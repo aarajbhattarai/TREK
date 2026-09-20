@@ -800,5 +800,6 @@ const admin: TranslationStrings = {
   'admin.placesUsageTitle': 'Para que a chave é usada',
   'admin.mapsKeyHintShort': 'Adiciona fotos, avaliações e horários. Cada consulta passa então pelo Google.',
   'admin.amapKeyHintShort': 'Para busca de lugares na China continental. Precisa de uma chave de serviço web, não de API JS.',
+  'admin.collab.links.subtitle': 'Ligações partilhadas e marcadores',
 };
 export default admin;

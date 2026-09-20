@@ -554,6 +554,44 @@ async function main() {
         db.prepare('UPDATE trek_photos SET passphrase = ? WHERE id = ?').run(newVal, row.id);
       }
     }
+
+    // --- document_connections: secrets ---
+    // Every credential of a document connection sits in ONE encrypted JSON blob
+    // (src/nest/doc-sync/doc-sync-secrets.ts) rather than in a column per
+    // provider, so a new provider changes nothing here: the blob is rotated as
+    // an opaque value. It also holds secrets the provider handed out itself,
+    // such as the DSM device token, which no form can re-enter. Left out of a
+    // rotation, every trip binding on the instance reads back as unauthorized
+    // and Synology needs a fresh OTP pairing. The table arrived with a later
+    // migration, hence the existence check.
+    if (tableExists('document_connections')) {
+      const documentConnections = db
+        .prepare('SELECT id, secrets FROM document_connections WHERE secrets IS NOT NULL')
+        .all() as { id: number; secrets: string }[];
+      for (const row of documentConnections) {
+        const newVal = migrateApiKeyValue(row.secrets, `document_connections[${row.id}].secrets`);
+        if (newVal !== null) {
+          db.prepare('UPDATE document_connections SET secrets = ? WHERE id = ?').run(newVal, row.id);
+        }
+      }
+    }
+
+    // --- trip_document_links: webhook_secret ---
+    // The secret a provider signs its webhook calls with, stored through the
+    // same blob helper. It is written once when the link is created and never
+    // regenerated, so a rotation that misses it leaves the link with nothing to
+    // check a signature against.
+    if (tableExists('trip_document_links')) {
+      const documentLinks = db
+        .prepare('SELECT id, webhook_secret FROM trip_document_links WHERE webhook_secret IS NOT NULL')
+        .all() as { id: number; webhook_secret: string }[];
+      for (const row of documentLinks) {
+        const newVal = migrateApiKeyValue(row.webhook_secret, `trip_document_links[${row.id}].webhook_secret`);
+        if (newVal !== null) {
+          db.prepare('UPDATE trip_document_links SET webhook_secret = ? WHERE id = ?').run(newVal, row.id);
+        }
+      }
+    }
   })();
 
   db.close();

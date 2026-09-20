@@ -11,7 +11,7 @@ import { buildPlanner, buildShell } from '../../../helpers/mobileTrip'
 import { resetAllStores, seedStore } from '../../../helpers/store'
 import { fireEvent, render, screen, waitFor } from '../../../helpers/render'
 
-// FE-MOB-SHOST-001 to FE-MOB-SHOST-028
+// FE-MOB-SHOST-001 to FE-MOB-SHOST-029
 //
 // Every child sheet is stubbed: this file is about the host — which sheet is
 // mounted for which shell.sheet id, and how the host's own callbacks wire the
@@ -423,6 +423,18 @@ describe('MTripSheets', () => {
     fireEvent.click(screen.getByText('confirm delete'))
     expect(planner.confirmDeletePlace).toHaveBeenCalledTimes(1)
     expect(planner.setDeletePlaceId).toHaveBeenCalledWith(null)
+  })
+
+  it('FE-MOB-SHOST-029: a night booked at the place is said before the yes, and only then', () => {
+    // The server takes the night down with the place, and the booking and the
+    // expense with the night. The planner builds the sentence; the sheet has to
+    // show it under the question.
+    const note = 'The booking at Hotel Okura and its expense go with it.'
+    renderHost({ deletePlaceId: 101, deletePlaceNote: note })
+
+    const confirm = screen.getByTestId('stub-confirm')
+    expect(confirm).toHaveTextContent('trip.confirm.deletePlace')
+    expect(screen.getByText(note)).toBeInTheDocument()
   })
 
   it('FE-MOB-SHOST-026: cancelling the confirm only disarms the flag', () => {

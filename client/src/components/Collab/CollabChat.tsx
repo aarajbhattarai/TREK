@@ -48,8 +48,8 @@ export default function CollabChat({ tripId, currentUser }: CollabChatProps) {
           </div>
         )}
 
-        {imagePreviews.length > 0 && <div style={{ display: 'flex', gap: 8, marginBottom: 8, overflowX: 'auto' }}>{imagePreviews.map((url, i) => <div key={url} style={{ position: 'relative' }}><img src={url} alt="" style={{ width: 56, height: 56, objectFit: 'cover', borderRadius: 8 }} /><button type="button" onClick={() => removeImage(i)} aria-label="Remove image" style={{ position: 'absolute', top: -6, right: -6, border: 0, borderRadius: '50%', background: 'var(--text-primary)', color: 'var(--bg-primary)', width: 18, height: 18, cursor: 'pointer' }}>×</button></div>)}</div>}
-        {uploadProgress > 0 && uploadProgress < 100 && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>Uploading {uploadProgress}%</div>}
+        {imagePreviews.length > 0 && <div style={{ display: 'flex', gap: 8, marginBottom: 8, overflowX: 'auto' }}>{imagePreviews.map((url, i) => <div key={url} style={{ position: 'relative' }}><img src={url} alt="" style={{ width: 56, height: 56, objectFit: 'cover', borderRadius: 8 }} /><button type="button" onClick={() => removeImage(i)} aria-label={t('places.removeImage')} style={{ position: 'absolute', top: -6, right: -6, border: 0, borderRadius: '50%', background: 'var(--text-primary)', color: 'var(--bg-primary)', width: 18, height: 18, cursor: 'pointer' }}>×</button></div>)}</div>}
+        {uploadProgress > 0 && uploadProgress < 100 && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>{t('collab.chat.uploading', { percent: uploadProgress })}</div>}
         <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6 }}>
           {/* Emoji button */}
           {canEdit && (
@@ -63,7 +63,7 @@ export default function CollabChat({ tripId, currentUser }: CollabChatProps) {
             </button>
           )}
 
-          {canEdit && <><input ref={imageInputRef} type="file" accept="image/jpeg,image/png,image/gif,image/webp" multiple hidden onChange={e => { if (e.target.files) addImageFiles(e.target.files); e.currentTarget.value = '' }} /><button type="button" onClick={() => imageInputRef.current?.click()} aria-label="Attach images" style={{ width: 34, height: 34, borderRadius: '50%', border: 'none', background: 'transparent', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 }}><ImagePlus size={19} /></button></>}
+          {canEdit && <><input ref={imageInputRef} type="file" accept="image/jpeg,image/png,image/gif,image/webp" multiple hidden onChange={e => { if (e.target.files) addImageFiles(e.target.files); e.currentTarget.value = '' }} /><button type="button" onClick={() => imageInputRef.current?.click()} aria-label={t('collab.chat.attachImages')} style={{ width: 34, height: 34, borderRadius: '50%', border: 'none', background: 'transparent', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 }}><ImagePlus size={19} /></button></>}
 
           <textarea
             ref={textareaRef}

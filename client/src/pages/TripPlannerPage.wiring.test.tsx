@@ -1,4 +1,4 @@
-// FE-PAGE-TPW-001 to FE-PAGE-TPW-061
+// FE-PAGE-TPW-001 to FE-PAGE-TPW-062
 //
 // The planner page is a wiring container: everything stateful lives in
 // useTripPlanner (covered in src/pages/tripPlanner/useTripPlanner.test.tsx).
@@ -285,6 +285,9 @@ function baseState(): HookState {
     setDeletePlaceId: vi.fn(),
     deletePlaceIds: null,
     setDeletePlaceIds: vi.fn(),
+    stayRelease: null,
+    setStayRelease: vi.fn(),
+    confirmStayRelease: vi.fn(async () => undefined),
     visibleConnections: [],
     toggleConnection: vi.fn(),
     allConnectionsShown: false,
@@ -1290,5 +1293,18 @@ describe('TripPlannerPage — modals', () => {
     act(() => { bulk.onConfirm() })
     expect(hookState.setDeletePlaceIds).toHaveBeenCalledWith(null)
     expect(hookState.confirmDeletePlaces).toHaveBeenCalled()
+  })
+
+  it('FE-PAGE-TPW-062: the question before a booked night becomes a pause answers through the hook', () => {
+    renderPage({ stayRelease: { stop: { stopType: null, dwellMinutes: 30 }, name: 'Hotel Fjord', booking: 'Booking 4711' } })
+
+    const [, , release] = confirmDialogs as unknown as Array<Record<string, () => unknown> & { isOpen: boolean }>
+    expect(release.isOpen).toBe(true)
+
+    act(() => { release.onClose() })
+    expect(hookState.setStayRelease).toHaveBeenCalledWith(null)
+
+    act(() => { release.onConfirm() })
+    expect(hookState.confirmStayRelease).toHaveBeenCalled()
   })
 })

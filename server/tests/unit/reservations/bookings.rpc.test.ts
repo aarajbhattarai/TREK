@@ -30,7 +30,7 @@ const req = (method: string, params: Record<string, unknown> = {}): RpcRequest =
 const events = (r: { broadcast: ReturnType<typeof vi.fn> }) => r.broadcast.mock.calls.map((c) => c[1]);
 
 /** Trip 1 belongs to user 42; reservation 5 and accommodation 11 sit on it. */
-function build(opts: { canEdit?: boolean; cascade?: boolean; stop?: boolean; seenActions?: string[] } = {}) {
+function build(opts: { canEdit?: boolean; cascade?: boolean; stop?: boolean; seenActions?: string[]; unresolved?: string[]; foreign?: string[] } = {}) {
   const realtime = { broadcast: vi.fn() } as unknown as RealtimeService & { broadcast: ReturnType<typeof vi.fn> };
   const reservations = {
     create: vi.fn(() => ({ reservation: { id: 40 }, accommodationCreated: !!opts.cascade })),
@@ -44,6 +44,9 @@ function build(opts: { canEdit?: boolean; cascade?: boolean; stop?: boolean; see
     syncBudgetOnCreate: vi.fn(),
     syncBudgetOnUpdate: vi.fn(),
     notifyBookingChange: vi.fn(),
+    // Both guards run before a write now, so the fixture answers for them.
+    referencesOutsideTrip: vi.fn(() => opts.foreign ?? []),
+    unresolvedReferences: vi.fn(() => opts.unresolved ?? []),
   } as unknown as ReservationsService & Record<string, ReturnType<typeof vi.fn>>;
   /** What a stay write did to the day plan, on top of writing the stay itself. */
   type Mirror = { created: { id: number; day_id: number } | null; removed: { id: number; dayId: number }[]; stamped: null };
@@ -191,6 +194,50 @@ describe('ReservationsRpc', () => {
     )) as RpcError;
     expect(res.error.code).toBe('BAD_PARAMS');
     expect(f.reservations.update).not.toHaveBeenCalled();
+  });
+
+  it('BOOK-RPC-018 an id that resolves to nothing is BAD_PARAMS, not a constraint failure', async () => {
+    const f = build({ unresolved: ['place_id'] });
+    const res = (await f.host().dispatch(
+      req('reservations.create', { tripId: 1, input: { title: 'Hotel', type: 'lodging', place_id: 999999 } }), 42,
+    )) as RpcError;
+    expect(res.error.code).toBe('BAD_PARAMS');
+    expect(res.error.message).toBe('unknown reference: place_id');
+    expect(f.reservations.create).not.toHaveBeenCalled();
+  });
+
+  it('BOOK-RPC-019 the same on update', async () => {
+    const f = build({ unresolved: ['day_id'] });
+    const res = (await f.host().dispatch(
+      req('reservations.update', { tripId: 1, reservationId: 5, input: { title: 'x', type: 'lodging', day_id: 999999 } }), 42,
+    )) as RpcError;
+    expect(res.error.code).toBe('BAD_PARAMS');
+    expect(f.reservations.update).not.toHaveBeenCalled();
+  });
+
+  it('BOOK-RPC-020 an id from another trip is RESOURCE_FORBIDDEN before the write, on create and update', async () => {
+    // reservation_edit on trip 1 says nothing about the ids in the body. A stay
+    // written against another trip's day puts a stop on that day, in a plan the
+    // acting user may not even read, so the body is checked the way the REST route
+    // and the MCP tool check it, and ownership is judged before existence.
+    const f = build({ foreign: ['create_accommodation.start_day_id'], unresolved: ['create_accommodation.start_day_id'] });
+    const stay = { title: 'Hotel', type: 'lodging', create_accommodation: { place_id: 9, start_day_id: 4711, end_day_id: 4712 } };
+    const created = (await f.host().dispatch(req('reservations.create', { tripId: 1, input: stay }), 42)) as RpcError;
+    expect(created.error.code).toBe('RESOURCE_FORBIDDEN');
+    expect(created.error.message).toBe('not part of trip 1: create_accommodation.start_day_id');
+    expect(f.reservations.create).not.toHaveBeenCalled();
+
+    const g = build({ foreign: ['day_id'] });
+    const updated = (await g.host().dispatch(req('reservations.update', { tripId: 1, reservationId: 5, input: { title: 'x', type: 'lodging', day_id: 4711 } }), 42)) as RpcError;
+    expect(updated.error.code).toBe('RESOURCE_FORBIDDEN');
+    expect(updated.error.message).toBe('not part of trip 1: day_id');
+    expect(g.reservations.update).not.toHaveBeenCalled();
+    expect(g.realtime.broadcast).not.toHaveBeenCalled();
+
+    // The same body with this trip's ids goes through.
+    const h = build();
+    expect((await h.host().dispatch(req('reservations.create', { tripId: 1, input: { ...stay, create_accommodation: { ...stay.create_accommodation, start_day_id: 3 } } }), 42)).ok).toBe(true);
+    expect(h.reservations.referencesOutsideTrip).toHaveBeenLastCalledWith('1', expect.objectContaining({ create_accommodation: expect.objectContaining({ start_day_id: 3 }) }));
   });
 
   it('BOOK-RPC-009 the class is listed in its module providers', () => {

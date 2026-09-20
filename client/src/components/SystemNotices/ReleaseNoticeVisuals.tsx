@@ -1,7 +1,8 @@
 import React from 'react';
 import * as LucideIcons from 'lucide-react';
-import { Car, Landmark, Search, Sparkles } from 'lucide-react';
+import { ArrowLeftRight, Car, Landmark, Search, Sparkles } from 'lucide-react';
 import DawarichIcon from '../shared/DawarichIcon';
+import { NextcloudIcon, OpenCloudIcon, PaperlessIcon, PapraIcon, SynologyDriveIcon } from '../shared/DocumentProviderIcons';
 import TrekMark from '../shared/TrekMark';
 
 /*
@@ -65,10 +66,29 @@ function DawarichVisual() {
   );
 }
 
+// A trip's documents travelling both ways between TREK and the five stores. The
+// wordmark without the API pill: this is TREK itself, not its index.
+const STORES = [PaperlessIcon, PapraIcon, NextcloudIcon, OpenCloudIcon, SynologyDriveIcon];
+
+function DocSyncVisual() {
+  return (
+    <div className="rn-vis rn-vis-docs">
+      <span className="rn-vis-trekbadge"><TrekMark pill={false} className="rn-vis-trekmark" /></span>
+      <span className="rn-vis-docs-flow"><ArrowLeftRight size={14} strokeWidth={2.4} /></span>
+      <div className="rn-vis-docs-stores">
+        {STORES.map((Store, i) => (
+          <span key={i} className="rn-vis-docs-store"><Store size={22} /></span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 const VISUALS: Record<string, () => React.ReactElement> = {
   'places-api': PlacesApiVisual,
   roadtrip: RoadtripVisual,
   dawarich: DawarichVisual,
+  docsync: DocSyncVisual,
 };
 
 /** The card's picture, or its icon when the release names no drawing this client knows. */

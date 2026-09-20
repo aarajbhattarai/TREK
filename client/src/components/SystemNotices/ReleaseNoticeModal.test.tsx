@@ -189,4 +189,24 @@ describe('ReleaseNoticeModal', () => {
     expect(document.querySelectorAll('.rn-vis-icon')).toHaveLength(2)
     expect(document.querySelectorAll('.rn-vis-icon svg')).toHaveLength(2)
   })
+
+  it('FE-RN-015: a wide card spans the row with its drawing beside the text, the others stay upright', () => {
+    const n = releaseNotice()
+    n.release!.features = [
+      ...n.release!.features,
+      { iconName: 'FolderSync', visual: 'docsync', layout: 'wide', titleKey: 'rel.f4.title', bodyKey: 'rel.f4.body' },
+    ]
+    renderModal(n)
+    const cards = document.querySelectorAll('.rn-feature')
+    expect(cards).toHaveLength(4)
+    expect(cards[3].classList.contains('rn-feature-wide')).toBe(true)
+    expect([...cards].slice(0, 3).some(c => c.classList.contains('rn-feature-wide'))).toBe(false)
+    // The document sync drawing: the wordmark without its API pill, and the five stores.
+    const wide = cards[3]
+    expect(wide.querySelector('.rn-vis-docs')).not.toBeNull()
+    expect(wide.querySelectorAll('.rn-vis-docs-store')).toHaveLength(5)
+    expect(wide.querySelector('.trek-mark .pill-bg')).toBeNull()
+    // The places card keeps the pill: that one is about the index.
+    expect(cards[0].querySelector('.trek-mark .pill-bg')).not.toBeNull()
+  })
 })

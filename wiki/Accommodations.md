@@ -36,7 +36,7 @@ For each day between the **From** day and **To** day (inclusive), the accommodat
 ## On the route
 
 Booking a night also puts its place on the check-in day, as a stop of its own. That stop
-is what the map draws a line to and what the Road Trip view builds its route from, so the
+is what the map draws a line to and what the [Road Trip](Road-Trip) view builds its route from, so the
 hotel shows up on the drive without having to be entered a second time as an ordinary
 place. It works the same way whichever way you book the night: the Day Detail panel, the
 booking form under Bookings, the phone, the Road Trip view, an MCP client or a plugin.

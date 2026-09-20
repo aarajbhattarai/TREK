@@ -9,7 +9,7 @@ vi.mock('./RouteCalculator', async (importActual) => {
   return { ...actual, calculateRouteWithLegs: vi.fn() }
 })
 
-const { calculateRouteWithLegs } = await import('./RouteCalculator')
+const { calculateRouteWithLegs, RoutingRefusedError } = await import('./RouteCalculator')
 
 const leg = (distance: number): RouteSegment => ({
   mid: [0, 0], from: [0, 0], to: [0, 0], distance, duration: 600,
@@ -103,5 +103,113 @@ describe('tripRouteGeometry', () => {
     controller.abort()
 
     await expect(pending).resolves.toMatchObject({ totalDistance: 0 })
+  })
+
+  // The public OSRM hosts allow about one request a second. Every leg of every day at
+  // once is exactly the burst they answer with 429 from the second second on, and each
+  // refused leg used to stay a straight line with no distance and no word about it.
+  it('FE-MAP-TRG-007: asks the router one leg at a time, a second apart', async () => {
+    vi.useFakeTimers()
+    try {
+      // A round trip takes time; only a network answer is paced, a cache hit is not.
+      vi.mocked(calculateRouteWithLegs).mockImplementation(() => new Promise(resolve => {
+        setTimeout(() => resolve({ coordinates: [[48.86, 2.35], [48.90, 2.42]], distance: 10000, duration: 600, legs: [leg(10000)] }), 100)
+      }))
+      const pending = routeTrip(input, { profile: 'driving', tripId: 7 })
+
+      // The second day waits for the first to answer...
+      expect(calculateRouteWithLegs).toHaveBeenCalledTimes(1)
+      await vi.advanceTimersByTimeAsync(100)
+      // ...and then for the gap the shared hosts need between two requests.
+      expect(calculateRouteWithLegs).toHaveBeenCalledTimes(1)
+      await vi.advanceTimersByTimeAsync(1100)
+      expect(calculateRouteWithLegs).toHaveBeenCalledTimes(2)
+
+      await vi.advanceTimersByTimeAsync(100)
+      const summary = await pending
+      expect(summary.totalDistance).toBe(20000)
+      expect(summary.unroutedLegs).toBe(0)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('FE-MAP-TRG-008: a rate limit is waited out and the leg asked for again', async () => {
+    vi.useFakeTimers()
+    try {
+      vi.mocked(calculateRouteWithLegs)
+        .mockRejectedValueOnce(new RoutingRefusedError(429, null))
+        .mockResolvedValue({ coordinates: [[48.86, 2.35], [48.90, 2.42]], distance: 10000, duration: 600, legs: [leg(10000)] })
+      const pending = routeTrip(input, { profile: 'driving', tripId: 7 })
+
+      await vi.advanceTimersByTimeAsync(1500)
+      expect(calculateRouteWithLegs).toHaveBeenCalledTimes(2)
+      await vi.advanceTimersByTimeAsync(1100)
+      const summary = await pending
+
+      // Both days routed: the refused leg answered on its second try.
+      expect(calculateRouteWithLegs).toHaveBeenCalledTimes(3)
+      expect(summary.totalDistance).toBe(20000)
+      expect(summary.unroutedLegs).toBe(0)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('FE-MAP-TRG-009: a host that says how long to wait is given that long', async () => {
+    vi.useFakeTimers()
+    try {
+      vi.mocked(calculateRouteWithLegs)
+        .mockRejectedValueOnce(new RoutingRefusedError(429, 6000))
+        .mockResolvedValue({ coordinates: [[48.86, 2.35], [48.90, 2.42]], distance: 10000, duration: 600, legs: [leg(10000)] })
+      const pending = routeTrip(input, { profile: 'driving', tripId: 7 })
+
+      // The own first backoff would be 1500 ms; asking then is just a second refusal.
+      await vi.advanceTimersByTimeAsync(2000)
+      expect(calculateRouteWithLegs).toHaveBeenCalledTimes(1)
+      await vi.advanceTimersByTimeAsync(4000)
+      expect(calculateRouteWithLegs).toHaveBeenCalledTimes(2)
+
+      await vi.advanceTimersByTimeAsync(1100)
+      await expect(pending).resolves.toMatchObject({ totalDistance: 20000 })
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('FE-MAP-TRG-010: a refusal the host meant is not repeated, and the leg is counted as unrouted', async () => {
+    // A 400 objects to these coordinates; the same request earns the same answer.
+    vi.mocked(calculateRouteWithLegs)
+      .mockRejectedValueOnce(new RoutingRefusedError(400, null))
+      .mockResolvedValue({ coordinates: [[45.76, 4.83], [45.80, 4.90]], distance: 10000, duration: 600, legs: [leg(10000)] })
+
+    const summary = await routeTrip(input, { profile: 'driving', tripId: 7 })
+
+    expect(calculateRouteWithLegs).toHaveBeenCalledTimes(2)
+    // The first day keeps its straight line and adds nothing to the sum...
+    expect(summary.lines[0]).toEqual([[48.86, 2.35], [48.90, 2.42]])
+    expect(summary.days[0].distance).toBe(0)
+    expect(summary.totalDistance).toBe(10000)
+    // ...and says so, per day and for the trip, so the total is not mistaken for complete.
+    expect(summary.days.map(d => d.unroutedLegs)).toEqual([1, 0])
+    expect(summary.unroutedLegs).toBe(1)
+  })
+
+  it('FE-MAP-TRG-011: a rate limit that never lifts gives up after the retries and is counted', async () => {
+    vi.useFakeTimers()
+    try {
+      vi.mocked(calculateRouteWithLegs).mockRejectedValue(new RoutingRefusedError(429, null))
+      const pending = routeTrip(input, { profile: 'driving', tripId: 7 })
+
+      // Two backoffs per leg, a gap between the legs, then it stops asking.
+      await vi.advanceTimersByTimeAsync(20000)
+      const summary = await pending
+
+      expect(calculateRouteWithLegs).toHaveBeenCalledTimes(6)
+      expect(summary.totalDistance).toBe(0)
+      expect(summary.unroutedLegs).toBe(2)
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })

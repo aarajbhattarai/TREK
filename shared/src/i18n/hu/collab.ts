@@ -93,5 +93,10 @@ const collab: TranslationStrings = {
   'collab.polls.options': 'Opciók',
   'collab.polls.delete': 'Törlés',
   'collab.polls.closedSection': 'Lezárva',
+  'collab.chat.imageLimit': 'Üzenetenként legfeljebb {max} képet csatolhatsz',
+  'collab.chat.uploading': 'Feltöltés {percent}%',
+  'collab.chat.attachImages': 'Képek csatolása',
+  'collab.chat.attachedImage': 'Csatolt kép',
+  'collab.chat.closeImage': 'Kép bezárása',
 };
 export default collab;

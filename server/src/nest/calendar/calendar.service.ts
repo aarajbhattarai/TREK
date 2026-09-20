@@ -241,6 +241,11 @@ export class CalendarService {
     for (const day of days) {
       if (!day.date) continue;
 
+      // A booked night puts a stop of its own on its check-in day, so the route
+      // can reach the hotel. That stop is the booking, not a place the traveller
+      // planned to visit, and the booking already comes through below as the
+      // stay block or its check-in and check-out markers. Read here as well it
+      // would put the hotel on the day a second time.
       const assignments = this.db.prepare(`
         SELECT da.*, p.name as place_name, p.address as place_address,
           p.lat as place_lat, p.lng as place_lng,
@@ -249,6 +254,7 @@ export class CalendarService {
         FROM day_assignments da
         JOIN places p ON da.place_id = p.id
         WHERE da.day_id = ?
+          AND da.accommodation_id IS NULL
         ORDER BY da.order_index ASC, da.created_at ASC
       `).all(day.id) as any[];
 

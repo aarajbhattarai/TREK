@@ -11,7 +11,7 @@ import { CustomDatePicker } from '../../../components/shared/CustomDateTimePicke
 import CustomSelect from '../../../components/shared/CustomSelect'
 import { currenciesWith, SYMBOLS } from '../../../components/Budget/BudgetPanel.constants'
 import type { DashboardTrip } from '../../../pages/dashboard/dashboardModel'
-import type { Trip, TripCreateRequest } from '@trek/shared'
+import { MAX_TRIP_DAYS, tripSpanDays, type Trip, type TripCreateRequest } from '@trek/shared'
 import MSheet from '../../components/MSheet'
 import MIconBtn from '../../components/MIconBtn'
 import MListRow from '../../components/MListRow'
@@ -112,8 +112,11 @@ export default function MNewTripSheet({ open, trip, onClose, onSave, onCoverUpda
   const handleSave = async () => {
     setError('')
     if (!title.trim()) { setError(t('dashboard.titleRequired')); return }
-    if (startDate && endDate && new Date(endDate) < new Date(startDate)) {
-      setError(t('dashboard.endDateError')); return
+    if (startDate && endDate) {
+      const span = tripSpanDays(startDate, endDate)
+      if (span < 1) { setError(t('dashboard.endDateError')); return }
+      const datesTouched = !trip || startDate !== (trip.start_date || '') || endDate !== (trip.end_date || '')
+      if (datesTouched && span > MAX_TRIP_DAYS) { setError(t('dashboard.tripTooLong', { days: MAX_TRIP_DAYS })); return }
     }
     setIsSaving(true)
     try {

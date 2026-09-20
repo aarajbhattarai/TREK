@@ -58,7 +58,7 @@ const roadtrip: TranslationStrings = {
   'roadtrip.window.conflict':
     'Μια σταθερή ώρα συγκρούεται με την οδήγηση και τις παύσεις. Οι χειροκίνητες ώρες διατηρούνται· ο αυτόματος σχεδιασμός έχει παύσει.',
   'roadtrip.window.tooLong':
-    'Αυτές οι ώρες απαιτούν πάνω από 365 επιπλέον ημέρες. Επιλέξτε μεγαλύτερο ημερήσιο διάστημα.',
+    'Αυτές οι ώρες απαιτούν πάνω από {days} επιπλέον ημέρες. Επιλέξτε μεγαλύτερο ημερήσιο διάστημα.',
   'roadtrip.mode.roadtrip': 'Οδικό ταξίδι',
   'roadtrip.mode.days': 'Ημέρες',
   'roadtrip.mode.label': 'Προβολή σχεδίου',
@@ -247,8 +247,10 @@ const roadtrip: TranslationStrings = {
   'roadtrip.stop.stay': 'Χρόνος σε αυτή τη στάση',
   'roadtrip.stop.pinned': 'Ώρα που ορίσατε',
   'roadtrip.stop.computed': 'Υπολογισμένη από τη διαδρομή',
+  'roadtrip.stop.endIsLeave': 'Στο οδικό ταξίδι, η αναχώρηση γίνεται αυτή την ώρα.',
   'roadtrip.via.hint': 'Σύρετε για να αλλάξετε τη διαδρομή, δεξί κλικ για αφαίρεση',
   'roadtrip.warn.late': 'Άφιξη {minutes} λεπτά μετά την ορισμένη ώρα',
+  'roadtrip.warn.missedLeave': 'Άφιξη {minutes} λεπτά μετά την ορισμένη ώρα αναχώρησης',
   'roadtrip.warn.overnight': 'Επόμενη μέρα',
   'roadtrip.spill.title': 'Από την ημέρα {number}',
   'roadtrip.spill.departs': 'αναχώρηση {time}',
@@ -258,9 +260,18 @@ const roadtrip: TranslationStrings = {
   'roadtrip.stay.custom': 'Λεπτα',
   'roadtrip.stay.arrive': 'Αφιξη',
   'roadtrip.stay.leave': 'Αναχωρηση',
+  'roadtrip.stay.until': 'έως {time}',
+  'roadtrip.stay.leavesAt': 'Αυτή η επίσκεψη έχει ώρα λήξης, οπότε η διαδρομή συνεχίζει στις {time}.',
+  'roadtrip.stay.dayEndsFirst':
+    'Η ημέρα ταξιδιού τελειώνει πριν από τις {time}, οπότε η διαδρομή συνεχίζει το επόμενο πρωί.',
+  'roadtrip.stay.clearLeave': 'Αφαίρεση ώρας λήξης',
   'roadtrip.alt.noMotorway': 'Χωρις αυτοκινητοδρομο',
   'roadtrip.alt.noToll': 'Χωρις διοδια',
   'roadtrip.alt.noFerry': 'Χωρίς φέρι',
   'roadtrip.summary.partial': 'Υπολογίζεται ακόμη η υπόλοιπη διαδρομή',
+  'roadtrip.stay.releaseTitle': 'Να αφαιρεθεί η διανυκτέρευση;',
+  'roadtrip.stay.releaseBody': 'Η διανυκτέρευση στο «{name}» θα αφαιρεθεί. Η στάση παραμένει στη διαδρομή ως παύση.',
+  'roadtrip.stay.releaseBookedBody': 'Η διανυκτέρευση στο «{name}» θα αφαιρεθεί μαζί με την κράτηση «{booking}» και κάθε συνδεδεμένο έξοδο. Η στάση παραμένει στη διαδρομή ως παύση.',
+  'roadtrip.stay.releaseAction': 'Κάνε το παύση',
 };
 export default roadtrip;

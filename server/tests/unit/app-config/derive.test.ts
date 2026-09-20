@@ -254,6 +254,11 @@ describe('deriveNet', () => {
     expect(deriveNet({ ALLOW_INTERNAL_NETWORK: '1' }).allowInternalNetwork).toBe(true);
     expect(deriveNet({}).allowInternalNetwork).toBe(false);
   });
+
+  it('ALLOW_LINK_LOCAL_IPS keeps only the addresses that may be used', () => {
+    expect(deriveNet({ ALLOW_LINK_LOCAL_IPS: '169.254.1.2,169.254.169.254,bogus' }).allowLinkLocalIps).toEqual(['169.254.1.2']);
+    expect(deriveNet({}).allowLinkLocalIps).toEqual([]);
+  });
 });
 
 describe('derivePaths', () => {
@@ -280,13 +285,26 @@ describe('deriveAll', () => {
 });
 
 describe('deriveMaps', () => {
-  it('TREK_PLACES_ENABLED is on unless it says the literal "false"', () => {
-    // Fail-open, and deliberately not the boolean-like family the switches
-    // above accept: a typo must not silently drop a whole install back to
-    // Nominatim, whose usage policy forbids what TREK was doing with it.
-    expect(deriveMaps({} as never).trekPlacesEnabled).toBe(true);
+  it('TREK_PLACES_ENABLED accepts the same false family as every other switch', () => {
+    // The schema admits the whole boolean-like family for this variable, so a
+    // value it lets through must also count: an operator who writes 0 or off,
+    // as the .env.example header invites, gets the index switched off rather
+    // than a silent no-op.
     expect(deriveMaps({ TREK_PLACES_ENABLED: 'false' } as never).trekPlacesEnabled).toBe(false);
-    for (const value of ['true', 'FALSE', '0', 'no', '']) {
+    for (const value of ['FALSE', '0', 'off', 'no', ' No ']) {
+      expect(deriveMaps({ TREK_PLACES_ENABLED: value } as never).trekPlacesEnabled, value).toBe(false);
+    }
+    for (const value of ['true', 'TRUE', '1', 'on', 'yes']) {
+      expect(deriveMaps({ TREK_PLACES_ENABLED: value } as never).trekPlacesEnabled, value).toBe(true);
+    }
+  });
+
+  it('TREK_PLACES_ENABLED fails open when unset, blank or outside the family', () => {
+    // A typo must not silently drop a whole install back to Nominatim, whose
+    // usage policy forbids what TREK was doing with it. Outside the family the
+    // schema aborts boot anyway; this covers the paths that skip validation.
+    expect(deriveMaps({} as never).trekPlacesEnabled).toBe(true);
+    for (const value of ['', '  ', 'maybe', 'fasle']) {
       expect(deriveMaps({ TREK_PLACES_ENABLED: value } as never).trekPlacesEnabled, value).toBe(true);
     }
   });

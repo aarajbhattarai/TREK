@@ -54,19 +54,16 @@ const system_notice: TranslationStrings = {
     '3.0.14 版本升级检测到一个或多个由存储账户中首尾空白字符引发的用户名或邮箱冲突。受影响的账户已自动重命名。请检查服务器日志中以 **[migration] WHITESPACE COLLISION** 开头的行，以确认哪些账户需要审查。',
   // The release modal. One stable set of keys: each big release swaps the copy in place.
   'system_notice.release_notes.eyebrow': '更新已安装',
-  'system_notice.release_notes.headline': '三件事，TREK 现在自己就能做到。',
-  'system_notice.release_notes.intro': '自建的地点 API，从出发到抵达全程规划的公路旅行，还有重新回到你手中的位置历史。',
+  'system_notice.release_notes.headline': 'TREK 现在能自己完成的四件事。',
+  'system_notice.release_notes.intro': '自有的地点 API、从头到尾规划的公路旅行、掌握在你手中的位置记录，以及保持同步的文档。',
   'system_notice.release_notes.features_label': '本次重头戏',
   'system_notice.release_notes.features_aside': '远不止这些',
   'system_notice.release_notes.feature_places_title': 'TREK Places API',
-  'system_notice.release_notes.feature_places_body':
-    '第一个自建地点 API 的开源旅行规划器。收录 7360 万个地点，每月重新构建。无需密钥，不限配额。',
+  'system_notice.release_notes.feature_places_body': '首个拥有自有地点 API 的开源旅行规划器。7360 万个地点，无需密钥，没有配额。',
   'system_notice.release_notes.feature_roadtrip_title': '公路旅行扩展',
-  'system_notice.release_notes.feature_roadtrip_body':
-    '公路旅行模式会把整段车程规划好：路线、里程、驾驶时长和停靠点。这是一个扩展，需要管理员开启后才能使用。',
+  'system_notice.release_notes.feature_roadtrip_body': '自动规划行车：路线、距离、时长和停靠点。管理员开启前默认关闭。',
   'system_notice.release_notes.feature_dawarich_title': 'Dawarich 集成',
-  'system_notice.release_notes.feature_dawarich_body':
-    'Google Timeline 的自托管替代方案，现在可以直接在 TREK 里查看。TREK 只读取，仅此而已，绝不会回写任何数据。',
+  'system_notice.release_notes.feature_dawarich_body': 'Google Timeline 的自托管替代方案，现在可以直接在 TREK 里查看。TREK 只读取，仅此而已。',
   'system_notice.release_notes.footnote': '除此之外，TREK 的其他部分还有一长串小改动。',
   'system_notice.release_notes.notes_label': '更新说明',
   'system_notice.release_notes.note_eyebrow': '来自维护者的话',
@@ -84,5 +81,7 @@ const system_notice: TranslationStrings = {
     '如果它已经在你的旅行中占有一席之地，请我喝杯咖啡，帮我把下一个版本继续做出来吧。',
   'system_notice.release_notes.cta_bmc': 'Buy me a coffee',
   'system_notice.release_notes.cta_kofi': '在 Ko-fi 上支持',
+  'system_notice.release_notes.feature_docsync_title': '文档同步',
+  'system_notice.release_notes.feature_docsync_body': 'Paperless-ngx、Papra、Nextcloud、OpenCloud 和 Synology Drive。行程的文档与你已在运行的存储双向流动。',
 };
 export default system_notice;

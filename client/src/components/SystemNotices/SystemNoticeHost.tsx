@@ -46,6 +46,10 @@ const KEY_SHAPE = /^[a-z0-9_-]+(\.[a-z0-9_-]+)+$/i;
  *
  * Deliberately generous: one resolved key is enough. Half a translation is still readable,
  * and a notice hidden by mistake is a worse failure than an ugly one.
+ *
+ * A bundle older than this filter cannot run it, so the server holds the release notice
+ * back until the store announces the layout (see systemNoticeStore.fetch). This filter is
+ * for the bundles after that one: they announce the layout but may still lack the copy.
  */
 function hasCopy(notice: SystemNoticeDTO, t: (key: string) => string): boolean {
   const keys = notice.release

@@ -43,6 +43,7 @@ import { runMigrations } from '../../../src/db/migrations';
 import { resetTestDb } from '../../helpers/test-db';
 import { createUser, createTrip, createDay, createPlace, addTripMember, createBudgetItem, createPackingItem, createReservation, createDayNote, createCollabNote, createDayAssignment, createDayAccommodation } from '../../helpers/factories';
 import { createMcpHarness, parseToolResult, parseResourceResult, type McpHarness } from '../../helpers/mcp-harness';
+import { MAX_TRIP_DAYS } from '@trek/shared';
 
 beforeAll(() => {
   createTables(testDb);
@@ -99,16 +100,29 @@ describe('Tool: create_trip', () => {
     });
   });
 
-  it('caps days at 90 for very long trips', async () => {
+  it('generates every day of a trip longer than a year (#2403)', async () => {
     const { user } = createUser(testDb);
     await withHarness(user.id, async (h) => {
       const result = await h.client.callTool({
         name: 'create_trip',
-        arguments: { title: 'Long Trip', start_date: '2026-01-01', end_date: '2027-12-31' },
+        arguments: { title: 'Long Trip', start_date: '2025-01-26', end_date: '2026-01-28' },
       });
       const data = parseToolResult(result) as any;
       const days = testDb.prepare('SELECT COUNT(*) as c FROM days WHERE trip_id = ?').get(data.trip.id) as { c: number };
-      expect(days.c).toBe(90);
+      expect(days.c).toBe(368);
+    });
+  });
+
+  it('refuses a date range longer than MAX_TRIP_DAYS instead of cutting the days short', async () => {
+    const { user } = createUser(testDb);
+    await withHarness(user.id, async (h) => {
+      const result = await h.client.callTool({
+        name: 'create_trip',
+        arguments: { title: 'Decade', start_date: '2026-01-01', end_date: '2036-01-01' },
+      });
+      expect(result.isError).toBe(true);
+      expect(JSON.stringify(result.content)).toContain(`at most ${MAX_TRIP_DAYS} days`);
+      expect(testDb.prepare('SELECT COUNT(*) as c FROM trips').get()).toEqual({ c: 0 });
     });
   });
 
@@ -153,11 +167,11 @@ describe('Tool: create_trip', () => {
     });
   });
 
-  it('refuses a day_count outside 1..365', async () => {
+  it('refuses a day_count outside 1..MAX_TRIP_DAYS', async () => {
     const { user } = createUser(testDb);
     await withHarness(user.id, async (h) => {
       expect((await h.client.callTool({ name: 'create_trip', arguments: { title: 'Zero', day_count: 0 } })).isError).toBe(true);
-      expect((await h.client.callTool({ name: 'create_trip', arguments: { title: 'Huge', day_count: 400 } })).isError).toBe(true);
+      expect((await h.client.callTool({ name: 'create_trip', arguments: { title: 'Huge', day_count: MAX_TRIP_DAYS + 1 } })).isError).toBe(true);
       expect(testDb.prepare('SELECT COUNT(*) as c FROM trips').get()).toEqual({ c: 0 });
     });
   });
@@ -378,13 +392,25 @@ describe('Tool: update_trip', () => {
     });
   });
 
-  it('refuses a day_count outside 1..365', async () => {
+  it('refuses a day_count outside 1..MAX_TRIP_DAYS', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id, { title: 'Untouched' });
     await withHarness(user.id, async (h) => {
       expect((await h.client.callTool({ name: 'update_trip', arguments: { tripId: trip.id, day_count: 0 } })).isError).toBe(true);
-      expect((await h.client.callTool({ name: 'update_trip', arguments: { tripId: trip.id, day_count: 400 } })).isError).toBe(true);
+      expect((await h.client.callTool({ name: 'update_trip', arguments: { tripId: trip.id, day_count: MAX_TRIP_DAYS + 1 } })).isError).toBe(true);
       expect(testDb.prepare('SELECT COUNT(*) as c FROM days WHERE trip_id = ?').get(trip.id)).toEqual({ c: 0 });
+    });
+  });
+
+  it('refuses a date range longer than MAX_TRIP_DAYS and leaves the trip untouched', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id, { title: 'Untouched', start_date: '2026-07-01', end_date: '2026-07-07' });
+    await withHarness(user.id, async (h) => {
+      const result = await h.client.callTool({ name: 'update_trip', arguments: { tripId: trip.id, end_date: '2036-07-01' } });
+      expect(result.isError).toBe(true);
+      expect(JSON.stringify(result.content)).toContain(`at most ${MAX_TRIP_DAYS} days`);
+      const row = testDb.prepare('SELECT end_date FROM trips WHERE id = ?').get(trip.id) as { end_date: string };
+      expect(row.end_date).toBe('2026-07-07');
     });
   });
 

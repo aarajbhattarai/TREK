@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { ArrowUp, ChevronUp, ImagePlus, Loader2, Reply, Trash2 } from 'lucide-react'
 import MDancingTrek from '../../../components/MDancingTrek'
-import { useChatImages } from '../../../../components/Collab/useChatImages'
+import { useChatImages, MAX_CHAT_IMAGES } from '../../../../components/Collab/useChatImages'
 import { collabApi } from '../../../../api/client'
 import { addListener, removeListener } from '../../../../api/websocket'
 import { useAuthStore } from '../../../../store/authStore'
@@ -160,7 +160,10 @@ export default function MCollabChat({ planner }: MCollabChatProps) {
   }
 
   const addImageFiles = (incoming: FileList | File[]) => {
-    if (!images.add(incoming)) toast.error(t('collab.chat.imageRejected'))
+    images.add(incoming, ({ rejected, overflow }) => {
+      if (rejected) toast.error(t('collab.chat.imageRejected'))
+      if (overflow) toast.error(t('collab.chat.imageLimit', { max: MAX_CHAT_IMAGES }))
+    })
   }
 
   const handleSend = useCallback(async () => {

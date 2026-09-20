@@ -1,8 +1,10 @@
 import React from 'react'
 import { avatarSrc } from '../../utils/avatarSrc'
-import { Share2, Users, Link2, Pencil, Download, Loader2 } from 'lucide-react'
+import { Share2, Users, Link2, Pencil } from 'lucide-react'
 import type { CollectionMember, CollectionLink } from '@trek/shared'
 import type { TranslationFn } from '../../types'
+import CollectionExportMenu from './CollectionExportMenu'
+import type { CollectionExportFormat } from './collectionFile'
 
 const AV_COLORS = ['#6366f1', '#ec4899', '#14b8a6', '#f97316', '#8b5cf6', '#3b82f6', '#ef4444', '#22c55e']
 
@@ -27,7 +29,7 @@ interface CollectionHeroProps {
   shareMemberCount: number
   onShare: () => void
   /** Absent on the "All saved" pseudo-list, which is a view rather than a list. */
-  onExport?: () => void
+  onExport?: (format: CollectionExportFormat) => void
   exporting?: boolean
   t: TranslationFn
 }
@@ -98,19 +100,7 @@ export default function CollectionHero({
                 <span className="txt">{t('common.edit')}</span>
               </button>
             )}
-            {onExport && (
-              <button
-                type="button"
-                onClick={onExport}
-                disabled={exporting}
-                aria-label={t('collections.file.export')}
-                title={t('collections.file.exportTitle')}
-                className="col-glass-btn"
-              >
-                {exporting ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />}
-                <span className="txt">{t('collections.file.export')}</span>
-              </button>
-            )}
+            {onExport && <CollectionExportMenu onExport={onExport} exporting={exporting} t={t} />}
             {canShare && (
               <button
                 type="button"

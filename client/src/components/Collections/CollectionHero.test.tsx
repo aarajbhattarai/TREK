@@ -172,8 +172,10 @@ describe('CollectionHero', () => {
     const all = [...document.querySelectorAll('.col-hero-actions button')];
     expect(all).toEqual(actions);
 
+    // Export asks which format first (#2301).
     await userEvent.click(actions[1]);
-    expect(onExport).toHaveBeenCalledTimes(1);
+    await userEvent.click(screen.getByRole('menuitem', { name: /TREK list/ }));
+    expect(onExport).toHaveBeenCalledWith('trek');
   });
 
   it('FE-COMP-COLHERO-013: has no Export button where there is no list to export', () => {
@@ -186,8 +188,9 @@ describe('CollectionHero', () => {
     renderHero({ canEdit: false, canShare: false, isOwner: false, onExport });
 
     await userEvent.click(screen.getByRole('button', { name: 'Export' }));
+    await userEvent.click(screen.getByRole('menuitem', { name: /GPX/ }));
 
-    expect(onExport).toHaveBeenCalledTimes(1);
+    expect(onExport).toHaveBeenCalledWith('gpx');
     expect(screen.queryByRole('button', { name: 'Edit' })).not.toBeInTheDocument();
   });
 

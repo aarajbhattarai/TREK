@@ -294,7 +294,8 @@ function TripPlannerPageDesktop(): React.ReactElement | null {
     reservationPrefill, transportPrefill, importReviewActive, advanceImportReview,
     routeShown, setRouteShown, transitRoutesShown, routeProfile, setRouteProfile, routeVias, fitKey, setFitKey,
     mobileSidebarOpen, setMobileSidebarOpen, mobilePlanScrollTopRef, mobilePlacesScrollTopRef,
-    deletePlaceId, setDeletePlaceId, deletePlaceIds, setDeletePlaceIds,
+    deletePlaceId, setDeletePlaceId, deletePlaceIds, setDeletePlaceIds, deletePlaceNote, deletePlacesNote,
+    stayRelease, setStayRelease, confirmStayRelease,
     visibleConnections, toggleConnection, allConnectionsShown, toggleAllConnections, mapTransportDetail, setMapTransportDetail,
     isMobile, isTouch,
     expandedDayIds, setExpandedDayIds, mapPlaces,
@@ -1058,7 +1059,7 @@ function TripPlannerPageDesktop(): React.ReactElement | null {
           />
         </LazyPanel>
       )}
-      <PlaceFormModal isOpen={showPlaceForm} onClose={() => { setShowPlaceForm(false); setEditingPlace(null); setEditingAssignmentId(null); setPrefillCoords(null); setServiceStopForm(false) }} onSave={handleSavePlace} place={editingPlace} prefillCoords={prefillCoords} assignmentId={editingAssignmentId} dayAssignments={editingPlace ? Object.values(assignments).flat() : []} tripId={tripId} categories={categories} onCategoryCreated={cat => tripActions.addCategory?.(cat)} isMobile={isMobile} onOpenExpense={openBookingExpense} serviceStop={serviceStopMode} />
+      <PlaceFormModal isOpen={showPlaceForm} onClose={() => { setShowPlaceForm(false); setEditingPlace(null); setEditingAssignmentId(null); setPrefillCoords(null); setServiceStopForm(false) }} onSave={handleSavePlace} place={editingPlace} prefillCoords={prefillCoords} assignmentId={editingAssignmentId} dayAssignments={editingPlace ? Object.values(assignments).flat() : []} tripId={tripId} categories={categories} onCategoryCreated={cat => tripActions.addCategory?.(cat)} isMobile={isMobile} onOpenExpense={openBookingExpense} serviceStop={serviceStopMode} roadtripActive={roadtripActive} />
       <TripFormModal
         isOpen={showTripForm}
         onClose={() => setShowTripForm(false)}
@@ -1137,14 +1138,26 @@ function TripPlannerPageDesktop(): React.ReactElement | null {
         onClose={() => setDeletePlaceId(null)}
         onConfirm={confirmDeletePlace}
         title={t('common.delete')}
-        message={t('trip.confirm.deletePlace')}
+        message={deletePlaceNote ? `${t('trip.confirm.deletePlace')} ${deletePlaceNote}` : t('trip.confirm.deletePlace')}
       />
       <ConfirmDialog
         isOpen={!!deletePlaceIds?.length}
         onClose={() => setDeletePlaceIds(null)}
         onConfirm={confirmDeletePlaces}
         title={t('common.delete')}
-        message={t('trip.confirm.deletePlaces', { count: deletePlaceIds?.length ?? 0 })}
+        message={deletePlacesNote
+          ? `${t('trip.confirm.deletePlaces', { count: deletePlaceIds?.length ?? 0 })} ${deletePlacesNote}`
+          : t('trip.confirm.deletePlaces', { count: deletePlaceIds?.length ?? 0 })}
+      />
+      <ConfirmDialog
+        isOpen={!!stayRelease}
+        onClose={() => setStayRelease(null)}
+        onConfirm={confirmStayRelease}
+        title={t('roadtrip.stay.releaseTitle')}
+        message={stayRelease?.booking
+          ? t('roadtrip.stay.releaseBookedBody', { name: stayRelease.name, booking: stayRelease.booking })
+          : t('roadtrip.stay.releaseBody', { name: stayRelease?.name ?? '' })}
+        confirmLabel={t('roadtrip.stay.releaseAction')}
       />
     </div>
   )

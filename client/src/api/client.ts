@@ -1050,7 +1050,10 @@ const MEMORIES_TIMEOUT = 0
 export const memoriesApi = {
   status: (provider: string): Promise<{ connected: boolean }> =>
     apiClient.get(`/integrations/memories/${provider}/status`, { timeout: MEMORIES_TIMEOUT }).then(r => r.data),
-  search: (provider: string, body: { from: string; to: string; page: number; size: number }, signal?: AbortSignal) =>
+  // utc_offset_minutes says which 24 hours from/to name. It is NOT the Synology
+  // `offset`, which is rows to skip: one body goes to whichever provider, so the
+  // two names have to stay apart (#2336).
+  search: (provider: string, body: { from: string; to: string; page: number; size: number; utc_offset_minutes?: number }, signal?: AbortSignal) =>
     apiClient.post(`/integrations/memories/${provider}/search`, body, { timeout: MEMORIES_TIMEOUT, signal }).then(r => r.data),
   albums: (provider: string) =>
     apiClient.get(`/integrations/memories/${provider}/albums`, { timeout: MEMORIES_TIMEOUT }).then(r => r.data),
@@ -1356,6 +1359,64 @@ export const filesApi = {
   addLink: (tripId: number | string, fileId: number, data: FileLinkRequest) => apiClient.post(`/trips/${tripId}/files/${fileId}/link`, data).then(r => r.data),
   removeLink: (tripId: number | string, fileId: number, linkId: number) => apiClient.delete(`/trips/${tripId}/files/${fileId}/link/${linkId}`).then(r => r.data),
   getLinks: (tripId: number | string, fileId: number) => apiClient.get(`/trips/${tripId}/files/${fileId}/links`).then(r => r.data),
+}
+
+/**
+ * How long the browser waits for a document-sync call that makes the server go
+ * and ask the store.
+ *
+ * The shared 8 s on `apiClient` is right for TREK's own routes and wrong for
+ * these, for the reason `dawarich.ts` gives: the server allows each request to
+ * a store 15 s by itself (20 s for Papra), a connection test may probe more
+ * than once, and binding or unbinding first registers or removes a webhook at
+ * the store. Cut off at 8 s, the browser reported a failure while the server
+ * carried on and finished, so a listing that took twelve seconds read as a
+ * broken store.
+ */
+export const DOCSYNC_UPSTREAM_TIMEOUT_MS = 60_000
+
+/**
+ * A run is longer again. The server answers only once the whole of it is
+ * through: a listing of up to 40 pages, then up to 25 transfers at up to 120 s
+ * each, and Paperless-ngx holds every push until its consume task has run.
+ * Resolving a conflict runs the binding afterwards, so it waits just as long.
+ * Ten minutes covers a full transfer budget of ordinary documents; a run that
+ * outlasts it still finishes on the server, and the `docsync:changed` ping
+ * refreshes the dialog when it does.
+ */
+export const DOCSYNC_RUN_TIMEOUT_MS = 600_000
+
+const docsyncUpstream = { timeout: DOCSYNC_UPSTREAM_TIMEOUT_MS }
+const docsyncRun = { timeout: DOCSYNC_RUN_TIMEOUT_MS }
+
+/**
+ * Document sync: one provider connection per trip, shared by every member.
+ *
+ * Trip-scoped rather than user-scoped on purpose: a per-user connection would
+ * make a document's visibility depend on whose credentials fetched it, which is
+ * the opposite of what a shared trip needs.
+ */
+export const docsyncApi = {
+  providers: (tripId: number | string) => apiClient.get(`/trips/${tripId}/docsync/providers`).then(r => r.data),
+  status: (tripId: number | string) => apiClient.get(`/trips/${tripId}/docsync/status`).then(r => r.data),
+  listConnections: (tripId: number | string) => apiClient.get(`/trips/${tripId}/docsync/connections`).then(r => r.data),
+  saveConnection: (tripId: number | string, data: unknown) => apiClient.put(`/trips/${tripId}/docsync/connections`, data).then(r => r.data),
+  testConnection: (tripId: number | string, data: unknown) => apiClient.post(`/trips/${tripId}/docsync/connections/test`, data, docsyncUpstream).then(r => r.data),
+  deleteConnection: (tripId: number | string, connectionId: number) => apiClient.delete(`/trips/${tripId}/docsync/connections/${connectionId}`).then(r => r.data),
+  listScopes: (tripId: number | string, connectionId: number, q?: string) =>
+    apiClient.get(`/trips/${tripId}/docsync/connections/${connectionId}/scopes`, { params: q ? { q } : {}, ...docsyncUpstream }).then(r => r.data),
+  createScope: (tripId: number | string, connectionId: number, name: string) =>
+    apiClient.post(`/trips/${tripId}/docsync/connections/${connectionId}/scopes`, { name }, docsyncUpstream).then(r => r.data),
+  listLinks: (tripId: number | string) => apiClient.get(`/trips/${tripId}/docsync/links`).then(r => r.data),
+  createLink: (tripId: number | string, data: unknown) => apiClient.post(`/trips/${tripId}/docsync/links`, data, docsyncUpstream).then(r => r.data),
+  updateLink: (tripId: number | string, linkId: number, data: unknown) => apiClient.patch(`/trips/${tripId}/docsync/links/${linkId}`, data).then(r => r.data),
+  deleteLink: (tripId: number | string, linkId: number) => apiClient.delete(`/trips/${tripId}/docsync/links/${linkId}`, docsyncUpstream).then(r => r.data),
+  syncNow: (tripId: number | string, linkId: number, full = false) =>
+    apiClient.post(`/trips/${tripId}/docsync/links/${linkId}/sync`, { full }, docsyncRun).then(r => r.data),
+  items: (tripId: number | string, state?: string) =>
+    apiClient.get(`/trips/${tripId}/docsync/items`, { params: state ? { state } : {} }).then(r => r.data),
+  resolve: (tripId: number | string, itemId: number, keep: 'trek' | 'provider' | 'both') =>
+    apiClient.post(`/trips/${tripId}/docsync/items/${itemId}/resolve`, { keep }, docsyncRun).then(r => r.data),
 }
 
 export const reservationsApi = {

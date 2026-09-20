@@ -807,5 +807,6 @@ const admin: TranslationStrings = {
   'admin.placesUsageTitle': 'Wofür der Schlüssel benutzt wird',
   'admin.mapsKeyHintShort': 'Ergänzt Fotos, Bewertungen und Öffnungszeiten. Jede Abfrage geht dann an Google.',
   'admin.amapKeyHintShort': 'Für die Ortssuche in Festlandchina. Braucht einen Web-Service-Schlüssel, keinen JS-API-Schlüssel.',
+  'admin.collab.links.subtitle': 'Geteilte Links und Lesezeichen',
 };
 export default admin;

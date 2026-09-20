@@ -9,7 +9,7 @@ import type { TranslationFn } from '../../../../src/types'
 import type { RefuelSearch } from '../../../../src/components/Roadtrip/useRefuelSearch'
 import type { RefuelCandidate } from '../../../../src/components/Roadtrip/refuelSuggestion'
 
-// FE-MOB-RTROW-001 to FE-MOB-RTROW-048
+// FE-MOB-RTROW-001 to FE-MOB-RTROW-049
 
 // Same echo strategy as tests/helpers/mobileTrip: assertions stay on keys, not copy.
 const t: TranslationFn = (key, params) =>
@@ -639,5 +639,14 @@ describe('RtSpillRow', () => {
 
     expect(screen.getByText('roadtrip.spill.title:1')).toBeInTheDocument()
     expect(screen.queryByText(/roadtrip\.spill\.departs/)).toBeNull()
+  })
+
+  it('FE-MOB-RTROW-049: the departure follows the reader twelve hour setting like every other clock in the chain', () => {
+    // The band sits directly above stops that print their clocks through the same
+    // setting, so a raw 21:30 over a 9:45 PM is two clocks on one screen.
+    render(<RtSpillRow fromDayNumber={1} departs="21:30" chrome={{ ...chrome, is12h: true }} />)
+
+    expect(screen.getByText('roadtrip.spill.departs:9:30 PM')).toBeInTheDocument()
+    expect(screen.queryByText('roadtrip.spill.departs:21:30')).toBeNull()
   })
 })

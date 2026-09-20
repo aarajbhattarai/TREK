@@ -66,5 +66,7 @@ const mobileTrip: TranslationStrings = {
   'mobileTrip.rtNoneOnStage': 'この区間沿いにはそうした場所はありません。',
   'mobileTrip.rtTruncated.one': '1 区間は1回の答えに収まりきりませんでした。種類を減らすと残りも見られます。',
   'mobileTrip.rtTruncated.other': '{count} 区間は1回の答えに収まりきりませんでした。種類を減らすと残りも見られます。',
+  'mobileTrip.rtNoDay': '日が選択されていません',
+  'mobileTrip.rtNoDayHint': '地図には旅程全体が表示されています。上の日をタップするとその日の行程が見られます。',
 };
 export default mobileTrip;

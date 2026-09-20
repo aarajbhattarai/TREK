@@ -88,5 +88,7 @@ const trip: TranslationStrings = {
   'transit.transfersLabel': 'Chuyển tuyến',
   'transit.walkLabel': 'Đi bộ',
   'transit.searchHint': 'Tìm các kết nối thực tế và thêm thẳng vào ngày — dữ liệu qua Transitous.',
+  'trip.confirm.deletePlaceNight': 'Đêm đã đặt tại “{name}” sẽ mất cùng với địa điểm.',
+  'trip.confirm.deletePlaceBooked': 'Đêm đã đặt tại “{name}” sẽ mất cùng với địa điểm, kèm theo đặt chỗ “{booking}” và mọi chi phí liên quan.',
 };
 export default trip;

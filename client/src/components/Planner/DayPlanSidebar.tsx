@@ -9,6 +9,7 @@ import { avatarSrc } from '../../utils/avatarSrc'
 import { safeHttpUrl } from '../../utils/safeUrl'
 import { ChevronDown, ChevronRight, ChevronUp, Compass, Navigation, RotateCcw, ExternalLink, Clock, Pencil, GripVertical, Ticket, Plus, FileText, Trash2, Car, Lock, Hotel, Footprints, Route as RouteIcon, Bookmark, StickyNote, TramFront, Zap } from 'lucide-react'
 import { type PickedPlace } from './TransitSearchPanel'
+import { buildTransitLeg, buildTransitNameIndex } from './transitLeg'
 import { assignmentsApi, reservationsApi, daysApi } from '../../api/client'
 import { calculateRouteWithLegs, optimizeRoute, generateGoogleMapsUrl, generateCoMapsUrl, type NamedWaypoint } from '../Map/RouteCalculator'
 import GoogleMapsIcon from '../shared/GoogleMapsIcon'
@@ -492,6 +493,26 @@ function useDayPlanSidebar(props: DayPlanSidebarProps) {
       dayId,
       getDisplayTime: getDisplayTimeForDay,
     })
+
+  // The list is a filtered view of the day, and the store is not: assignPlaceToDay
+  // and moveAssignment splice into the full day, hidden rows included, and persist
+  // the result. A position counted over the rows on screen therefore lands one slot
+  // early for every hidden row above the target. So a drop names the row it should
+  // land ahead of, and what goes to the store is that row's slot in the full day,
+  // in the order the list reads it. No row (an empty day, a note under the last
+  // stop) means the end of the full day.
+  const storedPositionBefore = (dayId: number, target: { id: number } | null | undefined): number => {
+    const stored = (assignments[String(dayId)] || []).slice().sort((a, b) => a.order_index - b.order_index)
+    const idx = target ? stored.findIndex(a => a.id === target.id) : -1
+    return idx >= 0 ? idx : stored.length
+  }
+
+  // The stop a drop on a note lands ahead of: the next place below the note.
+  const placeBelowNote = (dayId: number, noteId: number): Assignment | undefined => {
+    const tm = getMergedItems(dayId)
+    const noteIdx = tm.findIndex(i => i.type === 'note' && i.data.id === noteId)
+    return noteIdx < 0 ? undefined : tm.slice(noteIdx + 1).find(i => i.type === 'place')?.data
+  }
 
   // Pre-compute merged items for all days so the render loop doesn't recompute on unrelated state changes (e.g. hover)
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1189,6 +1210,8 @@ function useDayPlanSidebar(props: DayPlanSidebarProps) {
     computeTransportPosition,
     initTransportPositions,
     getMergedItems,
+    storedPositionBefore,
+    placeBelowNote,
     mergedItemsMap,
     applyMergedOrder,
     handleMergedDrop,
@@ -1387,6 +1410,8 @@ const DayPlanSidebar = React.memo(function DayPlanSidebar(props: DayPlanSidebarP
     computeTransportPosition,
     initTransportPositions,
     getMergedItems,
+    storedPositionBefore,
+    placeBelowNote,
     mergedItemsMap,
     applyMergedOrder,
     handleMergedDrop,
@@ -1434,61 +1459,18 @@ const DayPlanSidebar = React.memo(function DayPlanSidebar(props: DayPlanSidebarP
     })
   }
 
-  // A connector's endpoints carry only coordinates (RouteSegment.from/to, both
-  // [lat, lng]); resolve them back to the NAMES the transit search shows by indexing
-  // every located place, hotel and booking endpoint on the trip. Name is a property
-  // of a coordinate, so a trip-wide index is fine; a connector only renders when both
-  // ends are located, so a coordinate that misses the index is rare (nameless pick).
-  const transitNameIndex = useMemo(() => {
-    const m = new Map<string, string>()
-    const put = (lat?: number | null, lng?: number | null, name?: string | null) => {
-      if (lat == null || lng == null || !name) return
-      const k = `${lat},${lng}`
-      if (!m.has(k)) m.set(k, name)
-    }
-    for (const list of Object.values(assignments)) {
-      for (const a of list) put(a.place?.lat, a.place?.lng, a.place?.name)
-    }
-    for (const acc of accommodations) put(acc.place_lat, acc.place_lng, acc.place_name)
-    for (const r of reservations) {
-      for (const ep of (r.endpoints || [])) put(ep.lat, ep.lng, ep.name)
-    }
-    return m
-  }, [assignments, accommodations, reservations])
-
-  // The leg's departure time must be resolved WITHIN its day: the same located POI can
-  // be revisited on another day at a different time (a supported pattern), so a
-  // trip-wide coordinate index would return the wrong day's time. Scope to this day's
-  // assignments (and the reservations that touch it) so a revisit keeps its own time.
-  const originDepartureTime = (originKey: string, dayId: number): string | null => {
-    for (const a of assignments[String(dayId)] ?? []) {
-      if (a.place?.lat != null && a.place?.lng != null && `${a.place.lat},${a.place.lng}` === originKey) return a.place.place_time ?? null
-    }
-    for (const r of reservations) {
-      if (r.day_id !== dayId && r.end_day_id !== dayId) continue
-      for (const ep of (r.endpoints || [])) {
-        if (ep.lat != null && ep.lng != null && `${ep.lat},${ep.lng}` === originKey) return ep.local_time ?? null
-      }
-    }
-    return null
-  }
-
-  // Build the "public transport" prefill for a leg from its RouteSegment: MOTIS is
-  // driven off the coordinates, the names come from the index and the departure time
-  // from the origin's own day. Accepts 'H:mm' or 'HH:mm[:ss]', normalised to 'HH:mm'.
-  const buildTransitLeg = (seg: RouteSegment | undefined, dayId: number): { from: PickedPlace; to: PickedPlace; time: string | null } | null => {
-    if (!seg?.from || !seg?.to) return null
-    const pick = (c: [number, number]): PickedPlace => ({ name: transitNameIndex.get(`${c[0]},${c[1]}`) || '', lat: c[0], lng: c[1] })
-    const rawTime = originDepartureTime(`${seg.from[0]},${seg.from[1]}`, dayId)
-    const m = rawTime ? /^(\d{1,2}):(\d{2})/.exec(rawTime) : null
-    return { from: pick(seg.from), to: pick(seg.to), time: m ? `${m[1].padStart(2, '0')}:${m[2]}` : null }
-  }
+  // Coordinates back to names for the transit search, over every located place,
+  // hotel and booking endpoint on the trip (see transitLeg.ts).
+  const transitNameIndex = useMemo(
+    () => buildTransitNameIndex(assignments, accommodations, reservations),
+    [assignments, accommodations, reservations],
+  )
 
   // The extra connector-menu entry (#1281 follow-up): search public transit for this
   // leg instead of drawing a road route. Only when a handler is wired (day has dates).
   const transitLegMenuItem = (dayId: number, seg?: RouteSegment) => {
     if (!onPlanTransitLeg) return []
-    const leg = buildTransitLeg(seg, dayId)
+    const leg = buildTransitLeg(seg, dayId, transitNameIndex, assignments, reservations)
     if (!leg) return []
     return [{ label: t('transit.title'), icon: TramFront, onClick: () => onPlanTransitLeg({ dayId, from: leg.from, to: leg.to, time: leg.time }) }]
   }
@@ -2059,8 +2041,7 @@ const DayPlanSidebar = React.memo(function DayPlanSidebar(props: DayPlanSidebarP
                               e.preventDefault(); e.stopPropagation()
                               const { placeId, assignmentId: fromAssignmentId, noteId, reservationId: fromReservationId, fromDayId, phase } = getDragData(e)
                               if (placeId) {
-                                const pos = placeItems.findIndex(i => i.data.id === assignment.id)
-                                onAssignToDay?.(Number.parseInt(placeId), day.id, pos >= 0 ? pos : undefined)
+                                onAssignToDay?.(Number.parseInt(placeId), day.id, storedPositionBefore(day.id, assignment))
                                 setDropTargetKey(null); window.__dragData = null
                               } else if (fromReservationId && fromDayId !== day.id) {
                                 const r = reservations.find(x => x.id === Number(fromReservationId))
@@ -2069,8 +2050,7 @@ const DayPlanSidebar = React.memo(function DayPlanSidebar(props: DayPlanSidebarP
                               } else if (fromReservationId) {
                                 handleMergedDrop(day.id, 'transport', Number(fromReservationId), 'place', assignment.id)
                               } else if (fromAssignmentId && fromDayId !== day.id) {
-                                const toIdx = getDayAssignments(day.id).findIndex(a => a.id === assignment.id)
-                                tripActions.moveAssignment(tripId, Number(fromAssignmentId), fromDayId, day.id, toIdx).catch((err: unknown) => toast.error(err instanceof Error ? err.message : t('common.unknownError')))
+                                tripActions.moveAssignment(tripId, Number(fromAssignmentId), fromDayId, day.id, storedPositionBefore(day.id, assignment)).catch((err: unknown) => toast.error(err instanceof Error ? err.message : t('common.unknownError')))
                                 setDraggingId(null); setDropTargetKey(null); dragDataRef.current = null
                               } else if (fromAssignmentId) {
                                 handleMergedDrop(day.id, 'place', Number(fromAssignmentId), 'place', assignment.id)
@@ -2659,12 +2639,9 @@ const DayPlanSidebar = React.memo(function DayPlanSidebar(props: DayPlanSidebarP
                             const { placeId, noteId: fromNoteId, assignmentId: fromAssignmentId, reservationId: fromReservationId, fromDayId, phase } = getDragData(e)
                             if (placeId) {
                               // New place dropped onto a note: insert it among the
-                              // assignments at the note's position (after the places
-                              // above it), so it lands right where the note sits.
-                              const tm = getMergedItems(day.id)
-                              const noteIdx = tm.findIndex(i => i.type === 'note' && i.data.id === note.id)
-                              const pos = tm.slice(0, noteIdx).filter(i => i.type === 'place').length
-                              onAssignToDay?.(Number.parseInt(placeId), day.id, pos)
+                              // assignments at the note's position (ahead of the first
+                              // place below it), so it lands right where the note sits.
+                              onAssignToDay?.(Number.parseInt(placeId), day.id, storedPositionBefore(day.id, placeBelowNote(day.id, note.id)))
                               setDropTargetKey(null); window.__dragData = null
                             } else if (fromReservationId && fromDayId !== day.id) {
                               const r = reservations.find(x => x.id === Number(fromReservationId))
@@ -2681,10 +2658,7 @@ const DayPlanSidebar = React.memo(function DayPlanSidebar(props: DayPlanSidebarP
                             } else if (fromNoteId && fromNoteId !== String(note.id)) {
                               handleMergedDrop(day.id, 'note', Number(fromNoteId), 'note', note.id)
                             } else if (fromAssignmentId && fromDayId !== day.id) {
-                              const tm = getMergedItems(day.id)
-                              const noteIdx = tm.findIndex(i => i.type === 'note' && i.data.id === note.id)
-                              const toIdx = tm.slice(0, noteIdx).filter(i => i.type === 'place').length
-                              tripActions.moveAssignment(tripId, Number(fromAssignmentId), fromDayId, day.id, toIdx).catch((err: unknown) => toast.error(err instanceof Error ? err.message : t('common.unknownError')))
+                              tripActions.moveAssignment(tripId, Number(fromAssignmentId), fromDayId, day.id, storedPositionBefore(day.id, placeBelowNote(day.id, note.id))).catch((err: unknown) => toast.error(err instanceof Error ? err.message : t('common.unknownError')))
                               setDraggingId(null); setDropTargetKey(null)
                             } else if (fromAssignmentId) {
                               handleMergedDrop(day.id, 'place', Number(fromAssignmentId), 'note', note.id)

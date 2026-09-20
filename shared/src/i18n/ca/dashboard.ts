@@ -75,6 +75,7 @@ const dashboard: TranslationStrings = {
   'dashboard.coverRemoveError': 'Error en eliminar la imatge',
   'dashboard.titleRequired': 'El títol és obligatori',
   'dashboard.endDateError': "La data de fi ha de ser posterior a la d'inici",
+  'dashboard.tripTooLong': 'Un viatge pot durar com a màxim {days} dies',
   'dashboard.greeting.morning': 'Bon dia,',
   'dashboard.greeting.afternoon': 'Bona tarda,',
   'dashboard.greeting.evening': 'Bona nit,',

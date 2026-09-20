@@ -54,12 +54,21 @@ Click **Add expense**, or the pencil beside a row, to open the expense editor:
 | Who paid? | Who actually put the money down — see [Who paid](#who-paid). |
 | Split | How the total is shared out — see [Splitting costs](#splitting-costs). |
 | Note | Free-text note, shown on the row. |
+| Receipts & Invoices | Images and PDFs attached to the expense, several per expense. See [Receipts and invoices](#receipts-and-invoices). |
 
 ### Expenses linked to a booking or a place
 
 An expense can hang off a **booking** (reservation or transport) or off a **place** — both offer a **Create expense** button in their form, which saves the record first and then opens the expense editor for it. A linked expense is an ordinary expense: it takes a payer, a split, a date and a currency like any other, and it shows up in the settlement.
 
 Deleting the booking or the place deletes its linked expense with it. Removing the expense from the record's Costs block deletes only the expense and leaves the record standing.
+
+### Receipts and invoices
+
+An expense can carry the receipt or invoice behind it. **Attach receipt / invoice** in the expense editor opens the file picker for images and PDFs, and several files can go on one expense. They are uploaded when the expense is saved, land in the trip's Files with a link to the expense, and are listed in the editor's **Receipts & Invoices** block from then on. If the save fails after the upload, the uploaded files are taken back out again; any that could not be removed are reported, so you can delete them in the Files tab.
+
+A row with receipts shows a **Receipts** chip beside the name, with the count when there is more than one. Click it to open the viewer: it shows one receipt at a time, pages through them with the **arrow keys**, and offers a download for a PDF.
+
+**Remove receipt** in the editor only unlinks the file from the expense. The file itself stays on the trip, because editing an expense (`budget_edit`) does not carry the file permission: to get rid of the file, delete it in the Files tab, which needs `file_delete`. Uploading a receipt goes through the trip's file upload, so it needs `file_upload` on top of `budget_edit`. A file that is also linked to a place or a booking keeps those links. See [Documents-and-Files](Documents-and-Files).
 
 ## Who paid
 

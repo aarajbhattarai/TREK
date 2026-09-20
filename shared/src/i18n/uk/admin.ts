@@ -805,5 +805,6 @@ const admin: TranslationStrings = {
   'admin.placesUsageTitle': 'Для чого використовується ключ',
   'admin.mapsKeyHintShort': 'Додає фото, оцінки та години роботи. Кожен запит тоді йде до Google.',
   'admin.amapKeyHintShort': 'Для пошуку місць у материковому Китаї. Потрібен ключ вебсервісу, а не ключ JS API.',
+  'admin.collab.links.subtitle': 'Спільні посилання та закладки',
 };
 export default admin;

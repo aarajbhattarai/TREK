@@ -10,7 +10,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 // Mutable, so the instance URL and the operator's own index can be set per test.
 const { env } = vi.hoisted(() => ({
   env: {
-    maps: { trekPlacesUrl: '' },
+    maps: { trekPlacesUrl: '', trekPlacesEnabled: true },
     app: { appUrl: 'https://trip.example.org', port: 3001 },
     http: { allowedOriginsRaw: '' },
   },
@@ -112,6 +112,7 @@ beforeEach(() => {
   // Process state, so it leaks between cases unless it is cleared.
   resetTrekPlacesBreaker();
   env.maps.trekPlacesUrl = '';
+  env.maps.trekPlacesEnabled = true;
   env.app.appUrl = 'https://trip.example.org';
   env.app.port = 3001;
   env.http.allowedOriginsRaw = '';
@@ -436,6 +437,32 @@ describe('trekPlacesById', () => {
     stubFetch({ place: PLACE });
     await trekPlacesById('a/b c');
     expect(calls[0].url).toContain('/v1/place/a%2Fb%20c');
+  });
+});
+
+describe('the switch', () => {
+  it('lets nothing leave once the operator turned the index off, a lookup by id included', async () => {
+    // TREK_PLACES_ENABLED=false is a promise about egress. The service checks
+    // it before each call it makes; this is the one place every request passes,
+    // so a caller that did not is stopped here rather than at the firewall.
+    env.maps.trekPlacesEnabled = false;
+    stubFetch({ place: PLACE });
+
+    await expect(trekPlacesById('abc-123')).rejects.toThrow('switched off');
+    await expect(trekPlacesSearch('osteria')).rejects.toThrow('switched off');
+    await expect(trekPlacesNearby(54, 12)).rejects.toThrow('switched off');
+    await expect(trekPlacesArea(BOX)).rejects.toThrow('switched off');
+    expect(calls).toEqual([]);
+  });
+
+  it('is not an outage: the refusal never opens the breaker', async () => {
+    env.maps.trekPlacesEnabled = false;
+    for (let i = 0; i < 6; i++) await trekPlacesById('abc-123').catch(() => null);
+
+    env.maps.trekPlacesEnabled = true;
+    stubFetch({ place: PLACE });
+    await expect(trekPlacesById('abc-123')).resolves.toEqual(PLACE);
+    expect(calls).toHaveLength(1);
   });
 });
 

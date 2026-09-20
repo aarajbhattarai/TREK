@@ -17,7 +17,7 @@ The scopes required for Mapbox GL are:
 
 ## Satellite view
 
-A round button in the bottom-left corner of the Leaflet map flips the base layer between the normal map tiles and **satellite** imagery (ESRI World Imagery — no API key needed, usable up to zoom 19). The icon always shows the layer it switches to. Your choice is stored on your account (`map_base_layer`), so it carries over to every trip and survives a reload. Markers, route lines, tracks and booking overlays are drawn on top of either layer.
+A round button in the bottom-left corner of the map flips the base layer between the normal map tiles and **satellite** imagery (ESRI World Imagery — no API key needed, usable up to zoom 19). The icon always shows the layer it switches to. The button is on all three renderers: Leaflet swaps its tile layer for the imagery, while MapLibre GL and Mapbox GL put the same imagery on as a raster layer of their own beneath everything TREK draws, so the route, the pins and the tracks stay on top of it. Your choice is stored on your account (`map_base_layer`), the same setting whichever renderer you use, so it carries over to every trip and survives a reload. Markers, route lines, tracks and booking overlays are drawn on top of either layer.
 
 ## Place markers
 
@@ -44,7 +44,7 @@ A card above the button lists the days: each one by its title, or by its number 
 
 The total is real routed distance summed over every leg — road geometry from the router, not straight lines between stops — which is what makes it worth building a fuel estimate on. It arrives a few legs at a time: while they are still coming in the total is followed by an ellipsis to say it is a partial sum, and it settles once every leg has answered. A leg the router refuses keeps its straight line on the map and contributes nothing to the total, so a trip with an unroutable hop reads low rather than wrong. Days with fewer than two located stops have no route and are left out of the list entirely.
 
-Road trip mode already draws the whole trip its own way, so the button is not offered while it is on.
+[Road trip mode](Road-Trip) already draws the whole trip its own way, so the button is not offered while it is on.
 
 ## GPX tracks
 

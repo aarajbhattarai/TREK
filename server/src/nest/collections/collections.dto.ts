@@ -11,6 +11,7 @@ import {
   collectionSetStatusRequestSchema,
   collectionSetStatusManyRequestSchema,
   collectionSetStatusFromTripRequestSchema,
+  collectionImportIntoRequestSchema,
   collectionCopyToTripRequestSchema,
   collectionInviteRequestSchema,
   collectionInviteActionRequestSchema,
@@ -21,6 +22,7 @@ import {
   collectionLabelUpdateRequestSchema,
   collectionLabelAssignRequestSchema,
   collectionImportRequestSchema,
+  collectionGpxReadRequestSchema,
 } from '@trek/shared';
 
 /**
@@ -41,6 +43,7 @@ export class CollectionPlaceUpdateDto extends createZodDto(collectionPlaceUpdate
 export class CollectionSetStatusDto extends createZodDto(collectionSetStatusRequestSchema) {}
 export class CollectionSetStatusManyDto extends createZodDto(collectionSetStatusManyRequestSchema) {}
 export class CollectionSetStatusFromTripDto extends createZodDto(collectionSetStatusFromTripRequestSchema) {}
+export class CollectionImportIntoDto extends createZodDto(collectionImportIntoRequestSchema) {}
 export class CollectionCopyToTripDto extends createZodDto(collectionCopyToTripRequestSchema) {}
 export class CollectionInviteDto extends createZodDto(collectionInviteRequestSchema) {}
 export class CollectionInviteActionDto extends createZodDto(collectionInviteActionRequestSchema) {}
@@ -51,3 +54,4 @@ export class CollectionLabelCreateDto extends createZodDto(collectionLabelCreate
 export class CollectionLabelUpdateDto extends createZodDto(collectionLabelUpdateRequestSchema) {}
 export class CollectionLabelAssignDto extends createZodDto(collectionLabelAssignRequestSchema) {}
 export class CollectionImportDto extends createZodDto(collectionImportRequestSchema) {}
+export class CollectionGpxReadDto extends createZodDto(collectionGpxReadRequestSchema) {}

@@ -169,14 +169,22 @@ export class DawarichService {
       // instance's credential somewhere it was never issued for, so the key goes
       // with the host — and only with the host: correcting a typo in the path,
       // or adding a trailing slash, keeps it.
-      if (newKey === undefined && movedHost(previousUrl, trimmedUrl)) {
+      //
+      // What the old instance answered goes with the host regardless of the
+      // key: its probed capabilities and its sync history describe a server
+      // this row no longer points at, and a fresh key does not make them true
+      // of the new one.
+      if (movedHost(previousUrl, trimmedUrl)) {
         this.db.run(
           `UPDATE dawarich_connections
-              SET api_key = NULL, capabilities = NULL, last_sync_state = 'never',
+              SET capabilities = NULL, last_sync_state = 'never',
                   last_sync_error = NULL, last_sync_at = NULL
             WHERE user_id = ?`,
           userId,
         );
+        if (newKey === undefined) {
+          this.db.run('UPDATE dawarich_connections SET api_key = NULL WHERE user_id = ?', userId);
+        }
       }
 
       // Clearing the address leaves a key that can no longer be used for
@@ -213,6 +221,11 @@ export class DawarichService {
    * Try the connection as it is about to be saved — with the typed key if there
    * is one, otherwise with the stored one.
    *
+   * The stored one only for the host it was stored against. `saveSettings`
+   * drops the key on a host change for a reason, and a test button that still
+   * carried it to whatever address was just typed would post the credential
+   * at a stranger's server before the save ever got the chance to refuse.
+   *
    * Answers 200 with `connected: false` rather than throwing, because "wrong
    * key" is an answer the form has to render, not a server error.
    */
@@ -225,7 +238,16 @@ export class DawarichService {
     const typedKey = (apiKey || '').trim();
     const stored = this.getCredentials(userId);
     const baseUrl = (url || '').trim() || stored?.baseUrl || '';
-    const key = typedKey && typedKey !== DAWARICH_KEY_MASK ? typedKey : stored?.apiKey;
+    const typed = typedKey && typedKey !== DAWARICH_KEY_MASK ? typedKey : '';
+
+    if (!typed && stored && movedHost(stored.baseUrl, baseUrl)) {
+      return {
+        connected: false,
+        error: 'not_connected',
+        errorDetail: `The stored key was issued for ${stored.baseUrl}. Enter the key for this address to test it.`,
+      };
+    }
+    const key = typed || stored?.apiKey;
 
     if (!baseUrl || !key) {
       return { connected: false, error: 'not_connected' };

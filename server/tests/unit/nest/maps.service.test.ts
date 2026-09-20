@@ -904,6 +904,19 @@ describe('fetchOverpassDetails (fetch stubbed)', () => {
     expect(result).toBeNull();
   });
 
+  it('MAPS-032b: refuses an id that is not a number, without sending anything', async () => {
+    // The id is interpolated into Overpass QL. Anything past the digits is a
+    // statement of its own, run on the mirror under TREK's shared user agent:
+    // this one turns a millisecond lookup into a global scan capped only by the
+    // query's own five second timeout.
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    for (const bad of ['1);nwr["amenity"](-90,-180,90,180', '12345;out geom', '', ' 1', '1e3', '-5']) {
+      expect(await svc.fetchOverpassDetails('node', bad), bad).toBeNull();
+    }
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it('MAPS-033: returns null when fetch throws', async () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Network error')));
     const result = await svc.fetchOverpassDetails('node', '99999');
@@ -1717,6 +1730,27 @@ describe('getPlaceDetails (fetch stubbed)', () => {
     const result = await svc.getPlaceDetails(1, 'node:99999');
     expect((result.place as any).source).toBe('openstreetmap');
     expect((result.place as any).website).toBeNull();
+  });
+
+  it('MAPS-040c: an OSM id with anything but digits after the colon is no place, and asks nobody', async () => {
+    // The route takes the id as a path segment and nothing validates it before
+    // it reaches here. Split at the colon, the rest went into an Overpass query
+    // as it was and to Nominatim as an osm_ids value, so a doctored id ran a
+    // query of its own on the mirror. A coordinate pseudo-id and a legacy image
+    // URL carry a colon too and have no details source either way.
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    for (const id of [
+      'node:1);nwr["amenity"](-90,-180,90,180',
+      'way:12345;out geom',
+      'relation:',
+      'node:abc',
+      'coords:48.8,2.3',
+      'https://example.test/pic.jpg',
+    ]) {
+      await expect(svc.getPlaceDetails(1, id), id).resolves.toEqual({ place: null });
+    }
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   // A Google id has no OpenStreetMap equivalent, so without a key there is

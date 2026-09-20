@@ -93,5 +93,10 @@ const collab: TranslationStrings = {
   'collab.polls.countdownHoursMinutes': '{h}h {m}m restants',
   'collab.polls.countdownMinutes': '{m}m restants',
   'collab.polls.clearDeadline': 'Esborra la data límit',
+  'collab.chat.imageLimit': 'Pots adjuntar fins a {max} imatges per missatge',
+  'collab.chat.uploading': 'Pujant {percent} %',
+  'collab.chat.attachImages': 'Adjunta imatges',
+  'collab.chat.attachedImage': 'Imatge adjunta',
+  'collab.chat.closeImage': 'Tanca la imatge',
 };
 export default collab;

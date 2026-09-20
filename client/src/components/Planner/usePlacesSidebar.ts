@@ -307,16 +307,24 @@ export function usePlacesSidebar(props: PlacesSidebarProps) {
     lastAutoScrolledPlaceIdRef.current = props.selectedPlaceId
   }, [filtered, props.selectedPlaceId])
 
-  const isAssignedToSelectedDay = (placeId) =>
-    selectedDayId && (assignments[String(selectedDayId)] || []).some(a => a.place?.id === placeId)
-
   const selectedDayIdRef = useRef<number | null>(selectedDayId)
   useEffect(() => { selectedDayIdRef.current = selectedDayId }, [selectedDayId])
 
+  // The day list handed in is the one the planner shows, and in the day view that
+  // list leaves out the stop a booking wrote. The store still holds it, so the set
+  // that decides between "in the day" and the add button reads the day from there
+  // as well: on the list alone the hotel of a booked night offered "add to day" on
+  // its own check-in day, and taking that offer put a second row beside the night.
+  const storedDayAssignments = useTripStore((s) => (selectedDayId ? s.assignments[String(selectedDayId)] : undefined))
+
   const inDaySet = useMemo(() => {
     if (!selectedDayId) return new Set<number>()
-    return new Set<number>((assignments[String(selectedDayId)] || []).map((a: any) => a.place?.id).filter(Boolean))
-  }, [assignments, selectedDayId])
+    const ids = new Set<number>((assignments[String(selectedDayId)] || []).map((a: any) => a.place?.id).filter(Boolean))
+    for (const a of storedDayAssignments ?? []) if (a.place?.id) ids.add(a.place.id)
+    return ids
+  }, [assignments, storedDayAssignments, selectedDayId])
+
+  const isAssignedToSelectedDay = (placeId) => inDaySet.has(placeId)
 
   const openContextMenu = useCallback((e: React.MouseEvent, place: Place) => {
     const selDayId = selectedDayIdRef.current

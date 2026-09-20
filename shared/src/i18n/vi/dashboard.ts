@@ -95,6 +95,7 @@ const dashboard: TranslationStrings = {
   'dashboard.coverRemoveError': 'Không thể xóa',
   'dashboard.titleRequired': 'Tiêu đề là bắt buộc',
   'dashboard.endDateError': 'Ngày kết thúc phải sau ngày bắt đầu',
+  'dashboard.tripTooLong': 'Một chuyến đi có thể kéo dài tối đa {days} ngày',
   'dashboard.dateShiftTitle': 'Ngày bắt đầu mới',
   'dashboard.dateShiftIntro':
     'Bạn đã thay đổi thời điểm bắt đầu chuyến đi. Các kế hoạch của bạn nên theo ngày mới như thế nào?',

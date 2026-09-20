@@ -77,7 +77,9 @@ A request for an account that can actually be reset writes **two** rows: one wit
 | `admin.places_autocomplete` | Places autocomplete feature toggled |
 | `admin.places_details` | Places details feature toggled |
 | `admin.places_enrich` | Place enrichment feature toggled |
+| `admin.place_shadow` | Place Search Log toggled (`enabled` in details) |
 | `admin.collab_features` | Collaboration features updated |
+| `admin.transit_provider` | Public transit backend changed (`provider` in details: `transitous` or `google`) |
 | `admin.packing_template_create` | Packing template created |
 | `admin.packing_template_delete` | Packing template deleted |
 | `admin.plugin_retrust` | Plugin signing key re-trusted (records the old and the new key fingerprint) |
@@ -135,6 +137,8 @@ A request for an account that can actually be reset writes **two** rows: one wit
 |---|---|
 | `immich.private_ip_configured` | Immich URL saved that resolves to a private IP |
 | `airtrail.private_ip_configured` | AirTrail URL saved that resolves to a private IP |
+| `dawarich.private_ip_configured` | Dawarich URL saved that resolves to a private IP |
+| `dawarich.disconnected` | A user disconnected their Dawarich instance |
 
 ## Log columns
 

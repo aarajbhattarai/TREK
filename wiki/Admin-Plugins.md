@@ -70,7 +70,7 @@ Enabling can be refused for good reasons. The first three are version gates that
 
 Installed-but-disabled dependencies are enabled automatically as a cascade, and a toast tells you which.
 
-The row's **⋯** menu offers **Restart** (active plugins only), **View error log**, **Allowed hosts**, links to the **Source repository** and **Report an issue** for registry plugins, and **Delete**.
+The row's **⋯** menu offers **Restart** (active plugins only), **Instance settings** (plugins with instance-wide settings or actions), **View error log**, **Allowed hosts**, **Change version** (registry plugins only), links to the **Source repository** and **Report an issue** for registry plugins, and **Delete**.
 
 ## Updating
 

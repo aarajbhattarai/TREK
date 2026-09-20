@@ -104,7 +104,7 @@ Between them they now catch, **offline**, nearly everything the registry rejects
   the network allow-list and the iframe CSP from those permissions only and never reads
   `egress[]`, so such a host is silently unreachable at runtime
 - a permission TREK doesn't know — the SDK and registry CI check against the same
-  64-entry list the host enforces, so a typo'd permission fails here instead of at
+  65-entry list the host enforces, so a typo'd permission fails here instead of at
   install on every instance (the registry's copy is a manually regenerated snapshot,
   so a brand-new TREK permission can briefly fail registry CI even though `validate`
   accepts it — that's the snapshot lagging, not a typo)

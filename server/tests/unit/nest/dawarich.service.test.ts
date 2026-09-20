@@ -798,6 +798,46 @@ describe('DawarichService saveSettings', () => {
       capabilities: JSON.stringify(FULL_CAPS),
     });
   });
+
+  it('DAWARICH-SVC-072: a key typed with the host change keeps the key but still drops what the old instance answered', async () => {
+    // The probe blob and the sync history describe the server the row used to
+    // point at. Carrying them over would show the old instance's version and
+    // "last sync ok" on a connection that has never been asked anything, and
+    // the tracks layer would skip an endpoint the new instance does have.
+    connect(USER, {
+      url: 'https://old.example',
+      apiKey: 'stored-key',
+      lastSyncAt: '2026-09-12T04:15:00.000Z',
+      lastSyncState: 'ok',
+      lastSyncError: 'rate_limited',
+      capabilities: JSON.stringify(FULL_CAPS),
+    });
+
+    await svc.saveSettings(USER, 'https://new.example', 'minted-for-new', false, true, IP);
+
+    expect(svc.getCredentials(USER)?.apiKey).toBe('minted-for-new');
+    const stored = row();
+    expect(stored?.url).toBe('https://new.example');
+    expect(stored?.capabilities).toBeNull();
+    expect(stored?.last_sync_state).toBe('never');
+    expect(stored?.last_sync_error).toBeNull();
+    expect(stored?.last_sync_at).toBeNull();
+  });
+
+  it('DAWARICH-SVC-073: a new key on the same host keeps the probe, because it describes the host and not the key', async () => {
+    connect(USER, {
+      url: 'https://d.example/api',
+      apiKey: 'stored-key',
+      lastSyncState: 'ok',
+      capabilities: JSON.stringify(FULL_CAPS),
+    });
+
+    await svc.saveSettings(USER, 'https://d.example/', 'rotated-key', false, true, IP);
+
+    expect(svc.getCredentials(USER)?.apiKey).toBe('rotated-key');
+    expect(row()?.capabilities).toBe(JSON.stringify(FULL_CAPS));
+    expect(row()?.last_sync_state).toBe('ok');
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -986,6 +1026,50 @@ describe('DawarichService testConnection', () => {
       error: 'not_connected',
     });
     expect(client.probe).not.toHaveBeenCalled();
+  });
+
+  it('DAWARICH-SVC-105: a blank key field against a different host than the stored one is refused before anything is sent', async () => {
+    // The form prefills the address and never the key, so "retype the URL and
+    // press Test" is the ordinary way to move an instance. Falling back to the
+    // stored key here would carry it to whatever host was just typed, which is
+    // exactly what saveSettings refuses to persist.
+    connect(USER, { url: 'https://old.example', apiKey: 'stored-key' });
+
+    const out = await svc.testConnection(USER, 'https://someone-elses.example', undefined, false);
+
+    expect(out).toMatchObject({ connected: false, error: 'not_connected' });
+    expect(out.errorDetail).toContain('https://old.example');
+    expect(client.probe).not.toHaveBeenCalled();
+  });
+
+  it('DAWARICH-SVC-106: the mask against a different host is a blank field, not a key', async () => {
+    connect(USER, { url: 'https://old.example', apiKey: 'stored-key' });
+
+    const out = await svc.testConnection(USER, 'https://old.example:8443', DAWARICH_KEY_MASK, false);
+
+    expect(out).toMatchObject({ connected: false, error: 'not_connected' });
+    expect(client.probe).not.toHaveBeenCalled();
+  });
+
+  it('DAWARICH-SVC-107: a path edit on the same origin still tests with the stored key', async () => {
+    // The mirror of 105: the same instance under a corrected path is where the
+    // key was issued, and refusing it would make every trailing-slash edit
+    // demand the key again.
+    connect(USER, { url: 'https://d.example/api', apiKey: 'stored-key' });
+
+    const out = await svc.testConnection(USER, 'https://d.example/', undefined, false);
+
+    expect(out.connected).toBe(true);
+    expect(client.probe).toHaveBeenCalledWith({ baseUrl: 'https://d.example/', apiKey: 'stored-key', allowInsecureTls: false });
+  });
+
+  it('DAWARICH-SVC-108: a key typed for the new host is used as typed, so moving an instance and testing it first still works', async () => {
+    connect(USER, { url: 'https://old.example', apiKey: 'stored-key' });
+
+    const out = await svc.testConnection(USER, 'https://new.example', 'minted-for-new', false);
+
+    expect(out.connected).toBe(true);
+    expect(client.probe).toHaveBeenCalledWith({ baseUrl: 'https://new.example', apiKey: 'minted-for-new', allowInsecureTls: false });
   });
 });
 

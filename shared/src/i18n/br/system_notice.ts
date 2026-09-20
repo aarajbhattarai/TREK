@@ -56,20 +56,16 @@ const system_notice: TranslationStrings = {
     'A atualização 3.0.14 detectou um ou mais conflitos de nome de usuário ou e-mail causados por espaços em branco no início ou fim dos valores armazenados. As contas afetadas foram renomeadas automaticamente. Verifique os logs do servidor por linhas começando com **[migration] WHITESPACE COLLISION** para identificar quais contas precisam de revisão.',
   // The release modal. One stable set of keys: each big release swaps the copy in place.
   'system_notice.release_notes.eyebrow': 'Atualização instalada',
-  'system_notice.release_notes.headline': 'Três coisas que o TREK agora faz sozinho.',
-  'system_notice.release_notes.intro':
-    'Uma API de lugares própria, viagens de carro planejadas de ponta a ponta e o seu histórico de localização de volta nas suas mãos.',
+  'system_notice.release_notes.headline': 'Quatro coisas que o TREK agora faz sozinho.',
+  'system_notice.release_notes.intro': 'A sua própria API de locais, road trips planeadas do início ao fim, o seu histórico de localização nas suas mãos, e os seus documentos sincronizados.',
   'system_notice.release_notes.features_label': 'Os destaques',
   'system_notice.release_notes.features_aside': 'E não é só isso',
   'system_notice.release_notes.feature_places_title': 'TREK Places API',
-  'system_notice.release_notes.feature_places_body':
-    'O primeiro planejador de viagens open source que hospeda a própria API de lugares. 73,6 milhões de lugares, reconstruídos todo mês. Sem chave, sem cota.',
+  'system_notice.release_notes.feature_places_body': 'O primeiro planeador de viagens open source com API de locais própria. 73,6 milhões de locais, sem chave, sem quota.',
   'system_notice.release_notes.feature_roadtrip_title': 'Addon Viagem de carro',
-  'system_notice.release_notes.feature_roadtrip_body':
-    'O modo viagem de carro planeja o próprio trajeto: a rota, a distância, as horas de direção e as paradas. É um addon, desligado até que um admin o ative.',
+  'system_notice.release_notes.feature_roadtrip_body': 'Planeia a viagem sozinho: rota, distância, horas e paragens. Desligado até um admin o ativar.',
   'system_notice.release_notes.feature_dawarich_title': 'Integração Dawarich',
-  'system_notice.release_notes.feature_dawarich_body':
-    'A alternativa self-hosted ao Google Timeline, agora visível dentro do TREK. O TREK lê, e apenas lê. Nada nunca é gravado de volta.',
+  'system_notice.release_notes.feature_dawarich_body': 'A alternativa self-hosted ao Google Timeline, agora visível dentro do TREK. O TREK lê, e apenas lê.',
   'system_notice.release_notes.footnote': 'E ainda uma longa lista de mudanças menores em todo o resto do TREK.',
   'system_notice.release_notes.notes_label': 'Notas da versão',
   'system_notice.release_notes.note_eyebrow': 'Uma nota do mantenedor',
@@ -89,5 +85,7 @@ const system_notice: TranslationStrings = {
     'Se o TREK ganhou um lugar nas suas viagens, me pague um café e ajude a fazer a próxima versão acontecer.',
   'system_notice.release_notes.cta_bmc': 'Buy me a coffee',
   'system_notice.release_notes.cta_kofi': 'Apoiar no Ko-fi',
+  'system_notice.release_notes.feature_docsync_title': 'Sincronização de documentos',
+  'system_notice.release_notes.feature_docsync_body': 'Paperless-ngx, Papra, Nextcloud, OpenCloud e Synology Drive. Os documentos de uma viagem fluem nos dois sentidos com o serviço que já usa.',
 };
 export default system_notice;

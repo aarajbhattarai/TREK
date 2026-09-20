@@ -1,4 +1,4 @@
-import { Route } from 'lucide-react'
+import { AlertTriangle, Route } from 'lucide-react'
 import { useTranslation } from '../../i18n'
 import { Tooltip } from '../shared/Tooltip'
 import { profileIcon } from '../Planner/DayPlanSidebarRouteConnector'
@@ -66,6 +66,9 @@ export function TripRouteOverviewPanel({ overview, unit, selectedDayId, onSelect
 }) {
   const { t } = useTranslation()
   if (!overview.days.length) return null
+  // Only once the round is over: while it runs every leg still waiting is unrouted too,
+  // and the ellipsis on the total already says the number is growing.
+  const unrouted = overview.loading ? 0 : (overview.unroutedLegs ?? 0)
 
   return (
     <div
@@ -95,9 +98,23 @@ export function TripRouteOverviewPanel({ overview, unit, selectedDayId, onSelect
           {overview.loading && <span className="text-content-muted" style={{ fontWeight: 400 }}>{' '}…</span>}
         </span>
       </div>
+      {/* A leg the router refused stays a straight line and adds nothing to the sum, so
+          the total is short by however much road those legs are. Said in words rather than
+          left to the reader to notice, because the number is what a fuel estimate starts from. */}
+      {unrouted > 0 && (
+        <div
+          data-testid="trip-overview-unrouted"
+          className="text-warning"
+          style={{ display: 'flex', alignItems: 'flex-start', gap: 6, padding: '0 14px 8px', fontSize: 'calc(11px * var(--fs-scale-caption, 1))' }}
+        >
+          <AlertTriangle size={12} style={{ flexShrink: 0, marginTop: 1 }} aria-hidden />
+          <span>{t('map.overview.unrouted', { count: unrouted })}</span>
+        </div>
+      )}
       <div style={{ maxHeight: 220, overflowY: 'auto', borderTop: '1px solid var(--border-primary)' }}>
         {overview.days.map(day => {
           const label = day.title || t('dayplan.dayN', { n: day.dayNumber })
+          const dayUnrouted = overview.loading ? 0 : (day.unroutedLegs ?? 0)
           const row = (
             <>
               <span style={{ width: 8, height: 8, borderRadius: 999, background: day.color.line, flexShrink: 0 }} aria-hidden />
@@ -110,6 +127,17 @@ export function TripRouteOverviewPanel({ overview, unit, selectedDayId, onSelect
                   return <Icon key={mode} size={12} strokeWidth={2} aria-hidden />
                 })}
               </span>
+              {/* The day's own share of the shortfall, so the reader knows which figure
+                  to distrust rather than only that one of them is off. */}
+              {dayUnrouted > 0 && (
+                <AlertTriangle
+                  size={12}
+                  className="text-warning"
+                  style={{ flexShrink: 0 }}
+                  role="img"
+                  aria-label={t('map.overview.dayUnrouted', { count: dayUnrouted })}
+                />
+              )}
               <span className="text-content-muted" style={{ flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>
                 {formatDistance(day.distance / 1000, unit)}
               </span>

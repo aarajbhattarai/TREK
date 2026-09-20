@@ -69,6 +69,7 @@ describe('systemNoticeDtoSchema', () => {
         features: [
           { iconName: 'Database', titleKey: 'f1t', bodyKey: 'f1b' },
           { iconName: 'Route', visual: 'roadtrip', titleKey: 'f2t', bodyKey: 'f2b' },
+          { iconName: 'FolderSync', visual: 'docsync', layout: 'wide', titleKey: 'f3t', bodyKey: 'f3b' },
         ],
         note: {
           eyebrowKey: 'ne',

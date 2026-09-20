@@ -56,20 +56,16 @@ const system_notice: TranslationStrings = {
     'Aktualizace 3.0.14 zjistila jeden nebo více konfliktů uživatelského jména nebo e-mailu způsobených mezerami na začátku nebo konci uložených hodnot. Dotčené účty byly automaticky přejmenovány. Zkontrolujte protokoly serveru na řádky začínající **[migration] WHITESPACE COLLISION** a zjistěte, které účty vyžadují kontrolu.',
   // The release modal. One stable set of keys: each big release swaps the copy in place.
   'system_notice.release_notes.eyebrow': 'Aktualizace nainstalována',
-  'system_notice.release_notes.headline': 'Tři věci, které TREK teď zvládne sám.',
-  'system_notice.release_notes.intro':
-    'Vlastní API pro místa, cesty autem naplánované od začátku do konce a vaše historie polohy opět ve vašich rukou.',
+  'system_notice.release_notes.headline': 'Čtyři věci, které TREK nyní zvládne sám.',
+  'system_notice.release_notes.intro': 'Vlastní API míst, road tripy naplánované od začátku do konce, historie polohy ve vašich rukou, a dokumenty v synchronizaci.',
   'system_notice.release_notes.features_label': 'Hlavní novinky',
   'system_notice.release_notes.features_aside': 'Zdaleka ne všechno',
   'system_notice.release_notes.feature_places_title': 'TREK Places API',
-  'system_notice.release_notes.feature_places_body':
-    'První open source plánovač cest, který provozuje vlastní API pro místa. 73,6 milionu míst, každý měsíc nově sestavených. Žádný klíč, žádná kvóta.',
+  'system_notice.release_notes.feature_places_body': 'První open source plánovač cest s vlastním API míst. 73,6 milionu míst, bez klíče, bez limitu.',
   'system_notice.release_notes.feature_roadtrip_title': 'Doplněk Cesta autem',
-  'system_notice.release_notes.feature_roadtrip_body':
-    'Režim Cesta autem naplánuje i samotnou jízdu: trasu, vzdálenost, hodiny za volantem i zastávky. Jde o doplněk, který zůstává vypnutý, dokud ho nezapne správce.',
+  'system_notice.release_notes.feature_roadtrip_body': 'Naplánuje jízdu sám: trasu, vzdálenost, hodiny a zastávky. Vypnuto, dokud to admin nezapne.',
   'system_notice.release_notes.feature_dawarich_title': 'Integrace Dawarich',
-  'system_notice.release_notes.feature_dawarich_body':
-    'Self-hosted odpověď na Google Timeline, teď čitelná přímo v TREK. TREK čte, a jen čte. Nic se nikdy nezapisuje zpět.',
+  'system_notice.release_notes.feature_dawarich_body': 'Self-hosted odpověď na Google Timeline, teď čitelná přímo v TREK. TREK čte, a jen čte.',
   'system_notice.release_notes.footnote': 'A k tomu dlouhý seznam menších změn napříč zbytkem TREK.',
   'system_notice.release_notes.notes_label': 'Poznámky k vydání',
   'system_notice.release_notes.note_eyebrow': 'Slovo od autora',
@@ -89,5 +85,7 @@ const system_notice: TranslationStrings = {
     'Pokud si TREK získal místo na vašich cestách, kupte mi kávu a pomozte, aby přišlo i další vydání.',
   'system_notice.release_notes.cta_bmc': 'Buy me a coffee',
   'system_notice.release_notes.cta_kofi': 'Podpořit na Ko-fi',
+  'system_notice.release_notes.feature_docsync_title': 'Synchronizace dokumentů',
+  'system_notice.release_notes.feature_docsync_body': 'Paperless-ngx, Papra, Nextcloud, OpenCloud a Synology Drive. Dokumenty cesty proudí oběma směry s úložištěm, které už provozujete.',
 };
 export default system_notice;

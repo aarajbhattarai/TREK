@@ -769,5 +769,6 @@ const admin: TranslationStrings = {
   'admin.placesUsageTitle': '키를 사용하는 곳',
   'admin.mapsKeyHintShort': '사진, 평점, 영업시간이 추가됩니다. 이후 모든 조회는 Google로 갑니다.',
   'admin.amapKeyHintShort': '중국 본토에서의 장소 검색용. JS API 키가 아니라 웹 서비스 키가 필요합니다.',
+  'admin.collab.links.subtitle': '공유 링크와 북마크',
 };
 export default admin;

@@ -87,5 +87,7 @@ const trip: TranslationStrings = {
   'transit.transfersLabel': '换乘',
   'transit.walkLabel': '步行',
   'transit.searchHint': '搜索真实班次并直接添加到当天行程 — 数据来自 Transitous。',
+  'trip.confirm.deletePlaceNight': '在“{name}”预订的过夜会随该地点一起删除。',
+  'trip.confirm.deletePlaceBooked': '在“{name}”预订的过夜会随该地点一起删除，同时删除预订“{booking}”及其关联的费用。',
 };
 export default trip;

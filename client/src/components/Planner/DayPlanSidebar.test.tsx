@@ -4299,6 +4299,104 @@ describe('DayPlanSidebar', () => {
     fireEvent.dragEnd(row)
     expect(row.style.opacity).toBe('1')
   })
+
+  // ── Drop positions count the rows the list hides ───────────────────────
+  // The stop a booked night wrote is in the day but not in the list. The store
+  // splices into the full day, so a position counted over the visible rows would
+  // land one slot early and reorder would persist it that way.
+
+  /** A day whose first stored row is the hotel a booking put there, hidden from the list. */
+  function dayWithHiddenHotel(dayId: number) {
+    const hotel = buildPlace({ id: 600, name: 'Hotel Adlon', stop_type: 'hotel' })
+    const lunch = buildPlace({ id: 601, name: 'Lunch' })
+    const museum = buildPlace({ id: 602, name: 'Museum' })
+    return {
+      places: [hotel, lunch, museum],
+      assignments: [
+        buildAssignment({ id: 400, day_id: dayId, order_index: 0, place: hotel, accommodation_id: 7 } as never),
+        buildAssignment({ id: 401, day_id: dayId, order_index: 1, place: lunch }),
+        buildAssignment({ id: 402, day_id: dayId, order_index: 2, place: museum }),
+      ],
+    }
+  }
+
+  it('FE-PLANNER-DAYPLAN-210: a place dropped on a row lands ahead of that row in the stored day', () => {
+    const onAssignToDay = vi.fn()
+    const day = buildDay({ id: 10, date: '2025-06-01', title: 'Day 1' })
+    const { places, assignments } = dayWithHiddenHotel(10)
+    render(<DayPlanSidebar {...makeDefaultProps({
+      days: [day], places, assignments: { '10': assignments }, onAssignToDay,
+    })} />)
+    ;(window as any).__dragData = { placeId: '55' }
+    fireEvent.drop(dragRow(screen.getByText('Museum')), { dataTransfer: { getData: vi.fn(() => '') } })
+    // Museum is the second visible row but the third stored one.
+    expect(onAssignToDay).toHaveBeenCalledWith(55, 10, 2)
+
+    ;(window as any).__dragData = { placeId: '55' }
+    fireEvent.drop(dragRow(screen.getByText('Lunch')), { dataTransfer: { getData: vi.fn(() => '') } })
+    expect(onAssignToDay).toHaveBeenLastCalledWith(55, 10, 1)
+    ;(window as any).__dragData = null
+  })
+
+  it('FE-PLANNER-DAYPLAN-211: a stop moved from another day onto a row lands ahead of that row in the stored day', () => {
+    const moveAssignment = vi.fn(async () => undefined)
+    stubTripActions({ moveAssignment })
+    const days = [
+      buildDay({ id: 10, date: '2025-06-01', title: 'Day 1' }),
+      buildDay({ id: 11, date: '2025-06-02', title: 'Day 2' }),
+    ]
+    const source = buildPlace({ id: 1, name: 'Source place' })
+    const { places, assignments } = dayWithHiddenHotel(11)
+    render(<DayPlanSidebar {...makeDefaultProps({
+      days, places: [source, ...places],
+      assignments: { '10': [buildAssignment({ id: 11, day_id: 10, order_index: 0, place: source })], '11': assignments },
+    })} />)
+    fireEvent.dragStart(dragRow(screen.getByText('Source place')), { dataTransfer: emptyDataTransfer })
+    fireEvent.drop(dragRow(screen.getByText('Museum')), { dataTransfer: { getData: vi.fn(() => '') } })
+    expect(moveAssignment).toHaveBeenCalledWith(1, 11, 10, 11, 2)
+  })
+
+  it('FE-PLANNER-DAYPLAN-212: a place dropped on a note lands ahead of the next stop below it, or last', () => {
+    const onAssignToDay = vi.fn()
+    const day = buildDay({ id: 10, date: '2025-06-01', title: 'Day 1' })
+    const { places, assignments } = dayWithHiddenHotel(10)
+    mockDayNotesState.dayNotes = { '10': [
+      buildDayNote({ id: 70, day_id: 10, text: 'Between note', sort_order: 1.5 }),
+      buildDayNote({ id: 71, day_id: 10, text: 'Closing note', sort_order: 5 }),
+    ] }
+    render(<DayPlanSidebar {...makeDefaultProps({
+      days: [day], places, assignments: { '10': assignments }, onAssignToDay,
+    })} />)
+    ;(window as any).__dragData = { placeId: '55' }
+    fireEvent.drop(cardRow(screen.getByText('Between note')), { dataTransfer: { getData: vi.fn(() => '') } })
+    expect(onAssignToDay).toHaveBeenCalledWith(55, 10, 2)
+
+    // Nothing below the closing note, so the stop goes to the end of the stored
+    // day: three rows, the hidden hotel among them.
+    ;(window as any).__dragData = { placeId: '55' }
+    fireEvent.drop(cardRow(screen.getByText('Closing note')), { dataTransfer: { getData: vi.fn(() => '') } })
+    expect(onAssignToDay).toHaveBeenLastCalledWith(55, 10, 3)
+    ;(window as any).__dragData = null
+  })
+
+  it('FE-PLANNER-DAYPLAN-213: a stop moved from another day onto a note lands ahead of the next stop below it', () => {
+    const moveAssignment = vi.fn(async () => undefined)
+    stubTripActions({ moveAssignment })
+    const days = [
+      buildDay({ id: 10, date: '2025-06-01', title: 'Day 1' }),
+      buildDay({ id: 11, date: '2025-06-02', title: 'Day 2' }),
+    ]
+    const source = buildPlace({ id: 1, name: 'Source place' })
+    const { places, assignments } = dayWithHiddenHotel(11)
+    mockDayNotesState.dayNotes = { '11': [buildDayNote({ id: 70, day_id: 11, text: 'Between note', sort_order: 1.5 })] }
+    render(<DayPlanSidebar {...makeDefaultProps({
+      days, places: [source, ...places],
+      assignments: { '10': [buildAssignment({ id: 11, day_id: 10, order_index: 0, place: source })], '11': assignments },
+    })} />)
+    fireEvent.dragStart(dragRow(screen.getByText('Source place')), { dataTransfer: emptyDataTransfer })
+    fireEvent.drop(cardRow(screen.getByText('Between note')), { dataTransfer: { getData: vi.fn(() => '') } })
+    expect(moveAssignment).toHaveBeenCalledWith(1, 11, 10, 11, 2)
+  })
 })
 
 // FE-W5DPS-001 to FE-W5DPS-006 — booking subtitles, the collections entry in the

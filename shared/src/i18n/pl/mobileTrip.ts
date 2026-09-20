@@ -70,5 +70,7 @@ const mobileTrip: TranslationStrings = {
     '1 odcinek miał więcej, niż mieści się w jednej odpowiedzi. Wybierz mniej rodzajów, by zobaczyć resztę.',
   'mobileTrip.rtTruncated.other':
     'Odcinki, na których było więcej, niż mieści się w jednej odpowiedzi: {count}. Wybierz mniej rodzajów, by zobaczyć resztę.',
+  'mobileTrip.rtNoDay': 'Nie wybrano dnia',
+  'mobileTrip.rtNoDayHint': 'Mapa pokazuje całą podróż. Dotknij dnia powyżej, aby zobaczyć jego trasę.',
 };
 export default mobileTrip;

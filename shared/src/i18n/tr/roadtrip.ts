@@ -56,7 +56,7 @@ const roadtrip: TranslationStrings = {
   'roadtrip.window.incomplete': 'Günlük molaları hesaplamak için tüm bağlantı rotaları gereklidir.',
   'roadtrip.window.conflict':
     'Sabit bir saat sürüş ve molalarla çakışıyor. Elle girilen saatler korunur; otomatik planlama duraklatıldı.',
-  'roadtrip.window.tooLong': 'Bu saatler 365 günden fazla ek süre gerektiriyor. Daha uzun bir günlük aralık seçin.',
+  'roadtrip.window.tooLong': 'Bu saatler {days} günden fazla ek süre gerektiriyor. Daha uzun bir günlük aralık seçin.',
   'roadtrip.mode.roadtrip': 'Yol gezisi',
   'roadtrip.mode.days': 'Günler',
   'roadtrip.mode.label': 'Plan görünümü',
@@ -244,8 +244,10 @@ const roadtrip: TranslationStrings = {
   'roadtrip.stop.stay': 'Bu duraktaki süre',
   'roadtrip.stop.pinned': 'Belirlediğiniz saat',
   'roadtrip.stop.computed': 'Sürüşe göre hesaplandı',
+  'roadtrip.stop.endIsLeave': 'Yol gezisinde bu saatte yola çıkılır.',
   'roadtrip.via.hint': 'Rotayı yeniden şekillendirmek için sürükleyin, kaldırmak için sağ tıklayın',
   'roadtrip.warn.late': 'Belirlenen saatten {minutes} dk sonra varış',
+  'roadtrip.warn.missedLeave': 'Belirlenen kalkış saatinden {minutes} dk sonra varış',
   'roadtrip.warn.overnight': 'Ertesi gün',
   'roadtrip.spill.title': '{number}. günden',
   'roadtrip.spill.departs': 'kalkış {time}',
@@ -255,9 +257,18 @@ const roadtrip: TranslationStrings = {
   'roadtrip.stay.custom': 'Dakika',
   'roadtrip.stay.arrive': 'Varis',
   'roadtrip.stay.leave': 'Kalkis',
+  'roadtrip.stay.until': '{time} saatine kadar',
+  'roadtrip.stay.leavesAt': 'Bu ziyaretin bitiş saati var, bu yüzden yolculuk {time} saatinde devam eder.',
+  'roadtrip.stay.dayEndsFirst':
+    'Yolculuk günü {time} saatinden önce bitiyor, bu yüzden yolculuk ertesi sabah devam eder.',
+  'roadtrip.stay.clearLeave': 'Bitiş saatini kaldır',
   'roadtrip.alt.noMotorway': 'Otoyolsuz',
   'roadtrip.alt.noToll': 'Ucretsiz',
   'roadtrip.alt.noFerry': 'Feribotsuz',
   'roadtrip.summary.partial': 'Yolun geri kalanı hâlâ hesaplanıyor',
+  'roadtrip.stay.releaseTitle': 'Konaklama kaldırılsın mı?',
+  'roadtrip.stay.releaseBody': '“{name}” konumundaki gece kaldırılacak. Durak, yolculukta mola olarak kalır.',
+  'roadtrip.stay.releaseBookedBody': '“{name}” konumundaki gece, “{booking}” rezervasyonu ve ona bağlı tüm harcamalarla birlikte kaldırılacak. Durak, yolculukta mola olarak kalır.',
+  'roadtrip.stay.releaseAction': 'Molaya çevir',
 };
 export default roadtrip;

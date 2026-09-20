@@ -72,6 +72,7 @@ vi.mock('../../src/db/database', () => ({
   db, canAccessTrip, isOwner: vi.fn(() => true), getPlaceWithTags, closeDb: () => {}, reinitialize: () => {},
 }));
 vi.mock('../../src/websocket', () => ({ broadcast: vi.fn() }));
+import { broadcast } from '../../src/websocket';
 import { JourneyDomainService } from '../../src/nest/journey/journey-domain.service';
 
 import { PermissionsService } from '../../src/nest/permissions/permissions.service';
@@ -280,6 +281,22 @@ describe('Places e2e (real auth guard + temp SQLite)', () => {
 
     expect(res.status).toBe(200);
     expect(db.prepare('SELECT id FROM budget_items ORDER BY id').all()).toEqual([{ id: 45 }]);
+  });
+
+  it('DELETE :id tells the deleting tab about the expense that went with the place', async () => {
+    // X-Socket-Id keeps a tab from hearing back what it did itself. The tab
+    // removed the place; the expense went on the server alone, so that event
+    // goes out without the filter or the tab keeps the expense until a reload.
+    db.prepare("INSERT INTO places (id, trip_id, name) VALUES (13, 5, 'Louvre')").run();
+    db.prepare("INSERT INTO budget_items (id, trip_id, name, total_price, place_id) VALUES (46, 5, 'Tickets', 34, 13)").run();
+    vi.mocked(broadcast).mockClear();
+
+    const res = await request(server).delete('/api/trips/5/places/13')
+      .set('Cookie', sessionCookie(1)).set('X-Socket-Id', 'tab-1');
+
+    expect(res.status).toBe(200);
+    expect(broadcast).toHaveBeenCalledWith('5', 'place:deleted', { placeId: 13 }, 'tab-1');
+    expect(broadcast).toHaveBeenCalledWith('5', 'budget:deleted', { itemId: 46 }, undefined);
   });
 
   it('404 trip when not accessible', async () => {

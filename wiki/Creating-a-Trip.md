@@ -20,9 +20,9 @@ A short free-text description. It is not shown on the trip card or on the Spotli
 
 ### Dates
 
-Set a **Start date** and **End date** using the date picker. The day count is calculated automatically when both are set.
+Set a **Start date** and **End date** using the date picker. The day count is calculated automatically when both are set. A trip can span up to **999 days**.
 
-On desktop, if you leave **both** dates empty, a separate **Day count** field appears. Enter a number between **1 and 365** to create a date-less itinerary with a fixed number of days. The mobile sheet has no such field: a date-less trip created there always starts with 7 days.
+On desktop, if you leave **both** dates empty, a separate **Day count** field appears. Enter a number between **1 and 999** to create a date-less itinerary with a fixed number of days. The mobile sheet has no such field: a date-less trip created there always starts with 7 days.
 
 Only the **start** date is linked to the other one. Picking a start date fills the end date to match it, and moving the start date of an already-dated trip shifts the end date so the previous duration is kept. Nothing links them the other way round: you can pick an end date on its own, and the picker's **✕** button clears either field afterwards. A trip can therefore be saved with both dates, with only a start date, with only an end date, or with neither. A trip left with exactly one date gets an undated day grid (7 days by default), just like a date-less one.
 

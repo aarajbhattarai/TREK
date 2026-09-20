@@ -1498,4 +1498,50 @@ describe('PlaceInspector', () => {
     expect(screen.queryByRole('button', { name: /remove from day/i })).toBeNull();
     expect(screen.queryByRole('button', { name: /add to day/i })).toBeNull();
   });
+
+  it('FE-PLANNER-INSPECTOR-017c: the booked stop stays off the buttons when the day list hides it', () => {
+    // The day view hands the inspector the day without the stop a booking wrote,
+    // while the store still holds it. Judged on the list alone the hotel looked
+    // unassigned, and "Add to day" put a second copy beside the booked night.
+    const booked = [{ id: 99, place, day_id: 1, place_id: place.id, order_index: 0, notes: null, accommodation_id: 4 }];
+    seedStore(useTripStore, { assignments: { '1': booked } as never });
+    render(<PlaceInspector {...defaultProps} selectedDayId={1} assignments={{ '1': [] }} />);
+
+    expect(screen.queryByText('Add to Day')).toBeNull();
+    expect(screen.queryByText('Remove from Day')).toBeNull();
+  });
+
+  it('FE-PLANNER-INSPECTOR-017d: a stop the traveller placed at the booked hotel can still be removed', () => {
+    // A second copy that did get onto the day is the traveller's own row and shows
+    // in the list. That one keeps its "Remove from day", which is the way back.
+    const onRemoveAssignment = vi.fn();
+    const booked = { id: 99, place, day_id: 1, place_id: place.id, order_index: 0, notes: null, accommodation_id: 4 };
+    const own = { id: 100, place, day_id: 1, place_id: place.id, order_index: 1, notes: null };
+    seedStore(useTripStore, { assignments: { '1': [booked, own] } as never });
+    render(
+      <PlaceInspector
+        {...defaultProps}
+        selectedDayId={1}
+        assignments={{ '1': [own] } as never}
+        onRemoveAssignment={onRemoveAssignment}
+      />
+    );
+
+    fireEvent.click(screen.getByText('Remove from Day').closest('button')!);
+    expect(onRemoveAssignment).toHaveBeenCalledWith(1, 100);
+    expect(screen.queryByText('Add to Day')).toBeNull();
+  });
+
+  it('FE-PLANNER-INSPECTOR-017e: any booked stop at the place keeps the buttons off, whichever row the store lists first', () => {
+    // With the service stops switched off the day list can hide a hotel the traveller
+    // placed as well, so the store may list that row ahead of the booked one. The
+    // question is whether a booking holds this place on this day, not which row comes first.
+    const own = { id: 100, place, day_id: 1, place_id: place.id, order_index: 0, notes: null };
+    const booked = { id: 99, place, day_id: 1, place_id: place.id, order_index: 1, notes: null, accommodation_id: 4 };
+    seedStore(useTripStore, { assignments: { '1': [own, booked] } as never });
+    render(<PlaceInspector {...defaultProps} selectedDayId={1} assignments={{ '1': [] }} />);
+
+    expect(screen.queryByText('Add to Day')).toBeNull();
+    expect(screen.queryByText('Remove from Day')).toBeNull();
+  });
 })

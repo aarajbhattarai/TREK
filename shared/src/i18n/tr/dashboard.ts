@@ -101,6 +101,7 @@ const dashboard: TranslationStrings = {
   'dashboard.useUnsplashPhoto': '{photographer} tarafından çekilen Unsplash fotoğrafını kullan',
   'dashboard.titleRequired': 'Başlık gerekli',
   'dashboard.endDateError': 'Bitiş tarihi başlangıçtan sonra olmalı',
+  'dashboard.tripTooLong': 'Bir seyahat en fazla {days} gün sürebilir',
   'dashboard.dateShiftTitle': 'Yeni başlangıç tarihi',
   'dashboard.dateShiftIntro':
     'Bu seyahatin başlangıç tarihini değiştirdiniz. Planlarınız yeni tarihlere nasıl uyum sağlasın?',

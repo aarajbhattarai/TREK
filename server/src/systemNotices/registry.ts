@@ -73,6 +73,13 @@ export const SYSTEM_NOTICES: SystemNotice[] = [
           titleKey: 'system_notice.release_notes.feature_dawarich_title',
           bodyKey: 'system_notice.release_notes.feature_dawarich_body',
         },
+        {
+          iconName: 'FolderSync',
+          visual: 'docsync',
+          layout: 'wide',
+          titleKey: 'system_notice.release_notes.feature_docsync_title',
+          bodyKey: 'system_notice.release_notes.feature_docsync_body',
+        },
       ],
       footnoteKey: 'system_notice.release_notes.footnote',
       notes: {

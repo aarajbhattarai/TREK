@@ -808,5 +808,6 @@ const admin: TranslationStrings = {
   'admin.placesUsageTitle': 'Для чего используется ключ',
   'admin.mapsKeyHintShort': 'Добавляет фото, оценки и часы работы. Каждый запрос тогда идёт в Google.',
   'admin.amapKeyHintShort': 'Для поиска мест в материковом Китае. Нужен ключ веб-сервиса, а не ключ JS API.',
+  'admin.collab.links.subtitle': 'Общие ссылки и закладки',
 };
 export default admin;

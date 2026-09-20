@@ -514,7 +514,7 @@ export function RtSpillRow({ fromDayNumber, departs, chrome, children }: {
         </span>
         {departs && (
           <span className="ms-auto text-[0.71875rem] font-semibold tabular-nums text-m-ink">
-            {t('roadtrip.spill.departs', { time: departs })}
+            {t('roadtrip.spill.departs', { time: formatClockTime(departs, chrome.is12h) })}
           </span>
         )}
       </div>

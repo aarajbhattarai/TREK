@@ -71,5 +71,7 @@ const mobileTrip: TranslationStrings = {
     '1 tronçon avait plus que ce qui tient dans une réponse. Choisissez moins de types pour voir le reste.',
   'mobileTrip.rtTruncated.other':
     '{count} tronçons avaient plus que ce qui tient dans une réponse. Choisissez moins de types pour voir le reste.',
+  'mobileTrip.rtNoDay': 'Aucun jour sélectionné',
+  'mobileTrip.rtNoDayHint': 'La carte affiche tout le voyage. Touchez un jour ci-dessus pour voir son trajet.',
 };
 export default mobileTrip;

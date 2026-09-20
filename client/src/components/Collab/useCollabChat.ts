@@ -5,7 +5,7 @@ import { useCanDo } from '../../store/permissionsStore'
 import { useTripStore } from '../../store/tripStore'
 import { addListener, removeListener } from '../../api/websocket'
 import { useTranslation } from '../../i18n'
-import { useChatImages } from './useChatImages'
+import { useChatImages, MAX_CHAT_IMAGES } from './useChatImages'
 import { useToast } from '../shared/Toast'
 
 export function useCollabChat(tripId: any, currentUser: any) {
@@ -122,7 +122,10 @@ export function useCollabChat(tripId: any, currentUser: any) {
 
   /* ── send ── */
   const addImageFiles = useCallback((incoming: File[] | FileList) => {
-    if (!images.add(incoming)) toast.error(t('collab.chat.imageRejected'))
+    images.add(incoming, ({ rejected, overflow }) => {
+      if (rejected) toast.error(t('collab.chat.imageRejected'))
+      if (overflow) toast.error(t('collab.chat.imageLimit', { max: MAX_CHAT_IMAGES }))
+    })
   }, [images, toast, t])
   const removeImage = images.remove
   const handlePaste = useCallback((e: ClipboardEvent) => { if (e.clipboardData.files.length) addImageFiles(e.clipboardData.files) }, [addImageFiles])

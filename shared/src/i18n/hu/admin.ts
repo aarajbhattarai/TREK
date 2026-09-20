@@ -815,5 +815,6 @@ const admin: TranslationStrings = {
   'admin.placesUsageTitle': 'Mire használjuk a kulcsot',
   'admin.mapsKeyHintShort': 'Fényképeket, értékeléseket és nyitvatartást ad hozzá. Minden lekérdezés a Google-höz megy.',
   'admin.amapKeyHintShort': 'Helykereséshez a szárazföldi Kínában. Webszolgáltatás-kulcs kell, nem JS API-kulcs.',
+  'admin.collab.links.subtitle': 'Megosztott linkek és könyvjelzők',
 };
 export default admin;

@@ -345,10 +345,14 @@ function CollectionsPageDesktop(): React.ReactElement {
         />
       )}
 
-      {/* A list file as a new list — no active list needed, it makes one (#2198) */}
+      {/* A list file as a new list, or added to one that is already there (#2198, #2301) */}
       {c.showImportFile && (
         <ImportCollectionModal
           onImport={c.handleImportFile}
+          onImportInto={c.handleImportFileInto}
+          lists={c.writableLists}
+          defaultListId={typeof c.activeId === 'number' ? c.activeId : null}
+          onReadGpx={c.handleReadGpx}
           onClose={() => c.setShowImportFile(false)}
           t={t}
         />

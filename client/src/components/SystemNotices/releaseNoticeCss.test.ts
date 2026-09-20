@@ -36,4 +36,15 @@ describe('release notice css', () => {
     expect(step('--z-notice')).toBeGreaterThan(step('--z-nav'))
     expect(step('--z-notice')).toBeGreaterThan(61)
   })
+
+  it('FE-COMP-RELEASENOTICECSS-003: what the columns hold keeps its height, the columns scroll', () => {
+    // A flex item with overflow hidden may shrink to nothing. The promise box is
+    // one, and on a 1080p screen at 100% it was pressed down to its label while
+    // the column around it scrolled. jsdom lays nothing out, so the rule itself
+    // is the assertion.
+    const columns = block('.rn-release-inner > *,')
+    expect(columns).toMatch(/\.rn-note-body > \*/)
+    expect(columns).toMatch(/flex-shrink:\s*0/)
+    expect(block('.rn-promise {')).toMatch(/overflow:\s*hidden/)
+  })
 })

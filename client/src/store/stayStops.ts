@@ -16,9 +16,11 @@ export interface StayStopsResult {
  *
  * Booking a night also puts the place on its check-in day, because that stop is
  * what the road trip routes and the map draws. The server announces it over the
- * socket like any other assignment, but the socket deliberately skips the session
- * that sent the request (X-Socket-Id), so without this the one person who cannot
- * see their new stop is the one who just booked it. Goes through the same applier
+ * socket like any other assignment, and unlike the booking events it does not
+ * skip the session that sent the request: the stop and the order it was seated
+ * into arrive there together. The answer carries the stop as well, for a session
+ * whose socket is down at that moment, and applying it a second time is harmless
+ * because the store drops a stop it already holds. Goes through the same applier
  * the socket uses, so the write-through to IndexedDB happens either way.
  */
 export function applyStayStops(result: StayStopsResult | null | undefined): void {

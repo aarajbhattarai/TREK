@@ -495,6 +495,17 @@ async function flattenBrandLogo(bytes: Buffer): Promise<BrandLogo | null> {
 // day at the provider rather than a slow answer worth waiting for.
 const IDENTITY_TIMEOUT_MS = 2500;
 
+// The explicit search asks Nominatim alongside the index, and the pair costs
+// the slower one. The index gives up after 3.5 s and the browser after 8 s, so a
+// Nominatim that accepts the connection and then sits on it (the public service
+// under load, a self-hosted one that hung) has to give up in between: without a
+// deadline of its own the request rides undici's 300 s default, and the index's
+// answer is thrown away with the request that timed out waiting for it. The
+// deadline starts after the throttle wait, so it measures the answer alone:
+// generous for a slow one, still inside the browser's budget with the wait
+// added on.
+const SEARCH_TIMEOUT_MS = 6000;
+
 const MAX_CONCURRENT_PHOTO_FETCHES = 5;
 let photoFetchActive = 0;
 const photoFetchQueue: Array<() => void> = [];
@@ -1149,7 +1160,7 @@ export class MapsService {
       params.set('bounded', '0');
     }
     // Through the shared client: one throttle for the whole process.
-    const response = await nominatimFetch('search', params, { lane });
+    const response = await nominatimFetch('search', params, { lane, timeoutMs: SEARCH_TIMEOUT_MS });
     if (!response.ok) {
       const text = await response.text().catch(() => '');
       throw new Error(
@@ -1314,6 +1325,10 @@ export class MapsService {
     const typeMap: Record<string, string> = { node: 'node', way: 'way', relation: 'rel' };
     const oType = typeMap[osmType];
     if (!oType) return null;
+    // The id is the one thing written into the query, and the query is a
+    // language. An OSM element id is a number and nothing else; anything with
+    // more in it is a statement of its own, sent under TREK's shared user agent.
+    if (!/^\d+$/.test(osmId)) return null;
     const query = `[out:json][timeout:5];${oType}(${osmId});out tags;`;
     try {
       const res = await fetch('https://overpass-api.de/api/interpreter', {
@@ -2338,6 +2353,10 @@ export class MapsService {
     // colon branch below, which would otherwise read "gers" as an OSM type
     // and ask Overpass for an element that does not exist.
     if (placeId.startsWith('gers:')) {
+      // The switch is a deployment property, and off means nothing leaves for
+      // the index: a place saved while it was on is still opened from what the
+      // trip holds, not looked up again.
+      if (!this.trekPlacesEnabled()) return { place: null };
       const found = await trekPlacesById(placeId.slice('gers:'.length)).catch(() => null);
       if (!found) return { place: null };
 
@@ -2407,6 +2426,13 @@ export class MapsService {
 
     // OSM details: placeId is "node:123456" or "way:123456" etc.
     if (placeId.includes(':')) {
+      // Only an element type with a numeric id is looked up. The id is written
+      // into an Overpass query and a Nominatim lookup as it came in, and nothing
+      // else with a colon in it (a legacy image URL, a coordinate pseudo-id) has
+      // a details source: answering those with an empty record cost two
+      // requests that could not succeed, and let anything after the colon be
+      // sent as a query of its own.
+      if (!OSM_PLACE_ID.test(placeId)) return { place: null };
       const [osmType, osmId] = placeId.split(':');
       // buildOsmDetails never yields name/address/coordinates — Nominatim is
       // always the source for those (Overpass contributes the tag-derived rest).

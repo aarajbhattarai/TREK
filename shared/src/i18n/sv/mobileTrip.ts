@@ -69,5 +69,7 @@ const mobileTrip: TranslationStrings = {
     '1 sträcka hade mer än vad som får plats i ett svar. Välj färre sorter för att se resten.',
   'mobileTrip.rtTruncated.other':
     '{count} sträckor hade mer än vad som får plats i ett svar. Välj färre sorter för att se resten.',
+  'mobileTrip.rtNoDay': 'Ingen dag vald',
+  'mobileTrip.rtNoDayHint': 'Kartan visar hela resan. Tryck på en dag ovanför för att se dess körning.',
 };
 export default mobileTrip;

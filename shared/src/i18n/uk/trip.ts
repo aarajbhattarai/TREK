@@ -88,5 +88,7 @@ const trip: TranslationStrings = {
   'transit.transfersLabel': 'Пересадки',
   'transit.walkLabel': 'Пішки',
   'transit.searchHint': 'Шукайте справжні маршрути та додавайте їх одразу до дня — дані від Transitous.',
+  'trip.confirm.deletePlaceNight': 'Ночівля, заброньована в «{name}», зникне разом із місцем.',
+  'trip.confirm.deletePlaceBooked': 'Ночівля, заброньована в «{name}», зникне разом із місцем, а з нею бронювання «{booking}» і пов’язані витрати.',
 };
 export default trip;

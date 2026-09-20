@@ -205,6 +205,23 @@ describe('MapsService.searchPlaces — the merged path', () => {
     expect(out.source).toBe('openstreetmap');
   });
 
+  it('MAPS-SEARCH-010: the OpenStreetMap half runs on a deadline of its own', async () => {
+    // The pair costs the slower one. The index gives up after 3.5 s; without a
+    // deadline the Nominatim side rode undici's 300 s default, so a Nominatim
+    // that accepted the connection and sat on it held the whole answer past the
+    // browser's 8 s and threw the index's results away with it. The client
+    // builds the signal after its throttle wait, so this only has to fit the
+    // answer itself, and it has to stay under the browser's budget.
+    mockSearch.mockResolvedValue([indexHit("L'Osteria")]);
+
+    await make().searchPlaces(1, "L'Osteria");
+
+    const opts = mockNominatim.mock.calls[0][2] as { lane?: string; timeoutMs?: number };
+    expect(opts.lane).toBe('interactive');
+    expect(opts.timeoutMs).toBeGreaterThan(0);
+    expect(opts.timeoutMs).toBeLessThan(8000);
+  });
+
   it('MAPS-SEARCH-008: the location bias reaches both sources', async () => {
     mockSearch.mockResolvedValue([indexHit("L'Osteria")]);
 

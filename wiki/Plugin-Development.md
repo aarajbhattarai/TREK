@@ -571,7 +571,9 @@ The frame's CSP is locked down per plugin: `default-src 'none'`, own inline
 scripts/styles + the plugin's **own** `/plugin-frame/<id>/` files only (no other
 host may serve it script/style/img), `connect-src` limited to the hosts you were
 **granted** via `http:outbound:<host>` permissions (not merely the `egress[]` you
-declared), no popups.
+declared), no popups. The frame is allowed to go **fullscreen** (`allow="fullscreen"`
+on the iframe), so a page or widget may call `requestFullscreen()` on its own content
+after a click or tap; popups stay blocked.
 
 ### The context payload
 
@@ -806,7 +808,7 @@ module.exports = definePlugin({
 | Hook | Permission | Status |
 |---|---|---|
 | `placeDetailProvider.getDetails(placeId, ctx)` → `{ label, value?, url? }[]` | `hook:place-detail-provider` | **live** — shown in the place-detail panel; also `GET /api/place-details/:placeId` |
-| `searchProvider.search(request, ctx)` → `SearchResultPlace[]` | `hook:search-provider` | **live** — answers place searches from an index TREK does not ship, drawn into the app's own search list beside the core results (#2221). `request` is `{query, limit, lang?, near?}`; each place is `{id?, name, lat, lng, address?, rating?, website?, phone?, category?, description?}`. `rating` is the field open data cannot answer — OpenStreetMap carries none — so it is what makes "the best rated one around here" answerable at all; it is clamped to 0..5. Coordinates are range-checked, strings capped, `website` must be http/https, and ids are namespaced to `plugin:<yourId>:<id>` so they can never collide with an OSM one. Called for an explicit search, **not** per keystroke. Also `GET /api/plugin-search`, and to a connected assistant as the `search_places_via_plugins` MCP tool |
+| `searchProvider.search(request, ctx)` → `SearchResultPlace[]` | `hook:search-provider` | **live** — answers place searches from an index TREK does not ship, drawn into the app's own search list beside the core results (#2221). `request` is `{query, limit, lang?, near?, category?, bounds?}`; each place is `{id?, name, lat, lng, address?, rating?, website?, phone?, category?, description?}`. `rating` is the field open data cannot answer — OpenStreetMap carries none — so it is what makes "the best rated one around here" answerable at all; it is clamped to 0..5. Coordinates are range-checked, strings capped, `website` must be http/https, and ids are namespaced to `plugin:<yourId>:<id>` so they can never collide with an OSM one. Called for an explicit search, **not** per keystroke. The Road trip search along the route calls it too, once per kind the person picked, with `category` (`fuel`, `charging`, `rest_area`, `campsite`, `restaurant`, `sights` or `hotel`) and `bounds` (`{south, west, north, east}`, with `near` at its centre); `query` is then a fixed English phrase for that kind such as `fuel station` or `EV charging station`. The host drops every hit outside `bounds`, and a hit whose own `category` names a different one of those seven kinds; the rest count as the requested kind. Both fields are absent on ordinary searches. Also `GET /api/plugin-search`, and to a connected assistant as the `search_places_via_plugins` MCP tool; the corridor search is `POST /api/roadtrip/search-area` and the `search_roadtrip_corridor` MCP tool |
 | `warningProvider.getWarnings(tripId, ctx)` → `{ level, message, dayId?, placeId? }[]` | `hook:trip-warning-provider` | **live** — validation warnings shown as a non-blocking banner in the trip planner; also `GET /api/trip-warnings/:tripId`, and to a connected assistant as the `get_trip_warnings` MCP tool (≤20 warnings per provider, message ≤300 chars) — that path needs only the trips read scope, not `plugins:use` |
 | `tableContributor.getContributions(view, tripId, ctx)` → `TableContribution[]` | `hook:table-contributor` | **live** — host-rendered **columns/actions** keyed by `entityId` in the reservations, transports, places, day, costs, packing, files and todos views. A `column` is `{kind:'column', entityId, id, label, value?, url?, icon?, tone?}` (url is http/https/mailto only); an `action` is `{kind:'action', entityId, id, label, icon?, target}` where `target` opens your sandboxed frame (`{kind:'frame', sub}`) or calls a route (`{kind:'route', method, sub}`). All fields are bounded + normalized host-side; also `GET /api/view-contributions/:view/:tripId` |
 | `mapMarkerProvider.getMarkers(tripId, ctx)` → `MapMarkerContribution[]` | `hook:map-marker-provider` | **live** — bounded markers overlaid on the trip map (#587). Each is `{id, lat, lng, label?, popupText?, url?, icon?, tone?}`; coordinates are range-checked (−90..90 / −180..180), text length-capped, url http/https/mailto-only, count capped (≤200/plugin). Declarative only — plugin JS never runs on the map canvas. Also `GET /api/map-markers/:tripId` |
@@ -1142,9 +1144,9 @@ id (never a parent or a user id).
 
 Delivery is fire-and-forget on a short timeout, so a slow subscriber never blocks a
 core write. Because there's no user, trip reads (`ctx.trips.*`) are refused inside a
-handler — beyond the snapshot, use the plugin's own `ctx.db`, `ctx.ws.*`, or an
-outbound call. A plugin's own `plugin:*` broadcasts are never delivered back, so
-handlers can't loop. Event names follow `<family>:<verb>` (`place:created`,
+handler, and so are `ctx.ws.*` broadcasts; beyond the snapshot, use the plugin's own
+`ctx.db` or an outbound call. A plugin's own `plugin:*` broadcasts are never
+delivered back, so handlers can't loop. Event names follow `<family>:<verb>` (`place:created`,
 `day:updated`, `file:*`, `assignment:*`, `budget:*`, `accommodation:*`, …); the SDK
 exports the authoritative family list and the snapshot-grant mapping as
 `EVENT_FAMILIES` and `EVENT_SNAPSHOT_GRANT`.
@@ -1451,7 +1453,7 @@ build arg defaults to the literal `dev` — has nothing to compare a range again
 the check is skipped and an unversioned build installs anything. Plugins should still
 guard optional `ctx.*` namespaces.
 
-**Permissions** — the commonly-used core subset below; the **full list of 64**
+**Permissions** — the commonly-used core subset below; the **full list of 65**
 (all read/write scopes, the notify/ai/oauth brokers, every provider hook, `mcp:tools`)
 lives in **[[Plugin Permissions|Plugin-Permissions]]**. Unknown values are rejected at
 install (and by `trek-plugin validate` and registry CI, which check against the same list).

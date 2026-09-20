@@ -44,7 +44,7 @@ You are connected to TREK, a travel planning application. Below is a compact ref
 - The authenticated user can only access trips they own or are a member of. Never guess at trip IDs.
 - Only the trip owner can delete the trip, add members, or remove members.
 - Deleting a place removes all of its day assignments as well — warn the user before doing this.
-- Trips created via MCP are capped at 90 days.
+- A trip can span at most 999 days, by date range or by day_count.
 
 ## Dates and times
 

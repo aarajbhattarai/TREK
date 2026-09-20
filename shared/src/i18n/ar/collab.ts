@@ -93,5 +93,10 @@ const collab: TranslationStrings = {
   'collab.polls.delete': 'حذف',
   'collab.polls.closedSection': 'مغلق',
   'collab.notes.websitePlaceholder': 'https://...', // en-fallback
+  'collab.chat.imageLimit': 'يمكنك إرفاق ما يصل إلى {max} صور لكل رسالة',
+  'collab.chat.uploading': 'جارٍ الرفع {percent}%',
+  'collab.chat.attachImages': 'إرفاق صور',
+  'collab.chat.attachedImage': 'صورة مرفقة',
+  'collab.chat.closeImage': 'إغلاق الصورة',
 };
 export default collab;

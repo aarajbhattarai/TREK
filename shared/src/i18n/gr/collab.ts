@@ -93,5 +93,10 @@ const collab: TranslationStrings = {
   'collab.polls.options': 'Επιλογές',
   'collab.polls.delete': 'Διαγραφή',
   'collab.polls.closedSection': 'Κλειστές',
+  'collab.chat.imageLimit': 'Μπορείτε να επισυνάψετε έως {max} εικόνες ανά μήνυμα',
+  'collab.chat.uploading': 'Μεταφόρτωση {percent}%',
+  'collab.chat.attachImages': 'Επισύναψη εικόνων',
+  'collab.chat.attachedImage': 'Συνημμένη εικόνα',
+  'collab.chat.closeImage': 'Κλείσιμο εικόνας',
 };
 export default collab;

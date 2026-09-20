@@ -1,7 +1,8 @@
-// FE-TP-HOOK-001 to FE-TP-HOOK-115
+// FE-TP-HOOK-001 to FE-TP-HOOK-119
 import React from 'react'
 import { renderHook, act, waitFor } from '@testing-library/react'
 import { TranslationProvider } from '../../i18n/TranslationContext'
+import { useTranslation } from '../../i18n'
 import { useTripPlanner } from './useTripPlanner'
 import { useTripStore, type TripStoreState } from '../../store/tripStore'
 import { useAuthStore } from '../../store/authStore'
@@ -755,6 +756,31 @@ describe('useTripPlanner — map derivations', () => {
     expect(result.current.dayPlaces).toEqual([])
   })
 
+  it('FE-TP-HOOK-031c: a service stop on the selected day takes no number on the map', async () => {
+    const hamburg = geo(1)
+    const pump = geo(2, { stop_type: 'fuel' })
+    const berlin = geo(3)
+    seedTrip({
+      places: [hamburg, pump, berlin],
+      selectedDayId: 7,
+      assignments: {
+        '7': [
+          buildAssignment({ id: 10, day_id: 7, place: hamburg, order_index: 0 }),
+          buildAssignment({ id: 11, day_id: 7, place: pump, order_index: 1 }),
+          buildAssignment({ id: 12, day_id: 7, place: berlin, order_index: 2 }),
+        ],
+      },
+    })
+
+    const { result } = await renderPlanner()
+
+    // The pump is drawn without a badge and the rail gives it no number, so the stop
+    // after it is the second, not the third. The pin and the rail have to agree.
+    expect(result.current.dayOrderMap).toEqual({ 1: [1], 3: [2] })
+    // Still on the map: what is skipped is the number, not the stop.
+    expect(result.current.dayPlaces).toHaveLength(3)
+  })
+
   it('FE-TP-HOOK-032: without a selected day both day derivations stay empty', async () => {
     seedTrip({ places: [geo(1)] })
 
@@ -1256,6 +1282,56 @@ describe('useTripPlanner — place CRUD', () => {
 
     await act(async () => { await result.current.confirmDeletePlaces([1]) })
     expect(toasts.some(t => t.message === 'nope')).toBe(true)
+  })
+
+  it('FE-TP-HOOK-118: the delete question names the booked night, its booking and the expense before the yes', async () => {
+    // The server takes the night down with the place, and the booking and its
+    // expense with the night. The question only named the place, so a traveller
+    // deleting a hotel learnt about the rest from the costs total afterwards.
+    const hotel = buildPlace({ id: 1, name: 'Hotel Fjord', lat: 60.39, lng: 5.32 })
+    const cafe = buildPlace({ id: 2, name: 'Cafe', lat: 1, lng: 2 })
+    seedTrip({
+      places: [hotel, cafe],
+      reservations: [buildReservation({ id: 9, type: 'hotel', title: 'Booking 4711', accommodation_id: 7 })],
+    })
+    vi.mocked(accommodationRepo.list).mockResolvedValue({
+      accommodations: [{ id: 7, trip_id: 42, place_id: 1, start_day_id: 5, end_day_id: 6 }] as never,
+    })
+
+    const { result } = await renderPlanner()
+    await waitFor(() => expect(result.current.tripAccommodations).toHaveLength(1))
+    const { result: i18n } = renderHook(() => useTranslation(), { wrapper })
+
+    act(() => { result.current.handleDeletePlace(1) })
+    expect(result.current.deletePlaceNote).toBe(
+      i18n.current.t('trip.confirm.deletePlaceBooked', { name: 'Hotel Fjord', booking: 'Booking 4711' }),
+    )
+    // Still a question: nothing has been written.
+    expect(actions.deletePlace).not.toHaveBeenCalled()
+
+    // A place without a night adds nothing to the question.
+    act(() => { result.current.handleDeletePlace(2) })
+    expect(result.current.deletePlaceNote).toBeNull()
+  })
+
+  it('FE-TP-HOOK-119: a bulk delete warns once any of the places carries a night, booking or not', async () => {
+    const hotel = buildPlace({ id: 1, name: 'Hotel Fjord', lat: 60.39, lng: 5.32 })
+    const cafe = buildPlace({ id: 2, name: 'Cafe', lat: 1, lng: 2 })
+    seedTrip({ places: [hotel, cafe] })
+    vi.mocked(accommodationRepo.list).mockResolvedValue({
+      accommodations: [{ id: 7, trip_id: 42, place_id: 1, start_day_id: 5, end_day_id: 6 }] as never,
+    })
+
+    const { result } = await renderPlanner()
+    await waitFor(() => expect(result.current.tripAccommodations).toHaveLength(1))
+    const { result: i18n } = renderHook(() => useTranslation(), { wrapper })
+
+    // A night without a partner booking still goes with the place, so it is still named.
+    act(() => { result.current.setDeletePlaceIds([2, 1]) })
+    expect(result.current.deletePlacesNote).toBe(i18n.current.t('trip.confirm.deletePlaceNight', { name: 'Hotel Fjord' }))
+
+    act(() => { result.current.setDeletePlaceIds([2]) })
+    expect(result.current.deletePlacesNote).toBeNull()
   })
 
   it('FE-TP-HOOK-061: a bulk category change restores each previous category group on undo', async () => {

@@ -9,7 +9,7 @@ import type { Day, Place } from '../../../../src/types'
 import type { RoadtripDay, RoadtripRoutes, RouteSegment } from '@trek/shared/roadtrip'
 import type { LegAlternatives } from '../../../../src/components/Roadtrip/useRouteAlternatives'
 
-// FE-MOB-RTTAB-001 to FE-MOB-RTTAB-050
+// FE-MOB-RTTAB-001 to FE-MOB-RTTAB-053
 //
 // The stage bar pictures the place its day ends at. It reads that place out of the trip
 // store rather than the planner, the unfiltered list, so the picture tests seed the store.
@@ -282,6 +282,32 @@ describe('MRoadtripTab', () => {
       expect(screen.getByText('roadtrip.summary.partial')).toBeInTheDocument()
       expect(screen.queryByText('roadtrip.empty.title')).toBeNull()
       expect(screen.queryByText('mobileTrip.rtPlanOnDesktop')).toBeNull()
+    })
+
+    it('FE-MOB-RTTAB-053: with the drive routed and no day picked it asks for a day, not for a route', () => {
+      // The map's whole-trip view deselects the day and the list switch leaves it so.
+      // The header keeps printing the drive's distance meanwhile, so "no route yet"
+      // here contradicted the line right above it.
+      renderTab(planner({ selectedDayId: null }))
+
+      expect(screen.getByText('mobileTrip.rtNoDay')).toBeInTheDocument()
+      expect(screen.getByText('mobileTrip.rtNoDayHint')).toBeInTheDocument()
+      expect(screen.queryByText('roadtrip.empty.title')).toBeNull()
+      expect(screen.queryByText('mobileTrip.rtPlanOnDesktop')).toBeNull()
+      expect(screen.queryByText('mobileTrip.rtStart')).toBeNull()
+
+      // A picked day the routing has nothing for is still the empty stage: that one is
+      // about the day, and the sentence about two places is the right one there.
+      const unrouted = render(<MRoadtripTab planner={planner({ selectedDayId: 1 })} shell={buildShell()} tab="roadtrip" />)
+      expect(within(unrouted.container).getByText('roadtrip.empty.title')).toBeInTheDocument()
+      expect(within(unrouted.container).queryByText('mobileTrip.rtNoDay')).toBeNull()
+
+      // And while the round is still running, no day picked is still the partial hint.
+      const running = render(
+        <MRoadtripTab planner={planner({ selectedDayId: null, roadtripRoutes: routes({ loading: true }) })} shell={buildShell()} tab="roadtrip" />,
+      )
+      expect(within(running.container).getByText('roadtrip.summary.partial')).toBeInTheDocument()
+      expect(within(running.container).queryByText('mobileTrip.rtNoDay')).toBeNull()
     })
 
     it('FE-MOB-RTTAB-010: draws no day colour dot in the head card, even with the day colours on', () => {

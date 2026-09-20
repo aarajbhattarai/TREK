@@ -1,5 +1,5 @@
 /**
- * Unit tests for DawarichSuggestionsService: DAWARICH-SUG-001..062.
+ * Unit tests for DawarichSuggestionsService: DAWARICH-SUG-001..064.
  *
  * This is the only service in the Dawarich domain that writes into TREK proper,
  * and every write it makes crosses an ownership line: a suggestion belongs to
@@ -99,7 +99,10 @@ const clientStub = {
   findVisitsNear: vi.fn(),
   listVisitedCities: vi.fn(),
 };
-const atlasStub = { markCountry: vi.fn() };
+// `stats` is what the Atlas map is drawn from, and "already visited" in the
+// hand-off means "already on that map", so the stub answers it as the map
+// would: a list of countries with the status each is painted in.
+const atlasStub = { markCountry: vi.fn(), stats: vi.fn() };
 // `broadcast` and `onCreated` are stubbed because an acceptance is a normal
 // place write and has to behave like one: everyone on the trip is told, and a
 // live journey mirrors it. Both are asserted rather than merely tolerated.
@@ -151,6 +154,8 @@ function armStubs(): void {
   clientStub.listVisitedCities.mockReset();
   // Answers true — it added the country — unless a case says otherwise.
   atlasStub.markCountry.mockReset().mockReturnValue(true);
+  // An empty map unless a case paints something on it.
+  atlasStub.stats.mockReset().mockResolvedValue({ countries: [] });
   placesStub.create
     .mockReset()
     .mockImplementation((tripId: string, body: { name?: string; lat?: number; lng?: number }) =>
@@ -1137,7 +1142,9 @@ describe('DawarichSuggestionsService — the Atlas hand-off', () => {
 
   it('DAWARICH-SUG-030: atlasSuggestions codes what it can, lists what it cannot, and flags what TREK already has', async () => {
     const { user } = createUser(testDb);
-    testDb.prepare('INSERT INTO visited_countries (user_id, country_code) VALUES (?, ?)').run(user.id, 'DE');
+    // A hand mark, as the Atlas reports it back: the map merges visited_countries
+    // into its own list, so it is the map that is asked, not the table.
+    atlasStub.stats.mockResolvedValue({ countries: [{ code: 'DE', status: 'visited' }] });
     clientStub.listVisitedCities.mockResolvedValue([
       { country: 'Germany', cities: [{ city: 'Berlin', stayed_for: 120, timestamp: 1757000000 }] },
       { country: 'France', cities: [] },
@@ -1152,6 +1159,49 @@ describe('DawarichSuggestionsService — the Atlas hand-off', () => {
     expect(suggestions.countries[1].alreadyVisited).toBe(false);
     // A country TREK cannot code is still a country the user went to.
     expect(suggestions.unresolved).toEqual(['Absurdistan']);
+    expect(atlasStub.stats).toHaveBeenCalledWith(user.id);
+  });
+
+  it('DAWARICH-SUG-063: a country the Atlas already paints from a past trip is not offered as new, hand mark or not', async () => {
+    // The map derives Japan from the places on a finished trip and needs no
+    // visited_countries row to do so. Offering it back, preselected, would
+    // make the dialog a list of things the user has known for years, and the
+    // toast afterwards would count countries that changed nothing on the map.
+    const { user } = createUser(testDb);
+    atlasStub.stats.mockResolvedValue({
+      countries: [
+        { code: 'JP', status: 'visited' },
+        // Planned is a future trip: not on the map as visited yet, so still news.
+        { code: 'FR', status: 'planned' },
+      ],
+    });
+    clientStub.listVisitedCities.mockResolvedValue([
+      { country: 'Japan', cities: [{ city: 'Tokyo', stayed_for: 600 }] },
+      { country: 'France', cities: [] },
+      { country: 'Austria', cities: [] },
+    ]);
+
+    const suggestions = await svc.atlasSuggestions(user.id, new Date('2026-08-01'), new Date('2026-09-01'));
+
+    expect(suggestions.countries.map((c) => [c.countryCode, c.alreadyVisited])).toEqual([
+      ['JP', true],
+      ['FR', false],
+      ['AT', false],
+    ]);
+    expect(testDb.prepare('SELECT COUNT(*) AS n FROM visited_countries WHERE user_id = ?').get(user.id)).toEqual({ n: 0 });
+  });
+
+  it('DAWARICH-SUG-064: the shape the Atlas answers for a user without trips carries no status and reads as visited', async () => {
+    // With no trips at all the map lists only hand marks, without a status
+    // field, and paints every one of them as visited.
+    const { user } = createUser(testDb);
+    atlasStub.stats.mockResolvedValue({ countries: [{ code: 'DE' }] });
+    clientStub.listVisitedCities.mockResolvedValue([{ country: 'Germany', cities: [] }]);
+
+    const suggestions = await svc.atlasSuggestions(user.id, new Date('2026-08-01'), new Date('2026-09-01'));
+
+    expect(suggestions.countries).toHaveLength(1);
+    expect(suggestions.countries[0]).toMatchObject({ countryCode: 'DE', alreadyVisited: true });
   });
 
   it('DAWARICH-SUG-057: atlasSuggestions without a connection refuses before a request', async () => {

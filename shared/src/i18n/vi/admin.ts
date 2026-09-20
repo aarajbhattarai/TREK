@@ -749,5 +749,6 @@ const admin: TranslationStrings = {
   'admin.placesUsageTitle': 'Khóa được dùng cho việc gì',
   'admin.mapsKeyHintShort': 'Thêm ảnh, đánh giá và giờ mở cửa. Mọi tra cứu khi đó sẽ đi qua Google.',
   'admin.amapKeyHintShort': 'Cho tìm kiếm địa điểm tại Trung Quốc đại lục. Cần khóa dịch vụ web, không phải khóa JS API.',
+  'admin.collab.links.subtitle': 'Liên kết chia sẻ và dấu trang',
 };
 export default admin;

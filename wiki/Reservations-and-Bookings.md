@@ -51,7 +51,7 @@ Each card displays:
 
 - **Status dot** — green for Confirmed, amber for Pending
 - **Type chip** — icon and label for the reservation type
-- **Needs review badge** — an amber badge shown on reservations flagged by importers that may need your attention
+- **Review badge** — an amber badge shown on reservations flagged by importers that may need your attention
 - **Title** — the reservation name
 - **Edit and delete buttons** — visible only if you have edit permission
 
@@ -133,7 +133,7 @@ The **Import from file** button is hidden only when neither the `kitinerary-extr
 
 ### Needs review flag
 
-Items that the extractor could only partially parse are flagged **Needs review** — an amber badge on the card. Review these reservations after import and fill in any missing fields manually.
+Items that the extractor could only partially parse are flagged for review — an amber **Review** badge on the card. Review these reservations after import and fill in any missing fields manually.
 
 ### AI fallback for hard-to-read files
 

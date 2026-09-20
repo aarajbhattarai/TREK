@@ -1,4 +1,4 @@
-// FE-PAGE-COLL-001 to FE-PAGE-COLL-076
+// FE-PAGE-COLL-001 to FE-PAGE-COLL-085
 // The Collections page hook. The collection store is replaced by a fixture so
 // every handler/branch can be driven directly; the categories request goes
 // through MSW, and the websocket module is already mocked in tests/setup.ts.
@@ -31,8 +31,9 @@ vi.mock('../../store/collectionStore', () => ({
 // here the question is only whether the hook hands it the file it fetched.
 vi.mock('../../components/Collections/collectionFile', () => ({
   downloadCollectionFile: vi.fn(),
+  downloadCollectionGpx: vi.fn(),
 }))
-import { downloadCollectionFile } from '../../components/Collections/collectionFile'
+import { downloadCollectionFile, downloadCollectionGpx } from '../../components/Collections/collectionFile'
 
 // ── Fixtures ─────────────────────────────────────────────────────────────────
 function makeStore() {
@@ -153,6 +154,7 @@ beforeEach(() => {
   navigate.mockClear()
   addToast.mockClear()
   vi.mocked(downloadCollectionFile).mockClear()
+  vi.mocked(downloadCollectionGpx).mockClear()
   vi.mocked(addListener).mockClear()
   vi.mocked(removeListener).mockClear()
   installMatchMedia()
@@ -1061,6 +1063,65 @@ describe('useCollections — export and import as a file', () => {
     expect(result.current.showImportFile).toBe(true)
   })
 
+  it('FE-PAGE-COLL-082: a file added to another list lands on it and says what it did', async () => {
+    const seen: unknown[] = []
+    server.use(http.post('/api/addons/collections/:id/import', async ({ request, params }) => {
+      seen.push({ id: params.id, body: await request.json() })
+      return HttpResponse.json({ collection: { id: 11, name: 'Lisbon 2027' }, imported: 2, skipped: 0, duplicates: 1 })
+    }))
+    const { result } = await setup()
+
+    await act(async () => { await result.current.handleImportFileInto(listFile as never, 11) })
+
+    expect(seen[0]).toEqual({ id: '11', body: { file: listFile } })
+    expect(store.loadAll).toHaveBeenCalled()
+    expect(navigate).toHaveBeenCalledWith('/collections/11')
+    expect(addToast).toHaveBeenCalledWith('2 added to Lisbon 2027, 1 were already there', 'success', undefined)
+    expect(result.current.showImportFile).toBe(false)
+  })
+
+  it('FE-PAGE-COLL-083: adding to the list that is open refreshes it instead of navigating', async () => {
+    server.use(http.post('/api/addons/collections/:id/import', () =>
+      HttpResponse.json({ collection: { id: 11, name: 'Lisbon 2027' }, imported: 2, skipped: 0, duplicates: 0 })))
+    store.activeId = 11
+    const { result } = await setup()
+    navigate.mockClear()
+
+    await act(async () => { await result.current.handleImportFileInto(listFile as never, 11) })
+
+    expect(store.refreshActive).toHaveBeenCalled()
+    expect(navigate).not.toHaveBeenCalledWith('/collections/11')
+    expect(addToast).toHaveBeenCalledWith('2 places added to Lisbon 2027', 'success', undefined)
+  })
+
+  it('FE-PAGE-COLL-084: a file whose places were all there already says so instead of claiming a success', async () => {
+    server.use(http.post('/api/addons/collections/:id/import', () =>
+      HttpResponse.json({ collection: { id: 11, name: 'Lisbon 2027' }, imported: 0, skipped: 0, duplicates: 2 })))
+    const { result } = await setup()
+
+    await act(async () => { await result.current.handleImportFileInto(listFile as never, 11) })
+
+    expect(addToast).toHaveBeenCalledWith('Every place in the file is already in Lisbon 2027', 'info', undefined)
+  })
+
+  it('FE-PAGE-COLL-085: only lists this person may write to are offered as a target', async () => {
+    const shared = (id: number, role: string | null) => ({
+      ...collection({ id, is_owner: false }),
+      members: role === null ? [] : [{ user_id: 7, username: 'me', status: 'accepted', role }],
+    }) as unknown as Collection
+    store.collections = [
+      collection({ id: 1 }),
+      shared(2, 'editor'),
+      shared(3, 'admin'),
+      shared(4, 'viewer'),
+      shared(5, null),
+      { ...shared(6, 'editor'), members: [{ user_id: 7, username: 'me', status: 'pending', role: 'editor' }] } as unknown as Collection,
+    ]
+    const { result } = await setup()
+
+    expect(result.current.writableLists.map(l => l.id)).toEqual([1, 2, 3])
+  })
+
   it('FE-PAGE-COLL-076: a renamed import carries the new name to the server', async () => {
     const seen: unknown[] = []
     server.use(http.post('/api/addons/collections/import', async ({ request }) => {
@@ -1072,5 +1133,77 @@ describe('useCollections — export and import as a file', () => {
     await act(async () => { await result.current.handleImportFile(listFile as never, 'Lisbon (from Ana)') })
 
     expect(seen[0]).toEqual({ file: listFile, name: 'Lisbon (from Ana)' })
+  })
+})
+
+// ── The same list as GPX (#2301) ─────────────────────────────────────────────
+
+describe('useCollections: GPX (#2301)', () => {
+  const exportGpx = (body: Record<string, unknown>) =>
+    server.use(http.get('/api/addons/collections/:id/export/gpx', () => HttpResponse.json(body)))
+
+  it('FE-PAGE-COLL-077: downloads the GPX under the list name, and not the list file', async () => {
+    exportGpx({ name: 'Lisbon', gpx: '<gpx/>', waypoints: 2, omitted: 0 })
+    store.activeId = 11
+    const { result } = await setup()
+
+    await act(async () => { await result.current.handleExportList('gpx') })
+
+    expect(downloadCollectionGpx).toHaveBeenCalledWith('Lisbon', '<gpx/>')
+    expect(downloadCollectionFile).not.toHaveBeenCalled()
+    expect(addToast).not.toHaveBeenCalled()
+    expect(result.current.exporting).toBe(false)
+  })
+
+  it('FE-PAGE-COLL-078: says how many places had no coordinates and stayed out', async () => {
+    exportGpx({ name: 'Lisbon', gpx: '<gpx/>', waypoints: 2, omitted: 3 })
+    store.activeId = 11
+    const { result } = await setup()
+
+    await act(async () => { await result.current.handleExportList('gpx') })
+
+    expect(downloadCollectionGpx).toHaveBeenCalled()
+    expect(addToast).toHaveBeenCalledWith('3 places have no coordinates and were left out of the GPX file', 'info', undefined)
+  })
+
+  it('FE-PAGE-COLL-079: hands over no empty GPX when no place has coordinates', async () => {
+    exportGpx({ name: 'Lisbon', gpx: '<gpx/>', waypoints: 0, omitted: 4 })
+    store.activeId = 11
+    const { result } = await setup()
+
+    await act(async () => { await result.current.handleExportList('gpx') })
+
+    expect(downloadCollectionGpx).not.toHaveBeenCalled()
+    expect(addToast).toHaveBeenCalledWith(
+      'None of these places has coordinates, so there is nothing to put in a GPX file.', 'warning', undefined,
+    )
+    expect(result.current.exporting).toBe(false)
+  })
+
+  it('FE-PAGE-COLL-080: a failed GPX export says so', async () => {
+    server.use(http.get('/api/addons/collections/:id/export/gpx', () => HttpResponse.json({ error: 'Nope' }, { status: 500 })))
+    store.activeId = 11
+    const { result } = await setup()
+
+    await act(async () => { await result.current.handleExportList('gpx') })
+
+    expect(downloadCollectionGpx).not.toHaveBeenCalled()
+    expect(addToast).toHaveBeenCalledWith('Nope', 'error', undefined)
+  })
+
+  it('FE-PAGE-COLL-081: reads a GPX through the server and hands the list file back to the dialog', async () => {
+    const seen: unknown[] = []
+    const read = { file: { format: 'trek.collection', version: 1, name: 'Sintra', places: [] }, skipped: 1, track_points: 9 }
+    server.use(http.post('/api/addons/collections/gpx/read', async ({ request }) => {
+      seen.push(await request.json())
+      return HttpResponse.json(read)
+    }))
+    const { result } = await setup()
+
+    let answer: unknown
+    await act(async () => { answer = await result.current.handleReadGpx('<gpx/>', 'sintra.gpx') })
+
+    expect(seen[0]).toEqual({ gpx: '<gpx/>', file_name: 'sintra.gpx' })
+    expect(answer).toEqual(read)
   })
 })

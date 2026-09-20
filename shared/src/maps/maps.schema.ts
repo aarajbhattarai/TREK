@@ -273,7 +273,12 @@ export const mapsPlaceEnrichmentRequestSchema = z.object({
    * again is not cheap: an Overpass lookup for a large relation was measured at
    * 12.8 seconds. Passing them along turns a second slow round trip into none.
    * Only the tags are read, and the wiki tag is re-validated before use, so a
-   * doctored payload can at worst mislead the user who sent it.
+   * doctored payload can at worst mislead the user who sent it. That holds for
+   * the cache too: an answer whose description or links were read off these
+   * details is served to this caller and not written to the per-instance
+   * enrichment cache, and the index's own description is fetched from the
+   * index rather than taken from here, so nothing a sender puts in this record
+   * reaches another user's screen.
    */
   details: z.record(z.string(), z.unknown()).optional(),
 });

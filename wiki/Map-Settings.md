@@ -66,8 +66,9 @@ never stored inside the tile URL itself, so switching keys later does not break 
 Other providers are unaffected, and a keyless CARTO template is treated as "not configured" so the map falls back to
 OpenFreeMap instead of drawing watermarked tiles. Save a key and your template is kept as you entered it.
 
-Offline pre-download works on OpenFreeMap, on CARTO and on the Amap presets. It does not work on the OpenStreetMap
-presets, whose tile servers do not permit bulk downloading.
+Offline pre-download works on every built-in preset: OpenFreeMap, CARTO, the Amap presets, Stadia Smooth and the two
+OpenStreetMap presets. The OpenStreetMap tile servers do not permit bulk downloading under their usage policy, so for a
+trip you keep offline prefer OpenFreeMap, CARTO with a key or the Amap presets.
 
 ## Amap (高德地图) basemap
 

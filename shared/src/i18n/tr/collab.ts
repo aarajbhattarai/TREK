@@ -93,5 +93,10 @@ const collab: TranslationStrings = {
   'collab.polls.options': 'Seçenekler',
   'collab.polls.delete': 'Sil',
   'collab.polls.closedSection': 'Kapalı',
+  'collab.chat.imageLimit': 'Her mesaja en fazla {max} görsel ekleyebilirsiniz',
+  'collab.chat.uploading': 'Yükleniyor %{percent}',
+  'collab.chat.attachImages': 'Görsel ekle',
+  'collab.chat.attachedImage': 'Eklenen görsel',
+  'collab.chat.closeImage': 'Görseli kapat',
 };
 export default collab;

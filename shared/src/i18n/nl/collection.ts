@@ -151,6 +151,16 @@ const collection: TranslationStrings = {
   'collections.file.importTitle': 'Lijst importeren',
   'collections.file.choose': 'Kies een lijstbestand',
   'collections.file.confirm': 'Importeren',
+  'collections.file.targetNew': 'Nieuwe lijst',
+  'collections.file.targetNewHint': 'Het bestand als eigen lijst',
+  'collections.file.targetExisting': 'Aan een lijst toevoegen',
+  'collections.file.targetExistingHint': 'Aan een lijst die je al hebt',
+  'collections.file.searchLists': 'Lijsten zoeken',
+  'collections.file.intoHint': 'Plekken die de lijst al heeft blijven zoals ze zijn, net als de naam en de kleur. Labels uit het bestand komen erbij.',
+  'collections.file.confirmInto': 'Aan lijst toevoegen',
+  'collections.file.doneInto': '{count} plekken toegevoegd aan {name}',
+  'collections.file.doneIntoDuplicates': '{count} toegevoegd aan {name}, {duplicates} stonden er al in',
+  'collections.file.doneIntoNothing': 'Alle plekken uit het bestand staan al in {name}',
   'collections.file.change': 'Wijzigen',
   'collections.file.labelCount': '{count} labels',
   'collections.file.hint':
@@ -160,6 +170,20 @@ const collection: TranslationStrings = {
   'collections.file.errorTooLarge': 'Dit bestand is te groot om een lijst te zijn.',
   'collections.file.errorUnreadable': 'Dit bestand kon niet worden gelezen.',
   'collections.file.errorNotACollection': 'Dit is geen TREK-lijstbestand.',
+  'collections.file.formatTrek': 'TREK-lijst',
+  'collections.file.formatTrekHint': 'Voor een andere TREK, met labels en status',
+  'collections.file.formatGpxHint': 'Waypoints voor OsmAnd, Organic Maps, Garmin en andere kaart-apps',
+  'collections.file.gpxOmitted': '{count} plekken zonder coördinaten zijn niet in het GPX-bestand opgenomen',
+  'collections.file.gpxNothing':
+    'Geen van deze plekken heeft coördinaten, dus er is niets om in een GPX-bestand te zetten.',
+  'collections.file.reading': 'Bestand wordt gelezen…',
+  'collections.file.gpxSkipped': '{count} waypoints zonder bruikbare coördinaten worden overgeslagen.',
+  'collections.file.gpxTrack':
+    'Dit bestand bevat ook {count} trackpunten. Tracks worden niet geïmporteerd, alleen waypoints.',
+  'collections.file.gpxEmpty': 'Dit GPX-bestand bevat geen waypoints, dus er valt niets te importeren.',
+  'collections.file.errorNotGpx': 'Dit is geen GPX-bestand.',
+  'collections.file.errorTooManyPlaces':
+    'Dit bestand bevat meer dan {count} plekken. Splits het op en importeer de delen een voor een.',
 
   'collections.share.title': 'Lijst delen',
   'collections.share.titleNamed': '“{name}” delen',

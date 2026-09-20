@@ -26,5 +26,7 @@ const map: TranslationStrings = {
   'map.overview.hide': 'Teljes utazás elrejtése',
   'map.overview.total': 'Teljes távolság',
   'map.attribution': 'Térkép forrásai',
+  'map.overview.unrouted': '{count} szakaszt nem sikerült kiszámítani, a távolságok hiányosak.',
+  'map.overview.dayUnrouted': 'Ennek a napnak {count} szakaszát nem sikerült kiszámítani',
 };
 export default map;

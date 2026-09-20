@@ -597,7 +597,12 @@ export default function AdminSettingsTab({ admin, t }: AdminSettingsTabProps): R
                   try {
                     const saved = await adminApi.updateTransitProvider(next)
                     setTransitGoogleKeySource(saved.googleKeySource)
-                  } catch { setTransitProviderState(previous) }
+                  } catch (err: unknown) {
+                    // The select springs back on its own; without a word that reads
+                    // as a broken control, not as a save that failed.
+                    setTransitProviderState(previous)
+                    toast.error(getApiErrorMessage(err, t('common.error')))
+                  }
                 }}
                 options={[
                   { value: 'transitous', label: t('admin.transitProvider.transitous') },

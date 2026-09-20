@@ -71,5 +71,7 @@ const mobileTrip: TranslationStrings = {
     '1 ruas punya lebih banyak daripada yang muat dalam satu jawaban. Pilih lebih sedikit jenis untuk melihat sisanya.',
   'mobileTrip.rtTruncated.other':
     '{count} ruas punya lebih banyak daripada yang muat dalam satu jawaban. Pilih lebih sedikit jenis untuk melihat sisanya.',
+  'mobileTrip.rtNoDay': 'Belum ada hari yang dipilih',
+  'mobileTrip.rtNoDayHint': 'Peta menampilkan seluruh perjalanan. Ketuk hari di atas untuk melihat rutenya.',
 };
 export default mobileTrip;

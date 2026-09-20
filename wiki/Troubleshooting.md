@@ -115,9 +115,9 @@ There is no button for it: the Admin Panel UI has no per-user MFA reset (the use
 
 ---
 
-## Demo user cannot edit or create
+## Demo user cannot upload files or change account settings
 
-**Cause:** The instance is running with `DEMO_MODE=true`. All write operations are blocked for the demo account by design.
+**Cause:** The instance is running with `DEMO_MODE=true`. For the demo account, file uploads (avatar, trip cover, documents, place and collection images), password change, account deletion, MFA changes and the MCP write tools answer 403 by design. Everything else the demo user can create, edit and delete, trips, days, places and costs included; the hourly reset puts it all back to the saved baseline.
 
 **Fix:** This is intentional behavior for public demo deployments. If you are self-hosting and want full access, remove the `DEMO_MODE` variable (or set it to `false`). See [Demo Mode](Demo-Mode).
 
@@ -197,6 +197,30 @@ docker compose up -d
 
 ---
 
+## Container won't start: `Syntax error: end of file unexpected (expecting "fi")`
+
+**Symptoms:** The container restarts in a loop and the log holds a single line, with no TREK banner and no Node error:
+
+```
+TREK: 1: Syntax error: end of file unexpected (expecting "fi")
+```
+
+It typically shows up right after you changed an environment variable — `COOKIE_SECURE=false`, for example — on a container that had been running fine.
+
+**Cause:** The environment variable is innocent. The message comes from `/bin/sh` inside the container, before Node is ever reached. Some container management UIs — Portainer's **Duplicate/Edit** form among them — let you edit a running container's command by rendering it back into a text field and re-splitting that text when you submit. Older images shipped their start-up logic as a single quoted shell command, and the quotes do not survive that round-trip: the command comes back truncated, and the shell refuses to parse the half of an `if` block that is left. `TREK` is simply the word the re-split happened to strand as the shell's program name, from the message quoted in [**"Cannot find module" on startup**](#cannot-find-module-on-startup).
+
+Once a container is in this state it stays broken across restarts and image pulls, because the mangled command is stored in the container's own configuration, not in the image.
+
+**Fix:** Clear the command override so the image's own start-up command applies again.
+
+In Portainer, open the container → **Duplicate/Edit** → **Command & logging**, empty the **Command** field completely, then deploy. An empty field means "use the image's command". Recreating the container from the image, or redeploying it as a stack, has the same effect.
+
+> **Note:** `COOKIE_SECURE=false` is still the right setting if you reach TREK over plain HTTP — without it the browser will not send the session cookie and you cannot log in. Set it, just not by editing the container in place. Change environment variables by editing the **stack** and redeploying it; see [Install: Portainer](Install-Portainer).
+
+Current images run their start-up logic from a script file, and their command is a single word with nothing left for a UI to mangle.
+
+---
+
 ## Encryption key regenerated on restart — stored secrets stop working
 
 **Cause:** On every startup, TREK resolves its encryption key in this order: (1) `ENCRYPTION_KEY` env var, (2) `data/.encryption_key` file, (3) legacy `data/.jwt_secret` fallback, (4) auto-generate a fresh key. If neither the env var nor the `data/` volume is persisted — for example after recreating a container without a volume mount — a new random key is generated and all stored secrets (SMTP password, OIDC client secret, API keys, MFA TOTP seeds) become unrecoverable.
@@ -243,7 +267,7 @@ Set `OIDC_ISSUER` to that exact string.
 
 ## OIDC login fails when provider is on a private/internal network
 
-**Cause:** Not the SSRF guard, despite what it looks like. All four OIDC calls — discovery, token, userinfo, JWKS — go through the admin-configured fetch path, which deliberately **allows** loopback and private/LAN targets: a Keycloak or Authentik on `192.168.x` or `10.x` is a supported setup and needs no extra variable. `ALLOW_INTERNAL_NETWORK` belongs to the guard on *user*-supplied URLs and changes nothing about OIDC. The only addresses that path refuses are link-local and cloud-metadata ones (`169.254.0.0/16`, `fe80::/10`), which fail with `Requests to link-local / cloud-metadata addresses are not allowed`.
+**Cause:** Not the SSRF guard, despite what it looks like. All four OIDC calls (discovery, token, userinfo, JWKS) go through the admin-configured fetch path, which deliberately **allows** loopback and private/LAN targets: a Keycloak or Authentik on `192.168.x` or `10.x` is a supported setup and needs no extra variable. `ALLOW_INTERNAL_NETWORK` belongs to the guard on *user*-supplied URLs and changes nothing about OIDC. The only addresses that path refuses are link-local and cloud-metadata ones (`169.254.0.0/16`, `fe80::/10`), which fail with `Requests to link-local / cloud-metadata addresses are not allowed`. A provider behind the host gateway of a rootless Podman container resolves to `169.254.1.2` and fails exactly like that; list that address in `ALLOW_LINK_LOCAL_IPS`, see [Internal-Network-Access](Internal-Network-Access#a-link-local-address-you-need).
 
 **Fix:** Look for the reasons an internal provider actually fails. A failed discovery fetch answers `500 { "error": "OIDC login failed" }` and logs the real message as `[OIDC] Login error: …`, so start there:
 

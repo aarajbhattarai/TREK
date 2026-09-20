@@ -54,6 +54,9 @@
   max-height: 100%;
   display: grid;
   grid-template-columns: 1.2fr 1fr;
+  /* One row, never taller than the panel: otherwise the row takes the height of
+     the taller column and the panel clips both, the support buttons first. */
+  grid-template-rows: minmax(0, 1fr);
   border-radius: 30px;
   overflow: hidden;
   box-shadow: 0 4px 12px oklch(0 0 0 / 0.2), 0 60px 130px -40px oklch(0 0 0 / 0.7);
@@ -64,9 +67,20 @@
   line-height: normal;
 }
 
-/* Below the two-column breakpoint the halves stack and the panel scrolls. */
+/* Below the two-column breakpoint the halves stack and the panel scrolls. The
+   rows must go back to auto: with the single minmax row from above, the note took
+   the whole panel and the release half was left with nothing but its padding. */
 @media (max-width: 1080px) {
-  .rn-panel { grid-template-columns: 1fr; overflow-y: auto; }
+  .rn-panel { grid-template-columns: 1fr; grid-template-rows: auto; overflow-y: auto; }
+  .rn-release, .rn-release-inner, .rn-note-body { overflow: visible; }
+  /* Once the note has scrolled into view, the ask stays at the bottom edge. The
+     band's usual tint is translucent, so it gets a solid one here. */
+  .rn-support {
+    position: sticky;
+    bottom: 0;
+    z-index: 1;
+    background: color-mix(in srgb, var(--bg-card) 95%, var(--text-primary));
+  }
 }
 
 [data-reduce-motion='true'] .rn-overlay,
@@ -165,7 +179,7 @@
 
 .rn-intro {
   margin: 11px 0 0;
-  max-width: 560px;
+  max-width: 640px;
   font-size: 16.5px;
   line-height: 1.6;
   color: oklch(1 0 0 / 0.62);
@@ -193,11 +207,29 @@
 .rn-features {
   margin-top: 14px;
   /* Keeps the foot clear of the cards when the column has no height to spare. */
-  margin-bottom: 26px;
+  margin-bottom: 18px;
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
   gap: 14px;
 }
+
+/* A headliner laid across the row: the picture beside the text, not above it.
+   Doubled class so it wins over the .rn-feature block below, which sets the column. */
+.rn-feature.rn-feature-wide {
+  grid-column: 1 / -1;
+  flex-direction: row;
+  align-items: center;
+  gap: 18px;
+  padding: 12px 18px 12px 12px;
+}
+
+.rn-feature.rn-feature-wide .rn-feature-visual {
+  flex: 0 0 236px;
+  width: 236px;
+  height: 88px;
+}
+
+.rn-feature.rn-feature-wide .rn-feature-body { margin-top: 4px; }
 
 .rn-feature {
   position: relative;
@@ -461,6 +493,37 @@
 
 .rn-vis-trail-stay { fill: #ffffff; stroke: #2563eb; stroke-width: 2; }
 
+/* Document sync: the wordmark, the two-way arrow under it, and the five stores in a row. */
+.rn-vis-docs {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 8px 12px;
+}
+
+.rn-vis-docs .rn-vis-trekbadge { height: 22px; }
+.rn-vis-docs .rn-vis-trekmark { height: 19px; }
+
+.rn-vis-docs-flow { display: flex; color: oklch(1 0 0 / 0.55); transform: rotate(90deg); }
+
+.rn-vis-docs-stores {
+  display: flex;
+  gap: 8px;
+}
+
+.rn-vis-docs-store {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: oklch(1 0 0 / 0.1);
+  box-shadow: inset 0 1px 0 oklch(1 0 0 / 0.18), inset 0 0 0 1px oklch(1 0 0 / 0.1);
+}
+
 /* The mark itself, unframed, with its corners rounded like an app icon. */
 .rn-vis-brand {
   position: absolute;
@@ -528,6 +591,15 @@
 }
 
 .rn-note-body::-webkit-scrollbar { display: none; }
+
+/*
+ * The two columns scroll; what is inside them must not give way instead. A flex
+ * item may shrink below its content, and one with overflow hidden may shrink to
+ * nothing, so on a 1080p screen at 100% the promise box was pressed down to its
+ * label while the paragraphs around it kept their height and the column scrolled.
+ */
+.rn-release-inner > *,
+.rn-note-body > * { flex-shrink: 0; }
 
 .rn-note-eyebrow {
   font-family: var(--font-subtext);

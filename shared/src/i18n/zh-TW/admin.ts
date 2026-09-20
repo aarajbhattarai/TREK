@@ -747,5 +747,6 @@ const admin: TranslationStrings = {
   'admin.placesUsageTitle': '金鑰用於什麼',
   'admin.mapsKeyHintShort': '增加照片、評分和營業時間。之後每次查詢都會送往 Google。',
   'admin.amapKeyHintShort': '用於中國大陸的地點搜尋。需要 Web 服務金鑰，而非 JS API 金鑰。',
+  'admin.collab.links.subtitle': '共享連結和書籤',
 };
 export default admin;

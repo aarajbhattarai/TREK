@@ -26,5 +26,7 @@ const map: TranslationStrings = {
   'map.overview.hide': 'Skrýt celou cestu',
   'map.overview.total': 'Celková vzdálenost',
   'map.attribution': 'Zdroje mapy',
+  'map.overview.unrouted': '{count} úsek(ů) se nepodařilo spočítat, vzdálenosti jsou neúplné.',
+  'map.overview.dayUnrouted': '{count} úsek(ů) tohoto dne se nepodařilo spočítat',
 };
 export default map;

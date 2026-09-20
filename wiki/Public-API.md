@@ -52,12 +52,14 @@ A key can be narrowed when you create it, to any subset of:
 
 `trips` · `days` · `places` · `notes` · `reservations` · `accommodations` · `travellers` · `bucket-list` · `stats`
 
-This is **not** the same as `include`. `include` chooses which sections a response carries and any key may ask for any of them; this decides what the key may see at all, and the server refuses the rest with a `403`. A key given only `days` and `notes` reads exactly that, however it asks.
+This is **not** the same as `include`. `include` chooses which sections a response carries and any key may ask for any of them; this decides what the key may see at all, and the server refuses the rest with a `403`. `trips` is the entry ticket for both trip endpoints: without it, every call to `/api/v1/trips` and `/api/v1/trips/{id}` is a `403` with `required_scope: "trips"`, whatever else the key was given. The other areas only trim what a trip brings along. A key given `trips`, `days` and `notes` reads exactly that, however it asks.
 
 Two rules make it predictable:
 
 - **A section you named but may not read is a `403`**, with the missing one in `required_scope`. Silently dropping what you explicitly asked for would send you debugging your own correct code.
 - **A section you did not name is simply left out.** `include` defaults to everything, so a narrow key that omits `include` gets what it may have rather than an error for wanting sections it never mentioned.
+
+A key without `days` still receives the day skeleton when it asks for `places`, `notes` or `reservations`, because those are reported on days; each day then carries its `date` and `day_number`, and its `title` and `notes` are `null`.
 
 Keys created before this existed, and keys created with everything selected, read all of it — nothing that worked before stops working.
 

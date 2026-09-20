@@ -32,6 +32,8 @@ export interface NoticeReleaseFeature {
   iconName: string;
   /** A small illustration the client draws on the card; unknown names fall back to the icon. */
   visual?: string;
+  /** `wide` spans the row, picture beside the text; the default is an upright card. */
+  layout?: 'card' | 'wide';
   titleKey: string;
   bodyKey: string;
 }

@@ -93,5 +93,10 @@ const collab: TranslationStrings = {
   'collab.polls.options': '옵션',
   'collab.polls.delete': '삭제',
   'collab.polls.closedSection': '종료됨',
+  'collab.chat.imageLimit': '메시지당 최대 {max}장의 이미지를 첨부할 수 있습니다',
+  'collab.chat.uploading': '업로드 중 {percent}%',
+  'collab.chat.attachImages': '이미지 첨부',
+  'collab.chat.attachedImage': '첨부된 이미지',
+  'collab.chat.closeImage': '이미지 닫기',
 };
 export default collab;

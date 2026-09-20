@@ -54,6 +54,7 @@ import { createTables } from '../../../src/db/schema';
 import { runMigrations } from '../../../src/db/migrations';
 import { resetTestDb } from '../../helpers/test-db';
 import { createUser, createTrip, createReservation, createPlace, createDay, createDayAssignment, createDayNote, addTripMember } from '../../helpers/factories';
+import { MAX_TRIP_DAYS } from '@trek/shared';
 import { DatabaseService } from '../../../src/nest/database/database.service';
 import { DaysService } from '../../../src/nest/days/days.service';
 import { PermissionsService } from '../../../src/nest/permissions/permissions.service';
@@ -169,6 +170,10 @@ function getNotes(dayId: number) {
   return testDb.prepare('SELECT * FROM day_notes WHERE day_id = ?').all(dayId) as { id: number; day_id: number }[];
 }
 
+function addDaysIso(date: string, n: number) {
+  return new Date(Date.parse(date + 'T00:00:00Z') + n * 86400000).toISOString().slice(0, 10);
+}
+
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 describe('generateDays', () => {
@@ -258,6 +263,24 @@ describe('generateDays', () => {
     // New days 4 and 5 are empty
     expect(getAssignments(daysAfter[3].id)).toHaveLength(0);
     expect(getAssignments(daysAfter[4].id)).toHaveLength(0);
+  });
+
+  it('TRIP-SVC-062: a range longer than a year gets every one of its days (#2403)', () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id, { start_date: '2025-01-26', end_date: '2025-01-28' });
+    // The reporter's range: 368 days, and the days used to stop at 365.
+    svc.generateDays(trip.id, '2025-01-26', '2026-01-28');
+    const days = getDays(trip.id);
+    expect(days).toHaveLength(368);
+    expect(days[364].date).toBe('2026-01-25');
+    expect(days[367]).toMatchObject({ day_number: 368, date: '2026-01-28' });
+  });
+
+  it('TRIP-SVC-063: a dateless day_count is clamped to MAX_TRIP_DAYS', () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    svc.generateDays(trip.id, null, null, MAX_TRIP_DAYS + 50);
+    expect(getDays(trip.id)).toHaveLength(MAX_TRIP_DAYS);
   });
 
   it('TRIP-SVC-013: clearing dates converts all days to dateless without destroying assignments', () => {
@@ -722,6 +745,17 @@ describe('folded trip CRUD', () => {
     expect(getDays(tripId)).toHaveLength(3);
   });
 
+  it('TRIP-SVC-064: create refuses a range past MAX_TRIP_DAYS and writes nothing', () => {
+    const { user } = createUser(testDb);
+    const before = (testDb.prepare('SELECT COUNT(*) AS n FROM trips').get() as { n: number }).n;
+    expect(() => svc.create(user.id, { title: 'Decade', start_date: '2026-01-01', end_date: '2036-01-01' }))
+      .toThrow(`A trip can span at most ${MAX_TRIP_DAYS} days`);
+    expect((testDb.prepare('SELECT COUNT(*) AS n FROM trips').get() as { n: number }).n).toBe(before);
+    // The longest allowed range goes through in full.
+    const { tripId } = svc.create(user.id, { title: 'Longest', start_date: '2026-01-01', end_date: addDaysIso('2026-01-01', MAX_TRIP_DAYS - 1) });
+    expect(getDays(tripId)).toHaveLength(MAX_TRIP_DAYS);
+  });
+
   it('TRIP-SVC-045: remove deletes the trip, cleans skeleton journey entries and detaches filled ones', () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
@@ -930,17 +964,35 @@ describe('folded trip CRUD', () => {
 
 describe('TripsService wrapper helpers', () => {
   it('re-anchors the budget before the trip row leaves its old currency (#1543)', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
     const order: string[] = [];
     const rebaseSpy = vi.spyOn(budgetSvc, 'rebaseTripCurrency').mockImplementation(async () => { order.push('rebase'); });
     const updateSpy = vi.spyOn(svc, 'updateTrip').mockImplementation(() => { order.push('update'); return {} as never; });
     try {
-      await svc.update('9', 1, { currency: 'RUB' } as never, 'user');
+      await svc.update(trip.id, user.id, { currency: 'RUB' } as never, 'user');
       // The rebase reads the outgoing currency off the trip row, so it has to run first.
-      expect(rebaseSpy).toHaveBeenCalledWith('9', 'RUB');
+      expect(rebaseSpy).toHaveBeenCalledWith(trip.id, 'RUB');
       expect(order).toEqual(['rebase', 'update']);
     } finally {
       rebaseSpy.mockRestore();
       updateSpy.mockRestore();
+    }
+  });
+
+  it('TRIP-SVC-068: update refuses a bad range before the budget is rebased (#2403)', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id, { start_date: '2026-07-01', end_date: '2026-07-07' });
+    const rebaseSpy = vi.spyOn(budgetSvc, 'rebaseTripCurrency').mockResolvedValue();
+    try {
+      await expect(svc.update(trip.id, user.id, { currency: 'USD', end_date: '2036-07-01' }, 'user'))
+        .rejects.toThrow(`A trip can span at most ${MAX_TRIP_DAYS} days`);
+      await expect(svc.update(trip.id, user.id, { currency: 'USD', start_date: '2026-07-10' }, 'user'))
+        .rejects.toThrow('End date must be after start date');
+      expect(rebaseSpy).not.toHaveBeenCalled();
+      await expect(svc.update(99999, user.id, { currency: 'USD' }, 'user')).rejects.toThrow('Trip not found');
+    } finally {
+      rebaseSpy.mockRestore();
     }
   });
 
@@ -1004,6 +1056,40 @@ describe('folded quirk branches', () => {
     // Missing trips throw the byte-identical error; invalid ranges reject.
     expect(() => svc.updateTrip(99999, owner.id, {}, 'user')).toThrow('Trip not found');
     expect(() => svc.updateTrip(trip.id, owner.id, { start_date: '2025-06-10', end_date: '2025-06-01' }, 'user')).toThrow('End date must be after start date');
+  });
+
+  it('TRIP-SVC-065: updateTrip refuses a range past MAX_TRIP_DAYS before touching the row', () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id, { title: 'Week', start_date: '2026-07-01', end_date: '2026-07-07' });
+    expect(() => svc.updateTrip(trip.id, user.id, { title: 'Decade', end_date: '2036-07-01' }, 'user'))
+      .toThrow(`A trip can span at most ${MAX_TRIP_DAYS} days`);
+    expect(testDb.prepare('SELECT title, end_date FROM trips WHERE id = ?').get(trip.id)).toEqual({ title: 'Week', end_date: '2026-07-07' });
+    expect(getDays(trip.id)).toHaveLength(7);
+    // Moving only the start keeps the stored end and is measured against it.
+    expect(() => svc.updateTrip(trip.id, user.id, { start_date: '2020-01-01' }, 'user'))
+      .toThrow(`A trip can span at most ${MAX_TRIP_DAYS} days`);
+  });
+
+  it('TRIP-SVC-066: a trip whose stored range already exceeds the limit can still be renamed', () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id, { title: 'Legacy' });
+    testDb.prepare("UPDATE trips SET start_date = '2020-01-01', end_date = '2030-01-01' WHERE id = ?").run(trip.id);
+    const result = svc.updateTrip(trip.id, user.id, { title: 'Renamed' }, 'user');
+    expect(result.newTitle).toBe('Renamed');
+    expect(result.changes).toEqual({ title: 'Renamed' });
+    // A day_count would rebuild the grid over the whole stored range, so it is held to the limit too.
+    expect(() => svc.updateTrip(trip.id, user.id, { day_count: 5 }, 'user'))
+      .toThrow(`A trip can span at most ${MAX_TRIP_DAYS} days`);
+    expect(getDays(trip.id)).toHaveLength(0);
+  });
+
+  it('TRIP-SVC-067: a start date moved past the stored end is refused instead of emptying the trip', () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id, { title: 'Week', start_date: '2026-07-01', end_date: '2026-07-07' });
+    expect(() => svc.updateTrip(trip.id, user.id, { start_date: '2026-07-10' }, 'user'))
+      .toThrow('End date must be after start date');
+    expect(testDb.prepare('SELECT start_date FROM trips WHERE id = ?').get(trip.id)).toEqual({ start_date: '2026-07-01' });
+    expect(getDays(trip.id)).toHaveLength(7);
   });
 
   it('TRIP-SVC-049: addMember inserts the membership and reports the trip title; removeMember deletes it', () => {

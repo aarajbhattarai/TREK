@@ -66,5 +66,7 @@ const mobileTrip: TranslationStrings = {
   'mobileTrip.rtNoneOnStage': 'لا شيء من هذا النوع على طول هذه المرحلة.',
   'mobileTrip.rtTruncated.one': 'مقطع واحد فيه أكثر مما يتسع في إجابة واحدة. اختر أنواعًا أقل لرؤية الباقي.',
   'mobileTrip.rtTruncated.other': 'مقاطع فيها أكثر مما يتسع في إجابة واحدة: {count}. اختر أنواعًا أقل لرؤية الباقي.',
+  'mobileTrip.rtNoDay': 'لم يتم اختيار يوم',
+  'mobileTrip.rtNoDayHint': 'تعرض الخريطة الرحلة كاملة. اضغط على يوم في الأعلى لعرض مسيره.',
 };
 export default mobileTrip;

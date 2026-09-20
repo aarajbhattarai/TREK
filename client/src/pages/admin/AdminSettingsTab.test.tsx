@@ -1,4 +1,4 @@
-// FE-ADMSET-001 to FE-ADMSET-040
+// FE-ADMSET-001 to FE-ADMSET-042
 import { http, HttpResponse } from 'msw';
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -565,5 +565,27 @@ describe('AdminSettingsTab', () => {
 
     expect(screen.queryByRole('button', { name: /trek place index/i })).not.toBeInTheDocument();
     expect(screen.queryByText(/place search uses openstreetmap/i)).not.toBeInTheDocument();
+  });
+
+  it('FE-ADMSET-042: a failing transit provider save rolls back and says why', async () => {
+    // CustomSelect renders a plain button named after the selected option, so the
+    // trigger is found through its own block, and the menu entry is the button that
+    // is not the trigger.
+    server.use(http.put('/api/admin/transit-provider', () => HttpResponse.json({ error: 'Settings are read-only' }, { status: 500 })));
+    const admin = renderTab({
+      transitProvider: 'transitous',
+      setTransitProviderState: vi.fn(),
+      transitGoogleKeySource: 'instance',
+      setTransitGoogleKeySource: vi.fn(),
+    });
+    const block = screen.getByText('Transit Provider').closest<HTMLElement>('.rounded-xl')!;
+
+    fireEvent.click(within(block).getByRole('button'));
+    fireEvent.click(screen.getByText('Google'));
+
+    expect(admin.setTransitProviderState).toHaveBeenNthCalledWith(1, 'google');
+    await waitFor(() => expect(admin.toast.error).toHaveBeenCalledWith('Settings are read-only'));
+    expect(admin.setTransitProviderState).toHaveBeenLastCalledWith('transitous');
+    expect(admin.setTransitGoogleKeySource).not.toHaveBeenCalled();
   });
 });

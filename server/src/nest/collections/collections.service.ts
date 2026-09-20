@@ -19,11 +19,15 @@ import {
   COLLECTION_FILE_VERSION,
   MAX_COLLECTION_FILE_LABELS,
   type PlaceMatchCandidate,
-  type CollectionFile,
   type CollectionFileLabel,
   type CollectionFilePlace,
+  type CollectionFile,
   type CollectionImportRequest,
+  type CollectionImportIntoRequest,
   type CollectionImportResult,
+  type CollectionGpxExport,
+  type CollectionGpxReadRequest,
+  type CollectionGpxReadResult,
 } from '@trek/shared';
 import type {
   Collection,
@@ -44,6 +48,7 @@ import type {
   CollectionImportablesResponse,
 } from '@trek/shared';
 import { NotificationsService } from '../notifications/notifications.service';
+import { collectionFileToGpx, gpxToCollectionFile, type ExportedCollectionFile } from './collection-gpx.helpers';
 
 /** Links are stored as a JSON TEXT column; parse on read, stringify on write. */
 function parseLinks(raw: unknown): CollectionLink[] | undefined {
@@ -368,7 +373,7 @@ export class CollectionsService {
    * and a viewer who can read all of this on screen loses nothing by having it
    * as a file; what a viewer must not do is write, which no export does.
    */
-  exportCollection(userId: number, id: number): CollectionFile {
+  exportCollection(userId: number, id: number): ExportedCollectionFile {
     this.assertAccess(userId, id);
     const collection = this.getCollectionRow(id);
     const labels = this.loadLabelsByCollection(id);
@@ -420,29 +425,40 @@ export class CollectionsService {
   }
 
   /**
+   * The list as GPX (#2301), written from the very file the export above
+   * returns. What may leave the instance is decided once, there, and a GPX can
+   * only ever carry less of it. Same access rule too, since it is the same read.
+   */
+  exportCollectionGpx(userId: number, id: number): CollectionGpxExport {
+    return collectionFileToGpx(this.exportCollection(userId, id));
+  }
+
+  /**
+   * A GPX document read into the list file it amounts to. Touches no table:
+   * the file goes back to the browser to be shown, and comes back through
+   * importCollection like any other, so there is one import and one
+   * transaction whatever the format was.
+   */
+  readCollectionGpx(body: CollectionGpxReadRequest): CollectionGpxReadResult {
+    return gpxToCollectionFile(body.gpx, body.file_name);
+  }
+
+  /**
    * Read a file back as a new list of the caller's own.
-   *
-   * Always a new list. Importing into an existing one would mean deciding what
-   * happens to a place that is already there, and every answer to that is a
-   * merge somebody did not ask for; a fresh list is a thing they can look at
-   * and then move places out of, which the list UI already does well.
    *
    * The places go in through the same INSERT the rest of the service uses,
    * inside one transaction, so a file that fails halfway leaves nothing
    * behind. Each place is re-validated against the file contract on the way
    * in — the body was validated once at the pipe, and this is the second pass
    * that lets one bad row be dropped instead of failing the whole import.
+   *
+   * A new list is empty, so every place in the file is written and the answer
+   * carries no duplicate count. Adding to a list that already exists is
+   * importIntoCollection below.
    */
   importCollection(userId: number, body: CollectionImportRequest): CollectionImportResult {
     const file = body.file;
     const name = (body.name ?? file.name).trim().slice(0, 120) || file.name;
-
-    // The palette is instance-wide and read-only here: a file names a category,
-    // it does not get to create one.
-    const categoryIdByName = new Map<string, number>();
-    for (const c of this.db.all<{ id: number; name: string }>('SELECT id, name FROM categories')) {
-      categoryIdByName.set(c.name.trim().toLowerCase(), c.id);
-    }
 
     const result = this.db.transaction(() => {
       const collection = this.createCollection(userId, {
@@ -451,46 +467,9 @@ export class CollectionsService {
         color: file.color ?? undefined,
         icon: file.icon ?? undefined,
       });
-
-      const labelIdByName = new Map<string, number>();
-      for (const label of (file.labels ?? []).slice(0, MAX_COLLECTION_FILE_LABELS)) {
-        const key = label.name.trim().toLowerCase();
-        if (!key || labelIdByName.has(key)) continue;
-        labelIdByName.set(key, this.insertImportedLabel(collection.id, label, labelIdByName.size));
-      }
-
-      const insertPlace = this.db.prepare(`
-    INSERT INTO collection_places (
-      collection_id, owner_id, saved_by, name, description, lat, lng, address,
-      category_id, price, currency, notes, image_url, google_place_id, google_ftid,
-      osm_id, website, phone, status, links, sort_order
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `);
-      const assignLabel = this.db.prepare('INSERT OR IGNORE INTO collection_place_labels (collection_place_id, label_id) VALUES (?, ?)');
-
-      let imported = 0;
-      let skipped = 0;
-      for (const raw of file.places) {
-        const parsed = collectionFilePlaceSchema.safeParse(raw);
-        if (!parsed.success) { skipped += 1; continue; }
-        const place = parsed.data;
-        const res = insertPlace.run(
-          collection.id, userId, userId,
-          place.name, place.description ?? null, place.lat ?? null, place.lng ?? null, place.address ?? null,
-          place.category ? (categoryIdByName.get(place.category.trim().toLowerCase()) ?? null) : null,
-          place.price ?? null, place.currency ?? null, place.notes ?? null,
-          place.image_url ?? null, place.google_place_id ?? null, place.google_ftid ?? null,
-          place.osm_id ?? null, place.website ?? null, place.phone ?? null,
-          place.status ?? 'idea', serializeLinks(place.links), imported,
-        );
-        const placeId = Number(res.lastInsertRowid);
-        for (const labelName of place.labels ?? []) {
-          const labelId = labelIdByName.get(labelName.trim().toLowerCase());
-          if (labelId) assignLabel.run(placeId, labelId);
-        }
-        imported += 1;
-      }
-      return { collectionId: collection.id, imported, skipped };
+      const labels = this.labelIdsForFile(collection.id, file.labels);
+      const counts = this.writeFilePlaces(collection.id, userId, file, labels.byName, { skipDuplicates: false });
+      return { collectionId: collection.id, ...counts };
     });
 
     const collection = this.getCollectionRow(result.collectionId);
@@ -502,10 +481,154 @@ export class CollectionsService {
   }
 
   /**
+   * Read the same file into a list that already exists (#2301 follow-up).
+   *
+   * Only ever adds. A place the list already holds, by the rule a single save
+   * uses (provider id, then name, then position), is counted and left exactly
+   * as it is: its status, notes, rating and labels belong to the people on the
+   * list, and a file is not a reason to overwrite them. The list keeps its own
+   * name, colour, icon and description too; what the file says about those is
+   * about the list it came from.
+   *
+   * Editing rights, not ownership: whoever may add a place here may add a file
+   * of them, and everyone on the list sees the result at once.
+   */
+  importIntoCollection(
+    userId: number, id: number, body: CollectionImportIntoRequest, socketId?: string,
+  ): CollectionImportResult {
+    this.assertCanEdit(userId, id);
+    const file = body.file;
+
+    const result = this.db.transaction(() => {
+      const labels = this.labelIdsForFile(id, file.labels);
+      const counts = this.writeFilePlaces(id, userId, file, labels.byName, { skipDuplicates: true });
+      return { ...counts, labelsCreated: labels.created };
+    });
+
+    // A file whose places were all already there can still have brought a label
+    // with it, and that is a change the other members should see.
+    if (result.imported > 0 || result.labelsCreated > 0) {
+      this.notifyCollectionUsers(id, socketId, 'collections:updated');
+    }
+    const collection = this.getCollectionRow(id);
+    return {
+      collection: { ...collection, is_owner: collection.owner_id === userId, labels: this.loadLabelsByCollection(id) },
+      imported: result.imported,
+      skipped: result.skipped,
+      duplicates: result.duplicates,
+    };
+  }
+
+  /**
+   * The file's labels as ids in this list: the ones it already has, matched by
+   * name, plus the ones it does not, created in the file's order. A file never
+   * renames or recolours a label that is already there.
+   */
+  private labelIdsForFile(
+    collectionId: number, labels: CollectionFileLabel[] | undefined,
+  ): { byName: Map<string, number>; created: number } {
+    const byName = new Map<string, number>();
+    for (const row of this.db.all<{ id: number; name: string }>('SELECT id, name FROM collection_labels WHERE collection_id = ?', collectionId)) {
+      byName.set(row.name.trim().toLowerCase(), row.id);
+    }
+    let sortOrder = this.db.get<{ m: number }>(
+      'SELECT COALESCE(MAX(sort_order), -1) AS m FROM collection_labels WHERE collection_id = ?', collectionId,
+    )!.m + 1;
+    let created = 0;
+    for (const label of (labels ?? []).slice(0, MAX_COLLECTION_FILE_LABELS)) {
+      const key = label.name.trim().toLowerCase();
+      if (!key || byName.has(key)) continue;
+      byName.set(key, this.insertImportedLabel(collectionId, label, sortOrder));
+      sortOrder += 1;
+      created += 1;
+    }
+    return { byName, created };
+  }
+
+  /**
+   * The places of a file, written into a list that is already there to take
+   * them. Both imports go through here, so a file behaves the same way
+   * whichever one read it.
+   *
+   * `skipDuplicates` is the whole difference. A list that was just created out
+   * of this file is empty and takes every place it carries, duplicates within
+   * the file included, exactly as it always has; a list people have been
+   * working in keeps what it has.
+   *
+   * New places are appended after the ones already there rather than renumbered
+   * from zero, so a manual order survives an import.
+   */
+  private writeFilePlaces(
+    collectionId: number,
+    savedBy: number,
+    file: CollectionFile,
+    labelIdByName: Map<string, number>,
+    opts: { skipDuplicates: boolean },
+  ): { imported: number; skipped: number; duplicates: number } {
+    // The palette is instance-wide and read-only here: a file names a category,
+    // it does not get to create one.
+    const categoryIdByName = new Map<string, number>();
+    for (const c of this.db.all<{ id: number; name: string }>('SELECT id, name FROM categories')) {
+      categoryIdByName.set(c.name.trim().toLowerCase(), c.id);
+    }
+    const ownerId = this.ownerOf(collectionId);
+    const firstOrder = this.db.get<{ m: number }>(
+      'SELECT COALESCE(MAX(sort_order), -1) AS m FROM collection_places WHERE collection_id = ?', collectionId,
+    )!.m + 1;
+
+    const insertPlace = this.db.prepare(`
+    INSERT INTO collection_places (
+      collection_id, owner_id, saved_by, name, description, lat, lng, address,
+      category_id, price, currency, notes, image_url, google_place_id, google_ftid,
+      osm_id, website, phone, status, links, sort_order
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+    const assignLabel = this.db.prepare('INSERT OR IGNORE INTO collection_place_labels (collection_place_id, label_id) VALUES (?, ?)');
+
+    let imported = 0;
+    let skipped = 0;
+    let duplicates = 0;
+    for (const raw of file.places) {
+      const parsed = collectionFilePlaceSchema.safeParse(raw);
+      if (!parsed.success) { skipped += 1; continue; }
+      const place = parsed.data;
+      // Rows written earlier in this same run count as already there, so a file
+      // that lists a place twice adds it once.
+      if (opts.skipDuplicates && this.findDuplicateCollectionPlace(collectionId, {
+        name: place.name,
+        lat: place.lat ?? null,
+        lng: place.lng ?? null,
+        google_place_id: place.google_place_id ?? null,
+        google_ftid: place.google_ftid ?? null,
+        osm_id: place.osm_id ?? null,
+      })) {
+        duplicates += 1;
+        continue;
+      }
+      const res = insertPlace.run(
+        collectionId, ownerId, savedBy,
+        place.name, place.description ?? null, place.lat ?? null, place.lng ?? null, place.address ?? null,
+        place.category ? (categoryIdByName.get(place.category.trim().toLowerCase()) ?? null) : null,
+        place.price ?? null, place.currency ?? null, place.notes ?? null,
+        place.image_url ?? null, place.google_place_id ?? null, place.google_ftid ?? null,
+        place.osm_id ?? null, place.website ?? null, place.phone ?? null,
+        place.status ?? 'idea', serializeLinks(place.links), firstOrder + imported,
+      );
+      const placeId = Number(res.lastInsertRowid);
+      for (const labelName of place.labels ?? []) {
+        const labelId = labelIdByName.get(labelName.trim().toLowerCase());
+        if (labelId) assignLabel.run(placeId, labelId);
+      }
+      imported += 1;
+    }
+    return { imported, skipped, duplicates };
+  }
+
+  /**
    * A label straight from a file, without createLabel's duplicate check.
    *
-   * The caller already de-duplicates by name, the list is empty, and
-   * createLabel would notify the (nonexistent) members once per label.
+   * The caller de-duplicates by name, and one notification for the whole
+   * import is sent by the caller rather than one per label.
    */
   private insertImportedLabel(collectionId: number, label: CollectionFileLabel, sortOrder: number): number {
     const res = this.db.run(

@@ -1,4 +1,5 @@
 import { idSchema } from '../common/primitives.schema';
+import { MAX_TRIP_DAYS } from '../trip/trip.schema';
 import { roadtripPreferencesSchema } from './preferences.schema';
 
 import { z } from 'zod';
@@ -10,7 +11,7 @@ export const roadtripPlanRequestSchema = z.object({
 });
 export const roadtripCorridorRequestSchema = z.object({
   tripId: idSchema,
-  dayNumber: z.number().int().positive().max(366),
+  dayNumber: z.number().int().positive().max(MAX_TRIP_DAYS),
   category: z.enum(['fuel', 'charging', 'rest_area', 'campsite', 'restaurant', 'sights', 'hotel']),
   widthKm: z.number().positive().max(10).default(5),
   offset: z.number().int().min(0).max(1000).default(0),

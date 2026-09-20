@@ -64,6 +64,14 @@ export default function MRoadtripTab({ planner, shell }: MTripTabPanelProps) {
 
   const stage = rt.stage
 
+  // The map's whole-trip view leaves no day selected, and it stays that way when the
+  // list comes up: the switch here restores nothing on purpose, and the plan tab's
+  // toggle does that job only for its own timeline. The chain is one stage wide, so
+  // with routed days and no day picked it asks for one, rather than claiming there is
+  // no route while the header above prints the whole drive's distance. A day that is
+  // picked and has no drive of its own still gets the empty stage further down.
+  const noDayPicked = !stage && !rt.empty && !rt.loading && planner.selectedDayId == null
+
   // The disc is only a control for somebody who may change a place. Read here rather than
   // inside the row so the whole chain asks once, the way `rt` and `chrome` are handled.
   const canEditPlaces = planner.can('place_edit', planner.trip)
@@ -127,7 +135,9 @@ export default function MRoadtripTab({ planner, shell }: MTripTabPanelProps) {
           searchBar ? 'pt-[calc(var(--m-safe-top,12px)+150px)]' : 'pt-[calc(var(--m-safe-top,12px)+102px)]'
         }`}
       >
-        {rt.empty || !stage ? (
+        {noDayPicked ? (
+          <PickDay planner={planner} />
+        ) : rt.empty || !stage ? (
           <EmptyStage planner={planner} loading={rt.loading} />
         ) : (
           <>
@@ -371,6 +381,25 @@ function EmptyStage({ planner, loading }: { planner: MTripTabPanelProps['planner
           {t('mobileTrip.rtPlanOnDesktop')}
         </p>
       )}
+    </div>
+  )
+}
+
+/**
+ * No day on screen, because the map is showing all of them.
+ *
+ * Same shape as the empty stage, different sentence: the drive is there, the chips
+ * above are where a stage comes back from, and the line says so.
+ */
+function PickDay({ planner }: { planner: MTripTabPanelProps['planner'] }) {
+  const { t } = planner
+  return (
+    <div className="flex flex-col items-center justify-center px-5 py-16 text-center">
+      <MDancingTrek scene="guide" className="mb-2" />
+      <p className="text-[0.9375rem] font-semibold text-m-ink">{t('mobileTrip.rtNoDay')}</p>
+      <p className="mt-1.5 max-w-[27ch] font-geist text-[0.78125rem] leading-[1.5] text-m-muted">
+        {t('mobileTrip.rtNoDayHint')}
+      </p>
     </div>
   )
 }

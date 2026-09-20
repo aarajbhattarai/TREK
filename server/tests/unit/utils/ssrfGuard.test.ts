@@ -725,3 +725,186 @@ describe('safeFetchLlm', () => {
     expect(mockFetch).toHaveBeenCalledTimes(3);
   });
 });
+
+describe('ALLOW_LINK_LOCAL_IPS (#2400)', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+  });
+
+  // The list is read when the module loads, like ALLOW_INTERNAL_NETWORK, so each
+  // case loads a fresh copy under its own environment.
+  async function guardWith(env: Record<string, string>) {
+    for (const [key, value] of Object.entries(env)) vi.stubEnv(key, value);
+    vi.resetModules();
+    const guard = await import('../../../src/utils/ssrfGuard');
+    const lookup = vi.mocked((await import('dns/promises')).default.lookup);
+    const resolve = (ip: string) => lookup.mockResolvedValue({ address: ip, family: ip.includes(':') ? 6 : 4 });
+    return { guard, resolve };
+  }
+
+  it('reaches a rootless Podman host gateway from OIDC once the address is listed', async () => {
+    const { guard, resolve } = await guardWith({ ALLOW_LINK_LOCAL_IPS: '169.254.1.2' });
+    resolve('169.254.1.2');
+    const okFetch = vi.fn().mockResolvedValue({ status: 200, headers: new Headers() });
+    vi.stubGlobal('fetch', okFetch);
+
+    await guard.safeFetchAdminConfigured('https://keycloak.example.com/realms/trek/.well-known/openid-configuration');
+
+    expect(okFetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('refuses the gateway as before while nothing is listed, whatever ALLOW_INTERNAL_NETWORK says', async () => {
+    const { guard, resolve } = await guardWith({ ALLOW_INTERNAL_NETWORK: 'true' });
+    resolve('169.254.1.2');
+    const fetchSpy = vi.fn();
+    vi.stubGlobal('fetch', fetchSpy);
+
+    await expect(guard.safeFetchAdminConfigured('https://keycloak.example.com/')).rejects.toThrow(
+      'Requests to link-local / cloud-metadata addresses are not allowed',
+    );
+    expect((await guard.checkSsrf('https://keycloak.example.com/')).allowed).toBe(false);
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it('keeps every address that is not listed blocked, the metadata service included', async () => {
+    const { guard, resolve } = await guardWith({ ALLOW_LINK_LOCAL_IPS: '169.254.1.2', ALLOW_INTERNAL_NETWORK: 'true' });
+    const fetchSpy = vi.fn();
+    vi.stubGlobal('fetch', fetchSpy);
+
+    for (const ip of ['169.254.1.3', '169.254.169.254', '169.254.170.2', '::ffff:169.254.169.254']) {
+      resolve(ip);
+      await expect(guard.safeFetchAdminConfigured('https://idp.example/')).rejects.toThrow(guard.SsrfBlockedError);
+      expect((await guard.checkSsrf('https://idp.example/')).allowed).toBe(false);
+    }
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it('counts as the internal network for a URL a user typed, so it also needs ALLOW_INTERNAL_NETWORK', async () => {
+    const closed = await guardWith({ ALLOW_LINK_LOCAL_IPS: '169.254.1.2', ALLOW_INTERNAL_NETWORK: 'false' });
+    closed.resolve('169.254.1.2');
+    expect(await closed.guard.checkSsrf('https://immich.example/')).toMatchObject({
+      allowed: false,
+      isPrivate: true,
+      error: expect.stringContaining('ALLOW_INTERNAL_NETWORK'),
+    });
+
+    const open = await guardWith({ ALLOW_LINK_LOCAL_IPS: '169.254.1.2', ALLOW_INTERNAL_NETWORK: 'true' });
+    open.resolve('169.254.1.2');
+    expect(await open.guard.checkSsrf('https://immich.example/')).toMatchObject({ allowed: true, isPrivate: true });
+    // A caller that refuses the internal network outright still refuses it.
+    expect((await open.guard.checkSsrf('https://immich.example/', true)).allowed).toBe(false);
+    // The IPv4-mapped spelling of the same address gets the same answer.
+    open.resolve('::ffff:169.254.1.2');
+    expect(await open.guard.checkSsrf('https://immich.example/')).toMatchObject({ allowed: true, isPrivate: true });
+  });
+});
+
+describe('dual-stack names: every address is checked and every address is pinned', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+    mockLookup.mockReset();
+  });
+
+  const resolveAll = (entries: { address: string; family: number }[]) =>
+    mockLookup.mockResolvedValue(entries as never);
+
+  it('SEC-DUAL-001: asks the resolver for all addresses and lists IPv4 ahead of IPv6', async () => {
+    resolveAll([{ address: '2001:db8::10', family: 6 }, { address: '203.0.113.10', family: 4 }]);
+
+    const result = await checkSsrf('https://idp.example');
+
+    expect(mockLookup).toHaveBeenCalledWith('idp.example', { all: true });
+    expect(result.allowed).toBe(true);
+    expect(result.resolvedIps).toEqual(['203.0.113.10', '2001:db8::10']);
+    expect(result.resolvedIp).toBe('203.0.113.10');
+  });
+
+  it('SEC-DUAL-002: a name with one private address among public ones stays blocked', async () => {
+    resolveAll([{ address: '203.0.113.10', family: 4 }, { address: '10.0.0.5', family: 4 }]);
+
+    const result = await checkSsrf('https://split.example');
+
+    expect(result.allowed).toBe(false);
+    expect(result.isPrivate).toBe(true);
+    expect(result.resolvedIp).toBe('10.0.0.5');
+  });
+
+  it('SEC-DUAL-003: a loopback address hidden behind a public one is still loopback', async () => {
+    resolveAll([{ address: '203.0.113.10', family: 4 }, { address: '::1', family: 6 }]);
+
+    const result = await checkSsrf('https://rebind.example');
+
+    expect(result.allowed).toBe(false);
+    expect(result.error).toContain('loopback');
+  });
+
+  it('SEC-DUAL-004: the pinned dispatcher hands the socket the whole checked list, IPv4 first', async () => {
+    resolveAll([{ address: '2001:db8::10', family: 6 }, { address: '203.0.113.10', family: 4 }]);
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ status: 200, ok: true, headers: { get: () => null } }));
+
+    await safeFetchFollow('https://idp.example/');
+
+    const lookup = agentCapture.options.connect.lookup as (h: string, o: object, cb: (...a: unknown[]) => void) => void;
+    const seen: unknown[] = [];
+    lookup('somebody-else.example', { all: true }, (...args: unknown[]) => seen.push(...args));
+    expect(seen).toEqual([null, [
+      { address: '203.0.113.10', family: 4 },
+      { address: '2001:db8::10', family: 6 },
+    ]]);
+    // Asked for one address, the socket gets the first of the same list; the
+    // name it asks for never matters, that is the whole point of the pin.
+    const single: unknown[] = [];
+    lookup('somebody-else.example', {}, (...args: unknown[]) => single.push(...args));
+    expect(single).toEqual([null, '203.0.113.10', 4]);
+  });
+
+  it('SEC-DUAL-005: the admin lane blocks a name with a metadata address anywhere in its answer', async () => {
+    resolveAll([{ address: '203.0.113.10', family: 4 }, { address: '169.254.169.254', family: 4 }]);
+    const fetchSpy = vi.fn();
+    vi.stubGlobal('fetch', fetchSpy);
+
+    await expect(safeFetchLlm('https://models.example/v1')).rejects.toThrow(SsrfBlockedError);
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it('SEC-DUAL-006: a redirect hop resolves and pins its own full list again', async () => {
+    mockLookup
+      .mockResolvedValueOnce([{ address: '2001:db8::1', family: 6 }, { address: '203.0.113.1', family: 4 }] as never)
+      .mockResolvedValueOnce([{ address: '2001:db8::2', family: 6 }, { address: '203.0.113.2', family: 4 }] as never);
+    const pins: unknown[][] = [];
+    vi.stubGlobal('fetch', vi.fn().mockImplementation(async () => {
+      const lookup = agentCapture.options.connect.lookup as (h: string, o: object, cb: (...a: unknown[]) => void) => void;
+      const seen: unknown[] = [];
+      lookup('x', { all: true }, (...args: unknown[]) => seen.push(...args));
+      pins.push(seen);
+      return pins.length === 1
+        ? { status: 302, ok: false, headers: { get: (h: string) => (h.toLowerCase() === 'location' ? 'https://second.example/' : null) } }
+        : { status: 200, ok: true, headers: { get: () => null } };
+    }));
+
+    const response = await safeFetchLlm('https://first.example/');
+
+    expect(response.status).toBe(200);
+    expect(pins[0][1]).toEqual([{ address: '203.0.113.1', family: 4 }, { address: '2001:db8::1', family: 6 }]);
+    expect(pins[1][1]).toEqual([{ address: '203.0.113.2', family: 4 }, { address: '2001:db8::2', family: 6 }]);
+  });
+
+  it('SEC-DUAL-007: a single record answered the old way is still one pinned address', async () => {
+    mockLookup.mockResolvedValue({ address: '203.0.113.10', family: 4 });
+
+    const result = await checkSsrf('https://one.example');
+
+    expect(result).toMatchObject({ allowed: true, resolvedIp: '203.0.113.10', resolvedIps: ['203.0.113.10'] });
+  });
+
+  it('SEC-DUAL-008: an empty answer is a name that does not resolve', async () => {
+    mockLookup.mockResolvedValue([] as never);
+
+    const result = await checkSsrf('https://empty.example');
+
+    expect(result.allowed).toBe(false);
+    expect(result.error).toBe('Could not resolve hostname (ENOTFOUND)');
+  });
+});

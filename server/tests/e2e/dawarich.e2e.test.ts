@@ -252,6 +252,32 @@ describe('Dawarich e2e (real addon gate + real auth guard + real services + temp
     expect(res.body).toEqual({ success: true });
   });
 
+  it('DAWARICH-E2E-016: POST test with a blank key against a host other than the stored one answers not_connected and never dials out', async () => {
+    // The stored key is the one thing this route must not carry to an address
+    // the form just typed. The client stub throws on every call, so a probe
+    // that did go out would surface as `unreachable` here rather than as the
+    // refusal the form is meant to render.
+    db.prepare('INSERT INTO dawarich_connections (user_id, url, api_key) VALUES (?, ?, ?)').run(
+      ownerId,
+      'https://dawarich.old.example',
+      'plain-legacy-key',
+    );
+
+    const res = await request(server)
+      .post('/api/integrations/dawarich/test')
+      .set('Cookie', sessionCookie(ownerId))
+      .send({ url: 'https://dawarich.elsewhere.example' });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ connected: false, error: 'not_connected' });
+    expect(res.body.errorDetail).toContain('https://dawarich.old.example');
+    // And the stored connection is untouched by a test, as it always was.
+    expect(db.prepare('SELECT url, api_key FROM dawarich_connections WHERE user_id = ?').get(ownerId)).toEqual({
+      url: 'https://dawarich.old.example',
+      api_key: 'plain-legacy-key',
+    });
+  });
+
   // ── Suggestions ──────────────────────────────────────────────────────────
 
   it('DAWARICH-E2E-020: GET suggestions without a connection answers the envelope with connected:false — an empty list alone would read as "no stays"', async () => {

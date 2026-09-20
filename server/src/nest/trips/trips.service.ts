@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import path from 'path';
 import { DatabaseService } from '../database/database.service';
-import type { ActiveTrip, TrekWsPayload, TrekWsTripEventName } from '@trek/shared';
+import { MAX_TRIP_DAYS, tripSpanDays, type ActiveTrip, type TrekWsPayload, type TrekWsTripEventName } from '@trek/shared';
 import { RealtimeService } from '../realtime/realtime.service';
 import { PermissionsService } from '../permissions/permissions.service';
 import type { Trip, User } from '../../types';
@@ -14,7 +14,19 @@ import { StorageService } from '../storage/storage.service';
 import { NotFoundError, ValidationError } from '../common/domain-errors';
 
 export const MS_PER_DAY = 86400000;
-export const MAX_TRIP_DAYS = 365;
+
+/**
+ * The date range is refused, not cut short: generateDays used to clip the day
+ * rows at the limit while the trip kept its full end date, so everything past
+ * the cut-off had dates but no day to go on (#2403). An inverted range is
+ * refused here as well, because a start date moved past the stored end date
+ * arrives on its own and would otherwise empty the trip.
+ */
+function assertTripSpan(startDate: string, endDate: string) {
+  const span = tripSpanDays(startDate, endDate);
+  if (span < 1) throw new ValidationError('End date must be after start date');
+  if (span > MAX_TRIP_DAYS) throw new ValidationError(`A trip can span at most ${MAX_TRIP_DAYS} days`);
+}
 
 /**
  * Strips `feed_token` from a trip row on its way out.
@@ -171,7 +183,7 @@ export class TripsService {
 
   // ── Day generation ────────────────────────────────────────────────────────
 
-  generateDays(tripId: number | bigint | string, startDate: string | null, endDate: string | null, maxDays?: number, dayCount?: number) {
+  generateDays(tripId: number | bigint | string, startDate: string | null, endDate: string | null, dayCount?: number) {
     const existing = this.db.prepare('SELECT id, day_number, date FROM days WHERE trip_id = ?').all(tripId) as { id: number; day_number: number; date: string | null }[];
     const setDayNumber = this.db.prepare('UPDATE days SET day_number = ? WHERE id = ?');
 
@@ -215,10 +227,8 @@ export class TripsService {
     }
 
     const [sy, sm, sd] = startDate.split('-').map(Number);
-    const [ey, em, ed] = endDate.split('-').map(Number);
     const startMs = Date.UTC(sy, sm - 1, sd);
-    const endMs = Date.UTC(ey, em - 1, ed);
-    const numDays = Math.min(Math.floor((endMs - startMs) / MS_PER_DAY) + 1, maxDays ?? MAX_TRIP_DAYS);
+    const numDays = tripSpanDays(startDate, endDate);
 
     const targetDates: string[] = [];
     for (let i = 0; i < numDays; i++) {
@@ -309,7 +319,8 @@ export class TripsService {
     `).all({ userId, archived });
   }
 
-  create(userId: number, data: CreateTripData, maxDays?: number) {
+  create(userId: number, data: CreateTripData) {
+    if (data.start_date && data.end_date) assertTripSpan(data.start_date, data.end_date);
     const rd = data.reminder_days !== undefined
       ? (Number(data.reminder_days) >= 0 && Number(data.reminder_days) <= 30 ? Number(data.reminder_days) : 3)
       : 3;
@@ -320,7 +331,7 @@ export class TripsService {
     `).run(userId, data.title, data.description || null, data.start_date || null, data.end_date || null, data.currency || 'EUR', rd);
 
     const tripId = result.lastInsertRowid;
-    this.generateDays(tripId, data.start_date || null, data.end_date || null, maxDays, data.day_count);
+    this.generateDays(tripId, data.start_date || null, data.end_date || null, data.day_count);
 
     const trip = this.db.prepare(`${TRIP_SELECT} WHERE t.id = :tripId`).get({ userId, tripId });
     return { trip, tripId: Number(tripId), reminderDays: rd };
@@ -384,15 +395,11 @@ export class TripsService {
     const trip = this.db.prepare('SELECT * FROM trips WHERE id = ?').get(tripId) as Trip & { reminder_days?: number } | undefined;
     if (!trip) throw new NotFoundError('Trip not found');
 
-    const { title, description, start_date, end_date, currency, is_archived, cover_image, reminder_days } = data;
-
-    if (start_date && end_date && new Date(end_date) < new Date(start_date))
-      throw new ValidationError('End date must be after start date');
+    const { title, description, currency, is_archived, cover_image, reminder_days } = data;
+    const { newStart, newEnd, dayCount, regenerate } = this.resolveRange(trip, data);
 
     const newTitle = title || trip.title;
     const newDesc = description !== undefined ? description : trip.description;
-    const newStart = start_date !== undefined ? start_date : trip.start_date;
-    const newEnd = end_date !== undefined ? end_date : trip.end_date;
     const newCurrency = currency || trip.currency;
     const newArchived = is_archived !== undefined ? (is_archived ? 1 : 0) : trip.is_archived;
     const newCover = cover_image !== undefined ? cover_image : trip.cover_image;
@@ -410,8 +417,7 @@ export class TripsService {
     if (trip.start_date && trip.end_date && newStart && newStart !== trip.start_date)
       this.vacay.shiftOwnerEntriesForTripWindow(trip.user_id, trip.start_date, trip.end_date, newStart);
 
-    const dayCount = data.day_count ? Math.min(Math.max(Number(data.day_count) || 7, 1), MAX_TRIP_DAYS) : undefined;
-    if (newStart !== trip.start_date || newEnd !== trip.end_date || dayCount) {
+    if (regenerate) {
       this.db.transaction(() => {
         // Accommodations have no absolute date columns, so their pre-change dates must be
         // snapshotted before generateDays re-dates the day rows in place.
@@ -419,7 +425,7 @@ export class TripsService {
           (this.db.prepare('SELECT id, date FROM days WHERE trip_id = ?').all(tripId) as { id: number; date: string | null }[])
             .map(d => [d.id, d.date]),
         );
-        this.generateDays(tripId, newStart || null, newEnd || null, undefined, dayCount);
+        this.generateDays(tripId, newStart || null, newEnd || null, dayCount);
         if (data.date_shift_mode === 'shift_all') {
           // Explicit "shift everything": bookings stay glued to their (re-dated) day rows,
           // so re-stamp reservation_time to follow — same rules as reorderDays/insertDay.
@@ -456,7 +462,31 @@ export class TripsService {
     return { updatedTrip, changes, isAdminEdit, ownerEmail, newTitle, newReminder, oldReminder };
   }
 
+  /**
+   * The dates the update leaves the trip with, checked before anything is
+   * written. The day grid is rebuilt whenever a date moves or a day_count
+   * arrives, and a dated rebuild runs over the whole range, so the range is
+   * held to the limit exactly then. A trip stored with a longer range can
+   * still be renamed.
+   */
+  private resolveRange(trip: Trip, data: UpdateTripData) {
+    const { start_date, end_date } = data;
+    if (start_date && end_date && new Date(end_date) < new Date(start_date))
+      throw new ValidationError('End date must be after start date');
+    const newStart = start_date !== undefined ? start_date : trip.start_date;
+    const newEnd = end_date !== undefined ? end_date : trip.end_date;
+    const dayCount = data.day_count ? Math.min(Math.max(Number(data.day_count) || 7, 1), MAX_TRIP_DAYS) : undefined;
+    const regenerate = newStart !== trip.start_date || newEnd !== trip.end_date || dayCount !== undefined;
+    if (regenerate && newStart && newEnd) assertTripSpan(newStart, newEnd);
+    return { newStart, newEnd, dayCount, regenerate };
+  }
+
   async update(tripId: string | number, userId: number, body: UpdateTripData, role: string) {
+    // A refused range must not leave the budget rebased onto a currency the trip
+    // never took, so the dates are checked before the first write.
+    const trip = this.getRaw(tripId);
+    if (!trip) throw new NotFoundError('Trip not found');
+    this.resolveRange(trip, body);
     // Re-anchor the budget while the outgoing currency is still on the trip row,
     // otherwise the frozen FX rates and the currency-less expenses that inherit the
     // trip's base are left pointing at a currency that no longer exists (#1543).

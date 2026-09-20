@@ -26,5 +26,7 @@ const map: TranslationStrings = {
   'map.overview.hide': 'Sembunyikan seluruh perjalanan',
   'map.overview.total': 'Jarak total',
   'map.attribution': 'Kredit peta',
+  'map.overview.unrouted': '{count} ruas tidak dapat dihitung, jadi jaraknya belum lengkap.',
+  'map.overview.dayUnrouted': '{count} ruas pada hari ini tidak dapat dihitung',
 };
 export default map;

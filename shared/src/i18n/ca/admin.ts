@@ -723,5 +723,6 @@ const admin: TranslationStrings = {
   'admin.placesUsageTitle': "Per a què s'usa la clau",
   'admin.mapsKeyHintShort': 'Afegeix fotos, valoracions i horaris. Cada consulta passa llavors per Google.',
   'admin.amapKeyHintShort': 'Per a la cerca de llocs a la Xina continental. Cal una clau de servei web, no una clau API JS.',
+  'admin.collab.links.subtitle': 'Enllaços compartits i adreces d’interès',
 };
 export default admin;

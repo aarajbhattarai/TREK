@@ -1,4 +1,4 @@
-// FE-DAWARICH-ACCEPT-001 to FE-DAWARICH-ACCEPT-024
+// FE-DAWARICH-ACCEPT-001 to FE-DAWARICH-ACCEPT-026
 /**
  * The review step between a detector's guess and a row in somebody's trip.
  *
@@ -11,7 +11,8 @@
  * pinning, and it is the one a refactor breaks first.
  *
  * The rest is the shape of the three targets. `place` needs a trip and offers a
- * day, `journal` needs a journey and asks for a story, `bucket_list` needs a
+ * day (and no date: the day IS where it lands, and the server reads no date for
+ * a place), `journal` needs a journey, a date and a story, `bucket_list` needs a
  * matched wish and hides the clock entirely because ticking a wish off uses the
  * recorded timestamp and nothing else. Each of the three can be in a state
  * where there is nothing to write to (no trips, no journeys, no matched wish),
@@ -173,20 +174,20 @@ describe('DawarichAcceptDialog', () => {
 
     fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Café Reichard am Dom' } })
     fireEvent.change(screen.getByLabelText('Notes'), { target: { value: 'Two hours and a lot of cake.' } })
-    typeDate('2026-09-12')
     fireEvent.change(screen.getByLabelText('Arrived'), { target: { value: '09:00' } })
     fireEvent.change(screen.getByLabelText('Left'), { target: { value: '11:45' } })
     pick('Not on a day yet', 'Day 1')
 
     fireEvent.click(screen.getByRole('button', { name: 'Add place' }))
 
+    // The day is the only calendar fact a place carries: there is no date in
+    // this body because there is no date field on this rail.
     expect(onConfirm).toHaveBeenCalledWith({
       target: 'place',
       tripId: 31,
       dayId: 401,
       name: 'Café Reichard am Dom',
       notes: 'Two hours and a lot of cake.',
-      date: '2026-09-12',
       time: '09:00',
       endTime: '11:45',
     })
@@ -381,10 +382,11 @@ describe('DawarichAcceptDialog', () => {
   it('FE-DAWARICH-ACCEPT-018: a recording with no readable clock or date sends neither', () => {
     // Dawarich has shipped date-only and non-ISO timestamps; the clock parser
     // answers with an empty string rather than a guess, and an empty string must
-    // not reach the body as `time: ""`.
+    // not reach the body as `time: ""` or `date: ""`. On the journal rail,
+    // because that is the one rail that shows the date beside the clock.
     const { onConfirm } = open({
-      trips: TRIPS,
-      daysForTrip,
+      target: 'journal',
+      journals: JOURNALS,
       suggestion: stay({ startedAt: '2026-09-10', endedAt: '2026-09-10', localDate: '' }),
     })
 
@@ -392,8 +394,8 @@ describe('DawarichAcceptDialog', () => {
     expect(screen.getByLabelText('Left')).toHaveValue('')
     expect(screen.getByRole('button', { name: 'Date' })).toBeInTheDocument()
 
-    fireEvent.click(screen.getByRole('button', { name: 'Add place' }))
-    expect(onConfirm).toHaveBeenCalledWith({ target: 'place', tripId: 31 })
+    fireEvent.click(screen.getByRole('button', { name: 'Add entry' }))
+    expect(onConfirm).toHaveBeenCalledWith({ target: 'journal', journalId: 71 })
   })
 
   it('FE-DAWARICH-ACCEPT-019: the fields follow the stay, and survive a re-render of the same one', () => {
@@ -523,5 +525,44 @@ describe('DawarichAcceptDialog', () => {
       time: '10:15',
       endTime: '12:40',
     })
+  })
+
+  it('FE-DAWARICH-ACCEPT-025: the place rail offers no date, because the day picker is where a place lands', () => {
+    open({ trips: TRIPS, daysForTrip })
+
+    // A place has no date of its own: the server reads a date for a journal
+    // entry and for nothing else, so a date field on this rail was one whose
+    // change moved the place nowhere while the toast still said it landed.
+    // The clock stays, the server does read that.
+    expect(screen.queryByText('Date')).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Enter date manually' })).toBeNull()
+    expect(screen.getByLabelText('Arrived')).toHaveValue('10:15')
+    expect(screen.getByLabelText('Left')).toHaveValue('12:40')
+    expect(screen.getByRole('button', { name: 'Not on a day yet' })).toBeInTheDocument()
+  })
+
+  it('FE-DAWARICH-ACCEPT-026: a corrected date travels with a journal entry, and never with a place', () => {
+    // Both rails on one stay, so the dialog holds the corrected date in state
+    // across the switch: the same shape as switching rails with a note typed.
+    const { onConfirm, update } = open({ target: 'journal', journals: JOURNALS, trips: TRIPS, daysForTrip })
+
+    expect(screen.getByText('Date')).toBeInTheDocument()
+    typeDate('2026-09-12')
+    fireEvent.click(screen.getByRole('button', { name: 'Add entry' }))
+    expect(onConfirm).toHaveBeenLastCalledWith({
+      target: 'journal',
+      journalId: 71,
+      date: '2026-09-12',
+      time: '10:15',
+      endTime: '12:40',
+    })
+
+    // Same stay, now as a place. The corrected date is still in state and would
+    // be silently dropped by the server; it must not be in the body at all,
+    // so what the dialog claims to send is what is actually written.
+    update({ target: 'place' })
+    expect(screen.queryByText('Date')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Add place' }))
+    expect(onConfirm).toHaveBeenLastCalledWith({ target: 'place', tripId: 31, time: '10:15', endTime: '12:40' })
   })
 })

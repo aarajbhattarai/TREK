@@ -1,6 +1,6 @@
 # MCP Scopes
 
-OAuth scopes control exactly which data your AI client can read or write in TREK. You select scopes during the OAuth consent screen or when pre-creating an OAuth client. You can revoke access at any time by deleting the OAuth client or token from **Settings → Integrations → MCP**.
+OAuth scopes control exactly which data your AI client can read or write in TREK. You select scopes during the OAuth consent screen or when pre-creating an OAuth client. You can revoke access at any time by deleting the OAuth client or token from your **Settings → Integrations → MCP**.
 
 ![OAuth consent screen](assets/OAuthConsentDCR.png)
 
@@ -56,7 +56,7 @@ TREK defines 35 scopes across 17 groups.
 - `list_trips` and `get_trip_summary` are always available regardless of scope — they are navigation tools.
 - `plugins:use` grants no data access of its own. It lets a client call tools published by plugins your administrator installed and approved, and each plugin acts with the permissions the administrator granted it — which can reach further than the scopes on your token. The admin's `mcp:tools` grant is the real boundary, not this scope. No client preset selects it for you: a client has to ask for it by name.
 - Static tokens and web session JWTs have full access equivalent to all scopes, `plugins:use` included.
-- Addon-gated tools (Packing, To-dos, Budget, Collections, Atlas, Collab, Vacay, Journey) require both the relevant scope **and** the corresponding addon to be enabled by an admin. The to-do tools ride the **Packing** addon, not an addon of their own.
+- Addon-gated tools (Packing, To-dos, Budget, Collections, Atlas, Collab, Vacay, Journey, Road trip, Dawarich, Document sync and AirTrail) require both the relevant scope **and** the corresponding addon to be enabled by an admin. The to-do tools ride the **Packing** addon (listed as **Lists** under **Admin → Addons**), not an addon of their own. The Road trip tools sit on `trips:*` and `places:write`, the Dawarich tools on `journey:*`, `places:write` and `atlas:write`, the Document sync tools on `files:*` under the **Documents** addon, and the AirTrail tools on `reservations:*`; without the addon, a client holding those scopes does not see them.
 
 ## Choosing the right scopes
 
@@ -70,7 +70,7 @@ Grant only what you need. Some examples:
 | Packing list assistant | `trips:read` + `packing:read` + `packing:write` |
 | Journey writer | `trips:read` + `journey:read` + `journey:write` |
 
-The preset buttons in **Settings → Integrations → MCP → OAuth Clients** fill in a reasonable scope set for common clients. VS Code defaults to read-only scopes; Claude.ai and Claude Desktop default to all scopes except `:delete`.
+The preset buttons in your **Settings → Integrations → MCP → OAuth 2.1 Clients** fill in a reasonable scope set for common clients. VS Code defaults to read-only scopes; Claude.ai and Claude Desktop default to all scopes except `:delete`.
 
 ## Related
 

@@ -1,8 +1,10 @@
+import { MAX_TRIP_DAYS } from '../trip/trip.schema';
+
 import { z } from 'zod';
 
 export const roadtripDayBoundarySchema = z
   .object({
-    day_number: z.number().int().min(1).max(366),
+    day_number: z.number().int().min(1).max(MAX_TRIP_DAYS),
     from_assignment_id: z.number().int().positive(),
     to_assignment_id: z.number().int().positive().nullable(),
     fraction: z.number().min(0).max(1),

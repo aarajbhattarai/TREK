@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { type RouteProfileKey } from './RouteCalculator'
 import {
   assembleTripRoute, emptyAnswers, planTripRoute, routeTripLegs, summariseTripRoute,
-  type TripRouteSummary,
+  type TripRouteAnswers, type TripRouteSummary,
 } from './tripRouteGeometry'
 import { useSettingsStore } from '../../store/settingsStore'
 import type { Accommodation, AssignmentsMap, Day, Reservation } from '../../types'
@@ -66,12 +66,25 @@ export function useTripRouteOverview(
 
     // Straight lines first so the shape of the trip is on screen immediately, then the
     // real roads replace them — the same two-step the single-day route draws with.
-    setResult({ ...summariseTripRoute(assembleTripRoute(plan, emptyAnswers(plan))), loading: true })
+    const first = summariseTripRoute(assembleTripRoute(plan, emptyAnswers(plan)))
+    setResult({ ...first, loading: true })
 
-    routeTripLegs(plan, { tripId, signal: controller.signal }).then(routed => {
+    // Published leg by leg: the legs go to the router one at a time with a pause between
+    // them, so a cold trip takes a second per leg, and roads that fill in as they answer
+    // read as progress where straight lines that all flip at once read as a hang.
+    //
+    // The frame is the exception. A fresh `focusPoints` array is what tells the map to
+    // fit the camera, and a fit every second would take the map back from wherever the
+    // reader has panned to. The frame set on the straight lines therefore holds until
+    // the round is over, and only the finished result brings a new one, exactly the two
+    // fits the overview made when every answer landed at once.
+    const publish = (routed: TripRouteAnswers, loading: boolean): void => {
       if (controller.signal.aborted) return
-      setResult({ ...summariseTripRoute(assembleTripRoute(plan, routed)), loading: false })
-    })
+      const next = summariseTripRoute(assembleTripRoute(plan, routed))
+      setResult({ ...next, focusPoints: loading ? first.focusPoints : next.focusPoints, loading })
+    }
+    routeTripLegs(plan, { tripId, signal: controller.signal, onAnswer: routed => publish(routed, true) })
+      .then(routed => publish(routed, false))
 
     return () => controller.abort()
     // planKey is derived from the same inputs as plan, so keying on the string is

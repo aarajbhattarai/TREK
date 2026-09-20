@@ -71,5 +71,7 @@ const mobileTrip: TranslationStrings = {
     '1 szakaszon több volt, mint ami egy válaszba fér. Válassz kevesebb fajtát, hogy lásd a többit.',
   'mobileTrip.rtTruncated.other':
     '{count} szakaszon több volt, mint ami egy válaszba fér. Válassz kevesebb fajtát, hogy lásd a többit.',
+  'mobileTrip.rtNoDay': 'Nincs kiválasztott nap',
+  'mobileTrip.rtNoDayHint': 'A térkép a teljes utat mutatja. Koppints fent egy napra a napi útvonalhoz.',
 };
 export default mobileTrip;

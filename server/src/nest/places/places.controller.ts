@@ -328,11 +328,16 @@ export class PlacesController {
     // A night booked at this place went with it, and took its partner booking and
     // that booking's expense along. Neither is covered by place:deleted, and an
     // expense linked by reservation_id is not one linkedExpenseIds finds.
+    //
+    // Sent to the deleting tab as well, on purpose. The socket id keeps a tab
+    // from hearing back what it just did itself, and that tab only removed the
+    // places: the booking and the expense went on the server alone, and a tab
+    // that never hears about them keeps showing both until a reload.
     for (const reservationId of cancelled.reservationIds) {
-      this.places.broadcast(tripId, 'reservation:deleted', { reservationId }, socketId);
+      this.places.broadcast(tripId, 'reservation:deleted', { reservationId }, undefined);
     }
     for (const itemId of [...expenseIds, ...cancelled.budgetItemIds]) {
-      this.places.broadcast(tripId, 'budget:deleted', { itemId }, socketId);
+      this.places.broadcast(tripId, 'budget:deleted', { itemId }, undefined);
     }
     return { deleted, count: deleted.length };
   }
@@ -503,11 +508,12 @@ export class PlacesController {
     // A night booked at this place went with it, and took its partner booking and
     // that booking's expense along. Neither is covered by place:deleted, and an
     // expense linked by reservation_id is not one linkedExpenseIds finds.
+    // Without a socket id, so the deleting tab hears it too: see bulkDelete.
     for (const reservationId of cancelled.reservationIds) {
-      this.places.broadcast(tripId, 'reservation:deleted', { reservationId }, socketId);
+      this.places.broadcast(tripId, 'reservation:deleted', { reservationId }, undefined);
     }
     for (const itemId of [...expenseIds, ...cancelled.budgetItemIds]) {
-      this.places.broadcast(tripId, 'budget:deleted', { itemId }, socketId);
+      this.places.broadcast(tripId, 'budget:deleted', { itemId }, undefined);
     }
     return { success: true };
   }

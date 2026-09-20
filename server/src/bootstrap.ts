@@ -18,6 +18,7 @@ import { validateRouteGuards } from './nest/common/validate-route-guards';
 import { validateManagedRoutes } from './nest/common/validate-managed-routes';
 import { TrekWsAdapter } from './nest/realtime/trek-ws.adapter';
 import { StorageService } from './nest/storage/storage.service';
+import { MAX_COLLECTION_FILE_BYTES } from '@trek/shared';
 
 /**
  * Builds the unified TREK NestJS application that serves the ENTIRE surface — the
@@ -142,18 +143,30 @@ export async function buildApp(): Promise<INestApplication> {
    * but a save that quietly fails and an editor that says "not saved" without
    * saying why.
    *
-   * So the book route, and only the book route, is measured against the size a
-   * book can actually be. Everything else keeps the tighter limit.
+   * So the book route is measured against the size a book can actually be.
+   *
+   * A list file is the same story at a smaller scale. Its contract allows a
+   * megabyte and the import posts it whole, yet a list of a few hundred places
+   * with notes is past a hundred kilobytes already, and so is the favourites
+   * GPX of anybody who uses OsmAnd (#2301). The three routes that carry one,
+   * the import into a new list, the GPX reader and the import into a list that
+   * already exists, are measured against that megabyte, doubled for the JSON
+   * escaping of a document full of quotes. Everything else keeps the tighter
+   * limit.
    */
   const bookBody = express.json({ limit: '8mb', verify: rawBodyKeeper });
+  const listFileBody = express.json({ limit: MAX_COLLECTION_FILE_BYTES * 2, verify: rawBodyKeeper });
   const json = express.json({ limit: '100kb', verify: rawBodyKeeper });
   const urlencoded = express.urlencoded({ limit: '100kb', extended: true, verify: rawBodyKeeper });
   const isMcp = (req: Request) => req.path === '/mcp' || req.path === '/mcp/';
   const isBookWrite = (req: Request) =>
     req.method === 'PUT' && /^\/api\/journeys\/\d+\/book$/.test(req.path);
+  const isListFile = (req: Request) =>
+    req.method === 'POST' && /^\/api\/addons\/collections\/(import|gpx\/read|\d+\/import)$/.test(req.path);
 
   instance.use(function jsonParser(req: Request, res: Response, next: NextFunction) {
     if (isBookWrite(req)) return bookBody(req, res, next);
+    if (isListFile(req)) return listFileBody(req, res, next);
     return isMcp(req) ? next() : json(req, res, next);
   });
   instance.use(function urlencodedParser(req: Request, res: Response, next: NextFunction) {

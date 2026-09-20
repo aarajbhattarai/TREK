@@ -21,6 +21,7 @@ import {
   numberOr,
   parseBool,
   parseDurationMs,
+  parseLinkLocalAllowList,
   positiveIntOr,
   positiveNumberOr,
   resolveDurability,
@@ -150,8 +151,14 @@ export function deriveMaps(raw: RawEnv) {
      * whether searches leave the instance, and a setting that reaches for the
      * network is one an operator wants pinned in their compose file, not one a
      * second admin can flip in a browser.
+     *
+     * Off only on a value of the false family the schema admits (false, 0,
+     * off, no), so the switch reads like every other boolean here. Unset,
+     * blank and anything else stay on: the schema refuses a value outside the
+     * family at boot, and a path that skips validation must not quietly drop
+     * the install back to Nominatim.
      */
-    trekPlacesEnabled: raw.TREK_PLACES_ENABLED !== 'false',
+    trekPlacesEnabled: parseBool(raw.TREK_PLACES_ENABLED) !== false,
     placesApiKey: raw.PLACES_API_KEY || undefined,
     /** The same two knobs for Amap (高德), which an install in China uses instead. */
     amapApiBase: raw.AMAP_API_BASE || undefined,
@@ -323,6 +330,7 @@ export function derivePaths(raw: RawEnv) {
 export function deriveNet(raw: RawEnv) {
   return {
     allowInternalNetwork: parseBool(raw.ALLOW_INTERNAL_NETWORK) === true,
+    allowLinkLocalIps: parseLinkLocalAllowList(raw.ALLOW_LINK_LOCAL_IPS).ips,
   };
 }
 

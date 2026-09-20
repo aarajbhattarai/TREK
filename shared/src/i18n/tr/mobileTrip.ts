@@ -69,5 +69,7 @@ const mobileTrip: TranslationStrings = {
     '1 kesimde tek bir yanıta sığandan fazlası vardı. Geri kalanı görmek için daha az tür seçin.',
   'mobileTrip.rtTruncated.other':
     '{count} kesimde tek bir yanıta sığandan fazlası vardı. Geri kalanı görmek için daha az tür seçin.',
+  'mobileTrip.rtNoDay': 'Gün seçilmedi',
+  'mobileTrip.rtNoDayHint': 'Harita tüm yolculuğu gösteriyor. Günün sürüşünü görmek için yukarıdan bir güne dokunun.',
 };
 export default mobileTrip;

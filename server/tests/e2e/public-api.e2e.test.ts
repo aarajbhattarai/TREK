@@ -43,7 +43,7 @@ const { db } = vi.hoisted(() => {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP);
     CREATE TABLE categories (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL);
     CREATE TABLE day_assignments (id INTEGER PRIMARY KEY AUTOINCREMENT, day_id INTEGER NOT NULL,
-      place_id INTEGER NOT NULL, order_index INTEGER NOT NULL DEFAULT 0);
+      place_id INTEGER NOT NULL, order_index INTEGER NOT NULL DEFAULT 0, accommodation_id INTEGER);
     CREATE TABLE day_notes (id INTEGER PRIMARY KEY AUTOINCREMENT, day_id INTEGER NOT NULL,
       trip_id INTEGER NOT NULL, text TEXT NOT NULL, time TEXT, icon TEXT, sort_order REAL DEFAULT 0);
     CREATE TABLE day_accommodations (id INTEGER PRIMARY KEY AUTOINCREMENT, trip_id INTEGER NOT NULL,
@@ -213,8 +213,11 @@ describe('Public API v1 e2e (real guard + real SQL)', () => {
       "INSERT INTO reservations (trip_id, day_id, type, title, location, reservation_time, status) VALUES (1, 1, 'flight', 'LH 1234', 'FRA', '2026-06-14T08:00', 'confirmed')",
     ).run();
     db.prepare(
-      "INSERT INTO day_accommodations (trip_id, place_id, start_day_id, end_day_id, check_in, check_out) VALUES (1, 3, 1, 2, '15:00', '11:00')",
+      "INSERT INTO day_accommodations (id, trip_id, place_id, start_day_id, end_day_id, check_in, check_out) VALUES (1, 1, 3, 1, 2, '15:00', '11:00')",
     ).run();
+    // The stop a booked night puts on its check-in day, so the route can reach the
+    // hotel. It belongs to the stay, not to the day's plan.
+    db.prepare('INSERT INTO day_assignments (day_id, place_id, order_index, accommodation_id) VALUES (1, 3, 2, 1)').run();
 
     app = await build();
     server = app.getHttpServer() as Server;
@@ -350,6 +353,16 @@ describe('Public API v1 e2e (real guard + real SQL)', () => {
       ]);
     });
 
+    it('reports the night once, under accommodations, not again as a place on its check-in day', async () => {
+      // The stop a booking puts on its check-in day is how the route reaches the
+      // hotel. To a consumer it is the same booking twice: a hotel that is also a
+      // planned place reads as two different intentions.
+      const res = await get('/api/v1/trips/1?include=places,accommodations', ADA_TOKEN);
+      expect(res.status).toBe(200);
+      expect(res.body.days[0].places.map((p: { name: string }) => p.name)).toEqual(['Uffizien', 'Ponte Vecchio']);
+      expect(res.body.accommodations.map((a: { name: string }) => a.name)).toEqual(['Hotel Alba']);
+    });
+
     it('lists travellers by name, owner first, without ids or emails', async () => {
       const res = await get('/api/v1/trips/3?include=travellers', ADA_TOKEN);
       expect(res.status).toBe(200);
@@ -366,8 +379,9 @@ describe('Public API v1 e2e (real guard + real SQL)', () => {
       expect(res.body.unplanned_places).toEqual([
         expect.objectContaining({ name: 'Boboli-Garten', lat: 43.762, lng: 11.248, notes: 'vielleicht' }),
       ]);
-      // Hotel Alba has no day either, but it is the accommodation and is
-      // reported there — a shortlist that includes your hotel is not a shortlist.
+      // Hotel Alba stands on a day only through the stop its booking put there. It
+      // is the accommodation and is reported as such: a shortlist that includes
+      // your hotel is not a shortlist.
       expect(res.body.unplanned_places.map((p: { name: string }) => p.name)).not.toContain('Hotel Alba');
       // And the scheduled ones still sit on their day, not in both places.
       expect(res.body.days[0].places.map((p: { name: string }) => p.name)).toEqual(['Uffizien', 'Ponte Vecchio']);

@@ -65,5 +65,7 @@ const mobileTrip: TranslationStrings = {
   'mobileTrip.rtNoneOnStage': '本段沿途沒有這類地點。',
   'mobileTrip.rtTruncated.one': '1 段路的結果超出一次回答能容納的量。少選幾類就能看到其餘的。',
   'mobileTrip.rtTruncated.other': '{count} 段路的結果超出一次回答能容納的量。少選幾類就能看到其餘的。',
+  'mobileTrip.rtNoDay': '未選擇日期',
+  'mobileTrip.rtNoDayHint': '地圖顯示的是整個行程。點按上方的日期查看當天路線。',
 };
 export default mobileTrip;

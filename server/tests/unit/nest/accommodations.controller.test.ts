@@ -60,8 +60,8 @@ describe('AccommodationsController (parity with the legacy accommodations sub-ro
     });
 
     it('ACC-CTL-001 hands the day stop back in the answer and announces it', () => {
-      // The broadcast skips the socket that sent the request, so the answer is the
-      // only way the session that booked the night learns about its own stop.
+      // The stop reaches the session that booked the night over the socket as well;
+      // the answer is what it has left when that socket is down.
       const stop = { id: 77, day_id: 10 };
       const create = vi.fn().mockReturnValue({ accommodation: { id: 9 }, mirror: { created: stop, removed: [], stamped: null } });
       const announceMirror = vi.fn();
@@ -107,10 +107,12 @@ describe('AccommodationsController (parity with the legacy accommodations sub-ro
       expect(update).not.toHaveBeenCalled();
     });
 
-    it('ACC-CTL-004 the mirror sender is the same broadcast, socket id and all', () => {
+    it('ACC-CTL-004 the mirror sender is the same broadcast, reaching the sender too', () => {
       // announceMirror decides which events a stay write implies; the controller only
-      // hands it the door out. That door has to carry the sender's socket id, or the
-      // session that just moved the booking is told about its own stop twice.
+      // hands it the door out. That door must not skip the sender's socket: the day's
+      // new order and its re-pinned vias are not in the answer, and a session that
+      // takes the stop from the answer alone keeps the stops behind it on their old
+      // numbers. The stop itself arriving twice is a duplicate the store drops.
       const get = vi.fn().mockReturnValue({ id: 9 });
       const mirror = { created: { id: 78, day_id: 11 }, removed: [{ id: 77, dayId: 10 }], stamped: null };
       const update = vi.fn().mockReturnValue({ accommodation: { id: 9 }, mirror });
@@ -119,11 +121,18 @@ describe('AccommodationsController (parity with the legacy accommodations sub-ro
       const announceMirror = vi.fn((_tripId: string, m: typeof mirror, send: Send) => {
         for (const stop of m.removed) send('assignment:deleted', { assignmentId: stop.id, dayId: stop.dayId });
         if (m.created) send('assignment:created', { assignment: m.created });
+        send('assignment:reordered', { dayId: 11, orderedIds: [70, 78, 71] });
+        send('roadtripVia:changed', { dayId: 11, vias: [] });
       });
       const svc = makeService({ get, update, broadcast, announceMirror } as Partial<AccommodationsService>);
       new AccommodationsController(svc).update(user, '5', '9', refs, 'sock');
-      expect(broadcast).toHaveBeenCalledWith('5', 'assignment:deleted', { assignmentId: 77, dayId: 10 }, 'sock');
-      expect(broadcast).toHaveBeenCalledWith('5', 'assignment:created', { assignment: mirror.created }, 'sock');
+      expect(broadcast).toHaveBeenCalledWith('5', 'assignment:deleted', { assignmentId: 77, dayId: 10 }, undefined);
+      expect(broadcast).toHaveBeenCalledWith('5', 'assignment:created', { assignment: mirror.created }, undefined);
+      expect(broadcast).toHaveBeenCalledWith('5', 'assignment:reordered', { dayId: 11, orderedIds: [70, 78, 71] }, undefined);
+      expect(broadcast).toHaveBeenCalledWith('5', 'roadtripVia:changed', { dayId: 11, vias: [] }, undefined);
+      // The booking's own event is still the sender's echo, and still suppressed, and
+      // the journey reconcile behind announceMirror still gets the socket id (ACC-CTL-002).
+      expect(broadcast).toHaveBeenCalledWith('5', 'accommodation:updated', { accommodation: { id: 9 } }, 'sock');
     });
   });
 

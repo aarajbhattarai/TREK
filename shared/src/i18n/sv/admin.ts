@@ -809,5 +809,6 @@ const admin: TranslationStrings = {
   'admin.placesUsageTitle': 'Vad nyckeln används till',
   'admin.mapsKeyHintShort': 'Lägger till foton, betyg och öppettider. Varje sökning går då till Google.',
   'admin.amapKeyHintShort': 'För platssökning i Fastlandskina. Kräver en webbtjänstnyckel, inte en JS API-nyckel.',
+  'admin.collab.links.subtitle': 'Delade länkar och bokmärken',
 };
 export default admin;

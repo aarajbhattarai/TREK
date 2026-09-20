@@ -823,5 +823,6 @@ const admin: TranslationStrings = {
   'admin.placesUsageTitle': 'Σε τι χρησιμοποιείται το κλειδί',
   'admin.mapsKeyHintShort': 'Προσθέτει φωτογραφίες, βαθμολογίες και ώρες λειτουργίας. Κάθε αναζήτηση πηγαίνει τότε στη Google.',
   'admin.amapKeyHintShort': 'Για αναζήτηση τόπων στην ηπειρωτική Κίνα. Χρειάζεται κλειδί web service, όχι JS API.',
+  'admin.collab.links.subtitle': 'Κοινόχρηστοι σύνδεσμοι και σελιδοδείκτες',
 };
 export default admin;

@@ -1,3 +1,5 @@
+import { MAX_TRIP_DAYS } from '../trip/trip.schema';
+import { roadtripDayBoundarySchema } from './day-boundary.schema';
 import { roadtripPlanRequestSchema, roadtripCorridorRequestSchema, roadtripGpxImportSchema } from './planning.schema';
 import { roadtripPreferencesUpdateSchema } from './preferences.schema';
 
@@ -35,6 +37,18 @@ describe('Roadtrip MCP contracts', () => {
     expect(
       roadtripCorridorRequestSchema.safeParse({ tripId: 1, dayNumber: 1, category: 'charging', widthKm: 500 }).success,
     ).toBe(false);
+  });
+  it('lets day numbers run to the trip limit, not to a year (#2403)', () => {
+    const corridor = (dayNumber: number) =>
+      roadtripCorridorRequestSchema.safeParse({ tripId: 1, dayNumber, category: 'fuel' });
+    expect(corridor(400).success).toBe(true);
+    expect(corridor(MAX_TRIP_DAYS).success).toBe(true);
+    expect(corridor(MAX_TRIP_DAYS + 1).success).toBe(false);
+    const boundary = (day_number: number) =>
+      roadtripDayBoundarySchema.safeParse({ day_number, from_assignment_id: 1, to_assignment_id: 2, fraction: 0.5 });
+    expect(boundary(400).success).toBe(true);
+    expect(boundary(MAX_TRIP_DAYS).success).toBe(true);
+    expect(boundary(MAX_TRIP_DAYS + 1).success).toBe(false);
   });
   it('bounds GPX input and defaults all supported import types', () => {
     expect(roadtripGpxImportSchema.parse({ tripId: 1, gpx: '<gpx/>' })).toMatchObject({

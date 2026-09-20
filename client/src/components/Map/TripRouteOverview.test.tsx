@@ -87,4 +87,39 @@ describe('TripRouteOverviewPanel', () => {
     const { container } = render(<TripRouteOverviewPanel overview={overview({ days: [], totalDistance: 0 })} unit="metric" />)
     expect(container).toBeEmptyDOMElement()
   })
+
+  it('FE-MAP-TROU-009: says when legs could not be routed, and marks the day that is short', () => {
+    // A refused leg stays a straight line and adds nothing to the sum, so a total shown
+    // without a word about it reads as the whole trip when it is not.
+    const days = overview().days
+    const short = overview({
+      days: [{ ...days[0], unroutedLegs: 1 }, { ...days[1], unroutedLegs: 0 }],
+      unroutedLegs: 1,
+    })
+    render(<TripRouteOverviewPanel overview={short} unit="metric" />)
+
+    expect(screen.getByTestId('trip-overview-unrouted')).toHaveTextContent('map.overview.unrouted')
+    expect(screen.getAllByRole('img', { name: 'map.overview.dayUnrouted' })).toHaveLength(1)
+  })
+
+  it('FE-MAP-TROU-010: does not call a leg unrouted while the round is still running', () => {
+    // Every leg still waiting is unrouted too; the ellipsis already says the number grows.
+    const days = overview().days
+    const running = overview({
+      days: [{ ...days[0], unroutedLegs: 1 }, { ...days[1], unroutedLegs: 1 }],
+      unroutedLegs: 2,
+      loading: true,
+    })
+    render(<TripRouteOverviewPanel overview={running} unit="metric" />)
+
+    expect(screen.queryByTestId('trip-overview-unrouted')).toBeNull()
+    expect(screen.queryByRole('img', { name: 'map.overview.dayUnrouted' })).toBeNull()
+  })
+
+  it('FE-MAP-TROU-011: a fully routed trip carries no warning at all', () => {
+    render(<TripRouteOverviewPanel overview={overview({ unroutedLegs: 0 })} unit="metric" />)
+
+    expect(screen.queryByTestId('trip-overview-unrouted')).toBeNull()
+    expect(screen.queryByRole('img', { name: 'map.overview.dayUnrouted' })).toBeNull()
+  })
 })

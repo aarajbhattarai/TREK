@@ -1,5 +1,5 @@
 import { roadtripPreferencesRepo } from '../../repo/roadtripPreferencesRepo'
-// FE-TP-ROAD-001 to FE-TP-ROAD-099
+// FE-TP-ROAD-001 to FE-TP-ROAD-108
 import React from 'react'
 import { renderHook, act, waitFor } from '@testing-library/react'
 import { TranslationProvider } from '../../i18n/TranslationContext'
@@ -11,7 +11,7 @@ import { usePermissionsStore } from '../../store/permissionsStore'
 import { useSettingsStore } from '../../store/settingsStore'
 import { useBackgroundTasksStore } from '../../store/backgroundTasksStore'
 import { resetAllStores, seedStore } from '../../../tests/helpers/store'
-import { buildUser, buildTrip, buildDay, buildPlace, buildAssignment } from '../../../tests/helpers/factories'
+import { buildUser, buildTrip, buildDay, buildPlace, buildAssignment, buildReservation } from '../../../tests/helpers/factories'
 import {
   addonsApi, accommodationsApi, authApi, tripsApi, healthApi, airtrailApi, mapsApi,
 } from '../../api/client'
@@ -213,7 +213,7 @@ async function renderRoadtrip() {
     rt.routes.days = [{ ...rt.corridor.day, stops }]
   }
   rt.routes.days = rt.routes.days.map(day => ({
-    schedule: { entries: [] },
+    schedule: { entries: [], warnings: [] },
     legs: [],
     ...day,
     stops: (day.stops as Array<Record<string, unknown>>).map((stop, i) => ({
@@ -1972,7 +1972,7 @@ describe('useTripPlanner road trip: the phone feed', () => {
     rt.routes.days = [{
       dayId,
       dayNumber: 1,
-      schedule: { entries: [] },
+      schedule: { entries: [], warnings: [] },
       legs: [],
       stops: [0, 1, 2].map((i) => ({
         assignmentId: i + 1, placeId: i + 1, lat: 53 - i, lng: 10 + i,
@@ -2166,5 +2166,259 @@ describe('useTripPlanner road trip: the phone feed', () => {
     await waitFor(() => expect(rt.alt.close).toHaveBeenCalled())
     // The routed legs are kept (FE-TP-ROAD-094), so it is the tab that closed it, not the feed.
     expect(result.current.roadtripFeedActive).toBe(true)
+  })
+})
+
+/**
+ * The vias of a day are anchored by POSITION among the stops the router counts, and
+ * that count is taken over the STORED list: the day list read as a plan hides the stop
+ * a lodging booking put on the day and, behind the switch, the service stops, but the
+ * server and the routing round count every one of them. The handlers below are
+ * reachable from the place inspector and the day plan in Days mode, where the hook's
+ * own list is the shorter one, and a plan measured on it deleted the via behind a
+ * hidden hotel or pinned it to a leg nobody drew.
+ */
+describe('useTripPlanner road trip: corrections measured on the stored day', () => {
+  /** A day whose last stop is the hotel a booking put there, hidden under Days. */
+  const dayWithHiddenNight = () => {
+    seedTrip({
+      days: [buildDay({ id: 5, day_number: 1 })],
+      assignments: { '5': [stopAt(11, 5, 0), stopAt(13, 5, 1), stopAt(14, 5, 2, { accommodation_id: 7 })] },
+    })
+    rt.corridor.day = { dayId: 5, dayNumber: 1 }
+  }
+
+  it('FE-TP-ROAD-100: removing a stop under Days counts the night the list hides, so the via behind it moves instead of going', async () => {
+    dayWithHiddenNight()
+    // On the leg from the second stop to the hotel.
+    rt.vias.byDay = { 5: [via(1, 5, 1)] }
+    const { result } = await renderRoadtrip()
+    act(() => result.current.toggleRoadtripMode())
+    expect(result.current.assignments['5'].map(a => a.id)).toEqual([11, 13])
+
+    await act(async () => { await result.current.handleRemoveAssignment(5, 11) })
+
+    expect(actions.removeAssignment).toHaveBeenCalledWith(42, 5, 11)
+    // Three stops, not two: with two the day would have no leg left and every via
+    // of the day would be deleted on the server.
+    expect(rt.vias.reanchor).toHaveBeenCalledWith(5, { vias: [{ id: 1, after_order_index: 0 }], remove: [] })
+  })
+
+  it('FE-TP-ROAD-101: a drag under Days keeps a via behind the stop it was drawn after, hotel included', async () => {
+    dayWithHiddenNight()
+    // On the leg from the first stop to the second.
+    rt.vias.byDay = { 5: [via(1, 5, 0)] }
+    const { result } = await renderRoadtrip()
+    act(() => result.current.toggleRoadtripMode())
+
+    await act(async () => result.current.handleReorder(5, [13, 11]))
+
+    expect(actions.reorderAssignments).toHaveBeenCalledWith(42, 5, [13, 11, 14])
+    // The first stop is now second, and the leg from it to the hotel still exists.
+    await waitFor(() => expect(rt.vias.reanchor).toHaveBeenCalledWith(5, { vias: [{ id: 1, after_order_index: 1 }], remove: [] }))
+  })
+
+  it('FE-TP-ROAD-102: a drop under Days past the last visible row still lands before the hidden hotel', async () => {
+    dayWithHiddenNight()
+    rt.routes.days = [{
+      dayId: 5,
+      dayNumber: 1,
+      stops: [{ lat: 53, lng: 10 }, { lat: 54, lng: 11 }, { lat: 55, lng: 12 }],
+      geometry: [[53, 10], [54, 11], [55, 12]],
+    }]
+    // On the leg from the second stop to the hotel, past where the new stop goes.
+    rt.vias.byDay = { 5: [via(1, 5, 1, 0, 54.8, 11.8)] }
+    seedStore(useTripStore, { places: [buildPlace({ id: 300, lat: 54.2, lng: 11.2 })] })
+    const { result } = await renderRoadtrip()
+    act(() => result.current.toggleRoadtripMode())
+
+    // Row index 2 is the hotel's row in the day as it is stored, one past the last
+    // row the day plan shows.
+    await act(async () => { await result.current.handleAssignToDay(300, 5, 2) })
+
+    expect(actions.assignPlaceToDay).toHaveBeenCalledWith(42, 5, 300, 2)
+    expect(rt.vias.reanchor).toHaveBeenCalledWith(5, { vias: [{ id: 1, after_order_index: 2 }], remove: [] })
+  })
+
+  it('FE-TP-ROAD-103: a row index is translated into a stop index before the vias are corrected', async () => {
+    // A row without coordinates is never a stop, so the number of rows ahead of a drop
+    // is not the number of stops ahead of it.
+    seedTrip({
+      days: [buildDay({ id: 5, day_number: 1 })],
+      assignments: { '5': [placeless(10, 5, 0), stopAt(11, 5, 1), stopAt(13, 5, 2)] },
+    })
+    rt.corridor.day = { dayId: 5, dayNumber: 1 }
+    rt.routes.days = [{
+      dayId: 5,
+      dayNumber: 1,
+      stops: [{ lat: 54, lng: 11 }, { lat: 55, lng: 12 }],
+      geometry: [[54, 11], [55, 12]],
+    }]
+    rt.vias.byDay = { 5: [via(1, 5, 0, 0, 54.8, 11.8)] }
+    seedStore(useTripStore, { places: [buildPlace({ id: 300, lat: 54.2, lng: 11.2 })] })
+    const { result } = await renderRoadtrip()
+
+    await act(async () => { await result.current.handleAssignToDay(300, 5, 2) })
+
+    // Row 2 is stop 1: the via on the only leg is now behind the new stop.
+    expect(rt.vias.reanchor).toHaveBeenCalledWith(5, { vias: [{ id: 1, after_order_index: 1 }], remove: [] })
+  })
+})
+
+describe('useTripPlanner road trip: a booked night in the popup', () => {
+  const hotel = () => buildPlace({ id: 102, name: 'Hotel Fjord', stop_type: 'hotel', lat: 60.39, lng: 5.32 })
+
+  /** The popup as `openPlaceEditor` opens it on a booked night. */
+  const editingNight = (result: { current: ReturnType<typeof useTripPlanner> }) => {
+    act(() => {
+      result.current.setStopDraft({
+        poi: poi({ name: 'Hotel Fjord', category: 'hotel', lat: 60.39, lng: 5.32 }) as never,
+        dayId: 5,
+        dayNumber: 1,
+        position: 1,
+        editing: { placeId: 102, stopType: 'hotel', dwellMinutes: 30, accommodationId: 7, checkIn: '15:00', checkOut: '' },
+        overnight: { days: [{ id: 5, number: 1, date: null }, { id: 6, number: 2, date: null }], defaultEndDayId: 6 },
+      })
+    })
+  }
+
+  it('FE-TP-ROAD-104: switching a booked night to a pause asks first, naming the booking that would go', async () => {
+    const stay = hotel()
+    seedTrip({
+      places: [stay],
+      days: [buildDay({ id: 5, day_number: 1 }), buildDay({ id: 6, day_number: 2 })],
+      assignments: { '5': [buildAssignment({ id: 12, day_id: 5, order_index: 1, place: stay, accommodation_id: 7 })] },
+      reservations: [buildReservation({ id: 9, type: 'hotel', title: 'Booking 4711', accommodation_id: 7 })],
+    })
+    const remove = vi.spyOn(accommodationsApi, 'delete').mockResolvedValue({} as never)
+    const { result } = await renderRoadtrip()
+    editingNight(result)
+
+    await act(async () => { await result.current.saveStopDraft({ stopType: null, dwellMinutes: 45 }) })
+
+    // Nothing has been written, and the popup is still open behind the question.
+    expect(remove).not.toHaveBeenCalled()
+    expect(actions.updatePlace).not.toHaveBeenCalled()
+    expect(result.current.stopDraft).not.toBeNull()
+    expect(result.current.stayRelease).toEqual({
+      stop: { stopType: null, dwellMinutes: 45 },
+      name: 'Hotel Fjord',
+      booking: 'Booking 4711',
+    })
+
+    // A no leaves the traveller where they were.
+    act(() => { result.current.setStayRelease(null) })
+    expect(result.current.stopDraft).not.toBeNull()
+    expect(remove).not.toHaveBeenCalled()
+
+    // A yes is the very save that was asked for.
+    await act(async () => { await result.current.saveStopDraft({ stopType: null, dwellMinutes: 45 }) })
+    await act(async () => { await result.current.confirmStayRelease() })
+
+    expect(actions.updatePlace).toHaveBeenCalledWith(42, 102, { stop_type: null, duration_minutes: 45 })
+    expect(remove).toHaveBeenCalledWith(42, 7, { keepStop: true })
+    expect(result.current.stayRelease).toBeNull()
+    expect(result.current.stopDraft).toBeNull()
+  })
+
+  it('FE-TP-ROAD-105: a night without a booking of its own asks too, and names none', async () => {
+    const stay = hotel()
+    seedTrip({
+      places: [stay],
+      days: [buildDay({ id: 5, day_number: 1 }), buildDay({ id: 6, day_number: 2 })],
+      assignments: { '5': [buildAssignment({ id: 12, day_id: 5, order_index: 1, place: stay, accommodation_id: 7 })] },
+    })
+    vi.mocked(accommodationRepo.list).mockResolvedValue({
+      accommodations: [{ id: 7, trip_id: 42, place_id: 102, start_day_id: 5, end_day_id: 6, reservation_title: null }],
+    } as never)
+    const remove = vi.spyOn(accommodationsApi, 'delete').mockResolvedValue({} as never)
+    const { result } = await renderRoadtrip()
+    await waitFor(() => expect(result.current.tripAccommodations).toHaveLength(1))
+    editingNight(result)
+
+    await act(async () => { await result.current.saveStopDraft({ stopType: null, dwellMinutes: 20 }) })
+
+    expect(remove).not.toHaveBeenCalled()
+    expect(result.current.stayRelease).toMatchObject({ name: 'Hotel Fjord', booking: null })
+  })
+
+  it('FE-TP-ROAD-106: a check-in moved in the popup folds the re-seated night into the day', async () => {
+    // The server seats the night by its check-in and answers with the moved stop. The
+    // socket skips the session that asked, so this answer is the only way the writer's
+    // own rail learns the new order before a reload.
+    const stay = hotel()
+    const museum = buildPlace({ id: 101, name: 'Museum', lat: 60.4, lng: 5.3 })
+    const dinner = buildPlace({ id: 103, name: 'Dinner', lat: 60.41, lng: 5.31 })
+    const night = buildAssignment({ id: 12, day_id: 5, order_index: 1, place: stay, accommodation_id: 7 })
+    seedTrip({
+      places: [museum, stay, dinner],
+      days: [buildDay({ id: 5, day_number: 1 }), buildDay({ id: 6, day_number: 2 })],
+      assignments: { '5': [
+        buildAssignment({ id: 11, day_id: 5, order_index: 0, place: museum }),
+        night,
+        buildAssignment({ id: 13, day_id: 5, order_index: 2, place: dinner }),
+      ] },
+    })
+    const update = vi.spyOn(accommodationsApi, 'update').mockResolvedValue({
+      accommodation: { id: 7 },
+      movedAssignment: { assignment: { ...night, order_index: 2 }, oldDayId: 5 },
+    } as never)
+    const { result } = await renderRoadtrip()
+    editingNight(result)
+
+    await act(async () => {
+      await result.current.saveStopDraftAsNight({ endDayId: 6, checkIn: '20:00', checkOut: '' })
+    })
+
+    expect(update).toHaveBeenCalledWith(42, 7, { place_id: 102, start_day_id: 5, end_day_id: 6, check_in: '20:00', check_out: null })
+    expect(useTripStore.getState().assignments['5'].find(a => a.id === 12)?.order_index).toBe(2)
+    // The neighbours were renumbered as well, and the answer names only the night.
+    expect(actions.refreshDays).toHaveBeenCalledWith(42)
+    expect(result.current.stopDraft).toBeNull()
+  })
+})
+
+describe('useTripPlanner road trip: a hit handed to the full form', () => {
+  it('FE-TP-ROAD-107: saving it through the form re-anchors the vias the way the popup does', async () => {
+    seedTrip({ days: [buildDay({ id: 5, day_number: 1 })] })
+    rt.corridor.day = { dayId: 5, dayNumber: 1 }
+    rt.corridor.insertIndexFor.mockReturnValue(1)
+    rt.routes.days = [{
+      dayId: 5,
+      dayNumber: 1,
+      stops: [{ lat: 53.55, lng: 9.99 }, { lat: 53.0, lng: 11.5 }, { lat: 52.52, lng: 13.4 }],
+      geometry: [[53.55, 9.99], [53.0, 11.5], [52.52, 13.4]],
+    }]
+    // On the second leg, behind the stop the hit goes in front of.
+    rt.vias.byDay = { 5: [via(11, 5, 1, 0, 52.8, 12.2)] }
+    const { result } = await renderRoadtrip()
+
+    act(() => { result.current.handlePoiClick(poi({ lat: 53.2, lng: 10.7 }) as never) })
+    act(() => { result.current.stopDraftToForm({ stopType: 'fuel', dwellMinutes: 10 }) })
+    await act(async () => { await result.current.handleSavePlace({ name: 'Rasthof', lat: 53.2, lng: 10.7 }) })
+
+    expect(actions.assignPlaceToDay).toHaveBeenCalledWith(42, 5, 900, 1)
+    // Left alone the via keeps index 1 and is redrawn onto the leg the new stop took.
+    expect(rt.vias.reanchor).toHaveBeenCalledWith(5, { vias: [{ id: 11, after_order_index: 2 }], remove: [] })
+    const assigned = actions.assignPlaceToDay.mock.invocationCallOrder[0] ?? 0
+    const corrected = rt.vias.reanchor.mock.invocationCallOrder[0] ?? 0
+    expect(assigned).toBeLessThan(corrected)
+  })
+
+  it('FE-TP-ROAD-108: the position dies with the form, so the next add from a day goes to its end', async () => {
+    seedTrip({ days: [buildDay({ id: 5, day_number: 1 }), buildDay({ id: 6, day_number: 2 })] })
+    rt.corridor.day = { dayId: 5, dayNumber: 1 }
+    rt.corridor.insertIndexFor.mockReturnValue(2)
+    const { result } = await renderRoadtrip()
+
+    act(() => { result.current.handlePoiClick(poi() as never) })
+    act(() => { result.current.stopDraftToForm() })
+    expect(result.current.placeFormDayId).toBe(5)
+    // Closed unsaved, then opened again from another day's own "add place".
+    act(() => { result.current.setShowPlaceForm(false) })
+    act(() => { result.current.setPlaceFormDayId(6); result.current.setShowPlaceForm(true) })
+    await act(async () => { await result.current.handleSavePlace({ name: 'Museum' }) })
+
+    expect(actions.assignPlaceToDay).toHaveBeenCalledWith(42, 6, 900, null)
   })
 })

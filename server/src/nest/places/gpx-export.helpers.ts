@@ -48,7 +48,7 @@ type Pt = { lat: number; lng: number; ele: number | null };
 
 /** Coordinates are written with 7 decimals, ~11 mm, which is past what any consumer
  *  device resolves and keeps the file from carrying float noise. */
-function coord(n: number): string {
+export function coord(n: number): string {
   return Number(n.toFixed(7)).toString();
 }
 
@@ -81,7 +81,8 @@ function describe(place: GpxExportPlace): string | undefined {
   return parts.length ? parts.join(', ') : undefined;
 }
 
-const builder = new XMLBuilder({
+/** Shared with the list writer in collections/, which writes the same dialect. */
+export const gpxBuilder = new XMLBuilder({
   ignoreAttributes: false,
   attributeNamePrefix: '@_',
   format: true,
@@ -168,7 +169,7 @@ export function buildGpx(input: GpxExportInput, opts: GpxExportOptions = {}): st
     },
   };
 
-  return builder.build(doc);
+  return gpxBuilder.build(doc);
 }
 
 /** Filenames land on the receiving filesystem, so its reserved characters are

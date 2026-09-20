@@ -12,7 +12,7 @@ import { useTranslation } from '../../i18n/TranslationContext'
 import { MapLayerSwitcher, MAP_LAYER_SWITCHER_INSET, type BaseLayer } from './MapLayerSwitcher'
 import { useAuthStore } from '../../store/authStore'
 import { getCached, isLoading, fetchPhoto, onThumbReady, getAllThumbs } from '../../services/photoService'
-import { isCustomPlaceImage, photoCacheKey } from './placePhoto'
+import { isCustomPlaceImage, markerPhotoHtml, photoCacheKey, photoSourcesKey } from './placePhoto'
 import { CATEGORY_ICON_MAP } from '../shared/categoryIcons'
 import { isStandardFamily, supportsCustom3d, wantsTerrain, addCustom3dBuildings, addTerrainAndSky } from './mapboxSetup'
 import { attachLocationMarker, type LocationMarkerHandle } from './locationMarkerMapbox'
@@ -20,7 +20,6 @@ import { ReservationMapboxOverlay } from './reservationsMapbox'
 import { useTransportRoutes } from '../../hooks/useTransportRoutes'
 import { visibleRouteReservations } from '../../utils/reservationRoutes'
 import { safeHexColor } from '../../utils/safeColor'
-import { escapeHtml } from '@trek/shared'
 import { MAPBOX_DEFAULT_STYLE, styleForActiveProvider, basemapLanguage, type GlMapProvider } from './glProviders'
 import LocationButton from './LocationButton'
 import { useGeolocation } from '../../hooks/useGeolocation'
@@ -28,6 +27,7 @@ import type { Day, Place, Reservation, RouteVia } from '../../types'
 import type { MapHoverInfo } from './mapHover'
 import { nightPauseMarker, NIGHT_PAUSE_MIN_ZOOM } from './nightPauseMarker'
 import { clusterPois, poiClusterMarkup, poiClusterList, POI_CLUSTER_DETAIL_ZOOM } from './poiClusters'
+import { groupCoincidentPlaces } from './coincidentPlaces'
 import type { RoadtripHazard } from '@trek/shared'
 import { useHazardLayerGL } from './useHazardLayerGL'
 import { useDawarichTrailGL } from './useDawarichTrailGL'
@@ -230,7 +230,15 @@ interface Props {
   onMapReady?: (map: any | null) => void
 }
 
-/** How eagerly place markers merge into a cluster. */
+/**
+ * How eagerly place markers merge into a cluster.
+ *
+ * The overview band the Leaflet map clusters in as well (`CLUSTER_UNTIL_ZOOM` there),
+ * kept as plain numbers rather than shared constants so the GL bundle does not have to
+ * carry Leaflet for them. Above the cutoff supercluster hands every point back on its
+ * own, and the stops that share a coordinate are folded together at the pin level
+ * instead — see the reconcile below.
+ */
 const CLUSTER_RADIUS = 20
 const CLUSTER_MAX_ZOOM = 8
 
@@ -406,7 +414,7 @@ function createMarkerElement(place: Place & { category_color?: string; category_
         overflow:hidden;background:${bgColor};
         box-sizing:content-box;
       ">
-        <img src="${escapeHtml(photoUrl)}" width="${size}" height="${size}" style="display:block;border-radius:50%;object-fit:cover;" />
+        ${markerPhotoHtml(photoUrl)}
       </div>
       ${badgeHtml}
     `
@@ -837,15 +845,17 @@ export function MapViewGL({
     const VIA_MIN_ZOOM = 9
     const applyViaZoom = () => {
       const on = map.getZoom() >= VIA_MIN_ZOOM
-      for (const pin of viaPinsRef.current) {
-        const node = (pin as { getElement?: () => HTMLElement | null }).getElement?.()
-        if (node) node.style.display = on ? '' : 'none'
-      }
+      // `el` is the one handle both pin paths expose; the library marker's own accessor
+      // does not exist on the hand-positioned pin, so reading that left every handle on.
+      for (const pin of viaPinsRef.current) pin.el.style.display = on ? 'block' : 'none'
     }
 
     for (const via of vias) {
       const el = document.createElement('span')
       el.style.cssText = 'display:block;width:12px;height:12px;border-radius:9999px;background:#0a84ff;border:2.5px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.45);cursor:grab;touch-action:none'
+      // Marks the handle for the map's own click handlers: the drive's hit band runs
+      // right under it, and a click that lands here is the handle's, not the road's.
+      el.dataset.viaHandle = ''
       const pin = attachPin(map, gl, pinLayerRef.current, el, via.lng, via.lat)
       viaPinsRef.current.push(pin)
       if (!viasDraggable) continue
@@ -910,6 +920,10 @@ export function MapViewGL({
       }
       const onContext = (e: MouseEvent) => {
         e.preventDefault()
+        // Stopped here as well: both GL libraries listen on the canvas container the
+        // handle sits in, and the map's own contextmenu opens the add-place form at
+        // the very spot the via has just been removed from.
+        e.stopPropagation()
         viaHandlersRef.current.onRemoveVia?.(via.day_id, via.id)
       }
       el.addEventListener('pointerdown', onDown)
@@ -920,6 +934,10 @@ export function MapViewGL({
       el.addEventListener('mousedown', swallow)
       el.addEventListener('touchstart', swallow, { passive: true })
       el.addEventListener('dblclick', swallow)
+      // Stopping pointerdown does not stop the click that follows it, and the handle sits
+      // on the route's hit band: the map's click landed on the road and dropped a second
+      // via exactly under the one that was clicked.
+      el.addEventListener('click', swallow)
       viaCleanupRef.current.push(() => {
         el.removeEventListener('pointerdown', onDown)
         el.removeEventListener('pointermove', onMove)
@@ -929,6 +947,7 @@ export function MapViewGL({
         el.removeEventListener('mousedown', swallow)
         el.removeEventListener('touchstart', swallow)
         el.removeEventListener('dblclick', swallow)
+        el.removeEventListener('click', swallow)
       })
     }
 
@@ -1064,8 +1083,19 @@ export function MapViewGL({
   useEffect(() => {
     const map = mapRef.current
     if (!map || !mapReady || !onRouteClick) return
-    const onClick = (e: { lngLat: { lat: number; lng: number }; point?: { x: number; y: number }; preventDefault?: () => void }) => {
+    const onClick = (e: {
+      lngLat: { lat: number; lng: number }
+      point?: { x: number; y: number }
+      originalEvent?: { target?: EventTarget | null }
+      preventDefault?: () => void
+    }) => {
       e.preventDefault?.()
+      // A layer handler only asks what is drawn under the point, not what element the
+      // click came through. A via handle sits on the band by definition, and a click on
+      // it must not read as a click on the road under it; the map-level handler below
+      // filters markers the same way.
+      const target = e.originalEvent?.target
+      if (target instanceof Element && target.closest('[data-via-handle], .mapboxgl-marker, .maplibregl-marker')) return
       // Layer handlers are independent: MapLibre evaluates each registration
       // against the same click, so a point that hits both the offered-route band
       // and the current-route band fires both. Every alternative starts and ends
@@ -1720,7 +1750,7 @@ export function MapViewGL({
   // simultaneous thumb arrivals into one re-render.
   const pendingThumbsRef = useRef<Record<string, string>>({})
   const thumbRafRef = useRef<number | null>(null)
-  const placeIds = useMemo(() => places.map(p => p.id).join(','), [places])
+  const photoSources = useMemo(() => photoSourcesKey(places), [places])
   useEffect(() => {
     if (!places || places.length === 0 || !placesPhotosEnabled) return
     const cleanups: (() => void)[] = []
@@ -1771,7 +1801,7 @@ export function MapViewGL({
         thumbRafRef.current = null
       }
     }
-  }, [placeIds, placesPhotosEnabled]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [photoSources, placesPhotosEnabled]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Reconcile markers with places + photos. The clustered GeoJSON source decides
   // which points are currently unclustered, and we render the existing rich HTML
@@ -1873,7 +1903,24 @@ export function MapViewGL({
         seen.add(id)
         visiblePlaces.push(place)
       }
-      reconcileMarkers(visiblePlaces)
+      // Without a projection there is no way to tell which pins land on each other, so
+      // nothing is folded and every stop keeps the pin it has always had.
+      if (typeof map.project !== 'function') {
+        reconcileMarkers(visiblePlaces)
+        return
+      }
+      // Above the cluster cutoff supercluster reports every point unclustered, so stops
+      // on one coordinate would each get a pin and all but one of them would be buried
+      // (#2344). There is no spiderfy on a GL map to fan them out, so the pile draws as
+      // the one pin that is wanted: the selected stop when it is in there, which is what
+      // makes picking it from the places rail visible at all. Only pins that sit on each
+      // other fold — this side cannot undo a fold, hence its own tight radius.
+      const stacks = groupCoincidentPlaces(
+        visiblePlaces,
+        place => map.project([place.lng, place.lat]),
+        selectedPlaceId,
+      )
+      reconcileMarkers(stacks.map(stack => stack.lead))
     }
     const scheduleReconcile = () => {
       if (raf !== null) return

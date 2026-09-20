@@ -134,6 +134,21 @@ describe('roadtrip preferences', () => {
     await mcp.update({ tripId: 10, settings: { roadtrip_range_km: 300 } }, ctx);
     expect(s.preferenceDb.run).not.toHaveBeenCalled();
   });
+  it('tells the assistant why a window was refused instead of the exception class name', async () => {
+    // The service refuses an inverted window with the `{ error }` body the route
+    // sends verbatim; left to the SDK the tool would answer "Http Exception".
+    const s = setup();
+    const mcp = new RoadtripPreferencesMcp(
+      s.preferences,
+      { isDemoUser: () => false } as never,
+      {} as never,
+      s.db as never,
+      { hasTripPermission: () => true } as never,
+    );
+    const res = await mcp.update({ tripId: 10, settings: { roadtrip_day_end: '06:00' } }, ctx);
+    expect([res.isError, res.content[0].text]).toEqual([true, 'Day end must be later than day start.']);
+    expect(s.preferences.read(10).roadtrip_day_end).toBe('10:00');
+  });
 });
 
 describe('browser-independent roadtrip calculation', () => {
@@ -161,6 +176,22 @@ describe('browser-independent roadtrip calculation', () => {
     expect(s.db.all).not.toHaveBeenCalled();
     expect(s.router.route).not.toHaveBeenCalled();
   });
+  it('tells the assistant why a read, a calculation or a corridor search was refused', async () => {
+    // The service refuses with the `{ error }` body the route sends verbatim. Left
+    // to the SDK, the tool would answer "Http Exception" and the assistant could
+    // name no reason.
+    const s = setup();
+    const mcp = new RoadtripPlanningMcp(s.plans, {} as never, {} as never);
+    const reason = (res: { content: { text: string }[]; isError?: boolean }) => [res.isError, res.content[0].text];
+    s.db.canAccessTrip.mockReturnValue(false);
+    expect(reason(await mcp.context({ tripId: 20 }, ctx))).toEqual([true, 'Trip not found']);
+    expect(reason(await mcp.calculate({ tripId: 20, includeGeometry: false }, ctx))).toEqual([true, 'Trip not found']);
+    expect(reason(await mcp.corridor({ tripId: 20, dayNumber: 1, category: 'fuel', widthKm: 5, offset: 0 } as never, ctx))).toEqual([true, 'Trip not found']);
+    s.db.canAccessTrip.mockReturnValue(true);
+    const window = await mcp.calculate({ tripId: 10, includeGeometry: false, settings: { roadtrip_day_start: '18:00', roadtrip_day_end: '08:00' } }, ctx);
+    expect(reason(window)).toEqual([true, 'Day end must be later than day start.']);
+    expect(s.router.route).not.toHaveBeenCalled();
+  });
   it('marks provider failures incomplete and never leaks an endpoint from its exception', async () => {
     const s = setup();
     s.router.route.mockRejectedValue(new Error('secret https://private.example'));
@@ -175,6 +206,24 @@ describe('browser-independent roadtrip calculation', () => {
     Object.assign(s.visits[1], { lat: null });
     const plan = await s.plans.calculate(10, 5);
     expect(plan.omittedVisits).toEqual([2]);
+  });
+  it('hands calculate_roadtrip the end time of a visit as the moment the drive leaves it', async () => {
+    const s = setup();
+    // Stop 1 is left at 07:30 and the road takes two hours, so stop 2 is reached half an
+    // hour after the 09:00 it was meant to be left at. Stop 3 is left at noon, whatever
+    // its stay says.
+    Object.assign(s.visits[1], { end_time: '09:00' });
+    Object.assign(s.visits[2], { end_time: '12:00' });
+    const mcp = new RoadtripPlanningMcp(s.plans, {} as never, {} as never);
+    const answer = await mcp.calculate(
+      { tripId: 10, includeGeometry: false, settings: { roadtrip_day_start: '', roadtrip_day_end: '' } },
+      ctx,
+    );
+    const body = JSON.parse(answer.content[0].text as string);
+    const [day] = body.days;
+    expect(day.stops.map((stop: { leaveAt: string | null }) => stop.leaveAt)).toEqual([undefined, '09:00', '12:00']);
+    expect(day.schedule.entries.map((e: { departure: string }) => e.departure)).toEqual(['07:30', '09:30', '12:00']);
+    expect(day.schedule.warnings).toEqual([{ index: 1, code: 'missedLeave', minutes: 30 }]);
   });
   it('keeps explicit end-day visits and manual boundaries in the shared planning path', async () => {
     const s = setup();

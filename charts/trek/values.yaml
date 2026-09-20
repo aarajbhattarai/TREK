@@ -54,6 +54,9 @@ env:
   # ALLOW_INTERNAL_NETWORK: "false"
   # Set to "true" if Immich or other integrated services are hosted on a private/RFC-1918 network address.
   # Loopback (127.x) and link-local/metadata addresses (169.254.x) are always blocked.
+  # ALLOW_LINK_LOCAL_IPS: ""
+  # Comma-separated single link-local addresses TREK may reach after all, e.g. "169.254.1.2" for a host gateway.
+  # 169.254.169.x and 169.254.170.x (cloud metadata) cannot be listed; an invalid entry aborts startup.
   # OIDC_ISSUER: ""
   # OpenID Connect provider URL.
   # OIDC_CLIENT_ID: ""
@@ -87,8 +90,24 @@ env:
   # Custom Overpass endpoint(s) for the map POI "explore" search, comma-separated. When set, REPLACES the bundled
   # public mirrors — point it at an internal/self-hosted Overpass instance when the public mirrors are unreachable
   # from the cluster (e.g. locked-down egress). Non-http(s) entries are ignored.
-  # OVERPASS_TIMEOUT_MS: "12000"
-  # Per-endpoint timeout (ms) for Overpass POI requests. Raise it for a slow self-hosted Overpass instance. Defaults to 12000.
+  # OVERPASS_TIMEOUT_MS: "25000"
+  # Per-endpoint timeout (ms) for Overpass POI requests. The query itself gives Overpass 20 seconds of work, so a
+  # lower value hangs up on answers that were still coming. Raise it for a slow self-hosted Overpass instance.
+  # Defaults to 25000.
+  # TREK_PLACES_ENABLED: "false"
+  # Place search (suggestions, full search, category buttons, Road trip search, import geocoding, offline downloads)
+  # asks the TREK Places API at https://places.liketrek.com by default, so the pod makes outbound requests to that
+  # host. Set "false" to search the way it did before 4.3.0 (OpenStreetMap, or your Google/Amap key) and send
+  # nothing there. There is no switch in the admin panel on purpose: whether searches leave the instance is decided
+  # here. Defaults to on.
+  # TREK_PLACES_URL: ""
+  # Base URL of a copy of the Places API you run yourself; it has to answer the same /v1 API. Read from
+  # configuration rather than typed by a user, so an in-cluster address works without ALLOW_INTERNAL_NETWORK.
+  # Defaults to https://places.liketrek.com.
+  # AMAP_API_BASE: ""
+  # Send the Amap (高德地图) calls through an egress proxy, a cache or a gateway that speaks the same API instead of
+  # restapi.amap.com directly. The key itself is a credential and goes under secretEnv.AMAP_API_KEY, or into
+  # Admin > Settings > API Keys. Defaults to https://restapi.amap.com.
 
 
 # Secret environment variables stored in a Kubernetes Secret.
@@ -114,6 +133,15 @@ secretEnv:
   # Get a free key at https://unsplash.com/developers. Can also be set per-admin
   # in Admin > Settings; this value overrides that. Leave empty to disable.
   UNSPLASH_ACCESS_KEY: ""
+  # Optional Amap (高德地图) Web 服务 key for place search and geocoding inside mainland
+  # China. Overrides the key set in Admin > Settings > API Keys. A Web 端 (JS API) key is
+  # a different credential and is rejected with INVALID_USER_KEY. Leave empty to use the
+  # key from the admin panel, or none.
+  AMAP_API_KEY: ""
+  # The private secret (数字签名) of that key. Required exactly when the key was created
+  # with signing enabled, because such a key rejects every unsigned request. Leave empty
+  # otherwise. The endpoint itself is not a secret and is set under env.AMAP_API_BASE.
+  AMAP_API_SECRET: ""
 
 # If true, a random ENCRYPTION_KEY is generated at install and preserved across upgrades
 generateEncryptionKey: false

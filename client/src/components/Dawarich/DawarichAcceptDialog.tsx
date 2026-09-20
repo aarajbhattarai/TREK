@@ -114,7 +114,10 @@ export default function DawarichAcceptDialog({
     }
     if (name.trim() && name.trim() !== suggestion.name) body.name = name.trim()
     if (notes.trim()) body.notes = notes.trim()
-    if (date && date !== suggestion.localDate) body.date = date
+    // Only an entry carries a date. A place lands on the day chosen below and
+    // the server reads nothing else for it, so a date corrected on the journal
+    // rail must not ride along when the same stay is then added as a place.
+    if (target === 'journal' && date && date !== suggestion.localDate) body.date = date
     if (time) body.time = time
     if (endTime) body.endTime = endTime
     onConfirm(body)
@@ -199,15 +202,27 @@ export default function DawarichAcceptDialog({
             itself from the OS locale and a native `type="time"` ignores the 12h/24h
             setting outright (#2067) — and neither follows the colour scheme. The
             date column is the wide one because a localized date is long and a
-            clock never is. */}
+            clock never is.
+
+            The date is the journal rail's alone. A place has no date of its own:
+            the day picker below is where it lands, and a date field beside that
+            picker was a second answer to the same question, one the server never
+            read. The two clocks then share the row the way they do on the place
+            form. */}
         {target !== 'bucket_list' && (
-          <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_124px_124px] gap-2">
-            <div>
-              <span className="block text-caption font-medium mb-1.5 text-content-secondary">
-                {t('dawarich.accept.date')}
-              </span>
-              <CustomDatePicker value={date} onChange={setDate} />
-            </div>
+          <div
+            className={`grid grid-cols-1 gap-2 ${
+              target === 'journal' ? 'sm:grid-cols-[minmax(0,1fr)_124px_124px]' : 'sm:grid-cols-2'
+            }`}
+          >
+            {target === 'journal' && (
+              <div>
+                <span className="block text-caption font-medium mb-1.5 text-content-secondary">
+                  {t('dawarich.accept.date')}
+                </span>
+                <CustomDatePicker value={date} onChange={setDate} />
+              </div>
+            )}
             <div>
               <span className="block text-caption font-medium mb-1.5 text-content-secondary">
                 {t('dawarich.accept.from')}

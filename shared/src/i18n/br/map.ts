@@ -26,5 +26,7 @@ const map: TranslationStrings = {
   'map.overview.hide': 'Ocultar a viagem inteira',
   'map.overview.total': 'Distância total',
   'map.attribution': 'Créditos do mapa',
+  'map.overview.unrouted': 'Não foi possível calcular {count} troço(s), por isso as distâncias estão incompletas.',
+  'map.overview.dayUnrouted': 'Não foi possível calcular {count} troço(s) deste dia',
 };
 export default map;

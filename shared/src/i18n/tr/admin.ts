@@ -810,5 +810,6 @@ const admin: TranslationStrings = {
   'admin.placesUsageTitle': 'Anahtar ne için kullanılır',
   'admin.mapsKeyHintShort': "Fotoğraf, puan ve çalışma saatleri ekler. Her sorgu bundan sonra Google'a gider.",
   'admin.amapKeyHintShort': 'Çin anakarasında yer araması için. JS API anahtarı değil, web servis anahtarı gerekir.',
+  'admin.collab.links.subtitle': 'Paylaşılan bağlantılar ve yer imleri',
 };
 export default admin;

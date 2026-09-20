@@ -89,6 +89,7 @@ const dashboard: TranslationStrings = {
   'dashboard.useUnsplashPhoto': 'Usa foto Unsplash di {photographer}',
   'dashboard.titleRequired': 'Il titolo è obbligatorio',
   'dashboard.endDateError': 'La data di fine deve essere successiva alla data di inizio',
+  'dashboard.tripTooLong': 'Un viaggio può durare al massimo {days} giorni',
   'dashboard.dateShiftTitle': 'Nuova data di inizio',
   'dashboard.dateShiftIntro':
     'Hai modificato la data di inizio di questo viaggio. Come devono adattarsi i tuoi piani alle nuove date?',

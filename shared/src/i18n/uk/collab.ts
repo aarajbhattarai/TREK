@@ -93,5 +93,10 @@ const collab: TranslationStrings = {
   'collab.polls.options': 'Варіанти',
   'collab.polls.delete': 'Видалити',
   'collab.polls.closedSection': 'Закриті',
+  'collab.chat.imageLimit': 'До одного повідомлення можна додати до {max} зображень',
+  'collab.chat.uploading': 'Завантаження {percent}%',
+  'collab.chat.attachImages': 'Додати зображення',
+  'collab.chat.attachedImage': 'Додане зображення',
+  'collab.chat.closeImage': 'Закрити зображення',
 };
 export default collab;

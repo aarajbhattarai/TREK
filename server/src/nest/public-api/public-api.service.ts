@@ -136,6 +136,12 @@ export class PublicApiService {
    * `order_index` decides the sequence and is then dropped: it is a storage detail
    * that only means something relative to its siblings, and an array already
    * carries order.
+   *
+   * A booked night puts a stop of its own on its check-in day, so the route can
+   * reach the hotel. That stop is the booking, not a place the traveller planned
+   * to visit, and the booking is already reported in full under `accommodations`;
+   * listed here as well it would read as two different intentions. Same rule as
+   * the shortlist below.
    */
   private placesByDay(tripId: number): Map<number, PublicApiPlace[]> {
     const rows = this.db.all<PlaceRow>(
@@ -147,6 +153,7 @@ export class PublicApiService {
          JOIN places p ON p.id = da.place_id
          LEFT JOIN categories c ON c.id = p.category_id
         WHERE p.trip_id = ?
+          AND da.accommodation_id IS NULL
         ORDER BY da.day_id ASC, da.order_index ASC`,
       tripId,
     );

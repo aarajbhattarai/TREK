@@ -53,7 +53,8 @@ const roadtrip: TranslationStrings = {
   'roadtrip.window.incomplete': 'Daily breaks cannot be calculated until all connecting routes are available.',
   'roadtrip.window.conflict':
     'A fixed time conflicts with the drive and daily breaks. Manual times are unchanged; automatic scheduling is paused.',
-  'roadtrip.window.tooLong': 'These travel times would require more than 365 extra days. Choose a longer daily window.',
+  'roadtrip.window.tooLong':
+    'These travel times would require more than {days} extra days. Choose a longer daily window.',
   'roadtrip.mode.roadtrip': 'Road trip',
   'roadtrip.mode.days': 'Days',
   'roadtrip.mode.label': 'Plan view',
@@ -238,8 +239,10 @@ const roadtrip: TranslationStrings = {
   'roadtrip.stop.stay': 'Time at this stop',
   'roadtrip.stop.pinned': 'Time you set',
   'roadtrip.stop.computed': 'Calculated from the drive',
+  'roadtrip.stop.endIsLeave': 'On the road trip, the drive leaves at this time.',
   'roadtrip.via.hint': 'Drag to reshape the route, right-click to remove',
   'roadtrip.warn.late': 'Arrives {minutes} min after the time you set',
+  'roadtrip.warn.missedLeave': 'Arrives {minutes} min after the time you set to leave',
   'roadtrip.warn.overnight': 'Next day',
   'roadtrip.spill.title': 'From day {number}',
   'roadtrip.spill.departs': 'leaves {time}',
@@ -249,9 +252,17 @@ const roadtrip: TranslationStrings = {
   'roadtrip.stay.custom': 'Minutes',
   'roadtrip.stay.arrive': 'Arrive',
   'roadtrip.stay.leave': 'Leave',
+  'roadtrip.stay.until': 'until {time}',
+  'roadtrip.stay.leavesAt': 'This visit has an end time, so the drive leaves at {time}.',
+  'roadtrip.stay.dayEndsFirst': 'The travel day ends before {time}, so the drive goes on the next morning.',
+  'roadtrip.stay.clearLeave': 'Remove end time',
   'roadtrip.alt.noMotorway': 'No motorway',
   'roadtrip.alt.noToll': 'No tolls',
   'roadtrip.alt.noFerry': 'No ferry',
   'roadtrip.summary.partial': 'Still working out the rest of the drive',
+  'roadtrip.stay.releaseTitle': 'Drop the overnight stay?',
+  'roadtrip.stay.releaseBody': 'The night at “{name}” will be removed. The stop stays on the drive as a pause.',
+  'roadtrip.stay.releaseBookedBody': 'The night at “{name}” will be removed together with the booking “{booking}” and any expense linked to it. The stop stays on the drive as a pause.',
+  'roadtrip.stay.releaseAction': 'Make it a pause',
 };
 export default roadtrip;

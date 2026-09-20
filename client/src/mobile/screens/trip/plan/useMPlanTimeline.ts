@@ -6,13 +6,14 @@ import { usePluginStore } from '../../../../store/pluginStore'
 import { getDayBookendHotels } from '../../../../utils/dayOrder'
 import { getDisplayTimeForDay, getMergedItems, getTransportForDay, hasCarrierEndpointOnDay } from '../../../../utils/dayMerge'
 import { dayCoMapsUrl, dayGoogleMapsUrl, optimizeDayOrder } from '../lib/dayRoute'
+import { buildTransitLeg, buildTransitNameIndex, type TransitLeg } from '../../../../components/Planner/transitLeg'
 import {
   buildPlanRows, breaksChronology, findUpNext, hotelChipsForDay, hotelLegsForDay, itemHasTime,
   type HotelLegs, type PlanRow, type TransportEntry,
 } from './planTimelineModel'
 import type { TripPlanner } from '../MTripShell'
 import type { WeatherResult } from '@trek/shared'
-import type { Assignment, Place } from '../../../../types'
+import type { Assignment, Place, RouteSegment } from '../../../../types'
 import type { MergedItem } from '../../../../utils/dayMerge'
 
 /**
@@ -376,6 +377,29 @@ export function useMPlanTimeline(planner: TripPlanner) {
     })
   }, [day, tripId, toast, t, tripActions])
 
+  // ── Public transit for one leg (#2398) ──
+  // The entry the desktop connector menu carries: the automated search, seeded with
+  // the leg's two ends and the time the stop it leaves is planned for. It needs the
+  // trip's dates, as on the desktop and as the day sheet's own transit button does.
+  const tripHasDates = Boolean(planner.trip?.start_date && planner.trip?.end_date)
+  const transitNames = useMemo(
+    () => buildTransitNameIndex(assignments, tripAccommodations, reservations),
+    [assignments, tripAccommodations, reservations],
+  )
+  const transitLegFor = useCallback((seg: RouteSegment): TransitLeg | null => {
+    if (!day || !tripHasDates) return null
+    return buildTransitLeg(seg, day.id, transitNames, assignments, reservations)
+  }, [day, tripHasDates, transitNames, assignments, reservations])
+
+  const planTransitLeg = useCallback((leg: TransitLeg) => {
+    if (!day) return
+    planner.setTransportModalDayId(day.id)
+    planner.setEditingTransport(null)
+    planner.setTransitPrefill(leg)
+    planner.setTransportModalAutomated(true)
+    planner.setShowTransportModal(true)
+  }, [planner, day])
+
   return {
     day, rows, hotelLegs, merged, hotelChips, weather, weatherTemp, upNext,
     weatherPlaceName: weatherAnchor?.name ?? null,
@@ -385,7 +409,7 @@ export function useMPlanTimeline(planner: TripPlanner) {
     moveRowTo,
     addPlace, addBooking, addTransport,
     optimize, exportGoogleMaps, exportCoMaps, renameDay, fullPlaceOf,
-    routeModeOptions, setLegMode,
+    routeModeOptions, setLegMode, transitLegFor, planTransitLeg,
   }
 }
 

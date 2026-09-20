@@ -91,7 +91,7 @@ export function ReleaseNoticeModal({ notice, visible, onDismiss, onCTA, onSecond
 
             <div className="rn-features">
               {release.features.map(f => (
-                <div key={f.titleKey} className="rn-feature">
+                <div key={f.titleKey} className={f.layout === 'wide' ? 'rn-feature rn-feature-wide' : 'rn-feature'}>
                   <div className="rn-feature-shine" aria-hidden="true" />
                   <div className="rn-feature-visual" aria-hidden="true">
                     <ReleaseFeatureVisual visual={f.visual} iconName={f.iconName} />

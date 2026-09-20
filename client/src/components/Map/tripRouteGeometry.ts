@@ -1,4 +1,4 @@
-import { calculateRouteWithLegs, type RouteProfileKey } from './RouteCalculator'
+import { calculateRouteWithLegs, RoutingRefusedError, type RouteProfileKey } from './RouteCalculator'
 import { buildDayRouteRuns, type DayRouteInputs, type DayRoutePoint } from './dayRoutePlan'
 import { resolveLegMode } from '../Planner/legMode'
 import { dayColor } from '../Roadtrip/dayColors'
@@ -21,6 +21,12 @@ export interface TripOverviewDay {
   duration: number
   /** The modes this day is actually travelled in, first use first. */
   modes: string[]
+  /**
+   * Legs drawn as a straight line because the router gave no road for them: not asked
+   * yet while the round is running, refused or cut off by the deadline once it is over.
+   * Those legs add nothing to `distance`, so a day with any of them reads too short.
+   */
+  unroutedLegs?: number
 }
 
 export interface TripRouteSummary {
@@ -34,6 +40,8 @@ export interface TripRouteSummary {
   focusPoints: [number, number][]
   totalDistance: number
   totalDuration: number
+  /** `unroutedLegs` over every day: above zero, `totalDistance` is a partial sum. */
+  unroutedLegs?: number
 }
 
 /** Neighbouring legs of one run that resolve to the same mode travel as one request,
@@ -44,6 +52,8 @@ interface Chunk { points: DayRoutePoint[]; mode: string }
 export interface TripRoutePlanDay { day: Day; runs: Chunk[][] }
 
 type Answer = { coordinates: [number, number][]; legs: RouteSegment[] } | null
+/** Every leg's answer so far, indexed like the plan: day, run, chunk. */
+export type TripRouteAnswers = Answer[][][]
 
 /** The palette entry a day keeps, whatever else is added to the trip around it. */
 export const dayRouteColor = (day: Day): { line: string; casing: string } =>
@@ -90,10 +100,12 @@ export function assembleTripRoute(plan: TripRoutePlanDay[], routed: Answer[][][]
   return plan.map(({ day, runs }, d) => {
     const lines: [number, number][][] = []
     const segments: RouteSegment[] = []
+    let unroutedLegs = 0
     runs.forEach((chunks, r) => {
       const polyline: [number, number][] = []
       chunks.forEach((chunk, c) => {
         const answer = routed[d]?.[r]?.[c]
+        if (!answer) unroutedLegs++
         const coords = answer && answer.coordinates.length >= 2 ? answer.coordinates : straight(chunk.points)
         for (const point of coords) {
           // Drop the point shared with the previous chunk so concatenated legs
@@ -119,6 +131,7 @@ export function assembleTripRoute(plan: TripRoutePlanDay[], routed: Answer[][][]
       distance: segments.reduce((sum, s) => sum + s.distance, 0),
       duration: segments.reduce((sum, s) => sum + s.duration, 0),
       modes,
+      unroutedLegs,
     }
   })
 }
@@ -133,18 +146,49 @@ export function summariseTripRoute(days: TripOverviewDay[]): TripRouteSummary {
     focusPoints: lines.flat(),
     totalDistance: days.reduce((sum, d) => sum + d.distance, 0),
     totalDuration: days.reduce((sum, d) => sum + d.duration, 0),
+    unroutedLegs: days.reduce((sum, d) => sum + (d.unroutedLegs ?? 0), 0),
   }
 }
 
 /**
- * Ask the router for every leg of every day, a few at a time.
+ * Gap between two routing requests. The public OSRM hosts TREK ships with state one
+ * request per second; the overview asks for every leg of every day, so without spacing
+ * the first handful answer and the rest come back 429 (the road trip rail learnt this
+ * first and paces itself the same way).
+ */
+const REQUEST_SPACING_MS = 1100
+/** Anything answered faster than this came out of RouteCalculator's cache, not the network. */
+const CACHE_HIT_MS = 60
+/** How often a rate-limited leg is tried again, and how long after. */
+const RETRY_DELAYS_MS = [1500, 4000]
+
+const sleep = (ms: number, signal?: AbortSignal): Promise<void> =>
+  new Promise(resolve => {
+    if (signal?.aborted || ms <= 0) { resolve(); return }
+    const timer = setTimeout(done, ms)
+    function done(): void {
+      clearTimeout(timer)
+      signal?.removeEventListener('abort', done)
+      resolve()
+    }
+    signal?.addEventListener('abort', done, { once: true })
+  })
+
+/**
+ * Ask the router for every leg of every day, one at a time.
  *
- * A fortnight is dozens of legs and the routing host is usually a shared OSRM, so the
- * pool is deliberately small — the same one the sidebar connectors use. RouteCalculator's
- * cache is shared with the day route, so a day already drawn on screen costs nothing.
+ * A fortnight is dozens of legs and the routing host is usually a shared OSRM that
+ * refuses a burst, so the legs go out one after another with a pause between them, and
+ * a rate limit is waited out (for as long as the host asks, when it says) and asked
+ * again. Only what actually went to the network is paced: RouteCalculator's cache is
+ * shared with the day route, so a day already drawn on screen costs nothing and waits
+ * for nothing.
  *
- * A leg the router refuses keeps its straight line and contributes no distance, exactly
- * as a failed leg of a day route does. Nothing here throws.
+ * A leg the router still refuses keeps its straight line and contributes no distance,
+ * exactly as a failed leg of a day route does; `assembleTripRoute` counts it so the
+ * caller can say the total is short. A refusal the host meant (these coordinates, this
+ * profile) is not repeated, because the same request earns the same answer. Nothing
+ * here throws.
  */
 export async function routeTripLegs(
   plan: TripRoutePlanDay[],
@@ -161,26 +205,37 @@ export async function routeTripLegs(
     runs.forEach((chunks, r) => {
       chunks.forEach((chunk, c) => {
         tasks.push(async () => {
-          try {
-            const answer = await calculateRouteWithLegs(
-              chunk.points.map(p => ({ lat: p.lat, lng: p.lng })),
-              { signal, profile: chunk.mode, tripId, dayId: day.id },
-            )
-            routed[d][r][c] = { coordinates: answer.coordinates, legs: answer.legs }
-            onAnswer?.(routed)
-          } catch {
-            // Refused (usually a rate limit) — the straight line stands.
+          const waypoints = chunk.points.map(p => ({ lat: p.lat, lng: p.lng }))
+          for (let attempt = 0; attempt <= RETRY_DELAYS_MS.length; attempt++) {
+            if (signal?.aborted) return
+            try {
+              const answer = await calculateRouteWithLegs(
+                waypoints,
+                { signal, profile: chunk.mode, tripId, dayId: day.id },
+              )
+              routed[d][r][c] = { coordinates: answer.coordinates, legs: answer.legs }
+              onAnswer?.(routed)
+              return
+            } catch (err) {
+              if (signal?.aborted) return
+              const rateLimit = err instanceof RoutingRefusedError && err.isRateLimit ? err : null
+              if (!rateLimit || attempt === RETRY_DELAYS_MS.length) return
+              // When the host says how long to wait, waiting less is just a second refusal.
+              await sleep(Math.max(RETRY_DELAYS_MS[attempt], rateLimit.retryAfterMs ?? 0), signal)
+            }
           }
         })
       })
     })
   })
 
-  let next = 0
-  const worker = async () => {
-    while (next < tasks.length && !signal?.aborted) await tasks[next++]()
+  for (let i = 0; i < tasks.length; i++) {
+    if (signal?.aborted) break
+    const startedAt = performance.now()
+    await tasks[i]()
+    const wasNetwork = performance.now() - startedAt > CACHE_HIT_MS
+    if (wasNetwork && i < tasks.length - 1) await sleep(REQUEST_SPACING_MS, signal)
   }
-  await Promise.all(Array.from({ length: Math.min(6, tasks.length) }, worker))
   return routed
 }
 

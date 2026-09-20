@@ -68,5 +68,7 @@ const mobileTrip: TranslationStrings = {
   'mobileTrip.rtTruncated.one': '1 stuk had meer dan in één antwoord past. Kies minder soorten om de rest te zien.',
   'mobileTrip.rtTruncated.other':
     '{count} stukken hadden meer dan in één antwoord past. Kies minder soorten om de rest te zien.',
+  'mobileTrip.rtNoDay': 'Geen dag gekozen',
+  'mobileTrip.rtNoDayHint': 'De kaart toont de hele reis. Tik hierboven op een dag om de rit te zien.',
 };
 export default mobileTrip;

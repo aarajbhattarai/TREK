@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import type { TrekWsPayload, TrekWsTripEventName } from '@trek/shared';
+import type { RoadtripVia, TrekWsPayload, TrekWsTripEventName } from '@trek/shared';
 import { RealtimeService } from '../realtime/realtime.service';
 import { DatabaseService, type PlaceWithTags, type TripAccess } from '../database/database.service';
 import { PermissionsService } from '../permissions/permissions.service';
@@ -9,6 +9,12 @@ import type { User } from '../../types';
 type Trip = TripAccess;
 
 type MirroredAssignment = ReturnType<AssignmentsService['createAssignment']>;
+
+/** One day's drawn roads after a write re-pinned them, as the road trip broadcasts them. */
+type DayVias = { dayId: number; vias: RoadtripVia[] };
+
+/** A via as the re-pinning reads it: where it is pinned and its place on that leg. */
+type PinnedVia = { id: number; after_order_index: number; sequence: number };
 
 /** How a surface sends the mirror's events; see announceMirror. */
 export type MirrorSender = <E extends TrekWsTripEventName>(event: E, payload: TrekWsPayload<E>) => void;
@@ -25,6 +31,9 @@ export interface AccommodationMirror {
   removed: { id: number; dayId: number }[];
   /** The place, when this write was the one that typed it as lodging. */
   stamped: PlaceWithTags | null;
+  /** Days whose drawn roads were re-pinned because a stop of theirs changed position.
+   *  Absent when none did, which is what a mirror built elsewhere means too. */
+  vias?: DayVias[];
 }
 
 /** A write that left the day plan alone. Exported for the surfaces that write a
@@ -169,9 +178,11 @@ export class AccommodationsService {
    * Send what a stay write did to the day plan, and let the journey skeletons
    * catch up the way an assignment route does.
    *
-   * Takes the sender rather than broadcasting itself: REST and the plugin RPC
-   * hand their socket id in, the MCP tools tag their events, and the fan-out is
-   * the one part that must not exist in three copies.
+   * Takes the sender rather than broadcasting itself: the MCP tools tag their
+   * events, REST and the plugin RPC send them plain, and the fan-out is the one
+   * part that must not exist in three copies. None of them skips the socket that
+   * sent the request. The day order and the vias sent here are news to that
+   * session too, and they only make sense arriving behind the stop they concern.
    */
   announceMirror(tripId: string | number, mirror: AccommodationMirror, send: MirrorSender, socketId?: string): void {
     for (const stop of mirror.removed) send('assignment:deleted', { assignmentId: stop.id, dayId: stop.dayId });
@@ -194,6 +205,9 @@ export class AccommodationsService {
         'SELECT id FROM day_assignments WHERE day_id = ? ORDER BY order_index', dayId).map(row => row.id);
       send('assignment:reordered', { dayId, orderedIds });
     }
+    // After the order, the way the time sort sends them: the planner routes the
+    // anchors it holds against the order it holds, and the two have to land together.
+    for (const day of mirror.vias ?? []) send('roadtripVia:changed', day);
 
     if (mirror.created || mirror.moved || mirror.removed.length > 0) this.assignments.reconcile(tripId, socketId);
   }
@@ -325,6 +339,121 @@ export class AccommodationsService {
   }
 
   /**
+   * Each day's located stops in order, taken before a write that can move them.
+   *
+   * That order is the index space the day's vias are pinned to: a via sits behind
+   * the n-th stop that has coordinates, not behind a row id. Stops without
+   * coordinates are never routed and so never counted.
+   */
+  private stopOrders(dayIds: number[]): Map<number, number[]> {
+    return new Map([...new Set(dayIds)].map((dayId): [number, number[]] => [dayId, this.locatedStopIds(dayId)]));
+  }
+
+  private locatedStopIds(dayId: number): number[] {
+    return this.db.all<{ id: number }>(`
+      SELECT da.id FROM day_assignments da JOIN places p ON p.id = da.place_id
+      WHERE da.day_id = ? AND p.lat IS NOT NULL AND p.lng IS NOT NULL
+      ORDER BY da.order_index ASC, da.created_at ASC, da.id ASC
+    `, dayId).map(row => row.id);
+  }
+
+  /**
+   * Keep every drawn road behind the stop it was drawn after, now that this write
+   * has seated, moved or taken out a stop on these days.
+   *
+   * A night seated by its check-in ahead of the afternoon renumbers everything
+   * behind it, and a via pinned to position one would otherwise bend the drive
+   * into the hotel instead of the leg it was drawn on. Persisted and visible to
+   * everyone, so it is put right where the stop moved, by the rules the planner
+   * applies when a stop is dragged or taken out: a via follows its stop, a stop
+   * that left the day hands its road to the stop before it, and a stop that is
+   * last has no leg to keep a via on.
+   *
+   * Runs inside the caller's transaction.
+   */
+  private reanchorVias(mirror: AccommodationMirror, before: Map<number, number[]>): void {
+    for (const [dayId, previousIds] of before) {
+      const nextIds = this.locatedStopIds(dayId);
+      if (previousIds.length === nextIds.length && previousIds.every((id, i) => id === nextIds[i])) continue;
+      const vias = this.db.all<PinnedVia>('SELECT id, after_order_index, sequence FROM roadtrip_vias WHERE day_id = ?', dayId);
+      if (!vias.length) continue;
+
+      // A via behind the day's last stop bends the drive into the next day. It stays
+      // with that stop when the stop is still last, whatever its number is now:
+      // measured as a leg it would be dropped, because a last stop has no leg.
+      const previousLast = previousIds.length - 1;
+      const nextLast = nextIds.length - 1;
+      const lastStayed = previousLast >= 0 && previousIds[previousLast] === nextIds[nextLast];
+      const remove: number[] = [];
+      const moved: { id: number; after_order_index: number }[] = [];
+      for (const via of vias) {
+        const next = lastStayed && via.after_order_index === previousLast
+          ? nextLast
+          : this.legAfter(via.after_order_index, previousIds, nextIds);
+        if (next === null) remove.push(via.id);
+        else if (next !== via.after_order_index) moved.push({ id: via.id, after_order_index: next });
+      }
+      if (!remove.length && !moved.length) continue;
+
+      for (const viaId of remove) this.db.run('DELETE FROM roadtrip_vias WHERE id = ? AND day_id = ?', viaId, dayId);
+      for (const via of moved) this.db.run('UPDATE roadtrip_vias SET after_order_index = ? WHERE id = ? AND day_id = ?', via.after_order_index, via.id, dayId);
+      this.renumberMergedLegs(dayId, vias.filter(via => !remove.includes(via.id)), moved);
+      this.noteVias(mirror, {
+        dayId,
+        vias: this.db.all<RoadtripVia>(
+          'SELECT id, day_id, after_order_index, sequence, lat, lng, created_at FROM roadtrip_vias WHERE day_id = ? ORDER BY after_order_index, sequence, id', dayId),
+      });
+    }
+  }
+
+  /**
+   * The leg a via pinned behind the n-th stop of the old order is on in the new one.
+   *
+   * A stop this write took off the day hands its road to the stop before it: the
+   * leg it was drawn on merges into the one ahead, the way taking a stop out of the
+   * drive merges them (`RoadtripService.reanchor`). Null when no leg is left for it,
+   * because the stop it follows is the last one now, nothing ahead of it survived,
+   * or it was pinned past the day's end to begin with.
+   */
+  private legAfter(index: number, previousIds: number[], nextIds: number[]): number | null {
+    if (index > previousIds.length - 1) return null;
+    let at = index;
+    while (at >= 0 && !nextIds.includes(previousIds[at])) at -= 1;
+    if (at < 0) return null;
+    const next = nextIds.indexOf(previousIds[at]);
+    return next >= nextIds.length - 1 ? null : next;
+  }
+
+  /**
+   * Two legs that merged carry two sequence series side by side, and everything
+   * that draws the route orders by sequence: the drive would run through the first
+   * leg's point, the second leg's, and back. Renumbered the way
+   * `RoadtripService.reanchor` does it, the earlier leg's points first, then by
+   * their old sequence, then by id. Only a leg that received a via is touched.
+   */
+  private renumberMergedLegs(dayId: number, kept: PinnedVia[], moved: { id: number; after_order_index: number }[]): void {
+    const landed = new Map(moved.map(via => [via.id, via.after_order_index]));
+    const byLeg = new Map<number, PinnedVia[]>();
+    for (const via of kept) {
+      const leg = landed.get(via.id) ?? via.after_order_index;
+      byLeg.set(leg, [...(byLeg.get(leg) ?? []), via]);
+    }
+    for (const onLeg of byLeg.values()) {
+      if (!onLeg.some(via => landed.has(via.id))) continue;
+      onLeg.sort((a, b) => a.after_order_index - b.after_order_index || a.sequence - b.sequence || a.id - b.id);
+      onLeg.forEach((via, index) => {
+        if (via.sequence !== index) this.db.run('UPDATE roadtrip_vias SET sequence = ? WHERE id = ? AND day_id = ?', index, via.id, dayId);
+      });
+    }
+  }
+
+  /** One entry per day: a write that takes a stop off a day and puts one back on
+   *  the same day reports the state it left behind, not both steps. */
+  private noteVias(mirror: AccommodationMirror, day: DayVias): void {
+    mirror.vias = [...(mirror.vias ?? []).filter(known => known.dayId !== day.dayId), day];
+  }
+
+  /**
    * Carry the booking's own stop to where the booking now is, in place.
    *
    * A day stop is more than a (day, place) pair. Its participants and any road-trip
@@ -389,6 +518,7 @@ export class AccommodationsService {
     // answer for a place already planned for that day by hand.
     if (this.db.get('SELECT id FROM day_assignments WHERE day_id = ? AND place_id = ?', dayId, placeId)) return mirror;
 
+    const before = this.stopOrders([dayId]);
     // Through AssignmentsService, so the stop lands at the end of the day with the
     // order_index every other new assignment gets. Evening is where you arrive at a
     // hotel, and the day planner has no drive to position it against anyway.
@@ -402,6 +532,7 @@ export class AccommodationsService {
       accommodationId,
       orderIndex: this.positionForCheckIn(dayId, checkIn),
     });
+    this.reanchorVias(mirror, before);
     return mirror;
   }
 
@@ -428,7 +559,9 @@ export class AccommodationsService {
    */
   private releaseStops(accommodationId: number, opts: { keepStop?: boolean }): AccommodationMirror {
     const mirror = noMirror();
-    for (const stop of this.ownStops(accommodationId)) {
+    const own = this.ownStops(accommodationId);
+    const before = this.stopOrders(own.map(stop => stop.day_id));
+    for (const stop of own) {
       if (opts.keepStop) {
         this.db.run('UPDATE day_assignments SET accommodation_id = NULL WHERE id = ?', stop.id);
         // The stop stays, but it is the traveller's now. Days hides a stop whose
@@ -441,6 +574,7 @@ export class AccommodationsService {
       this.db.run('DELETE FROM day_assignments WHERE id = ?', stop.id);
       mirror.removed.push({ id: stop.id, dayId: stop.day_id });
     }
+    this.reanchorVias(mirror, before);
     return mirror;
   }
 
@@ -473,21 +607,26 @@ export class AccommodationsService {
     // note, its hour, its end-of-day flag and the road-trip day boundary anchored
     // on its id, all of which a DELETE takes with it.
     if (own.length === 1 && placeId) {
+      const before = this.stopOrders([own[0].day_id, dayId]);
       const moved = this.relocateOwnStop(own[0], placeId, dayId, checkIn);
       if (moved) {
         mirror.moved = { assignment: moved, oldDayId: own[0].day_id };
         mirror.stamped = this.stampLodging(placeId);
+        this.reanchorVias(mirror, before);
         return mirror;
       }
     }
 
+    const beforeRebuild = this.stopOrders(own.map(stop => stop.day_id));
     for (const stop of own) {
       this.db.run('DELETE FROM day_assignments WHERE id = ?', stop.id);
       mirror.removed.push({ id: stop.id, dayId: stop.day_id });
     }
+    this.reanchorVias(mirror, beforeRebuild);
     const fresh = this.mirrorStay(accommodationId, placeId, dayId, checkIn);
     mirror.created = fresh.created;
     mirror.stamped = fresh.stamped;
+    for (const day of fresh.vias ?? []) this.noteVias(mirror, day);
     return mirror;
   }
 

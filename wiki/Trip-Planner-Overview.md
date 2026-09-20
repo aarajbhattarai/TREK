@@ -27,6 +27,8 @@ Each sidebar has a drag handle on its inner edge for resizing.
 
 A **Day Detail panel** floats over the map area when you open a specific day, showing the weather forecast, that day's reservations, and the accommodation block. It can be collapsed to a slim header bar without closing it.
 
+Opening a day also narrows the Places sidebar. With a day selected, the **Planned** filter lists and counts only the places on that day's plan, the same set the map draws, and a line under the filter tabs says **Showing the open day only**. Its **X** closes the day again, so list, count and map return to the whole trip. **All** and **Unplanned** stay trip-wide on purpose: a place on some other day is planned, whichever day happens to be open.
+
 ## Tabs
 
 The tab bar sits directly below the main navigation bar.
@@ -47,9 +49,11 @@ The active tab is saved in `sessionStorage` per trip, so switching between trips
 
 ## Roadtrip daily start and end times
 
+> The road trip addon has its own page: [Road-Trip](Road-Trip).
+
 Nearby station search results group into count badges when zoomed out. Click a badge to zoom into its stations. Stations that still overlap at close zoom appear in a selectable list. Planned stops, including photo markers, also group into count badges when zoomed out. Day endings remain separate. This works with all supported map providers in Roadtrip mode.
 
-In the Roadtrip view, open **Driving settings** and enter a **Day start** and **Day end** in HH:mm format. Both values enable automatic daily scheduling and connect the drives between days. Clear either field to return to the existing schedule. These preferences belong to the trip. All travellers see the same daily schedule, vehicle settings and driving limits. Members with permission to edit days can change them. Existing trips inherit their owner's previous values once; later changes affect only that trip.
+In the Roadtrip view, open **Driving settings** and enter a **Day start time** and **Day end time** in HH:mm format. Both values enable automatic daily scheduling and connect the drives between days. Clear either field to return to the existing schedule. These preferences belong to the trip. All travellers see the same daily schedule, vehicle settings and driving limits. Members with permission to edit days can change them. Existing trips inherit their owner's previous values once; later changes affect only that trip.
 
 Driving pauses at the end time and resumes from the same location at the next day's start time. Stops and visit durations determine where each pause falls. Editing, adding or removing stops recalculates the pauses and subsequent arrivals. If a visit crosses the end time, the remaining visit continues there the next morning before driving resumes.
 
@@ -128,13 +132,13 @@ GDACS warning popups show the current episode score when supplied, falling back 
 
 ### Accommodation portals in Roadtrip
 
-The Add as a stop dialog offers trivago and CHECK24 for hotels, or PiNCAMP and Pitchup for campsites. The portal opens in a new tab without adding a stop or making a booking. trivago receives the search text; PiNCAMP receives a geographic area extending roughly 20 km from the stop; Pitchup receives the stop coordinates. All three receive the trip dates when both days have dates and departure is after arrival. Review the destination, dates and guest count on the portal. CHECK24 requires a manual search. Check-in and check-out use the shared TREK time picker.
+The Add as a stop dialog offers trivago and CHECK24 for hotels, or PiNCAMP and Pitchup for campsites. The portal opens in a new tab without adding a stop or making a booking. trivago receives the search text; PiNCAMP receives a geographic area extending roughly 20 km from the stop; Pitchup receives the stop coordinates. All three receive the trip dates when both days have dates and departure is after arrival. Review the destination, dates and guest count on the portal. CHECK24 requires a manual search. The dialog asks only for the **Check-in** time, in the shared TREK time picker; the check-out is a booking detail and is entered under Days.
 
-All Looking for categories, including accommodation, are added as Roadtrip service stops. In Roadtrip mode, Edit in a planned place's details opens the stop dialog with its saved duration and overnight dates and times. Saving updates the existing stop; More details still opens the full place editor. The shared stop-type contract also accepts hotel through MCP.
+All Looking for categories, including accommodation, are added as Roadtrip service stops. In Roadtrip mode, Edit in a planned place's details opens the stop dialog with its saved duration and check-in time. Saving updates the existing stop; More details still opens the full place editor. The shared stop-type contract also accepts hotel through MCP.
 
-A booked check-out time controls departure from an overnight stop on its check-out day. STAY is calculated from arrival until check-out, including multiple nights, and updates with the route. Explicit arrival times remain authoritative. Clicking STAY for a booking with check-out opens the overnight editor. Browser planning and MCP use the same scheduling logic.
+A booked night uses its check-in as the earliest arrival and the place's STAY as its length. The drive never reads the check-out: it is the latest the room has to be handed back, not the time anybody drives on, so it stays a booking detail under Days. To leave at a set hour, give the visit an End, see [Road-Trip](Road-Trip#leaving-at-a-set-time). Explicit arrival times remain authoritative. Browser planning and MCP use the same scheduling logic.
 
-The overnight dialog prefills check-in from the calculated arrival when available; existing manual check-in values take priority. Before adding a corridor result, the suggested arrival is estimated along the current routed leg. Without any known arrival, checkout still anchors the onward drive, but STAY remains unknown instead of displaying the old default duration.
+The overnight dialog prefills check-in from the calculated arrival when available; existing manual check-in values take priority. Before adding a corridor result, the suggested arrival is estimated along the current routed leg.
 
 Ordinary places retain the full place editor in Roadtrip mode. The compact stop editor is used for service stops and accommodation. When visits move into another day, their calculated departure continues into that day's following stops, including midnight offsets.
 

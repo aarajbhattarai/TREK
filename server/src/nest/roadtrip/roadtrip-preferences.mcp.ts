@@ -15,6 +15,7 @@ import { AuthService } from '../auth/auth.service';
 import { DatabaseService } from '../database/database.service';
 import { McpToolGuardsService } from '../mcp-shared/mcp-tool-guards.service';
 import { RoadtripPreferencesService } from './roadtrip-preferences.service';
+import { answeringRefusals } from './roadtrip-mcp.helpers';
 import { roadtripPreferencesUpdateSchema, type RoadtripPreferences } from '@trek/shared';
 
 import { z } from 'zod';
@@ -58,6 +59,7 @@ export class RoadtripPreferencesMcp {
     if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
     if (!this.db.canAccessTrip(tripId, ctx.userId)) return noAccess();
     if (!this.guards.hasTripPermission('day_edit', tripId, ctx.userId)) return permissionDenied();
-    return ok({ tripId, settings: this.preferences.update(tripId, settings), scope: 'trip' });
+    // A day window that ends before it starts is refused by the service, with the reason.
+    return answeringRefusals(() => ok({ tripId, settings: this.preferences.update(tripId, settings), scope: 'trip' }));
   }
 }

@@ -14,6 +14,7 @@ import { safeFetchFollow } from '../../utils/ssrfGuard';
 import { DatabaseService } from '../database/database.service';
 import {
   MapsService,
+  isGoogleMapsHost,
   readBrandIdentity,
   readWikiIdentity,
   withPhotoFetchSlot,
@@ -183,6 +184,23 @@ function yesNo(value: unknown): 'yes' | 'no' | string | null {
 }
 
 /**
+ * The Google Maps link a provider record carries, or nothing.
+ *
+ * The record comes with the request, and the link goes out labelled "Google"
+ * on a description every user of the instance reads from the cache. So it has
+ * to be a Google Maps address by shape, over http(s), and anything else is
+ * dropped rather than linked.
+ */
+function googleMapsLink(value: unknown): string | null {
+  if (typeof value !== 'string' || !placeWebsiteSchema.safeParse(value).success) return null;
+  try {
+    return isGoogleMapsHost(new URL(value).hostname) ? value : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Turns the place's OpenStreetMap tags into the short facts the column shows.
  *
  * This is the part that makes the column useful for a restaurant. No wiki will
@@ -342,14 +360,25 @@ export class PlaceEnrichmentService {
     // while the same building in OpenStreetMap carried all of it. Each field is
     // taken from whichever source actually has it rather than from one source
     // for everything.
+    const ownFacts = collectFacts(details);
     const result: CachedEnrichment = {
       photos,
       description,
-      facts: mergeFacts(collectFacts(details), collectFacts(osmDetails)),
+      facts: mergeFacts(ownFacts, collectFacts(osmDetails)),
       hours: collectHours(details) ?? collectHours(osmDetails),
       rating: collectRating(details) ?? collectRating(osmDetails),
     };
-    this.writeCache(placeId, lang, result);
+    // The cache is keyed by place and language, so a row written here is what
+    // every user of the instance sees for a week. An OpenStreetMap summary and
+    // a menu link are the two things read straight off the request's own
+    // `details` that become a link on every screen, and when the request
+    // carried those, the text and the link are the caller's word rather than
+    // the map's: fine to answer them with, not to serve to everyone else. The
+    // row simply is not written, and the next request computes its own answer.
+    // A summary or a link the lookup here fetched itself is the map's and keeps.
+    const fromCaller = req.details != null
+      && (description?.source === 'osm' || ownFacts.some((fact) => fact.url != null));
+    if (!fromCaller) this.writeCache(placeId, lang, result);
     return result;
   }
 
@@ -585,22 +614,21 @@ export class PlaceEnrichmentService {
    * The API fetches each page once, keeps the summary, and every instance reads
    * it from there. Only places carrying a GERS id can be looked up, which is
    * exactly the ones that came from the API in the first place.
+   *
+   * Asked of the index here, although the request's `details` carry the very
+   * same field from the dialog's own lookup a moment earlier. The answer is
+   * written into a cache the whole instance reads from for a week, and a
+   * description with a link in it is the one thing in there that must not be
+   * whatever the sender chose to put in the request body. One more short
+   * lookup per place and week is the price of the text being the index's.
    */
-  private async websiteDescription(
-    placeId: string,
-    details?: Record<string, unknown> | null,
-  ): Promise<PlaceDescription | null> {
+  private async websiteDescription(placeId: string): Promise<PlaceDescription | null> {
     if (!placeId.startsWith('gers:')) return null;
+    // Off means nothing leaves for the index, a saved place included.
+    if (!this.maps.trekPlacesEnabled()) return null;
     try {
-      // The details lookup already fetched this place and now carries its
-      // description, so the ordinary path costs nothing. Asking again meant two
-      // full round trips to the index for one added place, each with its own
-      // timeout budget, for a field the first answer already contained.
-      const carried = (details as { description?: { text?: string; sourceUrl?: string } } | null | undefined)
+      const got = (await trekPlacesById(placeId.slice(5)) as { description?: { text?: string; sourceUrl?: string } } | null)
         ?.description;
-      const got = carried
-        ?? (await trekPlacesById(placeId.slice(5)) as { description?: { text?: string; sourceUrl?: string } } | null)
-          ?.description;
       const text = typeof got?.text === 'string' ? got.text.trim() : '';
       if (!text) return null;
       // Through the same allow-list a place's website goes through: this
@@ -662,7 +690,7 @@ export class PlaceEnrichmentService {
     // exists, and it is published in JSON-LD or og:description precisely so
     // machines can read it. That covers roughly 43 percent of places, where the
     // encyclopaedias cover a fraction of a percent.
-    const fromSite = await this.websiteDescription(placeId, details);
+    const fromSite = await this.websiteDescription(placeId);
     if (fromSite) return fromSite;
 
     const apiKey = this.maps.getMapsKey(userId);
@@ -672,7 +700,7 @@ export class PlaceEnrichmentService {
         return {
           text: summary,
           source: 'google',
-          sourceUrl: typeof details?.google_maps_url === 'string' ? details.google_maps_url : null,
+          sourceUrl: googleMapsLink(details?.google_maps_url),
           license: null,
         };
       }

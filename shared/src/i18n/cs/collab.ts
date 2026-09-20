@@ -93,5 +93,10 @@ const collab: TranslationStrings = {
   'collab.polls.options': 'Možnosti',
   'collab.polls.delete': 'Smazat',
   'collab.polls.closedSection': 'Uzavřené',
+  'collab.chat.imageLimit': 'K jedné zprávě můžete připojit nejvýše {max} obrázků',
+  'collab.chat.uploading': 'Nahrávání {percent} %',
+  'collab.chat.attachImages': 'Připojit obrázky',
+  'collab.chat.attachedImage': 'Připojený obrázek',
+  'collab.chat.closeImage': 'Zavřít obrázek',
 };
 export default collab;

@@ -1,4 +1,4 @@
-// FE-APISURF-001 to FE-APISURF-054
+// FE-APISURF-001 to FE-APISURF-057
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import type { AxiosResponse } from 'axios'
 import { http, HttpResponse } from 'msw'
@@ -10,6 +10,7 @@ import {
   mapsApi, airportsApi, budgetApi, filesApi, reservationsApi, healthApi, weatherApi,
   configApi, helpApi, settingsApi, accommodationsApi, dayNotesApi, collabApi, backupApi,
   shareApi, transitApi, tripInviteApi, notificationsApi, inAppNotificationsApi, memoriesApi,
+  docsyncApi, DOCSYNC_RUN_TIMEOUT_MS, DOCSYNC_UPSTREAM_TIMEOUT_MS,
 } from './client'
 
 interface Recorded { method: string; url: string; body: unknown }
@@ -665,6 +666,12 @@ describe('client > request payloads', () => {
     expect(rec.method).toBe('DELETE')
     expect(rec.body).toEqual({ password: 'hunter2' })
   })
+
+  it('FE-APISURF-056: docsyncApi.createScope names the connection in the path only', async () => {
+    const rec = await traceOne(() => docsyncApi.createScope(1, 5, 'Norway'))
+    expect(`${rec.method} ${rec.url}`).toBe('POST /api/trips/1/docsync/connections/5/scopes')
+    expect(rec.body).toEqual({ name: 'Norway' })
+  })
 })
 
 describe('client > query parameters', () => {
@@ -894,5 +901,48 @@ describe('client > multipart uploads', () => {
     for (const call of post.mock.calls) {
       expect(call[2]).toMatchObject({ timeout: 40000 })
     }
+  })
+
+  it('FE-APISURF-057: every document-sync call that reaches the store outlives the 8s global timeout', async () => {
+    const post = spyPost()
+    const get = vi.spyOn(apiClient, 'get').mockResolvedValue({ data: { ok: true } } as unknown as AxiosResponse)
+    const del = vi.spyOn(apiClient, 'delete').mockResolvedValue({ data: { ok: true } } as unknown as AxiosResponse)
+
+    // The server allows each request to a store 15 s, and a run waits for the
+    // whole listing and every transfer; cut off at 8 s the browser reported a
+    // failure while the server carried on and finished.
+    await docsyncApi.testConnection(1, { providerId: 'paperless' })
+    await docsyncApi.createScope(1, 5, 'Norway')
+    await docsyncApi.createLink(1, { connectionId: 5 })
+    await docsyncApi.listScopes(1, 5)
+    await docsyncApi.deleteLink(1, 9)
+
+    expect(post.mock.calls.map(c => c[0])).toEqual([
+      '/trips/1/docsync/connections/test',
+      '/trips/1/docsync/connections/5/scopes',
+      '/trips/1/docsync/links',
+    ])
+    for (const call of post.mock.calls) {
+      expect(call[2]).toMatchObject({ timeout: DOCSYNC_UPSTREAM_TIMEOUT_MS })
+    }
+    expect(get.mock.calls[0][0]).toBe('/trips/1/docsync/connections/5/scopes')
+    expect(get.mock.calls[0][1]).toMatchObject({ timeout: DOCSYNC_UPSTREAM_TIMEOUT_MS })
+    expect(del.mock.calls[0][0]).toBe('/trips/1/docsync/links/9')
+    expect(del.mock.calls[0][1]).toMatchObject({ timeout: DOCSYNC_UPSTREAM_TIMEOUT_MS })
+    expect(DOCSYNC_UPSTREAM_TIMEOUT_MS).toBeGreaterThan(8000)
+
+    // A run, and a conflict choice that runs the binding afterwards.
+    post.mockClear()
+    await docsyncApi.syncNow(1, 9)
+    await docsyncApi.resolve(1, 4, 'trek')
+
+    expect(post.mock.calls.map(c => c[0])).toEqual([
+      '/trips/1/docsync/links/9/sync',
+      '/trips/1/docsync/items/4/resolve',
+    ])
+    for (const call of post.mock.calls) {
+      expect(call[2]).toMatchObject({ timeout: DOCSYNC_RUN_TIMEOUT_MS })
+    }
+    expect(DOCSYNC_RUN_TIMEOUT_MS).toBeGreaterThan(DOCSYNC_UPSTREAM_TIMEOUT_MS)
   })
 })

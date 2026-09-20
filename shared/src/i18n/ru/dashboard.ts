@@ -87,6 +87,7 @@ const dashboard: TranslationStrings = {
   'dashboard.useUnsplashPhoto': 'Использовать фото Unsplash от {photographer}',
   'dashboard.titleRequired': 'Название обязательно',
   'dashboard.endDateError': 'Дата окончания должна быть позже даты начала',
+  'dashboard.tripTooLong': 'Поездка может длиться не более {days} дней',
   'dashboard.dateShiftTitle': 'Новая дата начала',
   'dashboard.dateShiftIntro': 'Вы изменили дату начала поездки. Как перенести ваши планы на новые даты?',
   'dashboard.dateShiftKeepBookings': 'Оставить бронирования на своих датах',

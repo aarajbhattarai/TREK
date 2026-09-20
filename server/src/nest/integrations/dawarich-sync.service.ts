@@ -169,7 +169,7 @@ export class DawarichSyncService {
       if (!window) continue;
 
       try {
-        const result = await this.syncTripWindow(userId, trip.id, creds, window.from, window.to);
+        const result = await this.syncTripWindow(userId, trip.id, creds, window.from, window.to, trips);
         created += result.created;
         updated += result.updated;
         missing += result.missing;
@@ -234,6 +234,10 @@ export class DawarichSyncService {
    * it — so a changed-since filter, even if one existed, could never see a
    * deletion. Comparing the whole window against what TREK already holds is the
    * only thing that can.
+   *
+   * `trips` is every trip this run walks. A window reaches past its own trip
+   * on both sides, so a stay can be fetched by two neighbouring trips, and the
+   * one whose dates actually hold it is the one that gets it (see `tripForVisit`).
    */
   async syncTripWindow(
     userId: number,
@@ -241,6 +245,7 @@ export class DawarichSyncService {
     creds: DawarichCreds,
     from: Date,
     to: Date,
+    trips: TripRow[] = [],
   ): Promise<{ created: number; updated: number; missing: number }> {
     const { visits } = await this.client.listVisits(creds, from, to);
 
@@ -268,6 +273,8 @@ export class DawarichSyncService {
         visit.countryCodeFromSource ??
         (visit.lat !== null && visit.lng !== null ? getCountryFromCoords(visit.lat, visit.lng) : null);
 
+      const ownerTripId = tripForVisit(visit.localDate, tripId, existing?.trip_id ?? null, trips);
+
       if (!existing) {
         this.db.run(
           `INSERT INTO dawarich_visit_suggestions
@@ -277,7 +284,7 @@ export class DawarichSyncService {
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'new', ?, ?, ?)`,
           userId,
           visit.sourceVisitId,
-          tripId,
+          ownerTripId,
           visit.name,
           visit.lat,
           visit.lng,
@@ -302,13 +309,15 @@ export class DawarichSyncService {
 
       if (existing.state === 'new') {
         // Nobody has acted on it yet, so the newest version of the source is
-        // simply the better suggestion. Overwriting here loses nothing.
+        // simply the better suggestion. Overwriting here loses nothing, and
+        // that includes the trip: a stay parked on a neighbour by an earlier
+        // run moves to the trip whose dates hold it.
         this.db.run(
           `UPDATE dawarich_visit_suggestions
               SET name = ?, lat = ?, lng = ?, started_at = ?, ended_at = ?, duration_minutes = ?,
                   local_date = ?, source_status = ?, confidence = ?, confidence_band = ?,
                   country_code = ?, source_hash = ?, source_missing_at = NULL,
-                  trip_id = COALESCE(trip_id, ?), last_seen_at = ?
+                  trip_id = ?, last_seen_at = ?
             WHERE id = ?`,
           visit.name,
           visit.lat,
@@ -322,7 +331,7 @@ export class DawarichSyncService {
           visit.confidenceBand,
           countryCode,
           hash,
-          tripId,
+          ownerTripId,
           new Date().toISOString(),
           existing.id,
         );
@@ -520,6 +529,47 @@ interface TripRow {
 
 interface SuggestionRow {
   id: number;
+  trip_id: number | null;
   state: string;
   source_hash: string;
+}
+
+/**
+ * Does the trip's own span, not its widened window, hold this local date?
+ *
+ * Plain string order, because both sides are `YYYY-MM-DD`. A start that is not
+ * a date at all covers nothing: `syncWindow` skips such a trip, and it must
+ * not claim other trips' stays from the sidelines either.
+ */
+function tripCovers(trip: TripRow, localDate: string): boolean {
+  if (!trip.start_date || !Number.isFinite(Date.parse(`${trip.start_date}T00:00:00Z`))) return false;
+  if (localDate < trip.start_date) return false;
+  return !trip.end_date || localDate <= trip.end_date;
+}
+
+/**
+ * The trip a stay belongs to.
+ *
+ * Every window is padded by the lookback, so two trips a few days apart both
+ * fetch the last days of the earlier one, and whichever asked first would
+ * otherwise keep those stays for good. The trip whose dates hold the stay
+ * outranks the trip whose padding merely reached it. A row already sitting on
+ * a trip that covers its date stays put, so two overlapping trips cannot hand
+ * a stay back and forth on every run. A stay outside every trip, such as the
+ * evening before departure, keeps the trip it has or goes to the window that
+ * found it, exactly as before.
+ */
+function tripForVisit(
+  localDate: string,
+  currentTripId: number,
+  existingTripId: number | null,
+  trips: TripRow[],
+): number {
+  const existing = existingTripId === null ? undefined : trips.find((t) => t.id === existingTripId);
+  if (existing && tripCovers(existing, localDate)) return existing.id;
+  const current = trips.find((t) => t.id === currentTripId);
+  if (current && tripCovers(current, localDate)) return current.id;
+  const other = trips.find((t) => tripCovers(t, localDate));
+  if (other) return other.id;
+  return existingTripId ?? currentTripId;
 }

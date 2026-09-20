@@ -274,7 +274,22 @@ describe('PlacesController (parity with the legacy /api/trips/:tripId/places rou
 
       expect(linkedExpenseIds).toHaveBeenCalledWith('5', [1, 2]);
       expect(linkedExpenseIds.mock.invocationCallOrder[0]).toBeLessThan(removeMany.mock.invocationCallOrder[0]);
-      expect(broadcast).toHaveBeenCalledWith('5', 'budget:deleted', { itemId: 77 }, 'sock');
+      // Without the socket id: the deleting tab removed the places itself, not
+      // the expense, so it has to hear about that one like everybody else.
+      expect(broadcast).toHaveBeenCalledWith('5', 'budget:deleted', { itemId: 77 }, undefined);
+    });
+
+    it('tells the deleting tab about the booking and the expense a cancelled night took down', async () => {
+      const removeMany = vi.fn().mockReturnValue({ deleted: [1], cancelled: { reservationIds: [12], budgetItemIds: [77] } });
+      const broadcast = vi.fn();
+      const s = svc({ removeMany, broadcast, scopedIds: vi.fn().mockReturnValue([1]) } as Partial<PlacesService>);
+      await new PlacesController(s, new RuntimeEnvService(), storageStub).bulkDelete(user, '5', { ids: [1] }, 'sock');
+
+      // The place is the one change the tab made itself, so that echo stays
+      // filtered. The booking and its expense went on the server alone.
+      expect(broadcast).toHaveBeenCalledWith('5', 'place:deleted', { placeId: 1 }, 'sock');
+      expect(broadcast).toHaveBeenCalledWith('5', 'reservation:deleted', { reservationId: 12 }, undefined);
+      expect(broadcast).toHaveBeenCalledWith('5', 'budget:deleted', { itemId: 77 }, undefined);
     });
   });
 
@@ -440,8 +455,13 @@ describe('PlacesController (parity with the legacy /api/trips/:tripId/places rou
 
     await new PlacesController(s, new RuntimeEnvService(), storageStub).remove(user, '5', '9', 'sock');
 
-    expect(broadcast).toHaveBeenCalledWith('5', 'reservation:deleted', { reservationId: 12 }, 'sock');
-    expect(broadcast).toHaveBeenCalledWith('5', 'budget:deleted', { itemId: 77 }, 'sock');
+    // The place echo stays filtered by the socket id; the booking and the
+    // expense are sent to the deleting tab as well, because that tab only
+    // removed the place itself and would otherwise keep showing both until a
+    // reload.
+    expect(broadcast).toHaveBeenCalledWith('5', 'place:deleted', { placeId: 9 }, 'sock');
+    expect(broadcast).toHaveBeenCalledWith('5', 'reservation:deleted', { reservationId: 12 }, undefined);
+    expect(broadcast).toHaveBeenCalledWith('5', 'budget:deleted', { itemId: 77 }, undefined);
   });
 
   // #1745: a place on another trip must 404 without the hook ever running —

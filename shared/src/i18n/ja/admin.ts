@@ -772,5 +772,6 @@ const admin: TranslationStrings = {
   'admin.placesUsageTitle': 'キーの使いみち',
   'admin.mapsKeyHintShort': '写真・評価・営業時間が加わります。以降の検索はすべて Google に送られます。',
   'admin.amapKeyHintShort': '中国本土での地点検索用。JS API キーではなく Web サービスキーが必要です。',
+  'admin.collab.links.subtitle': '共有リンクとブックマーク',
 };
 export default admin;

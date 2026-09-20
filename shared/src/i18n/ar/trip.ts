@@ -88,5 +88,7 @@ const trip: TranslationStrings = {
   'transit.transfersLabel': 'التحويلات',
   'transit.walkLabel': 'المشي',
   'transit.searchHint': 'ابحث عن رحلات فعلية وأضفها مباشرة إلى اليوم — البيانات عبر Transitous.',
+  'trip.confirm.deletePlaceNight': 'ستُحذف الليلة المحجوزة في "{name}" مع المكان.',
+  'trip.confirm.deletePlaceBooked': 'ستُحذف الليلة المحجوزة في "{name}" مع المكان، ومعها الحجز "{booking}" وأي مصروف مرتبط به.',
 };
 export default trip;

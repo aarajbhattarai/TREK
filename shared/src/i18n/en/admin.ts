@@ -782,5 +782,6 @@ const admin: TranslationStrings = {
   'admin.placesUsageTitle': 'What the key is used for',
   'admin.mapsKeyHintShort': 'Adds photos, ratings and opening hours. Every lookup then goes to Google.',
   'admin.amapKeyHintShort': 'For place search inside mainland China. Needs a web service key, not a JS API key.',
+  'admin.collab.links.subtitle': 'Shared links and bookmarks',
 };
 export default admin;

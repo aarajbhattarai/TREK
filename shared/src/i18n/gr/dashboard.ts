@@ -99,6 +99,7 @@ const dashboard: TranslationStrings = {
   'dashboard.useUnsplashPhoto': 'Χρήση φωτογραφίας Unsplash από {photographer}',
   'dashboard.titleRequired': 'Ο τίτλος είναι υποχρεωτικός',
   'dashboard.endDateError': 'Η ημερομηνία λήξης πρέπει να είναι μετά την ημερομηνία έναρξης',
+  'dashboard.tripTooLong': 'Ένα ταξίδι μπορεί να διαρκεί το πολύ {days} ημέρες',
   'dashboard.dateShiftTitle': 'Νέα ημερομηνία έναρξης',
   'dashboard.dateShiftIntro':
     'Αλλάξατε την ημερομηνία έναρξης αυτού του ταξιδιού. Πώς θέλετε να ακολουθήσουν τα σχέδιά σας τις νέες ημερομηνίες;',

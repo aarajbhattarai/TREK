@@ -53,20 +53,16 @@ const system_notice: TranslationStrings = {
   'system_notice.pager.goto': '通知{n}へ',
   'system_notice.pager.position': '{total}件中{current}件目',
   'system_notice.release_notes.eyebrow': 'アップデート完了',
-  'system_notice.release_notes.headline': 'TREKが自前でできるようになった、3つのこと。',
-  'system_notice.release_notes.intro':
-    '自前の場所API、出発から到着まで計画できるロードトリップ、そしてあなたの手元に戻ってくる位置情報の履歴。',
+  'system_notice.release_notes.headline': 'TREKが自分でできるようになった4つのこと。',
+  'system_notice.release_notes.intro': '独自の場所API、最初から最後まで計画できるロードトリップ、あなたの手に戻る位置情報の履歴、そして同期される書類。',
   'system_notice.release_notes.features_label': '今回の目玉',
   'system_notice.release_notes.features_aside': 'ほんの一部です',
   'system_notice.release_notes.feature_places_title': 'TREK Places API',
-  'system_notice.release_notes.feature_places_body':
-    '場所APIを自前で運用する、初めてのオープンソース旅行プランナーです。7,360万件の場所を毎月作り直しています。APIキーも利用上限もありません。',
+  'system_notice.release_notes.feature_places_body': '独自の場所APIを持つ初のオープンソース旅行プランナー。7,360万件の場所、キー不要、制限なし。',
   'system_notice.release_notes.feature_roadtrip_title': 'ロードトリップアドオン',
-  'system_notice.release_notes.feature_roadtrip_body':
-    'ロードトリップモードは、ドライブそのものを計画します。ルート、距離、運転時間、立ち寄り先まで。アドオンなので、管理者が有効にするまではオフのままです。',
+  'system_notice.release_notes.feature_roadtrip_body': '走行を自動で計画：ルート、距離、時間、停車地。管理者が有効にするまではオフ。',
   'system_notice.release_notes.feature_dawarich_title': 'Dawarich連携',
-  'system_notice.release_notes.feature_dawarich_body':
-    'Google Timelineのセルフホスト版とも言えるDawarichを、TREKの中で読めるようになりました。TREKは読み取るだけで、それ以上のことはしません。書き戻すことは一切ありません。',
+  'system_notice.release_notes.feature_dawarich_body': 'Google Timelineのセルフホスト版とも言えるDawarichを、TREKの中で読めるようになりました。TREKは読み取るだけで、それ以上のことはしません。',
   'system_notice.release_notes.footnote': 'ほかにも、TREKのあちこちに細かな変更がたくさん入っています。',
   'system_notice.release_notes.notes_label': 'リリースノート',
   'system_notice.release_notes.note_eyebrow': '開発者より',
@@ -86,5 +82,7 @@ const system_notice: TranslationStrings = {
     'TREKがあなたの旅に欠かせないものになっていたら、コーヒーを一杯おごってください。次のリリースを届ける力になります。',
   'system_notice.release_notes.cta_bmc': 'Buy me a coffee',
   'system_notice.release_notes.cta_kofi': 'Ko-fiで応援する',
+  'system_notice.release_notes.feature_docsync_title': '書類の同期',
+  'system_notice.release_notes.feature_docsync_body': 'Paperless-ngx、Papra、Nextcloud、OpenCloud、Synology Drive。旅程の書類が、すでに運用しているストレージと双方向で同期されます。',
 };
 export default system_notice;

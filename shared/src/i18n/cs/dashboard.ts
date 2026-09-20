@@ -87,6 +87,7 @@ const dashboard: TranslationStrings = {
   'dashboard.useUnsplashPhoto': 'Použít fotku z Unsplash od {photographer}',
   'dashboard.titleRequired': 'Název je povinný',
   'dashboard.endDateError': 'Datum konce musí být po datu začátku',
+  'dashboard.tripTooLong': 'Cesta může trvat nejvýše {days} dní',
   'dashboard.dateShiftTitle': 'Nové datum začátku',
   'dashboard.dateShiftIntro': 'Změnili jste začátek této cesty. Jak se mají vaše plány přizpůsobit novým termínům?',
   'dashboard.dateShiftKeepBookings': 'Ponechat rezervace v původních termínech',

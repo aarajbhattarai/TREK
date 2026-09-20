@@ -793,5 +793,6 @@ const admin: TranslationStrings = {
   'admin.placesUsageTitle': 'K čemu se klíč používá',
   'admin.mapsKeyHintShort': 'Přidá fotky, hodnocení a otevírací dobu. Každý dotaz pak jde na Google.',
   'admin.amapKeyHintShort': 'Pro vyhledávání míst v pevninské Číně. Potřebuje klíč webové služby, ne klíč JS API.',
+  'admin.collab.links.subtitle': 'Sdílené odkazy a záložky',
 };
 export default admin;

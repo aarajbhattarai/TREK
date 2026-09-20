@@ -363,6 +363,64 @@ describe('request shape', () => {
   });
 });
 
+/**
+ * MOTIS names a train by its service, Google by its vehicle. The client's train
+ * chip therefore asks for the fine-grained rail modes and never for RAIL, while
+ * Google labels every conventional train HEAVY_RAIL, which lands on RAIL. The
+ * response filter has to read both as the same family, or the one billed call
+ * comes back with the trains the user asked for and throws them all away.
+ */
+describe('rail mode filter', () => {
+  /** The subway fixture with its one transit leg relabelled as another vehicle. */
+  function withVehicle(type: string): FixtureRoutes {
+    const route = subwayRoute();
+    const details = route.routes[0].legs[0].steps[1].transitDetails;
+    if (details) details.transitLine.vehicle.type = type;
+    return route;
+  }
+
+  // What the train chip sends, verbatim.
+  const TRAIN_CHIP = 'HIGHSPEED_RAIL,LONG_DISTANCE,NIGHT_RAIL,REGIONAL_RAIL,SUBURBAN';
+
+  it('GTRANSIT-039: the train filter keeps the trains Google labels HEAVY_RAIL', async () => {
+    const provider = new GoogleTransitProvider(googleDb());
+    for (const vehicle of ['HEAVY_RAIL', 'RAIL', 'COMMUTER_TRAIN', 'HIGH_SPEED_TRAIN']) {
+      clearGoogleTransitCache();
+      fetchMock.mockResolvedValue(okJson(withVehicle(vehicle)));
+      const { itineraries } = await provider.plan({ from: FROM, to: TO, modes: TRAIN_CHIP }, 'en', 1);
+      expect(itineraries, vehicle).toHaveLength(1);
+    }
+    // The request side is unchanged: the five fine modes collapse to Google's one TRAIN bucket.
+    expect(lastBody().transitPreferences).toEqual({ allowedTravelModes: ['TRAIN'] });
+  });
+
+  it('GTRANSIT-040: the RAIL umbrella keeps the fine-grained rail legs, and neither side leaks a subway', async () => {
+    const provider = new GoogleTransitProvider(googleDb());
+    // An MCP caller may name the umbrella; Google still answers by vehicle.
+    for (const vehicle of ['COMMUTER_TRAIN', 'HIGH_SPEED_TRAIN', 'HEAVY_RAIL']) {
+      clearGoogleTransitCache();
+      fetchMock.mockResolvedValue(okJson(withVehicle(vehicle)));
+      const { itineraries } = await provider.plan({ from: FROM, to: TO, modes: 'RAIL' }, 'en', 1);
+      expect(itineraries, vehicle).toHaveLength(1);
+    }
+
+    clearGoogleTransitCache();
+    fetchMock.mockResolvedValue(okJson(withVehicle('HEAVY_RAIL')));
+    expect((await provider.plan({ from: FROM, to: TO, modes: 'SUBWAY' }, 'en', 1)).itineraries).toEqual([]);
+
+    clearGoogleTransitCache();
+    fetchMock.mockResolvedValue(okJson(withVehicle('SUBWAY')));
+    expect((await provider.plan({ from: FROM, to: TO, modes: TRAIN_CHIP }, 'en', 1)).itineraries).toEqual([]);
+  });
+
+  it('GTRANSIT-041: a bus-only filter still refuses a train', async () => {
+    fetchMock.mockResolvedValue(okJson(withVehicle('HEAVY_RAIL')));
+    const provider = new GoogleTransitProvider(googleDb());
+    const { itineraries } = await provider.plan({ from: FROM, to: TO, modes: 'BUS,COACH' }, 'en', 1);
+    expect(itineraries).toEqual([]);
+  });
+});
+
 describe('geocode', () => {
   const places = {
     places: [

@@ -56,7 +56,7 @@ const roadtrip: TranslationStrings = {
   'roadtrip.window.conflict':
     'Waktu tetap bertentangan dengan perjalanan dan jeda. Waktu manual tidak berubah; perencanaan otomatis dijeda.',
   'roadtrip.window.tooLong':
-    'Waktu ini memerlukan lebih dari 365 hari tambahan. Pilih rentang waktu harian yang lebih panjang.',
+    'Waktu ini memerlukan lebih dari {days} hari tambahan. Pilih rentang waktu harian yang lebih panjang.',
   'roadtrip.mode.roadtrip': 'Perjalanan darat',
   'roadtrip.mode.days': 'Hari',
   'roadtrip.mode.label': 'Tampilan rencana',
@@ -245,8 +245,10 @@ const roadtrip: TranslationStrings = {
   'roadtrip.stop.stay': 'Waktu di perhentian ini',
   'roadtrip.stop.pinned': 'Waktu yang Anda tetapkan',
   'roadtrip.stop.computed': 'Dihitung dari waktu berkendara',
+  'roadtrip.stop.endIsLeave': 'Dalam perjalanan darat, keberangkatan pada waktu ini.',
   'roadtrip.via.hint': 'Seret untuk mengubah rute, klik kanan untuk menghapus',
   'roadtrip.warn.late': 'Tiba {minutes} menit setelah waktu yang ditetapkan',
+  'roadtrip.warn.missedLeave': 'Tiba {minutes} menit setelah waktu berangkat yang ditetapkan',
   'roadtrip.warn.overnight': 'Hari berikutnya',
   'roadtrip.spill.title': 'Dari hari {number}',
   'roadtrip.spill.departs': 'berangkat {time}',
@@ -256,9 +258,18 @@ const roadtrip: TranslationStrings = {
   'roadtrip.stay.custom': 'Menit',
   'roadtrip.stay.arrive': 'Tiba',
   'roadtrip.stay.leave': 'Berangkat',
+  'roadtrip.stay.until': 'sampai {time}',
+  'roadtrip.stay.leavesAt': 'Kunjungan ini punya waktu selesai, jadi perjalanan berlanjut pukul {time}.',
+  'roadtrip.stay.dayEndsFirst':
+    'Hari perjalanan berakhir sebelum pukul {time}, jadi perjalanan berlanjut keesokan paginya.',
+  'roadtrip.stay.clearLeave': 'Hapus waktu selesai',
   'roadtrip.alt.noMotorway': 'Tanpa jalan tol cepat',
   'roadtrip.alt.noToll': 'Tanpa tol',
   'roadtrip.alt.noFerry': 'Tanpa feri',
   'roadtrip.summary.partial': 'Sisa perjalanan masih dihitung',
+  'roadtrip.stay.releaseTitle': 'Hapus menginap semalam?',
+  'roadtrip.stay.releaseBody': 'Malam di “{name}” akan dihapus. Perhentian tetap ada di perjalanan sebagai jeda.',
+  'roadtrip.stay.releaseBookedBody': 'Malam di “{name}” akan dihapus bersama pemesanan “{booking}” dan pengeluaran yang terkait. Perhentian tetap ada di perjalanan sebagai jeda.',
+  'roadtrip.stay.releaseAction': 'Jadikan jeda',
 };
 export default roadtrip;

@@ -1,5 +1,5 @@
 /**
- * FE-CHATIMG-001..006 — the pictures pinned to a chat message before it is sent.
+ * FE-CHATIMG-001..009: the pictures pinned to a chat message before it is sent.
  *
  * The reason this file exists: the hook used to create object URLs and enqueue
  * the preview state from inside a `setFiles` updater. React invokes an updater
@@ -11,7 +11,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { StrictMode } from 'react'
 import { act, renderHook } from '@testing-library/react'
-import { useChatImages, MAX_CHAT_IMAGES } from './useChatImages'
+import { useChatImages, MAX_CHAT_IMAGES, type ChatImageDrop } from './useChatImages'
 
 let nextUrl = 0
 const revoked: string[] = []
@@ -91,5 +91,45 @@ describe('useChatImages', () => {
 
     expect(result.current.files).toEqual([])
     expect(revoked.sort()).toEqual(['blob:mock/1', 'blob:mock/2'])
+  })
+
+  // The strip shows what will be sent, so a picture the cap turned away is as gone as
+  // one of the wrong kind. The sender hears about both, and hears which it was.
+  it('FE-CHATIMG-007: a pick past the cap is reported as an overflow and is not a clean add', () => {
+    const { result } = strict()
+    const drops: ChatImageDrop[] = []
+    let ok = true
+
+    act(() => {
+      ok = result.current.add(Array.from({ length: MAX_CHAT_IMAGES + 2 }, (_, i) => img(`${i}.png`)), d => drops.push(d))
+    })
+
+    expect(ok).toBe(false)
+    expect(drops).toEqual([{ rejected: 0, overflow: 2 }])
+    expect(result.current.files).toHaveLength(MAX_CHAT_IMAGES)
+  })
+
+  it('FE-CHATIMG-008: a wrong kind and an overflow in one pick are told apart', () => {
+    const { result } = strict()
+    act(() => { result.current.add([img('a.png'), img('b.png'), img('c.png')]) })
+    const drops: ChatImageDrop[] = []
+
+    act(() => {
+      result.current.add([new File(['x'], 'notes.pdf', { type: 'application/pdf' }), img('d.png'), img('e.png')], d => drops.push(d))
+    })
+
+    expect(result.current.files.map(f => f.name)).toEqual(['a.png', 'b.png', 'c.png', 'd.png'])
+    expect(drops).toEqual([{ rejected: 1, overflow: 1 }])
+  })
+
+  it('FE-CHATIMG-009: a pick that fits is a clean add and reports nothing', () => {
+    const { result } = strict()
+    const onDrop = vi.fn()
+    let ok = false
+
+    act(() => { ok = result.current.add([img('a.png')], onDrop) })
+
+    expect(ok).toBe(true)
+    expect(onDrop).not.toHaveBeenCalled()
   })
 })

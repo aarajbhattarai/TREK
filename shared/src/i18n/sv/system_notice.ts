@@ -56,20 +56,16 @@ const system_notice: TranslationStrings = {
   'system_notice.pager.position': 'Meddlenade {current} av {total}',
   // The release modal. One stable set of keys: each big release swaps the copy in place.
   'system_notice.release_notes.eyebrow': 'Uppdatering klar',
-  'system_notice.release_notes.headline': 'Tre saker som TREK nu klarar på egen hand.',
-  'system_notice.release_notes.intro':
-    'Ett eget API för platser, bilresor planerade från start till mål och din platshistorik tillbaka i dina händer.',
+  'system_notice.release_notes.headline': 'Fyra saker TREK nu gör på egen hand.',
+  'system_notice.release_notes.intro': 'Ett eget plats-API, bilresor planerade från början till slut, din platshistorik i dina händer, och dina dokument i synk.',
   'system_notice.release_notes.features_label': 'Höjdpunkterna',
   'system_notice.release_notes.features_aside': 'Långt ifrån allt',
   'system_notice.release_notes.feature_places_title': 'TREK Places API',
-  'system_notice.release_notes.feature_places_body':
-    'Den första resplaneraren med öppen källkod som driver sitt eget API för platser. 73,6 miljoner platser som byggs om varje månad. Ingen nyckel, ingen kvot.',
+  'system_notice.release_notes.feature_places_body': 'Den första reseplaneraren med öppen källkod och eget plats-API. 73,6 miljoner platser, ingen nyckel, ingen kvot.',
   'system_notice.release_notes.feature_roadtrip_title': 'Tillägget Bilresa',
-  'system_notice.release_notes.feature_roadtrip_body':
-    'Bilreseläget planerar själva körningen: rutten, sträckan, körtiden och stoppen. Ett tillägg som är avstängt tills en administratör slår på det.',
+  'system_notice.release_notes.feature_roadtrip_body': 'Planerar körningen själv: rutt, sträcka, timmar och stopp. Av tills en admin slår på det.',
   'system_notice.release_notes.feature_dawarich_title': 'Dawarich-integration',
-  'system_notice.release_notes.feature_dawarich_body':
-    'Det självhostade svaret på Google Timeline, nu läsbart direkt i TREK. TREK läser, och bara läser. Ingenting skrivs någonsin tillbaka.',
+  'system_notice.release_notes.feature_dawarich_body': 'Det självhostade svaret på Google Timeline, nu läsbart direkt i TREK. TREK läser, och bara läser.',
   'system_notice.release_notes.footnote': 'Dessutom en lång rad mindre ändringar i resten av TREK.',
   'system_notice.release_notes.notes_label': 'Versionsnyheter',
   'system_notice.release_notes.note_eyebrow': 'Ett ord från utvecklaren',
@@ -89,5 +85,7 @@ const system_notice: TranslationStrings = {
     'Om TREK har förtjänat en plats på dina resor, så bjud mig gärna på en kaffe och hjälp till att nästa utgåva blir av.',
   'system_notice.release_notes.cta_bmc': 'Buy me a coffee',
   'system_notice.release_notes.cta_kofi': 'Stöd på Ko-fi',
+  'system_notice.release_notes.feature_docsync_title': 'Dokumentsynk',
+  'system_notice.release_notes.feature_docsync_body': 'Paperless-ngx, Papra, Nextcloud, OpenCloud och Synology Drive. En resas dokument flödar åt båda håll med lagringen du redan kör.',
 };
 export default system_notice;

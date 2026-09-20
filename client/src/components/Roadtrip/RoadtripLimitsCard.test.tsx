@@ -145,14 +145,17 @@ describe('RoadtripLimitsCard', () => {
   })
 
   it('FE-ROADTRIP-LIMITS-008: without a way to save, the dialog is read-only', () => {
+    useSettingsStore.setState({
+      settings: { roadtrip_leg_minutes: 180, roadtrip_day_minutes: 0, roadtrip_range_km: 0, distance_unit: 'metric' } as never,
+    })
     // `onSave` absent is how the caller says the reader may look but not change.
     open(undefined)
 
-    const [leg] = inputs()
-    fireEvent.change(leg, { target: { value: '180' } })
-    // Nothing to assert but the absence of a crash: the commit path has no
-    // handler to call, and must not assume one.
-    expect(() => fireEvent.blur(leg)).not.toThrow()
+    // Disabled rather than accepting a number it would then drop: a field that took 400
+    // and sprang back to 180 on Enter, with no word about why, read as broken.
+    for (const field of inputs()) expect(field).toBeDisabled()
+    // What is stored is still there to be read.
+    expect(screen.getByTestId('limit-legMinutes')).toHaveValue(180)
   })
 
   it('FE-ROADTRIP-LIMITS-009: naming the kind of car brings out its own figures', () => {
@@ -273,6 +276,42 @@ describe('RoadtripLimitsCard', () => {
       expect(toggle).toHaveAttribute('aria-pressed', 'true')
       fireEvent.click(toggle)
       expect(onSave).toHaveBeenCalledWith('roadtrip_connect_days', false)
+    })
+  })
+
+  /**
+   * A member without the right to edit days gets the dialog without a way to save. Every
+   * control has to say so by being disabled: a switch that flips and stays off, or a
+   * field that takes a number and springs back, is a fault report waiting to happen.
+   */
+  describe('read-only', () => {
+    it('FE-ROADTRIP-LIMITS-016: the kind of car and its figures cannot be changed', () => {
+      useSettingsStore.setState({
+        settings: { roadtrip_vehicle: 'electric', roadtrip_battery_kwh: 58, distance_unit: 'metric' } as never,
+      })
+      open(undefined)
+
+      for (const name of ['Either', 'Petrol', 'Electric']) {
+        expect(screen.getByRole('radio', { name })).toBeDisabled()
+      }
+      // The stored figure holds the disclosure open, so the car's own rows are on show.
+      expect(screen.getByTestId('limit-batteryKwh')).toBeDisabled()
+      expect(screen.getByTestId('limit-batteryKwh')).toHaveValue(58)
+      expect(screen.getByTestId('limit-fill')).toBeDisabled()
+    })
+
+    it('FE-ROADTRIP-LIMITS-017: the switches over the route line are not offered', () => {
+      useSettingsStore.setState({
+        settings: { roadtrip_connect_days: true, distance_unit: 'metric' } as never,
+      })
+      open(undefined)
+
+      expect(screen.queryByRole('button', { name: 'Connect the days' })).not.toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: 'A colour per day' })).not.toBeInTheDocument()
+      // The rows stay in the dialog, the same way the service-stop and hazard rows do
+      // without a way to save: a switch withheld is not a setting that vanished.
+      expect(screen.getByText('Connect the days')).toBeInTheDocument()
+      expect(screen.getByText('A colour per day')).toBeInTheDocument()
     })
   })
 })

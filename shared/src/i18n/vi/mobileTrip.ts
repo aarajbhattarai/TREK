@@ -71,5 +71,7 @@ const mobileTrip: TranslationStrings = {
     '1 đoạn có nhiều hơn mức vừa trong một câu trả lời. Chọn ít loại hơn để xem phần còn lại.',
   'mobileTrip.rtTruncated.other':
     '{count} đoạn có nhiều hơn mức vừa trong một câu trả lời. Chọn ít loại hơn để xem phần còn lại.',
+  'mobileTrip.rtNoDay': 'Chưa chọn ngày',
+  'mobileTrip.rtNoDayHint': 'Bản đồ đang hiển thị cả chuyến đi. Chạm vào một ngày ở trên để xem chặng lái.',
 };
 export default mobileTrip;

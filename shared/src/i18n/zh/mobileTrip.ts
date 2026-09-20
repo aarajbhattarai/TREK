@@ -65,5 +65,7 @@ const mobileTrip: TranslationStrings = {
   'mobileTrip.rtNoneOnStage': '本段沿途没有这类地点。',
   'mobileTrip.rtTruncated.one': '1 段路的结果超出一次回答能装下的量。少选几类就能看到其余的。',
   'mobileTrip.rtTruncated.other': '{count} 段路的结果超出一次回答能装下的量。少选几类就能看到其余的。',
+  'mobileTrip.rtNoDay': '未选择日期',
+  'mobileTrip.rtNoDayHint': '地图显示的是整个行程。点按上方的日期查看当天路线。',
 };
 export default mobileTrip;

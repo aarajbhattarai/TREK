@@ -75,6 +75,7 @@ function mapsStub(over: Partial<Record<keyof MapsService, unknown>> = {}) {
     fetchWikidataSitelinks: vi.fn(async () => ({}) as Record<string, string>),
     resolveOsmIdentity: vi.fn(async () => null as { tags: Record<string, string>; osmUrl: string | null; matchedName: string } | null),
     details: vi.fn(async () => ({ place: null })),
+    trekPlacesEnabled: vi.fn(() => true),
     ...over,
   } as unknown as MapsService;
 }
@@ -179,7 +180,7 @@ describe('description source order', () => {
   it('ENRICH-074: still falls back to Google when nothing free describes the place', async () => {
     const maps = mapsStub({
       getMapsKey: vi.fn(() => 'key'),
-      details: vi.fn(async () => ({ place: { source: 'google', google_maps_url: 'https://maps.google/x' } })),
+      details: vi.fn(async () => ({ place: { source: 'google', google_maps_url: 'https://maps.google.com/x' } })),
       fetchEditorialSummary: vi.fn(async () => 'Casual chain for wood-fired pizza.'),
     });
 
@@ -188,9 +189,38 @@ describe('description source order', () => {
     expect(out.description).toMatchObject({
       source: 'google',
       text: 'Casual chain for wood-fired pizza.',
-      sourceUrl: 'https://maps.google/x',
+      sourceUrl: 'https://maps.google.com/x',
       license: null,
     });
+  });
+
+  it('ENRICH-120: links Google\'s summary only to a Google Maps address', async () => {
+    // The record and its link come with the request, and the answer is cached
+    // for every user of the instance under the label "Google". A link that is
+    // not a Google Maps address by shape is dropped; the text stays.
+    for (const bad of ['https://phish.example/maps', 'https://google.evil.example/x', 'javascript:alert(1)', 'maps.google.com/x']) {
+      const maps = mapsStub({
+        getMapsKey: vi.fn(() => 'key'),
+        fetchEditorialSummary: vi.fn(async () => 'Casual chain for wood-fired pizza.'),
+      });
+      const out = await make(maps).enrich(1, {
+        ...GOOGLE_REQ,
+        details: { source: 'google', google_maps_url: bad },
+      });
+      expect(out.description, bad).toMatchObject({ source: 'google', text: 'Casual chain for wood-fired pizza.', sourceUrl: null });
+    }
+
+    for (const ok of ['https://maps.google.com/?cid=1', 'https://www.google.de/maps/place/x', 'https://maps.app.goo.gl/abc']) {
+      const maps = mapsStub({
+        getMapsKey: vi.fn(() => 'key'),
+        fetchEditorialSummary: vi.fn(async () => 'Casual chain for wood-fired pizza.'),
+      });
+      const out = await make(maps).enrich(1, {
+        ...GOOGLE_REQ,
+        details: { source: 'google', google_maps_url: ok },
+      });
+      expect(out.description, ok).toMatchObject({ source: 'google', sourceUrl: ok });
+    }
   });
 
   it('ENRICH-075: keeps the OpenStreetMap description ahead of everything', async () => {
@@ -362,23 +392,37 @@ describe("the description on the place's own website", () => {
     lang: 'de',
   };
 
-  it('ENRICH-100: reads the description the details lookup already fetched', async () => {
-    // The details call fetched this place a moment ago and its answer carries
-    // the description. Asking again made adding one place cost two full round
-    // trips to the index, each with its own timeout, for a field already in
-    // hand.
+  it('ENRICH-100: asks the index for the description, not the request that carries one', async () => {
+    // The dialog's own lookup fetched this place a moment ago and the request
+    // carries its answer, description included. It is still not read from
+    // there: the result lands in a cache the whole instance reads from for a
+    // week, and the text and the link in it have to be the index's, not
+    // whatever the sender put in the body. The cached row is the proof.
     mockTrekPlacesById.mockClear();
+    mockTrekPlacesById.mockResolvedValue({
+      description: { text: 'Pizza in Rostock, seit 2015.', sourceUrl: 'https://losteria.net/rostock' },
+    });
 
     const out = await make(mapsStub()).enrich(1, {
       ...GERS_REQ,
-      details: { description: { text: 'Pizza in Rostock, seit 2015.', sourceUrl: 'https://losteria.net/rostock' } },
+      details: {
+        source: 'trek-places',
+        description: { text: 'Buchung nur noch über https://phish.example', sourceUrl: 'https://phish.example' },
+      },
     });
 
-    expect(out.description).toMatchObject({ text: 'Pizza in Rostock, seit 2015.', source: 'website' });
-    expect(mockTrekPlacesById).not.toHaveBeenCalled();
+    expect(mockTrekPlacesById).toHaveBeenCalledWith('abc-123');
+    expect(out.description).toMatchObject({
+      text: 'Pizza in Rostock, seit 2015.',
+      source: 'website',
+      sourceUrl: 'https://losteria.net/rostock',
+    });
+    const written = mockDbRun.mock.calls.find(([sql]) => String(sql).includes('INSERT OR REPLACE INTO place_details_cache'));
+    expect(written).toBeTruthy();
+    expect(String(written![4])).not.toContain('phish.example');
   });
 
-  it('ENRICH-101: still asks when the caller passed no details', async () => {
+  it('ENRICH-101: asks when the caller passed no details, all the same', async () => {
     mockTrekPlacesById.mockClear();
     mockTrekPlacesById.mockResolvedValue({
       description: { text: 'Pizza in Rostock, seit 2015.', sourceUrl: 'https://losteria.net/rostock' },
@@ -394,22 +438,107 @@ describe("the description on the place's own website", () => {
     // It becomes an href on the client, and the value comes from whatever index
     // the instance is pointed at. The same allow-list a place's website goes
     // through, for the same reason.
-    mockTrekPlacesById.mockClear();
-
     for (const bad of ['javascript:alert(1)', 'data:text/html,<script>', 'file:///etc/passwd', 'not a url']) {
-      const out = await make(mapsStub()).enrich(1, {
-        ...GERS_REQ,
-        details: { description: { text: 'Pizza in Rostock.', sourceUrl: bad } },
-      });
+      mockTrekPlacesById.mockResolvedValue({ description: { text: 'Pizza in Rostock.', sourceUrl: bad } });
+      const out = await make(mapsStub()).enrich(1, GERS_REQ);
       expect(out.description, bad).toMatchObject({ text: 'Pizza in Rostock.', sourceUrl: null });
     }
 
     // The ordinary case still keeps its link.
-    const ok = await make(mapsStub()).enrich(1, {
-      ...GERS_REQ,
-      details: { description: { text: 'Pizza in Rostock.', sourceUrl: 'https://losteria.net/rostock' } },
+    mockTrekPlacesById.mockResolvedValue({
+      description: { text: 'Pizza in Rostock.', sourceUrl: 'https://losteria.net/rostock' },
     });
+    const ok = await make(mapsStub()).enrich(1, GERS_REQ);
     expect(ok.description).toMatchObject({ sourceUrl: 'https://losteria.net/rostock' });
+  });
+
+  it('ENRICH-117: a description the request made up never reaches the shared cache', async () => {
+    // The index knows no description for this place. The request claims one,
+    // with a link. Nobody gets to see it, the sender included: the website
+    // rung reads the index and nothing else.
+    mockTrekPlacesById.mockClear();
+    mockTrekPlacesById.mockResolvedValue({ description: null });
+
+    const out = await make(mapsStub()).enrich(1, {
+      ...GERS_REQ,
+      details: {
+        source: 'trek-places',
+        description: { text: 'Buchung nur noch über https://phish.example', sourceUrl: 'https://phish.example' },
+      },
+    });
+
+    expect(out.description).toBeNull();
+    for (const [sql, ...params] of mockDbRun.mock.calls) {
+      expect(JSON.stringify(params), String(sql)).not.toContain('phish.example');
+    }
+  });
+
+  it('ENRICH-118: an OpenStreetMap summary the request carried is answered, but not cached for everyone', async () => {
+    // The OSM rung reads `summary` and `osm_url` straight off the details, and
+    // the details came with the request. Answering the sender with their own
+    // payload is harmless; writing it into the row every other user of the
+    // instance reads for a week is not. The row simply is not written.
+    const carried = {
+      ...OSM_REQ,
+      details: {
+        source: 'openstreetmap',
+        summary: 'Buchung nur noch über https://phish.example',
+        osm_url: 'https://phish.example',
+      },
+    };
+
+    const out = await make(mapsStub()).enrich(1, carried);
+
+    expect(out.description).toMatchObject({ source: 'osm', text: 'Buchung nur noch über https://phish.example' });
+    expect(mockDbRun.mock.calls.some(([sql]) => String(sql).includes('place_details_cache'))).toBe(false);
+
+    // The same summary from the service's own lookup is the map's, and keeps.
+    const maps = mapsStub({
+      details: vi.fn(async () => ({
+        place: { source: 'openstreetmap', summary: 'Größter Kreuzungsbahnhof Europas.', osm_url: 'https://www.openstreetmap.org/relation/3600565' },
+      })),
+    });
+    mockDbRun.mockClear();
+    const own = await make(maps).enrich(1, OSM_REQ);
+    expect(own.description).toMatchObject({ source: 'osm', text: 'Größter Kreuzungsbahnhof Europas.' });
+    expect(mockDbRun.mock.calls.some(([sql]) => String(sql).includes('INSERT OR REPLACE INTO place_details_cache'))).toBe(true);
+  });
+
+  it('ENRICH-121: a menu link the request carried is answered, but not cached for everyone', async () => {
+    // The menu chip is the other link read straight off the details: it goes
+    // out as an href under the label "Menu", and a request can put any http(s)
+    // address there. Same treatment as the summary: the sender sees it, the
+    // row is not written.
+    const out = await make(mapsStub()).enrich(1, {
+      ...OSM_REQ,
+      details: { source: 'openstreetmap', menu_url: 'https://phish.example/menu' },
+    });
+
+    expect(out.facts).toContainEqual({ kind: 'menu', value: null, url: 'https://phish.example/menu' });
+    expect(mockDbRun.mock.calls.some(([sql]) => String(sql).includes('place_details_cache'))).toBe(false);
+
+    // The same link from the service's own lookup is the map's, and keeps.
+    const maps = mapsStub({
+      details: vi.fn(async () => ({ place: { source: 'openstreetmap', menu_url: 'https://example.org/karte' } })),
+    });
+    mockDbRun.mockClear();
+    const own = await make(maps).enrich(1, OSM_REQ);
+    expect(own.facts).toContainEqual({ kind: 'menu', value: null, url: 'https://example.org/karte' });
+    expect(mockDbRun.mock.calls.some(([sql]) => String(sql).includes('INSERT OR REPLACE INTO place_details_cache'))).toBe(true);
+  });
+
+  it('ENRICH-119: with the index switched off, no lookup leaves for the description', async () => {
+    // TREK_PLACES_ENABLED=false is a promise about egress, and a saved index
+    // place opened later is still an index place.
+    mockTrekPlacesById.mockClear();
+    mockTrekPlacesById.mockResolvedValue({
+      description: { text: 'Pizza in Rostock, seit 2015.', sourceUrl: 'https://losteria.net/rostock' },
+    });
+
+    const out = await make(mapsStub({ trekPlacesEnabled: vi.fn(() => false) })).enrich(1, GERS_REQ);
+
+    expect(mockTrekPlacesById).not.toHaveBeenCalled();
+    expect(out.description).toBeNull();
   });
 
   it('ENRICH-090: quotes the site and credits it by URL', async () => {

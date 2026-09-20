@@ -425,7 +425,11 @@ export const DAWARICH_BUCKET_MATCH_MIN_MINUTES = 20;
 export const DAWARICH_BUCKET_SCAN_LIMIT = 50;
 /** Points kept per day after thinning, so a month-long trip stays drawable. */
 export const DAWARICH_TRACK_POINTS_PER_DAY = 600;
-/** How far back a sync looks for trips that have no end date yet. */
+/**
+ * Days before a trip's start a sync still asks about, for every trip: the
+ * visits endpoint filters on the start of a visit, so a stay that began the
+ * evening before is invisible at an exact boundary.
+ */
 export const DAWARICH_SYNC_LOOKBACK_DAYS = 3;
 /** Days past a trip's end still worth polling — a stay can end after midnight. */
 export const DAWARICH_SYNC_LOOKAHEAD_DAYS = 1;

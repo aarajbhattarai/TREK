@@ -704,6 +704,7 @@ export default function MTransportFormSheet({ planner, onOpenExpense }: MTranspo
                     onAdd={(p) => saveTransport(p as Record<string, unknown> & { title: string })}
                     initialFrom={transitPrefill?.from ?? null}
                     initialTo={transitPrefill?.to ?? null}
+                    initialTime={transitPrefill?.time ?? null}
                   />
                 </div>
               )

@@ -89,6 +89,7 @@ const dashboard: TranslationStrings = {
   'dashboard.useUnsplashPhoto': '{photographer} Unsplash-fotójának használata',
   'dashboard.titleRequired': 'A cím megadása kötelező',
   'dashboard.endDateError': 'A záró dátumnak a kezdő dátum után kell lennie',
+  'dashboard.tripTooLong': 'Egy utazás legfeljebb {days} napos lehet',
   'dashboard.dateShiftTitle': 'Új kezdő dátum',
   'dashboard.dateShiftIntro': 'Megváltoztattad az út kezdetét. Hogyan kövessék a terveid az új dátumokat?',
   'dashboard.dateShiftKeepBookings': 'A foglalások maradjanak a saját dátumaikon',

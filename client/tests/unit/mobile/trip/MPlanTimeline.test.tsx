@@ -9,7 +9,7 @@ import type { MergedItem } from '../../../../src/utils/dayMerge'
 import type { Assignment, Day, DayNote, Place, RouteSegment } from '../../../../src/types'
 import MPlanTimeline from '../../../../src/mobile/screens/trip/plan/MPlanTimeline'
 
-// FE-MOB-PLTL-001 to FE-MOB-PLTL-045
+// FE-MOB-PLTL-001 to FE-MOB-PLTL-047
 
 const mocks = vi.hoisted(() => ({
   tl: {} as Record<string, unknown>,
@@ -119,6 +119,8 @@ function buildTl(over: Record<string, unknown> = {}): MPlanTimelineController {
       { key: 'plugin:ev/fastest', label: 'EV fastest' },
     ],
     setLegMode: vi.fn(),
+    transitLegFor: vi.fn(() => null),
+    planTransitLeg: vi.fn(),
     ...over,
   } as unknown as MPlanTimelineController
 }
@@ -386,6 +388,26 @@ describe('MPlanTimeline', () => {
       fireEvent.click(screen.getByText('dayplan.transportMode.useDefault'))
 
       expect(mocks.tl.setLegMode).toHaveBeenCalledWith(11, null)
+    })
+
+    it('FE-MOB-PLTL-046: a leg with a transit search behind it offers Public transit and opens it (#2398)', () => {
+      const leg = { from: { name: 'Museum', lat: 35.71, lng: 139.79 }, to: { name: 'Ueno Park', lat: 35.72, lng: 139.77 }, time: '09:30' }
+      renderTimeline({ transitLegFor: vi.fn(() => leg) }, {}, { mode: 'edit' })
+      fireEvent.click(connector())
+
+      expect(mocks.tl.transitLegFor).toHaveBeenCalledWith(SEG)
+      fireEvent.click(screen.getByText('transit.title'))
+
+      expect(mocks.tl.planTransitLeg).toHaveBeenCalledWith(leg)
+      expect(mocks.tl.setLegMode).not.toHaveBeenCalled()
+    })
+
+    it('FE-MOB-PLTL-047: without a transit search for the leg the menu keeps to the road profiles', () => {
+      renderEditing()
+      fireEvent.click(connector())
+
+      expect(screen.getByText('Driving')).toBeInTheDocument()
+      expect(screen.queryByText('transit.title')).not.toBeInTheDocument()
     })
 
     it('FE-MOB-PLTL-020: read-only members get no tappable connectors', () => {

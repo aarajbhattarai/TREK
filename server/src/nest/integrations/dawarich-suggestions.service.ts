@@ -579,11 +579,17 @@ export class DawarichSuggestionsService {
     if (!creds) throw new AcceptError('not_connected', 'Dawarich is not connected', 400);
 
     const countries = await this.client.listVisitedCities(creds, from, to);
-    const visited = new Set(
-      this.db
-        .all<{ country_code: string }>('SELECT country_code FROM visited_countries WHERE user_id = ?', userId)
-        .map((r) => r.country_code.toUpperCase()),
-    );
+
+    // "Already on the map" is what the Atlas itself paints as visited: the
+    // countries a finished trip's places resolve to, a booking landed in, or a
+    // hand mark added, minus the ones the user removed. Reading only the hand
+    // marks would offer somebody their own past trips as news.
+    const visited = new Set<string>();
+    for (const country of (await this.atlas.stats(userId)).countries) {
+      // The shape for a user without trips carries no status; everything in it
+      // is a hand mark, which the Atlas draws as visited.
+      if (!('status' in country) || country.status === 'visited') visited.add(country.code.toUpperCase());
+    }
 
     const resolved: DawarichAtlasCountry[] = [];
     const unresolved: string[] = [];

@@ -56,7 +56,7 @@ const roadtrip: TranslationStrings = {
   'roadtrip.window.conflict':
     'Фиксированное время противоречит поездке и перерывам. Ручные значения сохранены; автоматическое планирование приостановлено.',
   'roadtrip.window.tooLong':
-    'При этих настройках потребуется более 365 дополнительных дней. Увеличьте ежедневный интервал.',
+    'При этих настройках потребуется более {days} дополнительных дней. Увеличьте ежедневный интервал.',
   'roadtrip.mode.roadtrip': 'Автопутешествие',
   'roadtrip.mode.days': 'Дни',
   'roadtrip.mode.label': 'Вид плана',
@@ -245,8 +245,10 @@ const roadtrip: TranslationStrings = {
   'roadtrip.stop.stay': 'Время на остановке',
   'roadtrip.stop.pinned': 'Заданное вами время',
   'roadtrip.stop.computed': 'Рассчитано по времени в пути',
+  'roadtrip.stop.endIsLeave': 'В автопутешествии отправление будет в это время.',
   'roadtrip.via.hint': 'Перетащите, чтобы изменить маршрут, правый клик — удалить',
   'roadtrip.warn.late': 'Прибытие на {minutes} мин позже заданного времени',
+  'roadtrip.warn.missedLeave': 'Прибытие на {minutes} мин позже заданного времени отправления',
   'roadtrip.warn.overnight': 'Следующий день',
   'roadtrip.spill.title': 'Со дня {number}',
   'roadtrip.spill.departs': 'выезд {time}',
@@ -256,9 +258,17 @@ const roadtrip: TranslationStrings = {
   'roadtrip.stay.custom': 'Минуты',
   'roadtrip.stay.arrive': 'Прибытие',
   'roadtrip.stay.leave': 'Отправление',
+  'roadtrip.stay.until': 'до {time}',
+  'roadtrip.stay.leavesAt': 'У этого визита есть время окончания, поэтому поездка продолжится в {time}.',
+  'roadtrip.stay.dayEndsFirst': 'День в пути заканчивается раньше {time}, поэтому поездка продолжится следующим утром.',
+  'roadtrip.stay.clearLeave': 'Убрать время окончания',
   'roadtrip.alt.noMotorway': 'Без автомагистрали',
   'roadtrip.alt.noToll': 'Без платных дорог',
   'roadtrip.alt.noFerry': 'Без парома',
   'roadtrip.summary.partial': 'Остальная часть маршрута ещё рассчитывается',
+  'roadtrip.stay.releaseTitle': 'Убрать ночёвку?',
+  'roadtrip.stay.releaseBody': 'Ночёвка в «{name}» будет удалена. Остановка останется на маршруте как пауза.',
+  'roadtrip.stay.releaseBookedBody': 'Ночёвка в «{name}» будет удалена вместе с бронированием «{booking}» и связанными с ним расходами. Остановка останется на маршруте как пауза.',
+  'roadtrip.stay.releaseAction': 'Сделать паузой',
 };
 export default roadtrip;

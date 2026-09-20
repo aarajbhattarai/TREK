@@ -56,7 +56,7 @@ const roadtrip: TranslationStrings = {
   'roadtrip.window.conflict':
     'Egy rögzített időpont ütközik az utazással és a szünetekkel. A kézi időpontok megmaradnak; az automatikus tervezés szünetel.',
   'roadtrip.window.tooLong':
-    'Ezek az időpontok több mint 365 további napot igényelnének. Válassz hosszabb napi időszakot.',
+    'Ezek az időpontok több mint {days} további napot igényelnének. Válassz hosszabb napi időszakot.',
   'roadtrip.mode.roadtrip': 'Autós út',
   'roadtrip.mode.days': 'Napok',
   'roadtrip.mode.label': 'Terv nézet',
@@ -243,8 +243,10 @@ const roadtrip: TranslationStrings = {
   'roadtrip.stop.stay': 'Idő ezen a megállón',
   'roadtrip.stop.pinned': 'Az általad megadott időpont',
   'roadtrip.stop.computed': 'A menetidőből számolva',
+  'roadtrip.stop.endIsLeave': 'Az autós úton ekkor indul tovább az út.',
   'roadtrip.via.hint': 'Húzza az útvonal átalakításához, jobb gombbal eltávolítható',
   'roadtrip.warn.late': 'Érkezés {minutes} perccel a megadott idő után',
+  'roadtrip.warn.missedLeave': 'Érkezés {minutes} perccel a megadott indulási idő után',
   'roadtrip.warn.overnight': 'Következő nap',
   'roadtrip.spill.title': 'A(z) {number}. napról',
   'roadtrip.spill.departs': 'indulás {time}',
@@ -254,9 +256,17 @@ const roadtrip: TranslationStrings = {
   'roadtrip.stay.custom': 'Perc',
   'roadtrip.stay.arrive': 'Erkezes',
   'roadtrip.stay.leave': 'Indulas',
+  'roadtrip.stay.until': '{time}-ig',
+  'roadtrip.stay.leavesAt': 'Ennek a látogatásnak van befejezési ideje, ezért az út {time}-kor folytatódik.',
+  'roadtrip.stay.dayEndsFirst': 'Az utazási nap {time} előtt véget ér, ezért az út másnap reggel folytatódik.',
+  'roadtrip.stay.clearLeave': 'Befejezési idő törlése',
   'roadtrip.alt.noMotorway': 'Autopalya nelkul',
   'roadtrip.alt.noToll': 'Dijmentes',
   'roadtrip.alt.noFerry': 'Komp nélkül',
   'roadtrip.summary.partial': 'A hátralévő útszakasz számítása még folyamatban',
+  'roadtrip.stay.releaseTitle': 'Elveted az éjszakázást?',
+  'roadtrip.stay.releaseBody': 'A(z) „{name}” helyen töltött éjszaka törlődik. A megálló szünetként az útvonalon marad.',
+  'roadtrip.stay.releaseBookedBody': 'A(z) „{name}” helyen töltött éjszaka a(z) „{booking}” foglalással és a hozzá kapcsolt kiadásokkal együtt törlődik. A megálló szünetként az útvonalon marad.',
+  'roadtrip.stay.releaseAction': 'Legyen szünet',
 };
 export default roadtrip;

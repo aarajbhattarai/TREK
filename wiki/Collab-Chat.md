@@ -16,6 +16,10 @@ Type in the input field at the bottom and press **Enter** (or click the send but
 
 Messages load in pages of 100. A **Load older messages** button appears at the top of the chat when older messages are available.
 
+### Images
+
+A message can carry up to **four images**. Click the image button in the composer, paste them from the clipboard, or drop them onto the composer. JPEG, PNG, GIF and WebP are accepted, up to **10 MB** each; TREK checks the file type and the extension, and anything else is refused with *Only JPEG, PNG, GIF and WebP images up to 10 MB are allowed*. Each picked image shows as a thumbnail above the input with an **×** to drop it again, and a message can consist of images alone, with no text. Sending an image needs the `file_upload` permission on top of `collab_edit`.
+
 ## Emoji
 
 Click the smiley-face button in the composer to open the emoji picker. The picker has three categories:

@@ -71,5 +71,7 @@ const mobileTrip: TranslationStrings = {
     '1 trecho tinha mais do que cabe em uma resposta. Escolha menos tipos para ver o resto.',
   'mobileTrip.rtTruncated.other':
     '{count} trechos tinham mais do que cabe em uma resposta. Escolha menos tipos para ver o resto.',
+  'mobileTrip.rtNoDay': 'Nenhum dia escolhido',
+  'mobileTrip.rtNoDayHint': 'O mapa mostra a viagem inteira. Toque num dia acima para ver o seu percurso.',
 };
 export default mobileTrip;

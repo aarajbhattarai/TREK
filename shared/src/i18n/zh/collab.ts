@@ -93,5 +93,10 @@ const collab: TranslationStrings = {
   'collab.polls.options': '选项',
   'collab.polls.delete': '删除',
   'collab.polls.closedSection': '已关闭',
+  'collab.chat.imageLimit': '每条消息最多可附加 {max} 张图片',
+  'collab.chat.uploading': '上传中 {percent}%',
+  'collab.chat.attachImages': '附加图片',
+  'collab.chat.attachedImage': '附加的图片',
+  'collab.chat.closeImage': '关闭图片',
 };
 export default collab;

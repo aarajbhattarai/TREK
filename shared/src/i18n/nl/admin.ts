@@ -806,5 +806,6 @@ const admin: TranslationStrings = {
   'admin.placesUsageTitle': 'Waar de sleutel voor wordt gebruikt',
   'admin.mapsKeyHintShort': 'Voegt foto\'s, beoordelingen en openingstijden toe. Elke opzoeking gaat dan naar Google.',
   'admin.amapKeyHintShort': 'Voor plaatszoeken in het vasteland van China. Vereist een webservicesleutel, geen JS-API-sleutel.',
+  'admin.collab.links.subtitle': 'Gedeelde links en bladwijzers',
 };
 export default admin;

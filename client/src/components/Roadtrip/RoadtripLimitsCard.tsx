@@ -52,7 +52,7 @@ function parseLimit(raw: string): number {
  * its shape either way, because a range that switched between an input and a line of text
  * would move every row under it the moment a consumption was typed.
  */
-function LimitRow({ icon: Icon, label, suffix, value, placeholder, step, derived, testId, onDraft, onChange }: {
+function LimitRow({ icon: Icon, label, suffix, value, placeholder, step, derived, disabled, testId, onDraft, onChange }: {
   icon: typeof Clock
   label: string
   suffix: string
@@ -60,6 +60,12 @@ function LimitRow({ icon: Icon, label, suffix, value, placeholder, step, derived
   placeholder: string
   step?: number
   derived?: string
+  /**
+   * Readable but not editable, which is how a reader without the right to change the
+   * settings sees the dialog. Nothing this row could commit would be saved, and a field
+   * that takes a number and springs back to the old one reads as broken.
+   */
+  disabled?: boolean
   /**
    * A stable handle for the tests, because the rows are no longer at fixed indices.
    *
@@ -133,6 +139,7 @@ function LimitRow({ icon: Icon, label, suffix, value, placeholder, step, derived
             placeholder={placeholder}
             aria-label={`${label}, ${suffix}`}
             data-testid={testId}
+            disabled={disabled}
             onChange={e => { setDraft(e.target.value); onDraft?.(parseLimit(e.target.value)) }}
             onBlur={commit}
             // Committed here rather than by blurring and letting onBlur do it: a
@@ -141,7 +148,7 @@ function LimitRow({ icon: Icon, label, suffix, value, placeholder, step, derived
             onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); commit(); (e.target as HTMLInputElement).blur() } }}
             // The spinners are the other half of the width problem: they eat a third of a
             // narrow field and nobody sets a driving limit by clicking an arrow.
-            className="w-full rounded-lg border border-edge bg-surface px-2.5 py-1.5 text-end text-body tabular-nums text-content [appearance:textfield] focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+            className="w-full rounded-lg border border-edge bg-surface px-2.5 py-1.5 text-end text-body tabular-nums text-content [appearance:textfield] focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent disabled:opacity-50 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
           />
         )}
       </span>
@@ -269,6 +276,11 @@ export default function RoadtripLimitsCard({ onSave, onResetDayBoundaries, loadi
   const [open, setOpen] = useState(false)
   const distanceUnit: DistanceUnit = unit === 'imperial' ? 'imperial' : 'metric'
   const imperial = distanceUnit === 'imperial'
+  // No way to save is the caller saying the reader may look but not change. Every
+  // control below is disabled on that one answer: a member without the right to edit
+  // days gets the dialog with the trip's figures in it, not a form that takes a number
+  // and drops it.
+  const readOnly = !onSave
 
   const legMinutes = settings.roadtrip_leg_minutes
   const dayMinutes = settings.roadtrip_day_minutes
@@ -448,6 +460,7 @@ export default function RoadtripLimitsCard({ onSave, onResetDayBoundaries, loadi
                     suffix={t('roadtrip.limit.minutes')}
                     value={legMinutes}
                     placeholder={t('roadtrip.limit.off')}
+                    disabled={readOnly}
                     testId="limit-legMinutes"
                     onChange={v => onSave?.('roadtrip_leg_minutes', v)}
                   />
@@ -457,6 +470,7 @@ export default function RoadtripLimitsCard({ onSave, onResetDayBoundaries, loadi
                     suffix={t('roadtrip.limit.minutes')}
                     value={dayMinutes}
                     placeholder={t('roadtrip.limit.off')}
+                    disabled={readOnly}
                     testId="limit-dayMinutes"
                     onChange={v => onSave?.('roadtrip_day_minutes', v)}
                   />
@@ -478,7 +492,7 @@ export default function RoadtripLimitsCard({ onSave, onResetDayBoundaries, loadi
                       icon={icon}
                       label={label}
                       on={avoiding.includes(cls)}
-                      disabled={!canAvoid}
+                      disabled={!canAvoid || readOnly}
                       onToggle={() => toggleAvoid(cls)}
                     />
                   ))}
@@ -486,7 +500,7 @@ export default function RoadtripLimitsCard({ onSave, onResetDayBoundaries, loadi
                 <Panel icon={Signpost} title={t('roadtrip.stops.section')} note={t('roadtrip.stops.daysHint')}>
                   <AvoidRow icon={Link2} label={t('roadtrip.stops.inDays')}
                     on={settings.roadtrip_service_stops_in_days !== false}
-                    disabled={!onSave}
+                    disabled={readOnly}
                     onToggle={() => onSave?.('roadtrip_service_stops_in_days', settings.roadtrip_service_stops_in_days === false)}
                   />
                 </Panel>
@@ -516,6 +530,7 @@ export default function RoadtripLimitsCard({ onSave, onResetDayBoundaries, loadi
                             name="roadtrip-vehicle"
                             className="peer sr-only"
                             checked={(settings.roadtrip_vehicle || '') === (key ?? '')}
+                            disabled={readOnly}
                             onChange={() => {
                               // Never writes the car's figures away: switching kind leaves
                               // both sets stored, `rangeFromSpec` simply returns null for
@@ -526,7 +541,7 @@ export default function RoadtripLimitsCard({ onSave, onResetDayBoundaries, loadi
                               onSave?.('roadtrip_vehicle', key ?? '')
                             }}
                           />
-                          <span className="flex min-w-0 cursor-pointer items-center justify-center gap-1.5 rounded-lg px-2 py-1.5 text-center text-body text-content-secondary transition-colors hover:bg-surface-hover peer-checked:bg-accent peer-checked:text-accent-text peer-focus-visible:ring-2 peer-focus-visible:ring-accent">
+                          <span className="flex min-w-0 cursor-pointer items-center justify-center gap-1.5 rounded-lg px-2 py-1.5 text-center text-body text-content-secondary transition-colors hover:bg-surface-hover peer-checked:bg-accent peer-checked:text-accent-text peer-focus-visible:ring-2 peer-focus-visible:ring-accent peer-disabled:pointer-events-none">
                             <Icon size={14} className="shrink-0" aria-hidden />
                             {t(labelKey)}
                           </span>
@@ -555,6 +570,7 @@ export default function RoadtripLimitsCard({ onSave, onResetDayBoundaries, loadi
                     value={rangeShown}
                     placeholder={t('roadtrip.limit.off')}
                     derived={computedKm ? t('roadtrip.limit.computed') : undefined}
+                    disabled={readOnly}
                     testId="limit-range"
                     onDraft={v => setPreview({ key: 'range', value: v })}
                     onChange={setRange}
@@ -569,6 +585,7 @@ export default function RoadtripLimitsCard({ onSave, onResetDayBoundaries, loadi
                     suffix="%"
                     value={settings.roadtrip_fill_percent}
                     placeholder={t('roadtrip.limit.fillFull')}
+                    disabled={readOnly}
                     testId="limit-fill"
                     onDraft={v => setPreview({ key: 'fill', value: v > 100 ? 100 : v })}
                     onChange={v => onSave?.('roadtrip_fill_percent', v > 100 ? 100 : v)}
@@ -611,6 +628,7 @@ export default function RoadtripLimitsCard({ onSave, onResetDayBoundaries, loadi
                             step={step}
                             value={showSpec(key, saved[key], imperial)}
                             placeholder={t('roadtrip.limit.off')}
+                            disabled={readOnly}
                             testId={`limit-${key}`}
                             onDraft={v => setPreview({ key, value: v })}
                             onChange={v => onSave?.(setting, storeSpec(key, v, imperial))}
@@ -636,7 +654,7 @@ export default function RoadtripLimitsCard({ onSave, onResetDayBoundaries, loadi
                     icon={Link2}
                     label={t('roadtrip.line.connect')}
                     on={!!settings.roadtrip_connect_days}
-                    disabled={false}
+                    disabled={readOnly}
                     onToggle={() => onSave?.('roadtrip_connect_days', !settings.roadtrip_connect_days)}
                   />}
                   {/* Which matters most once the line IS continuous: end to end it is one
@@ -645,12 +663,12 @@ export default function RoadtripLimitsCard({ onSave, onResetDayBoundaries, loadi
                     icon={Palette}
                     label={t('roadtrip.line.dayColors')}
                     on={!!settings.roadtrip_day_colors}
-                    disabled={false}
+                    disabled={readOnly}
                     onToggle={() => onSave?.('roadtrip_day_colors', !settings.roadtrip_day_colors)}
                   />
                 </Panel>
                 <Panel icon={Signpost} title={t('roadtrip.hazards.current')} note={t('roadtrip.hazards.note')}>
-                  <AvoidRow icon={Signpost} label={t('roadtrip.hazards.show')} on={settings.roadtrip_show_hazards === true} disabled={!onSave}
+                  <AvoidRow icon={Signpost} label={t('roadtrip.hazards.show')} on={settings.roadtrip_show_hazards === true} disabled={readOnly}
                     onToggle={() => onSave?.('roadtrip_show_hazards', !settings.roadtrip_show_hazards)} />
                 </Panel>
 

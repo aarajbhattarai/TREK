@@ -93,5 +93,10 @@ const collab: TranslationStrings = {
   'collab.polls.options': 'Tùy chọn',
   'collab.polls.delete': 'Xóa bỏ',
   'collab.polls.closedSection': 'Đã đóng',
+  'collab.chat.imageLimit': 'Bạn có thể đính kèm tối đa {max} ảnh cho mỗi tin nhắn',
+  'collab.chat.uploading': 'Đang tải lên {percent}%',
+  'collab.chat.attachImages': 'Đính kèm ảnh',
+  'collab.chat.attachedImage': 'Ảnh đính kèm',
+  'collab.chat.closeImage': 'Đóng ảnh',
 };
 export default collab;

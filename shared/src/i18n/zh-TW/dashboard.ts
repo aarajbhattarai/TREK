@@ -87,6 +87,7 @@ const dashboard: TranslationStrings = {
   'dashboard.useUnsplashPhoto': '使用 {photographer} 的 Unsplash 照片',
   'dashboard.titleRequired': '標題為必填項',
   'dashboard.endDateError': '結束日期必須晚於開始日期',
+  'dashboard.tripTooLong': '行程最長為 {days} 天',
   'dashboard.dateShiftTitle': '新的開始日期',
   'dashboard.dateShiftIntro': '你變更了旅行的開始時間。你的計劃要如何配合新日期？',
   'dashboard.dateShiftKeepBookings': '預訂保留在原日期',

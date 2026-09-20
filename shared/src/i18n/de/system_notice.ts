@@ -57,20 +57,16 @@ const system_notice: TranslationStrings = {
     'Das 3.0.14-Upgrade hat einen oder mehrere Konflikte bei Benutzernamen oder E-Mail-Adressen festgestellt, die durch führende oder nachgestellte Leerzeichen in gespeicherten Konten verursacht wurden. Betroffene Konten wurden automatisch umbenannt. Prüfe die Serverprotokolle auf Zeilen, die mit **[migration] WHITESPACE COLLISION** beginnen, um die betroffenen Konten zu identifizieren.',
   // The release modal. One stable set of keys: each big release swaps the copy in place.
   'system_notice.release_notes.eyebrow': 'Update installiert',
-  'system_notice.release_notes.headline': 'Drei Dinge, die TREK jetzt selbst erledigt.',
-  'system_notice.release_notes.intro':
-    'Eine eigene API für Orte, Roadtrips von Anfang bis Ende geplant und dein Standortverlauf wieder in deiner Hand.',
+  'system_notice.release_notes.headline': 'Vier Dinge, die TREK jetzt selbst kann.',
+  'system_notice.release_notes.intro': 'Eine eigene Orts-API, Roadtrips komplett geplant, dein Standortverlauf wieder in deiner Hand, und deine Dokumente im Abgleich.',
   'system_notice.release_notes.features_label': 'Die Highlights',
   'system_notice.release_notes.features_aside': 'Längst nicht alles',
   'system_notice.release_notes.feature_places_title': 'TREK Places API',
-  'system_notice.release_notes.feature_places_body':
-    'Der erste Open-Source-Reiseplaner, der seine eigene API für Orte betreibt. 73,6 Millionen Orte, jeden Monat neu aufgebaut. Kein Schlüssel, kein Kontingent.',
+  'system_notice.release_notes.feature_places_body': 'Der erste Open-Source-Reiseplaner mit eigener Orts-API. 73,6 Millionen Orte, kein Key, kein Kontingent.',
   'system_notice.release_notes.feature_roadtrip_title': 'Roadtrip-Addon',
-  'system_notice.release_notes.feature_roadtrip_body':
-    'Der Roadtrip-Modus plant die Fahrt selbst: die Route, ihre Länge, die Fahrzeit und die Stopps. Ein Addon, das aus bleibt, bis ein Admin es einschaltet.',
+  'system_notice.release_notes.feature_roadtrip_body': 'Plant die Fahrt selbst: Route, Strecke, Stunden und Stopps. Aus, bis ein Admin es einschaltet.',
   'system_notice.release_notes.feature_dawarich_title': 'Dawarich-Integration',
-  'system_notice.release_notes.feature_dawarich_body':
-    'Die selbst gehostete Antwort auf Google Timeline, jetzt direkt in TREK lesbar. TREK liest, und nur das. Zurückgeschrieben wird nie etwas.',
+  'system_notice.release_notes.feature_dawarich_body': 'Die selbst gehostete Antwort auf Google Timeline, jetzt direkt in TREK lesbar. TREK liest, und nur das.',
   'system_notice.release_notes.footnote': 'Dazu kommt eine lange Liste kleinerer Änderungen überall sonst in TREK.',
   'system_notice.release_notes.notes_label': 'Release Notes',
   'system_notice.release_notes.note_eyebrow': 'Ein Wort vom Maintainer',
@@ -90,5 +86,7 @@ const system_notice: TranslationStrings = {
     'Wenn TREK sich einen Platz auf deinen Reisen verdient hat, spendier mir einen Kaffee und hilf mit, dass auch das nächste Release kommt.',
   'system_notice.release_notes.cta_bmc': 'Buy me a coffee',
   'system_notice.release_notes.cta_kofi': 'Ko-fi unterstützen',
+  'system_notice.release_notes.feature_docsync_title': 'Dokumenten-Sync',
+  'system_notice.release_notes.feature_docsync_body': 'Paperless-ngx, Papra, Nextcloud, OpenCloud und Synology Drive. Die Dokumente einer Reise fließen in beide Richtungen mit dem Speicher, den du ohnehin betreibst.',
 };
 export default system_notice;

@@ -809,5 +809,6 @@ const admin: TranslationStrings = {
   'admin.placesUsageTitle': 'Untuk apa kunci ini dipakai',
   'admin.mapsKeyHintShort': 'Menambahkan foto, penilaian, dan jam buka. Setiap pencarian lalu ke Google.',
   'admin.amapKeyHintShort': 'Untuk pencarian tempat di Tiongkok daratan. Perlu kunci layanan web, bukan kunci JS API.',
+  'admin.collab.links.subtitle': 'Tautan bersama dan penanda',
 };
 export default admin;

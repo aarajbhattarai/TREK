@@ -70,6 +70,8 @@ const mobileTrip: TranslationStrings = {
   'mobileTrip.rtTruncated.one': '1 tram tenia més del que cap en una resposta. Tria menys tipus per veure la resta.',
   'mobileTrip.rtTruncated.other':
     '{count} trams tenien més del que cap en una resposta. Tria menys tipus per veure la resta.',
+  'mobileTrip.rtNoDay': 'Cap dia seleccionat',
+  'mobileTrip.rtNoDayHint': 'El mapa mostra tot el viatge. Toca un dia a dalt per veure’n el trajecte.',
 };
 
 export default mobileTrip;

@@ -73,16 +73,18 @@ vi.mock('../../../../src/components/Planner/LocationSelect', () => ({
 }))
 
 vi.mock('../../../../src/components/Planner/TransitSearchPanel', () => ({
-  default: ({ day, places, onAdd, initialFrom }: {
+  default: ({ day, places, onAdd, initialFrom, initialTime }: {
     day: { id: number }
     places: { name: string }[]
     onAdd: (p: Record<string, unknown>) => void
     initialFrom: { name: string } | null
+    initialTime: string | null
   }) => (
     <div>
       <span data-testid="transit-day">{day.id}</span>
       <span data-testid="transit-places">{places.map(p => p.name).join(',')}</span>
       <span data-testid="transit-from">{initialFrom?.name ?? ''}</span>
+      <span data-testid="transit-time">{initialTime ?? ''}</span>
       <button type="button" onClick={() => onAdd({ title: 'U4 to Prater', type: 'transit' })}>add-itinerary</button>
     </div>
   ),
@@ -921,7 +923,7 @@ describe('MTransportFormSheet', () => {
     const planner = makePlanner({
       transportModalAutomated: true,
       transportModalDayId: 12,
-      transitPrefill: { from: { name: 'Hotel', lat: 34.7, lng: 135.5 }, to: null },
+      transitPrefill: { from: { name: 'Hotel', lat: 34.7, lng: 135.5 }, to: null, time: '08:15' },
       places: [{ id: 1, name: 'Fushimi Inari' }, { id: 2, name: 'Nishiki Market' }],
       assignments: { '12': [{ id: 9, place_id: 2, order_index: 1 }, { id: 8, place_id: 1, order_index: 0 }] },
     })
@@ -929,6 +931,8 @@ describe('MTransportFormSheet', () => {
     expect(screen.getByTestId('transit-day')).toHaveTextContent('12')
     expect(screen.getByTestId('transit-places')).toHaveTextContent('Fushimi Inari,Nishiki Market')
     expect(screen.getByTestId('transit-from')).toHaveTextContent('Hotel')
+    // A leg picked from the timeline's connector menu carries its departure (#2398).
+    expect(screen.getByTestId('transit-time')).toHaveTextContent('08:15')
   })
 
   it('FE-MOB-TRFRM-040: the transit panel saves its itinerary through the shared save path', async () => {

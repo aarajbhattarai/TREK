@@ -12,6 +12,7 @@ import { DatabaseModule } from '../../src/nest/database/database.module';
 import { RealtimeModule } from '../../src/nest/realtime/realtime.module';
 import { Test } from '@nestjs/testing';
 import { seedUser, sessionCookie } from './harness';
+import { MAX_TRIP_DAYS } from '@trek/shared';
 
 const { db } = vi.hoisted(() => {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -195,6 +196,33 @@ describe('Trips e2e (real auth guard + temp SQLite)', () => {
     checkPermission.mockReturnValue(false);
     const forbidden = await request(server).post('/api/trips').set('Cookie', sessionCookie(1)).send({ title: 'T' });
     expect(forbidden.status).toBe(403);
+  });
+
+  it('201 create keeps every day of a trip longer than a year (#2403)', async () => {
+    // 2025-01-26 .. 2026-01-28 is 368 days; the day list used to stop at 365.
+    const res = await request(server).post('/api/trips').set('Cookie', sessionCookie(1))
+      .send({ title: 'Gap year', start_date: '2025-01-26', end_date: '2026-01-28' });
+    expect(res.status).toBe(201);
+    expect(res.body.trip).toMatchObject({ start_date: '2025-01-26', end_date: '2026-01-28', day_count: 368 });
+    const last = db.prepare('SELECT day_number, date FROM days WHERE trip_id = ? ORDER BY day_number DESC LIMIT 1')
+      .get(res.body.trip.id) as { day_number: number; date: string };
+    expect(last).toEqual({ day_number: 368, date: '2026-01-28' });
+  });
+
+  it('400 on a date range past MAX_TRIP_DAYS, for create and update alike', async () => {
+    const tooLong = await request(server).post('/api/trips').set('Cookie', sessionCookie(1))
+      .send({ title: 'Decade', start_date: '2026-01-01', end_date: '2036-01-01' });
+    expect(tooLong.status).toBe(400);
+    expect(tooLong.body).toEqual({ error: `A trip can span at most ${MAX_TRIP_DAYS} days` });
+    expect(db.prepare('SELECT COUNT(*) AS n FROM trips').get()).toEqual({ n: 0 });
+
+    const week = await request(server).post('/api/trips').set('Cookie', sessionCookie(1))
+      .send({ title: 'Week', start_date: '2026-07-01', end_date: '2026-07-07' });
+    const stretched = await request(server).put(`/api/trips/${week.body.trip.id}`).set('Cookie', sessionCookie(1))
+      .send({ end_date: '2036-07-01' });
+    expect(stretched.status).toBe(400);
+    expect(stretched.body).toEqual({ error: `A trip can span at most ${MAX_TRIP_DAYS} days` });
+    expect(db.prepare('SELECT end_date FROM trips WHERE id = ?').get(week.body.trip.id)).toEqual({ end_date: '2026-07-07' });
   });
 
   it('404 on a missing trip', async () => {

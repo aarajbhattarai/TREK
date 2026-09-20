@@ -56,7 +56,7 @@ const roadtrip: TranslationStrings = {
   'roadtrip.window.conflict':
     'Un orario fisso è incompatibile con il tragitto e le pause. Gli orari manuali restano invariati; la pianificazione automatica è sospesa.',
   'roadtrip.window.tooLong':
-    'Questi orari richiederebbero oltre 365 giorni aggiuntivi. Scegli un intervallo giornaliero più lungo.',
+    'Questi orari richiederebbero oltre {days} giorni aggiuntivi. Scegli un intervallo giornaliero più lungo.',
   'roadtrip.mode.roadtrip': 'Viaggio su strada',
   'roadtrip.mode.days': 'Giorni',
   'roadtrip.mode.label': 'Vista del piano',
@@ -245,8 +245,10 @@ const roadtrip: TranslationStrings = {
   'roadtrip.stop.stay': 'Tempo alla sosta',
   'roadtrip.stop.pinned': 'Orario impostato da te',
   'roadtrip.stop.computed': 'Calcolato dal tragitto',
+  'roadtrip.stop.endIsLeave': 'Nel viaggio su strada si riparte a quest’ora.',
   'roadtrip.via.hint': 'Trascina per rimodellare il percorso, clic destro per rimuovere',
   'roadtrip.warn.late': 'Arrivo {minutes} min dopo l’orario impostato',
+  'roadtrip.warn.missedLeave': 'Arrivo {minutes} min dopo l’orario di partenza impostato',
   'roadtrip.warn.overnight': 'Giorno successivo',
   'roadtrip.spill.title': 'Dal giorno {number}',
   'roadtrip.spill.departs': 'partenza {time}',
@@ -256,9 +258,18 @@ const roadtrip: TranslationStrings = {
   'roadtrip.stay.custom': 'Minuti',
   'roadtrip.stay.arrive': 'Arrivo',
   'roadtrip.stay.leave': 'Partenza',
+  'roadtrip.stay.until': 'fino alle {time}',
+  'roadtrip.stay.leavesAt': 'Questa visita ha un orario di fine, quindi il viaggio riparte alle {time}.',
+  'roadtrip.stay.dayEndsFirst':
+    'La giornata di viaggio finisce prima delle {time}, quindi il viaggio riparte la mattina dopo.',
+  'roadtrip.stay.clearLeave': 'Rimuovi l’orario di fine',
   'roadtrip.alt.noMotorway': 'Senza autostrada',
   'roadtrip.alt.noToll': 'Senza pedaggi',
   'roadtrip.alt.noFerry': 'Senza traghetto',
   'roadtrip.summary.partial': 'Il resto del percorso è ancora in calcolo',
+  'roadtrip.stay.releaseTitle': 'Rimuovere il pernottamento?',
+  'roadtrip.stay.releaseBody': 'La notte a «{name}» verrà rimossa. La tappa resta sul percorso come pausa.',
+  'roadtrip.stay.releaseBookedBody': 'La notte a «{name}» verrà rimossa insieme alla prenotazione «{booking}» e a ogni spesa collegata. La tappa resta sul percorso come pausa.',
+  'roadtrip.stay.releaseAction': 'Rendi una pausa',
 };
 export default roadtrip;

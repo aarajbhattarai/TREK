@@ -101,6 +101,7 @@ const dashboard: TranslationStrings = {
   'dashboard.useUnsplashPhoto': 'Använd Unsplash-foto av {photographer}',
   'dashboard.titleRequired': 'Titel är obligatoriskt',
   'dashboard.endDateError': 'Slutdatumet måste ligga efter startdatumet',
+  'dashboard.tripTooLong': 'En resa kan vara högst {days} dagar',
   'dashboard.dateShiftTitle': 'Nytt startdatum',
   'dashboard.dateShiftIntro': 'Du har ändrat när resan börjar. Hur ska dina planer följa de nya datumen?',
   'dashboard.dateShiftKeepBookings': 'Behåll bokningar på sina datum',

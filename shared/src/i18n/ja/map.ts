@@ -26,5 +26,7 @@ const map: TranslationStrings = {
   'map.overview.hide': '旅程全体を非表示',
   'map.overview.total': '合計距離',
   'map.attribution': '地図のクレジット',
+  'map.overview.unrouted': '{count}区間のルートを計算できなかったため、距離は不完全です。',
+  'map.overview.dayUnrouted': 'この日の{count}区間のルートを計算できませんでした',
 };
 export default map;

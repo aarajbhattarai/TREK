@@ -11,7 +11,7 @@ import { useTranslation } from '../../i18n'
 import { CustomDatePicker } from '../shared/CustomDateTimePicker'
 import { normalizeImageFile } from '../../utils/convertHeic'
 import { getApiErrorMessage, type Trip } from '../../types'
-import type { TripCreateRequest } from '@trek/shared'
+import { MAX_TRIP_DAYS, tripSpanDays, type TripCreateRequest } from '@trek/shared'
 import { NumericInput } from '../shared/NumericInput'
 import { currenciesWith, SYMBOLS } from '../Budget/BudgetPanel.constants'
 
@@ -148,12 +148,17 @@ export default function TripFormModal({ isOpen, onClose, onSave, trip, onCoverUp
     e.preventDefault()
     setError('')
     if (!formData.title.trim()) { setError(t('dashboard.titleRequired')); return }
-    if (formData.start_date && formData.end_date && new Date(formData.end_date) < new Date(formData.start_date)) {
-      setError(t('dashboard.endDateError')); return
+    if (formData.start_date && formData.end_date) {
+      const span = tripSpanDays(formData.start_date, formData.end_date)
+      if (span < 1) { setError(t('dashboard.endDateError')); return }
+      // Only a range being set is held to the limit, as on the server: a trip that
+      // already carries a longer one can still be renamed.
+      const datesTouched = !trip || formData.start_date !== (trip.start_date || '') || formData.end_date !== (trip.end_date || '')
+      if (datesTouched && span > MAX_TRIP_DAYS) { setError(t('dashboard.tripTooLong', { days: MAX_TRIP_DAYS })); return }
     }
     if (!formData.start_date && !formData.end_date) {
       const dc = Number(formData.day_count)
-      if (formData.day_count === '' || !Number.isInteger(dc) || dc < 1 || dc > 365) {
+      if (formData.day_count === '' || !Number.isInteger(dc) || dc < 1 || dc > MAX_TRIP_DAYS) {
         setError(t('dashboard.dayCountRequired')); return
       }
     }
@@ -557,11 +562,11 @@ export default function TripFormModal({ isOpen, onClose, onSave, trip, onCoverUp
             <label className={labelCls}>
               {t('dashboard.dayCount')}
             </label>
-            <NumericInput min={1} max={365} value={formData.day_count}
+            <NumericInput min={1} max={MAX_TRIP_DAYS} value={formData.day_count}
               onValueChange={raw => {
                 if (raw === '') { update('day_count', ''); return }
                 const n = Math.floor(Number(raw))
-                if (Number.isFinite(n)) update('day_count', Math.min(365, Math.max(1, n)))
+                if (Number.isFinite(n)) update('day_count', Math.min(MAX_TRIP_DAYS, Math.max(1, n)))
               }}
               className={inputCls} />
             <p className="text-caption text-content-faint mt-1.5">{t('dashboard.dayCountHint')}</p>

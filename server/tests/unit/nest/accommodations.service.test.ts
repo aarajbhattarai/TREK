@@ -1030,6 +1030,222 @@ describe('the day stop a booking implies', () => {
   });
 });
 
+describe('the drawn roads a booking moves', () => {
+  // A via is pinned to a POSITION among the day's located stops, not to a row. A
+  // night seated by its check-in ahead of the afternoon renumbers every stop behind
+  // it, and every road drawn behind those stops has to move with them, or the
+  // detour is driven on the wrong leg for everyone.
+  const stopsOn = (dayId: number) =>
+    (testDb.prepare('SELECT place_id FROM day_assignments WHERE day_id = ? ORDER BY order_index').all(dayId) as { place_id: number }[])
+      .map(row => row.place_id);
+  const addVia = (dayId: number, afterOrderIndex: number): number =>
+    Number(testDb.prepare('INSERT INTO roadtrip_vias (day_id, after_order_index, sequence, lat, lng) VALUES (?, ?, 0, 48.1, 11.5)')
+      .run(dayId, afterOrderIndex).lastInsertRowid);
+  const viaAnchors = (dayId: number) =>
+    testDb.prepare('SELECT id, after_order_index FROM roadtrip_vias WHERE day_id = ? ORDER BY id').all(dayId) as
+      { id: number; after_order_index: number }[];
+  /** The day's roads as the route reads them: leg by leg, and in order within a leg. */
+  const legOrder = (dayId: number) =>
+    testDb.prepare('SELECT id, after_order_index, sequence FROM roadtrip_vias WHERE day_id = ? ORDER BY after_order_index, sequence, id').all(dayId) as
+      { id: number; after_order_index: number; sequence: number }[];
+  const pin = (assignmentId: number, time: string) =>
+    testDb.prepare('UPDATE day_assignments SET assignment_time = ? WHERE id = ?').run(time, assignmentId);
+
+  /** A(0), B(1) pinned to noon, C(2): the day a check-in at eleven lands in the middle of. */
+  function afternoonDay() {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const day = createDay(testDb, trip.id);
+    const [a, b, c, hotel] = ['Harbour', 'Mercure', 'Museum', 'Billstedt'].map(name => createPlace(testDb, trip.id, { name }));
+    createDayAssignment(testDb, day.id, a.id);
+    pin(createDayAssignment(testDb, day.id, b.id).id, '12:00');
+    createDayAssignment(testDb, day.id, c.id);
+    return { trip, day, a, b, c, hotel };
+  }
+
+  it('ACC-034 a night seated ahead of the afternoon carries the roads behind it along', () => {
+    const { trip, day, a, b, c, hotel } = afternoonDay();
+    const afterA = addVia(day.id, 0);
+    const afterB = addVia(day.id, 1);
+    // Behind the last stop: the drive into the next day. It stays with C, which is
+    // still last, rather than being dropped as a leg C never had.
+    const intoTomorrow = addVia(day.id, 2);
+
+    const { mirror } = svc.createAccommodation(trip.id, { place_id: hotel.id, start_day_id: day.id, end_day_id: day.id, check_in: '11:00' }) as any;
+
+    expect(stopsOn(day.id)).toEqual([a.id, hotel.id, b.id, c.id]);
+    expect(viaAnchors(day.id)).toEqual([
+      { id: afterA, after_order_index: 0 },
+      { id: afterB, after_order_index: 2 },
+      { id: intoTomorrow, after_order_index: 3 },
+    ]);
+    // Reported on the mirror in the shape the road trip broadcasts, so every planner
+    // routes the new anchors against the new order.
+    expect(mirror.vias).toEqual([{
+      dayId: day.id,
+      vias: [
+        expect.objectContaining({ id: afterA, day_id: day.id, after_order_index: 0 }),
+        expect.objectContaining({ id: afterB, day_id: day.id, after_order_index: 2 }),
+        expect.objectContaining({ id: intoTomorrow, day_id: day.id, after_order_index: 3 }),
+      ],
+    }]);
+  });
+
+  it('ACC-034b a night appended at the end of the day moves no road and reports none', () => {
+    const { trip, day, a, b, c, hotel } = afternoonDay();
+    const afterA = addVia(day.id, 0);
+    const afterB = addVia(day.id, 1);
+
+    const { mirror } = svc.createAccommodation(trip.id, { place_id: hotel.id, start_day_id: day.id, end_day_id: day.id }) as any;
+
+    expect(stopsOn(day.id)).toEqual([a.id, b.id, c.id, hotel.id]);
+    expect(viaAnchors(day.id)).toEqual([{ id: afterA, after_order_index: 0 }, { id: afterB, after_order_index: 1 }]);
+    expect(mirror.vias).toBeUndefined();
+  });
+
+  it('ACC-034c re-seating the night by a later check-in re-pins the roads around it', () => {
+    const { trip, day, a, b, c, hotel } = afternoonDay();
+    const { accommodation } = svc.createAccommodation(trip.id, { place_id: hotel.id, start_day_id: day.id, end_day_id: day.id, check_in: '11:00' }) as any;
+    expect(stopsOn(day.id)).toEqual([a.id, hotel.id, b.id, c.id]);
+    const afterA = addVia(day.id, 0);
+    const afterHotel = addVia(day.id, 1);
+    const afterB = addVia(day.id, 2);
+    const afterC = addVia(day.id, 3);
+
+    const existing = svc.getAccommodation(accommodation.id, trip.id)!;
+    const { mirror } = svc.updateAccommodation(accommodation.id, existing, { check_in: '20:00' }) as any;
+
+    // The night is last now. The road out of it has no leg left and goes; the roads
+    // behind B and C follow them one number up, and the one into the next day is
+    // C's no longer.
+    expect(stopsOn(day.id)).toEqual([a.id, b.id, c.id, hotel.id]);
+    expect(viaAnchors(day.id)).toEqual([
+      { id: afterA, after_order_index: 0 },
+      { id: afterB, after_order_index: 1 },
+      { id: afterC, after_order_index: 2 },
+    ]);
+    expect(viaAnchors(day.id).map(via => via.id)).not.toContain(afterHotel);
+    expect(mirror.moved).not.toBeNull();
+    expect(mirror.vias).toEqual([{ dayId: day.id, vias: expect.arrayContaining([expect.objectContaining({ id: afterB, after_order_index: 1 })]) }]);
+  });
+
+  it('ACC-034d cancelling the booking takes its stop out and re-pins the roads behind it', () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const day = createDay(testDb, trip.id);
+    const [a, b, hotel] = ['Harbour', 'Mercure', 'Billstedt'].map(name => createPlace(testDb, trip.id, { name }));
+    createDayAssignment(testDb, day.id, a.id);
+    pin(createDayAssignment(testDb, day.id, b.id).id, '12:00');
+    const { accommodation } = svc.createAccommodation(trip.id, { place_id: hotel.id, start_day_id: day.id, end_day_id: day.id, check_in: '11:00' }) as any;
+    expect(stopsOn(day.id)).toEqual([a.id, hotel.id, b.id]);
+    // The road out of the hotel is drawn first: by id alone it would lead the leg
+    // it ends up sharing with A's road.
+    const afterHotel = addVia(day.id, 1);
+    const afterA = addVia(day.id, 0);
+    const intoTomorrow = addVia(day.id, 2);
+
+    const { mirror } = svc.deleteAccommodation(accommodation.id);
+
+    expect(stopsOn(day.id)).toEqual([a.id, b.id]);
+    // The two legs around the hotel are one leg now, A to B, and the road out of the
+    // hotel joins A's road on it, behind it: the drive runs A's point first, then the
+    // hotel's, then B. The drive into the next day stays behind B, which is still last.
+    expect(legOrder(day.id)).toEqual([
+      { id: afterA, after_order_index: 0, sequence: 0 },
+      { id: afterHotel, after_order_index: 0, sequence: 1 },
+      { id: intoTomorrow, after_order_index: 1, sequence: 0 },
+    ]);
+    expect(mirror.vias).toEqual([{ dayId: day.id, vias: [
+      expect.objectContaining({ id: afterA, after_order_index: 0, sequence: 0 }),
+      expect.objectContaining({ id: afterHotel, after_order_index: 0, sequence: 1 }),
+      expect.objectContaining({ id: intoTomorrow, after_order_index: 1 }),
+    ] }]);
+  });
+
+  it('ACC-034e moving the booking to another day re-pins the roads on both days', () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const day1 = createDay(testDb, trip.id);
+    const day2 = createDay(testDb, trip.id);
+    const [a, b, c, hotel] = ['Harbour', 'Mercure', 'Museum', 'Billstedt'].map(name => createPlace(testDb, trip.id, { name }));
+    createDayAssignment(testDb, day1.id, a.id);
+    pin(createDayAssignment(testDb, day1.id, b.id).id, '12:00');
+    pin(createDayAssignment(testDb, day2.id, c.id).id, '14:00');
+    const { accommodation } = svc.createAccommodation(trip.id, { place_id: hotel.id, start_day_id: day1.id, end_day_id: day1.id, check_in: '11:00' }) as any;
+    expect(stopsOn(day1.id)).toEqual([a.id, hotel.id, b.id]);
+    const afterA = addVia(day1.id, 0);
+    const afterHotel = addVia(day1.id, 1);
+    const outOfC = addVia(day2.id, 0);
+
+    const existing = svc.getAccommodation(accommodation.id, trip.id)!;
+    const { mirror } = svc.updateAccommodation(accommodation.id, existing, { start_day_id: day2.id, end_day_id: day2.id }) as any;
+
+    expect(stopsOn(day1.id)).toEqual([a.id, b.id]);
+    expect(stopsOn(day2.id)).toEqual([hotel.id, c.id]);
+    // The hotel's road on day one joins A's on the leg that is left, behind it.
+    expect(legOrder(day1.id)).toEqual([
+      { id: afterA, after_order_index: 0, sequence: 0 },
+      { id: afterHotel, after_order_index: 0, sequence: 1 },
+    ]);
+    // C is still the last stop of its day, one number further on.
+    expect(viaAnchors(day2.id)).toEqual([{ id: outOfC, after_order_index: 1 }]);
+    expect(mirror.vias.map((day: { dayId: number }) => day.dayId).sort()).toEqual([day1.id, day2.id].sort());
+  });
+
+  it('ACC-034f a stop the booking hands to the traveller moves no road', () => {
+    const { trip, day, hotel } = afternoonDay();
+    const { accommodation } = svc.createAccommodation(trip.id, { place_id: hotel.id, start_day_id: day.id, end_day_id: day.id, check_in: '11:00' }) as any;
+    const afterB = addVia(day.id, 2);
+
+    const { mirror } = svc.deleteAccommodation(accommodation.id, { keepStop: true });
+
+    expect(viaAnchors(day.id)).toEqual([{ id: afterB, after_order_index: 2 }]);
+    expect(mirror.vias).toBeUndefined();
+  });
+
+  it('ACC-034h a booking rebuilt from two stops reports its day once, as it stands at the end', () => {
+    // A stay that owns two stops on one day cannot be carried across, so both go and
+    // one comes back, and the day's roads are re-pinned at each step. What the mirror
+    // reports is the state that was left behind, not both steps.
+    const { trip, day, a, b, c, hotel } = afternoonDay();
+    const { accommodation } = svc.createAccommodation(trip.id, { place_id: hotel.id, start_day_id: day.id, end_day_id: day.id, check_in: '11:00' }) as any;
+    testDb.prepare('INSERT INTO day_assignments (day_id, place_id, order_index, accommodation_id) VALUES (?, ?, 4, ?)').run(day.id, hotel.id, accommodation.id);
+    const afterA = addVia(day.id, 0);
+    const afterHotel = addVia(day.id, 1);
+    const afterB = addVia(day.id, 2);
+    addVia(day.id, 3);
+
+    const existing = svc.getAccommodation(accommodation.id, trip.id)!;
+    const { mirror } = svc.updateAccommodation(accommodation.id, existing, { notes: 'late arrival' }) as any;
+
+    expect(stopsOn(day.id)).toEqual([a.id, hotel.id, b.id, c.id]);
+    expect(mirror.removed).toHaveLength(2);
+    expect(mirror.created).not.toBeNull();
+    // Both stops went, so the hotel's road joined A's; then the night came back
+    // behind A, and B's road moved up with B. C's road was the last stop's leg
+    // once the second stop was gone, and stayed gone.
+    expect(mirror.vias).toEqual([{ dayId: day.id, vias: [
+      expect.objectContaining({ id: afterA, after_order_index: 0, sequence: 0 }),
+      expect.objectContaining({ id: afterHotel, after_order_index: 0, sequence: 1 }),
+      expect.objectContaining({ id: afterB, after_order_index: 2 }),
+    ] }]);
+  });
+
+  it('ACC-034g announceMirror sends the re-pinned roads behind the day order', () => {
+    const sent: Array<{ event: string; payload: unknown }> = [];
+    svc.announceMirror(5, {
+      created: { id: 78, day_id: 11 } as never,
+      moved: null,
+      updated: [],
+      removed: [],
+      stamped: null,
+      vias: [{ dayId: 11, vias: [] }],
+    }, (event, payload) => { sent.push({ event, payload }); });
+    expect(sent.map(e => e.event)).toEqual(['assignment:created', 'assignment:reordered', 'roadtripVia:changed']);
+    expect(sent[2].payload).toEqual({ dayId: 11, vias: [] });
+  });
+});
+
 describe('AccommodationsService wiring', () => {
   it('ACC-001: the module carries the controller and the RPC surface, and re-exports the service', () => {
     expectRegisteredController(AccommodationsModule, AccommodationsController);

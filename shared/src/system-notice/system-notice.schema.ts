@@ -45,10 +45,13 @@ const noticeCtaSchema = z.discriminatedUnion('kind', [
 /**
  * One headline card in the release panel. `visual` names a small illustration the
  * client draws for it; a name the client does not know falls back to the icon.
+ * `layout: 'wide'` lays the card across the whole row, picture beside the text,
+ * for a headliner that comes after a full row of upright cards.
  */
 const noticeReleaseFeatureSchema = z.object({
   iconName: z.string(),
   visual: z.string().optional(),
+  layout: z.enum(['card', 'wide']).optional(),
   titleKey: z.string(),
   bodyKey: z.string(),
 });

@@ -48,6 +48,7 @@ import { resetTestDb } from '../helpers/test-db';
 import { createUser, createAdmin } from '../helpers/factories';
 import { authCookie } from '../helpers/auth';
 import { SYSTEM_NOTICES } from '../../src/systemNotices/registry';
+import { getCurrentAppVersion } from '../../src/systemNotices/service';
 import type { SystemNotice } from '../../src/systemNotices/types';
 
 let nestApp: INestApplication;
@@ -235,9 +236,13 @@ describe('GET /api/system-notices/active', () => {
     const { user } = createUser(testDb);
     testDb.prepare('UPDATE users SET login_count = 5, first_seen_version = ? WHERE id = ?').run('3.0.0', user.id);
 
+    // The client announces the release layout and the version it was built as; a
+    // bundle that predates that, or one built for another version, never gets the
+    // notice (pinned separately below).
     const shows = async () => {
       const res = await request(app)
         .get('/api/system-notices/active')
+        .query({ supports: 'release', ui: getCurrentAppVersion() })
         .set('Cookie', authCookie(user.id));
       expect(res.status).toBe(200);
       return res.body.some((n: { id: string }) => n.id === 'release-notes');
@@ -266,6 +271,36 @@ describe('GET /api/system-notices/active', () => {
     // ...and closing it again holds until the one after that.
     await dismiss();
     expect(await shows()).toBe(false);
+  });
+
+  // Right after an update the browser still runs the bundle the service worker cached,
+  // which has neither the copy for the new release notice nor a way to tell. It would
+  // draw the keys, or its own older texts, and on close spend the notice for this whole
+  // version. So the notice waits for a client that announces the release layout AND
+  // was built for the version now running; the reload brings one.
+  it('keeps the release notes from a client that does not announce the release layout for this version', async () => {
+    const { user } = createUser(testDb);
+    testDb.prepare('UPDATE users SET login_count = 5, first_seen_version = ? WHERE id = ?').run('3.0.0', user.id);
+
+    const fetchActive = (query: Record<string, string>) => request(app)
+      .get('/api/system-notices/active')
+      .query(query)
+      .set('Cookie', authCookie(user.id));
+
+    const without = await fetchActive({});
+    expect(without.status).toBe(200);
+    expect(without.body.some((n: { id: string }) => n.id === 'release-notes')).toBe(false);
+    expect(without.body.some((n: { release?: unknown }) => n.release !== undefined)).toBe(false);
+
+    // The layout alone is the shell of the previous version after an update.
+    const layoutOnly = await fetchActive({ supports: 'release' });
+    expect(layoutOnly.body.some((n: { id: string }) => n.id === 'release-notes')).toBe(false);
+    const olderBundle = await fetchActive({ supports: 'release', ui: '4.0.0' });
+    expect(olderBundle.body.some((n: { id: string }) => n.id === 'release-notes')).toBe(false);
+
+    const matching = await fetchActive({ supports: 'release', ui: getCurrentAppVersion() });
+    expect(matching.status).toBe(200);
+    expect(matching.body.some((n: { id: string }) => n.id === 'release-notes')).toBe(true);
   });
 });
 

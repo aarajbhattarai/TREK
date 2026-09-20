@@ -28,11 +28,24 @@ interface PickedImage {
   url: string
 }
 
+/**
+ * What an add() left out: files of the wrong type or over the size limit, and
+ * valid files past the cap of MAX_CHAT_IMAGES. Either can be zero, both cannot.
+ */
+export interface ChatImageDrop {
+  rejected: number
+  overflow: number
+}
+
 export interface ChatImages {
   files: File[]
   previews: string[]
-  /** Returns false when something was dropped, so the caller can say why. */
-  add: (incoming: FileList | File[]) => boolean
+  /**
+   * Returns false when something was dropped, so the caller can say why. The
+   * optional callback tells it what was dropped, because a picture past the cap
+   * is a different message from a picture of the wrong kind.
+   */
+  add: (incoming: FileList | File[], onDrop?: (drop: ChatImageDrop) => void) => boolean
   remove: (index: number) => void
   clear: () => void
 }
@@ -52,7 +65,7 @@ export function useChatImages(): ChatImages {
     itemsRef.current = []
   }, [])
 
-  const add = useCallback((incoming: FileList | File[]) => {
+  const add = useCallback((incoming: FileList | File[], onDrop?: (drop: ChatImageDrop) => void) => {
     const all = Array.from(incoming)
     const valid = all.filter(f => CHAT_IMAGE_TYPES.includes(f.type) && f.size <= MAX_CHAT_IMAGE_BYTES)
     const room = MAX_CHAT_IMAGES - itemsRef.current.length
@@ -61,7 +74,11 @@ export function useChatImages(): ChatImages {
       // Only the new files get a URL; the ones already in the list keep theirs.
       commit([...itemsRef.current, ...added.map(file => ({ file, url: URL.createObjectURL(file) }))])
     }
-    return valid.length === all.length
+    // A picture the cap turned away is as gone as one of the wrong kind: the strip
+    // shows what will be sent, and the sender deserves to hear why it is short.
+    const drop = { rejected: all.length - valid.length, overflow: valid.length - added.length }
+    if (drop.rejected || drop.overflow) onDrop?.(drop)
+    return drop.rejected === 0 && drop.overflow === 0
   }, [commit])
 
   const remove = useCallback((index: number) => {

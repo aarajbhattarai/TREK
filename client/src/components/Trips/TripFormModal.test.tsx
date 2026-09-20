@@ -11,6 +11,7 @@ import { resetAllStores, seedStore } from '../../../tests/helpers/store';
 import { buildUser, buildTrip } from '../../../tests/helpers/factories';
 import { server } from '../../../tests/helpers/msw/server';
 import type { Trip } from '../../types';
+import { MAX_TRIP_DAYS } from '@trek/shared';
 import TripFormModal from './TripFormModal';
 
 const defaultProps = {
@@ -321,7 +322,7 @@ describe('TripFormModal', () => {
 
   it('FE-COMP-TRIPFORM-029: clearing the day count leaves the field empty (no snap to 1)', () => {
     render(<TripFormModal {...defaultProps} trip={null} />);
-    const dayInput = document.querySelector('input[max="365"]') as HTMLInputElement;
+    const dayInput = document.querySelector(`input[max="${MAX_TRIP_DAYS}"]`) as HTMLInputElement;
     expect(dayInput).toBeInTheDocument();
     expect(dayInput.value).toBe('7');
     fireEvent.change(dayInput, { target: { value: '' } });
@@ -333,7 +334,7 @@ describe('TripFormModal', () => {
     const onSave = vi.fn();
     render(<TripFormModal {...defaultProps} trip={null} onSave={onSave} />);
     await user.type(screen.getByPlaceholderText(/Summer in Japan/i), 'No-date Trip');
-    const dayInput = document.querySelector('input[max="365"]') as HTMLInputElement;
+    const dayInput = document.querySelector(`input[max="${MAX_TRIP_DAYS}"]`) as HTMLInputElement;
     fireEvent.change(dayInput, { target: { value: '' } });
     const submitBtn = screen.getAllByText('Create New Trip').find(el => el.closest('button'))!;
     await user.click(submitBtn.closest('button')!);
@@ -534,7 +535,7 @@ describe('TripFormModal', () => {
     expect(screen.getByPlaceholderText(/Summer in Japan/i)).toHaveValue('');
     expect(screen.getByText(/^EUR/)).toBeInTheDocument();
     // No dates -> the day-count field appears and falls back to 7.
-    expect(document.querySelector('input[max="365"]')).toHaveValue('7');
+    expect(document.querySelector(`input[max="${MAX_TRIP_DAYS}"]`)).toHaveValue('7');
   });
 
   // ── Create follow-ups: members and cover ──────────────────────────────────
@@ -921,7 +922,7 @@ describe('TripFormModal', () => {
     fireEvent.keyDown(input, { key: 'Enter' });
 
     // The day-count field disappears once the trip is dated.
-    await waitFor(() => expect(document.querySelector('input[max="365"]')).toBeNull());
+    await waitFor(() => expect(document.querySelector(`input[max="${MAX_TRIP_DAYS}"]`)).toBeNull());
     await submitNewTrip(user);
     await waitFor(() => expect(onSave).toHaveBeenCalledWith(
       expect.objectContaining({ start_date: '2026-04-10', end_date: '2026-04-10' })
@@ -951,18 +952,18 @@ describe('TripFormModal', () => {
     ));
   });
 
-  it('FE-COMP-TRIPFORM-067: the day count is clamped to the 1..365 range', async () => {
+  it('FE-COMP-TRIPFORM-067: the day count is clamped to the 1..MAX_TRIP_DAYS range', async () => {
     const user = userEvent.setup();
     const onSave = vi.fn().mockResolvedValue({});
     render(<TripFormModal {...defaultProps} trip={null} onSave={onSave} />);
 
-    const dayInput = document.querySelector('input[max="365"]') as HTMLInputElement;
-    fireEvent.change(dayInput, { target: { value: '400' } });
-    expect(dayInput.value).toBe('365');
+    const dayInput = document.querySelector(`input[max="${MAX_TRIP_DAYS}"]`) as HTMLInputElement;
+    fireEvent.change(dayInput, { target: { value: String(MAX_TRIP_DAYS + 1) } });
+    expect(dayInput.value).toBe(String(MAX_TRIP_DAYS));
 
     await user.type(screen.getByPlaceholderText(/Summer in Japan/i), 'Long Trip');
     await submitNewTrip(user);
-    await waitFor(() => expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ day_count: 365 })));
+    await waitFor(() => expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ day_count: MAX_TRIP_DAYS })));
   });
 
   it('FE-COMP-TRIPFORM-068: a currency without a known symbol is labelled with its code', () => {
@@ -1248,5 +1249,45 @@ describe('TripFormModal', () => {
 
     await waitFor(() => expect(revokeObjectURL).toHaveBeenCalledWith('blob:first'));
     Object.defineProperty(URL, 'revokeObjectURL', { writable: true, configurable: true, value: original });
+  });
+
+  it('FE-COMP-TRIPFORM-085: a trip longer than a year is saved with its full range (#2403)', async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn().mockResolvedValue({});
+    const trip = buildTrip({ id: 1, title: 'Gap year', start_date: '2025-01-26', end_date: '2026-01-28' });
+    render(<TripFormModal {...defaultProps} trip={trip} onSave={onSave} />);
+    await user.click(screen.getByRole('button', { name: /Update/i }));
+    await waitFor(() => expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({ start_date: '2025-01-26', end_date: '2026-01-28' })
+    ));
+  });
+
+  it('FE-COMP-TRIPFORM-086: a range past MAX_TRIP_DAYS is refused before anything is sent', async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn();
+    const trip = buildTrip({ id: 1, title: 'Week', start_date: '2026-01-01', end_date: '2026-01-07' });
+    render(<TripFormModal {...defaultProps} trip={trip} onSave={onSave} />);
+
+    await user.click(screen.getAllByRole('button', { name: 'Enter date manually' })[1]);
+    const endInput = screen.getByPlaceholderText('DD.MM.YYYY');
+    fireEvent.change(endInput, { target: { value: '2036-01-01' } });
+    fireEvent.keyDown(endInput, { key: 'Enter' });
+
+    await user.click(screen.getByRole('button', { name: /Update/i }));
+    await screen.findByText(`A trip can span at most ${MAX_TRIP_DAYS} days`);
+    expect(onSave).not.toHaveBeenCalled();
+  });
+
+  it('FE-COMP-TRIPFORM-087: a trip stored with a longer range can still be renamed', async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn().mockResolvedValue({});
+    const trip = buildTrip({ id: 1, title: 'Legacy', start_date: '2020-01-01', end_date: '2030-01-01' });
+    render(<TripFormModal {...defaultProps} trip={trip} onSave={onSave} />);
+    await user.clear(screen.getByPlaceholderText(/Summer in Japan/i));
+    await user.type(screen.getByPlaceholderText(/Summer in Japan/i), 'Renamed');
+    await user.click(screen.getByRole('button', { name: /Update/i }));
+    await waitFor(() => expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({ title: 'Renamed', start_date: '2020-01-01', end_date: '2030-01-01' })
+    ));
   });
 });

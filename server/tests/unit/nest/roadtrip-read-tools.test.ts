@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
+import { HttpException } from '@nestjs/common';
 import type { McpContext } from '../../../src/nest-mcp';
 import { ChargingMcp } from '../../../src/nest/roadtrip/charging.mcp';
 import { RoadtripHazardsMcp } from '../../../src/nest/roadtrip/roadtrip-hazards.mcp';
@@ -43,6 +44,31 @@ describe('roadtrip read tools', () => {
     expect(res.isError).toBe(true);
     expect(routes.import).not.toHaveBeenCalled();
   });
+  it('answers a refusal from the service with its reason, not with the exception class name', async () => {
+    // The services refuse with `{ error }` bodies the REST filter sends verbatim. Let
+    // through as exceptions, the SDK would show the assistant "Http Exception" and
+    // nothing else, so every tool on this surface answers them as error results.
+    const refuse = (error: string, status: number) => () => { throw new HttpException({ error }, status); };
+    const text = (res: { content: { text: string }[]; isError?: boolean }) => [res.isError, res.content[0].text];
+
+    const db = { canAccessTrip: vi.fn(() => true) };
+    const charging = new ChargingMcp({ read: refuse('Place not found', 404) } as never, db as never, {} as never);
+    expect(text(await charging.read({ tripId: 10, placeId: 2 }, ctx))).toEqual([true, 'Place not found']);
+
+    const auth = { isDemoUser: vi.fn(() => false) };
+    const routes = { preview: refuse('Use a Google Maps directions link.', 400), import: refuse('Permission denied', 403) };
+    const google = new GoogleRouteMcp(routes as never, auth as never, {} as never);
+    expect(text(await google.preview({ url: 'https://www.google.com/maps/place/A' }))).toEqual([true, 'Use a Google Maps directions link.']);
+    expect(text(google.import({ tripId: 10, dayId: 1, stops: [{ name: 'A', lat: 1, lng: 2 }] } as never, ctx))).toEqual([true, 'Permission denied']);
+
+    const realtime = { broadcast: vi.fn() };
+    const guards = { hasTripPermission: vi.fn(() => true) };
+    const boundaries = new DayBoundariesMcp({ save: refuse('Stop not found', 404) } as never, db as never, auth as never, guards as never, realtime as never, {} as never);
+    const boundary = { day_number: 1, from_assignment_id: 11, to_assignment_id: 12, fraction: 0.4 };
+    expect(text(await boundaries.save({ tripId: 10, dayNumber: 1, boundary }, ctx))).toEqual([true, 'Stop not found']);
+    expect(realtime.broadcast).not.toHaveBeenCalled();
+  });
+
   it('does not expose manual boundaries to nonmembers', async () => {
     const boundaries = { list: vi.fn(() => [{ day_number: 1 }]) };
     const db = { canAccessTrip: vi.fn(() => false) };

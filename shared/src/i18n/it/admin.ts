@@ -810,5 +810,6 @@ const admin: TranslationStrings = {
   'admin.placesUsageTitle': 'A cosa serve la chiave',
   'admin.mapsKeyHintShort': 'Aggiunge foto, valutazioni e orari. Ogni ricerca passa allora da Google.',
   'admin.amapKeyHintShort': 'Per la ricerca di luoghi nella Cina continentale. Richiede una chiave web service, non una chiave API JS.',
+  'admin.collab.links.subtitle': 'Link condivisi e segnalibri',
 };
 export default admin;

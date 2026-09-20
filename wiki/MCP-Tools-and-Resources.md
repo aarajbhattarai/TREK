@@ -2,7 +2,7 @@
 
 TREK exposes **tools** (read and write actions) and **resources** (read-only `trek://` URIs). Tools are registered per-session based on OAuth scopes and enabled addons.
 
-For addon-gated tools (Packing, To-Dos, Atlas, Collab, Collections, Vacay, Journey) and their resources, see [MCP-Addon-Tools](MCP-Addon-Tools).
+For addon-gated tools (Packing, To-Dos, Atlas, Collab, Collections, Vacay, Journey, Dawarich, Document sync, Road trip) and their resources, see [MCP-Addon-Tools](MCP-Addon-Tools).
 
 ## Tools
 
@@ -20,7 +20,7 @@ Compound tools collapse multi-step workflows into a single atomic transaction. I
 
 | Tool | Wraps | Description |
 |---|---|---|
-| `create_and_assign_place` | `create_place` + `assign_place_to_day` | Create a place and assign it to a day. Returns `{ place, assignment }`. Requires `places:write`. |
+| `create_and_assign_place` | `create_place` + `assign_place_to_day` | Create a place and assign it to a day. Takes the same place fields as `create_place`, `stop_type` included. Returns `{ place, assignment }`. Requires `places:write`. |
 | `create_place_accommodation` | `create_place` + `create_accommodation` | Create a place and book it as an accommodation. Returns `{ place, accommodation }`. Requires `trips:write`. |
 | `create_budget_item_with_members` | `create_budget_item` + `set_budget_item_members` | Create a budget item and set splitting members. If `userIds` is omitted, behaves like `create_budget_item`. Returns `{ item }`. Requires `budget:write`. |
 
@@ -33,10 +33,12 @@ Requires `trips:read` or `trips:write` scope.
 | `list_trips` | List all trips you own or are a member of. Supports `include_archived` flag. |
 | `create_trip` | Create a trip with title, dates, and currency. Days are auto-generated from the date range. |
 | `update_trip` | Update a trip's title, description, dates, or currency. |
+| `search_cover_images` | Search Unsplash for candidate cover photos and return their URLs, thumbnails and photographer credits. Nothing is saved; pass the chosen photo's URL to `update_trip` as `cover_image`. |
 | `delete_trip` | Delete a trip. Owner only. Requires `trips:delete`. |
 | `list_trip_members` | List the owner and all collaborators of a trip. |
 | `add_trip_member` | Add a user to a trip by username or email. Owner only. |
 | `remove_trip_member` | Remove a collaborator from a trip. Owner only. |
+| `leave_trip` | Leave a trip you were invited to, giving up your own access. Use this rather than `remove_trip_member` when the user means themselves. The owner cannot leave their own trip. Requires `trips:write`. |
 | `create_trip_guest` | Add a travelling companion who has no TREK account. Assignable to budget splits, packing and day participants; never signs in, never emailed. Owner only. |
 | `rename_trip_guest` | Rename a guest on a trip. Owner only. |
 | `delete_trip_guest` | Delete a guest and re-split the expenses they were part of. Owner only. |
@@ -53,15 +55,19 @@ Requires `places:read` or `places:write` scope.
 | Tool | Description |
 |---|---|
 | `list_places` | List places in a trip, optionally filtered by assignment status, category, tag, or search query. |
-| `create_place` | Add a place with name, coordinates, address, category, notes, website, phone, and optional `google_place_id` / `osm_id`. |
-| `update_place` | Update any field of an existing place including transport mode, timing, and price. |
+| `create_place` | Add a place with name, coordinates, address, category, notes, website, phone, and optional `google_place_id` / `osm_id`. An optional `stop_type` (`fuel`, `charging`, `rest_area`, `campsite`, `restaurant`, `sights` or `hotel`) marks it as a service stop on a drive rather than a destination, so it is left out of the day's stop count; see [Road-Trip](Road-Trip). Leave it unset for an ordinary place. |
+| `update_place` | Update any field of an existing place including transport mode, timing, price and `stop_type`. Pass `stop_type: null` to turn a service stop back into an ordinary place. |
 | `rate_place` | Set or clear your own 1–5 star rating on a place. Every trip member rates independently and the place shows the average. Pass `null` to clear the vote. |
-| `bulk_update_places` | Update many places at once, applying the same field values (e.g. category, price, transport mode) to every listed place in a single call. |
-| `delete_place` | Remove a place from a trip. Also removes all day assignments. |
-| `bulk_delete_places` | Delete multiple places by ID. Removes all day assignments. Cannot be undone. |
+| `bulk_update_places` | Update many places at once, applying the same field values (e.g. category, price, transport mode, `stop_type`) to every listed place in a single call. `stop_type: null` turns the listed service stops back into ordinary places. |
+| `delete_place` | Remove a place from a trip. Also removes all day assignments, the expenses linked to the place and any night booked at it, together with that night's reservation and the reservation's expense. Cannot be undone, so an assistant should warn before deleting a hotel that holds a booking. |
+| `bulk_delete_places` | Delete multiple places by ID. Removes all day assignments, linked expenses and any nights booked at each place, with their reservations and expenses. Cannot be undone. |
 | `import_places_from_url` | Import all places from a publicly shared Google Maps or Naver Maps list URL. |
 | `list_categories` | List all available place categories with id, name, icon, and color. |
-| `search_place` | Search for a place by name or address. Returns `osm_id` and `google_place_id` for use in `create_place`. |
+| `create_category` | Add a category to the instance-wide palette, with name, hex colour and emoji icon. Every trip on the instance sees it, so prefer an existing one from `list_categories`. Admin only; a non-admin gets `Admin access required`. Requires `places:write`. |
+| `update_category` | Rename a category or change its colour or icon. Every place already carrying it follows the change. Admin only. Requires `places:write`. |
+| `delete_category` | Remove a category from the palette. Places keep their data but lose the category, across every trip. Admin only. Requires `places:write`. |
+| `search_place` | Search for a place by name or address, the way the full search in the app does: TREK's own place index and OpenStreetMap together, and Google or Amap only when both are empty. Returns `osm_id` (and `google_place_id` / `google_ftid` when Google answered) for use in `create_place`. Takes an optional `locationBias` to rank results around the trip's destination. |
+| `search_places_via_plugins` | Search the place indexes installed plugins provide, alongside `search_place` rather than instead of it. Results have the shape `search_place` returns plus a `rating` and the `pluginId` that found them; only these results can carry a rating. Empty when no plugin offers a search index. Requires `places:read`. |
 
 ### Day Planning
 
@@ -72,12 +78,14 @@ Requires `trips:read` or `trips:write` scope.
 | `update_day` | Set or clear a day's title. |
 | `create_day` | Add a new day to a trip with optional date and notes. |
 | `delete_day` | Delete a day from a trip. |
+| `reorder_days` | Reorder whole days by listing every day ID of the trip in the desired order. Each day keeps its places, notes, stays and bookings; on a dated trip the dates stay pinned to their slots, so the content moves across them. For places inside one day use `reorder_day_assignments`. Requires `trips:write`. |
 | `set_day_default_transport_mode` | Set the whole-day default travel mode. Per-leg modes still override it. Pass `null` to clear. |
 | `assign_place_to_day` | Pin a place to a specific day in the itinerary. Requires `places:write`. |
 | `unassign_place` | Remove a place assignment from a day. Requires `places:write`. |
 | `reorder_day_assignments` | Reorder places within a day by providing assignment IDs in order. Requires `places:write`. |
 | `update_assignment_time` | Set start/end times for a place assignment (e.g. `"09:00"` – `"11:30"`). Pass `null` to clear. Requires `places:write`. |
 | `move_assignment` | Move a place assignment to a different day. Requires `places:write`. |
+| `update_assignment_notes` | Set or clear the day-specific note on a place assignment, the one `assign_place_to_day` and `create_and_assign_place` accept at creation. Pass `null` or an empty string to clear it. Requires `places:write`. |
 | `set_leg_transport_mode` | Set the travel mode of a route leg for a place assignment. `direction` `"outgoing"` (default) targets the leg leaving the stop, `"incoming"` the arriving one. Pass `null` to inherit the day default. Requires `places:write`. |
 | `get_assignment_participants` | Get users participating in a specific place assignment. Requires `places:read` or `places:write`. |
 | `set_assignment_participants` | Set participants for a place assignment (replaces current list). Requires `places:write`. |
@@ -134,10 +142,11 @@ Requires `reservations:read` or `reservations:write` scope.
 | `reorder_reservations` | Reorder reservations within a day. |
 | `set_reservation_travelers` | Set who is travelling on a booking, from the trip roster (members and guests). Replaces the list; an empty array clears it. Ids that are not on the trip come back under `ignored_user_ids` rather than being attached. |
 | `link_hotel_accommodation` | Set or update a hotel reservation's check-in/out day links and place. |
+| `list_upcoming_reservations` | The next bookings across all of the user's trips, soonest first, for "what is coming up?" when no particular trip is in question. Hotel stays appear as their check-in and check-out moments. Cancelled bookings and archived trips are left out. `limit` defaults to 6, at most 50. Requires `reservations:read`. |
 
 ### Budget
 
-Requires `budget:read` or `budget:write` scope. Budget addon must be enabled.
+Requires `budget:read` or `budget:write` scope. The Budget addon must be enabled; it is listed as **Costs** under **Admin → Addons** (id `budget`).
 
 | Tool | Description |
 |---|---|
@@ -169,7 +178,8 @@ Requires `places:read` or `places:write` scope.
 |---|---|---|
 | `get_place_details` | `geo:read` | Fetch detailed information (hours, photos, ratings) about a place by its Google Place ID. |
 | `reverse_geocode` | `geo:read` | Get a human-readable address for given coordinates. |
-| `resolve_maps_url` | `geo:read` | Resolve a Google Maps share URL to coordinates and place name. |
+| `resolve_maps_url` | `geo:read` | Resolve a Google Maps or Amap (高德地图) share URL to coordinates and place name. |
+| `search_pois` | `geo:read` | List places of one or more categories inside a map rectangle, the MCP side of the category buttons on the trip map. Answers from TREK's place index where it can and from OpenStreetMap (Overpass) otherwise, names the source of each result, and never calls Google. |
 | `search_airports` | `geo:read` | Search for airports by name, city, or IATA code. Returns IATA code, name, city, country, timezone. |
 | `get_airport` | `geo:read` | Look up an airport by IATA code (e.g. `"ZRH"`, `"CDG"`). |
 | `get_weather` | `weather:read` | Get a weather forecast for a location and date. |
@@ -195,8 +205,8 @@ Requires `files:read` or `files:write`. Reading what is inside a document needs 
 |---|---|
 | `list_trip_files` | List a trip's documents: name, type, size, uploader, description, what they are linked to, starred and trash state. Pass `trash` to list the trash instead. |
 | `read_trip_file` | Read one document's contents. Text comes back as text, anything else base64, with an `encoding` field saying which. Files over 10 MB are refused; use the download link in the app. |
-| `update_trip_file` | Set a file's description and the booking or place it belongs to. Pass null to detach. |
-| `link_trip_file` | Link a file to one more booking, place or day assignment. |
+| `update_trip_file` | Set a file's description and the booking, place or expense (`budget_item_id`, a receipt) it belongs to. Pass null to detach. |
+| `link_trip_file` | Link a file to one more booking, place, day assignment or expense (`budget_item_id`, a receipt). |
 | `unlink_trip_file` | Remove one link. The file stays. |
 | `list_trip_file_links` | List everything a file is linked to. |
 
@@ -226,7 +236,7 @@ Requires `trips:share`, the same scope that manages public share links.
 
 ### Invite links
 
-Requires `trips:share`. This is the link that grants **membership**, not the read-only public view link that `create_share_link` makes.
+Requires `trips:share` together with `trips:write`; a client holding only `trips:share` does not see these three tools. This is the link that grants **membership**, not the read-only public view link that `create_share_link` makes.
 
 | Tool | Description |
 |---|---|
@@ -252,6 +262,7 @@ Requires `journey:read`, or `journey:write` to attach. Needs a configured Immich
 | `search_provider_photos` | Search the connected photo library. |
 | `list_provider_albums` | List its albums. |
 | `list_provider_album_photos` | List one album's photos. |
+| `add_journey_provider_photos` | Attach photos from the library to a journey, or to one of its entries, by the asset ids the tools above return. Requires `journey:write` and the Journey addon; listed under [MCP-Addon-Tools](MCP-Addon-Tools). |
 
 Photo bytes are never returned: those are image URLs the app renders.
 

@@ -87,6 +87,7 @@ function mapsStub(over: Partial<Record<keyof MapsService, unknown>> = {}) {
     fetchWikidataSitelinks: vi.fn(async () => ({}) as Record<string, string>),
     fetchWikiExtractFor: vi.fn(async () => null as { text: string; sourceUrl: string; source: 'wikivoyage' | 'wikipedia' } | null),
     details: vi.fn(async () => ({ place: null })),
+    trekPlacesEnabled: vi.fn(() => true),
     ...over,
   } as unknown as MapsService;
 }

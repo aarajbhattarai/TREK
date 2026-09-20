@@ -48,8 +48,9 @@ import { z } from 'zod';
  * ── What an imported file is trusted for ─────────────────────────────────
  *
  * Nothing. It is a stranger's JSON. It is read in the browser that chose it,
- * never uploaded as a file, and what is sent to the server goes through this
- * contract on both sides. Text is rendered as text; the two fields that would
+ * never uploaded as a file (a GPX is, as text, for the reasons given at the
+ * end), and what is sent to the server goes through this contract on both
+ * sides. Text is rendered as text; the two fields that would
  * otherwise reach a browser API (`website` and a link's `url`) are pinned to
  * http(s) by the schemas they borrow, so neither can be a `javascript:` value.
  * The counts below are the other half: a file cannot ask the server for more
@@ -171,8 +172,8 @@ export type CollectionFile = z.infer<typeof collectionFileSchema>;
 
 /**
  * The import request: the file itself, plus the one thing the importer may
- * decide rather than the file. A list always arrives as a NEW list, so there
- * is no target id here and no way for a file to write into an existing one.
+ * decide rather than the file. This one always makes a NEW list, so it carries
+ * no target id; the list to add to is named in the URL of the route below.
  */
 export const collectionImportRequestSchema = z.object({
   file: collectionFileSchema,
@@ -181,10 +182,115 @@ export const collectionImportRequestSchema = z.object({
 });
 export type CollectionImportRequest = z.infer<typeof collectionImportRequestSchema>;
 
+/**
+ * The same file read into a list that already exists.
+ *
+ * Only the file: what the list is called, how it looks and what it says stay
+ * the list's own. Nothing in the request can overwrite a place either, so the
+ * worst a file can do to a list somebody else shares is add to it.
+ */
+export const collectionImportIntoRequestSchema = z.object({
+  file: collectionFileSchema,
+});
+export type CollectionImportIntoRequest = z.infer<typeof collectionImportIntoRequestSchema>;
+
 export interface CollectionImportResult {
-  /** The list as created, so the client can select it without a refetch. */
+  /** The list as created or added to, so the client can select it without a refetch. */
   collection: unknown;
   imported: number;
   /** Places the file carried that the contract refused. */
   skipped: number;
+  /**
+   * Places the list already had, left exactly as they were. Only an import
+   * into an existing list can report any: a new list starts empty.
+   */
+  duplicates?: number;
+}
+
+/*
+ * ── The same list as GPX (#2301) ─────────────────────────────────────────
+ *
+ * GPX is what the apps a list is usually wanted in already read: OsmAnd,
+ * Organic Maps, a Garmin, gpx.studio. It is not a second file format with its
+ * own idea of what may leave. A GPX is written from the list file above, after
+ * the exporter has decided what travels, so it can only ever carry less.
+ *
+ * Each place becomes a waypoint, and a waypoint needs coordinates: a place
+ * without them is left out and counted, never guessed. What GPX 1.1 has an
+ * element for goes into that element, so every reader shows it. What it has
+ * none for travels in TREK's own extension namespace, so a GPX made by TREK
+ * comes back as the same place rather than a pin with a name.
+ *
+ * Reading goes the other way through the same contract: a GPX is turned into
+ * a list file by the server and imported like one, so nothing a GPX says gets
+ * past `collectionFilePlaceSchema`. The server reads it, sent as text, because
+ * XML is where the parser itself is the risk (entities, DTDs, sheer size), and
+ * the server has one parser, already used for trip GPX, whose limits are its
+ * own and tested, where a browser's differ by engine.
+ */
+
+/** TREK's extension namespace. Versioned in the path; nothing resolves it. */
+export const COLLECTION_GPX_NAMESPACE = 'https://liketrek.com/xmlns/gpx/collection/1';
+
+/**
+ * Where each field of a place goes in a waypoint.
+ *
+ * `waypoint` has a GPX element of its own (name, lat/lon, desc, cmt, link,
+ * type); `extension` travels in the namespace above, one element per field,
+ * named after the field. Keyed by the place contract, so a field added there
+ * does not build until somebody decides where it goes in a GPX.
+ */
+export const COLLECTION_GPX_PLACE_FIELDS = {
+  name: 'waypoint',
+  lat: 'waypoint',
+  lng: 'waypoint',
+  description: 'waypoint',
+  notes: 'waypoint',
+  website: 'waypoint',
+  category: 'waypoint',
+  address: 'extension',
+  phone: 'extension',
+  status: 'extension',
+  price: 'extension',
+  currency: 'extension',
+  image_url: 'extension',
+  google_place_id: 'extension',
+  google_ftid: 'extension',
+  osm_id: 'extension',
+  labels: 'extension',
+  links: 'extension',
+} as const satisfies Record<keyof CollectionFilePlace, 'waypoint' | 'extension'>;
+
+/**
+ * A GPX document to be read into a list file. Sent as text: the file is a
+ * stranger's XML, and it is parsed where the XML parser and its limits are.
+ */
+export const collectionGpxReadRequestSchema = z.object({
+  gpx: z.string().min(1).max(MAX_COLLECTION_FILE_BYTES),
+  /** The chosen file's name, which names the list when the document does not. */
+  file_name: z.string().max(255).optional(),
+});
+export type CollectionGpxReadRequest = z.infer<typeof collectionGpxReadRequestSchema>;
+
+/** Why a GPX was not read, as the `code` of the 4xx that says so. */
+export const COLLECTION_GPX_PROBLEMS = ['too-large', 'unreadable', 'not-gpx', 'too-many-places'] as const;
+export type CollectionGpxProblem = (typeof COLLECTION_GPX_PROBLEMS)[number];
+
+export interface CollectionGpxReadResult {
+  /** The list file the GPX amounts to, ready for the import above. */
+  file: CollectionFile;
+  /** Waypoints that could not become a place, mostly for want of coordinates. */
+  skipped: number;
+  /** Points of tracks and unnamed route points: lines, not places, so not imported. */
+  track_points: number;
+}
+
+export interface CollectionGpxExport {
+  /** The list's name, for the file name. */
+  name: string;
+  gpx: string;
+  /** Places written as waypoints. */
+  waypoints: number;
+  /** Places left out because they have no coordinates. */
+  omitted: number;
 }

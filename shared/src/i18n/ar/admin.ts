@@ -781,5 +781,6 @@ const admin: TranslationStrings = {
   'admin.placesUsageTitle': 'فيمَ يُستخدم المفتاح',
   'admin.mapsKeyHintShort': 'يضيف الصور والتقييمات وساعات العمل. عندها يذهب كل بحث إلى Google.',
   'admin.amapKeyHintShort': 'للبحث عن الأماكن داخل الصين القارية. يحتاج مفتاح خدمة ويب، لا مفتاح JS API.',
+  'admin.collab.links.subtitle': 'الروابط المشتركة والإشارات المرجعية',
 };
 export default admin;

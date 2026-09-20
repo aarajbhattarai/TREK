@@ -209,6 +209,12 @@ export default function PlaceInspector({
   const { t, locale, language } = useTranslation()
   // Currency-less prices mean "the trip's currency"; null in collection mode (EUR fallback below).
   const tripCurrency = useTripStore(s => s.trip?.currency)
+  // The day list handed in is the one the planner shows, and in the day view that
+  // list leaves out the stop a booking wrote. The store still holds it, so the
+  // booked-night check below reads the day from there as well: on the list alone
+  // the hotel of a booked night looked unassigned and could be put on the day a
+  // second time, which is the duplicate that check exists to prevent.
+  const storedDayAssignments = useTripStore(s => (selectedDayId ? s.assignments[String(selectedDayId)] : undefined))
   const toast = useToast()
   const timeFormat = useSettingsStore(s => s.settings.time_format) || '24h'
   const distanceUnit = useSettingsStore(s => s.settings.distance_unit) || 'metric'
@@ -322,7 +328,9 @@ export default function PlaceInspector({
       ?? dayAssignments.find(a => a.place?.id === place.id))
     : null
   /** This stop belongs to a booked night rather than to the traveller. */
-  const bookedNight = assignmentInDay?.accommodation_id != null
+  const bookedNight = assignmentInDay
+    ? assignmentInDay.accommodation_id != null
+    : !!storedDayAssignments?.some(a => a.place?.id === place.id && a.accommodation_id != null)
 
   // The weekday lines are display text; the ring is computed from the structured
   // periods next to them, in the place's own timezone. open_now stays the fallback.

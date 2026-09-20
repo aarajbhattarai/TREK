@@ -119,4 +119,18 @@ describe('MapsService.getPlaceDetails for a gers: id', () => {
     // The index's own hours survive: they came with the record, not from OSM.
     expect(out.place?.opening_hours).toBeTruthy();
   });
+
+  it('MAPS-GERS-009: with the index switched off, opening a saved place asks nobody', async () => {
+    // TREK_PLACES_ENABLED=false is the operator's word that nothing leaves for
+    // the index. Search, autocomplete and the area download honoured it; the
+    // lookup by id did not, so every saved place that came from the index was
+    // still sent out, with the instance token, on every open.
+    const svc = make({ opening_hours: 'Mo-Su 11:30-23:00' });
+    vi.spyOn(svc, 'trekPlacesEnabled').mockReturnValue(false);
+
+    await expect(svc.getPlaceDetails(1, 'gers:abc-123')).resolves.toEqual({ place: null });
+
+    expect(mockById).not.toHaveBeenCalled();
+    expect(svc.resolveOsmIdentity).not.toHaveBeenCalled();
+  });
 });

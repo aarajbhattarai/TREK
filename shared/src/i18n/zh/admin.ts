@@ -745,5 +745,6 @@ const admin: TranslationStrings = {
   'admin.placesUsageTitle': '密钥用于什么',
   'admin.mapsKeyHintShort': '增加照片、评分和营业时间。之后每次查询都会发往 Google。',
   'admin.amapKeyHintShort': '用于中国大陆的地点搜索。需要 Web 服务密钥，而非 JS API 密钥。',
+  'admin.collab.links.subtitle': '共享链接和书签',
 };
 export default admin;

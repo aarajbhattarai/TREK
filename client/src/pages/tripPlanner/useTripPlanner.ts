@@ -52,7 +52,9 @@ import {
   isServiceStopType, refuelStopTypeFor, reanchorAfterReorder, type DryPoint } from '../../components/Roadtrip/roadtripModel'
 import type { ManualStopTarget, ServiceStopMode } from '../../components/Roadtrip/manualStop'
 import type { RoadtripStopDraft } from '../../components/Roadtrip/RoadtripStopPopup'
-import type { RoadtripStopType } from '@trek/shared'
+import type { StayDraft } from '../../components/Roadtrip/RoadtripStayModal'
+import { inspectorStay } from '../../components/Roadtrip/stayReading'
+import { MAX_TRIP_DAYS, type RoadtripStopType } from '@trek/shared'
 import { usePlaceSelection } from '../../hooks/usePlaceSelection'
 import { usePlannerHistory } from '../../hooks/usePlannerHistory'
 import { useAirtrailConnection } from '../../hooks/useAirtrailConnection'
@@ -307,6 +309,14 @@ export function useTripPlanner() {
    * Null means the old behaviour: the server appends it at the end.
    */
   const [placeFormPosition, setPlaceFormPosition] = useState<number | null>(null)
+  // The position belongs to the form it was opened with and to nothing after it. The
+  // day-scoped openers set the day, the form's close clears the coordinates, but the
+  // position is written by one opener and read by every save, so a stop handed to the
+  // form from the corridor popup once left the next add from any day landing at that
+  // same index. Tied to the form being open, the only time it means anything.
+  useEffect(() => {
+    if (!showPlaceForm) setPlaceFormPosition(null)
+  }, [showPlaceForm])
   /**
    * Whether the open place form is asking for a service stop on the drive.
    *
@@ -331,6 +341,20 @@ export function useTripPlanner() {
    * instead, and the form stays one click away behind "more details".
    */
   const [stopDraft, setStopDraft] = useState<RoadtripStopDraft | null>(null)
+  /**
+   * A booked night the popup was asked to turn into a pause, waiting for a yes.
+   *
+   * The switch in the popup reads like a change of stop kind, but the night is a
+   * booking row, and the server takes the reservation and the expense written against
+   * it down with that row. It is the one write the popup can make that nothing brings
+   * back, so it is the one that asks first. The name and the booking title are read
+   * once, here, so the dialog does not have to know where either lives.
+   */
+  const [stayRelease, setStayRelease] = useState<{
+    stop: { stopType: RoadtripStopType | null; dwellMinutes: number }
+    name: string
+    booking: string | null
+  } | null>(null)
   const [reservationModalDayId, setReservationModalDayId] = useState<number | null>(null)
 
   // The bottom-nav "+" opens the new-place form via ?create=place.
@@ -473,6 +497,38 @@ export function useTripPlanner() {
   const mobilePlacesScrollTopRef = useRef<number>(0)
   const [deletePlaceId, setDeletePlaceId] = useState<number | null>(null)
   const [deletePlaceIds, setDeletePlaceIds] = useState<number[] | null>(null)
+  /**
+   * The sentence the delete question adds when a night is booked at one of the places.
+   *
+   * The server takes a booked night down with its place, and with the night the
+   * booking made for it and the expense written against that booking. The question
+   * itself only names the place, and those are the rows the traveller least expects
+   * to lose, so the dialog says so before the yes. The expense list is loaded with
+   * the costs tab, not here, so the sentence speaks of any expense rather than
+   * counting them. Null when nothing beyond the place is at stake.
+   */
+  const bookedNightsNote = useCallback((placeIds: number[]): string | null => {
+    const stays = tripAccommodations.filter(stay => stay.place_id != null && placeIds.includes(stay.place_id))
+    if (stays.length === 0) return null
+    const names = [...new Set(stays.map(stay => allPlaces.find(p => p.id === stay.place_id)?.name ?? stay.place_name ?? ''))]
+      .filter(Boolean)
+    const bookings = stays
+      .map(stay => reservations.find(r => r.accommodation_id != null && Number(r.accommodation_id) === stay.id)?.title
+        ?? stay.reservation_title ?? null)
+      .filter((title): title is string => !!title)
+    const name = names.join(', ')
+    return bookings.length > 0
+      ? t('trip.confirm.deletePlaceBooked', { name, booking: bookings.join(', ') })
+      : t('trip.confirm.deletePlaceNight', { name })
+  }, [tripAccommodations, allPlaces, reservations, t])
+  const deletePlaceNote = useMemo(
+    () => (deletePlaceId ? bookedNightsNote([deletePlaceId]) : null),
+    [deletePlaceId, bookedNightsNote],
+  )
+  const deletePlacesNote = useMemo(
+    () => (deletePlaceIds?.length ? bookedNightsNote(deletePlaceIds) : null),
+    [deletePlaceIds, bookedNightsNote],
+  )
 
   useEffect(() => {
     if (!trip) return
@@ -883,16 +939,38 @@ export function useTripPlanner() {
    *
    * This is the index space `after_order_index` lives in: sorted by `order_index`, and
    * filtered to the rows that have coordinates, because a place the map cannot put
-   * anywhere is not a point the router is given. Built from `assignments` rather than
-   * from `roadtripRoutes` so it also answers for a day with one stop or none — exactly
-   * the day a stop gets pushed onto when a leg turns out too long.
+   * anywhere is not a point the router is given. Built from the STORED list, the same
+   * one the routing round and the server count over. The day list read as a plan
+   * hides the stop a lodging booking put on the day and, behind the switch, the
+   * service stops; the handlers that correct a day's vias run in that mode too, and a
+   * plan measured on the shorter list deleted a via behind a hidden hotel or pinned
+   * it to a leg nobody drew. Built from the list rather than from `roadtripRoutes` so
+   * it also answers for a day with one stop or none, which is exactly the day a stop
+   * gets pushed onto when a leg turns out too long.
    */
   const roadtripStopsOf = useCallback((dayId: number) =>
-    (assignments[String(dayId)] ?? [])
+    (storedAssignments[String(dayId)] ?? [])
       .slice()
       .sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0))
       .filter(a => typeof a.place?.lat === 'number' && typeof a.place?.lng === 'number'),
-  [assignments])
+  [storedAssignments])
+
+  /**
+   * Where a place dropped at `position` in a day's row list lands among the stops the
+   * road trip counts.
+   *
+   * The day plan hands over a row index and the store splices the new row in at that
+   * index, so the stop's place in the chain is the number of routable rows ahead of
+   * it, not the index itself: a row without coordinates is never a stop.
+   */
+  const roadtripIndexOf = useCallback((dayId: number, position: number) =>
+    (storedAssignments[String(dayId)] ?? [])
+      .slice()
+      .sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0))
+      .slice(0, Math.max(0, position))
+      .filter(a => typeof a.place?.lat === 'number' && typeof a.place?.lng === 'number')
+      .length,
+  [storedAssignments])
 
   /**
    * Which half of a split leg a via belongs to, measured on the road actually driven.
@@ -1033,16 +1111,30 @@ export function useTripPlanner() {
     }
   }, [tripId, trip, can, roadtripPreferencesState.ready, toast, t])
 
-  const saveStopDraft = useCallback(async ({ stopType, dwellMinutes }: { stopType: RoadtripStopType | null; dwellMinutes: number }) => {
+  const saveStopDraft = useCallback(async (
+    { stopType, dwellMinutes }: { stopType: RoadtripStopType | null; dwellMinutes: number },
+    { releaseStay = false }: { releaseStay?: boolean } = {},
+  ) => {
     if (!stopDraft) return
     const { poi, dayId, position } = stopDraft
+    const accommodationId = stopDraft.editing?.accommodationId
+    // Turning a booked night into a pause deletes the booking, and with it the
+    // reservation and the expense the server keeps against it. The popup stays open
+    // behind the question, so a no leaves the traveller exactly where they were.
+    if (accommodationId && !releaseStay) {
+      const stay = tripAccommodations.find(s => s.id === accommodationId)
+      const booking = reservations.find(r => r.accommodation_id != null && Number(r.accommodation_id) === accommodationId)?.title
+        ?? stay?.reservation_title ?? null
+      setStayRelease({ stop: { stopType, dwellMinutes }, name: poi.name, booking })
+      return
+    }
     try {
       if (stopDraft.editing) {
         await tripActions.updatePlace(tripId, stopDraft.editing.placeId, { stop_type: stopType, duration_minutes: dwellMinutes })
-        if (stopDraft.editing.accommodationId) {
+        if (accommodationId) {
           // The night is what was switched off, not the stop: it stays where it is
           // in the drive and becomes an ordinary pause.
-          applyStayStops(await accommodationsApi.delete(tripId, stopDraft.editing.accommodationId, { keepStop: true }))
+          applyStayStops(await accommodationsApi.delete(tripId, accommodationId, { keepStop: true }))
           await loadAccommodations()
         }
         updateRouteForDay(dayId)
@@ -1081,7 +1173,14 @@ export function useTripPlanner() {
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : t('common.unknownError'))
     }
-  }, [stopDraft, tripId, tripActions, updateRouteForDay, toast, t, roadtripVias, viaLiesBefore, loadAccommodations])
+  }, [stopDraft, tripId, tripActions, updateRouteForDay, toast, t, roadtripVias, viaLiesBefore, loadAccommodations, tripAccommodations, reservations])
+
+  /** The yes to the question above: the same save, this time allowed to drop the night. */
+  const confirmStayRelease = useCallback(async () => {
+    const pending = stayRelease
+    setStayRelease(null)
+    if (pending) await saveStopDraft(pending.stop, { releaseStay: true })
+  }, [stayRelease, saveStopDraft])
 
   const saveStopDraftAsNight = useCallback(async ({ endDayId, checkIn, checkOut }: {
     endDayId: number
@@ -1093,8 +1192,17 @@ export function useTripPlanner() {
     try {
       if (stopDraft.editing) {
         const booking = { place_id: stopDraft.editing.placeId, start_day_id: dayId, end_day_id: endDayId, check_in: checkIn || null, check_out: checkOut || null }
-        if (stopDraft.editing.accommodationId) await accommodationsApi.update(tripId, stopDraft.editing.accommodationId, booking)
-        else await accommodationsApi.create(tripId, booking)
+        // The answer carries the day stop the booking moved or added. The socket
+        // deliberately skips the session that sent the request, so without folding
+        // it in the one person whose rail still shows the night at its old place in
+        // the chain is the one who just moved its check-in.
+        const written = stopDraft.editing.accommodationId
+          ? await accommodationsApi.update(tripId, stopDraft.editing.accommodationId, booking)
+          : await accommodationsApi.create(tripId, booking)
+        applyStayStops(written)
+        // A night seated by a new check-in renumbers its neighbours as well, and the
+        // answer names only the night. The day is read back whole rather than guessed.
+        if (written?.movedAssignment) await tripActions.refreshDays(tripId)
         await tripActions.updatePlace(tripId, stopDraft.editing.placeId, { stop_type: poi.category === 'campsite' ? 'campsite' : 'hotel' })
         await loadAccommodations()
         updateRouteForDay(dayId)
@@ -1229,7 +1337,7 @@ export function useTripPlanner() {
    * the rail is a list — putting a dialog's state inside a row means it dies whenever the
    * list re-renders around it.
    */
-  const [stayDraft, setStayDraft] = useState<{ placeId: number; name: string; minutes: number | null; arrival: string | null } | null>(null)
+  const [stayDraft, setStayDraft] = useState<StayDraft | null>(null)
 
   /**
    * Whether the day ends at this stop, from BOTH the things that can end it.
@@ -1427,7 +1535,7 @@ export function useTripPlanner() {
         const next = dayBoundaries.boundaries.filter(b => b.day_number !== day)
         if (boundary) next.push(boundary)
         const issue = roadtripRoutes.validateBoundaries?.(next)
-        if (boundary && issue) { toast.error(t(`roadtrip.window.${issue}`)); return false }
+        if (boundary && issue) { toast.error(t(`roadtrip.window.${issue}`, { days: MAX_TRIP_DAYS })); return false }
         try { return await dayBoundaries.save(day, boundary) }
         catch (err: unknown) { toast.error(err instanceof Error ? err.message : t('common.unknownError')); return false }
       },
@@ -1915,12 +2023,15 @@ export function useTripPlanner() {
         // leg each via was drawn for. A via is stored as (day, after_order_index) and
         // that index is a POSITION in the day's stop list, so a stop dropped into the
         // middle of a routed day pushes every via at or behind it onto the wrong leg and
-        // the drawn road runs forward, doubles back and runs out again.
-        const plan = insert && typeof data.lat === 'number' && typeof data.lng === 'number'
+        // the drawn road runs forward, doubles back and runs out again. Keyed on the
+        // position rather than on the service-stop form: a corridor hit handed to the
+        // full form carries its position too, and was the one way into the middle of a
+        // day that left the vias where they were.
+        const plan = position != null && typeof data.lat === 'number' && typeof data.lng === 'number'
           ? reanchorAfterInsert(
-            roadtripVias.byDay[insert.dayId] ?? [],
-            insert.position,
-            viaLiesBefore(insert.dayId, { lat: data.lat, lng: data.lng }),
+            roadtripVias.byDay[dayId] ?? [],
+            position,
+            viaLiesBefore(dayId, { lat: data.lat, lng: data.lng }),
           )
           : null
         try {
@@ -2106,7 +2217,8 @@ export function useTripPlanner() {
     // the correction — and the predicate decides which side of the new stop a
     // via falls on when it is dropped into the middle of a leg.
     const stopsBefore = roadtripStopsOf(target)
-    const insertAt = position === undefined ? stopsBefore.length : position
+    // The position is a row index in the day list, the anchors count stops.
+    const insertAt = position === undefined ? stopsBefore.length : roadtripIndexOf(target, position)
     const place = places.find(p => p.id === placeId)
     const plan = insertAt >= stopsBefore.length || typeof place?.lat !== 'number' || typeof place?.lng !== 'number'
       ? null
@@ -2128,7 +2240,7 @@ export function useTripPlanner() {
         })
       }
     } catch (err: unknown) { toast.error(err instanceof Error ? err.message : t('common.unknownError')) }
-  }, [selectedDayId, tripId, toast, updateRouteForDay, pushUndo, t, places, roadtripVias, roadtripStopsOf, viaLiesBefore])
+  }, [selectedDayId, tripId, toast, updateRouteForDay, pushUndo, t, places, roadtripVias, roadtripStopsOf, roadtripIndexOf, viaLiesBefore])
 
   const handleRemoveAssignment = useCallback(async (dayId: number, assignmentId: number) => {
     const state = useTripStore.getState()
@@ -2437,19 +2549,24 @@ export function useTripPlanner() {
     ? { active: roadtripEndsDayAt(endDayStop), onToggle: () => setRoadtripEndDay(endDayStop) }
     : undefined
   const roadtripStay = roadtripActive && selectedPlace
-    ? { minutes: endDayStop ? endDayStop.dwellMinutes : selectedPlace.duration_minutes ?? null, onEdit: can('place_edit', trip) ? () => editRoadtripStay({ placeId: selectedPlace.id, name: selectedPlace.name, minutes: selectedPlace.duration_minutes ?? null, arrival: null }) : undefined }
+    ? inspectorStay(roadtripRoutes.days, endDayStop, selectedPlace, can('place_edit', trip) ? editRoadtripStay : undefined)
     : undefined
 
-  // Build placeId → order-number map from the selected day's assignments
+  // Build placeId → order-number map from the selected day's assignments. A service
+  // stop is passed over rather than counted: the map draws it without a badge and the
+  // rail gives it no number, so a number spent on it left the pin after a fuel stop
+  // wearing "3" where the rail said "2".
   const dayOrderMap = useMemo(() => {
     if (!selectedDayId) return {}
     const da = assignments[String(selectedDayId)] || []
     const sorted = [...da].sort((a, b) => a.order_index - b.order_index)
     const map = {}
-    sorted.forEach((a, i) => {
-      if (!a.place?.id) return
+    let counted = 0
+    sorted.forEach(a => {
+      if (!a.place?.id || isServiceStopType(a.place.stop_type)) return
+      counted += 1
       if (!map[a.place.id]) map[a.place.id] = []
-      map[a.place.id].push(i + 1)
+      map[a.place.id].push(counted)
     })
     return map
   }, [selectedDayId, assignments])
@@ -2495,6 +2612,7 @@ export function useTripPlanner() {
     prefillCoords, setPrefillCoords, editingAssignmentId, setEditingAssignmentId,
     placeFormDayId, setPlaceFormDayId, reservationModalDayId, setReservationModalDayId,
     stopDraft, setStopDraft, saveStopDraft, saveStopDraftAsNight, stopDraftToForm, stopDraftDuplicate, reorderRoadtripStop,
+    stayRelease, setStayRelease, confirmStayRelease,
     setRoadtripStopKind,
     setRoadtripStopFill,
     roadtripEndsDayAt,
@@ -2523,7 +2641,7 @@ export function useTripPlanner() {
     reservationPrefill, transportPrefill, importReviewActive, startImportReview, advanceImportReview,
     routeShown, setRouteShown, autoShowRoute, transitRoutesShown, routeProfile, setRouteProfile, routeVias, fitKey, setFitKey,
     mobileSidebarOpen, setMobileSidebarOpen, mobilePlanScrollTopRef, mobilePlacesScrollTopRef,
-    deletePlaceId, setDeletePlaceId, deletePlaceIds, setDeletePlaceIds,
+    deletePlaceId, setDeletePlaceId, deletePlaceIds, setDeletePlaceIds, deletePlaceNote, deletePlacesNote,
     visibleConnections, toggleConnection, allConnectionsShown, toggleAllConnections, mapTransportDetail, setMapTransportDetail,
     isMobile, isTouch,
     expandedDayIds, setExpandedDayIds, mapPlaces,

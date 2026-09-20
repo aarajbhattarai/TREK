@@ -3,6 +3,13 @@ import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 import { visualizer } from 'rollup-plugin-visualizer';
 import { rtlTextAlias } from './rtlTextAlias.js';
+import { readFileSync } from 'node:fs';
+
+// The version this bundle is built as, baked in at build time. The release image
+// bumps every package.json before it builds, so this matches the server's
+// APP_VERSION there; a source checkout matches the server's own package.json.
+// The server hands the release notice only to a bundle built for its version.
+const UI_VERSION = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')).version;
 
 // `npm run build:analyze` writes dist/stats.html — a treemap of what actually ended
 // up in each chunk. The plain build only reports chunk sizes, which tells you a chunk
@@ -13,6 +20,7 @@ const DEV_PORT = Number(process.env.TREK_DEV_PORT) || 5173;
 const API_TARGET = process.env.TREK_DEV_API || 'http://localhost:3001';
 
 export default defineConfig(({ mode }) => ({
+  define: { __TREK_UI_VERSION__: JSON.stringify(UI_VERSION) },
   plugins: [
     react(),
     mode === 'analyze' &&

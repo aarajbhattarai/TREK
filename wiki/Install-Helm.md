@@ -110,10 +110,9 @@ env:
   # TZ: "Europe/Berlin"          # timezone for logs, reminders, cron jobs
   # LOG_LEVEL: "info"            # "info" = concise, "debug" = verbose
   # TREK_WIKI_DIR: "/app/wiki"   # where /help reads its docs from; leave unset (the image ships them)
-  # DEFAULT_LANGUAGE: "en"       # fallback language on login page; supported: de, en, es, fr, hu, nl, br, cs, pl, ru, zh, zh-TW, it, tr, ar, id, ja, ko, uk, gr, sv, vi, ca
   # ALLOWED_ORIGINS: "https://trek.example.com"
   # APP_URL: "https://trek.example.com"
-  # FORCE_HTTPS: "false"         # enable HTTPS redirect + HSTS; requires TRUST_PROXY
+  # FORCE_HTTPS: "false"         # enable HTTPS redirect + HSTS; set TRUST_PROXY for correct client IPs
   # TRUST_PROXY: "1"             # proxy hops for X-Forwarded-For/Proto; defaults to 1 in production
   # COOKIE_SECURE: "true"        # auto-derived; set "false" only for local HTTP testing
   # ALLOW_INTERNAL_NETWORK: "false"  # set "true" if Immich or other services are on a private network
@@ -128,6 +127,8 @@ env:
   # OIDC_SCOPE: "openid email profile groups"
   # OIDC_DISCOVERY_URL: ""       # override for providers with non-standard discovery paths (e.g. Authentik)
 ```
+
+> **Note:** `DEFAULT_LANGUAGE` is not declared in the chart's ConfigMap, so a value under `env:` is dropped and the fallback stays `en`. Patch it onto the Deployment if you need it. See [Environment-Variables](Environment-Variables#default_language--supported-codes) for the codes.
 
 ### Sensitive Variables (`secretEnv`)
 
@@ -179,7 +180,7 @@ helm install trek trek/trek   --set probes.liveness.initialDelaySeconds=60   --s
 
 Raise `initialDelaySeconds` on slow storage or after a large migration, where the first start can outlast the default and leave the pod restarting in a loop. Overrides are merged over the defaults, so setting one key keeps the rest. To switch a probe to `exec` or `tcpSocket`, clear the shipped handler in the same override (`--set probes.liveness.httpGet=null`), otherwise Kubernetes rejects the pod with "may not specify more than 1 handler type". Set `probes.liveness=null` to drop a probe entirely.
 
-If you change `env.PORT`, update `service.port` and `probes.*.httpGet.port` to match.
+Leave `env.PORT` at `3000`. The chart passes it to the server, but `containerPort` in `deployment.yaml` and `targetPort` in `service.yaml` are fixed at 3000, so a different value makes the server listen where nothing routes to it. Changing it means patching both templates as well as `service.port` and `probes.*.httpGet.port`; `service.port` alone is not enough.
 
 ### Ingress
 

@@ -26,5 +26,7 @@ const map: TranslationStrings = {
   'map.overview.hide': 'إخفاء الرحلة كاملة',
   'map.overview.total': 'المسافة الإجمالية',
   'map.attribution': 'مصادر الخريطة',
+  'map.overview.unrouted': 'تعذّر حساب {count} مرحلة، لذا المسافات غير مكتملة.',
+  'map.overview.dayUnrouted': 'تعذّر حساب {count} مرحلة من هذا اليوم',
 };
 export default map;

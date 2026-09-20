@@ -740,8 +740,9 @@ export function parseWikipediaTag(tag: string | undefined | null): { lang: strin
 const NON_GOOGLE_PLACE_ID =
   /^(?:coords|gers|node|way|relation|amap):|^https?:\/\/|^-?\d+(?:\.\d+)?,\s*-?\d+(?:\.\d+)?$|~p\d+$/i;
 // The subset that still has a provider behind it — Overpass for details,
-// Wikimedia for photos.
-export const OSM_PLACE_ID = /^(?:node|way|relation):/i;
+// Wikimedia for photos. The id has to be the whole of what follows the colon:
+// it is written into an Overpass query as it is, and an element id is a number.
+export const OSM_PLACE_ID = /^(?:node|way|relation):\d+$/i;
 
 export function isGooglePlaceId(placeId: string): boolean {
   return !NON_GOOGLE_PLACE_ID.test(placeId);

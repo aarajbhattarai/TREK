@@ -26,5 +26,7 @@ const map: TranslationStrings = {
   'map.overview.hide': 'Tüm geziyi gizle',
   'map.overview.total': 'Toplam mesafe',
   'map.attribution': 'Harita kaynakları',
+  'map.overview.unrouted': '{count} etap hesaplanamadı, bu yüzden mesafeler eksik.',
+  'map.overview.dayUnrouted': 'Bu günün {count} etabı hesaplanamadı',
 };
 export default map;

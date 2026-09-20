@@ -137,6 +137,16 @@ whatever happens, so a provider that misses that window is left out of the list 
 than holding it up. `near` is the coordinate the search is biased toward,
 and it is what tells the four places called "Hase-dera" apart — use it when you have it.
 
+The Road trip search along the route reaches the same hook. It calls `search` once per
+kind the person picked, with two more fields on the request: `category` (`fuel`,
+`charging`, `rest_area`, `campsite`, `restaurant`, `sights` or `hotel`) and `bounds`
+(`{ south, west, north, east }`, the rectangle to search, with `near` at its centre).
+`query` is then a fixed English phrase such as `EV charging station` rather than
+something typed, so an index that ignores `category` still gets a usable query. Hits
+outside `bounds` are dropped, and so is a hit whose own `category` names a different one
+of those seven kinds. Both fields are absent on ordinary searches, so read them as
+optional.
+
 ## Raise validation warnings on a trip
 
 **Needs:** `hook:trip-warning-provider`

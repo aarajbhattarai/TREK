@@ -8,7 +8,7 @@ import { usePermissionsStore } from '../../../../src/store/permissionsStore';
 import { useSettingsStore } from '../../../../src/store/settingsStore';
 import { buildUser } from '../../../helpers/factories';
 import type { DashboardTrip } from '../../../../src/pages/dashboard/dashboardModel';
-import type { Trip, TripCreateRequest } from '@trek/shared';
+import { MAX_TRIP_DAYS, type Trip, type TripCreateRequest } from '@trek/shared';
 
 interface CoverSearchPhoto {
   id: string
@@ -133,6 +133,20 @@ describe('MNewTripSheet', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Create New Trip' }));
 
     expect(screen.getByText('End date must be after start date')).toBeInTheDocument();
+    expect(onSave).not.toHaveBeenCalled();
+  });
+
+  it('FE-MOB-NTSH-036: a range past MAX_TRIP_DAYS blocks the save (#2403)', () => {
+    const onSave = vi.fn(async () => undefined);
+    render(<MNewTripSheet open trip={null} onClose={() => {}} onSave={onSave} />);
+
+    fireEvent.change(screen.getByPlaceholderText('e.g. Summer in Japan'), { target: { value: 'Decade' } });
+    fireEvent.change(screen.getByLabelText('Start Date'), { target: { value: '2026-01-01' } });
+    fireEvent.change(screen.getByLabelText('End Date'), { target: { value: '2036-01-01' } });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Create New Trip' }));
+
+    expect(screen.getByText(`A trip can span at most ${MAX_TRIP_DAYS} days`)).toBeInTheDocument();
     expect(onSave).not.toHaveBeenCalled();
   });
 

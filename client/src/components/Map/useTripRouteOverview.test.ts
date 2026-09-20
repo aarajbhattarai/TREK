@@ -1,4 +1,4 @@
-import { renderHook, waitFor } from '@testing-library/react'
+import { act, renderHook, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { dayColor } from '../Roadtrip/dayColors'
 import { useTripRouteOverview } from './useTripRouteOverview'
@@ -10,7 +10,9 @@ vi.mock('./RouteCalculator', async (importActual) => {
   return { ...actual, calculateRouteWithLegs: vi.fn() }
 })
 
-const { calculateRouteWithLegs } = await import('./RouteCalculator')
+const { calculateRouteWithLegs, RoutingRefusedError } = await import('./RouteCalculator')
+
+type RouteAnswer = Awaited<ReturnType<typeof calculateRouteWithLegs>>
 
 const leg = (distance: number, duration: number): RouteSegment => ({
   mid: [0, 0], from: [0, 0], to: [0, 0],
@@ -135,5 +137,77 @@ describe('useTripRouteOverview', () => {
 
     await waitFor(() => expect(result.current.loading).toBe(false))
     expect(vi.mocked(calculateRouteWithLegs).mock.calls.length).toBe(calls)
+  })
+
+  it('FE-MAP-TRO-009: a leg the router refused outright is counted, so the total is not taken for complete', async () => {
+    // A 400 objects to these coordinates; the leg stays a straight line with no distance.
+    vi.mocked(calculateRouteWithLegs).mockRejectedValueOnce(new RoutingRefusedError(400, null))
+    const { result } = render()
+
+    await waitFor(() => expect(result.current.loading).toBe(false), { timeout: 3000 })
+    expect(result.current.days.map(d => d.unroutedLegs)).toEqual([1, 0])
+    expect(result.current.unroutedLegs).toBe(1)
+    expect(result.current.totalDistance).toBe(12000)
+  })
+
+  it('FE-MAP-TRO-010: each day is drawn as soon as its road answers, not when the round is over', async () => {
+    // The legs go to the router one at a time with a pause between them, so a cold trip
+    // takes a second per leg; roads filling in one by one is what makes that read as
+    // progress rather than as a hang.
+    const answer: RouteAnswer = {
+      coordinates: [[48.86, 2.35], [48.87, 2.355], [48.88, 2.36]],
+      distance: 12000, duration: 900,
+      legs: [leg(12000, 900)],
+    }
+    const answers: Array<(value: RouteAnswer) => void> = []
+    vi.mocked(calculateRouteWithLegs).mockImplementation(
+      () => new Promise<RouteAnswer>(resolve => { answers.push(resolve) }),
+    )
+    const { result } = render()
+
+    // Only the first leg has been asked for.
+    expect(answers).toHaveLength(1)
+    await act(async () => { answers[0](answer) })
+
+    // Its day is on the map while the second is still waiting.
+    expect(result.current.loading).toBe(true)
+    expect(result.current.days[0].distance).toBe(12000)
+    expect(result.current.days[1].distance).toBe(0)
+
+    await waitFor(() => expect(answers).toHaveLength(2), { timeout: 3000 })
+    await act(async () => { answers[1](answer) })
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    expect(result.current.totalDistance).toBe(24000)
+  })
+
+  it('FE-MAP-TRO-011: keeps the frame it set on the straight lines until the round is over', async () => {
+    // A fresh `focusPoints` array is what tells the map to fit the camera. One per
+    // answering leg would take the map back from wherever the reader has panned to, so
+    // the frame changes exactly twice: on the straight lines, and on the finished roads.
+    const answer: RouteAnswer = {
+      coordinates: [[48.86, 2.35], [48.87, 2.355], [48.88, 2.36]],
+      distance: 12000, duration: 900,
+      legs: [leg(12000, 900)],
+    }
+    const answers: Array<(value: RouteAnswer) => void> = []
+    vi.mocked(calculateRouteWithLegs).mockImplementation(
+      () => new Promise<RouteAnswer>(resolve => { answers.push(resolve) }),
+    )
+    const { result } = render()
+    const frame = result.current.focusPoints
+    expect(frame.length).toBeGreaterThan(0)
+
+    await act(async () => { answers[0](answer) })
+    // The road is drawn, the camera stays put.
+    expect(result.current.days[0].distance).toBe(12000)
+    expect(result.current.focusPoints).toBe(frame)
+
+    await waitFor(() => expect(answers).toHaveLength(2), { timeout: 3000 })
+    await act(async () => { answers[1](answer) })
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    // The finished result frames the roads themselves, which have more points than the
+    // straight lines had.
+    expect(result.current.focusPoints).not.toBe(frame)
+    expect(result.current.focusPoints.length).toBeGreaterThan(frame.length)
   })
 })

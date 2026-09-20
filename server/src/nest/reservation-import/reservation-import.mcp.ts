@@ -20,8 +20,8 @@ const airtrailAddonOn = addonGate(ADDON_IDS.AIRTRAIL);
 /**
  * The picker sends whatever a human ticked; a model can name a hundred ids off
  * one hallucinated list, and each one becomes a reservation and a broadcast.
- * The same reasoning as MAX_MCP_TRIP_DAYS: the tool surface caps a bulk write
- * the REST route leaves open, and says how to continue.
+ * The tool surface caps a bulk write the REST route leaves open, and says how
+ * to continue.
  */
 const MAX_MCP_AIRTRAIL_FLIGHTS = 50;
 

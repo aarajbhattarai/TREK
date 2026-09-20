@@ -93,5 +93,10 @@ const collab: TranslationStrings = {
   'collab.polls.options': '選択肢',
   'collab.polls.delete': '削除',
   'collab.polls.closedSection': '終了',
+  'collab.chat.imageLimit': '1件のメッセージに添付できる画像は{max}枚までです',
+  'collab.chat.uploading': 'アップロード中 {percent}%',
+  'collab.chat.attachImages': '画像を添付',
+  'collab.chat.attachedImage': '添付画像',
+  'collab.chat.closeImage': '画像を閉じる',
 };
 export default collab;

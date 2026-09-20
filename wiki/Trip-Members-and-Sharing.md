@@ -59,6 +59,7 @@ Once added, a guest can be picked anywhere a member can:
 - **Packing** — assigned to packing items and categories (see [Packing-Lists](Packing-Lists)).
 - **To-dos** — set as a task assignee.
 - **Day plan** — added as a participant on activities and places.
+- **Bookings**: set as a traveler on a reservation or a transport (see [Reservations-and-Bookings](Reservations-and-Bookings)).
 
 ### What a guest can never do
 

@@ -55,20 +55,16 @@ const system_notice: TranslationStrings = {
   'system_notice.pager.goto': '{n}번 공지로 이동',
   'system_notice.pager.position': '공지 {current}/{total}',
   'system_notice.release_notes.eyebrow': '업데이트 완료',
-  'system_notice.release_notes.headline': '이제 TREK이 직접 해내는 세 가지.',
-  'system_notice.release_notes.intro':
-    '자체 장소 API, 처음부터 끝까지 계획하는 로드트립, 그리고 다시 여러분의 손으로 돌아온 위치 기록.',
+  'system_notice.release_notes.headline': 'TREK가 이제 스스로 해내는 네 가지.',
+  'system_notice.release_notes.intro': '자체 장소 API, 처음부터 끝까지 계획되는 로드트립, 내 손에 있는 위치 기록, 그리고 동기화되는 문서.',
   'system_notice.release_notes.features_label': '이번 릴리스의 주역',
   'system_notice.release_notes.features_aside': '이게 전부는 아닙니다',
   'system_notice.release_notes.feature_places_title': 'TREK Places API',
-  'system_notice.release_notes.feature_places_body':
-    '자체 장소 API를 직접 운영하는 최초의 오픈 소스 여행 플래너입니다. 7,360만 개의 장소를 매달 새로 구축합니다. 키도, 사용량 제한도 없습니다.',
+  'system_notice.release_notes.feature_places_body': '자체 장소 API를 갖춘 최초의 오픈소스 여행 플래너. 7,360만 개 장소, 키 없음, 할당량 없음.',
   'system_notice.release_notes.feature_roadtrip_title': '로드트립 애드온',
-  'system_notice.release_notes.feature_roadtrip_body':
-    '로드트립 모드는 운전 자체를 계획합니다. 경로, 거리, 운전 시간, 경유지까지요. 애드온이라서 관리자가 켜기 전까지는 꺼져 있습니다.',
+  'system_notice.release_notes.feature_roadtrip_body': '주행을 스스로 계획합니다: 경로, 거리, 시간, 정차지. 관리자가 켤 때까지 꺼져 있습니다.',
   'system_notice.release_notes.feature_dawarich_title': 'Dawarich 연동',
-  'system_notice.release_notes.feature_dawarich_body':
-    'Google Timeline의 자체 호스팅 대안인 Dawarich를 이제 TREK 안에서 읽을 수 있습니다. TREK은 읽기만, 오직 읽기만 합니다. 다시 기록되는 것은 아무것도 없습니다.',
+  'system_notice.release_notes.feature_dawarich_body': 'Google Timeline의 자체 호스팅 대안인 Dawarich를 이제 TREK 안에서 읽을 수 있습니다. TREK은 읽기만, 오직 읽기만 합니다.',
   'system_notice.release_notes.footnote': '그 밖에도 TREK 곳곳에 작은 변경이 많이 담겨 있습니다.',
   'system_notice.release_notes.notes_label': '릴리스 노트',
   'system_notice.release_notes.note_eyebrow': '개발자의 한마디',
@@ -88,5 +84,7 @@ const system_notice: TranslationStrings = {
     'TREK이 여러분의 여행에 자리를 잡았다면, 커피 한 잔으로 다음 릴리스가 계속 나올 수 있게 도와주세요.',
   'system_notice.release_notes.cta_bmc': 'Buy me a coffee',
   'system_notice.release_notes.cta_kofi': 'Ko-fi에서 후원하기',
+  'system_notice.release_notes.feature_docsync_title': '문서 동기화',
+  'system_notice.release_notes.feature_docsync_body': 'Paperless-ngx, Papra, Nextcloud, OpenCloud, Synology Drive. 여행의 문서가 이미 운영 중인 저장소와 양방향으로 흐릅니다.',
 };
 export default system_notice;

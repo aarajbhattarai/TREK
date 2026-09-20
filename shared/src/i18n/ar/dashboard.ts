@@ -87,6 +87,7 @@ const dashboard: TranslationStrings = {
   'dashboard.useUnsplashPhoto': 'استخدم صورة من Unsplash بواسطة {photographer}',
   'dashboard.titleRequired': 'العنوان مطلوب',
   'dashboard.endDateError': 'يجب أن يكون تاريخ النهاية بعد البداية',
+  'dashboard.tripTooLong': 'لا يمكن أن تتجاوز مدة الرحلة {days} يومًا',
   'dashboard.dateShiftTitle': 'تاريخ بداية جديد',
   'dashboard.dateShiftIntro': 'لقد غيّرت موعد بداية هذه الرحلة. كيف تريد أن تتبع خططك التواريخ الجديدة؟',
   'dashboard.dateShiftKeepBookings': 'إبقاء الحجوزات في تواريخها',

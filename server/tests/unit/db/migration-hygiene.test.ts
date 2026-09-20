@@ -115,6 +115,8 @@ const ALLOWED_DESTRUCTIVE: Record<string, string> = {
     'Migration 87 journey rebuild: old data SELECTed into memory and re-inserted into new schema.',
   'DROP TABLE journeys':
     'Migration 87 journey rebuild: old data SELECTed into memory and re-inserted into new schema.',
+  'DROP TABLE roadtrip_day_boundaries':
+    'Rebuild to lift the day_number CHECK that mirrored the old 365-day trip limit (#2403). Rows copied first.',
 
   // ── template/cache scaffolding drops (no user content lost) ──────────────
   'DROP TABLE packing_template_items':

@@ -70,5 +70,7 @@ const mobileTrip: TranslationStrings = {
     '1 Abschnitt hatte mehr, als in eine Antwort passt. Wähl weniger Arten, um den Rest zu sehen.',
   'mobileTrip.rtTruncated.other':
     '{count} Abschnitte hatten mehr, als in eine Antwort passt. Wähl weniger Arten, um den Rest zu sehen.',
+  'mobileTrip.rtNoDay': 'Kein Tag gewählt',
+  'mobileTrip.rtNoDayHint': 'Die Karte zeigt die ganze Reise. Tippe oben auf einen Tag, um seine Fahrt zu sehen.',
 };
 export default mobileTrip;

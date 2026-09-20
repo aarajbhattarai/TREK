@@ -159,6 +159,14 @@ async function getJson<T>(
   params: Record<string, string | number | undefined>,
   opts: { maxBytes?: number; timeoutMs?: number } = {},
 ): Promise<T> {
+  // TREK_PLACES_ENABLED=false is the operator's word that nothing leaves for
+  // the index. Every caller checks it before asking, and this is the one place
+  // every request passes, so a caller that did not is still stopped here. Ahead
+  // of the breaker: a refusal says nothing about reachability.
+  if (!readEnv().maps.trekPlacesEnabled) {
+    throw new Error('TREK Places API is switched off on this instance');
+  }
+
   const url = new URL(trekPlacesBaseUrl() + path);
   for (const [k, v] of Object.entries(params)) {
     if (v !== undefined && v !== null && v !== '') url.searchParams.set(k, String(v));

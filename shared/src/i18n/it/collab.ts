@@ -93,5 +93,10 @@ const collab: TranslationStrings = {
   'collab.polls.options': 'Opzioni',
   'collab.polls.delete': 'Elimina',
   'collab.polls.closedSection': 'Chiusi',
+  'collab.chat.imageLimit': 'Puoi allegare fino a {max} immagini per messaggio',
+  'collab.chat.uploading': 'Caricamento {percent}%',
+  'collab.chat.attachImages': 'Allega immagini',
+  'collab.chat.attachedImage': 'Immagine allegata',
+  'collab.chat.closeImage': 'Chiudi immagine',
 };
 export default collab;

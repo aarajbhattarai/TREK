@@ -1,4 +1,4 @@
-// FE-PLANNER-PSHOOK-001 to FE-PLANNER-PSHOOK-051
+// FE-PLANNER-PSHOOK-001 to FE-PLANNER-PSHOOK-052
 import { http, HttpResponse } from 'msw';
 import userEvent from '@testing-library/user-event';
 import { render, screen, fireEvent, act, waitFor } from '../../../tests/helpers/render';
@@ -332,6 +332,21 @@ describe('usePlacesSidebar day helpers', () => {
     render(<Host {...makeProps({ places: [place], assignments: {}, selectedDayId: 8 })} />);
     expect(S.inDaySet.size).toBe(0);
     expect(S.isAssignedToSelectedDay(5)).toBe(false);
+  });
+
+  it('FE-PLANNER-PSHOOK-052: the stop a booking wrote counts as in the day when the list hides it', () => {
+    // The day view hands the pool the day without the stop a booking wrote, while
+    // the store still holds it. Judged on the list alone the hotel offered "add to
+    // day" on its own check-in day, and that put a second row beside the night.
+    const hotel = buildPlace({ id: 5, name: 'Hotel' });
+    const loose = buildPlace({ id: 6, name: 'Loose' });
+    const booked = buildAssignment({ place: hotel, day_id: 3, accommodation_id: 4 });
+    seedStore(useTripStore, { assignments: { '3': [booked] } });
+    render(<Host {...makeProps({ places: [hotel, loose], assignments: { '3': [] }, selectedDayId: 3 })} />);
+
+    expect([...S.inDaySet]).toEqual([5]);
+    expect(S.isAssignedToSelectedDay(5)).toBe(true);
+    expect(S.isAssignedToSelectedDay(6)).toBe(false);
   });
 });
 

@@ -90,5 +90,7 @@ const trip: TranslationStrings = {
   'transit.walkLabel': 'Περπάτημα',
   'transit.searchHint':
     'Αναζητήστε πραγματικές συνδέσεις και προσθέστε τις απευθείας στην ημέρα — δεδομένα μέσω Transitous.',
+  'trip.confirm.deletePlaceNight': 'Η διανυκτέρευση που κρατήθηκε στο «{name}» χάνεται μαζί με το μέρος.',
+  'trip.confirm.deletePlaceBooked': 'Η διανυκτέρευση που κρατήθηκε στο «{name}» χάνεται μαζί με το μέρος, μαζί με την κράτηση «{booking}» και κάθε συνδεδεμένο έξοδο.',
 };
 export default trip;

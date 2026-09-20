@@ -179,12 +179,20 @@ export default function MTripSheets({ planner, shell }: MTripSheetsProps) {
       />
 
       {/* Delete-place confirm behind handleDeletePlace (the place edit sheet
-          arms the same flag for its own two-tap delete — skip it there). */}
+          arms the same flag for its own two-tap delete — skip it there).
+          A night booked at the place goes down with it, and with the night
+          the booking and its expense: the planner adds that as a second
+          sentence, the same one the desktop question carries. */}
       <MConfirmSheet
         open={planner.deletePlaceId != null && !planner.showPlaceForm}
         onClose={() => planner.setDeletePlaceId(null)}
         title={t('common.delete')}
-        message={t('trip.confirm.deletePlace')}
+        message={planner.deletePlaceNote ? (
+          <>
+            <span className="block">{t('trip.confirm.deletePlace')}</span>
+            <span className="mt-1 block">{planner.deletePlaceNote}</span>
+          </>
+        ) : t('trip.confirm.deletePlace')}
         confirmLabel={t('common.delete')}
         cancelLabel={t('common.cancel')}
         danger

@@ -70,5 +70,7 @@ const mobileTrip: TranslationStrings = {
     '1 úsek měl víc, než se vejde do jedné odpovědi. Vyberte méně druhů, ať uvidíte zbytek.',
   'mobileTrip.rtTruncated.other':
     'Úseky, kde bylo víc, než se vejde do jedné odpovědi: {count}. Vyberte méně druhů, ať uvidíte zbytek.',
+  'mobileTrip.rtNoDay': 'Není vybrán žádný den',
+  'mobileTrip.rtNoDayHint': 'Mapa zobrazuje celou cestu. Klepněte nahoře na den a zobrazí se jeho trasa.',
 };
 export default mobileTrip;

@@ -56,7 +56,7 @@ const roadtrip: TranslationStrings = {
   'roadtrip.window.conflict':
     'Una hora fixa entra en conflicte amb el trajecte i les pauses. Es mantenen les hores manuals; la planificació automàtica està en pausa.',
   'roadtrip.window.tooLong':
-    'Aquests horaris requereixen més de 365 dies addicionals. Tria una franja diària més llarga.',
+    'Aquests horaris requereixen més de {days} dies addicionals. Tria una franja diària més llarga.',
   'roadtrip.mode.roadtrip': 'Viatge per carretera',
   'roadtrip.mode.days': 'Dies',
   'roadtrip.mode.label': 'Vista del pla',
@@ -246,8 +246,10 @@ const roadtrip: TranslationStrings = {
   'roadtrip.stop.stay': 'Temps en aquesta parada',
   'roadtrip.stop.pinned': 'Hora que has fixat',
   'roadtrip.stop.computed': 'Calculat a partir del trajecte',
+  'roadtrip.stop.endIsLeave': 'En el viatge per carretera, se surt a aquesta hora.',
   'roadtrip.via.hint': 'Arrossega per remodelar la ruta, clic dret per eliminar',
   'roadtrip.warn.late': 'Arriba {minutes} min després de l’hora fixada',
+  'roadtrip.warn.missedLeave': 'Arriba {minutes} min després de l’hora de sortida fixada',
   'roadtrip.warn.overnight': 'Dia següent',
   'roadtrip.spill.title': 'Del dia {number}',
   'roadtrip.spill.departs': 'surt {time}',
@@ -257,9 +259,18 @@ const roadtrip: TranslationStrings = {
   'roadtrip.stay.custom': 'Minuts',
   'roadtrip.stay.arrive': 'Arribada',
   'roadtrip.stay.leave': 'Sortida',
+  'roadtrip.stay.until': 'fins a les {time}',
+  'roadtrip.stay.leavesAt': 'Aquesta visita té una hora de fi, així que el viatge surt a les {time}.',
+  'roadtrip.stay.dayEndsFirst':
+    'El dia de viatge acaba abans de les {time}, així que el viatge continua l’endemà al matí.',
+  'roadtrip.stay.clearLeave': 'Treu l’hora de fi',
   'roadtrip.alt.noMotorway': 'Sense autopista',
   'roadtrip.alt.noToll': 'Sense peatges',
   'roadtrip.alt.noFerry': 'Sense ferri',
   'roadtrip.summary.partial': 'Encara s’està calculant la resta del trajecte',
+  'roadtrip.stay.releaseTitle': 'Treure la pernoctació?',
+  'roadtrip.stay.releaseBody': 'Es traurà la nit a «{name}». La parada es manté a la ruta com a pausa.',
+  'roadtrip.stay.releaseBookedBody': 'Es traurà la nit a «{name}» juntament amb la reserva «{booking}» i qualsevol despesa vinculada. La parada es manté a la ruta com a pausa.',
+  'roadtrip.stay.releaseAction': 'Converteix en pausa',
 };
 export default roadtrip;

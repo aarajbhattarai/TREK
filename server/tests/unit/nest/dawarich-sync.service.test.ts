@@ -310,6 +310,101 @@ describe('DawarichSyncService — new visits', () => {
   });
 });
 
+// ── Which trip a stay lands on ───────────────────────────────────────────────
+
+describe('DawarichSyncService, neighbouring trips', () => {
+  /** A trip that starts the day after TRIP ends, so its lookback reaches into TRIP's last days. */
+  function nextTrip(): number {
+    return createTrip(testDb, USER, { start_date: dayOffset(-24), end_date: dayOffset(-20) }).id;
+  }
+
+  /** A stay on TRIP's last day: inside TRIP's own dates and inside the next trip's lookback. */
+  function lastDayVisit(id: number): DawarichVisitRaw {
+    return visit({ id, started_at: `${TRIP_END}T09:00:00Z`, ended_at: `${TRIP_END}T12:00:00Z` });
+  }
+
+  it('DAWARICH-SYNC-074: a stay on the last day of a trip lands on that trip, not on the neighbour whose lookback reached it', async () => {
+    // Trips are walked newest first, so the neighbour asks first and both
+    // windows return the same stay. The trip whose dates hold it has to win,
+    // or the last days of every city hop show up under the next city.
+    const next = nextTrip();
+    withVisits(lastDayVisit(910));
+
+    const result = await svc.syncUser(USER);
+
+    expect(listVisits).toHaveBeenCalledTimes(2);
+    expect(result).toMatchObject({ state: 'ok', created: 1, missing: 0 });
+    const row = only();
+    expect(row.trip_id).toBe(TRIP);
+    expect(row.trip_id).not.toBe(next);
+  });
+
+  it('DAWARICH-SYNC-075: a stay already parked on the wrong neighbour moves to the trip whose dates hold it', async () => {
+    // What an earlier run left behind. Nobody acted on the row, so re-homing
+    // it loses nothing, and the panel of the trip it belongs to fills in.
+    const next = nextTrip();
+    testDb
+      .prepare(
+        `INSERT INTO dawarich_visit_suggestions
+           (user_id, source_visit_id, trip_id, name, lat, lng, started_at, ended_at, duration_minutes,
+            local_date, source_status, state, source_hash)
+         VALUES (?, '911', ?, 'Hotel Adlon', ?, ?, ?, ?, 180, ?, 'suggested', 'new', 'stale')`,
+      )
+      .run(USER, next, LAT, LNG, `${TRIP_END}T09:00:00Z`, `${TRIP_END}T12:00:00Z`, TRIP_END);
+    withVisits(lastDayVisit(911));
+
+    const result = await svc.syncUser(USER);
+
+    expect(result).toMatchObject({ created: 0, missing: 0 });
+    expect(only().trip_id).toBe(TRIP);
+  });
+
+  it('DAWARICH-SYNC-076: a row the user already acted on keeps its trip', async () => {
+    // An acceptance made a place on that trip. Moving the row out from under
+    // it would leave the handled list pointing somewhere else than the place.
+    const next = nextTrip();
+    testDb
+      .prepare(
+        `INSERT INTO dawarich_visit_suggestions
+           (user_id, source_visit_id, trip_id, name, lat, lng, started_at, ended_at, duration_minutes,
+            local_date, source_status, state, source_hash)
+         VALUES (?, '912', ?, 'Hotel Adlon', ?, ?, ?, ?, 180, ?, 'suggested', 'accepted', 'stale')`,
+      )
+      .run(USER, next, LAT, LNG, `${TRIP_END}T09:00:00Z`, `${TRIP_END}T12:00:00Z`, TRIP_END);
+    withVisits(lastDayVisit(912));
+
+    await svc.syncUser(USER);
+
+    expect(only().trip_id).toBe(next);
+  });
+
+  it('DAWARICH-SYNC-077: a stay in the slack before departure, inside no trip at all, stays with the window that found it', async () => {
+    // The evening before is why the lookback exists. With no other trip to
+    // claim it, the stay belongs to the trip that asked, exactly as before.
+    const eve = dayOffset(-31);
+    withVisits(visit({ id: 913, started_at: `${eve}T20:00:00Z`, ended_at: `${eve}T22:00:00Z` }));
+
+    await svc.syncUser(USER);
+
+    const row = only();
+    expect(row.local_date).toBe(eve);
+    expect(row.trip_id).toBe(TRIP);
+  });
+
+  it('DAWARICH-SYNC-078: a trip whose start is not a date cannot claim a stay from the sidelines', async () => {
+    // Such a trip is skipped by the window guard, and it must not turn into a
+    // catch-all for every stay outside the trips that are actually walked.
+    createTrip(testDb, USER, { start_date: '0000-00-00' });
+    const eve = dayOffset(-31);
+    withVisits(visit({ id: 914, started_at: `${eve}T20:00:00Z`, ended_at: `${eve}T22:00:00Z` }));
+
+    await svc.syncUser(USER);
+
+    expect(listVisits).toHaveBeenCalledTimes(1);
+    expect(only().trip_id).toBe(TRIP);
+  });
+});
+
 // ── Idempotency and change detection ─────────────────────────────────────────
 
 describe('DawarichSyncService — repeated runs', () => {

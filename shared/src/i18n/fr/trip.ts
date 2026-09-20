@@ -89,5 +89,7 @@ const trip: TranslationStrings = {
   'transit.transfersLabel': 'Correspondances',
   'transit.walkLabel': 'Marche',
   'transit.searchHint': 'Recherchez de vraies liaisons et ajoutez-les directement au jour — données via Transitous.',
+  'trip.confirm.deletePlaceNight': 'La nuit réservée à « {name} » disparaît avec le lieu.',
+  'trip.confirm.deletePlaceBooked': 'La nuit réservée à « {name} » disparaît avec le lieu, ainsi que la réservation « {booking} » et toute dépense qui y est liée.',
 };
 export default trip;

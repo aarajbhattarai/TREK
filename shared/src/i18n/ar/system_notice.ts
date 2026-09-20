@@ -54,20 +54,16 @@ const system_notice: TranslationStrings = {
   'system_notice.thank_you_support.cta_kofi': 'ادعمني على Ko-fi',
   'system_notice.pager.counter': '{current} / {total}', // en-fallback
   'system_notice.release_notes.eyebrow': 'تم تثبيت التحديث',
-  'system_notice.release_notes.headline': 'ثلاثة أشياء صار TREK يتولاها بنفسه.',
-  'system_notice.release_notes.intro':
-    'واجهة API خاصة به للأماكن، ورحلات برية مخطَّطة من أولها إلى آخرها، وسجل مواقعك يعود إلى يديك.',
+  'system_notice.release_notes.headline': 'أربعة أشياء يقوم بها TREK الآن بنفسه.',
+  'system_notice.release_notes.intro': 'واجهة أماكن خاصة به، ورحلات برية مخططة من البداية إلى النهاية، وسجل مواقعك في يديك، ومستنداتك متزامنة.',
   'system_notice.release_notes.features_label': 'أبرز الجديد',
   'system_notice.release_notes.features_aside': 'وهذا ليس كل شيء',
   'system_notice.release_notes.feature_places_title': 'TREK Places API',
-  'system_notice.release_notes.feature_places_body':
-    'أول مخطط سفر مفتوح المصدر يستضيف واجهة API خاصة به للأماكن. 73.6 مليون مكان، يُعاد بناؤها كل شهر. بلا مفتاح ولا حصة.',
+  'system_notice.release_notes.feature_places_body': 'أول مخطط رحلات مفتوح المصدر بواجهة أماكن خاصة به. 73.6 مليون مكان، بلا مفتاح، بلا حصة.',
   'system_notice.release_notes.feature_roadtrip_title': 'إضافة الرحلة البرية',
-  'system_notice.release_notes.feature_roadtrip_body':
-    'وضع الرحلة البرية يخطط القيادة نفسها: المسار، ومسافته، وساعات القيادة، ومحطات التوقف. إنها إضافة، تبقى معطَّلة حتى يفعّلها المسؤول.',
+  'system_notice.release_notes.feature_roadtrip_body': 'يخطط القيادة بنفسه: المسار والمسافة والساعات والمحطات. متوقف حتى يفعّله المشرف.',
   'system_notice.release_notes.feature_dawarich_title': 'تكامل Dawarich',
-  'system_notice.release_notes.feature_dawarich_body':
-    'البديل المستضاف ذاتيًا لـ Google Timeline، وصار بالإمكان الآن قراءته داخل TREK. يقرأ TREK، ويقرأ فقط. ولا يُكتب فيه أي شيء أبدًا.',
+  'system_notice.release_notes.feature_dawarich_body': 'البديل المستضاف ذاتيًا لـ Google Timeline، وصار بالإمكان الآن قراءته داخل TREK. يقرأ TREK، ويقرأ فقط.',
   'system_notice.release_notes.footnote': 'إلى جانب قائمة طويلة من التغييرات الأصغر في بقية أرجاء TREK.',
   'system_notice.release_notes.notes_label': 'ملاحظات الإصدار',
   'system_notice.release_notes.note_eyebrow': 'كلمة من صاحب المشروع',
@@ -86,5 +82,7 @@ const system_notice: TranslationStrings = {
     'إن كان TREK قد استحق مكانًا في رحلاتك، فاشترِ لي فنجان قهوة وساعد في أن يرى الإصدار القادم النور.',
   'system_notice.release_notes.cta_bmc': 'Buy me a coffee',
   'system_notice.release_notes.cta_kofi': 'ادعمني على Ko-fi',
+  'system_notice.release_notes.feature_docsync_title': 'مزامنة المستندات',
+  'system_notice.release_notes.feature_docsync_body': 'Paperless-ngx وPapra وNextcloud وOpenCloud وSynology Drive. تتدفق مستندات الرحلة في الاتجاهين مع المخزن الذي تشغّله بالفعل.',
 };
 export default system_notice;

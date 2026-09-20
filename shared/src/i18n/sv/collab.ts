@@ -93,5 +93,10 @@ const collab: TranslationStrings = {
   'collab.polls.options': 'Val',
   'collab.polls.delete': 'Ta bort',
   'collab.polls.closedSection': 'Stängd',
+  'collab.chat.imageLimit': 'Du kan bifoga upp till {max} bilder per meddelande',
+  'collab.chat.uploading': 'Laddar upp {percent} %',
+  'collab.chat.attachImages': 'Bifoga bilder',
+  'collab.chat.attachedImage': 'Bifogad bild',
+  'collab.chat.closeImage': 'Stäng bild',
 };
 export default collab;

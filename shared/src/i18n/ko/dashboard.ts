@@ -102,6 +102,7 @@ const dashboard: TranslationStrings = {
   'dashboard.useUnsplashPhoto': '{photographer}님의 Unsplash 사진 사용',
   'dashboard.titleRequired': '제목을 입력하세요',
   'dashboard.endDateError': '종료일은 시작일 이후여야 합니다',
+  'dashboard.tripTooLong': '여행 기간은 최대 {days}일까지입니다',
   'dashboard.dateShiftTitle': '새 시작일',
   'dashboard.dateShiftIntro': '여행 시작일이 변경되었습니다. 계획을 새 날짜에 어떻게 맞출까요?',
   'dashboard.dateShiftKeepBookings': '예약은 원래 날짜에 유지',

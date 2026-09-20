@@ -1,4 +1,4 @@
-// FE-API-COLLECTIONS-001 to FE-API-COLLECTIONS-032
+// FE-API-COLLECTIONS-001 to FE-API-COLLECTIONS-034
 //
 // The Collections addon wrapper is thin, but every method encodes a URL, a verb and a
 // request-body shape that the server contract depends on. These tests drive each method
@@ -341,5 +341,24 @@ describe('collectionsApi', () => {
     expect(requestUrl).toContain(`${BASE}/labels/unassign`)
     expect(requestBody).toEqual({ label_ids: [3], place_ids: [10] })
     expect(res.changed).toBe(1)
+  })
+
+  it('FE-API-COLLECTIONS-033: exportGpx() reads the GPX of a list by id', async () => {
+    server.use(http.get(`${BASE}/:id/export/gpx`, record({ name: 'Tokyo', gpx: '<gpx/>', waypoints: 0, omitted: 2 })))
+
+    const res = await collectionsApi.exportGpx(1)
+
+    expect(requestUrl).toContain(`${BASE}/1/export/gpx`)
+    expect(res).toEqual({ name: 'Tokyo', gpx: '<gpx/>', waypoints: 0, omitted: 2 })
+  })
+
+  it('FE-API-COLLECTIONS-034: readGpx() posts the document and its file name', async () => {
+    const file = { format: 'trek.collection', version: 1, name: 'Tokyo', places: [] }
+    server.use(http.post(`${BASE}/gpx/read`, record({ file, skipped: 0, track_points: 12 })))
+
+    const res = await collectionsApi.readGpx({ gpx: '<gpx/>', file_name: 'tokyo.gpx' })
+
+    expect(requestBody).toEqual({ gpx: '<gpx/>', file_name: 'tokyo.gpx' })
+    expect(res).toEqual({ file, skipped: 0, track_points: 12 })
   })
 })

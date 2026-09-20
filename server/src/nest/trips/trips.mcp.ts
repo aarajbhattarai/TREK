@@ -12,9 +12,10 @@ import { CalendarService } from '../calendar/calendar.service';
 import { TripMembersService } from '../trip-members/trip-members.service';
 import { TripReadModelService } from '../trip-read-model/trip-read-model.service';
 import { ADDON_IDS } from '../../addons';
-import { MAX_MCP_TRIP_DAYS, noAccess, permissionDenied } from '../../mcp/tools/_shared';
+import { noAccess, permissionDenied } from '../../mcp/tools/_shared';
 import { canRead, canReadTrips, canDeleteTrips } from '../../mcp/scopes';
-import { TripsService, MAX_TRIP_DAYS, NotFoundError, ValidationError } from './trips.service';
+import { MAX_TRIP_DAYS } from '@trek/shared';
+import { TripsService, NotFoundError, ValidationError } from './trips.service';
 import { TodoService } from '../todo/todo.service';
 import { CollabService } from '../collab/collab.service';
 import { AddonsService } from '../addons/addons.service';
@@ -81,7 +82,7 @@ export class TripsMcp {
 
   @Tool({
     name: 'create_trip',
-    description: 'Create a new trip. Returns the created trip with its generated days.',
+    description: 'Create a new trip. Returns the created trip; its day_count is the number of days generated, one per day of the date range.',
     inputSchema: {
       title: z.string().min(1).max(200).describe('Trip title'),
       description: z.string().max(2000).optional().describe('Trip description'),
@@ -117,8 +118,13 @@ export class TripsMcp {
     if (start_date && end_date && new Date(end_date) < new Date(start_date)) {
       return { content: [{ type: 'text' as const, text: 'End date must be after start date.' }], isError: true };
     }
-    const { trip } = this.trips.create(ctx.userId, { title, description, start_date, end_date, currency, day_count, reminder_days }, MAX_MCP_TRIP_DAYS);
-    return ok({ trip });
+    try {
+      const { trip } = this.trips.create(ctx.userId, { title, description, start_date, end_date, currency, day_count, reminder_days });
+      return ok({ trip });
+    } catch (err) {
+      if (err instanceof ValidationError) return errorResult(err.message);
+      throw err;
+    }
   }
 
   @Tool({
@@ -177,9 +183,14 @@ export class TripsMcp {
       : { start_date, end_date };
     // update() re-anchors the budget before the trip row moves off the old
     // currency (#1543) and then runs the legacy updateTrip core.
-    const { updatedTrip } = await this.trips.update(tripId, ctx.userId, { title, description, ...dates, currency, is_archived, cover_image, day_count, reminder_days, date_shift_mode }, 'user');
-    this.guards.safeBroadcast(tripId, 'trip:updated', { trip: updatedTrip });
-    return ok({ trip: updatedTrip });
+    try {
+      const { updatedTrip } = await this.trips.update(tripId, ctx.userId, { title, description, ...dates, currency, is_archived, cover_image, day_count, reminder_days, date_shift_mode }, 'user');
+      this.guards.safeBroadcast(tripId, 'trip:updated', { trip: updatedTrip });
+      return ok({ trip: updatedTrip });
+    } catch (err) {
+      if (err instanceof ValidationError) return errorResult(err.message);
+      throw err;
+    }
   }
 
   @Tool({
