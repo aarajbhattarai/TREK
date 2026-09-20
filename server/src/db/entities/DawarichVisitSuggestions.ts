@@ -1,8 +1,8 @@
-import { type Opt, type Ref, defineEntity, p, EntityRepository } from '@mikro-orm/core';
 import { BucketList } from './BucketList.js';
 import { Places } from './Places.js';
 import { Trips } from './Trips.js';
 import { Users } from './Users.js';
+import { defineEntity, EntityRepository, type Opt, p, type Ref } from '@mikro-orm/core';
 
 export class DawarichVisitSuggestions {
   id?: number | null;
@@ -38,9 +38,7 @@ export class DawarichVisitSuggestionsRepository extends EntityRepository<Dawaric
 export const DawarichVisitSuggestionsSchema = defineEntity({
   class: DawarichVisitSuggestions,
   repository: () => DawarichVisitSuggestionsRepository,
-  indexes: [
-    { name: 'idx_dawarich_suggestions_user_state', properties: ['user', 'state'] },
-  ],
+  indexes: [{ name: 'idx_dawarich_suggestions_user_state', properties: ['user', 'state'] }],
   properties: {
     id: p.integer().primary().autoincrement(),
     user: () => p.manyToOne(Users).ref().deleteRule('cascade'),
@@ -66,7 +64,7 @@ export const DawarichVisitSuggestionsSchema = defineEntity({
     sourceHash: p.text(),
     acceptedHash: p.text().nullable(),
     sourceMissingAt: p.text().nullable(),
-    firstSeenAt: p.text().onCreate(() => new Date()),
-    lastSeenAt: p.text().onCreate(() => new Date()),
+    firstSeenAt: p.text().onCreate(() => new Date().toISOString().replace(/\.\d{3}Z$/, 'Z')),
+    lastSeenAt: p.text().onCreate(() => new Date().toISOString().replace(/\.\d{3}Z$/, 'Z')),
   },
 });

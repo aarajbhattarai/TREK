@@ -1,6 +1,6 @@
-import { PrimaryKeyProp, type Ref, defineEntity, p, EntityRepository } from '@mikro-orm/core';
 import { Days } from './Days.js';
 import { Places } from './Places.js';
+import { defineEntity, EntityRepository, p, PrimaryKeyProp, type Ref } from '@mikro-orm/core';
 
 export class RoadtripDayTracks {
   [PrimaryKeyProp]?: 'day';
@@ -19,6 +19,9 @@ export const RoadtripDayTracksSchema = defineEntity({
     day: () => p.oneToOne(Days).primary().ref().nullable(),
     place: () => p.manyToOne(Places).ref().deleteRule('cascade').index('idx_roadtrip_day_tracks_place'),
     strayKm: p.double().nullable(),
-    createdAt: p.text().nullable().onCreate(() => new Date()),
+    createdAt: p
+      .text()
+      .nullable()
+      .onCreate(() => new Date().toISOString().replace(/\.\d{3}Z$/, 'Z')),
   },
 });

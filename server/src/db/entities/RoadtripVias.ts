@@ -1,5 +1,5 @@
-import { type Opt, type Ref, defineEntity, p, EntityRepository } from '@mikro-orm/core';
 import { Days } from './Days.js';
+import { defineEntity, EntityRepository, type Opt, p, type Ref } from '@mikro-orm/core';
 
 export class RoadtripVias {
   id?: number | null;
@@ -29,6 +29,9 @@ export const RoadtripViasSchema = defineEntity({
     sequence: p.integer(),
     lat: p.double(),
     lng: p.double(),
-    createdAt: p.text().nullable().onCreate(() => new Date()),
+    createdAt: p
+      .text()
+      .nullable()
+      .onCreate(() => new Date().toISOString().replace(/\.\d{3}Z$/, 'Z')),
   },
 });
