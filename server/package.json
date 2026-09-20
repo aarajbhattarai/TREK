@@ -27,6 +27,8 @@
   "dependencies": {
     "@aws-lite/client": "^0.23.7",
     "@aws-lite/s3": "^0.2.7",
+    "@mikro-orm/nestjs": "^7.1.0",
+    "@mikro-orm/postgresql": "^7.2.1",
     "@modelcontextprotocol/sdk": "^1.30.0",
     "@nestjs/common": "^11.1.24",
     "@nestjs/config": "^4.0.4",
@@ -62,7 +64,6 @@
     "rxjs": "^7.8.2",
     "semver": "^7.7.4",
     "tsconfig-paths": "^4.2.0",
-    "tsx": "^4.21.0",
     "typescript": "^6.0.2",
     "tz-lookup": "^6.1.25",
     "undici": "^7.29.0",
@@ -84,6 +85,9 @@
   "devDependencies": {
     "@aws-lite/s3-types": "^0.2.8",
     "@eslint/js": "^10.0.1",
+    "@mikro-orm/core": "^7.2.1",
+    "@mikro-orm/entity-generator": "^7.2.1",
+    "@mikro-orm/sqlite": "^7.2.1",
     "@nestjs/testing": "^11.1.24",
     "@swc/core": "^1.15.40",
     "@trivago/prettier-plugin-sort-imports": "^6.0.2",
@@ -114,6 +118,7 @@
     "prettier": "^3.8.3",
     "prettier-plugin-organize-imports": "^4.3.0",
     "supertest": "^7.2.2",
+    "tsx": "^4.23.13",
     "typescript-eslint": "^8.58.2",
     "unplugin-swc": "^1.5.9",
     "vitest": "^4.1.11"
