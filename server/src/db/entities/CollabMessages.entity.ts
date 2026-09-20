@@ -1,6 +1,6 @@
 import { Collection, type Ref, defineEntity, p, EntityRepository } from '@mikro-orm/core';
 import { CollabMessageReactions } from './CollabMessageReactions.entity';
-import { TripFiles } from './TripFiles.entity.entity';
+import { TripFiles } from './TripFiles.entity';
 import { Trips } from './Trips.entity';
 import { Users } from './Users.entity';
 

@@ -24,11 +24,20 @@
     "test:e2e": "vitest run tests/e2e",
     "test:coverage": "vitest run --coverage"
   },
+  "mikro-orm": {
+    "configPaths": [
+      "./src/mikro-orm.config.ts",
+      "./dist/mikro-orm.config.js"
+    ]
+  },
   "dependencies": {
     "@aws-lite/client": "^0.23.7",
     "@aws-lite/s3": "^0.2.7",
+    "@mikro-orm/cli": "^7.2.1",
+    "@mikro-orm/migrations": "^7.2.1",
     "@mikro-orm/nestjs": "^7.1.0",
     "@mikro-orm/postgresql": "^7.2.1",
+    "@mikro-orm/seeder": "^7.2.1",
     "@modelcontextprotocol/sdk": "^1.30.0",
     "@nestjs/common": "^11.2.5",
     "@nestjs/config": "^4.0.4",

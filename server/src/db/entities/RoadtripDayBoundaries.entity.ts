@@ -1,6 +1,22 @@
-import { PrimaryKeyProp, type Ref, defineEntity, p, EntityRepository } from '@mikro-orm/core';
 import { DayAssignments } from './DayAssignments.entity';
 import { Trips } from './Trips.entity';
+import { PrimaryKeyProp, type Ref, defineEntity, p, EntityRepository } from '@mikro-orm/core';
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 export class RoadtripDayBoundaries {
   [PrimaryKeyProp]?: ['trip', 'dayNumber'];
@@ -8,7 +24,7 @@ export class RoadtripDayBoundaries {
   dayNumber!: number;
   fromAssignment!: Ref<DayAssignments>;
   toAssignment?: Ref<DayAssignments> | null;
-  fraction!: unknown;
+  fraction!: number; // was `unknown`
 }
 
 export class RoadtripDayBoundariesRepository extends EntityRepository<RoadtripDayBoundaries> {}
@@ -19,7 +35,7 @@ export const RoadtripDayBoundariesSchema = defineEntity({
   checks: [
     {
       name: 'roadtrip_day_boundaries_fraction_check',
-      expression: 'fraction BETWEEN 0 AND 1),        PRIMARY KEY (trip_id, day_number',
+      expression: 'fraction BETWEEN 0 AND 1',
     },
     {
       name: 'roadtrip_day_boundaries_day_number_check',
