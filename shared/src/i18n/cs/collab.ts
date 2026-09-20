@@ -23,6 +23,8 @@ const collab: TranslationStrings = {
   'collab.links.pin': 'Připnout odkaz',
   'collab.links.unpin': 'Odepnout odkaz',
   'collab.links.delete': 'Smazat odkaz',
+  'collab.links.edit': 'Upravit odkaz',
+  'collab.links.open': 'Otevřít odkaz',
   'collab.whatsNext.title': 'Co následuje',
   'collab.whatsNext.today': 'Dnes',
   'collab.whatsNext.tomorrow': 'Zítra',

@@ -23,6 +23,8 @@ const collab: TranslationStrings = {
   'collab.links.pin': 'Link rögzítése',
   'collab.links.unpin': 'Link feloldása',
   'collab.links.delete': 'Link törlése',
+  'collab.links.edit': 'Link szerkesztése',
+  'collab.links.open': 'Link megnyitása',
   'collab.whatsNext.title': 'Mi következik',
   'collab.whatsNext.today': 'Ma',
   'collab.whatsNext.tomorrow': 'Holnap',

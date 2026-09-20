@@ -23,6 +23,8 @@ const collab: TranslationStrings = {
   'collab.links.pin': 'リンクを固定',
   'collab.links.unpin': 'リンクの固定を解除',
   'collab.links.delete': 'リンクを削除',
+  'collab.links.edit': 'リンクを編集',
+  'collab.links.open': 'リンクを開く',
   'collab.whatsNext.title': '次にすること',
   'collab.whatsNext.today': '今日',
   'collab.whatsNext.tomorrow': '明日',

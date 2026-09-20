@@ -1064,7 +1064,6 @@ describe('scheduleStopOf', () => {
   it('turns a leave time into a departure', () => {
     expect(scheduleStopOf({ time: '10:00', checkInTime: null, dwellMinutes: 60, leaveAt: '14:00' })).toEqual({
       anchor: '10:00',
-      earliest: null,
       dwellMinutes: 60,
       departureAt: 840,
     });
@@ -1073,10 +1072,20 @@ describe('scheduleStopOf', () => {
   it('leaves the departure out when there is no usable leave time', () => {
     expect(scheduleStopOf({ time: null, dwellMinutes: 30 })).toEqual({
       anchor: null,
-      earliest: null,
       dwellMinutes: 30,
     });
     expect(scheduleStopOf({ time: null, dwellMinutes: 30, leaveAt: 'soon' })).not.toHaveProperty('departureAt');
+  });
+
+  it('anchors a booked night on its check-in', () => {
+    expect(scheduleStopOf({ time: null, checkInTime: '10:00', dwellMinutes: 60 })).toEqual({
+      anchor: '10:00',
+      dwellMinutes: 60,
+    });
+  });
+
+  it('lets a time pinned on the stop itself win over the check-in', () => {
+    expect(scheduleStopOf({ time: '16:00', checkInTime: '15:00', dwellMinutes: 60 }).anchor).toBe('16:00');
   });
 });
 
@@ -1104,19 +1113,19 @@ describe('hasChosenArrival', () => {
   });
 });
 
-describe('a check-in is a door opening, not an appointment', () => {
-  // The hour a room becomes available. Reaching it later is reaching it; only a time
-  // somebody pinned to a stop can be missed. Read as an anchor it did the opposite:
-  // arriving at 16:14 was reported as 5 h 14 late against an 11:00 check-in, and the
-  // hotel was pushed onto the next day because 11:00 reads as earlier than the 15:00
-  // before it.
+describe('a check-in holds a booked night the way a pinned time does', () => {
+  // The hour the traveller said they are at the hotel. It used to be a floor, waited
+  // for when the drive got there first and silent otherwise, and once anything before
+  // it set the clock it held nothing: a night booked for ten in the morning was
+  // reported reached at a quarter past twelve, with the rest of the day lined up
+  // behind that. The check-in goes in as the anchor now (see scheduleStopOf), so
+  // these run on the anchor the way the rail does.
   it('waits for it when the drive gets there first', () => {
     const schedule = computeSchedule(
-      [{ anchor: '09:00', dwellMinutes: 0 }, { anchor: null, earliest: '15:00', dwellMinutes: 0 }],
+      [{ anchor: '09:00', dwellMinutes: 0 }, { anchor: '15:00', dwellMinutes: 0 }],
       [3600],
     );
     expect(schedule.entries[1]!.arrival).toBe('15:00');
-    // Waiting for a door is waiting for a time somebody named, so it is printed as one.
     expect(schedule.entries[1]!.anchored).toBe(true);
     expect(schedule.warnings).toEqual([]);
   });
@@ -1126,7 +1135,7 @@ describe('a check-in is a door opening, not an appointment', () => {
     // Read only as a floor, the chain worked the hotel backwards out of the afternoon
     // and put it at 13:46: true enough as arithmetic, and nothing anybody asked for.
     const schedule = computeSchedule(
-      [{ anchor: null, earliest: '10:00', dwellMinutes: 60 }, { anchor: '15:00', dwellMinutes: 60 }],
+      [{ anchor: '10:00', dwellMinutes: 60 }, { anchor: '15:00', dwellMinutes: 60 }],
       [14 * 60],
     );
     expect(schedule.entries[0]!.arrival).toBe('10:00');
@@ -1135,18 +1144,21 @@ describe('a check-in is a door opening, not an appointment', () => {
     expect(schedule.warnings).toEqual([]);
   });
 
-  it('is simply arrived at when the drive gets there later', () => {
+  it('keeps its hour and says how late the drive is when it gets there later', () => {
+    // Two stops, then the hotel booked for ten: the drive reaches it at 12:17. The
+    // night stays at ten and the day is lined up behind that, and the finding says
+    // by how much the drive misses it, the way it would for any pinned stop.
     const schedule = computeSchedule(
-      [{ anchor: '15:00', dwellMinutes: 60 }, { anchor: null, earliest: '11:00', dwellMinutes: 60 }],
-      [14 * 60],
+      [{ anchor: '08:00', dwellMinutes: 30 }, { anchor: null, dwellMinutes: 60 }, { anchor: '10:00', dwellMinutes: 60 }],
+      [89 * 60, 78 * 60],
     );
-    expect(schedule.entries[1]!.arrival).toBe('16:14');
-    // Nothing was decided here, so it reads as computed.
-    expect(schedule.entries[1]!.anchored).toBe(false);
-    // And nothing was missed.
-    expect(schedule.warnings).toEqual([]);
+    expect(schedule.entries[1]!.arrival).toBe('09:59');
+    expect(schedule.entries[2]!.arrival).toBe('10:00');
+    expect(schedule.entries[2]!.anchored).toBe(true);
+    expect(schedule.entries[2]!.departure).toBe('11:00');
+    expect(schedule.warnings).toEqual([{ index: 2, code: 'late', minutes: 137 }]);
     // Still the same day, which is what the day split reads.
-    expect(schedule.entries[1]!.dayOffset).toBe(0);
+    expect(schedule.entries[2]!.dayOffset).toBe(0);
   });
 
   it('still reports a pinned time that cannot be made', () => {

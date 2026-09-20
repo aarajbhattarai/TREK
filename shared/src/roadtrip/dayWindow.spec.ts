@@ -394,30 +394,49 @@ describe('daily travel window', () => {
   });
 });
 
-it('waits for a check-in the drive overshoots rather than rushing it', () => {
+it('holds a check-in the drive reaches within the minute a rounded leg can add', () => {
   const stops = [
     stop(1, { time: '07:00', dwellMinutes: 60 }),
     stop(2, { checkInTime: '09:11' }),
     stop(3),
   ];
-  const plan = calculate(stops, [72.5, 29]);
+  const plan = calculate(stops, [71.5, 29]);
   expect(plan.issue).toBeNull();
-  // Arrives two minutes past the hour it may check in from, and is left there rather
-  // than pulled back to the round number.
-  expect(plan.chains[0]!.schedule.entries[1]!.arrival).toBe('09:13');
+  // Half a minute over is the rounding of the drive, not being late: the night keeps
+  // its check-in, the same grace a pinned stop gets.
+  expect(plan.chains[0]!.schedule.entries[1]!.arrival).toBe('09:11');
   const stops0 = plan.chains[0]!.stops;
   expect(stops0.at(-1)!.placeId).toBe(3);
-  // And carries straight on from there: nothing holds the traveller at the stop.
-  expect(plan.chains[0]!.schedule.entries.at(-1)!.arrival).toBe('09:42');
+  expect(plan.chains[0]!.schedule.entries.at(-1)!.arrival).toBe('09:40');
 });
 
-it('waits for check-in without treating it as a fixed appointment', () => {
+it('does not rush a check-in the drive overshoots, and does not quietly move it either', () => {
+  // Two minutes past the check-in is past it. A pinned time out of reach is a
+  // conflict here, and a check-in is one of those now.
+  const stops = [
+    stop(1, { time: '07:00', dwellMinutes: 60 }),
+    stop(2, { checkInTime: '09:11' }),
+    stop(3),
+  ];
+  expect(calculate(stops, [72.5, 29]).issue).toBe('conflict');
+});
+
+it('waits for a check-in the drive reaches early', () => {
   const plan = calculate([stop(1), stop(2, { checkInTime: '15:00' }), stop(3)], [60, 29]);
   expect(plan.issue).toBeNull();
-  // The check-in is a door opening, not an appointment: the drive waits for it and then
-  // carries straight on, rather than the day being rebuilt around it.
+  // The night is held to its check-in the way a pinned stop is held to its time: the
+  // drive waits for it and carries on from there.
   expect(plan.chains[0]!.schedule.entries[1]!.arrival).toBe('15:00');
+  expect(plan.chains[0]!.schedule.entries[1]!.anchored).toBe(true);
   expect(plan.chains[0]!.schedule.entries.at(-1)!.arrival).toBe('15:29');
+});
+
+it('treats a check-in the drive cannot make as the conflict a missed pin is', () => {
+  // A night booked for ten with two hours of driving pinned ahead of it. The window
+  // planner does not invent a plan around a time it cannot keep; it hands back to the
+  // plain schedule, which keeps the ten and says how late the drive is.
+  const plan = calculate([stop(1, { time: '09:00' }), stop(2, { checkInTime: '10:00' })], [120]);
+  expect(plan.issue).toBe('conflict');
 });
 
 describe('a time set to leave a stop, with daily travel times', () => {

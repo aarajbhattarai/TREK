@@ -23,6 +23,8 @@ const collab: TranslationStrings = {
   'collab.links.pin': 'Sematkan tautan',
   'collab.links.unpin': 'Lepas sematan tautan',
   'collab.links.delete': 'Hapus tautan',
+  'collab.links.edit': 'Edit tautan',
+  'collab.links.open': 'Buka tautan',
   'collab.whatsNext.title': 'Berikutnya',
   'collab.whatsNext.today': 'Hari ini',
   'collab.whatsNext.tomorrow': 'Besok',

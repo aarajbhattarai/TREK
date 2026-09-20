@@ -1553,12 +1553,16 @@ function DaySection({ day, selectedAssignmentId, onSelectStop, onReorderStop, on
               {formatDate(day.date, language)}
             </time>
           ) : null}
-          <span className={`${DAY_BADGE} bg-surface-card`} style={{ fontSize: FS.label }}>
-            {t('roadtrip.leg.driveText', {
-              distance: formatDistance(day.distance / 1000, distanceUnit),
-              time: formatDurationShort(day.duration),
-            })}
-          </span>
+          {/* A day that is only the night booked for it has no drive to sum up and no
+              stop to count; the hotel row below says everything it has to say. */}
+          {day.legs.length > 0 ? (
+            <span className={`${DAY_BADGE} bg-surface-card`} style={{ fontSize: FS.label }}>
+              {t('roadtrip.leg.driveText', {
+                distance: formatDistance(day.distance / 1000, distanceUnit),
+                time: formatDurationShort(day.duration),
+              })}
+            </span>
+          ) : null}
           {day.dayWarning ? (
             <Tooltip label={t('roadtrip.limit.hint')}>
               <span className={`${DAY_BADGE} gap-1 bg-warning-soft text-warning`} style={{ fontSize: FS.label }}>
@@ -1569,9 +1573,11 @@ function DaySection({ day, selectedAssignmentId, onSelectStop, onReorderStop, on
               </span>
             </Tooltip>
           ) : null}
-          <span className={`${DAY_BADGE} bg-surface-card`} style={{ fontSize: FS.label }}>
-            {t('roadtrip.day.stopCount', { count: day.stops.filter(s => !s.automaticNight && !isServiceStopType(s.stopType)).length })}
-          </span>
+          {day.legs.length > 0 ? (
+            <span className={`${DAY_BADGE} bg-surface-card`} style={{ fontSize: FS.label }}>
+              {t('roadtrip.day.stopCount', { count: day.stops.filter(s => !s.automaticNight && !isServiceStopType(s.stopType)).length })}
+            </span>
+          ) : null}
           {/* The other half of "where possible". The setting is a weighting, so a day
               with no untolled crossing comes back on the toll road — and the only thing
               worse than not avoiding it is not avoiding it silently, which reads as the

@@ -294,3 +294,47 @@ describe('assembleRoadtrip leave times', () => {
     expect(schedule.warnings).toContainEqual({ index: 2, code: 'late', minutes: 30 });
   });
 });
+
+describe('assembleRoadtrip booked nights', () => {
+  // 90 km at the 40 seconds a kilometre `leg` drives is an hour.
+  const hour = 90;
+
+  it('ROADTRIP-ASSEMBLE-012: a day that is only its booked night stands among the days', () => {
+    // The arrival day of a trip: nothing but the hotel, entered under Days with its
+    // check-in. It used to be filed under the quiet days at the foot of the rail, which
+    // reads as the hotel missing from the road trip altogether.
+    const routes = assemble([stop({ ownerIndex: 0, night: true, checkInTime: '15:00', stopType: 'hotel' })], []);
+
+    expect(routes.quietDays).toEqual([]);
+    expect(routes.days).toHaveLength(1);
+    const day = routes.days[0]!;
+    expect(day.legs).toEqual([]);
+    expect(day.distance).toBe(0);
+    expect(day.schedule.entries[0]!).toMatchObject({ arrival: '15:00', anchored: true });
+  });
+
+  it('ROADTRIP-ASSEMBLE-013: a lone stop that is no night stays a quiet day', () => {
+    const routes = assemble([stop({ ownerIndex: 0 })], []);
+
+    expect(routes.days).toEqual([]);
+    expect(routes.quietDays).toHaveLength(1);
+  });
+
+  it('ROADTRIP-ASSEMBLE-014: the check-in holds the night and the day lines up behind it', () => {
+    // The day from Discord: two stops without an hour and the night booked for ten,
+    // which the drive used to reach at a quarter past twelve. Seated first by the
+    // server now, and held at ten by the schedule; the stops follow from there.
+    const stops = [
+      stop({ ownerIndex: 0, night: true, checkInTime: '10:00', dwellMinutes: 60, stopType: 'hotel' }),
+      stop({ ownerIndex: 1, dwellMinutes: 30 }),
+      stop({ ownerIndex: 2, dwellMinutes: 60 }),
+    ];
+
+    const routes = assemble(stops, [hour, hour]);
+
+    const { schedule } = routes.days[0]!;
+    expect(schedule.entries.map((e) => e.arrival)).toEqual(['10:00', '12:00', '13:30']);
+    expect(schedule.entries[0]!.anchored).toBe(true);
+    expect(schedule.warnings).toEqual([]);
+  });
+});

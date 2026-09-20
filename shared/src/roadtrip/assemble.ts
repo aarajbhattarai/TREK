@@ -21,6 +21,7 @@ import {
   refuelsRange,
   isServiceStopType,
   scheduleStopOf,
+  standsAsDay,
   type DryPoint,
   type DriveLimits,
   type VehicleKind,
@@ -278,7 +279,7 @@ export function assembleRoadtrip({
       dayWarning: drive.day,
     });
   }
-  const drives = out.filter((d) => d.stops.length > 1 || !!d.spills?.length || d.stops.some((s) => s.automaticNight));
+  const drives = out.filter((d) => standsAsDay(d.stops) || !!d.spills?.length || d.stops.some((s) => s.automaticNight));
   const originalStops = [...plan, ...quietDays].sort((a, b) => a.dayNumber - b.dayNumber).flatMap((day) => day.stops);
   const boundaryPath = originalStops.slice(0, -1).flatMap((from, position) => {
     const to = originalStops[position + 1]!;
@@ -317,7 +318,7 @@ export function assembleRoadtrip({
     ),
 
     quietDays: out
-      .filter((d) => d.stops.length < 2 && !d.spills?.length && !d.stops.some((s) => s.automaticNight))
+      .filter((d) => !standsAsDay(d.stops) && !d.spills?.length && !d.stops.some((s) => s.automaticNight))
       .map((d) => ({ dayId: d.dayId, dayNumber: d.dayNumber, date: d.date, title: d.title, stops: d.stops })),
     loading,
   };

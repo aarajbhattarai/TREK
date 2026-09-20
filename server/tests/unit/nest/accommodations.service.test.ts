@@ -615,7 +615,10 @@ describe('the day stop a booking implies', () => {
     expect(mirror.created.accommodation_id).toBe(accommodation.id);
   });
 
-  it('ACC-022 the stop lands at the end of the day, where you arrive at a hotel', () => {
+  it('ACC-022 the stop lands first: the hotel is where the day is based', () => {
+    // It used to go last, and a night booked for the morning sat behind a whole day
+    // of unpinned stops. The stops the traveller placed without an hour follow the
+    // hotel; only a clock of their own can put one ahead of it (ACC-022c).
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const day = createDay(testDb, trip.id);
@@ -625,13 +628,12 @@ describe('the day stop a booking implies', () => {
 
     book(trip.id, hotel.id, day.id, day.id);
 
-    expect(stopsOn(day.id).map(a => a.place_id)).toEqual([museum.id, hotel.id]);
+    expect(stopsOn(day.id).map(a => a.place_id)).toEqual([hotel.id, museum.id]);
+    expect(stopsOn(day.id).map(a => a.order_index)).toEqual([0, 1]);
   });
 
   it('ACC-022b a check-in puts the night before whatever is pinned to a later hour', () => {
-    // The default is last, because a night usually ends the day. A check-in at eleven
-    // says otherwise, and dropping the stop behind a stop pinned to the afternoon built
-    // a drive that reaches the hotel after the hour it was booked around.
+    // A stop pinned to the afternoon cannot stand ahead of a check-in at eleven.
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const day = createDay(testDb, trip.id);
@@ -645,7 +647,7 @@ describe('the day stop a booking implies', () => {
     expect(stopsOn(day.id).map(a => a.place_id)).toEqual([hotel.id, afternoon.id]);
   });
 
-  it('ACC-022c a check-in after everything pinned stays last, like a night without one', () => {
+  it('ACC-022c a stop pinned to an earlier hour stays ahead of the check-in', () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const day = createDay(testDb, trip.id);
@@ -659,18 +661,67 @@ describe('the day stop a booking implies', () => {
     expect(stopsOn(day.id).map(a => a.place_id)).toEqual([morning.id, hotel.id]);
   });
 
-  it('ACC-022d a stop without an hour of its own is never pushed past', () => {
-    // Its position came from the chain, not from a clock, so the traveller put it there.
+  it('ACC-022d a stop without an hour of its own follows the night, whatever the check-in', () => {
+    // A stop with no clock is planned from the hotel, not the other way round. This
+    // is the day from Discord: two unpinned stops and a night booked for ten in the
+    // morning, which the drive used to reach at a quarter past twelve.
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const day = createDay(testDb, trip.id);
-    const untimed = createPlace(testDb, trip.id, { name: 'Hafen' });
-    const hotel = createPlace(testDb, trip.id, { name: 'Billstedt' });
-    createDayAssignment(testDb, day.id, untimed.id);
+    const fuel = createPlace(testDb, trip.id, { name: 'Aral' });
+    const farm = createPlace(testDb, trip.id, { name: 'Karls Erdbeerhof' });
+    const hotel = createPlace(testDb, trip.id, { name: 'Rostock' });
+    createDayAssignment(testDb, day.id, fuel.id);
+    createDayAssignment(testDb, day.id, farm.id);
 
-    svc.createAccommodation(trip.id, { place_id: hotel.id, start_day_id: day.id, end_day_id: day.id, check_in: '11:00' });
+    svc.createAccommodation(trip.id, { place_id: hotel.id, start_day_id: day.id, end_day_id: day.id, check_in: '10:00' });
 
-    expect(stopsOn(day.id).map(a => a.place_id)).toEqual([untimed.id, hotel.id]);
+    expect(stopsOn(day.id).map(a => a.place_id)).toEqual([hotel.id, fuel.id, farm.id]);
+  });
+
+  it('ACC-022f the night goes behind the last stop whose own hour is at or before the check-in', () => {
+    // Pinned eight, unpinned, pinned two: a check-in at ten sits behind the eight and
+    // ahead of everything else, the unpinned stop included.
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const day = createDay(testDb, trip.id);
+    const [early, loose, late, hotel] = ['Aral', 'Hafen', 'Museum', 'Rostock'].map(name => createPlace(testDb, trip.id, { name }));
+    const first = createDayAssignment(testDb, day.id, early.id);
+    createDayAssignment(testDb, day.id, loose.id);
+    const third = createDayAssignment(testDb, day.id, late.id);
+    testDb.prepare("UPDATE day_assignments SET assignment_time = '08:00' WHERE id = ?").run(first.id);
+    testDb.prepare("UPDATE day_assignments SET assignment_time = '14:00' WHERE id = ?").run(third.id);
+
+    svc.createAccommodation(trip.id, { place_id: hotel.id, start_day_id: day.id, end_day_id: day.id, check_in: '10:00' });
+
+    expect(stopsOn(day.id).map(a => a.place_id)).toEqual([early.id, hotel.id, loose.id, late.id]);
+  });
+
+  it('ACC-022g a new check-in seats the night afresh, a change of notes leaves a dragged night alone', () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const day = createDay(testDb, trip.id);
+    const [harbour, market, hotel] = ['Hafen', 'Markt', 'Rostock'].map(name => createPlace(testDb, trip.id, { name }));
+    createDayAssignment(testDb, day.id, harbour.id);
+    createDayAssignment(testDb, day.id, market.id);
+    const { accommodation } = svc.createAccommodation(trip.id, { place_id: hotel.id, start_day_id: day.id, end_day_id: day.id }) as any;
+    expect(stopsOn(day.id).map(a => a.place_id)).toEqual([hotel.id, harbour.id, market.id]);
+
+    // Dragged to the end of the day by hand.
+    const own = stopsOn(day.id).find(a => a.place_id === hotel.id)!;
+    testDb.prepare('UPDATE day_assignments SET order_index = order_index - 1 WHERE day_id = ? AND order_index > ?').run(day.id, own.order_index);
+    testDb.prepare('UPDATE day_assignments SET order_index = 2 WHERE id = ?').run(own.id);
+    expect(stopsOn(day.id).map(a => a.place_id)).toEqual([harbour.id, market.id, hotel.id]);
+
+    let existing = svc.getAccommodation(accommodation.id, trip.id)!;
+    const quiet = svc.updateAccommodation(accommodation.id, existing, { notes: 'late arrival' }) as any;
+    expect(quiet.mirror.moved).toBeNull();
+    expect(stopsOn(day.id).map(a => a.place_id)).toEqual([harbour.id, market.id, hotel.id]);
+
+    existing = svc.getAccommodation(accommodation.id, trip.id)!;
+    const reseated = svc.updateAccommodation(accommodation.id, existing, { check_in: '10:00' }) as any;
+    expect(reseated.mirror.moved).toMatchObject({ oldDayId: day.id, assignment: { id: own.id } });
+    expect(stopsOn(day.id).map(a => a.place_id)).toEqual([hotel.id, harbour.id, market.id]);
   });
 
   it('ACC-022e moving the check-in later re-seats the night', () => {
@@ -690,6 +741,52 @@ describe('the day stop a booking implies', () => {
     svc.updateAccommodation(accommodation.id, existing, { check_in: '20:00' });
 
     expect(stopsOn(day.id).map(a => a.place_id)).toEqual([afternoon.id, hotel.id]);
+  });
+
+  it('ACC-022i a second night on the day counts by its check-in', () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const day = createDay(testDb, trip.id);
+    const [noon, morning] = ['Rue de Paris', 'Brandenburger Tor'].map(name => createPlace(testDb, trip.id, { name }));
+    svc.createAccommodation(trip.id, { place_id: noon.id, start_day_id: day.id, end_day_id: day.id, check_in: '12:00' });
+    svc.createAccommodation(trip.id, { place_id: morning.id, start_day_id: day.id, end_day_id: day.id, check_in: '10:00' });
+    expect(stopsOn(day.id).map(a => a.place_id)).toEqual([morning.id, noon.id]);
+
+    const evening = createPlace(testDb, trip.id, { name: 'Late' });
+    svc.createAccommodation(trip.id, { place_id: evening.id, start_day_id: day.id, end_day_id: day.id, check_in: '18:00' });
+    expect(stopsOn(day.id).map(a => a.place_id)).toEqual([morning.id, noon.id, evening.id]);
+  });
+
+  it('ACC-022h an edit that leaves the check-in alone still corrects a night the clocks contradict', () => {
+    // Dragged behind a stop pinned to the afternoon, with a check-in at ten: a change of
+    // notes puts it back ahead of that stop, because a night sitting after an afternoon it
+    // was booked before is the plan reading back wrong. Dragged behind a stop without an
+    // hour, the same edit leaves it where the traveller put it.
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const day = createDay(testDb, trip.id);
+    const [harbour, museum, hotel] = ['Hafen', 'Museum', 'Rostock'].map(name => createPlace(testDb, trip.id, { name }));
+    createDayAssignment(testDb, day.id, harbour.id);
+    const pinned = createDayAssignment(testDb, day.id, museum.id);
+    testDb.prepare("UPDATE day_assignments SET assignment_time = '14:00' WHERE id = ?").run(pinned.id);
+    const { accommodation } = svc.createAccommodation(trip.id, { place_id: hotel.id, start_day_id: day.id, end_day_id: day.id, check_in: '10:00' }) as any;
+    expect(stopsOn(day.id).map(a => a.place_id)).toEqual([hotel.id, harbour.id, museum.id]);
+    const own = stopsOn(day.id).find(a => a.place_id === hotel.id)!;
+
+    // Behind the harbour only: allowed, and left alone.
+    testDb.prepare('UPDATE day_assignments SET order_index = 0 WHERE day_id = ? AND place_id = ?').run(day.id, harbour.id);
+    testDb.prepare('UPDATE day_assignments SET order_index = 1 WHERE id = ?').run(own.id);
+    let existing = svc.getAccommodation(accommodation.id, trip.id)!;
+    expect((svc.updateAccommodation(accommodation.id, existing, { notes: 'late' }) as any).mirror.moved).toBeNull();
+    expect(stopsOn(day.id).map(a => a.place_id)).toEqual([harbour.id, hotel.id, museum.id]);
+
+    // Behind the afternoon: contradicted by the clocks, and seated afresh, which is
+    // the front, ahead of the harbour that has no hour of its own.
+    testDb.prepare('UPDATE day_assignments SET order_index = 1 WHERE day_id = ? AND place_id = ?').run(day.id, museum.id);
+    testDb.prepare('UPDATE day_assignments SET order_index = 2 WHERE id = ?').run(own.id);
+    existing = svc.getAccommodation(accommodation.id, trip.id)!;
+    expect((svc.updateAccommodation(accommodation.id, existing, { notes: 'later' }) as any).mirror.moved).not.toBeNull();
+    expect(stopsOn(day.id).map(a => a.place_id)).toEqual([hotel.id, harbour.id, museum.id]);
   });
 
   it('ACC-023 the place is typed as lodging, so the rail draws it as a service stop', () => {
@@ -887,7 +984,10 @@ describe('the day stop a booking implies', () => {
     createDayAssignment(testDb, day.id, dinner.id);
     const { accommodation } = book(trip.id, hotel.id, day.id, day.id);
     const stop = stopsOn(day.id).find((row: { place_id: number }) => row.place_id === hotel.id)!;
-    expect(stop.order_index).toBe(1);
+    // The backfill's placement, written by hand: the night behind the dinner.
+    testDb.prepare('UPDATE day_assignments SET order_index = 0 WHERE day_id = ? AND place_id = ?').run(day.id, dinner.id);
+    testDb.prepare('UPDATE day_assignments SET order_index = 1 WHERE id = ?').run(stop.id);
+    expect(stopsOn(day.id).map((row: { place_id: number }) => row.place_id)).toEqual([dinner.id, hotel.id]);
 
     const existing = svc.getAccommodation(accommodation.id, trip.id)!;
     const { mirror } = svc.updateAccommodation(accommodation.id, existing, { check_in: '15:00' }) as any;
@@ -1051,13 +1151,13 @@ describe('the drawn roads a booking moves', () => {
   const pin = (assignmentId: number, time: string) =>
     testDb.prepare('UPDATE day_assignments SET assignment_time = ? WHERE id = ?').run(time, assignmentId);
 
-  /** A(0), B(1) pinned to noon, C(2): the day a check-in at eleven lands in the middle of. */
+  /** A(0) pinned to nine, B(1) pinned to noon, C(2): the day a check-in at eleven lands in the middle of. */
   function afternoonDay() {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const day = createDay(testDb, trip.id);
     const [a, b, c, hotel] = ['Harbour', 'Mercure', 'Museum', 'Billstedt'].map(name => createPlace(testDb, trip.id, { name }));
-    createDayAssignment(testDb, day.id, a.id);
+    pin(createDayAssignment(testDb, day.id, a.id).id, '09:00');
     pin(createDayAssignment(testDb, day.id, b.id).id, '12:00');
     createDayAssignment(testDb, day.id, c.id);
     return { trip, day, a, b, c, hotel };
@@ -1091,20 +1191,22 @@ describe('the drawn roads a booking moves', () => {
     }]);
   });
 
-  it('ACC-034b a night appended at the end of the day moves no road and reports none', () => {
+  it('ACC-034b a night seated behind every drawn road moves none and reports none', () => {
     const { trip, day, a, b, c, hotel } = afternoonDay();
     const afterA = addVia(day.id, 0);
     const afterB = addVia(day.id, 1);
 
-    const { mirror } = svc.createAccommodation(trip.id, { place_id: hotel.id, start_day_id: day.id, end_day_id: day.id }) as any;
+    const { mirror } = svc.createAccommodation(trip.id, { place_id: hotel.id, start_day_id: day.id, end_day_id: day.id, check_in: '18:00' }) as any;
 
-    expect(stopsOn(day.id)).toEqual([a.id, b.id, c.id, hotel.id]);
+    expect(stopsOn(day.id)).toEqual([a.id, b.id, hotel.id, c.id]);
     expect(viaAnchors(day.id)).toEqual([{ id: afterA, after_order_index: 0 }, { id: afterB, after_order_index: 1 }]);
     expect(mirror.vias).toBeUndefined();
   });
 
   it('ACC-034c re-seating the night by a later check-in re-pins the roads around it', () => {
     const { trip, day, a, b, c, hotel } = afternoonDay();
+    // C pinned to the afternoon as well, so an evening check-in puts the night last.
+    testDb.prepare("UPDATE day_assignments SET assignment_time = '15:00' WHERE day_id = ? AND place_id = ?").run(day.id, c.id);
     const { accommodation } = svc.createAccommodation(trip.id, { place_id: hotel.id, start_day_id: day.id, end_day_id: day.id, check_in: '11:00' }) as any;
     expect(stopsOn(day.id)).toEqual([a.id, hotel.id, b.id, c.id]);
     const afterA = addVia(day.id, 0);
@@ -1134,7 +1236,7 @@ describe('the drawn roads a booking moves', () => {
     const trip = createTrip(testDb, user.id);
     const day = createDay(testDb, trip.id);
     const [a, b, hotel] = ['Harbour', 'Mercure', 'Billstedt'].map(name => createPlace(testDb, trip.id, { name }));
-    createDayAssignment(testDb, day.id, a.id);
+    pin(createDayAssignment(testDb, day.id, a.id).id, '09:00');
     pin(createDayAssignment(testDb, day.id, b.id).id, '12:00');
     const { accommodation } = svc.createAccommodation(trip.id, { place_id: hotel.id, start_day_id: day.id, end_day_id: day.id, check_in: '11:00' }) as any;
     expect(stopsOn(day.id)).toEqual([a.id, hotel.id, b.id]);
@@ -1168,7 +1270,7 @@ describe('the drawn roads a booking moves', () => {
     const day1 = createDay(testDb, trip.id);
     const day2 = createDay(testDb, trip.id);
     const [a, b, c, hotel] = ['Harbour', 'Mercure', 'Museum', 'Billstedt'].map(name => createPlace(testDb, trip.id, { name }));
-    createDayAssignment(testDb, day1.id, a.id);
+    pin(createDayAssignment(testDb, day1.id, a.id).id, '09:00');
     pin(createDayAssignment(testDb, day1.id, b.id).id, '12:00');
     pin(createDayAssignment(testDb, day2.id, c.id).id, '14:00');
     const { accommodation } = svc.createAccommodation(trip.id, { place_id: hotel.id, start_day_id: day1.id, end_day_id: day1.id, check_in: '11:00' }) as any;

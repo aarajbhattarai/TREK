@@ -23,6 +23,8 @@ const collab: TranslationStrings = {
   'collab.links.pin': '링크 고정',
   'collab.links.unpin': '링크 고정 해제',
   'collab.links.delete': '링크 삭제',
+  'collab.links.edit': '링크 편집',
+  'collab.links.open': '링크 열기',
   'collab.whatsNext.title': '다음 할 일',
   'collab.whatsNext.today': '오늘',
   'collab.whatsNext.tomorrow': '내일',

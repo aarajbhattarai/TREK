@@ -23,6 +23,8 @@ const collab: TranslationStrings = {
   'collab.links.pin': 'Καρφίτσωμα συνδέσμου',
   'collab.links.unpin': 'Ξεκαρφίτσωμα συνδέσμου',
   'collab.links.delete': 'Διαγραφή συνδέσμου',
+  'collab.links.edit': 'Επεξεργασία συνδέσμου',
+  'collab.links.open': 'Άνοιγμα συνδέσμου',
   'collab.whatsNext.title': 'Τι Επόμενο',
   'collab.whatsNext.today': 'Σήμερα',
   'collab.whatsNext.tomorrow': 'Αύριο',

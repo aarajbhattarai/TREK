@@ -22,6 +22,7 @@ import {
   type RoutedLeg,
   type SnappedWaypoint,
   type RouteAvoidClass,
+  standsAsDay,
 } from '@trek/shared/roadtrip';
 
 interface StoredDay {
@@ -32,6 +33,8 @@ interface StoredDay {
   default_transport_mode: string | null;
 }
 interface VisitRow {
+  /** The booking this stop stands for on its check-in day, when there is one. */
+  stay_id: number | null;
   check_in: string | null;
   /** The drive does not read these two (#2357): they are the booking as get_roadtrip_context reports it. */
   check_out: string | null;
@@ -75,7 +78,7 @@ export class RoadtripPlanService {
       `SELECT a.id, a.day_id, a.place_id, p.name, p.lat, p.lng,
       COALESCE(a.assignment_time, p.place_time) AS time, COALESCE(a.assignment_end_time, p.end_time) AS end_time,
       p.duration_minutes, a.end_day,
-      a.leg_transport_mode, a.incoming_leg_transport_mode, p.stop_type, p.fill_percent, stay.check_in, stay.check_out, checkout.day_number AS checkout_day
+      a.leg_transport_mode, a.incoming_leg_transport_mode, p.stop_type, p.fill_percent, stay.id AS stay_id, stay.check_in, stay.check_out, checkout.day_number AS checkout_day
       FROM day_assignments a JOIN days d ON d.id = a.day_id JOIN places p ON p.id = a.place_id
       LEFT JOIN day_accommodations stay ON stay.id = (SELECT id FROM day_accommodations WHERE place_id = p.id AND start_day_id = d.id ORDER BY id LIMIT 1)
       LEFT JOIN days checkout ON checkout.id = stay.end_day_id
@@ -123,6 +126,7 @@ export class RoadtripPlanService {
           // planner makes in the browser (useRoadtripRoutes).
           leaveAt: v.end_time,
           checkInTime: v.check_in,
+          night: v.stay_id !== null,
           dwellMinutes: v.duration_minutes,
           endDay: v.end_day === 1,
           legMode: v.leg_transport_mode,
@@ -245,8 +249,8 @@ export class RoadtripPlanService {
         preferences.roadtrip_range_km,
       ) || null;
     const calculated = assembleRoadtrip({
-      plan: plan.filter((d) => d.stops.length > 1),
-      quietDays: plan.filter((d) => d.stops.length < 2),
+      plan: plan.filter((d) => standsAsDay(d.stops)),
+      quietDays: plan.filter((d) => !standsAsDay(d.stops)),
       window,
       allLegs,
       snapByDay,

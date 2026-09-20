@@ -1375,6 +1375,136 @@ img[alt="TREK"] {
   justify-content: center;
 }
 
+/* Shared links in the Collab tab: one chip per link, two to a row across the full
+   width, one to a row where the panel is narrow. The chip is the link; edit, pin and
+   delete sit quietly in its tail and come forward on hover or keyboard focus. They
+   keep their width throughout: unfolding them reflowed the row under the pointer,
+   and a chip that grows as you reach for it is a chip you cannot catch. */
+.collab-link-grid {
+  container-type: inline-size;
+}
+.collab-link-grid__cells {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+@container (max-width: 420px) {
+  .collab-link-grid__cells { grid-template-columns: minmax(0, 1fr); }
+}
+.collab-link-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 5px 8px 5px 5px;
+  border-radius: 999px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-faint);
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
+}
+.collab-link-chip:hover, .collab-link-chip:focus-within {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--border-primary);
+}
+.collab-link-chip--pinned {
+  background: var(--accent-subtle);
+  border-color: color-mix(in srgb, var(--accent) 35%, transparent);
+}
+.collab-link-chip__main {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex: 1 1 auto;
+  min-width: 0;
+  color: var(--text-primary);
+  text-decoration: none;
+  outline: none;
+}
+.collab-link-chip__icon {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  flex: 0 0 24px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--bg-card);
+  color: var(--text-faint);
+}
+.collab-link-chip__icon img { width: 16px; height: 16px; object-fit: contain; }
+.collab-link-chip__icon > * { transition: opacity 0.15s ease; }
+/* Reaching for the chip turns its favicon into the open-in-new-tab glyph: the
+   affordance without a glyph of its own taking room from the title. */
+.collab-link-chip__go {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--text-primary);
+  opacity: 0;
+}
+.collab-link-chip__main:hover .collab-link-chip__go, .collab-link-chip__main:focus-visible .collab-link-chip__go { opacity: 1; }
+.collab-link-chip__main:hover .collab-link-chip__icon > :not(.collab-link-chip__go),
+.collab-link-chip__main:focus-visible .collab-link-chip__icon > :not(.collab-link-chip__go) { opacity: 0; }
+/* Title first, host with what is left: a max-content track takes its full width
+   before the fr track sees any, and shrinks only once the title alone no longer
+   fits. Two flex items shrank together and both ended in an ellipsis. */
+.collab-link-chip__text {
+  display: grid;
+  grid-template-columns: minmax(0, max-content) minmax(0, 1fr);
+  align-items: baseline;
+  column-gap: 6px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.collab-link-chip__title {
+  font-size: calc(12.5px * var(--fs-scale-body, 1));
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.collab-link-chip__host {
+  font-size: calc(10.5px * var(--fs-scale-caption, 1));
+  color: var(--text-faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.collab-link-chip__actions {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  gap: 1px;
+  margin-left: auto;
+  opacity: 0.45;
+  transition: opacity 0.15s ease;
+}
+.collab-link-chip:hover .collab-link-chip__actions, .collab-link-chip:focus-within .collab-link-chip__actions { opacity: 1; }
+.collab-link-chip__action {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-faint);
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+.collab-link-chip__action:hover, .collab-link-chip__action:focus-visible { background: var(--bg-hover); color: var(--text-primary); }
+.collab-link-chip__action--on { color: var(--accent); }
+@media (hover: none) {
+  .collab-link-chip__actions { opacity: 1; }
+}
+
 /* Markdown in Collab Notes */
 .collab-note-md strong, .collab-note-md-full strong { font-weight: 700 !important; }
 .collab-note-md em, .collab-note-md-full em { font-style: italic !important; }

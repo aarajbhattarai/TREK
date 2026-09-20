@@ -223,6 +223,17 @@ describe('DayPlanSidebar', () => {
     expect(document.body).toBeInTheDocument()
   })
 
+  it('FE-PLANNER-DAYPLAN-001b: the panel yields to whatever the desktop shell puts above it', () => {
+    // With the Days / Road trip switch above it, a panel sized by height alone ran the
+    // switch's height past the clipped edge and the last day could never be scrolled
+    // into view. jsdom lays nothing out, so the sizing itself is the assertion.
+    const { container } = render(<DayPlanSidebar {...makeDefaultProps()} />)
+    const panel = container.firstElementChild as HTMLElement
+    expect(panel.style.flex).toBe('1 1 0%')
+    expect(panel.style.minHeight).toBe('0px')
+    expect(panel.style.height).toBe('100%')
+  })
+
   it('FE-PLANNER-DAYPLAN-002: renders day titles', () => {
     const day = buildDay({ title: 'Amsterdam Day', date: '2025-06-01' })
     render(<DayPlanSidebar {...makeDefaultProps({ days: [day] })} />)

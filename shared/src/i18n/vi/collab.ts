@@ -23,6 +23,8 @@ const collab: TranslationStrings = {
   'collab.links.pin': 'Ghim liên kết',
   'collab.links.unpin': 'Bỏ ghim liên kết',
   'collab.links.delete': 'Xóa liên kết',
+  'collab.links.edit': 'Chỉnh sửa liên kết',
+  'collab.links.open': 'Mở liên kết',
   'collab.whatsNext.title': 'Tiếp theo là gì',
   'collab.whatsNext.today': 'Hôm nay',
   'collab.whatsNext.tomorrow': 'Ngày mai',

@@ -207,7 +207,10 @@ export function planDayWindow(
   let previous: RoadtripStop | undefined;
   for (let i = 0; i < stops.length; i++) {
     const { stop, day } = stops[i]!;
-    const pin = parseClock(stop.time);
+    // A booked night's check-in pins the stop the way its own time would: the day is
+    // built to be there by then, and a drive that cannot make it is the same conflict
+    // a pinned stop out of reach is.
+    const pin = parseClock(stop.time) ?? parseClock(stop.checkInTime);
     const leave = parseClock(stop.leaveAt);
     // When the drive into this stop set out, on this day's clock: for one a night broke
     // up, the morning it went on.
@@ -290,7 +293,6 @@ export function planDayWindow(
     const target = targets.get(number);
     if (target !== undefined && target < position) return failed('conflict');
     if (pin !== null) clock = pin;
-    if (pin === null && number === day.dayNumber) clock = Math.max(clock, parseClock(stop.checkInTime) ?? 0);
     append(stop, clock);
     previous = stop;
 

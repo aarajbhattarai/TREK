@@ -42,12 +42,12 @@ export function formatDurationShort(seconds: number): string {
  * Whether this stop's arrival is a time somebody chose, rather than one the chain
  * worked out from the stop before it.
  *
- * A check-in counts. Every schedule already anchors on `time ?? checkInTime`, so a
- * booked night starts its day exactly like a pinned stop does; asking only about
- * `time` here made the rail print that chosen hour in the grey it reserves for
- * computed ones. One function because the answer was spelled out separately in each
- * of the three schedulers, and two of them spelled it differently from the anchor
- * they had just used.
+ * A check-in counts. Every schedule anchors on `time ?? checkInTime`, so a booked
+ * night holds its hour exactly like a pinned stop does; asking only about `time`
+ * here made the rail print that chosen hour in the grey it reserves for computed
+ * ones. One function because the answer was spelled out separately in each of the
+ * three schedulers, and two of them spelled it differently from the anchor they had
+ * just used.
  */
 export function hasChosenArrival(stop: { time?: string | null; checkInTime?: string | null; automaticNight?: unknown }): boolean {
   if (stop.automaticNight) return false;
@@ -83,15 +83,8 @@ export interface ScheduleStop {
    */
   departureAt?: number;
   /** A time somebody fixed this stop to. The chain restarts from it, and arriving
-   *  after it is being late. */
+   *  after it is being late. A booked night's check-in is one of these. */
   anchor: string | null;
-
-  /**
-   * The earliest this stop can be entered, when something says so — a check-in is
-   * the hour a room becomes available, not an appointment. Arriving before it means
-   * waiting for it; arriving after it means arriving, with nothing to report.
-   */
-  earliest?: string | null;
 
   dwellMinutes: number | null;
 }
@@ -222,6 +215,13 @@ export function leaveAfter(
 /**
  * The part of a road trip stop the schedule reads.
  *
+ * A booked night's check-in is the hour the traveller said they are at the hotel, so
+ * it holds the stop the way a pinned time does: the day is built around it, and a
+ * drive that gets there later is late. Read as a mere floor it held nothing once
+ * anything before it set the clock, and a night booked for ten in the morning was
+ * reported reached at a quarter past twelve, with the rest of the day lined up
+ * behind that. A time pinned on the stop itself still wins.
+ *
  * A visit's end time is when the drive leaves it. It is the traveller's own statement
  * about this visit, unlike the check-out that used to feed `departureAt` (the LATEST a
  * room has to be handed back, which is why #2357 took it out of the drive).
@@ -231,8 +231,7 @@ export function scheduleStopOf(
 ): ScheduleStop {
   const leave = parseClock(stop.leaveAt);
   return {
-    anchor: stop.time ?? null,
-    earliest: stop.checkInTime ?? null,
+    anchor: stop.time ?? stop.checkInTime ?? null,
     dwellMinutes: stop.dwellMinutes,
     ...(leave === null ? {} : { departureAt: leave }),
   };
@@ -267,22 +266,7 @@ export function computeSchedule(
   for (let i = 0; i < stops.length; i++) {
     const stop = stops[i]!;
     const anchor = parseClock(stop.anchor);
-    const resolved = resolveArrival(anchor, cursor, dayOffset);
-    // A door that opens at eleven is not an appointment at eleven. Reaching the stop
-    // later than that is simply reaching it; only a time somebody pinned can be missed.
-    const opens = parseClock(stop.earliest ?? null);
-    // With nothing before it deciding the hour, the door IS the hour: a night booked
-    // to check in at ten starts the day at ten rather than being worked backwards out
-    // of whatever comes after it. Reached later, it is only a floor, and a floor below
-    // the arrival changes nothing.
-    const waited = anchor === null && opens !== null
-      ? resolved.arrival === null
-        ? opens + dayOffset * DAY_MINUTES
-        : opens + Math.round((resolved.arrival - opens) / DAY_MINUTES) * DAY_MINUTES
-      : null;
-    const held = waited !== null && (resolved.arrival === null || waited > resolved.arrival);
-    const arrival = held ? waited : resolved.arrival;
-    const lateBy = resolved.lateBy;
+    const { arrival, lateBy } = resolveArrival(anchor, cursor, dayOffset);
     if (lateBy !== null) warnings.push({ index: i, code: 'late', minutes: lateBy });
 
     if (arrival === null) {
@@ -302,9 +286,7 @@ export function computeSchedule(
     if (offset > dayOffset) dayOffset = offset;
 
     arrivals[i]! = arrival;
-    // Ink for a time somebody decided: a pinned one always, a check-in only where the
-    // drive actually had to wait for it.
-    anchored[i]! = anchor !== null || held;
+    anchored[i]! = anchor !== null;
 
     let departure = arrival + (stop.dwellMinutes ?? 0);
     if (stop.departureAt !== undefined) {
@@ -383,6 +365,20 @@ export function computeSchedule(
   }
 
   return { entries, warnings, endsAt };
+}
+
+/**
+ * Whether the rail lists this day among the days, rather than as a quiet placeholder
+ * asking for stops.
+ *
+ * Two stops make a drive. A booked night makes a day on its own: the day you arrive
+ * somewhere and go no further, or the one you check in at ten and set out from. It
+ * used to need company, and a hotel entered under Days for the arrival day was filed
+ * at the bottom of the rail under "only X so far", which reads as the hotel missing
+ * from the road trip altogether.
+ */
+export function standsAsDay(stops: readonly { night?: boolean }[]): boolean {
+  return stops.length > 1 || stops.some((stop) => stop.night === true);
 }
 
 export function splitIntoRuns<T>(stops: T[], modeOfLeg: (from: T, to: T) => string): { stops: T[]; mode: string }[] {

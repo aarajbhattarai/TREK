@@ -1,5 +1,5 @@
 import { useRoadtripSettings } from '../../hooks/useRoadtripSettings'
-import { assembleRoadtrip, foldRouteRun, type RoadtripStop, type RoadtripRoutes, type PlanDay, type QuietDay, type RoutedLeg } from '@trek/shared/roadtrip'
+import { assembleRoadtrip, foldRouteRun, standsAsDay, type RoadtripStop, type RoadtripRoutes, type PlanDay, type QuietDay, type RoutedLeg } from '@trek/shared/roadtrip'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { calculateRouteWithLegs, RoutingRefusedError } from '../Map/RouteCalculator'
 import { resolveLegMode } from '../Planner/legMode'
@@ -91,6 +91,7 @@ const asStop = (a: Assignment, ownerDayId: number, ownerIndex: number, accommoda
     // traveller's own statement about this stop, and the stay then runs until it.
     leaveAt: a.assignment_end_time ?? p.end_time ?? null,
     checkInTime: stay?.check_in ?? null,
+    night: stay !== undefined,
     dwellMinutes: typeof p.duration_minutes === 'number' ? p.duration_minutes : null,
     endDay: a.end_day === true,
     legMode: a.leg_transport_mode ?? null,
@@ -222,7 +223,7 @@ export function useRoadtripRoutes(
           stops,
         }
       })
-      .filter(d => d.stops.length > 1)
+      .filter(d => standsAsDay(d.stops))
   }, [days, assignments, accommodations])
 
   const quietDays = useMemo<QuietDay[]>(() => {
@@ -240,7 +241,7 @@ export function useRoadtripRoutes(
           .filter((s): s is RoadtripStop => s !== null)
           .map((s, i) => ({ ...s, ownerIndex: i })),
       }))
-      .filter(d => d.stops.length < 2)
+      .filter(d => !standsAsDay(d.stops))
   }, [days, assignments, accommodations])
 
   // Only the geometry decides whether legs have to be re-fetched: renaming a place or

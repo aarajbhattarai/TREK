@@ -23,6 +23,8 @@ const collab: TranslationStrings = {
   'collab.links.pin': '釘選連結',
   'collab.links.unpin': '取消釘選連結',
   'collab.links.delete': '刪除連結',
+  'collab.links.edit': '編輯連結',
+  'collab.links.open': '開啟連結',
   'collab.whatsNext.title': '接下來',
   'collab.whatsNext.today': '今天',
   'collab.whatsNext.tomorrow': '明天',

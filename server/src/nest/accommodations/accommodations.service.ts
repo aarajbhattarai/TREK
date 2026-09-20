@@ -164,9 +164,16 @@ export class AccommodationsService {
     return this.mirrorStay(accommodationId, placeId, dayId, checkIn);
   }
 
-  /** Carry a stay's own stop over to where the stay now is. */
-  moveStayStop(accommodationId: number, placeId: number | null, dayId: number, checkIn?: string | null): AccommodationMirror {
-    return this.remirrorStay(accommodationId, placeId, dayId, checkIn);
+  /** Carry a stay's own stop over to where the stay now is. `checkInChanged` says the
+   *  booking was given a new hour, which seats the night afresh (see remirrorStay). */
+  moveStayStop(
+    accommodationId: number,
+    placeId: number | null,
+    dayId: number,
+    checkIn?: string | null,
+    opts: { checkInChanged?: boolean } = {},
+  ): AccommodationMirror {
+    return this.remirrorStay(accommodationId, placeId, dayId, checkIn, opts);
   }
 
   /** Take back the stops of a stay that is being deleted elsewhere. */
@@ -277,42 +284,47 @@ export class AccommodationsService {
   /**
    * Where in the day the booked night belongs.
    *
-   * Last, unless the booking names an hour. A night usually ends the day, which is why
-   * that is the default — but a check-in at eleven says the traveller is at the desk
-   * before whatever they pinned to the afternoon, and dropping the stop behind it built
-   * a drive that visits the hotel after the sixteen-hundred it was booked around.
-   *
-   * Only stops that carry a clock of their own are compared. One without a time takes
-   * its position from the chain, not from the hour, so pushing past it would move a
-   * stop the traveller placed deliberately.
+   * First. The hotel is where the day is based: the traveller checks in and the stops
+   * they placed without an hour follow from there. Only a stop with a clock of its
+   * own can stand ahead of it, and only when that clock is at or before the check-in:
+   * a stop pinned to eight with a check-in at ten puts the night second, one pinned
+   * to the afternoon does not. It used to go last unless something pinned later
+   * pulled it forward, and a night booked for ten in the morning sat behind a whole
+   * day of unpinned stops, reached at a quarter past twelve.
    */
-  private positionForCheckIn(dayId: number, checkIn: string | null | undefined, excludeId?: number): number | undefined {
-    if (!checkIn) return undefined;
+  private positionForCheckIn(dayId: number, checkIn: string | null | undefined, excludeId?: number): number {
+    if (!checkIn) return 0;
     // excludeId leaves the row being re-seated out of the chain it is measured
     // against. Without it a night parked at the end of the day can find itself.
+    // Another booked night on the day counts by its check-in, so two bookings on
+    // one day settle by the clock.
     const rows = this.db.all<{ order_index: number; at: string | null }>(`
-      SELECT da.order_index, COALESCE(da.assignment_time, p.place_time) AS at
+      SELECT da.order_index, COALESCE(da.assignment_time, p.place_time, other.check_in) AS at
       FROM day_assignments da JOIN places p ON p.id = da.place_id
+      LEFT JOIN day_accommodations other ON other.id = da.accommodation_id
       WHERE da.day_id = ? AND da.id != ? ORDER BY da.order_index
     `, dayId, excludeId ?? -1);
-    const later = rows.find(row => row.at !== null && row.at > checkIn);
-    return later?.order_index;
+    let seat = 0;
+    for (const row of rows) if (row.at !== null && row.at <= checkIn) seat = row.order_index + 1;
+    return seat;
   }
 
   /**
-   * Whether the night already sits where its check-in says it should.
+   * Whether the night sits somewhere its check-in allows, on an edit that did not
+   * touch the check-in.
    *
    * Read off the chain rather than recomputed, because the index a fresh insert would
    * get is not the index this row already occupies. Two ways to be wrong: something
    * with a later hour ahead of it, or something with an earlier one behind it. Stops
-   * without an hour are passed over in both directions — their place in the chain is
-   * the traveller's doing, not a clock's.
+   * without an hour are passed over in both directions: the night may have been
+   * dragged past them on purpose, and a change of notes is no reason to undo that.
    */
   private seatedByCheckIn(dayId: number, ownId: number, checkIn: string | null | undefined): boolean {
     if (!checkIn) return true;
     const rows = this.db.all<{ id: number; at: string | null }>(`
-      SELECT da.id, COALESCE(da.assignment_time, p.place_time) AS at
+      SELECT da.id, COALESCE(da.assignment_time, p.place_time, other.check_in) AS at
       FROM day_assignments da JOIN places p ON p.id = da.place_id
+      LEFT JOIN day_accommodations other ON other.id = da.accommodation_id
       WHERE da.day_id = ? ORDER BY da.order_index
     `, dayId);
     const own = rows.findIndex(row => row.id === ownId);
@@ -493,7 +505,7 @@ export class AccommodationsService {
     this.db.run('UPDATE day_assignments SET day_id = ?, place_id = ?, order_index = ? WHERE id = ?', dayId, placeId, end, stop.id);
 
     const seat = this.positionForCheckIn(dayId, checkIn, stop.id);
-    if (seat !== undefined && seat < end) {
+    if (seat < end) {
       this.db.run(
         'UPDATE day_assignments SET order_index = order_index + 1 WHERE day_id = ? AND order_index >= ? AND id != ?',
         dayId, seat, stop.id,
@@ -519,9 +531,8 @@ export class AccommodationsService {
     if (this.db.get('SELECT id FROM day_assignments WHERE day_id = ? AND place_id = ?', dayId, placeId)) return mirror;
 
     const before = this.stopOrders([dayId]);
-    // Through AssignmentsService, so the stop lands at the end of the day with the
-    // order_index every other new assignment gets. Evening is where you arrive at a
-    // hotel, and the day planner has no drive to position it against anyway.
+    // Through AssignmentsService, seated where the check-in says (see
+    // positionForCheckIn), with everything behind it moved up one.
     //
     // The booking id goes in with the INSERT, not as an UPDATE afterwards: what this
     // returns is the row the answer hands the client, and stamping the id on later
@@ -590,14 +601,24 @@ export class AccommodationsService {
    *
    * Runs inside the caller's transaction.
    */
-  private remirrorStay(accommodationId: number, placeId: number | null, dayId: number, checkIn?: string | null): AccommodationMirror {
+  private remirrorStay(
+    accommodationId: number,
+    placeId: number | null,
+    dayId: number,
+    checkIn?: string | null,
+    opts: { checkInChanged?: boolean } = {},
+  ): AccommodationMirror {
     const own = this.ownStops(accommodationId);
     if (own.length === 0) return noMirror();
     if (own.length === 1 && own[0].day_id === dayId && own[0].place_id === placeId) {
-      // Same place, same day — but a check-in moved to a different hour can still put
-      // the night somewhere else in the chain, and a stop sitting after the afternoon
-      // it was booked around is the plan reading back wrong.
-      if (this.seatedByCheckIn(dayId, own[0].id, checkIn)) return noMirror();
+      // Same place, same day. A check-in given a new hour seats the night afresh, the
+      // way booking it with that hour would have; any other edit leaves a stop where
+      // it is unless the clocks around it say it is in the wrong place, so a night the
+      // traveller dragged somewhere stays there through a change of notes.
+      const settled = opts.checkInChanged
+        ? this.positionForCheckIn(dayId, checkIn, own[0].id) === own[0].order_index
+        : this.seatedByCheckIn(dayId, own[0].id, checkIn);
+      if (settled) return noMirror();
     }
 
     const mirror = noMirror();
@@ -689,7 +710,9 @@ export class AccommodationsService {
         'UPDATE day_accommodations SET place_id = ?, start_day_id = ?, end_day_id = ?, check_in = ?, check_in_end = ?, check_out = ?, confirmation = ?, notes = ? WHERE id = ?',
         newPlaceId, newStartDayId, newEndDayId, newCheckIn, newCheckInEnd, newCheckOut, newConfirmation, newNotes, id
       );
-      return this.remirrorStay(Number(id), newPlaceId, newStartDayId, newCheckIn);
+      return this.remirrorStay(Number(id), newPlaceId, newStartDayId, newCheckIn, {
+        checkInChanged: fields.check_in !== undefined && (fields.check_in || null) !== (existing.check_in || null),
+      });
     });
 
     // Sync check-in/out/confirmation to every linked reservation. The booking form

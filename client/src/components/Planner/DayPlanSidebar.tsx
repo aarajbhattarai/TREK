@@ -1525,7 +1525,11 @@ const DayPlanSidebar = React.memo(function DayPlanSidebar(props: DayPlanSidebarP
   }
 
   return (
-    <div ref={setPanel} data-touch-drag={dragDisabled ? undefined : ''} style={{ display: 'flex', flexDirection: 'column', height: '100%', position: 'relative', fontFamily: "var(--font-system)" }}>
+    // Sized as a flex child as well as by height: the desktop panel puts the Days / Road
+    // trip switch above this, and at height 100% alone the list ran the switch's height
+    // past the panel's clipped edge, so the last day could never be scrolled into view.
+    // Where nothing sits above it (the mobile shell), the height still fills the panel.
+    <div ref={setPanel} data-touch-drag={dragDisabled ? undefined : ''} style={{ display: 'flex', flexDirection: 'column', flex: '1 1 0%', minHeight: 0, height: '100%', position: 'relative', fontFamily: "var(--font-system)" }}>
       {/* Toolbar */}
       <DayPlanSidebarToolbar
         tripId={tripId}

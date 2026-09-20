@@ -25,6 +25,8 @@ export interface RoadtripStop {
 
   dwellMinutes: number | null;
   checkInTime?: string | null;
+  /** A booked night's stop on its check-in day, whether or not the booking names an hour. */
+  night?: boolean;
   endDay?: boolean;
 
   legMode: string | null;

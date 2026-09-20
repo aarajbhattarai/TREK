@@ -23,6 +23,8 @@ const collab: TranslationStrings = {
   'collab.links.pin': 'Link anheften',
   'collab.links.unpin': 'Link lösen',
   'collab.links.delete': 'Link löschen',
+  'collab.links.edit': 'Link bearbeiten',
+  'collab.links.open': 'Link öffnen',
   'collab.whatsNext.title': 'Nächste',
   'collab.whatsNext.today': 'Heute',
   'collab.whatsNext.tomorrow': 'Morgen',

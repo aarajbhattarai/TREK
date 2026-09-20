@@ -2,6 +2,7 @@ import { ROADTRIP_PREFERENCE_KEYS } from '@trek/shared';
 import { readEnv } from '../app-config';
 import { encrypt_api_key } from '../nest/common/crypto/apiKeyCrypto';
 import { seedDocumentProviders } from './document-provider-seed';
+import { reseatBookedNights } from './reseat-booked-nights';
 
 import Database from 'better-sqlite3';
 import fs from 'fs';
@@ -5211,6 +5212,19 @@ function runMigrations(db: Database.Database): void {
         DROP TABLE roadtrip_day_boundaries;
         ALTER TABLE roadtrip_day_boundaries_new RENAME TO roadtrip_day_boundaries;
       `);
+    },
+
+    /*
+     * Seat every booked night where its check-in says, the way a night booked
+     * today is seated. The night leads its day now; the stops a booking put on
+     * their check-in day before this release sit last, and the trips people
+     * already have would keep that order until somebody edits the check-in.
+     * The rules, and the drawn roads that follow the stops, are in
+     * reseat-booked-nights.ts. Re-runnable.
+     */
+    () => {
+      const seated = reseatBookedNights(db);
+      if (seated > 0) console.log(`[DB] Seated ${seated} booked night(s) at the head of their day`);
     },
   ];
 

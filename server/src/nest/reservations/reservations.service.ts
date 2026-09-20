@@ -846,6 +846,7 @@ export class ReservationsService {
       if (start_day_id && end_day_id) {
         this.requireResolvableStay(create_accommodation);
         if (resolvedAccId) {
+          const prior = this.db.get<{ check_in: string | null }>('SELECT check_in FROM day_accommodations WHERE id = ?', resolvedAccId);
           this.db.run(
             'UPDATE day_accommodations SET place_id = ?, start_day_id = ?, end_day_id = ?, check_in = ?, check_out = ?, confirmation = ? WHERE id = ?',
             accPlaceId || null, start_day_id, end_day_id, check_in || null, check_out || null, accConf || confirmation_number || null, resolvedAccId
@@ -853,7 +854,9 @@ export class ReservationsService {
           // The stay just moved. Its stop moves with it, or it is left sitting on a
           // day nobody sleeps there any more, hidden from the day list because it
           // still carries this booking's id and stranded in the middle of the drive.
-          stayMirror = this.accommodations.moveStayStop(resolvedAccId, accPlaceId || null, start_day_id, check_in);
+          stayMirror = this.accommodations.moveStayStop(resolvedAccId, accPlaceId || null, start_day_id, check_in, {
+            checkInChanged: (check_in || null) !== (prior?.check_in ?? null),
+          });
         } else if (accPlaceId) {
           const accResult = this.db.run(
             'INSERT INTO day_accommodations (trip_id, place_id, start_day_id, end_day_id, check_in, check_out, confirmation) VALUES (?, ?, ?, ?, ?, ?, ?)',

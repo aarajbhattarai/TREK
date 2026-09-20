@@ -252,11 +252,17 @@ export const STATE_APPLIERS: Partial<Record<TrekWsTripEventName, StateApplier>> 
     }
 
     // Genuinely new — including a legitimate second assignment of a place
-    // already on this day (no temp version to reconcile). Append.
+    // already on this day (no temp version to reconcile). Seated where the server
+    // put it: a booked night lands at the front of its day, and the rows behind it
+    // were moved up one there. Appending it with that index would leave it tied
+    // with the old first row and drawn second until the next reload.
+    const ordered = existing.slice().sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0))
+    const at = Math.max(0, Math.min(incoming.order_index ?? ordered.length, ordered.length))
+    ordered.splice(at, 0, incoming)
     return {
       assignments: {
         ...state.assignments,
-        [dayKey]: [...existing, incoming],
+        [dayKey]: ordered.map((a, i) => (a.order_index === i ? a : { ...a, order_index: i })),
       }
     }
   },
