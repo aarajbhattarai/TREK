@@ -15,8 +15,8 @@ import { AuthService } from './auth.service';
 export class PasskeyEnabledGuard implements CanActivate {
   constructor(private readonly auth: AuthService) {}
 
-  canActivate(): boolean {
-    if (!this.auth.resolveAuthToggles().passkey_login) {
+  async canActivate(): Promise<boolean> {
+    if (!(await this.auth.resolveAuthToggles()).passkey_login) {
       throw new HttpException({ error: 'Passkey login is not enabled' }, 404);
     }
     return true;

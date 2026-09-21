@@ -12,13 +12,13 @@ import { extractToken, verifyJwtAndLoadUser } from './jwt-verify';
  */
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
-  canActivate(context: ExecutionContext): boolean {
+  async canActivate(context: ExecutionContext): Promise<boolean> {
     const req = context.switchToHttp().getRequest<Request>();
     const token = extractToken(req);
     if (!token) {
       throw new HttpException({ error: 'Access token required', code: 'AUTH_REQUIRED' }, 401);
     }
-    const user = verifyJwtAndLoadUser(token);
+    const user = await verifyJwtAndLoadUser(token);
     if (!user) {
       throw new HttpException({ error: 'Invalid or expired token', code: 'AUTH_REQUIRED' }, 401);
     }

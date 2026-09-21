@@ -132,7 +132,7 @@ export class SettingsMcp {
     access: { group: 'settings', mode: 'write' },
   })
   async updateDisplaySettings({ settings }: { settings: Record<string, unknown> }, ctx: McpContext) {
-    if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
+    if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
 
     const entries = Object.entries(settings);
     if (entries.length === 0) {

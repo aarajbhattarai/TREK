@@ -52,14 +52,14 @@ function handler(): CallHandler & { handle: ReturnType<typeof vi.fn> } {
 }
 
 function makeInterceptor() {
-  const generateToken = vi.fn().mockReturnValue('renewed.jwt');
+  const generateToken = vi.fn().mockResolvedValue('renewed.jwt');
   const interceptor = new SessionRenewalInterceptor({ generateToken } as unknown as AuthService);
   return { interceptor, generateToken };
 }
 
 async function run(interceptor: SessionRenewalInterceptor, req: ReqShape, res: ReturnType<typeof makeRes>, type = 'http') {
   const h = handler();
-  const out = await lastValueFrom(interceptor.intercept(ctx(req, res, type), h));
+  const out = await lastValueFrom(await interceptor.intercept(ctx(req, res, type), h));
   expect(out).toBe('ok');
   expect(h.handle).toHaveBeenCalled();
 }

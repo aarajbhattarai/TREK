@@ -16,7 +16,7 @@ export class AllowedFileTypesService {
   constructor(private readonly db: DatabaseService) {}
 
   /** Comma-separated, as the admin panel stores it. `*` means anything. */
-  get(): string {
+  async get(): Promise<string> {
     try {
       const row = this.db.get<{ value: string }>(
         "SELECT value FROM app_settings WHERE key = 'allowed_file_types'",

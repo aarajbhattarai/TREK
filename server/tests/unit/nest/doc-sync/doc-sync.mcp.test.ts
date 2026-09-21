@@ -166,7 +166,7 @@ describe('DocSyncMcp access', () => {
   it('does not reach the sync service at all for a trip the user cannot see', async () => {
     const { mcp, sync, config } = makeMcp({ access: false, links: [link(1)] });
     await mcp.syncNow({ tripId: 3 }, ctx);
-    mcp.listIssues({ tripId: 3 }, ctx);
+    await mcp.listIssues({ tripId: 3 }, ctx);
     await mcp.getTripDocumentSync({ tripId: 3 }, ctx);
     expect(sync.syncLink).not.toHaveBeenCalled();
     expect(sync.status).not.toHaveBeenCalled();
@@ -185,24 +185,24 @@ describe('get_trip_document_sync', () => {
 });
 
 describe('list_trip_document_sync_issues', () => {
-  it('says the trip is not configured rather than answering with an empty list', () => {
+  it('says the trip is not configured rather than answering with an empty list', async () => {
     // An empty list and no connection at all read identically to an assistant,
     // and "everything is in step" is the wrong answer to give about documents
     // that were never being synced.
     const { mcp, sync } = makeMcp({ links: [] });
-    expect(payload(mcp.listIssues({ tripId: 3 }, ctx))).toEqual({ configured: false, issues: [] });
+    expect(payload(await mcp.listIssues({ tripId: 3 }, ctx))).toEqual({ configured: false, issues: [] });
     expect(sync.issues).not.toHaveBeenCalled();
   });
 
-  it('reports an empty list for a configured trip with nothing to decide', () => {
+  it('reports an empty list for a configured trip with nothing to decide', async () => {
     const { mcp } = makeMcp({ links: [link(1)], issues: [] });
-    expect(payload(mcp.listIssues({ tripId: 3 }, ctx))).toEqual({ configured: true, issues: [] });
+    expect(payload(await mcp.listIssues({ tripId: 3 }, ctx))).toEqual({ configured: true, issues: [] });
   });
 
-  it('passes the open issues through for a configured trip', () => {
+  it('passes the open issues through for a configured trip', async () => {
     const issues = [{ id: 9, state: 'conflict', remote_name: 'boarding.pdf' }];
     const { mcp, sync } = makeMcp({ links: [link(1)], issues });
-    expect(payload(mcp.listIssues({ tripId: 3 }, ctx))).toEqual({ configured: true, issues });
+    expect(payload(await mcp.listIssues({ tripId: 3 }, ctx))).toEqual({ configured: true, issues });
     expect(sync.issues).toHaveBeenCalledWith(3);
   });
 });

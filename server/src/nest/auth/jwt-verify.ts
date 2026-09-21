@@ -54,7 +54,7 @@ export function decodeSessionClaims(token: string | undefined): SessionClaims | 
   return decoded as SessionClaims;
 }
 
-export function verifyJwtAndLoadUser(token: string): User | null {
+export async function verifyJwtAndLoadUser(token: string): Promise<User | null> {
   try {
     const decoded = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] }) as { id: number; pv?: number; purpose?: string };
     // Purpose-scoped tokens (e.g. the short-lived mfa_login token) share this

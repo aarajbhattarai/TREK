@@ -104,14 +104,14 @@ export class PasskeyController {
   @Get('credentials')
   @MfaExempt('the setup screen lists what the user already has')
   @UseGuards(JwtAuthGuard)
-  list(@CurrentUser() user: User) {
-    return { credentials: this.passkeys.listPasskeys(user.id) };
+  async list(@CurrentUser() user: User) {
+    return { credentials: await this.passkeys.listPasskeys(user.id) };
   }
 
   @Patch('credentials/:id')
   @UseGuards(JwtAuthGuard)
-  rename(@CurrentUser() user: User, @Param('id') id: string, @Body() body: PasskeyRenameDto) {
-    const result = this.passkeys.renamePasskey(user.id, id, body?.name);
+  async rename(@CurrentUser() user: User, @Param('id') id: string, @Body() body: PasskeyRenameDto) {
+    const result = await this.passkeys.renamePasskey(user.id, id, body?.name);
     if (result.error) throw new HttpException({ error: result.error }, result.status!);
     return { success: true };
   }
@@ -120,7 +120,7 @@ export class PasskeyController {
   @UseGuards(JwtAuthGuard)
   async remove(@CurrentUser() user: User, @Param('id') id: string, @Body() body: PasskeyDeleteDto, @Req() req: Request) {
     this.limit('login', req, 5);
-    const result = this.passkeys.deletePasskey(user.id, id, body?.password);
+    const result = await this.passkeys.deletePasskey(user.id, id, body?.password);
     if (result.error) throw new HttpException({ error: result.error }, result.status!);
     await this.audit.writeAudit({ userId: user.id, action: 'user.passkey_delete', resource: String(id), ip: getClientIp(req) });
     return { success: true };

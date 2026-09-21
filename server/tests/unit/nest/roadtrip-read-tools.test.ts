@@ -23,12 +23,12 @@ describe('roadtrip read tools', () => {
   });
   it('passes reviewed Google stops and the authenticated user to the importer', async () => {
     const routes = { preview: vi.fn(async () => ({ stops: [] })), import: vi.fn(() => ({ imported: 2 })) };
-    const auth = { isDemoUser: vi.fn(() => false) };
+    const auth = { isDemoUser: vi.fn(async () => false) };
     const tool = new GoogleRouteMcp(routes as never, auth as never, {} as never);
     await tool.preview({ url: 'https://www.google.com/maps/dir/A/B' });
     expect(routes.preview).toHaveBeenCalledWith('https://www.google.com/maps/dir/A/B');
     const input = { tripId: 10, dayId: 1, stops: [{ name: 'A', lat: 1, lng: 2 }] };
-    expect(JSON.stringify(tool.import(input, ctx))).toContain('2');
+    expect(JSON.stringify(await tool.import(input, ctx))).toContain('2');
     expect(routes.import).toHaveBeenCalledWith(10, 5, input);
   });
 
@@ -36,7 +36,7 @@ describe('roadtrip read tools', () => {
     // The one non-admin write tool that had no gate: a demo session could write
     // thirty places and their assignments onto the shared demo trip.
     const routes = { preview: vi.fn(), import: vi.fn() };
-    const auth = { isDemoUser: vi.fn(() => true) };
+    const auth = { isDemoUser: vi.fn(async () => true) };
     const tool = new GoogleRouteMcp(routes as never, auth as never, {} as never);
 
     const res = await tool.import({ tripId: 10, dayId: 1, stops: [{ name: 'A', lat: 1, lng: 2 }] } as never, ctx);
@@ -55,7 +55,7 @@ describe('roadtrip read tools', () => {
     const charging = new ChargingMcp({ read: refuse('Place not found', 404) } as never, db as never, {} as never);
     expect(text(await charging.read({ tripId: 10, placeId: 2 }, ctx))).toEqual([true, 'Place not found']);
 
-    const auth = { isDemoUser: vi.fn(() => false) };
+    const auth = { isDemoUser: vi.fn(async () => false) };
     const routes = { preview: refuse('Use a Google Maps directions link.', 400), import: refuse('Permission denied', 403) };
     const google = new GoogleRouteMcp(routes as never, auth as never, {} as never);
     expect(text(await google.preview({ url: 'https://www.google.com/maps/place/A' }))).toEqual([true, 'Use a Google Maps directions link.']);

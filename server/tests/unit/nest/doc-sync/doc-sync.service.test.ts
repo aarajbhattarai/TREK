@@ -70,6 +70,7 @@ import type { AddonsService } from '../../../../src/nest/addons/addons.service';
 import type { FilesService } from '../../../../src/nest/files/files.service';
 import type { StorageService } from '../../../../src/nest/storage/storage.service';
 import type { RealtimeService } from '../../../../src/nest/realtime/realtime.service';
+import { createTestUnitOfWork } from '../../../helpers/test-uow';
 
 // ── Fixtures ─────────────────────────────────────────────────────────────────
 
@@ -303,7 +304,7 @@ const switchProvider = (id: string, on: boolean) =>
 // ── Suite ────────────────────────────────────────────────────────────────────
 
 describe('DocSyncService', () => {
-  beforeAll(() => {
+  beforeAll(async () => {
     createTables(testDb);
     runMigrations(testDb);
     spoolDir = fs.mkdtempSync(path.join(os.tmpdir(), 'trek-docsync-'));
@@ -330,6 +331,7 @@ describe('DocSyncService', () => {
       new AllowedFileTypesService(dbs),
       realtime,
       addons as unknown as AddonsService,
+      await createTestUnitOfWork(testDb),
     );
   });
 

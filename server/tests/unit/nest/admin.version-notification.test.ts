@@ -84,7 +84,7 @@ beforeAll(async () => {
   svc = new AdminService(
   dbs,
   new AddonsService(dbs),
-  new PasskeyService(dbs, auth, webauthn),
+  new PasskeyService(dbs, auth, webauthn, await createTestUnitOfWork(dbs.connection)),
   auth,
   permissions,
   await makeNotificationsService(dbs, realtime),

@@ -153,7 +153,7 @@ export class McpTransportService {
     }
 
     // Short-lived JWT (TREK web session used directly) — full access, no notice
-    const user = this.auth.verifyJwtToken(token);
+    const user = await this.auth.verifyJwtToken(token);
     if (!user) return null;
     return { user, scopes: null, clientId: null, isStaticToken: false };
   }

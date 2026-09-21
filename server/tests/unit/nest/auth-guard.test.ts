@@ -66,28 +66,28 @@ beforeEach(() => vi.clearAllMocks());
 describe('JwtAuthGuard', () => {
   const guard = new JwtAuthGuard();
 
-  it('rejects with the legacy 401 { error, code } when no token is present', () => {
+  it('rejects with the legacy 401 { error, code } when no token is present', async () => {
     vi.mocked(extractToken).mockReturnValue(null);
-    expect(thrown(() => guard.canActivate(context({ headers: {}, cookies: {} })))).toEqual({
+    expect(await thrownAsync(() => guard.canActivate(context({ headers: {}, cookies: {} })))).toEqual({
       status: 401,
       body: { error: 'Access token required', code: 'AUTH_REQUIRED' },
     });
   });
 
-  it('rejects an invalid/expired token (verify returns null)', () => {
+  it('rejects an invalid/expired token (verify returns null)', async () => {
     vi.mocked(extractToken).mockReturnValue('tok');
-    vi.mocked(verifyJwtAndLoadUser).mockReturnValue(null);
-    expect(thrown(() => guard.canActivate(context({ headers: {} })))).toEqual({
+    vi.mocked(verifyJwtAndLoadUser).mockResolvedValue(null);
+    expect(await thrownAsync(() => guard.canActivate(context({ headers: {} })))).toEqual({
       status: 401,
       body: { error: 'Invalid or expired token', code: 'AUTH_REQUIRED' },
     });
   });
 
-  it('attaches the loaded user and allows a valid token through', () => {
+  it('attaches the loaded user and allows a valid token through', async () => {
     const req: Record<string, unknown> = { headers: {} };
     vi.mocked(extractToken).mockReturnValue('tok');
-    vi.mocked(verifyJwtAndLoadUser).mockReturnValue(user);
-    expect(guard.canActivate(context(req))).toBe(true);
+    vi.mocked(verifyJwtAndLoadUser).mockResolvedValue(user);
+    expect(await guard.canActivate(context(req))).toBe(true);
     expect(req.user).toBe(user);
   });
 });
@@ -95,30 +95,30 @@ describe('JwtAuthGuard', () => {
 describe('CookieAuthGuard', () => {
   const guard = new CookieAuthGuard();
 
-  it('401s when the trek_session cookie is missing', () => {
-    expect(thrown(() => guard.canActivate(context({ cookies: {} })))).toEqual({
+  it('401s when the trek_session cookie is missing', async () => {
+    expect(await thrownAsync(() => guard.canActivate(context({ cookies: {} })))).toEqual({
       status: 401,
       body: { error: 'Cookie session required for this endpoint', code: 'COOKIE_AUTH_REQUIRED' },
     });
     // and when there is no cookies object at all
-    expect(thrown(() => guard.canActivate(context({})))).toEqual({
+    expect(await thrownAsync(() => guard.canActivate(context({})))).toEqual({
       status: 401,
       body: { error: 'Cookie session required for this endpoint', code: 'COOKIE_AUTH_REQUIRED' },
     });
   });
 
-  it('401s when the cookie token fails verification', () => {
-    vi.mocked(verifyJwtAndLoadUser).mockReturnValue(null);
-    expect(thrown(() => guard.canActivate(context({ cookies: { trek_session: 'tok' } })))).toEqual({
+  it('401s when the cookie token fails verification', async () => {
+    vi.mocked(verifyJwtAndLoadUser).mockResolvedValue(null);
+    expect(await thrownAsync(() => guard.canActivate(context({ cookies: { trek_session: 'tok' } })))).toEqual({
       status: 401,
       body: { error: 'Invalid or expired session', code: 'AUTH_REQUIRED' },
     });
   });
 
-  it('attaches the user and allows a valid cookie session through', () => {
+  it('attaches the user and allows a valid cookie session through', async () => {
     const req: Record<string, unknown> = { cookies: { trek_session: 'tok' } };
-    vi.mocked(verifyJwtAndLoadUser).mockReturnValue(user);
-    expect(guard.canActivate(context(req))).toBe(true);
+    vi.mocked(verifyJwtAndLoadUser).mockResolvedValue(user);
+    expect(await guard.canActivate(context(req))).toBe(true);
     expect(req.user).toBe(user);
   });
 });
@@ -126,27 +126,27 @@ describe('CookieAuthGuard', () => {
 describe('OptionalJwtGuard', () => {
   const guard = new OptionalJwtGuard();
 
-  it('always allows; sets req.user to null when no token', () => {
+  it('always allows; sets req.user to null when no token', async () => {
     const req: Record<string, unknown> = { headers: {} };
     vi.mocked(extractToken).mockReturnValue(null);
-    expect(guard.canActivate(context(req))).toBe(true);
+    expect(await guard.canActivate(context(req))).toBe(true);
     expect(req.user).toBeNull();
     expect(verifyJwtAndLoadUser).not.toHaveBeenCalled();
   });
 
-  it('sets req.user to null when a token verifies to nothing', () => {
+  it('sets req.user to null when a token verifies to nothing', async () => {
     const req: Record<string, unknown> = { headers: {} };
     vi.mocked(extractToken).mockReturnValue('tok');
-    vi.mocked(verifyJwtAndLoadUser).mockReturnValue(null);
-    expect(guard.canActivate(context(req))).toBe(true);
+    vi.mocked(verifyJwtAndLoadUser).mockResolvedValue(null);
+    expect(await guard.canActivate(context(req))).toBe(true);
     expect(req.user).toBeNull();
   });
 
-  it('populates req.user from a valid token', () => {
+  it('populates req.user from a valid token', async () => {
     const req: Record<string, unknown> = { headers: {} };
     vi.mocked(extractToken).mockReturnValue('tok');
-    vi.mocked(verifyJwtAndLoadUser).mockReturnValue(user);
-    expect(guard.canActivate(context(req))).toBe(true);
+    vi.mocked(verifyJwtAndLoadUser).mockResolvedValue(user);
+    expect(await guard.canActivate(context(req))).toBe(true);
     expect(req.user).toBe(user);
   });
 });
@@ -170,14 +170,14 @@ describe('PasskeyEnabledGuard', () => {
   const resolveAuthToggles = vi.fn();
   const guard = new PasskeyEnabledGuard({ resolveAuthToggles } as unknown as AuthService);
 
-  it('404s when passkey_login is off', () => {
-    resolveAuthToggles.mockReturnValue({ passkey_login: false });
-    expect(thrown(() => guard.canActivate())).toEqual({ status: 404, body: { error: 'Passkey login is not enabled' } });
+  it('404s when passkey_login is off', async () => {
+    resolveAuthToggles.mockResolvedValue({ passkey_login: false });
+    expect(await thrownAsync(() => guard.canActivate())).toEqual({ status: 404, body: { error: 'Passkey login is not enabled' } });
   });
 
-  it('allows when passkey_login is on', () => {
-    resolveAuthToggles.mockReturnValue({ passkey_login: true });
-    expect(guard.canActivate()).toBe(true);
+  it('allows when passkey_login is on', async () => {
+    resolveAuthToggles.mockResolvedValue({ passkey_login: true });
+    expect(await guard.canActivate()).toBe(true);
   });
 });
 
@@ -241,17 +241,17 @@ describe('PasskeyController', () => {
   }, 10000);
 
   it('credentials: list, rename (error + success), delete (error + success)', async () => {
-    passkey.listPasskeys.mockReturnValue([{ id: 'a' }]);
-    expect(pc(rl()).list(user)).toEqual({ credentials: [{ id: 'a' }] });
+    passkey.listPasskeys.mockResolvedValue([{ id: 'a' }]);
+    expect(await pc(rl()).list(user)).toEqual({ credentials: [{ id: 'a' }] });
 
-    passkey.renamePasskey.mockReturnValue({ error: 'Not found', status: 404 });
-    expect(thrown(() => pc(rl()).rename(user, 'cid', { name: 'x' }))).toEqual({ status: 404, body: { error: 'Not found' } });
-    passkey.renamePasskey.mockReturnValue({ success: true });
-    expect(pc(rl()).rename(user, 'cid', { name: 'x' })).toEqual({ success: true });
+    passkey.renamePasskey.mockResolvedValue({ error: 'Not found', status: 404 });
+    expect(await thrownAsync(() => pc(rl()).rename(user, 'cid', { name: 'x' }))).toEqual({ status: 404, body: { error: 'Not found' } });
+    passkey.renamePasskey.mockResolvedValue({ success: true });
+    expect(await pc(rl()).rename(user, 'cid', { name: 'x' })).toEqual({ success: true });
 
-    passkey.deletePasskey.mockReturnValue({ error: 'Incorrect password', status: 401 });
+    passkey.deletePasskey.mockResolvedValue({ error: 'Incorrect password', status: 401 });
     expect(await thrownAsync(() => pc(rl()).remove(user, 'cid', { password: 'x' }, req))).toEqual({ status: 401, body: { error: 'Incorrect password' } });
-    passkey.deletePasskey.mockReturnValue({ success: true });
+    passkey.deletePasskey.mockResolvedValue({ success: true });
     expect(await pc(rl()).remove(user, 'cid', { password: 'p' }, req)).toEqual({ success: true });
     expect(writeAudit).toHaveBeenCalledWith(expect.objectContaining({ action: 'user.passkey_delete' }));
   });

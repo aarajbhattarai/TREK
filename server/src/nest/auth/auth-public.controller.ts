@@ -45,8 +45,8 @@ export class AuthPublicController {
   @Post('demo-login')
   @Public('issues a session for the demo account; there is nothing to authenticate yet')
   @HttpCode(200)
-  demoLogin(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
-    const result = this.auth.demoLogin();
+  async demoLogin(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
+    const result = await this.auth.demoLogin();
     if (result.error) {
       throw new HttpException({ error: result.error }, result.status!);
     }
@@ -56,9 +56,9 @@ export class AuthPublicController {
 
   @Get('invite/:token')
   @Public('the invite token IS the credential')
-  invite(@Param('token') token: string, @Req() req: Request) {
+  async invite(@Param('token') token: string, @Req() req: Request) {
     this.limit('login', req, 10);
-    const result = this.auth.validateInviteToken(token);
+    const result = await this.auth.validateInviteToken(token);
     if (result.error) {
       throw new HttpException({ error: result.error }, result.status!);
     }
@@ -85,7 +85,7 @@ export class AuthPublicController {
   async login(@Body() body: LoginDto, @Req() req: Request, @Res({ passthrough: true }) res: Response) {
     this.limit('login', req, 10);
     const started = Date.now();
-    const result = this.auth.loginUser(body);
+    const result = await this.auth.loginUser(body);
     if (result.auditAction) {
       await this.audit.writeAudit({ userId: result.auditUserId ?? null, action: result.auditAction, ip: getClientIp(req), details: result.auditDetails });
     }
@@ -116,7 +116,7 @@ export class AuthPublicController {
     const rawEmail = typeof body?.email === 'string' ? body.email : '';
     const ip = getClientIp(req);
 
-    const outcome = this.auth.requestPasswordReset(rawEmail, ip);
+    const outcome = await this.auth.requestPasswordReset(rawEmail, ip);
     if (outcome.reason === 'issued' && outcome.tokenForDelivery && outcome.userEmail) {
       const origin = this.auth.getAppUrl();
       const url = `${origin.replace(/\/$/, '')}/reset-password?token=${encodeURIComponent(outcome.tokenForDelivery)}`;
@@ -143,7 +143,7 @@ export class AuthPublicController {
     // a dedicated bucket) — without it reset tokens could be guessed unthrottled.
     this.limit('reset', req, 5);
     const ip = getClientIp(req);
-    const result = this.auth.resetPassword(body);
+    const result = await this.auth.resetPassword(body);
     if (result.error) {
       await this.audit.writeAudit({ userId: null, action: 'user.password_reset_fail', ip, details: { reason: result.error } });
       throw new HttpException({ error: result.error }, result.status!);
@@ -160,7 +160,7 @@ export class AuthPublicController {
   @HttpCode(200)
   async verifyMfaLogin(@Body() body: MfaVerifyLoginDto, @Req() req: Request, @Res({ passthrough: true }) res: Response) {
     this.limit('mfa', req, 5);
-    const result = this.auth.verifyMfaLogin(body);
+    const result = await this.auth.verifyMfaLogin(body);
     if (result.error) {
       throw new HttpException({ error: result.error }, result.status!);
     }

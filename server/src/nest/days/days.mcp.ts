@@ -62,7 +62,7 @@ export class DaysMcp {
     { tripId, dayId, ...fields }: { tripId: number; dayId: number } & DayUpdateRequest,
     ctx: McpContext,
   ) {
-    if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
+    if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
     if (!(await this.days.verifyTripAccess(tripId, ctx.userId))) return noAccess();
     if (!(await this.guards.hasTripPermission('day_edit', tripId, ctx.userId))) return permissionDenied();
     const current = await this.days.getDay(dayId, tripId);
@@ -91,7 +91,7 @@ export class DaysMcp {
     { tripId, date, notes, position }: { tripId: number } & DayCreateRequest,
     ctx: McpContext,
   ) {
-    if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
+    if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
     if (!(await this.days.verifyTripAccess(tripId, ctx.userId))) return noAccess();
     if (!(await this.guards.hasTripPermission('day_edit', tripId, ctx.userId))) return permissionDenied();
     if (position === undefined) {
@@ -126,7 +126,7 @@ export class DaysMcp {
     { tripId, orderedIds }: { tripId: number } & DayReorderRequest,
     ctx: McpContext,
   ) {
-    if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
+    if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
     if (!(await this.days.verifyTripAccess(tripId, ctx.userId))) return noAccess();
     if (!(await this.guards.hasTripPermission('day_edit', tripId, ctx.userId))) return permissionDenied();
     try {
@@ -153,7 +153,7 @@ export class DaysMcp {
     access: { group: 'trips', mode: 'write' },
   })
   async deleteDay({ tripId, dayId }: { tripId: number; dayId: number }, ctx: McpContext) {
-    if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
+    if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
     if (!(await this.days.verifyTripAccess(tripId, ctx.userId))) return noAccess();
     if (!(await this.guards.hasTripPermission('day_edit', tripId, ctx.userId))) return permissionDenied();
     if (!(await this.days.getDay(dayId, tripId))) return errorResult('Day not found.');
@@ -179,7 +179,7 @@ export class DaysMcp {
     { tripId, dayId, transport_mode }: { tripId: number; dayId: number; transport_mode?: string | null },
     ctx: McpContext,
   ) {
-    if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
+    if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
     if (!(await this.days.verifyTripAccess(tripId, ctx.userId))) return noAccess();
     if (!(await this.guards.hasTripPermission('day_edit', tripId, ctx.userId))) return permissionDenied();
     if (!(await this.days.getDay(dayId, tripId))) return errorResult('Day not found.');

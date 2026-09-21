@@ -21,7 +21,7 @@ import { DatabaseService } from '../database/database.service';
 export class RegistrationInvitesService {
   constructor(private readonly db: DatabaseService) {}
 
-  listInvites() {
+  async listInvites() {
     return this.db.all(`
     SELECT i.*, u.username as created_by_name, t.title as trip_title
     FROM invite_tokens i
@@ -32,11 +32,11 @@ export class RegistrationInvitesService {
   }
 
   /** Trips an admin can bind an invite to — id + title only, for the picker (#1402). */
-  listTripsForInvite() {
+  async listTripsForInvite() {
     return this.db.all('SELECT id, title FROM trips ORDER BY title COLLATE NOCASE ASC');
   }
 
-  createInvite(
+  async createInvite(
     createdBy: number,
     data: { max_uses?: string | number; expires_in_days?: string | number; trip_id?: string | number | null },
   ) {
@@ -77,7 +77,7 @@ export class RegistrationInvitesService {
     return { invite, inviteId, uses, expiresInDays: data.expires_in_days ?? null, tripId };
   }
 
-  deleteInvite(id: string) {
+  async deleteInvite(id: string) {
     const invite = this.db.get('SELECT id FROM invite_tokens WHERE id = ?', id);
     if (!invite) return { error: 'Invite not found', status: 404 };
     this.db.run('DELETE FROM invite_tokens WHERE id = ?', id);

@@ -54,7 +54,7 @@ export class UserProfileService {
   }
 
   /** The three key columns plus the role that decides where a save lands. */
-  private currentKeys(userId: number) {
+  private async currentKeys(userId: number) {
     return this.db.get<Pick<User, 'role' | 'maps_api_key' | 'openweather_api_key' | 'unsplash_api_key' | 'amap_api_key'>>(
       'SELECT role, maps_api_key, openweather_api_key, unsplash_api_key, amap_api_key FROM users WHERE id = ?',
       userId
@@ -128,7 +128,7 @@ export class UserProfileService {
     if (this.managed) {
       return { success: true, maps_api_key: null, managed_keys: ['maps_api_key'], changedKeys: [] };
     }
-    const current = this.currentKeys(userId);
+    const current = await this.currentKeys(userId);
     const isAdmin = current?.role === 'admin';
     const changedKeys = await this.changedKeyNames({ maps_api_key }, current, isAdmin);
     await this.uow.transactional(async () => {
@@ -145,7 +145,7 @@ export class UserProfileService {
     const body = rawBody as { maps_api_key?: string; openweather_api_key?: string; unsplash_api_key?: string; amap_api_key?: string };
     const { blocked } = splitManagedKeys(body, this.managed);
     for (const key of blocked) delete body[key as keyof typeof body];
-    const current = this.currentKeys(userId);
+    const current = await this.currentKeys(userId);
     const isAdmin = current?.role === 'admin';
     const changedKeys = await this.changedKeyNames(body, current, isAdmin, blocked);
 
@@ -222,7 +222,7 @@ export class UserProfileService {
 
     // Read before the write, so the comparison sees the old value; the role in
     // the same row decides whether the two instance-wide names travel with it.
-    const current = this.currentKeys(userId);
+    const current = await this.currentKeys(userId);
     const isAdmin = current?.role === 'admin';
     const changedKeys = keyLocked ? [] : await this.changedKeyNames(body, current, isAdmin, blocked);
 
@@ -322,7 +322,7 @@ export class UserProfileService {
   // User directory
   // -------------------------------------------------------------------------
 
-  listUsers(excludeUserId: number) {
+  async listUsers(excludeUserId: number) {
     // The global user directory feeds the trip member-add / contributor pickers —
     // guests (#1362) are trip-scoped and must never be selectable here.
     const users = this.db.all<Pick<User, 'id' | 'username' | 'avatar'>>(

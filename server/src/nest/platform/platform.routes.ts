@@ -102,7 +102,7 @@ async function servePhoto(storage: StorageService, req: Request, res: Response):
   }
 
   // JWT session path (with pv check).
-  const user = verifyJwtAndLoadUser(rawToken);
+  const user = await verifyJwtAndLoadUser(rawToken);
   if (user) return sendPhoto();
 
   // Share-token path: require the token to cover the exact trip the

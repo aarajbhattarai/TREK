@@ -30,7 +30,7 @@ import { IS_PUBLIC, OPTIONAL_AUTH } from './public.decorator';
 export class GlobalAuthGuard implements CanActivate {
   constructor(private readonly reflector: Reflector) {}
 
-  canActivate(context: ExecutionContext): boolean {
+  async canActivate(context: ExecutionContext): Promise<boolean> {
     const handler = context.getHandler();
     const controller = context.getClass();
 
@@ -40,7 +40,7 @@ export class GlobalAuthGuard implements CanActivate {
 
     if (this.reflector.getAllAndOverride(OPTIONAL_AUTH, [handler, controller])) {
       const token = extractToken(req);
-      (req as { user: unknown }).user = (token ? verifyJwtAndLoadUser(token) : null) || null;
+      (req as { user: unknown }).user = (token ? await verifyJwtAndLoadUser(token) : null) || null;
       return true;
     }
 
@@ -57,7 +57,7 @@ export class GlobalAuthGuard implements CanActivate {
     ];
     if (declared.length > 0) {
       const declaredToken = extractToken(req);
-      (req as { user: unknown }).user = (declaredToken ? verifyJwtAndLoadUser(declaredToken) : null) || null;
+      (req as { user: unknown }).user = (declaredToken ? await verifyJwtAndLoadUser(declaredToken) : null) || null;
       return true;
     }
 
@@ -65,7 +65,7 @@ export class GlobalAuthGuard implements CanActivate {
     if (!token) {
       throw new HttpException({ error: 'Access token required', code: 'AUTH_REQUIRED' }, 401);
     }
-    const user = verifyJwtAndLoadUser(token);
+    const user = await verifyJwtAndLoadUser(token);
     if (!user) {
       throw new HttpException({ error: 'Invalid or expired token', code: 'AUTH_REQUIRED' }, 401);
     }

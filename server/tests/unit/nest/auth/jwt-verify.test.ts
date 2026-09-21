@@ -71,65 +71,65 @@ describe('extractToken', () => {
 });
 
 describe('verifyJwtAndLoadUser', () => {
-  it('AUTH-JWT-001: returns the user for a valid token, without password_version', () => {
+  it('AUTH-JWT-001: returns the user for a valid token, without password_version', async () => {
     userRow({ id: 1, username: 'alice', email: 'alice@example.com', role: 'user', password_version: 0 });
     const token = jwt.sign({ id: 1 }, 'test-secret', { algorithm: 'HS256' });
 
-    expect(verifyJwtAndLoadUser(token)).toEqual({ id: 1, username: 'alice', email: 'alice@example.com', role: 'user' });
+    expect(await verifyJwtAndLoadUser(token)).toEqual({ id: 1, username: 'alice', email: 'alice@example.com', role: 'user' });
   });
 
-  it('AUTH-JWT-002: returns null for a malformed token', () => {
-    expect(verifyJwtAndLoadUser('invalid.jwt.token')).toBeNull();
+  it('AUTH-JWT-002: returns null for a malformed token', async () => {
+    expect(await verifyJwtAndLoadUser('invalid.jwt.token')).toBeNull();
   });
 
-  it('AUTH-JWT-003: returns null when the user no longer exists', () => {
+  it('AUTH-JWT-003: returns null when the user no longer exists', async () => {
     userRow(undefined);
-    expect(verifyJwtAndLoadUser(jwt.sign({ id: 99999 }, 'test-secret', { algorithm: 'HS256' }))).toBeNull();
+    expect(await verifyJwtAndLoadUser(jwt.sign({ id: 99999 }, 'test-secret', { algorithm: 'HS256' }))).toBeNull();
   });
 
-  it('AUTH-JWT-004: returns null for an expired token', () => {
+  it('AUTH-JWT-004: returns null for an expired token', async () => {
     const expired = jwt.sign({ id: 1, exp: Math.floor(Date.now() / 1000) - 3600 }, 'test-secret', { algorithm: 'HS256' });
-    expect(verifyJwtAndLoadUser(expired)).toBeNull();
+    expect(await verifyJwtAndLoadUser(expired)).toBeNull();
   });
 
-  it('AUTH-JWT-005: returns null for a token signed with the wrong secret', () => {
-    expect(verifyJwtAndLoadUser(jwt.sign({ id: 1 }, 'wrong-secret', { algorithm: 'HS256' }))).toBeNull();
+  it('AUTH-JWT-005: returns null for a token signed with the wrong secret', async () => {
+    expect(await verifyJwtAndLoadUser(jwt.sign({ id: 1 }, 'wrong-secret', { algorithm: 'HS256' }))).toBeNull();
   });
 
-  it('AUTH-JWT-006: rejects a purpose-scoped mfa_login token even when the user is valid', () => {
+  it('AUTH-JWT-006: rejects a purpose-scoped mfa_login token even when the user is valid', async () => {
     // Issued after the password check but before TOTP, signed with the same
     // secret. It must never authenticate an ordinary request.
     userRow({ id: 1, username: 'alice', email: 'alice@example.com', role: 'user', password_version: 0 });
     const mfaToken = jwt.sign({ id: 1, purpose: 'mfa_login' }, 'test-secret', { algorithm: 'HS256' });
 
-    expect(verifyJwtAndLoadUser(mfaToken)).toBeNull();
+    expect(await verifyJwtAndLoadUser(mfaToken)).toBeNull();
   });
 
-  it('AUTH-JWT-007: rejects a token whose password_version predates the user row', () => {
+  it('AUTH-JWT-007: rejects a token whose password_version predates the user row', async () => {
     userRow({ id: 1, username: 'alice', email: 'alice@example.com', role: 'user', password_version: 2 });
     const stale = jwt.sign({ id: 1, pv: 1 }, 'test-secret', { algorithm: 'HS256' });
 
-    expect(verifyJwtAndLoadUser(stale)).toBeNull();
+    expect(await verifyJwtAndLoadUser(stale)).toBeNull();
   });
 
-  it('AUTH-JWT-008: accepts a token whose password_version matches', () => {
+  it('AUTH-JWT-008: accepts a token whose password_version matches', async () => {
     userRow({ id: 1, username: 'alice', email: 'alice@example.com', role: 'user', password_version: 2 });
     const current = jwt.sign({ id: 1, pv: 2 }, 'test-secret', { algorithm: 'HS256' });
 
-    expect(verifyJwtAndLoadUser(current)).not.toBeNull();
+    expect(await verifyJwtAndLoadUser(current)).not.toBeNull();
   });
 
-  it('AUTH-JWT-009: a pre-pv token still works against a never-reset user (both read as 0)', () => {
+  it('AUTH-JWT-009: a pre-pv token still works against a never-reset user (both read as 0)', async () => {
     userRow({ id: 1, username: 'alice', email: 'alice@example.com', role: 'user', password_version: null });
     const legacy = jwt.sign({ id: 1 }, 'test-secret', { algorithm: 'HS256' });
 
-    expect(verifyJwtAndLoadUser(legacy)).not.toBeNull();
+    expect(await verifyJwtAndLoadUser(legacy)).not.toBeNull();
   });
 
-  it('AUTH-JWT-010: but a pre-pv token stops working once the user has reset', () => {
+  it('AUTH-JWT-010: but a pre-pv token stops working once the user has reset', async () => {
     userRow({ id: 1, username: 'alice', email: 'alice@example.com', role: 'user', password_version: 1 });
     const legacy = jwt.sign({ id: 1 }, 'test-secret', { algorithm: 'HS256' });
 
-    expect(verifyJwtAndLoadUser(legacy)).toBeNull();
+    expect(await verifyJwtAndLoadUser(legacy)).toBeNull();
   });
 });

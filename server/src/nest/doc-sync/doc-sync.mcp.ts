@@ -52,7 +52,7 @@ export class DocSyncMcp {
     when: documentsAddonOn,
   })
   async getTripDocumentSync({ tripId }: { tripId: number }, ctx: McpContext) {
-    if (!this.files.verifyTripAccess(tripId, ctx.userId)) return noAccess();
+    if (!(await this.files.verifyTripAccess(tripId, ctx.userId))) return noAccess();
     return ok(await this.sync.status(tripId));
   }
 
@@ -67,8 +67,8 @@ export class DocSyncMcp {
     access: { group: 'files', mode: 'read' },
     when: documentsAddonOn,
   })
-  listIssues({ tripId }: { tripId: number }, ctx: McpContext) {
-    if (!this.files.verifyTripAccess(tripId, ctx.userId)) return noAccess();
+  async listIssues({ tripId }: { tripId: number }, ctx: McpContext) {
+    if (!(await this.files.verifyTripAccess(tripId, ctx.userId))) return noAccess();
     const links = this.config.listLinks(tripId);
     if (links.length === 0) return ok({ configured: false, issues: [] });
     return ok({ configured: true, issues: this.sync.issues(tripId) });
@@ -91,7 +91,7 @@ export class DocSyncMcp {
     when: documentsAddonOn,
   })
   async syncNow({ tripId, full }: { tripId: number; full?: boolean }, ctx: McpContext) {
-    if (!this.files.verifyTripAccess(tripId, ctx.userId)) return noAccess();
+    if (!(await this.files.verifyTripAccess(tripId, ctx.userId))) return noAccess();
     const links = this.config.listLinks(tripId);
     if (links.length === 0) {
       return errorResult('This trip is not connected to a document store. Connect one in the trip\'s file manager first.');

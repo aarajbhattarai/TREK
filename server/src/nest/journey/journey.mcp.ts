@@ -228,11 +228,11 @@ export class JourneyMcp {
     when: journeyAddonOn,
     access: { group: 'journey', mode: 'write' },
   })
-  createJourney(
+  async createJourney(
     { title, subtitle, trip_ids }: { title: string; subtitle?: string; trip_ids?: number[] },
     ctx: McpContext,
   ) {
-    if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
+    if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
     const journey = this.journey.createJourney(ctx.userId, { title, subtitle, trip_ids });
     // Return the fully-hydrated journey (entries/contributors/trips/stats/my_role),
     // matching get_journey, rather than the bare row.
@@ -255,14 +255,14 @@ export class JourneyMcp {
     when: journeyAddonOn,
     access: { group: 'journey', mode: 'write' },
   })
-  updateJourney(
+  async updateJourney(
     { journeyId, ...data }: {
       journeyId: number; title?: string; subtitle?: string; status?: string;
       show_verdict?: boolean; show_mood?: boolean; show_weather?: boolean;
     },
     ctx: McpContext,
   ) {
-    if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
+    if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
     const journey = this.journey.updateJourney(journeyId, ctx.userId, data);
     if (!journey) return notFound('Journey not found or access denied.');
     return ok({ journey });
@@ -278,8 +278,8 @@ export class JourneyMcp {
     when: journeyAddonOn,
     access: { group: 'journey', mode: 'write' },
   })
-  restoreJourneySuggestions({ journeyId }: { journeyId: number }, ctx: McpContext) {
-    if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
+  async restoreJourneySuggestions({ journeyId }: { journeyId: number }, ctx: McpContext) {
+    if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
     const result = this.journey.restoreDismissedSuggestions(journeyId, ctx.userId);
     if (!result) return notFound('Journey not found or access denied.');
     return ok(result);
@@ -293,8 +293,8 @@ export class JourneyMcp {
     when: journeyAddonOn,
     access: { group: 'journey', mode: 'write' },
   })
-  deleteJourney({ journeyId }: { journeyId: number }, ctx: McpContext) {
-    if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
+  async deleteJourney({ journeyId }: { journeyId: number }, ctx: McpContext) {
+    if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
     if (!this.journey.deleteJourney(journeyId, ctx.userId)) return notFound('Journey not found or access denied.');
     return ok({ success: true });
   }
@@ -307,8 +307,8 @@ export class JourneyMcp {
     when: journeyAddonOn,
     access: { group: 'journey', mode: 'write' },
   })
-  addJourneyTrip({ journeyId, tripId }: { journeyId: number; tripId: number }, ctx: McpContext) {
-    if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
+  async addJourneyTrip({ journeyId, tripId }: { journeyId: number; tripId: number }, ctx: McpContext) {
+    if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
     if (!this.journey.canAccessJourney(journeyId, ctx.userId)) return notFound('Journey not found or access denied.');
     return ok({ success: this.journey.addTripToJourney(journeyId, tripId, ctx.userId) });
   }
@@ -321,8 +321,8 @@ export class JourneyMcp {
     when: journeyAddonOn,
     access: { group: 'journey', mode: 'write' },
   })
-  removeJourneyTrip({ journeyId, tripId }: { journeyId: number; tripId: number }, ctx: McpContext) {
-    if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
+  async removeJourneyTrip({ journeyId, tripId }: { journeyId: number; tripId: number }, ctx: McpContext) {
+    if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
     const success = this.journey.removeTripFromJourney(journeyId, tripId, ctx.userId);
     if (!success) return notFound('Journey not found or access denied.');
     return ok({ success });
@@ -352,7 +352,7 @@ export class JourneyMcp {
     when: journeyAddonOn,
     access: { group: 'journey', mode: 'write' },
   })
-  createJourneyEntry(
+  async createJourneyEntry(
     { journeyId, ...data }: {
       journeyId: number; entry_date: string; title?: string; story?: string; entry_time?: string;
       location_name?: string; location_lat?: number; location_lng?: number; mood?: string; weather?: string;
@@ -361,7 +361,7 @@ export class JourneyMcp {
     },
     ctx: McpContext,
   ) {
-    if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
+    if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
     const entry = this.journey.createEntry(journeyId, ctx.userId, data);
     if (!entry) return notFound('Journey not found or access denied.');
     // Return through the listEntries enrichment (parsed tags/pros_cons, photos, source_trip_name).
@@ -395,7 +395,7 @@ export class JourneyMcp {
     when: journeyAddonOn,
     access: { group: 'journey', mode: 'write' },
   })
-  updateJourneyEntry(
+  async updateJourneyEntry(
     { entryId, ...data }: {
       entryId: number; title?: string | null; story?: string | null; entry_date?: string;
       entry_time?: string | null; location_name?: string | null; location_lat?: number | null;
@@ -406,7 +406,7 @@ export class JourneyMcp {
     },
     ctx: McpContext,
   ) {
-    if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
+    if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
     const entry = this.journey.updateEntry(entryId, ctx.userId, data, undefined);
     if (!entry) return notFound('Entry not found or access denied.');
     // Return through the listEntries enrichment (parsed tags/pros_cons, photos), matching create_journey_entry.
@@ -422,8 +422,8 @@ export class JourneyMcp {
     when: journeyAddonOn,
     access: { group: 'journey', mode: 'write' },
   })
-  deleteJourneyEntry({ entryId }: { entryId: number }, ctx: McpContext) {
-    if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
+  async deleteJourneyEntry({ entryId }: { entryId: number }, ctx: McpContext) {
+    if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
     if (!this.journey.deleteEntry(entryId, ctx.userId, undefined)) return notFound('Entry not found or access denied.');
     return ok({ success: true });
   }
@@ -439,8 +439,8 @@ export class JourneyMcp {
     when: journeyAddonOn,
     access: { group: 'journey', mode: 'write' },
   })
-  reorderJourneyEntries({ journeyId, orderedIds }: { journeyId: number; orderedIds: number[] }, ctx: McpContext) {
-    if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
+  async reorderJourneyEntries({ journeyId, orderedIds }: { journeyId: number; orderedIds: number[] }, ctx: McpContext) {
+    if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
     const success = this.journey.reorderEntries(journeyId, ctx.userId, orderedIds, undefined);
     if (!success) return notFound('Journey not found, access denied, or entry IDs do not belong to this journey.');
     return ok({ success: true });
@@ -458,11 +458,11 @@ export class JourneyMcp {
     when: journeyAddonOn,
     access: { group: 'journey', mode: 'write' },
   })
-  addJourneyContributor(
+  async addJourneyContributor(
     { journeyId, targetUserId, role }: { journeyId: number; targetUserId: number; role: 'editor' | 'viewer' },
     ctx: McpContext,
   ) {
-    if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
+    if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
     if (!this.journey.addContributor(journeyId, ctx.userId, targetUserId, role)) return notFound('Journey not found or access denied.');
     return ok({ success: true });
   }
@@ -479,11 +479,11 @@ export class JourneyMcp {
     when: journeyAddonOn,
     access: { group: 'journey', mode: 'write' },
   })
-  updateJourneyContributorRole(
+  async updateJourneyContributorRole(
     { journeyId, targetUserId, role }: { journeyId: number; targetUserId: number; role: 'editor' | 'viewer' },
     ctx: McpContext,
   ) {
-    if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
+    if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
     if (!this.journey.updateContributorRole(journeyId, ctx.userId, targetUserId, role)) return notFound('Journey not found or access denied.');
     return ok({ success: true });
   }
@@ -499,8 +499,8 @@ export class JourneyMcp {
     when: journeyAddonOn,
     access: { group: 'journey', mode: 'write' },
   })
-  removeJourneyContributor({ journeyId, targetUserId }: { journeyId: number; targetUserId: number }, ctx: McpContext) {
-    if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
+  async removeJourneyContributor({ journeyId, targetUserId }: { journeyId: number; targetUserId: number }, ctx: McpContext) {
+    if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
     if (!this.journey.removeContributor(journeyId, ctx.userId, targetUserId)) return notFound('Journey not found or access denied.');
     return ok({ success: true });
   }
@@ -516,11 +516,11 @@ export class JourneyMcp {
     when: journeyAddonOn,
     access: { group: 'journey', mode: 'write' },
   })
-  updateJourneyPreferences(
+  async updateJourneyPreferences(
     { journeyId, hide_skeletons }: { journeyId: number; hide_skeletons?: boolean },
     ctx: McpContext,
   ) {
-    if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
+    if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
     const result = this.journey.updateJourneyPreferences(journeyId, ctx.userId, { hide_skeletons });
     if (!result) return notFound('Journey not found or access denied.');
     // Return the service result ({ hide_skeletons }), matching the REST route.
@@ -543,14 +543,14 @@ export class JourneyMcp {
     when: journeyAddonOn,
     access: { group: 'journey', mode: 'write' },
   })
-  addJourneyProviderPhotos(
+  async addJourneyProviderPhotos(
     { journeyId, entryId, provider, asset_ids, media_types, caption, passphrase }: {
       journeyId: number; entryId?: number; provider: z.infer<typeof PHOTO_PROVIDER>;
       asset_ids: string[]; media_types?: Array<'image' | 'video'>; caption?: string; passphrase?: string;
     },
     ctx: McpContext,
   ) {
-    if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
+    if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
     // The REST routes derive the journey from the entry and let each per-asset
     // add answer for itself, which in the array branch means a caller with no
     // access gets an empty 200. Checking up front instead turns that silence
@@ -614,8 +614,8 @@ export class JourneyMcp {
     when: journeyAddonOn,
     access: { group: 'journey', mode: 'share' },
   })
-  createJourneyShareLink({ journeyId, ...permissions }: { journeyId: number; share_timeline?: boolean; share_gallery?: boolean; share_map?: boolean; newest_first?: boolean }, ctx: McpContext) {
-    if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
+  async createJourneyShareLink({ journeyId, ...permissions }: { journeyId: number; share_timeline?: boolean; share_gallery?: boolean; share_map?: boolean; newest_first?: boolean }, ctx: McpContext) {
+    if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
     const shareLink = this.share.createOrUpdateJourneyShareLink(journeyId, ctx.userId, permissions);
     if (!shareLink) return notFound('Journey not found or access denied.');
     return ok({ shareLink });
@@ -629,8 +629,8 @@ export class JourneyMcp {
     when: journeyAddonOn,
     access: { group: 'journey', mode: 'share' },
   })
-  deleteJourneyShareLink({ journeyId }: { journeyId: number }, ctx: McpContext) {
-    if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
+  async deleteJourneyShareLink({ journeyId }: { journeyId: number }, ctx: McpContext) {
+    if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
     if (!this.share.deleteJourneyShareLink(journeyId, ctx.userId)) return notFound('Journey not found or access denied.');
     return ok({ success: true });
   }

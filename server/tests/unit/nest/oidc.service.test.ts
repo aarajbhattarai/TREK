@@ -1178,12 +1178,12 @@ describe('verifyIdToken', () => {
 // ── wrapper methods (carried over from the delegation-shim suite) ────────────
 
 describe('wrapper methods', () => {
-  it('OIDC-SVC-046: oidcLoginEnabled reads the resolved auth toggle', () => {
+  it('OIDC-SVC-046: oidcLoginEnabled reads the resolved auth toggle', async () => {
     const spy = vi.spyOn(auth, 'resolveAuthToggles');
-    spy.mockReturnValue({ oidc_login: true } as ReturnType<AuthService['resolveAuthToggles']>);
-    expect(svc.oidcLoginEnabled()).toBe(true);
-    spy.mockReturnValue({ oidc_login: false } as ReturnType<AuthService['resolveAuthToggles']>);
-    expect(svc.oidcLoginEnabled()).toBe(false);
+    spy.mockResolvedValue({ oidc_login: true } as Awaited<ReturnType<AuthService['resolveAuthToggles']>>);
+    expect(await svc.oidcLoginEnabled()).toBe(true);
+    spy.mockResolvedValue({ oidc_login: false } as Awaited<ReturnType<AuthService['resolveAuthToggles']>>);
+    expect(await svc.oidcLoginEnabled()).toBe(false);
     spy.mockRestore();
   });
 
@@ -1222,22 +1222,22 @@ describe('OIDC settings', () => {
     expect(result.discovery_url).toBe('');
   });
 
-  it('ADMIN-SVC-048 — updateOidcSettings persists issuer and client_id, then getOidcSettings returns them', () => {
-    svc.updateOidcSettings({ issuer: 'https://auth.example.com', client_id: 'my-client' });
+  it('ADMIN-SVC-048 — updateOidcSettings persists issuer and client_id, then getOidcSettings returns them', async () => {
+    await svc.updateOidcSettings({ issuer: 'https://auth.example.com', client_id: 'my-client' });
     const result = svc.getOidcSettings() as any;
     expect(result.issuer).toBe('https://auth.example.com');
     expect(result.client_id).toBe('my-client');
   });
 
-  it('ADMIN-SVC-049 — updateOidcSettings does not write oidc_only (replaced by granular toggles)', () => {
-    svc.updateOidcSettings({ issuer: 'https://auth.example.com', client_id: 'my-client' });
+  it('ADMIN-SVC-049 — updateOidcSettings does not write oidc_only (replaced by granular toggles)', async () => {
+    await svc.updateOidcSettings({ issuer: 'https://auth.example.com', client_id: 'my-client' });
     const result = svc.getOidcSettings() as any;
     // oidc_only is no longer managed by updateOidcSettings; use password_login/oidc_login toggles
     expect(result.oidc_only).toBe(false);
   });
 
-  it('ADMIN-SVC-075 — updateOidcSettings applies all five writes atomically', () => {
-    const result = svc.updateOidcSettings({ issuer: 'https://idp', client_id: 'cid', display_name: 'IdP' }) as any;
+  it('ADMIN-SVC-075 — updateOidcSettings applies all five writes atomically', async () => {
+    const result = await svc.updateOidcSettings({ issuer: 'https://idp', client_id: 'cid', display_name: 'IdP' }) as any;
     expect(result.success).toBe(true);
     const settings = svc.getOidcSettings();
     expect(settings).toMatchObject({ issuer: 'https://idp', client_id: 'cid', display_name: 'IdP' });
@@ -1245,31 +1245,31 @@ describe('OIDC settings', () => {
 });
 
 describe('OIDC settings — the lockout guard', () => {
-  it('OIDC-SETTINGS-050 refuses to clear the config while password login is off', () => {
+  it('OIDC-SETTINGS-050 refuses to clear the config while password login is off', async () => {
     // Clearing the issuer with password login disabled locks every user out of the
     // instance: no SSO to log in through, and no password form either.
-    const toggles = vi.spyOn(auth, 'resolveAuthToggles').mockReturnValue({ password_login: false } as never);
-    expect(svc.updateOidcSettings({ issuer: '', client_id: 'x' })).toMatchObject({ status: 400 });
-    expect(svc.updateOidcSettings({ issuer: 'x', client_id: '' })).toMatchObject({ status: 400 });
-    expect((svc.updateOidcSettings({ issuer: '', client_id: '' }) as { error?: string }).error).toMatch(/password login/i);
+    const toggles = vi.spyOn(auth, 'resolveAuthToggles').mockResolvedValue({ password_login: false } as never);
+    expect(await svc.updateOidcSettings({ issuer: '', client_id: 'x' })).toMatchObject({ status: 400 });
+    expect(await svc.updateOidcSettings({ issuer: 'x', client_id: '' })).toMatchObject({ status: 400 });
+    expect(((await svc.updateOidcSettings({ issuer: '', client_id: '' })) as { error?: string }).error).toMatch(/password login/i);
     toggles.mockRestore();
   });
 
-  it('OIDC-SETTINGS-051 allows the same clear once password login is back on', () => {
-    const toggles = vi.spyOn(auth, 'resolveAuthToggles').mockReturnValue({ password_login: true } as never);
-    expect(svc.updateOidcSettings({ issuer: '', client_id: '' })).toEqual({ success: true });
+  it('OIDC-SETTINGS-051 allows the same clear once password login is back on', async () => {
+    const toggles = vi.spyOn(auth, 'resolveAuthToggles').mockResolvedValue({ password_login: true } as never);
+    expect(await svc.updateOidcSettings({ issuer: '', client_id: '' })).toEqual({ success: true });
     toggles.mockRestore();
   });
 
-  it('OIDC-SETTINGS-052 an omitted client_secret keeps the stored one, an empty string clears it', () => {
-    const toggles = vi.spyOn(auth, 'resolveAuthToggles').mockReturnValue({ password_login: true } as never);
-    svc.updateOidcSettings({ issuer: 'https://idp', client_id: 'c', client_secret: 'shh' });
+  it('OIDC-SETTINGS-052 an omitted client_secret keeps the stored one, an empty string clears it', async () => {
+    const toggles = vi.spyOn(auth, 'resolveAuthToggles').mockResolvedValue({ password_login: true } as never);
+    await svc.updateOidcSettings({ issuer: 'https://idp', client_id: 'c', client_secret: 'shh' });
     expect(svc.getOidcSettings().client_secret_set).toBe(true);
     // Omitted: the write skips the column entirely rather than blanking it, which is
     // what lets the admin panel save the form without re-typing the secret.
-    svc.updateOidcSettings({ issuer: 'https://idp', client_id: 'c' });
+    await svc.updateOidcSettings({ issuer: 'https://idp', client_id: 'c' });
     expect(svc.getOidcSettings().client_secret_set).toBe(true);
-    svc.updateOidcSettings({ issuer: 'https://idp', client_id: 'c', client_secret: '' });
+    await svc.updateOidcSettings({ issuer: 'https://idp', client_id: 'c', client_secret: '' });
     expect(svc.getOidcSettings().client_secret_set).toBe(false);
     toggles.mockRestore();
   });

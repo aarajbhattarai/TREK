@@ -70,7 +70,7 @@ export interface WebauthnConfig {
 export class WebauthnConfigService {
   constructor(private readonly db: DatabaseService) {}
 
-  private setting(key: string): string | null {
+  private async setting(key: string): Promise<string | null> {
     const raw = this.db.get<{ value: string }>('SELECT value FROM app_settings WHERE key = ?', key)?.value;
     const trimmed = raw?.trim();
     return trimmed ? trimmed : null;
@@ -81,10 +81,10 @@ export class WebauthnConfigService {
    * configured) — the feature then reports itself as "not configured" and stays
    * disabled so nobody can enrol a credential bound to the wrong origin.
    */
-  resolve(): WebauthnConfig | null {
+  async resolve(): Promise<WebauthnConfig | null> {
     // 1. Explicit operator config always wins.
-    const explicitRpId = (readEnv().webauthn.rpId || this.setting('webauthn_rp_id'))?.trim() || null;
-    const explicitOrigins = (readEnv().webauthn.origins || this.setting('webauthn_origins') || '')
+    const explicitRpId = (readEnv().webauthn.rpId || (await this.setting('webauthn_rp_id')))?.trim() || null;
+    const explicitOrigins = (readEnv().webauthn.origins || (await this.setting('webauthn_origins')) || '')
       .split(',')
       // The lookbehind matches only the first slash of the trailing run. Without it the
       // engine retries from every slash, which is quadratic on a slash-heavy value.
@@ -118,7 +118,7 @@ export class WebauthnConfigService {
   }
 
   /** True when a usable RP ID resolves for this deployment (exposed as a pure boolean on app-config). */
-  isConfigured(): boolean {
-    return this.resolve() !== null;
+  async isConfigured(): Promise<boolean> {
+    return (await this.resolve()) !== null;
   }
 }

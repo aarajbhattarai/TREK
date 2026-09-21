@@ -95,7 +95,7 @@ export class PluginsProxyController {
     let user: { id: number; username: string; role?: 'admin' | 'user' } | null = null;
     if (route.auth) {
       const token = extractToken(req);
-      const loaded = token ? verifyJwtAndLoadUser(token) : null;
+      const loaded = token ? await verifyJwtAndLoadUser(token) : null;
       if (!loaded) {
         res.status(401).json({ error: 'Access token required', code: 'AUTH_REQUIRED' });
         return;

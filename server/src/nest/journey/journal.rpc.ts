@@ -158,7 +158,7 @@ export class JournalRpc {
     }
     // The operator's allow-list gates this path too, or the RPC would be the way
     // around an admin setting that the REST upload obeys (journeyImageFileFilter).
-    const allowed = this.allowedTypes.get().split(',').map((e) => e.trim().toLowerCase());
+    const allowed = (await this.allowedTypes.get()).split(',').map((e) => e.trim().toLowerCase());
     if (!allowed.includes('*') && !allowed.includes(ext.slice(1))) {
       throw new BadParams(`file type ${ext} is not allowed`);
     }

@@ -10,10 +10,10 @@ import { extractToken, verifyJwtAndLoadUser } from './jwt-verify';
  */
 @Injectable()
 export class OptionalJwtGuard implements CanActivate {
-  canActivate(context: ExecutionContext): boolean {
+  async canActivate(context: ExecutionContext): Promise<boolean> {
     const req = context.switchToHttp().getRequest<Request>();
     const token = extractToken(req);
-    (req as { user: unknown }).user = (token ? verifyJwtAndLoadUser(token) : null) || null;
+    (req as { user: unknown }).user = (token ? await verifyJwtAndLoadUser(token) : null) || null;
     return true;
   }
 }

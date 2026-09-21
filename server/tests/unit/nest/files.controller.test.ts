@@ -59,9 +59,9 @@ const trip = { id: 5, user_id: 42 } as never;
 
 // The 404 "Trip not found" cases moved to trip-access.guard.test.ts with the check.
 describe('FilesController (parity with the legacy /api/trips/:tripId/files route)', () => {
-  it('GET / lists with the trash flag', () => {
+  it('GET / lists with the trash flag', async () => {
     const listFiles = vi.fn().mockReturnValue([{ id: 1 }]);
-    expect(fc(fsvc({ listFiles } as Partial<FilesService>)).list(user, trip, '5', 'true')).toEqual({ files: [{ id: 1 }] });
+    expect(await fc(fsvc({ listFiles } as Partial<FilesService>)).list(user, trip, '5', 'true')).toEqual({ files: [{ id: 1 }] });
     expect(listFiles).toHaveBeenCalledWith('5', true);
   });
 
@@ -218,7 +218,7 @@ describe('FilesController (parity with the legacy /api/trips/:tripId/files route
     expect(await fc(fsvc({ getFileById: vi.fn().mockReturnValue({ id: 9 }), deleteFileLink } as Partial<FilesService>)).unlink(user, trip, '5', '9', '3')).toEqual({ success: true });
     expect(deleteFileLink).toHaveBeenCalledWith('3', '9');
     const s = fsvc({ getFileById: vi.fn().mockReturnValue({ id: 9 }), getFileLinks: vi.fn().mockReturnValue([{ id: 1 }]) } as Partial<FilesService>);
-    expect(fc(s).links(user, trip, '5', '9')).toEqual({ links: [{ id: 1 }] });
+    expect(await fc(s).links(user, trip, '5', '9')).toEqual({ links: [{ id: 1 }] });
   });
 
   it('the link routes resolve the file against :tripId, so a foreign file is 404', async () => {
@@ -227,8 +227,7 @@ describe('FilesController (parity with the legacy /api/trips/:tripId/files route
     expect(await rejected(fc(unlinkSvc).unlink(user, trip, '5', '9', '3'))).toEqual({ status: 404, body: { error: 'File not found' } });
     expect(unlinkSvc.deleteFileLink).not.toHaveBeenCalled();
     const listSvc = foreign();
-    // `links` is still a synchronous handler, so it throws rather than rejecting.
-    expect(thrown(() => fc(listSvc).links(user, trip, '5', '9'))).toEqual({ status: 404, body: { error: 'File not found' } });
+    expect(await rejected(fc(listSvc).links(user, trip, '5', '9'))).toEqual({ status: 404, body: { error: 'File not found' } });
     expect(listSvc.getFileLinks).not.toHaveBeenCalled();
   });
 

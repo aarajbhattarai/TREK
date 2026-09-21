@@ -103,7 +103,7 @@ export class AdminController {
 
   @Delete('users/:id/passkeys')
   async resetUserPasskeys(@CurrentUser() user: User, @Param('id') id: string, @Req() req: Request) {
-    const result = ok(this.admin.resetUserPasskeys(id));
+    const result = ok(await this.admin.resetUserPasskeys(id));
     await this.audit.writeAudit({ userId: user.id, action: 'admin.user_passkeys_reset', resource: String(id), ip: getClientIp(req), details: { targetUser: result.email, deleted: result.deleted } });
     return { success: true, deleted: result.deleted };
   }
@@ -163,23 +163,23 @@ export class AdminController {
 
   // ── Invites ──
   @Get('invites')
-  listInvites() { return { invites: this.invites.listInvites() }; }
+  async listInvites() { return { invites: await this.invites.listInvites() }; }
 
   // Trips an admin can optionally bind a registration invite to (#1402).
   @Get('invites/trips')
-  listInviteTrips() { return { trips: this.invites.listTripsForInvite() }; }
+  async listInviteTrips() { return { trips: await this.invites.listTripsForInvite() }; }
 
   @Post('invites')
   @HttpCode(201)
   async createInvite(@CurrentUser() user: User, @Body() body: AdminInviteCreateDto, @Req() req: Request) {
-    const result = this.invites.createInvite(user.id, body);
+    const result = await this.invites.createInvite(user.id, body);
     await this.audit.writeAudit({ userId: user.id, action: 'admin.invite_create', resource: String(result.inviteId), ip: getClientIp(req), details: { max_uses: result.uses, expires_in_days: result.expiresInDays, trip_id: result.tripId } });
     return { invite: result.invite };
   }
 
   @Delete('invites/:id')
   async deleteInvite(@CurrentUser() user: User, @Param('id') id: string, @Req() req: Request) {
-    ok(this.invites.deleteInvite(id));
+    ok(await this.invites.deleteInvite(id));
     await this.audit.writeAudit({ userId: user.id, action: 'admin.invite_delete', resource: String(id), ip: getClientIp(req) });
     return { success: true };
   }

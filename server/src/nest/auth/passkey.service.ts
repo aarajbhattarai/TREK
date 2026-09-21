@@ -12,6 +12,7 @@ import { avatarUrl } from '../common/avatarUrl';
 import { stripUserForClient } from './auth.helpers';
 import { AuthService } from './auth.service';
 import { DatabaseService } from '../database/database.service';
+import { UnitOfWork } from '../database/unit-of-work';
 import type { User } from '../../types';
 
 // ---------------------------------------------------------------------------
@@ -107,17 +108,18 @@ export class PasskeyService {
     private readonly db: DatabaseService,
     private readonly auth: AuthService,
     private readonly webauthn: WebauthnConfigService,
+    private readonly uow: UnitOfWork,
   ) {}
 
   // -------------------------------------------------------------------------
   // Challenge store (DB-backed, single-use, TTL'd)
   // -------------------------------------------------------------------------
 
-  private purgeExpiredChallenges(now: number): void {
+  private async purgeExpiredChallenges(now: number): Promise<void> {
     this.db.run('DELETE FROM webauthn_challenges WHERE expires_at < ?', now);
   }
 
-  private storeChallenge(challenge: string, userId: number | null, type: 'registration' | 'authentication', now: number): void {
+  private async storeChallenge(challenge: string, userId: number | null, type: 'registration' | 'authentication', now: number): Promise<void> {
     this.db.run(
       'INSERT INTO webauthn_challenges (challenge, user_id, type, expires_at) VALUES (?, ?, ?, ?)',
       challenge, userId, type, now + CHALLENGE_TTL_MS,
@@ -130,7 +132,7 @@ export class PasskeyService {
    * concurrent double-submit of the same assertion can never spend one challenge
    * twice (the replay window a SELECT→await→DELETE ordering would open).
    */
-  private claimChallenge(challenge: string, type: 'registration' | 'authentication', now: number): { user_id: number | null } | null {
+  private async claimChallenge(challenge: string, type: 'registration' | 'authentication', now: number): Promise<{ user_id: number | null } | null> {
     const row = this.db.get<{ user_id: number | null }>(
       'DELETE FROM webauthn_challenges WHERE challenge = ? AND type = ? AND expires_at > ? RETURNING user_id',
       challenge, type, now,
@@ -203,7 +205,7 @@ export class PasskeyService {
     password: string | undefined,
     requestOrigin?: string,
   ): Promise<{ error?: string; status?: number; options?: Awaited<ReturnType<typeof generateRegistrationOptions>> }> {
-    const cfg = this.webauthn.resolve();
+    const cfg = await this.webauthn.resolve();
     if (!cfg) return { ...NOT_CONFIGURED };
     if (this.originCannotVerify(cfg, requestOrigin)) return { ...NOT_CONFIGURED };
 
@@ -222,7 +224,7 @@ export class PasskeyService {
     );
 
     const now = Date.now();
-    this.purgeExpiredChallenges(now);
+    await this.purgeExpiredChallenges(now);
 
     const options = await generateRegistrationOptions({
       rpName: cfg.rpName,
@@ -237,7 +239,7 @@ export class PasskeyService {
       supportedAlgorithmIDs: SUPPORTED_ALGORITHM_IDS,
     });
 
-    this.storeChallenge(options.challenge, userId, 'registration', now);
+    await this.storeChallenge(options.challenge, userId, 'registration', now);
     return { options };
   }
 
@@ -245,7 +247,7 @@ export class PasskeyService {
     userId: number,
     body: { attestationResponse?: unknown; name?: unknown },
   ): Promise<{ error?: string; status?: number; success?: boolean; credential?: unknown }> {
-    const cfg = this.webauthn.resolve();
+    const cfg = await this.webauthn.resolve();
     if (!cfg) return { ...NOT_CONFIGURED };
 
     const resp = body?.attestationResponse;
@@ -255,7 +257,7 @@ export class PasskeyService {
     if (!challenge) return { error: 'Invalid registration response', status: 400 };
 
     const now = Date.now();
-    const claimed = this.claimChallenge(challenge, 'registration', now);
+    const claimed = await this.claimChallenge(challenge, 'registration', now);
     if (!claimed || claimed.user_id !== userId) {
       return { error: 'Registration challenge expired. Please try again.', status: 400 };
     }
@@ -291,15 +293,14 @@ export class PasskeyService {
     // Duplicate check + INSERT in one transaction so the UNIQUE race can't slip
     // between them; the sentinel keeps the legacy 409-vs-400 split intact.
     try {
-      this.db.transaction((conn) => {
-        if (conn.prepare('SELECT id FROM webauthn_credentials WHERE credential_id = ?').get(credential.id)) {
+      await this.uow.transactional(async () => {
+        if (this.db.get('SELECT id FROM webauthn_credentials WHERE credential_id = ?', credential.id)) {
           throw DUPLICATE_CREDENTIAL;
         }
-        conn.prepare(
+        this.db.run(
           `INSERT INTO webauthn_credentials
              (user_id, credential_id, public_key, counter, transports, device_type, backed_up, name, aaguid, last_used_at)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)`,
-        ).run(
           userId,
           credential.id,
           Buffer.from(credential.publicKey),
@@ -334,12 +335,12 @@ export class PasskeyService {
     status?: number;
     options?: Awaited<ReturnType<typeof generateAuthenticationOptions>>;
   }> {
-    const cfg = this.webauthn.resolve();
+    const cfg = await this.webauthn.resolve();
     if (!cfg) return { ...NOT_CONFIGURED };
     if (this.originCannotVerify(cfg, requestOrigin)) return { ...NOT_CONFIGURED };
 
     const now = Date.now();
-    this.purgeExpiredChallenges(now);
+    await this.purgeExpiredChallenges(now);
 
     const options = await generateAuthenticationOptions({
       rpID: cfg.rpID,
@@ -348,7 +349,7 @@ export class PasskeyService {
       // accounts have passkeys, so the endpoint can't be used to enumerate users.
     });
 
-    this.storeChallenge(options.challenge, null, 'authentication', now);
+    await this.storeChallenge(options.challenge, null, 'authentication', now);
     return { options };
   }
 
@@ -360,7 +361,7 @@ export class PasskeyService {
     auditUserId?: number | null;
     auditAction?: string;
   }> {
-    const cfg = this.webauthn.resolve();
+    const cfg = await this.webauthn.resolve();
     if (!cfg) return { ...NOT_CONFIGURED };
 
     const resp = body?.assertionResponse;
@@ -371,7 +372,7 @@ export class PasskeyService {
 
     // Claim the challenge (single-use) BEFORE looking anything up or verifying.
     const now = Date.now();
-    if (!this.claimChallenge(challenge, 'authentication', now)) return { ...AUTH_FAILED };
+    if (!(await this.claimChallenge(challenge, 'authentication', now))) return { ...AUTH_FAILED };
 
     const credId = (resp as { id?: unknown; rawId?: unknown }).id ?? (resp as { rawId?: unknown }).rawId;
     if (typeof credId !== 'string') return { ...AUTH_FAILED };
@@ -417,15 +418,15 @@ export class PasskeyService {
     if (!user) return { ...AUTH_FAILED };
 
     // Persist the new counter + last-used and bump login bookkeeping atomically.
-    this.db.transaction((conn) => {
-      conn.prepare('UPDATE webauthn_credentials SET counter = ?, last_used_at = CURRENT_TIMESTAMP WHERE id = ?').run(newCounter, cred.id);
-      conn.prepare('UPDATE users SET last_login = CURRENT_TIMESTAMP, login_count = login_count + 1 WHERE id = ?').run(user.id);
+    await this.uow.transactional(async () => {
+      this.db.run('UPDATE webauthn_credentials SET counter = ?, last_used_at = CURRENT_TIMESTAMP WHERE id = ?', newCounter, cred.id);
+      this.db.run('UPDATE users SET last_login = CURRENT_TIMESTAMP, login_count = login_count + 1 WHERE id = ?', user.id);
     });
 
     // A user-verified passkey is phishing-resistant and inherently two-factor
     // (device possession + biometric/PIN), so it mints the real session directly
     // — the SAME path as password and OIDC login (no new token shape).
-    const token = this.auth.generateToken(user);
+    const token = await this.auth.generateToken(user);
     const userSafe = stripUserForClient(user) as Record<string, unknown>;
     return { token, user: { ...userSafe, avatar_url: avatarUrl(user) }, auditUserId: Number(user.id) };
   }
@@ -434,7 +435,7 @@ export class PasskeyService {
   // Management (authenticated, owner-scoped)
   // -------------------------------------------------------------------------
 
-  listPasskeys(userId: number): Array<Record<string, unknown>> {
+  async listPasskeys(userId: number): Promise<Array<Record<string, unknown>>> {
     const rows = this.db.all<{ backed_up: number } & Record<string, unknown>>(
       'SELECT id, name, device_type, backed_up, created_at, last_used_at FROM webauthn_credentials WHERE user_id = ? ORDER BY created_at DESC',
       userId,
@@ -442,7 +443,7 @@ export class PasskeyService {
     return rows.map((r) => ({ ...r, backed_up: r.backed_up === 1 }));
   }
 
-  renamePasskey(userId: number, id: string, name: unknown): { error?: string; status?: number; success?: boolean } {
+  async renamePasskey(userId: number, id: string, name: unknown): Promise<{ error?: string; status?: number; success?: boolean }> {
     const cleanName = sanitizeName(name);
     if (!cleanName) return { error: 'Name is required', status: 400 };
     // Ownership enforced in SQL (404 on miss, never a 403 that leaks existence).
@@ -451,11 +452,11 @@ export class PasskeyService {
     return { success: true };
   }
 
-  deletePasskey(
+  async deletePasskey(
     userId: number,
     id: string,
     password: string | undefined,
-  ): { error?: string; status?: number; success?: boolean } {
+  ): Promise<{ error?: string; status?: number; success?: boolean }> {
     // Re-auth before removing a credential (a hijacked session must not be able to
     // strip the victim's passkeys). Deleting is always allowed because every
     // account keeps a usable password as recovery fallback — losing all passkeys
@@ -470,7 +471,7 @@ export class PasskeyService {
   }
 
   /** Admin: clear all of a user's passkeys (e.g. on suspected compromise). */
-  adminResetPasskeys(targetUserId: number): { error?: string; status?: number; success?: boolean; deleted?: number; email?: string } {
+  async adminResetPasskeys(targetUserId: number): Promise<{ error?: string; status?: number; success?: boolean; deleted?: number; email?: string }> {
     const target = this.db.get<{ id: number; email: string }>('SELECT id, email FROM users WHERE id = ?', targetUserId);
     if (!target) return { error: 'User not found', status: 404 };
     const result = this.db.run('DELETE FROM webauthn_credentials WHERE user_id = ?', targetUserId);

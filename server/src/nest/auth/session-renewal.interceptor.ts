@@ -33,16 +33,16 @@ import { setAuthCookie } from '../common/cookie';
 export class SessionRenewalInterceptor implements NestInterceptor {
   constructor(private readonly auth: AuthService) {}
 
-  intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
+  async intercept(context: ExecutionContext, next: CallHandler): Promise<Observable<unknown>> {
     if (context.getType() === 'http') {
       const req = context.switchToHttp().getRequest<Request & { user?: { id: number } }>();
       const res = context.switchToHttp().getResponse<Response>();
-      this.maybeRenew(req, res);
+      await this.maybeRenew(req, res);
     }
     return next.handle();
   }
 
-  private maybeRenew(req: Request & { user?: { id: number } }, res: Response): void {
+  private async maybeRenew(req: Request & { user?: { id: number } }, res: Response): Promise<void> {
     const cookieToken: string | undefined = (req as { cookies?: Record<string, string> }).cookies?.trek_session;
     if (!req.user || !cookieToken || res.headersSent) return;
 
@@ -53,7 +53,7 @@ export class SessionRenewalInterceptor implements NestInterceptor {
     const halfLife = claims.iat + (claims.exp - claims.iat) / 2;
     if (Date.now() / 1000 < halfLife) return;
 
-    const token = this.auth.generateToken(
+    const token = await this.auth.generateToken(
       { id: req.user.id, password_version: claims.pv ?? 0 },
       claims.remember,
     );

@@ -81,7 +81,7 @@ export class FilesService {
     private readonly storage: StorageService,
   ) {}
 
-  verifyTripAccess(tripId: string | number, userId: number) {
+  async verifyTripAccess(tripId: string | number, userId: number) {
     return this.db.canAccessTrip(tripId, userId);
   }
 
@@ -98,7 +98,7 @@ export class FilesService {
   // download route)
   // ---------------------------------------------------------------------------
 
-  authenticateDownload(req: Request): { userId: number } | { error: string; status: number } {
+  async authenticateDownload(req: Request): Promise<{ userId: number } | { error: string; status: number }> {
     const cookieToken = (req as { cookies?: Record<string, string> }).cookies?.trek_session;
     const authHeader = req.headers['authorization'];
     const bearerToken = authHeader ? (authHeader.split(' ')[1] || undefined) : undefined;
@@ -110,7 +110,7 @@ export class FilesService {
       // Use the shared helper so the password_version gate applies here too;
       // previously this bypassed the check and stolen download tokens stayed
       // valid across a password reset.
-      const user = verifyJwtAndLoadUser(jwtToken);
+      const user = await verifyJwtAndLoadUser(jwtToken);
       if (!user) return { error: 'Invalid or expired token', status: 401 };
       return { userId: user.id };
     }
@@ -136,10 +136,10 @@ export class FilesService {
    * the first field that escapes `tripId`, or null when every supplied id belongs
    * to the trip. Absent / null / zero ids are ignored (they clear the link).
    */
-  findForeignLinkTarget(
+  async findForeignLinkTarget(
     tripId: string | number,
     opts: { reservation_id?: string | number | null; assignment_id?: string | number | null; place_id?: string | number | null; budget_item_id?: string | number | null }
-  ): 'reservation_id' | 'assignment_id' | 'place_id' | 'budget_item_id' | null {
+  ): Promise<'reservation_id' | 'assignment_id' | 'place_id' | 'budget_item_id' | null> {
     if (opts.reservation_id && !this.db.get('SELECT 1 FROM reservations WHERE id = ? AND trip_id = ?', opts.reservation_id, tripId)) {
       return 'reservation_id';
     }
@@ -159,11 +159,11 @@ export class FilesService {
   // CRUD
   // ---------------------------------------------------------------------------
 
-  getFileById(id: string | number, tripId: string | number): TripFile | undefined {
+  async getFileById(id: string | number, tripId: string | number): Promise<TripFile | undefined> {
     return this.db.get<TripFile>('SELECT * FROM trip_files WHERE id = ? AND trip_id = ?', id, tripId);
   }
 
-  getDeletedFile(id: string | number, tripId: string | number): TripFile | undefined {
+  async getDeletedFile(id: string | number, tripId: string | number): Promise<TripFile | undefined> {
     return this.db.get<TripFile>('SELECT * FROM trip_files WHERE id = ? AND trip_id = ? AND deleted_at IS NOT NULL', id, tripId);
   }
 
@@ -185,7 +185,7 @@ export class FilesService {
     tripId: string | number,
     fileId: string | number,
   ): Promise<{ name: string; mimetype: string; bytes: Buffer }> {
-    const file = this.getFileById(fileId, tripId);
+    const file = await this.getFileById(fileId, tripId);
     if (!file || file.deleted_at) throw new FileContentError('not-found', `no file ${fileId} on trip ${tripId}`);
     if ((file.file_size ?? 0) > FILE_CONTENT_MAX) {
       throw new FileContentError('too-large', `file too large to read (>${FILE_CONTENT_MAX} bytes); use the download UI`);
@@ -225,7 +225,7 @@ export class FilesService {
     };
   }
 
-  listFiles(tripId: string | number, showTrash: boolean) {
+  async listFiles(tripId: string | number, showTrash: boolean) {
     const where = showTrash
       ? 'f.trip_id = ? AND f.deleted_at IS NOT NULL AND f.message_id IS NULL'
       : 'f.trip_id = ? AND f.deleted_at IS NULL AND f.message_id IS NULL';
@@ -253,7 +253,7 @@ export class FilesService {
     });
   }
 
-  createFile(
+  async createFile(
     tripId: string | number,
     file: { filename: string; originalname: string; size: number; mimetype: string },
     uploadedBy: number,
@@ -282,7 +282,7 @@ export class FilesService {
     return formatFile(created);
   }
 
-  updateFile(
+  async updateFile(
     id: string | number,
     current: TripFile,
     updates: { description?: string; place_id?: string | number | null; reservation_id?: string | number | null; budget_item_id?: string | number | null }
@@ -312,7 +312,7 @@ export class FilesService {
     return formatFile(updated);
   }
 
-  toggleStarred(id: string | number, currentStarred: number | undefined) {
+  async toggleStarred(id: string | number, currentStarred: number | undefined) {
     const newStarred = currentStarred ? 0 : 1;
     this.db.run('UPDATE trip_files SET starred = ? WHERE id = ?', newStarred, id);
 
@@ -320,11 +320,11 @@ export class FilesService {
     return formatFile(updated);
   }
 
-  softDeleteFile(id: string | number) {
+  async softDeleteFile(id: string | number) {
     this.db.run('UPDATE trip_files SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?', id);
   }
 
-  restoreFile(id: string | number) {
+  async restoreFile(id: string | number) {
     this.db.run('UPDATE trip_files SET deleted_at = NULL WHERE id = ?', id);
     const restored = this.db.get<TripFile>(`${FILE_SELECT} WHERE f.id = ?`, id)!;
     return formatFile(restored);
@@ -372,7 +372,7 @@ export class FilesService {
   // Dedupe rides INSERT OR IGNORE + the UNIQUE(file_id, <target>) constraints;
   // a genuine insert failure propagates to the global exception filter instead
   // of returning a success-shaped links list (the legacy catch swallowed it).
-  createFileLink(
+  async createFileLink(
     fileId: string | number,
     opts: { reservation_id?: string | number | null; assignment_id?: string | number | null; place_id?: string | number | null; budget_item_id?: string | number | null }
   ) {
@@ -382,11 +382,11 @@ export class FilesService {
     return this.db.all('SELECT * FROM file_links WHERE file_id = ?', fileId);
   }
 
-  deleteFileLink(linkId: string | number, fileId: string | number) {
+  async deleteFileLink(linkId: string | number, fileId: string | number) {
     this.db.run('DELETE FROM file_links WHERE id = ? AND file_id = ?', linkId, fileId);
   }
 
-  getFileLinks(fileId: string | number) {
+  async getFileLinks(fileId: string | number) {
     return this.db.all(`
       SELECT fl.*, r.title as reservation_title
       FROM file_links fl

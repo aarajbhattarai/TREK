@@ -94,7 +94,7 @@ export class CollabMcp {
     },
     ctx: McpContext,
   ) {
-    if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
+    if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
     if (!this.collab.verifyTripAccess(tripId, ctx.userId)) return noAccess();
     if (!(await this.guards.hasTripPermission('collab_edit', tripId, ctx.userId))) return permissionDenied();
     const note = this.collab.createNote(tripId, ctx.userId, { title, content, category, color, website, pinned });
@@ -125,7 +125,7 @@ export class CollabMcp {
     },
     ctx: McpContext,
   ) {
-    if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
+    if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
     if (!this.collab.verifyTripAccess(tripId, ctx.userId)) return noAccess();
     if (!(await this.guards.hasTripPermission('collab_edit', tripId, ctx.userId))) return permissionDenied();
     const note = this.collab.updateNote(tripId, noteId, { title, content, category, color, website, pinned });
@@ -146,7 +146,7 @@ export class CollabMcp {
     access: { group: 'collab', mode: 'write' },
   })
   async deleteCollabNote({ tripId, noteId }: { tripId: number; noteId: number }, ctx: McpContext) {
-    if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
+    if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
     if (!this.collab.verifyTripAccess(tripId, ctx.userId)) return noAccess();
     if (!(await this.guards.hasTripPermission('collab_edit', tripId, ctx.userId))) return permissionDenied();
     const deleted = await this.collab.deleteNote(tripId, noteId);
@@ -193,7 +193,7 @@ export class CollabMcp {
     },
     ctx: McpContext,
   ) {
-    if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
+    if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
     if (!this.collab.verifyTripAccess(tripId, ctx.userId)) return noAccess();
     if (!(await this.guards.hasTripPermission('collab_edit', tripId, ctx.userId))) return permissionDenied();
     const poll = this.collab.createPoll(tripId, ctx.userId, { question, options, multiple, deadline });
@@ -214,7 +214,7 @@ export class CollabMcp {
     access: { group: 'collab', mode: 'write' },
   })
   async voteCollabPoll({ tripId, pollId, optionIndex }: { tripId: number; pollId: number; optionIndex: number }, ctx: McpContext) {
-    if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
+    if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
     if (!this.collab.verifyTripAccess(tripId, ctx.userId)) return noAccess();
     if (!(await this.guards.hasTripPermission('collab_edit', tripId, ctx.userId))) return permissionDenied();
     const result = this.collab.votePoll(tripId, pollId, ctx.userId, optionIndex);
@@ -235,7 +235,7 @@ export class CollabMcp {
     access: { group: 'collab', mode: 'write' },
   })
   async closeCollabPoll({ tripId, pollId }: { tripId: number; pollId: number }, ctx: McpContext) {
-    if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
+    if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
     if (!this.collab.verifyTripAccess(tripId, ctx.userId)) return noAccess();
     if (!(await this.guards.hasTripPermission('collab_edit', tripId, ctx.userId))) return permissionDenied();
     const poll = this.collab.closePoll(tripId, pollId);
@@ -256,7 +256,7 @@ export class CollabMcp {
     access: { group: 'collab', mode: 'write' },
   })
   async deleteCollabPoll({ tripId, pollId }: { tripId: number; pollId: number }, ctx: McpContext) {
-    if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
+    if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
     if (!this.collab.verifyTripAccess(tripId, ctx.userId)) return noAccess();
     if (!(await this.guards.hasTripPermission('collab_edit', tripId, ctx.userId))) return permissionDenied();
     const deleted = this.collab.deletePoll(tripId, pollId);
@@ -295,7 +295,7 @@ export class CollabMcp {
     access: { group: 'collab', mode: 'write' },
   })
   async sendCollabMessage({ tripId, text, replyTo }: { tripId: number; text: string; replyTo?: number }, ctx: McpContext) {
-    if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
+    if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
     if (!this.collab.verifyTripAccess(tripId, ctx.userId)) return noAccess();
     if (!(await this.guards.hasTripPermission('collab_edit', tripId, ctx.userId))) return permissionDenied();
     const result = this.collab.createMessage(tripId, ctx.userId, text, replyTo ?? null);
@@ -316,7 +316,7 @@ export class CollabMcp {
     access: { group: 'collab', mode: 'write' },
   })
   async deleteCollabMessage({ tripId, messageId }: { tripId: number; messageId: number }, ctx: McpContext) {
-    if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
+    if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
     if (!this.collab.verifyTripAccess(tripId, ctx.userId)) return noAccess();
     if (!(await this.guards.hasTripPermission('collab_edit', tripId, ctx.userId))) return permissionDenied();
     const result = this.collab.deleteMessage(tripId, messageId, ctx.userId);
@@ -338,7 +338,7 @@ export class CollabMcp {
     access: { group: 'collab', mode: 'write' },
   })
   async reactCollabMessage({ tripId, messageId, emoji }: { tripId: number; messageId: number; emoji: string }, ctx: McpContext) {
-    if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
+    if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
     if (!this.collab.verifyTripAccess(tripId, ctx.userId)) return noAccess();
     if (!(await this.guards.hasTripPermission('collab_edit', tripId, ctx.userId))) return permissionDenied();
     const result = this.collab.reactMessage(messageId, tripId, ctx.userId, emoji);

@@ -39,7 +39,7 @@ export class UserCleanupService {
    * Best-effort per table so a slimmed-down schema (some tests) can't fail the user
    * deletion itself.
    */
-  erasePluginUserData(userId: number): void {
+  async erasePluginUserData(userId: number): Promise<void> {
     for (const table of ['plugin_user_config', 'plugin_oauth_tokens', 'plugin_oauth_state']) {
       try { this.db.run(`DELETE FROM ${table} WHERE user_id = ?`, userId); } catch { /* table absent (slim schema) */ }
     }
@@ -81,7 +81,7 @@ export class UserCleanupService {
   async deleteUserCompletely(userId: number): Promise<void> {
     await this.uow.transactional(async () => {
       await this.cleanupUserReferences(userId);
-      this.erasePluginUserData(userId);
+      await this.erasePluginUserData(userId);
       this.db.run('DELETE FROM users WHERE id = ?', userId);
     });
   }

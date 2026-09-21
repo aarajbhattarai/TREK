@@ -94,7 +94,7 @@ afterAll(() => {
 });
 
 describe('erasePluginUserData', () => {
-  it('USER-CLEANUP-001: deletes the host-side per-user plugin rows', () => {
+  it('USER-CLEANUP-001: deletes the host-side per-user plugin rows', async () => {
     const { user } = createUser(testDb);
     const { user: other } = createUser(testDb, { username: 'other' });
     installPlugin('demo', []);
@@ -103,34 +103,34 @@ describe('erasePluginUserData', () => {
     testDb.prepare('INSERT INTO plugin_user_config (plugin_id, user_id, config) VALUES (?, ?, ?)')
       .run('demo', other.id, '{"token":"keep-me"}');
 
-    svc.erasePluginUserData(user.id);
+    await svc.erasePluginUserData(user.id);
 
     const rows = testDb.prepare('SELECT user_id FROM plugin_user_config').all() as Array<{ user_id: number }>;
     expect(rows.map(r => r.user_id)).toEqual([other.id]);
   });
 
-  it('USER-CLEANUP-002: enqueues an erasure only for plugins holding hook:user-data', () => {
+  it('USER-CLEANUP-002: enqueues an erasure only for plugins holding hook:user-data', async () => {
     const { user } = createUser(testDb);
     installPlugin('with-hook', ['hook:user-data', 'trips:read']);
     installPlugin('without-hook', ['trips:read']);
     installPlugin('no-permissions', null);
 
-    svc.erasePluginUserData(user.id);
+    await svc.erasePluginUserData(user.id);
 
     expect(queuedFor(user.id)).toEqual(['with-hook']);
   });
 
-  it('USER-CLEANUP-003: treats an unparseable permissions column as no permissions', () => {
+  it('USER-CLEANUP-003: treats an unparseable permissions column as no permissions', async () => {
     const { user } = createUser(testDb);
     testDb.prepare('INSERT INTO plugins (id, name, version, permissions) VALUES (?, ?, ?, ?)')
       .run('broken', 'broken', '1.0.0', '{not json');
 
-    svc.erasePluginUserData(user.id);
+    await svc.erasePluginUserData(user.id);
 
     expect(queuedFor(user.id)).toEqual([]);
   });
 
-  it('USER-CLEANUP-004: enqueues every orphan data dir — an uninstall keeps no permissions row', () => {
+  it('USER-CLEANUP-004: enqueues every orphan data dir — an uninstall keeps no permissions row', async () => {
     const { user } = createUser(testDb);
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'trek-plugins-data-'));
     dataRootRef.value = root;
@@ -140,7 +140,7 @@ describe('erasePluginUserData', () => {
     fs.mkdirSync(path.join(root, 'installed'));
 
     try {
-      svc.erasePluginUserData(user.id);
+      await svc.erasePluginUserData(user.id);
       // 'installed' comes from the permissions scan, not the orphan scan, and the
       // INSERT OR IGNORE keeps it single.
       expect(queuedFor(user.id)).toEqual(['installed', 'uninstalled-but-retained']);
@@ -155,7 +155,7 @@ describe('erasePluginUserData', () => {
     slim.prepare('INSERT INTO users (id) VALUES (1)').run();
     const slimSvc = new UserCleanupService(new DatabaseService(slim), budget, await createTestUnitOfWork(testDb));
 
-    expect(() => slimSvc.erasePluginUserData(1)).not.toThrow();
+    await expect(slimSvc.erasePluginUserData(1)).resolves.toBeUndefined();
 
     slim.close();
   });
@@ -216,6 +216,10 @@ describe('deleteUserCompletely', () => {
 
     // Fail on the final statement only, after the reference cleanup has written.
     const failing = new DatabaseService(testDb);
+    // `.bind` is load-bearing here and must NOT become an arrow forwarder: it captures
+    // the ORIGINAL run before vi.spyOn replaces the property, whereas `(...a) => failing.run(...a)`
+    // would re-enter the spy and recurse. `run` stays synchronous (recipe R0), so the
+    // `any`-typed alias hides nothing.
     const realRun = failing.run.bind(failing);
     vi.spyOn(failing, 'run').mockImplementation((sql: string, ...params: unknown[]) => {
       if (sql.startsWith('DELETE FROM users')) throw new Error('boom');

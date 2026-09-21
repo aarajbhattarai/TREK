@@ -170,21 +170,21 @@ describe('getSettings', () => {
 // ---------------------------------------------------------------------------
 
 describe('listUsers', () => {
-  it('AUTH-DB-011: returns all users except self, sorted by username', () => {
+  it('AUTH-DB-011: returns all users except self, sorted by username', async () => {
     const { user: self } = createUser(testDb, { username: 'zzself' });
     createUser(testDb, { username: 'alice' });
     createUser(testDb, { username: 'charlie' });
     createUser(testDb, { username: 'bob' });
-    const result = profile.listUsers(self.id);
+    const result = await profile.listUsers(self.id);
     expect(result).toHaveLength(3);
     const names = result.map((u) => u.username);
     expect(names).toEqual([...names].sort());
     expect(names).not.toContain('zzself');
   });
 
-  it('AUTH-DB-012: returns empty array when only one user exists', () => {
+  it('AUTH-DB-012: returns empty array when only one user exists', async () => {
     const { user } = createUser(testDb);
-    const result = profile.listUsers(user.id);
+    const result = await profile.listUsers(user.id);
     expect(result).toHaveLength(0);
   });
 });

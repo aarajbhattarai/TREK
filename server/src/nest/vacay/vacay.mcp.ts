@@ -127,7 +127,7 @@ export class VacayMcp {
     }: VacayUpdatePlanRequest,
     ctx: McpContext,
   ) {
-    if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
+    if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
     const planId = this.vacay.getActivePlanId(ctx.userId);
     // updatePlan already returns the fully-hydrated { plan }; surface it so the
     // AI consumer sees the updated plan, matching get_vacay_plan.
@@ -149,7 +149,7 @@ export class VacayMcp {
     access: { group: 'vacay', mode: 'write' },
   })
   async setVacayColor({ color }: { color: string }, ctx: McpContext) {
-    if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
+    if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
     const planId = this.vacay.getActivePlanId(ctx.userId);
     this.vacay.setUserColor(ctx.userId, planId, color, undefined);
     // Echo the persisted color (mirrors the service default) so the AI consumer sees what was set.
@@ -181,9 +181,9 @@ export class VacayMcp {
     access: { group: 'vacay', mode: 'write' },
   })
   async sendVacayInvite({ targetUserId }: { targetUserId: number }, ctx: McpContext) {
-    if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
+    if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
     const planId = this.vacay.getActivePlanId(ctx.userId);
-    const me = this.auth.getCurrentUser(ctx.userId);
+    const me = await this.auth.getCurrentUser(ctx.userId);
     if (!me) return errorResult('User not found.');
     const result = this.vacay.sendInvite(planId, ctx.userId, me.username, me.email, targetUserId);
     if (result.error) return errorResult(result.error);
@@ -201,7 +201,7 @@ export class VacayMcp {
     access: { group: 'vacay', mode: 'write' },
   })
   async acceptVacayInvite({ planId }: { planId: number }, ctx: McpContext) {
-    if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
+    if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
     const result = this.vacay.acceptInvite(ctx.userId, planId, undefined);
     if (result.error) return errorResult(result.error);
     return ok({ success: true });
@@ -218,7 +218,7 @@ export class VacayMcp {
     access: { group: 'vacay', mode: 'write' },
   })
   async declineVacayInvite({ planId }: { planId: number }, ctx: McpContext) {
-    if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
+    if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
     this.vacay.declineInvite(ctx.userId, planId, undefined);
     return ok({ success: true });
   }
@@ -234,7 +234,7 @@ export class VacayMcp {
     access: { group: 'vacay', mode: 'write' },
   })
   async cancelVacayInvite({ targetUserId }: { targetUserId: number }, ctx: McpContext) {
-    if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
+    if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
     const planId = this.vacay.getActivePlanId(ctx.userId);
     this.vacay.cancelInvite(planId, targetUserId);
     return ok({ success: true });
@@ -249,7 +249,7 @@ export class VacayMcp {
     access: { group: 'vacay', mode: 'write' },
   })
   async dissolveVacayPlan(_args: Record<string, never>, ctx: McpContext) {
-    if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
+    if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
     this.vacay.dissolvePlan(ctx.userId, undefined);
     return ok({ success: true });
   }
@@ -279,7 +279,7 @@ export class VacayMcp {
     access: { group: 'vacay', mode: 'write' },
   })
   async addVacayYear({ year }: { year: number }, ctx: McpContext) {
-    if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
+    if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
     const planId = this.vacay.getActivePlanId(ctx.userId);
     const years = this.vacay.addYear(planId, year, undefined);
     return ok({ years });
@@ -296,7 +296,7 @@ export class VacayMcp {
     access: { group: 'vacay', mode: 'write' },
   })
   async deleteVacayYear({ year }: { year: number }, ctx: McpContext) {
-    if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
+    if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
     const planId = this.vacay.getActivePlanId(ctx.userId);
     const years = this.vacay.deleteYear(planId, year, undefined);
     return ok({ years });
@@ -335,7 +335,7 @@ export class VacayMcp {
     { date, fraction, kind, targetUserId }: { date: string; fraction?: 0.5 | 1; kind?: 'vacation' | 'comp'; targetUserId?: number },
     ctx: McpContext,
   ) {
-    if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
+    if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
     const planId = this.vacay.getActivePlanId(ctx.userId);
     let userId = ctx.userId;
     if (targetUserId !== undefined && targetUserId !== ctx.userId) {
@@ -363,7 +363,7 @@ export class VacayMcp {
     access: { group: 'vacay', mode: 'write' },
   })
   async toggleCompanyHoliday({ date, note }: { date: string; note?: string }, ctx: McpContext) {
-    if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
+    if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
     const planId = this.vacay.getActivePlanId(ctx.userId);
     const result = this.vacay.toggleCompanyHoliday(planId, date, note, undefined);
     return ok(result);
@@ -397,7 +397,7 @@ export class VacayMcp {
     access: { group: 'vacay', mode: 'write' },
   })
   async updateVacayStats({ year, vacationDays }: { year: number; vacationDays: number }, ctx: McpContext) {
-    if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
+    if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
     const planId = this.vacay.getActivePlanId(ctx.userId);
     this.vacay.updateStats(ctx.userId, planId, year, vacationDays, undefined);
     return ok({ success: true });
@@ -421,7 +421,7 @@ export class VacayMcp {
     { region, type, label, color, sortOrder }: { region: string; type?: 'public_holiday' | 'school_holiday'; label?: string | null; color?: string; sortOrder?: number },
     ctx: McpContext,
   ) {
-    if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
+    if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
     const planId = this.vacay.getActivePlanId(ctx.userId);
     // An omitted type stays undefined so the service default (and the default
     // colour that goes with it) applies, exactly as on the REST route.
@@ -445,7 +445,7 @@ export class VacayMcp {
     { calendarId, label, color }: { calendarId: number; label?: string | null; color?: string },
     ctx: McpContext,
   ) {
-    if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
+    if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
     const planId = this.vacay.getActivePlanId(ctx.userId);
     const cal = this.vacay.updateHolidayCalendar(calendarId, planId, { label, color }, undefined);
     if (!cal) return errorResult('Holiday calendar not found.');
@@ -463,7 +463,7 @@ export class VacayMcp {
     access: { group: 'vacay', mode: 'write' },
   })
   async deleteHolidayCalendar({ calendarId }: { calendarId: number }, ctx: McpContext) {
-    if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
+    if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
     const planId = this.vacay.getActivePlanId(ctx.userId);
     this.vacay.deleteHolidayCalendar(calendarId, planId, undefined);
     return ok({ success: true });
@@ -573,8 +573,8 @@ export class VacayMcp {
     access: { group: 'vacay', mode: 'write' },
   })
   async shareVacayCalendar({ targetUserId }: { targetUserId: number }, ctx: McpContext) {
-    if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
-    const me = this.auth.getCurrentUser(ctx.userId);
+    if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
+    const me = await this.auth.getCurrentUser(ctx.userId);
     if (!me) return errorResult('User not found.');
     const result = this.vacay.shareCalendar(ctx.userId, me.email, targetUserId);
     if (result.error) return errorResult(result.error);
@@ -592,7 +592,7 @@ export class VacayMcp {
     access: { group: 'vacay', mode: 'write' },
   })
   async unshareVacayCalendar({ shareId }: { shareId: number }, ctx: McpContext) {
-    if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
+    if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
     if (!this.vacay.removeShare(shareId, ctx.userId, undefined)) {
       return errorResult('Share not found.');
     }

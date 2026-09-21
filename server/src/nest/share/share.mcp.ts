@@ -66,7 +66,7 @@ export class ShareMcp {
     },
     ctx: McpContext,
   ) {
-    if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
+    if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
     if (!this.share.verifyTripAccess(String(tripId), ctx.userId)) return noAccess();
     if (!(await this.guards.hasTripPermission('share_manage', tripId, ctx.userId))) return permissionDenied();
     // The zod .default()s above fill omitted flags, and ShareService applies
@@ -87,7 +87,7 @@ export class ShareMcp {
     access: (ctx) => canShareTrips(ctx.scopes),
   })
   async deleteShareLink({ tripId }: { tripId: number }, ctx: McpContext) {
-    if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
+    if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
     if (!this.share.verifyTripAccess(String(tripId), ctx.userId)) return noAccess();
     if (!(await this.guards.hasTripPermission('share_manage', tripId, ctx.userId))) return permissionDenied();
     this.share.remove(String(tripId));

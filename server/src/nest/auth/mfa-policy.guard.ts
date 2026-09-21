@@ -49,7 +49,7 @@ export class MfaPolicyGuard implements CanActivate {
     private readonly reflector: Reflector,
   ) {}
 
-  canActivate(context: ExecutionContext): boolean {
+  async canActivate(context: ExecutionContext): Promise<boolean> {
     const handler = context.getHandler();
     const controller = context.getClass();
 

@@ -183,7 +183,7 @@ export class TransitMcp {
     },
     ctx: McpContext,
   ) {
-    if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
+    if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
     if (!this.db.canAccessTrip(tripId, ctx.userId)) return noAccess();
     if (!(await this.guards.hasTripPermission('reservation_edit', tripId, ctx.userId))) return permissionDenied();
     const day = await this.days.getDay(dayId, tripId);

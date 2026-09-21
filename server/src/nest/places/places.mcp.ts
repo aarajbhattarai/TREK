@@ -96,7 +96,7 @@ export class PlacesMcp {
     },
     ctx: McpContext,
   ) {
-    if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
+    if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
     if (!this.db.canAccessTrip(tripId, ctx.userId)) return noAccess();
     if (!(await this.guards.hasTripPermission('place_edit', tripId, ctx.userId))) return permissionDenied();
     const place = this.places.create(String(tripId), { name, description, lat, lng, address, category_id, google_place_id, google_ftid, osm_id, amap_poi_id, notes, website, phone, image_url, price, currency, stop_type });
@@ -141,7 +141,7 @@ export class PlacesMcp {
     },
     ctx: McpContext,
   ) {
-    if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
+    if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
     if (!this.db.canAccessTrip(tripId, ctx.userId)) return noAccess();
     if (!(await this.guards.hasTripPermission('place_edit', tripId, ctx.userId))) return permissionDenied();
     if (!this.assignments.dayExists(dayId, tripId)) return { content: [{ type: 'text' as const, text: 'Day not found.' }], isError: true };
@@ -204,7 +204,7 @@ export class PlacesMcp {
     },
     ctx: McpContext,
   ) {
-    if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
+    if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
     if (!this.db.canAccessTrip(tripId, ctx.userId)) return noAccess();
     if (!(await this.guards.hasTripPermission('place_edit', tripId, ctx.userId))) return permissionDenied();
     const place = await this.places.update(String(tripId), String(placeId), { name, description, lat, lng, address, category_id, price, currency, place_time, end_time, duration_minutes, notes, website, phone, image_url, transport_mode, osm_id, google_place_id, google_ftid, amap_poi_id, stop_type, fill_percent });
@@ -228,7 +228,7 @@ export class PlacesMcp {
     { tripId, placeId, rating }: { tripId: number; placeId: number; rating?: number | null },
     ctx: McpContext,
   ) {
-    if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
+    if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
     // Rating is a personal vote — any trip member may cast one, place_edit not required.
     if (!this.db.canAccessTrip(tripId, ctx.userId)) return noAccess();
     const place = this.places.rate(String(tripId), String(placeId), ctx.userId, rating ?? null);
@@ -248,7 +248,7 @@ export class PlacesMcp {
     access: { group: 'places', mode: 'write' },
   })
   async deletePlace({ tripId, placeId }: { tripId: number; placeId: number }, ctx: McpContext) {
-    if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
+    if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
     if (!this.db.canAccessTrip(tripId, ctx.userId)) return noAccess();
     if (!(await this.guards.hasTripPermission('place_edit', tripId, ctx.userId))) return permissionDenied();
     // Scope the id to the trip before the hook: onPlaceDeleted keys on the place
@@ -342,7 +342,7 @@ export class PlacesMcp {
     { tripId, url, source, enrich }: { tripId: number; url: string; source: 'google-list' | 'naver-list'; enrich?: boolean },
     ctx: McpContext,
   ) {
-    if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
+    if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
     if (!this.db.canAccessTrip(tripId, ctx.userId)) return noAccess();
     if (!(await this.guards.hasTripPermission('place_edit', tripId, ctx.userId))) return permissionDenied();
 
@@ -373,7 +373,7 @@ export class PlacesMcp {
     access: { group: 'places', mode: 'write' },
   })
   async importGpx(input: RoadtripGpxImport, ctx: McpContext) {
-    if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
+    if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
     if (!this.db.canAccessTrip(input.tripId, ctx.userId)) return noAccess();
     if (!(await this.guards.hasTripPermission('place_edit', input.tripId, ctx.userId))) return permissionDenied();
     if (!input.importWaypoints && !input.importRoutes && !input.importTracks) return errorResult('No import types selected.');
@@ -424,7 +424,7 @@ export class PlacesMcp {
     access: { group: 'places', mode: 'write' },
   })
   async bulkDeletePlaces({ tripId, placeIds }: { tripId: number; placeIds: number[] }, ctx: McpContext) {
-    if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
+    if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
     if (!this.db.canAccessTrip(tripId, ctx.userId)) return noAccess();
     if (!(await this.guards.hasTripPermission('place_edit', tripId, ctx.userId))) return permissionDenied();
 
@@ -481,7 +481,7 @@ export class PlacesMcp {
     },
     ctx: McpContext,
   ) {
-    if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
+    if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
     if (!this.db.canAccessTrip(tripId, ctx.userId)) return noAccess();
     if (!(await this.guards.hasTripPermission('place_edit', tripId, ctx.userId))) return permissionDenied();
 

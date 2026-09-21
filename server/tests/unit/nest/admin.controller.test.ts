@@ -188,7 +188,7 @@ describe('AdminController read-only getters', () => {
     expect(adminCtl(svc({ getPermissions: vi.fn().mockReturnValue({ a: 1 }) } as Partial<AdminService>)).permissions()).toEqual({ a: 1 });
     expect(adminCtl(svc({ getAuditLog: vi.fn().mockReturnValue({ entries: [] }) } as Partial<AdminService>)).auditLog({})).toEqual({ entries: [] });
     await expect(adminCtl(svc({ checkVersion: vi.fn().mockResolvedValue({ current: '1' }) } as Partial<AdminService>)).versionCheck()).resolves.toEqual({ current: '1' });
-    expect(adminCtl(svc(), undefined, undefined, {}, { listInvites: vi.fn().mockReturnValue([{ id: 1 }]) }).listInvites()).toEqual({ invites: [{ id: 1 }] });
+    expect(await adminCtl(svc(), undefined, undefined, {}, { listInvites: vi.fn().mockReturnValue([{ id: 1 }]) }).listInvites()).toEqual({ invites: [{ id: 1 }] });
     expect(adminCtl(svc({ listAddons: vi.fn().mockReturnValue([{ id: 'mcp' }]) } as Partial<AdminService>)).listAddons()).toEqual({ addons: [{ id: 'mcp' }] });
     expect(adminCtl(svc(), undefined, undefined, { listAllMcpTokens: vi.fn().mockReturnValue([{ id: 1 }]) }).listMcpTokens()).toEqual({ tokens: [{ id: 1 }] });
     expect(await adminCtl(svc(), undefined, undefined, {}, {}, { listAllOAuthSessions: vi.fn().mockResolvedValue([{ id: 1 }]) }).listOAuthSessions()).toEqual({ sessions: [{ id: 1 }] });

@@ -60,7 +60,7 @@ interface Mocks {
 
 /** The demo gate is off unless a case turns it on; every write tool asks it. */
 function makeMcp(m: Mocks = {}) {
-  const auth: Partial<AuthService> = m.auth ?? { isDemoUser: () => false };
+  const auth: Partial<AuthService> = m.auth ?? { isDemoUser: async () => false };
   return new DawarichMcp(
     (m.suggestions ?? {}) as DawarichSuggestionsService,
     (m.tracks ?? {}) as DawarichTracksService,
@@ -221,7 +221,7 @@ describe('DawarichMcp surface', () => {
     // draws: reading is not a write. The gate is wired to answer "yes, demo"
     // here, so a check added to a read would turn both of these into refusals
     // and payload() would fail on the isError flag.
-    const isDemoUser = vi.fn().mockReturnValue(true);
+    const isDemoUser = vi.fn().mockResolvedValue(true);
     const listFn = vi.fn().mockReturnValue(list(1));
     const forTrip = vi.fn().mockResolvedValue({
       days: [], source: 'tracks', fetchedAt: '2026-05-02T09:00:00.000Z', pointCount: 0, truncated: false,
@@ -431,30 +431,30 @@ describe('DawarichMcp list_dawarich_suggestions', () => {
 describe('DawarichMcp accept tools', () => {
   it.each(['acceptAsPlace', 'acceptAsJournalEntry', 'markBucketVisited', 'dismiss'])(
     'DAWARICH-MCP-040: %s refuses the demo account before the service is reached',
-    (method) => {
+    async (method) => {
       // One argument object for all four: the demo check runs before anything
       // reads the body, so the extra keys are exactly as irrelevant here as the
       // refusal makes them.
       const args = { suggestionId: 9, tripId: 2, journalId: 2 };
       const accept = vi.fn();
       const setState = vi.fn();
-      const isDemoUser = vi.fn().mockReturnValue(true);
+      const isDemoUser = vi.fn().mockResolvedValue(true);
       const mcp = makeMcp({ suggestions: { accept, setState }, auth: { isDemoUser } });
 
-      const call = (mcp as unknown as Record<string, (a: unknown, c: McpContext) => McpTextResult>)[method];
-      expect(refusal(call.call(mcp, args, ctx))).toBe('Write operations are disabled in demo mode.');
+      const call = (mcp as unknown as Record<string, (a: unknown, c: McpContext) => Promise<McpTextResult>>)[method];
+      expect(refusal(await call.call(mcp, args, ctx))).toBe('Write operations are disabled in demo mode.');
       expect(isDemoUser).toHaveBeenCalledWith(7);
       expect(accept).not.toHaveBeenCalled();
       expect(setState).not.toHaveBeenCalled();
     },
   );
 
-  it('DAWARICH-MCP-041: accepting as a place forwards every correction under target "place", with the id kept out of the body', () => {
+  it('DAWARICH-MCP-041: accepting as a place forwards every correction under target "place", with the id kept out of the body', async () => {
     // suggestionId is the second argument, not a body field. Leaving it in the
     // body would put a key into DawarichAccept that nothing reads, and the next
     // reader would reasonably assume it was the one being accepted.
     const accept = vi.fn().mockReturnValue({ createdPlaceId: 5, createdJournalEntryId: null, bucketListItemId: null });
-    const out = payload(makeMcp({ suggestions: { accept } }).acceptAsPlace(
+    const out = payload(await makeMcp({ suggestions: { accept } }).acceptAsPlace(
       { suggestionId: 9, tripId: 2, dayId: 4, name: 'Hafen', notes: 'windy', lat: 53.5, lng: 9.9 },
       ctx,
     ));
@@ -472,15 +472,15 @@ describe('DawarichMcp accept tools', () => {
     expect(out).toMatchObject({ createdPlaceId: 5 });
   });
 
-  it('DAWARICH-MCP-042: a bare accept sends only the target, so the service keeps its own defaults for the trip and the coordinates', () => {
+  it('DAWARICH-MCP-042: a bare accept sends only the target, so the service keeps its own defaults for the trip and the coordinates', async () => {
     const accept = vi.fn().mockReturnValue({ createdPlaceId: 1 });
-    makeMcp({ suggestions: { accept } }).acceptAsPlace({ suggestionId: 9 }, ctx);
+    await makeMcp({ suggestions: { accept } }).acceptAsPlace({ suggestionId: 9 }, ctx);
     expect(accept).toHaveBeenCalledWith(7, 9, { target: 'place' });
   });
 
-  it('DAWARICH-MCP-043: accepting as a journal entry forwards target "journal" with the journey, the story and the corrected stamp', () => {
+  it('DAWARICH-MCP-043: accepting as a journal entry forwards target "journal" with the journey, the story and the corrected stamp', async () => {
     const accept = vi.fn().mockReturnValue({ createdJournalEntryId: 11 });
-    const out = payload(makeMcp({ suggestions: { accept } }).acceptAsJournalEntry(
+    const out = payload(await makeMcp({ suggestions: { accept } }).acceptAsJournalEntry(
       { suggestionId: 9, journalId: 3, name: 'The harbour', notes: 'It rained.', date: '2026-05-01', time: '09:30' },
       ctx,
     ));
@@ -496,15 +496,15 @@ describe('DawarichMcp accept tools', () => {
     expect(out).toMatchObject({ createdJournalEntryId: 11 });
   });
 
-  it('DAWARICH-MCP-044: ticking off a wish names it explicitly when the caller did', () => {
+  it('DAWARICH-MCP-044: ticking off a wish names it explicitly when the caller did', async () => {
     const accept = vi.fn().mockReturnValue({ bucketListItemId: 8 });
-    makeMcp({ suggestions: { accept } }).markBucketVisited({ suggestionId: 9, bucketListItemId: 8 }, ctx);
+    await makeMcp({ suggestions: { accept } }).markBucketVisited({ suggestionId: 9, bucketListItemId: 8 }, ctx);
     expect(accept).toHaveBeenCalledWith(7, 9, { target: 'bucket_list', bucketListItemId: 8 });
   });
 
-  it('DAWARICH-MCP-045: an omitted wish stays undefined rather than being guessed here, and the service falls back to the matched one', () => {
+  it('DAWARICH-MCP-045: an omitted wish stays undefined rather than being guessed here, and the service falls back to the matched one', async () => {
     const accept = vi.fn().mockReturnValue({ bucketListItemId: 2 });
-    makeMcp({ suggestions: { accept } }).markBucketVisited({ suggestionId: 9 }, ctx);
+    await makeMcp({ suggestions: { accept } }).markBucketVisited({ suggestionId: 9 }, ctx);
     expect(accept).toHaveBeenCalledWith(7, 9, { target: 'bucket_list', bucketListItemId: undefined });
   });
 
@@ -515,9 +515,9 @@ describe('DawarichMcp accept tools', () => {
     ['trip_required', 'A trip is required to create a place', 400],
   ])(
     'DAWARICH-MCP-046: the AcceptError %s comes back as a refusal an assistant can read (%s), not as an exception and not as the HTTP %i the REST half answers',
-    (code, message, status) => {
+    async (code, message, status) => {
       const accept = vi.fn(() => { throw new AcceptError(code, message, status); });
-      const result = makeMcp({ suggestions: { accept } }).acceptAsPlace({ suggestionId: 9 }, ctx);
+      const result = await makeMcp({ suggestions: { accept } }).acceptAsPlace({ suggestionId: 9 }, ctx);
 
       expect(refusal(result)).toBe(message);
       // The status code is the REST half's vocabulary. MCP has isError and a
@@ -527,46 +527,46 @@ describe('DawarichMcp accept tools', () => {
     },
   );
 
-  it('DAWARICH-MCP-047: the same shaping covers the journal and bucket-list tools, because run() is shared and a second copy would drift', () => {
+  it('DAWARICH-MCP-047: the same shaping covers the journal and bucket-list tools, because run() is shared and a second copy would drift', async () => {
     const accept = vi.fn(() => { throw new AcceptError('not_found', 'Bucket-list entry not found', 404); });
     const mcp = makeMcp({ suggestions: { accept } });
 
-    expect(refusal(mcp.acceptAsJournalEntry({ suggestionId: 9, journalId: 1 }, ctx))).toBe('Bucket-list entry not found');
-    expect(refusal(mcp.markBucketVisited({ suggestionId: 9 }, ctx))).toBe('Bucket-list entry not found');
+    expect(refusal(await mcp.acceptAsJournalEntry({ suggestionId: 9, journalId: 1 }, ctx))).toBe('Bucket-list entry not found');
+    expect(refusal(await mcp.markBucketVisited({ suggestionId: 9 }, ctx))).toBe('Bucket-list entry not found');
   });
 
-  it('DAWARICH-MCP-048: anything that is not an AcceptError propagates, because a failed write must never be reported as a success', () => {
+  it('DAWARICH-MCP-048: anything that is not an AcceptError propagates, because a failed write must never be reported as a success', async () => {
     // A locked database, or a permission lookup that blew up, is not a refusal
     // the caller can act on. Flattening it into a text result would hand the
     // assistant a message with no isError flag on it to notice.
     const accept = vi.fn(() => { throw new Error('SQLITE_BUSY: database is locked'); });
-    expect(() => makeMcp({ suggestions: { accept } }).acceptAsPlace({ suggestionId: 9 }, ctx))
-      .toThrow('SQLITE_BUSY: database is locked');
+    await expect(makeMcp({ suggestions: { accept } }).acceptAsPlace({ suggestionId: 9 }, ctx))
+      .rejects.toThrow('SQLITE_BUSY: database is locked');
   });
 });
 
 describe('DawarichMcp dismiss_dawarich_suggestion', () => {
-  it('DAWARICH-MCP-050: dismissed is the default, because that is what the tool is for', () => {
+  it('DAWARICH-MCP-050: dismissed is the default, because that is what the tool is for', async () => {
     const updated = { id: 4, state: 'dismissed' };
     const setState = vi.fn().mockReturnValue(updated);
-    const out = payload(makeMcp({ suggestions: { setState } }).dismiss({ suggestionId: 4 }, ctx));
+    const out = payload(await makeMcp({ suggestions: { setState } }).dismiss({ suggestionId: 4 }, ctx));
 
     expect(setState).toHaveBeenCalledWith(7, 4, 'dismissed');
     expect(out).toEqual({ suggestion: updated });
   });
 
-  it('DAWARICH-MCP-051: "new" puts a dismissed stay back into the review list', () => {
+  it('DAWARICH-MCP-051: "new" puts a dismissed stay back into the review list', async () => {
     const setState = vi.fn().mockReturnValue({ id: 4, state: 'new' });
-    makeMcp({ suggestions: { setState } }).dismiss({ suggestionId: 4, state: 'new' }, ctx);
+    await makeMcp({ suggestions: { setState } }).dismiss({ suggestionId: 4, state: 'new' }, ctx);
     expect(setState).toHaveBeenCalledWith(7, 4, 'new');
   });
 
-  it("DAWARICH-MCP-052: somebody else's suggestion gets the answer a missing one gets: the service says null, the tool says not found", () => {
+  it("DAWARICH-MCP-052: somebody else's suggestion gets the answer a missing one gets: the service says null, the tool says not found", async () => {
     // The service scopes its lookup by user_id, so null covers both cases and
     // the tool must not separate them. A different message for "exists but is
     // not yours" would let a caller enumerate other people's suggestion ids.
     const setState = vi.fn().mockReturnValue(null);
-    expect(refusal(makeMcp({ suggestions: { setState } }).dismiss({ suggestionId: 999 }, ctx)))
+    expect(refusal(await makeMcp({ suggestions: { setState } }).dismiss({ suggestionId: 999 }, ctx)))
       .toBe('Suggestion not found');
   });
 });

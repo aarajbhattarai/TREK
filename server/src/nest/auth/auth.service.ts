@@ -148,13 +148,13 @@ export class AuthService {
   // Toggles + tokens
   // -------------------------------------------------------------------------
 
-  resolveAuthToggles(): {
+  async resolveAuthToggles(): Promise<{
     password_login: boolean;
     password_registration: boolean;
     oidc_login: boolean;
     oidc_registration: boolean;
     passkey_login: boolean;
-  } {
+  }> {
     const get = (key: string) =>
       this.db.get<{ value: string }>("SELECT value FROM app_settings WHERE key = ?", key)?.value ?? null;
 
@@ -200,11 +200,11 @@ export class AuthService {
     };
   }
 
-  isOidcOnlyMode(): boolean {
-    return !this.resolveAuthToggles().password_login;
+  async isOidcOnlyMode(): Promise<boolean> {
+    return !(await this.resolveAuthToggles()).password_login;
   }
 
-  generateToken(user: { id: number | bigint; password_version?: number }, remember?: boolean) {
+  async generateToken(user: { id: number | bigint; password_version?: number }, remember?: boolean) {
     const pv = typeof user.password_version === 'number'
       ? user.password_version
       : (this.db.get<{ password_version?: number }>('SELECT password_version FROM users WHERE id = ?', user.id)?.password_version ?? 0);
@@ -244,8 +244,8 @@ export class AuthService {
    * the operator pointed here themselves (APP_URL, ALLOWED_ORIGINS or the
    * webauthn settings) is a real single-machine install and still counts.
    */
-  private passkeyConfigured(): boolean {
-    const cfg = this.webauthn.resolve();
+  private async passkeyConfigured(): Promise<boolean> {
+    const cfg = await this.webauthn.resolve();
     if (!cfg) return false;
     if (cfg.rpID !== 'localhost' || cfg.explicitOrigins) return true;
     const env = readEnv();
@@ -258,7 +258,7 @@ export class AuthService {
   async getAppConfig(authenticatedUser: User | undefined | null) {
     const userCount = this.db.get<{ count: number }>('SELECT COUNT(*) as count FROM users WHERE COALESCE(is_guest, 0) = 0')!.count;
     const isDemo = readEnv().demo.enabled;
-    const toggles = this.resolveAuthToggles();
+    const toggles = await this.resolveAuthToggles();
     // One directory deeper than the legacy src/services location — the extra
     // '../' keeps resolving to the workspace package.json.
     const version: string = readEnv().app.appVersion ?? require('../../../package.json').version;
@@ -317,7 +317,7 @@ export class AuthService {
       // are true. `passkey_configured` stays a pure boolean — it never leaks the
       // resolved RP ID / origin / APP_URL on this unauthenticated endpoint.
       passkey_login: toggles.passkey_login,
-      passkey_configured: this.passkeyConfigured(),
+      passkey_configured: await this.passkeyConfigured(),
       env_override_oidc_only: readEnv().oidc.only,
       has_users: userCount > 0,
       setup_complete: setupComplete,
@@ -333,7 +333,7 @@ export class AuthService {
       // fallback the upload filters use, so the client's picker and the
       // server's acceptance can never drift (the historical inline copy here
       // dropped pkpass, pkpasses, md and markdown).
-      allowed_file_types: this.allowedFileTypes.get(),
+      allowed_file_types: await this.allowedFileTypes.get(),
       // Whether the configuration belongs to whoever operates this install
       // rather than to its admin. The client uses it to stop offering settings
       // the server would refuse anyway — it is an honesty flag for the UI, never
@@ -362,18 +362,18 @@ export class AuthService {
   // Auth: register, login, demo
   // -------------------------------------------------------------------------
 
-  demoLogin(): { error?: string; status?: number; token?: string; user?: Record<string, unknown> } {
+  async demoLogin(): Promise<{ error?: string; status?: number; token?: string; user?: Record<string, unknown> }> {
     if (!readEnv().demo.enabled) {
       return { error: 'Not found', status: 404 };
     }
     const user = this.db.get<User>('SELECT * FROM users WHERE email = ?', DEMO_EMAIL_PRIMARY);
     if (!user) return { error: 'Demo user not found', status: 500 };
-    const token = this.generateToken(user);
+    const token = await this.generateToken(user);
     const safe = stripUserForClient(user) as Record<string, unknown>;
     return { token, user: { ...safe, avatar_url: avatarUrl(user) } };
   }
 
-  validateInviteToken(token: string): { error?: string; status?: number; valid?: boolean; max_uses?: number; used_count?: number; expires_at?: string } {
+  async validateInviteToken(token: string): Promise<{ error?: string; status?: number; valid?: boolean; max_uses?: number; used_count?: number; expires_at?: string }> {
     const invite = this.db.get('SELECT * FROM invite_tokens WHERE token = ?', token) as any;
     if (!invite) return { error: 'Invalid invite link', status: 404 };
     if (invite.max_uses > 0 && invite.used_count >= invite.max_uses) return { error: 'Invite link has been fully used', status: 410 };
@@ -398,7 +398,7 @@ export class AuthService {
     }
 
     if (userCount > 0 && !validInvite) {
-      const toggles = this.resolveAuthToggles();
+      const toggles = await this.resolveAuthToggles();
       if (!toggles.password_registration) {
         return { error: 'Password registration is disabled. Contact your administrator.', status: 403 };
       }
@@ -435,7 +435,7 @@ export class AuthService {
         );
 
         const user = { id: result.lastInsertRowid, username, email, role, avatar: null, mfa_enabled: false };
-        const token = this.generateToken(user);
+        const token = await this.generateToken(user);
 
         if (validInvite) {
           const updated = this.db.get(
@@ -464,7 +464,7 @@ export class AuthService {
     }
   }
 
-  loginUser(rawBody: unknown): {
+  async loginUser(rawBody: unknown): Promise<{
     error?: string;
     status?: number;
     token?: string;
@@ -475,9 +475,9 @@ export class AuthService {
     auditUserId?: number | null;
     auditAction?: string;
     auditDetails?: Record<string, unknown>;
-  } {
+  }> {
     const body = rawBody as { email?: string; password?: string; remember_me?: boolean };
-    if (this.isOidcOnlyMode()) {
+    if (await this.isOidcOnlyMode()) {
       return { error: 'Password authentication is disabled. Please sign in with SSO.', status: 403 };
     }
 
@@ -526,7 +526,7 @@ export class AuthService {
     }
 
     this.db.run('UPDATE users SET last_login = CURRENT_TIMESTAMP, login_count = login_count + 1 WHERE id = ?', user.id);
-    const token = this.generateToken(user, remember);
+    const token = await this.generateToken(user, remember);
     const userSafe = stripUserForClient(user) as Record<string, unknown>;
 
     return {
@@ -543,9 +543,9 @@ export class AuthService {
   // Session
   // -------------------------------------------------------------------------
 
-  getCurrentUser(
+  async getCurrentUser(
     userId: number
-  ): (Record<string, unknown> & Pick<User, 'id' | 'username' | 'email' | 'role'> & { avatar_url: string }) | null {
+  ): Promise<(Record<string, unknown> & Pick<User, 'id' | 'username' | 'email' | 'role'> & { avatar_url: string }) | null> {
     const user = this.db.get<User>(
       'SELECT id, username, email, role, avatar, oidc_issuer, created_at, mfa_enabled, must_change_password FROM users WHERE id = ?',
       userId
@@ -559,14 +559,14 @@ export class AuthService {
   // Password & account
   // -------------------------------------------------------------------------
 
-  changePassword(
+  async changePassword(
     userId: number,
     userEmail: string,
     rawBody: unknown,
     remember?: boolean,
-  ): { error?: string; status?: number; success?: boolean; token?: string } {
+  ): Promise<{ error?: string; status?: number; success?: boolean; token?: string }> {
     const body = rawBody as { current_password?: string; new_password?: string };
-    if (this.isOidcOnlyMode()) {
+    if (await this.isOidcOnlyMode()) {
       return { error: 'Password authentication is disabled.', status: 403 };
     }
     if (readEnv().demo.enabled && isDemoEmail(userEmail)) {
@@ -588,7 +588,7 @@ export class AuthService {
     const hash = bcrypt.hashSync(new_password, BCRYPT_COST);
     const newPv = (user.password_version ?? 0) + 1;
 
-    this.db.transaction(() => {
+    await this.uow.transactional(async () => {
       this.db.run('UPDATE users SET password_hash = ?, must_change_password = 0, password_version = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', hash, newPv, userId);
       // A password change rotates the user's sessions: bumping password_version
       // invalidates existing JWT cookie sessions, and the separate MCP static
@@ -606,7 +606,7 @@ export class AuthService {
     // stays logged in while other existing sessions are rotated out by the pv
     // gate — preserving the login's remember choice instead of downgrading a
     // remembered session to the default duration (#1927).
-    const token = this.generateToken({ id: userId, password_version: newPv }, remember);
+    const token = await this.generateToken({ id: userId, password_version: newPv }, remember);
     return { success: true, token };
   }
 
@@ -639,7 +639,7 @@ export class AuthService {
   // work, not with a move.
   // -------------------------------------------------------------------------
 
-  getAppSettings(userId: number): { error?: string; status?: number; data?: Record<string, string> } {
+  async getAppSettings(userId: number): Promise<{ error?: string; status?: number; data?: Record<string, string> }> {
     const user = this.db.get<{ role: string }>('SELECT role FROM users WHERE id = ?', userId);
     if (user?.role !== 'admin') return { error: 'Admin access required', status: 403 };
 
@@ -651,10 +651,10 @@ export class AuthService {
     return { data: result };
   }
 
-  updateAppSettings(
+  async updateAppSettings(
     userId: number,
     rawBody: unknown
-  ): {
+  ): Promise<{
     error?: string;
     status?: number;
     success?: boolean;
@@ -662,7 +662,7 @@ export class AuthService {
     auditDebugDetails?: Record<string, unknown>;
     /** Names the operator holds, skipped rather than written. Empty when self-hosted. */
     managedKeys?: string[];
-  } {
+  }> {
     const body = rawBody as Record<string, unknown>;
     const user = this.db.get<{ role: string }>('SELECT role FROM users WHERE id = ?', userId);
     if (user?.role !== 'admin') return { error: 'Admin access required', status: 403 };
@@ -683,7 +683,7 @@ export class AuthService {
 
     // Lockout prevention: can't disable all login methods
     if (body.password_login !== undefined || body.oidc_login !== undefined) {
-      const current = this.resolveAuthToggles();
+      const current = await this.resolveAuthToggles();
       const oidcConfigured = !!(
         (readEnv().oidc.issuer || this.db.get<{ value: string }>("SELECT value FROM app_settings WHERE key = 'oidc_issuer'")?.value) &&
         (readEnv().oidc.clientId || this.db.get<{ value: string }>("SELECT value FROM app_settings WHERE key = 'oidc_client_id'")?.value)
@@ -748,7 +748,7 @@ export class AuthService {
   // MFA
   // -------------------------------------------------------------------------
 
-  setupMfa(userId: number, userEmail: string): { error?: string; status?: number; secret?: string; otpauth_url?: string; qrPromise?: Promise<string> } {
+  async setupMfa(userId: number, userEmail: string): Promise<{ error?: string; status?: number; secret?: string; otpauth_url?: string; qrPromise?: Promise<string> }> {
     if (readEnv().demo.enabled && isDemoEmail(userEmail)) {
       return { error: 'MFA is not available in demo mode.', status: 403 };
     }
@@ -768,7 +768,7 @@ export class AuthService {
     return { secret, otpauth_url, qrPromise: QRCode.toString(otpauth_url, { type: 'svg', width: 250 }) };
   }
 
-  enableMfa(userId: number, rawCode: unknown): { error?: string; status?: number; success?: boolean; mfa_enabled?: boolean; backup_codes?: string[] } {
+  async enableMfa(userId: number, rawCode: unknown): Promise<{ error?: string; status?: number; success?: boolean; mfa_enabled?: boolean; backup_codes?: string[] }> {
     const code = rawCode as string | undefined;
     if (!code) {
       return { error: 'Verification code is required', status: 400 };
@@ -794,11 +794,11 @@ export class AuthService {
     return { success: true, mfa_enabled: true, backup_codes: backupCodes };
   }
 
-  disableMfa(
+  async disableMfa(
     userId: number,
     userEmail: string,
     rawBody: unknown
-  ): { error?: string; status?: number; success?: boolean; mfa_enabled?: boolean } {
+  ): Promise<{ error?: string; status?: number; success?: boolean; mfa_enabled?: boolean }> {
     const body = rawBody as { password?: string; code?: string };
     if (readEnv().demo.enabled && isDemoEmail(userEmail)) {
       return { error: 'MFA cannot be changed in demo mode.', status: 403 };
@@ -831,14 +831,14 @@ export class AuthService {
     return { success: true, mfa_enabled: false };
   }
 
-  verifyMfaLogin(rawBody: unknown): {
+  async verifyMfaLogin(rawBody: unknown): Promise<{
     error?: string;
     status?: number;
     token?: string;
     user?: Record<string, unknown>;
     remember?: boolean;
     auditUserId?: number;
-  } {
+  }> {
     const body = rawBody as { mfa_token?: string; code?: string; remember_me?: boolean };
     const { mfa_token, code, remember_me } = body;
     const remember = remember_me === true;
@@ -868,7 +868,7 @@ export class AuthService {
         hashes.splice(idx, 1);
         // Consume the backup code and record the login atomically — the code
         // must not burn without the login landing (or vice versa).
-        this.db.transaction(() => {
+        await this.uow.transactional(async () => {
           this.db.run('UPDATE users SET mfa_backup_codes = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
             JSON.stringify(hashes),
             user.id
@@ -878,7 +878,7 @@ export class AuthService {
       } else {
         this.db.run('UPDATE users SET last_login = CURRENT_TIMESTAMP, login_count = login_count + 1 WHERE id = ?', user.id);
       }
-      const sessionToken = this.generateToken(user, remember);
+      const sessionToken = await this.generateToken(user, remember);
       const userSafe = stripUserForClient(user) as Record<string, unknown>;
       return {
         token: sessionToken,
@@ -895,7 +895,7 @@ export class AuthService {
   // Password reset
   // -------------------------------------------------------------------------
 
-  requestPasswordReset(rawEmail: string, createdIp: string | null): PasswordResetRequestOutcome {
+  async requestPasswordReset(rawEmail: string, createdIp: string | null): Promise<PasswordResetRequestOutcome> {
     const email = String(rawEmail || '').trim().toLowerCase();
     // Basic shape check — a fully empty / malformed email is treated like
     // "no user" so we still spend the same time internally. Same "x@y.z somewhere
@@ -904,7 +904,7 @@ export class AuthService {
     const looksLikeEmail = email.length > 0 && /^.[^@\r\n\u2028\u2029]*@.[^.\r\n\u2028\u2029]*\../m.test(email);
 
     // Global policy check: password login disabled → no reset possible.
-    const toggles = this.resolveAuthToggles();
+    const toggles = await this.resolveAuthToggles();
     if (!toggles.password_login) {
       return { tokenForDelivery: null, userId: null, userEmail: null, reason: 'password_login_disabled' };
     }
@@ -971,7 +971,7 @@ export class AuthService {
    * compromised email alone therefore does NOT allow taking over a
    * 2FA-protected account.
    */
-  resetPassword(rawBody: unknown): ResetPasswordOutcome {
+  async resetPassword(rawBody: unknown): Promise<ResetPasswordOutcome> {
     const body = rawBody as { token?: string; new_password?: string; mfa_code?: string };
     const { token, new_password, mfa_code } = body;
     if (!token || typeof token !== 'string') {
@@ -1028,7 +1028,7 @@ export class AuthService {
     const newHash = bcrypt.hashSync(new_password, BCRYPT_COST);
     const newPv = (user.password_version ?? 0) + 1;
 
-    this.db.transaction(() => {
+    await this.uow.transactional(async () => {
       // Burn the token first to keep it atomic with the password change.
       this.db.run('UPDATE password_reset_tokens SET consumed_at = CURRENT_TIMESTAMP WHERE id = ?', row.id);
       // Also burn every OTHER live token for this user — a fresh login
@@ -1074,7 +1074,7 @@ export class AuthService {
   // which is about minting a token.
   // -------------------------------------------------------------------------
 
-  isDemoUser(userId: number): boolean {
+  async isDemoUser(userId: number): Promise<boolean> {
     if (!readEnv().demo.enabled) return false;
     const user = this.db.get<{ email: string }>('SELECT email FROM users WHERE id = ?', userId);
     return isDemoEmail(user?.email);
@@ -1089,7 +1089,7 @@ export class AuthService {
    * (MCP bearer, WebSocket handshake, file-download query tokens, photo
    * route) should go through.
    */
-  verifyJwtToken(token: string): User | null {
+  async verifyJwtToken(token: string): Promise<User | null> {
     return verifyJwtAndLoadUser(token);
   }
 }

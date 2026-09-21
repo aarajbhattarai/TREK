@@ -67,7 +67,7 @@ export class DayNotesMcp {
     },
     ctx: McpContext,
   ) {
-    if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
+    if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
     if (!(await this.notes.verifyTripAccess(tripId, ctx.userId))) return noAccess();
     if (!(await this.guards.hasTripPermission('day_edit', tripId, ctx.userId))) return permissionDenied();
     if (!(await this.notes.dayExists(dayId, tripId))) return { content: [{ type: 'text' as const, text: 'Day not found.' }], isError: true };
@@ -98,7 +98,7 @@ export class DayNotesMcp {
     },
     ctx: McpContext,
   ) {
-    if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
+    if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
     if (!(await this.notes.verifyTripAccess(tripId, ctx.userId))) return noAccess();
     if (!(await this.guards.hasTripPermission('day_edit', tripId, ctx.userId))) return permissionDenied();
     const existing = await this.notes.getNote(noteId, dayId, tripId);
@@ -120,7 +120,7 @@ export class DayNotesMcp {
     access: { group: 'trips', mode: 'write' },
   })
   async deleteDayNote({ tripId, dayId, noteId }: { tripId: number; dayId: number; noteId: number }, ctx: McpContext) {
-    if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
+    if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
     if (!(await this.notes.verifyTripAccess(tripId, ctx.userId))) return noAccess();
     if (!(await this.guards.hasTripPermission('day_edit', tripId, ctx.userId))) return permissionDenied();
     const note = await this.notes.getNote(noteId, dayId, tripId);

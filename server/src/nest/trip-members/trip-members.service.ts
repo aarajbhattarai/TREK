@@ -256,7 +256,7 @@ export class TripMembersService {
     // A guest is still a user id a plugin may hold data for, so erase that too — the
     // host-side per-user tables + a durable own-db erasure per granted plugin — exactly
     // like a full account deletion (otherwise a deleted guest's plugin data lingers).
-    this.userCleanup.erasePluginUserData(guestUserId);
+    await this.userCleanup.erasePluginUserData(guestUserId);
     // Quirk fix on top of the 1:1 move: the budget re-split and the user delete
     // run in one transaction, so a failure mid-flow can't leave the expense
     // divisors re-derived for a guest that still exists (or vice versa). The

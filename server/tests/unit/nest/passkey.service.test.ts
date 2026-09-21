@@ -125,7 +125,7 @@ beforeAll(async () => {
   new EphemeralTokenService(),
   new AllowedFileTypesService(new DatabaseService(testDb)), await createTestUnitOfWork(testDb),
 );
-  svc = new PasskeyService(new DatabaseService(testDb), auth, webauthn);
+  svc = new PasskeyService(new DatabaseService(testDb), auth, webauthn, await createTestUnitOfWork(testDb));
 });
 
 const CFG = { rpID: 'trek.example.com', rpName: 'TREK', origins: ['https://trek.example.com'], explicitOrigins: false };
@@ -660,7 +660,7 @@ describe('passkeyLoginVerify', () => {
 // ── listPasskeys ──────────────────────────────────────────────────────────────
 
 describe('listPasskeys', () => {
-  it('PASSKEY-SVC-025: lists newest-first with backed_up remapped to a boolean', () => {
+  it('PASSKEY-SVC-025: lists newest-first with backed_up remapped to a boolean', async () => {
     const { user } = createUser(testDb);
     const { user: other } = createUser(testDb);
     testDb.prepare(
@@ -669,7 +669,7 @@ describe('listPasskeys', () => {
     ).run(user.id, user.id);
     insertCredential(other.id);
 
-    const list = svc.listPasskeys(user.id);
+    const list = await svc.listPasskeys(user.id);
     expect(list.map((c) => c.name)).toEqual(['New', 'Old']);
     expect(list[0]).toEqual({
       id: expect.any(Number),
@@ -686,47 +686,47 @@ describe('listPasskeys', () => {
 // ── renamePasskey ─────────────────────────────────────────────────────────────
 
 describe('renamePasskey', () => {
-  it('PASSKEY-SVC-026: rejects a missing, non-string or whitespace-only name', () => {
+  it('PASSKEY-SVC-026: rejects a missing, non-string or whitespace-only name', async () => {
     const { user } = createUser(testDb);
     const cred = insertCredential(user.id);
-    expect(svc.renamePasskey(user.id, String(cred.id), undefined)).toEqual({ error: 'Name is required', status: 400 });
-    expect(svc.renamePasskey(user.id, String(cred.id), 42)).toEqual({ error: 'Name is required', status: 400 });
-    expect(svc.renamePasskey(user.id, String(cred.id), '   ')).toEqual({ error: 'Name is required', status: 400 });
+    expect(await svc.renamePasskey(user.id, String(cred.id), undefined)).toEqual({ error: 'Name is required', status: 400 });
+    expect(await svc.renamePasskey(user.id, String(cred.id), 42)).toEqual({ error: 'Name is required', status: 400 });
+    expect(await svc.renamePasskey(user.id, String(cred.id), '   ')).toEqual({ error: 'Name is required', status: 400 });
   });
 
-  it('PASSKEY-SVC-027: renames (trimmed, capped at 60) and 404s on foreign or unknown ids', () => {
+  it('PASSKEY-SVC-027: renames (trimmed, capped at 60) and 404s on foreign or unknown ids', async () => {
     const { user } = createUser(testDb);
     const { user: other } = createUser(testDb);
     const cred = insertCredential(user.id);
 
-    expect(svc.renamePasskey(user.id, String(cred.id), `  ${'n'.repeat(80)}  `)).toEqual({ success: true });
+    expect(await svc.renamePasskey(user.id, String(cred.id), `  ${'n'.repeat(80)}  `)).toEqual({ success: true });
     const row = testDb.prepare('SELECT name FROM webauthn_credentials WHERE id = ?').get(cred.id) as { name: string };
     expect(row.name).toBe('n'.repeat(60));
 
-    expect(svc.renamePasskey(other.id, String(cred.id), 'Steal')).toEqual({ error: 'Passkey not found', status: 404 });
-    expect(svc.renamePasskey(user.id, '999999', 'Ghost')).toEqual({ error: 'Passkey not found', status: 404 });
+    expect(await svc.renamePasskey(other.id, String(cred.id), 'Steal')).toEqual({ error: 'Passkey not found', status: 404 });
+    expect(await svc.renamePasskey(user.id, '999999', 'Ghost')).toEqual({ error: 'Passkey not found', status: 404 });
   });
 });
 
 // ── deletePasskey ─────────────────────────────────────────────────────────────
 
 describe('deletePasskey', () => {
-  it('PASSKEY-SVC-028: requires the current password (missing, wrong, or no hash all 401)', () => {
+  it('PASSKEY-SVC-028: requires the current password (missing, wrong, or no hash all 401)', async () => {
     const { user, password } = createUser(testDb);
     const cred = insertCredential(user.id);
-    expect(svc.deletePasskey(user.id, String(cred.id), undefined)).toEqual({ error: 'Incorrect password', status: 401 });
-    expect(svc.deletePasskey(user.id, String(cred.id), `${password}x`)).toEqual({ error: 'Incorrect password', status: 401 });
+    expect(await svc.deletePasskey(user.id, String(cred.id), undefined)).toEqual({ error: 'Incorrect password', status: 401 });
+    expect(await svc.deletePasskey(user.id, String(cred.id), `${password}x`)).toEqual({ error: 'Incorrect password', status: 401 });
     testDb.prepare("UPDATE users SET password_hash = '' WHERE id = ?").run(user.id);
-    expect(svc.deletePasskey(user.id, String(cred.id), password)).toEqual({ error: 'Incorrect password', status: 401 });
+    expect(await svc.deletePasskey(user.id, String(cred.id), password)).toEqual({ error: 'Incorrect password', status: 401 });
   });
 
-  it('PASSKEY-SVC-029: deletes own credentials only — foreign ids 404 without leaking', () => {
+  it('PASSKEY-SVC-029: deletes own credentials only — foreign ids 404 without leaking', async () => {
     const { user, password } = createUser(testDb);
     const { user: other, password: otherPassword } = createUser(testDb);
     const cred = insertCredential(user.id);
 
-    expect(svc.deletePasskey(other.id, String(cred.id), otherPassword)).toEqual({ error: 'Passkey not found', status: 404 });
-    expect(svc.deletePasskey(user.id, String(cred.id), password)).toEqual({ success: true });
+    expect(await svc.deletePasskey(other.id, String(cred.id), otherPassword)).toEqual({ error: 'Passkey not found', status: 404 });
+    expect(await svc.deletePasskey(user.id, String(cred.id), password)).toEqual({ success: true });
     expect(testDb.prepare('SELECT COUNT(*) AS n FROM webauthn_credentials').get()).toEqual({ n: 0 });
   });
 });
@@ -734,8 +734,8 @@ describe('deletePasskey', () => {
 // ── adminResetPasskeys ────────────────────────────────────────────────────────
 
 describe('adminResetPasskeys', () => {
-  it('PASSKEY-SVC-030: 404s on an unknown user, else clears all credentials and reports the count', () => {
-    expect(svc.adminResetPasskeys(999_999)).toEqual({ error: 'User not found', status: 404 });
+  it('PASSKEY-SVC-030: 404s on an unknown user, else clears all credentials and reports the count', async () => {
+    expect(await svc.adminResetPasskeys(999_999)).toEqual({ error: 'User not found', status: 404 });
 
     const { user } = createUser(testDb);
     const { user: other } = createUser(testDb);
@@ -743,8 +743,8 @@ describe('adminResetPasskeys', () => {
     insertCredential(user.id);
     const kept = insertCredential(other.id);
 
-    expect(svc.adminResetPasskeys(user.id)).toEqual({ success: true, deleted: 2, email: user.email });
-    expect(svc.adminResetPasskeys(user.id)).toEqual({ success: true, deleted: 0, email: user.email });
+    expect(await svc.adminResetPasskeys(user.id)).toEqual({ success: true, deleted: 2, email: user.email });
+    expect(await svc.adminResetPasskeys(user.id)).toEqual({ success: true, deleted: 0, email: user.email });
     expect(testDb.prepare('SELECT id FROM webauthn_credentials').all()).toEqual([{ id: kept.id }]);
   });
 });

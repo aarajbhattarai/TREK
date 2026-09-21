@@ -86,7 +86,7 @@ export class AtlasMcp {
     { name, lat, lng, country_code, notes, target_date }: { name: string; lat?: number; lng?: number; country_code?: string; notes?: string; target_date?: string | null },
     ctx: McpContext,
   ) {
-    if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
+    if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
     try {
       const item = await this.atlas.createBucketItem(ctx.userId, { name, lat, lng, country_code, notes, target_date });
       return ok({ item });
@@ -107,7 +107,7 @@ export class AtlasMcp {
     access: { group: 'atlas', mode: 'write' },
   })
   async deleteBucketListItem({ itemId }: { itemId: number }, ctx: McpContext) {
-    if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
+    if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
     const deleted = await this.atlas.deleteBucketItem(ctx.userId, itemId);
     if (!deleted) return { content: [{ type: 'text' as const, text: 'Bucket list item not found.' }], isError: true };
     return ok({ success: true });
@@ -126,7 +126,7 @@ export class AtlasMcp {
     access: { group: 'atlas', mode: 'write' },
   })
   async markCountryVisited({ country_code }: { country_code: string }, ctx: McpContext) {
-    if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
+    if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
     await this.atlas.markCountry(ctx.userId, country_code.toUpperCase());
     return ok({ success: true, country_code: country_code.toUpperCase() });
   }
@@ -142,7 +142,7 @@ export class AtlasMcp {
     access: { group: 'atlas', mode: 'write' },
   })
   async unmarkCountryVisited({ country_code }: { country_code: string }, ctx: McpContext) {
-    if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
+    if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
     await this.atlas.unmarkCountry(ctx.userId, country_code.toUpperCase());
     return ok({ success: true, country_code: country_code.toUpperCase() });
   }
@@ -226,7 +226,7 @@ export class AtlasMcp {
     { regionCode, regionName, countryCode }: { regionCode: string; regionName: string; countryCode: string },
     ctx: McpContext,
   ) {
-    if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
+    if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
     // Post-fold quirk fix: uppercase both codes, matching the REST controller
     // (the legacy registrar passed them through verbatim, so a lowercase mark
     // created a row REST's uppercased unmark could never hit).
@@ -251,7 +251,7 @@ export class AtlasMcp {
     access: { group: 'atlas', mode: 'write' },
   })
   async unmarkRegionVisited({ regionCode }: { regionCode: string }, ctx: McpContext) {
-    if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
+    if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
     // Post-fold quirk fix: uppercase, matching the REST controller.
     await this.atlas.unmarkRegion(ctx.userId, regionCode.toUpperCase());
     return ok({ success: true });
@@ -302,7 +302,7 @@ export class AtlasMcp {
     },
     ctx: McpContext,
   ) {
-    if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
+    if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
     let item: unknown;
     try {
       item = await this.atlas.updateBucketItem(ctx.userId, itemId, { name, notes, lat, lng, country_code, target_date });

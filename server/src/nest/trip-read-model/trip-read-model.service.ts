@@ -110,7 +110,7 @@ export class TripReadModelService {
       todoItems: await this.todo.listItems(tripId),
       budgetItems: await this.budget.listBudgetItems(tripId),
       reservations: this.reservations.list(tripId),
-      files: this.files.listFiles(tripId, false),
+      files: await this.files.listFiles(tripId, false),
       accommodations: this.accommodations.list(tripId),
       members: [owner, ...(members || [])].filter(Boolean),
     };

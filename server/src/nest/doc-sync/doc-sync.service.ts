@@ -10,6 +10,7 @@ import { DatabaseService } from '../database/database.service';
 import { AddonsService } from '../addons/addons.service';
 import { ADDON_IDS } from '../../addons';
 import { StorageService } from '../storage/storage.service';
+import { UnitOfWork } from '../database/unit-of-work';
 import { FilesService } from '../files/files.service';
 import { AllowedFileTypesService } from '../files/allowed-file-types.service';
 import { RealtimeService } from '../realtime/realtime.service';
@@ -88,6 +89,7 @@ export class DocSyncService {
     private readonly allowedTypes: AllowedFileTypesService,
     private readonly realtime: RealtimeService,
     private readonly addons: AddonsService,
+    private readonly uow: UnitOfWork,
   ) {}
 
   // ── Entry points ───────────────────────────────────────────────────────────
@@ -332,7 +334,7 @@ export class DocSyncService {
       case 'rename_local': {
         this.db.connection.prepare('UPDATE trip_files SET original_name = ? WHERE id = ?').run(action.name, action.fileId);
         this.realtime.broadcast(ctx.link.trip_id, 'file:updated', {
-          file: this.files.getFileById(action.fileId, ctx.link.trip_id),
+          file: await this.files.getFileById(action.fileId, ctx.link.trip_id),
         });
         this.db.connection
           .prepare(`UPDATE document_sync_items SET remote_name = ?, ${FOUND_AGAIN}, last_seen_at = CURRENT_TIMESTAMP WHERE id = ?`)
@@ -464,7 +466,7 @@ export class DocSyncService {
     // Video is admitted the way the upload admits it, whatever the operator's
     // list says: a clip the file manager takes must not come back as refused
     // when it arrives through the store instead.
-    const allowed = isVideoExtension(path.extname(name)) || isAllowedByOperator(name, this.allowedTypes.get());
+    const allowed = isVideoExtension(path.extname(name)) || isAllowedByOperator(name, await this.allowedTypes.get());
     if (isBlockedName(name) || !allowed) {
       this.upsertItem(ctx.link, { itemId, remote, state: 'rejected_type', errorCode: 'unsupported_type' });
       return 'unsupported_type';
@@ -518,7 +520,7 @@ export class DocSyncService {
           .prepare('SELECT file_id, remote_name, content_sha256 FROM document_sync_items WHERE id = ?')
           .get(itemId) as { file_id: number | null; remote_name: string | null; content_sha256: string | null } | undefined);
     const supersededId = pairing?.file_id ?? null;
-    const superseded = supersededId === null ? undefined : this.files.getFileById(supersededId, ctx.link.trip_id);
+    const superseded = supersededId === null ? undefined : await this.files.getFileById(supersededId, ctx.link.trip_id);
 
     // The bytes TREK already holds, under a version marker that moved on
     // metadata: Paperless bumps it for a tag or a correspondent as much as for
@@ -560,8 +562,8 @@ export class DocSyncService {
      * a new revision is the same document to the trip, and without this every
      * edit in the store quietly took the attachment off its booking.
      */
-    const { created, retired } = this.db.transaction(() => {
-      const file = this.files.createFile(
+    const { created, retired } = await this.uow.transactional(async () => {
+      const file = await this.files.createFile(
         ctx.link.trip_id,
         { filename: storageKey, originalname: name, size: bytes, mimetype: remote.mimeType || 'application/octet-stream' },
         // Attributed to the person whose connection brought it in, which is the
@@ -583,7 +585,7 @@ export class DocSyncService {
              SELECT ?, reservation_id, assignment_id, place_id, budget_item_id FROM file_links WHERE file_id = ?`,
           )
           .run(file.id, supersededId);
-        this.files.softDeleteFile(supersededId as number);
+        await this.files.softDeleteFile(supersededId as number);
       }
       this.upsertItem(ctx.link, {
         itemId,
@@ -624,7 +626,7 @@ export class DocSyncService {
       return 'too_large';
     }
 
-    const file = this.files.getFileById(local.fileId, ctx.link.trip_id);
+    const file = await this.files.getFileById(local.fileId, ctx.link.trip_id);
     if (!file) return 'not_found';
     // Re-read rather than trust the plan: a run walks a whole folder, and a
     // document somebody deleted in the meantime would otherwise still be

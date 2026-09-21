@@ -10,13 +10,13 @@ import { verifyJwtAndLoadUser } from './jwt-verify';
  */
 @Injectable()
 export class CookieAuthGuard implements CanActivate {
-  canActivate(context: ExecutionContext): boolean {
+  async canActivate(context: ExecutionContext): Promise<boolean> {
     const req = context.switchToHttp().getRequest<Request & { cookies?: Record<string, string> }>();
     const cookieToken = req.cookies?.trek_session;
     if (!cookieToken) {
       throw new HttpException({ error: 'Cookie session required for this endpoint', code: 'COOKIE_AUTH_REQUIRED' }, 401);
     }
-    const user = verifyJwtAndLoadUser(cookieToken);
+    const user = await verifyJwtAndLoadUser(cookieToken);
     if (!user) {
       throw new HttpException({ error: 'Invalid or expired session', code: 'AUTH_REQUIRED' }, 401);
     }

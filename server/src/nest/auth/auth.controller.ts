@@ -98,8 +98,8 @@ export class AuthController {
 
   @Get('me')
   @MfaExempt('the client needs to know who it is to render the setup screen')
-  me(@CurrentUser() user: User) {
-    const loaded = this.auth.getCurrentUser(user.id);
+  async me(@CurrentUser() user: User) {
+    const loaded = await this.auth.getCurrentUser(user.id);
     if (!loaded) {
       throw new HttpException({ error: 'User not found' }, 404);
     }
@@ -113,7 +113,7 @@ export class AuthController {
     // "remember me" login survives a password change (#1927). Bearer callers
     // have no cookie → undefined → the historical default duration.
     const remember = decodeSessionClaims((req.cookies as Record<string, string> | undefined)?.trek_session)?.remember;
-    const result = this.auth.changePassword(user.id, user.email, body, remember);
+    const result = await this.auth.changePassword(user.id, user.email, body, remember);
     if (result.error) {
       throw new HttpException({ error: result.error }, result.status!);
     }
@@ -213,8 +213,8 @@ export class AuthController {
   }
 
   @Get('users')
-  users(@CurrentUser() user: User) {
-    return { users: this.profile.listUsers(user.id) };
+  async users(@CurrentUser() user: User) {
+    return { users: await this.profile.listUsers(user.id) };
   }
 
   @ManagedForbidden('validating a key spends the operator quota on a test click')
@@ -229,8 +229,8 @@ export class AuthController {
 
   @Get('app-settings')
   @MfaExempt('the setup screen reads the policy it is asking the user to satisfy')
-  getAppSettings(@CurrentUser() user: User) {
-    const result = this.auth.getAppSettings(user.id);
+  async getAppSettings(@CurrentUser() user: User) {
+    const result = await this.auth.getAppSettings(user.id);
     if (result.error) {
       throw new HttpException({ error: result.error }, result.status!);
     }
@@ -240,7 +240,7 @@ export class AuthController {
   @Put('app-settings')
   @MfaExempt('an admin locked out by their own policy must still be able to lift it')
   async updateAppSettings(@CurrentUser() user: User, @Body() body: AppSettingsUpdateDto, @Req() req: Request) {
-    const result = this.auth.updateAppSettings(user.id, body);
+    const result = await this.auth.updateAppSettings(user.id, body);
     if (result.error) {
       throw new HttpException({ error: result.error }, result.status!);
     }
@@ -258,7 +258,7 @@ export class AuthController {
   @MfaExempt('completing setup is the way out of the policy')
   @HttpCode(200)
   async mfaSetup(@CurrentUser() user: User) {
-    const result = this.auth.setupMfa(user.id, user.email);
+    const result = await this.auth.setupMfa(user.id, user.email);
     if (result.error) {
       throw new HttpException({ error: result.error }, result.status!);
     }
@@ -276,7 +276,7 @@ export class AuthController {
   @HttpCode(200)
   async mfaEnable(@CurrentUser() user: User, @Body() body: MfaEnableDto, @Req() req: Request) {
     this.limit('mfa', req, 5);
-    const result = this.auth.enableMfa(user.id, body.code);
+    const result = await this.auth.enableMfa(user.id, body.code);
     if (result.error) {
       throw new HttpException({ error: result.error }, result.status!);
     }
@@ -288,7 +288,7 @@ export class AuthController {
   @HttpCode(200)
   async mfaDisable(@CurrentUser() user: User, @Body() body: MfaDisableDto, @Req() req: Request) {
     this.limit('login', req, 5);
-    const result = this.auth.disableMfa(user.id, user.email, body);
+    const result = await this.auth.disableMfa(user.id, user.email, body);
     if (result.error) {
       throw new HttpException({ error: result.error }, result.status!);
     }

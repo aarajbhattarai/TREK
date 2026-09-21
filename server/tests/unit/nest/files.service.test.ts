@@ -93,7 +93,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-afterAll(() => {
+afterAll(async () => {
   testDb.close();
   bareDb.close();
 });
@@ -104,8 +104,8 @@ function seedTrip() {
   return { user, trip };
 }
 
-function makeFile(tripId: number, userId: number, overrides: Partial<{ filename: string; originalname: string; size: number; mimetype: string }> = {}, opts: Parameters<FilesService['createFile']>[3] = {}) {
-  return svc.createFile(
+async function makeFile(tripId: number, userId: number, overrides: Partial<{ filename: string; originalname: string; size: number; mimetype: string }> = {}, opts: Parameters<FilesService['createFile']>[3] = {}) {
+  return await svc.createFile(
     tripId,
     { filename: 'stored-name.pdf', originalname: 'visa.pdf', size: 1234, mimetype: 'application/pdf', ...overrides },
     userId,
@@ -166,55 +166,55 @@ describe('files.constants', () => {
 // against the single remaining query owner.
 
 describe('AllowedFileTypesService.get', () => {
-  it('FILE-SVC-006: returns the app_settings value when set', () => {
+  it('FILE-SVC-006: returns the app_settings value when set', async () => {
     setAppSetting(testDb, 'allowed_file_types', 'pdf,txt');
-    expect(new AllowedFileTypesService(new DatabaseService(testDb)).get()).toBe('pdf,txt');
+    expect(await new AllowedFileTypesService(new DatabaseService(testDb)).get()).toBe('pdf,txt');
   });
 
-  it('FILE-SVC-007: returns the default when the row is absent', () => {
-    expect(new AllowedFileTypesService(new DatabaseService(testDb)).get()).toBe(DEFAULT_ALLOWED_EXTENSIONS);
+  it('FILE-SVC-007: returns the default when the row is absent', async () => {
+    expect(await new AllowedFileTypesService(new DatabaseService(testDb)).get()).toBe(DEFAULT_ALLOWED_EXTENSIONS);
   });
 
-  it('FILE-SVC-008: returns the default for an empty value (|| coercion, not ??)', () => {
+  it('FILE-SVC-008: returns the default for an empty value (|| coercion, not ??)', async () => {
     setAppSetting(testDb, 'allowed_file_types', '');
-    expect(new AllowedFileTypesService(new DatabaseService(testDb)).get()).toBe(DEFAULT_ALLOWED_EXTENSIONS);
+    expect(await new AllowedFileTypesService(new DatabaseService(testDb)).get()).toBe(DEFAULT_ALLOWED_EXTENSIONS);
   });
 
-  it('FILE-SVC-009: returns the default when the query throws (no app_settings table)', () => {
-    expect(new AllowedFileTypesService(new DatabaseService(bareDb)).get()).toBe(DEFAULT_ALLOWED_EXTENSIONS);
+  it('FILE-SVC-009: returns the default when the query throws (no app_settings table)', async () => {
+    expect(await new AllowedFileTypesService(new DatabaseService(bareDb)).get()).toBe(DEFAULT_ALLOWED_EXTENSIONS);
   });
 });
 
 // ── trip-scoped reads ─────────────────────────────────────────────────────────
 
 describe('getFileById / getDeletedFile', () => {
-  it('FILE-SVC-010: getFileById is trip-scoped', () => {
+  it('FILE-SVC-010: getFileById is trip-scoped', async () => {
     const { user, trip } = seedTrip();
     const other = createTrip(testDb, user.id);
-    const file = makeFile(trip.id, user.id);
-    expect(svc.getFileById(file.id, trip.id)?.id).toBe(file.id);
-    expect(svc.getFileById(file.id, other.id)).toBeUndefined();
+    const file = await makeFile(trip.id, user.id);
+    expect((await svc.getFileById(file.id, trip.id))?.id).toBe(file.id);
+    expect(await svc.getFileById(file.id, other.id)).toBeUndefined();
   });
 
-  it('FILE-SVC-011: getDeletedFile returns only soft-deleted rows', () => {
+  it('FILE-SVC-011: getDeletedFile returns only soft-deleted rows', async () => {
     const { user, trip } = seedTrip();
-    const file = makeFile(trip.id, user.id);
-    expect(svc.getDeletedFile(file.id, trip.id)).toBeUndefined();
-    svc.softDeleteFile(file.id);
-    expect(svc.getDeletedFile(file.id, trip.id)?.id).toBe(file.id);
+    const file = await makeFile(trip.id, user.id);
+    expect(await svc.getDeletedFile(file.id, trip.id)).toBeUndefined();
+    await svc.softDeleteFile(file.id);
+    expect((await svc.getDeletedFile(file.id, trip.id))?.id).toBe(file.id);
   });
 });
 
 describe('listFiles', () => {
-  it('FILE-SVC-012: active list excludes trash, is starred-first and carries the formatted shape', () => {
+  it('FILE-SVC-012: active list excludes trash, is starred-first and carries the formatted shape', async () => {
     const { user, trip } = seedTrip();
-    makeFile(trip.id, user.id, { originalname: 'plain.pdf' });
-    const starred = makeFile(trip.id, user.id, { originalname: 'starred.pdf' });
-    const trashed = makeFile(trip.id, user.id, { originalname: 'gone.pdf' });
-    svc.toggleStarred(starred.id, 0);
-    svc.softDeleteFile(trashed.id);
+    await makeFile(trip.id, user.id, { originalname: 'plain.pdf' });
+    const starred = await makeFile(trip.id, user.id, { originalname: 'starred.pdf' });
+    const trashed = await makeFile(trip.id, user.id, { originalname: 'gone.pdf' });
+    await svc.toggleStarred(starred.id, 0);
+    await svc.softDeleteFile(trashed.id);
 
-    const files = svc.listFiles(trip.id, false) as Record<string, unknown>[];
+    const files = await svc.listFiles(trip.id, false) as Record<string, unknown>[];
     expect(files.map((f) => f.id)).toHaveLength(2);
     expect(files[0].id).toBe(starred.id); // ORDER BY f.starred DESC first
     expect(files.map((f) => f.id)).not.toContain(trashed.id);
@@ -223,27 +223,27 @@ describe('listFiles', () => {
     expect(files[0]).toHaveProperty('uploaded_by_avatar');
   });
 
-  it('FILE-SVC-013: trash list returns only soft-deleted files', () => {
+  it('FILE-SVC-013: trash list returns only soft-deleted files', async () => {
     const { user, trip } = seedTrip();
-    const kept = makeFile(trip.id, user.id);
-    const trashed = makeFile(trip.id, user.id);
-    svc.softDeleteFile(trashed.id);
+    const kept = await makeFile(trip.id, user.id);
+    const trashed = await makeFile(trip.id, user.id);
+    await svc.softDeleteFile(trashed.id);
 
-    const trash = svc.listFiles(trip.id, true) as Record<string, unknown>[];
+    const trash = await svc.listFiles(trip.id, true) as Record<string, unknown>[];
     expect(trash.map((f) => f.id)).toEqual([trashed.id]);
     expect(trash.map((f) => f.id)).not.toContain(kept.id);
   });
 
-  it('FILE-SVC-014: batches file_links and filters null targets by truthiness', () => {
+  it('FILE-SVC-014: batches file_links and filters null targets by truthiness', async () => {
     const { user, trip } = seedTrip();
     const reservation = createReservation(testDb, trip.id);
     const place = createPlace(testDb, trip.id);
-    const linked = makeFile(trip.id, user.id);
-    const bare = makeFile(trip.id, user.id);
-    svc.createFileLink(linked.id, { reservation_id: reservation.id });
-    svc.createFileLink(linked.id, { place_id: place.id });
+    const linked = await makeFile(trip.id, user.id);
+    const bare = await makeFile(trip.id, user.id);
+    await svc.createFileLink(linked.id, { reservation_id: reservation.id });
+    await svc.createFileLink(linked.id, { place_id: place.id });
 
-    const files = svc.listFiles(trip.id, false) as Record<string, unknown>[];
+    const files = await svc.listFiles(trip.id, false) as Record<string, unknown>[];
     const linkedRow = files.find((f) => f.id === linked.id);
     const bareRow = files.find((f) => f.id === bare.id);
     expect(linkedRow.linked_reservation_ids).toEqual([reservation.id]);
@@ -252,14 +252,14 @@ describe('listFiles', () => {
     expect(bareRow.linked_place_ids).toEqual([]);
 
     const item = Number(testDb.prepare('INSERT INTO budget_items (trip_id, name) VALUES (?, ?)').run(trip.id, 'Dinner').lastInsertRowid);
-    svc.createFileLink(linked.id, { budget_item_id: item });
-    const withReceipt = (svc.listFiles(trip.id, false) as Record<string, unknown>[]).find((f) => f.id === linked.id);
+    await svc.createFileLink(linked.id, { budget_item_id: item });
+    const withReceipt = (await svc.listFiles(trip.id, false) as Record<string, unknown>[]).find((f) => f.id === linked.id);
     expect(withReceipt.linked_budget_item_ids).toEqual([item]);
-    expect((svc.listFiles(trip.id, false) as Record<string, unknown>[]).find((f) => f.id === bare.id).linked_budget_item_ids).toEqual([]);
+    expect((await svc.listFiles(trip.id, false) as Record<string, unknown>[]).find((f) => f.id === bare.id).linked_budget_item_ids).toEqual([]);
 
     // The empty-trip guard skips the IN () batch entirely.
     const empty = createTrip(testDb, user.id);
-    expect(svc.listFiles(empty.id, false)).toEqual([]);
+    expect(await svc.listFiles(empty.id, false)).toEqual([]);
   });
 });
 
@@ -270,41 +270,41 @@ describe('budget receipts', () => {
     return Number(testDb.prepare('INSERT INTO budget_items (trip_id, name) VALUES (?, ?)').run(tripId, 'Dinner').lastInsertRowid);
   }
 
-  it('FILE-SVC-040: an upload naming an expense gets its link row straight away', () => {
+  it('FILE-SVC-040: an upload naming an expense gets its link row straight away', async () => {
     const { user, trip } = seedTrip();
     const item = seedItem(trip.id);
-    const file = makeFile(trip.id, user.id, {}, { budget_item_id: item });
+    const file = await makeFile(trip.id, user.id, {}, { budget_item_id: item });
     expect(testDb.prepare('SELECT COUNT(*) c FROM file_links WHERE file_id = ? AND budget_item_id = ?').get(file.id, item)).toEqual({ c: 1 });
   });
 
-  it('FILE-SVC-041: an upload without one writes no link at all', () => {
+  it('FILE-SVC-041: an upload without one writes no link at all', async () => {
     const { user, trip } = seedTrip();
-    const file = makeFile(trip.id, user.id);
+    const file = await makeFile(trip.id, user.id);
     expect(testDb.prepare('SELECT COUNT(*) c FROM file_links WHERE file_id = ?').get(file.id)).toEqual({ c: 0 });
   });
 
-  it('FILE-SVC-042: updateFile attaches to an expense and detaches on a falsy id', () => {
+  it('FILE-SVC-042: updateFile attaches to an expense and detaches on a falsy id', async () => {
     const { user, trip } = seedTrip();
     const item = seedItem(trip.id);
-    const file = makeFile(trip.id, user.id);
+    const file = await makeFile(trip.id, user.id);
 
-    svc.updateFile(file.id, file, { budget_item_id: item });
+    await svc.updateFile(file.id, file, { budget_item_id: item });
     expect(testDb.prepare('SELECT COUNT(*) c FROM file_links WHERE file_id = ? AND budget_item_id = ?').get(file.id, item)).toEqual({ c: 1 });
 
     // Sending it twice must not double the row.
-    svc.updateFile(file.id, file, { budget_item_id: item });
+    await svc.updateFile(file.id, file, { budget_item_id: item });
     expect(testDb.prepare('SELECT COUNT(*) c FROM file_links WHERE file_id = ?').get(file.id)).toEqual({ c: 1 });
 
-    svc.updateFile(file.id, file, { budget_item_id: null });
+    await svc.updateFile(file.id, file, { budget_item_id: null });
     expect(testDb.prepare('SELECT COUNT(*) c FROM file_links WHERE file_id = ? AND budget_item_id IS NOT NULL').get(file.id)).toEqual({ c: 0 });
   });
 
-  it('FILE-SVC-043: leaving budget_item_id out touches no link', () => {
+  it('FILE-SVC-043: leaving budget_item_id out touches no link', async () => {
     const { user, trip } = seedTrip();
     const item = seedItem(trip.id);
-    const file = makeFile(trip.id, user.id, {}, { budget_item_id: item });
+    const file = await makeFile(trip.id, user.id, {}, { budget_item_id: item });
 
-    svc.updateFile(file.id, file, { description: 'renamed' });
+    await svc.updateFile(file.id, file, { description: 'renamed' });
     expect(testDb.prepare('SELECT COUNT(*) c FROM file_links WHERE file_id = ? AND budget_item_id = ?').get(file.id, item)).toEqual({ c: 1 });
   });
 });
@@ -312,9 +312,9 @@ describe('budget receipts', () => {
 // ── createFile / updateFile / toggleStarred ───────────────────────────────────
 
 describe('createFile', () => {
-  it('FILE-SVC-015: coerces falsy opts to NULL (|| null) and re-selects the formatted row', () => {
+  it('FILE-SVC-015: coerces falsy opts to NULL (|| null) and re-selects the formatted row', async () => {
     const { user, trip } = seedTrip();
-    const file = makeFile(trip.id, user.id, {}, { place_id: '', reservation_id: undefined, description: '' });
+    const file = await makeFile(trip.id, user.id, {}, { place_id: '', reservation_id: undefined, description: '' });
     const row = testDb.prepare('SELECT * FROM trip_files WHERE id = ?').get(file.id) as Record<string, unknown>;
     expect(row.place_id).toBeNull();
     expect(row.reservation_id).toBeNull();
@@ -323,10 +323,10 @@ describe('createFile', () => {
     expect((file as unknown as Record<string, unknown>).uploaded_by_name).toBe(user.username);
   });
 
-  it('FILE-SVC-016: stores the provided metadata and links the reservation title through FILE_SELECT', () => {
+  it('FILE-SVC-016: stores the provided metadata and links the reservation title through FILE_SELECT', async () => {
     const { user, trip } = seedTrip();
     const reservation = createReservation(testDb, trip.id, { title: 'Night train' });
-    const file = makeFile(trip.id, user.id, { originalname: 'ticket.pdf', size: 99, mimetype: 'application/pdf' }, {
+    const file = await makeFile(trip.id, user.id, { originalname: 'ticket.pdf', size: 99, mimetype: 'application/pdf' }, {
       reservation_id: String(reservation.id),
       description: 'the booking',
     });
@@ -339,23 +339,23 @@ describe('createFile', () => {
 });
 
 describe('updateFile', () => {
-  it('FILE-SVC-017: undefined fields keep the current values', () => {
+  it('FILE-SVC-017: undefined fields keep the current values', async () => {
     const { user, trip } = seedTrip();
     const place = createPlace(testDb, trip.id);
-    const file = makeFile(trip.id, user.id, {}, { description: 'keep me', place_id: String(place.id) });
-    const current = svc.getFileById(file.id, trip.id)!;
-    const updated = svc.updateFile(file.id, current, {}) as Record<string, unknown>;
+    const file = await makeFile(trip.id, user.id, {}, { description: 'keep me', place_id: String(place.id) });
+    const current = await svc.getFileById(file.id, trip.id)!;
+    const updated = await svc.updateFile(file.id, current, {}) as Record<string, unknown>;
     expect(updated.description).toBe('keep me');
     expect(updated.place_id).toBe(place.id);
   });
 
-  it("FILE-SVC-018: '' clears every field (|| null) — description matches createFile's coercion", () => {
+  it("FILE-SVC-018: '' clears every field (|| null) — description matches createFile's coercion", async () => {
     const { user, trip } = seedTrip();
     const place = createPlace(testDb, trip.id);
     const reservation = createReservation(testDb, trip.id);
-    const file = makeFile(trip.id, user.id, {}, { description: 'old', place_id: String(place.id), reservation_id: String(reservation.id) });
-    const current = svc.getFileById(file.id, trip.id)!;
-    const updated = svc.updateFile(file.id, current, { description: '', place_id: '', reservation_id: null }) as Record<string, unknown>;
+    const file = await makeFile(trip.id, user.id, {}, { description: 'old', place_id: String(place.id), reservation_id: String(reservation.id) });
+    const current = await svc.getFileById(file.id, trip.id)!;
+    const updated = await svc.updateFile(file.id, current, { description: '', place_id: '', reservation_id: null }) as Record<string, unknown>;
     expect(updated.description).toBeNull(); // '' → NULL on update too (post-migration fix: symmetric with createFile)
     expect(updated.place_id).toBeNull();
     expect(updated.reservation_id).toBeNull();
@@ -363,28 +363,28 @@ describe('updateFile', () => {
 });
 
 describe('toggleStarred / softDeleteFile / restoreFile', () => {
-  it('FILE-SVC-019: toggleStarred flips 0→1 and 1→0', () => {
+  it('FILE-SVC-019: toggleStarred flips 0→1 and 1→0', async () => {
     const { user, trip } = seedTrip();
-    const file = makeFile(trip.id, user.id);
-    const on = svc.toggleStarred(file.id, 0);
+    const file = await makeFile(trip.id, user.id);
+    const on = await svc.toggleStarred(file.id, 0);
     expect(on.starred).toBe(1);
-    const off = svc.toggleStarred(file.id, on.starred);
+    const off = await svc.toggleStarred(file.id, on.starred);
     expect(off.starred).toBe(0);
   });
 
-  it('FILE-SVC-020: softDeleteFile stamps deleted_at', () => {
+  it('FILE-SVC-020: softDeleteFile stamps deleted_at', async () => {
     const { user, trip } = seedTrip();
-    const file = makeFile(trip.id, user.id);
-    svc.softDeleteFile(file.id);
+    const file = await makeFile(trip.id, user.id);
+    await svc.softDeleteFile(file.id);
     const row = testDb.prepare('SELECT deleted_at FROM trip_files WHERE id = ?').get(file.id) as Record<string, unknown>;
     expect(row.deleted_at).not.toBeNull();
   });
 
-  it('FILE-SVC-021: restoreFile clears deleted_at and returns the formatted row', () => {
+  it('FILE-SVC-021: restoreFile clears deleted_at and returns the formatted row', async () => {
     const { user, trip } = seedTrip();
-    const file = makeFile(trip.id, user.id);
-    svc.softDeleteFile(file.id);
-    const restored = svc.restoreFile(file.id) as Record<string, unknown>;
+    const file = await makeFile(trip.id, user.id);
+    await svc.softDeleteFile(file.id);
+    const restored = await svc.restoreFile(file.id) as Record<string, unknown>;
     expect(restored.deleted_at).toBeNull();
     expect(restored.url).toBe(`/api/trips/${trip.id}/files/${file.id}/download`);
   });
@@ -395,46 +395,46 @@ describe('toggleStarred / softDeleteFile / restoreFile', () => {
 describe('permanentDeleteFile', () => {
   it('FILE-SVC-022: deletes the storage object (idempotent on missing), then the DB row', async () => {
     const { user, trip } = seedTrip();
-    const file = makeFile(trip.id, user.id, { filename: 'on-disk.pdf' });
+    const file = await makeFile(trip.id, user.id, { filename: 'on-disk.pdf' });
     storageDelete.mockResolvedValue(undefined);
-    await svc.permanentDeleteFile(svc.getFileById(file.id, trip.id) as TripFile);
+    await svc.permanentDeleteFile(await svc.getFileById(file.id, trip.id) as TripFile);
     expect(storageDelete).toHaveBeenCalledWith('files', 'on-disk.pdf');
-    expect(svc.getFileById(file.id, trip.id)).toBeUndefined();
+    expect(await svc.getFileById(file.id, trip.id)).toBeUndefined();
   });
 
   it('FILE-SVC-023: a delete failure logs [files], rethrows and keeps the DB row', async () => {
     const { user, trip } = seedTrip();
-    const file = makeFile(trip.id, user.id, { filename: 'stuck.pdf' });
+    const file = await makeFile(trip.id, user.id, { filename: 'stuck.pdf' });
     const boom = new Error('EACCES');
     storageDelete.mockRejectedValue(boom);
     const err = vi.spyOn(console, 'error').mockImplementation(() => {});
-    await expect(svc.permanentDeleteFile(svc.getFileById(file.id, trip.id) as TripFile)).rejects.toThrow('EACCES');
+    await expect(svc.permanentDeleteFile(await svc.getFileById(file.id, trip.id) as TripFile)).rejects.toThrow('EACCES');
     expect(err).toHaveBeenCalledWith('[files] unlink failed for stuck.pdf, keeping DB row:', boom);
-    expect(svc.getFileById(file.id, trip.id)).toBeDefined();
+    expect(await svc.getFileById(file.id, trip.id)).toBeDefined();
   });
 });
 
 describe('emptyTrash', () => {
   it('FILE-SVC-024: unlinks every trashed file and deletes their rows, returning the count', async () => {
     const { user, trip } = seedTrip();
-    const a = makeFile(trip.id, user.id, { filename: 'a.pdf' });
-    const b = makeFile(trip.id, user.id, { filename: 'b.pdf' });
-    const kept = makeFile(trip.id, user.id, { filename: 'kept.pdf' });
-    svc.softDeleteFile(a.id);
-    svc.softDeleteFile(b.id);
+    const a = await makeFile(trip.id, user.id, { filename: 'a.pdf' });
+    const b = await makeFile(trip.id, user.id, { filename: 'b.pdf' });
+    const kept = await makeFile(trip.id, user.id, { filename: 'kept.pdf' });
+    await svc.softDeleteFile(a.id);
+    await svc.softDeleteFile(b.id);
     storageDelete.mockResolvedValue(undefined);
 
     await expect(svc.emptyTrash(trip.id)).resolves.toBe(2);
-    expect(svc.listFiles(trip.id, true)).toEqual([]);
-    expect(svc.getFileById(kept.id, trip.id)).toBeDefined();
+    expect(await svc.listFiles(trip.id, true)).toEqual([]);
+    expect(await svc.getFileById(kept.id, trip.id)).toBeDefined();
   });
 
   it('FILE-SVC-025: a partial unlink failure keeps the failed row, swallows the error and counts only successes', async () => {
     const { user, trip } = seedTrip();
-    const good = makeFile(trip.id, user.id, { filename: 'good.pdf' });
-    const bad = makeFile(trip.id, user.id, { filename: 'bad.pdf' });
-    svc.softDeleteFile(good.id);
-    svc.softDeleteFile(bad.id);
+    const good = await makeFile(trip.id, user.id, { filename: 'good.pdf' });
+    const bad = await makeFile(trip.id, user.id, { filename: 'bad.pdf' });
+    await svc.softDeleteFile(good.id);
+    await svc.softDeleteFile(bad.id);
     const boom = new Error('EBUSY');
     storageDelete.mockImplementation((_category: string, name: string) =>
       name.includes('bad.pdf') ? Promise.reject(boom) : Promise.resolve()
@@ -443,8 +443,8 @@ describe('emptyTrash', () => {
 
     await expect(svc.emptyTrash(trip.id)).resolves.toBe(1);
     expect(err).toHaveBeenCalledWith('[files] unlink failed for bad.pdf, keeping DB row:', boom);
-    expect(svc.getFileById(good.id, trip.id)).toBeUndefined();
-    expect(svc.getDeletedFile(bad.id, trip.id)).toBeDefined();
+    expect(await svc.getFileById(good.id, trip.id)).toBeUndefined();
+    expect(await svc.getDeletedFile(bad.id, trip.id)).toBeDefined();
   });
 
   it('FILE-SVC-026: an empty trash resolves to 0 without touching storage', async () => {
@@ -464,7 +464,7 @@ describe('findForeignLinkTarget', () => {
     return { user, mine, foreign };
   }
 
-  it('FILE-SVC-027: flags each foreign target kind and passes same-trip ids', () => {
+  it('FILE-SVC-027: flags each foreign target kind and passes same-trip ids', async () => {
     const { mine, foreign } = twoTrips();
     const foreignRes = createReservation(testDb, foreign.id);
     const foreignPlace = createPlace(testDb, foreign.id);
@@ -472,27 +472,27 @@ describe('findForeignLinkTarget', () => {
     const foreignAssignment = createDayAssignment(testDb, foreignDay.id, createPlace(testDb, foreign.id).id);
     const myRes = createReservation(testDb, mine.id);
 
-    expect(svc.findForeignLinkTarget(mine.id, { reservation_id: foreignRes.id })).toBe('reservation_id');
-    expect(svc.findForeignLinkTarget(mine.id, { place_id: foreignPlace.id })).toBe('place_id');
-    expect(svc.findForeignLinkTarget(mine.id, { assignment_id: foreignAssignment.id })).toBe('assignment_id');
-    expect(svc.findForeignLinkTarget(mine.id, { reservation_id: myRes.id })).toBeNull();
+    expect(await svc.findForeignLinkTarget(mine.id, { reservation_id: foreignRes.id })).toBe('reservation_id');
+    expect(await svc.findForeignLinkTarget(mine.id, { place_id: foreignPlace.id })).toBe('place_id');
+    expect(await svc.findForeignLinkTarget(mine.id, { assignment_id: foreignAssignment.id })).toBe('assignment_id');
+    expect(await svc.findForeignLinkTarget(mine.id, { reservation_id: myRes.id })).toBeNull();
 
     // A receipt may only point at an expense on the same trip.
     const foreignItem = Number(testDb.prepare('INSERT INTO budget_items (trip_id, name) VALUES (?, ?)').run(foreign.id, 'Foreign').lastInsertRowid);
     const myItem = Number(testDb.prepare('INSERT INTO budget_items (trip_id, name) VALUES (?, ?)').run(mine.id, 'Mine').lastInsertRowid);
-    expect(svc.findForeignLinkTarget(mine.id, { budget_item_id: foreignItem })).toBe('budget_item_id');
-    expect(svc.findForeignLinkTarget(mine.id, { budget_item_id: myItem })).toBeNull();
+    expect(await svc.findForeignLinkTarget(mine.id, { budget_item_id: foreignItem })).toBe('budget_item_id');
+    expect(await svc.findForeignLinkTarget(mine.id, { budget_item_id: myItem })).toBeNull();
   });
 
-  it('FILE-SVC-028: falsy ids are skipped (they clear the link) and reservation is checked first', () => {
+  it('FILE-SVC-028: falsy ids are skipped (they clear the link) and reservation is checked first', async () => {
     const { mine, foreign } = twoTrips();
     const foreignRes = createReservation(testDb, foreign.id);
     const foreignPlace = createPlace(testDb, foreign.id);
 
-    expect(svc.findForeignLinkTarget(mine.id, { reservation_id: 0, place_id: null, assignment_id: undefined })).toBeNull();
-    expect(svc.findForeignLinkTarget(mine.id, { reservation_id: '' })).toBeNull();
+    expect(await svc.findForeignLinkTarget(mine.id, { reservation_id: 0, place_id: null, assignment_id: undefined })).toBeNull();
+    expect(await svc.findForeignLinkTarget(mine.id, { reservation_id: '' })).toBeNull();
     // Both foreign — the reservation check runs before the place check.
-    expect(svc.findForeignLinkTarget(mine.id, { reservation_id: foreignRes.id, place_id: foreignPlace.id })).toBe('reservation_id');
+    expect(await svc.findForeignLinkTarget(mine.id, { reservation_id: foreignRes.id, place_id: foreignPlace.id })).toBe('reservation_id');
   });
 });
 
@@ -511,89 +511,89 @@ type FileLinkRow = {
 };
 
 describe('createFileLink / deleteFileLink / getFileLinks', () => {
-  it('FILE-SVC-029: inserts with || null coercion, dedupes via INSERT OR IGNORE and returns the re-select', () => {
+  it('FILE-SVC-029: inserts with || null coercion, dedupes via INSERT OR IGNORE and returns the re-select', async () => {
     const { user, trip } = seedTrip();
     const reservation = createReservation(testDb, trip.id, { title: 'Ferry' });
-    const file = makeFile(trip.id, user.id);
+    const file = await makeFile(trip.id, user.id);
 
-    const links = svc.createFileLink(file.id, { reservation_id: reservation.id, place_id: '' }) as FileLinkRow[];
+    const links = await svc.createFileLink(file.id, { reservation_id: reservation.id, place_id: '' }) as FileLinkRow[];
     expect(links).toHaveLength(1);
     expect(links[0].reservation_id).toBe(reservation.id);
     expect(links[0].place_id).toBeNull();
 
-    const again = svc.createFileLink(file.id, { reservation_id: reservation.id }) as FileLinkRow[];
+    const again = await svc.createFileLink(file.id, { reservation_id: reservation.id }) as FileLinkRow[];
     expect(again).toHaveLength(1); // UNIQUE(file_id, reservation_id) + OR IGNORE
 
-    const hydrated = svc.getFileLinks(file.id) as FileLinkRow[];
+    const hydrated = await svc.getFileLinks(file.id) as FileLinkRow[];
     expect(hydrated[0].reservation_title).toBe('Ferry');
   });
 
-  it('FILE-SVC-030: an insert error propagates (post-migration fix: no silent swallow)', () => {
+  it('FILE-SVC-030: an insert error propagates (post-migration fix: no silent swallow)', async () => {
     const { user, trip } = seedTrip();
-    const file = makeFile(trip.id, user.id);
-    expect(() => svc.createFileLink(file.id, { reservation_id: { bad: true } as never })).toThrow();
+    const file = await makeFile(trip.id, user.id);
+    await expect(svc.createFileLink(file.id, { reservation_id: { bad: true } as never })).rejects.toThrow();
   });
 
-  it('FILE-SVC-031: deleteFileLink is scoped to (id AND file_id)', () => {
+  it('FILE-SVC-031: deleteFileLink is scoped to (id AND file_id)', async () => {
     const { user, trip } = seedTrip();
     const reservation = createReservation(testDb, trip.id);
-    const file = makeFile(trip.id, user.id);
-    const other = makeFile(trip.id, user.id);
-    const [link] = svc.createFileLink(file.id, { reservation_id: reservation.id }) as FileLinkRow[];
+    const file = await makeFile(trip.id, user.id);
+    const other = await makeFile(trip.id, user.id);
+    const [link] = await svc.createFileLink(file.id, { reservation_id: reservation.id }) as FileLinkRow[];
 
-    svc.deleteFileLink(link.id, other.id); // wrong file — no-op
-    expect(svc.getFileLinks(file.id)).toHaveLength(1);
-    svc.deleteFileLink(link.id, file.id);
-    expect(svc.getFileLinks(file.id)).toHaveLength(0);
+    await svc.deleteFileLink(link.id, other.id); // wrong file — no-op
+    expect(await svc.getFileLinks(file.id)).toHaveLength(1);
+    await svc.deleteFileLink(link.id, file.id);
+    expect(await svc.getFileLinks(file.id)).toHaveLength(0);
   });
 });
 
 // ── download auth & glue ──────────────────────────────────────────────────────
 
 describe('authenticateDownload', () => {
-  it('FILE-SVC-032: a valid session cookie wins over a bearer token', () => {
+  it('FILE-SVC-032: a valid session cookie wins over a bearer token', async () => {
     verifyJwtAndLoadUser.mockReturnValue({ id: 42 });
-    const result = svc.authenticateDownload(req({ cookie: 'cookie-jwt', bearer: 'bearer-jwt' }));
+    const result = await svc.authenticateDownload(req({ cookie: 'cookie-jwt', bearer: 'bearer-jwt' }));
     expect(result).toEqual({ userId: 42 });
     expect(verifyJwtAndLoadUser).toHaveBeenCalledWith('cookie-jwt');
   });
 
-  it('FILE-SVC-033: a bearer token is used when no cookie is present; invalid JWTs 401', () => {
+  it('FILE-SVC-033: a bearer token is used when no cookie is present; invalid JWTs 401', async () => {
     verifyJwtAndLoadUser.mockReturnValue({ id: 7 });
-    expect(svc.authenticateDownload(req({ bearer: 'bearer-jwt' }))).toEqual({ userId: 7 });
+    expect(await svc.authenticateDownload(req({ bearer: 'bearer-jwt' }))).toEqual({ userId: 7 });
     expect(verifyJwtAndLoadUser).toHaveBeenCalledWith('bearer-jwt');
 
     verifyJwtAndLoadUser.mockReturnValue(null);
-    expect(svc.authenticateDownload(req({ bearer: 'stale' }))).toEqual({ error: 'Invalid or expired token', status: 401 });
+    expect(await svc.authenticateDownload(req({ bearer: 'stale' }))).toEqual({ error: 'Invalid or expired token', status: 401 });
   });
 
-  it('FILE-SVC-034: a ?token= ephemeral token is consumed with the download purpose', () => {
+  it('FILE-SVC-034: a ?token= ephemeral token is consumed with the download purpose', async () => {
     consumeEphemeralToken.mockReturnValue(9);
-    expect(svc.authenticateDownload(req({ token: 'eph' }))).toEqual({ userId: 9 });
+    expect(await svc.authenticateDownload(req({ token: 'eph' }))).toEqual({ userId: 9 });
     expect(consumeEphemeralToken).toHaveBeenCalledWith('eph', 'download');
 
     consumeEphemeralToken.mockReturnValue(null);
-    expect(svc.authenticateDownload(req({ token: 'spent' }))).toEqual({ error: 'Invalid or expired token', status: 401 });
+    expect(await svc.authenticateDownload(req({ token: 'spent' }))).toEqual({ error: 'Invalid or expired token', status: 401 });
   });
 
-  it('FILE-SVC-035: no credentials at all is a 401 Authentication required', () => {
-    expect(svc.authenticateDownload(req({}))).toEqual({ error: 'Authentication required', status: 401 });
+  it('FILE-SVC-035: no credentials at all is a 401 Authentication required', async () => {
+    expect(await svc.authenticateDownload(req({}))).toEqual({ error: 'Authentication required', status: 401 });
     expect(verifyJwtAndLoadUser).not.toHaveBeenCalled();
     expect(consumeEphemeralToken).not.toHaveBeenCalled();
   });
 });
 
 describe('verifyTripAccess / can / files.bridge', () => {
-  it('FILE-SVC-036: verifyTripAccess resolves owner and member, refuses strangers', () => {
+  it('FILE-SVC-036: verifyTripAccess resolves owner and member, refuses strangers', async () => {
     const { user: owner } = createUser(testDb);
     const { user: member } = createUser(testDb);
     const { user: stranger } = createUser(testDb);
     const trip = createTrip(testDb, owner.id);
     addTripMember(testDb, trip.id, member.id);
 
-    expect(svc.verifyTripAccess(trip.id, owner.id)?.id).toBe(trip.id);
-    expect(svc.verifyTripAccess(trip.id, member.id)).toBeDefined();
-    expect(svc.verifyTripAccess(trip.id, stranger.id)).toBeFalsy();
+    expect((await svc.verifyTripAccess(trip.id, owner.id))?.id).toBe(trip.id);
+    expect(await svc.verifyTripAccess(trip.id, member.id)).toBeDefined();
+    expect(await svc.verifyTripAccess(trip.id, stranger.id)).toBeFalsy();
   });
 
   it('FILE-SVC-037: can() forwards to checkPermission with the shared-trip flag', async () => {
@@ -611,13 +611,13 @@ describe('verifyTripAccess / can / files.bridge', () => {
     expect(checkPermission).toHaveBeenLastCalledWith('file_upload', 'user', user.id, user.id, false);
   });
 
-  it('FILE-SVC-038: the allowed-extension list is a live read, not a boot snapshot', () => {
+  it('FILE-SVC-038: the allowed-extension list is a live read, not a boot snapshot', async () => {
     // Was asserted against files.bridge, which built its own FilesService. The
     // list moved to a leaf service the multer factories inject, and the property
     // that matters is unchanged: an admin editing the list in settings applies
     // to the next upload, with no invalidation wiring.
     const allowed = new AllowedFileTypesService(new DatabaseService(testDb));
     setAppSetting(testDb, 'allowed_file_types', 'md,markdown');
-    expect(allowed.get()).toBe('md,markdown');
+    expect(await allowed.get()).toBe('md,markdown');
   });
 });

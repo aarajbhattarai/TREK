@@ -36,48 +36,48 @@ afterAll(() => { testDb.close(); });
 // ── Invites ───────────────────────────────────────────────────────────────────
 
 describe('Invites', () => {
-  it('ADMIN-SVC-024 — createInvite returns invite with token', () => {
+  it('ADMIN-SVC-024 — createInvite returns invite with token', async () => {
     const { user: admin } = createAdmin(testDb);
-    const result = svc.createInvite(admin.id, { max_uses: 5 }) as any;
+    const result = await svc.createInvite(admin.id, { max_uses: 5 }) as any;
     expect(result.invite.token).toBeDefined();
     expect(result.invite.max_uses).toBe(5);
   });
 
-  it('ADMIN-SVC-025 — createInvite defaults to 1 use', () => {
+  it('ADMIN-SVC-025 — createInvite defaults to 1 use', async () => {
     const { user: admin } = createAdmin(testDb);
-    const result = svc.createInvite(admin.id, {}) as any;
+    const result = await svc.createInvite(admin.id, {}) as any;
     expect(result.uses).toBe(1);
   });
 
-  it('ADMIN-SVC-026 — listInvites returns array', () => {
+  it('ADMIN-SVC-026 — listInvites returns array', async () => {
     const { user: admin } = createAdmin(testDb);
-    svc.createInvite(admin.id, {});
-    const invites = svc.listInvites() as any[];
+    await svc.createInvite(admin.id, {});
+    const invites = await svc.listInvites() as any[];
     expect(invites.length).toBeGreaterThanOrEqual(1);
   });
 
-  it('ADMIN-SVC-027 — deleteInvite removes invite', () => {
+  it('ADMIN-SVC-027 — deleteInvite removes invite', async () => {
     const { user: admin } = createAdmin(testDb);
     const invite = createInviteToken(testDb, { created_by: admin.id }) as any;
-    const result = svc.deleteInvite(String(invite.id)) as any;
+    const result = await svc.deleteInvite(String(invite.id)) as any;
     expect(result.error).toBeUndefined();
     const check = testDb.prepare('SELECT id FROM invite_tokens WHERE id = ?').get(invite.id);
     expect(check).toBeUndefined();
   });
 
-  it('ADMIN-SVC-028 — deleteInvite returns 404 for non-existent invite', () => {
-    const result = svc.deleteInvite('99999') as any;
+  it('ADMIN-SVC-028 — deleteInvite returns 404 for non-existent invite', async () => {
+    const result = await svc.deleteInvite('99999') as any;
     expect(result.status).toBe(404);
   });
 });
 
 describe('Invites — trip binding', () => {
-  it('ADMIN-SVC-073 — createInvite 404s on a trip_id that does not resolve', () => {
+  it('ADMIN-SVC-073 — createInvite 404s on a trip_id that does not resolve', async () => {
     const { user: admin } = createAdmin(testDb);
-    expect(svc.createInvite(admin.id, { trip_id: 99999 }) as any).toMatchObject({ status: 404, error: 'Trip not found' });
-    expect(svc.createInvite(admin.id, { trip_id: 'not-a-number' }) as any).toMatchObject({ status: 404 });
+    expect(await svc.createInvite(admin.id, { trip_id: 99999 }) as any).toMatchObject({ status: 404, error: 'Trip not found' });
+    expect(await svc.createInvite(admin.id, { trip_id: 'not-a-number' }) as any).toMatchObject({ status: 404 });
     expect(testDb.prepare('SELECT COUNT(*) as c FROM invite_tokens').get()).toEqual({ c: 0 });
     // An absent/blank binding is still a plain registration invite.
-    expect((svc.createInvite(admin.id, {}) as any).tripId).toBeNull();
+    expect((await svc.createInvite(admin.id, {}) as any).tripId).toBeNull();
   });
 });

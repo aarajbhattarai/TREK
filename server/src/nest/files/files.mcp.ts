@@ -65,8 +65,8 @@ export class FilesMcp {
     access: { group: 'files', mode: 'read' },
   })
   async listTripFiles({ tripId, trash }: { tripId: number; trash?: boolean }, ctx: McpContext) {
-    if (!this.files.verifyTripAccess(tripId, ctx.userId)) return noAccess();
-    return ok({ files: this.files.listFiles(tripId, trash === true) });
+    if (!(await this.files.verifyTripAccess(tripId, ctx.userId))) return noAccess();
+    return ok({ files: await this.files.listFiles(tripId, trash === true) });
   }
 
   @Tool({
@@ -83,7 +83,7 @@ export class FilesMcp {
     access: { group: 'files', mode: 'content' },
   })
   async readTripFile({ tripId, fileId }: { tripId: number; fileId: number }, ctx: McpContext) {
-    if (!this.files.verifyTripAccess(tripId, ctx.userId)) return noAccess();
+    if (!(await this.files.verifyTripAccess(tripId, ctx.userId))) return noAccess();
     try {
       const { name, mimetype, bytes } = await this.files.readContent(tripId, fileId);
       const asText = isTextual(mimetype);
@@ -121,15 +121,15 @@ export class FilesMcp {
     { tripId, fileId, ...fields }: { tripId: number; fileId: number } & FileUpdateRequest,
     ctx: McpContext,
   ) {
-    if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
-    if (!this.files.verifyTripAccess(tripId, ctx.userId)) return noAccess();
+    if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
+    if (!(await this.files.verifyTripAccess(tripId, ctx.userId))) return noAccess();
     if (!(await this.guards.hasTripPermission('file_edit', tripId, ctx.userId))) return permissionDenied();
-    const current = this.files.getFileById(fileId, tripId);
+    const current = await this.files.getFileById(fileId, tripId);
     if (!current) return errorResult('File not found.');
     // Same enforcement as the REST route's assertLinkTargets, through the same
     // service method: a foreign reservation id would otherwise come back with its
     // title attached the next time this file is listed.
-    const foreign = this.files.findForeignLinkTarget(tripId, {
+    const foreign = await this.files.findForeignLinkTarget(tripId, {
       reservation_id: fields.reservation_id,
       place_id: fields.place_id,
       budget_item_id: fields.budget_item_id,
@@ -138,7 +138,7 @@ export class FilesMcp {
     // The rest spread carries only the keys the caller actually sent, which is what
     // updateFile's presence sentinels need: naming the fields here would hand it an
     // undefined description on a link-only call and wipe the description.
-    const file = this.files.updateFile(fileId, current, fields);
+    const file = await this.files.updateFile(fileId, current, fields);
     this.guards.safeBroadcast(tripId, 'file:updated', { file });
     return ok({ file });
   }
@@ -161,19 +161,19 @@ export class FilesMcp {
     { tripId, fileId, ...targets }: { tripId: number; fileId: number } & FileLinkRequest,
     ctx: McpContext,
   ) {
-    if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
-    if (!this.files.verifyTripAccess(tripId, ctx.userId)) return noAccess();
+    if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
+    if (!(await this.files.verifyTripAccess(tripId, ctx.userId))) return noAccess();
     if (!(await this.guards.hasTripPermission('file_edit', tripId, ctx.userId))) return permissionDenied();
-    if (!this.files.getFileById(fileId, tripId)) return errorResult('File not found.');
+    if (!(await this.files.getFileById(fileId, tripId))) return errorResult('File not found.');
     // The REST body allows all three to be absent and stores a link row pointing at
     // nothing. A tool caller that gets here with no target made a mistake, and saying
     // so is more useful than a success that attached the file to nothing.
     if (!targets.reservation_id && !targets.assignment_id && !targets.place_id && !targets.budget_item_id) {
       return errorResult('Pass at least one of reservation_id, assignment_id, place_id or budget_item_id.');
     }
-    const foreign = this.files.findForeignLinkTarget(tripId, targets);
+    const foreign = await this.files.findForeignLinkTarget(tripId, targets);
     if (foreign) return errorResult(`Linked item does not belong to this trip (${foreign}).`);
-    const links = this.files.createFileLink(fileId, targets);
+    const links = await this.files.createFileLink(fileId, targets);
     return ok({ success: true, links });
   }
 
@@ -192,14 +192,14 @@ export class FilesMcp {
     { tripId, fileId, linkId }: { tripId: number; fileId: number; linkId: number },
     ctx: McpContext,
   ) {
-    if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
-    if (!this.files.verifyTripAccess(tripId, ctx.userId)) return noAccess();
+    if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
+    if (!(await this.files.verifyTripAccess(tripId, ctx.userId))) return noAccess();
     if (!(await this.guards.hasTripPermission('file_edit', tripId, ctx.userId))) return permissionDenied();
     // deleteFileLink scopes by (linkId, fileId) only, so the file has to be resolved
     // against :tripId first, exactly as the REST route does it. Otherwise a member of
     // any trip could drop a link row belonging to a foreign trip's file.
-    if (!this.files.getFileById(fileId, tripId)) return errorResult('File not found.');
-    this.files.deleteFileLink(linkId, fileId);
+    if (!(await this.files.getFileById(fileId, tripId))) return errorResult('File not found.');
+    await this.files.deleteFileLink(linkId, fileId);
     return ok({ success: true });
   }
 
@@ -214,8 +214,8 @@ export class FilesMcp {
     access: { group: 'files', mode: 'read' },
   })
   async listTripFileLinks({ tripId, fileId }: { tripId: number; fileId: number }, ctx: McpContext) {
-    if (!this.files.verifyTripAccess(tripId, ctx.userId)) return noAccess();
-    if (!this.files.getFileById(fileId, tripId)) return errorResult('File not found.');
-    return ok({ links: this.files.getFileLinks(fileId) });
+    if (!(await this.files.verifyTripAccess(tripId, ctx.userId))) return noAccess();
+    if (!(await this.files.getFileById(fileId, tripId))) return errorResult('File not found.');
+    return ok({ links: await this.files.getFileLinks(fileId) });
   }
 }

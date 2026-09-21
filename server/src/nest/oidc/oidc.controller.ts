@@ -41,7 +41,7 @@ export class OidcController {
 
   @Get('login')
   async login(@Req() req: Request, @Res() res: Response): Promise<void> {
-    if (!this.oidc.oidcLoginEnabled()) {
+    if (!(await this.oidc.oidcLoginEnabled())) {
       res.status(403).json({ error: 'SSO login is disabled.' });
       return;
     }
@@ -107,7 +107,7 @@ export class OidcController {
     const boundState = (req.cookies as Record<string, string> | undefined)?.[OIDC_STATE_COOKIE];
     res.clearCookie(OIDC_STATE_COOKIE, cookieOptions(true, req));
 
-    if (!this.oidc.oidcLoginEnabled()) return f('/login?oidc_error=sso_disabled');
+    if (!(await this.oidc.oidcLoginEnabled())) return f('/login?oidc_error=sso_disabled');
     if (oidcError) {
       console.error('[OIDC] Provider error:', oidcError);
       return f('/login?oidc_error=' + encodeURIComponent(oidcError));
@@ -252,7 +252,7 @@ export class AdminOidcController {
   @ManagedForbidden('an instance-supplied issuer could assert any address as verified')
   @Put()
   async update(@CurrentUser() user: User, @Body() body: AdminOidcUpdateDto, @Req() req: Request) {
-    const result = this.oidc.updateOidcSettings(body);
+    const result = await this.oidc.updateOidcSettings(body);
     if (result.error) {
       throw new HttpException({ error: result.error }, result.status || 400);
     }

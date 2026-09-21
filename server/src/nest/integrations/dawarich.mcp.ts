@@ -104,11 +104,11 @@ export class DawarichMcp {
     access: { group: 'places', mode: 'write' },
     when: dawarichAddonOn,
   })
-  acceptAsPlace(
+  async acceptAsPlace(
     args: { suggestionId: number; tripId?: number; dayId?: number; name?: string; notes?: string; lat?: number; lng?: number },
     ctx: McpContext,
   ) {
-    if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
+    if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
     const { suggestionId, ...rest } = args;
     return this.run(() => this.suggestions.accept(ctx.userId, suggestionId, { target: 'place', ...rest }));
   }
@@ -129,11 +129,11 @@ export class DawarichMcp {
     access: { group: 'journey', mode: 'write' },
     when: dawarichAddonOn,
   })
-  acceptAsJournalEntry(
+  async acceptAsJournalEntry(
     args: { suggestionId: number; journalId: number; name?: string; notes?: string; date?: string; time?: string },
     ctx: McpContext,
   ) {
-    if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
+    if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
     const { suggestionId, ...rest } = args;
     return this.run(() => this.suggestions.accept(ctx.userId, suggestionId, { target: 'journal', ...rest }));
   }
@@ -151,11 +151,11 @@ export class DawarichMcp {
     access: { group: 'atlas', mode: 'write' },
     when: dawarichAddonOn,
   })
-  markBucketVisited(
+  async markBucketVisited(
     { suggestionId, bucketListItemId }: { suggestionId: number; bucketListItemId?: number },
     ctx: McpContext,
   ) {
-    if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
+    if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
     return this.run(() =>
       this.suggestions.accept(ctx.userId, suggestionId, { target: 'bucket_list', bucketListItemId }),
     );
@@ -173,11 +173,11 @@ export class DawarichMcp {
     access: { group: 'journey', mode: 'write' },
     when: dawarichAddonOn,
   })
-  dismiss(
+  async dismiss(
     { suggestionId, state }: { suggestionId: number; state?: 'dismissed' | 'new' },
     ctx: McpContext,
   ) {
-    if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
+    if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
     const updated = this.suggestions.setState(ctx.userId, suggestionId, state ?? 'dismissed');
     if (!updated) return errorResult('Suggestion not found');
     return ok({ suggestion: updated });

@@ -250,7 +250,7 @@ export class OidcService implements OnModuleDestroy {
     clearInterval(this.codeSweeper);
   }
 
-  oidcLoginEnabled(): boolean { return this.auth.resolveAuthToggles().oidc_login; }
+  async oidcLoginEnabled(): Promise<boolean> { return (await this.auth.resolveAuthToggles()).oidc_login; }
 
   getAppUrl() { return getAppUrl(); }
 
@@ -705,7 +705,7 @@ export class OidcService implements OnModuleDestroy {
     }
 
     if (!isFirstUser && !validInvite) {
-      const { oidc_registration } = this.auth.resolveAuthToggles();
+      const { oidc_registration } = await this.auth.resolveAuthToggles();
       if (!oidc_registration) {
         return { error: 'registration_disabled' };
       }
@@ -792,15 +792,15 @@ export class OidcService implements OnModuleDestroy {
     };
   }
 
-  updateOidcSettings(data: {
+  async updateOidcSettings(data: {
     issuer?: string;
     client_id?: string;
     client_secret?: string;
     display_name?: string;
     discovery_url?: string;
-  }): { error?: string; status?: number; success?: boolean } {
+  }): Promise<{ error?: string; status?: number; success?: boolean }> {
     // Lockout prevention: can't remove OIDC config when password login is disabled
-    if ((data.issuer === '' || data.client_id === '') && !this.auth.resolveAuthToggles().password_login) {
+    if ((data.issuer === '' || data.client_id === '') && !(await this.auth.resolveAuthToggles()).password_login) {
       return {
         error: 'Cannot remove SSO configuration while password login is disabled. Enable password login first.',
         status: 400,

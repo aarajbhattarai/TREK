@@ -42,6 +42,7 @@ import type { RealtimeService } from '../../../../src/nest/realtime/realtime.ser
 import { createTables } from '../../../../src/db/schema';
 import { runMigrations } from '../../../../src/db/migrations';
 import { createTrip, createUser } from '../../../helpers/factories';
+import { createTestUnitOfWork } from '../../../helpers/test-uow';
 
 const link = (id: number): LinkRow => ({ id, provider_id: 'paperless' } as LinkRow);
 
@@ -421,12 +422,9 @@ describe('DocSyncJob and a provider switched off in the admin panel', () => {
   const addons = { isAddonEnabled: vi.fn(() => true) } as unknown as AddonsService;
   const registry = new DocumentProviderRegistry([paperless, nextcloud] as unknown as DocumentProvider[]);
   const config = new DocSyncConfigService(dbs, registry);
-  const service = new DocSyncService(
-    dbs, config, registry,
-    {} as StorageService, {} as FilesService, new AllowedFileTypesService(dbs),
-    { broadcast: vi.fn() } as unknown as RealtimeService,
-    addons,
-  );
+  // Built in beforeAll: DocSyncService now takes a UnitOfWork, and
+  // createTestUnitOfWork is async — module-scope construction cannot await it.
+  let service: DocSyncService;
   const registrar = { isEnabled: () => false } as unknown as CronRegistrarService;
   /** A job of its own per pass, so the interval never decides whether a tick runs. */
   const tick = () => new DocSyncJob(dbs, service, config, addons, registrar).tick();
@@ -435,7 +433,14 @@ describe('DocSyncJob and a provider switched off in the admin panel', () => {
     testDb.prepare('UPDATE document_providers SET enabled = ? WHERE id = ?').run(on ? 1 : 0, id);
   const linkRow = (id: number) => testDb.prepare('SELECT * FROM trip_document_links WHERE id = ?').get(id);
 
-  beforeAll(() => {
+  beforeAll(async () => {
+    service = new DocSyncService(
+      dbs, config, registry,
+      {} as StorageService, {} as FilesService, new AllowedFileTypesService(dbs),
+      { broadcast: vi.fn() } as unknown as RealtimeService,
+      addons,
+      await createTestUnitOfWork(testDb),
+    );
     createTables(testDb);
     runMigrations(testDb);
     const ownerId = createUser(testDb, { username: 'owner', email: 'owner@docsync-job.test' }).user.id;

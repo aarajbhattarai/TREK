@@ -68,7 +68,7 @@ export class AccommodationsMcp {
     },
     ctx: McpContext,
   ) {
-    if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
+    if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
     if (!this.accommodations.verifyTripAccess(tripId, ctx.userId)) return noAccess();
     if (!(await this.guards.hasTripPermission('day_edit', tripId, ctx.userId))) return permissionDenied();
     const errors = this.accommodations.validateAccommodationRefs(tripId, place_id, start_day_id, end_day_id);
@@ -119,7 +119,7 @@ export class AccommodationsMcp {
     },
     ctx: McpContext,
   ) {
-    if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
+    if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
     if (!this.accommodations.verifyTripAccess(tripId, ctx.userId)) return noAccess();
     if (!(await this.guards.hasTripPermission('day_edit', tripId, ctx.userId))) return permissionDenied();
     const dayErrors = this.accommodations.validateAccommodationRefs(tripId, undefined, start_day_id, end_day_id);
@@ -167,7 +167,7 @@ export class AccommodationsMcp {
     },
     ctx: McpContext,
   ) {
-    if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
+    if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
     if (!this.accommodations.verifyTripAccess(tripId, ctx.userId)) return noAccess();
     if (!(await this.guards.hasTripPermission('day_edit', tripId, ctx.userId))) return permissionDenied();
     const existing = this.accommodations.getAccommodation(accommodationId, tripId);
@@ -191,7 +191,7 @@ export class AccommodationsMcp {
     access: { group: 'trips', mode: 'write' },
   })
   async deleteAccommodation({ tripId, accommodationId }: { tripId: number; accommodationId: number }, ctx: McpContext) {
-    if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
+    if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
     if (!this.accommodations.verifyTripAccess(tripId, ctx.userId)) return noAccess();
     if (!(await this.guards.hasTripPermission('day_edit', tripId, ctx.userId))) return permissionDenied();
     if (!this.accommodations.getAccommodation(accommodationId, tripId)) return { content: [{ type: 'text' as const, text: 'Accommodation not found.' }], isError: true };
