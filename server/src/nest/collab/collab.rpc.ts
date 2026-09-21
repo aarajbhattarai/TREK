@@ -33,7 +33,7 @@ export class CollabRpc {
   listNotes(params: Record<string, unknown>, ctx: PluginRpcContext): unknown {
     return this.guards.tripRead(params, ctx, async () => {
       await this.requireCollabAddon();
-      return this.collab.listNotes(num(params.tripId, 'tripId')) as unknown[];
+      return (await this.collab.listNotes(num(params.tripId, 'tripId'))) as unknown[];
     });
   }
 
@@ -41,7 +41,7 @@ export class CollabRpc {
   listPolls(params: Record<string, unknown>, ctx: PluginRpcContext): unknown {
     return this.guards.tripRead(params, ctx, async () => {
       await this.requireCollabAddon();
-      return this.collab.listPolls(num(params.tripId, 'tripId')) as unknown[];
+      return (await this.collab.listPolls(num(params.tripId, 'tripId'))) as unknown[];
     });
   }
 
@@ -50,7 +50,7 @@ export class CollabRpc {
     return this.guards.tripRead(params, ctx, async () => {
       await this.requireCollabAddon();
       const before = params.before != null ? num(params.before, 'before') : undefined;
-      return this.collab.listMessages(num(params.tripId, 'tripId'), before) as unknown[];
+      return (await this.collab.listMessages(num(params.tripId, 'tripId'), before)) as unknown[];
     });
   }
 
@@ -62,7 +62,7 @@ export class CollabRpc {
     if (typeof input.title !== 'string' || input.title.trim() === '') throw new BadParams('note title is required');
     await this.guards.requireTripEdit(tripId, actor, COLLAB_EDIT_ACTION);
     await this.requireCollabAddon();
-    const note = this.collab.createNote(String(tripId), actor, input as never);
+    const note = await this.collab.createNote(String(tripId), actor, input as never);
     this.realtime.broadcast(tripId, 'collab:note:created', { note }, undefined);
     return note;
   }
@@ -76,7 +76,7 @@ export class CollabRpc {
     if (!Array.isArray(input.options) || input.options.length < 2) throw new BadParams('a poll needs at least two options');
     await this.guards.requireTripEdit(tripId, actor, COLLAB_EDIT_ACTION);
     await this.requireCollabAddon();
-    const poll = this.collab.createPoll(String(tripId), actor, input as never);
+    const poll = await this.collab.createPoll(String(tripId), actor, input as never);
     this.realtime.broadcast(tripId, 'collab:poll:created', { poll }, undefined);
     return poll;
   }
@@ -87,7 +87,7 @@ export class CollabRpc {
     const actor = this.guards.requireActor(ctx, 'collab poll');
     await this.guards.requireTripEdit(tripId, actor, COLLAB_EDIT_ACTION);
     await this.requireCollabAddon();
-    const result = this.collab.votePoll(String(tripId), String(num(params.pollId, 'pollId')), actor, num(params.optionIndex, 'optionIndex'));
+    const result = await this.collab.votePoll(String(tripId), String(num(params.pollId, 'pollId')), actor, num(params.optionIndex, 'optionIndex'));
     // The service reports its own validation failures rather than throwing.
     if (result.error) throw new BadParams(result.error);
     this.realtime.broadcast(tripId, 'collab:poll:voted', { poll: result.poll }, undefined);
@@ -104,7 +104,7 @@ export class CollabRpc {
     await this.guards.requireTripEdit(tripId, actor, COLLAB_EDIT_ACTION);
     await this.requireCollabAddon();
     const replyTo = typeof params.replyTo === 'number' ? params.replyTo : null;
-    const result = this.collab.createMessage(String(tripId), actor, params.text, replyTo);
+    const result = await this.collab.createMessage(String(tripId), actor, params.text, replyTo);
     if (result.error) throw new BadParams(result.error);
     this.realtime.broadcast(tripId, 'collab:message:created', { message: result.message }, undefined);
     return result.message;

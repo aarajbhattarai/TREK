@@ -99,8 +99,8 @@ export class CollectionsController {
 
   @Post('reorder')
   @HttpCode(200)
-  reorder(@CurrentUser() user: User, @Body() body: CollectionReorderDto) {
-    this.collections.reorderCollections(user.id, body.orderedIds);
+  async reorder(@CurrentUser() user: User, @Body() body: CollectionReorderDto) {
+    await this.collections.reorderCollections(user.id, body.orderedIds);
     return { success: true };
   }
 
@@ -260,8 +260,8 @@ export class CollectionsController {
   }
 
   @Delete('labels/:lid')
-  deleteLabel(@CurrentUser() user: User, @Param('lid') lid: string, @Headers('x-socket-id') socketId?: string) {
-    this.collections.deleteLabel(user.id, Number(lid), socketId);
+  async deleteLabel(@CurrentUser() user: User, @Param('lid') lid: string, @Headers('x-socket-id') socketId?: string) {
+    await this.collections.deleteLabel(user.id, Number(lid), socketId);
     return { success: true };
   }
 
@@ -307,12 +307,12 @@ export class CollectionsController {
   // ── Fusion invitations ──────────────────────────────────────────────────────
   @Post('invite')
   @HttpCode(200)
-  invite(@CurrentUser() user: User, @Body() body: CollectionInviteDto) {
-    this.collections.assertAccess(user.id, body.collection_id); // 404 if not visible (no enumeration)
-    if (!this.collections.isOwner(user.id, body.collection_id)) {
+  async invite(@CurrentUser() user: User, @Body() body: CollectionInviteDto) {
+    await this.collections.assertAccess(user.id, body.collection_id); // 404 if not visible (no enumeration)
+    if (!(await this.collections.isOwner(user.id, body.collection_id))) {
       throw new HttpException({ error: 'Only the owner can invite' }, 403);
     }
-    const result = this.collections.sendInvite(body.collection_id, user.id, user.username, user.email, body.user_id, body.role);
+    const result = await this.collections.sendInvite(body.collection_id, user.id, user.username, user.email, body.user_id, body.role);
     if (result.error) {
       throw new HttpException({ error: result.error }, result.status!);
     }
@@ -321,8 +321,8 @@ export class CollectionsController {
 
   @Post('invite/accept')
   @HttpCode(200)
-  acceptInvite(@CurrentUser() user: User, @Body() body: CollectionInviteActionDto, @Headers('x-socket-id') socketId?: string) {
-    const result = this.collections.acceptInvite(user.id, body.collection_id, socketId);
+  async acceptInvite(@CurrentUser() user: User, @Body() body: CollectionInviteActionDto, @Headers('x-socket-id') socketId?: string) {
+    const result = await this.collections.acceptInvite(user.id, body.collection_id, socketId);
     if (result.error) {
       throw new HttpException({ error: result.error }, result.status!);
     }
@@ -331,59 +331,59 @@ export class CollectionsController {
 
   @Post('invite/decline')
   @HttpCode(200)
-  declineInvite(@CurrentUser() user: User, @Body() body: CollectionInviteActionDto, @Headers('x-socket-id') socketId?: string) {
-    this.collections.declineInvite(user.id, body.collection_id, socketId);
+  async declineInvite(@CurrentUser() user: User, @Body() body: CollectionInviteActionDto, @Headers('x-socket-id') socketId?: string) {
+    await this.collections.declineInvite(user.id, body.collection_id, socketId);
     return { success: true };
   }
 
   @Post('invite/cancel')
   @HttpCode(200)
-  cancelInvite(@CurrentUser() user: User, @Body() body: CollectionInviteCancelDto) {
-    this.collections.assertAccess(user.id, body.collection_id); // 404 if not visible
-    if (!this.collections.isOwner(user.id, body.collection_id)) {
+  async cancelInvite(@CurrentUser() user: User, @Body() body: CollectionInviteCancelDto) {
+    await this.collections.assertAccess(user.id, body.collection_id); // 404 if not visible
+    if (!(await this.collections.isOwner(user.id, body.collection_id))) {
       throw new HttpException({ error: 'Only the owner can cancel invites' }, 403);
     }
-    this.collections.cancelInvite(body.collection_id, user.id, body.user_id);
+    await this.collections.cancelInvite(body.collection_id, user.id, body.user_id);
     return { success: true };
   }
 
   @Post('leave')
   @HttpCode(200)
-  leave(@CurrentUser() user: User, @Body() body: CollectionInviteActionDto, @Headers('x-socket-id') socketId?: string) {
-    this.collections.leaveCollection(user.id, body.collection_id, socketId);
+  async leave(@CurrentUser() user: User, @Body() body: CollectionInviteActionDto, @Headers('x-socket-id') socketId?: string) {
+    await this.collections.leaveCollection(user.id, body.collection_id, socketId);
     return { success: true };
   }
 
   @Post('members/remove')
   @HttpCode(200)
-  removeMember(@CurrentUser() user: User, @Body() body: CollectionRemoveMemberDto) {
-    this.collections.assertAccess(user.id, body.collection_id); // 404 if not visible
-    if (!this.collections.isOwner(user.id, body.collection_id)) {
+  async removeMember(@CurrentUser() user: User, @Body() body: CollectionRemoveMemberDto) {
+    await this.collections.assertAccess(user.id, body.collection_id); // 404 if not visible
+    if (!(await this.collections.isOwner(user.id, body.collection_id))) {
       throw new HttpException({ error: 'Only the owner can remove members' }, 403);
     }
-    this.collections.removeMember(user.id, body.collection_id, body.user_id);
+    await this.collections.removeMember(user.id, body.collection_id, body.user_id);
     return { success: true };
   }
 
   @Post('members/role')
   @HttpCode(200)
-  setMemberRole(@CurrentUser() user: User, @Body() body: CollectionSetMemberRoleDto) {
-    this.collections.assertAccess(user.id, body.collection_id); // 404 if not visible
-    if (!this.collections.isOwner(user.id, body.collection_id)) {
+  async setMemberRole(@CurrentUser() user: User, @Body() body: CollectionSetMemberRoleDto) {
+    await this.collections.assertAccess(user.id, body.collection_id); // 404 if not visible
+    if (!(await this.collections.isOwner(user.id, body.collection_id))) {
       throw new HttpException({ error: 'Only the owner can change member roles' }, 403);
     }
-    this.collections.setMemberRole(user.id, body.collection_id, body.user_id, body.role);
+    await this.collections.setMemberRole(user.id, body.collection_id, body.user_id, body.role);
     return { success: true };
   }
 
   // ── /:id (declared last so static prefixes win) ─────────────────────────────
   @Get(':id/available-users')
-  availableUsers(@CurrentUser() user: User, @Param('id') id: string) {
-    this.collections.assertAccess(user.id, Number(id)); // 404 if not visible (no enumeration)
-    if (!this.collections.isOwner(user.id, Number(id))) {
+  async availableUsers(@CurrentUser() user: User, @Param('id') id: string) {
+    await this.collections.assertAccess(user.id, Number(id)); // 404 if not visible (no enumeration)
+    if (!(await this.collections.isOwner(user.id, Number(id)))) {
       throw new HttpException({ error: 'Only the owner can manage members' }, 403);
     }
-    return { users: this.collections.availableUsers(user.id, Number(id)) };
+    return { users: await this.collections.availableUsers(user.id, Number(id)) };
   }
 
   @Post(':id/cover')
@@ -458,8 +458,8 @@ export class CollectionsController {
   }
 
   @Delete(':id')
-  remove(@CurrentUser() user: User, @Param('id') id: string) {
-    this.collections.deleteCollection(user.id, Number(id));
+  async remove(@CurrentUser() user: User, @Param('id') id: string) {
+    await this.collections.deleteCollection(user.id, Number(id));
     return { success: true };
   }
 }

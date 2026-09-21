@@ -36,7 +36,7 @@ export class MapsMcp {
     // assistant reaching the provider anyway would bill them from the one
     // surface the switch does not cover. REST answers { place: null, disabled }
     // rather than an error, so this does too, with a line the model can act on.
-    if (this.maps.detailsDisabled()) {
+    if (await this.maps.detailsDisabled()) {
       return ok({
         details: null,
         disabled: true,

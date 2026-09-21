@@ -96,13 +96,13 @@ export async function createPluginRpcHostFactory(dbs: DatabaseService): Promise<
   const todos = new TodoService(dbs, permissions, realtime, await createTestUnitOfWork(dbs.connection));
   const packing = new PackingService(dbs, permissions, realtime, notificationsStub());
   const files = new FilesService(dbs, permissions, realtime, new EphemeralTokenService(), generalStorage);
-  const collab = new CollabService(dbs, permissions, realtime, notificationsStub(), generalStorage, new RateLimitService());
+  const collab = new CollabService(dbs, permissions, realtime, notificationsStub(), generalStorage, new RateLimitService(), await createTestUnitOfWork(dbs.connection));
   const vacay = new VacayService(dbs, realtime, notificationsStub());
   const days = new DaysService(dbs, permissions, realtime, queryHelpers, await createTestUnitOfWork(dbs.connection));
   const photoCache = new PlacePhotoCacheService(dbs, makeStorageFixture('photos/google/').storage);
   const unsplash = new UnsplashService(dbs, new RuntimeEnvService(), generalStorage);
   const journey = new JourneyDomainService(dbs, realtime, new TrekPhotosRepository(dbs));
-  const collections = new CollectionsService(dbs, permissions, realtime, notificationsStub(), generalStorage);
+  const collections = new CollectionsService(dbs, permissions, realtime, notificationsStub(), generalStorage, await createTestUnitOfWork(dbs.connection));
   const atlas = new AtlasService(dbs, await createTestUnitOfWork(dbs.connection));
   const dayNotes = new DayNotesService(dbs, permissions, realtime);
   const assignments = new AssignmentsService(dbs, permissions, realtime, queryHelpers, journey);

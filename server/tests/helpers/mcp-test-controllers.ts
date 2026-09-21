@@ -151,7 +151,7 @@ export async function createMcpTestRegistry(): Promise<McpRegistry> {
   const daysService = new DaysService(dbService, permissionsService, realtimeService, queryHelpersService, await createTestUnitOfWork(dbService.connection));
   const todoService = new TodoService(dbService, permissionsService, realtimeService, await createTestUnitOfWork(dbService.connection));
   const packingService = new PackingService(dbService, permissionsService, realtimeService, notificationsStub());
-  const collabService = new CollabService(dbService, permissionsService, realtimeService, notificationsStub(), generalStorage, new RateLimitService());
+  const collabService = new CollabService(dbService, permissionsService, realtimeService, notificationsStub(), generalStorage, new RateLimitService(), await createTestUnitOfWork(dbService.connection));
   // Exactly one instance, shared by maps, places and share: its stampede guard
   // and its on-disk set only work if all three readers see the same maps.
   const placePhotoCache = new PlacePhotoCacheService(dbService, makeStorageFixture('photos/google/').storage);
@@ -238,7 +238,7 @@ export async function createMcpTestRegistry(): Promise<McpRegistry> {
       new TripInviteMcp(new TripInviteService(dbService, permissionsService, new TripMembershipService(dbService), await createTestUnitOfWork(dbService.connection)), dbService, new RuntimeEnvService(), guards, new AuditService(dbService)),
       new MapsMcp(mapsService),
       new PlacesMcp(placesService, mapsService, dbService, authService, journeyDomain, assignmentsService, guards, await createTestUnitOfWork(dbService.connection)),
-      new CollectionsMcp(new CollectionsService(dbService, permissionsService, realtimeService, notificationsStub(), generalStorage), dbService, authService, addonsService),
+      new CollectionsMcp(new CollectionsService(dbService, permissionsService, realtimeService, notificationsStub(), generalStorage, await createTestUnitOfWork(dbService.connection)), dbService, authService, addonsService),
       new TransitMcp(new TransitService(new GoogleTransitProvider(dbService)), daysService, reservationsService, dbService, authService, guards),
       new AtlasMcp(new AtlasService(dbService, await createTestUnitOfWork(dbService.connection)), addonsService, authService),
       new JourneyMcp(journeyDomain, new JourneyShareService(dbService, journeyDomain, new SettingsService(dbService, await createTestUnitOfWork(dbService.connection))), addonsService, authService, captureBackfill),

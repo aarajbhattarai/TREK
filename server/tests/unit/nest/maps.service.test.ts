@@ -2663,32 +2663,32 @@ function settingsSvc(row?: { value: string }) {
 }
 
 describe('kill-switch settings reads', () => {
-  it('reports a switch disabled when the stored value is exactly "false"', () => {
-    expect(settingsSvc({ value: 'false' }).autocompleteDisabled()).toBe(true);
-    expect(settingsSvc({ value: 'false' }).detailsDisabled()).toBe(true);
-    expect(settingsSvc({ value: 'false' }).photosDisabled()).toBe(true);
+  it('reports a switch disabled when the stored value is exactly "false"', async () => {
+    expect(await settingsSvc({ value: 'false' }).autocompleteDisabled()).toBe(true);
+    expect(await settingsSvc({ value: 'false' }).detailsDisabled()).toBe(true);
+    expect(await settingsSvc({ value: 'false' }).photosDisabled()).toBe(true);
   });
 
-  it('reports enabled when the value is "true"', () => {
-    expect(settingsSvc({ value: 'true' }).autocompleteDisabled()).toBe(false);
-    expect(settingsSvc({ value: 'true' }).detailsDisabled()).toBe(false);
-    expect(settingsSvc({ value: 'true' }).photosDisabled()).toBe(false);
+  it('reports enabled when the value is "true"', async () => {
+    expect(await settingsSvc({ value: 'true' }).autocompleteDisabled()).toBe(false);
+    expect(await settingsSvc({ value: 'true' }).detailsDisabled()).toBe(false);
+    expect(await settingsSvc({ value: 'true' }).photosDisabled()).toBe(false);
   });
 
-  it('reports enabled when the setting row is absent', () => {
-    expect(settingsSvc(undefined).autocompleteDisabled()).toBe(false);
-    expect(settingsSvc(undefined).detailsDisabled()).toBe(false);
-    expect(settingsSvc(undefined).photosDisabled()).toBe(false);
+  it('reports enabled when the setting row is absent', async () => {
+    expect(await settingsSvc(undefined).autocompleteDisabled()).toBe(false);
+    expect(await settingsSvc(undefined).detailsDisabled()).toBe(false);
+    expect(await settingsSvc(undefined).photosDisabled()).toBe(false);
   });
 
-  it('queries the matching app_settings key', () => {
+  it('queries the matching app_settings key', async () => {
     const { db: settingsDb, get } = makeSettingsDb({ value: 'true' });
     const s = new MapsService(settingsDb, photoCacheStub);
-    s.autocompleteDisabled();
+    await s.autocompleteDisabled();
     expect(get).toHaveBeenCalledWith(expect.stringContaining('app_settings'), 'places_autocomplete_enabled');
-    s.detailsDisabled();
+    await s.detailsDisabled();
     expect(get).toHaveBeenCalledWith(expect.any(String), 'places_details_enabled');
-    s.photosDisabled();
+    await s.photosDisabled();
     expect(get).toHaveBeenCalledWith(expect.any(String), 'places_photos_enabled');
   });
 });

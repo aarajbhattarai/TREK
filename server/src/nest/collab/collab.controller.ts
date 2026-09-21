@@ -110,15 +110,15 @@ export class CollabController {
     private readonly storage: StorageService,
   ) {}
 
-  private requireTrip(tripId: string, user: User) {
-    const trip = this.collab.verifyTripAccess(tripId, user.id);
+  private async requireTrip(tripId: string, user: User) {
+    const trip = await this.collab.verifyTripAccess(tripId, user.id);
     if (!trip) {
       throw new HttpException({ error: 'Trip not found' }, 404);
     }
     return trip;
   }
 
-  private async requireEdit(trip: NonNullable<ReturnType<CollabService['verifyTripAccess']>>, user: User): Promise<void> {
+  private async requireEdit(trip: NonNullable<Awaited<ReturnType<CollabService['verifyTripAccess']>>>, user: User): Promise<void> {
     if (!(await this.collab.canEdit(trip, user))) {
       throw new HttpException({ error: 'No permission' }, 403);
     }
@@ -127,15 +127,15 @@ export class CollabController {
   // ── Notes ───────────────────────────────────────────────────────────────
   @UseGuards(TripAccessGuard)
   @Get('notes')
-  listNotes(@CurrentUser() user: User, @Param('tripId') tripId: string) {
-    return { notes: this.collab.listNotes(tripId) };
+  async listNotes(@CurrentUser() user: User, @Param('tripId') tripId: string) {
+    return { notes: await this.collab.listNotes(tripId) };
   }
 
   @UseGuards(TripAccessGuard)
   @RequirePermission('collab_edit')
   @Post('notes')
-  createNote(@CurrentUser() user: User, @Param('tripId') tripId: string, @Body() body: CollabNoteCreateDto, @Headers('x-socket-id') socketId?: string) {
-    const note = this.collab.createNote(tripId, user.id, {
+  async createNote(@CurrentUser() user: User, @Param('tripId') tripId: string, @Body() body: CollabNoteCreateDto, @Headers('x-socket-id') socketId?: string) {
+    const note = await this.collab.createNote(tripId, user.id, {
       title: body.title,
       content: body.content,
       category: body.category,
@@ -143,15 +143,15 @@ export class CollabController {
       website: body.website,
     });
     this.collab.broadcast(tripId, 'collab:note:created', { note }, socketId);
-    this.collab.notifyCollab(tripId, user);
+    await this.collab.notifyCollab(tripId, user);
     return { note };
   }
 
   @UseGuards(TripAccessGuard)
   @RequirePermission('collab_edit')
   @Put('notes/:id')
-  updateNote(@CurrentUser() user: User, @Param('tripId') tripId: string, @Param('id') id: string, @Body() body: CollabNoteUpdateDto, @Headers('x-socket-id') socketId?: string) {
-    const note = this.collab.updateNote(tripId, id, {
+  async updateNote(@CurrentUser() user: User, @Param('tripId') tripId: string, @Param('id') id: string, @Body() body: CollabNoteUpdateDto, @Headers('x-socket-id') socketId?: string) {
+    const note = await this.collab.updateNote(tripId, id, {
       title: body.title,
       content: body.content,
       category: body.category,
@@ -187,7 +187,7 @@ export class CollabController {
       if (file?.path) { try { fs.unlinkSync(file.path); } catch { /* best-effort */ } }
     };
     try {
-      const trip = this.requireTrip(tripId, user);
+      const trip = await this.requireTrip(tripId, user);
       if (!(await this.collab.canUploadFiles(trip, user))) {
         throw new HttpException({ error: 'No permission to upload files' }, 403);
       }
@@ -201,13 +201,13 @@ export class CollabController {
     // Commit the spooled upload to its final storage location (atomic
     // same-volume rename) before the DB row references the final path.
     await this.storage.put('files', file.filename, { tmpPath: file.path });
-    const result = this.collab.addNoteFile(tripId, id, file);
+    const result = await this.collab.addNoteFile(tripId, id, file);
     if (!result) {
       // Already committed, so the spool file is gone; drop the final object.
       await this.storage.delete('files', file.filename).catch(() => {});
       throw new HttpException({ error: 'Note not found' }, 404);
     }
-    this.collab.broadcast(tripId, 'collab:note:updated', { note: this.collab.getFormattedNoteById(tripId, id) }, socketId);
+    this.collab.broadcast(tripId, 'collab:note:updated', { note: await this.collab.getFormattedNoteById(tripId, id) }, socketId);
     return result;
   }
 
@@ -218,22 +218,22 @@ export class CollabController {
     if (!(await this.collab.deleteNoteFile(tripId, id, fileId))) {
       throw new HttpException({ error: 'File not found' }, 404);
     }
-    this.collab.broadcast(tripId, 'collab:note:updated', { note: this.collab.getFormattedNoteById(tripId, id) }, socketId);
+    this.collab.broadcast(tripId, 'collab:note:updated', { note: await this.collab.getFormattedNoteById(tripId, id) }, socketId);
     return { success: true };
   }
 
   // ── Shared links ────────────────────────────────────────────────────────
   @UseGuards(TripAccessGuard)
   @Get('links')
-  listLinks(@CurrentUser() user: User, @Param('tripId') tripId: string) {
-    return { links: this.collab.listLinks(tripId) };
+  async listLinks(@CurrentUser() user: User, @Param('tripId') tripId: string) {
+    return { links: await this.collab.listLinks(tripId) };
   }
 
   @UseGuards(TripAccessGuard)
   @RequirePermission('collab_edit')
   @Post('links')
-  createLink(@CurrentUser() user: User, @Param('tripId') tripId: string, @Body() body: CollabLinkCreateDto, @Headers('x-socket-id') socketId?: string) {
-    const link = this.collab.createLink(tripId, user.id, { title: body.title, url: body.url, pinned: Boolean(body.pinned) });
+  async createLink(@CurrentUser() user: User, @Param('tripId') tripId: string, @Body() body: CollabLinkCreateDto, @Headers('x-socket-id') socketId?: string) {
+    const link = await this.collab.createLink(tripId, user.id, { title: body.title, url: body.url, pinned: Boolean(body.pinned) });
     this.collab.broadcast(tripId, 'collab:link:created', { link }, socketId);
     return { link };
   }
@@ -241,8 +241,8 @@ export class CollabController {
   @UseGuards(TripAccessGuard)
   @RequirePermission('collab_edit')
   @Put('links/:id')
-  updateLink(@CurrentUser() user: User, @Param('tripId') tripId: string, @Param('id') id: string, @Body() body: CollabLinkUpdateDto, @Headers('x-socket-id') socketId?: string) {
-    const link = this.collab.updateLink(tripId, id, {
+  async updateLink(@CurrentUser() user: User, @Param('tripId') tripId: string, @Param('id') id: string, @Body() body: CollabLinkUpdateDto, @Headers('x-socket-id') socketId?: string) {
+    const link = await this.collab.updateLink(tripId, id, {
       title: body.title,
       url: body.url,
       pinned: body.pinned === undefined ? undefined : Boolean(body.pinned),
@@ -255,8 +255,8 @@ export class CollabController {
   @UseGuards(TripAccessGuard)
   @RequirePermission('collab_edit')
   @Delete('links/:id')
-  deleteLink(@CurrentUser() user: User, @Param('tripId') tripId: string, @Param('id') id: string, @Headers('x-socket-id') socketId?: string) {
-    if (!this.collab.deleteLink(tripId, id)) throw new HttpException({ error: 'Link not found' }, 404);
+  async deleteLink(@CurrentUser() user: User, @Param('tripId') tripId: string, @Param('id') id: string, @Headers('x-socket-id') socketId?: string) {
+    if (!(await this.collab.deleteLink(tripId, id))) throw new HttpException({ error: 'Link not found' }, 404);
     this.collab.broadcast(tripId, 'collab:link:deleted', { linkId: Number(id) }, socketId);
     return { success: true };
   }
@@ -264,15 +264,15 @@ export class CollabController {
   // ── Polls ───────────────────────────────────────────────────────────────
   @UseGuards(TripAccessGuard)
   @Get('polls')
-  listPolls(@CurrentUser() user: User, @Param('tripId') tripId: string) {
-    return { polls: this.collab.listPolls(tripId) };
+  async listPolls(@CurrentUser() user: User, @Param('tripId') tripId: string) {
+    return { polls: await this.collab.listPolls(tripId) };
   }
 
   @UseGuards(TripAccessGuard)
   @RequirePermission('collab_edit')
   @Post('polls')
-  createPoll(@CurrentUser() user: User, @Param('tripId') tripId: string, @Body() body: CollabPollCreateDto, @Headers('x-socket-id') socketId?: string) {
-    const poll = this.collab.createPoll(tripId, user.id, {
+  async createPoll(@CurrentUser() user: User, @Param('tripId') tripId: string, @Body() body: CollabPollCreateDto, @Headers('x-socket-id') socketId?: string) {
+    const poll = await this.collab.createPoll(tripId, user.id, {
       question: body.question,
       options: body.options,
       multiple: body.multiple,
@@ -287,8 +287,8 @@ export class CollabController {
   @RequirePermission('collab_edit')
   @Post('polls/:id/vote')
   @HttpCode(200)
-  votePoll(@CurrentUser() user: User, @Param('tripId') tripId: string, @Param('id') id: string, @Body() body: CollabPollVoteDto, @Headers('x-socket-id') socketId?: string) {
-    const result = this.collab.votePoll(tripId, id, user.id, body.option_index);
+  async votePoll(@CurrentUser() user: User, @Param('tripId') tripId: string, @Param('id') id: string, @Body() body: CollabPollVoteDto, @Headers('x-socket-id') socketId?: string) {
+    const result = await this.collab.votePoll(tripId, id, user.id, body.option_index);
     if (result.error === 'not_found') throw new HttpException({ error: 'Poll not found' }, 404);
     if (result.error === 'closed') throw new HttpException({ error: 'Poll is closed' }, 400);
     if (result.error === 'invalid_index') throw new HttpException({ error: 'Invalid option index' }, 400);
@@ -299,8 +299,8 @@ export class CollabController {
   @UseGuards(TripAccessGuard)
   @RequirePermission('collab_edit')
   @Put('polls/:id/close')
-  closePoll(@CurrentUser() user: User, @Param('tripId') tripId: string, @Param('id') id: string, @Headers('x-socket-id') socketId?: string) {
-    const poll = this.collab.closePoll(tripId, id);
+  async closePoll(@CurrentUser() user: User, @Param('tripId') tripId: string, @Param('id') id: string, @Headers('x-socket-id') socketId?: string) {
+    const poll = await this.collab.closePoll(tripId, id);
     if (!poll) {
       throw new HttpException({ error: 'Poll not found' }, 404);
     }
@@ -311,8 +311,8 @@ export class CollabController {
   @UseGuards(TripAccessGuard)
   @RequirePermission('collab_edit')
   @Delete('polls/:id')
-  deletePoll(@CurrentUser() user: User, @Param('tripId') tripId: string, @Param('id') id: string, @Headers('x-socket-id') socketId?: string) {
-    if (!this.collab.deletePoll(tripId, id)) {
+  async deletePoll(@CurrentUser() user: User, @Param('tripId') tripId: string, @Param('id') id: string, @Headers('x-socket-id') socketId?: string) {
+    if (!(await this.collab.deletePoll(tripId, id))) {
       throw new HttpException({ error: 'Poll not found' }, 404);
     }
     this.collab.broadcast(tripId, 'collab:poll:deleted', { pollId: Number(id) }, socketId);
@@ -322,8 +322,8 @@ export class CollabController {
   // ── Messages ────────────────────────────────────────────────────────────
   @UseGuards(TripAccessGuard)
   @Get('messages')
-  listMessages(@CurrentUser() user: User, @Param('tripId') tripId: string, @Query('before') before?: string) {
-    return { messages: this.collab.listMessages(tripId, before) };
+  async listMessages(@CurrentUser() user: User, @Param('tripId') tripId: string, @Query('before') before?: string) {
+    return { messages: await this.collab.listMessages(tripId, before) };
   }
 
   // No guard decorators, deliberately, like every other upload route in this
@@ -344,7 +344,7 @@ export class CollabController {
     const cleanupSpool = () => uploaded.forEach(file => { if (file.path) { try { fs.unlinkSync(file.path); } catch { /* best-effort */ } } });
     let trip;
     try {
-      trip = this.requireTrip(tripId, user);
+      trip = await this.requireTrip(tripId, user);
       await this.requireEdit(trip, user);
     } catch (err) {
       cleanupSpool();
@@ -376,7 +376,7 @@ export class CollabController {
       throw err;
     }
     const replyTo = body.reply_to === undefined || body.reply_to === '' || body.reply_to === null ? null : Number(body.reply_to);
-    const result = this.collab.createMessage(
+    const result = await this.collab.createMessage(
       tripId,
       user.id,
       text,
@@ -389,7 +389,7 @@ export class CollabController {
     }
     this.collab.broadcast(tripId, 'collab:message:created', { message: result.message }, socketId);
     const preview = text || 'sent an image';
-    this.collab.notifyCollab(tripId, user, preview.length > 80 ? preview.substring(0, 80) + '...' : preview);
+    await this.collab.notifyCollab(tripId, user, preview.length > 80 ? preview.substring(0, 80) + '...' : preview);
     return { message: result.message };
   }
 
@@ -397,8 +397,8 @@ export class CollabController {
   @RequirePermission('collab_edit')
   @Post('messages/:id/react')
   @HttpCode(200)
-  react(@CurrentUser() user: User, @Param('tripId') tripId: string, @Param('id') id: string, @Body() body: CollabReactionDto, @Headers('x-socket-id') socketId?: string) {
-    const result = this.collab.reactMessage(id, tripId, user.id, body.emoji);
+  async react(@CurrentUser() user: User, @Param('tripId') tripId: string, @Param('id') id: string, @Body() body: CollabReactionDto, @Headers('x-socket-id') socketId?: string) {
+    const result = await this.collab.reactMessage(id, tripId, user.id, body.emoji);
     if (!result.found) {
       throw new HttpException({ error: 'Message not found' }, 404);
     }
@@ -409,8 +409,8 @@ export class CollabController {
   @UseGuards(TripAccessGuard)
   @RequirePermission('collab_edit')
   @Delete('messages/:id')
-  deleteMessage(@CurrentUser() user: User, @Param('tripId') tripId: string, @Param('id') id: string, @Headers('x-socket-id') socketId?: string) {
-    const result = this.collab.deleteMessage(tripId, id, user.id);
+  async deleteMessage(@CurrentUser() user: User, @Param('tripId') tripId: string, @Param('id') id: string, @Headers('x-socket-id') socketId?: string) {
+    const result = await this.collab.deleteMessage(tripId, id, user.id);
     if (result.error === 'not_found') throw new HttpException({ error: 'Message not found' }, 404);
     if (result.error === 'not_owner') throw new HttpException({ error: 'You can only delete your own messages' }, 403);
     this.collab.broadcast(tripId, 'collab:message:deleted', { messageId: Number(id), username: result.username || user.username }, socketId);

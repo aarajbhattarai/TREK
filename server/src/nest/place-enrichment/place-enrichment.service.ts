@@ -449,7 +449,7 @@ export class PlaceEnrichmentService {
     details: Record<string, unknown> | null,
   ): Promise<PlacePhotoCandidate[]> {
     const apiKey = await this.maps.getMapsKey(userId);
-    const wantsGoogle = !!apiKey && !this.maps.photosDisabled() && isGooglePlaceId(placeId);
+    const wantsGoogle = !!apiKey && !(await this.maps.photosDisabled()) && isGooglePlaceId(placeId);
 
     const { wikidata, wikipedia } = identity;
 
@@ -694,7 +694,7 @@ export class PlaceEnrichmentService {
     if (fromSite) return fromSite;
 
     const apiKey = await this.maps.getMapsKey(userId);
-    if (apiKey && !this.maps.detailsDisabled() && isGooglePlaceId(placeId)) {
+    if (apiKey && !(await this.maps.detailsDisabled()) && isGooglePlaceId(placeId)) {
       const summary = await this.maps.fetchEditorialSummary(placeId, apiKey, req.lang);
       if (summary) {
         return {

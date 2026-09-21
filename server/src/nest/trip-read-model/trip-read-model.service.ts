@@ -80,7 +80,7 @@ export class TripReadModelService {
     };
 
     const reservations = this.reservations.list(tripId);
-    const collab_notes = this.collab.listNotes(tripId);
+    const collab_notes = await this.collab.listNotes(tripId);
 
     return {
       trip,

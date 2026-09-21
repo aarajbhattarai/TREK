@@ -284,8 +284,8 @@ export class TripsMcp {
     let pollCount = 0;
     let messageCount = 0;
     if (canReadCollab) {
-      if (collabFeatures?.polls) pollCount    = this.collab.listPolls(tripId).length;
-      if (collabFeatures?.chat)  messageCount = this.collab.countMessages(tripId);
+      if (collabFeatures?.polls) pollCount    = (await this.collab.listPolls(tripId)).length;
+      if (collabFeatures?.chat)  messageCount = await this.collab.countMessages(tripId);
     }
     const notice = ctx.getDeprecationNotice ? ctx.getDeprecationNotice() : null;
     // The core bucket (trip metadata, members WITH email, days with place

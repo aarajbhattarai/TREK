@@ -86,7 +86,7 @@ vi.spyOn(MapsService.prototype, 'searchOverpassPois').mockResolvedValue({
   clamped: false,
 } as never);
 // Off by default, so the existing cases exercise the lookup rather than the gate.
-vi.spyOn(MapsService.prototype, 'detailsDisabled').mockReturnValue(false);
+vi.spyOn(MapsService.prototype, 'detailsDisabled').mockResolvedValue(false);
 vi.spyOn(MapsService.prototype, 'reverseGeocode').mockResolvedValue({ name: 'Paris', address: 'France' });
 vi.spyOn(MapsService.prototype, 'resolveGoogleMapsUrl').mockResolvedValue({
   lat: 48.8566,
@@ -799,12 +799,12 @@ describe('Tool: get_airport', () => {
 
 describe('Tool: get_place_details (admin kill switch)', () => {
   afterEach(() => {
-    vi.mocked(MapsService.prototype.detailsDisabled).mockReturnValue(false);
+    vi.mocked(MapsService.prototype.detailsDisabled).mockResolvedValue(false);
   });
 
   it('fetches nothing when an admin has turned Place Details off', async () => {
     const { user } = createUser(testDb);
-    vi.spyOn(MapsService.prototype, 'detailsDisabled').mockReturnValue(true);
+    vi.spyOn(MapsService.prototype, 'detailsDisabled').mockResolvedValue(true);
     vi.mocked(MapsService.prototype.getPlaceDetails).mockClear();
     vi.mocked(MapsService.prototype.getPlaceDetailsExpanded).mockClear();
 
@@ -823,7 +823,7 @@ describe('Tool: get_place_details (admin kill switch)', () => {
 
   it('the switch also stops the expensive expanded path', async () => {
     const { user } = createUser(testDb);
-    vi.spyOn(MapsService.prototype, 'detailsDisabled').mockReturnValue(true);
+    vi.spyOn(MapsService.prototype, 'detailsDisabled').mockResolvedValue(true);
     vi.mocked(MapsService.prototype.getPlaceDetailsExpanded).mockClear();
 
     await withHarness(user.id, async (h) => {
@@ -838,7 +838,7 @@ describe('Tool: get_place_details (admin kill switch)', () => {
 
   it('leaves the lookup alone while the switch is on', async () => {
     const { user } = createUser(testDb);
-    vi.spyOn(MapsService.prototype, 'detailsDisabled').mockReturnValue(false);
+    vi.spyOn(MapsService.prototype, 'detailsDisabled').mockResolvedValue(false);
     vi.mocked(MapsService.prototype.getPlaceDetails).mockClear();
 
     await withHarness(user.id, async (h) => {

@@ -87,9 +87,9 @@ export class CollectionsRpc {
     const userId = this.requireCollectionsUser(ctx, 'writes');
     const placeId = num(params.placeId, 'placeId');
     await this.requireCollectionsAddon();
-    // deletePlace is async (it deletes the underlying storage object): await it so a
-    // refusal actually reaches the plugin as RESOURCE_FORBIDDEN/BAD_PARAMS instead of
-    // being dropped as an unhandled rejection while this returns {deleted: true} anyway.
+    // Awaited so a refusal actually reaches the plugin as RESOURCE_FORBIDDEN/BAD_PARAMS
+    // instead of being dropped as an unhandled rejection while this returns
+    // {deleted: true} anyway.
     await this.mapCollectionError(() => this.collections.deletePlace(userId, placeId, undefined));
     return { deleted: true };
   }
@@ -108,9 +108,8 @@ export class CollectionsRpc {
   /**
    * The service's status-tagged errors, mapped onto the RPC error taxonomy.
    *
-   * Async-aware: `deletePlace` is async (it deletes the underlying storage object),
-   * while `create`/`update`/`savePlace`/`copyToTrip` stay sync. Awaiting inside always
-   * works for both — a sync throw from `fn()` is caught by this function's own
+   * Async-aware: every service method it wraps is async. Awaiting inside works for
+   * a sync callback too — a sync throw from `fn()` is caught by this function's own
    * try/catch same as an awaited rejection — so every caller goes through one path.
    */
   private async mapCollectionError<T>(fn: () => T | Promise<T>): Promise<T> {

@@ -538,7 +538,7 @@ describe('MapsService.keyedProvider', () => {
   it('AMAP-076: a hand-edited nonsense value degrades to auto instead of failing', async () => {
     mockProviderGet.mockReturnValue({ value: 'not-a-provider' });
     keys({ google: 'gkey' });
-    expect(svc.placesProviderChoice()).toBe('auto');
+    expect(await svc.placesProviderChoice()).toBe('auto');
     expect((await svc.keyedProvider(1))?.id).toBe('google');
   });
 

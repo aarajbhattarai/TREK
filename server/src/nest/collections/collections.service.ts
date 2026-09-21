@@ -49,6 +49,7 @@ import type {
 } from '@trek/shared';
 import { NotificationsService } from '../notifications/notifications.service';
 import { collectionFileToGpx, gpxToCollectionFile, type ExportedCollectionFile } from './collection-gpx.helpers';
+import { UnitOfWork } from '../database/unit-of-work';
 
 /** Links are stored as a JSON TEXT column; parse on read, stringify on write. */
 function parseLinks(raw: unknown): CollectionLink[] | undefined {
@@ -104,6 +105,7 @@ export class CollectionsService {
     private readonly realtime: RealtimeService,
     private readonly notifications: NotificationsService,
     private readonly storage: StorageService,
+    private readonly uow: UnitOfWork,
   ) {}
 
   /**
@@ -126,7 +128,7 @@ export class CollectionsService {
   // accepted member. Every read/write goes through assertAccess.
   // -------------------------------------------------------------------------
 
-  accessibleCollectionIds(userId: number): number[] {
+  async accessibleCollectionIds(userId: number): Promise<number[]> {
     const rows = this.db.all<{ id: number }>(`
     SELECT id FROM collections WHERE owner_id = ?
     UNION
@@ -135,7 +137,7 @@ export class CollectionsService {
     return rows.map(r => r.id);
   }
 
-  private isVisible(userId: number, collectionId: number): boolean {
+  private async isVisible(userId: number, collectionId: number): Promise<boolean> {
     const row = this.db.get(`
     SELECT 1 FROM collections WHERE id = ? AND owner_id = ?
     UNION
@@ -145,19 +147,19 @@ export class CollectionsService {
     return !!row;
   }
 
-  assertAccess(userId: number, collectionId: number): void {
-    if (!this.isVisible(userId, collectionId)) httpError(404, 'Collection not found');
+  async assertAccess(userId: number, collectionId: number): Promise<void> {
+    if (!(await this.isVisible(userId, collectionId))) httpError(404, 'Collection not found');
   }
 
-  isOwner(userId: number, collectionId: number): boolean {
+  async isOwner(userId: number, collectionId: number): Promise<boolean> {
     const row = this.db.get('SELECT 1 FROM collections WHERE id = ? AND owner_id = ?', collectionId, userId);
     return !!row;
   }
 
   /** The viewer's effective permission on a list: owner (full), or their accepted
    *  member role, or null when they have no access. */
-  roleOf(userId: number, collectionId: number): EffectiveRole {
-    if (this.isOwner(userId, collectionId)) return 'owner';
+  async roleOf(userId: number, collectionId: number): Promise<EffectiveRole> {
+    if (await this.isOwner(userId, collectionId)) return 'owner';
     const row = this.db.get<{ role: string }>(
       "SELECT role FROM collection_members WHERE collection_id = ? AND user_id = ? AND status = 'accepted'",
       collectionId, userId,
@@ -168,20 +170,20 @@ export class CollectionsService {
 
   /** Add/edit a place — owner, admin or editor. 404 hides lists you can't see,
    *  403 for a read-only (viewer) member. */
-  assertCanEdit(userId: number, collectionId: number): void {
-    const r = this.roleOf(userId, collectionId);
+  async assertCanEdit(userId: number, collectionId: number): Promise<void> {
+    const r = await this.roleOf(userId, collectionId);
     if (r === null) httpError(404, 'Collection not found');
     if (r === 'viewer') httpError(403, 'You have read-only access to this list');
   }
 
   /** Delete a place — owner or admin only. */
-  assertCanDelete(userId: number, collectionId: number): void {
-    const r = this.roleOf(userId, collectionId);
+  async assertCanDelete(userId: number, collectionId: number): Promise<void> {
+    const r = await this.roleOf(userId, collectionId);
     if (r === null) httpError(404, 'Collection not found');
     if (r !== 'owner' && r !== 'admin') httpError(403, 'Only an admin can delete places from this list');
   }
 
-  private ownerOf(collectionId: number): number {
+  private async ownerOf(collectionId: number): Promise<number> {
     const row = this.db.get<{ owner_id: number }>('SELECT owner_id FROM collections WHERE id = ?', collectionId);
     if (!row) httpError(404, 'Collection not found');
     return row.owner_id;
@@ -191,7 +193,7 @@ export class CollectionsService {
   // Hydration helpers
   // -------------------------------------------------------------------------
 
-  private loadTagsByCollectionPlaceIds(placeIds: number[]): Record<number, { id: number; name: string; color: string }[]> {
+  private async loadTagsByCollectionPlaceIds(placeIds: number[]): Promise<Record<number, { id: number; name: string; color: string }[]>> {
     const out: Record<number, { id: number; name: string; color: string }[]> = {};
     if (placeIds.length === 0) return out;
     const placeholders = placeIds.map(() => '?').join(',');
@@ -209,7 +211,7 @@ export class CollectionsService {
   }
 
   /** A list's own label definitions, in display order. */
-  private loadLabelsByCollection(collectionId: number): CollectionLabel[] {
+  private async loadLabelsByCollection(collectionId: number): Promise<CollectionLabel[]> {
     return this.db.all<CollectionLabel>(
       'SELECT id, collection_id, name, color, sort_order FROM collection_labels WHERE collection_id = ? ORDER BY sort_order, id',
       collectionId,
@@ -217,7 +219,7 @@ export class CollectionsService {
   }
 
   /** Assigned label ids per place, batched (mirrors loadTagsByCollectionPlaceIds). */
-  private loadLabelIdsByPlaceIds(placeIds: number[]): Record<number, number[]> {
+  private async loadLabelIdsByPlaceIds(placeIds: number[]): Promise<Record<number, number[]>> {
     const out: Record<number, number[]> = {};
     if (placeIds.length === 0) return out;
     const placeholders = placeIds.map(() => '?').join(',');
@@ -233,7 +235,7 @@ export class CollectionsService {
   }
 
   /** Per-voter rating rows (#1435), batched (mirrors loadTagsByCollectionPlaceIds). */
-  private loadRatingsByCollectionPlaceIds(placeIds: number[]): Record<number, { user_id: number; username: string; avatar: string | null; rating: number }[]> {
+  private async loadRatingsByCollectionPlaceIds(placeIds: number[]): Promise<Record<number, { user_id: number; username: string; avatar: string | null; rating: number }[]>> {
     const out: Record<number, { user_id: number; username: string; avatar: string | null; rating: number }[]> = {};
     if (placeIds.length === 0) return out;
     const rows = this.db.all<{ pid: number; user_id: number; username: string; avatar: string | null; rating: number }>(`
@@ -250,11 +252,11 @@ export class CollectionsService {
     return out;
   }
 
-  private hydratePlaces(rows: PlaceRow[]): CollectionPlace[] {
+  private async hydratePlaces(rows: PlaceRow[]): Promise<CollectionPlace[]> {
     const ids = rows.map(r => r.id);
-    const tagsByPlace = this.loadTagsByCollectionPlaceIds(ids);
-    const labelsByPlace = this.loadLabelIdsByPlaceIds(ids);
-    const ratingsByPlace = this.loadRatingsByCollectionPlaceIds(ids);
+    const tagsByPlace = await this.loadTagsByCollectionPlaceIds(ids);
+    const labelsByPlace = await this.loadLabelIdsByPlaceIds(ids);
+    const ratingsByPlace = await this.loadRatingsByCollectionPlaceIds(ids);
     return rows.map(r => {
       const { category_name, category_color, category_icon, ...rest } = r;
       const ratings = ratingsByPlace[r.id] || [];
@@ -273,7 +275,7 @@ export class CollectionsService {
     });
   }
 
-  private getPlaceById(placeId: number): CollectionPlace {
+  private async getPlaceById(placeId: number): Promise<CollectionPlace> {
     const row = this.db.get<PlaceRow>(`
     SELECT cp.*, c.name AS category_name, c.color AS category_color, c.icon AS category_icon
     FROM collection_places cp
@@ -281,16 +283,16 @@ export class CollectionsService {
     WHERE cp.id = ?
   `, placeId);
     if (!row) httpError(404, 'Place not found');
-    return this.hydratePlaces([row])[0];
+    return (await this.hydratePlaces([row]))[0];
   }
 
-  private collectionIdOfPlace(placeId: number): number {
+  private async collectionIdOfPlace(placeId: number): Promise<number> {
     const row = this.db.get<{ collection_id: number }>('SELECT collection_id FROM collection_places WHERE id = ?', placeId);
     if (!row) httpError(404, 'Place not found');
     return row.collection_id;
   }
 
-  private buildMembers(collectionId: number): CollectionMember[] {
+  private async buildMembers(collectionId: number): Promise<CollectionMember[]> {
     const owner = this.db.get<Omit<CollectionMember, 'status' | 'is_owner'>>(`
     SELECT u.id AS user_id, u.username, u.email, u.avatar
     FROM collections col JOIN users u ON u.id = col.owner_id
@@ -308,24 +310,24 @@ export class CollectionsService {
     return result;
   }
 
-  private getCollectionRow(id: number): Collection {
+  private async getCollectionRow(id: number): Promise<Collection> {
     const col = this.db.get<Collection & { links?: unknown }>('SELECT * FROM collections WHERE id = ?', id);
     if (!col) httpError(404, 'Collection not found');
     const placeCount = this.db.get<{ n: number }>('SELECT COUNT(*) AS n FROM collection_places WHERE collection_id = ?', id)!.n;
-    return { ...col, links: parseLinks(col.links), place_count: placeCount, members: this.buildMembers(id) };
+    return { ...col, links: parseLinks(col.links), place_count: placeCount, members: await this.buildMembers(id) };
   }
 
   // -------------------------------------------------------------------------
   // Lists CRUD
   // -------------------------------------------------------------------------
 
-  listCollections(userId: number): CollectionListResponse {
-    const ids = this.accessibleCollectionIds(userId);
-    const collections: Collection[] = ids
-      .map(id => {
-        const col = this.getCollectionRow(id);
+  async listCollections(userId: number): Promise<CollectionListResponse> {
+    const ids = await this.accessibleCollectionIds(userId);
+    const collections: Collection[] = (await Promise.all(ids
+      .map(async id => {
+        const col = await this.getCollectionRow(id);
         return { ...col, is_owner: col.owner_id === userId };
-      })
+      })))
       .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0) || a.id - b.id);
 
     const incomingInvites = this.db.all<{ collection_id: number; name: string; from_id: number; from_username: string }>(`
@@ -340,9 +342,9 @@ export class CollectionsService {
     return { collections, incomingInvites };
   }
 
-  getCollection(userId: number, id: number): CollectionDetailResponse {
-    this.assertAccess(userId, id);
-    const collection = this.getCollectionRow(id);
+  async getCollection(userId: number, id: number): Promise<CollectionDetailResponse> {
+    await this.assertAccess(userId, id);
+    const collection = await this.getCollectionRow(id);
     const rows = this.db.all<PlaceRow>(`
     SELECT cp.*, c.name AS category_name, c.color AS category_color, c.icon AS category_icon
     FROM collection_places cp
@@ -351,8 +353,8 @@ export class CollectionsService {
     ORDER BY cp.sort_order, cp.created_at
   `, id);
     return {
-      collection: { ...collection, is_owner: collection.owner_id === userId, labels: this.loadLabelsByCollection(id) },
-      places: this.hydratePlaces(rows),
+      collection: { ...collection, is_owner: collection.owner_id === userId, labels: await this.loadLabelsByCollection(id) },
+      places: await this.hydratePlaces(rows),
     };
   }
 
@@ -373,10 +375,10 @@ export class CollectionsService {
    * and a viewer who can read all of this on screen loses nothing by having it
    * as a file; what a viewer must not do is write, which no export does.
    */
-  exportCollection(userId: number, id: number): ExportedCollectionFile {
-    this.assertAccess(userId, id);
-    const collection = this.getCollectionRow(id);
-    const labels = this.loadLabelsByCollection(id);
+  async exportCollection(userId: number, id: number): Promise<ExportedCollectionFile> {
+    await this.assertAccess(userId, id);
+    const collection = await this.getCollectionRow(id);
+    const labels = await this.loadLabelsByCollection(id);
     const labelNameById = new Map(labels.map(l => [l.id, l.name]));
 
     const rows = this.db.all<PlaceRow>(`
@@ -386,7 +388,7 @@ export class CollectionsService {
     WHERE cp.collection_id = ?
     ORDER BY cp.sort_order, cp.created_at
   `, id);
-    const labelIdsByPlace = this.loadLabelIdsByPlaceIds(rows.map(r => r.id));
+    const labelIdsByPlace = await this.loadLabelIdsByPlaceIds(rows.map(r => r.id));
 
     const places: CollectionFilePlace[] = rows.map(row => ({
       name: row.name,
@@ -429,8 +431,8 @@ export class CollectionsService {
    * returns. What may leave the instance is decided once, there, and a GPX can
    * only ever carry less of it. Same access rule too, since it is the same read.
    */
-  exportCollectionGpx(userId: number, id: number): CollectionGpxExport {
-    return collectionFileToGpx(this.exportCollection(userId, id));
+  async exportCollectionGpx(userId: number, id: number): Promise<CollectionGpxExport> {
+    return collectionFileToGpx(await this.exportCollection(userId, id));
   }
 
   /**
@@ -456,25 +458,25 @@ export class CollectionsService {
    * carries no duplicate count. Adding to a list that already exists is
    * importIntoCollection below.
    */
-  importCollection(userId: number, body: CollectionImportRequest): CollectionImportResult {
+  async importCollection(userId: number, body: CollectionImportRequest): Promise<CollectionImportResult> {
     const file = body.file;
     const name = (body.name ?? file.name).trim().slice(0, 120) || file.name;
 
-    const result = this.db.transaction(() => {
-      const collection = this.createCollection(userId, {
+    const result = await this.uow.transactional(async () => {
+      const collection = await this.createCollection(userId, {
         name,
         description: file.description ?? null,
         color: file.color ?? undefined,
         icon: file.icon ?? undefined,
       });
-      const labels = this.labelIdsForFile(collection.id, file.labels);
-      const counts = this.writeFilePlaces(collection.id, userId, file, labels.byName, { skipDuplicates: false });
+      const labels = await this.labelIdsForFile(collection.id, file.labels);
+      const counts = await this.writeFilePlaces(collection.id, userId, file, labels.byName, { skipDuplicates: false });
       return { collectionId: collection.id, ...counts };
     });
 
-    const collection = this.getCollectionRow(result.collectionId);
+    const collection = await this.getCollectionRow(result.collectionId);
     return {
-      collection: { ...collection, is_owner: true, labels: this.loadLabelsByCollection(result.collectionId) },
+      collection: { ...collection, is_owner: true, labels: await this.loadLabelsByCollection(result.collectionId) },
       imported: result.imported,
       skipped: result.skipped,
     };
@@ -493,26 +495,26 @@ export class CollectionsService {
    * Editing rights, not ownership: whoever may add a place here may add a file
    * of them, and everyone on the list sees the result at once.
    */
-  importIntoCollection(
+  async importIntoCollection(
     userId: number, id: number, body: CollectionImportIntoRequest, socketId?: string,
-  ): CollectionImportResult {
-    this.assertCanEdit(userId, id);
+  ): Promise<CollectionImportResult> {
+    await this.assertCanEdit(userId, id);
     const file = body.file;
 
-    const result = this.db.transaction(() => {
-      const labels = this.labelIdsForFile(id, file.labels);
-      const counts = this.writeFilePlaces(id, userId, file, labels.byName, { skipDuplicates: true });
+    const result = await this.uow.transactional(async () => {
+      const labels = await this.labelIdsForFile(id, file.labels);
+      const counts = await this.writeFilePlaces(id, userId, file, labels.byName, { skipDuplicates: true });
       return { ...counts, labelsCreated: labels.created };
     });
 
     // A file whose places were all already there can still have brought a label
     // with it, and that is a change the other members should see.
     if (result.imported > 0 || result.labelsCreated > 0) {
-      this.notifyCollectionUsers(id, socketId, 'collections:updated');
+      await this.notifyCollectionUsers(id, socketId, 'collections:updated');
     }
-    const collection = this.getCollectionRow(id);
+    const collection = await this.getCollectionRow(id);
     return {
-      collection: { ...collection, is_owner: collection.owner_id === userId, labels: this.loadLabelsByCollection(id) },
+      collection: { ...collection, is_owner: collection.owner_id === userId, labels: await this.loadLabelsByCollection(id) },
       imported: result.imported,
       skipped: result.skipped,
       duplicates: result.duplicates,
@@ -524,9 +526,9 @@ export class CollectionsService {
    * name, plus the ones it does not, created in the file's order. A file never
    * renames or recolours a label that is already there.
    */
-  private labelIdsForFile(
+  private async labelIdsForFile(
     collectionId: number, labels: CollectionFileLabel[] | undefined,
-  ): { byName: Map<string, number>; created: number } {
+  ): Promise<{ byName: Map<string, number>; created: number }> {
     const byName = new Map<string, number>();
     for (const row of this.db.all<{ id: number; name: string }>('SELECT id, name FROM collection_labels WHERE collection_id = ?', collectionId)) {
       byName.set(row.name.trim().toLowerCase(), row.id);
@@ -538,7 +540,7 @@ export class CollectionsService {
     for (const label of (labels ?? []).slice(0, MAX_COLLECTION_FILE_LABELS)) {
       const key = label.name.trim().toLowerCase();
       if (!key || byName.has(key)) continue;
-      byName.set(key, this.insertImportedLabel(collectionId, label, sortOrder));
+      byName.set(key, await this.insertImportedLabel(collectionId, label, sortOrder));
       sortOrder += 1;
       created += 1;
     }
@@ -558,20 +560,20 @@ export class CollectionsService {
    * New places are appended after the ones already there rather than renumbered
    * from zero, so a manual order survives an import.
    */
-  private writeFilePlaces(
+  private async writeFilePlaces(
     collectionId: number,
     savedBy: number,
     file: CollectionFile,
     labelIdByName: Map<string, number>,
     opts: { skipDuplicates: boolean },
-  ): { imported: number; skipped: number; duplicates: number } {
+  ): Promise<{ imported: number; skipped: number; duplicates: number }> {
     // The palette is instance-wide and read-only here: a file names a category,
     // it does not get to create one.
     const categoryIdByName = new Map<string, number>();
     for (const c of this.db.all<{ id: number; name: string }>('SELECT id, name FROM categories')) {
       categoryIdByName.set(c.name.trim().toLowerCase(), c.id);
     }
-    const ownerId = this.ownerOf(collectionId);
+    const ownerId = await this.ownerOf(collectionId);
     const firstOrder = this.db.get<{ m: number }>(
       'SELECT COALESCE(MAX(sort_order), -1) AS m FROM collection_places WHERE collection_id = ?', collectionId,
     )!.m + 1;
@@ -594,7 +596,7 @@ export class CollectionsService {
       const place = parsed.data;
       // Rows written earlier in this same run count as already there, so a file
       // that lists a place twice adds it once.
-      if (opts.skipDuplicates && this.findDuplicateCollectionPlace(collectionId, {
+      if (opts.skipDuplicates && await this.findDuplicateCollectionPlace(collectionId, {
         name: place.name,
         lat: place.lat ?? null,
         lng: place.lng ?? null,
@@ -630,7 +632,7 @@ export class CollectionsService {
    * The caller de-duplicates by name, and one notification for the whole
    * import is sent by the caller rather than one per label.
    */
-  private insertImportedLabel(collectionId: number, label: CollectionFileLabel, sortOrder: number): number {
+  private async insertImportedLabel(collectionId: number, label: CollectionFileLabel, sortOrder: number): Promise<number> {
     const res = this.db.run(
       'INSERT INTO collection_labels (collection_id, name, color, sort_order) VALUES (?, ?, ?, ?)',
       collectionId, label.name.trim(), label.color ?? '#6366f1', sortOrder,
@@ -638,7 +640,7 @@ export class CollectionsService {
     return Number(res.lastInsertRowid);
   }
 
-  createCollection(userId: number, body: CollectionCreateRequest): Collection {
+  async createCollection(userId: number, body: CollectionCreateRequest): Promise<Collection> {
     const max = this.db.get<{ m: number }>('SELECT COALESCE(MAX(sort_order), -1) AS m FROM collections WHERE owner_id = ?', userId)!.m;
     const result = this.db.run(`
     INSERT INTO collections (owner_id, name, description, color, icon, cover_image, links, sort_order)
@@ -653,12 +655,12 @@ export class CollectionsService {
       serializeLinks(body.links),
       max + 1,
     );
-    const col = this.getCollectionRow(Number(result.lastInsertRowid));
+    const col = await this.getCollectionRow(Number(result.lastInsertRowid));
     return { ...col, is_owner: true };
   }
 
-  updateCollection(userId: number, id: number, body: CollectionUpdateRequest, socketId?: string): Collection {
-    this.assertCanEdit(userId, id);
+  async updateCollection(userId: number, id: number, body: CollectionUpdateRequest, socketId?: string): Promise<Collection> {
+    await this.assertCanEdit(userId, id);
     const updates: string[] = [];
     const params: (string | number | null)[] = [];
     if (body.name !== undefined) { updates.push('name = ?'); params.push(body.name); }
@@ -673,25 +675,25 @@ export class CollectionsService {
       params.push(id);
       this.db.run(`UPDATE collections SET ${updates.join(', ')} WHERE id = ?`, ...params);
     }
-    this.notifyCollectionUsers(id, socketId, 'collections:updated');
-    const col = this.getCollectionRow(id);
+    await this.notifyCollectionUsers(id, socketId, 'collections:updated');
+    const col = await this.getCollectionRow(id);
     return { ...col, is_owner: col.owner_id === userId };
   }
 
   /** Set (or clear) a list's cover image, reclaiming the previous file. */
   async setCollectionCover(userId: number, id: number, coverUrl: string | null, socketId?: string): Promise<Collection> {
-    this.assertCanEdit(userId, id);
+    await this.assertCanEdit(userId, id);
     const prev = this.db.get<{ cover_image: string | null }>('SELECT cover_image FROM collections WHERE id = ?', id)?.cover_image ?? null;
     this.db.run('UPDATE collections SET cover_image = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', coverUrl, id);
     if (prev && prev !== coverUrl) await this.deleteOldCollectionCover(prev);
-    this.notifyCollectionUsers(id, socketId, 'collections:updated');
-    const col = this.getCollectionRow(id);
+    await this.notifyCollectionUsers(id, socketId, 'collections:updated');
+    const col = await this.getCollectionRow(id);
     return { ...col, is_owner: col.owner_id === userId };
   }
 
-  deleteCollection(userId: number, id: number): void {
-    this.assertAccess(userId, id);
-    if (!this.isOwner(userId, id)) httpError(403, 'Only the owner can delete this list');
+  async deleteCollection(userId: number, id: number): Promise<void> {
+    await this.assertAccess(userId, id);
+    if (!(await this.isOwner(userId, id))) httpError(403, 'Only the owner can delete this list');
 
     // Snapshot recipients BEFORE the cascade wipes collection_members.
     const accepted = this.db.all<{ user_id: number }>("SELECT user_id FROM collection_members WHERE collection_id = ? AND status = 'accepted'", id).map(r => r.user_id);
@@ -704,10 +706,10 @@ export class CollectionsService {
       .forEach(uid => this.realtime.broadcastToUser(uid, { type: 'collections:deleted', collectionId: id }));
   }
 
-  reorderCollections(userId: number, orderedIds: number[]): void {
-    const visible = new Set(this.accessibleCollectionIds(userId));
+  async reorderCollections(userId: number, orderedIds: number[]): Promise<void> {
+    const visible = new Set(await this.accessibleCollectionIds(userId));
     const stmt = this.db.prepare('UPDATE collections SET sort_order = ? WHERE id = ?');
-    this.db.transaction(() => {
+    await this.uow.transactional(async () => {
       orderedIds.forEach((cid, index) => {
         if (visible.has(cid)) stmt.run(index, cid);
       });
@@ -733,10 +735,10 @@ export class CollectionsService {
    * PlacesService.findMatchingPlaceId: provider id, then name, then coordinates
    * and only when there is no name.
    */
-  private findDuplicateCollectionPlace(
+  private async findDuplicateCollectionPlace(
     collectionId: number,
     candidate: PlaceMatchCandidate,
-  ): { id: number; name: string } | null {
+  ): Promise<{ id: number; name: string } | null> {
     for (const strategy of placeMatchStrategies(candidate)) {
       let hit: { id: number; name: string } | undefined;
       if (strategy.by === 'externalId') {
@@ -775,10 +777,10 @@ export class CollectionsService {
    * read straight back out: the tag read-back ships `tags.user_id`, so an
    * unfiltered id answers who owns a tag the caller cannot otherwise see.
    */
-  private attachTags(collectionPlaceId: number, tagIds: number[] | undefined): void {
+  private async attachTags(collectionPlaceId: number, tagIds: number[] | undefined): Promise<void> {
     if (!tagIds || tagIds.length === 0) return;
     const unique = [...new Set(tagIds)];
-    const eligible = this.collectionMemberIds(this.collectionIdOfPlace(collectionPlaceId));
+    const eligible = await this.collectionMemberIds(await this.collectionIdOfPlace(collectionPlaceId));
     const owned = this.db.all<{ id: number; user_id: number }>(
       `SELECT id, user_id FROM tags WHERE id IN (${unique.map(() => '?').join(',')})`,
       ...unique,
@@ -788,8 +790,8 @@ export class CollectionsService {
   }
 
   /** Owner + accepted members — the users whose votes may live in this list. */
-  private collectionMemberIds(collectionId: number): Set<number> {
-    const ids = new Set<number>([this.ownerOf(collectionId)]);
+  private async collectionMemberIds(collectionId: number): Promise<Set<number>> {
+    const ids = new Set<number>([await this.ownerOf(collectionId)]);
     const rows = this.db.all<{ user_id: number }>("SELECT user_id FROM collection_members WHERE collection_id = ? AND status = 'accepted'", collectionId);
     rows.forEach(r => ids.add(r.user_id));
     return ids;
@@ -800,8 +802,8 @@ export class CollectionsService {
    * place. Only votes by members of the target collection come along (the saver
    * is always a member) — other trip members' opinions stay in the trip.
    */
-  private copyTripRatings(sourcePlaceId: number, collectionPlaceId: number, collectionId: number): void {
-    const eligible = this.collectionMemberIds(collectionId);
+  private async copyTripRatings(sourcePlaceId: number, collectionPlaceId: number, collectionId: number): Promise<void> {
+    const eligible = await this.collectionMemberIds(collectionId);
     const rows = this.db.all<{ user_id: number; rating: number }>('SELECT user_id, rating FROM place_ratings WHERE place_id = ?', sourcePlaceId);
     const ins = this.db.prepare('INSERT OR IGNORE INTO collection_place_ratings (collection_place_id, user_id, rating) VALUES (?, ?, ?)');
     for (const r of rows) {
@@ -809,21 +811,21 @@ export class CollectionsService {
     }
   }
 
-  savePlace(userId: number, body: CollectionSavePlaceRequest, socketId?: string): CollectionSaveResult {
-    this.assertCanEdit(userId, body.collection_id);
+  async savePlace(userId: number, body: CollectionSavePlaceRequest, socketId?: string): Promise<CollectionSaveResult> {
+    await this.assertCanEdit(userId, body.collection_id);
 
     if (!body.force) {
-      const dup = this.findDuplicateCollectionPlace(body.collection_id, {
+      const dup = await this.findDuplicateCollectionPlace(body.collection_id, {
         name: body.name, lat: body.lat, lng: body.lng,
         google_place_id: body.google_place_id, google_ftid: body.google_ftid, osm_id: body.osm_id,
       });
       if (dup) return { duplicate: true, duplicateOf: dup };
     }
 
-    const ownerId = this.ownerOf(body.collection_id);
+    const ownerId = await this.ownerOf(body.collection_id);
     // Insert + tags + ratings-copy are one logical write — atomic since the
     // post-fold quirk pass (the relocation carried them un-transacted).
-    const placeId = this.db.transaction(() => {
+    const placeId = await this.uow.transactional(async () => {
       const result = this.db.run(`
     INSERT INTO collection_places (
       collection_id, owner_id, saved_by, name, description, lat, lng, address,
@@ -841,7 +843,7 @@ export class CollectionsService {
       );
 
       const id = Number(result.lastInsertRowid);
-      this.attachTags(id, body.tag_ids);
+      await this.attachTags(id, body.tag_ids);
       // Carry trip ratings ONLY when the caller can actually see the source place.
       // source_place_id/source_trip_id are raw client input, so verify trip access +
       // that the place lives in that trip before reading place_ratings — otherwise a
@@ -852,18 +854,18 @@ export class CollectionsService {
         this.db.canAccessTrip(body.source_trip_id, userId) &&
         this.db.get('SELECT 1 FROM places WHERE id = ? AND trip_id = ?', body.source_place_id, body.source_trip_id)
       ) {
-        this.copyTripRatings(body.source_place_id, id, body.collection_id);
+        await this.copyTripRatings(body.source_place_id, id, body.collection_id);
       }
       return id;
     });
-    this.notifyCollectionUsers(body.collection_id, socketId, 'collections:updated');
-    return { place: this.getPlaceById(placeId) };
+    await this.notifyCollectionUsers(body.collection_id, socketId, 'collections:updated');
+    return { place: await this.getPlaceById(placeId) };
   }
 
-  saveFromTripPlace(
+  async saveFromTripPlace(
     userId: number, collectionId: number, tripId: number, placeId: number, force?: boolean, socketId?: string,
-  ): CollectionSaveResult {
-    this.assertCanEdit(userId, collectionId);
+  ): Promise<CollectionSaveResult> {
+    await this.assertCanEdit(userId, collectionId);
     if (!this.db.canAccessTrip(tripId, userId)) httpError(404, 'Trip not found');
 
     const place = this.db.get<Record<string, unknown>>('SELECT * FROM places WHERE id = ? AND trip_id = ?', placeId, tripId);
@@ -900,8 +902,8 @@ export class CollectionsService {
    *
    *  `scheduled` is false for places no day holds. Those are what a trip leaves behind and
    *  what this import exists for, so the dialog pre-selects them. */
-  importablePlaces(userId: number, collectionId: number, tripId: number): CollectionImportablesResponse {
-    this.assertCanEdit(userId, collectionId);
+  async importablePlaces(userId: number, collectionId: number, tripId: number): Promise<CollectionImportablesResponse> {
+    await this.assertCanEdit(userId, collectionId);
     if (!this.db.canAccessTrip(tripId, userId)) httpError(404, 'Trip not found');
 
     // One row per place: a place can sit on several days, so the day columns resolve to the
@@ -925,27 +927,29 @@ export class CollectionsService {
        ORDER BY p.name COLLATE NOCASE
     `, tripId);
 
-    return {
-      places: rows.map(r => ({
+    const places: CollectionImportablesResponse['places'] = [];
+    for (const r of rows) {
+      places.push({
         ...r,
         // Asked with the same candidate the save will use, or the picker marks a
         // place as new and the save then refuses it as a duplicate.
-        already_in_list: this.findDuplicateCollectionPlace(collectionId, r) != null,
+        already_in_list: (await this.findDuplicateCollectionPlace(collectionId, r)) != null,
         scheduled: r.day_number != null,
-      })),
-    };
+      });
+    }
+    return { places };
   }
 
   /** Bulk copy of several trip places into a list in one shot — one access check,
    *  one WS notify (vs saving each place individually). Mirrors saveFromTripPlace's
    *  field mapping + dedup; skips duplicates unless force. Status starts at 'idea'. */
-  saveFromTripPlaces(
+  async saveFromTripPlaces(
     userId: number, collectionId: number, tripId: number, placeIds: number[], force?: boolean, socketId?: string,
-  ): { copied: number; skipped: { id: number; name: string }[] } {
-    this.assertCanEdit(userId, collectionId);
+  ): Promise<{ copied: number; skipped: { id: number; name: string }[] }> {
+    await this.assertCanEdit(userId, collectionId);
     if (!this.db.canAccessTrip(tripId, userId)) httpError(404, 'Trip not found');
 
-    const ownerId = this.ownerOf(collectionId);
+    const ownerId = await this.ownerOf(collectionId);
     const insert = this.db.prepare(`
     INSERT INTO collection_places (
       collection_id, owner_id, saved_by, name, description, lat, lng, address,
@@ -956,7 +960,7 @@ export class CollectionsService {
     let copied = 0;
     const skipped: { id: number; name: string }[] = [];
     // The whole batch is one logical write — atomic since the post-fold quirk pass.
-    this.db.transaction(() => {
+    await this.uow.transactional(async () => {
       for (const placeId of placeIds) {
         const p = this.db.get<Record<string, unknown>>('SELECT * FROM places WHERE id = ? AND trip_id = ?', placeId, tripId);
         if (!p) continue;
@@ -972,7 +976,7 @@ export class CollectionsService {
           google_ftid: (p.google_ftid as string | null) ?? null,
           osm_id: (p.osm_id as string | null) ?? null,
         };
-        if (!force && this.findDuplicateCollectionPlace(collectionId, candidate)) {
+        if (!force && await this.findDuplicateCollectionPlace(collectionId, candidate)) {
           skipped.push({ id: placeId, name });
           continue;
         }
@@ -984,17 +988,17 @@ export class CollectionsService {
           (p.osm_id as string | null) ?? null, (p.website as string | null) ?? null, (p.phone as string | null) ?? null,
           tripId, placeId,
         );
-        this.copyTripRatings(placeId, Number(res.lastInsertRowid), collectionId);
+        await this.copyTripRatings(placeId, Number(res.lastInsertRowid), collectionId);
         copied++;
       }
     });
-    if (copied > 0) this.notifyCollectionUsers(collectionId, socketId, 'collections:updated');
+    if (copied > 0) await this.notifyCollectionUsers(collectionId, socketId, 'collections:updated');
     return { copied, skipped };
   }
 
   async updatePlace(userId: number, placeId: number, body: CollectionPlaceUpdateRequest, socketId?: string): Promise<CollectionPlace> {
-    const currentCollection = this.collectionIdOfPlace(placeId);
-    this.assertCanEdit(userId, currentCollection);
+    const currentCollection = await this.collectionIdOfPlace(placeId);
+    await this.assertCanEdit(userId, currentCollection);
 
     // Capture the previous thumbnail so a replaced/cleared custom upload (#1136)
     // can be reclaimed once nothing references it any more.
@@ -1017,15 +1021,15 @@ export class CollectionsService {
 
     let movedTo: number | null = null;
     if (body.collection_id !== undefined && body.collection_id !== currentCollection) {
-      this.assertCanEdit(userId, body.collection_id);
+      await this.assertCanEdit(userId, body.collection_id);
       updates.push('collection_id = ?'); params.push(body.collection_id);
-      updates.push('owner_id = ?'); params.push(this.ownerOf(body.collection_id));
+      updates.push('owner_id = ?'); params.push(await this.ownerOf(body.collection_id));
       movedTo = body.collection_id;
     }
 
     // Field update + tag rewrite + label rewrite are one logical write — atomic
     // since the post-fold quirk pass.
-    this.db.transaction(() => {
+    await this.uow.transactional(async () => {
       if (updates.length > 0) {
         updates.push("updated_at = CURRENT_TIMESTAMP");
         params.push(placeId);
@@ -1034,29 +1038,29 @@ export class CollectionsService {
 
       if (body.tag_ids !== undefined) {
         this.db.run('DELETE FROM collection_place_tags WHERE collection_place_id = ?', placeId);
-        this.attachTags(placeId, body.tag_ids);
+        await this.attachTags(placeId, body.tag_ids);
       }
 
       // Labels are collection-scoped: a move invalidates the source list's labels;
       // a provided label_ids set replaces them against the (target) collection.
       if (movedTo) this.db.run('DELETE FROM collection_place_labels WHERE collection_place_id = ?', placeId);
-      if (body.label_ids !== undefined) this.setPlaceLabels(placeId, movedTo ?? currentCollection, body.label_ids);
+      if (body.label_ids !== undefined) await this.setPlaceLabels(placeId, movedTo ?? currentCollection, body.label_ids);
     });
 
     if (body.image_url !== undefined && prevImage !== (body.image_url ?? null)) {
       await reclaimPlaceImage(this.storage, prevImage);
     }
 
-    this.notifyCollectionUsers(currentCollection, socketId, 'collections:updated');
-    if (movedTo) this.notifyCollectionUsers(movedTo, socketId, 'collections:updated');
+    await this.notifyCollectionUsers(currentCollection, socketId, 'collections:updated');
+    if (movedTo) await this.notifyCollectionUsers(movedTo, socketId, 'collections:updated');
     return this.getPlaceById(placeId);
   }
 
-  setStatus(userId: number, placeId: number, status: CollectionStatus, socketId?: string): CollectionPlace {
-    const collectionId = this.collectionIdOfPlace(placeId);
-    this.assertCanEdit(userId, collectionId);
+  async setStatus(userId: number, placeId: number, status: CollectionStatus, socketId?: string): Promise<CollectionPlace> {
+    const collectionId = await this.collectionIdOfPlace(placeId);
+    await this.assertCanEdit(userId, collectionId);
     this.db.run("UPDATE collection_places SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?", status, placeId);
-    this.notifyCollectionUsers(collectionId, socketId, 'collections:updated');
+    await this.notifyCollectionUsers(collectionId, socketId, 'collections:updated');
     return this.getPlaceById(placeId);
   }
 
@@ -1065,9 +1069,9 @@ export class CollectionsService {
    * Gated on assertAccess, not assertCanEdit — a vote is the member's personal
    * opinion, so read-only viewers get to cast one too.
    */
-  setRating(userId: number, placeId: number, rating: number | null, socketId?: string): CollectionPlace {
-    const collectionId = this.collectionIdOfPlace(placeId);
-    this.assertAccess(userId, collectionId);
+  async setRating(userId: number, placeId: number, rating: number | null, socketId?: string): Promise<CollectionPlace> {
+    const collectionId = await this.collectionIdOfPlace(placeId);
+    await this.assertAccess(userId, collectionId);
     if (rating === null) {
       this.db.run('DELETE FROM collection_place_ratings WHERE collection_place_id = ? AND user_id = ?', placeId, userId);
     } else {
@@ -1076,17 +1080,17 @@ export class CollectionsService {
       ON CONFLICT(collection_place_id, user_id) DO UPDATE SET rating = excluded.rating
     `, placeId, userId, rating);
     }
-    this.notifyCollectionUsers(collectionId, socketId, 'collections:updated');
+    await this.notifyCollectionUsers(collectionId, socketId, 'collections:updated');
     return this.getPlaceById(placeId);
   }
 
   async deletePlace(userId: number, placeId: number, socketId?: string): Promise<void> {
-    const collectionId = this.collectionIdOfPlace(placeId);
-    this.assertCanDelete(userId, collectionId);
+    const collectionId = await this.collectionIdOfPlace(placeId);
+    await this.assertCanDelete(userId, collectionId);
     const image = this.db.get<{ image_url: string | null }>('SELECT image_url FROM collection_places WHERE id = ?', placeId)?.image_url ?? null;
     this.db.run('DELETE FROM collection_places WHERE id = ?', placeId); // CASCADE drops tags. NO photo-cache reclaim.
     await reclaimPlaceImage(this.storage, image);
-    this.notifyCollectionUsers(collectionId, socketId, 'collections:updated');
+    await this.notifyCollectionUsers(collectionId, socketId, 'collections:updated');
   }
 
   async deletePlacesMany(userId: number, ids: number[], socketId?: string): Promise<number[]> {
@@ -1098,19 +1102,19 @@ export class CollectionsService {
     const touched = new Set<number>();
     const images: (string | null)[] = [];
     for (const id of ids) {
-      const collectionId = this.collectionIdOfPlace(id);
-      this.assertCanDelete(userId, collectionId);
+      const collectionId = await this.collectionIdOfPlace(id);
+      await this.assertCanDelete(userId, collectionId);
       images.push(this.db.get<{ image_url: string | null }>('SELECT image_url FROM collection_places WHERE id = ?', id)?.image_url ?? null);
       touched.add(collectionId);
     }
-    this.db.transaction(() => {
+    await this.uow.transactional(async () => {
       for (const id of ids) {
         this.db.run('DELETE FROM collection_places WHERE id = ?', id);
         deleted.push(id);
       }
     });
     for (const image of images) await reclaimPlaceImage(this.storage, image);
-    touched.forEach(cid => this.notifyCollectionUsers(cid, socketId, 'collections:updated'));
+    for (const cid of touched) await this.notifyCollectionUsers(cid, socketId, 'collections:updated');
     return deleted;
   }
 
@@ -1122,15 +1126,15 @@ export class CollectionsService {
    * cannot leave half the batch applied. Rows that already carry the status are
    * counted as untouched rather than rewritten, which keeps updated_at honest.
    */
-  setStatusMany(userId: number, ids: number[], status: CollectionStatus, socketId?: string): { updated: number } {
+  async setStatusMany(userId: number, ids: number[], status: CollectionStatus, socketId?: string): Promise<{ updated: number }> {
     const touched = new Set<number>();
     for (const id of ids) {
-      const collectionId = this.collectionIdOfPlace(id);
-      this.assertCanEdit(userId, collectionId);
+      const collectionId = await this.collectionIdOfPlace(id);
+      await this.assertCanEdit(userId, collectionId);
       touched.add(collectionId);
     }
     let updated = 0;
-    this.db.transaction(() => {
+    await this.uow.transactional(async () => {
       for (const id of ids) {
         const res = this.db.run(
           "UPDATE collection_places SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND status IS NOT ?",
@@ -1139,7 +1143,7 @@ export class CollectionsService {
         updated += res.changes;
       }
     });
-    if (updated > 0) touched.forEach(cid => this.notifyCollectionUsers(cid, socketId, 'collections:updated'));
+    if (updated > 0) for (const cid of touched) await this.notifyCollectionUsers(cid, socketId, 'collections:updated');
     return { updated };
   }
 
@@ -1153,13 +1157,13 @@ export class CollectionsService {
    * alone rather than refused — a shared list you cannot edit should not stop
    * you marking your own.
    */
-  setStatusFromTrip(
+  async setStatusFromTrip(
     userId: number,
     tripId: number,
     placeIds: number[],
     status: CollectionStatus,
     socketId?: string,
-  ): { updated: number; places: number } {
+  ): Promise<{ updated: number; places: number }> {
     if (!this.db.canAccessTrip(tripId, userId)) httpError(404, 'Trip not found');
 
     const sources = placeIds.length
@@ -1170,23 +1174,24 @@ export class CollectionsService {
       : [];
     if (sources.length === 0) return { updated: 0, places: 0 };
 
-    const editable = this.accessibleCollectionIds(userId).filter(cid => {
-      const role = this.roleOf(userId, cid);
-      return role !== null && role !== 'viewer';
-    });
+    const editable: number[] = [];
+    for (const cid of await this.accessibleCollectionIds(userId)) {
+      const role = await this.roleOf(userId, cid);
+      if (role !== null && role !== 'viewer') editable.push(cid);
+    }
     if (editable.length === 0) return { updated: 0, places: 0 };
 
     const matched = new Set<number>();
     const placesWithMatch = new Set<number>();
     for (const src of sources) {
-      for (const row of this.matchingCollectionPlaces(editable, tripId, src)) {
+      for (const row of await this.matchingCollectionPlaces(editable, tripId, src)) {
         matched.add(row.id);
         placesWithMatch.add(src.id);
       }
     }
     if (matched.size === 0) return { updated: 0, places: 0 };
 
-    const { updated } = this.setStatusMany(userId, [...matched], status, socketId);
+    const { updated } = await this.setStatusMany(userId, [...matched], status, socketId);
     return { updated, places: placesWithMatch.size };
   }
 
@@ -1197,11 +1202,11 @@ export class CollectionsService {
    * inferring anything. A bare name match is left out here for the same reason
    * as there: every "Starbucks" in the library would answer to it.
    */
-  private matchingCollectionPlaces(
+  private async matchingCollectionPlaces(
     collectionIds: number[],
     tripId: number,
     place: { id: number; lat: number | null; lng: number | null; google_place_id: string | null; google_ftid: string | null; osm_id: string | null },
-  ): Array<{ id: number }> {
+  ): Promise<Array<{ id: number }>> {
     const conditions: string[] = ['(cp.source_trip_id = ? AND cp.source_place_id = ?)'];
     const params: (string | number)[] = [...collectionIds, tripId, place.id];
     if (place.google_place_id) { conditions.push('cp.google_place_id = ?'); params.push(place.google_place_id); }
@@ -1219,12 +1224,12 @@ export class CollectionsService {
 
   /** Set (or clear) a saved place's custom thumbnail, reclaiming the previous upload. */
   async setPlaceImage(userId: number, placeId: number, imageUrl: string | null, socketId?: string): Promise<CollectionPlace> {
-    const collectionId = this.collectionIdOfPlace(placeId);
-    this.assertCanEdit(userId, collectionId);
+    const collectionId = await this.collectionIdOfPlace(placeId);
+    await this.assertCanEdit(userId, collectionId);
     const prev = this.db.get<{ image_url: string | null }>('SELECT image_url FROM collection_places WHERE id = ?', placeId)?.image_url ?? null;
     this.db.run('UPDATE collection_places SET image_url = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', imageUrl, placeId);
     if (prev !== imageUrl) await reclaimPlaceImage(this.storage, prev);
-    this.notifyCollectionUsers(collectionId, socketId, 'collections:updated');
+    await this.notifyCollectionUsers(collectionId, socketId, 'collections:updated');
     return this.getPlaceById(placeId);
   }
 
@@ -1260,7 +1265,7 @@ export class CollectionsService {
       FROM collection_places WHERE id = ?
     `, pid);
       if (!row) httpError(404, 'Place not found');
-      this.assertAccess(userId, row.collection_id);
+      await this.assertAccess(userId, row.collection_id);
       sources.push(row);
     }
 
@@ -1288,7 +1293,7 @@ export class CollectionsService {
     let copied = 0;
     const skipped: { id: number; name: string }[] = [];
     // The whole copy is one logical write — atomic since the post-fold quirk pass.
-    this.db.transaction(() => {
+    await this.uow.transactional(async () => {
       for (const s of sources) {
         if (!body.force && isPlaceDuplicate({
           name: s.name, lat: s.lat, lng: s.lng,
@@ -1321,11 +1326,11 @@ export class CollectionsService {
   // Library-wide membership lookup (inspector indicator)
   // -------------------------------------------------------------------------
 
-  findMembership(
+  async findMembership(
     userId: number,
     query: { google_place_id?: string; google_ftid?: string; name?: string; lat?: number; lng?: number },
-  ): CollectionMembership {
-    const ids = this.accessibleCollectionIds(userId);
+  ): Promise<CollectionMembership> {
+    const ids = await this.accessibleCollectionIds(userId);
     if (ids.length === 0) return { saved: false, lists: [] };
     const placeholders = ids.map(() => '?').join(',');
 
@@ -1351,30 +1356,29 @@ export class CollectionsService {
     WHERE cp.collection_id IN (${placeholders}) AND (${conditions.join(' OR ')})
   `, ...params);
 
-    return {
-      saved: rows.length > 0,
-      lists: rows.map(r => {
-        const role = this.roleOf(userId, r.collection_id);
-        return {
-          collection_id: r.collection_id,
-          name: r.name,
-          place_id: r.place_id,
-          status: r.status ?? 'idea',
-          can_edit: role !== null && role !== 'viewer',
-        };
-      }),
-    };
+    const lists: CollectionMembership['lists'] = [];
+    for (const r of rows) {
+      const role = await this.roleOf(userId, r.collection_id);
+      lists.push({
+        collection_id: r.collection_id,
+        name: r.name,
+        place_id: r.place_id,
+        status: r.status ?? 'idea',
+        can_edit: role !== null && role !== 'viewer',
+      });
+    }
+    return { saved: rows.length > 0, lists };
   }
 
   // -------------------------------------------------------------------------
   // WebSocket notify
   // -------------------------------------------------------------------------
 
-  notifyCollectionUsers(
+  async notifyCollectionUsers(
     collectionId: number,
     excludeSid: string | undefined,
     event: 'collections:updated' | 'collections:accepted' | 'collections:declined' | 'collections:left' = 'collections:updated',
-  ): void {
+  ): Promise<void> {
     const owner = this.db.get<{ owner_id: number }>('SELECT owner_id FROM collections WHERE id = ?', collectionId);
     if (!owner) return;
     const userIds = [owner.owner_id];
@@ -1389,27 +1393,27 @@ export class CollectionsService {
   // member.
   // -------------------------------------------------------------------------
 
-  private collectionIdOfLabel(labelId: number): number {
+  private async collectionIdOfLabel(labelId: number): Promise<number> {
     const row = this.db.get<{ collection_id: number }>('SELECT collection_id FROM collection_labels WHERE id = ?', labelId);
     if (!row) httpError(404, 'Label not found');
     return row.collection_id;
   }
 
-  private getLabelById(labelId: number): CollectionLabel {
+  private async getLabelById(labelId: number): Promise<CollectionLabel> {
     return this.db.get<CollectionLabel>('SELECT id, collection_id, name, color, sort_order FROM collection_labels WHERE id = ?', labelId) as CollectionLabel;
   }
 
   /** Replace a place's label assignments, keeping only labels of `collectionId`. */
-  private setPlaceLabels(placeId: number, collectionId: number, labelIds: number[]): void {
+  private async setPlaceLabels(placeId: number, collectionId: number, labelIds: number[]): Promise<void> {
     this.db.run('DELETE FROM collection_place_labels WHERE collection_place_id = ?', placeId);
     if (labelIds.length === 0) return;
-    const valid = new Set(this.loadLabelsByCollection(collectionId).map(l => l.id));
+    const valid = new Set((await this.loadLabelsByCollection(collectionId)).map(l => l.id));
     const stmt = this.db.prepare('INSERT OR IGNORE INTO collection_place_labels (collection_place_id, label_id) VALUES (?, ?)');
     for (const id of labelIds) if (valid.has(id)) stmt.run(placeId, id);
   }
 
-  createLabel(userId: number, collectionId: number, name: string, color?: string, socketId?: string): CollectionLabel {
-    this.assertCanEdit(userId, collectionId);
+  async createLabel(userId: number, collectionId: number, name: string, color?: string, socketId?: string): Promise<CollectionLabel> {
+    await this.assertCanEdit(userId, collectionId);
     const trimmed = name.trim();
     if (!trimmed) httpError(400, 'Label name is required');
     const count = this.db.get<{ n: number }>('SELECT COUNT(*) AS n FROM collection_labels WHERE collection_id = ?', collectionId)!.n;
@@ -1420,13 +1424,13 @@ export class CollectionsService {
     const nextSort = this.db.get<{ m: number }>('SELECT COALESCE(MAX(sort_order), -1) AS m FROM collection_labels WHERE collection_id = ?', collectionId)!.m + 1;
     const res = this.db.run('INSERT INTO collection_labels (collection_id, name, color, sort_order) VALUES (?, ?, ?, ?)',
       collectionId, trimmed, color ?? '#6366f1', nextSort);
-    this.notifyCollectionUsers(collectionId, socketId, 'collections:updated');
+    await this.notifyCollectionUsers(collectionId, socketId, 'collections:updated');
     return this.getLabelById(Number(res.lastInsertRowid));
   }
 
-  updateLabel(userId: number, labelId: number, body: { name?: string; color?: string; sort_order?: number }, socketId?: string): CollectionLabel {
-    const collectionId = this.collectionIdOfLabel(labelId);
-    this.assertCanEdit(userId, collectionId);
+  async updateLabel(userId: number, labelId: number, body: { name?: string; color?: string; sort_order?: number }, socketId?: string): Promise<CollectionLabel> {
+    const collectionId = await this.collectionIdOfLabel(labelId);
+    await this.assertCanEdit(userId, collectionId);
     const updates: string[] = [];
     const params: (string | number)[] = [];
     if (body.name !== undefined) {
@@ -1443,24 +1447,24 @@ export class CollectionsService {
       params.push(labelId);
       this.db.run(`UPDATE collection_labels SET ${updates.join(', ')} WHERE id = ?`, ...params);
     }
-    this.notifyCollectionUsers(collectionId, socketId, 'collections:updated');
+    await this.notifyCollectionUsers(collectionId, socketId, 'collections:updated');
     return this.getLabelById(labelId);
   }
 
-  deleteLabel(userId: number, labelId: number, socketId?: string): void {
-    const collectionId = this.collectionIdOfLabel(labelId);
-    this.assertCanEdit(userId, collectionId);
+  async deleteLabel(userId: number, labelId: number, socketId?: string): Promise<void> {
+    const collectionId = await this.collectionIdOfLabel(labelId);
+    await this.assertCanEdit(userId, collectionId);
     this.db.run('DELETE FROM collection_labels WHERE id = ?', labelId); // CASCADE clears place assignments
-    this.notifyCollectionUsers(collectionId, socketId, 'collections:updated');
+    await this.notifyCollectionUsers(collectionId, socketId, 'collections:updated');
   }
 
   /** Bulk add (or remove) one or more labels across a selection of places.
    *  Places are grouped by list so each list is permission-checked once, and only
    *  labels that belong to that list are applied. */
-  assignLabels(userId: number, labelIds: number[], placeIds: number[], remove: boolean, socketId?: string): { changed: number } {
+  async assignLabels(userId: number, labelIds: number[], placeIds: number[], remove: boolean, socketId?: string): Promise<{ changed: number }> {
     const byCollection = new Map<number, number[]>();
     for (const pid of placeIds) {
-      const cid = this.collectionIdOfPlace(pid);
+      const cid = await this.collectionIdOfPlace(pid);
       if (!byCollection.has(cid)) byCollection.set(cid, []);
       byCollection.get(cid)!.push(pid);
     }
@@ -1469,12 +1473,12 @@ export class CollectionsService {
     // the write loop, so a later list's 403 left earlier lists modified), and
     // the writes then run in one transaction. Broadcasts still skip lists where
     // no provided label applied.
-    for (const cid of byCollection.keys()) this.assertCanEdit(userId, cid);
+    for (const cid of byCollection.keys()) await this.assertCanEdit(userId, cid);
     let changed = 0;
     const notified: number[] = [];
-    this.db.transaction(() => {
+    await this.uow.transactional(async () => {
       for (const [cid, pids] of byCollection) {
-        const valid = new Set(this.loadLabelsByCollection(cid).map(l => l.id));
+        const valid = new Set((await this.loadLabelsByCollection(cid)).map(l => l.id));
         const applicable = labelIds.filter(id => valid.has(id));
         if (applicable.length === 0) continue;
         if (remove) {
@@ -1487,7 +1491,7 @@ export class CollectionsService {
         notified.push(cid);
       }
     });
-    for (const cid of notified) this.notifyCollectionUsers(cid, socketId, 'collections:updated');
+    for (const cid of notified) await this.notifyCollectionUsers(cid, socketId, 'collections:updated');
     return { changed };
   }
 
@@ -1495,11 +1499,11 @@ export class CollectionsService {
   // Fusion invitations (mirror vacayService, dropping the one-fusion guards)
   // -------------------------------------------------------------------------
 
-  sendInvite(
+  async sendInvite(
     collectionId: number, inviterId: number, inviterUsername: string, inviterEmail: string, targetUserId: number,
     role: 'viewer' | 'editor' | 'admin' = 'editor',
-  ): { error?: string; status?: number } {
-    if (!this.isOwner(inviterId, collectionId)) return { error: 'Not allowed', status: 403 };
+  ): Promise<{ error?: string; status?: number }> {
+    if (!(await this.isOwner(inviterId, collectionId))) return { error: 'Not allowed', status: 403 };
     if (targetUserId === inviterId) return { error: 'Cannot invite yourself', status: 400 };
 
     const targetUser = this.db.get('SELECT id, username FROM users WHERE id = ?', targetUserId);
@@ -1524,51 +1528,51 @@ export class CollectionsService {
     return {};
   }
 
-  acceptInvite(userId: number, collectionId: number, socketId: string | undefined): { error?: string; status?: number } {
+  async acceptInvite(userId: number, collectionId: number, socketId: string | undefined): Promise<{ error?: string; status?: number }> {
     const invite = this.db.get<{ id: number }>("SELECT id FROM collection_members WHERE collection_id = ? AND user_id = ? AND status = 'pending'", collectionId, userId);
     if (!invite) return { error: 'No pending invite', status: 404 };
     this.db.run("UPDATE collection_members SET status = 'accepted' WHERE id = ?", invite.id);
-    this.notifyCollectionUsers(collectionId, socketId, 'collections:accepted');
+    await this.notifyCollectionUsers(collectionId, socketId, 'collections:accepted');
     return {};
   }
 
-  declineInvite(userId: number, collectionId: number, socketId: string | undefined): void {
+  async declineInvite(userId: number, collectionId: number, socketId: string | undefined): Promise<void> {
     this.db.run("DELETE FROM collection_members WHERE collection_id = ? AND user_id = ? AND status = 'pending'", collectionId, userId);
-    this.notifyCollectionUsers(collectionId, socketId, 'collections:declined');
+    await this.notifyCollectionUsers(collectionId, socketId, 'collections:declined');
   }
 
-  cancelInvite(collectionId: number, ownerId: number, targetUserId: number): void {
-    if (!this.isOwner(ownerId, collectionId)) httpError(403, 'Not allowed');
+  async cancelInvite(collectionId: number, ownerId: number, targetUserId: number): Promise<void> {
+    if (!(await this.isOwner(ownerId, collectionId))) httpError(403, 'Not allowed');
     this.db.run("DELETE FROM collection_members WHERE collection_id = ? AND user_id = ? AND status = 'pending'", collectionId, targetUserId);
     this.realtime.broadcastToUser(targetUserId, { type: 'collections:cancelled', collectionId });
   }
 
-  leaveCollection(userId: number, collectionId: number, socketId: string | undefined): void {
-    if (this.isOwner(userId, collectionId)) httpError(400, 'Owner cannot leave; delete the list');
+  async leaveCollection(userId: number, collectionId: number, socketId: string | undefined): Promise<void> {
+    if (await this.isOwner(userId, collectionId)) httpError(400, 'Owner cannot leave; delete the list');
     this.db.run("DELETE FROM collection_members WHERE collection_id = ? AND user_id = ? AND status = 'accepted'", collectionId, userId);
-    this.notifyCollectionUsers(collectionId, socketId, 'collections:left');
+    await this.notifyCollectionUsers(collectionId, socketId, 'collections:left');
   }
 
   /** Owner removes an already-accepted member (a "kick"). */
-  removeMember(ownerId: number, collectionId: number, targetUserId: number): void {
-    if (!this.isOwner(ownerId, collectionId)) httpError(403, 'Not allowed');
+  async removeMember(ownerId: number, collectionId: number, targetUserId: number): Promise<void> {
+    if (!(await this.isOwner(ownerId, collectionId))) httpError(403, 'Not allowed');
     if (targetUserId === ownerId) httpError(400, 'Owner cannot be removed');
     const res = this.db.run("DELETE FROM collection_members WHERE collection_id = ? AND user_id = ? AND status = 'accepted'", collectionId, targetUserId);
     if (res.changes === 0) httpError(404, 'Member not found');
-    this.notifyCollectionUsers(collectionId, undefined, 'collections:left'); // refresh remaining members
+    await this.notifyCollectionUsers(collectionId, undefined, 'collections:left'); // refresh remaining members
     this.realtime.broadcastToUser(targetUserId, { type: 'collections:removed', collectionId }); // bounce the removed user
   }
 
   /** Owner changes an accepted member's permission role (viewer/editor/admin). */
-  setMemberRole(ownerId: number, collectionId: number, targetUserId: number, role: 'viewer' | 'editor' | 'admin'): void {
-    if (!this.isOwner(ownerId, collectionId)) httpError(403, 'Not allowed');
+  async setMemberRole(ownerId: number, collectionId: number, targetUserId: number, role: 'viewer' | 'editor' | 'admin'): Promise<void> {
+    if (!(await this.isOwner(ownerId, collectionId))) httpError(403, 'Not allowed');
     const res = this.db.run("UPDATE collection_members SET role = ? WHERE collection_id = ? AND user_id = ? AND status = 'accepted'", role, collectionId, targetUserId);
     if (res.changes === 0) httpError(404, 'Member not found');
-    this.notifyCollectionUsers(collectionId, undefined, 'collections:updated'); // re-gate the member live
+    await this.notifyCollectionUsers(collectionId, undefined, 'collections:updated'); // re-gate the member live
     this.realtime.broadcastToUser(targetUserId, { type: 'collections:updated', collectionId });
   }
 
-  availableUsers(ownerId: number, collectionId: number): { id: number; username: string }[] {
+  async availableUsers(ownerId: number, collectionId: number): Promise<{ id: number; username: string }[]> {
     return this.db.all<{ id: number; username: string }>(`
     SELECT u.id, u.username FROM users u
     WHERE u.id != ?
@@ -1578,8 +1582,8 @@ export class CollectionsService {
   `, ownerId, collectionId);
   }
 
-  findMembershipForUser(userId: number, collectionId: number): { is_member: boolean; is_owner: boolean; status: string | null } {
-    if (this.isOwner(userId, collectionId)) return { is_member: true, is_owner: true, status: 'accepted' };
+  async findMembershipForUser(userId: number, collectionId: number): Promise<{ is_member: boolean; is_owner: boolean; status: string | null }> {
+    if (await this.isOwner(userId, collectionId)) return { is_member: true, is_owner: true, status: 'accepted' };
     const row = this.db.get<{ status: string }>('SELECT status FROM collection_members WHERE collection_id = ? AND user_id = ?', collectionId, userId);
     return { is_member: row?.status === 'accepted', is_owner: false, status: row?.status ?? null };
   }

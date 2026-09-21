@@ -77,7 +77,7 @@ export class CollectionsMcp {
     access: { group: 'collections', mode: 'read' },
   })
   async listCollections(_args: Record<string, never>, ctx: McpContext) {
-    try { return ok(this.collections.listCollections(ctx.userId)); } catch (err) { return fail(err); }
+    try { return ok(await this.collections.listCollections(ctx.userId)); } catch (err) { return fail(err); }
   }
 
   @Tool({
@@ -89,7 +89,7 @@ export class CollectionsMcp {
     access: { group: 'collections', mode: 'read' },
   })
   async getCollection({ collectionId }: { collectionId: number }, ctx: McpContext) {
-    try { return ok(this.collections.getCollection(ctx.userId, collectionId)); } catch (err) { return fail(err); }
+    try { return ok(await this.collections.getCollection(ctx.userId, collectionId)); } catch (err) { return fail(err); }
   }
 
   @Tool({
@@ -104,11 +104,11 @@ export class CollectionsMcp {
     try {
       // Owner-only, mirroring the REST gate — availableUsers() itself does no
       // access check, so without this any token could enumerate the user list.
-      this.collections.assertAccess(ctx.userId, collectionId);
-      if (!this.collections.isOwner(ctx.userId, collectionId)) {
+      await this.collections.assertAccess(ctx.userId, collectionId);
+      if (!(await this.collections.isOwner(ctx.userId, collectionId))) {
         return { content: [{ type: 'text' as const, text: 'Only the collection owner can view invitable users.' }], isError: true };
       }
-      return ok({ users: this.collections.availableUsers(ctx.userId, collectionId) });
+      return ok({ users: await this.collections.availableUsers(ctx.userId, collectionId) });
     } catch (err) { return fail(err); }
   }
 
@@ -130,7 +130,7 @@ export class CollectionsMcp {
     query: { google_place_id?: string; google_ftid?: string; name?: string; lat?: number; lng?: number },
     ctx: McpContext,
   ) {
-    try { return ok(this.collections.findMembership(ctx.userId, query)); } catch (err) { return fail(err); }
+    try { return ok(await this.collections.findMembership(ctx.userId, query)); } catch (err) { return fail(err); }
   }
 
   // ── Collections CRUD ─────────────────────────────────────────────────
@@ -145,7 +145,7 @@ export class CollectionsMcp {
   })
   async createCollection(body: CollectionCreateRequest, ctx: McpContext) {
     const demo = await this.denyDemo(ctx.userId); if (demo) return demo;
-    try { return ok({ collection: this.collections.createCollection(ctx.userId, body) }); } catch (err) { return fail(err); }
+    try { return ok({ collection: await this.collections.createCollection(ctx.userId, body) }); } catch (err) { return fail(err); }
   }
 
   @Tool({
@@ -158,7 +158,7 @@ export class CollectionsMcp {
   })
   async updateCollection({ collectionId, ...body }: { collectionId: number } & CollectionUpdateRequest, ctx: McpContext) {
     const demo = await this.denyDemo(ctx.userId); if (demo) return demo;
-    try { return ok({ collection: this.collections.updateCollection(ctx.userId, collectionId, body) }); } catch (err) { return fail(err); }
+    try { return ok({ collection: await this.collections.updateCollection(ctx.userId, collectionId, body) }); } catch (err) { return fail(err); }
   }
 
   @Tool({
@@ -171,7 +171,7 @@ export class CollectionsMcp {
   })
   async deleteCollection({ collectionId }: { collectionId: number }, ctx: McpContext) {
     const demo = await this.denyDemo(ctx.userId); if (demo) return demo;
-    try { this.collections.deleteCollection(ctx.userId, collectionId); return ok({ success: true }); } catch (err) { return fail(err); }
+    try { await this.collections.deleteCollection(ctx.userId, collectionId); return ok({ success: true }); } catch (err) { return fail(err); }
   }
 
   @Tool({
@@ -184,7 +184,7 @@ export class CollectionsMcp {
   })
   async reorderCollections({ orderedIds }: { orderedIds: number[] }, ctx: McpContext) {
     const demo = await this.denyDemo(ctx.userId); if (demo) return demo;
-    try { this.collections.reorderCollections(ctx.userId, orderedIds); return ok({ success: true }); } catch (err) { return fail(err); }
+    try { await this.collections.reorderCollections(ctx.userId, orderedIds); return ok({ success: true }); } catch (err) { return fail(err); }
   }
 
   // ── Places ────────────────────────────────────────────────────────────
@@ -199,7 +199,7 @@ export class CollectionsMcp {
   })
   async savePlaceToCollection(body: CollectionSavePlaceRequest, ctx: McpContext) {
     const demo = await this.denyDemo(ctx.userId); if (demo) return demo;
-    try { return ok(this.collections.savePlace(ctx.userId, body)); } catch (err) { return fail(err); }
+    try { return ok(await this.collections.savePlace(ctx.userId, body)); } catch (err) { return fail(err); }
   }
 
   @Tool({
@@ -220,7 +220,7 @@ export class CollectionsMcp {
     ctx: McpContext,
   ) {
     const demo = await this.denyDemo(ctx.userId); if (demo) return demo;
-    try { return ok(this.collections.saveFromTripPlaces(ctx.userId, collectionId, tripId, placeIds, force)); } catch (err) { return fail(err); }
+    try { return ok(await this.collections.saveFromTripPlaces(ctx.userId, collectionId, tripId, placeIds, force)); } catch (err) { return fail(err); }
   }
 
   @Tool({
@@ -246,7 +246,7 @@ export class CollectionsMcp {
   })
   async setCollectionPlaceStatus({ placeId, status }: { placeId: number; status: CollectionStatus }, ctx: McpContext) {
     const demo = await this.denyDemo(ctx.userId); if (demo) return demo;
-    try { return ok({ place: this.collections.setStatus(ctx.userId, placeId, status) }); } catch (err) { return fail(err); }
+    try { return ok({ place: await this.collections.setStatus(ctx.userId, placeId, status) }); } catch (err) { return fail(err); }
   }
 
   @Tool({
@@ -262,7 +262,7 @@ export class CollectionsMcp {
     ctx: McpContext,
   ) {
     const demo = await this.denyDemo(ctx.userId); if (demo) return demo;
-    try { return ok(this.collections.setStatusFromTrip(ctx.userId, trip_id, place_ids, status)); } catch (err) { return fail(err); }
+    try { return ok(await this.collections.setStatusFromTrip(ctx.userId, trip_id, place_ids, status)); } catch (err) { return fail(err); }
   }
 
   @Tool({
@@ -278,7 +278,7 @@ export class CollectionsMcp {
   })
   async rateCollectionPlace({ placeId, rating }: { placeId: number; rating?: number | null }, ctx: McpContext) {
     const demo = await this.denyDemo(ctx.userId); if (demo) return demo;
-    try { return ok({ place: this.collections.setRating(ctx.userId, placeId, rating ?? null) }); } catch (err) { return fail(err); }
+    try { return ok({ place: await this.collections.setRating(ctx.userId, placeId, rating ?? null) }); } catch (err) { return fail(err); }
   }
 
   @Tool({
@@ -319,7 +319,7 @@ export class CollectionsMcp {
   })
   async createCollectionLabel({ collection_id, name, color }: CollectionLabelCreateRequest, ctx: McpContext) {
     const demo = await this.denyDemo(ctx.userId); if (demo) return demo;
-    try { return ok({ label: this.collections.createLabel(ctx.userId, collection_id, name, color) }); } catch (err) { return fail(err); }
+    try { return ok({ label: await this.collections.createLabel(ctx.userId, collection_id, name, color) }); } catch (err) { return fail(err); }
   }
 
   @Tool({
@@ -332,7 +332,7 @@ export class CollectionsMcp {
   })
   async updateCollectionLabel({ labelId, ...body }: { labelId: number } & CollectionLabelUpdateRequest, ctx: McpContext) {
     const demo = await this.denyDemo(ctx.userId); if (demo) return demo;
-    try { return ok({ label: this.collections.updateLabel(ctx.userId, labelId, body) }); } catch (err) { return fail(err); }
+    try { return ok({ label: await this.collections.updateLabel(ctx.userId, labelId, body) }); } catch (err) { return fail(err); }
   }
 
   @Tool({
@@ -345,7 +345,7 @@ export class CollectionsMcp {
   })
   async deleteCollectionLabel({ labelId }: { labelId: number }, ctx: McpContext) {
     const demo = await this.denyDemo(ctx.userId); if (demo) return demo;
-    try { this.collections.deleteLabel(ctx.userId, labelId); return ok({ success: true }); } catch (err) { return fail(err); }
+    try { await this.collections.deleteLabel(ctx.userId, labelId); return ok({ success: true }); } catch (err) { return fail(err); }
   }
 
   @Tool({
@@ -361,7 +361,7 @@ export class CollectionsMcp {
     ctx: McpContext,
   ) {
     const demo = await this.denyDemo(ctx.userId); if (demo) return demo;
-    try { return ok(this.collections.assignLabels(ctx.userId, label_ids, place_ids, remove ?? false)); } catch (err) { return fail(err); }
+    try { return ok(await this.collections.assignLabels(ctx.userId, label_ids, place_ids, remove ?? false)); } catch (err) { return fail(err); }
   }
 
   // ── Sharing ───────────────────────────────────────────────────────────
@@ -380,7 +380,7 @@ export class CollectionsMcp {
     // of two where an unexpected throw escaped to the SDK instead of isError.
     try {
       const me = this.db.get<{ username: string; email: string }>('SELECT username, email FROM users WHERE id = ?', ctx.userId);
-      const res = this.collections.sendInvite(collection_id, ctx.userId, me?.username ?? '', me?.email ?? '', user_id, role);
+      const res = await this.collections.sendInvite(collection_id, ctx.userId, me?.username ?? '', me?.email ?? '', user_id, role);
       if (res.error) return { content: [{ type: 'text' as const, text: res.error }], isError: true };
       return ok({ success: true });
     } catch (err) { return fail(err); }
@@ -403,7 +403,7 @@ export class CollectionsMcp {
     ctx: McpContext,
   ) {
     const demo = await this.denyDemo(ctx.userId); if (demo) return demo;
-    try { this.collections.setMemberRole(ctx.userId, collectionId, targetUserId, role); return ok({ success: true }); } catch (err) { return fail(err); }
+    try { await this.collections.setMemberRole(ctx.userId, collectionId, targetUserId, role); return ok({ success: true }); } catch (err) { return fail(err); }
   }
 
   @Tool({
@@ -419,7 +419,7 @@ export class CollectionsMcp {
     ctx: McpContext,
   ) {
     const demo = await this.denyDemo(ctx.userId); if (demo) return demo;
-    try { this.collections.removeMember(ctx.userId, collectionId, targetUserId); return ok({ success: true }); } catch (err) { return fail(err); }
+    try { await this.collections.removeMember(ctx.userId, collectionId, targetUserId); return ok({ success: true }); } catch (err) { return fail(err); }
   }
 
   @Tool({
@@ -435,7 +435,7 @@ export class CollectionsMcp {
     ctx: McpContext,
   ) {
     const demo = await this.denyDemo(ctx.userId); if (demo) return demo;
-    try { this.collections.cancelInvite(collectionId, ctx.userId, targetUserId); return ok({ success: true }); } catch (err) { return fail(err); }
+    try { await this.collections.cancelInvite(collectionId, ctx.userId, targetUserId); return ok({ success: true }); } catch (err) { return fail(err); }
   }
 
   @Tool({
@@ -450,7 +450,7 @@ export class CollectionsMcp {
     const demo = await this.denyDemo(ctx.userId); if (demo) return demo;
     // try/catch added with the post-fold quirk pass (see inviteToCollection).
     try {
-      const res = this.collections.acceptInvite(ctx.userId, collectionId, undefined);
+      const res = await this.collections.acceptInvite(ctx.userId, collectionId, undefined);
       if (res.error) return { content: [{ type: 'text' as const, text: res.error }], isError: true };
       return ok({ success: true });
     } catch (err) { return fail(err); }
@@ -466,7 +466,7 @@ export class CollectionsMcp {
   })
   async declineCollectionInvite({ collectionId }: { collectionId: number }, ctx: McpContext) {
     const demo = await this.denyDemo(ctx.userId); if (demo) return demo;
-    try { this.collections.declineInvite(ctx.userId, collectionId, undefined); return ok({ success: true }); } catch (err) { return fail(err); }
+    try { await this.collections.declineInvite(ctx.userId, collectionId, undefined); return ok({ success: true }); } catch (err) { return fail(err); }
   }
 
   @Tool({
@@ -479,6 +479,6 @@ export class CollectionsMcp {
   })
   async leaveCollection({ collectionId }: { collectionId: number }, ctx: McpContext) {
     const demo = await this.denyDemo(ctx.userId); if (demo) return demo;
-    try { this.collections.leaveCollection(ctx.userId, collectionId, undefined); return ok({ success: true }); } catch (err) { return fail(err); }
+    try { await this.collections.leaveCollection(ctx.userId, collectionId, undefined); return ok({ success: true }); } catch (err) { return fail(err); }
   }
 }

@@ -143,7 +143,7 @@ describe('MapsController (parity with the legacy /api/maps route)', () => {
   describe('POST /autocomplete', () => {
     it('returns the disabled envelope when the kill-switch is off', async () => {
       const autocomplete = vi.fn();
-      const res = await makeController({ autocompleteDisabled: () => true, autocomplete }).autocomplete(user, { input: 'be' });
+      const res = await makeController({ autocompleteDisabled: async () => true, autocomplete }).autocomplete(user, { input: 'be' });
       expect(res).toEqual({ suggestions: [], source: 'disabled' });
       expect(autocomplete).not.toHaveBeenCalled();
     });
@@ -151,7 +151,7 @@ describe('MapsController (parity with the legacy /api/maps route)', () => {
     it('delegates a valid request', async () => {
       const autocomplete = vi.fn().mockResolvedValue({ suggestions: [], source: 'osm' });
       const bias = { low: { lat: 1, lng: 2 }, high: { lat: 3, lng: 4 } };
-      await makeController({ autocompleteDisabled: () => false, autocomplete }).autocomplete(user, { input: 'be', lang: 'en', locationBias: bias });
+      await makeController({ autocompleteDisabled: async () => false, autocomplete }).autocomplete(user, { input: 'be', lang: 'en', locationBias: bias });
       expect(autocomplete).toHaveBeenCalledWith(3, 'be', 'en', bias, undefined);
     });
 
@@ -159,14 +159,14 @@ describe('MapsController (parity with the legacy /api/maps route)', () => {
     // Google billing session instead of charging each request.
     it('passes a session token through to the service', async () => {
       const autocomplete = vi.fn().mockResolvedValue({ suggestions: [], source: 'google' });
-      await makeController({ autocompleteDisabled: () => false, autocomplete })
+      await makeController({ autocompleteDisabled: async () => false, autocomplete })
         .autocomplete(user, { input: 'be', sessionToken: 'abc123' });
       expect(autocomplete).toHaveBeenCalledWith(3, 'be', undefined, undefined, 'abc123');
     });
 
     it('maps a service error', async () => {
       const autocomplete = vi.fn().mockRejectedValue(withError(503, 'Upstream down'));
-      const c = makeController({ autocompleteDisabled: () => false, autocomplete });
+      const c = makeController({ autocompleteDisabled: async () => false, autocomplete });
       expect(await thrown(() => c.autocomplete(user, { input: 'be' }))).toEqual({
         status: 503, body: { error: 'Upstream down' },
       });
@@ -175,14 +175,14 @@ describe('MapsController (parity with the legacy /api/maps route)', () => {
 
   describe('GET /details/:placeId', () => {
     it('returns the disabled envelope when off', async () => {
-      const res = await makeController({ detailsDisabled: () => true }).details(user, 'p1');
+      const res = await makeController({ detailsDisabled: async () => true }).details(user, 'p1');
       expect(res).toEqual({ place: null, disabled: true });
     });
 
     it('uses the expanded lookup when expand is set', async () => {
       const detailsExpanded = vi.fn().mockResolvedValue({ place: { id: 'p1' } });
       const details = vi.fn();
-      await makeController({ detailsDisabled: () => false, detailsExpanded, details })
+      await makeController({ detailsDisabled: async () => false, detailsExpanded, details })
         .details(user, 'p1', 'full', 'de', '1');
       expect(detailsExpanded).toHaveBeenCalledWith(3, 'p1', 'de', true);
       expect(details).not.toHaveBeenCalled();
@@ -190,7 +190,7 @@ describe('MapsController (parity with the legacy /api/maps route)', () => {
 
     it('uses the plain lookup without expand', async () => {
       const details = vi.fn().mockResolvedValue({ place: { id: 'p1' } });
-      await makeController({ detailsDisabled: () => false, details }).details(user, 'p1', undefined, 'de');
+      await makeController({ detailsDisabled: async () => false, details }).details(user, 'p1', undefined, 'de');
       expect(details).toHaveBeenCalledWith(3, 'p1', 'de', undefined);
     });
 
@@ -198,7 +198,7 @@ describe('MapsController (parity with the legacy /api/maps route)', () => {
     // and a junk value degrades to per-request billing instead of reaching Google.
     it('forwards a well-formed session token and drops a malformed one', async () => {
       const details = vi.fn().mockResolvedValue({ place: { id: 'p1' } });
-      const c = makeController({ detailsDisabled: () => false, details });
+      const c = makeController({ detailsDisabled: async () => false, details });
 
       await c.details(user, 'p1', undefined, 'de', undefined, 'a-b_C9');
       expect(details).toHaveBeenLastCalledWith(3, 'p1', 'de', 'a-b_C9');
@@ -212,7 +212,7 @@ describe('MapsController (parity with the legacy /api/maps route)', () => {
 
     it('maps a service error', async () => {
       const details = vi.fn().mockRejectedValue(withError(404, 'Not found'));
-      expect(await thrown(() => makeController({ detailsDisabled: () => false, details }).details(user, 'p1'))).toEqual({
+      expect(await thrown(() => makeController({ detailsDisabled: async () => false, details }).details(user, 'p1'))).toEqual({
         status: 404, body: { error: 'Not found' },
       });
     });
@@ -221,20 +221,20 @@ describe('MapsController (parity with the legacy /api/maps route)', () => {
   describe('GET /place-photo/:placeId', () => {
     it('returns { photoUrl: null } when photos are disabled (non-coords)', async () => {
       const photo = vi.fn();
-      const res = await makeController({ photosDisabled: () => true, photo }).placePhoto(user, 'p1', '1', '2');
+      const res = await makeController({ photosDisabled: async () => true, photo }).placePhoto(user, 'p1', '1', '2');
       expect(res).toEqual({ photoUrl: null });
       expect(photo).not.toHaveBeenCalled();
     });
 
     it('bypasses the kill-switch for coords: ids', async () => {
       const photo = vi.fn().mockResolvedValue({ photoUrl: 'u', attribution: null });
-      await makeController({ photosDisabled: () => true, photo }).placePhoto(user, 'coords:1,2', '1', '2', 'Spot');
+      await makeController({ photosDisabled: async () => true, photo }).placePhoto(user, 'coords:1,2', '1', '2', 'Spot');
       expect(photo).toHaveBeenCalledWith(3, 'coords:1,2', 1, 2, 'Spot');
     });
 
     it('maps a 4xx service error', async () => {
       const photo = vi.fn().mockRejectedValue(withError(429, 'Rate limited'));
-      expect(await thrown(() => makeController({ photosDisabled: () => false, photo }).placePhoto(user, 'p1', '1', '2'))).toEqual({
+      expect(await thrown(() => makeController({ photosDisabled: async () => false, photo }).placePhoto(user, 'p1', '1', '2'))).toEqual({
         status: 429, body: { error: 'Rate limited' },
       });
     });
@@ -243,13 +243,13 @@ describe('MapsController (parity with the legacy /api/maps route)', () => {
     // place gets the user banned by any 404-rate IPS in front of TREK (#1727).
     it('passes a photo-less place through as a 200 with photoUrl null', async () => {
       const photo = vi.fn().mockResolvedValue({ photoUrl: null, attribution: null });
-      const res = await makeController({ photosDisabled: () => false, photo }).placePhoto(user, 'node:123', '1', '2');
+      const res = await makeController({ photosDisabled: async () => false, photo }).placePhoto(user, 'node:123', '1', '2');
       expect(res).toEqual({ photoUrl: null, attribution: null });
     });
 
     it('logs and maps a 5xx service error', async () => {
       const photo = vi.fn().mockRejectedValue(withError(502, 'Upstream failed'));
-      expect(await thrown(() => makeController({ photosDisabled: () => false, photo }).placePhoto(user, 'p1', '1', '2'))).toEqual({
+      expect(await thrown(() => makeController({ photosDisabled: async () => false, photo }).placePhoto(user, 'p1', '1', '2'))).toEqual({
         status: 502, body: { error: 'Upstream failed' },
       });
       expect(console.error).toHaveBeenCalledWith('Place photo error:', expect.any(Error));
@@ -257,7 +257,7 @@ describe('MapsController (parity with the legacy /api/maps route)', () => {
 
     it('defaults a status-less error to 500 and parses NaN coords', async () => {
       const photo = vi.fn().mockRejectedValue(new Error('Error fetching photo'));
-      expect(await thrown(() => makeController({ photosDisabled: () => false, photo }).placePhoto(user, 'p1'))).toEqual({
+      expect(await thrown(() => makeController({ photosDisabled: async () => false, photo }).placePhoto(user, 'p1'))).toEqual({
         status: 500, body: { error: 'Error fetching photo' },
       });
       const [, , lat, lng] = photo.mock.calls[0];

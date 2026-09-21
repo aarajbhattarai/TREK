@@ -696,7 +696,7 @@ export class MapsService {
    *  oldest entry is the one evicted when it fills up. */
   private readonly brandLogoCache = new Map<string, { at: number; logo: BrandLogo | null }>();
 
-  private isSettingDisabled(key: string): boolean {
+  private async isSettingDisabled(key: string): Promise<boolean> {
     const row = this.database.get<{ value: string }>(
       'SELECT value FROM app_settings WHERE key = ?',
       key,
@@ -747,15 +747,15 @@ export class MapsService {
     }
   }
 
-  autocompleteDisabled(): boolean {
+  autocompleteDisabled(): Promise<boolean> {
     return this.isSettingDisabled('places_autocomplete_enabled');
   }
 
-  detailsDisabled(): boolean {
+  detailsDisabled(): Promise<boolean> {
     return this.isSettingDisabled('places_details_enabled');
   }
 
-  photosDisabled(): boolean {
+  photosDisabled(): Promise<boolean> {
     return this.isSettingDisabled('places_photos_enabled');
   }
 
@@ -1023,7 +1023,7 @@ export class MapsService {
    * is read on the hot path of every search, and a hand-edited settings row must
    * not take place search down.
    */
-  placesProviderChoice(): PlacesProviderChoice {
+  async placesProviderChoice(): Promise<PlacesProviderChoice> {
     const row = this.database.get<{ value: string }>(
       'SELECT value FROM app_settings WHERE key = ?',
       PLACES_PROVIDER_SETTING,
@@ -1047,7 +1047,7 @@ export class MapsService {
    * the database reads it always did.
    */
   async keyedProvider(userId: number): Promise<KeyedProvider | null> {
-    const choice = this.placesProviderChoice();
+    const choice = await this.placesProviderChoice();
     if (choice === 'openstreetmap') return null;
 
     if (choice !== 'amap') {

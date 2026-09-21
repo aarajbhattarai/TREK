@@ -94,11 +94,11 @@ const collabFx = makeStorageFixture('files/');
 const rateLimit = new RateLimitService();
 let svc: CollabService;
 beforeAll(async () => {
-  svc = new CollabService(new DatabaseService(testDb), new PermissionsService(new DatabaseService(testDb), await createTestUnitOfWork(testDb)), new RealtimeService(), notificationsStub(), collabFx.storage, rateLimit);
+  svc = new CollabService(new DatabaseService(testDb), new PermissionsService(new DatabaseService(testDb), await createTestUnitOfWork(testDb)), new RealtimeService(), notificationsStub(), collabFx.storage, rateLimit, await createTestUnitOfWork(testDb));
 });
 
 /** A CollabService with its own preview cache and budget, for the tests that fill either. */
-const freshSvc = async () => new CollabService(new DatabaseService(testDb), new PermissionsService(new DatabaseService(testDb), await createTestUnitOfWork(testDb)), new RealtimeService(), notificationsStub(), collabFx.storage, new RateLimitService());
+const freshSvc = async () => new CollabService(new DatabaseService(testDb), new PermissionsService(new DatabaseService(testDb), await createTestUnitOfWork(testDb)), new RealtimeService(), notificationsStub(), collabFx.storage, new RateLimitService(), await createTestUnitOfWork(testDb));
 
 beforeAll(() => {
   createTables(testDb);
@@ -132,15 +132,15 @@ function setup() {
 // ── avatarUrl ─────────────────────────────────────────────────────────────────
 
 describe('avatarUrl', () => {
-  it('COLLAB-SVC-001: returns null when avatar is null', () => {
+  it('COLLAB-SVC-001: returns null when avatar is null', async () => {
     expect(avatarUrl({ avatar: null })).toBeNull();
   });
 
-  it('COLLAB-SVC-002: returns upload path when avatar is set', () => {
+  it('COLLAB-SVC-002: returns upload path when avatar is set', async () => {
     expect(avatarUrl({ avatar: 'abc.jpg' })).toBe('/uploads/avatars/abc.jpg');
   });
 
-  it('COLLAB-SVC-003: returns null when avatar is empty string', () => {
+  it('COLLAB-SVC-003: returns null when avatar is empty string', async () => {
     expect(avatarUrl({ avatar: '' })).toBeNull();
   });
 });
@@ -148,53 +148,53 @@ describe('avatarUrl', () => {
 // ── votePoll ──────────────────────────────────────────────────────────────────
 
 describe('votePoll', () => {
-  it('COLLAB-SVC-004: returns error "closed" when poll is closed', () => {
+  it('COLLAB-SVC-004: returns error "closed" when poll is closed', async () => {
     const { user1, trip } = setup();
-    const poll = svc.createPoll(trip.id, user1.id, { question: 'Q?', options: ['A', 'B'] });
-    svc.closePoll(trip.id, poll!.id);
+    const poll = await svc.createPoll(trip.id, user1.id, { question: 'Q?', options: ['A', 'B'] });
+    await svc.closePoll(trip.id, poll!.id);
 
-    const result = svc.votePoll(trip.id, poll!.id, user1.id, 0);
+    const result = await svc.votePoll(trip.id, poll!.id, user1.id, 0);
     expect(result.error).toBe('closed');
   });
 
-  it('COLLAB-SVC-005: returns error "invalid_index" for negative index', () => {
+  it('COLLAB-SVC-005: returns error "invalid_index" for negative index', async () => {
     const { user1, trip } = setup();
-    const poll = svc.createPoll(trip.id, user1.id, { question: 'Q?', options: ['A', 'B'] });
+    const poll = await svc.createPoll(trip.id, user1.id, { question: 'Q?', options: ['A', 'B'] });
 
-    const result = svc.votePoll(trip.id, poll!.id, user1.id, -1);
+    const result = await svc.votePoll(trip.id, poll!.id, user1.id, -1);
     expect(result.error).toBe('invalid_index');
   });
 
-  it('COLLAB-SVC-006: returns error "invalid_index" for out-of-range index', () => {
+  it('COLLAB-SVC-006: returns error "invalid_index" for out-of-range index', async () => {
     const { user1, trip } = setup();
-    const poll = svc.createPoll(trip.id, user1.id, { question: 'Q?', options: ['A', 'B'] });
+    const poll = await svc.createPoll(trip.id, user1.id, { question: 'Q?', options: ['A', 'B'] });
 
-    const result = svc.votePoll(trip.id, poll!.id, user1.id, 5);
+    const result = await svc.votePoll(trip.id, poll!.id, user1.id, 5);
     expect(result.error).toBe('invalid_index');
   });
 
-  it('COLLAB-SVC-007: returns error "not_found" for nonexistent poll', () => {
+  it('COLLAB-SVC-007: returns error "not_found" for nonexistent poll', async () => {
     const { user1, trip } = setup();
-    const result = svc.votePoll(trip.id, 9999, user1.id, 0);
+    const result = await svc.votePoll(trip.id, 9999, user1.id, 0);
     expect(result.error).toBe('not_found');
   });
 
-  it('COLLAB-SVC-008: successfully votes and returns poll with voters', () => {
+  it('COLLAB-SVC-008: successfully votes and returns poll with voters', async () => {
     const { user1, trip } = setup();
-    const poll = svc.createPoll(trip.id, user1.id, { question: 'Q?', options: ['Yes', 'No'] });
+    const poll = await svc.createPoll(trip.id, user1.id, { question: 'Q?', options: ['Yes', 'No'] });
 
-    const result = svc.votePoll(trip.id, poll!.id, user1.id, 0);
+    const result = await svc.votePoll(trip.id, poll!.id, user1.id, 0);
     expect(result.error).toBeUndefined();
     expect(result.poll).toBeDefined();
     expect(result.poll!.options[0].voters).toHaveLength(1);
   });
 
-  it('COLLAB-SVC-009: toggles vote off when voted again on same option', () => {
+  it('COLLAB-SVC-009: toggles vote off when voted again on same option', async () => {
     const { user1, trip } = setup();
-    const poll = svc.createPoll(trip.id, user1.id, { question: 'Q?', options: ['Yes', 'No'] });
+    const poll = await svc.createPoll(trip.id, user1.id, { question: 'Q?', options: ['Yes', 'No'] });
 
-    svc.votePoll(trip.id, poll!.id, user1.id, 0);
-    const result = svc.votePoll(trip.id, poll!.id, user1.id, 0);
+    await svc.votePoll(trip.id, poll!.id, user1.id, 0);
+    const result = await svc.votePoll(trip.id, poll!.id, user1.id, 0);
     expect(result.poll!.options[0].voters).toHaveLength(0);
   });
 });
@@ -202,23 +202,23 @@ describe('votePoll', () => {
 // ── listMessages with before cursor ──────────────────────────────────────────
 
 describe('listMessages', () => {
-  it('COLLAB-SVC-010: returns all messages when no before cursor', () => {
+  it('COLLAB-SVC-010: returns all messages when no before cursor', async () => {
     const { user1, trip } = setup();
-    svc.createMessage(trip.id, user1.id, 'Hello');
-    svc.createMessage(trip.id, user1.id, 'World');
+    await svc.createMessage(trip.id, user1.id, 'Hello');
+    await svc.createMessage(trip.id, user1.id, 'World');
 
-    const msgs = svc.listMessages(trip.id);
+    const msgs = await svc.listMessages(trip.id);
     expect(msgs).toHaveLength(2);
   });
 
-  it('COLLAB-SVC-011: paginates using before cursor (returns messages with id < before)', () => {
+  it('COLLAB-SVC-011: paginates using before cursor (returns messages with id < before)', async () => {
     const { user1, trip } = setup();
-    svc.createMessage(trip.id, user1.id, 'First');
-    svc.createMessage(trip.id, user1.id, 'Second');
-    const r3 = svc.createMessage(trip.id, user1.id, 'Third');
+    await svc.createMessage(trip.id, user1.id, 'First');
+    await svc.createMessage(trip.id, user1.id, 'Second');
+    const r3 = await svc.createMessage(trip.id, user1.id, 'Third');
 
     const id3 = r3.message!.id;
-    const msgs = svc.listMessages(trip.id, id3);
+    const msgs = await svc.listMessages(trip.id, id3);
     expect(msgs.length).toBe(2);
     const texts = msgs.map(m => m.text);
     expect(texts).toContain('First');
@@ -226,63 +226,63 @@ describe('listMessages', () => {
     expect(texts).not.toContain('Third');
   });
 
-  it('COLLAB-SVC-012: returns messages in ascending order (reversed after DESC query)', () => {
+  it('COLLAB-SVC-012: returns messages in ascending order (reversed after DESC query)', async () => {
     const { user1, trip } = setup();
-    svc.createMessage(trip.id, user1.id, 'A');
-    svc.createMessage(trip.id, user1.id, 'B');
-    svc.createMessage(trip.id, user1.id, 'C');
+    await svc.createMessage(trip.id, user1.id, 'A');
+    await svc.createMessage(trip.id, user1.id, 'B');
+    await svc.createMessage(trip.id, user1.id, 'C');
 
-    const msgs = svc.listMessages(trip.id);
+    const msgs = await svc.listMessages(trip.id);
     expect(msgs[0].text).toBe('A');
     expect(msgs[2].text).toBe('C');
   });
 
-  it('COLLAB-SVC-013a: blanks the text of a deleted message but keeps the flag', () => {
+  it('COLLAB-SVC-013a: blanks the text of a deleted message but keeps the flag', async () => {
     const { user1, trip } = setup();
-    const r = svc.createMessage(trip.id, user1.id, 'Secret plans');
-    svc.deleteMessage(trip.id, r.message!.id, user1.id);
+    const r = await svc.createMessage(trip.id, user1.id, 'Secret plans');
+    await svc.deleteMessage(trip.id, r.message!.id, user1.id);
 
-    const msgs = svc.listMessages(trip.id);
+    const msgs = await svc.listMessages(trip.id);
     expect(msgs).toHaveLength(1);
     expect(msgs[0].text).toBe('');
     expect(msgs[0].deleted).toBe(1);
   });
 
-  it('COLLAB-SVC-013b: blanks reply_text when the quoted message was deleted', () => {
+  it('COLLAB-SVC-013b: blanks reply_text when the quoted message was deleted', async () => {
     const { user1, trip } = setup();
-    const original = svc.createMessage(trip.id, user1.id, 'Original secret');
-    svc.createMessage(trip.id, user1.id, 'Quoting it', original.message!.id);
-    svc.deleteMessage(trip.id, original.message!.id, user1.id);
+    const original = await svc.createMessage(trip.id, user1.id, 'Original secret');
+    await svc.createMessage(trip.id, user1.id, 'Quoting it', original.message!.id);
+    await svc.deleteMessage(trip.id, original.message!.id, user1.id);
 
-    const msgs = svc.listMessages(trip.id);
+    const msgs = await svc.listMessages(trip.id);
     const reply = msgs.find(m => m.text === 'Quoting it')!;
     expect(reply.reply_text).toBe('');
   });
 
-  it('COLLAB-SVC-013c: a deleted message cannot be quoted, and the create path blanks too', () => {
+  it('COLLAB-SVC-013c: a deleted message cannot be quoted, and the create path blanks too', async () => {
     const { user1, trip } = setup();
-    const original = svc.createMessage(trip.id, user1.id, 'Original secret');
-    svc.deleteMessage(trip.id, original.message!.id, user1.id);
+    const original = await svc.createMessage(trip.id, user1.id, 'Original secret');
+    await svc.deleteMessage(trip.id, original.message!.id, user1.id);
 
     // Replying to something that is no longer there is refused outright.
-    expect(svc.createMessage(trip.id, user1.id, 'Too late', original.message!.id)).toEqual({ error: 'reply_not_found' });
+    expect(await svc.createMessage(trip.id, user1.id, 'Too late', original.message!.id)).toEqual({ error: 'reply_not_found' });
 
     // And the row the create path returns carries the same blanking listMessages
     // does, for a message quoted before the original was deleted.
-    const second = svc.createMessage(trip.id, user1.id, 'Another secret');
-    const quoting = svc.createMessage(trip.id, user1.id, 'Quoting it', second.message!.id);
+    const second = await svc.createMessage(trip.id, user1.id, 'Another secret');
+    const quoting = await svc.createMessage(trip.id, user1.id, 'Quoting it', second.message!.id);
     expect(quoting.message!.reply_text).toBe('Another secret');
-    svc.deleteMessage(trip.id, second.message!.id, user1.id);
-    expect(svc.listMessages(trip.id).find(m => m.text === 'Quoting it')!.reply_text).toBe('');
+    await svc.deleteMessage(trip.id, second.message!.id, user1.id);
+    expect((await svc.listMessages(trip.id)).find(m => m.text === 'Quoting it')!.reply_text).toBe('');
   });
 
-  it('COLLAB-SVC-013: includes reactions grouped by emoji', () => {
+  it('COLLAB-SVC-013: includes reactions grouped by emoji', async () => {
     const { user1, trip } = setup();
-    const r = svc.createMessage(trip.id, user1.id, 'React me');
+    const r = await svc.createMessage(trip.id, user1.id, 'React me');
     const msgId = r.message!.id;
     testDb.prepare('INSERT INTO collab_message_reactions (message_id, user_id, emoji) VALUES (?, ?, ?)').run(msgId, user1.id, '👍');
 
-    const msgs = svc.listMessages(trip.id);
+    const msgs = await svc.listMessages(trip.id);
     expect(msgs[0].reactions).toBeDefined();
     expect(msgs[0].reactions).toHaveLength(1);
     expect(msgs[0].reactions[0].emoji).toBe('👍');
@@ -292,16 +292,16 @@ describe('listMessages', () => {
 // ── createMessage with invalid replyTo ───────────────────────────────────────
 
 describe('createMessage', () => {
-  it('COLLAB-SVC-014: returns error when replyTo message does not exist', () => {
+  it('COLLAB-SVC-014: returns error when replyTo message does not exist', async () => {
     const { user1, trip } = setup();
-    const result = svc.createMessage(trip.id, user1.id, 'Reply to nothing', 9999);
+    const result = await svc.createMessage(trip.id, user1.id, 'Reply to nothing', 9999);
     expect(result.error).toBe('reply_not_found');
   });
 
-  it('COLLAB-SVC-015: creates message with valid replyTo', () => {
+  it('COLLAB-SVC-015: creates message with valid replyTo', async () => {
     const { user1, trip } = setup();
-    const r1 = svc.createMessage(trip.id, user1.id, 'Original');
-    const r2 = svc.createMessage(trip.id, user1.id, 'Reply', r1.message!.id);
+    const r1 = await svc.createMessage(trip.id, user1.id, 'Original');
+    const r2 = await svc.createMessage(trip.id, user1.id, 'Reply', r1.message!.id);
     expect(r2.error).toBeUndefined();
     expect(r2.message!.reply_to).toBe(r1.message!.id);
   });
@@ -310,25 +310,25 @@ describe('createMessage', () => {
 // ── deleteMessage ownership check ─────────────────────────────────────────────
 
 describe('deleteMessage', () => {
-  it('COLLAB-SVC-016: returns error "not_owner" when user does not own message', () => {
+  it('COLLAB-SVC-016: returns error "not_owner" when user does not own message', async () => {
     const { user1, user2, trip } = setup();
-    const r = svc.createMessage(trip.id, user1.id, 'My message');
+    const r = await svc.createMessage(trip.id, user1.id, 'My message');
 
-    const result = svc.deleteMessage(trip.id, r.message!.id, user2.id);
+    const result = await svc.deleteMessage(trip.id, r.message!.id, user2.id);
     expect(result.error).toBe('not_owner');
   });
 
-  it('COLLAB-SVC-017: returns error "not_found" for nonexistent message', () => {
+  it('COLLAB-SVC-017: returns error "not_found" for nonexistent message', async () => {
     const { user1, trip } = setup();
-    const result = svc.deleteMessage(trip.id, 9999, user1.id);
+    const result = await svc.deleteMessage(trip.id, 9999, user1.id);
     expect(result.error).toBe('not_found');
   });
 
-  it('COLLAB-SVC-018: marks message as deleted when owner deletes it', () => {
+  it('COLLAB-SVC-018: marks message as deleted when owner deletes it', async () => {
     const { user1, trip } = setup();
-    const r = svc.createMessage(trip.id, user1.id, 'Delete me');
+    const r = await svc.createMessage(trip.id, user1.id, 'Delete me');
 
-    const result = svc.deleteMessage(trip.id, r.message!.id, user1.id);
+    const result = await svc.deleteMessage(trip.id, r.message!.id, user1.id);
     expect(result.error).toBeUndefined();
 
     const row = testDb.prepare('SELECT deleted FROM collab_messages WHERE id = ?').get(r.message!.id) as any;
@@ -339,11 +339,11 @@ describe('deleteMessage', () => {
 // ── updateNote partial fields ─────────────────────────────────────────────────
 
 describe('updateNote', () => {
-  it('COLLAB-SVC-019: updates only title when other fields are undefined', () => {
+  it('COLLAB-SVC-019: updates only title when other fields are undefined', async () => {
     const { user1, trip } = setup();
-    const note = svc.createNote(trip.id, user1.id, { title: 'Original', content: 'Some content', website: 'https://example.com' });
+    const note = await svc.createNote(trip.id, user1.id, { title: 'Original', content: 'Some content', website: 'https://example.com' });
 
-    svc.updateNote(trip.id, note.id, { title: 'Updated' });
+    await svc.updateNote(trip.id, note.id, { title: 'Updated' });
 
     const updated = testDb.prepare('SELECT * FROM collab_notes WHERE id = ?').get(note.id) as any;
     expect(updated.title).toBe('Updated');
@@ -351,47 +351,47 @@ describe('updateNote', () => {
     expect(updated.website).toBe('https://example.com'); // unchanged
   });
 
-  it('COLLAB-SVC-020: clears content when content is explicitly set to empty string', () => {
+  it('COLLAB-SVC-020: clears content when content is explicitly set to empty string', async () => {
     const { user1, trip } = setup();
-    const note = svc.createNote(trip.id, user1.id, { title: 'T', content: 'Old content' });
+    const note = await svc.createNote(trip.id, user1.id, { title: 'T', content: 'Old content' });
 
-    svc.updateNote(trip.id, note.id, { content: '' });
+    await svc.updateNote(trip.id, note.id, { content: '' });
 
     const updated = testDb.prepare('SELECT * FROM collab_notes WHERE id = ?').get(note.id) as any;
     expect(updated.content).toBe('');
   });
 
-  it('COLLAB-SVC-021: updates website when website is defined', () => {
+  it('COLLAB-SVC-021: updates website when website is defined', async () => {
     const { user1, trip } = setup();
-    const note = svc.createNote(trip.id, user1.id, { title: 'T' });
+    const note = await svc.createNote(trip.id, user1.id, { title: 'T' });
 
-    svc.updateNote(trip.id, note.id, { website: 'https://new.example.com' });
+    await svc.updateNote(trip.id, note.id, { website: 'https://new.example.com' });
 
     const updated = testDb.prepare('SELECT * FROM collab_notes WHERE id = ?').get(note.id) as any;
     expect(updated.website).toBe('https://new.example.com');
   });
 
-  it('COLLAB-SVC-022: clears website when website is explicitly set to empty string', () => {
+  it('COLLAB-SVC-022: clears website when website is explicitly set to empty string', async () => {
     const { user1, trip } = setup();
-    const note = svc.createNote(trip.id, user1.id, { title: 'T', website: 'https://old.com' });
+    const note = await svc.createNote(trip.id, user1.id, { title: 'T', website: 'https://old.com' });
 
-    svc.updateNote(trip.id, note.id, { website: '' });
+    await svc.updateNote(trip.id, note.id, { website: '' });
 
     const updated = testDb.prepare('SELECT * FROM collab_notes WHERE id = ?').get(note.id) as any;
     expect(updated.website).toBe('');
   });
 
-  it('COLLAB-SVC-023: returns null when note does not exist', () => {
+  it('COLLAB-SVC-023: returns null when note does not exist', async () => {
     const { trip } = setup();
-    const result = svc.updateNote(trip.id, 9999, { title: 'Ghost' });
+    const result = await svc.updateNote(trip.id, 9999, { title: 'Ghost' });
     expect(result).toBeNull();
   });
 
-  it('COLLAB-SVC-024: updates pinned flag', () => {
+  it('COLLAB-SVC-024: updates pinned flag', async () => {
     const { user1, trip } = setup();
-    const note = svc.createNote(trip.id, user1.id, { title: 'T', pinned: false });
+    const note = await svc.createNote(trip.id, user1.id, { title: 'T', pinned: false });
 
-    svc.updateNote(trip.id, note.id, { pinned: true });
+    await svc.updateNote(trip.id, note.id, { pinned: true });
 
     const updated = testDb.prepare('SELECT * FROM collab_notes WHERE id = ?').get(note.id) as any;
     expect(updated.pinned).toBe(1);
@@ -689,9 +689,9 @@ describe('hardening', () => {
   it('COLLAB-SVC-034: votePoll switch is atomic — prior vote survives a failed INSERT', async () => {
     const { user1, trip } = setup();
     const dbs = new DatabaseService(testDb);
-    const failing = new CollabService(dbs, new PermissionsService(dbs, await createTestUnitOfWork(dbs.connection)), new RealtimeService(), notificationsStub(), collabFx.storage, new RateLimitService());
-    const poll = failing.createPoll(trip.id, user1.id, { question: 'Q?', options: ['A', 'B'] });
-    failing.votePoll(trip.id, poll!.id, user1.id, 0);
+    const failing = new CollabService(dbs, new PermissionsService(dbs, await createTestUnitOfWork(dbs.connection)), new RealtimeService(), notificationsStub(), collabFx.storage, new RateLimitService(), await createTestUnitOfWork(dbs.connection));
+    const poll = await failing.createPoll(trip.id, user1.id, { question: 'Q?', options: ['A', 'B'] });
+    await failing.votePoll(trip.id, poll!.id, user1.id, 0);
 
     const realRun = dbs.run.bind(dbs);
     const spy = vi.spyOn(dbs, 'run').mockImplementation((sql: string, ...params: unknown[]) => {
@@ -700,7 +700,7 @@ describe('hardening', () => {
     });
     // Single-choice switch: DELETE prior votes, then the INSERT fails — the
     // transaction must roll the DELETE back too.
-    expect(() => failing.votePoll(trip.id, poll!.id, user1.id, 1)).toThrow('boom');
+    await expect(failing.votePoll(trip.id, poll!.id, user1.id, 1)).rejects.toThrow('boom');
     spy.mockRestore();
 
     const votes = testDb.prepare('SELECT option_index FROM collab_poll_votes WHERE poll_id = ?').all(poll!.id) as { option_index: number }[];
@@ -710,8 +710,8 @@ describe('hardening', () => {
   it('COLLAB-SVC-035: deleteNote is atomic — trip_files rows survive a failed note DELETE', async () => {
     const { user1, trip } = setup();
     const dbs = new DatabaseService(testDb);
-    const failing = new CollabService(dbs, new PermissionsService(dbs, await createTestUnitOfWork(dbs.connection)), new RealtimeService(), notificationsStub(), collabFx.storage, new RateLimitService());
-    const note = failing.createNote(trip.id, user1.id, { title: 'With file' });
+    const failing = new CollabService(dbs, new PermissionsService(dbs, await createTestUnitOfWork(dbs.connection)), new RealtimeService(), notificationsStub(), collabFx.storage, new RateLimitService(), await createTestUnitOfWork(dbs.connection));
+    const note = await failing.createNote(trip.id, user1.id, { title: 'With file' });
     testDb.prepare('INSERT INTO trip_files (trip_id, note_id, filename, original_name) VALUES (?, ?, ?, ?)')
       .run(trip.id, note.id, 'files/a.pdf', 'a.pdf');
 
@@ -731,8 +731,8 @@ describe('hardening', () => {
     const { user1, trip } = setup();
     const dbs = new DatabaseService(testDb);
     const failingStorage = { delete: vi.fn().mockRejectedValue(new Error('EACCES')) };
-    const failing = new CollabService(dbs, new PermissionsService(dbs, await createTestUnitOfWork(dbs.connection)), new RealtimeService(), notificationsStub(), failingStorage as unknown as import('../../../src/nest/storage/storage.service').StorageService, new RateLimitService());
-    const note = failing.createNote(trip.id, user1.id, { title: 'Sticky file' });
+    const failing = new CollabService(dbs, new PermissionsService(dbs, await createTestUnitOfWork(dbs.connection)), new RealtimeService(), notificationsStub(), failingStorage as unknown as import('../../../src/nest/storage/storage.service').StorageService, new RateLimitService(), await createTestUnitOfWork(dbs.connection));
+    const note = await failing.createNote(trip.id, user1.id, { title: 'Sticky file' });
     testDb.prepare('INSERT INTO trip_files (trip_id, note_id, filename, original_name) VALUES (?, ?, ?, ?)')
       .run(trip.id, note.id, 'stuck.pdf', 'stuck.pdf');
     const fileId = (testDb.prepare('SELECT id FROM trip_files WHERE note_id = ?').get(note.id) as { id: number }).id;
@@ -746,22 +746,22 @@ describe('hardening', () => {
     expect(testDb.prepare('SELECT COUNT(*) as c FROM collab_notes WHERE id = ?').get(note.id)).toEqual({ c: 0 });
   });
 
-  it('COLLAB-SVC-036: getFormattedNoteById is trip-scoped and null-safe', () => {
+  it('COLLAB-SVC-036: getFormattedNoteById is trip-scoped and null-safe', async () => {
     const { user1, trip } = setup();
     const otherTrip = createTrip(testDb, user1.id);
-    const note = svc.createNote(trip.id, user1.id, { title: 'Scoped' });
+    const note = await svc.createNote(trip.id, user1.id, { title: 'Scoped' });
 
-    expect(svc.getFormattedNoteById(trip.id, note.id)!.title).toBe('Scoped');
-    expect(svc.getFormattedNoteById(otherTrip.id, note.id)).toBeNull();
-    expect(svc.getFormattedNoteById(trip.id, 9999)).toBeNull();
+    expect((await svc.getFormattedNoteById(trip.id, note.id))!.title).toBe('Scoped');
+    expect(await svc.getFormattedNoteById(otherTrip.id, note.id)).toBeNull();
+    expect(await svc.getFormattedNoteById(trip.id, 9999)).toBeNull();
   });
 
-  it('COLLAB-SVC-037: votePoll rejects a non-integer option index with "invalid_index"', () => {
+  it('COLLAB-SVC-037: votePoll rejects a non-integer option index with "invalid_index"', async () => {
     const { user1, trip } = setup();
-    const poll = svc.createPoll(trip.id, user1.id, { question: 'Q?', options: ['A', 'B'] });
+    const poll = await svc.createPoll(trip.id, user1.id, { question: 'Q?', options: ['A', 'B'] });
 
-    expect(svc.votePoll(trip.id, poll!.id, user1.id, '0' as unknown as number).error).toBe('invalid_index');
-    expect(svc.votePoll(trip.id, poll!.id, user1.id, 0.5).error).toBe('invalid_index');
+    expect((await svc.votePoll(trip.id, poll!.id, user1.id, '0' as unknown as number)).error).toBe('invalid_index');
+    expect((await svc.votePoll(trip.id, poll!.id, user1.id, 0.5)).error).toBe('invalid_index');
     expect(testDb.prepare('SELECT COUNT(*) as c FROM collab_poll_votes WHERE poll_id = ?').get(poll!.id)).toEqual({ c: 0 });
   });
 
