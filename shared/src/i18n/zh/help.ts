@@ -2600,6 +2600,297 @@ const help: TranslationStrings = {
   'help.guide.delete-booking.result': '卡片没了，对旅行中的所有人都是。预订没有撤销，所以这个问题就是最后一道关。',
   'help.guide.delete-booking.tip.1': '删除一条住宿预订，还会把它在日程计划里的那些夜取走，并移除关联到它的那笔支出。',
   'help.guide.delete-booking.tip.2': '附上过的单据仍留在这次旅行的“文件”栏里；走掉的只是它们与这条预订的关联。',
+
+  // ── Screen: trip-costs ────────────────────────────────────────────────────────────────
+  'help.ctx.trip-costs.title': '费用',
+  'help.ctx.trip-costs.summary':
+    '行程的钱：每一笔支出都是一条带日期的账目，谁垫的钱、谁该分摊，用的是收据上原本的货币；右栏则写明谁该付给谁，才能重新扯平。',
+  'help.ctx.trip-costs.bullet.1':
+    '顶部四张卡片：“你欠款”和“别人欠你”是你自己这一边的结算，“未结算金额”是已记录但还没有付款人的部分，“行程总支出”把一切加起来，下面带上“你的份额”和“你已支付”。',
+  'help.ctx.trip-costs.bullet.2': '右上角的“添加支出”打开编辑器；旁边的“结算”把所有未完成的转账一次全部记下。',
+  'help.ctx.trip-costs.bullet.3':
+    '账目按日期分组，最新的在前，那一天的合计显示在右侧。每一行带着作为彩色标签的分类、名称、付款人头像、备注和金额，当分摊让你多出或少出时，还会带上“你垫付了”或“你欠了”。',
+  'help.ctx.trip-costs.bullet.4':
+    '列表上方是“搜索支出…”、一个类别筛选、一个日期筛选、“全部”/“我支付的”/“别人欠我”开关和“导出 CSV”按钮。',
+  'help.ctx.trip-costs.bullet.5':
+    '右栏就是答案：“结算”列出谁付给谁，“余额”显示每位同行者的盈余或亏空，“最终花费”是这趟行程让他们每个人花了多少，“按分类”则是钱去了哪里。',
+  'help.ctx.trip-costs.bullet.6':
+    '已记录的付款在同一本账里占着自己的一行，旁边有“编辑”和“撤销”；支出则有一支铅笔和一个垃圾桶，而垃圾桶不问就直接删除。',
+  // add-expense
+  'help.guide.add-expense.title': '添加一笔支出',
+  'help.guide.add-expense.goal': '记下某样东西花了多少、谁付的钱、和谁一起分摊。',
+  'help.guide.add-expense.step.1': '点击“费用”标签页右上角的“添加支出”。编辑器打开，日期是今天，所有人已经在分摊里。',
+  'help.guide.add-expense.step.2':
+    '把这笔钱花在哪写进“这笔花在哪了？”，这是唯一必须填写的字段；把收据上的数字填进“总金额”。',
+  'help.guide.add-expense.step.3':
+    '“货币”和“日期”在金额下方。“货币”从行程自己的货币开始；改掉它，编辑器就会显示这笔金额折成行程货币是多少。“日期”从今天开始，账目按它把支出归到某一天下。',
+  'help.guide.add-expense.step.4':
+    '挑一个“分类”。一共十四个，并且不能更改：你挑的那个就是行里的彩色标签，也是“按分类”里的那根柱子。',
+  'help.guide.add-expense.step.5':
+    '在“谁支付的？”下面，挑出真正掏钱的那个人。“你”是预先选好的；“尚无人支付”只记下金额而不让任何人承担，“多人支付”把这笔账分给几个付款人。',
+  'help.guide.add-expense.step.6':
+    '“分摊”从“平均分摊”开始，所有人都包含在内，每个名字后面显示分到的份额。点击“添加支出”保存。',
+  'help.guide.add-expense.result': '这笔支出进了它那一天的账目，计入“行程总支出”，结算栏也重新算过了谁该付给谁。',
+  'help.guide.add-expense.tip.1':
+    '保持它打开时的样子：支出用行程的货币，日期是今天，在所有人之间平均分摊，真正必须填的只有名称和金额。',
+  'help.guide.add-expense.tip.2': '金额旁边的 ± 把支出变成退款。负的总额是把钱退回来而不是收走，分摊也反过来走。',
+  'help.guide.add-expense.tip.3':
+    '底部的“附加收据/发票”接受图片和 PDF。它们在你保存时上传，落进行程的“文件”里，列表中名称旁边会出现一个“收据”标记。',
+  // expense-payers
+  'help.guide.expense-payers.title': '说明这笔账是谁付的',
+  'help.guide.expense-payers.goal': '记下谁为一笔支出先垫了钱，这是结算算式的另一半。',
+  'help.guide.expense-payers.step.1':
+    '用行旁边的铅笔打开一笔支出，看“谁支付的？”。默认是“一人支付”：下拉框里写着掏钱的那一个人。',
+  'help.guide.expense-payers.step.2':
+    '那个下拉框的第一项“尚无人支付”只记下金额，不让任何人欠下什么。这笔支出仍然计入“行程总支出”。',
+  'help.guide.expense-payers.step.3':
+    '标签旁边的链接“多人支付”会为每位同行者打开一行。把付过钱的人加入，并填写每人各出了多少；这些金额必须加起来等于总额。',
+  'help.guide.expense-payers.step.4':
+    '没有人付过的支出会在行上标记“未完成”，并计入“未结算金额”卡片，那里正是已记录但未结清的开销汇集的地方。',
+  'help.guide.expense-payers.result': '谁付的钱决定谁被还钱，分摊决定谁该付钱，“余额”就是两者之差。',
+  'help.guide.expense-payers.tip.1':
+    '“谁支付的？”和“分摊”彼此独立：你可以为一顿自己没去的晚餐付钱，也可以被算进一顿自己没付钱的晚餐。',
+  'help.guide.expense-payers.tip.2':
+    '有几个付款人时，金额必须加起来等于总额。再加入一个人，其余的人会围着他重新排布；在它们还不相符时，编辑器会说付款人金额总和必须为总额，并拒绝保存。',
+  'help.guide.expense-payers.tip.3':
+    '移除一个付款人并不会移除这笔支出：金额仍留在“行程总支出”里，而这一行会变成“未完成”。',
+  // split-expense
+  'help.guide.split-expense.title': '在同行者之间分摊一笔账',
+  'help.guide.split-expense.goal': '决定谁为一笔支出买单：所有人平摊、按金额，或者照着收据一行一行来。',
+  'help.guide.split-expense.step.1':
+    '在支出编辑器里，“分摊”列出每一位同行者。点击一个名字就把他排除在这笔支出之外；被排除的同行者显示“不参与”，不必为它承担任何金额。',
+  'help.guide.split-expense.step.2':
+    '“平均分摊”是默认：每位被包含的同行者分到相同的份额，列表下方的那一行会说明分成几份、每份是多少。',
+  'help.guide.split-expense.step.3':
+    '“自定义金额”把这些份额换成金额输入框。填入每位同行者该承担的金额；下面那一行会一起计数，达到“分摊金额与总额相符”时变成绿色。不相符时它不会保存。',
+  'help.guide.split-expense.step.4':
+    '“按账单明细”把收据一行一行拆开：“添加项目”，然后每行填一个名称和一个价格，并在“分摊：”下面列出分担这一行的同行者。',
+  'help.guide.split-expense.step.5':
+    '明细下方的“每人份额”显示每位同行者最终该承担多少，而顶部的“总金额”由这些明细相加得出。点击“保存”。',
+  'help.guide.split-expense.result': '分摊是所有余额的根基。它随支出一起保存，之后可以修改而不牵动别的任何东西。',
+  'help.guide.split-expense.tip.1': '你排除掉的同行者显示“不参与”，仅在这一笔支出上不必承担；其余的人接过他的份额。',
+  'help.guide.split-expense.tip.2': '“平均分摊”精确到分：多出来的那一分会在支出之间轮转，所以不会总是同一个人来付。',
+  'help.guide.split-expense.tip.3': '“按账单明细”模式会自己把“总金额”加出来，并把该字段置灰：收据上的明细就是总额。',
+  // expense-currency
+  'help.guide.expense-currency.title': '用另一种货币录入支出',
+  'help.guide.expense-currency.goal': '照收据上真正写着的录入，让 TREK 替你守住汇率。',
+  'help.guide.expense-currency.step.1':
+    '打开“添加支出”，按收据上写的原样填写名称和金额，填那个数字本身，而不是换算过的结果。',
+  'help.guide.expense-currency.step.2':
+    '打开“货币”，挑出收据上的货币。列表里带着 TREK 认识的每一个代码，并且可以搜索：输入那三个字母。',
+  'help.guide.expense-currency.step.3':
+    '字段下方会出现一行，写明这笔金额此刻值多少，标着“实时汇率”。它只是预览，不是最终存下来的东西。',
+  'help.guide.expense-currency.step.4':
+    '点击“添加支出”。汇率就在此刻冻结：从此以后，这笔支出就值你录入那天它所值的数。',
+  'help.guide.expense-currency.step.5':
+    '在账目里，这一行在名称下面带着两个数字：你输入的金额、一个箭头，以及它折成行程货币后的数。上方的每一项合计、余额和结算用的都是第二个。',
+  'help.guide.expense-currency.result':
+    '这笔支出保留着你输入的金额和货币。账目把两者都显示出来，而行程的各项合计和余额仍保持行程的货币。',
+  'help.guide.expense-currency.tip.1':
+    '汇率在你保存的那一刻冻结，所以一笔已经结清的欠款不会因为下一周行情变动而重新翻起。只有改掉这笔支出的货币，才会冻结一个新的汇率。',
+  'help.guide.expense-currency.tip.2':
+    '“设置”里的“显示货币”只改变你读到的内容；存下来的金额从不挪动。留空时，每次行程都按它自己的货币显示。',
+  'help.guide.expense-currency.tip.3':
+    '行程货币本身在行程上，位于“编辑旅行”下面，需要“编辑旅行详情”的权限。更改它会把每一个冻结的汇率重新锚定，而不是把金额换算成另一种货币。',
+  // filter-costs
+  'help.guide.filter-costs.title': '找到一笔支出，或者某一天的开销',
+  'help.guide.filter-costs.goal': '把一本长长的账目收窄到你真正要找的那一部分。',
+  'help.guide.filter-costs.step.1': '在列表上方的“搜索支出…”里输入。它会随着你输入匹配支出的名称。',
+  'help.guide.filter-costs.step.2': '“所有类别”会展开十四个分类。挑一个，就只剩下那个分类的支出。',
+  'help.guide.filter-costs.step.3':
+    '“所有日期”列出每一个花过钱的日子。挑一个，就会有一条横幅取代日期标题，写着那一天、它包含多少笔支出以及它的合计。',
+  'help.guide.filter-costs.step.4':
+    '“全部”/“我支付的”/“别人欠我”开关是你自己这一边看到的账目：你为哪些掏了钱，又有哪些钱还没回到你手里。',
+  'help.guide.filter-costs.step.5': '行末的“导出 CSV”把每一笔支出写进一个文件，带上原始金额、它的货币和换算后的金额。',
+  'help.guide.filter-costs.result': '筛选可以叠加，日期分组也会用剩下内容的合计重新绘制。',
+  'help.guide.filter-costs.tip.1':
+    '已记录的付款没有名称也没有分类，所以搜索或类别筛选会把它们藏起来。日期筛选则把它们留着，归在付款被记下的那一天。',
+  'help.guide.filter-costs.tip.2': '“导出 CSV”永远导出每一笔支出，无论屏幕上筛选成什么样，一笔支出一行。',
+  // settle-up
+  'help.guide.settle-up.title': '算出谁该付给谁，并且结清',
+  'help.guide.settle-up.goal': '把一堆共同开销变成让所有人扯平所需的最少几笔转账，并在它们发生时记录下来。',
+  'help.guide.settle-up.step.1':
+    '右栏的“结算”卡片列出能让所有人扯平的转账：谁付给谁，以及多少。标题旁边的数字是还有几笔未完成。',
+  'help.guide.settle-up.step.2': '转账旁边的“结算”把它记为已完成。这条流向从卡片上消失，余额重新绘制。',
+  'help.guide.settle-up.step.3': '已记录的转账是账目里的一行，归在它发生的那一天下，标着“付款”，带着两位同行者和金额。',
+  'help.guide.settle-up.step.4': '在那一行旁边，铅笔可以更正一笔付款，“撤销”把它收回，转账就回到“结算”卡片上。',
+  'help.guide.settle-up.step.5':
+    '卡片标题处的“添加付款”用来记录一笔没有按建议进行的转账。挑选“付款方”和“收款方”、金额、它的货币以及它发生的日期。',
+  'help.guide.settle-up.step.6':
+    '屏幕顶部标题栏里的“结算”把所有未完成的转账一次全部记下，就像一群人在行程结束时一起把账清干净。',
+  'help.guide.settle-up.result':
+    '每一笔记录下来的转账都是账目里的一行，也是“结算”卡片上少掉的一条。当卡片写着“大家已两清”，这趟行程就付清了。',
+  'help.guide.settle-up.tip.1': '卡片显示的是最少的转账，而不是每一笔欠款：三个人绕成一圈互相欠着，会收成一两笔付款。',
+  'help.guide.settle-up.tip.2': '“结算”记录的是一笔转账，它并不搬动钱。用你惯用的方式把钱送出去，然后再点它。',
+  'help.guide.settle-up.tip.3':
+    '一笔付款可以用任何货币进行，所以用欧元还一笔日元的欠款很正常：对话框有自己的货币选择器，也会把那个汇率冻结下来。',
+  // final-budget
+  'help.guide.final-budget.title': '看看这趟行程让每位同行者花了多少',
+  'help.guide.final-budget.goal': '读账目里按人来的那一面：今天的余额，以及每个人的真实花费。',
+  'help.guide.final-budget.step.1':
+    '“余额”显示每位同行者的位置：如果行程欠他，就是一条向右的绿色条；如果是他欠行程，就是一条向左的红色条，金额写在名字旁边。',
+  'help.guide.final-budget.step.2':
+    '它下面的“最终花费”回答的是另一个问题：不是此刻谁欠着什么，而是等一切都还清之后，这趟行程让每位同行者花了多少。',
+  'help.guide.final-budget.step.3': '点击一个名字，就能展开这笔算式：“已支付的支出”，其下是“还款净额”和“待还款项”。',
+  'help.guide.final-budget.step.4':
+    '每一行下面坐着构成它的那些条目：那位同行者付过的支出、已经记录的转账以及仍然未完成的转账。它们加起来正好等于上面那一行。',
+  'help.guide.final-budget.result':
+    '“余额”是今天谁多出谁少出；“最终花费”是等一切都还清之后，这趟行程最终让你们每个人花了多少。',
+  'help.guide.final-budget.tip.1': '记录一笔付款不会改变任何人的最终花费。它只是把一笔金额从待还款项挪到还款净额。',
+  'help.guide.final-budget.tip.2': '没有付款人的支出不会进入这两张卡片，正如它也不会进入结算建议。',
+  // expense-from-booking
+  'help.guide.expense-from-booking.title': '把一次预订变成一笔支出',
+  'help.guide.expense-from-booking.goal': '把一趟航班、一家酒店或一个地点真正花掉的钱，附到它所属的那条记录上。',
+  'help.guide.expense-from-booking.step.1': '在“交通”或“预订”标签页打开该预订，点击它的铅笔。',
+  'help.guide.expense-from-booking.step.2':
+    '滚动到表单底部的“费用”区块。在还没有任何关联时，它会提供“创建支出”，并说明会先保存预订。',
+  'help.guide.expense-from-booking.step.3':
+    '点击“创建支出”。预订被保存，表单关闭，费用编辑器随即打开，预订的标题作为名称，它的类型也已经匹配到了一个分类。',
+  'help.guide.expense-from-booking.step.4':
+    '像填任何一笔支出那样填好金额、谁付的钱和分摊，然后保存。此时再打开该预订，就能在“关联支出”下看到它，旁边有铅笔可以编辑，有垃圾桶可以移除。',
+  'help.guide.expense-from-booking.result':
+    '预订带上了它的花费，而这笔支出就是“费用”标签页上一条普通的行，和别的支出一样有付款人、分摊和货币。',
+  'help.guide.expense-from-booking.tip.1':
+    '删除预订会连同它关联的支出一起删除。预订的“费用”区块里的“移除关联支出”则相反：支出没了，预订还在。',
+  'help.guide.expense-from-booking.tip.2': '地点的表单里有同样的区块，其中的“创建支出”会先保存地点。',
+
+  // ── Screen: trip-transports ───────────────────────────────────────────────────────────
+  'help.ctx.trip-transports.title': '交通',
+  'help.ctx.trip-transports.summary':
+    '把你在各个地点之间送来送去的一切：航班、火车、公交车、汽车、出租车、自行车、邮轮、渡轮，以及 TREK 替你查到的公共交通线路。这个标签页是它们的清单；它们也在计划上创建和查看，并画在地图上。',
+  'help.ctx.trip-transports.bullet.1':
+    '标签页里只有交通。住宿、餐厅、活动和门票在“预订”里，所以同一条记录永远不会出现两次。',
+  'help.ctx.trip-transports.bullet.2':
+    '工具栏在“全部”下统计全部数量，并给每个用到的类型一个带自己计数的筛选块：“航班”“火车”“汽车”“公共交通”。右侧的“交通”手动添加一条。',
+  'help.ctx.trip-transports.bullet.3':
+    '卡片分成三组，每组都能从标题折叠：搜索规划出的线路放在“自动公共交通”，然后是“待确认”，然后是“已确认”。',
+  'help.ctx.trip-transports.bullet.4':
+    '一张卡片带着状态、类型、它跨越的日子、时间、“预订码”、路线，以及“航空公司”和“航班号”，或者“车次”“站台”“座位”。铅笔打开它，垃圾桶在一次询问之后删除它。',
+  'help.ctx.trip-transports.bullet.5':
+    '交通也在计划上创建：每个日期标题都有一个“添加交通”的 + 和一个“公共交通”的有轨电车按钮，而两个地点之间的行程时间连接线会为这一段打开同一个搜索。',
+  'help.ctx.trip-transports.bullet.6':
+    '两端都设好的交通会在地图上画出一条线。日程里它那一行上的路线图标打开这条线，而日期上方工具栏里的“显示所有预订路线”翻转整趟旅行。',
+  // transports-list
+  'help.guide.transports-list.title': '读懂“交通”标签页',
+  'help.guide.transports-list.goal': '在你改动任何东西之前，先知道清单在告诉你什么。',
+  'help.guide.transports-list.step.1': '“交通”是旅行的第二个标签页。里面只有交通：酒店、餐厅、活动和门票在“预订”里。',
+  'help.guide.transports-list.step.2':
+    '工具栏在“全部”下统计每一条交通，并给每个用到的类型一个带自己计数的筛选块。点击一个筛选块只保留那个类型，再点一次就放开。多个筛选块可以同时打开，“全部”把它们清空。',
+  'help.guide.transports-list.step.3':
+    '“自动公共交通”自成一组，是公共交通搜索规划出的线路。“待确认”和“已确认”装着所有手动录入的内容。标题旁边的箭头把一组折叠起来。',
+  'help.guide.transports-list.step.4':
+    '一张卡片什么都说了：带“待确认”或“已确认”的状态圆点、类型、它跨越的日子和日期、时间、“预订码”、路线，以及“航空公司”和“航班号”，或者“车次”“站台”“座位”。',
+  'help.guide.transports-list.step.5': '铅笔打开交通进行编辑，垃圾桶在一次点名要删什么的询问之后把它删掉。',
+  'help.guide.transports-list.result': '清单收窄到你要找的东西，每张卡片一眼就说明这趟行程订没订上。',
+  'help.guide.transports-list.tip.1':
+    '筛选块和折叠起来的分组按每趟旅行分别记住，所以标签页会照你离开时的样子重新打开。',
+  'help.guide.transports-list.tip.2':
+    '只有当服务器能读取预订确认件、并且连接了一个 AirTrail 实例时，“从文件导入”和 AirTrail 才会和“交通”一起出现在工具栏里。没有它们，清单就靠手动录入和公共交通搜索来填。',
+  // add-transport
+  'help.guide.add-transport.title': '把一段交通加到某一天',
+  'help.guide.add-transport.goal': '把从一个地点带你到下一个地点的行程，放进它发生的那一天。',
+  'help.guide.add-transport.step.1':
+    '每个日期标题右侧有四个小按钮。点击那个提示写着“添加交通”的 +。表单打开时，“日期”已经设成了那一天。',
+  'help.guide.add-transport.step.2':
+    '“预订类型”选你要坐什么：“航班”“火车”“公交车”“汽车”“出租车”“自行车”“邮轮”“渡轮”或“其他”。表单随之变化。航班在每一段上要一个机场，火车要一串车站，汽车用的是“取车”和“还车”的说法以及“沿途停靠点”。',
+  'help.guide.add-transport.step.3':
+    '“标题”是唯一必须填的字段；没有它，“添加”一直是灰的。写上你在站台信息牌上能认出来的东西。',
+  'help.guide.add-transport.step.4':
+    '“出发”和“到达”搜索车站、港口或地址。至少输入三个字母，再从列表里选一个结果。只是打上去的名字不带坐标，因此在地图上什么也画不出来。',
+  'help.guide.add-transport.step.5':
+    '“日期”和“开始时间”说明它什么时候走，“结束日期”和“结束时间”说明它什么时候结束；第二天才到的行程在那一头取第二天。“预订码”、带“待确认”或“已确认”的“状态”以及“备注”都是可选的。',
+  'help.guide.add-transport.step.6': '点击“添加”。',
+  'help.guide.add-transport.result':
+    '这段交通成为那一天的一行，按它的时间排在各地点之间，同时在“交通”标签页里成为“待确认”或“已确认”下的一张卡片。',
+  'help.guide.add-transport.tip.1':
+    '这一行落在它的开始时间决定的位置，也就是最后一个开始得更早的地点之后。它的拖动柄能把它拖到当天任何别的位置，或者拖到另一天。',
+  'help.guide.add-transport.tip.2':
+    '“文件”下的“附加文件”接住车票，“费用”下的“创建支出”保存这条预订，并为票价打开“费用”编辑器。',
+  'help.guide.add-transport.tip.3':
+    '“出行人”标出谁在这趟行程上。只要有一条交通带了出行人，标签页的工具栏就长出他们的头像，并按他们筛选清单。',
+  // plan-transit
+  'help.guide.plan-transit.title': '规划一条公共交通线路',
+  'help.guide.plan-transit.goal': '让 TREK 查出某一天两点之间真实的火车和公交，把你选中的那一条放进计划。',
+  'help.guide.plan-transit.step.1': '在日期标题里点击有轨电车按钮，“公共交通”。搜索为那一天打开。',
+  'help.guide.plan-transit.step.2':
+    '“出发地”和“目的地”接受一个站点或车站。框还空着时，会先给出当天自己的地点；输入两个字母则改为搜索时刻表里的车站。两个框之间的“交换”把线路掉头。',
+  'help.guide.plan-transit.step.3':
+    '“出发”或“到达”加上一个时间说明你想什么时候走，“最佳路线”“减少换乘”或“减少步行”说明结果该怎么排序。',
+  'help.guide.plan-transit.step.4':
+    '下面的筛选块说明可以用哪些方式：“火车”“地铁”“有轨电车”“公交车”“渡轮”和“缆车”。关掉一个就把它排除在外，至少要留一个开着。然后点击“搜索”。',
+  'help.guide.plan-transit.step.5':
+    '每个结果给出发车和到达时间、要多久、换乘几次、步行多少，以及各条线路各自的颜色。点击其中一个可以一站一站展开，连站台和线路之间的步行都在。',
+  'help.guide.plan-transit.step.6': '点击“添加到当天”。',
+  'help.guide.plan-transit.result':
+    '这条线路成为那一天的一行，带着它的线路、换乘和步行时间，同时在“交通”标签页里成为“自动公共交通”下的一张卡片。',
+  'help.guide.plan-transit.tip.1':
+    '线路来自 Transitous，一个建立在公开时刻表数据之上的免费社区服务：不用密钥，不用账号。管理员可以把搜索改指向 Google。',
+  'help.guide.plan-transit.tip.2':
+    '什么也没找到？数据源只覆盖一个区域和一段时期。换个时间试试，多打开几种方式，或者选一个车站而不是地点本身。提示信息会写出回应的那个服务的名字。',
+  'help.guide.plan-transit.tip.3':
+    '同一个搜索也能为单独一段打开：点击两个地点之间的行程时间连接线，选“公共交通”。“出发地”“目的地”和出发时间都已经替你填好。',
+  // change-transit-route
+  'help.guide.change-transit-route.title': '打开并更改一条规划好的线路',
+  'help.guide.change-transit-route.goal': '一站一站地读这条线路，给它改名，或者重新查一次路线。',
+  'help.guide.change-transit-route.step.1': '在“交通”标签页里，规划好的线路在“自动公共交通”下面。点击卡片。',
+  'help.guide.change-transit-route.step.2':
+    '“时长”“换乘”和“步行”在最上面。它们下面的“行程”一站一站地走完这条线路，连站台和线路之间的步行都在。',
+  'help.guide.change-transit-route.step.3': '“更改路线”重新跑一次搜索，这条线路的两端和它的日期都已经填好。',
+  'help.guide.change-transit-route.step.4':
+    '选另一条线路并点击“添加到当天”，它就顶替旧的那条。而“更改路线”旁边的“编辑详情”打开的是普通的交通表单，“预订码”、“状态”、出行人和文件都在那里。',
+  'help.guide.change-transit-route.result': '这段行程带上了新的行程安排，它在“交通”标签页里的卡片显示新的线路和时间。',
+  'help.guide.change-transit-route.tip.1':
+    '行程的标题只是文字：旁边的铅笔给它改名，不会动到路线。下面的“备注”接受 markdown，并有“编辑”和“预览”两个标签。',
+  'help.guide.change-transit-route.tip.2': '行程底部的“删除”把这条线路从这趟旅行里拿走；那一天仍然保留它的地点。',
+  // leg-travel-mode
+  'help.guide.leg-travel-mode.title': '更改某一段的出行方式',
+  'help.guide.leg-travel-mode.goal': '在其余路段都开车的一天里，把其中一段改成步行，或者把那一段交给公共交通搜索。',
+  'help.guide.leg-travel-mode.step.1':
+    '地点之间的连接线只有在当天的路线打开之后才出现。点击这一天把它展开，然后点它地点下方的“路线”。',
+  'help.guide.leg-travel-mode.step.2':
+    '每条连接线说明那一段的行程时间和距离，并带上算路时所用方式的图标：开车是汽车，步行是脚。',
+  'help.guide.leg-travel-mode.step.3': '点击连接线。菜单提供“驾车”和“步行”、“公共交通”，以及“使用当日默认”。',
+  'help.guide.leg-travel-mode.step.4': '选“步行”。只有这一段会变；当天其余部分保留自己的方式。',
+  'help.guide.leg-travel-mode.result': '这一段显示脚的图标和它的步行时间，当天其他各段保留当天的方式。',
+  'help.guide.leg-travel-mode.tip.1':
+    '方式属于路段，不属于当天：整天的“驾车”和“步行”按钮从不覆盖你手动设过的路段。“使用当日默认”把这一段还给它们。',
+  'help.guide.leg-travel-mode.tip.2': '同一个菜单里的“公共交通”正好为这一段打开线路搜索，两端和出发时间都已经填好。',
+  'help.guide.leg-travel-mode.tip.3':
+    '时间来自一个跑在真实道路和步道上的公共路径服务。它算不出来的路段保留直线，并且不显示时间。',
+  // edit-transport
+  'help.guide.edit-transport.title': '更改或删除一段交通',
+  'help.guide.edit-transport.goal': '改一个时间、一个站台或一个预订码，或者把这趟交通从旅行里去掉。',
+  'help.guide.edit-transport.step.1': '在日程里，一段交通是地点之间一条带颜色的行。点击它。',
+  'help.guide.edit-transport.step.2':
+    '表单就是创建它的那一个，标题栏写着“编辑交通”。什么都能改：类型、路线、日期和时间、“预订码”、“状态”。',
+  'help.guide.edit-transport.step.3':
+    '航班的路线是一串机场，火车的路线是一串车站。“添加经停”在中间再放一个，每一段都保留自己的时间和自己的航班号或车次。',
+  'help.guide.edit-transport.step.4':
+    '点击“更新”。要把这段交通彻底移除，用它在“交通”标签页那张卡片上的垃圾桶，并确认。',
+  'help.guide.edit-transport.result':
+    '改动在这段交通出现的每个地方都会显示：“交通”标签页、它所在的那一天，以及它在地图上的线。',
+  'help.guide.edit-transport.tip.1':
+    '同一个表单从两边都能打开：“交通”标签页卡片上的铅笔，和日程里这段交通自己的行。规划好的公共交通线路是例外：它的行打开的是行程视图，那里的“编辑详情”才通向这个表单。',
+  'help.guide.edit-transport.tip.2': '把一段交通挪到另一天根本不需要表单：把它的行从一张日期卡片拖到下一张。',
+  // transport-on-map
+  'help.guide.transport-on-map.title': '把一段交通画到地图上',
+  'help.guide.transport-on-map.goal': '看看一次航班、一段驾车或一条线路实际走的是哪里。',
+  'help.guide.transport-on-map.step.1':
+    '两端都设好的交通，会在日程里它那一行上带一个小小的路线图标。点击它，它的标签就变成“隐藏预订路线”。',
+  'help.guide.transport-on-map.step.2': '路线画在地图上，两端各有一个带着这段交通图标的胶囊形标记。',
+  'help.guide.transport-on-map.step.3':
+    '点击端点标记，不用离开地图就能读到这条预订：时间、“航空公司”和“航班号”、“预订码”以及备注。“关闭”把这张卡片收起来。',
+  'help.guide.transport-on-map.step.4':
+    '日期上方工具栏里的路线图标一次处理整趟旅行：“显示所有预订路线”，以及用来再次清空的“隐藏所有预订路线”。',
+  'help.guide.transport-on-map.step.5':
+    '规划好的公共交通线路没有自己的图标。它是靠当天的“路线”开关画出来的，所以只要那一天的路线还开着，“隐藏所有预订路线”就清不掉它。',
+  'help.guide.transport-on-map.result': '各条路线带着两端的标记留在地图上，直到你再次把它们关掉。',
+  'help.guide.transport-on-map.tip.1':
+    '航班、邮轮和渡轮画成一条曲线，汽车、公交车、出租车和自行车沿着真实道路走，火车或规划好的线路则穿过它停靠的各个车站。',
+  'help.guide.transport-on-map.tip.2':
+    '“已确认”的预订是实线，“待确认”的是虚线。“预订路线标签”这个设置会把机场代码或车站名称印进端点标记里。',
+  'help.guide.transport-on-map.tip.3':
+    '“显示所有预订路线”是重新来过，而不是叠一层：它会丢掉单个图标设过的状态，所以按两次之后，留给你的要么是全开，要么是全关。',
 };
 
 export default help;

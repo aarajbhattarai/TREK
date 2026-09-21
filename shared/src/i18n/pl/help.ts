@@ -3203,6 +3203,342 @@ const help: TranslationStrings = {
     'Usunięcie rezerwacji zakwaterowania zabiera także jego noce z planu dnia i usuwa wydatek, który był z nim powiązany.',
   'help.guide.delete-booking.tip.2':
     'Dokumenty, które były dołączone, zostają w zakładce Pliki podróży; odchodzi tylko ich powiązanie z rezerwacją.',
+
+  // ── Screen: trip-costs ────────────────────────────────────────────────────────────────
+  'help.ctx.trip-costs.title': 'Koszty',
+  'help.ctx.trip-costs.summary':
+    'Pieniądze podróży: każdy wydatek jako datowany rejestr, kto go wyłożył i kto jest za niego winien, w tej walucie, w której był paragon, a w prawej kolumnie, kto komu ma zapłacić, żeby znów było równo.',
+  'help.ctx.trip-costs.bullet.1':
+    'Cztery karty u góry: Jesteś winien i Należy ci się to twoja własna strona rozliczenia, Kwota nierozliczona to, co jest zapisane, ale nie ma jeszcze płatnika, a Łączne wydatki na podróż sumują wszystko i pokazują pod spodem Twój udział oraz Zapłaciłeś.',
+  'help.ctx.trip-costs.bullet.2':
+    'Dodaj wydatek u góry po prawej otwiera edytor; Rozlicz obok zapisuje wszystkie otwarte przelewy naraz.',
+  'help.ctx.trip-costs.bullet.3':
+    'Rejestr jest pogrupowany po dniach, najnowsze pierwsze, z sumą tego dnia po prawej. Wiersz niesie kategorię jako kolorową zakładkę, nazwę, żetony płacących, notatkę i kwotę, a do tego pożyczyłeś albo pożyczyłeś od innych, gdy podział zostawia cię na plusie lub na minusie.',
+  'help.ctx.trip-costs.bullet.4':
+    'Nad listą siedzą Szukaj wydatków…, filtr kategorii, filtr dni, przełącznik Wszystkie / Opłacone przeze mnie / Należy mi się i przycisk Eksportuj CSV.',
+  'help.ctx.trip-costs.bullet.5':
+    'Prawa kolumna to odpowiedź: Rozlicz wypisuje, kto komu płaci, Salda pokazują nadwyżkę lub niedobór każdego podróżnego, Budżet końcowy to, ile podróż kosztuje każdego z nich, a Według kategorii to, gdzie poszły pieniądze.',
+  'help.ctx.trip-costs.bullet.6':
+    'Zapisana płatność siedzi w tym samym rejestrze jako własny wiersz, z Edytuj i Cofnij obok; wydatek ma ołówek i kosz, a kosz usuwa go bez pytania.',
+  // add-expense
+  'help.guide.add-expense.title': 'Dodać wydatek',
+  'help.guide.add-expense.goal': 'Zapisz, ile coś kosztowało, kto zapłacił i z kim jest to dzielone.',
+  'help.guide.add-expense.step.1':
+    'Kliknij Dodaj wydatek u góry po prawej na zakładce Koszty. Otwiera się edytor, z dzisiejszą datą i ze wszystkimi już w podziale.',
+  'help.guide.add-expense.step.2':
+    'Wpisz, na co to było, w pole Na co to było?, jedyne, które musi być wypełnione, a kwotę z paragonu w Łączna kwota.',
+  'help.guide.add-expense.step.3':
+    'Waluta i Dzień siedzą pod kwotą. Waluta zaczyna od waluty podróży; zmień ją, a edytor pokaże, ile kwota jest warta w walucie podróży. Dzień zaczyna od dzisiaj i to pod nim rejestr grupuje wydatek.',
+  'help.guide.add-expense.step.4':
+    'Wybierz Kategoria. Jest ich czternaście i nie da się ich zmienić: ta, którą wybierzesz, jest kolorową zakładką w wierszu i słupkiem w Według kategorii.',
+  'help.guide.add-expense.step.5':
+    'Pod Kto zapłacił? wybierz osobę, która naprawdę wyłożyła pieniądze. Ty jest wybrane z góry; Nikt jeszcze nie zapłacił zapisuje kwotę, nie czyniąc nikogo winnym za nią, a Zapłaciło kilka osób dzieli rachunek między kilku płacących.',
+  'help.guide.add-expense.step.6':
+    'Split zaczyna od Equally ze wszystkimi włączonymi, a przy każdym nazwisku widać udział, który z tego wychodzi. Kliknij Dodaj wydatek, żeby zapisać.',
+  'help.guide.add-expense.result':
+    'Wydatek jest w rejestrze pod swoim dniem, policzony do Łączne wydatki na podróż, a kolumna rozliczenia przeliczyła na nowo, kto komu jest winien.',
+  'help.guide.add-expense.tip.1':
+    'Zostawiony tak, jak się otwiera, wydatek jest w walucie podróży, z dzisiejszą datą i podzielony po równo między wszystkich: naprawdę wypełnić trzeba tylko nazwę i kwotę.',
+  'help.guide.add-expense.tip.2':
+    '± obok kwoty zamienia wydatek w zwrot. Ujemna suma oddaje pieniądze, zamiast je brać, a podział idzie w drugą stronę.',
+  'help.guide.add-expense.tip.3':
+    'Załącz paragon / fakturę na dole przyjmuje obrazy i pliki PDF. Wysyłają się przy zapisie, lądują w Pliki podróży, a obok nazwy na liście pojawia się plakietka Paragony.',
+  // expense-payers
+  'help.guide.expense-payers.title': 'Powiedzieć, kto zapłacił rachunek',
+  'help.guide.expense-payers.goal': 'Zapisz, kto wyłożył pieniądze na wydatek, druga połowa matematyki rozliczenia.',
+  'help.guide.expense-payers.step.1':
+    'Otwórz wydatek ołówkiem obok jego wiersza i spójrz na Kto zapłacił?. Zapłaciła jedna osoba jest domyślne: lista rozwijana wskazuje jedną osobę, która wyłożyła pieniądze.',
+  'help.guide.expense-payers.step.2':
+    'Nikt jeszcze nie zapłacił, pierwsza pozycja tej listy, zapisuje kwotę, nie czyniąc nikogo nic winnym. Wydatek nadal liczy się do Łączne wydatki na podróż.',
+  'help.guide.expense-payers.step.3':
+    'Zapłaciło kilka osób, odnośnik obok etykiety, otwiera wiersz na każdego podróżnego. Dodaj tych, którzy zapłacili, i wpisz, ile każdy z nich włożył; kwoty muszą sumować się do łącznej kwoty.',
+  'help.guide.expense-payers.step.4':
+    'Wydatek, za który nikt nie zapłacił, jest oznaczony Niezakończone w swoim wierszu i liczony do karty Kwota nierozliczona, gdzie zbierają się zapisane, ale nierozliczone wydatki.',
+  'help.guide.expense-payers.result':
+    'Kto zapłacił decyduje, komu się oddaje, podział decyduje, kto płaci, a Salda to różnica między jednym a drugim.',
+  'help.guide.expense-payers.tip.1':
+    'Kto zapłacił? i Split są niezależne: możesz zapłacić za kolację, na której cię nie było, i trafić do podziału kolacji, za którą nie płaciłeś.',
+  'help.guide.expense-payers.tip.2':
+    'Przy kilku płacących kwoty muszą sumować się do łącznej kwoty. Dodaj jeszcze jedną osobę, a pozostałe przestawią się wokół niej; dopóki się nie zgadzają, edytor mówi, że Kwoty płacących muszą sumować się do łącznej kwoty, i odmawia zapisu.',
+  'help.guide.expense-payers.tip.3':
+    'Usunięcie płacącego nie usuwa wydatku: kwota zostaje w Łączne wydatki na podróż, a wiersz staje się Niezakończone.',
+  // split-expense
+  'help.guide.split-expense.title': 'Podzielić rachunek między podróżnych',
+  'help.guide.split-expense.goal':
+    'Zdecyduj, kto jest winien za wydatek: wszyscy po równo, kwotowo albo linia po linii z paragonu.',
+  'help.guide.split-expense.step.1':
+    'W edytorze wydatku Split wypisuje każdego podróżnego. Kliknij nazwisko, żeby zostawić go poza tym wydatkiem; pominięty podróżny ma przy sobie Pominięty i nic za niego nie jest winien.',
+  'help.guide.split-expense.step.2':
+    'Equally jest domyślne: każdy włączony podróżny dostaje taki sam udział, a wiersz pod listą mówi, na ile części jest to podzielone i ile wychodzi każdy udział.',
+  'help.guide.split-expense.step.3':
+    'Custom zamienia udziały na pola z kwotami. Wpisz, ile każdy podróżny jest winien; wiersz pod spodem liczy na bieżąco i zielenieje na Podział zgadza się z sumą. Dopóki się nie zgadza, nie zapisze.',
+  'help.guide.split-expense.step.4':
+    'Ticket dzieli paragon linia po linii: Dodaj pozycję, potem nazwa i cena na każdą linię, a pod Dzielone między: podróżni, którzy dzielą tę linię.',
+  'help.guide.split-expense.step.5':
+    'Udział każdej osoby pod liniami pokazuje, ile każdy podróżny ostatecznie jest winien, a Łączna kwota u góry sumuje się z linii. Kliknij Zapisz.',
+  'help.guide.split-expense.result':
+    'Podział jest tym, z czego zbudowane jest każde saldo. Zapisuje się z wydatkiem i można go zmienić później, nie ruszając niczego innego.',
+  'help.guide.split-expense.tip.1':
+    'Podróżny, którego pominiesz, ma przy sobie Pominięty i nic za ten jeden wydatek nie jest winien; pozostali biorą jego udział.',
+  'help.guide.split-expense.tip.2':
+    'Equally jest dokładne co do centa: pozostały cent krąży od wydatku do wydatku, więc nie ma nikogo, kto zawsze go płaci.',
+  'help.guide.split-expense.tip.3': 'Tryb Ticket sam sumuje Łączna kwota i wyszarza to pole: linie paragonu są sumą.',
+  // expense-currency
+  'help.guide.expense-currency.title': 'Wprowadzić wydatek w innej walucie',
+  'help.guide.expense-currency.goal': 'Wpisz to, co naprawdę mówi paragon, i zostaw kurs TREK-owi.',
+  'help.guide.expense-currency.step.1':
+    'Otwórz Dodaj wydatek i wypełnij nazwę oraz kwotę dokładnie tak, jak mówi paragon, samą liczbę, a nie jej przeliczenie.',
+  'help.guide.expense-currency.step.2':
+    'Otwórz Waluta i wybierz walutę paragonu. Lista niesie każdy kod, który TREK zna, i da się w niej szukać: wpisz te trzy litery.',
+  'help.guide.expense-currency.step.3':
+    'Pod polami pojawia się wiersz z tym, ile kwota jest warta w tej chwili, oznaczony kurs na żywo. To podgląd, a nie to, co zostaje zapisane.',
+  'help.guide.expense-currency.step.4':
+    'Kliknij Dodaj wydatek. Kurs zostaje w tym momencie zamrożony: od teraz ten wydatek jest wart tyle, ile był wart w dniu, w którym go wprowadziłeś.',
+  'help.guide.expense-currency.step.5':
+    'W rejestrze wiersz niesie pod nazwą obie liczby: to, co wpisałeś, strzałkę i to, ile liczy się w walucie podróży. Każda suma, saldo i rozliczenie powyżej używa tej drugiej.',
+  'help.guide.expense-currency.result':
+    'Wydatek zachowuje kwotę i walutę, które wpisałeś. Rejestr pokazuje obie, a sumy i salda podróży zostają w walucie podróży.',
+  'help.guide.expense-currency.tip.1':
+    'Kurs zostaje zamrożony w chwili zapisu, więc rozliczony dług nie otwiera się na nowo dlatego, że rynek ruszył tydzień później. Nowy kurs zamraża jedynie zmiana waluty wydatku.',
+  'help.guide.expense-currency.tip.2':
+    'Waluta wyświetlania w Ustawieniach zmienia tylko to, co czytasz; zapisane kwoty nigdy się nie ruszają. Zostawiona pusta, każda podróż pokazuje się we własnej walucie.',
+  'help.guide.expense-currency.tip.3':
+    'Sama waluta podróży mieszka na podróży, pod Edytuj podróż, i wymaga prawa Edytowanie podróży. Jej zmiana zakotwicza na nowo każdy zamrożony kurs, zamiast przeliczać kwoty na inną walutę.',
+  // filter-costs
+  'help.guide.filter-costs.title': 'Znaleźć wydatek albo wydatki jednego dnia',
+  'help.guide.filter-costs.goal': 'Zawęź długi rejestr do tego, czego naprawdę szukasz.',
+  'help.guide.filter-costs.step.1': 'Pisz w Szukaj wydatków… nad listą. Dopasowuje nazwę wydatku, gdy piszesz.',
+  'help.guide.filter-costs.step.2':
+    'Wszystkie kategorie otwierają te czternaście kategorii. Wybierz jedną, a zostaną tylko wydatki tej kategorii.',
+  'help.guide.filter-costs.step.3':
+    'Wszystkie dni wypisują każdy dzień, w którym coś wydano. Wybierz jeden, a baner zastąpi nagłówki dni tym dniem, liczbą wydatków, które trzyma, i jego sumą.',
+  'help.guide.filter-costs.step.4':
+    'Przełącznik Wszystkie / Opłacone przeze mnie / Należy mi się to twój własny widok rejestru: za co wyłożyłeś pieniądze i za co nadal ci się należy.',
+  'help.guide.filter-costs.step.5':
+    'Eksportuj CSV na końcu wiersza zapisuje każdy wydatek do pliku, z oryginalną kwotą, jej walutą i kwotą przeliczoną.',
+  'help.guide.filter-costs.result':
+    'Filtry łączą się, a grupy dni rysują się na nowo z własnymi sumami dla tego, co zostanie.',
+  'help.guide.filter-costs.tip.1':
+    'Zapisane płatności nie niosą nazwy ani kategorii, więc wyszukiwanie albo filtr kategorii je ukrywa. Filtr dni je zostawia, pod dniem, w którym płatność została zapisana.',
+  'help.guide.filter-costs.tip.2':
+    'Eksportuj CSV zawsze eksportuje każdy wydatek, niezależnie od tego, co jest odfiltrowane na ekranie, jeden wiersz na wydatek.',
+  // settle-up
+  'help.guide.settle-up.title': 'Ustalić, kto komu jest winien, i rozliczyć to',
+  'help.guide.settle-up.goal':
+    'Zamień stos wspólnych wydatków w najmniejszą liczbę przelewów, które wyrównują wszystkich, i zapisuj je, gdy się dzieją.',
+  'help.guide.settle-up.step.1':
+    'Karta Rozlicz w prawej kolumnie wypisuje przelewy, które wyrównałyby wszystkich: kto komu płaci i ile. Liczba obok tytułu to tyle, ile jest jeszcze otwartych.',
+  'help.guide.settle-up.step.2':
+    'Rozlicz obok przelewu zapisuje go jako wykonany. Ten przepływ znika z karty, a salda rysują się na nowo.',
+  'help.guide.settle-up.step.3':
+    'Zapisany przelew jest wierszem w rejestrze, pod dniem, w którym się zdarzył, oznaczonym Płatność, z dwoma podróżnymi i kwotą.',
+  'help.guide.settle-up.step.4':
+    'Obok tego wiersza ołówek poprawia płatność, a Cofnij cofa ją, i przelew wraca na kartę Rozlicz.',
+  'help.guide.settle-up.step.5':
+    'Dodaj płatność w nagłówku karty zapisuje przelew, który nie poszedł za podpowiedzią. Wybierz Od i Do, kwotę, jej walutę i dzień, w którym się zdarzył.',
+  'help.guide.settle-up.step.6':
+    'Rozlicz w nagłówku u góry ekranu zapisuje wszystkie otwarte przelewy naraz, tak jak grupa rozlicza się na koniec podróży.',
+  'help.guide.settle-up.result':
+    'Każdy zapisany przelew jest wierszem w rejestrze i wierszem mniej na karcie Rozlicz. Gdy karta mówi Wszyscy rozliczeni, podróż jest spłacona.',
+  'help.guide.settle-up.tip.1':
+    'Karta pokazuje najmniejszą liczbę przelewów, a nie każdy dług: trzy osoby winne sobie w kółko zwijają się do jednej lub dwóch płatności.',
+  'help.guide.settle-up.tip.2':
+    'Rozlicz zapisuje przelew, nie przenosi pieniędzy. Wyślij je tak, jak zwykle to robisz, a potem kliknij.',
+  'help.guide.settle-up.tip.3':
+    'Płatność może być w dowolnej walucie, więc spłata długu w jenach w euro jest normalna: okno ma własny wybór waluty i też zamraża ten kurs.',
+  // final-budget
+  'help.guide.final-budget.title': 'Zobaczyć, ile podróż kosztowała każdego podróżnego',
+  'help.guide.final-budget.goal':
+    'Przeczytaj stronę rejestru liczoną na osobę: saldo na dziś i rzeczywisty koszt na osobę.',
+  'help.guide.final-budget.step.1':
+    'Salda pokazują pozycję każdego podróżnego: zielony pasek w prawo, jeśli podróż jest mu winna, czerwony pasek w lewo, jeśli to on jest jej winien, i kwotę obok nazwiska.',
+  'help.guide.final-budget.step.2':
+    'Budżet końcowy pod nimi odpowiada na inne pytanie: nie to, kto jest teraz komu winien, ale ile podróż kosztuje każdego podróżnego, gdy wszystko zostanie oddane.',
+  'help.guide.final-budget.step.3':
+    'Kliknij nazwisko, żeby otworzyć rachunek: Zapłacone wydatki, potem Zwroty netto i Oczekujące zwroty pod spodem.',
+  'help.guide.final-budget.step.4':
+    'Pod każdą linią siedzą wiersze, z których się składa: wydatki, za które ten podróżny zapłacił, przelewy już zapisane i te wciąż otwarte. Sumują się dokładnie do linii nad nimi.',
+  'help.guide.final-budget.result':
+    'Salda to, kto jest dziś na plusie lub na minusie; Budżet końcowy to, ile podróż ostatecznie kosztuje każdego z was, gdy wszystko zostanie oddane.',
+  'help.guide.final-budget.tip.1':
+    'Zapisanie płatności nie zmienia nikomu budżetu końcowego. Przenosi tylko kwotę z oczekujących zwrotów do zwrotów netto.',
+  'help.guide.final-budget.tip.2':
+    'Wydatek bez płatnika zostaje poza obiema kartami, tak samo jak zostaje poza podpowiedziami rozliczenia.',
+  // expense-from-booking
+  'help.guide.expense-from-booking.title': 'Zamienić rezerwację w wydatek',
+  'help.guide.expense-from-booking.goal':
+    'Dołącz to, ile lot, hotel albo miejsce naprawdę kosztowały, do wpisu, do którego należą.',
+  'help.guide.expense-from-booking.step.1':
+    'Otwórz rezerwację na zakładce Transport albo Rezerwacje i kliknij jej ołówek.',
+  'help.guide.expense-from-booking.step.2':
+    'Przewiń do bloku Costs na dole formularza. Dopóki nic nie jest powiązane, oferuje Create expense i mówi, że najpierw zapisuje rezerwację.',
+  'help.guide.expense-from-booking.step.3':
+    'Kliknij Create expense. Rezerwacja zostaje zapisana, formularz się zamyka, a edytor Koszty otwiera się z tytułem rezerwacji jako nazwą i jej typem już dopasowanym do kategorii.',
+  'help.guide.expense-from-booking.step.4':
+    'Wypełnij kwotę, kto zapłacił i podział jak przy każdym wydatku, i zapisz. Ponowne otwarcie rezerwacji pokazuje go teraz pod Linked expense, z ołówkiem do edycji i koszem do usunięcia.',
+  'help.guide.expense-from-booking.result':
+    'Rezerwacja niesie swój koszt, a wydatek jest zwykłym wierszem na zakładce Koszty, z płacącym, podziałem i walutą jak każdy inny.',
+  'help.guide.expense-from-booking.tip.1':
+    'Usunięcie rezerwacji usuwa razem z nią powiązany wydatek. Remove expense w bloku Costs rezerwacji robi odwrotnie: wydatek znika, rezerwacja zostaje.',
+  'help.guide.expense-from-booking.tip.2':
+    'Miejsce ma ten sam blok w swoim formularzu, gdzie Create expense najpierw zapisuje miejsce.',
+
+  // ── Screen: trip-transports ───────────────────────────────────────────────────────────
+  'help.ctx.trip-transports.title': 'Transport',
+  'help.ctx.trip-transports.summary':
+    'Wszystko, co wozi Cię między przystankami: loty, pociągi, autobusy, samochody, taksówki, rowery, rejsy, promy i połączenia transportu publicznego, które TREK wyszukuje za Ciebie. Zakładka jest ich listą; powstają i są czytane także w planie, a na mapie są rysowane.',
+  'help.ctx.trip-transports.bullet.1':
+    'Zakładka trzyma tylko przejazdy. Noclegi, restauracje, wydarzenia i bilety mieszkają w Rezerwacjach, więc ten sam wpis nigdy nie pojawia się dwa razy.',
+  'help.ctx.trip-transports.bullet.2':
+    'Pasek narzędzi liczy je wszystkie pod Wszystko i daje każdemu używanemu rodzajowi własny chip z własnym licznikiem: Lot, Pociąg, Samochód, Transport publiczny. Transport po prawej dodaje jeden ręcznie.',
+  'help.ctx.trip-transports.bullet.3':
+    'Karty przychodzą w trzech grupach, każdą można złożyć jej nagłówkiem: Automatyczny transport publiczny dla połączeń zaplanowanych przez wyszukiwarkę, potem Oczekująca, potem Potwierdzona.',
+  'help.ctx.trip-transports.bullet.4':
+    'Karta niesie status, rodzaj, dni, przez które się rozciąga, godziny, Kod rezerwacji, trasę oraz Linię lotniczą i Numer lotu albo Numer pociągu, Peron i Miejsce. Ołówek ją otwiera, kosz kasuje ją po pytaniu.',
+  'help.ctx.trip-transports.bullet.5':
+    'Transport powstaje też w planie: każdy nagłówek dnia ma plus dla Dodaj transport i przycisk tramwaju dla Transportu publicznego, a łącznik z czasem przejazdu między dwoma przystankami otwiera to samo wyszukiwanie dla tego jednego odcinka.',
+  'help.ctx.trip-transports.bullet.6':
+    'Transport z ustawionymi obydwoma końcami rysuje linię na mapie. Ikona trasy w jego wierszu w planie dnia włącza tę linię, a Pokaż wszystkie trasy rezerwacji na pasku nad dniami przełącza całą podróż.',
+  // transports-list
+  'help.guide.transports-list.title': 'Czytaj zakładkę Transport',
+  'help.guide.transports-list.goal': 'Wiedz, co mówi lista, zanim cokolwiek na niej zmienisz.',
+  'help.guide.transports-list.step.1':
+    'Transport to druga zakładka podróży. Trzyma tylko przejazdy: hotele, restauracje, wydarzenia i bilety są w Rezerwacjach.',
+  'help.guide.transports-list.step.2':
+    'Pasek narzędzi liczy każdy transport pod Wszystko i daje każdemu używanemu rodzajowi własny chip z własnym licznikiem. Kliknij chip, by zostawić tylko ten rodzaj, kliknij ponownie, by go puścić. Kilka chipów może być włączonych naraz, a Wszystko je czyści.',
+  'help.guide.transports-list.step.3':
+    'Automatyczny transport publiczny to własna grupa, połączenia zaplanowane przez wyszukiwarkę transportu publicznego. Oczekująca i Potwierdzona trzymają wszystko wprowadzone ręcznie. Strzałka obok nagłówka składa grupę.',
+  'help.guide.transports-list.step.4':
+    'Karta mówi wszystko: kropka statusu z Oczekująca albo Potwierdzona, rodzaj, dni, przez które się rozciąga, z ich datami, godziny, Kod rezerwacji, trasa oraz Linia lotnicza i Numer lotu albo Numer pociągu, Peron i Miejsce.',
+  'help.guide.transports-list.step.5':
+    'Ołówek otwiera transport do edycji, kosz go kasuje, po pytaniu, które nazywa to, co znika.',
+  'help.guide.transports-list.result':
+    'Lista jest zawężona do tego, czego szukałeś, a każda karta na pierwszy rzut oka mówi, czy przejazd jest zarezerwowany.',
+  'help.guide.transports-list.tip.1':
+    'Chipy i złożone grupy są pamiętane dla każdej podróży z osobna, więc zakładka otwiera się znowu tak, jak ją zostawiłeś.',
+  'help.guide.transports-list.tip.2':
+    'Importuj z pliku i AirTrail dołączają do Transportu na pasku tylko wtedy, gdy serwer potrafi czytać potwierdzenia rezerwacji i gdy podłączona jest instancja AirTrail. Bez nich listę wypełnia się ręcznie i wyszukiwarką transportu publicznego.',
+  // add-transport
+  'help.guide.add-transport.title': 'Dodaj transport do dnia',
+  'help.guide.add-transport.goal':
+    'Wstaw przejazd, który wiezie Cię z jednego przystanku na następny, do dnia, w którym się odbywa.',
+  'help.guide.add-transport.step.1':
+    'Każdy nagłówek dnia niesie po prawej cztery małe przyciski. Kliknij plus, którego podpowiedź brzmi Dodaj transport. Formularz otwiera się z Datą już ustawioną na ten dzień.',
+  'help.guide.add-transport.step.2':
+    'Rodzaj rezerwacji wybiera, czym jedziesz: Lot, Pociąg, Autobus, Samochód, Taksówka, Rower, Rejs, Prom albo Inne. Formularz się dostosowuje. Lot dostaje lotnisko na każdym odcinku, pociąg łańcuch stacji, samochód nazwy Odbiór i Zwrot oraz Przystanki po drodze.',
+  'help.guide.add-transport.step.3':
+    'Tytuł to jedyne pole, które musi być wypełnione; bez niego Dodaj zostaje szary. Napisz to, co rozpoznałbyś na tablicy peronowej.',
+  'help.guide.add-transport.step.4':
+    'Skąd i Dokąd szukają stacji, portu albo adresu. Wpisz co najmniej trzy litery i wybierz wynik z listy. Nazwa, która została tylko wpisana, nie niesie współrzędnych, więc nic nie rysuje na mapie.',
+  'help.guide.add-transport.step.5':
+    'Data i Godzina rozpoczęcia mówią, kiedy przejazd się odbywa, Data końca i Godzina zakończenia, kiedy się kończy; przejazd, który ląduje następnego dnia, bierze tam następny dzień. Kod rezerwacji, Status z Oczekująca albo Potwierdzona oraz Notatki są opcjonalne.',
+  'help.guide.add-transport.step.6': 'Kliknij Dodaj.',
+  'help.guide.add-transport.result':
+    'Transport jest wierszem w dniu, w swojej godzinie między przystankami, i kartą w zakładce Transport pod Oczekująca albo Potwierdzona.',
+  'help.guide.add-transport.tip.1':
+    'Wiersz ląduje tam, gdzie kładzie go jego godzina rozpoczęcia, za ostatnim przystankiem, który zaczyna się wcześniej. Jego uchwyt przeciąga go gdziekolwiek indziej w dniu albo na inny dzień.',
+  'help.guide.add-transport.tip.2':
+    'Załącz plik pod Pliki bierze bilet, a Create expense pod Costs zapisuje rezerwację i otwiera edytor Koszty dla ceny przejazdu.',
+  'help.guide.add-transport.tip.3':
+    'Podróżni zaznacza, kto jedzie. Gdy tylko jeden transport ma podróżnych, pasek narzędzi zakładki wypuszcza ich awatary i filtruje po nich listę.',
+  // plan-transit
+  'help.guide.plan-transit.title': 'Zaplanuj połączenie transportu publicznego',
+  'help.guide.plan-transit.goal':
+    'Pozwól TREK-owi wyszukać prawdziwe pociągi i autobusy między dwoma punktami dnia i wstaw do planu to, które wybierzesz.',
+  'help.guide.plan-transit.step.1':
+    'W nagłówku dnia kliknij przycisk tramwaju, Transport publiczny. Wyszukiwarka otwiera się dla tego dnia.',
+  'help.guide.plan-transit.step.2':
+    'Skąd i Dokąd przyjmują przystanek albo stację. Dopóki pole jest puste, oferowane są własne przystanki dnia; wpisanie dwóch liter przeszukuje zamiast tego stacje rozkładu jazdy. Zamień między dwoma polami odwraca połączenie.',
+  'help.guide.plan-transit.step.3':
+    'Odjazd albo Przyjazd z godziną mówi, kiedy chcesz jechać, a Najlepsza trasa, Mniej przesiadek albo Mniej pieszo mówi, jak mają być uporządkowane odpowiedzi.',
+  'help.guide.plan-transit.step.4':
+    'Chipy poniżej mówią, jakich środków wolno użyć: Pociąg, Metro, Tramwaj, Autobus, Prom i Kolej linowa. Wyłącz jeden, by go pominąć, przynajmniej jeden zostaje włączony. Potem kliknij Szukaj.',
+  'help.guide.plan-transit.step.5':
+    'Każdy wynik podaje odjazd i przyjazd, jak długo trwa, ile jest przesiadek i ile pieszo, oraz linie w ich własnych kolorach. Kliknij jeden, by rozwinąć go przystanek po przystanku, z peronami i odcinkami pieszo między liniami.',
+  'help.guide.plan-transit.step.6': 'Kliknij Dodaj do dnia.',
+  'help.guide.plan-transit.result':
+    'Połączenie jest wierszem w dniu ze swoimi liniami, przesiadkami i czasem pieszo, i kartą w zakładce Transport pod Automatyczny transport publiczny.',
+  'help.guide.plan-transit.tip.1':
+    'Połączenia pochodzą z Transitous, bezpłatnej usługi społecznościowej nad publicznymi danymi rozkładów: bez klucza, bez konta. Administrator może skierować wyszukiwarkę zamiast tego na Google.',
+  'help.guide.plan-transit.tip.2':
+    'Nic nie znaleziono? Źródła pokrywają region i okres. Spróbuj innej godziny, włącz więcej środków albo wybierz stację zamiast samego miejsca. Komunikat nazywa usługę, która odpowiedziała.',
+  'help.guide.plan-transit.tip.3':
+    'To samo wyszukiwanie otwiera się dla pojedynczego odcinka: kliknij łącznik z czasem przejazdu między dwoma przystankami i wybierz Transport publiczny. Skąd, Dokąd i godzina odjazdu są wypełnione za Ciebie.',
+  // change-transit-route
+  'help.guide.change-transit-route.title': 'Otwórz i zmień zaplanowane połączenie',
+  'help.guide.change-transit-route.goal':
+    'Przeczytaj połączenie przystanek po przystanku, zmień jego nazwę albo wyszukaj trasę jeszcze raz.',
+  'help.guide.change-transit-route.step.1':
+    'W zakładce Transport zaplanowane połączenia siedzą pod Automatyczny transport publiczny. Kliknij kartę.',
+  'help.guide.change-transit-route.step.2':
+    'Czas trwania, Przesiadki i Pieszo siedzą u góry. Plan podróży pod nimi przechodzi połączenie przystanek po przystanku, z peronami i odcinkami pieszo między liniami.',
+  'help.guide.change-transit-route.step.3':
+    'Zmień trasę uruchamia wyszukiwanie jeszcze raz, już wypełnione obydwoma końcami tego połączenia i jego dniem.',
+  'help.guide.change-transit-route.step.4':
+    'Wybierz inne połączenie i kliknij Dodaj do dnia; zajmuje miejsce starego. Edytuj szczegóły, obok Zmień trasę, otwiera zamiast tego zwykły formularz transportu, gdzie mieszkają Kod rezerwacji, Status, podróżni i pliki.',
+  'help.guide.change-transit-route.result':
+    'Widok Podróż transportem publicznym niesie nowy Plan podróży, a jego karta w zakładce Transport pokazuje nowe linie i godziny.',
+  'help.guide.change-transit-route.tip.1':
+    'Tytuł w widoku Podróż transportem publicznym to tylko tekst: ołówek obok niego zmienia nazwę, nie ruszając trasy. Notatki pod spodem przyjmują markdown i mają zakładkę Edytuj i Podgląd.',
+  'help.guide.change-transit-route.tip.2':
+    'Usuń u dołu widoku Podróż transportem publicznym wyjmuje połączenie z podróży; dzień zachowuje swoje przystanki.',
+  // leg-travel-mode
+  'help.guide.leg-travel-mode.title': 'Zmień, jak pokonujesz jeden odcinek',
+  'help.guide.leg-travel-mode.goal':
+    'Przejdź pieszo jeden odcinek dnia, który poza tym jedziesz samochodem, albo oddaj ten odcinek wyszukiwarce transportu publicznego.',
+  'help.guide.leg-travel-mode.step.1':
+    'Łączniki między przystankami pojawiają się dopiero, gdy Trasa dnia jest włączona. Kliknij dzień, by go otworzyć, potem Trasa pod jego przystankami.',
+  'help.guide.leg-travel-mode.step.2':
+    'Każdy łącznik nazywa czas przejazdu i długość tego odcinka, z ikoną środka, w którym wyznaczono trasę: samochód dla jazdy, stopa dla chodzenia.',
+  'help.guide.leg-travel-mode.step.3':
+    'Kliknij łącznik. Menu oferuje Samochodem i Pieszo, Transport publiczny oraz Użyj domyślnego dnia.',
+  'help.guide.leg-travel-mode.step.4':
+    'Wybierz Pieszo. Zmienia się tylko ten odcinek; reszta dnia zachowuje swój własny środek.',
+  'help.guide.leg-travel-mode.result':
+    'Odcinek pokazuje ikonę stopy i swój czas pieszo, a pozostałe odcinki dnia zachowują środek dnia.',
+  'help.guide.leg-travel-mode.tip.1':
+    'Środek należy do odcinka, nie do dnia: przyciski Samochodem i Pieszo całego dnia nigdy nie nadpisują odcinka ustawionego ręcznie. Użyj domyślnego dnia oddaje im odcinek z powrotem.',
+  'help.guide.leg-travel-mode.tip.2':
+    'Transport publiczny w tym samym menu otwiera wyszukiwarkę połączeń dokładnie dla tego odcinka, z obydwoma końcami i godziną odjazdu już wypełnionymi.',
+  'help.guide.leg-travel-mode.tip.3':
+    'Czasy pochodzą z publicznego planera tras po prawdziwych drogach i ścieżkach. Odcinek, na który nie potrafi odpowiedzieć, zachowuje swoją prostą linię i nie pokazuje czasu.',
+  // edit-transport
+  'help.guide.edit-transport.title': 'Zmień albo usuń transport',
+  'help.guide.edit-transport.goal': 'Popraw godzinę, peron albo kod rezerwacji, albo wyjmij przejazd z podróży.',
+  'help.guide.edit-transport.step.1': 'W planie dnia transport to kolorowy wiersz między przystankami. Kliknij go.',
+  'help.guide.edit-transport.step.2':
+    'Formularz jest ten sam, który go utworzył, z Edytuj transport na pasku tytułu. Zmienić można wszystko: rodzaj, trasę, dni i godziny, Kod rezerwacji, Status.',
+  'help.guide.edit-transport.step.3':
+    'Trasa lotu to łańcuch lotnisk, trasa pociągu łańcuch stacji. Dodaj przystanek wstawia kolejny pomiędzy, a każdy odcinek zachowuje własne godziny i własny numer lotu albo pociągu.',
+  'help.guide.edit-transport.step.4':
+    'Kliknij Aktualizuj. Aby usunąć transport całkiem, użyj kosza na jego karcie w zakładce Transport i potwierdź.',
+  'help.guide.edit-transport.result':
+    'Zmiana pokazuje się wszędzie, gdzie transport się pojawia: w zakładce Transport, w dniu, w którym jedzie, i na jego linii na mapie.',
+  'help.guide.edit-transport.tip.1':
+    'Ten sam formularz otwiera się z obu stron, ołówkiem na karcie w zakładce Transport i własnym wierszem transportu w planie dnia. Wyjątkiem jest zaplanowane połączenie transportu publicznego: jego wiersz otwiera widok Podróż transportem publicznym, a Edytuj szczegóły prowadzi stamtąd do tego formularza.',
+  'help.guide.edit-transport.tip.2':
+    'Przeniesienie transportu na inny dzień w ogóle nie potrzebuje formularza: przeciągnij jego wiersz z jednej karty dnia na następną.',
+  // transport-on-map
+  'help.guide.transport-on-map.title': 'Narysuj transport na mapie',
+  'help.guide.transport-on-map.goal': 'Zobacz, którędy lot, jazda albo połączenie naprawdę biegnie.',
+  'help.guide.transport-on-map.step.1':
+    'Transport z ustawionymi obydwoma końcami niesie małą ikonę trasy w swoim wierszu w planie dnia. Kliknij ją; jej podpis zmienia się na Ukryj trasy rezerwacji.',
+  'help.guide.transport-on-map.step.2':
+    'Trasa zostaje narysowana na mapie, a na każdym końcu stoi podłużny znacznik z ikoną transportu.',
+  'help.guide.transport-on-map.step.3':
+    'Kliknij znacznik końcowy, by przeczytać rezerwację bez opuszczania mapy: godziny, Linię lotniczą i Numer lotu, Kod rezerwacji i notatki. Zamknij chowa panel.',
+  'help.guide.transport-on-map.step.4':
+    'Ikona trasy na pasku nad dniami robi całą podróż naraz: Pokaż wszystkie trasy rezerwacji, a Ukryj wszystkie trasy rezerwacji, by je znowu wyczyścić.',
+  'help.guide.transport-on-map.step.5':
+    'Zaplanowane połączenie transportu publicznego nie ma własnej ikony. Rysuje je przełącznik Trasa danego dnia, dlatego Ukryj wszystkie trasy rezerwacji go nie czyści, dopóki trasa tego dnia jest włączona.',
+  'help.guide.transport-on-map.result':
+    'Trasy są na mapie ze znacznikiem na każdym końcu i zostają tam, dopóki znowu ich nie wyłączysz.',
+  'help.guide.transport-on-map.tip.1':
+    'Lot, rejs i prom rysują się jako łuk, samochód, autobus, taksówka i rower jadą prawdziwymi drogami, a pociąg albo zaplanowane połączenie biegnie przez stacje, na których się zatrzymuje.',
+  'help.guide.transport-on-map.tip.2':
+    'Potwierdzona rezerwacja to linia ciągła, oczekująca przerywana. Ustawienie Etykiety tras rezerwacji wypisuje kod lotniska albo nazwę stacji w znacznikach końcowych.',
+  'help.guide.transport-on-map.tip.3':
+    'Pokaż wszystkie trasy rezerwacji to czysta karta, nie warstwa: odrzuca to, co ustawiły pojedyncze ikony, więc dwukrotne naciśnięcie zostawia Cię ze wszystkim włączonym albo wszystkim wyłączonym.',
 };
 
 export default help;

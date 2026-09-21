@@ -3299,6 +3299,347 @@ const help: TranslationStrings = {
     'Eine Unterkunftsbuchung zu löschen nimmt auch ihre Nächte aus dem Tagesplan und entfernt die Ausgabe, die mit ihr verknüpft war.',
   'help.guide.delete-booking.tip.2':
     'Angehängte Dokumente bleiben im Tab Dateien der Reise; nur ihre Verknüpfung zur Buchung geht.',
+
+  // ── Screen: trip-costs ────────────────────────────────────────────────────────────────
+  'help.ctx.trip-costs.title': 'Kosten',
+  'help.ctx.trip-costs.summary':
+    'Das Geld der Reise: jede Ausgabe in einem datierten Journal, wer sie ausgelegt hat und wer dafür schuldet, in der Währung, in der der Beleg war, und in der rechten Spalte, wer wem zahlen muss, damit es wieder aufgeht.',
+  'help.ctx.trip-costs.bullet.1':
+    'Vier Karten oben: Du schuldest und Dir wird geschuldet sind deine eigene Seite der Abrechnung, Ausstehender Betrag ist, was erfasst ist, aber noch keinen Zahler hat, und Gesamtausgaben zählt alles zusammen, mit Dein Anteil und Du zahltest darunter.',
+  'help.ctx.trip-costs.bullet.2':
+    'Ausgabe hinzufügen oben rechts öffnet den Editor; Ausgleichen daneben verbucht alle offenen Überweisungen auf einmal.',
+  'help.ctx.trip-costs.bullet.3':
+    'Das Journal ist nach Tagen gruppiert, das Neueste zuerst, mit der Summe des Tages rechts. Eine Zeile trägt die Kategorie als farbigen Reiter, den Namen, die Zahler-Chips, die Notiz und den Betrag, dazu ausgelegt oder geliehen, wenn dich die Aufteilung auf dieser Ausgabe ins Plus oder ins Minus bringt.',
+  'help.ctx.trip-costs.bullet.4':
+    'Über der Liste sitzen Ausgaben suchen…, ein Kategoriefilter, ein Tagesfilter, der Schalter Alle / Von mir bezahlt / Mir geschuldet und der Knopf CSV exportieren.',
+  'help.ctx.trip-costs.bullet.5':
+    'Die rechte Spalte ist die Antwort: Ausgleichen listet, wer wem zahlt, Salden zeigt den Überschuss oder das Minus jedes Reisenden, Endbudget, was die Reise jeden von ihnen kostet, und Nach Kategorie, wohin das Geld gegangen ist.',
+  'help.ctx.trip-costs.bullet.6':
+    'Eine verbuchte Zahlung steht im selben Journal als eigene Zeile, mit Bearbeiten und Rückgängig daneben; eine Ausgabe hat einen Stift und einen Papierkorb, und der Papierkorb löscht sie ohne Nachfrage.',
+  // add-expense
+  'help.guide.add-expense.title': 'Eine Ausgabe hinzufügen',
+  'help.guide.add-expense.goal': 'Halt fest, was etwas gekostet hat, wer es bezahlt hat und mit wem es geteilt wird.',
+  'help.guide.add-expense.step.1':
+    'Klick oben rechts im Reiter Kosten auf Ausgabe hinzufügen. Der Editor öffnet sich, auf heute datiert, und alle sind schon in der Aufteilung.',
+  'help.guide.add-expense.step.2':
+    'Tipp in Wofür war es? ein, wofür es war, das einzige Feld, das ausgefüllt sein muss, und in Gesamtbetrag die Zahl vom Beleg.',
+  'help.guide.add-expense.step.3':
+    'Währung und Tag sitzen unter dem Betrag. Währung beginnt bei der Währung der Reise; änderst du sie, zeigt der Editor, was der Betrag in der Reisewährung wert ist. Tag beginnt bei heute und ist der Tag, unter dem das Journal die Ausgabe gruppiert.',
+  'help.guide.add-expense.step.4':
+    'Wähl eine Kategorie. Es gibt vierzehn davon, und sie lassen sich nicht ändern: die gewählte ist der farbige Reiter in der Zeile und der Balken in Nach Kategorie.',
+  'help.guide.add-expense.step.5':
+    'Wähl unter Wer hat bezahlt? die Person, die das Geld tatsächlich ausgelegt hat. Du ist vorausgewählt; Noch niemand bezahlt erfasst den Betrag, ohne dass jemand dafür schuldet, und Mehrere haben bezahlt teilt die Rechnung auf mehrere Zahler auf.',
+  'help.guide.add-expense.step.6':
+    'Aufteilen beginnt bei Gleichmäßig mit allen dabei, und an jedem Namen steht der Anteil, der dabei herauskommt. Klick auf Ausgabe hinzufügen zum Speichern.',
+  'help.guide.add-expense.result':
+    'Die Ausgabe steht im Journal unter ihrem Tag, zählt in Gesamtausgaben mit, und die Ausgleichsspalte hat neu berechnet, wer wem schuldet.',
+  'help.guide.add-expense.tip.1':
+    'So, wie sich der Editor öffnet, steht die Ausgabe in der Währung der Reise, auf heute datiert und gleichmäßig auf alle aufgeteilt: wirklich ausgefüllt sein müssen nur der Name und der Betrag.',
+  'help.guide.add-expense.tip.2':
+    'Das ± neben dem Betrag macht aus der Ausgabe eine Erstattung. Eine negative Summe gibt Geld zurück, statt es zu nehmen, und die Aufteilung läuft andersherum.',
+  'help.guide.add-expense.tip.3':
+    'Beleg / Rechnung anhängen unten nimmt Bilder und PDFs. Sie werden beim Speichern hochgeladen, landen in den Dateien der Reise, und neben dem Namen in der Liste erscheint ein Belege-Chip.',
+  // expense-payers
+  'help.guide.expense-payers.title': 'Sagen, wer die Rechnung bezahlt hat',
+  'help.guide.expense-payers.goal':
+    'Halt fest, wer für eine Ausgabe in Vorleistung gegangen ist, die andere Hälfte der Ausgleichsrechnung.',
+  'help.guide.expense-payers.step.1':
+    'Öffne eine Ausgabe mit dem Stift neben ihrer Zeile und sieh dir Wer hat bezahlt? an. Eine Person hat bezahlt ist die Voreinstellung: Das Auswahlmenü nennt die eine Person, die das Geld ausgelegt hat.',
+  'help.guide.expense-payers.step.2':
+    'Noch niemand bezahlt, der erste Eintrag dieses Auswahlmenüs, erfasst den Betrag, ohne dass jemand etwas schuldet. Die Ausgabe zählt trotzdem in Gesamtausgaben mit.',
+  'help.guide.expense-payers.step.3':
+    'Mehrere haben bezahlt, der Link neben der Beschriftung, öffnet eine Zeile pro Reisendem. Bezieh die ein, die bezahlt haben, und tipp ein, was jeder von ihnen beigesteuert hat; die Beträge müssen zusammen die Gesamtsumme ergeben.',
+  'help.guide.expense-payers.step.4':
+    'Eine Ausgabe, die niemand bezahlt hat, wird in ihrer Zeile als Offen markiert und in die Karte Ausstehender Betrag gezählt, wo sich erfasste, aber nicht ausgeglichene Ausgaben sammeln.',
+  'help.guide.expense-payers.result':
+    'Wer bezahlt hat, entscheidet, wer zurückbekommt, die Aufteilung entscheidet, wer zahlt, und Salden ist der Unterschied zwischen beidem.',
+  'help.guide.expense-payers.tip.1':
+    'Wer hat bezahlt? und Aufteilen sind unabhängig voneinander: Du kannst ein Abendessen bezahlen, bei dem du nicht warst, und in eines aufgeteilt werden, das du nicht bezahlt hast.',
+  'help.guide.expense-payers.tip.2':
+    'Bei mehreren Zahlenden müssen die Beträge zusammen die Gesamtsumme ergeben. Bezieh einen weiteren ein, und die anderen ordnen sich darum herum neu; solange sie nicht passen, sagt der Editor Die Beträge der Zahlenden müssen zusammen die Gesamtsumme ergeben und speichert nicht.',
+  'help.guide.expense-payers.tip.3':
+    'Einen Zahler zu entfernen entfernt nicht die Ausgabe: Der Betrag bleibt in Gesamtausgaben, und die Zeile wird Offen.',
+  // split-expense
+  'help.guide.split-expense.title': 'Eine Rechnung unter den Reisenden aufteilen',
+  'help.guide.split-expense.goal':
+    'Entscheide, wer für eine Ausgabe schuldet: alle gleichmäßig, nach Betrag oder Zeile für Zeile vom Beleg.',
+  'help.guide.split-expense.step.1':
+    'Im Ausgaben-Editor listet Aufteilen jeden Reisenden. Klick einen Namen an, um ihn aus dieser Ausgabe herauszunehmen; ein herausgenommener Reisender steht als Nicht dabei und schuldet nichts dafür.',
+  'help.guide.split-expense.step.2':
+    'Gleichmäßig ist die Voreinstellung: Jeder einbezogene Reisende bekommt denselben Anteil, und die Zeile unter der Liste sagt, auf wie viele aufgeteilt wird und wie viel auf jeden entfällt.',
+  'help.guide.split-expense.step.3':
+    'Individuell tauscht die Anteile gegen Betragsfelder. Tipp ein, was jeder Reisende schuldet; die Zeile darunter zählt mit und wird bei Aufteilung passt zur Summe grün. Solange es nicht passt, wird nicht gespeichert.',
+  'help.guide.split-expense.step.4':
+    'Beleg teilt die Rechnung Zeile für Zeile auf: Artikel hinzufügen, dann pro Zeile ein Name und ein Preis, und unter Aufteilen auf: die Reisenden, die sich diese Zeile teilen.',
+  'help.guide.split-expense.step.5':
+    'Anteil pro Person unter den Zeilen zeigt, was jeder Reisende am Ende schuldet, und Gesamtbetrag oben wird aus den Zeilen summiert. Klick auf Speichern.',
+  'help.guide.split-expense.result':
+    'Die Aufteilung ist das, woraus jeder Saldo gebaut wird. Sie wird mit der Ausgabe gespeichert und lässt sich später ändern, ohne dass sonst etwas angefasst wird.',
+  'help.guide.split-expense.tip.1':
+    'Ein Reisender, den du herauslässt, steht als Nicht dabei und schuldet nichts für diese eine Ausgabe; die anderen übernehmen seinen Anteil.',
+  'help.guide.split-expense.tip.2':
+    'Gleichmäßig geht bis auf den Cent auf: Der übrige Cent wandert von Ausgabe zu Ausgabe, damit ihn nicht immer derselbe zahlt.',
+  'help.guide.split-expense.tip.3':
+    'Der Beleg-Modus summiert Gesamtbetrag selbst und legt das Feld grau: Die Zeilen des Belegs sind die Summe.',
+  // expense-currency
+  'help.guide.expense-currency.title': 'Eine Ausgabe in einer anderen Währung eintragen',
+  'help.guide.expense-currency.goal': 'Trag ein, was wirklich auf dem Beleg steht, und lass TREK den Kurs halten.',
+  'help.guide.expense-currency.step.1':
+    'Öffne Ausgabe hinzufügen und trag Namen und Betrag genau so ein, wie der Beleg es sagt, die Zahl selbst und nicht eine Umrechnung davon.',
+  'help.guide.expense-currency.step.2':
+    'Öffne Währung und wähl die Währung des Belegs. Die Liste trägt jeden Code, den TREK kennt, und ist durchsuchbar: Tipp die drei Buchstaben.',
+  'help.guide.expense-currency.step.3':
+    'Unter den Feldern erscheint eine Zeile mit dem, was der Betrag gerade wert ist, markiert mit Live-Kurs. Sie ist eine Vorschau, nicht das, was gespeichert wird.',
+  'help.guide.expense-currency.step.4':
+    'Klick auf Ausgabe hinzufügen. Der Kurs wird auf der Stelle eingefroren: Von hier an ist diese Ausgabe wert, was sie an dem Tag wert war, an dem du sie eingetragen hast.',
+  'help.guide.expense-currency.step.5':
+    'Im Journal trägt die Zeile beide Zahlen unter dem Namen: was du getippt hast, einen Pfeil und das, was es in der Währung der Reise zählt. Jede Summe, jeder Saldo und jeder Ausgleich darüber nutzt die zweite.',
+  'help.guide.expense-currency.result':
+    'Die Ausgabe behält den Betrag und die Währung, die du getippt hast. Das Journal zeigt beides, und die Summen und Salden der Reise bleiben in der Währung der Reise.',
+  'help.guide.expense-currency.tip.1':
+    'Der Kurs wird in dem Moment eingefroren, in dem du speicherst, damit eine ausgeglichene Schuld nicht wieder aufgeht, weil der Markt eine Woche später gelaufen ist. Nur wenn du die Währung der Ausgabe änderst, wird ein neuer eingefroren.',
+  'help.guide.expense-currency.tip.2':
+    'Anzeigewährung in den Einstellungen ändert nur, was du liest; die gespeicherten Beträge bewegen sich nie. Bleibt sie leer, wird jede Reise in ihrer eigenen Währung gezeigt.',
+  'help.guide.expense-currency.tip.3':
+    'Die Währung der Reise selbst sitzt an der Reise, unter Reise bearbeiten, und braucht das Recht Reisedetails bearbeiten. Sie zu ändern verankert jeden eingefrorenen Kurs neu, statt die Beträge umzurechnen.',
+  // filter-costs
+  'help.guide.filter-costs.title': 'Eine Ausgabe finden, oder die Ausgaben eines Tages',
+  'help.guide.filter-costs.goal': 'Grenz ein langes Journal auf das ein, was du wirklich suchst.',
+  'help.guide.filter-costs.step.1':
+    'Tipp über der Liste in Ausgaben suchen… ein. Gesucht wird im Namen der Ausgabe, während du tippst.',
+  'help.guide.filter-costs.step.2':
+    'Alle Kategorien öffnet die vierzehn Kategorien. Wähl eine, und nur die Ausgaben dieser Kategorie bleiben.',
+  'help.guide.filter-costs.step.3':
+    'Alle Tage listet jeden Tag, an dem etwas ausgegeben wurde. Wähl einen, und ein Banner ersetzt die Tagesüberschriften durch diesen Tag, wie viele Ausgaben er enthält und seine Summe.',
+  'help.guide.filter-costs.step.4':
+    'Der Schalter Alle / Von mir bezahlt / Mir geschuldet ist dein eigener Blick auf das Journal: wofür du Geld ausgelegt hast und wofür du noch in Vorleistung bist.',
+  'help.guide.filter-costs.step.5':
+    'CSV exportieren am Ende der Zeile schreibt jede Ausgabe in eine Datei, mit dem ursprünglichen Betrag, seiner Währung und dem umgerechneten Betrag.',
+  'help.guide.filter-costs.result':
+    'Die Filter greifen ineinander, und die Tagesgruppen zeichnen sich mit ihren eigenen Summen für das neu, was übrig bleibt.',
+  'help.guide.filter-costs.tip.1':
+    'Verbuchte Zahlungen tragen weder Namen noch Kategorie, deshalb blendet eine Suche oder ein Kategoriefilter sie aus. Der Tagesfilter behält sie, unter dem Tag, an dem die Zahlung verbucht wurde.',
+  'help.guide.filter-costs.tip.2':
+    'CSV exportieren exportiert immer jede Ausgabe, egal was auf dem Bildschirm gefiltert ist, eine Zeile pro Ausgabe.',
+  // settle-up
+  'help.guide.settle-up.title': 'Herausfinden, wer wem schuldet, und es ausgleichen',
+  'help.guide.settle-up.goal':
+    'Mach aus einem Haufen geteilter Ausgaben die wenigsten Überweisungen, die alle gleichstellen, und verbuch sie, wenn sie passieren.',
+  'help.guide.settle-up.step.1':
+    'Die Karte Ausgleichen in der rechten Spalte listet die Überweisungen, die alle gleichstellen würden: wer wem zahlt und wie viel. Die Zahl neben dem Titel ist, wie viele davon noch offen sind.',
+  'help.guide.settle-up.step.2':
+    'Ausgleichen neben einer Überweisung verbucht sie als erledigt. Die Überweisung verschwindet aus der Karte, und die Salden zeichnen sich neu.',
+  'help.guide.settle-up.step.3':
+    'Die verbuchte Überweisung ist eine Zeile im Journal, unter dem Tag, an dem sie passiert ist, markiert mit Zahlung, mit den beiden Reisenden und dem Betrag.',
+  'help.guide.settle-up.step.4':
+    'Neben dieser Zeile korrigiert der Stift eine Zahlung und Rückgängig nimmt sie zurück, und die Überweisung kehrt in die Karte Ausgleichen zurück.',
+  'help.guide.settle-up.step.5':
+    'Zahlung hinzufügen in der Kopfzeile der Karte verbucht eine Überweisung, die keinem Vorschlag gefolgt ist. Wähl Von und An, den Betrag, seine Währung und den Tag, an dem sie passiert ist.',
+  'help.guide.settle-up.step.6':
+    'Ausgleichen in der Kopfzeile oben auf dem Bildschirm verbucht alle offenen Überweisungen auf einmal, so wie eine Gruppe am Ende einer Reise quitt macht.',
+  'help.guide.settle-up.result':
+    'Jede verbuchte Überweisung ist eine Zeile im Journal und eine Zeile weniger auf der Karte Ausgleichen. Steht auf der Karte Alle quitt, ist die Reise bezahlt.',
+  'help.guide.settle-up.tip.1':
+    'Die Karte zeigt die wenigsten Überweisungen, nicht jede Schuld: Drei Leute, die sich im Kreis schulden, fallen auf eine oder zwei Zahlungen zusammen.',
+  'help.guide.settle-up.tip.2':
+    'Ausgleichen verbucht eine Überweisung, es bewegt kein Geld. Schick sie, womit auch immer du sonst zahlst, und klick dann darauf.',
+  'help.guide.settle-up.tip.3':
+    'Eine Zahlung kann in jeder Währung erfolgen, eine Yen-Schuld in Euro zu bezahlen ist also normal: Der Dialog hat seine eigene Währungsauswahl und friert auch diesen Kurs ein.',
+  // final-budget
+  'help.guide.final-budget.title': 'Sehen, was die Reise jeden Reisenden gekostet hat',
+  'help.guide.final-budget.goal':
+    'Lies die Seite des Journals pro Person: den Saldo von heute und die echten Kosten pro Person.',
+  'help.guide.final-budget.step.1':
+    'Salden zeigt die Position jedes Reisenden: ein grüner Balken nach rechts, wenn die Reise ihm schuldet, ein roter Balken nach links, wenn er ihr schuldet, und der Betrag neben dem Namen.',
+  'help.guide.final-budget.step.2':
+    'Endbudget darunter beantwortet eine andere Frage: nicht, wer gerade was schuldet, sondern was die Reise jeden Reisenden kostet, sobald alles zurückgezahlt ist.',
+  'help.guide.final-budget.step.3':
+    'Klick einen Namen an, um die Rechnung zu öffnen: Bezahlte Ausgaben, darunter Rückzahlungen netto und Ausstehende Rückzahlungen.',
+  'help.guide.final-budget.step.4':
+    'Unter jeder Zeile sitzen die Zeilen, aus denen sie besteht: die Ausgaben, die dieser Reisende bezahlt hat, die schon verbuchten Überweisungen und die noch offenen. Sie ergeben zusammen genau die Zeile darüber.',
+  'help.guide.final-budget.result':
+    'Salden ist, wer heute im Plus oder im Minus ist; Endbudget ist, was die Reise am Ende jeden von euch kostet, sobald alles zurückgezahlt ist.',
+  'help.guide.final-budget.tip.1':
+    'Eine Zahlung zu verbuchen ändert niemandes Endbudget. Es verschiebt nur einen Betrag von den ausstehenden Rückzahlungen zu den Rückzahlungen netto.',
+  'help.guide.final-budget.tip.2':
+    'Eine Ausgabe ohne Zahler bleibt aus beiden Karten heraus, genauso wie sie aus den Ausgleichsvorschlägen herausbleibt.',
+  // expense-from-booking
+  'help.guide.expense-from-booking.title': 'Aus einer Buchung eine Ausgabe machen',
+  'help.guide.expense-from-booking.goal':
+    'Häng das, was ein Flug, ein Hotel oder ein Ort tatsächlich gekostet hat, an den Eintrag, zu dem es gehört.',
+  'help.guide.expense-from-booking.step.1':
+    'Öffne die Buchung im Reiter Transport oder Buchungen und klick auf ihren Stift.',
+  'help.guide.expense-from-booking.step.2':
+    'Scroll zum Block Kosten unten im Formular. Solange nichts verknüpft ist, bietet er Ausgabe erstellen an und sagt, dass er die Buchung zuerst speichert.',
+  'help.guide.expense-from-booking.step.3':
+    'Klick auf Ausgabe erstellen. Die Buchung wird gespeichert, das Formular schließt sich, und der Kosten-Editor öffnet sich mit dem Titel der Buchung als Namen und ihrem Typ, der schon einer Kategorie zugeordnet ist.',
+  'help.guide.expense-from-booking.step.4':
+    'Trag den Betrag ein, wer bezahlt hat, und die Aufteilung wie bei jeder Ausgabe, und speichere. Öffnest du die Buchung jetzt wieder, steht sie unter Verknüpfte Ausgabe, mit einem Stift zum Bearbeiten und einem Papierkorb zum Entfernen.',
+  'help.guide.expense-from-booking.result':
+    'Die Buchung trägt ihre Kosten, und die Ausgabe ist eine ganz normale Zeile im Reiter Kosten, mit Zahler, Aufteilung und Währung wie jede andere.',
+  'help.guide.expense-from-booking.tip.1':
+    'Die Buchung zu löschen löscht ihre verknüpfte Ausgabe mit. Ausgabe entfernen im Block Kosten der Buchung macht das Gegenteil: Die Ausgabe geht, die Buchung bleibt.',
+  'help.guide.expense-from-booking.tip.2':
+    'Ein Ort hat denselben Block in seinem Formular, wobei Ausgabe erstellen dort zuerst den Ort speichert.',
+
+  // ── Screen: trip-transports ───────────────────────────────────────────────────────────
+  'help.ctx.trip-transports.title': 'Transport',
+  'help.ctx.trip-transports.summary':
+    'Alles, was dich zwischen den Stopps befördert: Flüge, Züge, Busse, Autos, Taxis, Fahrräder, Kreuzfahrten, Fähren und die ÖPNV-Verbindungen, die TREK für dich heraussucht. Der Tab ist ihre Liste; angelegt und gelesen werden sie auch im Plan, und auf der Karte gezeichnet.',
+  'help.ctx.trip-transports.bullet.1':
+    'Der Tab hält nur die Fahrten. Unterkünfte, Restaurants, Events und Tickets leben unter Buchungen, damit derselbe Eintrag nie zweimal auftaucht.',
+  'help.ctx.trip-transports.bullet.2':
+    'Die Werkzeugleiste zählt alle unter Alle und gibt jedem benutzten Typ einen eigenen Chip mit eigener Zahl, Flug, Zug, Auto, ÖPNV. Transport rechts legt einen von Hand an.',
+  'help.ctx.trip-transports.bullet.3':
+    'Die Karten kommen in drei Gruppen, jede über ihre Überschrift zusammenklappbar: Automatische ÖPNV-Verbindungen für die Verbindungen aus der Suche, dann Ausstehend, dann Bestätigt.',
+  'help.ctx.trip-transports.bullet.4':
+    'Eine Karte trägt den Status, den Typ, die Tage, über die sie geht, die Zeiten, den Buchungscode, die Route und die Fluggesellschaft samt Flugnr. oder die Zugnr., das Gleis und den Sitzplatz. Der Stift öffnet sie, der Papierkorb löscht sie nach einer Rückfrage.',
+  'help.ctx.trip-transports.bullet.5':
+    'Transporte entstehen auch im Plan: jeder Tageskopf hat ein Plus für Transport hinzufügen und einen Tram-Knopf für Öffentliche Verkehrsmittel, und das Fahrzeit-Verbindungsstück zwischen zwei Stopps öffnet dieselbe Suche für genau diese Etappe.',
+  'help.ctx.trip-transports.bullet.6':
+    'Ein Transport mit beiden Enden zeichnet eine Linie auf der Karte. Das Routen-Symbol in seiner Zeile im Tagesplan schaltet diese Linie an, und Alle Buchungsrouten anzeigen in der Leiste über den Tagen schaltet die ganze Reise um.',
+  // transports-list
+  'help.guide.transports-list.title': 'Den Tab Transport lesen',
+  'help.guide.transports-list.goal': 'Wissen, was dir die Liste sagt, bevor du etwas daran änderst.',
+  'help.guide.transports-list.step.1':
+    'Transport ist der zweite Tab der Reise. Er hält nur die Fahrten: Hotels, Restaurants, Events und Tickets stehen unter Buchungen.',
+  'help.guide.transports-list.step.2':
+    'Die Werkzeugleiste zählt jeden Transport unter Alle und gibt jedem benutzten Typ einen eigenen Chip mit eigener Zahl. Klick einen Chip an, um nur diesen Typ zu behalten, klick ihn noch einmal, um ihn loszulassen. Mehrere Chips können zugleich an sein, und Alle räumt sie ab.',
+  'help.guide.transports-list.step.3':
+    'Automatische ÖPNV-Verbindungen ist eine eigene Gruppe, die Verbindungen aus der ÖPNV-Suche. Ausstehend und Bestätigt halten alles von Hand Eingetragene. Der Pfeil neben einer Überschrift klappt eine Gruppe weg.',
+  'help.guide.transports-list.step.4':
+    'Eine Karte sagt alles: der Statuspunkt mit Ausstehend oder Bestätigt, der Typ, die Tage, über die sie geht, mit ihren Daten, die Zeiten, der Buchungscode, die Route und die Fluggesellschaft samt Flugnr. oder die Zugnr., das Gleis und der Sitzplatz.',
+  'help.guide.transports-list.step.5':
+    'Der Stift öffnet den Transport zum Bearbeiten, der Papierkorb löscht ihn, nach einer Rückfrage, die nennt, was verschwindet.',
+  'help.guide.transports-list.result':
+    'Die Liste ist auf das eingeengt, was du gesucht hast, und jede Karte sagt auf einen Blick, ob die Fahrt gebucht ist.',
+  'help.guide.transports-list.tip.1':
+    'Die Chips und die zugeklappten Gruppen werden pro Reise gemerkt, der Tab geht also wieder so auf, wie du ihn verlassen hast.',
+  'help.guide.transports-list.tip.2':
+    'Aus Datei importieren und AirTrail gesellen sich nur dann zu Transport in der Leiste, wenn der Server Buchungsbestätigungen lesen kann und wenn eine AirTrail-Instanz verbunden ist. Ohne sie füllt sich die Liste von Hand und über die ÖPNV-Suche.',
+  // add-transport
+  'help.guide.add-transport.title': 'Einen Transport zu einem Tag hinzufügen',
+  'help.guide.add-transport.goal':
+    'Trag die Fahrt, die dich von einem Stopp zum nächsten bringt, in den Tag ein, an dem sie stattfindet.',
+  'help.guide.add-transport.step.1':
+    'Jeder Tageskopf trägt rechts vier kleine Knöpfe. Klick auf das Plus, dessen Tooltip Transport hinzufügen lautet. Das Formular öffnet sich, Datum steht schon auf diesem Tag.',
+  'help.guide.add-transport.step.2':
+    'Art der Buchung wählt, womit du fährst: Flug, Zug, Bus, Auto, Taxi, Fahrrad, Kreuzfahrt, Fähre oder Sonstiges. Das Formular folgt. Ein Flug bekommt auf jeder Etappe einen Flughafen, ein Zug eine Kette von Bahnhöfen, ein Auto die Wörter Abholung und Rückgabe und Stopps unterwegs.',
+  'help.guide.add-transport.step.3':
+    'Titel ist das einzige Feld, das gefüllt sein muss; Hinzufügen bleibt ohne ihn grau. Schreib hinein, was du auf einer Anzeigetafel wiedererkennen würdest.',
+  'help.guide.add-transport.step.4':
+    'Von und Nach suchen einen Bahnhof, einen Hafen oder eine Adresse. Tipp mindestens drei Buchstaben und wähl ein Ergebnis aus der Liste. Ein nur getippter Name trägt keine Koordinaten, zeichnet also nichts auf der Karte.',
+  'help.guide.add-transport.step.5':
+    'Datum und Startzeit sagen, wann sie läuft, Enddatum und Endzeit, wann sie vorbei ist; eine Fahrt, die am nächsten Tag ankommt, nimmt dort den nächsten Tag. Buchungscode, Status mit Ausstehend oder Bestätigt und Notizen sind freiwillig.',
+  'help.guide.add-transport.step.6': 'Klick auf Hinzufügen.',
+  'help.guide.add-transport.result':
+    'Der Transport ist eine Zeile am Tag, zu seiner Zeit zwischen den Stopps, und eine Karte im Tab Transport unter Ausstehend oder Bestätigt.',
+  'help.guide.add-transport.tip.1':
+    'Die Zeile landet dort, wo ihre Startzeit sie hinsetzt, hinter dem letzten Stopp, der früher beginnt. Ihr Griff zieht sie an jede andere Stelle des Tages oder auf einen anderen Tag.',
+  'help.guide.add-transport.tip.2':
+    'Datei anhängen unter Dateien nimmt das Ticket, und Ausgabe erstellen unter Kosten speichert die Buchung und öffnet den Kosten-Editor für den Fahrpreis.',
+  'help.guide.add-transport.tip.3':
+    'Reisende markiert, wer auf dieser Fahrt dabei ist. Sobald ein Transport Reisende hat, wachsen der Leiste des Tabs ihre Avatare, und sie filtert die Liste danach.',
+  // plan-transit
+  'help.guide.plan-transit.title': 'Eine ÖPNV-Verbindung planen',
+  'help.guide.plan-transit.goal':
+    'Lass TREK die echten Züge und Busse zwischen zwei Punkten eines Tages heraussuchen und die, die du wählst, in den Plan setzen.',
+  'help.guide.plan-transit.step.1':
+    'Klick im Tageskopf auf den Tram-Knopf, Öffentliche Verkehrsmittel. Die Suche öffnet sich für diesen Tag.',
+  'help.guide.plan-transit.step.2':
+    'Von und Nach nehmen eine Haltestelle oder einen Bahnhof. Solange das Feld leer ist, werden die eigenen Stopps des Tages angeboten; ab zwei Buchstaben wird stattdessen in den Stationen des Fahrplans gesucht. Tauschen zwischen den beiden Feldern dreht die Verbindung um.',
+  'help.guide.plan-transit.step.3':
+    'Abfahrt oder Ankunft mit einer Uhrzeit sagt, wann du fahren willst, und Beste Route, Wenige Umstiege oder Wenig Fußweg sagt, wie die Antworten sortiert werden sollen.',
+  'help.guide.plan-transit.step.4':
+    'Die Chips darunter sagen, welche Verkehrsmittel benutzt werden dürfen: Zug, U-Bahn, Tram, Bus, Fähre und Seilbahn. Schalt eines aus, um es wegzulassen, mindestens eines bleibt an. Dann klick auf Suchen.',
+  'help.guide.plan-transit.step.5':
+    'Jedes Ergebnis gibt Abfahrt und Ankunft, wie lange es dauert, wie viele Umstiege und wie viel Fußweg, und die Linien in ihren eigenen Farben. Klick eines an, um es Halt für Halt aufzuklappen, mit den Gleisen und den Fußwegen zwischen den Linien.',
+  'help.guide.plan-transit.step.6': 'Klick auf Zum Tag hinzufügen.',
+  'help.guide.plan-transit.result':
+    'Die Verbindung ist eine Zeile am Tag mit ihren Linien, ihren Umstiegen und ihrem Fußweg, und eine Karte im Tab Transport unter Automatische ÖPNV-Verbindungen.',
+  'help.guide.plan-transit.tip.1':
+    'Die Verbindungen kommen von Transitous, einem freien Gemeinschaftsdienst auf öffentlichen Fahrplandaten: kein Schlüssel, kein Konto. Ein Admin kann die Suche stattdessen auf Google richten.',
+  'help.guide.plan-transit.tip.2':
+    'Nichts gefunden? Die Fahrplandaten decken eine Region und einen Zeitraum ab. Probier eine andere Uhrzeit, schalt mehr Verkehrsmittel an, oder wähl einen Bahnhof statt des Ortes selbst. Die Meldung nennt den Dienst, der geantwortet hat.',
+  'help.guide.plan-transit.tip.3':
+    'Dieselbe Suche öffnet sich für eine einzelne Etappe: klick auf das Fahrzeit-Verbindungsstück zwischen zwei Stopps und wähl Öffentliche Verkehrsmittel. Von, Nach und die Abfahrtszeit sind schon für dich ausgefüllt.',
+  // change-transit-route
+  'help.guide.change-transit-route.title': 'Eine geplante Verbindung öffnen und ändern',
+  'help.guide.change-transit-route.goal':
+    'Die Verbindung Halt für Halt lesen, sie umbenennen, oder die Route neu heraussuchen lassen.',
+  'help.guide.change-transit-route.step.1':
+    'Im Tab Transport sitzen die geplanten Verbindungen unter Automatische ÖPNV-Verbindungen. Klick die Karte an.',
+  'help.guide.change-transit-route.step.2':
+    'Dauer, Umstiege und Fußweg stehen oben. Verbindung darunter geht die Fahrt Halt für Halt durch, mit den Gleisen und den Fußwegen zwischen den Linien.',
+  'help.guide.change-transit-route.step.3':
+    'Route ändern startet die Suche noch einmal, schon gefüllt mit den beiden Enden dieser Verbindung und ihrem Tag.',
+  'help.guide.change-transit-route.step.4':
+    'Wähl eine andere Verbindung und klick auf Zum Tag hinzufügen; sie tritt an die Stelle der alten. Details bearbeiten, neben Route ändern, öffnet stattdessen das gewöhnliche Transport-Formular, in dem der Buchungscode, der Status, die Reisenden und die Dateien liegen.',
+  'help.guide.change-transit-route.result':
+    'Die Fahrt trägt die neue Verbindung, und ihre Karte im Tab Transport zeigt die neuen Linien und Zeiten.',
+  'help.guide.change-transit-route.tip.1':
+    'Der Titel der Fahrt ist nur Text: der Stift daneben benennt sie um, ohne die Route anzurühren. Notizen darunter nehmen Markdown und haben einen Tab Bearbeiten und einen Tab Vorschau.',
+  'help.guide.change-transit-route.tip.2':
+    'Löschen am Fuß der Fahrt nimmt die Verbindung aus der Reise; der Tag behält seine Stopps.',
+  // leg-travel-mode
+  'help.guide.leg-travel-mode.title': 'Ändern, wie eine Etappe zurückgelegt wird',
+  'help.guide.leg-travel-mode.goal':
+    'Eine Etappe eines sonst gefahrenen Tages zu Fuß gehen, oder sie der ÖPNV-Suche übergeben.',
+  'help.guide.leg-travel-mode.step.1':
+    'Die Verbindungsstücke zwischen den Stopps erscheinen erst, wenn die Route des Tages an ist. Klick den Tag an, um ihn zu öffnen, dann Route unter seinen Stopps.',
+  'help.guide.leg-travel-mode.step.2':
+    'Jedes Verbindungsstück nennt Fahrzeit und Entfernung dieser Etappe, mit dem Symbol des Verkehrsmittels, in dem sie berechnet wurde: ein Auto fürs Fahren, ein Fuß fürs Gehen.',
+  'help.guide.leg-travel-mode.step.3':
+    'Klick auf das Verbindungsstück. Das Menü bietet Auto und Fußweg, Öffentliche Verkehrsmittel und Tages-Standard verwenden.',
+  'help.guide.leg-travel-mode.step.4':
+    'Wähl Fußweg. Nur diese Etappe ändert sich; der Rest des Tages behält sein eigenes Verkehrsmittel.',
+  'help.guide.leg-travel-mode.result':
+    'Die Etappe zeigt das Fuß-Symbol und ihre Gehzeit, und die übrigen Etappen des Tages behalten das Verkehrsmittel des Tages.',
+  'help.guide.leg-travel-mode.tip.1':
+    'Das Verkehrsmittel gehört der Etappe, nicht dem Tag: die Knöpfe Auto und Fußweg des ganzen Tages überschreiben nie eine Etappe, die du von Hand gesetzt hast. Tages-Standard verwenden gibt ihnen die Etappe zurück.',
+  'help.guide.leg-travel-mode.tip.2':
+    'Öffentliche Verkehrsmittel im selben Menü öffnet die Verbindungssuche für genau diese Etappe, mit beiden Enden und der Abfahrtszeit schon ausgefüllt.',
+  'help.guide.leg-travel-mode.tip.3':
+    'Die Zeiten kommen von einem öffentlichen Router über echte Straßen und Fußwege. Eine Etappe, die er nicht beantworten kann, behält ihre gerade Linie und zeigt keine Zeit.',
+  // edit-transport
+  'help.guide.edit-transport.title': 'Einen Transport ändern oder löschen',
+  'help.guide.edit-transport.goal':
+    'Eine Zeit, ein Gleis oder einen Buchungscode richten, oder die Fahrt aus der Reise nehmen.',
+  'help.guide.edit-transport.step.1':
+    'Im Tagesplan ist ein Transport eine farbige Zeile zwischen den Stopps. Klick sie an.',
+  'help.guide.edit-transport.step.2':
+    'Das Formular ist dasselbe, das ihn angelegt hat, mit Transport bearbeiten in der Titelzeile. Alles lässt sich ändern: der Typ, die Route, die Tage und Zeiten, der Buchungscode, der Status.',
+  'help.guide.edit-transport.step.3':
+    'Die Route eines Fluges ist eine Kette von Flughäfen, die eines Zuges eine Kette von Bahnhöfen. Zwischenstopp hinzufügen setzt einen weiteren dazwischen, und jede Etappe behält ihre eigenen Zeiten und ihre eigene Flug- oder Zugnummer.',
+  'help.guide.edit-transport.step.4':
+    'Klick auf Aktualisieren. Um den Transport ganz zu entfernen, nimm den Papierkorb auf seiner Karte im Tab Transport und bestätige.',
+  'help.guide.edit-transport.result':
+    'Die Änderung zeigt sich überall, wo der Transport auftaucht: im Tab Transport, an dem Tag, an dem er läuft, und in seiner Linie auf der Karte.',
+  'help.guide.edit-transport.tip.1':
+    'Dasselbe Formular öffnet sich von beiden Seiten, über den Stift auf der Karte im Tab Transport und über die eigene Zeile des Transports im Tagesplan. Eine geplante ÖPNV-Verbindung ist die Ausnahme: ihre Zeile öffnet die Fahrtansicht, und Details bearbeiten führt von dort zu diesem Formular.',
+  'help.guide.edit-transport.tip.2':
+    'Einen Transport auf einen anderen Tag zu verschieben braucht das Formular gar nicht: zieh seine Zeile von einer Tageskarte auf die nächste.',
+  // transport-on-map
+  'help.guide.transport-on-map.title': 'Einen Transport auf der Karte zeichnen',
+  'help.guide.transport-on-map.goal': 'Sehen, wo ein Flug, eine Fahrt oder eine Verbindung wirklich langgeht.',
+  'help.guide.transport-on-map.step.1':
+    'Ein Transport mit beiden Enden trägt ein kleines Routen-Symbol in seiner Zeile im Tagesplan. Klick es an; seine Beschriftung wird zu Buchungsrouten ausblenden.',
+  'help.guide.transport-on-map.step.2':
+    'Die Route wird auf der Karte gezeichnet, mit einem Pillen-Marker an jedem Ende, der das Symbol des Transports trägt.',
+  'help.guide.transport-on-map.step.3':
+    'Klick einen Endmarker an, um die Buchung zu lesen, ohne die Karte zu verlassen: die Zeiten, die Fluggesellschaft samt Flugnr., den Buchungscode und die Notizen. Schließen räumt das Blatt weg.',
+  'help.guide.transport-on-map.step.4':
+    'Das Routen-Symbol in der Leiste über den Tagen macht die ganze Reise auf einmal: Alle Buchungsrouten anzeigen, und Alle Buchungsrouten ausblenden, um sie wieder abzuräumen.',
+  'help.guide.transport-on-map.step.5':
+    'Eine geplante ÖPNV-Verbindung hat kein eigenes Symbol. Sie wird über den Schalter Route des Tages gezeichnet, und darum räumt Alle Buchungsrouten ausblenden sie nicht weg, solange die Route dieses Tages noch an ist.',
+  'help.guide.transport-on-map.result':
+    'Die Routen liegen auf der Karte, mit einem Marker an jedem Ende, und bleiben dort, bis du sie wieder ausschaltest.',
+  'help.guide.transport-on-map.tip.1':
+    'Ein Flug, eine Kreuzfahrt und eine Fähre zeichnen sich als Bogen, ein Auto, ein Bus, ein Taxi und ein Fahrrad folgen den echten Straßen, und ein Zug oder eine geplante Verbindung läuft durch die Bahnhöfe, die er anfährt.',
+  'help.guide.transport-on-map.tip.2':
+    'Eine bestätigte Buchung ist eine durchgezogene Linie, eine ausstehende eine gestrichelte. Die Einstellung Orts-Labels auf Buchungsrouten schreibt den Flughafencode oder den Bahnhofsnamen in die Endmarker.',
+  'help.guide.transport-on-map.tip.3':
+    'Alle Buchungsrouten anzeigen macht reinen Tisch, es ist keine Ebene: es verwirft, was die einzelnen Symbole gesetzt hatten, zweimal drücken lässt dich also mit allem an oder allem aus zurück.',
 };
 
 export default help;

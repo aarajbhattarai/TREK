@@ -2649,6 +2649,301 @@ const help: TranslationStrings = {
   'help.guide.delete-booking.result': '卡片沒了，對旅行中的所有人都是。預訂沒有復原，所以這個問題就是最後一道關。',
   'help.guide.delete-booking.tip.1': '刪除一筆住宿預訂，還會把它在日程計劃裡的那些夜取走，並移除關聯到它的那筆支出。',
   'help.guide.delete-booking.tip.2': '附上過的單據仍留在這次旅行的「檔案」欄裡；走掉的只是它們與這筆預訂的關聯。',
+
+  // ── Screen: trip-costs ────────────────────────────────────────────────────────────────
+  'help.ctx.trip-costs.title': '費用',
+  'help.ctx.trip-costs.summary':
+    '行程的錢：每一筆支出都是一條帶日期的帳目，誰墊的錢、誰該分攤，用的是收據上原本的貨幣；右欄則寫明誰該付給誰，才能重新扯平。',
+  'help.ctx.trip-costs.bullet.1':
+    '頂部四張卡片：「你欠款」和「他人欠你」是你自己這一邊的結算，「未結算金額」是已記錄但還沒有付款人的部分，「旅程總支出」把一切加起來，下面帶上「你的分攤」和「你支付了」。',
+  'help.ctx.trip-costs.bullet.2': '右上角的「新增支出」打開編輯器；旁邊的「結清」把所有未完成的轉帳一次全部記下。',
+  'help.ctx.trip-costs.bullet.3':
+    '帳目按日期分組，最新的在前，那一天的合計顯示在右側。每一列帶著作為彩色標籤的分類、名稱、付款人頭像、備註和金額，當分攤讓你多出或少出時，還會帶上「你借出」或「你借入」。',
+  'help.ctx.trip-costs.bullet.4':
+    '清單上方是「搜尋支出…」、一個類別篩選、一個日期篩選、「全部」/「我支付的」/「他人欠我」開關和「匯出 CSV」按鈕。',
+  'help.ctx.trip-costs.bullet.5':
+    '右欄就是答案：「結清」列出誰付給誰，「餘額」顯示每位旅伴的盈餘或虧空，「最終花費」是這趟行程讓他們每個人花了多少，「按分類」則是錢去了哪裡。',
+  'help.ctx.trip-costs.bullet.6':
+    '已記錄的付款在同一本帳裡佔著自己的一列，旁邊有「編輯」和「復原」；支出則有一支鉛筆和一個垃圾桶，而垃圾桶不問就直接刪除。',
+  // add-expense
+  'help.guide.add-expense.title': '新增一筆支出',
+  'help.guide.add-expense.goal': '記下某樣東西花了多少、誰付的錢、和誰一起分攤。',
+  'help.guide.add-expense.step.1': '點選「費用」分頁右上角的「新增支出」。編輯器打開，日期是今天，所有人已經在分攤裡。',
+  'help.guide.add-expense.step.2':
+    '把這筆錢花在哪寫進「這筆是什麼支出？」，這是唯一必須填寫的欄位；把收據上的數字填進「總金額」。',
+  'help.guide.add-expense.step.3':
+    '「貨幣」和「日期」在金額下方。「貨幣」從行程自己的貨幣開始；改掉它，編輯器就會顯示這筆金額折成行程貨幣是多少。「日期」從今天開始，帳目按它把支出歸到某一天下。',
+  'help.guide.add-expense.step.4':
+    '挑一個「分類」。一共十四個，而且不能更改：你挑的那個就是列上的彩色標籤，也是「按分類」裡的那根長條。',
+  'help.guide.add-expense.step.5':
+    '在「誰付的款？」下面，挑出真正掏錢的那個人。「你」是預先選好的；「尚無人付款」只記下金額而不讓任何人承擔，「多人支付」把這筆帳分給幾個付款人。',
+  'help.guide.add-expense.step.6':
+    'Split 從 Equally 開始，所有人都包含在內，每個名字後面顯示分到的分攤額。點選「新增支出」儲存。',
+  'help.guide.add-expense.result': '這筆支出進了它那一天的帳目，計入「旅程總支出」，結算欄也重新算過了誰該付給誰。',
+  'help.guide.add-expense.tip.1':
+    '保持它打開時的樣子：支出用行程的貨幣，日期是今天，在所有人之間平均分攤，真正必須填的只有名稱和金額。',
+  'help.guide.add-expense.tip.2': '金額旁邊的 ± 把支出變成退款。負的總額是把錢退回來而不是收走，分攤也反過來走。',
+  'help.guide.add-expense.tip.3':
+    '底部的「附加收據/發票」接受圖片和 PDF。它們在你儲存時上傳，落進行程的「檔案」裡，清單中名稱旁邊會出現一個「收據」標記。',
+  // expense-payers
+  'help.guide.expense-payers.title': '說明這筆帳是誰付的',
+  'help.guide.expense-payers.goal': '記下誰為一筆支出先墊了錢，這是結算算式的另一半。',
+  'help.guide.expense-payers.step.1':
+    '用列旁邊的鉛筆打開一筆支出，看「誰付的款？」。預設是「一人支付」：下拉框裡寫著掏錢的那一個人。',
+  'help.guide.expense-payers.step.2':
+    '那個下拉框的第一項「尚無人付款」只記下金額，不讓任何人欠下什麼。這筆支出仍然計入「旅程總支出」。',
+  'help.guide.expense-payers.step.3':
+    '標籤旁邊的連結「多人支付」會為每位旅伴打開一列。把付過錢的人加入，並填寫每人各出了多少；這些金額必須加起來等於總額。',
+  'help.guide.expense-payers.step.4':
+    '沒有人付過的支出會在列上標記「未完成」，並計入「未結算金額」卡片，那裡正是已記錄但未結清的開銷匯集的地方。',
+  'help.guide.expense-payers.result': '誰付的錢決定誰被還錢，分攤決定誰該付錢，「餘額」就是兩者之差。',
+  'help.guide.expense-payers.tip.1':
+    '「誰付的款？」和 Split 彼此獨立：你可以為一頓自己沒去的晚餐付錢，也可以被算進一頓自己沒付錢的晚餐。',
+  'help.guide.expense-payers.tip.2':
+    '有幾個付款人時，金額必須加起來等於總額。再加入一個人，其餘的人會圍著他重新排布；在它們還不相符時，編輯器會說付款人金額總和必須為總額，並拒絕儲存。',
+  'help.guide.expense-payers.tip.3':
+    '移除一個付款人並不會移除這筆支出：金額仍留在「旅程總支出」裡，而這一列會變成「未完成」。',
+  // split-expense
+  'help.guide.split-expense.title': '在旅伴之間分攤一筆帳',
+  'help.guide.split-expense.goal': '決定誰為一筆支出買單：所有人平攤、按金額，或者照著收據一行一行來。',
+  'help.guide.split-expense.step.1':
+    '在支出編輯器裡，Split 列出每一位旅伴。點選一個名字就把他排除在這筆支出之外；被排除的旅伴顯示「不參與」，不必為它承擔任何金額。',
+  'help.guide.split-expense.step.2':
+    'Equally 是預設：每位被包含的旅伴分到相同的分攤額，清單下方的那一行會說明分成幾份、每份是多少。',
+  'help.guide.split-expense.step.3':
+    'Custom 把這些分攤額換成金額輸入框。填入每位旅伴該承擔的金額；下面那一行會一起計數，達到「分攤金額與總額相符」時變成綠色。不相符時它不會儲存。',
+  'help.guide.split-expense.step.4':
+    'Ticket 把收據一行一行拆開：「新增品項」，然後每行填一個名稱和一個價格，並在「分攤：」下面列出分擔這一行的旅伴。',
+  'help.guide.split-expense.step.5':
+    '品項下方的「每人分攤額」顯示每位旅伴最終該承擔多少，而頂部的「總金額」由這些品項相加得出。點選「儲存」。',
+  'help.guide.split-expense.result': '分攤是所有餘額的根基。它隨支出一起儲存，之後可以修改而不牽動別的任何東西。',
+  'help.guide.split-expense.tip.1': '你排除掉的旅伴顯示「不參與」，僅在這一筆支出上不必承擔；其餘的人接過他的分攤額。',
+  'help.guide.split-expense.tip.2': 'Equally 精確到分：多出來的那一分會在支出之間輪轉，所以不會總是同一個人來付。',
+  'help.guide.split-expense.tip.3': 'Ticket 模式會自己把「總金額」加出來，並把該欄位反灰：收據上的品項就是總額。',
+  // expense-currency
+  'help.guide.expense-currency.title': '用另一種貨幣輸入支出',
+  'help.guide.expense-currency.goal': '照收據上真正寫著的輸入，讓 TREK 替你守住匯率。',
+  'help.guide.expense-currency.step.1':
+    '打開「新增支出」，按收據上寫的原樣填寫名稱和金額，填那個數字本身，而不是換算過的結果。',
+  'help.guide.expense-currency.step.2':
+    '打開「貨幣」，挑出收據上的貨幣。清單裡帶著 TREK 認識的每一個代碼，而且可以搜尋：輸入那三個字母。',
+  'help.guide.expense-currency.step.3':
+    '欄位下方會出現一行，寫明這筆金額此刻值多少，標著「即時匯率」。它只是預覽，不是最終存下來的東西。',
+  'help.guide.expense-currency.step.4':
+    '點選「新增支出」。匯率就在此刻凍結：從此以後，這筆支出就值你輸入那天它所值的數。',
+  'help.guide.expense-currency.step.5':
+    '在帳目裡，這一列在名稱下面帶著兩個數字：你輸入的金額、一個箭頭，以及它折成行程貨幣後的數。上方的每一項合計、餘額和結算用的都是第二個。',
+  'help.guide.expense-currency.result':
+    '這筆支出保留著你輸入的金額和貨幣。帳目把兩者都顯示出來，而行程的各項合計和餘額仍保持行程的貨幣。',
+  'help.guide.expense-currency.tip.1':
+    '匯率在你儲存的那一刻凍結，所以一筆已經結清的欠款不會因為下一週行情變動而重新翻起。只有改掉這筆支出的貨幣，才會凍結一個新的匯率。',
+  'help.guide.expense-currency.tip.2':
+    '「設定」裡的「顯示貨幣」只改變你讀到的內容；存下來的金額從不挪動。留空時，每次旅行都按它自己的貨幣顯示。',
+  'help.guide.expense-currency.tip.3':
+    '行程貨幣本身在行程上，位於「編輯旅行」下面，需要「編輯旅行詳情」的權限。更改它會把每一個凍結的匯率重新錨定，而不是把金額換算成另一種貨幣。',
+  // filter-costs
+  'help.guide.filter-costs.title': '找到一筆支出，或者某一天的開銷',
+  'help.guide.filter-costs.goal': '把一本長長的帳目收窄到你真正要找的那一部分。',
+  'help.guide.filter-costs.step.1': '在清單上方的「搜尋支出…」裡輸入。它會隨著你輸入比對支出的名稱。',
+  'help.guide.filter-costs.step.2': '「所有類別」會展開十四個分類。挑一個，就只剩下那個分類的支出。',
+  'help.guide.filter-costs.step.3':
+    '「所有日期」列出每一個花過錢的日子。挑一個，就會有一條橫幅取代日期標題，寫著那一天、它包含多少筆支出以及它的合計。',
+  'help.guide.filter-costs.step.4':
+    '「全部」/「我支付的」/「他人欠我」開關是你自己這一邊看到的帳目：你為哪些掏了錢，又有哪些錢還沒回到你手裡。',
+  'help.guide.filter-costs.step.5':
+    '列尾的「匯出 CSV」把每一筆支出寫進一個檔案，帶上原始金額、它的貨幣和換算後的金額。',
+  'help.guide.filter-costs.result': '篩選可以疊加，日期分組也會用剩下內容的合計重新繪製。',
+  'help.guide.filter-costs.tip.1':
+    '已記錄的付款沒有名稱也沒有分類，所以搜尋或類別篩選會把它們藏起來。日期篩選則把它們留著，歸在付款被記下的那一天。',
+  'help.guide.filter-costs.tip.2': '「匯出 CSV」永遠匯出每一筆支出，無論螢幕上篩選成什麼樣，一筆支出一列。',
+  // settle-up
+  'help.guide.settle-up.title': '算出誰該付給誰，並且結清',
+  'help.guide.settle-up.goal': '把一堆共同開銷變成讓所有人扯平所需的最少幾筆轉帳，並在它們發生時記錄下來。',
+  'help.guide.settle-up.step.1':
+    '右欄的「結清」卡片列出能讓所有人扯平的轉帳：誰付給誰，以及多少。標題旁邊的數字是還有幾筆未完成。',
+  'help.guide.settle-up.step.2': '轉帳旁邊的「結算」把它記為已完成。這條流向從卡片上消失，餘額重新繪製。',
+  'help.guide.settle-up.step.3': '已記錄的轉帳是帳目裡的一列，歸在它發生的那一天下，標著「付款」，帶著兩位旅伴和金額。',
+  'help.guide.settle-up.step.4': '在那一列旁邊，鉛筆可以更正一筆付款，「復原」把它收回，轉帳就回到「結清」卡片上。',
+  'help.guide.settle-up.step.5':
+    '卡片標題處的「新增付款」用來記錄一筆沒有按建議進行的轉帳。挑選「來自」和「給」、金額、它的貨幣以及它發生的日期。',
+  'help.guide.settle-up.step.6':
+    '螢幕頂部標題列裡的「結清」把所有未完成的轉帳一次全部記下，就像一群人在行程結束時一起把帳清乾淨。',
+  'help.guide.settle-up.result':
+    '每一筆記錄下來的轉帳都是帳目裡的一列，也是「結清」卡片上少掉的一條。當卡片寫著「大家都已結清」，這趟行程就付清了。',
+  'help.guide.settle-up.tip.1': '卡片顯示的是最少的轉帳，而不是每一筆欠款：三個人繞成一圈互相欠著，會收成一兩筆付款。',
+  'help.guide.settle-up.tip.2': '「結算」記錄的是一筆轉帳，它並不搬動錢。用你慣用的方式把錢送出去，然後再點它。',
+  'help.guide.settle-up.tip.3':
+    '一筆付款可以用任何貨幣進行，所以用歐元還一筆日圓的欠款很正常：對話框有自己的貨幣選擇器，也會把那個匯率凍結下來。',
+  // final-budget
+  'help.guide.final-budget.title': '看看這趟行程讓每位旅伴花了多少',
+  'help.guide.final-budget.goal': '讀帳目裡按人來的那一面：今天的餘額，以及每個人的真實花費。',
+  'help.guide.final-budget.step.1':
+    '「餘額」顯示每位旅伴的位置：如果行程欠他，就是一條向右的綠色長條；如果是他欠行程，就是一條向左的紅色長條，金額寫在名字旁邊。',
+  'help.guide.final-budget.step.2':
+    '它下面的「最終花費」回答的是另一個問題：不是此刻誰欠著什麼，而是等一切都還清之後，這趟行程讓每位旅伴花了多少。',
+  'help.guide.final-budget.step.3':
+    '點選一個名字，就能展開這筆算式：「已支付的支出」，其下是「還款淨額」和「待還款項」。',
+  'help.guide.final-budget.step.4':
+    '每一列下面坐著構成它的那些項目：那位旅伴付過的支出、已經記錄的轉帳以及仍然未完成的轉帳。它們加起來正好等於上面那一列。',
+  'help.guide.final-budget.result':
+    '「餘額」是今天誰多出誰少出；「最終花費」是等一切都還清之後，這趟行程最終讓你們每個人花了多少。',
+  'help.guide.final-budget.tip.1': '記錄一筆付款不會改變任何人的最終花費。它只是把一筆金額從待還款項挪到還款淨額。',
+  'help.guide.final-budget.tip.2': '沒有付款人的支出不會進入這兩張卡片，正如它也不會進入結算建議。',
+  // expense-from-booking
+  'help.guide.expense-from-booking.title': '把一次預訂變成一筆支出',
+  'help.guide.expense-from-booking.goal': '把一趟航班、一家飯店或一個地點真正花掉的錢，附到它所屬的那條記錄上。',
+  'help.guide.expense-from-booking.step.1': '在「交通」或「預訂」分頁打開該預訂，點選它的鉛筆。',
+  'help.guide.expense-from-booking.step.2':
+    '捲動到表單底部的 Costs 區塊。在還沒有任何關聯時，它會提供 Create expense，並說明會先儲存預訂。',
+  'help.guide.expense-from-booking.step.3':
+    '點選 Create expense。預訂被儲存，表單關閉，費用編輯器隨即打開，預訂的標題作為名稱，它的類型也已經對應到了一個分類。',
+  'help.guide.expense-from-booking.step.4':
+    '像填任何一筆支出那樣填好金額、誰付的錢和分攤，然後儲存。此時再打開該預訂，就能在 Linked expense 下看到它，旁邊有鉛筆可以編輯，有垃圾桶可以移除。',
+  'help.guide.expense-from-booking.result':
+    '預訂帶上了它的花費，而這筆支出就是「費用」分頁上一條普通的列，和別的支出一樣有付款人、分攤和貨幣。',
+  'help.guide.expense-from-booking.tip.1':
+    '刪除預訂會連同它關聯的支出一起刪除。預訂的 Costs 區塊裡的 Remove expense 則相反：支出沒了，預訂還在。',
+  'help.guide.expense-from-booking.tip.2': '地點的表單裡有同樣的區塊，其中的 Create expense 會先儲存地點。',
+
+  // ── Screen: trip-transports ───────────────────────────────────────────────────────────
+  'help.ctx.trip-transports.title': '交通',
+  'help.ctx.trip-transports.summary':
+    '把你在各個地點之間送來送去的一切：航班、火車、公車、汽車、計程車、自行車、郵輪、渡輪，以及 TREK 替你查到的大眾運輸路線。這個標籤頁是它們的清單；它們也在計劃上建立和檢視，並畫在地圖上。',
+  'help.ctx.trip-transports.bullet.1':
+    '標籤頁裡只有交通。住宿、餐廳、活動和門票在「預訂」裡，所以同一筆記錄永遠不會出現兩次。',
+  'help.ctx.trip-transports.bullet.2':
+    '工具列在「全部」下統計全部數量，並給每個用到的型別一個帶自己計數的篩選塊：「航班」「火車」「汽車」「大眾運輸」。右側的「交通」手動新增一筆。',
+  'help.ctx.trip-transports.bullet.3':
+    '卡片分成三組，每組都能從標題摺疊：搜尋規劃出的路線放在「自動大眾運輸」，然後是「待確認」，然後是「已確認」。',
+  'help.ctx.trip-transports.bullet.4':
+    '一張卡片帶著狀態、型別、它跨越的日子、時間、「預訂碼」、路線，以及「航空公司」和「航班號」，或者「車次」「站臺」「座位」。鉛筆開啟它，垃圾桶在一次詢問之後刪除它。',
+  'help.ctx.trip-transports.bullet.5':
+    '交通也在計劃上建立：每個日期標題都有一個「新增交通」的 + 和一個「大眾運輸」的路面電車按鈕，而兩個地點之間的行車時間連線會為這一段開啟同一個搜尋。',
+  'help.ctx.trip-transports.bullet.6':
+    '兩端都設好的交通會在地圖上畫出一條線。日程裡它那一列上的路線圖示開啟這條線，而日期上方工具列裡的「顯示所有預訂路線」翻轉整趟旅行。',
+  // transports-list
+  'help.guide.transports-list.title': '讀懂「交通」標籤頁',
+  'help.guide.transports-list.goal': '在你改動任何東西之前，先知道清單在告訴你什麼。',
+  'help.guide.transports-list.step.1':
+    '「交通」是旅行的第二個標籤頁。裡面只有交通：飯店、餐廳、活動和門票在「預訂」裡。',
+  'help.guide.transports-list.step.2':
+    '工具列在「全部」下統計每一筆交通，並給每個用到的型別一個帶自己計數的篩選塊。點選一個篩選塊只保留那個型別，再點一次就放開。多個篩選塊可以同時開啟，「全部」把它們清空。',
+  'help.guide.transports-list.step.3':
+    '「自動大眾運輸」自成一組，是大眾運輸搜尋規劃出的路線。「待確認」和「已確認」裝著所有手動輸入的內容。標題旁邊的箭頭把一組摺疊起來。',
+  'help.guide.transports-list.step.4':
+    '一張卡片什麼都說了：帶「待確認」或「已確認」的狀態圓點、型別、它跨越的日子和日期、時間、「預訂碼」、路線，以及「航空公司」和「航班號」，或者「車次」「站臺」「座位」。',
+  'help.guide.transports-list.step.5': '鉛筆開啟交通以便編輯，垃圾桶在一次點名要刪什麼的詢問之後把它刪掉。',
+  'help.guide.transports-list.result': '清單收窄到你要找的東西，每張卡片一眼就說明這趟交通訂沒訂上。',
+  'help.guide.transports-list.tip.1':
+    '篩選塊和摺疊起來的分組按每趟旅行分別記住，所以標籤頁會照你離開時的樣子重新開啟。',
+  'help.guide.transports-list.tip.2':
+    '只有當伺服器能讀取預訂確認檔、並且連線了一個 AirTrail 執行個體時，「從檔案匯入」和 AirTrail 才會和「交通」一起出現在工具列裡。沒有它們，清單就靠手動輸入和大眾運輸搜尋來填。',
+  // add-transport
+  'help.guide.add-transport.title': '把一段交通加到某一天',
+  'help.guide.add-transport.goal': '把從一個地點帶你到下一個地點的路程，放進它發生的那一天。',
+  'help.guide.add-transport.step.1':
+    '每個日期標題右側有四個小按鈕。點選那個提示寫著「新增交通」的 +。表單開啟時，「日期」已經設成了那一天。',
+  'help.guide.add-transport.step.2':
+    '「預訂型別」選你要搭什麼：「航班」「火車」「公車」「汽車」「計程車」「自行車」「郵輪」「渡輪」或「其他」。表單隨之變化。航班在每一段上要一個機場，火車要一串車站，汽車用的是「取車日期」和「還車日期」的說法以及「沿途停靠點」。',
+  'help.guide.add-transport.step.3':
+    '「標題」是唯一必須填的欄位；沒有它，「新增」一直是灰的。寫上你在月臺資訊牌上能認出來的東西。',
+  'help.guide.add-transport.step.4':
+    '「出發」和「到達」搜尋車站、港口或地址。至少輸入三個字母，再從清單裡選一個結果。只是打上去的名稱不帶座標，因此在地圖上什麼也畫不出來。',
+  'help.guide.add-transport.step.5':
+    '「日期」和「開始時間」說明它什麼時候走，「結束日期」和「結束時間」說明它什麼時候結束；第二天才到的路程在那一頭取第二天。「預訂碼」、帶「待確認」或「已確認」的「狀態」以及「備註」都是選填的。',
+  'help.guide.add-transport.step.6': '點選「新增」。',
+  'help.guide.add-transport.result':
+    '這段交通成為那一天的一列，按它的時間排在各地點之間，同時在「交通」標籤頁裡成為「待確認」或「已確認」下的一張卡片。',
+  'help.guide.add-transport.tip.1':
+    '這一列落在它的開始時間決定的位置，也就是最後一個開始得更早的地點之後。它的拖曳把手能把它拖到當天任何別的位置，或者拖到另一天。',
+  'help.guide.add-transport.tip.2':
+    '「檔案」下的「附加檔案」接住車票，「Costs」下的「Create expense」儲存這筆預訂，並為票價開啟「費用」編輯器。',
+  'help.guide.add-transport.tip.3':
+    '「出行成員」標出誰在這趟交通上。只要有一筆交通帶了出行成員，標籤頁的工具列就長出他們的頭像，並按他們篩選清單。',
+  // plan-transit
+  'help.guide.plan-transit.title': '規劃一條大眾運輸路線',
+  'help.guide.plan-transit.goal': '讓 TREK 查出某一天兩點之間真實的火車和公車，把你選中的那一條放進計劃。',
+  'help.guide.plan-transit.step.1': '在日期標題裡點選路面電車按鈕，「大眾運輸」。搜尋為那一天開啟。',
+  'help.guide.plan-transit.step.2':
+    '「起點」和「終點」接受一個站點或車站。欄位還空著時，會先給出當天自己的地點；輸入兩個字母則改為搜尋時刻表裡的車站。兩個欄位之間的「對調」把路線掉頭。',
+  'help.guide.plan-transit.step.3':
+    '「出發」或「抵達」加上一個時間說明你想什麼時候走，「最佳路線」「較少轉乘」或「較少步行」說明結果該怎麼排序。',
+  'help.guide.plan-transit.step.4':
+    '下面的篩選塊說明可以用哪些方式：「火車」「捷運」「路面電車」「公車」「渡輪」和「纜車」。關掉一個就把它排除在外，至少要留一個開著。然後點選「搜尋」。',
+  'help.guide.plan-transit.step.5':
+    '每個結果給出發車和抵達時間、要多久、轉乘幾次、步行多少，以及各條路線各自的顏色。點選其中一個可以一站一站展開，連月臺和路線之間的步行都在。',
+  'help.guide.plan-transit.step.6': '點選「加入當日行程」。',
+  'help.guide.plan-transit.result':
+    '這條路線成為那一天的一列，帶著它的路線、轉乘和步行時間，同時在「交通」標籤頁裡成為「自動大眾運輸」下的一張卡片。',
+  'help.guide.plan-transit.tip.1':
+    '路線來自 Transitous，一個建立在公開時刻表資料之上的免費社群服務：不用金鑰，不用帳號。管理員可以把搜尋改指向 Google。',
+  'help.guide.plan-transit.tip.2':
+    '什麼也沒找到？資料來源只涵蓋一個區域和一段時期。換個時間試試，多開啟幾種方式，或者選一個車站而不是地點本身。提示訊息會寫出回應的那個服務的名字。',
+  'help.guide.plan-transit.tip.3':
+    '同一個搜尋也能為單獨一段開啟：點選兩個地點之間的行車時間連線，選「大眾運輸」。「起點」「終點」和出發時間都已經替你填好。',
+  // change-transit-route
+  'help.guide.change-transit-route.title': '開啟並變更一條規劃好的路線',
+  'help.guide.change-transit-route.goal': '一站一站地讀這條路線，給它改名，或者重新查一次路線。',
+  'help.guide.change-transit-route.step.1': '在「交通」標籤頁裡，規劃好的路線在「自動大眾運輸」下面。點選卡片。',
+  'help.guide.change-transit-route.step.2':
+    '「行程時間」「轉乘次數」和「步行」在最上面。它們下面的「行程」一站一站地走完這條路線，連月臺和路線之間的步行都在。',
+  'help.guide.change-transit-route.step.3': '「變更路線」重新跑一次搜尋，這條路線的兩端和它的日期都已經填好。',
+  'help.guide.change-transit-route.step.4':
+    '選另一條路線並點選「加入當日行程」，它就頂替舊的那條。而「變更路線」旁邊的「編輯詳細資料」開啟的是普通的交通表單，「預訂碼」、「狀態」、出行成員和檔案都在那裡。',
+  'help.guide.change-transit-route.result':
+    '這趟行程帶上了新的行程內容，它在「交通」標籤頁裡的卡片顯示新的路線和時間。',
+  'help.guide.change-transit-route.tip.1':
+    '行程的標題只是文字：旁邊的鉛筆給它改名，不會動到路線。下面的「備註」接受 markdown，並有「編輯」和「預覽」兩個標籤。',
+  'help.guide.change-transit-route.tip.2': '行程底部的「刪除」把這條路線從這趟旅行裡拿走；那一天仍然保留它的地點。',
+  // leg-travel-mode
+  'help.guide.leg-travel-mode.title': '變更某一段的交通方式',
+  'help.guide.leg-travel-mode.goal': '在其餘路段都開車的一天裡，把其中一段改成步行，或者把那一段交給大眾運輸搜尋。',
+  'help.guide.leg-travel-mode.step.1':
+    '地點之間的連線只有在當天的路線開啟之後才出現。點選這一天把它展開，然後點它地點下方的「路線」。',
+  'help.guide.leg-travel-mode.step.2':
+    '每條連線說明那一段的行車時間和距離，並帶上算路時所用方式的圖示：開車是汽車，步行是腳。',
+  'help.guide.leg-travel-mode.step.3': '點選連線。選單提供「開車」和「步行」、「大眾運輸」，以及「使用當日預設」。',
+  'help.guide.leg-travel-mode.step.4': '選「步行」。只有這一段會變；當天其餘部分保留自己的方式。',
+  'help.guide.leg-travel-mode.result': '這一段顯示腳的圖示和它的步行時間，當天其他各段保留當天的方式。',
+  'help.guide.leg-travel-mode.tip.1':
+    '方式屬於路段，不屬於當天：整天的「開車」和「步行」按鈕從不覆蓋你手動設過的路段。「使用當日預設」把這一段還給它們。',
+  'help.guide.leg-travel-mode.tip.2': '同一個選單裡的「大眾運輸」正好為這一段開啟路線搜尋，兩端和出發時間都已經填好。',
+  'help.guide.leg-travel-mode.tip.3':
+    '時間來自一個跑在真實道路和步道上的公開路徑服務。它算不出來的路段保留直線，並且不顯示時間。',
+  // edit-transport
+  'help.guide.edit-transport.title': '變更或刪除一段交通',
+  'help.guide.edit-transport.goal': '改一個時間、一個月臺或一個預訂碼，或者把這趟交通從旅行裡去掉。',
+  'help.guide.edit-transport.step.1': '在日程裡，一段交通是地點之間一條有顏色的列。點選它。',
+  'help.guide.edit-transport.step.2':
+    '表單就是建立它的那一個，標題列寫著「編輯交通」。什麼都能改：型別、路線、日期和時間、「預訂碼」、「狀態」。',
+  'help.guide.edit-transport.step.3':
+    '航班的路線是一串機場，火車的路線是一串車站。「新增中轉站」在中間再放一個，每一段都保留自己的時間和自己的航班號或車次。',
+  'help.guide.edit-transport.step.4':
+    '點選「更新」。要把這段交通徹底移除，用它在「交通」標籤頁那張卡片上的垃圾桶，並確認。',
+  'help.guide.edit-transport.result':
+    '改動在這段交通出現的每個地方都會顯示：「交通」標籤頁、它所在的那一天，以及它在地圖上的線。',
+  'help.guide.edit-transport.tip.1':
+    '同一個表單從兩邊都能開啟：「交通」標籤頁卡片上的鉛筆，和日程裡這段交通自己的列。規劃好的大眾運輸路線是例外：它的列開啟的是行程檢視，那裡的「編輯詳細資料」才通向這個表單。',
+  'help.guide.edit-transport.tip.2': '把一段交通挪到另一天根本不需要表單：把它的列從一張日期卡片拖到下一張。',
+  // transport-on-map
+  'help.guide.transport-on-map.title': '把一段交通畫到地圖上',
+  'help.guide.transport-on-map.goal': '看看一次航班、一段開車或一條路線實際走的是哪裡。',
+  'help.guide.transport-on-map.step.1':
+    '兩端都設好的交通，會在日程裡它那一列上帶一個小小的路線圖示。點選它，它的標籤就變成「隱藏預訂路線」。',
+  'help.guide.transport-on-map.step.2': '路線畫在地圖上，兩端各有一個帶著這段交通圖示的膠囊形標記。',
+  'help.guide.transport-on-map.step.3':
+    '點選端點標記，不用離開地圖就能讀到這筆預訂：時間、「航空公司」和「航班號」、「預訂碼」以及備註。「關閉」把這張卡片收起來。',
+  'help.guide.transport-on-map.step.4':
+    '日期上方工具列裡的路線圖示一次處理整趟旅行：「顯示所有預訂路線」，以及用來再次清空的「隱藏所有預訂路線」。',
+  'help.guide.transport-on-map.step.5':
+    '規劃好的大眾運輸路線沒有自己的圖示。它是靠當天的「路線」開關畫出來的，所以只要那一天的路線還開著，「隱藏所有預訂路線」就清不掉它。',
+  'help.guide.transport-on-map.result': '各條路線帶著兩端的標記留在地圖上，直到你再次把它們關掉。',
+  'help.guide.transport-on-map.tip.1':
+    '航班、郵輪和渡輪畫成一條曲線，汽車、公車、計程車和自行車沿著真實道路走，火車或規劃好的路線則穿過它停靠的各個車站。',
+  'help.guide.transport-on-map.tip.2':
+    '「已確認」的預訂是實線，「待確認」的是虛線。「預訂路線標籤」這個設定會把機場代碼或車站名稱印進端點標記裡。',
+  'help.guide.transport-on-map.tip.3':
+    '「顯示所有預訂路線」是重新來過，而不是疊一層：它會丟掉單個圖示設過的狀態，所以按兩次之後，留給你的不是全開就是全關。',
 };
 
 export default help;

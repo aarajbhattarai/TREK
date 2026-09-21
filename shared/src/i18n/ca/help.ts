@@ -3266,6 +3266,346 @@ const help: TranslationStrings = {
     'Eliminar una reserva d’allotjament també treu les seves nits del Pla per dies i elimina la despesa que hi estava vinculada.',
   'help.guide.delete-booking.tip.2':
     'Els documents que hi havia adjunts es queden a la pestanya Fitxers del viatge; només se’n va el seu vincle amb la reserva.',
+
+  // ── Screen: trip-costs ────────────────────────────────────────────────────────────────
+  'help.ctx.trip-costs.title': 'Despeses',
+  'help.ctx.trip-costs.summary':
+    'Els diners del viatge: cada despesa en un registre amb data, qui la va avançar i qui la deu, en la divisa en què era el rebut, i, a la columna de la dreta, qui ha de pagar a qui perquè torni a quadrar.',
+  'help.ctx.trip-costs.bullet.1':
+    'Quatre targetes a dalt: Deus i Et deuen són el teu propi costat de la liquidació, Import pendent és el que està registrat però encara no té pagador, i Despesa total del viatge ho suma tot, amb La teva part i Vas pagar tu a sota.',
+  'help.ctx.trip-costs.bullet.2':
+    'Afegir despesa, a dalt a la dreta, obre l’editor; Liquidar comptes, al costat, registra de cop totes les transferències obertes.',
+  'help.ctx.trip-costs.bullet.3':
+    'El registre està agrupat per dies, el més recent primer, amb el total d’aquell dia a la dreta. Una fila porta la categoria com a pestanya de color, el nom, les fitxes dels pagadors, la nota i l’import, més has prestat o has manllevat quan el repartiment et deixa a favor o en contra en aquella despesa.',
+  'help.ctx.trip-costs.bullet.4':
+    'Sobre la llista hi ha Cercar despeses…, un filtre de categoria, un filtre de dia, el selector Tot / Pagat per mi / Em deuen i el botó Exporta CSV.',
+  'help.ctx.trip-costs.bullet.5':
+    'La columna de la dreta és la resposta: Liquidar comptes llista qui paga a qui, Balanços mostra el superàvit o el dèficit de cada viatger, Pressupost final el que el viatge costa a cadascun d’ells, i Per categoria on han anat els diners.',
+  'help.ctx.trip-costs.bullet.6':
+    'Un pagament registrat és al mateix registre com a fila pròpia, amb Editar i Desfer al costat; una despesa té un llapis i una paperera, i la paperera l’elimina sense preguntar.',
+  // add-expense
+  'help.guide.add-expense.title': 'Afegir una despesa',
+  'help.guide.add-expense.goal': 'Registra el que ha costat alguna cosa, qui ho ha pagat i amb qui es reparteix.',
+  'help.guide.add-expense.step.1':
+    'Fes clic a Afegir despesa, a dalt a la dreta de la pestanya Despeses. L’editor s’obre, amb la data d’avui i amb tothom ja al repartiment.',
+  'help.guide.add-expense.step.2':
+    'Escriu per a què ha estat a Per a què ha estat?, l’únic camp que s’ha d’omplir, i la xifra del rebut a Import total.',
+  'help.guide.add-expense.step.3':
+    'Divisa i Dia són sota l’import. Divisa comença en la del viatge; canvia-la i l’editor mostra el que val l’import en la divisa del viatge. Dia comença en avui i és el dia sota el qual el registre agrupa la despesa.',
+  'help.guide.add-expense.step.4':
+    'Tria una Categoria. N’hi ha catorze i no es poden canviar: la que triïs és la pestanya de color de la fila i la barra a Per categoria.',
+  'help.guide.add-expense.step.5':
+    'A Qui ha pagat?, tria la persona que realment va avançar els diners. Tu ve preseleccionat; Ningú ha pagat encara registra l’import sense que ningú el degui, i Han pagat diverses persones reparteix el compte entre diversos pagadors.',
+  'help.guide.add-expense.step.6':
+    'Dividir comença a A parts iguals amb tothom inclòs, i al costat de cada nom hi ha la part que en surt. Fes clic a Afegir despesa per desar.',
+  'help.guide.add-expense.result':
+    'La despesa és al registre sota el seu dia, comptada a Despesa total del viatge, i la columna de liquidació ha tornat a calcular qui deu a qui.',
+  'help.guide.add-expense.tip.1':
+    'Tal com s’obre, la despesa és en la divisa del viatge, amb la data d’avui i repartida a parts iguals entre tothom: només el nom i l’import s’han d’omplir de debò.',
+  'help.guide.add-expense.tip.2':
+    'El ± al costat de l’import converteix la despesa en una devolució. Un total negatiu retorna diners en lloc de prendre’ls, i el repartiment va a la inversa.',
+  'help.guide.add-expense.tip.3':
+    'Adjuntar rebut / factura, a baix, accepta imatges i PDF. Es pugen quan deses, van als Fitxers del viatge, i al costat del nom a la llista apareix una fitxa Rebuts.',
+  // expense-payers
+  'help.guide.expense-payers.title': 'Dir qui ha pagat el compte',
+  'help.guide.expense-payers.goal':
+    'Registra qui ha avançat els diners d’una despesa, l’altra meitat del càlcul de la liquidació.',
+  'help.guide.expense-payers.step.1':
+    'Obre una despesa amb el llapis del costat de la seva fila i mira Qui ha pagat?. Ha pagat una sola persona és l’opció per defecte: el desplegable anomena l’única persona que va avançar els diners.',
+  'help.guide.expense-payers.step.2':
+    'Ningú ha pagat encara, la primera entrada d’aquest desplegable, registra l’import sense que ningú degui res. La despesa compta igualment a Despesa total del viatge.',
+  'help.guide.expense-payers.step.3':
+    'Han pagat diverses persones, l’enllaç al costat de l’etiqueta, obre una fila per viatger. Inclou els qui han pagat i escriu el que ha posat cadascun; els imports han de sumar el total.',
+  'help.guide.expense-payers.step.4':
+    'Una despesa que ningú ha pagat es marca com a Sense finalitzar a la seva fila i es compta a la targeta Import pendent, on s’acumula la despesa registrada però no liquidada.',
+  'help.guide.expense-payers.result':
+    'Qui ha pagat decideix a qui se li torna, el repartiment decideix qui paga, i Balanços és la diferència entre tots dos.',
+  'help.guide.expense-payers.tip.1':
+    'Qui ha pagat? i Dividir són independents: pots pagar un sopar on no vas ser, i entrar al repartiment d’un que no vas pagar.',
+  'help.guide.expense-payers.tip.2':
+    'Amb diversos pagadors els imports han de sumar el total. Inclou-ne un més i els altres es reordenen al seu voltant; mentre no quadrin, l’editor diu Els imports dels pagadors han de sumar el total i es nega a desar.',
+  'help.guide.expense-payers.tip.3':
+    'Treure un pagador no treu la despesa: l’import continua a Despesa total del viatge i la fila passa a Sense finalitzar.',
+  // split-expense
+  'help.guide.split-expense.title': 'Repartir un compte entre els viatgers',
+  'help.guide.split-expense.goal':
+    'Decideix qui deu per una despesa: tothom a parts iguals, per import, o línia per línia del rebut.',
+  'help.guide.split-expense.step.1':
+    'A l’editor de la despesa, Dividir llista tots els viatgers. Fes clic a un nom per deixar-lo fora d’aquesta despesa; un viatger exclòs indica Exclòs i no deu res per ella.',
+  'help.guide.split-expense.step.2':
+    'A parts iguals és l’opció per defecte: cada viatger inclòs rep la mateixa part, i la línia de sota la llista diu entre quants es reparteix i a quant surt cada part.',
+  'help.guide.split-expense.step.3':
+    'Personalitzat canvia les parts per camps d’import. Escriu el que deu cada viatger; la línia de sota va comptant i es posa verda a El repartiment quadra amb el total. No es desa mentre no quadri.',
+  'help.guide.split-expense.step.4':
+    'Tiquet reparteix el rebut línia per línia: Afegeix un article, després un nom i un preu per línia, i sota Repartit entre: els viatgers que comparteixen aquella línia.',
+  'help.guide.split-expense.step.5':
+    'Part de cadascú, sota les línies, mostra el que acaba devent cada viatger, i Import total, a dalt, se suma a partir de les línies. Fes clic a Desar.',
+  'help.guide.split-expense.result':
+    'El repartiment és allò a partir del qual es construeix cada balanç. Es desa amb la despesa i es pot canviar més tard sense tocar res més.',
+  'help.guide.split-expense.tip.1':
+    'Un viatger que deixes fora indica Exclòs i no deu res per aquesta despesa concreta; els altres n’assumeixen la part.',
+  'help.guide.split-expense.tip.2':
+    'A parts iguals quadra fins al cèntim: el cèntim que sobra va rotant de despesa en despesa, perquè no sigui sempre el mateix qui el paga.',
+  'help.guide.split-expense.tip.3':
+    'El mode Tiquet suma Import total ell mateix i deixa el camp en gris: les línies del rebut són el total.',
+  // expense-currency
+  'help.guide.expense-currency.title': 'Introduir una despesa en una altra divisa',
+  'help.guide.expense-currency.goal':
+    'Introdueix el que diu realment el rebut i deixa que TREK guardi el tipus de canvi.',
+  'help.guide.expense-currency.step.1':
+    'Obre Afegir despesa i omple el nom i l’import exactament tal com diu el rebut, la xifra mateixa i no una conversió seva.',
+  'help.guide.expense-currency.step.2':
+    'Obre Divisa i tria la divisa del rebut. La llista porta tots els codis que TREK coneix i s’hi pot cercar: escriu les tres lletres.',
+  'help.guide.expense-currency.step.3':
+    'Sota els camps apareix una línia amb el que val l’import ara mateix, marcada amb tipus de canvi actual. És una vista prèvia, no el que es desa.',
+  'help.guide.expense-currency.step.4':
+    'Fes clic a Afegir despesa. El tipus de canvi es congela a l’instant: a partir d’aquí aquesta despesa val el que valia el dia que la vas introduir.',
+  'help.guide.expense-currency.step.5':
+    'Al registre la fila porta les dues xifres sota el nom: el que vas escriure, una fletxa, i el que compta en la divisa del viatge. Cada total, cada balanç i cada liquidació de dalt fa servir la segona.',
+  'help.guide.expense-currency.result':
+    'La despesa conserva l’import i la divisa que vas escriure. El registre mostra tots dos, i els totals i els balanços del viatge es mantenen en la divisa del viatge.',
+  'help.guide.expense-currency.tip.1':
+    'El tipus de canvi es congela en el moment que deses, perquè un deute liquidat no es torni a obrir perquè el mercat s’ha mogut la setmana següent. Només canviar la divisa de la despesa en congela un de nou.',
+  'help.guide.expense-currency.tip.2':
+    'Divisa de visualització a Configuració només canvia el que llegeixes; els imports desats no es mouen mai. Si es deixa buida, cada viatge es mostra en la seva pròpia divisa.',
+  'help.guide.expense-currency.tip.3':
+    'La divisa del viatge viu al viatge mateix, a Edita el viatge, i demana el dret Edita els detalls del viatge. Canviar-la torna a ancorar cada tipus de canvi congelat en lloc de redenominar els imports.',
+  // filter-costs
+  'help.guide.filter-costs.title': 'Trobar una despesa, o la despesa d’un dia',
+  'help.guide.filter-costs.goal': 'Redueix un registre llarg al que realment busques.',
+  'help.guide.filter-costs.step.1':
+    'Escriu a Cercar despeses…, sobre la llista. Cerca al nom de la despesa mentre escrius.',
+  'help.guide.filter-costs.step.2':
+    'Totes les categories obre les catorze categories. Tria’n una i només queden les despeses d’aquella categoria.',
+  'help.guide.filter-costs.step.3':
+    'Tots els dies llista cada dia en què s’ha gastat alguna cosa. Tria’n un i un bàner substitueix les capçaleres de dia per aquell dia, quantes despeses conté i el seu total.',
+  'help.guide.filter-costs.step.4':
+    'El selector Tot / Pagat per mi / Em deuen és la teva pròpia vista del registre: allò en què vas posar diners, i allò que encara tens pendent de recuperar.',
+  'help.guide.filter-costs.step.5':
+    'Exporta CSV, al final de la fila, escriu cada despesa en un fitxer, amb l’import original, la seva divisa i l’import convertit.',
+  'help.guide.filter-costs.result':
+    'Els filtres es combinen, i els grups de dia es tornen a dibuixar amb els seus propis totals per al que queda.',
+  'help.guide.filter-costs.tip.1':
+    'Els pagaments registrats no porten ni nom ni categoria, de manera que una cerca o un filtre de categoria els amaga. El filtre de dia els manté, sota el dia en què es va registrar el pagament.',
+  'help.guide.filter-costs.tip.2':
+    'Exporta CSV exporta sempre totes les despeses, sigui el que sigui el que hi ha filtrat a la pantalla, una fila per despesa.',
+  // settle-up
+  'help.guide.settle-up.title': 'Esbrinar qui deu a qui, i liquidar-ho',
+  'help.guide.settle-up.goal':
+    'Converteix un munt de despeses compartides en el mínim nombre de transferències que deixen tothom al dia, i registra-les a mesura que passen.',
+  'help.guide.settle-up.step.1':
+    'La targeta Liquidar comptes, a la columna de la dreta, llista les transferències que deixarien tothom al dia: qui paga a qui, i quant. El nombre al costat del títol és quantes encara són obertes.',
+  'help.guide.settle-up.step.2':
+    'Liquidar, al costat d’una transferència, la registra com a feta. El flux desapareix de la targeta i els balanços es tornen a dibuixar.',
+  'help.guide.settle-up.step.3':
+    'La transferència registrada és una fila del registre, sota el dia en què va passar, marcada com a Pagament amb els dos viatgers i l’import.',
+  'help.guide.settle-up.step.4':
+    'Al costat d’aquesta fila el llapis corregeix un pagament i Desfer el retira, i la transferència torna a la targeta Liquidar comptes.',
+  'help.guide.settle-up.step.5':
+    'Afegir pagament, a la capçalera de la targeta, registra una transferència que no ha seguit cap suggeriment. Tria De i A, l’Import, la seva divisa i el dia en què va passar.',
+  'help.guide.settle-up.step.6':
+    'Liquidar comptes, a la capçalera de dalt de la pantalla, registra de cop totes les transferències obertes, com un grup que es posa al dia al final d’un viatge.',
+  'help.guide.settle-up.result':
+    'Cada transferència registrada és una fila del registre i una línia menys a la targeta Liquidar comptes. Quan la targeta diu Tothom està al dia, el viatge està pagat.',
+  'help.guide.settle-up.tip.1':
+    'La targeta mostra el mínim nombre de transferències, no cada deute: tres persones que es deuen en cercle es redueixen a un o dos pagaments.',
+  'help.guide.settle-up.tip.2':
+    'Liquidar registra una transferència, no mou diners. Envia-la pel mitjà que facis servir i després fes-hi clic.',
+  'help.guide.settle-up.tip.3':
+    'Un pagament es pot fer en qualsevol divisa, de manera que pagar en euros un deute en iens és normal: el diàleg té el seu propi selector de divisa i també congela aquell tipus de canvi.',
+  // final-budget
+  'help.guide.final-budget.title': 'Veure el que el viatge ha costat a cada viatger',
+  'help.guide.final-budget.goal':
+    'Llegeix el costat per persona del registre: el balanç d’avui, i el cost real per persona.',
+  'help.guide.final-budget.step.1':
+    'Balanços mostra la posició de cada viatger: una barra verda cap a la dreta si el viatge li deu, una barra vermella cap a l’esquerra si ell deu al viatge, i l’import al costat del nom.',
+  'help.guide.final-budget.step.2':
+    'Pressupost final, a sota, respon una altra pregunta: no qui deu què ara mateix, sinó el que el viatge costa a cada viatger un cop s’ha tornat tot.',
+  'help.guide.final-budget.step.3':
+    'Fes clic a un nom per obrir el càlcul: Despeses pagades, després Reemborsaments nets i Reemborsaments pendents a sota.',
+  'help.guide.final-budget.step.4':
+    'Sota cada línia hi ha les files de què està feta: les despeses que ha pagat aquell viatger, les transferències ja registrades i les que encara són obertes. Sumen exactament la línia de sobre.',
+  'help.guide.final-budget.result':
+    'Balanços és qui està a favor o en contra avui; Pressupost final és el que el viatge acaba costant a cadascun de vosaltres un cop s’ha tornat tot.',
+  'help.guide.final-budget.tip.1':
+    'Registrar un pagament no canvia el pressupost final de ningú. Només mou un import dels reemborsaments pendents als reemborsaments nets.',
+  'help.guide.final-budget.tip.2':
+    'Una despesa sense pagador queda fora de les dues targetes, igual que queda fora dels suggeriments de liquidació.',
+  // expense-from-booking
+  'help.guide.expense-from-booking.title': 'Convertir una reserva en una despesa',
+  'help.guide.expense-from-booking.goal':
+    'Adjunta el que realment ha costat un vol, un hotel o un lloc a la fitxa a què pertany.',
+  'help.guide.expense-from-booking.step.1':
+    'Obre la reserva a la pestanya Transports o Reserves i fes clic al seu llapis.',
+  'help.guide.expense-from-booking.step.2':
+    'Baixa fins al bloc Despeses al final del formulari. Mentre no hi hagi res vinculat, ofereix Crear despesa i diu que primer desa la reserva.',
+  'help.guide.expense-from-booking.step.3':
+    'Fes clic a Crear despesa. La reserva es desa, el formulari es tanca, i l’editor de Despeses s’obre amb el títol de la reserva com a nom i el seu tipus ja associat a una categoria.',
+  'help.guide.expense-from-booking.step.4':
+    'Omple l’import, qui ha pagat i el repartiment com en qualsevol despesa, i desa. En tornar a obrir la reserva apareix sota Despesa vinculada, amb un llapis per editar-la i una paperera per treure-la.',
+  'help.guide.expense-from-booking.result':
+    'La reserva porta el seu cost, i la despesa és una fila corrent de la pestanya Despeses, amb un pagador, un repartiment i una divisa com qualsevol altra.',
+  'help.guide.expense-from-booking.tip.1':
+    'Eliminar la reserva elimina també la seva despesa vinculada. Eliminar despesa, al bloc Despeses de la reserva, fa el contrari: la despesa se’n va, la reserva es queda.',
+  'help.guide.expense-from-booking.tip.2':
+    'Un lloc té el mateix bloc al seu formulari, on Crear despesa desa primer el lloc.',
+
+  // ── Screen: trip-transports ───────────────────────────────────────────────────────────
+  'help.ctx.trip-transports.title': 'Transports',
+  'help.ctx.trip-transports.summary':
+    'Tot allò que et porta entre les parades: vols, trens, autobusos, cotxes, taxis, bicicletes, creuers, ferris i les connexions de transport públic que TREK cerca per tu. La pestanya n’és la llista; també es creen i es llegeixen al pla, i es dibuixen al mapa.',
+  'help.ctx.trip-transports.bullet.1':
+    'La pestanya només guarda els trajectes. Allotjaments, restaurants, esdeveniments i entrades viuen a Reserves, de manera que la mateixa entrada no surt mai dues vegades.',
+  'help.ctx.trip-transports.bullet.2':
+    'La barra d’eines els compta tots sota Tot i dona a cada tipus en ús el seu propi xip amb el seu recompte, Vol, Tren, Cotxe, Transport públic. Transport manual, a la dreta, n’afegeix un a mà.',
+  'help.ctx.trip-transports.bullet.3':
+    'Les targetes vénen en tres grups, cadascun plegable pel seu títol: Transport públic automatitzat per a les connexions que ha planificat la cerca, després Pendent, després Confirmada.',
+  'help.ctx.trip-transports.bullet.4':
+    'Una targeta porta l’estat, el tipus, els dies que abasta, les hores, el Codi de reserva, la ruta i l’Aerolínia amb el Núm. de vol, o bé el Núm. de tren, l’Andana i el Seient. El llapis l’obre, la paperera l’elimina després d’una pregunta.',
+  'help.ctx.trip-transports.bullet.5':
+    'Els transports també neixen al pla: cada capçalera de dia té un més per a Afegeix transport i un botó de tramvia per a Transport públic, i el connector de temps de viatge entre dues parades obre la mateixa cerca per a aquell sol tram.',
+  'help.ctx.trip-transports.bullet.6':
+    'Un transport amb els dos extrems posats dibuixa una línia al mapa. La icona de ruta a la seva fila del pla del dia encén aquesta línia, i Mostra totes les rutes de reserva, a la barra sobre els dies, commuta tot el viatge.',
+  // transports-list
+  'help.guide.transports-list.title': 'Llegir la pestanya Transports',
+  'help.guide.transports-list.goal': 'Saber què et diu la llista abans de canviar-hi res.',
+  'help.guide.transports-list.step.1':
+    'Transports és la segona pestanya del viatge. Només guarda els trajectes: hotels, restaurants, esdeveniments i entrades són a Reserves.',
+  'help.guide.transports-list.step.2':
+    'La barra d’eines compta cada transport sota Tot i dona a cada tipus en ús el seu propi xip amb el seu recompte. Fes clic en un xip per quedar-te només amb aquell tipus, torna-hi a fer clic per deixar-lo anar. Diversos xips poden estar actius alhora, i Tot els neteja.',
+  'help.guide.transports-list.step.3':
+    'Transport públic automatitzat és un grup propi, les connexions que ha planificat la cerca de transport públic. Pendent i Confirmada guarden tot el que s’ha entrat a mà. La fletxa del costat d’un títol plega un grup.',
+  'help.guide.transports-list.step.4':
+    'Una targeta ho diu tot: el punt d’estat amb Pendent o Confirmada, el tipus, els dies que abasta amb les seves dates, les hores, el Codi de reserva, la ruta, i l’Aerolínia amb el Núm. de vol, o bé el Núm. de tren, l’Andana i el Seient.',
+  'help.guide.transports-list.step.5':
+    'El llapis obre el transport per editar-lo, la paperera l’elimina, després d’una pregunta que diu què se’n va.',
+  'help.guide.transports-list.result':
+    'La llista queda reduïda al que buscaves, i cada targeta diu d’un cop d’ull si el trajecte està reservat.',
+  'help.guide.transports-list.tip.1':
+    'Els xips i els grups plegats es recorden per viatge, així que la pestanya es torna a obrir tal com la vas deixar.',
+  'help.guide.transports-list.tip.2':
+    "Importa des d'un fitxer i AirTrail només s’afegeixen a Transport manual a la barra d’eines quan el servidor sap llegir confirmacions de reserva i quan hi ha una instància d’AirTrail connectada. Sense ells, la llista s’omple a mà i amb la cerca de transport públic.",
+  // add-transport
+  'help.guide.add-transport.title': 'Afegir un transport a un dia',
+  'help.guide.add-transport.goal': 'Posar el trajecte que et duu d’una parada a la següent al dia en què passa.',
+  'help.guide.add-transport.step.1':
+    'Cada capçalera de dia porta quatre botons petits a la dreta. Fes clic al més, el consell del qual diu Afegeix transport. El formulari s’obre amb Data ja posada en aquell dia.',
+  'help.guide.add-transport.step.2':
+    'Tipus de reserva tria què agafes: Vol, Tren, Autobús, Cotxe, Taxi, Bicicleta, Creuer, Ferri o Altres. El formulari el segueix. Un vol rep un aeroport a cada tram, un tren una cadena d’estacions, un cotxe les paraules Recollida i Devolució i Parades pel camí.',
+  'help.guide.add-transport.step.3':
+    'Títol és l’únic camp que s’ha d’omplir; Afegir es queda gris sense ell. Escriu-hi allò que reconeixeries en un plafó d’andana.',
+  'help.guide.add-transport.step.4':
+    'Des de i Fins a cerquen una estació, un port o una adreça. Escriu almenys tres lletres i tria un resultat de la llista. Un nom només escrit no porta coordenades, així que no dibuixa res al mapa.',
+  'help.guide.add-transport.step.5':
+    "Data i Hora d'inici diuen quan va, Data de fi i Hora de fi quan s’ha acabat; un trajecte que arriba l’endemà hi pren el dia següent. Codi de reserva, Estat amb Pendent o Confirmada, i Notes són opcionals.",
+  'help.guide.add-transport.step.6': 'Fes clic a Afegir.',
+  'help.guide.add-transport.result':
+    'El transport és una fila al dia, a la seva hora entre les parades, i una targeta a la pestanya Transports sota Pendent o Confirmada.',
+  'help.guide.add-transport.tip.1':
+    'La fila cau on la posa la seva hora d’inici, darrere de l’última parada que comença abans. La seva nansa l’arrossega a qualsevol altre lloc del dia, o a un altre dia.',
+  'help.guide.add-transport.tip.2':
+    'Adjunta un fitxer, sota Fitxers, recull el bitllet, i Crear despesa, sota Despeses, desa la reserva i obre l’editor de Despeses per al preu.',
+  'help.guide.add-transport.tip.3':
+    'Viatgers marca qui va en aquest trajecte. Tan bon punt un transport té viatgers, la barra d’eines de la pestanya fa créixer els seus avatars i filtra la llista per ells.',
+  // plan-transit
+  'help.guide.plan-transit.title': 'Planificar una connexió de transport públic',
+  'help.guide.plan-transit.goal':
+    'Deixar que TREK cerqui els trens i autobusos reals entre dos punts d’un dia i posar al pla el que triïs.',
+  'help.guide.plan-transit.step.1':
+    'A la capçalera del dia, fes clic al botó de tramvia, Transport públic. La cerca s’obre per a aquell dia.',
+  'help.guide.plan-transit.step.2':
+    'Des de i Fins a accepten una parada o una estació. Amb la casella encara buida s’ofereixen les parades pròpies del dia; en escriure dues lletres es cerquen en canvi les estacions de l’horari. Intercanviar, entre les dues caselles, gira la connexió del revés.',
+  'help.guide.plan-transit.step.3':
+    'Sortida o Arribada amb una hora diu quan vols viatjar, i La millor ruta, Menys transbords o Caminar menys diu com s’han d’ordenar les respostes.',
+  'help.guide.plan-transit.step.4':
+    'Els xips de sota diuen quins mitjans es poden fer servir: Tren, Metro, Tramvia, Autobús, Ferri i Telefèric. Apaga’n un per deixar-lo fora, almenys un queda encès. Després fes clic a Cercar.',
+  'help.guide.plan-transit.step.5':
+    'Cada resultat dona sortida i arribada, quant dura, quants transbords i quanta estona a peu, i les línies amb els seus colors. Fes clic en un per desplegar-lo parada a parada, amb les andanes i els trams a peu entre les línies.',
+  'help.guide.plan-transit.step.6': 'Fes clic a Afegir al dia.',
+  'help.guide.plan-transit.result':
+    'La connexió és una fila al dia amb les seves línies, els seus transbords i el seu temps a peu, i una targeta a la pestanya Transports sota Transport públic automatitzat.',
+  'help.guide.plan-transit.tip.1':
+    'Les connexions vénen de Transitous, un servei comunitari lliure sobre dades públiques d’horaris: sense clau, sense compte. Un administrador pot apuntar la cerca a Google en lloc seu.',
+  'help.guide.plan-transit.tip.2':
+    'No has trobat res? Les fonts cobreixen una regió i un període. Prova una altra hora, encén més mitjans, o tria una estació en lloc del lloc mateix. El missatge diu quin servei ha respost.',
+  'help.guide.plan-transit.tip.3':
+    'La mateixa cerca s’obre per a un sol tram: fes clic al connector de temps de viatge entre dues parades i tria Transport públic. Des de, Fins a i l’hora de sortida ja et vénen omplerts.',
+  // change-transit-route
+  'help.guide.change-transit-route.title': 'Obrir i canviar una connexió planificada',
+  'help.guide.change-transit-route.goal':
+    'Llegir la connexió parada a parada, canviar-li el nom, o tornar a cercar la ruta.',
+  'help.guide.change-transit-route.step.1':
+    'A la pestanya Transports, les connexions planificades són sota Transport públic automatitzat. Fes clic a la targeta.',
+  'help.guide.change-transit-route.step.2':
+    'Durada, Transbords i A peu són a dalt. Itinerari, a sota, recorre la connexió parada a parada, amb les andanes i els trams a peu entre les línies.',
+  'help.guide.change-transit-route.step.3':
+    'Canviar de ruta torna a executar la cerca, ja plena amb els dos extrems d’aquesta connexió i amb el seu dia.',
+  'help.guide.change-transit-route.step.4':
+    'Tria una altra connexió i fes clic a Afegir al dia; ocupa el lloc de l’anterior. Editar detalls, al costat de Canviar de ruta, obre en canvi el formulari de transport corrent, on viuen el Codi de reserva, l’Estat, els viatgers i els fitxers.',
+  'help.guide.change-transit-route.result':
+    'El trajecte porta el nou itinerari, i la seva targeta a la pestanya Transports mostra les línies i les hores noves.',
+  'help.guide.change-transit-route.tip.1':
+    'El títol del trajecte només és text: el llapis del costat el canvia de nom sense tocar la ruta. Notes, a sota, accepten markdown i tenen una pestanya Editar i una de Vista prèvia.',
+  'help.guide.change-transit-route.tip.2':
+    'Eliminar, al peu del trajecte, treu la connexió del viatge; el dia manté les seves parades.',
+  // leg-travel-mode
+  'help.guide.leg-travel-mode.title': 'Canviar com es fa un tram',
+  'help.guide.leg-travel-mode.goal':
+    'Fer a peu un tram d’un dia que per la resta es fa en cotxe, o donar aquell tram a la cerca de transport públic.',
+  'help.guide.leg-travel-mode.step.1':
+    'Els connectors entre les parades només apareixen quan la ruta del dia està encesa. Fes clic al dia per obrir-lo, després a Ruta sota les seves parades.',
+  'help.guide.leg-travel-mode.step.2':
+    'Cada connector diu el temps de viatge i la distància d’aquell tram, amb la icona del mitjà amb què s’ha calculat: un cotxe per conduir, un peu per caminar.',
+  'help.guide.leg-travel-mode.step.3':
+    'Fes clic al connector. El menú ofereix En cotxe i A peu, Transport públic, i Usa el valor per defecte del dia.',
+  'help.guide.leg-travel-mode.step.4': 'Tria A peu. Només canvia aquest tram; la resta del dia manté el seu mitjà.',
+  'help.guide.leg-travel-mode.result':
+    'El tram mostra la icona del peu i el seu temps a peu, i els altres trams del dia mantenen el mitjà del dia.',
+  'help.guide.leg-travel-mode.tip.1':
+    'El mitjà pertany al tram, no al dia: els botons En cotxe i A peu de tot el dia no sobreescriuen mai un tram que has posat a mà. Usa el valor per defecte del dia els torna el tram.',
+  'help.guide.leg-travel-mode.tip.2':
+    'Transport públic, al mateix menú, obre la cerca de connexions per a exactament aquest tram, amb els dos extrems i l’hora de sortida ja omplerts.',
+  'help.guide.leg-travel-mode.tip.3':
+    'Els temps vénen d’un encaminador públic sobre carreteres i camins de vianants reals. Un tram que no pot respondre manté la seva línia recta i no mostra cap temps.',
+  // edit-transport
+  'help.guide.edit-transport.title': 'Canviar o eliminar un transport',
+  'help.guide.edit-transport.goal':
+    'Corregir una hora, una andana o un codi de reserva, o treure el trajecte del viatge.',
+  'help.guide.edit-transport.step.1':
+    'Al pla del dia un transport és una fila de color entre les parades. Fes-hi clic.',
+  'help.guide.edit-transport.step.2':
+    'El formulari és el mateix que el va crear, amb Edita el transport a la barra de títol. Tot es pot canviar: el tipus, la ruta, els dies i les hores, el Codi de reserva, l’Estat.',
+  'help.guide.edit-transport.step.3':
+    'La ruta d’un vol és una cadena d’aeroports, la d’un tren una cadena d’estacions. Afegeix una escala en posa una altra al mig, i cada tram manté les seves hores i el seu número de vol o de tren.',
+  'help.guide.edit-transport.step.4':
+    'Fes clic a Actualitzar. Per treure el transport del tot, fes servir la paperera de la seva targeta a la pestanya Transports i confirma.',
+  'help.guide.edit-transport.result':
+    'El canvi es veu a tot arreu on surt el transport: la pestanya Transports, el dia en què va, i la seva línia al mapa.',
+  'help.guide.edit-transport.tip.1':
+    'El mateix formulari s’obre pels dos costats, amb el llapis de la targeta a la pestanya Transports i amb la fila pròpia del transport al pla del dia. Una connexió de transport públic planificada és l’excepció: la seva fila obre la vista del trajecte, i Editar detalls hi porta a aquest formulari.',
+  'help.guide.edit-transport.tip.2':
+    'Moure un transport a un altre dia no necessita gens el formulari: arrossega la seva fila d’una targeta de dia a la següent.',
+  // transport-on-map
+  'help.guide.transport-on-map.title': 'Dibuixar un transport al mapa',
+  'help.guide.transport-on-map.goal': 'Veure per on passa realment un vol, un trajecte en cotxe o una connexió.',
+  'help.guide.transport-on-map.step.1':
+    'Un transport amb els dos extrems posats porta una icona de ruta petita a la seva fila del pla del dia. Fes-hi clic; l’etiqueta passa a Amaga les rutes de reserves.',
+  'help.guide.transport-on-map.step.2':
+    'La ruta es dibuixa al mapa, amb un marcador en forma de píndola a cada extrem que porta la icona del transport.',
+  'help.guide.transport-on-map.step.3':
+    'Fes clic en un marcador d’extrem per llegir la reserva sense deixar el mapa: les hores, l’Aerolínia i el Núm. de vol, el Codi de reserva i les notes. Tancar aparta el full.',
+  'help.guide.transport-on-map.step.4':
+    'La icona de ruta a la barra sobre els dies fa tot el viatge de cop: Mostra totes les rutes de reserva, i Amaga totes les rutes de reserva per tornar-les a netejar.',
+  'help.guide.transport-on-map.step.5':
+    'Una connexió de transport públic planificada no té icona pròpia. Es dibuixa amb l’interruptor Ruta del dia, i per això Amaga totes les rutes de reserva no la neteja mentre la ruta d’aquell dia encara està encesa.',
+  'help.guide.transport-on-map.result':
+    'Les rutes són al mapa amb un marcador a cada extrem, i s’hi queden fins que les tornes a apagar.',
+  'help.guide.transport-on-map.tip.1':
+    'Un vol, un creuer i un ferri es dibuixen com una corba, un cotxe, un autobús, un taxi i una bicicleta segueixen les carreteres reals, i un tren o una connexió planificada passa per les estacions on para.',
+  'help.guide.transport-on-map.tip.2':
+    'Una reserva confirmada és una línia contínua, una de pendent és discontínua. L’opció Etiquetes de rutes de reserves escriu el codi de l’aeroport o el nom de l’estació als marcadors dels extrems.',
+  'help.guide.transport-on-map.tip.3':
+    'Mostra totes les rutes de reserva és fer taula rasa, no és una capa: descarta el que havien posat les icones individuals, de manera que prémer-ho dues vegades et deixa amb tot encès o tot apagat.',
 };
 
 export default help;

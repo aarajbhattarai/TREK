@@ -3282,6 +3282,347 @@ const help: TranslationStrings = {
     'Menghapus pemesanan akomodasi juga mengeluarkan malam-malamnya dari “Rencana Hari” dan membuang pengeluaran yang terhubung dengannya.',
   'help.guide.delete-booking.tip.2':
     'Dokumen yang pernah dilampirkan tetap ada di tab “File” perjalanan; hanya hubungannya dengan pemesanan itu yang pergi.',
+
+  // ── Screen: trip-costs ────────────────────────────────────────────────────────────────
+  'help.ctx.trip-costs.title': 'Biaya',
+  'help.ctx.trip-costs.summary':
+    'Uang perjalanan: setiap pengeluaran sebagai buku besar bertanggal, siapa yang mengeluarkannya dan siapa yang menanggungnya, dalam mata uang apa pun yang tertera di kuitansi, dan, di kolom kanan, siapa harus membayar siapa agar semuanya impas lagi.',
+  'help.ctx.trip-costs.bullet.1':
+    'Empat kartu di atas: “Kamu berhutang” dan “Kamu dipinjami” adalah sisi Anda sendiri dari pelunasan, “Jumlah tertunda” adalah yang sudah dicatat tetapi belum ada pembayarnya, dan “Total pengeluaran perjalanan” menjumlahkan semuanya dengan “Bagianmu” dan “Kamu membayar” di bawahnya.',
+  'help.ctx.trip-costs.bullet.2':
+    '“Tambah pengeluaran” di kanan atas membuka editor; “Lunasi” di sebelahnya mencatat semua transfer terbuka sekaligus.',
+  'help.ctx.trip-costs.bullet.3':
+    'Buku besar dikelompokkan per hari, yang terbaru lebih dulu, dengan total hari itu di sebelah kanan. Sebuah baris membawa kategori sebagai tab berwarna, nama, chip pembayar, catatan dan jumlahnya, ditambah “kamu meminjamkan” atau “kamu meminjam” bila pembagiannya membuat Anda kelebihan atau kekurangan padanya.',
+  'help.ctx.trip-costs.bullet.4':
+    'Di atas daftar ada “Cari pengeluaran…”, sebuah filter kategori, sebuah filter hari, sakelar “Semua” / “Dibayar olehku” / “Dipinjami padaku” dan tombol “Ekspor CSV”.',
+  'help.ctx.trip-costs.bullet.5':
+    'Kolom kanan adalah jawabannya: “Lunasi” mendaftar siapa membayar siapa, “Saldo” menunjukkan surplus atau defisit tiap pelancong, “Anggaran akhir” berapa biaya perjalanan untuk masing-masing dari mereka, dan “Per kategori” ke mana uangnya pergi.',
+  'help.ctx.trip-costs.bullet.6':
+    'Pembayaran yang sudah dicatat duduk di buku besar yang sama sebagai baris tersendiri, dengan “Sunting” dan “Urungkan” di sebelahnya; sebuah pengeluaran punya pensil dan tempat sampah, dan tempat sampah itu menghapusnya tanpa bertanya.',
+  // add-expense
+  'help.guide.add-expense.title': 'Tambah sebuah pengeluaran',
+  'help.guide.add-expense.goal': 'Catat berapa biaya sesuatu, siapa yang membayarnya dan dengan siapa itu dibagi.',
+  'help.guide.add-expense.step.1':
+    'Klik “Tambah pengeluaran” di kanan atas tab Biaya. Editor terbuka, bertanggal hari ini, dengan semua orang sudah ada di pembagiannya.',
+  'help.guide.add-expense.step.2':
+    'Ketik untuk apa itu ke “Untuk apa?”, satu-satunya kolom yang harus diisi, dan angka dari kuitansi ke “Jumlah total”.',
+  'help.guide.add-expense.step.3':
+    '“Mata uang” dan “Hari” ada di bawah jumlahnya. “Mata uang” dimulai pada mata uang perjalanan sendiri; ubah itu dan editor menunjukkan berapa nilai jumlah tersebut dalam mata uang perjalanan. “Hari” dimulai pada hari ini dan itulah yang dipakai buku besar untuk mengelompokkan pengeluarannya.',
+  'help.guide.add-expense.step.4':
+    'Pilih sebuah “Kategori”. Ada empat belas dan tidak bisa diubah: yang Anda pilih menjadi tab berwarna pada barisnya dan batang di “Per kategori”.',
+  'help.guide.add-expense.step.5':
+    'Di bawah “Siapa yang membayar?”, pilih orang yang benar-benar mengeluarkan uangnya. “Kamu” sudah terpilih; “Belum ada yang membayar” mencatat jumlahnya tanpa membuat siapa pun menanggungnya, dan “Beberapa orang membayar” membagi tagihannya di antara beberapa pembayar.',
+  'help.guide.add-expense.step.6':
+    'Split dimulai pada Equally dengan semua orang disertakan, dan di tiap nama tertera bagian yang jatuh padanya. Klik “Tambah pengeluaran” untuk menyimpan.',
+  'help.guide.add-expense.result':
+    'Pengeluaran itu ada di buku besar di bawah harinya, dihitung ke dalam “Total pengeluaran perjalanan”, dan kolom pelunasan sudah menghitung ulang siapa berhutang kepada siapa.',
+  'help.guide.add-expense.tip.1':
+    'Dibiarkan seperti saat terbuka, pengeluaran itu dalam mata uang perjalanan, bertanggal hari ini dan dibagi rata di antara semua orang: hanya nama dan jumlahnya yang benar-benar harus diisi.',
+  'help.guide.add-expense.tip.2':
+    'Tanda ± di sebelah jumlahnya mengubah pengeluaran menjadi pengembalian dana. Total negatif mengembalikan uang alih-alih mengambilnya, dan pembagiannya berjalan ke arah sebaliknya.',
+  'help.guide.add-expense.tip.3':
+    '“Lampirkan kuitansi / faktur” di bagian bawah menerima gambar dan PDF. Semuanya diunggah saat Anda menyimpan, mendarat di File perjalanan, dan sebuah chip “Kuitansi” muncul di sebelah nama di daftar.',
+  // expense-payers
+  'help.guide.expense-payers.title': 'Katakan siapa yang membayar tagihannya',
+  'help.guide.expense-payers.goal':
+    'Catat siapa yang merogoh koceknya untuk sebuah pengeluaran, separuh lainnya dari hitungan pelunasan.',
+  'help.guide.expense-payers.step.1':
+    'Buka sebuah pengeluaran dengan pensil di sebelah barisnya dan lihat “Siapa yang membayar?”. “Satu orang membayar” adalah bawaannya: daftar turun itu menyebut satu orang yang mengeluarkan uangnya.',
+  'help.guide.expense-payers.step.2':
+    '“Belum ada yang membayar”, entri pertama pada daftar turun itu, mencatat jumlahnya tanpa membuat siapa pun berhutang apa pun. Pengeluaran itu tetap dihitung ke “Total pengeluaran perjalanan”.',
+  'help.guide.expense-payers.step.3':
+    '“Beberapa orang membayar”, tautan di sebelah labelnya, membuka satu baris per pelancong. Sertakan mereka yang membayar dan ketik berapa yang dimasukkan masing-masing; jumlah-jumlah itu harus berjumlah totalnya.',
+  'help.guide.expense-payers.step.4':
+    'Pengeluaran yang belum dibayar siapa pun ditandai “Belum selesai” pada barisnya dan dihitung ke kartu “Jumlah tertunda”, tempat berkumpulnya pengeluaran yang sudah dicatat tetapi belum diselesaikan.',
+  'help.guide.expense-payers.result':
+    'Siapa yang membayar menentukan siapa yang dibayar kembali, pembagiannya menentukan siapa yang membayar, dan “Saldo” adalah selisih antara keduanya.',
+  'help.guide.expense-payers.tip.1':
+    '“Siapa yang membayar?” dan Split saling bebas: Anda bisa membayar makan malam yang tidak Anda hadiri, dan ikut dibagi pada makan malam yang tidak Anda bayar.',
+  'help.guide.expense-payers.tip.2':
+    'Dengan beberapa pembayar, jumlah-jumlah itu harus berjumlah totalnya. Sertakan satu orang lagi dan yang lain menata ulang diri di sekitarnya; selama belum cocok, editor mengatakan jumlah para pembayar harus berjumlah totalnya dan menolak menyimpan.',
+  'help.guide.expense-payers.tip.3':
+    'Menghapus seorang pembayar tidak menghapus pengeluarannya: jumlahnya tetap ada di “Total pengeluaran perjalanan” dan barisnya menjadi “Belum selesai”.',
+  // split-expense
+  'help.guide.split-expense.title': 'Bagi sebuah tagihan di antara para pelancong',
+  'help.guide.split-expense.goal':
+    'Putuskan siapa menanggung sebuah pengeluaran: semua orang sama rata, per jumlah, atau baris demi baris dari kuitansinya.',
+  'help.guide.split-expense.step.1':
+    'Di editor pengeluaran, Split mendaftar setiap pelancong. Klik sebuah nama untuk mengeluarkannya dari pengeluaran ini; pelancong yang dikeluarkan tertulis “Tidak termasuk” dan tidak menanggung apa pun untuknya.',
+  'help.guide.split-expense.step.2':
+    'Equally adalah bawaannya: setiap pelancong yang disertakan mendapat bagian yang sama, dan baris di bawah daftar menyebut dibagi berapa dan berapa besar tiap bagiannya.',
+  'help.guide.split-expense.step.3':
+    'Custom menukar bagian-bagian itu dengan kolom jumlah. Ketik berapa yang ditanggung tiap pelancong; baris di bawahnya ikut menghitung dan berubah hijau pada “Pembagian sudah pas dengan total”. Selama belum pas, itu tidak akan tersimpan.',
+  'help.guide.split-expense.step.4':
+    'Ticket membagi kuitansinya baris demi baris: “Tambah item”, lalu sebuah nama dan sebuah harga per baris, dan di bawah “Dibagi dengan:” para pelancong yang berbagi baris itu.',
+  'help.guide.split-expense.step.5':
+    '“Bagian tiap orang” di bawah baris-baris itu menunjukkan berapa yang akhirnya ditanggung tiap pelancong, dan “Jumlah total” di atas dijumlahkan dari baris-barisnya. Klik “Simpan”.',
+  'help.guide.split-expense.result':
+    'Pembagian adalah dasar dari setiap saldo. Ia tersimpan bersama pengeluarannya dan bisa diubah nanti tanpa menyentuh apa pun yang lain.',
+  'help.guide.split-expense.tip.1':
+    'Pelancong yang Anda keluarkan tertulis “Tidak termasuk” dan tidak menanggung apa pun untuk pengeluaran yang satu ini; yang lain mengambil bagiannya.',
+  'help.guide.split-expense.tip.2':
+    'Equally tepat sampai sen terakhir: sen sisa berputar dari pengeluaran ke pengeluaran, jadi tidak ada satu orang yang selalu membayarnya.',
+  'help.guide.split-expense.tip.3':
+    'Mode Ticket menjumlahkan “Jumlah total” sendiri dan mengabukan kolomnya: baris-baris kuitansi itulah totalnya.',
+  // expense-currency
+  'help.guide.expense-currency.title': 'Masukkan pengeluaran dalam mata uang lain',
+  'help.guide.expense-currency.goal':
+    'Masukkan apa yang benar-benar tertulis di kuitansi dan biarkan TREK yang memegang kursnya.',
+  'help.guide.expense-currency.step.1':
+    'Buka “Tambah pengeluaran” dan isi nama serta jumlahnya persis seperti yang tertulis di kuitansi, angkanya sendiri dan bukan hasil konversinya.',
+  'help.guide.expense-currency.step.2':
+    'Buka “Mata uang” dan pilih mata uang kuitansinya. Daftarnya memuat setiap kode yang dikenal TREK dan bisa dicari: ketik tiga hurufnya.',
+  'help.guide.expense-currency.step.3':
+    'Sebuah baris muncul di bawah kolom-kolom itu berisi berapa nilai jumlahnya sekarang, ditandai “kurs langsung”. Itu pratinjau, bukan yang tersimpan.',
+  'help.guide.expense-currency.step.4':
+    'Klik “Tambah pengeluaran”. Kursnya dibekukan saat itu juga: mulai sekarang pengeluaran ini bernilai sebesar nilainya pada hari Anda memasukkannya.',
+  'help.guide.expense-currency.step.5':
+    'Di buku besar, barisnya membawa kedua angka di bawah namanya: yang Anda ketik, sebuah panah, dan berapa nilainya dalam mata uang perjalanan. Setiap total, saldo dan pelunasan di atas memakai yang kedua.',
+  'help.guide.expense-currency.result':
+    'Pengeluaran itu menyimpan jumlah dan mata uang yang Anda ketik. Buku besar menunjukkan keduanya, dan total serta saldo perjalanan tetap dalam mata uang perjalanan.',
+  'help.guide.expense-currency.tip.1':
+    'Kursnya dibekukan saat Anda menyimpan, sehingga hutang yang sudah lunas tidak terbuka lagi karena pasar bergerak seminggu kemudian. Hanya mengubah mata uang pengeluarannya yang membekukan kurs baru.',
+  'help.guide.expense-currency.tip.2':
+    '“Mata uang tampilan” di Pengaturan hanya mengubah apa yang Anda baca; jumlah yang tersimpan tidak pernah bergeser. Dibiarkan kosong, tiap perjalanan ditampilkan dalam mata uangnya sendiri.',
+  'help.guide.expense-currency.tip.3':
+    'Mata uang perjalanan itu sendiri ada pada perjalanannya, di bawah “Edit Perjalanan”, dan butuh hak untuk mengeditnya. Mengubahnya menambatkan ulang setiap kurs yang beku, bukan mengganti denominasi jumlahnya.',
+  // filter-costs
+  'help.guide.filter-costs.title': 'Temukan sebuah pengeluaran, atau belanja satu hari',
+  'help.guide.filter-costs.goal': 'Persempit buku besar yang panjang ke apa yang benar-benar Anda cari.',
+  'help.guide.filter-costs.step.1':
+    'Ketik ke “Cari pengeluaran…” di atas daftar. Ia mencocokkan nama pengeluarannya sambil Anda mengetik.',
+  'help.guide.filter-costs.step.2':
+    '“Semua kategori” membuka keempat belas kategori. Pilih satu dan hanya pengeluaran kategori itu yang tersisa.',
+  'help.guide.filter-costs.step.3':
+    '“Semua hari” mendaftar setiap hari yang ada pengeluarannya. Pilih satu dan sebuah spanduk menggantikan judul-judul hari dengan hari itu, berapa pengeluaran yang dimuatnya dan totalnya.',
+  'help.guide.filter-costs.step.4':
+    'Sakelar “Semua” / “Dibayar olehku” / “Dipinjami padaku” adalah pandangan Anda sendiri atas buku besar: untuk apa Anda mengeluarkan uang, dan untuk apa uang Anda masih belum kembali.',
+  'help.guide.filter-costs.step.5':
+    '“Ekspor CSV” di ujung baris menulis setiap pengeluaran ke sebuah file, dengan jumlah aslinya, mata uangnya dan jumlah hasil konversinya.',
+  'help.guide.filter-costs.result':
+    'Filter-filter itu bergabung, dan kelompok hari digambar ulang dengan totalnya sendiri untuk apa pun yang tersisa.',
+  'help.guide.filter-costs.tip.1':
+    'Pembayaran yang dicatat tidak membawa nama dan tidak membawa kategori, jadi sebuah pencarian atau filter kategori menyembunyikannya. Filter hari tetap menahannya, di bawah hari pembayaran itu dicatat.',
+  'help.guide.filter-costs.tip.2':
+    '“Ekspor CSV” selalu mengekspor setiap pengeluaran, apa pun yang sedang difilter di layar, satu baris per pengeluaran.',
+  // settle-up
+  'help.guide.settle-up.title': 'Hitung siapa berhutang kepada siapa, lalu lunasi',
+  'help.guide.settle-up.goal':
+    'Ubah tumpukan pengeluaran bersama menjadi transfer paling sedikit yang membuat semua orang impas, dan catat transfernya saat terjadi.',
+  'help.guide.settle-up.step.1':
+    'Kartu “Lunasi” di kolom kanan mendaftar transfer yang akan membuat semua orang impas: siapa membayar siapa, dan berapa. Angka di sebelah judulnya adalah berapa yang masih terbuka.',
+  'help.guide.settle-up.step.2':
+    '“Lunasi” di sebelah sebuah transfer mencatatnya sebagai selesai. Aliran itu hilang dari kartunya dan saldo digambar ulang.',
+  'help.guide.settle-up.step.3':
+    'Transfer yang dicatat menjadi sebuah baris di buku besar, di bawah hari terjadinya, ditandai “Pembayaran” dengan kedua pelancong dan jumlahnya.',
+  'help.guide.settle-up.step.4':
+    'Di sebelah baris itu, pensil mengoreksi sebuah pembayaran dan “Urungkan” menariknya kembali, lalu transfernya kembali ke kartu “Lunasi”.',
+  'help.guide.settle-up.step.5':
+    '“Tambah pembayaran” di kepala kartu mencatat transfer yang tidak mengikuti sebuah saran. Pilih “Dari” dan “Ke”, jumlahnya, mata uangnya dan hari terjadinya.',
+  'help.guide.settle-up.step.6':
+    '“Lunasi” di kepala layar bagian atas mencatat setiap transfer terbuka sekaligus, seperti sekelompok orang membereskan hitungan di akhir perjalanan.',
+  'help.guide.settle-up.result':
+    'Setiap transfer yang dicatat adalah sebuah baris di buku besar dan satu baris hilang dari kartu “Lunasi”. Saat kartunya bertuliskan “Semua sudah impas”, perjalanan itu sudah lunas.',
+  'help.guide.settle-up.tip.1':
+    'Kartunya menunjukkan transfer paling sedikit, bukan setiap hutang: tiga orang yang saling berhutang dalam lingkaran menciut menjadi satu atau dua pembayaran.',
+  'help.guide.settle-up.tip.2':
+    '“Lunasi” mencatat sebuah transfer, ia tidak memindahkan uang. Kirimkan dengan cara apa pun yang Anda pakai, lalu klik.',
+  'help.guide.settle-up.tip.3':
+    'Sebuah pembayaran bisa dilakukan dalam mata uang apa pun, jadi membayar hutang yen dengan euro itu biasa: dialognya punya pemilih mata uangnya sendiri dan membekukan kurs itu juga.',
+  // final-budget
+  'help.guide.final-budget.title': 'Lihat berapa biaya perjalanan untuk tiap pelancong',
+  'help.guide.final-budget.goal': 'Baca sisi per orang dari buku besar: saldo hari ini, dan biaya nyata per orang.',
+  'help.guide.final-budget.step.1':
+    '“Saldo” menunjukkan posisi setiap pelancong: batang hijau ke kanan bila perjalanan berhutang kepadanya, batang merah ke kiri bila dia yang berhutang kepada perjalanan, dan jumlahnya di sebelah namanya.',
+  'help.guide.final-budget.step.2':
+    '“Anggaran akhir” di bawahnya menjawab pertanyaan lain: bukan siapa berhutang apa saat ini, melainkan berapa biaya perjalanan untuk tiap pelancong setelah semuanya dibayar kembali.',
+  'help.guide.final-budget.step.3':
+    'Klik sebuah nama untuk membuka hitungannya: “Pengeluaran yang dibayar”, lalu “Penggantian bersih” dan “Penggantian tertunda” di bawahnya.',
+  'help.guide.final-budget.step.4':
+    'Di bawah tiap baris duduk baris-baris penyusunnya: pengeluaran yang dibayar pelancong itu, transfer yang sudah dicatat dan yang masih terbuka. Semuanya berjumlah persis sama dengan baris di atasnya.',
+  'help.guide.final-budget.result':
+    '“Saldo” adalah siapa yang kelebihan atau kekurangan hari ini; “Anggaran akhir” adalah berapa akhirnya biaya perjalanan ini untuk masing-masing dari Anda setelah semuanya dibayar kembali.',
+  'help.guide.final-budget.tip.1':
+    'Mencatat sebuah pembayaran tidak mengubah anggaran akhir siapa pun. Ia hanya memindahkan sejumlah uang dari penggantian tertunda ke penggantian bersih.',
+  'help.guide.final-budget.tip.2':
+    'Pengeluaran tanpa pembayar tetap berada di luar kedua kartu itu, sama seperti ia berada di luar saran pelunasan.',
+  // expense-from-booking
+  'help.guide.expense-from-booking.title': 'Ubah sebuah pemesanan menjadi pengeluaran',
+  'help.guide.expense-from-booking.goal':
+    'Lekatkan berapa biaya sebenarnya sebuah penerbangan, hotel atau tempat ke catatan yang memilikinya.',
+  'help.guide.expense-from-booking.step.1': 'Buka pemesanan itu di tab Transportasi atau Pemesanan dan klik pensilnya.',
+  'help.guide.expense-from-booking.step.2':
+    'Gulir ke blok Costs di bagian bawah formulir. Selama belum ada yang tertaut, ia menawarkan Create expense dan mengatakan bahwa pemesanannya disimpan lebih dulu.',
+  'help.guide.expense-from-booking.step.3':
+    'Klik Create expense. Pemesanannya disimpan, formulirnya menutup, dan editor Biaya terbuka dengan judul pemesanan sebagai namanya dan jenisnya sudah dicocokkan ke sebuah kategori.',
+  'help.guide.expense-from-booking.step.4':
+    'Isi jumlahnya, siapa yang membayar dan pembagiannya seperti pengeluaran mana pun, lalu simpan. Membuka lagi pemesanannya kini menunjukkannya di bawah Linked expense, dengan pensil untuk menyuntingnya dan tempat sampah untuk membuangnya.',
+  'help.guide.expense-from-booking.result':
+    'Pemesanannya membawa biayanya, dan pengeluarannya adalah baris biasa di tab Biaya, dengan pembayar, pembagian dan mata uang seperti yang lain.',
+  'help.guide.expense-from-booking.tip.1':
+    'Menghapus pemesanannya ikut menghapus pengeluaran yang tertaut padanya. Remove expense di blok Costs pemesanan itu melakukan kebalikannya: pengeluarannya hilang, pemesanannya tinggal.',
+  'help.guide.expense-from-booking.tip.2':
+    'Sebuah tempat punya blok yang sama di formulirnya, dengan Create expense yang menyimpan tempatnya lebih dulu.',
+
+  // ── Screen: trip-transports ───────────────────────────────────────────────────────────
+  'help.ctx.trip-transports.title': 'Transportasi',
+  'help.ctx.trip-transports.summary':
+    'Semua yang membawa Anda di antara perhentian: penerbangan, kereta, bus, mobil, taksi, sepeda, kapal pesiar, feri dan koneksi transportasi umum yang dicarikan TREK untuk Anda. Tab ini adalah daftarnya; semuanya juga dibuat dan dibaca di rencana, dan digambar di peta.',
+  'help.ctx.trip-transports.bullet.1':
+    'Tab ini hanya memuat perjalanan. Akomodasi, restoran, acara dan tiket ada di “Pemesanan”, jadi entri yang sama tidak pernah muncul dua kali.',
+  'help.ctx.trip-transports.bullet.2':
+    'Bilah alat menghitung semuanya di bawah “Semua” dan memberi setiap jenis yang dipakai chip sendiri dengan hitungannya sendiri: “Penerbangan”, “Kereta”, “Mobil”, “Transportasi umum”. “Transportasi” di sebelah kanan menambah satu dengan tangan.',
+  'help.ctx.trip-transports.bullet.3':
+    'Kartu datang dalam tiga kelompok, masing-masing bisa dilipat lewat judulnya: “Transportasi umum otomatis” untuk koneksi yang direncanakan pencarian, lalu “Tertunda”, lalu “Dikonfirmasi”.',
+  'help.ctx.trip-transports.bullet.4':
+    'Sebuah kartu membawa status, jenis, hari-hari yang dicakupnya, waktu, “Kode Pemesanan”, rute serta “Maskapai” dan “No. Penerbangan” atau “No. Kereta”, “Peron” dan “Kursi”. Pensil membukanya, tempat sampah menghapusnya setelah sebuah pertanyaan.',
+  'help.ctx.trip-transports.bullet.5':
+    'Transportasi juga dibuat di rencana: setiap kepala hari punya tanda + untuk “Tambah transportasi” dan tombol trem untuk “Transportasi umum”, dan penghubung waktu tempuh antara dua perhentian membuka pencarian yang sama untuk satu ruas itu.',
+  'help.ctx.trip-transports.bullet.6':
+    'Transportasi dengan kedua ujung terisi menggambar garis di peta. Ikon rute di barisnya dalam rencana hari menyalakan garis itu, dan “Tampilkan semua rute pemesanan” di bilah alat di atas hari-hari membalik seluruh perjalanan.',
+  // transports-list
+  'help.guide.transports-list.title': 'Membaca tab Transportasi',
+  'help.guide.transports-list.goal': 'Ketahui apa yang dikatakan daftar itu sebelum Anda mengubah apa pun di dalamnya.',
+  'help.guide.transports-list.step.1':
+    '“Transportasi” adalah tab kedua perjalanan. Isinya hanya perjalanan: hotel, restoran, acara dan tiket ada di “Pemesanan”.',
+  'help.guide.transports-list.step.2':
+    'Bilah alat menghitung setiap transportasi di bawah “Semua” dan memberi setiap jenis yang dipakai chip sendiri dengan hitungannya sendiri. Klik sebuah chip untuk menyisakan jenis itu saja, klik lagi untuk melepasnya. Beberapa chip bisa menyala sekaligus, dan “Semua” membersihkannya.',
+  'help.guide.transports-list.step.3':
+    '“Transportasi umum otomatis” adalah kelompok tersendiri, koneksi yang direncanakan pencarian transportasi umum. “Tertunda” dan “Dikonfirmasi” memuat semua yang dimasukkan dengan tangan. Panah di samping judul melipat sebuah kelompok.',
+  'help.guide.transports-list.step.4':
+    'Sebuah kartu mengatakan semuanya: titik status dengan “Tertunda” atau “Dikonfirmasi”, jenisnya, hari-hari yang dicakupnya beserta tanggalnya, waktu, “Kode Pemesanan”, rute, serta “Maskapai” dan “No. Penerbangan” atau “No. Kereta”, “Peron” dan “Kursi”.',
+  'help.guide.transports-list.step.5':
+    'Pensil membuka transportasi untuk disunting, tempat sampah menghapusnya, setelah sebuah pertanyaan yang menyebut apa yang akan hilang.',
+  'help.guide.transports-list.result':
+    'Daftar menyempit ke apa yang Anda cari, dan setiap kartu mengatakan sekilas apakah perjalanan itu sudah dipesan.',
+  'help.guide.transports-list.tip.1':
+    'Chip dan kelompok yang terlipat diingat per perjalanan, jadi tab terbuka lagi seperti Anda meninggalkannya.',
+  'help.guide.transports-list.tip.2':
+    '“Impor dari file” dan AirTrail bergabung dengan “Transportasi” di bilah alat hanya bila server dapat membaca konfirmasi pemesanan dan bila ada instans AirTrail yang terhubung. Tanpa keduanya, daftar diisi dengan tangan dan lewat pencarian transportasi umum.',
+  // add-transport
+  'help.guide.add-transport.title': 'Menambah transportasi ke sebuah hari',
+  'help.guide.add-transport.goal':
+    'Taruh perjalanan yang membawa Anda dari satu perhentian ke perhentian berikutnya pada hari perjalanan itu terjadi.',
+  'help.guide.add-transport.step.1':
+    'Setiap kepala hari membawa empat tombol kecil di sebelah kanannya. Klik tanda +, yang tooltipnya berbunyi “Tambah transportasi”. Formulir terbuka dengan “Tanggal” sudah disetel ke hari itu.',
+  'help.guide.add-transport.step.2':
+    '“Jenis Pemesanan” memilih apa yang Anda naiki: “Penerbangan”, “Kereta”, “Bus”, “Mobil”, “Taksi”, “Sepeda”, “Kapal Pesiar”, “Feri” atau “Lainnya”. Formulir mengikuti. Penerbangan mendapat sebuah bandara di setiap ruas, kereta sebuah rantai stasiun, mobil kata “Penjemputan” dan “Pengembalian” serta “Perhentian di sepanjang jalan”.',
+  'help.guide.add-transport.step.3':
+    '“Judul” adalah satu-satunya bidang yang harus diisi; tanpa itu “Tambah” tetap abu-abu. Tulis apa yang akan Anda kenali di papan peron.',
+  'help.guide.add-transport.step.4':
+    '“Dari” dan “Ke” mencari stasiun, pelabuhan atau alamat. Ketik setidaknya tiga huruf dan pilih satu hasil dari daftar. Nama yang hanya diketik tidak membawa koordinat, jadi tidak menggambar apa pun di peta.',
+  'help.guide.add-transport.step.5':
+    '“Tanggal” dan “Waktu mulai” mengatakan kapan perjalanan berlangsung, “Tanggal selesai” dan “Waktu selesai” kapan berakhir; perjalanan yang mendarat keesokan hari mengambil hari berikutnya di sana. “Kode Pemesanan”, “Status” dengan “Tertunda” atau “Dikonfirmasi”, dan “Catatan” bersifat opsional.',
+  'help.guide.add-transport.step.6': 'Klik “Tambah”.',
+  'help.guide.add-transport.result':
+    'Transportasi menjadi sebuah baris pada hari itu, pada waktunya di antara perhentian, dan sebuah kartu di tab “Transportasi” di bawah “Tertunda” atau “Dikonfirmasi”.',
+  'help.guide.add-transport.tip.1':
+    'Baris itu mendarat di tempat yang ditentukan waktu mulainya, setelah perhentian terakhir yang mulai lebih awal. Pegangannya menyeretnya ke mana pun di dalam hari itu, atau ke hari lain.',
+  'help.guide.add-transport.tip.2':
+    '“Lampirkan file” di bawah “File” menerima tiketnya, dan “Create expense” di bawah “Costs” menyimpan pemesanan dan membuka editor “Biaya” untuk ongkosnya.',
+  'help.guide.add-transport.tip.3':
+    '“Peserta” menandai siapa yang ikut dalam perjalanan ini. Begitu satu transportasi punya peserta, bilah alat tab menumbuhkan avatar mereka dan menyaring daftar berdasarkan mereka.',
+  // plan-transit
+  'help.guide.plan-transit.title': 'Merencanakan koneksi transportasi umum',
+  'help.guide.plan-transit.goal':
+    'Biarkan TREK mencari kereta dan bus sungguhan di antara dua titik sebuah hari dan menaruh yang Anda pilih ke dalam rencana.',
+  'help.guide.plan-transit.step.1':
+    'Di kepala hari, klik tombol trem, “Transportasi umum”. Pencarian terbuka untuk hari itu.',
+  'help.guide.plan-transit.step.2':
+    '“Dari” dan “Ke” menerima sebuah halte atau stasiun. Selama kotaknya masih kosong, perhentian hari itu sendiri yang ditawarkan; mengetik dua huruf justru mencari stasiun pada jadwal. “Tukar” di antara kedua kotak membalik arah koneksi.',
+  'help.guide.plan-transit.step.3':
+    '“Berangkat” atau “Tiba” dengan sebuah waktu mengatakan kapan Anda ingin bepergian, dan “Rute terbaik”, “Lebih sedikit transit” atau “Lebih sedikit jalan kaki” mengatakan bagaimana jawabannya diurutkan.',
+  'help.guide.plan-transit.step.4':
+    'Chip di bawahnya mengatakan moda mana yang boleh dipakai: “Kereta”, “MRT”, “Trem”, “Bus”, “Feri” dan “Kereta gantung”. Matikan satu untuk mengeluarkannya, setidaknya satu tetap menyala. Lalu klik “Cari”.',
+  'help.guide.plan-transit.step.5':
+    'Setiap hasil memberi keberangkatan dan kedatangan, berapa lama, berapa kali transit dan berapa banyak jalan kaki, serta jalurnya dalam warnanya sendiri. Klik satu untuk membukanya perhentian demi perhentian, dengan peron dan jalan kaki di antara jalur.',
+  'help.guide.plan-transit.step.6': 'Klik “Tambahkan ke hari”.',
+  'help.guide.plan-transit.result':
+    'Koneksi menjadi sebuah baris pada hari itu dengan jalur, transit dan waktu jalan kakinya, dan sebuah kartu di tab “Transportasi” di bawah “Transportasi umum otomatis”.',
+  'help.guide.plan-transit.tip.1':
+    'Koneksi berasal dari Transitous, layanan komunitas gratis di atas data jadwal publik: tanpa kunci, tanpa akun. Seorang admin bisa mengarahkan pencarian ke Google sebagai gantinya.',
+  'help.guide.plan-transit.tip.2':
+    'Tidak ada yang ditemukan? Umpan datanya mencakup sebuah wilayah dan sebuah periode. Coba waktu lain, nyalakan lebih banyak moda, atau pilih sebuah stasiun alih-alih tempatnya sendiri. Pesannya menyebut layanan yang menjawab.',
+  'help.guide.plan-transit.tip.3':
+    'Pencarian yang sama terbuka untuk satu ruas: klik penghubung waktu tempuh antara dua perhentian dan pilih “Transportasi umum”. “Dari”, “Ke” dan waktu keberangkatan sudah diisikan untuk Anda.',
+  // change-transit-route
+  'help.guide.change-transit-route.title': 'Membuka dan mengubah koneksi yang direncanakan',
+  'help.guide.change-transit-route.goal':
+    'Baca koneksi perhentian demi perhentian, ganti namanya, atau cari rutenya lagi.',
+  'help.guide.change-transit-route.step.1':
+    'Di tab “Transportasi”, koneksi yang direncanakan berada di bawah “Transportasi umum otomatis”. Klik kartunya.',
+  'help.guide.change-transit-route.step.2':
+    '“Durasi”, “Transit” dan “Jalan kaki” ada di bagian atas. “Itinerari” di bawahnya menelusuri koneksi perhentian demi perhentian, dengan peron dan jalan kaki di antara jalur.',
+  'help.guide.change-transit-route.step.3':
+    '“Ubah rute” menjalankan pencarian lagi, sudah terisi dengan kedua ujung koneksi ini dan harinya.',
+  'help.guide.change-transit-route.step.4':
+    'Pilih koneksi lain dan klik “Tambahkan ke hari”; koneksi itu mengambil tempat yang lama. “Sunting detail”, di samping “Ubah rute”, justru membuka formulir transportasi biasa, tempat “Kode Pemesanan”, “Status”, peserta dan file berada.',
+  'help.guide.change-transit-route.result':
+    'Perjalanan itu membawa itinerari baru, dan kartunya di tab “Transportasi” menampilkan jalur dan waktu yang baru.',
+  'help.guide.change-transit-route.tip.1':
+    'Judul perjalanan hanyalah teks: pensil di sampingnya mengganti namanya tanpa menyentuh rutenya. “Catatan” di bawahnya menerima markdown dan punya tab “Sunting” dan “Pratinjau”.',
+  'help.guide.change-transit-route.tip.2':
+    '“Hapus” di kaki tampilan perjalanan mengeluarkan koneksi itu dari perjalanan; hari itu tetap punya perhentiannya.',
+  // leg-travel-mode
+  'help.guide.leg-travel-mode.title': 'Mengubah cara satu ruas ditempuh',
+  'help.guide.leg-travel-mode.goal':
+    'Tempuh satu ruas sebuah hari dengan jalan kaki padahal sisanya dikendarai, atau serahkan ruas itu ke pencarian transportasi umum.',
+  'help.guide.leg-travel-mode.step.1':
+    'Penghubung di antara perhentian baru muncul setelah rute hari itu menyala. Klik hari itu untuk membukanya, lalu “Rute” di bawah perhentiannya.',
+  'help.guide.leg-travel-mode.step.2':
+    'Setiap penghubung menyebut waktu tempuh dan jarak ruas itu, dengan ikon moda yang dipakai untuk menghitung rutenya: mobil untuk berkendara, telapak kaki untuk jalan kaki.',
+  'help.guide.leg-travel-mode.step.3':
+    'Klik penghubung itu. Menu menawarkan “Berkendara” dan “Jalan kaki”, “Transportasi umum”, dan “Gunakan bawaan hari”.',
+  'help.guide.leg-travel-mode.step.4':
+    'Pilih “Jalan kaki”. Hanya ruas ini yang berubah; sisa hari itu tetap dengan modanya sendiri.',
+  'help.guide.leg-travel-mode.result':
+    'Ruas itu menampilkan ikon telapak kaki dan waktu jalan kakinya, dan ruas-ruas lain hari itu tetap memakai moda hari itu.',
+  'help.guide.leg-travel-mode.tip.1':
+    'Moda milik ruas, bukan milik hari: tombol “Berkendara” dan “Jalan kaki” untuk seluruh hari tidak pernah menimpa ruas yang Anda setel dengan tangan. “Gunakan bawaan hari” mengembalikan ruas itu kepada mereka.',
+  'help.guide.leg-travel-mode.tip.2':
+    '“Transportasi umum” di menu yang sama membuka pencarian koneksi persis untuk ruas ini, dengan kedua ujung dan waktu keberangkatan sudah terisi.',
+  'help.guide.leg-travel-mode.tip.3':
+    'Waktunya berasal dari perute publik di atas jalan dan jalur pejalan kaki sungguhan. Ruas yang tidak bisa dijawabnya tetap memakai garis lurusnya dan tidak menampilkan waktu.',
+  // edit-transport
+  'help.guide.edit-transport.title': 'Mengubah atau menghapus transportasi',
+  'help.guide.edit-transport.goal':
+    'Perbaiki waktu, peron atau kode pemesanan, atau keluarkan perjalanan itu dari rencana perjalanan.',
+  'help.guide.edit-transport.step.1':
+    'Di rencana hari, sebuah transportasi adalah baris berwarna di antara perhentian. Klik baris itu.',
+  'help.guide.edit-transport.step.2':
+    'Formulirnya adalah formulir yang membuatnya, dengan “Edit transportasi” di bilah judulnya. Semuanya bisa diubah: jenisnya, rutenya, hari dan waktunya, “Kode Pemesanan”, “Status”.',
+  'help.guide.edit-transport.step.3':
+    'Rute sebuah penerbangan adalah rantai bandara, rute kereta rantai stasiun. “Tambah persinggahan” menaruh satu lagi di antaranya, dan setiap ruas menyimpan waktunya sendiri dan nomor penerbangan atau nomor keretanya sendiri.',
+  'help.guide.edit-transport.step.4':
+    'Klik “Perbarui”. Untuk menghapus transportasi sama sekali, pakai tempat sampah pada kartunya di tab “Transportasi” dan konfirmasikan.',
+  'help.guide.edit-transport.result':
+    'Perubahan tampak di semua tempat transportasi itu muncul: tab “Transportasi”, hari perjalanannya berlangsung, dan garisnya di peta.',
+  'help.guide.edit-transport.tip.1':
+    'Formulir yang sama terbuka dari kedua sisi, pensil pada kartu di tab “Transportasi” dan baris transportasi itu sendiri di rencana hari. Koneksi transportasi umum yang direncanakan adalah pengecualian: barisnya membuka tampilan perjalanan, dan “Sunting detail” di sana menuju formulir ini.',
+  'help.guide.edit-transport.tip.2':
+    'Memindahkan transportasi ke hari lain sama sekali tidak memerlukan formulir: seret barisnya dari satu kartu hari ke kartu berikutnya.',
+  // transport-on-map
+  'help.guide.transport-on-map.title': 'Menggambar transportasi di peta',
+  'help.guide.transport-on-map.goal':
+    'Lihat ke mana sebenarnya sebuah penerbangan, sebuah perjalanan berkendara atau sebuah koneksi berjalan.',
+  'help.guide.transport-on-map.step.1':
+    'Transportasi dengan kedua ujung terisi membawa ikon rute kecil di barisnya dalam rencana hari. Klik ikon itu; labelnya berubah menjadi “Sembunyikan rute pemesanan”.',
+  'help.guide.transport-on-map.step.2':
+    'Rutenya digambar di peta, dengan penanda berbentuk pil di setiap ujung yang membawa ikon transportasi itu.',
+  'help.guide.transport-on-map.step.3':
+    'Klik penanda ujung untuk membaca pemesanan tanpa meninggalkan peta: waktunya, “Maskapai” dan “No. Penerbangan”, “Kode Pemesanan” dan catatannya. “Tutup” menyingkirkan lembarannya.',
+  'help.guide.transport-on-map.step.4':
+    'Ikon rute di bilah alat di atas hari-hari melakukannya untuk seluruh perjalanan sekaligus: “Tampilkan semua rute pemesanan”, dan “Sembunyikan semua rute pemesanan” untuk membersihkannya lagi.',
+  'help.guide.transport-on-map.step.5':
+    'Koneksi transportasi umum yang direncanakan tidak punya ikon sendiri. Ia digambar lewat sakelar “Rute” hari itu, dan karena itu “Sembunyikan semua rute pemesanan” tidak membersihkannya selama rute hari itu masih menyala.',
+  'help.guide.transport-on-map.result':
+    'Rute-rute itu ada di peta dengan penanda di setiap ujung, dan tetap di sana sampai Anda mematikannya lagi.',
+  'help.guide.transport-on-map.tip.1':
+    'Penerbangan, kapal pesiar dan feri digambar sebagai lengkungan, mobil, bus, taksi dan sepeda mengikuti jalan sungguhan, dan kereta atau koneksi yang direncanakan melewati stasiun-stasiun yang disinggahinya.',
+  'help.guide.transport-on-map.tip.2':
+    'Pemesanan yang “Dikonfirmasi” adalah garis utuh, yang “Tertunda” garis putus-putus. Pengaturan “Label rute pemesanan” mencetak kode bandara atau nama stasiun ke dalam penanda ujung.',
+  'help.guide.transport-on-map.tip.3':
+    '“Tampilkan semua rute pemesanan” adalah papan bersih, bukan lapisan: ia membuang apa yang telah disetel ikon-ikon tunggal, jadi menekannya dua kali meninggalkan Anda dengan semuanya menyala atau semuanya mati.',
 };
 
 export default help;

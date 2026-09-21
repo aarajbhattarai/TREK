@@ -3259,6 +3259,347 @@ const help: TranslationStrings = {
     'Eliminare una prenotazione di alloggio toglie anche le sue notti dal Programma giornaliero e rimuove la spesa che era collegata a essa.',
   'help.guide.delete-booking.tip.2':
     'I documenti che erano allegati restano nella scheda File del viaggio; se ne va solo il loro collegamento con la prenotazione.',
+
+  // ── Screen: trip-costs ────────────────────────────────────────────────────────────────
+  'help.ctx.trip-costs.title': 'Costi',
+  'help.ctx.trip-costs.summary':
+    'Il denaro del viaggio: ogni spesa in un registro datato, chi l’ha anticipata e chi la deve, nella valuta in cui era la ricevuta, e, nella colonna di destra, chi deve pagare chi perché torni tutto in pari.',
+  'help.ctx.trip-costs.bullet.1':
+    'Quattro schede in alto: Devi e Ti devono sono il tuo lato del conguaglio, Importo in sospeso è ciò che è registrato ma non ha ancora un pagante, e Spesa totale del viaggio somma tutto, con La tua quota e Hai pagato sotto.',
+  'help.ctx.trip-costs.bullet.2':
+    'Aggiungi spesa in alto a destra apre l’editor; Salda accanto registra in una volta sola tutti i trasferimenti aperti.',
+  'help.ctx.trip-costs.bullet.3':
+    'Il registro è raggruppato per giorno, il più recente per primo, con il totale di quel giorno a destra. Una riga porta la categoria come linguetta colorata, il nome, i segnalini dei paganti, la nota e l’importo, più hai prestato o hai preso in prestito quando la divisione ti lascia in attivo o in passivo su quella spesa.',
+  'help.ctx.trip-costs.bullet.4':
+    'Sopra la lista stanno Cerca spese…, un filtro di categoria, un filtro di giorno, il selettore Tutte / Pagate da me / Mi devono e il pulsante Esporta CSV.',
+  'help.ctx.trip-costs.bullet.5':
+    'La colonna di destra è la risposta: Salda elenca chi paga chi, Saldi mostra l’attivo o il passivo di ogni viaggiatore, Budget finale quanto il viaggio costa a ciascuno di loro, e Per categoria dove sono finiti i soldi.',
+  'help.ctx.trip-costs.bullet.6':
+    'Un pagamento registrato sta nello stesso registro come riga a sé, con Modifica e Annulla accanto; una spesa ha una matita e un cestino, e il cestino la elimina senza chiedere.',
+  // add-expense
+  'help.guide.add-expense.title': 'Aggiungere una spesa',
+  'help.guide.add-expense.goal': 'Registra quanto è costato qualcosa, chi l’ha pagato e con chi è diviso.',
+  'help.guide.add-expense.step.1':
+    'Clicca Aggiungi spesa in alto a destra nella scheda Costi. L’editor si apre, datato oggi, con tutti già nella divisione.',
+  'help.guide.add-expense.step.2':
+    'Scrivi per cosa era in Per cosa era?, l’unico campo che deve essere compilato, e la cifra della ricevuta in Importo totale.',
+  'help.guide.add-expense.step.3':
+    'Valuta e Giorno stanno sotto l’importo. Valuta parte da quella del viaggio; cambiala e l’editor mostra quanto vale l’importo nella valuta del viaggio. Giorno parte da oggi ed è il giorno sotto cui il registro raggruppa la spesa.',
+  'help.guide.add-expense.step.4':
+    'Scegli una Categoria. Ce ne sono quattordici e non si possono modificare: quella che scegli è la linguetta colorata della riga e la barra in Per categoria.',
+  'help.guide.add-expense.step.5':
+    'Sotto Chi ha pagato?, scegli la persona che ha davvero anticipato i soldi. Tu è preselezionato; Nessuno ha ancora pagato registra l’importo senza che nessuno lo debba, e Hanno pagato più persone divide il conto tra più paganti.',
+  'help.guide.add-expense.step.6':
+    'Split parte da Equally con tutti inclusi, e accanto a ogni nome c’è la quota che ne risulta. Clicca Aggiungi spesa per salvare.',
+  'help.guide.add-expense.result':
+    'La spesa è nel registro sotto il suo giorno, conteggiata in Spesa totale del viaggio, e la colonna del conguaglio ha ricalcolato chi deve a chi.',
+  'help.guide.add-expense.tip.1':
+    'Lasciata com’è quando si apre, la spesa è nella valuta del viaggio, datata oggi e divisa in parti uguali tra tutti: davvero da compilare ci sono solo il nome e l’importo.',
+  'help.guide.add-expense.tip.2':
+    'Il ± accanto all’importo trasforma la spesa in un rimborso. Un totale negativo restituisce denaro invece di prenderlo, e la divisione va al contrario.',
+  'help.guide.add-expense.tip.3':
+    'Allega ricevuta / fattura in fondo accetta immagini e PDF. Vengono caricati quando salvi, finiscono nei File del viaggio, e accanto al nome nella lista compare un segnalino Ricevute.',
+  // expense-payers
+  'help.guide.expense-payers.title': 'Dire chi ha pagato il conto',
+  'help.guide.expense-payers.goal':
+    'Registra chi ha anticipato i soldi per una spesa, l’altra metà del calcolo del conguaglio.',
+  'help.guide.expense-payers.step.1':
+    'Apri una spesa con la matita accanto alla sua riga e guarda Chi ha pagato?. Ha pagato una sola persona è l’impostazione predefinita: il menu a tendina nomina l’unica persona che ha anticipato i soldi.',
+  'help.guide.expense-payers.step.2':
+    'Nessuno ha ancora pagato, la prima voce di quel menu a tendina, registra l’importo senza che nessuno debba nulla. La spesa conta comunque in Spesa totale del viaggio.',
+  'help.guide.expense-payers.step.3':
+    'Hanno pagato più persone, il link accanto all’etichetta, apre una riga per viaggiatore. Includi quelli che hanno pagato e scrivi quanto ha messo ciascuno; gli importi devono sommare al totale.',
+  'help.guide.expense-payers.step.4':
+    'Una spesa che nessuno ha pagato è contrassegnata Incompleto sulla sua riga e conteggiata nella scheda Importo in sospeso, dove si raccoglie la spesa registrata ma non saldata.',
+  'help.guide.expense-payers.result':
+    'Chi ha pagato decide chi viene rimborsato, la divisione decide chi paga, e Saldi è la differenza tra i due.',
+  'help.guide.expense-payers.tip.1':
+    'Chi ha pagato? e Split sono indipendenti: puoi pagare una cena a cui non eri, ed essere incluso nella divisione di una che non hai pagato.',
+  'help.guide.expense-payers.tip.2':
+    'Con più paganti gli importi devono sommare al totale. Includine un altro e gli altri si riorganizzano attorno a lui; finché non corrispondono, l’editor dice Gli importi dei paganti devono sommare al totale e rifiuta di salvare.',
+  'help.guide.expense-payers.tip.3':
+    'Togliere un pagante non toglie la spesa: l’importo resta in Spesa totale del viaggio e la riga diventa Incompleto.',
+  // split-expense
+  'help.guide.split-expense.title': 'Dividere un conto tra i viaggiatori',
+  'help.guide.split-expense.goal':
+    'Decidi chi deve per una spesa: tutti in parti uguali, per importo, o riga per riga dalla ricevuta.',
+  'help.guide.split-expense.step.1':
+    'Nell’editor della spesa, Split elenca ogni viaggiatore. Clicca un nome per lasciarlo fuori da questa spesa; un viaggiatore escluso indica Escluso e non deve nulla per essa.',
+  'help.guide.split-expense.step.2':
+    'Equally è l’impostazione predefinita: ogni viaggiatore incluso riceve la stessa quota, e la riga sotto la lista dice in quante parti è divisa e a quanto ammonta ciascuna quota.',
+  'help.guide.split-expense.step.3':
+    'Custom sostituisce le quote con campi importo. Scrivi quanto deve ogni viaggiatore; la riga sotto conta man mano e diventa verde su La divisione corrisponde al totale. Non salva finché non corrisponde.',
+  'help.guide.split-expense.step.4':
+    'Ticket divide la ricevuta riga per riga: Aggiungi articolo, poi un nome e un prezzo per riga, e sotto Diviso tra: i viaggiatori che si dividono quella riga.',
+  'help.guide.split-expense.step.5':
+    'Quota di ciascuno sotto le righe mostra quanto deve alla fine ogni viaggiatore, e Importo totale in alto è la somma delle righe. Clicca Salva.',
+  'help.guide.split-expense.result':
+    'La divisione è ciò da cui è costruito ogni saldo. Viene salvata con la spesa e si può cambiare più tardi senza toccare nient’altro.',
+  'help.guide.split-expense.tip.1':
+    'Un viaggiatore che lasci fuori indica Escluso e non deve nulla per questa singola spesa; gli altri si prendono la sua quota.',
+  'help.guide.split-expense.tip.2':
+    'Equally è preciso al centesimo: il centesimo che avanza ruota di spesa in spesa, così non è sempre la stessa persona a pagarlo.',
+  'help.guide.split-expense.tip.3':
+    'La modalità Ticket somma da sé Importo totale e disattiva il campo: le righe della ricevuta sono il totale.',
+  // expense-currency
+  'help.guide.expense-currency.title': 'Inserire una spesa in un’altra valuta',
+  'help.guide.expense-currency.goal':
+    'Inserisci quello che dice davvero la ricevuta e lascia che sia TREK a tenere il tasso.',
+  'help.guide.expense-currency.step.1':
+    'Apri Aggiungi spesa e compila nome e importo esattamente come dice la ricevuta, la cifra stessa e non una sua conversione.',
+  'help.guide.expense-currency.step.2':
+    'Apri Valuta e scegli la valuta della ricevuta. La lista porta ogni codice che TREK conosce ed è ricercabile: digita le tre lettere.',
+  'help.guide.expense-currency.step.3':
+    'Sotto i campi compare una riga con quanto vale l’importo in questo momento, contrassegnata tasso in tempo reale. È un’anteprima, non ciò che viene salvato.',
+  'help.guide.expense-currency.step.4':
+    'Clicca Aggiungi spesa. Il tasso viene congelato sul posto: da qui in poi questa spesa vale quello che valeva il giorno in cui l’hai inserita.',
+  'help.guide.expense-currency.step.5':
+    'Nel registro la riga porta entrambe le cifre sotto il nome: quello che hai digitato, una freccia, e quanto conta nella valuta del viaggio. Ogni totale, saldo e conguaglio qui sopra usa la seconda.',
+  'help.guide.expense-currency.result':
+    'La spesa mantiene l’importo e la valuta che hai digitato. Il registro mostra entrambi, e i totali e i saldi del viaggio restano nella valuta del viaggio.',
+  'help.guide.expense-currency.tip.1':
+    'Il tasso viene congelato nel momento in cui salvi, così un debito saldato non si riapre perché il mercato si è mosso la settimana dopo. Solo cambiare la valuta della spesa ne congela uno nuovo.',
+  'help.guide.expense-currency.tip.2':
+    'Valuta di visualizzazione in Impostazioni cambia solo quello che leggi; gli importi salvati non si muovono mai. Lasciata vuota, ogni viaggio è mostrato nella sua valuta.',
+  'help.guide.expense-currency.tip.3':
+    'La valuta del viaggio sta sul viaggio stesso, sotto Modifica Viaggio, e richiede il permesso Modificare dettagli del viaggio. Cambiarla riancora ogni tasso congelato invece di ridenominare gli importi.',
+  // filter-costs
+  'help.guide.filter-costs.title': 'Trovare una spesa, o le spese di un giorno',
+  'help.guide.filter-costs.goal': 'Restringi un registro lungo a ciò che cerchi davvero.',
+  'help.guide.filter-costs.step.1': 'Scrivi in Cerca spese…, sopra la lista. Cerca nel nome della spesa mentre digiti.',
+  'help.guide.filter-costs.step.2':
+    'Tutte le categorie apre le quattordici categorie. Scegline una e restano solo le spese di quella categoria.',
+  'help.guide.filter-costs.step.3':
+    'Tutti i giorni elenca ogni giorno in cui è stato speso qualcosa. Scegline uno e un banner sostituisce le intestazioni dei giorni con quel giorno, quante spese contiene e il suo totale.',
+  'help.guide.filter-costs.step.4':
+    'Il selettore Tutte / Pagate da me / Mi devono è la tua vista del registro: ciò per cui hai anticipato dei soldi, e ciò che devi ancora recuperare.',
+  'help.guide.filter-costs.step.5':
+    'Esporta CSV in fondo alla riga scrive ogni spesa in un file, con l’importo originale, la sua valuta e l’importo convertito.',
+  'help.guide.filter-costs.result':
+    'I filtri si combinano, e i gruppi dei giorni si ridisegnano con i propri totali per quello che resta.',
+  'help.guide.filter-costs.tip.1':
+    'I pagamenti registrati non hanno né nome né categoria, quindi una ricerca o un filtro di categoria li nasconde. Il filtro di giorno li mantiene, sotto il giorno in cui il pagamento è stato registrato.',
+  'help.guide.filter-costs.tip.2':
+    'Esporta CSV esporta sempre tutte le spese, qualunque cosa sia filtrata sullo schermo, una riga per spesa.',
+  // settle-up
+  'help.guide.settle-up.title': 'Capire chi deve a chi, e saldare',
+  'help.guide.settle-up.goal':
+    'Trasforma un mucchio di spese condivise nel minor numero di trasferimenti che mettono tutti in pari, e registrali man mano che avvengono.',
+  'help.guide.settle-up.step.1':
+    'La scheda Salda nella colonna di destra elenca i trasferimenti che metterebbero tutti in pari: chi paga chi, e quanto. Il numero accanto al titolo è quanti sono ancora aperti.',
+  'help.guide.settle-up.step.2':
+    'Salda accanto a un trasferimento lo registra come fatto. Il flusso sparisce dalla scheda e i saldi si ridisegnano.',
+  'help.guide.settle-up.step.3':
+    'Il trasferimento registrato è una riga nel registro, sotto il giorno in cui è avvenuto, contrassegnata Pagamento con i due viaggiatori e l’importo.',
+  'help.guide.settle-up.step.4':
+    'Accanto a quella riga la matita corregge un pagamento e Annulla lo ritira, e il trasferimento torna nella scheda Salda.',
+  'help.guide.settle-up.step.5':
+    'Aggiungi pagamento nell’intestazione della scheda registra un trasferimento che non ha seguito un suggerimento. Scegli Da e A, l’Importo, la sua valuta e il giorno in cui è avvenuto.',
+  'help.guide.settle-up.step.6':
+    'Salda nell’intestazione in cima allo schermo registra in una volta sola tutti i trasferimenti aperti, come un gruppo che si mette in pari alla fine di un viaggio.',
+  'help.guide.settle-up.result':
+    'Ogni trasferimento registrato è una riga nel registro e una riga in meno sulla scheda Salda. Quando la scheda dice Sono tutti in pari, il viaggio è saldato.',
+  'help.guide.settle-up.tip.1':
+    'La scheda mostra il minor numero di trasferimenti, non ogni debito: tre persone che si devono in cerchio si riducono a uno o due pagamenti.',
+  'help.guide.settle-up.tip.2':
+    'Salda registra un trasferimento, non sposta denaro. Mandalo con il mezzo che usi, poi cliccalo.',
+  'help.guide.settle-up.tip.3':
+    'Un pagamento può essere fatto in qualsiasi valuta, quindi pagare in euro un debito in yen è normale: la finestra ha il proprio selettore di valuta e congela anche quel tasso.',
+  // final-budget
+  'help.guide.final-budget.title': 'Vedere quanto il viaggio è costato a ogni viaggiatore',
+  'help.guide.final-budget.goal':
+    'Leggi il lato per persona del registro: il saldo di oggi, e il costo reale a persona.',
+  'help.guide.final-budget.step.1':
+    'Saldi mostra la posizione di ogni viaggiatore: una barra verde verso destra se il viaggio gli deve, una barra rossa verso sinistra se lui deve al viaggio, e l’importo accanto al nome.',
+  'help.guide.final-budget.step.2':
+    'Budget finale sotto risponde a un’altra domanda: non chi deve cosa adesso, ma quanto il viaggio costa a ogni viaggiatore una volta che tutto è stato restituito.',
+  'help.guide.final-budget.step.3':
+    'Clicca un nome per aprire il conto: Spese pagate, poi Rimborsi netti e Rimborsi in sospeso sotto.',
+  'help.guide.final-budget.step.4':
+    'Sotto ogni riga stanno le righe di cui è fatta: le spese che quel viaggiatore ha pagato, i trasferimenti già registrati e quelli ancora aperti. La loro somma fa esattamente la riga sopra.',
+  'help.guide.final-budget.result':
+    'Saldi è chi oggi è in attivo o in passivo; Budget finale è quanto il viaggio finisce per costare a ciascuno di voi una volta che tutto è stato restituito.',
+  'help.guide.final-budget.tip.1':
+    'Registrare un pagamento non cambia il budget finale di nessuno. Sposta soltanto un importo dai rimborsi in sospeso ai rimborsi netti.',
+  'help.guide.final-budget.tip.2':
+    'Una spesa senza pagante resta fuori da entrambe le schede, allo stesso modo in cui resta fuori dai suggerimenti di conguaglio.',
+  // expense-from-booking
+  'help.guide.expense-from-booking.title': 'Trasformare una prenotazione in una spesa',
+  'help.guide.expense-from-booking.goal':
+    'Allega quanto sono costati davvero un volo, un hotel o un luogo alla scheda a cui appartengono.',
+  'help.guide.expense-from-booking.step.1':
+    'Apri la prenotazione nella scheda Trasporti o Prenotazioni e clicca la sua matita.',
+  'help.guide.expense-from-booking.step.2':
+    'Scorri fino al blocco Costs in fondo al modulo. Finché non c’è nulla di collegato, offre Create expense e dice che salva prima la prenotazione.',
+  'help.guide.expense-from-booking.step.3':
+    'Clicca Create expense. La prenotazione viene salvata, il modulo si chiude, e l’editor dei Costi si apre con il titolo della prenotazione come nome e il suo tipo già abbinato a una categoria.',
+  'help.guide.expense-from-booking.step.4':
+    'Compila l’importo, chi ha pagato e la divisione come per qualsiasi spesa, e salva. Riaprendo la prenotazione la si vede sotto Linked expense, con una matita per modificarla e un cestino per rimuoverla.',
+  'help.guide.expense-from-booking.result':
+    'La prenotazione porta il suo costo, e la spesa è una riga ordinaria nella scheda Costi, con un pagante, una divisione e una valuta come ogni altra.',
+  'help.guide.expense-from-booking.tip.1':
+    'Eliminare la prenotazione elimina con sé la spesa collegata. Remove expense nel blocco Costs della prenotazione fa il contrario: la spesa va via, la prenotazione resta.',
+  'help.guide.expense-from-booking.tip.2':
+    'Un luogo ha lo stesso blocco nel suo modulo, dove Create expense salva prima il luogo.',
+
+  // ── Screen: trip-transports ───────────────────────────────────────────────────────────
+  'help.ctx.trip-transports.title': 'Trasporti',
+  'help.ctx.trip-transports.summary':
+    'Tutto ciò che ti porta tra una tappa e l’altra: voli, treni, autobus, auto, taxi, biciclette, crociere, traghetti e i collegamenti di trasporto pubblico che TREK cerca per te. La scheda ne è l’elenco; si creano e si leggono anche nel programma, e si disegnano sulla mappa.',
+  'help.ctx.trip-transports.bullet.1':
+    'La scheda tiene solo i tragitti. Alloggi, ristoranti, eventi e biglietti vivono in Prenotazioni, così la stessa voce non compare mai due volte.',
+  'help.ctx.trip-transports.bullet.2':
+    'La barra degli strumenti li conta tutti sotto Tutti e dà a ogni tipo in uso un chip proprio con il proprio conteggio, Volo, Treno, Auto, Trasporto pubblico. Trasporto, a destra, ne aggiunge uno a mano.',
+  'help.ctx.trip-transports.bullet.3':
+    'Le schede arrivano in tre gruppi, ciascuno richiudibile dal suo titolo: Trasporto pubblico automatico per i collegamenti pianificati dalla ricerca, poi In attesa, poi Confermata.',
+  'help.ctx.trip-transports.bullet.4':
+    'Una scheda porta lo stato, il tipo, i giorni che copre, gli orari, il Codice prenotazione, l’itinerario e la Compagnia aerea con il N. volo, oppure il N. treno, il Binario e il Posto. La matita la apre, il cestino la elimina dopo una domanda.',
+  'help.ctx.trip-transports.bullet.5':
+    'I trasporti nascono anche nel programma: ogni intestazione di giorno ha un più per Aggiungi trasporto e un pulsante tram per Trasporto pubblico, e il connettore del tempo di viaggio tra due tappe apre la stessa ricerca per quella sola tratta.',
+  'help.ctx.trip-transports.bullet.6':
+    'Un trasporto con entrambi gli estremi impostati disegna una linea sulla mappa. L’icona del percorso sulla sua riga nel programma del giorno accende quella linea, e Mostra tutti i percorsi prenotati nella barra sopra i giorni commuta l’intero viaggio.',
+  // transports-list
+  'help.guide.transports-list.title': 'Leggere la scheda Trasporti',
+  'help.guide.transports-list.goal': 'Sapere cosa ti dice l’elenco prima di cambiarci qualcosa.',
+  'help.guide.transports-list.step.1':
+    'Trasporti è la seconda scheda del viaggio. Tiene solo i tragitti: hotel, ristoranti, eventi e biglietti stanno in Prenotazioni.',
+  'help.guide.transports-list.step.2':
+    'La barra degli strumenti conta ogni trasporto sotto Tutti e dà a ogni tipo in uso un chip proprio con il proprio conteggio. Clicca un chip per tenere solo quel tipo, cliccalo di nuovo per lasciarlo andare. Più chip possono essere attivi insieme, e Tutti li azzera.',
+  'help.guide.transports-list.step.3':
+    'Trasporto pubblico automatico è un gruppo a sé, i collegamenti pianificati dalla ricerca di trasporto pubblico. In attesa e Confermata tengono tutto ciò che è stato inserito a mano. La freccia accanto a un titolo richiude un gruppo.',
+  'help.guide.transports-list.step.4':
+    'Una scheda dice tutto: il punto di stato con In attesa o Confermata, il tipo, i giorni che copre con le loro date, gli orari, il Codice prenotazione, l’itinerario, e la Compagnia aerea con il N. volo, oppure il N. treno, il Binario e il Posto.',
+  'help.guide.transports-list.step.5':
+    'La matita apre il trasporto per modificarlo, il cestino lo elimina, dopo una domanda che nomina ciò che se ne va.',
+  'help.guide.transports-list.result':
+    'L’elenco è ristretto a ciò che cercavi, e ogni scheda dice a colpo d’occhio se il tragitto è prenotato.',
+  'help.guide.transports-list.tip.1':
+    'I chip e i gruppi richiusi vengono ricordati per viaggio, così la scheda si riapre come l’hai lasciata.',
+  'help.guide.transports-list.tip.2':
+    'Importa da file e AirTrail si affiancano a Trasporto nella barra degli strumenti solo quando il server sa leggere le conferme di prenotazione e quando un’istanza AirTrail è collegata. Senza di loro l’elenco si riempie a mano e con la ricerca di trasporto pubblico.',
+  // add-transport
+  'help.guide.add-transport.title': 'Aggiungere un trasporto a un giorno',
+  'help.guide.add-transport.goal':
+    'Mettere il tragitto che ti porta da una tappa alla successiva nel giorno in cui avviene.',
+  'help.guide.add-transport.step.1':
+    'Ogni intestazione di giorno porta quattro piccoli pulsanti a destra. Clicca il più, il cui suggerimento dice Aggiungi trasporto. Il modulo si apre con Data già impostata su quel giorno.',
+  'help.guide.add-transport.step.2':
+    'Tipo di prenotazione sceglie cosa prendi: Volo, Treno, Autobus, Auto, Taxi, Bicicletta, Crociera, Traghetto o Altro. Il modulo segue. Un volo riceve un aeroporto su ogni tratta, un treno una catena di stazioni, un’auto le parole Ritiro e Riconsegna e Soste lungo il tragitto.',
+  'help.guide.add-transport.step.3':
+    'Titolo è l’unico campo che deve essere compilato; Aggiungi resta grigio senza. Scrivi ciò che riconosceresti su un tabellone.',
+  'help.guide.add-transport.step.4':
+    'Da e A cercano una stazione, un porto o un indirizzo. Digita almeno tre lettere e scegli un risultato dall’elenco. Un nome solo digitato non porta coordinate, quindi non disegna nulla sulla mappa.',
+  'help.guide.add-transport.step.5':
+    'Data e Ora di inizio dicono quando parte, Data fine e Ora di fine quando è finito; un tragitto che arriva il giorno dopo lì prende il giorno successivo. Codice prenotazione, Stato con In attesa o Confermata, e Note sono facoltativi.',
+  'help.guide.add-transport.step.6': 'Clicca Aggiungi.',
+  'help.guide.add-transport.result':
+    'Il trasporto è una riga sul giorno, al suo orario tra le tappe, e, nella scheda Trasporti, una scheda sotto In attesa o Confermata.',
+  'help.guide.add-transport.tip.1':
+    'La riga arriva dove la mette il suo orario di inizio, dopo l’ultima tappa che comincia prima. La sua maniglia la trascina in qualsiasi altro punto del giorno, o su un altro giorno.',
+  'help.guide.add-transport.tip.2':
+    'Allega file sotto File prende il biglietto, e Create expense sotto Costs salva la prenotazione e apre l’editor dei Costi per la tariffa.',
+  'help.guide.add-transport.tip.3':
+    'Viaggiatori segna chi è su questo tragitto. Appena un trasporto ha viaggiatori, la barra della scheda fa crescere i loro avatar e filtra l’elenco per loro.',
+  // plan-transit
+  'help.guide.plan-transit.title': 'Pianificare un collegamento di trasporto pubblico',
+  'help.guide.plan-transit.goal':
+    'Lasciare che TREK cerchi i treni e gli autobus reali tra due punti di un giorno e metta nel programma quello che scegli.',
+  'help.guide.plan-transit.step.1':
+    'Nell’intestazione del giorno, clicca il pulsante tram, Trasporto pubblico. La ricerca si apre per quel giorno.',
+  'help.guide.plan-transit.step.2':
+    'Da e A prendono una fermata o una stazione. Finché la casella è vuota vengono offerte le tappe proprie del giorno; digitando due lettere si cercano invece le stazioni dell’orario. Inverti tra le due caselle gira il collegamento.',
+  'help.guide.plan-transit.step.3':
+    'Partenza o Arrivo con un orario dice quando vuoi viaggiare, e Percorso migliore, Meno cambi o Meno spostamenti a piedi dice come devono essere ordinate le risposte.',
+  'help.guide.plan-transit.step.4':
+    'I chip sotto dicono quali mezzi si possono usare: Treno, Metropolitana, Tram, Autobus, Traghetto e Funivia. Spegnine uno per lasciarlo fuori, almeno uno resta acceso. Poi clicca Cerca.',
+  'help.guide.plan-transit.step.5':
+    'Ogni risultato dà partenza e arrivo, quanto dura, quanti cambi e quanto si cammina, e le linee nei loro colori. Cliccane uno per aprirlo fermata per fermata, con i binari e i tratti a piedi tra le linee.',
+  'help.guide.plan-transit.step.6': 'Clicca Aggiungi al giorno.',
+  'help.guide.plan-transit.result':
+    'Il collegamento è una riga sul giorno con le sue linee, i suoi cambi e il suo tempo a piedi, e una scheda nella scheda Trasporti sotto Trasporto pubblico automatico.',
+  'help.guide.plan-transit.tip.1':
+    'I collegamenti vengono da Transitous, un servizio comunitario libero sui dati pubblici degli orari: nessuna chiave, nessun account. Un amministratore può puntare la ricerca su Google al suo posto.',
+  'help.guide.plan-transit.tip.2':
+    'Non hai trovato nulla? I dati coprono una regione e un periodo. Prova un altro orario, accendi più mezzi, oppure scegli una stazione invece del luogo stesso. Il messaggio nomina il servizio che ha risposto.',
+  'help.guide.plan-transit.tip.3':
+    'La stessa ricerca si apre per una sola tratta: clicca il connettore del tempo di viaggio tra due tappe e scegli Trasporto pubblico. Da, A e l’orario di partenza sono già compilati per te.',
+  // change-transit-route
+  'help.guide.change-transit-route.title': 'Aprire e cambiare un collegamento pianificato',
+  'help.guide.change-transit-route.goal':
+    'Leggere il collegamento fermata per fermata, rinominarlo, oppure cercare di nuovo il percorso.',
+  'help.guide.change-transit-route.step.1':
+    'Nella scheda Trasporti i collegamenti pianificati stanno sotto Trasporto pubblico automatico. Clicca la scheda.',
+  'help.guide.change-transit-route.step.2':
+    'Durata, Cambi e A piedi stanno in alto. Itinerario sotto di essi percorre il collegamento fermata per fermata, con i binari e i tratti a piedi tra le linee.',
+  'help.guide.change-transit-route.step.3':
+    'Cambia percorso rilancia la ricerca, già compilata con i due estremi di questo collegamento e con il suo giorno.',
+  'help.guide.change-transit-route.step.4':
+    'Scegli un altro collegamento e clicca Aggiungi al giorno; prende il posto del vecchio. Modifica dettagli, accanto a Cambia percorso, apre invece il normale modulo di trasporto, dove stanno il Codice prenotazione, lo Stato, i viaggiatori e i file.',
+  'help.guide.change-transit-route.result':
+    'Il viaggio in trasporto pubblico porta il nuovo itinerario, e la sua scheda nella scheda Trasporti mostra le nuove linee e i nuovi orari.',
+  'help.guide.change-transit-route.tip.1':
+    'Il titolo del viaggio in trasporto pubblico è solo testo: la matita accanto lo rinomina senza toccare il percorso. Note sotto accettano il markdown e hanno una linguetta Modifica e una linguetta Anteprima.',
+  'help.guide.change-transit-route.tip.2':
+    'Elimina ai piedi del viaggio in trasporto pubblico toglie il collegamento dal viaggio; il giorno mantiene le sue tappe.',
+  // leg-travel-mode
+  'help.guide.leg-travel-mode.title': 'Cambiare come si percorre una tratta',
+  'help.guide.leg-travel-mode.goal':
+    'Fare a piedi una tratta di un giorno che per il resto è in auto, oppure affidare quella tratta alla ricerca di trasporto pubblico.',
+  'help.guide.leg-travel-mode.step.1':
+    'I connettori tra le tappe compaiono solo quando il percorso del giorno è acceso. Clicca il giorno per aprirlo, poi Percorso sotto le sue tappe.',
+  'help.guide.leg-travel-mode.step.2':
+    'Ogni connettore nomina il tempo di viaggio e la distanza di quella tratta, con l’icona del mezzo con cui è stata calcolata: un’auto per la guida, un piede per il cammino.',
+  'help.guide.leg-travel-mode.step.3':
+    'Clicca il connettore. Il menu offre In auto e A piedi, Trasporto pubblico, e Usa predefinito del giorno.',
+  'help.guide.leg-travel-mode.step.4':
+    'Scegli A piedi. Cambia solo questa tratta; il resto del giorno mantiene il proprio mezzo.',
+  'help.guide.leg-travel-mode.result':
+    'La tratta mostra l’icona del piede e il suo tempo a piedi, e le altre tratte del giorno mantengono il mezzo del giorno.',
+  'help.guide.leg-travel-mode.tip.1':
+    'Il mezzo appartiene alla tratta, non al giorno: i pulsanti In auto e A piedi dell’intero giorno non sovrascrivono mai una tratta che hai impostato a mano. Usa predefinito del giorno restituisce loro la tratta.',
+  'help.guide.leg-travel-mode.tip.2':
+    'Trasporto pubblico nello stesso menu apre la ricerca dei collegamenti per esattamente questa tratta, con entrambi gli estremi e l’orario di partenza già compilati.',
+  'help.guide.leg-travel-mode.tip.3':
+    'I tempi vengono da un router pubblico su strade e sentieri pedonali reali. Una tratta a cui non sa rispondere mantiene la sua linea retta e non mostra alcun tempo.',
+  // edit-transport
+  'help.guide.edit-transport.title': 'Cambiare o eliminare un trasporto',
+  'help.guide.edit-transport.goal':
+    'Sistemare un orario, un binario o un codice di prenotazione, oppure togliere il tragitto dal viaggio.',
+  'help.guide.edit-transport.step.1':
+    'Nel programma del giorno un trasporto è una riga colorata tra le tappe. Cliccala.',
+  'help.guide.edit-transport.step.2':
+    'Il modulo è quello che l’ha creato, con Modifica trasporto nella barra del titolo. Tutto si può cambiare: il tipo, l’itinerario, i giorni e gli orari, il Codice prenotazione, lo Stato.',
+  'help.guide.edit-transport.step.3':
+    'L’itinerario di un volo è una catena di aeroporti, quello di un treno una catena di stazioni. Aggiungi scalo ne mette un altro in mezzo, e ogni tratta mantiene i propri orari e il proprio numero di volo o di treno.',
+  'help.guide.edit-transport.step.4':
+    'Clicca Aggiorna. Per togliere del tutto il trasporto, usa il cestino sulla sua scheda nella scheda Trasporti e conferma.',
+  'help.guide.edit-transport.result':
+    'La modifica si vede ovunque compaia il trasporto: nella scheda Trasporti, nel giorno in cui avviene, e nella sua linea sulla mappa.',
+  'help.guide.edit-transport.tip.1':
+    'Lo stesso modulo si apre da entrambi i lati, dalla matita sulla scheda nella scheda Trasporti e dalla riga propria del trasporto nel programma del giorno. Un collegamento di trasporto pubblico pianificato è l’eccezione: la sua riga apre il viaggio in trasporto pubblico, e Modifica dettagli porta da lì a questo modulo.',
+  'help.guide.edit-transport.tip.2':
+    'Spostare un trasporto a un altro giorno non ha affatto bisogno del modulo: trascina la sua riga da una scheda del giorno a quella dopo.',
+  // transport-on-map
+  'help.guide.transport-on-map.title': 'Disegnare un trasporto sulla mappa',
+  'help.guide.transport-on-map.goal': 'Vedere dove passa davvero un volo, un tragitto in auto o un collegamento.',
+  'help.guide.transport-on-map.step.1':
+    'Un trasporto con entrambi gli estremi impostati porta una piccola icona del percorso sulla sua riga nel programma del giorno. Cliccala; la sua etichetta diventa Nascondi percorsi prenotati.',
+  'help.guide.transport-on-map.step.2':
+    'Il percorso viene disegnato sulla mappa, con un indicatore a pillola a ogni estremo che porta l’icona del trasporto.',
+  'help.guide.transport-on-map.step.3':
+    'Clicca un indicatore di estremità per leggere la prenotazione senza lasciare la mappa: gli orari, la Compagnia aerea e il N. volo, il Codice prenotazione e le note. Chiudi mette via il foglio.',
+  'help.guide.transport-on-map.step.4':
+    'L’icona del percorso nella barra sopra i giorni fa l’intero viaggio in una volta: Mostra tutti i percorsi prenotati, e Nascondi tutti i percorsi prenotati per ripulirli di nuovo.',
+  'help.guide.transport-on-map.step.5':
+    'Un collegamento di trasporto pubblico pianificato non ha un’icona propria. Viene disegnato con l’interruttore Percorso del giorno, ed è per questo che Nascondi tutti i percorsi prenotati non lo toglie finché il percorso di quel giorno è ancora acceso.',
+  'help.guide.transport-on-map.result':
+    'I percorsi sono sulla mappa con un indicatore a ogni estremo, e restano lì finché non li spegni di nuovo.',
+  'help.guide.transport-on-map.tip.1':
+    'Un volo, una crociera e un traghetto si disegnano come una curva, un’auto, un autobus, un taxi e una bicicletta seguono le strade reali, e un treno o un collegamento pianificato passa per le stazioni in cui ferma.',
+  'help.guide.transport-on-map.tip.2':
+    'Una prenotazione confermata è una linea continua, una in attesa è tratteggiata. L’impostazione Etichette percorsi prenotati scrive il codice dell’aeroporto o il nome della stazione negli indicatori alle estremità.',
+  'help.guide.transport-on-map.tip.3':
+    'Mostra tutti i percorsi prenotati è una tabula rasa, non un livello: scarta ciò che avevano impostato le singole icone, quindi premerlo due volte ti lascia con tutto acceso o tutto spento.',
 };
 
 export default help;

@@ -3191,6 +3191,344 @@ const help: TranslationStrings = {
     'Xóa một đặt chỗ ở còn đưa những đêm của nó ra khỏi “Kế hoạch ngày” và gỡ khoản chi đã liên kết với nó.',
   'help.guide.delete-booking.tip.2':
     'Những giấy tờ từng được đính kèm vẫn ở lại trong thẻ “Tập tin” của chuyến đi; chỉ liên kết của chúng với đặt chỗ là mất đi.',
+
+  // ── Screen: trip-costs ────────────────────────────────────────────────────────────────
+  'help.ctx.trip-costs.title': 'Chi phí',
+  'help.ctx.trip-costs.summary':
+    'Tiền bạc của chuyến đi: mọi khoản chi thành một sổ cái có ngày tháng, ai đã bỏ tiền ra và ai phải gánh phần của mình, bằng đúng loại tiền ghi trên biên lai, và ở cột bên phải là ai phải trả cho ai để mọi thứ cân trở lại.',
+  'help.ctx.trip-costs.bullet.1':
+    'Bốn thẻ ở trên cùng: “Bạn nợ” và “Bạn đang nợ” là phía của chính bạn trong việc thanh toán, “Số tiền chưa thanh toán” là những gì đã ghi nhận nhưng chưa có người trả, còn “Tổng chi tiêu chuyến đi” cộng tất cả lại, với “Chia sẻ của bạn” và “Bạn đã trả tiền” ở bên dưới.',
+  'help.ctx.trip-costs.bullet.2':
+    '“Thêm chi phí” ở trên cùng bên phải mở trình chỉnh sửa; “Thanh toán” ngay cạnh đó ghi nhận mọi khoản chuyển còn mở cùng một lúc.',
+  'help.ctx.trip-costs.bullet.3':
+    'Sổ cái được nhóm theo ngày, mới nhất trước, với tổng của ngày đó ở bên phải. Mỗi dòng mang danh mục dưới dạng một tab màu, tên, các chip người trả, ghi chú và số tiền, cùng với “bạn đã cho mượn” hoặc “bạn đã mượn” khi cách chia khiến bạn dư ra hay thiếu đi ở khoản đó.',
+  'help.ctx.trip-costs.bullet.4':
+    'Phía trên danh sách là “Tìm kiếm chi phí…”, một bộ lọc danh mục, một bộ lọc ngày, công tắc “Tất cả” / “Do tôi trả tiền” / “tôi nợ” và nút “Xuất CSV”.',
+  'help.ctx.trip-costs.bullet.5':
+    'Cột bên phải chính là câu trả lời: “Thanh toán” liệt kê ai trả cho ai, “Số dư” cho thấy phần dư hay phần thiếu của từng người, “Ngân sách cuối cùng” cho biết chuyến đi tốn của mỗi người bao nhiêu, và “Theo danh mục” cho biết tiền đã đi đâu.',
+  'help.ctx.trip-costs.bullet.6':
+    'Một khoản chi trả đã ghi nhận nằm trong cùng sổ cái như một dòng riêng, với “Chỉnh sửa” và “Hoàn tác” bên cạnh; một khoản chi có cây bút chì và một thùng rác, và thùng rác xóa nó mà không hỏi lại.',
+  // add-expense
+  'help.guide.add-expense.title': 'Thêm một khoản chi',
+  'help.guide.add-expense.goal': 'Ghi lại một thứ đã tốn bao nhiêu, ai trả và nó được chia với những ai.',
+  'help.guide.add-expense.step.1':
+    'Nhấp “Thêm chi phí” ở trên cùng bên phải của tab Chi phí. Trình chỉnh sửa mở ra, mang ngày hôm nay, với tất cả mọi người đã có sẵn trong phần chia.',
+  'help.guide.add-expense.step.2':
+    'Gõ nó dùng để làm gì vào “Nó dùng để làm gì?”, ô duy nhất bắt buộc phải điền, và con số trên biên lai vào “Tổng số tiền”.',
+  'help.guide.add-expense.step.3':
+    '“Tiền tệ” và “Ngày” nằm dưới số tiền. “Tiền tệ” bắt đầu bằng tiền tệ của chính chuyến đi; đổi nó và trình chỉnh sửa cho thấy số tiền đó đáng bao nhiêu theo tiền tệ chuyến đi. “Ngày” bắt đầu từ hôm nay và đó là ngày mà sổ cái dùng để nhóm khoản chi.',
+  'help.guide.add-expense.step.4':
+    'Chọn một “Loại”. Có mười bốn loại và không thể thay đổi: loại bạn chọn chính là tab màu trên dòng và là thanh trong “Theo danh mục”.',
+  'help.guide.add-expense.step.5':
+    'Dưới “Ai đã trả tiền?”, chọn người thực sự đã bỏ tiền ra. “Bạn” được chọn sẵn; “Chưa có ai trả tiền” ghi nhận số tiền mà không bắt ai phải gánh, còn “Nhiều người đã trả” chia hóa đơn cho nhiều người trả.',
+  'help.guide.add-expense.step.6':
+    '“Chia tiền” bắt đầu ở “Chia đều” với tất cả mọi người được tính, và mỗi tên hiển thị phần tương ứng của mình. Nhấp “Thêm chi phí” để lưu.',
+  'help.guide.add-expense.result':
+    'Khoản chi nằm trong sổ cái dưới ngày của nó, được tính vào “Tổng chi tiêu chuyến đi”, và cột thanh toán đã tính lại ai nợ ai.',
+  'help.guide.add-expense.tip.1':
+    'Để nguyên như khi mở ra, khoản chi dùng tiền tệ của chuyến đi, mang ngày hôm nay và chia đều cho mọi người: thật ra chỉ có tên và số tiền là bắt buộc.',
+  'help.guide.add-expense.tip.2':
+    'Dấu ± bên cạnh số tiền biến khoản chi thành khoản hoàn. Tổng âm trả tiền lại thay vì lấy đi, và cách chia chạy theo hướng ngược lại.',
+  'help.guide.add-expense.tip.3':
+    '“Đính kèm hóa đơn / biên lai” ở dưới cùng nhận ảnh và tệp PDF. Chúng được tải lên khi bạn lưu, nằm trong Tập tin của chuyến đi, và một chip “Hóa đơn” xuất hiện cạnh tên trong danh sách.',
+  // expense-payers
+  'help.guide.expense-payers.title': 'Nói ai đã trả hóa đơn',
+  'help.guide.expense-payers.goal':
+    'Ghi lại ai đang phải bỏ tiền túi cho một khoản chi, nửa còn lại của phép tính thanh toán.',
+  'help.guide.expense-payers.step.1':
+    'Mở một khoản chi bằng cây bút chì bên cạnh dòng của nó và xem “Ai đã trả tiền?”. “Một người đã trả” là mặc định: danh sách thả xuống nêu tên một người duy nhất đã bỏ tiền ra.',
+  'help.guide.expense-payers.step.2':
+    '“Chưa có ai trả tiền”, mục đầu tiên của danh sách thả xuống đó, ghi nhận số tiền mà không bắt ai nợ gì cả. Khoản chi vẫn được tính vào “Tổng chi tiêu chuyến đi”.',
+  'help.guide.expense-payers.step.3':
+    '“Nhiều người đã trả”, liên kết cạnh nhãn, mở ra một dòng cho mỗi người. Bao gồm những ai đã trả và gõ số tiền từng người bỏ ra; các số tiền phải cộng lại bằng tổng.',
+  'help.guide.expense-payers.step.4':
+    'Một khoản chi chưa ai trả sẽ bị đánh dấu “Chưa xong” trên dòng của nó và được tính vào thẻ “Số tiền chưa thanh toán”, nơi gom những khoản đã ghi nhận nhưng chưa được thanh toán.',
+  'help.guide.expense-payers.result':
+    'Ai đã trả quyết định ai được trả lại, cách chia quyết định ai phải trả, và “Số dư” là chênh lệch giữa hai điều đó.',
+  'help.guide.expense-payers.tip.1':
+    '“Ai đã trả tiền?” và “Chia tiền” độc lập với nhau: bạn có thể trả cho một bữa tối bạn không dự, và bị chia vào một bữa tối bạn không trả.',
+  'help.guide.expense-payers.tip.2':
+    'Với nhiều người trả, các số tiền phải cộng lại bằng tổng. Bao gồm thêm một người và những người khác tự sắp xếp lại quanh người đó; trong lúc chúng chưa khớp, trình chỉnh sửa nói rằng tổng số tiền của người trả phải bằng tổng và từ chối lưu.',
+  'help.guide.expense-payers.tip.3':
+    'Bỏ một người trả không xóa khoản chi: số tiền vẫn nằm trong “Tổng chi tiêu chuyến đi” và dòng đó trở thành “Chưa xong”.',
+  // split-expense
+  'help.guide.split-expense.title': 'Chia một hóa đơn giữa những người đi cùng',
+  'help.guide.split-expense.goal':
+    'Quyết định ai gánh một khoản chi: tất cả chia đều, theo số tiền, hoặc từng dòng trên biên lai.',
+  'help.guide.split-expense.step.1':
+    'Trong trình chỉnh sửa khoản chi, “Chia tiền” liệt kê mọi người. Nhấp vào một tên để để người đó ra ngoài khoản chi này; người bị loại hiện chữ “Không tính” và không gánh gì cho nó.',
+  'help.guide.split-expense.step.2':
+    '“Chia đều” là mặc định: mỗi người được tính đều nhận cùng một phần, và dòng dưới danh sách cho biết chia làm bao nhiêu phần và mỗi phần là bao nhiêu.',
+  'help.guide.split-expense.step.3':
+    '“Tùy chỉnh” đổi các phần đó thành các ô số tiền. Gõ số tiền mỗi người phải gánh; dòng bên dưới đếm theo và chuyển xanh khi đạt “Phần chia khớp với tổng”. Nó sẽ không lưu khi còn lệch.',
+  'help.guide.split-expense.step.4':
+    '“Hóa đơn” chia biên lai theo từng dòng: “Thêm món”, rồi một tên và một giá cho mỗi dòng, và dưới “Chia cho:” là những người cùng gánh dòng đó.',
+  'help.guide.split-expense.step.5':
+    '“Phần của từng người” dưới các dòng cho thấy mỗi người rốt cuộc gánh bao nhiêu, còn “Tổng số tiền” ở trên được cộng từ các dòng. Nhấp “Lưu”.',
+  'help.guide.split-expense.result':
+    'Cách chia là nền của mọi số dư. Nó được lưu cùng khoản chi và có thể đổi sau mà không đụng tới thứ gì khác.',
+  'help.guide.split-expense.tip.1':
+    'Người bạn để ra ngoài hiện chữ “Không tính” và không gánh gì cho riêng khoản chi này; những người còn lại nhận phần của họ.',
+  'help.guide.split-expense.tip.2':
+    '“Chia đều” chính xác đến từng xu: đồng xu lẻ luân phiên từ khoản chi này sang khoản chi khác, nên không ai là người luôn phải trả nó.',
+  'help.guide.split-expense.tip.3':
+    'Chế độ “Hóa đơn” tự cộng “Tổng số tiền” và làm mờ ô đó: các dòng của biên lai chính là tổng.',
+  // expense-currency
+  'help.guide.expense-currency.title': 'Nhập một khoản chi bằng loại tiền khác',
+  'help.guide.expense-currency.goal': 'Nhập đúng những gì biên lai ghi và để TREK giữ tỷ giá.',
+  'help.guide.expense-currency.step.1':
+    'Mở “Thêm chi phí” và điền tên cùng số tiền đúng như biên lai ghi, chính con số đó chứ không phải một bản quy đổi.',
+  'help.guide.expense-currency.step.2':
+    'Mở “Tiền tệ” và chọn loại tiền của biên lai. Danh sách mang mọi mã tiền mà TREK biết và có thể tìm kiếm: gõ ba chữ cái.',
+  'help.guide.expense-currency.step.3':
+    'Một dòng hiện ra dưới các ô, cho biết số tiền đó đáng bao nhiêu ngay lúc này, được đánh dấu “tỷ lệ trực tiếp”. Đó là bản xem trước, không phải thứ được lưu lại.',
+  'help.guide.expense-currency.step.4':
+    'Nhấp “Thêm chi phí”. Tỷ giá được đóng băng ngay tại chỗ: từ đây trở đi khoản chi này đáng đúng bằng giá trị của nó vào ngày bạn nhập.',
+  'help.guide.expense-currency.step.5':
+    'Trong sổ cái, dòng đó mang cả hai con số dưới tên: số bạn đã gõ, một mũi tên, và số tiền tương ứng theo tiền tệ của chuyến đi. Mọi tổng, số dư và thanh toán ở trên đều dùng con số thứ hai.',
+  'help.guide.expense-currency.result':
+    'Khoản chi giữ nguyên số tiền và loại tiền bạn đã gõ. Sổ cái hiển thị cả hai, còn các tổng và số dư của chuyến đi vẫn theo tiền tệ của chuyến đi.',
+  'help.guide.expense-currency.tip.1':
+    'Tỷ giá được đóng băng ngay khi bạn lưu, nên một món nợ đã thanh toán không mở lại chỉ vì thị trường nhúc nhích tuần sau đó. Chỉ khi đổi loại tiền của khoản chi thì một tỷ giá mới mới được đóng băng.',
+  'help.guide.expense-currency.tip.2':
+    '“Tiền tệ hiển thị” trong Cài đặt chỉ đổi những gì bạn đọc; các số tiền đã lưu không bao giờ dịch chuyển. Để trống thì mỗi chuyến đi hiện theo tiền tệ của chính nó.',
+  'help.guide.expense-currency.tip.3':
+    'Bản thân tiền tệ của chuyến đi nằm trên chuyến đi, dưới “Chỉnh sửa chuyến đi”, và cần quyền chỉnh sửa chuyến đi. Đổi nó sẽ neo lại mọi tỷ giá đã đóng băng chứ không đổi mệnh giá các số tiền.',
+  // filter-costs
+  'help.guide.filter-costs.title': 'Tìm một khoản chi, hoặc chi tiêu của một ngày',
+  'help.guide.filter-costs.goal': 'Thu hẹp một sổ cái dài lại còn đúng thứ bạn đang tìm.',
+  'help.guide.filter-costs.step.1':
+    'Gõ vào “Tìm kiếm chi phí…” phía trên danh sách. Nó khớp theo tên của khoản chi khi bạn gõ.',
+  'help.guide.filter-costs.step.2':
+    '“Tất cả danh mục” mở ra mười bốn loại. Chọn một và chỉ những khoản chi của loại đó ở lại.',
+  'help.guide.filter-costs.step.3':
+    '“Tất cả các ngày” liệt kê mọi ngày có chi tiêu. Chọn một và một dải băng thay cho các tiêu đề ngày, cho biết ngày đó, nó chứa bao nhiêu khoản chi và tổng của nó.',
+  'help.guide.filter-costs.step.4':
+    'Công tắc “Tất cả” / “Do tôi trả tiền” / “tôi nợ” là góc nhìn của riêng bạn về sổ cái: những gì bạn đã bỏ tiền ra, và những gì bạn vẫn chưa được hoàn lại.',
+  'help.guide.filter-costs.step.5':
+    '“Xuất CSV” ở cuối hàng ghi mọi khoản chi ra một tệp, kèm số tiền gốc, loại tiền của nó và số tiền đã quy đổi.',
+  'help.guide.filter-costs.result':
+    'Các bộ lọc kết hợp với nhau, và các nhóm ngày được vẽ lại với tổng riêng cho những gì còn lại.',
+  'help.guide.filter-costs.tip.1':
+    'Các khoản chi trả đã ghi nhận không mang tên và không mang danh mục, nên một lần tìm kiếm hay một bộ lọc danh mục sẽ giấu chúng đi. Bộ lọc ngày giữ chúng lại, dưới ngày khoản chi trả được ghi nhận.',
+  'help.guide.filter-costs.tip.2':
+    '“Xuất CSV” luôn xuất mọi khoản chi, dù màn hình đang lọc thế nào, mỗi khoản chi một dòng.',
+  // settle-up
+  'help.guide.settle-up.title': 'Tính ai nợ ai, rồi thanh toán',
+  'help.guide.settle-up.goal':
+    'Biến một đống chi phí chung thành số lần chuyển tiền ít nhất để mọi người cân bằng, và ghi nhận chúng khi chúng diễn ra.',
+  'help.guide.settle-up.step.1':
+    'Thẻ “Thanh toán” ở cột bên phải liệt kê những khoản chuyển sẽ khiến mọi người cân bằng: ai trả cho ai, và bao nhiêu. Con số cạnh tiêu đề là số khoản vẫn còn mở.',
+  'help.guide.settle-up.step.2':
+    '“Thanh toán” bên cạnh một khoản chuyển ghi nhận nó là đã xong. Dòng chảy đó biến khỏi thẻ và các số dư được vẽ lại.',
+  'help.guide.settle-up.step.3':
+    'Khoản chuyển đã ghi nhận là một dòng trong sổ cái, dưới ngày nó diễn ra, được đánh dấu “Sự chi trả” cùng hai người và số tiền.',
+  'help.guide.settle-up.step.4':
+    'Cạnh dòng đó, cây bút chì sửa một khoản chi trả và “Hoàn tác” lấy lại nó, rồi khoản chuyển quay về thẻ “Thanh toán”.',
+  'help.guide.settle-up.step.5':
+    '“Thêm thanh toán” ở đầu thẻ ghi nhận một khoản chuyển không theo gợi ý nào. Chọn “Từ” và “ĐẾN”, số tiền, loại tiền của nó và ngày nó diễn ra.',
+  'help.guide.settle-up.step.6':
+    '“Thanh toán” ở phần đầu trên cùng màn hình ghi nhận mọi khoản chuyển còn mở cùng một lúc, theo cách một nhóm tính sổ với nhau vào cuối chuyến đi.',
+  'help.guide.settle-up.result':
+    'Mỗi khoản chuyển đã ghi nhận là một dòng trong sổ cái và một dòng bớt đi khỏi thẻ “Thanh toán”. Khi thẻ hiện chữ “Chia đều”, chuyến đi đã trả xong.',
+  'help.guide.settle-up.tip.1':
+    'Thẻ cho thấy số lần chuyển ít nhất, không phải mọi món nợ: ba người nợ nhau thành vòng sẽ gộp lại thành một hoặc hai lần chi trả.',
+  'help.guide.settle-up.tip.2':
+    '“Thanh toán” ghi nhận một khoản chuyển, nó không chuyển tiền. Hãy gửi bằng cách bạn vẫn dùng, rồi nhấp vào nó.',
+  'help.guide.settle-up.tip.3':
+    'Một khoản chi trả có thể thực hiện bằng bất kỳ loại tiền nào, nên trả một món nợ yên bằng euro là chuyện bình thường: hộp thoại có bộ chọn tiền tệ riêng và cũng đóng băng tỷ giá đó.',
+  // final-budget
+  'help.guide.final-budget.title': 'Xem chuyến đi tốn của mỗi người bao nhiêu',
+  'help.guide.final-budget.goal': 'Đọc phía từng người của sổ cái: số dư hôm nay, và chi phí thật cho mỗi người.',
+  'help.guide.final-budget.step.1':
+    '“Số dư” cho thấy vị trí của từng người: một thanh xanh về bên phải nếu chuyến đi nợ họ, một thanh đỏ về bên trái nếu họ nợ chuyến đi, và số tiền bên cạnh tên.',
+  'help.guide.final-budget.step.2':
+    '“Ngân sách cuối cùng” bên dưới trả lời một câu hỏi khác: không phải ai đang nợ gì ngay lúc này, mà chuyến đi tốn của mỗi người bao nhiêu khi mọi thứ đã được trả lại.',
+  'help.guide.final-budget.step.3':
+    'Nhấp vào một tên để mở phép tính: “Chi phí đã trả”, rồi “Hoàn trả ròng” và “Khoản hoàn trả đang chờ” bên dưới.',
+  'help.guide.final-budget.step.4':
+    'Dưới mỗi dòng là những mục làm nên nó: các khoản chi người đó đã trả, các khoản chuyển đã ghi nhận và các khoản còn mở. Chúng cộng lại đúng bằng dòng ở trên.',
+  'help.guide.final-budget.result':
+    '“Số dư” là ai đang dư hay thiếu hôm nay; “Ngân sách cuối cùng” là số tiền chuyến đi rốt cuộc tốn của từng người trong các bạn khi mọi thứ đã được trả lại.',
+  'help.guide.final-budget.tip.1':
+    'Ghi nhận một khoản chi trả không làm thay đổi ngân sách cuối cùng của ai cả. Nó chỉ chuyển một số tiền từ khoản hoàn trả đang chờ sang hoàn trả ròng.',
+  'help.guide.final-budget.tip.2':
+    'Một khoản chi không có người trả nằm ngoài cả hai thẻ, đúng như nó nằm ngoài các gợi ý thanh toán.',
+  // expense-from-booking
+  'help.guide.expense-from-booking.title': 'Biến một đặt chỗ thành khoản chi',
+  'help.guide.expense-from-booking.goal':
+    'Gắn chi phí thật của một chuyến bay, một khách sạn hay một địa điểm vào chính bản ghi của nó.',
+  'help.guide.expense-from-booking.step.1': 'Mở đặt chỗ ở tab Di chuyển hoặc Đặt chỗ và nhấp vào cây bút chì của nó.',
+  'help.guide.expense-from-booking.step.2':
+    'Cuộn tới khối “Chi phí” ở cuối biểu mẫu. Khi chưa có gì được liên kết, nó đưa ra “Tạo chi phí” và nói rằng đặt chỗ sẽ được lưu trước.',
+  'help.guide.expense-from-booking.step.3':
+    'Nhấp “Tạo chi phí”. Đặt chỗ được lưu, biểu mẫu đóng lại, và trình chỉnh sửa Chi phí mở ra với tiêu đề của đặt chỗ làm tên và loại của nó đã được khớp sẵn với một danh mục.',
+  'help.guide.expense-from-booking.step.4':
+    'Điền số tiền, ai đã trả và cách chia như với mọi khoản chi, rồi lưu. Mở lại đặt chỗ giờ sẽ thấy nó dưới “Chi phí liên kết”, với một cây bút chì để sửa và một thùng rác để bỏ nó ra.',
+  'help.guide.expense-from-booking.result':
+    'Đặt chỗ mang theo chi phí của nó, và khoản chi là một dòng bình thường trên tab Chi phí, có người trả, cách chia và loại tiền như mọi khoản khác.',
+  'help.guide.expense-from-booking.tip.1':
+    'Xóa đặt chỗ sẽ xóa luôn khoản chi liên kết với nó. “Xóa chi phí” trong khối “Chi phí” của đặt chỗ làm điều ngược lại: khoản chi biến mất, đặt chỗ ở lại.',
+  'help.guide.expense-from-booking.tip.2':
+    'Một địa điểm cũng có khối như vậy trong biểu mẫu của nó, với “Tạo chi phí” lưu địa điểm trước.',
+
+  // ── Screen: trip-transports ───────────────────────────────────────────────────────────
+  'help.ctx.trip-transports.title': 'Di chuyển',
+  'help.ctx.trip-transports.summary':
+    'Mọi thứ đưa bạn đi giữa các điểm dừng: chuyến bay, xe lửa, xe buýt, xe hơi, taxi, xe đạp, du thuyền, phà và những tuyến giao thông công cộng mà TREK tra cứu giúp bạn. Tab này là danh sách của chúng; chúng cũng được tạo và đọc ngay trên kế hoạch, và được vẽ trên bản đồ.',
+  'help.ctx.trip-transports.bullet.1':
+    'Tab chỉ chứa các chuyến đi lại. Chỗ ở, nhà hàng, sự kiện và vé nằm ở “Đặt chỗ”, nên cùng một mục không bao giờ xuất hiện hai lần.',
+  'help.ctx.trip-transports.bullet.2':
+    'Thanh công cụ đếm tất cả dưới “Tất cả” và cho mỗi loại đang dùng một chip riêng với số đếm riêng: “Chuyến bay”, “Xe lửa”, “Xe hơi”, “Giao thông công cộng”. “Phương tiện” ở bên phải thêm một mục bằng tay.',
+  'help.ctx.trip-transports.bullet.3':
+    'Các thẻ chia thành ba nhóm, mỗi nhóm gập lại được bằng tiêu đề của nó: “Giao thông công cộng tự động” cho những tuyến mà tìm kiếm đã lên kế hoạch, rồi “Chưa giải quyết”, rồi “Đã xác nhận”.',
+  'help.ctx.trip-transports.bullet.4':
+    'Một thẻ mang trạng thái, loại, những ngày nó kéo dài, giờ giấc, “Mã đặt chỗ”, tuyến đường và “Hãng hàng không” cùng “Chuyến bay số”, hoặc “Số tàu”, “Sân ga” và “Ghế”. Cây bút chì mở thẻ, thùng rác xóa thẻ sau một câu hỏi.',
+  'help.ctx.trip-transports.bullet.5':
+    'Phương tiện cũng được tạo ngay trên kế hoạch: mỗi đầu ngày có dấu + cho “Thêm phương tiện di chuyển” và một nút tàu điện cho “Giao thông công cộng”, còn đoạn nối thời gian đi lại giữa hai điểm dừng mở đúng tìm kiếm đó cho riêng chặng ấy.',
+  'help.ctx.trip-transports.bullet.6':
+    'Một phương tiện đã đặt cả hai đầu sẽ vẽ một đường trên bản đồ. Biểu tượng tuyến trên hàng của nó trong kế hoạch ngày bật đường đó lên, và “Hiển thị tất cả lộ trình đặt chỗ” ở thanh công cụ phía trên các ngày lật cả chuyến đi.',
+  // transports-list
+  'help.guide.transports-list.title': 'Đọc tab Di chuyển',
+  'help.guide.transports-list.goal': 'Biết danh sách nói gì với bạn trước khi thay đổi bất cứ thứ gì trên đó.',
+  'help.guide.transports-list.step.1':
+    '“Di chuyển” là tab thứ hai của chuyến đi. Nó chỉ chứa các chuyến đi lại: khách sạn, nhà hàng, sự kiện và vé nằm ở “Đặt chỗ”.',
+  'help.guide.transports-list.step.2':
+    'Thanh công cụ đếm mọi phương tiện dưới “Tất cả” và cho mỗi loại đang dùng một chip riêng với số đếm riêng. Nhấp một chip để chỉ giữ loại đó, nhấp lần nữa để bỏ. Nhiều chip có thể bật cùng lúc, và “Tất cả” xóa hết.',
+  'help.guide.transports-list.step.3':
+    '“Giao thông công cộng tự động” là một nhóm riêng, gồm những tuyến mà tìm kiếm giao thông công cộng đã lên kế hoạch. “Chưa giải quyết” và “Đã xác nhận” chứa mọi thứ nhập bằng tay. Mũi tên cạnh tiêu đề gập một nhóm lại.',
+  'help.guide.transports-list.step.4':
+    'Một thẻ nói đủ mọi thứ: chấm trạng thái với “Chưa giải quyết” hoặc “Đã xác nhận”, loại, những ngày nó kéo dài cùng ngày tháng, giờ giấc, “Mã đặt chỗ”, tuyến đường, và “Hãng hàng không” cùng “Chuyến bay số”, hoặc “Số tàu”, “Sân ga” và “Ghế”.',
+  'help.guide.transports-list.step.5':
+    'Cây bút chì mở phương tiện ra để chỉnh sửa, thùng rác xóa nó, sau một câu hỏi nêu tên thứ sắp mất.',
+  'help.guide.transports-list.result':
+    'Danh sách thu hẹp lại đúng thứ bạn cần, và mỗi thẻ nói ngay trong một cái liếc rằng chuyến đi lại ấy đã được đặt hay chưa.',
+  'help.guide.transports-list.tip.1':
+    'Các chip và những nhóm đã gập được nhớ theo từng chuyến đi, nên tab mở lại đúng như lúc bạn rời đi.',
+  'help.guide.transports-list.tip.2':
+    '“Nhập từ tập tin” và AirTrail chỉ xuất hiện bên cạnh “Phương tiện” trên thanh công cụ khi máy chủ đọc được các xác nhận đặt chỗ và khi có một máy chủ AirTrail được kết nối. Không có chúng, danh sách được điền bằng tay và bằng tìm kiếm giao thông công cộng.',
+  // add-transport
+  'help.guide.add-transport.title': 'Thêm một phương tiện vào một ngày',
+  'help.guide.add-transport.goal':
+    'Đặt chuyến đi lại đưa bạn từ điểm dừng này sang điểm dừng kế tiếp vào đúng ngày nó diễn ra.',
+  'help.guide.add-transport.step.1':
+    'Mỗi đầu ngày mang bốn nút nhỏ ở bên phải. Nhấp dấu +, có chú giải ghi “Thêm phương tiện di chuyển”. Biểu mẫu mở ra với “Ngày” đã được đặt sẵn vào ngày đó.',
+  'help.guide.add-transport.step.2':
+    '“Loại đặt chỗ” chọn thứ bạn sẽ đi: “Chuyến bay”, “Xe lửa”, “xe buýt”, “Xe hơi”, “Taxi”, “Xe đạp”, “Du thuyền”, “Phà” hoặc “Khác”. Biểu mẫu thay đổi theo. Chuyến bay nhận một sân bay ở mỗi chặng, tàu hỏa nhận một chuỗi nhà ga, xe hơi nhận cách gọi “Ngày đón” và “Ngày trở về” cùng “Điểm dừng dọc đường”.',
+  'help.guide.add-transport.step.3':
+    '“Tiêu đề” là ô duy nhất bắt buộc phải điền; thiếu nó thì “Thêm” vẫn xám. Hãy viết thứ bạn sẽ nhận ra trên bảng thông tin sân ga.',
+  'help.guide.add-transport.step.4':
+    '“Từ” và “ĐẾN” tìm một nhà ga, một bến cảng hoặc một địa chỉ. Gõ ít nhất ba chữ cái và chọn một kết quả trong danh sách. Một cái tên chỉ được gõ vào thì không mang tọa độ, nên nó không vẽ gì trên bản đồ.',
+  'help.guide.add-transport.step.5':
+    '“Ngày” và “Thời gian bắt đầu” cho biết khi nào nó chạy, “Ngày kết thúc” và “Thời gian kết thúc” cho biết khi nào nó xong; một chuyến đến nơi vào hôm sau thì lấy ngày hôm sau ở đầu kia. “Mã đặt chỗ”, “Trạng thái” với “Chưa giải quyết” hoặc “Đã xác nhận”, và “Ghi chú” là tùy chọn.',
+  'help.guide.add-transport.step.6': 'Nhấp “Thêm”.',
+  'help.guide.add-transport.result':
+    'Phương tiện trở thành một hàng trên ngày đó, đúng giờ của nó giữa các điểm dừng, và một thẻ trong tab “Di chuyển” dưới “Chưa giải quyết” hoặc “Đã xác nhận”.',
+  'help.guide.add-transport.tip.1':
+    'Hàng rơi vào chỗ mà giờ bắt đầu của nó quy định, sau điểm dừng cuối cùng bắt đầu sớm hơn. Tay nắm của nó kéo nó tới bất cứ đâu khác trong ngày, hoặc sang một ngày khác.',
+  'help.guide.add-transport.tip.2':
+    '“Đính kèm tập tin” dưới “Tập tin” nhận lấy vé, còn “Tạo chi phí” dưới “Chi phí” lưu đặt chỗ và mở trình biên tập “Chi phí” cho tiền vé.',
+  'help.guide.add-transport.tip.3':
+    '“Người đi” đánh dấu ai có mặt trên chuyến này. Ngay khi một phương tiện có người đi, thanh công cụ của tab mọc thêm ảnh đại diện của họ và lọc danh sách theo họ.',
+  // plan-transit
+  'help.guide.plan-transit.title': 'Lên kế hoạch một tuyến giao thông công cộng',
+  'help.guide.plan-transit.goal':
+    'Để TREK tra cứu những chuyến tàu và xe buýt có thật giữa hai điểm của một ngày và đưa chuyến bạn chọn vào kế hoạch.',
+  'help.guide.plan-transit.step.1':
+    'Ở đầu ngày, nhấp nút tàu điện, “Giao thông công cộng”. Tìm kiếm mở ra cho ngày đó.',
+  'help.guide.plan-transit.step.2':
+    '“Điểm đi” và “Điểm đến” nhận một trạm dừng hoặc một nhà ga. Khi ô còn trống, chính các điểm dừng của ngày được gợi ý; gõ hai chữ cái thì thay vào đó nó tìm các nhà ga trong biểu đồ giờ chạy. “Đổi chiều” giữa hai ô đảo ngược tuyến.',
+  'help.guide.plan-transit.step.3':
+    '“Khởi hành” hoặc “Đến nơi” kèm một giờ cho biết bạn muốn đi lúc nào, còn “Tuyến tốt nhất”, “Ít chuyển tuyến hơn” hoặc “Ít đi bộ hơn” cho biết các câu trả lời nên được sắp xếp thế nào.',
+  'help.guide.plan-transit.step.4':
+    'Các chip bên dưới cho biết được dùng những phương thức nào: “Tàu hỏa”, “Tàu điện ngầm”, “Tàu điện”, “Xe buýt”, “Phà” và “Cáp treo”. Tắt một cái để loại nó ra, ít nhất một cái vẫn bật. Rồi nhấp “Tìm kiếm”.',
+  'help.guide.plan-transit.step.5':
+    'Mỗi kết quả cho biết giờ đi và giờ đến, mất bao lâu, bao nhiêu lần chuyển tuyến và bao nhiêu phần đi bộ, cùng các tuyến với màu riêng của chúng. Nhấp vào một kết quả để mở nó ra từng điểm dừng một, kèm sân ga và các đoạn đi bộ giữa các tuyến.',
+  'help.guide.plan-transit.step.6': 'Nhấp “Thêm vào ngày”.',
+  'help.guide.plan-transit.result':
+    'Tuyến trở thành một hàng trên ngày đó với các tuyến xe, số lần chuyển tuyến và thời gian đi bộ của nó, và một thẻ trong tab “Di chuyển” dưới “Giao thông công cộng tự động”.',
+  'help.guide.plan-transit.tip.1':
+    'Các tuyến đến từ Transitous, một dịch vụ cộng đồng miễn phí dựa trên dữ liệu biểu đồ giờ chạy công khai: không khóa, không tài khoản. Quản trị viên có thể trỏ tìm kiếm sang Google thay vì vậy.',
+  'help.guide.plan-transit.tip.2':
+    'Không tìm thấy gì? Các nguồn dữ liệu chỉ phủ một vùng và một khoảng thời gian. Hãy thử giờ khác, bật thêm phương thức, hoặc chọn một nhà ga thay vì chính địa điểm đó. Thông báo nêu tên dịch vụ đã trả lời.',
+  'help.guide.plan-transit.tip.3':
+    'Cùng tìm kiếm đó mở ra cho riêng một chặng: nhấp đoạn nối thời gian đi lại giữa hai điểm dừng và chọn “Giao thông công cộng”. “Điểm đi”, “Điểm đến” và giờ khởi hành đã được điền sẵn cho bạn.',
+  // change-transit-route
+  'help.guide.change-transit-route.title': 'Mở và thay đổi một tuyến đã lên kế hoạch',
+  'help.guide.change-transit-route.goal': 'Đọc tuyến từng điểm dừng một, đổi tên nó, hoặc tra cứu lại lộ trình.',
+  'help.guide.change-transit-route.step.1':
+    'Trong tab “Di chuyển”, các tuyến đã lên kế hoạch nằm dưới “Giao thông công cộng tự động”. Nhấp vào thẻ.',
+  'help.guide.change-transit-route.step.2':
+    '“Thời lượng”, “Chuyển tuyến” và “Đi bộ” nằm ở trên cùng. “Lộ trình” bên dưới chúng đi qua tuyến từng điểm dừng một, kèm sân ga và các đoạn đi bộ giữa các tuyến.',
+  'help.guide.change-transit-route.step.3':
+    '“Đổi tuyến” chạy lại tìm kiếm, đã điền sẵn hai đầu của tuyến này và ngày của nó.',
+  'help.guide.change-transit-route.step.4':
+    'Chọn một tuyến khác và nhấp “Thêm vào ngày”; nó thế chỗ tuyến cũ. Còn “Chỉnh sửa chi tiết”, bên cạnh “Đổi tuyến”, mở biểu mẫu phương tiện thông thường, nơi có “Mã đặt chỗ”, “Trạng thái”, người đi và các tập tin.',
+  'help.guide.change-transit-route.result':
+    'Hành trình mang lộ trình mới, và thẻ của nó trong tab “Di chuyển” hiển thị các tuyến xe và giờ giấc mới.',
+  'help.guide.change-transit-route.tip.1':
+    'Tiêu đề của hành trình chỉ là chữ: cây bút chì bên cạnh đổi tên nó mà không động tới lộ trình. “Ghi chú” bên dưới nhận markdown và có hai tab “Chỉnh sửa” và “Xem trước”.',
+  'help.guide.change-transit-route.tip.2':
+    '“Xóa bỏ” ở chân hành trình đưa tuyến ra khỏi chuyến đi; ngày vẫn giữ các điểm dừng của nó.',
+  // leg-travel-mode
+  'help.guide.leg-travel-mode.title': 'Đổi cách đi một chặng',
+  'help.guide.leg-travel-mode.goal':
+    'Đi bộ một chặng của một ngày mà phần còn lại đi bằng xe, hoặc giao chặng đó cho tìm kiếm giao thông công cộng.',
+  'help.guide.leg-travel-mode.step.1':
+    'Các đoạn nối giữa những điểm dừng chỉ hiện ra khi lộ trình của ngày được bật. Nhấp vào ngày để mở nó, rồi “Chỉ đường” dưới các điểm dừng của ngày.',
+  'help.guide.leg-travel-mode.step.2':
+    'Mỗi đoạn nối nêu thời gian đi lại và khoảng cách của chặng đó, kèm biểu tượng của phương thức đã dùng để tính lộ trình: một chiếc xe cho lái xe, một bàn chân cho đi bộ.',
+  'help.guide.leg-travel-mode.step.3':
+    'Nhấp vào đoạn nối. Trình đơn đưa ra “Lái xe” và “Đi bộ”, “Giao thông công cộng”, và “Dùng mặc định của ngày”.',
+  'help.guide.leg-travel-mode.step.4':
+    'Chọn “Đi bộ”. Chỉ chặng này thay đổi; phần còn lại của ngày giữ phương thức của nó.',
+  'help.guide.leg-travel-mode.result':
+    'Chặng hiển thị biểu tượng bàn chân và thời gian đi bộ của nó, còn các chặng khác trong ngày giữ phương thức của ngày.',
+  'help.guide.leg-travel-mode.tip.1':
+    'Phương thức thuộc về chặng, không thuộc về ngày: các nút “Lái xe” và “Đi bộ” của cả ngày không bao giờ ghi đè một chặng bạn đã đặt bằng tay. “Dùng mặc định của ngày” trả chặng đó lại cho chúng.',
+  'help.guide.leg-travel-mode.tip.2':
+    '“Giao thông công cộng” trong cùng trình đơn mở tìm kiếm tuyến cho đúng chặng này, với hai đầu và giờ khởi hành đã được điền sẵn.',
+  'help.guide.leg-travel-mode.tip.3':
+    'Thời gian đến từ một bộ tìm đường công khai chạy trên đường sá và lối đi bộ có thật. Một chặng mà nó không trả lời được sẽ giữ đường thẳng của mình và không hiện thời gian.',
+  // edit-transport
+  'help.guide.edit-transport.title': 'Thay đổi hoặc xóa một phương tiện',
+  'help.guide.edit-transport.goal':
+    'Sửa một giờ, một sân ga hay một mã đặt chỗ, hoặc bỏ chuyến đi lại ấy ra khỏi chuyến đi.',
+  'help.guide.edit-transport.step.1':
+    'Trong kế hoạch ngày, một phương tiện là một hàng có màu nằm giữa các điểm dừng. Nhấp vào nó.',
+  'help.guide.edit-transport.step.2':
+    'Biểu mẫu chính là biểu mẫu đã tạo ra nó, với “Chỉnh sửa phương tiện đi lại” trên thanh tiêu đề. Mọi thứ đều đổi được: loại, tuyến đường, ngày và giờ, “Mã đặt chỗ”, “Trạng thái”.',
+  'help.guide.edit-transport.step.3':
+    'Tuyến đường của một chuyến bay là một chuỗi sân bay, của một chuyến tàu là một chuỗi nhà ga. “Thêm điểm dừng” đặt thêm một điểm ở giữa, và mỗi chặng giữ giờ giấc riêng cùng số hiệu chuyến bay hoặc số tàu riêng.',
+  'help.guide.edit-transport.step.4':
+    'Nhấp “Cập nhật”. Để bỏ hẳn phương tiện, dùng thùng rác trên thẻ của nó trong tab “Di chuyển” và xác nhận.',
+  'help.guide.edit-transport.result':
+    'Thay đổi hiện ra ở mọi nơi phương tiện xuất hiện: tab “Di chuyển”, ngày nó chạy, và đường của nó trên bản đồ.',
+  'help.guide.edit-transport.tip.1':
+    'Cùng một biểu mẫu mở ra từ cả hai phía, cây bút chì trên thẻ trong tab “Di chuyển” và chính hàng của phương tiện trong kế hoạch ngày. Một tuyến giao thông công cộng đã lên kế hoạch là ngoại lệ: hàng của nó mở khung nhìn hành trình, và “Chỉnh sửa chi tiết” ở đó dẫn tới biểu mẫu này.',
+  'help.guide.edit-transport.tip.2':
+    'Chuyển một phương tiện sang ngày khác hoàn toàn không cần tới biểu mẫu: kéo hàng của nó từ thẻ ngày này sang thẻ ngày kế tiếp.',
+  // transport-on-map
+  'help.guide.transport-on-map.title': 'Vẽ một phương tiện trên bản đồ',
+  'help.guide.transport-on-map.goal': 'Xem một chuyến bay, một chặng lái xe hay một tuyến thực sự đi qua đâu.',
+  'help.guide.transport-on-map.step.1':
+    'Một phương tiện đã đặt cả hai đầu mang một biểu tượng tuyến nhỏ trên hàng của nó trong kế hoạch ngày. Nhấp vào đó; nhãn của nó chuyển thành “Ẩn lộ trình đặt chỗ”.',
+  'help.guide.transport-on-map.step.2':
+    'Tuyến được vẽ trên bản đồ, với một dấu hình viên thuốc ở mỗi đầu mang biểu tượng của phương tiện.',
+  'help.guide.transport-on-map.step.3':
+    'Nhấp một dấu đầu tuyến để đọc đặt chỗ mà không rời bản đồ: giờ giấc, “Hãng hàng không” và “Chuyến bay số”, “Mã đặt chỗ” và các ghi chú. “Đóng” dẹp tấm thẻ đi.',
+  'help.guide.transport-on-map.step.4':
+    'Biểu tượng tuyến ở thanh công cụ phía trên các ngày làm việc đó cho cả chuyến đi một lượt: “Hiển thị tất cả lộ trình đặt chỗ”, và “Ẩn tất cả lộ trình đặt chỗ” để xóa chúng đi lần nữa.',
+  'help.guide.transport-on-map.step.5':
+    'Một tuyến giao thông công cộng đã lên kế hoạch không có biểu tượng riêng. Nó được vẽ bằng nút “Chỉ đường” của ngày, và vì thế “Ẩn tất cả lộ trình đặt chỗ” không xóa nó khi lộ trình của ngày đó vẫn đang bật.',
+  'help.guide.transport-on-map.result':
+    'Các tuyến nằm trên bản đồ với một dấu ở mỗi đầu, và ở lại đó cho tới khi bạn tắt chúng đi lần nữa.',
+  'help.guide.transport-on-map.tip.1':
+    'Một chuyến bay, một chuyến du thuyền và một chuyến phà được vẽ thành đường cong, còn xe hơi, xe buýt, taxi và xe đạp bám theo đường sá có thật, và một chuyến xe lửa hay một tuyến đã lên kế hoạch chạy qua những nhà ga nó dừng.',
+  'help.guide.transport-on-map.tip.2':
+    'Một đặt chỗ “Đã xác nhận” là đường liền, một đặt chỗ “Chưa giải quyết” là đường đứt nét. Cài đặt “Nhãn lộ trình đặt chỗ” in mã sân bay hoặc tên nhà ga vào các dấu đầu tuyến.',
+  'help.guide.transport-on-map.tip.3':
+    '“Hiển thị tất cả lộ trình đặt chỗ” là một tờ giấy trắng, không phải một lớp phủ: nó bỏ đi những gì các biểu tượng riêng lẻ đã đặt, nên bấm hai lần sẽ để bạn lại với tất cả đang bật hoặc tất cả đang tắt.',
 };
 
 export default help;

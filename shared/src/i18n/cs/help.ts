@@ -3127,6 +3127,341 @@ const help: TranslationStrings = {
     'Smazání rezervace ubytování vezme také jeho noci z denního plánu a odebere výdaj, který k němu byl propojený.',
   'help.guide.delete-booking.tip.2':
     'Dokumenty, které byly přiložené, zůstanou na kartě Soubory dané cesty; jde jen jejich propojení s rezervací.',
+
+  // ── Screen: trip-costs ────────────────────────────────────────────────────────────────
+  'help.ctx.trip-costs.title': 'Náklady',
+  'help.ctx.trip-costs.summary':
+    'Peníze cesty: každý výdaj jako datovaná kniha, kdo ho zaplatil a kdo za něj dluží, v té měně, v jaké byla účtenka, a v pravém sloupci, kdo komu musí zaplatit, aby bylo zase vyrovnáno.',
+  'help.ctx.trip-costs.bullet.1':
+    'Čtyři karty nahoře: Dlužíte a Dluží vám jsou vaše vlastní strana vyrovnání, Nevyřízená částka je to, co je zapsáno, ale zatím nemá plátce, a Celkové výdaje na cestu sečtou všechno a pod tím ukážou Váš podíl a Zaplatili jste.',
+  'help.ctx.trip-costs.bullet.2':
+    'Přidat výdaj vpravo nahoře otevře editor; Vyrovnat vedle něj zapíše všechny otevřené převody najednou.',
+  'help.ctx.trip-costs.bullet.3':
+    'Kniha je seskupená po dnech, nejnovější první, s celkem toho dne vpravo. Řádek nese kategorii jako barevný štítek, název, žetony plátců, poznámku a částku, a k tomu půjčili jste nebo vypůjčili jste si, když vás rozdělení nechá v plusu nebo v mínusu.',
+  'help.ctx.trip-costs.bullet.4':
+    'Nad seznamem sedí Hledat výdaje…, filtr kategorií, filtr dnů, přepínač Vše / Zaplaceno mnou / Dluží mi a tlačítko Exportovat CSV.',
+  'help.ctx.trip-costs.bullet.5':
+    'Pravý sloupec je odpověď: Vyrovnat vypisuje, kdo komu platí, Zůstatky ukazují přebytek nebo schodek každého cestovatele, Konečný rozpočet to, co cesta stojí každého z nich, a Podle kategorie to, kam peníze šly.',
+  'help.ctx.trip-costs.bullet.6':
+    'Zapsaná platba sedí ve stejné knize jako vlastní řádek, s Upravit a Vrátit zpět vedle sebe; výdaj má tužku a koš a koš ho smaže bez ptaní.',
+  // add-expense
+  'help.guide.add-expense.title': 'Přidat výdaj',
+  'help.guide.add-expense.goal': 'Zapište, co něco stálo, kdo to zaplatil a s kým se to dělí.',
+  'help.guide.add-expense.step.1':
+    'Klikněte na Přidat výdaj vpravo nahoře na kartě Náklady. Otevře se editor, datovaný dneškem, se všemi už v rozdělení.',
+  'help.guide.add-expense.step.2':
+    'Napište, za co to bylo, do pole Za co to bylo?, jediného, které musí být vyplněné, a částku z účtenky do Celková částka.',
+  'help.guide.add-expense.step.3':
+    'Měna a Den sedí pod částkou. Měna začíná na měně cesty; změňte ji a editor ukáže, jakou má částka hodnotu v měně cesty. Den začíná na dnešku a je to, pod co kniha výdaj zařadí.',
+  'help.guide.add-expense.step.4':
+    'Vyberte Kategorie. Je jich čtrnáct a nedají se měnit: ta, kterou vyberete, je barevný štítek na řádku a sloupec v Podle kategorie.',
+  'help.guide.add-expense.step.5':
+    'Pod Kdo zaplatil? vyberte člověka, který peníze skutečně dal. Vy je předvybráno; Zatím nikdo nezaplatil zapíše částku, aniž by za ni někdo dlužil, a Platilo více lidí rozdělí účet mezi několik plátců.',
+  'help.guide.add-expense.step.6':
+    'Split začíná na Equally se všemi zahrnutými a u každého jména je vidět podíl, který z toho vychází. Uložte kliknutím na Přidat výdaj.',
+  'help.guide.add-expense.result':
+    'Výdaj je v knize pod svým dnem, započítaný do Celkové výdaje na cestu, a sloupec vyrovnání přepočítal, kdo komu dluží.',
+  'help.guide.add-expense.tip.1':
+    'Když necháte editor tak, jak se otevře, je výdaj v měně cesty, datovaný dneškem a rozdělený rovným dílem mezi všechny: opravdu vyplnit musíte jen název a částku.',
+  'help.guide.add-expense.tip.2':
+    '± vedle částky změní výdaj na vratku. Záporný celek peníze vrací, místo aby je bral, a rozdělení běží opačně.',
+  'help.guide.add-expense.tip.3':
+    'Připojit účtenku / fakturu dole bere obrázky a PDF. Nahrají se při uložení, přistanou v Soubory cesty a vedle názvu v seznamu se objeví štítek Účtenky.',
+  // expense-payers
+  'help.guide.expense-payers.title': 'Říct, kdo účet zaplatil',
+  'help.guide.expense-payers.goal': 'Zapište, kdo za výdaj zaplatil ze svého, druhá polovina počtů vyrovnání.',
+  'help.guide.expense-payers.step.1':
+    'Otevřete výdaj tužkou vedle jeho řádku a podívejte se na Kdo zaplatil?. Platil jeden člověk je výchozí: rozbalovací nabídka jmenuje jediného člověka, který peníze dal.',
+  'help.guide.expense-payers.step.2':
+    'Zatím nikdo nezaplatil, první položka té nabídky, zapíše částku, aniž by kdokoli cokoli dlužil. Výdaj se dál počítá do Celkové výdaje na cestu.',
+  'help.guide.expense-payers.step.3':
+    'Platilo více lidí, odkaz vedle popisku, otevře řádek pro každého cestovatele. Zahrňte ty, kdo platili, a napište, co každý z nich dal; částky musí dát dohromady celek.',
+  'help.guide.expense-payers.step.4':
+    'Výdaj, který nikdo nezaplatil, je na svém řádku označený Nedokončeno a počítá se do karty Nevyřízená částka, kde se sbírají zapsané, ale nevyrovnané útraty.',
+  'help.guide.expense-payers.result':
+    'Kdo zaplatil rozhoduje, komu se vrací, rozdělení rozhoduje, kdo platí, a Zůstatky jsou rozdíl mezi obojím.',
+  'help.guide.expense-payers.tip.1':
+    'Kdo zaplatil? a Split jsou nezávislé: můžete zaplatit večeři, na které jste nebyli, a být rozděleni do večeře, kterou jste neplatili.',
+  'help.guide.expense-payers.tip.2':
+    'Při několika plátcích musí částky dát dohromady celek. Zahrňte dalšího a ostatní se kolem něj přerovnají; dokud nesedí, editor říká, že Součet částek plátců musí být roven celkové částce, a odmítá uložit.',
+  'help.guide.expense-payers.tip.3':
+    'Odebrání plátce neodebere výdaj: částka zůstává v Celkové výdaje na cestu a řádek se stane Nedokončeno.',
+  // split-expense
+  'help.guide.split-expense.title': 'Rozdělit účet mezi cestovatele',
+  'help.guide.split-expense.goal':
+    'Rozhodněte, kdo za výdaj dluží: všichni rovným dílem, podle částky, nebo řádek po řádku z účtenky.',
+  'help.guide.split-expense.step.1':
+    'V editoru výdaje Split vypisuje každého cestovatele. Klikněte na jméno, abyste ho z tohoto výdaje vynechali; vynechaný cestovatel má u sebe Nezahrnuto a nedluží za něj nic.',
+  'help.guide.split-expense.step.2':
+    'Equally je výchozí: každý zahrnutý cestovatel dostane stejný podíl a řádek pod seznamem říká, na kolik dílů je to rozděleno a na kolik každý podíl vychází.',
+  'help.guide.split-expense.step.3':
+    'Custom vymění podíly za pole s částkami. Napište, co který cestovatel dluží; řádek pod tím průběžně počítá a zezelená na Rozdělení sedí s celkem. Dokud to nesedí, nejde uložit.',
+  'help.guide.split-expense.step.4':
+    'Ticket rozdělí účtenku řádek po řádku: Přidat položku, pak název a cena na každý řádek a pod Dělí se mezi: cestovatelé, kteří si ten řádek dělí.',
+  'help.guide.split-expense.step.5':
+    'Podíl každého pod řádky ukazuje, co každý cestovatel nakonec dluží, a Celková částka nahoře se sečte z řádků. Klikněte na Uložit.',
+  'help.guide.split-expense.result':
+    'Rozdělení je to, z čeho je postavený každý zůstatek. Ukládá se s výdajem a dá se později změnit, aniž byste sáhli na cokoli jiného.',
+  'help.guide.split-expense.tip.1':
+    'Cestovatel, kterého vynecháte, má u sebe Nezahrnuto a za tento jeden výdaj nedluží nic; ostatní jeho podíl převezmou.',
+  'help.guide.split-expense.tip.2':
+    'Equally je přesné na cent: zbylý cent se střídá od výdaje k výdaji, takže není nikdo, kdo by ho platil pořád.',
+  'help.guide.split-expense.tip.3':
+    'Režim Ticket si Celková částka sečte sám a pole zešedne: řádky účtenky jsou celek.',
+  // expense-currency
+  'help.guide.expense-currency.title': 'Zadat výdaj v jiné měně',
+  'help.guide.expense-currency.goal': 'Zadejte to, co na účtence opravdu je, a nechte kurz na TREKu.',
+  'help.guide.expense-currency.step.1':
+    'Otevřete Přidat výdaj a vyplňte název a částku přesně tak, jak je na účtence, samotné číslo, ne jeho přepočet.',
+  'help.guide.expense-currency.step.2':
+    'Otevřete Měna a vyberte měnu účtenky. Seznam nese každý kód, který TREK zná, a dá se v něm hledat: napište ta tři písmena.',
+  'help.guide.expense-currency.step.3':
+    'Pod poli se objeví řádek s tím, jakou má částka hodnotu právě teď, označený aktuální kurz. Je to náhled, ne to, co se uloží.',
+  'help.guide.expense-currency.step.4':
+    'Klikněte na Přidat výdaj. Kurz se v tu chvíli zmrazí: od teď má tento výdaj hodnotu, jakou měl v den, kdy jste ho zadali.',
+  'help.guide.expense-currency.step.5':
+    'V knize nese řádek pod názvem obě čísla: to, co jste napsali, šipku a to, jak se počítá v měně cesty. Každý celek, zůstatek a vyrovnání výše používá to druhé.',
+  'help.guide.expense-currency.result':
+    'Výdaj si drží částku a měnu, které jste napsali. Kniha ukazuje obojí a celky a zůstatky cesty zůstávají v měně cesty.',
+  'help.guide.expense-currency.tip.1':
+    'Kurz se zmrazí ve chvíli, kdy uložíte, takže vyrovnaný dluh se neotevře znovu jen proto, že se trh týden nato pohnul. Nový kurz zmrazí jedině změna měny výdaje.',
+  'help.guide.expense-currency.tip.2':
+    'Zobrazovaná měna v Nastavení mění jen to, co čtete; uložené částky se nikdy nehnou. Když ji necháte prázdnou, každá cesta se ukazuje ve své vlastní měně.',
+  'help.guide.expense-currency.tip.3':
+    'Samotná měna cesty žije na cestě, pod Upravit cestu, a vyžaduje právo Upravit detaily výletu. Její změna znovu ukotví každý zmrazený kurz, místo aby částky přepočítala na jinou měnu.',
+  // filter-costs
+  'help.guide.filter-costs.title': 'Najít výdaj nebo útratu jednoho dne',
+  'help.guide.filter-costs.goal': 'Zužte dlouhou knihu na to, co opravdu hledáte.',
+  'help.guide.filter-costs.step.1': 'Pište do Hledat výdaje… nad seznamem. Hledá v názvu výdaje, jak píšete.',
+  'help.guide.filter-costs.step.2':
+    'Všechny kategorie otevřou těch čtrnáct kategorií. Vyberte jednu a zůstanou jen výdaje té kategorie.',
+  'help.guide.filter-costs.step.3':
+    'Všechny dny vypisují každý den, ve kterém se něco utratilo. Vyberte jeden a pruh nahradí hlavičky dnů tím dnem, tím, kolik výdajů drží, a jeho celkem.',
+  'help.guide.filter-costs.step.4':
+    'Přepínač Vše / Zaplaceno mnou / Dluží mi je váš vlastní pohled na knihu: za co jste dali peníze a na čem jste pořád ze svého.',
+  'help.guide.filter-costs.step.5':
+    'Exportovat CSV na konci řádku zapíše každý výdaj do souboru, s původní částkou, její měnou a přepočtenou částkou.',
+  'help.guide.filter-costs.result':
+    'Filtry se kombinují a skupiny dnů se překreslí s vlastními celky pro to, co zbude.',
+  'help.guide.filter-costs.tip.1':
+    'Zapsané platby nenesou název ani kategorii, takže je hledání nebo filtr kategorií skryje. Filtr dnů je nechá, pod dnem, kdy byla platba zapsána.',
+  'help.guide.filter-costs.tip.2':
+    'Exportovat CSV vždy vyexportuje každý výdaj, ať je na obrazovce filtrováno cokoli, jeden řádek na výdaj.',
+  // settle-up
+  'help.guide.settle-up.title': 'Spočítat, kdo komu dluží, a vyrovnat to',
+  'help.guide.settle-up.goal':
+    'Proměňte hromadu sdílených výdajů v nejmenší počet převodů, které všechny vyrovnají, a zapisujte je, jak se dějí.',
+  'help.guide.settle-up.step.1':
+    'Karta Vyrovnat v pravém sloupci vypisuje převody, které by všechny vyrovnaly: kdo komu platí a kolik. Číslo vedle názvu je to, kolik jich je ještě otevřených.',
+  'help.guide.settle-up.step.2':
+    'Vyrovnat vedle převodu ho zapíše jako hotový. Ten tok zmizí z karty a zůstatky se překreslí.',
+  'help.guide.settle-up.step.3':
+    'Zapsaný převod je řádek v knize, pod dnem, kdy se stal, označený Platba, se dvěma cestovateli a částkou.',
+  'help.guide.settle-up.step.4':
+    'Vedle toho řádku tužka platbu opraví a Vrátit zpět ji vezme zpátky, a převod se vrátí na kartu Vyrovnat.',
+  'help.guide.settle-up.step.5':
+    'Přidat platbu v hlavičce karty zapíše převod, který nešel podle návrhu. Vyberte Od a Komu, částku, její měnu a den, kdy se stal.',
+  'help.guide.settle-up.step.6':
+    'Vyrovnat v hlavičce nahoře na obrazovce zapíše všechny otevřené převody najednou, tak, jak se parta vyrovná na konci cesty.',
+  'help.guide.settle-up.result':
+    'Každý zapsaný převod je řádek v knize a o řádek méně na kartě Vyrovnat. Když na kartě stojí Všichni jsou vyrovnáni, je cesta zaplacená.',
+  'help.guide.settle-up.tip.1':
+    'Karta ukazuje nejmenší počet převodů, ne každý dluh: tři lidé, kteří si dluží dokola, se složí do jedné nebo dvou plateb.',
+  'help.guide.settle-up.tip.2':
+    'Vyrovnat zapíše převod, nepřesune peníze. Pošlete je tak, jak to děláte, a pak na to klikněte.',
+  'help.guide.settle-up.tip.3':
+    'Platba může být v jakékoli měně, takže zaplatit dluh v jenech eury je normální: dialog má vlastní výběr měny a i ten kurz zmrazí.',
+  // final-budget
+  'help.guide.final-budget.title': 'Zjistit, co cesta stála každého cestovatele',
+  'help.guide.final-budget.goal': 'Přečtěte stranu knihy na osobu: dnešní zůstatek a skutečný náklad na osobu.',
+  'help.guide.final-budget.step.1':
+    'Zůstatky ukazují pozici každého cestovatele: zelený pruh doprava, když cesta dluží jemu, červený pruh doleva, když dluží on jí, a částku vedle jména.',
+  'help.guide.final-budget.step.2':
+    'Konečný rozpočet pod tím odpovídá na jinou otázku: ne kdo teď co dluží, ale co cesta stojí každého cestovatele, až bude všechno vráceno.',
+  'help.guide.final-budget.step.3':
+    'Klikněte na jméno a otevře se počet: Zaplacené výdaje, pak Náhrady netto a Nevyřízené náhrady pod tím.',
+  'help.guide.final-budget.step.4':
+    'Pod každým řádkem sedí řádky, ze kterých je složený: výdaje, které ten cestovatel zaplatil, už zapsané převody a ty, které jsou ještě otevřené. Dávají dohromady přesně řádek nad sebou.',
+  'help.guide.final-budget.result':
+    'Zůstatky jsou to, kdo je dnes v plusu nebo v mínusu; Konečný rozpočet je to, co cesta nakonec stojí každého z vás, až bude všechno vráceno.',
+  'help.guide.final-budget.tip.1':
+    'Zapsání platby nikomu nezmění konečný rozpočet. Jen přesune částku z nevyřízených náhrad do náhrad netto.',
+  'help.guide.final-budget.tip.2':
+    'Výdaj bez plátce zůstává mimo obě karty, stejně jako zůstává mimo návrhy vyrovnání.',
+  // expense-from-booking
+  'help.guide.expense-from-booking.title': 'Udělat z rezervace výdaj',
+  'help.guide.expense-from-booking.goal':
+    'Připojte to, co let, hotel nebo místo opravdu stálo, k záznamu, ke kterému to patří.',
+  'help.guide.expense-from-booking.step.1':
+    'Otevřete rezervaci na kartě Doprava nebo Rezervace a klikněte na její tužku.',
+  'help.guide.expense-from-booking.step.2':
+    'Sjeďte k bloku Costs dole ve formuláři. Dokud není nic propojené, nabízí Create expense a říká, že nejdřív uloží rezervaci.',
+  'help.guide.expense-from-booking.step.3':
+    'Klikněte na Create expense. Rezervace se uloží, formulář se zavře a otevře se editor Náklady s názvem rezervace jako názvem a s jejím typem už přiřazeným ke kategorii.',
+  'help.guide.expense-from-booking.step.4':
+    'Vyplňte částku, kdo zaplatil, a rozdělení jako u každého výdaje a uložte. Když teď rezervaci otevřete znovu, ukáže výdaj pod Linked expense, s tužkou na úpravu a košem na odebrání.',
+  'help.guide.expense-from-booking.result':
+    'Rezervace nese svůj náklad a výdaj je obyčejný řádek na kartě Náklady, s plátcem, rozdělením a měnou jako každý jiný.',
+  'help.guide.expense-from-booking.tip.1':
+    'Smazání rezervace smaže i její propojený výdaj. Remove expense v bloku Costs rezervace dělá opak: výdaj zmizí, rezervace zůstane.',
+  'help.guide.expense-from-booking.tip.2':
+    'Místo má ve svém formuláři stejný blok, kde Create expense nejdřív uloží místo.',
+
+  // ── Screen: trip-transports ───────────────────────────────────────────────────────────
+  'help.ctx.trip-transports.title': 'Doprava',
+  'help.ctx.trip-transports.summary':
+    'Vše, co vás veze mezi zastávkami: lety, vlaky, autobusy, auta, taxi, kola, plavby, trajekty a spojení veřejné dopravy, která pro vás TREK vyhledá. Karta je jejich seznamem; vznikají a čtou se také v plánu a kreslí se na mapě.',
+  'help.ctx.trip-transports.bullet.1':
+    'Karta obsahuje pouze přepravu. Ubytování, restaurace, akce a vstupenky patří na kartu Rezervace, takže se stejný záznam nikdy neobjeví dvakrát.',
+  'help.ctx.trip-transports.bullet.2':
+    'Lišta nástrojů je všechny počítá pod položkou Vše a každému použitému typu dává vlastní štítek s vlastním počtem: Let, Vlak, Auto, Veřejná doprava. Tlačítko Doprava vpravo přidá jednu ručně.',
+  'help.ctx.trip-transports.bullet.3':
+    'Karty přicházejí ve třech skupinách, z nichž každou lze složit jejím nadpisem: Automatické spojení MHD pro spojení naplánovaná vyhledáváním, poté Čeká na potvrzení a nakonec Potvrzeno.',
+  'help.ctx.trip-transports.bullet.4':
+    'Karta nese stav, typ, dny, přes které se táhne, časy, Rezervační kód, trasu a Leteckou společnost a Číslo letu nebo Číslo vlaku, Nástupiště a Sedadlo. Tužka ji otevře, koš ji po dotazu smaže.',
+  'help.ctx.trip-transports.bullet.5':
+    'Přeprava vzniká i v plánu: každá hlavička dne má plus pro Přidat dopravu a tlačítko tramvaje pro Veřejnou dopravu a spojnice s dobou cesty mezi dvěma zastávkami otevře stejné vyhledávání pro tento jeden úsek.',
+  'help.ctx.trip-transports.bullet.6':
+    'Přeprava s oběma nastavenými konci kreslí na mapě čáru. Ikona trasy v jejím řádku v plánu dne tuto čáru zapne a Zobrazit všechny trasy rezervací na liště nad dny přepne celou cestu.',
+  // transports-list
+  'help.guide.transports-list.title': 'Jak číst kartu Doprava',
+  'help.guide.transports-list.goal': 'Vědět, co vám seznam říká, dříve než na něm něco změníte.',
+  'help.guide.transports-list.step.1':
+    'Doprava je druhá karta cesty. Obsahuje pouze přepravu: hotely, restaurace, akce a vstupenky jsou na kartě Rezervace.',
+  'help.guide.transports-list.step.2':
+    'Lišta nástrojů počítá veškerou přepravu pod položkou Vše a každému použitému typu dává vlastní štítek s vlastním počtem. Kliknutím na štítek ponecháte pouze tento typ, dalším kliknutím jej pustíte. Zapnuto může být několik štítků najednou a Vše je vymaže.',
+  'help.guide.transports-list.step.3':
+    'Automatické spojení MHD je vlastní skupina, spojení naplánovaná vyhledáváním veřejné dopravy. Čeká na potvrzení a Potvrzeno obsahují vše zadané ručně. Šipka vedle nadpisu skupinu složí.',
+  'help.guide.transports-list.step.4':
+    'Karta řekne vše: stavová tečka s Čeká na potvrzení nebo Potvrzeno, typ, dny, přes které se táhne, s jejich daty, časy, Rezervační kód, trasa a Letecká společnost a Číslo letu nebo Číslo vlaku, Nástupiště a Sedadlo.',
+  'help.guide.transports-list.step.5':
+    'Tužka otevře přepravu k úpravám, koš ji smaže, po dotazu, který pojmenuje, co zmizí.',
+  'help.guide.transports-list.result':
+    'Seznam je zúžený na to, co jste hledali, a každá karta na první pohled říká, zda je jízda rezervovaná.',
+  'help.guide.transports-list.tip.1':
+    'Štítky a složené skupiny se pamatují zvlášť pro každou cestu, takže se karta otevře tak, jak jste ji opustili.',
+  'help.guide.transports-list.tip.2':
+    'Importovat ze souboru a AirTrail se na liště připojí k tlačítku Doprava jen tehdy, když server umí číst potvrzení rezervací a když je připojena instance AirTrail. Bez nich se seznam plní ručně a vyhledáváním veřejné dopravy.',
+  // add-transport
+  'help.guide.add-transport.title': 'Přidat dopravu ke dni',
+  'help.guide.add-transport.goal': 'Vložit jízdu, která vás dostane z jedné zastávky na další, do dne, kdy se koná.',
+  'help.guide.add-transport.step.1':
+    'Každá hlavička dne nese vpravo čtyři malá tlačítka. Klikněte na plus, jehož popisek zní Přidat dopravu. Formulář se otevře s Datem již nastaveným na tento den.',
+  'help.guide.add-transport.step.2':
+    'Typ rezervace vybírá, čím jedete: Let, Vlak, Autobus, Auto, Taxi, Kolo, Plavba, Trajekt nebo Ostatní. Formulář se přizpůsobí. Let dostane letiště na každém úseku, vlak řetězec stanic, auto názvy Vyzvednutí a Vrácení a Zastávky po cestě.',
+  'help.guide.add-transport.step.3':
+    'Název je jediné pole, které musí být vyplněno; bez něj zůstane Přidat šedé. Napište to, co byste poznali na tabuli na nástupišti.',
+  'help.guide.add-transport.step.4':
+    'Z a Do hledají stanici, přístav nebo adresu. Napište alespoň tři písmena a vyberte výsledek ze seznamu. Název, který byl jen napsán, nenese žádné souřadnice, takže na mapě nic nenakreslí.',
+  'help.guide.add-transport.step.5':
+    'Datum a Čas začátku říkají, kdy jede, Datum konce a Čas konce, kdy je po ní; jízda, která přistává následující den, tam má další den. Rezervační kód, Stav s hodnotou Čeká na potvrzení nebo Potvrzeno a Poznámky jsou nepovinné.',
+  'help.guide.add-transport.step.6': 'Klikněte na Přidat.',
+  'help.guide.add-transport.result':
+    'Přeprava je řádkem ve dni, ve svém čase mezi zastávkami, a kartou na kartě Doprava pod Čeká na potvrzení nebo Potvrzeno.',
+  'help.guide.add-transport.tip.1':
+    'Řádek přistane tam, kam jej položí jeho čas začátku, za poslední zastávkou, která začíná dříve. Úchyt jej přetáhne kamkoli jinam ve dni nebo na jiný den.',
+  'help.guide.add-transport.tip.2':
+    'Přiložit soubor v sekci Soubory přijme jízdenku a Create expense v sekci Costs uloží rezervaci a otevře editor Náklady pro jízdné.',
+  'help.guide.add-transport.tip.3':
+    'Cestující označuje, kdo jede. Jakmile má jedna přeprava cestující, liště karty narostou jejich avatary a filtruje podle nich seznam.',
+  // plan-transit
+  'help.guide.plan-transit.title': 'Naplánovat spojení veřejnou dopravou',
+  'help.guide.plan-transit.goal':
+    'Nechat TREK vyhledat skutečné vlaky a autobusy mezi dvěma body dne a vložit do plánu ten, který vyberete.',
+  'help.guide.plan-transit.step.1':
+    'V hlavičce dne klikněte na tlačítko tramvaje, Veřejná doprava. Vyhledávání se otevře pro tento den.',
+  'help.guide.plan-transit.step.2':
+    'Odkud a Kam přijímají zastávku nebo stanici. Dokud je pole prázdné, nabízejí se vlastní zastávky dne; napsáním dvou písmen se místo toho prohledají stanice jízdního řádu. Prohodit mezi oběma poli otočí spojení.',
+  'help.guide.plan-transit.step.3':
+    'Odjezd nebo Příjezd s časem říkají, kdy chcete cestovat, a Nejlepší spojení, Méně přestupů nebo Méně chůze říkají, jak mají být odpovědi seřazeny.',
+  'help.guide.plan-transit.step.4':
+    'Štítky níže říkají, které prostředky se smějí použít: Vlak, Metro, Tramvaj, Autobus, Trajekt a Lanovka. Vypnutím jeden vynecháte, alespoň jeden zůstane zapnutý. Potom klikněte na Hledat.',
+  'help.guide.plan-transit.step.5':
+    'Každý výsledek uvádí odjezd a příjezd, jak dlouho trvá, kolik je přestupů a kolik chůze, a linky v jejich vlastních barvách. Kliknutím jej rozbalíte zastávku po zastávce, s nástupišti a s úseky pěšky mezi linkami.',
+  'help.guide.plan-transit.step.6': 'Klikněte na Přidat ke dni.',
+  'help.guide.plan-transit.result':
+    'Spojení je řádkem ve dni se svými linkami, přestupy a dobou chůze, a kartou na kartě Doprava pod Automatické spojení MHD.',
+  'help.guide.plan-transit.tip.1':
+    'Spojení pocházejí z Transitous, bezplatné komunitní služby nad veřejnými daty jízdních řádů: žádný klíč, žádný účet. Správce může vyhledávání místo toho nasměrovat na Google.',
+  'help.guide.plan-transit.tip.2':
+    'Nic nenalezeno? Zdroje pokrývají region a období. Zkuste jiný čas, zapněte více prostředků nebo vyberte stanici místo samotného místa. Zpráva pojmenuje službu, která odpověděla.',
+  'help.guide.plan-transit.tip.3':
+    'Stejné vyhledávání se otevře pro jediný úsek: klikněte na spojnici s dobou cesty mezi dvěma zastávkami a zvolte Veřejná doprava. Odkud, Kam a čas odjezdu se vyplní za vás.',
+  // change-transit-route
+  'help.guide.change-transit-route.title': 'Otevřít a změnit naplánované spojení',
+  'help.guide.change-transit-route.goal':
+    'Přečíst spojení zastávku po zastávce, přejmenovat je nebo trasu vyhledat znovu.',
+  'help.guide.change-transit-route.step.1':
+    'Na kartě Doprava sedí naplánovaná spojení pod Automatické spojení MHD. Klikněte na kartu.',
+  'help.guide.change-transit-route.step.2':
+    'Doba trvání, Přestupy a Chůze sedí nahoře. Itinerář pod nimi projde spojení zastávku po zastávce, s nástupišti a s úseky pěšky mezi linkami.',
+  'help.guide.change-transit-route.step.3':
+    'Změnit trasu spustí vyhledávání znovu, již vyplněné oběma konci tohoto spojení a jeho dnem.',
+  'help.guide.change-transit-route.step.4':
+    'Vyberte jiné spojení a klikněte na Přidat ke dni; zaujme místo toho starého. Upravit podrobnosti vedle Změnit trasu otevře místo toho běžný formulář dopravy, kde žijí Rezervační kód, Stav, cestující a soubory.',
+  'help.guide.change-transit-route.result':
+    'Okno Cesta veřejnou dopravou nese nový Itinerář a jeho karta na kartě Doprava ukazuje nové linky a časy.',
+  'help.guide.change-transit-route.tip.1':
+    'Název v okně Cesta veřejnou dopravou je jen text: tužka vedle něj jej přejmenuje, aniž by se dotkla trasy. Poznámky pod ním přijímají markdown a mají kartu Upravit a Náhled.',
+  'help.guide.change-transit-route.tip.2':
+    'Smazat na patě okna Cesta veřejnou dopravou vyjme spojení z cesty; den si ponechá své zastávky.',
+  // leg-travel-mode
+  'help.guide.leg-travel-mode.title': 'Změnit způsob cesty na jednom úseku',
+  'help.guide.leg-travel-mode.goal':
+    'Jít pěšky jeden úsek dne, který se jinak jede autem, nebo tento úsek předat vyhledávání veřejné dopravy.',
+  'help.guide.leg-travel-mode.step.1':
+    'Spojnice mezi zastávkami se objeví teprve tehdy, když je zapnutá Trasa dne. Kliknutím na den jej otevřete, potom klikněte na Trasa pod jeho zastávkami.',
+  'help.guide.leg-travel-mode.step.2':
+    'Každá spojnice pojmenuje dobu cesty a vzdálenost tohoto úseku s ikonou způsobu, kterým byla trasa spočítána: auto pro jízdu autem, chodidlo pro chůzi.',
+  'help.guide.leg-travel-mode.step.3':
+    'Klikněte na spojnici. Nabídka nabízí Autem a Pěšky, Veřejná doprava a Použít výchozí dne.',
+  'help.guide.leg-travel-mode.step.4':
+    'Zvolte Pěšky. Změní se pouze tento úsek; zbytek dne si ponechá svůj vlastní způsob.',
+  'help.guide.leg-travel-mode.result':
+    'Úsek ukazuje ikonu chodidla a svůj čas chůze a ostatní úseky dne si ponechají způsob dne.',
+  'help.guide.leg-travel-mode.tip.1':
+    'Způsob patří úseku, nikoli dni: tlačítka Autem a Pěšky celého dne nikdy nepřepíšou úsek, který jste nastavili ručně. Použít výchozí dne jim úsek vrátí.',
+  'help.guide.leg-travel-mode.tip.2':
+    'Veřejná doprava ve stejné nabídce otevře vyhledávání spojení přesně pro tento úsek, s oběma konci a časem odjezdu již vyplněnými.',
+  'help.guide.leg-travel-mode.tip.3':
+    'Časy pocházejí z veřejného plánovače tras nad skutečnými silnicemi a pěšinami. Úsek, na který neumí odpovědět, si ponechá svou přímou čáru a neukáže žádný čas.',
+  // edit-transport
+  'help.guide.edit-transport.title': 'Změnit nebo smazat dopravu',
+  'help.guide.edit-transport.goal': 'Opravit čas, nástupiště nebo rezervační kód, nebo jízdu z cesty odebrat.',
+  'help.guide.edit-transport.step.1': 'V plánu dne je doprava barevným řádkem mezi zastávkami. Klikněte na něj.',
+  'help.guide.edit-transport.step.2':
+    'Formulář je ten, který ji vytvořil, s nápisem Upravit dopravu v záhlaví. Změnit lze vše: typ, trasu, dny a časy, Rezervační kód, Stav.',
+  'help.guide.edit-transport.step.3':
+    'Trasa letu je řetězec letišť, trasa vlaku řetězec stanic. Přidat zastávku vloží mezi ně další a každý úsek si ponechá vlastní časy a vlastní číslo letu nebo vlaku.',
+  'help.guide.edit-transport.step.4':
+    'Klikněte na Aktualizovat. Chcete-li dopravu odstranit úplně, použijte koš na její kartě na kartě Doprava a potvrďte.',
+  'help.guide.edit-transport.result':
+    'Změna se projeví všude, kde se doprava objevuje: na kartě Doprava, ve dni, kdy jede, a na její čáře na mapě.',
+  'help.guide.edit-transport.tip.1':
+    'Stejný formulář se otevře z obou stran, tužkou na kartě na kartě Doprava i vlastním řádkem dopravy v plánu dne. Výjimkou je naplánované spojení veřejnou dopravou: jeho řádek otevře okno Cesta veřejnou dopravou a Upravit podrobnosti tam vede k tomuto formuláři.',
+  'help.guide.edit-transport.tip.2':
+    'Přesun dopravy na jiný den formulář vůbec nepotřebuje: přetáhněte její řádek z jedné karty dne na druhou.',
+  // transport-on-map
+  'help.guide.transport-on-map.title': 'Nakreslit dopravu na mapě',
+  'help.guide.transport-on-map.goal': 'Podívat se, kudy let, jízda nebo spojení skutečně vede.',
+  'help.guide.transport-on-map.step.1':
+    'Doprava s oběma nastavenými konci nese ve svém řádku v plánu dne malou ikonu trasy. Klikněte na ni; její popisek se změní na Skrýt trasy rezervací.',
+  'help.guide.transport-on-map.step.2':
+    'Trasa se nakreslí na mapě a na každém konci je oválná značka nesoucí ikonu dopravy.',
+  'help.guide.transport-on-map.step.3':
+    'Kliknutím na koncovou značku si přečtete rezervaci, aniž byste opustili mapu: časy, Leteckou společnost a Číslo letu, Rezervační kód a poznámky. Zavřít panel odloží.',
+  'help.guide.transport-on-map.step.4':
+    'Ikona trasy na liště nad dny zvládne celou cestu najednou: Zobrazit všechny trasy rezervací a Skrýt všechny trasy rezervací pro jejich opětovné vymazání.',
+  'help.guide.transport-on-map.step.5':
+    'Naplánované spojení veřejnou dopravou nemá vlastní ikonu. Kreslí se přepínačem Trasa daného dne, a proto je Skrýt všechny trasy rezervací nevymaže, dokud je trasa toho dne stále zapnutá.',
+  'help.guide.transport-on-map.result':
+    'Trasy jsou na mapě se značkou na každém konci a zůstanou tam, dokud je znovu nevypnete.',
+  'help.guide.transport-on-map.tip.1':
+    'Let, plavba a trajekt se kreslí jako oblouk, auto, autobus, taxi a kolo sledují skutečné silnice a vlak nebo naplánované spojení vede přes stanice, ve kterých zastavuje.',
+  'help.guide.transport-on-map.tip.2':
+    'Potvrzená rezervace je plná čára, ta čekající na potvrzení čárkovaná. Nastavení Popisky tras rezervací vytiskne do koncových značek kód letiště nebo název stanice.',
+  'help.guide.transport-on-map.tip.3':
+    'Zobrazit všechny trasy rezervací je čistý štít, nikoli vrstva: zahodí to, co nastavily jednotlivé ikony, takže dvojí stisknutí vám nechá vše zapnuté nebo vše vypnuté.',
 };
 
 export default help;

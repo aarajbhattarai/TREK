@@ -3164,6 +3164,344 @@ const help: TranslationStrings = {
     'Att ta bort en boendebokning tar också dess nätter ur dagsplanen och tar bort utgiften som var länkad till den.',
   'help.guide.delete-booking.tip.2':
     'Dokument som var bifogade stannar på resans flik Filer; bara deras länk till bokningen försvinner.',
+
+  // ── Screen: trip-costs ────────────────────────────────────────────────────────────────
+  'help.ctx.trip-costs.title': 'Kostnader',
+  'help.ctx.trip-costs.summary':
+    'Resans pengar: varje utgift som en daterad liggare, vem som lade ut och vem som är skyldig för den, i den valuta kvittot var i, och, i den högra kolumnen, vem som måste betala vem för att det ska bli jämnt igen.',
+  'help.ctx.trip-costs.bullet.1':
+    'Fyra kort högst upp: Du är skyldig (det första) och Du är skyldig (det andra) är din egen sida av uppgörelsen, Utestående belopp är det som är bokfört men ännu inte har någon betalare, och Totala resekostnader summerar allt med Din andel och Du betalade under sig.',
+  'help.ctx.trip-costs.bullet.2':
+    'Lägg till utgift högst upp till höger öppnar redigeraren; Betala bredvid den bokför alla öppna överföringar på en gång.',
+  'help.ctx.trip-costs.bullet.3':
+    'Liggaren är grupperad per dag, nyast först, med dagens summa till höger. En rad bär kategorin som en färgad flik, namnet, betalarnas brickor, anteckningen och beloppet, plus du lånade ut eller du lånade när fördelningen lämnar dig på plus eller minus.',
+  'help.ctx.trip-costs.bullet.4':
+    'Ovanför listan sitter Sök kostnader…, ett kategorifilter, ett dagsfilter, växeln Alla / Betalat av mig / Jag är skyldig och knappen Exportera CSV.',
+  'help.ctx.trip-costs.bullet.5':
+    'Den högra kolumnen är svaret: Betala listar vem som betalar vem, Balanser visar varje resenärs överskott eller underskott, Slutlig budget vad resan kostar var och en av dem, och Via kategori vart pengarna tog vägen.',
+  'help.ctx.trip-costs.bullet.6':
+    'En bokförd betalning ligger i samma liggare som en egen rad, med Redigera och Ångra bredvid sig; en utgift har en penna och en papperskorg, och papperskorgen tar bort den utan att fråga.',
+  // add-expense
+  'help.guide.add-expense.title': 'Lägg till en utgift',
+  'help.guide.add-expense.goal': 'Bokför vad något kostade, vem som betalade det och vilka det delas med.',
+  'help.guide.add-expense.step.1':
+    'Klicka på Lägg till utgift högst upp till höger på fliken Kostnader. Redigeraren öppnas, daterad idag, med alla redan i fördelningen.',
+  'help.guide.add-expense.step.2':
+    'Skriv vad det var till för i Vad var det till för?, det enda fältet som måste fyllas i, och siffran från kvittot i Totalt belopp.',
+  'help.guide.add-expense.step.3':
+    'Valuta och Dag sitter under beloppet. Valuta börjar på resans egen; byt den och redigeraren visar vad beloppet är värt i resans valuta. Dag börjar på idag och är det liggaren grupperar utgiften under.',
+  'help.guide.add-expense.step.4':
+    'Välj en Kategori. Det finns fjorton av dem och de går inte att ändra: den du väljer är den färgade fliken på raden och stapeln i Via kategori.',
+  'help.guide.add-expense.step.5':
+    'Under Vem betalade? väljer du personen som faktiskt lade ut pengarna. Du är förvalt; Ingen har betalat än bokför beloppet utan att göra någon skyldig för det, och Flera personer betalade delar notan mellan flera betalare.',
+  'help.guide.add-expense.step.6':
+    'Split börjar på Equally med alla med, och varje namn visar andelen det blir. Klicka på Lägg till utgift för att spara.',
+  'help.guide.add-expense.result':
+    'Utgiften ligger i liggaren under sin dag, inräknad i Totala resekostnader, och uppgörelsekolumnen har räknat om vem som är skyldig vem.',
+  'help.guide.add-expense.tip.1':
+    'Lämnad som den öppnas är utgiften i resans valuta, daterad idag och delad lika mellan alla: bara namnet och beloppet måste verkligen fyllas i.',
+  'help.guide.add-expense.tip.2':
+    '± bredvid beloppet gör utgiften till en återbetalning. En negativ summa ger tillbaka pengar i stället för att ta dem, och fördelningen går åt andra hållet.',
+  'help.guide.add-expense.tip.3':
+    'Bifoga kvitto / faktura längst ned tar bilder och PDF-filer. De laddas upp när du sparar, hamnar i resans Filer, och en bricka Kvitton dyker upp bredvid namnet i listan.',
+  // expense-payers
+  'help.guide.expense-payers.title': 'Säg vem som betalade notan',
+  'help.guide.expense-payers.goal':
+    'Bokför vem som ligger ute med pengar för en utgift, den andra halvan av uppgörelsens matematik.',
+  'help.guide.expense-payers.step.1':
+    'Öppna en utgift med pennan bredvid raden och titta på Vem betalade?. En person betalade är förval: rullgardinen namnger den enda person som lade ut pengarna.',
+  'help.guide.expense-payers.step.2':
+    'Ingen har betalat än, den första posten i den rullgardinen, bokför beloppet utan att göra någon skyldig något. Utgiften räknas ändå in i Totala resekostnader.',
+  'help.guide.expense-payers.step.3':
+    'Flera personer betalade, länken bredvid etiketten, öppnar en rad per resenär. Inkludera dem som betalade och skriv in vad var och en av dem lade in; beloppen måste bli totalbeloppet.',
+  'help.guide.expense-payers.step.4':
+    'En utgift som ingen har betalat för flaggas Oavslutad på sin rad och räknas in i kortet Utestående belopp, dit bokförda men ouppgjorda utlägg samlas.',
+  'help.guide.expense-payers.result':
+    'Vem som betalade avgör vem som får tillbaka, fördelningen avgör vem som betalar, och Balanser är skillnaden mellan de två.',
+  'help.guide.expense-payers.tip.1':
+    'Vem betalade? och Split är oberoende: du kan betala för en middag du inte var på, och fördelas in i en du inte betalade för.',
+  'help.guide.expense-payers.tip.2':
+    'Med flera betalare måste beloppen bli totalbeloppet. Inkludera en till så ordnar de andra om sig runt den; medan de inte stämmer säger redigeraren att Betalarnas belopp måste bli totalbeloppet och vägrar spara.',
+  'help.guide.expense-payers.tip.3':
+    'Att ta bort en betalare tar inte bort utgiften: beloppet stannar i Totala resekostnader och raden blir Oavslutad.',
+  // split-expense
+  'help.guide.split-expense.title': 'Dela en nota mellan resenärerna',
+  'help.guide.split-expense.goal':
+    'Avgör vem som är skyldig för en utgift: alla lika, per belopp, eller rad för rad från kvittot.',
+  'help.guide.split-expense.step.1':
+    'I utgiftsredigeraren listar Split varje resenär. Klicka på ett namn för att lämna personen utanför den här utgiften; en utesluten resenär står som Inte med och är inte skyldig något för den.',
+  'help.guide.split-expense.step.2':
+    'Equally är förval: varje inkluderad resenär får samma andel, och raden under listan säger hur många delar det delas i och vad varje andel blir.',
+  'help.guide.split-expense.step.3':
+    'Custom byter andelarna mot beloppsfält. Skriv vad varje resenär är skyldig; raden under räknar löpande och blir grön på Fördelningen stämmer med totalen. Den sparar inte medan den är fel.',
+  'help.guide.split-expense.step.4':
+    'Ticket delar kvittot rad för rad: Lägg till artikel, sedan ett namn och ett pris per rad, och under Delas mellan: resenärerna som delar den raden.',
+  'help.guide.split-expense.step.5':
+    'Andel per person under raderna visar vad varje resenär till slut är skyldig, och Totalt belopp högst upp summeras från raderna. Klicka på Spara.',
+  'help.guide.split-expense.result':
+    'Fördelningen är det varje balans byggs av. Den sparas med utgiften och kan ändras senare utan att något annat rörs.',
+  'help.guide.split-expense.tip.1':
+    'En resenär du lämnar utanför står som Inte med och är inte skyldig något för just den utgiften; de andra tar över andelen.',
+  'help.guide.split-expense.tip.2':
+    'Equally är exakt på centen: den överblivna centen roterar från utgift till utgift, så ingen är den som alltid betalar den.',
+  'help.guide.split-expense.tip.3':
+    'Ticket-läget summerar Totalt belopp själv och gråar ut fältet: kvittots rader är totalen.',
+  // expense-currency
+  'help.guide.expense-currency.title': 'Lägg in en utgift i en annan valuta',
+  'help.guide.expense-currency.goal': 'Lägg in det kvittot faktiskt säger och låt TREK hålla kursen.',
+  'help.guide.expense-currency.step.1':
+    'Öppna Lägg till utgift och fyll i namnet och beloppet precis som kvittot säger, själva siffran och inte en omräkning av den.',
+  'help.guide.expense-currency.step.2':
+    'Öppna Valuta och välj kvittots valuta. Listan bär varje kod TREK känner till och går att söka i: skriv de tre bokstäverna.',
+  'help.guide.expense-currency.step.3':
+    'En rad dyker upp under fälten med vad beloppet är värt just nu, märkt realtidspris. Det är en förhandsvisning, inte det som lagras.',
+  'help.guide.expense-currency.step.4':
+    'Klicka på Lägg till utgift. Kursen fryses på stället: härifrån är den här utgiften värd vad den var värd den dag du la in den.',
+  'help.guide.expense-currency.step.5':
+    'I liggaren bär raden båda siffrorna under namnet: det du skrev, en pil, och vad det räknas som i resans valuta. Varje summa, balans och uppgörelse ovanför använder den andra.',
+  'help.guide.expense-currency.result':
+    'Utgiften behåller beloppet och valutan du skrev. Liggaren visar båda, och resans summor och balanser stannar i resans valuta.',
+  'help.guide.expense-currency.tip.1':
+    'Kursen fryses i samma stund du sparar, så en uppgjord skuld öppnas inte igen för att marknaden rörde sig veckan efter. Bara att byta utgiftens valuta fryser en ny.',
+  'help.guide.expense-currency.tip.2':
+    'Visningsvaluta i Inställningar ändrar bara det du läser; de lagrade beloppen rör sig aldrig. Lämnad tom visas varje resa i sin egen valuta.',
+  'help.guide.expense-currency.tip.3':
+    'Själva resevalutan bor på resan, under Redigera resa, och kräver rätten Redigera resedetaljer. Att byta den förankrar varje fryst kurs på nytt i stället för att räkna om beloppen till en annan valuta.',
+  // filter-costs
+  'help.guide.filter-costs.title': 'Hitta en utgift, eller en dags utlägg',
+  'help.guide.filter-costs.goal': 'Smalna av en lång liggare till det du faktiskt letar efter.',
+  'help.guide.filter-costs.step.1':
+    'Skriv i Sök kostnader… ovanför listan. Den matchar utgiftens namn medan du skriver.',
+  'help.guide.filter-costs.step.2':
+    'Alla kategorier öppnar de fjorton kategorierna. Välj en så stannar bara den kategorins utgifter kvar.',
+  'help.guide.filter-costs.step.3':
+    'Alla dagar listar varje dag något har spenderats på. Välj en så ersätter en banner dagsrubrikerna med den dagen, hur många utgifter den håller och dess summa.',
+  'help.guide.filter-costs.step.4':
+    'Växeln Alla / Betalat av mig / Jag är skyldig är din egen vy av liggaren: vad du har lagt ut pengar för, och vad du fortfarande ligger ute med.',
+  'help.guide.filter-costs.step.5':
+    'Exportera CSV i slutet av raden skriver varje utgift till en fil, med ursprungsbeloppet, dess valuta och det omräknade beloppet.',
+  'help.guide.filter-costs.result':
+    'Filtren kombineras, och dagsgrupperna ritas om med sina egna summor för det som blir kvar.',
+  'help.guide.filter-costs.tip.1':
+    'Bokförda betalningar bär varken namn eller kategori, så en sökning eller ett kategorifilter döljer dem. Dagsfiltret behåller dem, under den dag betalningen bokfördes.',
+  'help.guide.filter-costs.tip.2':
+    'Exportera CSV exporterar alltid varje utgift, vad som än är filtrerat på skärmen, en rad per utgift.',
+  // settle-up
+  'help.guide.settle-up.title': 'Räkna ut vem som är skyldig vem, och gör upp',
+  'help.guide.settle-up.goal':
+    'Gör en hög delade utgifter till det minsta antal överföringar som gör alla jämna, och bokför dem när de sker.',
+  'help.guide.settle-up.step.1':
+    'Kortet Betala i den högra kolumnen listar de överföringar som skulle göra alla jämna: vem som betalar vem, och hur mycket. Siffran bredvid titeln är hur många som fortfarande är öppna.',
+  'help.guide.settle-up.step.2':
+    'Lösa bredvid en överföring bokför den som gjord. Flödet försvinner från kortet och balanserna ritas om.',
+  'help.guide.settle-up.step.3':
+    'Den bokförda överföringen är en rad i liggaren, under den dag den skedde, märkt Betalning med de två resenärerna och beloppet.',
+  'help.guide.settle-up.step.4':
+    'Bredvid den raden rättar pennan en betalning och Ångra tar tillbaka den, och överföringen återvänder till kortet Betala.',
+  'help.guide.settle-up.step.5':
+    'Lägg till betalning i kortets rubrik bokför en överföring som inte följde ett förslag. Välj Från och Till, summan, dess valuta och den dag den skedde.',
+  'help.guide.settle-up.step.6':
+    'Betala i rubriken högst upp på skärmen bokför alla öppna överföringar på en gång, så som ett gäng gör upp i slutet av en resa.',
+  'help.guide.settle-up.result':
+    'Varje bokförd överföring är en rad i liggaren och en rad mindre på kortet Betala. När kortet visar Alla är likadana är resan betald.',
+  'help.guide.settle-up.tip.1':
+    'Kortet visar det minsta antalet överföringar, inte varje skuld: tre personer som är skyldiga varandra i en cirkel faller ihop till en eller två betalningar.',
+  'help.guide.settle-up.tip.2':
+    'Lösa bokför en överföring, den flyttar inte pengar. Skicka dem på det sätt du brukar, och klicka sedan.',
+  'help.guide.settle-up.tip.3':
+    'En betalning kan göras i vilken valuta som helst, så att betala en yen-skuld i euro är normalt: dialogen har sin egen valutaväljare och fryser den kursen också.',
+  // final-budget
+  'help.guide.final-budget.title': 'Se vad resan kostade varje resenär',
+  'help.guide.final-budget.goal':
+    'Läs liggarens sida per person: balansen idag, och den verkliga kostnaden per person.',
+  'help.guide.final-budget.step.1':
+    'Balanser visar varje resenärs läge: en grön stapel åt höger om resan är skyldig resenären, en röd stapel åt vänster om resenären är skyldig resan, och beloppet bredvid namnet.',
+  'help.guide.final-budget.step.2':
+    'Slutlig budget under den svarar på en annan fråga: inte vem som är skyldig vad just nu, utan vad resan kostar varje resenär när allt har betalats tillbaka.',
+  'help.guide.final-budget.step.3':
+    'Klicka på ett namn för att öppna uträkningen: Betalda utgifter, sedan Återbetalningar netto och Väntande återbetalningar under den.',
+  'help.guide.final-budget.step.4':
+    'Under varje rad sitter de rader den är gjord av: utgifterna den resenären betalade för, överföringarna som redan bokförts och de som fortfarande är öppna. De summerar exakt till raden ovanför dem.',
+  'help.guide.final-budget.result':
+    'Balanser är vem som ligger på plus eller minus idag; Slutlig budget är vad resan till slut kostar var och en av er när allt är återbetalt.',
+  'help.guide.final-budget.tip.1':
+    'Att bokföra en betalning ändrar ingens slutliga budget. Den flyttar bara ett belopp från väntande återbetalningar till återbetalningar netto.',
+  'help.guide.final-budget.tip.2':
+    'En utgift utan betalare stannar utanför båda korten, på samma sätt som den stannar utanför uppgörelseförslagen.',
+  // expense-from-booking
+  'help.guide.expense-from-booking.title': 'Gör en bokning till en utgift',
+  'help.guide.expense-from-booking.goal':
+    'Fäst vad ett flyg, ett hotell eller en plats faktiskt kostade på posten den hör till.',
+  'help.guide.expense-from-booking.step.1':
+    'Öppna bokningen på fliken Transporter eller Bokningar och klicka på dess penna.',
+  'help.guide.expense-from-booking.step.2':
+    'Bläddra till blocket Kostnader längst ned i formuläret. Med inget länkat ännu erbjuder det Skapa utgift och säger att det sparar bokningen först.',
+  'help.guide.expense-from-booking.step.3':
+    'Klicka på Skapa utgift. Bokningen sparas, formuläret stängs, och Kostnader-redigeraren öppnas med bokningens titel som namn och dess typ redan matchad mot en kategori.',
+  'help.guide.expense-from-booking.step.4':
+    'Fyll i beloppet, vem som betalade och fördelningen som för vilken utgift som helst, och spara. Öppnar du bokningen igen visas den nu under Relaterade kostnader, med en penna för att redigera den och en papperskorg för att ta bort den.',
+  'help.guide.expense-from-booking.result':
+    'Bokningen bär sin kostnad, och utgiften är en vanlig rad på fliken Kostnader, med en betalare, en fördelning och en valuta som vilken annan som helst.',
+  'help.guide.expense-from-booking.tip.1':
+    'Att ta bort bokningen tar bort dess länkade utgift med den. Ta bort utgiften i bokningens Kostnader-block gör det motsatta: utgiften försvinner, bokningen stannar.',
+  'help.guide.expense-from-booking.tip.2':
+    'En plats har samma block i sitt formulär, där Skapa utgift sparar platsen först.',
+
+  // ── Screen: trip-transports ───────────────────────────────────────────────────────────
+  'help.ctx.trip-transports.title': 'Transporter',
+  'help.ctx.trip-transports.summary':
+    'Allt som bär dig mellan stoppen: flyg, tåg, bussar, bilar, taxibilar, cyklar, kryssningar, färjor och de kollektivtrafikförbindelser som TREK slår upp åt dig. Fliken är listan över dem; de skapas och läses även i planen, och ritas på kartan.',
+  'help.ctx.trip-transports.bullet.1':
+    'Fliken rymmer bara resorna. Boende, restauranger, evenemang och biljetter bor på Bokningar, så samma post dyker aldrig upp två gånger.',
+  'help.ctx.trip-transports.bullet.2':
+    'Verktygsfältet räknar dem alla under Alla och ger varje typ som används ett eget chip med egen räknare: Flygning, Tåg, Bil, Kollektivtrafik. Transport till höger lägger till en för hand.',
+  'help.ctx.trip-transports.bullet.3':
+    'Korten kommer i tre grupper, var och en hopfällbar via sin rubrik: Automatisk kollektivtrafik för de förbindelser sökningen planerade, sedan Väntar på beslut, sedan Bekräftat.',
+  'help.ctx.trip-transports.bullet.4':
+    'Ett kort bär status, typ, de dagar det sträcker sig över, tiderna, Bokningskoden, resvägen och Flygbolaget och Flygnumret eller Tågnumret, Plattformen och Sätet. Pennan öppnar det, papperskorgen raderar det efter en fråga.',
+  'help.ctx.trip-transports.bullet.5':
+    'Transporter skapas också i planen: varje dagrubrik har ett plus för Lägg till transport och en spårvagnsknapp för Kollektivtrafik, och restidslänken mellan två stopp öppnar samma sökning för just den sträckan.',
+  'help.ctx.trip-transports.bullet.6':
+    'En transport med båda ändarna satta ritar en linje på kartan. Ruttikonen på dess rad i dagsplanen tänder den linjen, och Visa alla bokningsvägar i verktygsfältet ovanför dagarna slår om hela resan.',
+  // transports-list
+  'help.guide.transports-list.title': 'Läs fliken Transporter',
+  'help.guide.transports-list.goal': 'Vet vad listan berättar innan du ändrar något på den.',
+  'help.guide.transports-list.step.1':
+    'Transporter är resans andra flik. Den rymmer bara resorna: hotell, restauranger, evenemang och biljetter ligger på Bokningar.',
+  'help.guide.transports-list.step.2':
+    'Verktygsfältet räknar varje transport under Alla och ger varje typ som används ett eget chip med egen räknare. Klicka på ett chip för att behålla bara den typen, klicka igen för att släppa den. Flera chip kan vara på samtidigt, och Alla rensar dem.',
+  'help.guide.transports-list.step.3':
+    'Automatisk kollektivtrafik är en egen grupp, de förbindelser kollektivtrafiksökningen planerade. Väntar på beslut och Bekräftat rymmer allt som matats in för hand. Pilen bredvid en rubrik fäller ihop en grupp.',
+  'help.guide.transports-list.step.4':
+    'Ett kort säger allt: statusprickan med Väntar på beslut eller Bekräftat, typen, de dagar det sträcker sig över med sina datum, tiderna, Bokningskoden, resvägen, och Flygbolaget och Flygnumret eller Tågnumret, Plattformen och Sätet.',
+  'help.guide.transports-list.step.5':
+    'Pennan öppnar transporten för redigering, papperskorgen raderar den, efter en fråga som namnger vad som försvinner.',
+  'help.guide.transports-list.result':
+    'Listan är smalnad till det du var ute efter, och varje kort säger med ett ögonkast om resan är bokad.',
+  'help.guide.transports-list.tip.1':
+    'Chippen och de hopfällda grupperna kommer ihåg per resa, så fliken öppnas igen så som du lämnade den.',
+  'help.guide.transports-list.tip.2':
+    'Importera från fil och AirTrail sällar sig till Transport i verktygsfältet bara när servern kan läsa bokningsbekräftelser och när en AirTrail-instans är ansluten. Utan dem fylls listan för hand och av kollektivtrafiksökningen.',
+  // add-transport
+  'help.guide.add-transport.title': 'Lägg till en transport i en dag',
+  'help.guide.add-transport.goal': 'Lägg resan som tar dig från ett stopp till nästa i den dag den sker.',
+  'help.guide.add-transport.step.1':
+    'Varje dagrubrik bär fyra små knappar till höger. Klicka på plusset, vars tooltip lyder Lägg till transport. Formuläret öppnas med Datum redan satt till den dagen.',
+  'help.guide.add-transport.step.2':
+    'Bokningstyp väljer vad du tar: Flygning, Tåg, Buss, Bil, Taxi, Cyckel, Kryssning, Färja eller Annat. Formuläret följer med. En flygning får en flygplats på varje sträcka, ett tåg en kedja av stationer, en bil orden Upphämtning och Återlämning och Stopp längs vägen.',
+  'help.guide.add-transport.step.3':
+    'Titel är det enda fältet som måste fyllas i; Lägg till förblir grå utan den. Skriv det du skulle känna igen på en avgångstavla.',
+  'help.guide.add-transport.step.4':
+    'Från och Till söker en station, en hamn eller en adress. Skriv minst tre bokstäver och välj ett resultat ur listan. Ett namn som bara skrivits in bär inga koordinater, så det ritar ingenting på kartan.',
+  'help.guide.add-transport.step.5':
+    'Datum och Starttid säger när den går, Slutdatum och Sluttid när den är över; en resa som landar nästa dag tar nästa dag där. Bokningskod, Status med Väntar på beslut eller Bekräftat, och Noteringar är valfria.',
+  'help.guide.add-transport.step.6': 'Klicka på Lägg till.',
+  'help.guide.add-transport.result':
+    'Transporten är en rad på dagen, på sin tid bland stoppen, och ett kort i fliken Transporter under Väntar på beslut eller Bekräftat.',
+  'help.guide.add-transport.tip.1':
+    'Raden landar där starttiden placerar den, efter det sista stoppet som börjar tidigare. Dess handtag drar den var som helst annars i dagen, eller till en annan dag.',
+  'help.guide.add-transport.tip.2':
+    'Bifoga fil under Filer tar biljetten, och Skapa utgift under Kostnader sparar bokningen och öppnar Kostnader-redigeraren för biljettpriset.',
+  'help.guide.add-transport.tip.3':
+    'Resenärer markerar vem som är med på resan. Så snart en transport har resenärer växer flikens verktygsfält med deras avatarer och filtrerar listan efter dem.',
+  // plan-transit
+  'help.guide.plan-transit.title': 'Planera en kollektivtrafikförbindelse',
+  'help.guide.plan-transit.goal':
+    'Låt TREK slå upp de riktiga tågen och bussarna mellan två punkter på en dag och lägg den du väljer i planen.',
+  'help.guide.plan-transit.step.1':
+    'Klicka på spårvagnsknappen i dagrubriken, Kollektivtrafik. Sökningen öppnas för den dagen.',
+  'help.guide.plan-transit.step.2':
+    'Från och Till tar ett stopp eller en station. Med rutan fortfarande tom erbjuds dagens egna stopp; skriver du två bokstäver söks tidtabellens stationer i stället. Byt plats mellan de två rutorna vänder förbindelsen.',
+  'help.guide.plan-transit.step.3':
+    'Avgång eller Ankomst med en tid säger när du vill resa, och Bästa resväg, Färre byten eller Mindre gång säger hur svaren ska ordnas.',
+  'help.guide.plan-transit.step.4':
+    'Chippen nedanför säger vilka färdsätt som får användas: Tåg, Tunnelbana, Spårvagn, Buss, Färja och Linbana. Slå av ett för att utesluta det, minst ett förblir på. Klicka sedan på Sök.',
+  'help.guide.plan-transit.step.5':
+    'Varje resultat ger avgång och ankomst, hur lång tid det tar, hur många byten och hur mycket gång, och linjerna i sina egna färger. Klicka på ett för att veckla ut det hållplats för hållplats, med spåren och promenaderna mellan linjerna.',
+  'help.guide.plan-transit.step.6': 'Klicka på Lägg till dag.',
+  'help.guide.plan-transit.result':
+    'Förbindelsen är en rad på dagen med sina linjer, sina byten och sin gångtid, och ett kort i fliken Transporter under Automatisk kollektivtrafik.',
+  'help.guide.plan-transit.tip.1':
+    'Förbindelserna kommer från Transitous, en gratis gemenskapstjänst över öppna tidtabellsdata: ingen nyckel, inget konto. En administratör kan rikta sökningen mot Google i stället.',
+  'help.guide.plan-transit.tip.2':
+    'Inget hittat? Flödena täcker en region och en period. Prova en annan tid, slå på fler färdsätt, eller välj en station snarare än själva platsen. Meddelandet namnger tjänsten som svarade.',
+  'help.guide.plan-transit.tip.3':
+    'Samma sökning öppnas för en enskild sträcka: klicka på restidslänken mellan två stopp och välj Kollektivtrafik. Från, Till och avgångstiden fylls i åt dig.',
+  // change-transit-route
+  'help.guide.change-transit-route.title': 'Öppna och ändra en planerad förbindelse',
+  'help.guide.change-transit-route.goal':
+    'Läs förbindelsen hållplats för hållplats, byt namn på den, eller slå upp resvägen igen.',
+  'help.guide.change-transit-route.step.1':
+    'I fliken Transporter sitter de planerade förbindelserna under Automatisk kollektivtrafik. Klicka på kortet.',
+  'help.guide.change-transit-route.step.2':
+    'Restid, Byten och Gång sitter överst. Reseplan under dem går igenom förbindelsen hållplats för hållplats, med spåren och promenaderna mellan linjerna.',
+  'help.guide.change-transit-route.step.3':
+    'Ändra resväg kör sökningen igen, redan ifylld med den här förbindelsens två ändar och dess dag.',
+  'help.guide.change-transit-route.step.4':
+    'Välj en annan förbindelse och klicka på Lägg till dag; den tar den gamlas plats. Redigera detaljer, bredvid Ändra resväg, öppnar i stället det vanliga transportformuläret, där Bokningskoden, Statusen, resenärerna och filerna bor.',
+  'help.guide.change-transit-route.result':
+    'Vyn Kollektivtrafikresa bär den nya Reseplanen, och dess kort i fliken Transporter visar de nya linjerna och tiderna.',
+  'help.guide.change-transit-route.tip.1':
+    'Titeln i vyn Kollektivtrafikresa är bara text: pennan bredvid den byter namn utan att röra resvägen. Noteringar under tar markdown och har en flik Redigera och en Förhandsvisning.',
+  'help.guide.change-transit-route.tip.2':
+    'Ta bort längst ner i vyn Kollektivtrafikresa tar ut förbindelsen ur resan; dagen behåller sina stopp.',
+  // leg-travel-mode
+  'help.guide.leg-travel-mode.title': 'Ändra hur en sträcka färdas',
+  'help.guide.leg-travel-mode.goal':
+    'Gå en sträcka av en dag som annars körs, eller lämna över den sträckan till kollektivtrafiksökningen.',
+  'help.guide.leg-travel-mode.step.1':
+    'Länkarna mellan stoppen dyker upp först när dagens Rutt är på. Klicka på dagen för att öppna den, sedan på Rutt under dess stopp.',
+  'help.guide.leg-travel-mode.step.2':
+    'Varje länk namnger restiden och avståndet för den sträckan, med ikonen för det färdsätt den ruttades i: en bil för körning, en fot för gång.',
+  'help.guide.leg-travel-mode.step.3':
+    'Klicka på länken. Menyn erbjuder Bil och Gång, Kollektivtrafik, och Använd dagens standard.',
+  'help.guide.leg-travel-mode.step.4':
+    'Välj Gång. Bara den här sträckan ändras; resten av dagen behåller sitt eget färdsätt.',
+  'help.guide.leg-travel-mode.result':
+    'Sträckan visar fotikonen och sin gångtid, och dagens övriga sträckor behåller dagens färdsätt.',
+  'help.guide.leg-travel-mode.tip.1':
+    'Färdsättet hör till sträckan, inte till dagen: knapparna Bil och Gång för hela dagen skriver aldrig över en sträcka du satt för hand. Använd dagens standard ger tillbaka sträckan till dem.',
+  'help.guide.leg-travel-mode.tip.2':
+    'Kollektivtrafik i samma meny öppnar förbindelsesökningen för exakt den här sträckan, med båda ändarna och avgångstiden redan ifyllda.',
+  'help.guide.leg-travel-mode.tip.3':
+    'Tiderna kommer från en publik ruttberäknare över riktiga vägar och gångstigar. En sträcka den inte kan svara på behåller sin raka linje och visar ingen tid.',
+  // edit-transport
+  'help.guide.edit-transport.title': 'Ändra eller ta bort en transport',
+  'help.guide.edit-transport.goal': 'Fixa en tid, en plattform eller en bokningskod, eller ta bort färden ur resan.',
+  'help.guide.edit-transport.step.1': 'I dagsplanen är en transport en färgad rad mellan stoppen. Klicka på den.',
+  'help.guide.edit-transport.step.2':
+    'Formuläret är det som skapade den, med Redigera transport i sin titelrad. Allt går att ändra: typen, resvägen, dagarna och tiderna, Bokningskoden, Statusen.',
+  'help.guide.edit-transport.step.3':
+    'En flygnings resväg är en kedja av flygplatser, ett tågs en kedja av stationer. Lägg till stopp sätter in ytterligare ett däremellan, och varje sträcka behåller sina egna tider och sitt eget flygnummer eller tågnummer.',
+  'help.guide.edit-transport.step.4':
+    'Klicka på Uppdatera. För att ta bort transporten helt, använd papperskorgen på dess kort i fliken Transporter och bekräfta.',
+  'help.guide.edit-transport.result':
+    'Ändringen syns överallt där transporten förekommer: fliken Transporter, dagen den går på, och dess linje på kartan.',
+  'help.guide.edit-transport.tip.1':
+    'Samma formulär öppnas från båda håll, pennan på kortet i fliken Transporter och transportens egen rad i dagsplanen. En planerad kollektivtrafikförbindelse är undantaget: dess rad öppnar vyn Kollektivtrafikresa, och Redigera detaljer där leder till det här formuläret.',
+  'help.guide.edit-transport.tip.2':
+    'Att flytta en transport till en annan dag behöver inte formuläret alls: dra dess rad från ett dagkort till nästa.',
+  // transport-on-map
+  'help.guide.transport-on-map.title': 'Rita en transport på kartan',
+  'help.guide.transport-on-map.goal': 'Se vart en flygning, en biltur eller en förbindelse faktiskt går.',
+  'help.guide.transport-on-map.step.1':
+    'En transport med båda ändarna satta bär en liten ruttikon på sin rad i dagsplanen. Klicka på den; dess etikett blir Dölj bokningsvägar.',
+  'help.guide.transport-on-map.step.2':
+    'Resvägen ritas på kartan, med en avlång markör i varje ände som bär transportens ikon.',
+  'help.guide.transport-on-map.step.3':
+    'Klicka på en ändmarkör för att läsa bokningen utan att lämna kartan: tiderna, Flygbolaget och Flygnumret, Bokningskoden och noteringarna. Stäng lägger undan bladet.',
+  'help.guide.transport-on-map.step.4':
+    'Ruttikonen i verktygsfältet ovanför dagarna gör hela resan på en gång: Visa alla bokningsvägar, och Dölj alla bokningsvägar för att rensa dem igen.',
+  'help.guide.transport-on-map.step.5':
+    'En planerad kollektivtrafikförbindelse har ingen egen ikon. Den ritas med dagens Rutt-växel, därför rensar Dölj alla bokningsvägar den inte medan den dagens rutt fortfarande är på.',
+  'help.guide.transport-on-map.result':
+    'Resvägarna ligger på kartan med en markör i varje ände, och de stannar där tills du slår av dem igen.',
+  'help.guide.transport-on-map.tip.1':
+    'En flygning, en kryssning och en färja ritas som en båge, en bil, en buss, en taxi och en cykel följer de riktiga vägarna, och ett tåg eller en planerad förbindelse går genom stationerna den stannar vid.',
+  'help.guide.transport-on-map.tip.2':
+    'En bekräftad bokning är en heldragen linje, en väntande en streckad. Inställningen Etiketter för bokningsrutter skriver ut flygplatskoden eller stationsnamnet i ändmarkörerna.',
+  'help.guide.transport-on-map.tip.3':
+    'Visa alla bokningsvägar är ett blankt blad, inte ett lager: den kastar det som de enskilda ikonerna hade satt, så att trycka två gånger lämnar dig med allt på eller allt av.',
 };
 
 export default help;

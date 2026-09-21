@@ -3280,6 +3280,345 @@ const help: TranslationStrings = {
     'Een accommodatieboeking verwijderen haalt ook haar nachten uit het Dagplan en verwijdert de kostenpost die eraan gekoppeld was.',
   'help.guide.delete-booking.tip.2':
     'Documenten die bijgevoegd waren blijven in het tabblad Bestanden van de reis; alleen hun koppeling met de boeking gaat weg.',
+
+  // ── Screen: trip-costs ────────────────────────────────────────────────────────────────
+  'help.ctx.trip-costs.title': 'Onkosten',
+  'help.ctx.trip-costs.summary':
+    'Het geld van de reis: elke uitgave in een gedateerd overzicht, wie hem heeft voorgeschoten en wie ervoor verschuldigd is, in de valuta van het bonnetje, en, in de rechterkolom, wie wie moet betalen om het weer gelijk te trekken.',
+  'help.ctx.trip-costs.bullet.1':
+    'Vier kaarten bovenaan: Jij bent verschuldigd en Jij krijgt nog zijn jouw eigen kant van de afrekening, Openstaand bedrag is wat is vastgelegd maar nog geen betaler heeft, en Totale reisuitgaven telt alles op, met Jouw aandeel en Jij hebt betaald eronder.',
+  'help.ctx.trip-costs.bullet.2':
+    'Uitgave toevoegen rechtsboven opent de editor; Afrekenen ernaast legt alle openstaande overboekingen in één keer vast.',
+  'help.ctx.trip-costs.bullet.3':
+    'Het overzicht is per dag gegroepeerd, het nieuwste eerst, met het totaal van die dag rechts. Een rij draagt de categorie als gekleurd tabblad, de naam, de betalerschips, de notitie en het bedrag, plus je hebt voorgeschoten of je hebt geleend wanneer de verdeling je op die uitgave omhoog of omlaag brengt.',
+  'help.ctx.trip-costs.bullet.4':
+    'Boven de lijst zitten Uitgaven zoeken…, een categoriefilter, een dagfilter, de schakelaar Alles / Door mij betaald / Mij verschuldigd en de knop CSV exporteren.',
+  'help.ctx.trip-costs.bullet.5':
+    'De rechterkolom is het antwoord: Afrekenen somt op wie wie betaalt, Saldi toont het overschot of tekort van elke reiziger, Eindbudget wat de reis elk van hen kost, en Per categorie waar het geld heen is gegaan.',
+  'help.ctx.trip-costs.bullet.6':
+    'Een vastgelegde betaling staat in hetzelfde overzicht als een eigen rij, met Bewerken en Ongedaan maken ernaast; een uitgave heeft een potlood en een prullenbak, en de prullenbak verwijdert hem zonder te vragen.',
+  // add-expense
+  'help.guide.add-expense.title': 'Een uitgave toevoegen',
+  'help.guide.add-expense.goal': 'Leg vast wat iets heeft gekost, wie het heeft betaald en met wie het wordt gedeeld.',
+  'help.guide.add-expense.step.1':
+    'Klik rechtsboven op het tabblad Onkosten op Uitgave toevoegen. De editor gaat open, met de datum van vandaag en met iedereen al in de verdeling.',
+  'help.guide.add-expense.step.2':
+    'Typ waar het voor was in Waar was het voor?, het enige veld dat ingevuld moet worden, en het bedrag van het bonnetje in Totaalbedrag.',
+  'help.guide.add-expense.step.3':
+    'Valuta en Dag zitten onder het bedrag. Valuta begint op die van de reis; verander hem en de editor toont wat het bedrag waard is in de valuta van de reis. Dag begint op vandaag en is de dag waaronder het overzicht de uitgave groepeert.',
+  'help.guide.add-expense.step.4':
+    'Kies een Categorie. Er zijn er veertien en ze kunnen niet gewijzigd worden: de gekozen categorie is het gekleurde tabblad op de rij en de balk in Per categorie.',
+  'help.guide.add-expense.step.5':
+    'Kies onder Wie heeft betaald? de persoon die het geld werkelijk heeft voorgeschoten. Jij staat voorgeselecteerd; Nog niemand heeft betaald legt het bedrag vast zonder dat iemand ervoor verschuldigd is, en Meerdere personen hebben betaald verdeelt de rekening over meerdere betalers.',
+  'help.guide.add-expense.step.6':
+    'Split begint op Equally met iedereen erbij, en bij elke naam staat het aandeel dat eruit komt. Klik op Uitgave toevoegen om op te slaan.',
+  'help.guide.add-expense.result':
+    'De uitgave staat in het overzicht onder zijn dag, meegeteld in Totale reisuitgaven, en de afrekenkolom heeft opnieuw berekend wie wie verschuldigd is.',
+  'help.guide.add-expense.tip.1':
+    'Zoals hij opengaat, staat de uitgave in de valuta van de reis, met de datum van vandaag en gelijk verdeeld over iedereen: alleen de naam en het bedrag moeten echt worden ingevuld.',
+  'help.guide.add-expense.tip.2':
+    'De ± naast het bedrag maakt van de uitgave een terugbetaling. Een negatief totaal geeft geld terug in plaats van het te nemen, en de verdeling loopt de andere kant op.',
+  'help.guide.add-expense.tip.3':
+    'Bon / factuur bijvoegen onderaan neemt afbeeldingen en PDF-bestanden. Ze worden geüpload als je opslaat, komen in de Bestanden van de reis terecht, en naast de naam in de lijst verschijnt een chip Bonnetjes.',
+  // expense-payers
+  'help.guide.expense-payers.title': 'Zeggen wie de rekening heeft betaald',
+  'help.guide.expense-payers.goal': 'Leg vast wie een uitgave heeft voorgeschoten, de andere helft van de afrekensom.',
+  'help.guide.expense-payers.step.1':
+    'Open een uitgave met het potlood naast zijn rij en kijk naar Wie heeft betaald?. Eén persoon heeft betaald is de standaard: het uitklapmenu noemt de ene persoon die het geld heeft voorgeschoten.',
+  'help.guide.expense-payers.step.2':
+    'Nog niemand heeft betaald, de eerste vermelding van dat uitklapmenu, legt het bedrag vast zonder dat iemand iets verschuldigd is. De uitgave telt toch mee in Totale reisuitgaven.',
+  'help.guide.expense-payers.step.3':
+    'Meerdere personen hebben betaald, de link naast het label, opent een rij per reiziger. Voeg degenen toe die hebben betaald en typ wat ieder van hen heeft ingelegd; de bedragen moeten samen optellen tot het totaal.',
+  'help.guide.expense-payers.step.4':
+    'Een uitgave die niemand heeft betaald, krijgt op zijn rij de markering Onvoltooid en wordt meegeteld in de kaart Openstaand bedrag, waar vastgelegde maar niet afgerekende uitgaven samenkomen.',
+  'help.guide.expense-payers.result':
+    'Wie heeft betaald bepaalt wie terugkrijgt, de verdeling bepaalt wie betaalt, en Saldi is het verschil tussen die twee.',
+  'help.guide.expense-payers.tip.1':
+    'Wie heeft betaald? en Split staan los van elkaar: je kunt een diner betalen waar je niet bij was, en meegeteld worden in de verdeling van een diner dat je niet hebt betaald.',
+  'help.guide.expense-payers.tip.2':
+    'Met meerdere betalers moeten de bedragen optellen tot het totaal. Voeg er nog een toe en de anderen schikken zich eromheen; zolang ze niet kloppen, zegt de editor De bedragen van de betalers moeten optellen tot het totaal en slaat niet op.',
+  'help.guide.expense-payers.tip.3':
+    'Een betaler verwijderen verwijdert de uitgave niet: het bedrag blijft in Totale reisuitgaven en de rij wordt Onvoltooid.',
+  // split-expense
+  'help.guide.split-expense.title': 'Een rekening over de reizigers verdelen',
+  'help.guide.split-expense.goal':
+    'Bepaal wie voor een uitgave verschuldigd is: iedereen gelijk, per bedrag, of regel voor regel van het bonnetje.',
+  'help.guide.split-expense.step.1':
+    'In de uitgave-editor somt Split elke reiziger op. Klik op een naam om hem buiten deze uitgave te laten; een uitgesloten reiziger toont Niet inbegrepen en is er niets voor verschuldigd.',
+  'help.guide.split-expense.step.2':
+    'Equally is de standaard: elke opgenomen reiziger krijgt hetzelfde aandeel, en de regel onder de lijst zegt over hoeveel het wordt verdeeld en op hoeveel elk aandeel uitkomt.',
+  'help.guide.split-expense.step.3':
+    'Custom vervangt de aandelen door bedragvelden. Typ wat elke reiziger verschuldigd is; de regel eronder telt mee en wordt groen bij Verdeling klopt met het totaal. Er wordt niet opgeslagen zolang het niet klopt.',
+  'help.guide.split-expense.step.4':
+    'Ticket verdeelt het bonnetje regel voor regel: Item toevoegen, dan per regel een naam en een prijs, en onder Verdeeld over: de reizigers die die regel delen.',
+  'help.guide.split-expense.step.5':
+    'Aandeel per persoon onder de regels toont wat elke reiziger uiteindelijk verschuldigd is, en Totaalbedrag bovenaan wordt uit de regels opgeteld. Klik op Opslaan.',
+  'help.guide.split-expense.result':
+    'De verdeling is waaruit elk saldo wordt opgebouwd. Ze wordt met de uitgave opgeslagen en kan later worden gewijzigd zonder iets anders aan te raken.',
+  'help.guide.split-expense.tip.1':
+    'Een reiziger die je eruit laat toont Niet inbegrepen en is niets verschuldigd voor deze ene uitgave; de anderen nemen zijn aandeel over.',
+  'help.guide.split-expense.tip.2':
+    'Equally klopt tot op de cent: de overgebleven cent rouleert van uitgave naar uitgave, zodat niet altijd dezelfde hem betaalt.',
+  'help.guide.split-expense.tip.3':
+    'De modus Ticket telt Totaalbedrag zelf op en maakt het veld grijs: de regels van het bonnetje zijn het totaal.',
+  // expense-currency
+  'help.guide.expense-currency.title': 'Een uitgave in een andere valuta invoeren',
+  'help.guide.expense-currency.goal': 'Voer in wat er echt op het bonnetje staat en laat TREK de koers vasthouden.',
+  'help.guide.expense-currency.step.1':
+    'Open Uitgave toevoegen en vul de naam en het bedrag precies in zoals het bonnetje het zegt, het getal zelf en niet een omrekening ervan.',
+  'help.guide.expense-currency.step.2':
+    'Open Valuta en kies de valuta van het bonnetje. De lijst bevat elke code die TREK kent en is doorzoekbaar: typ de drie letters.',
+  'help.guide.expense-currency.step.3':
+    'Onder de velden verschijnt een regel met wat het bedrag op dit moment waard is, gemarkeerd met live koers. Het is een voorbeeld, niet wat wordt opgeslagen.',
+  'help.guide.expense-currency.step.4':
+    'Klik op Uitgave toevoegen. De koers wordt ter plekke vastgezet: vanaf nu is deze uitgave waard wat hij waard was op de dag dat je hem invoerde.',
+  'help.guide.expense-currency.step.5':
+    'In het overzicht draagt de rij beide getallen onder de naam: wat je hebt getypt, een pijl, en waarvoor het meetelt in de valuta van de reis. Elk totaal, elk saldo en elke afrekening hierboven gebruikt het tweede.',
+  'help.guide.expense-currency.result':
+    'De uitgave houdt het bedrag en de valuta die je hebt getypt. Het overzicht toont beide, en de totalen en saldi van de reis blijven in de valuta van de reis.',
+  'help.guide.expense-currency.tip.1':
+    'De koers wordt vastgezet op het moment dat je opslaat, zodat een afgerekende schuld niet opnieuw opengaat omdat de markt een week later bewoog. Alleen het wijzigen van de valuta van de uitgave zet een nieuwe vast.',
+  'help.guide.expense-currency.tip.2':
+    'Weergavevaluta in Instellingen verandert alleen wat je leest; de opgeslagen bedragen bewegen nooit. Leeg gelaten wordt elke reis in zijn eigen valuta getoond.',
+  'help.guide.expense-currency.tip.3':
+    'De valuta van de reis zelf zit op de reis, onder Reis bewerken, en vraagt het recht Reisdetails bewerken. Hem wijzigen verankert elke vastgezette koers opnieuw in plaats van de bedragen om te rekenen naar een nieuwe munt.',
+  // filter-costs
+  'help.guide.filter-costs.title': 'Een uitgave vinden, of de uitgaven van één dag',
+  'help.guide.filter-costs.goal': 'Beperk een lang overzicht tot wat je echt zoekt.',
+  'help.guide.filter-costs.step.1':
+    'Typ in Uitgaven zoeken… boven de lijst. Het zoekt in de naam van de uitgave terwijl je typt.',
+  'help.guide.filter-costs.step.2':
+    'Alle categorieën opent de veertien categorieën. Kies er een en alleen de uitgaven van die categorie blijven over.',
+  'help.guide.filter-costs.step.3':
+    'Alle dagen somt elke dag op waarop iets is uitgegeven. Kies er een en een banner vervangt de dagkoppen door die dag, hoeveel uitgaven hij bevat en zijn totaal.',
+  'help.guide.filter-costs.step.4':
+    'De schakelaar Alles / Door mij betaald / Mij verschuldigd is jouw eigen blik op het overzicht: waarvoor jij geld hebt voorgeschoten, en waarvoor je nog altijd uit eigen zak zit.',
+  'help.guide.filter-costs.step.5':
+    'CSV exporteren aan het eind van de rij schrijft elke uitgave naar een bestand, met het oorspronkelijke bedrag, zijn valuta en het omgerekende bedrag.',
+  'help.guide.filter-costs.result':
+    'De filters werken samen, en de daggroepen tekenen zich opnieuw met hun eigen totalen voor wat overblijft.',
+  'help.guide.filter-costs.tip.1':
+    'Vastgelegde betalingen hebben geen naam en geen categorie, dus een zoekopdracht of een categoriefilter verbergt ze. Het dagfilter houdt ze, onder de dag waarop de betaling is vastgelegd.',
+  'help.guide.filter-costs.tip.2':
+    'CSV exporteren exporteert altijd elke uitgave, wat er ook op het scherm gefilterd is, één rij per uitgave.',
+  // settle-up
+  'help.guide.settle-up.title': 'Uitzoeken wie wie verschuldigd is, en het afrekenen',
+  'help.guide.settle-up.goal':
+    'Maak van een stapel gedeelde uitgaven het kleinste aantal overboekingen dat iedereen gelijk zet, en leg ze vast zodra ze gebeuren.',
+  'help.guide.settle-up.step.1':
+    'De kaart Afrekenen in de rechterkolom somt de overboekingen op die iedereen gelijk zouden zetten: wie wie betaalt, en hoeveel. Het getal naast de titel is hoeveel er nog openstaan.',
+  'help.guide.settle-up.step.2':
+    'Afrekenen naast een overboeking legt hem als gedaan vast. De stroom verdwijnt van de kaart en de saldi tekenen zich opnieuw.',
+  'help.guide.settle-up.step.3':
+    'De vastgelegde overboeking is een rij in het overzicht, onder de dag waarop hij plaatsvond, gemarkeerd als Betaling met de twee reizigers en het bedrag.',
+  'help.guide.settle-up.step.4':
+    'Naast die rij corrigeert het potlood een betaling en Ongedaan maken neemt hem terug, en de overboeking keert terug naar de kaart Afrekenen.',
+  'help.guide.settle-up.step.5':
+    'Betaling toevoegen in de kop van de kaart legt een overboeking vast die geen suggestie volgde. Kies Van en Aan, het Bedrag, de valuta ervan en de dag waarop hij plaatsvond.',
+  'help.guide.settle-up.step.6':
+    'Afrekenen in de kop bovenaan het scherm legt alle openstaande overboekingen in één keer vast, zoals een groep aan het eind van een reis alles gelijktrekt.',
+  'help.guide.settle-up.result':
+    'Elke vastgelegde overboeking is een rij in het overzicht en een regel minder op de kaart Afrekenen. Als de kaart Iedereen is quitte toont, is de reis betaald.',
+  'help.guide.settle-up.tip.1':
+    'De kaart toont het kleinste aantal overboekingen, niet elke schuld: drie mensen die elkaar in een kring verschuldigd zijn, vallen samen tot een of twee betalingen.',
+  'help.guide.settle-up.tip.2':
+    'Afrekenen legt een overboeking vast, het verplaatst geen geld. Stuur hem via het middel dat je gebruikt en klik er daarna op.',
+  'help.guide.settle-up.tip.3':
+    'Een betaling kan in elke valuta gebeuren, dus een schuld in yen in euro betalen is normaal: het dialoogvenster heeft zijn eigen valutakiezer en zet ook die koers vast.',
+  // final-budget
+  'help.guide.final-budget.title': 'Zien wat de reis elke reiziger heeft gekost',
+  'help.guide.final-budget.goal':
+    'Lees de kant per persoon van het overzicht: het saldo van vandaag, en de echte kosten per persoon.',
+  'help.guide.final-budget.step.1':
+    'Saldi toont de positie van elke reiziger: een groene balk naar rechts als de reis hem iets verschuldigd is, een rode balk naar links als hij de reis iets verschuldigd is, en het bedrag naast de naam.',
+  'help.guide.final-budget.step.2':
+    'Eindbudget daaronder beantwoordt een andere vraag: niet wie op dit moment wat verschuldigd is, maar wat de reis elke reiziger kost zodra alles is terugbetaald.',
+  'help.guide.final-budget.step.3':
+    'Klik op een naam om de rekensom te openen: Betaalde uitgaven, daaronder Terugbetalingen netto en Openstaande terugbetalingen.',
+  'help.guide.final-budget.step.4':
+    'Onder elke regel zitten de rijen waaruit hij bestaat: de uitgaven die die reiziger heeft betaald, de al vastgelegde overboekingen en de nog openstaande. Samen zijn ze precies de regel erboven.',
+  'help.guide.final-budget.result':
+    'Saldi is wie er vandaag boven of onder zit; Eindbudget is wat de reis uiteindelijk elk van jullie kost zodra alles is terugbetaald.',
+  'help.guide.final-budget.tip.1':
+    'Een betaling vastleggen verandert niemands eindbudget. Het verplaatst alleen een bedrag van de openstaande terugbetalingen naar de terugbetalingen netto.',
+  'help.guide.final-budget.tip.2':
+    'Een uitgave zonder betaler blijft buiten beide kaarten, net zoals hij buiten de afrekensuggesties blijft.',
+  // expense-from-booking
+  'help.guide.expense-from-booking.title': 'Van een boeking een uitgave maken',
+  'help.guide.expense-from-booking.goal':
+    'Hang wat een vlucht, een hotel of een plek echt heeft gekost aan het item waar het bij hoort.',
+  'help.guide.expense-from-booking.step.1':
+    'Open de boeking op het tabblad Transport of Boekingen en klik op zijn potlood.',
+  'help.guide.expense-from-booking.step.2':
+    'Scroll naar het blok Kosten onderaan het formulier. Zolang er niets gekoppeld is, biedt het Kostenpost aanmaken aan en zegt het dat het eerst de boeking opslaat.',
+  'help.guide.expense-from-booking.step.3':
+    'Klik op Kostenpost aanmaken. De boeking wordt opgeslagen, het formulier gaat dicht, en de Onkosteneditor gaat open met de titel van de boeking als naam en zijn type al gekoppeld aan een categorie.',
+  'help.guide.expense-from-booking.step.4':
+    'Vul het bedrag, wie heeft betaald en de verdeling in zoals bij elke uitgave, en sla op. Als je de boeking opnieuw opent, staat hij onder Gekoppelde kostenpost, met een potlood om hem te bewerken en een prullenbak om hem te verwijderen.',
+  'help.guide.expense-from-booking.result':
+    'De boeking draagt zijn kosten, en de uitgave is een gewone rij op het tabblad Onkosten, met een betaler, een verdeling en een valuta zoals elke andere.',
+  'help.guide.expense-from-booking.tip.1':
+    'De boeking verwijderen verwijdert ook zijn gekoppelde kostenpost. Kostenpost verwijderen in het blok Kosten van de boeking doet het omgekeerde: de kostenpost gaat weg, de boeking blijft.',
+  'help.guide.expense-from-booking.tip.2':
+    'Een plek heeft hetzelfde blok in zijn formulier, waar Kostenpost aanmaken eerst de plek opslaat.',
+
+  // ── Screen: trip-transports ───────────────────────────────────────────────────────────
+  'help.ctx.trip-transports.title': 'Transport',
+  'help.ctx.trip-transports.summary':
+    'Alles wat je tussen de stops vervoert: vluchten, treinen, bussen, auto’s, taxi’s, fietsen, cruises, veerboten en de verbindingen met openbaar vervoer die TREK voor je opzoekt. Het tabblad is de lijst ervan; ze worden ook in het plan gemaakt en gelezen, en op de kaart getekend.',
+  'help.ctx.trip-transports.bullet.1':
+    'Het tabblad houdt alleen de ritten. Accommodatie, restaurants, evenementen en tickets wonen onder Boekingen, zodat dezelfde vermelding nooit twee keer opduikt.',
+  'help.ctx.trip-transports.bullet.2':
+    'De werkbalk telt ze allemaal onder Alles en geeft elk gebruikt type een eigen chip met een eigen aantal, Vlucht, Trein, Auto, Openbaar vervoer. Vervoer rechts voegt er met de hand een toe.',
+  'help.ctx.trip-transports.bullet.3':
+    'De kaarten komen in drie groepen, elk inklapbaar via de kop: Automatisch openbaar vervoer voor de verbindingen die het zoeken plande, dan In behandeling, dan Bevestigd.',
+  'help.ctx.trip-transports.bullet.4':
+    'Een kaart draagt de status, het type, de dagen die hij beslaat, de tijden, de Boekingscode, de route en de Luchtvaartmaatschappij met het Vluchtnr., of het Treinnr., het Perron en de Stoel. Het potlood opent hem, de prullenbak verwijdert hem na een vraag.',
+  'help.ctx.trip-transports.bullet.5':
+    'Vervoer ontstaat ook in het plan: elke dagkop heeft een plus voor Vervoer toevoegen en een tramknop voor Openbaar vervoer, en de reistijdverbinding tussen twee stops opent hetzelfde zoeken voor dat ene traject.',
+  'help.ctx.trip-transports.bullet.6':
+    'Een transport met beide uiteinden gezet tekent een lijn op de kaart. Het route-icoon op zijn rij in het dagplan zet die lijn aan, en Alle boekingsroutes tonen in de balk boven de dagen schakelt de hele reis om.',
+  // transports-list
+  'help.guide.transports-list.title': 'Het tabblad Transport lezen',
+  'help.guide.transports-list.goal': 'Weten wat de lijst je vertelt voordat je er iets aan verandert.',
+  'help.guide.transports-list.step.1':
+    'Transport is het tweede tabblad van de reis. Het houdt alleen de ritten: hotels, restaurants, evenementen en tickets staan onder Boekingen.',
+  'help.guide.transports-list.step.2':
+    'De werkbalk telt elk transport onder Alles en geeft elk gebruikt type een eigen chip met een eigen aantal. Klik op een chip om alleen dat type te houden, klik er nog eens op om hem los te laten. Meerdere chips kunnen tegelijk aan staan, en Alles ruimt ze op.',
+  'help.guide.transports-list.step.3':
+    'Automatisch openbaar vervoer is een eigen groep, de verbindingen die het ov-zoeken plande. In behandeling en Bevestigd houden alles wat met de hand is ingevoerd. De pijl naast een kop klapt een groep weg.',
+  'help.guide.transports-list.step.4':
+    'Een kaart zegt het allemaal: de statusstip met In behandeling of Bevestigd, het type, de dagen die hij beslaat met hun datums, de tijden, de Boekingscode, de route, en de Luchtvaartmaatschappij met het Vluchtnr., of het Treinnr., het Perron en de Stoel.',
+  'help.guide.transports-list.step.5':
+    'Het potlood opent het transport om te bewerken, de prullenbak verwijdert het, na een vraag die noemt wat er weggaat.',
+  'help.guide.transports-list.result':
+    'De lijst is ingeperkt tot waar je naar zocht, en elke kaart zegt in één oogopslag of de rit geboekt is.',
+  'help.guide.transports-list.tip.1':
+    'De chips en de ingeklapte groepen worden per reis onthouden, dus het tabblad gaat weer open zoals je het achterliet.',
+  'help.guide.transports-list.tip.2':
+    'Importeren vanuit bestand en AirTrail voegen zich alleen bij Vervoer in de werkbalk wanneer de server boekingsbevestigingen kan lezen en wanneer er een AirTrail-instantie verbonden is. Zonder die twee vult de lijst zich met de hand en via het ov-zoeken.',
+  // add-transport
+  'help.guide.add-transport.title': 'Vervoer aan een dag toevoegen',
+  'help.guide.add-transport.goal':
+    'Zet de rit die je van de ene stop naar de volgende brengt in de dag waarop hij plaatsvindt.',
+  'help.guide.add-transport.step.1':
+    'Elke dagkop draagt rechts vier kleine knoppen. Klik op de plus, waarvan de tooltip Vervoer toevoegen luidt. Het formulier gaat open met Datum al op die dag gezet.',
+  'help.guide.add-transport.step.2':
+    'Boekingstype kiest wat je neemt: Vlucht, Trein, Bus, Auto, Taxi, Fiets, Cruise, Veerboot of Overig. Het formulier volgt. Een vlucht krijgt op elk traject een luchthaven, een trein een keten van stations, een auto de woorden Ophalen en Inleveren en Stops onderweg.',
+  'help.guide.add-transport.step.3':
+    'Titel is het enige veld dat ingevuld moet zijn; Toevoegen blijft zonder titel grijs. Schrijf op wat je op een vertrekbord zou herkennen.',
+  'help.guide.add-transport.step.4':
+    'Van en Naar zoeken een station, een haven of een adres. Typ minstens drie letters en kies een resultaat uit de lijst. Een naam die alleen getypt is draagt geen coördinaten en tekent dus niets op de kaart.',
+  'help.guide.add-transport.step.5':
+    'Datum en Starttijd zeggen wanneer hij rijdt, Einddatum en Eindtijd wanneer hij voorbij is; een rit die de volgende dag aankomt neemt daar de volgende dag. Boekingscode, Status met In behandeling of Bevestigd, en Notities zijn optioneel.',
+  'help.guide.add-transport.step.6': 'Klik op Toevoegen.',
+  'help.guide.add-transport.result':
+    'Het transport is een rij op de dag, op zijn tijd tussen de stops, en een kaart in het tabblad Transport onder In behandeling of Bevestigd.',
+  'help.guide.add-transport.tip.1':
+    'De rij belandt waar zijn starttijd hem zet, na de laatste stop die eerder begint. Zijn greep sleept hem overal anders in de dag naartoe, of naar een andere dag.',
+  'help.guide.add-transport.tip.2':
+    'Bestand bijvoegen onder Bestanden neemt het ticket, en Kostenpost aanmaken onder Kosten bewaart de boeking en opent de Onkosten-editor voor de prijs.',
+  'help.guide.add-transport.tip.3':
+    'Reizigers markeert wie er mee gaat op deze rit. Zodra één transport reizigers heeft, laat de werkbalk van het tabblad hun avatars groeien en filtert hij de lijst erop.',
+  // plan-transit
+  'help.guide.plan-transit.title': 'Een ov-verbinding plannen',
+  'help.guide.plan-transit.goal':
+    'Laat TREK de echte treinen en bussen tussen twee punten van een dag opzoeken en zet die je kiest in het plan.',
+  'help.guide.plan-transit.step.1':
+    'Klik in de dagkop op de tramknop, Openbaar vervoer. Het zoeken gaat open voor die dag.',
+  'help.guide.plan-transit.step.2':
+    'Van en Naar nemen een halte of een station. Zolang het veld leeg is worden de eigen stops van de dag aangeboden; vanaf twee letters worden in plaats daarvan de stations van de dienstregeling doorzocht. Wisselen tussen de twee velden draait de verbinding om.',
+  'help.guide.plan-transit.step.3':
+    'Vertrek of Aankomst met een tijd zegt wanneer je wilt reizen, en Beste route, Minder overstappen of Minder lopen zegt hoe de antwoorden geordend moeten worden.',
+  'help.guide.plan-transit.step.4':
+    'De chips eronder zeggen welke vervoerswijzen gebruikt mogen worden: Trein, Metro, Tram, Bus, Veerboot en Kabelbaan. Zet er een uit om hem weg te laten, minstens één blijft aan. Klik dan op Zoeken.',
+  'help.guide.plan-transit.step.5':
+    'Elk resultaat geeft vertrek en aankomst, hoe lang het duurt, hoeveel keer overstappen en hoeveel lopen, en de lijnen in hun eigen kleuren. Klik er een aan om hem halte voor halte uit te klappen, met de perrons en de stukken lopen tussen de lijnen.',
+  'help.guide.plan-transit.step.6': 'Klik op Toevoegen aan dag.',
+  'help.guide.plan-transit.result':
+    'De verbinding is een rij op de dag met haar lijnen, haar overstappen en haar looptijd, en een kaart in het tabblad Transport onder Automatisch openbaar vervoer.',
+  'help.guide.plan-transit.tip.1':
+    'De verbindingen komen van Transitous, een vrije gemeenschapsdienst op publieke dienstregelingsdata: geen sleutel, geen account. Een beheerder kan het zoeken in plaats daarvan op Google richten.',
+  'help.guide.plan-transit.tip.2':
+    'Niets gevonden? De feeds dekken een regio en een periode. Probeer een andere tijd, zet meer vervoerswijzen aan, of kies een station in plaats van de plek zelf. Het bericht noemt de dienst die antwoordde.',
+  'help.guide.plan-transit.tip.3':
+    'Hetzelfde zoeken gaat open voor één traject: klik op de reistijdverbinding tussen twee stops en kies Openbaar vervoer. Van, Naar en de vertrektijd zijn al voor je ingevuld.',
+  // change-transit-route
+  'help.guide.change-transit-route.title': 'Een geplande verbinding openen en wijzigen',
+  'help.guide.change-transit-route.goal':
+    'De verbinding halte voor halte lezen, hernoemen, of de route opnieuw laten opzoeken.',
+  'help.guide.change-transit-route.step.1':
+    'In het tabblad Transport zitten de geplande verbindingen onder Automatisch openbaar vervoer. Klik op de kaart.',
+  'help.guide.change-transit-route.step.2':
+    'Duur, Overstappen en Lopen staan bovenaan. Reisplan daaronder loopt de verbinding halte voor halte door, met de perrons en de stukken lopen tussen de lijnen.',
+  'help.guide.change-transit-route.step.3':
+    'Route wijzigen draait het zoeken opnieuw, al gevuld met de twee uiteinden van deze verbinding en met haar dag.',
+  'help.guide.change-transit-route.step.4':
+    'Kies een andere verbinding en klik op Toevoegen aan dag; die neemt de plaats van de oude in. Details bewerken, naast Route wijzigen, opent in plaats daarvan het gewone vervoersformulier, waar de Boekingscode, de Status, de reizigers en de bestanden wonen.',
+  'help.guide.change-transit-route.result':
+    'De ov-reis draagt het nieuwe reisplan, en haar kaart in het tabblad Transport toont de nieuwe lijnen en tijden.',
+  'help.guide.change-transit-route.tip.1':
+    'De titel van de ov-reis is alleen tekst: het potlood ernaast hernoemt hem zonder de route aan te raken. Notities eronder nemen markdown en hebben een tabblad Bewerken en een tabblad Voorbeeld.',
+  'help.guide.change-transit-route.tip.2':
+    'Verwijderen onderaan de ov-reis haalt de verbinding uit de reis; de dag houdt zijn stops.',
+  // leg-travel-mode
+  'help.guide.leg-travel-mode.title': 'Wijzigen hoe één traject wordt afgelegd',
+  'help.guide.leg-travel-mode.goal':
+    'Eén traject van een dag die verder met de auto gaat te voet doen, of dat traject aan het ov-zoeken overlaten.',
+  'help.guide.leg-travel-mode.step.1':
+    'De verbindingsstukken tussen de stops verschijnen pas als de route van de dag aan staat. Klik op de dag om hem te openen, dan op Route onder zijn stops.',
+  'help.guide.leg-travel-mode.step.2':
+    'Elk verbindingsstuk noemt de reistijd en de afstand van dat traject, met het icoon van de wijze waarin het berekend is: een auto voor rijden, een voet voor lopen.',
+  'help.guide.leg-travel-mode.step.3':
+    'Klik op het verbindingsstuk. Het menu biedt Auto en Lopen, Openbaar vervoer, en Dagstandaard gebruiken.',
+  'help.guide.leg-travel-mode.step.4':
+    'Kies Lopen. Alleen dit traject verandert; de rest van de dag houdt zijn eigen wijze.',
+  'help.guide.leg-travel-mode.result':
+    'Het traject toont het voeticoon en zijn looptijd, en de andere trajecten van de dag houden de wijze van de dag.',
+  'help.guide.leg-travel-mode.tip.1':
+    'De wijze hoort bij het traject, niet bij de dag: de knoppen Auto en Lopen van de hele dag overschrijven nooit een traject dat je met de hand hebt gezet. Dagstandaard gebruiken geeft het traject aan hen terug.',
+  'help.guide.leg-travel-mode.tip.2':
+    'Openbaar vervoer in hetzelfde menu opent het verbindingszoeken voor precies dit traject, met beide uiteinden en de vertrektijd al ingevuld.',
+  'help.guide.leg-travel-mode.tip.3':
+    'De tijden komen van een publieke router over echte wegen en voetpaden. Een traject dat hij niet kan beantwoorden houdt zijn rechte lijn en toont geen tijd.',
+  // edit-transport
+  'help.guide.edit-transport.title': 'Vervoer wijzigen of verwijderen',
+  'help.guide.edit-transport.goal':
+    'Een tijd, een perron of een boekingscode rechtzetten, of de rit uit de reis halen.',
+  'help.guide.edit-transport.step.1': 'In het dagplan is een transport een gekleurde rij tussen de stops. Klik erop.',
+  'help.guide.edit-transport.step.2':
+    'Het formulier is hetzelfde dat het aanmaakte, met Vervoer bewerken in de titelbalk. Alles kan veranderen: het type, de route, de dagen en tijden, de Boekingscode, de Status.',
+  'help.guide.edit-transport.step.3':
+    'De route van een vlucht is een keten van luchthavens, die van een trein een keten van stations. Tussenstop toevoegen zet er nog een tussenin, en elk traject houdt zijn eigen tijden en zijn eigen vlucht- of treinnummer.',
+  'help.guide.edit-transport.step.4':
+    'Klik op Bijwerken. Om het transport helemaal weg te halen, gebruik je de prullenbak op zijn kaart in het tabblad Transport en bevestig je.',
+  'help.guide.edit-transport.result':
+    'De wijziging is overal te zien waar het transport voorkomt: het tabblad Transport, de dag waarop het rijdt, en zijn lijn op de kaart.',
+  'help.guide.edit-transport.tip.1':
+    'Hetzelfde formulier gaat van twee kanten open, via het potlood op de kaart in het tabblad Transport en via de eigen rij van het transport in het dagplan. Een geplande ov-verbinding is de uitzondering: haar rij opent de ov-reis, en Details bewerken leidt daar naar dit formulier.',
+  'help.guide.edit-transport.tip.2':
+    'Een transport naar een andere dag verplaatsen heeft het formulier helemaal niet nodig: sleep zijn rij van de ene dagkaart naar de volgende.',
+  // transport-on-map
+  'help.guide.transport-on-map.title': 'Vervoer op de kaart tekenen',
+  'help.guide.transport-on-map.goal': 'Zien waar een vlucht, een autorit of een verbinding echt langsgaat.',
+  'help.guide.transport-on-map.step.1':
+    'Een transport met beide uiteinden gezet draagt een klein route-icoon op zijn rij in het dagplan. Klik erop; het label wordt Boekingsroutes verbergen.',
+  'help.guide.transport-on-map.step.2':
+    'De route wordt op de kaart getekend, met aan elk uiteinde een pilvormige markering die het icoon van het transport draagt.',
+  'help.guide.transport-on-map.step.3':
+    'Klik op een eindmarkering om de boeking te lezen zonder de kaart te verlaten: de tijden, de Luchtvaartmaatschappij en het Vluchtnr., de Boekingscode en de notities. Sluiten ruimt het blad op.',
+  'help.guide.transport-on-map.step.4':
+    'Het route-icoon in de balk boven de dagen doet de hele reis in één keer: Alle boekingsroutes tonen, en Alle boekingsroutes verbergen om ze weer op te ruimen.',
+  'help.guide.transport-on-map.step.5':
+    'Een geplande ov-verbinding heeft geen eigen icoon. Ze wordt getekend met de schakelaar Route van de dag, en daarom ruimt Alle boekingsroutes verbergen haar niet op zolang de route van die dag nog aan staat.',
+  'help.guide.transport-on-map.result':
+    'De routes liggen op de kaart met aan elk uiteinde een markering, en ze blijven daar tot je ze weer uitzet.',
+  'help.guide.transport-on-map.tip.1':
+    'Een vlucht, een cruise en een veerboot tekenen als een boog, een auto, een bus, een taxi en een fiets volgen de echte wegen, en een trein of een geplande verbinding loopt door de stations waar hij stopt.',
+  'help.guide.transport-on-map.tip.2':
+    'Een bevestigde boeking is een doorgetrokken lijn, een boeking in behandeling een gestippelde. De instelling Routelabels voor boekingen zet de luchthavencode of de stationsnaam in de eindmarkeringen.',
+  'help.guide.transport-on-map.tip.3':
+    'Alle boekingsroutes tonen is een schone lei, geen laag: het gooit weg wat de losse iconen hadden gezet, dus twee keer drukken laat je met alles aan of alles uit achter.',
 };
 
 export default help;

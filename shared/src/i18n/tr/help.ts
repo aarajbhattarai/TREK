@@ -3210,6 +3210,345 @@ const help: TranslationStrings = {
     'Bir konaklama rezervasyonunu silmek gecelerini de gün planından çıkarır ve ona bağlı olan harcamayı kaldırır.',
   'help.guide.delete-booking.tip.2':
     'Eklenmiş olan belgeler gezinin Dosyalar sekmesinde kalır; yalnızca rezervasyona olan bağları gider.',
+
+  // ── Screen: trip-costs ────────────────────────────────────────────────────────────────
+  'help.ctx.trip-costs.title': 'Maliyetler',
+  'help.ctx.trip-costs.summary':
+    'Seyahatin parası: her harcama tarihli bir defter olarak, parayı kimin verdiği ve kimin borçlu olduğu, fiş hangi para birimindeyse o para biriminde, ve sağ sütunda, her şeyin yeniden denk olması için kimin kime ödemesi gerektiği.',
+  'help.ctx.trip-costs.bullet.1':
+    'Üstte dört kart: Borcunuz ve Size borçlu hesaplaşmanın kendi tarafınız, Bekleyen tutar kaydedilmiş ama henüz ödeyeni olmayan şey, Toplam seyahat harcaması ise her şeyi toplar ve altında Sizin payınız ile Siz ödediniz yer alır.',
+  'help.ctx.trip-costs.bullet.2':
+    'Sağ üstteki Harcama ekle düzenleyiciyi açar; yanındaki Hesaplaş açık olan bütün transferleri tek seferde kaydeder.',
+  'help.ctx.trip-costs.bullet.3':
+    'Defter güne göre gruplanır, en yenisi önce, o günün toplamı sağda. Bir satır kategoriyi renkli bir sekme olarak, adı, ödeyen pullarını, notu ve tutarı taşır; bölüşüm sizi artıda ya da ekside bırakıyorsa ayrıca verdiniz veya aldınız ibaresini taşır.',
+  'help.ctx.trip-costs.bullet.4':
+    'Listenin üstünde Harcamalarda ara…, bir kategori filtresi, bir gün filtresi, Tümü / Benim ödediklerim / Bana borçlu anahtarı ve CSV dışa aktar düğmesi durur.',
+  'help.ctx.trip-costs.bullet.5':
+    'Sağ sütun cevaptır: Hesaplaş kimin kime ödediğini listeler, Bakiyeler her yolcunun fazlasını ya da eksiğini gösterir, Nihai bütçe seyahatin her birine kaça mal olduğunu, Kategoriye göre ise paranın nereye gittiğini gösterir.',
+  'help.ctx.trip-costs.bullet.6':
+    'Kaydedilmiş bir ödeme aynı defterde kendi satırı olarak durur, yanında Düzenle ve Geri al ile; bir harcamanın kalemi ve çöp kutusu vardır ve çöp kutusu onu sormadan siler.',
+  // add-expense
+  'help.guide.add-expense.title': 'Harcama ekleyin',
+  'help.guide.add-expense.goal': 'Bir şeyin kaça mal olduğunu, kimin ödediğini ve kimlerle paylaşıldığını kaydedin.',
+  'help.guide.add-expense.step.1':
+    'Maliyetler sekmesinin sağ üstündeki Harcama ekle düğmesine tıklayın. Düzenleyici, bugünün tarihiyle ve herkes bölüşüme dahil olarak açılır.',
+  'help.guide.add-expense.step.2':
+    'Ne için olduğunu, doldurulması zorunlu tek alan olan Ne içindi? alanına, fişteki rakamı da Toplam tutar alanına yazın.',
+  'help.guide.add-expense.step.3':
+    'Para birimi ve Gün tutarın altında durur. Para birimi seyahatin kendi para biriminden başlar; değiştirin, düzenleyici tutarın seyahat para biriminde ne ettiğini gösterir. Gün bugünden başlar ve defter harcamayı onun altında gruplar.',
+  'help.guide.add-expense.step.4':
+    'Bir Kategori seçin. On dört tane vardır ve değiştirilemezler: seçtiğiniz kategori satırdaki renkli sekme ve Kategoriye göre içindeki çubuktur.',
+  'help.guide.add-expense.step.5':
+    'Kim ödedi? altında parayı gerçekten veren kişiyi seçin. Siz önceden seçilidir; Henüz kimse ödemedi tutarı kimseyi borçlu kılmadan kaydeder, Birden fazla kişi ödedi ise hesabı birkaç ödeyen arasında böler.',
+  'help.guide.add-expense.step.6':
+    'Split, herkes dahil olacak şekilde Equally ile başlar ve her adın yanında düşen pay görünür. Kaydetmek için Harcama ekle düğmesine tıklayın.',
+  'help.guide.add-expense.result':
+    'Harcama kendi gününün altında deftere girer, Toplam seyahat harcaması içine sayılır ve hesaplaşma sütunu kimin kime borçlu olduğunu yeniden hesaplar.',
+  'help.guide.add-expense.tip.1':
+    'Açıldığı gibi bırakılırsa harcama seyahatin para biriminde, bugünün tarihli ve herkes arasında eşit bölüşülmüş olur: gerçekten doldurulması gereken yalnızca ad ve tutardır.',
+  'help.guide.add-expense.tip.2':
+    'Tutarın yanındaki ±, harcamayı iadeye çevirir. Eksi bir toplam para almak yerine para geri verir ve bölüşüm ters yönde işler.',
+  'help.guide.add-expense.tip.3':
+    'Aşağıdaki Fiş / fatura ekle görselleri ve PDF dosyalarını alır. Kaydettiğinizde yüklenirler, seyahatin Dosyalar bölümüne düşerler ve listede adın yanında bir Fişler rozeti belirir.',
+  // expense-payers
+  'help.guide.expense-payers.title': 'Hesabı kimin ödediğini belirtin',
+  'help.guide.expense-payers.goal':
+    'Bir harcama için cebinden parayı kimin çıkardığını kaydedin, hesaplaşma matematiğinin diğer yarısı.',
+  'help.guide.expense-payers.step.1':
+    'Satırının yanındaki kalemle bir harcamayı açın ve Kim ödedi? alanına bakın. Tek kişi ödedi varsayılandır: açılır liste parayı veren tek kişiyi adlandırır.',
+  'help.guide.expense-payers.step.2':
+    'O listenin ilk girdisi olan Henüz kimse ödemedi, tutarı kimseyi bir şeye borçlu kılmadan kaydeder. Harcama yine de Toplam seyahat harcaması içine sayılır.',
+  'help.guide.expense-payers.step.3':
+    'Etiketin yanındaki bağlantı olan Birden fazla kişi ödedi, her yolcu için bir satır açar. Ödeyenleri ekleyin ve her birinin ne kadar koyduğunu yazın; tutarların toplamı toplam tutarı vermelidir.',
+  'help.guide.expense-payers.step.4':
+    'Kimsenin ödemediği bir harcama satırında Tamamlanmadı olarak işaretlenir ve kaydedilmiş ama hesaplaşılmamış harcamaların toplandığı Bekleyen tutar kartına sayılır.',
+  'help.guide.expense-payers.result':
+    'Kimin ödediği kime geri ödeneceğini belirler, bölüşüm kimin ödeyeceğini belirler ve Bakiyeler ikisi arasındaki farktır.',
+  'help.guide.expense-payers.tip.1':
+    'Kim ödedi? ve Split birbirinden bağımsızdır: katılmadığınız bir yemeği ödeyebilir, ödemediğiniz bir yemeğin bölüşümüne girebilirsiniz.',
+  'help.guide.expense-payers.tip.2':
+    'Birkaç ödeyen varken tutarların toplamı toplam tutarı vermelidir. Bir kişi daha ekleyin, diğerleri onun etrafında yeniden düzenlenir; tutmadıkları sürece düzenleyici Ödeyenlerin tutarları toplamı toplam tutar olmalıdır der ve kaydetmeyi reddeder.',
+  'help.guide.expense-payers.tip.3':
+    'Bir ödeyeni kaldırmak harcamayı kaldırmaz: tutar Toplam seyahat harcaması içinde kalır ve satır Tamamlanmadı olur.',
+  // split-expense
+  'help.guide.split-expense.title': 'Bir hesabı yolcular arasında bölüşün',
+  'help.guide.split-expense.goal':
+    'Bir harcamanın kime borç yazılacağına karar verin: herkes eşit olarak, tutara göre ya da fişten satır satır.',
+  'help.guide.split-expense.step.1':
+    'Harcama düzenleyicisinde Split her yolcuyu listeler. Birini bu harcamanın dışında bırakmak için adına tıklayın; dışarıda bırakılan yolcu Dahil değil olarak görünür ve onun için hiçbir şey borçlu olmaz.',
+  'help.guide.split-expense.step.2':
+    'Equally varsayılandır: dahil edilen her yolcu aynı payı alır ve listenin altındaki satır kaç kişiye bölündüğünü ve her payın ne ettiğini söyler.',
+  'help.guide.split-expense.step.3':
+    'Custom payları tutar alanlarıyla değiştirir. Her yolcunun ne kadar borçlu olduğunu yazın; alttaki satır siz yazdıkça toplamı sayar ve Bölüşüm toplamla eşleşiyor olunca yeşile döner. Tutmadığı sürece kaydetmez.',
+  'help.guide.split-expense.step.4':
+    'Ticket fişi satır satır böler: Kalem ekle, sonra her satıra bir ad ve bir fiyat, ve Bölüşülüyor: altında o satırı paylaşan yolcular.',
+  'help.guide.split-expense.step.5':
+    'Satırların altındaki Kişi başı pay her yolcunun sonunda ne kadar borçlu olduğunu gösterir, üstteki Toplam tutar ise satırlardan toplanır. Kaydet düğmesine tıklayın.',
+  'help.guide.split-expense.result':
+    'Bölüşüm her bakiyenin üzerine kurulduğu temeldir. Harcamayla birlikte kaydedilir ve başka hiçbir şeye dokunmadan sonradan değiştirilebilir.',
+  'help.guide.split-expense.tip.1':
+    'Dışarıda bıraktığınız bir yolcu Dahil değil olarak görünür ve yalnızca bu harcama için hiçbir şey borçlu olmaz; diğerleri onun payını üstlenir.',
+  'help.guide.split-expense.tip.2':
+    'Equally sente kadar kusursuzdur: artan sent harcamadan harcamaya dönerek geçer, böylece onu hep aynı kişi ödemez.',
+  'help.guide.split-expense.tip.3':
+    'Ticket kipi Toplam tutar alanını kendisi toplar ve alanı soluklaştırır: fişin satırları toplamı oluşturur.',
+  // expense-currency
+  'help.guide.expense-currency.title': 'Başka bir para biriminde harcama girin',
+  'help.guide.expense-currency.goal': 'Fişte gerçekten yazan neyse onu girin, kuru TREK tutsun.',
+  'help.guide.expense-currency.step.1':
+    'Harcama ekle düğmesine tıklayın ve adı ile tutarı tam olarak fişte yazdığı gibi doldurun, rakamın kendisini, çevrilmiş halini değil.',
+  'help.guide.expense-currency.step.2':
+    'Para birimi alanını açın ve fişin para birimini seçin. Liste TREK’in bildiği her kodu taşır ve içinde arama yapılabilir: üç harfi yazın.',
+  'help.guide.expense-currency.step.3':
+    'Alanların altında tutarın şu anda ne ettiğini gösteren, anlık kur olarak işaretlenmiş bir satır belirir. Bu bir önizlemedir, saklanan şey değildir.',
+  'help.guide.expense-currency.step.4':
+    'Harcama ekle düğmesine tıklayın. Kur o anda dondurulur: bundan sonra bu harcama, girdiğiniz gün ne ediyorsa o kadar eder.',
+  'help.guide.expense-currency.step.5':
+    'Defterde satır adın altında iki rakamı da taşır: yazdığınız tutar, bir ok ve seyahatin para biriminde ne saydığı. Yukarıdaki her toplam, bakiye ve hesaplaşma ikincisini kullanır.',
+  'help.guide.expense-currency.result':
+    'Harcama yazdığınız tutarı ve para birimini korur. Defter ikisini de gösterir, seyahatin toplamları ve bakiyeleri ise seyahatin para biriminde kalır.',
+  'help.guide.expense-currency.tip.1':
+    'Kur kaydettiğiniz anda dondurulur, böylece hesaplaşılmış bir borç, piyasa bir hafta sonra kımıldadı diye yeniden açılmaz. Yeni bir kuru yalnızca harcamanın para birimini değiştirmek dondurur.',
+  'help.guide.expense-currency.tip.2':
+    'Ayarlar içindeki Görüntüleme para birimi yalnızca okuduğunuzu değiştirir; saklanan tutarlar asla yerinden oynamaz. Boş bırakılırsa her seyahat kendi para biriminde gösterilir.',
+  'help.guide.expense-currency.tip.3':
+    'Seyahat para biriminin kendisi seyahatin üzerinde, Seyahati Düzenle altında yaşar ve Seyahat ayrıntılarını düzenle hakkını gerektirir. Onu değiştirmek tutarları başka bir para birimine çevirmek yerine dondurulmuş her kuru yeniden çıpalar.',
+  // filter-costs
+  'help.guide.filter-costs.title': 'Bir harcamayı ya da bir günün harcamalarını bulun',
+  'help.guide.filter-costs.goal': 'Uzun bir defteri gerçekten aradığınız şeye daraltın.',
+  'help.guide.filter-costs.step.1':
+    'Listenin üstündeki Harcamalarda ara… alanına yazın. Siz yazdıkça harcamanın adında eşleşme arar.',
+  'help.guide.filter-costs.step.2':
+    'Tüm kategoriler on dört kategoriyi açar. Birini seçin, yalnızca o kategorinin harcamaları kalır.',
+  'help.guide.filter-costs.step.3':
+    'Tüm günler bir şey harcanmış her günü listeler. Birini seçin, bir şerit gün başlıklarının yerini o günle, kaç harcama tuttuğuyla ve toplamıyla değiştirir.',
+  'help.guide.filter-costs.step.4':
+    'Tümü / Benim ödediklerim / Bana borçlu anahtarı defterin size ait görünümüdür: ne için para verdiğiniz ve hangi harcamalarda hâlâ cebinizden çıkmış durumda olduğunuz.',
+  'help.guide.filter-costs.step.5':
+    'Satırın sonundaki CSV dışa aktar her harcamayı bir dosyaya yazar; özgün tutar, para birimi ve çevrilmiş tutarla birlikte.',
+  'help.guide.filter-costs.result':
+    'Filtreler birleşir ve gün grupları, geriye ne kalırsa onun kendi toplamlarıyla yeniden çizilir.',
+  'help.guide.filter-costs.tip.1':
+    'Kaydedilmiş ödemeler ad ve kategori taşımaz, bu yüzden bir arama ya da kategori filtresi onları gizler. Gün filtresi onları, ödemenin kaydedildiği günün altında tutar.',
+  'help.guide.filter-costs.tip.2':
+    'CSV dışa aktar, ekranda ne filtrelenmiş olursa olsun her zaman her harcamayı, harcama başına bir satır olarak dışa aktarır.',
+  // settle-up
+  'help.guide.settle-up.title': 'Kimin kime borçlu olduğunu çıkarın ve hesaplaşın',
+  'help.guide.settle-up.goal':
+    'Bir yığın ortak harcamayı herkesi denkleştiren en az sayıda transfere dönüştürün ve gerçekleştikçe kaydedin.',
+  'help.guide.settle-up.step.1':
+    'Sağ sütundaki Hesaplaş kartı herkesi denkleştirecek transferleri listeler: kimin kime, ne kadar ödediğini. Başlığın yanındaki sayı kaç tanesinin hâlâ açık olduğudur.',
+  'help.guide.settle-up.step.2':
+    'Bir transferin yanındaki Hesaplaş onu yapılmış olarak kaydeder. Akış karttan kaybolur ve bakiyeler yeniden çizilir.',
+  'help.guide.settle-up.step.3':
+    'Kaydedilen transfer defterde bir satırdır, gerçekleştiği günün altında, iki yolcu ve tutarla birlikte Ödeme olarak işaretlenir.',
+  'help.guide.settle-up.step.4':
+    'O satırın yanında kalem bir ödemeyi düzeltir, Geri al onu geri alır ve transfer Hesaplaş kartına döner.',
+  'help.guide.settle-up.step.5':
+    'Kart başlığındaki Ödeme ekle, bir öneriyi izlemeyen bir transferi kaydeder. Gönderen ve Alıcı seçin, tutarı, para birimini ve gerçekleştiği günü girin.',
+  'help.guide.settle-up.step.6':
+    'Ekranın en üstündeki başlıkta yer alan Hesaplaş, açık olan bütün transferleri tek seferde kaydeder, bir grubun seyahat sonunda hesabını kapatması gibi.',
+  'help.guide.settle-up.result':
+    'Kaydedilen her transfer defterde bir satır, Hesaplaş kartında bir satır eksilmesidir. Kartta Herkesin hesabı kapalı yazdığında seyahat ödenmiş demektir.',
+  'help.guide.settle-up.tip.1':
+    'Kart her borcu değil, en az sayıda transferi gösterir: birbirine döngü halinde borçlu üç kişi bir ya da iki ödemeye iner.',
+  'help.guide.settle-up.tip.2':
+    'Hesaplaş bir transferi kaydeder, parayı taşımaz. Parayı hangi yolla gönderiyorsanız onunla gönderin, sonra tıklayın.',
+  'help.guide.settle-up.tip.3':
+    'Bir ödeme herhangi bir para biriminde yapılabilir, yani yen cinsinden bir borcu euro ile ödemek olağandır: iletişim kutusunun kendi para birimi seçicisi vardır ve o kuru da dondurur.',
+  // final-budget
+  'help.guide.final-budget.title': 'Seyahatin her yolcuya kaça mal olduğunu görün',
+  'help.guide.final-budget.goal':
+    'Defterin kişi başına düşen tarafını okuyun: bugünkü bakiye ve kişi başına gerçek maliyet.',
+  'help.guide.final-budget.step.1':
+    'Bakiyeler her yolcunun durumunu gösterir: seyahat ona borçluysa sağa doğru yeşil bir çubuk, o seyahate borçluysa sola doğru kırmızı bir çubuk ve adın yanında tutar.',
+  'help.guide.final-budget.step.2':
+    'Altındaki Nihai bütçe başka bir soruya cevap verir: şu anda kimin ne borçlu olduğunu değil, her şey geri ödendiğinde seyahatin her yolcuya kaça mal olduğunu.',
+  'help.guide.final-budget.step.3':
+    'Aritmetiği açmak için bir ada tıklayın: Ödenen harcamalar, sonra altında Net geri ödemeler ve Bekleyen geri ödemeler.',
+  'help.guide.final-budget.step.4':
+    'Her satırın altında onu oluşturan satırlar durur: o yolcunun ödediği harcamalar, kaydedilmiş transferler ve hâlâ açık olanlar. Üstlerindeki satırı tam olarak verirler.',
+  'help.guide.final-budget.result':
+    'Bakiyeler bugün kimin artıda ya da ekside olduğudur; Nihai bütçe her şey geri ödendiğinde seyahatin her birinize kaça mal olduğudur.',
+  'help.guide.final-budget.tip.1':
+    'Bir ödemeyi kaydetmek kimsenin nihai bütçesini değiştirmez. Yalnızca bir tutarı bekleyen geri ödemelerden net geri ödemelere taşır.',
+  'help.guide.final-budget.tip.2':
+    'Ödeyeni olmayan bir harcama, hesaplaşma önerilerinin dışında kaldığı gibi her iki kartın da dışında kalır.',
+  // expense-from-booking
+  'help.guide.expense-from-booking.title': 'Bir rezervasyonu harcamaya dönüştürün',
+  'help.guide.expense-from-booking.goal':
+    'Bir uçuşun, bir otelin ya da bir yerin gerçekten kaça mal olduğunu ait olduğu kayda iliştirin.',
+  'help.guide.expense-from-booking.step.1':
+    'Rezervasyonu Ulaşım ya da Rezervasyonlar sekmesinde açın ve kalemine tıklayın.',
+  'help.guide.expense-from-booking.step.2':
+    'Formun altındaki Costs bloğuna inin. Henüz hiçbir şey bağlı değilken Create expense sunar ve önce rezervasyonu kaydettiğini söyler.',
+  'help.guide.expense-from-booking.step.3':
+    'Create expense düğmesine tıklayın. Rezervasyon kaydedilir, form kapanır ve Maliyetler düzenleyicisi rezervasyonun başlığını ad olarak, türünü de bir kategoriyle eşleştirilmiş halde açar.',
+  'help.guide.expense-from-booking.step.4':
+    'Tutarı, kimin ödediğini ve bölüşümü her harcamada olduğu gibi doldurup kaydedin. Rezervasyonu yeniden açtığınızda harcama Linked expense altında görünür, düzenlemek için bir kalem ve kaldırmak için bir çöp kutusuyla.',
+  'help.guide.expense-from-booking.result':
+    'Rezervasyon maliyetini taşır ve harcama, Maliyetler sekmesinde ödeyeni, bölüşümü ve para birimiyle diğerleri gibi sıradan bir satırdır.',
+  'help.guide.expense-from-booking.tip.1':
+    'Rezervasyonu silmek bağlı harcamasını da onunla birlikte siler. Rezervasyonun Costs bloğundaki Remove expense bunun tersini yapar: harcama gider, rezervasyon kalır.',
+  'help.guide.expense-from-booking.tip.2':
+    'Bir yerin formunda da aynı blok vardır, Create expense orada önce yeri kaydeder.',
+
+  // ── Screen: trip-transports ───────────────────────────────────────────────────────────
+  'help.ctx.trip-transports.title': 'Ulaşım',
+  'help.ctx.trip-transports.summary':
+    'Sizi duraklar arasında taşıyan her şey: uçuşlar, trenler, otobüsler, arabalar, taksiler, bisikletler, gemi turları, feribotlar ve TREK’in sizin için bulduğu toplu taşıma bağlantıları. Sekme bunların listesidir; planda da oluşturulur ve okunurlar, haritaya da çizilirler.',
+  'help.ctx.trip-transports.bullet.1':
+    'Sekme yalnızca yolculukları tutar. Konaklama, restoranlar, etkinlikler ve biletler Rezervasyonlar sekmesinde yaşar, bu yüzden aynı kayıt asla iki kez görünmez.',
+  'help.ctx.trip-transports.bullet.2':
+    'Araç çubuğu hepsini Tümü altında sayar ve kullanılan her türe kendi sayısıyla kendi çipini verir: Uçuş, Tren, Araba, Toplu taşıma. Sağdaki Ulaşım elle bir tane ekler.',
+  'help.ctx.trip-transports.bullet.3':
+    'Kartlar üç grup hâlinde gelir, her biri başlığından katlanabilir: aramanın planladığı bağlantılar için Otomatik toplu taşıma, sonra Askıda olması, sonra Onaylandı.',
+  'help.ctx.trip-transports.bullet.4':
+    'Bir kart durumu, türü, kapsadığı günleri, saatleri, Rezervasyon Kodunu, rotayı ve Havayolu ile Uçuş No. ya da Tren No., Platformu ve Koltuk bilgisini taşır. Kalem onu açar, çöp kutusu bir sorudan sonra siler.',
+  'help.ctx.trip-transports.bullet.5':
+    'Ulaşım planda da oluşturulur: her gün başlığında Ulaşım ekle için bir artı ve Toplu taşıma için bir tramvay düğmesi vardır, iki durak arasındaki yolculuk süresi bağlayıcısı da aynı aramayı o tek etap için açar.',
+  'help.ctx.trip-transports.bullet.6':
+    'İki ucu da ayarlanmış bir ulaşım haritaya bir çizgi çizer. Gün planındaki satırında bulunan rota simgesi o çizgiyi açar, günlerin üstündeki araç çubuğundaki Tüm rezervasyon rotalarını göster ise bütün seyahati çevirir.',
+  // transports-list
+  'help.guide.transports-list.title': 'Ulaşım sekmesini okuyun',
+  'help.guide.transports-list.goal': 'Listede bir şey değiştirmeden önce size ne anlattığını bilin.',
+  'help.guide.transports-list.step.1':
+    'Ulaşım, seyahatin ikinci sekmesidir. Yalnızca yolculukları tutar: oteller, restoranlar, etkinlikler ve biletler Rezervasyonlar sekmesindedir.',
+  'help.guide.transports-list.step.2':
+    'Araç çubuğu her ulaşımı Tümü altında sayar ve kullanılan her türe kendi sayısıyla kendi çipini verir. Yalnızca o türü bırakmak için bir çipe tıklayın, bırakmak için tekrar tıklayın. Aynı anda birkaç çip açık olabilir, Tümü ise hepsini temizler.',
+  'help.guide.transports-list.step.3':
+    'Otomatik toplu taşıma kendi grubudur, toplu taşıma aramasının planladığı bağlantılar. Askıda olması ve Onaylandı elle girilen her şeyi tutar. Bir başlığın yanındaki ok grubu katlar.',
+  'help.guide.transports-list.step.4':
+    'Bir kart her şeyi söyler: Askıda olması ya da Onaylandı ile durum noktası, tür, kapsadığı günler ve tarihleri, saatler, Rezervasyon Kodu, rota ve Havayolu ile Uçuş No. ya da Tren No., Platformu ve Koltuk.',
+  'help.guide.transports-list.step.5':
+    'Kalem ulaşımı düzenlemek için açar, çöp kutusu ise neyin gideceğini adlandıran bir sorudan sonra siler.',
+  'help.guide.transports-list.result':
+    'Liste aradığınız şeye daraltılır ve her kart bir bakışta yolculuğun rezerve edilip edilmediğini söyler.',
+  'help.guide.transports-list.tip.1':
+    'Çipler ve katlanmış gruplar her seyahat için ayrı hatırlanır, böylece sekme bıraktığınız gibi yeniden açılır.',
+  'help.guide.transports-list.tip.2':
+    'Dosyadan içe aktar ve AirTrail araç çubuğunda Ulaşım düğmesine yalnızca sunucu rezervasyon onaylarını okuyabildiğinde ve bir AirTrail örneği bağlı olduğunda katılır. Onlar olmadan liste elle ve toplu taşıma aramasıyla doldurulur.',
+  // add-transport
+  'help.guide.add-transport.title': 'Bir güne ulaşım ekleyin',
+  'help.guide.add-transport.goal': 'Sizi bir duraktan diğerine götüren yolculuğu, gerçekleştiği güne koyun.',
+  'help.guide.add-transport.step.1':
+    'Her gün başlığı sağında dört küçük düğme taşır. İpucu Ulaşım ekle yazan artıya tıklayın. Form, Tarih zaten o güne ayarlanmış olarak açılır.',
+  'help.guide.add-transport.step.2':
+    'Rezervasyon Türü neyle gittiğinizi seçer: Uçuş, Tren, Otobüs, Araba, Taksi, Bisiklet, Dolaşmak, Feribot ya da Diğer. Form buna uyar. Bir uçuş her etapta bir havaalanı, bir tren bir istasyon zinciri, bir araba ise Alış ve İade sözcükleriyle Yol üzerindeki duraklar alanını alır.',
+  'help.guide.add-transport.step.3':
+    'Başlık doldurulması zorunlu tek alandır; onsuz Ekle gri kalır. Peron panosunda tanıyacağınız şeyi yazın.',
+  'help.guide.add-transport.step.4':
+    'İtibaren ve İle bir istasyon, bir liman ya da bir adres arar. En az üç harf yazın ve listeden bir sonuç seçin. Yalnızca yazılmış bir ad koordinat taşımaz, bu yüzden haritaya hiçbir şey çizmez.',
+  'help.guide.add-transport.step.5':
+    'Tarih ve Başlangıç zamanı ne zaman gittiğini, Bitiş tarihi ve Bitiş zamanı ne zaman bittiğini söyler; ertesi gün inen bir yolculuk orada ertesi günü alır. Rezervasyon Kodu, Askıda olması ya da Onaylandı ile Durum ve Notlar isteğe bağlıdır.',
+  'help.guide.add-transport.step.6': 'Ekle düğmesine tıklayın.',
+  'help.guide.add-transport.result':
+    'Ulaşım, gündeki bir satırdır, duraklar arasında kendi saatinde, ve Ulaşım sekmesinde Askıda olması ya da Onaylandı altında bir karttır.',
+  'help.guide.add-transport.tip.1':
+    'Satır, başlangıç saatinin koyduğu yere, daha erken başlayan son duraktan sonra iner. Tutamağı onu gün içinde başka herhangi bir yere ya da başka bir güne sürükler.',
+  'help.guide.add-transport.tip.2':
+    'Dosyalar altındaki Dosya ekle bileti alır, Costs altındaki Create expense ise rezervasyonu kaydeder ve bilet ücreti için Maliyetler düzenleyicisini açar.',
+  'help.guide.add-transport.tip.3':
+    'Yolcular bu yolculukta kimin olduğunu işaretler. Bir ulaşımın yolcuları olur olmaz sekmenin araç çubuğunda avatarları belirir ve listeyi onlara göre süzer.',
+  // plan-transit
+  'help.guide.plan-transit.title': 'Bir toplu taşıma bağlantısı planlayın',
+  'help.guide.plan-transit.goal':
+    'TREK’in bir günün iki noktası arasındaki gerçek trenleri ve otobüsleri bulmasına izin verin ve seçtiğinizi plana koyun.',
+  'help.guide.plan-transit.step.1':
+    'Gün başlığında tramvay düğmesine, Toplu taşıma, tıklayın. Arama o gün için açılır.',
+  'help.guide.plan-transit.step.2':
+    'Nereden ve Nereye bir durak ya da istasyon alır. Kutu hâlâ boşken günün kendi durakları sunulur; iki harf yazmak bunun yerine tarifedeki istasyonları arar. İki kutu arasındaki Değiştir bağlantıyı ters çevirir.',
+  'help.guide.plan-transit.step.3':
+    'Bir saatle Kalkış ya da Varış ne zaman seyahat etmek istediğinizi, En iyi rota, Daha az aktarma ya da Daha az yürüme ise yanıtların nasıl sıralanacağını söyler.',
+  'help.guide.plan-transit.step.4':
+    'Aşağıdaki çipler hangi türlerin kullanılabileceğini söyler: Tren, Metro, Tramvay, Otobüs, Vapur ve Teleferik. Birini dışarıda bırakmak için kapatın, en az biri açık kalır. Sonra Ara düğmesine tıklayın.',
+  'help.guide.plan-transit.step.5':
+    'Her sonuç kalkış ve varışı, ne kadar sürdüğünü, kaç aktarma ve ne kadar yürüme olduğunu ve hatları kendi renkleriyle verir. Durak durak açmak için birine tıklayın, peronlarla ve hatlar arasındaki yürüyüşlerle birlikte.',
+  'help.guide.plan-transit.step.6': 'Güne ekle düğmesine tıklayın.',
+  'help.guide.plan-transit.result':
+    'Bağlantı, hatlarıyla, aktarmalarıyla ve yürüme süresiyle gündeki bir satırdır, ve Ulaşım sekmesinde Otomatik toplu taşıma altında bir karttır.',
+  'help.guide.plan-transit.tip.1':
+    'Bağlantılar, açık tarife verileri üzerinde çalışan ücretsiz bir topluluk hizmeti olan Transitous’tan gelir: anahtar yok, hesap yok. Bir yönetici aramayı bunun yerine Google’a yöneltebilir.',
+  'help.guide.plan-transit.tip.2':
+    'Hiçbir şey bulunamadı mı? Akışlar bir bölgeyi ve bir dönemi kapsar. Başka bir saat deneyin, daha fazla tür açın ya da yerin kendisi yerine bir istasyon seçin. Mesaj yanıtlayan hizmeti adlandırır.',
+  'help.guide.plan-transit.tip.3':
+    'Aynı arama tek bir etap için de açılır: iki durak arasındaki yolculuk süresi bağlayıcısına tıklayın ve Toplu taşıma seçin. Nereden, Nereye ve kalkış saati sizin için doldurulur.',
+  // change-transit-route
+  'help.guide.change-transit-route.title': 'Planlanmış bir bağlantıyı açın ve değiştirin',
+  'help.guide.change-transit-route.goal':
+    'Bağlantıyı durak durak okuyun, adını değiştirin ya da rotayı yeniden arayın.',
+  'help.guide.change-transit-route.step.1':
+    'Ulaşım sekmesinde planlanmış bağlantılar Otomatik toplu taşıma altında durur. Karta tıklayın.',
+  'help.guide.change-transit-route.step.2':
+    'Süre, Aktarma ve Yürüyüş en üstte durur. Altlarındaki Güzergah bağlantıyı durak durak yürür, peronlarla ve hatlar arasındaki yürüyüşlerle birlikte.',
+  'help.guide.change-transit-route.step.3':
+    'Rotayı değiştir aramayı yeniden çalıştırır, bu bağlantının iki ucu ve günü zaten doldurulmuş olarak.',
+  'help.guide.change-transit-route.step.4':
+    'Başka bir bağlantı seçin ve Güne ekle düğmesine tıklayın; eskisinin yerini alır. Rotayı değiştir yanındaki Ayrıntıları düzenle ise onun yerine sıradan ulaşım formunu açar, Rezervasyon Kodu, Durum, yolcular ve dosyalar orada yaşar.',
+  'help.guide.change-transit-route.result':
+    'Toplu taşıma yolculuğu görünümü yeni Güzergahı taşır ve Ulaşım sekmesindeki kartı yeni hatları ve saatleri gösterir.',
+  'help.guide.change-transit-route.tip.1':
+    'Toplu taşıma yolculuğu görünümündeki başlık yalnızca metindir: yanındaki kalem rotaya dokunmadan adını değiştirir. Altındaki Notlar markdown alır ve bir Düzenle ile bir Önizleme sekmesine sahiptir.',
+  'help.guide.change-transit-route.tip.2':
+    'Toplu taşıma yolculuğu görünümünün altındaki Sil bağlantıyı seyahatten çıkarır; gün duraklarını korur.',
+  // leg-travel-mode
+  'help.guide.leg-travel-mode.title': 'Bir etabın nasıl gidildiğini değiştirin',
+  'help.guide.leg-travel-mode.goal':
+    'Bir günün, geri kalanı arabayla gidilen bir etabını yürüyün ya da o etabı toplu taşıma aramasına devredin.',
+  'help.guide.leg-travel-mode.step.1':
+    'Duraklar arasındaki bağlayıcılar yalnızca günün Rota seçeneği açıkken görünür. Günü açmak için ona tıklayın, sonra duraklarının altındaki Rota seçeneğine.',
+  'help.guide.leg-travel-mode.step.2':
+    'Her bağlayıcı o etabın yolculuk süresini ve mesafesini, rotalandığı türün simgesiyle birlikte adlandırır: sürüş için bir araba, yürüyüş için bir ayak.',
+  'help.guide.leg-travel-mode.step.3':
+    'Bağlayıcıya tıklayın. Menü Araba ve Yürüyüş, Toplu taşıma ve Günün varsayılanını kullan seçeneklerini sunar.',
+  'help.guide.leg-travel-mode.step.4': 'Yürüyüş seçin. Yalnızca bu etap değişir; günün geri kalanı kendi türünü korur.',
+  'help.guide.leg-travel-mode.result':
+    'Etap ayak simgesini ve yürüme süresini gösterir, günün diğer etapları ise günün türünü korur.',
+  'help.guide.leg-travel-mode.tip.1':
+    'Tür güne değil etaba aittir: bütün günün Araba ve Yürüyüş düğmeleri elle ayarladığınız bir etabın üzerine asla yazmaz. Günün varsayılanını kullan etabı onlara geri verir.',
+  'help.guide.leg-travel-mode.tip.2':
+    'Aynı menüdeki Toplu taşıma tam olarak bu etap için bağlantı aramasını açar, iki uç ve kalkış saati zaten doldurulmuş olarak.',
+  'help.guide.leg-travel-mode.tip.3':
+    'Süreler gerçek yollar ve yaya yolları üzerinde çalışan açık bir rota hesaplayıcıdan gelir. Yanıtlayamadığı bir etap düz çizgisini korur ve süre göstermez.',
+  // edit-transport
+  'help.guide.edit-transport.title': 'Bir ulaşımı değiştirin ya da silin',
+  'help.guide.edit-transport.goal':
+    'Bir saati, bir peronu ya da bir rezervasyon kodunu düzeltin ya da yolculuğu seyahatten çıkarın.',
+  'help.guide.edit-transport.step.1': 'Gün planında bir ulaşım, duraklar arasındaki renkli bir satırdır. Ona tıklayın.',
+  'help.guide.edit-transport.step.2':
+    'Form onu oluşturan formdur, başlık çubuğunda Ulaşımı düzenle yazar. Her şey değiştirilebilir: tür, rota, günler ve saatler, Rezervasyon Kodu, Durum.',
+  'help.guide.edit-transport.step.3':
+    'Bir uçuşun rotası havaalanları zinciri, bir trenin rotası istasyonlar zinciridir. Durak ekle araya bir tane daha koyar ve her etap kendi saatlerini ve kendi uçuş ya da tren numarasını korur.',
+  'help.guide.edit-transport.step.4':
+    'Güncelle düğmesine tıklayın. Ulaşımı tamamen kaldırmak için Ulaşım sekmesindeki kartında bulunan çöp kutusunu kullanın ve onaylayın.',
+  'help.guide.edit-transport.result':
+    'Değişiklik ulaşımın göründüğü her yerde görünür: Ulaşım sekmesinde, gittiği günde ve haritadaki çizgisinde.',
+  'help.guide.edit-transport.tip.1':
+    'Aynı form iki taraftan da açılır, Ulaşım sekmesindeki karttaki kalemden ve gün planındaki ulaşımın kendi satırından. Planlanmış bir toplu taşıma bağlantısı istisnadır: satırı Toplu taşıma yolculuğu görünümünü açar ve oradaki Ayrıntıları düzenle bu forma götürür.',
+  'help.guide.edit-transport.tip.2':
+    'Bir ulaşımı başka bir güne taşımak forma hiç ihtiyaç duymaz: satırını bir gün kartından diğerine sürükleyin.',
+  // transport-on-map
+  'help.guide.transport-on-map.title': 'Haritaya bir ulaşım çizin',
+  'help.guide.transport-on-map.goal':
+    'Bir uçuşun, bir araba yolculuğunun ya da bir bağlantının gerçekte nereden geçtiğini görün.',
+  'help.guide.transport-on-map.step.1':
+    'İki ucu da ayarlanmış bir ulaşım, gün planındaki satırında küçük bir rota simgesi taşır. Ona tıklayın; etiketi Rezervasyon rotalarını gizle olur.',
+  'help.guide.transport-on-map.step.2':
+    'Rota haritaya çizilir, her iki uçta ulaşımın simgesini taşıyan hap biçiminde bir işaretçiyle.',
+  'help.guide.transport-on-map.step.3':
+    'Haritadan ayrılmadan rezervasyonu okumak için bir uç işaretçisine tıklayın: saatler, Havayolu ve Uçuş No., Rezervasyon Kodu ve notlar. Kapat sayfayı kaldırır.',
+  'help.guide.transport-on-map.step.4':
+    'Günlerin üstündeki araç çubuğundaki rota simgesi bütün seyahati aynı anda halleder: Tüm rezervasyon rotalarını göster ve onları yeniden temizlemek için Tüm rezervasyon rotalarını gizle.',
+  'help.guide.transport-on-map.step.5':
+    'Planlanmış bir toplu taşıma bağlantısının kendi simgesi yoktur. Günün Rota anahtarıyla çizilir, bu yüzden o günün rotası hâlâ açıkken Tüm rezervasyon rotalarını gizle onu temizlemez.',
+  'help.guide.transport-on-map.result':
+    'Rotalar her iki ucunda bir işaretçiyle haritadadır ve siz onları yeniden kapatana kadar orada kalır.',
+  'help.guide.transport-on-map.tip.1':
+    'Bir uçuş, bir gemi turu ve bir feribot eğri olarak çizilir, bir araba, bir otobüs, bir taksi ve bir bisiklet gerçek yolları izler, bir tren ya da planlanmış bir bağlantı ise uğradığı istasyonlardan geçer.',
+  'help.guide.transport-on-map.tip.2':
+    'Onaylanmış bir rezervasyon düz bir çizgidir, askıdaki bir rezervasyon kesik çizgidir. Rezervasyon rota etiketleri ayarı uç işaretçilerine havaalanı kodunu ya da istasyon adını yazar.',
+  'help.guide.transport-on-map.tip.3':
+    'Tüm rezervasyon rotalarını göster bir katman değil, temiz bir sayfadır: tek tek simgelerin ayarladığını atar, bu yüzden iki kez basmak sizi ya her şey açık ya da her şey kapalı bırakır.',
 };
 
 export default help;

@@ -3279,6 +3279,346 @@ const help: TranslationStrings = {
     'Egy szállásfoglalás törlése az éjszakáit is kiveszi a napi tervből, és eltávolítja a hozzá kapcsolt költséget.',
   'help.guide.delete-booking.tip.2':
     'A csatolt dokumentumok az utazás Fájlok fülén maradnak; csak a foglaláshoz fűződő kapcsolatuk szűnik meg.',
+
+  // ── Screen: trip-costs ────────────────────────────────────────────────────────────────
+  'help.ctx.trip-costs.title': 'Költségek',
+  'help.ctx.trip-costs.summary':
+    'Az utazás pénze: minden kiadás dátumozott főkönyvként, ki tette le az asztalra és ki tartozik érte, abban a pénznemben, amiben a nyugta volt, a jobb oldali oszlopban pedig az, kinek kinek kell fizetnie, hogy megint egyenlő legyen.',
+  'help.ctx.trip-costs.bullet.1':
+    'Négy kártya felül: a Tartozol és a Neked tartoznak a te saját oldalad az elszámolásban, a Rendezetlen összeg az, ami rögzítve van, de még nincs fizetője, a Teljes utazási költség pedig mindent összead, alatta A te részed és a Te fizettél.',
+  'help.ctx.trip-costs.bullet.2':
+    'A jobb felső Költség hozzáadása megnyitja a szerkesztőt; a mellette lévő Elszámolás egyszerre rögzíti az összes nyitott átutalást.',
+  'help.ctx.trip-costs.bullet.3':
+    'A főkönyv napok szerint van csoportosítva, a legújabb elöl, az adott nap végösszegével jobbra. Egy sor a kategóriát színes fülként, a nevet, a fizetők zsetonjait, a megjegyzést és az összeget viszi, plusz a kölcsönadtál vagy kölcsönkértél jelzést, ha a felosztás pluszban vagy mínuszban hagy rajta.',
+  'help.ctx.trip-costs.bullet.4':
+    'A lista fölött ül a Költségek keresése…, egy kategóriaszűrő, egy napszűrő, a Mind / Én fizettem / Nekem tartoznak kapcsoló és a CSV exportálás gomb.',
+  'help.ctx.trip-costs.bullet.5':
+    'A jobb oldali oszlop a válasz: az Elszámolás kilistázza, ki kinek fizet, az Egyenlegek megmutatják minden utazó többletét vagy hiányát, a Végső költségvetés azt, mennyibe kerül az utazás mindegyikőjüknek, a Kategóriánként pedig azt, hová ment a pénz.',
+  'help.ctx.trip-costs.bullet.6':
+    'Egy rögzített fizetés ugyanabban a főkönyvben ül saját sorként, mellette a Szerkesztés és a Visszavonás; egy kiadásnak ceruzája és kukája van, és a kuka kérdés nélkül törli.',
+  // add-expense
+  'help.guide.add-expense.title': 'Adj hozzá egy kiadást',
+  'help.guide.add-expense.goal': 'Rögzítsd, mennyibe került valami, ki fizette, és kivel osztozik rajta.',
+  'help.guide.add-expense.step.1':
+    'Kattints a Költségek fül jobb felső sarkában a Költség hozzáadása gombra. Megnyílik a szerkesztő, a mai dátummal, mindenkivel már a felosztásban.',
+  'help.guide.add-expense.step.2':
+    'Írd be, mire volt, a Mire volt? mezőbe, az egyetlenbe, amit ki kell tölteni, a nyugtán szereplő számot pedig a Teljes összeg mezőbe.',
+  'help.guide.add-expense.step.3':
+    'A Pénznem és a Nap az összeg alatt ül. A Pénznem az utazás sajátjáról indul; változtasd meg, és a szerkesztő megmutatja, mennyit ér az összeg az utazás pénznemében. A Nap a maival indul, és a főkönyv ez alá csoportosítja a kiadást.',
+  'help.guide.add-expense.step.4':
+    'Válassz egy Kategória értéket. Tizennégy van belőlük, és nem lehet őket megváltoztatni: amelyiket választod, az lesz a színes fül a soron és a sáv a Kategóriánként kártyán.',
+  'help.guide.add-expense.step.5':
+    'A Ki fizetett? alatt válaszd ki azt, aki valóban letette a pénzt. A Te van előre kiválasztva; a Még senki sem fizetett úgy rögzíti az összeget, hogy senki nem tartozik érte, a Többen fizettek pedig több fizető között osztja szét a számlát.',
+  'help.guide.add-expense.step.6':
+    'A Split az Equally beállításról indul, mindenkivel bent, és minden névnél látszik a rá jutó rész. A mentéshez kattints a Költség hozzáadása gombra.',
+  'help.guide.add-expense.result':
+    'A kiadás ott van a főkönyvben a napja alatt, beleszámolva a Teljes utazási költség értékébe, az elszámolási oszlop pedig újraszámolta, ki kinek tartozik.',
+  'help.guide.add-expense.tip.1':
+    'Úgy hagyva, ahogy megnyílik, a kiadás az utazás pénznemében van, mai dátummal, mindenki között egyenlően felosztva: igazából csak a nevet és az összeget kell kitölteni.',
+  'help.guide.add-expense.tip.2':
+    'Az összeg melletti ± visszatérítéssé alakítja a kiadást. A negatív végösszeg pénzt ad vissza ahelyett, hogy elvenné, és a felosztás is fordítva fut.',
+  'help.guide.add-expense.tip.3':
+    'Az alul lévő Nyugta / számla csatolása képeket és PDF-eket fogad. Mentéskor töltődnek fel, az utazás Fájlok részébe kerülnek, és a listában a név mellett megjelenik egy Nyugták jelölés.',
+  // expense-payers
+  'help.guide.expense-payers.title': 'Mondd meg, ki fizette a számlát',
+  'help.guide.expense-payers.goal':
+    'Rögzítsd, ki fizetett a saját zsebéből egy kiadásért, ez az elszámolás matematikájának másik fele.',
+  'help.guide.expense-payers.step.1':
+    'Nyisd meg a kiadást a sora melletti ceruzával, és nézd meg a Ki fizetett? mezőt. Az Egy személy fizetett az alapértelmezés: a legördülő megnevezi azt az egy embert, aki letette a pénzt.',
+  'help.guide.expense-payers.step.2':
+    'A Még senki sem fizetett, annak a legördülőnek az első eleme, úgy rögzíti az összeget, hogy senki nem tartozik semmivel. A kiadás továbbra is beleszámít a Teljes utazási költség értékébe.',
+  'help.guide.expense-payers.step.3':
+    'A Többen fizettek, a címke melletti hivatkozás, utazónként egy sort nyit. Add hozzá azokat, akik fizettek, és írd be, ki mennyit tett bele; az összegeknek ki kell adniuk a teljes összeget.',
+  'help.guide.expense-payers.step.4':
+    'Az a kiadás, amit senki nem fizetett, Befejezetlen jelölést kap a sorában, és beleszámít a Rendezetlen összeg kártyába, ahol a rögzített, de el nem számolt költés gyűlik.',
+  'help.guide.expense-payers.result':
+    'Az, hogy ki fizetett, eldönti, kinek fizetnek vissza, a felosztás eldönti, ki fizet, az Egyenlegek pedig a kettő különbsége.',
+  'help.guide.expense-payers.tip.1':
+    'A Ki fizetett? és a Split függetlenek: kifizethetsz egy vacsorát, amin ott sem voltál, és belekerülhetsz olyan vacsora felosztásába, amit nem te fizettél.',
+  'help.guide.expense-payers.tip.2':
+    'Több fizető esetén az összegeknek ki kell adniuk a teljes összeget. Adj hozzá még egyet, és a többi átrendeződik körülötte; amíg nem egyeznek, a szerkesztő azt mondja, hogy A fizetők összegeinek a teljes összeget kell kiadniuk, és nem hajlandó menteni.',
+  'help.guide.expense-payers.tip.3':
+    'Egy fizető eltávolítása nem távolítja el a kiadást: az összeg bent marad a Teljes utazási költség értékében, a sor pedig Befejezetlen lesz.',
+  // split-expense
+  'help.guide.split-expense.title': 'Ossz meg egy számlát az utazók között',
+  'help.guide.split-expense.goal':
+    'Döntsd el, ki tartozik egy kiadásért: mindenki egyenlően, összeg szerint, vagy soronként a nyugtáról.',
+  'help.guide.split-expense.step.1':
+    'A kiadásszerkesztőben a Split minden utazót felsorol. Kattints egy névre, hogy kihagyd ebből a kiadásból; a kihagyott utazónál Kihagyva áll, és semmivel nem tartozik érte.',
+  'help.guide.split-expense.step.2':
+    'Az Equally az alapértelmezés: minden bevont utazó ugyanakkora részt kap, a lista alatti sor pedig megmondja, hány felé oszlik, és mennyi jut egy részre.',
+  'help.guide.split-expense.step.3':
+    'A Custom a részeket összegmezőkre cseréli. Írd be, ki mennyivel tartozik; az alatta lévő sor folyamatosan számol, és zöldre vált, amikor A felosztás megegyezik a végösszeggel. Amíg nem stimmel, nem ment.',
+  'help.guide.split-expense.step.4':
+    'A Ticket soronként osztja fel a nyugtát: Tétel hozzáadása, aztán soronként egy név és egy ár, a Megosztva: alatt pedig azok az utazók, akik azon a soron osztoznak.',
+  'help.guide.split-expense.step.5':
+    'A sorok alatti Egyéni részek megmutatja, ki mennyivel tartozik a végén, a felül lévő Teljes összeg pedig a sorokból adódik össze. Kattints a Mentés gombra.',
+  'help.guide.split-expense.result':
+    'A felosztás az, amiből minden egyenleg felépül. A kiadással együtt mentődik, és később úgy módosítható, hogy semmi máshoz nem kell nyúlni.',
+  'help.guide.split-expense.tip.1':
+    'Annál az utazónál, akit kihagysz, Kihagyva áll, és ezzel az egy kiadással nem tartozik semmivel; a többiek viszik a részét.',
+  'help.guide.split-expense.tip.2':
+    'Az Equally centre pontos: a maradék cent kiadásról kiadásra forog, így nincs olyan, aki mindig ő fizeti.',
+  'help.guide.split-expense.tip.3':
+    'A Ticket mód magától összegzi a Teljes összeg mezőt, és kiszürkíti: a nyugta sorai adják a végösszeget.',
+  // expense-currency
+  'help.guide.expense-currency.title': 'Vigyél be kiadást másik pénznemben',
+  'help.guide.expense-currency.goal': 'Azt vidd be, ami a nyugtán tényleg áll, az árfolyamot pedig tartsa a TREK.',
+  'help.guide.expense-currency.step.1':
+    'Kattints a Költség hozzáadása gombra, és töltsd ki a nevet és az összeget pontosan úgy, ahogy a nyugtán áll, magát a számot, nem az átváltását.',
+  'help.guide.expense-currency.step.2':
+    'Nyisd meg a Pénznem mezőt, és válaszd ki a nyugta pénznemét. A lista minden kódot visz, amit a TREK ismer, és kereshető: írd be a három betűt.',
+  'help.guide.expense-currency.step.3':
+    'A mezők alatt megjelenik egy sor azzal, mennyit ér az összeg éppen most, élő árfolyam jelöléssel. Ez előnézet, nem az, ami tárolódik.',
+  'help.guide.expense-currency.step.4':
+    'Kattints a Költség hozzáadása gombra. Az árfolyam azon nyomban befagy: innentől ez a kiadás annyit ér, amennyit azon a napon ért, amikor bevitted.',
+  'help.guide.expense-currency.step.5':
+    'A főkönyvben a sor mindkét számot viszi a név alatt: amit beírtál, egy nyilat, és azt, amennyinek az utazás pénznemében számít. Minden fenti végösszeg, egyenleg és elszámolás a másodikat használja.',
+  'help.guide.expense-currency.result':
+    'A kiadás megtartja az összeget és a pénznemet, amit beírtál. A főkönyv mindkettőt mutatja, az utazás végösszegei és egyenlegei pedig az utazás pénznemében maradnak.',
+  'help.guide.expense-currency.tip.1':
+    'Az árfolyam a mentés pillanatában fagy be, így egy elszámolt tartozás nem nyílik ki újra attól, hogy a piac egy héttel később elmozdult. Új árfolyamot csak a kiadás pénznemének megváltoztatása fagyaszt be.',
+  'help.guide.expense-currency.tip.2':
+    'A Beállítások alatti Megjelenítési pénznem csak azt változtatja meg, amit olvasol; a tárolt összegek soha nem mozdulnak. Üresen hagyva minden utazás a saját pénznemében jelenik meg.',
+  'help.guide.expense-currency.tip.3':
+    'Maga az utazás pénzneme az utazáson él, az Utazás szerkesztése alatt, és az Utazás részleteinek szerkesztése jogot kívánja. A megváltoztatása minden befagyott árfolyamot újrarögzít, nem pedig átszámolja az összegeket másik pénznemre.',
+  // filter-costs
+  'help.guide.filter-costs.title': 'Találj meg egy kiadást vagy egy nap költését',
+  'help.guide.filter-costs.goal': 'Szűkítsd le a hosszú főkönyvet arra, amit valójában keresel.',
+  'help.guide.filter-costs.step.1':
+    'Írj a lista fölötti Költségek keresése… mezőbe. Gépelés közben a kiadás nevére illeszkedik.',
+  'help.guide.filter-costs.step.2':
+    'Az Összes kategória megnyitja a tizennégy kategóriát. Válassz egyet, és csak annak a kategóriának a kiadásai maradnak.',
+  'help.guide.filter-costs.step.3':
+    'Az Összes nap minden olyan napot felsorol, amin költöttek valamit. Válassz egyet, és egy sáv váltja fel a napfejléceket azzal a nappal, azzal, hány kiadást tart, és a végösszegével.',
+  'help.guide.filter-costs.step.4':
+    'A Mind / Én fizettem / Nekem tartoznak kapcsoló a te saját nézeted a főkönyvre: mire tettél le pénzt, és miért van még mindig kint a pénzed.',
+  'help.guide.filter-costs.step.5':
+    'A sor végén lévő CSV exportálás minden kiadást fájlba ír, az eredeti összeggel, annak pénznemével és az átváltott összeggel.',
+  'help.guide.filter-costs.result':
+    'A szűrők összeadódnak, a napcsoportok pedig újrarajzolódnak a saját végösszegeikkel arra, ami megmarad.',
+  'help.guide.filter-costs.tip.1':
+    'A rögzített fizetések nem visznek nevet és kategóriát, így egy keresés vagy egy kategóriaszűrő elrejti őket. A napszűrő megtartja őket, annak a napnak az alatt, amikor a fizetést rögzítették.',
+  'help.guide.filter-costs.tip.2':
+    'A CSV exportálás mindig minden kiadást exportál, bármi is van a képernyőn leszűrve, kiadásonként egy sorral.',
+  // settle-up
+  'help.guide.settle-up.title': 'Számold ki, ki kinek tartozik, és rendezd',
+  'help.guide.settle-up.goal':
+    'Alakítsd egy csomó közös kiadást a lehető legkevesebb átutalássá, ami mindenkit kiegyenlít, és rögzítsd őket, ahogy megtörténnek.',
+  'help.guide.settle-up.step.1':
+    'A jobb oldali oszlop Elszámolás kártyája felsorolja azokat az átutalásokat, amelyek mindenkit kiegyenlítenének: ki kinek fizet, és mennyit. A cím melletti szám az, hány van még nyitva.',
+  'help.guide.settle-up.step.2':
+    'Az átutalás melletti Elszámol megtörténtként rögzíti. A folyam eltűnik a kártyáról, az egyenlegek pedig újrarajzolódnak.',
+  'help.guide.settle-up.step.3':
+    'A rögzített átutalás egy sor a főkönyvben, annak a napnak az alatt, amikor megtörtént, Fizetés jelöléssel, a két utazóval és az összeggel.',
+  'help.guide.settle-up.step.4':
+    'A sor mellett a ceruza javítja a fizetést, a Visszavonás pedig visszaveszi, és az átutalás visszakerül az Elszámolás kártyára.',
+  'help.guide.settle-up.step.5':
+    'A kártya fejlécében lévő Fizetés hozzáadása olyan átutalást rögzít, ami nem egy javaslatot követett. Válassz Kitől és Kinek, az összeget, annak pénznemét és a napot, amikor megtörtént.',
+  'help.guide.settle-up.step.6':
+    'A képernyő tetején lévő fejlécben az Elszámolás egyszerre rögzíti az összes nyitott átutalást, ahogy egy társaság az utazás végén kvittre jön.',
+  'help.guide.settle-up.result':
+    'Minden rögzített átutalás egy sor a főkönyvben, és egy sorral kevesebb az Elszámolás kártyán. Amikor a kártyán az áll, hogy Mindenki kvittben van, az utazás ki van fizetve.',
+  'help.guide.settle-up.tip.1':
+    'A kártya a legkevesebb átutalást mutatja, nem minden tartozást: három ember, aki körbe tartozik egymásnak, egy vagy két fizetésre esik össze.',
+  'help.guide.settle-up.tip.2':
+    'Az Elszámol rögzít egy átutalást, nem mozgat pénzt. Küldd el úgy, ahogy szoktad, aztán kattints rá.',
+  'help.guide.settle-up.tip.3':
+    'Egy fizetés bármilyen pénznemben történhet, így egy jenben fennálló tartozást euróban fizetni teljesen normális: a párbeszédablaknak saját pénznemválasztója van, és azt az árfolyamot is befagyasztja.',
+  // final-budget
+  'help.guide.final-budget.title': 'Nézd meg, mennyibe került az utazás minden utazónak',
+  'help.guide.final-budget.goal':
+    'Olvasd a főkönyv fejenkénti oldalát: a mai egyenleget és a valódi fejenkénti költséget.',
+  'help.guide.final-budget.step.1':
+    'Az Egyenlegek minden utazó állását mutatják: zöld sáv jobbra, ha az utazás tartozik neki, piros sáv balra, ha ő tartozik az utazásnak, és az összeg a név mellett.',
+  'help.guide.final-budget.step.2':
+    'Az alatta lévő Végső költségvetés más kérdésre válaszol: nem arra, ki mivel tartozik éppen most, hanem arra, mennyibe kerül az utazás minden utazónak, ha már mindent visszafizettek.',
+  'help.guide.final-budget.step.3':
+    'Kattints egy névre, hogy megnyíljon a számítás: Kifizetett kiadások, alatta pedig Nettó visszatérítések és Függőben lévő visszatérítések.',
+  'help.guide.final-budget.step.4':
+    'Minden sor alatt ott ülnek a sorok, amikből összeáll: a kiadások, amiket az az utazó fizetett, a már rögzített átutalások és a még nyitottak. Pontosan kiadják a fölöttük lévő sort.',
+  'help.guide.final-budget.result':
+    'Az Egyenlegek azt mutatják, ki van ma pluszban vagy mínuszban; a Végső költségvetés azt, mennyibe kerül a végén az utazás mindegyikőtöknek, ha már mindent visszafizettek.',
+  'help.guide.final-budget.tip.1':
+    'Egy fizetés rögzítése senkinek nem változtatja meg a végső költségvetését. Csak átmozgat egy összeget a függőben lévő visszatérítésekből a nettó visszatérítésekbe.',
+  'help.guide.final-budget.tip.2':
+    'A fizető nélküli kiadás mindkét kártyán kívül marad, ugyanúgy, ahogy az elszámolási javaslatokon kívül is marad.',
+  // expense-from-booking
+  'help.guide.expense-from-booking.title': 'Csinálj foglalásból kiadást',
+  'help.guide.expense-from-booking.goal':
+    'Kapcsold azt, amennyibe egy repülőjárat, egy szállás vagy egy hely valójában került, ahhoz a bejegyzéshez, amihez tartozik.',
+  'help.guide.expense-from-booking.step.1':
+    'Nyisd meg a foglalást a Közlekedés vagy a Foglalások fülön, és kattints a ceruzájára.',
+  'help.guide.expense-from-booking.step.2':
+    'Görgess az űrlap alján lévő Costs blokkhoz. Amíg semmi nincs hozzákapcsolva, a Create expense lehetőséget kínálja, és azt mondja, hogy előbb menti a foglalást.',
+  'help.guide.expense-from-booking.step.3':
+    'Kattints a Create expense gombra. A foglalás mentődik, az űrlap bezárul, és megnyílik a Költségek szerkesztő a foglalás címével névként, a típusa pedig már egy kategóriához igazítva.',
+  'help.guide.expense-from-booking.step.4':
+    'Töltsd ki az összeget, azt, ki fizetett, és a felosztást, mint bármelyik kiadásnál, majd ments. A foglalást újra megnyitva a kiadás a Linked expense alatt látszik, ceruzával a szerkesztéshez és kukával az eltávolításhoz.',
+  'help.guide.expense-from-booking.result':
+    'A foglalás viszi a költségét, a kiadás pedig egy hétköznapi sor a Költségek fülön, fizetővel, felosztással és pénznemmel, mint bármelyik másik.',
+  'help.guide.expense-from-booking.tip.1':
+    'A foglalás törlése a hozzákapcsolt kiadást is törli vele. A foglalás Costs blokkjában a Remove expense az ellenkezőjét teszi: a kiadás eltűnik, a foglalás marad.',
+  'help.guide.expense-from-booking.tip.2':
+    'Egy helynek ugyanez a blokk van az űrlapján, ahol a Create expense előbb a helyet menti.',
+
+  // ── Screen: trip-transports ───────────────────────────────────────────────────────────
+  'help.ctx.trip-transports.title': 'Közlekedés',
+  'help.ctx.trip-transports.summary':
+    'Minden, ami visz téged a megállók között: repülők, vonatok, buszok, autók, taxik, kerékpárok, hajóutak, kompok és a tömegközlekedési kapcsolatok, amiket a TREK kikeres neked. A fül ezek listája; a tervben is létrejönnek és olvashatók, a térképre pedig felrajzolódnak.',
+  'help.ctx.trip-transports.bullet.1':
+    'A fül csak a közlekedést tartja. A szállás, az éttermek, az események és a jegyek a Foglalások fülön élnek, így ugyanaz a bejegyzés soha nem jelenik meg kétszer.',
+  'help.ctx.trip-transports.bullet.2':
+    'Az eszköztár mindet megszámolja az Összes alatt, és minden használatban lévő típusnak saját címkét ad saját számmal: Repülő, Vonat, Autó, Tömegközlekedés. A jobb oldali Közlekedés kézzel ad hozzá egyet.',
+  'help.ctx.trip-transports.bullet.3':
+    'A kártyák három csoportban jönnek, mindegyik összecsukható a fejlécével: Automatikus tömegközlekedés a keresés által tervezett kapcsolatokhoz, aztán Függőben, aztán Megerősítve.',
+  'help.ctx.trip-transports.bullet.4':
+    'Egy kártya viszi az állapotot, a típust, a napokat, amikre kiterjed, az időpontokat, a Foglalási kódot, az útvonalat, valamint a Légitársaságot és a Járatszámot vagy a Vonatszámot, a Vágányt és az Ülést. A ceruza megnyitja, a kuka egy kérdés után törli.',
+  'help.ctx.trip-transports.bullet.5':
+    'A közlekedés a tervben is létrejön: minden nap fejlécében van egy plusz a Közlekedés hozzáadása számára és egy villamosgomb a Tömegközlekedéshez, a két megálló közötti menetidő-összekötő pedig ugyanazt a keresést nyitja meg arra az egy szakaszra.',
+  'help.ctx.trip-transports.bullet.6':
+    'A mindkét végén beállított közlekedés vonalat rajzol a térképre. A napi tervben lévő sorának útvonal-ikonja bekapcsolja ezt a vonalat, a napok fölötti eszköztárban pedig az Összes foglalási útvonal megjelenítése az egész utazást átbillenti.',
+  // transports-list
+  'help.guide.transports-list.title': 'Olvasd a Közlekedés fület',
+  'help.guide.transports-list.goal': 'Tudd, mit mond a lista, mielőtt bármit megváltoztatsz rajta.',
+  'help.guide.transports-list.step.1':
+    'A Közlekedés az utazás második füle. Csak a közlekedést tartja: a hotelek, az éttermek, az események és a jegyek a Foglalások fülön vannak.',
+  'help.guide.transports-list.step.2':
+    'Az eszköztár minden közlekedést megszámol az Összes alatt, és minden használatban lévő típusnak saját címkét ad saját számmal. Kattints egy címkére, hogy csak az a típus maradjon, kattints újra, hogy elengedd. Több címke is bekapcsolva lehet egyszerre, az Összes pedig törli őket.',
+  'help.guide.transports-list.step.3':
+    'Az Automatikus tömegközlekedés saját csoport, a tömegközlekedési keresés által tervezett kapcsolatok. A Függőben és a Megerősítve mindent tart, amit kézzel vittél be. A fejléc melletti nyíl összecsukja a csoportot.',
+  'help.guide.transports-list.step.4':
+    'Egy kártya mindent elmond: az állapotpont Függőben vagy Megerősítve felirattal, a típus, a napok, amikre kiterjed, a dátumaikkal, az időpontok, a Foglalási kód, az útvonal, valamint a Légitársaság és a Járatszám vagy a Vonatszám, a Vágány és az Ülés.',
+  'help.guide.transports-list.step.5':
+    'A ceruza szerkesztésre nyitja a közlekedést, a kuka törli, egy kérdés után, amely megnevezi, mi tűnik el.',
+  'help.guide.transports-list.result':
+    'A lista arra szűkül, amit kerestél, és minden kártya egy pillantásra megmondja, le van-e foglalva az út.',
+  'help.guide.transports-list.tip.1':
+    'A címkéket és az összecsukott csoportokat a rendszer utazásonként megjegyzi, így a fül újra úgy nyílik meg, ahogy hagytad.',
+  'help.guide.transports-list.tip.2':
+    'Az Importálás fájlból és az AirTrail csak akkor csatlakozik a Közlekedés gombhoz az eszköztárban, ha a kiszolgáló el tudja olvasni a foglalási visszaigazolásokat, és ha egy AirTrail-példány csatlakoztatva van. Nélkülük a listát kézzel és a tömegközlekedési kereséssel töltöd fel.',
+  // add-transport
+  'help.guide.add-transport.title': 'Adj közlekedést egy naphoz',
+  'help.guide.add-transport.goal':
+    'Tedd az utat, amely az egyik megállótól a következőhöz visz, abba a napba, amikor megtörténik.',
+  'help.guide.add-transport.step.1':
+    'Minden nap fejléce négy kis gombot visz a jobb oldalán. Kattints a pluszra, amelynek a buboréka Közlekedés hozzáadása. Az űrlap a Dátummal már arra a napra állítva nyílik meg.',
+  'help.guide.add-transport.step.2':
+    'A Foglalás típusa választja ki, mivel mész: Repülő, Vonat, Busz, Autó, Taxi, Kerékpár, Hajóút, Komp vagy Egyéb. Az űrlap követi. Egy repülő minden szakaszon repteret kap, egy vonat állomásláncot, egy autó a Felvétel és a Visszaadás szavakat és a Megállók útközben mezőt.',
+  'help.guide.add-transport.step.3':
+    'A Cím az egyetlen mező, amit ki kell tölteni; nélküle a Hozzáadás szürke marad. Írd azt, amit felismernél egy peronkijelzőn.',
+  'help.guide.add-transport.step.4':
+    'A Honnan és a Hová állomást, kikötőt vagy címet keres. Írj be legalább három betűt, és válassz egy találatot a listából. A csak beírt név nem visz koordinátákat, így semmit nem rajzol a térképre.',
+  'help.guide.add-transport.step.5':
+    'A Dátum és a Kezdési idő mondja meg, mikor megy, a Befejezés dátuma és a Befejezési idő, mikor ér véget; a másnap landoló út ott a következő napot veszi. A Foglalási kód, az Állapot Függőben vagy Megerősítve értékkel és a Jegyzetek nem kötelezők.',
+  'help.guide.add-transport.step.6': 'Kattints a Hozzáadás gombra.',
+  'help.guide.add-transport.result':
+    'A közlekedés egy sor a napon, a saját idejében a megállók között, és egy kártya a Közlekedés fülön a Függőben vagy a Megerősítve alatt.',
+  'help.guide.add-transport.tip.1':
+    'A sor oda kerül, ahová a kezdési ideje teszi, az utolsó olyan megálló után, amely korábban kezdődik. A fogantyúja bárhová máshová húzza a napon belül, vagy egy másik napra.',
+  'help.guide.add-transport.tip.2':
+    'A Fájlok alatti Fájl csatolása veszi a jegyet, a Costs alatti Create expense pedig elmenti a foglalást, és megnyitja a Költségek szerkesztőt a viteldíjhoz.',
+  'help.guide.add-transport.tip.3':
+    'Az Utasok jelöli, ki van rajta ezen az úton. Amint egy közlekedésnek utasai vannak, a fül eszköztára kinöveszti az avatarjaikat, és szűri szerintük a listát.',
+  // plan-transit
+  'help.guide.plan-transit.title': 'Tervezz tömegközlekedési kapcsolatot',
+  'help.guide.plan-transit.goal':
+    'Hagyd, hogy a TREK kikeresse a valódi vonatokat és buszokat egy nap két pontja között, és tedd a tervbe azt, amelyiket kiválasztod.',
+  'help.guide.plan-transit.step.1':
+    'A nap fejlécében kattints a villamosgombra, Tömegközlekedés. A keresés arra a napra nyílik meg.',
+  'help.guide.plan-transit.step.2':
+    'Az Innen és az Ide megállót vagy állomást fogad. Amíg a mező üres, a nap saját megállóit kínálja; két betű beírása helyette a menetrend állomásai között keres. A két mező közötti Csere megfordítja a kapcsolatot.',
+  'help.guide.plan-transit.step.3':
+    'Az Indulás vagy az Érkezés egy időponttal mondja meg, mikor szeretnél utazni, a Legjobb útvonal, a Kevesebb átszállás vagy a Kevesebb gyaloglás pedig azt, hogyan legyenek rendezve a válaszok.',
+  'help.guide.plan-transit.step.4':
+    'Az alatta lévő címkék mondják meg, mely módok használhatók: Vonat, Metró, Villamos, Busz, Komp és Sikló. Kapcsolj ki egyet, hogy kimaradjon, legalább egy bekapcsolva marad. Aztán kattints a Keresés gombra.',
+  'help.guide.plan-transit.step.5':
+    'Minden találat megadja az indulást és az érkezést, mennyi ideig tart, hány átszállás és mennyi gyaloglás van benne, és a vonalakat a saját színeikkel. Kattints egyre, hogy megállóról megállóra kibontsd, a vágányokkal és a vonalak közötti sétákkal.',
+  'help.guide.plan-transit.step.6': 'Kattints a Hozzáadás a naphoz gombra.',
+  'help.guide.plan-transit.result':
+    'A kapcsolat egy sor a napon a vonalaival, az átszállásaival és a gyaloglási idejével, és egy kártya a Közlekedés fülön az Automatikus tömegközlekedés alatt.',
+  'help.guide.plan-transit.tip.1':
+    'A kapcsolatok a Transitoustól jönnek, ez egy ingyenes közösségi szolgáltatás nyilvános menetrendi adatok fölött: nincs kulcs, nincs fiók. Egy adminisztrátor a keresést a Google felé is irányíthatja.',
+  'help.guide.plan-transit.tip.2':
+    'Semmit nem találtál? A források egy régiót és egy időszakot fednek le. Próbálj másik időpontot, kapcsolj be több módot, vagy válassz állomást a hely helyett. Az üzenet megnevezi a választ adó szolgáltatást.',
+  'help.guide.plan-transit.tip.3':
+    'Ugyanez a keresés egyetlen szakaszra is megnyílik: kattints a két megálló közötti menetidő-összekötőre, és válaszd a Tömegközlekedést. Az Innen, az Ide és az indulási idő ki van töltve neked.',
+  // change-transit-route
+  'help.guide.change-transit-route.title': 'Nyiss meg és módosíts egy tervezett kapcsolatot',
+  'help.guide.change-transit-route.goal':
+    'Olvasd a kapcsolatot megállóról megállóra, nevezd át, vagy keresd ki újra az útvonalat.',
+  'help.guide.change-transit-route.step.1':
+    'A Közlekedés fülön a tervezett kapcsolatok az Automatikus tömegközlekedés alatt ülnek. Kattints a kártyára.',
+  'help.guide.change-transit-route.step.2':
+    'Az Időtartam, az Átszállások és a Gyaloglás felül ül. Alattuk az Útiterv megállóról megállóra végigjárja a kapcsolatot, a vágányokkal és a vonalak közötti sétákkal.',
+  'help.guide.change-transit-route.step.3':
+    'Az Útvonal módosítása újra lefuttatja a keresést, már kitöltve ennek a kapcsolatnak a két végével és a napjával.',
+  'help.guide.change-transit-route.step.4':
+    'Válassz másik kapcsolatot, és kattints a Hozzáadás a naphoz gombra; átveszi a régi helyét. Az Útvonal módosítása melletti Részletek szerkesztése helyette a szokásos közlekedési űrlapot nyitja meg, ahol a Foglalási kód, az Állapot, az utasok és a fájlok élnek.',
+  'help.guide.change-transit-route.result':
+    'A Tömegközlekedési útvonal nézet az új Útitervet viszi, a kártyája pedig a Közlekedés fülön az új vonalakat és időpontokat mutatja.',
+  'help.guide.change-transit-route.tip.1':
+    'A Tömegközlekedési útvonal nézet címe csak szöveg: a mellette lévő ceruza átnevezi anélkül, hogy az útvonalhoz nyúlna. Az alatta lévő Jegyzetek markdownt fogad, és van egy Szerkesztés és egy Előnézet füle.',
+  'help.guide.change-transit-route.tip.2':
+    'A Tömegközlekedési útvonal nézet alján lévő Törlés kiveszi a kapcsolatot az utazásból; a nap megtartja a megállóit.',
+  // leg-travel-mode
+  'help.guide.leg-travel-mode.title': 'Módosítsd, hogyan teszel meg egy szakaszt',
+  'help.guide.leg-travel-mode.goal':
+    'Sétálj végig egy nap egyik szakaszán, amit egyébként autóval tennél meg, vagy add át azt a szakaszt a tömegközlekedési keresésnek.',
+  'help.guide.leg-travel-mode.step.1':
+    'A megállók közötti összekötők csak akkor jelennek meg, ha a nap Útvonal kapcsolója be van kapcsolva. Kattints a napra, hogy megnyisd, aztán a megállói alatti Útvonal gombra.',
+  'help.guide.leg-travel-mode.step.2':
+    'Minden összekötő megnevezi az adott szakasz menetidejét és távolságát, annak a módnak az ikonjával, amelyikben az útvonalat számolták: autó az autózáshoz, láb a gyalogláshoz.',
+  'help.guide.leg-travel-mode.step.3':
+    'Kattints az összekötőre. A menü az Autózás és a Gyaloglás, a Tömegközlekedés és a Napi alapértelmezett lehetőséget kínálja.',
+  'help.guide.leg-travel-mode.step.4':
+    'Válaszd a Gyaloglást. Csak ez a szakasz változik; a nap többi része megtartja a saját módját.',
+  'help.guide.leg-travel-mode.result':
+    'A szakasz a láb ikont és a gyaloglási idejét mutatja, a nap többi szakasza pedig megtartja a nap módját.',
+  'help.guide.leg-travel-mode.tip.1':
+    'A mód a szakaszhoz tartozik, nem a naphoz: az egész nap Autózás és Gyaloglás gombjai soha nem írják felül a kézzel beállított szakaszt. A Napi alapértelmezett visszaadja nekik a szakaszt.',
+  'help.guide.leg-travel-mode.tip.2':
+    'Az ugyanabban a menüben lévő Tömegközlekedés pontosan erre a szakaszra nyitja meg a kapcsolatkeresést, a két véggel és az indulási idővel már kitöltve.',
+  'help.guide.leg-travel-mode.tip.3':
+    'Az időket egy nyilvános útvonaltervező adja valódi utak és gyalogutak fölött. Az a szakasz, amelyikre nem tud válaszolni, megtartja az egyenes vonalát, és nem mutat időt.',
+  // edit-transport
+  'help.guide.edit-transport.title': 'Módosíts vagy törölj egy közlekedést',
+  'help.guide.edit-transport.goal':
+    'Javíts egy időpontot, egy vágányt vagy egy foglalási kódot, vagy vedd ki az utat az utazásból.',
+  'help.guide.edit-transport.step.1': 'A napi tervben egy közlekedés színes sor a megállók között. Kattints rá.',
+  'help.guide.edit-transport.step.2':
+    'Az űrlap ugyanaz, amelyik létrehozta, a címsorában a Közlekedés szerkesztése felirattal. Minden módosítható: a típus, az útvonal, a napok és időpontok, a Foglalási kód, az Állapot.',
+  'help.guide.edit-transport.step.3':
+    'Egy repülő útvonala repterek lánca, egy vonaté állomások lánca. A Megálló hozzáadása közéjük tesz még egyet, és minden szakasz megtartja a saját időpontjait és a saját járatszámát vagy vonatszámát.',
+  'help.guide.edit-transport.step.4':
+    'Kattints a Frissítés gombra. Ha teljesen el akarod távolítani a közlekedést, használd a kukát a Közlekedés fülön lévő kártyáján, és erősítsd meg.',
+  'help.guide.edit-transport.result':
+    'A változás mindenhol látszik, ahol a közlekedés megjelenik: a Közlekedés fülön, a napon, amelyiken megy, és a vonalán a térképen.',
+  'help.guide.edit-transport.tip.1':
+    'Ugyanez az űrlap mindkét oldalról megnyílik, a Közlekedés fülön lévő kártya ceruzájáról és a közlekedés saját soráról a napi tervben. A tervezett tömegközlekedési kapcsolat a kivétel: a sora a Tömegközlekedési útvonal nézetet nyitja meg, és az ottani Részletek szerkesztése vezet ehhez az űrlaphoz.',
+  'help.guide.edit-transport.tip.2':
+    'Egy közlekedés másik napra mozgatásához egyáltalán nem kell az űrlap: húzd a sorát az egyik napkártyáról a másikra.',
+  // transport-on-map
+  'help.guide.transport-on-map.title': 'Rajzolj egy közlekedést a térképre',
+  'help.guide.transport-on-map.goal': 'Nézd meg, merre megy valójában egy repülő, egy autóút vagy egy kapcsolat.',
+  'help.guide.transport-on-map.step.1':
+    'A mindkét végén beállított közlekedés kis útvonal-ikont visz a napi tervben lévő során. Kattints rá; a felirata Foglalási útvonalak elrejtése lesz.',
+  'help.guide.transport-on-map.step.2':
+    'Az útvonal felrajzolódik a térképre, mindkét végén egy pirula alakú jelölővel, amely a közlekedés ikonját viszi.',
+  'help.guide.transport-on-map.step.3':
+    'Kattints egy végjelölőre, hogy elolvasd a foglalást a térkép elhagyása nélkül: az időpontok, a Légitársaság és a Járatszám, a Foglalási kód és a jegyzetek. A Bezárás elteszi a lapot.',
+  'help.guide.transport-on-map.step.4':
+    'A napok fölötti eszköztár útvonal-ikonja az egész utazást egyszerre intézi: Összes foglalási útvonal megjelenítése, és Összes foglalási útvonal elrejtése, hogy újra letöröld őket.',
+  'help.guide.transport-on-map.step.5':
+    'A tervezett tömegközlekedési kapcsolatnak nincs saját ikonja. A nap Útvonal kapcsolója rajzolja, ezért az Összes foglalási útvonal elrejtése nem törli, amíg az adott nap útvonala még be van kapcsolva.',
+  'help.guide.transport-on-map.result':
+    'Az útvonalak a térképen vannak, mindkét végükön egy jelölővel, és ott maradnak, amíg újra ki nem kapcsolod őket.',
+  'help.guide.transport-on-map.tip.1':
+    'Egy repülő, egy hajóút és egy komp ívként rajzolódik, egy autó, egy busz, egy taxi és egy kerékpár a valódi utakat követi, egy vonat vagy egy tervezett kapcsolat pedig az általa érintett állomásokon fut át.',
+  'help.guide.transport-on-map.tip.2':
+    'A megerősített foglalás folytonos vonal, a függőben lévő szaggatott. Az Útvonal-címkék a foglalásokhoz beállítás a reptérkódot vagy az állomásnevet írja a végjelölőkbe.',
+  'help.guide.transport-on-map.tip.3':
+    'Az Összes foglalási útvonal megjelenítése tiszta lap, nem réteg: eldobja, amit az egyes ikonok beállítottak, így kétszer megnyomva vagy minden be, vagy minden ki lesz kapcsolva.',
 };
 
 export default help;
