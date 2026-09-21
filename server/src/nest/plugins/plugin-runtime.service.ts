@@ -263,9 +263,11 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
     // scheduler is minute-granularity by contract, so 30s precision is plenty and
     // cheap. Unref'd so it never holds the process open.
     this.schedulerSweep = setInterval(() => {
-      // R1.5: a timer callback cannot await. Both helpers swallow their own errors
-      // (each body is wrapped in try/catch), so there is nothing to propagate.
-      void this.fireDueScheduled();
+      // R1.5: a timer callback cannot await. Both helpers already swallow their own
+      // errors (each body is wrapped in try/catch); the .catch below is defense-in-
+      // depth against a future regression, same shape as the pruneErrorLog call in
+      // the onLog hook above.
+      void this.fireDueScheduled().catch(() => { /* fireDueScheduled already handles its own errors — this is a backstop */ });
       void this.drainUserErasures();
     }, 30_000);
     this.schedulerSweep.unref?.();
@@ -871,7 +873,7 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
                           status = 'inactive', enabled = 0
        WHERE id = ?`,
     ).run(DEV_LINK_SOURCE, id);
-    await this.watchLinked(id, sourceDir);
+    this.watchLinked(id, sourceDir);
     return { id, version: manifest.version, replaced, trekRangeBypassed };
   }
 
@@ -892,10 +894,8 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
     if (wasActive) await this.activate(id);
   }
 
-  /** Best-effort fs.watch on a linked plugin's built output that debounces -> reload.
-   * `async` with nothing to await: the call-graph gate keys on the `async` modifier and
-   * this frame reaches the DB through the debounced `reload` below. */
-  private async watchLinked(id: string, sourceDir: string): Promise<void> {
+  /** Best-effort fs.watch on a linked plugin's built output that debounces -> reload. */
+  private watchLinked(id: string, sourceDir: string): void {
     this.stopWatch(id);
     const serverDir = path.join(sourceDir, 'server'); // the loader runs server/index.js
     try {

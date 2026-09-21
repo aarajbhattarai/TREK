@@ -62,9 +62,7 @@ export class PluginMcpToolsService implements OnApplicationBootstrap, OnModuleDe
   // needs PluginHooks, and PluginHooks injects PluginRuntimeService: owning it
   // there would be a cycle. Cleared on destroy, or a torn-down buildApp() leaves
   // a live source closing over a dead runtime and bleeds into the next suite.
-  // `async` with nothing to await: the call-graph gate keys on the `async` modifier
-  // and this frame reaches the DB through the source it installs.
-  async onApplicationBootstrap(): Promise<void> {
+  onApplicationBootstrap(): void {
     setPluginMcpToolSource((ctx) => this.mcpTools(ctx));
   }
 

@@ -43,7 +43,7 @@ export function makeDeps(): HostDeps {
       close: vi.fn(),
     } as unknown as HostDeps['data'],
     callPlugin: vi.fn(async (targetId: string, fn: string) => ({ calledTarget: targetId, calledFn: fn })),
-    emitPluginEvent: vi.fn(),
+    emitPluginEvent: vi.fn(async () => {}),
   };
 }
 
