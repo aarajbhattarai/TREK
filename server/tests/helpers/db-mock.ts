@@ -36,6 +36,10 @@ import { readSchemaSnapshot } from '../../src/db/schema-snapshot';
  * which only works on a database the ORM's migration table already knows.
  * The legacy `createTestDb()` (in test-db.ts) stays for unit suites that never
  * boot the app.
+ *
+ * @returns a normalised copy: the snapshot's seeded first-run `admin` row and
+ * the `users` autoincrement sequence have already been removed (see below), so
+ * the first user any caller creates lands on id 1.
  */
 export function createSnapshotTestDb(): Database.Database {
   const snapshot = readSchemaSnapshot();
@@ -43,7 +47,8 @@ export function createSnapshotTestDb(): Database.Database {
     throw new Error('No schema snapshot: run under vitest (tests/global-setup.ts writes it once per run).');
   }
   const db = new Database(snapshot);
-  db.exec('PRAGMA journal_mode = WAL');
+  // No journal_mode PRAGMA here: this is a deserialised in-memory database, so
+  // WAL mode (a disk-file concept) is a no-op on it.
   db.exec('PRAGMA busy_timeout = 5000');
   db.exec('PRAGMA foreign_keys = ON');
   // The snapshot carries the first-run seeded `admin` row (id 1); the legacy

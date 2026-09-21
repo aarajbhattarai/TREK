@@ -24,6 +24,19 @@ process.env.NODE_ENV = 'test';
 process.env.COOKIE_SECURE = 'false';
 process.env.LOG_LEVEL = 'error'; // suppress info/debug logs in test output
 
+// MikroORM loads migrations and seeders through its own dynamic import()
+// (core/utils/fs-utils.js: `globalThis.dynamicImportProvider ?? (id => import(id))`,
+// read at call time). Under vitest that native import() sits outside the
+// transform pipeline, so a seeder's extensionless `'../../app-config'` import
+// fails with ERR_UNSUPPORTED_DIR_IMPORT. Routed through this module's import()
+// it goes through vite-node instead. Test-only on purpose: set from the ORM
+// config it would compile to `require('file://…')` under the server's CommonJS
+// target and crash every production boot at the seeder step.
+interface DynamicImportGlobal {
+  dynamicImportProvider?: (id: string) => Promise<unknown>;
+}
+(globalThis as DynamicImportGlobal).dynamicImportProvider = (id) => import(id);
+
 // Several services fire notification sends as unawaited dynamic-import chains
 // (`import('…/notificationService').then(({ send }) => send(…).catch(…))`).
 // Give those chains one macrotask turn to settle after every test, while the

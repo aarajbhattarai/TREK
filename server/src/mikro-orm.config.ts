@@ -27,11 +27,4 @@ export default defineConfig({
   // itself, but the CLI and the migrator's logging still read it, and naming a
   // different file here than the one actually open is a trap.
   dbName: resolveDbPath(),
-  // MikroORM loads migrations and seeders through its own dynamic import(). Under
-  // vitest that native import() sits outside the transform pipeline, so a
-  // seeder's extensionless `'../../app-config'` import fails with
-  // ERR_UNSUPPORTED_DIR_IMPORT. Declared here, the import() runs inside a module
-  // vitest transforms; in production it resolves the compiled dist files as before.
-  // Same reason tests/unit/db/restore-migrates-forward.test.ts sets it.
-  dynamicImportProvider: (id: string) => import(id),
 });

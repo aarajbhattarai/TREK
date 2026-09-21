@@ -35,9 +35,13 @@ import type { RateLimitService } from '../../src/nest/common/rate-limit.service'
 // file imports AuthPublicController (for resetRateLimits below), so a vi.mock
 // factory MUST import from db-mock.ts directly, never from here, or it
 // re-enters src/db/database while its own mock for that module is still being
-// built and captures the real one. Re-exported so existing non-factory
-// importers of test-db.ts keep working unchanged.
-export { CAN_ACCESS_TRIP_SQL, createSnapshotTestDb, buildDbMock } from './db-mock';
+// built and captures the real one. Only buildDbMock/CAN_ACCESS_TRIP_SQL are
+// re-exported (the two a couple of unit suites use against their own
+// createTestDb()) — createSnapshotTestDb is deliberately NOT re-exported here,
+// so the re-entrant-import foot-gun above isn't reachable through this file at
+// all: nothing importing test-db.ts can accidentally build a vi.mock factory
+// that re-enters src/db/database.
+export { CAN_ACCESS_TRIP_SQL, buildDbMock } from './db-mock';
 
 // Tables to clear on reset, child-before-parent to be safe (FK checks are OFF during reset).
 // Keep in sync with schema.ts + migrations.ts. Intentionally excluded: categories, addons,
