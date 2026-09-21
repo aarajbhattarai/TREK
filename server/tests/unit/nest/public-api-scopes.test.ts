@@ -229,11 +229,11 @@ describe('ApiTokenGuard — the grant it leaves behind', () => {
     };
   }
 
-  it('PUBAPI-SCOPE-U010: puts the user AND the grant on the request, as two separate things', () => {
+  it('PUBAPI-SCOPE-U010: puts the user AND the grant on the request, as two separate things', async () => {
     const grant = limited('trips');
     const { guard, verifyApiTokenWithGrant } = guardWith({ user: USER, grant });
     const ctx = contextWith({ authorization: 'Bearer trek_abc123' });
-    expect(guard.canActivate(ctx)).toBe(true);
+    expect(await guard.canActivate(ctx)).toBe(true);
     expect(verifyApiTokenWithGrant).toHaveBeenCalledWith('trek_abc123');
     expect(ctx.req.user).toBe(USER);
     expect(ctx.req.apiToken).toBe(grant);
@@ -247,25 +247,25 @@ describe('ApiTokenGuard — the grant it leaves behind', () => {
    * The two refusals predate scopes and are load-bearing for every integration
    * that already handles them. Adding a third answer must not reword them.
    */
-  it('PUBAPI-SCOPE-U011: the 401 bodies are unchanged — no scope wording leaked into them', () => {
+  it('PUBAPI-SCOPE-U011: the 401 bodies are unchanged — no scope wording leaked into them', async () => {
     const { guard: noCredential } = guardWith(null);
-    expect(thrown(() => noCredential.canActivate(contextWith({})))).toEqual({
+    expect(await thrownAsync(() => noCredential.canActivate(contextWith({})))).toEqual({
       status: 401,
       body: { error: 'API token required', code: 'API_TOKEN_REQUIRED' },
     });
     const { guard: unknownToken } = guardWith(null);
     expect(
-      thrown(() => unknownToken.canActivate(contextWith({ authorization: 'Bearer trek_nope' }))),
+      await thrownAsync(() => unknownToken.canActivate(contextWith({ authorization: 'Bearer trek_nope' }))),
     ).toEqual({
       status: 401,
       body: { error: 'Invalid API token', code: 'API_TOKEN_INVALID' },
     });
   });
 
-  it('PUBAPI-SCOPE-U012: a rejected token leaves no grant behind for a later handler to trust', () => {
+  it('PUBAPI-SCOPE-U012: a rejected token leaves no grant behind for a later handler to trust', async () => {
     const { guard } = guardWith(null);
     const ctx = contextWith({ authorization: 'Bearer trek_nope' });
-    thrown(() => guard.canActivate(ctx));
+    await thrownAsync(() => guard.canActivate(ctx));
     expect(ctx.req.apiToken).toBeUndefined();
     expect(ctx.req.user).toBeUndefined();
   });
@@ -417,17 +417,17 @@ describe('TokenService — storing and resolving a grant', () => {
       api_scopes: string | null;
     };
 
-  const mint = (userId: number, name: string, scopes?: readonly string[]) =>
-    tokens.createApiToken(userId, name, scopes).token as {
+  const mint = async (userId: number, name: string, scopes?: readonly string[]) =>
+    (await tokens.createApiToken(userId, name, scopes)).token as {
       id: number;
       raw_token: string;
       scope_mode: string;
       scopes: string[];
     };
 
-  it('PUBAPI-SCOPE-U040: a key minted without scopes is stored as a full grant, not an empty one', () => {
+  it('PUBAPI-SCOPE-U040: a key minted without scopes is stored as a full grant, not an empty one', async () => {
     const { user } = createUser(testDb);
-    const created = mint(user.id, 'Dawarich');
+    const created = await mint(user.id, 'Dawarich');
     // 'all' is written explicitly: a NULL sentinel here would mean a bug that
     // drops the column silently grants everything.
     expect(rowFor(created.id)).toEqual({ kind: 'api', scope_mode: 'all', api_scopes: null });
@@ -435,10 +435,10 @@ describe('TokenService — storing and resolving a grant', () => {
     expect(created.scopes).toEqual([...PUBLIC_API_SCOPES]);
   });
 
-  it('PUBAPI-SCOPE-U041: and resolves to every scope when it is presented', () => {
+  it('PUBAPI-SCOPE-U041: and resolves to every scope when it is presented', async () => {
     const { user } = createUser(testDb);
-    const raw = mint(user.id, 'Dawarich').raw_token;
-    const resolved = tokens.verifyApiTokenWithGrant(raw);
+    const raw = (await mint(user.id, 'Dawarich')).raw_token;
+    const resolved = await tokens.verifyApiTokenWithGrant(raw);
     expect(resolved?.user.id).toBe(user.id);
     expect(resolved?.grant).toEqual({ mode: 'all', scopes: [...PUBLIC_API_SCOPES] });
   });
@@ -449,7 +449,7 @@ describe('TokenService — storing and resolving a grant', () => {
    * 'all', and a DatabaseService that hands back NULL anyway must land in the
    * same place. Both are "nobody ever narrowed this key".
    */
-  it('PUBAPI-SCOPE-U042: a row with no narrowing at all still reads everything', () => {
+  it('PUBAPI-SCOPE-U042: a row with no narrowing at all still reads everything', async () => {
     const noColumns = new TokenService(
       {
         get: () => ({ id: 3, username: 'ada', email: 'a@b.c', role: 'user', scope_mode: null, api_scopes: null }),
@@ -457,15 +457,15 @@ describe('TokenService — storing and resolving a grant', () => {
       } as unknown as DatabaseService,
       new EphemeralTokenService(),
     );
-    expect(noColumns.verifyApiTokenWithGrant('trek_legacy')?.grant).toEqual({
+    expect((await noColumns.verifyApiTokenWithGrant('trek_legacy'))?.grant).toEqual({
       mode: 'all',
       scopes: [...PUBLIC_API_SCOPES],
     });
   });
 
-  it('PUBAPI-SCOPE-U043: a narrowed key stores exactly the chosen sections, in the canonical order', () => {
+  it('PUBAPI-SCOPE-U043: a narrowed key stores exactly the chosen sections, in the canonical order', async () => {
     const { user } = createUser(testDb);
-    const created = mint(user.id, 'Dawarich', ['stats', 'trips']);
+    const created = await mint(user.id, 'Dawarich', ['stats', 'trips']);
     expect(rowFor(created.id)).toEqual({
       kind: 'api',
       scope_mode: 'limited',
@@ -476,81 +476,81 @@ describe('TokenService — storing and resolving a grant', () => {
     expect(created).toMatchObject({ scope_mode: 'limited', scopes: ['trips', 'stats'] });
   });
 
-  it('PUBAPI-SCOPE-U044: and resolves to exactly those, and no more', () => {
+  it('PUBAPI-SCOPE-U044: and resolves to exactly those, and no more', async () => {
     const { user } = createUser(testDb);
-    const raw = mint(user.id, 'Dawarich', ['trips', 'days']).raw_token;
-    expect(tokens.verifyApiTokenWithGrant(raw)?.grant).toEqual({
+    const raw = (await mint(user.id, 'Dawarich', ['trips', 'days'])).raw_token;
+    expect((await tokens.verifyApiTokenWithGrant(raw))?.grant).toEqual({
       mode: 'limited',
       scopes: ['trips', 'days'],
     });
   });
 
-  it('PUBAPI-SCOPE-U045: an unknown scope name is dropped rather than stored', () => {
+  it('PUBAPI-SCOPE-U045: an unknown scope name is dropped rather than stored', async () => {
     const { user } = createUser(testDb);
-    const created = mint(user.id, 'Dawarich', ['trips', 'passwords', 'trips']);
+    const created = await mint(user.id, 'Dawarich', ['trips', 'passwords', 'trips']);
     expect(rowFor(created.id).api_scopes).toBe(JSON.stringify(['trips']));
   });
 
-  it('PUBAPI-SCOPE-U046: a list of nothing but unknown names is no narrowing at all', () => {
+  it('PUBAPI-SCOPE-U046: a list of nothing but unknown names is no narrowing at all', async () => {
     const { user } = createUser(testDb);
     // Not an empty limited grant: that would mint a key that can read nothing,
     // which nobody asked for and which fails hours later at the integration.
-    const created = mint(user.id, 'Dawarich', ['everything']);
+    const created = await mint(user.id, 'Dawarich', ['everything']);
     expect(rowFor(created.id)).toMatchObject({ scope_mode: 'all', api_scopes: null });
   });
 
-  it('PUBAPI-SCOPE-U047: an empty scopes array means the caller did not narrow anything', () => {
+  it('PUBAPI-SCOPE-U047: an empty scopes array means the caller did not narrow anything', async () => {
     const { user } = createUser(testDb);
-    expect(rowFor(mint(user.id, 'Dawarich', []).id)).toMatchObject({ scope_mode: 'all', api_scopes: null });
+    expect(rowFor((await mint(user.id, 'Dawarich', [])).id)).toMatchObject({ scope_mode: 'all', api_scopes: null });
   });
 
-  it('PUBAPI-SCOPE-U048: a key that says it is narrowed and cannot say how reads nothing', () => {
+  it('PUBAPI-SCOPE-U048: a key that says it is narrowed and cannot say how reads nothing', async () => {
     // The direction matters. A row that never said 'limited' is a legacy
     // full-access key and stays one; a row that HAS said it is restricted must
     // never widen because its list became unreadable — that is the failure this
     // whole column exists to prevent. A key that stops working is a support
     // ticket; a key that quietly reads every trip is the bug.
     const { user } = createUser(testDb);
-    const created = mint(user.id, 'Dawarich', ['trips']);
+    const created = await mint(user.id, 'Dawarich', ['trips']);
     for (const broken of ['{"not":"a list"', 'null', '"trips"', '{}', '[]', '[42, null]']) {
       testDb.prepare('UPDATE mcp_tokens SET api_scopes = ? WHERE id = ?').run(broken, created.id);
-      expect(tokens.verifyApiTokenWithGrant(created.raw_token)?.grant).toEqual({
+      expect((await tokens.verifyApiTokenWithGrant(created.raw_token))?.grant).toEqual({
         mode: 'limited',
         scopes: [],
       });
     }
   });
 
-  it('PUBAPI-SCOPE-U051: a narrowed key whose scopes were all renamed away denies rather than widens', () => {
+  it('PUBAPI-SCOPE-U051: a narrowed key whose scopes were all renamed away denies rather than widens', async () => {
     const { user } = createUser(testDb);
-    const created = mint(user.id, 'Dawarich', ['trips']);
+    const created = await mint(user.id, 'Dawarich', ['trips']);
     // What a future version dropping or renaming a scope constant leaves behind.
     testDb
       .prepare('UPDATE mcp_tokens SET api_scopes = ? WHERE id = ?')
       .run(JSON.stringify(['itineraries']), created.id);
-    expect(tokens.verifyApiTokenWithGrant(created.raw_token)?.grant).toEqual({
+    expect((await tokens.verifyApiTokenWithGrant(created.raw_token))?.grant).toEqual({
       mode: 'limited',
       scopes: [],
     });
   });
 
-  it('PUBAPI-SCOPE-U049: a partly unreadable list keeps the names it can read', () => {
+  it('PUBAPI-SCOPE-U049: a partly unreadable list keeps the names it can read', async () => {
     const { user } = createUser(testDb);
-    const created = mint(user.id, 'Dawarich', ['trips']);
+    const created = await mint(user.id, 'Dawarich', ['trips']);
     testDb
       .prepare('UPDATE mcp_tokens SET api_scopes = ? WHERE id = ?')
       .run(JSON.stringify(['trips', 42, 'nope', 'stats']), created.id);
-    expect(tokens.verifyApiTokenWithGrant(created.raw_token)?.grant).toEqual({
+    expect((await tokens.verifyApiTokenWithGrant(created.raw_token))?.grant).toEqual({
       mode: 'limited',
       scopes: ['trips', 'stats'],
     });
   });
 
-  it('PUBAPI-SCOPE-U050: the list route reports the grant of every key, narrowed or not', () => {
+  it('PUBAPI-SCOPE-U050: the list route reports the grant of every key, narrowed or not', async () => {
     const { user } = createUser(testDb);
-    mint(user.id, 'Wide');
-    mint(user.id, 'Narrow', ['trips']);
-    const listed = tokens.listApiTokens(user.id) as Array<Record<string, unknown>>;
+    await mint(user.id, 'Wide');
+    await mint(user.id, 'Narrow', ['trips']);
+    const listed = await tokens.listApiTokens(user.id) as Array<Record<string, unknown>>;
     expect(listed).toHaveLength(2);
     expect(listed.map((t) => [t.name, t.scope_mode, t.scopes])).toEqual(
       expect.arrayContaining([
@@ -562,13 +562,13 @@ describe('TokenService — storing and resolving a grant', () => {
     expect(JSON.stringify(listed)).not.toContain('token_hash');
   });
 
-  it('PUBAPI-SCOPE-U051: an MCP token is untouched by any of this', () => {
+  it('PUBAPI-SCOPE-U051: an MCP token is untouched by any of this', async () => {
     const { user } = createUser(testDb);
-    const mcp = tokens.createMcpToken(user.id, 'Assistant').token as { id: number };
+    const mcp = (await tokens.createMcpToken(user.id, 'Assistant')).token as { id: number };
     // Stored as the column default, because an MCP token carries no read scopes
     // and must not look as if it did.
     expect(rowFor(mcp.id)).toEqual({ kind: 'mcp', scope_mode: 'all', api_scopes: null });
-    const listed = tokens.listMcpTokens(user.id) as Array<Record<string, unknown>>;
+    const listed = await tokens.listMcpTokens(user.id) as Array<Record<string, unknown>>;
     expect(listed).toHaveLength(1);
     // The MCP panel cannot act on scopes, so it is not shown two columns that
     // would always say the same thing.
@@ -579,22 +579,22 @@ describe('TokenService — storing and resolving a grant', () => {
     );
   });
 
-  it('PUBAPI-SCOPE-U052: an API key still does not verify as an MCP token, scopes or not', () => {
+  it('PUBAPI-SCOPE-U052: an API key still does not verify as an MCP token, scopes or not', async () => {
     const { user } = createUser(testDb);
-    const raw = mint(user.id, 'Dawarich', ['trips']).raw_token;
-    expect(tokens.verifyMcpToken(raw)).toBeNull();
-    expect(tokens.verifyApiTokenWithGrant(raw)).not.toBeNull();
+    const raw = (await mint(user.id, 'Dawarich', ['trips'])).raw_token;
+    expect(await tokens.verifyMcpToken(raw)).toBeNull();
+    expect(await tokens.verifyApiTokenWithGrant(raw)).not.toBeNull();
   });
 
-  it('PUBAPI-SCOPE-U053: presenting a narrowed key stamps last_used_at like any other', () => {
+  it('PUBAPI-SCOPE-U053: presenting a narrowed key stamps last_used_at like any other', async () => {
     const { user } = createUser(testDb);
-    const created = mint(user.id, 'Dawarich', ['trips']);
+    const created = await mint(user.id, 'Dawarich', ['trips']);
     expect(
       (testDb.prepare('SELECT last_used_at FROM mcp_tokens WHERE id = ?').get(created.id) as {
         last_used_at: string | null;
       }).last_used_at,
     ).toBeNull();
-    tokens.verifyApiTokenWithGrant(created.raw_token);
+    await tokens.verifyApiTokenWithGrant(created.raw_token);
     expect(
       (testDb.prepare('SELECT last_used_at FROM mcp_tokens WHERE id = ?').get(created.id) as {
         last_used_at: string | null;
@@ -619,13 +619,13 @@ describe('TokenService — storing and resolving a grant', () => {
     );
   const httpReq = { ip: '9.9.9.9', headers: {} } as Request;
 
-  it('PUBAPI-SCOPE-U060: POST /api/auth/api-tokens stores the scopes it was given', () => {
+  it('PUBAPI-SCOPE-U060: POST /api/auth/api-tokens stores the scopes it was given', async () => {
     const { user } = createUser(testDb);
-    const created = authController().createApiToken(
+    const created = (await authController().createApiToken(
       { id: user.id } as User,
       { name: 'Dawarich', scopes: ['trips', 'days'] },
       httpReq,
-    ).token as { id: number; scope_mode: string; scopes: string[]; raw_token: string };
+    )).token as { id: number; scope_mode: string; scopes: string[]; raw_token: string };
 
     expect(rowFor(created.id)).toMatchObject({
       scope_mode: 'limited',
@@ -636,42 +636,42 @@ describe('TokenService — storing and resolving a grant', () => {
     expect(created.raw_token).toMatch(/^trek_/);
   });
 
-  it('PUBAPI-SCOPE-U061: and the list route hands the same grant back', () => {
+  it('PUBAPI-SCOPE-U061: and the list route hands the same grant back', async () => {
     const { user } = createUser(testDb);
     const ctl = authController();
-    ctl.createApiToken({ id: user.id } as User, { name: 'Dawarich', scopes: ['bucket-list'] }, httpReq);
-    expect(ctl.listApiTokens({ id: user.id } as User)).toEqual({
+    await ctl.createApiToken({ id: user.id } as User, { name: 'Dawarich', scopes: ['bucket-list'] }, httpReq);
+    expect(await ctl.listApiTokens({ id: user.id } as User)).toEqual({
       tokens: [expect.objectContaining({ name: 'Dawarich', scope_mode: 'limited', scopes: ['bucket-list'] })],
     });
   });
 
-  it('PUBAPI-SCOPE-U062: a key minted with no scopes field is a full grant, as it always was', () => {
+  it('PUBAPI-SCOPE-U062: a key minted with no scopes field is a full grant, as it always was', async () => {
     const { user } = createUser(testDb);
     const ctl = authController();
-    const created = ctl.createApiToken({ id: user.id } as User, { name: 'Legacy' }, httpReq).token as {
+    const created = (await ctl.createApiToken({ id: user.id } as User, { name: 'Legacy' }, httpReq)).token as {
       id: number;
     };
     expect(rowFor(created.id)).toMatchObject({ scope_mode: 'all', api_scopes: null });
-    expect(ctl.listApiTokens({ id: user.id } as User)).toEqual({
+    expect(await ctl.listApiTokens({ id: user.id } as User)).toEqual({
       tokens: [expect.objectContaining({ scope_mode: 'all', scopes: [...PUBLIC_API_SCOPES] })],
     });
   });
 
-  it('PUBAPI-SCOPE-U063: POST /api/auth/mcp-tokens ignores scopes in the body entirely', () => {
+  it('PUBAPI-SCOPE-U063: POST /api/auth/mcp-tokens ignores scopes in the body entirely', async () => {
     const { user } = createUser(testDb);
     const ctl = authController();
     // The DTO is a different schema on purpose, so the field never survives the
     // pipe — and even handed straight to the controller it changes nothing.
-    const created = ctl.createMcpToken(
+    const created = (await ctl.createMcpToken(
       { id: user.id } as User,
       { name: 'Assistant', scopes: ['trips'] } as { name: string },
       httpReq,
-    ).token as Record<string, unknown>;
+    )).token as Record<string, unknown>;
 
     expect(rowFor(created.id as number)).toEqual({ kind: 'mcp', scope_mode: 'all', api_scopes: null });
     expect(created).not.toHaveProperty('scope_mode');
     expect(created).not.toHaveProperty('scopes');
-    expect(ctl.listMcpTokens({ id: user.id } as User).tokens[0]).not.toHaveProperty('scope_mode');
+    expect((await ctl.listMcpTokens({ id: user.id } as User)).tokens[0]).not.toHaveProperty('scope_mode');
   });
 
   it('PUBAPI-SCOPE-U064: the two create schemas differ, which is what keeps them apart', () => {

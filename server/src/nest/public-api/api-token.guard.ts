@@ -37,7 +37,7 @@ import { TokenService } from '../tokens/token.service';
 export class ApiTokenGuard implements CanActivate {
   constructor(private readonly tokens: TokenService) {}
 
-  canActivate(context: ExecutionContext): boolean {
+  async canActivate(context: ExecutionContext): Promise<boolean> {
     const req = context.switchToHttp().getRequest<Request>();
     const token = extractApiToken(req);
     if (!token) {
@@ -46,7 +46,7 @@ export class ApiTokenGuard implements CanActivate {
         401,
       );
     }
-    const resolved = this.tokens.verifyApiTokenWithGrant(token);
+    const resolved = await this.tokens.verifyApiTokenWithGrant(token);
     if (!resolved) {
       throw new HttpException(
         { error: 'Invalid API token', code: 'API_TOKEN_INVALID' },

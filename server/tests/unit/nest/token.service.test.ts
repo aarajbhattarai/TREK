@@ -69,83 +69,83 @@ afterAll(() => {
 // ---------------------------------------------------------------------------
 
 describe('MCP token service', () => {
-  it('AUTH-DB-041: createMcpToken returns 400 when name is missing', () => {
+  it('AUTH-DB-041: createMcpToken returns 400 when name is missing', async () => {
     const { user } = createUser(testDb);
-    const result = svc.createMcpToken(user.id, undefined);
+    const result = await svc.createMcpToken(user.id, undefined);
     expect(result.status).toBe(400);
   });
 
-  it('AUTH-DB-042: createMcpToken returns 400 when name exceeds 100 chars', () => {
+  it('AUTH-DB-042: createMcpToken returns 400 when name exceeds 100 chars', async () => {
     const { user } = createUser(testDb);
-    const result = svc.createMcpToken(user.id, 'a'.repeat(101));
+    const result = await svc.createMcpToken(user.id, 'a'.repeat(101));
     expect(result.status).toBe(400);
   });
 
-  it('AUTH-DB-043: createMcpToken creates token and returns raw_token', () => {
+  it('AUTH-DB-043: createMcpToken creates token and returns raw_token', async () => {
     const { user } = createUser(testDb);
-    const result = svc.createMcpToken(user.id, 'My Token');
+    const result = await svc.createMcpToken(user.id, 'My Token');
     expect(result.token).toBeDefined();
     expect((result.token as any).raw_token).toMatch(/^trek_/);
   });
 
-  it('AUTH-DB-044: createMcpToken returns 400 when user has 10 tokens already', () => {
+  it('AUTH-DB-044: createMcpToken returns 400 when user has 10 tokens already', async () => {
     const { user } = createUser(testDb);
     for (let i = 0; i < 10; i++) {
       testDb.prepare(
         'INSERT INTO mcp_tokens (user_id, name, token_hash, token_prefix) VALUES (?, ?, ?, ?)'
       ).run(user.id, `Token ${i}`, `hash${i}`, `trek_prefix${i}`);
     }
-    const result = svc.createMcpToken(user.id, 'One More');
+    const result = await svc.createMcpToken(user.id, 'One More');
     expect(result.status).toBe(400);
   });
 
-  it('AUTH-DB-045: deleteMcpToken returns 404 for non-existent token', () => {
+  it('AUTH-DB-045: deleteMcpToken returns 404 for non-existent token', async () => {
     const { user } = createUser(testDb);
-    const result = svc.deleteMcpToken(user.id, '99999');
+    const result = await svc.deleteMcpToken(user.id, '99999');
     expect(result.status).toBe(404);
   });
 
-  it('AUTH-DB-046: deleteMcpToken deletes the token and returns success', () => {
+  it('AUTH-DB-046: deleteMcpToken deletes the token and returns success', async () => {
     const { user } = createUser(testDb);
-    const created = svc.createMcpToken(user.id, 'Deletable Token');
+    const created = await svc.createMcpToken(user.id, 'Deletable Token');
     const tokenId = String((created.token as any).id);
 
-    const result = svc.deleteMcpToken(user.id, tokenId);
+    const result = await svc.deleteMcpToken(user.id, tokenId);
     expect(result).toEqual({ success: true });
 
     const row = testDb.prepare('SELECT id FROM mcp_tokens WHERE id = ?').get(tokenId);
     expect(row).toBeUndefined();
   });
 
-  it('AUTH-DB-092: deleteMcpToken succeeds even when the session sweep throws (best-effort)', () => {
+  it('AUTH-DB-092: deleteMcpToken succeeds even when the session sweep throws (best-effort)', async () => {
     const { user } = createUser(testDb);
-    const created = svc.createMcpToken(user.id, 'sweep-down');
+    const created = await svc.createMcpToken(user.id, 'sweep-down');
     const tokenId = String((created.token as { id: number }).id);
     vi.mocked(revokeUserSessions).mockImplementationOnce(() => { throw new Error('sweep down'); });
 
-    expect(svc.deleteMcpToken(user.id, tokenId)).toEqual({ success: true });
+    expect(await svc.deleteMcpToken(user.id, tokenId)).toEqual({ success: true });
     expect(testDb.prepare('SELECT id FROM mcp_tokens WHERE id = ?').get(tokenId)).toBeUndefined();
   });
 
-  it('TOKEN-001: listMcpTokens is scoped to the caller and never exposes the hash', () => {
+  it('TOKEN-001: listMcpTokens is scoped to the caller and never exposes the hash', async () => {
     const { user } = createUser(testDb);
     const { user: other } = createUser(testDb);
-    svc.createMcpToken(user.id, 'mine');
-    svc.createMcpToken(other.id, 'theirs');
+    await svc.createMcpToken(user.id, 'mine');
+    await svc.createMcpToken(other.id, 'theirs');
 
-    const mine = svc.listMcpTokens(user.id) as Record<string, unknown>[];
+    const mine = await svc.listMcpTokens(user.id) as Record<string, unknown>[];
     expect(mine).toHaveLength(1);
     expect(mine[0].name).toBe('mine');
     expect(mine[0]).not.toHaveProperty('token_hash');
   });
 
-  it('TOKEN-002: deleteMcpToken refuses a token that belongs to someone else', () => {
+  it('TOKEN-002: deleteMcpToken refuses a token that belongs to someone else', async () => {
     const { user } = createUser(testDb);
     const { user: other } = createUser(testDb);
-    const created = svc.createMcpToken(other.id, 'not-yours');
+    const created = await svc.createMcpToken(other.id, 'not-yours');
     const tokenId = String((created.token as { id: number }).id);
 
-    expect(svc.deleteMcpToken(user.id, tokenId)).toEqual({ error: 'Token not found', status: 404 });
+    expect(await svc.deleteMcpToken(user.id, tokenId)).toEqual({ error: 'Token not found', status: 404 });
     expect(testDb.prepare('SELECT id FROM mcp_tokens WHERE id = ?').get(tokenId)).toBeDefined();
   });
 });
@@ -159,60 +159,60 @@ describe('MCP token service', () => {
 // ---------------------------------------------------------------------------
 
 describe('API key service', () => {
-  it('TOKEN-010: an API key does not verify as an MCP token', () => {
+  it('TOKEN-010: an API key does not verify as an MCP token', async () => {
     const { user } = createUser(testDb);
-    const created = svc.createApiToken(user.id, 'dawarich');
+    const created = await svc.createApiToken(user.id, 'dawarich');
     const raw = (created.token as { raw_token: string }).raw_token;
 
-    expect(svc.verifyApiToken(raw)?.id).toBe(user.id);
-    expect(svc.verifyMcpToken(raw)).toBeNull();
+    expect((await svc.verifyApiToken(raw))?.id).toBe(user.id);
+    expect(await svc.verifyMcpToken(raw)).toBeNull();
   });
 
-  it('TOKEN-011: an MCP token does not verify as an API key', () => {
+  it('TOKEN-011: an MCP token does not verify as an API key', async () => {
     const { user } = createUser(testDb);
-    const created = svc.createMcpToken(user.id, 'claude');
+    const created = await svc.createMcpToken(user.id, 'claude');
     const raw = (created.token as { raw_token: string }).raw_token;
 
-    expect(svc.verifyMcpToken(raw)?.id).toBe(user.id);
-    expect(svc.verifyApiToken(raw)).toBeNull();
+    expect((await svc.verifyMcpToken(raw))?.id).toBe(user.id);
+    expect(await svc.verifyApiToken(raw)).toBeNull();
   });
 
-  it('TOKEN-012: each list shows only its own kind', () => {
+  it('TOKEN-012: each list shows only its own kind', async () => {
     const { user } = createUser(testDb);
-    svc.createMcpToken(user.id, 'claude');
-    svc.createApiToken(user.id, 'dawarich');
+    await svc.createMcpToken(user.id, 'claude');
+    await svc.createApiToken(user.id, 'dawarich');
 
-    const mcp = svc.listMcpTokens(user.id) as Record<string, unknown>[];
-    const api = svc.listApiTokens(user.id) as Record<string, unknown>[];
+    const mcp = await svc.listMcpTokens(user.id) as Record<string, unknown>[];
+    const api = await svc.listApiTokens(user.id) as Record<string, unknown>[];
     expect(mcp.map((t) => t.name)).toEqual(['claude']);
     expect(api.map((t) => t.name)).toEqual(['dawarich']);
   });
 
-  it('TOKEN-013: deleting across kinds 404s, identically to an unknown id', () => {
+  it('TOKEN-013: deleting across kinds 404s, identically to an unknown id', async () => {
     const { user } = createUser(testDb);
-    const mcpId = String((svc.createMcpToken(user.id, 'claude').token as { id: number }).id);
-    const apiId = String((svc.createApiToken(user.id, 'dawarich').token as { id: number }).id);
+    const mcpId = String((await svc.createMcpToken(user.id, 'claude')).token!.id as number);
+    const apiId = String((await svc.createApiToken(user.id, 'dawarich')).token!.id as number);
 
-    expect(svc.deleteApiToken(user.id, mcpId)).toEqual({ error: 'Token not found', status: 404 });
-    expect(svc.deleteMcpToken(user.id, apiId)).toEqual({ error: 'Token not found', status: 404 });
+    expect(await svc.deleteApiToken(user.id, mcpId)).toEqual({ error: 'Token not found', status: 404 });
+    expect(await svc.deleteMcpToken(user.id, apiId)).toEqual({ error: 'Token not found', status: 404 });
     // Neither row was touched: a wrong-kind delete must not be a way to revoke
     // someone's assistant access from the API-key screen.
     expect(testDb.prepare('SELECT id FROM mcp_tokens WHERE id = ?').get(mcpId)).toBeDefined();
     expect(testDb.prepare('SELECT id FROM mcp_tokens WHERE id = ?').get(apiId)).toBeDefined();
   });
 
-  it('TOKEN-014: the ten-token ceiling counts each kind on its own', () => {
+  it('TOKEN-014: the ten-token ceiling counts each kind on its own', async () => {
     const { user } = createUser(testDb);
-    for (let i = 0; i < 10; i += 1) svc.createMcpToken(user.id, `mcp-${i}`);
+    for (let i = 0; i < 10; i += 1) await svc.createMcpToken(user.id, `mcp-${i}`);
 
-    expect(svc.createMcpToken(user.id, 'one-too-many').status).toBe(400);
+    expect((await svc.createMcpToken(user.id, 'one-too-many')).status).toBe(400);
     // A full MCP shelf must not lock the user out of minting an API key.
-    expect(svc.createApiToken(user.id, 'dawarich').status).toBeUndefined();
+    expect((await svc.createApiToken(user.id, 'dawarich')).status).toBeUndefined();
   });
 
-  it('TOKEN-015: an API key is stored hashed, with only a prefix in the clear', () => {
+  it('TOKEN-015: an API key is stored hashed, with only a prefix in the clear', async () => {
     const { user } = createUser(testDb);
-    const created = svc.createApiToken(user.id, 'dawarich');
+    const created = await svc.createApiToken(user.id, 'dawarich');
     const raw = (created.token as { raw_token: string }).raw_token;
 
     const row = testDb
@@ -223,15 +223,15 @@ describe('API key service', () => {
     expect(raw.startsWith(row.token_prefix)).toBe(true);
   });
 
-  it('TOKEN-016: verifying an API key records last_used_at, so a stale key is visible', () => {
+  it('TOKEN-016: verifying an API key records last_used_at, so a stale key is visible', async () => {
     const { user } = createUser(testDb);
-    const raw = (svc.createApiToken(user.id, 'dawarich').token as { raw_token: string }).raw_token;
+    const raw = (await svc.createApiToken(user.id, 'dawarich')).token!.raw_token as string;
 
-    const before = svc.listApiTokens(user.id) as Record<string, unknown>[];
+    const before = await svc.listApiTokens(user.id) as Record<string, unknown>[];
     expect(before[0].last_used_at).toBeNull();
 
-    svc.verifyApiToken(raw);
-    const after = svc.listApiTokens(user.id) as Record<string, unknown>[];
+    await svc.verifyApiToken(raw);
+    const after = await svc.listApiTokens(user.id) as Record<string, unknown>[];
     expect(after[0].last_used_at).not.toBeNull();
   });
 });
@@ -244,42 +244,42 @@ describe('API key service', () => {
 // ---------------------------------------------------------------------------
 
 describe('MCP token service (admin view)', () => {
-  it('ADMIN-SVC-068 — listAllMcpTokens returns empty array initially', () => {
-    const result = svc.listAllMcpTokens() as any[];
+  it('ADMIN-SVC-068 — listAllMcpTokens returns empty array initially', async () => {
+    const result = await svc.listAllMcpTokens() as any[];
     expect(Array.isArray(result)).toBe(true);
     expect(result).toHaveLength(0);
   });
 
-  it('ADMIN-SVC-069 — adminDeleteMcpToken returns 404 for non-existent token', () => {
-    const result = svc.adminDeleteMcpToken('99999') as any;
+  it('ADMIN-SVC-069 — adminDeleteMcpToken returns 404 for non-existent token', async () => {
+    const result = await svc.adminDeleteMcpToken('99999') as any;
     expect(result.status).toBe(404);
     expect(result.error).toBeDefined();
   });
 
-  it('TOKEN-003: listAllMcpTokens spans users and carries the owner username', () => {
+  it('TOKEN-003: listAllMcpTokens spans users and carries the owner username', async () => {
     const { user } = createUser(testDb);
     const { user: other } = createUser(testDb);
-    svc.createMcpToken(user.id, 'a');
-    svc.createMcpToken(other.id, 'b');
+    await svc.createMcpToken(user.id, 'a');
+    await svc.createMcpToken(other.id, 'b');
 
-    const all = svc.listAllMcpTokens() as Record<string, unknown>[];
+    const all = await svc.listAllMcpTokens() as Record<string, unknown>[];
     expect(all).toHaveLength(2);
     expect(all.every(t => typeof t.username === 'string')).toBe(true);
     expect(all.some(t => t.token_hash !== undefined)).toBe(false);
   });
 
-  it('TOKEN-004: adminDeleteMcpToken removes any user token and revokes that user', () => {
+  it('TOKEN-004: adminDeleteMcpToken removes any user token and revokes that user', async () => {
     const { user } = createUser(testDb);
-    const created = svc.createMcpToken(user.id, 'admin-killed');
+    const created = await svc.createMcpToken(user.id, 'admin-killed');
     const tokenId = String((created.token as { id: number }).id);
 
-    expect(svc.adminDeleteMcpToken(tokenId)).toEqual({});
+    expect(await svc.adminDeleteMcpToken(tokenId)).toEqual({});
     expect(testDb.prepare('SELECT id FROM mcp_tokens WHERE id = ?').get(tokenId)).toBeUndefined();
     expect(revokeUserSessions).toHaveBeenCalledWith(user.id);
   });
 
-  it('TOKEN-005: adminDeleteMcpToken 404s on an unknown id without revoking anyone', () => {
-    expect(svc.adminDeleteMcpToken('99999')).toEqual({ error: 'Token not found', status: 404 });
+  it('TOKEN-005: adminDeleteMcpToken 404s on an unknown id without revoking anyone', async () => {
+    expect(await svc.adminDeleteMcpToken('99999')).toEqual({ error: 'Token not found', status: 404 });
     expect(revokeUserSessions).not.toHaveBeenCalled();
   });
 });
@@ -297,31 +297,31 @@ describe('ephemeral tokens', () => {
     expect(svc.createResourceToken(user.id, 'download')).toEqual({ token: 'tok-1' });
   });
 
-  it('AUTH-DB-087: createWsToken returns the ephemeral token when the store answers', () => {
+  it('AUTH-DB-087: createWsToken returns the ephemeral token when the store answers', async () => {
     const { user } = createUser(testDb);
     vi.mocked(createEphemeralToken).mockReturnValueOnce('ws-tok');
-    expect(svc.createWsToken(user.id)).toEqual({ token: 'ws-tok' });
+    expect(await svc.createWsToken(user.id)).toEqual({ token: 'ws-tok' });
   });
 
-  it('TOKEN-006: createWsToken binds the caller password_version, so a pre-reset token is rejected on connect', () => {
+  it('TOKEN-006: createWsToken binds the caller password_version, so a pre-reset token is rejected on connect', async () => {
     const { user } = createUser(testDb);
     testDb.prepare('UPDATE users SET password_version = 7 WHERE id = ?').run(user.id);
     vi.mocked(createEphemeralToken).mockReturnValueOnce('ws-tok');
 
-    svc.createWsToken(user.id);
+    await svc.createWsToken(user.id);
     expect(createEphemeralToken).toHaveBeenCalledWith(user.id, 'ws', { pv: 7 });
   });
 
-  it('TOKEN-007: createWsToken falls back to pv 0 for a user row without one', () => {
+  it('TOKEN-007: createWsToken falls back to pv 0 for a user row without one', async () => {
     vi.mocked(createEphemeralToken).mockReturnValueOnce('ws-tok');
-    svc.createWsToken(99999);
+    await svc.createWsToken(99999);
     expect(createEphemeralToken).toHaveBeenCalledWith(99999, 'ws', { pv: 0 });
   });
 
-  it('TOKEN-008: createWsToken reports 503 when the store refuses', () => {
+  it('TOKEN-008: createWsToken reports 503 when the store refuses', async () => {
     const { user } = createUser(testDb);
     vi.mocked(createEphemeralToken).mockReturnValueOnce(null as unknown as string);
-    expect(svc.createWsToken(user.id)).toEqual({ error: 'Service unavailable', status: 503 });
+    expect(await svc.createWsToken(user.id)).toEqual({ error: 'Service unavailable', status: 503 });
   });
 });
 
@@ -330,36 +330,36 @@ describe('ephemeral tokens', () => {
 // ---------------------------------------------------------------------------
 
 describe('verifyMcpToken', () => {
-  it('AUTH-BR-002: verifyMcpToken resolves a freshly created token to its user', () => {
+  it('AUTH-BR-002: verifyMcpToken resolves a freshly created token to its user', async () => {
     const { user } = createUser(testDb);
-    const created = svc.createMcpToken(user.id, 'bridge-case');
+    const created = await svc.createMcpToken(user.id, 'bridge-case');
     const raw = (created.token as { raw_token: string }).raw_token;
 
-    const resolved = svc.verifyMcpToken(raw);
+    const resolved = await svc.verifyMcpToken(raw);
     expect(resolved?.id).toBe(user.id);
-    expect(svc.verifyMcpToken('trek_no_such_token')).toBeNull();
+    expect(await svc.verifyMcpToken('trek_no_such_token')).toBeNull();
   });
 
-  it('TOKEN-009: a successful verify stamps last_used_at, a failed one changes nothing', () => {
+  it('TOKEN-009: a successful verify stamps last_used_at, a failed one changes nothing', async () => {
     const { user } = createUser(testDb);
-    const created = svc.createMcpToken(user.id, 'stamped');
+    const created = await svc.createMcpToken(user.id, 'stamped');
     const raw = (created.token as { raw_token: string }).raw_token;
     const id = (created.token as { id: number }).id;
     expect((testDb.prepare('SELECT last_used_at FROM mcp_tokens WHERE id = ?').get(id) as { last_used_at: string | null }).last_used_at).toBeNull();
 
-    svc.verifyMcpToken(raw);
+    await svc.verifyMcpToken(raw);
     expect((testDb.prepare('SELECT last_used_at FROM mcp_tokens WHERE id = ?').get(id) as { last_used_at: string | null }).last_used_at).not.toBeNull();
 
-    svc.verifyMcpToken('trek_wrong');
+    await svc.verifyMcpToken('trek_wrong');
     expect(testDb.prepare('SELECT COUNT(*) c FROM mcp_tokens').get()).toEqual({ c: 1 });
   });
 
-  it('TOKEN-010: verifyMcpToken returns identity columns only, never the password hash', () => {
+  it('TOKEN-010: verifyMcpToken returns identity columns only, never the password hash', async () => {
     const { user } = createUser(testDb);
-    const created = svc.createMcpToken(user.id, 'lean');
+    const created = await svc.createMcpToken(user.id, 'lean');
     const raw = (created.token as { raw_token: string }).raw_token;
 
-    const resolved = svc.verifyMcpToken(raw) as unknown as Record<string, unknown>;
+    const resolved = await svc.verifyMcpToken(raw) as unknown as Record<string, unknown>;
     expect(Object.keys(resolved).sort()).toEqual(['email', 'id', 'role', 'username']);
   });
 });

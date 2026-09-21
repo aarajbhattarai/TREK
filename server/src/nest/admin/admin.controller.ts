@@ -306,11 +306,11 @@ export class AdminController {
 
   // ── MCP tokens / OAuth sessions ──
   @Get('mcp-tokens')
-  listMcpTokens() { return { tokens: this.tokens.listAllMcpTokens() }; }
+  async listMcpTokens() { return { tokens: await this.tokens.listAllMcpTokens() }; }
 
   @Delete('mcp-tokens/:id')
   async deleteMcpToken(@CurrentUser() user: User, @Param('id') id: string, @Req() req: Request) {
-    ok(this.tokens.adminDeleteMcpToken(id));
+    ok(await this.tokens.adminDeleteMcpToken(id));
     await this.audit.writeAudit({ userId: user.id, action: 'admin.mcp_token_delete', resource: String(id), ip: getClientIp(req) });
     return { success: true };
   }

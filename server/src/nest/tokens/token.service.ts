@@ -43,8 +43,8 @@ export class TokenService {
     private readonly ephemeral: EphemeralTokenService,
   ) {}
 
-  listMcpTokens(userId: number) {
-    return this.listTokens(userId, 'mcp');
+  async listMcpTokens(userId: number) {
+    return await this.listTokens(userId, 'mcp');
   }
 
   /**
@@ -57,11 +57,11 @@ export class TokenService {
    * radius nobody asked for, so `kind` keeps the two apart and each surface
    * verifies the one it accepts.
    */
-  listApiTokens(userId: number) {
-    return this.listTokens(userId, 'api');
+  async listApiTokens(userId: number) {
+    return await this.listTokens(userId, 'api');
   }
 
-  private listTokens(userId: number, kind: TokenKind) {
+  private async listTokens(userId: number, kind: TokenKind) {
     const rows = this.db.all<TokenRow>(
       'SELECT id, name, token_prefix, created_at, last_used_at, scope_mode, api_scopes FROM mcp_tokens WHERE user_id = ? AND kind = ? ORDER BY created_at DESC',
       userId, kind
@@ -86,8 +86,8 @@ export class TokenService {
     });
   }
 
-  createMcpToken(userId: number, rawName: unknown) {
-    return this.createToken(userId, rawName, 'mcp');
+  async createMcpToken(userId: number, rawName: unknown) {
+    return await this.createToken(userId, rawName, 'mcp');
   }
 
   /**
@@ -97,11 +97,11 @@ export class TokenService {
    * before this argument existed. Narrowing is opt-in on purpose: shipping the
    * column must not change what an already-running integration can do.
    */
-  createApiToken(userId: number, rawName: unknown, scopes?: readonly string[]) {
-    return this.createToken(userId, rawName, 'api', scopes);
+  async createApiToken(userId: number, rawName: unknown, scopes?: readonly string[]) {
+    return await this.createToken(userId, rawName, 'api', scopes);
   }
 
-  private createToken(userId: number, rawName: unknown, kind: TokenKind, scopes?: readonly string[]): { error?: string; status?: number; token?: Record<string, unknown> } {
+  private async createToken(userId: number, rawName: unknown, kind: TokenKind, scopes?: readonly string[]): Promise<{ error?: string; status?: number; token?: Record<string, unknown> }> {
     const name = rawName as string | undefined;
     if (!name?.trim()) return { error: 'Token name is required', status: 400 };
     if (name.trim().length > 100) return { error: 'Token name must be 100 characters or less', status: 400 };
@@ -135,12 +135,12 @@ export class TokenService {
     return { token: { ...(token as object), ...grant, raw_token: rawToken } };
   }
 
-  deleteMcpToken(userId: number, tokenId: string) {
-    return this.deleteToken(userId, tokenId, 'mcp');
+  async deleteMcpToken(userId: number, tokenId: string) {
+    return await this.deleteToken(userId, tokenId, 'mcp');
   }
 
-  deleteApiToken(userId: number, tokenId: string) {
-    return this.deleteToken(userId, tokenId, 'api');
+  async deleteApiToken(userId: number, tokenId: string) {
+    return await this.deleteToken(userId, tokenId, 'api');
   }
 
   /**
@@ -148,7 +148,7 @@ export class TokenService {
    * happily delete a token the MCP panel manages, and the user would find a key
    * missing from a screen they never opened.
    */
-  private deleteToken(userId: number, tokenId: string, kind: TokenKind): { error?: string; status?: number; success?: boolean } {
+  private async deleteToken(userId: number, tokenId: string, kind: TokenKind): Promise<{ error?: string; status?: number; success?: boolean }> {
     const token = this.db.get('SELECT id FROM mcp_tokens WHERE id = ? AND user_id = ? AND kind = ?', tokenId, userId, kind);
     if (!token) return { error: 'Token not found', status: 404 };
     this.db.run('DELETE FROM mcp_tokens WHERE id = ?', tokenId);
@@ -162,7 +162,7 @@ export class TokenService {
   // Ephemeral tokens
   // -------------------------------------------------------------------------
 
-  createWsToken(userId: number): { error?: string; status?: number; token?: string } {
+  async createWsToken(userId: number): Promise<{ error?: string; status?: number; token?: string }> {
     // Bind the ws-token to the user's current password_version so a token minted
     // before a password reset is rejected on connect (defence-in-depth session gate).
     const pv = this.db.get<{ password_version?: number }>('SELECT password_version FROM users WHERE id = ?', userId)?.password_version ?? 0;
@@ -192,7 +192,7 @@ export class TokenService {
   // user-facing one treats that as best-effort.
   // -------------------------------------------------------------------------
 
-  listAllMcpTokens() {
+  async listAllMcpTokens() {
     return this.db.all(`
     SELECT t.id, t.name, t.token_prefix, t.created_at, t.last_used_at, t.user_id, u.username
     FROM mcp_tokens t
@@ -201,7 +201,7 @@ export class TokenService {
   `);
   }
 
-  adminDeleteMcpToken(id: string) {
+  async adminDeleteMcpToken(id: string) {
     const token = this.db.get<{ id: number; user_id: number }>('SELECT id, user_id FROM mcp_tokens WHERE id = ?', id);
     if (!token) return { error: 'Token not found', status: 404 };
     this.db.run('DELETE FROM mcp_tokens WHERE id = ?', id);
@@ -213,13 +213,13 @@ export class TokenService {
   // Verification
   // -------------------------------------------------------------------------
 
-  verifyMcpToken(rawToken: string): User | null {
-    return this.verifyToken(rawToken, 'mcp');
+  async verifyMcpToken(rawToken: string): Promise<User | null> {
+    return await this.verifyToken(rawToken, 'mcp');
   }
 
   /** Verifies an integration key. An MCP token presented here does not resolve. */
-  verifyApiToken(rawToken: string): User | null {
-    return this.verifyToken(rawToken, 'api');
+  async verifyApiToken(rawToken: string): Promise<User | null> {
+    return await this.verifyToken(rawToken, 'api');
   }
 
   /**
@@ -229,7 +229,7 @@ export class TokenService {
    * both halves, nothing else needs either, and the existing signature is
    * pinned by tests that assert exactly a `User`.
    */
-  verifyApiTokenWithGrant(rawToken: string): { user: User; grant: PublicApiGrant } | null {
+  async verifyApiTokenWithGrant(rawToken: string): Promise<{ user: User; grant: PublicApiGrant } | null> {
     const hash = createHash('sha256').update(rawToken).digest('hex');
     const row = this.db.get<User & { scope_mode: string | null; api_scopes: string | null }>(`
     SELECT u.id, u.username, u.email, u.role, mt.scope_mode, mt.api_scopes
@@ -251,7 +251,7 @@ export class TokenService {
    * neither the caller nor a timing measurement learns that the string was a
    * real credential for somewhere else.
    */
-  private verifyToken(rawToken: string, kind: TokenKind): User | null {
+  private async verifyToken(rawToken: string, kind: TokenKind): Promise<User | null> {
     const hash = createHash('sha256').update(rawToken).digest('hex');
     const row = this.db.get<User>(`
     SELECT u.id, u.username, u.email, u.role

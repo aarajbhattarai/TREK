@@ -147,7 +147,7 @@ export class McpTransportService {
 
     // Long-lived static MCP token (trek_...) — full access + deprecation notice
     if (token.startsWith('trek_')) {
-      const user = this.tokens.verifyMcpToken(token);
+      const user = await this.tokens.verifyMcpToken(token);
       if (!user) return null;
       return { user, scopes: null, clientId: null, isStaticToken: true };
     }

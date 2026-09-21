@@ -42,7 +42,8 @@ import { EphemeralTokenService } from '../../src/nest/auth/ephemeral-token.servi
 // instance mints tokens the app under test accepts (TokenService is a leaf —
 // its own unit suite constructs it the same way).
 const tokenService = new TokenService(new DatabaseService(testDb), new EphemeralTokenService());
-const createWsToken = tokenService.createWsToken.bind(tokenService);
+const createWsToken = (...args: Parameters<typeof tokenService.createWsToken>) =>
+  tokenService.createWsToken(...args);
 
 let server: http.Server;
 let wsUrl: string;
@@ -423,7 +424,7 @@ describe('WS auth edge cases', () => {
   it('WS-027 — ws-token minted before a password change is rejected (session gate)', async () => {
     // createWsToken stamps the user's current password_version (0) into the token.
     const { user } = createUser(testDb);
-    const result = createWsToken(user.id);
+    const result = await createWsToken(user.id);
     const token = result.token!;
 
     // Simulate a password reset bumping the version AFTER the token was issued.
@@ -441,7 +442,7 @@ describe('WS auth edge cases', () => {
     const { user } = createUser(testDb);
     // Bump the version first, THEN mint — the token captures the current pv.
     testDb.prepare('UPDATE users SET password_version = 3 WHERE id = ?').run(user.id);
-    const result = createWsToken(user.id);
+    const result = await createWsToken(user.id);
     const client = await connectWs(result.token!);
     try {
       const msg = await client.next();

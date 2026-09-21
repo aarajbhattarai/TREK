@@ -297,16 +297,16 @@ export class AuthController {
   }
 
   @Get('mcp-tokens')
-  listMcpTokens(@CurrentUser() user: User) {
-    return { tokens: this.tokens.listMcpTokens(user.id) };
+  async listMcpTokens(@CurrentUser() user: User) {
+    return { tokens: await this.tokens.listMcpTokens(user.id) };
   }
 
   @ManagedForbidden('a static token never expires and carries every scope; OAuth covers the same ground')
   @Post('mcp-tokens')
   @HttpCode(201)
-  createMcpToken(@CurrentUser() user: User, @Body() body: McpTokenCreateDto, @Req() req: Request) {
+  async createMcpToken(@CurrentUser() user: User, @Body() body: McpTokenCreateDto, @Req() req: Request) {
     this.limit('login', req, 5);
-    const result = this.tokens.createMcpToken(user.id, body.name);
+    const result = await this.tokens.createMcpToken(user.id, body.name);
     if (result.error) {
       throw new HttpException({ error: result.error }, result.status!);
     }
@@ -314,8 +314,8 @@ export class AuthController {
   }
 
   @Delete('mcp-tokens/:id')
-  deleteMcpToken(@CurrentUser() user: User, @Param('id') id: string) {
-    const result = this.tokens.deleteMcpToken(user.id, id);
+  async deleteMcpToken(@CurrentUser() user: User, @Param('id') id: string) {
+    const result = await this.tokens.deleteMcpToken(user.id, id);
     if (result.error) {
       throw new HttpException({ error: result.error }, result.status!);
     }
@@ -335,18 +335,18 @@ export class AuthController {
    * whole reason it exists.
    */
   @Get('api-tokens')
-  listApiTokens(@CurrentUser() user: User) {
-    return { tokens: this.tokens.listApiTokens(user.id) };
+  async listApiTokens(@CurrentUser() user: User) {
+    return { tokens: await this.tokens.listApiTokens(user.id) };
   }
 
   @Post('api-tokens')
   @HttpCode(201)
-  createApiToken(@CurrentUser() user: User, @Body() body: ApiTokenCreateDto, @Req() req: Request) {
+  async createApiToken(@CurrentUser() user: User, @Body() body: ApiTokenCreateDto, @Req() req: Request) {
     this.limit('login', req, 5);
     // No `scopes` means the key reads everything, which is what every key minted
     // before this field existed does. Narrowing stays opt-in so the change
     // cannot break an integration that is already running.
-    const result = this.tokens.createApiToken(user.id, body.name, body.scopes);
+    const result = await this.tokens.createApiToken(user.id, body.name, body.scopes);
     if (result.error) {
       throw new HttpException({ error: result.error }, result.status!);
     }
@@ -354,8 +354,8 @@ export class AuthController {
   }
 
   @Delete('api-tokens/:id')
-  deleteApiToken(@CurrentUser() user: User, @Param('id') id: string) {
-    const result = this.tokens.deleteApiToken(user.id, id);
+  async deleteApiToken(@CurrentUser() user: User, @Param('id') id: string) {
+    const result = await this.tokens.deleteApiToken(user.id, id);
     if (result.error) {
       throw new HttpException({ error: result.error }, result.status!);
     }
@@ -364,14 +364,14 @@ export class AuthController {
 
   @Post('ws-token')
   @HttpCode(200)
-  wsToken(@CurrentUser() user: User) {
+  async wsToken(@CurrentUser() user: User) {
     // Own bucket, not 'login': a client that reconnects its socket in a loop
     // must not be able to lock itself out of signing in. The ceiling is far
     // above any real client, which mints one token per socket connect, but it
     // stops a single account from filling the process-wide ephemeral store and
     // 503-ing every other user's ws and download tokens.
     this.limitUser('ws_token', user.id, 120);
-    const result = this.tokens.createWsToken(user.id);
+    const result = await this.tokens.createWsToken(user.id);
     if (result.error) {
       throw new HttpException({ error: result.error }, result.status!);
     }

@@ -465,7 +465,7 @@ describe('changePassword — session invalidation', () => {
 
   it('AUTH-DB-036b: bumps password_version, prunes MCP tokens, and re-issues a session', async () => {
     const { user, password } = createUser(testDb);
-    tokens.createMcpToken(user.id, 'cli');
+    await tokens.createMcpToken(user.id, 'cli');
 
     expect(pvOf(user.id)).toBe(0);
     expect(mcpCount(user.id)).toBe(1);
@@ -1028,13 +1028,13 @@ describe('auth quirk fixes', () => {
 // ---------------------------------------------------------------------------
 
 describe('MCP token verification round-trips', () => {
-  it('AUTH-BR-002: verifyMcpToken resolves a freshly created token to its user', () => {
+  it('AUTH-BR-002: verifyMcpToken resolves a freshly created token to its user', async () => {
     const { user } = createUser(testDb);
-    const created = tokens.createMcpToken(user.id, 'bridge-case');
+    const created = await tokens.createMcpToken(user.id, 'bridge-case');
     const raw = (created.token as { raw_token: string }).raw_token;
-    const resolved = tokens.verifyMcpToken(raw);
+    const resolved = await tokens.verifyMcpToken(raw);
     expect(resolved?.id).toBe(user.id);
-    expect(tokens.verifyMcpToken('trek_no_such_token')).toBeNull();
+    expect(await tokens.verifyMcpToken('trek_no_such_token')).toBeNull();
   });
 
   it('AUTH-BR-003: verifyJwtToken round-trips a service-minted token through the pv gate', async () => {
