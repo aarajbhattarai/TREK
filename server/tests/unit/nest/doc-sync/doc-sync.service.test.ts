@@ -422,6 +422,13 @@ describe('DocSyncService', () => {
       const second = await service.syncLink(link);
       expect(second.state).toBe('busy');
 
+      // `second` only proves `first` had already claimed the in-flight guard,
+      // which happens synchronously before any await; it says nothing about
+      // how far `first` has actually run. `runLink` now awaits `isSwitchedOff`
+      // (itself awaiting the addon check) before it reaches `resolveScope`, so
+      // drain microtasks until that call has actually landed and assigned
+      // `release`, rather than assuming it already has.
+      while (provider.resolveScope.mock.calls.length === 0) await Promise.resolve();
       release();
       await first;
       expect(provider.list).toHaveBeenCalledTimes(1);
