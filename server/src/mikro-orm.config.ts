@@ -3,10 +3,10 @@ import { SharedSqliteDriver } from './db/orm-driver';
 import { Migrator } from '@mikro-orm/migrations';
 import { SeedManager } from '@mikro-orm/seeder';
 import { defineConfig } from '@mikro-orm/sqlite';
+import { ALL_ENTITIES } from './db/entities';
 
 export default defineConfig({
-  entities: ['dist/**/*.entity.js'],
-  entitiesTs: ['src/**/*.entity.ts'],
+  entities: ALL_ENTITIES,
   extensions: [Migrator, SeedManager],
   // Reuses the connection db/database.ts owns rather than opening a second one.
   // See orm-driver.ts — with `:memory:` in tests, a second connection would be a
@@ -15,6 +15,7 @@ export default defineConfig({
   migrations: {
     path: 'dist/db/migrations',
     pathTs: 'src/db/migrations',
+    snapshot: false,
   },
   seeder: {
     path: 'dist/db/seeders',
