@@ -159,6 +159,9 @@ export default defineConfig({
         // zero asserts nothing. It needs tests before it needs a threshold.
         'src/app-config/**/*.ts': { statements: 99, branches: 95, functions: 99, lines: 99 },
         'src/db/**/*.ts': { statements: 73, branches: 38, functions: 59, lines: 80 },
+        'src/db/dialect/**/*.ts': { statements: 99, branches: 99, functions: 99, lines: 99 },
+        'src/db/repositories/**/*.ts': { statements: 99, branches: 99, functions: 99, lines: 99 },
+        'src/db/types/**/*.ts': { statements: 89, branches: 83, functions: 99, lines: 89 },
         'src/mcp/**/*.ts': { statements: 58, branches: 43, functions: 63, lines: 60 },
         'src/middleware/**/*.ts': { statements: 91, branches: 89, functions: 87, lines: 94 },
         // The folded-in nest-mcp decorator/registry layer keeps the 80% floor

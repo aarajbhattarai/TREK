@@ -43,6 +43,7 @@ import { resetTestDb } from '../helpers/test-db';
 import { createUser } from '../helpers/factories';
 import { authCookie } from '../helpers/auth';
 import { buildApp } from '../../src/bootstrap';
+import { UnitOfWork } from '../../src/nest/database/unit-of-work';
 
 describe('BOOTSTRAP (F6) — unified NestJS app serves the whole surface', () => {
   let app: INestApplication;
@@ -124,5 +125,9 @@ describe('BOOTSTRAP (F6) — unified NestJS app serves the whole surface', () =>
       .set('Cookie', authCookie(user.id));
     expect(res.status).toBe(200);
     expect(res.headers['content-encoding']).toBe('gzip');
+  });
+
+  it('BOOTSTRAP-ORM-001: the ORM unit of work resolves from the container', () => {
+    expect(app.get(UnitOfWork)).toBeInstanceOf(UnitOfWork);
   });
 });
