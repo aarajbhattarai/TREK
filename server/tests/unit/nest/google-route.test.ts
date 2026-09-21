@@ -90,20 +90,21 @@ describe('Google route import', () => {
   });
 
   it('rolls back every created stop when any assignment fails and sends no events', async () => {
-    const { service, db, places, assignments } = await setup();
-    const sqlite = new Database(':memory:');
-    sqlite.exec('CREATE TABLE stops (name TEXT)');
-    db.transaction = fn => sqlite.transaction(fn)();
+    // The write goes through this.uow.transactional now, not db.transaction, and
+    // the UnitOfWork MikroORM binds in setup() shares routeTestDb's connection —
+    // so a raw statement against that same handle is what proves the rollback.
+    const { service, places, assignments } = await setup();
+    routeTestDb.exec('CREATE TABLE stops (name TEXT)');
     places.create.mockImplementation((_trip, stop) => {
-      sqlite.prepare('INSERT INTO stops VALUES (?)').run(stop.name);
+      routeTestDb.prepare('INSERT INTO stops VALUES (?)').run(stop.name);
       return { id: stop.name };
     });
     assignments.createAssignment.mockImplementationOnce(() => ({ dayId: 3, placeId: 'Munich' })).mockImplementationOnce(() => { throw new Error('write failed'); });
     try {
       await expect(service.import(1, 7, input)).rejects.toThrow('write failed');
-      expect(sqlite.prepare('SELECT * FROM stops').all()).toEqual([]);
+      expect(routeTestDb.prepare('SELECT * FROM stops').all()).toEqual([]);
       expect(places.broadcast).not.toHaveBeenCalled();
       expect(assignments.broadcast).not.toHaveBeenCalled();
-    } finally { sqlite.close(); }
+    } finally { routeTestDb.exec('DROP TABLE stops'); }
   });
 });

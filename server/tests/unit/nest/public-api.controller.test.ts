@@ -61,6 +61,17 @@ function thrown(fn: () => unknown): { status: number; body: unknown } {
   throw new Error('expected the handler to throw');
 }
 
+async function thrownAsync(fn: () => Promise<unknown>): Promise<{ status: number; body: unknown }> {
+  try {
+    await fn();
+  } catch (err) {
+    expect(err).toBeInstanceOf(HttpException);
+    const e = err as HttpException;
+    return { status: e.getStatus(), body: e.getResponse() };
+  }
+  throw new Error('expected the handler to throw');
+}
+
 describe('PublicApiController', () => {
   describe('GET /api/v1/bucket-list', () => {
     it('returns the caller’s wishlist and passes the id from the guard, never the query', () => {
@@ -97,9 +108,9 @@ describe('PublicApiController', () => {
       expect(await makeController({ listTrips }).listTrips(req(7))).toEqual({ trips: [] });
     });
 
-    it('401s if the guard was somehow bypassed and no user is attached', () => {
+    it('401s if the guard was somehow bypassed and no user is attached', async () => {
       const listTrips = vi.fn();
-      expect(thrown(() => makeController({ listTrips }).listTrips(reqWithoutUser()))).toEqual({
+      expect(await thrownAsync(() => makeController({ listTrips }).listTrips(reqWithoutUser()))).toEqual({
         status: 401,
         body: { error: 'API token required', code: 'API_TOKEN_REQUIRED' },
       });
@@ -169,9 +180,9 @@ describe('PublicApiController', () => {
   });
 
   describe('rate limiting', () => {
-    it('429s the list once the budget is spent, without reaching the service', () => {
+    it('429s the list once the budget is spent, without reaching the service', async () => {
       const listTrips = vi.fn();
-      const res = thrown(() => makeController({ listTrips }, false).listTrips(req(7)));
+      const res = await thrownAsync(() => makeController({ listTrips }, false).listTrips(req(7)));
       expect(res).toEqual({ status: 429, body: { error: 'Too many requests. Please slow down.' } });
       expect(listTrips).not.toHaveBeenCalled();
     });

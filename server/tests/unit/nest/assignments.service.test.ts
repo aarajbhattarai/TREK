@@ -182,7 +182,7 @@ describe('createAssignment', () => {
     const { user, trip, day, place } = fixture();
     const tag = createTag(testDb, user.id, { name: 'museum' });
     testDb.prepare('INSERT INTO place_tags (place_id, tag_id) VALUES (?, ?)').run(place.id, tag.id);
-    const a = svc.createAssignment(day.id, place.id, 'skip the line');
+    const a = await svc.createAssignment(day.id, place.id, 'skip the line');
     expect(a).toMatchObject({
       day_id: day.id,
       place_id: place.id,
@@ -616,10 +616,10 @@ describe('updateTime', () => {
 });
 
 describe('updateNotes (#2163)', () => {
-  it('ASG-SVC-030: persists the note and re-selects the nested shape', () => {
+  it('ASG-SVC-030: persists the note and re-selects the nested shape', async () => {
     const { day, place } = fixture();
     const a = createDayAssignment(testDb, day.id, place.id);
-    const updated = svc.updateNotes(a.id, 'Book the 10:00 timed entry');
+    const updated = await svc.updateNotes(a.id, 'Book the 10:00 timed entry');
     expect(updated).toMatchObject({ id: a.id, notes: 'Book the 10:00 timed entry' });
     expect(testDb.prepare('SELECT notes FROM day_assignments WHERE id = ?').get(a.id)).toEqual({ notes: 'Book the 10:00 timed entry' });
   });
@@ -638,7 +638,7 @@ describe('updateNotes (#2163)', () => {
     const { day, place } = fixture();
     const a = createDayAssignment(testDb, day.id, place.id, { order_index: 3 });
     await svc.updateTime(a.id, '09:00', '10:00');
-    const updated = svc.updateNotes(a.id, 'note');
+    const updated = await svc.updateNotes(a.id, 'note');
     expect(updated).toMatchObject({ assignment_time: '09:00', assignment_end_time: '10:00' });
     // 3, not 0: a start on a day already in order no longer renumbers it, so the key
     // this note edit must not touch is still the one the stop was created with.

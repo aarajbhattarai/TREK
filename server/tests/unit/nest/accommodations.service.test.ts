@@ -460,7 +460,7 @@ describe('route-facing delegators', () => {
     expect(svc.validateRefs(trip.id, 99999, day.id, day.id)).toEqual([{ field: 'place_id', message: 'Place not found' }]);
   });
 
-  it('ACC-012 — create() writes the stay, get() reads it back trip-scoped', () => {
+  it('ACC-012 — create() writes the stay, get() reads it back trip-scoped', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const otherTrip = createTrip(testDb, user.id);
@@ -468,42 +468,42 @@ describe('route-facing delegators', () => {
     const place = createPlace(testDb, trip.id, { name: 'Hotel' }) as any;
 
     // Both ids arrive from the route as strings.
-    const { accommodation: created } = svc.create(String(trip.id), {
+    const { accommodation: created } = (await svc.create(String(trip.id), {
       place_id: place.id, start_day_id: day.id, end_day_id: day.id, confirmation: 'XY-1',
-    }) as any;
+    })) as any;
 
     expect(svc.get(String(created.id), String(trip.id))).toMatchObject({ id: created.id, confirmation: 'XY-1' });
     // Trip-scoped: a stay must not be readable through another trip's URL.
     expect(svc.get(created.id, otherTrip.id)).toBeUndefined();
   });
 
-  it('ACC-013 — update() syncs the partner reservation even when the id is a string', () => {
+  it('ACC-013 — update() syncs the partner reservation even when the id is a string', async () => {
     // updateAccommodation looks the reservation up with Number(id); if that coercion
     // regresses, the REST path silently stops syncing check-in times.
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const day = createDay(testDb, trip.id) as any;
     const place = createPlace(testDb, trip.id, { name: 'Hotel' }) as any;
-    const { accommodation: accom } = svc.create(trip.id, { place_id: place.id, start_day_id: day.id, end_day_id: day.id }) as any;
+    const { accommodation: accom } = (await svc.create(trip.id, { place_id: place.id, start_day_id: day.id, end_day_id: day.id })) as any;
 
     const existing = svc.get(accom.id, trip.id)!;
-    const { accommodation: updated } = svc.update(String(accom.id), existing as any, { check_in: '16:00', notes: 'late arrival' }) as any;
+    const { accommodation: updated } = (await svc.update(String(accom.id), existing as any, { check_in: '16:00', notes: 'late arrival' })) as any;
 
     expect(updated).toMatchObject({ check_in: '16:00', notes: 'late arrival' });
     const reservation = testDb.prepare('SELECT metadata FROM reservations WHERE accommodation_id = ?').get(accom.id) as any;
     expect(JSON.parse(reservation.metadata).check_in_time).toBe('16:00');
   });
 
-  it('ACC-014 — remove() reports the partner reservation it took with it', () => {
+  it('ACC-014 — remove() reports the partner reservation it took with it', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const day = createDay(testDb, trip.id) as any;
     const place = createPlace(testDb, trip.id, { name: 'Hotel' }) as any;
-    const { accommodation: accom } = svc.create(trip.id, { place_id: place.id, start_day_id: day.id, end_day_id: day.id }) as any;
+    const { accommodation: accom } = (await svc.create(trip.id, { place_id: place.id, start_day_id: day.id, end_day_id: day.id })) as any;
     const reservation = testDb.prepare('SELECT id FROM reservations WHERE accommodation_id = ?').get(accom.id) as any;
 
     // The controller broadcasts reservation:deleted off this return value.
-    expect(svc.remove(String(accom.id))).toEqual({
+    expect(await svc.remove(String(accom.id))).toEqual({
       linkedReservationId: reservation.id,
       deletedBudgetItemId: null,
       linkedReservationIds: [reservation.id],
@@ -1124,7 +1124,7 @@ describe('the day stop a booking implies', () => {
     const { accommodation } = await book(trip.id, place.id, day.id, day.id);
     const stop = stopsOn(day.id)[0];
 
-    const { mirror } = svc.remove(accommodation.id, { keepStop: true }) as any;
+    const { mirror } = (await svc.remove(accommodation.id, { keepStop: true })) as any;
 
     // Days hides a stop that carries an accommodation_id, so a client still holding
     // the old row keeps the place invisible on a day it is standing on.

@@ -17,9 +17,9 @@ const notice: SystemNoticeDto = {
 };
 
 /** Run `fn`, expecting an HttpException; return its { status, body }. */
-function thrown(fn: () => unknown): { status: number; body: unknown } {
+async function thrownAsync(fn: () => Promise<unknown>): Promise<{ status: number; body: unknown }> {
   try {
-    fn();
+    await fn();
   } catch (err) {
     expect(err).toBeInstanceOf(HttpException);
     const e = err as HttpException;
@@ -79,9 +79,9 @@ describe('SystemNoticesController (parity with the legacy /api/system-notices ro
       expect(dismiss).toHaveBeenCalledWith(7, 'welcome');
     });
 
-    it('404 { error: NOTICE_NOT_FOUND } when the id is unknown', () => {
+    it('404 { error: NOTICE_NOT_FOUND } when the id is unknown', async () => {
       const dismiss = vi.fn().mockReturnValue(false);
-      expect(thrown(() => makeController({ dismiss }).dismiss(user, 'nope'))).toEqual({
+      expect(await thrownAsync(() => makeController({ dismiss }).dismiss(user, 'nope'))).toEqual({
         status: 404,
         body: { error: 'NOTICE_NOT_FOUND' },
       });
