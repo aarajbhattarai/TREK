@@ -2,41 +2,78 @@ import { getRawConnection } from './database';
 import type { Configuration } from '@mikro-orm/core';
 import { SqliteConnection, SqliteDriver } from '@mikro-orm/sqlite';
 
-import { SqliteDialect } from 'kysely';
+import type Database from 'better-sqlite3';
+import { SqliteDialect, SqliteDriver as KyselySqliteDriver, type Dialect, type SqliteDialectConfig } from 'kysely';
 
 /**
- * A SQLite driver that reuses the connection `db/database.ts` already owns
- * instead of opening a second one.
- *
- * This is not a preference — it is forced by the test harness. `database.ts`
- * hands each vitest worker `:memory:`, and in better-sqlite3 an in-memory
- * database belongs to its *connection*: two connections to `:memory:` are two
- * unrelated databases. MikroORM's stock `SqliteConnection.createKyselyDialect()`
- * always does `new Database(dbName)`, so it would migrate a database nothing
- * else in the process can see.
- *
- * Sharing it also keeps the single-writer property the app has always had: one
- * handle, one WAL, no two-writers-on-one-file question in production.
+ * The stock Kysely SQLite driver's `destroy()` unconditionally does
+ * `db.close()`. MikroORM's own `close()` (`AbstractSqlConnection.close()`)
+ * always calls the Kysely client's `destroy()` too, regardless of the `force`
+ * flag it was given, and it caches that client behind a private field — so a
+ * `SqliteConnection` subclass has no hook to intercept just that one call.
+ * The fix has to live at the Kysely layer: hand MikroORM a driver identical to
+ * the stock one except `destroy()` is a no-op, so closing the ORM never closes
+ * a handle somebody else owns.
  */
-class SharedSqliteConnection extends SqliteConnection {
-  /**
-   * Resolved lazily, on every (re)connect rather than once at import: a backup
-   * restore closes the handle and opens a new one, and Kysely caches whatever it
-   * is given for the life of its client. `reinitialize()` closes this connection
-   * so that the next `connect()` lands here again and picks up the new handle.
-   */
-  override createKyselyDialect(): SqliteDialect {
-    return new SqliteDialect({ database: getRawConnection() });
+class NonClosingSqliteDriver extends KyselySqliteDriver {
+  override async destroy(): Promise<void> {
+    // The handle's owner (whoever `getHandle` below reads from) closes it.
   }
 }
 
-export class SharedSqliteDriver extends SqliteDriver {
-  constructor(config: Configuration) {
-    super(config);
-    // The base constructor already built a stock SqliteConnection; replace it
-    // before anything connects. `connection` is protected on AbstractSqlDriver,
-    // and there is no supported hook for supplying the class from a subclass of
-    // SqliteDriver (its own constructor hardcodes SqliteConnection).
-    (this as unknown as { connection: SqliteConnection }).connection = new SharedSqliteConnection(config);
+/**
+ * A SQLite driver bound to a better-sqlite3 handle somebody else owns.
+ *
+ * Forced by the test harness: `database.ts` hands each vitest worker
+ * `:memory:`, and in better-sqlite3 an in-memory database belongs to its
+ * *connection* — two connections to `:memory:` are two unrelated databases.
+ * MikroORM's stock `SqliteConnection.createKyselyDialect()` always does
+ * `new Database(dbName)`, so it would migrate a database nothing else in the
+ * process can see. Sharing the handle also keeps the single-writer property the
+ * app has always had: one handle, one WAL.
+ *
+ * `getHandle` is called on every (re)connect rather than once: a backup restore
+ * closes the handle and opens a new one, and Kysely caches whatever it is given
+ * for the life of its client, so `reinitialize()` closes the connection and the
+ * next `connect()` lands here again with the new handle.
+ */
+export function createBoundSqliteDriver(getHandle: () => Database.Database): typeof SqliteDriver {
+  class BoundSqliteConnection extends SqliteConnection {
+    override createKyselyDialect(): Dialect {
+      const config: SqliteDialectConfig = { database: getHandle() };
+      // Delegate the compiler/adapter/introspector to a throwaway stock dialect
+      // (stateless factories); only `createDriver()` needs the non-closing swap.
+      const stock = new SqliteDialect(config);
+      return {
+        createDriver: () => new NonClosingSqliteDriver(config),
+        createQueryCompiler: () => stock.createQueryCompiler(),
+        createAdapter: () => stock.createAdapter(),
+        createIntrospector: (db) => stock.createIntrospector(db),
+      };
+    }
   }
+
+  return class BoundSqliteDriver extends SqliteDriver {
+    constructor(config: Configuration) {
+      super(config);
+      // The base constructor already built a stock SqliteConnection; replace it
+      // before anything connects. `connection` is protected on AbstractSqlDriver
+      // and SqliteDriver's constructor hardcodes the class, so there is no
+      // supported hook for supplying it.
+      (this as unknown as { connection: SqliteConnection }).connection = new BoundSqliteConnection(config);
+    }
+  };
 }
+
+/**
+ * The production driver: bound to the connection `db/database.ts` owns.
+ *
+ * Wrapped in a closure rather than passed as `getRawConnection` directly:
+ * `createBoundSqliteDriver` doesn't call its argument until something actually
+ * connects, but merely *reading* the `getRawConnection` binding here would —
+ * this module is evaluated at import time, and a test that mocks
+ * `db/database` with a partial replacement (most do, via `buildDbMock` or a
+ * hand-rolled object) throws on that read even when the test never touches
+ * the database at all.
+ */
+export const SharedSqliteDriver = createBoundSqliteDriver(() => getRawConnection());
