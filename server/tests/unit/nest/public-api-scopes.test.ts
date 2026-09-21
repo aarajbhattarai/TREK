@@ -130,6 +130,17 @@ function thrown(fn: () => unknown): { status: number; body: unknown } {
   throw new Error('expected the handler to refuse');
 }
 
+async function thrownAsync(fn: () => Promise<unknown>): Promise<{ status: number; body: unknown }> {
+  try {
+    await fn();
+  } catch (err) {
+    expect(err).toBeInstanceOf(HttpException);
+    const e = err as HttpException;
+    return { status: e.getStatus(), body: e.getResponse() };
+  }
+  throw new Error('expected the handler to refuse');
+}
+
 function apiController(svc: Partial<PublicApiService>) {
   const rl = { check: vi.fn().mockReturnValue(true) } as unknown as RateLimitService;
   return new PublicApiController(svc as PublicApiService, rl);
@@ -291,11 +302,11 @@ describe('PublicApiController — what a narrowed key reaches', () => {
     expect(listBucketList).not.toHaveBeenCalled();
   });
 
-  it('PUBAPI-SCOPE-U023: a key without `trips` cannot reach the list or a single trip', () => {
+  it('PUBAPI-SCOPE-U023: a key without `trips` cannot reach the list or a single trip', async () => {
     const listTrips = vi.fn();
     const getTrip = vi.fn();
     const ctl = apiController({ listTrips, getTrip });
-    expect(thrown(() => ctl.listTrips(req(limited('bucket-list')))).status).toBe(403);
+    expect((await thrownAsync(() => ctl.listTrips(req(limited('bucket-list'))))).status).toBe(403);
     expect(thrown(() => ctl.getTrip(req(limited('bucket-list')), '12', undefined)).status).toBe(403);
     expect(listTrips).not.toHaveBeenCalled();
     expect(getTrip).not.toHaveBeenCalled();
@@ -352,10 +363,10 @@ describe('PublicApiController — what a narrowed key reaches', () => {
 });
 
 describe('PublicStatsController — the widest answer on the surface', () => {
-  it('PUBAPI-SCOPE-U030: a key without `stats` is refused, in the module next door too', () => {
+  it('PUBAPI-SCOPE-U030: a key without `stats` is refused, in the module next door too', async () => {
     // The route lives in atlas/ and imports the check from public-api/. If it ever
     // stops calling it, nothing else in that module would notice.
-    const res = thrown(() => statsController().stats(req(limited('trips'))));
+    const res = await thrownAsync(() => statsController().stats(req(limited('trips'))));
     expect(res).toEqual({
       status: 403,
       body: {
@@ -366,15 +377,15 @@ describe('PublicStatsController — the widest answer on the surface', () => {
     });
   });
 
-  it('PUBAPI-SCOPE-U031: a key that was granted stats still gets its numbers', () => {
-    expect(statsController().stats(req(limited('stats')))).toMatchObject({
+  it('PUBAPI-SCOPE-U031: a key that was granted stats still gets its numbers', async () => {
+    expect(await statsController().stats(req(limited('stats')))).toMatchObject({
       total_trips: 1,
       total_countries: 1,
     });
   });
 
-  it('PUBAPI-SCOPE-U032: an un-narrowed key reads stats, as every key did before', () => {
-    expect(statsController().stats(req(ALL))).toMatchObject({ total_trips: 1 });
+  it('PUBAPI-SCOPE-U032: an un-narrowed key reads stats, as every key did before', async () => {
+    expect(await statsController().stats(req(ALL))).toMatchObject({ total_trips: 1 });
   });
 });
 

@@ -27,8 +27,8 @@ function res() {
   return r as unknown as Response & { statusCode: number };
 }
 
-function thrown(fn: () => unknown): { status: number; body: unknown } {
-  try { fn(); } catch (err) {
+async function thrown(fn: () => Promise<unknown>): Promise<{ status: number; body: unknown }> {
+  try { await fn(); } catch (err) {
     expect(err).toBeInstanceOf(HttpException);
     const e = err as HttpException;
     return { status: e.getStatus(), body: e.getResponse() };
@@ -38,10 +38,10 @@ function thrown(fn: () => unknown): { status: number; body: unknown } {
 
 beforeEach(() => vi.clearAllMocks());
 
-describe('TripShareController', () => {
-  it('POST 404 without access, 403 without share_manage', () => {
-    expect(thrown(() => new TripShareController(svc({ verifyTripAccess: vi.fn().mockReturnValue(undefined) })).create(user, '5', {}, res()))).toEqual({ status: 404, body: { error: 'Trip not found' } });
-    expect(thrown(() => new TripShareController(svc({ canManage: vi.fn().mockReturnValue(false) })).create(user, '5', {}, res()))).toEqual({ status: 403, body: { error: 'No permission' } });
+describe('TripShareController', async () => {
+  it('POST 404 without access, 403 without share_manage', async () => {
+    expect(await thrown(() => new TripShareController(svc({ verifyTripAccess: vi.fn().mockReturnValue(undefined) })).create(user, '5', {}, res()))).toEqual({ status: 404, body: { error: 'Trip not found' } });
+    expect(await thrown(() => new TripShareController(svc({ canManage: vi.fn().mockReturnValue(false) })).create(user, '5', {}, res()))).toEqual({ status: 403, body: { error: 'No permission' } });
   });
 
   it('POST answers 201 on create, 200 on update', async () => {
@@ -57,18 +57,18 @@ describe('TripShareController', () => {
   });
 
   it('GET 404 without access, 403 without share_manage, returns info or a null token', async () => {
-    expect(thrown(() => new TripShareController(svc({ verifyTripAccess: vi.fn().mockReturnValue(undefined) })).get(user, '5'))).toEqual({ status: 404, body: { error: 'Trip not found' } });
+    expect(await thrown(() => new TripShareController(svc({ verifyTripAccess: vi.fn().mockReturnValue(undefined) })).get(user, '5'))).toEqual({ status: 404, body: { error: 'Trip not found' } });
     // Reading returns the token itself, so it needs the same permission as
     // creating it — a member with plain trip access must not get a copy.
     const get = vi.fn();
-    expect(thrown(() => new TripShareController(svc({ canManage: vi.fn().mockReturnValue(false), get } as Partial<ShareService>)).get(user, '5'))).toEqual({ status: 403, body: { error: 'No permission' } });
+    expect(await thrown(() => new TripShareController(svc({ canManage: vi.fn().mockReturnValue(false), get } as Partial<ShareService>)).get(user, '5'))).toEqual({ status: 403, body: { error: 'No permission' } });
     expect(get).not.toHaveBeenCalled();
     expect(await new TripShareController(svc({ get: vi.fn().mockReturnValue({ token: 't' }) } as Partial<ShareService>)).get(user, '5')).toEqual({ token: 't' });
     expect(await new TripShareController(svc({ get: vi.fn().mockReturnValue(null) } as Partial<ShareService>)).get(user, '5')).toEqual({ token: null });
   });
 
   it('DELETE 403 without share_manage, else removes', async () => {
-    expect(thrown(() => new TripShareController(svc({ canManage: vi.fn().mockReturnValue(false) })).remove(user, '5'))).toEqual({ status: 403, body: { error: 'No permission' } });
+    expect(await thrown(() => new TripShareController(svc({ canManage: vi.fn().mockReturnValue(false) })).remove(user, '5'))).toEqual({ status: 403, body: { error: 'No permission' } });
     const remove = vi.fn();
     expect(await new TripShareController(svc({ remove } as Partial<ShareService>)).remove(user, '5')).toEqual({ success: true });
     expect(remove).toHaveBeenCalledWith('5');
@@ -77,7 +77,7 @@ describe('TripShareController', () => {
 
 describe('SharedController', () => {
   it('404 for an invalid token, else returns the snapshot', async () => {
-    expect(thrown(() => new SharedController(svc({ getSharedTripData: vi.fn().mockReturnValue(null) } as Partial<ShareService>), storageStub).read('bad'))).toEqual({ status: 404, body: { error: 'Invalid or expired link' } });
+    expect(await thrown(() => new SharedController(svc({ getSharedTripData: vi.fn().mockReturnValue(null) } as Partial<ShareService>), storageStub).read('bad'))).toEqual({ status: 404, body: { error: 'Invalid or expired link' } });
     expect(await new SharedController(svc({ getSharedTripData: vi.fn().mockReturnValue({ trip: { id: 9 } }) } as Partial<ShareService>), storageStub).read('tok')).toEqual({ trip: { id: 9 } });
   });
 

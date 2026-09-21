@@ -53,9 +53,9 @@ describe('PlacesController (parity with the legacy /api/trips/:tripId/places rou
   });
 
   describe('POST / (create)', () => {
-    it('400 on an over-long name (length guard before permission)', () => {
+    it('400 on an over-long name (length guard before permission)', async () => {
       const canEdit = vi.fn().mockReturnValue(false); // would 403 if reached
-      expect(thrown(() => new PlacesController(svc({ canEdit }), new RuntimeEnvService(), storageStub).create(user, '5', { name: 'x'.repeat(201) }))).toEqual({
+      expect(await thrownAsync(() => new PlacesController(svc({ canEdit }), new RuntimeEnvService(), storageStub).create(user, '5', { name: 'x'.repeat(201) }))).toEqual({
         status: 400, body: { error: 'name must be 200 characters or less' },
       });
       expect(canEdit).not.toHaveBeenCalled();
@@ -65,7 +65,7 @@ describe('PlacesController (parity with the legacy /api/trips/:tripId/places rou
     // pins `name`, so the ZodValidationPipe rejects a nameless body before the
     // handler runs (see the e2e suite for the envelope it produces).
     it('403 without place_edit, then creates + hooks', async () => {
-      expect(thrown(() => new PlacesController(svc({ canEdit: vi.fn().mockReturnValue(false) }), new RuntimeEnvService(), storageStub).create(user, '5', { name: 'Spot' }))).toEqual({ status: 403, body: { error: 'No permission' } });
+      expect(await thrownAsync(() => new PlacesController(svc({ canEdit: vi.fn().mockReturnValue(false) }), new RuntimeEnvService(), storageStub).create(user, '5', { name: 'Spot' }))).toEqual({ status: 403, body: { error: 'No permission' } });
       const create = vi.fn().mockReturnValue({ id: 9 }); const broadcast = vi.fn(); const onCreated = vi.fn();
       const s = svc({ create, broadcast, onCreated } as Partial<PlacesService>);
       expect(await new PlacesController(s, new RuntimeEnvService(), storageStub).create(user, '5', { name: 'Spot' }, 'sock')).toEqual({ place: { id: 9 } });
@@ -76,16 +76,16 @@ describe('PlacesController (parity with the legacy /api/trips/:tripId/places rou
 
   describe('POST /import/gpx', () => {
     const file = { buffer: Buffer.from('gpx'), originalname: 'r.gpx' } as Express.Multer.File;
-    it('400 without a file', () => {
-      expect(thrown(() => new PlacesController(svc(), new RuntimeEnvService(), storageStub).importGpx(user, '5', undefined, {}))).toEqual({ status: 400, body: { error: 'No file uploaded' } });
+    it('400 without a file', async () => {
+      expect(await thrownAsync(() => new PlacesController(svc(), new RuntimeEnvService(), storageStub).importGpx(user, '5', undefined, {}))).toEqual({ status: 400, body: { error: 'No file uploaded' } });
     });
-    it('400 when all import types are disabled', () => {
-      expect(thrown(() => new PlacesController(svc(), new RuntimeEnvService(), storageStub).importGpx(user, '5', file, { importWaypoints: 'false', importRoutes: 'false', importTracks: 'false' }))).toEqual({
+    it('400 when all import types are disabled', async () => {
+      expect(await thrownAsync(() => new PlacesController(svc(), new RuntimeEnvService(), storageStub).importGpx(user, '5', file, { importWaypoints: 'false', importRoutes: 'false', importTracks: 'false' }))).toEqual({
         status: 400, body: { error: 'No import types selected' },
       });
     });
-    it('400 when the GPX yields nothing', () => {
-      expect(thrown(() => new PlacesController(svc({ importGpx: vi.fn().mockReturnValue(null) } as Partial<PlacesService>), new RuntimeEnvService(), storageStub).importGpx(user, '5', file, {}))).toEqual({
+    it('400 when the GPX yields nothing', async () => {
+      expect(await thrownAsync(() => new PlacesController(svc({ importGpx: vi.fn().mockReturnValue(null) } as Partial<PlacesService>), new RuntimeEnvService(), storageStub).importGpx(user, '5', file, {}))).toEqual({
         status: 400, body: { error: 'No matching places found in GPX file' },
       });
     });
@@ -346,7 +346,7 @@ describe('PlacesController (parity with the legacy /api/trips/:tripId/places rou
       expect(await thrownAsync(() => new PlacesController(svc({ canEdit }), new RuntimeEnvService(), storageStub).update(user, '5', '9', { route_color: 'red' }))).toEqual(err);
       expect(await thrownAsync(() => new PlacesController(svc({ canEdit }), new RuntimeEnvService(), storageStub).update(user, '5', '9', { route_color: '#12345' }))).toEqual(err);
       expect(await thrownAsync(() => new PlacesController(svc({ canEdit }), new RuntimeEnvService(), storageStub).update(user, '5', '9', { route_color: 123 }))).toEqual(err);
-      expect(thrown(() => new PlacesController(svc({ canEdit }), new RuntimeEnvService(), storageStub).create(user, '5', { name: 'T', route_color: 'red' }))).toEqual(err);
+      expect(await thrownAsync(() => new PlacesController(svc({ canEdit }), new RuntimeEnvService(), storageStub).create(user, '5', { name: 'T', route_color: 'red' }))).toEqual(err);
       expect(canEdit).not.toHaveBeenCalled();
     });
 
@@ -391,7 +391,7 @@ describe('PlacesController (parity with the legacy /api/trips/:tripId/places rou
       ]) {
         expect(await thrownAsync(() => ctl({ canEdit }).update(user, '5', '9', { image_url }))).toEqual(imageErr);
       }
-      expect(thrown(() => ctl({ canEdit }).create(user, '5', { name: 'T', image_url: 'javascript:alert(1)' }))).toEqual(imageErr);
+      expect(await thrownAsync(() => ctl({ canEdit }).create(user, '5', { name: 'T', image_url: 'javascript:alert(1)' }))).toEqual(imageErr);
       expect(canEdit).not.toHaveBeenCalled();
     });
 

@@ -78,7 +78,7 @@ async function thrownAsync(fn: () => Promise<unknown>): Promise<{ status: number
 
 beforeEach(() => vi.clearAllMocks());
 
-describe('TripsController (parity with the legacy /api/trips route)', () => {
+describe('TripsController (parity with the legacy /api/trips route)', async () => {
   it('GET / lists for the user with the archived flag', () => {
     const list = vi.fn().mockReturnValue([{ id: 1 }]);
     expect(tc(svc({ list } as Partial<TripsService>)).list(user, '1')).toEqual({ trips: [{ id: 1 }] });
@@ -148,8 +148,8 @@ describe('TripsController (parity with the legacy /api/trips route)', () => {
   });
 
   describe('POST / (create)', () => {
-    it('403 without trip_create; a missing title 400s in the ZodValidationPipe', () => {
-      expect(thrown(() => tc(svc({ can: vi.fn().mockReturnValue(false) })).create(user, { title: 'T' }, req))).toEqual({ status: 403, body: { error: 'No permission to create trips' } });
+    it('403 without trip_create; a missing title 400s in the ZodValidationPipe', async () => {
+      expect(await thrownAsync(() => tc(svc({ can: vi.fn().mockReturnValue(false) })).create(user, { title: 'T' }, req))).toEqual({ status: 403, body: { error: 'No permission to create trips' } });
       // The hand-rolled 'Title is required' 400 moved into the global pipe
       // (trips DTO ratchet) — the schema rejects a missing/empty title.
       expect(tripCreateRequestSchema.safeParse({}).success).toBe(false);
@@ -162,8 +162,8 @@ describe('TripsController (parity with the legacy /api/trips route)', () => {
       expect(create).toHaveBeenCalledWith(1, expect.objectContaining({ start_date: '2026-07-01', end_date: '2026-07-07' }));
     });
 
-    it('400 when end_date precedes start_date', () => {
-      expect(thrown(() => tc(svc()).create(user, { title: 'T', start_date: '2026-07-10', end_date: '2026-07-01' }, req))).toEqual({
+    it('400 when end_date precedes start_date', async () => {
+      expect(await thrownAsync(() => tc(svc()).create(user, { title: 'T', start_date: '2026-07-10', end_date: '2026-07-01' }, req))).toEqual({
         status: 400, body: { error: 'End date must be after start date' },
       });
     });
@@ -186,9 +186,9 @@ describe('TripsController (parity with the legacy /api/trips route)', () => {
       expect(create).toHaveBeenCalledWith(1, expect.objectContaining({ day_count: MAX_TRIP_DAYS }));
     });
 
-    it('maps a ValidationError from create to 400 (range past MAX_TRIP_DAYS)', () => {
+    it('maps a ValidationError from create to 400 (range past MAX_TRIP_DAYS)', async () => {
       const create = vi.fn().mockImplementation(() => { throw new ValidationError(`A trip can span at most ${MAX_TRIP_DAYS} days`); });
-      expect(thrown(() => tc(svc({ create } as Partial<TripsService>)).create(user, { title: 'T', start_date: '2026-01-01', end_date: '2036-01-01' }, req))).toEqual({
+      expect(await thrownAsync(() => tc(svc({ create } as Partial<TripsService>)).create(user, { title: 'T', start_date: '2026-01-01', end_date: '2036-01-01' }, req))).toEqual({
         status: 400, body: { error: `A trip can span at most ${MAX_TRIP_DAYS} days` },
       });
     });
@@ -280,9 +280,9 @@ describe('TripsController (parity with the legacy /api/trips route)', () => {
   });
 
   describe('POST /:id/copy', () => {
-    it('403 without trip_create, 404 without access', () => {
-      expect(thrown(() => tc(svc({ can: vi.fn().mockReturnValue(false) })).copy(user, '9', {}, req))).toEqual({ status: 403, body: { error: 'No permission to create trips' } });
-      expect(thrown(() => tc(svc({ canAccessTrip: vi.fn().mockReturnValue(undefined) })).copy(user, '9', {}, req))).toEqual({ status: 404, body: { error: 'Trip not found' } });
+    it('403 without trip_create, 404 without access', async () => {
+      expect(await thrownAsync(() => tc(svc({ can: vi.fn().mockReturnValue(false) })).copy(user, '9', {}, req))).toEqual({ status: 403, body: { error: 'No permission to create trips' } });
+      expect(await thrownAsync(() => tc(svc({ canAccessTrip: vi.fn().mockReturnValue(undefined) })).copy(user, '9', {}, req))).toEqual({ status: 404, body: { error: 'Trip not found' } });
     });
 
     it('copies + returns the new trip', async () => {
@@ -292,15 +292,15 @@ describe('TripsController (parity with the legacy /api/trips route)', () => {
   });
 
   describe('DELETE /:id', () => {
-    it('404 when no owner, 403 without trip_delete', () => {
-      expect(thrown(() => tc(svc({ getOwner: vi.fn().mockReturnValue(undefined) } as Partial<TripsService>)).remove(user, '9', req))).toEqual({ status: 404, body: { error: 'Trip not found' } });
+    it('404 when no owner, 403 without trip_delete', async () => {
+      expect(await thrownAsync(() => tc(svc({ getOwner: vi.fn().mockReturnValue(undefined) } as Partial<TripsService>)).remove(user, '9', req))).toEqual({ status: 404, body: { error: 'Trip not found' } });
       const s = svc({ getOwner: vi.fn().mockReturnValue({ user_id: 1 }), can: vi.fn().mockReturnValue(false) } as Partial<TripsService>);
-      expect(thrown(() => tc(s).remove(user, '9', req))).toEqual({ status: 403, body: { error: 'No permission to delete this trip' } });
+      expect(await thrownAsync(() => tc(s).remove(user, '9', req))).toEqual({ status: 403, body: { error: 'No permission to delete this trip' } });
     });
 
-    it('404s for someone with no access, so the 403 is not an existence oracle', () => {
+    it('404s for someone with no access, so the 403 is not an existence oracle', async () => {
       const s = svc({ getOwner: vi.fn().mockReturnValue({ user_id: 2 }), canAccessTrip: vi.fn().mockReturnValue(null), remove: vi.fn() } as Partial<TripsService>);
-      expect(thrown(() => tc(s).remove(user, '9', req))).toEqual({ status: 404, body: { error: 'Trip not found' } });
+      expect(await thrownAsync(() => tc(s).remove(user, '9', req))).toEqual({ status: 404, body: { error: 'Trip not found' } });
       expect(s.remove).not.toHaveBeenCalled();
     });
 
@@ -422,8 +422,8 @@ describe('TripsController (parity with the legacy /api/trips route)', () => {
     });
   });
 
-  it('POST /:id/copy maps a copy failure to 500', () => {
+  it('POST /:id/copy maps a copy failure to 500', async () => {
     const s = svc({ copy: vi.fn().mockImplementation(() => { throw new Error('boom'); }) } as Partial<TripsService>);
-    expect(thrown(() => tc(s).copy(user, '9', {}, req))).toEqual({ status: 500, body: { error: 'Failed to copy trip' } });
+    expect(await thrownAsync(() => tc(s).copy(user, '9', {}, req))).toEqual({ status: 500, body: { error: 'Failed to copy trip' } });
   });
 });

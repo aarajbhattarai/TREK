@@ -94,32 +94,32 @@ afterAll(() => {
 // ── listTripPhotos ────────────────────────────────────────────────────────────
 
 describe('listTripPhotos', () => {
-  it('MEM-UNIFIED-001: returns 404 when user cannot access trip', () => {
-    const result = listTripPhotos('9999', 1);
+  it('MEM-UNIFIED-001: returns 404 when user cannot access trip', async () => {
+    const result = await listTripPhotos('9999', 1);
     expect(result.success).toBe(false);
     expect((result as any).error.status).toBe(404);
   });
 
-  it('MEM-UNIFIED-002: returns 400 when no photo providers are enabled', () => {
+  it('MEM-UNIFIED-002: returns 400 when no photo providers are enabled', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
 
     // Disable all providers
     testDb.prepare('UPDATE photo_providers SET enabled = 0').run();
 
-    const result = listTripPhotos(String(trip.id), user.id);
+    const result = await listTripPhotos(String(trip.id), user.id);
     expect(result.success).toBe(false);
     expect((result as any).error.status).toBe(400);
     expect((result as any).error.message).toMatch(/no photo providers enabled/i);
   });
 
-  it('MEM-UNIFIED-013: treats enabled providers as disabled while the journey addon is off', () => {
+  it('MEM-UNIFIED-013: treats enabled providers as disabled while the journey addon is off', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
 
     setAddonEnabled(testDb, ADDON_IDS.JOURNEY, false);
 
-    const result = listTripPhotos(String(trip.id), user.id);
+    const result = await listTripPhotos(String(trip.id), user.id);
     expect(result.success).toBe(false);
     expect((result as any).error.status).toBe(400);
     expect((result as any).error.message).toMatch(/no photo providers enabled/i);
@@ -129,19 +129,19 @@ describe('listTripPhotos', () => {
 // ── listTripAlbumLinks ────────────────────────────────────────────────────────
 
 describe('listTripAlbumLinks', () => {
-  it('MEM-UNIFIED-003: returns 404 when user cannot access trip', () => {
-    const result = listTripAlbumLinks('9999', 1);
+  it('MEM-UNIFIED-003: returns 404 when user cannot access trip', async () => {
+    const result = await listTripAlbumLinks('9999', 1);
     expect(result.success).toBe(false);
     expect((result as any).error.status).toBe(404);
   });
 
-  it('MEM-UNIFIED-004: returns 400 when no photo providers are enabled', () => {
+  it('MEM-UNIFIED-004: returns 400 when no photo providers are enabled', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
 
     testDb.prepare('UPDATE photo_providers SET enabled = 0').run();
 
-    const result = listTripAlbumLinks(String(trip.id), user.id);
+    const result = await listTripAlbumLinks(String(trip.id), user.id);
     expect(result.success).toBe(false);
     expect((result as any).error.status).toBe(400);
   });
@@ -219,13 +219,13 @@ describe('removeTripPhoto', () => {
 // ── createTripAlbumLink ───────────────────────────────────────────────────────
 
 describe('createTripAlbumLink', () => {
-  it('MEM-UNIFIED-010: returns 404 when user cannot access trip', () => {
-    const result = createTripAlbumLink('9999', 1, 'immich', 'album-1', 'My Album');
+  it('MEM-UNIFIED-010: returns 404 when user cannot access trip', async () => {
+    const result = await createTripAlbumLink('9999', 1, 'immich', 'album-1', 'My Album');
     expect(result.success).toBe(false);
     expect((result as any).error.status).toBe(404);
   });
 
-  it('MEM-UNIFIED-011: returns 400 when provider is disabled', () => {
+  it('MEM-UNIFIED-011: returns 400 when provider is disabled', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
 
@@ -233,7 +233,7 @@ describe('createTripAlbumLink', () => {
       'INSERT OR IGNORE INTO photo_providers (id, name, description, icon, enabled, sort_order) VALUES (?, ?, ?, ?, ?, ?)'
     ).run('disabled-prov2', 'Disabled2', 'desc', 'Image', 0, 100);
 
-    const result = createTripAlbumLink(String(trip.id), user.id, 'disabled-prov2', 'album-1', 'My Album');
+    const result = await createTripAlbumLink(String(trip.id), user.id, 'disabled-prov2', 'album-1', 'My Album');
     expect(result.success).toBe(false);
     expect((result as any).error.status).toBe(400);
   });

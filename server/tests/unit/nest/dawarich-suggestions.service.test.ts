@@ -286,16 +286,6 @@ function bucketOf(id: number): BucketRow {
  * the status the controller maps and the code the MCP tool renders, and
  * `toThrow(AcceptError)` alone would pass on the wrong refusal.
  */
-function refusalFrom(fn: () => unknown): AcceptError {
-  try {
-    fn();
-  } catch (err) {
-    if (err instanceof AcceptError) return err;
-    throw err;
-  }
-  throw new Error('expected the call to throw an AcceptError, but it returned');
-}
-
 async function asyncRefusalFrom(fn: () => Promise<unknown>): Promise<AcceptError> {
   try {
     await fn();
@@ -419,13 +409,13 @@ describe('DawarichSuggestionsService — the review list', () => {
 // ── accept: place ────────────────────────────────────────────────────────────
 
 describe('DawarichSuggestionsService — accepting into a trip', () => {
-  it('DAWARICH-SUG-005: a trip the caller cannot see is a 404, and nothing is created', () => {
+  it('DAWARICH-SUG-005: a trip the caller cannot see is a 404, and nothing is created', async () => {
     const { user } = createUser(testDb);
     const { user: stranger } = createUser(testDb);
     const strangerTrip = createTrip(testDb, stranger.id);
     const id = seedSuggestion({ userId: user.id });
 
-    const err = refusalFrom(() => svc.accept(user.id, id, { target: 'place', tripId: strangerTrip.id }));
+    const err = await asyncRefusalFrom(() => svc.accept(user.id, id, { target: 'place', tripId: strangerTrip.id }));
 
     expect(err.status).toBe(404);
     expect(err.code).toBe('not_found');
@@ -433,14 +423,14 @@ describe('DawarichSuggestionsService — accepting into a trip', () => {
     expect(rowOf(id).state).toBe('new');
   });
 
-  it('DAWARICH-SUG-006: a day from another trip is a 400 — trip access is not day access', () => {
+  it('DAWARICH-SUG-006: a day from another trip is a 400 — trip access is not day access', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const otherTrip = createTrip(testDb, user.id);
     const foreignDay = createDay(testDb, otherTrip.id, { date: '2026-09-01' });
     const id = seedSuggestion({ userId: user.id });
 
-    const err = refusalFrom(() =>
+    const err = await asyncRefusalFrom(() =>
       svc.accept(user.id, id, { target: 'place', tripId: trip.id, dayId: foreignDay.id }),
     );
 
@@ -494,11 +484,11 @@ describe('DawarichSuggestionsService — accepting into a trip', () => {
     expect(result.suggestion.sourceChanged).toBe(false);
   });
 
-  it('DAWARICH-SUG-008: a stay with no trip anywhere is a 400 rather than a place nobody can see', () => {
+  it('DAWARICH-SUG-008: a stay with no trip anywhere is a 400 rather than a place nobody can see', async () => {
     const { user } = createUser(testDb);
     const id = seedSuggestion({ userId: user.id, tripId: null });
 
-    const err = refusalFrom(() => svc.accept(user.id, id, { target: 'place' }));
+    const err = await asyncRefusalFrom(() => svc.accept(user.id, id, { target: 'place' }));
 
     expect(err.status).toBe(400);
     expect(err.code).toBe('trip_required');
@@ -588,13 +578,13 @@ describe('DawarichSuggestionsService — accepting into a trip', () => {
     );
   });
 
-  it("DAWARICH-SUG-009: accepting a stranger's suggestion is a 404 before any target is looked at", () => {
+  it("DAWARICH-SUG-009: accepting a stranger's suggestion is a 404 before any target is looked at", async () => {
     const { user } = createUser(testDb);
     const { user: stranger } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const theirs = seedSuggestion({ userId: stranger.id });
 
-    const err = refusalFrom(() => svc.accept(user.id, theirs, { target: 'place', tripId: trip.id }));
+    const err = await asyncRefusalFrom(() => svc.accept(user.id, theirs, { target: 'place', tripId: trip.id }));
 
     expect(err.status).toBe(404);
     expect(err.code).toBe('not_found');
@@ -605,12 +595,12 @@ describe('DawarichSuggestionsService — accepting into a trip', () => {
 // ── accept: journal ──────────────────────────────────────────────────────────
 
 describe('DawarichSuggestionsService — accepting into a journey', () => {
-  it('DAWARICH-SUG-010: a journey the caller may not edit refuses before createEntry is reached', () => {
+  it('DAWARICH-SUG-010: a journey the caller may not edit refuses before createEntry is reached', async () => {
     const { user } = createUser(testDb);
     const id = seedSuggestion({ userId: user.id });
     journeyStub.canEdit.mockReturnValue(false);
 
-    const err = refusalFrom(() => svc.accept(user.id, id, { target: 'journal', journalId: 4242 }));
+    const err = await asyncRefusalFrom(() => svc.accept(user.id, id, { target: 'journal', journalId: 4242 }));
 
     expect(journeyStub.canEdit).toHaveBeenCalledWith(4242, user.id);
     expect(err.status).toBe(404);
@@ -648,11 +638,11 @@ describe('DawarichSuggestionsService — accepting into a journey', () => {
     expect(row.accepted_journal_entry_id).toBe(CREATED_ENTRY_ID);
   });
 
-  it('DAWARICH-SUG-012: a journey id missing from the body is a 400, not a guess', () => {
+  it('DAWARICH-SUG-012: a journey id missing from the body is a 400, not a guess', async () => {
     const { user } = createUser(testDb);
     const id = seedSuggestion({ userId: user.id });
 
-    const err = refusalFrom(() => svc.accept(user.id, id, { target: 'journal' }));
+    const err = await asyncRefusalFrom(() => svc.accept(user.id, id, { target: 'journal' }));
 
     expect(err.status).toBe(400);
     expect(err.code).toBe('journal_required');
@@ -713,12 +703,12 @@ describe('DawarichSuggestionsService — accepting into a journey', () => {
     expect(body.story).toBeUndefined();
   });
 
-  it('DAWARICH-SUG-013: a journey domain that returns nothing leaves the suggestion in review', () => {
+  it('DAWARICH-SUG-013: a journey domain that returns nothing leaves the suggestion in review', async () => {
     const { user } = createUser(testDb);
     const id = seedSuggestion({ userId: user.id });
     journeyStub.createEntry.mockReturnValue(null);
 
-    const err = refusalFrom(() => svc.accept(user.id, id, { target: 'journal', journalId: 12 }));
+    const err = await asyncRefusalFrom(() => svc.accept(user.id, id, { target: 'journal', journalId: 12 }));
 
     expect(err.status).toBe(404);
     expect(rowOf(id).state).toBe('new');
@@ -728,13 +718,13 @@ describe('DawarichSuggestionsService — accepting into a journey', () => {
 // ── accept: bucket list ──────────────────────────────────────────────────────
 
 describe('DawarichSuggestionsService — ticking off a wish', () => {
-  it('DAWARICH-SUG-014: a wish owned by somebody else is a 404 and stays untouched', () => {
+  it('DAWARICH-SUG-014: a wish owned by somebody else is a 404 and stays untouched', async () => {
     const { user } = createUser(testDb);
     const { user: stranger } = createUser(testDb);
     const theirWish = seedBucketItem(stranger.id, { name: 'Their Hallstatt' });
     const id = seedSuggestion({ userId: user.id });
 
-    const err = refusalFrom(() =>
+    const err = await asyncRefusalFrom(() =>
       svc.accept(user.id, id, { target: 'bucket_list', bucketListItemId: theirWish }),
     );
 
@@ -770,11 +760,11 @@ describe('DawarichSuggestionsService — ticking off a wish', () => {
     expect(bucketOf(wish).visited_source).toBe('dawarich');
   });
 
-  it('DAWARICH-SUG-017: with nothing named and nothing matched it is a 400', () => {
+  it('DAWARICH-SUG-017: with nothing named and nothing matched it is a 400', async () => {
     const { user } = createUser(testDb);
     const id = seedSuggestion({ userId: user.id, matchedBucketListItemId: null });
 
-    const err = refusalFrom(() => svc.accept(user.id, id, { target: 'bucket_list' }));
+    const err = await asyncRefusalFrom(() => svc.accept(user.id, id, { target: 'bucket_list' }));
 
     expect(err.status).toBe(400);
     expect(err.code).toBe('bucket_required');
@@ -792,7 +782,7 @@ describe('DawarichSuggestionsService — what an acceptance closes off', () => {
     const first = await svc.accept(user.id, id, { target: 'place', tripId: trip.id });
     expect(placesStub.create).toHaveBeenCalledTimes(1);
 
-    const err = refusalFrom(() => svc.accept(user.id, id, { target: 'place', tripId: trip.id }));
+    const err = await asyncRefusalFrom(() => svc.accept(user.id, id, { target: 'place', tripId: trip.id }));
 
     expect(err.status).toBe(409);
     expect(err.code).toBe('already_accepted');

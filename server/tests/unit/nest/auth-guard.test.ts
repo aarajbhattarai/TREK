@@ -250,7 +250,7 @@ describe('PasskeyController', () => {
     expect(pc(rl()).rename(user, 'cid', { name: 'x' })).toEqual({ success: true });
 
     passkey.deletePasskey.mockReturnValue({ error: 'Incorrect password', status: 401 });
-    expect(thrown(() => pc(rl()).remove(user, 'cid', { password: 'x' }, req))).toEqual({ status: 401, body: { error: 'Incorrect password' } });
+    expect(await thrownAsync(() => pc(rl()).remove(user, 'cid', { password: 'x' }, req))).toEqual({ status: 401, body: { error: 'Incorrect password' } });
     passkey.deletePasskey.mockReturnValue({ success: true });
     expect(await pc(rl()).remove(user, 'cid', { password: 'p' }, req)).toEqual({ success: true });
     expect(writeAudit).toHaveBeenCalledWith(expect.objectContaining({ action: 'user.passkey_delete' }));

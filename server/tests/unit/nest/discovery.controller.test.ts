@@ -93,22 +93,34 @@ describe('DiscoveryMetadataService', () => {
   });
 });
 
+/**
+ * createMcpMetadataMiddleware resolves the addon gate inside an async IIFE
+ * (Express cannot await a middleware), so on a /.well-known path the 404 or the
+ * router delegation lands a microtask after mw() returns. Drain the microtask
+ * queue — no timer is involved, so there is nothing to sleep for.
+ */
+async function flushMicrotasks(): Promise<void> {
+  for (let i = 0; i < 10; i++) await Promise.resolve();
+}
+
 describe('createMcpMetadataMiddleware', () => {
-  it('DISC-010: 404s a /.well-known path with an empty body when MCP is disabled', () => {
+  it('DISC-010: 404s a /.well-known path with an empty body when MCP is disabled', async () => {
     const mw = createMcpMetadataMiddleware(new DiscoveryMetadataService(), addons(false));
     const res = makeRes();
     const next = vi.fn();
     mw({ path: '/.well-known/oauth-authorization-server' } as never, res as never, next);
+    await flushMicrotasks();
     expect(res.statusCode).toBe(404);
     expect(res.ended).toBe(true);
     expect(next).not.toHaveBeenCalled();
     expect(h.metaRouter).not.toHaveBeenCalled();
   });
 
-  it('DISC-011: delegates a /.well-known path to the SDK router when MCP is enabled', () => {
+  it('DISC-011: delegates a /.well-known path to the SDK router when MCP is enabled', async () => {
     const mw = createMcpMetadataMiddleware(new DiscoveryMetadataService(), addons(true));
     const next = vi.fn();
     mw({ path: '/.well-known/oauth-authorization-server' } as never, makeRes() as never, next);
+    await flushMicrotasks();
     expect(h.metaRouter).toHaveBeenCalled();
   });
 

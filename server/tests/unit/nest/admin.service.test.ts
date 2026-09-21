@@ -282,15 +282,15 @@ describe('getStats', () => {
 // ── getPermissions / savePermissions ─────────────────────────────────────────
 
 describe('Permissions', () => {
-  it('ADMIN-SVC-019 — getPermissions returns an array of actions', () => {
-    const result = getPermissions() as any;
+  it('ADMIN-SVC-019 — getPermissions returns an array of actions', async () => {
+    const result = await getPermissions() as any;
     expect(Array.isArray(result.permissions)).toBe(true);
     expect(result.permissions.length).toBeGreaterThan(0);
   });
 
   it('ADMIN-SVC-020 — savePermissions persists a permission change', async () => {
     await savePermissions({ trip_create: 'admin' });
-    const result = getPermissions() as any;
+    const result = await getPermissions() as any;
     const perm = result.permissions.find((p: any) => p.key === 'trip_create');
     expect(perm.level).toBe('admin');
   });
@@ -490,17 +490,17 @@ describe('listAddons', () => {
 // ── updateAddon ───────────────────────────────────────────────────────────────
 
 describe('updateAddon', () => {
-  it('ADMIN-SVC-066 — updateAddon enables and disables a seeded addon', () => {
-    const disabled = updateAddon('mcp', { enabled: false }) as any;
+  it('ADMIN-SVC-066 — updateAddon enables and disables a seeded addon', async () => {
+    const disabled = await updateAddon('mcp', { enabled: false }) as any;
     expect(disabled.addon).toBeDefined();
     expect(disabled.addon.enabled).toBe(false);
 
-    const enabled = updateAddon('mcp', { enabled: true }) as any;
+    const enabled = await updateAddon('mcp', { enabled: true }) as any;
     expect(enabled.addon.enabled).toBe(true);
   });
 
-  it('ADMIN-SVC-067 — updateAddon returns 404 for unknown addon id', () => {
-    const result = updateAddon('nonexistent-addon-xyz', { enabled: true }) as any;
+  it('ADMIN-SVC-067 — updateAddon returns 404 for unknown addon id', async () => {
+    const result = await updateAddon('nonexistent-addon-xyz', { enabled: true }) as any;
     expect(result.status).toBe(404);
     expect(result.error).toBeDefined();
   });
@@ -508,52 +508,52 @@ describe('updateAddon', () => {
   it('ADMIN-SVC-069 — mcpAffected only fires on a real enabled-flip of an MCP-relevant addon (#1414)', async () => {
     await updateAddon('packing', { enabled: true });
     // no-op save (enabled already true) → sessions survive
-    expect((updateAddon('packing', { enabled: true }) as any).mcpAffected).toBe(false);
+    expect((await updateAddon('packing', { enabled: true }) as any).mcpAffected).toBe(false);
     // config-only save → sessions survive
-    expect((updateAddon('packing', { config: { foo: 'bar' } }) as any).mcpAffected).toBe(false);
+    expect((await updateAddon('packing', { config: { foo: 'bar' } }) as any).mcpAffected).toBe(false);
     // real flip of an MCP-relevant addon → invalidate
-    expect((updateAddon('packing', { enabled: false }) as any).mcpAffected).toBe(true);
-    expect((updateAddon('packing', { enabled: true }) as any).mcpAffected).toBe(true);
+    expect((await updateAddon('packing', { enabled: false }) as any).mcpAffected).toBe(true);
+    expect((await updateAddon('packing', { enabled: true }) as any).mcpAffected).toBe(true);
     // real flip of an addon with no MCP surface → sessions survive. Taken from
     // the list rather than named, because an addon that grows MCP tools joins it
     // and would otherwise turn this assertion false without changing anything
     // it is actually about (documents did, when document sync landed).
     const noMcp = Object.values(ADDON_IDS).find(id => !MCP_GATED_ADDON_IDS.includes(id));
     if (noMcp) {
-      const flip = updateAddon(noMcp, { enabled: false }) as any;
+      const flip = await updateAddon(noMcp, { enabled: false }) as any;
       if (!flip.error) expect(flip.mcpAffected).toBe(false);
     }
 
     // and the one this change put on the list carries the opposite verdict
-    const docsFlip = updateAddon('documents', { enabled: false }) as any;
+    const docsFlip = await updateAddon('documents', { enabled: false }) as any;
     if (!docsFlip.error) expect(docsFlip.mcpAffected).toBe(true);
   });
 
-  it('ADMIN-SVC-087 — refuses to enable a photo provider while journey is off', () => {
+  it('ADMIN-SVC-087 — refuses to enable a photo provider while journey is off', async () => {
     testDb.prepare("UPDATE addons SET enabled = 0 WHERE id = 'journey'").run();
     testDb.prepare("UPDATE photo_providers SET enabled = 0 WHERE id = 'immich'").run();
 
-    const result = updateAddon('immich', { enabled: true }) as any;
+    const result = await updateAddon('immich', { enabled: true }) as any;
     expect(result).toEqual({ error: 'Enable the Journey addon first', status: 409 });
     expect(testDb.prepare("SELECT enabled FROM photo_providers WHERE id = 'immich'").get()).toEqual({ enabled: 0 });
   });
 
-  it('ADMIN-SVC-088 — enables a provider under an enabled journey; disabling never needs journey', () => {
+  it('ADMIN-SVC-088 — enables a provider under an enabled journey; disabling never needs journey', async () => {
     testDb.prepare("UPDATE addons SET enabled = 1 WHERE id = 'journey'").run();
-    const enabled = updateAddon('immich', { enabled: true }) as any;
+    const enabled = await updateAddon('immich', { enabled: true }) as any;
     expect(enabled.addon).toMatchObject({ id: 'immich', type: 'photo_provider', enabled: true });
 
     // Switching a provider OFF stays possible with journey off — cleanup must not dead-end.
     testDb.prepare("UPDATE addons SET enabled = 0 WHERE id = 'journey'").run();
-    const disabled = updateAddon('immich', { enabled: false }) as any;
+    const disabled = await updateAddon('immich', { enabled: false }) as any;
     expect(disabled.addon.enabled).toBe(false);
   });
 
-  it('ADMIN-SVC-089 — disabling journey cascades every photo provider off', () => {
+  it('ADMIN-SVC-089 — disabling journey cascades every photo provider off', async () => {
     testDb.prepare("UPDATE addons SET enabled = 1 WHERE id = 'journey'").run();
     testDb.prepare('UPDATE photo_providers SET enabled = 1').run();
 
-    const result = updateAddon('journey', { enabled: false }) as any;
+    const result = await updateAddon('journey', { enabled: false }) as any;
     expect(result.addon.enabled).toBe(false);
     const rows = testDb.prepare('SELECT enabled FROM photo_providers').all() as Array<{ enabled: number }>;
     expect(rows.length).toBeGreaterThan(0);

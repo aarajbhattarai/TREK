@@ -69,8 +69,8 @@ describe('AdminController system-info', () => {
   });
 });
 
-function thrown(fn: () => unknown): { status: number; body: unknown } {
-  try { fn(); } catch (err) {
+async function thrown(fn: () => Promise<unknown>): Promise<{ status: number; body: unknown }> {
+  try { await fn(); } catch (err) {
     if (err instanceof NotFoundException) return { status: 404, body: err.getResponse() };
     expect(err).toBeInstanceOf(HttpException);
     const e = err as HttpException;
@@ -85,7 +85,7 @@ afterEach(() => { delete process.env.NODE_ENV; });
 describe('AdminController users', () => {
   it('lists, creates (201 + audit), maps an error', async () => {
     expect(adminCtl(svc({ listUsers: vi.fn().mockReturnValue([{ id: 1 }]) } as Partial<AdminService>)).listUsers()).toEqual({ users: [{ id: 1 }] });
-    expect(thrown(() => adminCtl(svc({ createUser: vi.fn().mockReturnValue({ error: 'Email taken', status: 409 }) } as Partial<AdminService>)).createUser(user, {}, req))).toEqual({ status: 409, body: { error: 'Email taken' } });
+    expect(await thrown(() => adminCtl(svc({ createUser: vi.fn().mockReturnValue({ error: 'Email taken', status: 409 }) } as Partial<AdminService>)).createUser(user, {}, req))).toEqual({ status: 409, body: { error: 'Email taken' } });
     const c = adminCtl(svc({ createUser: vi.fn().mockReturnValue({ user: { id: 2 }, insertedId: 2, auditDetails: {} }) } as Partial<AdminService>));
     expect(await c.createUser(user, { email: 'a@b.c' }, req)).toEqual({ user: { id: 2 } });
     expect(writeAudit).toHaveBeenCalledWith(expect.objectContaining({ action: 'admin.user_create' }));
@@ -93,7 +93,7 @@ describe('AdminController users', () => {
 
   it('update + delete audit and map errors', async () => {
     expect(await adminCtl(svc({ updateUser: vi.fn().mockReturnValue({ user: { id: 2 }, previousEmail: 'a@b.c', changed: ['role'] }) } as Partial<AdminService>)).updateUser(user, '2', {}, req)).toEqual({ user: { id: 2 } });
-    expect(thrown(() => adminCtl(svc({ deleteUser: vi.fn().mockReturnValue({ error: 'Cannot delete self', status: 400 }) } as Partial<AdminService>)).deleteUser(user, '1', req))).toEqual({ status: 400, body: { error: 'Cannot delete self' } });
+    expect(await thrown(() => adminCtl(svc({ deleteUser: vi.fn().mockReturnValue({ error: 'Cannot delete self', status: 400 }) } as Partial<AdminService>)).deleteUser(user, '1', req))).toEqual({ status: 400, body: { error: 'Cannot delete self' } });
     expect(await adminCtl(svc({ deleteUser: vi.fn().mockReturnValue({ email: 'a@b.c' }) } as Partial<AdminService>)).deleteUser(user, '2', req)).toEqual({ success: true });
   });
 });
@@ -111,7 +111,7 @@ describe('AdminController permissions + oidc + misc', () => {
 
 
   it('save-demo-baseline maps error, else returns message', async () => {
-    expect(thrown(() => adminCtl(svc({ saveDemoBaseline: vi.fn().mockReturnValue({ error: 'not demo', status: 400 }) } as Partial<AdminService>)).saveDemoBaseline(user, req))).toEqual({ status: 400, body: { error: 'not demo' } });
+    expect(await thrown(() => adminCtl(svc({ saveDemoBaseline: vi.fn().mockReturnValue({ error: 'not demo', status: 400 }) } as Partial<AdminService>)).saveDemoBaseline(user, req))).toEqual({ status: 400, body: { error: 'not demo' } });
     expect(await adminCtl(svc({ saveDemoBaseline: vi.fn().mockReturnValue({ message: 'saved' }) } as Partial<AdminService>)).saveDemoBaseline(user, req)).toEqual({ success: true, message: 'saved' });
   });
 });
@@ -124,7 +124,7 @@ describe('AdminController invites', () => {
     const c = adminCtl(svc(), undefined, undefined, {}, { createInvite: vi.fn().mockReturnValue({ invite: { id: 5 }, inviteId: 5, uses: 1, expiresInDays: 7 }) });
     expect(await c.createInvite(user, {}, req)).toEqual({ invite: { id: 5 } });
     expect(writeAudit).toHaveBeenCalledWith(expect.objectContaining({ action: 'admin.invite_create' }));
-    expect(thrown(() => adminCtl(svc(), undefined, undefined, {}, { deleteInvite: vi.fn().mockReturnValue({ error: 'not found', status: 404 }) }).deleteInvite(user, '5', req))).toEqual({ status: 404, body: { error: 'not found' } });
+    expect(await thrown(() => adminCtl(svc(), undefined, undefined, {}, { deleteInvite: vi.fn().mockReturnValue({ error: 'not found', status: 404 }) }).deleteInvite(user, '5', req))).toEqual({ status: 404, body: { error: 'not found' } });
   });
 
 
@@ -167,15 +167,15 @@ describe('AdminController addons + sessions + jwt + defaults', () => {
 
   it('oauth-sessions revoke audits; rotate-jwt maps error', async () => {
     expect(await adminCtl(svc(), undefined, undefined, {}, {}, { adminRevokeOAuthSession: vi.fn().mockReturnValue({}) }).revokeOAuthSession(user, '3', req)).toEqual({ success: true });
-    expect(thrown(() => adminCtl(svc({ rotateJwtSecret: vi.fn().mockReturnValue({ error: 'locked', status: 409 }) } as Partial<AdminService>)).rotateJwtSecret(user, req))).toEqual({ status: 409, body: { error: 'locked' } });
+    expect(await thrown(() => adminCtl(svc({ rotateJwtSecret: vi.fn().mockReturnValue({ error: 'locked', status: 409 }) } as Partial<AdminService>)).rotateJwtSecret(user, req))).toEqual({ status: 409, body: { error: 'locked' } });
     expect(await adminCtl(svc({ rotateJwtSecret: vi.fn().mockReturnValue({}) } as Partial<AdminService>)).rotateJwtSecret(user, req)).toEqual({ success: true });
   });
 
 });
 
 describe('AdminController error envelope fallbacks', () => {
-  it('ok() defaults to 400 when the error envelope omits a status', () => {
-    expect(thrown(() => adminCtl(svc({ createUser: vi.fn().mockReturnValue({ error: 'boom' }) } as Partial<AdminService>)).createUser(user, {}, req))).toEqual({ status: 400, body: { error: 'boom' } });
+  it('ok() defaults to 400 when the error envelope omits a status', async () => {
+    expect(await thrown(() => adminCtl(svc({ createUser: vi.fn().mockReturnValue({ error: 'boom' }) } as Partial<AdminService>)).createUser(user, {}, req))).toEqual({ status: 400, body: { error: 'boom' } });
   });
 
 
@@ -210,8 +210,8 @@ describe('AdminController read-only getters', () => {
 describe('AdminController tokens + sessions', () => {
   it('mcp token + oauth session deletes return success and map errors', async () => {
     expect(await adminCtl(svc(), undefined, undefined, { adminDeleteMcpToken: vi.fn().mockReturnValue({}) }).deleteMcpToken(user, '2', req)).toEqual({ success: true });
-    expect(thrown(() => adminCtl(svc(), undefined, undefined, { adminDeleteMcpToken: vi.fn().mockReturnValue({ error: 'no token', status: 404 }) }).deleteMcpToken(user, '9', req))).toEqual({ status: 404, body: { error: 'no token' } });
-    expect(thrown(() => adminCtl(svc(), undefined, undefined, {}, {}, { adminRevokeOAuthSession: vi.fn().mockReturnValue({ error: 'no session', status: 404 }) }).revokeOAuthSession(user, '9', req))).toEqual({ status: 404, body: { error: 'no session' } });
+    expect(await thrown(() => adminCtl(svc(), undefined, undefined, { adminDeleteMcpToken: vi.fn().mockReturnValue({ error: 'no token', status: 404 }) }).deleteMcpToken(user, '9', req))).toEqual({ status: 404, body: { error: 'no token' } });
+    expect(await thrown(() => adminCtl(svc(), undefined, undefined, {}, {}, { adminRevokeOAuthSession: vi.fn().mockReturnValue({ error: 'no session', status: 404 }) }).revokeOAuthSession(user, '9', req))).toEqual({ status: 404, body: { error: 'no session' } });
   });
 });
 
@@ -251,10 +251,10 @@ describe('AdminController dev test-notification', () => {
 // The feature toggles now go straight to AddonsService — these cases used to assert
 // the same thing through AdminService pass-throughs that no longer exist.
 describe('AdminController feature toggles', () => {
-  it('ADMIN-TOGGLE-001 each toggle forwards to AddonsService and writes its own audit action', () => {
+  it('ADMIN-TOGGLE-001 each toggle forwards to AddonsService and writes its own audit action', async () => {
     const addons = addonsStub();
     const c = adminCtl(svc(), undefined, addons);
-    const cases: Array<[() => unknown, string, keyof AddonsService]> = [
+    const cases: Array<[() => Promise<unknown>, string, keyof AddonsService]> = [
       [() => c.updateBagTracking(user, { enabled: true }, req), 'admin.bag_tracking', 'updateBagTracking'],
       [() => c.updatePlacesPhotos(user, { enabled: true }, req), 'admin.places_photos', 'updatePlacesPhotos'],
       [() => c.updatePlacesAutocomplete(user, { enabled: true }, req), 'admin.places_autocomplete', 'updatePlacesAutocomplete'],
@@ -263,7 +263,7 @@ describe('AdminController feature toggles', () => {
     ];
     for (const [run, action, method] of cases) {
       writeAudit.mockClear();
-      expect(run()).toEqual({ enabled: true });
+      expect(await run()).toEqual({ enabled: true });
       expect(addons[method]).toHaveBeenCalledWith(true);
       expect(writeAudit).toHaveBeenCalledWith(expect.objectContaining({ action, details: { enabled: true } }));
     }
