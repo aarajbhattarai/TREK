@@ -6,7 +6,7 @@ import { createBoundSqliteDriver } from '../../src/db/orm-driver';
 
 export interface TestOrm {
   orm: MikroORM;
-  /** A fork of the global EntityManager; `clear()` empties its identity map. */
+  /** The global, context-resolving EntityManager; `clear()` empties its identity map. */
   em: EntityManager;
   repo<T extends object>(entity: EntityClass<T>): GetRepository<T, EntityRepository<T>>;
   clear(): void;
@@ -23,6 +23,15 @@ export interface TestOrm {
  * service with `t.repo(X)` and calls it without an HTTP request around it.
  * Production keeps the default (false), which is what `withRequestContext` in
  * `src/nest/database/request-context.ts` is for.
+ *
+ * `em` and `repo()` hand out the ORM's global EntityManager rather than a fork
+ * on purpose: a forked EntityManager has `useContext: false`, so its
+ * `getContext()` returns itself and ignores `TransactionContext`. A `t.repo(X)`
+ * built on a fork and used inside `uow.transactional` would write outside the
+ * open transaction, on a second connection the transaction is holding, and
+ * deadlock on Kysely's connection mutex. The helper therefore hands out the
+ * same context-resolving global EM that Nest injects into services, which
+ * resolves the transactional fork the way production does.
  *
  * `close()` on the underlying MikroORM connection ignores the `force` flag and
  * always tears down its Kysely client — what actually keeps the handle open
@@ -42,12 +51,11 @@ export async function createTestOrm(
     allowGlobalContext: options.allowGlobalContext ?? true,
     discovery: { warnWhenNoEntities: false },
   });
-  const em = orm.em.fork();
   return {
     orm,
-    em,
-    repo: (entity) => em.getRepository(entity),
-    clear: () => em.clear(),
+    em: orm.em,
+    repo: (entity) => orm.em.getRepository(entity),
+    clear: () => orm.em.clear(),
     close: async () => {
       // The `force` flag is irrelevant here — MikroORM's connection.close()
       // always destroys its Kysely client either way. It's the driver's

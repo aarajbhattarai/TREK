@@ -26,6 +26,7 @@ import { TrekExceptionFilter } from './common/trek-exception.filter';
 import { ZodValidationPipe } from './common/zod-validation.pipe';
 import { ConfigModule } from './config/config.module';
 import { DatabaseModule } from './database/database.module';
+import { OrmModule } from './database/orm.module';
 import { DayNotesModule } from './day-notes/day-notes.module';
 import { DaysModule } from './days/days.module';
 import { DocSyncModule } from './doc-sync/doc-sync.module';
@@ -151,6 +152,9 @@ import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
     LlmParseModule,
     ManagedExtModule,
     MikroOrmModule.forRoot(mikroOrmConfig),
+    // Not part of DatabaseModule: 41 e2e suites compose that module without the
+    // ORM, and an EntityManager-dependent provider there fails their containers.
+    OrmModule,
   ],
   providers: [
     // Default-deny: a route is authenticated unless it carries @Public() or
