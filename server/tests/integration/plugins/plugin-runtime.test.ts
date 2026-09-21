@@ -148,10 +148,17 @@ describe('PluginRuntimeService (M2 end-to-end)', () => {
     // first activate is covered by the 'counter' happy-path test above.)
   });
 
-  it('onApplicationBootstrap is a no-op when the runtime is disabled', () => {
+  it('onApplicationBootstrap is a no-op when the runtime is disabled', async () => {
+    // onApplicationBootstrap is synchronous (void), so the observed step is the
+    // runtime's own construction; the disabled path is then exercised — and
+    // reset — around that single, awaited call, not before it settles.
     process.env.TREK_PLUGINS_ENABLED = 'false';
-    expect(async () => (await createPluginRuntime(new DatabaseService(dbConn))).onApplicationBootstrap()).not.toThrow();
-    process.env.TREK_PLUGINS_ENABLED = 'true';
+    try {
+      const rt = await createPluginRuntime(new DatabaseService(dbConn));
+      expect(() => rt.onApplicationBootstrap()).not.toThrow();
+    } finally {
+      process.env.TREK_PLUGINS_ENABLED = 'true';
+    }
   });
 
   it('deactivate stops the plugin and clears the enabled intent', async () => {

@@ -6,6 +6,7 @@ import { DatabaseService } from '../database/database.service';
 import { SETTING_SYNC_ENABLED, WEBHOOK_NUDGE_DEBOUNCE_SECONDS } from './doc-sync.constants';
 import { DocSyncConfigService, type LinkRow } from './doc-sync-config.service';
 import { DocSyncService } from './doc-sync.service';
+import { logError } from '../audit/audit-log.logger';
 
 /**
  * `/api/docsync/webhook/:token`: the one endpoint a provider calls.
@@ -108,17 +109,24 @@ export class DocSyncWebhookController implements OnModuleDestroy {
    */
   private schedule(linkId: number, reload: () => ReturnType<DocSyncConfigService['getLink']>, isRetry = false): void {
     if (this.pending.has(linkId)) return;
-    const timer = setTimeout(async () => {
-      this.pending.delete(linkId);
-      const fresh = reload();
-      if (!fresh || fresh.sync_enabled !== 1) return;
-      if (!(await this.syncIsOn(fresh))) return;
-      void this.sync.syncLink(fresh).then((res) => {
-        // A run that was already in flight answers `busy`, and the changes this
-        // nudge was about may have landed after that run read the folder. Ask
-        // again once rather than waiting out a whole poll interval: once, and
-        // only for `busy`, so this cannot become a loop.
-        if (res?.state === 'busy' && !isRetry) this.schedule(linkId, reload, true);
+    // setTimeout cannot await its callback, so the now-async body runs in a
+    // helper and its rejection is observed here rather than left unhandled
+    // (recipe R1.5).
+    const timer = setTimeout(() => {
+      void (async () => {
+        this.pending.delete(linkId);
+        const fresh = reload();
+        if (!fresh || fresh.sync_enabled !== 1) return;
+        if (!(await this.syncIsOn(fresh))) return;
+        void this.sync.syncLink(fresh).then((res) => {
+          // A run that was already in flight answers `busy`, and the changes this
+          // nudge was about may have landed after that run read the folder. Ask
+          // again once rather than waiting out a whole poll interval: once, and
+          // only for `busy`, so this cannot become a loop.
+          if (res?.state === 'busy' && !isRetry) this.schedule(linkId, reload, true);
+        });
+      })().catch((err: unknown) => {
+        logError(`Document sync webhook nudge failed for link ${linkId}: ${err instanceof Error ? err.message : String(err)}`);
       });
     }, WEBHOOK_NUDGE_DEBOUNCE_SECONDS * 1000);
     // A pending nudge must not hold the process open at shutdown.
