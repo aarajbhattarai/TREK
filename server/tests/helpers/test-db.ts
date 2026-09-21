@@ -248,14 +248,13 @@ export function resetTestDb(db: Database.Database): void {
       db.exec(`DELETE FROM "${table}"`);
     }
   }
-  // Restart ids at 1, exactly as a fresh legacy database did — the snapshot's
-  // seeded `admin` user (id 1) was just deleted above, and the factories assume
-  // a clean autoincrement sequence.
-  const seqTable = existingTables.has('sqlite_sequence');
-  if (seqTable) {
-    const clear = db.prepare('DELETE FROM sqlite_sequence WHERE name = ?');
-    for (const table of RESET_TABLES) if (existingTables.has(table)) clear.run(table);
-  }
+  // No sqlite_sequence reset here, on purpose: the legacy helper never reset
+  // sequences either, so ids keep growing across tests within a file. Several
+  // suites (oauth.test.ts's per-user client cap, mcp.test.ts's in-memory
+  // session registry keyed by user id, memories-synology.test.ts's
+  // insert-once fixtures) rely on that to stay disjoint from one test to the
+  // next. The snapshot's one seeded row (the first-run `admin` user) is
+  // normalised away once, in createSnapshotTestDb() (db-mock.ts), not here.
   db.exec('PRAGMA foreign_keys = ON');
   seedDefaults(db);
 }

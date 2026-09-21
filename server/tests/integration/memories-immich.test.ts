@@ -219,6 +219,11 @@ beforeEach(() => {
   resetRateLimits(nestApp);
   // Providers only count as enabled under an enabled journey addon (migration 84 seeds it off).
   setAddonEnabled(testDb, 'journey', true);
+  // The migrated snapshot seeds photo_providers.immich.enabled = 0 (an admin must
+  // configure it before it's usable in production); the legacy test helper always
+  // seeded it enabled, which is what these tests assume. Same convention
+  // memories-synology.test.ts already uses for its own provider.
+  testDb.prepare("UPDATE photo_providers SET enabled = 1 WHERE id = 'immich'").run();
   immichState.albumAssets = DEFAULT_ALBUM_ASSETS.map((a) => ({ ...a }));
   immichState.albumAssetPages = null;
   immichState.searchCalls = [];

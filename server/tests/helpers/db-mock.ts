@@ -46,6 +46,16 @@ export function createSnapshotTestDb(): Database.Database {
   db.exec('PRAGMA journal_mode = WAL');
   db.exec('PRAGMA busy_timeout = 5000');
   db.exec('PRAGMA foreign_keys = ON');
+  // The snapshot carries the first-run seeded `admin` row (id 1); the legacy
+  // createTestDb() started with no users at all, so the first user a test
+  // created was always id 1. Normalise ONCE, here, rather than resetting the
+  // sequence on every resetTestDb() call: ids then keep growing across tests
+  // within a file exactly as they did under the legacy helper, which several
+  // suites (oauth.test.ts's per-user client cap, mcp.test.ts's in-memory
+  // session registry, memories-synology.test.ts's insert-once fixtures) rely
+  // on to stay disjoint from one test to the next.
+  db.exec('DELETE FROM users');
+  db.exec("DELETE FROM sqlite_sequence WHERE name = 'users'");
   return db;
 }
 
