@@ -55,7 +55,7 @@ beforeEach(() => {
   process.env.TREK_PLUGINS_ENABLED = 'true';
   runtime = { update: vi.fn(), retrust: vi.fn() } as unknown as PluginRuntimeService;
   registry = { install: vi.fn(), installWithDependencies: vi.fn(), recomputeUpdateHold: vi.fn() } as unknown as PluginRegistryService;
-  plugins = { resumeUpdates: vi.fn(() => true) } as unknown as PluginsService;
+  plugins = { resumeUpdates: vi.fn(async () => true) } as unknown as PluginsService;
   controller = new PluginsController(plugins, runtime, registry, { isManaged: () => false } as unknown as RuntimeEnvService);
 });
 
@@ -175,7 +175,7 @@ describe('update hold wiring', () => {
   });
 
   it('POST :id/resume-updates is a 404 for an unknown plugin', async () => {
-    vi.mocked(plugins.resumeUpdates).mockReturnValue(false);
+    vi.mocked(plugins.resumeUpdates).mockResolvedValue(false);
 
     const { status } = await wireFailure(async () => controller.resumeUpdates('ghost'));
     expect(status).toBe(404);

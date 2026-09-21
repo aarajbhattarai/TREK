@@ -59,8 +59,8 @@ export class PluginsController {
   ) {}
 
   @Get()
-  list() {
-    return this.plugins.list();
+  async list() {
+    return await this.plugins.list();
   }
 
   @Get('registry')
@@ -140,11 +140,11 @@ export class PluginsController {
   }
 
   @Get(':id/config')
-  getConfig(@Param('id') id: string): PluginInstanceConfigResponse {
+  async getConfig(@Param('id') id: string): Promise<PluginInstanceConfigResponse> {
     return {
-      fields: this.plugins.instanceSettingsFields(id),
-      config: this.plugins.getInstanceConfig(id),
-      actions: this.runtime.actionsOf(id, 'instance'),
+      fields: await this.plugins.instanceSettingsFields(id),
+      config: await this.plugins.getInstanceConfig(id),
+      actions: await this.runtime.actionsOf(id, 'instance'),
     };
   }
 
@@ -162,7 +162,7 @@ export class PluginsController {
     if (!pluginsEnabled()) throw new HttpException({ error: 'Plugins are disabled by server configuration' }, 503);
     let config: Record<string, unknown>;
     try {
-      config = this.plugins.updateInstanceConfig(id, body || {});
+      config = await this.plugins.updateInstanceConfig(id, body || {});
     } catch (e) {
       if (e instanceof MissingRequiredSettingError) throw new HttpException({ error: e.message }, 400);
       throw e;
@@ -227,8 +227,8 @@ export class PluginsController {
    * is admin-guarded): an end user can never widen a plugin's egress.
    */
   @Get(':id/egress-hosts')
-  egressHosts(@Param('id') id: string) {
-    return { supported: this.runtime.wantsOperatorEgress(id), hosts: this.runtime.operatorEgressHosts(id) };
+  async egressHosts(@Param('id') id: string) {
+    return { supported: await this.runtime.wantsOperatorEgress(id), hosts: await this.runtime.operatorEgressHosts(id) };
   }
 
   @Put(':id/egress-hosts')
@@ -324,8 +324,8 @@ export class PluginsController {
   /** Release a per-plugin update hold (set by a deliberate non-latest install). */
   @Post(':id/resume-updates')
   @HttpCode(200)
-  resumeUpdates(@Param('id') id: string) {
-    if (!this.plugins.resumeUpdates(id)) throw new HttpException({ error: `plugin ${id} not found` }, 404);
+  async resumeUpdates(@Param('id') id: string) {
+    if (!(await this.plugins.resumeUpdates(id))) throw new HttpException({ error: `plugin ${id} not found` }, 404);
     return { updateHold: false };
   }
 
@@ -370,18 +370,18 @@ export class PluginsController {
   }
 
   @Get(':id/errors')
-  errors(@Param('id') id: string) {
-    return { errors: this.plugins.errors(id) };
+  async errors(@Param('id') id: string) {
+    return { errors: await this.plugins.errors(id) };
   }
 
   @Get(':id/audit')
-  audit(@Param('id') id: string) {
-    return { audit: this.plugins.auditLog(id) };
+  async audit(@Param('id') id: string) {
+    return { audit: await this.plugins.auditLog(id) };
   }
 
   @Get(':id/budget')
-  budget(@Param('id') id: string) {
-    return { budget: this.plugins.budget(id) };
+  async budget(@Param('id') id: string) {
+    return { budget: await this.plugins.budget(id) };
   }
 
   /** GDPR portability: aggregate everything the installed plugins hold about one
@@ -395,15 +395,15 @@ export class PluginsController {
   }
 
   @Delete(':id/errors')
-  clearErrors(@Param('id') id: string) {
-    this.plugins.clearErrors(id);
+  async clearErrors(@Param('id') id: string) {
+    await this.plugins.clearErrors(id);
     return { ok: true };
   }
 
   @Post('rescan')
   @HttpCode(200)
-  rescan() {
+  async rescan() {
     if (!pluginsEnabled()) throw new HttpException({ error: 'Plugins are disabled by server configuration' }, 503);
-    return this.runtime.rescan();
+    return await this.runtime.rescan();
   }
 }

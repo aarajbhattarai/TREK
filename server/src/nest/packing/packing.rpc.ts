@@ -92,10 +92,10 @@ export class PackingRpc {
   }
 
   @PluginMethod('packing.listBags', { permission: 'db:write:packing' })
-  listBags(params: Record<string, unknown>, ctx: PluginRpcContext): unknown[] {
+  async listBags(params: Record<string, unknown>, ctx: PluginRpcContext): Promise<unknown[]> {
     // Note the permission: the envelope really does gate this READ on the write
     // grant. The decorator makes the oddity visible instead of burying it.
-    return this.guards.tripRead(params, ctx, () => this.packing.listBags(String(num(params.tripId, 'tripId'))) as unknown[]);
+    return await this.guards.tripRead(params, ctx, () => this.packing.listBags(String(num(params.tripId, 'tripId'))) as unknown[]);
   }
 
   @PluginMethod('packing.createBag', { permission: 'db:write:packing' })

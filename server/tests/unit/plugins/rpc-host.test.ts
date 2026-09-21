@@ -121,7 +121,7 @@ describe('PluginRpcHost — capability enforcement', () => {
     expect(seen?.data).toBe(deps.data);
     await seen?.plugins.call('other', 'sum', [1], 42);
     expect(deps.callPlugin).toHaveBeenCalledWith('other', 'sum', [1], 42);
-    seen?.plugins.emit('ping', { a: 1 });
+    await seen?.plugins.emit('ping', { a: 1 });
     expect(deps.emitPluginEvent).toHaveBeenCalledWith('ping', { a: 1 });
   });
 

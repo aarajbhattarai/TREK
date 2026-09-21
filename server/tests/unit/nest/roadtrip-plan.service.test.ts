@@ -65,14 +65,14 @@ beforeEach(() => {
 });
 
 describe('a visit end time on the road trip', () => {
-  it('is read from the visit, and from the place when the visit has none', () => {
+  it('is read from the visit, and from the place when the visit has none', async () => {
     const { user, trip, visits, plans } = setup();
     db.prepare("UPDATE day_assignments SET assignment_end_time = '14:00' WHERE id = ?").run(visits[1].id);
     db.prepare(
       "UPDATE places SET end_time = '18:00' WHERE id = (SELECT place_id FROM day_assignments WHERE id = ?)",
     ).run(visits[2].id);
 
-    const context = plans.context(trip.id, user.id);
+    const context = await plans.context(trip.id, user.id);
 
     expect(context.visits.map((v) => [v.name, v.end_time])).toEqual([
       ['Hamburg', null],

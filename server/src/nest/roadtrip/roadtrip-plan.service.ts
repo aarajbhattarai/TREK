@@ -68,7 +68,7 @@ export class RoadtripPlanService {
     private readonly boundaries: DayBoundariesService,
   ) {}
 
-  context(tripId: number, userId: number) {
+  async context(tripId: number, userId: number) {
     if (!this.db.canAccessTrip(tripId, userId)) throw new HttpException({ error: 'Trip not found' }, 404);
     const days = this.db.all<StoredDay>(
       'SELECT id, day_number, date, title, default_transport_mode FROM days WHERE trip_id = ? ORDER BY day_number',
@@ -89,7 +89,7 @@ export class RoadtripPlanService {
       days,
       visits,
       settings: this.preferences.read(tripId),
-      profiles: this.router.profiles(),
+      profiles: await this.router.profiles(),
       vias: this.roadtrip.listForTrip(tripId),
       tracks: this.roadtrip.tracksForTrip(tripId),
       boundaries: this.boundaries.list(tripId),
@@ -97,7 +97,7 @@ export class RoadtripPlanService {
   }
 
   async calculate(tripId: number, userId: number, overrides?: RoadtripPreferences) {
-    const context = this.context(tripId, userId);
+    const context = await this.context(tripId, userId);
     const preferences = { ...context.settings, ...overrides };
     const window = dayWindow(
       preferences.roadtrip_day_start,

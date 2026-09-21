@@ -9,7 +9,7 @@ import { getPluginDataDb } from './plugin-host-state';
 /** Routes inter-plugin calls/events; supplied by PluginRuntimeService (owns the supervisor). */
 export interface PluginCallRouter {
   callPlugin(callerId: string, targetId: string, fn: string, args: unknown, actingUserId: number | undefined): Promise<unknown>;
-  emitPluginEvent(sourceId: string, event: string, payload: unknown): void;
+  emitPluginEvent(sourceId: string, event: string, payload: unknown): Promise<void>;
 }
 
 /**

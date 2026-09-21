@@ -129,7 +129,7 @@ export class MetaRpc {
     }
     const entityId = num(params.entityId, 'entityId');
     if (ctx.actingUserId === undefined) throw new ForbiddenResource('metadata requires an authenticated user context');
-    const tripId = this.entityTrip(entityType, entityId);
+    const tripId = await this.entityTrip(entityType, entityId);
     if (tripId === undefined || !this.db.canAccessTrip(tripId, ctx.actingUserId)) {
       throw new ForbiddenResource(`no access to ${entityType} ${entityId}`);
     }
@@ -139,7 +139,7 @@ export class MetaRpc {
     return { entityType, entityId };
   }
 
-  private entityTrip(entityType: string, entityId: number): number | undefined {
+  private async entityTrip(entityType: string, entityId: number): Promise<number | undefined> {
     if (entityType === 'trip') {
       return (this.db.prepare('SELECT id FROM trips WHERE id = ?').get(entityId) as { id: number } | undefined)?.id;
     }

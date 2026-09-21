@@ -63,7 +63,7 @@ const svc = () => {
  * `parseSettingDefault` in manifest.ts, not just the settingsFields() read path.
  */
 let codeRoot: string;
-function installFixturePlugin(opts: { settings: Array<Record<string, unknown>> }) {
+async function installFixturePlugin(opts: { settings: Array<Record<string, unknown>> }) {
   const dir = path.join(codeRoot, 'fixture-id', 'server');
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(
@@ -71,7 +71,7 @@ function installFixturePlugin(opts: { settings: Array<Record<string, unknown>> }
     JSON.stringify({ id: 'fixture-id', name: 'Fixture', version: '1.0.0', type: 'integration', trek: '>=4.0.0 <5.0.0', settings: opts.settings }),
   );
   fs.writeFileSync(path.join(dir, 'index.js'), 'module.exports={}');
-  discoverPlugins(testDb);
+  await discoverPlugins(testDb);
 }
 
 beforeAll(() => {
@@ -91,22 +91,22 @@ afterEach(() => {
 });
 
 describe('instance settings fields', () => {
-  it('INS-001 — lists only the instance-scope fields, in declared order, with form metadata', () => {
+  it('INS-001 — lists only the instance-scope fields, in declared order, with form metadata', async () => {
     install('p');
     declareField('p', 'apiUrl', 'instance', { required: true, sortOrder: 1 });
     declareField('p', 'apiKey', 'instance', { secret: true, sortOrder: 0 });
     declareField('p', 'units', 'user', { sortOrder: 2 }); // must never leak into the admin form
 
-    const fields = svc().instanceSettingsFields('p');
+    const fields = await svc().instanceSettingsFields('p');
     expect(fields.map((f) => f.key)).toEqual(['apiKey', 'apiUrl']);
     expect(fields[0]).toMatchObject({ secret: true, required: false, input_type: 'text' });
     expect(fields[1]).toMatchObject({ secret: false, required: true });
   });
 
-  it('INS-002 — parses select options like the user form does', () => {
+  it('INS-002 — parses select options like the user form does', async () => {
     install('p');
     declareField('p', 'mode', 'instance', { options: '["fast","slow"]' });
-    expect(svc().instanceSettingsFields('p')[0].options).toEqual(['fast', 'slow']);
+    expect((await svc().instanceSettingsFields('p'))[0].options).toEqual(['fast', 'slow']);
   });
 
   it('INS-003 — the admin list carries the instance-field count (gates the menu item)', async () => {
@@ -137,14 +137,14 @@ describe('instance settings fields', () => {
     testDb.prepare("DELETE FROM plugin_actions WHERE plugin_id = 'with-action'").run();
   });
 
-  it('INS-010 — persists a settings-field default and serves it on the fields list', () => {
-    installFixturePlugin({ settings: [{ key: 'oauth_authorize_url', required: true, default: 'https://auth.openbnb.org/authorize' }] });
-    const fields = svc().instanceSettingsFields('fixture-id');
+  it('INS-010 — persists a settings-field default and serves it on the fields list', async () => {
+    await installFixturePlugin({ settings: [{ key: 'oauth_authorize_url', required: true, default: 'https://auth.openbnb.org/authorize' }] });
+    const fields = await svc().instanceSettingsFields('fixture-id');
     expect(fields[0].default).toBe('https://auth.openbnb.org/authorize');
   });
 
-  it('INS-013 — drops a default the field cannot take: non-boolean on a checkbox, or not one of the select options', () => {
-    installFixturePlugin({
+  it('INS-013 — drops a default the field cannot take: non-boolean on a checkbox, or not one of the select options', async () => {
+    await installFixturePlugin({
       settings: [
         { key: 'on', input_type: 'checkbox', default: 'true' },
         { key: 'mode', input_type: 'select', options: ['fast', 'slow'], default: 'warp' },
@@ -152,60 +152,60 @@ describe('instance settings fields', () => {
         { key: 'on_ok', input_type: 'checkbox', default: true },
       ],
     });
-    const byKey = Object.fromEntries(svc().instanceSettingsFields('fixture-id').map((f) => [f.key, f.default]));
+    const byKey = Object.fromEntries((await svc().instanceSettingsFields('fixture-id')).map((f) => [f.key, f.default]));
     expect(byKey).toEqual({ on: undefined, mode: undefined, mode_ok: 'a', on_ok: true });
   });
 
-  it('INS-011 — drops a default on a secret field at parse time', () => {
-    installFixturePlugin({ settings: [{ key: 'token', secret: true, default: 'leak' }] });
-    expect(svc().instanceSettingsFields('fixture-id')[0].default).toBeUndefined();
+  it('INS-011 — drops a default on a secret field at parse time', async () => {
+    await installFixturePlugin({ settings: [{ key: 'token', secret: true, default: 'leak' }] });
+    expect((await svc().instanceSettingsFields('fixture-id'))[0].default).toBeUndefined();
   });
 });
 
 describe('required settings are enforced on save', () => {
-  it('refuses a save that leaves a required instance field empty', () => {
-    installFixturePlugin({ settings: [{ key: 'client_id', required: true }] });
-    expect(() => svc().updateInstanceConfig('fixture-id', { client_id: '   ' })).toThrow(/Missing required setting "client_id"/);
+  it('refuses a save that leaves a required instance field empty', async () => {
+    await installFixturePlugin({ settings: [{ key: 'client_id', required: true }] });
+    await expect(svc().updateInstanceConfig('fixture-id', { client_id: '   ' })).rejects.toThrow(/Missing required setting "client_id"/);
   });
 
-  it('accepts a partial patch when the required field is already stored', () => {
-    installFixturePlugin({ settings: [{ key: 'client_id', required: true }, { key: 'note', required: false }] });
+  it('accepts a partial patch when the required field is already stored', async () => {
+    await installFixturePlugin({ settings: [{ key: 'client_id', required: true }, { key: 'note', required: false }] });
     const s = svc();
-    s.updateInstanceConfig('fixture-id', { client_id: 'abc' });
-    expect(() => s.updateInstanceConfig('fixture-id', { note: 'hi' })).not.toThrow();
+    await s.updateInstanceConfig('fixture-id', { client_id: 'abc' });
+    await expect(s.updateInstanceConfig('fixture-id', { note: 'hi' })).resolves.toBeDefined();
   });
 
-  it('accepts a user-scope partial patch when the required user field is already stored', () => {
-    installFixturePlugin({ settings: [{ key: 'api_key', scope: 'user', required: true }, { key: 'units', scope: 'user' }] });
+  it('accepts a user-scope partial patch when the required user field is already stored', async () => {
+    await installFixturePlugin({ settings: [{ key: 'api_key', scope: 'user', required: true }, { key: 'units', scope: 'user' }] });
     const s = svc();
-    s.updateUserConfig('fixture-id', 1, { api_key: 'sk-1' });
-    expect(() => s.updateUserConfig('fixture-id', 1, { units: 'metric' })).not.toThrow();
+    await s.updateUserConfig('fixture-id', 1, { api_key: 'sk-1' });
+    await expect(s.updateUserConfig('fixture-id', 1, { units: 'metric' })).resolves.toBeDefined();
   });
 
-  it('refuses a user-settings save that leaves a required user field empty', () => {
-    installFixturePlugin({ settings: [{ key: 'api_key', scope: 'user', required: true }] });
-    expect(() => svc().updateUserConfig('fixture-id', 1, { api_key: '' })).toThrow(/Missing required setting "api_key"/);
+  it('refuses a user-settings save that leaves a required user field empty', async () => {
+    await installFixturePlugin({ settings: [{ key: 'api_key', scope: 'user', required: true }] });
+    await expect(svc().updateUserConfig('fixture-id', 1, { api_key: '' })).rejects.toThrow(/Missing required setting "api_key"/);
   });
 
-  it('exempts checkbox fields from required enforcement (consent, not a settings field)', () => {
-    installFixturePlugin({ settings: [{ key: 'accept_terms', input_type: 'checkbox', required: true }, { key: 'note', required: false }] });
+  it('exempts checkbox fields from required enforcement (consent, not a settings field)', async () => {
+    await installFixturePlugin({ settings: [{ key: 'accept_terms', input_type: 'checkbox', required: true }, { key: 'note', required: false }] });
     // accept_terms is left entirely unset (never patched, nothing stored) — a
     // non-checkbox required field in this state would throw.
-    expect(() => svc().updateInstanceConfig('fixture-id', { note: 'hi' })).not.toThrow();
+    await expect(svc().updateInstanceConfig('fixture-id', { note: 'hi' })).resolves.toBeDefined();
   });
 
-  it('a required field with a manifest default is satisfied by the default', () => {
-    installFixturePlugin({ settings: [{ key: 'region', required: true, default: 'eu' }, { key: 'note', required: false }] });
+  it('a required field with a manifest default is satisfied by the default', async () => {
+    await installFixturePlugin({ settings: [{ key: 'region', required: true, default: 'eu' }, { key: 'note', required: false }] });
     // region is never patched and nothing is stored — the runtime will see the default,
     // so refusing the save here would contradict what the child actually gets.
-    expect(() => svc().updateInstanceConfig('fixture-id', { note: 'hi' })).not.toThrow();
+    await expect(svc().updateInstanceConfig('fixture-id', { note: 'hi' })).resolves.toBeDefined();
   });
 
-  it('a stored secret (non-empty ciphertext) counts as filled on a later partial patch', () => {
-    installFixturePlugin({ settings: [{ key: 'api_key', secret: true, required: true }, { key: 'note', required: false }] });
+  it('a stored secret (non-empty ciphertext) counts as filled on a later partial patch', async () => {
+    await installFixturePlugin({ settings: [{ key: 'api_key', secret: true, required: true }, { key: 'note', required: false }] });
     const s = svc();
-    s.updateInstanceConfig('fixture-id', { api_key: 'sk-real' });
-    expect(() => s.updateInstanceConfig('fixture-id', { api_key: '••••••••', note: 'hi' })).not.toThrow();
+    await s.updateInstanceConfig('fixture-id', { api_key: 'sk-real' });
+    await expect(s.updateInstanceConfig('fixture-id', { api_key: '••••••••', note: 'hi' })).resolves.toBeDefined();
   });
 });
 
@@ -239,12 +239,12 @@ describe('admin config endpoints (controller)', () => {
       { isManaged: () => false } as unknown as RuntimeEnvService,
     );
 
-  it('INS-006 — GET :id/config returns the fields alongside the (masked) values', () => {
+  it('INS-006 — GET :id/config returns the fields alongside the (masked) values', async () => {
     install('p');
     declareField('p', 'apiUrl', 'instance');
     testDb.prepare("UPDATE plugins SET config = '{\"apiUrl\":\"https://x.example\"}' WHERE id = 'p'").run();
 
-    const out = controllerWith({ actionsOf: () => [] }).getConfig('p');
+    const out = await controllerWith({ actionsOf: async () => [] }).getConfig('p');
     expect(out.config).toEqual({ apiUrl: 'https://x.example' });
     expect(out.fields.map((f: Record<string, unknown>) => f.key)).toEqual(['apiUrl']);
   });
@@ -292,7 +292,7 @@ describe('admin config endpoints (controller)', () => {
     expect(failed?.getStatus()).toBe(503);
     // The respawn is a spawn: it must not run while the whole plugin system is off.
     expect(respawnIfActive).not.toHaveBeenCalled();
-    expect(svc().getInstanceConfig('p')).toEqual({});
+    expect(await svc().getInstanceConfig('p')).toEqual({});
   });
 
   it('INS-011: a respawn that fails reports the save that DID happen, and stops claiming the plugin runs', async () => {
@@ -315,7 +315,7 @@ describe('admin config endpoints (controller)', () => {
       config: { apiUrl: 'https://y.example' },
       error: expect.stringMatching(/Settings saved.*db:read:trips/),
     });
-    expect(svc().getInstanceConfig('p')).toEqual({ apiUrl: 'https://y.example' });
+    expect(await svc().getInstanceConfig('p')).toEqual({ apiUrl: 'https://y.example' });
     // disable() leaves the row enabled, so the admin list would keep showing a plugin
     // that no longer has a child. The enable toggle is where the reason is offered.
     expect(deactivate).toHaveBeenCalledWith('p');
@@ -324,7 +324,7 @@ describe('admin config endpoints (controller)', () => {
 
 describe('defaults reach the child at spawn', () => {
   it('INS-012 — an unset instance field is handed to the child as its manifest default; a stored value wins', async () => {
-    installFixturePlugin({
+    await installFixturePlugin({
       settings: [
         { key: 'api_url', default: 'https://api.example' },
         { key: 'retries', input_type: 'number', default: 3 },
@@ -332,7 +332,7 @@ describe('defaults reach the child at spawn', () => {
       ],
     });
     const s = svc();
-    s.updateInstanceConfig('fixture-id', { api_url: 'https://mine.example' });
+    await s.updateInstanceConfig('fixture-id', { api_url: 'https://mine.example' });
 
     const rt = await createPluginRuntime(new DatabaseService(dbConn));
     const sup = (rt as unknown as { supervisor: { activate: (...a: unknown[]) => Promise<void> } }).supervisor;
@@ -380,7 +380,7 @@ describe('instance-scope actions (admin)', () => {
     declareAction('p', 'purge', 'instance');
     declareAction('p', 'testConnection', 'user');
     const { c } = await controller();
-    expect(c.getConfig('p').actions).toEqual([{ key: 'purge', label: 'purge', hint: undefined, danger: false, scope: 'instance' }]);
+    expect((await c.getConfig('p')).actions).toEqual([{ key: 'purge', label: 'purge', hint: undefined, danger: false, scope: 'instance' }]);
   });
 
   it('ACT-ADM-002 — POST runs the action as the clicking admin in the instance scope', async () => {

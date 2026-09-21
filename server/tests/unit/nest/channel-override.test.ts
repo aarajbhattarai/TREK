@@ -78,7 +78,11 @@ import type { ExternalChannel } from '../../../src/nest/notifications/notificati
 
 const prefsDbs = new DatabaseService(testDb);
 const prefsSvc = new NotificationPreferencesService(prefsDbs, new MailerService(prefsDbs));
-const getPreferencesMatrix = prefsSvc.getPreferencesMatrix.bind(prefsSvc);
+// An arrow forwarder rather than `.bind(prefsSvc)`: under `strictBindCallApply: false`
+// a bound alias is typed `any`, which hides a missing `await` from tsc and the lint
+// rules alike (recipe R4).
+const getPreferencesMatrix = (...a: Parameters<NotificationPreferencesService['getPreferencesMatrix']>) =>
+  prefsSvc.getPreferencesMatrix(...a);
 void WebhookService; void NtfyService;
 
 beforeAll(() => { createTables(testDb); runMigrations(testDb); });
@@ -113,10 +117,10 @@ const TRIP_INVITE = { event: 'trip_invite', actorId: null, scope: 'user', target
 describe('a plugin channel can never override a built-in', () => {
   beforeEach(() => { rogueSend.mockClear(); rogueGlobal.mockClear(); });
 
-  it('CHOVR-001 — a channel claiming a built-in id is dropped from the registry', () => {
+  it('CHOVR-001 — a channel claiming a built-in id is dropped from the registry', async () => {
     setPluginChannelSource(() => [rogue()]);
-    expect(listChannels().filter(c => c.id === 'email')).toHaveLength(1);
-    expect(getChannel('email')!.source).toBe('builtin');
+    expect((await listChannels()).filter(c => c.id === 'email')).toHaveLength(1);
+    expect((await getChannel('email'))!.source).toBe('builtin');
   });
 
   it('CHOVR-002 — it does NOT ride the user’s email opt-in', async () => {
@@ -131,19 +135,19 @@ describe('a plugin channel can never override a built-in', () => {
     expect(sendMailMock).toHaveBeenCalledTimes(1); // the real email channel still delivers
   });
 
-  it('CHOVR-003 — an un-namespaced id is dropped even when it collides with nothing', () => {
+  it('CHOVR-003 — an un-namespaced id is dropped even when it collides with nothing', async () => {
     setPluginChannelSource(() => [rogue({ id: 'carrier-pigeon', source: 'plugin' })]);
-    expect(listChannels().map(c => c.id)).not.toContain('carrier-pigeon');
+    expect((await listChannels()).map(c => c.id)).not.toContain('carrier-pigeon');
   });
 
-  it('CHOVR-004 — a properly namespaced channel IS admitted', () => {
+  it('CHOVR-004 — a properly namespaced channel IS admitted', async () => {
     setPluginChannelSource(() => [rogue({ id: 'plugin:gotify', source: 'plugin' })]);
-    expect(listChannels().map(c => c.id)).toContain('plugin:gotify');
+    expect((await listChannels()).map(c => c.id)).toContain('plugin:gotify');
   });
 
-  it('CHOVR-005 — an admitted plugin channel has its built-in-only privileges stripped', () => {
+  it('CHOVR-005 — an admitted plugin channel has its built-in-only privileges stripped', async () => {
     setPluginChannelSource(() => [rogue({ id: 'plugin:gotify' })]);
-    const ch = getChannel('plugin:gotify')!;
+    const ch = (await getChannel('plugin:gotify'))!;
     expect(ch.source).toBe('plugin'); // it cannot self-declare as a built-in
     expect(ch.bypassesActiveToggleForAdminEvents).toBe(false);
     expect(ch.supportsAdminGlobal).toBe(false);
@@ -168,16 +172,16 @@ describe('a plugin channel can never override a built-in', () => {
     setNotificationChannels(testDb, 'plugin:gotify');
     setPluginChannelSource(() => [rogue({ id: 'plugin:gotify' }), rogue({ id: 'plugin:gotify' })]);
 
-    expect(listChannels().filter(c => c.id === 'plugin:gotify')).toHaveLength(1);
+    expect((await listChannels()).filter(c => c.id === 'plugin:gotify')).toHaveLength(1);
     await send({ ...TRIP_INVITE, targetId: user.id });
     expect(rogueSend).toHaveBeenCalledTimes(1);
   });
 
-  it('CHOVR-008 — the preferences matrix never shows a duplicate column', () => {
+  it('CHOVR-008 — the preferences matrix never shows a duplicate column', async () => {
     const { user } = createUser(testDb);
     setNotificationChannels(testDb, 'email');
     setPluginChannelSource(() => [rogue()]);
-    const ids = getPreferencesMatrix(user.id, 'user').channels.map(c => c.id);
+    const ids = (await getPreferencesMatrix(user.id, 'user')).channels.map(c => c.id);
     expect(ids.filter(i => i === 'email')).toHaveLength(1);
     expect(new Set(ids).size).toBe(ids.length);
   });
@@ -190,12 +194,12 @@ describe('a plugin channel can never override a built-in', () => {
 describe('a live plugin channel needs no second opt-in', () => {
   beforeEach(() => { rogueSend.mockClear(); });
 
-  it('CHOVR-011 — it appears in the matrix with NOTHING in notification_channels', () => {
+  it('CHOVR-011 — it appears in the matrix with NOTHING in notification_channels', async () => {
     const { user } = createUser(testDb);
     setNotificationChannels(testDb, 'none'); // the admin has enabled no built-in at all
     setPluginChannelSource(() => [rogue({ id: 'plugin:gotify', source: 'plugin', label: 'Gotify' })]);
 
-    const matrix = getPreferencesMatrix(user.id, 'user');
+    const matrix = await getPreferencesMatrix(user.id, 'user');
     const ch = matrix.channels.find(c => c.id === 'plugin:gotify')!;
     // Enabling the PLUGIN is the opt-in. There is no UI that can write a `plugin:` id into
     // the notification_channels CSV, so requiring one meant the channel could never show.
@@ -227,7 +231,7 @@ describe('a live plugin channel needs no second opt-in', () => {
     const { user } = createUser(testDb);
     setPluginChannelSource(() => [rogue({ id: 'plugin:gotify', source: 'plugin', isConfiguredFor: () => false })]);
 
-    const ch = getPreferencesMatrix(user.id, 'user').channels.find(c => c.id === 'plugin:gotify')!;
+    const ch = (await getPreferencesMatrix(user.id, 'user')).channels.find(c => c.id === 'plugin:gotify')!;
     expect(ch.active).toBe(true);      // shown — so they can see it and go configure it
     expect(ch.configured).toBe(false); // …but flagged as needing setup
 

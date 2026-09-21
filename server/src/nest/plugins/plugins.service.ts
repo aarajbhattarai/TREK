@@ -128,7 +128,7 @@ export class PluginsService {
   }
 
   /** Hosts an admin has added for a plugin (0 unless it declared operatorEgress). */
-  private egressHostCount(id: string): number {
+  private async egressHostCount(id: string): Promise<number> {
     try {
       return (this.db.prepare('SELECT COUNT(*) AS n FROM plugin_egress_hosts WHERE plugin_id = ?').get(id) as { n: number }).n;
     } catch {
@@ -136,7 +136,7 @@ export class PluginsService {
     }
   }
 
-  private instanceSettingsCount(id: string): number {
+  private async instanceSettingsCount(id: string): Promise<number> {
     try {
       return (
         this.db.prepare("SELECT COUNT(*) AS n FROM plugin_settings_fields WHERE plugin_id = ? AND scope = 'instance'").get(id) as { n: number }
@@ -146,7 +146,7 @@ export class PluginsService {
     }
   }
 
-  private instanceActionsCount(id: string): number {
+  private async instanceActionsCount(id: string): Promise<number> {
     try {
       return (
         this.db.prepare("SELECT COUNT(*) AS n FROM plugin_actions WHERE plugin_id = ? AND scope = 'instance'").get(id) as { n: number }
@@ -200,9 +200,9 @@ export class PluginsService {
       plugins.push({
         ...rest,
         operatorEgress: _oe === 1,
-        egressHostCount: this.egressHostCount(r.id),
-        instanceSettingsCount: this.instanceSettingsCount(r.id),
-        instanceActionsCount: this.instanceActionsCount(r.id),
+        egressHostCount: await this.egressHostCount(r.id),
+        instanceSettingsCount: await this.instanceSettingsCount(r.id),
+        instanceActionsCount: await this.instanceActionsCount(r.id),
         dependencies: deps,
         dependencyStatus,
         trekRange: trek_range,
@@ -224,7 +224,7 @@ export class PluginsService {
    * Release a per-plugin update hold (set by a deliberate non-latest install).
    * Returns whether the plugin row existed — the controller answers 404 otherwise.
    */
-  resumeUpdates(id: string): boolean {
+  async resumeUpdates(id: string): Promise<boolean> {
     return this.db.prepare('UPDATE plugins SET update_hold = 0 WHERE id = ?').run(id).changes > 0;
   }
 
@@ -234,7 +234,7 @@ export class PluginsService {
    * declared as `scope:'instance'` fields are accepted, same as updateUserConfig.
    * Returns the config with secrets masked for the client.
    */
-  updateInstanceConfig(id: string, patch: Record<string, unknown>): Record<string, unknown> {
+  async updateInstanceConfig(id: string, patch: Record<string, unknown>): Promise<Record<string, unknown>> {
     const row = this.db.prepare('SELECT config FROM plugins WHERE id = ?').get(id) as { config: string } | undefined;
     if (!row) throw new Error(`plugin ${id} not found`);
 
@@ -264,22 +264,22 @@ export class PluginsService {
         config[k] = v;
       }
     }
-    this.assertRequiredFilled(id, 'instance', config);
+    await this.assertRequiredFilled(id, 'instance', config);
     this.db.prepare('UPDATE plugins SET config = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(JSON.stringify(config), id);
     return maskSecrets(config, secretKeys);
   }
 
   /** The plugin's `scope:'user'` settings fields, in declared order (for the user form). */
-  userSettingsFields(id: string): PluginSettingsField[] {
-    return this.settingsFields(id, 'user');
+  async userSettingsFields(id: string): Promise<PluginSettingsField[]> {
+    return await this.settingsFields(id, 'user');
   }
 
   /** The plugin's `scope:'instance'` settings fields, in declared order (for the ADMIN form). */
-  instanceSettingsFields(id: string): PluginSettingsField[] {
-    return this.settingsFields(id, 'instance');
+  async instanceSettingsFields(id: string): Promise<PluginSettingsField[]> {
+    return await this.settingsFields(id, 'instance');
   }
 
-  private settingsFields(id: string, scope: 'user' | 'instance'): PluginSettingsField[] {
+  private async settingsFields(id: string, scope: 'user' | 'instance'): Promise<PluginSettingsField[]> {
     return this.db
       .prepare(
         `SELECT field_key AS key, label, input_type, placeholder, hint, required, secret, options, default_value
@@ -306,7 +306,7 @@ export class PluginsService {
       });
   }
 
-  private userSecretKeys(id: string): Set<string> {
+  private async userSecretKeys(id: string): Promise<Set<string>> {
     return new Set(
       (
         this.db
@@ -317,22 +317,22 @@ export class PluginsService {
   }
 
   /** A user's own config for a plugin, secrets masked (safe to send to the client). */
-  getUserConfig(id: string, userId: number): Record<string, unknown> {
+  async getUserConfig(id: string, userId: number): Promise<Record<string, unknown>> {
     const row = this.db.prepare('SELECT config FROM plugin_user_config WHERE plugin_id = ? AND user_id = ?').get(id, userId) as
       | { config: string }
       | undefined;
-    return maskSecrets(safeParse(row?.config ?? '{}'), this.userSecretKeys(id));
+    return maskSecrets(safeParse(row?.config ?? '{}'), await this.userSecretKeys(id));
   }
 
   /** Merge a user's own settings, encrypting secret fields (SECRET_MASK = keep stored
    * ciphertext). Only keys declared as `scope:'user'` fields are accepted. Returns masked. */
-  updateUserConfig(id: string, userId: number, patch: Record<string, unknown>): Record<string, unknown> {
+  async updateUserConfig(id: string, userId: number, patch: Record<string, unknown>): Promise<Record<string, unknown>> {
     const allowed = new Set(
       (this.db.prepare("SELECT field_key FROM plugin_settings_fields WHERE plugin_id = ? AND scope = 'user'").all(id) as Array<{ field_key: string }>).map(
         (r) => r.field_key,
       ),
     );
-    const secretKeys = this.userSecretKeys(id);
+    const secretKeys = await this.userSecretKeys(id);
     const existing = this.db.prepare('SELECT config FROM plugin_user_config WHERE plugin_id = ? AND user_id = ?').get(id, userId) as
       | { config: string }
       | undefined;
@@ -346,7 +346,7 @@ export class PluginsService {
         config[k] = v;
       }
     }
-    this.assertRequiredFilled(id, 'user', config);
+    await this.assertRequiredFilled(id, 'user', config);
     this.db.prepare(
       `INSERT INTO plugin_user_config (plugin_id, user_id, config, updated_at) VALUES (?, ?, ?, datetime('now'))
        ON CONFLICT(plugin_id, user_id) DO UPDATE SET config = excluded.config, updated_at = excluded.updated_at`,
@@ -356,40 +356,40 @@ export class PluginsService {
 
   /** A user's own config with secrets DECRYPTED — host-only, for runtime `ctx.settings`.
    * Never sent to a client; the acting user is resolved host-side. */
-  getUserConfigDecrypted(id: string, userId: number): Record<string, unknown> {
+  async getUserConfigDecrypted(id: string, userId: number): Promise<Record<string, unknown>> {
     const row = this.db.prepare('SELECT config FROM plugin_user_config WHERE plugin_id = ? AND user_id = ?').get(id, userId) as
       | { config: string }
       | undefined;
     const config = safeParse(row?.config ?? '{}');
-    const secretKeys = this.userSecretKeys(id);
+    const secretKeys = await this.userSecretKeys(id);
     const out: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(config)) out[k] = secretKeys.has(k) && v ? decrypt_api_key(v) : v;
     return out;
   }
 
   /** A plugin's error log, newest first. */
-  errors(id: string): Array<{ ts: string; level: string; message: string }> {
+  async errors(id: string): Promise<Array<{ ts: string; level: string; message: string }>> {
     return this.db
       .prepare('SELECT ts, level, message FROM plugin_error_log WHERE plugin_id = ? ORDER BY ts DESC, id DESC LIMIT 200')
       .all(id) as Array<{ ts: string; level: string; message: string }>;
   }
 
-  clearErrors(id: string): void {
+  async clearErrors(id: string): Promise<void> {
     this.db.prepare('DELETE FROM plugin_error_log WHERE plugin_id = ?').run(id);
   }
 
   /** A plugin's hash-chained capability audit log, newest first. */
-  auditLog(id: string): unknown[] {
-    return readAudit(this.db, id);
+  async auditLog(id: string): Promise<unknown[]> {
+    return await readAudit(this.db, id);
   }
 
   /** A plugin's broker budget usage for today (AI + notification counts vs caps). */
-  budget(id: string): ReturnType<typeof pluginBudgetUsage> {
-    return pluginBudgetUsage(id, this.db);
+  async budget(id: string): ReturnType<typeof pluginBudgetUsage> {
+    return await pluginBudgetUsage(id, this.db);
   }
 
   /** Read the instance config with secret fields masked. */
-  getInstanceConfig(id: string): Record<string, unknown> {
+  async getInstanceConfig(id: string): Promise<Record<string, unknown>> {
     const row = this.db.prepare('SELECT config FROM plugins WHERE id = ?').get(id) as { config: string } | undefined;
     if (!row) throw new Error(`plugin ${id} not found`);
     const secretKeys = new Set(
@@ -408,13 +408,13 @@ export class PluginsService {
    * stored secret (non-empty ciphertext) counts as filled. A `checkbox` is exempt — required
    * would demand `true`, which is a consent flow, not a settings field.
    */
-  private assertRequiredFilled(id: string, scope: 'instance' | 'user', config: Record<string, unknown>): void {
+  private async assertRequiredFilled(id: string, scope: 'instance' | 'user', config: Record<string, unknown>): Promise<void> {
     const required = this.db
       .prepare(
         "SELECT field_key FROM plugin_settings_fields WHERE plugin_id = ? AND scope = ? AND required = 1 AND input_type != 'checkbox'",
       )
       .all(id, scope) as Array<{ field_key: string }>;
-    const defaults = settingDefaults(this.db, id, scope);
+    const defaults = await settingDefaults(this.db, id, scope);
     for (const f of required) {
       // The runtime resolves the default too, so it counts as filled here as well.
       if (!isFilled(config[f.field_key] ?? defaults[f.field_key])) throw new MissingRequiredSettingError(f.field_key);

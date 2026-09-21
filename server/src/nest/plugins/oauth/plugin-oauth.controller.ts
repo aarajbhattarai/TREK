@@ -20,22 +20,22 @@ export class PluginOAuthController {
     private readonly dbs: DatabaseService,
   ) {}
 
-  private isActive(id: string): boolean {
+  private async isActive(id: string): Promise<boolean> {
     return !!this.dbs.connection.prepare("SELECT 1 FROM plugins WHERE id = ? AND status = 'active'").get(id);
   }
 
   @Get(':id/status')
-  status(@Param('id') id: string, @Req() req: Request & { user?: { id: number } }): { configured: boolean; connected: boolean } {
+  async status(@Param('id') id: string, @Req() req: Request & { user?: { id: number } }): Promise<{ configured: boolean; connected: boolean }> {
     const userId = req.user?.id;
-    if (!pluginsEnabled() || userId == null || !this.isActive(id)) return { configured: false, connected: false };
-    return this.oauth.status(id, userId);
+    if (!pluginsEnabled() || userId == null || !(await this.isActive(id))) return { configured: false, connected: false };
+    return await this.oauth.status(id, userId);
   }
 
   @Post(':id/connect')
-  connect(@Param('id') id: string, @Req() req: Request & { user?: { id: number } }): { authorizeUrl: string } {
+  async connect(@Param('id') id: string, @Req() req: Request & { user?: { id: number } }): Promise<{ authorizeUrl: string }> {
     const userId = req.user?.id;
-    if (!pluginsEnabled() || userId == null || !this.isActive(id)) throw new Error('plugin not available');
-    return { authorizeUrl: this.oauth.startConnect(id, userId, Date.now()) };
+    if (!pluginsEnabled() || userId == null || !(await this.isActive(id))) throw new Error('plugin not available');
+    return { authorizeUrl: await this.oauth.startConnect(id, userId, Date.now()) };
   }
 
   @Get(':id/callback')
@@ -49,7 +49,7 @@ export class PluginOAuthController {
   ): Promise<void> {
     const userId = req.user?.id;
     const back = (status: string) => res.redirect(`/settings?oauth=${encodeURIComponent(id)}:${status}`);
-    if (!pluginsEnabled() || userId == null || !this.isActive(id)) return back('unavailable');
+    if (!pluginsEnabled() || userId == null || !(await this.isActive(id))) return back('unavailable');
     if (error || !code || !state) return back('denied');
     try {
       await this.oauth.completeCallback(id, userId, code, state, Date.now());
@@ -60,9 +60,9 @@ export class PluginOAuthController {
   }
 
   @Post(':id/disconnect')
-  disconnect(@Param('id') id: string, @Req() req: Request & { user?: { id: number } }): { connected: false } {
+  async disconnect(@Param('id') id: string, @Req() req: Request & { user?: { id: number } }): Promise<{ connected: false }> {
     const userId = req.user?.id;
-    if (userId != null) this.oauth.disconnect(id, userId);
+    if (userId != null) await this.oauth.disconnect(id, userId);
     return { connected: false };
   }
 }

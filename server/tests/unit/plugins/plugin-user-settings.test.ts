@@ -49,44 +49,44 @@ describe('per-user plugin settings', () => {
     svc = new PluginsService(dbs, new AddonsService(dbs));
   });
 
-  it('lists only the user-scope fields, in order', () => {
-    const fields = svc.userSettingsFields('p');
+  it('lists only the user-scope fields, in order', async () => {
+    const fields = await svc.userSettingsFields('p');
     expect(fields.map(f => f.key)).toEqual(['apiKey', 'units']); // not the instance field
     expect(fields[0]).toMatchObject({ secret: true, required: true });
   });
 
-  it('encrypts a secret at rest, masks it to the client, stores a plain field verbatim', () => {
-    const masked = svc.updateUserConfig('p', 42, { apiKey: 'sk-123', units: 'metric' });
+  it('encrypts a secret at rest, masks it to the client, stores a plain field verbatim', async () => {
+    const masked = await svc.updateUserConfig('p', 42, { apiKey: 'sk-123', units: 'metric' });
     expect(masked.apiKey).toBe('••••••••');       // never echoed
     expect(masked.units).toBe('metric');
     // decrypted runtime read returns the real value; the stored form is ciphertext
-    expect(userSettings().readOne('p', 42, 'apiKey')).toBe('sk-123');
-    expect(svc.getUserConfig('p', 42).apiKey).toBe('••••••••');
+    expect(await userSettings().readOne('p', 42, 'apiKey')).toBe('sk-123');
+    expect((await svc.getUserConfig('p', 42)).apiKey).toBe('••••••••');
   });
 
-  it('an unchanged secret (the mask) keeps the stored ciphertext', () => {
-    svc.updateUserConfig('p', 42, { apiKey: 'sk-123' });
-    svc.updateUserConfig('p', 42, { apiKey: '••••••••', units: 'imperial' }); // mask = untouched
-    expect(userSettings().readOne('p', 42, 'apiKey')).toBe('sk-123'); // still the original
-    expect(svc.getUserConfig('p', 42).units).toBe('imperial');
+  it('an unchanged secret (the mask) keeps the stored ciphertext', async () => {
+    await svc.updateUserConfig('p', 42, { apiKey: 'sk-123' });
+    await svc.updateUserConfig('p', 42, { apiKey: '••••••••', units: 'imperial' }); // mask = untouched
+    expect(await userSettings().readOne('p', 42, 'apiKey')).toBe('sk-123'); // still the original
+    expect((await svc.getUserConfig('p', 42)).units).toBe('imperial');
   });
 
-  it('ignores keys that are not declared user-scope fields', () => {
+  it('ignores keys that are not declared user-scope fields', async () => {
     // apiKey is required — filled here so the save isn't refused; the assertion is
     // about adminOnly/bogus being dropped, not about required enforcement.
-    svc.updateUserConfig('p', 42, { apiKey: 'sk-123', adminOnly: 'nope', bogus: 'x', units: 'metric' } as Record<string, unknown>);
-    const cfg = svc.getUserConfig('p', 42);
+    await svc.updateUserConfig('p', 42, { apiKey: 'sk-123', adminOnly: 'nope', bogus: 'x', units: 'metric' } as Record<string, unknown>);
+    const cfg = await svc.getUserConfig('p', 42);
     expect(cfg.adminOnly).toBeUndefined(); // instance field — not accepted here
     expect(cfg.bogus).toBeUndefined();
     expect(cfg.units).toBe('metric');
   });
 
-  it('is per-user — one user cannot see another\'s value', () => {
+  it('is per-user — one user cannot see another\'s value', async () => {
     // apiKey is required — filled here so the save isn't refused; the point of this
     // test is that user 99 sees none of user 42's values.
-    svc.updateUserConfig('p', 42, { apiKey: 'sk-123', units: 'metric' });
-    expect(svc.getUserConfig('p', 99).units).toBeUndefined();
-    expect(userSettings().readOne('p', 99, 'apiKey')).toBeUndefined();
+    await svc.updateUserConfig('p', 42, { apiKey: 'sk-123', units: 'metric' });
+    expect((await svc.getUserConfig('p', 99)).units).toBeUndefined();
+    expect(await userSettings().readOne('p', 99, 'apiKey')).toBeUndefined();
   });
 });
 
@@ -107,29 +107,29 @@ describe('manifest defaults reach the runtime reads', () => {
     ins.run('p', 'endpoint', 'text', 1, 0, 'user', 5, JSON.stringify('https://api.example'));
   });
 
-  it('readOne falls back to the declared default when nothing is stored', () => {
-    expect(userSettings().readOne('p', 42, 'region')).toBe('eu');
-    expect(userSettings().readOne('p', 42, 'retries')).toBe(3); // JSON round-trip keeps the type
-    expect(userSettings().readOne('p', 42, 'apiKey')).toBeUndefined(); // no default declared
+  it('readOne falls back to the declared default when nothing is stored', async () => {
+    expect(await userSettings().readOne('p', 42, 'region')).toBe('eu');
+    expect(await userSettings().readOne('p', 42, 'retries')).toBe(3); // JSON round-trip keeps the type
+    expect(await userSettings().readOne('p', 42, 'apiKey')).toBeUndefined(); // no default declared
   });
 
-  it('a stored value wins over the default', () => {
-    svc.updateUserConfig('p', 42, { apiKey: 'sk-123', region: 'us' });
-    expect(userSettings().readOne('p', 42, 'region')).toBe('us');
-    expect(userSettings().readOne('p', 99, 'region')).toBe('eu'); // another user still gets the default
+  it('a stored value wins over the default', async () => {
+    await svc.updateUserConfig('p', 42, { apiKey: 'sk-123', region: 'us' });
+    expect(await userSettings().readOne('p', 42, 'region')).toBe('us');
+    expect(await userSettings().readOne('p', 99, 'region')).toBe('eu'); // another user still gets the default
   });
 
-  it('readAll folds defaults in for the fields the user left unset', () => {
-    svc.updateUserConfig('p', 42, { apiKey: 'sk-123', region: 'us' });
-    expect(userSettings().readAll('p', 42)).toMatchObject({ apiKey: 'sk-123', region: 'us', retries: 3, endpoint: 'https://api.example' });
+  it('readAll folds defaults in for the fields the user left unset', async () => {
+    await svc.updateUserConfig('p', 42, { apiKey: 'sk-123', region: 'us' });
+    expect(await userSettings().readAll('p', 42)).toMatchObject({ apiKey: 'sk-123', region: 'us', retries: 3, endpoint: 'https://api.example' });
   });
 
-  it('hasRequired treats a required field with a default as filled', () => {
+  it('hasRequired treats a required field with a default as filled', async () => {
     // apiKey is required with no default → not configured until stored.
-    expect(userSettings().hasRequired('p', 42)).toBe(false);
-    svc.updateUserConfig('p', 42, { apiKey: 'sk-123' });
+    expect(await userSettings().hasRequired('p', 42)).toBe(false);
+    await svc.updateUserConfig('p', 42, { apiKey: 'sk-123' });
     // endpoint is required too, but its default satisfies it.
-    expect(userSettings().hasRequired('p', 42)).toBe(true);
+    expect(await userSettings().hasRequired('p', 42)).toBe(true);
   });
 });
 
@@ -147,15 +147,15 @@ describe('hasRequired applies the same "filled" rule as the save gate', () => {
       .run('p', 'consent', 'checkbox', 1, 0, 'user', 9);
   });
 
-  it('exempts a required checkbox (consent, not a settings field)', () => {
-    svc.updateUserConfig('p', 42, { apiKey: 'sk-123' }); // consent never set
-    expect(userSettings().hasRequired('p', 42)).toBe(true);
+  it('exempts a required checkbox (consent, not a settings field)', async () => {
+    await svc.updateUserConfig('p', 42, { apiKey: 'sk-123' }); // consent never set
+    expect(await userSettings().hasRequired('p', 42)).toBe(true);
   });
 
-  it('treats a whitespace-only value as empty', () => {
+  it('treats a whitespace-only value as empty', async () => {
     (getDb.current as import('better-sqlite3').Database)
       .prepare("INSERT INTO plugin_user_config (plugin_id, user_id, config, updated_at) VALUES ('p', 42, ?, '')")
       .run(JSON.stringify({ apiKey: '   ', consent: true }));
-    expect(userSettings().hasRequired('p', 42)).toBe(false);
+    expect(await userSettings().hasRequired('p', 42)).toBe(false);
   });
 });

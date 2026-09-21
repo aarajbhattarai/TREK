@@ -50,14 +50,18 @@ registerBuiltinChannels({ mailer, webhook: new WebhookService(dbs), ntfy: new Nt
 const svc = new NotificationPreferencesService(dbs, mailer);
 
 // Legacy free-function names bound to the service, so the moved cases read as before.
-const isEnabledForEvent = svc.isEnabledForEvent.bind(svc);
-const getPreferencesMatrix = svc.getPreferencesMatrix.bind(svc);
-const setPreferences = svc.setPreferences.bind(svc);
-const setAdminPreferences = svc.setAdminPreferences.bind(svc);
-const getAdminGlobalPref = svc.getAdminGlobalPref.bind(svc);
-const getActiveChannels = svc.getActiveChannels.bind(svc);
-const isSmtpConfigured = svc.isSmtpConfigured.bind(svc);
-const isWebhookConfigured = svc.isWebhookConfigured.bind(svc);
+// Arrow forwarders rather than `.bind(svc)`: under `strictBindCallApply: false` a bound
+// alias is typed `any`, which hides a missing `await` from tsc AND from the type-aware
+// lint rules (recipe R4).
+type Svc = NotificationPreferencesService;
+const isEnabledForEvent = (...a: Parameters<Svc['isEnabledForEvent']>) => svc.isEnabledForEvent(...a);
+const getPreferencesMatrix = (...a: Parameters<Svc['getPreferencesMatrix']>) => svc.getPreferencesMatrix(...a);
+const setPreferences = (...a: Parameters<Svc['setPreferences']>) => svc.setPreferences(...a);
+const setAdminPreferences = (...a: Parameters<Svc['setAdminPreferences']>) => svc.setAdminPreferences(...a);
+const getAdminGlobalPref = (...a: Parameters<Svc['getAdminGlobalPref']>) => svc.getAdminGlobalPref(...a);
+const getActiveChannels = (...a: Parameters<Svc['getActiveChannels']>) => svc.getActiveChannels(...a);
+const isSmtpConfigured = (...a: Parameters<Svc['isSmtpConfigured']>) => svc.isSmtpConfigured(...a);
+const isWebhookConfigured = (...a: Parameters<Svc['isWebhookConfigured']>) => svc.isWebhookConfigured(...a);
 
 
 beforeAll(() => {
@@ -103,32 +107,32 @@ describe('isEnabledForEvent', () => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe('getPreferencesMatrix', () => {
-  it('NPREF-004 — regular user does not see version_available in event_types', () => {
+  it('NPREF-004 — regular user does not see version_available in event_types', async () => {
     const { user } = createUser(testDb);
-    const { event_types } = getPreferencesMatrix(user.id, 'user');
+    const { event_types } = await getPreferencesMatrix(user.id, 'user');
     expect(event_types).not.toContain('version_available');
     // +1 for plugin_notification: users can mute host-mediated plugin notifications.
     expect(event_types.length).toBe(12);
   });
 
-  it('NPREF-005 — user scope excludes version_available for everyone including admins', () => {
+  it('NPREF-005 — user scope excludes version_available for everyone including admins', async () => {
     const { user } = createAdmin(testDb);
-    const { event_types } = getPreferencesMatrix(user.id, 'admin', 'user');
+    const { event_types } = await getPreferencesMatrix(user.id, 'admin', 'user');
     expect(event_types).not.toContain('version_available');
     expect(event_types.length).toBe(12);
   });
 
-  it('NPREF-005b — admin scope returns the admin-scoped events', () => {
+  it('NPREF-005b — admin scope returns the admin-scoped events', async () => {
     const { user } = createAdmin(testDb);
-    const { event_types } = getPreferencesMatrix(user.id, 'admin', 'admin');
+    const { event_types } = await getPreferencesMatrix(user.id, 'admin', 'admin');
     expect(event_types).toContain('version_available');
     expect(event_types).toContain('replica_failure');
     expect(event_types.length).toBe(2);
   });
 
-  it('NPREF-006 — returns default true for all preferences when no stored prefs', () => {
+  it('NPREF-006 — returns default true for all preferences when no stored prefs', async () => {
     const { user } = createUser(testDb);
-    const { preferences } = getPreferencesMatrix(user.id, 'user');
+    const { preferences } = await getPreferencesMatrix(user.id, 'user');
     for (const [, channels] of Object.entries(preferences)) {
       for (const [, enabled] of Object.entries(channels as Record<string, boolean>)) {
         expect(enabled).toBe(true);
@@ -136,11 +140,11 @@ describe('getPreferencesMatrix', () => {
     }
   });
 
-  it('NPREF-007 — reflects stored disabled preferences in the matrix', () => {
+  it('NPREF-007 — reflects stored disabled preferences in the matrix', async () => {
     const { user } = createUser(testDb);
     disableNotificationPref(testDb, user.id, 'trip_invite', 'email');
     disableNotificationPref(testDb, user.id, 'collab_message', 'webhook');
-    const { preferences } = getPreferencesMatrix(user.id, 'user');
+    const { preferences } = await getPreferencesMatrix(user.id, 'user');
     expect(preferences['trip_invite']!['email']).toBe(false);
     expect(preferences['collab_message']!['webhook']).toBe(false);
     // Others unaffected
@@ -148,29 +152,29 @@ describe('getPreferencesMatrix', () => {
     expect(preferences['booking_change']!['email']).toBe(true);
   });
 
-  it('NPREF-008 — the inapp channel is always active', () => {
+  it('NPREF-008 — the inapp channel is always active', async () => {
     const { user } = createUser(testDb);
-    const { channels } = getPreferencesMatrix(user.id, 'user');
+    const { channels } = await getPreferencesMatrix(user.id, 'user');
     expect(channels.find(c => c.id === 'inapp')?.active).toBe(true);
   });
 
-  it('NPREF-009 — email is active when email is in notification_channels', () => {
+  it('NPREF-009 — email is active when email is in notification_channels', async () => {
     const { user } = createUser(testDb);
     setNotificationChannels(testDb, 'email');
-    const { channels } = getPreferencesMatrix(user.id, 'user');
+    const { channels } = await getPreferencesMatrix(user.id, 'user');
     expect(channels.find(c => c.id === 'email')?.active).toBe(true);
   });
 
-  it('NPREF-010 — email is inactive when email is not in notification_channels', () => {
+  it('NPREF-010 — email is inactive when email is not in notification_channels', async () => {
     const { user } = createUser(testDb);
     // No notification_channels set → defaults to none
-    const { channels } = getPreferencesMatrix(user.id, 'user');
+    const { channels } = await getPreferencesMatrix(user.id, 'user');
     expect(channels.find(c => c.id === 'email')?.active).toBe(false);
   });
 
-  it('NPREF-011 — implemented_combos maps version_available to [inapp, email, webhook, ntfy]', () => {
+  it('NPREF-011 — implemented_combos maps version_available to [inapp, email, webhook, ntfy]', async () => {
     const { user } = createAdmin(testDb);
-    const { implemented_combos } = getPreferencesMatrix(user.id, 'admin', 'admin');
+    const { implemented_combos } = await getPreferencesMatrix(user.id, 'admin', 'admin');
     expect(implemented_combos['version_available']).toEqual(['inapp', 'email', 'webhook', 'ntfy']);
     // All events now support all four channels
     expect(implemented_combos['trip_invite']).toContain('inapp');
@@ -231,26 +235,26 @@ describe('setPreferences', () => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe('getActiveChannels', () => {
-  it('NPREF-015 — returns [] when notification_channels is none', () => {
+  it('NPREF-015 — returns [] when notification_channels is none', async () => {
     setAppSetting(testDb, 'notification_channels', 'none');
-    expect(getActiveChannels()).toEqual([]);
+    expect(await getActiveChannels()).toEqual([]);
   });
 
-  it('NPREF-016 — returns [email] when notification_channels is email', () => {
+  it('NPREF-016 — returns [email] when notification_channels is email', async () => {
     setAppSetting(testDb, 'notification_channels', 'email');
-    expect(getActiveChannels()).toEqual(['email']);
+    expect(await getActiveChannels()).toEqual(['email']);
   });
 
-  it('NPREF-017 — returns [email, webhook] when notification_channels is email,webhook', () => {
+  it('NPREF-017 — returns [email, webhook] when notification_channels is email,webhook', async () => {
     setAppSetting(testDb, 'notification_channels', 'email,webhook');
-    expect(getActiveChannels()).toEqual(['email', 'webhook']);
+    expect(await getActiveChannels()).toEqual(['email', 'webhook']);
   });
 
-  it('NPREF-018 — falls back to notification_channel (singular) when plural key absent', () => {
+  it('NPREF-018 — falls back to notification_channel (singular) when plural key absent', async () => {
     // Only set the singular key
     setAppSetting(testDb, 'notification_channel', 'webhook');
     // No notification_channels key
-    expect(getActiveChannels()).toEqual(['webhook']);
+    expect(await getActiveChannels()).toEqual(['webhook']);
   });
 });
 
@@ -264,9 +268,9 @@ describe('channel availability', () => {
     expect(isSmtpConfigured()).toBe(true);
   });
 
-  it('NPREF-020 — webhook is active when admin has enabled the webhook channel', () => {
+  it('NPREF-020 — webhook is active when admin has enabled the webhook channel', async () => {
     setNotificationChannels(testDb, 'webhook');
-    expect(getActiveChannels()).toContain('webhook');
+    expect(await getActiveChannels()).toContain('webhook');
   });
 
   it('NPREF-021 — detects SMTP config from env var SMTP_HOST', () => {
@@ -280,10 +284,10 @@ describe('channel availability', () => {
     }
   });
 
-  it('NPREF-022 — an unknown channel id in notification_channels is ignored', () => {
+  it('NPREF-022 — an unknown channel id in notification_channels is ignored', async () => {
     // e.g. a plugin channel left in the CSV after the plugin was uninstalled
     setNotificationChannels(testDb, 'webhook,plugin:long-gone');
-    expect(getActiveChannels()).toEqual(['webhook']);
+    expect(await getActiveChannels()).toEqual(['webhook']);
   });
 });
 
@@ -341,13 +345,13 @@ describe('setAdminPreferences', () => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe('isWebhookConfigured', () => {
-  it('NPREF-026 — returns false when webhook is not in active channels', () => {
+  it('NPREF-026 — returns false when webhook is not in active channels', async () => {
     // No notification_channels configured → defaults don't include webhook
-    expect(isWebhookConfigured()).toBe(false);
+    expect(await isWebhookConfigured()).toBe(false);
   });
 
-  it('NPREF-027 — returns true when webhook is in active channels', () => {
+  it('NPREF-027 — returns true when webhook is in active channels', async () => {
     setNotificationChannels(testDb, 'webhook');
-    expect(isWebhookConfigured()).toBe(true);
+    expect(await isWebhookConfigured()).toBe(true);
   });
 });

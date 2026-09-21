@@ -52,65 +52,65 @@ afterEach(() => {
 });
 
 describe('channelRegistry', () => {
-  it('CHREG-001 — the three built-in external channels are registered; in-app is not', () => {
-    expect(listChannels().map(c => c.id)).toEqual(['email', 'webhook', 'ntfy']);
-    expect(getChannel('inapp')).toBeUndefined();
+  it('CHREG-001 — the three built-in external channels are registered; in-app is not', async () => {
+    expect((await listChannels()).map(c => c.id)).toEqual(['email', 'webhook', 'ntfy']);
+    expect(await getChannel('inapp')).toBeUndefined();
   });
 
-  it('CHREG-002 — plugin channels come from the injected source and are namespaced', () => {
+  it('CHREG-002 — plugin channels come from the injected source and are namespaced', async () => {
     setPluginChannelSource(() => [fakeChannel(pluginChannelId('gotify'))]);
-    expect(listChannels().map(c => c.id)).toContain('plugin:gotify');
-    expect(getChannel('plugin:gotify')?.source).toBe('plugin');
+    expect((await listChannels()).map(c => c.id)).toContain('plugin:gotify');
+    expect((await getChannel('plugin:gotify'))?.source).toBe('plugin');
     expect(isPluginChannelId('plugin:gotify')).toBe(true);
     expect(isPluginChannelId('email')).toBe(false);
   });
 
-  it('CHREG-003 — a plugin channel disappears when the runtime stops reporting it', () => {
+  it('CHREG-003 — a plugin channel disappears when the runtime stops reporting it', async () => {
     let live = true;
     setPluginChannelSource(() => (live ? [fakeChannel('plugin:gotify')] : []));
-    expect(getChannel('plugin:gotify')).toBeDefined();
+    expect(await getChannel('plugin:gotify')).toBeDefined();
     live = false;
-    expect(getChannel('plugin:gotify')).toBeUndefined();
-    expect(listChannels().map(c => c.id)).toEqual(['email', 'webhook', 'ntfy']);
+    expect(await getChannel('plugin:gotify')).toBeUndefined();
+    expect((await listChannels()).map(c => c.id)).toEqual(['email', 'webhook', 'ntfy']);
   });
 
-  it('CHREG-004 — a throwing plugin source cannot take notifications down', () => {
+  it('CHREG-004 — a throwing plugin source cannot take notifications down', async () => {
     setPluginChannelSource(() => {
       throw new Error('runtime exploded');
     });
-    expect(listChannels().map(c => c.id)).toEqual(['email', 'webhook', 'ntfy']);
+    expect((await listChannels()).map(c => c.id)).toEqual(['email', 'webhook', 'ntfy']);
   });
 
-  it('CHREG-005 — a plugin can never claim a built-in id', () => {
+  it('CHREG-005 — a plugin can never claim a built-in id', async () => {
     // The prefix is the whole defence: an id without it is not a plugin channel id,
     // and pluginChannelId() is the only way the runtime mints one.
     expect(pluginChannelId('email')).toBe('plugin:email');
-    expect(getChannel('email')?.source).toBe('builtin');
+    expect((await getChannel('email'))?.source).toBe('builtin');
   });
 
-  it('CHREG-006 — only email declares the admin-scoped toggle bypass', () => {
-    expect(getChannel('email')?.bypassesActiveToggleForAdminEvents).toBe(true);
-    expect(getChannel('webhook')?.bypassesActiveToggleForAdminEvents).toBeUndefined();
-    expect(getChannel('ntfy')?.bypassesActiveToggleForAdminEvents).toBeUndefined();
+  it('CHREG-006 — only email declares the admin-scoped toggle bypass', async () => {
+    expect((await getChannel('email'))?.bypassesActiveToggleForAdminEvents).toBe(true);
+    expect((await getChannel('webhook'))?.bypassesActiveToggleForAdminEvents).toBeUndefined();
+    expect((await getChannel('ntfy'))?.bypassesActiveToggleForAdminEvents).toBeUndefined();
   });
 
-  it('CHREG-007 — webhook and ntfy deliver the admin-global copy; email does not', () => {
-    expect(getChannel('webhook')?.supportsAdminGlobal).toBe(true);
-    expect(getChannel('ntfy')?.supportsAdminGlobal).toBe(true);
-    expect(getChannel('email')?.supportsAdminGlobal).toBeUndefined();
+  it('CHREG-007 — webhook and ntfy deliver the admin-global copy; email does not', async () => {
+    expect((await getChannel('webhook'))?.supportsAdminGlobal).toBe(true);
+    expect((await getChannel('ntfy'))?.supportsAdminGlobal).toBe(true);
+    expect((await getChannel('email'))?.supportsAdminGlobal).toBeUndefined();
   });
 
-  it('CHREG-008 — built-ins carry every event except synology_session_cleared', () => {
+  it('CHREG-008 — built-ins carry every event except synology_session_cleared', async () => {
     for (const id of ['email', 'webhook', 'ntfy']) {
-      expect(getChannel(id)!.supportsEvent('trip_invite')).toBe(true);
-      expect(getChannel(id)!.supportsEvent('version_available')).toBe(true);
-      expect(getChannel(id)!.supportsEvent('synology_session_cleared')).toBe(false);
+      expect((await getChannel(id))!.supportsEvent('trip_invite')).toBe(true);
+      expect((await getChannel(id))!.supportsEvent('version_available')).toBe(true);
+      expect((await getChannel(id))!.supportsEvent('synology_session_cleared')).toBe(false);
     }
   });
 
-  it('CHREG-009 — registerChannel replaces an existing id rather than duplicating it', () => {
+  it('CHREG-009 — registerChannel replaces an existing id rather than duplicating it', async () => {
     registerChannel(fakeChannel('email', { source: 'builtin' }));
-    expect(listChannels().filter(c => c.id === 'email')).toHaveLength(1);
+    expect((await listChannels()).filter(c => c.id === 'email')).toHaveLength(1);
   });
 
   it('CHREG-010 — a channel that rejects is the caller’s problem, not the registry’s', async () => {
@@ -120,8 +120,8 @@ describe('channelRegistry', () => {
       },
     });
     setPluginChannelSource(() => [boom]);
-    await expect(getChannel('plugin:boom')!.sendToUser(1, MSG)).rejects.toThrow('nope');
+    await expect((await getChannel('plugin:boom'))!.sendToUser(1, MSG)).rejects.toThrow('nope');
     // and the registry is unharmed
-    expect(listChannels()).toHaveLength(4);
+    expect(await listChannels()).toHaveLength(4);
   });
 });

@@ -14,7 +14,7 @@ import { devLinkEnabled } from '../dev-link';
  * manifest is invalid or that ships native binaries is skipped (recorded to its
  * error log if it already existed).
  */
-export function discoverPlugins(db: BetterSqlite3.Database): { discovered: string[]; skipped: string[] } {
+export async function discoverPlugins(db: BetterSqlite3.Database): Promise<{ discovered: string[]; skipped: string[] }> {
   const root = pluginsCodeRoot();
   const discovered: string[] = [];
   const skipped: string[] = [];
@@ -50,7 +50,7 @@ export function discoverPlugins(db: BetterSqlite3.Database): { discovered: strin
       const manifest = parseManifest(parseJsonText(fs.readFileSync(manifestPath, 'utf8')));
       if (manifest.id !== entry.name) throw new Error(`manifest id "${manifest.id}" != directory "${entry.name}"`);
       if (scanForNativeBinaries(dir).length) throw new Error('directory contains native binaries');
-      upsert(db, manifest);
+      await upsert(db, manifest);
       discovered.push(manifest.id);
     } catch (e) {
       skipped.push(entry.name);
@@ -61,7 +61,7 @@ export function discoverPlugins(db: BetterSqlite3.Database): { discovered: strin
   return { discovered, skipped };
 }
 
-function upsert(db: BetterSqlite3.Database, m: PluginManifest): void {
+async function upsert(db: BetterSqlite3.Database, m: PluginManifest): Promise<void> {
   const dependencies = JSON.stringify({ requiredAddons: m.requiredAddons, pluginDependencies: m.pluginDependencies });
   const existing = db.prepare('SELECT id FROM plugins WHERE id = ?').get(m.id) as { id: string } | undefined;
   if (existing) {

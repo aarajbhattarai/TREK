@@ -269,7 +269,7 @@ export class TripMembersService {
       // (trip_members, budget/packing/assignment links) via the ON DELETE foreign keys.
       this.db.prepare('DELETE FROM users WHERE id = ? AND is_guest = 1').run(guestUserId);
     });
-    emitUserDeleted(guestUserId); // deliver the erasure to any active plugin now
+    await emitUserDeleted(guestUserId); // deliver the erasure to any active plugin now
     return true;
   }
 }

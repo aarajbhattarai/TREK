@@ -431,13 +431,13 @@ describe('PluginRegistryService', () => {
   });
 
   // ── Sideload (upload your own plugin) ────────────────────────────────────────
-  it('sideload: stage + commit installs an uploaded plugin INACTIVE as local:upload', () => {
+  it('sideload: stage + commit installs an uploaded plugin INACTIVE as local:upload', async () => {
     const zip = makeArtifact({ id: 'my-upload', name: 'Uploaded', version: '2.0.0', type: 'widget', permissions: ['db:own'] });
     const staged = svc.stageUpload(zip);
     expect(staged.id).toBe('my-upload');
     expect(staged.version).toBe('2.0.0');
 
-    svc.commitUpload(staged);
+    await svc.commitUpload(staged);
 
     const row = testDb.prepare('SELECT status, source_repo, reviewed_at, version FROM plugins WHERE id = ?').get('my-upload') as
       { status: string; source_repo: string | null; reviewed_at: string | null; version: string } | undefined;
@@ -458,11 +458,11 @@ describe('PluginRegistryService', () => {
     expect(() => svc.stageUpload(empty)).toThrow(/trek-plugin\.json/);
   });
 
-  it('sideload: forces INACTIVE even when replacing a plugin that was active', () => {
+  it('sideload: forces INACTIVE even when replacing a plugin that was active', async () => {
     const zip = () => makeArtifact({ id: 'my-upload', name: 'Uploaded', version: '2.0.0', type: 'widget', permissions: ['db:own'] });
-    svc.commitUpload(svc.stageUpload(zip()));                                            // first install
+    await svc.commitUpload(svc.stageUpload(zip()));                                      // first install
     testDb.prepare("UPDATE plugins SET status = 'active', enabled = 1 WHERE id = 'my-upload'").run(); // admin activated it
-    svc.commitUpload(svc.stageUpload(zip()));                                            // re-upload replaces the code
+    await svc.commitUpload(svc.stageUpload(zip()));                                      // re-upload replaces the code
     const row = testDb.prepare('SELECT status, enabled FROM plugins WHERE id = ?').get('my-upload') as { status: string; enabled: number };
     expect(row.status).toBe('inactive');   // discoverPlugins keeps the old status; commitUpload floors it back to inactive
     expect(row.enabled).toBe(0);
@@ -1076,7 +1076,7 @@ describe('an update block does not outlive the registry relationship', () => {
 
     // The admin now uploads the plugin by hand.
     const upload = makeArtifact({ id: 'flight-tracker', name: 'Flight', version: '9.9.9', type: 'widget', permissions: ['db:own'] });
-    svc.commitUpload(svc.stageUpload(upload));
+    await svc.commitUpload(svc.stageUpload(upload));
 
     const row = testDb.prepare("SELECT source_repo, author_pubkey, update_block_code, update_block_version FROM plugins WHERE id='flight-tracker'").get() as Record<string, unknown>;
     expect(row.source_repo).toBe('local:upload');

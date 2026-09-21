@@ -264,13 +264,13 @@ export interface NotificationPayload {
  *  - everything else: the admin enabled the channel, the user didn't opt out of this
  *    event on it, and the user has credentials for it.
  */
-function shouldSendToUser(
+async function shouldSendToUser(
   channel: ExternalChannel,
   event: NotifEventType,
   recipientId: number,
   activeChannels: string[],
   prefs: NotificationPreferencesService,
-): boolean {
+): Promise<boolean> {
   if (!channel.supportsEvent(event)) return false;
   if (channel.isInstanceConfigured && !channel.isInstanceConfigured()) return false;
 
@@ -285,7 +285,7 @@ function shouldSendToUser(
     if (!prefs.isEnabledForEvent(recipientId, event, channel.id)) return false;
   }
 
-  return channel.isConfiguredFor(recipientId);
+  return await channel.isConfiguredFor(recipientId);
 }
 
 /**
@@ -324,16 +324,16 @@ export class NotificationsService {
     registerBuiltinChannels({ mailer, webhook, ntfy });
   }
 
-  getPreferences(userId: number, role: string): PreferencesMatrix {
-    return this.prefs.getPreferencesMatrix(userId, role, 'user');
+  async getPreferences(userId: number, role: string): Promise<PreferencesMatrix> {
+    return await this.prefs.getPreferencesMatrix(userId, role, 'user');
   }
 
   /** Send a test notification over any registered channel (built-in or plugin). */
   async testChannel(userId: number, channelId: string): Promise<ChannelTestResult> {
-    const channel = getChannel(channelId);
+    const channel = await getChannel(channelId);
     if (!channel) return { success: false, error: 'Unknown channel' };
     if (!channel.test) return { success: false, error: 'This channel does not support test sends' };
-    if (!channel.isConfiguredFor(userId)) return { success: false, error: 'Channel is not configured for this user' };
+    if (!(await channel.isConfiguredFor(userId))) return { success: false, error: 'Channel is not configured for this user' };
     try {
       return await channel.test(userId);
     } catch (e) {
@@ -702,8 +702,8 @@ export class NotificationsService {
       }
     }
     const config = configEntry ?? FALLBACK_EVENT_CONFIG;
-    const activeChannels = this.prefs.getActiveChannels();
-    const channels = listChannels();
+    const activeChannels = await this.prefs.getActiveChannels();
+    const channels = await listChannels();
     const appUrl = getAppUrl();
 
     // Build navigate target (used by email/webhook CTA and in-app navigate)
@@ -783,7 +783,12 @@ export class NotificationsService {
       // One loop over the registry. The message is rendered once per recipient, in
       // their language, and handed to every channel that wants it — so a plugin
       // channel never touches i18n.
-      const deliverable = channels.filter(ch => shouldSendToUser(ch, event, recipientId, activeChannels, this.prefs));
+      // R1.4: `filter` cannot await, and the credential check behind shouldSendToUser
+      // is now async (a plugin channel reads the recipient's stored settings).
+      const deliverable: ExternalChannel[] = [];
+      for (const ch of channels) {
+        if (await shouldSendToUser(ch, event, recipientId, activeChannels, this.prefs)) deliverable.push(ch);
+      }
       if (deliverable.length > 0) {
         const lang = this.mailer.getUserLanguage(recipientId);
         const { title, body } = getEventText(lang, event, params);

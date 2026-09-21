@@ -52,18 +52,18 @@ beforeEach(async () => {
 describe('operator-supplied egress hosts', () => {
   it('OEG-001 — an admin can add hosts to a plugin that declared operatorEgress', async () => {
     install('gotify', true);
-    expect(rt.wantsOperatorEgress('gotify')).toBe(true);
+    expect(await rt.wantsOperatorEgress('gotify')).toBe(true);
     expect(await rt.setOperatorEgressHosts('gotify', ['gotify.mydomain.com'])).toEqual(['gotify.mydomain.com']);
-    expect(rt.operatorEgressHosts('gotify')).toEqual(['gotify.mydomain.com']);
+    expect(await rt.operatorEgressHosts('gotify')).toEqual(['gotify.mydomain.com']);
   });
 
   it('OEG-002 — a plugin that did NOT declare it can never have hosts added', async () => {
     install('sneaky', false);
-    expect(rt.wantsOperatorEgress('sneaky')).toBe(false);
+    expect(await rt.wantsOperatorEgress('sneaky')).toBe(false);
     // This is the load-bearing check: without it an admin could silently widen egress for
     // ANY plugin, and the install-time consent would stop bounding what's possible.
     await expect(rt.setOperatorEgressHosts('sneaky', ['evil.example.com'])).rejects.toThrow(/did not declare operatorEgress/);
-    expect(rt.operatorEgressHosts('sneaky')).toEqual([]);
+    expect(await rt.operatorEgressHosts('sneaky')).toEqual([]);
   });
 
   it('OEG-003 — hosts are validated exactly like manifest egress', async () => {
@@ -86,7 +86,7 @@ describe('operator-supplied egress hosts', () => {
     install('gotify', true);
     await rt.setOperatorEgressHosts('gotify', ['a.example.com', 'b.example.com']);
     await rt.setOperatorEgressHosts('gotify', ['b.example.com']);
-    expect(rt.operatorEgressHosts('gotify')).toEqual(['b.example.com']);
+    expect(await rt.operatorEgressHosts('gotify')).toEqual(['b.example.com']);
   });
 
   it('OEG-006 — the manifest rejects operatorEgress without an outbound permission', () => {
@@ -113,7 +113,7 @@ describe('operator-supplied egress hosts', () => {
     // It ACTIVATES (it may have useful offline features), but the child's allow-list is the
     // union of its http:outbound:<host> grants and the admin's hosts — both empty here.
     install('gotify', true, ['http:outbound']);
-    expect(rt.operatorEgressHosts('gotify')).toEqual([]);
+    expect(await rt.operatorEgressHosts('gotify')).toEqual([]);
     expect(makeHostAllow([])('gotify.mydomain.com')).toBe(false);
   });
 
@@ -122,7 +122,7 @@ describe('operator-supplied egress hosts', () => {
     await rt.setOperatorEgressHosts('gotify', ['gotify.mydomain.com']);
     await rt.uninstall('gotify', false);
     // A LATER plugin reusing this id must not silently inherit hosts approved for another.
-    expect(rt.operatorEgressHosts('gotify')).toEqual([]);
+    expect(await rt.operatorEgressHosts('gotify')).toEqual([]);
   });
 });
 
@@ -132,12 +132,12 @@ describe('settings-page actions (runtime)', () => {
       .run(id, key, key, scope);
   }
 
-  it('ACT-001 — actionsOf returns the declared descriptors of ONE scope', () => {
+  it('ACT-001 — actionsOf returns the declared descriptors of ONE scope', async () => {
     install('p', false);
     declareAction('p', 'testConnection');
     declareAction('p', 'purge', 'instance');
-    expect(rt.actionsOf('p', 'user')).toEqual([{ key: 'testConnection', label: 'testConnection', hint: undefined, danger: false, scope: 'user' }]);
-    expect(rt.actionsOf('p', 'instance')).toEqual([{ key: 'purge', label: 'purge', hint: undefined, danger: false, scope: 'instance' }]);
+    expect(await rt.actionsOf('p', 'user')).toEqual([{ key: 'testConnection', label: 'testConnection', hint: undefined, danger: false, scope: 'user' }]);
+    expect(await rt.actionsOf('p', 'instance')).toEqual([{ key: 'purge', label: 'purge', hint: undefined, danger: false, scope: 'instance' }]);
   });
 
   it('ACT-002 — invoking an action the plugin never declared is REFUSED', async () => {

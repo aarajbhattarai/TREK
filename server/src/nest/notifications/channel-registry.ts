@@ -88,17 +88,17 @@ function sanitizePluginChannels(raw: readonly ExternalChannel[]): ExternalChanne
 // setPluginEventSink() in plugin-runtime.service.ts: the runtime pushes a getter
 // in at onModuleInit, and we pull from it on every read so a plugin that is
 // disabled or uninstalled simply stops appearing.
-let pluginChannelSource: (() => ExternalChannel[]) | null = null;
+let pluginChannelSource: (() => ExternalChannel[] | Promise<ExternalChannel[]>) | null = null;
 
-export function setPluginChannelSource(source: (() => ExternalChannel[]) | null): void {
+export function setPluginChannelSource(source: (() => ExternalChannel[] | Promise<ExternalChannel[]>) | null): void {
   pluginChannelSource = source;
 }
 
 /** Every channel that currently exists: built-ins plus live, sanitized plugin channels. */
-export function listChannels(): ExternalChannel[] {
-  const plugins = (() => {
+export async function listChannels(): Promise<ExternalChannel[]> {
+  const plugins = await (async () => {
     try {
-      return pluginChannelSource?.() ?? [];
+      return (await pluginChannelSource?.()) ?? [];
     } catch {
       // A broken plugin runtime must never take notifications down with it.
       return [];
@@ -109,8 +109,8 @@ export function listChannels(): ExternalChannel[] {
   return [...builtins.values(), ...sanitizePluginChannels(plugins)];
 }
 
-export function getChannel(id: string): ExternalChannel | undefined {
-  if (isPluginChannelId(id)) return listChannels().find((c) => c.id === id);
+export async function getChannel(id: string): Promise<ExternalChannel | undefined> {
+  if (isPluginChannelId(id)) return (await listChannels()).find((c) => c.id === id);
   return builtins.get(id);
 }
 

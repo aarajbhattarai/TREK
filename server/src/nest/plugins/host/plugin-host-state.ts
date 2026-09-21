@@ -44,7 +44,7 @@ export function closePluginDataDb(id: string): void {
 // nothing persisted or phoned home.
 const budgets = new Map<string, DailyBudget>();
 
-export function budgetFor(id: string, conn: Database.Database): DailyBudget {
+export async function budgetFor(id: string, conn: Database.Database): Promise<DailyBudget> {
   let b = budgets.get(id);
   if (!b) {
     const now = Date.now();
@@ -64,6 +64,6 @@ export function budgetFor(id: string, conn: Database.Database): DailyBudget {
 }
 
 /** Today's broker usage for one plugin (admin view). Seeds the counter if unseen. */
-export function pluginBudgetUsage(id: string, conn: Database.Database): ReturnType<DailyBudget['used']> {
-  return budgetFor(id, conn).used(Date.now());
+export async function pluginBudgetUsage(id: string, conn: Database.Database): Promise<ReturnType<DailyBudget['used']>> {
+  return (await budgetFor(id, conn)).used(Date.now());
 }

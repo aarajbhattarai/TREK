@@ -33,7 +33,7 @@ export class PluginsFeedController {
   constructor(private readonly dbs: DatabaseService) {}
 
   @Get()
-  list(): { plugins: ActivePlugin[] } {
+  async list(): Promise<{ plugins: ActivePlugin[] }> {
     if (!pluginsEnabled()) return { plugins: [] };
     const rows = this.dbs.connection
       .prepare("SELECT id, name, type, icon, capabilities, granted_permissions FROM plugins WHERE status = 'active' ORDER BY sort_order, name")

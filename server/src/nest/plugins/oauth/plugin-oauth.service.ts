@@ -74,7 +74,7 @@ export class PluginOAuthService {
 
   /** The plugin's decrypted OAuth provider config from its INSTANCE settings, or null
    *  when any required piece is missing/blank. */
-  providerConfig(pluginId: string): OAuthProviderConfig | null {
+  async providerConfig(pluginId: string): Promise<OAuthProviderConfig | null> {
     const row = this.db.prepare('SELECT config FROM plugins WHERE id = ?').get(pluginId) as { config: string } | undefined;
     if (!row) return null;
     let cfg: Record<string, unknown>;
@@ -85,7 +85,7 @@ export class PluginOAuthService {
     }
     // A provider plugin ships its endpoints/scopes as manifest defaults; the admin types
     // only the client id/secret (secrets — never defaulted).
-    cfg = applySettingDefaults(cfg, settingDefaults(this.db, pluginId, 'instance'));
+    cfg = applySettingDefaults(cfg, await settingDefaults(this.db, pluginId, 'instance'));
     const authorizeUrl = String(cfg.oauth_authorize_url ?? '').trim();
     const tokenUrl = String(cfg.oauth_token_url ?? '').trim();
     const clientId = cfg.oauth_client_id ? String(decrypt_api_key(cfg.oauth_client_id)) : '';
@@ -100,15 +100,15 @@ export class PluginOAuthService {
   }
 
   /** Whether the acting user has a stored token for this plugin. */
-  status(pluginId: string, userId: number): { configured: boolean; connected: boolean } {
-    const configured = this.providerConfig(pluginId) !== null;
+  async status(pluginId: string, userId: number): Promise<{ configured: boolean; connected: boolean }> {
+    const configured = (await this.providerConfig(pluginId)) !== null;
     const tok = this.db.prepare('SELECT 1 FROM plugin_oauth_tokens WHERE plugin_id = ? AND user_id = ? AND access_token IS NOT NULL').get(pluginId, userId);
     return { configured, connected: !!tok };
   }
 
   /** Begin the authorize flow: mint PKCE + state, persist them, return the provider URL. */
-  startConnect(pluginId: string, userId: number, nowMs: number): string {
-    const cfg = this.providerConfig(pluginId);
+  async startConnect(pluginId: string, userId: number, nowMs: number): Promise<string> {
+    const cfg = await this.providerConfig(pluginId);
     if (!cfg) throw new Error('OAuth is not configured for this plugin');
     const authorize = assertSafeHttps(cfg.authorizeUrl, 'authorize_url');
     assertSafeHttps(cfg.tokenUrl, 'token_url'); // fail fast if the token endpoint is unsafe too
@@ -150,7 +150,7 @@ export class PluginOAuthService {
     }
     this.db.prepare('DELETE FROM plugin_oauth_state WHERE state = ?').run(state); // single-use
 
-    const cfg = this.providerConfig(pluginId);
+    const cfg = await this.providerConfig(pluginId);
     if (!cfg) throw new Error('OAuth is not configured for this plugin');
 
     const token = await this.tokenRequest(cfg, {
@@ -159,7 +159,7 @@ export class PluginOAuthService {
       redirect_uri: this.redirectUri(pluginId),
       code_verifier: row.verifier,
     });
-    this.storeToken(pluginId, userId, token, nowMs);
+    await this.storeToken(pluginId, userId, token, nowMs);
   }
 
   /** A valid access token for the acting user, refreshing it if it is expiring. Null when
@@ -174,7 +174,7 @@ export class PluginOAuthService {
     if (notExpiring) return decrypt_api_key(row.access_token) as string;
 
     if (!row.refresh_token) return decrypt_api_key(row.access_token) as string; // no refresh token — hand back what we have
-    const cfg = this.providerConfig(pluginId);
+    const cfg = await this.providerConfig(pluginId);
     if (!cfg) return null;
     const token = await this.tokenRequest(cfg, {
       grant_type: 'refresh_token',
@@ -182,11 +182,11 @@ export class PluginOAuthService {
     });
     // Some providers omit a new refresh_token on refresh — keep the existing one.
     if (!token.refresh_token) token.refresh_token = decrypt_api_key(row.refresh_token) as string;
-    this.storeToken(pluginId, userId, token, nowMs);
+    await this.storeToken(pluginId, userId, token, nowMs);
     return token.access_token ?? null;
   }
 
-  disconnect(pluginId: string, userId: number): void {
+  async disconnect(pluginId: string, userId: number): Promise<void> {
     this.db.prepare('DELETE FROM plugin_oauth_tokens WHERE plugin_id = ? AND user_id = ?').run(pluginId, userId);
     this.db.prepare('DELETE FROM plugin_oauth_state WHERE plugin_id = ? AND user_id = ?').run(pluginId, userId);
   }
@@ -221,7 +221,7 @@ export class PluginOAuthService {
     };
   }
 
-  private storeToken(pluginId: string, userId: number, token: { access_token?: string; refresh_token?: string; expires_in?: number; scope?: string }, nowMs: number): void {
+  private async storeToken(pluginId: string, userId: number, token: { access_token?: string; refresh_token?: string; expires_in?: number; scope?: string }, nowMs: number): Promise<void> {
     if (!token.access_token) throw new Error('token endpoint returned no access_token');
     const expiresAt = token.expires_in ? nowMs + token.expires_in * 1000 : null;
     this.db.prepare(

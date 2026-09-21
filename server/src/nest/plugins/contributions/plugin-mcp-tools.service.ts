@@ -62,7 +62,9 @@ export class PluginMcpToolsService implements OnApplicationBootstrap, OnModuleDe
   // needs PluginHooks, and PluginHooks injects PluginRuntimeService: owning it
   // there would be a cycle. Cleared on destroy, or a torn-down buildApp() leaves
   // a live source closing over a dead runtime and bleeds into the next suite.
-  onApplicationBootstrap(): void {
+  // `async` with nothing to await: the call-graph gate keys on the `async` modifier
+  // and this frame reaches the DB through the source it installs.
+  async onApplicationBootstrap(): Promise<void> {
     setPluginMcpToolSource((ctx) => this.mcpTools(ctx));
   }
 
@@ -71,11 +73,11 @@ export class PluginMcpToolsService implements OnApplicationBootstrap, OnModuleDe
   }
 
   /**
-   * Every plugin tool this session may see. Synchronous, and never throws:
-   * nest-mcp contains a throwing source, but a per-plugin failure here should
-   * cost that plugin's tools and nothing else.
+   * Every plugin tool this session may see. Never throws: nest-mcp contains a
+   * throwing source, but a per-plugin failure here should cost that plugin's
+   * tools and nothing else.
    */
-  mcpTools(_ctx: McpContext): McpDynamicTool[] {
+  async mcpTools(_ctx: McpContext): Promise<McpDynamicTool[]> {
     if (!pluginsEnabled()) return [];
     const out: McpDynamicTool[] = [];
     let dropped = 0;
@@ -83,7 +85,7 @@ export class PluginMcpToolsService implements OnApplicationBootstrap, OnModuleDe
     for (const id of this.hooks.providersOf(HOOK)) {
       let tools: McpDynamicTool[];
       try {
-        tools = this.toolsOf(id);
+        tools = await this.toolsOf(id);
       } catch {
         // One plugin's bad row contributes nothing; the others still advertise.
         continue;
@@ -114,8 +116,8 @@ export class PluginMcpToolsService implements OnApplicationBootstrap, OnModuleDe
    * on every restart with no version bump. Same two-sided shape as callPlugin's
    * exports check.
    */
-  private toolsOf(pluginId: string): McpDynamicTool[] {
-    const declared = this.runtime.mcpToolCapabilities(pluginId);
+  private async toolsOf(pluginId: string): Promise<McpDynamicTool[]> {
+    const declared = await this.runtime.mcpToolCapabilities(pluginId);
     if (!declared.length) return [];
     const implemented = new Set(this.runtime.mcpToolsOf(pluginId));
     const grants = this.runtime.grantsOf(pluginId);

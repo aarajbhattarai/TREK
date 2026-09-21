@@ -61,9 +61,9 @@ afterEach(() => {
 });
 
 describe('the advertised surface', () => {
-  it('MCPTOOLS-001: advertises a declared and implemented tool under the prefixed name', () => {
+  it('MCPTOOLS-001: advertises a declared and implemented tool under the prefixed name', async () => {
     const { svc } = makeService();
-    const tools = svc.mcpTools(ctx);
+    const tools = await svc.mcpTools(ctx);
 
     expect(tools).toHaveLength(1);
     expect(tools[0].options.name).toBe('plugin_weather_forecast');
@@ -71,32 +71,32 @@ describe('the advertised surface', () => {
     expect(tools[0].options.access).toEqual({ group: 'plugins', mode: 'use' });
   });
 
-  it('MCPTOOLS-002: drops a tool the manifest declares but the build does not implement', () => {
+  it('MCPTOOLS-002: drops a tool the manifest declares but the build does not implement', async () => {
     const { svc } = makeService({ implemented: { weather: [] } });
-    expect(svc.mcpTools(ctx)).toEqual([]);
+    expect(await svc.mcpTools(ctx)).toEqual([]);
   });
 
-  it('MCPTOOLS-003: drops a tool the build reports but the manifest never declared', () => {
+  it('MCPTOOLS-003: drops a tool the build reports but the manifest never declared', async () => {
     // The manifest is signed and re-consented; the loaded report is neither.
     const { svc } = makeService({ declared: { weather: [] }, implemented: { weather: ['sneaky'] } });
-    expect(svc.mcpTools(ctx)).toEqual([]);
+    expect(await svc.mcpTools(ctx)).toEqual([]);
   });
 
-  it('MCPTOOLS-004: a plugin without the grant never reaches the surface', () => {
+  it('MCPTOOLS-004: a plugin without the grant never reaches the surface', async () => {
     // providersOf already filters on active AND reported AND granted.
     const { svc, hooks } = makeService({ providers: [] });
-    expect(svc.mcpTools(ctx)).toEqual([]);
+    expect(await svc.mcpTools(ctx)).toEqual([]);
     expect(hooks.providersOf).toHaveBeenCalledWith('mcpToolProvider');
   });
 
-  it('MCPTOOLS-005: the kill switch empties the surface', () => {
+  it('MCPTOOLS-005: the kill switch empties the surface', async () => {
     pluginsOn = false;
     const { svc, hooks } = makeService();
-    expect(svc.mcpTools(ctx)).toEqual([]);
+    expect(await svc.mcpTools(ctx)).toEqual([]);
     expect(hooks.providersOf).not.toHaveBeenCalled();
   });
 
-  it('MCPTOOLS-006: one failing plugin costs only its own tools', () => {
+  it('MCPTOOLS-006: one failing plugin costs only its own tools', async () => {
     const { svc } = makeService({
       providers: ['broken', 'weather'],
       declared: {
@@ -106,20 +106,20 @@ describe('the advertised surface', () => {
       implemented: { weather: ['forecast'], broken: ['x'] },
     });
 
-    const tools = svc.mcpTools(ctx);
+    const tools = await svc.mcpTools(ctx);
     expect(tools.map((t) => t.options.name)).toEqual(['plugin_weather_forecast']);
   });
 
-  it('MCPTOOLS-007: caps the tools one plugin may contribute', () => {
+  it('MCPTOOLS-007: caps the tools one plugin may contribute', async () => {
     const many = Array.from({ length: 12 }, (_, i) => ({ ...weatherTool, name: `t${i}` }));
     const { svc } = makeService({
       declared: { weather: many },
       implemented: { weather: many.map((t) => t.name) },
     });
-    expect(svc.mcpTools(ctx)).toHaveLength(8);
+    expect(await svc.mcpTools(ctx)).toHaveLength(8);
   });
 
-  it('MCPTOOLS-008: caps the whole surface and says so rather than truncating silently', () => {
+  it('MCPTOOLS-008: caps the whole surface and says so rather than truncating silently', async () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const eight = Array.from({ length: 8 }, (_, i) => ({ ...weatherTool, name: `t${i}` }));
     const providers = ['p1', 'p2', 'p3', 'p4', 'p5'];
@@ -131,22 +131,22 @@ describe('the advertised surface', () => {
     }
 
     const { svc } = makeService({ providers, declared, implemented });
-    expect(svc.mcpTools(ctx)).toHaveLength(32);
+    expect(await svc.mcpTools(ctx)).toHaveLength(32);
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('dropped'));
   });
 
-  it('MCPTOOLS-009: clamps annotations against the grants the plugin actually holds', () => {
+  it('MCPTOOLS-009: clamps annotations against the grants the plugin actually holds', async () => {
     const claiming = [{ ...weatherTool, annotations: { readOnlyHint: true } }];
     const { svc } = makeService({
       declared: { weather: claiming },
       grants: { weather: ['db:write:trips'] },
     });
-    expect(svc.mcpTools(ctx)[0].options.annotations).toMatchObject({ readOnlyHint: false });
+    expect((await svc.mcpTools(ctx))[0].options.annotations).toMatchObject({ readOnlyHint: false });
   });
 
-  it('MCPTOOLS-010: never advertises _meta or an outputSchema', () => {
+  it('MCPTOOLS-010: never advertises _meta or an outputSchema', async () => {
     const { svc } = makeService({ declared: { weather: [{ ...weatherTool, _meta: { x: 1 } }] } });
-    const options = svc.mcpTools(ctx)[0].options;
+    const options = (await svc.mcpTools(ctx))[0].options;
     expect(options._meta).toBeUndefined();
     expect(options.outputSchema).toBeUndefined();
   });
@@ -154,7 +154,7 @@ describe('the advertised surface', () => {
 
 describe('invoking a tool', () => {
   const invoke = async (svc: PluginMcpToolsService, args: unknown = { city: 'Lisbon' }) => {
-    const tool = svc.mcpTools(ctx)[0];
+    const tool = (await svc.mcpTools(ctx))[0];
     return (await tool.handler(args, ctx)) as { content: Array<{ text: string }>; isError?: boolean };
   };
 
@@ -191,7 +191,7 @@ describe('invoking a tool', () => {
 
   it('MCPTOOLS-015: refuses once the kill switch goes off mid-session', async () => {
     const { svc, callTool } = makeService();
-    const tool = svc.mcpTools(ctx)[0];
+    const tool = (await svc.mcpTools(ctx))[0];
     pluginsOn = false;
     const res = (await tool.handler({}, ctx)) as { isError?: boolean };
     expect(res.isError).toBe(true);
@@ -200,29 +200,29 @@ describe('invoking a tool', () => {
 });
 
 describe('toMcpTextResult', () => {
-  it('MCPTOOLS-016: preserves a well-formed result, isError included', () => {
+  it('MCPTOOLS-016: preserves a well-formed result, isError included', async () => {
     const given = { content: [{ type: 'text', text: 'hi' }], isError: true };
     expect(toMcpTextResult(given)).toEqual(given);
   });
 
-  it('MCPTOOLS-017: wraps a bare string', () => {
+  it('MCPTOOLS-017: wraps a bare string', async () => {
     expect(toMcpTextResult('hello')).toEqual({ content: [{ type: 'text', text: 'hello' }] });
   });
 
-  it('MCPTOOLS-018: survives a value that cannot be serialised', () => {
+  it('MCPTOOLS-018: survives a value that cannot be serialised', async () => {
     const cyclic: Record<string, unknown> = {};
     cyclic.self = cyclic;
     const res = toMcpTextResult(cyclic) as { isError?: boolean };
     expect(res.isError).toBe(true);
   });
 
-  it('MCPTOOLS-019: caps a flood so a plugin cannot fill the assistant context', () => {
+  it('MCPTOOLS-019: caps a flood so a plugin cannot fill the assistant context', async () => {
     const huge = 'x'.repeat(200_000);
     const res = toMcpTextResult(huge);
     expect(res.content[0].text.length).toBeLessThanOrEqual(64 * 1024);
   });
 
-  it('MCPTOOLS-020: the budget covers the WHOLE result, not each block', () => {
+  it('MCPTOOLS-020: the budget covers the WHOLE result, not each block', async () => {
     // Per-block slicing is not a limit: 100 blocks of the maximum size is 100
     // times the maximum. This shape produced 6.5M characters before the fix.
     const many = { content: Array.from({ length: 100 }, () => ({ type: 'text', text: 'x'.repeat(200_000) })) };
@@ -231,14 +231,14 @@ describe('toMcpTextResult', () => {
     expect(total).toBeLessThan(70 * 1024);
   });
 
-  it('MCPTOOLS-021: caps the number of content blocks and says it truncated', () => {
+  it('MCPTOOLS-021: caps the number of content blocks and says it truncated', async () => {
     const many = { content: Array.from({ length: 500 }, (_, i) => ({ type: 'text', text: `b${i}` })) };
     const res = toMcpTextResult(many);
     expect(res.content.length).toBeLessThanOrEqual(33);
     expect(res.content[res.content.length - 1].text).toContain('truncated');
   });
 
-  it('MCPTOOLS-022: bounds a huge object without serialising it whole first', () => {
+  it('MCPTOOLS-022: bounds a huge object without serialising it whole first', async () => {
     const fat = { rows: Array.from({ length: 20_000 }, (_, i) => ({ i, blob: 'y'.repeat(500) })) };
     const res = toMcpTextResult(fat);
     const total = res.content.reduce((n, c) => n + c.text.length, 0);

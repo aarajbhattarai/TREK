@@ -45,19 +45,19 @@ export class HostSurfaceRpc {
   ) {}
 
   @PluginMethod('users.getById', { permission: 'db:read:users' })
-  getUser(params: Record<string, unknown>, ctx: PluginRpcContext): unknown {
+  async getUser(params: Record<string, unknown>, ctx: PluginRpcContext): Promise<unknown> {
     // Scoped to people the acting user can actually see (themselves, or someone they
     // share a trip with), so a plugin cannot enumerate every account by looping ids.
     const id = num(params.id, 'id');
     if (ctx.actingUserId === undefined) throw new ForbiddenResource('user reads require an authenticated user context');
-    if (id !== ctx.actingUserId && !this.sharesATrip(ctx.actingUserId, id)) {
+    if (id !== ctx.actingUserId && !(await this.sharesATrip(ctx.actingUserId, id))) {
       throw new ForbiddenResource(`no access to user ${id}`);
     }
     return this.db.prepare('SELECT id, username, display_name, avatar FROM users WHERE id = ?').get(id);
   }
 
   @PluginMethod('ws.broadcastToTrip', { permission: 'ws:broadcast:trip' })
-  broadcastToTrip(params: Record<string, unknown>, ctx: PluginRpcContext): unknown {
+  async broadcastToTrip(params: Record<string, unknown>, ctx: PluginRpcContext): Promise<unknown> {
     // The TARGET is gated like a read: only a trip room the acting user belongs to.
     // Namespacing the event type alone does not cross the membership boundary.
     const tripId = num(params.tripId, 'tripId');
@@ -105,7 +105,7 @@ export class HostSurfaceRpc {
       throw new ForbiddenResource('the acting user is not a member of that trip');
     }
     const link = this.safeLink(input.link);
-    if (!budgetFor(ctx.pluginId, this.db.connection).take('notify', Date.now())) {
+    if (!(await budgetFor(ctx.pluginId, this.db.connection)).take('notify', Date.now())) {
       throw new BadParams('daily notification budget exhausted (resets at UTC midnight)');
     }
     await this.notifications.send({
@@ -126,7 +126,7 @@ export class HostSurfaceRpc {
     const prompt = typeof params.prompt === 'string' ? params.prompt : '';
     if (prompt.trim() === '') throw new BadParams('prompt is required');
     if (prompt.length > AI_TEXT_MAX) throw new BadParams(`prompt exceeds the ${AI_TEXT_MAX}-char cap`);
-    this.takeAiBudget(ctx);
+    await this.takeAiBudget(ctx);
     const system = typeof params.system === 'string' ? params.system.slice(0, 4000) : undefined;
     const results = await this.runModel(config, {
       prompt: system || 'You are a helpful assistant. Reply with a JSON object of the form {"text": "..."} whose "text" field holds your answer.',
@@ -150,7 +150,7 @@ export class HostSurfaceRpc {
     if (typeof params.jsonSchema !== 'object' || params.jsonSchema === null) {
       throw new BadParams('jsonSchema (an object) is required');
     }
-    this.takeAiBudget(ctx);
+    await this.takeAiBudget(ctx);
     const hint = typeof params.prompt === 'string' ? params.prompt.slice(0, 4000) : '';
     const results = await this.runModel(config, {
       prompt: hint || 'Extract structured data from the text into the given JSON schema.',
@@ -173,7 +173,7 @@ export class HostSurfaceRpc {
   }
 
   @PluginMethod('scheduler.set', { permission: 'jobs:run' })
-  schedulerSet(params: Record<string, unknown>, ctx: PluginRpcContext): unknown {
+  async schedulerSet(params: Record<string, unknown>, ctx: PluginRpcContext): Promise<unknown> {
     const name = str(params.name, 'name');
     const dueAt = num(params.dueAt, 'dueAt');
     const everyMs = params.everyMs != null ? num(params.everyMs, 'everyMs') : undefined;
@@ -200,7 +200,7 @@ export class HostSurfaceRpc {
   }
 
   @PluginMethod('scheduler.cancel', { permission: 'jobs:run' })
-  schedulerCancel(params: Record<string, unknown>, ctx: PluginRpcContext): unknown {
+  async schedulerCancel(params: Record<string, unknown>, ctx: PluginRpcContext): Promise<unknown> {
     const r = this.db
       .prepare('DELETE FROM plugin_scheduled_tasks WHERE plugin_id = ? AND name = ?')
       .run(ctx.pluginId, str(params.name, 'name'));
@@ -208,7 +208,7 @@ export class HostSurfaceRpc {
   }
 
   /** Two users share a trip when both are owner-or-member of the same one. */
-  private sharesATrip(actingUserId: number, targetUserId: number): boolean {
+  private async sharesATrip(actingUserId: number, targetUserId: number): Promise<boolean> {
     return !!this.db
       .prepare(
         `SELECT 1 FROM trips t
@@ -245,8 +245,8 @@ export class HostSurfaceRpc {
     }
   }
 
-  private takeAiBudget(ctx: PluginRpcContext): void {
-    if (!budgetFor(ctx.pluginId, this.db.connection).take('ai', Date.now())) {
+  private async takeAiBudget(ctx: PluginRpcContext): Promise<void> {
+    if (!(await budgetFor(ctx.pluginId, this.db.connection)).take('ai', Date.now())) {
       throw new BadParams('daily AI budget exhausted (resets at UTC midnight)');
     }
   }

@@ -31,11 +31,11 @@ export function parseDefaultValue(raw: unknown): SettingDefault | undefined {
 
 /** The declared defaults for one plugin and scope, keyed by field. Null-prototype so a
  *  field key can never resolve off Object.prototype (see plugin-config-parse.ts). */
-export function settingDefaults(
+export async function settingDefaults(
   db: BetterSqlite3.Database,
   pluginId: string,
   scope: 'instance' | 'user',
-): Record<string, SettingDefault> {
+): Promise<Record<string, SettingDefault>> {
   const rows = db
     .prepare(
       'SELECT field_key, default_value FROM plugin_settings_fields WHERE plugin_id = ? AND scope = ? AND secret = 0 AND default_value IS NOT NULL',

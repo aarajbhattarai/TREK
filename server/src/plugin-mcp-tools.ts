@@ -23,7 +23,7 @@ import type { McpContext, McpDynamicTool } from './nest-mcp';
  * again on the way out would swallow that diagnostic and report the same
  * degraded surface less usefully.
  */
-export type PluginMcpToolSource = (ctx: McpContext) => readonly McpDynamicTool[];
+export type PluginMcpToolSource = (ctx: McpContext) => readonly McpDynamicTool[] | Promise<readonly McpDynamicTool[]>;
 
 let source: PluginMcpToolSource | null = null;
 

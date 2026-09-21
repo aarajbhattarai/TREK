@@ -184,6 +184,6 @@ describe('server Roadtrip router', () => {
     });
     expect((await router.route(7, 8, 9, points, 'plugin:scenic/car', [])).leg.seg.distance).toBe(3000);
     expect(hooks.route).toHaveBeenCalledWith('scenic', { tripId: 8, dayId: 9, profile: 'car', waypoints: points }, 7);
-    expect(router.profiles()).toContain('plugin:scenic/car');
+    expect(await router.profiles()).toContain('plugin:scenic/car');
   });
 });

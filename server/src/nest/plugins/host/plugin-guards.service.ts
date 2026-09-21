@@ -31,7 +31,7 @@ export class PluginGuards {
    * so a plugin cannot read another user's trips by naming their id. A userless
    * context (a job, or onLoad) has no acting user and is refused.
    */
-  tripRead<T>(params: Record<string, unknown>, ctx: PluginRpcContext, read: (userId: number) => T): T {
+  async tripRead<T>(params: Record<string, unknown>, ctx: PluginRpcContext, read: (userId: number) => T): Promise<T> {
     const tripId = num(params.tripId, 'tripId');
     if (ctx.actingUserId === undefined) {
       throw new ForbiddenResource('trip reads require an authenticated user context');

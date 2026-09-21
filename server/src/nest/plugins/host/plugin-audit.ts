@@ -98,7 +98,7 @@ function envInt(name: string, def: number): number {
 
 /** Keep only the newest `MAX_AUDIT_ROWS` rows for a plugin. Called amortised from
  * appendAudit; exported for tests. No-op when disabled or under the cap. */
-export function pruneAudit(db: AuditDb, pluginId: string, keep = MAX_AUDIT_ROWS): void {
+export async function pruneAudit(db: AuditDb, pluginId: string, keep = MAX_AUDIT_ROWS): Promise<void> {
   if (keep <= 0) return;
   db.prepare(
     `DELETE FROM plugin_capability_audit WHERE plugin_id = ? AND id NOT IN
@@ -106,8 +106,9 @@ export function pruneAudit(db: AuditDb, pluginId: string, keep = MAX_AUDIT_ROWS)
   ).run(pluginId, pluginId, keep);
 }
 
-/** Append one entry to the per-plugin hash chain. Synchronous (better-sqlite3). */
-export function appendAudit(db: AuditDb, e: AuditEntry): void {
+/** Append one entry to the per-plugin hash chain. The statements themselves are
+ * synchronous (better-sqlite3); the method is async for the ORM seam. */
+export async function appendAudit(db: AuditDb, e: AuditEntry): Promise<void> {
   const prev =
     (db.prepare('SELECT hash FROM plugin_capability_audit WHERE plugin_id = ? ORDER BY id DESC LIMIT 1').get(e.pluginId) as
       | { hash: string }
@@ -120,7 +121,7 @@ export function appendAudit(db: AuditDb, e: AuditEntry): void {
   ).run(e.pluginId, e.actingUserId ?? null, e.method, e.resource ?? null, e.code, ts, prev || null, hash);
   // Amortised retention: prune roughly every PRUNE_EVERY appends per plugin.
   const n = (appendsSincePrune.get(e.pluginId) ?? 0) + 1;
-  if (n >= PRUNE_EVERY) { appendsSincePrune.set(e.pluginId, 0); pruneAudit(db, e.pluginId); }
+  if (n >= PRUNE_EVERY) { appendsSincePrune.set(e.pluginId, 0); await pruneAudit(db, e.pluginId); }
   else appendsSincePrune.set(e.pluginId, n);
 }
 
@@ -128,7 +129,7 @@ export function appendAudit(db: AuditDb, e: AuditEntry): void {
  * "what have plugins done in my name?" view. This is what legitimizes the broad
  * read grants: the user, not just the admin, can see every plugin action bound to
  * them. Joined with the plugin name for display; capped. */
-export function readAuditForUser(db: AuditDb, userId: number, limit = 200): unknown[] {
+export async function readAuditForUser(db: AuditDb, userId: number, limit = 200): Promise<unknown[]> {
   return db
     .prepare(
       `SELECT a.ts, a.plugin_id, p.name AS plugin_name, a.method, a.resource, a.code
@@ -139,7 +140,7 @@ export function readAuditForUser(db: AuditDb, userId: number, limit = 200): unkn
 }
 
 /** Read the most recent audit rows for a plugin (admin view). */
-export function readAudit(db: AuditDb, pluginId: string, limit = 200): unknown[] {
+export async function readAudit(db: AuditDb, pluginId: string, limit = 200): Promise<unknown[]> {
   return db
     .prepare('SELECT ts, acting_user_id, method, resource, code FROM plugin_capability_audit WHERE plugin_id = ? ORDER BY id DESC LIMIT ?')
     .all(pluginId, limit);

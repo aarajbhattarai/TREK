@@ -1,6 +1,7 @@
 import { Injectable, type OnApplicationBootstrap, type OnModuleDestroy } from '@nestjs/common';
 import semver from 'semver';
 import { DatabaseService } from '../database/database.service';
+import { UnitOfWork } from '../database/unit-of-work';
 import { pluginsEnabled } from './kill-switch';
 import { setPluginEventSink } from '../../plugin-event-sink';
 import { setUserDeletedSink } from '../../plugin-user-lifecycle';
@@ -151,7 +152,10 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
         // Retention: a crash-looping plugin emits a stderr line per restart, so an
         // uncapped table grows without bound in the shared trek.db. Keep only the
         // most recent LOG_RETENTION rows per plugin (the admin view shows 200).
-        this.pruneErrorLog(id);
+        // R1.5: this hook is a child-lifecycle EventEmitter callback the supervisor
+        // cannot await, so the now-async prune is fired off with its own handler —
+        // the same "a log line must never crash the host" rule as the catch below.
+        void this.pruneErrorLog(id).catch(() => { /* retention is best-effort */ });
       } catch { /* DB unavailable — a log line must never crash the host */ }
     },
   });
@@ -179,6 +183,11 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
     private readonly userSettings: PluginUserSettingsService,
     private readonly registry?: PluginRegistryService,
     private readonly hostFactory?: PluginRpcHostFactory,
+    // LAST, and optional only because TypeScript forbids a required parameter after
+    // an optional one — Nest always injects it (OrmModule is global). A hand-built
+    // test instance that exercises a transaction must pass one; setOperatorEgressHosts
+    // refuses rather than writing outside a transaction (same shape as hostFactory).
+    private readonly uow?: UnitOfWork,
   ) {}
 
   private get db() {
@@ -193,7 +202,7 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
   // plugin's first RPC after a restart came back PERMISSION_DENIED (pinned by
   // tests/integration/plugins/boot-registry-order.test.ts). onApplicationBootstrap
   // is guaranteed to run after EVERY module's onModuleInit, registry scan included.
-  onApplicationBootstrap(): void {
+  async onApplicationBootstrap(): Promise<void> {
     if (!pluginsEnabled()) return;
     // If a restore staged plugin trees, swap them into place NOW — before we open any
     // plugin DB below. This is where a restored backup's plugin data/code actually
@@ -226,8 +235,8 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
     // boot must NEVER block app init, even in a context without plugin tables
     // (e.g. a slimmed-down test app that only imports AdminModule).
     try {
-      discoverPlugins(this.db);
-      const installed = this.installedDepRows();
+      await discoverPlugins(this.db);
+      const installed = await this.installedDepRows();
       const enabledIds = [...installed.values()].filter((r) => r.enabled).map((r) => r.id);
       let order: string[];
       try {
@@ -254,7 +263,9 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
     // scheduler is minute-granularity by contract, so 30s precision is plenty and
     // cheap. Unref'd so it never holds the process open.
     this.schedulerSweep = setInterval(() => {
-      this.fireDueScheduled();
+      // R1.5: a timer callback cannot await. Both helpers swallow their own errors
+      // (each body is wrapped in try/catch), so there is nothing to propagate.
+      void this.fireDueScheduled();
       void this.drainUserErasures();
     }, 30_000);
     this.schedulerSweep.unref?.();
@@ -264,7 +275,7 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
    * ones, delete one-shots. The row is re-armed/deleted BEFORE the fire so a crash
    * mid-callback can't double-fire; an inactive plugin's tasks are left untouched so
    * they run on the next sweep after it reactivates. Never throws. */
-  private fireDueScheduled(): void {
+  private async fireDueScheduled(): Promise<void> {
     if (!pluginsEnabled()) return;
     try {
       // Scope the window to ACTIVE plugins so a backlog of past-due rows belonging to
@@ -293,7 +304,7 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
    * try to deliver immediately. Persisted first (INSERT OR IGNORE, idempotent) so the
    * erasure survives a restart and reaches a plugin that is offline right now. Never
    * throws — a bookkeeping error must not fail the account deletion that triggered it. */
-  private enqueueUserErasure(userId: number): void {
+  private async enqueueUserErasure(userId: number): Promise<void> {
     try {
       const rows = this.db.prepare('SELECT id, permissions FROM plugins').all() as Array<{ id: string; permissions: string | null }>;
       const insert = this.db.prepare('INSERT OR IGNORE INTO plugin_user_erasure_queue (plugin_id, user_id) VALUES (?, ?)');
@@ -311,14 +322,14 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
   /** Deliver queued erasures to active plugins, dropping each row only once the plugin
    * ACKs. Rows for inactive plugins are left for a later sweep / their reactivation.
    * Never throws. */
-  private drainUserErasures(): Promise<void> {
+  private async drainUserErasures(): Promise<void> {
     // Coalesce onto the drain already in flight. Both the 30s sweep and enqueue trigger
     // a drain, and a pass awaits per-row delivery (up to the invoke timeout each), so
     // running two concurrently would select the SAME rows and deliver an erasure twice.
     // A caller that awaits still waits for a full pass (the in-flight one).
-    if (this.drainInFlight !== null) return this.drainInFlight;
+    if (this.drainInFlight !== null) return await this.drainInFlight;
     this.drainInFlight = this.runDrainOnce().finally(() => { this.drainInFlight = null; });
-    return this.drainInFlight;
+    return await this.drainInFlight;
   }
 
   private async runDrainOnce(): Promise<void> {
@@ -435,8 +446,8 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
   }
 
   /** Re-scan the plugins volume on demand (admin action). */
-  rescan(): { discovered: string[]; skipped: string[] } {
-    return discoverPlugins(this.db);
+  async rescan(): Promise<{ discovered: string[]; skipped: string[] }> {
+    return await discoverPlugins(this.db);
   }
 
   async onModuleDestroy(): Promise<void> {
@@ -462,7 +473,7 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
    * update consent dialog), and otherwise throws PluginConsentRequired.
    */
   async activate(id: string, consentWiden = false): Promise<void> {
-    const installed = this.installedDepRows();
+    const installed = await this.installedDepRows();
     // Deps-first order over the installed graph (throws DependencyCycleError on a
     // cycle). Missing deps aren't in `installed` so they don't appear here — the
     // per-node gate reports those separately.
@@ -483,7 +494,7 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
   }
 
   /** All plugin rows projected to what the dependency helpers reason over. */
-  private installedDepRows(): Map<string, PluginDepRow> {
+  private async installedDepRows(): Promise<Map<string, PluginDepRow>> {
     const rows = this.db.prepare('SELECT id, version, enabled, dependencies FROM plugins').all() as PluginDepRow[];
     return new Map(rows.map((r) => [r.id, r]));
   }
@@ -574,7 +585,7 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
     this.db.prepare('UPDATE plugins SET granted_permissions = ?, enabled = 1 WHERE id = ?').run(JSON.stringify(declared), id);
     // Manifest defaults fill whatever the admin never set, so the child's ctx.config is
     // the same effective value the settings form shows (see settings-defaults.ts).
-    const config = applySettingDefaults(decryptConfig(parseObject(row.config)), settingDefaults(this.db, id, 'instance'));
+    const config = applySettingDefaults(decryptConfig(parseObject(row.config)), await settingDefaults(this.db, id, 'instance'));
     const manifestHosts = declared.filter((p) => p.startsWith(HTTP_OUTBOUND)).map((p) => p.slice(HTTP_OUTBOUND.length));
     // Union in the hosts the ADMIN added post-install. A plugin that talks to a
     // self-hosted service can't name the operator's hostname in its manifest, so without
@@ -583,12 +594,12 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
     // still bounds what is possible — and it is always the admin, never an end user,
     // who widens it. The egress list is spawn-time only, which is why changing it
     // re-spawns the plugin (see setOperatorEgressHosts).
-    const egress = [...new Set([...manifestHosts, ...this.operatorEgressHosts(id)])];
+    const egress = [...new Set([...manifestHosts, ...(await this.operatorEgressHosts(id))])];
     await this.supervisor.activate(id, new Set(declared), config, egress);
   }
 
   /** Hosts an admin added for this plugin (empty unless it declared `operatorEgress`). */
-  operatorEgressHosts(id: string): string[] {
+  async operatorEgressHosts(id: string): Promise<string[]> {
     try {
       return (this.db.prepare('SELECT host FROM plugin_egress_hosts WHERE plugin_id = ? ORDER BY host').all(id) as Array<{ host: string }>)
         .map((r) => r.host);
@@ -598,7 +609,7 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
   }
 
   /** Does this plugin's manifest declare that it needs operator-supplied hosts? */
-  wantsOperatorEgress(id: string): boolean {
+  async wantsOperatorEgress(id: string): Promise<boolean> {
     const row = this.db.prepare('SELECT operator_egress FROM plugins WHERE id = ?').get(id) as { operator_egress: number } | undefined;
     return row?.operator_egress === 1;
   }
@@ -609,7 +620,7 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
    * `init` is deliberately refused, so there is no way to widen a live child's allow-list.
    */
   async setOperatorEgressHosts(id: string, hosts: string[]): Promise<string[]> {
-    if (!this.wantsOperatorEgress(id)) {
+    if (!(await this.wantsOperatorEgress(id))) {
       throw new ForbiddenResource(`plugin ${id} did not declare operatorEgress`);
     }
     const clean: string[] = [];
@@ -621,11 +632,12 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
       if (host === '*' || !EGRESS_HOST_RE.test(host)) throw new ForbiddenResource(`invalid host "${raw}"`);
       if (!clean.includes(host)) clean.push(host);
     }
-    this.db.transaction(() => {
+    if (!this.uow) throw new Error('UnitOfWork not provided — tests that set egress hosts must pass one');
+    await this.uow.transactional(async () => {
       this.db.prepare('DELETE FROM plugin_egress_hosts WHERE plugin_id = ?').run(id);
       const ins = this.db.prepare('INSERT OR IGNORE INTO plugin_egress_hosts (plugin_id, host) VALUES (?, ?)');
       for (const h of clean) ins.run(id, h);
-    })();
+    });
     // Re-spawn so a live child actually gets the new allow-list.
     if (this.isActive(id)) {
       await this.supervisor.disable(id);
@@ -807,7 +819,7 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
       // — without a fresh activation + permission consent. deactivate() no-ops on
       // a plugin that isn't running.
       if (replaced) await this.deactivate(staged.id);
-      this.registry.commitUpload(staged); // moves code + registers INACTIVE, then clears staging
+      await this.registry.commitUpload(staged); // moves code + registers INACTIVE, then clears staging
       return { id: staged.id, version: staged.version, replaced, trekRangeBypassed: staged.trekRangeBypassed };
     } catch (e) {
       // A failure before commitUpload leaves staging behind — clean it up.
@@ -850,7 +862,7 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
     removePluginCodeEntry(dest); // drop any prior link — never follows into the author's source
     fs.mkdirSync(path.dirname(dest), { recursive: true });
     fs.symlinkSync(sourceDir, dest, 'junction'); // Windows junction (no elevation); POSIX ignores the type -> dir symlink
-    discoverPlugins(this.db); // registers/updates the row from the linked manifest, INACTIVE
+    await discoverPlugins(this.db); // registers/updates the row from the linked manifest, INACTIVE
     // Same as a sideload: the plugin has left the registry trust model, so a block that
     // described a refused REGISTRY update no longer describes the code that will run.
     this.db.prepare(
@@ -859,7 +871,7 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
                           status = 'inactive', enabled = 0
        WHERE id = ?`,
     ).run(DEV_LINK_SOURCE, id);
-    this.watchLinked(id, sourceDir);
+    await this.watchLinked(id, sourceDir);
     return { id, version: manifest.version, replaced, trekRangeBypassed };
   }
 
@@ -880,8 +892,10 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
     if (wasActive) await this.activate(id);
   }
 
-  /** Best-effort fs.watch on a linked plugin's built output that debounces -> reload. */
-  private watchLinked(id: string, sourceDir: string): void {
+  /** Best-effort fs.watch on a linked plugin's built output that debounces -> reload.
+   * `async` with nothing to await: the call-graph gate keys on the `async` modifier and
+   * this frame reaches the DB through the debounced `reload` below. */
+  private async watchLinked(id: string, sourceDir: string): Promise<void> {
     this.stopWatch(id);
     const serverDir = path.join(sourceDir, 'server'); // the loader runs server/index.js
     try {
@@ -930,7 +944,7 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
     // same reason as the settings fields: these are TREK's config ABOUT the plugin, and
     // leaving them means a later plugin that reuses this id silently inherits every
     // user's opt-outs and the admin's enablement.
-    this.retireNotificationChannel(id);
+    await this.retireNotificationChannel(id);
     if (deleteData) {
       removePluginData(id);
       this.db.prepare('DELETE FROM plugin_error_log WHERE plugin_id = ?').run(id);
@@ -958,7 +972,7 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
   }
 
   /** Declared outbound hosts (from http:outbound:<host> grants) for the frame CSP. */
-  outboundHostsOf(id: string): string[] {
+  async outboundHostsOf(id: string): Promise<string[]> {
     const row = this.db.prepare('SELECT granted_permissions FROM plugins WHERE id = ?').get(id) as
       | { granted_permissions: string }
       | undefined;
@@ -1010,14 +1024,14 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
    * `capabilities.provides` AND implemented, as reported at load). The acting user
    * is forwarded, so the target's export runs membership-checked as the caller's user.
    */
-  callPlugin(callerId: string, targetId: string, fn: string, args: unknown, actingUserId: number | undefined): Promise<unknown> {
+  async callPlugin(callerId: string, targetId: string, fn: string, args: unknown, actingUserId: number | undefined): Promise<unknown> {
     if (!this.supervisor.isActive(targetId)) {
       return Promise.reject(new ForbiddenResource(`plugin ${targetId} is not active`));
     }
-    if (!this.dependsOnSatisfied(callerId, targetId)) {
+    if (!(await this.dependsOnSatisfied(callerId, targetId))) {
       return Promise.reject(new ForbiddenResource(`plugin ${callerId} does not declare ${targetId} as a satisfied dependency`));
     }
-    if (!this.capabilityList(targetId, 'provides').includes(fn) || !this.supervisor.exportsOf(targetId).includes(fn)) {
+    if (!(await this.capabilityList(targetId, 'provides')).includes(fn) || !this.supervisor.exportsOf(targetId).includes(fn)) {
       return Promise.reject(new ForbiddenResource(`plugin ${targetId} does not export "${fn}"`));
     }
     return this.supervisor.invoke(targetId, 'invoke.export', { fn, args }, { actingUserId, timeoutMs: 5000 });
@@ -1028,12 +1042,12 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
    * to `(source, event)` and (b) declares `source` as a satisfied dependency. The
    * source must declare `event` in its manifest `capabilities.emits`. Fire-and-forget.
    */
-  emitPluginEvent(sourceId: string, event: string, payload: unknown): void {
-    if (!this.capabilityList(sourceId, 'emits').includes(event)) {
+  async emitPluginEvent(sourceId: string, event: string, payload: unknown): Promise<void> {
+    if (!(await this.capabilityList(sourceId, 'emits')).includes(event)) {
       throw new ForbiddenResource(`plugin ${sourceId} does not declare event "${event}"`);
     }
     for (const subscriberId of this.supervisor.subscribersOf(sourceId, event)) {
-      if (!this.dependsOnSatisfied(subscriberId, sourceId)) continue;
+      if (!(await this.dependsOnSatisfied(subscriberId, sourceId))) continue;
       this.supervisor
         .invoke(subscriberId, 'invoke.pluginEvent', { source: sourceId, event, payload }, { actingUserId: undefined, timeoutMs: 5000 })
         .catch(() => {
@@ -1044,7 +1058,7 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
 
   /** True if `caller` declares `target` as a plugin dependency whose range the
    * installed target version satisfies. */
-  private dependsOnSatisfied(callerId: string, targetId: string): boolean {
+  private async dependsOnSatisfied(callerId: string, targetId: string): Promise<boolean> {
     const caller = this.db.prepare('SELECT dependencies FROM plugins WHERE id = ?').get(callerId) as { dependencies: string | null } | undefined;
     const target = this.db.prepare('SELECT version FROM plugins WHERE id = ?').get(targetId) as { version: string | null } | undefined;
     if (!caller || !target) return false;
@@ -1057,7 +1071,7 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
    * Drop every trace of a plugin's notification channel: the per-user event opt-outs
    * and the id in the admin's `notification_channels` list.
    */
-  private retireNotificationChannel(id: string): void {
+  private async retireNotificationChannel(id: string): Promise<void> {
     // Drop the users' per-event opt-outs for this channel. A plugin channel is never
     // listed in the admin's `notification_channels` CSV (it is active by virtue of the
     // plugin being enabled), so there is nothing to scrub there.
@@ -1079,7 +1093,7 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
    * The label, the event set and the configured-check are all answered from the
    * manifest and the DB, with no IPC: the child is only ever woken to actually send.
    */
-  notificationChannels(): ExternalChannel[] {
+  async notificationChannels(): Promise<ExternalChannel[]> {
     if (!pluginsEnabled()) return [];
     return this.supervisor.providersOf('notificationChannel').map((id) => {
       const row = this.db.prepare('SELECT name, capabilities FROM plugins WHERE id = ?').get(id) as
@@ -1109,12 +1123,12 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
         // Declared as a contract on PluginHooks.sendNotification, like every other
         // hook. It is invoked here rather than through that class because PluginHooks
         // injects this service, and going back the other way would close a DI cycle.
-        sendToUser: (userId: number, msg: ChannelMessage) =>
-          this.invokeHook(
+        sendToUser: async (userId: number, msg: ChannelMessage) =>
+          await this.invokeHook(
             id,
             'notificationChannel',
             'send',
-            [{ event: msg.event, title: msg.title, body: msg.body, url: msg.url, tripName: msg.tripName }, this.userSettings.readAll(id, userId)],
+            [{ event: msg.event, title: msg.title, body: msg.body, url: msg.url, tripName: msg.tripName }, await this.userSettings.readAll(id, userId)],
             // No acting user: a notification is host-initiated for an arbitrary
             // recipient, so the hook gets the recipient's config as an argument
             // rather than the right to read anything AS them.
@@ -1123,7 +1137,7 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
           ),
         test: async (userId: number) => {
           try {
-            await this.invokeHook(id, 'notificationChannel', 'test', [this.userSettings.readAll(id, userId)], undefined, 8000);
+            await this.invokeHook(id, 'notificationChannel', 'test', [await this.userSettings.readAll(id, userId)], undefined, 8000);
             return { success: true };
           } catch (e) {
             return { success: false, error: e instanceof Error ? e.message : String(e) };
@@ -1134,7 +1148,7 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
   }
 
   /** The settings-form action buttons a plugin declared for ONE scope (descriptors, from the DB). */
-  actionsOf(id: string, scope: PluginActionScope): PluginActionDescriptor[] {
+  async actionsOf(id: string, scope: PluginActionScope): Promise<PluginActionDescriptor[]> {
     try {
       return (
         this.db
@@ -1154,7 +1168,7 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
    * CALLER's route, so a user route can never fire an admin button, nor the reverse.
    */
   async invokeAction(id: string, key: string, actingUserId: number, scope: PluginActionScope): Promise<PluginActionResult> {
-    if (!this.actionsOf(id, scope).some((a) => a.key === key)) {
+    if (!(await this.actionsOf(id, scope)).some((a) => a.key === key)) {
       throw new ForbiddenResource(`plugin ${id} did not declare action "${key}" in scope ${scope}`);
     }
     const cap = (v: unknown) => stripEmoji(String(v)).slice(0, 200);
@@ -1184,7 +1198,7 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
    *
    * Public, unlike capabilityList, because PluginMcpToolsService reads it.
    */
-  mcpToolCapabilities(id: string): McpToolCapability[] {
+  async mcpToolCapabilities(id: string): Promise<McpToolCapability[]> {
     const row = this.db.prepare('SELECT capabilities FROM plugins WHERE id = ?').get(id) as { capabilities: string } | undefined;
     if (!row) return [];
     try {
@@ -1198,7 +1212,7 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
     }
   }
 
-  private capabilityList(id: string, field: 'provides' | 'emits'): string[] {
+  private async capabilityList(id: string, field: 'provides' | 'emits'): Promise<string[]> {
     const row = this.db.prepare('SELECT capabilities FROM plugins WHERE id = ?').get(id) as { capabilities: string } | undefined;
     if (!row) return [];
     try {
@@ -1212,7 +1226,7 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
 
   /** Trim a plugin's error log to the most recent LOG_RETENTION rows. Cheap: onLog
    * only fires on warn/error, so this never runs on the hot path. */
-  private pruneErrorLog(pluginId: string): void {
+  private async pruneErrorLog(pluginId: string): Promise<void> {
     this.db.prepare(
       `DELETE FROM plugin_error_log WHERE plugin_id = ? AND id NOT IN (
          SELECT id FROM plugin_error_log WHERE plugin_id = ? ORDER BY id DESC LIMIT ${LOG_RETENTION}

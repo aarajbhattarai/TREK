@@ -103,7 +103,7 @@ const registry = createTestPluginRegistry([
   new HostSurfaceRpc(dbs, new RealtimeService(), notifications, llmConfig, oauth, guards),
 ]);
 const factory = new PluginRpcHostFactory(dbs, registry as unknown as PluginRpcRegistryService);
-const stubRouter: PluginCallRouter = { callPlugin: async () => undefined, emitPluginEvent: () => {} };
+const stubRouter: PluginCallRouter = { callPlugin: async () => undefined, emitPluginEvent: async () => {} };
 const makeHost = (id: string, ...perms: string[]) => factory.create(id, new Set(perms), stubRouter);
 /**
  * A response read loosely, on purpose.
@@ -224,7 +224,7 @@ describe('DbRpc — the unconditional three', () => {
         calls.push({ callerId, targetId, fn, args, uid });
         return { echoed: true };
       },
-      emitPluginEvent: (sourceId, event, payload) => {
+      emitPluginEvent: async (sourceId, event, payload) => {
         emits.push({ sourceId, event, payload });
       },
     };

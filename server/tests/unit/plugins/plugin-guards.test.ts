@@ -47,39 +47,39 @@ function build(overrides: { role?: string | undefined; allow?: boolean; addonOn?
 }
 
 describe('PluginGuards — tripRead', () => {
-  it('PGUARD-001 runs the read for a member and hands it the acting user', () => {
+  it('PGUARD-001 runs the read for a member and hands it the acting user', async () => {
     const { guards } = build();
     const read = vi.fn((userId: number) => ({ seenBy: userId }));
-    expect(guards.tripRead({ tripId: 1 }, ctx(42), read)).toEqual({ seenBy: 42 });
+    expect(await guards.tripRead({ tripId: 1 }, ctx(42), read)).toEqual({ seenBy: 42 });
     expect(read).toHaveBeenCalledWith(42);
   });
 
-  it('PGUARD-002 a userless context is refused before the read runs', () => {
+  it('PGUARD-002 a userless context is refused before the read runs', async () => {
     const { guards } = build();
     const read = vi.fn();
-    expect(() => guards.tripRead({ tripId: 1 }, ctx(undefined), read)).toThrow(
+    await expect(guards.tripRead({ tripId: 1 }, ctx(undefined), read)).rejects.toThrow(
       new ForbiddenResource('trip reads require an authenticated user context'),
     );
     expect(read).not.toHaveBeenCalled();
   });
 
-  it('PGUARD-003 a non-member is refused, naming the trip', () => {
+  it('PGUARD-003 a non-member is refused, naming the trip', async () => {
     const { guards } = build();
     const read = vi.fn();
-    expect(() => guards.tripRead({ tripId: 2 }, ctx(42), read)).toThrow(
+    await expect(guards.tripRead({ tripId: 2 }, ctx(42), read)).rejects.toThrow(
       new ForbiddenResource('no access to trip 2'),
     );
     expect(read).not.toHaveBeenCalled();
   });
 
-  it('PGUARD-004 a missing tripId is BAD_PARAMS, not a refusal', () => {
+  it('PGUARD-004 a missing tripId is BAD_PARAMS, not a refusal', async () => {
     const { guards } = build();
-    expect(() => guards.tripRead({}, ctx(42), vi.fn())).toThrow(new BadParams('tripId must be a number'));
+    await expect(guards.tripRead({}, ctx(42), vi.fn())).rejects.toThrow(new BadParams('tripId must be a number'));
   });
 
-  it('PGUARD-005 a numeric string tripId is accepted, as the wire contract allows', () => {
+  it('PGUARD-005 a numeric string tripId is accepted, as the wire contract allows', async () => {
     const { guards } = build();
-    expect(guards.tripRead({ tripId: '1' }, ctx(42), (u) => u)).toBe(42);
+    expect(await guards.tripRead({ tripId: '1' }, ctx(42), (u) => u)).toBe(42);
   });
 });
 

@@ -24,15 +24,15 @@ export class PluginUserSettingsService {
   }
 
   /** One decrypted value for the acting user, for the runtime's `ctx.settings.get()`. */
-  readOne(pluginId: string, userId: number, key: string): unknown {
+  async readOne(pluginId: string, userId: number, key: string): Promise<unknown> {
     const isSecret =
       (
         this.db
           .prepare("SELECT secret FROM plugin_settings_fields WHERE plugin_id = ? AND field_key = ? AND scope = 'user'")
           .get(pluginId, key) as { secret: number } | undefined
       )?.secret === 1;
-    const value = this.storedFor(pluginId, userId)[key];
-    if (value == null) return settingDefaults(this.db, pluginId, 'user')[key]; // unset → the manifest default, if any
+    const value = (await this.storedFor(pluginId, userId))[key];
+    if (value == null) return (await settingDefaults(this.db, pluginId, 'user'))[key]; // unset → the manifest default, if any
     return isSecret ? decrypt_api_key(value as string) : value;
   }
 
@@ -43,15 +43,15 @@ export class PluginUserSettingsService {
    * dispatch is host-initiated with no acting user, so `ctx.settings.get()` (which
    * resolves against the acting user) would return undefined there.
    */
-  readAll(pluginId: string, userId: number): Record<string, unknown> {
+  async readAll(pluginId: string, userId: number): Promise<Record<string, unknown>> {
     const fields = this.db
       .prepare("SELECT field_key, secret FROM plugin_settings_fields WHERE plugin_id = ? AND scope = 'user'")
       .all(pluginId) as Array<{ field_key: string; secret: number }>;
-    const stored = this.storedFor(pluginId, userId);
+    const stored = await this.storedFor(pluginId, userId);
     // Null-prototype for the same reason as safeParseConfig: never let a field key write
     // through to Object.prototype on the way out to the plugin.
     const out: Record<string, unknown> = Object.create(null);
-    const defaults = settingDefaults(this.db, pluginId, 'user');
+    const defaults = await settingDefaults(this.db, pluginId, 'user');
     for (const field of fields) {
       const value = stored[field.field_key];
       if (value == null) {
@@ -73,19 +73,19 @@ export class PluginUserSettingsService {
    * what decides whether a channel dispatches to the user, and a save the form accepted
    * must not leave them "not configured".
    */
-  hasRequired(pluginId: string, userId: number): boolean {
+  async hasRequired(pluginId: string, userId: number): Promise<boolean> {
     const required = this.db
       .prepare(
         "SELECT field_key FROM plugin_settings_fields WHERE plugin_id = ? AND scope = 'user' AND required = 1 AND input_type != 'checkbox'",
       )
       .all(pluginId) as Array<{ field_key: string }>;
     if (required.length === 0) return true;
-    const stored = this.storedFor(pluginId, userId);
-    const defaults = settingDefaults(this.db, pluginId, 'user');
+    const stored = await this.storedFor(pluginId, userId);
+    const defaults = await settingDefaults(this.db, pluginId, 'user');
     return required.every((field) => isFilled(stored[field.field_key] ?? defaults[field.field_key]));
   }
 
-  private storedFor(pluginId: string, userId: number): Record<string, unknown> {
+  private async storedFor(pluginId: string, userId: number): Promise<Record<string, unknown>> {
     const row = this.db
       .prepare('SELECT config FROM plugin_user_config WHERE plugin_id = ? AND user_id = ?')
       .get(pluginId, userId) as { config: string } | undefined;

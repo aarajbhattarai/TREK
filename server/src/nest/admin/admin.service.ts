@@ -257,7 +257,7 @@ export class AdminService {
     if (!userToDel) return { error: 'User not found', status: 404 };
 
     await this.userCleanup.deleteUserCompletely(userToDel.id);
-    emitUserDeleted(userToDel.id); // let plugins erase their own per-user data
+    await emitUserDeleted(userToDel.id); // let plugins erase their own per-user data
     return { email: userToDel.email };
   }
 

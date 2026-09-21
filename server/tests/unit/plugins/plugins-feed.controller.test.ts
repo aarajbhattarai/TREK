@@ -29,23 +29,23 @@ describe('PluginsFeedController', () => {
   const c = new PluginsFeedController(new DatabaseService(dbConn));
   beforeEach(() => { pluginsEnabled.mockReturnValue(true); rows.value = []; });
 
-  it('returns an empty feed when the runtime is disabled', () => {
+  it('returns an empty feed when the runtime is disabled', async () => {
     pluginsEnabled.mockReturnValue(false);
     rows.value = [row()];
-    expect(c.list()).toEqual({ plugins: [] });
+    expect(await c.list()).toEqual({ plugins: [] });
   });
 
-  it('serves routeProfiles only alongside the recorded hook:route-provider grant', () => {
+  it('serves routeProfiles only alongside the recorded hook:route-provider grant', async () => {
     rows.value = [
       row({ id: 'granted', capabilities: JSON.stringify({ routeProfiles: [{ id: 'ev', label: 'EV' }] }), granted_permissions: JSON.stringify(['hook:route-provider']) }),
       row({ id: 'ungranted', capabilities: JSON.stringify({ routeProfiles: [{ id: 'ev', label: 'EV' }] }) }),
     ];
-    const { plugins } = c.list();
+    const { plugins } = await c.list();
     expect(plugins.find(p => p.id === 'granted')?.routeProfiles).toEqual([{ id: 'ev', label: 'EV' }]);
     expect(plugins.find(p => p.id === 'ungranted')?.routeProfiles).toBeUndefined();
   });
 
-  it('re-validates hand-edited routeProfiles rows (bad ids dropped, labels capped, max 3)', () => {
+  it('re-validates hand-edited routeProfiles rows (bad ids dropped, labels capped, max 3)', async () => {
     rows.value = [row({
       id: 'edited',
       capabilities: JSON.stringify({
@@ -57,25 +57,25 @@ describe('PluginsFeedController', () => {
       }),
       granted_permissions: JSON.stringify(['hook:route-provider']),
     })];
-    const profiles = c.list().plugins[0].routeProfiles!;
+    const profiles = (await c.list()).plugins[0].routeProfiles!;
     expect(profiles.every(p => /^[a-z][a-z0-9-]{0,23}$/.test(p.id))).toBe(true);
     expect(profiles.length).toBeLessThanOrEqual(3);
     expect(profiles.every(p => p.label.length <= 40)).toBe(true);
   });
 
-  it('flags geolocation only when the grant is recorded', () => {
+  it('flags geolocation only when the grant is recorded', async () => {
     rows.value = [
       row({ id: 'granted', granted_permissions: JSON.stringify(['geolocation:read']) }),
       row({ id: 'ungranted' }),
     ];
-    const { plugins } = c.list();
+    const { plugins } = await c.list();
     expect(plugins.find(p => p.id === 'granted')?.geolocation).toBe(true);
     expect(plugins.find(p => p.id === 'ungranted')?.geolocation).toBeUndefined();
   });
 
-  it('survives malformed JSON blobs without dropping the plugin', () => {
+  it('survives malformed JSON blobs without dropping the plugin', async () => {
     rows.value = [row({ capabilities: '{not json', granted_permissions: 'also not' })];
-    const { plugins } = c.list();
+    const { plugins } = await c.list();
     expect(plugins).toHaveLength(1);
     expect(plugins[0].routeProfiles).toBeUndefined();
     expect(plugins[0].slot).toBe('sidebar');

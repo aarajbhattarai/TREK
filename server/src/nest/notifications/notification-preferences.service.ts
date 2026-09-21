@@ -45,13 +45,13 @@ export class NotificationPreferencesService {
    * Channels implemented for an event. In-app takes everything; external channels
    * decide for themselves (today: everything except `synology_session_cleared`).
    */
-  combosFor(event: NotifEventType): NotifChannel[] {
-    return [INAPP_CHANNEL, ...listChannels().filter(c => c.supportsEvent(event)).map(c => c.id)];
+  async combosFor(event: NotifEventType): Promise<NotifChannel[]> {
+    return [INAPP_CHANNEL, ...(await listChannels()).filter(c => c.supportsEvent(event)).map(c => c.id)];
   }
 
-  private allCombos(): Record<string, NotifChannel[]> {
+  private async allCombos(): Promise<Record<string, NotifChannel[]>> {
     const out: Record<string, NotifChannel[]> = {};
-    for (const event of ALL_EVENT_TYPES) out[event] = this.combosFor(event);
+    for (const event of ALL_EVENT_TYPES) out[event] = await this.combosFor(event);
     return out;
   }
 
@@ -68,16 +68,16 @@ export class NotificationPreferencesService {
    * into this CSV, and the admin toggle rebuilds it from the three built-in booleans, which
    * would silently drop any that were).
    */
-  getActiveChannels(): NotifChannel[] {
+  async getActiveChannels(): Promise<NotifChannel[]> {
     const raw = this.getAppSetting('notification_channels') || this.getAppSetting('notification_channel') || 'none';
     if (raw === 'none') return [];
-    const builtins = new Set(listChannels().filter(c => c.source === 'builtin').map(c => c.id));
+    const builtins = new Set((await listChannels()).filter(c => c.source === 'builtin').map(c => c.id));
     return raw.split(',').map(c => c.trim()).filter(c => builtins.has(c));
   }
 
   /** Is this channel switched on? Plugin channels are on by virtue of being live. */
-  isChannelActive(channel: ExternalChannel): boolean {
-    return channel.source === 'plugin' || this.getActiveChannels().includes(channel.id);
+  async isChannelActive(channel: ExternalChannel): Promise<boolean> {
+    return channel.source === 'plugin' || (await this.getActiveChannels()).includes(channel.id);
   }
 
   // ── Per-user preference checks ─────────────────────────────────────────────
@@ -112,7 +112,7 @@ export class NotificationPreferencesService {
    * scope='user'  — a column per channel the admin turned on in `notification_channels`.
    * scope='admin' — a column per channel that has admin-global credentials.
    */
-  private describeChannels(userId: number, scope: 'user' | 'admin'): ChannelDescriptor[] {
+  private async describeChannels(userId: number, scope: 'user' | 'admin'): Promise<ChannelDescriptor[]> {
     const out: ChannelDescriptor[] = [this.inAppDescriptor()];
 
     if (scope === 'admin') {
@@ -122,7 +122,7 @@ export class NotificationPreferencesService {
       const hasAdminWebhook = !!this.getAppSetting('admin_webhook_url');
       const hasAdminNtfy = !!this.getAppSetting('admin_ntfy_topic');
       const adminActive: Record<string, boolean> = { email: hasSmtp, webhook: hasAdminWebhook, ntfy: hasAdminNtfy };
-      for (const channel of listChannels()) {
+      for (const channel of await listChannels()) {
         // Plugin channels are user-scoped only — they never carry admin-global events.
         if (channel.source !== 'builtin') continue;
         const active = adminActive[channel.id] ?? false;
@@ -138,7 +138,7 @@ export class NotificationPreferencesService {
       return out;
     }
 
-    for (const channel of listChannels()) {
+    for (const channel of await listChannels()) {
       out.push({
         id: channel.id,
         source: channel.source,
@@ -147,8 +147,8 @@ export class NotificationPreferencesService {
         settingsPath: channel.settingsPath,
         // A live plugin channel is always a column. `configured` tells the user whether
         // they still need to enter credentials — it does not hide the channel from them.
-        active: this.isChannelActive(channel),
-        configured: channel.isConfiguredFor(userId),
+        active: await this.isChannelActive(channel),
+        configured: await channel.isConfiguredFor(userId),
       });
     }
     return out;
@@ -159,7 +159,7 @@ export class NotificationPreferencesService {
    * scope='user'  — excludes admin-scoped events (for user settings page)
    * scope='admin' — returns only admin-scoped events (for admin notifications tab)
    */
-  getPreferencesMatrix(userId: number, userRole: string, scope: 'user' | 'admin' = 'user'): PreferencesMatrix {
+  async getPreferencesMatrix(userId: number, userRole: string, scope: 'user' | 'admin' = 'user'): Promise<PreferencesMatrix> {
     const rows = this.db.all<{ event_type: string; channel: string; enabled: number }>(
       'SELECT event_type, channel, enabled FROM notification_channel_preferences WHERE user_id = ?', userId,
     );
@@ -171,7 +171,7 @@ export class NotificationPreferencesService {
       stored[row.event_type]![row.channel] = row.enabled === 1;
     }
 
-    const implemented_combos = this.allCombos();
+    const implemented_combos = await this.allCombos();
 
     // Build the full matrix with defaults (true when no row exists)
     const preferences: Partial<Record<NotifEventType, Partial<Record<NotifChannel, boolean>>>> = {};
@@ -195,7 +195,7 @@ export class NotificationPreferencesService {
 
     return {
       preferences,
-      channels: this.describeChannels(userId, scope),
+      channels: await this.describeChannels(userId, scope),
       event_types,
       implemented_combos,
       ...(scope === 'user' && { defaults: { ntfyServer: this.getAppSetting('admin_ntfy_server') || null } }),
@@ -304,7 +304,7 @@ export class NotificationPreferencesService {
     return this.mailer.isSmtpConfigured();
   }
 
-  isWebhookConfigured(): boolean {
-    return this.getActiveChannels().includes('webhook');
+  async isWebhookConfigured(): Promise<boolean> {
+    return (await this.getActiveChannels()).includes('webhook');
   }
 }

@@ -169,7 +169,7 @@ export class McpRegistry {
   ): Promise<void> {
     let tools: readonly McpDynamicTool[];
     try {
-      tools = source(ctx) ?? [];
+      tools = (await source(ctx)) ?? [];
     } catch (err) {
       // A session with no dynamic tools is degraded; a session that throws here
       // is a 500 on initialize, because hosts call attach() outside their try.

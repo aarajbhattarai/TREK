@@ -446,9 +446,9 @@ export class PluginRegistryService {
     // A refusal is REMEMBERED (the plugin keeps running on its old code, so the
     // reason must outlive the toast) and re-thrown untouched.
     try {
-      this.verifySignatureAndTofu(id, bytes, entry, ver, opts?.retrustKey);
+      await this.verifySignatureAndTofu(id, bytes, entry, ver, opts?.retrustKey);
     } catch (e) {
-      if (e instanceof RegistryError && isSignatureCode(e.code)) setUpdateBlock(this.dbs.connection, id, e.code, e.message, ver.version);
+      if (e instanceof RegistryError && isSignatureCode(e.code)) await setUpdateBlock(this.dbs.connection, id, e.code, e.message, ver.version);
       throw e;
     }
 
@@ -480,7 +480,7 @@ export class PluginRegistryService {
       fs.renameSync(pluginRoot, dest);
 
       // 7. register INACTIVE (record provenance)
-      discoverPlugins(this.db);
+      await discoverPlugins(this.db);
       this.db.prepare('UPDATE plugins SET source_repo = ?, source_commit = ?, sha256 = ?, reviewed_at = ? WHERE id = ?').run(
         entry.repo,
         ver.commitSha,
@@ -497,7 +497,7 @@ export class PluginRegistryService {
       }
       // The plugin is now on new code that passed every check — whatever refusal was
       // recorded before no longer describes reality.
-      clearUpdateBlock(this.dbs.connection, id);
+      await clearUpdateBlock(this.dbs.connection, id);
       return { id, version: ver.version, trekRangeBypassed };
     } finally {
       fs.rmSync(staging, { recursive: true, force: true });
@@ -603,13 +603,13 @@ export class PluginRegistryService {
    * the UI flags it and offers no auto-update. The caller MUST have stopped any
    * running child of this id first (the code dir is replaced).
    */
-  commitUpload(staged: { id: string; root: string; stagingDir: string }): void {
+  async commitUpload(staged: { id: string; root: string; stagingDir: string }): Promise<void> {
     try {
       const dest = pluginCodeDir(staged.id);
       fs.mkdirSync(pluginsCodeRoot(), { recursive: true });
       fs.rmSync(dest, { recursive: true, force: true });
       fs.renameSync(staged.root, dest);
-      discoverPlugins(this.db);
+      await discoverPlugins(this.db);
       // Provenance for a sideload, plus a hard INACTIVE floor: discoverPlugins keeps
       // an existing row's status, so replacing a plugin that was active must not
       // leave the new code marked active — the admin re-activates (and re-consents
@@ -650,13 +650,13 @@ export class PluginRegistryService {
    * key, over the artifact bytes. A key an admin blesses must still sign the code it
    * ships — a re-trust moves the pin from one VERIFIED key to another verified key.
    */
-  private verifySignatureAndTofu(
+  private async verifySignatureAndTofu(
     id: string,
     bytes: Buffer,
     entry: RegistryEntry,
     ver: RegistryVersion,
     retrustKey?: string,
-  ): void {
+  ): Promise<void> {
     const pinned =
       (this.db.prepare('SELECT author_pubkey FROM plugins WHERE id = ?').get(id) as { author_pubkey?: string } | undefined)
         ?.author_pubkey ?? null;

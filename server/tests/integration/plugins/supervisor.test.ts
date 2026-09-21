@@ -43,7 +43,7 @@ function makeSupervisor(events: Array<{ topic: string; data: unknown }>, tuning:
     const deps: HostDeps = {
       data: new PluginDataDb(id),
       callPlugin: async () => undefined,
-      emitPluginEvent: (event, payload) => broadcasts.push({ id, event, payload }),
+      emitPluginEvent: async (event, payload) => { broadcasts.push({ id, event, payload }); },
     };
     // Only db.* is exercised from a child here; the rest of the surface has its own
     // unit suites and would drag every domain service into this integration test.

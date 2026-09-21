@@ -46,9 +46,9 @@ export interface HostDeps {
    * the dependency edge + the target's `provides` allowlist, forwards the acting user. */
   callPlugin(targetId: string, fn: string, args: unknown, actingUserId: number | undefined): Promise<unknown>;
   /** Publish an event from this host's plugin to its subscribed dependents. */
-  emitPluginEvent(event: string, payload: unknown): void;
+  emitPluginEvent(event: string, payload: unknown): Promise<void>;
   /** Optional sink for the capability audit log (host-side, hash-chained). */
-  audit?(entry: { pluginId: string; actingUserId?: number; method: string; resource: string | null; code: string }): void;
+  audit?(entry: { pluginId: string; actingUserId?: number; method: string; resource: string | null; code: string }): Promise<void>;
 }
 
 type Handler = (params: Record<string, unknown>, actingUserId: number | undefined) => unknown;
@@ -98,7 +98,7 @@ export class PluginRpcHost {
     // Audit the core-data / broadcast surface (incl. denials) at the boundary.
     if (this.deps.audit && isAuditable(req.method)) {
       try {
-        this.deps.audit({
+        await this.deps.audit({
           pluginId: this.pluginId,
           actingUserId,
           method: req.method,

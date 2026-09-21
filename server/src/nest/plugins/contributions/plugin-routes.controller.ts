@@ -56,7 +56,7 @@ export class PluginRoutesController {
     // one the manifest declared — re-validated from the DB row like the plugins feed,
     // so a hand-edited capabilities blob can't invent profiles.
     if (!this.hooks.providersOf('routeProvider').includes(pluginId)) return { route: null };
-    if (!declaredProfiles(this.dbs.connection, pluginId).includes(profileId)) return { route: null };
+    if (!(await declaredProfiles(this.dbs.connection, pluginId)).includes(profileId)) return { route: null };
 
     try {
       const raw = await this.hooks.route(pluginId, { tripId, dayId, profile: profileId, waypoints }, userId);

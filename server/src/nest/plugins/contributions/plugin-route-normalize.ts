@@ -120,7 +120,7 @@ export function normalize(
   return { pluginId, profile, coordinates, distance, duration, legs, viaPoints };
 }
 
-export function declaredProfiles(conn: Database.Database, pluginId: string): string[] {
+export async function declaredProfiles(conn: Database.Database, pluginId: string): Promise<string[]> {
   try {
     const row = conn.prepare('SELECT capabilities FROM plugins WHERE id = ?').get(pluginId) as
       | { capabilities?: string }

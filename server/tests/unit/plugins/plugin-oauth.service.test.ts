@@ -58,13 +58,13 @@ describe('PluginOAuthService', () => {
   let svc: PluginOAuthService;
   beforeEach(() => { getDb.current = freshDb(); svc = new PluginOAuthService(new DatabaseService(dbConn)); vi.restoreAllMocks(); dnsState.address = '93.184.216.34'; dnsState.family = 4; });
 
-  it('providerConfig returns null unless every piece is present, decrypting the secrets', () => {
-    expect(svc.providerConfig('p')).toMatchObject({ clientId: 'client-123', clientSecret: 'secret-abc', scopes: 'read write' });
+  it('providerConfig returns null unless every piece is present, decrypting the secrets', async () => {
+    expect(await svc.providerConfig('p')).toMatchObject({ clientId: 'client-123', clientSecret: 'secret-abc', scopes: 'read write' });
     getDb.current = freshDb({ ...CFG, oauth_client_secret: '' });
-    expect(new PluginOAuthService(new DatabaseService(dbConn)).providerConfig('p')).toBeNull();
+    expect(await new PluginOAuthService(new DatabaseService(dbConn)).providerConfig('p')).toBeNull();
   });
 
-  it('providerConfig falls back to the manifest defaults for the endpoints the admin left unset', () => {
+  it('providerConfig falls back to the manifest defaults for the endpoints the admin left unset', async () => {
     // A provider plugin ships its authorize/token URLs as defaults; the admin only ever
     // types the client id/secret. Those two are secrets and can never carry a default.
     const { oauth_authorize_url: _a, oauth_token_url: _t, oauth_scopes: _s, ...stored } = CFG;
@@ -75,7 +75,7 @@ describe('PluginOAuthService', () => {
     ins.run('oauth_token_url', JSON.stringify('https://provider.example/token'));
     ins.run('oauth_scopes', JSON.stringify('read'));
     svc = new PluginOAuthService(new DatabaseService(dbConn));
-    expect(svc.providerConfig('p')).toEqual({
+    expect(await svc.providerConfig('p')).toEqual({
       authorizeUrl: 'https://provider.example/authorize',
       tokenUrl: 'https://provider.example/token',
       scopes: 'read',
@@ -84,8 +84,8 @@ describe('PluginOAuthService', () => {
     });
   });
 
-  it('startConnect builds a PKCE authorize URL + persists a single fresh state per user', () => {
-    const url = new URL(svc.startConnect('p', 42, NOW));
+  it('startConnect builds a PKCE authorize URL + persists a single fresh state per user', async () => {
+    const url = new URL(await svc.startConnect('p', 42, NOW));
     expect(url.origin + url.pathname).toBe('https://provider.example/authorize');
     expect(url.searchParams.get('code_challenge_method')).toBe('S256');
     expect(url.searchParams.get('client_id')).toBe('client-123');
@@ -96,28 +96,28 @@ describe('PluginOAuthService', () => {
     const stored = rows.prepare('SELECT verifier, user_id FROM plugin_oauth_state WHERE state = ?').get(state) as { verifier: string; user_id: number };
     expect(stored.user_id).toBe(42);
     // a second connect replaces the first (one live state per user)
-    svc.startConnect('p', 42, NOW);
+    await svc.startConnect('p', 42, NOW);
     expect((rows.prepare('SELECT COUNT(*) c FROM plugin_oauth_state WHERE user_id = 42').get() as { c: number }).c).toBe(1);
   });
 
-  it('rejects a non-https / loopback / metadata / internal authorize endpoint', () => {
+  it('rejects a non-https / loopback / metadata / internal authorize endpoint', async () => {
     getDb.current = freshDb({ ...CFG, oauth_authorize_url: 'http://provider.example/authorize' });
-    expect(() => new PluginOAuthService(new DatabaseService(dbConn)).startConnect('p', 42, NOW)).toThrow(/https/);
+    await expect(new PluginOAuthService(new DatabaseService(dbConn)).startConnect('p', 42, NOW)).rejects.toThrow(/https/);
     getDb.current = freshDb({ ...CFG, oauth_token_url: 'https://127.0.0.1/token' });
-    expect(() => new PluginOAuthService(new DatabaseService(dbConn)).startConnect('p', 42, NOW)).toThrow(/loopback|private/);
+    await expect(new PluginOAuthService(new DatabaseService(dbConn)).startConnect('p', 42, NOW)).rejects.toThrow(/loopback|private/);
     // IPv6-literal loopback must not slip past the fast-fail
     getDb.current = freshDb({ ...CFG, oauth_token_url: 'https://[::1]/token' });
-    expect(() => new PluginOAuthService(new DatabaseService(dbConn)).startConnect('p', 42, NOW)).toThrow(/loopback/);
+    await expect(new PluginOAuthService(new DatabaseService(dbConn)).startConnect('p', 42, NOW)).rejects.toThrow(/loopback/);
     // cloud-metadata by literal is refused too
     getDb.current = freshDb({ ...CFG, oauth_token_url: 'https://169.254.169.254/token' });
-    expect(() => new PluginOAuthService(new DatabaseService(dbConn)).startConnect('p', 42, NOW)).toThrow(/loopback|metadata/);
+    await expect(new PluginOAuthService(new DatabaseService(dbConn)).startConnect('p', 42, NOW)).rejects.toThrow(/loopback|metadata/);
     // an internal name suffix is refused
     getDb.current = freshDb({ ...CFG, oauth_token_url: 'https://idp.internal/token' });
-    expect(() => new PluginOAuthService(new DatabaseService(dbConn)).startConnect('p', 42, NOW)).toThrow(/local/);
+    await expect(new PluginOAuthService(new DatabaseService(dbConn)).startConnect('p', 42, NOW)).rejects.toThrow(/local/);
   });
 
   it('completeCallback verifies state (single-use, user-bound, TTL), exchanges the code, encrypts tokens', async () => {
-    const url = new URL(svc.startConnect('p', 42, NOW));
+    const url = new URL(await svc.startConnect('p', 42, NOW));
     const state = url.searchParams.get('state')!;
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue({
       ok: true, json: async () => ({ access_token: 'AT', refresh_token: 'RT', expires_in: 3600, scope: 'read' }),
@@ -134,15 +134,15 @@ describe('PluginOAuthService', () => {
     const tok = rows.prepare('SELECT access_token, refresh_token FROM plugin_oauth_tokens WHERE plugin_id = ? AND user_id = 42').get('p') as { access_token: string; refresh_token: string };
     expect(tok.access_token).toBe('enc:AT');   // encrypted at rest
     expect(tok.refresh_token).toBe('enc:RT');
-    expect(svc.status('p', 42)).toMatchObject({ configured: true, connected: true });
+    expect(await svc.status('p', 42)).toMatchObject({ configured: true, connected: true });
     // state is single-use — replaying it fails
     await expect(svc.completeCallback('p', 42, 'the-code', state, NOW + 2000)).rejects.toThrow(/state/);
   });
 
   it('rejects a foreign or expired state', async () => {
-    const state = new URL(svc.startConnect('p', 42, NOW)).searchParams.get('state')!;
+    const state = new URL(await svc.startConnect('p', 42, NOW)).searchParams.get('state')!;
     await expect(svc.completeCallback('p', 99, 'code', state, NOW + 1000)).rejects.toThrow(/state/); // wrong user
-    const state2 = new URL(svc.startConnect('p', 42, NOW)).searchParams.get('state')!;
+    const state2 = new URL(await svc.startConnect('p', 42, NOW)).searchParams.get('state')!;
     await expect(svc.completeCallback('p', 42, 'code', state2, NOW + 20 * 60 * 1000)).rejects.toThrow(/state/); // > 10 min
   });
 
@@ -166,7 +166,7 @@ describe('PluginOAuthService', () => {
   });
 
   it('routes the token exchange through the SSRF guard — a token_url resolving to cloud metadata is refused', async () => {
-    const state = new URL(svc.startConnect('p', 42, NOW)).searchParams.get('state')!;
+    const state = new URL(await svc.startConnect('p', 42, NOW)).searchParams.get('state')!;
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue({ ok: true, json: async () => ({ access_token: 'AT' }) } as Response);
     // The provider's token_url now resolves to the cloud-metadata address.
     dnsState.address = '169.254.169.254';
@@ -177,7 +177,7 @@ describe('PluginOAuthService', () => {
   it('disconnect drops the user\'s tokens', async () => {
     const rows = getDb.current as unknown as InstanceType<typeof Database>;
     rows.prepare('INSERT INTO plugin_oauth_tokens (plugin_id, user_id, access_token) VALUES (?,?,?)').run('p', 42, 'enc:X');
-    svc.disconnect('p', 42);
-    expect(svc.status('p', 42).connected).toBe(false);
+    await svc.disconnect('p', 42);
+    expect((await svc.status('p', 42)).connected).toBe(false);
   });
 });

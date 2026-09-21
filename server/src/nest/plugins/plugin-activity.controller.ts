@@ -21,13 +21,13 @@ export class PluginActivityController {
   constructor(private readonly dbs: DatabaseService) {}
 
   @Get()
-  mine(@Req() req: Request & { user?: { id: number } }, @Query('limit') limitRaw?: string): { activity: unknown[] } {
+  async mine(@Req() req: Request & { user?: { id: number } }, @Query('limit') limitRaw?: string): Promise<{ activity: unknown[] }> {
     if (!pluginsEnabled()) return { activity: [] };
     const userId = req.user?.id;
     if (userId == null) return { activity: [] };
     // Math.floor so a non-integer (e.g. ?limit=2.5) can't reach SQLite's LIMIT and 500;
     // Math.floor(NaN) stays NaN so the `|| 200` fallback still applies.
     const limit = Math.min(Math.max(Math.floor(Number(limitRaw)) || 200, 1), 500);
-    return { activity: readAuditForUser(this.dbs.connection, userId, limit) };
+    return { activity: await readAuditForUser(this.dbs.connection, userId, limit) };
   }
 }

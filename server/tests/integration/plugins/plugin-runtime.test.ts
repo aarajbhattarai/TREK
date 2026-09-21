@@ -260,7 +260,7 @@ describe('PluginRuntimeService (M2 end-to-end)', () => {
     testDb.prepare("INSERT INTO plugins (id, status, enabled, granted_permissions, config) VALUES ('booter','error',1,'[]','{}')").run();
 
     const rt = await createPluginRuntime(new DatabaseService(dbConn));
-    rt.onApplicationBootstrap(); // fire-and-forget spawn
+    await rt.onApplicationBootstrap(); // fire-and-forget spawn
     for (let i = 0; i < 40 && !rt.isActive('booter'); i++) await new Promise((r) => setTimeout(r, 50));
     expect(rt.isActive('booter')).toBe(true);
     await rt.deactivate('booter');
@@ -272,7 +272,7 @@ describe('PluginRuntimeService (M2 end-to-end)', () => {
     testDb.prepare("INSERT INTO plugins (id, status, enabled, granted_permissions, config) VALUES ('sleeper','inactive',0,'[]','{}')").run();
 
     const rt = await createPluginRuntime(new DatabaseService(dbConn));
-    rt.onApplicationBootstrap();
+    await rt.onApplicationBootstrap();
     await new Promise((r) => setTimeout(r, 300));
     expect(rt.isActive('sleeper')).toBe(false);
   });
@@ -280,8 +280,8 @@ describe('PluginRuntimeService (M2 end-to-end)', () => {
   it('outboundHostsOf extracts declared http:outbound hosts', async () => {
     testDb.prepare("INSERT INTO plugins (id, status, granted_permissions, config) VALUES ('net','inactive','[\"db:own\",\"http:outbound:api.x.com\",\"http:outbound:*.y.com\"]','{}')").run();
     const rt = await createPluginRuntime(new DatabaseService(dbConn));
-    expect(rt.outboundHostsOf('net')).toEqual(['api.x.com', '*.y.com']);
-    expect(rt.outboundHostsOf('missing')).toEqual([]);
+    expect(await rt.outboundHostsOf('net')).toEqual(['api.x.com', '*.y.com']);
+    expect(await rt.outboundHostsOf('missing')).toEqual([]);
   });
 
   it('uninstall removes the code, DB rows, settings and (with deleteData) data', async () => {
@@ -525,9 +525,9 @@ describe('PluginRuntimeService inter-plugin (exports + events)', () => {
     await expect(runtime.callPlugin('consumer', 'lib', 'nope', {}, 7)).rejects.toThrow(/does not export/);
   });
 
-  it('emitPluginEvent validates the declared event and fans out without throwing', () => {
-    expect(() => runtime.emitPluginEvent('lib', 'ping', { x: 1 })).not.toThrow();
-    expect(() => runtime.emitPluginEvent('lib', 'not-declared', {})).toThrow(/does not declare event/);
+  it('emitPluginEvent validates the declared event and fans out without throwing', async () => {
+    await expect(runtime.emitPluginEvent('lib', 'ping', { x: 1 })).resolves.toBeUndefined();
+    await expect(runtime.emitPluginEvent('lib', 'not-declared', {})).rejects.toThrow(/does not declare event/);
   });
 });
 

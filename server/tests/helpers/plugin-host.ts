@@ -152,5 +152,13 @@ export async function createPluginRpcHostFactory(dbs: DatabaseService): Promise<
 
 /** A PluginRuntimeService constructed the way Nest would: with a real host factory. */
 export async function createPluginRuntime(dbs: DatabaseService, registry?: PluginRegistryService): Promise<PluginRuntimeService> {
-  return new PluginRuntimeService(dbs, new AuditService(dbs), new AddonsService(dbs), new PluginUserSettingsService(dbs), registry, await createPluginRpcHostFactory(dbs));
+  return new PluginRuntimeService(
+    dbs,
+    new AuditService(dbs),
+    new AddonsService(dbs),
+    new PluginUserSettingsService(dbs),
+    registry,
+    await createPluginRpcHostFactory(dbs),
+    await createTestUnitOfWork(dbs.connection),
+  );
 }

@@ -621,7 +621,7 @@ export class AuthService {
       }
     }
     await this.userCleanup.deleteUserCompletely(userId);
-    emitUserDeleted(userId); // let plugins erase their own per-user data
+    await emitUserDeleted(userId); // let plugins erase their own per-user data
     return { success: true };
   }
 

@@ -67,7 +67,7 @@ export function keyFingerprint(pubkey: string | null | undefined): string | null
  * old code. A blocked update is not a broken runtime, and conflating them would
  * make the isolation-health dot lie.
  */
-export function setUpdateBlock(conn: Database.Database, id: string, code: SignatureCode, detail: string, version: string | null): void {
+export async function setUpdateBlock(conn: Database.Database, id: string, code: SignatureCode, detail: string, version: string | null): Promise<void> {
   try {
     conn.prepare('UPDATE plugins SET update_block_code = ?, update_block_detail = ?, update_block_version = ? WHERE id = ?').run(
       code,
@@ -84,7 +84,7 @@ export function setUpdateBlock(conn: Database.Database, id: string, code: Signat
  * activating the plugin at its OLD version resolves nothing, and letting an off/on
  * toggle erase the warning is exactly the silent-stops-updating failure this exists
  * to prevent. (Uninstall drops the row entirely, so it needs no explicit clear.) */
-export function clearUpdateBlock(conn: Database.Database, id: string): void {
+export async function clearUpdateBlock(conn: Database.Database, id: string): Promise<void> {
   try {
     conn.prepare('UPDATE plugins SET update_block_code = NULL, update_block_detail = NULL, update_block_version = NULL WHERE id = ?').run(id);
   } catch {
