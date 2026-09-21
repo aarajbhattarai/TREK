@@ -13,6 +13,7 @@ import { TripMembershipService } from '../trip-membership/trip-membership.servic
 import { setAuthCookie, RememberOption } from '../common/cookie';
 import { AuthService } from '../auth/auth.service';
 import { DatabaseService } from '../database/database.service';
+import { UnitOfWork } from '../database/unit-of-work';
 import { safeFetchAdminConfigured } from '../../utils/ssrfGuard';
 
 // ---------------------------------------------------------------------------
@@ -228,6 +229,7 @@ export class OidcService implements OnModuleDestroy {
     private readonly db: DatabaseService,
     private readonly auth: AuthService,
     private readonly membership: TripMembershipService,
+    private readonly uow: UnitOfWork,
   ) {
     this.stateSweeper = setInterval(() => {
       const now = Date.now();
@@ -607,11 +609,11 @@ export class OidcService implements OnModuleDestroy {
   // Find or create user by OIDC sub / email
   // -------------------------------------------------------------------------
 
-  findOrCreateUser(
+  async findOrCreateUser(
     userInfo: OidcUserInfo,
     config: OidcConfig,
     inviteToken?: string,
-  ): { user: User; roleChange?: OidcRoleChange } | { error: string } {
+  ): Promise<{ user: User; roleChange?: OidcRoleChange } | { error: string }> {
     // Defense-in-depth for direct callers — the controller redirects on a
     // missing email before it ever calls this; the same code flows through its
     // `oidc_error=' + result.error` pass-through if reached here.
@@ -731,7 +733,7 @@ export class OidcService implements OnModuleDestroy {
     // both pass the earlier SELECT-based check and each create a user.
     const inviteRaceError = new Error('invite_exhausted');
     try {
-      const result = this.db.transaction(() => {
+      const result = (await this.uow.transactional(async () => {
         if (validInvite) {
           const updated = this.db.prepare(
             'UPDATE invite_tokens SET used_count = used_count + 1 WHERE id = ? AND (max_uses = 0 OR used_count < max_uses)',
@@ -744,10 +746,10 @@ export class OidcService implements OnModuleDestroy {
         // Trip-bound invite (#1402): auto-add the new SSO user to the trip inside the
         // same atomic step as the invite consume. Idempotent + owner-safe.
         if (validInvite?.trip_id) {
-          this.membership.joinTripAsMember(Number(validInvite.trip_id), Number(ins.lastInsertRowid), validInvite.created_by ?? null);
+          await this.membership.joinTripAsMember(Number(validInvite.trip_id), Number(ins.lastInsertRowid), validInvite.created_by ?? null);
         }
         return ins;
-      }) as { lastInsertRowid: number | bigint };
+      })) as { lastInsertRowid: number | bigint };
       // Re-select so the returned User carries the real row (password_version,
       // is_guest, created_at, …) instead of a hand-built partial — same shape
       // the existing-user branch returns.

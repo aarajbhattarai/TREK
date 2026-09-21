@@ -36,10 +36,10 @@ describe('parseDependencies', () => {
 });
 
 describe('disabledRequiredAddons', () => {
-  it('lists only the disabled required addons', () => {
+  it('lists only the disabled required addons', async () => {
     const deps = parseDependencies(JSON.stringify({ requiredAddons: ['budget', 'journey'], pluginDependencies: [] }));
-    expect(disabledRequiredAddons(deps, (a) => a === 'budget')).toEqual(['journey']);
-    expect(disabledRequiredAddons(deps, () => true)).toEqual([]);
+    expect(await disabledRequiredAddons(deps, (a) => Promise.resolve(a === 'budget'))).toEqual(['journey']);
+    expect(await disabledRequiredAddons(deps, () => Promise.resolve(true))).toEqual([]);
   });
 });
 

@@ -36,17 +36,17 @@ export class UnifiedMemoriesService {
     private readonly addons: AddonsService,
   ) {}
 
-  private _providers(): Array<{id: string; enabled: boolean}> {
+  private async _providers(): Promise<Array<{id: string; enabled: boolean}>> {
     // A provider only counts as enabled while the journey addon is — its whole
     // surface lives inside journeys. Covers rows left enabled from before
     // updateAddon cascaded the journey disable.
-    const journeyOn = this.addons.isAddonEnabled(ADDON_IDS.JOURNEY);
+    const journeyOn = await this.addons.isAddonEnabled(ADDON_IDS.JOURNEY);
     const rows = this.db.prepare('SELECT id, enabled FROM photo_providers').all() as Array<{id: string; enabled: number}>;
     return rows.map(r => ({ id: r.id, enabled: journeyOn && r.enabled === 1 }));
   }
 
-  private _validProvider(provider: string): ServiceResult<string> {
-    const providers = this._providers();
+  private async _validProvider(provider: string): Promise<ServiceResult<string>> {
+    const providers = await this._providers();
     const found = providers.find(p => p.id === provider);
     if (!found) {
       return fail(`Provider: "${provider}" is not supported`, 400);
@@ -60,7 +60,7 @@ export class UnifiedMemoriesService {
 
 
 
-  listTripPhotos(tripId: string, userId: number): ServiceResult<any[]> {
+  async listTripPhotos(tripId: string, userId: number): Promise<ServiceResult<any[]>> {
     const access = this.db.canAccessTrip(tripId, userId);
     if (!access) {
       return fail('Trip not found or access denied', 404);
@@ -68,7 +68,7 @@ export class UnifiedMemoriesService {
 
     try {
 
-      const enabledProviders = this._providers().filter(p => p.enabled).map(p => p.id);
+      const enabledProviders = (await this._providers()).filter(p => p.enabled).map(p => p.id);
 
       if (enabledProviders.length === 0) {
         return fail('No photo providers enabled', 400);
@@ -92,14 +92,14 @@ export class UnifiedMemoriesService {
     }
   }
 
-  listTripAlbumLinks(tripId: string, userId: number): ServiceResult<any[]> {
+  async listTripAlbumLinks(tripId: string, userId: number): Promise<ServiceResult<any[]>> {
     const access = this.db.canAccessTrip(tripId, userId);
     if (!access) {
       return fail('Trip not found or access denied', 404);
     }
 
   
-      const enabledProviders = this._providers().filter(p => p.enabled).map(p => p.id);
+      const enabledProviders = (await this._providers()).filter(p => p.enabled).map(p => p.id);
 
       if (enabledProviders.length === 0) {
         return fail('No photo providers enabled', 400);
@@ -133,8 +133,8 @@ export class UnifiedMemoriesService {
   //-----------------------------------------------
   // managing photos in trip
 
-  private _addTripPhoto(tripId: string, userId: number, provider: string, assetId: string, shared: boolean, albumLinkId?: string, passphrase?: string): ServiceResult<boolean> {
-    const providerResult = this._validProvider(provider);
+  private async _addTripPhoto(tripId: string, userId: number, provider: string, assetId: string, shared: boolean, albumLinkId?: string, passphrase?: string): Promise<ServiceResult<boolean>> {
+    const providerResult = await this._validProvider(provider);
     if (!providerResult.success) {
       return providerResult as ServiceResult<boolean>;
     }
@@ -169,14 +169,14 @@ export class UnifiedMemoriesService {
 
     let added = 0;
     for (const selection of selections) {
-      const providerResult = this._validProvider(selection.provider);
+      const providerResult = await this._validProvider(selection.provider);
       if (!providerResult.success) {
         return providerResult as ServiceResult<{ added: number; shared: boolean }>;
       }
       for (const raw of selection.asset_ids) {
         const assetId = String(raw || '').trim();
         if (!assetId) continue;
-        const result = this._addTripPhoto(tripId, userId, selection.provider, assetId, shared, albumLinkId, selection.passphrase);
+        const result = await this._addTripPhoto(tripId, userId, selection.provider, assetId, shared, albumLinkId, selection.passphrase);
         if (!result.success) {
           return result as ServiceResult<{ added: number; shared: boolean }>;
         }
@@ -252,7 +252,7 @@ export class UnifiedMemoriesService {
   // ----------------------------------------------
   // managing album links in trip
 
-  createTripAlbumLink(tripId: string, userId: number, providerRaw: unknown, albumIdRaw: unknown, albumNameRaw: unknown, passphrase?: string): ServiceResult<true> {
+  async createTripAlbumLink(tripId: string, userId: number, providerRaw: unknown, albumIdRaw: unknown, albumNameRaw: unknown, passphrase?: string): Promise<ServiceResult<true>> {
     const access = this.db.canAccessTrip(tripId, userId);
     if (!access) {
       return fail('Trip not found or access denied', 404);
@@ -270,7 +270,7 @@ export class UnifiedMemoriesService {
     }
 
 
-    const providerResult = this._validProvider(provider);
+    const providerResult = await this._validProvider(provider);
     if (!providerResult.success) {
       return providerResult as ServiceResult<true>;
     }

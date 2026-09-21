@@ -7,6 +7,8 @@ import { PermissionsService } from '../../src/nest/permissions/permissions.servi
 import { QueryHelpersService } from '../../src/nest/query-helpers/query-helpers.service';
 import { RealtimeService } from '../../src/nest/realtime/realtime.service';
 import { TrekPhotosRepository } from '../../src/nest/photos/trek-photos.repository';
+import { createTestUnitOfWork } from './test-uow';
+import { UnitOfWork } from '../../src/nest/database/unit-of-work';
 
 /**
  * AccommodationsService over a test connection.
@@ -16,7 +18,7 @@ import { TrekPhotosRepository } from '../../src/nest/photos/trek-photos.reposito
  * back, and it has to come out of the same connection. Five collaborators deep is
  * why this is a helper and not five copies across the suites.
  */
-export function makeAccommodationsService(conn: Database): AccommodationsService {
+export async function makeAccommodationsService(conn: Database): Promise<AccommodationsService> {
   return accommodationsOver(new DatabaseService(conn));
 }
 
@@ -27,13 +29,13 @@ export function makeAccommodationsService(conn: Database): AccommodationsService
  * the same stop a night entered under Days does, and every suite that builds
  * that service by hand needs one to hand it.
  */
-export function accommodationsOver(dbs: DatabaseService): AccommodationsService {
-  const permissions = new PermissionsService(dbs);
+export async function accommodationsOver(dbs: DatabaseService): Promise<AccommodationsService> {
+  const permissions = new PermissionsService(dbs, await createTestUnitOfWork(dbs.connection));
   const realtime = new RealtimeService();
   const assignments = new AssignmentsService(
     dbs, permissions, realtime,
     new QueryHelpersService(dbs),
     new JourneyDomainService(dbs, realtime, new TrekPhotosRepository(dbs)),
   );
-  return new AccommodationsService(dbs, permissions, realtime, assignments);
+  return new AccommodationsService(dbs, permissions, realtime, assignments, await createTestUnitOfWork(dbs.connection));
 }

@@ -82,18 +82,28 @@ import { __clearVersionCacheForTests } from '../../../src/nest/admin/admin.helpe
 import { makeNotificationsService, makeNotificationPreferencesService } from '../../helpers/notifications';
 import { EphemeralTokenService } from '../../../src/nest/auth/ephemeral-token.service';
 import { AllowedFileTypesService } from '../../../src/nest/files/allowed-file-types.service';
+import { createTestUnitOfWork } from '../../helpers/test-uow';
+import { UnitOfWork } from '../../../src/nest/database/unit-of-work';
 
 const dbs = new DatabaseService(testDb);
 const realtime = new RealtimeService();
-const permissions = new PermissionsService(dbs);
+
 const webauthn = new WebauthnConfigService(dbs);
-const userCleanup = new UserCleanupService(dbs, new BudgetService(dbs, permissions, new ExchangeRatesService(), realtime));
+
 // Positional and previously wrong: an AtlasService sat in the membership slot
 // and the mailer was missing entirely, so `auth` was built with its last four
 // collaborators shifted by one. Nothing failed, because none of the cases below
 // reach a path that uses them.
-const auth = new AuthService(dbs, permissions, new TripMembershipService(dbs), webauthn, userCleanup, new MailerService(dbs), new EphemeralTokenService(), new AllowedFileTypesService(dbs));
-const svc = new AdminService(
+
+let permissions: PermissionsService;
+let userCleanup: UserCleanupService;
+let auth: AuthService;
+let svc: AdminService;
+beforeAll(async () => {
+  permissions = new PermissionsService(dbs, await createTestUnitOfWork(dbs.connection));
+  userCleanup = new UserCleanupService(dbs, new BudgetService(dbs, permissions, new ExchangeRatesService(), realtime));
+  auth = new AuthService(dbs, permissions, new TripMembershipService(dbs), webauthn, userCleanup, new MailerService(dbs), new EphemeralTokenService(), new AllowedFileTypesService(dbs), await createTestUnitOfWork(dbs.connection));
+  svc = new AdminService(
   dbs,
   new AddonsService(dbs),
   new PasskeyService(dbs, auth, webauthn),
@@ -103,6 +113,7 @@ const svc = new AdminService(
   userCleanup,
   realtime,
 );
+});
 
 // Legacy free-function names bound to the service, so the moved cases below read
 // exactly as they did before the fold.
@@ -277,8 +288,8 @@ describe('Permissions', () => {
     expect(result.permissions.length).toBeGreaterThan(0);
   });
 
-  it('ADMIN-SVC-020 — savePermissions persists a permission change', () => {
-    savePermissions({ trip_create: 'admin' });
+  it('ADMIN-SVC-020 — savePermissions persists a permission change', async () => {
+    await savePermissions({ trip_create: 'admin' });
     const result = getPermissions() as any;
     const perm = result.permissions.find((p: any) => p.key === 'trip_create');
     expect(perm.level).toBe('admin');
@@ -494,8 +505,8 @@ describe('updateAddon', () => {
     expect(result.error).toBeDefined();
   });
 
-  it('ADMIN-SVC-069 — mcpAffected only fires on a real enabled-flip of an MCP-relevant addon (#1414)', () => {
-    updateAddon('packing', { enabled: true });
+  it('ADMIN-SVC-069 — mcpAffected only fires on a real enabled-flip of an MCP-relevant addon (#1414)', async () => {
+    await updateAddon('packing', { enabled: true });
     // no-op save (enabled already true) → sessions survive
     expect((updateAddon('packing', { enabled: true }) as any).mcpAffected).toBe(false);
     // config-only save → sessions survive

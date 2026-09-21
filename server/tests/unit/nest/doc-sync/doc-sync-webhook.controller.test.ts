@@ -141,47 +141,47 @@ function settle() {
 }
 
 describe('an unknown token', () => {
-  it('answers as if it were known, so nobody can enumerate which tokens exist', () => {
-    expect(controller.nudge('tok-guessed', makeReq())).toEqual({ received: true });
+  it('answers as if it were known, so nobody can enumerate which tokens exist', async () => {
+    expect(await controller.nudge('tok-guessed', makeReq())).toEqual({ received: true });
   });
 
-  it('schedules no run', () => {
-    controller.nudge('tok-guessed', makeReq());
+  it('schedules no run', async () => {
+    await controller.nudge('tok-guessed', makeReq());
     expect(sync.syncLink).not.toHaveBeenCalled();
   });
 });
 
 describe('a binding whose sync is switched off', () => {
-  it('is left alone, and says nothing about it', () => {
+  it('is left alone, and says nothing about it', async () => {
     config.getLinkByToken.mockReturnValue(link({ sync_enabled: 0 }));
-    expect(controller.nudge('tok-live', makeReq({ 'x-trek-docsync-secret': SECRET }))).toEqual({ received: true });
+    expect(await controller.nudge('tok-live', makeReq({ 'x-trek-docsync-secret': SECRET }))).toEqual({ received: true });
     expect(sync.syncLink).not.toHaveBeenCalled();
   });
 });
 
 describe('a shared-secret header', () => {
-  it('triggers the run when it matches', () => {
-    controller.nudge('tok-live', makeReq({ 'x-trek-docsync-secret': SECRET }));
+  it('triggers the run when it matches', async () => {
+    await controller.nudge('tok-live', makeReq({ 'x-trek-docsync-secret': SECRET }));
     settle();
     expect(sync.syncLink).toHaveBeenCalledTimes(1);
     settle();
     expect(sync.syncLink.mock.calls[0][0]).toMatchObject({ id: 4 });
   });
 
-  it('triggers nothing when it is wrong, and the answer looks identical', () => {
+  it('triggers nothing when it is wrong, and the answer looks identical', async () => {
     const wrong = `${SECRET.slice(0, -1)}X`;
-    expect(controller.nudge('tok-live', makeReq({ 'x-trek-docsync-secret': wrong }))).toEqual({ received: true });
+    expect(await controller.nudge('tok-live', makeReq({ 'x-trek-docsync-secret': wrong }))).toEqual({ received: true });
     expect(sync.syncLink).not.toHaveBeenCalled();
   });
 
-  it('triggers nothing when the header is missing altogether', () => {
-    controller.nudge('tok-live', makeReq());
+  it('triggers nothing when the header is missing altogether', async () => {
+    await controller.nudge('tok-live', makeReq());
     expect(sync.syncLink).not.toHaveBeenCalled();
   });
 
-  it('is not demanded from a binding that carries no secret: the token alone authenticates there', () => {
+  it('is not demanded from a binding that carries no secret: the token alone authenticates there', async () => {
     config.webhookSecret.mockReturnValue('');
-    controller.nudge('tok-live', makeReq());
+    await controller.nudge('tok-live', makeReq());
     settle();
     expect(sync.syncLink).toHaveBeenCalledTimes(1);
   });
@@ -205,22 +205,22 @@ describe('a binding pasted into the store by hand', () => {
     config.getLink.mockImplementation((id: number) => (id === 4 ? pasted() : undefined));
   });
 
-  it('runs on the token alone, with no secret in the call', () => {
-    controller.nudge('tok-live', makeReq());
+  it('runs on the token alone, with no secret in the call', async () => {
+    await controller.nudge('tok-live', makeReq());
     settle();
     expect(sync.syncLink).toHaveBeenCalledTimes(1);
     expect(config.webhookSecret).not.toHaveBeenCalled();
   });
 
-  it('runs on a Papra call signed with a secret TREK has never seen', () => {
+  it('runs on a Papra call signed with a secret TREK has never seen', async () => {
     const payload = JSON.stringify({ event: 'document.created', documentId: 'doc_1' });
-    controller.nudge('tok-live', papraReq(payload, sign(payload, 'papras-own-signing-secret')));
+    await controller.nudge('tok-live', papraReq(payload, sign(payload, 'papras-own-signing-secret')));
     settle();
     expect(sync.syncLink).toHaveBeenCalledTimes(1);
   });
 
-  it('still needs the right token', () => {
-    controller.nudge('tok-guessed', makeReq());
+  it('still needs the right token', async () => {
+    await controller.nudge('tok-guessed', makeReq());
     settle();
     expect(sync.syncLink).not.toHaveBeenCalled();
   });
@@ -229,33 +229,33 @@ describe('a binding pasted into the store by hand', () => {
 describe('a Papra standard-webhooks signature', () => {
   const payload = JSON.stringify({ event: 'document.created', documentId: 'doc_1' });
 
-  it('triggers the run when it covers the bytes that arrived', () => {
-    controller.nudge('tok-live', papraReq(payload, sign(payload)));
+  it('triggers the run when it covers the bytes that arrived', async () => {
+    await controller.nudge('tok-live', papraReq(payload, sign(payload)));
     settle();
     expect(sync.syncLink).toHaveBeenCalledTimes(1);
   });
 
-  it('triggers nothing when the payload was altered after it was signed', () => {
+  it('triggers nothing when the payload was altered after it was signed', async () => {
     const tampered = JSON.stringify({ event: 'document.created', documentId: 'doc_999' });
-    expect(controller.nudge('tok-live', papraReq(payload, sign(payload), tampered))).toEqual({ received: true });
+    expect(await controller.nudge('tok-live', papraReq(payload, sign(payload), tampered))).toEqual({ received: true });
     expect(sync.syncLink).not.toHaveBeenCalled();
   });
 
-  it('triggers nothing when the signature was made with another secret', () => {
-    controller.nudge('tok-live', papraReq(payload, sign(payload, 'someone-elses-secret-value')));
+  it('triggers nothing when the signature was made with another secret', async () => {
+    await controller.nudge('tok-live', papraReq(payload, sign(payload, 'someone-elses-secret-value')));
     expect(sync.syncLink).not.toHaveBeenCalled();
   });
 
-  it('triggers nothing when the id or timestamp does not match what was signed', () => {
+  it('triggers nothing when the id or timestamp does not match what was signed', async () => {
     const req = makeReq(
       { 'webhook-id': 'msg_other', 'webhook-timestamp': WEBHOOK_TS, 'webhook-signature': `v1,${sign(payload)}` },
       { rawBody: Buffer.from(payload, 'utf8') },
     );
-    controller.nudge('tok-live', req);
+    await controller.nudge('tok-live', req);
     expect(sync.syncLink).not.toHaveBeenCalled();
   });
 
-  it('accepts a header carrying several signatures, as a key rotation sends', () => {
+  it('accepts a header carrying several signatures, as a key rotation sends', async () => {
     const req = makeReq(
       {
         'webhook-id': WEBHOOK_ID,
@@ -264,28 +264,28 @@ describe('a Papra standard-webhooks signature', () => {
       },
       { rawBody: Buffer.from(payload, 'utf8') },
     );
-    controller.nudge('tok-live', req);
+    await controller.nudge('tok-live', req);
     settle();
     expect(sync.syncLink).toHaveBeenCalledTimes(1);
   });
 
-  it('verifies against the parsed body when a mount left no raw bytes behind', () => {
+  it('verifies against the parsed body when a mount left no raw bytes behind', async () => {
     const body = { event: 'document.created', documentId: 'doc_1' };
     const req = makeReq(
       { 'webhook-id': WEBHOOK_ID, 'webhook-timestamp': WEBHOOK_TS, 'webhook-signature': `v1,${sign(JSON.stringify(body))}` },
       { body },
     );
-    controller.nudge('tok-live', req);
+    await controller.nudge('tok-live', req);
     settle();
     expect(sync.syncLink).toHaveBeenCalledTimes(1);
   });
 
-  it('is ignored when the timestamp header is missing, rather than verified without it', () => {
+  it('is ignored when the timestamp header is missing, rather than verified without it', async () => {
     const req = makeReq(
       { 'webhook-id': WEBHOOK_ID, 'webhook-signature': `v1,${sign(payload)}` },
       { rawBody: Buffer.from(payload, 'utf8') },
     );
-    controller.nudge('tok-live', req);
+    await controller.nudge('tok-live', req);
     expect(sync.syncLink).not.toHaveBeenCalled();
   });
 });
@@ -294,16 +294,14 @@ describe('a credential of the wrong length', () => {
   // crypto.timingSafeEqual throws on buffers of unequal length, so a one-byte
   // header would turn into a 500 that tells a prober the secret is longer than
   // what they sent.
-  it('is rejected rather than thrown over, whether it arrives as a header or as a signature', () => {
-    expect(() => controller.nudge('tok-live', makeReq({ 'x-trek-docsync-secret': 'a' }))).not.toThrow();
-    expect(() =>
-      controller.nudge('tok-live', papraReq('{}', 'short')),
-    ).not.toThrow();
+  it('is rejected rather than thrown over, whether it arrives as a header or as a signature', async () => {
+    await expect(controller.nudge('tok-live', makeReq({ 'x-trek-docsync-secret': 'a' }))).resolves.not.toThrow();
+    await expect(controller.nudge('tok-live', papraReq('{}', 'short'))).resolves.not.toThrow();
     expect(sync.syncLink).not.toHaveBeenCalled();
   });
 
-  it('is rejected the same way when it is longer than the stored secret', () => {
-    expect(() => controller.nudge('tok-live', makeReq({ 'x-trek-docsync-secret': `${SECRET}extra` }))).not.toThrow();
+  it('is rejected the same way when it is longer than the stored secret', async () => {
+    await expect(controller.nudge('tok-live', makeReq({ 'x-trek-docsync-secret': `${SECRET}extra` }))).resolves.not.toThrow();
     expect(sync.syncLink).not.toHaveBeenCalled();
   });
 });
@@ -318,62 +316,62 @@ describe('a credential of the wrong length', () => {
  * before most of the changes landed.
  */
 describe('a burst of nudges', () => {
-  it('runs once for twenty calls rather than twenty times', () => {
+  it('runs once for twenty calls rather than twenty times', async () => {
     for (let i = 0; i < 20; i += 1) {
-      controller.nudge('tok-live', makeReq({ 'x-trek-docsync-secret': SECRET }));
+      await controller.nudge('tok-live', makeReq({ 'x-trek-docsync-secret': SECRET }));
     }
     settle();
     expect(sync.syncLink).toHaveBeenCalledTimes(1);
   });
 
-  it('answers every one of them immediately, before any run happens', () => {
+  it('answers every one of them immediately, before any run happens', async () => {
     const answers = [];
     for (let i = 0; i < 5; i += 1) {
-      answers.push(controller.nudge('tok-live', makeReq({ 'x-trek-docsync-secret': SECRET })));
+      answers.push(await controller.nudge('tok-live', makeReq({ 'x-trek-docsync-secret': SECRET })));
     }
     // Paperless gives the call five seconds before it counts it as failed.
     expect(answers).toEqual(Array.from({ length: 5 }, () => ({ received: true })));
     expect(sync.syncLink).not.toHaveBeenCalled();
   });
 
-  it('runs again for a burst that arrives after the window closed', () => {
-    controller.nudge('tok-live', makeReq({ 'x-trek-docsync-secret': SECRET }));
+  it('runs again for a burst that arrives after the window closed', async () => {
+    await controller.nudge('tok-live', makeReq({ 'x-trek-docsync-secret': SECRET }));
     settle();
-    controller.nudge('tok-live', makeReq({ 'x-trek-docsync-secret': SECRET }));
+    await controller.nudge('tok-live', makeReq({ 'x-trek-docsync-secret': SECRET }));
     settle();
     expect(sync.syncLink).toHaveBeenCalledTimes(2);
   });
 
-  it('keeps one window per binding, so a busy trip cannot starve a quiet one', () => {
+  it('keeps one window per binding, so a busy trip cannot starve a quiet one', async () => {
     const other = link({ id: 9, webhook_token: 'tok-other' });
     config.getLinkByToken.mockImplementation((t: string) =>
       t === 'tok-live' ? link() : t === 'tok-other' ? other : undefined);
     config.getLink.mockImplementation((id: number) => (id === 4 ? link() : id === 9 ? other : undefined));
 
-    controller.nudge('tok-live', makeReq({ 'x-trek-docsync-secret': SECRET }));
-    controller.nudge('tok-other', makeReq({ 'x-trek-docsync-secret': SECRET }));
+    await controller.nudge('tok-live', makeReq({ 'x-trek-docsync-secret': SECRET }));
+    await controller.nudge('tok-other', makeReq({ 'x-trek-docsync-secret': SECRET }));
     settle();
 
     expect(sync.syncLink).toHaveBeenCalledTimes(2);
     expect(sync.syncLink.mock.calls.map((c) => c[0].id).sort()).toEqual([4, 9]);
   });
 
-  it('drops the run when the binding is switched off inside the window', () => {
-    controller.nudge('tok-live', makeReq({ 'x-trek-docsync-secret': SECRET }));
+  it('drops the run when the binding is switched off inside the window', async () => {
+    await controller.nudge('tok-live', makeReq({ 'x-trek-docsync-secret': SECRET }));
     config.getLink.mockReturnValue(link({ sync_enabled: 0 }));
     settle();
     expect(sync.syncLink).not.toHaveBeenCalled();
   });
 
-  it('drops the run when the binding is deleted inside the window', () => {
-    controller.nudge('tok-live', makeReq({ 'x-trek-docsync-secret': SECRET }));
+  it('drops the run when the binding is deleted inside the window', async () => {
+    await controller.nudge('tok-live', makeReq({ 'x-trek-docsync-secret': SECRET }));
     config.getLink.mockReturnValue(undefined);
     settle();
     expect(sync.syncLink).not.toHaveBeenCalled();
   });
 
-  it('forgets its pending timers when the module goes down', () => {
-    controller.nudge('tok-live', makeReq({ 'x-trek-docsync-secret': SECRET }));
+  it('forgets its pending timers when the module goes down', async () => {
+    await controller.nudge('tok-live', makeReq({ 'x-trek-docsync-secret': SECRET }));
     controller.onModuleDestroy();
     settle();
     expect(sync.syncLink).not.toHaveBeenCalled();
@@ -389,30 +387,30 @@ describe('a burst of nudges', () => {
  * carried on driving full runs.
  */
 describe('the admin switches', () => {
-  it('does nothing while the addon or the provider of the binding is switched off', () => {
+  it('does nothing while the addon or the provider of the binding is switched off', async () => {
     sync.isSwitchedOff.mockReturnValue(true);
-    expect(controller.nudge('tok-live', makeReq({ 'x-trek-docsync-secret': SECRET }))).toEqual({ received: true });
+    expect(await controller.nudge('tok-live', makeReq({ 'x-trek-docsync-secret': SECRET }))).toEqual({ received: true });
     settle();
     expect(sync.isSwitchedOff.mock.calls[0][0]).toMatchObject({ id: 4, provider_id: 'papra' });
     expect(sync.syncLink).not.toHaveBeenCalled();
   });
 
-  it('does nothing while the kill switch is set', () => {
+  it('does nothing while the kill switch is set', async () => {
     settings.set('docsync_sync_enabled', 'false');
-    controller.nudge('tok-live', makeReq({ 'x-trek-docsync-secret': SECRET }));
+    await controller.nudge('tok-live', makeReq({ 'x-trek-docsync-secret': SECRET }));
     settle();
     expect(sync.syncLink).not.toHaveBeenCalled();
   });
 
-  it('drops a scheduled run when the provider goes off inside the window', () => {
-    controller.nudge('tok-live', makeReq({ 'x-trek-docsync-secret': SECRET }));
+  it('drops a scheduled run when the provider goes off inside the window', async () => {
+    await controller.nudge('tok-live', makeReq({ 'x-trek-docsync-secret': SECRET }));
     sync.isSwitchedOff.mockReturnValue(true);
     settle();
     expect(sync.syncLink).not.toHaveBeenCalled();
   });
 
-  it('runs normally while both are on', () => {
-    controller.nudge('tok-live', makeReq({ 'x-trek-docsync-secret': SECRET }));
+  it('runs normally while both are on', async () => {
+    await controller.nudge('tok-live', makeReq({ 'x-trek-docsync-secret': SECRET }));
     settle();
     expect(sync.syncLink).toHaveBeenCalledTimes(1);
   });
@@ -429,7 +427,7 @@ describe('the admin switches', () => {
 describe('a nudge that arrives mid-run', () => {
   it('asks again once when the run was busy', async () => {
     sync.syncLink.mockResolvedValueOnce({ state: 'busy', pulled: 0, pushed: 0, conflicts: 0, missing: 0 });
-    controller.nudge('tok-live', makeReq({ 'x-trek-docsync-secret': SECRET }));
+    await controller.nudge('tok-live', makeReq({ 'x-trek-docsync-secret': SECRET }));
     settle();
     await Promise.resolve();
     settle();
@@ -438,7 +436,7 @@ describe('a nudge that arrives mid-run', () => {
 
   it('gives up after that one retry rather than chasing itself', async () => {
     sync.syncLink.mockResolvedValue({ state: 'busy', pulled: 0, pushed: 0, conflicts: 0, missing: 0 });
-    controller.nudge('tok-live', makeReq({ 'x-trek-docsync-secret': SECRET }));
+    await controller.nudge('tok-live', makeReq({ 'x-trek-docsync-secret': SECRET }));
     for (let i = 0; i < 5; i += 1) { settle(); await Promise.resolve(); }
     expect(sync.syncLink).toHaveBeenCalledTimes(2);
   });
@@ -447,7 +445,7 @@ describe('a nudge that arrives mid-run', () => {
     // Set explicitly: clearAllMocks drops the calls but keeps the
     // implementation the previous case installed.
     sync.syncLink.mockResolvedValue({ state: 'ok', pulled: 0, pushed: 0, conflicts: 0, missing: 0 });
-    controller.nudge('tok-live', makeReq({ 'x-trek-docsync-secret': SECRET }));
+    await controller.nudge('tok-live', makeReq({ 'x-trek-docsync-secret': SECRET }));
     settle();
     await Promise.resolve();
     settle();

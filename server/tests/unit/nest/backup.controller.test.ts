@@ -188,15 +188,15 @@ describe('BackupController', () => {
     expect(r.body).toEqual({ error: 'Could not save auto-backup settings', detail: undefined });
   });
 
-  it('PUT /auto-settings tolerates a missing body', () => {
+  it('PUT /auto-settings tolerates a missing body', async () => {
     const updateAutoSettings = vi.fn().mockReturnValue({ enabled: false, interval: 'weekly', keep_days: 30 });
-    bc(svc(), job({ updateAutoSettings })).updateAutoSettings(user, undefined as unknown as Record<string, unknown>, req);
+    await bc(svc(), job({ updateAutoSettings })).updateAutoSettings(user, undefined as unknown as Record<string, unknown>, req);
     expect(updateAutoSettings).toHaveBeenCalledWith({});
   });
 
-  it('GET/PUT /auto-settings', () => {
+  it('GET/PUT /auto-settings', async () => {
     expect(bc(svc(), job({ getAutoSettings: vi.fn().mockReturnValue({ settings: { enabled: true }, timezone: 'UTC' }) as never })).autoSettings()).toEqual({ settings: { enabled: true }, timezone: 'UTC' });
-    const res = bc(svc(), job({ updateAutoSettings: vi.fn().mockReturnValue({ enabled: true, interval: 'daily', keep_days: 7 }) as never })).updateAutoSettings(user, { enabled: true }, req);
+    const res = await bc(svc(), job({ updateAutoSettings: vi.fn().mockReturnValue({ enabled: true, interval: 'daily', keep_days: 7 }) as never })).updateAutoSettings(user, { enabled: true }, req);
     expect(res).toEqual({ settings: { enabled: true, interval: 'daily', keep_days: 7 } });
     expect(writeAudit).toHaveBeenCalledWith(expect.objectContaining({ action: 'backup.auto_settings' }));
   });

@@ -845,10 +845,10 @@ describe('DawarichService saveSettings', () => {
 // ---------------------------------------------------------------------------
 
 describe('DawarichService disconnect', () => {
-  it('DAWARICH-SVC-080: forgets the credential and says so in the audit log', () => {
+  it('DAWARICH-SVC-080: forgets the credential and says so in the audit log', async () => {
     connect(USER);
 
-    svc.disconnect(USER, '198.51.100.7');
+    await svc.disconnect(USER, '198.51.100.7');
 
     expect(row()).toBeUndefined();
     expect(svc.getConnection(USER).connected).toBe(false);
@@ -860,19 +860,19 @@ describe('DawarichService disconnect', () => {
     });
   });
 
-  it('DAWARICH-SVC-081: disconnecting something that was never connected is a no-op that still leaves a trail', () => {
-    svc.disconnect(USER, null);
+  it('DAWARICH-SVC-081: disconnecting something that was never connected is a no-op that still leaves a trail', async () => {
+    await svc.disconnect(USER, null);
 
     expect(row()).toBeUndefined();
     expect(audit.writeAudit).toHaveBeenCalledWith(expect.objectContaining({ ip: null }));
   });
 
-  it('DAWARICH-SVC-082: only the calling user loses their connection', () => {
+  it('DAWARICH-SVC-082: only the calling user loses their connection', async () => {
     const other = createUser(testDb).user.id;
     connect(USER);
     connect(other);
 
-    svc.disconnect(USER, null);
+    await svc.disconnect(USER, null);
 
     expect(row(other)).toBeDefined();
   });

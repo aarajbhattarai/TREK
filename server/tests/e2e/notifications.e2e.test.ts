@@ -70,6 +70,9 @@ import { NotificationPreferencesService } from '../../src/nest/notifications/not
 import { NtfyService } from '../../src/nest/notifications/transports/ntfy.service';
 import { WebhookService } from '../../src/nest/notifications/transports/webhook.service';
 import { TrekExceptionFilter } from '../../src/nest/common/trek-exception.filter';
+import { createTestUnitOfWork } from '../helpers/test-uow';
+import { UnitOfWork } from '../../src/nest/database/unit-of-work';
+import { TestUnitOfWorkModule } from '../helpers/test-uow';
 
 function seedNotification(recipientId: number, overrides: { is_read?: number } = {}): number {
   const r = db.prepare(
@@ -85,7 +88,7 @@ describe('Notifications e2e (real auth guard + temp SQLite)', () => {
 
   async function build() {
     const moduleRef = await Test.createTestingModule({
-      imports: [DatabaseModule, RealtimeModule, NotificationsModule],
+      imports: [await TestUnitOfWorkModule.forRoot(db), DatabaseModule, RealtimeModule, NotificationsModule],
     })
       .overrideProvider(NotificationPreferencesService).useValue(prefs)
       .overrideProvider(MailerService).useValue(mailer)

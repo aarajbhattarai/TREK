@@ -139,12 +139,12 @@ describe('TagsRpc handlers', () => {
     rpc = new TagsRpc(tags);
   });
 
-  it('TAGS-RPC-008 list returns the acting user\'s tags', () => {
-    expect(rpc.list({}, ctx(42))).toEqual([{ id: 1, user_id: 42, name: 'work' }]);
+  it('TAGS-RPC-008 list returns the acting user\'s tags', async () => {
+    expect(await rpc.list({}, ctx(42))).toEqual([{ id: 1, user_id: 42, name: 'work' }]);
   });
 
-  it('TAGS-RPC-009 create passes name and colour through', () => {
-    expect(rpc.create({ input: { name: 'work', color: '#abc' } }, ctx(42))).toEqual({
+  it('TAGS-RPC-009 create passes name and colour through', async () => {
+    expect(await rpc.create({ input: { name: 'work', color: '#abc' } }, ctx(42))).toEqual({
       id: 9,
       user_id: 42,
       name: 'work',
@@ -152,44 +152,38 @@ describe('TagsRpc handlers', () => {
     });
   });
 
-  it('TAGS-RPC-010 a non-string colour is dropped rather than passed on', () => {
-    rpc.create({ input: { name: 'work', color: 123 } }, ctx(42));
+  it('TAGS-RPC-010 a non-string colour is dropped rather than passed on', async () => {
+    await rpc.create({ input: { name: 'work', color: 123 } }, ctx(42));
     expect(tags.create).toHaveBeenCalledWith(42, 'work', undefined);
   });
 
-  it('TAGS-RPC-011 a non-object input is wrapped, so the name check still refuses it', () => {
-    expect(() => rpc.create({ input: 'work' }, ctx(42))).toThrow(new BadParams('tag name is required'));
+  it('TAGS-RPC-011 a non-object input is wrapped, so the name check still refuses it', async () => {
+    await expect(rpc.create({ input: 'work' }, ctx(42))).rejects.toThrow(new BadParams('tag name is required'));
   });
 
-  it('TAGS-RPC-012 a userless write says "writes", not "reads"', () => {
-    expect(() => rpc.create({ input: { name: 'x' } }, ctx(undefined))).toThrow(
-      new ForbiddenResource('tag writes require an authenticated user context'),
-    );
-    expect(() => rpc.update({ tagId: 1 }, ctx(undefined))).toThrow(
-      new ForbiddenResource('tag writes require an authenticated user context'),
-    );
-    expect(() => rpc.delete({ tagId: 1 }, ctx(undefined))).toThrow(
-      new ForbiddenResource('tag writes require an authenticated user context'),
-    );
+  it('TAGS-RPC-012 a userless write says "writes", not "reads"', async () => {
+    await expect(rpc.create({ input: { name: 'x' } }, ctx(undefined))).rejects.toThrow(new ForbiddenResource('tag writes require an authenticated user context'));
+    await expect(rpc.update({ tagId: 1 }, ctx(undefined))).rejects.toThrow(new ForbiddenResource('tag writes require an authenticated user context'));
+    await expect(rpc.delete({ tagId: 1 }, ctx(undefined))).rejects.toThrow(new ForbiddenResource('tag writes require an authenticated user context'));
   });
 
-  it('TAGS-RPC-013 update only forwards the fields it was given', () => {
-    rpc.update({ tagId: 1, input: { name: 'renamed' } }, ctx(42));
+  it('TAGS-RPC-013 update only forwards the fields it was given', async () => {
+    await rpc.update({ tagId: 1, input: { name: 'renamed' } }, ctx(42));
     expect(tags.update).toHaveBeenCalledWith(1, 'renamed', undefined);
   });
 
-  it('TAGS-RPC-014 a missing tagId is BAD_PARAMS before the ownership check runs', () => {
-    expect(() => rpc.update({ input: { name: 'x' } }, ctx(42))).toThrow(new BadParams('tagId must be a number'));
+  it('TAGS-RPC-014 a missing tagId is BAD_PARAMS before the ownership check runs', async () => {
+    await expect(rpc.update({ input: { name: 'x' } }, ctx(42))).rejects.toThrow(new BadParams('tagId must be a number'));
     expect(tags.getByIdAndUser).not.toHaveBeenCalled();
   });
 
-  it('TAGS-RPC-015 delete re-checks ownership and reports the deletion', () => {
-    expect(rpc.delete({ tagId: 1 }, ctx(42))).toEqual({ deleted: true });
+  it('TAGS-RPC-015 delete re-checks ownership and reports the deletion', async () => {
+    expect(await rpc.delete({ tagId: 1 }, ctx(42))).toEqual({ deleted: true });
     expect(tags.remove).toHaveBeenCalledWith(1);
   });
 
-  it('TAGS-RPC-016 deleting another user\'s tag never reaches remove()', () => {
-    expect(() => rpc.delete({ tagId: 2 }, ctx(42))).toThrow(new ForbiddenResource('no tag 2 for this user'));
+  it('TAGS-RPC-016 deleting another user\'s tag never reaches remove()', async () => {
+    await expect(rpc.delete({ tagId: 2 }, ctx(42))).rejects.toThrow(new ForbiddenResource('no tag 2 for this user'));
     expect(tags.remove).not.toHaveBeenCalled();
   });
 });

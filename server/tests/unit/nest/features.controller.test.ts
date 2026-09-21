@@ -21,32 +21,32 @@ function make(available: boolean, aiEnabled: boolean) {
 }
 
 describe('FeaturesController (GET /api/health/features)', () => {
-  it('FEAT-001: reports both flags on', () => {
+  it('FEAT-001: reports both flags on', async () => {
     const { controller } = make(true, true);
-    expect(controller.features()).toEqual({ bookingImport: true, aiParsing: true });
+    expect(await controller.features()).toEqual({ bookingImport: true, aiParsing: true });
   });
 
-  it('FEAT-002: reports both flags off', () => {
+  it('FEAT-002: reports both flags off', async () => {
     const { controller } = make(false, false);
-    expect(controller.features()).toEqual({ bookingImport: false, aiParsing: false });
+    expect(await controller.features()).toEqual({ bookingImport: false, aiParsing: false });
   });
 
-  it('FEAT-003: the two flags are independent', () => {
-    expect(make(true, false).controller.features()).toEqual({ bookingImport: true, aiParsing: false });
-    expect(make(false, true).controller.features()).toEqual({ bookingImport: false, aiParsing: true });
+  it('FEAT-003: the two flags are independent', async () => {
+    expect(await make(true, false).controller.features()).toEqual({ bookingImport: true, aiParsing: false });
+    expect(await make(false, true).controller.features()).toEqual({ bookingImport: false, aiParsing: true });
   });
 
-  it('FEAT-004: aiParsing asks the addons service for the LLM parsing addon specifically', () => {
+  it('FEAT-004: aiParsing asks the addons service for the LLM parsing addon specifically', async () => {
     const { controller, addons } = make(true, true);
-    controller.features();
+    await controller.features();
     expect(addons.isAddonEnabled).toHaveBeenCalledWith(ADDON_IDS.LLM_PARSING);
   });
 
-  it('FEAT-005: bookingImport is read live, not cached at construction', () => {
+  it('FEAT-005: bookingImport is read live, not cached at construction', async () => {
     const { controller, extractor } = make(false, false);
-    controller.features();
+    await controller.features();
     extractor.isAvailable.mockReturnValue(true);
-    expect(controller.features().bookingImport).toBe(true);
+    expect((await controller.features()).bookingImport).toBe(true);
     expect(extractor.isAvailable).toHaveBeenCalledTimes(2);
   });
 

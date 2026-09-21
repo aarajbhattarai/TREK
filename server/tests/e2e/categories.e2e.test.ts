@@ -37,6 +37,9 @@ import { DatabaseModule } from '../../src/nest/database/database.module';
 import { RealtimeModule } from '../../src/nest/realtime/realtime.module';
 import { TrekExceptionFilter } from '../../src/nest/common/trek-exception.filter';
 import { ZodValidationPipe } from '../../src/nest/common/zod-validation.pipe';
+import { createTestUnitOfWork } from '../helpers/test-uow';
+import { UnitOfWork } from '../../src/nest/database/unit-of-work';
+import { TestUnitOfWorkModule } from '../helpers/test-uow';
 
 function insertCategory(name: string, color = '#6366f1', icon = '📍', userId = 1): number {
   const res = db
@@ -53,7 +56,7 @@ describe('Categories e2e (real JwtAuthGuard + AdminGuard + temp SQLite)', () => 
     // RealtimeModule is @Global in the app graph but not in a partial container,
 // and CategoriesModule now pulls McpSharedModule in for the admin tools, whose
 // guard service takes it. days.e2e.test.ts imports it for the same reason.
-    const moduleRef = await Test.createTestingModule({ imports: [DatabaseModule, RealtimeModule, CategoriesModule] }).compile();
+    const moduleRef = await Test.createTestingModule({ imports: [await TestUnitOfWorkModule.forRoot(db), DatabaseModule, RealtimeModule, CategoriesModule] }).compile();
     const nest = moduleRef.createNestApplication();
     nest.use(cookieParser());
     nest.useGlobalFilters(new TrekExceptionFilter());

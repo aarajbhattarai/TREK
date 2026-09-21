@@ -51,7 +51,7 @@ export class CategoriesMcp {
     access: { group: 'places', mode: 'read' },
   })
   async listCategories(_args: Record<string, never>, _ctx: McpContext) {
-    const categories = this.categories.list();
+    const categories = await this.categories.list();
     return ok({ categories });
   }
 
@@ -70,7 +70,7 @@ export class CategoriesMcp {
     if (this.isDemoUser(ctx.userId)) return demoDenied();
     // The palette is instance-wide; the REST route restricts management to admins. Match it.
     if (!this.guards.isAdminUser(ctx.userId)) return adminRequired();
-    const category = this.categories.create(ctx.userId, name, color, icon);
+    const category = await this.categories.create(ctx.userId, name, color, icon);
     return ok({ category });
   }
 
@@ -89,8 +89,8 @@ export class CategoriesMcp {
   async updateCategory({ categoryId, name, color, icon }: { categoryId: number; name?: string; color?: string; icon?: string }, ctx: McpContext) {
     if (this.isDemoUser(ctx.userId)) return demoDenied();
     if (!this.guards.isAdminUser(ctx.userId)) return adminRequired();
-    if (!this.categories.getById(categoryId)) return errorResult('Category not found');
-    const category = this.categories.update(categoryId, name, color, icon);
+    if (!(await this.categories.getById(categoryId))) return errorResult('Category not found');
+    const category = await this.categories.update(categoryId, name, color, icon);
     return ok({ category });
   }
 
@@ -106,8 +106,8 @@ export class CategoriesMcp {
   async deleteCategory({ categoryId }: { categoryId: number }, ctx: McpContext) {
     if (this.isDemoUser(ctx.userId)) return demoDenied();
     if (!this.guards.isAdminUser(ctx.userId)) return adminRequired();
-    if (!this.categories.getById(categoryId)) return errorResult('Category not found');
-    this.categories.remove(categoryId);
+    if (!(await this.categories.getById(categoryId))) return errorResult('Category not found');
+    await this.categories.remove(categoryId);
     return ok({ success: true });
   }
 
@@ -118,7 +118,7 @@ export class CategoriesMcp {
     mimeType: 'application/json',
   })
   async categoriesResource(uri: URL, _ctx: McpContext) {
-    const categories = this.categories.list();
+    const categories = await this.categories.list();
     return {
       contents: [{
         uri: uri.href,

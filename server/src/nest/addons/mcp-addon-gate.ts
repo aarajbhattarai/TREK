@@ -9,11 +9,16 @@ import { ADDON_IDS } from '../../addons';
  * hand the bare RequestHandler to consumer.apply() ahead of the SDK routers.
  */
 export function createMcpAddonGate(addons: AddonsService): RequestHandler {
+  // Express cannot await a middleware, so the now-async gate runs in a helper and
+  // its rejection is handed to next() — the same error path a synchronous throw
+  // took before (recipe R1.5).
   return (_req, res, next) => {
-    if (!addons.isAddonEnabled(ADDON_IDS.MCP)) {
-      res.status(404).end();
-      return;
-    }
-    next();
+    void (async () => {
+      if (!(await addons.isAddonEnabled(ADDON_IDS.MCP))) {
+        res.status(404).end();
+        return;
+      }
+      next();
+    })().catch(next);
   };
 }

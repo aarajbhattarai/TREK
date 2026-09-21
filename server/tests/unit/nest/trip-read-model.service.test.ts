@@ -78,39 +78,56 @@ import { RuntimeEnvService } from '../../../src/nest/app-config/runtime-env.serv
 import { makeStorageFixture } from '../../helpers/storage-fixture';
 import { JourneyDomainService } from '../../../src/nest/journey/journey-domain.service';
 import { TrekPhotosRepository } from '../../../src/nest/photos/trek-photos.repository';
+import { createTestUnitOfWork } from '../../helpers/test-uow';
+import { UnitOfWork } from '../../../src/nest/database/unit-of-work';
 
 // Real sibling services over the same in-memory DB — the aggregation runs the
 // actual SQL of every domain it fans out to, so a shape change downstream shows
 // up here instead of being papered over by a stub.
 const dbs = () => new DatabaseService(testDb);
-const budgetSvc = new BudgetService(dbs(), new PermissionsService(dbs()), new ExchangeRatesService(), new RealtimeService());
-const daysSvc = new DaysService(dbs(), new PermissionsService(dbs()), new RealtimeService(), new QueryHelpersService(dbs()));
+
+
 // One shared cache instance (the PlacePhotoCacheService rule): the in-flight dedup in
 // PlacePhotoCacheService only works while both consumers hold the same object.
 const photoCache = new PlacePhotoCacheService(dbs(), makeStorageFixture('photos/google/').storage);
-const placesSvc = new PlacesService(
-  dbs(), new PermissionsService(dbs()), new RealtimeService(),
+
+let accommodationsSvc: Awaited<ReturnType<typeof makeAccommodationsService>>;
+beforeAll(async () => {
+  accommodationsSvc = await makeAccommodationsService(testDb);
+});
+let budgetSvc: BudgetService;
+let daysSvc: DaysService;
+let placesSvc: PlacesService;
+let membersSvc: TripMembersService;
+beforeAll(async () => {
+  budgetSvc = new BudgetService(dbs(), new PermissionsService(dbs(), await createTestUnitOfWork(dbs().connection)), new ExchangeRatesService(), new RealtimeService());
+  daysSvc = new DaysService(dbs(), new PermissionsService(dbs(), await createTestUnitOfWork(dbs().connection)), new RealtimeService(), new QueryHelpersService(dbs()));
+  placesSvc = new PlacesService(
+  dbs(), new PermissionsService(dbs(), await createTestUnitOfWork(dbs().connection)), new RealtimeService(),
   new MapsService(dbs(), photoCache), new QueryHelpersService(dbs()),
   new UnsplashService(dbs(), new RuntimeEnvService(), makeStorageFixture('').storage), photoCache,
   new JourneyDomainService(dbs(), new RealtimeService(), new TrekPhotosRepository(dbs())),
   makeStorageFixture('').storage,
-  accommodationsOver(dbs()),
+  await accommodationsOver(dbs()), await createTestUnitOfWork(dbs().connection),
 );
-const accommodationsSvc = makeAccommodationsService(testDb);
-const membersSvc = new TripMembersService(dbs(), budgetSvc, new UserCleanupService(dbs(), budgetSvc), new PermissionsService(dbs()), new RealtimeService(), notificationsStub());
+  membersSvc = new TripMembersService(dbs(), budgetSvc, new UserCleanupService(dbs(), budgetSvc), new PermissionsService(dbs(), await createTestUnitOfWork(dbs().connection)), new RealtimeService(), notificationsStub());
+});
 
-const buildReadModel = (database: DatabaseService, roster: TripMembersService = membersSvc) =>
+const buildReadModel = async (database: DatabaseService, roster: TripMembersService = membersSvc) =>
   new TripReadModelService(
     database, roster, daysSvc, accommodationsSvc, budgetSvc,
-    new PackingService(dbs(), new PermissionsService(dbs()), new RealtimeService(), notificationsStub()),
-    new ReservationsService(dbs(), new PermissionsService(dbs()), budgetSvc, new RealtimeService(), notificationsStub(), new ReservationsReadRepository(dbs()), accommodationsOver(dbs())),
-    new CollabService(dbs(), new PermissionsService(dbs()), new RealtimeService(), notificationsStub(), makeStorageFixture('').storage, new RateLimitService()),
+    new PackingService(dbs(), new PermissionsService(dbs(), await createTestUnitOfWork(dbs().connection)), new RealtimeService(), notificationsStub()),
+    new ReservationsService(dbs(), new PermissionsService(dbs(), await createTestUnitOfWork(dbs().connection)), budgetSvc, new RealtimeService(), notificationsStub(), new ReservationsReadRepository(dbs()), await accommodationsOver(dbs()), await createTestUnitOfWork(dbs().connection)),
+    new CollabService(dbs(), new PermissionsService(dbs(), await createTestUnitOfWork(dbs().connection)), new RealtimeService(), notificationsStub(), makeStorageFixture('').storage, new RateLimitService()),
     placesSvc,
-    new TodoService(dbs(), new PermissionsService(dbs()), new RealtimeService()),
-    new FilesService(dbs(), new PermissionsService(dbs()), new RealtimeService(), new EphemeralTokenService(), makeStorageFixture('').storage),
+    new TodoService(dbs(), new PermissionsService(dbs(), await createTestUnitOfWork(dbs().connection)), new RealtimeService()),
+    new FilesService(dbs(), new PermissionsService(dbs(), await createTestUnitOfWork(dbs().connection)), new RealtimeService(), new EphemeralTokenService(), makeStorageFixture('').storage),
   );
 
-const svc = buildReadModel(dbs());
+let svc: Awaited<ReturnType<typeof buildReadModel>>;
+beforeAll(async () => {
+  svc = await buildReadModel(dbs());
+});
 
 beforeAll(() => {
   createTables(testDb);
@@ -158,31 +175,31 @@ function ownerlessDbs(): DatabaseService {
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 describe('getTripSummary guards', () => {
-  it('TRIP-READ-001: returns null for a missing trip instead of throwing', () => {
+  it('TRIP-READ-001: returns null for a missing trip instead of throwing', async () => {
     // The MCP get_trip_summary tool hands over whatever id the model produced, so
     // an unknown id has to come back as an empty answer; a throw there surfaces as
     // a tool error rather than "no such trip".
-    expect(svc.getTripSummary(99999)).toBeNull();
-    expect(svc.getTripSummary(99999, 1)).toBeNull();
+    expect(await svc.getTripSummary(99999)).toBeNull();
+    expect(await svc.getTripSummary(99999, 1)).toBeNull();
   });
 
-  it('TRIP-READ-002: returns null when the owner row cannot be read', () => {
+  it('TRIP-READ-002: returns null when the owner row cannot be read', async () => {
     const { user: owner } = createUser(testDb);
     const trip = createTrip(testDb, owner.id);
 
     // Trip row and owner id are two separate SELECTs; if the second one comes back
     // empty (trip deleted in between) the guard has to stop. Without it listMembers
     // runs with an undefined owner id and the summary reports an ownerless trip.
-    expect(buildReadModel(ownerlessDbs()).getTripSummary(trip.id, owner.id)).toBeNull();
+    expect(await (await buildReadModel(ownerlessDbs())).getTripSummary(trip.id, owner.id)).toBeNull();
 
     // Same trip through the real connection still aggregates — the null above is
     // the missing owner row, not a broken fixture.
-    expect(svc.getTripSummary(trip.id, owner.id)).not.toBeNull();
+    expect(await svc.getTripSummary(trip.id, owner.id)).not.toBeNull();
   });
 });
 
 describe('getTripSummary shaping', () => {
-  it('TRIP-READ-003: folds a falsy total_price into the budget total instead of poisoning it', () => {
+  it('TRIP-READ-003: folds a falsy total_price into the budget total instead of poisoning it', async () => {
     const { user: owner } = createUser(testDb);
     const trip = createTrip(testDb, owner.id);
     addBudgetItem(trip.id, 'Dinner', 40);
@@ -193,13 +210,13 @@ describe('getTripSummary shaping', () => {
     // the offline clients both render as an empty budget.
     addBudgetItem(trip.id, 'Free walking tour', 0);
 
-    const summary = svc.getTripSummary(trip.id, owner.id)!;
+    const summary = await (await svc.getTripSummary(trip.id, owner.id))!;
     expect(summary.budget.item_count).toBe(2);
     expect(summary.budget.total).toBe(40);
     expect(summary.budget.currency).toBe('EUR');
   });
 
-  it('TRIP-READ-004: counts only checked packing items, not the whole list', () => {
+  it('TRIP-READ-004: counts only checked packing items, not the whole list', async () => {
     const { user: owner } = createUser(testDb);
     const trip = createTrip(testDb, owner.id);
     addPackingItem(trip.id, 'Socks', 1);
@@ -208,14 +225,14 @@ describe('getTripSummary shaping', () => {
 
     // total and checked come from the same array; if the filter is ever widened the
     // packing progress the summary reports jumps to 100% while items are still open.
-    const summary = svc.getTripSummary(trip.id, owner.id)!;
+    const summary = await (await svc.getTripSummary(trip.id, owner.id))!;
     expect(summary.packing.total).toBe(3);
     expect(summary.packing.checked).toBe(2);
   });
 });
 
 describe('bundle shaping', () => {
-  it('TRIP-READ-005: keeps the member list a flat array when the roster has no members', () => {
+  it('TRIP-READ-005: keeps the member list a flat array when the roster has no members', async () => {
     const { user: owner } = createUser(testDb);
     const trip = createTrip(testDb, owner.id);
 
@@ -227,14 +244,14 @@ describe('bundle shaping', () => {
       owner: { id: owner.id, username: 'solo' }, members: undefined,
     } as never);
     try {
-      const result = svc.bundle(String(trip.id), { user_id: owner.id }, owner.id) as any;
+      const result = (await svc.bundle(String(trip.id), { user_id: owner.id }, owner.id)) as any;
       expect(result.members).toEqual([{ id: owner.id, username: 'solo' }]);
     } finally {
       roster.mockRestore();
     }
   });
 
-  it('TRIP-READ-006: drops a falsy owner rather than shipping a hole in the member list', () => {
+  it('TRIP-READ-006: drops a falsy owner rather than shipping a hole in the member list', async () => {
     const { user: owner } = createUser(testDb);
     const trip = createTrip(testDb, owner.id);
 
@@ -245,7 +262,7 @@ describe('bundle shaping', () => {
       owner: undefined, members: [{ id: 42, username: 'left-behind' }],
     } as never);
     try {
-      const result = svc.bundle(String(trip.id), { user_id: owner.id }, owner.id) as any;
+      const result = (await svc.bundle(String(trip.id), { user_id: owner.id }, owner.id)) as any;
       expect(result.members).toEqual([{ id: 42, username: 'left-behind' }]);
     } finally {
       roster.mockRestore();
@@ -254,7 +271,7 @@ describe('bundle shaping', () => {
 });
 
 describe('private packing items stay viewer-scoped (#858)', () => {
-  it("TRIP-READ-007: neither summary nor bundle leaks another member's private item", () => {
+  it("TRIP-READ-007: neither summary nor bundle leaks another member's private item", async () => {
     const { user: owner } = createUser(testDb);
     const { user: viewer } = createUser(testDb);
     const trip = createTrip(testDb, owner.id, { start_date: '2025-06-01', end_date: '2025-06-02' });
@@ -267,17 +284,17 @@ describe('private packing items stay viewer-scoped (#858)', () => {
     // ONLY thing filtering the list. If either call site loses it, listItems falls
     // back to the unfiltered query and the surprise the owner is carrying shows up
     // in the other member's MCP summary and in their offline cache.
-    const asViewer = svc.getTripSummary(trip.id, viewer.id)!;
+    const asViewer = await (await svc.getTripSummary(trip.id, viewer.id))!;
     expect(asViewer.packing.items.map((i: any) => i.name)).toEqual(['Tent']);
     expect(asViewer.packing.total).toBe(1);
 
-    const bundled = svc.bundle(String(trip.id), { user_id: owner.id }, viewer.id) as any;
+    const bundled = (await svc.bundle(String(trip.id), { user_id: owner.id }, viewer.id)) as any;
     expect(bundled.packingItems.map((i: any) => i.name)).toEqual(['Tent']);
 
     // The owner still sees their own private item through both paths, so the
     // assertions above are the filter working, not an empty fixture.
-    expect(svc.getTripSummary(trip.id, owner.id)!.packing.items.map((i: any) => i.name)).toEqual(['Ring', 'Tent']);
-    expect((svc.bundle(String(trip.id), { user_id: owner.id }, owner.id) as any)
+    expect((await (await svc.getTripSummary(trip.id, owner.id))!).packing.items.map((i: any) => i.name)).toEqual(['Ring', 'Tent']);
+    expect(((await svc.bundle(String(trip.id), { user_id: owner.id }, owner.id)) as any)
       .packingItems.map((i: any) => i.name)).toEqual(['Ring', 'Tent']);
   });
 });

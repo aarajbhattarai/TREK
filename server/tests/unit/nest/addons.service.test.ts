@@ -23,7 +23,7 @@ function svc() {
   return new AddonsService(new DatabaseService(dbConn));
 }
 
-type ListAddon = ReturnType<AddonsService['list']>['addons'][number];
+type ListAddon = Awaited<ReturnType<AddonsService['list']>>['addons'][number];
 
 type PhotoProviderField = {
   key: string;
@@ -74,16 +74,16 @@ beforeEach(() => {
 });
 
 describe('AddonsService.list', () => {
-  it('returns the collab features and the bag-tracking flag from app_settings', () => {
+  it('returns the collab features and the bag-tracking flag from app_settings', async () => {
     feedReads([], [], [], [{ key: 'collab_chat_enabled', value: 'false' }], { value: 'true' });
 
-    const res = svc().list();
+    const res = await svc().list();
     expect(res.collabFeatures).toEqual({ chat: false, notes: true, links: true, polls: true, whatsnext: true });
     expect(res.bagTracking).toBe(true);
     expect(res.addons).toEqual([]);
   });
 
-  it('coerces the addon enabled column to a boolean (both 1 and 0)', () => {
+  it('coerces the addon enabled column to a boolean (both 1 and 0)', async () => {
     feedReads(
       [
         { id: 'atlas', name: 'Atlas', type: 'page', icon: 'globe', enabled: 1 },
@@ -93,14 +93,14 @@ describe('AddonsService.list', () => {
       [],
     );
 
-    const res = svc().list();
+    const res = await svc().list();
     expect(res.addons).toEqual([
       { id: 'atlas', name: 'Atlas', type: 'page', icon: 'globe', enabled: true },
       { id: 'vacay', name: 'Vacay', type: 'page', icon: 'sun', enabled: false },
     ]);
   });
 
-  it('maps a photo provider with no fields to an empty fields array (the || [] fallback)', () => {
+  it('maps a photo provider with no fields to an empty fields array (the || [] fallback)', async () => {
     feedReads(
       [],
       [{ id: 'immich', name: 'Immich', icon: 'image', enabled: 1, sort_order: 0 }],
@@ -108,7 +108,7 @@ describe('AddonsService.list', () => {
     );
     getPhotoProviderConfig.mockReturnValue({ baseUrl: 'http://x' });
 
-    const res = svc().list();
+    const res = await svc().list();
     expect(res.addons).toEqual([
       {
         id: 'immich',
@@ -123,18 +123,18 @@ describe('AddonsService.list', () => {
     expect(getPhotoProviderConfig).toHaveBeenCalledWith('immich');
   });
 
-  it('coerces a disabled photo provider enabled flag to false', () => {
+  it('coerces a disabled photo provider enabled flag to false', async () => {
     feedReads(
       [],
       [{ id: 'synology', name: 'Synology', icon: 'image', enabled: 0, sort_order: 1 }],
       [],
     );
 
-    const res = svc().list();
+    const res = await svc().list();
     expect((res.addons[0] as { enabled: boolean }).enabled).toBe(false);
   });
 
-  it('groups multiple fields under their provider and keeps insertion order', () => {
+  it('groups multiple fields under their provider and keeps insertion order', async () => {
     feedReads(
       [],
       [{ id: 'immich', name: 'Immich', icon: 'image', enabled: 1, sort_order: 0 }],
@@ -169,7 +169,7 @@ describe('AddonsService.list', () => {
       ],
     );
 
-    const res = svc().list();
+    const res = await svc().list();
     expect(providerFields(res.addons[0])).toEqual([
       {
         key: 'url',
@@ -198,7 +198,7 @@ describe('AddonsService.list', () => {
     ]);
   });
 
-  it('falls back placeholder→"", hint→null, settings/payload keys→null when columns are missing/empty', () => {
+  it('falls back placeholder→"", hint→null, settings/payload keys→null when columns are missing/empty', async () => {
     feedReads(
       [],
       [{ id: 'p', name: 'P', icon: 'i', enabled: 1, sort_order: 0 }],
@@ -216,7 +216,7 @@ describe('AddonsService.list', () => {
       ],
     );
 
-    const res = svc().list();
+    const res = await svc().list();
     const field = providerFields(res.addons[0])[0];
     expect(field).toMatchObject({
       placeholder: '',
@@ -226,7 +226,7 @@ describe('AddonsService.list', () => {
     });
   });
 
-  it('keeps fields belonging to other providers out of a provider with none of its own', () => {
+  it('keeps fields belonging to other providers out of a provider with none of its own', async () => {
     // A field exists, but for a DIFFERENT provider than the one returned — exercises
     // the `fieldsByProvider.get(p.id) || []` fallback while the map is non-empty.
     feedReads(
@@ -245,23 +245,23 @@ describe('AddonsService.list', () => {
       ],
     );
 
-    const res = svc().list();
+    const res = await svc().list();
     expect(providerFields(res.addons[0])).toEqual([]);
   });
 
-  it('concatenates regular addons before the photo providers', () => {
+  it('concatenates regular addons before the photo providers', async () => {
     feedReads(
       [{ id: 'atlas', name: 'Atlas', type: 'page', icon: 'globe', enabled: 1 }],
       [{ id: 'immich', name: 'Immich', icon: 'image', enabled: 1, sort_order: 0 }],
       [],
     );
 
-    const res = svc().list();
+    const res = await svc().list();
     expect(res.addons.map((a) => (a as { id: string }).id)).toEqual(['atlas', 'immich']);
     expect((res.addons[1] as { type: string }).type).toBe('photo_provider');
   });
 
-  it('drops the photo providers while the journey addon is off, whatever their rows say', () => {
+  it('drops the photo providers while the journey addon is off, whatever their rows say', async () => {
     // The journey gate (.get) answers disabled, so the provider query is never
     // made and the .all chain shortens to addons, fields, collab.
     dbMock._stmt.get.mockReturnValueOnce({ enabled: 0 });
@@ -270,7 +270,7 @@ describe('AddonsService.list', () => {
       .mockReturnValueOnce([])
       .mockReturnValueOnce([]);
 
-    const res = svc().list();
+    const res = await svc().list();
     expect(res.addons).toEqual([{ id: 'atlas', name: 'Atlas', type: 'page', icon: 'globe', enabled: true }]);
     const providerReads = (dbMock.prepare.mock.calls as unknown[][]).filter((call) => String(call[0]).includes('FROM photo_providers'));
     expect(providerReads).toEqual([]);
@@ -281,43 +281,43 @@ describe('AddonsService.list', () => {
 // services/adminService (finding `admin-1`). The polarity asymmetry is on
 // purpose: bag tracking is opt-in (=== 'true'), collab flags opt-out (!== 'false').
 describe('AddonsService addon/feature flags', () => {
-  it('isAddonEnabled coerces the enabled column (1/0/missing row)', () => {
+  it('isAddonEnabled coerces the enabled column (1/0/missing row)', async () => {
     dbMock._stmt.get.mockReturnValueOnce({ enabled: 1 });
-    expect(svc().isAddonEnabled('budget')).toBe(true);
+    expect(await svc().isAddonEnabled('budget')).toBe(true);
     dbMock._stmt.get.mockReturnValueOnce({ enabled: 0 });
-    expect(svc().isAddonEnabled('budget')).toBe(false);
+    expect(await svc().isAddonEnabled('budget')).toBe(false);
     dbMock._stmt.get.mockReturnValueOnce(undefined);
-    expect(svc().isAddonEnabled('nope')).toBe(false);
+    expect(await svc().isAddonEnabled('nope')).toBe(false);
   });
 
-  it('getBagTracking is opt-in: only the literal string true enables it', () => {
+  it('getBagTracking is opt-in: only the literal string true enables it', async () => {
     dbMock._stmt.get.mockReturnValueOnce({ value: 'true' });
-    expect(svc().getBagTracking()).toEqual({ enabled: true });
+    expect(await svc().getBagTracking()).toEqual({ enabled: true });
     dbMock._stmt.get.mockReturnValueOnce({ value: 'false' });
-    expect(svc().getBagTracking()).toEqual({ enabled: false });
+    expect(await svc().getBagTracking()).toEqual({ enabled: false });
     dbMock._stmt.get.mockReturnValueOnce(undefined); // absent row → OFF
-    expect(svc().getBagTracking()).toEqual({ enabled: false });
+    expect(await svc().getBagTracking()).toEqual({ enabled: false });
   });
 
-  it('updateBagTracking persists true/false strings and echoes the flag (ADMIN-SVC-030)', () => {
-    expect(svc().updateBagTracking(true)).toEqual({ enabled: true });
+  it('updateBagTracking persists true/false strings and echoes the flag (ADMIN-SVC-030)', async () => {
+    expect(await svc().updateBagTracking(true)).toEqual({ enabled: true });
     expect(dbMock._stmt.run).toHaveBeenCalledWith('true');
-    expect(svc().updateBagTracking(false)).toEqual({ enabled: false });
+    expect(await svc().updateBagTracking(false)).toEqual({ enabled: false });
     expect(dbMock._stmt.run).toHaveBeenCalledWith('false');
   });
 
-  it('getCollabFeatures is opt-out: absent rows default ON, only false disables', () => {
+  it('getCollabFeatures is opt-out: absent rows default ON, only false disables', async () => {
     dbMock._stmt.all.mockReturnValueOnce([
       { key: 'collab_chat_enabled', value: 'false' },
       { key: 'collab_polls_enabled', value: 'true' },
     ]);
-    expect(svc().getCollabFeatures()).toEqual({ chat: false, notes: true, links: true, polls: true, whatsnext: true });
+    expect(await svc().getCollabFeatures()).toEqual({ chat: false, notes: true, links: true, polls: true, whatsnext: true });
   });
 
-  it('updateCollabFeatures writes only the provided flags and reports changed (#1414, ADMIN-SVC-070)', () => {
+  it('updateCollabFeatures writes only the provided flags and reports changed (#1414, ADMIN-SVC-070)', async () => {
     // before-read: all default ON; after-read: chat flipped off → changed
     dbMock._stmt.all.mockReturnValueOnce([]).mockReturnValueOnce([{ key: 'collab_chat_enabled', value: 'false' }]);
-    const first = svc().updateCollabFeatures({ chat: false });
+    const first = await svc().updateCollabFeatures({ chat: false });
     expect(first.changed).toBe(true);
     expect(first.features.chat).toBe(false);
     expect(dbMock._stmt.run).toHaveBeenCalledTimes(1);
@@ -328,14 +328,14 @@ describe('AddonsService addon/feature flags', () => {
     dbMock._stmt.all
       .mockReturnValueOnce([{ key: 'collab_chat_enabled', value: 'false' }])
       .mockReturnValueOnce([{ key: 'collab_chat_enabled', value: 'false' }]);
-    const second = svc().updateCollabFeatures({ chat: false });
+    const second = await svc().updateCollabFeatures({ chat: false });
     expect(second.changed).toBe(false);
     expect(dbMock._stmt.run).toHaveBeenCalledWith('collab_chat_enabled', 'false');
 
     // undefined flags are not written
     dbMock._stmt.run.mockClear();
     dbMock._stmt.all.mockReturnValueOnce([]).mockReturnValueOnce([]);
-    const third = svc().updateCollabFeatures({});
+    const third = await svc().updateCollabFeatures({});
     expect(third.changed).toBe(false);
     expect(dbMock._stmt.run).not.toHaveBeenCalled();
   });
@@ -359,30 +359,30 @@ describe('AddonsService places flags', () => {
     ['getPlacesDetails', 'updatePlacesDetails', 'places_details_enabled'],
   ] as const;
 
-  it('ADDONS-SVC-080 an unset flag reads as OFF, and anything but the literal true does too', () => {
+  it('ADDONS-SVC-080 an unset flag reads as OFF, and anything but the literal true does too', async () => {
     for (const [getter, , key] of cases) {
       dbMock._stmt.get.mockReturnValueOnce(undefined);
-      expect(svc()[getter]()).toEqual({ enabled: false });
+      expect(await svc()[getter]()).toEqual({ enabled: false });
       expect(dbMock.prepare).toHaveBeenLastCalledWith('SELECT value FROM app_settings WHERE key = ?');
       expect(dbMock._stmt.get).toHaveBeenLastCalledWith(key);
 
       dbMock._stmt.get.mockReturnValueOnce({ value: 'garbage' });
-      expect(svc()[getter]()).toEqual({ enabled: false });
+      expect(await svc()[getter]()).toEqual({ enabled: false });
     }
   });
 
-  it('ADDONS-SVC-081 a stored "true" reads as ON', () => {
+  it('ADDONS-SVC-081 a stored "true" reads as ON', async () => {
     for (const [getter] of cases) {
       dbMock._stmt.get.mockReturnValueOnce({ value: 'true' });
-      expect(svc()[getter]()).toEqual({ enabled: true });
+      expect(await svc()[getter]()).toEqual({ enabled: true });
     }
   });
 
-  it('ADDONS-SVC-082 the setters persist the literal string and echo the boolean back', () => {
+  it('ADDONS-SVC-082 the setters persist the literal string and echo the boolean back', async () => {
     for (const [, setter, key] of cases) {
-      expect(svc()[setter](true)).toEqual({ enabled: true });
+      expect(await svc()[setter](true)).toEqual({ enabled: true });
       expect(dbMock._stmt.run).toHaveBeenLastCalledWith(key, 'true');
-      expect(svc()[setter](false)).toEqual({ enabled: false });
+      expect(await svc()[setter](false)).toEqual({ enabled: false });
       expect(dbMock._stmt.run).toHaveBeenLastCalledWith(key, 'false');
     }
   });
@@ -403,25 +403,25 @@ describe('AddonsService places enrichment flag', () => {
     vi.clearAllMocks();
   });
 
-  it('ADDONS-SVC-083 an unset flag reads as ON', () => {
+  it('ADDONS-SVC-083 an unset flag reads as ON', async () => {
     dbMock._stmt.get.mockReturnValueOnce(undefined);
-    expect(svc().getPlacesEnrich()).toEqual({ enabled: true });
+    expect(await svc().getPlacesEnrich()).toEqual({ enabled: true });
   });
 
-  it('ADDONS-SVC-084 only the literal "false" switches it off', () => {
+  it('ADDONS-SVC-084 only the literal "false" switches it off', async () => {
     dbMock._stmt.get.mockReturnValueOnce({ value: 'false' });
-    expect(svc().getPlacesEnrich()).toEqual({ enabled: false });
+    expect(await svc().getPlacesEnrich()).toEqual({ enabled: false });
 
     for (const value of ['true', 'garbage', '']) {
       dbMock._stmt.get.mockReturnValueOnce({ value });
-      expect(svc().getPlacesEnrich()).toEqual({ enabled: true });
+      expect(await svc().getPlacesEnrich()).toEqual({ enabled: true });
     }
   });
 
-  it('ADDONS-SVC-085 the setter persists the literal string and echoes the boolean back', () => {
-    expect(svc().updatePlacesEnrich(false)).toEqual({ enabled: false });
+  it('ADDONS-SVC-085 the setter persists the literal string and echoes the boolean back', async () => {
+    expect(await svc().updatePlacesEnrich(false)).toEqual({ enabled: false });
     expect(dbMock._stmt.run).toHaveBeenLastCalledWith('places_enrich_enabled', 'false');
-    expect(svc().updatePlacesEnrich(true)).toEqual({ enabled: true });
+    expect(await svc().updatePlacesEnrich(true)).toEqual({ enabled: true });
     expect(dbMock._stmt.run).toHaveBeenLastCalledWith('places_enrich_enabled', 'true');
   });
 });
@@ -437,27 +437,27 @@ describe('AddonsService transit provider', () => {
     vi.clearAllMocks();
   });
 
-  it('ADDONS-SVC-086 an unset provider reads as Transitous, with no key anywhere', () => {
+  it('ADDONS-SVC-086 an unset provider reads as Transitous, with no key anywhere', async () => {
     dbMock._stmt.get.mockReturnValue(undefined);
-    expect(svc().getTransitProvider()).toEqual({ provider: 'transitous', googleKeySource: null });
+    expect(await svc().getTransitProvider()).toEqual({ provider: 'transitous', googleKeySource: null });
   });
 
-  it('ADDONS-SVC-087 only a known provider name is honoured', () => {
+  it('ADDONS-SVC-087 only a known provider name is honoured', async () => {
     dbMock._stmt.get.mockReturnValueOnce({ value: 'google' }).mockReturnValue(undefined);
-    expect(svc().getTransitProvider().provider).toBe('google');
+    expect((await svc().getTransitProvider()).provider).toBe('google');
 
     for (const value of ['someday-maps', '', 'GOOGLE']) {
       dbMock._stmt.get.mockReset();
       dbMock._stmt.get.mockReturnValueOnce({ value }).mockReturnValue(undefined);
-      expect(svc().getTransitProvider().provider).toBe('transitous');
+      expect((await svc().getTransitProvider()).provider).toBe('transitous');
     }
   });
 
-  it('ADDONS-SVC-088 the setter persists the name and echoes it back', () => {
+  it('ADDONS-SVC-088 the setter persists the name and echoes it back', async () => {
     dbMock._stmt.get.mockReturnValue(undefined);
-    expect(svc().updateTransitProvider('google').provider).toBe('google');
+    expect((await svc().updateTransitProvider('google')).provider).toBe('google');
     expect(dbMock._stmt.run).toHaveBeenLastCalledWith('transit_provider', 'google');
-    expect(svc().updateTransitProvider('transitous').provider).toBe('transitous');
+    expect((await svc().updateTransitProvider('transitous')).provider).toBe('transitous');
     expect(dbMock._stmt.run).toHaveBeenLastCalledWith('transit_provider', 'transitous');
   });
 
@@ -466,11 +466,11 @@ describe('AddonsService transit provider', () => {
    * the instance/user-row split is the part worth pinning: only 'user-row'
    * means "works for this admin, Transitous for everybody else".
    */
-  it('ADDONS-SVC-089 reports where the Google key resolved from', () => {
+  it('ADDONS-SVC-089 reports where the Google key resolved from', async () => {
     // provider row, then the instance maps_api_key row.
     dbMock._stmt.get.mockReset();
     dbMock._stmt.get.mockReturnValueOnce({ value: 'google' }).mockReturnValueOnce({ value: 'instance-key' });
-    expect(svc().getTransitProvider(7).googleKeySource).toBe('instance');
+    expect((await svc().getTransitProvider(7)).googleKeySource).toBe('instance');
 
     // No instance row, but the caller's own users column has one.
     dbMock._stmt.get.mockReset();
@@ -478,12 +478,12 @@ describe('AddonsService transit provider', () => {
       .mockReturnValueOnce({ value: 'google' })
       .mockReturnValueOnce(undefined)
       .mockReturnValueOnce({ maps_api_key: 'personal-key' });
-    expect(svc().getTransitProvider(7).googleKeySource).toBe('user-row');
+    expect((await svc().getTransitProvider(7)).googleKeySource).toBe('user-row');
 
     // Nothing anywhere.
     dbMock._stmt.get.mockReset();
     dbMock._stmt.get.mockReturnValue(undefined);
-    expect(svc().getTransitProvider(7).googleKeySource).toBeNull();
+    expect((await svc().getTransitProvider(7)).googleKeySource).toBeNull();
   });
 });
 
@@ -500,24 +500,24 @@ describe('AddonsService place shadow flag', () => {
     vi.clearAllMocks();
   });
 
-  it('ADDONS-SVC-090 an unset flag reads as OFF, and so does every value but the literal "true"', () => {
+  it('ADDONS-SVC-090 an unset flag reads as OFF, and so does every value but the literal "true"', async () => {
     dbMock._stmt.get.mockReturnValueOnce(undefined);
-    expect(svc().getPlaceShadow()).toEqual({ enabled: false });
+    expect(await svc().getPlaceShadow()).toEqual({ enabled: false });
     expect(dbMock.prepare).toHaveBeenLastCalledWith('SELECT value FROM app_settings WHERE key = ?');
     expect(dbMock._stmt.get).toHaveBeenLastCalledWith('place_shadow_enabled');
 
     for (const value of ['false', 'TRUE', '1', '']) {
       dbMock._stmt.get.mockReturnValueOnce({ value });
-      expect(svc().getPlaceShadow()).toEqual({ enabled: false });
+      expect(await svc().getPlaceShadow()).toEqual({ enabled: false });
     }
   });
 
-  it('ADDONS-SVC-091 a stored "true" reads as ON', () => {
+  it('ADDONS-SVC-091 a stored "true" reads as ON', async () => {
     dbMock._stmt.get.mockReturnValueOnce({ value: 'true' });
-    expect(svc().getPlaceShadow()).toEqual({ enabled: true });
+    expect(await svc().getPlaceShadow()).toEqual({ enabled: true });
   });
 
-  it('ADDONS-SVC-092 the setter round-trips through the getter under its own key', () => {
+  it('ADDONS-SVC-092 the setter round-trips through the getter under its own key', async () => {
     // Keyed store instead of an echo assertion: the write has to produce the
     // exact string the read compares against, so a setter persisting '1' fails
     // here rather than silently reading back OFF in production.
@@ -530,19 +530,19 @@ describe('AddonsService place shadow flag', () => {
       return value === undefined ? undefined : { value };
     });
 
-    expect(svc().updatePlaceShadow(true)).toEqual({ enabled: true });
+    expect(await svc().updatePlaceShadow(true)).toEqual({ enabled: true });
     expect(dbMock._stmt.run).toHaveBeenLastCalledWith('place_shadow_enabled', 'true');
-    expect(svc().getPlaceShadow()).toEqual({ enabled: true });
+    expect(await svc().getPlaceShadow()).toEqual({ enabled: true });
     // a sibling switch must not ride along on the shared statement
-    expect(svc().getPlacesDetails()).toEqual({ enabled: false });
+    expect(await svc().getPlacesDetails()).toEqual({ enabled: false });
 
-    expect(svc().updatePlaceShadow(false)).toEqual({ enabled: false });
+    expect(await svc().updatePlaceShadow(false)).toEqual({ enabled: false });
     expect(dbMock._stmt.run).toHaveBeenLastCalledWith('place_shadow_enabled', 'false');
-    expect(svc().getPlaceShadow()).toEqual({ enabled: false });
+    expect(await svc().getPlaceShadow()).toEqual({ enabled: false });
     expect([...stored.keys()]).toEqual(['place_shadow_enabled']);
   });
 
-  it('ADDONS-SVC-093 answers the same as PlaceShadowService.enabled() for every stored value', () => {
+  it('ADDONS-SVC-093 answers the same as PlaceShadowService.enabled() for every stored value', async () => {
     const shadow = new PlaceShadowService(new DatabaseService(dbConn));
     const rows: Array<[{ value: string } | undefined, boolean]> = [
       [undefined, false],
@@ -559,7 +559,7 @@ describe('AddonsService place shadow flag', () => {
       // so the key each one names has to be asserted too: the getter binds it,
       // the gate inlines it, and a divergence there would still look like
       // agreement on the value alone.
-      expect(svc().getPlaceShadow()).toEqual({ enabled: expected });
+      expect(await svc().getPlaceShadow()).toEqual({ enabled: expected });
       expect(dbMock._stmt.get).toHaveBeenLastCalledWith('place_shadow_enabled');
 
       expect(shadow.enabled()).toBe(expected);

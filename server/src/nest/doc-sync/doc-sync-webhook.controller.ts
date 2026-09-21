@@ -54,8 +54,8 @@ export class DocSyncWebhookController implements OnModuleDestroy {
    * well as on arrival, so a switch thrown during the debounce window still
    * takes effect.
    */
-  private syncIsOn(link: LinkRow): boolean {
-    if (this.sync.isSwitchedOff(link)) return false;
+  private async syncIsOn(link: LinkRow): Promise<boolean> {
+    if ((await this.sync.isSwitchedOff(link))) return false;
     const killSwitch = this.db.get<{ value: string }>(
       'SELECT value FROM app_settings WHERE key = ?', SETTING_SYNC_ENABLED,
     )?.value;
@@ -72,12 +72,12 @@ export class DocSyncWebhookController implements OnModuleDestroy {
   @Post(':token')
   @Public('A provider cannot hold a TREK session; the per-link token in the URL is the authentication, and the call can only ever trigger a sync run.')
   @HttpCode(200)
-  nudge(@Param('token') token: string, @Req() req: Request) {
+  async nudge(@Param('token') token: string, @Req() req: Request) {
     const link = this.config.getLinkByToken(token);
     // Always 200, even for an unknown token: a 404 here would let anyone probe
     // which tokens exist, and a provider that gets an error will retry anyway.
     if (!link || link.sync_enabled !== 1) return { received: true };
-    if (!this.syncIsOn(link)) return { received: true };
+    if (!(await this.syncIsOn(link))) return { received: true };
 
     // The secret is only known to a provider TREK subscribed at itself, so it
     // is only demanded there. A URL pasted into a store by hand (Papra, or a
@@ -108,11 +108,11 @@ export class DocSyncWebhookController implements OnModuleDestroy {
    */
   private schedule(linkId: number, reload: () => ReturnType<DocSyncConfigService['getLink']>, isRetry = false): void {
     if (this.pending.has(linkId)) return;
-    const timer = setTimeout(() => {
+    const timer = setTimeout(async () => {
       this.pending.delete(linkId);
       const fresh = reload();
       if (!fresh || fresh.sync_enabled !== 1) return;
-      if (!this.syncIsOn(fresh)) return;
+      if (!(await this.syncIsOn(fresh))) return;
       void this.sync.syncLink(fresh).then((res) => {
         // A run that was already in flight answers `busy`, and the changes this
         // nudge was about may have landed after that run read the folder. Ask

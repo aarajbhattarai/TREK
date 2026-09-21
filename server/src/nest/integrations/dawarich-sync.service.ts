@@ -73,13 +73,13 @@ export class DawarichSyncService {
   ) {}
 
   /** The addon gate, evaluated per tick so an admin toggle lands without a restart. */
-  syncGloballyEnabled(): boolean {
+  async syncGloballyEnabled(): Promise<boolean> {
     return this.addons.isAddonEnabled(ADDON_IDS.DAWARICH);
   }
 
   /** Every connected user, one after another. The cron's entry point. */
   async runSync(): Promise<void> {
-    if (!this.syncGloballyEnabled()) return;
+    if (!(await this.syncGloballyEnabled())) return;
     if (this.running) return;
     this.running = true;
     try {
@@ -132,7 +132,7 @@ export class DawarichSyncService {
 
   /** The body of a sync, with the guard above already held. */
   private async syncUserOnce(userId: number): Promise<DawarichSyncOutcome> {
-    if (!this.syncGloballyEnabled()) {
+    if (!(await this.syncGloballyEnabled())) {
       this.dawarich.recordSyncResult(userId, 'failed', 'addon_disabled');
       return { state: 'failed', created: 0, updated: 0, missing: 0 };
     }

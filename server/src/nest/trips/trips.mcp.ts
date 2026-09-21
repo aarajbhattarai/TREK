@@ -161,7 +161,7 @@ export class TripsMcp {
   ) {
     if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
     if (!this.trips.canAccessTrip(tripId, ctx.userId)) return noAccess();
-    if (!this.guards.hasTripPermission('trip_edit', tripId, ctx.userId)) return permissionDenied();
+    if (!(await this.guards.hasTripPermission('trip_edit', tripId, ctx.userId))) return permissionDenied();
     if (clear_dates && (start_date || end_date))
       return errorResult('clear_dates cannot be combined with start_date or end_date.');
     if (start_date) {
@@ -264,14 +264,14 @@ export class TripsMcp {
   })
   async getTripSummary({ tripId }: { tripId: number }, ctx: McpContext) {
     if (!this.trips.canAccessTrip(tripId, ctx.userId)) return noAccess();
-    const summary = this.readModel.getTripSummary(tripId, ctx.userId);
+    const summary = await this.readModel.getTripSummary(tripId, ctx.userId);
     if (!summary) return noAccess();
     const R = canReadTrips(ctx.scopes);
     // Addon availability gates
-    const packingEnabled = this.addons.isAddonEnabled(ADDON_IDS.PACKING);
-    const budgetEnabled  = this.addons.isAddonEnabled(ADDON_IDS.BUDGET);
-    const collabEnabled  = this.addons.isAddonEnabled(ADDON_IDS.COLLAB);
-    const collabFeatures = collabEnabled ? this.addons.getCollabFeatures() : null;
+    const packingEnabled = await this.addons.isAddonEnabled(ADDON_IDS.PACKING);
+    const budgetEnabled  = await this.addons.isAddonEnabled(ADDON_IDS.BUDGET);
+    const collabEnabled  = await this.addons.isAddonEnabled(ADDON_IDS.COLLAB);
+    const collabFeatures = collabEnabled ? await this.addons.getCollabFeatures() : null;
     // Scope gates — sections not covered by the client's OAuth scopes are omitted.
     // Core trip data (metadata, days, members, accommodations) is always included
     // because this tool is always registered and needed for navigation.
@@ -357,7 +357,7 @@ export class TripsMcp {
     // member_manage rather than a hardcoded owner test: the action is admin-lowerable
     // in the permission matrix, and POST /api/trips/:id/members has always honoured
     // that setting (and the admin bypass inside checkPermission) where this did not.
-    if (!this.guards.hasTripPermission('member_manage', tripId, ctx.userId)) return permissionDenied();
+    if (!(await this.guards.hasTripPermission('member_manage', tripId, ctx.userId))) return permissionDenied();
     try {
       const result = this.members.addMember(tripId, identifier, ownerRow.user_id, ctx.userId);
       this.guards.safeBroadcast(tripId, 'member:added', { member: result.member });
@@ -383,7 +383,7 @@ export class TripsMcp {
     if (!this.trips.canAccessTrip(tripId, ctx.userId)) return noAccess();
     // Giving up your own access is not member management, so it carries no permission
     // requirement: the same self-removal bypass DELETE /api/trips/:id/members/:userId has.
-    if (memberId !== ctx.userId && !this.guards.hasTripPermission('member_manage', tripId, ctx.userId))
+    if (memberId !== ctx.userId && !(await this.guards.hasTripPermission('member_manage', tripId, ctx.userId)))
       return permissionDenied();
     this.members.removeMember(tripId, memberId);
     this.guards.safeBroadcast(tripId, 'member:removed', { userId: memberId });
@@ -598,8 +598,8 @@ export class TripsMcp {
     if (!this.trips.canAccessTrip(tripId, ctx.userId)) {
       return { messages: [{ role: 'user' as const, content: { type: 'text' as const, text: 'Trip not found or access denied.' } }] };
     }
-    const summary = this.readModel.getTripSummary(tripId, ctx.userId);
-    if (!summary) {
+    const summary = await this.readModel.getTripSummary(tripId, ctx.userId);
+    if (!(await summary)) {
       return { messages: [{ role: 'user' as const, content: { type: 'text' as const, text: 'Trip not found.' } }] };
     }
     const { trip, days, members, budget, packing, reservations, collab_notes } = summary as any;

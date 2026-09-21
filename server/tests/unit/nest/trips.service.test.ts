@@ -88,12 +88,14 @@ import fs from 'fs';
 import path from 'path';
 import { notificationsStub } from '../../helpers/notifications';
 import { EphemeralTokenService } from '../../../src/nest/auth/ephemeral-token.service';
+import { createTestUnitOfWork } from '../../helpers/test-uow';
+import { UnitOfWork } from '../../../src/nest/database/unit-of-work';
 
 // Real sibling services over the same in-memory DB — updateTrip's date-shift
 // resyncs and the summary/bundle aggregation run their actual SQL.
 const dbs = () => new DatabaseService(testDb);
-const budgetSvc = new BudgetService(dbs(), new PermissionsService(dbs()), new ExchangeRatesService(), new RealtimeService());
-const daysSvc = new DaysService(dbs(), new PermissionsService(dbs()), new RealtimeService(), new QueryHelpersService(dbs()));
+
+
 // Same collaborator set the container hands PlacesService (see places.service.test.ts).
 // Only the read-model aggregation reaches into places here, but the photo cache,
 // Unsplash and journey domain are real instances over the same in-memory DB
@@ -103,9 +105,29 @@ const daysSvc = new DaysService(dbs(), new PermissionsService(dbs()), new Realti
 // production, where the in-flight dedup only works on a shared instance.
 const photoCache = new PlacePhotoCacheService(dbs(), makeStorageFixture('photos/google/').storage);
 const coversFx = makeStorageFixture('covers/');
-const placesSvc = new PlacesService(
+
+
+let accommodationsSvc: Awaited<ReturnType<typeof makeAccommodationsService>>;
+let createAccommodation: typeof accommodationsSvc.createAccommodation;
+beforeAll(async () => {
+  accommodationsSvc = await makeAccommodationsService(testDb);
+  createAccommodation = accommodationsSvc.createAccommodation.bind(accommodationsSvc);
+});
+
+
+
+let budgetSvc: BudgetService;
+let daysSvc: DaysService;
+let placesSvc: PlacesService;
+let svc: TripsService;
+let membersSvc: TripMembersService;
+let readModelSvc: TripReadModelService;
+beforeAll(async () => {
+  budgetSvc = new BudgetService(dbs(), new PermissionsService(dbs(), await createTestUnitOfWork(dbs().connection)), new ExchangeRatesService(), new RealtimeService());
+  daysSvc = new DaysService(dbs(), new PermissionsService(dbs(), await createTestUnitOfWork(dbs().connection)), new RealtimeService(), new QueryHelpersService(dbs()));
+  placesSvc = new PlacesService(
   dbs(),
-  new PermissionsService(dbs()),
+  new PermissionsService(dbs(), await createTestUnitOfWork(dbs().connection)),
   new RealtimeService(),
   new MapsService(dbs(), photoCache),
   new QueryHelpersService(dbs()),
@@ -113,32 +135,30 @@ const placesSvc = new PlacesService(
   photoCache,
   new JourneyDomainService(dbs(), new RealtimeService(), new TrekPhotosRepository(dbs())),
   makeStorageFixture('').storage,
-  accommodationsOver(dbs()),
+  await accommodationsOver(dbs()), await createTestUnitOfWork(dbs().connection),
 );
-const accommodationsSvc = makeAccommodationsService(testDb);
-const createAccommodation = accommodationsSvc.createAccommodation.bind(accommodationsSvc);
-
-const svc = new TripsService(
+  svc = new TripsService(
   dbs(),
-  new ReservationsService(dbs(), new PermissionsService(dbs()), budgetSvc, new RealtimeService(), notificationsStub(), new ReservationsReadRepository(dbs()), accommodationsSvc),
+  new ReservationsService(dbs(), new PermissionsService(dbs(), await createTestUnitOfWork(dbs().connection)), budgetSvc, new RealtimeService(), notificationsStub(), new ReservationsReadRepository(dbs()), accommodationsSvc, await createTestUnitOfWork(dbs().connection)),
   daysSvc,
-  new PermissionsService(dbs()),
+  new PermissionsService(dbs(), await createTestUnitOfWork(dbs().connection)),
   budgetSvc,
   new VacayService(dbs(), new RealtimeService(), notificationsStub()),
   new RealtimeService(),
   undefined as never, // unsplash — not exercised here
   coversFx.storage,
 );
-const membersSvc = new TripMembersService(dbs(), budgetSvc, new UserCleanupService(dbs(), budgetSvc), new PermissionsService(dbs()), new RealtimeService(), notificationsStub());
-const readModelSvc = new TripReadModelService(
+  membersSvc = new TripMembersService(dbs(), budgetSvc, new UserCleanupService(dbs(), budgetSvc), new PermissionsService(dbs(), await createTestUnitOfWork(dbs().connection)), new RealtimeService(), notificationsStub());
+  readModelSvc = new TripReadModelService(
   dbs(), membersSvc, daysSvc, accommodationsSvc, budgetSvc,
-  new PackingService(dbs(), new PermissionsService(dbs()), new RealtimeService(), notificationsStub()),
-  new ReservationsService(dbs(), new PermissionsService(dbs()), budgetSvc, new RealtimeService(), notificationsStub(), new ReservationsReadRepository(dbs()), accommodationsSvc),
-  new CollabService(dbs(), new PermissionsService(dbs()), new RealtimeService(), notificationsStub(), coversFx.storage, new RateLimitService()),
+  new PackingService(dbs(), new PermissionsService(dbs(), await createTestUnitOfWork(dbs().connection)), new RealtimeService(), notificationsStub()),
+  new ReservationsService(dbs(), new PermissionsService(dbs(), await createTestUnitOfWork(dbs().connection)), budgetSvc, new RealtimeService(), notificationsStub(), new ReservationsReadRepository(dbs()), accommodationsSvc, await createTestUnitOfWork(dbs().connection)),
+  new CollabService(dbs(), new PermissionsService(dbs(), await createTestUnitOfWork(dbs().connection)), new RealtimeService(), notificationsStub(), coversFx.storage, new RateLimitService()),
   placesSvc,
-  new TodoService(dbs(), new PermissionsService(dbs()), new RealtimeService()),
-  new FilesService(dbs(), new PermissionsService(dbs()), new RealtimeService(), new EphemeralTokenService(), coversFx.storage),
+  new TodoService(dbs(), new PermissionsService(dbs(), await createTestUnitOfWork(dbs().connection)), new RealtimeService()),
+  new FilesService(dbs(), new PermissionsService(dbs(), await createTestUnitOfWork(dbs().connection)), new RealtimeService(), new EphemeralTokenService(), coversFx.storage),
 );
+});
 
 
 beforeAll(() => {
@@ -472,11 +492,11 @@ describe('resyncAccommodationDays (#1288)', () => {
   const dayFor = (tripId: number, date: string) =>
     (testDb.prepare('SELECT id FROM days WHERE trip_id = ? AND date = ?').get(tripId, date) as { id: number }).id;
 
-  const insertAccommodation = (tripId: number, startDayId: number, endDayId: number) => {
+  const insertAccommodation = async (tripId: number, startDayId: number, endDayId: number) => {
     const place = createPlace(testDb, tripId, { name: 'Grand Hotel' });
-    const { accommodation: acc } = createAccommodation(tripId, {
+    const { accommodation: acc } = (await createAccommodation(tripId, {
       place_id: place.id, start_day_id: startDayId, end_day_id: endDayId,
-    }) as { accommodation: { id: number } };
+    })) as { accommodation: { id: number } };
     const linkedRes = testDb.prepare(
       'SELECT id FROM reservations WHERE accommodation_id = ?',
     ).get(acc.id) as { id: number };
@@ -490,10 +510,10 @@ describe('resyncAccommodationDays (#1288)', () => {
     testDb.prepare('SELECT day_id, reservation_time FROM reservations WHERE id = ?').get(id) as
       { day_id: number | null; reservation_time: string | null };
 
-  it('TRIP-SVC-035: extending the start keeps an accommodation on its absolute dates', () => {
+  it('TRIP-SVC-035: extending the start keeps an accommodation on its absolute dates', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id, { start_date: '2025-06-10', end_date: '2025-06-14' });
-    const { accId, linkedResId } = insertAccommodation(trip.id, dayFor(trip.id, '2025-06-11'), dayFor(trip.id, '2025-06-13'));
+    const { accId, linkedResId } = await insertAccommodation(trip.id, dayFor(trip.id, '2025-06-11'), dayFor(trip.id, '2025-06-13'));
     // Add a day at the start: days re-date positionally (old 06-11 row becomes 06-10, …).
     svc.updateTrip(trip.id, user.id, { start_date: '2025-06-09', end_date: '2025-06-14' }, 'user');
     const acc = getAcc(accId);
@@ -504,13 +524,13 @@ describe('resyncAccommodationDays (#1288)', () => {
     expect(res.reservation_time?.slice(0, 10)).toBe('2025-06-11');
   });
 
-  it('TRIP-SVC-059: the day stop a booking wrote follows it when the trip is re-dated', () => {
+  it('TRIP-SVC-059: the day stop a booking wrote follows it when the trip is re-dated', async () => {
     // Booking a night also puts its place on the check-in day. Re-dating the trip moves
     // the stay to whichever day row now carries its date, and the stop has to go with
     // it, or the route runs through a day the traveller is no longer staying on.
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id, { start_date: '2025-06-10', end_date: '2025-06-14' });
-    const { accId } = insertAccommodation(trip.id, dayFor(trip.id, '2025-06-11'), dayFor(trip.id, '2025-06-13'));
+    const { accId } = await insertAccommodation(trip.id, dayFor(trip.id, '2025-06-11'), dayFor(trip.id, '2025-06-13'));
     const stopOf = () => testDb.prepare('SELECT day_id FROM day_assignments WHERE accommodation_id = ?').get(accId) as { day_id: number };
     expect(stopOf().day_id).toBe(dayFor(trip.id, '2025-06-11'));
 
@@ -520,12 +540,12 @@ describe('resyncAccommodationDays (#1288)', () => {
     expect(stopOf().day_id).toBe(dayFor(trip.id, '2025-06-11'));
   });
 
-  it('TRIP-SVC-036: moving the whole trip out of the old range keeps the accommodation glued to its days', () => {
+  it('TRIP-SVC-036: moving the whole trip out of the old range keeps the accommodation glued to its days', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id, { start_date: '2025-06-01', end_date: '2025-06-05' });
     const startDayId = dayFor(trip.id, '2025-06-02');
     const endDayId = dayFor(trip.id, '2025-06-03');
-    const { accId, linkedResId } = insertAccommodation(trip.id, startDayId, endDayId);
+    const { accId, linkedResId } = await insertAccommodation(trip.id, startDayId, endDayId);
     svc.updateTrip(trip.id, user.id, { start_date: '2025-07-01', end_date: '2025-07-05' }, 'user');
     const acc = getAcc(accId);
     expect(acc.start_day_id).toBe(startDayId);
@@ -536,14 +556,14 @@ describe('resyncAccommodationDays (#1288)', () => {
     expect(res.reservation_time?.slice(0, 10)).toBe('2025-07-02');
   });
 
-  it("TRIP-SVC-038: date_shift_mode 'shift_all' glues bookings to their days and restamps their times", () => {
+  it("TRIP-SVC-038: date_shift_mode 'shift_all' glues bookings to their days and restamps their times", async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id, { start_date: '2025-06-01', end_date: '2025-06-05' });
     const origDayId = dayFor(trip.id, '2025-06-02');
     const resId = Number(testDb.prepare(
       "INSERT INTO reservations (trip_id, day_id, title, reservation_time, type, status) VALUES (?, ?, 'Dinner', '2025-06-02T19:00:00', 'restaurant', 'pending')",
     ).run(trip.id, origDayId).lastInsertRowid);
-    const { accId } = insertAccommodation(trip.id, origDayId, dayFor(trip.id, '2025-06-03'));
+    const { accId } = await insertAccommodation(trip.id, origDayId, dayFor(trip.id, '2025-06-03'));
     svc.updateTrip(trip.id, user.id, { start_date: '2025-06-03', end_date: '2025-06-07', date_shift_mode: 'shift_all' }, 'user');
     // The booking stays on its day row (now 2025-06-04) and its time follows.
     const res = testDb.prepare('SELECT day_id, reservation_time FROM reservations WHERE id = ?').get(resId) as
@@ -692,7 +712,7 @@ describe('guest members (#1362)', () => {
 // ── Folded CRUD SQL (summary / list / create / delete / copy) ─────────────────
 
 describe('folded trip CRUD', () => {
-  it('TRIP-SVC-042: getTripSummary aggregates members, days, budget, packing and reservations', () => {
+  it('TRIP-SVC-042: getTripSummary aggregates members, days, budget, packing and reservations', async () => {
     const { user: owner } = createUser(testDb);
     const { user: member } = createUser(testDb);
     const trip = createTrip(testDb, owner.id, { start_date: '2025-06-01', end_date: '2025-06-02' });
@@ -700,7 +720,7 @@ describe('folded trip CRUD', () => {
     testDb.prepare("INSERT INTO budget_items (trip_id, category, name, total_price) VALUES (?, 'food', 'Dinner', 40)").run(trip.id);
     testDb.prepare("INSERT INTO packing_items (trip_id, name, checked) VALUES (?, 'Socks', 1)").run(trip.id);
 
-    const summary = readModelSvc.getTripSummary(trip.id, owner.id)!;
+    const summary = await (await readModelSvc.getTripSummary(trip.id, owner.id))!;
     expect(summary).toBeTruthy();
     expect((summary.trip as any).id).toBe(trip.id);
     expect(summary.members.owner.id).toBe(owner.id);
@@ -714,7 +734,7 @@ describe('folded trip CRUD', () => {
     expect(summary.collab_notes).toEqual([]);
 
     // Missing trips return null instead of throwing.
-    expect(readModelSvc.getTripSummary(99999)).toBeNull();
+    expect(await readModelSvc.getTripSummary(99999)).toBeNull();
   });
 
   it('TRIP-SVC-043: list returns owned + shared trips with is_owner, honoring the archived filter', () => {
@@ -996,12 +1016,12 @@ describe('TripsService wrapper helpers', () => {
     }
   });
 
-  it('canAccessTrip delegates to the db helper; can() delegates to checkPermission; broadcast forwards', () => {
+  it('canAccessTrip delegates to the db helper; can() delegates to checkPermission; broadcast forwards', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     expect(svc.canAccessTrip(String(trip.id), user.id)).toMatchObject({ user_id: user.id });
 
-    expect(svc.can('trip_edit', 'user', user.id, user.id, false)).toBe(true);
+    expect(await svc.can('trip_edit', 'user', user.id, user.id, false)).toBe(true);
 
     svc.broadcast('9', 'trip:updated', { a: 1 } as never, 'sock');
     expect(broadcast).toHaveBeenCalledWith('9', 'trip:updated', { a: 1 }, 'sock');
@@ -1015,7 +1035,7 @@ describe('TripsService wrapper helpers', () => {
     expect(row.is_owner).toBe(1);
   });
 
-  it('bundle aggregates every sub-collection + the member list, scoping packing to the viewer (#858)', () => {
+  it('bundle aggregates every sub-collection + the member list, scoping packing to the viewer (#858)', async () => {
     const { user: owner } = createUser(testDb);
     const { user: viewer } = createUser(testDb);
     const trip = createTrip(testDb, owner.id, { start_date: '2025-06-01', end_date: '2025-06-02' });
@@ -1024,7 +1044,7 @@ describe('TripsService wrapper helpers', () => {
     testDb.prepare("INSERT INTO packing_items (trip_id, name, is_private, owner_id) VALUES (?, 'Secret', 1, ?)").run(trip.id, owner.id);
     testDb.prepare("INSERT INTO packing_items (trip_id, name) VALUES (?, 'Shared')").run(trip.id);
 
-    const result = readModelSvc.bundle(String(trip.id), { user_id: owner.id }, viewer.id) as any;
+    const result = (await readModelSvc.bundle(String(trip.id), { user_id: owner.id }, viewer.id)) as any;
     expect(result.days).toHaveLength(2);
     expect(result.members.map((m: any) => m.id).sort()).toEqual([owner.id, viewer.id].sort());
     expect(result.packingItems.map((p: any) => p.name)).toEqual(['Shared']);
@@ -1181,13 +1201,13 @@ describe('quirk fixes', () => {
     return { connection: conn, canAccessTrip: dbMock.canAccessTrip, isOwner: dbMock.isOwner } as unknown as import('../../../src/nest/database/database.service').DatabaseService;
   }
 
-  function failingTrips(match: string) {
+  async function failingTrips(match: string) {
     const fdbs = failingConnection(match);
     return new TripsService(
       fdbs,
-      new ReservationsService(dbs(), new PermissionsService(dbs()), budgetSvc, new RealtimeService(), notificationsStub(), new ReservationsReadRepository(dbs()), accommodationsSvc),
+      new ReservationsService(dbs(), new PermissionsService(dbs(), await createTestUnitOfWork(dbs().connection)), budgetSvc, new RealtimeService(), notificationsStub(), new ReservationsReadRepository(dbs()), accommodationsSvc, await createTestUnitOfWork(dbs().connection)),
       daysSvc,
-      new PermissionsService(dbs()),
+      new PermissionsService(dbs(), await createTestUnitOfWork(dbs().connection)),
       budgetSvc,
       new VacayService(dbs(), new RealtimeService(), notificationsStub()),
       new RealtimeService(),
@@ -1197,15 +1217,15 @@ describe('quirk fixes', () => {
   }
 
   /** Same frozen connection, for the guest deletion that now lives on the roster. */
-  function failingMembers(match: string) {
+  async function failingMembers(match: string) {
     return new TripMembersService(
       failingConnection(match), budgetSvc, new UserCleanupService(dbs(), budgetSvc),
-      new PermissionsService(dbs()), new RealtimeService(),
+      new PermissionsService(dbs(), await createTestUnitOfWork(dbs().connection)), new RealtimeService(),
       notificationsStub(),
     );
   }
 
-  it('TRIP-SVC-051: remove is atomic — a failed trip DELETE keeps the journey entries intact', () => {
+  it('TRIP-SVC-051: remove is atomic — a failed trip DELETE keeps the journey entries intact', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const journeyId = Number(testDb.prepare(
@@ -1215,7 +1235,7 @@ describe('quirk fixes', () => {
       "INSERT INTO journey_entries (journey_id, source_trip_id, author_id, type, title, entry_date, created_at, updated_at) VALUES (?, ?, ?, 'skeleton', 'S', '2025-06-01', 0, 0)",
     ).run(journeyId, trip.id, user.id);
 
-    const broken = failingTrips('DELETE FROM trips WHERE id = ?');
+    const broken = await failingTrips('DELETE FROM trips WHERE id = ?');
     expect(() => broken.remove(trip.id, user.id, 'user')).toThrow('boom');
 
     // The skeleton cleanup rolled back with the failed delete.
@@ -1223,13 +1243,13 @@ describe('quirk fixes', () => {
     expect(testDb.prepare('SELECT id FROM trips WHERE id = ?').get(trip.id)).toBeDefined();
   });
 
-  it('TRIP-SVC-052: deleteGuest is atomic — a failed user DELETE rolls the budget re-split back', () => {
+  it('TRIP-SVC-052: deleteGuest is atomic — a failed user DELETE rolls the budget re-split back', async () => {
     const { user: owner } = createUser(testDb);
     const trip = createTrip(testDb, owner.id);
     const { member: guest } = membersSvc.createGuest(trip.id, 'Gia', owner.id);
     const item = budgetSvc.createBudgetItem(trip.id, { name: 'Dinner', total_price: 80, member_ids: [owner.id, guest.id] });
 
-    const broken = failingMembers('DELETE FROM users WHERE id = ? AND is_guest = 1');
+    const broken = await failingMembers('DELETE FROM users WHERE id = ? AND is_guest = 1');
     expect(() => broken.deleteGuest(trip.id, guest.id)).toThrow('boom');
 
     // Neither the guest nor their split membership was touched.

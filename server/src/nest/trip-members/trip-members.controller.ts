@@ -58,13 +58,13 @@ export class TripMembersController {
 
   @Post(':id/members')
   @HttpCode(201)
-  addMember(@CurrentUser() user: User, @Param('id') id: string, @Body() body: TripAddMemberDto) {
+  async addMember(@CurrentUser() user: User, @Param('id') id: string, @Body() body: TripAddMemberDto) {
     const { identifier } = body;
     const access = this.roster.canAccessTrip(id, user.id);
     if (!access) {
       throw new HttpException({ error: 'Trip not found' }, 404);
     }
-    if (!this.roster.can('member_manage', user.role, access.user_id, user.id, access.user_id !== user.id)) {
+    if (!(await this.roster.can('member_manage', user.role, access.user_id, user.id, access.user_id !== user.id))) {
       throw new HttpException({ error: 'No permission to manage members' }, 403);
     }
     try {
@@ -79,13 +79,13 @@ export class TripMembersController {
   }
 
   @Delete(':id/members/:userId')
-  removeMember(@CurrentUser() user: User, @Param('id') id: string, @Param('userId') userId: string) {
+  async removeMember(@CurrentUser() user: User, @Param('id') id: string, @Param('userId') userId: string) {
     const access = this.roster.canAccessTrip(id, user.id);
     if (!access) {
       throw new HttpException({ error: 'Trip not found' }, 404);
     }
     const targetId = Number.parseInt(userId);
-    if (targetId !== user.id && !this.roster.can('member_manage', user.role, access.user_id, user.id, access.user_id !== user.id)) {
+    if (targetId !== user.id && !(await this.roster.can('member_manage', user.role, access.user_id, user.id, access.user_id !== user.id))) {
       throw new HttpException({ error: 'No permission to remove members' }, 403);
     }
     this.roster.removeMember(id, targetId);
@@ -95,7 +95,7 @@ export class TripMembersController {
   @Post(':id/transfer')
   @UseGuards(TripOwnerGuard)
   @RequireTripOwner('Only the owner can transfer ownership', { param: 'id' })
-  transferOwnership(
+  async transferOwnership(
     @CurrentUser() user: User,
     @Param('id') id: string,
     @Body() body: TripTransferOwnershipDto,
@@ -105,7 +105,7 @@ export class TripMembersController {
     const { newOwnerId } = body;
     try {
       const result = this.roster.transferOwnership(id, newOwnerId, user.id);
-      this.audit.writeAudit({ userId: user.id, action: 'trip.transfer_ownership', ip: getClientIp(req), details: { tripId: Number(id), trip: result.tripTitle, from: result.fromEmail, to: result.toEmail } });
+      await this.audit.writeAudit({ userId: user.id, action: 'trip.transfer_ownership', ip: getClientIp(req), details: { tripId: Number(id), trip: result.tripTitle, from: result.fromEmail, to: result.toEmail } });
       // Nudge everyone viewing the trip to re-read it so the new ownership and the
       // recomputed permissions take effect live.
       const updatedTrip = this.roster.getTripForViewer(id, user.id);

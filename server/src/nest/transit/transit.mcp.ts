@@ -185,7 +185,7 @@ export class TransitMcp {
   ) {
     if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
     if (!this.db.canAccessTrip(tripId, ctx.userId)) return noAccess();
-    if (!this.guards.hasTripPermission('reservation_edit', tripId, ctx.userId)) return permissionDenied();
+    if (!(await this.guards.hasTripPermission('reservation_edit', tripId, ctx.userId))) return permissionDenied();
     const day = this.days.getDay(dayId, tripId);
     if (!day) {
       return { content: [{ type: 'text' as const, text: 'dayId does not belong to this trip.' }], isError: true };
@@ -228,14 +228,14 @@ export class TransitMcp {
         isError: true,
       };
     }
-    const endDay = this.days.list(tripId).days.find((d) => d.date === arrival.local_date);
+    const endDay = (await this.days.list(tripId)).days.find((d) => d.date === arrival.local_date);
     if (!endDay) {
       return {
         content: [{ type: 'text' as const, text: `No trip day exists for the arrival date ${arrival.local_date}.` }],
         isError: true,
       };
     }
-    const { reservation } = this.reservations.create(tripId, {
+    const { reservation } = await this.reservations.create(tripId, {
       title: `${from.name} → ${to.name}`,
       type: 'transit',
       status: 'confirmed',

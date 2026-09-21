@@ -33,12 +33,12 @@ export class LlmParseService {
   ) {}
 
   /** True when the addon is enabled AND a usable config resolves for this user. */
-  isAvailable(userId: number): boolean {
-    return this.llmConfig.resolve(userId) !== null;
+  async isAvailable(userId: number): Promise<boolean> {
+    return (await this.llmConfig.resolve(userId)) !== null;
   }
 
   async parse(file: { buffer: Buffer; originalName: string }, userId: number): Promise<LlmParseResult> {
-    const config = this.llmConfig.resolve(userId);
+    const config = await this.llmConfig.resolve(userId);
     if (!config) return { kiItems: [], warnings: ['AI parsing is not configured'] };
 
     const warnings: string[] = [];

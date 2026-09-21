@@ -85,7 +85,7 @@ export class OauthService {
     private readonly audit: AuditService,
   ) {}
 
-  mcpEnabled(): boolean { return this.addons.isAddonEnabled(ADDON_IDS.MCP); }
+  async mcpEnabled(): Promise<boolean> { return this.addons.isAddonEnabled(ADDON_IDS.MCP); }
   mcpSafeUrl(): string { return getMcpSafeUrl(); }
 
   // -------------------------------------------------------------------------
@@ -106,14 +106,14 @@ export class OauthService {
     }));
   }
 
-  createOAuthClient(
+  async createOAuthClient(
     userId: number | null,
     name: string,
     redirectUris: string[],
     allowedScopes: string[],
     ip?: string | null,
     options?: { isPublic?: boolean; createdVia?: string; allowsClientCredentials?: boolean },
-  ): { error?: string; status?: number; client?: Record<string, unknown> } {
+  ): Promise<{ error?: string; status?: number; client?: Record<string, unknown> }> {
     if (!name?.trim()) return { error: 'Name is required', status: 400 };
     if (name.trim().length > 100) return { error: 'Name must be 100 characters or less', status: 400 };
     const isMachineClient = Boolean(options?.allowsClientCredentials);
@@ -163,7 +163,7 @@ export class OauthService {
       id,
     )!;
 
-    this.audit.writeAudit({ userId, action: 'oauth.client.create', details: { client_id: clientId, name: name.trim(), is_public: isPublic, allows_client_credentials: isMachineClient }, ip });
+    await this.audit.writeAudit({ userId, action: 'oauth.client.create', details: { client_id: clientId, name: name.trim(), is_public: isPublic, allows_client_credentials: isMachineClient }, ip });
 
     return {
       client: {
@@ -183,11 +183,11 @@ export class OauthService {
     };
   }
 
-  rotateOAuthClientSecret(
+  async rotateOAuthClientSecret(
     userId: number,
     clientRowId: string,
     ip?: string | null,
-  ): { error?: string; status?: number; client_secret?: string } {
+  ): Promise<{ error?: string; status?: number; client_secret?: string }> {
     const row = this.db.get<OAuthClientRow>('SELECT id, client_id, is_public FROM oauth_clients WHERE id = ? AND user_id = ?', clientRowId, userId);
     if (!row) return { error: 'Client not found', status: 404 };
     if (row.is_public) return { error: 'Public clients do not use a client secret', status: 400 };
@@ -203,20 +203,20 @@ export class OauthService {
     // Terminate active MCP sessions for this (user, client) pair
     revokeUserSessionsForClient(userId, row.client_id);
 
-    this.audit.writeAudit({ userId, action: 'oauth.client.rotate_secret', details: { client_id: row.client_id }, ip });
+    await this.audit.writeAudit({ userId, action: 'oauth.client.rotate_secret', details: { client_id: row.client_id }, ip });
 
     return { client_secret: rawSecret };
   }
 
-  deleteOAuthClient(
+  async deleteOAuthClient(
     userId: number,
     clientRowId: string,
     ip?: string | null,
-  ): { error?: string; status?: number; success?: boolean } {
+  ): Promise<{ error?: string; status?: number; success?: boolean }> {
     const row = this.db.get<OAuthClientRow>('SELECT id, client_id FROM oauth_clients WHERE id = ? AND user_id = ?', clientRowId, userId);
     if (!row) return { error: 'Client not found', status: 404 };
     this.db.run('DELETE FROM oauth_clients WHERE id = ?', clientRowId);
-    this.audit.writeAudit({ userId, action: 'oauth.client.delete', details: { client_id: row.client_id }, ip });
+    await this.audit.writeAudit({ userId, action: 'oauth.client.delete', details: { client_id: row.client_id }, ip });
     return { success: true };
   }
 
@@ -253,7 +253,7 @@ export class OauthService {
     return row ? JSON.parse(row.scopes) : null;
   }
 
-  saveConsent(clientId: string, userId: number, scopes: string[], ip?: string | null): void {
+  async saveConsent(clientId: string, userId: number, scopes: string[], ip?: string | null): Promise<void> {
     // Union existing consent with newly approved scopes (M5: never narrow stored consent)
     const existing = this.getConsent(clientId, userId) ?? [];
     const merged = Array.from(new Set([...existing, ...scopes]));
@@ -261,7 +261,7 @@ export class OauthService {
       'INSERT OR REPLACE INTO oauth_consents (client_id, user_id, scopes, updated_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP)',
       clientId, userId, JSON.stringify(merged),
     );
-    this.audit.writeAudit({ userId, action: 'oauth.consent.grant', details: { client_id: clientId, scopes: merged }, ip });
+    await this.audit.writeAudit({ userId, action: 'oauth.consent.grant', details: { client_id: clientId, scopes: merged }, ip });
   }
 
   isConsentSufficient(existingScopes: string[], requestedScopes: string[]): boolean {
@@ -446,12 +446,12 @@ export class OauthService {
     return !!successor;
   }
 
-  refreshTokens(
+  async refreshTokens(
     rawRefreshToken: string,
     clientId: string,
     clientSecret: string | undefined,
     ip?: string | null,
-  ): { error?: string; status?: number; tokens?: ReturnType<OauthService['issueTokens']> } {
+  ): Promise<{ error?: string; status?: number; tokens?: ReturnType<OauthService['issueTokens']> }> {
     const client = this.db.get<OAuthClientRow>('SELECT client_id, client_secret_hash, is_public FROM oauth_clients WHERE client_id = ?', clientId);
     if (!client) return { error: 'invalid_client', status: 401 };
     if (!client.is_public) {
@@ -478,7 +478,7 @@ export class OauthService {
       // parent so each client walks away with its own token.
       if (this.isConcurrentRotation(row)) {
         const tokens = this.issueTokens(clientId, row.user_id, JSON.parse(row.scopes), row.id, row.audience ?? null);
-        this.audit.writeAudit({
+        await this.audit.writeAudit({
           userId: row.user_id,
           action: 'oauth.token.refresh',
           details: { client_id: clientId, concurrent: true },
@@ -493,7 +493,7 @@ export class OauthService {
 
       revokeUserSessionsForClient(row.user_id, clientId);
 
-      this.audit.writeAudit({
+      await this.audit.writeAudit({
         userId: row.user_id,
         action: 'oauth.token.replay_detected',
         details: { client_id: clientId },
@@ -515,7 +515,7 @@ export class OauthService {
     this.db.run('UPDATE oauth_tokens SET revoked_at = CURRENT_TIMESTAMP WHERE id = ?', row.id);
 
     const tokens = this.issueTokens(clientId, row.user_id, JSON.parse(row.scopes), row.id, row.audience ?? null);
-    this.audit.writeAudit({ userId: row.user_id, action: 'oauth.token.refresh', details: { client_id: clientId }, ip });
+    await this.audit.writeAudit({ userId: row.user_id, action: 'oauth.token.refresh', details: { client_id: clientId }, ip });
 
     return { tokens };
   }
@@ -524,7 +524,7 @@ export class OauthService {
   // Token revocation
   // -------------------------------------------------------------------------
 
-  revokeToken(rawToken: string, clientId: string, userId?: number, ip?: string | null): void {
+  async revokeToken(rawToken: string, clientId: string, userId?: number, ip?: string | null): Promise<void> {
     const hash = hashToken(rawToken);
 
     // Get the user_id for the token so we can revoke its MCP sessions
@@ -542,7 +542,7 @@ export class OauthService {
     const affectedUserId = row?.user_id ?? userId;
     if (affectedUserId) {
       revokeUserSessionsForClient(affectedUserId, clientId);
-      this.audit.writeAudit({ userId: affectedUserId, action: 'oauth.token.revoke', details: { client_id: clientId, method: 'token' }, ip });
+      await this.audit.writeAudit({ userId: affectedUserId, action: 'oauth.token.revoke', details: { client_id: clientId, method: 'token' }, ip });
     }
   }
 
@@ -564,11 +564,11 @@ export class OauthService {
     return rows.map(r => ({ ...r, scopes: JSON.parse(r.scopes as string) }));
   }
 
-  revokeSession(
+  async revokeSession(
     userId: number,
     sessionId: number,
     ip?: string | null,
-  ): { error?: string; status?: number; success?: boolean } {
+  ): Promise<{ error?: string; status?: number; success?: boolean }> {
     const row = this.db.get<{ id: number; client_id: string }>('SELECT id, client_id FROM oauth_tokens WHERE id = ? AND user_id = ?', sessionId, userId);
     if (!row) return { error: 'Session not found', status: 404 };
 
@@ -576,7 +576,7 @@ export class OauthService {
 
     revokeUserSessionsForClient(userId, row.client_id);
 
-    this.audit.writeAudit({ userId, action: 'oauth.token.revoke', details: { client_id: row.client_id, method: 'session' }, ip });
+    await this.audit.writeAudit({ userId, action: 'oauth.token.revoke', details: { client_id: row.client_id, method: 'session' }, ip });
 
     return { success: true };
   }
@@ -585,11 +585,11 @@ export class OauthService {
   // Authorize request validation (option A: called by SPA via GET /api/oauth/authorize/validate)
   // -------------------------------------------------------------------------
 
-  validateAuthorizeRequest(
+  async validateAuthorizeRequest(
     params: AuthorizeParams,
     userId: number | null,
-  ): ValidateAuthorizeResult {
-    if (!this.addons.isAddonEnabled(ADDON_IDS.MCP)) {
+  ): Promise<ValidateAuthorizeResult> {
+    if (!(await this.addons.isAddonEnabled(ADDON_IDS.MCP))) {
       return { valid: false, error: 'mcp_disabled', error_description: 'MCP is not enabled on this server' };
     }
 

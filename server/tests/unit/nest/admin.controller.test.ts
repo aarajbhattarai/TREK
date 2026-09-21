@@ -83,36 +83,36 @@ beforeEach(() => vi.clearAllMocks());
 afterEach(() => { delete process.env.NODE_ENV; });
 
 describe('AdminController users', () => {
-  it('lists, creates (201 + audit), maps an error', () => {
+  it('lists, creates (201 + audit), maps an error', async () => {
     expect(adminCtl(svc({ listUsers: vi.fn().mockReturnValue([{ id: 1 }]) } as Partial<AdminService>)).listUsers()).toEqual({ users: [{ id: 1 }] });
     expect(thrown(() => adminCtl(svc({ createUser: vi.fn().mockReturnValue({ error: 'Email taken', status: 409 }) } as Partial<AdminService>)).createUser(user, {}, req))).toEqual({ status: 409, body: { error: 'Email taken' } });
     const c = adminCtl(svc({ createUser: vi.fn().mockReturnValue({ user: { id: 2 }, insertedId: 2, auditDetails: {} }) } as Partial<AdminService>));
-    expect(c.createUser(user, { email: 'a@b.c' }, req)).toEqual({ user: { id: 2 } });
+    expect(await c.createUser(user, { email: 'a@b.c' }, req)).toEqual({ user: { id: 2 } });
     expect(writeAudit).toHaveBeenCalledWith(expect.objectContaining({ action: 'admin.user_create' }));
   });
 
-  it('update + delete audit and map errors', () => {
-    expect(adminCtl(svc({ updateUser: vi.fn().mockReturnValue({ user: { id: 2 }, previousEmail: 'a@b.c', changed: ['role'] }) } as Partial<AdminService>)).updateUser(user, '2', {}, req)).toEqual({ user: { id: 2 } });
+  it('update + delete audit and map errors', async () => {
+    expect(await adminCtl(svc({ updateUser: vi.fn().mockReturnValue({ user: { id: 2 }, previousEmail: 'a@b.c', changed: ['role'] }) } as Partial<AdminService>)).updateUser(user, '2', {}, req)).toEqual({ user: { id: 2 } });
     expect(thrown(() => adminCtl(svc({ deleteUser: vi.fn().mockReturnValue({ error: 'Cannot delete self', status: 400 }) } as Partial<AdminService>)).deleteUser(user, '1', req))).toEqual({ status: 400, body: { error: 'Cannot delete self' } });
-    expect(adminCtl(svc({ deleteUser: vi.fn().mockReturnValue({ email: 'a@b.c' }) } as Partial<AdminService>)).deleteUser(user, '2', req)).toEqual({ success: true });
+    expect(await adminCtl(svc({ deleteUser: vi.fn().mockReturnValue({ email: 'a@b.c' }) } as Partial<AdminService>)).deleteUser(user, '2', req)).toEqual({ success: true });
   });
 });
 
 describe('AdminController permissions + oidc + misc', () => {
-  it('permissions: saves + audits', () => {
+  it('permissions: saves + audits', async () => {
     const c = adminCtl(svc({ savePermissions: vi.fn().mockReturnValue({ permissions: { x: 1 }, skipped: [] }) } as Partial<AdminService>));
-    expect(c.savePermissions(user, { permissions: { x: 1 } }, req)).toEqual({ success: true, permissions: { x: 1 } });
+    expect(await c.savePermissions(user, { permissions: { x: 1 } }, req)).toEqual({ success: true, permissions: { x: 1 } });
   });
 
-  it('permissions: includes skipped when present', () => {
+  it('permissions: includes skipped when present', async () => {
     const c = adminCtl(svc({ savePermissions: vi.fn().mockReturnValue({ permissions: {}, skipped: ['bad'] }) } as Partial<AdminService>));
-    expect(c.savePermissions(user, { permissions: {} }, req)).toEqual({ success: true, permissions: {}, skipped: ['bad'] });
+    expect(await c.savePermissions(user, { permissions: {} }, req)).toEqual({ success: true, permissions: {}, skipped: ['bad'] });
   });
 
 
-  it('save-demo-baseline maps error, else returns message', () => {
+  it('save-demo-baseline maps error, else returns message', async () => {
     expect(thrown(() => adminCtl(svc({ saveDemoBaseline: vi.fn().mockReturnValue({ error: 'not demo', status: 400 }) } as Partial<AdminService>)).saveDemoBaseline(user, req))).toEqual({ status: 400, body: { error: 'not demo' } });
-    expect(adminCtl(svc({ saveDemoBaseline: vi.fn().mockReturnValue({ message: 'saved' }) } as Partial<AdminService>)).saveDemoBaseline(user, req)).toEqual({ success: true, message: 'saved' });
+    expect(await adminCtl(svc({ saveDemoBaseline: vi.fn().mockReturnValue({ message: 'saved' }) } as Partial<AdminService>)).saveDemoBaseline(user, req)).toEqual({ success: true, message: 'saved' });
   });
 });
 
@@ -120,9 +120,9 @@ describe('AdminController permissions + oidc + misc', () => {
 // domains; their cases live in admin-feature-toggles.controller.test.ts and
 // admin-packing-templates.controller.test.ts.
 describe('AdminController invites', () => {
-  it('invites: create 201 + audit, delete maps error', () => {
+  it('invites: create 201 + audit, delete maps error', async () => {
     const c = adminCtl(svc(), undefined, undefined, {}, { createInvite: vi.fn().mockReturnValue({ invite: { id: 5 }, inviteId: 5, uses: 1, expiresInDays: 7 }) });
-    expect(c.createInvite(user, {}, req)).toEqual({ invite: { id: 5 } });
+    expect(await c.createInvite(user, {}, req)).toEqual({ invite: { id: 5 } });
     expect(writeAudit).toHaveBeenCalledWith(expect.objectContaining({ action: 'admin.invite_create' }));
     expect(thrown(() => adminCtl(svc(), undefined, undefined, {}, { deleteInvite: vi.fn().mockReturnValue({ error: 'not found', status: 404 }) }).deleteInvite(user, '5', req))).toEqual({ status: 404, body: { error: 'not found' } });
   });
@@ -165,10 +165,10 @@ describe('AdminController addons + sessions + jwt + defaults', () => {
     expect(writeAudit).not.toHaveBeenCalled();
   });
 
-  it('oauth-sessions revoke audits; rotate-jwt maps error', () => {
-    expect(adminCtl(svc(), undefined, undefined, {}, {}, { adminRevokeOAuthSession: vi.fn().mockReturnValue({}) }).revokeOAuthSession(user, '3', req)).toEqual({ success: true });
+  it('oauth-sessions revoke audits; rotate-jwt maps error', async () => {
+    expect(await adminCtl(svc(), undefined, undefined, {}, {}, { adminRevokeOAuthSession: vi.fn().mockReturnValue({}) }).revokeOAuthSession(user, '3', req)).toEqual({ success: true });
     expect(thrown(() => adminCtl(svc({ rotateJwtSecret: vi.fn().mockReturnValue({ error: 'locked', status: 409 }) } as Partial<AdminService>)).rotateJwtSecret(user, req))).toEqual({ status: 409, body: { error: 'locked' } });
-    expect(adminCtl(svc({ rotateJwtSecret: vi.fn().mockReturnValue({}) } as Partial<AdminService>)).rotateJwtSecret(user, req)).toEqual({ success: true });
+    expect(await adminCtl(svc({ rotateJwtSecret: vi.fn().mockReturnValue({}) } as Partial<AdminService>)).rotateJwtSecret(user, req)).toEqual({ success: true });
   });
 
 });
@@ -183,7 +183,7 @@ describe('AdminController error envelope fallbacks', () => {
 
 describe('AdminController read-only getters', () => {
   it('return service values verbatim', async () => {
-    expect(adminCtl(svc({ resetUserPasskeys: vi.fn().mockReturnValue({ email: 'a@b.c', deleted: 2 }) } as Partial<AdminService>)).resetUserPasskeys(user, '4', req)).toEqual({ success: true, deleted: 2 });
+    expect(await adminCtl(svc({ resetUserPasskeys: vi.fn().mockReturnValue({ email: 'a@b.c', deleted: 2 }) } as Partial<AdminService>)).resetUserPasskeys(user, '4', req)).toEqual({ success: true, deleted: 2 });
     expect(adminCtl(svc({ getStats: vi.fn().mockReturnValue({ users: 3 }) } as Partial<AdminService>)).stats()).toEqual({ users: 3 });
     expect(adminCtl(svc({ getPermissions: vi.fn().mockReturnValue({ a: 1 }) } as Partial<AdminService>)).permissions()).toEqual({ a: 1 });
     expect(adminCtl(svc({ getAuditLog: vi.fn().mockReturnValue({ entries: [] }) } as Partial<AdminService>)).auditLog({})).toEqual({ entries: [] });
@@ -208,8 +208,8 @@ describe('AdminController read-only getters', () => {
 
 
 describe('AdminController tokens + sessions', () => {
-  it('mcp token + oauth session deletes return success and map errors', () => {
-    expect(adminCtl(svc(), undefined, undefined, { adminDeleteMcpToken: vi.fn().mockReturnValue({}) }).deleteMcpToken(user, '2', req)).toEqual({ success: true });
+  it('mcp token + oauth session deletes return success and map errors', async () => {
+    expect(await adminCtl(svc(), undefined, undefined, { adminDeleteMcpToken: vi.fn().mockReturnValue({}) }).deleteMcpToken(user, '2', req)).toEqual({ success: true });
     expect(thrown(() => adminCtl(svc(), undefined, undefined, { adminDeleteMcpToken: vi.fn().mockReturnValue({ error: 'no token', status: 404 }) }).deleteMcpToken(user, '9', req))).toEqual({ status: 404, body: { error: 'no token' } });
     expect(thrown(() => adminCtl(svc(), undefined, undefined, {}, {}, { adminRevokeOAuthSession: vi.fn().mockReturnValue({ error: 'no session', status: 404 }) }).revokeOAuthSession(user, '9', req))).toEqual({ status: 404, body: { error: 'no session' } });
   });
@@ -280,17 +280,17 @@ describe('AdminController feature toggles', () => {
     expect(c.getCollabFeatures()).toEqual({ chat: false });
   });
 
-  it('ADMIN-TOGGLE-002b places-enrich updates through the addons domain and is audited', () => {
+  it('ADMIN-TOGGLE-002b places-enrich updates through the addons domain and is audited', async () => {
     const c = adminCtl(svc());
-    expect(c.updatePlacesEnrich(user, { enabled: false }, req)).toEqual({ enabled: false });
+    expect(await c.updatePlacesEnrich(user, { enabled: false }, req)).toEqual({ enabled: false });
     expect(writeAudit).toHaveBeenCalledWith(expect.objectContaining({ action: 'admin.places_enrich' }));
   });
 
-  it('ADMIN-TOGGLE-002c transit-provider reads and writes through the addons domain and is audited (#1699)', () => {
+  it('ADMIN-TOGGLE-002c transit-provider reads and writes through the addons domain and is audited (#1699)', async () => {
     const addons = addonsStub();
     const c = adminCtl(svc(), undefined, addons);
     expect(c.getTransitProvider(user)).toEqual({ provider: 'transitous', googleKeySource: null });
-    expect(c.updateTransitProvider(user, { provider: 'google' }, req)).toEqual({ provider: 'google', googleKeySource: null });
+    expect(await c.updateTransitProvider(user, { provider: 'google' }, req)).toEqual({ provider: 'google', googleKeySource: null });
     // The acting admin's id drives key resolution — the panel warns about the
     // key THEY would search with.
     expect(addons.getTransitProvider).toHaveBeenCalledWith(user.id);
@@ -300,17 +300,17 @@ describe('AdminController feature toggles', () => {
     );
   });
 
-  it('ADMIN-TOGGLE-004 place-shadow forwards the body value and audits the stored one', () => {
+  it('ADMIN-TOGGLE-004 place-shadow forwards the body value and audits the stored one', async () => {
     // The handler audits result.enabled. A service that declines the flip must
     // not leave behind an audit row claiming the shadow log was switched on.
     const updatePlaceShadow = vi.fn(() => ({ enabled: false }));
     const c = adminCtl(svc(), undefined, { ...addonsStub(), updatePlaceShadow } as unknown as AddonsService);
-    expect(c.updatePlaceShadow(user, { enabled: true }, req)).toEqual({ enabled: false });
+    expect(await c.updatePlaceShadow(user, { enabled: true }, req)).toEqual({ enabled: false });
     expect(updatePlaceShadow).toHaveBeenCalledWith(true);
     expect(writeAudit).toHaveBeenCalledWith({ userId: user.id, action: 'admin.place_shadow', ip: '1.2.3.4', details: { enabled: false } });
     // Off is carried too: the table above only ever asks for true, so a handler
     // that hardcoded the argument would pass it.
-    c.updatePlaceShadow(user, { enabled: false }, req);
+    await c.updatePlaceShadow(user, { enabled: false }, req);
     expect(updatePlaceShadow).toHaveBeenLastCalledWith(false);
   });
 
@@ -322,10 +322,10 @@ describe('AdminController feature toggles', () => {
     expect(writeAudit).not.toHaveBeenCalled();
   });
 
-  it('ADMIN-TOGGLE-003 collab-features invalidates MCP sessions only when a flag flipped (#1414)', () => {
+  it('ADMIN-TOGGLE-003 collab-features invalidates MCP sessions only when a flag flipped (#1414)', async () => {
     const invalidateMcpSessions = vi.fn();
     const c = adminCtl(svc({ invalidateMcpSessions } as Partial<AdminService>));
-    expect(c.updateCollabFeatures(user, { chat: true }, req)).toEqual({ chat: true });
+    expect(await c.updateCollabFeatures(user, { chat: true }, req)).toEqual({ chat: true });
     expect(invalidateMcpSessions).toHaveBeenCalled();
 
     const noopInvalidate = vi.fn();
@@ -334,7 +334,7 @@ describe('AdminController feature toggles', () => {
       undefined,
       { ...addonsStub(), updateCollabFeatures: vi.fn(() => ({ features: { chat: true }, changed: false })) } as unknown as AddonsService,
     );
-    expect(noop.updateCollabFeatures(user, { chat: true }, req)).toEqual({ chat: true });
+    expect(await noop.updateCollabFeatures(user, { chat: true }, req)).toEqual({ chat: true });
     expect(noopInvalidate).not.toHaveBeenCalled();
   });
 });

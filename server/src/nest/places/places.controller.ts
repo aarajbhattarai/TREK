@@ -126,26 +126,26 @@ export class PlacesController {
     return trip;
   }
 
-  private requireEdit(trip: NonNullable<ReturnType<PlacesService['verifyTripAccess']>>, user: User): void {
-    if (!this.places.canEdit(trip, user)) {
+  private async requireEdit(trip: NonNullable<ReturnType<PlacesService['verifyTripAccess']>>, user: User): Promise<void> {
+    if (!(await this.places.canEdit(trip, user))) {
       throw new HttpException({ error: 'No permission' }, 403);
     }
   }
 
   @Get()
   @UseGuards(TripAccessGuard)
-  list(
+  async list(
     @CurrentUser() user: User,
     @Param('tripId') tripId: string,
     @Query('search') search?: string,
     @Query('category') category?: string,
     @Query('tag') tag?: string,
   ) {
-    return { places: this.places.list(tripId, { search, category, tag }) };
+    return { places: await this.places.list(tripId, { search, category, tag }) };
   }
 
   @Post()
-  create(
+  async create(
     @CurrentUser() user: User,
     @Param('tripId') tripId: string,
     @Body() body: PlaceCreateDto,
@@ -155,7 +155,7 @@ export class PlacesController {
     validateLengths(body);
     validateRouteColor(body);
     validateUrlFields(body);
-    this.requireEdit(trip, user);
+    await this.requireEdit(trip, user);
     const place = this.places.create(tripId, body as never);
     this.places.broadcast(tripId, 'place:created', { place }, socketId);
     this.places.onCreated(tripId, place.id);
@@ -164,7 +164,7 @@ export class PlacesController {
 
   @Post('import/gpx')
   @UseInterceptors(FileInterceptor('file', UPLOAD))
-  importGpx(
+  async importGpx(
     @CurrentUser() user: User,
     @Param('tripId') tripId: string,
     @UploadedFile() file: Express.Multer.File | undefined,
@@ -172,7 +172,7 @@ export class PlacesController {
     @Headers('x-socket-id') socketId?: string,
   ) {
     const trip = this.requireTrip(tripId, user);
-    this.requireEdit(trip, user);
+    await this.requireEdit(trip, user);
     if (!file) {
       throw new HttpException({ error: 'No file uploaded' }, 400);
     }
@@ -230,7 +230,7 @@ export class PlacesController {
     @Headers('x-socket-id') socketId?: string,
   ) {
     const trip = this.requireTrip(tripId, user);
-    this.requireEdit(trip, user);
+    await this.requireEdit(trip, user);
     if (!file) {
       throw new HttpException({ error: 'No file uploaded' }, 400);
     }
@@ -268,7 +268,7 @@ export class PlacesController {
   /** Shared google/naver list import — identical flow, different provider + error string. */
   private async importList(provider: 'google' | 'naver', user: User, tripId: string, body: PlaceImportListDto, socketId?: string) {
     const trip = this.requireTrip(tripId, user);
-    this.requireEdit(trip, user);
+    await this.requireEdit(trip, user);
     const { url, enrich } = body;
     // Opt-in: re-resolve each imported place via the Places API to fill in
     // photo / address / website / phone and persist a google_place_id (#886).
@@ -307,7 +307,7 @@ export class PlacesController {
     @Headers('x-socket-id') socketId?: string,
   ) {
     const trip = this.requireTrip(tripId, user);
-    this.requireEdit(trip, user);
+    await this.requireEdit(trip, user);
     const { ids } = body;
     if (ids.length === 0) {
       return { deleted: [], count: 0 };
@@ -351,7 +351,7 @@ export class PlacesController {
     @Headers('x-socket-id') socketId?: string,
   ) {
     const trip = this.requireTrip(tripId, user);
-    this.requireEdit(trip, user);
+    await this.requireEdit(trip, user);
     const { ids } = body;
     if (ids.length === 0) {
       return { updated: [], count: 0 };
@@ -390,7 +390,7 @@ export class PlacesController {
     @Headers('x-socket-id') socketId?: string,
   ) {
     const trip = this.requireTrip(tripId, user);
-    this.requireEdit(trip, user);
+    await this.requireEdit(trip, user);
     // Inline rather than DemoWriteGuard: requireEdit above answers 404/403 for a
     // trip the caller cannot reach, and a guard would run before it.
     if (isDemoWriteBlocked(this.env, user.email)) {
@@ -473,7 +473,7 @@ export class PlacesController {
     validateLengths(body);
     validateRouteColor(body);
     validateUrlFields(body);
-    this.requireEdit(trip, user);
+    await this.requireEdit(trip, user);
     const result = await this.places.update(tripId, id, body as never, ifMatch);
     if (!result) {
       throw new HttpException({ error: 'Place not found' }, 404);

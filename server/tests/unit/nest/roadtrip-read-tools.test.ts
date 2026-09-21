@@ -32,14 +32,14 @@ describe('roadtrip read tools', () => {
     expect(routes.import).toHaveBeenCalledWith(10, 5, input);
   });
 
-  it('refuses the Google import for the demo account, like every other write tool', () => {
+  it('refuses the Google import for the demo account, like every other write tool', async () => {
     // The one non-admin write tool that had no gate: a demo session could write
     // thirty places and their assignments onto the shared demo trip.
     const routes = { preview: vi.fn(), import: vi.fn() };
     const auth = { isDemoUser: vi.fn(() => true) };
     const tool = new GoogleRouteMcp(routes as never, auth as never, {} as never);
 
-    const res = tool.import({ tripId: 10, dayId: 1, stops: [{ name: 'A', lat: 1, lng: 2 }] } as never, ctx);
+    const res = await tool.import({ tripId: 10, dayId: 1, stops: [{ name: 'A', lat: 1, lng: 2 }] } as never, ctx);
 
     expect(res.isError).toBe(true);
     expect(routes.import).not.toHaveBeenCalled();
@@ -59,7 +59,7 @@ describe('roadtrip read tools', () => {
     const routes = { preview: refuse('Use a Google Maps directions link.', 400), import: refuse('Permission denied', 403) };
     const google = new GoogleRouteMcp(routes as never, auth as never, {} as never);
     expect(text(await google.preview({ url: 'https://www.google.com/maps/place/A' }))).toEqual([true, 'Use a Google Maps directions link.']);
-    expect(text(google.import({ tripId: 10, dayId: 1, stops: [{ name: 'A', lat: 1, lng: 2 }] } as never, ctx))).toEqual([true, 'Permission denied']);
+    expect(text(await google.import({ tripId: 10, dayId: 1, stops: [{ name: 'A', lat: 1, lng: 2 }] } as never, ctx))).toEqual([true, 'Permission denied']);
 
     const realtime = { broadcast: vi.fn() };
     const guards = { hasTripPermission: vi.fn(() => true) };

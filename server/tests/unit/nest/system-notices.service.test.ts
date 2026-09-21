@@ -29,9 +29,9 @@ beforeEach(() => {
 });
 
 describe('SystemNoticesService', () => {
-  it('getActiveFor threads a live addonEnabled check over the injected AddonsService', () => {
+  it('getActiveFor threads a live addonEnabled check over the injected AddonsService', async () => {
     mockGetActive.mockReturnValue([]);
-    svc.getActiveFor(7);
+    await svc.getActiveFor(7);
     expect(mockGetActive).toHaveBeenCalledWith(7, expect.any(Function), false);
     const addonEnabled = mockGetActive.mock.calls[0][1] as (id: string) => boolean;
     expect(addonEnabled('journey')).toBe(true);
@@ -39,9 +39,9 @@ describe('SystemNoticesService', () => {
     expect(isAddonEnabled).toHaveBeenLastCalledWith('vacay');
   });
 
-  it('dismiss passes through to the upstream service', () => {
+  it('dismiss passes through to the upstream service', async () => {
     mockDismiss.mockReturnValue(true);
-    expect(svc.dismiss(7, 'welcome')).toBe(true);
+    expect(await svc.dismiss(7, 'welcome')).toBe(true);
     expect(mockDismiss).toHaveBeenCalledWith(7, 'welcome');
   });
 
@@ -61,47 +61,47 @@ describe('SystemNoticesService', () => {
       release: { version: '4.3.0', headlineKey: 'system_notice.release_notes.headline' },
     };
 
-    it('drops a notice with a release block when nothing is announced', () => {
+    it('drops a notice with a release block when nothing is announced', async () => {
       mockGetActive.mockReturnValue([release, generic]);
-      expect(svc.getActiveFor(7).map(n => n.id)).toEqual(['outage']);
+      expect((await svc.getActiveFor(7)).map(n => n.id)).toEqual(['outage']);
     });
 
-    it('drops it when other layouts are announced but not release', () => {
+    it('drops it when other layouts are announced but not release', async () => {
       mockGetActive.mockReturnValue([release, generic]);
-      expect(svc.getActiveFor(7, new Set(['banner'])).map(n => n.id)).toEqual(['outage']);
+      expect((await svc.getActiveFor(7, new Set(['banner']))).map(n => n.id)).toEqual(['outage']);
     });
 
-    it('delivers it, in place, once the client announces the release layout for the running version', () => {
+    it('delivers it, in place, once the client announces the release layout for the running version', async () => {
       mockGetActive.mockReturnValue([release, generic]);
-      expect(svc.getActiveFor(7, new Set(['release']), '4.3.0').map(n => n.id)).toEqual(['release-notes', 'outage']);
+      expect((await svc.getActiveFor(7, new Set(['release']), '4.3.0')).map(n => n.id)).toEqual(['release-notes', 'outage']);
     });
 
-    it('drops it for a bundle that announces the layout but was built for another version', () => {
+    it('drops it for a bundle that announces the layout but was built for another version', async () => {
       // The shell the service worker serves right after an update: it can draw the
       // layout, but with the texts of the version it was built for, and its X would
       // use the notice up for the version now running.
       mockGetActive.mockReturnValue([release, generic]);
-      expect(svc.getActiveFor(7, new Set(['release']), '4.2.1').map(n => n.id)).toEqual(['outage']);
+      expect((await svc.getActiveFor(7, new Set(['release']), '4.2.1')).map(n => n.id)).toEqual(['outage']);
       mockAppVersion.mockReturnValueOnce('4.3.1');
-      expect(svc.getActiveFor(7, new Set(['release']), '4.3.0').map(n => n.id)).toEqual(['outage']);
+      expect((await svc.getActiveFor(7, new Set(['release']), '4.3.0')).map(n => n.id)).toEqual(['outage']);
     });
 
-    it('drops it for a bundle that names no version at all', () => {
+    it('drops it for a bundle that names no version at all', async () => {
       mockGetActive.mockReturnValue([release, generic]);
-      expect(svc.getActiveFor(7, new Set(['release'])).map(n => n.id)).toEqual(['outage']);
-      expect(svc.getActiveFor(7, new Set(['release']), '').map(n => n.id)).toEqual(['outage']);
-      expect(svc.getActiveFor(7, new Set(['release']), 'dev').map(n => n.id)).toEqual(['outage']);
+      expect((await svc.getActiveFor(7, new Set(['release']))).map(n => n.id)).toEqual(['outage']);
+      expect((await svc.getActiveFor(7, new Set(['release']), '')).map(n => n.id)).toEqual(['outage']);
+      expect((await svc.getActiveFor(7, new Set(['release']), 'dev')).map(n => n.id)).toEqual(['outage']);
     });
 
-    it('reads the version loosely, as the server reads its own', () => {
+    it('reads the version loosely, as the server reads its own', async () => {
       mockGetActive.mockReturnValue([release, generic]);
-      expect(svc.getActiveFor(7, new Set(['release']), 'v4.3.0').map(n => n.id)).toEqual(['release-notes', 'outage']);
+      expect((await svc.getActiveFor(7, new Set(['release']), 'v4.3.0')).map(n => n.id)).toEqual(['release-notes', 'outage']);
     });
 
-    it('always delivers a notice without a release block', () => {
+    it('always delivers a notice without a release block', async () => {
       mockGetActive.mockReturnValue([generic]);
-      expect(svc.getActiveFor(7).map(n => n.id)).toEqual(['outage']);
-      expect(svc.getActiveFor(7, new Set(['release']), '4.3.0').map(n => n.id)).toEqual(['outage']);
+      expect((await svc.getActiveFor(7)).map(n => n.id)).toEqual(['outage']);
+      expect((await svc.getActiveFor(7, new Set(['release']), '4.3.0')).map(n => n.id)).toEqual(['outage']);
     });
   });
 
@@ -115,7 +115,7 @@ describe('SystemNoticesService', () => {
     const { SystemNoticesService: Reloaded } = await import('../../../src/nest/system-notices/system-notices.service');
     const inst = new Reloaded({ isAddonEnabled } as unknown as AddonsService, { isManaged: () => false } as unknown as RuntimeEnvService);
     mockGetActive.mockReturnValue([]);
-    inst.getActiveFor(1);
+    await inst.getActiveFor(1);
     expect(mockGetActive).toHaveBeenCalledWith(1, expect.any(Function), false);
     vi.doUnmock('../../../src/nest/addons/addons.service');
   });

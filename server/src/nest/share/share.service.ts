@@ -161,7 +161,7 @@ export class ShareService {
     return this.dbs.canAccessTrip(tripId, userId);
   }
 
-  canManage(trip: Trip, user: User): boolean {
+  async canManage(trip: Trip, user: User): Promise<boolean> {
     return this.permissions.checkPermission('share_manage', user.role, trip.user_id, user.id, trip.user_id !== user.id);
   }
 
@@ -258,7 +258,7 @@ export class ShareService {
     return out;
   }
 
-  getSharedTripData(token: string): Record<string, any> | null {
+  async getSharedTripData(token: string): Promise<Record<string, any> | null> {
     const shareRow = this.dbs.get<any>(
       "SELECT * FROM share_tokens WHERE token = ? AND (expires_at IS NULL OR expires_at > datetime('now'))",
       token,
@@ -309,7 +309,7 @@ export class ShareService {
         `, ...dayIds);
 
         const placeIds = [...new Set(allAssignments.map((a: any) => a.place_id))];
-        const tagsByPlace = this.queryHelpers.loadTagsByPlaceIds(placeIds, { compact: true });
+        const tagsByPlace = await this.queryHelpers.loadTagsByPlaceIds(placeIds, { compact: true });
 
         const byDay: Record<number, any[]> = {};
         for (const a of allAssignments as any[]) {

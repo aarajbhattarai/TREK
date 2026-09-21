@@ -75,7 +75,7 @@ import type { RpcError, RpcResponse } from '../../../src/nest/plugins/protocol/e
 
 // Typed from the real method rather than from the always-true body below, so a case that
 // swaps in an implementation reading the action key (HOSTRPC-015) still type-checks.
-const checkPermission = vi.fn<PermissionsService['checkPermission']>(() => true);
+const checkPermission = vi.fn<PermissionsService['checkPermission']>(() => Promise.resolve(true));
 const permissions = { checkPermission } as unknown as PermissionsService;
 const addons = { isAddonEnabled: vi.fn(() => true) } as unknown as AddonsService;
 const notifications = { send: notifySend } as unknown as NotificationsService;
@@ -255,7 +255,7 @@ describe('DbRpc — the unconditional three', () => {
 describe('MetaRpc — namespaced entity metadata', () => {
   beforeEach(() => {
     checkPermission.mockReset();
-    checkPermission.mockReturnValue(true);
+    checkPermission.mockResolvedValue(true);
   });
   afterAll(() => closePluginDataDb('meta'));
 
@@ -315,7 +315,7 @@ describe('MetaRpc — namespaced entity metadata', () => {
     const seen: string[] = [];
     checkPermission.mockImplementation((action) => {
       seen.push(action);
-      return true;
+      return Promise.resolve(true);
     });
     for (const [entityType, entityId] of [['trip', 1], ['place', 7], ['day', 3], ['reservation', 40], ['accommodation', 11]] as const) {
       expect((await call(host, 'meta.set', { entityType, entityId, key: 'k', value: 1 })).ok).toBe(true);
@@ -323,7 +323,7 @@ describe('MetaRpc — namespaced entity metadata', () => {
     // Accommodations deliberately ride on day_edit, like the accommodation write path.
     expect(seen).toEqual(['trip_edit', 'place_edit', 'day_edit', 'reservation_edit', 'day_edit']);
 
-    checkPermission.mockReturnValue(false);
+    checkPermission.mockResolvedValue(false);
     const write = await call(host, 'meta.set', { entityType: 'trip', entityId: 1, key: 'k', value: 2 });
     expect(write.error?.code).toBe('RESOURCE_FORBIDDEN');
     // …but a READ is only access-gated, so it still works for the same user.
@@ -359,7 +359,7 @@ describe('MetaRpc — namespaced entity metadata', () => {
 describe('HostSurfaceRpc — users, broadcasts, notify, ai, oauth, scheduler', () => {
   beforeEach(() => {
     checkPermission.mockReset();
-    checkPermission.mockReturnValue(true);
+    checkPermission.mockResolvedValue(true);
     notifySend.mockClear();
     llmExtract.mockClear();
     broadcast.mockClear();

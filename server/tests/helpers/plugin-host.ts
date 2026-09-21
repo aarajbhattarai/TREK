@@ -72,6 +72,8 @@ import { PlacePhotoCacheService } from '../../src/nest/place-photos/place-photo-
 import { TrekPhotosRepository } from '../../src/nest/photos/trek-photos.repository';
 import { RuntimeEnvService } from '../../src/nest/app-config/runtime-env.service';
 import { makeStorageFixture } from './storage-fixture';
+import { createTestUnitOfWork } from './test-uow';
+import { UnitOfWork } from '../../src/nest/database/unit-of-work';
 
 /**
  * Hand-wired counterpart of the PluginsModule DI graph for no-Nest tests
@@ -83,9 +85,9 @@ import { makeStorageFixture } from './storage-fixture';
  * domains, so what it builds is the same set of `@PluginController()` instances the
  * container would discover, handed to the host factory as a registry.
  */
-export function createPluginRpcHostFactory(dbs: DatabaseService): PluginRpcHostFactory {
+export async function createPluginRpcHostFactory(dbs: DatabaseService): Promise<PluginRpcHostFactory> {
   const generalStorage = makeStorageFixture('').storage;
-  const permissions = new PermissionsService(dbs);
+  const permissions = new PermissionsService(dbs, await createTestUnitOfWork(dbs.connection));
   const exchangeRates = new ExchangeRatesService();
   const realtime = new RealtimeService();
   const budget = new BudgetService(dbs, permissions, exchangeRates, realtime);
@@ -108,11 +110,11 @@ export function createPluginRpcHostFactory(dbs: DatabaseService): PluginRpcHostF
   const notifications = makeNotificationsService(dbs, realtime);
   const llmConfig = new LlmConfigResolver(new SettingsService(dbs), dbs, addons);
   const oauth = new PluginOAuthService(dbs);
-  const accommodations = new AccommodationsService(dbs, permissions, realtime, assignments);
+  const accommodations = new AccommodationsService(dbs, permissions, realtime, assignments, await createTestUnitOfWork(dbs.connection));
   // After it: deleting a place cancels the nights booked at it through this one.
-  const places = new PlacesService(dbs, permissions, realtime, new MapsService(dbs, photoCache), queryHelpers, unsplash, photoCache, journey, generalStorage, accommodations);
+  const places = new PlacesService(dbs, permissions, realtime, new MapsService(dbs, photoCache), queryHelpers, unsplash, photoCache, journey, generalStorage, accommodations, await createTestUnitOfWork(dbs.connection));
   // After accommodations: a hotel booking writes the stay's day stop through it.
-  const reservations = new ReservationsService(dbs, permissions, budget, realtime, notificationsStub(), new ReservationsReadRepository(dbs), accommodations);
+  const reservations = new ReservationsService(dbs, permissions, budget, realtime, notificationsStub(), new ReservationsReadRepository(dbs), accommodations, await createTestUnitOfWork(dbs.connection));
   const trips = new TripsService(dbs, reservations, days, permissions, budget, vacay, realtime, unsplash, generalStorage);
   const members = new TripMembersService(dbs, budget, new UserCleanupService(dbs, budget), permissions, realtime, notificationsStub());
   const guards = new PluginGuards(dbs, permissions, addons);
@@ -149,6 +151,6 @@ export function createPluginRpcHostFactory(dbs: DatabaseService): PluginRpcHostF
 }
 
 /** A PluginRuntimeService constructed the way Nest would: with a real host factory. */
-export function createPluginRuntime(dbs: DatabaseService, registry?: PluginRegistryService): PluginRuntimeService {
-  return new PluginRuntimeService(dbs, new AuditService(dbs), new AddonsService(dbs), new PluginUserSettingsService(dbs), registry, createPluginRpcHostFactory(dbs));
+export async function createPluginRuntime(dbs: DatabaseService, registry?: PluginRegistryService): Promise<PluginRuntimeService> {
+  return new PluginRuntimeService(dbs, new AuditService(dbs), new AddonsService(dbs), new PluginUserSettingsService(dbs), registry, await createPluginRpcHostFactory(dbs));
 }

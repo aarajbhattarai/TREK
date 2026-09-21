@@ -54,6 +54,8 @@ import { TrekPhotosRepository } from '../../../src/nest/photos/trek-photos.repos
 import { RuntimeEnvService } from '../../../src/nest/app-config/runtime-env.service';
 import { notificationsStub } from '../../helpers/notifications';
 import { makeStorageFixture } from '../../helpers/storage-fixture';
+import { createTestUnitOfWork } from '../../helpers/test-uow';
+import { UnitOfWork } from '../../../src/nest/database/unit-of-work';
 
 const dbs = new DatabaseService(testDb);
 const realtime = new RealtimeService();
@@ -62,10 +64,14 @@ const runtimeEnv = new RuntimeEnvService();
 // the service's stampede guard only works if there is exactly one of them.
 const photoCache = new PlacePhotoCacheService(dbs, makeStorageFixture('photos/google/').storage);
 
-const packing = new PackingService(dbs, new PermissionsService(dbs), realtime, notificationsStub());
-const places = new PlacesService(
+
+let packing: PackingService;
+let places: PlacesService;
+beforeAll(async () => {
+  packing = new PackingService(dbs, new PermissionsService(dbs, await createTestUnitOfWork(dbs.connection)), realtime, notificationsStub());
+  places = new PlacesService(
   dbs,
-  new PermissionsService(dbs),
+  new PermissionsService(dbs, await createTestUnitOfWork(dbs.connection)),
   realtime,
   new MapsService(dbs, photoCache),
   new QueryHelpersService(dbs),
@@ -73,8 +79,9 @@ const places = new PlacesService(
   photoCache,
   new JourneyDomainService(dbs, realtime, new TrekPhotosRepository(dbs)),
   makeStorageFixture('').storage,
-  accommodationsOver(dbs),
+  await accommodationsOver(dbs), await createTestUnitOfWork(dbs.connection),
 );
+});
 
 beforeAll(() => {
   createTables(testDb);

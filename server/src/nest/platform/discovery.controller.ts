@@ -44,8 +44,8 @@ export class DiscoveryController {
   // them with invalid_target — showing the user the TREK home page instead of the
   // consent form.
   @Get('oauth-protected-resource')
-  protectedResource(@Res() res: Response): void {
-    if (!this.addons.isAddonEnabled(ADDON_IDS.MCP)) {
+  async protectedResource(@Res() res: Response): Promise<void> {
+    if (!(await this.addons.isAddonEnabled(ADDON_IDS.MCP))) {
       res.status(404).end();
       return;
     }

@@ -23,12 +23,17 @@ export function createMcpMetadataMiddleware(
   meta: DiscoveryMetadataService,
   addons: AddonsService,
 ): RequestHandler {
+  // Express cannot await a middleware, so the now-async addon check runs in a
+  // helper and its rejection is handed to next() — the same error path a
+  // synchronous throw took before (recipe R1.5).
   return (req, res, next) => {
-    if (req.path.startsWith('/.well-known/') && !addons.isAddonEnabled(ADDON_IDS.MCP)) {
-      res.status(404).end();
-      return;
-    }
-    meta.getMetaRouter()(req, res, next);
+    void (async () => {
+      if (req.path.startsWith('/.well-known/') && !(await addons.isAddonEnabled(ADDON_IDS.MCP))) {
+        res.status(404).end();
+        return;
+      }
+      meta.getMetaRouter()(req, res, next);
+    })().catch(next);
   };
 }
 

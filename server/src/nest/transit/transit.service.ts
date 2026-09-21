@@ -172,7 +172,7 @@ export class TransitService {
     const text = (query || '').trim();
     // Answered before either backend is consulted, so it reports the one that
     // WOULD have been asked rather than claiming nobody was.
-    const provider: TransitProvider = this.google.isActive(userId) ? 'google' : 'transitous';
+    const provider: TransitProvider = (await this.google.isActive(userId)) ? 'google' : 'transitous';
     if (text.length < 2) return { results: [], provider };
     if (text.length > 200) {
       const e = new Error('Query too long') as Error & { status: number };
@@ -253,7 +253,7 @@ export class TransitService {
 
     // After validation on purpose: whichever backend answers, the caller is held
     // to the same coordinate/mode/transfer contract and gets the same 400s.
-    if (this.google.isActive(userId)) {
+    if ((await this.google.isActive(userId))) {
       return { ...(await this.google.plan(q, language, userId)), provider: 'google' };
     }
 

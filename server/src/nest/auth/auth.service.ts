@@ -10,6 +10,7 @@ import type { Request, Response } from 'express';
 import { readEnv } from '../../app-config';
 import { JWT_SECRET, SESSION_DURATION_SECONDS, SESSION_DURATION_REMEMBER_SECONDS } from '../../config';
 import { DatabaseService } from '../database/database.service';
+import { UnitOfWork } from '../database/unit-of-work';
 import { PermissionsService } from '../permissions/permissions.service';
 import { validatePassword } from '../common/passwordPolicy';
 import { encryptMfaSecret, decryptMfaSecret } from '../common/crypto/mfaCrypto';
@@ -132,6 +133,7 @@ export class AuthService {
     private readonly mailer: MailerService,
     private readonly tokens: EphemeralTokenService,
     private readonly allowedFileTypes: AllowedFileTypesService,
+    private readonly uow: UnitOfWork,
   ) {}
 
   // Cookie
@@ -253,7 +255,7 @@ export class AuthService {
     return !!(declaredRpId || env.app.appUrl || env.http.allowedOriginsRaw);
   }
 
-  getAppConfig(authenticatedUser: User | undefined | null) {
+  async getAppConfig(authenticatedUser: User | undefined | null) {
     const userCount = this.db.get<{ count: number }>('SELECT COUNT(*) as count FROM users WHERE COALESCE(is_guest, 0) = 0')!.count;
     const isDemo = readEnv().demo.enabled;
     const toggles = this.resolveAuthToggles();
@@ -350,7 +352,7 @@ export class AuthService {
       places_details_enabled: placesDetailsEnabled,
       places_enrich_enabled: placesEnrichEnabled,
       place_shadow_enabled: placeShadowEnabled,
-      permissions: authenticatedUser ? this.permissions.getAllPermissions() : undefined,
+      permissions: authenticatedUser ? (await this.permissions.getAllPermissions()) : undefined,
       // Case-sensitive on purpose (legacy parity).
       dev_mode: readEnv().app.nodeEnv === 'development',
     };
@@ -379,7 +381,7 @@ export class AuthService {
     return { valid: true, max_uses: invite.max_uses, used_count: invite.used_count, expires_at: invite.expires_at };
   }
 
-  registerUser(rawBody: unknown): { error?: string; status?: number; token?: string; user?: Record<string, unknown>; auditUserId?: number; auditDetails?: Record<string, unknown> } {
+  async registerUser(rawBody: unknown): Promise<{ error?: string; status?: number; token?: string; user?: Record<string, unknown>; auditUserId?: number; auditDetails?: Record<string, unknown> }> {
     const body = rawBody as { username?: string; email?: string; password?: string; invite_token?: string };
     const username = typeof body.username === 'string' ? body.username.trim() : '';
     const email = typeof body.email === 'string' ? body.email.trim() : '';
@@ -426,7 +428,7 @@ export class AuthService {
     try {
       // One transaction for the whole signup: a mid-sequence throw (invite
       // bookkeeping, trip auto-join) must not leave a half-registered user.
-      return this.db.transaction(() => {
+      return await this.uow.transactional(async () => {
         const result = this.db.run(
           'INSERT INTO users (username, email, password_hash, role, first_seen_version, login_count) VALUES (?, ?, ?, ?, ?, 0)',
           username, email, password_hash, role, readEnv().app.appVersion || '0.0.0'
@@ -446,7 +448,7 @@ export class AuthService {
           // Trip-bound invite (#1402): auto-add the freshly registered user to the
           // trip. Idempotent + owner-safe; no-ops if the bound trip was since deleted.
           if (validInvite.trip_id) {
-            this.membership.joinTripAsMember(Number(validInvite.trip_id), Number(result.lastInsertRowid), validInvite.created_by ?? null);
+            await this.membership.joinTripAsMember(Number(validInvite.trip_id), Number(result.lastInsertRowid), validInvite.created_by ?? null);
           }
         }
 

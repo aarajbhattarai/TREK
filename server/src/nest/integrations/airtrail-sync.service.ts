@@ -38,7 +38,7 @@ export class AirtrailSyncService {
    *  than a module-level flag, because the service is a container singleton. */
   private running = false;
 
-  syncGloballyEnabled(): boolean {
+  async syncGloballyEnabled(): Promise<boolean> {
     return this.link.syncGloballyEnabled();
   }
 
@@ -91,7 +91,7 @@ export class AirtrailSyncService {
         continue;
       }
       try {
-        this.reservations.update(row.id, row.trip_id, mapFlightToReservation(flight) as any, current as any);
+        await this.reservations.update(row.id, row.trip_id, mapFlightToReservation(flight) as any, current as any);
         this.db.run(
           'UPDATE reservations SET external_hash = ?, external_synced_at = ? WHERE id = ?',
           hash,
@@ -110,7 +110,7 @@ export class AirtrailSyncService {
   /** Background poll across every connected owner (scheduler). */
   async runAirtrailSync(): Promise<void> {
     if (this.running) return;
-    if (!this.link.syncGloballyEnabled()) return;
+    if (!(await this.link.syncGloballyEnabled())) return;
     this.running = true;
     let changed = 0;
     try {
@@ -132,7 +132,7 @@ export class AirtrailSyncService {
    * background poll.
    */
   async runAirtrailSyncForUser(userId: number): Promise<{ changed: number }> {
-    if (!this.link.syncGloballyEnabled()) return { changed: 0 };
+    if (!(await this.link.syncGloballyEnabled())) return { changed: 0 };
     try {
       return { changed: await this.syncOwner(userId) };
     } catch (err) {

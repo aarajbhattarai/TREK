@@ -52,8 +52,17 @@ export function parseDependencies(raw: string | null | undefined): PluginDepende
 }
 
 /** Required addon ids that are currently NOT enabled — these block activation. */
-export function disabledRequiredAddons(deps: PluginDependencies, isAddonEnabled: (id: string) => boolean): string[] {
-  return deps.requiredAddons.filter((a) => !isAddonEnabled(a));
+export async function disabledRequiredAddons(
+  deps: PluginDependencies,
+  isAddonEnabled: (id: string) => Promise<boolean>,
+): Promise<string[]> {
+  // A `filter` cannot await, so the same predicate runs as an explicit loop —
+  // same order, same result.
+  const disabled: string[] = [];
+  for (const a of deps.requiredAddons) {
+    if (!(await isAddonEnabled(a))) disabled.push(a);
+  }
+  return disabled;
 }
 
 export interface VersionMismatch {

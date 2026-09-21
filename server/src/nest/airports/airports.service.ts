@@ -16,9 +16,9 @@ import { DatabaseService } from '../database/database.service';
 export class AirportsService implements OnApplicationBootstrap {
   constructor(private readonly db: DatabaseService) {}
 
-  onApplicationBootstrap(): void {
+  async onApplicationBootstrap(): Promise<void> {
     try {
-      this.backfillFlightEndpoints();
+      await this.backfillFlightEndpoints();
     } catch (err) {
       console.error('[DB] Flight endpoint backfill failed:', err);
     }
@@ -32,7 +32,7 @@ export class AirportsService implements OnApplicationBootstrap {
     return findByIata(code) as Airport | null;
   }
 
-  backfillFlightEndpoints(): void {
+  async backfillFlightEndpoints(): Promise<void> {
     const pending = this.db.prepare(`
       SELECT r.id, r.metadata, r.reservation_time, r.reservation_end_time
       FROM reservations r

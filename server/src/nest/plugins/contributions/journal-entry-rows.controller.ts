@@ -78,7 +78,7 @@ export class JournalEntryRowsController {
     @Param('entryId') entryIdRaw: string,
     @Req() req: Request & { user?: { id: number } },
   ): Promise<{ providers: ProviderResult[] }> {
-    if (!pluginsEnabled() || !this.addons.isAddonEnabled(ADDON_IDS.JOURNEY)) return { providers: [] };
+    if (!pluginsEnabled() || !(await this.addons.isAddonEnabled(ADDON_IDS.JOURNEY))) return { providers: [] };
     const entryId = Number(entryIdRaw);
     const userId = req.user?.id;
     if (!Number.isFinite(entryId) || userId == null) return { providers: [] };

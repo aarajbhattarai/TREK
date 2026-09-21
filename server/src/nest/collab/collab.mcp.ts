@@ -96,7 +96,7 @@ export class CollabMcp {
   ) {
     if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
     if (!this.collab.verifyTripAccess(tripId, ctx.userId)) return noAccess();
-    if (!this.guards.hasTripPermission('collab_edit', tripId, ctx.userId)) return permissionDenied();
+    if (!(await this.guards.hasTripPermission('collab_edit', tripId, ctx.userId))) return permissionDenied();
     const note = this.collab.createNote(tripId, ctx.userId, { title, content, category, color, website, pinned });
     this.guards.safeBroadcast(tripId, 'collab:note:created', { note });
     return ok({ note });
@@ -127,7 +127,7 @@ export class CollabMcp {
   ) {
     if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
     if (!this.collab.verifyTripAccess(tripId, ctx.userId)) return noAccess();
-    if (!this.guards.hasTripPermission('collab_edit', tripId, ctx.userId)) return permissionDenied();
+    if (!(await this.guards.hasTripPermission('collab_edit', tripId, ctx.userId))) return permissionDenied();
     const note = this.collab.updateNote(tripId, noteId, { title, content, category, color, website, pinned });
     if (!note) return errorResult('Note not found.');
     this.guards.safeBroadcast(tripId, 'collab:note:updated', { note });
@@ -148,7 +148,7 @@ export class CollabMcp {
   async deleteCollabNote({ tripId, noteId }: { tripId: number; noteId: number }, ctx: McpContext) {
     if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
     if (!this.collab.verifyTripAccess(tripId, ctx.userId)) return noAccess();
-    if (!this.guards.hasTripPermission('collab_edit', tripId, ctx.userId)) return permissionDenied();
+    if (!(await this.guards.hasTripPermission('collab_edit', tripId, ctx.userId))) return permissionDenied();
     const deleted = await this.collab.deleteNote(tripId, noteId);
     if (!deleted) return errorResult('Note not found.');
     this.guards.safeBroadcast(tripId, 'collab:note:deleted', { noteId });
@@ -195,7 +195,7 @@ export class CollabMcp {
   ) {
     if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
     if (!this.collab.verifyTripAccess(tripId, ctx.userId)) return noAccess();
-    if (!this.guards.hasTripPermission('collab_edit', tripId, ctx.userId)) return permissionDenied();
+    if (!(await this.guards.hasTripPermission('collab_edit', tripId, ctx.userId))) return permissionDenied();
     const poll = this.collab.createPoll(tripId, ctx.userId, { question, options, multiple, deadline });
     this.guards.safeBroadcast(tripId, 'collab:poll:created', { poll });
     return ok({ poll });
@@ -216,7 +216,7 @@ export class CollabMcp {
   async voteCollabPoll({ tripId, pollId, optionIndex }: { tripId: number; pollId: number; optionIndex: number }, ctx: McpContext) {
     if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
     if (!this.collab.verifyTripAccess(tripId, ctx.userId)) return noAccess();
-    if (!this.guards.hasTripPermission('collab_edit', tripId, ctx.userId)) return permissionDenied();
+    if (!(await this.guards.hasTripPermission('collab_edit', tripId, ctx.userId))) return permissionDenied();
     const result = this.collab.votePoll(tripId, pollId, ctx.userId, optionIndex);
     if (result.error) return errorResult(result.error);
     this.guards.safeBroadcast(tripId, 'collab:poll:voted', { poll: result.poll });
@@ -237,7 +237,7 @@ export class CollabMcp {
   async closeCollabPoll({ tripId, pollId }: { tripId: number; pollId: number }, ctx: McpContext) {
     if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
     if (!this.collab.verifyTripAccess(tripId, ctx.userId)) return noAccess();
-    if (!this.guards.hasTripPermission('collab_edit', tripId, ctx.userId)) return permissionDenied();
+    if (!(await this.guards.hasTripPermission('collab_edit', tripId, ctx.userId))) return permissionDenied();
     const poll = this.collab.closePoll(tripId, pollId);
     if (!poll) return errorResult('Poll not found.');
     this.guards.safeBroadcast(tripId, 'collab:poll:closed', { poll });
@@ -258,7 +258,7 @@ export class CollabMcp {
   async deleteCollabPoll({ tripId, pollId }: { tripId: number; pollId: number }, ctx: McpContext) {
     if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
     if (!this.collab.verifyTripAccess(tripId, ctx.userId)) return noAccess();
-    if (!this.guards.hasTripPermission('collab_edit', tripId, ctx.userId)) return permissionDenied();
+    if (!(await this.guards.hasTripPermission('collab_edit', tripId, ctx.userId))) return permissionDenied();
     const deleted = this.collab.deletePoll(tripId, pollId);
     if (!deleted) return errorResult('Poll not found.');
     this.guards.safeBroadcast(tripId, 'collab:poll:deleted', { pollId });
@@ -297,7 +297,7 @@ export class CollabMcp {
   async sendCollabMessage({ tripId, text, replyTo }: { tripId: number; text: string; replyTo?: number }, ctx: McpContext) {
     if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
     if (!this.collab.verifyTripAccess(tripId, ctx.userId)) return noAccess();
-    if (!this.guards.hasTripPermission('collab_edit', tripId, ctx.userId)) return permissionDenied();
+    if (!(await this.guards.hasTripPermission('collab_edit', tripId, ctx.userId))) return permissionDenied();
     const result = this.collab.createMessage(tripId, ctx.userId, text, replyTo ?? null);
     if (result.error) return errorResult(result.error);
     this.guards.safeBroadcast(tripId, 'collab:message:created', { message: result.message });
@@ -318,7 +318,7 @@ export class CollabMcp {
   async deleteCollabMessage({ tripId, messageId }: { tripId: number; messageId: number }, ctx: McpContext) {
     if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
     if (!this.collab.verifyTripAccess(tripId, ctx.userId)) return noAccess();
-    if (!this.guards.hasTripPermission('collab_edit', tripId, ctx.userId)) return permissionDenied();
+    if (!(await this.guards.hasTripPermission('collab_edit', tripId, ctx.userId))) return permissionDenied();
     const result = this.collab.deleteMessage(tripId, messageId, ctx.userId);
     if (result.error) return errorResult(result.error);
     this.guards.safeBroadcast(tripId, 'collab:message:deleted', { messageId, username: result.username });
@@ -340,7 +340,7 @@ export class CollabMcp {
   async reactCollabMessage({ tripId, messageId, emoji }: { tripId: number; messageId: number; emoji: string }, ctx: McpContext) {
     if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
     if (!this.collab.verifyTripAccess(tripId, ctx.userId)) return noAccess();
-    if (!this.guards.hasTripPermission('collab_edit', tripId, ctx.userId)) return permissionDenied();
+    if (!(await this.guards.hasTripPermission('collab_edit', tripId, ctx.userId))) return permissionDenied();
     const result = this.collab.reactMessage(messageId, tripId, ctx.userId, emoji);
     if (!result.found) return errorResult('Message not found.');
     this.guards.safeBroadcast(tripId, 'collab:message:reacted', { messageId, reactions: result.reactions });

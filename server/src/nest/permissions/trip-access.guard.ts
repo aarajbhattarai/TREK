@@ -47,7 +47,7 @@ export class TripAccessGuard implements CanActivate {
     private readonly reflector: Reflector,
   ) {}
 
-  canActivate(context: ExecutionContext): boolean {
+  async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<TripRequest>();
     const user = request.user;
     // JwtAuthGuard runs first and 401s an anonymous request, so a missing user here
@@ -67,7 +67,7 @@ export class TripAccessGuard implements CanActivate {
     ]);
     if (action) {
       const shared = trip.user_id !== user.id;
-      if (!this.permissions.checkPermission(action, user.role, trip.user_id, user.id, shared)) {
+      if (!(await this.permissions.checkPermission(action, user.role, trip.user_id, user.id, shared))) {
         throw new HttpException({ error: 'No permission' }, 403);
       }
     }

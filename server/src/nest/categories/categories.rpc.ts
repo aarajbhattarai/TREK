@@ -11,7 +11,7 @@ export class CategoriesRpc {
   constructor(private readonly categories: CategoriesService) {}
 
   @PluginMethod('categories.list', { permission: 'db:read:categories' })
-  list(): unknown[] {
-    return this.categories.list() as unknown[];
+  async list(): Promise<unknown[]> {
+    return (await this.categories.list()) as unknown[];
   }
 }

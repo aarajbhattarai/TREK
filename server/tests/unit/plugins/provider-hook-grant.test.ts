@@ -101,7 +101,7 @@ describe('providersOf enforces the hook:* grant', () => {
 
 describe('runtime.invokeHook defense-in-depth', () => {
   it('refuses a plugin id that is not a granted provider of the hook, even if passed directly', async () => {
-    const rt = createPluginRuntime(new DatabaseService(db));
+    const rt = await createPluginRuntime(new DatabaseService(db));
     // one legitimate granted provider exists, so providersOf('placeDetailProvider') = ['ok']
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (rt as any).supervisor.running.set('ok', { id: 'ok', status: 'active', hooks: ['placeDetailProvider'], events: [], granted: new Set(['hook:place-detail-provider']) });

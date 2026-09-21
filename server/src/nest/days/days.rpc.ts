@@ -24,12 +24,12 @@ export class DaysRpc {
   ) {}
 
   @PluginMethod('days.create', { permission: 'db:write:days' })
-  create(params: Record<string, unknown>, ctx: PluginRpcContext): unknown {
+  async create(params: Record<string, unknown>, ctx: PluginRpcContext): Promise<unknown> {
     const tripId = num(params.tripId, 'tripId');
     const actor = this.guards.requireActor(ctx, 'day');
     const parsed = dayCreateRequestSchema.safeParse(params.input);
     if (!parsed.success) throw new BadParams(`invalid day: ${schemaMessage(parsed.error)}`);
-    this.guards.requireTripEdit(tripId, actor, DAY_EDIT_ACTION);
+    await this.guards.requireTripEdit(tripId, actor, DAY_EDIT_ACTION);
     const input = parsed.data as { date?: string; notes?: string };
     const day = this.days.create(tripId, input.date, input.notes);
     this.realtime.broadcast(tripId, 'day:created', { day });
@@ -37,27 +37,27 @@ export class DaysRpc {
   }
 
   @PluginMethod('days.update', { permission: 'db:write:days' })
-  update(params: Record<string, unknown>, ctx: PluginRpcContext): unknown {
+  async update(params: Record<string, unknown>, ctx: PluginRpcContext): Promise<unknown> {
     const tripId = num(params.tripId, 'tripId');
     const dayId = num(params.dayId, 'dayId');
     const actor = this.guards.requireActor(ctx, 'day');
     const parsed = dayUpdateRequestSchema.safeParse(params.input);
     if (!parsed.success) throw new BadParams(`invalid day: ${schemaMessage(parsed.error)}`);
-    this.guards.requireTripEdit(tripId, actor, DAY_EDIT_ACTION);
+    await this.guards.requireTripEdit(tripId, actor, DAY_EDIT_ACTION);
     // getDay scopes the row to the trip before the write touches it.
     const current = this.days.getDay(dayId, tripId);
     if (!current) throw new ForbiddenResource(`no day ${dayId} on trip ${tripId}`);
-    const day = this.days.update(dayId, current, parsed.data as { notes?: string; title?: string | null });
+    const day = await this.days.update(dayId, current, parsed.data as { notes?: string; title?: string | null });
     this.realtime.broadcast(tripId, 'day:updated', { day });
     return day;
   }
 
   @PluginMethod('days.delete', { permission: 'db:write:days' })
-  delete(params: Record<string, unknown>, ctx: PluginRpcContext): unknown {
+  async delete(params: Record<string, unknown>, ctx: PluginRpcContext): Promise<unknown> {
     const tripId = num(params.tripId, 'tripId');
     const dayId = num(params.dayId, 'dayId');
     const actor = this.guards.requireActor(ctx, 'day');
-    this.guards.requireTripEdit(tripId, actor, DAY_EDIT_ACTION);
+    await this.guards.requireTripEdit(tripId, actor, DAY_EDIT_ACTION);
     if (!this.days.getDay(dayId, tripId)) throw new ForbiddenResource(`no day ${dayId} on trip ${tripId}`);
     this.days.remove(dayId);
     this.realtime.broadcast(tripId, 'day:deleted', { dayId });

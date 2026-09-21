@@ -46,12 +46,12 @@ describe('ReservationsController (parity with the legacy /api/trips/:tripId/rese
     // The bespoke 'Title is required' 400 moved to the global ZodValidationPipe
     // (ReservationCreateDto) — covered by the e2e suite.
 
-    it('creates, runs budget sync, broadcasts accommodation + reservation, notifies', () => {
+    it('creates, runs budget sync, broadcasts accommodation + reservation, notifies', async () => {
       const create = vi.fn().mockReturnValue({ reservation: { id: 9 }, accommodationCreated: true });
       const broadcast = vi.fn(); const syncBudgetOnCreate = vi.fn(); const notifyBookingChange = vi.fn();
       const svc = makeService({ create, broadcast, syncBudgetOnCreate, notifyBookingChange } as Partial<ReservationsService>);
       const body = { title: 'Hotel', type: 'lodging', create_budget_entry: { total_price: 200 } };
-      expect(new ReservationsController(svc, airtrailLink).create(user, '5', body, 'sock')).toEqual({ reservation: { id: 9 } });
+      expect(await new ReservationsController(svc, airtrailLink).create(user, '5', body, 'sock')).toEqual({ reservation: { id: 9 } });
       expect(broadcast).toHaveBeenCalledWith('5', 'accommodation:created', {}, 'sock');
       expect(syncBudgetOnCreate).toHaveBeenCalledWith('5', 9, 'Hotel', 'lodging', { total_price: 200 }, 'sock');
       expect(broadcast).toHaveBeenCalledWith('5', 'reservation:created', { reservation: { id: 9 } }, 'sock');
@@ -115,12 +115,12 @@ describe('ReservationsController (parity with the legacy /api/trips/:tripId/rese
       expect(thrown(() => new ReservationsController(svc, airtrailLink).update(user, '5', '9', { title: 'X' }))).toEqual({ status: 404, body: { error: 'Reservation not found' } });
     });
 
-    it('updates, syncs budget with current fallbacks, broadcasts + notifies', () => {
+    it('updates, syncs budget with current fallbacks, broadcasts + notifies', async () => {
       const getReservation = vi.fn().mockReturnValue({ title: 'Old', type: 'lodging' });
       const update = vi.fn().mockReturnValue({ reservation: { id: 9 }, accommodationChanged: true });
       const broadcast = vi.fn(); const syncBudgetOnUpdate = vi.fn(); const notifyBookingChange = vi.fn();
       const svc = makeService({ getReservation, update, broadcast, syncBudgetOnUpdate, notifyBookingChange } as Partial<ReservationsService>);
-      new ReservationsController(svc, airtrailLink).update(user, '5', '9', { create_budget_entry: { total_price: 50 } }, 'sock');
+      await new ReservationsController(svc, airtrailLink).update(user, '5', '9', { create_budget_entry: { total_price: 50 } }, 'sock');
       expect(broadcast).toHaveBeenCalledWith('5', 'accommodation:updated', {}, 'sock');
       expect(syncBudgetOnUpdate).toHaveBeenCalledWith('5', '9', '', undefined, 'Old', 'lodging', { total_price: 50 }, 'sock');
       expect(notifyBookingChange).toHaveBeenCalledWith('5', user.id, 'Old', 'lodging');
@@ -180,11 +180,11 @@ describe('ReservationsController (parity with the legacy /api/trips/:tripId/rese
       expect(thrown(() => new ReservationsController(svc, airtrailLink).remove(user, '5', '9'))).toEqual({ status: 404, body: { error: 'Reservation not found' } });
     });
 
-    it('broadcasts the accommodation + budget cascade then reservation:deleted', () => {
+    it('broadcasts the accommodation + budget cascade then reservation:deleted', async () => {
       const remove = vi.fn().mockReturnValue({ deleted: { id: 9, title: 'Hotel', type: 'lodging', accommodation_id: 3 }, accommodationDeleted: true, deletedBudgetItemId: 7 });
       const broadcast = vi.fn(); const notifyBookingChange = vi.fn();
       const svc = makeService({ remove, broadcast, notifyBookingChange } as Partial<ReservationsService>);
-      expect(new ReservationsController(svc, airtrailLink).remove(user, '5', '9', 'sock')).toEqual({ success: true });
+      expect(await new ReservationsController(svc, airtrailLink).remove(user, '5', '9', 'sock')).toEqual({ success: true });
       expect(broadcast).toHaveBeenCalledWith('5', 'accommodation:deleted', { accommodationId: 3 }, 'sock');
       expect(broadcast).toHaveBeenCalledWith('5', 'budget:deleted', { itemId: 7 }, 'sock');
       expect(broadcast).toHaveBeenCalledWith('5', 'reservation:deleted', { reservationId: 9 }, 'sock');

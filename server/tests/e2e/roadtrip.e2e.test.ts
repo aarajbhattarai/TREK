@@ -28,6 +28,9 @@ import cookieParser from 'cookie-parser';
 import type { Server } from 'http';
 import request from 'supertest';
 import { describe, it, expect, beforeAll, afterAll, beforeEach, vi, type MockInstance } from 'vitest';
+import { createTestUnitOfWork } from '../helpers/test-uow';
+import { UnitOfWork } from '../../src/nest/database/unit-of-work';
+import { TestUnitOfWorkModule } from '../helpers/test-uow';
 
 const { db } = vi.hoisted(() => {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -95,7 +98,7 @@ describe('Roadtrip e2e (real guard chain + temp SQLite)', () => {
 
   async function build() {
     const moduleRef = await Test.createTestingModule({
-      imports: [DatabaseModule, RealtimeModule, RoadtripModule],
+      imports: [await TestUnitOfWorkModule.forRoot(db), DatabaseModule, RealtimeModule, RoadtripModule],
     }).compile();
     const nest = moduleRef.createNestApplication();
     nest.use(cookieParser());
@@ -169,7 +172,7 @@ describe('Roadtrip e2e (real guard chain + temp SQLite)', () => {
   it('validates Google route preview and import before executing either service', async () => {
     const routes = app.get(GoogleRouteService);
     const preview = vi.spyOn(routes, 'preview').mockResolvedValue({ stops: [] });
-    const save = vi.spyOn(routes, 'import').mockReturnValue({ imported: 2 });
+    const save = vi.spyOn(routes, 'import').mockResolvedValue({ imported: 2 });
     const input = { dayId: 3, stops: [{ name: 'A', lat: 48, lng: 11 }, { name: 'B', lat: 41, lng: 12 }] };
     try {
       await request(server).post('/api/roadtrip/google-maps-preview').send({ url: 'https://google.com/maps/dir/A/B' }).expect(401);

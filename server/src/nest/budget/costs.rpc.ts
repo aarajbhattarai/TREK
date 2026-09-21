@@ -38,22 +38,22 @@ export class CostsRpc {
 
   @PluginMethod('costs.getByTrip', { permission: 'db:read:costs' })
   getByTrip(params: Record<string, unknown>, ctx: PluginRpcContext): unknown {
-    return this.guards.tripRead(params, ctx, () => {
-      this.requireBudgetAddon();
+    return this.guards.tripRead(params, ctx, async () => {
+      await this.requireBudgetAddon();
       return this.budget.listBudgetItems(num(params.tripId, 'tripId'));
     });
   }
 
   @PluginMethod('costs.listMine', { permission: 'db:read:costs' })
-  listMine(_params: Record<string, unknown>, ctx: PluginRpcContext): unknown {
+  async listMine(_params: Record<string, unknown>, ctx: PluginRpcContext): Promise<unknown> {
     // Cross-trip aggregate. The acting user is host-bound; a job or onLoad is refused
     // the same way tripRead refuses one.
     if (ctx.actingUserId === undefined) throw new ForbiddenResource('cost reads require an authenticated user context');
-    this.requireBudgetAddon();
+    await this.requireBudgetAddon();
     // The leaf membership read, not TripsService.list: TripsModule imports this
     // one, so injecting TripsService here would close a cycle. Same id set,
     // same newest-first order.
-    const tripIds = this.membership.listAccessibleTripIds(ctx.actingUserId);
+    const tripIds = await this.membership.listAccessibleTripIds(ctx.actingUserId);
     return tripIds.flatMap((id) => this.budget.listBudgetItems(id));
   }
 
@@ -61,10 +61,10 @@ export class CostsRpc {
   async create(params: Record<string, unknown>, ctx: PluginRpcContext): Promise<unknown> {
     const tripId = num(params.tripId, 'tripId');
     const actor = this.requireCostActor(ctx);
-    this.requireBudgetAddon();
+    await this.requireBudgetAddon();
     const parsed = budgetCreateItemRequestSchema.safeParse(params.input);
     if (!parsed.success) throw new BadParams(`invalid cost: ${schemaMessage(parsed.error)}`);
-    this.requireCostEdit(tripId, actor);
+    await this.requireCostEdit(tripId, actor);
     // BudgetService.create freezes the FX rate and resolves members/payers, so the
     // plugin path produces the same row the web app would.
     const item = await this.budget.create(String(tripId), parsed.data);
@@ -77,10 +77,10 @@ export class CostsRpc {
     const tripId = num(params.tripId, 'tripId');
     const itemId = num(params.itemId, 'itemId');
     const actor = this.requireCostActor(ctx);
-    this.requireBudgetAddon();
+    await this.requireBudgetAddon();
     const parsed = budgetUpdateItemRequestSchema.safeParse(params.input);
     if (!parsed.success) throw new BadParams(`invalid cost: ${schemaMessage(parsed.error)}`);
-    this.requireCostEdit(tripId, actor);
+    await this.requireCostEdit(tripId, actor);
     // update re-freezes the FX rate on a currency change, exactly like create.
     const item = await this.budget.update(String(itemId), String(tripId), parsed.data);
     if (item == null) throw new ForbiddenResource(`no cost ${itemId} on trip ${tripId}`);
@@ -89,12 +89,12 @@ export class CostsRpc {
   }
 
   @PluginMethod('costs.delete', { permission: 'db:write:costs' })
-  delete(params: Record<string, unknown>, ctx: PluginRpcContext): unknown {
+  async delete(params: Record<string, unknown>, ctx: PluginRpcContext): Promise<unknown> {
     const tripId = num(params.tripId, 'tripId');
     const itemId = num(params.itemId, 'itemId');
     const actor = this.requireCostActor(ctx);
-    this.requireBudgetAddon();
-    this.requireCostEdit(tripId, actor);
+    await this.requireBudgetAddon();
+    await this.requireCostEdit(tripId, actor);
     if (!this.budget.remove(String(itemId), String(tripId))) {
       throw new ForbiddenResource(`no cost ${itemId} on trip ${tripId}`);
     }
@@ -110,14 +110,14 @@ export class CostsRpc {
     return ctx.actingUserId;
   }
 
-  private requireBudgetAddon(): void {
-    this.guards.requireAddon(ADDON_IDS.BUDGET, 'costs');
+  private async requireBudgetAddon(): Promise<void> {
+    await this.guards.requireAddon(ADDON_IDS.BUDGET, 'costs');
   }
 
   /** Trip access plus budget_edit, with the cost-specific refusal message. */
-  private requireCostEdit(tripId: number, userId: number): void {
+  private async requireCostEdit(tripId: number, userId: number): Promise<void> {
     if (!this.db.canAccessTrip(tripId, userId)) throw new ForbiddenResource(`no access to trip ${tripId}`);
-    if (!this.guards.canEditAs(BUDGET_EDIT_ACTION, tripId, userId)) {
+    if (!(await this.guards.canEditAs(BUDGET_EDIT_ACTION, tripId, userId))) {
       throw new ForbiddenResource(`no permission to edit costs on trip ${tripId}`);
     }
   }

@@ -40,6 +40,9 @@ vi.mock('../../src/db/database', () => ({
 
 import { PlaceShadowModule } from '../../src/nest/place-shadow/place-shadow.module';
 import { TrekExceptionFilter } from '../../src/nest/common/trek-exception.filter';
+import { createTestUnitOfWork } from '../helpers/test-uow';
+import { UnitOfWork } from '../../src/nest/database/unit-of-work';
+import { TestUnitOfWorkModule } from '../helpers/test-uow';
 
 const PICK = {
   query: 'kaffee bar am dobi',
@@ -66,7 +69,7 @@ describe('/api/place-shadow e2e (real guards + temp SQLite)', () => {
 
   async function build() {
     const moduleRef = await Test.createTestingModule({
-      imports: [DatabaseModule, PlaceShadowModule],
+      imports: [await TestUnitOfWorkModule.forRoot(db), DatabaseModule, PlaceShadowModule],
       providers: [{ provide: APP_PIPE, useClass: ZodValidationPipe }],
     }).compile();
     const nest = moduleRef.createNestApplication();

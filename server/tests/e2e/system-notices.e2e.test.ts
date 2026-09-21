@@ -33,6 +33,9 @@ vi.mock('../../src/systemNotices/service', () => ({
 import { SystemNoticesModule } from '../../src/nest/system-notices/system-notices.module';
 import { DatabaseModule } from '../../src/nest/database/database.module';
 import { TrekExceptionFilter } from '../../src/nest/common/trek-exception.filter';
+import { createTestUnitOfWork } from '../helpers/test-uow';
+import { UnitOfWork } from '../../src/nest/database/unit-of-work';
+import { TestUnitOfWorkModule } from '../helpers/test-uow';
 
 const notice = {
   id: 'welcome', display: 'modal', severity: 'info',
@@ -47,7 +50,7 @@ describe('System-notices e2e (real auth guard + temp SQLite)', () => {
     // DatabaseModule is @Global in the real app; a partial graph has to
     // provide it for SystemNoticesModule's AddonsModule import (the
     // addons.e2e precedent).
-    const moduleRef = await Test.createTestingModule({ imports: [DatabaseModule, SystemNoticesModule] }).compile();
+    const moduleRef = await Test.createTestingModule({ imports: [await TestUnitOfWorkModule.forRoot(db), DatabaseModule, SystemNoticesModule] }).compile();
     const nest = moduleRef.createNestApplication();
     nest.use(cookieParser());
     nest.useGlobalFilters(new TrekExceptionFilter());

@@ -28,32 +28,32 @@ export class CategoriesController {
 
   @Get()
   @UseGuards(JwtAuthGuard)
-  list(): CategoryListResponse {
-    return { categories: this.categories.list() };
+  async list(): Promise<CategoryListResponse> {
+    return { categories: await this.categories.list() };
   }
 
   @Post()
   @UseGuards(JwtAuthGuard, AdminGuard)
-  create(@CurrentUser() user: User, @Body() body: CategoryCreateDto): { category: Category } {
-    return { category: this.categories.create(user.id, body.name, body.color, body.icon) };
+  async create(@CurrentUser() user: User, @Body() body: CategoryCreateDto): Promise<{ category: Category }> {
+    return { category: await this.categories.create(user.id, body.name, body.color, body.icon) };
   }
 
   @Put(':id')
   @UseGuards(JwtAuthGuard, AdminGuard)
-  update(@Param('id') id: string, @Body() body: CategoryUpdateDto): { category: Category } {
-    if (!this.categories.getById(id)) {
+  async update(@Param('id') id: string, @Body() body: CategoryUpdateDto): Promise<{ category: Category }> {
+    if (!(await this.categories.getById(id))) {
       throw new HttpException({ error: 'Category not found' }, 404);
     }
-    return { category: this.categories.update(id, body.name, body.color, body.icon) };
+    return { category: await this.categories.update(id, body.name, body.color, body.icon) };
   }
 
   @Delete(':id')
   @UseGuards(JwtAuthGuard, AdminGuard)
-  remove(@Param('id') id: string): { success: boolean } {
-    if (!this.categories.getById(id)) {
+  async remove(@Param('id') id: string): Promise<{ success: boolean }> {
+    if (!(await this.categories.getById(id))) {
       throw new HttpException({ error: 'Category not found' }, 404);
     }
-    this.categories.remove(id);
+    await this.categories.remove(id);
     return { success: true };
   }
 }

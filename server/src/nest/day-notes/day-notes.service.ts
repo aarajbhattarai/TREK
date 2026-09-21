@@ -37,7 +37,7 @@ export class DayNotesService {
     return this.dbs.canAccessTrip(tripId, userId);
   }
 
-  canEdit(trip: TripAccess, user: User): boolean {
+  async canEdit(trip: TripAccess, user: User): Promise<boolean> {
     return this.permissions.checkPermission('day_edit', user.role, trip.user_id, user.id, trip.user_id !== user.id);
   }
 

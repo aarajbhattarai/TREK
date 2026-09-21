@@ -22,6 +22,9 @@ import { TrekExceptionFilter } from '../../src/nest/common/trek-exception.filter
 import { validateBodyContracts } from '../../src/nest/common/validate-body-contracts';
 import { createTestRegistry } from '../../src/nest-mcp';
 import { trekMcpAccessPolicy, trekMcpValidateAccess } from '../../src/mcp/nest-mcp-policy';
+import { createTestUnitOfWork } from '../helpers/test-uow';
+import { UnitOfWork } from '../../src/nest/database/unit-of-work';
+import { TestUnitOfWorkModule } from '../helpers/test-uow';
 
 const base = '/api/school-holiday-catalog';
 const winter = { name: 'Winter break', startDate: '2026-12-20', endDate: '2027-01-06' };
@@ -32,7 +35,7 @@ beforeAll(async () => {
   createTables(db);
   runMigrations(db);
   db.prepare("INSERT INTO users (id, username, email, password_hash, role) VALUES (1, 'admin', 'admin@test.local', '', 'admin'), (2, 'member', 'member@test.local', '', 'user')").run();
-  const module = await Test.createTestingModule({ imports: [DatabaseModule, RealtimeModule, SchoolHolidaysModule] }).compile();
+  const module = await Test.createTestingModule({ imports: [await TestUnitOfWorkModule.forRoot(db), DatabaseModule, RealtimeModule, SchoolHolidaysModule] }).compile();
   app = module.createNestApplication();
   app.use(cookieParser());
   app.useGlobalPipes(new ZodValidationPipe());

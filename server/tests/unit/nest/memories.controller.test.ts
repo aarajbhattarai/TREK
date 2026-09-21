@@ -50,19 +50,19 @@ function makeRes(): MockRes {
 // ─────────────────────────────────────────────────────────────────────────────
 describe('UnifiedMemoriesController (parity with /api/integrations/memories/unified)', () => {
   describe('GET /trips/:tripId/photos', () => {
-    it('returns the photos on success', () => {
+    it('returns the photos on success', async () => {
       const svc = makeService({ listTripPhotos: vi.fn().mockReturnValue({ data: [{ id: 1 }] }) });
       const res = makeRes();
-      new UnifiedMemoriesController(svc).listPhotos(user, '5', res);
+      await new UnifiedMemoriesController(svc).listPhotos(user, '5', res);
       expect(svc.listTripPhotos).toHaveBeenCalledWith('5', 7);
       expect(res.json).toHaveBeenCalledWith({ photos: [{ id: 1 }] });
       expect(res.status).not.toHaveBeenCalled();
     });
 
-    it('maps the error envelope to its status + message', () => {
+    it('maps the error envelope to its status + message', async () => {
       const svc = makeService({ listTripPhotos: vi.fn().mockReturnValue({ error: { status: 404, message: 'Trip not found' } }) });
       const res = makeRes();
-      new UnifiedMemoriesController(svc).listPhotos(user, '5', res);
+      await new UnifiedMemoriesController(svc).listPhotos(user, '5', res);
       expect(res.status).toHaveBeenCalledWith(404);
       expect(res.json).toHaveBeenCalledWith({ error: 'Trip not found' });
     });
@@ -147,28 +147,28 @@ describe('UnifiedMemoriesController (parity with /api/integrations/memories/unif
   });
 
   describe('GET /trips/:tripId/album-links', () => {
-    it('returns the links on success', () => {
+    it('returns the links on success', async () => {
       const svc = makeService({ listTripAlbumLinks: vi.fn().mockReturnValue({ data: [{ id: 'l1' }] }) });
       const res = makeRes();
-      new UnifiedMemoriesController(svc).listAlbumLinks(user, '5', res);
+      await new UnifiedMemoriesController(svc).listAlbumLinks(user, '5', res);
       expect(res.json).toHaveBeenCalledWith({ links: [{ id: 'l1' }] });
     });
 
-    it('maps the error envelope', () => {
+    it('maps the error envelope', async () => {
       const svc = makeService({ listTripAlbumLinks: vi.fn().mockReturnValue({ error: { status: 404, message: 'Trip not found' } }) });
       const res = makeRes();
-      new UnifiedMemoriesController(svc).listAlbumLinks(user, '5', res);
+      await new UnifiedMemoriesController(svc).listAlbumLinks(user, '5', res);
       expect(res.status).toHaveBeenCalledWith(404);
       expect(res.json).toHaveBeenCalledWith({ error: 'Trip not found' });
     });
   });
 
   describe('POST /trips/:tripId/album-links', () => {
-    it('forwards a coerced passphrase when present', () => {
+    it('forwards a coerced passphrase when present', async () => {
       const createTripAlbumLink = vi.fn().mockReturnValue({ data: {} });
       const svc = makeService({ createTripAlbumLink });
       const res = makeRes();
-      new UnifiedMemoriesController(svc).createAlbumLink(
+      await new UnifiedMemoriesController(svc).createAlbumLink(
         user,
         '5',
         { provider: 'synologyphotos', album_id: 'a1', album_name: 'Trip', passphrase: 123 },
@@ -178,17 +178,17 @@ describe('UnifiedMemoriesController (parity with /api/integrations/memories/unif
       expect(res.json).toHaveBeenCalledWith({ success: true });
     });
 
-    it('passes undefined when the passphrase is absent or empty', () => {
+    it('passes undefined when the passphrase is absent or empty', async () => {
       const createTripAlbumLink = vi.fn().mockReturnValue({ data: {} });
       const svc = makeService({ createTripAlbumLink });
-      new UnifiedMemoriesController(svc).createAlbumLink(user, '5', { provider: 'immich', album_id: 'a1', album_name: 'Trip', passphrase: '' }, makeRes());
+      await new UnifiedMemoriesController(svc).createAlbumLink(user, '5', { provider: 'immich', album_id: 'a1', album_name: 'Trip', passphrase: '' }, makeRes());
       expect(createTripAlbumLink).toHaveBeenCalledWith('5', 7, 'immich', 'a1', 'Trip', undefined);
     });
 
-    it('maps the error envelope', () => {
+    it('maps the error envelope', async () => {
       const svc = makeService({ createTripAlbumLink: vi.fn().mockReturnValue({ error: { status: 400, message: 'Invalid provider' } }) });
       const res = makeRes();
-      new UnifiedMemoriesController(svc).createAlbumLink(user, '5', {}, res);
+      await new UnifiedMemoriesController(svc).createAlbumLink(user, '5', {}, res);
       expect(res.status).toHaveBeenCalledWith(400);
       expect(res.json).toHaveBeenCalledWith({ error: 'Invalid provider' });
     });

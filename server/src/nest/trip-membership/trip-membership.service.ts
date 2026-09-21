@@ -19,13 +19,13 @@ export class TripMembershipService {
   constructor(private readonly db: DatabaseService) {}
 
   /** The trip owner's user id, or null when the trip does not exist. */
-  getOwnerId(tripId: string | number): number | null {
+  async getOwnerId(tripId: string | number): Promise<number | null> {
     const row = this.db.get<{ user_id: number }>('SELECT user_id FROM trips WHERE id = ?', tripId);
     return row ? row.user_id : null;
   }
 
   /** Member user ids (owner excluded), in added_at order like listMembers. */
-  listMemberUserIds(tripId: string | number): number[] {
+  async listMemberUserIds(tripId: string | number): Promise<number[]> {
     return this.db
       .all<{ user_id: number }>('SELECT user_id FROM trip_members WHERE trip_id = ? ORDER BY added_at ASC', tripId)
       .map((r) => r.user_id);
@@ -35,7 +35,7 @@ export class TripMembershipService {
    * Ids of every trip the user owns or is a member of, newest first — the id
    * half of TripsService.list(userId, null), same WHERE and ORDER BY.
    */
-  listAccessibleTripIds(userId: number): number[] {
+  async listAccessibleTripIds(userId: number): Promise<number[]> {
     return this.db
       .prepare(`
         SELECT t.id FROM trips t
@@ -58,11 +58,11 @@ export class TripMembershipService {
    *
    * Returns whether a new membership row was actually created.
    */
-  joinTripAsMember(
+  async joinTripAsMember(
     tripId: number,
     userId: number,
     invitedBy: number | null,
-  ): { joined: boolean; tripId: number } {
+  ): Promise<{ joined: boolean; tripId: number }> {
     const trip = this.db.get<{ id: number; user_id: number }>('SELECT id, user_id FROM trips WHERE id = ?', tripId);
     if (!trip) return { joined: false, tripId };
     // The owner already has full access; never add them as a member.

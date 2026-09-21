@@ -596,7 +596,7 @@ describe('verifyTripAccess / can / files.bridge', () => {
     expect(svc.verifyTripAccess(trip.id, stranger.id)).toBeFalsy();
   });
 
-  it('FILE-SVC-037: can() forwards to checkPermission with the shared-trip flag', () => {
+  it('FILE-SVC-037: can() forwards to checkPermission with the shared-trip flag', async () => {
     const { user, trip } = seedTrip();
     const guest = { id: user.id + 1, role: 'user' } as unknown as User;
     checkPermission.mockReturnValue(true);
@@ -604,10 +604,10 @@ describe('verifyTripAccess / can / files.bridge', () => {
     // TripAccess also carries currency, which no assertion here looks at.
     const tripRow = { id: trip.id, user_id: user.id } as TripAccess;
 
-    expect(svc.can('file_edit', tripRow, guest)).toBe(true);
+    expect(await svc.can('file_edit', tripRow, guest)).toBe(true);
     expect(checkPermission).toHaveBeenCalledWith('file_edit', 'user', user.id, guest.id, true);
 
-    svc.can('file_upload', tripRow, { id: user.id, role: 'user' } as unknown as User);
+    await svc.can('file_upload', tripRow, { id: user.id, role: 'user' } as unknown as User);
     expect(checkPermission).toHaveBeenLastCalledWith('file_upload', 'user', user.id, user.id, false);
   });
 

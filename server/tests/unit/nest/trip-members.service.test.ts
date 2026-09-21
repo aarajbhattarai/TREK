@@ -65,10 +65,17 @@ import { TripMembersService } from '../../../src/nest/trip-members/trip-members.
 import { NotFoundError, ValidationError } from '../../../src/nest/common/domain-errors';
 import type { User } from '../../../src/types';
 import { notificationsStub } from '../../helpers/notifications';
+import { createTestUnitOfWork } from '../../helpers/test-uow';
+import { UnitOfWork } from '../../../src/nest/database/unit-of-work';
 
 const dbs = () => new DatabaseService(testDb);
-const budgetSvc = new BudgetService(dbs(), new PermissionsService(dbs()), new ExchangeRatesService(), new RealtimeService());
-const roster = new TripMembersService(dbs(), budgetSvc, new UserCleanupService(dbs(), budgetSvc), new PermissionsService(dbs()), new RealtimeService(), notificationsStub(notifySend));
+
+let budgetSvc: BudgetService;
+let roster: TripMembersService;
+beforeAll(async () => {
+  budgetSvc = new BudgetService(dbs(), new PermissionsService(dbs(), await createTestUnitOfWork(dbs().connection)), new ExchangeRatesService(), new RealtimeService());
+  roster = new TripMembersService(dbs(), budgetSvc, new UserCleanupService(dbs(), budgetSvc), new PermissionsService(dbs(), await createTestUnitOfWork(dbs().connection)), new RealtimeService(), notificationsStub(notifySend));
+});
 
 /**
  * A roster whose connection reports "no such row" for the first result of every
@@ -77,7 +84,7 @@ const roster = new TripMembersService(dbs(), budgetSvc, new UserCleanupService(d
  * the read is the only way to keep those branches honest. Same Proxy shape as
  * the failingConnection helper in trips.service.test.ts.
  */
-function rosterWithMissingRow(match: string) {
+async function rosterWithMissingRow(match: string) {
   const conn = new Proxy(testDb, {
     get(target, prop) {
       if (prop === 'prepare') {
@@ -98,7 +105,7 @@ function rosterWithMissingRow(match: string) {
     },
   });
   const frozen = { connection: conn, canAccessTrip: dbMock.canAccessTrip, isOwner: dbMock.isOwner } as unknown as DatabaseService;
-  return new TripMembersService(frozen, budgetSvc, new UserCleanupService(dbs(), budgetSvc), new PermissionsService(dbs()), new RealtimeService(), notificationsStub(notifySend));
+  return new TripMembersService(frozen, budgetSvc, new UserCleanupService(dbs(), budgetSvc), new PermissionsService(dbs(), await createTestUnitOfWork(dbs().connection)), new RealtimeService(), notificationsStub(notifySend));
 }
 
 beforeAll(() => {
@@ -134,15 +141,15 @@ describe('TripMembersService delegation', () => {
     expect(roster.canAccessTrip(trip.id, stranger.id)).toBeUndefined();
   });
 
-  it('MEMBERS-SVC-002: can() resolves member_manage at its trip_owner default and lets admins through', () => {
+  it('MEMBERS-SVC-002: can() resolves member_manage at its trip_owner default and lets admins through', async () => {
     const { user: owner } = createUser(testDb);
     const { user: member } = createUser(testDb);
 
     // Inviting and evicting both hang off this single call, so a member must not
     // pass it while the action sits at its default level.
-    expect(roster.can('member_manage', 'user', owner.id, owner.id, false)).toBe(true);
-    expect(roster.can('member_manage', 'user', owner.id, member.id, true)).toBe(false);
-    expect(roster.can('member_manage', 'admin', owner.id, member.id, true)).toBe(true);
+    expect(await roster.can('member_manage', 'user', owner.id, owner.id, false)).toBe(true);
+    expect(await roster.can('member_manage', 'user', owner.id, member.id, true)).toBe(false);
+    expect(await roster.can('member_manage', 'admin', owner.id, member.id, true)).toBe(true);
   });
 
   it('MEMBERS-SVC-003: broadcast forwards the socket id so the originating client is not echoed', () => {
@@ -201,7 +208,7 @@ describe('TripMembersService delegation', () => {
 // ── addMember fallbacks ──────────────────────────────────────────────────────
 
 describe('addMember fallbacks', () => {
-  it("MEMBERS-SVC-007: addMember still reports a title when the trip row cannot be read ('Untitled')", () => {
+  it("MEMBERS-SVC-007: addMember still reports a title when the trip row cannot be read ('Untitled')", async () => {
     const { user: owner } = createUser(testDb);
     const { user: invitee } = createUser(testDb);
     const trip = createTrip(testDb, owner.id, { title: 'Readable' });
@@ -209,7 +216,7 @@ describe('addMember fallbacks', () => {
     // The title only feeds the invite notification, and it is read after the
     // membership is inserted — losing that row must not cost the invitee their
     // access or throw on an undefined title.
-    const broken = rosterWithMissingRow('SELECT title FROM trips WHERE id = ?');
+    const broken = await rosterWithMissingRow('SELECT title FROM trips WHERE id = ?');
     const result = broken.addMember(trip.id, invitee.email, owner.id, owner.id);
     expect(result.tripTitle).toBe('Untitled');
     expect(testDb.prepare('SELECT id FROM trip_members WHERE trip_id = ? AND user_id = ?').get(trip.id, invitee.id)).toBeDefined();
@@ -251,7 +258,7 @@ describe('transferOwnership guard rails', () => {
     expect((testDb.prepare('SELECT user_id FROM trips WHERE id = ?').get(trip.id) as { user_id: number }).user_id).toBe(owner.id);
   });
 
-  it('MEMBERS-SVC-011: completes with an empty fromEmail when the former owner cannot be read', () => {
+  it('MEMBERS-SVC-011: completes with an empty fromEmail when the former owner cannot be read', async () => {
     const { user: owner } = createUser(testDb);
     const { user: member } = createUser(testDb);
     const trip = createTrip(testDb, owner.id);
@@ -260,7 +267,7 @@ describe('transferOwnership guard rails', () => {
     // fromEmail is audit detail only; an unreadable row must not abort the
     // handover halfway, which would leave the owner pointer and the member rows
     // disagreeing about who owns the trip.
-    const broken = rosterWithMissingRow('SELECT email FROM users WHERE id = ?');
+    const broken = await rosterWithMissingRow('SELECT email FROM users WHERE id = ?');
     const result = broken.transferOwnership(trip.id, member.id, owner.id);
     expect(result.fromEmail).toBe('');
     expect(result.toEmail).toBe(member.email);

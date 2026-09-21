@@ -67,10 +67,10 @@ const tokens = { consumeWithMeta } as unknown as EphemeralTokenService;
 const canAccessJourney = vi.fn((journeyId: number) => (journeyId === 4 ? null : { id: journeyId }));
 const journeys = { canAccessJourney } as unknown as JourneyDomainService;
 
-function connect(url: string) {
+async function connect(url: string) {
   const gw = new RealtimeGateway(db, tokens, journeys);
   const ws = socket();
-  gw.handleConnection(ws, { url } as never);
+  await gw.handleConnection(ws, { url } as never);
   return { gw, ws };
 }
 
@@ -82,74 +82,74 @@ beforeEach(() => {
 });
 
 describe('RealtimeGateway handshake', () => {
-  it('WSGW-001: refuses a connect with no token before touching the store', () => {
-    const { ws } = connect('/ws');
+  it('WSGW-001: refuses a connect with no token before touching the store', async () => {
+    const { ws } = await connect('/ws');
     expect(ws.closedWith).toEqual([4001, 'Authentication required']);
     expect(consumeWithMeta).not.toHaveBeenCalled();
   });
 
-  it('WSGW-002: refuses an unknown or spent token', () => {
+  it('WSGW-002: refuses an unknown or spent token', async () => {
     consumeWithMeta.mockReturnValue(null);
-    expect(connect('/ws?token=x').ws.closedWith).toEqual([4001, 'Invalid or expired token']);
+    expect((await connect('/ws?token=x')).ws.closedWith).toEqual([4001, 'Invalid or expired token']);
   });
 
-  it('WSGW-003: rejects a token minted before a password change', () => {
+  it('WSGW-003: rejects a token minted before a password change', async () => {
     // The pv gate. Same close reason as an unknown token on purpose: a client
     // must not be able to tell a stale token from a forged one.
     consumeWithMeta.mockReturnValue({ userId: 3, pv: 1 });
-    expect(connect('/ws?token=x').ws.closedWith).toEqual([4001, 'Invalid or expired token']);
+    expect((await connect('/ws?token=x')).ws.closedWith).toEqual([4001, 'Invalid or expired token']);
   });
 
-  it('WSGW-004: treats a token minted without a pv as version 0', () => {
+  it('WSGW-004: treats a token minted without a pv as version 0', async () => {
     consumeWithMeta.mockReturnValue({ userId: 3 });
     rows.set('user', { id: 3, email: 'm@x.test', role: 'user', mfa_enabled: 0, password_version: 0 });
-    expect(connect('/ws?token=x').ws.closedWith).toBeNull();
+    expect((await connect('/ws?token=x')).ws.closedWith).toBeNull();
   });
 
-  it('WSGW-005: enforces the MFA policy with its own close code', () => {
+  it('WSGW-005: enforces the MFA policy with its own close code', async () => {
     rows.set('mfa', { value: 'true' });
-    expect(connect('/ws?token=x').ws.closedWith).toEqual([4403, 'MFA required']);
+    expect((await connect('/ws?token=x')).ws.closedWith).toEqual([4403, 'MFA required']);
   });
 
-  it('WSGW-006: admits an MFA-enabled user while the policy is on', () => {
+  it('WSGW-006: admits an MFA-enabled user while the policy is on', async () => {
     rows.set('mfa', { value: 'true' });
     rows.set('user', { id: 3, email: 'm@x.test', role: 'user', mfa_enabled: 1, password_version: 2 });
-    expect(connect('/ws?token=x').ws.closedWith).toBeNull();
+    expect((await connect('/ws?token=x')).ws.closedWith).toBeNull();
   });
 
-  it('WSGW-007: the welcome frame carries a NUMERIC socket id', () => {
+  it('WSGW-007: the welcome frame carries a NUMERIC socket id', async () => {
     // Load-bearing: the client echoes this back as X-Socket-Id and broadcast
     // excludes the originator with Number(excludeSid). A uuid would be NaN,
     // NaN === NaN is false, and every client would receive its own writes back.
     // Nothing throws; it shows up as drag-and-drop that jumps under the cursor.
-    const { ws } = connect('/ws?token=x');
+    const { ws } = await connect('/ws?token=x');
     const welcome = JSON.parse(ws.sent[0]) as { type: string; socketId: unknown };
     expect(welcome.type).toBe('welcome');
     expect(Number.isInteger(welcome.socketId)).toBe(true);
   });
 
-  it('WSGW-007b: survives an upgrade request with no url, rather than throwing at it', () => {
+  it('WSGW-007b: survives an upgrade request with no url, rather than throwing at it', async () => {
     const gw = new RealtimeGateway(db, tokens, journeys);
     const ws = socket();
-    expect(() => gw.handleConnection(ws, {} as never)).not.toThrow();
+    await expect(gw.handleConnection(ws, {} as never)).resolves.not.toThrow();
     expect(ws.closedWith).toEqual([4001, 'Authentication required']);
   });
 
-  it('WSGW-007c: a user row with no password_version reads as version 0', () => {
+  it('WSGW-007c: a user row with no password_version reads as version 0', async () => {
     // Legacy rows predate the column. Treating a missing value as 0 is what
     // makes a legacy token match a legacy row instead of being refused forever.
     consumeWithMeta.mockReturnValue({ userId: 3, pv: 0 });
     rows.set('user', { id: 3, email: 'm@x.test', role: 'user', mfa_enabled: 0 });
-    expect(connect('/ws?token=x').ws.closedWith).toBeNull();
+    expect((await connect('/ws?token=x')).ws.closedWith).toBeNull();
   });
 
-  it('WSGW-008: never leaks password_version past the handshake', () => {
+  it('WSGW-008: never leaks password_version past the handshake', async () => {
     // Asserted on what the socket registry HOLDS, not on the frames it sends.
     // The frames never carry the user object at all, so the earlier version of
     // this case passed with the strip deleted: it proved nothing. What matters
     // is that the retained identity is clean, because that object is what
     // getOnlineUserIds and the onlyUserId filter read.
-    const { ws } = connect('/ws?token=x');
+    const { ws } = await connect('/ws?token=x');
     const held = userOf(ws) as unknown as Record<string, unknown> | undefined;
     expect(held).toBeDefined();
     expect(held).not.toHaveProperty('password_version');
@@ -158,20 +158,20 @@ describe('RealtimeGateway handshake', () => {
 });
 
 describe('RealtimeGateway rooms', () => {
-  it('WSGW-010: join refuses a trip the user cannot reach', () => {
-    const { gw, ws } = connect('/ws?token=x');
-    expect(gw.handleJoin({ tripId: 99 }, ws)).toEqual({ type: 'error', message: 'Access denied' });
+  it('WSGW-010: join refuses a trip the user cannot reach', async () => {
+    const { gw, ws } = await connect('/ws?token=x');
+    expect(await gw.handleJoin({ tripId: 99 }, ws)).toEqual({ type: 'error', message: 'Access denied' });
   });
 
-  it('WSGW-011: join and leave answer flat, keyed by type', () => {
-    const { gw, ws } = connect('/ws?token=x');
-    expect(gw.handleJoin({ tripId: 7 }, ws)).toEqual({ type: 'joined', tripId: 7 });
+  it('WSGW-011: join and leave answer flat, keyed by type', async () => {
+    const { gw, ws } = await connect('/ws?token=x');
+    expect(await gw.handleJoin({ tripId: 7 }, ws)).toEqual({ type: 'joined', tripId: 7 });
     expect(gw.handleLeave({ tripId: 7 }, ws)).toEqual({ type: 'left', tripId: 7 });
   });
 
-  it('WSGW-012: a frame with no tripId is ignored rather than answered', () => {
-    const { gw, ws } = connect('/ws?token=x');
-    expect(gw.handleJoin({}, ws)).toBeUndefined();
+  it('WSGW-012: a frame with no tripId is ignored rather than answered', async () => {
+    const { gw, ws } = await connect('/ws?token=x');
+    expect(await gw.handleJoin({}, ws)).toBeUndefined();
     expect(gw.handleLeave({}, ws)).toBeUndefined();
   });
 });
@@ -218,8 +218,8 @@ describe('RealtimeGateway heartbeat', () => {
     }
   });
 
-  it('WSGW-022: a pong marks the socket live again', () => {
-    const { ws } = connect('/ws?token=x');
+  it('WSGW-022: a pong marks the socket live again', async () => {
+    const { ws } = await connect('/ws?token=x');
     const pong = (ws.on as unknown as { mock: { calls: [string, () => void][] } }).mock.calls
       .find(([event]) => event === 'pong');
     expect(pong).toBeDefined();
@@ -313,36 +313,36 @@ describe('ws-state fan-out', () => {
 describe('book rooms', () => {
   let nextJourney = 100;
 
-  function joined(journeyId: number) {
+  async function joined(journeyId: number) {
     const gw = new RealtimeGateway(db, tokens, journeys);
     const ws = socket();
     registerSocket(ws, { id: 3, username: 'm' } as User);
-    const reply = gw.handleBookJoin({ journeyId }, ws);
+    const reply = await gw.handleBookJoin({ journeyId }, ws);
     return { gw, ws, reply };
   }
 
-  it('WSGW-BOOK-001: admits a socket to a journey it may see', () => {
+  it('WSGW-BOOK-001: admits a socket to a journey it may see', async () => {
     const j = nextJourney++;
-    const { reply } = joined(j);
+    const { reply } = await joined(j);
     expect(reply).toEqual({ type: 'book:joined', journeyId: j });
     expect(bookPeers(j).map(p => p.userId)).toEqual([3]);
   });
 
   /* Same shape as the trip room's refusal, and for the same reason. */
-  it('WSGW-BOOK-002: refuses a journey the user cannot see, and adds nobody', () => {
+  it('WSGW-BOOK-002: refuses a journey the user cannot see, and adds nobody', async () => {
     const gw = new RealtimeGateway(db, tokens, journeys);
     const ws = socket();
     registerSocket(ws, { id: 3, username: 'm' } as User);
 
-    expect(gw.handleBookJoin({ journeyId: 4 }, ws)).toEqual({ type: 'error', message: 'Access denied' });
+    expect(await gw.handleBookJoin({ journeyId: 4 }, ws)).toEqual({ type: 'error', message: 'Access denied' });
     expect(bookPeers(4)).toEqual([]);
   });
 
-  it('WSGW-BOOK-003: tells everyone in the book who is in it', () => {
+  it('WSGW-BOOK-003: tells everyone in the book who is in it', async () => {
     const j = nextJourney++;
-    const { ws: first } = joined(j);
+    const { ws: first } = await joined(j);
     first.sent.length = 0;
-    joined(j);
+    await joined(j);
 
     const peers = first.sent.map(raw => JSON.parse(raw)).filter(m => m.type === 'journey:book:peers');
     expect(peers).toHaveLength(1);
@@ -350,9 +350,9 @@ describe('book rooms', () => {
     expect(peers[0].journeyId).toBe(j);
   });
 
-  it('WSGW-BOOK-004: leaving empties the room and says so', () => {
+  it('WSGW-BOOK-004: leaving empties the room and says so', async () => {
     const j = nextJourney++;
-    const { gw, ws } = joined(j);
+    const { gw, ws } = await joined(j);
     expect(gw.handleBookLeave({ journeyId: j }, ws)).toEqual({ type: 'book:left', journeyId: j });
     expect(bookPeers(j)).toEqual([]);
   });
@@ -361,10 +361,10 @@ describe('book rooms', () => {
    * The one that leaves a ghost if it is missed: a closed tab whose arrow stays
    * on everyone else's page, belonging to nobody.
    */
-  it('WSGW-BOOK-005: a dropped connection leaves the book too', () => {
+  it('WSGW-BOOK-005: a dropped connection leaves the book too', async () => {
     const j = nextJourney++;
-    const { gw, ws } = joined(j);
-    const other = joined(j);
+    const { gw, ws } = await joined(j);
+    const other = await joined(j);
     other.ws.sent.length = 0;
     expect(bookPeers(j)).toHaveLength(2);
 
@@ -379,15 +379,15 @@ describe('book rooms', () => {
 describe('book pointers', () => {
   let nextJourney = 200;
 
-  function pair() {
+  async function pair() {
     const journeyId = nextJourney++;
     const gw = new RealtimeGateway(db, tokens, journeys);
     const mine = socket();
     const theirs = socket();
     registerSocket(mine, { id: 3, username: 'm' } as User);
     registerSocket(theirs, { id: 4, username: 'other' } as User);
-    gw.handleBookJoin({ journeyId }, mine);
-    gw.handleBookJoin({ journeyId }, theirs);
+    await gw.handleBookJoin({ journeyId }, mine);
+    await gw.handleBookJoin({ journeyId }, theirs);
     mine.sent.length = 0;
     theirs.sent.length = 0;
     return { gw, mine, theirs, journeyId };
@@ -396,8 +396,8 @@ describe('book pointers', () => {
   const cursorsIn = (ws: FakeSocket) =>
     ws.sent.map(raw => JSON.parse(raw)).filter(m => m.type === 'journey:book:cursor');
 
-  it('WSGW-CUR-001: forwards a pointer to the others, not back to the sender', () => {
-    const { gw, mine, theirs, journeyId } = pair();
+  it('WSGW-CUR-001: forwards a pointer to the others, not back to the sender', async () => {
+    const { gw, mine, theirs, journeyId } = await pair();
     gw.handleBookCursor({ journeyId, spreadIndex: 2, x: 105.5, y: 60 }, mine);
 
     expect(cursorsIn(mine)).toEqual([]);
@@ -410,8 +410,8 @@ describe('book pointers', () => {
    * this path — it runs ten times a second — so a socket that never joined has
    * to reach nobody.
    */
-  it('WSGW-CUR-002: a socket that never joined reaches nobody', () => {
-    const { gw, theirs, journeyId } = pair();
+  it('WSGW-CUR-002: a socket that never joined reaches nobody', async () => {
+    const { gw, theirs, journeyId } = await pair();
     const stranger = socket();
     registerSocket(stranger, { id: 5, username: 'x' } as User);
 
@@ -419,14 +419,14 @@ describe('book pointers', () => {
     expect(cursorsIn(theirs)).toEqual([]);
   });
 
-  it('WSGW-CUR-003: a pointer leaving the page travels as null', () => {
-    const { gw, mine, theirs, journeyId } = pair();
+  it('WSGW-CUR-003: a pointer leaving the page travels as null', async () => {
+    const { gw, mine, theirs, journeyId } = await pair();
     gw.handleBookCursor({ journeyId, spreadIndex: 0, x: null, y: null }, mine);
     expect(cursorsIn(theirs)[0]).toMatchObject({ x: null, y: null });
   });
 
-  it('WSGW-CUR-004: refuses nonsense coordinates rather than passing them on', () => {
-    const { gw, mine, theirs, journeyId } = pair();
+  it('WSGW-CUR-004: refuses nonsense coordinates rather than passing them on', async () => {
+    const { gw, mine, theirs, journeyId } = await pair();
     gw.handleBookCursor({ journeyId, spreadIndex: -4, x: Number.NaN, y: Infinity }, mine);
 
     expect(cursorsIn(theirs)[0]).toMatchObject({ spreadIndex: 0, x: null, y: null });
@@ -445,30 +445,30 @@ describe('book pointers', () => {
 describe('book messages that are refused', () => {
   let nextJourney = 300;
 
-  it('WSGW-BOOK-006: a join without a journey id is ignored', () => {
+  it('WSGW-BOOK-006: a join without a journey id is ignored', async () => {
     const gw = new RealtimeGateway(db, tokens, journeys);
     const ws = socket();
     registerSocket(ws, { id: 3, username: 'm' } as User);
 
-    expect(gw.handleBookJoin({}, ws)).toBeUndefined();
+    expect(await gw.handleBookJoin({}, ws)).toBeUndefined();
     expect(ws.sent).toEqual([]);
   });
 
   /* An unauthenticated socket never got as far as the registry. */
-  it('WSGW-BOOK-007: a join from a socket with no user is ignored', () => {
+  it('WSGW-BOOK-007: a join from a socket with no user is ignored', async () => {
     const gw = new RealtimeGateway(db, tokens, journeys);
     const j = nextJourney++;
 
-    expect(gw.handleBookJoin({ journeyId: j }, socket())).toBeUndefined();
+    expect(await gw.handleBookJoin({ journeyId: j }, socket())).toBeUndefined();
     expect(bookPeers(j)).toEqual([]);
   });
 
-  it('WSGW-BOOK-008: a journey id that is not a number is refused, not joined', () => {
+  it('WSGW-BOOK-008: a journey id that is not a number is refused, not joined', async () => {
     const gw = new RealtimeGateway(db, tokens, journeys);
     const ws = socket();
     registerSocket(ws, { id: 3, username: 'm' } as User);
 
-    expect(gw.handleBookJoin({ journeyId: 'not-a-journey' }, ws))
+    expect(await gw.handleBookJoin({ journeyId: 'not-a-journey' }, ws))
       .toEqual({ type: 'error', message: 'Access denied' });
   });
 
@@ -491,27 +491,27 @@ describe('book messages that are refused', () => {
     expect(bookPeers(j)).toEqual([]);
   });
 
-  it('WSGW-CUR-005: a pointer without a journey id reaches nobody', () => {
+  it('WSGW-CUR-005: a pointer without a journey id reaches nobody', async () => {
     const gw = new RealtimeGateway(db, tokens, journeys);
     const mine = socket();
     const theirs = socket();
     registerSocket(mine, { id: 3, username: 'm' } as User);
     registerSocket(theirs, { id: 4, username: 'o' } as User);
     const j = nextJourney++;
-    gw.handleBookJoin({ journeyId: j }, mine);
-    gw.handleBookJoin({ journeyId: j }, theirs);
+    await gw.handleBookJoin({ journeyId: j }, mine);
+    await gw.handleBookJoin({ journeyId: j }, theirs);
     theirs.sent.length = 0;
 
     expect(gw.handleBookCursor({ x: 1, y: 1 }, mine)).toBeUndefined();
     expect(theirs.sent).toEqual([]);
   });
 
-  it('WSGW-CUR-006: a pointer from a socket with no user reaches nobody', () => {
+  it('WSGW-CUR-006: a pointer from a socket with no user reaches nobody', async () => {
     const gw = new RealtimeGateway(db, tokens, journeys);
     const theirs = socket();
     registerSocket(theirs, { id: 4, username: 'o' } as User);
     const j = nextJourney++;
-    gw.handleBookJoin({ journeyId: j }, theirs);
+    await gw.handleBookJoin({ journeyId: j }, theirs);
     theirs.sent.length = 0;
 
     expect(gw.handleBookCursor({ journeyId: j, x: 1, y: 1 }, socket())).toBeUndefined();

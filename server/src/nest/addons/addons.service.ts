@@ -29,28 +29,28 @@ export class AddonsService {
     return this.dbs.connection;
   }
 
-  isAddonEnabled(addonId: string): boolean {
+  async isAddonEnabled(addonId: string): Promise<boolean> {
     const addon = this.db.prepare('SELECT enabled FROM addons WHERE id = ?').get(addonId) as
       | { enabled: number }
       | undefined;
     return !!addon?.enabled;
   }
 
-  getBagTracking() {
+  async getBagTracking() {
     const row = this.db.prepare("SELECT value FROM app_settings WHERE key = 'bag_tracking_enabled'").get() as
       | { value: string }
       | undefined;
     return { enabled: row?.value === 'true' };
   }
 
-  updateBagTracking(enabled: boolean) {
+  async updateBagTracking(enabled: boolean) {
     this.db.prepare("INSERT OR REPLACE INTO app_settings (key, value) VALUES ('bag_tracking_enabled', ?)").run(
       enabled ? 'true' : 'false',
     );
     return { enabled: !!enabled };
   }
 
-  getCollabFeatures() {
+  async getCollabFeatures() {
     const rows = this.db
       .prepare(
         "SELECT key, value FROM app_settings WHERE key IN ('collab_chat_enabled', 'collab_notes_enabled', 'collab_links_enabled', 'collab_polls_enabled', 'collab_whatsnext_enabled')",
@@ -67,7 +67,7 @@ export class AddonsService {
     };
   }
 
-  updateCollabFeatures(features: { chat?: boolean; notes?: boolean; links?: boolean; polls?: boolean; whatsnext?: boolean }) {
+  async updateCollabFeatures(features: { chat?: boolean; notes?: boolean; links?: boolean; polls?: boolean; whatsnext?: boolean }) {
     const mapping: Record<string, string> = {
       chat: 'collab_chat_enabled',
       notes: 'collab_notes_enabled',
@@ -75,12 +75,12 @@ export class AddonsService {
       polls: 'collab_polls_enabled',
       whatsnext: 'collab_whatsnext_enabled',
     };
-    const before = this.getCollabFeatures();
+    const before = await this.getCollabFeatures();
     const stmt = this.db.prepare('INSERT OR REPLACE INTO app_settings (key, value) VALUES (?, ?)');
     for (const [feat, key] of Object.entries(mapping)) {
       if (features[feat] !== undefined) stmt.run(key, features[feat] ? 'true' : 'false');
     }
-    const after = this.getCollabFeatures();
+    const after = await this.getCollabFeatures();
     // Collab flags gate MCP tool/resource registration, so callers must know
     // whether anything actually flipped — a no-op save must not tear down every
     // live MCP session (#1414).
@@ -88,7 +88,7 @@ export class AddonsService {
     return { features: after, changed };
   }
 
-  list() {
+  async list() {
     const addons = this.db
       .prepare('SELECT id, name, type, icon, enabled FROM addons WHERE enabled = 1 ORDER BY sort_order')
       .all() as Pick<Addon, 'id' | 'name' | 'type' | 'icon' | 'enabled'>[];
@@ -97,7 +97,7 @@ export class AddonsService {
     // here (instead of a migration) also covers installs that still hold an
     // enabled provider under a disabled journey from before updateAddon
     // cascaded the disable.
-    const providers = !this.isAddonEnabled(ADDON_IDS.JOURNEY)
+    const providers = !(await this.isAddonEnabled(ADDON_IDS.JOURNEY))
       ? []
       : (this.db
           .prepare(
@@ -135,8 +135,8 @@ export class AddonsService {
     }
 
     return {
-      collabFeatures: this.getCollabFeatures(),
-      bagTracking: this.getBagTracking().enabled,
+      collabFeatures: await this.getCollabFeatures(),
+      bagTracking: (await this.getBagTracking()).enabled,
       addons: [
         ...addons.map((a) => ({ ...a, enabled: !!a.enabled })),
         ...providers.map((p) => ({
@@ -171,22 +171,22 @@ export class AddonsService {
   // backfills 'true' for installs that never touched the switches, so nobody
   // loses a feature on upgrade.
 
-  private readFlag(key: string) {
+  private async readFlag(key: string) {
     const row = this.db.prepare('SELECT value FROM app_settings WHERE key = ?').get(key) as { value: string } | undefined;
     return { enabled: row?.value === 'true' };
   }
 
-  private writeFlag(key: string, enabled: boolean) {
+  private async writeFlag(key: string, enabled: boolean) {
     this.db.prepare('INSERT OR REPLACE INTO app_settings (key, value) VALUES (?, ?)').run(key, enabled ? 'true' : 'false');
     return { enabled: !!enabled };
   }
 
-  getPlacesPhotos() { return this.readFlag('places_photos_enabled'); }
-  updatePlacesPhotos(enabled: boolean) { return this.writeFlag('places_photos_enabled', enabled); }
-  getPlacesAutocomplete() { return this.readFlag('places_autocomplete_enabled'); }
-  updatePlacesAutocomplete(enabled: boolean) { return this.writeFlag('places_autocomplete_enabled', enabled); }
-  getPlacesDetails() { return this.readFlag('places_details_enabled'); }
-  updatePlacesDetails(enabled: boolean) { return this.writeFlag('places_details_enabled', enabled); }
+  async getPlacesPhotos() { return this.readFlag('places_photos_enabled'); }
+  async updatePlacesPhotos(enabled: boolean) { return this.writeFlag('places_photos_enabled', enabled); }
+  async getPlacesAutocomplete() { return this.readFlag('places_autocomplete_enabled'); }
+  async updatePlacesAutocomplete(enabled: boolean) { return this.writeFlag('places_autocomplete_enabled', enabled); }
+  async getPlacesDetails() { return this.readFlag('places_details_enabled'); }
+  async updatePlacesDetails(enabled: boolean) { return this.writeFlag('places_details_enabled', enabled); }
 
   /**
    * The shadow log, fail-CLOSED like the three above but for the opposite
@@ -195,8 +195,8 @@ export class AddonsService {
    * so there is nothing to backfill and an absent row correctly means off.
    * PlaceShadowService.enabled() reads the same key the same way.
    */
-  getPlaceShadow() { return this.readFlag('place_shadow_enabled'); }
-  updatePlaceShadow(enabled: boolean) { return this.writeFlag('place_shadow_enabled', enabled); }
+  async getPlaceShadow() { return this.readFlag('place_shadow_enabled'); }
+  async updatePlaceShadow(enabled: boolean) { return this.writeFlag('place_shadow_enabled', enabled); }
 
   /**
    * Enrichment reads fail-OPEN, unlike the three switches above.
@@ -211,14 +211,14 @@ export class AddonsService {
    * the same key the same way. If these two ever disagree the admin panel shows
    * "off" while the feature runs, which is worse than either default.
    */
-  getPlacesEnrich() {
+  async getPlacesEnrich() {
     const row = this.db.prepare("SELECT value FROM app_settings WHERE key = 'places_enrich_enabled'").get() as
       | { value: string }
       | undefined;
     return { enabled: row?.value !== 'false' };
   }
 
-  updatePlacesEnrich(enabled: boolean) { return this.writeFlag('places_enrich_enabled', enabled); }
+  async updatePlacesEnrich(enabled: boolean) { return this.writeFlag('places_enrich_enabled', enabled); }
 
   // ── Transit backend (#1699) ────────────────────────────────────────────────
   // Not a flag: two named backends, so it stores the name rather than a
@@ -243,11 +243,11 @@ export class AddonsService {
     return resolveApiKey(this.dbs, 'maps_api_key', userId, readEnv().maps.placesApiKey).source;
   }
 
-  getTransitProvider(userId = 0) {
-    return { provider: readTransitProvider(this.dbs), googleKeySource: this.googleKeySource(userId) };
+  async getTransitProvider(userId = 0) {
+    return { provider: await readTransitProvider(this.dbs), googleKeySource: this.googleKeySource(userId) };
   }
 
-  updateTransitProvider(provider: TransitProvider, userId = 0) {
-    return { provider: writeTransitProvider(this.dbs, provider), googleKeySource: this.googleKeySource(userId) };
+  async updateTransitProvider(provider: TransitProvider, userId = 0) {
+    return { provider: await writeTransitProvider(this.dbs, provider), googleKeySource: this.googleKeySource(userId) };
   }
 }

@@ -265,20 +265,20 @@ describe('ApiTokenGuard — the grant it leaves behind', () => {
 // ---------------------------------------------------------------------------
 
 describe('PublicApiController — what a narrowed key reaches', () => {
-  it('PUBAPI-SCOPE-U020: an un-narrowed key reads every route, exactly as before', () => {
+  it('PUBAPI-SCOPE-U020: an un-narrowed key reads every route, exactly as before', async () => {
     const listTrips = vi.fn().mockReturnValue([TRIP]);
     const listBucketList = vi.fn().mockReturnValue([]);
     const getTrip = vi.fn().mockReturnValue(TRIP);
     const ctl = apiController({ listTrips, listBucketList, getTrip });
-    expect(ctl.listTrips(req(ALL))).toEqual({ trips: [TRIP] });
+    expect(await ctl.listTrips(req(ALL))).toEqual({ trips: [TRIP] });
     expect(ctl.listBucketList(req(ALL))).toEqual({ items: [] });
     expect(ctl.getTrip(req(ALL), '12', undefined)).toEqual(TRIP);
     expect(getTrip).toHaveBeenCalledWith(12, 7, [...PUBLIC_API_INCLUDES], [...PUBLIC_API_SCOPES]);
   });
 
-  it('PUBAPI-SCOPE-U021: a trips-only key reads the trip list', () => {
+  it('PUBAPI-SCOPE-U021: a trips-only key reads the trip list', async () => {
     const listTrips = vi.fn().mockReturnValue([TRIP]);
-    expect(apiController({ listTrips }).listTrips(req(limited('trips')))).toEqual({ trips: [TRIP] });
+    expect(await apiController({ listTrips }).listTrips(req(limited('trips')))).toEqual({ trips: [TRIP] });
   });
 
   it('PUBAPI-SCOPE-U022: and is refused the bucket list before the service is ever asked', () => {

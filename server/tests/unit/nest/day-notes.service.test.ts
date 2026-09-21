@@ -51,8 +51,13 @@ import { PermissionsService } from '../../../src/nest/permissions/permissions.se
 import { DayNotesService } from '../../../src/nest/day-notes/day-notes.service';
 import type { DayNote } from '../../../src/types';
 import { RealtimeService } from '../../../src/nest/realtime/realtime.service';
+import { createTestUnitOfWork } from '../../helpers/test-uow';
+import { UnitOfWork } from '../../../src/nest/database/unit-of-work';
 
-const svc = new DayNotesService(new DatabaseService(testDb), new PermissionsService(new DatabaseService(testDb)), new RealtimeService());
+let svc: DayNotesService;
+beforeAll(async () => {
+  svc = new DayNotesService(new DatabaseService(testDb), new PermissionsService(new DatabaseService(testDb), await createTestUnitOfWork(testDb)), new RealtimeService());
+});
 
 beforeAll(() => {
   createTables(testDb);
@@ -281,21 +286,21 @@ describe('remove', () => {
  * an HTTP guard, and it is tested directly here for the same reason.
  */
 describe('DayNotesService.canEdit', () => {
-  it('DAYNOTE-SVC-090 asks for day_edit and flags a non-owner as shared', () => {
+  it('DAYNOTE-SVC-090 asks for day_edit and flags a non-owner as shared', async () => {
     const checkPermission = vi.fn(() => true);
     const permissions = { checkPermission } as unknown as PermissionsService;
     const withStub = new DayNotesService(new DatabaseService(testDb), permissions, new RealtimeService());
     const trip = { id: 1, user_id: 1 } as never;
 
-    expect(withStub.canEdit(trip, { id: 1, role: 'user' } as never)).toBe(true);
+    expect(await withStub.canEdit(trip, { id: 1, role: 'user' } as never)).toBe(true);
     expect(checkPermission).toHaveBeenLastCalledWith('day_edit', 'user', 1, 1, false);
 
-    withStub.canEdit(trip, { id: 2, role: 'user' } as never);
+    await withStub.canEdit(trip, { id: 2, role: 'user' } as never);
     // The shared flag is what the guard has to reproduce; getting it wrong would give a
     // member the owner's rights on somebody else's trip.
     expect(checkPermission).toHaveBeenLastCalledWith('day_edit', 'user', 1, 2, true);
 
     checkPermission.mockReturnValue(false);
-    expect(withStub.canEdit(trip, { id: 2, role: 'user' } as never)).toBe(false);
+    expect(await withStub.canEdit(trip, { id: 2, role: 'user' } as never)).toBe(false);
   });
 });

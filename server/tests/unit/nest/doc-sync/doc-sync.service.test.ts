@@ -1083,39 +1083,39 @@ describe('DocSyncService', () => {
       expect(linkRow(link.id)).toEqual(before);
     });
 
-    it('answers the same question for any caller that has to refuse up front', () => {
+    it('answers the same question for any caller that has to refuse up front', async () => {
       const link = makeLink();
-      expect(service.isSwitchedOff(link)).toBe(false);
+      expect(await service.isSwitchedOff(link)).toBe(false);
 
       switchProvider('paperless', false);
-      expect(service.isSwitchedOff(link)).toBe(true);
+      expect(await service.isSwitchedOff(link)).toBe(true);
 
       switchProvider('paperless', true);
       addons.isAddonEnabled.mockReturnValue(false);
-      expect(service.isSwitchedOff(link)).toBe(true);
+      expect(await service.isSwitchedOff(link)).toBe(true);
     });
   });
 
   describe('status', () => {
-    it('reports the trip bindings together with a count per item state', () => {
+    it('reports the trip bindings together with a count per item state', async () => {
       const link = makeLink();
       seedItem(link, { remoteId: 'r1', state: 'synced' });
       seedItem(link, { remoteId: 'r2', state: 'synced' });
       seedItem(link, { remoteId: 'r3', state: 'conflict' });
 
-      const status = service.status(tripId);
+      const status = await service.status(tripId);
 
       expect(status.links).toHaveLength(1);
       expect(status.items).toEqual({ synced: 2, conflict: 1 });
     });
 
-    it('says which bindings are paused because their provider is switched off', () => {
+    it('says which bindings are paused because their provider is switched off', async () => {
       const off = makeLink();
       const on = makeLink({ providerId: 'nextcloud' });
       switchProvider('paperless', false);
       switchProvider('nextcloud', true);
 
-      const links = service.status(tripId).links as Array<{ id: number; providerOff: boolean }>;
+      const links = (await service.status(tripId)).links as Array<{ id: number; providerOff: boolean }>;
 
       expect(links.find((l) => l.id === off.id)?.providerOff).toBe(true);
       expect(links.find((l) => l.id === on.id)?.providerOff).toBe(false);
@@ -2071,7 +2071,7 @@ describe('DocSyncService', () => {
       expect(itemRow(itemId).remote_missing_at).not.toBeNull();
       expect(service.issues(tripId).map((r) => r.id)).not.toContain(itemId);
       // Closed is not "back at the store": the holdings must not count it there.
-      const [status] = (service.status(tripId) as { links: Array<{ holdings: { atProvider: number; missing: number } }> }).links;
+      const [status] = ((await service.status(tripId)) as { links: Array<{ holdings: { atProvider: number; missing: number } }> }).links;
       expect(status.holdings).toMatchObject({ atProvider: 0, missing: 0 });
       expect(res.state).toBe('ok');
     });

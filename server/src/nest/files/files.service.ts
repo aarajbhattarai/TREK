@@ -85,7 +85,7 @@ export class FilesService {
     return this.db.canAccessTrip(tripId, userId);
   }
 
-  can(action: FilePermission, trip: Trip, user: User): boolean {
+  async can(action: FilePermission, trip: Trip, user: User): Promise<boolean> {
     return this.permissions.checkPermission(action, user.role, trip.user_id, user.id, trip.user_id !== user.id);
   }
 

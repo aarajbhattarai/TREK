@@ -115,10 +115,10 @@ export class McpRegistry {
    * `ctx` as the handler's last argument (in the SDK `extra` slot). `opts`
    * carries per-session hooks — see `McpAttachOptions`.
    */
-  attach(server: McpServer, ctx: McpContext, opts?: McpAttachOptions): void {
+  async attach(server: McpServer, ctx: McpContext, opts?: McpAttachOptions): Promise<void> {
     const registrar = server as unknown as LooseRegistrar;
     for (const { entry, instance } of this.bound) {
-      if (!this.allowed(entry, ctx, instance)) continue;
+      if (!(await this.allowed(entry, ctx, instance))) continue;
       const handler = (instance as unknown as Record<string, AnyHandler>)[entry.methodName];
       switch (entry.kind) {
         case 'tool':
@@ -142,7 +142,7 @@ export class McpRegistry {
     // tools/list is insertion-ordered, so host-contributed tools sort last,
     // which is the right priority signal in a long list; and it reads the way
     // it works — the registry, then whatever this session added on top.
-    if (opts?.dynamicTools) this.attachDynamicTools(registrar, ctx, opts, opts.dynamicTools);
+    if (opts?.dynamicTools) await this.attachDynamicTools(registrar, ctx, opts, opts.dynamicTools);
   }
 
   /**
@@ -161,12 +161,12 @@ export class McpRegistry {
     return this.reserved;
   }
 
-  private attachDynamicTools(
+  private async attachDynamicTools(
     registrar: LooseRegistrar,
     ctx: McpContext,
     opts: McpAttachOptions,
     source: McpDynamicToolSource,
-  ): void {
+  ): Promise<void> {
     let tools: readonly McpDynamicTool[];
     try {
       tools = source(ctx) ?? [];
@@ -197,7 +197,7 @@ export class McpRegistry {
         // entries only avoid it because validate() pre-checks them at boot, and
         // a per-session source has no boot to be checked at.
         const entry: McpEntry = { kind: 'tool', methodName: DYNAMIC_METHOD_NAME, options: tool.options };
-        if (!this.allowed(entry, ctx, owner)) continue;
+        if (!(await this.allowed(entry, ctx, owner))) continue;
         this.attachTool(registrar, tool.options, owner, tool.handler as AnyHandler, ctx, opts);
       } catch (err) {
         console.warn(`[nest-mcp] skipped dynamic tool "${String(name)}": ${describeError(err)}`);
@@ -263,12 +263,12 @@ export class McpRegistry {
     };
   }
 
-  private allowed(entry: McpEntry, ctx: McpContext, instance: object): boolean {
+  private async allowed(entry: McpEntry, ctx: McpContext, instance: object): Promise<boolean> {
     // The declaring instance goes in so the gate can read an injected
     // collaborator. It is resolved here, at attach, rather than captured when
     // the options object was built — the class body runs long before the
     // container exists.
-    if (entry.options.when && !entry.options.when(ctx, instance)) return false;
+    if (entry.options.when && !(await entry.options.when(ctx, instance))) return false;
     const access = entry.options.access;
     if (access === undefined) return true;
     if (typeof access === 'function') return access(ctx);

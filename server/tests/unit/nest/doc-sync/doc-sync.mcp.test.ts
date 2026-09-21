@@ -167,7 +167,7 @@ describe('DocSyncMcp access', () => {
     const { mcp, sync, config } = makeMcp({ access: false, links: [link(1)] });
     await mcp.syncNow({ tripId: 3 }, ctx);
     mcp.listIssues({ tripId: 3 }, ctx);
-    mcp.getTripDocumentSync({ tripId: 3 }, ctx);
+    await mcp.getTripDocumentSync({ tripId: 3 }, ctx);
     expect(sync.syncLink).not.toHaveBeenCalled();
     expect(sync.status).not.toHaveBeenCalled();
     expect(sync.issues).not.toHaveBeenCalled();
@@ -176,10 +176,10 @@ describe('DocSyncMcp access', () => {
 });
 
 describe('get_trip_document_sync', () => {
-  it('hands back the trip status as the service reports it', () => {
+  it('hands back the trip status as the service reports it', async () => {
     const status = { links: [{ id: 1, remoteLabel: 'Japan 2026' }], items: { synced: 4, conflict: 1 } };
     const { mcp, sync } = makeMcp({ status });
-    expect(payload(mcp.getTripDocumentSync({ tripId: 3 }, ctx))).toEqual(status);
+    expect(payload(await mcp.getTripDocumentSync({ tripId: 3 }, ctx))).toEqual(status);
     expect(sync.status).toHaveBeenCalledWith(3);
   });
 });

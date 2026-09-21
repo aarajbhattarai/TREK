@@ -58,19 +58,19 @@ afterAll(() => {
 // ── list ──────────────────────────────────────────────────────────────────────
 
 describe('list', () => {
-  it('CAT-SVC-001 — returns an array (seeded defaults are present after migrations)', () => {
+  it('CAT-SVC-001 — returns an array (seeded defaults are present after migrations)', async () => {
     // Migrations seed default categories, so the list is never empty in a fully initialized DB
-    const cats = svc.list();
+    const cats = await svc.list();
     expect(Array.isArray(cats)).toBe(true);
     expect(cats.length).toBeGreaterThan(0);
   });
 
-  it('CAT-SVC-002 — results are ordered by name ascending (custom categories sort correctly)', () => {
+  it('CAT-SVC-002 — results are ordered by name ascending (custom categories sort correctly)', async () => {
     const { user } = createUser(testDb);
-    svc.create(user.id, 'Zoo');
-    svc.create(user.id, 'Aquarium');
+    await svc.create(user.id, 'Zoo');
+    await svc.create(user.id, 'Aquarium');
     // Migrations seed default categories; verify ordering by checking our custom ones appear in sorted order
-    const names = svc.list().map((c) => c.name);
+    const names = (await svc.list()).map((c) => c.name);
     const aquariumIdx = names.indexOf('Aquarium');
     const zooIdx = names.indexOf('Zoo');
     expect(aquariumIdx).toBeGreaterThanOrEqual(0);
@@ -78,43 +78,43 @@ describe('list', () => {
     expect(aquariumIdx).toBeLessThan(zooIdx);
   });
 
-  it('CAT-SVC-003 — returns categories from all users (including seeded defaults)', () => {
+  it('CAT-SVC-003 — returns categories from all users (including seeded defaults)', async () => {
     const { user: a } = createUser(testDb);
     const { user: b } = createUser(testDb);
-    const before = svc.list().length;
-    svc.create(a.id, 'Cat-A');
-    svc.create(b.id, 'Cat-B');
-    expect(svc.list()).toHaveLength(before + 2);
+    const before = (await svc.list()).length;
+    await svc.create(a.id, 'Cat-A');
+    await svc.create(b.id, 'Cat-B');
+    expect(await svc.list()).toHaveLength(before + 2);
   });
 });
 
 // ── create ────────────────────────────────────────────────────────────────────
 
 describe('create', () => {
-  it('CAT-SVC-004 — creates a category with name, color, and icon', () => {
+  it('CAT-SVC-004 — creates a category with name, color, and icon', async () => {
     const { user } = createUser(testDb);
-    const cat = svc.create(user.id, 'Restaurant', '#ff5500', '🍽️');
+    const cat = await svc.create(user.id, 'Restaurant', '#ff5500', '🍽️');
     expect(cat.name).toBe('Restaurant');
     expect(cat.color).toBe('#ff5500');
     expect(cat.icon).toBe('🍽️');
     expect(cat.user_id).toBe(user.id);
   });
 
-  it('CAT-SVC-005 — defaults color to #6366f1 when not provided', () => {
+  it('CAT-SVC-005 — defaults color to #6366f1 when not provided', async () => {
     const { user } = createUser(testDb);
-    const cat = svc.create(user.id, 'Default Color');
+    const cat = await svc.create(user.id, 'Default Color');
     expect(cat.color).toBe('#6366f1');
   });
 
-  it('CAT-SVC-006 — defaults icon to 📍 when not provided', () => {
+  it('CAT-SVC-006 — defaults icon to 📍 when not provided', async () => {
     const { user } = createUser(testDb);
-    const cat = svc.create(user.id, 'Default Icon');
+    const cat = await svc.create(user.id, 'Default Icon');
     expect(cat.icon).toBe('📍');
   });
 
-  it('CAT-SVC-007 — returns the inserted row with an id', () => {
+  it('CAT-SVC-007 — returns the inserted row with an id', async () => {
     const { user } = createUser(testDb);
-    const cat = svc.create(user.id, 'WithId');
+    const cat = await svc.create(user.id, 'WithId');
     expect(typeof cat.id).toBe('number');
     expect(cat.id).toBeGreaterThan(0);
   });
@@ -123,22 +123,22 @@ describe('create', () => {
 // ── getById ───────────────────────────────────────────────────────────────────
 
 describe('getById', () => {
-  it('CAT-SVC-008 — returns category for a valid id', () => {
+  it('CAT-SVC-008 — returns category for a valid id', async () => {
     const { user } = createUser(testDb);
-    const created = svc.create(user.id, 'Find Me');
-    const found = svc.getById(created.id);
+    const created = await svc.create(user.id, 'Find Me');
+    const found = await svc.getById(created.id);
     expect(found).toBeDefined();
     expect(found?.name).toBe('Find Me');
   });
 
-  it('CAT-SVC-009 — returns undefined for non-existent id', () => {
-    expect(svc.getById(99999)).toBeUndefined();
+  it('CAT-SVC-009 — returns undefined for non-existent id', async () => {
+    expect(await svc.getById(99999)).toBeUndefined();
   });
 
-  it('CAT-SVC-010 — accepts string id (coerced by SQLite)', () => {
+  it('CAT-SVC-010 — accepts string id (coerced by SQLite)', async () => {
     const { user } = createUser(testDb);
-    const created = svc.create(user.id, 'StringId');
-    const found = svc.getById(String(created.id));
+    const created = await svc.create(user.id, 'StringId');
+    const found = await svc.getById(String(created.id));
     expect(found).toBeDefined();
     expect(found?.id).toBe(created.id);
   });
@@ -147,27 +147,27 @@ describe('getById', () => {
 // ── update ────────────────────────────────────────────────────────────────────
 
 describe('update', () => {
-  it('CAT-SVC-011 — updates name, color, and icon', () => {
+  it('CAT-SVC-011 — updates name, color, and icon', async () => {
     const { user } = createUser(testDb);
-    const cat = svc.create(user.id, 'Old', '#aaaaaa', '❓');
-    const updated = svc.update(cat.id, 'New', '#bbbbbb', '✅');
+    const cat = await svc.create(user.id, 'Old', '#aaaaaa', '❓');
+    const updated = await svc.update(cat.id, 'New', '#bbbbbb', '✅');
     expect(updated.name).toBe('New');
     expect(updated.color).toBe('#bbbbbb');
     expect(updated.icon).toBe('✅');
   });
 
-  it('CAT-SVC-012 — COALESCE: omitting name preserves existing name', () => {
+  it('CAT-SVC-012 — COALESCE: omitting name preserves existing name', async () => {
     const { user } = createUser(testDb);
-    const cat = svc.create(user.id, 'KeepName', '#aaaaaa', '⭐');
-    const updated = svc.update(cat.id, undefined, '#cccccc', '🔥');
+    const cat = await svc.create(user.id, 'KeepName', '#aaaaaa', '⭐');
+    const updated = await svc.update(cat.id, undefined, '#cccccc', '🔥');
     expect(updated.name).toBe('KeepName');
     expect(updated.color).toBe('#cccccc');
   });
 
-  it('CAT-SVC-013 — COALESCE: omitting color preserves existing color', () => {
+  it('CAT-SVC-013 — COALESCE: omitting color preserves existing color', async () => {
     const { user } = createUser(testDb);
-    const cat = svc.create(user.id, 'KeepColor', '#dddddd', '⭐');
-    const updated = svc.update(cat.id, 'NewName', undefined, '🌟');
+    const cat = await svc.create(user.id, 'KeepColor', '#dddddd', '⭐');
+    const updated = await svc.update(cat.id, 'NewName', undefined, '🌟');
     expect(updated.name).toBe('NewName');
     expect(updated.color).toBe('#dddddd');
   });
@@ -176,14 +176,14 @@ describe('update', () => {
 // ── remove ────────────────────────────────────────────────────────────────────
 
 describe('remove', () => {
-  it('CAT-SVC-014 — deletes the category from the database', () => {
+  it('CAT-SVC-014 — deletes the category from the database', async () => {
     const { user } = createUser(testDb);
-    const cat = svc.create(user.id, 'ToDelete');
-    svc.remove(cat.id);
-    expect(svc.getById(cat.id)).toBeUndefined();
+    const cat = await svc.create(user.id, 'ToDelete');
+    await svc.remove(cat.id);
+    expect(await svc.getById(cat.id)).toBeUndefined();
   });
 
-  it('CAT-SVC-015 — deleting a non-existent category does not throw', () => {
-    expect(() => svc.remove(99999)).not.toThrow();
+  it('CAT-SVC-015 — deleting a non-existent category does not throw', async () => {
+    await expect(svc.remove(99999)).resolves.not.toThrow();
   });
 });

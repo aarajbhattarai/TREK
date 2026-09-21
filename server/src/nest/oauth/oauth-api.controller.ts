@@ -25,25 +25,25 @@ const MIN = 60_000;
 export class OauthApiController {
   constructor(private readonly oauth: OauthService, private readonly rl: RateLimitService) {}
 
-  private requireMcp403(): void {
-    if (!this.oauth.mcpEnabled()) {
+  private async requireMcp403(): Promise<void> {
+    if (!(await this.oauth.mcpEnabled())) {
       throw new HttpException({ error: 'MCP is not enabled' }, 403);
     }
   }
 
   @Get('authorize/validate')
   @UseGuards(OptionalJwtGuard)
-  validate(@Req() req: Request, @Query() params: Partial<AuthorizeParams>, @Res({ passthrough: true }) res: Response) {
+  async validate(@Req() req: Request, @Query() params: Partial<AuthorizeParams>, @Res({ passthrough: true }) res: Response) {
     if (!this.rl.check('oauth_validate', req.ip || 'unknown', 30, MIN, Date.now())) {
       throw new HttpException({ error: 'too_many_requests', error_description: 'Too many attempts. Please try again later.' }, 429);
     }
-    if (!this.oauth.mcpEnabled()) {
+    if (!(await this.oauth.mcpEnabled())) {
       // 404 (not 403) with an empty body so anonymous callers can't fingerprint the feature.
       res.status(404).end();
       return undefined;
     }
     const userId = (req.user as User | undefined)?.id ?? null;
-    const result = this.oauth.validateAuthorizeRequest(
+    const result = await this.oauth.validateAuthorizeRequest(
       {
         response_type: params.response_type || '',
         client_id: params.client_id || '',
@@ -68,9 +68,9 @@ export class OauthApiController {
   @Post('authorize')
   @HttpCode(200) // Express answers consent with res.json (200), not the POST-default 201.
   @UseGuards(CookieAuthGuard)
-  authorize(@CurrentUser() user: User, @Body() body: OauthConsentDto, @Req() req: Request) {
+  async authorize(@CurrentUser() user: User, @Body() body: OauthConsentDto, @Req() req: Request) {
     const ip = getClientIp(req);
-    if (!this.oauth.mcpEnabled()) {
+    if (!(await this.oauth.mcpEnabled())) {
       throw new HttpException({ error: 'MCP is not enabled' }, 403);
     }
     const params: AuthorizeParams = {
@@ -87,7 +87,7 @@ export class OauthApiController {
     // of body.redirect_uri too, and only validateAuthorizeRequest checks it
     // against the client's registered URIs. A string that is not a URL at all
     // would additionally throw out of `new URL()` as a 500.
-    const validation = this.oauth.validateAuthorizeRequest(params, user.id);
+    const validation = await this.oauth.validateAuthorizeRequest(params, user.id);
     if (!validation.valid) {
       throw new HttpException({ error: validation.error, error_description: validation.error_description }, 400);
     }
@@ -99,7 +99,7 @@ export class OauthApiController {
       return { redirect: url.toString() };
     }
     const scopes = validation.scopes!;
-    this.oauth.saveConsent(body.client_id, user.id, scopes, ip);
+    await this.oauth.saveConsent(body.client_id, user.id, scopes, ip);
     const code = this.oauth.createAuthCode({
       clientId: body.client_id,
       userId: user.id,
@@ -120,17 +120,17 @@ export class OauthApiController {
 
   @Get('clients')
   @UseGuards(JwtAuthGuard)
-  listClients(@CurrentUser() user: User) {
-    this.requireMcp403();
+  async listClients(@CurrentUser() user: User) {
+    await this.requireMcp403();
     return { clients: this.oauth.listOAuthClients(user.id) };
   }
 
   @Post('clients')
   @HttpCode(201)
   @UseGuards(CookieAuthGuard)
-  createClient(@CurrentUser() user: User, @Body() body: OauthClientCreateDto, @Req() req: Request) {
-    this.requireMcp403();
-    const result = this.oauth.createOAuthClient(user.id, body.name, body.redirect_uris ?? [], body.allowed_scopes, getClientIp(req), { allowsClientCredentials: body.allows_client_credentials });
+  async createClient(@CurrentUser() user: User, @Body() body: OauthClientCreateDto, @Req() req: Request) {
+    await this.requireMcp403();
+    const result = await this.oauth.createOAuthClient(user.id, body.name, body.redirect_uris ?? [], body.allowed_scopes, getClientIp(req), { allowsClientCredentials: body.allows_client_credentials });
     if (result.error) {
       throw new HttpException({ error: result.error }, result.status || 400);
     }
@@ -140,9 +140,9 @@ export class OauthApiController {
   @Post('clients/:id/rotate')
   @HttpCode(200)
   @UseGuards(CookieAuthGuard)
-  rotateClient(@CurrentUser() user: User, @Param('id') id: string, @Req() req: Request) {
-    this.requireMcp403();
-    const result = this.oauth.rotateOAuthClientSecret(user.id, id, getClientIp(req));
+  async rotateClient(@CurrentUser() user: User, @Param('id') id: string, @Req() req: Request) {
+    await this.requireMcp403();
+    const result = await this.oauth.rotateOAuthClientSecret(user.id, id, getClientIp(req));
     if (result.error) {
       throw new HttpException({ error: result.error }, result.status || 400);
     }
@@ -151,9 +151,9 @@ export class OauthApiController {
 
   @Delete('clients/:id')
   @UseGuards(CookieAuthGuard)
-  deleteClient(@CurrentUser() user: User, @Param('id') id: string, @Req() req: Request) {
-    this.requireMcp403();
-    const result = this.oauth.deleteOAuthClient(user.id, id, getClientIp(req));
+  async deleteClient(@CurrentUser() user: User, @Param('id') id: string, @Req() req: Request) {
+    await this.requireMcp403();
+    const result = await this.oauth.deleteOAuthClient(user.id, id, getClientIp(req));
     if (result.error) {
       throw new HttpException({ error: result.error }, result.status || 400);
     }
@@ -162,16 +162,16 @@ export class OauthApiController {
 
   @Get('sessions')
   @UseGuards(JwtAuthGuard)
-  listSessions(@CurrentUser() user: User) {
-    this.requireMcp403();
+  async listSessions(@CurrentUser() user: User) {
+    await this.requireMcp403();
     return { sessions: this.oauth.listOAuthSessions(user.id) };
   }
 
   @Delete('sessions/:id')
   @UseGuards(CookieAuthGuard)
-  revokeSession(@CurrentUser() user: User, @Param('id') id: string, @Req() req: Request) {
-    this.requireMcp403();
-    const result = this.oauth.revokeSession(user.id, Number(id), getClientIp(req));
+  async revokeSession(@CurrentUser() user: User, @Param('id') id: string, @Req() req: Request) {
+    await this.requireMcp403();
+    const result = await this.oauth.revokeSession(user.id, Number(id), getClientIp(req));
     if (result.error) {
       throw new HttpException({ error: result.error }, result.status || 400);
     }

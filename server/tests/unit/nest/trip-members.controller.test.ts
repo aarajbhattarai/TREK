@@ -56,12 +56,12 @@ describe('members', () => {
     expect(tc(s).members(user, '9')).toEqual({ owner: { id: 1 }, members: [], current_user_id: 1 });
   });
 
-  it('POST 403 without member_manage, else adds + notifies', () => {
+  it('POST 403 without member_manage, else adds + notifies', async () => {
     expect(thrown(() => tc(svc({ can: vi.fn().mockReturnValue(false) })).addMember(user, '9', { identifier: 'bob@x.y' }))).toEqual({ status: 403, body: { error: 'No permission to manage members' } });
     const addMember = vi.fn().mockReturnValue({ member: { id: 2, email: 'bob@x.y' }, targetUserId: 2, tripTitle: 'T' });
     const notifyInvite = vi.fn();
     const s = svc({ addMember, notifyInvite } as Partial<TripMembersService>);
-    expect(tc(s).addMember(user, '9', { identifier: 'bob@x.y' })).toEqual({ member: { id: 2, email: 'bob@x.y' } });
+    expect(await tc(s).addMember(user, '9', { identifier: 'bob@x.y' })).toEqual({ member: { id: 2, email: 'bob@x.y' } });
     expect(notifyInvite).toHaveBeenCalledWith('9', user, 2, 'T', 'bob@x.y');
   });
 
@@ -70,13 +70,13 @@ describe('members', () => {
     expect(thrown(() => tc(s).addMember(user, '9', { identifier: 'bob@x.y' }))).toEqual({ status: 404, body: { error: 'Trip not found' } });
   });
 
-  it('POST maps NotFoundError to 404, ValidationError to 400, re-throws others', () => {
+  it('POST maps NotFoundError to 404, ValidationError to 400, re-throws others', async () => {
     const nf = svc({ addMember: vi.fn().mockImplementation(() => { throw new NotFoundError('no user'); }) } as Partial<TripMembersService>);
     expect(thrown(() => tc(nf).addMember(user, '9', { identifier: 'bob@x.y' }))).toEqual({ status: 404, body: { error: 'no user' } });
     const ve = svc({ addMember: vi.fn().mockImplementation(() => { throw new ValidationError('already a member'); }) } as Partial<TripMembersService>);
     expect(thrown(() => tc(ve).addMember(user, '9', { identifier: 'bob@x.y' }))).toEqual({ status: 400, body: { error: 'already a member' } });
     const other = svc({ addMember: vi.fn().mockImplementation(() => { throw new Error('boom'); }) } as Partial<TripMembersService>);
-    expect(() => tc(other).addMember(user, '9', { identifier: 'bob@x.y' })).toThrow('boom');
+    await expect(tc(other).addMember(user, '9', { identifier: 'bob@x.y' })).rejects.toThrow('boom');
   });
 
   it('DELETE 404 without trip access', () => {
@@ -84,11 +84,11 @@ describe('members', () => {
     expect(thrown(() => tc(s).removeMember(user, '9', '2'))).toEqual({ status: 404, body: { error: 'Trip not found' } });
   });
 
-  it('DELETE self needs no permission; removing others needs member_manage', () => {
+  it('DELETE self needs no permission; removing others needs member_manage', async () => {
     const removeMember = vi.fn();
     const s = svc({ can: vi.fn().mockReturnValue(false), removeMember } as Partial<TripMembersService>);
     // self-removal (targetId === user.id) bypasses the permission check
-    expect(tc(s).removeMember(user, '9', '1')).toEqual({ success: true });
+    expect(await tc(s).removeMember(user, '9', '1')).toEqual({ success: true });
     expect(thrown(() => tc(s).removeMember(user, '9', '2'))).toEqual({ status: 403, body: { error: 'No permission to remove members' } });
   });
 });
@@ -107,12 +107,12 @@ describe('POST /:id/transfer (#973)', () => {
     expect(tripTransferOwnershipRequestSchema.safeParse({}).success).toBe(false);
   });
 
-  it('transfers, audits and broadcasts the refreshed trip', () => {
+  it('transfers, audits and broadcasts the refreshed trip', async () => {
     const transferOwnership = vi.fn().mockReturnValue({ tripTitle: 'Roadtrip', fromEmail: 'a@x.y', toEmail: 'b@x.y' });
     const getTripForViewer = vi.fn().mockReturnValue({ id: 9, user_id: 2 });
     const broadcast = vi.fn();
     const s = svc({ transferOwnership, getTripForViewer, broadcast } as Partial<TripMembersService>);
-    expect(tc(s).transferOwnership(user, '9', { newOwnerId: 2 }, req, 'sock')).toEqual({ success: true });
+    expect(await tc(s).transferOwnership(user, '9', { newOwnerId: 2 }, req, 'sock')).toEqual({ success: true });
     expect(transferOwnership).toHaveBeenCalledWith('9', 2, user.id);
     expect(broadcast).toHaveBeenCalledWith('9', 'trip:updated', { trip: { id: 9, user_id: 2 } }, 'sock');
   });

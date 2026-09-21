@@ -57,6 +57,9 @@ vi.mock('../../src/config', () => ({ ENCRYPTION_KEY: 'e2e-storage-key', JWT_SECR
 
 import { TrekExceptionFilter } from '../../src/nest/common/trek-exception.filter';
 import { ZodValidationPipe } from '../../src/nest/common/zod-validation.pipe';
+import { createTestUnitOfWork } from '../helpers/test-uow';
+import { UnitOfWork } from '../../src/nest/database/unit-of-work';
+import { TestUnitOfWorkModule } from '../helpers/test-uow';
 
 describe('Storage admin e2e (real auth + admin guard + managed guard + temp SQLite)', () => {
   let server: Server;
@@ -66,7 +69,7 @@ describe('Storage admin e2e (real auth + admin guard + managed guard + temp SQLi
 
   async function build() {
     const moduleRef = await Test.createTestingModule({
-      imports: [DatabaseModule, StorageModule],
+      imports: [await TestUnitOfWorkModule.forRoot(db), DatabaseModule, StorageModule],
       providers: [{ provide: APP_GUARD, useClass: ManagedGuard }],
     }).compile();
     const nest = moduleRef.createNestApplication();

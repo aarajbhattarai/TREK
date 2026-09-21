@@ -240,7 +240,7 @@ describe('PasskeyController', () => {
     expect(writeAudit).toHaveBeenCalledWith(expect.objectContaining({ action: 'user.login', details: { method: 'passkey' } }));
   }, 10000);
 
-  it('credentials: list, rename (error + success), delete (error + success)', () => {
+  it('credentials: list, rename (error + success), delete (error + success)', async () => {
     passkey.listPasskeys.mockReturnValue([{ id: 'a' }]);
     expect(pc(rl()).list(user)).toEqual({ credentials: [{ id: 'a' }] });
 
@@ -252,7 +252,7 @@ describe('PasskeyController', () => {
     passkey.deletePasskey.mockReturnValue({ error: 'Incorrect password', status: 401 });
     expect(thrown(() => pc(rl()).remove(user, 'cid', { password: 'x' }, req))).toEqual({ status: 401, body: { error: 'Incorrect password' } });
     passkey.deletePasskey.mockReturnValue({ success: true });
-    expect(pc(rl()).remove(user, 'cid', { password: 'p' }, req)).toEqual({ success: true });
+    expect(await pc(rl()).remove(user, 'cid', { password: 'p' }, req)).toEqual({ success: true });
     expect(writeAudit).toHaveBeenCalledWith(expect.objectContaining({ action: 'user.passkey_delete' }));
   });
 

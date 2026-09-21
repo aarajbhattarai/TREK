@@ -27,6 +27,6 @@ export class GoogleRouteMcp {
     access: { group: 'places', mode: 'write' }, when: addonGate(ADDON_IDS.ROADTRIP) })
   import(input: GoogleRouteImport & { tripId: number }, ctx: McpContext) {
     if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
-    return answeringRefusals(() => ok(this.routes.import(input.tripId, ctx.userId, input)));
+    return answeringRefusals(async () => ok(await this.routes.import(input.tripId, ctx.userId, input)));
   }
 }

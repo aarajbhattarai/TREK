@@ -4,7 +4,7 @@
  * to slots while content rides along by id, booking-date re-stamp, permutation
  * validation, the accommodation-inversion guard, and insert (dated + dateless).
  */
-import { describe, it, expect, vi, beforeEach, afterAll } from 'vitest';
+import { describe, it, expect, vi, beforeAll, beforeEach, afterAll } from 'vitest';
 
 vi.mock('../../src/db/database', async () => {
   const { createSnapshotTestDb, buildDbMock } = await import('../helpers/db-mock');
@@ -25,8 +25,13 @@ import { PermissionsService } from '../../src/nest/permissions/permissions.servi
 import { DaysService, DayReorderError } from '../../src/nest/days/days.service';
 import { RealtimeService } from '../../src/nest/realtime/realtime.service';
 import { QueryHelpersService } from '../../src/nest/query-helpers/query-helpers.service';
+import { createTestUnitOfWork } from '../helpers/test-uow';
+import { UnitOfWork } from '../../src/nest/database/unit-of-work';
 
-const svc = new DaysService(new DatabaseService(testDb), new PermissionsService(new DatabaseService(testDb)), new RealtimeService(), new QueryHelpersService(new DatabaseService(testDb)));
+let svc: DaysService;
+beforeAll(async () => {
+  svc = new DaysService(new DatabaseService(testDb), new PermissionsService(new DatabaseService(testDb), await createTestUnitOfWork(testDb)), new RealtimeService(), new QueryHelpersService(new DatabaseService(testDb)));
+});
 const reorderDays = (tripId: number, orderedIds: number[]) => svc.reorder(tripId, orderedIds);
 const insertDay = (tripId: number, position?: number) => svc.insert(tripId, position);
 
@@ -44,14 +49,14 @@ const orderedDays = (tripId: number) =>
     { id: number; day_number: number; date: string | null }[];
 
 describe('reorderDays', () => {
-  it('permutes positions, pins dates to slots, and content rides along by id', () => {
+  it('permutes positions, pins dates to slots, and content rides along by id', async () => {
     const trip = createTrip(testDb, userId, { start_date: '2026-03-01', end_date: '2026-03-03' });
     const [d1, d2, d3] = orderedDays(trip.id);
     const place = createPlace(testDb, trip.id);
     createDayAssignment(testDb, d2.id, place.id); // place sits on day 2
 
     // Move day 2 to the front: [d2, d1, d3]
-    reorderDays(trip.id, [d2.id, d1.id, d3.id]);
+    await reorderDays(trip.id, [d2.id, d1.id, d3.id]);
 
     const after = orderedDays(trip.id);
     expect(after.map(d => d.id)).toEqual([d2.id, d1.id, d3.id]);
@@ -62,13 +67,13 @@ describe('reorderDays', () => {
     expect(onD2).toHaveLength(1);
   });
 
-  it('re-stamps a booking\'s date onto its day\'s new date, keeping the time', () => {
+  it('re-stamps a booking\'s date onto its day\'s new date, keeping the time', async () => {
     const trip = createTrip(testDb, userId, { start_date: '2026-03-01', end_date: '2026-03-03' });
     const [d1, d2, d3] = orderedDays(trip.id);
     const res = createReservation(testDb, trip.id, { day_id: d2.id, type: 'restaurant' });
     testDb.prepare('UPDATE reservations SET reservation_time = ? WHERE id = ?').run('2026-03-02T19:00', res.id);
 
-    reorderDays(trip.id, [d2.id, d1.id, d3.id]); // d2 moves to the 2026-03-01 slot
+    await reorderDays(trip.id, [d2.id, d1.id, d3.id]); // d2 moves to the 2026-03-01 slot
 
     const r = testDb.prepare('SELECT reservation_time FROM reservations WHERE id = ?').get(res.id) as { reservation_time: string };
     expect(r.reservation_time).toBe('2026-03-01T19:00');

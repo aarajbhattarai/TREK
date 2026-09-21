@@ -23,12 +23,12 @@ function isTransitProvider(value: unknown): value is TransitProvider {
  * this one does not know, resolves to Transitous. The alternative is billing an
  * admin's Google key because a string did not parse.
  */
-export function readTransitProvider(db: DatabaseService): TransitProvider {
+export async function readTransitProvider(db: DatabaseService): Promise<TransitProvider> {
   const row = db.get<{ value: string | null }>('SELECT value FROM app_settings WHERE key = ?', TRANSIT_PROVIDER_SETTING);
   return isTransitProvider(row?.value) ? row.value : DEFAULT_TRANSIT_PROVIDER;
 }
 
-export function writeTransitProvider(db: DatabaseService, provider: TransitProvider): TransitProvider {
+export async function writeTransitProvider(db: DatabaseService, provider: TransitProvider): Promise<TransitProvider> {
   db.run(
     `INSERT INTO app_settings (key, value) VALUES (?, ?)
      ON CONFLICT(key) DO UPDATE SET value = excluded.value`,

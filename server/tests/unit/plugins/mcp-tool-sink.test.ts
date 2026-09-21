@@ -47,30 +47,30 @@ describe('setPluginMcpToolSource', () => {
 });
 
 describe('registerTools wiring', () => {
-  it('MCPSINK-003: passes no dynamic source when none is registered', () => {
+  it('MCPSINK-003: passes no dynamic source when none is registered', async () => {
     const { attach, registry } = spyRegistry();
 
-    registerTools(registry, new McpServer({ name: 't', version: '1' }), 1, null);
+    await registerTools(registry, new McpServer({ name: 't', version: '1' }), 1, null);
 
     expect(attach.mock.calls[0][2]).toEqual({ onInvoke: undefined, dynamicTools: undefined });
   });
 
-  it('MCPSINK-004: passes the registered source through to attach', () => {
+  it('MCPSINK-004: passes the registered source through to attach', async () => {
     const source = (_ctx: McpContext) => [echo];
     setPluginMcpToolSource(source);
     const { attach, registry } = spyRegistry();
 
-    registerTools(registry, new McpServer({ name: 't', version: '1' }), 1, null);
+    await registerTools(registry, new McpServer({ name: 't', version: '1' }), 1, null);
 
     expect(attach.mock.calls[0][2].dynamicTools).toBe(source);
   });
 
-  it('MCPSINK-005: an explicit argument wins over the process-level source', () => {
+  it('MCPSINK-005: an explicit argument wins over the process-level source', async () => {
     setPluginMcpToolSource(() => [echo]);
     const explicit = () => [];
     const { attach, registry } = spyRegistry();
 
-    registerTools(registry, new McpServer({ name: 't', version: '1' }), 1, null, false, undefined, undefined, explicit);
+    await registerTools(registry, new McpServer({ name: 't', version: '1' }), 1, null, false, undefined, undefined, explicit);
 
     expect(attach.mock.calls[0][2].dynamicTools).toBe(explicit);
   });

@@ -89,6 +89,8 @@ import { UserCleanupService } from '../../../src/nest/auth/user-cleanup.service'
 import { EphemeralTokenService } from '../../../src/nest/auth/ephemeral-token.service';
 import { AllowedFileTypesService } from '../../../src/nest/files/allowed-file-types.service';
 import { MailerService } from '../../../src/nest/notifications/mailer/mailer.service';
+import { createTestUnitOfWork } from '../../helpers/test-uow';
+import { UnitOfWork } from '../../../src/nest/database/unit-of-work';
 
 // MailerService is injected since the notifications fold — a stub instead of a
 // module mock. sendPasswordResetEmail is the only thing auth reaches for.
@@ -109,17 +111,22 @@ const webauthn = { resolve: resolveWebauthnConfigMock } as unknown as WebauthnCo
 // undefined so a future case that does reach one gets a working object; each
 // takes only the DatabaseService. AuthService's own webauthn is the real
 // resolver, separate from the `webauthn` switch PasskeyService is handed.
-const auth = new AuthService(
+
+let auth: AuthService;
+let svc: PasskeyService;
+beforeAll(async () => {
+  auth = new AuthService(
   new DatabaseService(testDb),
-  new PermissionsService(new DatabaseService(testDb)),
+  new PermissionsService(new DatabaseService(testDb), await createTestUnitOfWork(testDb)),
   new TripMembershipService(new DatabaseService(testDb)),
   new WebauthnConfigService(new DatabaseService(testDb)),
-  new UserCleanupService(new DatabaseService(testDb), new BudgetService(new DatabaseService(testDb), new PermissionsService(new DatabaseService(testDb)), new ExchangeRatesService(), new RealtimeService())),
+  new UserCleanupService(new DatabaseService(testDb), new BudgetService(new DatabaseService(testDb), new PermissionsService(new DatabaseService(testDb), await createTestUnitOfWork(testDb)), new ExchangeRatesService(), new RealtimeService())),
   mailerStub,
   new EphemeralTokenService(),
-  new AllowedFileTypesService(new DatabaseService(testDb)),
+  new AllowedFileTypesService(new DatabaseService(testDb)), await createTestUnitOfWork(testDb),
 );
-const svc = new PasskeyService(new DatabaseService(testDb), auth, webauthn);
+  svc = new PasskeyService(new DatabaseService(testDb), auth, webauthn);
+});
 
 const CFG = { rpID: 'trek.example.com', rpName: 'TREK', origins: ['https://trek.example.com'], explicitOrigins: false };
 // The unconfigured fallback resolve() yields when APP_URL is unset (#2147).

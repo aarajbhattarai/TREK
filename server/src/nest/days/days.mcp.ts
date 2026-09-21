@@ -64,13 +64,13 @@ export class DaysMcp {
   ) {
     if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
     if (!this.days.verifyTripAccess(tripId, ctx.userId)) return noAccess();
-    if (!this.guards.hasTripPermission('day_edit', tripId, ctx.userId)) return permissionDenied();
+    if (!(await this.guards.hasTripPermission('day_edit', tripId, ctx.userId))) return permissionDenied();
     const current = this.days.getDay(dayId, tripId);
     if (!current) return errorResult('Day not found.');
     // The rest spread carries only the keys the caller actually sent, which is
     // what update()'s presence sentinels need: naming the two fields here would
     // hand it an undefined notes on a title-only call and wipe the day's notes.
-    const updated = this.days.update(dayId, current, fields);
+    const updated = await this.days.update(dayId, current, fields);
     this.guards.safeBroadcast(tripId, 'day:updated', { day: updated });
     return ok({ day: updated });
   }
@@ -93,7 +93,7 @@ export class DaysMcp {
   ) {
     if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
     if (!this.days.verifyTripAccess(tripId, ctx.userId)) return noAccess();
-    if (!this.guards.hasTripPermission('day_edit', tripId, ctx.userId)) return permissionDenied();
+    if (!(await this.guards.hasTripPermission('day_edit', tripId, ctx.userId))) return permissionDenied();
     if (position === undefined) {
       const day = this.days.create(tripId, date, notes);
       this.guards.safeBroadcast(tripId, 'day:created', { day });
@@ -128,9 +128,9 @@ export class DaysMcp {
   ) {
     if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
     if (!this.days.verifyTripAccess(tripId, ctx.userId)) return noAccess();
-    if (!this.guards.hasTripPermission('day_edit', tripId, ctx.userId)) return permissionDenied();
+    if (!(await this.guards.hasTripPermission('day_edit', tripId, ctx.userId))) return permissionDenied();
     try {
-      this.days.reorder(tripId, orderedIds);
+      await this.days.reorder(tripId, orderedIds);
     } catch (err) {
       // A non-permutation and an inverted stay are both the caller's input, so
       // they come back as tool errors rather than a throw the SDK has to dress up.
@@ -155,7 +155,7 @@ export class DaysMcp {
   async deleteDay({ tripId, dayId }: { tripId: number; dayId: number }, ctx: McpContext) {
     if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
     if (!this.days.verifyTripAccess(tripId, ctx.userId)) return noAccess();
-    if (!this.guards.hasTripPermission('day_edit', tripId, ctx.userId)) return permissionDenied();
+    if (!(await this.guards.hasTripPermission('day_edit', tripId, ctx.userId))) return permissionDenied();
     if (!this.days.getDay(dayId, tripId)) return errorResult('Day not found.');
     this.days.remove(dayId);
     // REST parity shape ({ dayId }) — the client reads payload.dayId, so the { id }
@@ -181,9 +181,9 @@ export class DaysMcp {
   ) {
     if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
     if (!this.days.verifyTripAccess(tripId, ctx.userId)) return noAccess();
-    if (!this.guards.hasTripPermission('day_edit', tripId, ctx.userId)) return permissionDenied();
+    if (!(await this.guards.hasTripPermission('day_edit', tripId, ctx.userId))) return permissionDenied();
     if (!this.days.getDay(dayId, tripId)) return errorResult('Day not found.');
-    const day = this.days.setDefaultTransportMode(dayId, transport_mode ?? null);
+    const day = await this.days.setDefaultTransportMode(dayId, transport_mode ?? null);
     this.guards.safeBroadcast(tripId, 'day:updated', { day });
     return ok({ day });
   }
@@ -206,7 +206,7 @@ export class DaysMcp {
         }],
       };
     }
-    const { days } = this.days.list(id);
+    const { days } = await this.days.list(id);
     return {
       contents: [{
         uri: uri.href,

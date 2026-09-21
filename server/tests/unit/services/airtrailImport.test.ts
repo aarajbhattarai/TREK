@@ -23,6 +23,8 @@ import type { AirtrailClient } from '../../../src/nest/integrations/airtrail.cli
 import type { AirtrailService } from '../../../src/nest/integrations/airtrail.service';
 import { notificationsStub } from '../../helpers/notifications';
 import { accommodationsOver } from '../../helpers/accommodations-service';
+import { createTestUnitOfWork } from '../../helpers/test-uow';
+import { UnitOfWork } from '../../../src/nest/database/unit-of-work';
 
 // The client and the per-user credentials are the only stubs; the reservation
 // writes go through the real service against the real test DB, as before. They
@@ -30,9 +32,9 @@ import { accommodationsOver } from '../../helpers/accommodations-service';
 const listFlights = vi.fn();
 const broadcast = vi.fn();
 
-function makeImportService(): AirtrailImportService {
+async function makeImportService(): Promise<AirtrailImportService> {
   const dbs = () => new DatabaseService(db);
-  const permissions = new PermissionsService(dbs());
+  const permissions = new PermissionsService(dbs(), await createTestUnitOfWork(dbs().connection));
   const realtime = { broadcast } as unknown as RealtimeService;
   return new AirtrailImportService(
     dbs(),
@@ -44,7 +46,7 @@ function makeImportService(): AirtrailImportService {
       realtime,
       notificationsStub(),
       new ReservationsReadRepository(dbs()),
-      accommodationsOver(dbs()),
+      await accommodationsOver(dbs()), await createTestUnitOfWork(dbs().connection),
     ),
     { listFlights } as unknown as AirtrailClient,
     {
@@ -53,9 +55,9 @@ function makeImportService(): AirtrailImportService {
   );
 }
 
-const importAirtrailFlights = (
+const importAirtrailFlights = async (
   ...args: Parameters<AirtrailImportService['importAirtrailFlights']>
-) => makeImportService().importAirtrailFlights(...args);
+) => (await makeImportService()).importAirtrailFlights(...args);
 
 const BRU: AirtrailAirport = { id: 1, icao: 'EBBR', iata: 'BRU', name: 'Brussels', lat: 50.9014, lon: 4.4844, tz: 'Europe/Brussels', country: 'BE' };
 const HEL: AirtrailAirport = { id: 2, icao: 'EFHK', iata: 'HEL', name: 'Helsinki-Vantaa', lat: 60.3172, lon: 24.9633, tz: 'Europe/Helsinki', country: 'FI' };

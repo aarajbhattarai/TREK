@@ -431,8 +431,8 @@ describe('a secret the adapter earned itself', () => {
 });
 
 describe('reading the trip state', () => {
-  it('asks the reconciler with a number, because the path hands the handler a string', () => {
-    controller.status(String(tripId));
+  it('asks the reconciler with a number, because the path hands the handler a string', async () => {
+    await controller.status(String(tripId));
     expect(sync.status).toHaveBeenCalledWith(tripId);
   });
 });

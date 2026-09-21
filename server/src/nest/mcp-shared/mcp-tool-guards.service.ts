@@ -65,7 +65,7 @@ export class McpToolGuardsService {
    * matching REST route uses. Returns true when the user may perform `action`
    * on `tripId`.
    */
-  hasTripPermission(action: string, tripId: number | string, userId: number): boolean {
+  async hasTripPermission(action: string, tripId: number | string, userId: number): Promise<boolean> {
     const trip = this.db.get<{ user_id?: number }>('SELECT user_id FROM trips WHERE id = ?', tripId);
     if (!trip) return false;
     const userRow = this.db.get<{ role?: string }>('SELECT role FROM users WHERE id = ?', userId);

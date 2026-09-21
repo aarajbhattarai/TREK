@@ -803,8 +803,8 @@ describe('create-path fields + bag trip scope (#2154)', () => {
 // ── Wrapper helpers (carried over from the old delegation suite) ──────────────
 
 describe('canEdit', () => {
-  it('delegates to checkPermission with packing_edit', () => {
-    svc.canEdit({ user_id: 2 } as never, { id: 1, role: 'user' } as never);
+  it('delegates to checkPermission with packing_edit', async () => {
+    await svc.canEdit({ user_id: 2 } as never, { id: 1, role: 'user' } as never);
     expect(checkPermission).toHaveBeenCalledWith('packing_edit', 'user', 2, 1, true);
   });
 });

@@ -952,10 +952,10 @@ describe('DawarichSyncService — gates', () => {
     expect(listVisits).not.toHaveBeenCalled();
   });
 
-  it('DAWARICH-SYNC-052: syncGloballyEnabled follows the addon row', () => {
-    expect(svc.syncGloballyEnabled()).toBe(true);
+  it('DAWARICH-SYNC-052: syncGloballyEnabled follows the addon row', async () => {
+    expect(await svc.syncGloballyEnabled()).toBe(true);
     setAddonEnabled(testDb, 'dawarich', false);
-    expect(svc.syncGloballyEnabled()).toBe(false);
+    expect(await svc.syncGloballyEnabled()).toBe(false);
   });
 });
 

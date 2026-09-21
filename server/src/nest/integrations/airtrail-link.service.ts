@@ -34,8 +34,8 @@ export class AirtrailLinkService {
   ) {}
 
   /** Global on/off: the addon must be enabled and sync not explicitly turned off. */
-  syncGloballyEnabled(): boolean {
-    if (!this.addons.isAddonEnabled(ADDON_IDS.AIRTRAIL)) return false;
+  async syncGloballyEnabled(): Promise<boolean> {
+    if (!(await this.addons.isAddonEnabled(ADDON_IDS.AIRTRAIL))) return false;
     const row = this.db.get<{ value: string }>("SELECT value FROM app_settings WHERE key = 'airtrail_sync_enabled'");
     return row?.value !== 'false';
   }
@@ -82,7 +82,7 @@ export class AirtrailLinkService {
    * next pull's AirTrail-wins policy can't silently revert the local edit.
    */
   async pushReservationToAirtrail(reservationId: number, tripId: number): Promise<void> {
-    if (!this.syncGloballyEnabled()) return;
+    if (!(await this.syncGloballyEnabled())) return;
 
     const row = this.db.get<{
       id: number; trip_id: number; external_id: string; external_owner_user_id: number | null; sync_enabled: number;

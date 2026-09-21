@@ -51,7 +51,7 @@ export class TripOwnerGuard implements CanActivate {
     private readonly reflector: Reflector,
   ) {}
 
-  canActivate(context: ExecutionContext): boolean {
+  async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<TripRequest>();
     const user = request.user;
     // JwtAuthGuard runs first and 401s an anonymous request, so a missing user

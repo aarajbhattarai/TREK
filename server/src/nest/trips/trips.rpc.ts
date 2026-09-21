@@ -77,7 +77,7 @@ export class TripsRpc {
     return this.guards.tripRead(
       params,
       ctx,
-      () => (this.days.list(num(params.tripId, 'tripId')) as { days: unknown[] }).days,
+      async () => ((await this.days.list(num(params.tripId, 'tripId'))) as { days: unknown[] }).days,
     );
   }
 
@@ -113,20 +113,20 @@ export class TripsRpc {
   }
 
   @PluginMethod('trips.update', { permission: 'db:write:trips' })
-  update(params: Record<string, unknown>, ctx: PluginRpcContext): unknown {
+  async update(params: Record<string, unknown>, ctx: PluginRpcContext): Promise<unknown> {
     const tripId = num(params.tripId, 'tripId');
     const actor = this.guards.requireActor(ctx, 'trip');
     const parsed = tripUpdateRequestSchema.safeParse(params.input);
     if (!parsed.success) throw new BadParams(`invalid trip: ${schemaMessage(parsed.error)}`);
     this.guards.capStrings(parsed.data as Record<string, unknown>, TRIP_STR_LIMITS);
-    this.guards.requireTripEdit(tripId, actor, TRIP_EDIT_ACTION);
+    await this.guards.requireTripEdit(tripId, actor, TRIP_EDIT_ACTION);
     const input = parsed.data as Record<string, unknown>;
     // Two fields carry their own permissions on top of trip_edit, exactly as the REST
     // controller gates them.
-    if ('is_archived' in input && !this.guards.canEditAs('trip_archive', tripId, actor)) {
+    if ('is_archived' in input && !(await this.guards.canEditAs('trip_archive', tripId, actor))) {
       throw new ForbiddenResource(`no permission to archive trip ${tripId}`);
     }
-    if ('cover_image' in input && !this.guards.canEditAs('trip_cover_upload', tripId, actor)) {
+    if ('cover_image' in input && !(await this.guards.canEditAs('trip_cover_upload', tripId, actor))) {
       throw new ForbiddenResource(`no permission to change the cover of trip ${tripId}`);
     }
     const user = this.db.prepare('SELECT role FROM users WHERE id = ?').get(actor) as { role?: string } | undefined;
@@ -144,14 +144,14 @@ export class TripsRpc {
   }
 
   @PluginMethod('trips.create', { permission: 'db:create:trips' })
-  create(params: Record<string, unknown>, ctx: PluginRpcContext): unknown {
+  async create(params: Record<string, unknown>, ctx: PluginRpcContext): Promise<unknown> {
     // The capability that unlocks importers (MyMaps, booking dumps, calendar sync).
     // No broadcast: a new trip is only visible to its owner, who refetches.
     const actor = this.guards.requireActor(ctx, 'trip');
     const parsed = tripCreateRequestSchema.safeParse(params.input);
     if (!parsed.success) throw new BadParams(`invalid trip: ${schemaMessage(parsed.error)}`);
     this.guards.capStrings(parsed.data as Record<string, unknown>, TRIP_STR_LIMITS);
-    if (!this.canCreateTrip(actor)) throw new ForbiddenResource('no permission to create trips');
+    if (!(await this.canCreateTrip(actor))) throw new ForbiddenResource('no permission to create trips');
     try {
       return this.trips.create(actor, parsed.data as unknown as Parameters<TripsService['create']>[1]).trip;
     } catch (e) {
@@ -161,16 +161,16 @@ export class TripsRpc {
   }
 
   /** trip_create is not trip-scoped, so it cannot go through requireTripEdit. */
-  private canCreateTrip(userId: number): boolean {
+  private async canCreateTrip(userId: number): Promise<boolean> {
     return this.guards.canCreateAs('trip_create', userId);
   }
 
   @PluginMethod('trips.addMember', { permission: 'db:write:members' })
-  addMember(params: Record<string, unknown>, ctx: PluginRpcContext): unknown {
+  async addMember(params: Record<string, unknown>, ctx: PluginRpcContext): Promise<unknown> {
     const tripId = num(params.tripId, 'tripId');
     const targetUserId = num(params.userId, 'userId');
     const actor = this.guards.requireActor(ctx, 'trip member');
-    this.guards.requireTripEdit(tripId, actor, MEMBER_MANAGE_ACTION);
+    await this.guards.requireTripEdit(tripId, actor, MEMBER_MANAGE_ACTION);
     const target = this.db.prepare('SELECT id FROM users WHERE id = ?').get(targetUserId) as { id: number } | undefined;
     if (!target) throw new ForbiddenResource(`no user ${targetUserId}`);
     // The acting user is recorded as the inviter.
@@ -178,11 +178,11 @@ export class TripsRpc {
   }
 
   @PluginMethod('trips.removeMember', { permission: 'db:write:members' })
-  removeMember(params: Record<string, unknown>, ctx: PluginRpcContext): unknown {
+  async removeMember(params: Record<string, unknown>, ctx: PluginRpcContext): Promise<unknown> {
     const tripId = num(params.tripId, 'tripId');
     const targetUserId = num(params.userId, 'userId');
     const actor = this.guards.requireActor(ctx, 'trip member');
-    this.guards.requireTripEdit(tripId, actor, MEMBER_MANAGE_ACTION);
+    await this.guards.requireTripEdit(tripId, actor, MEMBER_MANAGE_ACTION);
     // Never remove the OWNER through this path: that would orphan the trip.
     // Ownership transfer is a separate, deliberate action.
     const trip = this.db.prepare('SELECT user_id FROM trips WHERE id = ?').get(tripId) as { user_id: number } | undefined;

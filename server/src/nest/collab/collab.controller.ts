@@ -118,8 +118,8 @@ export class CollabController {
     return trip;
   }
 
-  private requireEdit(trip: NonNullable<ReturnType<CollabService['verifyTripAccess']>>, user: User): void {
-    if (!this.collab.canEdit(trip, user)) {
+  private async requireEdit(trip: NonNullable<ReturnType<CollabService['verifyTripAccess']>>, user: User): Promise<void> {
+    if (!(await this.collab.canEdit(trip, user))) {
       throw new HttpException({ error: 'No permission' }, 403);
     }
   }
@@ -188,7 +188,7 @@ export class CollabController {
     };
     try {
       const trip = this.requireTrip(tripId, user);
-      if (!this.collab.canUploadFiles(trip, user)) {
+      if (!(await this.collab.canUploadFiles(trip, user))) {
         throw new HttpException({ error: 'No permission to upload files' }, 403);
       }
     } catch (err) {
@@ -345,12 +345,12 @@ export class CollabController {
     let trip;
     try {
       trip = this.requireTrip(tripId, user);
-      this.requireEdit(trip, user);
+      await this.requireEdit(trip, user);
     } catch (err) {
       cleanupSpool();
       throw err;
     }
-    if (uploaded.length && !this.collab.canUploadFiles(trip, user)) {
+    if (uploaded.length && !(await this.collab.canUploadFiles(trip, user))) {
       cleanupSpool();
       throw new HttpException({ error: 'No permission to upload files' }, 403);
     }

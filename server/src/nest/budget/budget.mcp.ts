@@ -99,11 +99,11 @@ export class BudgetMcp {
    * and is passed through. Reads ride the leaf TripMembershipService — the
    * hydrated member services all live in modules that import this one.
    */
-  private resolveMemberIds(tripId: number, member_ids?: number[]): number[] | undefined {
+  private async resolveMemberIds(tripId: number, member_ids?: number[]): Promise<number[] | undefined> {
     if (member_ids !== undefined) return member_ids;
-    const ownerId = this.membership.getOwnerId(tripId);
+    const ownerId = await this.membership.getOwnerId(tripId);
     if (ownerId === null) return undefined;
-    return Array.from(new Set([ownerId, ...this.membership.listMemberUserIds(tripId)]));
+    return Array.from(new Set([ownerId, ...(await this.membership.listMemberUserIds(tripId))]));
   }
 
   /**
@@ -205,7 +205,7 @@ export class BudgetMcp {
   ) {
     if (this.isDemoUser(ctx.userId)) return demoDenied();
     if (!this.budget.verifyTripAccess(tripId, ctx.userId)) return noAccess();
-    if (!this.guards.hasTripPermission('budget_edit', tripId, ctx.userId)) return permissionDenied();
+    if (!(await this.guards.hasTripPermission('budget_edit', tripId, ctx.userId))) return permissionDenied();
     if (members !== undefined && member_ids !== undefined) return errorResult('Pass either members (uneven split) or member_ids (equal split), not both.');
     if (place_id != null && !this.placeOnTrip(tripId, place_id)) return errorResult('place_id does not belong to this trip.');
     if (members !== undefined) {
@@ -214,7 +214,7 @@ export class BudgetMcp {
     }
     // The split participants are the members of an uneven split; the equal-split
     // list still carries them so the row's `persons` count comes out the same.
-    const splitIds = members ? members.map(m => m.user_id) : this.resolveMemberIds(tripId, member_ids);
+    const splitIds = members ? members.map(m => m.user_id) : await this.resolveMemberIds(tripId, member_ids);
     const itemData = { category, name, total_price, currency, member_ids: splitIds, members, payers, expense_date, place_id, note };
     // Freeze the live FX rate at entry time so a settled position isn't re-opened
     // when live rates drift (#1445) — same as the REST create path.
@@ -238,7 +238,7 @@ export class BudgetMcp {
   async deleteBudgetItem({ tripId, itemId }: { tripId: number; itemId: number }, ctx: McpContext) {
     if (this.isDemoUser(ctx.userId)) return demoDenied();
     if (!this.budget.verifyTripAccess(tripId, ctx.userId)) return noAccess();
-    if (!this.guards.hasTripPermission('budget_edit', tripId, ctx.userId)) return permissionDenied();
+    if (!(await this.guards.hasTripPermission('budget_edit', tripId, ctx.userId))) return permissionDenied();
     const deleted = this.budget.deleteBudgetItem(itemId, tripId);
     if (!deleted) return errorResult('Budget item not found.');
     this.guards.safeBroadcast(tripId, 'budget:deleted', { itemId });
@@ -280,7 +280,7 @@ export class BudgetMcp {
   ) {
     if (this.isDemoUser(ctx.userId)) return demoDenied();
     if (!this.budget.verifyTripAccess(tripId, ctx.userId)) return noAccess();
-    if (!this.guards.hasTripPermission('budget_edit', tripId, ctx.userId)) return permissionDenied();
+    if (!(await this.guards.hasTripPermission('budget_edit', tripId, ctx.userId))) return permissionDenied();
     if (members !== undefined && member_ids !== undefined) return errorResult('Pass either members (uneven split) or member_ids (equal split), not both.');
     if (members !== undefined) {
       // An edit that leaves the total alone still has to reconcile against it, so
@@ -324,10 +324,10 @@ export class BudgetMcp {
   ) {
     if (this.isDemoUser(ctx.userId)) return demoDenied();
     if (!this.budget.verifyTripAccess(tripId, ctx.userId)) return noAccess();
-    if (!this.guards.hasTripPermission('budget_edit', tripId, ctx.userId)) return permissionDenied();
+    if (!(await this.guards.hasTripPermission('budget_edit', tripId, ctx.userId))) return permissionDenied();
     if (place_id != null && !this.placeOnTrip(tripId, place_id)) return errorResult('place_id does not belong to this trip.');
     // Omitted userIds → default to the whole trip, matching create_budget_item.
-    const members = (userIds && userIds.length > 0) ? userIds : this.resolveMemberIds(tripId, undefined);
+    const members = (userIds && userIds.length > 0) ? userIds : await this.resolveMemberIds(tripId, undefined);
     try {
       const item = this.db.transaction(() => {
         const created = this.budget.createBudgetItem(tripId, { category, name, total_price, note, member_ids: members, place_id });
@@ -356,7 +356,7 @@ export class BudgetMcp {
   async setBudgetItemMembers({ tripId, itemId, userIds }: { tripId: number; itemId: number; userIds: number[] }, ctx: McpContext) {
     if (this.isDemoUser(ctx.userId)) return demoDenied();
     if (!this.budget.verifyTripAccess(tripId, ctx.userId)) return noAccess();
-    if (!this.guards.hasTripPermission('budget_edit', tripId, ctx.userId)) return permissionDenied();
+    if (!(await this.guards.hasTripPermission('budget_edit', tripId, ctx.userId))) return permissionDenied();
     const result = this.budget.updateMembers(itemId, tripId, userIds);
     if (!result) return errorResult('Budget item not found.');
     const item = this.budget.getBudgetItem(itemId, tripId);
@@ -380,7 +380,7 @@ export class BudgetMcp {
   async toggleBudgetMemberPaid({ tripId, itemId, memberId, paid }: { tripId: number; itemId: number; memberId: number; paid: boolean }, ctx: McpContext) {
     if (this.isDemoUser(ctx.userId)) return demoDenied();
     if (!this.budget.verifyTripAccess(tripId, ctx.userId)) return noAccess();
-    if (!this.guards.hasTripPermission('budget_edit', tripId, ctx.userId)) return permissionDenied();
+    if (!(await this.guards.hasTripPermission('budget_edit', tripId, ctx.userId))) return permissionDenied();
     const member = this.budget.toggleMemberPaid(itemId, tripId, memberId, paid);
     this.guards.safeBroadcast(tripId, 'budget:member-paid-updated', { itemId, userId: memberId, paid: paid ? 1 : 0 });
     return ok({ member });
@@ -445,7 +445,7 @@ export class BudgetMcp {
   ) {
     if (this.isDemoUser(ctx.userId)) return demoDenied();
     if (!this.budget.verifyTripAccess(tripId, ctx.userId)) return noAccess();
-    if (!this.guards.hasTripPermission('budget_edit', tripId, ctx.userId)) return permissionDenied();
+    if (!(await this.guards.hasTripPermission('budget_edit', tripId, ctx.userId))) return permissionDenied();
     // Freeze-then-write composite, same as the REST path: the rate for the display
     // currency is frozen at entry time (#1445).
     const settlement = await this.budget.createSettlement(tripId, { from_user_id, to_user_id, amount, currency, settled_at }, ctx.userId);
@@ -476,7 +476,7 @@ export class BudgetMcp {
   ) {
     if (this.isDemoUser(ctx.userId)) return demoDenied();
     if (!this.budget.verifyTripAccess(tripId, ctx.userId)) return noAccess();
-    if (!this.guards.hasTripPermission('budget_edit', tripId, ctx.userId)) return permissionDenied();
+    if (!(await this.guards.hasTripPermission('budget_edit', tripId, ctx.userId))) return permissionDenied();
     // Freeze-then-write composite, same as the REST path: an edit that leaves the
     // currency alone keeps the rate frozen at settle time.
     const settlement = await this.budget.updateSettlement(settlementId, tripId, { from_user_id, to_user_id, amount, currency, settled_at });
@@ -499,7 +499,7 @@ export class BudgetMcp {
   async deleteSettlement({ tripId, settlementId }: { tripId: number; settlementId: number }, ctx: McpContext) {
     if (this.isDemoUser(ctx.userId)) return demoDenied();
     if (!this.budget.verifyTripAccess(tripId, ctx.userId)) return noAccess();
-    if (!this.guards.hasTripPermission('budget_edit', tripId, ctx.userId)) return permissionDenied();
+    if (!(await this.guards.hasTripPermission('budget_edit', tripId, ctx.userId))) return permissionDenied();
     const deleted = this.budget.deleteSettlement(settlementId, tripId);
     if (!deleted) return errorResult('Settlement not found.');
     this.guards.safeBroadcast(tripId, 'budget:settlement-deleted', { settlementId });

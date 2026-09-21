@@ -382,7 +382,7 @@ export class DocSyncController {
     // Refused before the shelved rows are touched, so a binding an admin
     // switched off stays exactly as it was and resumes where it stopped. A code
     // rather than a sentence: the client says it in the reader's language.
-    if (this.sync.isSwitchedOff(link)) {
+    if ((await this.sync.isSwitchedOff(link))) {
       throw new HttpException({ error: PROVIDER_DISABLED }, 409);
     }
     // A person asking for a run is also asking for the rows that gave up to be

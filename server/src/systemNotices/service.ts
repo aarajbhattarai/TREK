@@ -35,11 +35,11 @@ function severityWeight(s: string): number {
   return s === 'critical' ? 2 : s === 'warn' ? 1 : 0;
 }
 
-export function getActiveNoticesFor(
+export async function getActiveNoticesFor(
   userId: number,
-  addonEnabled: (addonId: string) => boolean,
+  addonEnabled: (addonId: string) => Promise<boolean>,
   managed = false
-): SystemNoticeDTO[] {
+): Promise<SystemNoticeDTO[]> {
   const user = db.prepare(
     'SELECT login_count, first_seen_version, role FROM users WHERE id = ?'
   ).get(userId) as { login_count: number; first_seen_version: string; role: string } | undefined;
@@ -59,7 +59,23 @@ export function getActiveNoticesFor(
 
   const now = new Date();
   const currentAppVersion = getCurrentAppVersion();
-  const ctx = { user: { ...user, noTrips: tripCount }, currentAppVersion, now, addonEnabled, managed };
+  // `evaluate` runs inside a .filter(), which cannot await, so the addon flags
+  // the registry is able to ask about are resolved up front and handed to it as
+  // a lookup. The ids come from the notices themselves, so every question the
+  // conditions can ask has an answer here and the fallback is unreachable.
+  const addonFlags = new Map<string, boolean>();
+  for (const condition of SYSTEM_NOTICES.flatMap(n => n.conditions)) {
+    if (condition.kind === 'addonEnabled' && !addonFlags.has(condition.addonId)) {
+      addonFlags.set(condition.addonId, await addonEnabled(condition.addonId));
+    }
+  }
+  const ctx = {
+    user: { ...user, noTrips: tripCount },
+    currentAppVersion,
+    now,
+    addonEnabled: (addonId: string) => addonFlags.get(addonId) ?? false,
+    managed,
+  };
   const appVer = semver.coerce(currentAppVersion)?.version ?? '0.0.0';
 
   const isStillDismissed = (n: SystemNotice): boolean => {
@@ -89,7 +105,7 @@ export function getActiveNoticesFor(
     .map(({ conditions: _c, publishedAt: _p, minVersion: _mn, maxVersion: _mx, priority: _pr, recurring: _rc, ...dto }) => dto);
 }
 
-export function dismissNotice(userId: number, noticeId: string): boolean {
+export async function dismissNotice(userId: number, noticeId: string): Promise<boolean> {
   const exists = SYSTEM_NOTICES.some(n => n.id === noticeId);
   if (!exists) return false;
   // Record the app version at dismissal so per-version notices can re-appear on the next

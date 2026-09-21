@@ -106,6 +106,8 @@ import { EphemeralTokenService } from '../../../src/nest/auth/ephemeral-token.se
 import { AllowedFileTypesService } from '../../../src/nest/files/allowed-file-types.service';
 import { OidcService } from '../../../src/nest/oidc/oidc.service';
 import { MailerService } from '../../../src/nest/notifications/mailer/mailer.service';
+import { createTestUnitOfWork } from '../../helpers/test-uow';
+import { UnitOfWork } from '../../../src/nest/database/unit-of-work';
 
 // MailerService is injected since the notifications fold — a stub instead of a
 // module mock. sendPasswordResetEmail is the only thing auth reaches for.
@@ -116,17 +118,22 @@ const membership = new TripMembershipService(new DatabaseService(testDb));
 // slot, which AuthService no longer takes at all, so webauthn/userCleanup/mailer
 // each landed one place too late and the EphemeralTokenService was missing
 // entirely. Nothing failed, because no case below reaches those collaborators.
-const auth = new AuthService(
+
+let auth: AuthService;
+let svc: OidcService;
+beforeAll(async () => {
+  auth = new AuthService(
   new DatabaseService(testDb),
-  new PermissionsService(new DatabaseService(testDb)),
+  new PermissionsService(new DatabaseService(testDb), await createTestUnitOfWork(testDb)),
   membership,
   new WebauthnConfigService(new DatabaseService(testDb)),
-  new UserCleanupService(new DatabaseService(testDb), new BudgetService(new DatabaseService(testDb), new PermissionsService(new DatabaseService(testDb)), new ExchangeRatesService(), new RealtimeService())),
+  new UserCleanupService(new DatabaseService(testDb), new BudgetService(new DatabaseService(testDb), new PermissionsService(new DatabaseService(testDb), await createTestUnitOfWork(testDb)), new ExchangeRatesService(), new RealtimeService())),
   mailerStub,
   new EphemeralTokenService(),
-  new AllowedFileTypesService(new DatabaseService(testDb)),
+  new AllowedFileTypesService(new DatabaseService(testDb)), await createTestUnitOfWork(testDb),
 );
-const svc = new OidcService(new DatabaseService(testDb), auth, membership);
+  svc = new OidcService(new DatabaseService(testDb), auth, membership, await createTestUnitOfWork(testDb));
+});
 
 const MOCK_CONFIG = {
   issuer: 'https://oidc.example.com',
@@ -484,13 +491,13 @@ describe('getOidcConfig issuer trailing-slash regex', () => {
 // ── findOrCreateUser ──────────────────────────────────────────────────────────
 
 describe('findOrCreateUser', () => {
-  it('OIDC-SVC-020: finds existing user by oidc_sub', () => {
+  it('OIDC-SVC-020: finds existing user by oidc_sub', async () => {
     const { user } = createUser(testDb, { email: 'alice@example.com' });
     // Link the sub manually
     testDb.prepare('UPDATE users SET oidc_sub = ?, oidc_issuer = ? WHERE id = ?')
       .run('sub-alice-123', MOCK_CONFIG.issuer, user.id);
 
-    const result = svc.findOrCreateUser(
+    const result = await svc.findOrCreateUser(
       { sub: 'sub-alice-123', email: 'alice@example.com', name: 'Alice' },
       MOCK_CONFIG
     );
@@ -498,10 +505,10 @@ describe('findOrCreateUser', () => {
     expect((result as { user: any }).user.id).toBe(user.id);
   });
 
-  it('OIDC-SVC-021: finds existing user by email when no sub match', () => {
+  it('OIDC-SVC-021: finds existing user by email when no sub match', async () => {
     const { user } = createUser(testDb, { email: 'bob@example.com' });
 
-    const result = svc.findOrCreateUser(
+    const result = await svc.findOrCreateUser(
       { sub: 'sub-bob-new', email: 'bob@example.com', name: 'Bob', email_verified: true },
       MOCK_CONFIG
     );
@@ -509,8 +516,8 @@ describe('findOrCreateUser', () => {
     expect((result as { user: any }).user.id).toBe(user.id);
   });
 
-  it('OIDC-SVC-022: creates new user when registration is open', () => {
-    const result = svc.findOrCreateUser(
+  it('OIDC-SVC-022: creates new user when registration is open', async () => {
+    const result = await svc.findOrCreateUser(
       { sub: 'sub-new-1', email: 'newuser@example.com', name: 'New User' },
       MOCK_CONFIG
     );
@@ -519,9 +526,9 @@ describe('findOrCreateUser', () => {
     expect(newUser).toBeDefined();
   });
 
-  it('OIDC-SVC-023: first user gets admin role', () => {
+  it('OIDC-SVC-023: first user gets admin role', async () => {
     // DB is empty after resetTestDb
-    const result = svc.findOrCreateUser(
+    const result = await svc.findOrCreateUser(
       { sub: 'sub-first', email: 'first@example.com', name: 'First' },
       MOCK_CONFIG
     );
@@ -529,11 +536,11 @@ describe('findOrCreateUser', () => {
     expect((result as { user: any }).user.role).toBe('admin');
   });
 
-  it('OIDC-SVC-024: returns registration_disabled error when registration is off', () => {
+  it('OIDC-SVC-024: returns registration_disabled error when registration is off', async () => {
     createUser(testDb, { email: 'existing@example.com' });
     testDb.prepare("INSERT OR REPLACE INTO app_settings (key, value) VALUES ('allow_registration', 'false')").run();
 
-    const result = svc.findOrCreateUser(
+    const result = await svc.findOrCreateUser(
       { sub: 'sub-blocked', email: 'blocked@example.com', name: 'Blocked' },
       MOCK_CONFIG
     );
@@ -541,12 +548,12 @@ describe('findOrCreateUser', () => {
     expect((result as { error: string }).error).toBe('registration_disabled');
   });
 
-  it('OIDC-SVC-025: links oidc_sub when existing user has none (verified email)', () => {
+  it('OIDC-SVC-025: links oidc_sub when existing user has none (verified email)', async () => {
     const { user } = createUser(testDb, { email: 'charlie@example.com' });
     // Ensure no oidc_sub set
     testDb.prepare('UPDATE users SET oidc_sub = NULL, oidc_issuer = NULL WHERE id = ?').run(user.id);
 
-    svc.findOrCreateUser(
+    await svc.findOrCreateUser(
       { sub: 'sub-charlie-linked', email: 'charlie@example.com', name: 'Charlie', email_verified: true },
       MOCK_CONFIG
     );
@@ -555,13 +562,13 @@ describe('findOrCreateUser', () => {
     expect(updated.oidc_sub).toBe('sub-charlie-linked');
   });
 
-  it('OIDC-SVC-025b: refuses to link an unverified email to an existing local account', () => {
+  it('OIDC-SVC-025b: refuses to link an unverified email to an existing local account', async () => {
     const { user } = createUser(testDb, { email: 'dora@example.com' });
     testDb.prepare('UPDATE users SET oidc_sub = NULL, oidc_issuer = NULL WHERE id = ?').run(user.id);
 
     // No email_verified claim — an IdP that lets users set arbitrary emails must
     // not be able to take over a pre-existing password account.
-    const result = svc.findOrCreateUser(
+    const result = await svc.findOrCreateUser(
       { sub: 'sub-dora-attacker', email: 'dora@example.com', name: 'Dora' },
       MOCK_CONFIG
     );
@@ -572,7 +579,7 @@ describe('findOrCreateUser', () => {
     expect(updated.oidc_sub).toBeNull(); // account not linked / not hijacked
   });
 
-  it('OIDC-SVC-026: existing user role is updated when OIDC claim mapping changes it', () => {
+  it('OIDC-SVC-026: existing user role is updated when OIDC claim mapping changes it', async () => {
     const { user } = createUser(testDb, { email: 'diana@example.com', role: 'user' });
     // Link oidc_sub manually so the user is found by sub lookup
     testDb.prepare('UPDATE users SET oidc_sub = ?, oidc_issuer = ? WHERE id = ?')
@@ -580,7 +587,7 @@ describe('findOrCreateUser', () => {
 
     process.env.OIDC_ADMIN_VALUE = 'admins';
 
-    const result = svc.findOrCreateUser(
+    const result = await svc.findOrCreateUser(
       { sub: 'sub-diana-role', email: 'diana@example.com', name: 'Diana', groups: ['admins'] },
       MOCK_CONFIG
     );
@@ -592,13 +599,13 @@ describe('findOrCreateUser', () => {
     expect(dbUser.role).toBe('admin');
   });
 
-  it('OIDC-SVC-027: new user with valid invite token increments used_count', () => {
+  it('OIDC-SVC-027: new user with valid invite token increments used_count', async () => {
     const { user: creator } = createUser(testDb, { email: 'creator@example.com' });
     testDb.prepare(
       "INSERT INTO invite_tokens (token, max_uses, used_count, created_by) VALUES ('tok-valid', 5, 0, ?)"
     ).run(creator.id);
 
-    const result = svc.findOrCreateUser(
+    const result = await svc.findOrCreateUser(
       { sub: 'sub-invite-user', email: 'invitee@example.com', name: 'Invitee' },
       MOCK_CONFIG,
       'tok-valid'
@@ -610,13 +617,13 @@ describe('findOrCreateUser', () => {
     expect(token.used_count).toBe(1);
   });
 
-  it('OIDC-SVC-028: new user with expired invite token is created but invite is ignored', () => {
+  it('OIDC-SVC-028: new user with expired invite token is created but invite is ignored', async () => {
     const { user: creator } = createUser(testDb, { email: 'creator2@example.com' });
     testDb.prepare(
       "INSERT INTO invite_tokens (token, max_uses, used_count, expires_at, created_by) VALUES ('tok-expired', 5, 0, '2000-01-01T00:00:00.000Z', ?)"
     ).run(creator.id);
 
-    const result = svc.findOrCreateUser(
+    const result = await svc.findOrCreateUser(
       { sub: 'sub-expired-invite', email: 'expired-invitee@example.com', name: 'ExpiredInvitee' },
       MOCK_CONFIG,
       'tok-expired'
@@ -632,13 +639,13 @@ describe('findOrCreateUser', () => {
     expect(token.used_count).toBe(0);
   });
 
-  it('OIDC-SVC-029: new user with max_uses exceeded invite token is created but invite is ignored', () => {
+  it('OIDC-SVC-029: new user with max_uses exceeded invite token is created but invite is ignored', async () => {
     const { user: creator } = createUser(testDb, { email: 'creator3@example.com' });
     testDb.prepare(
       "INSERT INTO invite_tokens (token, max_uses, used_count, created_by) VALUES ('tok-full', 1, 1, ?)"
     ).run(creator.id);
 
-    const result = svc.findOrCreateUser(
+    const result = await svc.findOrCreateUser(
       { sub: 'sub-full-invite', email: 'full-invitee@example.com', name: 'FullInvitee' },
       MOCK_CONFIG,
       'tok-full'
@@ -656,8 +663,8 @@ describe('findOrCreateUser', () => {
 
   // ── OIDC picture claim → avatar (#1399) ──────────────────────────────────
 
-  it('OIDC-SVC-040: new user stores the https picture claim as their avatar', () => {
-    const result = svc.findOrCreateUser(
+  it('OIDC-SVC-040: new user stores the https picture claim as their avatar', async () => {
+    const result = await svc.findOrCreateUser(
       { sub: 'sub-pic-1', email: 'pic1@example.com', name: 'Pic One', picture: 'https://idp.example.com/u/pic1.png' },
       MOCK_CONFIG
     );
@@ -666,8 +673,8 @@ describe('findOrCreateUser', () => {
     expect(row.avatar).toBe('https://idp.example.com/u/pic1.png');
   });
 
-  it('OIDC-SVC-041: new user with a non-https picture claim stores no avatar', () => {
-    svc.findOrCreateUser(
+  it('OIDC-SVC-041: new user with a non-https picture claim stores no avatar', async () => {
+    await svc.findOrCreateUser(
       { sub: 'sub-pic-2', email: 'pic2@example.com', name: 'Pic Two', picture: 'http://idp.example.com/u/pic2.png' },
       MOCK_CONFIG
     );
@@ -675,11 +682,11 @@ describe('findOrCreateUser', () => {
     expect(row.avatar).toBeNull();
   });
 
-  it('OIDC-SVC-042: existing user with no avatar gets the OIDC picture', () => {
+  it('OIDC-SVC-042: existing user with no avatar gets the OIDC picture', async () => {
     const { user } = createUser(testDb, { email: 'pic3@example.com' });
     testDb.prepare('UPDATE users SET oidc_sub = ?, oidc_issuer = ?, avatar = NULL WHERE id = ?')
       .run('sub-pic-3', MOCK_CONFIG.issuer, user.id);
-    svc.findOrCreateUser(
+    await svc.findOrCreateUser(
       { sub: 'sub-pic-3', email: 'pic3@example.com', name: 'Pic Three', picture: 'https://idp.example.com/u/pic3.png' },
       MOCK_CONFIG
     );
@@ -687,11 +694,11 @@ describe('findOrCreateUser', () => {
     expect(row.avatar).toBe('https://idp.example.com/u/pic3.png');
   });
 
-  it('OIDC-SVC-043: a custom uploaded avatar is never overwritten by the OIDC picture', () => {
+  it('OIDC-SVC-043: a custom uploaded avatar is never overwritten by the OIDC picture', async () => {
     const { user } = createUser(testDb, { email: 'pic4@example.com' });
     testDb.prepare('UPDATE users SET oidc_sub = ?, oidc_issuer = ?, avatar = ? WHERE id = ?')
       .run('sub-pic-4', MOCK_CONFIG.issuer, 'uploaded-abc.jpg', user.id);
-    svc.findOrCreateUser(
+    await svc.findOrCreateUser(
       { sub: 'sub-pic-4', email: 'pic4@example.com', name: 'Pic Four', picture: 'https://idp.example.com/u/pic4.png' },
       MOCK_CONFIG
     );
@@ -699,11 +706,11 @@ describe('findOrCreateUser', () => {
     expect(row.avatar).toBe('uploaded-abc.jpg');
   });
 
-  it('OIDC-SVC-044: a previously stored OIDC picture URL is refreshed on next login', () => {
+  it('OIDC-SVC-044: a previously stored OIDC picture URL is refreshed on next login', async () => {
     const { user } = createUser(testDb, { email: 'pic5@example.com' });
     testDb.prepare('UPDATE users SET oidc_sub = ?, oidc_issuer = ?, avatar = ? WHERE id = ?')
       .run('sub-pic-5', MOCK_CONFIG.issuer, 'https://idp.example.com/u/old.png', user.id);
-    svc.findOrCreateUser(
+    await svc.findOrCreateUser(
       { sub: 'sub-pic-5', email: 'pic5@example.com', name: 'Pic Five', picture: 'https://idp.example.com/u/new.png' },
       MOCK_CONFIG
     );
@@ -715,12 +722,12 @@ describe('findOrCreateUser', () => {
   // because the verified-email lookup finds the row, but everything the old provider put
   // on it used to survive: an avatar URL on a host this instance no longer talks to, and
   // a sub/issuer pair pinning the account to a provider that is gone.
-  it('OIDC-SVC-060: a provider without a picture claim clears the previous provider avatar', () => {
+  it('OIDC-SVC-060: a provider without a picture claim clears the previous provider avatar', async () => {
     const { user } = createUser(testDb, { email: 'switch1@example.com' });
     testDb.prepare('UPDATE users SET oidc_sub = ?, oidc_issuer = ?, avatar = ? WHERE id = ?')
       .run('sub-old-1', 'https://old-idp.example.com', 'https://old-idp.example.com/u/me.png', user.id);
 
-    svc.findOrCreateUser(
+    await svc.findOrCreateUser(
       { sub: 'sub-new-1', email: 'switch1@example.com', name: 'Switcher', email_verified: true },
       { ...MOCK_CONFIG, issuer: 'https://new-idp.example.com' },
     );
@@ -729,13 +736,13 @@ describe('findOrCreateUser', () => {
     expect(row.avatar).toBeNull();
   });
 
-  it('OIDC-SVC-061: an uploaded avatar survives the same switch', () => {
+  it('OIDC-SVC-061: an uploaded avatar survives the same switch', async () => {
     const { user } = createUser(testDb, { email: 'switch2@example.com' });
     // A local upload is a bare filename, not a URL, and belongs to the user.
     testDb.prepare('UPDATE users SET oidc_sub = ?, oidc_issuer = ?, avatar = ? WHERE id = ?')
       .run('sub-old-2', 'https://old-idp.example.com', 'uploaded-abc.jpg', user.id);
 
-    svc.findOrCreateUser(
+    await svc.findOrCreateUser(
       { sub: 'sub-new-2', email: 'switch2@example.com', name: 'Switcher', email_verified: true },
       { ...MOCK_CONFIG, issuer: 'https://new-idp.example.com' },
     );
@@ -744,12 +751,12 @@ describe('findOrCreateUser', () => {
     expect(row.avatar).toBe('uploaded-abc.jpg');
   });
 
-  it('OIDC-SVC-062: the account is relinked to the new provider sub and issuer', () => {
+  it('OIDC-SVC-062: the account is relinked to the new provider sub and issuer', async () => {
     const { user } = createUser(testDb, { email: 'switch3@example.com' });
     testDb.prepare('UPDATE users SET oidc_sub = ?, oidc_issuer = ? WHERE id = ?')
       .run('sub-old-3', 'https://old-idp.example.com', user.id);
 
-    svc.findOrCreateUser(
+    await svc.findOrCreateUser(
       { sub: 'sub-new-3', email: 'switch3@example.com', name: 'Switcher', email_verified: true },
       { ...MOCK_CONFIG, issuer: 'https://new-idp.example.com' },
     );
@@ -759,14 +766,14 @@ describe('findOrCreateUser', () => {
     expect(row.oidc_issuer).toBe('https://new-idp.example.com');
   });
 
-  it('OIDC-SVC-053: returns no_email when the email claim is missing (no throw)', () => {
-    const result = svc.findOrCreateUser({ sub: 'sub-no-email', name: 'No Email' }, MOCK_CONFIG);
+  it('OIDC-SVC-053: returns no_email when the email claim is missing (no throw)', async () => {
+    const result = await svc.findOrCreateUser({ sub: 'sub-no-email', name: 'No Email' }, MOCK_CONFIG);
     expect('error' in result).toBe(true);
     expect((result as { error: string }).error).toBe('no_email');
   });
 
-  it('OIDC-SVC-054: a new user is returned as the re-selected DB row, not a hand-built partial', () => {
-    const result = svc.findOrCreateUser(
+  it('OIDC-SVC-054: a new user is returned as the re-selected DB row, not a hand-built partial', async () => {
+    const result = await svc.findOrCreateUser(
       { sub: 'sub-full-row', email: 'fullrow@example.com', name: 'Full Row' },
       MOCK_CONFIG
     );
@@ -779,14 +786,14 @@ describe('findOrCreateUser', () => {
     expect(user.email).toBe('fullrow@example.com');
   });
 
-  it('OIDC-SVC-045: a trip-bound invite auto-adds the new SSO user as a trip member (#1402)', () => {
+  it('OIDC-SVC-045: a trip-bound invite auto-adds the new SSO user as a trip member (#1402)', async () => {
     const { user: admin } = createUser(testDb, { role: 'admin' });
     const trip = createTrip(testDb, admin.id);
     testDb.prepare(
       'INSERT INTO invite_tokens (token, max_uses, used_count, expires_at, created_by, trip_id) VALUES (?, 5, 0, NULL, ?, ?)'
     ).run('inv-trip-join', admin.id, trip.id);
 
-    const result = svc.findOrCreateUser(
+    const result = await svc.findOrCreateUser(
       { sub: 'sub-trip-join', email: 'joiner@example.com', name: 'Joiner' },
       MOCK_CONFIG,
       'inv-trip-join'
@@ -810,7 +817,7 @@ describe('findOrCreateUser role mapping', () => {
   }
   const storedRole = (id: number) => (testDb.prepare('SELECT role FROM users WHERE id = ?').get(id) as { role: string }).role;
 
-  it('OIDC-SVC-063: an admin keeps the role when the configured claim is absent from the payload', () => {
+  it('OIDC-SVC-063: an admin keeps the role when the configured claim is absent from the payload', async () => {
     process.env.OIDC_ADMIN_VALUE = 'trek-admins';
     process.env.OIDC_ADMIN_CLAIM = 'entitlements';
     // A second admin row, so the #1274 last-admin guard cannot be what saves them.
@@ -819,10 +826,10 @@ describe('findOrCreateUser role mapping', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
     try {
-      const result = svc.findOrCreateUser(
+      const result = (await svc.findOrCreateUser(
         { sub: 'sub-keep-admin', email: 'sso-admin@example.com', groups: ['authentik Admins'] },
         MOCK_CONFIG
-      ) as RoleResult;
+      )) as RoleResult;
 
       expect(result.user.role).toBe('admin');
       expect(storedRole(user.id)).toBe('admin');
@@ -832,17 +839,17 @@ describe('findOrCreateUser role mapping', () => {
     }
   });
 
-  it('OIDC-SVC-064: an absent claim does not promote a plain user either', () => {
+  it('OIDC-SVC-064: an absent claim does not promote a plain user either', async () => {
     process.env.OIDC_ADMIN_VALUE = 'trek-admins';
     process.env.OIDC_ADMIN_CLAIM = 'entitlements';
     const user = ssoUser('plain@example.com', 'sub-keep-user', 'user');
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
     try {
-      const result = svc.findOrCreateUser(
+      const result = (await svc.findOrCreateUser(
         { sub: 'sub-keep-user', email: 'plain@example.com', groups: ['authentik Admins'] },
         MOCK_CONFIG
-      ) as RoleResult;
+      )) as RoleResult;
 
       expect(result.user.role).toBe('user');
       expect(storedRole(user.id)).toBe('user');
@@ -852,46 +859,46 @@ describe('findOrCreateUser role mapping', () => {
     }
   });
 
-  it('OIDC-SVC-065: a custom claim that does arrive still promotes, and reports the change', () => {
+  it('OIDC-SVC-065: a custom claim that does arrive still promotes, and reports the change', async () => {
     process.env.OIDC_ADMIN_VALUE = 'trek-admins';
     process.env.OIDC_ADMIN_CLAIM = 'entitlements';
     const user = ssoUser('promote@example.com', 'sub-promote', 'user');
 
-    const result = svc.findOrCreateUser(
+    const result = (await svc.findOrCreateUser(
       { sub: 'sub-promote', email: 'promote@example.com', entitlements: ['trek-users', 'trek-admins'] },
       MOCK_CONFIG
-    ) as RoleResult;
+    )) as RoleResult;
 
     expect(storedRole(user.id)).toBe('admin');
     expect(result.roleChange).toEqual({ from: 'user', to: 'admin', claim: 'entitlements' });
   });
 
-  it('OIDC-SVC-066: a claim that arrives without the admin value still demotes', () => {
+  it('OIDC-SVC-066: a claim that arrives without the admin value still demotes', async () => {
     process.env.OIDC_ADMIN_VALUE = 'trek-admins';
     process.env.OIDC_ADMIN_CLAIM = 'entitlements';
     createUser(testDb, { email: 'bootstrap2@example.com', role: 'admin' });
     const user = ssoUser('demote@example.com', 'sub-demote', 'admin');
 
-    const result = svc.findOrCreateUser(
+    const result = (await svc.findOrCreateUser(
       { sub: 'sub-demote', email: 'demote@example.com', entitlements: ['trek-users'] },
       MOCK_CONFIG
-    ) as RoleResult;
+    )) as RoleResult;
 
     expect(storedRole(user.id)).toBe('user');
     expect(result.roleChange).toEqual({ from: 'admin', to: 'user', claim: 'entitlements' });
   });
 
-  it('OIDC-SVC-067: the only admin is still kept when the claim arrives without the admin value (#1274)', () => {
+  it('OIDC-SVC-067: the only admin is still kept when the claim arrives without the admin value (#1274)', async () => {
     process.env.OIDC_ADMIN_VALUE = 'trek-admins';
     process.env.OIDC_ADMIN_CLAIM = 'entitlements';
     const user = ssoUser('lonely@example.com', 'sub-lonely', 'admin');
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
     try {
-      const result = svc.findOrCreateUser(
+      const result = (await svc.findOrCreateUser(
         { sub: 'sub-lonely', email: 'lonely@example.com', entitlements: ['trek-users'] },
         MOCK_CONFIG
-      ) as RoleResult;
+      )) as RoleResult;
 
       expect(storedRole(user.id)).toBe('admin');
       expect(result.roleChange).toBeUndefined();
@@ -901,19 +908,19 @@ describe('findOrCreateUser role mapping', () => {
     }
   });
 
-  it('OIDC-SVC-068: for a plain user the absent-claim warning names the claim and the keys that arrived, never their values, and fires once', () => {
+  it('OIDC-SVC-068: for a plain user the absent-claim warning names the claim and the keys that arrived, never their values, and fires once', async () => {
     process.env.OIDC_ADMIN_VALUE = 'trek-admins';
     process.env.OIDC_ADMIN_CLAIM = 'trek_roles';
     ssoUser('warned@example.com', 'sub-warned', 'user');
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     // The warning is deduped per claim name for the life of the process, so this
     // case needs an instance that has not seen the claim yet.
-    const fresh = new OidcService(new DatabaseService(testDb), auth, membership);
+    const fresh = new OidcService(new DatabaseService(testDb), auth, membership, await createTestUnitOfWork(testDb));
 
     try {
       const info = { sub: 'sub-warned', email: 'warned@example.com', groups: ['authentik Admins'] };
-      fresh.findOrCreateUser(info, MOCK_CONFIG);
-      fresh.findOrCreateUser(info, MOCK_CONFIG);
+      await fresh.findOrCreateUser(info, MOCK_CONFIG);
+      await fresh.findOrCreateUser(info, MOCK_CONFIG);
 
       expect(warn).toHaveBeenCalledTimes(1);
       const line = warn.mock.calls[0][0] as string;
@@ -928,17 +935,17 @@ describe('findOrCreateUser role mapping', () => {
     }
   });
 
-  it('OIDC-SVC-069: a new account is registered with the default role when the claim is absent', () => {
+  it('OIDC-SVC-069: a new account is registered with the default role when the claim is absent', async () => {
     process.env.OIDC_ADMIN_VALUE = 'trek-admins';
     process.env.OIDC_ADMIN_CLAIM = 'reg_entitlements';
     createUser(testDb, { email: 'someone@example.com' }); // not the first user any more
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
     try {
-      const result = svc.findOrCreateUser(
+      const result = (await svc.findOrCreateUser(
         { sub: 'sub-fresh', email: 'fresh@example.com', name: 'Fresh', groups: ['authentik Admins'] },
         MOCK_CONFIG
-      ) as RoleResult;
+      )) as RoleResult;
 
       expect(storedRole(result.user.id)).toBe('user');
       expect(result.roleChange).toBeUndefined();
@@ -948,15 +955,15 @@ describe('findOrCreateUser role mapping', () => {
     }
   });
 
-  it('OIDC-SVC-070: a claim that already agrees with the stored role reports no change', () => {
+  it('OIDC-SVC-070: a claim that already agrees with the stored role reports no change', async () => {
     process.env.OIDC_ADMIN_VALUE = 'trek-admins';
     process.env.OIDC_ADMIN_CLAIM = 'entitlements';
     const user = ssoUser('steady@example.com', 'sub-steady', 'admin');
 
-    const result = svc.findOrCreateUser(
+    const result = (await svc.findOrCreateUser(
       { sub: 'sub-steady', email: 'steady@example.com', entitlements: ['trek-admins'] },
       MOCK_CONFIG
-    ) as RoleResult;
+    )) as RoleResult;
 
     expect(storedRole(user.id)).toBe('admin');
     expect(result.roleChange).toBeUndefined();
@@ -975,7 +982,7 @@ describe('findOrCreateUser role mapping', () => {
     expect(svc.resolveOidcRoleDetailed({ ...info, entitlements: ['trek-admins'] }, false)).toMatchObject({ role: 'admin', claimMissing: false });
   });
 
-  it('OIDC-SVC-072: a stored admin whose claim never arrives is warned about on every login, by id, with the admin panel as the way out', () => {
+  it('OIDC-SVC-072: a stored admin whose claim never arrives is warned about on every login, by id, with the admin panel as the way out', async () => {
     process.env.OIDC_ADMIN_VALUE = 'trek-admins';
     process.env.OIDC_ADMIN_CLAIM = 'kept_admin_roles';
     createUser(testDb, { email: 'bootstrap3@example.com', role: 'admin' });
@@ -984,8 +991,8 @@ describe('findOrCreateUser role mapping', () => {
 
     try {
       const info = { sub: 'sub-kept-admin', email: 'kept@example.com', groups: ['authentik Admins'] };
-      svc.findOrCreateUser(info, MOCK_CONFIG);
-      svc.findOrCreateUser(info, MOCK_CONFIG);
+      await svc.findOrCreateUser(info, MOCK_CONFIG);
+      await svc.findOrCreateUser(info, MOCK_CONFIG);
 
       // No dedup here: this is the login where an IdP-side revocation quietly fails.
       expect(warn).toHaveBeenCalledTimes(2);
@@ -1004,19 +1011,19 @@ describe('findOrCreateUser role mapping', () => {
     }
   });
 
-  it('OIDC-SVC-073: warning about a stored admin does not use up the once-per-claim warning for everybody else', () => {
+  it('OIDC-SVC-073: warning about a stored admin does not use up the once-per-claim warning for everybody else', async () => {
     process.env.OIDC_ADMIN_VALUE = 'trek-admins';
     process.env.OIDC_ADMIN_CLAIM = 'shared_roles';
     createUser(testDb, { email: 'bootstrap4@example.com', role: 'admin' });
     ssoUser('shared-admin@example.com', 'sub-shared-admin', 'admin');
     ssoUser('shared-plain@example.com', 'sub-shared-plain', 'user');
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    const fresh = new OidcService(new DatabaseService(testDb), auth, membership);
+    const fresh = new OidcService(new DatabaseService(testDb), auth, membership, await createTestUnitOfWork(testDb));
 
     try {
-      fresh.findOrCreateUser({ sub: 'sub-shared-admin', email: 'shared-admin@example.com' }, MOCK_CONFIG);
-      fresh.findOrCreateUser({ sub: 'sub-shared-plain', email: 'shared-plain@example.com' }, MOCK_CONFIG);
-      fresh.findOrCreateUser({ sub: 'sub-shared-plain', email: 'shared-plain@example.com' }, MOCK_CONFIG);
+      await fresh.findOrCreateUser({ sub: 'sub-shared-admin', email: 'shared-admin@example.com' }, MOCK_CONFIG);
+      await fresh.findOrCreateUser({ sub: 'sub-shared-plain', email: 'shared-plain@example.com' }, MOCK_CONFIG);
+      await fresh.findOrCreateUser({ sub: 'sub-shared-plain', email: 'shared-plain@example.com' }, MOCK_CONFIG);
 
       expect(warn).toHaveBeenCalledTimes(2);
       expect(warn.mock.calls[0][0]).toContain('is stored as an admin');

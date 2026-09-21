@@ -48,16 +48,16 @@ export class DayAssignmentsController {
   constructor(private readonly assignments: AssignmentsService) {}
 
   @Get()
-  list(@CurrentUser() user: User, @Param('tripId') tripId: string, @Param('dayId') dayId: string) {
+  async list(@CurrentUser() user: User, @Param('tripId') tripId: string, @Param('dayId') dayId: string) {
     if (!this.assignments.dayExists(dayId, tripId)) {
       throw new HttpException({ error: 'Day not found' }, 404);
     }
-    return { assignments: this.assignments.listDayAssignments(dayId) };
+    return { assignments: await this.assignments.listDayAssignments(dayId) };
   }
 
   @RequirePermission('day_edit')
   @Post()
-  create(
+  async create(
     @CurrentUser() user: User,
     @Param('tripId') tripId: string,
     @Param('dayId') dayId: string,
@@ -70,7 +70,7 @@ export class DayAssignmentsController {
     if (!this.assignments.placeExists(body.place_id, tripId)) {
       throw new HttpException({ error: 'Place not found' }, 404);
     }
-    const assignment = this.assignments.createAssignment(dayId, body.place_id, body.notes);
+    const assignment = await this.assignments.createAssignment(dayId, body.place_id, body.notes);
     this.assignments.broadcast(tripId, 'assignment:created', { assignment }, socketId);
     this.assignments.reconcile(tripId, socketId);
     return { assignment };
@@ -128,7 +128,7 @@ export class AssignmentOpsController {
 
   @RequirePermission('day_edit')
   @Put(':id/move')
-  move(
+  async move(
     @CurrentUser() user: User,
     @Param('tripId') tripId: string,
     @Param('id') id: string,
@@ -141,7 +141,7 @@ export class AssignmentOpsController {
     if (!this.assignments.dayExists(String(body.new_day_id), tripId)) {
       throw new HttpException({ error: 'Target day not found' }, 404);
     }
-    const { assignment, oldDayId } = this.assignments.moveAssignment(id, body.new_day_id, body.order_index);
+    const { assignment, oldDayId } = await this.assignments.moveAssignment(id, body.new_day_id, body.order_index);
     this.assignments.broadcast(tripId, 'assignment:moved', { assignment, oldDayId: Number(oldDayId), newDayId: Number(body.new_day_id) }, socketId);
     this.assignments.reconcile(tripId, socketId);
     return { assignment };
@@ -157,7 +157,7 @@ export class AssignmentOpsController {
 
   @RequirePermission('day_edit')
   @Put(':id/time')
-  time(
+  async time(
     @CurrentUser() user: User,
     @Param('tripId') tripId: string,
     @Param('id') id: string,
@@ -167,7 +167,7 @@ export class AssignmentOpsController {
     if (!this.assignments.getAssignmentForTrip(id, tripId)) {
       throw new HttpException({ error: 'Assignment not found' }, 404);
     }
-    const { assignment, reordered, vias } = this.assignments.updateTime(id, body.place_time, body.end_time);
+    const { assignment, reordered, vias } = await this.assignments.updateTime(id, body.place_time, body.end_time);
     this.assignments.broadcast(tripId, 'assignment:updated', { assignment }, socketId);
     // The whole day when a start moved stops, or collaborators apply the one row
     // they were sent to their old order and end up with a third one.
@@ -184,7 +184,7 @@ export class AssignmentOpsController {
 
   @RequirePermission('day_edit')
   @Put(':id/end-day')
-  endDay(
+  async endDay(
     @Param('tripId') tripId: string,
     @Param('id') id: string,
     @Body() body: AssignmentEndDayDto,
@@ -193,7 +193,7 @@ export class AssignmentOpsController {
     if (!this.assignments.getAssignmentForTrip(id, tripId)) {
       throw new HttpException({ error: 'Assignment not found' }, 404);
     }
-    const assignment = this.assignments.setEndDay(id, body.end_day);
+    const assignment = await this.assignments.setEndDay(id, body.end_day);
     this.assignments.broadcast(tripId, 'assignment:updated', { assignment }, socketId);
     return { assignment };
   }
@@ -203,7 +203,7 @@ export class AssignmentOpsController {
   // neighbours; no reconcile — the note doesn't touch the journey skeleton.
   @RequirePermission('day_edit')
   @Put(':id/notes')
-  notes(
+  async notes(
     @CurrentUser() user: User,
     @Param('tripId') tripId: string,
     @Param('id') id: string,
@@ -213,14 +213,14 @@ export class AssignmentOpsController {
     if (!this.assignments.getAssignmentForTrip(id, tripId)) {
       throw new HttpException({ error: 'Assignment not found' }, 404);
     }
-    const assignment = this.assignments.updateNotes(id, body.notes);
+    const assignment = await this.assignments.updateNotes(id, body.notes);
     this.assignments.broadcast(tripId, 'assignment:updated', { assignment }, socketId);
     return { assignment };
   }
 
   @RequirePermission('day_edit')
   @Put(':id/transport')
-  transport(
+  async transport(
     @CurrentUser() user: User,
     @Param('tripId') tripId: string,
     @Param('id') id: string,
@@ -231,8 +231,8 @@ export class AssignmentOpsController {
       throw new HttpException({ error: 'Assignment not found' }, 404);
     }
     const assignment = body.direction === 'incoming'
-      ? this.assignments.setIncomingLegTransportMode(id, body.transport_mode ?? null)
-      : this.assignments.setLegTransportMode(id, body.transport_mode ?? null);
+      ? await this.assignments.setIncomingLegTransportMode(id, body.transport_mode ?? null)
+      : await this.assignments.setLegTransportMode(id, body.transport_mode ?? null);
     this.assignments.broadcast(tripId, 'assignment:updated', { assignment }, socketId);
     return { assignment };
   }

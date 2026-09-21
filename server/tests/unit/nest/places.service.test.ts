@@ -78,6 +78,8 @@ import { QueryHelpersService } from '../../../src/nest/query-helpers/query-helpe
 import { JourneyDomainService } from '../../../src/nest/journey/journey-domain.service';
 import { TrekPhotosRepository } from '../../../src/nest/photos/trek-photos.repository';
 import { makeStorageFixture } from '../../helpers/storage-fixture';
+import { createTestUnitOfWork } from '../../helpers/test-uow';
+import { UnitOfWork } from '../../../src/nest/database/unit-of-work';
 
 const GPX_FIXTURE = path.join(__dirname, '../../fixtures/test.gpx');
 const KML_FIXTURE = path.join(__dirname, '../../fixtures/test.kml');
@@ -95,10 +97,10 @@ const dbs = new DatabaseService(testDb);
  */
 const placesStorageFx = makeStorageFixture('');
 
-function makePlacesService(maps: MapsService = new MapsService(dbs, photoCacheStub)): PlacesService {
+async function makePlacesService(maps: MapsService = new MapsService(dbs, photoCacheStub)): Promise<PlacesService> {
   return new PlacesService(
     dbs,
-    new PermissionsService(dbs),
+    new PermissionsService(dbs, await createTestUnitOfWork(dbs.connection)),
     new RealtimeService(),
     maps,
     new QueryHelpersService(dbs),
@@ -106,12 +108,17 @@ function makePlacesService(maps: MapsService = new MapsService(dbs, photoCacheSt
     photoCacheStub,
     new JourneyDomainService(dbs, new RealtimeService(), new TrekPhotosRepository(dbs)),
     placesStorageFx.storage,
-    accommodationsOver(dbs),
+    await accommodationsOver(dbs), await createTestUnitOfWork(dbs.connection),
   );
 }
 
-const accommodations = accommodationsOver(dbs);
-const svc = makePlacesService();
+
+let accommodations: Awaited<ReturnType<typeof accommodationsOver>>;
+let svc: Awaited<ReturnType<typeof makePlacesService>>;
+beforeAll(async () => {
+  accommodations = await accommodationsOver(dbs);
+  svc = await makePlacesService();
+});
 
 beforeAll(() => {
   createTables(testDb);
@@ -129,59 +136,59 @@ afterAll(() => {
 // ── list ──────────────────────────────────────────────────────────────────────
 
 describe('list', () => {
-  it('PLACE-SVC-001 — returns empty array when trip has no places', () => {
+  it('PLACE-SVC-001 — returns empty array when trip has no places', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
-    expect(svc.list(String(trip.id), {})).toEqual([]);
+    expect(await svc.list(String(trip.id), {})).toEqual([]);
   });
 
-  it('PLACE-SVC-002 — returns all places for a trip', () => {
+  it('PLACE-SVC-002 — returns all places for a trip', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     createPlace(testDb, trip.id, { name: 'Alpha' });
     createPlace(testDb, trip.id, { name: 'Beta' });
-    const places = svc.list(String(trip.id), {}) as any[];
+    const places = (await svc.list(String(trip.id), {})) as any[];
     expect(places).toHaveLength(2);
   });
 
-  it('PLACE-SVC-003 — does not return places from other trips', () => {
+  it('PLACE-SVC-003 — does not return places from other trips', async () => {
     const { user } = createUser(testDb);
     const t1 = createTrip(testDb, user.id);
     const t2 = createTrip(testDb, user.id);
     createPlace(testDb, t1.id, { name: 'T1 Place' });
     createPlace(testDb, t2.id, { name: 'T2 Place' });
-    const places = svc.list(String(t1.id), {}) as any[];
+    const places = (await svc.list(String(t1.id), {})) as any[];
     expect(places).toHaveLength(1);
     expect(places[0].name).toBe('T1 Place');
   });
 
-  it('PLACE-SVC-004 — filters by search term (name)', () => {
+  it('PLACE-SVC-004 — filters by search term (name)', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     createPlace(testDb, trip.id, { name: 'Eiffel Tower' });
     createPlace(testDb, trip.id, { name: 'Louvre Museum' });
-    const places = svc.list(String(trip.id), { search: 'Eiffel' }) as any[];
+    const places = (await svc.list(String(trip.id), { search: 'Eiffel' })) as any[];
     expect(places).toHaveLength(1);
     expect(places[0].name).toBe('Eiffel Tower');
   });
 
-  it('PLACE-SVC-005 — attaches tags array to each place (empty when none)', () => {
+  it('PLACE-SVC-005 — attaches tags array to each place (empty when none)', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     createPlace(testDb, trip.id, { name: 'No Tags' });
-    const places = svc.list(String(trip.id), {}) as any[];
+    const places = (await svc.list(String(trip.id), {})) as any[];
     expect(Array.isArray(places[0].tags)).toBe(true);
     expect(places[0].tags).toHaveLength(0);
   });
 
-  it('PLACE-SVC-006 — attaches category object when place has a category', () => {
+  it('PLACE-SVC-006 — attaches category object when place has a category', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const cat = createCategory(testDb, { name: 'Museum', user_id: user.id }) as any;
     const place = createPlace(testDb, trip.id, { name: 'Art Museum' }) as any;
     testDb.prepare('UPDATE places SET category_id = ? WHERE id = ?').run(cat.id, place.id);
 
-    const places = svc.list(String(trip.id), {}) as any[];
+    const places = (await svc.list(String(trip.id), {})) as any[];
     expect(places[0].category).toBeDefined();
     expect(places[0].category!.name).toBe('Museum');
   });
@@ -422,7 +429,7 @@ describe('remove', () => {
     const p1 = createPlace(testDb, trip.id, { name: 'Keep' }) as any;
     const p2 = createPlace(testDb, trip.id, { name: 'Remove' }) as any;
     await svc.remove(String(trip.id), String(p2.id));
-    const remaining = svc.list(String(trip.id), {}) as any[];
+    const remaining = (await svc.list(String(trip.id), {})) as any[];
     expect(remaining).toHaveLength(1);
     expect(remaining[0].id).toBe(p1.id);
   });
@@ -436,9 +443,9 @@ describe('remove', () => {
     const trip = createTrip(testDb, user.id);
     const day = createDay(testDb, trip.id);
     const place = createPlace(testDb, trip.id, { name: 'Hotel Adlon' }) as any;
-    const { accommodation } = accommodations.createAccommodation(trip.id, {
+    const { accommodation } = (await accommodations.createAccommodation(trip.id, {
       place_id: place.id, start_day_id: day.id, end_day_id: day.id,
-    }) as any;
+    })) as any;
     expect(testDb.prepare('SELECT id FROM reservations WHERE accommodation_id = ?').get(accommodation.id)).toBeTruthy();
 
     await svc.remove(String(trip.id), String(place.id));
@@ -454,9 +461,9 @@ describe('remove', () => {
     const day = createDay(testDb, trip.id);
     const hotel = createPlace(testDb, trip.id, { name: 'Hotel Adlon' }) as any;
     const museum = createPlace(testDb, trip.id, { name: 'Pergamon' }) as any;
-    const { accommodation } = accommodations.createAccommodation(trip.id, {
+    const { accommodation } = (await accommodations.createAccommodation(trip.id, {
       place_id: hotel.id, start_day_id: day.id, end_day_id: day.id,
-    }) as any;
+    })) as any;
 
     await svc.remove(String(trip.id), String(museum.id));
 
@@ -545,9 +552,9 @@ describe('removeMany', () => {
     const hotel = createPlace(testDb, trip.id, { name: 'Hotel Adlon' }) as any;
     // Booked through the accommodations domain, so it gets its partner hotel
     // reservation the way the booking form writes one.
-    const { accommodation } = accommodations.createAccommodation(trip.id, {
+    const { accommodation } = (await accommodations.createAccommodation(trip.id, {
       place_id: hotel.id, start_day_id: day.id, end_day_id: day.id,
-    }) as { accommodation: { id: number } };
+    })) as { accommodation: { id: number } };
     const reservation = testDb.prepare('SELECT id FROM reservations WHERE accommodation_id = ?').get(accommodation.id) as { id: number };
     // An expense hung off the reservation rather than the place: linkedExpenseIds
     // selects on budget_items.place_id and never finds this one.
@@ -972,7 +979,7 @@ describe('searchImage', () => {
 // ── Import deduplication ──────────────────────────────────────────────────────
 
 describe('importGpx deduplication', () => {
-  it('PLACE-SVC-033 — skips waypoints already in trip by name', () => {
+  it('PLACE-SVC-033 — skips waypoints already in trip by name', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const buf = fs.readFileSync(GPX_FIXTURE);
@@ -987,11 +994,11 @@ describe('importGpx deduplication', () => {
     expect(second.skipped).toBe(first.count);
 
     // Total places in DB should equal first import count
-    const total = (svc.list(String(trip.id), {}) as any[]).length;
+    const total = ((await svc.list(String(trip.id), {})) as any[]).length;
     expect(total).toBe(first.count);
   });
 
-  it('PLACE-SVC-034 — imports new places while skipping existing ones', () => {
+  it('PLACE-SVC-034 — imports new places while skipping existing ones', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const buf = fs.readFileSync(GPX_FIXTURE);
@@ -1004,7 +1011,7 @@ describe('importGpx deduplication', () => {
     const second = svc.importGpx(String(trip.id), buf) as any;
     expect(second.count).toBe(0);
 
-    const total = (svc.list(String(trip.id), {}) as any[]).length;
+    const total = ((await svc.list(String(trip.id), {})) as any[]).length;
     expect(total).toBe(first.count + 1);
   });
 });
@@ -1279,14 +1286,14 @@ describe('enrichImportedPlaces', () => {
 
   it('PLACE-SVC-058 — no-ops when no Google Maps key is configured', async () => {
     const searchPlaces = vi.fn();
-    const svcNoKey = enrichSvc({ getMapsKey: vi.fn(() => null), searchPlaces });
+    const svcNoKey = await enrichSvc({ getMapsKey: vi.fn(() => null), searchPlaces });
     await svcNoKey.enrichImportedPlaces('1', 1, [{ id: 1, name: 'A', lat: 1, lng: 2 }]);
     expect(searchPlaces).not.toHaveBeenCalled();
   });
 
   it('PLACE-SVC-059 — no-ops for an empty batch without touching the provider', async () => {
     const getMapsKey = vi.fn(() => 'key');
-    await enrichSvc({ getMapsKey }).enrichImportedPlaces('1', 1, []);
+    await (await enrichSvc({ getMapsKey })).enrichImportedPlaces('1', 1, []);
     expect(getMapsKey).not.toHaveBeenCalled();
   });
 
@@ -1297,7 +1304,7 @@ describe('enrichImportedPlaces', () => {
     // An address the import already captured must survive the COALESCE.
     testDb.prepare('UPDATE places SET address = ? WHERE id = ?').run('Imported address', place.id);
 
-    const svcWithMaps = enrichSvc({
+    const svcWithMaps = await enrichSvc({
       getMapsKey: vi.fn(() => 'key'),
       searchPlaces: vi.fn(async () => ({
         source: 'google',
@@ -1322,7 +1329,7 @@ describe('enrichImportedPlaces', () => {
     const trip = createTrip(testDb, user.id);
     const place = createPlace(testDb, trip.id, { name: 'Bar', lat: 48.85, lng: 2.35 }) as any;
 
-    const svcWithMaps = enrichSvc({
+    const svcWithMaps = await enrichSvc({
       getMapsKey: vi.fn(() => 'key'),
       // ~1.2 km away — beyond MATCH_RADIUS_METERS.
       searchPlaces: vi.fn(async () => ({ source: 'google', places: [{ google_place_id: 'ChIJfar', lat: 48.86, lng: 2.36 }] })),
@@ -1339,7 +1346,7 @@ describe('enrichImportedPlaces', () => {
     const trip = createTrip(testDb, user.id);
     const place = createPlace(testDb, trip.id, { name: 'Bar', lat: 48.85, lng: 2.35 }) as any;
 
-    const svcWithMaps = enrichSvc({
+    const svcWithMaps = await enrichSvc({
       getMapsKey: vi.fn(() => 'key'),
       searchPlaces: vi.fn(async () => ({ source: 'google', places: [{ google_place_id: 'ChIJ1', lat: 48.85, lng: 2.35 }] })),
       getPlacePhoto: vi.fn(async () => { throw new Error('provider down'); }),
@@ -1356,7 +1363,7 @@ describe('enrichImportedPlaces', () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const err = vi.spyOn(console, 'error').mockImplementation(() => {});
-    const svcWithMaps = enrichSvc({
+    const svcWithMaps = await enrichSvc({
       getMapsKey: vi.fn(() => 'key'),
       searchPlaces: vi.fn(async () => { throw new Error('lookup exploded'); }),
     } as never);
@@ -1370,7 +1377,7 @@ describe('enrichImportedPlaces', () => {
 
   it('PLACE-SVC-064 — skips a place that is already linked or has no coordinates', async () => {
     const searchPlaces = vi.fn();
-    const svcWithMaps = enrichSvc({ getMapsKey: vi.fn(() => 'key'), searchPlaces } as never);
+    const svcWithMaps = await enrichSvc({ getMapsKey: vi.fn(() => 'key'), searchPlaces } as never);
     await svcWithMaps.enrichImportedPlaces('1', 1, [
       { id: 1, name: 'Linked', lat: 1, lng: 2, google_place_id: 'ChIJalready' },
       { id: 2, name: 'Coordless', lat: null as never, lng: null as never },
@@ -1440,7 +1447,7 @@ describe('zero-valued numeric fields', () => {
 // ── LIKE metacharacter escaping (#1745) ───────────────────────────────────────
 
 describe('list search escaping', () => {
-  it('PLACE-SVC-068 — a % or _ in the search term matches literally, not as a wildcard', () => {
+  it('PLACE-SVC-068 — a % or _ in the search term matches literally, not as a wildcard', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     createPlace(testDb, trip.id, { name: '50% off shop' });
@@ -1449,17 +1456,17 @@ describe('list search escaping', () => {
     createPlace(testDb, trip.id, { name: 'axb cafe' });
 
     // '%' used to match every row.
-    expect((svc.list(String(trip.id), { search: '%' }) as any[]).map(p => p.name)).toEqual(['50% off shop']);
+    expect(((await svc.list(String(trip.id), { search: '%' })) as any[]).map(p => p.name)).toEqual(['50% off shop']);
     // '_' used to match any single character.
-    expect((svc.list(String(trip.id), { search: 'a_b' }) as any[]).map(p => p.name)).toEqual(['a_b cafe']);
+    expect(((await svc.list(String(trip.id), { search: 'a_b' })) as any[]).map(p => p.name)).toEqual(['a_b cafe']);
   });
 
-  it('PLACE-SVC-069 — ordinary search terms are unaffected', () => {
+  it('PLACE-SVC-069 — ordinary search terms are unaffected', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     createPlace(testDb, trip.id, { name: 'Eiffel Tower' });
     createPlace(testDb, trip.id, { name: 'Louvre' });
-    expect((svc.list(String(trip.id), { search: 'eiff' }) as any[]).map(p => p.name)).toEqual(['Eiffel Tower']);
+    expect(((await svc.list(String(trip.id), { search: 'eiff' })) as any[]).map(p => p.name)).toEqual(['Eiffel Tower']);
   });
 });
 
@@ -1606,7 +1613,7 @@ describe('backfillMissingAddresses', () => {
     const place = createPlace(testDb, trip.id, { name: 'Bar', lat: 48.85, lng: 2.35 }) as any;
 
     const reverseGeocode = vi.fn(async () => ({ name: null, address: '1 Rue de Rivoli, Paris' }));
-    await backfillSvc(reverseGeocode).backfillMissingAddresses(String(trip.id), [
+    await (await backfillSvc(reverseGeocode)).backfillMissingAddresses(String(trip.id), [
       { id: place.id, name: 'Bar', lat: 48.85, lng: 2.35 },
     ]);
 
@@ -1622,7 +1629,7 @@ describe('backfillMissingAddresses', () => {
     testDb.prepare('UPDATE places SET address = ? WHERE id = ?').run('Imported address', place.id);
 
     const reverseGeocode = vi.fn(async () => ({ name: null, address: 'Nominatim address' }));
-    await backfillSvc(reverseGeocode).backfillMissingAddresses(String(trip.id), [
+    await (await backfillSvc(reverseGeocode)).backfillMissingAddresses(String(trip.id), [
       { id: place.id, name: 'Bar', lat: 48.85, lng: 2.35, address: 'Imported address' },
     ]);
 
@@ -1636,7 +1643,7 @@ describe('backfillMissingAddresses', () => {
     const trip = createTrip(testDb, user.id);
     const place = createPlace(testDb, trip.id, { name: 'Bar', lat: 48.85, lng: 2.35 }) as any;
 
-    await backfillSvc(vi.fn(async () => ({ name: null, address: null }))).backfillMissingAddresses(String(trip.id), [
+    await (await backfillSvc(vi.fn(async () => ({ name: null, address: null })))).backfillMissingAddresses(String(trip.id), [
       { id: place.id, name: 'Bar', lat: 48.85, lng: 2.35 },
     ]);
 
@@ -1655,7 +1662,7 @@ describe('backfillMissingAddresses', () => {
       .mockResolvedValueOnce({ name: null, address: 'Second address' });
 
     await expect(
-      backfillSvc(reverseGeocode as unknown as MapsService['reverseGeocode']).backfillMissingAddresses(String(trip.id), [
+      (await backfillSvc(reverseGeocode as unknown as MapsService['reverseGeocode'])).backfillMissingAddresses(String(trip.id), [
         { id: first.id, name: 'A', lat: 1, lng: 2 },
         { id: second.id, name: 'B', lat: 3, lng: 4 },
       ]),
@@ -1673,13 +1680,13 @@ describe('backfillMissingAddresses', () => {
     const batch = Array.from({ length: ADDRESS_BACKFILL_MAX_PLACES + 1 }, (_, i) => ({
       id: i + 1, name: `P${i}`, lat: 1, lng: 2,
     }));
-    await backfillSvc(reverseGeocode as unknown as MapsService['reverseGeocode']).backfillMissingAddresses('1', batch);
+    await (await backfillSvc(reverseGeocode as unknown as MapsService['reverseGeocode'])).backfillMissingAddresses('1', batch);
     expect(reverseGeocode).not.toHaveBeenCalled();
   });
 
   it('PLACE-SVC-083 — a place without coordinates is skipped', async () => {
     const reverseGeocode = vi.fn();
-    await backfillSvc(reverseGeocode as unknown as MapsService['reverseGeocode']).backfillMissingAddresses('1', [
+    await (await backfillSvc(reverseGeocode as unknown as MapsService['reverseGeocode'])).backfillMissingAddresses('1', [
       { id: 1, name: 'A', lat: null as unknown as number, lng: null as unknown as number },
     ]);
     expect(reverseGeocode).not.toHaveBeenCalled();

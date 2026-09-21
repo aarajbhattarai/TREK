@@ -165,14 +165,14 @@ export class OidcController {
         userInfo.picture = idVerify.claims.picture;
       }
 
-      const result = this.oidc.findOrCreateUser(userInfo, config, pending.inviteToken);
+      const result = await this.oidc.findOrCreateUser(userInfo, config, pending.inviteToken);
       if ('error' in result) return f('/login?oidc_error=' + result.error);
       if (result.roleChange) {
         // The claim mapping changing someone's privileges is a security event, and
         // the row is written here because this is where the client IP is. The claim
         // NAME goes in the details, never its value: that column is readable by
         // every admin and a claim can carry group memberships and worse.
-        this.audit.writeAudit({
+        await this.audit.writeAudit({
           userId: result.user.id,
           action: 'oidc.role_change',
           resource: String(result.user.id),
@@ -251,14 +251,14 @@ export class AdminOidcController {
 
   @ManagedForbidden('an instance-supplied issuer could assert any address as verified')
   @Put()
-  update(@CurrentUser() user: User, @Body() body: AdminOidcUpdateDto, @Req() req: Request) {
+  async update(@CurrentUser() user: User, @Body() body: AdminOidcUpdateDto, @Req() req: Request) {
     const result = this.oidc.updateOidcSettings(body);
     if (result.error) {
       throw new HttpException({ error: result.error }, result.status || 400);
     }
     // Only whether an issuer was set, never the value: the details column is readable
     // by every admin and the issuer identifies the customer's IdP tenant.
-    this.audit.writeAudit({
+    await this.audit.writeAudit({
       userId: user.id,
       action: 'admin.oidc_update',
       ip: getClientIp(req),

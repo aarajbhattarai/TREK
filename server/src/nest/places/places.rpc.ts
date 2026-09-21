@@ -52,14 +52,14 @@ export class PlacesRpc {
   ) {}
 
   @PluginMethod('places.create', { permission: 'db:write:places' })
-  create(params: Record<string, unknown>, ctx: PluginRpcContext): unknown {
+  async create(params: Record<string, unknown>, ctx: PluginRpcContext): Promise<unknown> {
     const tripId = num(params.tripId, 'tripId');
     const actor = this.guards.requireActor(ctx, 'place');
     const parsed = placeCreateRequestSchema.safeParse(params.input);
     if (!parsed.success) throw new BadParams(`invalid place: ${schemaMessage(parsed.error)}`);
     this.guards.capStrings(parsed.data as Record<string, unknown>, PLACE_STR_LIMITS);
     capUrls(parsed.data as Record<string, unknown>);
-    this.guards.requireTripEdit(tripId, actor, PLACE_EDIT_ACTION);
+    await this.guards.requireTripEdit(tripId, actor, PLACE_EDIT_ACTION);
     const place = this.places.create(String(tripId), parsed.data as unknown as PlaceCreateInput);
     this.realtime.broadcast(tripId, 'place:created', { place });
     this.mirrorJourneys(() => this.journey.onPlaceCreated(tripId, place.id));
@@ -75,7 +75,7 @@ export class PlacesRpc {
     if (!parsed.success) throw new BadParams(`invalid place: ${schemaMessage(parsed.error)}`);
     this.guards.capStrings(parsed.data as Record<string, unknown>, PLACE_STR_LIMITS);
     capUrls(parsed.data as Record<string, unknown>);
-    this.guards.requireTripEdit(tripId, actor, PLACE_EDIT_ACTION);
+    await this.guards.requireTripEdit(tripId, actor, PLACE_EDIT_ACTION);
     // update is async (it may delete a superseded storage object): await it so the
     // null-refusal check compares against the resolved place, not an always-truthy
     // Promise, and the broadcast below carries the actual place.
@@ -91,7 +91,7 @@ export class PlacesRpc {
     const tripId = num(params.tripId, 'tripId');
     const placeId = num(params.placeId, 'placeId');
     const actor = this.guards.requireActor(ctx, 'place');
-    this.guards.requireTripEdit(tripId, actor, PLACE_EDIT_ACTION);
+    await this.guards.requireTripEdit(tripId, actor, PLACE_EDIT_ACTION);
     // Scope the id to the trip before anything else: onPlaceDeleted keys on the place
     // alone, so an id belonging to a foreign trip would detach THAT trip's journey
     // entries even though the delete below refuses it.

@@ -41,8 +41,8 @@ export class PublicApiService {
   ) {}
 
   /** Every trip the token's owner may read, newest first, without itineraries. */
-  listTrips(userId: number): PublicApiTripSummary[] {
-    const ids = this.membership.listAccessibleTripIds(userId);
+  async listTrips(userId: number): Promise<PublicApiTripSummary[]> {
+    const ids = await this.membership.listAccessibleTripIds(userId);
     if (ids.length === 0) return [];
     const rows = this.db.all<TripRow>(
       `SELECT id, title, description, start_date, end_date, currency, is_archived, updated_at

@@ -134,15 +134,15 @@ describe('FilesController (parity with the legacy /api/trips/:tripId/files route
     });
   });
 
-  it('PUT /:id 403 without file_edit, 404 unknown, else updates + broadcasts', () => {
+  it('PUT /:id 403 without file_edit, 404 unknown, else updates + broadcasts', async () => {
     expect(thrown(() => fc(fsvc({ can: vi.fn().mockReturnValue(false) })).update(user, trip, '5', '9', {}))).toEqual({ status: 403, body: { error: 'No permission to edit files' } });
     expect(thrown(() => fc(fsvc({ getFileById: vi.fn().mockReturnValue(undefined) } as Partial<FilesService>)).update(user, trip, '5', '9', {}))).toEqual({ status: 404, body: { error: 'File not found' } });
     const updateFile = vi.fn().mockReturnValue({ id: 9 });
     const s = fsvc({ getFileById: vi.fn().mockReturnValue({ id: 9, description: 'x' }), updateFile, broadcast: vi.fn() } as Partial<FilesService>);
-    expect(fc(s).update(user, trip, '5', '9', { description: 'new' })).toEqual({ file: { id: 9 } });
+    expect(await fc(s).update(user, trip, '5', '9', { description: 'new' })).toEqual({ file: { id: 9 } });
   });
 
-  it('passes budget_item_id to assertLinkTargets and updateFile on update, rejecting foreign targets', () => {
+  it('passes budget_item_id to assertLinkTargets and updateFile on update, rejecting foreign targets', async () => {
     const rejectSvc = fsvc({
       getFileById: vi.fn().mockReturnValue({ id: 9 }),
       findForeignLinkTarget: vi.fn().mockReturnValue('budget_item_id'),
@@ -158,7 +158,7 @@ describe('FilesController (parity with the legacy /api/trips/:tripId/files route
       updateFile,
       broadcast: vi.fn(),
     });
-    fc(okSvc).update(user, trip, '5', '9', { budget_item_id: '12' });
+    await fc(okSvc).update(user, trip, '5', '9', { budget_item_id: '12' });
     expect(updateFile).toHaveBeenCalledWith('9', { id: 9 }, {
       description: undefined,
       place_id: undefined,
@@ -167,30 +167,30 @@ describe('FilesController (parity with the legacy /api/trips/:tripId/files route
     });
   });
 
-  it('PATCH /:id/star 403/404, else toggles', () => {
+  it('PATCH /:id/star 403/404, else toggles', async () => {
     expect(thrown(() => fc(fsvc({ can: vi.fn().mockReturnValue(false) })).star(user, trip, '5', '9'))).toEqual({ status: 403, body: { error: 'No permission' } });
     expect(thrown(() => fc(fsvc({ getFileById: vi.fn().mockReturnValue(undefined) } as Partial<FilesService>)).star(user, trip, '5', '9'))).toEqual({ status: 404, body: { error: 'File not found' } });
     const toggleStarred = vi.fn().mockReturnValue({ id: 9, starred: 1 });
     const s = fsvc({ getFileById: vi.fn().mockReturnValue({ id: 9, starred: 0 }), toggleStarred, broadcast: vi.fn() } as Partial<FilesService>);
-    expect(fc(s).star(user, trip, '5', '9')).toEqual({ file: { id: 9, starred: 1 } });
+    expect(await fc(s).star(user, trip, '5', '9')).toEqual({ file: { id: 9, starred: 1 } });
     expect(toggleStarred).toHaveBeenCalledWith('9', 0);
   });
 
-  it('DELETE /:id soft-delete 403/404, else success', () => {
+  it('DELETE /:id soft-delete 403/404, else success', async () => {
     expect(thrown(() => fc(fsvc({ can: vi.fn().mockReturnValue(false) })).remove(user, trip, '5', '9'))).toEqual({ status: 403, body: { error: 'No permission to delete files' } });
     expect(thrown(() => fc(fsvc({ getFileById: vi.fn().mockReturnValue(undefined) } as Partial<FilesService>)).remove(user, trip, '5', '9'))).toEqual({ status: 404, body: { error: 'File not found' } });
     const softDeleteFile = vi.fn();
     const broadcast = vi.fn();
     const s = fsvc({ getFileById: vi.fn().mockReturnValue({ id: 9 }), softDeleteFile, broadcast } as Partial<FilesService>);
-    expect(fc(s).remove(user, trip, '5', '9', 'sock')).toEqual({ success: true });
+    expect(await fc(s).remove(user, trip, '5', '9', 'sock')).toEqual({ success: true });
     expect(broadcast).toHaveBeenCalledWith('5', 'file:deleted', { fileId: 9 }, 'sock');
   });
 
-  it('POST /:id/restore 404 not in trash, else restores', () => {
+  it('POST /:id/restore 404 not in trash, else restores', async () => {
     expect(thrown(() => fc(fsvc({ getDeletedFile: vi.fn().mockReturnValue(undefined) } as Partial<FilesService>)).restore(user, trip, '5', '9'))).toEqual({ status: 404, body: { error: 'File not found in trash' } });
     const restoreFile = vi.fn().mockReturnValue({ id: 9 });
     const s = fsvc({ getDeletedFile: vi.fn().mockReturnValue({ id: 9 }), restoreFile, broadcast: vi.fn() } as Partial<FilesService>);
-    expect(fc(s).restore(user, trip, '5', '9')).toEqual({ file: { id: 9 } });
+    expect(await fc(s).restore(user, trip, '5', '9')).toEqual({ file: { id: 9 } });
   });
 
   it('DELETE /:id/permanent 404 not in trash, else deletes', async () => {
@@ -206,16 +206,16 @@ describe('FilesController (parity with the legacy /api/trips/:tripId/files route
     expect(await fc(s).emptyTrash(user, trip, '5')).toEqual({ success: true, deleted: 3 });
   });
 
-  it('POST /:id/link 404 unknown file, else links', () => {
+  it('POST /:id/link 404 unknown file, else links', async () => {
     expect(thrown(() => fc(fsvc({ getFileById: vi.fn().mockReturnValue(undefined) } as Partial<FilesService>)).link(user, trip, '5', '9', {}))).toEqual({ status: 404, body: { error: 'File not found' } });
     const createFileLink = vi.fn().mockReturnValue([{ id: 1 }]);
     const s = fsvc({ getFileById: vi.fn().mockReturnValue({ id: 9 }), createFileLink } as Partial<FilesService>);
-    expect(fc(s).link(user, trip, '5', '9', { reservation_id: 2 })).toEqual({ success: true, links: [{ id: 1 }] });
+    expect(await fc(s).link(user, trip, '5', '9', { reservation_id: 2 })).toEqual({ success: true, links: [{ id: 1 }] });
   });
 
-  it('DELETE /:id/link/:linkId removes the link; GET /:id/links lists', () => {
+  it('DELETE /:id/link/:linkId removes the link; GET /:id/links lists', async () => {
     const deleteFileLink = vi.fn();
-    expect(fc(fsvc({ getFileById: vi.fn().mockReturnValue({ id: 9 }), deleteFileLink } as Partial<FilesService>)).unlink(user, trip, '5', '9', '3')).toEqual({ success: true });
+    expect(await fc(fsvc({ getFileById: vi.fn().mockReturnValue({ id: 9 }), deleteFileLink } as Partial<FilesService>)).unlink(user, trip, '5', '9', '3')).toEqual({ success: true });
     expect(deleteFileLink).toHaveBeenCalledWith('3', '9');
     const s = fsvc({ getFileById: vi.fn().mockReturnValue({ id: 9 }), getFileLinks: vi.fn().mockReturnValue([{ id: 1 }]) } as Partial<FilesService>);
     expect(fc(s).links(user, trip, '5', '9')).toEqual({ links: [{ id: 1 }] });

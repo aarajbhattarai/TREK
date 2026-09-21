@@ -37,7 +37,7 @@ export class ThumbnailService {
   async ensureLocalThumbnail(
     originalRelPath: string,
   ): Promise<{ thumbnailRelPath: string; width: number; height: number } | null> {
-    if (!this.addons.isAddonEnabled(ADDON_IDS.JOURNEY)) return null
+    if (!(await this.addons.isAddonEnabled(ADDON_IDS.JOURNEY))) return null
 
     // The DB stores uploads-relative paths ('journey/<file>'); anything else
     // is not a local journey photo and has no thumbnail to derive.
@@ -88,7 +88,7 @@ export class ThumbnailService {
    * (airtrail-sync.job.ts precedent).
    */
   async sweepOrphanThumbs(): Promise<number> {
-    if (!this.addons.isAddonEnabled(ADDON_IDS.JOURNEY)) return 0
+    if (!(await this.addons.isAddonEnabled(ADDON_IDS.JOURNEY))) return 0
 
     const live = new Set<string>()
     for (const row of this.db.all<{ file_path: string }>(

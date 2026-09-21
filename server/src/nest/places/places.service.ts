@@ -4,6 +4,7 @@ import { TRACK_COLORS, placeMatchStrategies, type PlaceMatchCandidate } from '@t
 import type { TrekWsPayload, TrekWsTripEventName } from '@trek/shared';
 import { RealtimeService } from '../realtime/realtime.service';
 import { DatabaseService, type TripAccess } from '../database/database.service';
+import { UnitOfWork } from '../database/unit-of-work';
 import type { PlaceWithTags } from '../database/database.service';
 import { PermissionsService } from '../permissions/permissions.service';
 import { MapsService, GOOGLE_SHORT_HOSTS, isGoogleMapsHost } from '../maps/maps.service';
@@ -133,13 +134,14 @@ export class PlacesService {
     private readonly journey: JourneyDomainService,
     private readonly storage: StorageService,
     private readonly accommodations: AccommodationsService,
+    private readonly uow: UnitOfWork,
   ) {}
 
   verifyTripAccess(tripId: string, userId: number) {
     return this.dbs.canAccessTrip(Number(tripId), userId);
   }
 
-  canEdit(trip: Trip, user: User): boolean {
+  async canEdit(trip: Trip, user: User): Promise<boolean> {
     return this.permissions.checkPermission('place_edit', user.role, trip.user_id, user.id, trip.user_id !== user.id);
   }
 
@@ -174,7 +176,7 @@ export class PlacesService {
   // List places
   // -------------------------------------------------------------------------
 
-  list(
+  async list(
     tripId: string,
     filters: { search?: string; category?: string; tag?: string; assignment?: 'all' | 'unassigned' | 'assigned' },
   ) {
@@ -217,8 +219,8 @@ export class PlacesService {
     const places = this.dbs.prepare(query).all(...params) as PlaceWithCategory[];
 
     const placeIds = places.map(p => p.id);
-    const tagsByPlaceId = this.queryHelpers.loadTagsByPlaceIds(placeIds);
-    const ratingsByPlaceId = this.queryHelpers.loadRatingsByPlaceIds(placeIds);
+    const tagsByPlaceId = await this.queryHelpers.loadTagsByPlaceIds(placeIds);
+    const ratingsByPlaceId = await this.queryHelpers.loadRatingsByPlaceIds(placeIds);
 
     return places.map(p => ({
       ...p,
@@ -449,12 +451,12 @@ export class PlacesService {
    *
    * Runs inside the caller's transaction.
    */
-  private cancelStaysAt(tripId: string | number, placeId: string | number, into: CancelledStays): void {
+  private async cancelStaysAt(tripId: string | number, placeId: string | number, into: CancelledStays): Promise<void> {
     const stays = this.dbs.all<{ id: number }>(
       'SELECT id FROM day_accommodations WHERE trip_id = ? AND place_id = ?', tripId, placeId,
     );
     for (const stay of stays) {
-      const gone = this.accommodations.deleteAccommodation(stay.id);
+      const gone = await this.accommodations.deleteAccommodation(stay.id);
       // What went down with the night is what the caller has to announce. The
       // partner booking and its expense are rows the Bookings list and the Costs
       // total are still holding; place:deleted says nothing about either, and a
@@ -473,8 +475,8 @@ export class PlacesService {
     // The linked expense goes with the place, the same way a booking takes its
     // expense with it (#1298). One transaction, so a place can never survive
     // half-detached from its money.
-    this.dbs.transaction(() => {
-      this.cancelStaysAt(tripId, placeId, cancelled);
+    await this.uow.transactional(async () => {
+      await this.cancelStaysAt(tripId, placeId, cancelled);
       this.dbs.run('DELETE FROM budget_items WHERE trip_id = ? AND place_id = ?', tripId, placeId);
       this.dbs.run('DELETE FROM places WHERE id = ?', placeId);
     });
@@ -491,11 +493,11 @@ export class PlacesService {
     const deleteExpenseStmt = this.dbs.prepare('DELETE FROM budget_items WHERE trip_id = ? AND place_id = ?');
     const deleted: number[] = [];
     const reclaimable: { google_place_id: string | null; image_url: string | null }[] = [];
-    this.dbs.transaction(() => {
+    await this.uow.transactional(async () => {
       for (const id of ids) {
         const row = selectStmt.get(id, tripId) as { google_place_id: string | null; image_url: string | null } | undefined;
         if (!row) continue;
-        this.cancelStaysAt(tripId, id, cancelled);
+        await this.cancelStaysAt(tripId, id, cancelled);
         deleteExpenseStmt.run(tripId, id);
         deleteStmt.run(id);
         deleted.push(id);

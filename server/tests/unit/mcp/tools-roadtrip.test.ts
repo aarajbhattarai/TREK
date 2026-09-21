@@ -48,12 +48,16 @@ import { addTripMember } from '../../helpers/factories';
 import { PermissionsService } from '../../../src/nest/permissions/permissions.service';
 import { DatabaseService } from '../../../src/nest/database/database.service';
 import { DEMO_EMAIL_PRIMARY } from '../../../src/nest/common/demo';
+import { createTestUnitOfWork } from '../../helpers/test-uow';
+import { UnitOfWork } from '../../../src/nest/database/unit-of-work';
 
 // The permissions cache is module-scoped, so a write through any instance is
 // what the tool's own check reads back.
-const savePermissions = new PermissionsService(new DatabaseService(testDb)).savePermissions.bind(
-  new PermissionsService(new DatabaseService(testDb)),
-);
+let savePermissions: PermissionsService['savePermissions'];
+beforeAll(async () => {
+  const permissionsService = new PermissionsService(new DatabaseService(testDb), await createTestUnitOfWork(testDb));
+  savePermissions = permissionsService.savePermissions.bind(permissionsService);
+});
 
 beforeAll(() => {
   createTables(testDb);
@@ -254,7 +258,7 @@ describe('road-trip MCP tools', () => {
     const { user, trip, day } = scenario();
     const member = createUser(testDb, { email: 'member@example.test' });
     addTripMember(testDb, trip.id, member.user.id);
-    savePermissions({ day_edit: 'trip_owner' });
+    await savePermissions({ day_edit: 'trip_owner' });
 
     try {
       await withHarness(member.user.id, async (h) => {
@@ -276,7 +280,7 @@ describe('road-trip MCP tools', () => {
       });
       expect(testDb.prepare('SELECT COUNT(*) c FROM roadtrip_vias').get()).toEqual({ c: 0 });
     } finally {
-      savePermissions({ day_edit: 'trip_member' });
+      await savePermissions({ day_edit: 'trip_member' });
     }
     // The owner is unaffected.
     await withHarness(user.id, async (h) => {

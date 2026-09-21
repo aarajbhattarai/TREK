@@ -48,10 +48,10 @@ export class AssignmentsMcp {
   ) {
     if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
     if (!this.assignments.verifyTripAccess(tripId, ctx.userId)) return noAccess();
-    if (!this.guards.hasTripPermission('day_edit', tripId, ctx.userId)) return permissionDenied();
+    if (!(await this.guards.hasTripPermission('day_edit', tripId, ctx.userId))) return permissionDenied();
     if (!this.assignments.dayExists(dayId, tripId)) return errorResult('Day not found.');
     if (!this.assignments.placeExists(placeId, tripId)) return errorResult('Place not found.');
-    const assignment = this.assignments.createAssignment(dayId, placeId, notes || null);
+    const assignment = await this.assignments.createAssignment(dayId, placeId, notes || null);
     this.guards.safeBroadcast(tripId, 'assignment:created', { assignment });
     this.assignments.reconcile(tripId);
     return ok({ assignment });
@@ -74,9 +74,9 @@ export class AssignmentsMcp {
   ) {
     if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
     if (!this.assignments.verifyTripAccess(tripId, ctx.userId)) return noAccess();
-    if (!this.guards.hasTripPermission('day_edit', tripId, ctx.userId)) return permissionDenied();
+    if (!(await this.guards.hasTripPermission('day_edit', tripId, ctx.userId))) return permissionDenied();
     if (!this.assignments.getAssignmentForTrip(assignmentId, tripId)) return errorResult('Assignment not found.');
-    const assignment = this.assignments.setEndDay(assignmentId, end_day);
+    const assignment = await this.assignments.setEndDay(assignmentId, end_day);
     this.guards.safeBroadcast(tripId, 'assignment:updated', { assignment });
     return ok({ assignment });
   }
@@ -98,7 +98,7 @@ export class AssignmentsMcp {
   ) {
     if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
     if (!this.assignments.verifyTripAccess(tripId, ctx.userId)) return noAccess();
-    if (!this.guards.hasTripPermission('day_edit', tripId, ctx.userId)) return permissionDenied();
+    if (!(await this.guards.hasTripPermission('day_edit', tripId, ctx.userId))) return permissionDenied();
     if (!this.assignments.assignmentExistsInDay(assignmentId, dayId, tripId))
       return errorResult('Assignment not found.');
     this.assignments.deleteAssignment(assignmentId);
@@ -127,10 +127,10 @@ export class AssignmentsMcp {
   ) {
     if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
     if (!this.assignments.verifyTripAccess(tripId, ctx.userId)) return noAccess();
-    if (!this.guards.hasTripPermission('day_edit', tripId, ctx.userId)) return permissionDenied();
+    if (!(await this.guards.hasTripPermission('day_edit', tripId, ctx.userId))) return permissionDenied();
     const existing = this.assignments.getAssignmentForTrip(assignmentId, tripId);
     if (!existing) return errorResult('Assignment not found.');
-    const { assignment, reordered, vias } = this.assignments.updateTime(
+    const { assignment, reordered, vias } = await this.assignments.updateTime(
       assignmentId,
       place_time !== undefined ? place_time : existing.assignment_time,
       end_time !== undefined ? end_time : existing.assignment_end_time
@@ -163,9 +163,9 @@ export class AssignmentsMcp {
   ) {
     if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
     if (!this.assignments.verifyTripAccess(tripId, ctx.userId)) return noAccess();
-    if (!this.guards.hasTripPermission('day_edit', tripId, ctx.userId)) return permissionDenied();
+    if (!(await this.guards.hasTripPermission('day_edit', tripId, ctx.userId))) return permissionDenied();
     if (!this.assignments.getAssignmentForTrip(assignmentId, tripId)) return errorResult('Assignment not found.');
-    const assignment = this.assignments.updateNotes(assignmentId, notes);
+    const assignment = await this.assignments.updateNotes(assignmentId, notes);
     this.guards.safeBroadcast(tripId, 'assignment:updated', { assignment });
     return ok({ assignment });
   }
@@ -190,11 +190,11 @@ export class AssignmentsMcp {
   ) {
     if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
     if (!this.assignments.verifyTripAccess(tripId, ctx.userId)) return noAccess();
-    if (!this.guards.hasTripPermission('day_edit', tripId, ctx.userId)) return permissionDenied();
+    if (!(await this.guards.hasTripPermission('day_edit', tripId, ctx.userId))) return permissionDenied();
     if (!this.assignments.getAssignmentForTrip(assignmentId, tripId)) return errorResult('Assignment not found.');
     const assignment = direction === 'incoming'
-      ? this.assignments.setIncomingLegTransportMode(assignmentId, transport_mode ?? null)
-      : this.assignments.setLegTransportMode(assignmentId, transport_mode ?? null);
+      ? await this.assignments.setIncomingLegTransportMode(assignmentId, transport_mode ?? null)
+      : await this.assignments.setLegTransportMode(assignmentId, transport_mode ?? null);
     this.guards.safeBroadcast(tripId, 'assignment:updated', { assignment });
     return ok({ assignment });
   }
@@ -220,10 +220,10 @@ export class AssignmentsMcp {
   ) {
     if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
     if (!this.assignments.verifyTripAccess(tripId, ctx.userId)) return noAccess();
-    if (!this.guards.hasTripPermission('day_edit', tripId, ctx.userId)) return permissionDenied();
+    if (!(await this.guards.hasTripPermission('day_edit', tripId, ctx.userId))) return permissionDenied();
     if (!this.assignments.getAssignmentForTrip(assignmentId, tripId)) return errorResult('Assignment not found.');
     if (!this.days.getDay(newDayId, tripId)) return errorResult('Day not found.');
-    const result = this.assignments.moveAssignment(assignmentId, newDayId, orderIndex ?? 0);
+    const result = await this.assignments.moveAssignment(assignmentId, newDayId, orderIndex ?? 0);
     // REST parity shape ({ assignment, oldDayId, newDayId }) — the client keys its
     // per-day assignment map on newDayId, so omitting it filed the moved assignment
     // under "undefined" on collaborator screens.
@@ -269,7 +269,7 @@ export class AssignmentsMcp {
   ) {
     if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
     if (!this.assignments.verifyTripAccess(tripId, ctx.userId)) return noAccess();
-    if (!this.guards.hasTripPermission('day_edit', tripId, ctx.userId)) return permissionDenied();
+    if (!(await this.guards.hasTripPermission('day_edit', tripId, ctx.userId))) return permissionDenied();
     if (!this.assignments.getAssignmentForTrip(assignmentId, tripId)) return errorResult('Assignment not found.');
     const participants = this.assignments.setParticipants(assignmentId, userIds, tripId);
     this.guards.safeBroadcast(tripId, 'assignment:participants', { assignmentId, participants });
@@ -293,7 +293,7 @@ export class AssignmentsMcp {
   ) {
     if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
     if (!this.assignments.verifyTripAccess(tripId, ctx.userId)) return noAccess();
-    if (!this.guards.hasTripPermission('day_edit', tripId, ctx.userId)) return permissionDenied();
+    if (!(await this.guards.hasTripPermission('day_edit', tripId, ctx.userId))) return permissionDenied();
     if (!this.days.getDay(dayId, tripId)) return errorResult('Day not found.');
     this.assignments.reorderAssignments(dayId, assignmentIds);
     // REST parity shape ({ dayId, orderedIds }) — the client only reads orderedIds,

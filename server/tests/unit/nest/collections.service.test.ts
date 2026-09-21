@@ -55,9 +55,14 @@ import { CollectionsService } from '../../../src/nest/collections/collections.se
 import { PlacePhotoCacheService } from '../../../src/nest/place-photos/place-photo-cache.service';
 import { makeStorageFixture } from '../../helpers/storage-fixture';
 import { notificationsStub } from '../../helpers/notifications';
+import { createTestUnitOfWork } from '../../helpers/test-uow';
+import { UnitOfWork } from '../../../src/nest/database/unit-of-work';
 
 const storageFx = makeStorageFixture('');
-const svc = new CollectionsService(new DatabaseService(testDb), new PermissionsService(new DatabaseService(testDb)), new RealtimeService(), notificationsStub(notifSend), storageFx.storage);
+let svc: CollectionsService;
+beforeAll(async () => {
+  svc = new CollectionsService(new DatabaseService(testDb), new PermissionsService(new DatabaseService(testDb), await createTestUnitOfWork(testDb)), new RealtimeService(), notificationsStub(notifSend), storageFx.storage);
+});
 // The real cache: these cases assert what removeIfUnreferenced actually does
 // about collection_places (#1081), so a stub would assert nothing.
 const photoCache = new PlacePhotoCacheService(new DatabaseService(testDb), makeStorageFixture('photos/google/').storage);
@@ -342,7 +347,7 @@ describe('status + updatePlace move', () => {
 // ── copy to trip ─────────────────────────────────────────────────────────────
 
 describe('copyToTrip', () => {
-  it('COLLECTIONS-SVC-020: reduced INSERT (itinerary defaults), skips dups, copies tags', () => {
+  it('COLLECTIONS-SVC-020: reduced INSERT (itinerary defaults), skips dups, copies tags', async () => {
     const u = createUser(testDb).user;
     createCategory(testDb);
     const trip = createTrip(testDb, u.id);
@@ -354,7 +359,7 @@ describe('copyToTrip', () => {
     createPlace(testDb, trip.id, { name: 'Pantheon' });
     const p2 = svc.savePlace(u.id, { collection_id: col.id, name: 'Pantheon' }).place!;
 
-    const res = svc.copyToTrip(u.id, { trip_id: trip.id, place_ids: [p1.id, p2.id] });
+    const res = await svc.copyToTrip(u.id, { trip_id: trip.id, place_ids: [p1.id, p2.id] });
     expect(res.copied).toBe(1);
     expect(res.skipped.map((s) => s.name)).toEqual(['Pantheon']);
 
@@ -365,7 +370,7 @@ describe('copyToTrip', () => {
     expect(tagLink).toEqual({ n: 1 });
   });
 
-  it('COLLECTIONS-SVC-021: rejects place_ids from a collection the user cannot see', () => {
+  it('COLLECTIONS-SVC-021: rejects place_ids from a collection the user cannot see', async () => {
     const owner = createUser(testDb).user;
     const stranger = createUser(testDb).user;
     createCategory(testDb);
@@ -373,20 +378,20 @@ describe('copyToTrip', () => {
     const p = svc.savePlace(owner.id, { collection_id: hidden.id, name: 'Secret' }).place!;
     const trip = createTrip(testDb, stranger.id);
 
-    expect(() => svc.copyToTrip(stranger.id, { trip_id: trip.id, place_ids: [p.id] })).toThrow();
+    await expect(svc.copyToTrip(stranger.id, { trip_id: trip.id, place_ids: [p.id] })).rejects.toThrow();
   });
 
-  it('COLLECTIONS-SVC-022: rejects a trip the user cannot edit (403/404)', () => {
+  it('COLLECTIONS-SVC-022: rejects a trip the user cannot edit (403/404)', async () => {
     const u = createUser(testDb).user;
     const owner2 = createUser(testDb).user;
     createCategory(testDb);
     const trip = createTrip(testDb, owner2.id); // u has no access
     const col = svc.createCollection(u.id, { name: 'C' });
     const p = svc.savePlace(u.id, { collection_id: col.id, name: 'X' }).place!;
-    expect(() => svc.copyToTrip(u.id, { trip_id: trip.id, place_ids: [p.id] })).toThrow();
+    await expect(svc.copyToTrip(u.id, { trip_id: trip.id, place_ids: [p.id] })).rejects.toThrow();
   });
 
-  it('COLLECTIONS-SVC-023: a trip MEMBER can copy (place_edit allowed)', () => {
+  it('COLLECTIONS-SVC-023: a trip MEMBER can copy (place_edit allowed)', async () => {
     const owner2 = createUser(testDb).user;
     const member = createUser(testDb).user;
     createCategory(testDb);
@@ -394,7 +399,7 @@ describe('copyToTrip', () => {
     addTripMember(testDb, trip.id, member.id);
     const col = svc.createCollection(member.id, { name: 'C' });
     const p = svc.savePlace(member.id, { collection_id: col.id, name: 'Forum' }).place!;
-    const res = svc.copyToTrip(member.id, { trip_id: trip.id, place_ids: [p.id] });
+    const res = await svc.copyToTrip(member.id, { trip_id: trip.id, place_ids: [p.id] });
     expect(res.copied).toBe(1);
   });
 });
@@ -792,7 +797,7 @@ describe('collaborative ratings (#1435)', () => {
     expect(votes.find(v => v.user_id === tripOnly.id)).toBeUndefined();
   });
 
-  it('COLLECTIONS-SVC-074: copying a saved place into a trip carries its ratings along', () => {
+  it('COLLECTIONS-SVC-074: copying a saved place into a trip carries its ratings along', async () => {
     const owner = createUser(testDb).user;
     const member = createUser(testDb).user;
     const col = svc.createCollection(owner.id, { name: 'Copyable' });
@@ -803,7 +808,7 @@ describe('collaborative ratings (#1435)', () => {
 
     const trip = createTrip(testDb, owner.id);
     addTripMember(testDb, trip.id, member.id); // member is on the trip, so their vote carries
-    const res = svc.copyToTrip(owner.id, { trip_id: trip.id, place_ids: [cp.id] });
+    const res = await svc.copyToTrip(owner.id, { trip_id: trip.id, place_ids: [cp.id] });
     expect(res.copied).toBe(1);
 
     const newPlace = testDb.prepare('SELECT id FROM places WHERE trip_id = ? ORDER BY id DESC LIMIT 1').get(trip.id) as { id: number };
@@ -832,7 +837,7 @@ describe('collaborative ratings (#1435)', () => {
     expect(stolen).toHaveLength(0); // no access to the source trip → nothing copied
   });
 
-  it('COLLECTIONS-SVC-076: copyToTrip carries only votes from members of the target trip', () => {
+  it('COLLECTIONS-SVC-076: copyToTrip carries only votes from members of the target trip', async () => {
     const owner = createUser(testDb).user;
     const inTrip = createUser(testDb).user;    // collection member AND trip member
     const notInTrip = createUser(testDb).user; // collection member only
@@ -847,7 +852,7 @@ describe('collaborative ratings (#1435)', () => {
 
     const trip = createTrip(testDb, owner.id);
     addTripMember(testDb, trip.id, inTrip.id);
-    svc.copyToTrip(owner.id, { trip_id: trip.id, place_ids: [cp.id] });
+    await svc.copyToTrip(owner.id, { trip_id: trip.id, place_ids: [cp.id] });
 
     const newPlace = testDb.prepare('SELECT id FROM places WHERE trip_id = ? ORDER BY id DESC LIMIT 1').get(trip.id) as { id: number };
     const ids = (testDb.prepare('SELECT user_id FROM place_ratings WHERE place_id = ?').all(newPlace.id) as { user_id: number }[])

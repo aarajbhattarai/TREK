@@ -363,14 +363,14 @@ describe('Tool: list_addons', () => {
     const addonsService = new AddonsService(new DatabaseService(testDb));
     const { user } = createUser(testDb);
     await withHarness(user.id, async (h) => {
-      addonsService.updateCollabFeatures({ polls: false });
+      await addonsService.updateCollabFeatures({ polls: false });
       const off = parseToolResult(
         await h.client.callTool({ name: 'list_addons', arguments: {} }),
       ) as AddonsPayload;
       expect(off.collabFeatures.polls).toBe(false);
       expect(off.collabFeatures.chat).toBe(true);
 
-      addonsService.updateCollabFeatures({ polls: true });
+      await addonsService.updateCollabFeatures({ polls: true });
       const on = parseToolResult(
         await h.client.callTool({ name: 'list_addons', arguments: {} }),
       ) as AddonsPayload;

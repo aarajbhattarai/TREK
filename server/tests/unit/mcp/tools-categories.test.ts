@@ -50,6 +50,8 @@ import { RuntimeEnvService } from '../../../src/nest/app-config/runtime-env.serv
 import { PermissionsService } from '../../../src/nest/permissions/permissions.service';
 import { RealtimeService } from '../../../src/nest/realtime/realtime.service';
 import { McpToolGuardsService } from '../../../src/nest/mcp-shared/mcp-tool-guards.service';
+import { createTestUnitOfWork } from '../../helpers/test-uow';
+import { UnitOfWork } from '../../../src/nest/database/unit-of-work';
 
 beforeAll(() => {
   createTables(testDb);
@@ -79,16 +81,19 @@ async function withHarness(
 // file's DB, which is what lets the admin gate and the demo gate be driven from
 // the users table instead of from a stub.
 const categoriesDb = new DatabaseService(testDb);
-const categoriesMcp = new CategoriesMcp(
+let categoriesMcp: CategoriesMcp;
+beforeAll(async () => {
+  categoriesMcp = new CategoriesMcp(
   new CategoriesService(categoriesDb),
   categoriesDb,
   new RuntimeEnvService(),
-  new McpToolGuardsService(categoriesDb, new PermissionsService(categoriesDb), new RealtimeService()),
+  new McpToolGuardsService(categoriesDb, new PermissionsService(categoriesDb, await createTestUnitOfWork(categoriesDb.connection)), new RealtimeService()),
 );
+});
 
 async function withWriteHarness(userId: number, fn: (client: Client) => Promise<void>) {
   const server = new McpServer({ name: 'trek-test', version: '1.0.0' });
-  createTestRegistry([categoriesMcp], { accessPolicy: trekMcpAccessPolicy, validateAccess: trekMcpValidateAccess })
+  await createTestRegistry([categoriesMcp], { accessPolicy: trekMcpAccessPolicy, validateAccess: trekMcpValidateAccess })
     .attach(server, { userId, scopes: null, isStaticToken: false });
   const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
   const client = new Client({ name: 'test-client', version: '1.0.0' });

@@ -29,56 +29,56 @@ export class CollectionsRpc {
   ) {}
 
   @PluginMethod('collections.listMine', { permission: 'db:read:collections' })
-  listMine(_params: Record<string, unknown>, ctx: PluginRpcContext): unknown {
+  async listMine(_params: Record<string, unknown>, ctx: PluginRpcContext): Promise<unknown> {
     const userId = this.requireCollectionsUser(ctx, 'reads');
-    this.requireCollectionsAddon();
+    await this.requireCollectionsAddon();
     return this.collections.listCollections(userId);
   }
 
   @PluginMethod('collections.get', { permission: 'db:read:collections' })
-  get(params: Record<string, unknown>, ctx: PluginRpcContext): unknown {
+  async get(params: Record<string, unknown>, ctx: PluginRpcContext): Promise<unknown> {
     // getCollection is user-scoped by the service, so a plugin only ever fetches one
     // the acting user may see.
     const userId = this.requireCollectionsUser(ctx, 'reads');
     const id = num(params.id, 'id');
-    this.requireCollectionsAddon();
+    await this.requireCollectionsAddon();
     return this.collections.getCollection(userId, id);
   }
 
   @PluginMethod('collections.create', { permission: 'db:write:collections' })
-  create(params: Record<string, unknown>, ctx: PluginRpcContext): unknown {
+  async create(params: Record<string, unknown>, ctx: PluginRpcContext): Promise<unknown> {
     const parsed = collectionCreateRequestSchema.safeParse(params.input);
     if (!parsed.success) throw new BadParams(`invalid collection: ${schemaMessage(parsed.error)}`);
     const userId = this.requireCollectionsUser(ctx, 'writes');
-    this.requireCollectionsAddon();
+    await this.requireCollectionsAddon();
     return this.mapCollectionError(() => this.collections.createCollection(userId, parsed.data as never));
   }
 
   @PluginMethod('collections.update', { permission: 'db:write:collections' })
-  update(params: Record<string, unknown>, ctx: PluginRpcContext): unknown {
+  async update(params: Record<string, unknown>, ctx: PluginRpcContext): Promise<unknown> {
     const parsed = collectionUpdateRequestSchema.safeParse(params.input);
     if (!parsed.success) throw new BadParams(`invalid collection: ${schemaMessage(parsed.error)}`);
     const userId = this.requireCollectionsUser(ctx, 'writes');
     const id = num(params.id, 'id');
-    this.requireCollectionsAddon();
+    await this.requireCollectionsAddon();
     return this.mapCollectionError(() => this.collections.updateCollection(userId, id, parsed.data as never, undefined));
   }
 
   @PluginMethod('collections.savePlace', { permission: 'db:write:collections' })
-  savePlace(params: Record<string, unknown>, ctx: PluginRpcContext): unknown {
+  async savePlace(params: Record<string, unknown>, ctx: PluginRpcContext): Promise<unknown> {
     const parsed = collectionSavePlaceRequestSchema.safeParse(params.input);
     if (!parsed.success) throw new BadParams(`invalid place: ${schemaMessage(parsed.error)}`);
     const userId = this.requireCollectionsUser(ctx, 'writes');
-    this.requireCollectionsAddon();
+    await this.requireCollectionsAddon();
     return this.mapCollectionError(() => this.collections.savePlace(userId, parsed.data as never, undefined));
   }
 
   @PluginMethod('collections.copyToTrip', { permission: 'db:write:collections' })
-  copyToTrip(params: Record<string, unknown>, ctx: PluginRpcContext): unknown {
+  async copyToTrip(params: Record<string, unknown>, ctx: PluginRpcContext): Promise<unknown> {
     const parsed = collectionCopyToTripRequestSchema.safeParse(params.input);
     if (!parsed.success) throw new BadParams(`invalid copy request: ${schemaMessage(parsed.error)}`);
     const userId = this.requireCollectionsUser(ctx, 'writes');
-    this.requireCollectionsAddon();
+    await this.requireCollectionsAddon();
     return this.mapCollectionError(() => this.collections.copyToTrip(userId, parsed.data as never));
   }
 
@@ -86,7 +86,7 @@ export class CollectionsRpc {
   async deletePlace(params: Record<string, unknown>, ctx: PluginRpcContext): Promise<unknown> {
     const userId = this.requireCollectionsUser(ctx, 'writes');
     const placeId = num(params.placeId, 'placeId');
-    this.requireCollectionsAddon();
+    await this.requireCollectionsAddon();
     // deletePlace is async (it deletes the underlying storage object): await it so a
     // refusal actually reaches the plugin as RESOURCE_FORBIDDEN/BAD_PARAMS instead of
     // being dropped as an unhandled rejection while this returns {deleted: true} anyway.
@@ -101,8 +101,8 @@ export class CollectionsRpc {
     return ctx.actingUserId;
   }
 
-  private requireCollectionsAddon(): void {
-    this.guards.requireAddon(ADDON_IDS.COLLECTIONS, 'collections');
+  private async requireCollectionsAddon(): Promise<void> {
+    await this.guards.requireAddon(ADDON_IDS.COLLECTIONS, 'collections');
   }
 
   /**

@@ -30,18 +30,18 @@ export class SystemNoticesController {
   constructor(private readonly notices: SystemNoticesService) {}
 
   @Get('active')
-  active(
+  async active(
     @CurrentUser() user: User,
     @Query('supports') supports?: string | string[],
     @Query('ui') ui?: string | string[],
-  ): SystemNoticeDto[] {
+  ): Promise<SystemNoticeDto[]> {
     return this.notices.getActiveFor(user.id, parseSupports(supports), typeof ui === 'string' ? ui.trim() : undefined);
   }
 
   @Post(':id/dismiss')
   @HttpCode(204)
-  dismiss(@CurrentUser() user: User, @Param('id') id: string): void {
-    const dismissed = this.notices.dismiss(user.id, id);
+  async dismiss(@CurrentUser() user: User, @Param('id') id: string): Promise<void> {
+    const dismissed = await this.notices.dismiss(user.id, id);
     if (!dismissed) {
       throw new HttpException({ error: 'NOTICE_NOT_FOUND' }, 404);
     }

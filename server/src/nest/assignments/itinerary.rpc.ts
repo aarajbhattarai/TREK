@@ -25,27 +25,27 @@ export class ItineraryRpc {
   ) {}
 
   @PluginMethod('itinerary.assign', { permission: 'db:write:itinerary' })
-  assign(params: Record<string, unknown>, ctx: PluginRpcContext): unknown {
+  async assign(params: Record<string, unknown>, ctx: PluginRpcContext): Promise<unknown> {
     const tripId = num(params.tripId, 'tripId');
     const dayId = num(params.dayId, 'dayId');
     const placeId = num(params.placeId, 'placeId');
     const actor = this.guards.requireActor(ctx, 'itinerary');
     const notes = params.notes === undefined || params.notes === null ? null : str(params.notes, 'notes');
-    this.guards.requireTripEdit(tripId, actor, DAY_EDIT_ACTION);
+    await this.guards.requireTripEdit(tripId, actor, DAY_EDIT_ACTION);
     if (!this.assignments.dayExists(dayId, tripId)) throw new ForbiddenResource(`no day ${dayId} on trip ${tripId}`);
     if (!this.assignments.placeExists(placeId, tripId)) throw new ForbiddenResource(`no place ${placeId} on trip ${tripId}`);
-    const assignment = this.assignments.createAssignment(dayId, placeId, notes);
+    const assignment = await this.assignments.createAssignment(dayId, placeId, notes);
     this.realtime.broadcast(tripId, 'assignment:created', { assignment });
     this.assignments.reconcile(tripId);
     return assignment;
   }
 
   @PluginMethod('itinerary.unassign', { permission: 'db:write:itinerary' })
-  unassign(params: Record<string, unknown>, ctx: PluginRpcContext): unknown {
+  async unassign(params: Record<string, unknown>, ctx: PluginRpcContext): Promise<unknown> {
     const tripId = num(params.tripId, 'tripId');
     const assignmentId = num(params.assignmentId, 'assignmentId');
     const actor = this.guards.requireActor(ctx, 'itinerary');
-    this.guards.requireTripEdit(tripId, actor, DAY_EDIT_ACTION);
+    await this.guards.requireTripEdit(tripId, actor, DAY_EDIT_ACTION);
     const existing = this.assignments.getAssignmentForTrip(assignmentId, tripId);
     if (!existing) throw new ForbiddenResource(`no assignment ${assignmentId} on trip ${tripId}`);
     this.assignments.deleteAssignment(assignmentId);

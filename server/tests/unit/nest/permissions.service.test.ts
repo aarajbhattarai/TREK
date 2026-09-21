@@ -47,8 +47,13 @@ import {
   getPermissionsCache,
   invalidatePermissionsCache as invalidateSharedCache,
 } from '../../../src/nest/permissions/permissions-cache';
+import { createTestUnitOfWork } from '../../helpers/test-uow';
+import { UnitOfWork } from '../../../src/nest/database/unit-of-work';
 
-const svc = new PermissionsService(new DatabaseService(testDb));
+let svc: PermissionsService;
+beforeAll(async () => {
+  svc = new PermissionsService(new DatabaseService(testDb), await createTestUnitOfWork(testDb));
+});
 
 beforeAll(() => {
   createTables(testDb);
@@ -68,17 +73,17 @@ afterAll(() => {
 // ── checkPermission ───────────────────────────────────────────────────────────
 
 describe('checkPermission — admin bypass', () => {
-  it('PERM-SVC-001: admin always passes regardless of permission level', () => {
+  it('PERM-SVC-001: admin always passes regardless of permission level', async () => {
     for (const action of PERMISSION_ACTIONS) {
-      expect(svc.checkPermission(action.key, 'admin', 1, 1, false)).toBe(true);
-      expect(svc.checkPermission(action.key, 'admin', 99, 1, false)).toBe(true);
+      expect(await svc.checkPermission(action.key, 'admin', 1, 1, false)).toBe(true);
+      expect(await svc.checkPermission(action.key, 'admin', 99, 1, false)).toBe(true);
     }
   });
 });
 
 describe('checkPermission — everybody level', () => {
-  it('PERM-SVC-002: trip_create (everybody) allows any authenticated user', () => {
-    expect(svc.checkPermission('trip_create', 'user', null, 42, false)).toBe(true);
+  it('PERM-SVC-002: trip_create (everybody) allows any authenticated user', async () => {
+    expect(await svc.checkPermission('trip_create', 'user', null, 42, false)).toBe(true);
   });
 });
 
@@ -86,16 +91,16 @@ describe('checkPermission — trip_owner level', () => {
   const ownerId = 10;
   const memberId = 20;
 
-  it('PERM-SVC-003: trip owner passes trip_owner check', () => {
-    expect(svc.checkPermission('trip_delete', 'user', ownerId, ownerId, false)).toBe(true);
+  it('PERM-SVC-003: trip owner passes trip_owner check', async () => {
+    expect(await svc.checkPermission('trip_delete', 'user', ownerId, ownerId, false)).toBe(true);
   });
 
-  it('PERM-SVC-004: member fails trip_owner check', () => {
-    expect(svc.checkPermission('trip_delete', 'user', ownerId, memberId, true)).toBe(false);
+  it('PERM-SVC-004: member fails trip_owner check', async () => {
+    expect(await svc.checkPermission('trip_delete', 'user', ownerId, memberId, true)).toBe(false);
   });
 
-  it('PERM-SVC-005: non-member non-owner fails trip_owner check', () => {
-    expect(svc.checkPermission('trip_delete', 'user', ownerId, memberId, false)).toBe(false);
+  it('PERM-SVC-005: non-member non-owner fails trip_owner check', async () => {
+    expect(await svc.checkPermission('trip_delete', 'user', ownerId, memberId, false)).toBe(false);
   });
 });
 
@@ -104,23 +109,23 @@ describe('checkPermission — trip_member level', () => {
   const memberId = 20;
   const outsiderId = 30;
 
-  it('PERM-SVC-006: trip owner passes trip_member check', () => {
-    expect(svc.checkPermission('day_edit', 'user', ownerId, ownerId, false)).toBe(true);
+  it('PERM-SVC-006: trip owner passes trip_member check', async () => {
+    expect(await svc.checkPermission('day_edit', 'user', ownerId, ownerId, false)).toBe(true);
   });
 
-  it('PERM-SVC-007: trip member passes trip_member check', () => {
-    expect(svc.checkPermission('day_edit', 'user', ownerId, memberId, true)).toBe(true);
+  it('PERM-SVC-007: trip member passes trip_member check', async () => {
+    expect(await svc.checkPermission('day_edit', 'user', ownerId, memberId, true)).toBe(true);
   });
 
-  it('PERM-SVC-008: outsider fails trip_member check', () => {
-    expect(svc.checkPermission('day_edit', 'user', ownerId, outsiderId, false)).toBe(false);
+  it('PERM-SVC-008: outsider fails trip_member check', async () => {
+    expect(await svc.checkPermission('day_edit', 'user', ownerId, outsiderId, false)).toBe(false);
   });
 });
 
 // ── getPermissionLevel ────────────────────────────────────────────────────────
 
 describe('getPermissionLevel — defaults', () => {
-  it('PERM-SVC-009: returns default level for known actions (no DB overrides)', () => {
+  it('PERM-SVC-009: returns default level for known actions (no DB overrides)', async () => {
     const defaults: Record<string, string> = {
       trip_create: 'everybody',
       trip_delete: 'trip_owner',
@@ -128,28 +133,28 @@ describe('getPermissionLevel — defaults', () => {
       budget_edit: 'trip_member',
     };
     for (const [key, expected] of Object.entries(defaults)) {
-      expect(svc.getPermissionLevel(key)).toBe(expected);
+      expect(await svc.getPermissionLevel(key)).toBe(expected);
     }
   });
 
-  it('PERM-SVC-010: returns trip_owner for unknown action key', () => {
-    expect(svc.getPermissionLevel('nonexistent_action')).toBe('trip_owner');
+  it('PERM-SVC-010: returns trip_owner for unknown action key', async () => {
+    expect(await svc.getPermissionLevel('nonexistent_action')).toBe('trip_owner');
   });
 });
 
 // ── savePermissions ───────────────────────────────────────────────────────────
 
 describe('savePermissions — invalid input is silently skipped', () => {
-  it('PERM-SVC-011: returns skipped array containing invalid action key, writes no row', () => {
-    const result = svc.savePermissions({ nonexistent_action: 'trip_member' });
+  it('PERM-SVC-011: returns skipped array containing invalid action key, writes no row', async () => {
+    const result = await svc.savePermissions({ nonexistent_action: 'trip_member' });
     expect(result.skipped).toContain('nonexistent_action');
     const rows = testDb.prepare("SELECT key FROM app_settings WHERE key LIKE 'perm_%'").all();
     expect(rows).toEqual([]);
   });
 
-  it('PERM-SVC-012: returns skipped array when level is not in allowedLevels for the action', () => {
+  it('PERM-SVC-012: returns skipped array when level is not in allowedLevels for the action', async () => {
     // trip_delete only allows ['admin', 'trip_owner'], so 'trip_member' is invalid
-    const result = svc.savePermissions({ trip_delete: 'trip_member' });
+    const result = await svc.savePermissions({ trip_delete: 'trip_member' });
     expect(result.skipped).toContain('trip_delete');
     const rows = testDb.prepare("SELECT key FROM app_settings WHERE key LIKE 'perm_%'").all();
     expect(rows).toEqual([]);
@@ -157,127 +162,129 @@ describe('savePermissions — invalid input is silently skipped', () => {
 });
 
 describe('corrupt stored levels', () => {
-  it('PERM-SVC-013: an unrecognized stored level is ignored — every reader falls back to the default', () => {
+  it('PERM-SVC-013: an unrecognized stored level is ignored — every reader falls back to the default', async () => {
     testDb.prepare('INSERT OR REPLACE INTO app_settings (key, value) VALUES (?, ?)').run('perm_trip_edit', 'unknown_level');
     testDb.prepare('INSERT OR REPLACE INTO app_settings (key, value) VALUES (?, ?)').run('perm_trip_delete', '');
     svc.invalidatePermissionsCache();
     // Since the quirk fix the corrupt rows never enter the cache, so
     // getPermissionLevel, getAllPermissions and checkPermission agree on the
     // default instead of the old display-default/deny-in-check split.
-    expect(svc.getPermissionLevel('trip_edit')).toBe('trip_owner');
-    expect(svc.getAllPermissions().trip_edit).toBe('trip_owner');
-    expect(svc.checkPermission('trip_edit', 'user', 10, 10, false)).toBe(true);   // owner passes the default
-    expect(svc.checkPermission('trip_edit', 'user', 10, 20, true)).toBe(false);   // member still denied
-    expect(svc.getPermissionLevel('trip_delete')).toBe('trip_owner');
+    expect(await svc.getPermissionLevel('trip_edit')).toBe('trip_owner');
+    expect((await svc.getAllPermissions()).trip_edit).toBe('trip_owner');
+    expect(await svc.checkPermission('trip_edit', 'user', 10, 10, false)).toBe(true);   // owner passes the default
+    expect(await svc.checkPermission('trip_edit', 'user', 10, 20, true)).toBe(false);   // member still denied
+    expect(await svc.getPermissionLevel('trip_delete')).toBe('trip_owner');
   });
 
-  it('PERM-SVC-021: a stored level outside the action\'s allowedLevels is ignored too', () => {
+  it('PERM-SVC-021: a stored level outside the action\'s allowedLevels is ignored too', async () => {
     // trip_edit only allows trip_owner/trip_member — a raw 'everybody' row must not widen it.
     testDb.prepare('INSERT OR REPLACE INTO app_settings (key, value) VALUES (?, ?)').run('perm_trip_edit', 'everybody');
     svc.invalidatePermissionsCache();
-    expect(svc.getPermissionLevel('trip_edit')).toBe('trip_owner');
-    expect(svc.checkPermission('trip_edit', 'user', 10, 30, false)).toBe(false);
+    expect(await svc.getPermissionLevel('trip_edit')).toBe('trip_owner');
+    expect(await svc.checkPermission('trip_edit', 'user', 10, 30, false)).toBe(false);
   });
 });
 
 describe('load failures', () => {
-  it('PERM-SVC-022: a missing app_settings table stays silent and serves defaults; other DB failures are logged', () => {
+  it('PERM-SVC-022: a missing app_settings table stays silent and serves defaults; other DB failures are logged', async () => {
     const bareDb = new Database(':memory:');
-    const bareSvc = new PermissionsService(new DatabaseService(bareDb));
+    const bareSvc = new PermissionsService(new DatabaseService(bareDb), await createTestUnitOfWork(bareDb));
     bareSvc.invalidatePermissionsCache();
-    expect(bareSvc.getPermissionLevel('trip_edit')).toBe('trip_owner');
+    expect(await bareSvc.getPermissionLevel('trip_edit')).toBe('trip_owner');
     expect(logError).not.toHaveBeenCalled();
     // An unexpected failure (closed connection) must leave a trace.
     bareDb.close();
     bareSvc.invalidatePermissionsCache();
-    expect(bareSvc.getPermissionLevel('trip_edit')).toBe('trip_owner');
+    expect(await bareSvc.getPermissionLevel('trip_edit')).toBe('trip_owner');
     expect(logError).toHaveBeenCalledWith(expect.stringMatching(/^Permissions load failed: /));
     svc.invalidatePermissionsCache(); // don't leak the bare-DB cache to later tests
   });
 
-  it('PERM-SVC-024: a failed read serves defaults without installing them, and a later read populates the cache', () => {
+  it('PERM-SVC-024: a failed read serves defaults without installing them, and a later read populates the cache', async () => {
     const failing = { all: vi.fn((): { key: string; value: string }[] => { throw new Error('database connection is closed'); }) };
-    const flakySvc = new PermissionsService(failing as unknown as DatabaseService);
+    // The stub never opens a transaction, so the suite's own UnitOfWork is the
+    // honest thing to hand it.
+    const flakySvc = new PermissionsService(failing as unknown as DatabaseService, await createTestUnitOfWork(testDb));
     flakySvc.invalidatePermissionsCache();
 
-    expect(flakySvc.getPermissionLevel('trip_edit')).toBe('trip_owner');
+    expect(await flakySvc.getPermissionLevel('trip_edit')).toBe('trip_owner');
     // Nothing installed: an admin's stricter stored level would otherwise stay
     // invisible until somebody invalidated by hand.
     expect(getPermissionsCache()).toBe(null);
 
     failing.all.mockReturnValue([{ key: 'perm_trip_edit', value: 'trip_member' }]);
-    expect(flakySvc.getPermissionLevel('trip_edit')).toBe('trip_member');
+    expect(await flakySvc.getPermissionLevel('trip_edit')).toBe('trip_member');
     expect(getPermissionsCache()).not.toBe(null);
     svc.invalidatePermissionsCache(); // don't leak the stub cache to later tests
   });
 
-  it('PERM-SVC-023: an all-skipped save writes nothing and leaves the cache untouched', () => {
-    expect(svc.getPermissionLevel('trip_edit')).toBe('trip_owner'); // prime the cache
+  it('PERM-SVC-023: an all-skipped save writes nothing and leaves the cache untouched', async () => {
+    expect(await svc.getPermissionLevel('trip_edit')).toBe('trip_owner'); // prime the cache
     testDb.prepare('INSERT OR REPLACE INTO app_settings (key, value) VALUES (?, ?)').run('perm_trip_edit', 'trip_member');
-    const result = svc.savePermissions({ bogus: 'trip_member', trip_delete: 'trip_member' });
+    const result = await svc.savePermissions({ bogus: 'trip_member', trip_delete: 'trip_member' });
     expect(result.skipped).toEqual(['bogus', 'trip_delete']);
     // No valid entries → no transaction and no cache flush: the raw row above
     // stays invisible until an explicit invalidation.
-    expect(svc.getPermissionLevel('trip_edit')).toBe('trip_owner');
+    expect(await svc.getPermissionLevel('trip_edit')).toBe('trip_owner');
     svc.invalidatePermissionsCache();
-    expect(svc.getPermissionLevel('trip_edit')).toBe('trip_member');
+    expect(await svc.getPermissionLevel('trip_edit')).toBe('trip_member');
   });
 });
 
 // ── cache semantics (real DB) ─────────────────────────────────────────────────
 
 describe('stored overrides + cache', () => {
-  it('PERM-SVC-014: stored perm_ row overrides the default after invalidation', () => {
+  it('PERM-SVC-014: stored perm_ row overrides the default after invalidation', async () => {
     testDb.prepare('INSERT OR REPLACE INTO app_settings (key, value) VALUES (?, ?)').run('perm_trip_edit', 'trip_member');
     svc.invalidatePermissionsCache();
-    expect(svc.getPermissionLevel('trip_edit')).toBe('trip_member');
+    expect(await svc.getPermissionLevel('trip_edit')).toBe('trip_member');
     // A plain member now passes what defaults to a trip_owner-only action.
-    expect(svc.checkPermission('trip_edit', 'user', 10, 20, true)).toBe(true);
+    expect(await svc.checkPermission('trip_edit', 'user', 10, 20, true)).toBe(true);
   });
 
-  it('PERM-SVC-015: savePermissions persists the row and self-invalidates the cache', () => {
+  it('PERM-SVC-015: savePermissions persists the row and self-invalidates the cache', async () => {
     // Prime the cache with the defaults first.
-    expect(svc.getPermissionLevel('trip_edit')).toBe('trip_owner');
-    const result = svc.savePermissions({ trip_edit: 'trip_member' });
+    expect(await svc.getPermissionLevel('trip_edit')).toBe('trip_owner');
+    const result = await svc.savePermissions({ trip_edit: 'trip_member' });
     expect(result.skipped).toEqual([]);
     const row = testDb.prepare('SELECT value FROM app_settings WHERE key = ?').get('perm_trip_edit') as { value: string };
     expect(row.value).toBe('trip_member');
     // No manual invalidation — savePermissions did it.
-    expect(svc.getPermissionLevel('trip_edit')).toBe('trip_member');
+    expect(await svc.getPermissionLevel('trip_edit')).toBe('trip_member');
   });
 
-  it('PERM-SVC-016: the cache memoizes until invalidated', () => {
-    expect(svc.getPermissionLevel('trip_edit')).toBe('trip_owner');
+  it('PERM-SVC-016: the cache memoizes until invalidated', async () => {
+    expect(await svc.getPermissionLevel('trip_edit')).toBe('trip_owner');
     // Raw SQL write bypasses savePermissions' self-invalidation → stale value served.
     testDb.prepare('INSERT OR REPLACE INTO app_settings (key, value) VALUES (?, ?)').run('perm_trip_edit', 'trip_member');
-    expect(svc.getPermissionLevel('trip_edit')).toBe('trip_owner');
+    expect(await svc.getPermissionLevel('trip_edit')).toBe('trip_owner');
     svc.invalidatePermissionsCache();
-    expect(svc.getPermissionLevel('trip_edit')).toBe('trip_member');
+    expect(await svc.getPermissionLevel('trip_edit')).toBe('trip_member');
   });
 });
 
 // ── module-scoped cache across instances ──────────────────────────────────────
 
-describe('module-scoped permissions cache', () => {
-  const secondInstance = new PermissionsService(new DatabaseService(testDb));
+describe('module-scoped permissions cache', async () => {
+  const secondInstance = new PermissionsService(new DatabaseService(testDb), await createTestUnitOfWork(testDb));
 
-  it('PERM-SVC-017: checkPermission agrees across independently built instances', () => {
-    expect(secondInstance.checkPermission('trip_create', 'user', null, 42, false)).toBe(true);
-    expect(secondInstance.checkPermission('trip_delete', 'user', 10, 20, true)).toBe(false);
+  it('PERM-SVC-017: checkPermission agrees across independently built instances', async () => {
+    expect(await secondInstance.checkPermission('trip_create', 'user', null, 42, false)).toBe(true);
+    expect(await secondInstance.checkPermission('trip_delete', 'user', 10, 20, true)).toBe(false);
   });
 
-  it('PERM-SVC-020: the cache is module-scoped — shared by every service instance', () => {
+  it('PERM-SVC-020: the cache is module-scoped — shared by every service instance', async () => {
     // Save through the DI instance; a second instance sees it immediately
     // (checkPermission for a plain member flips with the stored level).
-    svc.savePermissions({ trip_edit: 'trip_member' });
-    expect(secondInstance.checkPermission('trip_edit', 'user', 10, 20, true)).toBe(true);
+    await svc.savePermissions({ trip_edit: 'trip_member' });
+    expect(await secondInstance.checkPermission('trip_edit', 'user', 10, 20, true)).toBe(true);
     // Raw SQL write, then invalidate through permissions-cache — the plain
     // function backup.impl.ts calls after a restore. Both service instances
     // must serve the fresh value afterwards.
     testDb.prepare('INSERT OR REPLACE INTO app_settings (key, value) VALUES (?, ?)').run('perm_trip_edit', 'trip_owner');
-    expect(svc.getPermissionLevel('trip_edit')).toBe('trip_member'); // still cached
+    expect(await svc.getPermissionLevel('trip_edit')).toBe('trip_member'); // still cached
     invalidateSharedCache();
-    expect(svc.getPermissionLevel('trip_edit')).toBe('trip_owner');
-    expect(secondInstance.checkPermission('trip_edit', 'user', 10, 20, true)).toBe(false);
+    expect(await svc.getPermissionLevel('trip_edit')).toBe('trip_owner');
+    expect(await secondInstance.checkPermission('trip_edit', 'user', 10, 20, true)).toBe(false);
   });
 });

@@ -35,13 +35,13 @@ export class DayNotesRpc {
   }
 
   @PluginMethod('daynotes.create', { permission: 'db:write:daynotes' })
-  create(params: Record<string, unknown>, ctx: PluginRpcContext): unknown {
+  async create(params: Record<string, unknown>, ctx: PluginRpcContext): Promise<unknown> {
     const tripId = num(params.tripId, 'tripId');
     const dayId = num(params.dayId, 'dayId');
     const actor = this.guards.requireActor(ctx, 'day note');
     const input = asPayload(params.input);
     if (typeof input.text !== 'string' || input.text.trim() === '') throw new BadParams('note text is required');
-    this.guards.requireTripEdit(tripId, actor, DAY_NOTE_EDIT_ACTION);
+    await this.guards.requireTripEdit(tripId, actor, DAY_NOTE_EDIT_ACTION);
     if (!this.dayNotes.dayExists(dayId, tripId)) throw new ForbiddenResource(`no day ${dayId} on trip ${tripId}`);
     const i = input as DayNoteInput;
     const note = this.dayNotes.create(dayId, tripId, i.text ?? '', i.time, i.icon, i.sort_order);
@@ -50,12 +50,12 @@ export class DayNotesRpc {
   }
 
   @PluginMethod('daynotes.update', { permission: 'db:write:daynotes' })
-  update(params: Record<string, unknown>, ctx: PluginRpcContext): unknown {
+  async update(params: Record<string, unknown>, ctx: PluginRpcContext): Promise<unknown> {
     const tripId = num(params.tripId, 'tripId');
     const dayId = num(params.dayId, 'dayId');
     const noteId = num(params.noteId, 'noteId');
     const actor = this.guards.requireActor(ctx, 'day note');
-    this.guards.requireTripEdit(tripId, actor, DAY_NOTE_EDIT_ACTION);
+    await this.guards.requireTripEdit(tripId, actor, DAY_NOTE_EDIT_ACTION);
     const current = this.dayNotes.getNote(noteId, dayId, tripId);
     if (!current) throw new ForbiddenResource(`no note ${noteId} on day ${dayId}`);
     const note = this.dayNotes.update(noteId, current as never, asPayload(params.input) as DayNoteInput);
@@ -64,12 +64,12 @@ export class DayNotesRpc {
   }
 
   @PluginMethod('daynotes.delete', { permission: 'db:write:daynotes' })
-  delete(params: Record<string, unknown>, ctx: PluginRpcContext): unknown {
+  async delete(params: Record<string, unknown>, ctx: PluginRpcContext): Promise<unknown> {
     const tripId = num(params.tripId, 'tripId');
     const dayId = num(params.dayId, 'dayId');
     const noteId = num(params.noteId, 'noteId');
     const actor = this.guards.requireActor(ctx, 'day note');
-    this.guards.requireTripEdit(tripId, actor, DAY_NOTE_EDIT_ACTION);
+    await this.guards.requireTripEdit(tripId, actor, DAY_NOTE_EDIT_ACTION);
     const current = this.dayNotes.getNote(noteId, dayId, tripId);
     if (!current) throw new ForbiddenResource(`no note ${noteId} on day ${dayId}`);
     this.dayNotes.remove(noteId);

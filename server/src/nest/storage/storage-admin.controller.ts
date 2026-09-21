@@ -42,7 +42,7 @@ export class StorageAdminController {
   }
 
   @Put()
-  update(@CurrentUser() user: User, @Body() body: StorageConfigDto, @Req() req: Request) {
+  async update(@CurrentUser() user: User, @Body() body: StorageConfigDto, @Req() req: Request) {
     try {
       this.service.applyConfig(body);
     } catch (err) {
@@ -53,7 +53,7 @@ export class StorageAdminController {
       if (err instanceof StorageConflictError) throw new HttpException({ error: err.message }, 409);
       throw new HttpException({ error: err instanceof Error ? err.message : String(err) }, 400);
     }
-    this.audit.writeAudit({
+    await this.audit.writeAudit({
       userId: user.id,
       action: 'admin.storage_update',
       ip: getClientIp(req),
@@ -73,7 +73,7 @@ export class StorageAdminController {
       throw new HttpException({ error: err instanceof Error ? err.message : String(err) }, 400);
     }
     // Audited because the probe writes and deletes an object; names only, never options.
-    this.audit.writeAudit({
+    await this.audit.writeAudit({
       userId: user.id,
       action: 'admin.storage_test',
       ip: getClientIp(req),
@@ -90,7 +90,7 @@ export class StorageAdminController {
   /** Start a replica catch-up for a routed mirror. One at a time, globally. */
   @Post('backends/:name/backfill')
   @HttpCode(200)
-  backfillStart(@CurrentUser() user: User, @Param('name') name: string, @Req() req: Request): { started: true } {
+  async backfillStart(@CurrentUser() user: User, @Param('name') name: string, @Req() req: Request): Promise<{ started: true }> {
     try {
       this.service.startBackfill(name);
     } catch (err) {
@@ -98,7 +98,7 @@ export class StorageAdminController {
       if (err instanceof BackfillBusyError) throw new HttpException({ error: err.message }, 409);
       throw err;
     }
-    this.audit.writeAudit({
+    await this.audit.writeAudit({
       userId: user.id,
       action: 'admin.storage_backfill',
       ip: getClientIp(req),
@@ -108,11 +108,11 @@ export class StorageAdminController {
   }
 
   @Delete('backends/:name/backfill')
-  backfillCancel(@CurrentUser() user: User, @Param('name') name: string, @Req() req: Request): { cancelled: true } {
+  async backfillCancel(@CurrentUser() user: User, @Param('name') name: string, @Req() req: Request): Promise<{ cancelled: true }> {
     if (!this.service.cancelBackfill(name)) {
       throw new HttpException({ error: `no active sync for '${name}'` }, 404);
     }
-    this.audit.writeAudit({
+    await this.audit.writeAudit({
       userId: user.id,
       action: 'admin.storage_backfill_cancel',
       ip: getClientIp(req),
@@ -124,7 +124,7 @@ export class StorageAdminController {
   /** Start a category migration: copy → flip → delta sweep. One storage job at a time. */
   @Post('migrations')
   @HttpCode(200)
-  migrationStart(@CurrentUser() user: User, @Body() body: StorageMigrationRequestDto, @Req() req: Request): { started: true } {
+  async migrationStart(@CurrentUser() user: User, @Body() body: StorageMigrationRequestDto, @Req() req: Request): Promise<{ started: true }> {
     const { category, to } = body;
     try {
       this.service.startMigration(category, to);
@@ -134,7 +134,7 @@ export class StorageAdminController {
       if (err instanceof BackfillBusyError) throw new HttpException({ error: err.message }, 409);
       throw err;
     }
-    this.audit.writeAudit({
+    await this.audit.writeAudit({
       userId: user.id,
       action: 'admin.storage_migration',
       ip: getClientIp(req),
@@ -144,11 +144,11 @@ export class StorageAdminController {
   }
 
   @Delete('migrations/:category')
-  migrationCancel(@CurrentUser() user: User, @Param('category') category: string, @Req() req: Request): { cancelled: true } {
+  async migrationCancel(@CurrentUser() user: User, @Param('category') category: string, @Req() req: Request): Promise<{ cancelled: true }> {
     if (!this.service.cancelMigration(category)) {
       throw new HttpException({ error: `no running migration for '${category}'` }, 404);
     }
-    this.audit.writeAudit({
+    await this.audit.writeAudit({
       userId: user.id,
       action: 'admin.storage_migration_cancel',
       ip: getClientIp(req),
@@ -167,7 +167,7 @@ export class StorageAdminController {
       if (err instanceof StatsBusyError) throw new HttpException({ error: err.message }, 409);
       throw err;
     }
-    this.audit.writeAudit({
+    await this.audit.writeAudit({
       userId: user.id,
       action: 'admin.storage_stats_refresh',
       ip: getClientIp(req),

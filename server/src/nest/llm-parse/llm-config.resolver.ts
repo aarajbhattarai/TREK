@@ -28,8 +28,8 @@ export class LlmConfigResolver {
    * else null. This is the single place the API key is decrypted, and the single
    * place that decides which endpoint the server is allowed to call (#1772).
    */
-  resolve(userId: number): ResolvedLlmConfig | null {
-    if (!this.addons.isAddonEnabled(ADDON_IDS.LLM_PARSING)) return null;
+  async resolve(userId: number): Promise<ResolvedLlmConfig | null> {
+    if (!(await this.addons.isAddonEnabled(ADDON_IDS.LLM_PARSING))) return null;
     return this.readInstanceConfig() ?? this.readUserConfig(userId);
   }
 

@@ -67,6 +67,8 @@ import type { PlacesService } from '../../../src/nest/places/places.service';
 import type { AssignmentsService } from '../../../src/nest/assignments/assignments.service';
 import type { PermissionsService } from '../../../src/nest/permissions/permissions.service';
 import type { JourneyDomainService } from '../../../src/nest/journey/journey-domain.service';
+import { createTestUnitOfWork } from '../../helpers/test-uow';
+import { UnitOfWork } from '../../../src/nest/database/unit-of-work';
 
 // ── Collaborator stubs ───────────────────────────────────────────────────────
 //
@@ -114,7 +116,9 @@ const permissionsStub = { checkPermission: vi.fn() };
 const journeyStub = { canEdit: vi.fn(), createEntry: vi.fn() };
 
 const dbs = new DatabaseService(testDb);
-const svc = new DawarichSuggestionsService(
+let svc: DawarichSuggestionsService;
+beforeAll(async () => {
+  svc = new DawarichSuggestionsService(
   dbs,
   dawarichStub as unknown as DawarichService,
   clientStub as unknown as DawarichClient,
@@ -122,8 +126,9 @@ const svc = new DawarichSuggestionsService(
   placesStub as unknown as PlacesService,
   assignmentsStub as unknown as AssignmentsService,
   permissionsStub as unknown as PermissionsService,
-  journeyStub as unknown as JourneyDomainService,
+  journeyStub as unknown as JourneyDomainService, await createTestUnitOfWork(dbs.connection),
 );
+});
 
 const CREATED_ENTRY_ID = 7702;
 
@@ -382,11 +387,11 @@ describe('DawarichSuggestionsService — the review list', () => {
     expect(svc.getOne(stranger.id, theirs)?.name).toBe('Their Kitchen');
   });
 
-  it('DAWARICH-SUG-059: the flags the panel warns with are read off the row, never acted on', () => {
+  it('DAWARICH-SUG-059: the flags the panel warns with are read off the row, never acted on', async () => {
     const { user } = createUser(testDb);
     const wish = seedBucketItem(user.id);
     const id = seedSuggestion({ userId: user.id });
-    svc.accept(user.id, id, { target: 'bucket_list', bucketListItemId: wish });
+    await svc.accept(user.id, id, { target: 'bucket_list', bucketListItemId: wish });
 
     // Everything a later sync is allowed to do to a row somebody already
     // accepted: the detector re-ran and the hash moved, it upgraded the stay
@@ -448,7 +453,7 @@ describe('DawarichSuggestionsService — accepting into a trip', () => {
     expect(rowOf(id).state).toBe('new');
   });
 
-  it('DAWARICH-SUG-007: a stay on a trip the caller is a member of becomes a place pinned to the day', () => {
+  it('DAWARICH-SUG-007: a stay on a trip the caller is a member of becomes a place pinned to the day', async () => {
     const { user: owner } = createUser(testDb);
     const { user: member } = createUser(testDb);
     const trip = createTrip(testDb, owner.id);
@@ -456,7 +461,7 @@ describe('DawarichSuggestionsService — accepting into a trip', () => {
     const day = createDay(testDb, trip.id, { date: '2026-09-01' });
     const id = seedSuggestion({ userId: member.id, tripId: trip.id, name: 'Cafe Central' });
 
-    const result = svc.accept(member.id, id, {
+    const result = await svc.accept(member.id, id, {
       target: 'place',
       tripId: trip.id,
       dayId: day.id,
@@ -500,7 +505,7 @@ describe('DawarichSuggestionsService — accepting into a trip', () => {
     expect(placesStub.create).not.toHaveBeenCalled();
   });
 
-  it('DAWARICH-SUG-043: every field the review step lets someone correct beats the recorded one', () => {
+  it('DAWARICH-SUG-043: every field the review step lets someone correct beats the recorded one', async () => {
     // The review step exists so a detector's guess can be fixed rather than
     // swallowed; a correction that silently lost to the recording would make
     // the whole form decorative.
@@ -508,7 +513,7 @@ describe('DawarichSuggestionsService — accepting into a trip', () => {
     const trip = createTrip(testDb, user.id);
     const id = seedSuggestion({ userId: user.id, tripId: trip.id, name: 'Unnamed stay' });
 
-    svc.accept(user.id, id, {
+    await svc.accept(user.id, id, {
       target: 'place',
       tripId: trip.id,
       name: '  Cafe Central  ',
@@ -534,7 +539,7 @@ describe('DawarichSuggestionsService — accepting into a trip', () => {
     );
   });
 
-  it('DAWARICH-SUG-044: a stay with no position and no measurable length passes neither on', () => {
+  it('DAWARICH-SUG-044: a stay with no position and no measurable length passes neither on', async () => {
     // `undefined` rather than null or zero: PlacesService applies its own
     // defaults for a field nobody supplied, and a place pinned at 0,0 off the
     // coast of Africa with a duration of "0 min" is worse than one with none.
@@ -542,7 +547,7 @@ describe('DawarichSuggestionsService — accepting into a trip', () => {
     const trip = createTrip(testDb, user.id);
     const id = seedSuggestion({ userId: user.id, tripId: trip.id, lat: null, lng: null, durationMinutes: 0 });
 
-    svc.accept(user.id, id, { target: 'place', tripId: trip.id });
+    await svc.accept(user.id, id, { target: 'place', tripId: trip.id });
 
     const body = placesStub.create.mock.calls[0][1] as Record<string, unknown>;
     expect(body.lat).toBeUndefined();
@@ -550,18 +555,18 @@ describe('DawarichSuggestionsService — accepting into a trip', () => {
     expect(body.duration_minutes).toBeUndefined();
   });
 
-  it('DAWARICH-SUG-045: with no trip in the body, the one the sync filed the stay under is used', () => {
+  it('DAWARICH-SUG-045: with no trip in the body, the one the sync filed the stay under is used', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const id = seedSuggestion({ userId: user.id, tripId: trip.id });
 
-    const result = svc.accept(user.id, id, { target: 'place' });
+    const result = await svc.accept(user.id, id, { target: 'place' });
 
     expect(placesStub.create).toHaveBeenCalledWith(String(trip.id), expect.anything());
     expect(result.createdPlaceId).not.toBeNull();
   });
 
-  it('DAWARICH-SUG-046: a timestamp with no clock time in it yields no time rather than a wrong one', () => {
+  it('DAWARICH-SUG-046: a timestamp with no clock time in it yields no time rather than a wrong one', async () => {
     // Dawarich normally sends a full ISO instant, but a visit imported from a
     // GPX or an older schema can arrive as a bare date. Slicing characters 11
     // to 16 out of that would put the last five characters of the date into a
@@ -575,7 +580,7 @@ describe('DawarichSuggestionsService — accepting into a trip', () => {
       endedAt: '2026-09-01',
     });
 
-    svc.accept(user.id, id, { target: 'place', tripId: trip.id });
+    await svc.accept(user.id, id, { target: 'place', tripId: trip.id });
 
     expect(placesStub.create).toHaveBeenCalledWith(
       String(trip.id),
@@ -614,11 +619,11 @@ describe('DawarichSuggestionsService — accepting into a journey', () => {
     expect(rowOf(id).state).toBe('new');
   });
 
-  it('DAWARICH-SUG-011: a permitted journey gets a dated entry, with the socket id passed through', () => {
+  it('DAWARICH-SUG-011: a permitted journey gets a dated entry, with the socket id passed through', async () => {
     const { user } = createUser(testDb);
     const id = seedSuggestion({ userId: user.id, name: 'Cafe Central', localDate: '2026-09-01' });
 
-    const result = svc.accept(user.id, id, { target: 'journal', journalId: 88 }, 'socket-7');
+    const result = await svc.accept(user.id, id, { target: 'journal', journalId: 88 }, 'socket-7');
 
     expect(journeyStub.createEntry).toHaveBeenCalledWith(
       88,
@@ -654,11 +659,11 @@ describe('DawarichSuggestionsService — accepting into a journey', () => {
     expect(journeyStub.canEdit).not.toHaveBeenCalled();
   });
 
-  it('DAWARICH-SUG-047: a corrected entry carries the corrections, not the recording', () => {
+  it('DAWARICH-SUG-047: a corrected entry carries the corrections, not the recording', async () => {
     const { user } = createUser(testDb);
     const id = seedSuggestion({ userId: user.id, name: 'Cafe Central', localDate: '2026-09-01' });
 
-    svc.accept(user.id, id, {
+    await svc.accept(user.id, id, {
       target: 'journal',
       journalId: 88,
       name: 'Dinner at the Naschmarkt',
@@ -685,7 +690,7 @@ describe('DawarichSuggestionsService — accepting into a journey', () => {
     );
   });
 
-  it('DAWARICH-SUG-048: a stay with no position and no clock time writes an entry without either', () => {
+  it('DAWARICH-SUG-048: a stay with no position and no clock time writes an entry without either', async () => {
     // The journey domain treats a missing field and an empty one differently
     // (a location_lat of null would put a pin on the map at the equator), so
     // everything unknown has to arrive as undefined rather than as null.
@@ -698,7 +703,7 @@ describe('DawarichSuggestionsService — accepting into a journey', () => {
       localDate: '2026-09-03',
     });
 
-    svc.accept(user.id, id, { target: 'journal', journalId: 88 });
+    await svc.accept(user.id, id, { target: 'journal', journalId: 88 });
 
     const body = journeyStub.createEntry.mock.calls[0][2] as Record<string, unknown>;
     expect(body.entry_date).toBe('2026-09-03');
@@ -739,12 +744,12 @@ describe('DawarichSuggestionsService — ticking off a wish', () => {
     expect(rowOf(id).state).toBe('new');
   });
 
-  it("DAWARICH-SUG-015: the caller's own wish is ticked with the stay's arrival and marked as imported", () => {
+  it("DAWARICH-SUG-015: the caller's own wish is ticked with the stay's arrival and marked as imported", async () => {
     const { user } = createUser(testDb);
     const wish = seedBucketItem(user.id, { name: 'Hallstatt' });
     const id = seedSuggestion({ userId: user.id, startedAt: '2026-09-01T09:30:00Z' });
 
-    const result = svc.accept(user.id, id, { target: 'bucket_list', bucketListItemId: wish });
+    const result = await svc.accept(user.id, id, { target: 'bucket_list', bucketListItemId: wish });
 
     const item = bucketOf(wish);
     expect(item.visited_at).toBe('2026-09-01T09:30:00Z');
@@ -754,12 +759,12 @@ describe('DawarichSuggestionsService — ticking off a wish', () => {
     expect(rowOf(id).accepted_bucket_list_item_id).toBe(wish);
   });
 
-  it('DAWARICH-SUG-016: with no wish named in the body, the matched one is used', () => {
+  it('DAWARICH-SUG-016: with no wish named in the body, the matched one is used', async () => {
     const { user } = createUser(testDb);
     const wish = seedBucketItem(user.id, { name: 'Hallstatt' });
     const id = seedSuggestion({ userId: user.id, matchedBucketListItemId: wish });
 
-    const result = svc.accept(user.id, id, { target: 'bucket_list' });
+    const result = await svc.accept(user.id, id, { target: 'bucket_list' });
 
     expect(result.bucketListItemId).toBe(wish);
     expect(bucketOf(wish).visited_source).toBe('dawarich');
@@ -779,12 +784,12 @@ describe('DawarichSuggestionsService — ticking off a wish', () => {
 // ── accept twice / state ─────────────────────────────────────────────────────
 
 describe('DawarichSuggestionsService — what an acceptance closes off', () => {
-  it('DAWARICH-SUG-018: accepting an already accepted suggestion is a 409, not a second place', () => {
+  it('DAWARICH-SUG-018: accepting an already accepted suggestion is a 409, not a second place', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const id = seedSuggestion({ userId: user.id, tripId: trip.id });
 
-    const first = svc.accept(user.id, id, { target: 'place', tripId: trip.id });
+    const first = await svc.accept(user.id, id, { target: 'place', tripId: trip.id });
     expect(placesStub.create).toHaveBeenCalledTimes(1);
 
     const err = refusalFrom(() => svc.accept(user.id, id, { target: 'place', tripId: trip.id }));
@@ -797,11 +802,11 @@ describe('DawarichSuggestionsService — what an acceptance closes off', () => {
     expect(testDb.prepare('SELECT COUNT(*) AS n FROM places WHERE trip_id = ?').get(trip.id)).toEqual({ n: 1 });
   });
 
-  it('DAWARICH-SUG-019: setState cannot pull an accepted suggestion back into review', () => {
+  it('DAWARICH-SUG-019: setState cannot pull an accepted suggestion back into review', async () => {
     const { user } = createUser(testDb);
     const wish = seedBucketItem(user.id);
     const id = seedSuggestion({ userId: user.id });
-    svc.accept(user.id, id, { target: 'bucket_list', bucketListItemId: wish });
+    await svc.accept(user.id, id, { target: 'bucket_list', bucketListItemId: wish });
 
     const back = svc.setState(user.id, id, 'new');
 
@@ -1259,12 +1264,12 @@ describe('DawarichSuggestionsService — the Atlas hand-off', () => {
   });
   // ── What an acceptance tells the rest of the trip ──────────────────────────
 
-  it('DAWARICH-SUG-031: accepting as a place broadcasts it like any other place, socket id and all', () => {
+  it('DAWARICH-SUG-031: accepting as a place broadcasts it like any other place, socket id and all', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const id = seedSuggestion({ userId: user.id, tripId: trip.id, name: 'Museum Ludwig' });
 
-    const result = svc.accept(user.id, id, { target: 'place', tripId: trip.id }, 'socket-7');
+    const result = await svc.accept(user.id, id, { target: 'place', tripId: trip.id }, 'socket-7');
 
     expect(placesStub.broadcast).toHaveBeenCalledWith(
       String(trip.id),
@@ -1276,7 +1281,7 @@ describe('DawarichSuggestionsService — the Atlas hand-off', () => {
     expect(placesStub.onCreated).toHaveBeenCalledWith(String(trip.id), result.createdPlaceId);
   });
 
-  it('DAWARICH-SUG-060: the broadcast carries the re-read row, so everyone on the trip sees the dawarich mark', () => {
+  it('DAWARICH-SUG-060: the broadcast carries the re-read row, so everyone on the trip sees the dawarich mark', async () => {
     // `source` is stamped after PlacesService.create returns, so the object
     // that call handed back does not have it. Broadcasting that one would leave
     // every other client showing the place without its provenance until the
@@ -1285,14 +1290,14 @@ describe('DawarichSuggestionsService — the Atlas hand-off', () => {
     const trip = createTrip(testDb, user.id);
     const id = seedSuggestion({ userId: user.id, tripId: trip.id, name: 'Museum Ludwig' });
 
-    const result = svc.accept(user.id, id, { target: 'place', tripId: trip.id });
+    const result = await svc.accept(user.id, id, { target: 'place', tripId: trip.id });
 
     const payload = placesStub.broadcast.mock.calls[0][2] as { place: { id: number; source: string | null } };
     expect(payload.place.id).toBe(result.createdPlaceId);
     expect(payload.place.source).toBe('dawarich');
   });
 
-  it('DAWARICH-SUG-061: a re-read that comes back empty still broadcasts the place that was created', () => {
+  it('DAWARICH-SUG-061: a re-read that comes back empty still broadcasts the place that was created', async () => {
     // The re-read is an improvement on the payload, not a precondition for it:
     // if it finds nothing the acceptance has still happened, and a broadcast
     // the trip never receives is a place that needs a page reload to appear.
@@ -1301,7 +1306,7 @@ describe('DawarichSuggestionsService — the Atlas hand-off', () => {
     const id = seedSuggestion({ userId: user.id, tripId: trip.id });
     dbMock.getPlaceWithTags.mockReturnValue(null);
 
-    const result = svc.accept(user.id, id, { target: 'place', tripId: trip.id }, 'socket-3');
+    const result = await svc.accept(user.id, id, { target: 'place', tripId: trip.id }, 'socket-3');
 
     expect(placesStub.broadcast).toHaveBeenCalledWith(
       String(trip.id),
@@ -1311,7 +1316,7 @@ describe('DawarichSuggestionsService — the Atlas hand-off', () => {
     );
   });
 
-  it('DAWARICH-SUG-039: a member refused place_edit is refused here too', () => {
+  it('DAWARICH-SUG-039: a member refused place_edit is refused here too', async () => {
     const { user: owner } = createUser(testDb);
     const { user: member } = createUser(testDb);
     const trip = createTrip(testDb, owner.id);
@@ -1319,13 +1324,13 @@ describe('DawarichSuggestionsService — the Atlas hand-off', () => {
     const id = seedSuggestion({ userId: member.id, tripId: trip.id });
     permissionsStub.checkPermission.mockImplementation((action: string) => action !== 'place_edit');
 
-    expect(() => svc.accept(member.id, id, { target: 'place', tripId: trip.id })).toThrow(AcceptError);
+    await expect(svc.accept(member.id, id, { target: 'place', tripId: trip.id })).rejects.toThrow(AcceptError);
     // Nothing written, and the stay is still waiting rather than marked handled.
     expect(placesStub.create).not.toHaveBeenCalled();
     expect(rowOf(id).state).toBe('new');
   });
 
-  it('DAWARICH-SUG-040: pinning to a day asks day_edit as well, and writes nothing without it', () => {
+  it('DAWARICH-SUG-040: pinning to a day asks day_edit as well, and writes nothing without it', async () => {
     const { user: owner } = createUser(testDb);
     const { user: member } = createUser(testDb);
     const trip = createTrip(testDb, owner.id);
@@ -1334,29 +1339,29 @@ describe('DawarichSuggestionsService — the Atlas hand-off', () => {
     const id = seedSuggestion({ userId: member.id, tripId: trip.id });
     permissionsStub.checkPermission.mockImplementation((action: string) => action !== 'day_edit');
 
-    expect(() => svc.accept(member.id, id, { target: 'place', tripId: trip.id, dayId: day.id })).toThrow(AcceptError);
+    await expect(svc.accept(member.id, id, { target: 'place', tripId: trip.id, dayId: day.id })).rejects.toThrow(AcceptError);
     expect(placesStub.create).not.toHaveBeenCalled();
     expect(rowOf(id).state).toBe('new');
   });
 
-  it('DAWARICH-SUG-041: the permission is asked about the trip owner, not about the caller', () => {
+  it('DAWARICH-SUG-041: the permission is asked about the trip owner, not about the caller', async () => {
     const { user: owner } = createUser(testDb);
     const { user: member } = createUser(testDb);
     const trip = createTrip(testDb, owner.id);
     addTripMember(testDb, trip.id, member.id);
     const id = seedSuggestion({ userId: member.id, tripId: trip.id });
 
-    svc.accept(member.id, id, { target: 'place', tripId: trip.id });
+    await svc.accept(member.id, id, { target: 'place', tripId: trip.id });
 
     expect(permissionsStub.checkPermission).toHaveBeenCalledWith('place_edit', 'user', owner.id, member.id, true);
   });
 
-  it('DAWARICH-SUG-038: a place made from a recording says where it came from', () => {
+  it('DAWARICH-SUG-038: a place made from a recording says where it came from', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const id = seedSuggestion({ userId: user.id, tripId: trip.id });
 
-    const result = svc.accept(user.id, id, { target: 'place', tripId: trip.id });
+    const result = await svc.accept(user.id, id, { target: 'place', tripId: trip.id });
 
     const place = testDb
       .prepare('SELECT source FROM places WHERE id = ?')
@@ -1364,14 +1369,14 @@ describe('DawarichSuggestionsService — the Atlas hand-off', () => {
     expect(place.source).toBe('dawarich');
   });
 
-  it('DAWARICH-SUG-032: a stay accepted onto a day broadcasts the assignment too', () => {
+  it('DAWARICH-SUG-032: a stay accepted onto a day broadcasts the assignment too', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const day = createDay(testDb, trip.id, { date: '2026-09-01' });
     const id = seedSuggestion({ userId: user.id, tripId: trip.id });
     assignmentsStub.createAssignment.mockReturnValue({ id: 4242, day_id: day.id });
 
-    svc.accept(user.id, id, { target: 'place', tripId: trip.id, dayId: day.id }, 'socket-9');
+    await svc.accept(user.id, id, { target: 'place', tripId: trip.id, dayId: day.id }, 'socket-9');
 
     expect(assignmentsStub.broadcast).toHaveBeenCalledWith(
       String(trip.id),
@@ -1381,14 +1386,14 @@ describe('DawarichSuggestionsService — the Atlas hand-off', () => {
     );
   });
 
-  it('DAWARICH-SUG-033: an assignment the domain refuses to create is not broadcast as one', () => {
+  it('DAWARICH-SUG-033: an assignment the domain refuses to create is not broadcast as one', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const day = createDay(testDb, trip.id, { date: '2026-09-01' });
     const id = seedSuggestion({ userId: user.id, tripId: trip.id });
     assignmentsStub.createAssignment.mockReturnValue(undefined);
 
-    svc.accept(user.id, id, { target: 'place', tripId: trip.id, dayId: day.id });
+    await svc.accept(user.id, id, { target: 'place', tripId: trip.id, dayId: day.id });
 
     expect(assignmentsStub.broadcast).not.toHaveBeenCalled();
   });
@@ -1401,11 +1406,11 @@ describe('DawarichSuggestionsService — the Atlas hand-off', () => {
   // points at a place that is gone and accepting it again is refused as a
   // duplicate.
 
-  it('DAWARICH-SUG-034: deleting the place an acceptance created puts the stay back into review', () => {
+  it('DAWARICH-SUG-034: deleting the place an acceptance created puts the stay back into review', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const id = seedSuggestion({ userId: user.id, tripId: trip.id });
-    const result = svc.accept(user.id, id, { target: 'place', tripId: trip.id });
+    const result = await svc.accept(user.id, id, { target: 'place', tripId: trip.id });
     expect(rowOf(id).state).toBe('accepted');
 
     testDb.prepare('DELETE FROM places WHERE id = ?').run(result.createdPlaceId);
@@ -1415,21 +1420,21 @@ describe('DawarichSuggestionsService — the Atlas hand-off', () => {
     expect(listed.target).toBeNull();
     expect(listed.acceptedPlaceId).toBeNull();
     // And it can be accepted again rather than answering 409 forever.
-    expect(() => svc.accept(user.id, id, { target: 'place', tripId: trip.id })).not.toThrow();
+    await expect(svc.accept(user.id, id, { target: 'place', tripId: trip.id })).resolves.not.toThrow();
   });
 
-  it('DAWARICH-SUG-035: an acceptance whose place still exists is left alone', () => {
+  it('DAWARICH-SUG-035: an acceptance whose place still exists is left alone', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const id = seedSuggestion({ userId: user.id, tripId: trip.id });
-    svc.accept(user.id, id, { target: 'place', tripId: trip.id });
+    await svc.accept(user.id, id, { target: 'place', tripId: trip.id });
 
     const listed = svc.list(user.id, {}).suggestions.find((s) => s.id === id)!;
     expect(listed.state).toBe('accepted');
     expect(listed.acceptedPlaceId).not.toBeNull();
   });
 
-  it('DAWARICH-SUG-036: a journal acceptance reopens once its entry is gone', () => {
+  it('DAWARICH-SUG-036: a journal acceptance reopens once its entry is gone', async () => {
     const { user } = createUser(testDb);
     const id = seedSuggestion({ userId: user.id, tripId: null });
     const journeyId = Number(
@@ -1448,7 +1453,7 @@ describe('DawarichSuggestionsService — the Atlas hand-off', () => {
     );
     journeyStub.createEntry.mockReturnValue({ id: entryId });
 
-    svc.accept(user.id, id, { target: 'journal', journalId: journeyId });
+    await svc.accept(user.id, id, { target: 'journal', journalId: journeyId });
     expect(svc.list(user.id, {}).suggestions.find((s) => s.id === id)!.state).toBe('accepted');
 
     testDb.prepare('DELETE FROM journey_entries WHERE id = ?').run(entryId);
@@ -1456,12 +1461,12 @@ describe('DawarichSuggestionsService — the Atlas hand-off', () => {
     expect(svc.list(user.id, {}).suggestions.find((s) => s.id === id)!.state).toBe('new');
   });
 
-  it('DAWARICH-SUG-037: reopening is scoped to the caller — another user\'s orphan stays put', () => {
+  it('DAWARICH-SUG-037: reopening is scoped to the caller — another user\'s orphan stays put', async () => {
     const { user: mine } = createUser(testDb);
     const { user: theirs } = createUser(testDb);
     const trip = createTrip(testDb, theirs.id);
     const id = seedSuggestion({ userId: theirs.id, tripId: trip.id });
-    const result = svc.accept(theirs.id, id, { target: 'place', tripId: trip.id });
+    const result = await svc.accept(theirs.id, id, { target: 'place', tripId: trip.id });
     testDb.prepare('DELETE FROM places WHERE id = ?').run(result.createdPlaceId);
 
     svc.list(mine.id, {});

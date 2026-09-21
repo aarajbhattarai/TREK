@@ -247,6 +247,7 @@ describe('Roadtrip MCP registration and search', () => {
       {} as never,
       {} as never,
       guards as never,
+      {} as never,
     );
     const input = {
       tripId: 1,
@@ -269,7 +270,7 @@ describe('Roadtrip MCP registration and search', () => {
     await mcp.importGpx(input, ctx);
     expect(places.importGpx).not.toHaveBeenCalled();
   });
-  it('hides addon tools when disabled and separates settings reads from writes', () => {
+  it('hides addon tools when disabled and separates settings reads from writes', async () => {
     const s = setup();
     const addons = { isAddonEnabled: vi.fn(() => true) };
     const registry = createTestRegistry(
@@ -285,12 +286,12 @@ describe('Roadtrip MCP registration and search', () => {
         names.push(name);
       },
     };
-    registry.attach(registrar as never, { ...ctx, scopes: ['trips:read'] });
+    await registry.attach(registrar as never, { ...ctx, scopes: ['trips:read'] });
     expect(names).toContain('get_roadtrip_settings');
     expect(names).not.toContain('update_roadtrip_settings');
     names.length = 0;
     addons.isAddonEnabled.mockReturnValue(false);
-    registry.attach(registrar as never, { ...ctx, scopes: null });
+    await registry.attach(registrar as never, { ...ctx, scopes: null });
     expect(names).toEqual([]);
   });
   it('returns corridor sources, truncation and matching brands without adding stops', async () => {

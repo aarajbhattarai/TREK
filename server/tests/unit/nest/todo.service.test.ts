@@ -48,8 +48,13 @@ import { DatabaseService } from '../../../src/nest/database/database.service';
 import { PermissionsService } from '../../../src/nest/permissions/permissions.service';
 import { TodoService } from '../../../src/nest/todo/todo.service';
 import { RealtimeService } from '../../../src/nest/realtime/realtime.service';
+import { createTestUnitOfWork } from '../../helpers/test-uow';
+import { UnitOfWork } from '../../../src/nest/database/unit-of-work';
 
-const svc = new TodoService(new DatabaseService(testDb), new PermissionsService(new DatabaseService(testDb)), new RealtimeService());
+let svc: TodoService;
+beforeAll(async () => {
+  svc = new TodoService(new DatabaseService(testDb), new PermissionsService(new DatabaseService(testDb), await createTestUnitOfWork(testDb)), new RealtimeService());
+});
 
 beforeAll(() => {
   createTables(testDb);
@@ -326,21 +331,21 @@ describe('getCategoryAssignees / updateCategoryAssignees', () => {
  * an HTTP guard, and it is tested directly here for the same reason.
  */
 describe('TodoService.canEdit', () => {
-  it('TODO-SVC-090 asks for packing_edit and flags a non-owner as shared', () => {
+  it('TODO-SVC-090 asks for packing_edit and flags a non-owner as shared', async () => {
     const checkPermission = vi.fn(() => true);
     const permissions = { checkPermission } as unknown as PermissionsService;
     const withStub = new TodoService(new DatabaseService(testDb), permissions, new RealtimeService());
     const trip = { id: 1, user_id: 1 } as never;
 
-    expect(withStub.canEdit(trip, { id: 1, role: 'user' } as never)).toBe(true);
+    expect(await withStub.canEdit(trip, { id: 1, role: 'user' } as never)).toBe(true);
     expect(checkPermission).toHaveBeenLastCalledWith('packing_edit', 'user', 1, 1, false);
 
-    withStub.canEdit(trip, { id: 2, role: 'user' } as never);
+    await withStub.canEdit(trip, { id: 2, role: 'user' } as never);
     // The shared flag is what the guard has to reproduce; getting it wrong would give a
     // member the owner's rights on somebody else's trip.
     expect(checkPermission).toHaveBeenLastCalledWith('packing_edit', 'user', 1, 2, true);
 
     checkPermission.mockReturnValue(false);
-    expect(withStub.canEdit(trip, { id: 2, role: 'user' } as never)).toBe(false);
+    expect(await withStub.canEdit(trip, { id: 2, role: 'user' } as never)).toBe(false);
   });
 });

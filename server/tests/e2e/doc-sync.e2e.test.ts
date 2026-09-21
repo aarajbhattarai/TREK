@@ -83,6 +83,9 @@ import { SynologyDriveDocumentProvider } from '../../src/nest/doc-sync/providers
 import { NextcloudDocumentProvider, OpencloudDocumentProvider } from '../../src/nest/doc-sync/providers/webdav.provider';
 import { TrekExceptionFilter } from '../../src/nest/common/trek-exception.filter';
 import { ZodValidationPipe } from '../../src/nest/common/zod-validation.pipe';
+import { createTestUnitOfWork } from '../helpers/test-uow';
+import { UnitOfWork } from '../../src/nest/database/unit-of-work';
+import { TestUnitOfWorkModule } from '../helpers/test-uow';
 
 /** A provider that answers plausibly but never opens a socket. */
 function fakeProvider(id: string) {
@@ -136,7 +139,7 @@ describe('Document sync e2e (real guards + real services + temp SQLite)', () => 
       [OpencloudDocumentProvider, 'opencloud'],
       [SynologyDriveDocumentProvider, 'synologydrive'],
     ] as const;
-    let builder = Test.createTestingModule({ imports: [DatabaseModule, DocSyncModule] })
+    let builder = Test.createTestingModule({ imports: [await TestUnitOfWorkModule.forRoot(db), DatabaseModule, DocSyncModule] })
       .overrideProvider(AddonsService)
       .useValue({ isAddonEnabled });
     const fakes = providers.map(([, id]) => fakeProvider(id));
@@ -401,7 +404,7 @@ describe('Document sync e2e (real guards + real services + temp SQLite)', () => 
 
       // The assistant reads the same bindings through its own tool.
       const ctx = { userId: memberId, scopes: null, isStaticToken: false } as McpContext;
-      const result = app.get(DocSyncMcp).getTripDocumentSync({ tripId }, ctx);
+      const result = await app.get(DocSyncMcp).getTripDocumentSync({ tripId }, ctx);
       const status = JSON.parse(result.content[0].text) as { links: Array<Record<string, unknown>> };
       expect(status.links[0]).toMatchObject({ providerId: 'paperless', providerName: 'Paperless-ngx' });
     } finally {

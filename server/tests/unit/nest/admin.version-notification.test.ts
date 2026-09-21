@@ -60,18 +60,28 @@ import { AdminService } from '../../../src/nest/admin/admin.service';
 import { makeNotificationsService, makeNotificationPreferencesService } from '../../helpers/notifications';
 import { EphemeralTokenService } from '../../../src/nest/auth/ephemeral-token.service';
 import { AllowedFileTypesService } from '../../../src/nest/files/allowed-file-types.service';
+import { createTestUnitOfWork } from '../../helpers/test-uow';
+import { UnitOfWork } from '../../../src/nest/database/unit-of-work';
 
 const dbs = new DatabaseService(testDb);
 const realtime = new RealtimeService();
-const permissions = new PermissionsService(dbs);
+
 const webauthn = new WebauthnConfigService(dbs);
-const userCleanup = new UserCleanupService(dbs, new BudgetService(dbs, permissions, new ExchangeRatesService(), realtime));
+
 // Positional and previously wrong: an AtlasService sat in the membership slot
 // and the mailer was missing entirely, so `auth` was built with its last four
 // collaborators shifted by one. Nothing failed, because the version-check path
 // below never reaches them.
-const auth = new AuthService(dbs, permissions, new TripMembershipService(dbs), webauthn, userCleanup, new MailerService(dbs), new EphemeralTokenService(), new AllowedFileTypesService(dbs));
-const svc = new AdminService(
+
+let permissions: PermissionsService;
+let userCleanup: UserCleanupService;
+let auth: AuthService;
+let svc: AdminService;
+beforeAll(async () => {
+  permissions = new PermissionsService(dbs, await createTestUnitOfWork(dbs.connection));
+  userCleanup = new UserCleanupService(dbs, new BudgetService(dbs, permissions, new ExchangeRatesService(), realtime));
+  auth = new AuthService(dbs, permissions, new TripMembershipService(dbs), webauthn, userCleanup, new MailerService(dbs), new EphemeralTokenService(), new AllowedFileTypesService(dbs), await createTestUnitOfWork(dbs.connection));
+  svc = new AdminService(
   dbs,
   new AddonsService(dbs),
   new PasskeyService(dbs, auth, webauthn),
@@ -81,6 +91,7 @@ const svc = new AdminService(
   userCleanup,
   realtime,
 );
+});
 const checkAndNotifyVersion = () => svc.checkAndNotifyVersion();
 
 // Helper: mock the GitHub releases/latest endpoint

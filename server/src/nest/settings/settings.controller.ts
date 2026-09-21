@@ -113,7 +113,7 @@ export class AdminDefaultUserSettingsController {
   }
 
   @Put()
-  update(@CurrentUser() user: User, @Body() body: AdminDefaultUserSettingsDto, @Req() req: Request) {
+  async update(@CurrentUser() user: User, @Body() body: AdminDefaultUserSettingsDto, @Req() req: Request) {
     try {
       // Deliberately no managed_keys in the response here: the route answers
       // with the raw defaults map the admin panel renders from, so an extra
@@ -124,7 +124,7 @@ export class AdminDefaultUserSettingsController {
         this.env.isManaged(),
       );
       this.settings.setAdminUserDefaults(allowed);
-      this.audit.writeAudit({
+      await this.audit.writeAudit({
         userId: user.id,
         action: 'admin.default_user_settings_update',
         ip: getClientIp(req),

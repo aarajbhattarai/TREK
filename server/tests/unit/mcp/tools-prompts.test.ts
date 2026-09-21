@@ -87,6 +87,8 @@ import type { TodoService } from '../../../src/nest/todo/todo.service';
 import type { CollabService } from '../../../src/nest/collab/collab.service';
 import { AddonsService } from '../../../src/nest/addons/addons.service';
 import { notificationsStub } from '../../helpers/notifications';
+import { createTestUnitOfWork } from '../../helpers/test-uow';
+import { UnitOfWork } from '../../../src/nest/database/unit-of-work';
 
 // The trip-summary prompt moved to the DI-discovered TripsMcp — its cases below
 // exercise it through a hand-built registry over a stub TripsService whose
@@ -99,8 +101,28 @@ const tripsStub = {
 const readModelStub = {
   getTripSummary: (tripId: number, viewerUserId?: number) => mockGetTripSummary(tripId, viewerUserId),
 } as never;
-const promptGuards = new McpToolGuardsService(new DatabaseService(testDb), new PermissionsService(new DatabaseService(testDb)), new RealtimeService());
-const tripsMcp = new TripsMcp(
+
+
+
+// The three remaining prompts moved to their domains' @McpController classes:
+// packing-list, budget-overview and the static-token notice. Built over the same
+// in-memory DB so the cases below keep asserting real rows.
+const promptDbs = () => new DatabaseService(testDb);
+const authStub = { isDemoUser: () => false } as unknown as AuthService;
+
+
+
+// The packing-list / budget-overview prompts live here since the trips.bridge
+// fold; the summary rides the same readModelStub the trip-summary prompt uses.
+let promptGuards: McpToolGuardsService;
+let tripsMcp: TripsMcp;
+let promptPackingService: PackingService;
+let packingMcp: PackingMcp;
+let budgetMcp: BudgetMcp;
+let tripPromptsMcp: TripPromptsMcp;
+beforeAll(async () => {
+  promptGuards = new McpToolGuardsService(new DatabaseService(testDb), new PermissionsService(new DatabaseService(testDb), await createTestUnitOfWork(testDb)), new RealtimeService());
+  tripsMcp = new TripsMcp(
   tripsStub,
   { listItems: () => [] } as unknown as TodoService,
   { listPolls: () => [], countMessages: () => 0 } as unknown as CollabService,
@@ -111,16 +133,10 @@ const tripsMcp = new TripsMcp(
   addonsStub,
   promptGuards,
 );
-
-// The three remaining prompts moved to their domains' @McpController classes:
-// packing-list, budget-overview and the static-token notice. Built over the same
-// in-memory DB so the cases below keep asserting real rows.
-const promptDbs = () => new DatabaseService(testDb);
-const authStub = { isDemoUser: () => false } as unknown as AuthService;
-const promptPackingService = new PackingService(promptDbs(), new PermissionsService(promptDbs()), new RealtimeService(), notificationsStub());
-const packingMcp = new PackingMcp(promptPackingService, authStub, addonsStub, promptGuards);
-const budgetMcp = new BudgetMcp(
-  new BudgetService(promptDbs(), new PermissionsService(promptDbs()), new ExchangeRatesService(), new RealtimeService()),
+  promptPackingService = new PackingService(promptDbs(), new PermissionsService(promptDbs(), await createTestUnitOfWork(promptDbs().connection)), new RealtimeService(), notificationsStub());
+  packingMcp = new PackingMcp(promptPackingService, authStub, addonsStub, promptGuards);
+  budgetMcp = new BudgetMcp(
+  new BudgetService(promptDbs(), new PermissionsService(promptDbs(), await createTestUnitOfWork(promptDbs().connection)), new ExchangeRatesService(), new RealtimeService()),
   new ExchangeRatesService(),
   promptDbs(),
   new RuntimeEnvService(),
@@ -128,9 +144,8 @@ const budgetMcp = new BudgetMcp(
   addonsStub,
   promptGuards,
 );
-// The packing-list / budget-overview prompts live here since the trips.bridge
-// fold; the summary rides the same readModelStub the trip-summary prompt uses.
-const tripPromptsMcp = new TripPromptsMcp(tripsStub, readModelStub, promptPackingService, addonsStub);
+  tripPromptsMcp = new TripPromptsMcp(tripsStub, readModelStub, promptPackingService, addonsStub);
+});
 const authMcp = new AuthMcp();
 
 beforeAll(() => {
@@ -193,7 +208,7 @@ async function buildServer(userId: number, opts: { isStaticToken?: boolean } = {
   const server = new McpServer({ name: 'trek-test', version: '1.0.0' });
   // Every prompt is DI-discovered now; attach them the way registerTools does in
   // production, including the isStaticToken flag the notice's `when` gate reads.
-  createTestRegistry([tripsMcp, tripPromptsMcp, packingMcp, budgetMcp, authMcp], { accessPolicy: trekMcpAccessPolicy, validateAccess: trekMcpValidateAccess })
+  await createTestRegistry([tripsMcp, tripPromptsMcp, packingMcp, budgetMcp, authMcp], { accessPolicy: trekMcpAccessPolicy, validateAccess: trekMcpValidateAccess })
     .attach(server, { userId, scopes: null, isStaticToken: opts.isStaticToken ?? false });
   const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
   const client = new Client({ name: 'test-client', version: '1.0.0' });

@@ -73,18 +73,18 @@ describe('AdminPackingTemplatesController', () => {
     expect(thrown(() => c.createCategory('1', { name: '' }))).toEqual({ status: 400, body: { error: 'name required' } });
   });
 
-  it('PACKTPL-004 create audits with the new template id', () => {
+  it('PACKTPL-004 create audits with the new template id', async () => {
     const { c, packing } = controller();
-    expect(c.create(user, { name: 'Beach' }, req)).toEqual({ template: { id: 9 } });
+    expect(await c.create(user, { name: 'Beach' }, req)).toEqual({ template: { id: 9 } });
     expect(packing.createPackingTemplate).toHaveBeenCalledWith('Beach', 1);
     expect(writeAudit).toHaveBeenCalledWith(
       expect.objectContaining({ action: 'admin.packing_template_create', resource: '9', details: { name: 'Beach' } }),
     );
   });
 
-  it('PACKTPL-005 delete audits the removed name and answers { success: true }', () => {
+  it('PACKTPL-005 delete audits the removed name and answers { success: true }', async () => {
     const { c } = controller();
-    expect(c.remove(user, '1', req)).toEqual({ success: true });
+    expect(await c.remove(user, '1', req)).toEqual({ success: true });
     expect(writeAudit).toHaveBeenCalledWith(
       expect.objectContaining({ action: 'admin.packing_template_delete', resource: '1', details: { name: 'Beach' } }),
     );

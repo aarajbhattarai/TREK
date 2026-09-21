@@ -114,6 +114,8 @@ import { AirtrailImportService } from '../../src/nest/integrations/airtrail-impo
 import { ReservationImportMcp } from '../../src/nest/reservation-import/reservation-import.mcp';
 import { HelpMcp } from '../../src/nest/help/help.mcp';
 import { AddonsMcp } from '../../src/nest/addons/addons.mcp';
+import { createTestUnitOfWork } from './test-uow';
+import { UnitOfWork } from '../../src/nest/database/unit-of-work';
 
 /**
  * Hand-wired counterpart of the boot-time discovery in McpRegistryService,
@@ -122,10 +124,10 @@ import { AddonsMcp } from '../../src/nest/addons/addons.mcp';
  * fan-out. Constructing against the `db` Proxy keeps per-file vi.mock's of
  * src/db/database flowing through (same pattern as todo.bridge.ts).
  */
-export function createMcpTestRegistry(): McpRegistry {
+export async function createMcpTestRegistry(): Promise<McpRegistry> {
   const dbService = new DatabaseService(db);
   const generalStorage = makeStorageFixture('').storage;
-  const permissionsService = new PermissionsService(dbService);
+  const permissionsService = new PermissionsService(dbService, await createTestUnitOfWork(dbService.connection));
   // Same argument list as auth.bridge.ts. AtlasService used to sit in third
   // place; when getTravelStats moved onto AtlasService itself the edge was
   // dropped and four collaborators took its place, but this call site kept the
@@ -143,7 +145,7 @@ export function createMcpTestRegistry(): McpRegistry {
     new UserCleanupService(dbService, budgetService),
     new MailerService(dbService),
     new EphemeralTokenService(),
-    new AllowedFileTypesService(dbService),
+    new AllowedFileTypesService(dbService), await createTestUnitOfWork(dbService.connection),
   );
   const queryHelpersService = new QueryHelpersService(dbService);
   const daysService = new DaysService(dbService, permissionsService, realtimeService, queryHelpersService);
@@ -163,7 +165,7 @@ export function createMcpTestRegistry(): McpRegistry {
   // One instance, four consumers: AssignmentsMcp, ReservationsMcp, PlacesMcp and
   // AccommodationsService, which writes the day stop a booked night implies.
   const assignmentsService = new AssignmentsService(dbService, permissionsService, realtimeService, queryHelpersService, journeyDomain);
-  const accommodationsService = new AccommodationsService(dbService, permissionsService, realtimeService, assignmentsService);
+  const accommodationsService = new AccommodationsService(dbService, permissionsService, realtimeService, assignmentsService, await createTestUnitOfWork(dbService.connection));
   // Built after it: deleting a place cancels the nights booked at it through this one.
   const placesService = new PlacesService(
     dbService, permissionsService, realtimeService, mapsService, queryHelpersService,
@@ -171,10 +173,10 @@ export function createMcpTestRegistry(): McpRegistry {
     placePhotoCache,
     journeyDomain,
     generalStorage,
-    accommodationsService,
+    accommodationsService, await createTestUnitOfWork(dbService.connection),
   );
   // Built after it: a hotel booking writes the stay's day stop through this one.
-  const reservationsService = new ReservationsService(dbService, permissionsService, budgetService, realtimeService, notificationsStub(), new ReservationsReadRepository(dbService), accommodationsService);
+  const reservationsService = new ReservationsService(dbService, permissionsService, budgetService, realtimeService, notificationsStub(), new ReservationsReadRepository(dbService), accommodationsService, await createTestUnitOfWork(dbService.connection));
   const membersService = new TripMembersService(dbService, budgetService, new UserCleanupService(dbService, budgetService), permissionsService, realtimeService, notificationsStub());
   const tripsService = new TripsService(
     dbService,
@@ -223,7 +225,7 @@ export function createMcpTestRegistry(): McpRegistry {
       new DaysMcp(daysService, authService, guards),
       new RoadtripMcp(new RoadtripService(dbService, realtimeService), dbService, guards, authService, addonsService),
       new FilesMcp(new FilesService(dbService, permissionsService, realtimeService, new EphemeralTokenService(), generalStorage), authService, guards),
-      new AccommodationsMcp(accommodationsService, dbService, placesService, authService, guards),
+      new AccommodationsMcp(accommodationsService, dbService, placesService, authService, guards, await createTestUnitOfWork(dbService.connection)),
       new AssignmentsMcp(assignmentsService, daysService, authService, guards),
       new CollabMcp(collabService, authService, addonsService, guards),
       new VacayMcp(new VacayService(dbService, realtimeService, notificationsStub()), authService, addonsService),
@@ -234,7 +236,7 @@ export function createMcpTestRegistry(): McpRegistry {
       new FeedsMcp(new FeedsService(dbService, calendarService), dbService, new RuntimeEnvService(), guards),
       new TripInviteMcp(new TripInviteService(dbService, permissionsService, new TripMembershipService(dbService)), dbService, new RuntimeEnvService(), guards, new AuditService(dbService)),
       new MapsMcp(mapsService),
-      new PlacesMcp(placesService, mapsService, dbService, authService, journeyDomain, assignmentsService, guards),
+      new PlacesMcp(placesService, mapsService, dbService, authService, journeyDomain, assignmentsService, guards, await createTestUnitOfWork(dbService.connection)),
       new CollectionsMcp(new CollectionsService(dbService, permissionsService, realtimeService, notificationsStub(), generalStorage), dbService, authService, addonsService),
       new TransitMcp(new TransitService(new GoogleTransitProvider(dbService)), daysService, reservationsService, dbService, authService, guards),
       new AtlasMcp(new AtlasService(dbService), addonsService, authService),

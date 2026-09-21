@@ -253,7 +253,7 @@ describe('the plugin channel source reaches the outside-container instance', () 
     setNotificationChannels(testDb, 'none');
     const delivered: Array<{ userId: number; title: string }> = [];
 
-    const runtime = createPluginRuntime(new DatabaseService(testDb));
+    const runtime = await createPluginRuntime(new DatabaseService(testDb));
     // Stand in for a booted supervisor: one plugin providing the hook, and an
     // invokeHook that records instead of forking a child.
     Object.defineProperty(runtime, 'supervisor', {

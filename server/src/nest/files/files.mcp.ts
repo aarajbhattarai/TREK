@@ -123,7 +123,7 @@ export class FilesMcp {
   ) {
     if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
     if (!this.files.verifyTripAccess(tripId, ctx.userId)) return noAccess();
-    if (!this.guards.hasTripPermission('file_edit', tripId, ctx.userId)) return permissionDenied();
+    if (!(await this.guards.hasTripPermission('file_edit', tripId, ctx.userId))) return permissionDenied();
     const current = this.files.getFileById(fileId, tripId);
     if (!current) return errorResult('File not found.');
     // Same enforcement as the REST route's assertLinkTargets, through the same
@@ -163,7 +163,7 @@ export class FilesMcp {
   ) {
     if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
     if (!this.files.verifyTripAccess(tripId, ctx.userId)) return noAccess();
-    if (!this.guards.hasTripPermission('file_edit', tripId, ctx.userId)) return permissionDenied();
+    if (!(await this.guards.hasTripPermission('file_edit', tripId, ctx.userId))) return permissionDenied();
     if (!this.files.getFileById(fileId, tripId)) return errorResult('File not found.');
     // The REST body allows all three to be absent and stores a link row pointing at
     // nothing. A tool caller that gets here with no target made a mistake, and saying
@@ -194,7 +194,7 @@ export class FilesMcp {
   ) {
     if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
     if (!this.files.verifyTripAccess(tripId, ctx.userId)) return noAccess();
-    if (!this.guards.hasTripPermission('file_edit', tripId, ctx.userId)) return permissionDenied();
+    if (!(await this.guards.hasTripPermission('file_edit', tripId, ctx.userId))) return permissionDenied();
     // deleteFileLink scopes by (linkId, fileId) only, so the file has to be resolved
     // against :tripId first, exactly as the REST route does it. Otherwise a member of
     // any trip could drop a link row belonging to a foreign trip's file.

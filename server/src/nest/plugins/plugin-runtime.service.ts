@@ -473,7 +473,7 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
     // blocked dependency never leaves the chain half-activated. Only the target
     // may consent-widen; dependencies are auto-enabled at their existing grant.
     const toCheck = rootInstalled ? order : [id];
-    for (const nodeId of toCheck) this.assertActivatable(nodeId, installed, nodeId === id ? consentWiden : false);
+    for (const nodeId of toCheck) await this.assertActivatable(nodeId, installed, nodeId === id ? consentWiden : false);
 
     // Enable dependencies first (skip ones already enabled), then the target.
     for (const nodeId of order) {
@@ -494,7 +494,7 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
    * plugin-API version compatibility → permission re-consent → required addon disabled →
    * missing/mismatched plugin dependency.
    */
-  private assertActivatable(id: string, installed: Map<string, PluginDepRow>, consentWiden: boolean): void {
+  private async assertActivatable(id: string, installed: Map<string, PluginDepRow>, consentWiden: boolean): Promise<void> {
     const row = this.db.prepare('SELECT permissions, granted_permissions, dependencies, trek_range, api_version FROM plugins WHERE id = ?').get(id) as
       | { permissions: string; granted_permissions: string; dependencies: string | null; trek_range: string | null; api_version: number | null }
       | undefined;
@@ -548,7 +548,7 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
     }
 
     const deps = parseDependencies(row.dependencies);
-    const disabledAddons = disabledRequiredAddons(deps, (id) => this.addons.isAddonEnabled(id));
+    const disabledAddons = await disabledRequiredAddons(deps, (id) => this.addons.isAddonEnabled(id));
     if (disabledAddons.length) {
       throw new PluginDependencyError(`plugin ${id} requires disabled addon(s): ${disabledAddons.join(', ')}`, 'ADDON_DISABLED', {
         addons: disabledAddons,
@@ -774,7 +774,7 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
     // reconstructible after an incident. This goes to the ADMIN audit log, not the
     // plugin capability log — that one answers "what have plugins done in my name?"
     // and is shown to end users; a lifecycle action by an admin does not belong there.
-    this.audit.writeAudit({
+    await this.audit.writeAudit({
       userId: actor.userId,
       action: 'admin.plugin_retrust',
       resource: id,

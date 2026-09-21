@@ -92,7 +92,7 @@ export class RealtimeGateway
    * unchanged — a missing token is refused before the store is touched, and the
    * password-version gate runs before the MFA one.
    */
-  handleConnection(socket: TrekWebSocket, request: IncomingMessage): void {
+  async handleConnection(socket: TrekWebSocket, request: IncomingMessage): Promise<void> {
     const url = new URL(request.url ?? '/', 'http://localhost');
     const token = url.searchParams.get('token');
     if (!token) {
@@ -150,10 +150,10 @@ export class RealtimeGateway
   }
 
   @SubscribeMessage('join')
-  handleJoin(
+  async handleJoin(
     @MessageBody() message: { tripId?: number | string },
     @ConnectedSocket() socket: TrekWebSocket,
-  ): { type: string; tripId?: number; message?: string } | undefined {
+  ): Promise<{ type: string; tripId?: number; message?: string } | undefined> {
     const user = userOf(socket);
     if (!user || !message?.tripId) return undefined;
 
@@ -174,10 +174,10 @@ export class RealtimeGateway
    */
 
   @SubscribeMessage('book:join')
-  handleBookJoin(
+  async handleBookJoin(
     @MessageBody() message: { journeyId?: number | string },
     @ConnectedSocket() socket: TrekWebSocket,
-  ): { type: string; journeyId?: number; message?: string } | undefined {
+  ): Promise<{ type: string; journeyId?: number; message?: string } | undefined> {
     const user = userOf(socket);
     if (!user || !message?.journeyId) return undefined;
 

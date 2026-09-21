@@ -156,9 +156,9 @@ describe('TripsController (parity with the legacy /api/trips route)', () => {
       expect(tripCreateRequestSchema.safeParse({ title: '' }).success).toBe(false);
     });
 
-    it('infers end_date from start_date (+6 days) and creates', () => {
+    it('infers end_date from start_date (+6 days) and creates', async () => {
       const create = vi.fn().mockReturnValue({ trip: { id: 9 }, tripId: 9, reminderDays: 0 });
-      tc(svc({ create } as Partial<TripsService>)).create(user, { title: 'T', start_date: '2026-07-01' }, req);
+      await tc(svc({ create } as Partial<TripsService>)).create(user, { title: 'T', start_date: '2026-07-01' }, req);
       expect(create).toHaveBeenCalledWith(1, expect.objectContaining({ start_date: '2026-07-01', end_date: '2026-07-07' }));
     });
 
@@ -168,21 +168,21 @@ describe('TripsController (parity with the legacy /api/trips route)', () => {
       });
     });
 
-    it('infers start_date from end_date (-6 days) and parses day_count', () => {
+    it('infers start_date from end_date (-6 days) and parses day_count', async () => {
       const create = vi.fn().mockReturnValue({ trip: { id: 9 }, tripId: 9, reminderDays: 0 });
-      tc(svc({ create } as Partial<TripsService>)).create(user, prePipeCreateBody({ title: 'T', end_date: '2026-07-07', day_count: '40' }), req);
+      await tc(svc({ create } as Partial<TripsService>)).create(user, prePipeCreateBody({ title: 'T', end_date: '2026-07-07', day_count: '40' }), req);
       expect(create).toHaveBeenCalledWith(1, expect.objectContaining({ start_date: '2026-07-01', end_date: '2026-07-07', day_count: 40 }));
     });
 
-    it('clamps a non-numeric day_count to the default of 7', () => {
+    it('clamps a non-numeric day_count to the default of 7', async () => {
       const create = vi.fn().mockReturnValue({ trip: { id: 9 }, tripId: 9, reminderDays: 0 });
-      tc(svc({ create } as Partial<TripsService>)).create(user, prePipeCreateBody({ title: 'T', day_count: 'abc' }), req);
+      await tc(svc({ create } as Partial<TripsService>)).create(user, prePipeCreateBody({ title: 'T', day_count: 'abc' }), req);
       expect(create).toHaveBeenCalledWith(1, expect.objectContaining({ day_count: 7 }));
     });
 
-    it('clamps day_count to MAX_TRIP_DAYS', () => {
+    it('clamps day_count to MAX_TRIP_DAYS', async () => {
       const create = vi.fn().mockReturnValue({ trip: { id: 9 }, tripId: 9, reminderDays: 0 });
-      tc(svc({ create } as Partial<TripsService>)).create(user, { title: 'T', day_count: MAX_TRIP_DAYS + 1 }, req);
+      await tc(svc({ create } as Partial<TripsService>)).create(user, { title: 'T', day_count: MAX_TRIP_DAYS + 1 }, req);
       expect(create).toHaveBeenCalledWith(1, expect.objectContaining({ day_count: MAX_TRIP_DAYS }));
     });
 
@@ -193,14 +193,14 @@ describe('TripsController (parity with the legacy /api/trips route)', () => {
       });
     });
 
-    it('re-throws an unknown error from create', () => {
+    it('re-throws an unknown error from create', async () => {
       const create = vi.fn().mockImplementation(() => { throw new Error('boom'); });
-      expect(() => tc(svc({ create } as Partial<TripsService>)).create(user, { title: 'T' }, req)).toThrow('boom');
+      await expect(tc(svc({ create } as Partial<TripsService>)).create(user, { title: 'T' }, req)).rejects.toThrow('boom');
     });
 
-    it('logs the reminder when reminderDays is set', () => {
+    it('logs the reminder when reminderDays is set', async () => {
       const create = vi.fn().mockReturnValue({ trip: { id: 9 }, tripId: 9, reminderDays: 3 });
-      expect(tc(svc({ create } as Partial<TripsService>)).create(user, { title: 'T' }, req)).toEqual({ trip: { id: 9 } });
+      expect(await tc(svc({ create } as Partial<TripsService>)).create(user, { title: 'T' }, req)).toEqual({ trip: { id: 9 } });
     });
   });
 
@@ -285,9 +285,9 @@ describe('TripsController (parity with the legacy /api/trips route)', () => {
       expect(thrown(() => tc(svc({ canAccessTrip: vi.fn().mockReturnValue(undefined) })).copy(user, '9', {}, req))).toEqual({ status: 404, body: { error: 'Trip not found' } });
     });
 
-    it('copies + returns the new trip', () => {
+    it('copies + returns the new trip', async () => {
       const s = svc({ copy: vi.fn().mockReturnValue(42), getCopiedTrip: vi.fn().mockReturnValue({ id: 42 }) } as Partial<TripsService>);
-      expect(tc(s).copy(user, '9', { title: 'Copy' }, req)).toEqual({ trip: { id: 42 } });
+      expect(await tc(s).copy(user, '9', { title: 'Copy' }, req)).toEqual({ trip: { id: 42 } });
     });
   });
 
@@ -304,26 +304,26 @@ describe('TripsController (parity with the legacy /api/trips route)', () => {
       expect(s.remove).not.toHaveBeenCalled();
     });
 
-    it('still lets an admin delete a trip they are not a member of', () => {
+    it('still lets an admin delete a trip they are not a member of', async () => {
       const admin = { id: 1, role: 'admin', email: 'a@example.test' } as User;
       const remove = vi.fn().mockReturnValue({ tripId: 9, title: 'T', isAdminDelete: true, ownerEmail: 'owner@x.y' });
       const s = svc({ getOwner: vi.fn().mockReturnValue({ user_id: 2 }), canAccessTrip: vi.fn().mockReturnValue(null), remove, broadcast: vi.fn() } as Partial<TripsService>);
-      expect(tc(s).remove(admin, '9', req)).toEqual({ success: true });
+      expect(await tc(s).remove(admin, '9', req)).toEqual({ success: true });
       expect(remove).toHaveBeenCalledWith('9', 1, 'admin');
     });
 
-    it('deletes, audits and broadcasts', () => {
+    it('deletes, audits and broadcasts', async () => {
       const remove = vi.fn().mockReturnValue({ tripId: 9, title: 'T', isAdminDelete: false }); const broadcast = vi.fn();
       const s = svc({ getOwner: vi.fn().mockReturnValue({ user_id: 1 }), remove, broadcast } as Partial<TripsService>);
-      expect(tc(s).remove(user, '9', req, 'sock')).toEqual({ success: true });
+      expect(await tc(s).remove(user, '9', req, 'sock')).toEqual({ success: true });
       expect(broadcast).toHaveBeenCalledWith('9', 'trip:deleted', { id: 9 }, 'sock');
     });
 
-    it('admin delete logs the owner', () => {
+    it('admin delete logs the owner', async () => {
       const remove = vi.fn().mockReturnValue({ tripId: 9, title: 'T', isAdminDelete: true, ownerEmail: 'owner@x.y' });
       const broadcast = vi.fn();
       const s = svc({ getOwner: vi.fn().mockReturnValue({ user_id: 2 }), remove, broadcast } as Partial<TripsService>);
-      expect(tc(s).remove(user, '9', req)).toEqual({ success: true });
+      expect(await tc(s).remove(user, '9', req)).toEqual({ success: true });
       expect(broadcast).toHaveBeenCalledWith('9', 'trip:deleted', { id: 9 }, undefined);
     });
   });

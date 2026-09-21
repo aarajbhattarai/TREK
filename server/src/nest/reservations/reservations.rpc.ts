@@ -30,16 +30,16 @@ export class ReservationsRpc {
   ) {}
 
   @PluginMethod('reservations.create', { permission: 'db:write:reservations' })
-  create(params: Record<string, unknown>, ctx: PluginRpcContext): unknown {
+  async create(params: Record<string, unknown>, ctx: PluginRpcContext): Promise<unknown> {
     const tripId = num(params.tripId, 'tripId');
     const actor = this.guards.requireActor(ctx, 'reservation');
     const parsed = reservationCreateRequestSchema.safeParse(params.input);
     if (!parsed.success) throw new BadParams(`invalid reservation: ${schemaMessage(parsed.error)}`);
     const input = parsed.data as Record<string, unknown>;
     this.requireValidEndpoints(input.endpoints);
-    this.guards.requireTripEdit(tripId, actor, RESERVATION_EDIT_ACTION);
+    await this.guards.requireTripEdit(tripId, actor, RESERVATION_EDIT_ACTION);
     this.requireOwnReferences(tripId, input);
-    const { reservation, accommodationCreated } = this.reservations.create(String(tripId), input as never);
+    const { reservation, accommodationCreated } = await this.reservations.create(String(tripId), input as never);
     if (accommodationCreated) this.realtime.broadcast(tripId, 'accommodation:created', {}, undefined);
     const i = input as { title?: string; type?: string; create_budget_entry?: unknown };
     this.reservations.syncBudgetOnCreate(String(tripId), reservation.id, i.title ?? '', i.type, i.create_budget_entry as never, undefined);
@@ -49,7 +49,7 @@ export class ReservationsRpc {
   }
 
   @PluginMethod('reservations.update', { permission: 'db:write:reservations' })
-  update(params: Record<string, unknown>, ctx: PluginRpcContext): unknown {
+  async update(params: Record<string, unknown>, ctx: PluginRpcContext): Promise<unknown> {
     const tripId = num(params.tripId, 'tripId');
     const reservationId = num(params.reservationId, 'reservationId');
     const actor = this.guards.requireActor(ctx, 'reservation');
@@ -57,11 +57,11 @@ export class ReservationsRpc {
     if (!parsed.success) throw new BadParams(`invalid reservation: ${schemaMessage(parsed.error)}`);
     const input = parsed.data as Record<string, unknown>;
     this.requireValidEndpoints(input.endpoints);
-    this.guards.requireTripEdit(tripId, actor, RESERVATION_EDIT_ACTION);
+    await this.guards.requireTripEdit(tripId, actor, RESERVATION_EDIT_ACTION);
     const current = this.reservations.getReservation(String(reservationId), String(tripId));
     if (!current) throw new ForbiddenResource(`no reservation ${reservationId} on trip ${tripId}`);
     this.requireOwnReferences(tripId, input);
-    const { reservation, accommodationChanged } = this.reservations.update(String(reservationId), String(tripId), input as never, current as never);
+    const { reservation, accommodationChanged } = await this.reservations.update(String(reservationId), String(tripId), input as never, current as never);
     if (accommodationChanged) this.realtime.broadcast(tripId, 'accommodation:updated', {}, undefined);
     const cur = current as { title: string; type?: string };
     const i = input as { title?: string; type?: string; create_budget_entry?: unknown };
@@ -72,12 +72,12 @@ export class ReservationsRpc {
   }
 
   @PluginMethod('reservations.delete', { permission: 'db:write:reservations' })
-  delete(params: Record<string, unknown>, ctx: PluginRpcContext): unknown {
+  async delete(params: Record<string, unknown>, ctx: PluginRpcContext): Promise<unknown> {
     const tripId = num(params.tripId, 'tripId');
     const reservationId = num(params.reservationId, 'reservationId');
     const actor = this.guards.requireActor(ctx, 'reservation');
-    this.guards.requireTripEdit(tripId, actor, RESERVATION_EDIT_ACTION);
-    const { deleted, accommodationDeleted, deletedBudgetItemId } = this.reservations.remove(String(reservationId), String(tripId));
+    await this.guards.requireTripEdit(tripId, actor, RESERVATION_EDIT_ACTION);
+    const { deleted, accommodationDeleted, deletedBudgetItemId } = await this.reservations.remove(String(reservationId), String(tripId));
     if (!deleted) throw new ForbiddenResource(`no reservation ${reservationId} on trip ${tripId}`);
     if (accommodationDeleted) this.realtime.broadcast(tripId, 'accommodation:deleted', { accommodationId: deleted.accommodation_id }, undefined);
     if (deletedBudgetItemId) this.realtime.broadcast(tripId, 'budget:deleted', { itemId: deletedBudgetItemId }, undefined);

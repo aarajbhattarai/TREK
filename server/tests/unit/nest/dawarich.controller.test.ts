@@ -168,12 +168,12 @@ describe('DawarichController connection routes', () => {
       .toEqual({ success: true, warning: 'resolves to a private IP' });
   });
 
-  it('DAWARICH-CTRL-016: DELETE settings disconnects, forgets the track and answers 200 { success: true }', () => {
+  it('DAWARICH-CTRL-016: DELETE settings disconnects, forgets the track and answers 200 { success: true }', async () => {
     const disconnect = vi.fn();
     const forget = vi.fn();
     const c = makeController({ dawarich: { disconnect }, tracks: { forget } });
 
-    expect(c.disconnect(user, makeReq({}, '198.51.100.4'))).toEqual({ success: true });
+    expect(await c.disconnect(user, makeReq({}, '198.51.100.4'))).toEqual({ success: true });
     expect(disconnect).toHaveBeenCalledWith(7, '198.51.100.4');
     expect(forget).toHaveBeenCalledWith(7);
   });
@@ -310,22 +310,22 @@ describe('DawarichController suggestion routes', () => {
       expect(r).toEqual({ status: 404, body: { error: 'Suggestion not found' } }));
   });
 
-  it('DAWARICH-CTRL-042: POST accept forwards X-Socket-Id, so the broadcast does not echo into the originating tab', () => {
+  it('DAWARICH-CTRL-042: POST accept forwards X-Socket-Id, so the broadcast does not echo into the originating tab', async () => {
     const accept = vi.fn().mockReturnValue({ createdPlaceId: 5 });
     const body = { target: 'place' as const, tripId: 2 };
-    makeController({ suggestions: { accept } }).acceptSuggestion(user, '9', body, makeReq({ 'x-socket-id': 'sock-abc' }));
+    await makeController({ suggestions: { accept } }).acceptSuggestion(user, '9', body, makeReq({ 'x-socket-id': 'sock-abc' }));
     expect(accept).toHaveBeenCalledWith(7, 9, body, 'sock-abc');
   });
 
-  it('DAWARICH-CTRL-043: no X-Socket-Id means undefined, not an empty string a broadcaster would compare against', () => {
+  it('DAWARICH-CTRL-043: no X-Socket-Id means undefined, not an empty string a broadcaster would compare against', async () => {
     const accept = vi.fn().mockReturnValue({});
-    makeController({ suggestions: { accept } }).acceptSuggestion(user, '9', { target: 'journal' }, makeReq());
+    await makeController({ suggestions: { accept } }).acceptSuggestion(user, '9', { target: 'journal' }, makeReq());
     expect(accept.mock.calls[0][3]).toBeUndefined();
   });
 
-  it('DAWARICH-CTRL-044: a blank X-Socket-Id counts as absent', () => {
+  it('DAWARICH-CTRL-044: a blank X-Socket-Id counts as absent', async () => {
     const accept = vi.fn().mockReturnValue({});
-    makeController({ suggestions: { accept } }).acceptSuggestion(user, '9', { target: 'journal' }, makeReq({ 'x-socket-id': '' }));
+    await makeController({ suggestions: { accept } }).acceptSuggestion(user, '9', { target: 'journal' }, makeReq({ 'x-socket-id': '' }));
     expect(accept.mock.calls[0][3]).toBeUndefined();
   });
 

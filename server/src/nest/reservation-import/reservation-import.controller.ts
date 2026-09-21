@@ -94,13 +94,13 @@ export class ReservationImportController {
 
 
   /** Shared validation for both the sync and async import endpoints; returns the parsed mode. */
-  private validateImport(tripId: string, user: User, files: Express.Multer.File[] | undefined, rawMode?: string): BookingImportMode {
+  private async validateImport(tripId: string, user: User, files: Express.Multer.File[] | undefined, rawMode?: string): Promise<BookingImportMode> {
 
     const modeResult = bookingImportModeSchema.safeParse(rawMode ?? 'no-ai');
     if (!modeResult.success) throw new HttpException({ error: 'Invalid mode' }, 400);
     const mode = modeResult.data;
 
-    if (mode === 'force-ai' && !this.bookingImport.aiAvailable(user.id)) {
+    if (mode === 'force-ai' && !(await this.bookingImport.aiAvailable(user.id))) {
       throw new HttpException({ error: 'AI parsing is not configured' }, 409);
     }
     if (mode === 'no-ai' && !this.bookingImport.isAvailable()) {
@@ -130,7 +130,7 @@ export class ReservationImportController {
     @UploadedFiles() files: Express.Multer.File[] | undefined,
     @Body() body: BookingImportPreviewDto,
   ): Promise<BookingImportPreviewResponse> {
-    const mode = this.validateImport(tripId, user, files, body?.mode);
+    const mode = await this.validateImport(tripId, user, files, body?.mode);
     return this.bookingImport.preview(files!, mode, user.id);
   }
 
@@ -150,7 +150,7 @@ export class ReservationImportController {
     @UploadedFiles() files: Express.Multer.File[] | undefined,
     @Body() body: BookingImportPreviewDto,
   ): Promise<{ jobId: string }> {
-    const mode = this.validateImport(tripId, user, files, body?.mode);
+    const mode = await this.validateImport(tripId, user, files, body?.mode);
     const jobId = this.importJobs.start(tripId, files!, mode, user.id);
     return { jobId };
   }

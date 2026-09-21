@@ -25,7 +25,7 @@ interface DayStopRow {
  * vias; both stay null when the save left every stop where it was.
  */
 export interface AssignmentTimeUpdate {
-  assignment: ReturnType<AssignmentsService['getAssignmentWithPlace']>;
+  assignment: Awaited<ReturnType<AssignmentsService['getAssignmentWithPlace']>>;
   reordered: { dayId: number; orderedIds: number[] } | null;
   vias: { dayId: number; vias: RoadtripVia[] } | null;
 }
@@ -70,7 +70,7 @@ export class AssignmentsService {
     return this.dbs.canAccessTrip(Number(tripId), userId);
   }
 
-  canEdit(trip: Trip, user: User): boolean {
+  async canEdit(trip: Trip, user: User): Promise<boolean> {
     return this.permissions.checkPermission('day_edit', user.role, trip.user_id, user.id, trip.user_id !== user.id);
   }
 
@@ -92,7 +92,7 @@ export class AssignmentsService {
    * Public because the accommodation mirror moves a stop in place and has to hand
    * the moved row back in exactly this shape.
    */
-  getAssignmentWithPlace(assignmentId: number | bigint) {
+  async getAssignmentWithPlace(assignmentId: number | bigint) {
     const a = this.dbs.get<AssignmentRow>(`
       SELECT da.*, p.id as place_id, p.name as place_name, p.description as place_description,
         p.lat, p.lng, p.address, p.category_id, p.price, p.currency as place_currency,
@@ -111,7 +111,7 @@ export class AssignmentsService {
 
     // Same compact tag projection as listDayAssignments, so an assignment has
     // one wire shape regardless of which read path produced it.
-    const tags = this.queryHelpers.loadTagsByPlaceIds([a.place_id], { compact: true })[a.place_id] || [];
+    const tags = (await this.queryHelpers.loadTagsByPlaceIds([a.place_id], { compact: true }))[a.place_id] || [];
 
     const participants = this.dbs.all<Participant>(`
       SELECT ap.user_id, COALESCE(u.display_name, u.username) AS username, u.avatar
@@ -128,7 +128,7 @@ export class AssignmentsService {
     return formatAssignmentWithPlace(a, tags, participants);
   }
 
-  listDayAssignments(dayId: string | number) {
+  async listDayAssignments(dayId: string | number) {
     const assignments = this.dbs.all<AssignmentRow>(`
       SELECT da.*, p.id as place_id, p.name as place_name, p.description as place_description,
         p.lat, p.lng, p.address, p.category_id, p.price, p.currency as place_currency,
@@ -145,10 +145,10 @@ export class AssignmentsService {
     `, dayId);
 
     const placeIds = [...new Set(assignments.map(a => a.place_id))];
-    const tagsByPlaceId = this.queryHelpers.loadTagsByPlaceIds(placeIds, { compact: true });
+    const tagsByPlaceId = await this.queryHelpers.loadTagsByPlaceIds(placeIds, { compact: true });
 
     const assignmentIds = assignments.map(a => a.id);
-    const participantsByAssignment = this.queryHelpers.loadParticipantsByAssignmentIds(assignmentIds);
+    const participantsByAssignment = await this.queryHelpers.loadParticipantsByAssignmentIds(assignmentIds);
 
     return assignments.map(a => {
       return formatAssignmentWithPlace(a, tagsByPlaceId[a.place_id] || [], participantsByAssignment[a.id] || []);
@@ -219,7 +219,7 @@ export class AssignmentsService {
     `, id, tripId);
   }
 
-  moveAssignment(id: string | number, newDayId: unknown, orderIndex: number | null | undefined) {
+  async moveAssignment(id: string | number, newDayId: unknown, orderIndex: number | null | undefined) {
     // The source day comes from the row, not the caller — callers can't lie
     // about (or race on) where the assignment was.
     const oldDayId = this.dbs.transaction(() => {
@@ -227,7 +227,7 @@ export class AssignmentsService {
       this.dbs.run('UPDATE day_assignments SET day_id = ?, order_index = ? WHERE id = ?', newDayId, orderIndex ?? 0, id);
       return row?.day_id;
     });
-    const updated = this.getAssignmentWithPlace(Number(id));
+    const updated = await this.getAssignmentWithPlace(Number(id));
     return { assignment: updated, oldDayId };
   }
 
@@ -253,7 +253,7 @@ export class AssignmentsService {
    * such a day the order stored and the order drawn can differ. The old sort did the
    * same.
    */
-  updateTime(id: string | number, placeTime: unknown, endTime: unknown): AssignmentTimeUpdate {
+  async updateTime(id: string | number, placeTime: unknown, endTime: unknown): Promise<AssignmentTimeUpdate> {
     const sorted = this.dbs.transaction(() => {
       const stored = this.dbs.get<{ day_id: number; start: string | null }>(`
         SELECT da.day_id, COALESCE(da.assignment_time, p.place_time, acc.check_in) AS start
@@ -280,7 +280,7 @@ export class AssignmentsService {
     });
 
     return {
-      assignment: this.getAssignmentWithPlace(Number(id)),
+      assignment: await this.getAssignmentWithPlace(Number(id)),
       reordered: sorted ? { dayId: sorted.dayId, orderedIds: sorted.orderedIds } : null,
       vias: sorted?.viasMoved ? { dayId: sorted.dayId, vias: this.listDayVias(sorted.dayId) } : null,
     };

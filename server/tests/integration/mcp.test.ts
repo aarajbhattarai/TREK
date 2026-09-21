@@ -45,8 +45,8 @@ const oauthDbs = new DatabaseService(testDb);
 const oauthSvc = new OauthService(oauthDbs, new AddonsService(oauthDbs), new AuditService(oauthDbs));
 
 /** Mint a trekoa_ access token for the user via a fresh OAuth client. */
-function mintOauthToken(userId: number, audience: string | null, scopes: string[] = ['trips:read']): { accessToken: string; clientId: string } {
-  const created = oauthSvc.createOAuthClient(userId, 'MCP Test Client', ['https://client.example.com/cb'], scopes);
+async function mintOauthToken(userId: number, audience: string | null, scopes: string[] = ['trips:read']): Promise<{ accessToken: string; clientId: string }> {
+  const created = await oauthSvc.createOAuthClient(userId, 'MCP Test Client', ['https://client.example.com/cb'], scopes);
   const clientId = (created.client as { client_id: string }).client_id;
   const tokens = oauthSvc.issueTokens(clientId, userId, scopes, null, audience);
   return { accessToken: tokens.access_token, clientId };
@@ -399,7 +399,7 @@ describe('MCP transport parity pins (Nest-hosted /mcp)', () => {
 
   it('MCP-P04 — a trekoa_ token with the wrong audience is rejected with a challenge', async () => {
     const { user } = createUser(testDb);
-    const { accessToken } = mintOauthToken(user.id, 'https://other.example.com/api');
+    const { accessToken } = await mintOauthToken(user.id, 'https://other.example.com/api');
     const res = await request(app)
       .post('/mcp')
       .set('Authorization', `Bearer ${accessToken}`)
@@ -410,7 +410,7 @@ describe('MCP transport parity pins (Nest-hosted /mcp)', () => {
 
   it('MCP-P05 — a trekoa_ token with the MCP audience authenticates', async () => {
     const { user } = createUser(testDb);
-    const { accessToken } = mintOauthToken(user.id, MCP_AUDIENCE);
+    const { accessToken } = await mintOauthToken(user.id, MCP_AUDIENCE);
     const res = await request(app)
       .post('/mcp')
       .set('Authorization', `Bearer ${accessToken}`)
@@ -449,7 +449,7 @@ describe('MCP transport parity pins (Nest-hosted /mcp)', () => {
   it('MCP-P08 — a session created via JWT rejects resumption by an OAuth client', async () => {
     const { user } = createUser(testDb);
     const sessionId = await createSession(generateToken(user.id));
-    const { accessToken } = mintOauthToken(user.id, MCP_AUDIENCE);
+    const { accessToken } = await mintOauthToken(user.id, MCP_AUDIENCE);
 
     const res = await request(app)
       .post('/mcp')
@@ -463,7 +463,7 @@ describe('MCP transport parity pins (Nest-hosted /mcp)', () => {
 
   it('MCP-P08b — a narrower token cannot resume a session that was created with wider scopes', async () => {
     const { user } = createUser(testDb);
-    const created = oauthSvc.createOAuthClient(user.id, 'Scope Test Client', ['https://client.example.com/cb'], ['trips:read', 'trips:write']);
+    const created = await oauthSvc.createOAuthClient(user.id, 'Scope Test Client', ['https://client.example.com/cb'], ['trips:read', 'trips:write']);
     const clientId = (created.client as { client_id: string }).client_id;
     const wide = oauthSvc.issueTokens(clientId, user.id, ['trips:read', 'trips:write'], null, MCP_AUDIENCE);
     const narrow = oauthSvc.issueTokens(clientId, user.id, ['trips:read'], null, MCP_AUDIENCE);
@@ -483,7 +483,7 @@ describe('MCP transport parity pins (Nest-hosted /mcp)', () => {
 
   it('MCP-P08c — the same scopes in a different order still resume', async () => {
     const { user } = createUser(testDb);
-    const created = oauthSvc.createOAuthClient(user.id, 'Scope Order Client', ['https://client.example.com/cb'], ['trips:read', 'trips:write']);
+    const created = await oauthSvc.createOAuthClient(user.id, 'Scope Order Client', ['https://client.example.com/cb'], ['trips:read', 'trips:write']);
     const clientId = (created.client as { client_id: string }).client_id;
     const first = oauthSvc.issueTokens(clientId, user.id, ['trips:read', 'trips:write'], null, MCP_AUDIENCE);
     const reordered = oauthSvc.issueTokens(clientId, user.id, ['trips:write', 'trips:read'], null, MCP_AUDIENCE);
@@ -525,7 +525,7 @@ describe('MCP transport parity pins (Nest-hosted /mcp)', () => {
 
   it('MCP-P13 — an authorized tools/call writes exactly one mcp.tool_call audit row', async () => {
     const { user } = createUser(testDb);
-    const { accessToken, clientId } = mintOauthToken(user.id, MCP_AUDIENCE);
+    const { accessToken, clientId } = await mintOauthToken(user.id, MCP_AUDIENCE);
     const sessionId = await createSession(accessToken);
     testDb.prepare("DELETE FROM audit_log WHERE action = 'mcp.tool_call'").run();
 
@@ -643,7 +643,7 @@ describe('MCP transport parity pins (Nest-hosted /mcp)', () => {
   it('MCP-P17 — a contributed tool call writes an mcp.tool_call audit row like any other', async () => {
     const { user } = createUser(testDb);
     setPluginMcpToolSource(() => [dynamicTool('plugin_demo_echo', 'contributed')]);
-    const { accessToken, clientId } = mintOauthToken(user.id, MCP_AUDIENCE, ['trips:read', 'plugins:use']);
+    const { accessToken, clientId } = await mintOauthToken(user.id, MCP_AUDIENCE, ['trips:read', 'plugins:use']);
     const sessionId = await createSession(accessToken);
     testDb.prepare("DELETE FROM audit_log WHERE action = 'mcp.tool_call'").run();
 
@@ -671,7 +671,7 @@ describe('MCP transport parity pins (Nest-hosted /mcp)', () => {
     setPluginMcpToolSource(() => [dynamicTool('plugin_demo_echo', 'contributed')]);
     // trips:read only. The declarative access marker on every contributed tool
     // resolves through the same policy as a built-in's.
-    const { accessToken } = mintOauthToken(user.id, MCP_AUDIENCE, ['trips:read']);
+    const { accessToken } = await mintOauthToken(user.id, MCP_AUDIENCE, ['trips:read']);
     const sessionId = await createSession(accessToken);
 
     const list = await request(app)

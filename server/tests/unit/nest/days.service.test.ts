@@ -64,9 +64,17 @@ import { RealtimeService } from '../../../src/nest/realtime/realtime.service';
 import { QueryHelpersService } from '../../../src/nest/query-helpers/query-helpers.service';
 import { makeAccommodationsService } from '../../helpers/accommodations-service';
 import type { Day } from '../../../src/types';
+import { createTestUnitOfWork } from '../../helpers/test-uow';
+import { UnitOfWork } from '../../../src/nest/database/unit-of-work';
 
-const svc = new DaysService(new DatabaseService(testDb), new PermissionsService(new DatabaseService(testDb)), new RealtimeService(), new QueryHelpersService(new DatabaseService(testDb)));
-const accommodations = makeAccommodationsService(testDb);
+let svc: DaysService;
+beforeAll(async () => {
+  svc = new DaysService(new DatabaseService(testDb), new PermissionsService(new DatabaseService(testDb), await createTestUnitOfWork(testDb)), new RealtimeService(), new QueryHelpersService(new DatabaseService(testDb)));
+});
+let accommodations: Awaited<ReturnType<typeof makeAccommodationsService>>;
+beforeAll(async () => {
+  accommodations = await makeAccommodationsService(testDb);
+});
 
 beforeAll(() => {
   createTables(testDb);
@@ -103,28 +111,28 @@ describe('verifyTripAccess', () => {
 // ── getAssignmentsForDay ──────────────────────────────────────────────────────
 
 describe('getAssignmentsForDay', () => {
-  it('DAY-SVC-003 — returns empty array when day has no assignments', () => {
+  it('DAY-SVC-003 — returns empty array when day has no assignments', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const day = createDay(testDb, trip.id) as any;
-    expect(svc.getAssignmentsForDay(day.id)).toEqual([]);
+    expect(await svc.getAssignmentsForDay(day.id)).toEqual([]);
   });
 
-  it('DAY-SVC-004 — returns assignments with nested place object', () => {
+  it('DAY-SVC-004 — returns assignments with nested place object', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const day = createDay(testDb, trip.id) as any;
     const place = createPlace(testDb, trip.id, { name: 'Eiffel Tower', lat: 48.8, lng: 2.3 }) as any;
     createDayAssignment(testDb, day.id, place.id, { order_index: 0 });
 
-    const assignments = svc.getAssignmentsForDay(day.id) as any[];
+    const assignments = (await svc.getAssignmentsForDay(day.id)) as any[];
     expect(assignments).toHaveLength(1);
     expect(assignments[0].place).toBeDefined();
     expect(assignments[0].place.name).toBe('Eiffel Tower');
     expect(assignments[0].place.lat).toBe(48.8);
   });
 
-  it('DAY-SVC-029 — a road-trip stop keeps its kind on both loaders', () => {
+  it('DAY-SVC-029 — a road-trip stop keeps its kind on both loaders', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const day = createDay(testDb, trip.id) as any;
@@ -135,25 +143,25 @@ describe('getAssignmentsForDay', () => {
     // Both queries build the same place shape by hand, and only one of them used to
     // fetch the column — so the rail drew a petrol station as an ordinary numbered stop
     // while the database had known it was fuel all along.
-    const single = svc.getAssignmentsForDay(day.id) as any[];
+    const single = (await svc.getAssignmentsForDay(day.id)) as any[];
     expect(single[0].place.stop_type).toBe('fuel');
 
-    const listed = svc.list(trip.id) as any;
+    const listed = (await svc.list(trip.id)) as any;
     expect(listed.days[0].assignments[0].place.stop_type).toBe('fuel');
   });
 
-  it('DAY-SVC-005 — assignment includes tags array (empty when place has none)', () => {
+  it('DAY-SVC-005 — assignment includes tags array (empty when place has none)', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const day = createDay(testDb, trip.id) as any;
     const place = createPlace(testDb, trip.id, { name: 'No Tags' }) as any;
     createDayAssignment(testDb, day.id, place.id);
 
-    const assignments = svc.getAssignmentsForDay(day.id) as any[];
+    const assignments = (await svc.getAssignmentsForDay(day.id)) as any[];
     expect(Array.isArray(assignments[0].place.tags)).toBe(true);
   });
 
-  it('DAY-SVC-006 — assignments are ordered by order_index ASC', () => {
+  it('DAY-SVC-006 — assignments are ordered by order_index ASC', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const day = createDay(testDb, trip.id) as any;
@@ -162,7 +170,7 @@ describe('getAssignmentsForDay', () => {
     createDayAssignment(testDb, day.id, p1.id, { order_index: 2 });
     createDayAssignment(testDb, day.id, p2.id, { order_index: 1 });
 
-    const assignments = svc.getAssignmentsForDay(day.id) as any[];
+    const assignments = (await svc.getAssignmentsForDay(day.id)) as any[];
     expect(assignments[0].place.name).toBe('First');
     expect(assignments[1].place.name).toBe('Second');
   });
@@ -171,18 +179,18 @@ describe('getAssignmentsForDay', () => {
 // ── list ──────────────────────────────────────────────────────────────────────
 
 describe('list', () => {
-  it('DAY-SVC-007 — returns { days: [] } for trip with no days', () => {
+  it('DAY-SVC-007 — returns { days: [] } for trip with no days', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
-    const result = svc.list(trip.id) as any;
+    const result = (await svc.list(trip.id)) as any;
     expect(result.days).toEqual([]);
   });
 
-  it('DAY-SVC-008 — returns days with assignments nested', () => {
+  it('DAY-SVC-008 — returns days with assignments nested', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     createDay(testDb, trip.id);
-    const result = svc.list(trip.id) as any;
+    const result = (await svc.list(trip.id)) as any;
     expect(result.days).toHaveLength(1);
     expect(Array.isArray(result.days[0].assignments)).toBe(true);
   });
@@ -229,20 +237,20 @@ describe('getDay', () => {
 });
 
 describe('update', () => {
-  it('DAY-SVC-013 — updates notes and returns updated day with assignments', () => {
+  it('DAY-SVC-013 — updates notes and returns updated day with assignments', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const day = createDay(testDb, trip.id) as any;
-    const updated = svc.update(day.id, day, { notes: 'Updated notes' }) as any;
+    const updated = (await svc.update(day.id, day, { notes: 'Updated notes' })) as any;
     expect(updated.notes).toBe('Updated notes');
     expect(Array.isArray(updated.assignments)).toBe(true);
   });
 
-  it('DAY-SVC-014 — updates title', () => {
+  it('DAY-SVC-014 — updates title', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const day = createDay(testDb, trip.id) as any;
-    const updated = svc.update(day.id, day, { title: 'Day 1 - City Tour' }) as any;
+    const updated = (await svc.update(day.id, day, { title: 'Day 1 - City Tour' })) as any;
     expect(updated.title).toBe('Day 1 - City Tour');
   });
 });
@@ -282,11 +290,11 @@ describe('DaysService — the surface the deleted bridge exposed', () => {
     expect(bridgeGetDay(99999, trip.id)).toBeUndefined();
   });
 
-  it('DAY-SVC-028 — listDays delegates to DaysService.list', () => {
+  it('DAY-SVC-028 — listDays delegates to DaysService.list', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     createDay(testDb, trip.id);
-    const result = bridgeListDays(trip.id);
+    const result = await bridgeListDays(trip.id);
     expect(result.days).toHaveLength(1);
     expect(Array.isArray(result.days[0].assignments)).toBe(true);
   });
@@ -341,19 +349,19 @@ describe('DaysService — the surface the deleted bridge exposed', () => {
 // ── post-port defect fixes ────────────────────────────────────────────────────
 
 describe('quirk fixes', () => {
-  it('DAY-SVC-033 — update preserves the omitted column (title-only keeps notes, notes-only keeps title)', () => {
+  it('DAY-SVC-033 — update preserves the omitted column (title-only keeps notes, notes-only keeps title)', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     // Typed as the domain Day, not as the factory's row shape: the variable is
     // rebound to what update() returns, and only Day carries `notes`.
     let day: Day = createDay(testDb, trip.id);
-    day = svc.update(day.id, day, { notes: 'Walking day' });
-    day = svc.update(day.id, day, { title: 'Arrival' });
+    day = await svc.update(day.id, day, { notes: 'Walking day' });
+    day = await svc.update(day.id, day, { title: 'Arrival' });
     expect(day).toMatchObject({ title: 'Arrival', notes: 'Walking day' });
-    day = svc.update(day.id, day, { notes: 'Museum day' });
+    day = await svc.update(day.id, day, { notes: 'Museum day' });
     expect(day).toMatchObject({ title: 'Arrival', notes: 'Museum day' });
     // A present key still clears via the legacy falsy coercion.
-    day = svc.update(day.id, day, { notes: '' });
+    day = await svc.update(day.id, day, { notes: '' });
     expect(day.notes).toBeNull();
     expect(day.title).toBe('Arrival');
   });
@@ -363,23 +371,23 @@ describe('quirk fixes', () => {
   // that is `undefined`, calling it throws, and `.toThrow()` was satisfied by the
   // TypeError rather than by the rollback. The invariant went unchecked for the
   // whole time the case reported green.
-  it('DAY-SVC-034 — createAccommodation is atomic: a failed reservation insert leaves no orphan stay', () => {
+  it('DAY-SVC-034 — createAccommodation is atomic: a failed reservation insert leaves no orphan stay', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const day = createDay(testDb, trip.id);
     const place = createPlace(testDb, trip.id, { name: 'Hotel' });
     testDb.exec("CREATE TRIGGER boom BEFORE INSERT ON reservations BEGIN SELECT RAISE(ABORT, 'boom'); END");
     try {
-      expect(() => accommodations.createAccommodation(trip.id, {
+      await expect(accommodations.createAccommodation(trip.id, {
         place_id: place.id, start_day_id: day.id, end_day_id: day.id,
-      })).toThrow();
+      })).rejects.toThrow();
       expect(testDb.prepare('SELECT COUNT(*) as n FROM day_accommodations WHERE trip_id = ?').get(trip.id)).toMatchObject({ n: 0 });
     } finally {
       testDb.exec('DROP TRIGGER boom');
     }
   });
 
-  it('DAY-SVC-036 — getAssignmentsForDay returns full tag rows from the batched load', () => {
+  it('DAY-SVC-036 — getAssignmentsForDay returns full tag rows from the batched load', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const day = createDay(testDb, trip.id);
@@ -388,7 +396,7 @@ describe('quirk fixes', () => {
     const tagId = Number(testDb.prepare('INSERT INTO tags (user_id, name, color) VALUES (?, ?, ?)').run(user.id, 'Food', '#ff0000').lastInsertRowid);
     testDb.prepare('INSERT INTO place_tags (place_id, tag_id) VALUES (?, ?)').run(place.id, tagId);
 
-    const assignments = svc.getAssignmentsForDay(day.id);
+    const assignments = await svc.getAssignmentsForDay(day.id);
     expect(assignments[0].place.tags).toHaveLength(1);
     expect(assignments[0].place.tags[0]).toMatchObject({ id: tagId, name: 'Food', color: '#ff0000' });
   });
@@ -624,7 +632,7 @@ describe('reorder', () => {
     expect(orderedDays(trip.id).map(d => d.day_number)).toEqual([1, 2]);
   });
 
-  it('DAY-SVC-047 — renumbers a dateless trip without inventing dates or touching bookings', () => {
+  it('DAY-SVC-047 — renumbers a dateless trip without inventing dates or touching bookings', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const d1 = createDay(testDb, trip.id);
@@ -634,7 +642,7 @@ describe('reorder', () => {
       'INSERT INTO reservations (trip_id, day_id, title, reservation_time) VALUES (?, ?, ?, ?)'
     ).run(trip.id, d2.id, 'Dinner', '2026-02-02T19:00').lastInsertRowid);
 
-    const result = svc.reorder(trip.id, [d3.id, d1.id, d2.id]);
+    const result = await svc.reorder(trip.id, [d3.id, d1.id, d2.id]);
 
     expect(result.days.map(d => d.id)).toEqual([d3.id, d1.id, d2.id]);
     expect(orderedDays(trip.id).map(d => d.date)).toEqual([null, null, null]);
@@ -644,13 +652,13 @@ describe('reorder', () => {
       .toMatchObject({ reservation_time: '2026-02-02T19:00' });
   });
 
-  it('DAY-SVC-048 — pins the known dates to the leading slots and nulls the slots beyond them', () => {
+  it('DAY-SVC-048 — pins the known dates to the leading slots and nulls the slots beyond them', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const dated = createDay(testDb, trip.id, { date: '2026-03-01' });
     const dateless = createDay(testDb, trip.id);
 
-    svc.reorder(trip.id, [dateless.id, dated.id]);
+    await svc.reorder(trip.id, [dateless.id, dated.id]);
 
     // The slot beyond the known dates must resolve to null: better-sqlite3
     // refuses to bind the `undefined` a bare index lookup would hand it.
@@ -660,7 +668,7 @@ describe('reorder', () => {
     ]);
   });
 
-  it('DAY-SVC-049 — allows a move that keeps a stay ordered and rolls back one that inverts it', () => {
+  it('DAY-SVC-049 — allows a move that keeps a stay ordered and rolls back one that inverts it', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const d1 = createDay(testDb, trip.id, { date: '2026-03-01' });
@@ -671,7 +679,7 @@ describe('reorder', () => {
 
     // Stretching the stay over a third slot is legal — the guard only rejects
     // an end that lands before its start.
-    svc.reorder(trip.id, [d1.id, d3.id, d2.id]);
+    await svc.reorder(trip.id, [d1.id, d3.id, d2.id]);
     expect(orderedDays(trip.id).map(d => d.id)).toEqual([d1.id, d3.id, d2.id]);
 
     expect(() => svc.reorder(trip.id, [d2.id, d3.id, d1.id])).toThrow(DayReorderError);
@@ -708,24 +716,24 @@ describe('insert', () => {
 // ── day shaping ───────────────────────────────────────────────────────────────
 
 describe('setDefaultTransportMode', () => {
-  it('DAY-SVC-051 — sets and clears the whole-day mode without disturbing notes or title', () => {
+  it('DAY-SVC-051 — sets and clears the whole-day mode without disturbing notes or title', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const day = createDay(testDb, trip.id, { title: 'Arrival' });
-    svc.update(day.id, day as never, { notes: 'Keep me' });
+    await svc.update(day.id, day as never, { notes: 'Keep me' });
 
-    const set = svc.setDefaultTransportMode(day.id, 'walk');
+    const set = await svc.setDefaultTransportMode(day.id, 'walk');
     expect(set).toMatchObject({ default_transport_mode: 'walk', title: 'Arrival', notes: 'Keep me' });
 
     // Its own endpoint exists precisely so clearing the mode cannot wipe the
     // day's text the way a general update would.
-    const cleared = svc.setDefaultTransportMode(day.id, null);
+    const cleared = await svc.setDefaultTransportMode(day.id, null);
     expect(cleared).toMatchObject({ default_transport_mode: null, title: 'Arrival', notes: 'Keep me' });
   });
 });
 
 describe('day shaping', () => {
-  it('DAY-SVC-052 — getAssignmentsForDay reports a null category for an uncategorised place', () => {
+  it('DAY-SVC-052 — getAssignmentsForDay reports a null category for an uncategorised place', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const day = createDay(testDb, trip.id);
@@ -735,10 +743,10 @@ describe('day shaping', () => {
 
     // The LEFT JOIN yields category_name/color/icon as NULL, which must collapse
     // to a null category instead of an object of nulls the client would render.
-    expect(svc.getAssignmentsForDay(day.id)[0].place.category).toBeNull();
+    expect((await svc.getAssignmentsForDay(day.id))[0].place.category).toBeNull();
   });
 
-  it('DAY-SVC-053 — list groups assignments, tags, participants and notes onto their own day', () => {
+  it('DAY-SVC-053 — list groups assignments, tags, participants and notes onto their own day', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const busy = createDay(testDb, trip.id);
@@ -753,7 +761,7 @@ describe('day shaping', () => {
     createDayNote(testDb, busy.id, trip.id, { text: 'Breakfast', sort_order: 1 });
     createDayNote(testDb, busy.id, trip.id, { text: 'Dinner', sort_order: 2 });
 
-    const { days } = svc.list(trip.id);
+    const { days } = await svc.list(trip.id);
 
     expect(days[0].assignments.map(a => a.place.name)).toEqual(['Louvre', 'Pont Neuf']);
     expect(days[0].assignments[0].place.tags.map(t => t.name)).toEqual(['Museum']);
@@ -767,7 +775,7 @@ describe('day shaping', () => {
     expect(days[1]).toMatchObject({ id: empty.id, assignments: [], notes_items: [] });
   });
 
-  it('DAY-SVC-054 — create keeps an explicit date and notes, update clears a title sent as null', () => {
+  it('DAY-SVC-054 — create keeps an explicit date and notes, update clears a title sent as null', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
 
@@ -776,8 +784,8 @@ describe('day shaping', () => {
 
     // The MCP update_day tool clears a title by sending null, which must reach
     // the column instead of being treated as "key absent, keep the old title".
-    const titled = svc.update(day.id, day as never, { title: 'Crossing' });
-    expect(svc.update(day.id, titled as never, { title: null })).toMatchObject({ title: null, notes: 'Ferry to the island' });
+    const titled = await svc.update(day.id, day as never, { title: 'Crossing' });
+    expect(await svc.update(day.id, titled as never, { title: null })).toMatchObject({ title: null, notes: 'Ferry to the island' });
   });
 });
 
@@ -788,21 +796,21 @@ describe('day shaping', () => {
  * an HTTP guard, and it is tested directly here for the same reason.
  */
 describe('DaysService.canEdit', () => {
-  it('DAY-SVC-090 asks for day_edit and flags a non-owner as shared', () => {
+  it('DAY-SVC-090 asks for day_edit and flags a non-owner as shared', async () => {
     const checkPermission = vi.fn(() => true);
     const permissions = { checkPermission } as unknown as PermissionsService;
     const withStub = new DaysService(new DatabaseService(testDb), permissions, new RealtimeService(), new QueryHelpersService(new DatabaseService(testDb)));
     const trip = { id: 1, user_id: 1 } as never;
 
-    expect(withStub.canEdit(trip, { id: 1, role: 'user' } as never)).toBe(true);
+    expect(await withStub.canEdit(trip, { id: 1, role: 'user' } as never)).toBe(true);
     expect(checkPermission).toHaveBeenLastCalledWith('day_edit', 'user', 1, 1, false);
 
-    withStub.canEdit(trip, { id: 2, role: 'user' } as never);
+    await withStub.canEdit(trip, { id: 2, role: 'user' } as never);
     // The shared flag is what the guard has to reproduce; getting it wrong would give a
     // member the owner's rights on somebody else's trip.
     expect(checkPermission).toHaveBeenLastCalledWith('day_edit', 'user', 1, 2, true);
 
     checkPermission.mockReturnValue(false);
-    expect(withStub.canEdit(trip, { id: 2, role: 'user' } as never)).toBe(false);
+    expect(await withStub.canEdit(trip, { id: 2, role: 'user' } as never)).toBe(false);
   });
 });

@@ -59,7 +59,7 @@ export async function createMcpHarness(options: McpHarnessOptions): Promise<McpH
     // McpRegistryService to registerTools; the harness has no Nest app, so it
     // builds the same registry by hand (see mcp-test-controllers.ts).
     // registerTools' own ctx construction stays exercised.
-    registerTools(createMcpTestRegistry(), server, userId, scopes ?? null, isStaticToken, getDeprecationNotice, undefined, dynamicTools);
+    await registerTools(await createMcpTestRegistry(), server, userId, scopes ?? null, isStaticToken, getDeprecationNotice, undefined, dynamicTools);
   }
 
   const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();

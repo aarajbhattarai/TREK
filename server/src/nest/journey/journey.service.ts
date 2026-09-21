@@ -31,7 +31,7 @@ export class JourneyService {
     return this.dbs.connection;
   }
 
-  journeyAddonEnabled(): boolean {
+  async journeyAddonEnabled(): Promise<boolean> {
     return this.addons.isAddonEnabled(ADDON_IDS.JOURNEY);
   }
 

@@ -32,39 +32,39 @@ function memberRow(tripId: number, userId: number) {
 }
 
 describe('joinTripAsMember', () => {
-  it('TRIP-JOIN-001: adds a non-member and reports joined', () => {
+  it('TRIP-JOIN-001: adds a non-member and reports joined', async () => {
     const { user: owner } = createUser(testDb);
     const { user: joiner } = createUser(testDb);
     const trip = createTrip(testDb, owner.id);
 
-    const r = joinTripAsMember(trip.id, joiner.id, null);
+    const r = await joinTripAsMember(trip.id, joiner.id, null);
     expect(r).toEqual({ joined: true, tripId: trip.id });
     expect(memberRow(trip.id, joiner.id)).toBeTruthy();
   });
 
-  it('TRIP-JOIN-002: never adds the trip owner as a member', () => {
+  it('TRIP-JOIN-002: never adds the trip owner as a member', async () => {
     const { user: owner } = createUser(testDb);
     const trip = createTrip(testDb, owner.id);
 
-    const r = joinTripAsMember(trip.id, owner.id, null);
+    const r = await joinTripAsMember(trip.id, owner.id, null);
     expect(r.joined).toBe(false);
     expect(memberRow(trip.id, owner.id)).toBeUndefined();
   });
 
-  it('TRIP-JOIN-003: is idempotent for an existing member (no duplicate row)', () => {
+  it('TRIP-JOIN-003: is idempotent for an existing member (no duplicate row)', async () => {
     const { user: owner } = createUser(testDb);
     const { user: joiner } = createUser(testDb);
     const trip = createTrip(testDb, owner.id);
 
-    expect(joinTripAsMember(trip.id, joiner.id, owner.id).joined).toBe(true);
-    expect(joinTripAsMember(trip.id, joiner.id, owner.id).joined).toBe(false);
+    expect((await joinTripAsMember(trip.id, joiner.id, owner.id)).joined).toBe(true);
+    expect((await joinTripAsMember(trip.id, joiner.id, owner.id)).joined).toBe(false);
     const count = testDb.prepare('SELECT COUNT(*) as n FROM trip_members WHERE trip_id = ? AND user_id = ?').get(trip.id, joiner.id) as { n: number };
     expect(count.n).toBe(1);
   });
 
-  it('TRIP-JOIN-004: no-ops for a missing trip', () => {
+  it('TRIP-JOIN-004: no-ops for a missing trip', async () => {
     const { user: joiner } = createUser(testDb);
-    const r = joinTripAsMember(999999, joiner.id, null);
+    const r = await joinTripAsMember(999999, joiner.id, null);
     expect(r.joined).toBe(false);
   });
 });
@@ -74,25 +74,25 @@ describe('joinTripAsMember', () => {
 describe('leaf membership reads', () => {
   const svc = () => new TripMembershipService(new DatabaseService(testDb));
 
-  it('TRIP-READ-001: getOwnerId answers the owner and null for a missing trip', () => {
+  it('TRIP-READ-001: getOwnerId answers the owner and null for a missing trip', async () => {
     const { user: owner } = createUser(testDb);
     const trip = createTrip(testDb, owner.id);
-    expect(svc().getOwnerId(trip.id)).toBe(owner.id);
-    expect(svc().getOwnerId(999999)).toBeNull();
+    expect(await svc().getOwnerId(trip.id)).toBe(owner.id);
+    expect(await svc().getOwnerId(999999)).toBeNull();
   });
 
-  it('TRIP-READ-002: listMemberUserIds excludes the owner and follows added_at order', () => {
+  it('TRIP-READ-002: listMemberUserIds excludes the owner and follows added_at order', async () => {
     const { user: owner } = createUser(testDb);
     const { user: m1 } = createUser(testDb);
     const { user: m2 } = createUser(testDb);
     const trip = createTrip(testDb, owner.id);
     testDb.prepare("INSERT INTO trip_members (trip_id, user_id, added_at) VALUES (?, ?, '2026-01-02')").run(trip.id, m2.id);
     testDb.prepare("INSERT INTO trip_members (trip_id, user_id, added_at) VALUES (?, ?, '2026-01-01')").run(trip.id, m1.id);
-    expect(svc().listMemberUserIds(trip.id)).toEqual([m1.id, m2.id]);
-    expect(svc().listMemberUserIds(999999)).toEqual([]);
+    expect(await svc().listMemberUserIds(trip.id)).toEqual([m1.id, m2.id]);
+    expect(await svc().listMemberUserIds(999999)).toEqual([]);
   });
 
-  it('TRIP-READ-003: listAccessibleTripIds unions owned and member trips, newest first', () => {
+  it('TRIP-READ-003: listAccessibleTripIds unions owned and member trips, newest first', async () => {
     const { user } = createUser(testDb);
     const { user: other } = createUser(testDb);
     const owned = createTrip(testDb, user.id);
@@ -102,7 +102,7 @@ describe('leaf membership reads', () => {
     // Distinct created_at so the ORDER BY is actually asserted, not assumed.
     testDb.prepare("UPDATE trips SET created_at = '2026-01-01' WHERE id = ?").run(owned.id);
     testDb.prepare("UPDATE trips SET created_at = '2026-01-02' WHERE id = ?").run(memberOf.id);
-    const ids = svc().listAccessibleTripIds(user.id);
+    const ids = await svc().listAccessibleTripIds(user.id);
     expect(ids).toEqual([memberOf.id, owned.id]);
     expect(ids).not.toContain(foreign.id);
   });

@@ -97,8 +97,8 @@ export class DawarichController {
 
   @Delete('settings')
   @HttpCode(200)
-  disconnect(@CurrentUser() user: User, @Req() req: Request) {
-    this.dawarich.disconnect(user.id, getClientIp(req));
+  async disconnect(@CurrentUser() user: User, @Req() req: Request) {
+    await this.dawarich.disconnect(user.id, getClientIp(req));
     this.tracks.forget(user.id);
     return { success: true };
   }
@@ -138,7 +138,10 @@ export class DawarichController {
     @Body() body: DawarichAcceptDto,
     @Req() req: Request,
   ) {
-    return this.guard(() =>
+    // guardAsync, not guard: accept() is async now, so its AcceptError arrives as
+    // a rejection a synchronous try/catch cannot see — and the domain's own code
+    // would be dropped from the body.
+    return this.guardAsync(() =>
       this.suggestions.accept(user.id, parseId(id), body, socketId(req)),
     );
   }

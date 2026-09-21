@@ -45,12 +45,19 @@ vi.mock('../../../src/config', () => ({
 import { ReservationsService } from '../../../src/nest/reservations/reservations.service';
 import type { TransitPlace } from '../../../src/nest/transit/transit.helpers';
 import { TransitService } from '../../../src/nest/transit/transit.service';
+import { createTestUnitOfWork } from '../../helpers/test-uow';
+import { UnitOfWork } from '../../../src/nest/database/unit-of-work';
 
 // savePermissions is no longer bridged; write through a service instance — the
 // permissions cache is module-scoped, so the MCP _shared checkPermission path
 // sees the write immediately.
-const permissionsService = new PermissionsService(new DatabaseService(testDb));
-const savePermissions = permissionsService.savePermissions.bind(permissionsService);
+
+let permissionsService: PermissionsService;
+let savePermissions: typeof permissionsService.savePermissions;
+beforeAll(async () => {
+  permissionsService = new PermissionsService(new DatabaseService(testDb), await createTestUnitOfWork(testDb));
+  savePermissions = permissionsService.savePermissions.bind(permissionsService);
+});
 
 // The transit tools live on the DI-discovered transit.mcp.ts since the transit
 // fold; the test registry builds a real TransitService (and injects a real
@@ -444,7 +451,7 @@ describe('MCP transit tools', () => {
       expect((result.content[0] as any).text).toContain('access denied');
     });
 
-    savePermissions({ reservation_edit: 'trip_owner' });
+    await savePermissions({ reservation_edit: 'trip_owner' });
     await withHarness(member.id, ['reservations:write'], async (harness) => {
       const result = await harness.client.callTool({
         name: 'create_transit_journey',

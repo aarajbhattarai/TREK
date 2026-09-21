@@ -34,7 +34,7 @@ export class QueryHelpersService {
   constructor(private readonly db: DatabaseService) {}
 
   /** Batch-load tags for multiple places in a single query, indexed by place ID. */
-  loadTagsByPlaceIds(placeIds: number[], { compact }: { compact?: boolean } = {}): Record<number, Partial<Tag>[]> {
+  async loadTagsByPlaceIds(placeIds: number[], { compact }: { compact?: boolean } = {}): Promise<Record<number, Partial<Tag>[]>> {
     const tagsByPlaceId: Record<number, Partial<Tag>[]> = {};
     if (placeIds.length > 0) {
       const placeholders = placeIds.map(() => '?').join(',');
@@ -59,7 +59,7 @@ export class QueryHelpersService {
   }
 
   /** Batch-load collaborative ratings (#1435) for multiple places in one query, indexed by place ID. */
-  loadRatingsByPlaceIds(placeIds: number[]): Record<number, PlaceRatingRow[]> {
+  async loadRatingsByPlaceIds(placeIds: number[]): Promise<Record<number, PlaceRatingRow[]>> {
     const ratingsByPlaceId: Record<number, PlaceRatingRow[]> = {};
     if (placeIds.length > 0) {
       const rows = this.db.all<PlaceRatingRow & { place_id: number }>(`
@@ -77,7 +77,7 @@ export class QueryHelpersService {
   }
 
   /** Batch-load participants for multiple day-assignments in a single query, indexed by assignment ID. */
-  loadParticipantsByAssignmentIds(assignmentIds: number[]): Record<number, Participant[]> {
+  async loadParticipantsByAssignmentIds(assignmentIds: number[]): Promise<Record<number, Participant[]>> {
     const participantsByAssignment: Record<number, Participant[]> = {};
     if (assignmentIds.length > 0) {
       const allParticipants = this.db.all<ParticipantRow>(

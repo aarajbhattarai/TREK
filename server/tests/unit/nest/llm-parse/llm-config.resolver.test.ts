@@ -58,14 +58,14 @@ beforeEach(() => {
 });
 
 describe('resolveLlmConfig', () => {
-  it('returns null when the addon is disabled', () => {
+  it('returns null when the addon is disabled', async () => {
     isAddonEnabled.mockReturnValue(false);
-    expect(resolver.resolve(1)).toBeNull();
+    expect(await resolver.resolve(1)).toBeNull();
   });
 
-  it('uses instance config when present (and decrypts the key)', () => {
+  it('uses instance config when present (and decrypts the key)', async () => {
     setInstanceConfig({ provider: 'anthropic', model: 'claude-opus-4-8', apiKey: 'sk-plain', multimodal: true });
-    expect(resolver.resolve(1)).toEqual({
+    expect(await resolver.resolve(1)).toEqual({
       provider: 'anthropic',
       model: 'claude-opus-4-8',
       baseUrl: undefined,
@@ -74,17 +74,17 @@ describe('resolveLlmConfig', () => {
     });
   });
 
-  it('instance config with a base URL still wins for a plain user (#1772 does not touch it)', () => {
+  it('instance config with a base URL still wins for a plain user (#1772 does not touch it)', async () => {
     setInstanceConfig({ provider: 'local', model: 'nuextract', baseUrl: 'http://ollama:11434' });
     setRole('user');
-    expect(resolver.resolve(7)).toMatchObject({ provider: 'local', baseUrl: 'http://ollama:11434' });
+    expect(await resolver.resolve(7)).toMatchObject({ provider: 'local', baseUrl: 'http://ollama:11434' });
   });
 
-  it('falls back to per-user config when instance config is incomplete', () => {
+  it('falls back to per-user config when instance config is incomplete', async () => {
     setInstanceConfig({ provider: 'anthropic' }); // no model → not usable
     getUserSettings.mockReturnValue({ llm_provider: 'anthropic', llm_model: 'claude-sonnet', llm_multimodal: true });
     getDecryptedUserSetting.mockReturnValue('user-key');
-    expect(resolver.resolve(7)).toEqual({
+    expect(await resolver.resolve(7)).toEqual({
       provider: 'anthropic',
       model: 'claude-sonnet',
       baseUrl: undefined,
@@ -94,22 +94,22 @@ describe('resolveLlmConfig', () => {
     expect(getDecryptedUserSetting).toHaveBeenCalledWith(7, 'llm_api_key');
   });
 
-  it('returns null when neither instance nor user config is usable', () => {
+  it('returns null when neither instance nor user config is usable', async () => {
     getUserSettings.mockReturnValue({ llm_provider: 'openai' }); // no model
-    expect(resolver.resolve(1)).toBeNull();
+    expect(await resolver.resolve(1)).toBeNull();
   });
 
   // #1772: the endpoint is instance configuration, so it may only come from an
   // admin-controlled source, whoever is asking.
-  it('#1772: picking local personally gets no config at all (no silent reroute)', () => {
+  it('#1772: picking local personally gets no config at all (no silent reroute)', async () => {
     getUserSettings.mockReturnValue({ llm_provider: 'local', llm_model: 'nuextract', llm_base_url: 'http://192.168.1.5:11434' });
-    expect(resolver.resolve(7)).toBeNull();
+    expect(await resolver.resolve(7)).toBeNull();
   });
 
-  it('#1772: a personal OpenAI config survives but loses its own base URL', () => {
+  it('#1772: a personal OpenAI config survives but loses its own base URL', async () => {
     getUserSettings.mockReturnValue({ llm_provider: 'openai', llm_model: 'gpt-4o-mini', llm_base_url: 'http://192.168.1.5:11434' });
     getDecryptedUserSetting.mockReturnValue('sk-user');
-    expect(resolver.resolve(7)).toEqual({
+    expect(await resolver.resolve(7)).toEqual({
       provider: 'openai',
       model: 'gpt-4o-mini',
       baseUrl: undefined,
@@ -118,21 +118,21 @@ describe('resolveLlmConfig', () => {
     });
   });
 
-  it('#1772: an admin-set instance default endpoint applies to everyone', () => {
+  it('#1772: an admin-set instance default endpoint applies to everyone', async () => {
     // getUserSettings merges the admin defaults in; getAdminUserDefaults is the
     // admin-controlled layer the endpoint is allowed to come from.
     getUserSettings.mockReturnValue({ llm_provider: 'local', llm_model: 'nuextract', llm_base_url: 'http://ollama.internal:11434' });
     getAdminUserDefaults.mockReturnValue({ llm_provider: 'local', llm_base_url: 'http://ollama.internal:11434' });
-    expect(resolver.resolve(7)).toMatchObject({ provider: 'local', baseUrl: 'http://ollama.internal:11434' });
+    expect(await resolver.resolve(7)).toMatchObject({ provider: 'local', baseUrl: 'http://ollama.internal:11434' });
   });
 
-  it('#1772: the caller\'s role does not change the answer, and no role is looked up', () => {
+  it('#1772: the caller\'s role does not change the answer, and no role is looked up', async () => {
     // An instance has one endpoint. An admin who parked one in their own row is
     // in exactly the same position as anyone else, and the resolver no longer
     // reads the users table at all.
     setRole('admin');
     getUserSettings.mockReturnValue({ llm_provider: 'local', llm_model: 'nuextract', llm_base_url: 'http://192.168.1.5:11434' });
-    expect(resolver.resolve(7)).toBeNull();
+    expect(await resolver.resolve(7)).toBeNull();
     expect(dbMock._role.get).not.toHaveBeenCalled();
   });
 });

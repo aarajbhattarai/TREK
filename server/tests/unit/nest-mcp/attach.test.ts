@@ -282,17 +282,15 @@ describe('McpRegistry.attach', () => {
     );
   });
 
-  it('attach itself still guards declarative access without a policy (defense in depth)', () => {
+  it('attach itself still guards declarative access without a policy (defense in depth)', async () => {
     // Bypass createTestRegistry's validate() by assembling the registry by hand.
     const registry = new McpRegistry();
     registry.register(new DeclarativeOnly());
-    expect(() =>
-      registry.attach(
+    await expect(registry.attach(
         // attach never gets far enough to need a live server here
         {} as Parameters<typeof registry.attach>[0],
         { userId: 1 } as McpContext,
-      ),
-    ).toThrow(/declares declarative access but no accessPolicy was configured/);
+      )).rejects.toThrow(/declares declarative access but no accessPolicy was configured/);
   });
 });
 

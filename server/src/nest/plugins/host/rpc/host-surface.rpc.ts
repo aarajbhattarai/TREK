@@ -122,7 +122,7 @@ export class HostSurfaceRpc {
   @PluginMethod('ai.complete', { permission: 'ai:invoke' })
   async aiComplete(params: Record<string, unknown>, ctx: PluginRpcContext): Promise<unknown> {
     const actor = this.guards.requireActor(ctx, 'AI');
-    const config = this.requireLlm(actor);
+    const config = await this.requireLlm(actor);
     const prompt = typeof params.prompt === 'string' ? params.prompt : '';
     if (prompt.trim() === '') throw new BadParams('prompt is required');
     if (prompt.length > AI_TEXT_MAX) throw new BadParams(`prompt exceeds the ${AI_TEXT_MAX}-char cap`);
@@ -143,7 +143,7 @@ export class HostSurfaceRpc {
   @PluginMethod('ai.extract', { permission: 'ai:invoke' })
   async aiExtract(params: Record<string, unknown>, ctx: PluginRpcContext): Promise<unknown> {
     const actor = this.guards.requireActor(ctx, 'AI');
-    const config = this.requireLlm(actor);
+    const config = await this.requireLlm(actor);
     const text = typeof params.text === 'string' ? params.text : '';
     if (text.trim() === '') throw new BadParams('text is required');
     if (text.length > AI_TEXT_MAX) throw new BadParams(`text exceeds the ${AI_TEXT_MAX}-char cap`);
@@ -221,9 +221,9 @@ export class HostSurfaceRpc {
       .get(actingUserId, targetUserId, actingUserId, targetUserId);
   }
 
-  private requireLlm(userId: number) {
-    const config = this.llmConfig.resolve(userId);
-    if (!config) throw new BadParams('no AI provider is configured for this user');
+  private async requireLlm(userId: number) {
+    const config = await this.llmConfig.resolve(userId);
+    if (!(await config)) throw new BadParams('no AI provider is configured for this user');
     return config;
   }
 

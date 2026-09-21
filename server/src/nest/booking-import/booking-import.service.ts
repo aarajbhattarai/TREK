@@ -52,7 +52,7 @@ export class BookingImportService {
   }
 
   /** True when the LLM fallback is enabled and configured for this user. */
-  aiAvailable(userId: number): boolean {
+  async aiAvailable(userId: number): Promise<boolean> {
     return this.llmParse.isAvailable(userId);
   }
 
@@ -137,7 +137,7 @@ export class BookingImportService {
     onProgress?: (done: number, total: number, fileName: string) => void,
   ): Promise<BookingImportPreviewResponse> {
     const kitineraryAvailable = this.extractor.isAvailable();
-    const aiAvailable = this.llmParse.isAvailable(userId);
+    const aiAvailable = await this.llmParse.isAvailable(userId);
     if (!kitineraryAvailable && !aiAvailable) {
       throw new HttpException({ error: 'KItinerary extractor is not available on this server' }, 503);
     }
@@ -296,7 +296,7 @@ export class BookingImportService {
           };
         }
 
-        const { reservation, accommodationCreated } = this.reservations.create(tripId, {
+        const { reservation, accommodationCreated } = await this.reservations.create(tripId, {
           ...reservationData,
           place_id: placeId,
           create_accommodation: createAccommodation,
@@ -309,7 +309,7 @@ export class BookingImportService {
 
         // Turn an extracted price into a real linked cost (Costs addon), so the
         // booking shows up as an expense — not just a price in metadata.
-        if (this.addons.isAddonEnabled(ADDON_IDS.BUDGET)) {
+        if ((await this.addons.isAddonEnabled(ADDON_IDS.BUDGET))) {
           const meta =
             reservationData.metadata && typeof reservationData.metadata === 'object'
               ? (reservationData.metadata as Record<string, unknown>)

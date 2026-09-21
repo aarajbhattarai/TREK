@@ -304,7 +304,7 @@ export class CollectionsMcp {
   })
   async copyCollectionPlacesToTrip(body: CollectionCopyToTripRequest, ctx: McpContext) {
     const demo = this.denyDemo(ctx.userId); if (demo) return demo;
-    try { return ok(this.collections.copyToTrip(ctx.userId, body)); } catch (err) { return fail(err); }
+    try { return ok(await this.collections.copyToTrip(ctx.userId, body)); } catch (err) { return fail(err); }
   }
 
   // ── Labels ────────────────────────────────────────────────────────────

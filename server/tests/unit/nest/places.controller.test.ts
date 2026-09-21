@@ -46,9 +46,9 @@ describe('PlacesController (parity with the legacy /api/trips/:tripId/places rou
   // The trip 404 for this handler is TripAccessGuard's now (see
   // trip-access.guard.test.ts and the places e2e), so it is no longer reachable
   // by calling the method directly.
-  it('GET / lists with filters', () => {
+  it('GET / lists with filters', async () => {
     const list = vi.fn().mockReturnValue([{ id: 1 }]);
-    expect(new PlacesController(svc({ list } as Partial<PlacesService>), new RuntimeEnvService(), storageStub).list(user, '5', 'beach', 'cat', 'tag')).toEqual({ places: [{ id: 1 }] });
+    expect(await new PlacesController(svc({ list } as Partial<PlacesService>), new RuntimeEnvService(), storageStub).list(user, '5', 'beach', 'cat', 'tag')).toEqual({ places: [{ id: 1 }] });
     expect(list).toHaveBeenCalledWith('5', { search: 'beach', category: 'cat', tag: 'tag' });
   });
 
@@ -64,11 +64,11 @@ describe('PlacesController (parity with the legacy /api/trips/:tripId/places rou
     // The legacy 'Place name is required' 400 is gone: placeCreateRequestSchema
     // pins `name`, so the ZodValidationPipe rejects a nameless body before the
     // handler runs (see the e2e suite for the envelope it produces).
-    it('403 without place_edit, then creates + hooks', () => {
+    it('403 without place_edit, then creates + hooks', async () => {
       expect(thrown(() => new PlacesController(svc({ canEdit: vi.fn().mockReturnValue(false) }), new RuntimeEnvService(), storageStub).create(user, '5', { name: 'Spot' }))).toEqual({ status: 403, body: { error: 'No permission' } });
       const create = vi.fn().mockReturnValue({ id: 9 }); const broadcast = vi.fn(); const onCreated = vi.fn();
       const s = svc({ create, broadcast, onCreated } as Partial<PlacesService>);
-      expect(new PlacesController(s, new RuntimeEnvService(), storageStub).create(user, '5', { name: 'Spot' }, 'sock')).toEqual({ place: { id: 9 } });
+      expect(await new PlacesController(s, new RuntimeEnvService(), storageStub).create(user, '5', { name: 'Spot' }, 'sock')).toEqual({ place: { id: 9 } });
       expect(broadcast).toHaveBeenCalledWith('5', 'place:created', { place: { id: 9 } }, 'sock');
       expect(onCreated).toHaveBeenCalledWith('5', 9);
     });
@@ -89,10 +89,10 @@ describe('PlacesController (parity with the legacy /api/trips/:tripId/places rou
         status: 400, body: { error: 'No matching places found in GPX file' },
       });
     });
-    it('imports and broadcasts per place', () => {
+    it('imports and broadcasts per place', async () => {
       const broadcast = vi.fn();
       const s = svc({ importGpx: vi.fn().mockReturnValue({ places: [{ id: 1 }, { id: 2 }], count: 2, skipped: 0 }), broadcast } as Partial<PlacesService>);
-      expect(new PlacesController(s, new RuntimeEnvService(), storageStub).importGpx(user, '5', file, {}, 'sock')).toEqual({ places: [{ id: 1 }, { id: 2 }], count: 2, skipped: 0 });
+      expect(await new PlacesController(s, new RuntimeEnvService(), storageStub).importGpx(user, '5', file, {}, 'sock')).toEqual({ places: [{ id: 1 }, { id: 2 }], count: 2, skipped: 0 });
       expect(broadcast).toHaveBeenCalledTimes(2);
     });
   });

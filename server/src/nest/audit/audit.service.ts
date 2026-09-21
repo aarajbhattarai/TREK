@@ -68,7 +68,7 @@ function buildInfoSummary(action: string, details?: Record<string, unknown>): st
 export class AuditService {
   constructor(private readonly dbs: DatabaseService) {}
 
-  private resolveUserEmail(userId: number | null): string {
+  private async resolveUserEmail(userId: number | null): Promise<string> {
     if (userId == null) return 'anonymous';
     try {
       const row = this.dbs.get<{ email: string }>('SELECT email FROM users WHERE id = ?', userId);
@@ -77,14 +77,14 @@ export class AuditService {
   }
 
   /** Best-effort; never throws — failures are logged only. */
-  writeAudit(entry: {
+  async writeAudit(entry: {
     userId: number | null;
     action: string;
     resource?: string | null;
     details?: Record<string, unknown>;
     debugDetails?: Record<string, unknown>;
     ip?: string | null;
-  }): void {
+  }): Promise<void> {
     try {
       const detailsJson = entry.details && Object.keys(entry.details).length > 0 ? JSON.stringify(entry.details) : null;
       this.dbs.run(
@@ -92,7 +92,7 @@ export class AuditService {
         entry.userId, entry.action, entry.resource ?? null, detailsJson, entry.ip ?? null
       );
 
-      const email = this.resolveUserEmail(entry.userId);
+      const email = await this.resolveUserEmail(entry.userId);
       const label = ACTION_LABELS[entry.action] || entry.action;
       const brief = buildInfoSummary(entry.action, entry.details);
       logInfo(oneLine(`${email} ${label}${brief} ip=${entry.ip || '-'}`));

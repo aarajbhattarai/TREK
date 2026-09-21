@@ -56,15 +56,15 @@ describe('BudgetService', () => {
     expect(canAccessTrip).toHaveBeenCalledWith('5', 2);
   });
 
-  it('canEdit forwards the ownership flag when the user owns the trip', () => {
+  it('canEdit forwards the ownership flag when the user owns the trip', async () => {
     checkPermission.mockReturnValue(true);
-    expect(svc().canEdit({ user_id: 1 } as never, { id: 1, role: 'user' } as never)).toBe(true);
+    expect(await svc().canEdit({ user_id: 1 } as never, { id: 1, role: 'user' } as never)).toBe(true);
     expect(checkPermission).toHaveBeenCalledWith('budget_edit', 'user', 1, 1, false);
   });
 
-  it('canEdit marks the user as a guest when they do not own the trip', () => {
+  it('canEdit marks the user as a guest when they do not own the trip', async () => {
     checkPermission.mockReturnValue(false);
-    expect(svc().canEdit({ user_id: 2 } as never, { id: 1, role: 'user' } as never)).toBe(false);
+    expect(await svc().canEdit({ user_id: 2 } as never, { id: 1, role: 'user' } as never)).toBe(false);
     expect(checkPermission).toHaveBeenCalledWith('budget_edit', 'user', 2, 1, true);
   });
 

@@ -309,8 +309,8 @@ export class AdminService {
 
   // ── Permissions ────────────────────────────────────────────────────────────
 
-  getPermissions() {
-    const current = this.permissions.getAllPermissions();
+  async getPermissions() {
+    const current = await this.permissions.getAllPermissions();
     const actions = PERMISSION_ACTIONS.map((a) => ({
       key: a.key,
       level: current[a.key],
@@ -320,9 +320,9 @@ export class AdminService {
     return { permissions: actions };
   }
 
-  savePermissions(permissions: Record<string, string>) {
-    const { skipped } = this.permissions.savePermissions(permissions);
-    return { permissions: this.permissions.getAllPermissions(), skipped };
+  async savePermissions(permissions: Record<string, string>) {
+    const { skipped } = await this.permissions.savePermissions(permissions);
+    return { permissions: await this.permissions.getAllPermissions(), skipped };
   }
 
   // ── Audit Log ──────────────────────────────────────────────────────────────
@@ -664,7 +664,7 @@ export class AdminService {
     ];
   }
 
-  updateAddon(id: string, data: { enabled?: boolean; config?: Record<string, unknown> }) {
+  async updateAddon(id: string, data: { enabled?: boolean; config?: Record<string, unknown> }) {
     type ProviderRow = { id: string; name: string; description?: string | null; icon: string; enabled: number; sort_order: number };
     const addon = this.db.get<Addon>('SELECT * FROM addons WHERE id = ?', id);
     const provider = this.db.get<ProviderRow>('SELECT * FROM photo_providers WHERE id = ?', id);
@@ -682,14 +682,14 @@ export class AdminService {
     // Photo providers are Journey's shelf rows — their whole UI lives inside
     // journeys, so enabling one under a disabled journey addon would only
     // advertise an integration nothing can reach.
-    if (provider && data.enabled === true && !this.addons.isAddonEnabled(ADDON_IDS.JOURNEY)) {
+    if (provider && data.enabled === true && !(await this.addons.isAddonEnabled(ADDON_IDS.JOURNEY))) {
       return { error: 'Enable the Journey addon first', status: 409 };
     }
 
     // Same rule one shelf down: a document provider only exists to serve the
     // file manager, so switching one on under a disabled Documents addon would
     // advertise a sync nothing can reach.
-    if (docProvider && data.enabled === true && !this.addons.isAddonEnabled(ADDON_IDS.DOCUMENTS)) {
+    if (docProvider && data.enabled === true && !(await this.addons.isAddonEnabled(ADDON_IDS.DOCUMENTS))) {
       return { error: 'Enable the Documents addon first', status: 409 };
     }
 

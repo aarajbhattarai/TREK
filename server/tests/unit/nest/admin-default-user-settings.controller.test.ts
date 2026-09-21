@@ -44,11 +44,11 @@ describe('AdminDefaultUserSettingsController', () => {
     expect(controller().c.get()).toEqual({ theme: 'dark' });
   });
 
-  it('DEFAULTS-002 PUT writes, audits, and answers with the STORED defaults', () => {
+  it('DEFAULTS-002 PUT writes, audits, and answers with the STORED defaults', async () => {
     const { c, settings } = controller();
     // Not the request body: the service normalises and drops unknown keys, and the
     // admin panel renders straight from this response.
-    expect(c.update(user, { theme: 'light' } as never, req)).toEqual({ theme: 'dark' });
+    expect(await c.update(user, { theme: 'light' } as never, req)).toEqual({ theme: 'dark' });
     expect(settings.setAdminUserDefaults).toHaveBeenCalledWith({ theme: 'light' });
     expect(writeAudit).toHaveBeenCalledWith(
       expect.objectContaining({ userId: 1, action: 'admin.default_user_settings_update', details: { theme: 'light' } }),

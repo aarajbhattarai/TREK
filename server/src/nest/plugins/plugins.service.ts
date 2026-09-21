@@ -156,7 +156,7 @@ export class PluginsService {
     }
   }
 
-  list(): { enabled: boolean; devLink: boolean; ignoreTrekRange: boolean; plugins: PluginListItem[] } {
+  async list(): Promise<{ enabled: boolean; devLink: boolean; ignoreTrekRange: boolean; plugins: PluginListItem[] }> {
     const rows = this.db
       .prepare(
         `SELECT id, name, description, type, icon, version, status, enabled, last_error, reviewed_at, source_repo,
@@ -169,9 +169,12 @@ export class PluginsService {
     const installed = new Map<string, PluginDepRow>(
       rows.map((r) => [r.id, { id: r.id, version: r.version, enabled: r.enabled, dependencies: r.dependencies }]),
     );
-    const plugins: PluginListItem[] = rows.map((r) => {
+    // A `map` callback cannot await the addon gate, so the projection runs as an
+    // explicit loop — same order, same rows.
+    const plugins: PluginListItem[] = [];
+    for (const r of rows) {
       const deps = parseDependencies(r.dependencies);
-      const disabledAddons = disabledRequiredAddons(deps, (id) => this.addons.isAddonEnabled(id));
+      const disabledAddons = await disabledRequiredAddons(deps, (id) => this.addons.isAddonEnabled(id));
       const state = resolveDependencyState(deps, installed);
       // Mirrors the order of assertActivatable's gate, so the card explains the same
       // blocker the activate call would hit rather than a second, lesser one.
@@ -194,7 +197,7 @@ export class PluginsService {
         update_hold,
         ...rest
       } = r as PluginRawRow & { operator_egress?: number };
-      return {
+      plugins.push({
         ...rest,
         operatorEgress: _oe === 1,
         egressHostCount: this.egressHostCount(r.id),
@@ -212,8 +215,8 @@ export class PluginsService {
           ? { code: update_block_code, detail: update_block_detail, version: update_block_version }
           : null,
         updateHold: update_hold === 1,
-      };
-    });
+      });
+    }
     return { enabled: pluginsEnabled(), devLink: devLinkEnabled(), ignoreTrekRange: trekRangeBypassed(), plugins };
   }
 

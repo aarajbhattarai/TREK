@@ -162,23 +162,23 @@ function subwayRoute(): FixtureRoutes {
 }
 
 describe('activation', () => {
-  it('GTRANSIT-001: stays off while the instance is on Transitous, even with a key', () => {
+  it('GTRANSIT-001: stays off while the instance is on Transitous, even with a key', async () => {
     const provider = new GoogleTransitProvider(stubDb({ maps_api_key: 'test-key' }));
-    expect(provider.isActive(1)).toBe(false);
+    expect(await provider.isActive(1)).toBe(false);
   });
 
-  it('GTRANSIT-002: stays off when Google is selected but no key resolves', () => {
+  it('GTRANSIT-002: stays off when Google is selected but no key resolves', async () => {
     const provider = new GoogleTransitProvider(stubDb({ transit_provider: 'google' }));
-    expect(provider.isActive(1)).toBe(false);
+    expect(await provider.isActive(1)).toBe(false);
   });
 
-  it('GTRANSIT-003: is on only with both the setting and a key', () => {
-    expect(new GoogleTransitProvider(googleDb()).isActive(1)).toBe(true);
+  it('GTRANSIT-003: is on only with both the setting and a key', async () => {
+    expect(await new GoogleTransitProvider(googleDb()).isActive(1)).toBe(true);
   });
 
-  it('GTRANSIT-004: an unknown provider value falls back to Transitous', () => {
+  it('GTRANSIT-004: an unknown provider value falls back to Transitous', async () => {
     const provider = new GoogleTransitProvider(stubDb({ transit_provider: 'someday-maps', maps_api_key: 'test-key' }));
-    expect(provider.isActive(1)).toBe(false);
+    expect(await provider.isActive(1)).toBe(false);
   });
 
   it('GTRANSIT-005: TransitService routes to Google only when it is active', async () => {

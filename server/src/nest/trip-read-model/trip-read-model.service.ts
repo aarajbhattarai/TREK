@@ -47,7 +47,7 @@ export class TripReadModelService {
 
   // ── Trip summary (used by MCP get_trip_summary tool) ──────────────────────
 
-  getTripSummary(tripId: number, viewerUserId?: number) {
+  async getTripSummary(tripId: number, viewerUserId?: number) {
     const trip = withoutFeedToken(
       this.db.prepare('SELECT * FROM trips WHERE id = ?').get(tripId) as Record<string, unknown> | undefined,
     );
@@ -57,7 +57,7 @@ export class TripReadModelService {
     if (!ownerRow) return null;
     const { owner, members } = this.members.listMembers(tripId, ownerRow.user_id);
 
-    const { days: rawDays } = this.days.list(tripId);
+    const { days: rawDays } = await this.days.list(tripId);
     const days = rawDays.map(({ notes_items, ...day }) => ({ ...day, notes: notes_items }));
 
     const accommodations = this.accommodations.list(tripId);
@@ -97,13 +97,13 @@ export class TripReadModelService {
   // ── Bundle / notifications (route helpers) ────────────────────────────────
 
   /** Aggregates every trip sub-collection for offline caching (legacy /:id/bundle). */
-  bundle(tripId: string, trip: { user_id: number }, viewerId: number) {
-    const { days } = this.days.list(tripId);
+  async bundle(tripId: string, trip: { user_id: number }, viewerId: number) {
+    const { days } = await this.days.list(tripId);
     const { owner, members } = this.members.listMembers(tripId, trip.user_id);
     return {
       trip,
       days,
-      places: this.places.list(String(tripId), {}),
+      places: await this.places.list(String(tripId), {}),
       // Scope to the requesting member so other members' private packing items
       // (#858) never land in this viewer's offline cache.
       packingItems: this.packing.listItems(tripId, viewerId),

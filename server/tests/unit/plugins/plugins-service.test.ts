@@ -36,13 +36,13 @@ afterEach(() => {
 });
 
 describe('PluginsService.list', () => {
-  it('returns the installed plugins and the runtime-enabled flag', () => {
+  it('returns the installed plugins and the runtime-enabled flag', async () => {
     testDb
       .prepare('INSERT INTO plugins (id, name, description, type, status, version) VALUES (?,?,?,?,?,?)')
       .run('flight', 'Flight', 'desc', 'widget', 'inactive', '1.0.0');
     process.env.TREK_PLUGINS_ENABLED = 'true';
 
-    const out = new PluginsService(new DatabaseService(dbConn), new AddonsService(new DatabaseService(dbConn))).list();
+    const out = await new PluginsService(new DatabaseService(dbConn), new AddonsService(new DatabaseService(dbConn))).list();
     expect(out.enabled).toBe(true);
     expect(out.plugins).toHaveLength(1);
     expect(out.plugins[0]).toMatchObject({ id: 'flight', name: 'Flight', status: 'inactive' });
@@ -60,19 +60,19 @@ describe('PluginsService.list', () => {
         .prepare("INSERT INTO plugins (id, name, type, status, version, trek_range) VALUES ('old','Old','widget','inactive','1.0.0','>=3.0.0 <4.0.0')")
         .run();
 
-    it('reports the switch off and an outgrown plugin as hostIncompatible by default', () => {
+    it('reports the switch off and an outgrown plugin as hostIncompatible by default', async () => {
       process.env.APP_VERSION = '4.1.0';
       seed();
-      const out = new PluginsService(new DatabaseService(dbConn), new AddonsService(new DatabaseService(dbConn))).list();
+      const out = await new PluginsService(new DatabaseService(dbConn), new AddonsService(new DatabaseService(dbConn))).list();
       expect(out.ignoreTrekRange).toBe(false);
       expect(out.plugins[0]).toMatchObject({ dependencyStatus: 'hostIncompatible', trekRangeBypassed: null });
     });
 
-    it('with the switch on, the plugin may activate but the row still says it is outside its range', () => {
+    it('with the switch on, the plugin may activate but the row still says it is outside its range', async () => {
       process.env.APP_VERSION = '4.1.0';
       process.env.TREK_PLUGINS_IGNORE_TREK_RANGE = '1';
       seed();
-      const out = new PluginsService(new DatabaseService(dbConn), new AddonsService(new DatabaseService(dbConn))).list();
+      const out = await new PluginsService(new DatabaseService(dbConn), new AddonsService(new DatabaseService(dbConn))).list();
       expect(out.ignoreTrekRange).toBe(true);
       expect(out.plugins[0]).toMatchObject({
         dependencyStatus: 'ok',
@@ -80,16 +80,16 @@ describe('PluginsService.list', () => {
       });
     });
 
-    it('a plugin inside its range carries no marker even with the switch on', () => {
+    it('a plugin inside its range carries no marker even with the switch on', async () => {
       process.env.APP_VERSION = '3.5.0';
       process.env.TREK_PLUGINS_IGNORE_TREK_RANGE = '1';
       seed();
-      const out = new PluginsService(new DatabaseService(dbConn), new AddonsService(new DatabaseService(dbConn))).list();
+      const out = await new PluginsService(new DatabaseService(dbConn), new AddonsService(new DatabaseService(dbConn))).list();
       expect(out.plugins[0]).toMatchObject({ dependencyStatus: 'ok', trekRangeBypassed: null });
     });
   });
 
-  it('surfaces updateHold as a boolean (held plugins leave the update banner)', () => {
+  it('surfaces updateHold as a boolean (held plugins leave the update banner)', async () => {
     testDb
       .prepare("INSERT INTO plugins (id, name, type, status, version, update_hold) VALUES ('held','Held','widget','inactive','1.0.0',1)")
       .run();
@@ -97,7 +97,7 @@ describe('PluginsService.list', () => {
       .prepare("INSERT INTO plugins (id, name, type, status, version) VALUES ('free','Free','widget','inactive','1.0.0')")
       .run();
 
-    const out = new PluginsService(new DatabaseService(dbConn), new AddonsService(new DatabaseService(dbConn))).list();
+    const out = await new PluginsService(new DatabaseService(dbConn), new AddonsService(new DatabaseService(dbConn))).list();
     expect(out.plugins.find((p) => p.id === 'held')).toMatchObject({ updateHold: true });
     expect(out.plugins.find((p) => p.id === 'free')).toMatchObject({ updateHold: false });
   });
@@ -113,19 +113,19 @@ describe('PluginsService.list', () => {
     expect(svc.resumeUpdates('ghost')).toBe(false);
   });
 
-  it('reports enabled by default (no kill switch set)', () => {
+  it('reports enabled by default (no kill switch set)', async () => {
     testDb
       .prepare('INSERT INTO plugins (id, name, description, type, status, version) VALUES (?,?,?,?,?,?)')
       .run('flight', 'Flight', 'desc', 'widget', 'inactive', '1.0.0');
 
-    const out = new PluginsService(new DatabaseService(dbConn), new AddonsService(new DatabaseService(dbConn))).list();
+    const out = await new PluginsService(new DatabaseService(dbConn), new AddonsService(new DatabaseService(dbConn))).list();
     expect(out.enabled).toBe(true);
     expect(out.plugins).toHaveLength(1);
   });
 
-  it('reports disabled when the kill switch is off (TREK_PLUGINS_ENABLED=false)', () => {
+  it('reports disabled when the kill switch is off (TREK_PLUGINS_ENABLED=false)', async () => {
     process.env.TREK_PLUGINS_ENABLED = 'false';
-    const out = new PluginsService(new DatabaseService(dbConn), new AddonsService(new DatabaseService(dbConn))).list();
+    const out = await new PluginsService(new DatabaseService(dbConn), new AddonsService(new DatabaseService(dbConn))).list();
     expect(out.enabled).toBe(false);
     expect(out.plugins).toEqual([]);
   });
@@ -141,11 +141,11 @@ describe('PluginsService.list', () => {
         .prepare('INSERT INTO plugins (id, name, type, status, version, source_repo, author_pubkey) VALUES (?,?,?,?,?,?,?)')
         .run(id, id, 'widget', 'inactive', '1.0.0', sourceRepo, pubkey);
 
-    it('reports signed + a display fingerprint for a registry plugin with a pinned key', () => {
+    it('reports signed + a display fingerprint for a registry plugin with a pinned key', async () => {
       const key = 'RWTvBn0aBcDeFgHiJkLmNoPqRsTuVwXyZ0123456789abcd';
       insert('signed-one', 'acme/signed-one', key);
 
-      const p = new PluginsService(new DatabaseService(dbConn), new AddonsService(new DatabaseService(dbConn))).list().plugins[0];
+      const p = (await new PluginsService(new DatabaseService(dbConn), new AddonsService(new DatabaseService(dbConn))).list()).plugins[0];
       expect(p.signed).toBe(true);
       // Short head…tail, for eyeballing against what the author reads out over the
       // phone. NOT a confidentiality measure — the key is public, and the re-trust
@@ -153,41 +153,41 @@ describe('PluginsService.list', () => {
       expect(p.keyFingerprint).toBe(`${key.slice(0, 8)}…${key.slice(-8)}`);
     });
 
-    it('reports unsigned for a registry plugin with no pinned key', () => {
+    it('reports unsigned for a registry plugin with no pinned key', async () => {
       insert('plain', 'acme/plain', null);
-      const p = new PluginsService(new DatabaseService(dbConn), new AddonsService(new DatabaseService(dbConn))).list().plugins[0];
+      const p = (await new PluginsService(new DatabaseService(dbConn), new AddonsService(new DatabaseService(dbConn))).list()).plugins[0];
       expect(p.signed).toBe(false);
       expect(p.keyFingerprint).toBeNull();
     });
 
-    it('reports unsigned for a sideloaded and a dev-linked plugin (they carry no key)', () => {
+    it('reports unsigned for a sideloaded and a dev-linked plugin (they carry no key)', async () => {
       insert('uploaded', 'local:upload', null);
       insert('linked', 'local:link', null);
-      const plugins = new PluginsService(new DatabaseService(dbConn), new AddonsService(new DatabaseService(dbConn))).list().plugins;
+      const plugins = (await new PluginsService(new DatabaseService(dbConn), new AddonsService(new DatabaseService(dbConn))).list()).plugins;
       expect(plugins.map((p) => [p.id, p.signed, p.source_repo])).toEqual([
         ['linked', false, 'local:link'],
         ['uploaded', false, 'local:upload'],
       ]);
     });
 
-    it('surfaces a recorded update block, and reports none when there is none', () => {
+    it('surfaces a recorded update block, and reports none when there is none', async () => {
       insert('blocked', 'acme/blocked', 'RWTvBn0aBcDeFgHiJkLmNoPqRsTuVwXyZ0123456789abcd');
       insert('fine', 'acme/fine', null);
       testDb
         .prepare('UPDATE plugins SET update_block_code = ?, update_block_detail = ?, update_block_version = ? WHERE id = ?')
         .run('SIGNATURE_KEY_CHANGED', 'the key changed', '2.0.0', 'blocked');
 
-      const byId = Object.fromEntries(new PluginsService(new DatabaseService(dbConn), new AddonsService(new DatabaseService(dbConn))).list().plugins.map((p) => [p.id, p]));
+      const byId = Object.fromEntries((await new PluginsService(new DatabaseService(dbConn), new AddonsService(new DatabaseService(dbConn))).list()).plugins.map((p) => [p.id, p]));
       expect(byId.blocked.updateBlock).toEqual({ code: 'SIGNATURE_KEY_CHANGED', detail: 'the key changed', version: '2.0.0' });
       expect(byId.fine.updateBlock).toBeNull();
     });
 
-    it('never leaks the raw pinned key into the list response (only the fingerprint)', () => {
+    it('never leaks the raw pinned key into the list response (only the fingerprint)', async () => {
       insert('signed-one', 'acme/signed-one', 'RWTvBn0aBcDeFgHiJkLmNoPqRsTuVwXyZ0123456789abcd');
       // PluginListItem is an interface, so it has no implicit index signature and cannot
       // be narrowed to a record directly. Widening through unknown is what lets this case
       // probe for a key the contract deliberately does not declare.
-      const p = new PluginsService(new DatabaseService(dbConn), new AddonsService(new DatabaseService(dbConn))).list()
+      const p = (await new PluginsService(new DatabaseService(dbConn), new AddonsService(new DatabaseService(dbConn))).list())
         .plugins[0] as unknown as Record<string, unknown>;
       expect(p.author_pubkey).toBeUndefined();
     });

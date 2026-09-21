@@ -103,8 +103,8 @@ export class TripsController {
 
   @Post()
   @HttpCode(201)
-  create(@CurrentUser() user: User, @Body() body: TripCreateDto, @Req() req: Request) {
-    if (!this.trips.can('trip_create', user.role, null, user.id, false)) {
+  async create(@CurrentUser() user: User, @Body() body: TripCreateDto, @Req() req: Request) {
+    if (!(await this.trips.can('trip_create', user.role, null, user.id, false))) {
       throw new HttpException({ error: 'No permission to create trips' }, 403);
     }
     // Presence/shape validation happens in the ZodValidationPipe (tripCreateRequestSchema).
@@ -119,7 +119,7 @@ export class TripsController {
     const parsedDayCount = day_count ? Math.min(Math.max(Number(day_count) || 7, 1), MAX_TRIP_DAYS) : undefined;
     try {
       const { trip, tripId, reminderDays } = this.trips.create(user.id, { title, description, start_date, end_date, currency, reminder_days, day_count: parsedDayCount });
-      this.audit.writeAudit({ userId: user.id, action: 'trip.create', ip: getClientIp(req), details: { tripId, title, reminder_days: reminderDays === 0 ? 'none' : `${reminderDays} days` } });
+      await this.audit.writeAudit({ userId: user.id, action: 'trip.create', ip: getClientIp(req), details: { tripId, title, reminder_days: reminderDays === 0 ? 'none' : `${reminderDays} days` } });
       if (reminderDays > 0) logInfo(`${user.email} set ${reminderDays}-day reminder for trip "${title}"`);
       return { trip };
     } catch (e: unknown) {
@@ -145,14 +145,14 @@ export class TripsController {
     }
     const ownerId = access.user_id;
     const isMember = ownerId !== user.id;
-    if (body.is_archived !== undefined && !this.trips.can('trip_archive', user.role, ownerId, user.id, isMember)) {
+    if (body.is_archived !== undefined && !(await this.trips.can('trip_archive', user.role, ownerId, user.id, isMember))) {
       throw new HttpException({ error: 'No permission to archive/unarchive this trip' }, 403);
     }
-    if (body.cover_image !== undefined && !this.trips.can('trip_cover_upload', user.role, ownerId, user.id, isMember)) {
+    if (body.cover_image !== undefined && !(await this.trips.can('trip_cover_upload', user.role, ownerId, user.id, isMember))) {
       throw new HttpException({ error: 'No permission to change cover image' }, 403);
     }
     const editFields = ['title', 'description', 'start_date', 'end_date', 'currency', 'reminder_days', 'day_count'];
-    if (editFields.some((f) => body[f] !== undefined) && !this.trips.can('trip_edit', user.role, ownerId, user.id, isMember)) {
+    if (editFields.some((f) => body[f] !== undefined) && !(await this.trips.can('trip_edit', user.role, ownerId, user.id, isMember))) {
       throw new HttpException({ error: 'No permission to edit this trip' }, 403);
     }
     // A chosen Unsplash cover arrives as an images.unsplash.com hot-link; download
@@ -175,7 +175,7 @@ export class TripsController {
         await this.trips.deleteOldCover(oldCover);
       }
       if (Object.keys(result.changes).length > 0) {
-        this.audit.writeAudit({ userId: user.id, action: 'trip.update', ip: getClientIp(req), details: { tripId: Number(id), trip: result.newTitle, ...(result.ownerEmail ? { owner: result.ownerEmail } : {}), ...result.changes } });
+        await this.audit.writeAudit({ userId: user.id, action: 'trip.update', ip: getClientIp(req), details: { tripId: Number(id), trip: result.newTitle, ...(result.ownerEmail ? { owner: result.ownerEmail } : {}), ...result.changes } });
         if (result.isAdminEdit && result.ownerEmail) logInfo(`Admin ${user.email} edited trip "${result.newTitle}" owned by ${result.ownerEmail}`);
       }
       if (result.newReminder !== result.oldReminder) {
@@ -201,7 +201,7 @@ export class TripsController {
     if (!access?.user_id) {
       throw new HttpException({ error: 'Trip not found' }, 404);
     }
-    if (!this.trips.can('trip_cover_upload', user.role, access.user_id, user.id, access.user_id !== user.id)) {
+    if (!(await this.trips.can('trip_cover_upload', user.role, access.user_id, user.id, access.user_id !== user.id))) {
       throw new HttpException({ error: 'No permission to change the cover image' }, 403);
     }
     const trip = this.trips.getRaw(id) as { cover_image: string | null } | undefined;
@@ -222,8 +222,8 @@ export class TripsController {
 
   @Post(':id/copy')
   @HttpCode(201)
-  copy(@CurrentUser() user: User, @Param('id') id: string, @Body() body: TripCopyDto, @Req() req: Request) {
-    if (!this.trips.can('trip_create', user.role, null, user.id, false)) {
+  async copy(@CurrentUser() user: User, @Param('id') id: string, @Body() body: TripCopyDto, @Req() req: Request) {
+    if (!(await this.trips.can('trip_create', user.role, null, user.id, false))) {
       throw new HttpException({ error: 'No permission to create trips' }, 403);
     }
     if (!this.trips.canAccessTrip(id, user.id)) {
@@ -232,7 +232,7 @@ export class TripsController {
     const { title } = body;
     try {
       const newTripId = this.trips.copy(id, user.id, title);
-      this.audit.writeAudit({ userId: user.id, action: 'trip.copy', ip: getClientIp(req), details: { sourceTripId: Number(id), newTripId, title } });
+      await this.audit.writeAudit({ userId: user.id, action: 'trip.copy', ip: getClientIp(req), details: { sourceTripId: Number(id), newTripId, title } });
       return { trip: this.trips.getCopiedTrip(newTripId, user.id) };
     } catch {
       throw new HttpException({ error: 'Failed to copy trip' }, 500);
@@ -240,7 +240,7 @@ export class TripsController {
   }
 
   @Delete(':id')
-  remove(@CurrentUser() user: User, @Param('id') id: string, @Req() req: Request, @Headers('x-socket-id') socketId?: string) {
+  async remove(@CurrentUser() user: User, @Param('id') id: string, @Req() req: Request, @Headers('x-socket-id') socketId?: string) {
     const owner = this.trips.getOwner(id);
     if (!owner) {
       throw new HttpException({ error: 'Trip not found' }, 404);
@@ -252,11 +252,11 @@ export class TripsController {
     if (user.role !== 'admin' && !this.trips.canAccessTrip(id, user.id)) {
       throw new HttpException({ error: 'Trip not found' }, 404);
     }
-    if (!this.trips.can('trip_delete', user.role, owner.user_id, user.id, owner.user_id !== user.id)) {
+    if (!(await this.trips.can('trip_delete', user.role, owner.user_id, user.id, owner.user_id !== user.id))) {
       throw new HttpException({ error: 'No permission to delete this trip' }, 403);
     }
     const info = this.trips.remove(id, user.id, user.role);
-    this.audit.writeAudit({ userId: user.id, action: 'trip.delete', ip: getClientIp(req), details: { tripId: info.tripId, trip: info.title, ...(info.ownerEmail ? { owner: info.ownerEmail } : {}) } });
+    await this.audit.writeAudit({ userId: user.id, action: 'trip.delete', ip: getClientIp(req), details: { tripId: info.tripId, trip: info.title, ...(info.ownerEmail ? { owner: info.ownerEmail } : {}) } });
     if (info.isAdminDelete && info.ownerEmail) logInfo(`Admin ${user.email} deleted trip "${info.title}" owned by ${info.ownerEmail}`);
     this.trips.broadcast(String(info.tripId), 'trip:deleted', { id: info.tripId }, socketId);
     return { success: true };

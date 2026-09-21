@@ -32,9 +32,9 @@ describe('DayAssignmentsController (parity with the legacy day-assignments route
     expect(thrown(() => new DayAssignmentsController(s).list(user, '5', '9'))).toEqual({ status: 404, body: { error: 'Day not found' } });
   });
 
-  it('GET returns assignments (access-only, no permission gate)', () => {
+  it('GET returns assignments (access-only, no permission gate)', async () => {
     const s = svc({ canEdit: vi.fn().mockReturnValue(false), listDayAssignments: vi.fn().mockReturnValue([{ id: 1 }]) } as Partial<AssignmentsService>);
-    expect(new DayAssignmentsController(s).list(user, '5', '3')).toEqual({ assignments: [{ id: 1 }] });
+    expect(await new DayAssignmentsController(s).list(user, '5', '3')).toEqual({ assignments: [{ id: 1 }] });
   });
 
   describe('POST', () => {
@@ -79,12 +79,12 @@ describe('AssignmentOpsController (parity with the per-assignment op routes)', (
     expect(thrown(() => controller.endDay('5', '9', { end_day: false }))).toEqual({ status: 404, body: { error: 'Assignment not found' } });
   });
 
-  it('PUT /:id/move 404 assignment, 404 target day, else moves', () => {
+  it('PUT /:id/move 404 assignment, 404 target day, else moves', async () => {
     expect(thrown(() => new AssignmentOpsController(svc({ getAssignmentForTrip: vi.fn().mockReturnValue(undefined) } as Partial<AssignmentsService>)).move(user, '5', '9', { new_day_id: 4 }))).toEqual({ status: 404, body: { error: 'Assignment not found' } });
     expect(thrown(() => new AssignmentOpsController(svc({ getAssignmentForTrip: vi.fn().mockReturnValue({ day_id: 3 }), dayExists: vi.fn().mockReturnValue(false) } as Partial<AssignmentsService>)).move(user, '5', '9', { new_day_id: 4 }))).toEqual({ status: 404, body: { error: 'Target day not found' } });
     const moveAssignment = vi.fn().mockReturnValue({ assignment: { id: 9 }, oldDayId: 3 }); const broadcast = vi.fn(); const reconcile = vi.fn();
     const s = svc({ getAssignmentForTrip: vi.fn().mockReturnValue({ day_id: 3 }), moveAssignment, broadcast, reconcile } as Partial<AssignmentsService>);
-    expect(new AssignmentOpsController(s).move(user, '5', '9', { new_day_id: 4, order_index: 0 }, 'sock')).toEqual({ assignment: { id: 9 } });
+    expect(await new AssignmentOpsController(s).move(user, '5', '9', { new_day_id: 4, order_index: 0 }, 'sock')).toEqual({ assignment: { id: 9 } });
     expect(moveAssignment).toHaveBeenCalledWith('9', 4, 0);
     expect(broadcast).toHaveBeenCalledWith('5', 'assignment:moved', { assignment: { id: 9 }, oldDayId: 3, newDayId: 4 }, 'sock');
     expect(reconcile).toHaveBeenCalledWith('5', 'sock');
@@ -97,24 +97,24 @@ describe('AssignmentOpsController (parity with the per-assignment op routes)', (
     expect(new AssignmentOpsController(s).participants(user, '5', '9')).toEqual({ participants: [{ user_id: 2 }] });
   });
 
-  it('PUT /:id/time 404 missing, else updates', () => {
+  it('PUT /:id/time 404 missing, else updates', async () => {
     expect(thrown(() => new AssignmentOpsController(svc({ getAssignmentForTrip: vi.fn().mockReturnValue(undefined) } as Partial<AssignmentsService>)).time(user, '5', '9', {}))).toEqual({ status: 404, body: { error: 'Assignment not found' } });
     const updateTime = vi.fn().mockReturnValue({ assignment: { id: 9 }, reordered: null, vias: null }); const broadcast = vi.fn(); const reconcile = vi.fn();
     const s = svc({ getAssignmentForTrip: vi.fn().mockReturnValue({ id: 9 }), updateTime, broadcast, reconcile } as Partial<AssignmentsService>);
-    expect(new AssignmentOpsController(s).time(user, '5', '9', { place_time: '10:00' }, 'sock')).toEqual({ assignment: { id: 9 } });
+    expect(await new AssignmentOpsController(s).time(user, '5', '9', { place_time: '10:00' }, 'sock')).toEqual({ assignment: { id: 9 } });
     expect(updateTime).toHaveBeenCalledWith('9', '10:00', undefined);
     // Nothing moved, so the row is all collaborators hear about.
     expect(broadcast.mock.calls).toEqual([['5', 'assignment:updated', { assignment: { id: 9 } }, 'sock']]);
     expect(reconcile).toHaveBeenCalledWith('5', 'sock');
   });
 
-  it('PUT /:id/time sends the whole day and the re-pinned vias to every socket when a start moved stops', () => {
+  it('PUT /:id/time sends the whole day and the re-pinned vias to every socket when a start moved stops', async () => {
     const reordered = { dayId: 3, orderedIds: [7, 9, 8] };
     const vias = { dayId: 3, vias: [{ id: 40, day_id: 3, after_order_index: 1, sequence: 0, lat: 1, lng: 2 }] };
     const updateTime = vi.fn().mockReturnValue({ assignment: { id: 9 }, reordered, vias }); const broadcast = vi.fn();
     const s = svc({ getAssignmentForTrip: vi.fn().mockReturnValue({ id: 9 }), updateTime, broadcast } as Partial<AssignmentsService>);
 
-    expect(new AssignmentOpsController(s).time(user, '5', '9', { place_time: '10:00' }, 'sock')).toEqual({ assignment: { id: 9 } });
+    expect(await new AssignmentOpsController(s).time(user, '5', '9', { place_time: '10:00' }, 'sock')).toEqual({ assignment: { id: 9 } });
 
     expect(broadcast.mock.calls).toEqual([
       ['5', 'assignment:updated', { assignment: { id: 9 } }, 'sock'],

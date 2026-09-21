@@ -61,7 +61,7 @@ export class ReservationsController {
 
   @RequirePermission('reservation_edit')
   @Post()
-  create(
+  async create(
     @CurrentUser() user: User,
     @Param('tripId') tripId: string,
     @Body() rawBody: ReservationCreateDto,
@@ -69,7 +69,7 @@ export class ReservationsController {
   ) {
     const body = rawBody as ReservationBody & { title: string };
     this.rejectForeignReferences(tripId, body);
-    const { reservation, accommodationCreated } = this.reservations.create(tripId, body as never);
+    const { reservation, accommodationCreated } = await this.reservations.create(tripId, body as never);
     if (accommodationCreated) {
       this.reservations.broadcast(tripId, 'accommodation:created', {}, socketId);
     }
@@ -96,7 +96,7 @@ export class ReservationsController {
 
   @RequirePermission('reservation_edit')
   @Put(':id')
-  update(
+  async update(
     @CurrentUser() user: User,
     @Param('tripId') tripId: string,
     @Param('id') id: string,
@@ -109,7 +109,7 @@ export class ReservationsController {
       throw new HttpException({ error: 'Reservation not found' }, 404);
     }
     this.rejectForeignReferences(tripId, body);
-    const { reservation, accommodationChanged } = this.reservations.update(id, tripId, body as never, current as never);
+    const { reservation, accommodationChanged } = await this.reservations.update(id, tripId, body as never, current as never);
     if (accommodationChanged) {
       this.reservations.broadcast(tripId, 'accommodation:updated', {}, socketId);
     }
@@ -144,13 +144,13 @@ export class ReservationsController {
 
   @RequirePermission('reservation_edit')
   @Delete(':id')
-  remove(
+  async remove(
     @CurrentUser() user: User,
     @Param('tripId') tripId: string,
     @Param('id') id: string,
     @Headers('x-socket-id') socketId?: string,
   ) {
-    const { deleted, accommodationDeleted, deletedBudgetItemId } = this.reservations.remove(id, tripId);
+    const { deleted, accommodationDeleted, deletedBudgetItemId } = await this.reservations.remove(id, tripId);
     if (!deleted) {
       throw new HttpException({ error: 'Reservation not found' }, 404);
     }

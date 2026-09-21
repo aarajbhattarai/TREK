@@ -101,7 +101,7 @@ export class FilesRpc {
     if (input.content_base64.length > 14 * 1024 * 1024) {
       throw new BadParams('file exceeds the 10MB plugin upload cap');
     }
-    this.guards.requireTripEdit(tripId, actor, UPLOAD_ACTION);
+    await this.guards.requireTripEdit(tripId, actor, UPLOAD_ACTION);
     return this.writeFile(tripId, input as unknown as CreateInput, actor);
   }
 
@@ -148,11 +148,11 @@ export class FilesRpc {
   }
 
   @PluginMethod('files.createLink', { permission: 'db:write:files' })
-  createLink(params: Record<string, unknown>, ctx: PluginRpcContext): unknown {
+  async createLink(params: Record<string, unknown>, ctx: PluginRpcContext): Promise<unknown> {
     const tripId = num(params.tripId, 'tripId');
     const fileId = num(params.fileId, 'fileId');
     const actor = this.guards.requireActor(ctx, 'file link');
-    this.guards.requireTripEdit(tripId, actor, EDIT_ACTION);
+    await this.guards.requireTripEdit(tripId, actor, EDIT_ACTION);
     if (!this.files.getFileById(fileId, tripId)) throw new ForbiddenResource(`no file ${fileId} on trip ${tripId}`);
     const opts = asPayload(params.opts) as { reservation_id?: number; assignment_id?: number; place_id?: number };
     // A link target on another trip would otherwise attach this trip's file to it.
@@ -166,11 +166,11 @@ export class FilesRpc {
   }
 
   @PluginMethod('files.update', { permission: 'db:write:files' })
-  update(params: Record<string, unknown>, ctx: PluginRpcContext): unknown {
+  async update(params: Record<string, unknown>, ctx: PluginRpcContext): Promise<unknown> {
     const tripId = num(params.tripId, 'tripId');
     const fileId = num(params.fileId, 'fileId');
     const actor = this.guards.requireActor(ctx, 'file');
-    this.guards.requireTripEdit(tripId, actor, EDIT_ACTION);
+    await this.guards.requireTripEdit(tripId, actor, EDIT_ACTION);
     const current = this.files.getFileById(fileId, tripId);
     if (!current) throw new ForbiddenResource(`no file ${fileId} on trip ${tripId}`);
     const input = asPayload(params.input) as { description?: string; place_id?: number | null; reservation_id?: number | null };
@@ -190,11 +190,11 @@ export class FilesRpc {
   }
 
   @PluginMethod('files.softDelete', { permission: 'db:write:files' })
-  softDelete(params: Record<string, unknown>, ctx: PluginRpcContext): unknown {
+  async softDelete(params: Record<string, unknown>, ctx: PluginRpcContext): Promise<unknown> {
     const tripId = num(params.tripId, 'tripId');
     const fileId = num(params.fileId, 'fileId');
     const actor = this.guards.requireActor(ctx, 'file');
-    this.guards.requireTripEdit(tripId, actor, DELETE_ACTION);
+    await this.guards.requireTripEdit(tripId, actor, DELETE_ACTION);
     if (!this.files.getFileById(fileId, tripId)) throw new ForbiddenResource(`no file ${fileId} on trip ${tripId}`);
     this.files.softDeleteFile(fileId);
     this.realtime.broadcast(tripId, 'file:deleted', { fileId }, undefined);

@@ -159,7 +159,7 @@ export class McpTransportService {
   }
 
   async handle(req: Request, res: Response): Promise<void> {
-    if (!this.addons.isAddonEnabled(ADDON_IDS.MCP)) {
+    if (!(await this.addons.isAddonEnabled(ADDON_IDS.MCP))) {
       res.status(403).json({ error: 'MCP is not enabled' });
       return;
     }
@@ -281,22 +281,25 @@ export class McpTransportService {
     const transportHolder: { current: StreamableHTTPServerTransport | null } = { current: null };
     const onInvoke = (info: { kind: string; name: string }): void => {
       if (info.kind !== 'tool') return;
-      try {
+      // The registry fires this from the SDK's tool callback and cannot await it,
+      // so the now-async write runs on its own and reports its own failure —
+      // which is what the try/catch here always did (recipe R1.5).
+      void (async () => {
         const sid = transportHolder.current?.sessionId;
         const ip = (sid ? sessions.get(sid)?.lastClientIp : null) ?? createIp;
-        this.audit.writeAudit({
+        await this.audit.writeAudit({
           userId: user.id,
           action: 'mcp.tool_call',
           resource: info.name,
           details: { clientId: clientId ?? 'native' },
           ip,
         });
-      } catch (err) {
+      })().catch((err: unknown) => {
         console.error('[MCP] tool-call audit failed:', (err as Error | undefined)?.message ?? err);
-      }
+      });
     };
 
-    registerTools(this.registry, server, user.id, scopes, isStaticToken, getDeprecationNotice, onInvoke);
+    await registerTools(this.registry, server, user.id, scopes, isStaticToken, getDeprecationNotice, onInvoke);
 
     const transport = new StreamableHTTPServerTransport({
       sessionIdGenerator: () => randomUUID(),

@@ -16,7 +16,7 @@ export class AddonsController {
   constructor(private readonly addons: AddonsService) {}
 
   @Get()
-  list() {
+  async list() {
     return this.addons.list();
   }
 }

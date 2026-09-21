@@ -67,7 +67,7 @@ export class BackupController {
     }
     try {
       const backup = await this.backup.createBackup();
-      this.audit.writeAudit({ userId: user.id, action: 'backup.create', resource: backup.filename, ip: getClientIp(req), details: { size: backup.size } });
+      await this.audit.writeAudit({ userId: user.id, action: 'backup.create', resource: backup.filename, ip: getClientIp(req), details: { size: backup.size } });
       return { success: true, backup };
     } catch {
       throw new HttpException({ error: 'Error creating backup' }, 500);
@@ -109,7 +109,7 @@ export class BackupController {
       if (!result.success) {
         throw new HttpException({ error: result.error }, result.status || 400);
       }
-      this.audit.writeAudit({ userId: user.id, action: 'backup.restore', resource: filename, ip: getClientIp(req) });
+      await this.audit.writeAudit({ userId: user.id, action: 'backup.restore', resource: filename, ip: getClientIp(req) });
       return { success: true };
     } catch (err) {
       if (err instanceof HttpException) throw err;
@@ -142,7 +142,7 @@ export class BackupController {
       if (!result.success) {
         throw new HttpException({ error: result.error }, result.status || 400);
       }
-      this.audit.writeAudit({ userId: user.id, action: 'backup.upload_restore', resource: origName, ip: getClientIp(req) });
+      await this.audit.writeAudit({ userId: user.id, action: 'backup.upload_restore', resource: origName, ip: getClientIp(req) });
       return { success: true };
     } catch (err) {
       if (err instanceof HttpException) throw err;
@@ -164,10 +164,10 @@ export class BackupController {
 
   @ManagedForbidden('the operator schedules backups off-volume; a second schedule inside it is not one')
   @Put('auto-settings')
-  updateAutoSettings(@CurrentUser() user: User, @Body() body: AutoBackupSettingsDto, @Req() req: Request) {
+  async updateAutoSettings(@CurrentUser() user: User, @Body() body: AutoBackupSettingsDto, @Req() req: Request) {
     try {
       const settings = this.autoBackup.updateAutoSettings(body || {});
-      this.audit.writeAudit({ userId: user.id, action: 'backup.auto_settings', ip: getClientIp(req), details: { enabled: settings.enabled, interval: settings.interval, keep_days: settings.keep_days } });
+      await this.audit.writeAudit({ userId: user.id, action: 'backup.auto_settings', ip: getClientIp(req), details: { enabled: settings.enabled, interval: settings.interval, keep_days: settings.keep_days } });
       return { settings };
     } catch (err) {
       console.error('[backup] PUT auto-settings:', err);
@@ -185,7 +185,7 @@ export class BackupController {
       throw new HttpException({ error: 'Backup not found' }, 404);
     }
     await this.backup.deleteBackup(filename);
-    this.audit.writeAudit({ userId: user.id, action: 'backup.delete', resource: filename, ip: getClientIp(req) });
+    await this.audit.writeAudit({ userId: user.id, action: 'backup.delete', resource: filename, ip: getClientIp(req) });
     return { success: true };
   }
 }

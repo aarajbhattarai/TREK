@@ -57,9 +57,9 @@ export class FeedsMcp {
   }
 
   /** Trip access first (404-equivalent), then share_manage, exactly as TripFeedTokenController is gated. */
-  private denyTripFeed(tripId: number, userId: number) {
+  private async denyTripFeed(tripId: number, userId: number) {
     if (!this.db.canAccessTrip(tripId, userId)) return noAccess();
-    if (!this.guards.hasTripPermission('share_manage', tripId, userId)) return permissionDenied();
+    if (!(await this.guards.hasTripPermission('share_manage', tripId, userId))) return permissionDenied();
     return null;
   }
 
@@ -75,8 +75,8 @@ export class FeedsMcp {
     access: { group: 'trips', mode: 'share' },
   })
   async getTripCalendarFeed({ tripId }: { tripId: number }, ctx: McpContext) {
-    const denied = this.denyTripFeed(tripId, ctx.userId);
-    if (denied) return denied;
+    const denied = await this.denyTripFeed(tripId, ctx.userId);
+    if ((await denied)) return denied;
     return ok(this.feeds.getTripToken(String(tripId), ctx.userId, this.base()));
   }
 
@@ -91,8 +91,8 @@ export class FeedsMcp {
   })
   async enableTripCalendarFeed({ tripId }: { tripId: number }, ctx: McpContext) {
     if (this.isDemoUser(ctx.userId)) return demoDenied();
-    const denied = this.denyTripFeed(tripId, ctx.userId);
-    if (denied) return denied;
+    const denied = await this.denyTripFeed(tripId, ctx.userId);
+    if ((await denied)) return denied;
     return ok(this.feeds.generateTripToken(String(tripId), ctx.userId, this.base()));
   }
 
@@ -107,8 +107,8 @@ export class FeedsMcp {
   })
   async rotateTripCalendarFeed({ tripId }: { tripId: number }, ctx: McpContext) {
     if (this.isDemoUser(ctx.userId)) return demoDenied();
-    const denied = this.denyTripFeed(tripId, ctx.userId);
-    if (denied) return denied;
+    const denied = await this.denyTripFeed(tripId, ctx.userId);
+    if ((await denied)) return denied;
     return ok(this.feeds.rotateTripToken(String(tripId), ctx.userId, this.base()));
   }
 
@@ -123,8 +123,8 @@ export class FeedsMcp {
   })
   async disableTripCalendarFeed({ tripId }: { tripId: number }, ctx: McpContext) {
     if (this.isDemoUser(ctx.userId)) return demoDenied();
-    const denied = this.denyTripFeed(tripId, ctx.userId);
-    if (denied) return denied;
+    const denied = await this.denyTripFeed(tripId, ctx.userId);
+    if ((await denied)) return denied;
     this.feeds.disableTripToken(String(tripId), ctx.userId);
     // Matches the route, which answers the cleared token as a null URL.
     return ok({ feed_url: null });

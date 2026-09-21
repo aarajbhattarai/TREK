@@ -100,7 +100,7 @@ export class AirtrailService {
         return { success: false, error: ssrf.error ?? 'Invalid AirTrail URL' };
       }
       if (ssrf.isPrivate) {
-        this.audit.writeAudit({
+        await this.audit.writeAudit({
           userId,
           action: 'airtrail.private_ip_configured',
           ip: clientIp,

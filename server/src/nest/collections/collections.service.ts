@@ -1232,11 +1232,11 @@ export class CollectionsService {
   // Copy to trip
   // -------------------------------------------------------------------------
 
-  copyToTrip(userId: number, body: CollectionCopyToTripRequest): { copied: number; skipped: { id: number; name: string }[] } {
+  async copyToTrip(userId: number, body: CollectionCopyToTripRequest): Promise<{ copied: number; skipped: { id: number; name: string }[] }> {
     const trip = this.db.canAccessTrip(body.trip_id, userId);
     if (!trip) httpError(404, 'Trip not found');
     const role = this.db.get<{ role: string }>('SELECT role FROM users WHERE id = ?', userId)?.role ?? 'user';
-    if (!this.permissions.checkPermission('place_edit', role, trip.user_id, userId, trip.user_id !== userId)) {
+    if (!(await this.permissions.checkPermission('place_edit', role, trip.user_id, userId, trip.user_id !== userId))) {
       httpError(403, 'Not allowed to edit this trip');
     }
 

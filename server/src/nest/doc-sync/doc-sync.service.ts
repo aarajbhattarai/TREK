@@ -133,8 +133,8 @@ export class DocSyncService {
    * resumes exactly where it stopped once the switch is back on. Public because
    * a manual run has to refuse before it un-shelves anything.
    */
-  isSwitchedOff(link: Pick<LinkRow, 'provider_id'>): boolean {
-    if (!this.addons.isAddonEnabled(ADDON_IDS.DOCUMENTS)) return true;
+  async isSwitchedOff(link: Pick<LinkRow, 'provider_id'>): Promise<boolean> {
+    if (!(await this.addons.isAddonEnabled(ADDON_IDS.DOCUMENTS))) return true;
     return !this.config.enabledProviderIds().includes(link.provider_id);
   }
 
@@ -174,7 +174,7 @@ export class DocSyncService {
     // First, before anything that records a failure: a binding whose provider
     // is switched off must come back as it was left. The webhook and a first
     // run after binding reach this without asking beforehand.
-    if (this.isSwitchedOff(link)) {
+    if ((await this.isSwitchedOff(link))) {
       return { state: 'disabled', pulled: 0, pushed: 0, conflicts: 0, missing: 0 };
     }
     // An orphaned binding runs for nobody. Its credential belongs to somebody
@@ -1100,7 +1100,7 @@ export class DocSyncService {
   }
 
   /** Per-trip view for the UI: what is synced, what needs attention. */
-  status(tripId: number): Record<string, unknown> {
+  async status(tripId: number): Promise<Record<string, unknown>> {
     const links = this.config.listLinks(tripId);
     const counts = this.db.connection
       .prepare('SELECT state, COUNT(*) AS n FROM document_sync_items WHERE trip_id = ? GROUP BY state')
@@ -1138,22 +1138,26 @@ export class DocSyncService {
       .all(tripId) as Array<{ link_id: number; paired: number; atProvider: number; missing: number }>;
 
     const byLink = new Map(perLink.map((r) => [r.link_id, r]));
+    // `map` cannot await the provider-off read, so the projection runs as an
+    // explicit loop — same order, same rows.
+    const linkCards = [];
+    for (const l of links) {
+      const row = byLink.get(l.id);
+      linkCards.push({
+        ...this.config.publicLink(l, null),
+        // Paused rather than failed, so the card can say why nothing moves
+        // without the binding's own state being touched.
+        providerOff: await this.isSwitchedOff(l),
+        holdings: {
+          inTrek: totalHere.n,
+          atProvider: Number(row?.atProvider ?? 0),
+          paired: Number(row?.paired ?? 0),
+          missing: Number(row?.missing ?? 0),
+        },
+      });
+    }
     return {
-      links: links.map((l) => {
-        const row = byLink.get(l.id);
-        return {
-          ...this.config.publicLink(l, null),
-          // Paused rather than failed, so the card can say why nothing moves
-          // without the binding's own state being touched.
-          providerOff: this.isSwitchedOff(l),
-          holdings: {
-            inTrek: totalHere.n,
-            atProvider: Number(row?.atProvider ?? 0),
-            paired: Number(row?.paired ?? 0),
-            missing: Number(row?.missing ?? 0),
-          },
-        };
-      }),
+      links: linkCards,
       items: Object.fromEntries(counts.map((c) => [c.state, c.n])),
     };
   }

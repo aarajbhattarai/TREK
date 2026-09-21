@@ -2,13 +2,14 @@ import { Injectable } from '@nestjs/common';
 import type { RoadtripVia, TrekWsPayload, TrekWsTripEventName } from '@trek/shared';
 import { RealtimeService } from '../realtime/realtime.service';
 import { DatabaseService, type PlaceWithTags, type TripAccess } from '../database/database.service';
+import { UnitOfWork } from '../database/unit-of-work';
 import { PermissionsService } from '../permissions/permissions.service';
 import { AssignmentsService } from '../assignments/assignments.service';
 import type { User } from '../../types';
 
 type Trip = TripAccess;
 
-type MirroredAssignment = ReturnType<AssignmentsService['createAssignment']>;
+type MirroredAssignment = Awaited<ReturnType<AssignmentsService['createAssignment']>>;
 
 /** One day's drawn roads after a write re-pinned them, as the road trip broadcasts them. */
 type DayVias = { dayId: number; vias: RoadtripVia[] };
@@ -95,6 +96,7 @@ export class AccommodationsService {
     private readonly permissions: PermissionsService,
     private readonly realtime: RealtimeService,
     private readonly assignments: AssignmentsService,
+    private readonly uow: UnitOfWork,
   ) {}
 
   private get db() {
@@ -107,7 +109,7 @@ export class AccommodationsService {
     return this.dbs.canAccessTrip(Number(tripId), userId);
   }
 
-  canEdit(trip: Trip, user: User): boolean {
+  async canEdit(trip: Trip, user: User): Promise<boolean> {
     return this.permissions.checkPermission('day_edit', user.role, trip.user_id, user.id, trip.user_id !== user.id);
   }
 
@@ -160,24 +162,24 @@ export class AccommodationsService {
   // -------------------------------------------------------------------------
 
   /** Put a freshly written stay on the map. */
-  attachStayStop(accommodationId: number, placeId: number | null, dayId: number, checkIn?: string | null): AccommodationMirror {
+  async attachStayStop(accommodationId: number, placeId: number | null, dayId: number, checkIn?: string | null): Promise<AccommodationMirror> {
     return this.mirrorStay(accommodationId, placeId, dayId, checkIn);
   }
 
   /** Carry a stay's own stop over to where the stay now is. `checkInChanged` says the
    *  booking was given a new hour, which seats the night afresh (see remirrorStay). */
-  moveStayStop(
+  async moveStayStop(
     accommodationId: number,
     placeId: number | null,
     dayId: number,
     checkIn?: string | null,
     opts: { checkInChanged?: boolean } = {},
-  ): AccommodationMirror {
+  ): Promise<AccommodationMirror> {
     return this.remirrorStay(accommodationId, placeId, dayId, checkIn, opts);
   }
 
   /** Take back the stops of a stay that is being deleted elsewhere. */
-  dropStayStops(accommodationId: number): AccommodationMirror {
+  async dropStayStops(accommodationId: number): Promise<AccommodationMirror> {
     return this.releaseStops(accommodationId, {});
   }
 
@@ -191,7 +193,7 @@ export class AccommodationsService {
    * sent the request. The day order and the vias sent here are news to that
    * session too, and they only make sense arriving behind the stop they concern.
    */
-  announceMirror(tripId: string | number, mirror: AccommodationMirror, send: MirrorSender, socketId?: string): void {
+  async announceMirror(tripId: string | number, mirror: AccommodationMirror, send: MirrorSender, socketId?: string): Promise<void> {
     for (const stop of mirror.removed) send('assignment:deleted', { assignmentId: stop.id, dayId: stop.dayId });
     if (mirror.created) send('assignment:created', { assignment: mirror.created });
     if (mirror.moved) {
@@ -207,7 +209,7 @@ export class AccommodationsService {
     // A night is seated by its check-in, which renumbers the stops around it. The
     // created/moved event alone puts the row at the end of the day on every other
     // screen, so the day that changed sends its order along.
-    for (const dayId of this.touchedDays(mirror)) {
+    for (const dayId of await this.touchedDays(mirror)) {
       const orderedIds = this.db.all<{ id: number }>(
         'SELECT id FROM day_assignments WHERE day_id = ? ORDER BY order_index', dayId).map(row => row.id);
       send('assignment:reordered', { dayId, orderedIds });
@@ -220,7 +222,7 @@ export class AccommodationsService {
   }
 
   /** Days whose stop order this write can have changed, each named once. */
-  private touchedDays(mirror: AccommodationMirror): number[] {
+  private async touchedDays(mirror: AccommodationMirror): Promise<number[]> {
     const days = new Set<number>();
     if (mirror.created) days.add(mirror.created.day_id);
     if (mirror.moved) { days.add(mirror.moved.assignment.day_id); days.add(mirror.moved.oldDayId); }
@@ -479,12 +481,12 @@ export class AccommodationsService {
    *
    * Runs inside the caller's transaction.
    */
-  private relocateOwnStop(
+  private async relocateOwnStop(
     stop: { id: number; day_id: number; order_index: number },
     placeId: number,
     dayId: number,
     checkIn?: string | null,
-  ): MirroredAssignment | null {
+  ): Promise<MirroredAssignment | null> {
     if (this.db.get('SELECT id FROM day_assignments WHERE day_id = ? AND place_id = ? AND id != ?', dayId, placeId, stop.id)) {
       return null;
     }
@@ -516,7 +518,7 @@ export class AccommodationsService {
     return this.assignments.getAssignmentWithPlace(stop.id);
   }
 
-  private mirrorStay(accommodationId: number, placeId: number | null, dayId: number, checkIn?: string | null): AccommodationMirror {
+  private async mirrorStay(accommodationId: number, placeId: number | null, dayId: number, checkIn?: string | null): Promise<AccommodationMirror> {
     const mirror = noMirror();
     // A stay can outlive its place (place_id is ON DELETE SET NULL) and the booking
     // form writes stays that never had one. Nothing to put on the map then.
@@ -539,7 +541,7 @@ export class AccommodationsService {
     // would leave that copy without it. The day list has nothing else to tell the
     // stop from a place the traveller added, so it would show the hotel a second
     // time until the next reload.
-    mirror.created = this.assignments.createAssignment(dayId, placeId, null, {
+    mirror.created = await this.assignments.createAssignment(dayId, placeId, null, {
       accommodationId,
       orderIndex: this.positionForCheckIn(dayId, checkIn),
     });
@@ -568,7 +570,7 @@ export class AccommodationsService {
    *
    * Runs inside the caller's transaction.
    */
-  private releaseStops(accommodationId: number, opts: { keepStop?: boolean }): AccommodationMirror {
+  private async releaseStops(accommodationId: number, opts: { keepStop?: boolean }): Promise<AccommodationMirror> {
     const mirror = noMirror();
     const own = this.ownStops(accommodationId);
     const before = this.stopOrders(own.map(stop => stop.day_id));
@@ -578,7 +580,7 @@ export class AccommodationsService {
         // The stop stays, but it is the traveller's now. Days hides a stop whose
         // accommodation_id is set, so a client left holding the old row keeps the
         // place invisible on a day it is standing on.
-        const released = this.assignments.getAssignmentWithPlace(stop.id);
+        const released = await this.assignments.getAssignmentWithPlace(stop.id);
         if (released) mirror.updated.push(released);
         continue;
       }
@@ -601,13 +603,13 @@ export class AccommodationsService {
    *
    * Runs inside the caller's transaction.
    */
-  private remirrorStay(
+  private async remirrorStay(
     accommodationId: number,
     placeId: number | null,
     dayId: number,
     checkIn?: string | null,
     opts: { checkInChanged?: boolean } = {},
-  ): AccommodationMirror {
+  ): Promise<AccommodationMirror> {
     const own = this.ownStops(accommodationId);
     if (own.length === 0) return noMirror();
     if (own.length === 1 && own[0].day_id === dayId && own[0].place_id === placeId) {
@@ -629,7 +631,7 @@ export class AccommodationsService {
     // on its id, all of which a DELETE takes with it.
     if (own.length === 1 && placeId) {
       const before = this.stopOrders([own[0].day_id, dayId]);
-      const moved = this.relocateOwnStop(own[0], placeId, dayId, checkIn);
+      const moved = await this.relocateOwnStop(own[0], placeId, dayId, checkIn);
       if (moved) {
         mirror.moved = { assignment: moved, oldDayId: own[0].day_id };
         mirror.stamped = this.stampLodging(placeId);
@@ -644,19 +646,19 @@ export class AccommodationsService {
       mirror.removed.push({ id: stop.id, dayId: stop.day_id });
     }
     this.reanchorVias(mirror, beforeRebuild);
-    const fresh = this.mirrorStay(accommodationId, placeId, dayId, checkIn);
+    const fresh = await this.mirrorStay(accommodationId, placeId, dayId, checkIn);
     mirror.created = fresh.created;
     mirror.stamped = fresh.stamped;
     for (const day of fresh.vias ?? []) this.noteVias(mirror, day);
     return mirror;
   }
 
-  createAccommodation(tripId: string | number, data: CreateAccommodationData) {
+  async createAccommodation(tripId: string | number, data: CreateAccommodationData) {
     const { place_id, start_day_id, end_day_id, check_in, check_in_end, check_out, confirmation, notes } = data;
 
     // The stay, its partner hotel reservation and the day stop it implies are one
     // logical write, and an atomic one, so a failed insert halfway can't leave an orphan.
-    const written = this.db.transaction(() => {
+    const written = await this.uow.transactional(async () => {
       const result = this.db.run(
         'INSERT INTO day_accommodations (trip_id, place_id, start_day_id, end_day_id, check_in, check_in_end, check_out, confirmation, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
         tripId, place_id, start_day_id, end_day_id, check_in || null, check_in_end || null, check_out || null, confirmation || null, notes || null
@@ -680,7 +682,7 @@ export class AccommodationsService {
         Object.keys(meta).length > 0 ? JSON.stringify(meta) : null
       );
 
-      return { accommodationId: newId, mirror: this.mirrorStay(Number(newId), place_id ?? null, start_day_id, check_in) };
+      return { accommodationId: newId, mirror: await this.mirrorStay(Number(newId), place_id ?? null, start_day_id, check_in) };
     });
 
     return { accommodation: this.getAccommodationWithPlace(written.accommodationId), mirror: written.mirror };
@@ -690,7 +692,7 @@ export class AccommodationsService {
     return this.db.get<DayAccommodation>('SELECT * FROM day_accommodations WHERE id = ? AND trip_id = ?', id, tripId);
   }
 
-  updateAccommodation(id: string | number, existing: DayAccommodation, fields: {
+  async updateAccommodation(id: string | number, existing: DayAccommodation, fields: {
     place_id?: number; start_day_id?: number; end_day_id?: number;
     check_in?: string; check_in_end?: string; check_out?: string; confirmation?: string; notes?: string;
   }) {
@@ -705,12 +707,12 @@ export class AccommodationsService {
 
     // The stay row and the day stop that mirrors it describe the same booking, so a
     // move that wrote only one of the two must not survive.
-    const mirror = this.db.transaction(() => {
+    const mirror = await this.uow.transactional(async () => {
       this.db.run(
         'UPDATE day_accommodations SET place_id = ?, start_day_id = ?, end_day_id = ?, check_in = ?, check_in_end = ?, check_out = ?, confirmation = ?, notes = ? WHERE id = ?',
         newPlaceId, newStartDayId, newEndDayId, newCheckIn, newCheckInEnd, newCheckOut, newConfirmation, newNotes, id
       );
-      return this.remirrorStay(Number(id), newPlaceId, newStartDayId, newCheckIn, {
+      return await this.remirrorStay(Number(id), newPlaceId, newStartDayId, newCheckIn, {
         checkInChanged: fields.check_in !== undefined && (fields.check_in || null) !== (existing.check_in || null),
       });
     });
@@ -742,14 +744,14 @@ export class AccommodationsService {
    * that no longer exists. `linkedReservationId` / `deletedBudgetItemId` stay on the
    * result as the first of each, because the RPC, MCP and REST callers read them.
    */
-  deleteAccommodation(id: string | number, opts: { keepStop?: boolean } = {}): {
+  async deleteAccommodation(id: string | number, opts: { keepStop?: boolean } = {}): Promise<{
     linkedReservationId: number | null;
     deletedBudgetItemId: number | null;
     linkedReservationIds: number[];
     deletedBudgetItemIds: number[];
     mirror: AccommodationMirror;
-  } {
-    return this.db.transaction(() => {
+  }> {
+    return this.uow.transactional(async () => {
       const linkedRes = this.db.all<{ id: number }>('SELECT id FROM reservations WHERE accommodation_id = ?', Number(id));
       const deletedBudgetItemIds: number[] = [];
       for (const res of linkedRes) {
@@ -761,7 +763,7 @@ export class AccommodationsService {
         this.db.run('DELETE FROM reservations WHERE id = ?', res.id);
       }
 
-      const mirror = this.releaseStops(Number(id), opts);
+      const mirror = await this.releaseStops(Number(id), opts);
 
       this.db.run('DELETE FROM day_accommodations WHERE id = ?', id);
       const linkedReservationIds = linkedRes.map(r => r.id);

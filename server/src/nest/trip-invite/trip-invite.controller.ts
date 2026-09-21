@@ -23,42 +23,42 @@ const RL_WINDOW = 15 * 60 * 1000;
 export class TripInviteLinkController {
   constructor(private readonly invites: TripInviteService, private readonly audit: AuditService) {}
 
-  private requireManage(tripId: string, user: User) {
+  private async requireManage(tripId: string, user: User) {
     const trip = this.invites.verifyTripAccess(tripId, user.id);
     if (!trip) throw new HttpException({ error: 'Trip not found' }, 404);
-    if (!this.invites.canManage(trip, user)) throw new HttpException({ error: 'No permission' }, 403);
+    if (!(await this.invites.canManage(trip, user))) throw new HttpException({ error: 'No permission' }, 403);
   }
 
   @Get()
-  get(@CurrentUser() user: User, @Param('tripId') tripId: string) {
+  async get(@CurrentUser() user: User, @Param('tripId') tripId: string) {
     // The token grants trip membership, so reading it needs the same
     // share_manage permission as creating/rotating it — not just trip access.
-    this.requireManage(tripId, user);
+    await this.requireManage(tripId, user);
     const info = this.invites.get(tripId);
     return info ? info : { token: null };
   }
 
   @Post()
-  create(
+  async create(
     @CurrentUser() user: User,
     @Param('tripId') tripId: string,
     @Body() body: TripInviteLinkCreateDto,
     @Req() req: Request,
   ) {
-    this.requireManage(tripId, user);
+    await this.requireManage(tripId, user);
     const days = body?.expires_in_days != null && String(body.expires_in_days).trim() !== ''
       ? Number.parseInt(String(body.expires_in_days))
       : null;
     const info = this.invites.createOrRotate(tripId, user.id, Number.isFinite(days as number) ? days : null);
-    this.audit.writeAudit({ userId: user.id, action: 'trip.invite_link_create', resource: tripId, ip: getClientIp(req), details: { expires_in_days: days } });
+    await this.audit.writeAudit({ userId: user.id, action: 'trip.invite_link_create', resource: tripId, ip: getClientIp(req), details: { expires_in_days: days } });
     return info;
   }
 
   @Delete()
-  remove(@CurrentUser() user: User, @Param('tripId') tripId: string, @Req() req: Request) {
-    this.requireManage(tripId, user);
+  async remove(@CurrentUser() user: User, @Param('tripId') tripId: string, @Req() req: Request) {
+    await this.requireManage(tripId, user);
     this.invites.remove(tripId);
-    this.audit.writeAudit({ userId: user.id, action: 'trip.invite_link_delete', resource: tripId, ip: getClientIp(req) });
+    await this.audit.writeAudit({ userId: user.id, action: 'trip.invite_link_delete', resource: tripId, ip: getClientIp(req) });
     return { success: true };
   }
 }
@@ -91,12 +91,12 @@ export class TripInviteController {
 
   @Post(':token/accept')
   @HttpCode(200)
-  accept(@CurrentUser() user: User, @Param('token') token: string, @Req() req: Request) {
+  async accept(@CurrentUser() user: User, @Param('token') token: string, @Req() req: Request) {
     this.limit(req, 20);
     const resolved = this.invites.resolve(token);
     if (!resolved) throw new HttpException({ error: 'Invalid or expired invite link' }, 404);
-    const result = this.invites.join(resolved.trip_id, user.id);
-    this.audit.writeAudit({ userId: user.id, action: 'trip.invite_link_join', resource: String(resolved.trip_id), ip: getClientIp(req), details: { joined: result.joined } });
+    const result = await this.invites.join(resolved.trip_id, user.id);
+    await this.audit.writeAudit({ userId: user.id, action: 'trip.invite_link_join', resource: String(resolved.trip_id), ip: getClientIp(req), details: { joined: result.joined } });
     return { trip_id: resolved.trip_id, joined: result.joined };
   }
 }

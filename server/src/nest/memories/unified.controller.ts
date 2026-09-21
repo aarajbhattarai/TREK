@@ -22,8 +22,8 @@ export class UnifiedMemoriesController {
   constructor(private readonly memories: MemoriesService) {}
 
   @Get('trips/:tripId/photos')
-  listPhotos(@CurrentUser() user: User, @Param('tripId') tripId: string, @Res() res: Response): void {
-    const result = this.memories.listTripPhotos(tripId, user.id);
+  async listPhotos(@CurrentUser() user: User, @Param('tripId') tripId: string, @Res() res: Response): Promise<void> {
+    const result = await this.memories.listTripPhotos(tripId, user.id);
     if ('error' in result) {
       res.status(result.error.status).json({ error: result.error.message });
       return;
@@ -81,8 +81,8 @@ export class UnifiedMemoriesController {
   }
 
   @Get('trips/:tripId/album-links')
-  listAlbumLinks(@CurrentUser() user: User, @Param('tripId') tripId: string, @Res() res: Response): void {
-    const result = this.memories.listTripAlbumLinks(tripId, user.id);
+  async listAlbumLinks(@CurrentUser() user: User, @Param('tripId') tripId: string, @Res() res: Response): Promise<void> {
+    const result = await this.memories.listTripAlbumLinks(tripId, user.id);
     if ('error' in result) {
       res.status(result.error.status).json({ error: result.error.message });
       return;
@@ -92,14 +92,14 @@ export class UnifiedMemoriesController {
 
   @Post('trips/:tripId/album-links')
   @HttpCode(200)
-  createAlbumLink(
+  async createAlbumLink(
     @CurrentUser() user: User,
     @Param('tripId') tripId: string,
     @Body() body: CreateAlbumLinkDto,
     @Res() res: Response,
-  ): void {
+  ): Promise<void> {
     const passphrase = body?.passphrase ? String(body.passphrase) : undefined;
-    const result = this.memories.createTripAlbumLink(tripId, user.id, body?.provider, body?.album_id, body?.album_name, passphrase);
+    const result = await this.memories.createTripAlbumLink(tripId, user.id, body?.provider, body?.album_id, body?.album_name, passphrase);
     if ('error' in result) {
       res.status(result.error.status).json({ error: result.error.message });
       return;

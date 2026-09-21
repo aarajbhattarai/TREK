@@ -1137,12 +1137,12 @@ describe('validateAuthorizeRequest — unauthenticated strips client info (H3)',
 // ---------------------------------------------------------------------------
 
 describe('addon gate and MCP endpoint', () => {
-  it('mcpEnabled checks the MCP addon flag', () => {
+  it('mcpEnabled checks the MCP addon flag', async () => {
     isAddonEnabled.mockReturnValue(true);
-    expect(svc.mcpEnabled()).toBe(true);
+    expect(await svc.mcpEnabled()).toBe(true);
     expect(isAddonEnabled).toHaveBeenCalledWith(ADDON_IDS.MCP);
     isAddonEnabled.mockReturnValue(false);
-    expect(svc.mcpEnabled()).toBe(false);
+    expect(await svc.mcpEnabled()).toBe(false);
   });
 
   it('mcpSafeUrl forwards to the app-config helper', () => {

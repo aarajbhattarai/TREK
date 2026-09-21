@@ -50,9 +50,9 @@ export class AdminPackingTemplatesController {
 
   @Post()
   @HttpCode(201)
-  create(@CurrentUser() user: User, @Body() body: AdminTemplateNameDto, @Req() req: Request) {
+  async create(@CurrentUser() user: User, @Body() body: AdminTemplateNameDto, @Req() req: Request) {
     const result = ok(this.packing.createPackingTemplate(body.name, user.id));
-    this.audit.writeAudit({
+    await this.audit.writeAudit({
       userId: user.id,
       action: 'admin.packing_template_create',
       resource: String((result.template as { id?: number } | undefined)?.id ?? ''),
@@ -68,9 +68,9 @@ export class AdminPackingTemplatesController {
   }
 
   @Delete(':id')
-  remove(@CurrentUser() user: User, @Param('id') id: string, @Req() req: Request) {
+  async remove(@CurrentUser() user: User, @Param('id') id: string, @Req() req: Request) {
     const result = ok(this.packing.deletePackingTemplate(id));
-    this.audit.writeAudit({
+    await this.audit.writeAudit({
       userId: user.id,
       action: 'admin.packing_template_delete',
       resource: String(id),

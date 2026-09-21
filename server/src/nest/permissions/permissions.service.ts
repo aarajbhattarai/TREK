@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
+import { UnitOfWork } from '../database/unit-of-work';
 import { logError } from '../audit/audit-log.logger';
 import {
   getPermissionsCache,
@@ -73,9 +74,12 @@ const ACTIONS_MAP = new Map(PERMISSION_ACTIONS.map(a => [a.key, a]));
 
 @Injectable()
 export class PermissionsService {
-  constructor(private readonly dbs: DatabaseService) {}
+  constructor(
+    private readonly dbs: DatabaseService,
+    private readonly uow: UnitOfWork,
+  ) {}
 
-  private loadPermissions(): Map<string, PermissionLevel> {
+  private async loadPermissions(): Promise<Map<string, PermissionLevel>> {
     const cached = getPermissionsCache();
     if (cached) return cached;
     const cache = new Map<string, PermissionLevel>();
@@ -113,16 +117,16 @@ export class PermissionsService {
     invalidateSharedCache();
   }
 
-  getPermissionLevel(actionKey: string): PermissionLevel {
-    const perms = this.loadPermissions();
+  async getPermissionLevel(actionKey: string): Promise<PermissionLevel> {
+    const perms = await this.loadPermissions();
     const stored = perms.get(actionKey);
     if (stored) return stored;
     const action = ACTIONS_MAP.get(actionKey);
     return action?.defaultLevel ?? 'trip_owner';
   }
 
-  getAllPermissions(): Record<string, PermissionLevel> {
-    const perms = this.loadPermissions();
+  async getAllPermissions(): Promise<Record<string, PermissionLevel>> {
+    const perms = await this.loadPermissions();
     const result: Record<string, PermissionLevel> = {};
     for (const action of PERMISSION_ACTIONS) {
       result[action.key] = perms.get(action.key) ?? action.defaultLevel;
@@ -130,7 +134,7 @@ export class PermissionsService {
     return result;
   }
 
-  savePermissions(settings: Record<string, string>): { skipped: string[] } {
+  async savePermissions(settings: Record<string, string>): Promise<{ skipped: string[] }> {
     const skipped: string[] = [];
     const valid: Array<[string, string]> = [];
     for (const [actionKey, level] of Object.entries(settings)) {
@@ -144,7 +148,7 @@ export class PermissionsService {
     // Nothing valid to write → no prepare, no transaction, no cache flush.
     if (valid.length === 0) return { skipped };
     const upsert = this.dbs.prepare('INSERT OR REPLACE INTO app_settings (key, value) VALUES (?, ?)');
-    this.dbs.transaction(() => {
+    await this.uow.transactional(async () => {
       for (const [actionKey, level] of valid) {
         upsert.run(`perm_${actionKey}`, level);
       }
@@ -162,17 +166,17 @@ export class PermissionsService {
    * @param userId - The requesting user's ID
    * @param isMember - Whether the user is a trip member (not owner)
    */
-  checkPermission(
+  async checkPermission(
     actionKey: string,
     userRole: string,
     tripUserId: number | null,
     userId: number,
     isMember: boolean
-  ): boolean {
+  ): Promise<boolean> {
     // Admins always pass
     if (userRole === 'admin') return true;
 
-    const required = this.getPermissionLevel(actionKey);
+    const required = await this.getPermissionLevel(actionKey);
 
     switch (required) {
       case 'admin':

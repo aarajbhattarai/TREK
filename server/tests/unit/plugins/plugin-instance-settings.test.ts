@@ -109,19 +109,19 @@ describe('instance settings fields', () => {
     expect(svc().instanceSettingsFields('p')[0].options).toEqual(['fast', 'slow']);
   });
 
-  it('INS-003 — the admin list carries the instance-field count (gates the menu item)', () => {
+  it('INS-003 — the admin list carries the instance-field count (gates the menu item)', async () => {
     install('with-fields');
     install('plain');
     declareField('with-fields', 'apiKey', 'instance', { secret: true });
     declareField('with-fields', 'apiUrl', 'instance');
     declareField('with-fields', 'units', 'user'); // user fields must not count
 
-    const plugins = svc().list().plugins;
+    const plugins = (await svc().list()).plugins;
     expect(plugins.find((p) => p.id === 'with-fields')).toMatchObject({ instanceSettingsCount: 2 });
     expect(plugins.find((p) => p.id === 'plain')).toMatchObject({ instanceSettingsCount: 0 });
   });
 
-  it('INS-004 — the admin list carries the instance-action count (gates the menu item even with no settings fields)', () => {
+  it('INS-004 — the admin list carries the instance-action count (gates the menu item even with no settings fields)', async () => {
     install('with-action');
     install('plain');
     testDb
@@ -131,7 +131,7 @@ describe('instance settings fields', () => {
       .prepare('INSERT INTO plugin_actions (plugin_id, action_key, label, hint, danger, scope, sort_order) VALUES (?, ?, ?, NULL, 0, ?, 0)')
       .run('with-action', 'notify', 'Notify', 'user'); // user-scope actions must not count
 
-    const plugins = svc().list().plugins;
+    const plugins = (await svc().list()).plugins;
     expect(plugins.find((p) => p.id === 'with-action')).toMatchObject({ instanceSettingsCount: 0, instanceActionsCount: 1 });
     expect(plugins.find((p) => p.id === 'plain')).toMatchObject({ instanceSettingsCount: 0, instanceActionsCount: 0 });
     testDb.prepare("DELETE FROM plugin_actions WHERE plugin_id = 'with-action'").run();
@@ -212,13 +212,13 @@ describe('required settings are enforced on save', () => {
 describe('respawn on save (runtime)', () => {
   it('INS-004 — an inactive plugin is left alone (no respawn, reports false)', async () => {
     install('p');
-    const rt = createPluginRuntime(new DatabaseService(dbConn));
+    const rt = await createPluginRuntime(new DatabaseService(dbConn));
     await expect(rt.respawnIfActive('p')).resolves.toBe(false);
   });
 
   it('INS-005 — an active plugin is stopped and re-activated so the child re-reads config', async () => {
     install('p');
-    const rt = createPluginRuntime(new DatabaseService(dbConn));
+    const rt = await createPluginRuntime(new DatabaseService(dbConn));
     const calls: string[] = [];
     vi.spyOn(rt, 'isActive').mockReturnValue(true);
     vi.spyOn(rt, 'activate').mockImplementation(async () => { calls.push('activate'); });
@@ -334,7 +334,7 @@ describe('defaults reach the child at spawn', () => {
     const s = svc();
     s.updateInstanceConfig('fixture-id', { api_url: 'https://mine.example' });
 
-    const rt = createPluginRuntime(new DatabaseService(dbConn));
+    const rt = await createPluginRuntime(new DatabaseService(dbConn));
     const sup = (rt as unknown as { supervisor: { activate: (...a: unknown[]) => Promise<void> } }).supervisor;
     const activate = vi.spyOn(sup, 'activate').mockResolvedValue(undefined);
 

@@ -51,9 +51,9 @@ export class DocSyncMcp {
     access: { group: 'files', mode: 'read' },
     when: documentsAddonOn,
   })
-  getTripDocumentSync({ tripId }: { tripId: number }, ctx: McpContext) {
+  async getTripDocumentSync({ tripId }: { tripId: number }, ctx: McpContext) {
     if (!this.files.verifyTripAccess(tripId, ctx.userId)) return noAccess();
-    return ok(this.sync.status(tripId));
+    return ok(await this.sync.status(tripId));
   }
 
   @Tool({
@@ -108,7 +108,7 @@ export class DocSyncMcp {
       // Refused as the REST route refuses it, before the shelved rows below are
       // touched: a binding an admin switched off stays exactly as it was, so it
       // resumes where it stopped once the provider is back on.
-      if (this.sync.isSwitchedOff(link)) {
+      if ((await this.sync.isSwitchedOff(link))) {
         results.push({ linkId: link.id, provider: link.provider_id, state: 'disabled', errorCode: PROVIDER_DISABLED });
         continue;
       }

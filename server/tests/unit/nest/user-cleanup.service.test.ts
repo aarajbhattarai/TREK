@@ -49,10 +49,17 @@ import { ExchangeRatesService } from '../../../src/nest/budget/exchange-rates.se
 import { RealtimeService } from '../../../src/nest/realtime/realtime.service';
 import { BudgetService } from '../../../src/nest/budget/budget.service';
 import { UserCleanupService } from '../../../src/nest/auth/user-cleanup.service';
+import { createTestUnitOfWork } from '../../helpers/test-uow';
+import { UnitOfWork } from '../../../src/nest/database/unit-of-work';
 
 const dbs = new DatabaseService(testDb);
-const budget = new BudgetService(dbs, new PermissionsService(dbs), new ExchangeRatesService(), new RealtimeService());
-const svc = new UserCleanupService(dbs, budget);
+
+let budget: BudgetService;
+let svc: UserCleanupService;
+beforeAll(async () => {
+  budget = new BudgetService(dbs, new PermissionsService(dbs, await createTestUnitOfWork(dbs.connection)), new ExchangeRatesService(), new RealtimeService());
+  svc = new UserCleanupService(dbs, budget);
+});
 
 const installPlugin = (id: string, permissions: string[] | null) => {
   testDb.prepare('INSERT INTO plugins (id, name, version, permissions) VALUES (?, ?, ?, ?)')

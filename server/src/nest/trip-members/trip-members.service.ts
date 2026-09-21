@@ -76,7 +76,7 @@ export class TripMembersService {
     return this.dbs.canAccessTrip(tripId, userId) as { user_id: number } | null | undefined;
   }
 
-  can(action: string, role: string, ownerId: number | null, userId: number, isMember: boolean): boolean {
+  async can(action: string, role: string, ownerId: number | null, userId: number, isMember: boolean): Promise<boolean> {
     return this.permissions.checkPermission(action, role, ownerId, userId, isMember);
   }
 

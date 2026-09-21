@@ -44,41 +44,41 @@ describe('TripShareController', () => {
     expect(thrown(() => new TripShareController(svc({ canManage: vi.fn().mockReturnValue(false) })).create(user, '5', {}, res()))).toEqual({ status: 403, body: { error: 'No permission' } });
   });
 
-  it('POST answers 201 on create, 200 on update', () => {
+  it('POST answers 201 on create, 200 on update', async () => {
     const createdRes = res();
     const c1 = new TripShareController(svc({ createOrUpdate: vi.fn().mockReturnValue({ token: 't', created: true }) } as Partial<ShareService>));
-    expect(c1.create(user, '5', { share_map: true }, createdRes)).toEqual({ token: 't' });
+    expect(await c1.create(user, '5', { share_map: true }, createdRes)).toEqual({ token: 't' });
     expect(createdRes.statusCode).toBe(201);
 
     const updatedRes = res();
     const c2 = new TripShareController(svc({ createOrUpdate: vi.fn().mockReturnValue({ token: 't', created: false }) } as Partial<ShareService>));
-    expect(c2.create(user, '5', {}, updatedRes)).toEqual({ token: 't' });
+    expect(await c2.create(user, '5', {}, updatedRes)).toEqual({ token: 't' });
     expect(updatedRes.statusCode).toBe(200);
   });
 
-  it('GET 404 without access, 403 without share_manage, returns info or a null token', () => {
+  it('GET 404 without access, 403 without share_manage, returns info or a null token', async () => {
     expect(thrown(() => new TripShareController(svc({ verifyTripAccess: vi.fn().mockReturnValue(undefined) })).get(user, '5'))).toEqual({ status: 404, body: { error: 'Trip not found' } });
     // Reading returns the token itself, so it needs the same permission as
     // creating it — a member with plain trip access must not get a copy.
     const get = vi.fn();
     expect(thrown(() => new TripShareController(svc({ canManage: vi.fn().mockReturnValue(false), get } as Partial<ShareService>)).get(user, '5'))).toEqual({ status: 403, body: { error: 'No permission' } });
     expect(get).not.toHaveBeenCalled();
-    expect(new TripShareController(svc({ get: vi.fn().mockReturnValue({ token: 't' }) } as Partial<ShareService>)).get(user, '5')).toEqual({ token: 't' });
-    expect(new TripShareController(svc({ get: vi.fn().mockReturnValue(null) } as Partial<ShareService>)).get(user, '5')).toEqual({ token: null });
+    expect(await new TripShareController(svc({ get: vi.fn().mockReturnValue({ token: 't' }) } as Partial<ShareService>)).get(user, '5')).toEqual({ token: 't' });
+    expect(await new TripShareController(svc({ get: vi.fn().mockReturnValue(null) } as Partial<ShareService>)).get(user, '5')).toEqual({ token: null });
   });
 
-  it('DELETE 403 without share_manage, else removes', () => {
+  it('DELETE 403 without share_manage, else removes', async () => {
     expect(thrown(() => new TripShareController(svc({ canManage: vi.fn().mockReturnValue(false) })).remove(user, '5'))).toEqual({ status: 403, body: { error: 'No permission' } });
     const remove = vi.fn();
-    expect(new TripShareController(svc({ remove } as Partial<ShareService>)).remove(user, '5')).toEqual({ success: true });
+    expect(await new TripShareController(svc({ remove } as Partial<ShareService>)).remove(user, '5')).toEqual({ success: true });
     expect(remove).toHaveBeenCalledWith('5');
   });
 });
 
 describe('SharedController', () => {
-  it('404 for an invalid token, else returns the snapshot', () => {
+  it('404 for an invalid token, else returns the snapshot', async () => {
     expect(thrown(() => new SharedController(svc({ getSharedTripData: vi.fn().mockReturnValue(null) } as Partial<ShareService>), storageStub).read('bad'))).toEqual({ status: 404, body: { error: 'Invalid or expired link' } });
-    expect(new SharedController(svc({ getSharedTripData: vi.fn().mockReturnValue({ trip: { id: 9 } }) } as Partial<ShareService>), storageStub).read('tok')).toEqual({ trip: { id: 9 } });
+    expect(await new SharedController(svc({ getSharedTripData: vi.fn().mockReturnValue({ trip: { id: 9 } }) } as Partial<ShareService>), storageStub).read('tok')).toEqual({ trip: { id: 9 } });
   });
 
   describe('place-photo proxy', () => {

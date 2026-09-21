@@ -82,7 +82,7 @@ export class DocSyncJob implements OnApplicationBootstrap {
 
   async tick(): Promise<void> {
     try {
-      if (!this.addons.isAddonEnabled(ADDON_IDS.DOCUMENTS)) return;
+      if (!(await this.addons.isAddonEnabled(ADDON_IDS.DOCUMENTS))) return;
       const killSwitch = this.db.get<{ value: string }>('SELECT value FROM app_settings WHERE key = ?', SETTING_SYNC_ENABLED)?.value;
       // Unrecognised values mean ON here because the setting is absent by
       // default; only an explicit 'false' stops the sync.

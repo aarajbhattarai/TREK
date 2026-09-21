@@ -13,6 +13,7 @@ import {
   type DawarichSuggestionList,
 } from '@trek/shared';
 import { DatabaseService } from '../database/database.service';
+import { UnitOfWork } from '../database/unit-of-work';
 import { AtlasService } from '../atlas/atlas.service';
 import { PlacesService } from '../places/places.service';
 import { AssignmentsService } from '../assignments/assignments.service';
@@ -53,6 +54,7 @@ export class DawarichSuggestionsService {
     private readonly assignments: AssignmentsService,
     private readonly permissions: PermissionsService,
     private readonly journey: JourneyDomainService,
+    private readonly uow: UnitOfWork,
   ) {}
 
   /**
@@ -175,7 +177,7 @@ export class DawarichSuggestionsService {
    * MCP tool and any future caller each shape the failure their own way — the
    * atlas domain's `BucketItemExistsError` is the precedent.
    */
-  accept(userId: number, id: number, body: DawarichAccept, sid?: string): DawarichAcceptResult {
+  async accept(userId: number, id: number, body: DawarichAccept, sid?: string): Promise<DawarichAcceptResult> {
     const row = this.db.get<SuggestionRow>(
       'SELECT * FROM dawarich_visit_suggestions WHERE id = ? AND user_id = ?',
       id,
@@ -201,12 +203,12 @@ export class DawarichSuggestionsService {
    * written: permission to touch the trip is not permission to attach a place
    * to somebody else's day.
    */
-  private acceptAsPlace(
+  private async acceptAsPlace(
     userId: number,
     row: SuggestionRow,
     body: DawarichAccept,
     sid?: string,
-  ): DawarichAcceptResult {
+  ): Promise<DawarichAcceptResult> {
     const tripId = body.tripId ?? row.trip_id;
     if (!tripId) throw new AcceptError('trip_required', 'A trip is required to create a place', 400);
 
@@ -219,10 +221,10 @@ export class DawarichSuggestionsService {
     // owner, a member accepting a stay must be refused exactly as they would be
     // in the planner. Asked here rather than in the controller so the MCP tool
     // cannot take a different route to the same write.
-    this.requirePermission('place_edit', access.user_id, userId);
+    await this.requirePermission('place_edit', access.user_id, userId);
 
     if (body.dayId !== undefined) {
-      this.requirePermission('day_edit', access.user_id, userId);
+      await this.requirePermission('day_edit', access.user_id, userId);
       if (!this.assignments.dayExists(body.dayId, tripId)) {
         throw new AcceptError('day_not_on_trip', 'Day does not belong to this trip', 400);
       }
@@ -235,7 +237,7 @@ export class DawarichSuggestionsService {
     // a place with no assignment, or a place nobody recorded as accepted — is
     // worse than none: the stay would come back as unhandled while the place it
     // already produced sat on the trip.
-    const { created, placeId, assignment } = this.db.transaction(() => {
+    const { created, placeId, assignment } = await this.uow.transactional(async () => {
       const place = this.places.create(String(tripId), {
         name: body.name?.trim() || row.name,
         lat,
@@ -253,7 +255,7 @@ export class DawarichSuggestionsService {
       // because this path made it.
       this.db.run("UPDATE places SET source = 'dawarich' WHERE id = ?", id);
 
-      const day = body.dayId !== undefined ? this.assignments.createAssignment(body.dayId, id, null) : undefined;
+      const day = body.dayId !== undefined ? await this.assignments.createAssignment(body.dayId, id, null) : undefined;
       this.markAccepted(row.id, 'place', { placeId: id });
       // Re-read, so what goes out on the wire carries the source: everyone else
       // on the trip should see the Dawarich mark on it too, not only the person
@@ -379,16 +381,16 @@ export class DawarichSuggestionsService {
    * tool holds `ctx.userId`, and a permission that depended on which door
    * somebody came through would not be a permission.
    */
-  private requirePermission(action: 'place_edit' | 'day_edit', tripOwnerId: number, userId: number): void {
+  private async requirePermission(action: 'place_edit' | 'day_edit', tripOwnerId: number, userId: number): Promise<void> {
     const actor = this.db.get<{ role: string }>('SELECT role FROM users WHERE id = ?', userId);
-    const allowed = this.permissions.checkPermission(
+    const allowed = await this.permissions.checkPermission(
       action,
       actor?.role ?? 'user',
       tripOwnerId,
       userId,
       tripOwnerId !== userId,
     );
-    if (!allowed) throw new AcceptError('forbidden', 'No permission', 403);
+    if (!(await allowed)) throw new AcceptError('forbidden', 'No permission', 403);
   }
 
   /**

@@ -1,3 +1,4 @@
+import { Module, type DynamicModule } from '@nestjs/common';
 import type Database from 'better-sqlite3';
 import { UnitOfWork } from '../../src/nest/database/unit-of-work';
 import { createTestOrm } from './test-orm';
@@ -21,4 +22,26 @@ export function createTestUnitOfWork(db: Database.Database): Promise<UnitOfWork>
   const pending = createTestOrm(db).then((t) => new UnitOfWork(t.em));
   perHandle.set(db, pending);
   return pending;
+}
+
+/**
+ * The same `UnitOfWork`, as a **global** Nest module.
+ *
+ * A `Test.createTestingModule({ providers: [...] })` entry only reaches the root
+ * testing module, so a service resolved inside its own feature module (the
+ * `PermissionsService` in `PermissionsModule`, say) still finds no `UnitOfWork`.
+ * `OrmModule` is `@Global()` in the app graph for exactly that reason, and the
+ * partial containers the e2e suites build need the same shape.
+ */
+@Module({})
+export class TestUnitOfWorkModule {
+  static async forRoot(db: Database.Database): Promise<DynamicModule> {
+    const uow = await createTestUnitOfWork(db);
+    return {
+      module: TestUnitOfWorkModule,
+      global: true,
+      providers: [{ provide: UnitOfWork, useValue: uow }],
+      exports: [UnitOfWork],
+    };
+  }
 }

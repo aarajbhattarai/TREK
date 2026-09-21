@@ -96,61 +96,55 @@ describe('PluginGuards — requireActor', () => {
 });
 
 describe('PluginGuards — requireTripEdit and canEditAs', () => {
-  it('PGUARD-008 passes when the user may access and edit', () => {
+  it('PGUARD-008 passes when the user may access and edit', async () => {
     const { guards, permissions } = build({ allow: true });
-    expect(() => guards.requireTripEdit(1, 42, 'trip_edit')).not.toThrow();
+    await expect(guards.requireTripEdit(1, 42, 'trip_edit')).resolves.not.toThrow();
     expect(permissions.checkPermission).toHaveBeenCalledWith('trip_edit', 'user', 42, 42, false);
   });
 
-  it('PGUARD-009 no access wins over no permission, and names the trip', () => {
+  it('PGUARD-009 no access wins over no permission, and names the trip', async () => {
     const { guards } = build({ allow: false });
-    expect(() => guards.requireTripEdit(2, 42, 'trip_edit')).toThrow(
-      new ForbiddenResource('no access to trip 2'),
-    );
+    await expect(guards.requireTripEdit(2, 42, 'trip_edit')).rejects.toThrow(new ForbiddenResource('no access to trip 2'));
   });
 
-  it('PGUARD-010 access without the edit permission is a different message', () => {
+  it('PGUARD-010 access without the edit permission is a different message', async () => {
     const { guards } = build({ allow: false });
-    expect(() => guards.requireTripEdit(1, 42, 'trip_edit')).toThrow(
-      new ForbiddenResource('no permission to edit trip 1'),
-    );
+    await expect(guards.requireTripEdit(1, 42, 'trip_edit')).rejects.toThrow(new ForbiddenResource('no permission to edit trip 1'));
   });
 
-  it('PGUARD-011 canEditAs returns false rather than throwing when there is no access', () => {
-    expect(build().guards.canEditAs('trip_edit', 2, 42)).toBe(false);
+  it('PGUARD-011 canEditAs returns false rather than throwing when there is no access', async () => {
+    expect(await build().guards.canEditAs('trip_edit', 2, 42)).toBe(false);
   });
 
-  it('PGUARD-012 canEditAs returns false when the user row is gone', () => {
-    expect(build({ role: undefined }).guards.canEditAs('trip_edit', 1, 42)).toBe(false);
+  it('PGUARD-012 canEditAs returns false when the user row is gone', async () => {
+    expect(await build({ role: undefined }).guards.canEditAs('trip_edit', 1, 42)).toBe(false);
   });
 
-  it('PGUARD-013 a missing role column falls back to "user"', () => {
+  it('PGUARD-013 a missing role column falls back to "user"', async () => {
     const { guards, permissions } = build({ role: null as unknown as string });
-    guards.canEditAs('trip_edit', 1, 42);
+    await guards.canEditAs('trip_edit', 1, 42);
     expect(permissions.checkPermission).toHaveBeenCalledWith('trip_edit', 'user', 42, 42, false);
   });
 
-  it('PGUARD-014 a non-owner member is flagged as shared', () => {
+  it('PGUARD-014 a non-owner member is flagged as shared', async () => {
     const db = {
       canAccessTrip: vi.fn(() => ({ id: 1, user_id: 7 })),
       prepare: vi.fn(() => ({ get: () => ({ role: 'user' }) })),
     } as unknown as DatabaseService;
     const permissions = { checkPermission: vi.fn(() => true) } as unknown as PermissionsService;
     const guards = new PluginGuards(db, permissions, {} as AddonsService);
-    guards.canEditAs('trip_edit', 1, 42);
+    await guards.canEditAs('trip_edit', 1, 42);
     expect(permissions.checkPermission).toHaveBeenCalledWith('trip_edit', 'user', 7, 42, true);
   });
 });
 
 describe('PluginGuards — requireAddon', () => {
-  it('PGUARD-015 an enabled addon passes', () => {
-    expect(() => build({ addonOn: true }).guards.requireAddon('budget', 'costs')).not.toThrow();
+  it('PGUARD-015 an enabled addon passes', async () => {
+    await expect(build({ addonOn: true }).guards.requireAddon('budget', 'costs')).resolves.not.toThrow();
   });
 
-  it('PGUARD-016 a disabled addon is refused with the noun in the message', () => {
-    expect(() => build({ addonOn: false }).guards.requireAddon('budget', 'costs')).toThrow(
-      new ForbiddenResource('the costs addon is disabled'),
-    );
+  it('PGUARD-016 a disabled addon is refused with the noun in the message', async () => {
+    await expect(build({ addonOn: false }).guards.requireAddon('budget', 'costs')).rejects.toThrow(new ForbiddenResource('the costs addon is disabled'));
   });
 });
 

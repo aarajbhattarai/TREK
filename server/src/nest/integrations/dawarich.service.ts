@@ -122,7 +122,7 @@ export class DawarichService {
         return { success: false, code: 'invalid_url', error: ssrf.error ?? 'Invalid Dawarich URL' };
       }
       if (ssrf.isPrivate) {
-        this.audit.writeAudit({
+        await this.audit.writeAudit({
           userId,
           action: 'dawarich.private_ip_configured',
           ip: clientIp,
@@ -212,9 +212,9 @@ export class DawarichService {
    * their journal because they revoked an API key would be the integration
    * destroying user content on its way out. What goes is the credential.
    */
-  disconnect(userId: number, clientIp: string | null): void {
+  async disconnect(userId: number, clientIp: string | null): Promise<void> {
     this.db.run('DELETE FROM dawarich_connections WHERE user_id = ?', userId);
-    this.audit.writeAudit({ userId, action: 'dawarich.disconnected', ip: clientIp, details: {} });
+    await this.audit.writeAudit({ userId, action: 'dawarich.disconnected', ip: clientIp, details: {} });
   }
 
   /**

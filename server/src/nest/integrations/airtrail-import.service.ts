@@ -234,7 +234,7 @@ export class AirtrailImportService {
       const ids = chain.map(f => String(f.id));
       try {
         const mapped = mapFlightsToMultiLegReservation(chain, resolveDayId);
-        const { reservation } = this.reservations.create(tripId, mapped as any);
+        const { reservation } = await this.reservations.create(tripId, mapped as any);
         const now = new Date().toISOString();
         this.db.prepare(
           `UPDATE reservations SET external_source = 'airtrail', external_id = ?, external_owner_user_id = ?,
@@ -278,7 +278,7 @@ export class AirtrailImportService {
       }
 
       try {
-        const { reservation } = this.reservations.create(tripId, mapped as any);
+        const { reservation } = await this.reservations.create(tripId, mapped as any);
         const now = new Date().toISOString();
         this.db.prepare(
           `UPDATE reservations SET external_source = 'airtrail', external_id = ?, external_owner_user_id = ?,

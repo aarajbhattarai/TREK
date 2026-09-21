@@ -52,10 +52,10 @@ export class PublicApiController {
 
   /** Every trip the token's owner can reach, without itineraries. */
   @Get('trips')
-  listTrips(@Req() req: Request): PublicApiTripList {
+  async listTrips(@Req() req: Request): Promise<PublicApiTripList> {
     this.limit(req);
     requireScope(req, 'trips');
-    return { trips: this.api.listTrips(requireUserId(req)) };
+    return { trips: await this.api.listTrips(requireUserId(req)) };
   }
 
   /**

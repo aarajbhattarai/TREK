@@ -50,17 +50,17 @@ export class JournalRpc {
   ) {}
 
   @PluginMethod('journal.listMine', { permission: 'db:read:journal' })
-  listMine(_params: Record<string, unknown>, ctx: PluginRpcContext): unknown {
+  async listMine(_params: Record<string, unknown>, ctx: PluginRpcContext): Promise<unknown> {
     const userId = this.requireJournalUser(ctx, 'reads');
-    this.requireJourneyAddon();
+    await this.requireJourneyAddon();
     return this.journey.listJourneys(userId);
   }
 
   @PluginMethod('journal.getEntries', { permission: 'db:read:journal' })
-  getEntries(params: Record<string, unknown>, ctx: PluginRpcContext): unknown {
+  async getEntries(params: Record<string, unknown>, ctx: PluginRpcContext): Promise<unknown> {
     const userId = this.requireJournalUser(ctx, 'reads');
     const journeyId = num(params.journeyId, 'journeyId');
-    this.requireJourneyAddon();
+    await this.requireJourneyAddon();
     // listEntries self-gates via canAccessJourney and returns null when the user
     // cannot see it.
     const entries = this.journey.listEntries(journeyId, userId);
@@ -69,32 +69,32 @@ export class JournalRpc {
   }
 
   @PluginMethod('journal.createEntry', { permission: 'db:write:journal' })
-  createEntry(params: Record<string, unknown>, ctx: PluginRpcContext): unknown {
+  async createEntry(params: Record<string, unknown>, ctx: PluginRpcContext): Promise<unknown> {
     const userId = this.requireJournalUser(ctx, 'writes');
     const input = asPayload(params.input);
     if (typeof input.entry_date !== 'string' || input.entry_date === '') throw new BadParams('entry_date is required');
     const journeyId = num(params.journeyId, 'journeyId');
-    this.requireJourneyAddon();
+    await this.requireJourneyAddon();
     const entry = this.journey.createEntry(journeyId, userId, input as never);
     if (!entry) throw new ForbiddenResource(`no editable journey ${journeyId} for this user`);
     return entry;
   }
 
   @PluginMethod('journal.updateEntry', { permission: 'db:write:journal' })
-  updateEntry(params: Record<string, unknown>, ctx: PluginRpcContext): unknown {
+  async updateEntry(params: Record<string, unknown>, ctx: PluginRpcContext): Promise<unknown> {
     const userId = this.requireJournalUser(ctx, 'writes');
     const entryId = num(params.entryId, 'entryId');
-    this.requireJourneyAddon();
+    await this.requireJourneyAddon();
     const entry = this.journey.updateEntry(entryId, userId, asPayload(params.input) as never);
     if (!entry) throw new ForbiddenResource(`no editable journal entry ${entryId} for this user`);
     return entry;
   }
 
   @PluginMethod('journal.deleteEntry', { permission: 'db:write:journal' })
-  deleteEntry(params: Record<string, unknown>, ctx: PluginRpcContext): unknown {
+  async deleteEntry(params: Record<string, unknown>, ctx: PluginRpcContext): Promise<unknown> {
     const userId = this.requireJournalUser(ctx, 'writes');
     const entryId = num(params.entryId, 'entryId');
-    this.requireJourneyAddon();
+    await this.requireJourneyAddon();
     if (!this.journey.deleteEntry(entryId, userId)) {
       throw new ForbiddenResource(`no editable journal entry ${entryId} for this user`);
     }
@@ -102,10 +102,10 @@ export class JournalRpc {
   }
 
   @PluginMethod('journal.createJourney', { permission: 'db:write:journal' })
-  createJourney(params: Record<string, unknown>, ctx: PluginRpcContext): unknown {
+  async createJourney(params: Record<string, unknown>, ctx: PluginRpcContext): Promise<unknown> {
     const userId = this.requireJournalUser(ctx, 'writes');
     const input = asPayload(params.input);
-    this.requireJourneyAddon();
+    await this.requireJourneyAddon();
     const title = typeof input.title === 'string' ? input.title.trim() : '';
     if (!title) throw new BadParams('journal title is required');
     return this.journey.createJourney(userId, {
@@ -137,7 +137,7 @@ export class JournalRpc {
     const entryId = num(params.entryId, 'entryId');
     // num() accepts "3" and 1.5; a row id is neither.
     if (!Number.isInteger(entryId) || entryId <= 0) throw new BadParams('entryId must be a positive integer');
-    this.requireJourneyAddon();
+    await this.requireJourneyAddon();
 
     const parsed = journalPluginPhotoInputSchema.safeParse(params.input);
     if (!parsed.success) throw new BadParams(`invalid photo input: ${parsed.error.issues[0]?.message ?? 'unknown'}`);
@@ -188,10 +188,10 @@ export class JournalRpc {
   }
 
   @PluginMethod('journal.deleteJourney', { permission: 'db:write:journal' })
-  deleteJourney(params: Record<string, unknown>, ctx: PluginRpcContext): unknown {
+  async deleteJourney(params: Record<string, unknown>, ctx: PluginRpcContext): Promise<unknown> {
     const userId = this.requireJournalUser(ctx, 'writes');
     const journeyId = num(params.journeyId, 'journeyId');
-    this.requireJourneyAddon();
+    await this.requireJourneyAddon();
     if (!this.journey.deleteJourney(journeyId, userId)) {
       throw new ForbiddenResource(`no deletable journal ${journeyId} for this user`);
     }
@@ -205,7 +205,7 @@ export class JournalRpc {
     return ctx.actingUserId;
   }
 
-  private requireJourneyAddon(): void {
-    this.guards.requireAddon(ADDON_IDS.JOURNEY, 'journey');
+  private async requireJourneyAddon(): Promise<void> {
+    await this.guards.requireAddon(ADDON_IDS.JOURNEY, 'journey');
   }
 }

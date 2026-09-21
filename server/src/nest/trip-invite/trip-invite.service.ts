@@ -38,7 +38,7 @@ export class TripInviteService {
     return this.dbs.canAccessTrip(tripId, userId);
   }
 
-  canManage(trip: Trip, user: User): boolean {
+  async canManage(trip: Trip, user: User): Promise<boolean> {
     return this.permissions.checkPermission('share_manage', user.role, trip.user_id, user.id, trip.user_id !== user.id);
   }
 

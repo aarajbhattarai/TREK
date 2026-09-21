@@ -86,15 +86,15 @@ describe('PublicApiController', () => {
   });
 
   describe('GET /api/v1/trips', () => {
-    it('returns the accessible trips for the token owner', () => {
+    it('returns the accessible trips for the token owner', async () => {
       const listTrips = vi.fn().mockReturnValue([TRIP]);
-      expect(makeController({ listTrips }).listTrips(req(7))).toEqual({ trips: [TRIP] });
+      expect(await makeController({ listTrips }).listTrips(req(7))).toEqual({ trips: [TRIP] });
       expect(listTrips).toHaveBeenCalledWith(7);
     });
 
-    it('returns an empty list rather than 404 when the user has no trips', () => {
+    it('returns an empty list rather than 404 when the user has no trips', async () => {
       const listTrips = vi.fn().mockReturnValue([]);
-      expect(makeController({ listTrips }).listTrips(req(7))).toEqual({ trips: [] });
+      expect(await makeController({ listTrips }).listTrips(req(7))).toEqual({ trips: [] });
     });
 
     it('401s if the guard was somehow bypassed and no user is attached', () => {

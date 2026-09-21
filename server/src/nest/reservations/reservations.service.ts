@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { DatabaseService, type TripAccess } from '../database/database.service';
+import { UnitOfWork } from '../database/unit-of-work';
 import type { TrekWsPayload, TrekWsTripEventName } from '@trek/shared';
 import { RealtimeService } from '../realtime/realtime.service';
 import { PermissionsService } from '../permissions/permissions.service';
@@ -151,13 +152,14 @@ export class ReservationsService {
     private readonly notifications: NotificationsService,
     private readonly reads: ReservationsReadRepository,
     private readonly accommodations: AccommodationsService,
+    private readonly uow: UnitOfWork,
   ) {}
 
   verifyTripAccess(tripId: string | number, userId: number) {
     return this.db.canAccessTrip(tripId, userId);
   }
 
-  canEdit(trip: Trip, user: User): boolean {
+  async canEdit(trip: Trip, user: User): Promise<boolean> {
     return this.permissions.checkPermission('reservation_edit', user.role, trip.user_id, user.id, trip.user_id !== user.id);
   }
 
@@ -178,8 +180,8 @@ export class ReservationsService {
    * booking event on this surface is echo-suppressed because the client already
    * drew what it sent, and it never sent this.
    */
-  private announceStayMirror(tripId: string | number, mirror: AccommodationMirror): void {
-    this.accommodations.announceMirror(tripId, mirror, (event, payload) => this.realtime.broadcast(tripId, event, payload));
+  private async announceStayMirror(tripId: string | number, mirror: AccommodationMirror): Promise<void> {
+    await this.accommodations.announceMirror(tripId, mirror, (event, payload) => this.realtime.broadcast(tripId, event, payload));
   }
 
   /** Fire-and-forget booking-change notification, mirroring the legacy dynamic import. */
@@ -665,13 +667,13 @@ export class ReservationsService {
 
   /** The accommodation insert, the reservation insert, the endpoint save and
    *  the metadata sync are one logical write — all-or-nothing. */
-  create(tripId: string | number, data: CreateReservationData): { reservation: ReservationRow; accommodationCreated: boolean } {
-    const { stayMirror, ...written } = this.db.transaction(() => this.createInTx(tripId, data));
-    this.announceStayMirror(tripId, stayMirror);
+  async create(tripId: string | number, data: CreateReservationData): Promise<{ reservation: ReservationRow; accommodationCreated: boolean }> {
+    const { stayMirror, ...written } = await this.uow.transactional(() => this.createInTx(tripId, data));
+    await this.announceStayMirror(tripId, stayMirror);
     return written;
   }
 
-  private createInTx(tripId: string | number, data: CreateReservationData): { reservation: ReservationRow; accommodationCreated: boolean; stayMirror: AccommodationMirror } {
+  private async createInTx(tripId: string | number, data: CreateReservationData): Promise<{ reservation: ReservationRow; accommodationCreated: boolean; stayMirror: AccommodationMirror }> {
     const {
       title, reservation_time, reservation_end_time, location,
       confirmation_number, notes, url, day_id, end_day_id, place_id, assignment_id,
@@ -703,7 +705,7 @@ export class ReservationsService {
         // night entered under Days. Without it the hotel booked on this form is the
         // one place the drive does not know about, which is the duplicate entry this
         // whole change exists to remove.
-        stayMirror = this.accommodations.attachStayStop(resolvedAccommodationId, accPlaceId || null, start_day_id, check_in);
+        stayMirror = await this.accommodations.attachStayStop(resolvedAccommodationId, accPlaceId || null, start_day_id, check_in);
       }
     }
 
@@ -816,13 +818,13 @@ export class ReservationsService {
 
   /** The accommodation upsert, the reservation update, the endpoint replace
    *  and the metadata sync are one logical write — all-or-nothing. */
-  update(id: string | number, tripId: string | number, data: UpdateReservationData, current: Reservation): { reservation: ReservationRow; accommodationChanged: boolean } {
-    const { stayMirror, ...written } = this.db.transaction(() => this.updateInTx(id, tripId, data, current));
-    this.announceStayMirror(tripId, stayMirror);
+  async update(id: string | number, tripId: string | number, data: UpdateReservationData, current: Reservation): Promise<{ reservation: ReservationRow; accommodationChanged: boolean }> {
+    const { stayMirror, ...written } = await this.uow.transactional(() => this.updateInTx(id, tripId, data, current));
+    await this.announceStayMirror(tripId, stayMirror);
     return written;
   }
 
-  private updateInTx(id: string | number, tripId: string | number, data: UpdateReservationData, current: Reservation): { reservation: ReservationRow; accommodationChanged: boolean; stayMirror: AccommodationMirror } {
+  private async updateInTx(id: string | number, tripId: string | number, data: UpdateReservationData, current: Reservation): Promise<{ reservation: ReservationRow; accommodationChanged: boolean; stayMirror: AccommodationMirror }> {
     const {
       title, reservation_time, reservation_end_time, location,
       confirmation_number, notes, url, day_id, end_day_id, place_id, assignment_id,
@@ -854,7 +856,7 @@ export class ReservationsService {
           // The stay just moved. Its stop moves with it, or it is left sitting on a
           // day nobody sleeps there any more, hidden from the day list because it
           // still carries this booking's id and stranded in the middle of the drive.
-          stayMirror = this.accommodations.moveStayStop(resolvedAccId, accPlaceId || null, start_day_id, check_in, {
+          stayMirror = await this.accommodations.moveStayStop(resolvedAccId, accPlaceId || null, start_day_id, check_in, {
             checkInChanged: (check_in || null) !== (prior?.check_in ?? null),
           });
         } else if (accPlaceId) {
@@ -863,7 +865,7 @@ export class ReservationsService {
             tripId, accPlaceId, start_day_id, end_day_id, check_in || null, check_out || null, accConf || confirmation_number || null
           );
           resolvedAccId = Number(accResult.lastInsertRowid);
-          stayMirror = this.accommodations.attachStayStop(resolvedAccId, accPlaceId, start_day_id, check_in);
+          stayMirror = await this.accommodations.attachStayStop(resolvedAccId, accPlaceId, start_day_id, check_in);
         }
         accommodationChanged = true;
       }
@@ -987,8 +989,8 @@ export class ReservationsService {
 
   /** The accommodation + budget-item + reservation deletes are one logical
    *  cascade — all-or-nothing. */
-  remove(id: string | number, tripId: string | number): { deleted: { id: number; title: string; type: string; accommodation_id: number | null } | undefined; accommodationDeleted: boolean; deletedBudgetItemId: number | null } {
-    const removed = this.db.transaction(() => {
+  async remove(id: string | number, tripId: string | number): Promise<{ deleted: { id: number; title: string; type: string; accommodation_id: number | null } | undefined; accommodationDeleted: boolean; deletedBudgetItemId: number | null }> {
+    const removed = await this.uow.transactional(async () => {
       const reservation = this.db.get<{ id: number; title: string; type: string; accommodation_id: number | null }>(
         'SELECT id, title, type, accommodation_id FROM reservations WHERE id = ? AND trip_id = ?', id, tripId
       );
@@ -1009,7 +1011,7 @@ export class ReservationsService {
           // by accommodation id, and that pointer is cleared the moment the stay is
           // deleted. Reversed, the stop stands with nothing left to remove it, and
           // the day list hides it for carrying a booking id.
-          stayMirror = this.accommodations.dropStayStops(reservation.accommodation_id);
+          stayMirror = await this.accommodations.dropStayStops(reservation.accommodation_id);
           this.db.run('DELETE FROM day_accommodations WHERE id = ? AND trip_id = ?', reservation.accommodation_id, tripId);
           accommodationDeleted = true;
         }
@@ -1024,7 +1026,7 @@ export class ReservationsService {
       return { deleted: reservation, accommodationDeleted, deletedBudgetItemId: linkedBudget ? linkedBudget.id : null, stayMirror };
     });
     const { stayMirror, ...answer } = removed;
-    this.announceStayMirror(tripId, stayMirror);
+    await this.announceStayMirror(tripId, stayMirror);
     return answer;
   }
 

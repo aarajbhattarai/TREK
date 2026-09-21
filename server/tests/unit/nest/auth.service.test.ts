@@ -84,6 +84,8 @@ import { MailerService } from '../../../src/nest/notifications/mailer/mailer.ser
 import { EphemeralTokenService } from '../../../src/nest/auth/ephemeral-token.service';
 import { AllowedFileTypesService } from '../../../src/nest/files/allowed-file-types.service';
 import { DEFAULT_ALLOWED_EXTENSIONS } from '../../../src/nest/files/files.constants';
+import { createTestUnitOfWork } from '../../helpers/test-uow';
+import { UnitOfWork } from '../../../src/nest/database/unit-of-work';
 
 // MailerService is injected since the notifications fold — a stub instead of a
 // module mock. sendPasswordResetEmail is the only thing auth reaches for.
@@ -97,16 +99,19 @@ const membershipStub = { joinTripAsMember } as unknown as TripMembershipService;
 // need one as a fixture: changePassword prunes MCP tokens, and the bridge parity
 // case verifies a token it just minted.
 const tokens = new TokenService(new DatabaseService(testDb), new EphemeralTokenService());
-const svc = new AuthService(
+let svc: AuthService;
+beforeAll(async () => {
+  svc = new AuthService(
   new DatabaseService(testDb),
-  new PermissionsService(new DatabaseService(testDb)),
+  new PermissionsService(new DatabaseService(testDb), await createTestUnitOfWork(testDb)),
   membershipStub,
   new WebauthnConfigService(new DatabaseService(testDb)),
-  new UserCleanupService(new DatabaseService(testDb), new BudgetService(new DatabaseService(testDb), new PermissionsService(new DatabaseService(testDb)), new ExchangeRatesService(), new RealtimeService())),
+  new UserCleanupService(new DatabaseService(testDb), new BudgetService(new DatabaseService(testDb), new PermissionsService(new DatabaseService(testDb), await createTestUnitOfWork(testDb)), new ExchangeRatesService(), new RealtimeService())),
   mailerStub,
   new EphemeralTokenService(),
-  new AllowedFileTypesService(new DatabaseService(testDb)),
+  new AllowedFileTypesService(new DatabaseService(testDb)), await createTestUnitOfWork(testDb),
 );
+});
 
 // ---------------------------------------------------------------------------
 // Lifecycle
@@ -400,22 +405,22 @@ describe('validateInviteToken', () => {
 // ---------------------------------------------------------------------------
 
 describe('registerUser — OIDC-only / registration-disabled', () => {
-  it('AUTH-DB-033: returns 403 when oidc_only=true and not first user', () => {
+  it('AUTH-DB-033: returns 403 when oidc_only=true and not first user', async () => {
     createUser(testDb); // ensure userCount > 0
     testDb.prepare("INSERT INTO app_settings (key, value) VALUES ('oidc_only', 'true')").run();
     testDb.prepare("INSERT INTO app_settings (key, value) VALUES ('oidc_issuer', 'https://x')").run();
     testDb.prepare("INSERT INTO app_settings (key, value) VALUES ('oidc_client_id', 'id')").run();
 
-    const result = svc.registerUser({ username: 'u', email: 'new@x.com', password: 'Secure123!' });
+    const result = await svc.registerUser({ username: 'u', email: 'new@x.com', password: 'Secure123!' });
     expect(result.status).toBe(403);
     expect(result.error).toMatch(/password registration is disabled/i);
   });
 
-  it('AUTH-DB-034: returns 403 when registration is disabled and no invite', () => {
+  it('AUTH-DB-034: returns 403 when registration is disabled and no invite', async () => {
     createUser(testDb); // ensure userCount > 0
     testDb.prepare("INSERT OR REPLACE INTO app_settings (key, value) VALUES ('allow_registration', 'false')").run();
 
-    const result = svc.registerUser({ username: 'u2', email: 'n2@x.com', password: 'Secure123!' });
+    const result = await svc.registerUser({ username: 'u2', email: 'n2@x.com', password: 'Secure123!' });
     expect(result.status).toBe(403);
   });
 });
@@ -548,10 +553,10 @@ describe('verifyMfaLogin — validation', () => {
 // ---------------------------------------------------------------------------
 
 describe('getAppConfig', () => {
-  it('AUTH-DB-050: anonymous caller gets toggles/version and no permissions block', () => {
+  it('AUTH-DB-050: anonymous caller gets toggles/version and no permissions block', async () => {
     vi.stubEnv('OIDC_ONLY', '');
     createUser(testDb);
-    const cfg = svc.getAppConfig(null);
+    const cfg = await svc.getAppConfig(null);
     expect(cfg.password_login).toBe(true);
     expect(cfg.has_users).toBe(true);
     expect(typeof cfg.version).toBe('string');
@@ -562,23 +567,23 @@ describe('getAppConfig', () => {
     vi.unstubAllEnvs();
   });
 
-  it('AUTH-DB-050b: fresh-install fallback matches DEFAULT_ALLOWED_EXTENSIONS (pkpass/md included)', () => {
+  it('AUTH-DB-050b: fresh-install fallback matches DEFAULT_ALLOWED_EXTENSIONS (pkpass/md included)', async () => {
     // No allowed_file_types row: the config payload must advertise the same
     // default list the upload filters actually enforce — the historical
     // hardcoded copy dropped pkpass, pkpasses, md and markdown, so the client
     // greyed out types the server accepts.
     createUser(testDb);
     testDb.prepare("DELETE FROM app_settings WHERE key = 'allowed_file_types'").run();
-    const cfg = svc.getAppConfig(null);
+    const cfg = await svc.getAppConfig(null);
     expect(cfg.allowed_file_types).toBe(DEFAULT_ALLOWED_EXTENSIONS);
   });
 
-  it('AUTH-DB-051: authenticated caller gets the permissions block; app_settings rows flow through', () => {
+  it('AUTH-DB-051: authenticated caller gets the permissions block; app_settings rows flow through', async () => {
     const { user } = createUser(testDb);
     testDb.prepare("INSERT OR REPLACE INTO app_settings (key, value) VALUES ('require_mfa', 'true')").run();
     testDb.prepare("INSERT OR REPLACE INTO app_settings (key, value) VALUES ('notification_channels', 'email,webhook')").run();
     testDb.prepare("INSERT OR REPLACE INTO app_settings (key, value) VALUES ('allowed_file_types', 'jpg,png')").run();
-    const cfg = svc.getAppConfig({ id: user.id } as never);
+    const cfg = await svc.getAppConfig({ id: user.id } as never);
     expect(cfg.permissions).toBeDefined();
     expect(cfg.require_mfa).toBe(true);
     expect(cfg.notification_channels).toEqual(['email', 'webhook']);
@@ -586,10 +591,10 @@ describe('getAppConfig', () => {
     expect(cfg.allowed_file_types).toBe('jpg,png');
   });
 
-  it('AUTH-DB-052: demo mode forces registration toggles off and surfaces the demo credentials', () => {
+  it('AUTH-DB-052: demo mode forces registration toggles off and surfaces the demo credentials', async () => {
     vi.stubEnv('DEMO_MODE', 'true');
     createUser(testDb);
-    const cfg = svc.getAppConfig(null);
+    const cfg = await svc.getAppConfig(null);
     expect(cfg.demo_mode).toBe(true);
     expect(cfg.password_registration).toBe(false);
     expect(cfg.oidc_registration).toBe(false);
@@ -598,15 +603,15 @@ describe('getAppConfig', () => {
     vi.unstubAllEnvs();
   });
 
-  it('AUTH-DB-052b: managed is false unless the install says otherwise', () => {
+  it('AUTH-DB-052b: managed is false unless the install says otherwise', async () => {
     createUser(testDb);
-    expect(svc.getAppConfig(null).managed).toBe(false);
+    expect((await svc.getAppConfig(null)).managed).toBe(false);
   });
 
-  it('AUTH-DB-052c: managed reaches the client, so the UI can stop offering what the server refuses', () => {
+  it('AUTH-DB-052c: managed reaches the client, so the UI can stop offering what the server refuses', async () => {
     vi.stubEnv('TREK_MANAGED', 'true');
     createUser(testDb);
-    const cfg = svc.getAppConfig(null);
+    const cfg = await svc.getAppConfig(null);
     expect(cfg.managed).toBe(true);
     // Additive only: the flag says who owns the configuration and changes
     // nothing else about the instance.
@@ -615,52 +620,52 @@ describe('getAppConfig', () => {
     vi.unstubAllEnvs();
   });
 
-  it('AUTH-DB-052d: an instance that declared nothing reports passkeys as not configured (#2147)', () => {
+  it('AUTH-DB-052d: an instance that declared nothing reports passkeys as not configured (#2147)', async () => {
     // APP_URL unset, so getAppUrl() invents http://localhost:{PORT} and the
     // resolver hands back a localhost RP. No browser on the real domain can
     // finish a ceremony against it, and the options step says so, so the client
     // must not advertise a button whose every click 400s.
     createUser(testDb);
-    expect(svc.getAppConfig(null).passkey_configured).toBe(false);
+    expect((await svc.getAppConfig(null)).passkey_configured).toBe(false);
   });
 
-  it('AUTH-DB-052e: a localhost RP the operator declared themselves still counts', () => {
+  it('AUTH-DB-052e: a localhost RP the operator declared themselves still counts', async () => {
     createUser(testDb);
     vi.stubEnv('APP_URL', 'http://localhost:5173');
-    expect(svc.getAppConfig(null).passkey_configured).toBe(true);
+    expect((await svc.getAppConfig(null)).passkey_configured).toBe(true);
     vi.unstubAllEnvs();
 
     vi.stubEnv('ALLOWED_ORIGINS', 'http://localhost:5173');
-    expect(svc.getAppConfig(null).passkey_configured).toBe(true);
+    expect((await svc.getAppConfig(null)).passkey_configured).toBe(true);
     vi.unstubAllEnvs();
 
     testDb.prepare("INSERT OR REPLACE INTO app_settings (key, value) VALUES ('webauthn_rp_id', 'localhost')").run();
-    expect(svc.getAppConfig(null).passkey_configured).toBe(true);
+    expect((await svc.getAppConfig(null)).passkey_configured).toBe(true);
   });
 
-  it('AUTH-DB-052f: a real domain is configured, a bare IP host is not', () => {
+  it('AUTH-DB-052f: a real domain is configured, a bare IP host is not', async () => {
     createUser(testDb);
     vi.stubEnv('APP_URL', 'https://trek.example.org');
-    expect(svc.getAppConfig(null).passkey_configured).toBe(true);
+    expect((await svc.getAppConfig(null)).passkey_configured).toBe(true);
     vi.stubEnv('APP_URL', 'http://192.168.1.50:3001');
-    expect(svc.getAppConfig(null).passkey_configured).toBe(false);
+    expect((await svc.getAppConfig(null)).passkey_configured).toBe(false);
     vi.unstubAllEnvs();
   });
 
-  it('AUTH-DB-052g: place_shadow_enabled fails closed, on the unauthenticated payload', () => {
+  it('AUTH-DB-052g: place_shadow_enabled fails closed, on the unauthenticated payload', async () => {
     createUser(testDb);
     const set = testDb.prepare("INSERT OR REPLACE INTO app_settings (key, value) VALUES ('place_shadow_enabled', ?)");
     // No row is the state of every install that never touched the switch.
-    expect(svc.getAppConfig(null).place_shadow_enabled).toBe(false);
+    expect((await svc.getAppConfig(null)).place_shadow_enabled).toBe(false);
     set.run('false');
-    expect(svc.getAppConfig(null).place_shadow_enabled).toBe(false);
+    expect((await svc.getAppConfig(null)).place_shadow_enabled).toBe(false);
     // Only the literal 'true' opens it, the mirror image of the fail-open
     // places_* flags beside it, which close only on the literal 'false'.
     set.run('1');
-    expect(svc.getAppConfig(null).place_shadow_enabled).toBe(false);
-    expect(svc.getAppConfig(null).places_enrich_enabled).toBe(true);
+    expect((await svc.getAppConfig(null)).place_shadow_enabled).toBe(false);
+    expect((await svc.getAppConfig(null)).places_enrich_enabled).toBe(true);
     set.run('true');
-    expect(svc.getAppConfig(null).place_shadow_enabled).toBe(true);
+    expect((await svc.getAppConfig(null)).place_shadow_enabled).toBe(true);
   });
 });
 
@@ -694,29 +699,29 @@ describe('validateInviteToken — valid path', () => {
 });
 
 describe('registerUser — success paths', () => {
-  it('AUTH-DB-056: first user becomes admin and gets a token', () => {
-    const result = svc.registerUser({ username: 'first', email: 'first@x.com', password: 'Secure123!' });
+  it('AUTH-DB-056: first user becomes admin and gets a token', async () => {
+    const result = await svc.registerUser({ username: 'first', email: 'first@x.com', password: 'Secure123!' });
     expect(result.error).toBeUndefined();
     expect(typeof result.token).toBe('string');
     expect((result.user as { role: string }).role).toBe('admin');
     expect(result.auditDetails).toEqual({ username: 'first', email: 'first@x.com', role: 'admin' });
   });
 
-  it('AUTH-DB-057: missing fields / bad email / duplicate answer their bespoke 400/409s', () => {
+  it('AUTH-DB-057: missing fields / bad email / duplicate answer their bespoke 400/409s', async () => {
     createUser(testDb, { username: 'taken', email: 'taken@x.com' });
-    expect(svc.registerUser({ username: '', email: 'a@x.com', password: 'Secure123!' }))
+    expect(await svc.registerUser({ username: '', email: 'a@x.com', password: 'Secure123!' }))
       .toEqual({ error: 'Username, email and password are required', status: 400 });
-    expect(svc.registerUser({ username: 'u', email: 'not-an-email', password: 'Secure123!' }))
+    expect(await svc.registerUser({ username: 'u', email: 'not-an-email', password: 'Secure123!' }))
       .toEqual({ error: 'Invalid email format', status: 400 });
-    expect(svc.registerUser({ username: 'TAKEN', email: 'other@x.com', password: 'Secure123!' }))
+    expect(await svc.registerUser({ username: 'TAKEN', email: 'other@x.com', password: 'Secure123!' }))
       .toEqual({ error: 'Registration failed. Please try different credentials.', status: 409 });
   });
 
-  it('AUTH-DB-058: an invite bypasses disabled registration and bumps used_count', () => {
+  it('AUTH-DB-058: an invite bypasses disabled registration and bumps used_count', async () => {
     createUser(testDb);
     testDb.prepare("INSERT OR REPLACE INTO app_settings (key, value) VALUES ('allow_registration', 'false')").run();
     const invite = createInviteToken(testDb, { max_uses: 2 });
-    const result = svc.registerUser({ username: 'invited', email: 'invited@x.com', password: 'Secure123!', invite_token: invite.token });
+    const result = await svc.registerUser({ username: 'invited', email: 'invited@x.com', password: 'Secure123!', invite_token: invite.token });
     expect(result.error).toBeUndefined();
     const { used_count } = testDb.prepare('SELECT used_count FROM invite_tokens WHERE id = ?').get(invite.id) as { used_count: number };
     expect(used_count).toBe(1);
@@ -984,14 +989,14 @@ describe('ephemeral + demo helpers', () => {
 // ---------------------------------------------------------------------------
 
 describe('auth quirk fixes', () => {
-  it('AUTH-DB-090: a throw mid-registration rolls the whole signup back (user + invite bookkeeping)', () => {
+  it('AUTH-DB-090: a throw mid-registration rolls the whole signup back (user + invite bookkeeping)', async () => {
     const { user: owner } = createUser(testDb);
     const trip = createTrip(testDb, owner.id);
     const invite = createInviteToken(testDb, { max_uses: 5 });
     testDb.prepare('UPDATE invite_tokens SET trip_id = ? WHERE id = ?').run(trip.id, invite.id);
     joinTripAsMember.mockImplementationOnce(() => { throw new Error('boom'); });
 
-    const result = svc.registerUser({ username: 'rollback', email: 'rollback@x.com', password: 'Secure123!', invite_token: invite.token });
+    const result = await svc.registerUser({ username: 'rollback', email: 'rollback@x.com', password: 'Secure123!', invite_token: invite.token });
 
     expect(result).toEqual({ error: 'Error creating user', status: 500 });
     expect(testDb.prepare("SELECT id FROM users WHERE email = 'rollback@x.com'").get()).toBeUndefined();

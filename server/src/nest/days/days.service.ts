@@ -72,7 +72,7 @@ export class DaysService {
     return this.db.canAccessTrip(Number(tripId), userId);
   }
 
-  canEdit(trip: Trip, user: User): boolean {
+  async canEdit(trip: Trip, user: User): Promise<boolean> {
     return this.permissions.checkPermission('day_edit', user.role, trip.user_id, user.id, trip.user_id !== user.id);
   }
 
@@ -84,7 +84,7 @@ export class DaysService {
   // Day assignment helpers
   // -------------------------------------------------------------------------
 
-  getAssignmentsForDay(dayId: number | string) {
+  async getAssignmentsForDay(dayId: number | string) {
     const assignments = this.db.all<AssignmentRow>(`
     SELECT da.*, p.id as place_id, p.name as place_name, p.description as place_description,
       p.lat, p.lng, p.address, p.category_id, p.price, p.currency as place_currency,
@@ -103,7 +103,7 @@ export class DaysService {
     // One batched tag load instead of the legacy per-assignment query; the
     // non-compact loader returns the same full tag rows (t.* minus the join
     // key), so the output shape is unchanged.
-    const tagsByPlaceId = this.queryHelpers.loadTagsByPlaceIds([...new Set(assignments.map(a => a.place_id))]);
+    const tagsByPlaceId = await this.queryHelpers.loadTagsByPlaceIds([...new Set(assignments.map(a => a.place_id))]);
 
     return assignments.map(a => {
       const tags = tagsByPlaceId[a.place_id] || [];
@@ -160,7 +160,7 @@ export class DaysService {
   // Day CRUD
   // -------------------------------------------------------------------------
 
-  list(tripId: string | number) {
+  async list(tripId: string | number) {
     const days = this.db.all<Day>('SELECT * FROM days WHERE trip_id = ? ORDER BY day_number ASC', tripId);
 
     if (days.length === 0) {
@@ -186,10 +186,10 @@ export class DaysService {
   `, ...dayIds);
 
     const placeIds = [...new Set(allAssignments.map(a => a.place_id))];
-    const tagsByPlaceId = this.queryHelpers.loadTagsByPlaceIds(placeIds, { compact: true });
+    const tagsByPlaceId = await this.queryHelpers.loadTagsByPlaceIds(placeIds, { compact: true });
 
     const allAssignmentIds = allAssignments.map(a => a.id);
-    const participantsByAssignment = this.queryHelpers.loadParticipantsByAssignmentIds(allAssignmentIds);
+    const participantsByAssignment = await this.queryHelpers.loadParticipantsByAssignmentIds(allAssignmentIds);
 
     const assignmentsByDayId: Record<number, ReturnType<typeof formatAssignmentWithPlace>[]> = {};
     for (const a of allAssignments) {
@@ -233,7 +233,7 @@ export class DaysService {
     return this.db.get<Day>('SELECT * FROM days WHERE id = ? AND trip_id = ?', id, tripId);
   }
 
-  update(id: string | number, current: Day, fields: { notes?: string; title?: string | null }) {
+  async update(id: string | number, current: Day, fields: { notes?: string; title?: string | null }) {
     // Both columns use the presence sentinel: an absent key preserves the
     // current value (the legacy version always wrote notes, so setting a title
     // silently wiped the day's notes — the client sends the two fields in
@@ -244,7 +244,7 @@ export class DaysService {
       id
     );
     const updatedDay = this.db.get<Day>('SELECT * FROM days WHERE id = ?', id)!;
-    return { ...updatedDay, assignments: this.getAssignmentsForDay(id) };
+    return { ...updatedDay, assignments: await this.getAssignmentsForDay(id) };
   }
 
   /**
@@ -252,10 +252,10 @@ export class DaysService {
    * notes/title the way the general day update would, and symmetric with the
    * per-leg assignment transport setter. Per-segment leg modes still override it.
    */
-  setDefaultTransportMode(id: string | number, mode: string | null) {
+  async setDefaultTransportMode(id: string | number, mode: string | null) {
     this.db.run('UPDATE days SET default_transport_mode = ? WHERE id = ?', mode ?? null, id);
     const updatedDay = this.db.get<Day>('SELECT * FROM days WHERE id = ?', id)!;
-    return { ...updatedDay, assignments: this.getAssignmentsForDay(id) };
+    return { ...updatedDay, assignments: await this.getAssignmentsForDay(id) };
   }
 
   remove(id: string | number): void {

@@ -129,7 +129,7 @@ export class FilesController {
       if (isDemoWriteBlocked(this.env, user.email)) {
         throw new HttpException(DEMO_WRITE_ERROR, 403);
       }
-      if (!this.files.can('file_upload', trip, user)) {
+      if (!(await this.files.can('file_upload', trip, user))) {
         throw new HttpException({ error: 'No permission to upload files' }, 403);
       }
     } catch (err) {
@@ -173,8 +173,8 @@ export class FilesController {
 
   @UseGuards(TripAccessGuard)
   @Put(':id')
-  update(@CurrentUser() user: User, @Trip() trip: TripAccess, @Param('tripId') tripId: string, @Param('id') id: string, @Body() body: FileUpdateDto, @Headers('x-socket-id') socketId?: string) {
-    if (!this.files.can('file_edit', trip, user)) {
+  async update(@CurrentUser() user: User, @Trip() trip: TripAccess, @Param('tripId') tripId: string, @Param('id') id: string, @Body() body: FileUpdateDto, @Headers('x-socket-id') socketId?: string) {
+    if (!(await this.files.can('file_edit', trip, user))) {
       throw new HttpException({ error: 'No permission to edit files' }, 403);
     }
     const file = this.files.getFileById(id, tripId);
@@ -194,8 +194,8 @@ export class FilesController {
 
   @UseGuards(TripAccessGuard)
   @Patch(':id/star')
-  star(@CurrentUser() user: User, @Trip() trip: TripAccess, @Param('tripId') tripId: string, @Param('id') id: string, @Headers('x-socket-id') socketId?: string) {
-    if (!this.files.can('file_edit', trip, user)) {
+  async star(@CurrentUser() user: User, @Trip() trip: TripAccess, @Param('tripId') tripId: string, @Param('id') id: string, @Headers('x-socket-id') socketId?: string) {
+    if (!(await this.files.can('file_edit', trip, user))) {
       throw new HttpException({ error: 'No permission' }, 403);
     }
     const file = this.files.getFileById(id, tripId);
@@ -210,7 +210,7 @@ export class FilesController {
   @UseGuards(TripAccessGuard)
   @Delete('trash/empty')
   async emptyTrash(@CurrentUser() user: User, @Trip() trip: TripAccess, @Param('tripId') tripId: string) {
-    if (!this.files.can('file_delete', trip, user)) {
+    if (!(await this.files.can('file_delete', trip, user))) {
       throw new HttpException({ error: 'No permission' }, 403);
     }
     const deleted = await this.files.emptyTrash(tripId);
@@ -220,7 +220,7 @@ export class FilesController {
   @UseGuards(TripAccessGuard)
   @Delete(':id/permanent')
   async permanent(@CurrentUser() user: User, @Trip() trip: TripAccess, @Param('tripId') tripId: string, @Param('id') id: string, @Headers('x-socket-id') socketId?: string) {
-    if (!this.files.can('file_delete', trip, user)) {
+    if (!(await this.files.can('file_delete', trip, user))) {
       throw new HttpException({ error: 'No permission' }, 403);
     }
     const file = this.files.getDeletedFile(id, tripId);
@@ -234,8 +234,8 @@ export class FilesController {
 
   @UseGuards(TripAccessGuard)
   @Delete(':id')
-  remove(@CurrentUser() user: User, @Trip() trip: TripAccess, @Param('tripId') tripId: string, @Param('id') id: string, @Headers('x-socket-id') socketId?: string) {
-    if (!this.files.can('file_delete', trip, user)) {
+  async remove(@CurrentUser() user: User, @Trip() trip: TripAccess, @Param('tripId') tripId: string, @Param('id') id: string, @Headers('x-socket-id') socketId?: string) {
+    if (!(await this.files.can('file_delete', trip, user))) {
       throw new HttpException({ error: 'No permission to delete files' }, 403);
     }
     const file = this.files.getFileById(id, tripId);
@@ -250,8 +250,8 @@ export class FilesController {
   @UseGuards(TripAccessGuard)
   @Post(':id/restore')
   @HttpCode(200) // Express answers restore with res.json (200), not the POST-default 201.
-  restore(@CurrentUser() user: User, @Trip() trip: TripAccess, @Param('tripId') tripId: string, @Param('id') id: string, @Headers('x-socket-id') socketId?: string) {
-    if (!this.files.can('file_delete', trip, user)) {
+  async restore(@CurrentUser() user: User, @Trip() trip: TripAccess, @Param('tripId') tripId: string, @Param('id') id: string, @Headers('x-socket-id') socketId?: string) {
+    if (!(await this.files.can('file_delete', trip, user))) {
       throw new HttpException({ error: 'No permission' }, 403);
     }
     const file = this.files.getDeletedFile(id, tripId);
@@ -266,8 +266,8 @@ export class FilesController {
   @UseGuards(TripAccessGuard)
   @Post(':id/link')
   @HttpCode(200) // Express answers link with res.json (200).
-  link(@CurrentUser() user: User, @Trip() trip: TripAccess, @Param('tripId') tripId: string, @Param('id') id: string, @Body() body: FileLinkDto) {
-    if (!this.files.can('file_edit', trip, user)) {
+  async link(@CurrentUser() user: User, @Trip() trip: TripAccess, @Param('tripId') tripId: string, @Param('id') id: string, @Body() body: FileLinkDto) {
+    if (!(await this.files.can('file_edit', trip, user))) {
       throw new HttpException({ error: 'No permission' }, 403);
     }
     const file = this.files.getFileById(id, tripId);
@@ -281,8 +281,8 @@ export class FilesController {
 
   @UseGuards(TripAccessGuard)
   @Delete(':id/link/:linkId')
-  unlink(@CurrentUser() user: User, @Trip() trip: TripAccess, @Param('tripId') tripId: string, @Param('id') id: string, @Param('linkId') linkId: string) {
-    if (!this.files.can('file_edit', trip, user)) {
+  async unlink(@CurrentUser() user: User, @Trip() trip: TripAccess, @Param('tripId') tripId: string, @Param('id') id: string, @Param('linkId') linkId: string) {
+    if (!(await this.files.can('file_edit', trip, user))) {
       throw new HttpException({ error: 'No permission' }, 403);
     }
     // deleteFileLink scopes by (linkId, fileId) only, so the file itself has to

@@ -72,29 +72,40 @@ import { CollabService } from '../../../src/nest/collab/collab.service';
 import { VacayService } from '../../../src/nest/vacay/vacay.service';
 import { QueryHelpersService } from '../../../src/nest/query-helpers/query-helpers.service';
 import { notificationsStub } from '../../helpers/notifications';
+import { createTestUnitOfWork } from '../../helpers/test-uow';
+import { UnitOfWork } from '../../../src/nest/database/unit-of-work';
 
-const budget = new BudgetService(
-  new DatabaseService(testDb),
-  new PermissionsService(new DatabaseService(testDb)),
-  new ExchangeRatesService(),
-  new RealtimeService(),
-);
+
 
 // Guest fixtures come from TripMembersService since the trip split (they were on
 // TripsService before, and on the deleted services/tripService before that);
 // deleteGuest routes through the SAME BudgetService domain SQL
 // (removeUserFromBudgetItems) under test.
 const dbs = () => new DatabaseService(testDb);
-const membersSvc = new TripMembersService(
+
+
+let budget: BudgetService;
+let membersSvc: TripMembersService;
+let createGuest: typeof membersSvc.createGuest;
+let deleteGuest: typeof membersSvc.deleteGuest;
+beforeAll(async () => {
+  budget = new BudgetService(
+  new DatabaseService(testDb),
+  new PermissionsService(new DatabaseService(testDb), await createTestUnitOfWork(testDb)),
+  new ExchangeRatesService(),
+  new RealtimeService(),
+);
+  membersSvc = new TripMembersService(
   dbs(),
   budget,
   new UserCleanupService(dbs(), budget),
-  new PermissionsService(dbs()),
+  new PermissionsService(dbs(), await createTestUnitOfWork(dbs().connection)),
   new RealtimeService(),
   notificationsStub(),
 );
-const createGuest = membersSvc.createGuest.bind(membersSvc);
-const deleteGuest = membersSvc.deleteGuest.bind(membersSvc);
+  createGuest = membersSvc.createGuest.bind(membersSvc);
+  deleteGuest = membersSvc.deleteGuest.bind(membersSvc);
+});
 
 beforeAll(() => {
   createTables(testDb);

@@ -49,8 +49,8 @@ export class MetaRpc {
   ) {}
 
   @PluginMethod('meta.get', { permission: 'db:meta' })
-  get(params: Record<string, unknown>, ctx: PluginRpcContext): unknown {
-    const { entityType, entityId } = this.resolveEntity(params, ctx, false);
+  async get(params: Record<string, unknown>, ctx: PluginRpcContext): Promise<unknown> {
+    const { entityType, entityId } = await this.resolveEntity(params, ctx, false);
     const row = this.db
       .prepare('SELECT value FROM plugin_entity_metadata WHERE plugin_id=? AND entity_type=? AND entity_id=? AND key=?')
       .get(ctx.pluginId, entityType, entityId, str(params.key, 'key')) as { value: string } | undefined;
@@ -63,8 +63,8 @@ export class MetaRpc {
   }
 
   @PluginMethod('meta.set', { permission: 'db:meta' })
-  set(params: Record<string, unknown>, ctx: PluginRpcContext): unknown {
-    const { entityType, entityId } = this.resolveEntity(params, ctx, true);
+  async set(params: Record<string, unknown>, ctx: PluginRpcContext): Promise<unknown> {
+    const { entityType, entityId } = await this.resolveEntity(params, ctx, true);
     const key = str(params.key, 'key');
     if (key.length > META_KEY_MAX) throw new BadParams(`metadata key too long (>${META_KEY_MAX} chars)`);
     const json = JSON.stringify(params.value ?? null);
@@ -88,8 +88,8 @@ export class MetaRpc {
   }
 
   @PluginMethod('meta.list', { permission: 'db:meta' })
-  list(params: Record<string, unknown>, ctx: PluginRpcContext): unknown {
-    const { entityType, entityId } = this.resolveEntity(params, ctx, false);
+  async list(params: Record<string, unknown>, ctx: PluginRpcContext): Promise<unknown> {
+    const { entityType, entityId } = await this.resolveEntity(params, ctx, false);
     const rows = this.db
       .prepare('SELECT key, value FROM plugin_entity_metadata WHERE plugin_id=? AND entity_type=? AND entity_id=? ORDER BY key')
       .all(ctx.pluginId, entityType, entityId) as Array<{ key: string; value: string }>;
@@ -105,8 +105,8 @@ export class MetaRpc {
   }
 
   @PluginMethod('meta.delete', { permission: 'db:meta' })
-  delete(params: Record<string, unknown>, ctx: PluginRpcContext): unknown {
-    const { entityType, entityId } = this.resolveEntity(params, ctx, true);
+  async delete(params: Record<string, unknown>, ctx: PluginRpcContext): Promise<unknown> {
+    const { entityType, entityId } = await this.resolveEntity(params, ctx, true);
     const res = this.db
       .prepare('DELETE FROM plugin_entity_metadata WHERE plugin_id=? AND entity_type=? AND entity_id=? AND key=?')
       .run(ctx.pluginId, entityType, entityId, str(params.key, 'key'));
@@ -118,11 +118,11 @@ export class MetaRpc {
    * resolves to a trip the acting user can access, and for a write that entity's own
    * edit permission.
    */
-  private resolveEntity(
+  private async resolveEntity(
     params: Record<string, unknown>,
     ctx: PluginRpcContext,
     write: boolean,
-  ): { entityType: string; entityId: number } {
+  ): Promise<{ entityType: string; entityId: number }> {
     const entityType = str(params.entityType, 'entityType');
     if (!META_ENTITY_TYPES.has(entityType)) {
       throw new BadParams(`invalid entityType "${entityType}" (${[...META_ENTITY_TYPES].join('|')})`);
@@ -133,7 +133,7 @@ export class MetaRpc {
     if (tripId === undefined || !this.db.canAccessTrip(tripId, ctx.actingUserId)) {
       throw new ForbiddenResource(`no access to ${entityType} ${entityId}`);
     }
-    if (write && !this.guards.canEditAs(EDIT_ACTION[entityType], tripId, ctx.actingUserId)) {
+    if (write && !(await this.guards.canEditAs(EDIT_ACTION[entityType], tripId, ctx.actingUserId))) {
       throw new ForbiddenResource(`no permission to edit ${entityType} ${entityId}`);
     }
     return { entityType, entityId };

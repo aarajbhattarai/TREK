@@ -173,7 +173,7 @@ export class TripsService {
     return this.dbs.isOwner(tripId, userId);
   }
 
-  can(action: string, role: string, ownerId: number | null, userId: number, isMember: boolean): boolean {
+  async can(action: string, role: string, ownerId: number | null, userId: number, isMember: boolean): Promise<boolean> {
     return this.permissions.checkPermission(action, role, ownerId, userId, isMember);
   }
 

@@ -36,9 +36,9 @@ function addons(enabled: boolean): AddonsService {
   return { isAddonEnabled: vi.fn(() => enabled) } as unknown as AddonsService;
 }
 
-function thrown(fn: () => unknown) {
+async function thrown(fn: () => unknown) {
   try {
-    fn();
+    await fn();
     return undefined;
   } catch (err) {
     return err instanceof HttpException ? { status: err.getStatus(), body: err.getResponse() } : err;
@@ -53,38 +53,38 @@ function decorated(addonId: string, label: string) {
 }
 
 describe('AddonGuard', () => {
-  it('ADDON-GUARD-001: 404s with the decorator label when the addon is disabled', () => {
+  it('ADDON-GUARD-001: 404s with the decorator label when the addon is disabled', async () => {
     const cls = decorated(ADDON_IDS.JOURNEY, 'Journey');
     const guard = new AddonGuard(addons(false), new Reflector());
 
-    expect(thrown(() => guard.canActivate(ctxFor(() => {}, cls))))
+    expect(await thrown(() => guard.canActivate(ctxFor(() => {}, cls))))
       .toEqual({ status: 404, body: { error: 'Journey addon is not enabled' } });
   });
 
-  it('ADDON-GUARD-002: passes when the addon is enabled, asking for the declared id', () => {
+  it('ADDON-GUARD-002: passes when the addon is enabled, asking for the declared id', async () => {
     const cls = decorated(ADDON_IDS.COLLECTIONS, 'Collections');
     const svc = addons(true);
     const guard = new AddonGuard(svc, new Reflector());
 
-    expect(guard.canActivate(ctxFor(() => {}, cls))).toBe(true);
+    expect(await guard.canActivate(ctxFor(() => {}, cls))).toBe(true);
     expect(svc.isAddonEnabled).toHaveBeenCalledWith(ADDON_IDS.COLLECTIONS);
   });
 
-  it('ADDON-GUARD-003: is a no-op on a route that never asked for an addon', () => {
+  it('ADDON-GUARD-003: is a no-op on a route that never asked for an addon', async () => {
     const svc = addons(false);
     const guard = new AddonGuard(svc, new Reflector());
 
-    expect(guard.canActivate(ctxFor(() => {}, class {}))).toBe(true);
+    expect(await guard.canActivate(ctxFor(() => {}, class {}))).toBe(true);
     expect(svc.isAddonEnabled).not.toHaveBeenCalled();
   });
 
-  it('ADDON-GUARD-004: a handler-level decorator overrides the controller-level one', () => {
+  it('ADDON-GUARD-004: a handler-level decorator overrides the controller-level one', async () => {
     const cls = decorated(ADDON_IDS.JOURNEY, 'Journey');
     const handler = () => {};
     RequireAddon(ADDON_IDS.AIRTRAIL, 'AirTrail')(handler);
     const svc = addons(false);
 
-    expect(thrown(() => new AddonGuard(svc, new Reflector()).canActivate(ctxFor(handler, cls))))
+    expect(await thrown(() => new AddonGuard(svc, new Reflector()).canActivate(ctxFor(handler, cls))))
       .toEqual({ status: 404, body: { error: 'AirTrail addon is not enabled' } });
     expect(svc.isAddonEnabled).toHaveBeenCalledWith(ADDON_IDS.AIRTRAIL);
   });

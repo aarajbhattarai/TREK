@@ -83,17 +83,17 @@ describe('DaysController (parity with the legacy /api/trips/:tripId/days route)'
       });
     });
 
-    it('rethrows a non-DayReorderError unchanged', () => {
+    it('rethrows a non-DayReorderError unchanged', async () => {
       const boom = new Error('db is down');
       const reorder = vi.fn(() => { throw boom; });
       const svc = daysSvc({ reorder } as Partial<DaysService>);
-      expect(() => new DaysController(svc).reorder(user, '5', { orderedIds: [1, 2] })).toThrow(boom);
+      await expect(new DaysController(svc).reorder(user, '5', { orderedIds: [1, 2] })).rejects.toThrow(boom);
     });
 
-    it('reorders and broadcasts day:reordered', () => {
+    it('reorders and broadcasts day:reordered', async () => {
       const reorder = vi.fn(); const broadcast = vi.fn();
       const svc = daysSvc({ reorder, broadcast } as Partial<DaysService>);
-      expect(new DaysController(svc).reorder(user, '5', { orderedIds: [2, 1] }, 'sock')).toEqual({ success: true });
+      expect(await new DaysController(svc).reorder(user, '5', { orderedIds: [2, 1] }, 'sock')).toEqual({ success: true });
       expect(reorder).toHaveBeenCalledWith('5', [2, 1]);
       expect(broadcast).toHaveBeenCalledWith('5', 'day:reordered', { orderedIds: [2, 1] }, 'sock');
     });

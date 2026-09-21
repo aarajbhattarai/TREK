@@ -53,7 +53,7 @@ function writeSource(id: string, opts: { index?: string; native?: boolean; noBui
   return dir;
 }
 
-beforeAll(() => {
+beforeAll(async () => {
   codeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'trekplug-link-code-'));
   dataRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'trekplug-link-data-'));
   srcRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'trekplug-link-src-'));
@@ -61,7 +61,7 @@ beforeAll(() => {
   process.env.TREK_PLUGINS_DATA_DIR = dataRoot;
   process.env.TREK_PLUGINS_ENABLED = 'true';
   process.env.TREK_PLUGINS_DEV_LINK = '1';
-  runtime = createPluginRuntime(new DatabaseService(dbConn));
+  runtime = await createPluginRuntime(new DatabaseService(dbConn));
 });
 
 afterAll(async () => {

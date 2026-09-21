@@ -49,11 +49,18 @@ import { AirtrailClient, AirtrailRequestError, type AirtrailFlightRaw } from '..
 import { AirtrailImportService } from '../../../src/nest/integrations/airtrail-import.service';
 import { PermissionsService } from '../../../src/nest/permissions/permissions.service';
 import { DatabaseService } from '../../../src/nest/database/database.service';
+import { createTestUnitOfWork } from '../../helpers/test-uow';
+import { UnitOfWork } from '../../../src/nest/database/unit-of-work';
 
 // The permissions cache is module-scoped, so a write through any instance is
 // what the tool's own checkPermission call reads back.
-const permissionsService = new PermissionsService(new DatabaseService(testDb));
-const savePermissions = permissionsService.savePermissions.bind(permissionsService);
+
+let permissionsService: PermissionsService;
+let savePermissions: typeof permissionsService.savePermissions;
+beforeAll(async () => {
+  permissionsService = new PermissionsService(new DatabaseService(testDb), await createTestUnitOfWork(testDb));
+  savePermissions = permissionsService.savePermissions.bind(permissionsService);
+});
 
 // The registry builds its own AirtrailClient per harness, so the stub goes on
 // the prototype. Everything below listFlights (creds, mapper, dedupe) is real.
@@ -64,7 +71,7 @@ beforeAll(() => {
   runMigrations(testDb);
 });
 
-beforeEach(() => {
+beforeEach(async () => {
   resetTestDb(testDb);
   broadcastMock.mockClear();
   listFlightsMock.mockReset();
@@ -73,7 +80,7 @@ beforeEach(() => {
   // resetTestDb leaves the addons table alone, and both tools are gated on the
   // airtrail addon, so every case restates the toggle it needs.
   setAddonEnabled(testDb, ADDON_IDS.AIRTRAIL, true);
-  savePermissions({ reservation_edit: 'trip_member' });
+  await savePermissions({ reservation_edit: 'trip_member' });
 });
 
 afterAll(() => {
@@ -435,7 +442,7 @@ describe('Tool: import_airtrail_flights', () => {
       expect((result.content as any)[0].text).toContain('access denied');
     });
 
-    savePermissions({ reservation_edit: 'trip_owner' });
+    await savePermissions({ reservation_edit: 'trip_owner' });
     await withHarness(member.id, async (h) => {
       const result = await h.client.callTool({ name: 'import_airtrail_flights', arguments: { tripId: trip.id, flightIds: ['11'] } });
       expect(result.isError).toBe(true);

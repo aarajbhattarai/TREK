@@ -105,7 +105,7 @@ export class ImmichService {
         userId
       );
       if (ssrf.isPrivate) {
-        this.audit.writeAudit({
+        await this.audit.writeAudit({
           userId,
           action: 'immich.private_ip_configured',
           ip: clientIp,

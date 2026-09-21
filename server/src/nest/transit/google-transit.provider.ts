@@ -246,8 +246,8 @@ export class GoogleTransitProvider {
    * behaviour and the safe one: the alternative is every transit search 403ing
    * on an install that flipped the switch before pasting a key.
    */
-  isActive(userId: number): boolean {
-    if (readTransitProvider(this.database) !== 'google') return false;
+  async isActive(userId: number): Promise<boolean> {
+    if ((await readTransitProvider(this.database)) !== 'google') return false;
     return !!this.resolveKey(userId).key;
   }
 

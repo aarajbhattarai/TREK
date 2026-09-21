@@ -86,7 +86,7 @@ export class TrekClientsStore implements OAuthRegisteredClientsStore {
         const scopes = rawScopes.filter(s => (ALL_SCOPES as string[]).includes(s));
         if (scopes.length === 0) throw new InvalidClientMetadataError('No valid scopes requested');
 
-        const result = this.oauth.createOAuthClient(null, name, uris, scopes, null, { isPublic, createdVia: 'dcr' });
+        const result = await this.oauth.createOAuthClient(null, name, uris, scopes, null, { isPublic, createdVia: 'dcr' });
         if (result.error) throw new InvalidClientMetadataError(result.error);
 
         const c = result.client!;
@@ -179,7 +179,7 @@ export class TrekOAuthProvider implements OAuthServerProvider {
             throw new Error('Authorization grant is invalid.');
 
         const tokens = this.oauth.issueTokens(client.client_id, pending.userId, pending.scopes, null, pending.resource ?? null);
-        this.audit.writeAudit({
+        await this.audit.writeAudit({
             userId: pending.userId,
             action: 'oauth.token.issue',
             details: { client_id: client.client_id, scopes: pending.scopes, audience: pending.resource ?? null },
@@ -194,7 +194,7 @@ export class TrekOAuthProvider implements OAuthServerProvider {
         _scopes?: string[],
         _resource?: URL,
     ): Promise<OAuthTokens> {
-        const result = this.oauth.refreshTokens(refreshToken, client.client_id, client.client_secret, null);
+        const result = await this.oauth.refreshTokens(refreshToken, client.client_id, client.client_secret, null);
         if (result.error) throw new Error(result.error === 'invalid_client' ? 'Invalid client credentials' : 'Refresh token is invalid or expired');
         return result.tokens!;
     }
@@ -214,6 +214,6 @@ export class TrekOAuthProvider implements OAuthServerProvider {
         client: OAuthClientInformationFull,
         request: OAuthTokenRevocationRequest,
     ): Promise<void> {
-        this.oauth.revokeToken(request.token, client.client_id, undefined, null);
+        await this.oauth.revokeToken(request.token, client.client_id, undefined, null);
     }
 }

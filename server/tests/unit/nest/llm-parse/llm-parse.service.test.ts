@@ -41,10 +41,10 @@ beforeEach(() => {
 });
 
 describe('LlmParseService', () => {
-  it('isAvailable reflects whether a config resolves', () => {
+  it('isAvailable reflects whether a config resolves', async () => {
     resolveLlmConfig.mockReturnValueOnce(null);
-    expect(svc().isAvailable(1)).toBe(false);
-    expect(svc().isAvailable(1)).toBe(true);
+    expect(await svc().isAvailable(1)).toBe(false);
+    expect(await svc().isAvailable(1)).toBe(true);
   });
 
   it('returns a not-configured warning when no config resolves', async () => {

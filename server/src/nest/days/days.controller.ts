@@ -61,7 +61,7 @@ export class DaysController {
 
   @RequirePermission('day_edit')
   @Put('reorder')
-  reorder(
+  async reorder(
     @CurrentUser() user: User,
     @Param('tripId') tripId: string,
     @Body() body: DayReorderDto,
@@ -71,7 +71,7 @@ export class DaysController {
       throw new HttpException({ error: 'orderedIds must be an array' }, 400);
     }
     try {
-      this.days.reorder(tripId, body.orderedIds);
+      await this.days.reorder(tripId, body.orderedIds);
     } catch (err) {
       if (err instanceof DayReorderError) {
         throw new HttpException({ error: err.message }, 400);
@@ -84,7 +84,7 @@ export class DaysController {
 
   @RequirePermission('day_edit')
   @Put(':id')
-  update(
+  async update(
     @CurrentUser() user: User,
     @Param('tripId') tripId: string,
     @Param('id') id: string,
@@ -98,14 +98,14 @@ export class DaysController {
     // The zod-parsed body carries only the keys the client actually sent, so
     // the service's presence sentinels preserve the omitted column (the client
     // updates notes and title in separate requests).
-    const day = this.days.update(id, current as never, body);
+    const day = await this.days.update(id, current as never, body);
     this.days.broadcast(tripId, 'day:updated', { day }, socketId);
     return { day };
   }
 
   @RequirePermission('day_edit')
   @Put(':id/transport')
-  transport(
+  async transport(
     @CurrentUser() user: User,
     @Param('tripId') tripId: string,
     @Param('id') id: string,
@@ -115,7 +115,7 @@ export class DaysController {
     if (!this.days.getDay(id, tripId)) {
       throw new HttpException({ error: 'Day not found' }, 404);
     }
-    const day = this.days.setDefaultTransportMode(id, body.transport_mode ?? null);
+    const day = await this.days.setDefaultTransportMode(id, body.transport_mode ?? null);
     this.days.broadcast(tripId, 'day:updated', { day }, socketId);
     return { day };
   }

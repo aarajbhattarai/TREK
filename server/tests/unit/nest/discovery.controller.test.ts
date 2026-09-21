@@ -150,16 +150,16 @@ describe('DiscoveryController', () => {
     expect(body.userinfo_endpoint).toBe('https://trek.example.test/oauth/userinfo');
   });
 
-  it('DISC-031: flat oauth-protected-resource 404s empty when MCP is disabled', () => {
+  it('DISC-031: flat oauth-protected-resource 404s empty when MCP is disabled', async () => {
     const res = makeRes();
-    controller(false).protectedResource(res as never);
+    await controller(false).protectedResource(res as never);
     expect(res.statusCode).toBe(404);
     expect(res.ended).toBe(true);
   });
 
-  it('DISC-032: flat oauth-protected-resource serves the PRM document when enabled', () => {
+  it('DISC-032: flat oauth-protected-resource serves the PRM document when enabled', async () => {
     const res = makeRes();
-    controller().protectedResource(res as never);
+    await controller().protectedResource(res as never);
     expect(res.body).toEqual({
       resource:                 'https://trek.example.test/mcp',
       authorization_servers:    ['https://trek.example.test'],
