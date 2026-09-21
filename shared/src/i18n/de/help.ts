@@ -1814,6 +1814,150 @@ const help: TranslationStrings = {
     'Rückgängig deckt den Plan ab: Orte zuweisen, entfernen, umsortieren und verschieben, eine Route optimieren, Orte löschen, Kategoriewechsel und Importe.',
   'help.guide.undo-change.tip.2':
     'Es geht nur einen Schritt tief: Nur die letzte Änderung lässt sich zurücknehmen, und eine neue Änderung ersetzt sie.',
+
+  // ── Screen: trip-places ───────────────────────────────────────────────────────────────
+  'help.ctx.trip-places.title': 'Orte',
+  'help.ctx.trip-places.summary':
+    'Die rechte Spalte des Plans: jeder Ort der Reise, geplant oder nicht, mit Suche und Filtern, dazu die Wege, Orte hereinzuholen, von Hand, aus einer Datei oder aus einer geteilten Liste.',
+  'help.ctx.trip-places.bullet.1':
+    'Ort/Aktivität hinzufügen oben öffnet das Formular für einen Ort, den du eintippst oder suchst. Solange ein Tag geöffnet ist, heißt der Knopf Neuer Ort, und Zum Tag daneben legt den Ort direkt auf diesem Tag an.',
+  'help.ctx.trip-places.bullet.2':
+    'Dateimport nimmt .gpx-, .kml- und .kmz-Dateien; Listenimport nimmt eine geteilte Liste aus Google Maps oder Naver Maps. Eine Datei lässt sich auch einfach auf die Spalte fallen lassen.',
+  'help.ctx.trip-places.bullet.3':
+    'Das Auswahlmenü wechselt zwischen Alle, Ungeplant, Geplant und, sobald ein Track importiert wurde, Tracks; darunter sitzen die Suche, der Kategoriefilter und der Stern für eine Mindestbewertung.',
+  'help.ctx.trip-places.bullet.4':
+    'Eine Zeile zeigt Bild, Name und Beschreibung oder Adresse. Klick sie für die Ortsdetails an, zieh sie auf einen Tag, oder öffne mit Rechtsklick Bearbeiten, + Tag, Webseite öffnen, Google Maps, In Sammlung speichern und Löschen.',
+  'help.ctx.trip-places.bullet.5':
+    'Bei geöffnetem Tag legt ein + am Ende einer ungeplanten Zeile den Ort auf diesen Tag, und Geplant listet nur diesen Tag, mit Ganze Reise anzeigen zum Aufweiten.',
+  'help.ctx.trip-places.bullet.6':
+    'Der Haken am rechten Ende der Filterzeile startet eine Auswahl: mehrere Zeilen auf einmal bekommen eine neue Kategorie, wandern in eine Sammlung oder werden gelöscht.',
+  // create-place
+  'help.guide.create-place.title': 'Einen Ort anlegen',
+  'help.guide.create-place.goal':
+    'Trag einen Ort oder eine Aktivität von Hand ein, mit allem, was der Plan darüber wissen muss.',
+  'help.guide.create-place.step.1':
+    'Klick oben in der Orte-Spalte auf Ort/Aktivität hinzufügen (Neuer Ort, solange ein Tag geöffnet ist). Das Formular öffnet sich.',
+  'help.guide.create-place.step.2':
+    'Tipp den Ort oben in Ortssuche... ein und wähl ein Ergebnis. Name, Adresse, Breitengrad und Längengrad füllen sich, und Ortsdetails rechts zeigt Bilder, eine Beschreibung und Fakten dazu. Nicht der richtige Ort? Stattdessen bei Google suchen startet die Suche noch einmal über Google.',
+  'help.guide.create-place.step.3':
+    'In den Ortsdetails macht ein Klick auf ein Bild unter Bild auswählen es zum Bild des Ortes; Text übernehmen trägt die Beschreibung ins Formular.',
+  'help.guide.create-place.step.4':
+    'Prüf die Felder: Name ist Pflicht; Beschreibung und Notizen gehören dir; Adresse, Breitengrad und Längengrad kommen aus der Suche oder werden getippt; Kategorie wählt eine der Kategorien der Reise, und das + daneben legt auf der Stelle eine neue an; Website nimmt den Link.',
+  'help.guide.create-place.step.5':
+    'Klick auf Hinzufügen. Liegt schon ein Ort gleichen Namens in der Reise, sagt das Formular es, und der Knopf wird zu Trotzdem hinzufügen.',
+  'help.guide.create-place.result':
+    'Der Ort steht in der Liste und auf der Karte, unter Ungeplant, bis er auf einen Tag gelegt wird.',
+  'help.guide.create-place.tip.1':
+    'Dateien und Kosten unten im Formular hängen ein Dokument an den Ort oder öffnen gleich nach dem Speichern den Kosten-Editor für seine Ausgabe.',
+  'help.guide.create-place.tip.2':
+    'Ohne Google-Schlüssel läuft die Suche über den TREK-Index und OpenStreetMap: Sie findet den Ort, nur ohne Bewertungen, Öffnungszeiten und Fotos.',
+  'help.guide.create-place.tip.3':
+    'Ein Ort kann auch auf der Karte beginnen: Rechtsklick auf die Stelle, und das Formular öffnet sich mit eingetragenen Koordinaten und Adresse.',
+  // place-to-open-day
+  'help.guide.place-to-open-day.title': 'Einen Ort direkt auf den geöffneten Tag legen',
+  'help.guide.place-to-open-day.goal':
+    'Spar dir den zweiten Schritt: Leg den Ort an oder wähl ihn, und er liegt sofort auf dem Tag.',
+  'help.guide.place-to-open-day.step.1':
+    'Klick in der Tage-Spalte auf die Kopfzeile eines Tages. Der Tag ist geöffnet: Seine Karte ist hervorgehoben, und die Orte-Spalte bekommt den Knopf Zum Tag.',
+  'help.guide.place-to-open-day.step.2':
+    'Zum Tag öffnet dasselbe Formular wie Neuer Ort, nur landet der Ort in dem Moment auf dem geöffneten Tag, in dem du auf Hinzufügen klickst.',
+  'help.guide.place-to-open-day.step.3':
+    'Ein Ort, den es schon gibt, kommt mit dem + am Ende seiner Zeile auf den geöffneten Tag, oder per Rechtsklick über + Tag.',
+  'help.guide.place-to-open-day.result':
+    'Der Ort steht unter dem Tag, ganz am Ende; zieh ihn hoch oder runter an seinen Platz.',
+  'help.guide.place-to-open-day.tip.1':
+    'Eine Zeile auf einen Tag zu ziehen geht genauso, und dabei lässt sich der Ort gleich zwischen zwei Stopps ablegen.',
+  'help.guide.place-to-open-day.tip.2': 'Rückgängig in der Werkzeugleiste über den Tagen nimmt die Zuordnung zurück.',
+  // filter-places
+  'help.guide.filter-places.title': 'Einen Ort in der Liste finden',
+  'help.guide.filter-places.goal': 'Eng die Spalte auf die Orte ein, die du suchst.',
+  'help.guide.filter-places.step.1':
+    'Das Auswahlmenü oben wechselt zwischen Alle, Ungeplant (noch auf keinem Tag), Geplant (auf einem Tag) und Tracks (importierte GPX-Tracks), jeweils mit seiner Anzahl.',
+  'help.guide.filter-places.step.2': 'Tipp in Orte suchen...; die Liste wird mit jedem Zeichen enger.',
+  'help.guide.filter-places.step.3':
+    'Alle Kategorien öffnet eine Liste, in der du eine oder mehrere Kategorien ankreuzt, Keine Kategorie darunter; Filter zurücksetzen an ihrem Ende setzt sie zurück.',
+  'help.guide.filter-places.step.4':
+    'Der Stern daneben setzt eine Mindestbewertung: 5+, 4+ und so weiter zeigen nur Orte, die du mindestens so hoch bewertet hast.',
+  'help.guide.filter-places.result':
+    'Die Zahl über den Zeilen sagt, wie viele Orte passen; die Filter greifen zusammen.',
+  'help.guide.filter-places.tip.1':
+    'Bei geöffnetem Tag listet Geplant nur diesen Tag und sagt es auch: Nur der geöffnete Tag wird angezeigt, mit Ganze Reise anzeigen daneben.',
+  'help.guide.filter-places.tip.2':
+    'Die Karte engt sich ebenfalls auf den geöffneten Tag ein; Alle in der Liste zeigt weiterhin jeden Ort der Reise.',
+  // edit-place
+  'help.guide.edit-place.title': 'Einen Ort ändern',
+  'help.guide.edit-place.goal':
+    'Korrigier einen Namen, verschieb den Pin, ergänz eine Website oder wechsel die Kategorie.',
+  'help.guide.edit-place.step.1':
+    'Rechtsklick auf die Zeile und Bearbeiten wählen, oder den Ort öffnen und in seinen Details auf Bearbeiten klicken.',
+  'help.guide.edit-place.step.2':
+    'Ändere, was du brauchst: Name, Beschreibung, Notizen, Adresse, Breitengrad und Längengrad, Kategorie, Website. Von einem Tag aus geöffnet, hat das Formular zusätzlich Notizen für diesen Tag sowie Startzeit und Ende für diesen Tag.',
+  'help.guide.edit-place.step.3': 'Klick auf Aktualisieren.',
+  'help.guide.edit-place.result':
+    'Die Änderung gilt überall, wo der Ort auftaucht: in der Liste, auf der Karte und an jedem Tag, an dem er hängt.',
+  'help.guide.edit-place.tip.1':
+    'Notizen für diesen Tag gehören zum Ort an diesem einen Tag; Notizen gehören zum Ort selbst.',
+  'help.guide.edit-place.tip.2':
+    'Ein Ende vor der Startzeit blockiert Aktualisieren; Zeitliche Überschneidung mit: warnt nur, dass ein anderer Stopp des Tages dieselbe Zeit hat.',
+  // delete-place
+  'help.guide.delete-place.title': 'Einen Ort löschen',
+  'help.guide.delete-place.goal': 'Nimm einen Ort endgültig aus der Reise.',
+  'help.guide.delete-place.step.1':
+    'Rechtsklick auf die Zeile und Löschen wählen, oder in den Ortsdetails auf Löschen klicken.',
+  'help.guide.delete-place.step.2':
+    'Bestätige. Wurde an dem Ort eine Nacht gebucht oder hängt eine Buchung daran, sagt die Frage, was mitgeht.',
+  'help.guide.delete-place.result':
+    'Der Ort ist aus der Liste, von der Karte und von jedem Tag verschwunden; Rückgängig in der Werkzeugleiste über den Tagen holt ihn zurück.',
+  'help.guide.delete-place.tip.1':
+    'Um einen Ort nur von einem Tag zu nehmen, nutz stattdessen Vom Tag entfernen an diesem Stopp.',
+  'help.guide.delete-place.tip.2': 'Mehrere Orte auf einmal: Der Haken neben den Filtern startet eine Auswahl.',
+  // select-places
+  'help.guide.select-places.title': 'Mehrere Orte auf einmal ändern oder löschen',
+  'help.guide.select-places.goal': 'Räum die Liste in einem Zug auf, statt Ort für Ort.',
+  'help.guide.select-places.step.1':
+    'Klick auf den Haken am rechten Ende der Filterzeile. Die Zeilen bekommen Kästchen, und eine Leiste mit den Aktionen erscheint.',
+  'help.guide.select-places.step.2':
+    'Hak die Zeilen an, oder nutz Alle auswählen in der Leiste; die Leiste zählt, was ausgewählt ist.',
+  'help.guide.select-places.step.3':
+    'Kategorie ändern gibt allen eine Kategorie; In Sammlung speichern kopiert sie in eine deiner Sammlungen; Auswahl löschen entfernt sie nach einer Bestätigung.',
+  'help.guide.select-places.step.4': 'Klick noch einmal auf den Haken, um die Auswahl zu verlassen.',
+  'help.guide.select-places.result':
+    'Die Änderung gilt für jeden ausgewählten Ort; ein Löschen lässt sich über die Werkzeugleiste über den Tagen rückgängig machen.',
+  'help.guide.select-places.tip.1':
+    'Die Filter arbeiten weiter, während du auswählst: Filter erst auf Ungeplant, dann erwischt Alle auswählen genau diese.',
+  'help.guide.select-places.tip.2':
+    'In deinen Listen als besucht markieren erscheint in der Leiste, wenn das Addon Sammlungen an ist: Es hakt die Orte in den Sammlungen ab, in denen sie gespeichert sind.',
+  // import-places-file
+  'help.guide.import-places-file.title': 'Orte aus einer GPX-, KML- oder KMZ-Datei importieren',
+  'help.guide.import-places-file.goal':
+    'Hol herein, was Google My Maps, Google Earth oder ein GPS-Tracker exportiert hat.',
+  'help.guide.import-places-file.step.1':
+    'Klick auf Dateimport, oder lass die Datei irgendwo auf der Orte-Spalte fallen.',
+  'help.guide.import-places-file.step.2':
+    'Wähl die Datei oder zieh sie in das Feld. Bei einer GPX hakst du an, was importiert wird: Wegpunkte, Routen, Tracks (mit Streckenverlauf); bei KML und KMZ Punkte (Placemarks) und Pfade (LineStrings).',
+  'help.guide.import-places-file.step.3':
+    'Orte über Google anreichern schlägt jeden importierten Ort nach, um Fotos, Adresse und Details zu ergänzen; dafür braucht es den Google-Schlüssel.',
+  'help.guide.import-places-file.step.4':
+    'Klick auf Importieren. Die Zusammenfassung sagt, wie viele Orte angelegt und wie viele übersprungen wurden, weil sie schon in der Reise waren.',
+  'help.guide.import-places-file.result':
+    'Die Orte stehen in der Liste; ein Track trägt in seiner Zeile eine Routenmarkierung, zeichnet sich auf der Karte und bekommt seinen eigenen Filter Tracks.',
+  'help.guide.import-places-file.tip.1':
+    'Eine zu große Datei wird mit der Größengrenze abgelehnt; exportier sie noch einmal ohne Fotos, oder teil sie auf.',
+  'help.guide.import-places-file.tip.2':
+    'Der Import lässt sich als Ganzes über die Werkzeugleiste über den Tagen rückgängig machen.',
+  // import-places-list
+  'help.guide.import-places-list.title': 'Eine geteilte Liste aus Google Maps oder Naver Maps importieren',
+  'help.guide.import-places-list.goal': 'Mach aus dem Link einer geteilten Liste Orte.',
+  'help.guide.import-places-list.step.1': 'Klick auf Listenimport und wähl Google Liste oder Naver Liste.',
+  'help.guide.import-places-list.step.2':
+    'Füg den geteilten Link der Liste ein. Ein Routenlink von Google Maps geht auch: Seine Stopps werden zu Orten, in der Reihenfolge der Fahrt.',
+  'help.guide.import-places-list.step.3': 'Klick auf Importieren.',
+  'help.guide.import-places-list.result':
+    'Jeder Ort der Liste ist in der Reise, benannt wie in der Liste; Orte, die schon in der Reise sind, werden übersprungen.',
+  'help.guide.import-places-list.tip.1':
+    'Die Liste muss öffentlich geteilt sein; der Link einer privaten Liste importiert nichts.',
+  'help.guide.import-places-list.tip.2':
+    'Naver Liste braucht das Addon Naver List Import, das der Admin unter Addons einschaltet; ohne es heißt der Knopf Google Liste.',
 };
 
 export default help;

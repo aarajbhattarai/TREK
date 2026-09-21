@@ -1786,6 +1786,148 @@ const help: TranslationStrings = {
     'L’annullamento copre il programma: assegnare, rimuovere, riordinare e spostare luoghi, ottimizzare un percorso, eliminare luoghi, cambi di categoria e importazioni.',
   'help.guide.undo-change.tip.2':
     'È profondo un solo passo: solo l’ultima modifica può essere ritirata, e una nuova modifica la sostituisce.',
+
+  // ── Screen: trip-places ───────────────────────────────────────────────────────────────
+  'help.ctx.trip-places.title': 'Luoghi',
+  'help.ctx.trip-places.summary':
+    'La colonna di destra del programma: ogni luogo del viaggio, pianificato o no, con ricerca e filtri, e i modi per far entrare i luoghi, a mano, da un file o da una lista condivisa.',
+  'help.ctx.trip-places.bullet.1':
+    'Aggiungi Luogo/Attività in alto apre il modulo per un luogo che digiti o cerchi. Finché un giorno è aperto il pulsante dice Nuovo luogo, e Al giorno accanto crea il luogo direttamente su quel giorno.',
+  'help.ctx.trip-places.bullet.2':
+    'Importa file accetta file .gpx, .kml e .kmz; Importa lista accetta una lista condivisa di Google Maps o Naver Maps. Un file si può anche semplicemente lasciar cadere sulla colonna.',
+  'help.ctx.trip-places.bullet.3':
+    'Il menu a tendina passa tra Tutti, Non pianificati, Pianificati e, una volta importata una traccia, Tracce; sotto stanno la ricerca, il filtro di categoria e la stella per una valutazione minima.',
+  'help.ctx.trip-places.bullet.4':
+    'Una riga mostra immagine, nome e descrizione o indirizzo. Cliccala per i dettagli del luogo, trascinala su un giorno, oppure fai clic destro per Modifica, + Giorno, Apri sito web, Google Maps, Salva nella raccolta ed Elimina.',
+  'help.ctx.trip-places.bullet.5':
+    'Con un giorno aperto, un + in fondo a una riga non pianificata mette il luogo su quel giorno, e Pianificati elenca solo quel giorno, con Mostra tutto il viaggio per allargare di nuovo.',
+  'help.ctx.trip-places.bullet.6':
+    'La spunta all’estremità destra della riga dei filtri avvia una selezione: più righe insieme ricevono una nuova categoria, finiscono in una raccolta o vengono eliminate.',
+  // create-place
+  'help.guide.create-place.title': 'Creare un luogo',
+  'help.guide.create-place.goal':
+    'Aggiungi a mano un luogo o un’attività, con tutto ciò che il programma deve saperne.',
+  'help.guide.create-place.step.1':
+    'Clicca Aggiungi Luogo/Attività in cima alla colonna dei luoghi (Nuovo luogo finché un giorno è aperto). Il modulo si apre.',
+  'help.guide.create-place.step.2':
+    'Digita il luogo in Cerca luoghi... in alto e scegli un risultato. Nome, Indirizzo, Latitudine e Longitudine si riempiono, e Dettagli del luogo a destra mostra immagini, una descrizione e dati. Non è il posto giusto? Cerca su Google rilancia la ricerca tramite Google.',
+  'help.guide.create-place.step.3':
+    'In Dettagli del luogo, un clic su un’immagine sotto Scegli un’immagine la rende l’immagine del luogo; Usa questo testo porta la descrizione nel modulo.',
+  'help.guide.create-place.step.4':
+    'Controlla i campi: Nome è obbligatorio; Descrizione e Note sono tue; Indirizzo, Latitudine e Longitudine arrivano dalla ricerca o si digitano; Categoria sceglie una delle categorie del viaggio, e il + accanto ne crea una nuova sul momento; Sito web prende il link.',
+  'help.guide.create-place.step.5':
+    'Clicca Aggiungi. Se un luogo con lo stesso nome è già nel viaggio, il modulo lo dice e il pulsante diventa Aggiungi comunque.',
+  'help.guide.create-place.result':
+    'Il luogo è nella lista e sulla mappa, sotto Non pianificati finché non viene messo su un giorno.',
+  'help.guide.create-place.tip.1':
+    'File e Costs in fondo al modulo allegano un documento al luogo, o aprono l’editor Costs per la sua spesa subito dopo il salvataggio.',
+  'help.guide.create-place.tip.2':
+    'Senza chiave Google la ricerca passa per l’indice di TREK e OpenStreetMap: trova il luogo, solo senza valutazioni, orari di apertura e foto.',
+  'help.guide.create-place.tip.3':
+    'Un luogo può anche partire dalla mappa: fai clic destro sul punto, e il modulo si apre con coordinate e indirizzo già compilati.',
+  // place-to-open-day
+  'help.guide.place-to-open-day.title': 'Aggiungere un luogo direttamente al giorno aperto',
+  'help.guide.place-to-open-day.goal': 'Salta il secondo passo: crea o scegli il luogo e mettilo subito sul giorno.',
+  'help.guide.place-to-open-day.step.1':
+    'Clicca l’intestazione di un giorno nella colonna dei giorni. Il giorno è aperto: la sua scheda è evidenziata, e la colonna dei luoghi guadagna il pulsante Al giorno.',
+  'help.guide.place-to-open-day.step.2':
+    'Al giorno apre lo stesso modulo di Nuovo luogo, solo che il luogo finisce sul giorno aperto nel momento in cui clicchi Aggiungi.',
+  'help.guide.place-to-open-day.step.3':
+    'Un luogo che esiste già va sul giorno aperto con il + in fondo alla sua riga, oppure con clic destro, + Giorno.',
+  'help.guide.place-to-open-day.result':
+    'Il luogo è elencato sotto il giorno, in fondo; trascinalo su o giù dove gli spetta.',
+  'help.guide.place-to-open-day.tip.1':
+    'Trascinare una riga su un giorno funziona ugualmente, e così il luogo si può lasciare subito tra due tappe.',
+  'help.guide.place-to-open-day.tip.2': 'Annulla nella barra degli strumenti sopra i giorni ritira l’assegnazione.',
+  // filter-places
+  'help.guide.filter-places.title': 'Trovare un luogo nella lista',
+  'help.guide.filter-places.goal': 'Restringi la colonna ai luoghi che cerchi.',
+  'help.guide.filter-places.step.1':
+    'Il menu a tendina in alto passa tra Tutti, Non pianificati (non ancora su un giorno), Pianificati (su un giorno) e Tracce (tracce GPX importate), ognuno con il suo conteggio.',
+  'help.guide.filter-places.step.2': 'Digita in Cerca luoghi...; la lista si restringe mentre scrivi.',
+  'help.guide.filter-places.step.3':
+    'Tutte le categorie apre una lista in cui spuntare una o più categorie, Nessuna categoria compresa; Cancella filtro, in fondo, la azzera.',
+  'help.guide.filter-places.step.4':
+    'La stella accanto imposta una valutazione minima: 5+, 4+ e così via mostrano solo i luoghi che hai valutato almeno così in alto.',
+  'help.guide.filter-places.result':
+    'Il conteggio sopra le righe dice quanti luoghi corrispondono; i filtri si combinano.',
+  'help.guide.filter-places.tip.1':
+    'Con un giorno aperto, Pianificati elenca solo quel giorno e lo dice: Viene mostrato solo il giorno aperto, con Mostra tutto il viaggio accanto.',
+  'help.guide.filter-places.tip.2':
+    'Anche la mappa si restringe al giorno aperto; Tutti nella lista mostra comunque ogni luogo del viaggio.',
+  // edit-place
+  'help.guide.edit-place.title': 'Modificare un luogo',
+  'help.guide.edit-place.goal': 'Correggi un nome, sposta il segnaposto, aggiungi un sito web o cambia la categoria.',
+  'help.guide.edit-place.step.1':
+    'Fai clic destro sulla riga e scegli Modifica, oppure apri il luogo e clicca Modifica nei suoi dettagli.',
+  'help.guide.edit-place.step.2':
+    'Cambia ciò che ti serve: Nome, Descrizione, Note, Indirizzo, Latitudine e Longitudine, Categoria, Sito web. Aperto da un giorno, il modulo ha anche Note per questo giorno e Inizio e Fine per quel giorno.',
+  'help.guide.edit-place.step.3': 'Clicca Aggiorna.',
+  'help.guide.edit-place.result':
+    'La modifica vale ovunque il luogo compaia: nella lista, sulla mappa e in ogni giorno su cui sta.',
+  'help.guide.edit-place.tip.1':
+    'Note per questo giorno appartiene al luogo in quel solo giorno; Note appartiene al luogo stesso.',
+  'help.guide.edit-place.tip.2':
+    'Una Fine prima dell’Inizio blocca Aggiorna; Sovrapposizione di orario con: avverte solo che un’altra tappa del giorno ha la stessa ora.',
+  // delete-place
+  'help.guide.delete-place.title': 'Eliminare un luogo',
+  'help.guide.delete-place.goal': 'Togli un luogo dal viaggio per sempre.',
+  'help.guide.delete-place.step.1':
+    'Fai clic destro sulla riga e scegli Elimina, oppure clicca Elimina nei dettagli del luogo.',
+  'help.guide.delete-place.step.2':
+    'Conferma. Se al luogo era prenotata una notte, o se una prenotazione è collegata ad esso, la domanda dice cosa se ne va insieme.',
+  'help.guide.delete-place.result':
+    'Il luogo è sparito dalla lista, dalla mappa e da ogni giorno; Annulla nella barra degli strumenti sopra i giorni lo riporta.',
+  'help.guide.delete-place.tip.1':
+    'Per togliere un luogo da un solo giorno, usa invece Rimuovi dal giorno su quella tappa.',
+  'help.guide.delete-place.tip.2': 'Più luoghi insieme: la spunta accanto ai filtri avvia una selezione.',
+  // select-places
+  'help.guide.select-places.title': 'Modificare o eliminare più luoghi insieme',
+  'help.guide.select-places.goal': 'Metti in ordine la lista in un colpo solo invece che luogo per luogo.',
+  'help.guide.select-places.step.1':
+    'Clicca la spunta all’estremità destra della riga dei filtri. Le righe ricevono caselle e compare una barra con le azioni.',
+  'help.guide.select-places.step.2':
+    'Spunta le righe, oppure Seleziona tutto nella barra; la barra conta ciò che è selezionato.',
+  'help.guide.select-places.step.3':
+    'Change category dà a tutti un’unica categoria; Salva nella raccolta li copia in una delle tue raccolte; Elimina selezionati li rimuove dopo una conferma.',
+  'help.guide.select-places.step.4': 'Clicca di nuovo la spunta per uscire dalla selezione.',
+  'help.guide.select-places.result':
+    'La modifica vale per ogni luogo selezionato; un’eliminazione si può annullare dalla barra degli strumenti sopra i giorni.',
+  'help.guide.select-places.tip.1':
+    'I filtri continuano a funzionare mentre selezioni: filtra prima su Non pianificati, poi Seleziona tutto prende esattamente quelli.',
+  'help.guide.select-places.tip.2':
+    'Segna come visitato nelle tue liste compare nella barra quando l’addon Raccolte è attivo: spunta i luoghi nelle raccolte in cui sono salvati.',
+  // import-places-file
+  'help.guide.import-places-file.title': 'Importare luoghi da un file GPX, KML o KMZ',
+  'help.guide.import-places-file.goal':
+    'Porta dentro ciò che Google My Maps, Google Earth o un tracker GPS ha esportato.',
+  'help.guide.import-places-file.step.1':
+    'Clicca Importa file, oppure lascia cadere il file in un punto qualsiasi della colonna dei luoghi.',
+  'help.guide.import-places-file.step.2':
+    'Scegli il file o trascinalo nel riquadro. Per un GPX, spunta cosa importare: Waypoint, Percorsi, Tracce (con geometria percorso); per KML e KMZ, Punti (Placemarks) e Percorsi (LineStrings).',
+  'help.guide.import-places-file.step.3':
+    'Arricchisci i luoghi con Google cerca ogni luogo importato per completare foto, indirizzo e dettagli; serve la chiave Google.',
+  'help.guide.import-places-file.step.4':
+    'Clicca Importa. Il riepilogo dice quanti luoghi sono stati creati e quanti sono stati saltati perché erano già nel viaggio.',
+  'help.guide.import-places-file.result':
+    'I luoghi sono nella lista; una traccia porta un segno di percorso sulla sua riga, si disegna sulla mappa e ottiene il proprio filtro Tracce.',
+  'help.guide.import-places-file.tip.1':
+    'Un file troppo grande viene rifiutato con il limite di dimensione; esportalo di nuovo senza foto, oppure dividilo.',
+  'help.guide.import-places-file.tip.2':
+    'L’importazione si può annullare per intero dalla barra degli strumenti sopra i giorni.',
+  // import-places-list
+  'help.guide.import-places-list.title': 'Importare una lista condivisa di Google Maps o Naver Maps',
+  'help.guide.import-places-list.goal': 'Trasforma il link di una lista condivisa in luoghi.',
+  'help.guide.import-places-list.step.1': 'Clicca Importa lista e scegli Lista Google o Lista Naver.',
+  'help.guide.import-places-list.step.2':
+    'Incolla il link condiviso della lista. Va bene anche un link di indicazioni di Google Maps: le sue tappe diventano luoghi, nell’ordine di percorrenza.',
+  'help.guide.import-places-list.step.3': 'Clicca Importa.',
+  'help.guide.import-places-list.result':
+    'Ogni luogo della lista è nel viaggio, con il nome che ha nella lista; i luoghi già nel viaggio vengono saltati.',
+  'help.guide.import-places-list.tip.1':
+    'La lista deve essere condivisa pubblicamente; il link di una lista privata non importa nulla.',
+  'help.guide.import-places-list.tip.2':
+    'Lista Naver richiede l’addon Naver List Import, che l’admin accende sotto Moduli; senza di esso il pulsante dice Lista Google.',
 };
 
 export default help;

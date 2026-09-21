@@ -1417,6 +1417,118 @@ const help: TranslationStrings = {
   'help.guide.undo-change.result': '计划恢复原样，箭头变灰，直到下一次更改。',
   'help.guide.undo-change.tip.1': '撤销覆盖计划：分配、移除、重新排序和移动地点，优化路线，删除地点，类别更改和导入。',
   'help.guide.undo-change.tip.2': '它只有一步深：只能收回最新的一次更改，新的更改会取代它。',
+
+  // ── Screen: trip-places ───────────────────────────────────────────────────────────────
+  'help.ctx.trip-places.title': '地点',
+  'help.ctx.trip-places.summary':
+    '计划的右栏：旅行的每一个地点，无论是否已规划，带搜索和筛选，以及把地点带进来的各种方式：手动添加、从文件导入或从共享列表导入。',
+  'help.ctx.trip-places.bullet.1':
+    '顶部的“添加地点/活动”打开一个表单，用来输入或搜索地点。当某一天打开时，按钮变成“新地点”，旁边的“加入当天”直接把地点创建到那一天。',
+  'help.ctx.trip-places.bullet.2':
+    '“导入文件”接受 .gpx、.kml 和 .kmz 文件；“列表导入”接受共享的 Google Maps 或 Naver Maps 列表。文件也可以直接拖放到这一栏上。',
+  'help.ctx.trip-places.bullet.3':
+    '下拉菜单在“全部”“未规划”“已规划”之间切换，导入轨迹之后还会有“路线”；它下方是搜索框、分类筛选和用于最低评分的星标。',
+  'help.ctx.trip-places.bullet.4':
+    '一行显示图片、名称以及描述或地址。点击它查看地点详情，把它拖到某一天，或者右键点击它，得到“编辑”“+ 天”“打开网站”“Google 地图”“保存到收藏”和“删除”。',
+  'help.ctx.trip-places.bullet.5':
+    '在某一天打开时，未规划行末尾的 + 会把地点放到那一天，而“已规划”只列出那一天，旁边的“显示整个行程”可以再次放宽。',
+  'help.ctx.trip-places.bullet.6': '筛选行右端的对勾开始一次选择：多行一次性获得新分类、进入某个收藏或被删除。',
+  // create-place
+  'help.guide.create-place.title': '创建地点',
+  'help.guide.create-place.goal': '手动添加一个地点或活动，连同计划需要知道的一切。',
+  'help.guide.create-place.step.1': '点击地点栏顶部的“添加地点/活动”（某一天打开时是“新地点”）。表单打开。',
+  'help.guide.create-place.step.2':
+    '在顶部的“搜索地点...”里输入地点并选一个结果。“名称”“地址”“纬度”和“经度”会自动填好，右侧的“地点详情”显示图片、一段描述和相关资料。“不是想找的地点？改用 Google 搜索”会再通过 Google 跑一次搜索。',
+  'help.guide.create-place.step.3':
+    '在“地点详情”里，点击“选择图片”下方的一张图片就把它设为地点的配图；“使用此文本”把描述接过来填入表单。',
+  'help.guide.create-place.step.4':
+    '检查各个字段：“名称”必填；“描述”和“备注”由你自己写；“地址”“纬度”和“经度”来自搜索或手动输入；“分类”从旅行的分类里选一个，旁边的 + 可以当场新建一个；“网站”放链接。',
+  'help.guide.create-place.step.5': '点击“添加”。如果旅行里已经有同名的地点，表单会说明，按钮变成“仍然添加”。',
+  'help.guide.create-place.result': '地点已经在列表里和地图上，在被放到某一天之前位于“未规划”下。',
+  'help.guide.create-place.tip.1':
+    '表单底部的“文件”和“费用”可以给地点附上一份文档，或者在保存之后立刻打开它那笔支出的“费用”编辑器。',
+  'help.guide.create-place.tip.2':
+    '没有 Google 密钥时，搜索走 TREK 索引和 OpenStreetMap：照样能找到地点，只是没有评分、营业时间和照片。',
+  'help.guide.create-place.tip.3': '地点也可以从地图开始：右键点击那个位置，表单就会带着坐标和地址打开。',
+  // place-to-open-day
+  'help.guide.place-to-open-day.title': '把地点直接加到打开的那一天',
+  'help.guide.place-to-open-day.goal': '跳过第二步：创建或选中地点，一次就把它放到那一天。',
+  'help.guide.place-to-open-day.step.1':
+    '在天数栏里点击某一天的标题。这一天就打开了：它的卡片高亮，地点栏多出“加入当天”按钮。',
+  'help.guide.place-to-open-day.step.2':
+    '“加入当天”打开的表单和“新地点”一样，只是你点击“添加”的那一刻地点就落在打开的那一天上。',
+  'help.guide.place-to-open-day.step.3': '已经存在的地点，用它那一行末尾的 + 或者右键点击后的“+ 天”放到打开的那一天。',
+  'help.guide.place-to-open-day.result': '地点列在那一天下面，排在最后；上下拖动把它放到该在的位置。',
+  'help.guide.place-to-open-day.tip.1': '把一行拖到某一天同样可行，而且可以直接把地点放到两个停靠点之间。',
+  'help.guide.place-to-open-day.tip.2': '天数上方工具栏里的“撤销”收回这次分配。',
+  // filter-places
+  'help.guide.filter-places.title': '在列表里找到地点',
+  'help.guide.filter-places.goal': '把这一栏收窄到你要找的地点。',
+  'help.guide.filter-places.step.1':
+    '顶部的下拉菜单在“全部”、“未规划”（还不在任何一天上）、“已规划”（在某一天上）和“路线”（导入的 GPX 轨迹）之间切换，每一项都带数量。',
+  'help.guide.filter-places.step.2': '在“搜索地点...”里输入；列表随着输入不断收窄。',
+  'help.guide.filter-places.step.3':
+    '“所有分类”打开一个列表，可以勾选一个或多个分类，“无分类”也在其中；底部的“清除筛选”把它重置。',
+  'help.guide.filter-places.step.4': '旁边的星标设定最低评分：5+、4+ 等等，只显示你打分不低于该值的地点。',
+  'help.guide.filter-places.result': '行上方的数字说明有多少地点符合；各个筛选条件会叠加。',
+  'help.guide.filter-places.tip.1':
+    '某一天打开时，“已规划”只列出那一天并会说明：“仅显示当前打开的日期”，旁边是“显示整个行程”。',
+  'help.guide.filter-places.tip.2': '地图同样收窄到打开的那一天；列表里的“全部”仍然显示旅行的每一个地点。',
+  // edit-place
+  'help.guide.edit-place.title': '修改地点',
+  'help.guide.edit-place.goal': '改个名字、挪一下图钉、加上网站或者换个分类。',
+  'help.guide.edit-place.step.1': '右键点击该行并选择“编辑”，或者打开地点并在它的详情里点击“编辑”。',
+  'help.guide.edit-place.step.2':
+    '改你需要的：“名称”“描述”“备注”“地址”“纬度”和“经度”“分类”“网站”。从某一天打开时，表单里还有“当天备注”以及那一天的“开始”和“结束”。',
+  'help.guide.edit-place.step.3': '点击“更新”。',
+  'help.guide.edit-place.result': '改动在地点出现的所有地方生效：列表、地图和它所在的每一天。',
+  'help.guide.edit-place.tip.1': '“当天备注”属于这个地点在那一天上的条目；“备注”属于地点本身。',
+  'help.guide.edit-place.tip.2': '“结束”早于“开始”会挡住“更新”；“时间冲突：”只是提醒当天另有一个停靠点用了相同的时间。',
+  // delete-place
+  'help.guide.delete-place.title': '删除地点',
+  'help.guide.delete-place.goal': '把一个地点彻底移出旅行。',
+  'help.guide.delete-place.step.1': '右键点击该行并选择“删除”，或者在地点详情里点击“删除”。',
+  'help.guide.delete-place.step.2':
+    '确认。如果这个地点上订了一晚住宿，或者有预订与它相关，提示会说明会一并消失的内容。',
+  'help.guide.delete-place.result': '地点从列表、地图和每一天都消失了；天数上方工具栏里的“撤销”能把它找回来。',
+  'help.guide.delete-place.tip.1': '只想把地点从某一天上拿掉，就改在那个停靠点上用“从当天移除”。',
+  'help.guide.delete-place.tip.2': '一次处理多个地点：筛选旁边的对勾开始一次选择。',
+  // select-places
+  'help.guide.select-places.title': '一次修改或删除多个地点',
+  'help.guide.select-places.goal': '一次性整理列表，而不是一个一个来。',
+  'help.guide.select-places.step.1': '点击筛选行右端的对勾。各行出现复选框，并出现一条带有各项操作的操作栏。',
+  'help.guide.select-places.step.2': '勾选各行，或者用操作栏上的“全选”；操作栏会统计选中的数量。',
+  'help.guide.select-places.step.3':
+    '“更改分类”给它们全部同一个分类；“保存到收藏”把它们复制到你的某个收藏里；“删除所选”在确认之后把它们移除。',
+  'help.guide.select-places.step.4': '再次点击对勾即可退出选择。',
+  'help.guide.select-places.result': '改动作用于每一个选中的地点；删除可以从天数上方的工具栏撤销。',
+  'help.guide.select-places.tip.1': '选择期间筛选仍然有效：先筛到“未规划”，再用“全选”就正好抓到那些。',
+  'help.guide.select-places.tip.2':
+    '收藏扩展开启时，操作栏上会出现“在清单中标记为已去过”：它会在这些地点所保存的收藏里把它们勾掉。',
+  // import-places-file
+  'help.guide.import-places-file.title': '从 GPX、KML 或 KMZ 文件导入地点',
+  'help.guide.import-places-file.goal': '把 Google My Maps、Google Earth 或 GPS 记录器导出的内容带进来。',
+  'help.guide.import-places-file.step.1': '点击“导入文件”，或者把文件拖放到地点栏的任意位置。',
+  'help.guide.import-places-file.step.2':
+    '选择文件或把它拖进方框。对于 GPX，勾选要导入的内容：“路点”“路线”“轨迹（含路径几何）”；对于 KML 和 KMZ，是“点（Placemarks）”和“路径（LineStrings）”。',
+  'help.guide.import-places-file.step.3':
+    '“通过 Google 丰富地点信息”会逐个查找导入的地点，补上照片、地址和详情；它需要 Google 密钥。',
+  'help.guide.import-places-file.step.4': '点击“导入”。摘要会说明创建了多少地点，以及因为旅行里已经有了而跳过了多少。',
+  'help.guide.import-places-file.result':
+    '地点已经在列表里；轨迹的行上带有路线标记，会画在地图上，并获得自己的“路线”筛选项。',
+  'help.guide.import-places-file.tip.1': '文件过大会被拒绝并给出大小上限；去掉照片重新导出，或者把它拆开。',
+  'help.guide.import-places-file.tip.2': '整次导入可以从天数上方的工具栏撤销。',
+  // import-places-list
+  'help.guide.import-places-list.title': '导入共享的 Google Maps 或 Naver Maps 列表',
+  'help.guide.import-places-list.goal': '把共享列表的链接变成地点。',
+  'help.guide.import-places-list.step.1': '点击“列表导入”并选择“Google 列表”或“Naver 列表”。',
+  'help.guide.import-places-list.step.2':
+    '粘贴该列表的共享链接。Google Maps 的路线规划链接也可以：它的各个停靠点会按驾车顺序变成地点。',
+  'help.guide.import-places-list.step.3': '点击“导入”。',
+  'help.guide.import-places-list.result': '列表里的每个地点都进了旅行，名称与列表中一致；旅行里已有的地点会被跳过。',
+  'help.guide.import-places-list.tip.1': '列表必须公开共享；私有列表的链接什么也导不进来。',
+  'help.guide.import-places-list.tip.2':
+    '“Naver 列表”需要 Naver List Import 扩展，由管理员在“扩展”下开启；没有它，按钮显示为“Google 列表”。',
 };
 
 export default help;

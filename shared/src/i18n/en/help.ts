@@ -1735,7 +1735,7 @@ const help: TranslationStrings = {
   'help.guide.create-place.step.1':
     'Click Add Place/Activity at the top of the places column (New place while a day is open). The form opens.',
   'help.guide.create-place.step.2':
-    'Type the place into Search places… at the top and pick a result. Name, Address, Latitude and Longitude fill in, and Place details on the right shows pictures, a description and facts for it. Not the right place? Search Google instead runs the search again through Google.',
+    'Type the place into Search places… at the top and pick a result. Name, Address, Latitude, Longitude and Website fill in, and Place details on the left shows pictures, opening hours and a description for it. On a TREK with a Google key, Not the right place? Search Google instead sits under the list and runs the same search through Google.',
   'help.guide.create-place.step.3':
     'In Place details, a click on a picture under Pick a picture makes it the place’s image; Use this text takes the description over into the form.',
   'help.guide.create-place.step.4':
@@ -1747,7 +1747,7 @@ const help: TranslationStrings = {
   'help.guide.create-place.tip.1':
     'Files and Costs at the bottom of the form attach a document to the place, or open the Costs editor for its expense right after saving.',
   'help.guide.create-place.tip.2':
-    'Without a Google key the search runs through the TREK index and OpenStreetMap: it finds the place, only without ratings, opening hours and photos.',
+    'The TREK index and OpenStreetMap answer the search on every TREK, and Place details fills itself from Wikipedia, Wikivoyage and Wikimedia. Google is asked only where both come up empty, and only it brings ratings.',
   'help.guide.create-place.tip.3':
     'A place can also start on the map: right-click the spot, and the form opens with the coordinates and address filled in.',
   // place-to-open-day
@@ -1825,9 +1825,9 @@ const help: TranslationStrings = {
   'help.guide.import-places-file.step.2':
     'Pick the file or drag it into the box. For a GPX, tick what to import: Waypoints, Routes, Tracks (with path geometry); for KML and KMZ, Points (Placemarks) and Paths (LineStrings).',
   'help.guide.import-places-file.step.3':
-    'Enrich places via Google looks each imported place up to fill in photos, address and details; it needs the Google key.',
+    'The box takes several files at once, and only .gpx, .kml and .kmz. Another kind of file, or one over 10 MB, is refused in the dialog and not imported.',
   'help.guide.import-places-file.step.4':
-    'Click Import. The summary says how many places were created and how many were skipped because they were already in the trip.',
+    'Click Import. A message says how many places came in; for a KML or KMZ file the dialog stays open with a summary of what was created and what was skipped.',
   'help.guide.import-places-file.result':
     'The places are in the list; a track carries a route marker on its row, draws on the map and gets its own Tracks filter.',
   'help.guide.import-places-file.tip.1':
@@ -1845,7 +1845,7 @@ const help: TranslationStrings = {
   'help.guide.import-places-list.tip.1':
     'The list has to be shared publicly; the link of a private list imports nothing.',
   'help.guide.import-places-list.tip.2':
-    'Naver List needs the Naver List Import addon, which the admin switches on under Addons; without it the button reads Google List.',
+    'Enrich places via Google appears in the dialog when your TREK has a Google key: it looks every imported place up and fills in photos, address and details.',
 
   // ── Screen: trip-days ─────────────────────────────────────────────────────────────────
   'help.ctx.trip-days.title': 'Days',

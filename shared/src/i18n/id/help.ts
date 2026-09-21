@@ -1800,6 +1800,145 @@ const help: TranslationStrings = {
     'Batalkan mencakup rencana: menugaskan, menghapus, mengurutkan ulang, dan memindahkan tempat, mengoptimalkan rute, menghapus tempat, perubahan kategori, dan impor.',
   'help.guide.undo-change.tip.2':
     'Dalamnya satu langkah: hanya perubahan terakhir yang bisa ditarik kembali, dan perubahan baru menggantikannya.',
+
+  // ── Screen: trip-places ───────────────────────────────────────────────────────────────
+  'help.ctx.trip-places.title': 'Tempat',
+  'help.ctx.trip-places.summary':
+    'Kolom kanan rencana: setiap tempat perjalanan, direncanakan atau belum, dengan pencarian dan filter, serta cara-cara memasukkan tempat, dengan tangan, dari sebuah file atau dari daftar yang dibagikan.',
+  'help.ctx.trip-places.bullet.1':
+    '“Tambah Tempat/Aktivitas” di atas membuka formulir untuk tempat yang Anda ketik atau cari. Selama sebuah hari terbuka, tombol itu berbunyi “Tempat baru”, dan “Ke hari” di sebelahnya membuat tempat langsung pada hari tersebut.',
+  'help.ctx.trip-places.bullet.2':
+    '“Impor file” menerima file .gpx, .kml dan .kmz; “Impor Daftar” menerima daftar Google Maps atau Naver Maps yang dibagikan. Sebuah file juga bisa cukup dijatuhkan ke kolom ini.',
+  'help.ctx.trip-places.bullet.3':
+    'Menu tarik-turun beralih antara “Semua”, “Belum direncanakan”, “Direncanakan” dan, setelah sebuah trek diimpor, “Trek”; di bawahnya ada pencarian, filter kategori dan bintang untuk penilaian minimum.',
+  'help.ctx.trip-places.bullet.4':
+    'Sebuah baris menampilkan gambar, nama dan deskripsi atau alamat. Klik untuk melihat detail tempat, seret ke sebuah hari, atau klik kanan untuk “Sunting”, “+ Hari”, “Buka Situs Web”, “Google Maps”, “Simpan ke Koleksi” dan “Hapus”.',
+  'help.ctx.trip-places.bullet.5':
+    'Dengan sebuah hari terbuka, tanda + di ujung baris yang belum direncanakan menaruh tempat itu pada hari tersebut, dan “Direncanakan” hanya mendaftar hari itu, dengan “Tampilkan seluruh perjalanan” untuk melebarkan lagi.',
+  'help.ctx.trip-places.bullet.6':
+    'Tanda centang di ujung kanan baris filter memulai pemilihan: beberapa baris sekaligus mendapat kategori baru, masuk ke sebuah koleksi atau dihapus.',
+  // create-place
+  'help.guide.create-place.title': 'Membuat tempat',
+  'help.guide.create-place.goal':
+    'Tambahkan tempat atau aktivitas dengan tangan, lengkap dengan semua yang perlu diketahui rencana tentangnya.',
+  'help.guide.create-place.step.1':
+    'Klik “Tambah Tempat/Aktivitas” di atas kolom tempat (“Tempat baru” selama sebuah hari terbuka). Formulir terbuka.',
+  'help.guide.create-place.step.2':
+    'Ketik tempatnya di “Cari tempat...” di atas dan pilih satu hasil. “Nama”, “Alamat”, “Lintang” dan “Bujur” terisi, dan “Detail tempat” di sebelah kanan menampilkan gambar, sebuah deskripsi dan fakta tentangnya. “Bukan tempat yang tepat? Cari di Google saja” menjalankan pencarian sekali lagi lewat Google.',
+  'help.guide.create-place.step.3':
+    'Di “Detail tempat”, klik pada sebuah gambar di bawah “Pilih gambar” menjadikannya gambar tempat itu; “Gunakan teks ini” memindahkan deskripsinya ke formulir.',
+  'help.guide.create-place.step.4':
+    'Periksa kolom-kolomnya: “Nama” wajib; “Deskripsi” dan “Catatan” milik Anda; “Alamat”, “Lintang” dan “Bujur” datang dari pencarian atau diketik; “Kategori” memilih salah satu kategori perjalanan, dan tanda + di sebelahnya membuat kategori baru saat itu juga; “Situs web” menerima tautannya.',
+  'help.guide.create-place.step.5':
+    'Klik “Tambah”. Jika tempat dengan nama yang sama sudah ada di perjalanan, formulir mengatakannya dan tombolnya berubah menjadi “Tetap tambahkan”.',
+  'help.guide.create-place.result':
+    'Tempat itu ada di daftar dan di peta, di bawah “Belum direncanakan” sampai ditaruh pada sebuah hari.',
+  'help.guide.create-place.tip.1':
+    '“File” dan “Costs” di bagian bawah formulir melampirkan dokumen ke tempat itu, atau membuka editor “Costs” untuk pengeluarannya tepat setelah menyimpan.',
+  'help.guide.create-place.tip.2':
+    'Tanpa kunci Google, pencarian berjalan lewat indeks TREK dan OpenStreetMap: tempatnya tetap ketemu, hanya saja tanpa penilaian, jam buka dan foto.',
+  'help.guide.create-place.tip.3':
+    'Sebuah tempat juga bisa dimulai dari peta: klik kanan titiknya, dan formulir terbuka dengan koordinat serta alamat sudah terisi.',
+  // place-to-open-day
+  'help.guide.place-to-open-day.title': 'Menambahkan tempat langsung ke hari yang dibuka',
+  'help.guide.place-to-open-day.goal':
+    'Lewati langkah kedua: buat atau pilih tempatnya dan langsung taruh pada hari itu.',
+  'help.guide.place-to-open-day.step.1':
+    'Klik judul sebuah hari di kolom hari. Hari itu terbuka: kartunya disorot, dan kolom tempat mendapat tombol “Ke hari”.',
+  'help.guide.place-to-open-day.step.2':
+    '“Ke hari” membuka formulir yang sama seperti “Tempat baru”, hanya saja tempat itu mendarat pada hari yang dibuka begitu Anda klik “Tambah”.',
+  'help.guide.place-to-open-day.step.3':
+    'Tempat yang sudah ada masuk ke hari yang dibuka lewat tanda + di ujung barisnya, atau dengan klik kanan, “+ Hari”.',
+  'help.guide.place-to-open-day.result':
+    'Tempat itu terdaftar di bawah hari tersebut, di urutan terakhir; seret ke atas atau ke bawah ke posisi yang semestinya.',
+  'help.guide.place-to-open-day.tip.1':
+    'Menyeret sebuah baris ke sebuah hari juga bisa, dan itu langsung dapat menjatuhkan tempat di antara dua perhentian.',
+  'help.guide.place-to-open-day.tip.2': '“Batalkan” di bilah alat di atas hari-hari menarik kembali penugasan itu.',
+  // filter-places
+  'help.guide.filter-places.title': 'Menemukan tempat dalam daftar',
+  'help.guide.filter-places.goal': 'Persempit kolom ke tempat-tempat yang Anda cari.',
+  'help.guide.filter-places.step.1':
+    'Menu tarik-turun di atas beralih antara “Semua”, “Belum direncanakan” (belum ada di hari mana pun), “Direncanakan” (ada di sebuah hari) dan “Trek” (trek GPX yang diimpor), masing-masing dengan jumlahnya.',
+  'help.guide.filter-places.step.2': 'Ketik di “Cari tempat...”; daftarnya menyempit sambil Anda mengetik.',
+  'help.guide.filter-places.step.3':
+    '“Semua Kategori” membuka daftar untuk mencentang satu kategori atau lebih, termasuk “Tanpa Kategori”; “Hapus filter” di bagian bawahnya mengembalikannya.',
+  'help.guide.filter-places.step.4':
+    'Bintang di sebelahnya mengatur penilaian minimum: 5+, 4+ dan seterusnya hanya menampilkan tempat yang Anda beri nilai setidaknya setinggi itu.',
+  'help.guide.filter-places.result':
+    'Angka di atas baris-baris itu mengatakan berapa tempat yang cocok; filternya saling menggabung.',
+  'help.guide.filter-places.tip.1':
+    'Dengan sebuah hari terbuka, “Direncanakan” hanya mendaftar hari itu dan mengatakannya: “Hanya menampilkan hari yang dibuka”, dengan “Tampilkan seluruh perjalanan” di sebelahnya.',
+  'help.guide.filter-places.tip.2':
+    'Peta juga menyempit ke hari yang dibuka; “Semua” di daftar tetap menampilkan setiap tempat perjalanan.',
+  // edit-place
+  'help.guide.edit-place.title': 'Mengubah tempat',
+  'help.guide.edit-place.goal': 'Perbaiki nama, geser pin, tambahkan situs web atau ganti kategori.',
+  'help.guide.edit-place.step.1':
+    'Klik kanan barisnya dan pilih “Sunting”, atau buka tempatnya dan klik “Sunting” di detailnya.',
+  'help.guide.edit-place.step.2':
+    'Ubah yang Anda perlukan: “Nama”, “Deskripsi”, “Catatan”, “Alamat”, “Lintang” dan “Bujur”, “Kategori”, “Situs web”. Bila dibuka dari sebuah hari, formulir juga punya “Catatan untuk hari ini” serta “Mulai” dan “Selesai” untuk hari itu.',
+  'help.guide.edit-place.step.3': 'Klik “Perbarui”.',
+  'help.guide.edit-place.result':
+    'Perubahan berlaku di mana pun tempat itu muncul: daftar, peta dan setiap hari yang memuatnya.',
+  'help.guide.edit-place.tip.1':
+    '“Catatan untuk hari ini” milik tempat itu pada satu hari tersebut; “Catatan” milik tempat itu sendiri.',
+  'help.guide.edit-place.tip.2':
+    '“Selesai” sebelum “Mulai” memblokir “Perbarui”; “Waktu tumpang tindih dengan:” hanya memperingatkan bahwa perhentian lain pada hari itu punya waktu yang sama.',
+  // delete-place
+  'help.guide.delete-place.title': 'Menghapus tempat',
+  'help.guide.delete-place.goal': 'Keluarkan sebuah tempat dari perjalanan untuk selamanya.',
+  'help.guide.delete-place.step.1': 'Klik kanan barisnya dan pilih “Hapus”, atau klik “Hapus” di detail tempat itu.',
+  'help.guide.delete-place.step.2':
+    'Konfirmasikan. Jika sebuah malam dipesan di tempat itu, atau sebuah pemesanan terkait dengannya, pertanyaannya mengatakan apa saja yang ikut terbawa.',
+  'help.guide.delete-place.result':
+    'Tempat itu hilang dari daftar, peta dan setiap hari; “Batalkan” di bilah alat di atas hari-hari mengembalikannya.',
+  'help.guide.delete-place.tip.1':
+    'Untuk mengeluarkan tempat dari satu hari saja, gunakan “Hapus dari Hari” pada perhentian itu sebagai gantinya.',
+  'help.guide.delete-place.tip.2': 'Beberapa tempat sekaligus: tanda centang di sebelah filter memulai pemilihan.',
+  // select-places
+  'help.guide.select-places.title': 'Mengubah atau menghapus beberapa tempat sekaligus',
+  'help.guide.select-places.goal': 'Rapikan daftar dalam satu kali jalan alih-alih satu per satu.',
+  'help.guide.select-places.step.1':
+    'Klik tanda centang di ujung kanan baris filter. Baris-baris mendapat kotak centang dan muncul sebuah bilah berisi tindakannya.',
+  'help.guide.select-places.step.2':
+    'Centang baris-barisnya, atau “Pilih semua” di bilah itu; bilah itu menghitung apa yang terpilih.',
+  'help.guide.select-places.step.3':
+    '“Change category” memberi semuanya satu kategori; “Simpan ke Koleksi” menyalinnya ke salah satu koleksi Anda; “Hapus yang dipilih” menghapusnya setelah sebuah konfirmasi.',
+  'help.guide.select-places.step.4': 'Klik tanda centang itu lagi untuk keluar dari pemilihan.',
+  'help.guide.select-places.result':
+    'Perubahan berlaku untuk setiap tempat yang terpilih; penghapusan bisa dibatalkan dari bilah alat di atas hari-hari.',
+  'help.guide.select-places.tip.1':
+    'Filter tetap bekerja sambil Anda memilih: saring ke “Belum direncanakan” dulu, lalu “Pilih semua” menangkap persis yang itu.',
+  'help.guide.select-places.tip.2':
+    '“Tandai dikunjungi di daftar Anda” muncul di bilah itu saat addon Koleksi aktif: ia mencentang tempat-tempat itu di koleksi tempat mereka disimpan.',
+  // import-places-file
+  'help.guide.import-places-file.title': 'Mengimpor tempat dari file GPX, KML atau KMZ',
+  'help.guide.import-places-file.goal': 'Masukkan apa yang diekspor Google My Maps, Google Earth atau pelacak GPS.',
+  'help.guide.import-places-file.step.1': 'Klik “Impor file”, atau jatuhkan filenya di mana saja pada kolom tempat.',
+  'help.guide.import-places-file.step.2':
+    'Pilih filenya atau seret ke dalam kotak. Untuk GPX, centang apa yang akan diimpor: “Titik jalan”, “Rute”, “Trek (dengan geometri jalur)”; untuk KML dan KMZ, “Titik (Placemarks)” dan “Jalur (LineStrings)”.',
+  'help.guide.import-places-file.step.3':
+    '“Perkaya tempat via Google” mencari setiap tempat yang diimpor untuk mengisi foto, alamat dan detail; ini membutuhkan kunci Google.',
+  'help.guide.import-places-file.step.4':
+    'Klik “Impor”. Ringkasannya mengatakan berapa tempat yang dibuat dan berapa yang dilewati karena sudah ada di perjalanan.',
+  'help.guide.import-places-file.result':
+    'Tempat-tempatnya ada di daftar; sebuah trek membawa penanda rute di barisnya, tergambar di peta dan mendapat filter “Trek” sendiri.',
+  'help.guide.import-places-file.tip.1':
+    'File yang terlalu besar ditolak dengan menyebut batas ukurannya; ekspor ulang tanpa foto, atau pecah menjadi beberapa bagian.',
+  'help.guide.import-places-file.tip.2': 'Impor itu bisa dibatalkan seluruhnya dari bilah alat di atas hari-hari.',
+  // import-places-list
+  'help.guide.import-places-list.title': 'Mengimpor daftar Google Maps atau Naver Maps yang dibagikan',
+  'help.guide.import-places-list.goal': 'Ubah tautan daftar yang dibagikan menjadi tempat.',
+  'help.guide.import-places-list.step.1': 'Klik “Impor Daftar” dan pilih “Daftar Google” atau “Daftar Naver”.',
+  'help.guide.import-places-list.step.2':
+    'Tempelkan tautan berbagi daftar itu. Tautan rute Google Maps juga bisa: perhentiannya menjadi tempat, dalam urutan berkendara.',
+  'help.guide.import-places-list.step.3': 'Klik “Impor”.',
+  'help.guide.import-places-list.result':
+    'Setiap tempat dari daftar itu ada di perjalanan, dengan nama seperti di daftar; tempat yang sudah ada di perjalanan dilewati.',
+  'help.guide.import-places-list.tip.1':
+    'Daftarnya harus dibagikan secara publik; tautan daftar pribadi tidak mengimpor apa pun.',
+  'help.guide.import-places-list.tip.2':
+    '“Daftar Naver” membutuhkan addon Naver List Import, yang dinyalakan admin di bawah “Addon”; tanpa itu tombolnya berbunyi “Daftar Google”.',
 };
 
 export default help;

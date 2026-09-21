@@ -1802,6 +1802,146 @@ const help: TranslationStrings = {
     'Desfer cobreix el pla: assignar, treure, reordenar i moure llocs, optimitzar una ruta, eliminar llocs, canvis de categoria i importacions.',
   'help.guide.undo-change.tip.2':
     'Només té un pas de profunditat: només es pot retirar l’últim canvi, i un canvi nou el substitueix.',
+
+  // ── Screen: trip-places ───────────────────────────────────────────────────────────────
+  'help.ctx.trip-places.title': 'Llocs',
+  'help.ctx.trip-places.summary':
+    'La columna dreta del pla: tots els llocs del viatge, planificats o no, amb cerca i filtres, i les maneres de fer entrar llocs, a mà, des d’un fitxer o des d’una llista compartida.',
+  'help.ctx.trip-places.bullet.1':
+    'Afegeix un lloc / activitat, a dalt, obre el formulari d’un lloc que escrius o cerques. Mentre hi ha un dia obert el botó diu Lloc nou, i Al dia, al costat, crea el lloc directament en aquell dia.',
+  'help.ctx.trip-places.bullet.2':
+    'Importa un fitxer accepta fitxers .gpx, .kml i .kmz; Importa una llista accepta una llista compartida de Google Maps o de Naver Maps. Un fitxer també es pot deixar caure simplement sobre la columna.',
+  'help.ctx.trip-places.bullet.3':
+    'El desplegable canvia entre Tot, Sense planificar, Planificats i, un cop s’ha importat una ruta, Rutes; a sota hi ha la cerca, el filtre de categoria i l’estrella per a una valoració mínima.',
+  'help.ctx.trip-places.bullet.4':
+    'Una fila mostra imatge, nom i descripció o adreça. Fes-hi clic per als detalls del lloc, arrossega-la a un dia, o fes clic dret per a Editar, + Dia, Obre el lloc web, Obre a Google Maps, Desar a la col·lecció i Eliminar.',
+  'help.ctx.trip-places.bullet.5':
+    'Amb un dia obert, un + al final d’una fila sense planificar posa el lloc en aquell dia, i Planificats llista només aquell dia, amb Mostra tot el viatge per tornar a eixamplar.',
+  'help.ctx.trip-places.bullet.6':
+    'La marca de selecció a l’extrem dret de la fila de filtres inicia una selecció: diverses files alhora reben una categoria nova, van a una col·lecció o s’eliminen.',
+  // create-place
+  'help.guide.create-place.title': 'Crear un lloc',
+  'help.guide.create-place.goal': 'Afegeix un lloc o una activitat a mà, amb tot el que el pla n’ha de saber.',
+  'help.guide.create-place.step.1':
+    'Fes clic a Afegeix un lloc / activitat, a dalt de la columna de llocs (Lloc nou mentre hi ha un dia obert). S’obre el formulari.',
+  'help.guide.create-place.step.2':
+    'Escriu el lloc a Cerca llocs..., a dalt, i tria un resultat. Nom, Adreça, Latitud i Longitud s’omplen, i Detalls del lloc, a la dreta, mostra imatges, una descripció i dades. No és el lloc correcte? Cerca a Google torna a fer la cerca amb Google.',
+  'help.guide.create-place.step.3':
+    'A Detalls del lloc, un clic en una imatge sota Tria una imatge la converteix en la imatge del lloc; Utilitza aquest text porta la descripció al formulari.',
+  'help.guide.create-place.step.4':
+    'Revisa els camps: Nom és obligatori; Descripció i Notes són teves; Adreça, Latitud i Longitud surten de la cerca o s’escriuen; Categoria tria una de les categories del viatge, i el + del costat en crea una de nova a l’instant; Lloc web recull l’enllaç.',
+  'help.guide.create-place.step.5':
+    'Fes clic a Afegir. Si ja hi ha un lloc amb el mateix nom al viatge, el formulari ho diu i el botó passa a ser Afegir igualment.',
+  'help.guide.create-place.result':
+    'El lloc és a la llista i al mapa, sota Sense planificar fins que no es posa en un dia.',
+  'help.guide.create-place.tip.1':
+    'Fitxers i Despeses, al final del formulari, adjunten un document al lloc, o obren l’editor de Despeses per a la seva despesa just després de desar.',
+  'help.guide.create-place.tip.2':
+    'Sense clau de Google la cerca va per l’índex de TREK i OpenStreetMap: troba el lloc, només que sense valoracions, horaris d’obertura ni fotos.',
+  'help.guide.create-place.tip.3':
+    'Un lloc també pot començar al mapa: fes clic dret al punt, i el formulari s’obre amb les coordenades i l’adreça posades.',
+  // place-to-open-day
+  'help.guide.place-to-open-day.title': 'Afegir un lloc directament al dia obert',
+  'help.guide.place-to-open-day.goal': 'Salta’t el segon pas: crea o tria el lloc i posa’l al dia de seguida.',
+  'help.guide.place-to-open-day.step.1':
+    'Fes clic a la capçalera d’un dia a la columna dels dies. El dia és obert: la seva targeta queda destacada, i la columna de llocs guanya el botó Al dia.',
+  'help.guide.place-to-open-day.step.2':
+    'Al dia obre el mateix formulari que Lloc nou, només que el lloc va a parar al dia obert en el moment que fas clic a Afegir.',
+  'help.guide.place-to-open-day.step.3':
+    'Un lloc que ja existeix va al dia obert amb el + al final de la seva fila, o amb clic dret, + Dia.',
+  'help.guide.place-to-open-day.result':
+    'El lloc queda llistat sota el dia, al final; arrossega’l amunt o avall fins on toca.',
+  'help.guide.place-to-open-day.tip.1':
+    'Arrossegar una fila a un dia funciona igual, i així el lloc es pot deixar de seguida entre dues parades.',
+  'help.guide.place-to-open-day.tip.2': 'Desfés, a la barra d’eines sobre els dies, retira l’assignació.',
+  // filter-places
+  'help.guide.filter-places.title': 'Trobar un lloc a la llista',
+  'help.guide.filter-places.goal': 'Estreny la columna fins als llocs que busques.',
+  'help.guide.filter-places.step.1':
+    'El desplegable de dalt canvia entre Tot, Sense planificar (encara en cap dia), Planificats (en un dia) i Rutes (rutes GPX importades), cadascun amb el seu recompte.',
+  'help.guide.filter-places.step.2': 'Escriu a Cerca llocs...; la llista s’estreny mentre escrius.',
+  'help.guide.filter-places.step.3':
+    'Totes les categories obre una llista per marcar una o més categories, Sense categoria inclosa; Esborra el filtre, al final, la reinicia.',
+  'help.guide.filter-places.step.4':
+    'L’estrella del costat fixa una valoració mínima: 5+, 4+ i així successivament mostren només els llocs que has valorat com a mínim tan amunt.',
+  'help.guide.filter-places.result': 'El recompte sobre les files diu quants llocs encaixen; els filtres es combinen.',
+  'help.guide.filter-places.tip.1':
+    'Amb un dia obert, Planificats llista només aquell dia i ho diu: Es mostra només el dia obert, amb Mostra tot el viatge al costat.',
+  'help.guide.filter-places.tip.2':
+    'El mapa també s’estreny al dia obert; Tot a la llista continua mostrant tots els llocs del viatge.',
+  // edit-place
+  'help.guide.edit-place.title': 'Canviar un lloc',
+  'help.guide.edit-place.goal': 'Corregeix un nom, mou la xinxeta, afegeix un lloc web o canvia la categoria.',
+  'help.guide.edit-place.step.1':
+    'Fes clic dret a la fila i tria Editar, o obre el lloc i fes clic a Editar als seus detalls.',
+  'help.guide.edit-place.step.2':
+    'Canvia el que et calgui: Nom, Descripció, Notes, Adreça, Latitud i Longitud, Categoria, Lloc web. Obert des d’un dia, el formulari també té Notes per a aquest dia i Inici i Fi per a aquell dia.',
+  'help.guide.edit-place.step.3': 'Fes clic a Actualitzar.',
+  'help.guide.edit-place.result':
+    'El canvi s’aplica a tot arreu on apareix el lloc: la llista, el mapa i cada dia en què està.',
+  'help.guide.edit-place.tip.1':
+    'Notes per a aquest dia pertany al lloc en aquell únic dia; Notes pertany al lloc mateix.',
+  'help.guide.edit-place.tip.2':
+    'Un Fi anterior a l’Inici bloqueja Actualitzar; Solapament horari amb: només avisa que una altra parada del dia té la mateixa hora.',
+  // delete-place
+  'help.guide.delete-place.title': 'Eliminar un lloc',
+  'help.guide.delete-place.goal': 'Treu un lloc del viatge per sempre.',
+  'help.guide.delete-place.step.1':
+    'Fes clic dret a la fila i tria Eliminar, o fes clic a Eliminar als detalls del lloc.',
+  'help.guide.delete-place.step.2':
+    'Confirma. Si al lloc hi havia una nit reservada, o hi ha una reserva lligada, la pregunta diu què se’n va amb ell.',
+  'help.guide.delete-place.result':
+    'El lloc desapareix de la llista, del mapa i de cada dia; Desfés, a la barra d’eines sobre els dies, el torna.',
+  'help.guide.delete-place.tip.1':
+    'Per treure un lloc només d’un dia, fes servir en lloc d’això Treure del dia en aquella parada.',
+  'help.guide.delete-place.tip.2':
+    'Diversos llocs alhora: la marca de selecció al costat dels filtres inicia una selecció.',
+  // select-places
+  'help.guide.select-places.title': 'Canviar o eliminar diversos llocs alhora',
+  'help.guide.select-places.goal': 'Endreça la llista d’un sol cop en comptes de lloc per lloc.',
+  'help.guide.select-places.step.1':
+    'Fes clic a la marca de selecció a l’extrem dret de la fila de filtres. Les files reben caselles i apareix una barra amb les accions.',
+  'help.guide.select-places.step.2':
+    'Marca les files, o fes servir Seleccionar-ho tot a la barra; la barra compta el que està seleccionat.',
+  'help.guide.select-places.step.3':
+    'Canviar categoria posa una mateixa categoria a tots; Desar a la col·lecció els copia a una de les teves col·leccions; Elimina la selecció els treu després d’una confirmació.',
+  'help.guide.select-places.step.4': 'Torna a fer clic a la marca de selecció per sortir de la selecció.',
+  'help.guide.select-places.result':
+    'El canvi s’aplica a cada lloc seleccionat; una eliminació es pot desfer des de la barra d’eines sobre els dies.',
+  'help.guide.select-places.tip.1':
+    'Els filtres continuen funcionant mentre selecciones: filtra primer per Sense planificar, i així Seleccionar-ho tot agafa exactament aquells.',
+  'help.guide.select-places.tip.2':
+    'Marca com a visitat a les teves llistes apareix a la barra quan l’addon Col·leccions està actiu: marca els llocs a les col·leccions on estan desats.',
+  // import-places-file
+  'help.guide.import-places-file.title': 'Importar llocs des d’un fitxer GPX, KML o KMZ',
+  'help.guide.import-places-file.goal':
+    'Fes entrar el que han exportat Google My Maps, Google Earth o un registrador GPS.',
+  'help.guide.import-places-file.step.1':
+    'Fes clic a Importa un fitxer, o deixa caure el fitxer en qualsevol punt de la columna de llocs.',
+  'help.guide.import-places-file.step.2':
+    'Tria el fitxer o arrossega’l dins el quadre. Per a un GPX, marca què vols importar: Punts de ruta, Rutes, Tracks (amb geometria de ruta); per a KML i KMZ, Punts (Placemarks) i Rutes (LineStrings).',
+  'help.guide.import-places-file.step.3':
+    'Enriquir llocs mitjançant Google consulta cada lloc importat per completar fotos, adreça i detalls; necessita la clau de Google.',
+  'help.guide.import-places-file.step.4':
+    'Fes clic a Importar. El resum diu quants llocs s’han creat i quants s’han omès perquè ja eren al viatge.',
+  'help.guide.import-places-file.result':
+    'Els llocs són a la llista; una ruta porta una marca d’itinerari a la seva fila, es dibuixa al mapa i rep el seu propi filtre Rutes.',
+  'help.guide.import-places-file.tip.1':
+    'Un fitxer massa gran es rebutja indicant el límit de mida; torna a exportar-lo sense fotos, o parteix-lo.',
+  'help.guide.import-places-file.tip.2': 'La importació es pot desfer sencera des de la barra d’eines sobre els dies.',
+  // import-places-list
+  'help.guide.import-places-list.title': 'Importar una llista compartida de Google Maps o de Naver Maps',
+  'help.guide.import-places-list.goal': 'Converteix l’enllaç d’una llista compartida en llocs.',
+  'help.guide.import-places-list.step.1': 'Fes clic a Importa una llista i tria Llista de Google o Llista de Naver.',
+  'help.guide.import-places-list.step.2':
+    'Enganxa l’enllaç compartit de la llista. Un enllaç d’indicacions de Google Maps també serveix: les seves parades es converteixen en llocs, en l’ordre del trajecte.',
+  'help.guide.import-places-list.step.3': 'Fes clic a Importar.',
+  'help.guide.import-places-list.result':
+    'Cada lloc de la llista és al viatge, amb el nom que té a la llista; els llocs que ja són al viatge s’ometen.',
+  'help.guide.import-places-list.tip.1':
+    'La llista ha d’estar compartida públicament; l’enllaç d’una llista privada no importa res.',
+  'help.guide.import-places-list.tip.2':
+    'Llista de Naver necessita l’addon Naver List Import, que l’admin activa a Complements; sense ell el botó diu Llista de Google.',
 };
 
 export default help;

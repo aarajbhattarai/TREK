@@ -1715,6 +1715,140 @@ const help: TranslationStrings = {
   'help.guide.undo-change.tip.1':
     'Zpět pokrývá plán: přiřazení, odebrání, přeřazení a přesun míst, optimalizaci trasy, mazání míst, změny kategorií a importy.',
   'help.guide.undo-change.tip.2': 'Má jen jeden krok: vrátit lze pouze poslední změnu a nová změna ji nahradí.',
+
+  // ── Screen: trip-places ───────────────────────────────────────────────────────────────
+  'help.ctx.trip-places.title': 'Místa',
+  'help.ctx.trip-places.summary':
+    'Pravý sloupec plánu: každé místo cesty, naplánované i ne, s hledáním a filtry, a způsoby, jak místa dostat dovnitř, ručně, ze souboru nebo ze sdíleného seznamu.',
+  'help.ctx.trip-places.bullet.1':
+    'Přidat místo/aktivitu nahoře otevře formulář pro místo, které napíšete nebo vyhledáte. Když je otevřený den, tlačítko říká Nové místo a Ke dni vedle něj vytvoří místo rovnou na tom dni.',
+  'help.ctx.trip-places.bullet.2':
+    'Importovat soubor bere soubory .gpx, .kml a .kmz; Import seznamu bere sdílený seznam z Google Maps nebo Naver Maps. Soubor lze také jen pustit na sloupec.',
+  'help.ctx.trip-places.bullet.3':
+    'Rozbalovací nabídka přepíná mezi Vše, Nezařazené, Naplánované a, jakmile je importovaná trasa, Trasy; pod ní sedí hledání, filtr kategorií a hvězda pro minimální hodnocení.',
+  'help.ctx.trip-places.bullet.4':
+    'Řádek ukazuje obrázek, název a popis nebo adresu. Kliknutím otevřete podrobnosti místa, přetažením ho položíte na den, pravým tlačítkem dostanete Upravit, + Den, Otevřít webové stránky, Google Maps, Uložit do sbírky a Smazat.',
+  'help.ctx.trip-places.bullet.5':
+    'Když je otevřený den, + na konci nezařazeného řádku položí místo na ten den a Naplánované vypíší jen ten den, se Zobrazit celou cestu pro návrat k celku.',
+  'help.ctx.trip-places.bullet.6':
+    'Ikona zaškrtnutí na pravém konci řádku s filtry spustí výběr: několik řádků naráz dostane novou kategorii, jde do sbírky nebo se smaže.',
+  // create-place
+  'help.guide.create-place.title': 'Vytvořit místo',
+  'help.guide.create-place.goal': 'Přidejte místo nebo aktivitu ručně, se vším, co o něm plán potřebuje vědět.',
+  'help.guide.create-place.step.1':
+    'Klikněte nahoře ve sloupci míst na Přidat místo/aktivitu (Nové místo, když je otevřený den). Otevře se formulář.',
+  'help.guide.create-place.step.2':
+    'Napište místo nahoře do Hledat místa... a vyberte výsledek. Název, Adresa, Zeměpisná šířka a Zeměpisná délka se vyplní a Podrobnosti místa vpravo ukážou obrázky, popis a fakta k němu. Není to správné místo? Hledat na Googlu spustí hledání znovu přes Google.',
+  'help.guide.create-place.step.3':
+    'V Podrobnostech místa se kliknutím na obrázek pod Vybrat obrázek stane tento obrázek obrázkem místa; Použít tento text převezme popis do formuláře.',
+  'help.guide.create-place.step.4':
+    'Zkontrolujte pole: Název je povinný; Popis a Poznámky jsou vaše; Adresa, Zeměpisná šířka a Zeměpisná délka pocházejí z hledání nebo se napíší; Kategorie vybírá jednu z kategorií cesty a + vedle ní vytvoří na místě novou; Webové stránky berou odkaz.',
+  'help.guide.create-place.step.5':
+    'Klikněte na Přidat. Pokud už v cestě je místo stejného názvu, formulář to řekne a tlačítko se změní na Přesto přidat.',
+  'help.guide.create-place.result': 'Místo je v seznamu a na mapě, pod Nezařazené, dokud ho nepoložíte na den.',
+  'help.guide.create-place.tip.1':
+    'Soubory a Costs dole ve formuláři připojí k místu dokument nebo hned po uložení otevřou editor Costs pro jeho výdaj.',
+  'help.guide.create-place.tip.2':
+    'Bez klíče Google běží hledání přes index TREK a OpenStreetMap: místo najde, jen bez hodnocení, otevírací doby a fotek.',
+  'help.guide.create-place.tip.3':
+    'Místo může začít i na mapě: klikněte na bod pravým tlačítkem a formulář se otevře s vyplněnými souřadnicemi a adresou.',
+  // place-to-open-day
+  'help.guide.place-to-open-day.title': 'Přidat místo rovnou na otevřený den',
+  'help.guide.place-to-open-day.goal': 'Vynechte druhý krok: vytvořte nebo vyberte místo a mějte ho rovnou na dni.',
+  'help.guide.place-to-open-day.step.1':
+    'Klikněte ve sloupci dnů na záhlaví dne. Den je otevřený: jeho karta je zvýrazněná a sloupec míst dostane tlačítko Ke dni.',
+  'help.guide.place-to-open-day.step.2':
+    'Ke dni otevře stejný formulář jako Nové místo, jen místo přistane na otevřeném dni ve chvíli, kdy kliknete na Přidat.',
+  'help.guide.place-to-open-day.step.3':
+    'Místo, které už existuje, jde na otevřený den přes + na konci svého řádku nebo pravým tlačítkem, + Den.',
+  'help.guide.place-to-open-day.result':
+    'Místo je vypsané pod dnem, na konci; přetažením nahoru nebo dolů ho dáte tam, kam patří.',
+  'help.guide.place-to-open-day.tip.1':
+    'Přetažení řádku na den funguje také a může místo rovnou položit mezi dvě zastávky.',
+  'help.guide.place-to-open-day.tip.2': 'Zpět v liště nástrojů nad dny přiřazení vrátí.',
+  // filter-places
+  'help.guide.filter-places.title': 'Najít místo v seznamu',
+  'help.guide.filter-places.goal': 'Zužte sloupec na místa, která hledáte.',
+  'help.guide.filter-places.step.1':
+    'Rozbalovací nabídka nahoře přepíná mezi Vše, Nezařazené (ještě na žádném dni), Naplánované (na dni) a Trasy (importované trasy GPX), každé se svým počtem.',
+  'help.guide.filter-places.step.2': 'Pište do Hledat místa...; seznam se zužuje, jak píšete.',
+  'help.guide.filter-places.step.3':
+    'Všechny kategorie otevřou seznam, kde zaškrtnete jednu nebo víc kategorií, mezi nimi Bez kategorie; Vymazat filtr dole ho zruší.',
+  'help.guide.filter-places.step.4':
+    'Hvězda vedle nastaví minimální hodnocení: 5+, 4+ a tak dál ukážou jen místa, která jste ohodnotili aspoň tak vysoko.',
+  'help.guide.filter-places.result': 'Počet nad řádky říká, kolik míst odpovídá; filtry se kombinují.',
+  'help.guide.filter-places.tip.1':
+    'Když je otevřený den, Naplánované vypíší jen ten den a říkají to: Zobrazuje se jen otevřený den, se Zobrazit celou cestu vedle.',
+  'help.guide.filter-places.tip.2': 'Mapa se zúží na otevřený den také; Vše v seznamu stále ukazuje každé místo cesty.',
+  // edit-place
+  'help.guide.edit-place.title': 'Změnit místo',
+  'help.guide.edit-place.goal': 'Opravte název, posuňte špendlík, přidejte web nebo změňte kategorii.',
+  'help.guide.edit-place.step.1':
+    'Klikněte na řádek pravým tlačítkem a zvolte Upravit, nebo místo otevřete a klikněte na Upravit v jeho podrobnostech.',
+  'help.guide.edit-place.step.2':
+    'Změňte, co potřebujete: Název, Popis, Poznámky, Adresa, Zeměpisná šířka a Zeměpisná délka, Kategorie, Webové stránky. Otevřený ze dne má formulář navíc Poznámky pro tento den a Od a Do pro ten den.',
+  'help.guide.edit-place.step.3': 'Klikněte na Aktualizovat.',
+  'help.guide.edit-place.result':
+    'Změna platí všude, kde se místo objevuje: v seznamu, na mapě a na každém dni, na kterém je.',
+  'help.guide.edit-place.tip.1':
+    'Poznámky pro tento den patří místu na tom jednom dni; Poznámky patří samotnému místu.',
+  'help.guide.edit-place.tip.2':
+    'Do před Od zablokuje Aktualizovat; Časový překryv s: jen upozorní, že jiná zastávka dne má stejný čas.',
+  // delete-place
+  'help.guide.delete-place.title': 'Smazat místo',
+  'help.guide.delete-place.goal': 'Odeberte místo z cesty natrvalo.',
+  'help.guide.delete-place.step.1':
+    'Klikněte na řádek pravým tlačítkem a zvolte Smazat, nebo klikněte na Smazat v podrobnostech místa.',
+  'help.guide.delete-place.step.2':
+    'Potvrďte. Pokud byla na místě zamluvená noc nebo je k němu navázaná rezervace, otázka řekne, co jde s ním.',
+  'help.guide.delete-place.result':
+    'Místo zmizí ze seznamu, z mapy i ze všech dnů; Zpět v liště nástrojů nad dny ho vrátí.',
+  'help.guide.delete-place.tip.1':
+    'Chcete-li místo sundat jen z jednoho dne, použijte na té zastávce raději Odebrat ze dne.',
+  'help.guide.delete-place.tip.2': 'Několik míst naráz: ikona zaškrtnutí vedle filtrů spustí výběr.',
+  // select-places
+  'help.guide.select-places.title': 'Změnit nebo smazat několik míst naráz',
+  'help.guide.select-places.goal': 'Ukliďte seznam jedním tahem, ne místo po místu.',
+  'help.guide.select-places.step.1':
+    'Klikněte na ikonu zaškrtnutí na pravém konci řádku s filtry. Řádky dostanou zaškrtávací políčka a objeví se lišta s akcemi.',
+  'help.guide.select-places.step.2': 'Zaškrtněte řádky, nebo v liště Vybrat vše; lišta počítá, co je vybrané.',
+  'help.guide.select-places.step.3':
+    'Change category dá všem jednu kategorii; Uložit do sbírky je zkopíruje do některé z vašich sbírek; Smazat vybrané je po potvrzení odstraní.',
+  'help.guide.select-places.step.4': 'Dalším kliknutím na ikonu zaškrtnutí výběr opustíte.',
+  'help.guide.select-places.result':
+    'Změna platí pro každé vybrané místo; smazání lze vrátit z lišty nástrojů nad dny.',
+  'help.guide.select-places.tip.1':
+    'Filtry při výběru dál fungují: nejdřív filtrujte na Nezařazené, pak Vybrat vše chytí přesně je.',
+  'help.guide.select-places.tip.2':
+    'Označit jako navštívené v seznamech se v liště objeví, když je zapnutý doplněk Sbírky: odškrtne místa ve sbírkách, ve kterých jsou uložená.',
+  // import-places-file
+  'help.guide.import-places-file.title': 'Importovat místa ze souboru GPX, KML nebo KMZ',
+  'help.guide.import-places-file.goal':
+    'Dostaňte dovnitř to, co vyexportovaly Google My Maps, Google Earth nebo GPS tracker.',
+  'help.guide.import-places-file.step.1': 'Klikněte na Importovat soubor, nebo pusťte soubor kamkoli na sloupec míst.',
+  'help.guide.import-places-file.step.2':
+    'Vyberte soubor nebo ho přetáhněte do rámečku. U GPX zaškrtněte, co se má importovat: Trasové body, Trasy, Trasy GPS (s geometrií); u KML a KMZ Body (Placemarks) a Trasy (LineStrings).',
+  'help.guide.import-places-file.step.3':
+    'Obohatit místa přes Google vyhledá každé importované místo a doplní fotky, adresu a podrobnosti; potřebuje klíč Google.',
+  'help.guide.import-places-file.step.4':
+    'Klikněte na Importovat. Souhrn řekne, kolik míst vzniklo a kolik se přeskočilo, protože už v cestě byla.',
+  'help.guide.import-places-file.result':
+    'Místa jsou v seznamu; trasa nese na svém řádku značku trasy, kreslí se na mapě a dostane vlastní filtr Trasy.',
+  'help.guide.import-places-file.tip.1':
+    'Příliš velký soubor je odmítnut s limitem velikosti; vyexportujte ho znovu bez fotek, nebo ho rozdělte.',
+  'help.guide.import-places-file.tip.2': 'Import lze vrátit jako celek z lišty nástrojů nad dny.',
+  // import-places-list
+  'help.guide.import-places-list.title': 'Importovat sdílený seznam z Google Maps nebo Naver Maps',
+  'help.guide.import-places-list.goal': 'Proměňte odkaz na sdílený seznam v místa.',
+  'help.guide.import-places-list.step.1': 'Klikněte na Import seznamu a zvolte Google Seznam nebo Naver Seznam.',
+  'help.guide.import-places-list.step.2':
+    'Vložte sdílený odkaz seznamu. Funguje i odkaz na trasu v Google Maps: jeho zastávky se stanou místy, v pořadí jízdy.',
+  'help.guide.import-places-list.step.3': 'Klikněte na Importovat.',
+  'help.guide.import-places-list.result':
+    'Každé místo seznamu je v cestě, pojmenované jako v seznamu; místa, která už v cestě jsou, se přeskočí.',
+  'help.guide.import-places-list.tip.1': 'Seznam musí být sdílený veřejně; odkaz na soukromý seznam neimportuje nic.',
+  'help.guide.import-places-list.tip.2':
+    'Naver Seznam potřebuje doplněk Naver List Import, který správce zapne pod Doplňky; bez něj tlačítko říká Google Seznam.',
 };
 
 export default help;

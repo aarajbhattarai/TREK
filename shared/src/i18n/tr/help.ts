@@ -1765,6 +1765,145 @@ const help: TranslationStrings = {
     'Geri alma planı kapsar: yerleri atama, çıkarma, yeniden sıralama ve taşıma, rota optimizasyonu, yer silme, kategori değişiklikleri ve içe aktarmalar.',
   'help.guide.undo-change.tip.2':
     'Tek adım derinliğindedir: yalnızca en son değişiklik geri alınabilir ve yeni bir değişiklik onun yerini alır.',
+
+  // ── Screen: trip-places ───────────────────────────────────────────────────────────────
+  'help.ctx.trip-places.title': 'Yerler',
+  'help.ctx.trip-places.summary':
+    'Planın sağ sütunu: gezinin her yeri, planlanmış olsun ya da olmasın, arama ve filtrelerle birlikte, ve yerleri içeri getirme yolları, elle, bir dosyadan ya da paylaşılan bir listeden.',
+  'help.ctx.trip-places.bullet.1':
+    'Üstteki Yer/etkinlik Ekle, yazdığınız ya da aradığınız bir yer için formu açar. Bir gün açıkken düğmede Yeni yer yazar ve yanındaki Güne, yeri doğrudan o günde oluşturur.',
+  'help.ctx.trip-places.bullet.2':
+    'Dosyayı içe aktar .gpx, .kml ve .kmz dosyalarını alır; Liste İçe Aktarma paylaşılan bir Google Maps ya da Naver Maps listesini alır. Bir dosya sütunun üzerine de bırakılabilir.',
+  'help.ctx.trip-places.bullet.3':
+    'Açılır liste Tüm, Planlanmamış, Planlanmış ve bir parça içe aktarıldığında Parçalar arasında geçiş yapar; altında arama, kategori filtresi ve en düşük puan için yıldız durur.',
+  'help.ctx.trip-places.bullet.4':
+    "Bir satır resmi, adı ve açıklamayı ya da adresi gösterir. Yerin ayrıntıları için satıra tıklayın, bir güne sürükleyin ya da Düzenle, + Gün, Web Sitesini Aç, Google Haritalar'da aç, Koleksiyona kaydet ve Sil için sağ tıklayın.",
+  'help.ctx.trip-places.bullet.5':
+    'Bir gün açıkken, planlanmamış bir satırın sonundaki + yeri o güne koyar ve Planlanmış yalnızca o günü listeler; yeniden genişletmek için yanında Tüm yolculuğu göster bulunur.',
+  'help.ctx.trip-places.bullet.6':
+    'Filtre satırının sağ ucundaki onay işareti bir seçim başlatır: birkaç satır birden yeni bir kategori alır, bir koleksiyona gider ya da silinir.',
+  // create-place
+  'help.guide.create-place.title': 'Bir yer oluşturun',
+  'help.guide.create-place.goal':
+    'Bir yeri ya da etkinliği elle ekleyin, planın onun hakkında bilmesi gereken her şeyle.',
+  'help.guide.create-place.step.1':
+    'Yerler sütununun üstündeki Yer/etkinlik Ekle düğmesine tıklayın (bir gün açıkken Yeni yer). Form açılır.',
+  'help.guide.create-place.step.2':
+    "Yeri üstteki Yerleri ara... alanına yazın ve bir sonuç seçin. İsim, Adres, Enlem ve Boylam dolar, sağdaki Yer ayrıntıları ise onun için resimleri, bir açıklamayı ve bilgileri gösterir. Doğru yer değil mi? Bunun yerine Google'da ara, aramayı Google üzerinden yeniden çalıştırır.",
+  'help.guide.create-place.step.3':
+    'Yer ayrıntıları içinde, Bir görsel seç altındaki bir resme tıklamak onu yerin görseli yapar; Bu metni kullan açıklamayı forma aktarır.',
+  'help.guide.create-place.step.4':
+    'Alanları kontrol edin: İsim zorunludur; Tanım ve Notlar sizindir; Adres, Enlem ve Boylam aramadan gelir ya da yazılır; Kategori gezinin kategorilerinden birini seçer ve yanındaki + anında yenisini oluşturur; Web sitesi bağlantıyı alır.',
+  'help.guide.create-place.step.5':
+    'Ekle düğmesine tıklayın. Aynı adlı bir yer gezide zaten varsa form bunu söyler ve düğme Yine de ekle olur.',
+  'help.guide.create-place.result': 'Yer listede ve haritadadır, bir güne konana kadar Planlanmamış altında.',
+  'help.guide.create-place.tip.1':
+    'Formun altındaki Dosyalar ve Costs, yere bir belge ekler ya da kaydettikten hemen sonra gideri için Costs düzenleyicisini açar.',
+  'help.guide.create-place.tip.2':
+    'Google anahtarı olmadan arama TREK dizini ve OpenStreetMap üzerinden gider: yeri bulur, yalnızca puanlar, açılış saatleri ve fotoğraflar olmadan.',
+  'help.guide.create-place.tip.3':
+    'Bir yer haritada da başlayabilir: noktaya sağ tıklayın, form koordinatlar ve adres doldurulmuş olarak açılır.',
+  // place-to-open-day
+  'help.guide.place-to-open-day.title': 'Bir yeri doğrudan açık güne ekleyin',
+  'help.guide.place-to-open-day.goal': 'İkinci adımı atlayın: yeri oluşturun ya da seçin, hemen o günde olsun.',
+  'help.guide.place-to-open-day.step.1':
+    'Günler sütununda bir günün başlığına tıklayın. Gün açıktır: kartı vurgulanır ve yerler sütunu Güne düğmesini kazanır.',
+  'help.guide.place-to-open-day.step.2':
+    'Güne, Yeni yer ile aynı formu açar, yalnızca Ekle düğmesine tıkladığınız anda yer açık güne iner.',
+  'help.guide.place-to-open-day.step.3':
+    'Zaten var olan bir yer, satırının sonundaki + ile ya da sağ tıklayıp + Gün ile açık güne gider.',
+  'help.guide.place-to-open-day.result':
+    'Yer günün altında, en sonda listelenir; ait olduğu yere yukarı ya da aşağı sürükleyin.',
+  'help.guide.place-to-open-day.tip.1':
+    'Bir satırı bir güne sürüklemek de olur ve yeri hemen iki durak arasına bırakabilir.',
+  'help.guide.place-to-open-day.tip.2': 'Günlerin üstündeki araç çubuğundaki Geri al, atamayı geri alır.',
+  // filter-places
+  'help.guide.filter-places.title': 'Listede bir yer bulun',
+  'help.guide.filter-places.goal': 'Sütunu peşinde olduğunuz yerlere daraltın.',
+  'help.guide.filter-places.step.1':
+    'Üstteki açılır liste Tüm, Planlanmamış (henüz hiçbir günde değil), Planlanmış (bir günde) ve Parçalar (içe aktarılmış GPX izleri) arasında geçiş yapar, her biri kendi sayısıyla.',
+  'help.guide.filter-places.step.2': 'Yer ara... alanına yazın; liste siz yazdıkça daralır.',
+  'help.guide.filter-places.step.3':
+    'Tüm Kategoriler, bir ya da daha fazla kategoriyi işaretleyeceğiniz bir liste açar, aralarında Kategori Yok da vardır; altındaki Filtreyi temizle bunu sıfırlar.',
+  'help.guide.filter-places.step.4':
+    'Yanındaki yıldız en düşük puanı belirler: 5+, 4+ ve devamı yalnızca en az o kadar puan verdiğiniz yerleri gösterir.',
+  'help.guide.filter-places.result': 'Satırların üstündeki sayı kaç yerin uyduğunu söyler; filtreler birleşir.',
+  'help.guide.filter-places.tip.1':
+    'Bir gün açıkken Planlanmış yalnızca o günü listeler ve bunu söyler: Yalnızca açık gün gösteriliyor, yanında Tüm yolculuğu göster ile.',
+  'help.guide.filter-places.tip.2': 'Harita da açık güne daralır; listedeki Tüm yine de gezinin her yerini gösterir.',
+  // edit-place
+  'help.guide.edit-place.title': 'Bir yeri değiştirin',
+  'help.guide.edit-place.goal': 'Bir adı düzeltin, iğneyi taşıyın, bir web sitesi ekleyin ya da kategoriyi değiştirin.',
+  'help.guide.edit-place.step.1':
+    'Satıra sağ tıklayın ve Düzenle seçeneğini seçin, ya da yeri açıp ayrıntılarında Düzenle düğmesine tıklayın.',
+  'help.guide.edit-place.step.2':
+    'Neye ihtiyacınız varsa değiştirin: İsim, Tanım, Notlar, Adres, Enlem ve Boylam, Kategori, Web sitesi. Bir günden açıldığında formda ayrıca Bu gün için notlar ve o gün için Başlangıç ile Son bulunur.',
+  'help.guide.edit-place.step.3': 'Güncelle düğmesine tıklayın.',
+  'help.guide.edit-place.result':
+    'Değişiklik yerin göründüğü her yerde geçerlidir: listede, haritada ve bulunduğu her günde.',
+  'help.guide.edit-place.tip.1': 'Bu gün için notlar yere o tek günde aittir; Notlar yerin kendisine aittir.',
+  'help.guide.edit-place.tip.2':
+    'Başlangıç öncesindeki bir Son, Güncelle işlemini engeller; Zaman şununla çakışıyor: yalnızca günün başka bir durağının aynı saate sahip olduğu konusunda uyarır.',
+  // delete-place
+  'help.guide.delete-place.title': 'Bir yeri silin',
+  'help.guide.delete-place.goal': 'Bir yeri geziden temelli çıkarın.',
+  'help.guide.delete-place.step.1':
+    'Satıra sağ tıklayın ve Sil seçeneğini seçin, ya da yerin ayrıntılarında Sil düğmesine tıklayın.',
+  'help.guide.delete-place.step.2':
+    'Onaylayın. Yerde bir gece rezerve edilmişse ya da ona bağlı bir rezervasyon varsa, soru onunla birlikte neyin gittiğini söyler.',
+  'help.guide.delete-place.result':
+    'Yer listeden, haritadan ve her günden kalkar; günlerin üstündeki araç çubuğundaki Geri al onu geri getirir.',
+  'help.guide.delete-place.tip.1':
+    'Bir yeri yalnızca bir günden almak için, bunun yerine o durakta Günden Kaldır kullanın.',
+  'help.guide.delete-place.tip.2': 'Aynı anda birkaç yer: filtrelerin yanındaki onay işareti bir seçim başlatır.',
+  // select-places
+  'help.guide.select-places.title': 'Aynı anda birkaç yeri değiştirin ya da silin',
+  'help.guide.select-places.goal': 'Listeyi tek tek yer yerine bir seferde toparlayın.',
+  'help.guide.select-places.step.1':
+    'Filtre satırının sağ ucundaki onay işaretine tıklayın. Satırlar onay kutuları alır ve eylemlerin bulunduğu bir çubuk belirir.',
+  'help.guide.select-places.step.2':
+    'Satırları işaretleyin ya da çubuktaki Tümünü seç düğmesini kullanın; çubuk neyin seçili olduğunu sayar.',
+  'help.guide.select-places.step.3':
+    'Change category hepsine tek bir kategori verir; Koleksiyona kaydet onları koleksiyonlarınızdan birine kopyalar; Seçileni sil bir onaydan sonra onları kaldırır.',
+  'help.guide.select-places.step.4': 'Seçimden çıkmak için onay işaretine yeniden tıklayın.',
+  'help.guide.select-places.result':
+    'Değişiklik seçili her yer için geçerlidir; bir silme günlerin üstündeki araç çubuğundan geri alınabilir.',
+  'help.guide.select-places.tip.1':
+    'Siz seçerken filtreler çalışmayı sürdürür: önce Planlanmamış olarak filtreleyin, sonra Tümünü seç tam olarak onları yakalar.',
+  'help.guide.select-places.tip.2':
+    'Listelerinde ziyaret edildi olarak işaretle, Koleksiyonlar eklentisi açıkken çubukta belirir: yerleri kayıtlı oldukları koleksiyonlarda işaretler.',
+  // import-places-file
+  'help.guide.import-places-file.title': 'GPX, KML ya da KMZ dosyasından yerleri içe aktarın',
+  'help.guide.import-places-file.goal':
+    'Google My Maps, Google Earth ya da bir GPS izleyicinin dışa aktardığını içeri getirin.',
+  'help.guide.import-places-file.step.1':
+    'Dosyayı içe aktar düğmesine tıklayın ya da dosyayı yerler sütununun herhangi bir yerine bırakın.',
+  'help.guide.import-places-file.step.2':
+    "Dosyayı seçin ya da kutuya sürükleyin. Bir GPX için neyin içe aktarılacağını işaretleyin: Ara noktalar, Rotalar, İzler (yol geometrisi ile); KML ve KMZ için Noktalar (Yer İşaretleri) ve Yollar (LineString'ler).",
+  'help.guide.import-places-file.step.3':
+    'Yerleri Google ile zenginleştir, içe aktarılan her yeri arayıp fotoğrafları, adresi ve ayrıntıları doldurur; bunun için Google anahtarı gerekir.',
+  'help.guide.import-places-file.step.4':
+    'İçe aktar düğmesine tıklayın. Özet, kaç yerin oluşturulduğunu ve gezide zaten var oldukları için kaçının atlandığını söyler.',
+  'help.guide.import-places-file.result':
+    'Yerler listededir; bir iz satırında bir rota işareti taşır, haritada çizilir ve kendi Parçalar filtresini alır.',
+  'help.guide.import-places-file.tip.1':
+    'Çok büyük bir dosya boyut sınırıyla birlikte reddedilir; onu fotoğraflar olmadan yeniden dışa aktarın ya da bölün.',
+  'help.guide.import-places-file.tip.2':
+    'İçe aktarma, günlerin üstündeki araç çubuğundan bütün olarak geri alınabilir.',
+  // import-places-list
+  'help.guide.import-places-list.title': 'Paylaşılan bir Google Maps ya da Naver Maps listesini içe aktarın',
+  'help.guide.import-places-list.goal': 'Paylaşılan bir liste bağlantısını yerlere dönüştürün.',
+  'help.guide.import-places-list.step.1':
+    'Liste İçe Aktarma düğmesine tıklayın ve Google Listesi ya da Naver Listesi seçeneğini seçin.',
+  'help.guide.import-places-list.step.2':
+    'Listenin paylaşılan bağlantısını yapıştırın. Bir Google Maps yol tarifi bağlantısı da olur: durakları sürüş sırasına göre birer yer olur.',
+  'help.guide.import-places-list.step.3': 'İçe aktar düğmesine tıklayın.',
+  'help.guide.import-places-list.result':
+    'Listenin her yeri gezidedir, listedeki adıyla; gezide zaten bulunan yerler atlanır.',
+  'help.guide.import-places-list.tip.1':
+    'Listenin herkese açık paylaşılması gerekir; özel bir listenin bağlantısı hiçbir şey içe aktarmaz.',
+  'help.guide.import-places-list.tip.2':
+    'Naver Listesi, yöneticinin Eklentiler altında açtığı Naver List Import eklentisine ihtiyaç duyar; o olmadan düğmede Google Listesi yazar.',
 };
 
 export default help;

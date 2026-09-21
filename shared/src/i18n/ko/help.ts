@@ -1638,6 +1638,137 @@ const help: TranslationStrings = {
     '실행 취소는 계획을 다룹니다. 장소 배정, 제거, 순서 변경, 이동, 경로 최적화, 장소 삭제, 카테고리 변경, 가져오기입니다.',
   'help.guide.undo-change.tip.2':
     '깊이는 한 단계입니다. 최근 변경만 되돌릴 수 있고, 새 변경이 생기면 그것으로 대체됩니다.',
+
+  // ── Screen: trip-places ───────────────────────────────────────────────────────────────
+  'help.ctx.trip-places.title': '장소',
+  'help.ctx.trip-places.summary':
+    '계획의 오른쪽 열입니다. 계획된 것이든 아니든 여행의 모든 장소가 검색과 필터와 함께 있고, 장소를 들여오는 방법도 여기에 있습니다. 손으로, 파일에서, 또는 공유된 목록에서.',
+  'help.ctx.trip-places.bullet.1':
+    '맨 위의 “장소/활동 추가”는 직접 입력하거나 검색한 장소의 양식을 엽니다. 날짜가 열려 있는 동안에는 버튼이 “새 장소”가 되고, 그 옆의 “해당 날짜로”는 장소를 바로 그 날짜에 만듭니다.',
+  'help.ctx.trip-places.bullet.2':
+    '“파일 가져오기”는 .gpx, .kml, .kmz 파일을 받습니다. “목록 가져오기”는 공유된 Google Maps 또는 Naver Maps 목록을 받습니다. 파일은 그냥 이 열에 끌어다 놓아도 됩니다.',
+  'help.ctx.trip-places.bullet.3':
+    '드롭다운은 “전체”, “미계획”, “계획됨” 사이를 전환하고, 트랙을 가져오고 나면 “트랙”도 생깁니다. 그 아래에 검색, 카테고리 필터, 최소 평점을 위한 별이 있습니다.',
+  'help.ctx.trip-places.bullet.4':
+    '행에는 사진, 이름, 그리고 설명이나 주소가 나옵니다. 클릭하면 장소 세부정보가 열리고, 날짜로 끌어다 놓을 수 있으며, 오른쪽 클릭하면 “편집”, “+ 날에 추가”, “웹사이트 열기”, “Google Maps”, “컬렉션에 저장”, “삭제”가 나옵니다.',
+  'help.ctx.trip-places.bullet.5':
+    '날짜가 열려 있으면 미계획 행 끝의 +가 그 장소를 그 날짜에 넣고, “계획됨”은 그 날짜만 보여 줍니다. “전체 여행 보기”로 다시 넓힐 수 있습니다.',
+  'help.ctx.trip-places.bullet.6':
+    '필터 행 오른쪽 끝의 체크 표시는 선택을 시작합니다. 여러 행이 한 번에 새 카테고리를 받거나, 컬렉션에 들어가거나, 삭제됩니다.',
+  // create-place
+  'help.guide.create-place.title': '장소 만들기',
+  'help.guide.create-place.goal': '계획이 알아야 할 것을 모두 담아 장소나 활동을 손으로 추가합니다.',
+  'help.guide.create-place.step.1':
+    '장소 열 맨 위의 “장소/활동 추가”를 클릭합니다(날짜가 열려 있으면 “새 장소”). 양식이 열립니다.',
+  'help.guide.create-place.step.2':
+    '맨 위의 “장소 검색...”에 장소를 입력하고 결과를 고릅니다. “이름”, “주소”, “위도”, “경도”가 채워지고, 오른쪽의 “장소 세부정보”에 사진과 설명, 그 장소에 대한 정보가 나옵니다. “찾는 장소가 아닌가요? Google에서 검색”은 검색을 Google로 다시 실행합니다.',
+  'help.guide.create-place.step.3':
+    '“장소 세부정보”에서 “사진 선택” 아래의 사진을 클릭하면 그것이 장소의 이미지가 됩니다. “이 텍스트 사용”은 설명을 양식으로 옮깁니다.',
+  'help.guide.create-place.step.4':
+    '항목을 확인합니다. “이름”은 필수입니다. “설명”과 “메모”는 직접 적는 칸입니다. “주소”, “위도”, “경도”는 검색에서 오거나 직접 입력합니다. “카테고리”는 여행의 카테고리 중 하나를 고르고, 그 옆의 +는 그 자리에서 새 카테고리를 만듭니다. “웹사이트”에는 링크를 넣습니다.',
+  'help.guide.create-place.step.5':
+    '“추가”를 클릭합니다. 같은 이름의 장소가 이미 여행에 있으면 양식이 그렇게 알려 주고 버튼이 “그래도 추가”로 바뀝니다.',
+  'help.guide.create-place.result': '장소가 목록과 지도에 있습니다. 날짜에 놓이기 전까지는 “미계획” 아래에 있습니다.',
+  'help.guide.create-place.tip.1':
+    '양식 아래의 “파일”과 “Costs”는 장소에 문서를 첨부하거나, 저장한 직후 그 지출의 “Costs” 편집기를 엽니다.',
+  'help.guide.create-place.tip.2':
+    'Google 키가 없으면 검색은 TREK 색인과 OpenStreetMap을 거칩니다. 장소는 찾지만 평점, 영업시간, 사진은 없습니다.',
+  'help.guide.create-place.tip.3':
+    '장소는 지도에서 시작할 수도 있습니다. 그 지점을 오른쪽 클릭하면 좌표와 주소가 채워진 양식이 열립니다.',
+  // place-to-open-day
+  'help.guide.place-to-open-day.title': '열린 날짜에 장소를 바로 추가하기',
+  'help.guide.place-to-open-day.goal': '두 번째 단계를 건너뜁니다. 장소를 만들거나 고르면 바로 그 날짜에 들어갑니다.',
+  'help.guide.place-to-open-day.step.1':
+    '일자 열에서 날짜의 머리글을 클릭합니다. 그 날짜가 열립니다. 카드가 강조되고, 장소 열에 “해당 날짜로” 버튼이 생깁니다.',
+  'help.guide.place-to-open-day.step.2':
+    '“해당 날짜로”는 “새 장소”와 같은 양식을 열지만, “추가”를 클릭하는 순간 장소가 열린 날짜에 놓입니다.',
+  'help.guide.place-to-open-day.step.3':
+    '이미 있는 장소는 행 끝의 +로, 또는 오른쪽 클릭 후 “+ 날에 추가”로 열린 날짜에 들어갑니다.',
+  'help.guide.place-to-open-day.result': '장소가 그 날짜 아래 맨 끝에 나열됩니다. 위아래로 끌어 제자리로 옮기세요.',
+  'help.guide.place-to-open-day.tip.1':
+    '행을 날짜로 끌어다 놓아도 되고, 그렇게 하면 두 경유지 사이에 바로 떨어뜨릴 수 있습니다.',
+  'help.guide.place-to-open-day.tip.2': '일자 위의 도구 모음에 있는 “실행 취소”가 이 배정을 되돌립니다.',
+  // filter-places
+  'help.guide.filter-places.title': '목록에서 장소 찾기',
+  'help.guide.filter-places.goal': '찾는 장소만 남도록 열을 좁힙니다.',
+  'help.guide.filter-places.step.1':
+    '맨 위의 드롭다운은 “전체”, “미계획”(아직 어느 날짜에도 없음), “계획됨”(어느 날짜에 있음), “트랙”(가져온 GPX 트랙) 사이를 전환하고, 각각 개수가 붙습니다.',
+  'help.guide.filter-places.step.2': '“장소 검색...”에 입력합니다. 입력할수록 목록이 좁아집니다.',
+  'help.guide.filter-places.step.3':
+    '“모든 카테고리”는 카테고리를 하나 이상 체크하는 목록을 엽니다. 그중에 “카테고리 없음”도 있습니다. 맨 아래의 “필터 지우기”가 되돌립니다.',
+  'help.guide.filter-places.step.4':
+    '그 옆의 별은 최소 평점을 정합니다. 5+, 4+ 같은 식으로, 그만큼 이상으로 평가한 장소만 보여 줍니다.',
+  'help.guide.filter-places.result': '행 위의 숫자가 몇 개의 장소가 맞는지 알려 줍니다. 필터는 서로 겹쳐서 적용됩니다.',
+  'help.guide.filter-places.tip.1':
+    '날짜가 열려 있으면 “계획됨”은 그 날짜만 보여 주고 그렇게 알려 줍니다. “열린 날짜만 표시 중”, 그 옆에 “전체 여행 보기”입니다.',
+  'help.guide.filter-places.tip.2':
+    '지도도 열린 날짜로 좁혀집니다. 목록의 “전체”는 여전히 여행의 모든 장소를 보여 줍니다.',
+  // edit-place
+  'help.guide.edit-place.title': '장소 바꾸기',
+  'help.guide.edit-place.goal': '이름을 고치고, 핀을 옮기고, 웹사이트를 넣고, 카테고리를 바꿉니다.',
+  'help.guide.edit-place.step.1':
+    '행을 오른쪽 클릭하고 “편집”을 고르거나, 장소를 열어 세부정보에서 “편집”을 클릭합니다.',
+  'help.guide.edit-place.step.2':
+    '필요한 것을 바꿉니다. “이름”, “설명”, “메모”, “주소”, “위도”와 “경도”, “카테고리”, “웹사이트”. 날짜에서 열면 양식에 그 날짜를 위한 “이 날의 메모”와 “시작”, “종료”도 있습니다.',
+  'help.guide.edit-place.step.3': '“업데이트”를 클릭합니다.',
+  'help.guide.edit-place.result':
+    '변경은 그 장소가 나오는 모든 곳에 적용됩니다. 목록, 지도, 그리고 그 장소가 있는 모든 날짜입니다.',
+  'help.guide.edit-place.tip.1': '“이 날의 메모”는 그 하루의 장소에 속하고, “메모”는 장소 자체에 속합니다.',
+  'help.guide.edit-place.tip.2':
+    '“시작”보다 앞선 “종료”는 “업데이트”를 막습니다. “시간 겹침:”은 그 날의 다른 경유지가 같은 시간이라는 것을 알릴 뿐입니다.',
+  // delete-place
+  'help.guide.delete-place.title': '장소 삭제하기',
+  'help.guide.delete-place.goal': '장소를 여행에서 완전히 빼냅니다.',
+  'help.guide.delete-place.step.1': '행을 오른쪽 클릭하고 “삭제”를 고르거나, 장소 세부정보에서 “삭제”를 클릭합니다.',
+  'help.guide.delete-place.step.2':
+    '확인합니다. 그 장소에 숙박이 예약되어 있거나 예약이 연결되어 있으면, 무엇이 함께 사라지는지 질문이 알려 줍니다.',
+  'help.guide.delete-place.result':
+    '장소가 목록, 지도, 모든 날짜에서 사라집니다. 일자 위의 도구 모음에 있는 “실행 취소”가 되돌립니다.',
+  'help.guide.delete-place.tip.1': '하루에서만 장소를 빼려면 삭제 대신 그 경유지에서 “날에서 제거”를 쓰세요.',
+  'help.guide.delete-place.tip.2': '여러 장소를 한 번에: 필터 옆의 체크 표시가 선택을 시작합니다.',
+  // select-places
+  'help.guide.select-places.title': '여러 장소를 한 번에 바꾸거나 삭제하기',
+  'help.guide.select-places.goal': '하나씩이 아니라 한 번에 목록을 정리합니다.',
+  'help.guide.select-places.step.1':
+    '필터 행 오른쪽 끝의 체크 표시를 클릭합니다. 행에 체크박스가 생기고 동작이 담긴 바가 나타납니다.',
+  'help.guide.select-places.step.2': '행을 체크하거나 바의 “전체 선택”을 씁니다. 바가 선택된 수를 셉니다.',
+  'help.guide.select-places.step.3':
+    '“Change category”는 모두에게 하나의 카테고리를 줍니다. “컬렉션에 저장”은 그것들을 내 컬렉션 중 하나로 복사합니다. “선택 항목 삭제”는 확인 후 그것들을 지웁니다.',
+  'help.guide.select-places.step.4': '체크 표시를 다시 클릭하면 선택에서 빠져나옵니다.',
+  'help.guide.select-places.result':
+    '변경은 선택된 모든 장소에 적용됩니다. 삭제는 일자 위의 도구 모음에서 되돌릴 수 있습니다.',
+  'help.guide.select-places.tip.1':
+    '선택하는 동안에도 필터는 그대로 작동합니다. 먼저 “미계획”으로 거른 다음 “전체 선택”을 하면 정확히 그것들만 잡힙니다.',
+  'help.guide.select-places.tip.2':
+    '컬렉션 애드온이 켜져 있으면 바에 “내 목록에서 방문함으로 표시”가 나타납니다. 그 장소들이 저장된 컬렉션에서 방문 표시를 해 줍니다.',
+  // import-places-file
+  'help.guide.import-places-file.title': 'GPX, KML, KMZ 파일에서 장소 가져오기',
+  'help.guide.import-places-file.goal': 'Google My Maps, Google Earth 또는 GPS 추적기가 내보낸 것을 들여옵니다.',
+  'help.guide.import-places-file.step.1': '“파일 가져오기”를 클릭하거나, 장소 열 아무 데나 파일을 끌어다 놓습니다.',
+  'help.guide.import-places-file.step.2':
+    '파일을 고르거나 상자로 끌어다 놓습니다. GPX는 무엇을 가져올지 체크합니다. “웨이포인트”, “경로”, “트랙 (경로 형상 포함)”입니다. KML과 KMZ는 “포인트 (Placemarks)”와 “경로 (LineStrings)”입니다.',
+  'help.guide.import-places-file.step.3':
+    '“Google로 장소 정보 보강”은 가져온 장소를 하나씩 찾아 사진, 주소, 세부정보를 채웁니다. Google 키가 필요합니다.',
+  'help.guide.import-places-file.step.4':
+    '“가져오기”를 클릭합니다. 요약에 장소가 몇 개 만들어졌는지, 이미 여행에 있어서 몇 개가 건너뛰어졌는지 나옵니다.',
+  'help.guide.import-places-file.result':
+    '장소들이 목록에 있습니다. 트랙은 행에 경로 표시가 붙고, 지도에 그려지며, 자기만의 “트랙” 필터를 얻습니다.',
+  'help.guide.import-places-file.tip.1':
+    '너무 큰 파일은 크기 제한과 함께 거부됩니다. 사진 없이 다시 내보내거나 나누세요.',
+  'help.guide.import-places-file.tip.2': '가져오기는 일자 위의 도구 모음에서 통째로 되돌릴 수 있습니다.',
+  // import-places-list
+  'help.guide.import-places-list.title': '공유된 Google Maps 또는 Naver Maps 목록 가져오기',
+  'help.guide.import-places-list.goal': '공유된 목록 링크를 장소로 바꿉니다.',
+  'help.guide.import-places-list.step.1': '“목록 가져오기”를 클릭하고 “Google 목록”이나 “네이버 목록”을 고릅니다.',
+  'help.guide.import-places-list.step.2':
+    '목록의 공유 링크를 붙여 넣습니다. Google Maps 길찾기 링크도 됩니다. 그 경유지들이 주행 순서대로 장소가 됩니다.',
+  'help.guide.import-places-list.step.3': '“가져오기”를 클릭합니다.',
+  'help.guide.import-places-list.result':
+    '목록의 모든 장소가 여행에 들어오고, 이름은 목록에 있던 그대로입니다. 이미 여행에 있는 장소는 건너뜁니다.',
+  'help.guide.import-places-list.tip.1':
+    '목록은 공개로 공유되어 있어야 합니다. 비공개 목록의 링크는 아무것도 가져오지 않습니다.',
+  'help.guide.import-places-list.tip.2':
+    '“네이버 목록”에는 Naver List Import 애드온이 필요하며, 관리자가 “애드온”에서 켭니다. 없으면 버튼은 “Google 목록”으로 표시됩니다.',
 };
 
 export default help;

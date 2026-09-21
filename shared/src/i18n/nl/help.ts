@@ -1805,6 +1805,148 @@ const help: TranslationStrings = {
     'Ongedaan maken dekt het plan: plekken toewijzen, verwijderen, herschikken en verplaatsen, een route optimaliseren, plekken wissen, categoriewijzigingen en imports.',
   'help.guide.undo-change.tip.2':
     'Het gaat één stap diep: alleen de laatste wijziging kan worden teruggenomen, en een nieuwe wijziging vervangt haar.',
+
+  // ── Screen: trip-places ───────────────────────────────────────────────────────────────
+  'help.ctx.trip-places.title': 'Plekken',
+  'help.ctx.trip-places.summary':
+    'De rechterkolom van het plan: elke plek van de reis, gepland of niet, met zoeken en filters, en de manieren om plekken binnen te halen, met de hand, uit een bestand of uit een gedeelde lijst.',
+  'help.ctx.trip-places.bullet.1':
+    'Plaats/activiteit toevoegen bovenaan opent het formulier voor een plek die je typt of zoekt. Zolang een dag open is heet de knop Nieuwe plek, en Naar dag ernaast maakt de plek meteen op die dag aan.',
+  'help.ctx.trip-places.bullet.2':
+    'Bestand importeren neemt .gpx-, .kml- en .kmz-bestanden; Lijst importeren neemt een gedeelde lijst van Google Maps of Naver Maps. Een bestand kun je ook gewoon op de kolom laten vallen.',
+  'help.ctx.trip-places.bullet.3':
+    'Het uitklapmenu wisselt tussen Alle, Ongepland, Gepland en, zodra een track is geïmporteerd, Tracks; daaronder zitten het zoekveld, het categoriefilter en de ster voor een minimale beoordeling.',
+  'help.ctx.trip-places.bullet.4':
+    'Een rij toont afbeelding, naam en beschrijving of adres. Klik erop voor de plaatsdetails, sleep hem op een dag, of klik met rechts voor Bewerken, + Dag, Website openen, Google Maps, In collectie opslaan en Verwijderen.',
+  'help.ctx.trip-places.bullet.5':
+    'Met een dag open zet een + aan het eind van een ongeplande rij de plek op die dag, en Gepland toont alleen die dag, met Hele reis tonen om weer te verbreden.',
+  'help.ctx.trip-places.bullet.6':
+    'Het vinkje uiterst rechts in de filterrij start een selectie: meerdere rijen tegelijk krijgen een nieuwe categorie, gaan in een collectie of worden verwijderd.',
+  // create-place
+  'help.guide.create-place.title': 'Een plek aanmaken',
+  'help.guide.create-place.goal':
+    'Voeg met de hand een plek of activiteit toe, met alles wat het plan erover moet weten.',
+  'help.guide.create-place.step.1':
+    'Klik bovenaan de plekkenkolom op Plaats/activiteit toevoegen (Nieuwe plek zolang een dag open is). Het formulier gaat open.',
+  'help.guide.create-place.step.2':
+    'Typ de plek bovenin in Plaatsen zoeken... en kies een resultaat. Naam, Adres, Breedtegraad en Lengtegraad vullen zich, en Plaatsdetails rechts toont afbeeldingen, een beschrijving en gegevens erbij. Niet de juiste plek? Zoek in plaats daarvan op Google draait de zoekopdracht opnieuw via Google.',
+  'help.guide.create-place.step.3':
+    'In Plaatsdetails maakt een klik op een afbeelding onder Kies een afbeelding deze tot de afbeelding van de plek; Deze tekst gebruiken neemt de beschrijving over in het formulier.',
+  'help.guide.create-place.step.4':
+    'Loop de velden na: Naam is verplicht; Beschrijving en Notities zijn van jou; Adres, Breedtegraad en Lengtegraad komen uit de zoekopdracht of typ je zelf; Categorie kiest een van de categorieën van de reis, en de + ernaast maakt er ter plekke een nieuwe aan; Website neemt de link.',
+  'help.guide.create-place.step.5':
+    'Klik op Toevoegen. Ligt er al een plek met dezelfde naam in de reis, dan zegt het formulier dat en wordt de knop Toch toevoegen.',
+  'help.guide.create-place.result':
+    'De plek staat in de lijst en op de kaart, onder Ongepland tot hij op een dag wordt gezet.',
+  'help.guide.create-place.tip.1':
+    'Bestanden en Kosten onderaan het formulier hangen een document aan de plek, of openen meteen na het opslaan de Kosten-editor voor de uitgave ervan.',
+  'help.guide.create-place.tip.2':
+    'Zonder Google-sleutel loopt de zoekopdracht via de TREK-index en OpenStreetMap: hij vindt de plek, alleen zonder beoordelingen, openingstijden en foto’s.',
+  'help.guide.create-place.tip.3':
+    'Een plek kan ook op de kaart beginnen: klik met rechts op het punt, en het formulier gaat open met de coördinaten en het adres al ingevuld.',
+  // place-to-open-day
+  'help.guide.place-to-open-day.title': 'Een plek meteen aan de open dag toevoegen',
+  'help.guide.place-to-open-day.goal':
+    'Sla de tweede stap over: maak de plek aan of kies hem, en zet hem meteen op de dag.',
+  'help.guide.place-to-open-day.step.1':
+    'Klik in de dagenkolom op de kop van een dag. De dag is open: zijn kaart is gemarkeerd, en de plekkenkolom krijgt de knop Naar dag erbij.',
+  'help.guide.place-to-open-day.step.2':
+    'Naar dag opent hetzelfde formulier als Nieuwe plek, alleen komt de plek op de open dag terecht op het moment dat je op Toevoegen klikt.',
+  'help.guide.place-to-open-day.step.3':
+    'Een plek die al bestaat gaat naar de open dag met de + aan het eind van zijn rij, of met rechts klikken, + Dag.',
+  'help.guide.place-to-open-day.result':
+    'De plek staat onder de dag, helemaal onderaan; sleep hem omhoog of omlaag naar waar hij hoort.',
+  'help.guide.place-to-open-day.tip.1':
+    'Een rij op een dag slepen werkt net zo goed, en daarbij kun je de plek meteen tussen twee stops laten vallen.',
+  'help.guide.place-to-open-day.tip.2': 'Ongedaan maken in de werkbalk boven de dagen neemt de toewijzing terug.',
+  // filter-places
+  'help.guide.filter-places.title': 'Een plek in de lijst vinden',
+  'help.guide.filter-places.goal': 'Versmal de kolom tot de plekken die je zoekt.',
+  'help.guide.filter-places.step.1':
+    'Het uitklapmenu bovenaan wisselt tussen Alle, Ongepland (nog op geen enkele dag), Gepland (op een dag) en Tracks (geïmporteerde GPX-tracks), elk met zijn aantal.',
+  'help.guide.filter-places.step.2': 'Typ in Plaatsen zoeken...; de lijst wordt smaller terwijl je typt.',
+  'help.guide.filter-places.step.3':
+    'Alle categorieën opent een lijst om een of meer categorieën aan te vinken, Geen categorie daarbij; Filter wissen onderaan zet hem terug.',
+  'help.guide.filter-places.step.4':
+    'De ster ernaast zet een minimale beoordeling: 5+, 4+ enzovoort tonen alleen plekken die je minstens zo hoog hebt beoordeeld.',
+  'help.guide.filter-places.result': 'Het aantal boven de rijen zegt hoeveel plekken passen; de filters werken samen.',
+  'help.guide.filter-places.tip.1':
+    'Met een dag open toont Gepland alleen die dag en zegt dat ook: Alleen de geopende dag wordt getoond, met Hele reis tonen ernaast.',
+  'help.guide.filter-places.tip.2':
+    'De kaart versmalt ook tot de open dag; Alle in de lijst toont nog steeds elke plek van de reis.',
+  // edit-place
+  'help.guide.edit-place.title': 'Een plek wijzigen',
+  'help.guide.edit-place.goal': 'Verbeter een naam, verplaats de speld, voeg een website toe of wissel de categorie.',
+  'help.guide.edit-place.step.1':
+    'Klik met rechts op de rij en kies Bewerken, of open de plek en klik op Bewerken in de details.',
+  'help.guide.edit-place.step.2':
+    'Wijzig wat je nodig hebt: Naam, Beschrijving, Notities, Adres, Breedtegraad en Lengtegraad, Categorie, Website. Vanuit een dag geopend heeft het formulier ook Notities voor deze dag en Starttijd en Einde voor die dag.',
+  'help.guide.edit-place.step.3': 'Klik op Bijwerken.',
+  'help.guide.edit-place.result':
+    'De wijziging geldt overal waar de plek opduikt: in de lijst, op de kaart en op elke dag waarop hij staat.',
+  'help.guide.edit-place.tip.1':
+    'Notities voor deze dag hoort bij de plek op die ene dag; Notities hoort bij de plek zelf.',
+  'help.guide.edit-place.tip.2':
+    'Een Einde vóór de Starttijd blokkeert Bijwerken; Tijdoverlap met: waarschuwt er alleen voor dat een andere stop van de dag dezelfde tijd heeft.',
+  // delete-place
+  'help.guide.delete-place.title': 'Een plek verwijderen',
+  'help.guide.delete-place.goal': 'Haal een plek voorgoed uit de reis.',
+  'help.guide.delete-place.step.1':
+    'Klik met rechts op de rij en kies Verwijderen, of klik op Verwijderen in de plaatsdetails.',
+  'help.guide.delete-place.step.2':
+    'Bevestig. Is er op de plek een nacht geboekt, of hangt er een boeking aan, dan zegt de vraag wat er meegaat.',
+  'help.guide.delete-place.result':
+    'De plek is weg uit de lijst, van de kaart en van elke dag; Ongedaan maken in de werkbalk boven de dagen haalt hem terug.',
+  'help.guide.delete-place.tip.1':
+    'Om een plek alleen van één dag te halen, gebruik je in plaats daarvan Verwijderen van dag op die stop.',
+  'help.guide.delete-place.tip.2': 'Meerdere plekken tegelijk: het vinkje naast de filters start een selectie.',
+  // select-places
+  'help.guide.select-places.title': 'Meerdere plekken tegelijk wijzigen of verwijderen',
+  'help.guide.select-places.goal': 'Ruim de lijst in één keer op in plaats van plek voor plek.',
+  'help.guide.select-places.step.1':
+    'Klik op het vinkje uiterst rechts in de filterrij. De rijen krijgen vakjes en er verschijnt een balk met de acties.',
+  'help.guide.select-places.step.2':
+    'Vink de rijen aan, of gebruik Alles selecteren in de balk; de balk telt wat er geselecteerd is.',
+  'help.guide.select-places.step.3':
+    'Change category geeft ze allemaal één categorie; In collectie opslaan kopieert ze naar een van je collecties; Selectie verwijderen haalt ze na een bevestiging weg.',
+  'help.guide.select-places.step.4': 'Klik nog eens op het vinkje om de selectie te verlaten.',
+  'help.guide.select-places.result':
+    'De wijziging geldt voor elke geselecteerde plek; een verwijdering kun je ongedaan maken vanuit de werkbalk boven de dagen.',
+  'help.guide.select-places.tip.1':
+    'De filters blijven werken terwijl je selecteert: filter eerst op Ongepland, dan pakt Alles selecteren precies die.',
+  'help.guide.select-places.tip.2':
+    'Markeer als bezocht in je lijsten verschijnt in de balk als de add-on Collecties aan staat: hij vinkt de plekken af in de collecties waarin ze zijn opgeslagen.',
+  // import-places-file
+  'help.guide.import-places-file.title': 'Plekken importeren uit een GPX-, KML- of KMZ-bestand',
+  'help.guide.import-places-file.goal':
+    'Haal binnen wat Google My Maps, Google Earth of een GPS-tracker heeft geëxporteerd.',
+  'help.guide.import-places-file.step.1':
+    'Klik op Bestand importeren, of laat het bestand ergens op de plekkenkolom vallen.',
+  'help.guide.import-places-file.step.2':
+    'Kies het bestand of sleep het in het vak. Bij een GPX vink je aan wat je importeert: Waypoints, Routes, Tracks (met routegeometrie); bij KML en KMZ Punten (Placemarks) en Paden (LineStrings).',
+  'help.guide.import-places-file.step.3':
+    'Plaatsen verrijken via Google zoekt elke geïmporteerde plek op om foto’s, adres en details aan te vullen; daarvoor is de Google-sleutel nodig.',
+  'help.guide.import-places-file.step.4':
+    'Klik op Importeren. De samenvatting zegt hoeveel plekken zijn aangemaakt en hoeveel er zijn overgeslagen omdat ze al in de reis zaten.',
+  'help.guide.import-places-file.result':
+    'De plekken staan in de lijst; een track draagt een routemarkering op zijn rij, tekent zich op de kaart en krijgt zijn eigen filter Tracks.',
+  'help.guide.import-places-file.tip.1':
+    'Een te groot bestand wordt geweigerd met de groottelimiet; exporteer het opnieuw zonder foto’s, of splits het.',
+  'help.guide.import-places-file.tip.2':
+    'De import kun je in zijn geheel ongedaan maken vanuit de werkbalk boven de dagen.',
+  // import-places-list
+  'help.guide.import-places-list.title': 'Een gedeelde lijst van Google Maps of Naver Maps importeren',
+  'help.guide.import-places-list.goal': 'Maak van de link van een gedeelde lijst plekken.',
+  'help.guide.import-places-list.step.1': 'Klik op Lijst importeren en kies Google Lijst of Naver Lijst.',
+  'help.guide.import-places-list.step.2':
+    'Plak de gedeelde link van de lijst. Een routebeschrijvingslink van Google Maps werkt ook: zijn stops worden plekken, in rijvolgorde.',
+  'help.guide.import-places-list.step.3': 'Klik op Importeren.',
+  'help.guide.import-places-list.result':
+    'Elke plek van de lijst zit in de reis, met de naam uit de lijst; plekken die al in de reis zitten worden overgeslagen.',
+  'help.guide.import-places-list.tip.1':
+    'De lijst moet openbaar gedeeld zijn; de link van een privélijst importeert niets.',
+  'help.guide.import-places-list.tip.2':
+    'Naver Lijst heeft de add-on Naver List Import nodig, die de beheerder onder Add-ons aanzet; zonder die add-on heet de knop Google Lijst.',
 };
 
 export default help;

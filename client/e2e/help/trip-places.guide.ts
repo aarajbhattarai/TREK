@@ -1,7 +1,7 @@
 import { test, expect, type Page, type Locator } from '@playwright/test'
 import { captureGuide, captureHero, beat, typeInto, settle, VIEWPORT, type GuideScript } from './guide'
 import { seededTrip, gpxFixture, ensureTrack } from './fixtures'
-import { openTrip, modal, dialog } from './trip-shared'
+import { openTrip, modal, dialog, confirmDialog, portalDialog } from './trip-shared'
 import { tripPlacesContext, tripPlacesGuides } from '../../src/help/contexts/tripPlaces'
 import type { HelpGuide } from '../../src/help/types'
 
@@ -19,6 +19,8 @@ const guide = (id: string): HelpGuide => {
 }
 
 const SPARE = { name: 'Tsukiji Outer Market', lat: 35.6654, lng: 139.7707, address: '4 Chome Tsukiji, Chuo City, Tokyo' }
+/** What create-place looks up. See the note in its second step for why this one. */
+const SEARCHED = { query: 'Osaka Castle', match: /^Osaka Castle/ }
 
 /** A row of the places column by the place's name (the rows are options of a list). */
 const row = (page: Page, name: string) => page.getByRole('option', { name: new RegExp(`^${name}`) }).first()
@@ -29,6 +31,13 @@ const addButton = (page: Page) => page.getByRole('button', { name: /^(Add Place\
 /** The filter row's controls. */
 const filterSelect = (page: Page) => page.getByTestId('places-filter').getByRole('button').first()
 const searchBox = (page: Page) => page.getByPlaceholder('Search places...').last()
+/** FileImportModal: its own portal, recognised by the hidden file input and its heading. */
+const importFileDialog = (page: Page) =>
+  portalDialog(page, page.locator('input[type="file"][accept*=".gpx"]'))
+/** ListImportModal: its own portal, recognised by the link box. */
+const listImportDialog = (page: Page) => portalDialog(page, page.getByPlaceholder(/goo\.gl|naver/))
+/** The drop box of the file dialog: the dashed button that opens the file picker. */
+const dropBox = (page: Page) => importFileDialog(page).getByRole('button').first()
 /** The column itself: the header block around the search box. */
 const column = (page: Page) => searchBox(page).locator('xpath=ancestor::div[contains(@class,"scroll") or @data-places-sidebar][1]')
 
@@ -74,29 +83,37 @@ const SCRIPTS: Record<string, GuideScript> = {
       {
         prepare: async p => {
           const box = modal(p).getByPlaceholder('Search places...')
-          await typeInto(p, box, 'Tokyo Tower')
-          // The suggestions drop down under the box; the first one is the tower.
-          const suggestion = modal(p).locator('.shadow-dropdown button').filter({ hasText: /Tokyo Tower/ }).first()
+          // Osaka Castle on purpose: its entry in the index carries a picture,
+          // opening hours and a description, so Place details shows what the
+          // text says it shows. Most results have none of that and the column
+          // would be an empty state in the picture.
+          await typeInto(p, box, SEARCHED.query)
+          const suggestion = modal(p).locator('.shadow-dropdown button').filter({ hasText: SEARCHED.match }).first()
           await expect(suggestion).toBeVisible({ timeout: 20_000 })
           await suggestion.click()
-          await expect(modal(p).getByPlaceholder('e.g. Eiffel Tower')).toHaveValue(/Tokyo Tower/, { timeout: 20_000 })
+          await expect(modal(p).getByPlaceholder('e.g. Eiffel Tower')).toHaveValue(SEARCHED.match, { timeout: 20_000 })
+          // The details column answers after the form; wait for it or the
+          // picture catches the spinner.
+          await expect(modal(p).getByText('Pick a picture', { exact: false }).first()).toBeVisible({ timeout: 30_000 })
           await settle(p)
         },
         target: p => modal(p).getByPlaceholder('Search places...').locator('xpath=../..'),
       },
-      only(p => modal(p).getByText('Place details', { exact: true }).locator('xpath=ancestor::div[2]')),
-      only(p => modal(p).getByPlaceholder('e.g. Eiffel Tower').locator('xpath=ancestor::div[3]')),
+      // The details column is an <aside> beside the form; both used to resolve to
+      // the whole dialog, which gave two steps the same picture.
+      only(p => modal(p).getByText('Place details', { exact: true }).locator('xpath=ancestor::aside[1]')),
+      only(p => modal(p).getByPlaceholder('e.g. Eiffel Tower').locator('xpath=ancestor::form[1]')),
       {
         target: p => modal(p).getByRole('button', { name: 'Add', exact: true }),
         act: async p => {
           await modal(p).getByRole('button', { name: 'Add', exact: true }).click()
           await expect(modal(p)).toHaveCount(0)
-          await expect(row(p, 'Tokyo Tower')).toBeVisible({ timeout: 20_000 })
+          await expect(row(p, SEARCHED.query)).toBeVisible({ timeout: 20_000 })
           await settle(p)
         },
       },
     ],
-    cleanup: p => deleteByName(p, 'Tokyo Tower'),
+    cleanup: p => deleteByName(p, SEARCHED.query),
   },
   'place-to-open-day': {
     guide: guide('place-to-open-day'),
@@ -205,14 +222,14 @@ const SCRIPTS: Record<string, GuideScript> = {
         target: p => menu(p).getByRole('button', { name: 'Delete' }),
         act: async p => {
           await menu(p).getByRole('button', { name: 'Delete' }).click()
-          await expect(modal(p)).toBeVisible()
+          await expect(confirmDialog(p)).toBeVisible()
           await settle(p)
         },
       },
       {
-        target: dialog,
+        target: confirmDialog,
         act: async p => {
-          await modal(p).getByRole('button', { name: 'Delete', exact: true }).click()
+          await confirmDialog(p).getByRole('button', { name: 'Delete', exact: true }).click()
           await expect(row(p, SPARE.name)).toHaveCount(0, { timeout: 15_000 })
           await settle(p)
         },
@@ -259,24 +276,24 @@ const SCRIPTS: Record<string, GuideScript> = {
         target: p => p.getByRole('button', { name: 'Import file' }),
         act: async p => {
           await p.getByRole('button', { name: 'Import file' }).click()
-          await expect(modal(p).getByText('Import file')).toBeVisible()
+          await expect(importFileDialog(p)).toBeVisible()
           await settle(p)
         },
       },
       {
         prepare: async p => {
-          await modal(p).locator('input[type="file"]').setInputFiles(gpxFixture('arashiyama-loop'))
-          await expect(modal(p).getByText('Tracks (with path geometry)')).toBeVisible({ timeout: 15_000 })
+          await importFileDialog(p).locator('input[type="file"]').setInputFiles(gpxFixture('arashiyama-loop'))
+          await expect(importFileDialog(p).getByText('Tracks (with path geometry)')).toBeVisible({ timeout: 15_000 })
           await settle(p)
         },
-        target: dialog,
+        target: importFileDialog,
       },
-      only(p => modal(p).getByText('Enrich places via Google').locator('xpath=ancestor::label[1] | xpath=..').first()),
+      only(dropBox),
       {
-        target: p => modal(p).getByRole('button', { name: 'Import', exact: true }),
+        target: p => importFileDialog(p).getByRole('button', { name: 'Import', exact: true }),
         act: async p => {
-          await modal(p).getByRole('button', { name: 'Import', exact: true }).click()
-          await expect(modal(p)).toHaveCount(0, { timeout: 30_000 })
+          await importFileDialog(p).getByRole('button', { name: 'Import', exact: true }).click()
+          await expect(importFileDialog(p)).toHaveCount(0, { timeout: 30_000 })
           await expect(row(p, 'Arashiyama loop')).toBeVisible({ timeout: 20_000 })
           await settle(p)
         },
@@ -292,20 +309,26 @@ const SCRIPTS: Record<string, GuideScript> = {
         target: p => p.getByRole('button', { name: 'List Import' }),
         act: async p => {
           await p.getByRole('button', { name: 'List Import' }).click()
-          await expect(modal(p).getByPlaceholder(/goo\.gl|naver/)).toBeVisible()
+          await expect(listImportDialog(p)).toBeVisible()
           await settle(p)
         },
       },
       {
         prepare: async p => {
-          await typeInto(p, modal(p).getByPlaceholder(/goo\.gl|naver/), 'https://maps.app.goo.gl/kyoto-favourites')
+          await typeInto(p, listImportDialog(p).getByPlaceholder(/goo\.gl|naver/), 'https://maps.app.goo.gl/kyoto-favourites')
           await beat(p, 300)
         },
-        target: dialog,
+        target: listImportDialog,
       },
-      only(p => modal(p).getByRole('button', { name: 'Import', exact: true })),
+      only(p => listImportDialog(p).getByRole('button', { name: 'Import', exact: true })),
     ],
-    cleanup: closeModal,
+    // The dialog has no Escape route: Cancel is the way out.
+    cleanup: async p => {
+      if (await listImportDialog(p).isVisible().catch(() => false)) {
+        await listImportDialog(p).getByRole('button', { name: 'Cancel' }).click()
+        await expect(listImportDialog(p)).toHaveCount(0)
+      }
+    },
   },
 }
 

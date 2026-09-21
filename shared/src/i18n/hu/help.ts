@@ -1807,6 +1807,146 @@ const help: TranslationStrings = {
     'A visszavonás a tervre terjed ki: helyek hozzárendelése, eltávolítása, átrendezése és mozgatása, útvonal optimalizálása, helyek törlése, kategóriamódosítások és importok.',
   'help.guide.undo-change.tip.2':
     'Egy lépés mély: csak a legutóbbi módosítás vehető vissza, és egy új módosítás felülírja.',
+
+  // ── Screen: trip-places ───────────────────────────────────────────────────────────────
+  'help.ctx.trip-places.title': 'Helyek',
+  'help.ctx.trip-places.summary':
+    'A terv jobb oldali oszlopa: az utazás minden helye, tervezett vagy sem, kereséssel és szűrőkkel, meg a módok, ahogy helyeket behozol, kézzel, fájlból vagy megosztott listából.',
+  'help.ctx.trip-places.bullet.1':
+    'A felül lévő Hely/Tevékenység hozzáadása megnyitja az űrlapot egy helyhez, amit beírsz vagy megkeresel. Amíg egy nap meg van nyitva, a gombon Új hely áll, a mellette lévő A naphoz pedig egyenesen arra a napra hozza létre a helyet.',
+  'help.ctx.trip-places.bullet.2':
+    'A Fájl importálása .gpx, .kml és .kmz fájlokat fogad; a Lista importálás megosztott Google Maps vagy Naver Maps listát fogad. Egy fájlt egyszerűen az oszlopra is ejthetsz.',
+  'help.ctx.trip-places.bullet.3':
+    'A legördülő az Összes, a Nem tervezett, a Tervezett és, ha már importáltál nyomvonalat, a Nyomvonalak között vált; alatta ül a keresés, a kategóriaszűrő és a csillag a legkisebb értékeléshez.',
+  'help.ctx.trip-places.bullet.4':
+    'Egy sor képet, nevet és leírást vagy címet mutat. Kattints rá a hely részleteiért, húzd rá egy napra, vagy kattints rá jobb gombbal, és megkapod a Szerkesztés, + Nap, Weboldal megnyitása, Google Maps, Mentés gyűjteménybe és Törlés pontokat.',
+  'help.ctx.trip-places.bullet.5':
+    'Megnyitott nappal egy nem tervezett sor végén lévő + arra a napra teszi a helyet, a Tervezett pedig csak azt a napot sorolja fel, a Teljes utazás megjelenítése pedig újra kitágítja.',
+  'help.ctx.trip-places.bullet.6':
+    'A szűrősor jobb szélén lévő pipa kijelölést indít: több sor egyszerre kap új kategóriát, kerül gyűjteménybe vagy törlődik.',
+  // create-place
+  'help.guide.create-place.title': 'Hely létrehozása',
+  'help.guide.create-place.goal':
+    'Adj hozzá kézzel egy helyet vagy tevékenységet, mindennel, amit a tervnek tudnia kell róla.',
+  'help.guide.create-place.step.1':
+    'Kattints a helyek oszlopának tetején a Hely/Tevékenység hozzáadása gombra (Új hely, amíg egy nap meg van nyitva). Megnyílik az űrlap.',
+  'help.guide.create-place.step.2':
+    'Írd be a helyet felül a Helyek keresése... mezőbe, és válassz egy találatot. A Név, a Cím, a Szélességi fok és a Hosszúsági fok kitöltődik, a jobb oldali Hely részletei pedig képeket, leírást és adatokat mutat hozzá. A Nem a megfelelő hely? Keresés inkább a Google-ben újra lefuttatja a keresést a Google-ön át.',
+  'help.guide.create-place.step.3':
+    'A Hely részletei alatt egy képre kattintás a Válassz képet résznél a hely képévé teszi azt; a Szöveg átvétele a leírást átveszi az űrlapra.',
+  'help.guide.create-place.step.4':
+    'Nézd át a mezőket: a Név kötelező; a Leírás és a Jegyzetek a tiéd; a Cím, a Szélességi fok és a Hosszúsági fok a keresésből jön vagy beírod; a Kategória az utazás kategóriái közül választ, a mellette lévő + pedig azonnal újat hoz létre; a Weboldal a linket fogadja.',
+  'help.guide.create-place.step.5':
+    'Kattints a Hozzáadás gombra. Ha már van azonos nevű hely az utazásban, az űrlap szól, és a gombból Hozzáadás mindenképp lesz.',
+  'help.guide.create-place.result':
+    'A hely benne van a listában és a térképen, a Nem tervezett alatt, amíg egy napra nem kerül.',
+  'help.guide.create-place.tip.1':
+    'Az űrlap alján a Fájlok és a Costs dokumentumot csatol a helyhez, vagy mentés után rögtön megnyitja a Costs szerkesztőt a kiadásához.',
+  'help.guide.create-place.tip.2':
+    'Google kulcs nélkül a keresés a TREK indexén és az OpenStreetMapen át fut: megtalálja a helyet, csak értékelések, nyitvatartás és fotók nélkül.',
+  'help.guide.create-place.tip.3':
+    'Egy hely a térképen is indulhat: kattints jobb gombbal a pontra, és az űrlap kitöltött koordinátákkal és címmel nyílik meg.',
+  // place-to-open-day
+  'help.guide.place-to-open-day.title': 'Hely hozzáadása egyenesen a megnyitott naphoz',
+  'help.guide.place-to-open-day.goal':
+    'Hagyd ki a második lépést: hozd létre vagy válaszd ki a helyet, és máris a napon van.',
+  'help.guide.place-to-open-day.step.1':
+    'Kattints egy nap fejlécére a napok oszlopában. A nap meg van nyitva: a kártyája kiemelt, a helyek oszlopa pedig megkapja A naphoz gombot.',
+  'help.guide.place-to-open-day.step.2':
+    'A naphoz ugyanazt az űrlapot nyitja meg, mint az Új hely, csak a hely abban a pillanatban a megnyitott napra kerül, ahogy a Hozzáadás gombra kattintasz.',
+  'help.guide.place-to-open-day.step.3':
+    'Egy már létező hely a sora végén lévő + gombbal vagy jobb gombbal, a + Nap ponttal kerül a megnyitott napra.',
+  'help.guide.place-to-open-day.result': 'A hely a nap alatt szerepel, a végén; húzd fel vagy le oda, ahová tartozik.',
+  'help.guide.place-to-open-day.tip.1': 'Egy sor napra húzása is működik, és rögtön két megálló közé ejtheti a helyet.',
+  'help.guide.place-to-open-day.tip.2': 'A napok fölötti eszköztárban a Visszavonás visszaveszi a hozzárendelést.',
+  // filter-places
+  'help.guide.filter-places.title': 'Hely megtalálása a listában',
+  'help.guide.filter-places.goal': 'Szűkítsd az oszlopot azokra a helyekre, amelyeket keresel.',
+  'help.guide.filter-places.step.1':
+    'A felül lévő legördülő az Összes, a Nem tervezett (még egy napon sincs), a Tervezett (egy napon van) és a Nyomvonalak (importált GPX nyomvonalak) között vált, mindegyik a saját darabszámával.',
+  'help.guide.filter-places.step.2': 'Írj a Helyek keresése... mezőbe; a lista szűkül, ahogy gépelsz.',
+  'help.guide.filter-places.step.3':
+    'Az Összes kategória listát nyit, ahol egy vagy több kategóriát pipálsz ki, köztük a Nincs kategória lehetőséget; az alján a Szűrő törlése visszaállítja.',
+  'help.guide.filter-places.step.4':
+    'A mellette lévő csillag legkisebb értékelést állít be: az 5+, a 4+ és így tovább csak azokat a helyeket mutatja, amelyeket legalább annyira értékeltél.',
+  'help.guide.filter-places.result': 'A sorok fölötti szám megmondja, hány hely illik; a szűrők összeadódnak.',
+  'help.guide.filter-places.tip.1':
+    'Megnyitott nappal a Tervezett csak azt a napot sorolja fel, és ezt ki is írja: Csak a megnyitott nap látszik, mellette a Teljes utazás megjelenítése.',
+  'help.guide.filter-places.tip.2':
+    'A térkép is a megnyitott napra szűkül; az Összes a listában továbbra is az utazás minden helyét mutatja.',
+  // edit-place
+  'help.guide.edit-place.title': 'Hely módosítása',
+  'help.guide.edit-place.goal': 'Javíts egy nevet, told el a tűt, adj hozzá weboldalt vagy válts kategóriát.',
+  'help.guide.edit-place.step.1':
+    'Kattints jobb gombbal a sorra, és válaszd a Szerkesztés pontot, vagy nyisd meg a helyet, és kattints a Szerkesztés gombra a részleteiben.',
+  'help.guide.edit-place.step.2':
+    'Módosítsd, amire szükséged van: Név, Leírás, Jegyzetek, Cím, Szélességi fok és Hosszúsági fok, Kategória, Weboldal. Napból megnyitva az űrlapon ott van a Jegyzetek erre a napra, valamint a Kezdés és a Befejezés arra a napra.',
+  'help.guide.edit-place.step.3': 'Kattints a Frissítés gombra.',
+  'help.guide.edit-place.result':
+    'A módosítás mindenhol érvényes, ahol a hely megjelenik: a listában, a térképen és minden napon, amelyen rajta van.',
+  'help.guide.edit-place.tip.1':
+    'A Jegyzetek erre a napra a helyhez tartozik azon az egy napon; a Jegyzetek magához a helyhez tartozik.',
+  'help.guide.edit-place.tip.2':
+    'A Kezdés előtti Befejezés megakadályozza a Frissítést; az Időbeli átfedés: csak figyelmeztet, hogy a nap egy másik megállója ugyanabban az időben van.',
+  // delete-place
+  'help.guide.delete-place.title': 'Hely törlése',
+  'help.guide.delete-place.goal': 'Vedd ki a helyet az utazásból véglegesen.',
+  'help.guide.delete-place.step.1':
+    'Kattints jobb gombbal a sorra, és válaszd a Törlés pontot, vagy kattints a Törlés gombra a hely részleteiben.',
+  'help.guide.delete-place.step.2':
+    'Erősítsd meg. Ha a helyen éjszakát foglaltak, vagy foglalás kapcsolódik hozzá, a kérdés megmondja, mi megy vele.',
+  'help.guide.delete-place.result':
+    'A hely eltűnik a listából, a térképről és minden napról; a napok fölötti eszköztárban a Visszavonás visszahozza.',
+  'help.guide.delete-place.tip.1':
+    'Ha csak egy napról akarod levenni a helyet, használd inkább azon a megállón az Eltávolítás a napról pontot.',
+  'help.guide.delete-place.tip.2': 'Több hely egyszerre: a szűrők melletti pipa kijelölést indít.',
+  // select-places
+  'help.guide.select-places.title': 'Több hely módosítása vagy törlése egyszerre',
+  'help.guide.select-places.goal': 'Rendezd a listát egy menetben, nem helyenként.',
+  'help.guide.select-places.step.1':
+    'Kattints a szűrősor jobb szélén lévő pipára. A sorok jelölőnégyzeteket kapnak, és megjelenik egy sáv a műveletekkel.',
+  'help.guide.select-places.step.2':
+    'Pipáld ki a sorokat, vagy használd a sávban a Mindet kiválaszt gombot; a sáv számolja, mi van kijelölve.',
+  'help.guide.select-places.step.3':
+    'A Change category mindegyiknek egy kategóriát ad; a Mentés gyűjteménybe átmásolja őket az egyik gyűjteményedbe; a Kijelöltek törlése egy megerősítés után eltávolítja őket.',
+  'help.guide.select-places.step.4': 'Kattints újra a pipára, hogy kilépj a kijelölésből.',
+  'help.guide.select-places.result':
+    'A módosítás minden kijelölt helyre érvényes; a törlés a napok fölötti eszköztárból visszavonható.',
+  'help.guide.select-places.tip.1':
+    'A szűrők kijelölés közben is működnek: szűrj előbb a Nem tervezett értékre, akkor a Mindet kiválaszt pontosan azokat fogja meg.',
+  'help.guide.select-places.tip.2':
+    'A Megjelölés látogatottként a listáidban akkor jelenik meg a sávban, ha a Gyűjtemények bővítmény be van kapcsolva: kipipálja a helyeket azokban a gyűjteményekben, amelyekbe el vannak mentve.',
+  // import-places-file
+  'help.guide.import-places-file.title': 'Helyek importálása GPX, KML vagy KMZ fájlból',
+  'help.guide.import-places-file.goal':
+    'Hozd be, amit a Google My Maps, a Google Earth vagy egy GPS tracker exportált.',
+  'help.guide.import-places-file.step.1':
+    'Kattints a Fájl importálása gombra, vagy ejtsd a fájlt bárhová a helyek oszlopára.',
+  'help.guide.import-places-file.step.2':
+    'Válaszd ki a fájlt, vagy húzd a keretbe. GPX esetén pipáld ki, mit importáljon: Útpontok, Útvonalak, Nyomvonalak (útvonalgeometriával); KML és KMZ esetén Pontok (Placemarks) és Útvonalak (LineStrings).',
+  'help.guide.import-places-file.step.3':
+    'A Helyek gazdagítása a Google-lel minden importált helyet kikeres, hogy fotókat, címet és részleteket töltsön ki; ehhez kell a Google kulcs.',
+  'help.guide.import-places-file.step.4':
+    'Kattints az Importálás gombra. Az összegzés megmondja, hány hely jött létre, és hányat hagyott ki, mert már az utazásban voltak.',
+  'help.guide.import-places-file.result':
+    'A helyek a listában vannak; egy nyomvonal útvonaljelet visel a sorában, kirajzolódik a térképen, és saját Nyomvonalak szűrőt kap.',
+  'help.guide.import-places-file.tip.1':
+    'A túl nagy fájlt a méretkorláttal együtt visszautasítja; exportáld újra fotók nélkül, vagy vágd szét.',
+  'help.guide.import-places-file.tip.2': 'Az importálás egészben visszavonható a napok fölötti eszköztárból.',
+  // import-places-list
+  'help.guide.import-places-list.title': 'Megosztott Google Maps vagy Naver Maps lista importálása',
+  'help.guide.import-places-list.goal': 'Alakíts egy megosztott listalinket helyekké.',
+  'help.guide.import-places-list.step.1':
+    'Kattints a Lista importálás gombra, és válaszd a Google Lista vagy a Naver Lista lehetőséget.',
+  'help.guide.import-places-list.step.2':
+    'Illeszd be a lista megosztott linkjét. Egy Google Maps útvonaltervező link is működik: a megállói helyek lesznek, vezetési sorrendben.',
+  'help.guide.import-places-list.step.3': 'Kattints az Importálás gombra.',
+  'help.guide.import-places-list.result':
+    'A lista minden helye benne van az utazásban, a listabeli nevével; az utazásban már meglévő helyeket kihagyja.',
+  'help.guide.import-places-list.tip.1':
+    'A listát nyilvánosan meg kell osztani; egy privát lista linkje semmit sem importál.',
+  'help.guide.import-places-list.tip.2':
+    'A Naver Lista a Naver List Import bővítményt igényli, amit az admin a Bővítmények alatt kapcsol be; nélküle a gombon Google Lista áll.',
 };
 
 export default help;

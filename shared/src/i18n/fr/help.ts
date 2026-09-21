@@ -1852,6 +1852,148 @@ const help: TranslationStrings = {
     'L’annulation couvre le plan : assigner, retirer, réordonner et déplacer des lieux, optimiser un itinéraire, supprimer des lieux, les changements de catégorie et les imports.',
   'help.guide.undo-change.tip.2':
     'Elle n’a qu’un cran de profondeur : seule la dernière modification peut être reprise, et une nouvelle modification la remplace.',
+
+  // ── Screen: trip-places ───────────────────────────────────────────────────────────────
+  'help.ctx.trip-places.title': 'Lieux',
+  'help.ctx.trip-places.summary':
+    'La colonne de droite du plan : tous les lieux du voyage, planifiés ou non, avec la recherche et les filtres, et les façons de faire entrer des lieux, à la main, depuis un fichier ou depuis une liste partagée.',
+  'help.ctx.trip-places.bullet.1':
+    'Ajouter un lieu/activité en haut ouvre le formulaire pour un lieu que vous tapez ou cherchez. Tant qu’un jour est ouvert, le bouton affiche Nouveau lieu, et Au jour à côté crée le lieu directement sur ce jour.',
+  'help.ctx.trip-places.bullet.2':
+    'Importer un fichier prend les fichiers .gpx, .kml et .kmz ; Import de liste prend une liste partagée de Google Maps ou de Naver Maps. Un fichier peut aussi être simplement déposé sur la colonne.',
+  'help.ctx.trip-places.bullet.3':
+    'Le menu déroulant bascule entre Tous, Non planifiés, Planifiés et, dès qu’une trace a été importée, Traces ; en dessous se trouvent la recherche, le filtre de catégorie et l’étoile pour une note minimale.',
+  'help.ctx.trip-places.bullet.4':
+    'Une ligne montre l’image, le nom et la description ou l’adresse. Cliquez dessus pour les détails du lieu, glissez-la sur un jour, ou faites un clic droit pour Modifier, + Jour, Ouvrir le site web, Google Maps, Enregistrer dans une collection et Supprimer.',
+  'help.ctx.trip-places.bullet.5':
+    'Avec un jour ouvert, un + au bout d’une ligne non planifiée pose le lieu sur ce jour, et Planifiés ne liste que ce jour, avec Afficher tout le voyage pour élargir de nouveau.',
+  'help.ctx.trip-places.bullet.6':
+    'La coche au bout droit de la ligne de filtres démarre une sélection : plusieurs lignes à la fois reçoivent une nouvelle catégorie, partent dans une collection ou sont supprimées.',
+  // create-place
+  'help.guide.create-place.title': 'Créer un lieu',
+  'help.guide.create-place.goal': 'Ajoutez un lieu ou une activité à la main, avec tout ce que le plan doit en savoir.',
+  'help.guide.create-place.step.1':
+    'Cliquez sur Ajouter un lieu/activité en haut de la colonne des lieux (Nouveau lieu tant qu’un jour est ouvert). Le formulaire s’ouvre.',
+  'help.guide.create-place.step.2':
+    'Tapez le lieu dans Rechercher des lieux… en haut et choisissez un résultat. Nom, Adresse, Latitude et Longitude se remplissent, et Détails du lieu à droite montre des images, une description et des informations. Ce n’est pas le bon lieu ? Rechercher sur Google relance la recherche via Google.',
+  'help.guide.create-place.step.3':
+    'Dans Détails du lieu, un clic sur une image sous Choisir une image en fait l’image du lieu ; Utiliser ce texte reprend la description dans le formulaire.',
+  'help.guide.create-place.step.4':
+    'Vérifiez les champs : Nom est obligatoire ; Description et Notes sont à vous ; Adresse, Latitude et Longitude viennent de la recherche ou se tapent ; Catégorie choisit une des catégories du voyage, et le + à côté en crée une nouvelle sur place ; Site web prend le lien.',
+  'help.guide.create-place.step.5':
+    'Cliquez sur Ajouter. Si un lieu du même nom est déjà dans le voyage, le formulaire le signale et le bouton devient Ajouter quand même.',
+  'help.guide.create-place.result':
+    'Le lieu est dans la liste et sur la carte, sous Non planifiés tant qu’il n’est pas posé sur un jour.',
+  'help.guide.create-place.tip.1':
+    'Fichiers et Costs en bas du formulaire attachent un document au lieu, ou ouvrent l’éditeur Costs pour sa dépense juste après l’enregistrement.',
+  'help.guide.create-place.tip.2':
+    'Sans clé Google, la recherche passe par l’index TREK et OpenStreetMap : elle trouve le lieu, seulement sans les notes, les horaires d’ouverture et les photos.',
+  'help.guide.create-place.tip.3':
+    'Un lieu peut aussi commencer sur la carte : faites un clic droit sur l’endroit, et le formulaire s’ouvre avec les coordonnées et l’adresse déjà remplies.',
+  // place-to-open-day
+  'help.guide.place-to-open-day.title': 'Ajouter un lieu directement au jour ouvert',
+  'help.guide.place-to-open-day.goal':
+    'Sautez la deuxième étape : créez ou choisissez le lieu et posez-le tout de suite sur le jour.',
+  'help.guide.place-to-open-day.step.1':
+    'Cliquez sur l’en-tête d’un jour dans la colonne des jours. Le jour est ouvert : sa carte est mise en évidence, et la colonne des lieux gagne le bouton Au jour.',
+  'help.guide.place-to-open-day.step.2':
+    'Au jour ouvre le même formulaire que Nouveau lieu, sauf que le lieu se pose sur le jour ouvert au moment où vous cliquez sur Ajouter.',
+  'help.guide.place-to-open-day.step.3':
+    'Un lieu qui existe déjà va sur le jour ouvert avec le + au bout de sa ligne, ou par un clic droit, + Jour.',
+  'help.guide.place-to-open-day.result':
+    'Le lieu est listé sous le jour, à la fin ; glissez-le vers le haut ou vers le bas jusqu’à sa place.',
+  'help.guide.place-to-open-day.tip.1':
+    'Glisser une ligne sur un jour marche aussi, et cela peut déposer le lieu entre deux étapes tout de suite.',
+  'help.guide.place-to-open-day.tip.2': 'Annuler dans la barre d’outils au-dessus des jours reprend l’affectation.',
+  // filter-places
+  'help.guide.filter-places.title': 'Trouver un lieu dans la liste',
+  'help.guide.filter-places.goal': 'Resserrez la colonne sur les lieux que vous cherchez.',
+  'help.guide.filter-places.step.1':
+    'Le menu déroulant en haut bascule entre Tous, Non planifiés (pas encore sur un jour), Planifiés (sur un jour) et Traces (traces GPX importées), chacun avec son compte.',
+  'help.guide.filter-places.step.2': 'Tapez dans Rechercher des lieux… ; la liste se resserre à mesure que vous tapez.',
+  'help.guide.filter-places.step.3':
+    'Toutes les catégories ouvre une liste où cocher une ou plusieurs catégories, Sans catégorie comprise ; Effacer le filtre, en bas, la remet à zéro.',
+  'help.guide.filter-places.step.4':
+    'L’étoile à côté fixe une note minimale : 5+, 4+ et ainsi de suite ne montrent que les lieux que vous avez notés au moins aussi haut.',
+  'help.guide.filter-places.result':
+    'Le compte au-dessus des lignes dit combien de lieux correspondent ; les filtres se combinent.',
+  'help.guide.filter-places.tip.1':
+    'Avec un jour ouvert, Planifiés ne liste que ce jour et le dit : Seul le jour ouvert est affiché, avec Afficher tout le voyage à côté.',
+  'help.guide.filter-places.tip.2':
+    'La carte se resserre elle aussi sur le jour ouvert ; Tous dans la liste montre toujours tous les lieux du voyage.',
+  // edit-place
+  'help.guide.edit-place.title': 'Modifier un lieu',
+  'help.guide.edit-place.goal': 'Corrigez un nom, déplacez l’épingle, ajoutez un site web ou changez la catégorie.',
+  'help.guide.edit-place.step.1':
+    'Faites un clic droit sur la ligne et choisissez Modifier, ou ouvrez le lieu et cliquez sur Modifier dans ses détails.',
+  'help.guide.edit-place.step.2':
+    'Changez ce qu’il faut : Nom, Description, Notes, Adresse, Latitude et Longitude, Catégorie, Site web. Ouvert depuis un jour, le formulaire a aussi Notes pour ce jour ainsi que Début et Fin pour ce jour.',
+  'help.guide.edit-place.step.3': 'Cliquez sur Mettre à jour.',
+  'help.guide.edit-place.result':
+    'La modification s’applique partout où le lieu apparaît : la liste, la carte et chaque jour où il se trouve.',
+  'help.guide.edit-place.tip.1':
+    'Notes pour ce jour appartient au lieu sur ce seul jour ; Notes appartient au lieu lui-même.',
+  'help.guide.edit-place.tip.2':
+    'Une Fin avant le Début bloque Mettre à jour ; Chevauchement horaire avec : avertit seulement qu’une autre étape du jour a la même heure.',
+  // delete-place
+  'help.guide.delete-place.title': 'Supprimer un lieu',
+  'help.guide.delete-place.goal': 'Sortez un lieu du voyage pour de bon.',
+  'help.guide.delete-place.step.1':
+    'Faites un clic droit sur la ligne et choisissez Supprimer, ou cliquez sur Supprimer dans les détails du lieu.',
+  'help.guide.delete-place.step.2':
+    'Confirmez. Si une nuit a été réservée au lieu, ou si une réservation y est liée, la question dit ce qui part avec.',
+  'help.guide.delete-place.result':
+    'Le lieu a disparu de la liste, de la carte et de chaque jour ; Annuler dans la barre d’outils au-dessus des jours le ramène.',
+  'help.guide.delete-place.tip.1':
+    'Pour retirer un lieu d’un seul jour, utilisez plutôt Retirer du jour sur cette étape.',
+  'help.guide.delete-place.tip.2': 'Plusieurs lieux à la fois : la coche à côté des filtres démarre une sélection.',
+  // select-places
+  'help.guide.select-places.title': 'Modifier ou supprimer plusieurs lieux à la fois',
+  'help.guide.select-places.goal': 'Rangez la liste en une seule fois au lieu d’y aller lieu par lieu.',
+  'help.guide.select-places.step.1':
+    'Cliquez sur la coche au bout droit de la ligne de filtres. Les lignes reçoivent des cases et une barre avec les actions apparaît.',
+  'help.guide.select-places.step.2':
+    'Cochez les lignes, ou Tout sélectionner dans la barre ; la barre compte ce qui est sélectionné.',
+  'help.guide.select-places.step.3':
+    'Change category donne à tous une seule catégorie ; Enregistrer dans une collection les copie dans une de vos collections ; Supprimer la sélection les retire après une confirmation.',
+  'help.guide.select-places.step.4': 'Cliquez de nouveau sur la coche pour quitter la sélection.',
+  'help.guide.select-places.result':
+    'La modification s’applique à chaque lieu sélectionné ; une suppression peut être annulée depuis la barre d’outils au-dessus des jours.',
+  'help.guide.select-places.tip.1':
+    'Les filtres continuent de marcher pendant que vous sélectionnez : filtrez d’abord sur Non planifiés, puis Tout sélectionner attrape exactement ceux-là.',
+  'help.guide.select-places.tip.2':
+    'Marquer comme visité dans vos listes apparaît dans la barre quand le module Collections est actif : il coche les lieux dans les collections où ils sont enregistrés.',
+  // import-places-file
+  'help.guide.import-places-file.title': 'Importer des lieux depuis un fichier GPX, KML ou KMZ',
+  'help.guide.import-places-file.goal':
+    'Faites entrer ce que Google My Maps, Google Earth ou un traceur GPS a exporté.',
+  'help.guide.import-places-file.step.1':
+    'Cliquez sur Importer un fichier, ou déposez le fichier n’importe où sur la colonne des lieux.',
+  'help.guide.import-places-file.step.2':
+    'Choisissez le fichier ou glissez-le dans le cadre. Pour un GPX, cochez ce qui doit être importé : Points de passage, Itinéraires, Traces (avec géométrie) ; pour KML et KMZ, Points (Placemarks) et Chemins (LineStrings).',
+  'help.guide.import-places-file.step.3':
+    'Enrichir les lieux via Google recherche chaque lieu importé pour compléter les photos, l’adresse et les détails ; cela demande la clé Google.',
+  'help.guide.import-places-file.step.4':
+    'Cliquez sur Importer. Le résumé dit combien de lieux ont été créés et combien ont été ignorés parce qu’ils étaient déjà dans le voyage.',
+  'help.guide.import-places-file.result':
+    'Les lieux sont dans la liste ; une trace porte un repère d’itinéraire sur sa ligne, se dessine sur la carte et obtient son propre filtre Traces.',
+  'help.guide.import-places-file.tip.1':
+    'Un fichier trop gros est refusé avec la limite de taille ; exportez-le de nouveau sans les photos, ou coupez-le en plusieurs.',
+  'help.guide.import-places-file.tip.2':
+    'L’import peut être annulé en bloc depuis la barre d’outils au-dessus des jours.',
+  // import-places-list
+  'help.guide.import-places-list.title': 'Importer une liste partagée de Google Maps ou de Naver Maps',
+  'help.guide.import-places-list.goal': 'Transformez le lien d’une liste partagée en lieux.',
+  'help.guide.import-places-list.step.1': 'Cliquez sur Import de liste et choisissez Liste Google ou Liste Naver.',
+  'help.guide.import-places-list.step.2':
+    'Collez le lien partagé de la liste. Un lien d’itinéraire Google Maps marche aussi : ses étapes deviennent des lieux, dans l’ordre du trajet.',
+  'help.guide.import-places-list.step.3': 'Cliquez sur Importer.',
+  'help.guide.import-places-list.result':
+    'Chaque lieu de la liste est dans le voyage, nommé comme dans la liste ; les lieux déjà dans le voyage sont ignorés.',
+  'help.guide.import-places-list.tip.1':
+    'La liste doit être partagée publiquement ; le lien d’une liste privée n’importe rien.',
+  'help.guide.import-places-list.tip.2':
+    'Liste Naver a besoin du module Naver List Import, que l’admin active sous Extensions ; sans lui, le bouton affiche Liste Google.',
 };
 
 export default help;

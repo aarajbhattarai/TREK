@@ -1713,6 +1713,141 @@ const help: TranslationStrings = {
     '元に戻すの対象は計画です。場所の割り当て・取り外し・並び替え・移動、ルートの最適化、場所の削除、カテゴリの変更、インポートです。',
   'help.guide.undo-change.tip.2':
     '深さは1段階です。取り消せるのは最新の変更だけで、新しい変更があるとそれに置き換わります。',
+
+  // ── Screen: trip-places ───────────────────────────────────────────────────────────────
+  'help.ctx.trip-places.title': '場所',
+  'help.ctx.trip-places.summary':
+    '計画の右の列です。旅行のすべての場所が、計画済みかどうかにかかわらず、検索とフィルターとともに並びます。場所を取り込む方法も、手入力、ファイルから、共有リストからと、ここにあります。',
+  'help.ctx.trip-places.bullet.1':
+    '上の「場所／アクティビティを追加」は、入力または検索した場所のフォームを開きます。日が開いている間はボタンが「新しい場所」になり、その隣の「この日へ」は場所をそのままその日に作ります。',
+  'help.ctx.trip-places.bullet.2':
+    '「ファイルをインポート」は .gpx、.kml、.kmz ファイルを受け取ります。「リストをインポート」は共有された Google Maps または Naver Maps のリストを受け取ります。ファイルはこの列にドロップするだけでも構いません。',
+  'help.ctx.trip-places.bullet.3':
+    'ドロップダウンは「すべて」「未計画」「計画済み」を切り替え、トラックをインポートすると「トラック」も加わります。その下に検索、カテゴリのフィルター、最低評価の星があります。',
+  'help.ctx.trip-places.bullet.4':
+    '行には写真、名前、説明または住所が出ます。クリックすると場所の詳細が開き、日にドラッグすれば割り当てられ、右クリックすると「編集」「+ 日」「Webサイトを開く」「Google Maps」「コレクションに保存」「削除」が出ます。',
+  'help.ctx.trip-places.bullet.5':
+    '日が開いていると、未計画の行の末尾の + がその場所をその日に置き、「計画済み」はその日だけを並べます。「旅行全体を表示」でまた広げられます。',
+  'help.ctx.trip-places.bullet.6':
+    'フィルター行の右端のチェックは選択を始めます。複数の行が一度に新しいカテゴリを受け取り、コレクションに入り、または削除されます。',
+  // create-place
+  'help.guide.create-place.title': '場所を作る',
+  'help.guide.create-place.goal': '計画が知っておくべきことをすべて添えて、場所やアクティビティを手で追加します。',
+  'help.guide.create-place.step.1':
+    '場所の列の上にある「場所／アクティビティを追加」をクリックします（日が開いている間は「新しい場所」）。フォームが開きます。',
+  'help.guide.create-place.step.2':
+    '上の「場所を検索…」に場所を入力し、結果を選びます。「名前」「住所」「緯度」「経度」が埋まり、右の「場所の詳細」に写真、説明、その場所の情報が出ます。「目的の場所ではない？ Google で検索」は、検索をもう一度 Google 経由で実行します。',
+  'help.guide.create-place.step.3':
+    '「場所の詳細」で「写真を選ぶ」の下の写真をクリックすると、それが場所の画像になります。「このテキストを使う」は説明をフォームに引き継ぎます。',
+  'help.guide.create-place.step.4':
+    '項目を確認します。「名前」は必須です。「説明」と「メモ」はあなたのものです。「住所」「緯度」「経度」は検索から入るか、自分で入力します。「カテゴリ」は旅行のカテゴリから1つを選び、その隣の + はその場で新しいカテゴリを作ります。「ウェブサイト」にはリンクを入れます。',
+  'help.guide.create-place.step.5':
+    '「追加」をクリックします。同じ名前の場所がすでに旅行にある場合、フォームがそれを伝え、ボタンは「それでも追加」に変わります。',
+  'help.guide.create-place.result': '場所はリストと地図にあります。日に置かれるまでは「未計画」の下です。',
+  'help.guide.create-place.tip.1':
+    'フォームの下の「ファイル」と「Costs」は、場所に書類を添付するか、保存の直後にその支出の「Costs」エディターを開きます。',
+  'help.guide.create-place.tip.2':
+    'Google キーがない場合、検索は TREK のインデックスと OpenStreetMap を通ります。場所は見つかりますが、評価、営業時間、写真はありません。',
+  'help.guide.create-place.tip.3':
+    '場所は地図から始めることもできます。その地点を右クリックすると、座標と住所が入った状態でフォームが開きます。',
+  // place-to-open-day
+  'help.guide.place-to-open-day.title': '開いている日に直接場所を追加する',
+  'help.guide.place-to-open-day.goal': '2つ目の手順を省きます。場所を作るか選ぶかして、その日に一度で入れます。',
+  'help.guide.place-to-open-day.step.1':
+    '日程の列で日のヘッダーをクリックします。その日が開きます。カードが強調され、場所の列に「この日へ」ボタンが出ます。',
+  'help.guide.place-to-open-day.step.2':
+    '「この日へ」は「新しい場所」と同じフォームを開きますが、「追加」をクリックした瞬間に場所が開いている日に入ります。',
+  'help.guide.place-to-open-day.step.3':
+    'すでにある場所は、行の末尾の + で、または右クリックの「+ 日」で開いている日に入ります。',
+  'help.guide.place-to-open-day.result':
+    '場所はその日の下、最後に並びます。上下にドラッグして、あるべき位置へ動かしてください。',
+  'help.guide.place-to-open-day.tip.1':
+    '行を日にドラッグする方法もあり、その場で2つの立ち寄り先の間に落とすこともできます。',
+  'help.guide.place-to-open-day.tip.2': '日程の上のツールバーにある「元に戻す」は、この割り当てを取り消します。',
+  // filter-places
+  'help.guide.filter-places.title': 'リストで場所を見つける',
+  'help.guide.filter-places.goal': '探している場所まで列を絞り込みます。',
+  'help.guide.filter-places.step.1':
+    '上のドロップダウンは「すべて」「未計画」（まだどの日にもない）「計画済み」（日にある）「トラック」（インポートした GPX トラック）を切り替え、それぞれに件数が付きます。',
+  'help.guide.filter-places.step.2': '「場所を検索…」に入力します。入力するにつれてリストが絞られます。',
+  'help.guide.filter-places.step.3':
+    '「すべてのカテゴリ」は、カテゴリを1つ以上チェックする一覧を開きます。「カテゴリなし」もそこにあります。一番下の「フィルター解除」で元に戻ります。',
+  'help.guide.filter-places.step.4':
+    'その隣の星は最低評価を決めます。5+、4+ などは、あなたがそれ以上に評価した場所だけを表示します。',
+  'help.guide.filter-places.result': '行の上の数が、いくつの場所が一致するかを示します。フィルターは組み合わさります。',
+  'help.guide.filter-places.tip.1':
+    '日が開いていると、「計画済み」はその日だけを並べ、そう伝えます。「開いている日のみ表示中」と、その隣に「旅行全体を表示」です。',
+  'help.guide.filter-places.tip.2':
+    '地図も開いている日に絞られます。リストの「すべて」は変わらず旅行のすべての場所を示します。',
+  // edit-place
+  'help.guide.edit-place.title': '場所を変更する',
+  'help.guide.edit-place.goal': '名前を直す、ピンを動かす、ウェブサイトを足す、カテゴリを変える。',
+  'help.guide.edit-place.step.1':
+    '行を右クリックして「編集」を選ぶか、場所を開いてその詳細で「編集」をクリックします。',
+  'help.guide.edit-place.step.2':
+    '必要なところを変えます。「名前」「説明」「メモ」「住所」「緯度」「経度」「カテゴリ」「ウェブサイト」。日から開いた場合は、その日のための「この日のメモ」と「開始」「終了」もフォームにあります。',
+  'help.guide.edit-place.step.3': '「更新」をクリックします。',
+  'help.guide.edit-place.result':
+    '変更は、その場所が現れるすべてのところに及びます。リスト、地図、そしてその場所があるすべての日です。',
+  'help.guide.edit-place.tip.1': '「この日のメモ」はその1日の場所に属します。「メモ」は場所そのものに属します。',
+  'help.guide.edit-place.tip.2':
+    '「開始」より前の「終了」は「更新」を止めます。「時間が重複しています：」は、その日の別の立ち寄り先が同じ時間だと知らせるだけです。',
+  // delete-place
+  'help.guide.delete-place.title': '場所を削除する',
+  'help.guide.delete-place.goal': '場所を旅行から完全に取り除きます。',
+  'help.guide.delete-place.step.1': '行を右クリックして「削除」を選ぶか、場所の詳細で「削除」をクリックします。',
+  'help.guide.delete-place.step.2':
+    '確認します。その場所に宿泊が予約されている場合や、予約が結び付いている場合は、何が一緒に消えるかを質問が伝えます。',
+  'help.guide.delete-place.result':
+    '場所はリスト、地図、すべての日から消えます。日程の上のツールバーにある「元に戻す」が戻します。',
+  'help.guide.delete-place.tip.1':
+    '1日だけから場所を外すには、代わりにその立ち寄り先で「この日から削除」を使ってください。',
+  'help.guide.delete-place.tip.2': '複数の場所を一度に扱うなら、フィルターの隣のチェックが選択を始めます。',
+  // select-places
+  'help.guide.select-places.title': '複数の場所を一度に変更または削除する',
+  'help.guide.select-places.goal': '1つずつではなく、一度でリストを整えます。',
+  'help.guide.select-places.step.1':
+    'フィルター行の右端のチェックをクリックします。行にチェックボックスが付き、操作の並んだバーが現れます。',
+  'help.guide.select-places.step.2':
+    '行にチェックを付けるか、バーの「すべて選択」を使います。バーは選ばれた数を数えます。',
+  'help.guide.select-places.step.3':
+    '「Change category」はすべてに1つのカテゴリを与えます。「コレクションに保存」はそれらをあなたのコレクションの1つにコピーします。「選択を削除」は確認のあとそれらを取り除きます。',
+  'help.guide.select-places.step.4': 'もう一度チェックをクリックすると選択を抜けます。',
+  'help.guide.select-places.result': '変更は選んだすべての場所に及びます。削除は日程の上のツールバーから元に戻せます。',
+  'help.guide.select-places.tip.1':
+    '選択中もフィルターは効いています。先に「未計画」で絞れば、「すべて選択」はちょうどそれらだけを捕まえます。',
+  'help.guide.select-places.tip.2':
+    'コレクションのアドオンが有効だと、バーに「リストで訪問済みにする」が出ます。保存されているコレクションの中で、その場所にチェックを付けます。',
+  // import-places-file
+  'help.guide.import-places-file.title': 'GPX、KML、KMZ ファイルから場所をインポートする',
+  'help.guide.import-places-file.goal': 'Google My Maps、Google Earth、GPS トラッカーが書き出したものを取り込みます。',
+  'help.guide.import-places-file.step.1':
+    '「ファイルをインポート」をクリックするか、場所の列のどこかにファイルをドロップします。',
+  'help.guide.import-places-file.step.2':
+    'ファイルを選ぶか、枠にドラッグします。GPX では何をインポートするかにチェックを付けます。「ウェイポイント」「ルート」「トラック（経路付き）」です。KML と KMZ では「ポイント（プレースマーク）」と「パス（ライン）」です。',
+  'help.guide.import-places-file.step.3':
+    '「Googleで場所を補完」は、インポートした各場所を調べて写真、住所、詳細を埋めます。これには Google キーが必要です。',
+  'help.guide.import-places-file.step.4':
+    '「インポート」をクリックします。まとめに、いくつの場所が作られ、すでに旅行にあったためにいくつが飛ばされたかが出ます。',
+  'help.guide.import-places-file.result':
+    '場所はリストに入ります。トラックは行にルートの印が付き、地図に描かれ、専用の「トラック」フィルターを得ます。',
+  'help.guide.import-places-file.tip.1':
+    '大きすぎるファイルはサイズ上限とともに拒否されます。写真なしで書き出し直すか、分割してください。',
+  'help.guide.import-places-file.tip.2': 'インポートは日程の上のツールバーからまとめて元に戻せます。',
+  // import-places-list
+  'help.guide.import-places-list.title': '共有された Google Maps または Naver Maps のリストをインポートする',
+  'help.guide.import-places-list.goal': '共有リストのリンクを場所に変えます。',
+  'help.guide.import-places-list.step.1':
+    '「リストをインポート」をクリックし、「Google リスト」か「Naver リスト」を選びます。',
+  'help.guide.import-places-list.step.2':
+    'リストの共有リンクを貼り付けます。Google Maps の経路リンクでも構いません。その立ち寄り先が、走る順に場所になります。',
+  'help.guide.import-places-list.step.3': '「インポート」をクリックします。',
+  'help.guide.import-places-list.result':
+    'リストのすべての場所が旅行に入り、名前はリストのままです。すでに旅行にある場所は飛ばされます。',
+  'help.guide.import-places-list.tip.1':
+    'リストは公開で共有されている必要があります。非公開のリストのリンクは何もインポートしません。',
+  'help.guide.import-places-list.tip.2':
+    '「Naver リスト」には Naver List Import アドオンが必要で、管理者が「アドオン」で有効にします。なければボタンは「Google リスト」と表示されます。',
 };
 
 export default help;

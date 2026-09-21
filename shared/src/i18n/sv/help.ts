@@ -1733,6 +1733,141 @@ const help: TranslationStrings = {
     'Ångra täcker planen: tilldela, ta bort, ordna om och flytta platser, optimera en rutt, radera platser, kategoriändringar och importer.',
   'help.guide.undo-change.tip.2':
     'Den går ett steg djupt: bara den senaste ändringen kan tas tillbaka, och en ny ändring ersätter den.',
+
+  // ── Screen: trip-places ───────────────────────────────────────────────────────────────
+  'help.ctx.trip-places.title': 'Platser',
+  'help.ctx.trip-places.summary':
+    'Planens högra kolumn: resans alla platser, planerade eller inte, med sökning och filter, och sätten att få in platser, för hand, från en fil eller från en delad lista.',
+  'help.ctx.trip-places.bullet.1':
+    'Lägg till plats/aktivitet högst upp öppnar formuläret för en plats du skriver in eller söker fram. Medan en dag är öppen står det Ny plats på knappen, och Till dagen bredvid den skapar platsen direkt på den dagen.',
+  'help.ctx.trip-places.bullet.2':
+    'Importera fil tar .gpx-, .kml- och .kmz-filer; Importera lista tar en delad lista från Google Maps eller Naver Maps. En fil kan också bara släppas på kolumnen.',
+  'help.ctx.trip-places.bullet.3':
+    'Rullgardinsmenyn växlar mellan Alla, Oplanerat, Planerat och, när ett spår har importerats, Spår; under den sitter sökningen, kategorifiltret och stjärnan för ett minsta betyg.',
+  'help.ctx.trip-places.bullet.4':
+    'En rad visar bild, namn och beskrivning eller adress. Klicka på den för platsens detaljer, dra den till en dag, eller högerklicka den för Redigera, + Dag, Öppna hemsida, Google Maps, Spara i samling och Ta bort.',
+  'help.ctx.trip-places.bullet.5':
+    'Med en dag öppen lägger ett + i slutet av en oplanerad rad platsen på den dagen, och Planerat listar bara den dagen, med Visa hela resan för att vidga igen.',
+  'help.ctx.trip-places.bullet.6':
+    'Bocken längst till höger i filterraden startar en markering: flera rader på en gång får en ny kategori, hamnar i en samling eller tas bort.',
+  // create-place
+  'help.guide.create-place.title': 'Skapa en plats',
+  'help.guide.create-place.goal': 'Lägg till en plats eller aktivitet för hand, med allt planen behöver veta om den.',
+  'help.guide.create-place.step.1':
+    'Klicka på Lägg till plats/aktivitet högst upp i platskolumnen (Ny plats medan en dag är öppen). Formuläret öppnas.',
+  'help.guide.create-place.step.2':
+    'Skriv in platsen i Sök efter platser... högst upp och välj ett resultat. Namn, Adress, Latitud och Longitud fylls i, och Platsdetaljer till höger visar bilder, en beskrivning och fakta om den. Inte rätt plats? Sök på Google i stället kör sökningen igen via Google.',
+  'help.guide.create-place.step.3':
+    'I Platsdetaljer blir en bild platsens bild när du klickar på den under Välj en bild; Använd den här texten tar över beskrivningen till formuläret.',
+  'help.guide.create-place.step.4':
+    'Kontrollera fälten: Namn krävs; Beskrivning och Noteringar är dina; Adress, Latitud och Longitud kommer från sökningen eller skrivs in; Kategori väljer en av resans kategorier, och + bredvid skapar en ny på stället; Hemsida tar länken.',
+  'help.guide.create-place.step.5':
+    'Klicka på Lägg till. Om en plats med samma namn redan finns i resan säger formuläret det och knappen blir Lägg till ändå.',
+  'help.guide.create-place.result': 'Platsen finns i listan och på kartan, under Oplanerat tills den läggs på en dag.',
+  'help.guide.create-place.tip.1':
+    'Filer och Kostnader längst ner i formuläret fäster ett dokument vid platsen, eller öppnar Kostnader-redigeraren för dess utgift direkt efter att du sparat.',
+  'help.guide.create-place.tip.2':
+    'Utan en Google-nyckel går sökningen via TREK-indexet och OpenStreetMap: den hittar platsen, bara utan betyg, öppettider och foton.',
+  'help.guide.create-place.tip.3':
+    'En plats kan också börja på kartan: högerklicka stället, så öppnas formuläret med koordinater och adress ifyllda.',
+  // place-to-open-day
+  'help.guide.place-to-open-day.title': 'Lägg till en plats direkt på den öppna dagen',
+  'help.guide.place-to-open-day.goal':
+    'Hoppa över andra steget: skapa eller välj platsen och få den på dagen med en gång.',
+  'help.guide.place-to-open-day.step.1':
+    'Klicka på en dags rubrik i dagkolumnen. Dagen är öppen: dess kort är markerat, och platskolumnen får knappen Till dagen.',
+  'help.guide.place-to-open-day.step.2':
+    'Till dagen öppnar samma formulär som Ny plats, bara att platsen hamnar på den öppna dagen i samma stund som du klickar på Lägg till.',
+  'help.guide.place-to-open-day.step.3':
+    'En plats som redan finns hamnar på den öppna dagen med + i slutet av sin rad, eller via högerklick, + Dag.',
+  'help.guide.place-to-open-day.result':
+    'Platsen listas under dagen, sist; dra den uppåt eller nedåt dit den hör hemma.',
+  'help.guide.place-to-open-day.tip.1':
+    'Att dra en rad till en dag fungerar lika bra, och den kan släppa platsen mellan två stopp med en gång.',
+  'help.guide.place-to-open-day.tip.2': 'Ångra i verktygsraden ovanför dagarna tar tillbaka tilldelningen.',
+  // filter-places
+  'help.guide.filter-places.title': 'Hitta en plats i listan',
+  'help.guide.filter-places.goal': 'Smalna av kolumnen till de platser du är ute efter.',
+  'help.guide.filter-places.step.1':
+    'Rullgardinsmenyn högst upp växlar mellan Alla, Oplanerat (inte på någon dag ännu), Planerat (på en dag) och Spår (importerade GPX-spår), var och en med sitt antal.',
+  'help.guide.filter-places.step.2': 'Skriv i Sök efter platser...; listan smalnar av medan du skriver.',
+  'help.guide.filter-places.step.3':
+    'Alla kategorier öppnar en lista där du bockar för en eller flera kategorier, Ingen kategori bland dem; Rensa filter längst ner nollställer den.',
+  'help.guide.filter-places.step.4':
+    'Stjärnan bredvid sätter ett minsta betyg: 5+, 4+ och så vidare visar bara platser du satt minst så högt betyg på.',
+  'help.guide.filter-places.result': 'Antalet ovanför raderna säger hur många platser som stämmer; filtren kombineras.',
+  'help.guide.filter-places.tip.1':
+    'Med en dag öppen listar Planerat bara den dagen och säger det: Visar bara den öppna dagen, med Visa hela resan bredvid.',
+  'help.guide.filter-places.tip.2':
+    'Kartan smalnar av till den öppna dagen också; Alla i listan visar fortfarande resans alla platser.',
+  // edit-place
+  'help.guide.edit-place.title': 'Ändra en plats',
+  'help.guide.edit-place.goal': 'Rätta ett namn, flytta nålen, lägg till en hemsida eller byt kategori.',
+  'help.guide.edit-place.step.1':
+    'Högerklicka raden och välj Redigera, eller öppna platsen och klicka på Redigera i dess detaljer.',
+  'help.guide.edit-place.step.2':
+    'Ändra det du behöver: Namn, Beskrivning, Noteringar, Adress, Latitud och Longitud, Kategori, Hemsida. Öppnat från en dag har formuläret också Anteckningar för denna dag och Börjar och Slutar för den dagen.',
+  'help.guide.edit-place.step.3': 'Klicka på Uppdatera.',
+  'help.guide.edit-place.result':
+    'Ändringen slår igenom överallt där platsen syns: i listan, på kartan och på varje dag den ligger på.',
+  'help.guide.edit-place.tip.1':
+    'Anteckningar för denna dag hör till platsen just den dagen; Noteringar hör till platsen själv.',
+  'help.guide.edit-place.tip.2':
+    'Ett Slutar före Börjar blockerar Uppdatera; Tidsöverlappning med: varnar bara för att ett annat stopp på dagen har samma tid.',
+  // delete-place
+  'help.guide.delete-place.title': 'Ta bort en plats',
+  'help.guide.delete-place.goal': 'Ta ut en plats ur resan för gott.',
+  'help.guide.delete-place.step.1': 'Högerklicka raden och välj Ta bort, eller klicka på Ta bort i platsens detaljer.',
+  'help.guide.delete-place.step.2':
+    'Bekräfta. Om en natt var bokad på platsen, eller en bokning är knuten till den, säger frågan vad som följer med.',
+  'help.guide.delete-place.result':
+    'Platsen är borta från listan, kartan och varje dag; Ångra i verktygsraden ovanför dagarna tar tillbaka den.',
+  'help.guide.delete-place.tip.1':
+    'För att ta bort en plats från bara en dag, använd Ta bort från dag på det stoppet i stället.',
+  'help.guide.delete-place.tip.2': 'Flera platser på en gång: bocken bredvid filtren startar en markering.',
+  // select-places
+  'help.guide.select-places.title': 'Ändra eller ta bort flera platser på en gång',
+  'help.guide.select-places.goal': 'Städa listan i ett svep i stället för plats för plats.',
+  'help.guide.select-places.step.1':
+    'Klicka på bocken längst till höger i filterraden. Raderna får kryssrutor och en rad med åtgärderna dyker upp.',
+  'help.guide.select-places.step.2': 'Bocka för raderna, eller Välj alla i raden; raden räknar det som är markerat.',
+  'help.guide.select-places.step.3':
+    'Change category ger dem alla en kategori; Spara i samling kopierar dem till en av dina samlingar; Ta bort det markerade tar bort dem efter en bekräftelse.',
+  'help.guide.select-places.step.4': 'Klicka på bocken igen för att lämna markeringen.',
+  'help.guide.select-places.result':
+    'Ändringen gäller varje markerad plats; en borttagning kan ångras från verktygsraden ovanför dagarna.',
+  'help.guide.select-places.tip.1':
+    'Filtren fortsätter att fungera medan du markerar: filtrera till Oplanerat först, då fångar Välj alla precis dem.',
+  'help.guide.select-places.tip.2':
+    'Markera som besökt i dina listor dyker upp i raden när tillägget Samlingar är på: det bockar av platserna i de samlingar de är sparade i.',
+  // import-places-file
+  'help.guide.import-places-file.title': 'Importera platser från en GPX-, KML- eller KMZ-fil',
+  'help.guide.import-places-file.goal': 'Ta in det som Google My Maps, Google Earth eller en GPS-tracker exporterade.',
+  'help.guide.import-places-file.step.1': 'Klicka på Importera fil, eller släpp filen var som helst på platskolumnen.',
+  'help.guide.import-places-file.step.2':
+    'Välj filen eller dra in den i rutan. För en GPX, bocka för vad som ska importeras: Vägpunkter, Rutter, Spår (med spårgeometri); för KML och KMZ, Punkter (platsmarkeringar) och Stigar (LineStrings).',
+  'help.guide.import-places-file.step.3':
+    'Berika platser via Google slår upp varje importerad plats för att fylla i foton, adress och detaljer; det kräver Google-nyckeln.',
+  'help.guide.import-places-file.step.4':
+    'Klicka på Importera. Sammanfattningen säger hur många platser som skapades och hur många som hoppades över för att de redan fanns i resan.',
+  'help.guide.import-places-file.result':
+    'Platserna finns i listan; ett spår bär en ruttmarkering på sin rad, ritas ut på kartan och får sitt eget Spår-filter.',
+  'help.guide.import-places-file.tip.1':
+    'En fil som är för stor avvisas med storleksgränsen; exportera den igen utan foton, eller dela upp den.',
+  'help.guide.import-places-file.tip.2': 'Importen kan ångras som helhet från verktygsraden ovanför dagarna.',
+  // import-places-list
+  'help.guide.import-places-list.title': 'Importera en delad lista från Google Maps eller Naver Maps',
+  'help.guide.import-places-list.goal': 'Gör om en delad listlänk till platser.',
+  'help.guide.import-places-list.step.1': 'Klicka på Importera lista och välj Google-lista eller Naver-lista.',
+  'help.guide.import-places-list.step.2':
+    'Klistra in listans delade länk. En vägbeskrivningslänk från Google Maps fungerar också: dess stopp blir platser, i körordning.',
+  'help.guide.import-places-list.step.3': 'Klicka på Importera.',
+  'help.guide.import-places-list.result':
+    'Varje plats i listan finns i resan, med namnet från listan; platser som redan finns i resan hoppas över.',
+  'help.guide.import-places-list.tip.1':
+    'Listan måste vara delad offentligt; länken till en privat lista importerar ingenting.',
+  'help.guide.import-places-list.tip.2':
+    'Naver-lista kräver tillägget Naver List Import, som administratören slår på under Tillägg; utan det står det Google-lista på knappen.',
 };
 
 export default help;

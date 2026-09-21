@@ -1747,6 +1747,145 @@ const help: TranslationStrings = {
     'Hoàn tác bao gồm kế hoạch: gán, gỡ, sắp xếp lại và di chuyển địa điểm, tối ưu hóa tuyến đường, xóa địa điểm, đổi danh mục và nhập dữ liệu.',
   'help.guide.undo-change.tip.2':
     'Chỉ sâu một bước: chỉ thay đổi gần nhất mới lấy lại được, và một thay đổi mới sẽ thay thế nó.',
+
+  // ── Screen: trip-places ───────────────────────────────────────────────────────────────
+  'help.ctx.trip-places.title': 'Địa điểm',
+  'help.ctx.trip-places.summary':
+    'Cột bên phải của kế hoạch: mọi địa điểm của chuyến đi, đã lên kế hoạch hay chưa, cùng tìm kiếm và bộ lọc, và các cách đưa địa điểm vào: bằng tay, từ một tập tin hoặc từ một danh sách được chia sẻ.',
+  'help.ctx.trip-places.bullet.1':
+    '“Thêm địa điểm/Hoạt động” ở trên cùng mở biểu mẫu cho một địa điểm bạn gõ vào hoặc tìm kiếm. Khi một ngày đang mở, nút đó ghi “Địa điểm mới”, và “Vào ngày” bên cạnh tạo địa điểm thẳng vào ngày đó.',
+  'help.ctx.trip-places.bullet.2':
+    '“Nhập tập tin” nhận các tập tin .gpx, .kml và .kmz; “Nhập danh sách” nhận một danh sách Google Maps hoặc Naver Maps được chia sẻ. Bạn cũng có thể chỉ cần thả tập tin lên cột này.',
+  'help.ctx.trip-places.bullet.3':
+    'Danh sách thả xuống chuyển giữa “Tất cả”, “Không có kế hoạch”, “Có kế hoạch” và, khi đã nhập một đường đi, “Bài hát”; bên dưới nó là ô tìm kiếm, bộ lọc danh mục và ngôi sao cho mức đánh giá tối thiểu.',
+  'help.ctx.trip-places.bullet.4':
+    'Một hàng hiển thị hình ảnh, tên và mô tả hoặc địa chỉ. Nhấp vào đó để xem chi tiết địa điểm, kéo nó lên một ngày, hoặc nhấp chuột phải để có “Chỉnh sửa”, “+ Ngày”, “Mở trang web”, “Google Maps”, “Lưu vào Bộ sưu tập” và “Xóa bỏ”.',
+  'help.ctx.trip-places.bullet.5':
+    'Khi một ngày đang mở, dấu + ở cuối một hàng chưa có kế hoạch sẽ đặt địa điểm vào ngày đó, và “Có kế hoạch” chỉ liệt kê ngày đó, với “Hiện toàn bộ chuyến đi” để mở rộng trở lại.',
+  'help.ctx.trip-places.bullet.6':
+    'Dấu tích ở đầu bên phải của hàng bộ lọc bắt đầu một lượt chọn: nhiều hàng cùng lúc nhận một danh mục mới, vào một bộ sưu tập hoặc bị xóa.',
+  // create-place
+  'help.guide.create-place.title': 'Tạo một địa điểm',
+  'help.guide.create-place.goal': 'Thêm một địa điểm hoặc hoạt động bằng tay, với mọi thứ mà kế hoạch cần biết về nó.',
+  'help.guide.create-place.step.1':
+    'Nhấp “Thêm địa điểm/Hoạt động” ở đầu cột địa điểm (“Địa điểm mới” khi một ngày đang mở). Biểu mẫu mở ra.',
+  'help.guide.create-place.step.2':
+    'Gõ địa điểm vào “Tìm kiếm địa điểm...” ở trên cùng và chọn một kết quả. “Tên”, “Địa chỉ”, “Vĩ độ” và “Kinh độ” được điền, và “Chi tiết địa điểm” ở bên phải hiển thị hình ảnh, một mô tả và thông tin về nó. “Không đúng địa điểm? Tìm trên Google” chạy lại tìm kiếm qua Google.',
+  'help.guide.create-place.step.3':
+    'Trong “Chi tiết địa điểm”, một cú nhấp vào hình ảnh dưới “Chọn một hình ảnh” biến nó thành ảnh của địa điểm; “Dùng văn bản này” đưa phần mô tả sang biểu mẫu.',
+  'help.guide.create-place.step.4':
+    'Kiểm tra các ô: “Tên” là bắt buộc; “Miêu tả” và “Ghi chú” là của bạn; “Địa chỉ”, “Vĩ độ” và “Kinh độ” đến từ tìm kiếm hoặc do bạn gõ; “Loại” chọn một trong các danh mục của chuyến đi, và dấu + bên cạnh tạo ngay một danh mục mới; “Trang web” nhận liên kết.',
+  'help.guide.create-place.step.5':
+    'Nhấp “Thêm”. Nếu một địa điểm cùng tên đã có trong chuyến đi, biểu mẫu sẽ báo và nút đổi thành “Vẫn thêm”.',
+  'help.guide.create-place.result':
+    'Địa điểm đã ở trong danh sách và trên bản đồ, dưới “Không có kế hoạch” cho đến khi được đặt vào một ngày.',
+  'help.guide.create-place.tip.1':
+    '“Tập tin” và “Chi phí” ở cuối biểu mẫu đính kèm một tài liệu vào địa điểm, hoặc mở trình soạn “Chi phí” cho khoản chi của nó ngay sau khi lưu.',
+  'help.guide.create-place.tip.2':
+    'Không có khóa Google, tìm kiếm chạy qua chỉ mục TREK và OpenStreetMap: nó vẫn tìm ra địa điểm, chỉ là không có đánh giá, giờ mở cửa và ảnh.',
+  'help.guide.create-place.tip.3':
+    'Một địa điểm cũng có thể bắt đầu từ bản đồ: nhấp chuột phải vào điểm đó, và biểu mẫu mở ra với tọa độ và địa chỉ đã điền sẵn.',
+  // place-to-open-day
+  'help.guide.place-to-open-day.title': 'Thêm địa điểm thẳng vào ngày đang mở',
+  'help.guide.place-to-open-day.goal':
+    'Bỏ qua bước thứ hai: tạo hoặc chọn địa điểm và có nó trên ngày đó ngay lập tức.',
+  'help.guide.place-to-open-day.step.1':
+    'Nhấp vào tiêu đề của một ngày ở cột các ngày. Ngày đó đang mở: thẻ của nó được làm nổi, và cột địa điểm có thêm nút “Vào ngày”.',
+  'help.guide.place-to-open-day.step.2':
+    '“Vào ngày” mở đúng biểu mẫu như “Địa điểm mới”, chỉ khác là địa điểm rơi vào ngày đang mở ngay khi bạn nhấp “Thêm”.',
+  'help.guide.place-to-open-day.step.3':
+    'Một địa điểm đã có sẵn sẽ vào ngày đang mở bằng dấu + ở cuối hàng của nó, hoặc bằng nhấp chuột phải rồi “+ Ngày”.',
+  'help.guide.place-to-open-day.result':
+    'Địa điểm được liệt kê dưới ngày đó, ở cuối; kéo lên hoặc xuống tới chỗ nó thuộc về.',
+  'help.guide.place-to-open-day.tip.1':
+    'Kéo một hàng lên một ngày cũng được, và nó có thể thả địa điểm vào giữa hai điểm dừng ngay lập tức.',
+  'help.guide.place-to-open-day.tip.2': '“Hoàn tác” trên thanh công cụ phía trên các ngày lấy lại việc gán đó.',
+  // filter-places
+  'help.guide.filter-places.title': 'Tìm một địa điểm trong danh sách',
+  'help.guide.filter-places.goal': 'Thu hẹp cột lại còn những địa điểm bạn đang tìm.',
+  'help.guide.filter-places.step.1':
+    'Danh sách thả xuống ở trên cùng chuyển giữa “Tất cả”, “Không có kế hoạch” (chưa ở ngày nào), “Có kế hoạch” (đã ở một ngày) và “Bài hát” (các đường GPX đã nhập), mỗi mục kèm số lượng.',
+  'help.guide.filter-places.step.2': 'Gõ vào “Tìm kiếm địa điểm...”; danh sách thu hẹp lại khi bạn gõ.',
+  'help.guide.filter-places.step.3':
+    '“Tất cả danh mục” mở một danh sách để tích một hoặc nhiều danh mục, trong đó có “Không có danh mục”; “Xóa bộ lọc” ở dưới cùng đặt lại nó.',
+  'help.guide.filter-places.step.4':
+    'Ngôi sao bên cạnh đặt mức đánh giá tối thiểu: 5+, 4+ và cứ thế, chỉ hiện những địa điểm bạn chấm ít nhất từng đó.',
+  'help.guide.filter-places.result':
+    'Con số phía trên các hàng cho biết có bao nhiêu địa điểm khớp; các bộ lọc kết hợp với nhau.',
+  'help.guide.filter-places.tip.1':
+    'Khi một ngày đang mở, “Có kế hoạch” chỉ liệt kê ngày đó và nói rõ điều đó: “Chỉ hiển thị ngày đang mở”, với “Hiện toàn bộ chuyến đi” bên cạnh.',
+  'help.guide.filter-places.tip.2':
+    'Bản đồ cũng thu hẹp về ngày đang mở; “Tất cả” trong danh sách vẫn hiện mọi địa điểm của chuyến đi.',
+  // edit-place
+  'help.guide.edit-place.title': 'Thay đổi một địa điểm',
+  'help.guide.edit-place.goal': 'Sửa một cái tên, dời ghim, thêm một trang web hoặc đổi danh mục.',
+  'help.guide.edit-place.step.1':
+    'Nhấp chuột phải vào hàng và chọn “Chỉnh sửa”, hoặc mở địa điểm và nhấp “Chỉnh sửa” trong phần chi tiết của nó.',
+  'help.guide.edit-place.step.2':
+    'Đổi những gì bạn cần: “Tên”, “Miêu tả”, “Ghi chú”, “Địa chỉ”, “Vĩ độ” và “Kinh độ”, “Loại”, “Trang web”. Khi mở từ một ngày, biểu mẫu còn có “Ghi chú cho ngày này” cùng “Bắt đầu” và “Kết thúc” cho ngày đó.',
+  'help.guide.edit-place.step.3': 'Nhấp “Cập nhật”.',
+  'help.guide.edit-place.result': 'Thay đổi áp dụng ở mọi nơi địa điểm xuất hiện: danh sách, bản đồ và mọi ngày có nó.',
+  'help.guide.edit-place.tip.1':
+    '“Ghi chú cho ngày này” thuộc về địa điểm trong đúng ngày đó; “Ghi chú” thuộc về chính địa điểm.',
+  'help.guide.edit-place.tip.2':
+    '“Kết thúc” trước “Bắt đầu” sẽ chặn “Cập nhật”; “Thời gian trùng lặp với:” chỉ cảnh báo rằng một điểm dừng khác trong ngày có cùng giờ.',
+  // delete-place
+  'help.guide.delete-place.title': 'Xóa một địa điểm',
+  'help.guide.delete-place.goal': 'Đưa một địa điểm ra khỏi chuyến đi vĩnh viễn.',
+  'help.guide.delete-place.step.1':
+    'Nhấp chuột phải vào hàng và chọn “Xóa bỏ”, hoặc nhấp “Xóa bỏ” trong phần chi tiết của địa điểm.',
+  'help.guide.delete-place.step.2':
+    'Xác nhận. Nếu có một đêm đã đặt tại địa điểm đó, hoặc có một đặt chỗ liên kết với nó, câu hỏi sẽ nói rõ những gì mất theo.',
+  'help.guide.delete-place.result':
+    'Địa điểm biến mất khỏi danh sách, bản đồ và mọi ngày; “Hoàn tác” trên thanh công cụ phía trên các ngày mang nó trở lại.',
+  'help.guide.delete-place.tip.1':
+    'Để bỏ một địa điểm chỉ khỏi một ngày, thay vào đó hãy dùng “Xóa khỏi ngày” trên điểm dừng đó.',
+  'help.guide.delete-place.tip.2': 'Nhiều địa điểm cùng lúc: dấu tích cạnh các bộ lọc bắt đầu một lượt chọn.',
+  // select-places
+  'help.guide.select-places.title': 'Thay đổi hoặc xóa nhiều địa điểm cùng lúc',
+  'help.guide.select-places.goal': 'Dọn danh sách trong một lần thay vì từng địa điểm một.',
+  'help.guide.select-places.step.1':
+    'Nhấp dấu tích ở đầu bên phải của hàng bộ lọc. Các hàng có thêm ô đánh dấu và một thanh với các thao tác hiện ra.',
+  'help.guide.select-places.step.2':
+    'Tích các hàng, hoặc “Chọn tất cả” trên thanh đó; thanh đó đếm những gì đang được chọn.',
+  'help.guide.select-places.step.3':
+    '“Change category” cho tất cả chúng một danh mục; “Lưu vào Bộ sưu tập” sao chép chúng vào một bộ sưu tập của bạn; “Xóa đã chọn” gỡ chúng sau một lần xác nhận.',
+  'help.guide.select-places.step.4': 'Nhấp lại dấu tích để rời khỏi lượt chọn.',
+  'help.guide.select-places.result':
+    'Thay đổi áp dụng cho mọi địa điểm được chọn; một lần xóa có thể hoàn tác từ thanh công cụ phía trên các ngày.',
+  'help.guide.select-places.tip.1':
+    'Các bộ lọc vẫn hoạt động trong khi bạn chọn: lọc về “Không có kế hoạch” trước, rồi “Chọn tất cả” sẽ bắt đúng những cái đó.',
+  'help.guide.select-places.tip.2':
+    '“Đánh dấu đã đến trong danh sách của bạn” xuất hiện trên thanh khi tiện ích Bộ sưu tập được bật: nó đánh dấu các địa điểm trong những bộ sưu tập mà chúng được lưu vào.',
+  // import-places-file
+  'help.guide.import-places-file.title': 'Nhập địa điểm từ tập tin GPX, KML hoặc KMZ',
+  'help.guide.import-places-file.goal':
+    'Đưa vào những gì Google My Maps, Google Earth hoặc một thiết bị theo dõi GPS đã xuất ra.',
+  'help.guide.import-places-file.step.1': 'Nhấp “Nhập tập tin”, hoặc thả tập tin vào bất cứ chỗ nào trên cột địa điểm.',
+  'help.guide.import-places-file.step.2':
+    'Chọn tập tin hoặc kéo nó vào ô. Với GPX, tích những gì cần nhập: “Điểm tham chiếu”, “Tuyến đường”, “Đường đi (có hình dạng đường dẫn)”; với KML và KMZ, “Điểm (Dấu vị trí)” và “Đường dẫn (LineStrings)”.',
+  'help.guide.import-places-file.step.3':
+    '“Làm phong phú các địa điểm thông qua Google” tra cứu từng địa điểm đã nhập để điền ảnh, địa chỉ và chi tiết; nó cần khóa Google.',
+  'help.guide.import-places-file.step.4':
+    'Nhấp “Nhập”. Phần tóm tắt cho biết bao nhiêu địa điểm đã được tạo và bao nhiêu bị bỏ qua vì đã có trong chuyến đi.',
+  'help.guide.import-places-file.result':
+    'Các địa điểm đã ở trong danh sách; một đường đi mang dấu tuyến trên hàng của nó, được vẽ trên bản đồ và có bộ lọc “Bài hát” riêng.',
+  'help.guide.import-places-file.tip.1':
+    'Tập tin quá lớn sẽ bị từ chối kèm giới hạn dung lượng; hãy xuất lại mà không có ảnh, hoặc chia nhỏ nó.',
+  'help.guide.import-places-file.tip.2': 'Toàn bộ lần nhập có thể hoàn tác từ thanh công cụ phía trên các ngày.',
+  // import-places-list
+  'help.guide.import-places-list.title': 'Nhập một danh sách Google Maps hoặc Naver Maps được chia sẻ',
+  'help.guide.import-places-list.goal': 'Biến liên kết của một danh sách được chia sẻ thành các địa điểm.',
+  'help.guide.import-places-list.step.1': 'Nhấp “Nhập danh sách” và chọn “Danh sách Google” hoặc “Danh sách Naver”.',
+  'help.guide.import-places-list.step.2':
+    'Dán liên kết chia sẻ của danh sách. Liên kết chỉ đường của Google Maps cũng được: các điểm dừng của nó trở thành địa điểm, theo thứ tự lái xe.',
+  'help.guide.import-places-list.step.3': 'Nhấp “Nhập”.',
+  'help.guide.import-places-list.result':
+    'Mọi địa điểm của danh sách đều có trong chuyến đi, với tên như trong danh sách; những địa điểm đã có trong chuyến đi bị bỏ qua.',
+  'help.guide.import-places-list.tip.1':
+    'Danh sách phải được chia sẻ công khai; liên kết của một danh sách riêng tư không nhập được gì.',
+  'help.guide.import-places-list.tip.2':
+    '“Danh sách Naver” cần tiện ích Naver List Import, được quản trị viên bật dưới “Tiện ích bổ sung”; không có nó, nút sẽ ghi “Danh sách Google”.',
 };
 
 export default help;

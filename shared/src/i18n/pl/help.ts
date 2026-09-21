@@ -1758,6 +1758,141 @@ const help: TranslationStrings = {
     'Cofanie obejmuje plan: przypisywanie, usuwanie, zmianę kolejności i przenoszenie miejsc, optymalizację trasy, kasowanie miejsc, zmiany kategorii i importy.',
   'help.guide.undo-change.tip.2':
     'Sięga jeden krok wstecz: cofnąć można tylko ostatnią zmianę, a nowa zmiana ją zastępuje.',
+
+  // ── Screen: trip-places ───────────────────────────────────────────────────────────────
+  'help.ctx.trip-places.title': 'Miejsca',
+  'help.ctx.trip-places.summary':
+    'Prawa kolumna planu: każde miejsce podróży, zaplanowane czy nie, z wyszukiwaniem i filtrami, oraz sposoby na wprowadzenie miejsc, ręcznie, z pliku albo z udostępnionej listy.',
+  'help.ctx.trip-places.bullet.1':
+    'Dodaj miejsce/atrakcję u góry otwiera formularz miejsca, które wpiszesz lub wyszukasz. Gdy dzień jest otwarty, przycisk brzmi Nowe miejsce, a Do dnia obok niego tworzy miejsce od razu w tym dniu.',
+  'help.ctx.trip-places.bullet.2':
+    'Importuj plik przyjmuje pliki .gpx, .kml i .kmz; Import listy przyjmuje udostępnioną listę z Google Maps lub Naver Maps. Plik można też po prostu upuścić na kolumnę.',
+  'help.ctx.trip-places.bullet.3':
+    'Lista rozwijana przełącza między Wszystkie, Niezaplanowane, Zaplanowane i, gdy trasa została zaimportowana, Trasy; poniżej siedzą wyszukiwanie, filtr kategorii i gwiazdka dla minimalnej oceny.',
+  'help.ctx.trip-places.bullet.4':
+    'Wiersz pokazuje zdjęcie, nazwę i opis albo adres. Kliknij go, by zobaczyć szczegóły miejsca, przeciągnij go na dzień albo kliknij prawym przyciskiem po Edytuj, + Dzień, Otwórz stronę internetową, Google Maps, Zapisz w kolekcji i Usuń.',
+  'help.ctx.trip-places.bullet.5':
+    'Gdy dzień jest otwarty, + na końcu niezaplanowanego wiersza umieszcza miejsce w tym dniu, a Zaplanowane wypisują tylko ten dzień, z Pokaż całą podróż, by znów poszerzyć.',
+  'help.ctx.trip-places.bullet.6':
+    'Ptaszek na prawym końcu wiersza filtrów uruchamia zaznaczanie: kilka wierszy naraz dostaje nową kategorię, trafia do kolekcji albo zostaje usuniętych.',
+  // create-place
+  'help.guide.create-place.title': 'Utworzyć miejsce',
+  'help.guide.create-place.goal': 'Dodaj miejsce lub atrakcję ręcznie, ze wszystkim, co plan musi o nim wiedzieć.',
+  'help.guide.create-place.step.1':
+    'Kliknij Dodaj miejsce/atrakcję u góry kolumny miejsc (Nowe miejsce, gdy dzień jest otwarty). Otwiera się formularz.',
+  'help.guide.create-place.step.2':
+    'Wpisz miejsce u góry w Szukaj miejsc... i wybierz wynik. Nazwa, Adres, Szerokość i Długość wypełniają się, a Szczegóły miejsca po prawej pokazują zdjęcia, opis i fakty o nim. To nie to miejsce? Poszukaj w Google uruchamia wyszukiwanie jeszcze raz przez Google.',
+  'help.guide.create-place.step.3':
+    'W Szczegółach miejsca kliknięcie zdjęcia pod Wybierz zdjęcie ustawia obrazek miejsca; Użyj tego tekstu przenosi opis do formularza.',
+  'help.guide.create-place.step.4':
+    'Sprawdź pola: Nazwa jest wymagana; Opis i Notatki są Twoje; Adres, Szerokość i Długość pochodzą z wyszukiwania albo są wpisane; Kategoria wybiera jedną z kategorii podróży, a + obok niej tworzy nową na miejscu; Strona internetowa przyjmuje link.',
+  'help.guide.create-place.step.5':
+    'Kliknij Dodaj. Jeśli miejsce o tej samej nazwie już jest w podróży, formularz to mówi, a przycisk zmienia się w Dodaj mimo to.',
+  'help.guide.create-place.result': 'Miejsce jest na liście i na mapie, pod Niezaplanowane, dopóki nie trafi do dnia.',
+  'help.guide.create-place.tip.1':
+    'Pliki i Costs na dole formularza dołączają do miejsca dokument albo otwierają edytor Costs dla jego wydatku zaraz po zapisaniu.',
+  'help.guide.create-place.tip.2':
+    'Bez klucza Google wyszukiwanie idzie przez indeks TREK i OpenStreetMap: znajduje miejsce, tylko bez ocen, godzin otwarcia i zdjęć.',
+  'help.guide.create-place.tip.3':
+    'Miejsce może zacząć się też na mapie: kliknij punkt prawym przyciskiem, a formularz otworzy się z wypełnionymi współrzędnymi i adresem.',
+  // place-to-open-day
+  'help.guide.place-to-open-day.title': 'Dodać miejsce prosto do otwartego dnia',
+  'help.guide.place-to-open-day.goal':
+    'Pomiń drugi krok: utwórz albo wybierz miejsce, a od razu znajdzie się ono w dniu.',
+  'help.guide.place-to-open-day.step.1':
+    'Kliknij nagłówek dnia w kolumnie dni. Dzień jest otwarty: jego karta jest podświetlona, a kolumna miejsc zyskuje przycisk Do dnia.',
+  'help.guide.place-to-open-day.step.2':
+    'Do dnia otwiera ten sam formularz co Nowe miejsce, tylko miejsce ląduje w otwartym dniu w chwili, gdy klikniesz Dodaj.',
+  'help.guide.place-to-open-day.step.3':
+    'Miejsce, które już istnieje, trafia do otwartego dnia przez + na końcu swojego wiersza albo prawym przyciskiem, + Dzień.',
+  'help.guide.place-to-open-day.result':
+    'Miejsce jest wypisane pod dniem, na końcu; przeciągnij je w górę lub w dół tam, gdzie pasuje.',
+  'help.guide.place-to-open-day.tip.1':
+    'Przeciągnięcie wiersza na dzień działa tak samo i może od razu upuścić miejsce między dwa przystanki.',
+  'help.guide.place-to-open-day.tip.2': 'Cofnij na pasku narzędzi nad dniami cofa przypisanie.',
+  // filter-places
+  'help.guide.filter-places.title': 'Znaleźć miejsce na liście',
+  'help.guide.filter-places.goal': 'Zawęź kolumnę do miejsc, których szukasz.',
+  'help.guide.filter-places.step.1':
+    'Lista rozwijana u góry przełącza między Wszystkie, Niezaplanowane (jeszcze w żadnym dniu), Zaplanowane (w dniu) i Trasy (zaimportowane trasy GPX), każde ze swoją liczbą.',
+  'help.guide.filter-places.step.2': 'Pisz w Szukaj miejsc...; lista zawęża się, gdy piszesz.',
+  'help.guide.filter-places.step.3':
+    'Wszystkie kategorie otwierają listę, na której zaznaczasz jedną lub więcej kategorii, wśród nich Brak kategorii; Wyczyść filtr na jej dole resetuje to.',
+  'help.guide.filter-places.step.4':
+    'Gwiazdka obok ustawia minimalną ocenę: 5+, 4+ i tak dalej pokazują tylko miejsca, które oceniłeś co najmniej tak wysoko.',
+  'help.guide.filter-places.result': 'Liczba nad wierszami mówi, ile miejsc pasuje; filtry się łączą.',
+  'help.guide.filter-places.tip.1':
+    'Gdy dzień jest otwarty, Zaplanowane wypisują tylko ten dzień i mówią to: Widoczny tylko otwarty dzień, z Pokaż całą podróż obok.',
+  'help.guide.filter-places.tip.2':
+    'Mapa też zawęża się do otwartego dnia; Wszystkie na liście nadal pokazują każde miejsce podróży.',
+  // edit-place
+  'help.guide.edit-place.title': 'Zmienić miejsce',
+  'help.guide.edit-place.goal': 'Popraw nazwę, przesuń pinezkę, dodaj stronę albo zmień kategorię.',
+  'help.guide.edit-place.step.1':
+    'Kliknij wiersz prawym przyciskiem i wybierz Edytuj, albo otwórz miejsce i kliknij Edytuj w jego szczegółach.',
+  'help.guide.edit-place.step.2':
+    'Zmień, co trzeba: Nazwa, Opis, Notatki, Adres, Szerokość i Długość, Kategoria, Strona internetowa. Otwarty z dnia formularz ma dodatkowo Notatki na ten dzień oraz Początek i Koniec dla tego dnia.',
+  'help.guide.edit-place.step.3': 'Kliknij Aktualizuj.',
+  'help.guide.edit-place.result':
+    'Zmiana obowiązuje wszędzie, gdzie miejsce się pojawia: na liście, na mapie i w każdym dniu, w którym jest.',
+  'help.guide.edit-place.tip.1':
+    'Notatki na ten dzień należą do miejsca w tym jednym dniu; Notatki należą do samego miejsca.',
+  'help.guide.edit-place.tip.2':
+    'Koniec przed Początkiem blokuje Aktualizuj; Nakładanie się godzin z: tylko ostrzega, że inny przystanek dnia ma tę samą godzinę.',
+  // delete-place
+  'help.guide.delete-place.title': 'Usunąć miejsce',
+  'help.guide.delete-place.goal': 'Wyjmij miejsce z podróży na dobre.',
+  'help.guide.delete-place.step.1':
+    'Kliknij wiersz prawym przyciskiem i wybierz Usuń, albo kliknij Usuń w szczegółach miejsca.',
+  'help.guide.delete-place.step.2':
+    'Potwierdź. Jeśli w tym miejscu zarezerwowano nocleg albo powiązana jest z nim rezerwacja, pytanie mówi, co idzie razem z nim.',
+  'help.guide.delete-place.result':
+    'Miejsce znika z listy, z mapy i z każdego dnia; Cofnij na pasku narzędzi nad dniami przywraca je.',
+  'help.guide.delete-place.tip.1': 'Aby zdjąć miejsce tylko z jednego dnia, użyj na tym przystanku Usuń z dnia.',
+  'help.guide.delete-place.tip.2': 'Kilka miejsc naraz: ptaszek obok filtrów uruchamia zaznaczanie.',
+  // select-places
+  'help.guide.select-places.title': 'Zmienić lub usunąć kilka miejsc naraz',
+  'help.guide.select-places.goal': 'Uporządkuj listę za jednym razem, zamiast miejsce po miejscu.',
+  'help.guide.select-places.step.1':
+    'Kliknij ptaszek na prawym końcu wiersza filtrów. Wiersze dostają pola wyboru i pojawia się pasek z akcjami.',
+  'help.guide.select-places.step.2': 'Zaznacz wiersze albo Zaznacz wszystko na pasku; pasek liczy, co jest zaznaczone.',
+  'help.guide.select-places.step.3':
+    'Change category nadaje im wszystkim jedną kategorię; Zapisz w kolekcji kopiuje je do jednej z Twoich kolekcji; Usuń wybrane usuwa je po potwierdzeniu.',
+  'help.guide.select-places.step.4': 'Kliknij ptaszek jeszcze raz, by wyjść z zaznaczania.',
+  'help.guide.select-places.result':
+    'Zmiana obowiązuje dla każdego zaznaczonego miejsca; usunięcie można cofnąć z paska narzędzi nad dniami.',
+  'help.guide.select-places.tip.1':
+    'Filtry działają dalej podczas zaznaczania: przefiltruj najpierw na Niezaplanowane, a wtedy Zaznacz wszystko łapie dokładnie te.',
+  'help.guide.select-places.tip.2':
+    'Oznacz jako odwiedzone na listach pojawia się na pasku, gdy dodatek Kolekcje jest włączony: odhacza miejsca w kolekcjach, w których są zapisane.',
+  // import-places-file
+  'help.guide.import-places-file.title': 'Zaimportować miejsca z pliku GPX, KML lub KMZ',
+  'help.guide.import-places-file.goal': 'Wprowadź to, co wyeksportowały Google My Maps, Google Earth albo tracker GPS.',
+  'help.guide.import-places-file.step.1': 'Kliknij Importuj plik albo upuść plik gdziekolwiek na kolumnie miejsc.',
+  'help.guide.import-places-file.step.2':
+    'Wybierz plik albo przeciągnij go do ramki. Przy GPX zaznacz, co zaimportować: Punkty trasy, Trasy, Trasy GPS (ze śladem); przy KML i KMZ Punkty (Placemarks) i Ścieżki (LineStrings).',
+  'help.guide.import-places-file.step.3':
+    'Wzbogać miejsca przez Google wyszukuje każde zaimportowane miejsce, by uzupełnić zdjęcia, adres i szczegóły; potrzebuje klucza Google.',
+  'help.guide.import-places-file.step.4':
+    'Kliknij Importuj. Podsumowanie mówi, ile miejsc powstało i ile pominięto, bo były już w podróży.',
+  'help.guide.import-places-file.result':
+    'Miejsca są na liście; trasa niesie na swoim wierszu znacznik trasy, rysuje się na mapie i dostaje własny filtr Trasy.',
+  'help.guide.import-places-file.tip.1':
+    'Za duży plik jest odrzucany z podaniem limitu rozmiaru; wyeksportuj go jeszcze raz bez zdjęć albo podziel go.',
+  'help.guide.import-places-file.tip.2': 'Import można cofnąć w całości z paska narzędzi nad dniami.',
+  // import-places-list
+  'help.guide.import-places-list.title': 'Zaimportować udostępnioną listę Google Maps lub Naver Maps',
+  'help.guide.import-places-list.goal': 'Zamień link udostępnionej listy w miejsca.',
+  'help.guide.import-places-list.step.1': 'Kliknij Import listy i wybierz Lista Google albo Lista Naver.',
+  'help.guide.import-places-list.step.2':
+    'Wklej udostępniony link listy. Działa też link do trasy w Google Maps: jego przystanki stają się miejscami, w kolejności jazdy.',
+  'help.guide.import-places-list.step.3': 'Kliknij Importuj.',
+  'help.guide.import-places-list.result':
+    'Każde miejsce z listy jest w podróży, nazwane jak na liście; miejsca już obecne w podróży są pomijane.',
+  'help.guide.import-places-list.tip.1':
+    'Lista musi być udostępniona publicznie; link prywatnej listy nie importuje niczego.',
+  'help.guide.import-places-list.tip.2':
+    'Lista Naver potrzebuje dodatku Naver List Import, który administrator włącza pod Dodatki; bez niego przycisk brzmi Lista Google.',
 };
 
 export default help;
