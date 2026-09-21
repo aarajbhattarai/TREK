@@ -78,23 +78,27 @@ export function journeyImageFileFilter(allowedTypes: AllowedFileTypesService): O
       return cb(err);
     }
     const ext = path.extname(file.originalname).toLowerCase().replace('.', '');
-    // R1.5: multer's fileFilter is a callback API that cannot await, and the
-    // allowed-extension list is now an async read. The decision runs in a
-    // detached async function that always answers through `cb`; a rejection
-    // refuses the file, so the filter still fails closed.
-    void (async () => {
-      const allowed = (await allowedTypes.get()).split(',').map((e) => e.trim().toLowerCase());
-      if (!allowed.includes('*') && !allowed.includes(ext)) {
-        const err: Error & { statusCode?: number } = new Error(`File type .${ext} is not allowed`);
-        err.statusCode = 400;
-        return cb(err);
-      }
-      cb(null, true);
-    })().catch(() => {
+    const reject = () => {
       const err: Error & { statusCode?: number } = new Error(`File type .${ext} is not allowed`);
       err.statusCode = 400;
       cb(err);
-    });
+    };
+    // R1.5: multer's fileFilter is a callback API that cannot await, and the
+    // allowed-extension list is now an async read. The decision runs in a
+    // detached async function that always answers through `cb`; a rejection
+    // refuses the file, so the filter still fails closed. Only the await is
+    // wrapped in try/catch, so a throw from cb() itself is never re-routed
+    // into a second cb() call.
+    void (async () => {
+      let allowed: string[];
+      try {
+        allowed = (await allowedTypes.get()).split(',').map((e) => e.trim().toLowerCase());
+      } catch {
+        return reject();
+      }
+      if (!allowed.includes('*') && !allowed.includes(ext)) return reject();
+      cb(null, true);
+    })();
   };
 }
 

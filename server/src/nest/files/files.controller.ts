@@ -56,14 +56,21 @@ export function filesUploadFileFilter(allowedTypes: AllowedFileTypesService): Op
     // allowed-extension list is now an async read. The decision runs in a
     // detached async function that always answers through `cb` — multer holds
     // the file stream until it does (make-middleware.js says as much). A
-    // rejection refuses the file, so the filter still fails closed.
+    // rejection refuses the file, so the filter still fails closed. Only the
+    // await is wrapped in try/catch, so a throw from cb() itself is never
+    // re-routed into a second cb() call.
     void (async () => {
-      const allowed = (await allowedTypes.get()).split(',').map((e) => e.trim().toLowerCase());
+      let allowed: string[];
+      try {
+        allowed = (await allowedTypes.get()).split(',').map((e) => e.trim().toLowerCase());
+      } catch {
+        return reject();
+      }
       const fileExt = ext.replace('.', '');
       // Video is accepted as media regardless of the admin doc-types allowlist (#823).
       if (allowed.includes(fileExt) || isVideoExtension(fileExt) || (allowed.includes('*') && !BLOCKED_EXTENSIONS.includes(ext))) return cb(null, true);
       reject();
-    })().catch(() => reject());
+    })();
   };
 }
 

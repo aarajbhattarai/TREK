@@ -343,7 +343,7 @@ describe('updateFile', () => {
     const { user, trip } = seedTrip();
     const place = createPlace(testDb, trip.id);
     const file = await makeFile(trip.id, user.id, {}, { description: 'keep me', place_id: String(place.id) });
-    const current = await svc.getFileById(file.id, trip.id)!;
+    const current = (await svc.getFileById(file.id, trip.id))!;
     const updated = await svc.updateFile(file.id, current, {}) as Record<string, unknown>;
     expect(updated.description).toBe('keep me');
     expect(updated.place_id).toBe(place.id);
@@ -354,7 +354,7 @@ describe('updateFile', () => {
     const place = createPlace(testDb, trip.id);
     const reservation = createReservation(testDb, trip.id);
     const file = await makeFile(trip.id, user.id, {}, { description: 'old', place_id: String(place.id), reservation_id: String(reservation.id) });
-    const current = await svc.getFileById(file.id, trip.id)!;
+    const current = (await svc.getFileById(file.id, trip.id))!;
     const updated = await svc.updateFile(file.id, current, { description: '', place_id: '', reservation_id: null }) as Record<string, unknown>;
     expect(updated.description).toBeNull(); // '' → NULL on update too (post-migration fix: symmetric with createFile)
     expect(updated.place_id).toBeNull();
