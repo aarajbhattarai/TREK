@@ -124,6 +124,7 @@ export const PUBLIC_ROUTE_ALLOW_LIST: string[] = [
   'HelpController.asset',
   'HelpController.index',
   'HelpController.page',
+  'HelpController.search',
   // Share-token validated.
   'JourneyPublicController.get',
   'JourneyPublicController.legacyPhoto',

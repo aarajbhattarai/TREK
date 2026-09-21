@@ -8,6 +8,1543 @@ const help: TranslationStrings = {
   'help.noResults': 'No matching pages.',
   'help.errorTitle': "Couldn't load this page",
   'help.errorBody': 'The help content is fetched from the TREK wiki. Check your connection and try again.',
+
+  // center
+  'help.center.button': '이 화면의 도움말',
+  'help.center.title': '도움말',
+  'help.center.onThisScreen': '이 화면에서',
+  'help.center.screens': '화면',
+  'help.center.thisScreen': '현재 화면',
+  'help.center.subScreens': '하위 화면: {count}',
+  'help.center.subScreensLabel': '하위 화면',
+  'help.center.guidesCount': '가이드 {count}개',
+  'help.center.goToScreen': '{screen}(으)로 이동',
+  'help.center.overview': '개요',
+  'help.center.howTo': '이렇게 하려면…',
+  'help.center.searchPlaceholder': '가이드와 문서 검색…',
+  'help.center.searchEmpty': '“{query}”에 대한 결과가 없습니다.',
+  'help.center.searchGuides': '가이드',
+  'help.center.searchDocs': '문서',
+  'help.center.searchError': '지금은 검색을 사용할 수 없습니다.',
+  'help.center.back': '뒤로',
+  'help.center.close': '도움말 닫기',
+  'help.center.steps': '{count}단계',
+  'help.center.step': '{n}단계',
+  'help.center.stepsLabel': '단계',
+  'help.center.stepOf': '{total}단계 중 {n}단계',
+  'help.center.screenshot': '스크린샷',
+  'help.center.result': '결과',
+  'help.center.tips': '알아두면 좋은 점',
+  'help.center.related': '관련 항목',
+  'help.center.openDocs': '도움말 및 문서에서 열기',
+  'help.center.docsSection': '문서에서',
+  'help.center.noContext': '이 화면에 대한 가이드가 아직 없습니다.',
+  'help.center.noContextHint': '문서를 검색하거나 찾던 내용을 알려주세요.',
+  'help.center.feedback': '빠진 내용이 있나요?',
+  'help.center.feedbackLink': 'GitHub에 알려주세요',
+  'help.center.discord': 'Discord에서 질문하기',
+  'help.center.quick': '간단',
+  'help.center.guide': '가이드',
+  'help.center.tour': '따라하기',
+  'help.center.imageAlt': '“{title}”의 {n}단계',
+
+  // ctx
+  'help.ctx.dashboard.title': '대시보드',
+  'help.ctx.dashboard.summary':
+    '대시보드는 모든 여행으로 들어가는 입구입니다. 상단의 탑승권은 진행 중이거나 다음에 떠날 여행을 크게 보여주고, 그 아래 줄은 지금까지의 여행 기록을 집계하며, 카드에는 계획 중, 보관됨, 완료된 여행이 모두 나열됩니다.',
+  'help.ctx.dashboard.bullet.1':
+    '탑승권: 진행 중이거나 다음 여행을 날짜, 동행자, 장소, 카운트다운과 함께 보여줍니다. 클릭하면 여행이 열립니다.',
+  'help.ctx.dashboard.bullet.2': '여행 통계: 방문한 국가, 여행 수, 여행 일수, 비행 거리를 모든 여행에 걸쳐 집계합니다.',
+  'help.ctx.dashboard.bullet.3':
+    '여행 카드: 예정, 보관됨, 완료됨으로 필터링하고 격자 또는 목록으로 봅니다. 카드에 마우스를 올리면 편집, 복제, 보관, 삭제를 할 수 있습니다.',
+  'help.ctx.dashboard.bullet.4': '오른쪽 위젯: 환율 계산기, 세계 시계, 다가오는 예약, 컬렉션. 각각 끌 수 있습니다.',
+  'help.ctx.dashboard.bullet.5': '“새 여행” 카드와 오른쪽 아래 버튼은 둘 다 새 여행을 시작합니다.',
+
+  // create-trip
+  'help.guide.create-trip.title': '여행 만들기',
+  'help.guide.create-trip.goal': '이름, 날짜, 커버 사진으로 새 여행을 시작합니다.',
+  'help.guide.create-trip.step.1':
+    '“새 여행”을 클릭합니다. 여행 목록 끝의 카드와 오른쪽 아래 버튼은 같은 역할을 합니다.',
+  'help.guide.create-trip.step.2': '여행에 이름을 붙입니다. 필수 항목은 이것뿐이며 나머지는 나중에 추가할 수 있습니다.',
+  'help.guide.create-trip.step.3':
+    '시작일과 종료일을 고릅니다. TREK은 날짜마다 하루씩 만들어 주므로 일정을 바로 채울 수 있습니다.',
+  'help.guide.create-trip.step.4':
+    '선택 사항: 커버 사진을 추가합니다. 직접 업로드하거나 끌어다 놓거나 Unsplash에서 목적지를 검색하세요.',
+  'help.guide.create-trip.step.5': '“새 여행 만들기”를 클릭합니다.',
+  'help.guide.create-trip.result': '여행이 대시보드에 나타납니다. 다음 여행이라면 상단의 탑승권에 표시됩니다.',
+  'help.guide.create-trip.tip.1':
+    '날짜는 나중에 바꿀 수 있습니다. 이미 예약이 있다면 TREK이 예약도 날짜와 함께 옮길지 물어봅니다.',
+  'help.guide.create-trip.tip.2':
+    '여기서 고르는 여행 통화는 모든 비용이 환산되는 기준입니다. 목적지의 통화를 선택하세요.',
+
+  // edit-trip
+  'help.guide.edit-trip.title': '여행 편집하기',
+  'help.guide.edit-trip.goal': '여행 이름을 바꾸거나 날짜를 변경하거나 설정을 조정합니다.',
+  'help.guide.edit-trip.step.1': '여행 카드(또는 탑승권)에 마우스를 올리고 연필 아이콘을 클릭합니다.',
+  'help.guide.edit-trip.step.2': '필요한 항목을 바꿉니다: 이름, 설명, 날짜, 커버, 통화, 알림, 구성원.',
+  'help.guide.edit-trip.step.3': '“업데이트”를 클릭합니다.',
+  'help.guide.edit-trip.result': '카드가 즉시 갱신되고 여행의 모든 구성원에게 반영됩니다.',
+  'help.guide.edit-trip.tip.1':
+    '이미 예약이 있는 여행의 날짜를 옮기면 예약도 함께 옮길지 묻는 두 번째 단계가 열립니다.',
+
+  // cover-image
+  'help.guide.cover-image.title': '커버 사진 설정하기',
+  'help.guide.cover-image.goal': '카드와 탑승권에 표시될 이미지를 여행에 지정합니다.',
+  'help.guide.cover-image.step.1': '카드의 연필 아이콘으로 여행 편집 양식을 엽니다.',
+  'help.guide.cover-image.step.2':
+    '“커버 이미지”에 사진을 끌어다 놓거나, 클릭해 업로드하거나, Unsplash 검색에 목적지를 입력합니다.',
+  'help.guide.cover-image.step.3': '사진을 고르고 “업데이트”를 클릭합니다.',
+  'help.guide.cover-image.result': '사진은 여행과 함께 저장되어 여행이 표시되는 모든 곳에 나타납니다.',
+  'help.guide.cover-image.tip.1':
+    'Unsplash 검색 사진에는 출처가 자동으로 표시됩니다. 직접 업로드한 사진은 내 서버에 남습니다.',
+
+  // duplicate-trip
+  'help.guide.duplicate-trip.title': '여행 복제하기',
+  'help.guide.duplicate-trip.goal': '기존 여행을 새 여행의 템플릿으로 재사용합니다.',
+  'help.guide.duplicate-trip.step.1': '카드에 마우스를 올리고 복제 아이콘을 클릭합니다.',
+  'help.guide.duplicate-trip.step.2': '복사되는 항목과 되지 않는 항목을 확인한 뒤 승인합니다.',
+  'help.guide.duplicate-trip.result': '원본 옆에 복사본이 나타나며, 이름과 날짜만 바꾸면 됩니다.',
+  'help.guide.duplicate-trip.tip.1':
+    '일정, 장소, 예약, 예산 항목, 짐 목록, 일별 메모는 복사됩니다. 구성원, 채팅, 투표, 파일, 공유 링크는 복사되지 않습니다.',
+
+  // archive-trip
+  'help.guide.archive-trip.title': '여행 보관 및 복원하기',
+  'help.guide.archive-trip.goal': '여행을 삭제하지 않고 치워두었다가 나중에 다시 가져옵니다.',
+  'help.guide.archive-trip.step.1': '카드에 마우스를 올리고 “보관”을 클릭합니다.',
+  'help.guide.archive-trip.step.2': '카드 위의 필터를 “보관됨”으로 바꾸면 다시 볼 수 있습니다.',
+  'help.guide.archive-trip.step.3': '카드의 “복원”을 클릭하면 “예정”으로 돌아갑니다.',
+  'help.guide.archive-trip.result':
+    '보관된 여행은 모든 내용을 그대로 유지합니다. 대시보드와 전체 여행 캘린더 피드에서만 보이지 않게 됩니다.',
+
+  // delete-trip
+  'help.guide.delete-trip.title': '여행 삭제하기',
+  'help.guide.delete-trip.goal': '여행을 완전히 삭제합니다.',
+  'help.guide.delete-trip.step.1': '카드에 마우스를 올리고 휴지통 아이콘을 클릭합니다.',
+  'help.guide.delete-trip.step.2': '확인합니다. 대화상자에 여행 이름이 표시되므로 맞는지 확인할 수 있습니다.',
+  'help.guide.delete-trip.result':
+    '여행과 일정, 장소, 예약, 파일이 모두 사라집니다. 되돌릴 수 없으니 확실하지 않다면 보관하세요.',
+
+  // filter-and-view
+  'help.guide.filter-and-view.title': '완료된 여행 찾기, 격자와 목록 전환하기',
+  'help.guide.filter-and-view.goal': '완료되었거나 보관된 여행을 보고 원하는 레이아웃을 고릅니다.',
+  'help.guide.filter-and-view.step.1':
+    '카드 위의 “예정”, “보관됨”, “완료됨”을 사용합니다. 종료일이 지난 여행은 모두 완료됨에 들어갑니다.',
+  'help.guide.filter-and-view.step.2':
+    '목록 아이콘을 클릭하면 간결한 목록으로 바뀌고, 다시 클릭하면 격자로 돌아옵니다.',
+  'help.guide.filter-and-view.result': '대시보드는 이 기기에서의 레이아웃을 기억합니다.',
+
+  // calendar-feed
+  'help.guide.calendar-feed.title': '캘린더에서 모든 여행 구독하기',
+  'help.guide.calendar-feed.goal': '진행 중인 모든 여행의 일정과 예약을 캘린더 앱에서 항상 동기화된 상태로 봅니다.',
+  'help.guide.calendar-feed.step.1': '보기 전환 옆의 캘린더 아이콘을 클릭합니다.',
+  'help.guide.calendar-feed.step.2': '“Enable calendar subscription”을 클릭합니다. TREK이 비공개 피드 링크를 만듭니다.',
+  'help.guide.calendar-feed.step.3':
+    '버튼(Google, Apple, Outlook) 중 하나로 피드를 추가하거나, URL 구독을 지원하는 캘린더 앱에 링크를 복사합니다.',
+  'help.guide.calendar-feed.result':
+    '진행 중인 모든 여행이 캘린더에 표시되고 자동으로 갱신됩니다. 보관된 여행과 90일 이상 전에 끝난 여행은 제외됩니다.',
+  'help.guide.calendar-feed.tip.1':
+    '링크는 비밀입니다. 링크를 가진 사람은 누구나 피드를 읽을 수 있으니, 유출되면 같은 대화상자에서 취소하세요.',
+
+  // widgets
+  'help.guide.widgets.title': '대시보드 위젯 고르기',
+  'help.guide.widgets.goal': '통계 줄과 오른쪽 위젯을 표시하거나 숨깁니다.',
+  'help.guide.widgets.step.1': '오른쪽 위의 아바타 메뉴를 열고 “설정”을 선택합니다.',
+  'help.guide.widgets.step.2': '“Appearance” 탭으로 이동합니다.',
+  'help.guide.widgets.step.3': '“Dashboard widgets”에서 각 위젯을 켜거나 끕니다. 데스크톱과 모바일은 따로 설정합니다.',
+  'help.guide.widgets.step.4': '대시보드로 돌아갑니다. 변경 사항은 바로 적용됩니다.',
+  'help.guide.widgets.result':
+    '숨긴 위젯만큼 여행에 쓸 공간이 넓어집니다. 오른쪽 열 전체를 끄면 레이아웃이 가운데 정렬됩니다.',
+  'help.guide.widgets.link': '외관 설정 열기',
+
+  // currency-widget
+  'help.guide.currency-widget.title': '환율 계산하기',
+  'help.guide.currency-widget.goal': '최신 환율로 두 통화 간 금액을 환산합니다.',
+  'help.guide.currency-widget.step.1': '금액을 입력하고 두 통화를 고릅니다.',
+  'help.guide.currency-widget.step.2': '가운데 화살표는 통화 쌍을 바꾸고, 원형 화살표는 환율을 새로 고칩니다.',
+  'help.guide.currency-widget.result': '통화 쌍은 계정에 저장되므로 모든 기기에서 동일합니다.',
+  'help.guide.currency-widget.tip.1': '환율은 유럽중앙은행에서 가져오며 하루에 한 번 갱신됩니다.',
+
+  // timezones-widget
+  'help.guide.timezones-widget.title': '세계 시계 추가하기',
+  'help.guide.timezones-widget.goal': '목적지의 현지 시간을 한눈에 확인합니다.',
+  'help.guide.timezones-widget.step.1': '“시간대” 위젯의 +를 클릭하고 도시를 검색합니다.',
+  'help.guide.timezones-widget.step.2': '시계 옆의 ×로 삭제합니다.',
+  'help.guide.timezones-widget.result': '시계는 계정에 저장됩니다.',
+
+  // ── Screen: vacay ──────────────────────────────────────────────────────────
+  'help.ctx.vacay.title': 'Vacay',
+  'help.ctx.vacay.summary':
+    'Vacay는 개인 휴가 플래너입니다. 한 해에 휴가가 며칠인지, 어떤 날을 기록했는지, 얼마나 남았는지를 관리합니다. 격자는 한 해 전체를 한눈에 보여주고, 사이드바에는 연도 선택, 함께 계획하는 사람, 공유받은 캘린더, 범례, 휴가 일수가 있습니다.',
+  'help.ctx.vacay.bullet.1':
+    '연간 격자: 월 카드 12장, 하루에 셀 하나. 날짜를 클릭해 기록하거나 지웁니다. 작은 파란 점은 이미 여행이 잡힌 날을 표시합니다.',
+  'help.ctx.vacay.bullet.2':
+    '하단 도구 모음: “휴가” 또는 “회사 휴일” 모드, 그리고 클릭이 무엇을 기록할지 바꾸는 “반차”와 “대체휴무” 스위치.',
+  'help.ctx.vacay.bullet.3': '“휴가 일수”: 올해의 일수, 사용한 날과 남은 날, 이전 기간에서 이월된 날을 포함합니다.',
+  'help.ctx.vacay.bullet.4':
+    '“인원”은 내 계획과 병합된 사람들로 각자 색이 있습니다. “공유된 캘린더”는 다른 사람의 휴무를 읽기 전용 링으로 보여줍니다.',
+  'help.ctx.vacay.bullet.5':
+    '“설정”에서는 주말, 주 시작 요일, 이월, 휴가 연도, 회사 휴일, 공휴일과 학교 방학 캘린더를 다룹니다.',
+  // log-day
+  'help.guide.log-day.title': '휴가일 기록하기',
+  'help.guide.log-day.goal': '연간 격자에 휴무일을 표시하고 잔여 일수가 따라 바뀌는 것을 확인합니다.',
+  'help.guide.log-day.step.1':
+    '하단 도구 모음을 확인하세요. 내 색의 왼쪽 버튼은 클릭하면 나를 위한 휴가일이 기록된다는 뜻입니다.',
+  'help.guide.log-day.step.2': '아무 월 카드에서 날짜를 클릭하세요. 내 색으로 채워지고 “사용”이 하루 늘어납니다.',
+  'help.guide.log-day.step.3': '같은 날짜를 다시 클릭하면 지워집니다.',
+  'help.guide.log-day.result':
+    '날이 기록되고 “일”, “사용”, “남음”이 바로 갱신되며, 계획을 병합한 사람 모두가 실시간으로 봅니다.',
+  'help.guide.log-day.tip.1': '“설정”에서 “주말 차단”이 켜져 있는 동안에는 주말을 기록할 수 없습니다.',
+  'help.guide.log-day.tip.2':
+    '셀의 파란 점은 내 여행 중 하나가 그날에 걸쳐 있다는 뜻이라, 휴가와 여행이 겹치는 곳을 볼 수 있습니다.',
+  // half-day
+  'help.guide.half-day.title': '반차 기록하기',
+  'help.guide.half-day.goal': '하루치 휴가를 쓰지 않고 오후만 쉬세요.',
+  'help.guide.half-day.step.1': '도구 모음에서 “반차”를 켭니다. 주황 점은 격자에서 반차에 붙는 표시입니다.',
+  'help.guide.half-day.step.2': '날짜를 클릭하세요. 0.5로 기록되고 모서리에 주황 점이 붙습니다.',
+  'help.guide.half-day.step.3': '끝나면 “반차”를 다시 끕니다. 다른 설정으로 반차를 클릭하면 그 자리에서 변환됩니다.',
+  'help.guide.half-day.result': '“사용”이 0.5 늘어납니다. “반차”와 “대체휴무”는 독립적이라 반차 대체휴무도 가능합니다.',
+  'help.guide.half-day.tip.1': '도구 모음은 항상 다음 클릭이 놓을 표시를 보여주므로 기록 전에 확인할 수 있습니다.',
+  // comp-day
+  'help.guide.comp-day.title': '대체휴무 또는 유연근무 기록하기',
+  'help.guide.comp-day.goal': '휴가 일수를 쓰지 않는 대체휴무를 사용합니다.',
+  'help.guide.comp-day.step.1':
+    '도구 모음에서 “대체휴무”를 켭니다. 빗금 원판은 격자에서 대체휴무일이 보이는 모습입니다.',
+  'help.guide.comp-day.step.2': '날짜를 클릭하세요. 단색 블록 대신 내 색의 대각선 빗금으로 채워집니다.',
+  'help.guide.comp-day.result': '대체휴무일은 휴가 일수 타일 옆에 따로 집계되며 “남음”을 줄이지 않습니다.',
+  'help.guide.comp-day.tip.1':
+    '되돌려 받은 초과근무, 유연근무, 보상휴가: 쉬는 날이지만 휴가가 아닌 것은 모두 여기에 해당합니다.',
+  // entitlement
+  'help.guide.entitlement.title': '휴가 일수 설정하기',
+  'help.guide.entitlement.goal': '한 해 휴가가 며칠인지 Vacay에 알려줍니다.',
+  'help.guide.entitlement.step.1': '사이드바의 “휴가 일수” 아래에 있는 “일” 타일을 클릭합니다.',
+  'help.guide.entitlement.step.2': '일수를 입력하고 Enter를 누릅니다.',
+  'help.guide.entitlement.result': '“남음”은 휴가 일수, 이월분, 사용한 날로 다시 계산됩니다.',
+  'help.guide.entitlement.tip.1': '연도마다 휴가 일수가 따로 있으므로 여기서의 변경은 선택한 연도에만 적용됩니다.',
+  // years
+  'help.guide.years.title': '연도 추가와 전환',
+  'help.guide.years.goal': '내년을 미리 계획하거나 작년을 돌아봅니다.',
+  'help.guide.years.step.1': '연도 오른쪽의 +를 클릭해 다음 해를, 왼쪽의 +로 이전 해를 추가합니다.',
+  'help.guide.years.step.2': '화살표나 아래의 연도 칩으로 연도를 전환합니다.',
+  'help.guide.years.step.3':
+    '연도를 삭제하려면 칩에 마우스를 올리고 작은 빼기를 클릭하세요. 기록도 함께 사라지니 신중히 확인하세요.',
+  'help.guide.years.result': '각 연도는 자체 휴가 일수와 기록을 유지하며, 이월이 이를 연결합니다.',
+  // company-holidays
+  'help.guide.company-holidays.title': '회사 휴일 표시하기',
+  'help.guide.company-holidays.goal': '누구의 휴가도 쓰지 않고 회사 전체가 쉬는 날을 차단합니다.',
+  'help.guide.company-holidays.step.1':
+    '“설정”을 열고 “회사 휴일”이 켜져 있는지 확인합니다. 기본으로 켜져 있으며, 켜져 있는 동안에만 도구 모음에 모드가 나타납니다.',
+  'help.guide.company-holidays.step.2': '격자로 돌아와 도구 모음을 “회사 휴일” 모드로 바꿉니다.',
+  'help.guide.company-holidays.step.3': '날짜들을 클릭하세요. 호박색으로 바뀌고 범례에 나타납니다.',
+  'help.guide.company-holidays.result': '회사 휴일은 계획에 병합된 모두에게 보이며 “남음”을 줄이지 않습니다.',
+  'help.guide.company-holidays.tip.1': '병합된 구성원 누구나 회사 휴일을 편집할 수 있으니 누가 관리할지 정하세요.',
+  // public-holidays
+  'help.guide.public-holidays.title': '공휴일 표시하기',
+  'help.guide.public-holidays.goal': '국가나 지역의 공휴일을 격자에 표시합니다.',
+  'help.guide.public-holidays.step.1': '“설정”을 열고 “공휴일”을 켭니다.',
+  'help.guide.public-holidays.step.2':
+    '“캘린더 추가”를 클릭하고 국가를, 필요하면 지역도 고릅니다. 원하면 색과 이름을 지정하세요.',
+  'help.guide.public-holidays.step.3': '“설정”을 닫습니다. 공휴일이 격자와 범례에 나타납니다.',
+  'help.guide.public-holidays.result': '공휴일은 캘린더 색으로 표시되며 휴가 일수에서 차감되지 않습니다.',
+  'help.guide.public-holidays.tip.1': '여러 캘린더를 추가할 수 있습니다. 예를 들어 내 지역과 병합된 동료의 지역.',
+  // school-holidays
+  'help.guide.school-holidays.title': '학교 방학 표시하기',
+  'help.guide.school-holidays.goal': '내 지역의 학교 방학을 내 휴무일 옆에서 확인합니다.',
+  'help.guide.school-holidays.step.1': '“설정”을 열고 “School Holidays”를 켭니다.',
+  'help.guide.school-holidays.step.2':
+    '“캘린더 추가”를 클릭하고 국가를 고릅니다. 국가가 캘린더를 나눈 경우 지역이나 그룹도 고르세요.',
+  'help.guide.school-holidays.step.3': '“설정”을 닫습니다. 각 방학 기간의 날짜 아래에 색 띠가 표시됩니다.',
+  'help.guide.school-holidays.result': '학교 방학은 표시용일 뿐 누구의 휴가 일수도 줄이지 않습니다.',
+  'help.guide.school-holidays.tip.1':
+    '지역이 없나요? 관리자가 “관리자”, “개인 설정”, “학교 방학”에서 직접 관리할 수 있습니다.',
+  // weekends
+  'help.guide.weekends.title': '주말 차단과 주 시작 요일 설정',
+  'help.guide.weekends.goal': '주말을 집계에서 빼고 익숙한 요일에 주를 시작합니다.',
+  'help.guide.weekends.step.1': '“설정”을 엽니다.',
+  'help.guide.weekends.step.2': '“주말 차단”을 켜고 어떤 요일을 주말로 볼지 고릅니다.',
+  'help.guide.weekends.step.3': '“주 시작 요일”에서 월요일 또는 일요일을 고릅니다.',
+  'help.guide.weekends.result': '차단된 날은 격자에서 회색으로 표시되며 실수로 기록할 수 없습니다.',
+  // leave-year
+  'help.guide.leave-year.title': '휴가 연도 설정하기',
+  'help.guide.leave-year.goal': '1월부터 12월이 아니라 회계연도나 입사일을 기준으로 휴가 일수를 셉니다.',
+  'help.guide.leave-year.step.1': '“설정”을 열고 “휴가 연도”를 찾습니다.',
+  'help.guide.leave-year.step.2':
+    '“캘린더”, “회계연도”(시작 월과 일 지정) 또는 “입사일”(입사한 날짜 지정) 중에서 고릅니다.',
+  'help.guide.leave-year.result': '휴가 일수, 사용일, 이월이 그 기간을 따르고 격자는 그 첫 달부터 시작합니다.',
+  'help.guide.leave-year.tip.1': '이 설정은 개인용입니다. 병합된 계획에서도 각자 자신의 휴가 연도와 숫자를 유지합니다.',
+  // carry-over
+  'help.guide.carry-over.title': '미사용 일수 이월하기',
+  'help.guide.carry-over.goal': '기간 말에 남은 날을 다음 기간에 더합니다.',
+  'help.guide.carry-over.step.1': '“설정”을 엽니다.',
+  'help.guide.carry-over.step.2': '“이월”을 켭니다.',
+  'help.guide.carry-over.result': '이월된 양은 모든 연도에 걸쳐 다시 계산되어 휴가 일수 아래에 표시됩니다.',
+  'help.guide.carry-over.tip.1': '끄면 모든 이월 잔액이 0으로 돌아갑니다.',
+  // invite
+  'help.guide.invite.title': '누군가와 함께 계획하기',
+  'help.guide.invite.goal': '다른 TREK 사용자와 계획을 병합해 서로의 휴무를 한 격자에서 봅니다.',
+  'help.guide.invite.step.1': '“인원” 패널의 사람 아이콘을 클릭합니다.',
+  'help.guide.invite.step.2': '사용자를 고르고 초대를 보냅니다.',
+  'help.guide.invite.step.3': '상대가 알림을 받고 수락합니다. 그때까지 초대는 대기 중으로 표시됩니다.',
+  'help.guide.invite.result':
+    '두 계획이 병합됩니다. 각자 색이 있고, 서로를 위해 날짜를 기록할 수 있으며, 모든 것이 실시간으로 동기화됩니다.',
+  'help.guide.invite.tip.1':
+    '병합을 취소하려면 “설정”의 “퓨전 해제”를 사용하세요. 각자의 기록은 자신의 계획으로 돌아갑니다.',
+  'help.guide.invite.tip.2': '상대가 내 휴무만 보면 된다면 병합 대신 캘린더를 공유하세요.',
+  // share-calendar
+  'help.guide.share-calendar.title': '캘린더를 읽기 전용으로 공유하기',
+  'help.guide.share-calendar.goal': '계획에 대한 권한을 주지 않고 내가 언제 쉬는지 보여줍니다.',
+  'help.guide.share-calendar.step.1': '“공유된 캘린더” 패널의 공유 아이콘을 클릭합니다.',
+  'help.guide.share-calendar.step.2': '사용자를 고르고 “공유”를 클릭합니다. 수락은 필요 없습니다.',
+  'help.guide.share-calendar.step.3':
+    '나에게 공유된 캘린더는 같은 패널에 나타납니다. 눈 아이콘으로 숨기고, “공유 중지”로 내 공유를 취소합니다.',
+  'help.guide.share-calendar.result':
+    '내 휴무가 상대의 격자에 색 링으로 나타납니다. 공유한 내용은 상대가 편집할 수 없습니다.',
+  'help.guide.share-calendar.tip.1':
+    '공유와 병합은 독립적입니다. 한 사람과 병합하면서 다른 사람들과 공유할 수 있습니다.',
+  'help.guide.share-calendar.tip.2': '링이 있는 날에 마우스를 올리면 누가 얼마나 쉬는지 볼 수 있습니다.',
+
+  // ── Screen: atlas ─────────────────────────────────────────────────────────────────────
+  'help.ctx.atlas.title': 'Atlas',
+  'help.ctx.atlas.summary':
+    'Atlas는 세계 지도 위에 그려진 나의 여행 발자취입니다. 여행으로 다녀온 나라는 모두 색이 칠해지고, TREK을 쓰기 전에 다녀온 나라는 직접 추가할 수 있습니다. 확대하면 지역이 보이고, 아직 가 보고 싶은 곳은 버킷 리스트로 관리하며, 하단의 유리 패널에서 숫자를 확인합니다.',
+  'help.ctx.atlas.bullet.1':
+    '지도: 방문한 나라는 그 나라만의 색을 유지하고, 예정된 나라는 점선 테두리, 버킷 리스트의 나라는 빗금, 나머지는 회색입니다. 나라에 마우스를 올리면 여행, 장소, 첫 방문과 마지막 방문이 보입니다.',
+  'help.ctx.atlas.bullet.2':
+    '상단 검색: 나라나 장소를 입력합니다. 나라를 고르면 지도가 그곳으로 이동해 팝업이 열리고, 장소를 고르면 그 지역에 내려앉아 바로 표시할 수 있습니다.',
+  'help.ctx.atlas.bullet.3':
+    '오른쪽 위의 “예정된 국가 표시”: 다가오는 여행의 나라를 보여줍니다. 이 스위치는 예정된 여행이 있는 동안에만 나타납니다.',
+  'help.ctx.atlas.bullet.4':
+    '하단 패널: 통계 탭에는 국가, 여행, 장소, 도시, 일수, 대륙, 연속 기록이 있고, 버킷 리스트 탭에는 아직 앞에 남은 것들이 있습니다.',
+  'help.ctx.atlas.bullet.5':
+    '지역: 줌 레벨 5부터 지도가 주와 도 단위로 바뀌며, 각각 클릭해 표시하거나 해제할 수 있습니다.',
+  'help.ctx.atlas.bullet.6':
+    'Dawarich: 애드온을 연결하면 통계 왼쪽의 패널이 기록을 바탕으로 버킷 리스트 항목을 체크하고 나라를 추가합니다. 사용자의 확인 없이는 절대 진행되지 않습니다.',
+  // mark-country
+  'help.guide.mark-country.title': '나라를 방문한 곳으로 표시하기',
+  'help.guide.mark-country.goal': 'TREK을 쓰기 전에 다녀온 나라를 추가해 지도와 집계에 포함합니다.',
+  'help.guide.mark-country.step.1': '지도 상단의 검색창에 나라 이름을 입력합니다.',
+  'help.guide.mark-country.step.2': '목록에서 고릅니다. 지도가 그곳으로 이동하고 그 나라의 팝업이 열립니다.',
+  'help.guide.mark-country.step.3': '“방문으로 표시”를 선택합니다.',
+  'help.guide.mark-country.result':
+    '그 나라가 지도에서 자기 색을 갖고 “국가”가 하나 늘어납니다. 이 색은 고정입니다. 다른 나라를 더 표시해도 나머지 색이 뒤섞이지 않습니다.',
+  'help.guide.mark-country.tip.1':
+    '지도에서 회색 나라를 클릭해도 같은 팝업이 열립니다. 작은 나라에는 검색이 확실한 방법입니다.',
+  'help.guide.mark-country.tip.2':
+    '직접 표시한 나라는 그곳으로 가는 여행의 날짜와 상관없이 항상 방문한 곳으로 집계됩니다.',
+  // unmark-country
+  'help.guide.unmark-country.title': '표시한 나라 제거하기',
+  'help.guide.unmark-country.goal': '직접 표시한 나라를 지도에서 다시 뺍니다.',
+  'help.guide.unmark-country.step.1':
+    '나라를 검색해 고르거나 지도에서 클릭합니다. 직접 표시한 나라라면 팝업이 제거할지 묻습니다.',
+  'help.guide.unmark-country.step.2': '“제거”로 확인합니다.',
+  'help.guide.unmark-country.result': '그 나라는 다시 회색이 되고 집계에서 빠집니다.',
+  'help.guide.unmark-country.tip.1':
+    '이 방법으로 제거할 수 있는 것은 직접 표시한 나라뿐입니다. 여행이나 장소가 있는 나라는 그것들이 남아 있는 한 유지됩니다. 직접 표시한 나라라면 패널의 상세 카드에도 “제거”가 있습니다.',
+  // country-details
+  'help.guide.country-details.title': '어떤 나라에서 무엇을 했는지 보기',
+  'help.guide.country-details.goal': '방문한 나라를 열고, 그곳으로 데려다준 여행으로 바로 이동합니다.',
+  'help.guide.country-details.step.1': '방문한 적 있는 나라를 검색합니다.',
+  'help.guide.country-details.step.2':
+    '고릅니다. 지도가 그곳으로 이동하고, 하단 패널에 국기, 장소, 여행, 그리고 여행마다 칩이 하나씩 달린 카드가 나타납니다.',
+  'help.guide.country-details.result': '여행 칩을 클릭하면 그 여행이 플래너에서 열립니다.',
+  'help.guide.country-details.tip.1':
+    '지도에서 나라에 마우스를 올리면 같은 숫자와 함께 첫 방문과 마지막 방문이 보입니다.',
+  // planned-countries
+  'help.guide.planned-countries.title': '앞으로 갈 나라 표시하기',
+  'help.guide.planned-countries.goal': '다가오는 여행의 나라를 방문한 곳으로 집계하지 않고 지도에 올립니다.',
+  'help.guide.planned-countries.step.1':
+    '오른쪽 위의 “예정된 국가 표시”를 켭니다. 옆의 숫자는 기다리고 있는 나라의 수입니다.',
+  'help.guide.planned-countries.step.2':
+    '예정된 나라를 검색해 고릅니다. 패널에는 “예정”이 표시되고, 지도의 툴팁에는 언제 가는지가 보입니다.',
+  'help.guide.planned-countries.result':
+    '예정된 나라는 점선 테두리로 나타나므로 이미 다녀온 곳처럼 보이지 않습니다. 스위치는 선택을 기억합니다.',
+  'help.guide.planned-countries.tip.1':
+    '나라는 그곳으로 가는 여행이 시작되는 순간 방문한 곳으로 집계됩니다. 진행 중인 여행도 포함됩니다. 날짜가 없는 여행은 통계에서 완전히 제외됩니다.',
+  'help.guide.planned-countries.tip.2': '이 스위치는 다가오는 여행이 있는 동안에만 존재합니다.',
+  // regions
+  'help.guide.regions.title': '지역 표시하기',
+  'help.guide.regions.goal': '나라보다 더 세밀하게, 다녀온 주, 도, 현을 표시합니다.',
+  'help.guide.regions.step.1':
+    '지역이 나타날 때까지 나라를 확대합니다(줌 레벨 5부터). 나라를 검색해 고르면 충분히 가까이 이동합니다.',
+  'help.guide.regions.step.2':
+    '지역을 클릭합니다. 마우스를 올리면 이름이 보이고, 팝업에는 지역과 그 나라가 표시됩니다.',
+  'help.guide.regions.step.3': '“방문으로 표시”를 선택합니다.',
+  'help.guide.regions.result':
+    '지역이 그 나라의 색으로 채워집니다. 지역을 표시하면 아직 방문한 곳이 아니었던 나라도 방문한 곳으로 집계됩니다.',
+  'help.guide.regions.tip.1':
+    '방문한 지역을 클릭하면 “제거”가 나타납니다. 직접 표시한 지역이든 장소 때문에 표시된 지역이든 마찬가지입니다.',
+  'help.guide.regions.tip.2': '실제 장소가 있는 지역은 자동으로 표시됩니다. 거기서는 할 일이 없습니다.',
+  // search-place
+  'help.guide.search-place.title': '장소를 찾아 그 지역 표시하기',
+  'help.guide.search-place.goal': '도시가 어느 지역에 속하는지 몰라도, 밀라노를 검색해 롬바르디아를 표시합니다.',
+  'help.guide.search-place.step.1':
+    '검색창에 도시, 명소 또는 주소를 입력합니다. 나라가 먼저 나오고, 일치하는 장소는 그 아래 “장소” 제목 밑에 나타납니다.',
+  'help.guide.search-place.step.2':
+    '장소를 고릅니다. 지도가 그곳으로 이동하고 그 지점이 어느 지역에 있는지 알아냅니다.',
+  'help.guide.search-place.step.3':
+    '그 지역에 대해 “방문으로 표시”를 선택하거나, 아직 가기 전이라면 “버킷 리스트에 추가”를 선택합니다.',
+  'help.guide.search-place.result':
+    '지역이 표시되고 나라도 함께 표시됩니다. 지도 데이터에 지역 정보가 없는 나라는 나라 자체로 대신합니다.',
+  'help.guide.search-place.tip.1': '장소는 TREK의 다른 곳과 같은 검색에서 오므로, 관리자가 설정한 제공자를 따릅니다.',
+  // bucket-country
+  'help.guide.bucket-country.title': '나라를 버킷 리스트에 올리기',
+  'help.guide.bucket-country.goal':
+    '다녀온 나라와는 별도로, 가고 싶은 나라의 버킷 리스트를 지도 위에서 바로 관리합니다.',
+  'help.guide.bucket-country.step.1': '나라를 검색해 고르거나 지도에서 클릭합니다.',
+  'help.guide.bucket-country.step.2': '“버킷 리스트에 추가”를 선택합니다.',
+  'help.guide.bucket-country.step.3': '언제 갈지 이미 안다면 월과 연도를 고른 뒤 “버킷 리스트에 추가”로 확인합니다.',
+  'help.guide.bucket-country.result':
+    '그 나라는 나중에 다녀오면 갖게 될 색의 빗금으로 그려지고, 패널의 버킷 리스트 탭에 나타납니다.',
+  'help.guide.bucket-country.tip.1': '나라가 목록에 오르면 같은 팝업에 “버킷 리스트에서 제거”가 나타납니다.',
+  'help.guide.bucket-country.tip.2':
+    '목표 날짜마다 항목 하나입니다. 같은 나라를 서로 다른 두 달에 올릴 수는 있지만, 같은 달에 두 번은 안 됩니다.',
+  // bucket-place
+  'help.guide.bucket-place.title': '장소를 버킷 리스트에 추가하기',
+  'help.guide.bucket-place.goal': '꿈꾸는 도시, 명소, 주소를 좌표와 목표 날짜와 함께 저장합니다.',
+  'help.guide.bucket-place.step.1': '하단 패널에서 버킷 리스트 탭을 엽니다.',
+  'help.guide.bucket-place.step.2': '“장소 추가”를 클릭합니다.',
+  'help.guide.bucket-place.step.3':
+    '이름을 입력하고 검색 버튼을 누른 뒤, 일치하는 결과를 골라 장소에 좌표를 붙입니다. 이름만 입력하고 검색을 건너뛰어도 됩니다.',
+  'help.guide.bucket-place.step.4': '원한다면 월과 연도를 고르고 “추가”를 클릭합니다.',
+  'help.guide.bucket-place.result':
+    '그 장소는 목표 날짜와 함께 버킷 리스트 맨 위에 놓입니다. 옆의 ×로 다시 제거합니다.',
+  'help.guide.bucket-place.tip.1':
+    '좌표가 있는 항목은 나중에 기록이 그곳에 있었음을 보여주면 Dawarich가 대신 체크해 줄 수 있는 항목입니다.',
+  // stats
+  'help.guide.stats.title': '통계 읽기',
+  'help.guide.stats.goal': '패널의 숫자가 무엇을 세고 무엇을 세지 않는지 알아봅니다.',
+  'help.guide.stats.step.1':
+    '“국가”는 실제로 다녀온 서로 다른 나라의 수입니다. 예정된 나라는 그 옆에 표시될 뿐 포함되지 않습니다. “여행”, “장소”, “일”은 모든 여행에 걸친 합계입니다. “도시”는 장소의 주소에서 산출하므로 추정치입니다.',
+  'help.guide.stats.step.2':
+    '대륙별로 방문한 나라 수가 표시되고, 남극은 다녀온 뒤에 줄에 합류합니다. 그다음은 연속 기록, 즉 여행이 최소 한 번은 있는 연속된 햇수와, 올해 다녀온 여행 수입니다.',
+  'help.guide.stats.result': '숫자는 여행을 계획하는 대로 따라옵니다. 여기서 관리할 것은 없습니다.',
+  'help.guide.stats.tip.1':
+    '도시는 주소 텍스트에서 읽어낼 뿐 따로 조회하지 않으므로, “Osteria Francescana, Italy”처럼 짧은 주소나 현으로 끝나는 주소는 도시가 아니라 지역으로 잡힐 수 있습니다.',
+  'help.guide.stats.tip.2': '직접 표시한 나라는 “국가”와 대륙에는 집계되지만, 여행, 장소, 일수는 가져오지 않습니다.',
+
+  // ── Screen: collections ───────────────────────────────────────────────────────────────
+  'help.ctx.collections.title': '컬렉션',
+  'help.ctx.collections.summary':
+    'Collections는 여행 밖에 있는 나의 장소 라이브러리입니다. 찾아서 간직하고 싶은 장소를 이름 있는 목록으로 모으고, 각 장소에는 “아이디어”, “가고 싶은 곳”, “방문함” 중 하나의 상태가 붙습니다. 장소는 여행으로 복사되고 여행에서 복사될 뿐 연결되지 않으므로, 목록과 여행이 서로를 바꾸는 일은 없습니다.',
+  'help.ctx.collections.bullet.1':
+    '왼쪽의 목록 레일: 내 목록, 나와 공유된 목록, 수락을 기다리는 초대, 내가 소유한 모든 것을 합친 “모든 저장 항목”, 그리고 맨 위의 “새 목록”과 파일 가져오기.',
+  'help.ctx.collections.bullet.2':
+    '열린 목록의 헤더: 색, 커버, 설명과 링크, 멤버, 그리고 오른쪽의 “편집”, “내보내기”, “공유” 동작.',
+  'help.ctx.collections.bullet.3':
+    '장소 위의 필터 행: 상태, 카테고리, 평점, 정렬, 레이블 필터, 장소를 추가하는 +, 여행 가져오기, 일괄 작업을 위한 “선택”.',
+  'help.ctx.collections.bullet.4':
+    '장소 행: 아바타, 이름과 주소, 레이블과 카테고리, 그리고 한 번의 클릭으로 바뀌는 오른쪽의 상태 알약.',
+  'help.ctx.collections.bullet.5':
+    '오른쪽의 지도: 좌표가 있는 장소마다 핀 하나, 목록과 지도 전환, 검색창, 레이블 필터. 핀을 클릭하면 그 장소가 열립니다.',
+  'help.ctx.collections.bullet.6':
+    '상세 시트: 행을 클릭하면 커버, 카테고리, 레이블, 상태, 설명, 링크가 보이고 “편집”, “여행에 복사”, “목록에서 제거”를 쓸 수 있습니다.',
+  // create-list
+  'help.guide.create-list.title': '목록 만들기',
+  'help.guide.create-list.goal': '색과 커버가 있는 이름 있는 새 목록을 시작해 장소를 담을 준비를 합니다.',
+  'help.guide.create-list.step.1': '목록 레일 맨 위의 “새 목록”을 클릭합니다.',
+  'help.guide.create-list.step.2':
+    '목록에 이름을 붙이고 색을 고릅니다. 커버 이미지, 설명, 링크는 선택 사항이며 나중에 “편집”으로 추가할 수 있습니다.',
+  'help.guide.create-list.step.3': '“만들기”를 클릭합니다.',
+  'help.guide.create-list.result':
+    '목록이 빈 상태로 열리고, “장소 추가”와 “여행에서 가져오기”가 채우는 두 가지 방법으로 제시됩니다.',
+  'help.guide.create-list.tip.1':
+    '커버는 직접 올린 이미지일 수도 있고, 같은 대화 상자의 Unsplash 검색으로 찾은 사진일 수도 있습니다.',
+  // add-place
+  'help.guide.add-place.title': '장소 추가하기',
+  'help.guide.add-place.goal': '장소를 찾아 이름, 카테고리, 상태, 메모와 함께 한 번에 열린 목록에 저장합니다.',
+  'help.guide.add-place.step.1': '장소 위 필터 행의 +를 클릭합니다.',
+  'help.guide.add-place.step.2': '검색 필드에 장소를 입력하고 결과를 고릅니다. 이름, 주소, 좌표가 거기서 채워집니다.',
+  'help.guide.add-place.step.3':
+    '상태를 정하고, 원한다면 카테고리, 설명, 링크도 넣은 뒤 “추가”를 클릭합니다. 대화 상자는 다음 장소를 위해 열린 채로 남고, “취소”가 닫습니다.',
+  'help.guide.add-place.result': '장소가 목록에 나타나고, 좌표가 있으면 지도의 핀으로도 나타납니다.',
+  'help.guide.add-place.tip.1':
+    '여행 안에서는 장소 인스펙터나 장소 메뉴의 “컬렉션에 저장”으로, 여행을 떠나지 않고 여행의 장소를 목록에 넣을 수 있습니다.',
+  'help.guide.add-place.tip.2':
+    '목록은 내 것이거나 내가 편집자 또는 관리자인 것이어야 합니다. “모든 저장 항목”이나 보기만 할 수 있는 목록에는 +가 없습니다.',
+  // import-from-trip
+  'help.guide.import-from-trip.title': '여행에서 장소 가져오기',
+  'help.guide.import-from-trip.goal': '여행의 장소를 하나씩 저장하는 대신 한 번에 목록으로 가져옵니다.',
+  'help.guide.import-from-trip.step.1':
+    '필터 행에서 구름 화살표가 있는 가져오기 버튼을 클릭합니다. 빈 목록에서는 같은 동작이 “장소 추가” 옆에 있습니다.',
+  'help.guide.import-from-trip.step.2': '내 여행 중 하나를 고릅니다.',
+  'help.guide.import-from-trip.step.3':
+    '원하는 장소에 체크합니다. 이미 목록에 있는 장소는 회색으로 표시되고, 여행의 어느 날에도 속하지 않은 장소는 처음부터 선택되어 있습니다. “새 항목만”은 이미 가진 것을 숨깁니다.',
+  'help.guide.import-from-trip.step.4': '“가져오기”를 클릭합니다. 버튼에는 추가될 개수가 항상 표시됩니다.',
+  'help.guide.import-from-trip.result':
+    '장소가 이름, 주소, 좌표, 설명, 카테고리와 함께 목록으로 복사됩니다. 여행은 그대로입니다.',
+  'help.guide.import-from-trip.tip.1': '이름이나 좌표가 같은 중복은 자동으로 건너뛰므로, 두 번 가져와도 문제없습니다.',
+  'help.guide.import-from-trip.tip.2':
+    '여행의 장소 목록 안에서는 대신 선택 모드의 “컬렉션에 저장”으로 직접 고른 장소들만 저장할 수 있습니다.',
+  // place-status
+  'help.guide.place-status.title': '장소의 상태 정하기',
+  'help.guide.place-status.goal': '무엇이 아이디어이고, 무엇이 후보이며, 어디를 다녀왔는지 관리합니다.',
+  'help.guide.place-status.step.1': '장소 행 오른쪽 끝의 상태 알약을 클릭합니다. “아이디어”가 “가고 싶은 곳”이 됩니다.',
+  'help.guide.place-status.step.2': '다시 클릭하면 “방문함”이 되고, 한 번 더 클릭하면 “아이디어”로 돌아갑니다.',
+  'help.guide.place-status.result': '알약과 그 색이 바로 바뀌고, 목록 위의 상태 필터 개수도 함께 바뀝니다.',
+  'help.guide.place-status.tip.1': '상태는 Collections만의 것입니다. 장소를 여행에 복사해도 상태는 따라가지 않습니다.',
+  'help.guide.place-status.tip.2':
+    '여행에서는 “컬렉션에 저장”이 그 장소가 속한 목록마다 상태 알약을 보여주고, 장소 패널에는 선택한 장소에 대한 “방문함으로 표시” 동작이 있습니다.',
+  // place-detail
+  'help.guide.place-detail.title': '저장한 장소 열기',
+  'help.guide.place-detail.goal': '장소에 대한 모든 것을 보고 작업합니다. 편집, 여행에 복사, 제거.',
+  'help.guide.place-detail.step.1': '장소 행을 클릭합니다. 상세 시트가 목록 옆에 열리고 지도가 그 장소로 이동합니다.',
+  'help.guide.place-detail.step.2':
+    '아래쪽에 “편집”, “여행에 복사”, “목록에서 제거”가 있고, 커버의 카메라로 자동 사진을 내 사진으로 바꿀 수 있습니다.',
+  'help.guide.place-detail.result':
+    '“편집”을 누르면 이름, 카테고리, 레이블, 주소, 좌표, 설명, 링크를 시트 안에서 바로 고칠 수 있습니다.',
+  'help.guide.place-detail.tip.1':
+    '장소에 고유한 사진이 없으면 커버는 자동으로 가져옵니다. 직접 올리는 파일은 JPG, PNG, GIF, WebP이며 최대 20MB입니다.',
+  'help.guide.place-detail.tip.2':
+    '공유 목록의 멤버는 여기서 별점도 남길 수 있고, 필터 행의 평점 필터는 그 평균을 사용합니다.',
+  // labels
+  'help.guide.labels.title': '레이블로 장소 묶기',
+  'help.guide.labels.goal': '공통 카테고리와는 별개로, 지역이나 날짜 같은 목록만의 레이블을 붙입니다.',
+  'help.guide.labels.step.1': '필터 행의 레이블 컨트롤에서 레이블 관리자를 엽니다.',
+  'help.guide.labels.step.2':
+    '이름을 입력하고 색을 고른 뒤 “레이블 추가”를 클릭합니다. 기존 레이블의 이름 변경, 색 변경, 삭제도 같은 대화 상자에서 합니다.',
+  'help.guide.labels.step.3':
+    '“선택”을 켜고 장소에 체크한 뒤 선택 바의 “레이블 지정”을 클릭합니다. 장소 하나라면 상세 시트의 “편집”으로도 레이블을 붙일 수 있습니다.',
+  'help.guide.labels.step.4':
+    '필터 행에서 레이블을 하나 이상 고르면 목록과 지도가 그중 하나라도 가진 장소로 좁혀집니다.',
+  'help.guide.labels.result':
+    '레이블이 붙은 장소는 행에 레이블을 보여줍니다. 레이블 필터는 뷰어를 포함한 모든 멤버에게 제공됩니다.',
+  'help.guide.labels.tip.1': '레이블은 만들어진 그 목록에만 속합니다. 장소를 다른 목록으로 옮기면 레이블은 사라집니다.',
+  'help.guide.labels.tip.2': '레이블을 관리하고 지정하려면 목록의 편집 권한이 필요합니다.',
+  // filter-select
+  'help.guide.filter-select.title': '장소 필터링하고 선택하기',
+  'help.guide.filter-select.goal': '목록을 좁히고 여러 장소를 한 번에 처리합니다.',
+  'help.guide.filter-select.step.1':
+    '필터 행의 드롭다운을 사용합니다. 상태, 카테고리, 최소 평점, 정렬 순서입니다. 각각 남게 될 장소의 수를 보여줍니다.',
+  'help.guide.filter-select.step.2': '“선택”을 클릭합니다. 모든 행에 체크박스가 생기고 선택 바가 나타납니다.',
+  'help.guide.filter-select.step.3':
+    '장소에 체크하거나 현재 필터된 전부를 대상으로 “모두 선택”을 쓴 뒤 “레이블 지정”, “목록으로 이동”, “목록에 복제”, “여행에 복사”, “삭제” 중 하나를 고릅니다.',
+  'help.guide.filter-select.result': '동작은 선택 전체에 한 번에 적용됩니다. 오른쪽의 ×로 선택 모드를 나갑니다.',
+  'help.guide.filter-select.tip.1':
+    '“모두 선택”은 필터를 따르므로, “가고 싶은 곳”으로 필터한 뒤 모두 선택하는 것이 후보를 한 번에 처리하는 빠른 방법입니다.',
+  // copy-to-trip
+  'help.guide.copy-to-trip.title': '장소를 여행에 복사하기',
+  'help.guide.copy-to-trip.goal': '저장한 장소를 내 여행의 경유지로 만듭니다.',
+  'help.guide.copy-to-trip.step.1':
+    '“선택”을 켜고 장소에 체크하거나, 장소 하나를 열어 상세 시트의 “여행에 복사”를 사용합니다.',
+  'help.guide.copy-to-trip.step.2': '선택 바의 “여행에 복사”를 클릭합니다.',
+  'help.guide.copy-to-trip.step.3': '여행을 고릅니다. 검색창으로 긴 목록을 좁힐 수 있습니다.',
+  'help.guide.copy-to-trip.result':
+    '장소가 이름, 설명, 카테고리, 메모, 가격, 좌표, 사진, 태그와 함께 그 여행의 장소 목록에 들어갑니다. 컬렉션에서는 아무것도 바뀌지 않습니다.',
+  'help.guide.copy-to-trip.tip.1':
+    '공유 목록의 뷰어도 이 작업을 할 수 있습니다. 목록에서 복사해 갈 뿐 목록을 바꾸지는 않습니다.',
+  // share-list
+  'help.guide.share-list.title': '목록을 누군가와 공유하기',
+  'help.guide.share-list.goal': '이 TREK의 다른 사람들과 목록을 실시간으로 함께 계획합니다.',
+  'help.guide.share-list.step.1': '내 목록의 헤더에서 “공유”를 클릭합니다.',
+  'help.guide.share-list.step.2': '사용자와 역할을 고릅니다. “뷰어”, “편집자”, “관리자” 중 하나입니다.',
+  'help.guide.share-list.step.3':
+    '“초대 보내기”를 클릭합니다. 상대가 자신의 목록 레일에서 초대를 수락할 때까지 “대기 중인 초대”로 표시됩니다.',
+  'help.guide.share-list.result':
+    '수락되면 상대에게는 “공유됨” 아래에 목록이 나타나고 모든 변경이 실시간으로 동기화됩니다. 멤버와 역할은 같은 대화 상자에서 계속 바꿀 수 있습니다.',
+  'help.guide.share-list.tip.1':
+    '뷰어는 보고, 평가하고, 장소를 자기 여행에 복사할 수 있습니다. 편집자는 장소와 레이블을 추가하고 편집합니다. 관리자는 삭제도 할 수 있습니다.',
+  'help.guide.share-list.tip.2':
+    '사람을 초대하고 내보내는 것은 소유자만 할 수 있습니다. 멤버는 스스로 공유 목록에서 나갈 수 있습니다.',
+  // export-list
+  'help.guide.export-list.title': '목록을 파일로 내보내기',
+  'help.guide.export-list.goal': '다른 TREK에 있는 사람에게 목록을 건네거나 지도 앱으로 가져갑니다.',
+  'help.guide.export-list.step.1': '목록의 헤더에서 “내보내기”를 클릭합니다.',
+  'help.guide.export-list.step.2':
+    '다른 TREK용으로는 레이블과 상태가 담긴 “TREK 목록”을, OsmAnd, Organic Maps, Garmin 기기, 그 밖에 웨이포인트를 읽는 앱용으로는 GPX를 고릅니다.',
+  'help.guide.export-list.result': '파일이 다운로드됩니다. 공유 목록의 멤버라면 누구나 내보낼 수 있습니다.',
+  'help.guide.export-list.tip.1':
+    '좌표가 없는 장소는 GPX 웨이포인트가 될 수 없어 제외되며, TREK이 몇 개가 제외되었는지 알려줍니다.',
+  'help.guide.export-list.tip.2':
+    '평점, 멤버, 올린 사진은 일부러 남겨 둡니다. 이것들은 목록이 아니라 이 TREK에 속하기 때문입니다.',
+  // import-file
+  'help.guide.import-file.title': '파일에서 목록 가져오기',
+  'help.guide.import-file.goal': 'TREK 목록 파일이나 GPX 파일을 새 목록으로, 또는 가지고 있는 목록에 가져옵니다.',
+  'help.guide.import-file.step.1': '목록 레일에서 “새 목록” 옆에 있는 업로드 화살표 가져오기 버튼을 클릭합니다.',
+  'help.guide.import-file.step.2':
+    '파일을 고릅니다. TREK은 무언가 일어나기 전에 파일의 내용을 보여줍니다. 이름, 장소와 레이블의 개수입니다.',
+  'help.guide.import-file.step.3':
+    '“새 리스트”를 그대로 두고 원하면 이름을 바꾸거나, “리스트에 추가”를 골라 편집할 수 있는 목록에 장소를 넣은 뒤 “가져오기”를 클릭합니다.',
+  'help.guide.import-file.result':
+    '가져온 장소가 있는 목록으로 이동합니다. 목록에 추가하는 것은 언제나 추가만 합니다. 이미 있던 장소는 상태, 메모, 레이블을 그대로 유지합니다.',
+  'help.guide.import-file.tip.1':
+    'GPX에서는 이름이 있는 모든 웨이포인트가 장소가 됩니다. 트랙은 선이라 제외되며, 미리보기에 그 점이 몇 개였는지 표시됩니다.',
+  'help.guide.import-file.tip.2':
+    'TREK 목록도 GPX도 아닌 파일은 이유와 함께 거부됩니다. 읽을 수 없는 장소 하나는 그 장소만 건너뛰고, 파일 전체를 거부하지는 않습니다.',
+  // edit-list
+  'help.guide.edit-list.title': '목록 편집하거나 삭제하기',
+  'help.guide.edit-list.goal': '목록의 이름, 색, 커버, 설명, 링크를 바꾸거나 목록을 없앱니다.',
+  'help.guide.edit-list.step.1': '목록의 헤더에서 “편집”을 클릭합니다. 소유자에게만 보입니다.',
+  'help.guide.edit-list.step.2':
+    '원하는 것을 바꾸고 “저장”을 클릭합니다. 왼쪽 아래의 “목록 삭제”는 확인을 거친 뒤 목록을 모든 장소와 함께 없앱니다.',
+  'help.guide.edit-list.result': '헤더에 새 색, 커버, 설명이 바로 반영됩니다.',
+  'help.guide.edit-list.tip.1': '목록 삭제는 되돌릴 수 없습니다. 사본을 남기고 싶다면 먼저 내보내세요.',
+  // all-saved
+  'help.guide.all-saved.title': '내 라이브러리 전체 검색하기',
+  'help.guide.all-saved.goal': '내가 소유한 모든 목록을 한 번에 살펴봅니다.',
+  'help.guide.all-saved.step.1':
+    '목록 레일의 “모든 저장 항목”을 클릭합니다. 내가 소유하거나 공동 소유한 모든 목록의 장소를 합쳐서 보여줍니다.',
+  'help.guide.all-saved.step.2':
+    '다른 목록에서처럼 검색창과 필터를 사용합니다. “선택”도 여기서 여행에 복사하는 데 쓸 수 있습니다.',
+  'help.guide.all-saved.result':
+    '저장한 모든 장소를 한 화면에서 봅니다. 담을 목록이 하나로 정해지지 않으므로 추가나 가져오기는 없습니다.',
+  'help.guide.all-saved.tip.1': '레이블은 목록별이므로 “모든 저장 항목”에서는 레이블 필터가 제공되지 않습니다.',
+
+  // ── Screen: journey ───────────────────────────────────────────────────────────────────
+  'help.ctx.journey.title': 'Journey',
+  'help.ctx.journey.summary':
+    'Journey는 사진이 중심인 여행 일기입니다. 모든 Journey는 하나 이상의 여행에 묶여 있고, 이야기, 사진, 기분, 날씨가 담긴 기록으로 하루하루 자라납니다. 이 화면에는 나의 Journey가 나열되며, 하나를 열면 쓸 수 있습니다.',
+  'help.ctx.journey.bullet.1':
+    '상단의 배너는 진행 중인 Journey, 없으면 가장 최근 Journey를 기록, 사진, 장소 수와 함께 보여줍니다. “계속 쓰기”는 그것을 오늘 날짜로 엽니다.',
+  'help.ctx.journey.bullet.2':
+    '그 아래에는 Journey마다 커버, 부제목, 날짜, 개수가 담긴 카드가 하나씩 있습니다. 카드를 클릭하면 열립니다.',
+  'help.ctx.journey.bullet.3': '그리드의 마지막 카드인 “새 Journey 만들기”는 여행에서 Journey를 시작합니다.',
+  // create-journey
+  'help.guide.create-journey.title': 'Journey 만들기',
+  'help.guide.create-journey.goal': '여행의 일기를 시작합니다. 그 여행의 장소들은 이미 제안으로 기다리고 있습니다.',
+  'help.guide.create-journey.step.1': '그리드의 마지막 카드인 “새 Journey 만들기”를 클릭합니다.',
+  'help.guide.create-journey.step.2':
+    '이름을 붙이고, 원하면 부제목도 붙인 다음, 속하는 여행에 체크합니다. 카운터는 장소가 몇 개 들어올지 알려줍니다.',
+  'help.guide.create-journey.step.3': '“Journey 만들기”를 클릭합니다.',
+  'help.guide.create-journey.result':
+    '일기가 열립니다. 연결된 여행의 모든 장소가 타임라인에 제안으로 놓이고, 장소가 걸쳐 있는 날마다 하나씩 생겨 바로 써 넣을 수 있습니다.',
+  'help.guide.create-journey.tip.1': '여행은 나중에 “Journey 설정”에서 더 연결할 수 있습니다.',
+  'help.guide.create-journey.tip.2': '여행이 없는 Journey도 됩니다. 그때는 기록을 직접 추가합니다.',
+  // open-journey
+  'help.guide.open-journey.title': 'Journey 열기',
+  'help.guide.open-journey.goal': '일기 안으로 들어가고, 어디에서 열리는지 알아둡니다.',
+  'help.guide.open-journey.step.1':
+    '카드를 클릭합니다. 각 카드에는 커버, 날짜, 그리고 그 Journey에 담긴 기록, 사진, 장소의 수가 보입니다.',
+  'help.guide.open-journey.result':
+    '진행 중인 Journey는 오늘 날짜로 열리고, 아직 아무것도 쓰지 않았다면 오늘 이전의 마지막 기록에서 열립니다. 끝난 Journey는 처음에서 열립니다.',
+  'help.guide.open-journey.tip.1': '커버는 “Journey 설정”에서 따로 정하지 않는 한 Journey의 첫 사진입니다.',
+  // continue-writing
+  'help.guide.continue-writing.title': '진행 중인 Journey 이어 쓰기',
+  'help.guide.continue-writing.goal': '지금 하고 있는 Journey의 오늘 페이지로 곧장 들어갑니다.',
+  'help.guide.continue-writing.step.1':
+    '상단 배너의 “계속 쓰기”를 클릭합니다. 배너에는 진행 중인 Journey, 없으면 가장 최근 Journey가 보입니다.',
+  'help.guide.continue-writing.result':
+    '일기가 오늘 날짜로 열리고, 아직 아무것도 쓰지 않았다면 오늘 이전의 마지막 기록에서 열립니다.',
+  'help.guide.continue-writing.tip.1':
+    '배너는 아직 Journey가 없는 여행에 대한 제안도 보여줍니다. “닫기”는 그 제안을 숨깁니다.',
+
+  // ── Screen: journey-detail ────────────────────────────────────────────────────────────
+  'help.ctx.journey-detail.title': '일기',
+  'help.ctx.journey-detail.summary':
+    '열려 있는 하나의 Journey입니다. 왼쪽에는 하루하루의 타임라인이, 오른쪽에는 모든 기록과 연결된 여행의 장소가 담긴 지도가 있습니다. 일기에 무언가를 더하는 것은 모두 상단에 있고, 헤더에는 개수, “Studio”, 제안 스위치, “Journey 설정”이 있습니다.',
+  'help.ctx.journey-detail.bullet.1':
+    '헤더: 커버, 제목과 부제목, 일수, 장소, 기록, 사진 수, 그리고 오른쪽에 “Studio”, 제안 스위치, “Journey 설정”.',
+  'help.ctx.journey-detail.bullet.2': '툴바: “타임라인”과 “갤러리” 탭, “이 여행에서 검색”, “항목 추가”.',
+  'help.ctx.journey-detail.bullet.3':
+    '타임라인: 날마다 섹션이 하나씩 있고, +로 그날에 기록을 추가합니다. 사진, 기분, 날씨, 이야기가 담긴 기록 카드와, 여행에서 온 제안이 “이 제안 넘기기”와 함께 더 옅은 모양으로 놓입니다.',
+  'help.ctx.journey-detail.bullet.4':
+    '지도: 기록은 핀으로 표시되어 날짜 순으로 점선으로 이어지고, 여행의 장소와 그 여행에 가져온 GPX 트랙도 보입니다.',
+  'help.ctx.journey-detail.bullet.5':
+    '“Journey 설정”: 커버, 이름과 부제목, 지도의 트랙, 기록 항목, 넘긴 제안, 연결된 여행, 기여자, 공개 공유, 보관과 삭제.',
+  'help.ctx.journey-detail.bullet.6':
+    '긴 타임라인 위에는 둥근 버튼 두 개가 떠 있습니다. 맨 위로, 그리고 마지막 기록으로.',
+  // add-entry
+  'help.guide.add-entry.title': '기록 쓰기',
+  'help.guide.add-entry.goal': '제목, 본문, 기분, 날씨가 담긴 하루의 이야기를 추가합니다.',
+  'help.guide.add-entry.step.1': '툴바의 “항목 추가”를 클릭하거나, 날짜 헤더의 +를 클릭해 그날에서 시작합니다.',
+  'help.guide.add-entry.step.2':
+    '그 순간에 이름을 붙이고 이야기를 씁니다. 본문 위의 툴바로 굵게, 기울임, 제목, 인용, 링크, 목록을 Markdown으로 넣을 수 있습니다.',
+  'help.guide.add-entry.step.3':
+    '기분과 날씨를 고르고, 날짜를 확인하고, 원하면 위치를 고정합니다. 장소를 검색하거나 현재 위치를 씁니다.',
+  'help.guide.add-entry.step.4': '“저장”을 클릭합니다.',
+  'help.guide.add-entry.result': '기록이 타임라인의 그날에, 그리고 지도에 핀으로 나타납니다. 헤더의 개수가 갱신됩니다.',
+  'help.guide.add-entry.tip.1': '제안에 써 넣는 것도 같은 편집기이며, 장소가 이미 정해져 있습니다.',
+  'help.guide.add-entry.tip.2':
+    '아래의 태그는 “hidden gem”이나 “best meal” 같은 자유 텍스트이고, 검색으로 찾을 수 있습니다.',
+  // entry-photos
+  'help.guide.entry-photos.title': '기록에 사진과 동영상 추가하기',
+  'help.guide.entry-photos.goal': '하루에 사진을 올립니다. 첫 번째 사진이 기록의 커버가 됩니다.',
+  'help.guide.entry-photos.step.1': '카드의 ⋯로 기록 메뉴를 열고 “편집”을 선택합니다.',
+  'help.guide.entry-photos.step.2':
+    '“사진 업로드”를 클릭해 파일을 고릅니다. “갤러리에서”는 이미 Journey의 갤러리에 있는 사진을 가져오고, “External photos”는 연결된 Immich나 Synology 라이브러리에서 그날의 사진을 찾습니다.',
+  'help.guide.entry-photos.step.3':
+    '사진에 마우스를 올리면 나오는 “1번째로 설정”으로 커버를 고른 뒤 “저장”을 클릭합니다.',
+  'help.guide.entry-photos.result': '사진이 카드와 갤러리에 보입니다. 첫 번째 사진이 어디서나 썸네일이 됩니다.',
+  'help.guide.entry-photos.tip.1':
+    '동영상도 같은 방법으로 기록에 올립니다. mp4, m4v, webm, mov를 500MB까지, 업로드한 그대로 저장됩니다.',
+  'help.guide.entry-photos.tip.2':
+    'iPhone의 HEIC 파일은 업로드 시 JPEG로 변환되며, 이때 GPS와 카메라 메타데이터가 사라집니다.',
+  // suggestions
+  'help.guide.suggestions.title': '제안 활용하기 또는 넘기기',
+  'help.guide.suggestions.goal': '여행의 장소를 기록으로 바꾸고, 쓰지 않을 것은 치웁니다.',
+  'help.guide.suggestions.step.1':
+    '제안은 장소 이름이 기울임꼴로 적힌 옅은 카드입니다. 클릭하면 장소와 날짜가 이미 정해진 편집기가 열립니다.',
+  'help.guide.suggestions.step.2':
+    '쓰지 않을 카드에서 “이 제안 넘기기”를 클릭합니다. 삭제되지 않고 타임라인에서만 사라지며, 여행 동기화가 다시 제안하지 않습니다.',
+  'help.guide.suggestions.step.3':
+    '마음이 바뀌었다면, “Journey 설정”에 넘긴 개수가 보이고 “넘긴 제안 되돌리기”가 모두 되돌립니다.',
+  'help.guide.suggestions.result':
+    '타임라인에는 쓰려는 것만 남습니다. 읽는 동안에는 헤더의 스위치가 모든 제안을 한 번에 숨깁니다.',
+  'help.guide.suggestions.tip.1': '이틀에 걸친 장소는 각각의 날에 제안을 하나씩 만듭니다.',
+  'help.guide.suggestions.tip.2': '제안은 통계에 절대 집계되지 않습니다. 쓴 기록만 집계됩니다.',
+  // add-on-day
+  'help.guide.add-on-day.title': '지난 날에 기록 추가하기',
+  'help.guide.add-on-day.goal': '이미 지나간 날에 대해, 나중에 날짜를 고치지 않고 씁니다.',
+  'help.guide.add-on-day.step.1': '그날의 헤더에 있는 +를 클릭합니다.',
+  'help.guide.add-on-day.step.2': '그 날짜가 정해진 채로 편집기가 열립니다. 평소처럼 쓰고 “저장”합니다.',
+  'help.guide.add-on-day.result': '기록이 바로 맞는 날에 들어갑니다.',
+  'help.guide.add-on-day.tip.1': '하루 안에서는 기록 메뉴의 화살표로 앞이나 뒤로 옮길 수 있습니다.',
+  // pros-cons
+  'help.guide.pros-cons.title': '총평 추가하기',
+  'help.guide.pros-cons.goal': '무엇이 좋았고 무엇이 아니었는지로 하루를 정리합니다.',
+  'help.guide.pros-cons.step.1':
+    '편집기에서 이야기 아래의 “장단점”을 찾습니다. “장점”이나 “단점”에 한 가지를 적고, 다음 것은 “하나 더 추가”로 넣습니다.',
+  'help.guide.pros-cons.step.2': '저장합니다. 총평이 카드에 두 개의 짧은 목록으로 보입니다.',
+  'help.guide.pros-cons.result': '이야기 아래에서 좋았던 점과 아쉬웠던 점이 한눈에 들어옵니다.',
+  'help.guide.pros-cons.tip.1': '총평을 쓰지 않는 Journey는 “Journey 설정”의 “기록 항목”에서 이 섹션을 끌 수 있습니다.',
+  // search-journey
+  'help.guide.search-journey.title': '긴 일기에서 찾기',
+  'help.guide.search-journey.goal': '몇 주치를 스크롤하지 않고 원하는 기록으로 갑니다.',
+  'help.guide.search-journey.step.1':
+    '툴바의 “이 여행에서 검색”에 입력합니다. 입력하는 대로 타임라인이 제목, 이야기, 장소, 태그를 대상으로 걸러집니다. 악센트와 대소문자는 상관없습니다.',
+  'help.guide.search-journey.step.2':
+    '헤더의 제안 스위치는 읽는 동안 아직 쓰지 않은 카드를 숨깁니다. 타임라인이 길어지면 아래쪽 가장자리 위에 둥근 버튼 두 개가 떠 있습니다. 맨 위로, 그리고 마지막 기록으로.',
+  'help.guide.search-journey.result': '일치하는 기록만 남습니다. 검색창을 비우면 다시 전부 보입니다.',
+  'help.guide.search-journey.tip.1':
+    '진행 중인 Journey는 오늘 날짜로 열리므로, 현재 페이지는 보통 이미 보이는 상태입니다.',
+  'help.guide.search-journey.tip.2': '태그도 포함됩니다. “hidden gem”을 검색하면 그 태그가 달린 모든 기록이 나옵니다.',
+  // gallery-map
+  'help.guide.gallery-map.title': '갤러리와 지도 둘러보기',
+  'help.guide.gallery-map.goal': 'Journey 전체를 사진으로, 그리고 지도 위의 장소로 봅니다.',
+  'help.guide.gallery-map.step.1':
+    '툴바에서 “갤러리”로 전환합니다. 모든 기록의 모든 사진과, 갤러리에 직접 업로드한 사진이 있습니다. 하나를 클릭하면 라이트박스로 열립니다.',
+  'help.guide.gallery-map.step.2':
+    '오른쪽 지도는 기록을 날짜 순의 핀으로, 연결된 여행의 장소를, 그리고 그 여행에 가져온 GPX 트랙을 플래너에서의 색 그대로 보여줍니다.',
+  'help.guide.gallery-map.result':
+    '트랙에 마우스를 올리면 이름이 보입니다. 기록 사이의 점선은 TREK이 그린 것이고, 트랙은 실제로 기록한 경로입니다.',
+  'help.guide.gallery-map.tip.1': '트랙은 “Journey 설정”에서 Journey별로 끌 수 있습니다.',
+  'help.guide.gallery-map.tip.2':
+    '위치가 있는 갤러리 사진은 “갤러리”와 “지도”가 모두 공유될 때 공개 지도에도 나타납니다.',
+  // entry-fields
+  'help.guide.entry-fields.title': '기록 항목 끄기',
+  'help.guide.entry-fields.goal': '편집기를 이 Journey에서 쓰는 것만으로 줄입니다.',
+  'help.guide.entry-fields.step.1': '헤더에서 “Journey 설정”을 엽니다.',
+  'help.guide.entry-fields.step.2': '“기록 항목”에서 “기분”, “날씨”, “좋은 점과 아쉬운 점”을 끕니다.',
+  'help.guide.entry-fields.result':
+    '편집기가 더 이상 그것을 묻지 않습니다. 쓴 내용은 사라지지 않습니다. 항목을 다시 켜면 저장된 값이 다시 보이고, 공유된 Journey에서도 같은 항목이 숨겨집니다.',
+  'help.guide.entry-fields.tip.1': '스위치는 Journey별이므로 출장과 휴가를 다르게 둘 수 있습니다.',
+  // link-trip
+  'help.guide.link-trip.title': '다른 여행 연결하기',
+  'help.guide.link-trip.goal': '두 번째 여행의 장소를 제안으로 일기에 가져옵니다.',
+  'help.guide.link-trip.step.1': '헤더에서 “Journey 설정”을 엽니다.',
+  'help.guide.link-trip.step.2': '연결된 여행 아래의 “여행 추가”를 클릭합니다.',
+  'help.guide.link-trip.step.3': '여행을 고릅니다.',
+  'help.guide.link-trip.result':
+    '그 여행의 장소가 각자의 날에 제안으로 타임라인에 들어오고, GPX 트랙이 지도에 더해집니다.',
+  'help.guide.link-trip.tip.1': '연결된 여행 옆의 ×는 연결을 다시 해제합니다. 쓴 기록은 남습니다.',
+  'help.guide.link-trip.tip.2': '어떤 날의 기록은 그날을 몇 개의 여행이 덮고 있든 한 번만 집계됩니다.',
+  // share-public
+  'help.guide.share-public.title': 'Journey 공개로 공유하기',
+  'help.guide.share-public.goal': 'TREK 계정이 없는 사람에게 읽기 전용 링크를 줍니다.',
+  'help.guide.share-public.step.1': '“Journey 설정”을 열고 “공개 공유”를 찾습니다.',
+  'help.guide.share-public.step.2': '“공유 링크 만들기”를 클릭합니다.',
+  'help.guide.share-public.step.3':
+    '방문자에게 보일 것을 고릅니다. “타임라인”, “갤러리”, “지도”는 각각 별도의 스위치입니다. “복사”는 링크를 클립보드에 넣습니다.',
+  'help.guide.share-public.result':
+    '링크가 있는 사람은 켜진 섹션만 보고 그 밖에는 아무것도 보지 못합니다. “기록 항목”에서 끈 항목은 거기서도 숨겨진 채입니다.',
+  'help.guide.share-public.tip.1':
+    '사진은 “갤러리”와 “지도”가 모두 켜져 있을 때만 공개 지도에 나타납니다. “지도”가 꺼져 있으면 좌표는 서버를 떠나기 전에 제거됩니다.',
+  'help.guide.share-public.tip.2': '공유를 끝내려면 같은 자리에서 링크를 삭제합니다.',
+  // contributors
+  'help.guide.contributors.title': '함께 쓰기',
+  'help.guide.contributors.goal': '여행 동행자가 자기 기록과 사진을 추가하게 합니다.',
+  'help.guide.contributors.step.1': '“Journey 설정”을 열고 기여자까지 스크롤합니다.',
+  'help.guide.contributors.step.2': '“기여자 초대”를 클릭하고 이름이나 이메일로 사용자를 검색합니다.',
+  'help.guide.contributors.step.3': '역할을 고르고 확인합니다.',
+  'help.guide.contributors.result':
+    'Journey가 그 사람의 목록에 나타나고, 그 사람의 기록에는 그 사람의 이름이 붙습니다. 기여자를 빼려면 옆의 ×를 씁니다.',
+  'help.guide.contributors.tip.1':
+    '기여자는 이 TREK에 있는 사람을 위한 것입니다. 그 밖의 모든 사람에게는 공개 링크가 있습니다.',
+  // studio
+  'help.guide.studio.title': 'Journey를 포토북으로 꾸미기',
+  'help.guide.studio.goal': '일기를 인쇄할 수 있는 페이지로 만듭니다.',
+  'help.guide.studio.step.1': '헤더의 “Studio”를 클릭합니다. 디자이너가 Journey 위에 열립니다.',
+  'help.guide.studio.step.2': '상단 바 왼쪽의 Journey 이름이 돌아가는 길입니다. 있던 자리로 데려다줍니다.',
+  'help.guide.studio.result':
+    '왼쪽에 페이지 레일, 작업대에 펼침면, 오른쪽에 속성이 있습니다. “Auto layout”은 기록으로 책을 만들고, “Export”는 인쇄용 PDF를 만듭니다.',
+  'help.guide.studio.tip.1': 'Studio는 너비 1024px 이상의 창이 필요하며 휴대폰에서는 제공되지 않습니다.',
+  'help.guide.studio.tip.2':
+    '책은 Journey의 접근 권한을 물려받습니다. Journey를 읽을 수 있는 사람은 열 수 있고, 편집할 수 있는 사람은 저장할 수 있습니다.',
+  // archive-journey
+  'help.guide.archive-journey.title': 'Journey 보관하기 또는 삭제하기',
+  'help.guide.archive-journey.goal': '끝난 Journey를 닫거나, 하나를 영구히 없앱니다.',
+  'help.guide.archive-journey.step.1': '“Journey 설정”을 엽니다.',
+  'help.guide.archive-journey.step.2':
+    '맨 아래의 “Journey 보관”은 Journey를 끝내고 보관됨으로 표시하며, “Journey 복원”은 되돌립니다. “삭제”는 확인 후 모든 기록과 사진과 함께 없앱니다.',
+  'help.guide.archive-journey.result':
+    '보관된 Journey는 계속 읽고 공유할 수 있습니다. 다만 더 이상 오늘 날짜로 열리지 않을 뿐입니다.',
+  'help.guide.archive-journey.tip.1': '삭제는 되돌릴 수 없으며, Journey가 연결되어 있던 여행에는 손대지 않습니다.',
+  'help.guide.archive-journey.tip.2': '커버, 이름, 부제목은 같은 대화상자의 맨 위에 있습니다.',
+
+  // ── Screen: journey-studio ────────────────────────────────────────────────────────────
+  'help.ctx.journey-studio.title': 'Studio',
+  'help.ctx.journey-studio.summary':
+    'TREK Studio는 여행을 인쇄할 수 있는 포토북으로 배치합니다. 일기 위에 열리며, 왼쪽에 페이지 사이드바와 콘텐츠, 가운데에 작업 중인 펼침면, 오른쪽에 그 속성이 있습니다. Auto layout이 항목에서 첫 초안을 만들고, 그다음부터는 옮기고 자르고 스타일을 바꾸는 모든 것이 내 몫이며, 모든 단계를 되돌릴 수 있습니다.',
+  'help.ctx.journey-studio.bullet.1':
+    '상단 바: Back to the journey, Book view, Undo와 Redo, Page format, Auto layout, Export. 제목 옆의 “저장됨” 표시로 책이 저장된 시점을 알 수 있습니다.',
+  'help.ctx.journey-studio.bullet.2':
+    '왼쪽 사이드바에는 다섯 섹션이 있습니다. Pages, Content(여행의 사진과 항목), Elements(텍스트, 도형, 선, 그리드, 프레임, 아이콘), “여행”(여행에서 만들어지는 지도, 국가, 국기, 표시), Layouts입니다.',
+  'help.ctx.journey-studio.bullet.3':
+    '작업 영역: 도련과 안전 영역이 표시된 현재 펼침면, 그 아래의 확대 바, Fit to view, 오른쪽의 “이 펼침면 내려받기”.',
+  'help.ctx.journey-studio.bullet.4':
+    '오른쪽의 Properties: 선택한 것의 위치와 크기, 자르기와 초점, Fill 또는 Fit, 모양, 모서리, 프레임, 쌓임 순서, 잠금. 아무것도 선택하지 않으면 쪽 번호와 문서입니다.',
+  'help.ctx.journey-studio.bullet.5':
+    '책은 제본된 책의 형태를 갖습니다. 표지, 낱장인 첫 페이지, 펼침면들, 낱장인 마지막 페이지, 뒤표지입니다. 쪽 번호는 첫 페이지부터 세고 보이는 그대로 인쇄됩니다.',
+  'help.ctx.journey-studio.bullet.6':
+    '여러 사람이 동시에 디자인할 수 있습니다. 모두가 다른 사람의 포인터를 이름과 함께 보고, 다른 사람이 바꾼 버전에 저장하면 그 작업을 덮어쓰는 대신 충돌로 돌아옵니다.',
+  // studio-auto-layout
+  'help.guide.studio-auto-layout.title': '책을 자동으로 만들기',
+  'help.guide.studio-auto-layout.goal': '일기의 항목과 사진으로 완전한 첫 초안을 한 번의 클릭으로 얻습니다.',
+  'help.guide.studio-auto-layout.step.1': '상단 바에서 Auto layout을 클릭합니다.',
+  'help.guide.studio-auto-layout.step.2':
+    '“책 전체”를 고릅니다. 제목과 페이지 설정은 유지한 채 모든 페이지를 교체합니다. “이 페이지”는 화면에 있는 펼침면만 다시 만들며, 항목에서 만들어진 펼침면에서만 제공됩니다.',
+  'help.guide.studio-auto-layout.step.3':
+    'Pages 사이드바를 훑어봅니다. 이전 상태가 더 좋았다면 Undo가 레이아웃 전체를 되돌립니다.',
+  'help.guide.studio-auto-layout.result':
+    '항목마다 펼침면 하나가 순서대로 만들어지고, 사진, 제목, 이야기가 배치됩니다. 각 요소는 편집하기 전까지 항목을 계속 따라갑니다.',
+  'help.guide.studio-auto-layout.tip.1': '두 항목 모두 일반적인 되돌리기 단계이므로 자유롭게 시도해 보세요.',
+  'help.guide.studio-auto-layout.tip.2':
+    'Auto layout이 항목에 묶어 둔 요소는 Properties에서 손대기 전까지 그 항목의 편집을 따라갑니다. 손대면 연결이 끊어집니다.',
+  // studio-pages
+  'help.guide.studio-pages.title': '펼침면 추가, 이동, 삭제하기',
+  'help.guide.studio-pages.goal': '책을 페이지 단위로 만들어 갑니다.',
+  'help.guide.studio-pages.step.1':
+    '사이드바에서 Pages를 엽니다. 썸네일은 책의 순서 그대로입니다. 표지, 첫 페이지, 펼침면들, 마지막 페이지, 뒤표지.',
+  'help.guide.studio-pages.step.2':
+    '맨 아래의 “페이지 추가”는 마지막 페이지 앞에 새 펼침면을 놓습니다. 두 썸네일 사이의 +는 바로 그 자리에 삽입합니다.',
+  'help.guide.studio-pages.step.3':
+    '썸네일에 마우스를 올리면 동작이 나타납니다. “앞으로 이동”, “뒤로 이동”, “페이지 복제”, “페이지 삭제”입니다. 썸네일을 클릭하면 그 펼침면이 작업 영역에 열립니다.',
+  'help.guide.studio-pages.result':
+    '표지, 첫 페이지와 마지막 페이지, 뒤표지는 제자리에 남습니다. 새 펼침면은 항상 그 사이에 들어갑니다.',
+  'help.guide.studio-pages.tip.1': '상단 바의 Book view는 제본될 모습 그대로 책 전체를 낱장으로 보여줍니다.',
+  'help.guide.studio-pages.tip.2': '쪽 번호는 아무것도 선택하지 않은 상태에서 Properties의 “문서” 아래에서 켭니다.',
+  // studio-layouts
+  'help.guide.studio-layouts.title': '펼침면에 레이아웃 적용하기',
+  'help.guide.studio-layouts.goal': '펼침면에 사진과 텍스트 프레임이 미리 짜인 배치를 입힙니다.',
+  'help.guide.studio-layouts.step.1':
+    '사이드바에서 Layouts를 엽니다. 펼침면 레이아웃 13개와, 표지, 뒤표지, 낱쪽을 위한 별도 세트가 있습니다.',
+  'help.guide.studio-layouts.step.2':
+    '하나를 클릭합니다. 작업 영역의 펼침면이 그 프레임을 받고, 이미 있던 사진과 텍스트가 그 안에 채워집니다.',
+  'help.guide.studio-layouts.result':
+    '빈 프레임은 콘텐츠를 기다립니다. Content에서 사진을 끌어다 놓거나 Add to this page를 사용합니다.',
+  'help.guide.studio-layouts.tip.1': '레이아웃도 다른 것과 같은 되돌리기 단계입니다.',
+  // studio-content
+  'help.guide.studio-content.title': '사진과 항목을 페이지에 놓기',
+  'help.guide.studio-content.goal': '여행 자체의 재료를 펼침면으로 가져옵니다.',
+  'help.guide.studio-content.step.1':
+    '사이드바에서 Content를 엽니다. Photos에는 여행의 모든 사진이, Entries에는 텍스트가 있는 항목이 나열됩니다.',
+  'help.guide.studio-content.step.2':
+    '사진을 펼침면이나 빈 프레임으로 끌어다 놓거나, 그 아래의 Add to this page를 클릭합니다. “사진 업로드”는 아직 여행에 없는 사진을 추가합니다.',
+  'help.guide.studio-content.step.3':
+    '항목 아래의 Title, Story, Place는 그 텍스트를 텍스트 요소로 페이지에 놓습니다. 날짜와 좌표는 표시로 들어오고, 항목의 사진은 바로 거기에 나열됩니다.',
+  'help.guide.studio-content.result':
+    '끌어다 놓은 사진은 사진 요소가 됩니다. 텍스트는 편집하기 전까지 항목을 계속 따라갑니다.',
+  'help.guide.studio-content.tip.1': 'Content 상단의 검색창은 두 목록을 모두 거릅니다.',
+  'help.guide.studio-content.tip.2': '바탕화면의 파일을 작업 영역에 끌어다 놓으면 업로드와 배치가 한 번에 됩니다.',
+  // studio-elements
+  'help.guide.studio-elements.title': '텍스트, 도형, 아이콘 추가하기',
+  'help.guide.studio-elements.goal': '사진과 이야기 너머로 펼침면을 꾸밉니다.',
+  'help.guide.studio-elements.step.1': '사이드바에서 Elements를 엽니다.',
+  'help.guide.studio-elements.step.2':
+    '제목이나 캡션용 텍스트 스타일, 도형, 선, 그리드, 프레임 스타일이 있는 빈 프레임, 검색 가능한 라이브러리의 아이콘 중 하나를 클릭합니다. 각각 펼침면 가운데에 놓여 바로 옮길 수 있습니다.',
+  'help.guide.studio-elements.result':
+    '텍스트 요소를 더블클릭하면 입력할 수 있습니다. Properties에 글꼴, 굵기, 크기, 간격, 정렬이 있습니다.',
+  'help.guide.studio-elements.tip.1': '프레임은 빈 사진 자리입니다. 사진은 나중에 끌어다 놓으면 됩니다.',
+  // studio-travel
+  'help.guide.studio-travel.title': '지도, 국기, 수치 추가하기',
+  'help.guide.studio-travel.goal': '여행 자체를 페이지 위의 수치로 바꿉니다.',
+  'help.guide.studio-travel.step.1': '사이드바에서 “여행”을 엽니다.',
+  'help.guide.studio-travel.step.2':
+    '추가할 것을 고릅니다. 항목의 경로 지도, 국가 윤곽, 국가 목록이나 그리드, 국기, 날짜·일수·거리 표시, 여행 전체 요약. 각각 여행의 데이터로 만들어지고 데이터와 함께 갱신됩니다.',
+  'help.guide.studio-travel.result': '요소가 펼침면에 나타납니다. Properties로 스타일을, 지도는 범위를 조정합니다.',
+  'help.guide.studio-travel.tip.1':
+    '표시는 펼침면의 바탕이 된 항목을 따르므로, 자동 배치된 펼침면의 날짜 표시는 이미 그날을 보여줍니다.',
+  // studio-properties
+  'help.guide.studio-properties.title': '선택한 것 편집하기',
+  'help.guide.studio-properties.goal': '인스펙터로 요소를 옮기고, 자르고, 꾸미고, 쌓습니다.',
+  'help.guide.studio-properties.step.1':
+    '펼침면의 요소를 클릭합니다. 크기와 회전을 위한 핸들이 나타나고, 끌면 옮겨집니다.',
+  'help.guide.studio-properties.step.2':
+    '오른쪽의 Properties는 선택을 따라갑니다. 위치와 크기, 프레임 안에 남길 부분을 정하는 초점이 있는 Crop, Fill 또는 Fit, Look 필터, Corner 반경, “프레임” 스타일, 쌓임 순서, Lock입니다.',
+  'help.guide.studio-properties.step.3':
+    '“복제”와 Delete는 인스펙터 맨 위에 있습니다. 상단 바의 Undo로 무엇이든 되돌릴 수 있습니다.',
+  'help.guide.studio-properties.result':
+    '잠긴 요소는 더 이상 페이지에서 잡히지 않으므로, 주변을 작업하는 동안 완성된 레이아웃이 안전하게 유지됩니다.',
+  'help.guide.studio-properties.tip.1':
+    'Shift를 누른 채 클릭하면 여러 요소가 선택되고, 인스펙터가 이들을 함께 편집합니다.',
+  'help.guide.studio-properties.tip.2':
+    'Auto layout이 놓은 요소를 편집하면 항목과의 연결이 끊어져, 그 항목의 이후 변경을 더 이상 따르지 않습니다.',
+  // studio-format
+  'help.guide.studio-format.title': '페이지 형식 고르기',
+  'help.guide.studio-format.goal': '레이아웃이 크기에 좌우되기 전에, 책이 인쇄될 크기를 정합니다.',
+  'help.guide.studio-format.step.1': '상단 바에서 Page format을 클릭합니다.',
+  'help.guide.studio-format.step.2':
+    'Square 21 × 21 cm, Square 30 × 30 cm, A4 또는 A5의 가로나 세로를 고르거나, 너비와 높이를 밀리미터로 직접 입력합니다. 도련과 안전 영역은 그 아래에 있습니다.',
+  'help.guide.studio-format.result': '모든 펼침면이 그 크기로 그려지며, 기본값은 도련 3 mm, 안전 영역 5 mm입니다.',
+  'help.guide.studio-format.tip.1':
+    '형식을 먼저 바꾼 다음 Auto layout을 실행하세요. 레이아웃은 그때의 크기에 맞춰 만들어집니다.',
+  'help.guide.studio-format.tip.2': '인쇄소에 도련과 안전 영역 값을 물어보고 그 값을 입력하세요.',
+  // studio-export
+  'help.guide.studio-export.title': '책을 PDF로 내보내기',
+  'help.guide.studio-export.goal': '인쇄용 파일이나 화면에서 읽을 파일을 얻습니다.',
+  'help.guide.studio-export.step.1': '상단 바에서 Export를 클릭합니다.',
+  'help.guide.studio-export.step.2':
+    '“낱쪽”(한 장에 한 페이지씩 읽는 순서대로, 인쇄소가 원하는 형태) 또는 “펼침면”(책을 펼친 것처럼 두 페이지씩)을 고릅니다. “재단선”은 모든 가장자리에 도련을 더하고 자를 위치를 표시합니다.',
+  'help.guide.studio-export.step.3':
+    '“인쇄 화면”을 클릭합니다. 브라우저가 페이지를 열고, “PDF로 저장”이 이를 파일로 만듭니다.',
+  'help.guide.studio-export.result': '대화 상자가 알린 만큼의 장수로, 설정한 페이지 형식의 PDF가 만들어집니다.',
+  'help.guide.studio-export.tip.1': 'PDF 만들기는 Studio 자체와 마찬가지로 데스크톱에서만 됩니다.',
+  'help.guide.studio-export.tip.2':
+    '교정용으로는 재단선 없이 “펼침면”을, 인쇄소용으로는 재단선을 넣어 “낱쪽”을 내보냅니다.',
+  // studio-spread-file
+  'help.guide.studio-spread-file.title': '펼침면을 다른 책에서 다시 쓰기',
+  'help.guide.studio-spread-file.goal': '마음에 드는 디자인을 한 여행의 책에서 다른 여행의 책으로 옮깁니다.',
+  'help.guide.studio-spread-file.step.1':
+    '펼침면을 작업 영역에 연 상태에서, 확대 바 오른쪽 끝의 “이 펼침면 내려받기”를 클릭합니다. 파일에는 디자인만 담기고 사진은 담기지 않습니다.',
+  'help.guide.studio-spread-file.step.2':
+    '다른 책에서 Pages를 열고 “페이지 추가” 옆의 “가져오기”를 클릭한 다음 파일을 고릅니다.',
+  'help.guide.studio-spread-file.result':
+    '펼침면이 프레임과 텍스트 스타일과 함께 도착합니다. 새 여행의 사진을 프레임에 끌어다 놓으세요.',
+  'help.guide.studio-spread-file.tip.1': '펼침면 디자인이 아닌 파일은 이유와 함께 거부됩니다.',
+
+  // ── Screen: settings (all tabs) ───────────────────────────────────────────────────────
+  'help.ctx.settings.title': '설정',
+  'help.ctx.settings.summary':
+    '나의 개인 설정으로, 왼쪽 사이드바에 주제별 탭이 하나씩 있습니다. 대부분의 스위치는 바꾸는 순간 적용됩니다. 아래에 “저장” 버튼이 있는 양식은 그 버튼을 누를 때까지 기다립니다. 여기서 바꾼 것이 다른 사람의 TREK을 바꾸는 일은 없습니다.',
+  'help.ctx.settings.bullet.1':
+    '왼쪽 사이드바: “화면”, “Appearance”, “지도”, “알림”, “통합”, “오프라인”, “계정”. “플러그인”은 플러그인이 하나라도 설치되면 나타나고, “정보”는 직접 호스팅한 TREK에서 나타납니다.',
+  'help.ctx.settings.bullet.2':
+    '“화면”은 언어, 단위, 통화, 앱이 처음 여는 화면이고, “Appearance”는 테마, 색상, 글자 크기, 대시보드 위젯입니다.',
+  'help.ctx.settings.bullet.3':
+    '“지도”는 렌더러와 스타일을, “알림”은 나에게 닿는 채널을, “통합”은 사진 라이브러리, API 키, MCP를, “오프라인”은 앱이 이 기기에 보관하는 것을 정합니다.',
+  'help.ctx.settings.bullet.4': '“계정”에는 프로필, 비밀번호, 2단계 인증, 패스키, 그리고 계정 삭제가 있습니다.',
+  'help.ctx.settings-display.title': '화면',
+  'help.ctx.settings-display.summary':
+    '언어, 단위, 통화, 지도와 예약이 동작하는 방식, 그리고 TREK이 처음 여는 화면. 여기서의 모든 변경은 즉시 적용됩니다.',
+  'help.ctx.settings-display.bullet.1':
+    '“Language & region”: 인터페이스 언어, 시간 형식, 표시 통화, 거리 및 온도 단위.',
+  'help.ctx.settings-display.bullet.2':
+    '“Travel & map”: 예약 경로를 항상 지도에 표시, 장소 탐색 알약 버튼, 숙소 기준 경로 최적화, 예약 코드 흐리게, 예약 경로에 이름 표시.',
+  'help.ctx.settings-display.bullet.3':
+    '“시작”: TREK이 대시보드에서 열릴지 진행 중인 여행에서 열릴지, 그리고 여행의 어느 탭이 먼저 나올지.',
+  'help.ctx.settings-appearance.title': 'Appearance',
+  'help.ctx.settings-appearance.summary':
+    '이 계정에서 TREK이 보이는 방식: 라이트 또는 다크, 강조 색상, 유리 효과와 움직임, 글자 크기, 대시보드에 보일 위젯. 모두 즉시 적용되며 로그인한 모든 기기에 반영됩니다.',
+  'help.ctx.settings-appearance.bullet.1':
+    '“Theme”: “라이트”, “다크” 또는 “자동”, 그리고 직접 고르는 “Custom accent”가 있는 “Color scheme”.',
+  'help.ctx.settings-appearance.bullet.2':
+    '“Readability”: “Transparency”, “Reduce motion”, “Density”, “Text size”, 그리고 단계별 고급 크기.',
+  'help.ctx.settings-appearance.bullet.3':
+    '“Dashboard widgets”: 위젯마다 스위치 하나씩, “Desktop”과 “Mobile”을 따로 설정합니다.',
+  'help.ctx.settings-appearance.bullet.4': '맨 아래 “Reset to defaults”가 모든 것을 되돌립니다.',
+  'help.ctx.settings-map.title': '지도',
+  'help.ctx.settings-map.summary':
+    '어떤 엔진이 어떤 스타일로 지도를 그리는지. Leaflet은 고전적인 래스터 지도, MapLibre는 토큰 없이 벡터 타일을 그리고, Mapbox는 내 토큰으로 3D 건물과 지형을 더합니다.',
+  'help.ctx.settings-map.bullet.1':
+    '“지도 공급자”: Leaflet, MapLibre 또는 Mapbox, 각각 무엇이 필요한지 한 줄로 안내합니다.',
+  'help.ctx.settings-map.bullet.2': '“지도 스타일”과 “지도 템플릿”: 타일의 모양, 그리고 공급자가 요구하는 토큰이나 키.',
+  'help.ctx.settings-map.bullet.3': '안티앨리어싱과 지구본 투영을 위한 “고품질 모드”. “지도 저장”이 선택을 기록합니다.',
+  'help.ctx.settings-notifications.title': '알림',
+  'help.ctx.settings-notifications.summary':
+    '앱 밖에서 TREK이 나에게 닿는 곳: ntfy 토픽, 웹훅, 또는 플러그인이 제공하는 채널. 채널 아래에서는 이벤트마다 한 줄씩 무엇을 어디로 보낼지 정합니다.',
+  'help.ctx.settings-notifications.bullet.1':
+    'ntfy: 토픽, 선택 사항인 내 서버, 선택 사항인 액세스 토큰. “테스트”로 바로 하나 보낼 수 있습니다.',
+  'help.ctx.settings-notifications.bullet.2': '웹훅: 모든 이벤트를 JSON으로 받는 URL 하나. “테스트”가 있습니다.',
+  'help.ctx.settings-notifications.bullet.3':
+    '환경설정 행: 이벤트마다 어느 채널이 켜져 있는지. 플러그인 채널은 설정이 끝날 때까지 “설정하기”를 표시합니다.',
+  'help.ctx.settings-integrations.title': '통합',
+  'help.ctx.settings-integrations.summary':
+    '밖에서 TREK에 연결되는 모든 것: 일기를 위한 사진 라이브러리, 스크립트를 위한 API 키, 그리고 AI 어시스턴트를 위한 MCP 엔드포인트와 그 토큰 및 OAuth 클라이언트.',
+  'help.ctx.settings-integrations.bullet.1':
+    '사진 공급자: Immich와 Synology Photos, 각각 URL과 키, “연결 테스트”와 “저장”이 있습니다.',
+  'help.ctx.settings-integrations.bullet.2':
+    '“API 키”: 내 이름으로 TREK API를 호출하는 스크립트와 다른 도구를 위한 개인 키.',
+  'help.ctx.settings-integrations.bullet.3': '“MCP 설정”: 엔드포인트, 복사해 쓰는 클라이언트 설정, 그리고 API 토큰.',
+  'help.ctx.settings-integrations.bullet.4':
+    '“OAuth 2.1 클라이언트”: TREK을 통해 로그인하는 앱. 리디렉션 URI, 허용 권한 범위, 머신 클라이언트, 활성 세션이 있습니다.',
+  'help.ctx.settings-offline.title': '오프라인',
+  'help.ctx.settings-offline.summary':
+    '연결이 없어도 여행이 열리도록 TREK이 이 기기에 보관하는 것, 그리고 오프라인에서 한 변경이 다른 곳에서 한 변경과 충돌할 때 일어나는 일.',
+  'help.ctx.settings-offline.bullet.1':
+    '“오프라인 모드”: “오프라인 모드 강제 사용”은 네트워크가 끊긴 것처럼 앱을 동작시킵니다. 테스트나 데이터 요금제 연결에 씁니다.',
+  'help.ctx.settings-offline.bullet.2':
+    '“오프라인 준비”: “오프라인 사용을 위해 다운로드”가 여행과 그 지도 타일을 지금 가져옵니다.',
+  'help.ctx.settings-offline.bullet.3': '“오프라인에 저장할 항목”: 지도 타일 켜기 또는 끄기, 그리고 여행별 스위치.',
+  'help.ctx.settings-offline.bullet.4':
+    '“동기화 충돌”과 “오프라인 캐시”: 충돌 전략, 대기 중 및 실패한 변경 수, “지금 다시 동기화”와 “캐시 지우기”.',
+  'help.ctx.settings-account.title': '계정',
+  'help.ctx.settings-account.summary':
+    '이 TREK에서 내가 누구이고 어떻게 로그인하는지: 프로필과 아바타, 비밀번호, 2단계 인증, 패스키, 그리고 맨 아래에 계정 삭제.',
+  'help.ctx.settings-account.bullet.1': '프로필: 사용자 이름, 이메일, 아바타. “프로필 저장”으로 저장합니다.',
+  'help.ctx.settings-account.bullet.2': '“비밀번호 변경”: 현재 비밀번호, 새 비밀번호 두 번, “비밀번호 업데이트”.',
+  'help.ctx.settings-account.bullet.3':
+    '인증 앱과 백업 코드를 쓰는 “2단계 인증 (2FA)”. 비밀번호 없이 로그인하는 “패스키”.',
+  'help.ctx.settings-account.bullet.4':
+    '맨 아래의 “계정 삭제”는 확인 뒤에 있습니다. 마지막 관리자는 자신을 삭제할 수 없습니다.',
+  // language-region
+  'help.guide.language-region.title': '언어, 단위, 통화 설정하기',
+  'help.guide.language-region.goal': 'TREK이 내 언어로 말하고 내 방식으로 세게 합니다.',
+  'help.guide.language-region.step.1':
+    '“Language & region”에서 인터페이스 언어를 고릅니다. TREK은 즉시 바뀌며 로그인한 모든 기기에 반영됩니다.',
+  'help.guide.language-region.step.2': '그 아래에서 시간 형식, 표시 통화, 거리 및 온도 단위를 고릅니다.',
+  'help.guide.language-region.result':
+    '날짜, 거리, 금액이 기대한 대로 읽힙니다. 여행 자체의 통화는 환산된 금액 옆에 계속 표시됩니다.',
+  'help.guide.language-region.tip.1':
+    '표시 통화는 여행을 아우르는 합계를 위한 것입니다. 각 여행은 지정해 둔 통화를 유지합니다.',
+  'help.guide.language-region.tip.2': '언어는 Vacay와 일기의 요일 및 월 이름도 정합니다.',
+  // travel-map-prefs
+  'help.guide.travel-map-prefs.title': '지도와 예약의 동작 조정하기',
+  'help.guide.travel-map-prefs.goal': '여행 지도가 기본으로 무엇을 보여줄지 정합니다.',
+  'help.guide.travel-map-prefs.step.1':
+    '“Travel & map”에서 “예약 경로 항상 표시”는 해당 날짜를 열지 않아도 항공편과 기차를 지도에 남기고, “지도에서 장소 탐색”은 장소를 찾는 알약 버튼을 보여주며, “숙소 기준으로 경로 최적화”는 묵는 곳에서 경로를 시작합니다.',
+  'help.guide.travel-map-prefs.step.2':
+    '“예약 코드 흐리게”는 마우스를 올릴 때까지 확인 번호를 숨기고, “예약 경로 레이블”은 예약 이름을 경로를 따라 적습니다.',
+  'help.guide.travel-map-prefs.result': '여행 지도는 다시 바꿀 때까지 모든 여행에서 이 설정을 따릅니다.',
+  'help.guide.travel-map-prefs.tip.1':
+    '이 설정은 여행별이 아니라 계정별입니다. 공유 여행의 멤버는 각자 자신의 선택을 봅니다.',
+  // startup
+  'help.guide.startup.title': 'TREK이 처음 여는 화면 고르기',
+  'help.guide.startup.goal': '매번 대시보드가 아니라 가장 많이 작업하는 곳에서 시작합니다.',
+  'help.guide.startup.step.1': '“시작”에서 “시작 화면”을 “대시보드” 또는 “진행 중인 여행”으로 설정합니다.',
+  'help.guide.startup.step.2': '“시작 탭”은 여행을 열 때 어느 탭이 먼저 나올지 고릅니다.',
+  'help.guide.startup.result': '다음 로그인과 로고를 다음에 탭할 때 곧바로 그곳으로 갑니다.',
+  'help.guide.startup.tip.1': '“진행 중인 여행”은 오늘 진행 중인 여행을, 없으면 다음 여행을 뜻합니다.',
+  // theme-scheme
+  'help.guide.theme-scheme.title': '테마와 강조 색상 설정하기',
+  'help.guide.theme-scheme.goal': 'TREK을 라이트, 다크 또는 기기 설정에 맞추고, 좋아하는 색으로 꾸밉니다.',
+  'help.guide.theme-scheme.step.1':
+    '“Theme”에서 “라이트”, “다크” 또는 “자동”을 고릅니다. “자동”은 기기 설정을 따릅니다.',
+  'help.guide.theme-scheme.step.2':
+    '“Color scheme”을 고릅니다: “Default”, “High contrast”, “Indigo”, “Teal”, “Rose”, “Amber”, “Violet” 또는 “Custom”.',
+  'help.guide.theme-scheme.step.3':
+    '“Custom”에서는 프리셋에서 강조 색상을 고르거나 직접 입력합니다. 옆의 대비 검사가 그 위에서 글자가 잘 읽히는지 알려줍니다.',
+  'help.guide.theme-scheme.result': '버튼, 링크, 강조 표시가 어디서나 그 색을 쓰며 로그인한 모든 기기에 반영됩니다.',
+  'help.guide.theme-scheme.tip.1':
+    '내비게이션 바에도 라이트와 다크를 빠르게 바꾸는 스위치가 있습니다. 같은 테마를 설정합니다.',
+  'help.guide.theme-scheme.tip.2': '“High contrast”는 기본이 너무 흐릿하게 읽힐 때 고르는 스킴입니다.',
+  // readability
+  'help.guide.readability.title': '가독성과 글자 크기 조정하기',
+  'help.guide.readability.goal': '유리 효과와 움직임은 줄이고, 여백은 늘리거나 글자는 키웁니다.',
+  'help.guide.readability.step.1':
+    '“Readability”에서 “Transparency”는 유리 패널을 불투명한 면으로 바꾸고, “Reduce motion”은 애니메이션을 최소화하며, “Density”는 “Comfortable” 또는 “Compact”를 고릅니다.',
+  'help.guide.readability.step.2':
+    '“Text size”는 “Everything”을 한 번에 조절하고, “Advanced text sizes”는 제목, 부제목, 본문, 캡션을 따로 정하게 해 줍니다.',
+  'help.guide.readability.result': '지도 패널과 일기를 포함해 앱 전체가 즉시 따릅니다.',
+  'help.guide.readability.tip.1': '“Reduce motion”은 건드리지 않으면 시스템 설정도 따릅니다.',
+  'help.guide.readability.tip.2':
+    '글자 크기는 타이포그래피 단계를 통해 적용되므로 잘리는 것이 없습니다. 더 이상 들어가지 않는 크기는 줄이 바뀝니다.',
+  // dashboard-widgets
+  'help.guide.dashboard-widgets.title': '대시보드 위젯 고르기',
+  'help.guide.dashboard-widgets.goal': '쓰는 위젯만, 데스크톱과 휴대폰에서 따로 보여줍니다.',
+  'help.guide.dashboard-widgets.step.1':
+    '“Dashboard widgets”에서 각 위젯을 “Desktop”과 “Mobile”에 대해 켜거나 끕니다: 오른쪽 사이드바 전체, 통화, Collections, 시간대, 다가오는 예약, Atlas 국가, 여행 수치.',
+  'help.guide.dashboard-widgets.step.2': '맨 아래 “Reset to defaults”가 탭 전체를 출고 상태로 되돌립니다.',
+  'help.guide.dashboard-widgets.result': '대시보드는 즉시 다시 배치됩니다. 오른쪽 사이드바를 끄면 가운데 정렬됩니다.',
+  'help.guide.dashboard-widgets.tip.1': '애드온의 위젯은 관리자가 그 애드온을 켜 둔 동안에만 나타납니다.',
+  'help.guide.dashboard-widgets.tip.2': '대시보드 자체는 격자 또는 목록 보기와 정렬 순서를 기기별로 기억합니다.',
+  // map-provider
+  'help.guide.map-provider.title': '지도 엔진과 스타일 고르기',
+  'help.guide.map-provider.goal': '고전적인 지도, 벡터 타일, Mapbox의 3D 지도 사이를 오갑니다.',
+  'help.guide.map-provider.step.1':
+    '“지도 공급자”에서 어떤 래스터 타일이든 쓰는 고전적인 2D 지도는 Leaflet, 토큰 없는 OpenFreeMap 벡터 타일은 MapLibre, 3D 건물과 지형이 있는 벡터 타일은 Mapbox를 고릅니다.',
+  'help.guide.map-provider.step.2':
+    '모양을 위해 “지도 스타일” 또는 “지도 템플릿”을 고릅니다. Mapbox에는 “Mapbox 액세스 토큰”이, 일부 래스터 스타일에는 “CARTO API 키”가 필요합니다. 입력란 옆의 링크가 발급받는 곳으로 안내합니다.',
+  'help.guide.map-provider.step.3': '“고품질 모드”는 안티앨리어싱과 지구본 투영을 더합니다. “지도 저장”을 클릭합니다.',
+  'help.guide.map-provider.result': '여행, Atlas, Collections, 일기 등 TREK의 모든 지도가 고른 엔진으로 그려집니다.',
+  'help.guide.map-provider.tip.1': '토큰이 없으면 Mapbox는 아무것도 보여주지 않는 대신 기본 지도로 돌아갑니다.',
+  'help.guide.map-provider.tip.2': '오프라인에 저장하는 지도 타일은 다운로드할 때 활성화된 공급자에서 가져옵니다.',
+  // notification-channels
+  'help.guide.notification-channels.title': '알림이 닿는 곳 설정하기',
+  'help.guide.notification-channels.goal': '여행 리마인더와 협업 이벤트를 휴대폰이나 다른 도구에서 받습니다.',
+  'help.guide.notification-channels.step.1':
+    '“알림”에서 “Ntfy 토픽”을 채웁니다. 직접 운영한다면 내 “Ntfy 서버 URL”과 “액세스 토큰”을 더합니다. “테스트”가 바로 메시지를 보냅니다.',
+  'help.guide.notification-channels.step.2':
+    '또는 모든 이벤트를 JSON으로 받는 “웹훅 URL”을 주고 같은 방식으로 “테스트”합니다.',
+  'help.guide.notification-channels.step.3':
+    '아래 행에서 이벤트마다 채널별로 켜거나 끕니다. 플러그인 채널은 플러그인 설정에서 준비될 때까지 “설정하기”라고 표시되고, “테스트 전송”이 하나 보내 봅니다.',
+  'help.guide.notification-channels.result':
+    '이벤트는 켜진 채널을 통해 나갑니다. 내비게이션 바의 종은 그와 상관없이 앱 안에서 계속 보여줍니다.',
+  'help.guide.notification-channels.tip.1': '여행별 환경설정은 여행 자체의 알림 설정에 있습니다.',
+  'help.guide.notification-channels.tip.2':
+    '관리자는 모두를 위한 기본 ntfy 서버를 미리 채워 둘 수 있습니다. 토픽은 여전히 직접 고릅니다.',
+  // photo-providers
+  'help.guide.photo-providers.title': '사진 라이브러리 연결하기',
+  'help.guide.photo-providers.goal': '일기가 그날의 사진을 Immich나 Synology Photos에서 가져오게 합니다.',
+  'help.guide.photo-providers.step.1':
+    '“통합”에서 공급자 섹션을 찾아 URL과 API 키를 입력합니다. Immich는 Journey 업로드를 라이브러리로 되돌려 미러링하는 것도 제안합니다.',
+  'help.guide.photo-providers.step.2': '“연결 테스트”를 클릭한 다음 “저장”을 클릭합니다.',
+  'help.guide.photo-providers.result':
+    '기록 편집기의 “External photos” 탭이 연결된 라이브러리에서 그 기록의 날짜를 검색하며, 기록의 위치에 가장 가까운 것부터 보여줍니다.',
+  'help.guide.photo-providers.tip.1': '연결은 내 것입니다. Journey의 다른 멤버는 각자 자신의 라이브러리를 연결합니다.',
+  'help.guide.photo-providers.tip.2': '사진에 GPS 데이터가 없는 공급자도 동작합니다. 그때는 목록이 시간순입니다.',
+  // api-keys
+  'help.guide.api-keys.title': 'API 키 만들기',
+  'help.guide.api-keys.goal': '스크립트나 다른 도구가 나로서 TREK API를 호출하게 합니다.',
+  'help.guide.api-keys.step.1': '“API 키”에서 “키 만들기”를 클릭하고 어디에 쓸지 알 수 있는 이름을 붙입니다.',
+  'help.guide.api-keys.step.2':
+    '대화 상자에서 키를 복사합니다. 한 번만 표시됩니다. 도구가 더 이상 필요 없으면 목록에서 키를 삭제합니다.',
+  'help.guide.api-keys.result':
+    '그 키로 보낸 요청은 내 권한으로 동작합니다. 목록에는 각 키가 언제 만들어지고 마지막으로 쓰였는지 표시됩니다.',
+  'help.guide.api-keys.tip.1': '도구마다 키 하나씩이면 취소가 수월합니다.',
+  'help.guide.api-keys.tip.2':
+    'AI 어시스턴트에는 대신 OAuth가 있는 MCP를 씁니다. API 키는 단순한 HTTP 클라이언트용입니다.',
+  // mcp-oauth
+  'help.guide.mcp-oauth.title': 'MCP로 AI 어시스턴트 연결하기',
+  'help.guide.mcp-oauth.goal': 'Claude, IDE 또는 다른 MCP 클라이언트에 내 여행에 대한 접근을 줍니다.',
+  'help.guide.mcp-oauth.step.1':
+    '“MCP 설정”에서 “MCP 엔드포인트”를 복사하거나, JSON 조각을 받는 클라이언트라면 “클라이언트 설정” 전체를 복사합니다.',
+  'help.guide.mcp-oauth.step.2':
+    '브라우저로 로그인하는 클라이언트는 OAuth 2.1을 씁니다: “OAuth 2.1 클라이언트” 아래 “새 클라이언트”에서 “리디렉션 URI”, “허용 권한 범위”, 그리고 브라우저가 없는 서버라면 “머신 클라이언트”를 설정합니다.',
+  'help.guide.mcp-oauth.step.3':
+    '“시크릿 교체”와 “클라이언트 삭제”는 각 클라이언트에 있습니다. “활성 OAuth 세션”은 로그인된 것을 나열하고 취소하게 해 줍니다. “API 토큰”과 “새 토큰 만들기”는 예전 방식의 입구입니다.',
+  'help.guide.mcp-oauth.result':
+    '클라이언트는 권한 범위가 허용하는 것을 나로서 읽고 바꿀 수 있으며, 모든 작업은 내 이름으로 표시됩니다.',
+  'help.guide.mcp-oauth.tip.1': '권한 범위는 안전망입니다. 더 필요해질 때까지 클라이언트에 읽기 범위만 줍니다.',
+  'help.guide.mcp-oauth.tip.2': '관리자는 인스턴스 전체에서 MCP를 끌 수 있습니다. 그러면 이 섹션이 없습니다.',
+  // offline-prepare
+  'help.guide.offline-prepare.title': '여행을 오프라인으로 가져가기',
+  'help.guide.offline-prepare.goal': '연결이 끊기기 전에 여행과 지도를 이 기기에 갖춥니다.',
+  'help.guide.offline-prepare.step.1':
+    '“오프라인에 저장할 항목”에서 “지도 타일을 오프라인에 저장”을 켜 두고, 이 기기에 두고 싶은 여행을 켭니다.',
+  'help.guide.offline-prepare.step.2':
+    '“오프라인 준비” 아래의 “오프라인 사용을 위해 다운로드”를 클릭합니다. 여행과 그 장소 주변의 타일을 가져옵니다.',
+  'help.guide.offline-prepare.step.3':
+    '“오프라인 모드” 아래의 “오프라인 모드 강제 사용”으로 떠나기 전에 모든 것이 있는지 확인할 수 있습니다.',
+  'help.guide.offline-prepare.result':
+    '여행이 연결 없이 열립니다. 변경 사항은 대기열에서 기다리다가 다시 연결되면 전송됩니다.',
+  'help.guide.offline-prepare.tip.1':
+    '타일이 공간을 가장 많이 차지합니다. “오프라인 캐시” 섹션에 여행별로 무엇이 저장됐는지 보입니다.',
+  'help.guide.offline-prepare.tip.2': '가장 매끄러운 오프라인 시작을 위해 브라우저에서 TREK을 앱으로 설치합니다.',
+  // offline-conflicts
+  'help.guide.offline-conflicts.title': '동기화 충돌 시 무엇이 이길지 정하기',
+  'help.guide.offline-conflicts.goal': '오프라인에서 한 변경과 다른 곳에서 한 변경을 TREK이 어떻게 정리할지 고릅니다.',
+  'help.guide.offline-conflicts.step.1':
+    '“동기화 충돌”에서 “매번 묻기”, “항상 내 버전 유지” 또는 “항상 서버 버전 유지”를 고릅니다.',
+  'help.guide.offline-conflicts.step.2':
+    '“오프라인 캐시”에는 여행, 대기 중 및 실패한 변경, 충돌이 보입니다. “지금 다시 동기화”는 대기열을 보내고, “캐시 지우기”는 기기를 비웁니다.',
+  'help.guide.offline-conflicts.result':
+    '“매번 묻기”에서는 충돌이 두 버전을 보여주고 고르게 합니다. 다른 둘에서는 조용히 정리됩니다.',
+  'help.guide.offline-conflicts.tip.1': '“캐시 지우기”는 이 기기의 사본만 지웁니다. 서버의 것은 건드리지 않습니다.',
+  // profile
+  'help.guide.profile.title': '프로필 바꾸기',
+  'help.guide.profile.goal': '이름, 이메일, 사진을 업데이트합니다.',
+  'help.guide.profile.step.1':
+    '“계정”에서 “사용자 이름”과 “이메일”을 편집합니다. 아바타에는 내 이미지를 업로드할 수 있고, 지우면 이니셜로 돌아갑니다.',
+  'help.guide.profile.step.2': '“프로필 저장”을 클릭합니다.',
+  'help.guide.profile.result': '이름과 사진이 공유하는 여행을 포함해 어디서나 즉시 업데이트됩니다.',
+  'help.guide.profile.tip.1': 'OIDC로 로그인하는 계정은 여기에 그렇게 표시되며, 이메일은 공급자에서 옵니다.',
+  // password
+  'help.guide.password.title': '비밀번호 바꾸기',
+  'help.guide.password.goal': '새 비밀번호를 설정합니다.',
+  'help.guide.password.step.1': '“비밀번호 변경”에서 현재 비밀번호를 입력한 다음 새 비밀번호를 두 번 입력합니다.',
+  'help.guide.password.step.2': '“비밀번호 업데이트”를 클릭합니다.',
+  'help.guide.password.result': '새 비밀번호는 다음 로그인부터 적용됩니다. 다른 세션은 로그인 상태를 유지합니다.',
+  'help.guide.password.tip.1': 'OIDC로 로그인하는 계정에는 바꿀 TREK 비밀번호가 없습니다.',
+  // mfa
+  'help.guide.mfa.title': '2단계 인증 켜기',
+  'help.guide.mfa.goal': '인증 앱의 코드로 계정을 보호합니다.',
+  'help.guide.mfa.step.1': '“2단계 인증 (2FA)”에서 “인증 앱 설정”을 클릭합니다.',
+  'help.guide.mfa.step.2':
+    '앱으로 QR 코드를 스캔하거나 시크릿을 직접 입력한 다음, 앱에 보이는 6자리 코드를 입력하고 “2FA 활성화”를 클릭합니다.',
+  'help.guide.mfa.step.3':
+    '백업 코드를 저장합니다: 복사, 다운로드 또는 인쇄. 휴대폰이 손에 없을 때 각각 한 번씩 쓸 수 있습니다.',
+  'help.guide.mfa.result': '로그인할 때마다 비밀번호 뒤에 코드를 묻습니다.',
+  'help.guide.mfa.tip.1': '“2FA 비활성화”에는 비밀번호와 현재 코드가 필요합니다.',
+  'help.guide.mfa.tip.2': '관리자는 모두에게 2FA를 필수로 할 수 있습니다. 그러면 여기서 끌 수 없습니다.',
+  // passkeys
+  'help.guide.passkeys.title': '패스키로 로그인하기',
+  'help.guide.passkeys.goal': '비밀번호 대신 기기의 지문, 얼굴 또는 PIN을 씁니다.',
+  'help.guide.passkeys.step.1':
+    '“패스키”에서 “패스키 추가”를 클릭하고 기기에서 확인합니다. 어느 기기인지 알 수 있는 이름을 붙입니다.',
+  'help.guide.passkeys.step.2':
+    '목록에는 모든 패스키가 이름과 마지막 사용 시각과 함께 보입니다. 삭제 버튼이 하나를 지웁니다.',
+  'help.guide.passkeys.result': '로그인 페이지에서 패스키를 제안합니다. 비밀번호는 대비책으로 남습니다.',
+  'help.guide.passkeys.tip.1': '패스키는 기기나 그 비밀번호 관리자에 있으므로 기기마다 하나씩 추가합니다.',
+  'help.guide.passkeys.tip.2':
+    '패스키에는 HTTPS가 필요합니다. 일반 HTTP 인스턴스에서는 섹션이 왜 쓸 수 없는지 설명합니다.',
+  // delete-account
+  'help.guide.delete-account.title': '계정 삭제하기',
+  'help.guide.delete-account.goal': '내 계정과 나에게만 속한 데이터를 없앱니다.',
+  'help.guide.delete-account.step.1': '“계정”의 맨 아래에서 “계정 삭제”를 클릭하고 확인합니다.',
+  'help.guide.delete-account.result':
+    '내 계정, 내 여행, 내 Journey가 사라집니다. 다른 사람과 공유한 여행은 그들에게 남습니다.',
+  'help.guide.delete-account.tip.1':
+    '인스턴스의 마지막 관리자는 자신을 삭제할 수 없습니다. 먼저 다른 사람을 관리자로 만드세요.',
+  'help.guide.delete-account.tip.2': '되돌릴 수 없습니다. 확인하기 전에 남기고 싶은 것을 내보내세요.',
+
+  // ── Screen: admin (all tabs) ──────────────────────────────────────────────────────────
+  'help.ctx.admin.title': '관리자',
+  'help.ctx.admin.summary':
+    '모두의 TREK을 떠받치는 인스턴스입니다. 누가 어떻게 로그인할 수 있는지, 무엇이 켜져 있는지, 파일이 어디에 있는지, 서버가 사람들에게 어떻게 연락하는지, 어떻게 백업되는지를 정합니다. 이 페이지는 관리자만 볼 수 있고, 각 탭은 사이드바에서 별도의 화면입니다.',
+  'help.ctx.admin.bullet.1':
+    '상단의 카드 네 개는 사용자, 여행, 장소, 파일의 수를 세고, 그 위의 배너는 새 TREK 릴리스를 알립니다.',
+  'help.ctx.admin.bullet.2': '“사용자”와 “기본값”: 계정, 초대 링크, 그리고 새 계정이 처음 갖는 지도 설정.',
+  'help.ctx.admin.bullet.3':
+    '“개인 설정”, “설정”, “애드온”, “플러그인”: 차례로 짐 목록 템플릿, 카테고리, 학교 방학; 로그인 방법과 API 키; 기능 모듈; 서드파티 플러그인입니다.',
+  'help.ctx.admin.bullet.4':
+    '“스토리지”, “알림”, “MCP 접근”, “GitHub”: 차례로 업로드가 저장되는 곳, 인스턴스 전체의 채널, AI 클라이언트의 토큰과 세션, 릴리스 히스토리입니다.',
+  'help.ctx.admin.bullet.5': '“백업”과 “감사”: 수동 및 예약 백업, 그리고 보안 관련 이벤트의 로그.',
+  'help.ctx.admin-users.title': '사용자',
+  'help.ctx.admin-users.summary':
+    '이 TREK의 모든 계정을 역할, 이메일, 마지막 로그인과 함께 보여주고, 닫힌 인스턴스에서 사람들이 가입할 수 있게 해 주는 초대 링크를 관리합니다.',
+  'help.ctx.admin-users.bullet.1':
+    '표: 사용자 이름, 이메일, 역할, 생성일, 마지막 로그인, 그리고 행별 작업. 나 자신에게는 표시가 붙습니다.',
+  'help.ctx.admin-users.bullet.2': '상단의 “사용자 만들기”는 내가 전달할 비밀번호와 함께 계정을 직접 추가합니다.',
+  'help.ctx.admin-users.bullet.3':
+    '아래의 “초대 링크”: 사용 횟수 제한과 만료 기간이 있는 일회용 가입 링크로, 원하면 새 사용자가 도착하자마자 참여할 여행도 정할 수 있습니다.',
+  'help.ctx.admin-users.bullet.4':
+    '맨 아래의 “권한 설정”: 작업별로 누가 할 수 있는지를 “모든 사람”, “여행 멤버”, “여행 소유자”, “관리자만” 중에서 정합니다.',
+  'help.ctx.admin-defaults.title': '기본값',
+  'help.ctx.admin-defaults.summary':
+    '새 계정이 처음 갖는 설정입니다. 아무도 지도 탭부터 찾을 필요가 없도록 지도 제공자, 스타일, 토큰, 품질을 미리 정합니다.',
+  'help.ctx.admin-defaults.bullet.1':
+    '지도 제공자, Mapbox 스타일과 토큰, CARTO 키, Mapbox 품질. 사용자가 “설정”의 “지도”에서 정하는 것과 똑같은 항목입니다.',
+  'help.ctx.admin-defaults.bullet.2':
+    '항목별 “초기화”는 TREK 자체의 기본값으로 되돌립니다. 사용자 자신의 설정이 언제나 이 값보다 우선합니다.',
+  'help.ctx.admin-config.title': '개인 설정',
+  'help.ctx.admin-config.summary':
+    '인스턴스의 모든 여행이 공유하는 것: 짐 목록 템플릿, 장소와 컬렉션에 쓰는 카테고리 모음, 그리고 Vacay가 참조하는 학교 방학 카탈로그입니다.',
+  'help.ctx.admin-config.bullet.1':
+    '“짐 목록 템플릿”: 여행의 짐 목록이 출발점으로 삼을 수 있는, 이름이 붙은 카테고리와 항목의 목록.',
+  'help.ctx.admin-config.bullet.2':
+    '“카테고리”: 장소 인스펙터부터 컬렉션까지 TREK 전체에서 쓰이는 카테고리의 이름, 아이콘, 색상.',
+  'help.ctx.admin-config.bullet.3': '“학교 방학”: 내장 피드가 다루지 않는 곳을 위한 국가와 지역의 카탈로그.',
+  'help.ctx.admin-settings.title': '설정',
+  'help.ctx.admin-settings.summary':
+    '사람들이 어떻게 들어오고 서버가 무엇과 통신해도 되는지: 로그인과 가입 방법, SSO, 패스키, 2단계 인증 정책, 지도·장소·이미지용 API 키, 검색과 대중교통 제공자, 그리고 업로드에 허용되는 파일 형식.',
+  'help.ctx.admin-settings.bullet.1':
+    '“인증 방법”: “비밀번호 로그인”, “비밀번호 회원가입”, “SSO 로그인”, “SSO 자동 프로비저닝”, “2단계 인증 (2FA) 요구”.',
+  'help.ctx.admin-settings.bullet.2':
+    '“Single Sign-On (OIDC)”에는 발급자, 클라이언트, 표시 이름을; “패스키 로그인”에는 Relying Party ID와 오리진을 넣습니다.',
+  'help.ctx.admin-settings.bullet.3':
+    '“API 키”: Google Maps, Unsplash, Amap 각각에 “테스트”가 있습니다. “키의 사용 범위”로 Google 키를 비용을 낼 기능에만 한정합니다.',
+  'help.ctx.admin-settings.bullet.4':
+    '“장소 검색 제공자”와 “대중교통 제공자”는 누가 검색과 경로에 답할지 고릅니다. “허용된 파일 형식”은 업로드를 제한합니다.',
+  'help.ctx.admin-addons.title': '애드온',
+  'help.ctx.admin-addons.summary':
+    'TREK의 기능 모듈이며 각각 스위치가 있습니다: 목록, 비용, 문서, Vacay, Atlas, Collab, Journey, 컬렉션, 로드트립, MCP, AirTrail, Dawarich, 그리고 AI 파싱. 끄면 내비게이션 항목, 라우트, API가 모두에게서 사라집니다.',
+  'help.ctx.admin-addons.bullet.1': '애드온마다 스위치가 있는 타일 하나, 옵션이 있으면 그 하위 행.',
+  'help.ctx.admin-addons.bullet.2':
+    '사진 제공자와 문서 제공자도 여기에 타일로 나타나므로 Immich나 Synology를 사용자에게 제공할 수 있습니다.',
+  'help.ctx.admin-addons.bullet.3': '“가방 추적”은 타일 아래에 자체 스위치가 있습니다.',
+  'help.ctx.admin-plugins.title': '플러그인',
+  'help.ctx.admin-plugins.summary':
+    'TREK 옆에서 자체 프로세스로 실행되는 서드파티 플러그인으로, 각각 설치 시 요청한 권한을 갖습니다. 카탈로그에서 설치하거나, 패키지를 업로드하거나, 개발 중에는 폴더를 연결합니다.',
+  'help.ctx.admin-plugins.bullet.1':
+    '목록: 설치된 모든 플러그인을 버전, 상태, 서명, 보유 권한과 함께 표시합니다. 행마다 활성화, 비활성화, 업데이트, 제거가 가능합니다.',
+  'help.ctx.admin-plugins.bullet.2':
+    '“플러그인 업로드”는 패키지 파일을 받고, “다시 스캔”은 개발용으로 연결한 플러그인 폴더를 불러옵니다.',
+  'help.ctx.admin-plugins.bullet.3':
+    '플러그인별 “허용된 호스트”: 플러그인이 호출해도 되는 주소입니다. 외부 통신은 기본적으로 차단됩니다.',
+  'help.ctx.admin-storage.title': '스토리지',
+  'help.ctx.admin-storage.summary':
+    '업로드가 저장되는 곳: 로컬 디스크, S3 버킷, 또는 둘 다에 쓰는 미러. 업로드 카테고리마다 다른 백엔드로 보낼 수 있고, “상태”는 모든 백엔드가 응답하는지 알려줍니다.',
+  'help.ctx.admin-storage.bullet.1':
+    '“백엔드”: 각각의 이름과 유형에 “테스트”, “편집”, “제거”가 있습니다. 환경 변수로 설정된 것은 여기서 읽기 전용입니다.',
+  'help.ctx.admin-storage.bullet.2':
+    '“카테고리”: 커버, 문서, 여정 사진 등 각각을 백엔드에 배정합니다. 하나를 바꾸면 기존 파일을 옮길지 묻습니다.',
+  'help.ctx.admin-storage.bullet.3': '“상태”: 백엔드별 점검과, 설정이 서버가 보는 것과 같음을 증명하는 시드 파일.',
+  'help.ctx.admin-notifications.title': '알림',
+  'help.ctx.admin-notifications.summary':
+    '인스턴스가 사용자에게 제공하는 채널과, 관리자인 나에게 닿는 채널입니다. 사용자는 “설정”에서 자기 토픽과 URL을 고르고, 나는 무엇을 제공할지 정하고 이메일을 설정합니다.',
+  'help.ctx.admin-notifications.bullet.1':
+    '“앱 내”, “이메일 (SMTP)”, “Ntfy”, “웹훅”: 패널 하나씩이며, 채널을 사용자에게 제공하는 스위치와 필요한 서버 측 설정이 있습니다.',
+  'help.ctx.admin-notifications.bullet.2': '“여행 리마인더”: 여행 시작 전에 서버가 리마인더를 보낼지 여부.',
+  'help.ctx.admin-notifications.bullet.3':
+    '“관리자 Ntfy”와 “관리자 웹훅”: 실패한 백업이나 새 릴리스 같은 관리자 이벤트가 가는 곳이며, “테스트”가 있습니다.',
+  'help.ctx.admin-mcp-tokens.title': 'MCP 접근',
+  'help.ctx.admin-mcp-tokens.summary':
+    'AI 클라이언트가 이 TREK에 대해 가진 모든 토큰과 OAuth 세션을 전체 사용자에 걸쳐 보여주며, 어느 것이든 취소할 수 있습니다.',
+  'help.ctx.admin-mcp-tokens.bullet.1': '“API 토큰”: 누가 만들었는지, 언제 마지막으로 쓰였는지, 그리고 “삭제”.',
+  'help.ctx.admin-mcp-tokens.bullet.2': '“OAuth 세션”: 클라이언트, 사용자, 부여된 스코프, 그리고 “취소”.',
+  'help.ctx.admin-github.title': 'GitHub',
+  'help.ctx.admin-github.summary':
+    'TREK의 새 소식: GitHub의 릴리스 히스토리, 지금 실행 중인 버전, 그리고 새 버전이 나왔는지 여부. 업데이트 자체는 앱 밖의 호스트에서 이루어집니다.',
+  'help.ctx.admin-github.bullet.1':
+    '“릴리스 히스토리”는 릴리스를 노트와 함께 나열합니다. 가장 새것에는 “최신”이 붙고, 내 버전에는 표시가 있습니다.',
+  'help.ctx.admin-github.bullet.2':
+    '새 릴리스가 있으면 헤더에 “업데이트 사용 가능”이 나타나고, Docker와 그 밖의 설치 방식에 맞는 업데이트 방법을 알려줍니다.',
+  'help.ctx.admin-backup.title': '백업',
+  'help.ctx.admin-backup.summary':
+    '데이터베이스와 업로드의 전체 백업입니다. 수동으로 또는 예약으로 만들고, 서버에 보관되며, 파일 하나로 다운로드할 수 있습니다. “복원”은 백업을 되돌립니다.',
+  'help.ctx.admin-backup.bullet.1': '“데이터 백업”: “백업 만들기”와, 기존 백업 목록에 “다운로드”, “복원”, 삭제.',
+  'help.ctx.admin-backup.bullet.2': '“백업 업로드”는 다른 인스턴스나 이전 날짜에 만든 파일을 가져옵니다.',
+  'help.ctx.admin-backup.bullet.3': '“자동 백업”: 켜기 또는 끄기, 간격, 시간과 요일, 보관할 개수.',
+  'help.ctx.admin-audit.title': '감사',
+  'help.ctx.admin-audit.summary':
+    '보안 및 관리 관련 이벤트의 로그: 로그인과 실패, MFA 변경, 사용자와 설정 변경, 백업과 복원. 읽기 전용이며 최신 순입니다.',
+  'help.ctx.admin-audit.bullet.1': '이벤트마다 한 행에 시간, 사용자, 작업, 리소스, IP, 세부 정보.',
+  'help.ctx.admin-audit.bullet.2': '“새로 고침”은 다시 불러오고, “더 불러오기”는 더 과거로 갑니다.',
+  // create-user
+  'help.guide.create-user.title': '사용자 만들기',
+  'help.guide.create-user.goal': '초대 없이 계정을 직접 추가합니다.',
+  'help.guide.create-user.step.1': '“사용자” 탭 상단의 “사용자 만들기”를 클릭합니다.',
+  'help.guide.create-user.step.2':
+    '“사용자 이름”, “이메일”, “비밀번호”를 입력하고 “역할”을 “사용자” 또는 “관리자” 중에서 고릅니다.',
+  'help.guide.create-user.step.3': '“사용자 만들기”를 클릭합니다.',
+  'help.guide.create-user.result':
+    '계정이 표에 나타나고 바로 로그인할 수 있습니다. 비밀번호는 신뢰할 수 있는 경로로 전달합니다.',
+  'help.guide.create-user.tip.1': '비밀번호를 스스로 정해야 할 사람에게는 초대 링크가 더 나은 방법입니다.',
+  'help.guide.create-user.tip.2': '관리자는 이 페이지와 감사 로그를 봅니다. 그 외에는 두 역할이 같습니다.',
+  // edit-user
+  'help.guide.edit-user.title': '사용자의 역할이나 비밀번호 바꾸기',
+  'help.guide.edit-user.goal': '누군가를 승격하거나 강등하거나, 비밀번호를 잃은 사람을 다시 들어오게 합니다.',
+  'help.guide.edit-user.step.1': '사용자 행의 연필을 클릭합니다. 계정 정보와 함께 “사용자 편집”이 열립니다.',
+  'help.guide.edit-user.step.2':
+    '“역할”을 바꾸거나, “새 비밀번호”를 정하거나, 패스키가 있던 기기를 잃은 사람이면 “패스키 초기화”를 클릭한 다음 “저장”합니다.',
+  'help.guide.edit-user.result': '변경은 다음 요청부터 적용됩니다. 새 비밀번호는 다음 로그인부터 동작합니다.',
+  'help.guide.edit-user.tip.1': '내가 마지막 관리자인 동안에는 나 자신에게서 관리자 역할을 뺄 수 없습니다.',
+  'help.guide.edit-user.tip.2':
+    '패스키를 초기화해도 비밀번호는 유지됩니다. 본인이 “설정”의 “계정”에서 새 패스키를 추가합니다.',
+  // invite-links
+  'help.guide.invite-links.title': '링크로 초대하기',
+  'help.guide.invite-links.goal': '닫힌 인스턴스에 사람이 가입하게 하고, 원하면 바로 여행에 들어가게 합니다.',
+  'help.guide.invite-links.step.1': '“초대 링크” 아래에서 “링크 만들기”를 클릭합니다.',
+  'help.guide.invite-links.step.2':
+    '“최대 사용 횟수”와 “만료 기간”을 정하고, 필요하면 “여행에 추가 (선택 사항)”을 고른 뒤 “만들기 및 복사”를 클릭합니다.',
+  'help.guide.invite-links.step.3':
+    '링크를 보냅니다. 각 행은 사용 횟수와 만든 사람을 보여줍니다. “링크 복사”로 다시 복사할 수 있고, 다 쓴 링크나 만료된 링크에는 표시가 붙습니다.',
+  'help.guide.invite-links.result':
+    '링크를 여는 사람은 자기 비밀번호로 가입하고, 여행이 지정되어 있으면 곧바로 참여합니다.',
+  'help.guide.invite-links.tip.1': '초대 링크는 “설정”에서 “비밀번호 회원가입”이 꺼져 있어도 동작합니다.',
+  'help.guide.invite-links.tip.2': '한 사람에게는 사용 횟수 1회에 만료 기간이 짧은 링크가 가장 안전한 기본값입니다.',
+  // delete-user
+  'help.guide.delete-user.title': '사용자 삭제하기',
+  'help.guide.delete-user.goal': '계정과 그 계정만 소유한 모든 것을 제거합니다.',
+  'help.guide.delete-user.step.1': '사용자 행의 휴지통 아이콘을 클릭하고 “사용자 삭제”를 확인합니다.',
+  'help.guide.delete-user.result':
+    '계정, 그 사람 자신의 여행, 여정이 사라집니다. 다른 사람과 공유한 여행은 남은 멤버에게 남습니다.',
+  'help.guide.delete-user.tip.1': '되돌릴 수 없습니다. 확신이 없다면 먼저 백업을 만듭니다.',
+  'help.guide.delete-user.tip.2': '마지막 관리자는 삭제할 수 없습니다. 먼저 다른 사람을 관리자로 만듭니다.',
+  // permissions
+  'help.guide.permissions.title': '누가 무엇을 할 수 있는지 정하기',
+  'help.guide.permissions.goal': '작업별로 이 TREK에서 어떤 역할에 허용할지 설정합니다.',
+  'help.guide.permissions.step.1':
+    '“권한 설정”에서 작업을 해당 그룹에서 찾습니다. 예를 들어 “여행 관리” 아래의 “여행 삭제”입니다. 수준을 “모든 사람”, “여행 멤버”, “여행 소유자”, “관리자만” 중에서 고릅니다. 바뀐 행에는 “맞춤 설정됨” 표시가 붙습니다.',
+  'help.guide.permissions.step.2':
+    '“저장”을 클릭합니다. “기본값으로 초기화”는 모든 행을 기본 제공 수준으로 되돌립니다.',
+  'help.guide.permissions.result':
+    '규칙은 모든 여행에 한꺼번에 적용됩니다. 수준에 못 미치는 사람의 버튼과 메뉴는 사라집니다.',
+  'help.guide.permissions.tip.1':
+    '“여행 소유자”는 여행을 만든 사람을 뜻합니다. 관리자는 언제나 모든 것을 할 수 있습니다.',
+  'help.guide.permissions.tip.2':
+    '멤버를 삭제하기보다 수준을 낮추세요. 편집할 수 없는 멤버도 읽고 댓글을 달 수는 있습니다.',
+  // default-map
+  'help.guide.default-map.title': '새 사용자의 지도 기본값 정하기',
+  'help.guide.default-map.goal': '개인 토큰 없이도 모든 새 계정에 동작하는 지도를 줍니다.',
+  'help.guide.default-map.step.1':
+    '“지도” 아래에서 “지도 엔진”을 고르고, Mapbox나 MapLibre라면 “지도 스타일”, “공유 Mapbox 토큰”, “고품질 모드”를, 래스터 지도라면 “지도 템플릿”과 “공유 CARTO 키”를 정합니다.',
+  'help.guide.default-map.step.2':
+    '바꾼 항목 옆의 “초기화”는 TREK 자체의 기본값으로 되돌립니다. 왼쪽의 “기본 사용자 설정”은 “색상 모드”, 단위, 통화에 대해 같은 일을 합니다.',
+  'help.guide.default-map.result':
+    '새 계정은 이 설정으로 시작합니다. “설정”에서 자기 지도를 정한 사람은 자기 것을 유지합니다.',
+  'help.guide.default-map.tip.1': '여기에 넣은 토큰은 자기 토큰이 없는 모두가 공유하므로 할당량에 주의합니다.',
+  'help.guide.default-map.tip.2': '지도 탭을 한 번도 건드리지 않은 기존 계정도 이 기본값을 따릅니다.',
+  // packing-templates
+  'help.guide.packing-templates.title': '짐 목록 템플릿 만들기',
+  'help.guide.packing-templates.goal': '빈 목록 대신 출발점이 될 짐 목록을 여행에 줍니다.',
+  'help.guide.packing-templates.step.1': '“새 템플릿”을 클릭하고 이름을 입력한 뒤 체크 표시로 확정합니다.',
+  'help.guide.packing-templates.step.2':
+    '템플릿을 열고 “카테고리 추가”를 클릭합니다. 각 카테고리 아래의 +가 항목을 추가하며, 항목에는 이름만 있으면 됩니다.',
+  'help.guide.packing-templates.step.3':
+    '모든 것이 그때그때 저장됩니다. 연필은 템플릿, 카테고리, 항목의 이름을 바꾸고 휴지통은 삭제합니다.',
+  'help.guide.packing-templates.result':
+    '템플릿은 모든 여행의 짐 목록에서 제안됩니다. 적용하면 항목이 복사되므로 여행마다 자유롭게 바꿀 수 있습니다.',
+  'help.guide.packing-templates.tip.1': '해변, 도시, 하이킹처럼 여행 종류별 템플릿이 하나의 거대한 목록보다 낫습니다.',
+  'help.guide.packing-templates.tip.2': '템플릿을 삭제해도 이미 적용한 여행에는 영향이 없습니다.',
+  // categories
+  'help.guide.categories.title': '카테고리 모음 관리하기',
+  'help.guide.categories.goal': '장소와 컬렉션이 가질 수 있는 카테고리와 그 모양을 정합니다.',
+  'help.guide.categories.step.1':
+    '“새 카테고리”를 클릭하고 이름을 붙이고 아이콘과 색상을 고릅니다. “미리보기”가 결과를 보여줍니다. “생성”을 클릭합니다.',
+  'help.guide.categories.step.2':
+    '목록의 카테고리에 마우스를 올리면 편집하거나 삭제할 수 있습니다. 삭제는 확인을 요청합니다.',
+  'help.guide.categories.result': '모음은 어디에나 한 번에 적용됩니다: 장소 인스펙터, 지도 핀, 컬렉션, 필터.',
+  'help.guide.categories.tip.1':
+    '장소는 카테고리 ID를 유지하므로, 카테고리 이름을 바꾸면 모든 장소에서 이름이 바뀝니다.',
+  'help.guide.categories.tip.2':
+    '삭제된 카테고리의 장소는 카테고리가 없어집니다. 그것이 문제라면 먼저 다시 배정합니다.',
+  // school-holiday-catalog
+  'help.guide.school-holiday-catalog.title': '학교 방학 직접 관리하기',
+  'help.guide.school-holiday-catalog.goal': '내장 방학 피드가 다루지 않는 국가나 지역을 채웁니다.',
+  'help.guide.school-holiday-catalog.step.1':
+    '“학교 방학” 아래에서 “국가 추가”를 클릭하고 “국가”와 “국가 코드(예: US)”를 입력한 뒤 “저장”합니다. 그다음 다른 부분마다 “지역 추가”를 합니다.',
+  'help.guide.school-holiday-catalog.step.2':
+    '지역을 클릭해 “지역 또는 학군”을 엽니다. “방학 기간 추가”로 각각에 “방학 이름”, “시작일”, “종료일”을 주고 “저장”합니다. 휴지통은 기간, 지역, 그리고 지역이 하나도 남지 않은 국가를 제거합니다.',
+  'help.guide.school-holiday-catalog.result':
+    '사용자는 Vacay의 “설정”에서 그 국가와 지역을 찾고, 연간 그리드에서 기간을 봅니다.',
+  'help.guide.school-holiday-catalog.tip.1':
+    '내장 피드의 지역은 여기서 편집할 수 없습니다. 날짜가 틀리면 수동 지역을 나란히 추가합니다.',
+  // auth-methods
+  'help.guide.auth-methods.title': '로그인 방법 정하기',
+  'help.guide.auth-methods.goal': '비밀번호 로그인, SSO, 가입을 열거나 닫고 2FA를 요구합니다.',
+  'help.guide.auth-methods.step.1':
+    '“인증 방법” 아래에서 “비밀번호 로그인”과 “비밀번호 회원가입”을 켜거나 끕니다. 가입이 꺼져 있으면 새 계정은 초대 링크, SSO, 직접 만들기로만 생깁니다.',
+  'help.guide.auth-methods.step.2':
+    '“SSO 로그인”과 “SSO 자동 프로비저닝”은 아래의 “Single Sign-On (OIDC)” 설정이 필요합니다. 자동 프로비저닝은 누군가 SSO로 처음 로그인할 때 계정을 만듭니다.',
+  'help.guide.auth-methods.step.3':
+    '“2단계 인증 (2FA) 요구”는 비밀번호로 로그인하는 모두가 다음 로그인 때 인증 앱을 설정하게 합니다. “패스키 로그인”에는 Relying Party ID와 내 TREK에 접속하는 오리진이 필요합니다.',
+  'help.guide.auth-methods.result': '로그인 페이지에는 켜 둔 방법만 정확히 나타납니다.',
+  'help.guide.auth-methods.tip.1':
+    '스스로를 잠그기 전에 경고가 나타납니다. 관리자를 위한 입구 하나는 언제나 켜진 채로 남습니다.',
+  'help.guide.auth-methods.tip.2': '환경 변수로 정한 값은 여기서 읽기 전용으로 보입니다.',
+  // oidc
+  'help.guide.oidc.title': 'Single Sign-On 연결하기',
+  'help.guide.oidc.goal': '사람들이 내 ID 제공자로 로그인하게 합니다.',
+  'help.guide.oidc.step.1':
+    '“Single Sign-On (OIDC)” 아래에서 버튼에 쓸 “표시 이름”과, 제공자에게서 받은 “발급자 URL”, “Client ID”, “Client Secret”을 입력하고 “저장”합니다.',
+  'help.guide.oidc.step.2': '“인증 방법” 아래에서 “SSO 로그인”을 켭니다.',
+  'help.guide.oidc.result':
+    '로그인 페이지에 SSO 버튼이 나타납니다. “SSO 자동 프로비저닝”이 켜져 있으면 처음 오는 사용자는 자동으로 계정을 받습니다.',
+  'help.guide.oidc.tip.1':
+    '제공자에게 필요한 리디렉션 URI는 내 TREK 주소에 문서에 있는 OIDC 콜백 경로를 붙인 것입니다.',
+  'help.guide.oidc.tip.2': '어떤 SSO 그룹이 관리자가 되는지는 클레임 매핑이 정합니다. 문서의 OIDC 페이지를 참고합니다.',
+  // instance-keys
+  'help.guide.instance-keys.title': 'API 키 입력하기',
+  'help.guide.instance-keys.goal': '인스턴스 전체에서 Google 장소 검색, Unsplash 커버, Amap을 씁니다.',
+  'help.guide.instance-keys.step.1':
+    '“API 키” 아래에서 “Google Maps API 키”를 붙여 넣고 “테스트”를 클릭합니다. 키가 응답하는지 필드가 알려줍니다.',
+  'help.guide.instance-keys.step.2':
+    '“키의 사용 범위” 아래에서 그 키로 과금해도 되는 기능만 켭니다: 자동완성, 상세 정보, 사진, 정보 보강, 장소 검색 기록.',
+  'help.guide.instance-keys.step.3':
+    '“Unsplash API 키”는 커버 검색을, “Amap(高德地图) API 키”는 중국 내 장소 검색을 맡습니다. 각각 같은 방식으로 테스트합니다.',
+  'help.guide.instance-keys.result':
+    '사용자는 자기 키 없이 기능을 씁니다. Google 키가 없으면 TREK은 무료 OpenStreetMap 스택과 TREK Places API로 검색합니다.',
+  'help.guide.instance-keys.tip.1': '사용자가 “설정”에 넣은 개인 키는 그 사용자에게는 인스턴스 키보다 우선합니다.',
+  'help.guide.instance-keys.tip.2': '키는 환경 변수로도 올 수 있으며, 그런 키는 여기서 읽기 전용으로 보입니다.',
+  // places-transit
+  'help.guide.places-transit.title': '검색과 대중교통 제공자 고르기',
+  'help.guide.places-transit.goal': '장소 검색과 대중교통 경로에 누가 답할지 정합니다.',
+  'help.guide.places-transit.step.1':
+    '“장소 검색 제공자” 아래에서 “자동”, “Google Places”, “Amap(高德地图)”, “OpenStreetMap” 중에서 고릅니다. “자동”은 존재하는 가장 좋은 키를 씁니다.',
+  'help.guide.places-transit.step.2':
+    '“대중교통 제공자” 아래에서 전 세계를 키 없이 다루는 “Transitous (무료)” 또는 Google 키가 필요한 “Google”을 고릅니다.',
+  'help.guide.places-transit.result': 'TREK의 모든 검색창과 모든 대중교통 경로가 이 선택을 따릅니다.',
+  'help.guide.places-transit.tip.1': '키가 없는 제공자는 여기에 경고를 표시하고 OpenStreetMap으로 대체됩니다.',
+  'help.guide.places-transit.tip.2': 'Google 대중교통 경로는 요청마다 과금되고, Transitous는 그렇지 않습니다.',
+  // file-types
+  'help.guide.file-types.title': '파일 형식 제한하기',
+  'help.guide.file-types.goal': '업로드에 허용할 파일 확장자를 정합니다.',
+  'help.guide.file-types.step.1': '“허용된 파일 형식” 아래에서 쉼표로 구분된 확장자 목록을 편집하고 저장합니다.',
+  'help.guide.file-types.result': '그 밖의 형식은 문서, 여정, 커버 어디서든 명확한 메시지와 함께 거부됩니다.',
+  'help.guide.file-types.tip.1': '이미지 형식은 목록에 남겨 둡니다. 커버와 여정 사진도 같은 검사를 거칩니다.',
+  // toggle-addon
+  'help.guide.toggle-addon.title': '애드온 켜거나 끄기',
+  'help.guide.toggle-addon.goal': '기능 모듈을 모두에게 제공하거나 거둬들입니다.',
+  'help.guide.toggle-addon.step.1':
+    '애드온 타일의 스위치를 넘깁니다. 내비게이션 항목이 모두에게 한꺼번에 나타나거나 사라집니다.',
+  'help.guide.toggle-addon.step.2':
+    '일부 타일에는 옵션용 하위 행이 있습니다. 예를 들어 “목록” 아래의 “가방 추적”이나 “Journey” 아래의 사진 제공자입니다. 이들은 애드온이 켜져 있는 동안에만 보입니다.',
+  'help.guide.toggle-addon.result': '꺼진 애드온의 데이터는 보존됩니다. 다시 켜면 다시 보입니다.',
+  'help.guide.toggle-addon.tip.1': 'MCP를 끄면 엔드포인트와 그것에 의존하는 “통합” 섹션이 사라집니다.',
+  'help.guide.toggle-addon.tip.2':
+    'Vacay, Atlas, Journey는 사용자가 가장 많이 찾는 애드온입니다. 문서는 업로드용 스토리지가 필요합니다.',
+  // install-plugin
+  'help.guide.install-plugin.title': '플러그인 설치하기',
+  'help.guide.install-plugin.goal': '서드파티 플러그인을 추가하고 요청한 권한만 정확히 줍니다.',
+  'help.guide.install-plugin.step.1':
+    '“둘러보기”를 열어 플러그인을 고르고 “설치”를 클릭하거나, “플러그인 업로드”를 클릭해 .zip 또는 .tar.gz 패키지를 고릅니다.',
+  'help.guide.install-plugin.step.2':
+    '“설치됨”으로 돌아가 행을 읽습니다: 플러그인이 읽거나 쓸 수 있는 것, 호출하는 호스트, 서명 여부. “플러그인 활성화”를 켭니다.',
+  'help.guide.install-plugin.step.3':
+    '행의 메뉴에는 “다시 시작”, “오류 로그 보기”, “허용된 호스트”, “버전 변경…”이 있고 “삭제”는 제거합니다. 새 버전이 있으면 행에서 업데이트를 제안하며, 새 권한을 요청하는 업데이트는 내가 승인할 때까지 꺼진 채로 남습니다.',
+  'help.guide.install-plugin.result':
+    '플러그인은 자체 프로세스로 실행됩니다. 플러그인이 추가하는 위젯, 지도 레이어, 도구는 플러그인이 선언한 곳에 나타납니다.',
+  'help.guide.install-plugin.tip.1': '“다시 스캔”은 패키지 없이 개발용으로 연결한 플러그인 폴더를 불러옵니다.',
+  'help.guide.install-plugin.tip.2': '서명되지 않은 플러그인에는 그렇게 표시됩니다. 출처를 신뢰할 때만 설치합니다.',
+  // storage-backends
+  'help.guide.storage-backends.title': '업로드를 S3나 미러로 옮기기',
+  'help.guide.storage-backends.goal': '파일을 오브젝트 스토리지에, 또는 디스크와 버킷 양쪽에 보관합니다.',
+  'help.guide.storage-backends.step.1':
+    '“백엔드” 아래에서 “백엔드 추가”를 클릭하고 “이름”을 붙이고 “유형”을 “로컬”, “S3”, “미러” 중에서 고른 뒤 필드를 채우고 “적용”합니다. “테스트”는 연결을 확인하고 “변경 사항 저장”은 기록합니다.',
+  'help.guide.storage-backends.step.2':
+    '“카테고리” 아래에서 각 업로드 카테고리를 백엔드에 배정합니다. 하나를 바꾸면 “기존 객체 이동”인지 “새 쓰기만 전환”인지 묻습니다.',
+  'help.guide.storage-backends.step.3':
+    '상단의 “상태”가 모든 백엔드를 점검합니다. 빨간 항목은 무엇이 실패했는지 알려줍니다.',
+  'help.guide.storage-backends.result': '새 업로드는 배정된 백엔드로 갑니다. 옮긴 파일은 그곳에서 제공됩니다.',
+  'help.guide.storage-backends.tip.1': '환경 변수로 설정된 백엔드는 표시되지만 여기서 편집할 수 없습니다.',
+  'help.guide.storage-backends.tip.2': '미러는 양쪽에 쓰고 첫 번째에서 읽습니다. 중단 없이 이전하는 데 씁니다.',
+  // channels-instance
+  'help.guide.channels-instance.title': '알림 채널 설정하기',
+  'help.guide.channels-instance.goal': '사용자가 고를 수 있는 채널을 정하고 이메일을 설정합니다.',
+  'help.guide.channels-instance.step.1':
+    '“이메일 (SMTP)” 아래에서 SMTP Host, SMTP Port, SMTP User, SMTP Password, From Address를 입력합니다. “테스트 이메일 전송”은 나에게 메일을 보냅니다.',
+  'help.guide.channels-instance.step.2':
+    '“Ntfy”와 “웹훅”을 켜서 제공합니다. 그러면 사용자는 “설정”의 “알림”에서 자기 토픽이나 URL을 입력합니다.',
+  'help.guide.channels-instance.step.3':
+    '“여행 리마인더”는 여행 시작 전 리마인더를 켜고 끕니다. “앱 내”는 언제나 켜져 있고 여기서는 설명만 합니다.',
+  'help.guide.channels-instance.result': '모든 사용자의 “알림” 탭에 내가 켠 채널이 나타납니다.',
+  'help.guide.channels-instance.tip.1':
+    '여기에 넣은 기본 ntfy 서버는 사용자에게 미리 채워집니다. 사용자는 여전히 자기 서버를 지정할 수 있습니다.',
+  'help.guide.channels-instance.tip.2': '플러그인 채널은 그 기능을 가진 플러그인이 활성화되면 저절로 나타납니다.',
+  // admin-channels
+  'help.guide.admin-channels.title': '관리자 이벤트를 휴대폰으로 받기',
+  'help.guide.admin-channels.goal': '실패한 백업, 새 릴리스, 그 밖의 인스턴스 이벤트를 알림으로 받습니다.',
+  'help.guide.admin-channels.step.1':
+    '“관리자 Ntfy” 아래에서 토픽과, 필요하면 서버와 토큰을 입력합니다. “관리자 웹훅” 아래에는 URL을 입력합니다.',
+  'help.guide.admin-channels.step.2': '“테스트 ntfy 전송” 또는 “테스트 웹훅 전송”을 클릭해 메시지가 도착하는지 봅니다.',
+  'help.guide.admin-channels.result': '관리자 이벤트는 모든 관리자의 앱 내 벨에 더해 그곳으로도 갑니다.',
+  'help.guide.admin-channels.tip.1':
+    '관리자 토픽은 개인 토픽과 분리해 둡니다. 장애 알림이 여행 알림에 묻히지 않게 하기 위해서입니다.',
+  // mcp-tokens-admin
+  'help.guide.mcp-tokens-admin.title': 'AI 접근 취소하기',
+  'help.guide.mcp-tokens-admin.goal': '어느 사용자든 AI 클라이언트가 가진 모든 토큰과 세션을 보고 끊습니다.',
+  'help.guide.mcp-tokens-admin.step.1':
+    '“API 토큰” 아래에서 사용자와 이름으로 토큰을 찾습니다. 휴지통이 삭제하며 클라이언트는 즉시 멈춥니다.',
+  'help.guide.mcp-tokens-admin.step.2':
+    '“OAuth 세션” 아래에서는 브라우저 기반 클라이언트에 대해 같은 일을 합니다: 클라이언트, 사용자, 날짜가 있고 휴지통이 세션을 취소합니다.',
+  'help.guide.mcp-tokens-admin.result':
+    '클라이언트는 그 사용자가 다시 연결해야 합니다. 그 밖에는 아무것도 바뀌지 않습니다.',
+  'help.guide.mcp-tokens-admin.tip.1':
+    '스코프는 클라이언트가 무엇을 할 수 있었는지 알려줍니다. 읽기 전용 스코프는 남겨 두어도 무해합니다.',
+  'help.guide.mcp-tokens-admin.tip.2': 'MCP 애드온을 끄면 모든 것이 한꺼번에 취소됩니다.',
+  // release-history
+  'help.guide.release-history.title': '새 릴리스 확인하기',
+  'help.guide.release-history.goal': '내 TREK이 최신인지, 다음 버전이 무엇을 가져오는지 압니다.',
+  'help.guide.release-history.step.1':
+    '새 릴리스가 있으면 관리자 페이지 상단에 “업데이트 사용 가능”이 보입니다. “GitHub에서 보기”가 그것을 열고, “업데이트 방법”이 Docker와 그 밖의 설치 방식의 업데이트를 설명합니다.',
+  'help.guide.release-history.step.2':
+    '“릴리스 히스토리”는 모든 릴리스를 노트와 함께 나열합니다. “상세 보기”가 펼치고, 가장 새것에는 “최신”이 붙으며, “더 불러오기”는 더 과거로 갑니다.',
+  'help.guide.release-history.result':
+    '업데이트는 호스트에서 새 이미지를 받거나 새 태그를 빌드해 이루어집니다. 데이터 디렉터리는 그대로 남습니다.',
+  'help.guide.release-history.tip.1': '업데이트 전에 백업을 만듭니다. “백업” 탭이 바로 옆에 있습니다.',
+  'help.guide.release-history.tip.2':
+    '프리릴리스는 표시되지만, 내가 프리릴리스를 쓰고 있지 않는 한 업데이트로 알리지 않습니다.',
+  // create-backup
+  'help.guide.create-backup.title': '백업 만들고 복원하기',
+  'help.guide.create-backup.goal': '인스턴스 전체의 스냅샷을 만들고, 사본을 다른 곳에 두고, 되돌릴 수 있게 합니다.',
+  'help.guide.create-backup.step.1':
+    '“데이터 백업” 아래에서 “백업 만들기”를 클릭합니다. 데이터베이스와 업로드를 서버의 파일 하나로 묶습니다.',
+  'help.guide.create-backup.step.2':
+    '“다운로드”는 사본을 이 기기 밖에 보관합니다. 휴지통은 오래된 것을 삭제해 공간을 확보합니다.',
+  'help.guide.create-backup.step.3':
+    '백업의 “복원”이나 파일을 이용한 “백업 업로드”는 “백업을 복원할까요?”가 한 번 확인한 뒤 현재 데이터를 대체합니다.',
+  'help.guide.create-backup.result':
+    '복원은 사용자, 여행, 파일, 설정을 그 백업 시점으로 되돌리며, 모두가 로그아웃됩니다.',
+  'help.guide.create-backup.tip.1': '복원은 여기서 유일하게 되돌릴 수 없는 작업입니다. 먼저 새 백업을 만듭니다.',
+  'help.guide.create-backup.tip.2': '백업은 데이터 디렉터리에 있습니다. 다른 기기에 사본이 있어야 비로소 백업입니다.',
+  // auto-backup
+  'help.guide.auto-backup.title': '백업 예약하기',
+  'help.guide.auto-backup.goal': '서버가 스스로 백업하고 최근 몇 개만 남기게 합니다.',
+  'help.guide.auto-backup.step.1':
+    '“자동 백업” 아래에서 “자동 백업 활성화”를 켜고 “간격”, “실행 시간”, 그리고 주간이나 월간이면 “요일” 또는 “매월 몇 일”을 고릅니다.',
+  'help.guide.auto-backup.step.2':
+    '“이후 오래된 백업 삭제”는 백업을 얼마나 오래 보관할지 정합니다. 새 백업이 만들어지면 더 오래된 것은 사라집니다.',
+  'help.guide.auto-backup.result': '백업이 예약대로 목록에 나타납니다. 실패는 관리자 채널로 전달됩니다.',
+  'help.guide.auto-backup.tip.1': '시간은 서버의 시간대를 따르며, “감사” 탭에 표시됩니다.',
+  'help.guide.auto-backup.tip.2': '서버의 저장 공간은 유한합니다. 세 개에서 다섯 개를 보관하면 보통 충분합니다.',
+  // audit-log
+  'help.guide.audit-log.title': '감사 로그 읽기',
+  'help.guide.audit-log.goal': '누가 무엇을 언제 했는지 알아냅니다.',
+  'help.guide.audit-log.step.1':
+    '행을 읽습니다: 시간, 사용자, 작업, 리소스, IP, 세부 정보, 최신 순. 작업은 로그인 실패, MFA 변경, 복원처럼 일어난 일로 이름이 붙습니다.',
+  'help.guide.audit-log.step.2': '“새로 고침”은 맨 위를 다시 불러오고, “더 불러오기”는 더 과거로 갑니다.',
+  'help.guide.audit-log.result': '왜 무언가가 바뀌었는지 묻는 사람에게 건넬 수 있는 기록입니다.',
+  'help.guide.audit-log.tip.1': '시간은 서버의 시간대로 표시되며, 표 위에 그 이름이 있습니다.',
+  'help.guide.audit-log.tip.2': '로그는 추가 전용입니다. 여기의 어떤 것도 앱에서 편집하거나 삭제할 수 없습니다.',
 };
 
 export default help;

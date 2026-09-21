@@ -9,6 +9,18 @@ import { defineConfig, devices } from '@playwright/test'
  * /ws to the backend. Tests run serially against one worker so they share the
  * single seeded database deterministically.
  */
+/**
+ * Ports. The defaults are what `npm run e2e` has always used. `npm run
+ * help:media` (e2e/help/run.mjs) sets E2E_WEB_PORT/E2E_API_PORT to a second
+ * pair so it can record while `npm run dev` keeps serving 5173/3001 to whoever
+ * is watching. Environment only, no argv sniffing: Playwright's workers load
+ * this file again with different arguments, and every process must agree.
+ * vite.config.js honours TREK_DEV_PORT and TREK_DEV_API for the same reason.
+ */
+const WEB_PORT = Number(process.env.E2E_WEB_PORT) || 5173
+const API_PORT = Number(process.env.E2E_API_PORT) || 3001
+export const E2E_BASE_URL = `http://localhost:${WEB_PORT}`
+
 export default defineConfig({
   testDir: './e2e',
   fullyParallel: false,
@@ -19,7 +31,7 @@ export default defineConfig({
   expect: { timeout: 15_000 },
   reporter: [['list']],
   use: {
-    baseURL: 'http://localhost:5173',
+    baseURL: E2E_BASE_URL,
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
   },
@@ -57,13 +69,31 @@ export default defineConfig({
       },
       dependencies: ['seed'],
     },
+    // Help-center media (`npm run help:media`): pictures and walkthroughs for
+    // the in-app guides, generated from the guide definitions in src/help/.
+    // Same seed as the wiki screenshots; its own match so neither run pays
+    // for the other. Serial and generous on time: a walkthrough is paced for
+    // a human to follow.
+    {
+      name: 'help-media',
+      testMatch: /\.guide\.ts/,
+      timeout: 150_000,
+      use: {
+        ...devices['Desktop Chrome'],
+        storageState: 'e2e/.tmp/state.json',
+        viewport: { width: 1920, height: 1080 },
+        deviceScaleFactor: 2,
+      },
+      dependencies: ['seed'],
+    },
   ],
   webServer: [
     {
       // Always start our own backend (never reuse) so the isolated test DB is
       // reset + reseeded on every run, regardless of any stray dev server.
       command: 'node e2e/server-launch.mjs',
-      port: 3001,
+      port: API_PORT,
+      env: { E2E_API_PORT: String(API_PORT) },
       reuseExistingServer: false,
       timeout: 180_000,
       stdout: 'pipe',
@@ -71,7 +101,8 @@ export default defineConfig({
     },
     {
       command: 'npm run dev',
-      port: 5173,
+      port: WEB_PORT,
+      env: { TREK_DEV_PORT: String(WEB_PORT), TREK_DEV_API: `http://localhost:${API_PORT}` },
       reuseExistingServer: !process.env.CI,
       timeout: 120_000,
     },

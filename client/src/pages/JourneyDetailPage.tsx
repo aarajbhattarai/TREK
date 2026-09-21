@@ -25,11 +25,17 @@ import { GalleryView } from '../components/Journey/JourneyDetailPageGalleryView'
 import { EntryEditor } from '../components/Journey/JourneyDetailPageEntryEditor'
 import { AddTripDialog } from '../components/Journey/JourneyDetailPageAddTripDialog'
 import { JourneySettingsDialog } from '../components/Journey/JourneyDetailPageSettingsDialog'
+import HelpAnchor from '../components/Help/HelpAnchor'
 
 export default function JourneyDetailPage() {
   // ViewportRoute in App.tsx picks the branch now, so the phone screen is a
   // chunk of its own instead of a dead limb in this one.
-  return <JourneyDetailPageDesktop />
+  return (
+    <>
+      <HelpAnchor id="journey-detail" />
+      <JourneyDetailPageDesktop />
+    </>
+  )
 }
 
 function JourneyDetailPageDesktop() {

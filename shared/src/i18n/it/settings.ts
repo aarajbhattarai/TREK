@@ -25,7 +25,8 @@ const settings: TranslationStrings = {
   'settings.mapTemplatePlaceholder.select': 'Seleziona modello...',
   'settings.mapDefaultHint': 'Lascia vuoto per OpenStreetMap (predefinito)',
   'settings.routingBase': 'Motore di percorso proprio',
-  'settings.routingBaseHint': 'Una tua istanza OSRM. Vuoto usa i server pubblici, che consentono circa una richiesta al secondo: sufficiente per un giorno, poco per un viaggio in auto. Ha effetto dopo il riavvio del server.',
+  'settings.routingBaseHint':
+    'Una tua istanza OSRM. Vuoto usa i server pubblici, che consentono circa una richiesta al secondo: sufficiente per un giorno, poco per un viaggio in auto. Ha effetto dopo il riavvio del server.',
   'settings.valhallaBase': 'Istanza Valhalla propria',
   'settings.valhallaBaseHint':
     'TREK usa per impostazione predefinita la Valhalla pubblica di FOSSGIS per evitare pedaggi, autostrade e traghetti. Inserisci qui l’URL della tua Valhalla per usarla al suo posto. Se è configurata solo un’istanza di routing personalizzata, la Valhalla pubblica non viene usata. Dopo aver inserito un URL personalizzato, riavvia il server e ricarica la pagina.',
@@ -241,7 +242,7 @@ const settings: TranslationStrings = {
   'settings.deleteBlockedMessage':
     "Sei l'unico amministratore. Promuovi un altro utente ad amministratore prima di eliminare il tuo account.",
   'settings.roleUser': 'Utente',
-  'settings.saveProfile': 'Salva Profillo',
+  'settings.saveProfile': 'Salva Profilo',
   'settings.toast.mapSaved': 'Impostazioni mappa salvate',
   'settings.toast.keysSaved': 'Chiavi API salvate',
   'settings.toast.displaySaved': 'Impostazioni di visualizzazione salvate',
@@ -510,7 +511,8 @@ const settings: TranslationStrings = {
   'settings.offline.notice.offline': 'Nessuna connessione. Connettiti per salvare i viaggi offline.',
   'settings.offline.notice.signedOut': 'La tua sessione è scaduta. Accedi di nuovo per sincronizzare.',
   'settings.offline.notice.failed': 'Il download non è stato completato. Controlla la connessione e riprova.',
-  'settings.offline.notice.loadFailed': 'Impossibile leggere l’archivio offline di questo dispositivo. Di solito basta svuotare la cache.',
+  'settings.offline.notice.loadFailed':
+    'Impossibile leggere l’archivio offline di questo dispositivo. Di solito basta svuotare la cache.',
   'settings.offline.clear': 'Svuota la cache',
   'settings.offline.clearConfirm':
     'Cancellare tutti i dati di viaggio offline? Puoi risincronizzare in qualsiasi momento quando sei online.',
@@ -557,7 +559,7 @@ const settings: TranslationStrings = {
   'settings.apiScopes.hint':
     'Lascia tutto attivo per una chiave che deve vedere ogni cosa. Ciò che disattivi viene rifiutato per questa chiave, non semplicemente omesso dalla risposta.',
   'settings.apiScopes.all': 'Tutto',
-  'settings.apiScopes.noneSelected': 'Scegli almeno un\'area, altrimenti la chiave non potrebbe leggere nulla.',
+  'settings.apiScopes.noneSelected': "Scegli almeno un'area, altrimenti la chiave non potrebbe leggere nulla.",
   'settings.apiScopes.limited': '{count} di {total}',
   'settings.apiScopes.trips': 'Viaggi',
   'settings.apiScopes.days': 'Giorni',
@@ -569,13 +571,15 @@ const settings: TranslationStrings = {
   'settings.apiScopes.bucket-list': 'Lista dei desideri',
   'settings.apiScopes.stats': 'Totali',
   'settings.apiKeys.title': 'Chiavi API',
-  'settings.apiKeys.description': 'Chiavi per l\'API pubblica, così altri software possono leggere i tuoi viaggi. Sola lettura: una chiave non può modificare né eliminare nulla.',
+  'settings.apiKeys.description':
+    "Chiavi per l'API pubblica, così altri software possono leggere i tuoi viaggi. Sola lettura: una chiave non può modificare né eliminare nulla.",
   'settings.apiKeys.create': 'Crea chiave',
   'settings.apiKeys.empty': 'Nessuna chiave. Creane una per collegare altri software.',
   'settings.apiKeys.createdAt': 'creata',
   'settings.apiKeys.usedAt': 'ultimo uso',
   'settings.apiKeys.deleteTitle': 'Elimina chiave',
-  'settings.apiKeys.deleteMessage': 'Tutto ciò che usa questa chiave smette di funzionare subito. L\'operazione non è reversibile.',
+  'settings.apiKeys.deleteMessage':
+    "Tutto ciò che usa questa chiave smette di funzionare subito. L'operazione non è reversibile.",
   'settings.apiKeys.deleted': 'Chiave eliminata',
   'settings.apiKeys.deleteFailed': 'Impossibile eliminare la chiave',
   'settings.apiKeys.createFailed': 'Impossibile creare la chiave',
@@ -584,7 +588,8 @@ const settings: TranslationStrings = {
   'settings.apiKeys.endpoint': 'Endpoint',
   'settings.apiKeys.neverUsed': 'mai usata',
   'settings.apiKeys.loadFailed': 'Impossibile caricare le tue chiavi. Ricarica la pagina per riprovare.',
-  'settings.apiKeys.limitReached': 'Hai {max} chiavi, il massimo per un account. Eliminane una che non usi più per crearne un\'altra.',
+  'settings.apiKeys.limitReached':
+    "Hai {max} chiavi, il massimo per un account. Eliminane una che non usi più per crearne un'altra.",
   'settings.apiKeys.copyFailed': 'Impossibile copiare. Seleziona il testo e copialo a mano.',
   'settings.apiKeys.modal.createTitle': 'Crea chiave API',
   'settings.apiKeys.modal.name': 'Nome',
@@ -593,7 +598,8 @@ const settings: TranslationStrings = {
   'settings.apiKeys.modal.creating': 'Creazione...',
   'settings.apiKeys.modal.create': 'Crea',
   'settings.apiKeys.modal.createdTitle': 'Chiave API creata',
-  'settings.apiKeys.modal.createdWarning': 'Copia la chiave adesso. Viene mostrata una sola volta e non può essere recuperata in seguito.',
+  'settings.apiKeys.modal.createdWarning':
+    'Copia la chiave adesso. Viene mostrata una sola volta e non può essere recuperata in seguito.',
   'settings.apiKeys.modal.done': 'Fatto',
 };
 

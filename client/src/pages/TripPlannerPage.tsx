@@ -35,6 +35,8 @@ import { lazyWithRetry } from '../utils/lazyWithRetry'
 import { getDayBookendHotels } from '../utils/dayOrder'
 import TripWarningsBanner from '../components/Planner/TripWarningsBanner'
 import Navbar from '../components/Layout/Navbar'
+import HelpAnchor from '../components/Help/HelpAnchor'
+import { getHelpContext } from '../help/registry'
 import { useToast } from '../components/shared/Toast'
 import { Map, X, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Ticket, PackageCheck, Wallet, FolderOpen, Users, Train } from 'lucide-react'
 import { useTranslation } from '../i18n'
@@ -245,6 +247,11 @@ function ListsContainer({ tripId, packingItems, todoItems }: { tripId: number; p
   )
 }
 
+/** The tab ids are historical; the help screens carry the names the tabs show. */
+const TRIP_TAB_HELP: Record<string, string> = {
+  transports: 'transports', buchungen: 'bookings', listen: 'lists', finanzplan: 'costs', dateien: 'files', collab: 'collab', roadtrip: 'roadtrip',
+}
+
 export default function TripPlannerPage(): React.ReactElement | null {
   // ViewportRoute in App.tsx picks the branch now, so the phone screen is a
   // chunk of its own instead of a dead limb in this one.
@@ -379,8 +386,17 @@ function TripPlannerPageDesktop(): React.ReactElement | null {
   const mapInsetLeft = leftPanelPx ? leftPanelPx + 10 : 0
   const mapInsetRight = rightPanelPx ? rightPanelPx + 10 : 0
 
+  // The trip is a family of help screens: the frame, then one per tab, and on
+  // the plan one per overlay that is open. A screen that has no help yet falls
+  // back to the frame.
+  const helpFor = (id: string) => (getHelpContext(id) ? id : 'trip')
+  const helpId = activeTab === 'plan'
+    ? helpFor(roadtripActive ? 'trip-roadtrip' : selectedPlace ? 'trip-place' : showDayDetail ? 'trip-day-detail' : 'trip')
+    : helpFor(`trip-${TRIP_TAB_HELP[activeTab] ?? activeTab}`)
+
   return (
     <div style={{ position: 'fixed', inset: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden', ...fontStyle }}>
+      <HelpAnchor id={helpId} />
       <Navbar tripTitle={trip.title} tripId={tripId} showBack onBack={() => navigate('/dashboard')} onShare={() => setShowMembersModal(true)} />
 
       <div className="bg-surface-elevated border-b border-edge-faint" style={{
