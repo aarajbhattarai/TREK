@@ -19,10 +19,7 @@ export class PlaceShadowRetentionJob implements OnApplicationBootstrap {
     private readonly registrar: CronRegistrarService,
   ) {}
 
-  // `async` only so the sweep's call-graph gate sees a non-sync DB-reaching
-  // frame here: nothing in the body awaits, and Nest awaits the returned
-  // promise before the next bootstrap hook, exactly as it did the `void`.
-  async onApplicationBootstrap(): Promise<void> {
+  onApplicationBootstrap(): void {
     if (!this.registrar.isEnabled()) return;
     this.registrar.register('place-shadow-retention', '40 3 * * *', () => this.tick());
   }

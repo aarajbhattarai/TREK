@@ -6,9 +6,15 @@
  *   --sync  every *synchronous* method under `server/src/**` that touches the
  *           database — directly (a `get/all/run/prepare/transaction/exec/pragma`
  *           or a `canAccessTrip/isOwner/rosterUserIds/getPlaceWithTags` call on a
- *           DatabaseService / raw handle) or transitively (it calls, through
- *           `this.*`, a method that does). These are exactly the methods the
- *           sweep's R1 turns into `async` ones.
+ *           DatabaseService / raw handle) or transitively through a chain of
+ *           *synchronous* `this.*` calls that does. An `async` callee is a
+ *           stopping point for this walk: it is not traversed into, and its own
+ *           DB reach (direct or transitive) is not attributed to the caller — so
+ *           a sync method that only calls already-async methods (e.g. an
+ *           `onApplicationBootstrap()` hook that schedules an async cron
+ *           callback) is not listed here. That shape is `--unawaited`'s job, not
+ *           `--sync`'s. These are exactly the methods the sweep's R1 turns into
+ *           `async` ones.
  *   --tx    every real `…​.transaction(` call site (the AST sees calls, so the six
  *           prose mentions inside doc comments that `grep` finds are not here).
  *           These are the sites R2 routes through `UnitOfWork.transactional`.
@@ -465,6 +471,9 @@ for (const c of allClasses) {
       seen.add(k);
       const t = methodIndex.get(k);
       if (!t) continue;
+      // An async callee stops the walk: neither its own DB reach nor anything further
+      // behind it is attributed to the (sync) caller — that's --unawaited's job. See header.
+      if (t.m.async) continue;
       if (t.m.directDb) dbCallees.add(k);
       for (const nk of calleeKeys(t.cls, t.m)) if (!seen.has(nk)) stack.push(nk);
     }
