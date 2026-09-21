@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest'
-import { existsSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import path from 'node:path'
 import en from '@trek/shared/i18n/en'
+import { headingSlug } from './headingSlug'
 import { dashboardGuides } from './contexts/dashboard'
 import { vacayGuides } from './contexts/vacay'
 import { atlasGuides } from './contexts/atlas'
@@ -135,6 +136,46 @@ describe('help registry: every promised picture is on disk', () => {
         for (let n = 1; n <= guide.steps; n++) expect(onDisk(helpMedia.step(guide.id, n)), helpMedia.step(guide.id, n)).toBe(true)
       }
       if (guide.media.result) expect(onDisk(helpMedia.result(guide.id)), helpMedia.result(guide.id)).toBe(true)
+    }
+  })
+})
+
+describe('help registry: every doc link resolves in the wiki', () => {
+  // The reader opens a doc link at /help/<slug>#<anchor>, which HelpPage renders
+  // from wiki/<slug>.md and anchors with headingSlug. A slug or an anchor that is
+  // not there gives a 404 or a jump to nowhere, and nothing else in this file
+  // notices: four of them had already shipped when this was written.
+  const WIKI = path.join(process.cwd(), '..', 'wiki')
+  const anchorsOf = (slug: string): Set<string> =>
+    new Set(
+      readFileSync(path.join(WIKI, `${slug}.md`), 'utf8')
+        .split('\n')
+        .map(line => /^#{1,6}\s+(.*?)\s*$/.exec(line)?.[1])
+        .filter((h): h is string => h !== undefined)
+        .map(h =>
+          headingSlug(
+            h
+              .replace(/`([^`]*)`/g, '$1')
+              .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
+              .replace(/\*\*([^*]*)\*\*/g, '$1'),
+          ),
+        ),
+    )
+
+  const pages = new Set(readdirSync(WIKI).filter(f => f.endsWith('.md')).map(f => f.slice(0, -3)))
+  const links: Array<[string, { slug: string; anchor?: string }]> = [
+    ...[...HELP_CONTEXTS.values()].flatMap(c => c.docs.map(d => [`context "${c.id}"`, d] as [string, typeof d])),
+    ...allHelpGuides().flatMap(g => (g.docs ? [[`guide "${g.id}"`, g.docs] as [string, typeof g.docs]] : [])),
+  ].filter((entry): entry is [string, { slug: string; anchor?: string }] => Boolean(entry[1]))
+
+  it('names a wiki page that exists', () => {
+    for (const [who, link] of links) expect(pages.has(link.slug), `${who} links to missing page "${link.slug}"`).toBe(true)
+  })
+
+  it('names a heading that exists on that page', () => {
+    for (const [who, link] of links) {
+      if (!link.anchor) continue
+      expect(anchorsOf(link.slug).has(link.anchor), `${who}: "${link.slug}" has no heading "#${link.anchor}"`).toBe(true)
     }
   })
 })

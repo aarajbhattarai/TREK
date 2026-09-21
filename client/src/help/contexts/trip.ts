@@ -1,4 +1,4 @@
-import type { HelpContext, HelpGuide } from '../types'
+import { defineScreen } from '../defineScreen'
 
 /**
  * Help for a trip (`/trips/:id`). The trip is a family of screens: this one is
@@ -8,30 +8,22 @@ import type { HelpContext, HelpGuide } from '../types'
  * the pictures live in `e2e/help/trip.guide.ts`.
  */
 
-const SHARING = 'Sharing-and-Collaboration'
-const PLANNER = 'Trip-Planner'
+const SHARING = 'Trip-Members-and-Sharing'
+const PLANNER = 'Trip-Planner-Overview'
 
-const guide = (
-  id: string, icon: HelpGuide['icon'], size: HelpGuide['size'], steps: number, tips: number,
-  docs: HelpGuide['docs'], related: string[], result = false,
-): HelpGuide => ({ id, context: 'trip', icon, size, steps, tips, media: { steps: true, result }, docs, related })
-
-export const tripGuides: HelpGuide[] = [
-  guide('add-member', 'userPlus', 'quick', 3, 2, { slug: SHARING }, ['trip-invite-link', 'add-guest'], true),
-  guide('trip-invite-link', 'link', 'quick', 3, 2, { slug: SHARING }, ['add-member', 'invite-links']),
-  guide('add-guest', 'userRound', 'quick', 2, 2, { slug: SHARING, anchor: 'guests' }, ['add-member'], true),
-  guide('public-link', 'share', 'quick', 3, 2, { slug: SHARING, anchor: 'public-share-links' }, ['add-member']),
-  guide('transfer-ownership', 'crown', 'quick', 2, 2, { slug: SHARING }, ['add-member']),
-  guide('collapse-columns', 'panelLeft', 'quick', 3, 2, { slug: PLANNER }, []),
-  guide('undo-change', 'undo', 'quick', 1, 2, { slug: PLANNER }, []),
-]
-
-export const tripContext: HelpContext = {
+export const { context: tripContext, guides: tripGuides } = defineScreen({
   id: 'trip',
   route: '/trips/:id?tab=plan',
   icon: 'route',
   bullets: 6,
-  guides: tripGuides.map(g => g.id),
   docs: [{ slug: PLANNER }, { slug: SHARING }],
-  hero: true,
-}
+  guides: [
+    ['add-member', 'userPlus', 'quick', 3, 2, { slug: SHARING, anchor: 'inviting-members' }, ['trip-invite-link', 'add-guest'], true],
+    ['trip-invite-link', 'link', 'quick', 3, 2, { slug: SHARING, anchor: 'trip-invite-link' }, ['add-member', 'invite-links']],
+    ['add-guest', 'userRound', 'quick', 2, 2, { slug: SHARING, anchor: 'guest-members' }, ['add-member'], true],
+    ['public-link', 'share', 'quick', 3, 2, { slug: SHARING, anchor: 'public-share-link' }, ['add-member']],
+    ['transfer-ownership', 'crown', 'quick', 2, 2, { slug: SHARING, anchor: 'transferring-ownership' }, ['add-member']],
+    ['collapse-columns', 'panelLeft', 'quick', 3, 2, { slug: PLANNER, anchor: 'layout' }, []],
+    ['undo-change', 'undo', 'quick', 1, 2, { slug: PLANNER, anchor: 'undo' }, []],
+  ],
+})

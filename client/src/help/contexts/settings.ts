@@ -37,8 +37,8 @@ export const settingsGuides: HelpGuide[] = [
   guide('api-keys', 'settings-integrations', 'key', 'guide', 2, 2, { slug: SETTINGS, anchor: 'integrations-tab' }, ['mcp-oauth'], false),
   guide('mcp-oauth', 'settings-integrations', 'plug', 'guide', 3, 2, { slug: 'MCP-Setup' }, ['api-keys'], false),
   // Offline
-  guide('offline-prepare', 'settings-offline', 'cloudOff', 'guide', 3, 2, { slug: OFFLINE, anchor: 'settings--offline' }, ['offline-conflicts'], false),
-  guide('offline-conflicts', 'settings-offline', 'repeat', 'quick', 2, 1, { slug: OFFLINE, anchor: 'settings--offline' }, ['offline-prepare'], false),
+  guide('offline-prepare', 'settings-offline', 'cloudOff', 'guide', 3, 2, { slug: OFFLINE, anchor: 'settings-offline' }, ['offline-conflicts'], false),
+  guide('offline-conflicts', 'settings-offline', 'repeat', 'quick', 2, 1, { slug: OFFLINE, anchor: 'settings-offline' }, ['offline-prepare'], false),
   // Account
   guide('profile', 'settings-account', 'user', 'quick', 2, 1, { slug: SETTINGS, anchor: 'account-tab-summary' }, ['password'], false),
   guide('password', 'settings-account', 'lock', 'quick', 2, 1, { slug: SETTINGS, anchor: 'account-tab-summary' }, ['mfa'], false),
