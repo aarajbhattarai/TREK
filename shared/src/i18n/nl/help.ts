@@ -1947,6 +1947,811 @@ const help: TranslationStrings = {
     'De lijst moet openbaar gedeeld zijn; de link van een privélijst importeert niets.',
   'help.guide.import-places-list.tip.2':
     'Plaatsen verrijken via Google verschijnt in het dialoogvenster als jouw TREK een Google-sleutel heeft: het zoekt elke geïmporteerde plek op en vult foto’s, adres en details aan.',
+
+  // ── Screen: trip-days ─────────────────────────────────────────────────────────────────
+  'help.ctx.trip-days.title': 'Dagen',
+  'help.ctx.trip-days.summary':
+    'De linkerkolom van het plan: één kaart per dag met de stops op volgorde, de notities, de boekingen en het vervoer van de dag, en de route tussen de stops. Hier wordt de reis echt gepland.',
+  'help.ctx.trip-days.bullet.1':
+    'De werkbalk bovenaan: Exporteren (PDF, agenda, GPX), Expand all days / Collapse all days, de pijl Ongedaan maken, Dagen herordenen en Alle boekingsroutes tonen.',
+  'help.ctx.trip-days.bullet.2':
+    'Een dagkaart: nummer, weer, titel, datum en de kosten van de dag in de kop; klik op de kop om de dag te openen, het pijltje vouwt hem dicht. Openbaar vervoer, Vervoer toevoegen en Notitie toevoegen staan ook in de kop.',
+  'help.ctx.trip-days.bullet.3':
+    'Binnen een dag: de stops op volgorde, elk met afbeelding, naam, tijd en een slotje op de afbeelding; notities; boekingen die bij de dag horen; en tussen de stops de reistijd van elk traject.',
+  'help.ctx.trip-days.bullet.4':
+    'Onder de stops de routebalk: Route tekent de dag op de kaart, Optimaliseren sorteert de stops, Auto / Lopen zet de vervoerswijze van de dag, Openen in Google Maps en Openen in CoMaps geven de dag door.',
+  'help.ctx.trip-days.bullet.5':
+    'Plekken komen op een dag door een rij uit de plekkenkolom te slepen, met de + op die rij, met Plaats toevoegen aan deze dag op een lege dag, of vanuit de plaatsdetails.',
+  'help.ctx.trip-days.bullet.6':
+    'Totale kosten onderaan telt elke stop en elke boeking met een prijs bij elkaar op, in de valuta van de reis.',
+  // read-day-plan
+  'help.guide.read-day-plan.title': 'Een dag lezen',
+  'help.guide.read-day-plan.goal': 'Weten wat elk onderdeel van een dagkaart je vertelt voordat je iets verandert.',
+  'help.guide.read-day-plan.step.1':
+    'De kop: het dagnummer, de voorspelling voor de dag, Dag 1 of de titel die je hebt gegeven, de datum en de kosten van de dag. Klik op de kop om de dag te openen (de Dagdetails gaan open boven de kaart); het pijltje rechts vouwt de kaart dicht en weer open.',
+  'help.guide.read-day-plan.step.2':
+    'Een stop: het greepje links sleept hem, de afbeelding draagt een slotje voor de route-optimalisatie, dan de naam, de beschrijving en, als ze er zijn, de Notities voor deze dag. Een tijdlabel toont Starttijd en Einde als de stop die heeft; de pijlen die aan het rechteruiteinde verschijnen zetten hem omhoog of omlaag.',
+  'help.guide.read-day-plan.step.3':
+    'Een boeking op de dag: vervoer verschijnt als Vertrek of Aankomst met tijd en traject, een reservering bij een stop markeert die stop als Reservering bevestigd of Reservering in behandeling. Het kleine schakelaartje op een vervoersrij toont de route op de kaart.',
+  'help.guide.read-day-plan.step.4':
+    'Tussen twee stops zegt de verbinding hoe lang het traject duurt en hoe ver het is, in de vervoerswijze van de dag; klik erop om de wijze voor dat ene traject te veranderen.',
+  'help.guide.read-day-plan.step.5':
+    'De routebalk aan het eind: Route tekent de weg van de dag op de kaart, Optimaliseren zet de stops op een nieuwe volgorde, de knoppen kiezen Auto of Lopen, Openen in Google Maps en Openen in CoMaps openen de dag daar.',
+  'help.guide.read-day-plan.result':
+    'Elk symbool op de kaart heeft een betekenis; de gidsen hieronder veranderen ze stuk voor stuk.',
+  'help.guide.read-day-plan.tip.1':
+    'Klik met rechts op een stop voor zijn menu: Bewerken, Verwijderen van dag, Website openen, de navigatie-apps (Google Maps, Waze, Apple Maps, OpenStreetMap, CoMaps), In collectie opslaan, Verwijderen.',
+  'help.guide.read-day-plan.tip.2':
+    'Ga met de muis over een stop en aan het eind verschijnt Boeking toevoegen: een reservering die je daar maakt hangt aan deze stop op deze dag.',
+  // place-onto-day
+  'help.guide.place-onto-day.title': 'Een plek op een dag zetten',
+  'help.guide.place-onto-day.goal':
+    'Van een plek uit de lijst een stop van de dag maken, daar waar hij in de volgorde hoort.',
+  'help.guide.place-onto-day.step.1':
+    'Sleep een rij uit de plekkenkolom op de dagkaart. Laat hem tussen twee stops vallen om hem precies daar te zetten, of ergens op de kaart om hem achteraan toe te voegen.',
+  'help.guide.place-onto-day.step.2':
+    'Zonder slepen: open de dag met een klik op de kop, klik dan op de + aan het eind van de rij van de plek, of klik met rechts op de rij en kies + Dag.',
+  'help.guide.place-onto-day.step.3':
+    'Op een lege dag opent Plaats toevoegen aan deze dag het plaatsformulier, en de nieuwe plek belandt meteen op de dag.',
+  'help.guide.place-onto-day.step.4':
+    'Vanuit de plaatsdetails vraagt Toevoegen aan dag welke dag; vanuit de kop van de dag maakt Naar dag in de plekkenkolom een nieuwe plek op de geopende dag aan.',
+  'help.guide.place-onto-day.result':
+    'De plek is een stop van de dag, op de kaart met het nummer van de dag, en de plekkenkolom telt hem onder Gepland.',
+  'help.guide.place-onto-day.tip.1':
+    'Een plek kan op meerdere dagen staan: zet hem vanuit de plekkenkolom op de tweede dag. Een stop van de ene dagkaart naar de andere slepen verplaatst hem juist.',
+  'help.guide.place-onto-day.tip.2': 'De pijl Ongedaan maken in de werkbalk draait de toewijzing terug.',
+  'help.guide.place-onto-day.tip.3':
+    'Een stop kan niet tussen twee items met vaste tijden worden losgelaten, en ook niet vóór een boeking die al een tijd heeft; het plan houdt zijn chronologie.',
+  // reorder-stops
+  'help.guide.reorder-stops.title': 'De volgorde van een dag veranderen',
+  'help.guide.reorder-stops.goal': 'Een stop omhoog of omlaag zetten, of naar een andere dag.',
+  'help.guide.reorder-stops.step.1': 'Sleep de stop aan zijn greepje naar de nieuwe plek in de kaart.',
+  'help.guide.reorder-stops.step.2':
+    'Of gebruik de pijlen aan het rechteruiteinde van de stop: één stap omhoog of omlaag per klik.',
+  'help.guide.reorder-stops.step.3':
+    'Sleep de stop op een andere dagkaart om hem daarheen te verplaatsen; hij verlaat de oude dag.',
+  'help.guide.reorder-stops.step.4':
+    'Een stop met een vast tijdstip vraagt Tijd verwijderen? als de verplaatsing de volgorde van de dag zou doorbreken, want het tijdstip bepaalde zijn plek: Bevestigen haalt het tijdstip weg en dan mag hij overal heen.',
+  'help.guide.reorder-stops.result': 'De route en de reistijden volgen de nieuwe volgorde meteen.',
+  'help.guide.reorder-stops.tip.1':
+    'Boekingen met een vast tijdstip kunnen niet worden verplaatst; ze staan waar hun tijd ze zet.',
+  'help.guide.reorder-stops.tip.2':
+    'Optimaliseren in de routebalk zet de hele dag op de kortste weg; vergrendel eerst een stop om hem te laten staan waar hij staat.',
+  // set-stop-times
+  'help.guide.set-stop-times.title': 'Een stop een tijd geven',
+  'help.guide.set-stop-times.goal':
+    'Vastleggen wanneer een stop begint en eindigt, zodat de dag als een dienstregeling leest.',
+  'help.guide.set-stop-times.step.1':
+    'Klik met rechts op de stop en kies Bewerken. Geopend vanuit de dag heeft het formulier onderaan Starttijd en Einde.',
+  'help.guide.set-stop-times.step.2':
+    'Vul Starttijd in en, als je wilt, Einde. Tijdoverlap met: waarschuwt dat een andere stop van de dag met een tijd overlapt; een Einde vóór de Starttijd blokkeert Bijwerken.',
+  'help.guide.set-stop-times.step.3':
+    'Klik op Bijwerken. De stop krijgt een tijdlabel en schuift naar de plek waar zijn tijd in de dag hoort.',
+  'help.guide.set-stop-times.result':
+    'Stops met een tijd houden hun plek in de volgorde; stops zonder tijd sorteren zich eromheen.',
+  'help.guide.set-stop-times.tip.1':
+    'De tijd hoort bij de stop op die dag; dezelfde plek kan op een andere dag een andere tijd hebben.',
+  'help.guide.set-stop-times.tip.2':
+    'Om een stop met tijd met de hand te verplaatsen, sleep je hem: de vraag Tijd verwijderen? haalt het tijdstip onderweg weg, zodra je op Bevestigen klikt.',
+  'help.guide.set-stop-times.tip.3':
+    'Het veld Notities voor deze dag in hetzelfde formulier houdt vast wat alleen op deze dag geldt, een gereserveerde tafel, een ticketnummer.',
+  // remove-from-day
+  'help.guide.remove-from-day.title': 'Een stop van een dag halen',
+  'help.guide.remove-from-day.goal': 'Een plek uit de planning halen zonder hem uit de reis te verwijderen.',
+  'help.guide.remove-from-day.step.1': 'Klik met rechts op de stop en kies Verwijderen van dag.',
+  'help.guide.remove-from-day.step.2':
+    'De stop is weg uit de dag; de plek blijft in de plekkenkolom, onder Ongepland als hij op geen enkele andere dag staat.',
+  'help.guide.remove-from-day.result':
+    'De dag, zijn route en zijn kosten worden bijgewerkt; de pijl Ongedaan maken haalt de stop terug.',
+  'help.guide.remove-from-day.tip.1':
+    'Verwijderen in hetzelfde menu haalt de plek uit de hele reis, elke dag inbegrepen.',
+  'help.guide.remove-from-day.tip.2':
+    'Verwijderen van dag staat ook in het detailpaneel van de plek, naast Toevoegen aan dag.',
+  // lock-stop
+  'help.guide.lock-stop.title': 'Een stop op zijn plek vastzetten',
+  'help.guide.lock-stop.goal': 'Een stop houden waar hij staat als de route wordt geoptimaliseerd.',
+  'help.guide.lock-stop.step.1':
+    'Ga met de muis over de afbeelding van de stop en klik op het slotje: Positie behouden tijdens route-optimalisatie.',
+  'help.guide.lock-stop.step.2':
+    'Optimaliseren sorteert nu de andere stops eromheen; klik nog eens op het slotje (Klik om te ontgrendelen) om hem los te laten.',
+  'help.guide.lock-stop.result':
+    'Het slotje staat op de afbeelding; de stop houdt zijn positie tot je hem ontgrendelt.',
+  'help.guide.lock-stop.tip.1':
+    'Een stop met een vaste tijd is door zijn tijd vergrendeld; hij beweegt tijdens het optimaliseren nooit.',
+  'help.guide.lock-stop.tip.2':
+    'Het slot geldt voor dit bezoek: na een herlaadbeurt is elke stop weer vrij, alleen stops met een tijd blijven vast.',
+  // day-note
+  'help.guide.day-note.title': 'Een notitie aan een dag toevoegen',
+  'help.guide.day-note.goal': 'Een geheugensteun, een ticketnummer of een plan B in de dag zelf bewaren.',
+  'help.guide.day-note.step.1': 'Klik op Notitie toevoegen in de kop van de dag.',
+  'help.guide.day-note.step.2':
+    'Geef hem een naam onder Notitie, dat is wat er in de dag te zien is, en schrijf de rest onder Dagnotitie. De werkbalk erboven maakt de tekst op (Vet, Opsomming, Link, Citaat), en Voorbeeld, links, toont hoe de notitie er in de dag uit komt te zien.',
+  'help.guide.day-note.step.3':
+    'Kies een Pictogram en een Kleur, zodat de notitie opvalt tussen de stops, en dan Toevoegen.',
+  'help.guide.day-note.step.4':
+    'De notitie staat in de dag als een stop: sleep hem op zijn plek, klik met rechts voor Bewerken en Verwijderen.',
+  'help.guide.day-note.result':
+    'De notitie hoort bij de dag, ook in de PDF; een notitie met een tijd sorteert mee met de stops met een tijd.',
+  'help.guide.day-note.tip.1':
+    'Een notitie met een tijd kan invallen voor vervoer waarvoor je geen boeking hebt: „08:15 S3 vanaf het centraal station“.',
+  'help.guide.day-note.tip.2': 'Notities gelden per dag; een notitie voor de hele reis hoort in Samenwerking.',
+  // day-route
+  'help.guide.day-route.title': 'De route van de dag tonen en optimaliseren',
+  'help.guide.day-route.goal': 'De weg tussen de stops zien, kiezen hoe je reist, en TREK de volgorde laten sorteren.',
+  'help.guide.day-route.step.1':
+    'Open de dag en klik op Route in de routebalk: de weg tussen de stops wordt op de kaart getekend, en de verbindingen tussen de stops tonen de tijd en de afstand van elk traject.',
+  'help.guide.day-route.step.2':
+    'Auto en Lopen ernaast zetten de vervoerswijze van de dag; de trajecten worden opnieuw berekend. Plugins kunnen eigen vervoerswijzen toevoegen.',
+  'help.guide.day-route.step.3':
+    'Klik op een verbinding om de wijze van dat ene traject te veranderen: kies een wijze, of Dagstandaard gebruiken om terug te vallen op die van de dag.',
+  'help.guide.day-route.step.4':
+    'Optimaliseren zet de stops op de kortste weg. Stops met een slotje of een vaste tijd houden hun plek; met een accommodatie op de dag begint de route daar.',
+  'help.guide.day-route.step.5':
+    'Openen in Google Maps of Openen in CoMaps opent de hele dag als route in die app, om onderweg op te navigeren.',
+  'help.guide.day-route.result':
+    'De dag is een route met tijden; Totale kosten en de trajecten veranderen mee met de volgorde.',
+  'help.guide.day-route.tip.1':
+    'Routes komen standaard van OSRM; de beheerder kan TREK onder Standaardinstellingen op een andere routeringsdienst richten.',
+  'help.guide.day-route.tip.2':
+    'Een traject dat niet kon worden berekend toont geen tijd; controleer of beide stops coördinaten hebben.',
+  'help.guide.day-route.tip.3': 'De pijl Ongedaan maken draait een optimalisatie terug.',
+  // manage-days
+  'help.guide.manage-days.title': 'Dagen toevoegen, herordenen en hernoemen',
+  'help.guide.manage-days.goal': 'De dagen zelf vormgeven, niet alleen wat erop staat.',
+  'help.guide.manage-days.step.1':
+    'De dagen komen uit de data van de reis; verander de data op de reiskaart onder Dashboard en er komen dagen bij of vallen dagen weg aan de uiteinden.',
+  'help.guide.manage-days.step.2':
+    'Dagen herordenen in de werkbalk opent een lijst: Omhoog en Omlaag verschuiven een dag met alles wat erop staat; Dag toevoegen zet een dag achteraan.',
+  'help.guide.manage-days.step.3':
+    'Om een dag te hernoemen open je hem en klik je op het potlood naast de titel in de Dagdetails boven de kaart; de naam vervangt Dag 1 in de kaart en in de PDF.',
+  'help.guide.manage-days.step.4':
+    'Expand all days en Collapse all days in de werkbalk vouwen elke kaart in één keer; een enkele kaart vouwt met zijn eigen pijltje.',
+  'help.guide.manage-days.result':
+    'De data blijven bij de positie: een dag die omhoog gaat krijgt de eerdere datum, en zijn stops, notities en boekingen reizen mee.',
+  'help.guide.manage-days.tip.1': 'Dagen herordenen kan via de werkbalk ongedaan worden gemaakt.',
+  'help.guide.manage-days.tip.2':
+    'De kosten in de kop van een dag tellen de stops en boekingen van die dag op die een prijs dragen.',
+  // bookings-in-plan
+  'help.guide.bookings-in-plan.title': 'Boekingen en vervoer in het plan lezen',
+  'help.guide.bookings-in-plan.goal': 'Weten waar een boeking opduikt zodra ze bestaat, en welk scherm haar aanmaakt.',
+  'help.guide.bookings-in-plan.step.1':
+    'Vervoer (Vlucht, Trein, Veerboot, Bus, Auto) verschijnt op de dag van vertrek als Vertrek en op de dag van aankomst als Aankomst, met tijd en traject; een rit over meerdere dagen overspant de dagen ertussen.',
+  'help.guide.bookings-in-plan.step.2':
+    'Een reservering die aan een stop hangt (een Restaurant, een Rondleiding) markeert die stop als Reservering bevestigd of Reservering in behandeling; een boeking met een dag maar zonder stop is een eigen rij in de dag.',
+  'help.guide.bookings-in-plan.step.3':
+    'Een nacht in een hotel is een accommodatie: die staat in de Dagdetails onder Accommodatie, van Inchecken tot Uitchecken, en de route van elk van die dagen begint daar.',
+  'help.guide.bookings-in-plan.step.4':
+    'Op de kaart tekent het schakelaartje op een vervoersrij zijn route; Alle boekingsroutes tonen in de werkbalk tekent ze allemaal.',
+  'help.guide.bookings-in-plan.step.5':
+    'Aanmaken: Boeking toevoegen op een stop waar je met de muis overheen gaat, Vervoer toevoegen en Openbaar vervoer in de kop van de dag, en de tabbladen Boekingen en Transport voor de volledige lijst met import en bestanden.',
+  'help.guide.bookings-in-plan.result':
+    'Eén boeking, één plek in het plan; de tabbladen zijn dezelfde boekingen als lijst.',
+  'help.guide.bookings-in-plan.tip.1':
+    'Bevestigd en In behandeling is een status die je op de boeking zet; het plan toont hem op de stop, het tabblad Boekingen telt ze allebei.',
+  'help.guide.bookings-in-plan.tip.2':
+    'Vervoer met een vast tijdstip kan niet worden gesleept; verander in plaats daarvan de tijd in de boeking.',
+  // export-plan
+  'help.guide.export-plan.title': 'Het plan exporteren',
+  'help.guide.export-plan.goal': 'Het plan meenemen als document, in je agenda of op een gps.',
+  'help.guide.export-plan.step.1': 'Klik op Exporteren in de werkbalk boven de dagen.',
+  'help.guide.export-plan.step.2':
+    'Document: PDF opent de afdrukweergave van elke dag met zijn stops, notities en boekingen; Pagina-einde per dag begint elke dag op een nieuwe pagina, Opslaan als PDF haalt hem binnen.',
+  'help.guide.export-plan.step.3':
+    'Agenda: .ics downloaden bewaart de boekingen als agendabestand; Abonneren op kalender geeft een link die je agenda-app zelf ververst.',
+  'help.guide.export-plan.step.4':
+    'Kaarten en gps · GPX: Hele reis exporteert plekken, dagroutes en tracks; Alleen plekken de punten; Dagen als routes één route per dag, voor offlinekaarten en gps-apparaten.',
+  'help.guide.export-plan.result': 'Het bestand wordt gedownload; in de reis verandert niets.',
+  'help.guide.export-plan.tip.1':
+    'Eén losse dag gaat vanuit zijn routebalk naar een kaartenapp: Openen in Google Maps of Openen in CoMaps.',
+  'help.guide.export-plan.tip.2':
+    'Abonneren op kalender heeft ingeschakelde agendafeeds in je instellingen nodig; Dashboard heeft er een gids voor.',
+  'help.guide.export-plan.tip.3': 'Exporteren is lezen: elk lid van de reis kan het.',
+
+  // ── Screen: trip-place ────────────────────────────────────────────────────────────────
+  'help.ctx.trip-place.title': 'Plaatsdetails',
+  'help.ctx.trip-place.summary':
+    'De plaatsdetails gaan boven de kaart open als je een plek kiest: alles wat de reis over hem weet, de sterren die iedereen gaf, zijn afbeelding en zijn bestanden, en de knoppen die hem op de open dag, in een lijst of in een kaarten-app zetten.',
+  'help.ctx.trip-place.bullet.1':
+    'Klik op een rij in de plekkenkolom, op een stop in een dag of op een marker op de kaart, en de plaatsdetails gaan boven de kaart open. Kies je hem in een dag, dan weten de details welke stop je bedoelt, en dat is wat de deelnemers van de stop en zijn boeking meebrengt.',
+  'help.ctx.trip-place.bullet.2':
+    'De kop draagt de ronde afbeelding, de naam, de categorie, het adres en de coördinaten. Klik op de afbeelding om er een van jezelf te nemen, dubbelklik op de naam om de plek ter plekke te hernoemen, en de X rechts sluit de details.',
+  'help.ctx.trip-place.bullet.3':
+    'Daaronder: de sterren die elke reiziger de plek gaf, de prijs als hij er een heeft, de beschrijving en de notities, en Notities voor deze dag als de stop die draagt.',
+  'help.ctx.trip-place.bullet.4':
+    'Openingstijden, Routekleur, Routegegevens en Bestanden volgen, voor zover ze van toepassing zijn. Bestanden neemt alles uit je mappen en toont ook wat aan de boeking van deze stop hangt.',
+  'help.ctx.trip-place.bullet.5':
+    'De rij onderaan: Toevoegen aan dag of Verwijderen van dag zolang een dag open is, dan In collectie opslaan, Navigatie, Website openen, Bewerken en Verwijderen.',
+  'help.ctx.trip-place.bullet.6':
+    'Een plek die TREK aan een kaartaanbieder kon koppelen toont meer: de beoordeling van die aanbieder met een recensie, het telefoonnummer, en een ring om de afbeelding die Openingstijden of Gesloten zegt, met de openingstijden van de week erachter.',
+  // read-place
+  'help.guide.read-place.title': 'Wat de plaatsdetails je over een plek vertellen',
+  'help.guide.read-place.goal': 'Lees alles wat de reis over een plek weet, in één venster.',
+  'help.guide.read-place.step.1':
+    'Klik in de dagenkolom op de stop die je wilt lezen. De plaatsdetails gaan boven de kaart open en de stop blijft gemarkeerd in zijn dag.',
+  'help.guide.read-place.step.2':
+    'De kop: de ronde afbeelding, de naam, het adres en de exacte coördinaten. De X rechts sluit de details weer.',
+  'help.guide.read-place.step.3':
+    'Daaronder de sterren die elke reiziger de plek gaf, met het gemiddelde en hoeveel er stemden. Nog niet beoordeeld zolang niemand dat deed.',
+  'help.guide.read-place.step.4':
+    'Dan de beschrijving en daaronder de notities. Allebei zijn het de tekst uit het formulier van de plek, gerenderd: lijsten, links en vet werken allemaal.',
+  'help.guide.read-place.step.5':
+    'Deelnemers zegt wie er naar deze stop gaat. Iedereen doet mee tot je iemand eruit haalt.',
+  'help.guide.read-place.step.6':
+    'De rij onderaan is wat je hiervandaan kunt doen: de plek van de open dag halen of erop zetten, hem in een lijst opslaan, hem in een kaarten-app openen, hem bewerken of verwijderen.',
+  'help.guide.read-place.result':
+    'De details blijven open tot je ze met de X sluit of een andere plek kiest, en de stop waar ze bij horen blijft gemarkeerd in de dagenkolom.',
+  'help.guide.read-place.tip.1':
+    'Vanuit de plekkenkolom gekozen kennen de details de plek maar geen stop, dus tonen ze geen deelnemers en geen boeking. Kies in plaats daarvan de stop in de dag, dan zijn ze er allebei.',
+  'help.guide.read-place.tip.2':
+    'Dubbelklik op de naam om de plek te hernoemen zonder het formulier te openen. Enter slaat op, Escape laat de wijziging vallen.',
+  'help.guide.read-place.tip.3':
+    'Een plek die TREK aan een kaartaanbieder kon koppelen toont ook de beoordeling van die aanbieder, een recensie, het telefoonnummer en de openingstijden.',
+  // rate-place
+  'help.guide.rate-place.title': 'Een plek beoordelen',
+  'help.guide.rate-place.goal': 'Geef een plek je eigen sterren, en zie wat iedereen hem gaf.',
+  'help.guide.rate-place.step.1':
+    'Open de plek. De sterrenrij zit direct onder de kop en draagt het gemiddelde van de stemmen tot nu toe, met hun aantal tussen haakjes.',
+  'help.guide.rate-place.step.2':
+    'Klik op de ster die je bedoelt. De sterren vullen zich terwijl je eroverheen gaat, zo zie je wat je op het punt staat te geven.',
+  'help.guide.rate-place.step.3':
+    'Je stem telt meteen mee in het gemiddelde, en de gezichten ernaast zijn wie er stemden. Houd de muis op de rij om ieders sterren te zien.',
+  'help.guide.rate-place.step.4':
+    'Hetzelfde gemiddelde staat op de rij van de plek in de plekkenkolom, zo vallen de goede op in de lijst.',
+  'help.guide.rate-place.result':
+    'Je sterren staan op de plek voor de hele reis, en de ster in de filterrij boven de lijst kan nu alleen de plekken houden die een ondergrens halen.',
+  'help.guide.rate-place.tip.1':
+    'Elke reiziger mag beoordelen, ook op een reis waar maar sommigen het recht Plaatsen toevoegen / bewerken / verwijderen hebben.',
+  'help.guide.rate-place.tip.2':
+    'Klik op de ster die je al gaf om je stem terug te nemen. Als er niemand meer stemt, leest de plek weer Nog niet beoordeeld.',
+  'help.guide.rate-place.tip.3':
+    'Er passen tot zes stemmers als gezichten naast de sterren; de tooltip noemt ze allemaal, en markeert de jouwe.',
+  // place-image
+  'help.guide.place-image.title': 'Je eigen afbeelding op een plek zetten',
+  'help.guide.place-image.goal': 'Vervang de automatische miniatuur door een foto van jezelf.',
+  'help.guide.place-image.step.1': 'Open de plek vanuit de plekkenkolom.',
+  'help.guide.place-image.step.2':
+    'Houd de muis op de ronde afbeelding in de kop: er verschijnt een camera en de tooltip zegt Afbeelding uploaden. Klik erop en kies je bestand.',
+  'help.guide.place-image.step.3': 'De kop toont nu jouw afbeelding, met een kleine rode X in de hoek.',
+  'help.guide.place-image.step.4':
+    'Dezelfde afbeelding staat op de rij van de plek in de plekkenkolom, en op zijn marker op de kaart.',
+  'help.guide.place-image.result':
+    'Jouw afbeelding is overal de afbeelding van de plek: de details, de plekkenkolom, de stop in de dag, de marker op de kaart en een gedeelde reis.',
+  'help.guide.place-image.tip.1':
+    'JPG, PNG, GIF en WebP worden aangenomen, en een HEIC van een iPhone wordt onderweg omgezet.',
+  'help.guide.place-image.tip.2':
+    'De X in de hoek haalt jouw afbeelding er weer af en de automatische komt terug. De plek zelf blijft ongemoeid.',
+  'help.guide.place-image.tip.3':
+    'Zonder een eigen afbeelding zoekt TREK er een op uit de coördinaten van de plek, en valt terug op het icoon van de categorie.',
+  // place-day-assign
+  'help.guide.place-day-assign.title': 'De plek op de open dag zetten, of eraf halen',
+  'help.guide.place-day-assign.goal': 'Gebruik de knop in de details in plaats van de rij door de planner te slepen.',
+  'help.guide.place-day-assign.step.1':
+    'Klik in de dagenkolom op de kop van een dag. Die dag is nu de open dag, en de details werken daarmee.',
+  'help.guide.place-day-assign.step.2':
+    'Klik in de plekkenkolom op een plek die niet op die dag staat. Zijn details gaan open en de rij onderaan biedt Toevoegen aan dag.',
+  'help.guide.place-day-assign.step.3':
+    'Klik op Toevoegen aan dag. De stop belandt aan het eind van de dag en de knop wordt Verwijderen van dag.',
+  'help.guide.place-day-assign.step.4':
+    'De stop staat nu in de dag, als laatste in de lijst. Sleep hem omhoog naar zijn plaats.',
+  'help.guide.place-day-assign.step.5':
+    'Verwijderen van dag haalt die stop weer van de dag, en de details bieden opnieuw Toevoegen aan dag.',
+  'help.guide.place-day-assign.result':
+    'De dag draagt de stop, of draagt hem niet meer, en de plek zelf blijft hoe dan ook ongemoeid.',
+  'help.guide.place-day-assign.tip.1':
+    'De knop bestaat alleen zolang een dag open is. Zonder dag hebben de details niets om de plek aan toe te voegen.',
+  'help.guide.place-day-assign.tip.2':
+    'Een stop van een dag halen laat de plek in de reis en in de plekkenkolom staan. Verwijderen is wat hem overal weghaalt.',
+  'help.guide.place-day-assign.tip.3':
+    'Een stop die een overnachtingsboeking op de dag zette biedt geen van beide knoppen: die nacht wordt toegevoegd en weggehaald in het blok Accommodatie van de dag.',
+  // place-participants
+  'help.guide.place-participants.title': 'Zeggen wie er naar deze stop gaat',
+  'help.guide.place-participants.goal': 'Splits de groep voor één stop zonder de reis te splitsen.',
+  'help.guide.place-participants.step.1':
+    'Klik op de stop in de dag. De details gaan open en Deelnemers toont iedereen in de reis.',
+  'help.guide.place-participants.step.2':
+    'Klik op de naam van een reiziger om hem uit deze stop te halen. De naam wordt doorgestreept terwijl je erover zweeft.',
+  'help.guide.place-participants.step.3':
+    'Zodra er iemand mist verschijnt er een gestippelde +. Klik erop om te zien wie er niet op de stop staat.',
+  'help.guide.place-participants.step.4':
+    'Klik op een naam om hem terug te zetten. Met iedereen terug is de stop weer van de hele groep.',
+  'help.guide.place-participants.result':
+    'De stop draagt de reizigers die je koos, en de rest van de groep heeft die middag voor zichzelf.',
+  'help.guide.place-participants.tip.1':
+    'Deelnemers verschijnt alleen met een geselecteerde stop, kies de plek dus in de dag en niet in de plekkenkolom, en alleen op een reis met meer dan één reiziger.',
+  'help.guide.place-participants.tip.2':
+    'Niemand gekozen betekent dat iedereen meegaat. De laatste eruit halen zet iedereen terug.',
+  'help.guide.place-participants.tip.3':
+    'Een gast, die geen eigen account heeft, kan net als ieder ander deelnemer zijn.',
+  // place-booking
+  'help.guide.place-booking.title': 'De boeking op een stop',
+  'help.guide.place-booking.goal': 'Lees de boeking die bij een stop hoort, open hem, en hang er een nieuwe aan.',
+  'help.guide.place-booking.step.1':
+    'Open de stop waar de boeking bij hoort. De details tonen een strook met Bevestigd of In behandeling en de naam van de boeking.',
+  'help.guide.place-booking.step.2':
+    'De strook draagt de Datum, de Tijd en de Boekingscode, en de notities die de boeking heeft.',
+  'help.guide.place-booking.step.3': 'Klik op de strook. Het eigen formulier van de boeking gaat erop open.',
+  'help.guide.place-booking.step.4':
+    'Koppelen aan dagtoewijzing is wat een boeking aan een stop hangt, en hier noemt het deze al. Sluit het formulier weer.',
+  'help.guide.place-booking.step.5':
+    'Een nieuwe boeking voor een stop begint in de dagenkolom: zweef over de stop en klik op de + aan het eind. Het formulier gaat open als Nieuwe reservering, al eraan gekoppeld.',
+  'help.guide.place-booking.result':
+    'De boeking hangt aan de stop: hij staat in de details, hij staat in de dag, en zijn bestanden staan hier ook onder Bestanden.',
+  'help.guide.place-booking.tip.1':
+    'De strook verschijnt alleen bij de stop waaraan de boeking hangt. Een boeking zonder stop woont op het tabblad Boekingen.',
+  'help.guide.place-booking.tip.2':
+    'Meerdere boekingen kunnen één stop delen: de lunch en de tour die bij dezelfde deur vertrekt.',
+  'help.guide.place-booking.tip.3':
+    'Een trein, een vlucht of een veerboot opent in plaats daarvan het transportformulier, dat van het tabblad Transport.',
+  // place-files
+  'help.guide.place-files.title': 'De tickets van een plek bij de plek houden',
+  'help.guide.place-files.goal': 'Leg het ticket, de voucher of de plattegrond voor een plek waar je hem zult zoeken.',
+  'help.guide.place-files.step.1':
+    'Open de plek. Bestanden zit onderaan de details en leest Bestanden zolang de plek er geen heeft.',
+  'help.guide.place-files.step.2': 'Klik ernaast op Uploaden en kies het bestand.',
+  'help.guide.place-files.step.3': 'De knop telt wat de plek heeft, en de lijst gaat vanzelf open.',
+  'help.guide.place-files.step.4':
+    'Elke rij is de naam van het bestand met zijn grootte. Klik erop om het bestand te openen.',
+  'help.guide.place-files.result':
+    'Het bestand zit op de plek, geteld in de details, en het staat ook op het tabblad Bestanden van de reis.',
+  'help.guide.place-files.tip.1':
+    'Bestanden toont ook wat aan de boeking van deze stop hangt, dus een hotelbevestiging duikt op bij het hotel.',
+  'help.guide.place-files.tip.2': 'Uploaden neemt meerdere bestanden tegelijk.',
+  'help.guide.place-files.tip.3':
+    'Zonder het recht Bestanden uploaden is de knop Uploaden er niet; bestanden die al op de plek staan blijven.',
+  // place-navigation
+  'help.guide.place-navigation.title': 'Een plek in een kaarten-app of op zijn website openen',
+  'help.guide.place-navigation.goal': 'Geef de plek door aan de app die je er echt heen brengt.',
+  'help.guide.place-navigation.step.1': 'Open de plek en klik op Navigatie in de rij onderaan.',
+  'help.guide.place-navigation.step.2':
+    'De lijst is de kaarten-apps die bij deze plek passen: Google Maps, Waze, Apple Maps, OpenStreetMap en CoMaps.',
+  'help.guide.place-navigation.step.3':
+    'Klik op degene die je gebruikt. TREK geeft hem waar het kan de plek zelf mee, niet alleen een paar coördinaten, zo kom je bij de juiste ingang uit.',
+  'help.guide.place-navigation.step.4':
+    'Website openen ernaast opent de eigen pagina van de plek, zijn tijden en zijn tickets, in een nieuw tabblad.',
+  'help.guide.place-navigation.result':
+    'De kaarten-app gaat open op de plek, de website in een eigen tabblad, en in de reis verandert er niets.',
+  'help.guide.place-navigation.tip.1':
+    'Waze begint meteen met navigeren. De andere openen de plek, en van daaruit starten is nog één tik.',
+  'help.guide.place-navigation.tip.2':
+    'Welke apps worden aangeboden hangt af van de plek en van je apparaat: Apple Maps valt weg op Android, 高德地图 komt alleen op bij een plek in China, en Waze, Apple Maps en CoMaps hebben de coördinaten van de plek nodig.',
+  'help.guide.place-navigation.tip.3':
+    'Als er maar één app past, draagt de knop de naam van die app en opent hij hem meteen.',
+  // place-to-collection
+  'help.guide.place-to-collection.title': 'Een plek in een van je lijsten opslaan',
+  'help.guide.place-to-collection.goal': 'Bewaar een plek die je op deze reis vond voor de volgende.',
+  'help.guide.place-to-collection.step.1': 'Open de plek en klik onderaan de details op In collectie opslaan.',
+  'help.guide.place-to-collection.step.2':
+    'In lijst opslaan toont elke lijst die van jou is of die je deelt. Een vinkje markeert de lijsten die deze plek al hebben.',
+  'help.guide.place-to-collection.step.3': 'Klik op de lijst. De plek zit er meteen in.',
+  'help.guide.place-to-collection.step.4': 'Sluit, en de knop in de details leest Opgeslagen.',
+  'help.guide.place-to-collection.result':
+    'De plek zit in je lijst met zijn afbeelding, zijn notities en zijn sterren, klaar voor de volgende reis.',
+  'help.guide.place-to-collection.tip.1':
+    'De knop is er alleen zolang de add-on Collecties aan staat, die de beheerder onder Add-ons inschakelt.',
+  'help.guide.place-to-collection.tip.2':
+    'Een plek kan tegelijk in meerdere lijsten zitten, met een eigen status in elke: een Idee in de ene, Bezocht in de andere.',
+  'help.guide.place-to-collection.tip.3':
+    'Markeer als bezocht, naast de naam van de plek in de kiezer, vinkt hem af in de lijst; staat de plek in meerdere van je lijsten, dan leest de pil Overal bezocht en doet ze allemaal tegelijk.',
+  // place-track
+  'help.guide.place-track.title': 'Een track lezen en hem zijn eigen kleur geven',
+  'help.guide.place-track.goal':
+    'Zie hoe lang een geïmporteerde wandeling is, en onderscheid zijn lijn van de andere op de kaart.',
+  'help.guide.place-track.step.1':
+    'De rij van een track in de plekkenkolom draagt een kort streepje in de kleur waarin zijn lijn is getekend. Klik erop.',
+  'help.guide.place-track.step.2': 'Routegegevens geeft de lengte van het pad, in de Afstandseenheid die je instelde.',
+  'help.guide.place-track.step.3':
+    'Routekleur erboven toont de kleur die in gebruik is. Klik op de rij om de staaltjes te openen.',
+  'help.guide.place-track.step.4': 'Kies een kleur. De lijn op de kaart en het streepje op de rij veranderen mee.',
+  'help.guide.place-track.step.5':
+    'De gestippelde cel links, Automatische kleur, geeft de track de kleur terug die hij erft; de pipet rechts opent de kleurkiezer van je systeem voor al het andere.',
+  'help.guide.place-track.result':
+    'De track wordt getekend in de kleur die je koos, in de details, op zijn rij in de plekkenkolom en op de kaart.',
+  'help.guide.place-track.tip.1':
+    'Alleen een plek die een pad draagt, geïmporteerd uit een GPX-, KML- of KMZ-bestand, heeft deze twee blokken.',
+  'help.guide.place-track.tip.2':
+    'Een track die met hoogtes is opgenomen toont ook zijn hoogste en laagste punt, de meters omhoog en omlaag, en het profiel van de wandeling.',
+  'help.guide.place-track.tip.3':
+    'Een import geeft elke track die hij binnenhaalt een eigen kleur, zo komen twee wandelingen nooit in dezelfde binnen.',
+
+  // ── Screen: trip-files ────────────────────────────────────────────────────────────────
+  'help.ctx.trip-files.title': 'Bestanden',
+  'help.ctx.trip-files.summary':
+    'Elk document van de reis in één lijst: tickets, bevestigingen, passen en foto’s, elk met een notitie, een koppeling naar de plek of de boeking waar het bij hoort, en een prullenbak waar het weer uit kan komen.',
+  'help.ctx.trip-files.bullet.1':
+    'Sleep bestanden hierheen bovenaan neemt de bestanden aan; een klik op het vak opent de bestandskiezer. De regel eronder noemt de bestandstypen die deze TREK aanneemt en de grens van 50 MB per bestand.',
+  'help.ctx.trip-files.bullet.2':
+    "De tabbladen zeggen wat de lijst toont: Alle, PDF's, Afbeeldingen en Documenten, elk met zijn aantal. Een stertabblad komt erbij zodra een bestand een ster heeft, Collab-notities zodra een notitie een bijlage draagt.",
+  'help.ctx.trip-files.bullet.3':
+    'Een rij draagt wie hem heeft geüpload, de naam, de notitie eronder, de grootte en de datum, en één label per koppeling: Dagplan en de plek, Boeking of Transport en de boeking, Uit Collab-notities.',
+  'help.ctx.trip-files.bullet.4':
+    'Aan het eind van een rij zitten Ster, Toewijzen, Openen, Downloaden en Verwijderen. Verwijderen vraagt niets: het bestand gaat naar de prullenbak, waar het weer uit kan worden gehaald.',
+  'help.ctx.trip-files.bullet.5':
+    'Een afbeelding of een video opent schermvullend, met de pijltjestoetsen en een strook miniaturen; elk ander document opent in een voorbeeld over de pagina heen, met Openen in nieuw tabblad en Downloaden. Een wallet-pas wordt meteen gedownload.',
+  'help.ctx.trip-files.bullet.6':
+    'Prullenbak uiterst rechts zet de lijst over naar de verwijderde bestanden, waar elk wordt hersteld of voorgoed verwijderd en Prullenbak legen ze allemaal weghaalt. Waar een beheerder een documentopslag heeft gekoppeld, staat Documentsynchronisatie ernaast.',
+  // files-upload
+  'help.guide.files-upload.title': 'Een document in de reis zetten',
+  'help.guide.files-upload.goal':
+    'Haal een ticket, een bevestiging of een foto uit je downloadmap in de reis, waar iedereen die erbij hoort erbij kan.',
+  'help.guide.files-upload.step.1':
+    'Open de reis en klik op Bestanden in de tabbladenbalk. Daar staan de documenten van de reis, met het uploadvak erboven.',
+  'help.guide.files-upload.step.2':
+    'Klik op Sleep bestanden hierheen en kies één of meer bestanden. Ze worden na elkaar geüpload en in het vak staat Uploaden... zolang het loopt. De regel onder het vak zegt welke typen deze TREK aanneemt, en dat een bestand hoogstens 50 MB mag zijn.',
+  'help.guide.files-upload.step.3':
+    'Zodra het laatste bestand binnen is, gaat Bestand toewijzen er vanzelf voor open. Notitie toevoegen... geeft het bestand een eigen regel, en de lijsten eronder binden het aan een plek of een boeking. Sluit het met de ×; door te sluiten gaat er niets verloren.',
+  'help.guide.files-upload.step.4':
+    'De nieuwe bestanden staan bovenaan de lijst. Een rij toont wie hem heeft geüpload, de naam, de grootte en de datum; een afbeelding krijgt een miniatuur, elk ander bestand zijn type.',
+  'help.guide.files-upload.result':
+    'De documenten staan in de reis, en iedereen die de reis kan zien kan ze openen en downloaden.',
+  'help.guide.files-upload.tip.1':
+    'Een bestand kan ook van het bureaublad rechtstreeks op het vak worden gesleept, dat oplicht zolang het bestand erboven hangt.',
+  'help.guide.files-upload.tip.2':
+    'Een afbeelding op het klembord komt met Ctrl+V in de lijst, zodat een schermafbeelding van een boeking nooit eerst hoeft te worden opgeslagen.',
+  'help.guide.files-upload.tip.3':
+    'Uploaden vraagt het recht Bestanden uploaden; zonder dat recht is het vak er helemaal niet. Een type dat niet op de lijst staat, of een bestand boven 50 MB, wordt met een melding geweigerd en er wordt niets geüpload.',
+  // files-link
+  'help.guide.files-link.title': 'Een document aan een plek of een boeking binden',
+  'help.guide.files-link.goal':
+    'Maak het ticket vindbaar vanaf de dag waar het bij hoort, niet alleen vanuit deze lijst.',
+  'help.guide.files-link.step.1':
+    'Klik op Toewijzen, het potlood aan het eind van de rij. Bestand toewijzen gaat open, met de naam van het bestand.',
+  'help.guide.files-link.step.2':
+    'Onder Notitie neemt Notitie toevoegen... één regel aan, die daarna in de lijst onder de naam van het bestand staat. Hij wordt opgeslagen op het moment dat je het veld verlaat.',
+  'help.guide.files-link.step.3':
+    'Onder Plaats staan de plekken van de reis, gegroepeerd per dag waarop ze staan, met Niet toegewezen aan het eind voor de plekken zonder dag. Klik er een aan en die krijgt een vinkje.',
+  'help.guide.files-link.step.4':
+    'Onder Boeking en Transport staan de boekingen van de reis. Klik die aan waar het document bij hoort; die krijgt ook zijn vinkje.',
+  'help.guide.files-link.step.5':
+    'Sluit met de ×. Een opslaanknop is er hier niet: elke klik is geschreven op het moment dat je hem maakte.',
+  'help.guide.files-link.result':
+    'De rij draagt de notitie en één label per koppeling, Dagplan en de naam van de plek, Transport en de naam van de vlucht, en het document hangt ook aan de plek en aan de boeking.',
+  'help.guide.files-link.tip.1':
+    'Een bestand kan meerdere koppelingen tegelijk dragen, zodat dezelfde bevestiging bij het hotel hoort en bij de nacht die hij dekt.',
+  'help.guide.files-link.tip.2':
+    'Nog een keer op een aangevinkte regel klikken haalt die koppeling weg; het bestand zelf blijft.',
+  'help.guide.files-link.tip.3':
+    'Het werkt ook andersom: een document dat aan een plek of aan een boeking hangt, staat ook in deze lijst, met hetzelfde label op zijn rij.',
+  // files-star
+  'help.guide.files-star.title': 'De belangrijke documenten bovenaan houden',
+  'help.guide.files-star.goal':
+    'Haal de twee of drie papieren die je echt nodig hebt uit een lijst die de hele reis lang groeit.',
+  'help.guide.files-star.step.1':
+    'Klik op Ster aan het eind van een rij. De ster kleurt geel, een tweede ster verschijnt voor de naam van het bestand, en de knop heet nu Ster verwijderen.',
+  'help.guide.files-star.step.2':
+    'De lijst sorteert zichzelf opnieuw: bestanden met een ster staan boven alle andere, binnen elke groep de nieuwste eerst.',
+  'help.guide.files-star.step.3':
+    'Bovenaan is een ster bij de tabbladen gekomen, met het aantal bestanden met een ster erachter. Klik erop om alleen die te zien.',
+  'help.guide.files-star.result':
+    'De papieren die je aan de balie nodig hebt staan bovenaan de lijst, en één tabblad toont niets anders.',
+  'help.guide.files-star.tip.1':
+    'Het stertabblad bestaat alleen zolang er iets een ster heeft. Haal de ster bij het laatste bestand weg en het tabblad verdwijnt ermee.',
+  'help.guide.files-star.tip.2':
+    'Een ster zetten telt als bewerken: een lid dat de bestanden van de reis alleen mag lezen ziet de sterren wel, maar kan ze niet zetten.',
+  // files-filter
+  'help.guide.files-filter.title': 'Een document in de lijst vinden',
+  'help.guide.files-filter.goal': 'Breng een lijst met alles terug tot het ene soort papier dat je zoekt.',
+  'help.guide.files-filter.step.1':
+    "De tabbladen boven de lijst zijn Alle, PDF's, Afbeeldingen en Documenten, elk met het aantal bestanden erachter.",
+  'help.guide.files-filter.step.2': "Klik op PDF's: de lijst houdt de PDF-bestanden over en niets anders.",
+  'help.guide.files-filter.step.3':
+    'Nog twee tabbladen komen en gaan met wat er in de reis zit: een ster zodra een bestand een ster heeft, en Collab-notities zodra een notitie in het tabblad Samenwerking een bijlage draagt.',
+  'help.guide.files-filter.step.4': 'Alle haalt de hele lijst terug.',
+  'help.guide.files-filter.result':
+    'De lijst toont alleen wat het tabblad noemt, en het aantal op elk tabblad zegt hoeveel dat er zijn.',
+  'help.guide.files-filter.tip.1':
+    'Mappen zijn er hier niet en hernoemen ook niet: de notitie in Bestand toewijzen, de koppelingen naar plekken en boekingen, en de ster zijn waar een document op wordt gesorteerd.',
+  'help.guide.files-filter.tip.2':
+    'De lijst zelf staat altijd eerst met ster, daarna nieuwste eerst, zodat een document dat vandaag is geüpload boven een document van vorige maand staat.',
+  // files-preview
+  'help.guide.files-preview.title': 'Een document lezen zonder TREK te verlaten',
+  'help.guide.files-preview.goal':
+    'Bekijk een ticket of een afbeelding ter plekke, en haal het naar je eigen machine wanneer je het daar nodig hebt.',
+  'help.guide.files-preview.step.1':
+    'Klik op de naam van een afbeelding of op de miniatuur. Hij opent schermvullend, met de naam van het bestand en zijn plaats in de afbeeldingen in de kop.',
+  'help.guide.files-preview.step.2':
+    'De ronde pijlen aan de zijkanten, de pijltjestoetsen links en rechts en de strook miniaturen onderaan lopen door elke afbeelding die de lijst op dat moment toont.',
+  'help.guide.files-preview.step.3':
+    'Openen in nieuw tabblad en Downloaden zitten in de kop; de × of Escape sluit de afbeelding weer.',
+  'help.guide.files-preview.step.4':
+    'Een document dat geen afbeelding is opent in plaats daarvan in een voorbeeld over de pagina heen, met dezelfde twee knoppen in zijn kop. Dat sluit met de × of met een klik ernaast.',
+  'help.guide.files-preview.step.5':
+    'Downloaden aan het eind van een rij zet het bestand rechtstreeks op je machine, zonder eerst iets te openen.',
+  'help.guide.files-preview.result':
+    'Het document staat op het scherm, en dezelfde twee knoppen zetten het in een tabblad van de browser of op je schijf.',
+  'help.guide.files-preview.tip.1':
+    'Op een aanraakscherm veeg je door de afbeeldingen in plaats van op de pijlen te klikken.',
+  'help.guide.files-preview.tip.2':
+    'Een wallet-pas opent nooit een voorbeeld: hij wordt meteen gedownload, zodat de telefoon hem aan zijn wallet-app kan geven.',
+  'help.guide.files-preview.tip.3':
+    'Openen in nieuw tabblad en Downloaden halen het bestand allebei op met jouw sessie, zodat een link die uit de adresbalk is gekopieerd voor niemand anders iets doet.',
+  // files-trash
+  'help.guide.files-trash.title': 'Een document weggooien, en terughalen',
+  'help.guide.files-trash.goal':
+    'Ruim op wat de reis niet meer nodig heeft, zonder iets te verliezen dat je toch nodig had.',
+  'help.guide.files-trash.step.1':
+    'Klik op Verwijderen aan het eind van een rij. Het bestand verlaat de lijst meteen en de melding zegt Naar prullenbak verplaatst. Niets vraagt eerst.',
+  'help.guide.files-trash.step.2':
+    'Prullenbak uiterst rechts in de werkbalk zet de lijst over naar wat is weggegooid. De kop zegt Prullenbak en de filtertabbladen zijn weg.',
+  'help.guide.files-trash.step.3':
+    'Een weggegooide rij is grijs en heeft nog twee knoppen: Herstellen, dat het bestand terughaalt, en Verwijderen, dat het na een vraag voorgoed weghaalt.',
+  'help.guide.files-trash.step.4':
+    'Klik op Herstellen. De melding zegt Bestand hersteld en de rij verlaat de prullenbak, met zijn notitie en zijn koppelingen er nog op.',
+  'help.guide.files-trash.step.5':
+    'Prullenbak legen bovenaan haalt alles wat hier nog ligt voorgoed weg, en de browser vraagt het één keer voordat hij het doet. Prullenbak schakelt terug naar de bestanden.',
+  'help.guide.files-trash.result': 'Het bestand staat weer in de lijst waar het stond, alsof er niets was gebeurd.',
+  'help.guide.files-trash.tip.1':
+    'Verwijderen op een rij vraagt niets vooraf, en daar is de prullenbak voor: niets verlaat TREK tot jij het hier zegt.',
+  'help.guide.files-trash.tip.2':
+    'Een bestand weggooien en terughalen vraagt het recht Bestanden verwijderen. Een lid zonder dat recht ziet Verwijderen op de rij niet en de knoppen in de prullenbak ook niet.',
+  'help.guide.files-trash.tip.3':
+    'Een bestand dat in de prullenbak voorgoed is verwijderd, kan niet worden teruggehaald.',
+
+  // ── Screen: trip-day-detail ───────────────────────────────────────────────────────────
+  'help.ctx.trip-day-detail.title': 'Dagdetails',
+  'help.ctx.trip-day-detail.summary':
+    'Het paneel dat de kop van een dag over de kaart opent: de dag als geheel, zijn naam en zijn datum, het weer waar je zult zijn, de boekingen die op hem vallen en de nachten die voor hem geboekt zijn.',
+  'help.ctx.trip-day-detail.bullet.1':
+    'Klik in de dagenkolom op de kop van een dag en het paneel gaat open over het midden van de kaart. Dezelfde kop nog eens, of het kruisje rechts ervan, sluit het en laat de dag weer los.',
+  'help.ctx.trip-day-detail.bullet.2':
+    'De kop draagt de naam van de dag en zijn datum. Het potlood naast de naam hernoemt de dag, de dubbele chevron vouwt het paneel tot een smalle balk zodat de kaart weer vrij is.',
+  'help.ctx.trip-day-detail.bullet.3':
+    'Bovenaan het weer van de dag. Voorspelling voor noemt de plek waar het voor geldt: de eerste stop van de dag, of het hotel waar je wakker wordt.',
+  'help.ctx.trip-day-detail.bullet.4':
+    'Reserveringen zet de boekingen van die dag op een rij, elk met zijn soort, de stop waar hij bij hoort en zijn tijden. Groen betekent bevestigd, amberkleurig nog in behandeling; het is alleen een uitlezing, boekingen wijzig je onder Boekingen.',
+  'help.ctx.trip-day-detail.bullet.5':
+    'Accommodatie toont elke nacht die over deze dag geboekt is, met Inchecken en Uitchecken op de dagen waarop ze gebeuren, het incheckvenster, de uitchecktijd en het bevestigingsnummer.',
+  'help.ctx.trip-day-detail.bullet.6':
+    'Accommodatie toevoegen boekt een nacht op deze dag: kies het pand uit de plekken van de reis, zeg welke dagen hij beslaat, en vul de tijden en de code aan.',
+  // day-panel
+  'help.guide.day-panel.title': 'Een dag openen en zijn details lezen',
+  'help.guide.day-panel.goal':
+    'Eén dag in zijn geheel zien, zijn weer, zijn boekingen en waar je slaapt, zonder de kaart te verlaten.',
+  'help.guide.day-panel.step.1':
+    'Klik in de dagenkolom op de kop van een dag. De dag wordt geselecteerd en zijn details gaan open over het midden van de kaart.',
+  'help.guide.day-panel.step.2': 'De kop noemt de dag, Dag 1 zolang je hem geen naam geeft, met zijn datum eronder.',
+  'help.guide.day-panel.step.3':
+    'Bovenaan het weer van de dag. Voorspelling voor zegt om welke plek het gaat: de eerste stop van de dag, of het hotel waar je wakker wordt.',
+  'help.guide.day-panel.step.4':
+    'Reserveringen daaronder zet de boekingen die op deze dag vallen op een rij, met hun tijden.',
+  'help.guide.day-panel.step.5':
+    'Accommodatie toont de nachten die over deze dag geboekt zijn, met Inchecken en Uitchecken op de dagen waarop ze gebeuren.',
+  'help.guide.day-panel.step.6':
+    'De dubbele chevron in de kop vouwt het paneel tot een smalle balk. Het kruisje ernaast sluit het paneel en laat de dag weer los.',
+  'help.guide.day-panel.result':
+    'Tot zijn balk gevouwen laat het paneel de kaart vrij en houdt het de dag geselecteerd; gesloten is de dag niet meer geselecteerd en is het plan als voorheen.',
+  'help.guide.day-panel.tip.1':
+    'Klikken op een willekeurige plek van de kopbalk van het paneel vouwt het ook op. De chevron is er alleen de knop voor.',
+  'help.guide.day-panel.tip.2':
+    'Een plek openen uit de plekkenkolom zet de plaatsdetails op de plaats van het paneel. Sluit ze en de dag is terug.',
+  // day-weather
+  'help.guide.day-weather.title': 'Het weer van de dag lezen',
+  'help.guide.day-weather.goal': 'Weten hoe de dag wordt daar waar je die dag echt bent.',
+  'help.guide.day-weather.step.1':
+    'Voorspelling voor noemt de plek waar de cijfers voor gelden: de eerste stop van de dag of, op een dag zonder stop, het hotel waar je wakker wordt.',
+  'help.guide.day-weather.step.2':
+    'Het grote getal is de temperatuur van de dag, ernaast de laagste en de hoogste, en de toestand in woorden.',
+  'help.guide.day-weather.step.3':
+    'De chips eronder: de regenkans, hoeveel er valt, de sterkste wind, en zonsopgang en zonsondergang.',
+  'help.guide.day-weather.step.4':
+    'Onderaan de dag uur voor uur, om het andere uur: de tijd, het icoon, de temperatuur en de regenkans. Een uur boven de 50 procent krijgt een blauwe achtergrond.',
+  'help.guide.day-weather.result':
+    'De dagkaart in de dagenkolom draagt hetzelfde weer klein onder haar nummer, zodat de hele reis in één oogopslag te lezen is.',
+  'help.guide.day-weather.tip.1':
+    'Graden en wind volgen je keuze onder Weergave in Instellingen: zet om naar Fahrenheit en dezelfde voorspelling wordt in °F en mph gegeven.',
+  'help.guide.day-weather.tip.2':
+    'Een dag zonder gelokaliseerde stop en zonder hotel om in wakker te worden toont helemaal geen weer: de voorspelling geldt altijd voor een plek, nooit voor de reis.',
+  'help.guide.day-weather.tip.3':
+    'Verder dan 16 dagen vooruit valt er geen voorspelling te halen. De cijfers zijn dan de gemiddelden van eerdere jaren voor die datum, gemarkeerd met Ø en daaronder ook als zodanig vermeld.',
+  // rename-day
+  'help.guide.rename-day.title': 'De dag een naam geven',
+  'help.guide.rename-day.goal': 'Een dag noemen wat hij is, Aankomst in Kyoto of Rustdag, in plaats van Dag 5.',
+  'help.guide.rename-day.step.1': 'Open de dag. In zijn kop staat Dag 5, met de datum eronder.',
+  'help.guide.rename-day.step.2': 'Klik op het potlood naast de naam.',
+  'help.guide.rename-day.step.3': 'De naam wordt een veld. Typ de naam die je wilt.',
+  'help.guide.rename-day.step.4':
+    'Druk op Enter, of klik gewoon ergens anders; Escape gooit de wijziging weg. De dagkaart in de dagenkolom draagt de naam ook.',
+  'help.guide.rename-day.result':
+    'De naam vervangt Dag 5 in het paneel en op de dagkaart in de dagenkolom; de datum blijft waar hij was.',
+  'help.guide.rename-day.tip.1':
+    'Maak het veld leeg en sla op, en de dag heet weer Dag 5: het nummer is wat er staat als er geen naam is.',
+  'help.guide.rename-day.tip.2':
+    'De naam hoort bij de dag, niet bij zijn datum. Zet de dagen in een andere volgorde en hij reist mee met al het andere van die dag.',
+  // add-accommodation
+  'help.guide.add-accommodation.title': 'Een nacht op een dag boeken',
+  'help.guide.add-accommodation.goal':
+    'Het hotel één keer in het plan zetten, met de dagen die het beslaat, zijn tijden en zijn bevestigingsnummer.',
+  'help.guide.add-accommodation.step.1':
+    'Het pand moet eerst een plek van de reis zijn. Maak het in de plekkenkolom aan zoals elke andere plek: de kiezer biedt alleen aan wat er al is.',
+  'help.guide.add-accommodation.step.2':
+    'Open de dag van je aankomst en klik onder Accommodatie op Accommodatie toevoegen.',
+  'help.guide.add-accommodation.step.3':
+    'Toepassen op dagen zegt welke nachten het verblijf beslaat: de incheckdag links, de uitcheckdag rechts. Alle neemt de hele reis.',
+  'help.guide.add-accommodation.step.4':
+    'Vul Inchecken, Tot en Uitchecken in, en zet het nummer van de boeking onder Bevestiging. Alle vier mogen leeg blijven.',
+  'help.guide.add-accommodation.step.5':
+    'Kies het pand uit de plekken van de reis. De chips boven de lijst beperken haar tot één categorie.',
+  'help.guide.add-accommodation.step.6': 'Klik op Opslaan.',
+  'help.guide.add-accommodation.result':
+    'Het verblijf staat op elke dag die het beslaat, Inchecken op de eerste en Uitchecken op de laatste. Het pand wordt een stop op de incheckdag, zodat de kaart de weg ernaartoe tekent, en onder Boekingen verschijnt een boeking van het type Accommodatie.',
+  'help.guide.add-accommodation.tip.1':
+    'De kiezer opent op de dag waar je vandaan kwam, met uitchecken de dag erna; beide kun je nog verzetten voor je opslaat.',
+  'help.guide.add-accommodation.tip.2':
+    'Geef het hotel bij het aanmaken de categorie Hotel van de reis en de chips boven de lijst beperken haar met één klik tot je hotels.',
+  'help.guide.add-accommodation.tip.3':
+    'De tijden zijn allemaal optioneel: een verblijf zonder inchecktijd en zonder code beslaat zijn nachten toch en tekent toch zijn route.',
+  // edit-accommodation
+  'help.guide.edit-accommodation.title': 'Een geboekte nacht wijzigen of annuleren',
+  'help.guide.edit-accommodation.goal':
+    'Een verblijf verplaatsen, zijn tijden verbeteren, of het weer uit het plan halen.',
+  'help.guide.edit-accommodation.step.1':
+    'Op elke dag van het verblijf toont de kaart van het verblijf het pand, het incheckvenster, de uitchecktijd en het bevestigingsnummer.',
+  'help.guide.edit-accommodation.step.2':
+    'Het potlood aan de rechterkant ervan opent het verblijf opnieuw. Het venster heet nu Accommodatie bewerken.',
+  'help.guide.edit-accommodation.step.3':
+    'Wijzig wat nodig is: de dagen die het beslaat, Inchecken, Tot, Uitchecken, Bevestiging, of het pand zelf.',
+  'help.guide.edit-accommodation.step.4': 'Klik op Opslaan.',
+  'help.guide.edit-accommodation.step.5':
+    'Het kruisje naast het potlood beëindigt het verblijf. Het vraagt niets, en de boeking van het type Accommodatie die erbij hoort gaat mee.',
+  'help.guide.edit-accommodation.result':
+    'De wijziging bereikt in één keer elke dag die het verblijf beslaat, en de boeking van het type Accommodatie onder Boekingen erbij.',
+  'help.guide.edit-accommodation.tip.1':
+    'Een nacht midden in een verblijf draagt geen label Inchecken en geen label Uitchecken: alleen de eerste en de laatste dag van het bereik doen dat.',
+  'help.guide.edit-accommodation.tip.2':
+    'Een verblijf annuleren neemt ook de stop mee die het op de incheckdag zette en alle kosten die aan zijn boeking hangen. Boek de nacht opnieuw als het een vergissing was.',
+  // day-bookings
+  'help.guide.day-bookings.title': 'De boekingen van de dag in één oogopslag',
+  'help.guide.day-bookings.goal': 'Op één plek zien wat er al voor deze dag geboekt is en of het bevestigd is.',
+  'help.guide.day-bookings.step.1':
+    'Reserveringen zet de boekingen van de dag op een rij: die op hem gedateerd zijn, en die aan een van zijn stops hangen.',
+  'help.guide.day-bookings.step.2':
+    'Een rij toont wat voor soort boeking het is, zijn naam en, als hij bij een stop hoort, die stop na een punt. Zijn tijden staan helemaal rechts.',
+  'help.guide.day-bookings.step.3':
+    'De kleur zegt hoe een boeking ervoor staat: een groene rij is bevestigd, een amberkleurige is nog in behandeling. Accommodaties staan niet in deze lijst, die hebben hun eigen blok eronder.',
+  'help.guide.day-bookings.step.4':
+    'De lijst leest de boekingen alleen uit. Een boeking maak en wijzig je onder Boekingen.',
+  'help.guide.day-bookings.result':
+    'Alles wat op de dag gedateerd is, en alles wat aan een van zijn stops hangt, staat in deze ene lijst.',
+  'help.guide.day-bookings.tip.1':
+    'Een boeking belandt op een dag door zijn eigen datum. Wijzig de datum onder Boekingen en hij verhuist vanzelf naar de andere dag.',
+  'help.guide.day-bookings.tip.2':
+    'Geen blok Reserveringen betekent dat de dag geen boekingen heeft: het wordt verborgen in plaats van leeg getoond.',
+
+  // ── Screen: trip-map ──────────────────────────────────────────────────────────────────
+  'help.ctx.trip-map.title': 'Kaart',
+  'help.ctx.trip-map.summary':
+    'Het midden van het plan: elke plek van de reis als speld, de routes die ze verbinden, en de schakelaars langs de randen van de kaart voor satelliet, voor de hele reis in één keer en voor de plekken rond de buurt waar je naar kijkt.',
+  'help.ctx.trip-map.bullet.1':
+    'Een speld is een plek: de eigen foto als die er is, anders de kleur van zijn categorie met het categorie-icoon. Houd de aanwijzer erop voor een kaartje met zijn naam, zijn beoordeling, zijn categorie en zijn adres.',
+  'help.ctx.trip-map.bullet.2':
+    'Spelden die te dicht bij elkaar zitten om uit elkaar te houden, vouwen samen tot één donkere bel met een aantal. Klik op de bel en de kaart zoomt in op wat erin zit.',
+  'help.ctx.trip-map.bullet.3':
+    'Klik op een speld om de plek onder de kaart te openen, met zijn beoordeling, zijn bestanden en wat er verder mee kan; klik op een leeg stuk van de kaart om hem weer los te laten.',
+  'help.ctx.trip-map.bullet.4':
+    'Met een dag open in de dagenkolom dragen zijn stops een kleine witte badge met hun nummer in die dag, en een plek die op twee dagen is gepland draagt beide nummers, verbonden door ·.',
+  'help.ctx.trip-map.bullet.5':
+    'De rij iconen bovenaan doorzoekt het stuk kaart dat je ziet: Restaurants, Cafés, Bars & uitgaan, Accommodatie, Bezienswaardigheden, Musea & cultuur, Natuur & parken en Activiteiten. Dit gebied doorzoeken draait de zoekopdracht opnieuw nadat je de kaart hebt verschoven.',
+  'help.ctx.trip-map.bullet.6':
+    'Met een rechterklik ergens op de kaart gaat het plekformulier open op dat punt, met het adres al opgezocht. De ronde knop linksonder ruilt de getekende kaart in voor luchtbeelden.',
+  'help.ctx.trip-map.bullet.7':
+    'Hele reis tonen rechtsonder tekent elke reisdag in één keer en zet op een rij wat elke dag beslaat; het route-icoon op de rij van een boeking tekent die boeking, en dat in de werkbalk boven de dagen tekent ze allemaal.',
+  // map-markers
+  'help.guide.map-markers.title': 'De kaart lezen',
+  'help.guide.map-markers.goal': 'Weten wat elke speld, badge en bel op de kaart je vertelt.',
+  'help.guide.map-markers.step.1':
+    'De kaart draagt elke plek van de reis. Waar spelden te dicht bij elkaar zitten om uit elkaar te houden, vouwen ze samen tot één donkere bel met het aantal plekken dat erin zit.',
+  'help.guide.map-markers.step.2':
+    'Klik op de bel. De kaart zoomt in op wat erin zat en de spelden gaan uit elkaar; op het diepste zoomniveau waaiert hij ze uit in plaats van verder in te zoomen.',
+  'help.guide.map-markers.step.3':
+    'Een speld is de eigen foto van de plek als die er is, anders de kleur van zijn categorie met het categorie-icoon. Houd de aanwijzer erop en een kaartje geeft zijn naam, zijn beoordeling, zijn categorie en zijn adres.',
+  'help.guide.map-markers.step.4':
+    'Klik op een speld en de plek gaat open onder de kaart: zijn coördinaten, zijn beoordeling, zijn bestanden, en Toevoegen aan dag, In collectie opslaan, Navigatie, Bewerken en Verwijderen. Klik op een leeg stuk van de kaart om hem weer los te laten.',
+  'help.guide.map-markers.step.5':
+    'Open een dag in de dagenkolom en zijn stops krijgen nummers: de kleine witte badge in de hoek van een speld is de plaats van die stop in de dag. Een plek die op twee dagen is gepland draagt beide nummers, verbonden door ·. Zonder open dag zijn er geen nummers, en draagt de hoek in plaats daarvan de beoordeling.',
+  'help.guide.map-markers.result':
+    'Aan de reis is niets veranderd: de kaart is er een weergave van, en elke speld zegt welke plek, welke dag en in welke volgorde.',
+  'help.guide.map-markers.tip.1':
+    'Een dag die in de dagenkolom is dichtgeklapt neemt zijn stops van de kaart mee; klap de dag weer open en ze zijn terug.',
+  'help.guide.map-markers.tip.2':
+    'Het filter boven de plekkenlijst bepaalt ook wat de kaart tekent: kies Ongepland en alleen de plekken die nog geen dag hebben blijven erop staan.',
+  'help.guide.map-markers.tip.3':
+    'Deze kaart heeft geen zoomknoppen: het wiel zoomt, een dubbele klik zoomt een stap in, en slepen verschuift hem.',
+  // map-nearby-places
+  'help.guide.map-nearby-places.title': 'Plekken in je omgeving op de kaart vinden',
+  'help.guide.map-nearby-places.goal':
+    'Laat de kaart zoeken naar restaurants, bezienswaardigheden of een hotel in de buurt waar je naar kijkt, en haal er een de reis in.',
+  'help.guide.map-nearby-places.step.1':
+    'De rij iconen bovenaan de kaart is het zoeken per categorie: Restaurants, Cafés, Bars & uitgaan, Accommodatie, Bezienswaardigheden, Musea & cultuur, Natuur & parken en Activiteiten.',
+  'help.guide.map-nearby-places.step.2':
+    'Klik op een categorie. TREK zoekt dat soort plek in het stuk kaart dat je ziet en zet voor elke treffer een speld in de kleur van de categorie. Eén categorie tegelijk: op een andere klikken wisselt hem, en op de actieve klikken zet hem uit.',
+  'help.guide.map-nearby-places.step.3':
+    'Verschuif de kaart en er verschijnt een tweede knop onder de rij: Dit gebied doorzoeken draait dezelfde zoekopdracht voor het nieuwe beeld. Verschuiven alleen zoekt nooit opnieuw, wat het aantal verzoeken laag houdt.',
+  'help.guide.map-nearby-places.step.4':
+    'De spelden dragen de naam van wat er gevonden is. Klik er een aan en het plekformulier gaat open, al ingevuld vanuit die treffer: Naam, Adres, Breedtegraad en Lengtegraad, en de website en het telefoonnummer waar OpenStreetMap ze heeft.',
+  'help.guide.map-nearby-places.step.5':
+    'Loop na wat er is ingevuld en vul aan wat de zoekopdracht niet kon weten: een Beschrijving, een Categorie, eigen notities.',
+  'help.guide.map-nearby-places.step.6':
+    'Klik op Toevoegen. Ligt er al een plek met dezelfde naam in de reis, dan zegt het formulier dat en wordt de knop Toch toevoegen.',
+  'help.guide.map-nearby-places.result':
+    'De plek staat in de plekkenlijst en op de kaart als een van de eigen spelden van de reis, onder Ongepland tot je hem op een dag zet. De zoekspelden blijven staan tot je de categorie uitzet.',
+  'help.guide.map-nearby-places.tip.1':
+    'De rij is weg als Plaatsen op de kaart ontdekken uit staat in Instellingen, onder Travel & map.',
+  'help.guide.map-nearby-places.tip.2':
+    'De antwoorden komen uit de TREK-plaatsenindex en van OpenStreetMap, dus dit is een van de weinige dingen in het plan die een verbinding nodig hebben.',
+  'help.guide.map-nearby-places.tip.3':
+    'Een zoekopdracht dekt wat er op het scherm staat, dus zoom in op de straat waar je naar vraagt: een hele stad antwoordt met de eerste zestig treffers en met weinig ordening daarin.',
+  // map-add-place
+  'help.guide.map-add-place.title': 'Een plek aanmaken met een rechterklik op de kaart',
+  'help.guide.map-add-place.goal': 'Zet een plek precies waar je hem wilt, zonder er eerst naar te zoeken.',
+  'help.guide.map-add-place.step.1':
+    'Klik met rechts op het punt op de kaart dat je bedoelt. Het plekformulier gaat open, met de titel Plaats/activiteit toevoegen.',
+  'help.guide.map-add-place.step.2':
+    'Breedtegraad en Lengtegraad staan al op dat punt, en TREK zoekt de coördinaten op en vult Adres met wat het daar vindt. Er is nog niets opgeslagen, dus overschrijf wat niet klopt.',
+  'help.guide.map-add-place.step.3':
+    'Geef hem een Naam die je herkent, en de rest van wat het plan moet weten: Beschrijving, Notities, Categorie, Website.',
+  'help.guide.map-add-place.step.4':
+    'Klik op Toevoegen. De plek belandt ongepland in de lijst, ook met een dag open: een rechterklik op de kaart zegt waar, niet wanneer.',
+  'help.guide.map-add-place.result':
+    'De plek staat in de lijst en op de kaart, onder Ongepland tot je hem op een dag zet.',
+  'help.guide.map-add-place.tip.1':
+    'Het adres komt uit een opzoeking van de coördinaten, dus het kan meer als een straat dan als een naam lezen, en boven open land kan het leeg terugkomen. Beide velden mag je overschrijven.',
+  'help.guide.map-add-place.tip.2':
+    'Op de kaarten van MapLibre GL en Mapbox GL doet een middelklik hetzelfde, en op een aanraakscherm een lange druk.',
+  // map-satellite
+  'help.guide.map-satellite.title': 'Overschakelen naar satelliet',
+  'help.guide.map-satellite.goal': 'Ruil de getekende kaart in voor luchtbeelden, en terug.',
+  'help.guide.map-satellite.step.1':
+    'De ronde knop linksonder op de kaart is de schakelaar voor de onderlaag. Zijn icoon toont altijd de laag waar hij heen zou gaan, en erop zweven zegt welke: Overschakelen naar satellietweergave.',
+  'help.guide.map-satellite.step.2':
+    'Klik erop. De kaart wordt luchtbeeld, diep genoeg om een enkel gebouw te onderscheiden, en zonder een eigen sleutel.',
+  'help.guide.map-satellite.step.3':
+    'Alles wat TREK tekent blijft erbovenop staan: de spelden, de route van de dag, de tracks en de boekingsroutes. Klik nog eens op de knop, die nu Overschakelen naar kaartweergave zegt, om terug te gaan.',
+  'help.guide.map-satellite.result':
+    'De kaart is weer getekend, en de laag waarop je hem hebt achtergelaten wordt op je account onthouden.',
+  'help.guide.map-satellite.tip.1':
+    'De keuze hangt aan je account en niet aan de reis, dus elke reis gaat open zoals je hem hebt achtergelaten, met welke kaartrenderer je ook werkt.',
+  'help.guide.map-satellite.tip.2':
+    'De beelden dragen geen tekst: straatnamen, wijken en huisnummers staan op de getekende kaart, dus schakel terug als je een adres zoekt.',
+  // map-whole-trip
+  'help.guide.map-whole-trip.title': 'De hele reis en zijn afstanden zien',
+  'help.guide.map-whole-trip.goal':
+    'Ruil de ene open dag in voor elke reisdag van de reis, en lees hoe ver elke dag gaat.',
+  'help.guide.map-whole-trip.step.1': 'De ronde knop Hele reis tonen zit rechtsonder op de kaart.',
+  'help.guide.map-whole-trip.step.2':
+    'Klik erop. Elke reisdag van de reis wordt in één keer getekend, elk in zijn eigen kleur over een witte omlijning, zodat dagen naast elkaar uit elkaar blijven.',
+  'help.guide.map-whole-trip.step.3':
+    'Het kaartje boven de knop somt die dagen op: een gekleurde stip, de naam van de dag, een icoon voor elke manier waarop je hem aflegt, en de afstand die hij beslaat. Totale afstand staat bovenaan.',
+  'help.guide.map-whole-trip.step.4':
+    'Klik op een dag in het kaartje om hem te kiezen, net als kiezen in de dagenkolom. Klik nog eens op de knop, die nu Hele reis verbergen zegt, om terug te gaan naar die ene dag.',
+  'help.guide.map-whole-trip.result':
+    'Elke reisdag is in zijn eigen kleur getekend, en het kaartje zegt wat elke dag beslaat en waar de reis op uitkomt.',
+  'help.guide.map-whole-trip.tip.1':
+    'Het totaal komt binnen in een paar etappes tegelijk. Zolang er een … achter staat, is het getal nog een deelsom; het ligt vast zodra elke etappe heeft geantwoord.',
+  'help.guide.map-whole-trip.tip.2':
+    'Een etappe die de router weigert blijft een rechte lijn en telt niets mee, en het kaartje zegt dat, in plaats van stilletjes te laag uit te komen.',
+  'help.guide.map-whole-trip.tip.3':
+    'Een dag met minder dan twee stops met een locatie heeft geen route om te tekenen en valt dus helemaal buiten het kaartje.',
+  // map-booking-routes
+  'help.guide.map-booking-routes.title': 'De route van een boeking op de kaart tonen',
+  'help.guide.map-booking-routes.goal':
+    'Teken de vluchten, treinen en ritten die je hebt geboekt op de kaart, en haal ze er weer af.',
+  'help.guide.map-booking-routes.step.1':
+    'Boekingsroutes staan uit tot je erom vraagt. Op de rij van een boeking in de dagenkolom zit een klein route-icoon: Boekingsroutes tonen.',
+  'help.guide.map-booking-routes.step.2':
+    'Klik erop. De boeking verschijnt op de kaart: een vlucht als een grootcirkelboog, een rit langs de echte wegen, een trein als de keten van zijn stations. Bevestigd wordt doorgetrokken getekend, In behandeling gestreept.',
+  'help.guide.map-booking-routes.step.3':
+    'De uiteinden van de route zijn blauwe pillen met het icoon van het vervoer. Klik er een aan om de boeking erachter te openen, met de tijden, de Boekingscode en Locatie / Adres; Sluiten bergt hem weer op.',
+  'help.guide.map-booking-routes.step.4':
+    'Het route-icoon in de werkbalk boven de dagen doet de hele reis in één keer: Alle boekingsroutes tonen tekent elke boeking die er een heeft.',
+  'help.guide.map-booking-routes.step.5':
+    'Het is een schone lei en geen laag erbovenop, dus wat je boeking voor boeking had gekozen, valt weg. Druk er nog eens op, nu het Alle boekingsroutes verbergen zegt, en de kaart is leeg.',
+  'help.guide.map-booking-routes.result':
+    'De boekingen waar je om vroeg staan op de kaart getekend, en de keuze blijft voor deze reis in deze browser bewaard tot je hem verandert.',
+  'help.guide.map-booking-routes.tip.1':
+    'De uiteinden dragen de luchthavencode of de naam van het station alleen als Routelabels voor boekingen aan staat in Instellingen, onder Travel & map; anders tonen ze alleen het icoon.',
+  'help.guide.map-booking-routes.tip.2':
+    'Boekingsroutes altijd tonen, in dezelfde instellingen, tekent ze vanaf het begin op elke reis waarover je nog niet hebt beslist.',
+  'help.guide.map-booking-routes.tip.3':
+    'Een boeking heeft twee uiteinden met coördinaten nodig voordat hij getekend kan worden, dus een hotel of een restaurant draagt geen route-icoon.',
 };
 
 export default help;

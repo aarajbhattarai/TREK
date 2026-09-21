@@ -1769,6 +1769,755 @@ const help: TranslationStrings = {
     '목록은 공개로 공유되어 있어야 합니다. 비공개 목록의 링크는 아무것도 가져오지 않습니다.',
   'help.guide.import-places-list.tip.2':
     '“Google로 장소 정보 보강”은 내 TREK에 Google 키가 있을 때 대화 상자에 나타납니다. 가져온 장소를 하나씩 찾아 사진, 주소, 세부정보를 채웁니다.',
+
+  // ── Screen: trip-days ─────────────────────────────────────────────────────────────────
+  'help.ctx.trip-days.title': '일',
+  'help.ctx.trip-days.summary':
+    '계획의 왼쪽 열입니다. 하루에 카드 하나씩, 그날의 방문지가 순서대로, 메모, 그날의 예약과 교통편, 그리고 방문지 사이의 경로가 들어 있습니다. 여행이 실제로 계획되는 곳입니다.',
+  'help.ctx.trip-days.bullet.1':
+    '맨 위의 도구 모음: “내보내기”(PDF, 캘린더, GPX), “모든 날 펼치기” / “모든 날 접기”, 실행 취소 화살표, “날짜 순서 변경”, “모든 예약 경로 표시”.',
+  'help.ctx.trip-days.bullet.2':
+    '날짜 카드: 머리글에 날짜 번호, 날씨, 제목, 날짜, 그날의 비용이 있습니다. 머리글을 클릭하면 그날이 열리고, 꺾쇠가 카드를 접습니다. “대중교통”, “교통 추가”, “메모 추가”도 머리글에 있습니다.',
+  'help.ctx.trip-days.bullet.3':
+    '날짜 안에는 순서대로 놓인 방문지가 있고, 각각 사진, 이름, 시간, 사진 위의 잠금이 있습니다. 그 밖에 메모, 그날에 속한 예약, 그리고 방문지 사이에는 각 구간의 이동 시간이 있습니다.',
+  'help.ctx.trip-days.bullet.4':
+    '방문지 아래는 경로 막대입니다. “경로”는 그날을 지도에 그리고, “최적화”는 방문지를 정렬하며, “자동차” / “도보”는 그날의 이동 수단을 정하고, “Google Maps에서 열기”와 “CoMaps에서 열기”는 그날을 넘겨줍니다.',
+  'help.ctx.trip-days.bullet.5':
+    '장소는 장소 열에서 행을 끌어다 놓거나, 그 행의 +로, 빈 날짜의 “이 날짜에 장소 추가”로, 또는 장소 세부정보에서 날짜에 올라옵니다.',
+  'help.ctx.trip-days.bullet.6': '맨 아래의 “총 비용”은 가격이 있는 모든 방문지와 예약을 여행의 통화로 더합니다.',
+  // read-day-plan
+  'help.guide.read-day-plan.title': '하루 읽기',
+  'help.guide.read-day-plan.goal': '무엇을 바꾸기 전에 날짜 카드의 각 부분이 무엇을 말하는지 압니다.',
+  'help.guide.read-day-plan.step.1':
+    '머리글: 날짜 번호, 그날의 예보, “1일차” 또는 직접 붙인 제목, 날짜, 그날의 비용입니다. 머리글을 클릭하면 그날이 열리고(“일별 상세” 패널이 지도 위에 열립니다), 오른쪽의 꺾쇠가 카드를 접고 폅니다.',
+  'help.guide.read-day-plan.step.2':
+    '방문지: 왼쪽의 손잡이로 끌고, 사진에는 경로 최적화를 위한 잠금이 있으며, 이어서 이름, 설명, 그리고 적어 두었다면 “이 날의 메모”가 나옵니다. 시간이 있는 방문지에는 “시작”과 “종료”를 보여 주는 시간 배지가 붙고, 오른쪽 끝에 나타나는 화살표가 그것을 위나 아래로 옮깁니다.',
+  'help.guide.read-day-plan.step.3':
+    '그날의 예약: 교통편은 “출발” 또는 “도착”으로 시간과 경로와 함께 나오고, 방문지에 묶인 예약은 그 방문지를 “예약 확정” 또는 “예약 대기 중”으로 표시합니다. 교통편의 작은 토글은 그 경로를 지도에 보여 줍니다.',
+  'help.guide.read-day-plan.step.4':
+    '두 방문지 사이의 연결선은 그날의 이동 수단으로 그 구간이 얼마나 걸리고 얼마나 먼지 알려 줍니다. 클릭하면 그 한 구간의 수단을 바꿀 수 있습니다.',
+  'help.guide.read-day-plan.step.5':
+    '끝의 경로 막대: “경로”는 그날의 길을 지도에 그리고, “최적화”는 방문지의 순서를 바꾸며, 수단 버튼은 “자동차”나 “도보”를 고르고, “Google Maps에서 열기”와 “CoMaps에서 열기”는 그날을 그 앱에서 엽니다.',
+  'help.guide.read-day-plan.result': '카드의 모든 기호에는 뜻이 있습니다. 아래의 안내가 그 하나하나를 바꿉니다.',
+  'help.guide.read-day-plan.tip.1':
+    '방문지를 오른쪽 클릭하면 메뉴가 나옵니다. “편집”, “날에서 제거”, “웹사이트 열기”, 내비게이션 앱(Google Maps, Waze, Apple Maps, OpenStreetMap, CoMaps), “컬렉션에 저장”, “삭제”입니다.',
+  'help.guide.read-day-plan.tip.2':
+    '방문지에 마우스를 올리면 끝에 “예약 추가”가 나타납니다. 거기서 만든 예약은 이날의 이 방문지에 묶입니다.',
+  // place-onto-day
+  'help.guide.place-onto-day.title': '장소를 날짜에 올리기',
+  'help.guide.place-onto-day.goal': '목록의 장소를 순서 안의 제자리에 놓인 그날의 방문지로 만듭니다.',
+  'help.guide.place-onto-day.step.1':
+    '장소 열에서 행을 날짜 카드로 끌어다 놓습니다. 두 방문지 사이에 놓으면 정확히 그 자리에 들어가고, 카드의 아무 곳에나 놓으면 뒤에 붙습니다.',
+  'help.guide.place-onto-day.step.2':
+    '끌지 않으려면 머리글을 클릭해 날짜를 연 다음, 장소 행 끝의 +를 클릭하거나 행을 오른쪽 클릭해 “+ 날에 추가”를 고릅니다.',
+  'help.guide.place-onto-day.step.3':
+    '빈 날짜에서는 “이 날짜에 장소 추가”가 장소 양식을 열고, 새 장소는 곧바로 그날에 놓입니다.',
+  'help.guide.place-onto-day.step.4':
+    '장소 세부정보에서는 “날에 추가”가 어느 날인지 묻습니다. 날짜가 열려 있으면 장소 열의 “해당 날짜로”가 열린 날짜에 새 장소를 만듭니다.',
+  'help.guide.place-onto-day.result':
+    '장소는 그날의 방문지가 되고, 지도에는 그날의 번호와 함께 나오며, 장소 열은 그것을 “계획됨”으로 셉니다.',
+  'help.guide.place-onto-day.tip.1':
+    '한 장소를 여러 날에 둘 수 있습니다. 둘째 날에는 장소 열에서 다시 놓으세요. 방문지를 한 날짜 카드에서 다른 카드로 끌면 그 대신 옮겨집니다.',
+  'help.guide.place-onto-day.tip.2': '도구 모음의 실행 취소 화살표가 이 배정을 되돌립니다.',
+  'help.guide.place-onto-day.tip.3':
+    '시간이 고정된 두 항목 사이나, 이미 시간이 정해진 예약 앞에는 방문지를 놓을 수 없습니다. 계획은 시간 순서를 지킵니다.',
+  // reorder-stops
+  'help.guide.reorder-stops.title': '하루의 순서 바꾸기',
+  'help.guide.reorder-stops.goal': '방문지를 위나 아래로, 또는 다른 날짜로 옮깁니다.',
+  'help.guide.reorder-stops.step.1': '방문지를 손잡이로 잡아 카드 안의 새 자리로 끕니다.',
+  'help.guide.reorder-stops.step.2':
+    '또는 방문지 오른쪽 끝의 화살표를 씁니다. 클릭할 때마다 한 칸씩 위나 아래로 갑니다.',
+  'help.guide.reorder-stops.step.3': '방문지를 다른 날짜 카드로 끌면 그쪽으로 옮겨지고 이전 날짜에서는 빠집니다.',
+  'help.guide.reorder-stops.step.4':
+    '시간이 고정된 방문지는 옮기면 그날의 순서가 깨질 때 “시간을 제거할까요?”라고 묻습니다. 그 자리를 정한 것이 시간이기 때문입니다. “확인”을 누르면 시간을 버리고 어디로든 갈 수 있게 됩니다.',
+  'help.guide.reorder-stops.result': '경로와 이동 시간이 곧바로 새 순서를 따릅니다.',
+  'help.guide.reorder-stops.tip.1':
+    '고정된 시간이 있는 예약은 순서를 바꿀 수 없습니다. 그 시간이 정하는 자리에 머뭅니다.',
+  'help.guide.reorder-stops.tip.2':
+    '경로 막대의 “최적화”는 하루 전체를 가장 짧은 길로 정렬합니다. 그대로 두고 싶은 방문지는 먼저 잠그세요.',
+  // set-stop-times
+  'help.guide.set-stop-times.title': '방문지에 시간 주기',
+  'help.guide.set-stop-times.goal': '방문지가 언제 시작하고 끝나는지 정해, 하루가 일정표처럼 읽히게 합니다.',
+  'help.guide.set-stop-times.step.1':
+    '방문지를 오른쪽 클릭해 “편집”을 고릅니다. 날짜에서 연 양식에는 아래에 “시작”과 “종료”가 있습니다.',
+  'help.guide.set-stop-times.step.2':
+    '“시작”을, 원하면 “종료”도 입력합니다. “시간 겹침:”은 그날의 다른 시간 있는 방문지와 겹친다고 알려 줍니다. “시작”보다 앞선 “종료”는 “업데이트”를 막습니다.',
+  'help.guide.set-stop-times.step.3':
+    '“업데이트”를 클릭합니다. 방문지에 시간 배지가 붙고, 그날에서 그 시간에 맞는 자리로 옮겨집니다.',
+  'help.guide.set-stop-times.result':
+    '시간이 있는 방문지는 순서 안의 자리를 지키고, 시간이 없는 방문지는 그 둘레에 정렬됩니다.',
+  'help.guide.set-stop-times.tip.1':
+    '시간은 그날의 그 방문지에 속합니다. 같은 장소라도 다른 날에는 다른 시간을 가질 수 있습니다.',
+  'help.guide.set-stop-times.tip.2':
+    '시간이 있는 방문지를 손으로 옮기려면 끌어 놓으세요. “확인”을 누르면 “시간을 제거할까요?”라는 물음이 그 과정에서 시간을 버립니다.',
+  'help.guide.set-stop-times.tip.3':
+    '같은 양식의 “이 날의 메모”에는 이날에만 해당하는 것, 예약한 자리, 표 번호 같은 것을 적습니다.',
+  // remove-from-day
+  'help.guide.remove-from-day.title': '방문지를 날짜에서 빼기',
+  'help.guide.remove-from-day.goal': '여행에서 지우지 않고 장소의 계획만 해제합니다.',
+  'help.guide.remove-from-day.step.1': '방문지를 오른쪽 클릭해 “날에서 제거”를 고릅니다.',
+  'help.guide.remove-from-day.step.2':
+    '방문지는 그날에서 사라집니다. 장소는 장소 열에 남고, 다른 날에도 없으면 “미계획” 아래로 갑니다.',
+  'help.guide.remove-from-day.result': '그날과 경로와 비용이 갱신됩니다. 실행 취소 화살표가 방문지를 되돌립니다.',
+  'help.guide.remove-from-day.tip.1': '같은 메뉴의 “삭제”는 모든 날짜를 포함해 여행 전체에서 그 장소를 지웁니다.',
+  'help.guide.remove-from-day.tip.2': '“날에서 제거”는 장소 세부정보 패널에도 “날에 추가” 옆에 있습니다.',
+  // lock-stop
+  'help.guide.lock-stop.title': '방문지를 제자리에 잠그기',
+  'help.guide.lock-stop.goal': '경로를 최적화해도 방문지를 그 자리에 둡니다.',
+  'help.guide.lock-stop.step.1': '방문지의 사진에 마우스를 올리고 잠금을 클릭합니다. “경로 최적화 중 위치 유지”입니다.',
+  'help.guide.lock-stop.step.2':
+    '이제 “최적화”는 다른 방문지를 그 둘레에 정렬합니다. 잠금을 다시 클릭하면(“클릭하여 잠금 해제”) 풀립니다.',
+  'help.guide.lock-stop.result': '잠금이 사진 위에 보입니다. 풀기 전까지 방문지는 자리를 지킵니다.',
+  'help.guide.lock-stop.tip.1': '시간이 고정된 방문지는 그 시간으로 잠겨 있어, 최적화 중에도 절대 움직이지 않습니다.',
+  'help.guide.lock-stop.tip.2':
+    '잠금은 이번 방문 동안만 갑니다. 새로 고치고 나면 모든 방문지가 다시 자유로워지고, 시간이 있는 방문지만 고정된 채로 남습니다.',
+  // day-note
+  'help.guide.day-note.title': '날짜에 메모 추가하기',
+  'help.guide.day-note.goal': '알림, 표 번호, 대안을 그날 안에 둡니다.',
+  'help.guide.day-note.step.1': '날짜 머리글에서 “메모 추가”를 클릭합니다.',
+  'help.guide.day-note.step.2':
+    '“메모”에 이름을 적으세요. 날짜 카드에 보이는 것이 그것입니다. 나머지는 “일별 메모”에 씁니다. 그 위의 “서식” 도구 모음이 글의 모양을 잡고(“굵게”, “글머리 기호 목록”, “번호 매기기 목록”, “링크”, “인용”), 왼쪽의 “미리 보기”가 어떤 카드가 되는지 보여 줍니다.',
+  'help.guide.day-note.step.3': '“아이콘”과 “색상”을 골라 메모가 방문지 사이에서 눈에 띄게 한 다음 “추가”합니다.',
+  'help.guide.day-note.step.4':
+    '메모는 방문지처럼 그날 안에 놓입니다. 끌어서 자리를 잡고, 오른쪽 클릭하면 “편집”과 “삭제”가 나옵니다.',
+  'help.guide.day-note.result':
+    '메모는 그날의 일부이고 PDF에도 들어갑니다. 시간이 있는 메모는 시간이 있는 방문지와 함께 정렬됩니다.',
+  'help.guide.day-note.tip.1':
+    '시간이 있는 메모는 예약이 없는 이동을 대신할 수 있습니다. 예를 들어 “08:15 중앙역에서 S3”입니다.',
+  'help.guide.day-note.tip.2': '메모는 날짜별입니다. 여행 전체를 위한 메모는 Collab에 속합니다.',
+  // day-route
+  'help.guide.day-route.title': '그날의 경로 보기와 최적화',
+  'help.guide.day-route.goal': '방문지 사이의 길을 보고, 어떻게 이동할지 고르고, 순서는 TREK에 맡깁니다.',
+  'help.guide.day-route.step.1':
+    '날짜를 열고 경로 막대의 “경로”를 클릭합니다. 방문지 사이의 길이 지도에 그려지고, 방문지 사이의 연결선이 각 구간의 시간과 거리를 보여 줍니다.',
+  'help.guide.day-route.step.2':
+    '그 옆의 “자동차”와 “도보”가 그날의 이동 수단을 정하고, 구간이 다시 계산됩니다. 플러그인이 자체 수단을 더할 수도 있습니다.',
+  'help.guide.day-route.step.3':
+    '연결선을 클릭하면 그 한 구간의 수단을 바꿉니다. 수단을 고르거나, “하루 기본값 사용”으로 그날의 수단으로 되돌립니다.',
+  'help.guide.day-route.step.4':
+    '“최적화”는 방문지를 가장 짧은 길로 다시 정렬합니다. 잠금이 있거나 시간이 고정된 방문지는 자리를 지킵니다. 그날에 숙박이 있으면 경로는 거기서 시작합니다.',
+  'help.guide.day-route.step.5':
+    '“Google Maps에서 열기”나 “CoMaps에서 열기”는 하루 전체를 하나의 경로로 그 앱에서 엽니다. 길에서 길찾기에 쓰라고 있는 것입니다.',
+  'help.guide.day-route.result': '하루가 시간이 있는 경로가 됩니다. 순서가 바뀌면 “총 비용”과 구간이 갱신됩니다.',
+  'help.guide.day-route.tip.1':
+    '경로는 기본적으로 OSRM에서 옵니다. 관리자는 “기본값”에서 TREK을 다른 경로 엔진으로 돌릴 수 있습니다.',
+  'help.guide.day-route.tip.2':
+    '경로를 낼 수 없었던 구간에는 시간이 나오지 않습니다. 두 방문지 모두 좌표가 있는지 확인하세요.',
+  'help.guide.day-route.tip.3': '실행 취소 화살표가 최적화를 되돌립니다.',
+  // manage-days
+  'help.guide.manage-days.title': '날짜 추가, 순서 변경, 이름 바꾸기',
+  'help.guide.manage-days.goal': '날짜에 담긴 것뿐 아니라 날짜 자체를 만듭니다.',
+  'help.guide.manage-days.step.1':
+    '날짜는 여행의 기간에서 나옵니다. “대시보드”의 여행 카드에서 날짜를 바꾸면 양 끝에서 날이 더해지거나 빠집니다.',
+  'help.guide.manage-days.step.2':
+    '도구 모음의 “날짜 순서 변경”은 목록을 엽니다. “위로 이동”과 “아래로 이동”은 그날에 담긴 것까지 함께 옮기고, “날짜 추가”는 끝에 하루를 붙입니다.',
+  'help.guide.manage-days.step.3':
+    '날짜의 이름을 바꾸려면 그날을 열고 지도 위 “일별 상세” 패널에서 제목 옆의 연필을 클릭합니다. 그 이름이 카드와 PDF에서 “1일차”를 대신합니다.',
+  'help.guide.manage-days.step.4':
+    '도구 모음의 “모든 날 펼치기”와 “모든 날 접기”는 모든 카드를 한 번에 펴고 접습니다. 카드 하나는 꺾쇠로 접습니다.',
+  'help.guide.manage-days.result':
+    '날짜는 자리를 따라갑니다. 위로 옮긴 날은 앞선 날짜를 받고, 그 방문지와 메모와 예약이 함께 따라갑니다.',
+  'help.guide.manage-days.tip.1': '“날짜 순서 변경”은 도구 모음에서 되돌릴 수 있습니다.',
+  'help.guide.manage-days.tip.2': '날짜 머리글의 비용은 그날의 방문지와 예약 가운데 가격이 있는 것을 더합니다.',
+  // bookings-in-plan
+  'help.guide.bookings-in-plan.title': '계획 속의 예약과 교통편 읽기',
+  'help.guide.bookings-in-plan.goal': '예약이 생기면 어디에 나타나는지, 어느 화면이 그것을 만드는지 압니다.',
+  'help.guide.bookings-in-plan.step.1':
+    '교통편(항공, 기차, 페리, 버스, 차량)은 출발하는 날에 “출발”로, 도착하는 날에 “도착”으로 시간과 경로와 함께 나옵니다. 여러 날에 걸친 것은 그 사이의 날들을 가로지릅니다.',
+  'help.guide.bookings-in-plan.step.2':
+    '방문지에 묶인 예약(레스토랑, 투어)은 그 방문지를 “예약 확정” 또는 “예약 대기 중”으로 표시합니다. 날짜는 있지만 방문지가 없는 예약은 그날의 독립된 행이 됩니다.',
+  'help.guide.bookings-in-plan.step.3':
+    '호텔에서 보내는 밤은 숙박입니다. 그날의 “일별 상세” 패널에서 “숙박” 아래, “체크인”부터 “체크아웃”까지 놓이고, 그 날들 각각의 경로가 거기서 시작합니다.',
+  'help.guide.bookings-in-plan.step.4':
+    '지도에서는 교통편 행의 토글이 그 경로를 그립니다. 도구 모음의 “모든 예약 경로 표시”는 모두를 그립니다.',
+  'help.guide.bookings-in-plan.step.5':
+    '만드는 곳: 마우스를 올린 방문지의 “예약 추가”, 날짜 머리글의 “교통 추가”와 “대중교통”, 그리고 가져오기와 파일을 갖춘 전체 목록인 “예약”과 “교통” 탭입니다.',
+  'help.guide.bookings-in-plan.result':
+    '예약 하나는 계획 안의 한 자리에 있습니다. 탭은 같은 예약을 목록으로 보여 줍니다.',
+  'help.guide.bookings-in-plan.tip.1':
+    '“확정됨”과 “대기 중”은 예약에 직접 정하는 상태입니다. 계획은 그것을 방문지 위에 보여 주고, “예약” 탭은 둘 다 셉니다.',
+  'help.guide.bookings-in-plan.tip.2': '시간이 고정된 교통편은 끌 수 없습니다. 대신 예약에서 시간을 바꾸세요.',
+  // export-plan
+  'help.guide.export-plan.title': '계획 내보내기',
+  'help.guide.export-plan.goal': '계획을 문서로, 캘린더로, 또는 GPS로 가져갑니다.',
+  'help.guide.export-plan.step.1': '날짜 위 도구 모음에서 “내보내기”를 클릭합니다.',
+  'help.guide.export-plan.step.2':
+    '“문서”: “PDF”는 모든 날을 방문지, 메모, 예약과 함께 인쇄 화면으로 엽니다. “날짜별 페이지 나누기”는 각 날을 새 쪽에서 시작하고, “PDF로 저장”이 그것을 내려받습니다.',
+  'help.guide.export-plan.step.3':
+    '“캘린더”: “.ics 다운로드”는 예약을 캘린더 파일로 저장합니다. “캘린더 구독”은 캘린더 앱이 스스로 새로 고치는 링크를 줍니다.',
+  'help.guide.export-plan.step.4':
+    '“지도 및 GPS · GPX”: “여행 전체”는 장소와 날짜별 경로와 트랙을 내보내고, “장소만”은 핀만, “날짜를 경로로”는 하루에 경로 하나를 내보냅니다. 오프라인 지도와 GPS 기기를 위한 것입니다.',
+  'help.guide.export-plan.result': '파일이 내려받아집니다. 여행에서는 아무것도 바뀌지 않습니다.',
+  'help.guide.export-plan.tip.1':
+    '하루만 지도 앱으로 보내려면 그 경로 막대를 씁니다. “Google Maps에서 열기” 또는 “CoMaps에서 열기”입니다.',
+  'help.guide.export-plan.tip.2':
+    '“캘린더 구독”은 설정에서 캘린더 구독이 켜져 있어야 합니다. “대시보드”에 그 안내가 있습니다.',
+  'help.guide.export-plan.tip.3': '내보내기는 읽기입니다. 여행의 모든 구성원이 할 수 있습니다.',
+
+  // ── Screen: trip-place ────────────────────────────────────────────────────────────────
+  'help.ctx.trip-place.title': '장소 세부정보',
+  'help.ctx.trip-place.summary':
+    '장소를 고르면 지도 위에 열리는 카드입니다. 여행이 그 장소에 대해 아는 모든 것, 모두가 준 별, 사진과 파일, 그리고 그 장소를 열린 날짜에 놓거나 목록에 넣거나 지도 앱으로 여는 버튼이 여기에 있습니다.',
+  'help.ctx.trip-place.bullet.1':
+    '장소 열의 행, 날짜 안의 정차지, 또는 지도의 마커를 클릭하면 카드가 지도 위에 열립니다. 날짜 안에서 고르면 어느 정차지를 뜻하는지 카드에 알려 주고, 그래야 그 정차지의 참가자와 예약이 함께 따라옵니다.',
+  'help.ctx.trip-place.bullet.2':
+    '머리 부분에는 둥근 사진, 이름, 카테고리, 주소, 좌표가 있습니다. 사진을 클릭하면 직접 고른 사진을 쓸 수 있고, 이름을 더블클릭하면 그 자리에서 장소 이름을 바꿀 수 있으며, 오른쪽의 X는 카드를 닫습니다.',
+  'help.ctx.trip-place.bullet.3':
+    '그 아래에는 여행자마다 장소에 준 별, 값이 있으면 그 값, 설명과 메모, 그리고 정차지가 가지고 있으면 “이 날의 메모”가 있습니다.',
+  'help.ctx.trip-place.bullet.4':
+    '이어서 “영업 시간”, “트랙 색상”, “트랙 통계”, “파일”이 해당되는 만큼 나옵니다. “파일”은 폴더에서 무엇이든 받고, 이 정차지의 예약에 달린 것도 함께 보여 줍니다.',
+  'help.ctx.trip-place.bullet.5':
+    '맨 아래 행에는 날짜가 열려 있는 동안 “날에 추가” 또는 “날에서 제거”가 있고, 그다음에 “컬렉션에 저장”, “내비게이션”, “웹사이트 열기”, “편집”, “삭제”가 있습니다.',
+  'help.ctx.trip-place.bullet.6':
+    'TREK이 지도 제공자와 맞춘 장소는 더 많은 것을 보여 줍니다. 그 제공자의 평점과 리뷰, 전화번호, 그리고 사진을 두른 “영업 중” 또는 “영업 종료” 고리와 그 뒤의 한 주 영업 시간입니다.',
+  // read-place
+  'help.guide.read-place.title': '카드가 장소에 대해 알려 주는 것',
+  'help.guide.read-place.goal': '여행이 한 장소에 대해 아는 모든 것을 카드 하나에서 읽습니다.',
+  'help.guide.read-place.step.1':
+    '일자 열에서 읽고 싶은 정차지를 클릭합니다. 카드가 지도 위에 열리고, 그 정차지는 자기 날짜 안에서 계속 표시된 채로 있습니다.',
+  'help.guide.read-place.step.2':
+    '머리 부분은 둥근 사진, 이름, 주소, 정확한 좌표입니다. 오른쪽의 X가 카드를 다시 닫습니다.',
+  'help.guide.read-place.step.3':
+    '그 아래에는 여행자마다 장소에 준 별이 평균과 투표한 사람 수와 함께 있습니다. 아무도 주지 않았으면 “아직 평점 없음”입니다.',
+  'help.guide.read-place.step.4':
+    '그다음이 설명이고, 그 아래가 메모입니다. 둘 다 장소 양식에 쓴 글을 그려 낸 것이라 목록도 링크도 굵은 글씨도 모두 작동합니다.',
+  'help.guide.read-place.step.5':
+    '“참가자”는 이 정차지에 누가 가는지 말해 줍니다. 누군가를 빼기 전까지는 모두가 들어 있습니다.',
+  'help.guide.read-place.step.6':
+    '맨 아래 행은 여기서 할 수 있는 일입니다. 장소를 열린 날짜에서 빼거나 넣기, 목록에 저장하기, 지도 앱에서 열기, 편집하기, 삭제하기.',
+  'help.guide.read-place.result':
+    '카드는 X로 닫거나 다른 장소를 고를 때까지 열린 채로 있고, 그 카드가 속한 정차지는 일자 열에서 계속 표시된 채로 있습니다.',
+  'help.guide.read-place.tip.1':
+    '장소 열에서 고르면 카드는 장소는 알아도 정차지는 모르므로 참가자도 예약도 나오지 않습니다. 대신 날짜 안의 정차지를 고르면 둘 다 나옵니다.',
+  'help.guide.read-place.tip.2':
+    '이름을 더블클릭하면 양식을 열지 않고 장소 이름을 바꿀 수 있습니다. Enter가 저장하고, Escape는 변경을 버립니다.',
+  'help.guide.read-place.tip.3':
+    'TREK이 지도 제공자와 맞출 수 있었던 장소는 그 제공자의 평점, 리뷰, 전화번호, 영업 시간도 보여 줍니다.',
+  // rate-place
+  'help.guide.rate-place.title': '장소에 평점 주기',
+  'help.guide.rate-place.goal': '장소에 내 별을 주고, 다른 사람들이 준 별을 봅니다.',
+  'help.guide.rate-place.step.1':
+    '장소를 엽니다. 별 행은 머리 바로 아래에 있고, 지금까지의 투표 평균과 그 수를 괄호 안에 담고 있습니다.',
+  'help.guide.rate-place.step.2':
+    '주려는 별을 클릭합니다. 별 위를 지나가는 대로 별이 채워지므로, 무엇을 주려는지 보입니다.',
+  'help.guide.rate-place.step.3':
+    '내 표는 곧바로 평균에 들어가고, 그 옆의 얼굴들이 투표한 사람들입니다. 행에 마우스를 올리면 모두의 별이 보입니다.',
+  'help.guide.rate-place.step.4': '같은 평균이 장소 열의 그 행에도 있어서, 좋은 장소가 목록에서 눈에 띕니다.',
+  'help.guide.rate-place.result':
+    '내 별은 여행 전체가 볼 수 있게 장소에 붙고, 목록 위 필터 행의 별은 이제 하한에 이르는 장소만 남길 수 있습니다.',
+  'help.guide.rate-place.tip.1':
+    '여행자는 누구나 평점을 줄 수 있습니다. 일부만 “장소 추가/편집/삭제”를 할 수 있는 여행에서도 그렇습니다.',
+  'help.guide.rate-place.tip.2':
+    '이미 준 별을 클릭하면 표를 거둘 수 있습니다. 투표한 사람이 아무도 남지 않으면 장소는 다시 “아직 평점 없음”이 됩니다.',
+  'help.guide.rate-place.tip.3':
+    '별 옆에 얼굴로 들어가는 투표자는 최대 여섯 명입니다. 툴팁은 모두의 이름을 대고, 내 표에는 표시를 합니다.',
+  // place-image
+  'help.guide.place-image.title': '장소에 내 사진 올리기',
+  'help.guide.place-image.goal': '자동 썸네일을 내 사진으로 바꿉니다.',
+  'help.guide.place-image.step.1': '장소 열에서 장소를 엽니다.',
+  'help.guide.place-image.step.2':
+    '머리의 둥근 사진에 마우스를 올립니다. 카메라가 나타나고 툴팁에 “이미지 업로드”가 뜹니다. 클릭해서 파일을 고릅니다.',
+  'help.guide.place-image.step.3': '이제 머리에 내 사진이 보이고, 그 모서리에 작은 빨간 X가 있습니다.',
+  'help.guide.place-image.step.4': '같은 사진이 장소 열의 그 행에도, 지도의 마커에도 있습니다.',
+  'help.guide.place-image.result':
+    '내 사진이 어디서나 그 장소의 사진이 됩니다. 카드, 장소 열, 날짜 안의 정차지, 지도의 마커, 그리고 공유한 여행에서도 그렇습니다.',
+  'help.guide.place-image.tip.1': 'JPG, PNG, GIF, WebP를 받고, iPhone의 HEIC는 들어오는 길에 변환됩니다.',
+  'help.guide.place-image.tip.2':
+    '모서리의 X가 내 사진을 다시 지우면 자동 사진이 돌아옵니다. 장소 자체는 그대로입니다.',
+  'help.guide.place-image.tip.3':
+    '내 사진이 없으면 TREK이 장소의 좌표로 사진을 찾아보고, 없으면 카테고리의 아이콘으로 돌아갑니다.',
+  // place-day-assign
+  'help.guide.place-day-assign.title': '열린 날짜에 장소를 놓거나 빼기',
+  'help.guide.place-day-assign.goal': '행을 플래너 너머로 끌지 말고 카드 자체의 버튼을 씁니다.',
+  'help.guide.place-day-assign.step.1':
+    '일자 열에서 날짜의 머리글을 클릭합니다. 이제 그 날짜가 열린 날짜이고, 카드는 그 날짜를 상대로 움직입니다.',
+  'help.guide.place-day-assign.step.2':
+    '장소 열에서 그 날짜에 없는 장소를 클릭합니다. 카드가 열리고 맨 아래 행이 “날에 추가”를 내놓습니다.',
+  'help.guide.place-day-assign.step.3':
+    '“날에 추가”를 클릭합니다. 정차지가 그 날짜의 끝에 놓이고 버튼은 “날에서 제거”로 바뀝니다.',
+  'help.guide.place-day-assign.step.4':
+    '정차지가 이제 그 날짜에 있고, 목록의 맨 끝입니다. 위로 끌어 제자리로 옮기세요.',
+  'help.guide.place-day-assign.step.5':
+    '“날에서 제거”는 그 정차지를 다시 날짜에서 빼고, 카드는 “날에 추가”를 한 번 더 내놓습니다.',
+  'help.guide.place-day-assign.result':
+    '그 날짜가 정차지를 갖거나 더는 갖지 않게 되고, 어느 쪽이든 장소 자체는 그대로입니다.',
+  'help.guide.place-day-assign.tip.1':
+    '이 버튼은 날짜가 열려 있는 동안에만 있습니다. 열린 날짜가 없으면 카드에는 장소를 더할 곳이 없습니다.',
+  'help.guide.place-day-assign.tip.2':
+    '정차지를 날짜에서 빼도 장소는 여행에도 장소 열에도 남습니다. 어디서나 없애는 것은 “삭제”입니다.',
+  'help.guide.place-day-assign.tip.3':
+    '숙소 예약이 날짜에 놓은 정차지에는 두 버튼 다 없습니다. 그 밤은 그 날짜의 “숙박” 블록에서 더하고 뺍니다.',
+  // place-participants
+  'help.guide.place-participants.title': '이 정차지에 누가 가는지 정하기',
+  'help.guide.place-participants.goal': '여행을 나누지 않고 한 정차지에서만 일행을 나눕니다.',
+  'help.guide.place-participants.step.1':
+    '날짜 안의 정차지를 클릭합니다. 카드가 열리고 “참가자”가 여행의 모두를 보여 줍니다.',
+  'help.guide.place-participants.step.2':
+    '여행자의 칩을 클릭하면 그 사람을 이 정차지에서 뺍니다. 마우스를 올리면 이름에 줄이 그어집니다.',
+  'help.guide.place-participants.step.3':
+    '누군가 빠지는 순간 점선 +가 나타납니다. 클릭하면 정차지에 없는 사람이 보입니다.',
+  'help.guide.place-participants.step.4':
+    '이름을 클릭하면 다시 넣습니다. 모두가 돌아오면 정차지는 다시 일행 전체의 것이 됩니다.',
+  'help.guide.place-participants.result':
+    '정차지는 고른 여행자들을 데리고 있고, 나머지 일행은 그 오후를 자기들끼리 보냅니다.',
+  'help.guide.place-participants.tip.1':
+    '“참가자”는 정차지가 선택되어 있을 때만 나오므로, 장소 열이 아니라 날짜 안에서 장소를 고르세요. 그리고 여행자가 두 명 이상인 여행에서만 나옵니다.',
+  'help.guide.place-participants.tip.2':
+    '아무도 고르지 않으면 모두가 간다는 뜻입니다. 마지막 한 명을 빼면 모두가 다시 들어옵니다.',
+  'help.guide.place-participants.tip.3': '자기 계정이 없는 “게스트”도 다른 사람과 똑같이 참가자가 될 수 있습니다.',
+  // place-booking
+  'help.guide.place-booking.title': '정차지에 붙은 예약',
+  'help.guide.place-booking.goal': '정차지에 속한 예약을 읽고, 열고, 새 예약을 붙입니다.',
+  'help.guide.place-booking.step.1':
+    '예약이 속한 정차지를 엽니다. 카드에 “확정됨” 또는 “대기 중”과 예약 이름이 담긴 띠가 보입니다.',
+  'help.guide.place-booking.step.2': '그 띠에는 “날짜”, “시간”, “예약 코드”와 예약이 가진 메모가 담깁니다.',
+  'help.guide.place-booking.step.3': '띠를 클릭합니다. 그 예약 자체의 양식이 그 위에 열립니다.',
+  'help.guide.place-booking.step.4':
+    '“날 배정에 연결”이 예약을 정차지에 붙이는 항목이고, 여기서는 이미 이 정차지를 가리키고 있습니다. 양식을 다시 닫습니다.',
+  'help.guide.place-booking.step.5':
+    '정차지의 새 예약은 일자 열에서 시작합니다. 정차지에 마우스를 올리고 그 끝의 +를 클릭하세요. 양식이 “새 예약”으로 열리고, 이미 그 정차지에 연결되어 있습니다.',
+  'help.guide.place-booking.result':
+    '예약은 정차지에 달립니다. 카드에도 있고, 날짜에도 있고, 그 파일은 여기 “파일” 아래에도 나옵니다.',
+  'help.guide.place-booking.tip.1':
+    '띠는 예약이 붙어 있는 정차지에서만 보입니다. 정차지가 없는 예약은 “예약” 탭에 있습니다.',
+  'help.guide.place-booking.tip.2':
+    '한 정차지를 여러 예약이 나눠 가질 수 있습니다. 점심과, 같은 문에서 출발하는 투어처럼.',
+  'help.guide.place-booking.tip.3': '기차, 항공편, 페리는 대신 교통 양식을 엽니다. “교통” 탭이 쓰는 그 양식입니다.',
+  // place-files
+  'help.guide.place-files.title': '장소의 티켓을 장소와 함께 두기',
+  'help.guide.place-files.goal': '장소의 티켓, 바우처, 지도를 나중에 찾게 될 곳에 둡니다.',
+  'help.guide.place-files.step.1':
+    '장소를 엽니다. “파일”은 카드 맨 아래에 있고, 장소에 파일이 하나도 없는 동안에는 “파일”이라고 적혀 있습니다.',
+  'help.guide.place-files.step.2': '그 옆의 “업로드”를 클릭하고 파일을 고릅니다.',
+  'help.guide.place-files.step.3': '버튼이 장소가 가진 개수를 세고, 목록은 스스로 열립니다.',
+  'help.guide.place-files.step.4': '각 행은 파일의 이름과 크기입니다. 클릭하면 파일이 열립니다.',
+  'help.guide.place-files.result': '파일이 장소에 놓이고 카드에서 세어지며, 여행의 “파일” 탭에도 있습니다.',
+  'help.guide.place-files.tip.1': '“파일”은 이 정차지의 예약에 달린 것도 보여 주므로, 호텔 확인서가 호텔에 나타납니다.',
+  'help.guide.place-files.tip.2': '“업로드”는 여러 파일을 한 번에 받습니다.',
+  'help.guide.place-files.tip.3':
+    '“파일 업로드” 권한이 없으면 “업로드” 버튼이 없습니다. 이미 장소에 있는 파일은 그대로 있습니다.',
+  // place-navigation
+  'help.guide.place-navigation.title': '장소를 지도 앱이나 웹사이트에서 열기',
+  'help.guide.place-navigation.goal': '실제로 데려다줄 앱에 장소를 넘깁니다.',
+  'help.guide.place-navigation.step.1': '장소를 열고 맨 아래 행의 “내비게이션”을 클릭합니다.',
+  'help.guide.place-navigation.step.2':
+    '목록은 이 장소에 맞는 지도 앱입니다. Google Maps, Waze, Apple Maps, OpenStreetMap, CoMaps.',
+  'help.guide.place-navigation.step.3':
+    '쓰는 앱을 클릭합니다. TREK은 가능한 곳에서는 좌표 한 쌍이 아니라 장소 자체를 넘기므로, 제대로 된 입구에 닿습니다.',
+  'help.guide.place-navigation.step.4':
+    '그 옆의 “웹사이트 열기”는 장소 자체의 페이지와 그 시간, 티켓을 새 탭에서 엽니다.',
+  'help.guide.place-navigation.result':
+    '지도 앱이 장소를 열고, 웹사이트는 따로 탭에서 열리며, 여행에서는 아무것도 바뀌지 않습니다.',
+  'help.guide.place-navigation.tip.1':
+    'Waze는 곧바로 길안내를 시작합니다. 나머지는 장소를 열어 주므로, 거기서 출발하려면 한 번 더 눌러야 합니다.',
+  'help.guide.place-navigation.tip.2':
+    '어떤 앱이 나오는지는 장소와 기기에 달려 있습니다. Android에서는 Apple Maps가 빠지고, 高德地图는 중국의 장소에서만 나오며, Waze와 Apple Maps, CoMaps는 장소의 좌표가 필요합니다.',
+  'help.guide.place-navigation.tip.3': '해당하는 앱이 하나뿐이면 버튼이 그 앱의 이름을 달고 곧바로 그 앱을 엽니다.',
+  // place-to-collection
+  'help.guide.place-to-collection.title': '장소를 내 목록 중 하나에 저장하기',
+  'help.guide.place-to-collection.goal': '이번 여행에서 찾은 장소를 다음 여행을 위해 남겨 둡니다.',
+  'help.guide.place-to-collection.step.1': '장소를 열고 카드 아래의 “컬렉션에 저장”을 클릭합니다.',
+  'help.guide.place-to-collection.step.2':
+    '“목록에 저장”이 내가 가진 목록과 공유받은 목록을 모두 보여 줍니다. 이미 이 장소가 들어 있는 목록에는 체크 표시가 있습니다.',
+  'help.guide.place-to-collection.step.3': '목록을 클릭합니다. 장소가 곧바로 그 안에 들어갑니다.',
+  'help.guide.place-to-collection.step.4': '닫으면 카드의 버튼이 “저장됨”이 됩니다.',
+  'help.guide.place-to-collection.result': '장소가 사진과 메모와 별을 달고 내 목록에 들어가, 다음 여행을 기다립니다.',
+  'help.guide.place-to-collection.tip.1':
+    '이 버튼은 “컬렉션” 애드온이 켜져 있는 동안에만 있고, 그것은 관리자가 “애드온” 아래에서 켭니다.',
+  'help.guide.place-to-collection.tip.2':
+    '한 장소가 여러 목록에 한꺼번에 들어갈 수 있고, 목록마다 상태가 따로입니다. 한 곳에서는 “아이디어”, 다른 곳에서는 “방문함”처럼.',
+  'help.guide.place-to-collection.tip.3':
+    '선택 창에서 장소 이름 옆의 “방문함으로 표시”는 그 목록에서 장소에 표시를 해 줍니다. 장소가 내 목록 여러 개에 들어 있으면 그 알약 버튼은 “모든 목록에서 방문함”이 되어 한 번에 모두 처리합니다.',
+  // place-track
+  'help.guide.place-track.title': '트랙을 읽고 고유한 색 주기',
+  'help.guide.place-track.goal': '가져온 걷기가 얼마나 긴지 보고, 그 선을 지도의 다른 선과 구별합니다.',
+  'help.guide.place-track.step.1': '장소 열의 트랙 행에는 그 선이 그려지는 색의 짧은 선이 있습니다. 클릭하세요.',
+  'help.guide.place-track.step.2': '“트랙 통계”가 설정한 “거리 단위”로 길의 길이를 알려 줍니다.',
+  'help.guide.place-track.step.3': '그 위의 “트랙 색상”이 쓰이는 색을 보여 줍니다. 행을 클릭하면 색 견본이 열립니다.',
+  'help.guide.place-track.step.4': '색을 고릅니다. 지도의 선과 행의 짧은 선이 함께 바뀝니다.',
+  'help.guide.place-track.step.5':
+    '왼쪽의 점선 칸 “자동 색상”은 트랙에 물려받은 색을 돌려주고, 오른쪽의 스포이트 “사용자 지정 색상 선택”은 그 밖의 색을 위해 시스템의 색 선택기를 엽니다.',
+  'help.guide.place-track.result':
+    '트랙이 고른 색으로 그려집니다. 카드에서도, 장소 열의 그 행에서도, 지도에서도 그렇습니다.',
+  'help.guide.place-track.tip.1': 'GPX, KML, KMZ 파일에서 가져온 길을 가진 장소만 이 두 블록을 갖습니다.',
+  'help.guide.place-track.tip.2':
+    '고도와 함께 기록된 트랙은 가장 높은 지점과 낮은 지점, 오르내린 미터, 그리고 걷기의 단면도 보여 줍니다.',
+  'help.guide.place-track.tip.3':
+    '가져오기는 데려오는 트랙마다 고유한 색을 주므로, 두 걷기가 같은 색으로 도착하는 일은 없습니다.',
+
+  // ── Screen: trip-files ────────────────────────────────────────────────────────────────
+  'help.ctx.trip-files.title': '파일',
+  'help.ctx.trip-files.summary':
+    '여행의 모든 문서가 한 목록에 있습니다. 티켓, 예약 확인서, 패스, 사진. 각각에 메모와, 그것이 속한 장소나 예약으로 가는 링크가 붙고, 휴지통에서 다시 꺼낼 수도 있습니다.',
+  'help.ctx.trip-files.bullet.1':
+    '맨 위의 “여기에 파일을 놓으세요”가 파일을 받습니다. 상자를 클릭하면 파일 선택 창이 열립니다. 그 아래 줄에는 이 TREK이 받는 파일 형식과 파일당 50 MB 제한이 적혀 있습니다.',
+  'help.ctx.trip-files.bullet.2':
+    '탭이 목록에 무엇을 보여 줄지 정합니다. “전체”, “PDF”, “이미지”, “문서”이고 각각에 개수가 붙습니다. 파일에 즐겨찾기를 달면 별 탭이, 메모에 첨부가 붙으면 “Collab 메모”가 함께 생깁니다.',
+  'help.ctx.trip-files.bullet.3':
+    '행에는 올린 사람, 이름, 그 아래의 메모, 크기와 날짜, 그리고 링크마다 배지 하나가 있습니다. “일별 계획”과 장소, “예약” 또는 “교통”과 그 예약, “Collab 메모에서”입니다.',
+  'help.ctx.trip-files.bullet.4':
+    '행 끝에는 “즐겨찾기”, “배정”, “열기”, “다운로드”, “삭제”가 있습니다. “삭제”는 묻지 않습니다. 파일은 휴지통으로 가고, 거기서 다시 꺼낼 수 있습니다.',
+  'help.ctx.trip-files.bullet.5':
+    '사진이나 영상은 전체 화면으로 열리며 화살표 키와 썸네일 띠로 넘깁니다. 그 밖의 문서는 페이지 위의 미리보기로 열리고 “새 탭에서 열기”와 “다운로드”가 함께 나옵니다. 월렛 패스는 곧바로 다운로드됩니다.',
+  'help.ctx.trip-files.bullet.6':
+    '오른쪽 끝의 “휴지통”은 목록을 삭제된 파일로 바꿉니다. 거기서 하나씩 복원하거나 영구 삭제할 수 있고, “휴지통 비우기”는 전부 지웁니다. 관리자가 문서 저장소를 연결해 둔 곳에서는 그 옆에 “문서 동기화”가 있습니다.',
+  // files-upload
+  'help.guide.files-upload.title': '문서를 여행에 넣기',
+  'help.guide.files-upload.goal':
+    '티켓이나 예약 확인서, 사진을 다운로드 폴더에서 여행으로 옮겨, 여행에 있는 모두가 닿을 수 있게 합니다.',
+  'help.guide.files-upload.step.1':
+    '여행을 열고 탭 바의 “파일”을 클릭합니다. 여행의 문서가 거기 나열되고, 그 위에 업로드 상자가 있습니다.',
+  'help.guide.files-upload.step.2':
+    '“여기에 파일을 놓으세요”를 클릭하고 파일을 하나 또는 여럿 고릅니다. 파일은 차례로 올라가고, 그동안 상자에는 “업로드 중...”이 나옵니다. 상자 아래 줄은 이 TREK이 받는 형식과, 파일 하나가 최대 50 MB라는 것을 알려 줍니다.',
+  'help.guide.files-upload.step.3':
+    '마지막 파일이 올라가면 그 파일의 “파일 배정”이 저절로 열립니다. “메모 추가...”는 파일에 한 줄을 붙이고, 그 아래 목록은 파일을 장소나 예약에 묶습니다. ×로 닫으면 되고, 닫아도 잃는 것은 없습니다.',
+  'help.guide.files-upload.step.4':
+    '새 파일은 목록 맨 위에 섭니다. 행에는 올린 사람, 이름, 크기, 날짜가 나오고, 사진에는 썸네일이, 그 밖의 파일에는 형식이 붙습니다.',
+  'help.guide.files-upload.result': '문서가 여행 안에 있고, 여행을 볼 수 있는 모두가 열고 내려받을 수 있습니다.',
+  'help.guide.files-upload.tip.1':
+    '파일은 바탕화면에서 상자 위로 바로 끌어다 놓을 수도 있습니다. 파일이 위에 있는 동안 상자가 밝아집니다.',
+  'help.guide.files-upload.tip.2':
+    '클립보드의 사진은 Ctrl+V로 목록에 들어갑니다. 예약 화면을 찍은 것을 먼저 저장할 필요가 없습니다.',
+  'help.guide.files-upload.tip.3':
+    '업로드에는 “파일 업로드” 권한이 필요합니다. 권한이 없으면 상자 자체가 없습니다. 목록에 없는 형식이거나 50 MB가 넘는 파일은 메시지와 함께 거절되고 아무것도 올라가지 않습니다.',
+  // files-link
+  'help.guide.files-link.title': '문서를 장소나 예약에 묶기',
+  'help.guide.files-link.goal': '티켓을 이 목록에서만이 아니라, 그것이 속한 날에서도 찾을 수 있게 합니다.',
+  'help.guide.files-link.step.1': '행 끝의 연필, “배정”을 클릭합니다. 파일 이름을 단 “파일 배정”이 열립니다.',
+  'help.guide.files-link.step.2':
+    '“메모” 아래의 “메모 추가...”는 한 줄을 받고, 그 줄은 목록에서 파일 이름 아래에 섭니다. 상자를 벗어나는 순간 저장됩니다.',
+  'help.guide.files-link.step.3':
+    '“장소” 아래에는 여행의 장소가 각자 속한 날끼리 묶여 있고, 어느 날에도 없는 장소는 맨 끝의 “미배정”에 있습니다. 하나를 클릭하면 체크가 붙습니다.',
+  'help.guide.files-link.step.4':
+    '“예약”과 “교통” 아래에는 여행의 예약이 있습니다. 문서가 속한 것을 클릭하면 거기에도 체크가 붙습니다.',
+  'help.guide.files-link.step.5':
+    '×로 닫습니다. 여기에는 저장 버튼이 없습니다. 클릭할 때마다 그 자리에서 기록되었습니다.',
+  'help.guide.files-link.result':
+    '행에는 메모와 링크마다 배지 하나가 붙습니다. “일별 계획”과 장소 이름, “교통”과 항공편 이름입니다. 문서는 그 장소와 그 예약에도 함께 걸립니다.',
+  'help.guide.files-link.tip.1':
+    '한 파일이 여러 링크를 동시에 가질 수 있습니다. 같은 예약 확인서가 호텔에도, 그것이 덮는 밤에도 속합니다.',
+  'help.guide.files-link.tip.2': '체크된 항목을 다시 클릭하면 그 링크가 사라집니다. 파일 자체는 남습니다.',
+  'help.guide.files-link.tip.3':
+    '반대 방향도 됩니다. 장소나 예약에 붙인 문서는 이 목록에도 있고, 그 행에 같은 배지가 붙습니다.',
+  // files-star
+  'help.guide.files-star.title': '중요한 문서를 맨 위에 두기',
+  'help.guide.files-star.goal': '여행 내내 불어나는 목록에서 정말 필요한 서류 두세 개를 끄집어냅니다.',
+  'help.guide.files-star.step.1':
+    '행 끝의 “즐겨찾기”를 클릭합니다. 별이 노랗게 차고, 파일 이름 앞에 별이 하나 더 나타나며, 버튼은 이제 “즐겨찾기 해제”가 됩니다.',
+  'help.guide.files-star.step.2':
+    '목록이 다시 정렬됩니다. 즐겨찾기한 파일이 나머지 모두의 위에 서고, 각 묶음 안에서는 최신순입니다.',
+  'help.guide.files-star.step.3':
+    '맨 위 탭에 별이 하나 생겼고, 그 뒤에 즐겨찾기한 파일 수가 있습니다. 클릭하면 그것만 보입니다.',
+  'help.guide.files-star.result':
+    '창구에서 필요한 서류가 목록 맨 위에 서고, 한 탭에는 그것 말고는 아무것도 나오지 않습니다.',
+  'help.guide.files-star.tip.1':
+    '별 탭은 무언가에 즐겨찾기가 달려 있는 동안에만 있습니다. 마지막 파일의 즐겨찾기를 풀면 탭도 함께 사라집니다.',
+  'help.guide.files-star.tip.2':
+    '즐겨찾기는 편집으로 칩니다. “파일 메타데이터 편집” 권한이 없어 여행의 파일을 읽기만 할 수 있는 구성원에게는 별이 보이지만 달 수는 없습니다.',
+  // files-filter
+  'help.guide.files-filter.title': '목록에서 문서 찾기',
+  'help.guide.files-filter.goal': '모든 것이 든 목록을 찾고 있는 한 가지 서류까지 좁힙니다.',
+  'help.guide.files-filter.step.1': '목록 위의 탭은 “전체”, “PDF”, “이미지”, “문서”이고, 각각 뒤에 파일 수가 붙습니다.',
+  'help.guide.files-filter.step.2': '“PDF”를 클릭하면 목록에는 PDF 파일만 남습니다.',
+  'help.guide.files-filter.step.3':
+    '탭 두 개가 여행에 무엇이 있느냐에 따라 생겼다 사라집니다. 파일에 즐겨찾기가 달리면 별이, Collab 탭의 메모에 첨부가 붙으면 “Collab 메모”가 나옵니다.',
+  'help.guide.files-filter.step.4': '“전체”는 목록 전체를 되돌립니다.',
+  'help.guide.files-filter.result': '목록에는 탭이 가리키는 것만 나오고, 각 탭의 숫자가 그것이 몇 개인지 알려 줍니다.',
+  'help.guide.files-filter.tip.1':
+    '여기에는 폴더도 이름 바꾸기도 없습니다. “파일 배정”의 메모, 장소와 예약으로 가는 링크, 그리고 즐겨찾기가 문서를 정리하는 수단입니다.',
+  'help.guide.files-filter.tip.2':
+    '목록 자체는 언제나 즐겨찾기가 먼저, 그다음이 최신순입니다. 오늘 올린 문서가 지난달 것보다 위에 섭니다.',
+  // files-preview
+  'help.guide.files-preview.title': 'TREK을 떠나지 않고 문서 읽기',
+  'help.guide.files-preview.goal': '티켓이나 사진을 그 자리에서 보고, 필요할 때는 내 기기로 가져옵니다.',
+  'help.guide.files-preview.step.1':
+    '사진의 이름이나 썸네일을 클릭합니다. 전체 화면으로 열리고, 머리글에 파일 이름과 사진들 사이에서의 위치가 나옵니다.',
+  'help.guide.files-preview.step.2':
+    '양옆의 둥근 화살표, 왼쪽과 오른쪽 화살표 키, 그리고 아래의 썸네일 띠로 목록이 지금 보여 주는 모든 사진을 넘깁니다.',
+  'help.guide.files-preview.step.3':
+    '머리글에는 “새 탭에서 열기”와 “다운로드”가 있습니다. ×나 Escape로 사진이 다시 닫힙니다.',
+  'help.guide.files-preview.step.4':
+    '사진이 아닌 문서는 대신 페이지 위의 미리보기로 열리고, 머리글에 같은 버튼 두 개가 있습니다. 이것은 ×나 옆을 클릭하면 닫힙니다.',
+  'help.guide.files-preview.step.5': '행 끝의 “다운로드”는 아무것도 열지 않고 파일을 바로 내 기기에 저장합니다.',
+  'help.guide.files-preview.result': '문서가 화면에 있고, 같은 버튼 두 개가 그것을 브라우저 탭이나 디스크에 놓습니다.',
+  'help.guide.files-preview.tip.1': '터치 화면에서는 화살표를 클릭하는 대신 사진을 쓸어 넘깁니다.',
+  'help.guide.files-preview.tip.2':
+    '월렛 패스는 미리보기를 열지 않습니다. 곧바로 내려받아, 휴대폰이 월렛 앱에 넘길 수 있게 합니다.',
+  'help.guide.files-preview.tip.3':
+    '“새 탭에서 열기”와 “다운로드”는 둘 다 내 세션으로 파일을 가져옵니다. 그래서 주소창에서 복사한 링크는 다른 사람에게는 쓸모가 없습니다.',
+  // files-trash
+  'help.guide.files-trash.title': '문서를 버리고, 다시 가져오기',
+  'help.guide.files-trash.goal': '여행에 더 이상 필요 없는 것을 치우되, 알고 보니 필요했던 것은 잃지 않습니다.',
+  'help.guide.files-trash.step.1':
+    '행 끝의 “삭제”를 클릭합니다. 파일은 즉시 목록에서 사라지고 “휴지통으로 이동됨”이라는 메시지가 나옵니다. 미리 묻는 것은 없습니다.',
+  'help.guide.files-trash.step.2':
+    '도구 모음 오른쪽 끝의 “휴지통”은 목록을 버린 것들로 바꿉니다. 제목은 “휴지통”이 되고 필터 탭은 사라집니다.',
+  'help.guide.files-trash.step.3':
+    '버려진 행은 흐리게 표시되고 버튼이 둘만 남습니다. 파일을 되돌리는 “복원”과, 한 번 물은 뒤 영구히 지우는 “삭제”입니다.',
+  'help.guide.files-trash.step.4':
+    '“복원”을 클릭합니다. “파일이 복원되었습니다”라는 메시지가 나오고, 행은 메모와 링크를 그대로 단 채 휴지통을 떠납니다.',
+  'help.guide.files-trash.step.5':
+    '맨 위의 “휴지통 비우기”는 여기 남은 것을 모두 영구히 지우며, 그 전에 브라우저가 한 번 묻습니다. “휴지통”을 누르면 다시 파일 목록으로 돌아갑니다.',
+  'help.guide.files-trash.result': '파일은 아무 일도 없었던 것처럼 있던 자리 그대로 목록에 돌아와 있습니다.',
+  'help.guide.files-trash.tip.1':
+    '행의 “삭제”는 미리 묻지 않고, 휴지통이 바로 그것을 위해 있습니다. 여기에서 직접 그렇게 하기 전에는 아무것도 TREK을 떠나지 않습니다.',
+  'help.guide.files-trash.tip.2':
+    '파일을 버리고 되돌리는 데에는 “파일 삭제” 권한이 필요합니다. 권한이 없는 구성원에게는 행의 “삭제”도, 휴지통 안의 버튼도 보이지 않습니다.',
+  'help.guide.files-trash.tip.3': '휴지통에서 영구 삭제한 파일은 되돌릴 수 없습니다.',
+
+  // ── Screen: trip-day-detail ───────────────────────────────────────────────────────────
+  'help.ctx.trip-day-detail.title': '일별 상세',
+  'help.ctx.trip-day-detail.summary':
+    '일자의 헤더가 지도 위에 여는 패널입니다. 하루 전체, 이름과 날짜, 머무는 곳의 날씨, 그날에 걸리는 예약, 그리고 그날에 잡아 둔 숙박이 들어 있습니다.',
+  'help.ctx.trip-day-detail.bullet.1':
+    '일자 열에서 어느 날의 헤더를 클릭하면 패널이 지도 한가운데 위에 열립니다. 같은 헤더를 다시 누르거나 그 오른쪽의 X를 누르면 닫히고 그 날의 선택도 풀립니다.',
+  'help.ctx.trip-day-detail.bullet.2':
+    '헤더에는 그 날의 이름과 날짜가 있습니다. 이름 옆의 연필은 날 이름을 바꾸고, 이중 셰브론은 패널을 얇은 막대로 접어 지도를 다시 비웁니다.',
+  'help.ctx.trip-day-detail.bullet.3':
+    '맨 위는 그 날의 날씨입니다. “… 예보”가 어느 장소를 가리키는지 말해 줍니다. 그 날의 첫 경유지이거나, 아침을 맞는 호텔입니다.',
+  'help.ctx.trip-day-detail.bullet.4':
+    '“예약”은 그 날의 예약을 종류, 속한 경유지, 시간과 함께 보여 줍니다. 초록은 확정됨, 호박색은 아직 대기 중입니다. 여기서는 읽기만 하고, 예약을 바꾸는 곳은 “예약” 탭입니다.',
+  'help.ctx.trip-day-detail.bullet.5':
+    '“숙박”은 이 날에 걸린 모든 숙박을 보여 줍니다. “체크인”과 “체크아웃”은 각각 해당하는 날에 붙고, 체크인 가능 시간대와 체크아웃 시간, 확인 번호도 함께 나옵니다.',
+  'help.ctx.trip-day-detail.bullet.6':
+    '“숙박 추가”는 이 날에 하룻밤을 잡습니다. 여행의 장소에서 숙소를 고르고, 며칠에 걸치는지 정하고, 시간과 번호를 넣습니다.',
+  // day-panel
+  'help.guide.day-panel.title': '날을 열어 상세를 읽기',
+  'help.guide.day-panel.goal': '지도를 떠나지 않고 하루 전체, 날씨, 예약, 그리고 잠자는 곳을 봅니다.',
+  'help.guide.day-panel.step.1':
+    '일자 열에서 어느 날의 헤더를 클릭합니다. 그 날이 선택되고 상세가 지도 한가운데 위에 열립니다.',
+  'help.guide.day-panel.step.2':
+    '헤더는 그 날의 이름을 보여 줍니다. 이름을 주기 전까지는 “1일차”이고, 그 아래에 날짜가 있습니다.',
+  'help.guide.day-panel.step.3':
+    '맨 위는 그 날의 날씨입니다. “… 예보”가 어느 장소를 가리키는지 말해 줍니다. 그 날의 첫 경유지이거나, 아침을 맞는 호텔입니다.',
+  'help.guide.day-panel.step.4': '그 아래의 “예약”은 이 날에 걸리는 예약을 시간과 함께 보여 줍니다.',
+  'help.guide.day-panel.step.5':
+    '“숙박”은 이 날에 걸린 숙박을 보여 주고, “체크인”과 “체크아웃”은 각각 해당하는 날에 붙습니다.',
+  'help.guide.day-panel.step.6':
+    '헤더의 이중 셰브론은 패널을 얇은 막대로 접습니다. 그 옆의 X는 패널을 닫고 그 날의 선택도 풉니다.',
+  'help.guide.day-panel.result':
+    '막대로 접힌 패널은 지도를 비워 두고 그 날의 선택은 유지합니다. 닫으면 선택이 풀리고 계획은 원래대로입니다.',
+  'help.guide.day-panel.tip.1': '패널의 헤더 막대는 어디를 클릭해도 접힙니다. 셰브론은 그 버튼일 뿐입니다.',
+  'help.guide.day-panel.tip.2':
+    '장소 열에서 장소를 열면 패널 자리에 장소 세부정보가 들어옵니다. 그것을 닫으면 그 날이 돌아옵니다.',
+  // day-weather
+  'help.guide.day-weather.title': '그 날의 날씨 읽기',
+  'help.guide.day-weather.goal': '그 날에 실제로 있는 곳의 하루가 어떨지 압니다.',
+  'help.guide.day-weather.step.1':
+    '“… 예보”는 숫자가 어느 장소의 것인지 알려 줍니다. 그 날의 첫 경유지, 경유지가 없는 날에는 아침을 맞는 호텔입니다.',
+  'help.guide.day-weather.step.2': '큰 숫자가 그 날의 기온이고, 그 옆에 최저와 최고, 그리고 날씨 상태가 말로 나옵니다.',
+  'help.guide.day-weather.step.3': '그 아래 칩들은 강수 확률, 강수량, 가장 센 바람, 그리고 일출과 일몰입니다.',
+  'help.guide.day-weather.step.4':
+    '맨 아래는 그 날의 시간별, 두 시간마다입니다. 시각, 아이콘, 기온, 강수 확률이 나옵니다. 50%를 넘는 시간은 파랗게 칠해집니다.',
+  'help.guide.day-weather.result':
+    '일자 열의 그 날 카드에도 번호 아래에 같은 날씨가 작게 실려서, 여행 전체를 한눈에 읽을 수 있습니다.',
+  'help.guide.day-weather.tip.1':
+    '온도와 바람은 설정의 “화면”에서 한 선택을 따릅니다. Fahrenheit로 바꾸면 같은 예보가 °F와 mph로 읽힙니다.',
+  'help.guide.day-weather.tip.2':
+    '좌표가 있는 경유지도 없고 아침을 맞을 호텔도 없는 날에는 날씨가 전혀 나오지 않습니다. 예보는 언제나 장소에 대한 것이지 여행에 대한 것이 아닙니다.',
+  'help.guide.day-weather.tip.3':
+    '16일보다 앞선 날에는 받을 예보가 없습니다. 그때의 숫자는 그 날짜에 대한 지난 해들의 평균이며, Ø 표시가 붙고 그 아래에 그렇게 적힙니다.',
+  // rename-day
+  'help.guide.rename-day.title': '날에 이름 주기',
+  'help.guide.rename-day.goal': '“5일차” 대신 “Kyoto 도착”이나 “휴식일”처럼 그 날을 그대로 부릅니다.',
+  'help.guide.rename-day.step.1': '날을 엽니다. 헤더에 “5일차”가 있고 그 아래에 날짜가 있습니다.',
+  'help.guide.rename-day.step.2': '이름 옆의 연필을 클릭합니다.',
+  'help.guide.rename-day.step.3': '이름이 입력란으로 바뀝니다. 원하는 이름을 입력합니다.',
+  'help.guide.rename-day.step.4':
+    'Enter를 누르거나 다른 곳을 클릭하기만 해도 됩니다. Escape는 변경을 버립니다. 일자 열의 그 날 카드에도 이름이 실립니다.',
+  'help.guide.rename-day.result': '이름이 패널과 일자 열의 그 날 카드에서 “5일차”를 대신합니다. 날짜는 그대로입니다.',
+  'help.guide.rename-day.tip.1':
+    '입력란을 비우고 저장하면 그 날은 다시 “5일차”가 됩니다. 이름이 없을 때 나오는 것이 번호입니다.',
+  'help.guide.rename-day.tip.2':
+    '이름은 날짜가 아니라 날에 속합니다. 날들의 순서를 바꾸면 그 날의 다른 모든 것과 함께 따라갑니다.',
+  // add-accommodation
+  'help.guide.add-accommodation.title': '어느 날에 하룻밤 잡기',
+  'help.guide.add-accommodation.goal': '호텔을 한 번만 계획에 넣습니다. 걸치는 날, 시간, 확인 번호까지 함께입니다.',
+  'help.guide.add-accommodation.step.1':
+    '숙소는 먼저 여행의 장소여야 합니다. 다른 장소와 똑같이 장소 열에서 만드세요. 선택기는 이미 있는 것만 보여 줍니다.',
+  'help.guide.add-accommodation.step.2': '도착하는 날을 열고 “숙박” 아래의 “숙박 추가”를 클릭합니다.',
+  'help.guide.add-accommodation.step.3':
+    '“적용할 날”이 이 숙박이 걸치는 밤을 정합니다. 왼쪽이 체크인 날, 오른쪽이 체크아웃 날입니다. “전체”는 여행 전체를 덮습니다.',
+  'help.guide.add-accommodation.step.4':
+    '“체크인”, “까지”, “체크아웃”을 채우고 예약 번호를 “확인”에 넣습니다. 넷 다 비워 두어도 됩니다.',
+  'help.guide.add-accommodation.step.5': '여행의 장소에서 숙소를 고릅니다. 목록 위의 칩이 한 카테고리로 좁혀 줍니다.',
+  'help.guide.add-accommodation.step.6': '“저장”을 클릭합니다.',
+  'help.guide.add-accommodation.result':
+    '숙박은 걸치는 모든 날에 나옵니다. 첫날에 “체크인”, 마지막 날에 “체크아웃”입니다. 숙소는 체크인 날의 경유지가 되어 지도가 거기까지 가는 길을 그리고, “예약” 탭에 “숙박” 예약이 생깁니다.',
+  'help.guide.add-accommodation.tip.1':
+    '선택기는 열어 둔 날로 시작하고 체크아웃은 그 다음 날입니다. 저장하기 전에 둘 다 옮길 수 있습니다.',
+  'help.guide.add-accommodation.tip.2':
+    '호텔을 만들 때 여행의 Hotel 카테고리를 주면, 목록 위의 칩으로 한 번에 호텔만 남길 수 있습니다.',
+  'help.guide.add-accommodation.tip.3':
+    '시간은 모두 선택 사항입니다. 체크인도 번호도 없는 숙박이라도 밤은 그대로 덮고 경로도 그대로 그립니다.',
+  // edit-accommodation
+  'help.guide.edit-accommodation.title': '잡아 둔 숙박 바꾸기 또는 취소하기',
+  'help.guide.edit-accommodation.goal': '숙박을 옮기거나, 시간을 고치거나, 계획에서 다시 빼냅니다.',
+  'help.guide.edit-accommodation.step.1':
+    '숙박의 모든 날에서 카드는 숙소, 체크인 가능 시간대, 체크아웃 시간, 확인 번호를 보여 줍니다.',
+  'help.guide.edit-accommodation.step.2':
+    '그 오른쪽의 연필이 숙박을 다시 엽니다. 팝업은 이제 “숙박 편집”이라고 나옵니다.',
+  'help.guide.edit-accommodation.step.3':
+    '필요한 것을 바꿉니다. 걸치는 날, “체크인”, “까지”, “체크아웃”, “확인”, 또는 숙소 자체입니다.',
+  'help.guide.edit-accommodation.step.4': '“저장”을 클릭합니다.',
+  'help.guide.edit-accommodation.step.5':
+    '연필 옆의 X는 숙박을 끝냅니다. 아무것도 묻지 않고, 거기 딸린 “숙박” 예약도 함께 사라집니다.',
+  'help.guide.edit-accommodation.result':
+    '변경은 숙박이 걸치는 모든 날에 한 번에 닿고, “예약” 탭의 “숙박” 예약에도 함께 닿습니다.',
+  'help.guide.edit-accommodation.tip.1':
+    '숙박 중간의 밤에는 “체크인”도 “체크아웃”도 라벨이 붙지 않습니다. 붙는 것은 기간의 첫날과 마지막 날뿐입니다.',
+  'help.guide.edit-accommodation.tip.2':
+    '숙박을 취소하면 체크인 날에 놓았던 경유지와 그 예약에 딸린 비용도 함께 사라집니다. 실수였다면 다시 하룻밤을 잡으세요.',
+  // day-bookings
+  'help.guide.day-bookings.title': '그 날의 예약을 한눈에',
+  'help.guide.day-bookings.goal': '이 날에 이미 무엇이 예약되어 있고 확정되었는지를 한곳에서 봅니다.',
+  'help.guide.day-bookings.step.1':
+    '“예약”은 그 날의 예약을 보여 줍니다. 그 날로 날짜가 잡힌 것과, 그 날의 경유지에 달린 것입니다.',
+  'help.guide.day-bookings.step.2':
+    '한 행에는 예약의 종류와 이름이 나오고, 경유지에 속하면 가운뎃점 뒤에 그 경유지가 붙습니다. 시간은 오른쪽 끝에 있습니다.',
+  'help.guide.day-bookings.step.3':
+    '색이 예약의 상태를 말해 줍니다. 초록 행은 확정됨, 호박색 행은 아직 대기 중입니다. 호텔은 이 목록에 없고 아래에 자기 블록을 가집니다.',
+  'help.guide.day-bookings.step.4': '이 목록은 예약을 읽어 주기만 합니다. 예약을 만들고 바꾸는 곳은 “예약” 탭입니다.',
+  'help.guide.day-bookings.result':
+    '그 날로 날짜가 잡힌 것도, 그 날의 경유지에 달린 것도 모두 이 하나의 목록에 있습니다.',
+  'help.guide.day-bookings.tip.1':
+    '예약은 자기 날짜에 따라 어느 날에 놓입니다. “예약” 탭에서 날짜를 바꾸면 저절로 다른 날로 옮겨 갑니다.',
+  'help.guide.day-bookings.tip.2':
+    '“예약” 블록이 없으면 그 날에는 예약이 없다는 뜻입니다. 비어 있는 채로 보여 주는 대신 숨깁니다.',
+
+  // ── Screen: trip-map ──────────────────────────────────────────────────────────────────
+  'help.ctx.trip-map.title': '지도',
+  'help.ctx.trip-map.summary':
+    '계획의 가운데입니다. 여행의 모든 장소가 핀으로 있고, 그것들을 잇는 경로가 있으며, 지도 가장자리에는 위성, 전체 여행 한눈에 보기, 지금 보고 있는 동네 주변의 장소를 위한 스위치가 있습니다.',
+  'help.ctx.trip-map.bullet.1':
+    '핀은 장소입니다. 사진이 있으면 그 사진이고, 없으면 카테고리 색과 카테고리 아이콘입니다. 포인터를 올리면 이름, 평점, 카테고리, 주소가 담긴 카드가 나옵니다.',
+  'help.ctx.trip-map.bullet.2':
+    '너무 가까워 구분되지 않는 핀들은 개수를 가진 하나의 짙은 버블로 접힙니다. 버블을 클릭하면 지도가 그 안에 있는 것에 맞춰 확대됩니다.',
+  'help.ctx.trip-map.bullet.3':
+    '핀을 클릭하면 지도 아래에 그 장소가 열립니다. 평점, “파일”, 그리고 다음에 할 수 있는 일이 나옵니다. 지도의 빈 곳을 클릭하면 다시 닫힙니다.',
+  'help.ctx.trip-map.bullet.4':
+    '일자 열에서 날짜가 열려 있으면 그 경유지에 작은 흰색 배지가 붙어 그 날 안에서의 번호를 보여 주고, 두 날짜에 계획된 장소는 · 로 이은 두 번호를 함께 가집니다.',
+  'help.ctx.trip-map.bullet.5':
+    '맨 위의 아이콘 줄은 보이는 지도 범위를 검색합니다. “음식점”, “카페”, “바 & 나이트라이프”, “숙소”, “명소”, “박물관 & 문화”, “자연 & 공원”, “액티비티”입니다. 지도를 옮긴 뒤에는 “이 지역 검색”이 다시 실행합니다.',
+  'help.ctx.trip-map.bullet.6':
+    '지도 아무 곳이나 오른쪽 클릭하면 그 지점의 장소 양식이, 주소를 이미 찾아 둔 채로 열립니다. 왼쪽 아래의 둥근 버튼은 그려진 지도를 항공 사진으로 바꿉니다.',
+  'help.ctx.trip-map.bullet.7':
+    '오른쪽 아래의 “전체 여행 보기”는 이동이 있는 모든 날짜를 한 번에 그리고 각 날짜가 무엇을 지나는지 나열합니다. 예약 행의 경로 아이콘은 그 예약을 그리고, 일자 위 도구 모음의 아이콘은 전부를 그립니다.',
+  // map-markers
+  'help.guide.map-markers.title': '지도 읽기',
+  'help.guide.map-markers.goal': '지도의 모든 핀과 배지와 버블이 무엇을 말하는지 압니다.',
+  'help.guide.map-markers.step.1':
+    '지도에는 여행의 모든 장소가 있습니다. 핀이 너무 가까워 구분되지 않는 곳에서는, 안에 든 장소의 수를 가진 하나의 짙은 버블로 접힙니다.',
+  'help.guide.map-markers.step.2':
+    '버블을 클릭합니다. 지도가 그 안에 있던 것에 맞춰 확대되고 핀이 떨어집니다. 가장 깊은 배율에서는 더 확대하는 대신 핀을 부채처럼 펼칩니다.',
+  'help.guide.map-markers.step.3':
+    '핀은 사진이 있으면 그 장소의 사진이고, 없으면 카테고리 색과 카테고리 아이콘입니다. 포인터를 올리면 카드가 이름, 평점, 카테고리, 주소를 알려 줍니다.',
+  'help.guide.map-markers.step.4':
+    '핀을 클릭하면 지도 아래에 장소가 열립니다. 좌표, 평점, “파일”, 그리고 “날에 추가”, “컬렉션에 저장”, “내비게이션”, “편집”, “삭제”입니다. 지도의 빈 곳을 클릭하면 다시 닫힙니다.',
+  'help.guide.map-markers.step.5':
+    '일자 열에서 날짜를 열면 그 경유지에 번호가 붙습니다. 핀 모서리의 작은 흰색 배지가 그 날 안에서의 순서입니다. 두 날짜에 계획된 장소는 · 로 이은 두 번호를 함께 가집니다. 열린 날짜가 없으면 번호도 없고, 모서리에는 대신 평점이 들어갑니다.',
+  'help.guide.map-markers.result':
+    '여행에는 아무 변화도 없습니다. 지도는 여행을 보는 창이고, 핀마다 어느 장소인지, 어느 날인지, 몇 번째인지를 말합니다.',
+  'help.guide.map-markers.tip.1':
+    '일자 열에서 접힌 날짜는 그 경유지도 함께 지도에서 데려갑니다. 날짜를 다시 열면 돌아옵니다.',
+  'help.guide.map-markers.tip.2':
+    '장소 목록 위의 필터는 지도가 무엇을 그릴지도 정합니다. “미계획”을 고르면 아직 날짜가 없는 장소만 지도에 남습니다.',
+  'help.guide.map-markers.tip.3':
+    '이 지도에는 확대 버튼이 없습니다. 휠로 확대하고 축소하며, 더블 클릭으로 한 단계 확대하고, 끌어서 움직입니다.',
+  // map-nearby-places
+  'help.guide.map-nearby-places.title': '지도에서 주변 장소 찾기',
+  'help.guide.map-nearby-places.goal':
+    '지금 보고 있는 동네에서 음식점이나 명소, 호텔을 지도가 찾게 하고, 그중 하나를 여행에 담습니다.',
+  'help.guide.map-nearby-places.step.1':
+    '지도 위쪽의 아이콘 줄이 카테고리 검색입니다. “음식점”, “카페”, “바 & 나이트라이프”, “숙소”, “명소”, “박물관 & 문화”, “자연 & 공원”, “액티비티”입니다.',
+  'help.guide.map-nearby-places.step.2':
+    '카테고리를 클릭합니다. TREK가 보이는 지도 범위에서 그 종류의 장소를 찾고, 찾은 것마다 카테고리 색의 핀을 떨어뜨립니다. 한 번에 하나의 카테고리만 됩니다. 다른 것을 클릭하면 바뀌고, 켜져 있는 것을 클릭하면 꺼집니다.',
+  'help.guide.map-nearby-places.step.3':
+    '지도를 옮기면 줄 아래에 두 번째 버튼이 나타납니다. “이 지역 검색”이 새 화면으로 같은 검색을 실행합니다. 옮기는 것만으로는 결코 다시 검색하지 않으며, 그만큼 요청 수가 줄어듭니다.',
+  'help.guide.map-nearby-places.step.4':
+    '핀에는 찾은 것의 이름이 붙어 있습니다. 하나를 클릭하면 장소 양식이 그 내용으로 이미 채워진 채 열립니다. “이름”, “주소”, “위도”와 “경도”, 그리고 OpenStreetMap에 있는 경우 웹사이트와 전화번호입니다.',
+  'help.guide.map-nearby-places.step.5':
+    '채워진 내용을 확인하고 검색이 알 수 없었던 것을 더합니다. “설명”, “카테고리”, 그리고 나만의 메모입니다.',
+  'help.guide.map-nearby-places.step.6':
+    '“추가”를 클릭합니다. 같은 이름의 장소가 이미 여행에 있으면 양식이 그것을 알리고 버튼은 “그래도 추가”로 바뀝니다.',
+  'help.guide.map-nearby-places.result':
+    '장소는 장소 목록에 있고 지도에는 여행 자신의 핀 가운데 하나로 있습니다. 날짜에 놓기 전까지는 “미계획” 아래입니다. 검색 핀은 카테고리를 끌 때까지 남습니다.',
+  'help.guide.map-nearby-places.tip.1':
+    '“설정”의 “Travel & map”에서 “지도에서 장소 탐색”이 꺼져 있으면 이 줄은 없습니다.',
+  'help.guide.map-nearby-places.tip.2':
+    '답은 TREK 장소 색인과 OpenStreetMap에서 옵니다. 그래서 이것은 계획에서 연결이 필요한 몇 안 되는 것 가운데 하나입니다.',
+  'help.guide.map-nearby-places.tip.3':
+    '검색은 화면에 있는 것을 대상으로 하므로, 묻고 싶은 거리까지 확대하세요. 도시 하나 전체는 처음 예순 개의 결과를, 거의 순서 없이 돌려줍니다.',
+  // map-add-place
+  'help.guide.map-add-place.title': '지도를 오른쪽 클릭해 장소 만들기',
+  'help.guide.map-add-place.goal': '먼저 검색하지 않고, 원하는 바로 그 자리에 장소를 둡니다.',
+  'help.guide.map-add-place.step.1':
+    '지도에서 원하는 지점을 오른쪽 클릭합니다. “장소/활동 추가”라는 제목의 장소 양식이 열립니다.',
+  'help.guide.map-add-place.step.2':
+    '“위도”와 “경도”는 이미 그 지점이고, TREK가 좌표를 찾아보고 거기서 찾은 것으로 “주소”를 채웁니다. 아직 아무것도 기록되지 않았으니 틀린 것은 덮어쓰세요.',
+  'help.guide.map-add-place.step.3':
+    '알아볼 수 있는 “이름”을 주고, 계획이 알아야 할 나머지도 넣습니다. “설명”, “메모”, “카테고리”, “웹사이트”입니다.',
+  'help.guide.map-add-place.step.4':
+    '“추가”를 클릭합니다. 날짜가 열려 있어도 장소는 미계획으로 목록에 들어갑니다. 지도의 오른쪽 클릭은 어디인지를 말할 뿐, 언제인지는 말하지 않습니다.',
+  'help.guide.map-add-place.result': '장소는 목록과 지도에 있습니다. 날짜에 놓기 전까지는 “미계획” 아래입니다.',
+  'help.guide.map-add-place.tip.1':
+    '주소는 좌표를 되짚어 찾은 것이라 이름이 아니라 거리로 읽힐 수 있고, 허허벌판에서는 비어서 돌아올 수도 있습니다. 두 항목 모두 덮어쓸 수 있습니다.',
+  'help.guide.map-add-place.tip.2':
+    'MapLibre GL과 Mapbox GL 지도에서는 가운데 클릭도 같은 일을 하고, 터치 화면에서는 길게 누르면 됩니다.',
+  // map-satellite
+  'help.guide.map-satellite.title': '위성으로 전환하기',
+  'help.guide.map-satellite.goal': '그려진 지도를 항공 사진으로 바꾸고, 다시 되돌립니다.',
+  'help.guide.map-satellite.step.1':
+    '지도 왼쪽 아래의 둥근 버튼이 기본 레이어 전환입니다. 아이콘은 늘 옮겨 갈 레이어를 보여 주고, 위에 올리면 어느 쪽인지 알려 줍니다. “위성 보기로 전환”입니다.',
+  'help.guide.map-satellite.step.2':
+    '버튼을 클릭합니다. 지도가 항공 사진이 됩니다. 건물 하나를 알아볼 만큼 자세하고, 나만의 키도 필요 없습니다.',
+  'help.guide.map-satellite.step.3':
+    'TREK가 그리는 것은 모두 그 위에 남습니다. 핀, 그 날의 경로, “트랙”, 예약 경로입니다. 이제 “지도 보기로 전환”이라고 적힌 버튼을 다시 클릭하면 돌아갑니다.',
+  'help.guide.map-satellite.result': '지도가 다시 그려지고, 마지막에 두었던 레이어는 내 계정에 기억됩니다.',
+  'help.guide.map-satellite.tip.1':
+    '이 선택은 여행이 아니라 계정에 보관되므로, 어떤 지도 렌더러를 쓰든 모든 여행이 마지막에 둔 모습으로 열립니다.',
+  'help.guide.map-satellite.tip.2':
+    '항공 사진에는 글자가 없습니다. 거리 이름과 구역, 번지는 그려진 지도에 있으니 주소를 찾을 때는 다시 전환하세요.',
+  // map-whole-trip
+  'help.guide.map-whole-trip.title': '전체 여행과 그 거리 보기',
+  'help.guide.map-whole-trip.goal':
+    '열려 있는 하루를 여행의 이동이 있는 모든 날짜로 바꾸고, 각 날짜가 얼마나 가는지 읽습니다.',
+  'help.guide.map-whole-trip.step.1': '둥근 “전체 여행 보기” 버튼은 지도 오른쪽 아래에 있습니다.',
+  'help.guide.map-whole-trip.step.2':
+    '버튼을 클릭합니다. 여행의 이동이 있는 모든 날짜가 한 번에 그려집니다. 각각 흰 테두리 위에 자기 색으로 그려져, 이웃한 날짜끼리도 구분됩니다.',
+  'help.guide.map-whole-trip.step.3':
+    '버튼 위의 카드가 그 날짜들을 나열합니다. 색 점, 날짜 이름, 그 날 이동하는 방식마다의 아이콘, 그리고 지나는 거리입니다. “총 거리”는 맨 위에 있습니다.',
+  'help.guide.map-whole-trip.step.4':
+    '카드에서 날짜를 클릭하면 선택됩니다. 일자 열에서 고르는 것과 같습니다. 이제 “전체 여행 숨기기”라고 적힌 버튼을 다시 클릭하면 하루로 돌아갑니다.',
+  'help.guide.map-whole-trip.result':
+    '이동이 있는 모든 날짜가 자기 색으로 그려지고, 카드는 각 날짜가 지나는 거리와 여행 전체의 합계를 알려 줍니다.',
+  'help.guide.map-whole-trip.tip.1':
+    '합계는 구간마다 조금씩 도착합니다. 뒤에 … 가 붙어 있는 동안 그 숫자는 아직 부분 합계이며, 모든 구간이 답하면 확정됩니다.',
+  'help.guide.map-whole-trip.tip.2':
+    '경로 계산이 거부한 구간은 직선으로 남고 거리에 더해지지 않으며, 카드는 조용히 적게 보여 주는 대신 그것을 알립니다.',
+  'help.guide.map-whole-trip.tip.3':
+    '위치가 있는 경유지가 둘에 못 미치는 날짜는 그릴 경로가 없으므로 카드에서 아예 빠집니다.',
+  // map-booking-routes
+  'help.guide.map-booking-routes.title': '예약 경로를 지도에 표시하기',
+  'help.guide.map-booking-routes.goal': '예약한 항공편과 기차, 자동차 이동을 지도에 그리고, 다시 지웁니다.',
+  'help.guide.map-booking-routes.step.1':
+    '예약 경로는 요청하기 전까지 꺼져 있습니다. 일자 열의 예약 행에는 작은 경로 아이콘이 있습니다. “예약 경로 표시”입니다.',
+  'help.guide.map-booking-routes.step.2':
+    '아이콘을 클릭합니다. 예약이 지도에 나타납니다. 항공편은 대권 호로, 자동차 이동은 실제 도로를 따라, 기차는 역을 이은 선으로 그려집니다. “확정됨”은 실선으로, “대기 중”은 점선으로 그려집니다.',
+  'help.guide.map-booking-routes.step.3':
+    '경로의 양 끝은 교통수단 아이콘이 든 파란 알약 모양입니다. 하나를 클릭하면 그 뒤의 예약이 시간, “예약 코드”, “위치 / 주소”와 함께 열립니다. “닫기”로 다시 치웁니다.',
+  'help.guide.map-booking-routes.step.4':
+    '일자 위 도구 모음의 경로 아이콘은 전체 여행을 한 번에 다룹니다. “모든 예약 경로 표시”는 경로가 있는 모든 예약을 그립니다.',
+  'help.guide.map-booking-routes.step.5':
+    '이것은 위에 얹는 층이 아니라 백지에서 다시 시작하는 것이라, 예약마다 골라 둔 것은 사라집니다. 이제 “모든 예약 경로 숨기기”라고 적힌 버튼을 다시 누르면 지도가 깨끗해집니다.',
+  'help.guide.map-booking-routes.result':
+    '요청한 예약이 지도에 그려지고, 그 선택은 바꾸기 전까지 이 브라우저의 이 여행에 보관됩니다.',
+  'help.guide.map-booking-routes.tip.1':
+    '양 끝에 공항 코드나 역 이름이 나오는 것은 “설정”의 “Travel & map”에서 “예약 경로 레이블”이 켜져 있을 때뿐입니다. 그렇지 않으면 아이콘만 보입니다.',
+  'help.guide.map-booking-routes.tip.2':
+    '같은 설정에 있는 “예약 경로 항상 표시”는 아직 정하지 않은 모든 여행에서 처음부터 경로를 그립니다.',
+  'help.guide.map-booking-routes.tip.3':
+    '예약이 그려지려면 좌표가 있는 두 끝이 필요하므로, 호텔이나 음식점에는 경로 아이콘이 없습니다.',
 };
 
 export default help;

@@ -1942,6 +1942,805 @@ const help: TranslationStrings = {
     'La llista ha d’estar compartida públicament; l’enllaç d’una llista privada no importa res.',
   'help.guide.import-places-list.tip.2':
     'Enriquir llocs mitjançant Google apareix al diàleg quan el teu TREK té una clau de Google: consulta cada lloc importat i completa fotos, adreça i detalls.',
+
+  // ── Screen: trip-days ─────────────────────────────────────────────────────────────────
+  'help.ctx.trip-days.title': 'Dies',
+  'help.ctx.trip-days.summary':
+    'La columna esquerra del pla: una targeta per dia amb les seves parades en ordre, les notes, les reserves i els transports del dia, i la ruta entre les parades. És aquí on el viatge es planifica de debò.',
+  'help.ctx.trip-days.bullet.1':
+    'La barra d’eines de dalt: Exporta (PDF, calendari, GPX), Expandeix tots els dies / Contreu tots els dies, la fletxa Desfés, Reordena els dies i Mostra totes les rutes de reserva.',
+  'help.ctx.trip-days.bullet.2':
+    'Una targeta de dia: número, temps, títol, data i el cost del dia a la capçalera; fes clic a la capçalera per obrir el dia, la fletxeta la plega. Transport públic, Afegeix transport i Afegeix una nota també són a la capçalera.',
+  'help.ctx.trip-days.bullet.3':
+    'Dins d’un dia: les parades en ordre, cadascuna amb imatge, nom, hora i un cadenat sobre la imatge; les notes; les reserves que pertanyen al dia; i entre les parades el temps de viatge de cada tram.',
+  'help.ctx.trip-days.bullet.4':
+    'Sota les parades, la barra de ruta: Ruta dibuixa el dia al mapa, Optimitza ordena les parades, En cotxe / A peu fixa el mitjà de transport del dia, Obre a Google Maps i Obre a CoMaps lliuren el dia.',
+  'help.ctx.trip-days.bullet.5':
+    'Els llocs arriben a un dia arrossegant una fila de la columna de llocs, amb el + d’aquella fila, amb Afegeix un lloc a aquest dia en un dia buit, o des dels detalls del lloc.',
+  'help.ctx.trip-days.bullet.6':
+    'Cost total, a baix, suma cada parada i cada reserva amb un preu, en la moneda del viatge.',
+  // read-day-plan
+  'help.guide.read-day-plan.title': 'Llegir un dia',
+  'help.guide.read-day-plan.goal': 'Saber què et diu cada part d’una targeta de dia abans de canviar res.',
+  'help.guide.read-day-plan.step.1':
+    'La capçalera: el número del dia, la previsió per al dia, Dia 1 o el títol que li has posat, la data i el cost del dia. Fes clic a la capçalera per obrir el dia (els Detalls del dia s’obren sobre el mapa); la fletxeta de la dreta plega i desplega la targeta.',
+  'help.guide.read-day-plan.step.2':
+    'Una parada: la nansa de l’esquerra l’arrossega, la imatge porta un cadenat per a l’optimització de ruta, després el nom, la descripció i, si n’hi ha, les Notes per a aquest dia. Una etiqueta d’hora mostra Inici i Fi quan la parada els té; les fletxes que apareixen al seu extrem dret la pugen o la baixen.',
+  'help.guide.read-day-plan.step.3':
+    'Una reserva del dia: un transport apareix com a Sortida o Arribada amb la seva hora i el seu trajecte, una reserva en una parada la marca com a Reserva confirmada o Reserva pendent. El petit interruptor d’un transport mostra la seva ruta al mapa.',
+  'help.guide.read-day-plan.step.4':
+    'Entre dues parades, el connector diu quant dura el tram i quina distància fa, en el mitjà de transport del dia; fes-hi clic per canviar el mitjà d’aquell sol tram.',
+  'help.guide.read-day-plan.step.5':
+    'La barra de ruta del final: Ruta dibuixa el camí del dia al mapa, Optimitza reordena les parades, els botons de mode trien En cotxe o A peu, Obre a Google Maps i Obre a CoMaps obren el dia allà.',
+  'help.guide.read-day-plan.result':
+    'Cada símbol de la targeta té un significat; les guies de sota els canvien un per un.',
+  'help.guide.read-day-plan.tip.1':
+    'Fes clic dret en una parada per al seu menú: Editar, Treure del dia, Obre el lloc web, les aplicacions de navegació (Google Maps, Waze, Apple Maps, OpenStreetMap, CoMaps), Desar a la col·lecció, Eliminar.',
+  'help.guide.read-day-plan.tip.2':
+    'Passa el ratolí per una parada i al seu extrem apareix Afegeix una reserva: una reserva creada allà queda lligada a aquesta parada en aquest dia.',
+  // place-onto-day
+  'help.guide.place-onto-day.title': 'Posar un lloc en un dia',
+  'help.guide.place-onto-day.goal': 'Convertir un lloc de la llista en una parada del dia, allà on li toca en l’ordre.',
+  'help.guide.place-onto-day.step.1':
+    'Arrossega una fila de la columna de llocs fins a la targeta del dia. Deixa-la anar entre dues parades per posar-la exactament allà, o en qualsevol punt de la targeta per afegir-la al final.',
+  'help.guide.place-onto-day.step.2':
+    'Sense arrossegar: obre el dia fent clic a la capçalera, després fes clic al + del final de la fila del lloc, o fes clic dret a la fila i tria + Dia.',
+  'help.guide.place-onto-day.step.3':
+    'En un dia buit, Afegeix un lloc a aquest dia obre el formulari de lloc, i el lloc nou cau al dia de seguida.',
+  'help.guide.place-onto-day.step.4':
+    'Des dels detalls d’un lloc, Afegeix al dia pregunta quin dia; des de la capçalera del dia, Al dia a la columna de llocs crea un lloc nou al dia obert.',
+  'help.guide.place-onto-day.result':
+    'El lloc és una parada del dia, al mapa amb el número del dia, i la columna de llocs el compta sota Planificats.',
+  'help.guide.place-onto-day.tip.1':
+    'Un lloc pot ser en diversos dies: posa’l al segon dia des de la columna de llocs. Arrossegar una parada d’una targeta de dia a una altra la mou en comptes de copiar-la.',
+  'help.guide.place-onto-day.tip.2': 'La fletxa Desfés de la barra d’eines desfà l’assignació.',
+  'help.guide.place-onto-day.tip.3':
+    'Una parada no es pot deixar anar entre dues entrades amb hores fixes, ni abans d’una reserva que ja té hora; el pla manté la seva cronologia.',
+  // reorder-stops
+  'help.guide.reorder-stops.title': 'Canviar l’ordre d’un dia',
+  'help.guide.reorder-stops.goal': 'Pujar o baixar una parada, o portar-la a un altre dia.',
+  'help.guide.reorder-stops.step.1': 'Arrossega la parada per la nansa fins a la nova posició dins la targeta.',
+  'help.guide.reorder-stops.step.2':
+    'O fes servir les fletxes de l’extrem dret de la parada: un pas amunt o avall per clic.',
+  'help.guide.reorder-stops.step.3':
+    'Arrossega la parada a una altra targeta de dia per moure-la allà; deixa el dia antic.',
+  'help.guide.reorder-stops.step.4':
+    'Una parada amb una hora fixa pregunta Vols eliminar l’hora? quan moure-la trencaria l’ordre del dia, perquè l’hora decidia el seu lloc: Confirmar treu l’hora i la deixa anar a qualsevol lloc.',
+  'help.guide.reorder-stops.result': 'La ruta i els temps de viatge segueixen el nou ordre a l’instant.',
+  'help.guide.reorder-stops.tip.1':
+    'Les reserves amb hora fixa no es poden reordenar; es queden allà on la seva hora les posa.',
+  'help.guide.reorder-stops.tip.2':
+    'Optimitza, a la barra de ruta, ordena tot el dia pel camí més curt; bloqueja abans una parada perquè es quedi on és.',
+  // set-stop-times
+  'help.guide.set-stop-times.title': 'Donar una hora a una parada',
+  'help.guide.set-stop-times.goal':
+    'Fixar quan comença i quan acaba una parada, perquè el dia es llegeixi com un horari.',
+  'help.guide.set-stop-times.step.1':
+    'Fes clic dret a la parada i tria Editar. Obert des del dia, el formulari té Inici i Fi a baix.',
+  'help.guide.set-stop-times.step.2':
+    'Posa Inici i, si vols, Fi. Solapament horari amb: avisa que una altra parada del dia amb hora se solapa; un Fi anterior a l’Inici bloqueja Actualitzar.',
+  'help.guide.set-stop-times.step.3':
+    'Fes clic a Actualitzar. La parada rep una etiqueta d’hora i es mou allà on la seva hora la col·loca dins el dia.',
+  'help.guide.set-stop-times.result':
+    'Les parades amb hora mantenen el seu lloc en l’ordre; les parades sense hora s’ordenen al seu voltant.',
+  'help.guide.set-stop-times.tip.1':
+    'L’hora pertany a la parada d’aquell dia; el mateix lloc en un altre dia pot tenir una altra hora.',
+  'help.guide.set-stop-times.tip.2':
+    'Per moure a mà una parada amb hora, arrossega-la: la pregunta Vols eliminar l’hora? treu l’hora pel camí, tan bon punt fas clic a Confirmar.',
+  'help.guide.set-stop-times.tip.3':
+    'El camp Notes per a aquest dia, al mateix formulari, guarda el que només val en aquest dia, una taula reservada, un número d’entrada.',
+  // remove-from-day
+  'help.guide.remove-from-day.title': 'Treure una parada d’un dia',
+  'help.guide.remove-from-day.goal': 'Desplanificar un lloc sense esborrar-lo del viatge.',
+  'help.guide.remove-from-day.step.1': 'Fes clic dret a la parada i tria Treure del dia.',
+  'help.guide.remove-from-day.step.2':
+    'La parada ja no és al dia; el lloc es queda a la columna de llocs, sota Sense planificar si no és en cap altre dia.',
+  'help.guide.remove-from-day.result':
+    'El dia, la seva ruta i el seu cost s’actualitzen; la fletxa Desfés torna a portar la parada.',
+  'help.guide.remove-from-day.tip.1': 'Eliminar, al mateix menú, treu el lloc de tot el viatge, cada dia inclòs.',
+  'help.guide.remove-from-day.tip.2':
+    'Treure del dia també és al plafó de detalls del lloc, al costat d’Afegeix al dia.',
+  // lock-stop
+  'help.guide.lock-stop.title': 'Fixar una parada al seu lloc',
+  'help.guide.lock-stop.goal': 'Mantenir una parada on és quan s’optimitza la ruta.',
+  'help.guide.lock-stop.step.1':
+    'Passa el ratolí per la imatge de la parada i fes clic al cadenat: Mantén la posició durant l’optimització de ruta.',
+  'help.guide.lock-stop.step.2':
+    'Optimitza ara ordena les altres parades al seu voltant; fes clic al cadenat una altra vegada (Fes clic per desbloquejar) per alliberar-la.',
+  'help.guide.lock-stop.result':
+    'El cadenat es veu a la imatge; la parada manté la seva posició fins que la desbloquegis.',
+  'help.guide.lock-stop.tip.1':
+    'Una parada amb hora fixa està bloquejada per la seva hora; durant l’optimització no es mou mai.',
+  'help.guide.lock-stop.tip.2':
+    'El bloqueig dura aquesta visita: després de recarregar, cada parada torna a ser lliure, només les parades amb hora queden fixes.',
+  // day-note
+  'help.guide.day-note.title': 'Afegir una nota a un dia',
+  'help.guide.day-note.goal': 'Guardar un recordatori, un número d’entrada o un pla B dins el dia mateix.',
+  'help.guide.day-note.step.1': 'Fes clic a Afegeix una nota a la capçalera del dia.',
+  'help.guide.day-note.step.2':
+    'Posa-li un nom a Nota, és el que es veu al dia, i escriu la resta a Nota diària. La barra d’eines de sobre dona format al text (Negreta, Llista amb pics, Enllaç, Cita), i Vista prèvia, a l’esquerra, mostra com quedarà la nota al dia.',
+  'help.guide.day-note.step.3':
+    'Tria una Icona i un Color, perquè la nota destaqui entre les parades, i després Afegir.',
+  'help.guide.day-note.step.4':
+    'La nota és al dia com una parada: arrossega-la al seu lloc, fes-hi clic dret per a Editar i Eliminar.',
+  'help.guide.day-note.result':
+    'La nota forma part del dia, també al PDF; una nota amb hora s’ordena amb les parades amb hora.',
+  'help.guide.day-note.tip.1':
+    'Una nota amb hora pot fer de transport del qual no tens cap reserva: «08:15 S3 des de l’estació central».',
+  'help.guide.day-note.tip.2': 'Les notes són per dia; una nota per a tot el viatge pertany a Col·laboració.',
+  // day-route
+  'help.guide.day-route.title': 'Mostrar i optimitzar la ruta del dia',
+  'help.guide.day-route.goal':
+    'Veure el camí entre les parades, triar com viatges i deixar que el TREK ordeni la seqüència.',
+  'help.guide.day-route.step.1':
+    'Obre el dia i fes clic a Ruta a la barra de ruta: el camí entre les parades es dibuixa al mapa, i els connectors entre les parades mostren el temps i la distància de cada tram.',
+  'help.guide.day-route.step.2':
+    'En cotxe i A peu, al costat, fixen el mitjà de transport del dia; els trams es recalculen. Els plugins poden afegir mitjans propis.',
+  'help.guide.day-route.step.3':
+    'Fes clic en un connector per canviar el mitjà d’aquell sol tram: tria un mitjà, o Usa el valor per defecte del dia per tornar al del dia.',
+  'help.guide.day-route.step.4':
+    'Optimitza reordena les parades pel camí més curt. Les parades amb un cadenat o amb hora fixa mantenen el seu lloc; amb un allotjament al dia, la ruta comença allà.',
+  'help.guide.day-route.step.5':
+    'Obre a Google Maps o Obre a CoMaps obre tot el dia com a ruta en aquella aplicació, per navegar pel camí.',
+  'help.guide.day-route.result':
+    'El dia és una ruta amb hores; Cost total i els trams s’actualitzen a mesura que canvia l’ordre.',
+  'help.guide.day-route.tip.1':
+    'Les rutes venen d’OSRM per defecte; l’administrador pot apuntar el TREK a un altre motor de rutes sota Valors per defecte.',
+  'help.guide.day-route.tip.2':
+    'Un tram que no s’ha pogut calcular no mostra cap temps; comprova que totes dues parades tinguin coordenades.',
+  'help.guide.day-route.tip.3': 'La fletxa Desfés desfà una optimització.',
+  // manage-days
+  'help.guide.manage-days.title': 'Afegir, reordenar i reanomenar dies',
+  'help.guide.manage-days.goal': 'Donar forma als dies mateixos, no només al que hi ha a sobre.',
+  'help.guide.manage-days.step.1':
+    'Els dies surten de les dates del viatge; canvia les dates a la targeta del viatge sota Tauler i s’afegeixen o es treuen dies als extrems.',
+  'help.guide.manage-days.step.2':
+    'Reordena els dies a la barra d’eines obre una llista: Puja i Baixa desplacen un dia amb tot el que porta; Afegeix un dia n’afegeix un al final.',
+  'help.guide.manage-days.step.3':
+    'Per reanomenar un dia, obre’l i fes clic al llapis del costat del títol als Detalls del dia sobre el mapa; el nom substitueix Dia 1 a la targeta i al PDF.',
+  'help.guide.manage-days.step.4':
+    'Expandeix tots els dies i Contreu tots els dies a la barra d’eines pleguen totes les targetes alhora; una targeta sola es plega amb la seva fletxeta.',
+  'help.guide.manage-days.result':
+    'Les dates es queden amb la posició: un dia que puja pren la data anterior, i les seves parades, notes i reserves viatgen amb ell.',
+  'help.guide.manage-days.tip.1': 'Reordena els dies es pot desfer des de la barra d’eines.',
+  'help.guide.manage-days.tip.2':
+    'El cost a la capçalera d’un dia suma les parades i les reserves d’aquell dia que porten un preu.',
+  // bookings-in-plan
+  'help.guide.bookings-in-plan.title': 'Llegir reserves i transports al pla',
+  'help.guide.bookings-in-plan.goal': 'Saber on apareix una reserva un cop existeix, i quina pantalla la crea.',
+  'help.guide.bookings-in-plan.step.1':
+    'Un transport (Vol, Tren, Ferri, Autobús, Cotxe) apareix al dia en què surt com a Sortida i al dia en què arriba com a Arribada, amb hora i trajecte; un de diversos dies abasta els dies del mig.',
+  'help.guide.bookings-in-plan.step.2':
+    'Una reserva lligada a una parada (un Restaurant, una Excursió) marca aquella parada com a Reserva confirmada o Reserva pendent; una reserva amb dia però sense parada és una fila pròpia dins el dia.',
+  'help.guide.bookings-in-plan.step.3':
+    'Una nit a l’hotel és un allotjament: és als Detalls del dia sota Allotjament, del Registre d’entrada al Registre de sortida, i la ruta de cadascun d’aquells dies comença allà.',
+  'help.guide.bookings-in-plan.step.4':
+    'Al mapa, l’interruptor d’una fila de transport dibuixa la seva ruta; Mostra totes les rutes de reserva, a la barra d’eines, les dibuixa totes.',
+  'help.guide.bookings-in-plan.step.5':
+    'Per crear-les: Afegeix una reserva en una parada amb el ratolí a sobre, Afegeix transport i Transport públic a la capçalera del dia, i les pestanyes Reserves i Transports per a la llista completa amb importació i fitxers.',
+  'help.guide.bookings-in-plan.result':
+    'Una reserva, un lloc al pla; les pestanyes són les mateixes reserves en forma de llista.',
+  'help.guide.bookings-in-plan.tip.1':
+    'Confirmada i Pendent és un estat que poses a la reserva; el pla el mostra a la parada, la pestanya Reserves les compta totes dues.',
+  'help.guide.bookings-in-plan.tip.2':
+    'Un transport amb hora fixa no es pot arrossegar; en lloc d’això, canvia-li l’hora a la reserva.',
+  // export-plan
+  'help.guide.export-plan.title': 'Exportar el pla',
+  'help.guide.export-plan.goal': 'Endur-te el pla com a document, al teu calendari o a un GPS.',
+  'help.guide.export-plan.step.1': 'Fes clic a Exporta a la barra d’eines de sobre els dies.',
+  'help.guide.export-plan.step.2':
+    'Document: PDF obre la vista d’impressió de cada dia amb les seves parades, notes i reserves; Salt de pàgina per dia comença cada dia en una pàgina nova, Desa com a PDF el baixa.',
+  'help.guide.export-plan.step.3':
+    'Calendari: Baixa .ics desa les reserves com a fitxer de calendari; Subscriu-te al calendari dona un enllaç que la teva aplicació de calendari refresca tota sola.',
+  'help.guide.export-plan.step.4':
+    'Mapes i GPS · GPX: Tot el viatge exporta llocs, rutes dels dies i traces; Només els llocs, els punts; Dies com a rutes, una ruta per dia, per a mapes fora de línia i aparells GPS.',
+  'help.guide.export-plan.result': 'El fitxer es baixa; al viatge no canvia res.',
+  'help.guide.export-plan.tip.1':
+    'Un dia sol va cap a una aplicació de mapes des de la seva barra de ruta: Obre a Google Maps o Obre a CoMaps.',
+  'help.guide.export-plan.tip.2':
+    'Subscriu-te al calendari necessita els canals de calendari activats als teus ajustos; el Tauler té una guia per fer-ho.',
+  'help.guide.export-plan.tip.3': 'Exportar és llegir: qualsevol membre del viatge ho pot fer.',
+
+  // ── Screen: trip-place ────────────────────────────────────────────────────────────────
+  'help.ctx.trip-place.title': 'Detalls del lloc',
+  'help.ctx.trip-place.summary':
+    'La fitxa que s’obre damunt del mapa quan tries un lloc: tot el que el viatge en sap, les estrelles que hi ha posat tothom, la seva imatge i els seus fitxers, i els botons que el posen al dia obert, a una llista o a una aplicació de mapes.',
+  'help.ctx.trip-place.bullet.1':
+    'Fes clic a una fila de la columna de llocs, a una parada dins d’un dia o a un marcador del mapa, i la fitxa s’obre damunt del mapa. Triar-lo dins d’un dia diu a la fitxa de quina parada parles, i això és el que hi porta els participants de la parada i la seva reserva.',
+  'help.ctx.trip-place.bullet.2':
+    'La capçalera duu la imatge rodona, el nom, la categoria, l’adreça i les coordenades. Fes clic a la imatge per posar-ne una de teva, fes doble clic al nom per canviar el nom del lloc a l’instant, i la X de la dreta tanca la fitxa.',
+  'help.ctx.trip-place.bullet.3':
+    'A sota: les estrelles que cada viatger ha donat al lloc, el preu si en té, la descripció i les notes, i Notes per a aquest dia quan la parada en duu.',
+  'help.ctx.trip-place.bullet.4':
+    'Horari d’obertura, Color de la ruta, Dades de la ruta i Fitxers vénen després, en la mesura que s’apliquin. Fitxers accepta qualsevol cosa de les teves carpetes i també llista el que penja de la reserva d’aquesta parada.',
+  'help.ctx.trip-place.bullet.5':
+    'La fila de baix: Afegeix al dia o Treure del dia mentre hi ha un dia obert, després Desar a la col·lecció, Navegació, Obre el lloc web, Editar i Eliminar.',
+  'help.ctx.trip-place.bullet.6':
+    'Un lloc que el TREK ha pogut aparellar amb un proveïdor de mapes mostra més coses: la valoració d’aquest proveïdor amb una ressenya, el telèfon i un anell Obert o Tancat al voltant de la imatge, amb l’horari de la setmana al darrere.',
+  // read-place
+  'help.guide.read-place.title': 'Què et diu la fitxa d’un lloc',
+  'help.guide.read-place.goal': 'Llegeix tot el que el viatge sap d’un lloc, en una sola fitxa.',
+  'help.guide.read-place.step.1':
+    'A la columna dels dies, fes clic a la parada que vols llegir. La fitxa s’obre damunt del mapa i la parada queda marcada al seu dia.',
+  'help.guide.read-place.step.2':
+    'La capçalera: la imatge rodona, el nom, l’adreça i les coordenades exactes. La X de la dreta torna a tancar la fitxa.',
+  'help.guide.read-place.step.3':
+    'A sota, les estrelles que cada viatger ha donat al lloc, amb la mitjana i quants han votat. Encara sense valoració mentre no ho hagi fet ningú.',
+  'help.guide.read-place.step.4':
+    'Després la descripció i, a sota, les notes. Totes dues són el text del formulari del lloc, renderitzat: llistes, enllaços i negreta funcionen.',
+  'help.guide.read-place.step.5': 'Participants diu qui va a aquesta parada. Hi són tots fins que en treus algú.',
+  'help.guide.read-place.step.6':
+    'La fila de baix és el que pots fer des d’aquí: treure el lloc del dia obert o posar-l’hi, desar-lo a una llista, obrir-lo en una aplicació de mapes, editar-lo o eliminar-lo.',
+  'help.guide.read-place.result':
+    'La fitxa queda oberta fins que la tanques amb la X o tries un altre lloc, i la parada a la qual pertany queda marcada a la columna dels dies.',
+  'help.guide.read-place.tip.1':
+    'Triada des de la columna de llocs, la fitxa coneix el lloc però no cap parada, així que no mostra ni participants ni reserva. Tria la parada dins del dia i hi són tots dos.',
+  'help.guide.read-place.tip.2':
+    'Fes doble clic al nom per canviar el nom del lloc sense obrir el formulari. Retorn desa, Esc descarta el canvi.',
+  'help.guide.read-place.tip.3':
+    'Un lloc que el TREK ha pogut aparellar amb un proveïdor de mapes mostra també la valoració d’aquest proveïdor, una ressenya, el telèfon i l’horari d’obertura.',
+  // rate-place
+  'help.guide.rate-place.title': 'Valorar un lloc',
+  'help.guide.rate-place.goal': 'Posa les teves estrelles a un lloc, i mira les que hi ha posat tothom.',
+  'help.guide.rate-place.step.1':
+    'Obre el lloc. La fila d’estrelles seu just sota la capçalera i duu la mitjana dels vots fins ara, amb el seu nombre entre parèntesis.',
+  'help.guide.rate-place.step.2':
+    'Fes clic a l’estrella que vols. Les estrelles s’omplen mentre hi passes per sobre, així veus què estàs a punt de donar.',
+  'help.guide.rate-place.step.3':
+    'El teu vot entra a la mitjana de seguida, i les cares del costat són qui ha votat. Deixa el punter sobre la fila per veure les estrelles de tothom.',
+  'help.guide.rate-place.step.4':
+    'La mateixa mitjana és a la fila del lloc a la columna de llocs, així els bons destaquen a la llista.',
+  'help.guide.rate-place.result':
+    'Les teves estrelles són al lloc, a la vista de tot el viatge, i l’estrella de la fila de filtres sobre la llista ja pot deixar només els llocs que arriben a un mínim.',
+  'help.guide.rate-place.tip.1':
+    'Tot viatger pot valorar, fins i tot en un viatge on només alguns tenen el permís Afegeix / edita / elimina llocs.',
+  'help.guide.rate-place.tip.2':
+    'Fes clic a l’estrella que ja has donat per retirar el teu vot. Sense ningú votant, el lloc torna a dir Encara sense valoració.',
+  'help.guide.rate-place.tip.3':
+    'Al costat de les estrelles hi caben fins a sis votants com a cares; el rètol els anomena tots, i marca el teu.',
+  // place-image
+  'help.guide.place-image.title': 'Posar la teva pròpia imatge a un lloc',
+  'help.guide.place-image.goal': 'Substitueix la miniatura automàtica per una foto teva.',
+  'help.guide.place-image.step.1': 'Obre el lloc des de la columna de llocs.',
+  'help.guide.place-image.step.2':
+    'Deixa el punter sobre la imatge rodona de la capçalera: apareix una càmera i el rètol diu Puja una imatge. Fes-hi clic i tria el teu fitxer.',
+  'help.guide.place-image.step.3': 'La capçalera mostra ara la teva imatge, amb una X vermella petita al seu cantó.',
+  'help.guide.place-image.step.4':
+    'La mateixa imatge és a la fila del lloc a la columna de llocs, i al seu marcador del mapa.',
+  'help.guide.place-image.result':
+    'La teva imatge és la imatge del lloc a tot arreu: la fitxa, la columna de llocs, la parada del dia, el marcador del mapa i un viatge compartit.',
+  'help.guide.place-image.tip.1': 'S’accepten JPG, PNG, GIF i WebP, i un HEIC d’un iPhone es converteix en entrar.',
+  'help.guide.place-image.tip.2':
+    'La X del cantó treu la teva imatge i torna l’automàtica. El lloc mateix queda intacte.',
+  'help.guide.place-image.tip.3':
+    'Sense una imatge teva el TREK en busca una a partir de les coordenades del lloc, i recorre a la icona de la categoria.',
+  // place-day-assign
+  'help.guide.place-day-assign.title': 'Posar el lloc al dia obert, o treure’l',
+  'help.guide.place-day-assign.goal':
+    'Fes servir el botó de la fitxa mateixa en comptes d’arrossegar la fila pel planificador.',
+  'help.guide.place-day-assign.step.1':
+    'Fes clic a la capçalera d’un dia a la columna dels dies. Aquell dia ara és l’obert, i la fitxa hi treballa.',
+  'help.guide.place-day-assign.step.2':
+    'Fes clic a la columna de llocs en un lloc que no és en aquell dia. La seva fitxa s’obre i la fila de baix ofereix Afegeix al dia.',
+  'help.guide.place-day-assign.step.3':
+    'Fes clic a Afegeix al dia. La parada cau al final del dia i el botó passa a ser Treure del dia.',
+  'help.guide.place-day-assign.step.4':
+    'La parada ja és al dia, l’última de la llista. Arrossega-la amunt fins al seu lloc.',
+  'help.guide.place-day-assign.step.5':
+    'Treure del dia torna a treure aquella parada del dia, i la fitxa ofereix Afegeix al dia un altre cop.',
+  'help.guide.place-day-assign.result':
+    'El dia duu la parada, o ja no la duu, i el lloc mateix queda intacte en tots dos casos.',
+  'help.guide.place-day-assign.tip.1':
+    'El botó només existeix mentre hi ha un dia obert. Sense cap dia, la fitxa no té on afegir el lloc.',
+  'help.guide.place-day-assign.tip.2':
+    'Treure una parada d’un dia deixa el lloc al viatge i a la columna de llocs. Eliminar és el que el treu de tot arreu.',
+  'help.guide.place-day-assign.tip.3':
+    'Una parada que una reserva d’allotjament ha posat al dia no ofereix cap dels dos botons: aquella nit s’afegeix i es treu al bloc Allotjament del dia.',
+  // place-participants
+  'help.guide.place-participants.title': 'Dir qui va a aquesta parada',
+  'help.guide.place-participants.goal': 'Divideix el grup per a una parada sense dividir el viatge.',
+  'help.guide.place-participants.step.1':
+    'Fes clic a la parada dins del dia. La fitxa s’obre i Participants llista tothom del viatge.',
+  'help.guide.place-participants.step.2':
+    'Fes clic al nom d’un viatger per treure’l d’aquesta parada. El nom es ratlla mentre hi passes per sobre.',
+  'help.guide.place-participants.step.3':
+    'Apareix un + de traç discontinu tan bon punt hi falta algú. Fes-hi clic per veure qui no és a la parada.',
+  'help.guide.place-participants.step.4':
+    'Fes clic a un nom per tornar-lo a posar. Amb tothom de nou dins, la parada torna a ser de tot el grup.',
+  'help.guide.place-participants.result':
+    'La parada duu els viatgers que has triat, i la resta del grup té aquella tarda per a ells.',
+  'help.guide.place-participants.tip.1':
+    'Participants només apareix amb una parada seleccionada, així que tria el lloc dins del dia i no a la columna de llocs, i només en un viatge amb més d’un viatger.',
+  'help.guide.place-participants.tip.2':
+    'Ningú triat vol dir que hi van tots. Treure’n l’últim els torna a posar tots.',
+  'help.guide.place-participants.tip.3':
+    'Un convidat, que no té compte propi, pot ser participant com qualsevol altre.',
+  // place-booking
+  'help.guide.place-booking.title': 'La reserva d’una parada',
+  'help.guide.place-booking.goal': 'Llegeix la reserva que pertany a una parada, obre-la, i penja-n’hi una de nova.',
+  'help.guide.place-booking.step.1':
+    'Obre la parada a la qual pertany la reserva. La fitxa mostra una franja amb Confirmada o Pendent i el nom de la reserva.',
+  'help.guide.place-booking.step.2':
+    'La franja duu la Data, l’Hora i el Codi de reserva, i les notes que tingui la reserva.',
+  'help.guide.place-booking.step.3': 'Fes clic a la franja. El formulari de la reserva s’hi obre al damunt.',
+  'help.guide.place-booking.step.4':
+    'Vincula a una assignació del dia és el que penja una reserva d’una parada, i aquí ja n’anomena aquesta. Torna a tancar el formulari.',
+  'help.guide.place-booking.step.5':
+    'Una reserva nova per a una parada comença a la columna dels dies: passa per sobre de la parada i fes clic al + del seu extrem. El formulari s’obre com a Reserva nova, ja vinculada a ella.',
+  'help.guide.place-booking.result':
+    'La reserva penja de la parada: és a la fitxa, és al dia, i els seus fitxers també apareixen aquí sota Fitxers.',
+  'help.guide.place-booking.tip.1':
+    'La franja només es mostra a la parada de la qual penja la reserva. Una reserva sense parada viu a la pestanya Reserves.',
+  'help.guide.place-booking.tip.2':
+    'Diverses reserves poden compartir una parada: el dinar i la visita que surt de la mateixa porta.',
+  'help.guide.place-booking.tip.3':
+    'Un tren, un vol o un ferri obre en canvi el formulari de transport, el mateix que fa servir la pestanya Transports.',
+  // place-files
+  'help.guide.place-files.title': 'Tenir les entrades d’un lloc amb el lloc',
+  'help.guide.place-files.goal': 'Posa l’entrada, el val o el plànol d’un lloc allà on el buscaràs.',
+  'help.guide.place-files.step.1':
+    'Obre el lloc. Fitxers seu al peu de la fitxa i diu Fitxers mentre el lloc no en té cap.',
+  'help.guide.place-files.step.2': 'Fes clic a Pujar, al costat, i tria el fitxer.',
+  'help.guide.place-files.step.3': 'El botó compta el que el lloc guarda, i la llista s’obre tota sola.',
+  'help.guide.place-files.step.4': 'Cada fila és el nom del fitxer amb la seva mida. Fes-hi clic per obrir el fitxer.',
+  'help.guide.place-files.result':
+    'El fitxer seu al lloc, comptat a la fitxa, i també és a la pestanya Fitxers del viatge.',
+  'help.guide.place-files.tip.1':
+    'Fitxers també llista el que penja de la reserva d’aquesta parada, així una confirmació d’hotel apareix a l’hotel.',
+  'help.guide.place-files.tip.2': 'Pujar accepta diversos fitxers alhora.',
+  'help.guide.place-files.tip.3':
+    'Sense el permís Puja fitxers el botó Pujar no hi és; els fitxers que ja són al lloc s’hi queden.',
+  // place-navigation
+  'help.guide.place-navigation.title': 'Obrir un lloc en una aplicació de mapes o al seu lloc web',
+  'help.guide.place-navigation.goal': 'Passa el lloc a l’aplicació que t’hi portarà de debò.',
+  'help.guide.place-navigation.step.1': 'Obre el lloc i fes clic a Navegació a la fila de baix.',
+  'help.guide.place-navigation.step.2':
+    'La llista són les aplicacions de mapes que encaixen amb aquest lloc: Google Maps, Waze, Apple Maps, OpenStreetMap i CoMaps.',
+  'help.guide.place-navigation.step.3':
+    'Fes clic a la que fas servir. El TREK li passa el lloc mateix quan pot, no només un parell de coordenades, així arribes a l’entrada bona.',
+  'help.guide.place-navigation.step.4':
+    'Obre el lloc web, al costat, obre la pàgina pròpia del lloc, els seus horaris i les seves entrades, en una pestanya nova.',
+  'help.guide.place-navigation.result':
+    'L’aplicació de mapes s’obre al lloc, el lloc web en una pestanya pròpia, i al viatge no canvia res.',
+  'help.guide.place-navigation.tip.1':
+    'El Waze comença a navegar de seguida. Les altres obren el lloc, i sortir des d’allà és un toc més.',
+  'help.guide.place-navigation.tip.2':
+    'Quines aplicacions s’ofereixen depèn del lloc i del teu dispositiu: l’Apple Maps queda fora a Android, el 高德地图 només surt per a un lloc a la Xina, i Waze, Apple Maps i CoMaps necessiten les coordenades del lloc.',
+  'help.guide.place-navigation.tip.3':
+    'Quan només hi encaixa una aplicació, el botó duu el nom d’aquesta aplicació i l’obre directament.',
+  // place-to-collection
+  'help.guide.place-to-collection.title': 'Desar un lloc a una de les teves llistes',
+  'help.guide.place-to-collection.goal': 'Guarda per al proper viatge un lloc que has trobat en aquest.',
+  'help.guide.place-to-collection.step.1': 'Obre el lloc i fes clic a Desar a la col·lecció al capdavall de la fitxa.',
+  'help.guide.place-to-collection.step.2':
+    'Desar a la llista mostra totes les llistes que són teves o que comparteixes. Una marca assenyala les que ja tenen aquest lloc.',
+  'help.guide.place-to-collection.step.3': 'Fes clic a la llista. El lloc hi és de seguida.',
+  'help.guide.place-to-collection.step.4': 'Tanca, i el botó de la fitxa diu Desat.',
+  'help.guide.place-to-collection.result':
+    'El lloc és a la teva llista amb la seva imatge, les seves notes i les seves estrelles, a punt per al proper viatge.',
+  'help.guide.place-to-collection.tip.1':
+    'El botó només hi és mentre el complement Col·leccions està actiu, cosa que l’administrador engega a Complements.',
+  'help.guide.place-to-collection.tip.2':
+    'Un lloc pot ser a diverses llistes alhora, amb un estat propi a cadascuna: una Idea a l’una, Visitat a l’altra.',
+  'help.guide.place-to-collection.tip.3':
+    'Marca com a visitat, al costat del nom del lloc al selector, el marca a la llista; amb el lloc a diverses de les teves llistes la píndola diu Visitat pertot i les fa totes de cop.',
+  // place-track
+  'help.guide.place-track.title': 'Llegir una ruta i donar-li un color propi',
+  'help.guide.place-track.goal':
+    'Mira com de llarga és una caminada importada, i distingeix la seva línia de les altres al mapa.',
+  'help.guide.place-track.step.1':
+    'A la columna de llocs, la fila d’una ruta duu un traç curt del color amb què està dibuixat el seu traçat. Fes-hi clic.',
+  'help.guide.place-track.step.2':
+    'Dades de la ruta dóna la llargada del camí, en la Unitat de distància que hagis posat.',
+  'help.guide.place-track.step.3':
+    'Color de la ruta, a sobre, mostra el color en ús. Fes clic a la fila per obrir les mostres.',
+  'help.guide.place-track.step.4': 'Tria un color. El traçat del mapa i el traç de la fila canvien amb ell.',
+  'help.guide.place-track.step.5':
+    'La cel·la de traç discontinu de l’esquerra, Color automàtic, torna a la ruta el color que hereta; la pipeta de la dreta obre el selector de colors del teu sistema per a qualsevol altre.',
+  'help.guide.place-track.result':
+    'La ruta es dibuixa amb el color que has triat, a la fitxa, a la seva fila de la columna de llocs i al mapa.',
+  'help.guide.place-track.tip.1':
+    'Només un lloc que duu un camí, importat d’un fitxer GPX, KML o KMZ, té aquests dos blocs.',
+  'help.guide.place-track.tip.2':
+    'Una ruta enregistrada amb altituds mostra també el seu punt més alt i més baix, els metres de pujada i de baixada, i el perfil de la caminada.',
+  'help.guide.place-track.tip.3':
+    'Una importació dóna a cada ruta que porta un color propi, així dues caminades mai no arriben amb el mateix.',
+
+  // ── Screen: trip-files ────────────────────────────────────────────────────────────────
+  'help.ctx.trip-files.title': 'Fitxers',
+  'help.ctx.trip-files.summary':
+    'Tots els documents del viatge en una llista: bitllets, confirmacions, passis i imatges, cadascun amb una nota, un enllaç al lloc o a la reserva a què pertany, i una paperera d’on pot tornar a sortir.',
+  'help.ctx.trip-files.bullet.1':
+    'Arrossega els fitxers aquí, a dalt, agafa els fitxers; un clic al quadre obre el selector de fitxers. La línia de sota enumera els tipus de fitxer que accepta aquest TREK i el límit de 50 MB per fitxer.',
+  'help.ctx.trip-files.bullet.2':
+    'Les pestanyes diuen què mostra la llista: Tot, PDF, Imatges i Documents, cadascuna amb el seu recompte. Una pestanya d’estrella s’hi afegeix així que un fitxer es destaca, i Notes de col·laboració així que una nota porta un adjunt.',
+  'help.ctx.trip-files.bullet.3':
+    'Una fila porta qui la va pujar, el nom, la nota a sota, la mida i la data, i una etiqueta per enllaç: Pla diari i el lloc, Reserva o Transport i la reserva, Des de notes de col·laboració.',
+  'help.ctx.trip-files.bullet.4':
+    'Al final d’una fila hi ha Destaca, Assigna, Obrir, Baixa i Eliminar. Eliminar no pregunta: el fitxer va a la paperera, d’on es pot recuperar.',
+  'help.ctx.trip-files.bullet.5':
+    'Una imatge o un vídeo s’obre a pantalla completa, amb les tecles de fletxa i una tira de miniatures; qualsevol altre document s’obre en una vista prèvia sobre la pàgina, amb Obre en una pestanya nova i Baixa. Un passi de wallet es baixa de seguida.',
+  'help.ctx.trip-files.bullet.6':
+    'Paperera, a l’extrem dret, canvia la llista als fitxers eliminats, on cadascun es restaura o s’elimina per sempre i Buida la paperera els treu tots. On un administrador ha connectat un magatzem de documents, al costat hi ha Sincronització de documents.',
+  // files-upload
+  'help.guide.files-upload.title': 'Posar un document al viatge',
+  'help.guide.files-upload.goal':
+    'Treu un bitllet, una confirmació o una foto de la teva carpeta de baixades i posa’ls al viatge, on hi pot arribar tothom qui hi és.',
+  'help.guide.files-upload.step.1':
+    'Obre el viatge i fes clic a Fitxers a la barra de pestanyes. Allà hi ha llistats els documents del viatge, amb el quadre de pujada a sobre.',
+  'help.guide.files-upload.step.2':
+    'Fes clic a Arrossega els fitxers aquí i tria un o diversos fitxers. Es pugen l’un darrere l’altre i al quadre hi diu Pujant... mentre dura. La línia de sota del quadre diu quins tipus accepta aquest TREK, i que un fitxer pot fer 50 MB com a màxim.',
+  'help.guide.files-upload.step.3':
+    'Així que el darrer fitxer és a dalt, Assigna el fitxer s’obre tot sol per a ell. Afegeix una nota... dona al fitxer una línia pròpia, i les llistes de sota el lliguen a un lloc o a una reserva. Tanca’l amb la ×; en tancar-lo no es perd res.',
+  'help.guide.files-upload.step.4':
+    'Els fitxers nous queden a dalt de tot de la llista. Una fila mostra qui el va pujar, el nom, la mida i la data; una imatge rep una miniatura, qualsevol altre fitxer el seu tipus.',
+  'help.guide.files-upload.result':
+    'Els documents són al viatge, i tothom qui pot veure el viatge els pot obrir i baixar.',
+  'help.guide.files-upload.tip.1':
+    'Un fitxer també es pot arrossegar des de l’escriptori directament al quadre, que s’il·lumina mentre el fitxer hi és a sobre.',
+  'help.guide.files-upload.tip.2':
+    'Una imatge del porta-retalls entra a la llista amb Ctrl+V, així una captura de pantalla d’una reserva no s’ha de desar mai abans.',
+  'help.guide.files-upload.tip.3':
+    'Pujar demana el dret Puja fitxers; sense ell el quadre no hi és gens. Un tipus que no és a la llista, o un fitxer de més de 50 MB, es rebutja amb un missatge i no es puja res.',
+  // files-link
+  'help.guide.files-link.title': 'Lligar un document a un lloc o a una reserva',
+  'help.guide.files-link.goal':
+    'Fes que el bitllet es pugui trobar des del dia a què pertany, i no només des d’aquesta llista.',
+  'help.guide.files-link.step.1':
+    'Fes clic a Assigna, el llapis al final de la fila. S’obre Assigna el fitxer, amb el nom del fitxer.',
+  'help.guide.files-link.step.2':
+    'Sota Nota, Afegeix una nota... admet una línia, que després queda sota el nom del fitxer a la llista. Es desa en el moment que surts del camp.',
+  'help.guide.files-link.step.3':
+    'Sota Lloc hi ha els llocs del viatge, agrupats pel dia en què són, amb Sense assignar al final per als que no són en cap dia. Fes clic en un i rep una marca.',
+  'help.guide.files-link.step.4':
+    'Sota Reserva i Transport hi ha les reserves del viatge. Fes clic a aquella a què pertany el document; també rep la seva marca.',
+  'help.guide.files-link.step.5': 'Tanca amb la ×. Aquí no hi ha botó de desar: cada clic s’ha escrit mentre el feies.',
+  'help.guide.files-link.result':
+    'La fila porta la nota i una etiqueta per enllaç, Pla diari i el nom del lloc, Transport i el nom del vol, i el document també penja del lloc i de la reserva.',
+  'help.guide.files-link.tip.1':
+    'Un fitxer pot tenir diversos enllaços alhora, així la mateixa confirmació pertany a l’hotel i a la nit que cobreix.',
+  'help.guide.files-link.tip.2':
+    'Tornar a fer clic en una entrada marcada treu aquell enllaç; el fitxer mateix es queda.',
+  'help.guide.files-link.tip.3':
+    'Funciona també a l’inrevés: un document adjuntat a un lloc o a una reserva també és en aquesta llista, amb la mateixa etiqueta a la seva fila.',
+  // files-star
+  'help.guide.files-star.title': 'Mantenir a dalt els documents importants',
+  'help.guide.files-star.goal':
+    'Treu els dos o tres papers que necessitaràs de debò d’una llista que creix tot el viatge.',
+  'help.guide.files-star.step.1':
+    'Fes clic a Destaca al final d’una fila. L’estrella s’omple de groc, una segona estrella apareix davant del nom del fitxer, i el botó ara diu Treure el destacat.',
+  'help.guide.files-star.step.2':
+    'La llista es torna a ordenar: els fitxers destacats queden per damunt de tots els altres, els més nous primer dins de cada grup.',
+  'help.guide.files-star.step.3':
+    'A dalt s’ha afegit una estrella a les pestanyes, amb el nombre de fitxers destacats al darrere. Fes-hi clic per veure només aquests.',
+  'help.guide.files-star.result':
+    'Els papers que necessites al taulell són a dalt de tot de la llista, i una pestanya no mostra res més.',
+  'help.guide.files-star.tip.1':
+    'La pestanya d’estrella només existeix mentre hi ha alguna cosa destacada. Treu el destacat del darrer fitxer i la pestanya se’n va amb ell.',
+  'help.guide.files-star.tip.2':
+    'Destacar compta com una edició: un membre que només pot llegir els fitxers del viatge veu les estrelles, però no les pot posar.',
+  // files-filter
+  'help.guide.files-filter.title': 'Trobar un document a la llista',
+  'help.guide.files-filter.goal': 'Redueix una llista amb tot a l’únic tipus de paper que busques.',
+  'help.guide.files-filter.step.1':
+    'Les pestanyes de sobre la llista són Tot, PDF, Imatges i Documents, cadascuna amb el nombre de fitxers al darrere.',
+  'help.guide.files-filter.step.2': 'Fes clic a PDF: la llista es queda amb els fitxers PDF i res més.',
+  'help.guide.files-filter.step.3':
+    'Dues pestanyes més van i vénen amb el que hi ha al viatge: una estrella així que un fitxer es destaca, i Notes de col·laboració així que una nota de la pestanya Col·laboració porta un adjunt.',
+  'help.guide.files-filter.step.4': 'Tot torna a portar la llista sencera.',
+  'help.guide.files-filter.result':
+    'La llista mostra només el que anomena la pestanya, i el recompte de cada pestanya diu quants n’hi ha.',
+  'help.guide.files-filter.tip.1':
+    'Aquí no hi ha carpetes ni canvis de nom: la nota d’Assigna el fitxer, els enllaços a llocs i reserves, i l’estrella són allò pel qual s’ordena un document.',
+  'help.guide.files-filter.tip.2':
+    'La llista mateixa va sempre destacats primer i després els més nous primer, així un document pujat avui queda per damunt d’un del mes passat.',
+  // files-preview
+  'help.guide.files-preview.title': 'Llegir un document sense sortir de TREK',
+  'help.guide.files-preview.goal':
+    'Mira un bitllet o una imatge allà mateix, i porta’ls a la teva màquina quan els necessitis allà.',
+  'help.guide.files-preview.step.1':
+    'Fes clic al nom d’una imatge o a la seva miniatura. S’obre a pantalla completa, amb el nom del fitxer i el seu lloc entre les imatges a la capçalera.',
+  'help.guide.files-preview.step.2':
+    'Les fletxes rodones dels costats, les tecles de fletxa esquerra i dreta i la tira de miniatures de baix recorren totes les imatges que la llista mostra en aquell moment.',
+  'help.guide.files-preview.step.3':
+    'Obre en una pestanya nova i Baixa són a la capçalera; la × o Esc torna a tancar la imatge.',
+  'help.guide.files-preview.step.4':
+    'Un document que no és una imatge s’obre en canvi en una vista prèvia sobre la pàgina, amb els mateixos dos botons a la seva capçalera. Aquesta es tanca amb la × o amb un clic al costat.',
+  'help.guide.files-preview.step.5':
+    'Baixa al final d’una fila desa el fitxer directament a la teva màquina, sense obrir res abans.',
+  'help.guide.files-preview.result':
+    'El document és a la pantalla, i els mateixos dos botons el posen en una pestanya del navegador o al teu disc.',
+  'help.guide.files-preview.tip.1':
+    'En una pantalla tàctil llisques per les imatges en comptes de fer clic a les fletxes.',
+  'help.guide.files-preview.tip.2':
+    'Un passi de wallet no obre mai una vista prèvia: es baixa de seguida, perquè el telèfon el pugui passar a la seva aplicació de wallet.',
+  'help.guide.files-preview.tip.3':
+    'Obre en una pestanya nova i Baixa van a buscar tots dos el fitxer amb la teva sessió, així un enllaç copiat de la barra d’adreces no serveix a ningú més.',
+  // files-trash
+  'help.guide.files-trash.title': 'Llençar un document, i recuperar-lo',
+  'help.guide.files-trash.goal':
+    'Neteja el que el viatge ja no necessita, sense perdre res que al final sí que necessitaves.',
+  'help.guide.files-trash.step.1':
+    'Fes clic a Eliminar al final d’una fila. El fitxer surt de la llista a l’instant i el missatge diu Mogut a la paperera. No pregunta res abans.',
+  'help.guide.files-trash.step.2':
+    'Paperera, a l’extrem dret de la barra d’eines, canvia la llista al que s’ha llençat. El títol diu Paperera i les pestanyes de filtre desapareixen.',
+  'help.guide.files-trash.step.3':
+    'Una fila llençada queda grisa i li queden dos botons: Restaura, que torna el fitxer, i Eliminar, que el treu per sempre després d’una pregunta.',
+  'help.guide.files-trash.step.4':
+    'Fes clic a Restaura. El missatge diu Fitxer restaurat i la fila surt de la paperera, amb la nota i els enllaços encara posats.',
+  'help.guide.files-trash.step.5':
+    'Buida la paperera, a dalt, treu per sempre tot el que encara hi ha aquí, i el navegador ho pregunta un cop abans de fer-ho. Paperera torna a canviar als fitxers.',
+  'help.guide.files-trash.result': 'El fitxer torna a ser a la llista on era, com si no hagués passat res.',
+  'help.guide.files-trash.tip.1':
+    'Eliminar en una fila no pregunta abans, i per això hi ha la paperera: res no surt de TREK fins que ho dius aquí dins.',
+  'help.guide.files-trash.tip.2':
+    'Llençar un fitxer i recuperar-lo demana el dret Elimina fitxers. Un membre que no el té no veu ni Eliminar a la fila ni els botons de la paperera.',
+  'help.guide.files-trash.tip.3': 'Un fitxer eliminat per sempre a la paperera no es pot recuperar.',
+
+  // ── Screen: trip-day-detail ───────────────────────────────────────────────────────────
+  'help.ctx.trip-day-detail.title': 'Detalls del dia',
+  'help.ctx.trip-day-detail.summary':
+    'El panell que la capçalera d’un dia obre sobre el mapa: el dia sencer, el seu nom i la seva data, el temps allà on seràs, les reserves que hi cauen i les nits reservades per a ell.',
+  'help.ctx.trip-day-detail.bullet.1':
+    'Fes clic a la capçalera d’un dia a la columna dels dies i el panell s’obre sobre el centre del mapa. La mateixa capçalera un altre cop, o la creu de la seva dreta, el tanca i deixa anar el dia.',
+  'help.ctx.trip-day-detail.bullet.2':
+    'La capçalera porta el nom del dia i la seva data. El llapis del costat del nom canvia el nom del dia, el doble chevron plega el panell en una barra estreta perquè el mapa torni a quedar lliure.',
+  'help.ctx.trip-day-detail.bullet.3':
+    'A dalt de tot, el temps del dia. Previsió per a anomena el lloc al qual correspon: la primera parada del dia, o l’allotjament on et despertes.',
+  'help.ctx.trip-day-detail.bullet.4':
+    'Reserves llista les reserves d’aquell dia, cadascuna amb el seu tipus, la parada a la qual pertany i els seus horaris. Verd vol dir confirmada, ambre encara pendent; només és una lectura, les reserves es canvien a la pestanya Reserves.',
+  'help.ctx.trip-day-detail.bullet.5':
+    'Allotjament mostra cada nit reservada sobre aquest dia, amb Registre d’entrada i Registre de sortida als dies en què passen, la franja d’entrada, l’hora de sortida i el número de confirmació.',
+  'help.ctx.trip-day-detail.bullet.6':
+    'Afegeix un allotjament reserva una nit en aquest dia: tria l’establiment entre els llocs del viatge, digues quins dies cobreix, i afegeix els horaris i el codi.',
+  // day-panel
+  'help.guide.day-panel.title': 'Obrir un dia i llegir-ne els detalls',
+  'help.guide.day-panel.goal':
+    'Veure un dia sencer, el seu temps, les seves reserves i on dorms, sense deixar el mapa.',
+  'help.guide.day-panel.step.1':
+    'Fes clic a la capçalera d’un dia a la columna dels dies. El dia queda seleccionat i els seus detalls s’obren sobre el centre del mapa.',
+  'help.guide.day-panel.step.2': 'La capçalera anomena el dia, Dia 1 mentre no li donis un nom, amb la data a sota.',
+  'help.guide.day-panel.step.3':
+    'A dalt de tot, el temps del dia. Previsió per a diu a quin lloc correspon: la primera parada del dia, o l’allotjament on et despertes.',
+  'help.guide.day-panel.step.4': 'Reserves, a sota, llista les reserves que cauen en aquest dia, amb els seus horaris.',
+  'help.guide.day-panel.step.5':
+    'Allotjament mostra les nits reservades sobre aquest dia, amb Registre d’entrada i Registre de sortida als dies en què passen.',
+  'help.guide.day-panel.step.6':
+    'El doble chevron de la capçalera plega el panell en una barra estreta. La creu del costat tanca el panell i deixa anar el dia.',
+  'help.guide.day-panel.result':
+    'Plegat a la seva barra, el panell deixa el mapa lliure i manté el dia seleccionat; tancat, el dia queda desseleccionat i el pla és com era.',
+  'help.guide.day-panel.tip.1':
+    'Fer clic a qualsevol punt de la barra de capçalera del panell també el plega. El chevron només n’és el botó.',
+  'help.guide.day-panel.tip.2':
+    'Obrir un lloc des de la columna dels llocs posa els detalls del lloc a l’espai del panell. Tanca’ls i el dia torna.',
+  // day-weather
+  'help.guide.day-weather.title': 'Llegir el temps del dia',
+  'help.guide.day-weather.goal': 'Saber com serà el dia allà on ets realment aquell dia.',
+  'help.guide.day-weather.step.1':
+    'Previsió per a anomena el lloc al qual corresponen els números: la primera parada del dia o, en un dia sense cap, l’allotjament on et despertes.',
+  'help.guide.day-weather.step.2':
+    'El número gran és la temperatura del dia, al costat la mínima i la màxima, i la condició en paraules.',
+  'help.guide.day-weather.step.3':
+    'Els xips de sota: la probabilitat de pluja, quanta en cau, el vent més fort, i l’alba i el capvespre.',
+  'help.guide.day-weather.step.4':
+    'A baix de tot, el dia hora per hora, cada dues hores: l’hora, la icona, la temperatura i la probabilitat de pluja. Una hora per sobre del 50 per cent queda ombrejada de blau.',
+  'help.guide.day-weather.result':
+    'La targeta del dia a la columna dels dies porta el mateix temps en petit sota el seu número, de manera que tot el viatge es llegeix d’un cop d’ull.',
+  'help.guide.day-weather.tip.1':
+    'Els graus i el vent segueixen la teva tria a Pantalla, dins de Configuració: canvia a Fahrenheit i la mateixa previsió es dona en °F i mph.',
+  'help.guide.day-weather.tip.2':
+    'Un dia sense cap parada localitzada i sense allotjament on despertar-se no mostra cap temps: la previsió sempre és per a un lloc, mai per al viatge.',
+  'help.guide.day-weather.tip.3':
+    'Més enllà de 16 dies no hi ha previsió a obtenir. Els números són llavors les mitjanes d’anys anteriors per a aquella data, marcats amb Ø i indicats com a tals a sota.',
+  // rename-day
+  'help.guide.rename-day.title': 'Donar un nom al dia',
+  'help.guide.rename-day.goal': 'Dir-li a un dia el que és, Arribada a Kyoto o Dia de descans, en comptes de Dia 5.',
+  'help.guide.rename-day.step.1': 'Obre el dia. La seva capçalera diu Dia 5, amb la data a sota.',
+  'help.guide.rename-day.step.2': 'Fes clic al llapis del costat del nom.',
+  'help.guide.rename-day.step.3': 'El nom es converteix en un camp. Escriu el nom que vulguis.',
+  'help.guide.rename-day.step.4':
+    'Prem Retorn, o simplement fes clic en un altre lloc; Esc llença el canvi. La targeta del dia a la columna dels dies també porta el nom.',
+  'help.guide.rename-day.result':
+    'El nom substitueix Dia 5 al panell i a la targeta del dia de la columna dels dies; la data es queda on era.',
+  'help.guide.rename-day.tip.1':
+    'Buida el camp i desa, i el dia torna a ser Dia 5: el número és el que surt quan no hi ha nom.',
+  'help.guide.rename-day.tip.2':
+    'El nom pertany al dia, no a la seva data. Reordena els dies i el nom viatja amb tota la resta d’aquell dia.',
+  // add-accommodation
+  'help.guide.add-accommodation.title': 'Reservar una nit en un dia',
+  'help.guide.add-accommodation.goal':
+    'Posar l’hotel al pla una sola vegada, amb els dies que cobreix, els seus horaris i el seu número de confirmació.',
+  'help.guide.add-accommodation.step.1':
+    'L’establiment primer ha de ser un lloc del viatge. Crea’l a la columna dels llocs com faries amb qualsevol altre lloc: el selector només ofereix el que ja hi és.',
+  'help.guide.add-accommodation.step.2':
+    'Obre el dia de la teva arribada i fes clic a Afegeix un allotjament, sota Allotjament.',
+  'help.guide.add-accommodation.step.3':
+    'Aplica als dies diu quines nits cobreix l’estada: el dia d’entrada a l’esquerra, el dia de sortida a la dreta. Tots agafa tot el viatge.',
+  'help.guide.add-accommodation.step.4':
+    'Omple Registre d’entrada, Fins a i Registre de sortida, i posa el número de la reserva a Confirmació. Tots quatre poden quedar buits.',
+  'help.guide.add-accommodation.step.5':
+    'Tria l’establiment entre els llocs del viatge. Els xips de sobre la llista la redueixen a una sola categoria.',
+  'help.guide.add-accommodation.step.6': 'Fes clic a Desar.',
+  'help.guide.add-accommodation.result':
+    'L’estada surt a cada dia que cobreix, Registre d’entrada al primer i Registre de sortida a l’últim. L’establiment es converteix en una parada del dia d’entrada, de manera que el mapa dibuixa el camí fins allà, i a la pestanya Reserves apareix una reserva de tipus Allotjament.',
+  'help.guide.add-accommodation.tip.1':
+    'El selector s’obre al dia d’on venies, amb la sortida l’endemà; tots dos es poden moure abans de desar.',
+  'help.guide.add-accommodation.tip.2':
+    'Dona a l’hotel la categoria Hotel del viatge quan el creïs i els xips de sobre la llista la redueixen als teus hotels amb un sol clic.',
+  'help.guide.add-accommodation.tip.3':
+    'Els horaris són tots opcionals: una estada sense entrada i sense codi cobreix igualment les seves nits i dibuixa igualment la seva ruta.',
+  // edit-accommodation
+  'help.guide.edit-accommodation.title': 'Canviar o anul·lar una nit reservada',
+  'help.guide.edit-accommodation.goal': 'Moure una estada, corregir-ne els horaris, o treure-la del pla altre cop.',
+  'help.guide.edit-accommodation.step.1':
+    'A cada dia de l’estada la targeta mostra l’establiment, la franja d’entrada, l’hora de sortida i el número de confirmació.',
+  'help.guide.edit-accommodation.step.2':
+    'El llapis de la seva dreta torna a obrir l’estada. La finestra ara diu Edita l’allotjament.',
+  'help.guide.edit-accommodation.step.3':
+    'Canvia el que calgui: els dies que cobreix, Registre d’entrada, Fins a, Registre de sortida, Confirmació, o el mateix establiment.',
+  'help.guide.edit-accommodation.step.4': 'Fes clic a Desar.',
+  'help.guide.edit-accommodation.step.5':
+    'La creu del costat del llapis acaba l’estada. No pregunta res, i la reserva de tipus Allotjament que li pertany se’n va amb ella.',
+  'help.guide.edit-accommodation.result':
+    'El canvi arriba de cop a cada dia que l’estada cobreix, i a la reserva de tipus Allotjament de la pestanya Reserves amb ell.',
+  'help.guide.edit-accommodation.tip.1':
+    'Una nit al mig d’una estada no porta ni l’etiqueta Registre d’entrada ni Registre de sortida: només les porten el primer i l’últim dia del rang.',
+  'help.guide.edit-accommodation.tip.2':
+    'Anul·lar una estada s’emporta també la parada que va posar al dia d’entrada i qualsevol despesa lligada a la seva reserva. Reserva la nit de nou si va ser un error.',
+  // day-bookings
+  'help.guide.day-bookings.title': 'Les reserves del dia d’un cop d’ull',
+  'help.guide.day-bookings.goal': 'Veure en un sol lloc què hi ha ja reservat per a aquest dia i si està confirmat.',
+  'help.guide.day-bookings.step.1':
+    'Reserves llista les reserves del dia: les datades en ell, i les que pengen d’alguna de les seves parades.',
+  'help.guide.day-bookings.step.2':
+    'Una fila mostra de quin tipus de reserva es tracta, el seu nom i, quan pertany a una parada, aquella parada després d’un punt. Els seus horaris queden a l’extrem dret.',
+  'help.guide.day-bookings.step.3':
+    'El color diu com està una reserva: una fila verda està confirmada, una d’ambre encara està pendent. Els allotjaments no surten en aquesta llista, tenen el seu propi bloc a sota.',
+  'help.guide.day-bookings.step.4':
+    'La llista només llegeix les reserves. Una reserva es crea i es canvia a la pestanya Reserves.',
+  'help.guide.day-bookings.result':
+    'Tot el que està datat al dia, i tot el que penja d’alguna de les seves parades, és en aquesta única llista.',
+  'help.guide.day-bookings.tip.1':
+    'Una reserva cau en un dia per la seva pròpia data. Canvia la data a la pestanya Reserves i passa a l’altre dia tota sola.',
+  'help.guide.day-bookings.tip.2':
+    'Que no hi hagi bloc Reserves vol dir que el dia no té reserves: s’amaga en lloc de mostrar-se buit.',
+
+  // ── Screen: trip-map ──────────────────────────────────────────────────────────────────
+  'help.ctx.trip-map.title': 'Mapa',
+  'help.ctx.trip-map.summary':
+    'El centre del pla: cada lloc del viatge com una xinxeta, les rutes que els uneixen i els interruptors de les vores del mapa per al satèl·lit, per a tot el viatge alhora i per als llocs del voltant de la zona que estàs mirant.',
+  'help.ctx.trip-map.bullet.1':
+    'Una xinxeta és un lloc: la seva pròpia foto quan en té una, si no el color de la seva categoria amb la icona de la categoria. Deixa-hi el punter a sobre per veure una fitxa amb el nom, la valoració, la categoria i l’adreça.',
+  'help.ctx.trip-map.bullet.2':
+    'Les xinxetes massa juntes per distingir-les es pleguen en una bombolla fosca amb un recompte. Fes clic a la bombolla i el mapa s’acosta al que hi ha a dins.',
+  'help.ctx.trip-map.bullet.3':
+    'Fes clic en una xinxeta per obrir el lloc sota el mapa, amb la seva valoració, els seus fitxers i què fer-ne tot seguit; fes clic en un tros buit del mapa per deixar-lo anar de nou.',
+  'help.ctx.trip-map.bullet.4':
+    'Amb un dia obert a la columna dels dies, les seves parades porten una petita insígnia blanca amb el seu número dins d’aquell dia, i un lloc planificat en dos dies porta els dos números, units per ·.',
+  'help.ctx.trip-map.bullet.5':
+    'La fila d’icones de dalt cerca a la part del mapa que veus: Restaurants, Cafeteries, Bars i oci nocturn, Allotjament, Llocs d’interès, Museus i cultura, Natura i parcs i Activitats. Cerca en aquesta zona la torna a executar després que moguis el mapa.',
+  'help.ctx.trip-map.bullet.6':
+    'Un clic dret a qualsevol punt del mapa obre el formulari de lloc en aquell punt, amb l’adreça ja consultada. El botó rodó de baix a l’esquerra bescanvia el mapa dibuixat per imatges aèries.',
+  'help.ctx.trip-map.bullet.7':
+    'Mostra tot el viatge, a baix a la dreta, dibuixa tots els dies de trajecte alhora i llista què cobreix cadascun; la icona de ruta a la fila d’una reserva dibuixa aquella reserva, i la de la barra d’eines sobre els dies les dibuixa totes.',
+  // map-markers
+  'help.guide.map-markers.title': 'Llegir el mapa',
+  'help.guide.map-markers.goal': 'Saber què t’està dient cada xinxeta, insígnia i bombolla del mapa.',
+  'help.guide.map-markers.step.1':
+    'El mapa porta tots els llocs del viatge. Allà on les xinxetes queden massa juntes per distingir-les, es pleguen en una bombolla fosca que porta el nombre de llocs que hi ha a dins.',
+  'help.guide.map-markers.step.2':
+    'Fes clic a la bombolla. El mapa s’acosta al que hi havia a dins i les xinxetes se separen; al zoom més profund les desplega en ventall en comptes d’acostar-se més.',
+  'help.guide.map-markers.step.3':
+    'Una xinxeta és la foto pròpia del lloc quan en té una, si no el color de la seva categoria amb la icona de la categoria. Deixa-hi el punter a sobre i una fitxa en dona el nom, la valoració, la categoria i l’adreça.',
+  'help.guide.map-markers.step.4':
+    'Fes clic en una xinxeta i el lloc s’obre sota el mapa: les seves coordenades, la seva valoració, els seus fitxers, i Afegeix al dia, Desar a la col·lecció, Navegació, Editar i Eliminar. Fes clic en un tros buit del mapa per deixar-lo anar de nou.',
+  'help.guide.map-markers.step.5':
+    'Obre un dia a la columna dels dies i les seves parades es numeren: la petita insígnia blanca al cantó d’una xinxeta és el lloc que ocupa aquella parada dins del dia. Un lloc planificat en dos dies porta els dos números, units per ·. Sense cap dia obert no hi ha números, i el cantó porta la valoració al seu lloc.',
+  'help.guide.map-markers.result':
+    'Al viatge no ha canviat res: el mapa n’és una vista, i cada xinxeta diu quin lloc, quin dia i en quin ordre.',
+  'help.guide.map-markers.tip.1':
+    'Un dia plegat a la columna dels dies s’emporta les seves parades fora del mapa; torna a obrir el dia i hi tornen a ser.',
+  'help.guide.map-markers.tip.2':
+    'El filtre de sobre la llista de llocs també decideix què dibuixa el mapa: tria Sense planificar i només hi queden els llocs que encara no tenen dia.',
+  'help.guide.map-markers.tip.3':
+    'Aquest mapa no té botons de zoom: la roda fa zoom, un doble clic s’acosta un pas, i arrossegar el mou.',
+  // map-nearby-places
+  'help.guide.map-nearby-places.title': 'Trobar llocs del teu voltant al mapa',
+  'help.guide.map-nearby-places.goal':
+    'Deixa que el mapa busqui restaurants, llocs d’interès o un hotel a la zona que estàs mirant, i porta’n un al viatge.',
+  'help.guide.map-nearby-places.step.1':
+    'La fila d’icones de dalt del mapa és la cerca per categoria: Restaurants, Cafeteries, Bars i oci nocturn, Allotjament, Llocs d’interès, Museus i cultura, Natura i parcs i Activitats.',
+  'help.guide.map-nearby-places.step.2':
+    'Fes clic en una categoria. TREK busca aquest tipus de lloc a la part del mapa que veus i posa una xinxeta del color de la categoria per a cada resultat. Una categoria alhora: fer clic en una altra la bescanvia, i fer clic en la que està activa l’apaga.',
+  'help.guide.map-nearby-places.step.3':
+    'Mou el mapa i sota la fila apareix un segon botó: Cerca en aquesta zona torna a fer la mateixa cerca per a la vista nova. Moure el mapa tot sol no torna a cercar mai, cosa que manté baix el nombre de peticions.',
+  'help.guide.map-nearby-places.step.4':
+    'Les xinxetes porten el nom del que s’ha trobat. Fes clic en una i el formulari de lloc s’obre ja emplenat a partir d’ella: Nom, Adreça, Latitud i Longitud, i el lloc web i el telèfon allà on OpenStreetMap els té.',
+  'help.guide.map-nearby-places.step.5':
+    'Revisa el que s’ha emplenat i afegeix el que la cerca no podia saber: una Descripció, una Categoria, notes teves.',
+  'help.guide.map-nearby-places.step.6':
+    'Fes clic a Afegir. Si ja hi ha un lloc amb el mateix nom al viatge, el formulari ho diu i el botó passa a ser Afegir igualment.',
+  'help.guide.map-nearby-places.result':
+    'El lloc és a la llista de llocs i al mapa com una de les xinxetes pròpies del viatge, sota Sense planificar fins que el posis en un dia. Les xinxetes de la cerca es queden fins que apaguis la categoria.',
+  'help.guide.map-nearby-places.tip.1':
+    'La fila no hi és quan Explora llocs al mapa està desactivat a Configuració, sota Viatge i mapa.',
+  'help.guide.map-nearby-places.tip.2':
+    'Les respostes vénen de l’índex de llocs de TREK i d’OpenStreetMap, així que això és una de les poques coses del pla que necessita connexió.',
+  'help.guide.map-nearby-places.tip.3':
+    'Una cerca cobreix el que hi ha a la pantalla, així que acosta el zoom al carrer pel qual preguntes: una ciutat sencera respon amb els primers seixanta resultats i amb poc ordre.',
+  // map-add-place
+  'help.guide.map-add-place.title': 'Crear un lloc amb un clic dret al mapa',
+  'help.guide.map-add-place.goal': 'Posa un lloc exactament on el vols, sense buscar-lo abans.',
+  'help.guide.map-add-place.step.1':
+    'Fes clic dret al punt del mapa que vols. S’obre el formulari de lloc, amb el títol Afegeix un lloc / activitat.',
+  'help.guide.map-add-place.step.2':
+    'Latitud i Longitud ja són en aquell punt, i TREK consulta les coordenades i omple Adreça amb el que hi troba. Encara no s’ha desat res, així que sobreescriu tot el que no vagi bé.',
+  'help.guide.map-add-place.step.3':
+    'Dona-li un Nom que reconeguis, i la resta del que el pla ha de saber: Descripció, Notes, Categoria, Lloc web.',
+  'help.guide.map-add-place.step.4':
+    'Fes clic a Afegir. El lloc cau a la llista com a no planificat fins i tot amb un dia obert: un clic dret al mapa diu on, no quan.',
+  'help.guide.map-add-place.result':
+    'El lloc és a la llista i al mapa, sota Sense planificar fins que el posis en un dia.',
+  'help.guide.map-add-place.tip.1':
+    'L’adreça surt d’una consulta de les coordenades, així que pot llegir-se com un carrer i no com un nom, i en camp obert pot tornar buida. Els dos camps són teus per sobreescriure’ls.',
+  'help.guide.map-add-place.tip.2':
+    'Als mapes MapLibre GL i Mapbox GL un clic amb el botó del mig fa el mateix, i en una pantalla tàctil una pulsació llarga.',
+  // map-satellite
+  'help.guide.map-satellite.title': 'Canviar a satèl·lit',
+  'help.guide.map-satellite.goal': 'Bescanvia el mapa dibuixat per imatges aèries, i torna.',
+  'help.guide.map-satellite.step.1':
+    'El botó rodó de baix a l’esquerra del mapa és el commutador de capa base. La seva icona mostra sempre la capa cap a la qual aniria, i passar-hi el punter diu quina: Canvia a vista de satèl·lit.',
+  'help.guide.map-satellite.step.2':
+    'Fes-hi clic. El mapa es torna imatges aèries, prou detallades per distingir un sol edifici, i sense cap clau teva.',
+  'help.guide.map-satellite.step.3':
+    'Tot el que dibuixa TREK es queda a sobre: les xinxetes, la ruta del dia, les rutes importades i les rutes de reserves. Fes clic al botó de nou, que ara diu Canvia a vista de mapa, per tornar.',
+  'help.guide.map-satellite.result':
+    'El mapa torna a estar dibuixat, i la capa on el vas deixar es recorda al teu compte.',
+  'help.guide.map-satellite.tip.1':
+    'La tria es guarda al teu compte i no al viatge, de manera que cada viatge s’obre tal com el vas deixar, sigui quin sigui el motor de mapes que facis servir.',
+  'help.guide.map-satellite.tip.2':
+    'Les imatges no porten cap text: els noms de carrer, els barris i els números són al mapa dibuixat, així que torna-hi quan busquis una adreça.',
+  // map-whole-trip
+  'help.guide.map-whole-trip.title': 'Veure tot el viatge i les seves distàncies',
+  'help.guide.map-whole-trip.goal':
+    'Bescanvia l’únic dia obert per tots els dies de trajecte del viatge, i llegeix fins on arriba cadascun.',
+  'help.guide.map-whole-trip.step.1': 'El botó rodó Mostra tot el viatge és a baix a la dreta del mapa.',
+  'help.guide.map-whole-trip.step.2':
+    'Fes-hi clic. Tots els dies de trajecte del viatge es dibuixen alhora, cadascun amb el seu color sobre una vora blanca, perquè els dies veïns quedin separats.',
+  'help.guide.map-whole-trip.step.3':
+    'La fitxa de sobre el botó llista aquests dies: un punt de color, el nom del dia, una icona per a cada manera com el recorres, i la distància que cobreix. Distància total és a dalt de tot.',
+  'help.guide.map-whole-trip.step.4':
+    'Fes clic en un dia de la fitxa per seleccionar-lo, igual que si el triessis a la columna dels dies. Fes clic al botó de nou, que ara diu Amaga tot el viatge, per tornar a l’únic dia.',
+  'help.guide.map-whole-trip.result':
+    'Cada dia de trajecte està dibuixat amb el seu color, i la fitxa diu què cobreix cadascun i a quant arriba el viatge.',
+  'help.guide.map-whole-trip.tip.1':
+    'El total arriba uns quants trams cada vegada. Mentre el segueixi un …, el nombre encara és una suma parcial; queda fixat un cop cada tram ha respost.',
+  'help.guide.map-whole-trip.tip.2':
+    'Un tram que l’encaminador rebutja es queda com una línia recta i no compta res, i la fitxa ho diu en comptes de mostrar en silenci una xifra massa baixa.',
+  'help.guide.map-whole-trip.tip.3':
+    'Un dia amb menys de dues parades localitzades no té cap ruta per dibuixar, així que queda del tot fora de la fitxa.',
+  // map-booking-routes
+  'help.guide.map-booking-routes.title': 'Mostrar la ruta d’una reserva al mapa',
+  'help.guide.map-booking-routes.goal':
+    'Dibuixa al mapa els vols, els trens i els trajectes en cotxe que has reservat, i treu-los de nou.',
+  'help.guide.map-booking-routes.step.1':
+    'Les rutes de reserves estan apagades fins que en demanes una. A la fila d’una reserva, a la columna dels dies, hi ha una petita icona de ruta: Mostra les rutes de reserves.',
+  'help.guide.map-booking-routes.step.2':
+    'Fes-hi clic. La reserva apareix al mapa: un vol com un arc de cercle màxim, un trajecte en cotxe per les carreteres reals, un tren com la cadena de les seves estacions. Confirmada es dibuixa contínua, Pendent discontínua.',
+  'help.guide.map-booking-routes.step.3':
+    'Els extrems de la ruta són píndoles blaves amb la icona del transport. Fes clic en un per obrir la reserva que hi ha al darrere, amb els seus horaris, el seu Codi de reserva i Ubicació / adreça; Tancar la desa de nou.',
+  'help.guide.map-booking-routes.step.4':
+    'La icona de ruta de la barra d’eines sobre els dies fa tot el viatge alhora: Mostra totes les rutes de reserva dibuixa totes les reserves que en tenen una.',
+  'help.guide.map-booking-routes.step.5':
+    'És un full en blanc i no una capa a sobre, de manera que el que havies triat reserva per reserva es deixa anar. Torna a prémer-lo, que ara diu Amaga totes les rutes de reserva, i el mapa queda net.',
+  'help.guide.map-booking-routes.result':
+    'Les reserves que has demanat estan dibuixades al mapa, i la tria es guarda per a aquest viatge en aquest navegador fins que la canviïs.',
+  'help.guide.map-booking-routes.tip.1':
+    'Els extrems porten el codi de l’aeroport o el nom de l’estació només quan Etiquetes de rutes de reserves està activat a Configuració, sota Viatge i mapa; si no, només mostren la icona.',
+  'help.guide.map-booking-routes.tip.2':
+    'Mostra sempre les rutes de reserva, a la mateixa configuració, les dibuixa des del principi a cada viatge sobre el qual encara no has decidit.',
+  'help.guide.map-booking-routes.tip.3':
+    'Una reserva necessita dos extrems amb coordenades abans de poder-se dibuixar, així que un hotel o un restaurant no porta icona de ruta.',
 };
 
 export default help;

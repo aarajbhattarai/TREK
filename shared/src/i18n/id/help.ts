@@ -1939,6 +1939,817 @@ const help: TranslationStrings = {
     'Daftarnya harus dibagikan secara publik; tautan daftar pribadi tidak mengimpor apa pun.',
   'help.guide.import-places-list.tip.2':
     '“Perkaya tempat via Google” muncul di dialog ketika TREK Anda punya kunci Google: ia mencari setiap tempat yang diimpor dan mengisi foto, alamat dan detail.',
+
+  // ── Screen: trip-days ─────────────────────────────────────────────────────────────────
+  'help.ctx.trip-days.title': 'Hari',
+  'help.ctx.trip-days.summary':
+    'Kolom kiri rencana: satu kartu per hari dengan perhentiannya secara berurutan, catatan, pemesanan dan transportasi hari itu, dan rute di antara perhentian. Di sinilah perjalanan benar-benar direncanakan.',
+  'help.ctx.trip-days.bullet.1':
+    'Bilah alat di atas: “Ekspor” (PDF, kalender, GPX), “Expand all days” / “Collapse all days”, panah pembatalan, “Atur ulang hari” dan “Tampilkan semua rute pemesanan”.',
+  'help.ctx.trip-days.bullet.2':
+    'Sebuah kartu hari: nomor, cuaca, judul, tanggal dan biaya hari itu di kepalanya; klik kepala kartu untuk membuka hari itu, tanda panahnya melipatnya. “Transportasi umum”, “Tambah transportasi” dan “Tambah Catatan” juga ada di kepala kartu.',
+  'help.ctx.trip-days.bullet.3':
+    'Di dalam sebuah hari: perhentian secara berurutan, masing-masing dengan gambar, nama, waktu dan sebuah kunci pada gambarnya; catatan; pemesanan yang termasuk hari itu; dan di antara perhentian, waktu tempuh setiap ruas.',
+  'help.ctx.trip-days.bullet.4':
+    'Di bawah perhentian ada bilah rute: “Rute” menggambar hari itu di peta, “Optimalkan” mengurutkan perhentian, “Berkendara” / “Jalan kaki” menetapkan moda perjalanan hari itu, “Buka di Google Maps” dan “Buka di CoMaps” menyerahkan hari itu.',
+  'help.ctx.trip-days.bullet.5':
+    'Tempat masuk ke sebuah hari dengan menyeret baris dari kolom tempat, dengan tanda + pada baris itu, dengan “Tambah tempat ke hari ini” pada hari yang kosong, atau dari detail tempat.',
+  'help.ctx.trip-days.bullet.6':
+    '“Total Biaya” di bawah menjumlahkan setiap perhentian dan pemesanan yang berharga, dalam mata uang perjalanan.',
+  // read-day-plan
+  'help.guide.read-day-plan.title': 'Membaca sebuah hari',
+  'help.guide.read-day-plan.goal':
+    'Ketahui apa yang diberitahukan setiap bagian kartu hari sebelum Anda mengubah apa pun.',
+  'help.guide.read-day-plan.step.1':
+    'Kepala kartu: nomor hari, prakiraan cuaca untuk hari itu, “Hari 1” atau judul yang Anda berikan, tanggal dan biaya hari itu. Klik kepala kartu untuk membuka hari itu (panel “Detail hari” terbuka di atas peta); tanda panah di kanan melipat dan membuka kartu.',
+  'help.guide.read-day-plan.step.2':
+    'Sebuah perhentian: pegangan di kiri menyeretnya, gambarnya membawa kunci untuk optimasi rute, lalu nama, deskripsi dan, jika diisi, “Catatan untuk hari ini”. Sebuah lencana waktu menampilkan “Mulai” dan “Selesai” bila perhentian itu punya keduanya; panah yang muncul di ujung kanannya memindahkannya ke atas atau ke bawah.',
+  'help.guide.read-day-plan.step.3':
+    'Sebuah pemesanan pada hari itu: transportasi tampil sebagai “Keberangkatan” atau “Kedatangan” dengan waktu dan rutenya, sebuah reservasi pada perhentian menandai perhentian itu “Reservasi dikonfirmasi” atau “Reservasi tertunda”. Sakelar kecil pada transportasi menampilkan rutenya di peta.',
+  'help.guide.read-day-plan.step.4':
+    'Di antara dua perhentian, penghubungnya menyebutkan berapa lama ruas itu dan berapa jauh, dalam moda perjalanan hari itu; klik untuk mengubah moda ruas yang satu itu.',
+  'help.guide.read-day-plan.step.5':
+    'Bilah rute di ujung: “Rute” menggambar jalan hari itu di peta, “Optimalkan” menyusun ulang perhentian, tombol moda memilih “Berkendara” atau “Jalan kaki”, “Buka di Google Maps” dan “Buka di CoMaps” membuka hari itu di sana.',
+  'help.guide.read-day-plan.result':
+    'Setiap simbol pada kartu punya arti; panduan di bawah mengubah masing-masing dari simbol itu.',
+  'help.guide.read-day-plan.tip.1':
+    'Klik kanan sebuah perhentian untuk menunya: “Sunting”, “Hapus dari hari”, “Buka Situs Web”, aplikasi navigasi (Google Maps, Waze, Apple Maps, OpenStreetMap, CoMaps), “Simpan ke Koleksi”, “Hapus”.',
+  'help.guide.read-day-plan.tip.2':
+    'Arahkan kursor ke sebuah perhentian dan “Tambah pemesanan” muncul di ujungnya: reservasi yang dibuat di situ terikat pada perhentian ini di hari ini.',
+  // place-onto-day
+  'help.guide.place-onto-day.title': 'Menaruh tempat pada sebuah hari',
+  'help.guide.place-onto-day.goal':
+    'Ubah tempat dari daftar menjadi perhentian sebuah hari, di posisi yang semestinya dalam urutan.',
+  'help.guide.place-onto-day.step.1':
+    'Seret sebuah baris dari kolom tempat ke kartu hari. Jatuhkan di antara dua perhentian untuk menaruhnya tepat di sana, atau di mana saja pada kartu untuk menambahkannya di akhir.',
+  'help.guide.place-onto-day.step.2':
+    'Tanpa menyeret: buka hari itu dengan mengklik kepalanya, lalu klik tanda + di ujung baris tempat, atau klik kanan baris itu dan pilih “+ Hari”.',
+  'help.guide.place-onto-day.step.3':
+    'Pada hari yang kosong, “Tambah tempat ke hari ini” membuka formulir tempat, dan tempat baru itu langsung mendarat di hari tersebut.',
+  'help.guide.place-onto-day.step.4':
+    'Dari detail sebuah tempat, “Tambah ke Hari” menanyakan hari mana; selama sebuah hari terbuka, “Ke hari” di kolom tempat membuat tempat baru pada hari yang terbuka itu.',
+  'help.guide.place-onto-day.result':
+    'Tempat itu kini perhentian hari tersebut, ada di peta dengan nomor hari itu, dan kolom tempat menghitungnya di bawah “Direncanakan”.',
+  'help.guide.place-onto-day.tip.1':
+    'Sebuah tempat bisa ada di beberapa hari: taruh lagi pada hari kedua dari kolom tempat. Menyeret sebuah perhentian dari satu kartu hari ke kartu lain justru memindahkannya.',
+  'help.guide.place-onto-day.tip.2': 'Panah pembatalan di bilah alat menarik kembali penugasan itu.',
+  'help.guide.place-onto-day.tip.3':
+    'Sebuah perhentian tidak bisa dijatuhkan di antara dua entri yang punya waktu tetap, atau sebelum pemesanan yang sudah berwaktu; rencana menjaga kronologinya.',
+  // reorder-stops
+  'help.guide.reorder-stops.title': 'Mengubah urutan sebuah hari',
+  'help.guide.reorder-stops.goal': 'Pindahkan perhentian ke atas atau ke bawah, atau ke hari lain.',
+  'help.guide.reorder-stops.step.1': 'Seret perhentian pada pegangannya ke posisi baru di dalam kartu.',
+  'help.guide.reorder-stops.step.2':
+    'Atau gunakan panah di ujung kanan perhentian: satu langkah ke atas atau ke bawah setiap klik.',
+  'help.guide.reorder-stops.step.3':
+    'Seret perhentian ke kartu hari lain untuk memindahkannya ke sana; ia meninggalkan hari yang lama.',
+  'help.guide.reorder-stops.step.4':
+    'Perhentian dengan waktu tetap menanyakan “Hapus waktu?” bila pemindahan itu akan merusak urutan hari tersebut, karena waktulah yang menentukan posisinya: “Konfirmasi” membuang waktu itu dan membiarkannya pergi ke mana saja.',
+  'help.guide.reorder-stops.result': 'Rute dan waktu tempuh langsung mengikuti urutan yang baru.',
+  'help.guide.reorder-stops.tip.1':
+    'Pemesanan dengan waktu tetap tidak bisa diurutkan ulang; mereka duduk di tempat yang ditentukan waktunya.',
+  'help.guide.reorder-stops.tip.2':
+    '“Optimalkan” di bilah rute mengurutkan seluruh hari menurut jalan terpendek; kunci dulu sebuah perhentian agar tetap di tempatnya.',
+  // set-stop-times
+  'help.guide.set-stop-times.title': 'Memberi waktu pada perhentian',
+  'help.guide.set-stop-times.goal':
+    'Tetapkan kapan sebuah perhentian mulai dan selesai, supaya hari itu terbaca seperti jadwal.',
+  'help.guide.set-stop-times.step.1':
+    'Klik kanan perhentian dan pilih “Sunting”. Dibuka dari hari itu, formulirnya punya “Mulai” dan “Selesai” di bagian bawah.',
+  'help.guide.set-stop-times.step.2':
+    'Isi “Mulai” dan, kalau mau, “Selesai”. “Waktu tumpang tindih dengan:” memperingatkan bahwa perhentian berwaktu lain pada hari itu bertumpang tindih; “Selesai” yang lebih awal dari “Mulai” menghalangi “Perbarui”.',
+  'help.guide.set-stop-times.step.3':
+    'Klik “Perbarui”. Perhentian itu mendapat lencana waktu dan berpindah ke tempat yang sesuai dengan waktunya di dalam hari itu.',
+  'help.guide.set-stop-times.result':
+    'Perhentian berwaktu mempertahankan tempatnya dalam urutan; perhentian tanpa waktu tersusun di sekitarnya.',
+  'help.guide.set-stop-times.tip.1':
+    'Waktu itu milik perhentian pada hari tersebut; tempat yang sama pada hari lain bisa punya waktu lain.',
+  'help.guide.set-stop-times.tip.2':
+    'Untuk memindahkan perhentian berwaktu dengan tangan, seret saja: pertanyaan “Hapus waktu?” membuang waktunya di tengah jalan, begitu Anda menekan “Konfirmasi”.',
+  'help.guide.set-stop-times.tip.3':
+    '“Catatan untuk hari ini” di formulir yang sama memuat apa yang hanya berlaku pada hari ini, sebuah meja yang dipesan, sebuah nomor tiket.',
+  // remove-from-day
+  'help.guide.remove-from-day.title': 'Mengeluarkan perhentian dari sebuah hari',
+  'help.guide.remove-from-day.goal': 'Batalkan rencana sebuah tempat tanpa menghapusnya dari perjalanan.',
+  'help.guide.remove-from-day.step.1': 'Klik kanan perhentian dan pilih “Hapus dari hari”.',
+  'help.guide.remove-from-day.step.2':
+    'Perhentian itu hilang dari hari tersebut; tempatnya tetap ada di kolom tempat, di bawah “Belum direncanakan” bila ia tidak ada pada hari lain.',
+  'help.guide.remove-from-day.result':
+    'Hari itu, rutenya dan biayanya diperbarui; panah pembatalan membawa perhentian itu kembali.',
+  'help.guide.remove-from-day.tip.1':
+    '“Hapus” di menu yang sama mengeluarkan tempat itu dari seluruh perjalanan, termasuk setiap hari.',
+  'help.guide.remove-from-day.tip.2': '“Hapus dari Hari” juga ada di panel detail tempat, di sebelah “Tambah ke Hari”.',
+  // lock-stop
+  'help.guide.lock-stop.title': 'Mengunci perhentian di tempatnya',
+  'help.guide.lock-stop.goal': 'Biarkan sebuah perhentian tetap di tempatnya saat rute dioptimalkan.',
+  'help.guide.lock-stop.step.1':
+    'Arahkan kursor ke gambar perhentian dan klik kuncinya: “Pertahankan posisi saat mengoptimalkan rute”.',
+  'help.guide.lock-stop.step.2':
+    'Kini “Optimalkan” menyusun perhentian lain di sekitarnya; klik kunci itu sekali lagi (“Klik untuk membuka kunci”) untuk melepaskannya.',
+  'help.guide.lock-stop.result':
+    'Kunci itu terlihat pada gambar; perhentian mempertahankan posisinya sampai Anda membuka kuncinya.',
+  'help.guide.lock-stop.tip.1':
+    'Perhentian dengan waktu tetap terkunci oleh waktunya; ia tidak pernah bergerak selama optimasi.',
+  'help.guide.lock-stop.tip.2':
+    'Kunci itu bertahan untuk kunjungan ini: setelah halaman dimuat ulang setiap perhentian bebas lagi, hanya perhentian berwaktu yang tetap terpaku.',
+  // day-note
+  'help.guide.day-note.title': 'Menambahkan catatan pada sebuah hari',
+  'help.guide.day-note.goal': 'Simpan sebuah pengingat, nomor tiket atau rencana cadangan langsung di dalam hari itu.',
+  'help.guide.day-note.step.1': 'Klik “Tambah Catatan” di kepala kartu hari.',
+  'help.guide.day-note.step.2':
+    'Beri nama di bawah “Catatan”, itulah yang ditampilkan kartu hari, dan tulis selebihnya di bawah “Catatan Harian”. Bilah “Pemformatan” di atasnya mengatur bentuk teks (“Tebal”, “Daftar berpoin”, “Daftar bernomor”, “Tautan”, “Kutipan”) dan “Pratinjau” di sebelah kiri memperlihatkan kartu yang akan terbentuk darinya.',
+  'help.guide.day-note.step.3':
+    'Pilih sebuah “Ikon” dan sebuah “Warna”, supaya catatan menonjol di antara perhentian, lalu “Tambah”.',
+  'help.guide.day-note.step.4':
+    'Catatan duduk di dalam hari itu seperti sebuah perhentian: seret ke tempatnya, klik kanan untuk “Sunting” dan “Hapus”.',
+  'help.guide.day-note.result':
+    'Catatan adalah bagian dari hari itu, termasuk di PDF; catatan berwaktu tersusun bersama perhentian berwaktu.',
+  'help.guide.day-note.tip.1':
+    'Catatan dengan waktu bisa menggantikan transportasi yang tidak Anda pesan: “08:15 S3 dari stasiun pusat”.',
+  'help.guide.day-note.tip.2': 'Catatan berlaku per hari; catatan untuk seluruh perjalanan tempatnya di Collab.',
+  // day-route
+  'help.guide.day-route.title': 'Menampilkan dan mengoptimalkan rute hari itu',
+  'help.guide.day-route.goal':
+    'Lihat jalan di antara perhentian, pilih cara Anda bepergian, dan biarkan TREK menyusun urutannya.',
+  'help.guide.day-route.step.1':
+    'Buka hari itu dan klik “Rute” di bilah rute: jalan di antara perhentian tergambar di peta, dan penghubung di antara perhentian menampilkan waktu dan jarak setiap ruas.',
+  'help.guide.day-route.step.2':
+    '“Berkendara” dan “Jalan kaki” di sebelahnya menetapkan moda perjalanan hari itu; ruas-ruasnya dihitung ulang. Plugin bisa menambahkan moda mereka sendiri.',
+  'help.guide.day-route.step.3':
+    'Klik sebuah penghubung untuk mengubah moda ruas yang satu itu: pilih sebuah moda, atau “Gunakan bawaan hari” untuk kembali ke moda hari itu.',
+  'help.guide.day-route.step.4':
+    '“Optimalkan” menyusun ulang perhentian menurut jalan terpendek. Perhentian dengan kunci atau waktu tetap mempertahankan tempatnya; bila ada akomodasi pada hari itu, rute dimulai dari sana.',
+  'help.guide.day-route.step.5':
+    '“Buka di Google Maps” atau “Buka di CoMaps” membuka seluruh hari sebagai satu rute di aplikasi tersebut, untuk navigasi di perjalanan.',
+  'help.guide.day-route.result':
+    'Hari itu menjadi sebuah rute dengan waktu; “Total Biaya” dan ruas-ruasnya diperbarui saat urutannya berubah.',
+  'help.guide.day-route.tip.1':
+    'Rute secara bawaan berasal dari OSRM; admin dapat mengarahkan TREK ke mesin rute lain di “Pengaturan Default Pengguna”.',
+  'help.guide.day-route.tip.2':
+    'Ruas yang rutenya tidak bisa dihitung tidak menampilkan waktu; periksa apakah kedua perhentian punya koordinat.',
+  'help.guide.day-route.tip.3': 'Panah pembatalan menarik kembali sebuah optimasi.',
+  // manage-days
+  'help.guide.manage-days.title': 'Menambah, mengurutkan dan mengganti nama hari',
+  'help.guide.manage-days.goal': 'Bentuk harinya sendiri, bukan hanya apa yang ada di dalamnya.',
+  'help.guide.manage-days.step.1':
+    'Hari berasal dari tanggal perjalanan; ubah tanggalnya pada kartu perjalanan di “Dasbor” dan hari akan ditambahkan atau dikurangi di kedua ujungnya.',
+  'help.guide.manage-days.step.2':
+    '“Atur ulang hari” di bilah alat membuka sebuah daftar: “Pindah ke atas” dan “Pindah ke bawah” menggeser sebuah hari beserta segala isinya; “Tambah hari” menambahkan satu hari di akhir.',
+  'help.guide.manage-days.step.3':
+    'Untuk mengganti nama sebuah hari, buka hari itu dan klik pensil di sebelah judulnya pada panel detail di atas peta; nama itu menggantikan “Hari 1” di kartu dan di PDF.',
+  'help.guide.manage-days.step.4':
+    '“Expand all days” dan “Collapse all days” di bilah alat melipat semua kartu sekaligus; satu kartu dilipat dengan tanda panahnya.',
+  'help.guide.manage-days.result':
+    'Tanggal tetap melekat pada posisi: hari yang dipindahkan ke atas mengambil tanggal yang lebih awal, dan perhentian, catatan serta pemesanannya ikut berpindah.',
+  'help.guide.manage-days.tip.1': '“Atur ulang hari” bisa dibatalkan dari bilah alat.',
+  'help.guide.manage-days.tip.2':
+    'Biaya di kepala kartu sebuah hari menjumlahkan perhentian dan pemesanan hari itu yang membawa harga.',
+  // bookings-in-plan
+  'help.guide.bookings-in-plan.title': 'Membaca pemesanan dan transportasi di rencana',
+  'help.guide.bookings-in-plan.goal':
+    'Ketahui di mana sebuah pemesanan muncul begitu ia ada, dan layar mana yang membuatnya.',
+  'help.guide.bookings-in-plan.step.1':
+    'Sebuah transportasi (penerbangan, kereta, feri, bus, mobil) tampil pada hari keberangkatannya sebagai “Keberangkatan” dan pada hari kedatangannya sebagai “Kedatangan”, dengan waktu dan rute; yang berlangsung beberapa hari membentang melewati hari-hari di antaranya.',
+  'help.guide.bookings-in-plan.step.2':
+    'Reservasi yang terikat pada sebuah perhentian (sebuah restoran, sebuah tur) menandai perhentian itu “Reservasi dikonfirmasi” atau “Reservasi tertunda”; pemesanan yang punya hari tetapi tanpa perhentian menjadi barisnya sendiri di hari itu.',
+  'help.guide.bookings-in-plan.step.3':
+    'Bermalam di hotel adalah akomodasi: ia duduk di panel detail hari di bawah “Akomodasi”, dari “Check-in” sampai “Check-out”, dan rute setiap hari tersebut dimulai dari sana.',
+  'help.guide.bookings-in-plan.step.4':
+    'Di peta, sakelar pada baris transportasi menggambar rutenya; “Tampilkan semua rute pemesanan” di bilah alat menggambar semuanya.',
+  'help.guide.bookings-in-plan.step.5':
+    'Membuatnya: “Tambah pemesanan” pada perhentian yang disorot kursor, “Tambah transportasi” dan “Transportasi umum” di kepala kartu hari, dan tab “Pemesanan” serta “Transportasi” untuk daftar lengkap dengan impor dan file.',
+  'help.guide.bookings-in-plan.result':
+    'Satu pemesanan, satu tempat di dalam rencana; tab itu berisi pemesanan yang sama dalam bentuk daftar.',
+  'help.guide.bookings-in-plan.tip.1':
+    '“Dikonfirmasi” dan “Tertunda” adalah status yang Anda tetapkan pada pemesanan; rencana menampilkannya pada perhentian, tab “Pemesanan” menghitung keduanya.',
+  'help.guide.bookings-in-plan.tip.2':
+    'Transportasi dengan waktu tetap tidak bisa diseret; ubah waktunya di pemesanannya saja.',
+  // export-plan
+  'help.guide.export-plan.title': 'Mengekspor rencana',
+  'help.guide.export-plan.goal': 'Bawa rencana sebagai dokumen, ke dalam kalender Anda atau ke sebuah GPS.',
+  'help.guide.export-plan.step.1': 'Klik “Ekspor” di bilah alat di atas hari-hari.',
+  'help.guide.export-plan.step.2':
+    '“Dokumen”: “PDF” membuka tampilan cetak setiap hari beserta perhentian, catatan dan pemesanannya; “Pemisah halaman per hari” memulai setiap hari pada halaman baru, “Simpan sebagai PDF” mengunduhnya.',
+  'help.guide.export-plan.step.3':
+    '“Kalender”: “Unduh .ics” menyimpan pemesanan sebagai berkas kalender; “Berlangganan kalender” memberi sebuah tautan yang disegarkan sendiri oleh aplikasi kalender Anda.',
+  'help.guide.export-plan.step.4':
+    '“Peta & GPS · GPX”: “Seluruh perjalanan” mengekspor tempat, rute harian dan trek; “Hanya tempat” hanya pinnya; “Hari sebagai rute” satu rute per hari, untuk peta luring dan perangkat GPS.',
+  'help.guide.export-plan.result': 'Berkasnya terunduh; tidak ada yang berubah di dalam perjalanan.',
+  'help.guide.export-plan.tip.1':
+    'Satu hari saja bisa dikirim ke aplikasi peta dari bilah rutenya: “Buka di Google Maps” atau “Buka di CoMaps”.',
+  'help.guide.export-plan.tip.2':
+    '“Berlangganan kalender” memerlukan langganan kalender yang dinyalakan di pengaturan Anda; “Dasbor” punya panduannya.',
+  'help.guide.export-plan.tip.3': 'Mengekspor adalah membaca: setiap anggota perjalanan bisa melakukannya.',
+
+  // ── Screen: trip-place ────────────────────────────────────────────────────────────────
+  'help.ctx.trip-place.title': 'Detail tempat',
+  'help.ctx.trip-place.summary':
+    'Kartu yang terbuka di atas peta ketika Anda memilih sebuah tempat: semua yang perjalanan ketahui tentangnya, bintang yang diberikan semua orang, gambar dan file-nya, serta tombol-tombol yang menaruhnya pada hari yang dibuka, ke dalam sebuah daftar atau ke dalam aplikasi peta.',
+  'help.ctx.trip-place.bullet.1':
+    'Klik sebuah baris di kolom tempat, sebuah perhentian di dalam sebuah hari, atau sebuah penanda di peta, dan kartu terbuka di atas peta. Memilihnya di dalam sebuah hari memberi tahu kartu itu perhentian mana yang Anda maksud, dan itulah yang membawa serta peserta perhentian tersebut beserta pemesanannya.',
+  'help.ctx.trip-place.bullet.2':
+    'Bagian kepala membawa gambar bulat, nama, kategori, alamat dan koordinat. Klik gambarnya untuk memakai gambar Anda sendiri, klik ganda namanya untuk mengganti nama tempat di tempat itu juga, dan tanda X di sebelah kanan menutup kartu.',
+  'help.ctx.trip-place.bullet.3':
+    'Di bawahnya: bintang yang diberikan setiap pelancong kepada tempat itu, harganya jika ada, deskripsi dan catatan, serta “Catatan untuk hari ini” bila perhentian itu membawanya.',
+  'help.ctx.trip-place.bullet.4':
+    '“Jam Buka”, “Warna jalur”, “Statistik Jalur” dan “File” menyusul, sejauh berlaku. “File” menerima apa pun dari folder Anda dan juga mendaftar apa yang menggantung pada pemesanan perhentian ini.',
+  'help.ctx.trip-place.bullet.5':
+    'Baris di bagian bawah: “Tambah ke Hari” atau “Hapus dari Hari” selama sebuah hari terbuka, lalu “Simpan ke Koleksi”, “Navigasi”, “Buka Situs Web”, “Sunting” dan “Hapus”.',
+  'help.ctx.trip-place.bullet.6':
+    'Tempat yang TREK cocokkan dengan penyedia peta menampilkan lebih banyak: penilaian penyedia itu beserta sebuah ulasan, nomor telepon, dan cincin “Buka” atau “Tutup” di sekeliling gambar dengan jam buka sepekan di baliknya.',
+  // read-place
+  'help.guide.read-place.title': 'Apa yang kartu ceritakan tentang sebuah tempat',
+  'help.guide.read-place.goal': 'Baca semua yang perjalanan ketahui tentang satu tempat, dalam satu kartu.',
+  'help.guide.read-place.step.1':
+    'Di kolom hari, klik perhentian yang ingin Anda baca. Kartu terbuka di atas peta dan perhentian itu tetap ditandai pada harinya.',
+  'help.guide.read-place.step.2':
+    'Bagian kepala: gambar bulat, nama, alamat dan koordinat persisnya. Tanda X di sebelah kanan menutup kartu lagi.',
+  'help.guide.read-place.step.3':
+    'Di bawahnya bintang yang diberikan setiap pelancong kepada tempat itu, dengan rata-ratanya dan berapa banyak yang memilih. “Belum dinilai” selama belum ada yang memberi.',
+  'help.guide.read-place.step.4':
+    'Lalu deskripsinya dan, di bawahnya, catatannya. Keduanya adalah teks dari formulir tempat, ditampilkan apa adanya: daftar, tautan dan huruf tebal semuanya bekerja.',
+  'help.guide.read-place.step.5':
+    '“Peserta” menyebut siapa yang pergi ke perhentian ini. Semua orang ikut sampai Anda mengeluarkan seseorang.',
+  'help.guide.read-place.step.6':
+    'Baris di bagian bawah adalah apa yang bisa Anda lakukan dari sini: mengeluarkan tempat itu dari hari yang dibuka atau menaruhnya di sana, menyimpannya ke sebuah daftar, membukanya di aplikasi peta, menyuntingnya atau menghapusnya.',
+  'help.guide.read-place.result':
+    'Kartu tetap terbuka sampai Anda menutupnya dengan tanda X atau memilih tempat lain, dan perhentian yang memilikinya tetap ditandai di kolom hari.',
+  'help.guide.read-place.tip.1':
+    'Dipilih dari kolom tempat, kartu mengenal tempatnya tetapi bukan sebuah perhentian, jadi tidak ada peserta dan tidak ada pemesanan. Pilihlah perhentian di dalam harinya, maka keduanya ada.',
+  'help.guide.read-place.tip.2':
+    'Klik ganda namanya untuk mengganti nama tempat tanpa membuka formulir. Enter menyimpan, Escape membatalkan perubahan.',
+  'help.guide.read-place.tip.3':
+    'Tempat yang bisa TREK cocokkan dengan penyedia peta juga menampilkan penilaian penyedia itu, sebuah ulasan, nomor telepon dan jam bukanya.',
+  // rate-place
+  'help.guide.rate-place.title': 'Menilai sebuah tempat',
+  'help.guide.rate-place.goal': 'Beri tempat itu bintang Anda sendiri, dan lihat apa yang diberikan orang lain.',
+  'help.guide.rate-place.step.1':
+    'Buka tempatnya. Baris bintang ada tepat di bawah bagian kepala dan membawa rata-rata suara sejauh ini, dengan jumlahnya dalam tanda kurung.',
+  'help.guide.rate-place.step.2':
+    'Klik bintang yang Anda maksud. Bintang-bintang terisi saat Anda bergerak melintasinya, jadi Anda melihat apa yang akan Anda berikan.',
+  'help.guide.rate-place.step.3':
+    'Suara Anda langsung masuk ke rata-rata, dan wajah-wajah di sebelahnya adalah yang memberi suara. Arahkan kursor ke barisnya untuk melihat bintang semua orang.',
+  'help.guide.rate-place.step.4':
+    'Rata-rata yang sama ada di baris tempat itu pada kolom tempat, jadi yang bagus menonjol dalam daftar.',
+  'help.guide.rate-place.result':
+    'Bintang Anda ada pada tempat itu untuk dilihat seluruh perjalanan, dan bintang di baris filter di atas daftar kini bisa menyisakan hanya tempat-tempat yang mencapai batas bawah.',
+  'help.guide.rate-place.tip.1':
+    'Setiap pelancong boleh menilai, bahkan pada perjalanan yang hanya sebagian dari Anda boleh “Tambah / edit / hapus tempat”.',
+  'help.guide.rate-place.tip.2':
+    'Klik bintang yang sudah Anda berikan untuk menarik kembali suara Anda. Bila tidak ada lagi yang memberi suara, tempat itu kembali berbunyi “Belum dinilai”.',
+  'help.guide.rate-place.tip.3':
+    'Hingga enam pemberi suara muat di samping bintang sebagai wajah; tooltipnya menyebut semuanya, dan menandai milik Anda.',
+  // place-image
+  'help.guide.place-image.title': 'Menaruh gambar Anda sendiri pada sebuah tempat',
+  'help.guide.place-image.goal': 'Ganti gambar mini otomatis dengan foto Anda sendiri.',
+  'help.guide.place-image.step.1': 'Buka tempatnya dari kolom tempat.',
+  'help.guide.place-image.step.2':
+    'Arahkan kursor ke gambar bulat di bagian kepala: sebuah kamera muncul dan tooltipnya berbunyi “Unggah gambar”. Klik dan pilih file Anda.',
+  'help.guide.place-image.step.3':
+    'Bagian kepala kini menampilkan gambar Anda, dengan tanda X merah kecil di sudutnya.',
+  'help.guide.place-image.step.4':
+    'Gambar yang sama ada di baris tempat itu pada kolom tempat, dan pada penandanya di peta.',
+  'help.guide.place-image.result':
+    'Gambar Anda menjadi gambar tempat itu di mana-mana: di kartu, di kolom tempat, di perhentian dalam hari, di penanda pada peta dan pada perjalanan yang dibagikan.',
+  'help.guide.place-image.tip.1': 'JPG, PNG, GIF dan WebP diterima, dan HEIC dari iPhone dikonversi saat masuk.',
+  'help.guide.place-image.tip.2':
+    'Tanda X di sudut menghapus gambar Anda lagi dan yang otomatis kembali. Tempatnya sendiri tidak tersentuh.',
+  'help.guide.place-image.tip.3':
+    'Tanpa gambar Anda sendiri, TREK mencarikan satu dari koordinat tempat itu, dan jatuh kembali ke ikon kategorinya.',
+  // place-day-assign
+  'help.guide.place-day-assign.title': 'Menaruh tempat pada hari yang dibuka, atau mengeluarkannya',
+  'help.guide.place-day-assign.goal': 'Pakai tombol kartu itu sendiri, bukan menyeret barisnya melintasi perencana.',
+  'help.guide.place-day-assign.step.1':
+    'Klik judul sebuah hari di kolom hari. Hari itu sekarang yang terbuka, dan kartu bekerja terhadapnya.',
+  'help.guide.place-day-assign.step.2':
+    'Klik sebuah tempat yang belum ada pada hari itu di kolom tempat. Kartunya terbuka dan baris di bagian bawah menawarkan “Tambah ke Hari”.',
+  'help.guide.place-day-assign.step.3':
+    'Klik “Tambah ke Hari”. Perhentian itu mendarat di akhir hari dan tombolnya berubah menjadi “Hapus dari Hari”.',
+  'help.guide.place-day-assign.step.4':
+    'Perhentian itu sekarang ada dalam hari tersebut, paling akhir dalam daftar. Seret ke atas ke tempat yang semestinya.',
+  'help.guide.place-day-assign.step.5':
+    '“Hapus dari Hari” mengeluarkan perhentian itu dari hari tersebut lagi, dan kartu menawarkan “Tambah ke Hari” sekali lagi.',
+  'help.guide.place-day-assign.result':
+    'Hari itu membawa perhentian tersebut, atau tidak lagi membawanya, dan tempatnya sendiri tidak tersentuh dalam kedua hal itu.',
+  'help.guide.place-day-assign.tip.1':
+    'Tombol itu hanya ada selama sebuah hari terbuka. Tanpa hari yang terbuka, kartu tidak punya tujuan untuk menambahkan tempatnya.',
+  'help.guide.place-day-assign.tip.2':
+    'Mengeluarkan perhentian dari sebuah hari tetap meninggalkan tempatnya di perjalanan dan di kolom tempat. “Hapus” adalah yang menghilangkannya di mana-mana.',
+  'help.guide.place-day-assign.tip.3':
+    'Perhentian yang ditaruh pada hari itu oleh pemesanan penginapan tidak menawarkan kedua tombol tersebut: malam itu ditambah dan dihapus di blok “Akomodasi” hari tersebut.',
+  // place-participants
+  'help.guide.place-participants.title': 'Menyebut siapa yang pergi ke perhentian ini',
+  'help.guide.place-participants.goal': 'Pecah kelompok untuk satu perhentian tanpa memecah perjalanannya.',
+  'help.guide.place-participants.step.1':
+    'Klik perhentian di dalam harinya. Kartu terbuka dan “Peserta” mendaftar semua orang dalam perjalanan.',
+  'help.guide.place-participants.step.2':
+    'Klik chip seorang pelancong untuk mengeluarkannya dari perhentian ini. Namanya dicoret saat Anda mengarahkan kursor ke sana.',
+  'help.guide.place-participants.step.3':
+    'Tanda + bergaris putus-putus muncul begitu ada yang tidak ikut. Klik untuk melihat siapa yang tidak ada di perhentian itu.',
+  'help.guide.place-participants.step.4':
+    'Klik sebuah nama untuk memasukkannya kembali. Dengan semua orang kembali, perhentian itu jadi milik seluruh kelompok lagi.',
+  'help.guide.place-participants.result':
+    'Perhentian itu membawa pelancong yang Anda pilih, dan sisa kelompok punya sore itu untuk mereka sendiri.',
+  'help.guide.place-participants.tip.1':
+    '“Peserta” hanya muncul dengan sebuah perhentian terpilih, jadi pilihlah tempatnya di dalam hari dan bukan di kolom tempat, dan hanya pada perjalanan dengan lebih dari satu pelancong.',
+  'help.guide.place-participants.tip.2':
+    'Tidak memilih siapa pun berarti semua orang pergi. Mengeluarkan yang terakhir memasukkan semua orang kembali.',
+  'help.guide.place-participants.tip.3':
+    'Seorang “Tamu”, yang tidak punya akun sendiri, bisa menjadi peserta seperti orang lain.',
+  // place-booking
+  'help.guide.place-booking.title': 'Pemesanan pada sebuah perhentian',
+  'help.guide.place-booking.goal':
+    'Baca pemesanan yang menjadi milik sebuah perhentian, buka, dan sematkan yang baru padanya.',
+  'help.guide.place-booking.step.1':
+    'Buka perhentian yang memiliki pemesanan itu. Kartu menampilkan sebuah bilah dengan “Dikonfirmasi” atau “Tertunda” dan nama pemesanannya.',
+  'help.guide.place-booking.step.2':
+    'Bilah itu membawa “Tanggal”, “Waktu” dan “Kode Pemesanan”, serta catatan apa pun yang dimiliki pemesanan itu.',
+  'help.guide.place-booking.step.3': 'Klik bilahnya. Formulir pemesanan itu sendiri terbuka di atasnya.',
+  'help.guide.place-booking.step.4':
+    '“Hubungkan ke jadwal harian” adalah yang menyematkan sebuah pemesanan ke sebuah perhentian, dan di sini sudah menyebut perhentian ini. Tutup formulirnya lagi.',
+  'help.guide.place-booking.step.5':
+    'Pemesanan baru untuk sebuah perhentian dimulai di kolom hari: arahkan kursor ke perhentian itu dan klik tanda + di ujungnya. Formulir terbuka sebagai “Reservasi Baru”, sudah terhubung dengannya.',
+  'help.guide.place-booking.result':
+    'Pemesanan itu menggantung pada perhentian tersebut: ada di kartu, ada di hari itu, dan file-filenya juga terdaftar di bawah “File” di sini.',
+  'help.guide.place-booking.tip.1':
+    'Bilah itu hanya tampil untuk perhentian tempat pemesanannya disematkan. Pemesanan tanpa perhentian tinggal di tab “Pesan”.',
+  'help.guide.place-booking.tip.2':
+    'Beberapa pemesanan bisa berbagi satu perhentian: makan siangnya dan turnya yang berangkat dari pintu yang sama.',
+  'help.guide.place-booking.tip.3':
+    'Kereta, penerbangan atau feri membuka formulir transportasi sebagai gantinya, yang dipakai tab “Transportasi”.',
+  // place-files
+  'help.guide.place-files.title': 'Menyimpan tiket sebuah tempat bersama tempatnya',
+  'help.guide.place-files.goal': 'Taruh tiket, voucher atau peta untuk sebuah tempat di mana Anda akan mencarinya.',
+  'help.guide.place-files.step.1':
+    'Buka tempatnya. “File” ada di kaki kartu dan berbunyi “File” selama tempat itu belum punya satu pun.',
+  'help.guide.place-files.step.2': 'Klik “Unggah” di sebelahnya dan pilih file-nya.',
+  'help.guide.place-files.step.3':
+    'Tombol itu menghitung apa yang dimiliki tempat tersebut, dan daftarnya terbuka sendiri.',
+  'help.guide.place-files.step.4': 'Setiap baris adalah nama file dengan ukurannya. Klik untuk membuka file-nya.',
+  'help.guide.place-files.result':
+    'File itu ada pada tempatnya, terhitung di kartu, dan ada juga di tab “File” perjalanan.',
+  'help.guide.place-files.tip.1':
+    '“File” juga mendaftar apa yang menggantung pada pemesanan perhentian ini, jadi konfirmasi hotel muncul pada hotelnya.',
+  'help.guide.place-files.tip.2': '“Unggah” menerima beberapa file sekaligus.',
+  'help.guide.place-files.tip.3':
+    'Tanpa hak “Unggah file”, tombol “Unggah” tidak ada; file yang sudah ada pada tempat itu tetap ada.',
+  // place-navigation
+  'help.guide.place-navigation.title': 'Membuka tempat di aplikasi peta atau di situsnya',
+  'help.guide.place-navigation.goal': 'Serahkan tempatnya kepada aplikasi yang benar-benar akan membawa Anda ke sana.',
+  'help.guide.place-navigation.step.1': 'Buka tempatnya dan klik “Navigasi” di baris bagian bawah.',
+  'help.guide.place-navigation.step.2':
+    'Daftarnya adalah aplikasi peta yang cocok untuk tempat ini: Google Maps, Waze, Apple Maps, OpenStreetMap dan CoMaps.',
+  'help.guide.place-navigation.step.3':
+    'Klik yang Anda pakai. TREK menyerahkan tempatnya sendiri jika bisa, bukan hanya sepasang koordinat, jadi Anda mendarat di pintu masuk yang tepat.',
+  'help.guide.place-navigation.step.4':
+    '“Buka Situs Web” di sebelahnya membuka halaman tempat itu sendiri, jam bukanya dan tiketnya, di tab baru.',
+  'help.guide.place-navigation.result':
+    'Aplikasi peta terbuka pada tempatnya, situsnya di tab tersendiri, dan tidak ada yang berubah di perjalanan.',
+  'help.guide.place-navigation.tip.1':
+    'Waze langsung mulai menavigasi. Yang lain membuka tempatnya, dan memulai dari sana adalah satu ketukan lagi.',
+  'help.guide.place-navigation.tip.2':
+    'Aplikasi mana yang ditawarkan bergantung pada tempatnya dan pada perangkat Anda: Apple Maps ditinggalkan di Android, 高德地图 hanya muncul untuk tempat di Tiongkok, dan Waze, Apple Maps serta CoMaps memerlukan koordinat tempatnya.',
+  'help.guide.place-navigation.tip.3':
+    'Ketika hanya satu aplikasi yang berlaku, tombolnya membawa nama aplikasi itu dan langsung membukanya.',
+  // place-to-collection
+  'help.guide.place-to-collection.title': 'Menyimpan tempat ke salah satu daftar Anda',
+  'help.guide.place-to-collection.goal':
+    'Simpan tempat yang Anda temukan di perjalanan ini untuk perjalanan berikutnya.',
+  'help.guide.place-to-collection.step.1': 'Buka tempatnya dan klik “Simpan ke Koleksi” di bagian bawah kartu.',
+  'help.guide.place-to-collection.step.2':
+    '“Simpan ke daftar” menampilkan setiap daftar yang Anda miliki atau bagikan. Tanda centang menandai yang sudah memuat tempat ini.',
+  'help.guide.place-to-collection.step.3': 'Klik daftarnya. Tempat itu langsung ada di dalamnya.',
+  'help.guide.place-to-collection.step.4': 'Tutup, dan tombol di kartu berbunyi “Tersimpan”.',
+  'help.guide.place-to-collection.result':
+    'Tempat itu ada di daftar Anda dengan gambarnya, catatannya dan bintangnya, siap untuk perjalanan berikutnya.',
+  'help.guide.place-to-collection.tip.1':
+    'Tombol itu hanya ada selama addon “Koleksi” aktif, yang dinyalakan admin di bawah “Addon”.',
+  'help.guide.place-to-collection.tip.2':
+    'Sebuah tempat bisa berada di beberapa daftar sekaligus, dengan statusnya sendiri di masing-masing: “Ide” di satu, “Dikunjungi” di yang lain.',
+  'help.guide.place-to-collection.tip.3':
+    '“Tandai dikunjungi”, di samping nama tempat itu di pemilihnya, mencentangnya di daftar tersebut; bila tempatnya ada di beberapa daftar Anda, pilnya berbunyi “Dikunjungi di semua” dan melakukannya sekaligus untuk semuanya.',
+  // place-track
+  'help.guide.place-track.title': 'Membaca sebuah jalur dan memberinya warna sendiri',
+  'help.guide.place-track.goal':
+    'Lihat berapa panjang sebuah jalan kaki yang diimpor, dan bedakan garisnya dari yang lain di peta.',
+  'help.guide.place-track.step.1':
+    'Baris sebuah jalur di kolom tempat membawa goresan pendek dengan warna garisnya digambar. Klik baris itu.',
+  'help.guide.place-track.step.2':
+    '“Statistik Jalur” memberi panjang lintasannya, dalam “Satuan Jarak” yang Anda tetapkan.',
+  'help.guide.place-track.step.3':
+    '“Warna jalur” di atasnya menampilkan warna yang dipakai. Klik barisnya untuk membuka contoh-contoh warnanya.',
+  'help.guide.place-track.step.4': 'Pilih sebuah warna. Garis di peta dan goresan di barisnya berubah bersamanya.',
+  'help.guide.place-track.step.5':
+    'Sel bergaris putus-putus di sebelah kiri, “Warna otomatis”, mengembalikan kepada jalur itu warna yang diwarisinya; pipet di sebelah kanan, “Pilih warna kustom”, membuka pemilih warna sistem Anda untuk apa pun selain itu.',
+  'help.guide.place-track.result':
+    'Jalur itu digambar dengan warna yang Anda pilih, di kartu, di barisnya pada kolom tempat dan di peta.',
+  'help.guide.place-track.tip.1':
+    'Hanya tempat yang membawa sebuah lintasan, yang diimpor dari file GPX, KML atau KMZ, memiliki kedua blok ini.',
+  'help.guide.place-track.tip.2':
+    'Jalur yang direkam dengan ketinggian juga menampilkan titik tertinggi dan terendahnya, meter naik dan turun, serta profil jalan kakinya.',
+  'help.guide.place-track.tip.3':
+    'Sebuah impor memberi setiap jalur yang dibawanya warna tersendiri, jadi dua jalan kaki tidak pernah tiba dengan warna yang sama.',
+
+  // ── Screen: trip-files ────────────────────────────────────────────────────────────────
+  'help.ctx.trip-files.title': 'File',
+  'help.ctx.trip-files.summary':
+    'Setiap dokumen perjalanan dalam satu daftar: tiket, konfirmasi, pas dan gambar, masing-masing dengan sebuah catatan, sebuah tautan ke tempat atau pemesanan yang memilikinya, dan sebuah sampah yang bisa mengeluarkannya kembali.',
+  'help.ctx.trip-files.bullet.1':
+    '“Jatuhkan file di sini” di atas menerima file; sebuah klik pada kotak itu membuka pemilih file. Baris di bawahnya menyebut tipe file yang diterima TREK ini dan batas 50 MB per file.',
+  'help.ctx.trip-files.bullet.2':
+    'Tab-tab menentukan apa yang ditampilkan daftar: “Semua”, “PDFs”, “Gambar” dan “Dokumen”, masing-masing dengan jumlahnya. Sebuah tab bintang ikut muncul begitu ada file yang ditandai bintang, dan “Catatan Collab” begitu sebuah catatan membawa lampiran.',
+  'help.ctx.trip-files.bullet.3':
+    'Sebuah baris memuat siapa yang mengunggahnya, namanya, catatan di bawahnya, ukuran dan tanggal, serta satu lencana per tautan: “Rencana Harian” dan tempatnya, “Pemesanan” atau “Transportasi” dan pemesanannya, “Dari Catatan Collab”.',
+  'help.ctx.trip-files.bullet.4':
+    'Di ujung sebuah baris ada “Bintang”, “Tugaskan”, “Buka”, “Unduh” dan “Hapus”. “Hapus” tidak bertanya: file itu masuk ke sampah, dan dari sana bisa dibawa kembali.',
+  'help.ctx.trip-files.bullet.5':
+    'Sebuah gambar atau video terbuka layar penuh, dengan tombol panah dan sederet thumbnail; setiap dokumen lain terbuka dalam pratinjau di atas halaman, dengan “Buka di tab baru” dan “Unduh”. Sebuah wallet pass langsung diunduh.',
+  'help.ctx.trip-files.bullet.6':
+    '“Sampah” di ujung kanan mengalihkan daftar ke file yang dihapus, di mana setiap file dipulihkan atau dihapus untuk selamanya dan “Kosongkan Sampah” membersihkan semuanya. Di tempat seorang administrator sudah menyambungkan penyimpanan dokumen, “Sinkronisasi dokumen” berdiri di sebelahnya.',
+  // files-upload
+  'help.guide.files-upload.title': 'Memasukkan dokumen ke dalam perjalanan',
+  'help.guide.files-upload.goal':
+    'Bawa tiket, konfirmasi atau foto dari folder unduhan Anda ke dalam perjalanan, tempat semua orang di dalamnya bisa menjangkaunya.',
+  'help.guide.files-upload.step.1':
+    'Buka perjalanan dan klik “File” di bilah tab. Dokumen perjalanan itu terdaftar di sana, dengan kotak unggah di atasnya.',
+  'help.guide.files-upload.step.2':
+    'Klik “Jatuhkan file di sini” dan pilih satu atau beberapa file. File diunggah satu demi satu dan kotak itu berbunyi “Mengunggah...” selama berlangsung. Baris di bawah kotak menyebut tipe apa saja yang diterima TREK ini, dan bahwa sebuah file paling besar 50 MB.',
+  'help.guide.files-upload.step.3':
+    'Begitu file terakhir selesai, “Tugaskan File” terbuka sendiri untuknya. “Tambahkan catatan...” memberi file itu satu barisnya sendiri, dan daftar di bawahnya mengikatnya ke sebuah tempat atau sebuah pemesanan. Tutup dengan tanda ×; menutupnya tidak menghilangkan apa pun.',
+  'help.guide.files-upload.step.4':
+    'File baru berdiri di puncak daftar. Sebuah baris menunjukkan siapa yang mengunggahnya, namanya, ukuran dan tanggal; sebuah gambar mendapat thumbnail, setiap file lain mendapat tipenya.',
+  'help.guide.files-upload.result':
+    'Dokumen sudah ada di dalam perjalanan, dan semua orang yang bisa melihat perjalanan itu bisa membuka dan mengunduhnya.',
+  'help.guide.files-upload.tip.1':
+    'Sebuah file juga bisa diseret dari desktop langsung ke kotak itu, yang menyala selama file berada di atasnya.',
+  'help.guide.files-upload.tip.2':
+    'Sebuah gambar di papan klip masuk ke daftar dengan Ctrl+V, jadi tangkapan layar sebuah pemesanan tidak perlu disimpan lebih dulu.',
+  'help.guide.files-upload.tip.3':
+    'Mengunggah memerlukan hak “Unggah file”; tanpa itu kotaknya sama sekali tidak ada. Tipe yang tidak ada dalam daftar, atau file di atas 50 MB, ditolak dengan sebuah pesan dan tidak ada yang diunggah.',
+  // files-link
+  'help.guide.files-link.title': 'Mengikat dokumen ke sebuah tempat atau pemesanan',
+  'help.guide.files-link.goal':
+    'Buat tiket itu bisa ditemukan dari hari yang memilikinya, bukan hanya dari daftar ini.',
+  'help.guide.files-link.step.1':
+    'Klik “Tugaskan”, pensil di ujung baris. “Tugaskan File” terbuka, dinamai menurut file itu.',
+  'help.guide.files-link.step.2':
+    'Di bawah “Catatan”, “Tambahkan catatan...” menerima satu baris, yang lalu berdiri di bawah nama file dalam daftar. Baris itu tersimpan begitu Anda meninggalkan kotaknya.',
+  'help.guide.files-link.step.3':
+    'Di bawah “Tempat” berdiri tempat-tempat perjalanan, dikelompokkan menurut hari yang memuatnya, dengan “Tidak ditugaskan” di akhir untuk yang tidak ada di hari mana pun. Klik salah satu dan ia mendapat tanda centang.',
+  'help.guide.files-link.step.4':
+    'Di bawah “Pemesanan” dan “Transportasi” berdiri pemesanan-pemesanan perjalanan. Klik yang memiliki dokumen itu; ia pun mendapat tanda centangnya.',
+  'help.guide.files-link.step.5':
+    'Tutup dengan tanda ×. Tidak ada tombol simpan di sini: setiap klik sudah ditulis saat Anda melakukannya.',
+  'help.guide.files-link.result':
+    'Baris itu membawa catatannya dan satu lencana per tautan, “Rencana Harian” dan nama tempatnya, “Transportasi” dan nama penerbangannya, dan dokumen itu juga menggantung pada tempat dan pada pemesanan.',
+  'help.guide.files-link.tip.1':
+    'Sebuah file bisa memegang beberapa tautan sekaligus, jadi konfirmasi yang sama menjadi milik hotel dan milik malam yang dicakupnya.',
+  'help.guide.files-link.tip.2':
+    'Mengklik lagi entri yang sudah tercentang mencabut tautan itu; filenya sendiri tetap ada.',
+  'help.guide.files-link.tip.3':
+    'Sebaliknya juga berlaku: dokumen yang dilampirkan ke sebuah tempat atau ke sebuah pemesanan ada dalam daftar ini juga, dengan lencana yang sama pada barisnya.',
+  // files-star
+  'help.guide.files-star.title': 'Menjaga dokumen penting tetap di atas',
+  'help.guide.files-star.goal':
+    'Tarik dua atau tiga kertas yang benar-benar akan Anda perlukan keluar dari daftar yang terus tumbuh sepanjang perjalanan.',
+  'help.guide.files-star.step.1':
+    'Klik “Bintang” di ujung sebuah baris. Bintang itu terisi kuning, bintang kedua muncul di depan nama file, dan tombolnya kini berbunyi “Hapus bintang”.',
+  'help.guide.files-star.step.2':
+    'Daftar menyusun dirinya lagi: file bertanda bintang berdiri di atas semua yang lain, yang terbaru lebih dulu di dalam setiap kelompok.',
+  'help.guide.files-star.step.3':
+    'Sebuah bintang bergabung dengan tab-tab di atas, dengan jumlah file bertanda bintang di belakangnya. Klik untuk melihat hanya file-file itu.',
+  'help.guide.files-star.result':
+    'Kertas yang Anda perlukan di loket berdiri di puncak daftar, dan satu tab tidak menampilkan apa pun selain itu.',
+  'help.guide.files-star.tip.1':
+    'Tab bintang hanya ada selama ada sesuatu yang bertanda bintang. Hapus bintang pada file terakhir dan tab itu ikut hilang.',
+  'help.guide.files-star.tip.2':
+    'Memberi bintang terhitung sebagai penyuntingan: anggota tanpa hak “Edit metadata file”, yang hanya boleh membaca file perjalanan, melihat bintangnya tetapi tidak bisa memasangnya.',
+  // files-filter
+  'help.guide.files-filter.title': 'Menemukan sebuah dokumen dalam daftar',
+  'help.guide.files-filter.goal': 'Persempit daftar yang berisi segalanya menjadi satu jenis kertas yang Anda cari.',
+  'help.guide.files-filter.step.1':
+    'Tab di atas daftar adalah “Semua”, “PDFs”, “Gambar” dan “Dokumen”, masing-masing dengan jumlah file di belakangnya.',
+  'help.guide.files-filter.step.2': 'Klik “PDFs”: daftar menyimpan file PDF dan tidak ada yang lain.',
+  'help.guide.files-filter.step.3':
+    'Dua tab lagi datang dan pergi mengikuti apa yang ada di perjalanan: sebuah bintang begitu ada file yang ditandai bintang, dan “Catatan Collab” begitu sebuah catatan di tab Collab membawa lampiran.',
+  'help.guide.files-filter.step.4': '“Semua” membawa kembali seluruh daftar.',
+  'help.guide.files-filter.result':
+    'Daftar hanya menampilkan apa yang disebut tab itu, dan angka pada setiap tab mengatakan berapa banyaknya.',
+  'help.guide.files-filter.tip.1':
+    'Di sini tidak ada folder dan tidak ada penggantian nama: catatan di “Tugaskan File”, tautan ke tempat dan pemesanan, serta bintangnya, itulah yang menjadi dasar penataan sebuah dokumen.',
+  'help.guide.files-filter.tip.2':
+    'Daftarnya sendiri selalu bertanda bintang lebih dulu, lalu yang terbaru lebih dulu, jadi dokumen yang diunggah hari ini berdiri di atas yang dari bulan lalu.',
+  // files-preview
+  'help.guide.files-preview.title': 'Membaca dokumen tanpa meninggalkan TREK',
+  'help.guide.files-preview.goal':
+    'Lihat sebuah tiket atau gambar di tempatnya, dan bawa ke mesin Anda sendiri saat Anda memerlukannya di sana.',
+  'help.guide.files-preview.step.1':
+    'Klik nama sebuah gambar atau thumbnailnya. Gambar terbuka layar penuh, dengan nama file dan posisinya di antara gambar-gambar itu pada bagian atas.',
+  'help.guide.files-preview.step.2':
+    'Panah bundar di sisi-sisinya, tombol panah kiri dan kanan serta deretan thumbnail di bawah membawa Anda melewati setiap gambar yang sedang ditampilkan daftar.',
+  'help.guide.files-preview.step.3':
+    '“Buka di tab baru” dan “Unduh” berada di bagian atas; tanda × atau Escape menutup gambar itu lagi.',
+  'help.guide.files-preview.step.4':
+    'Dokumen yang bukan gambar terbuka dalam pratinjau di atas halaman, dengan dua tombol yang sama di bagian atasnya. Yang ini tertutup oleh tanda × atau sebuah klik di sebelahnya.',
+  'help.guide.files-preview.step.5':
+    '“Unduh” di ujung sebuah baris menyimpan file langsung ke mesin Anda, tanpa membuka apa pun lebih dulu.',
+  'help.guide.files-preview.result':
+    'Dokumen ada di layar, dan dua tombol yang sama menaruhnya di sebuah tab browser atau di disk Anda.',
+  'help.guide.files-preview.tip.1':
+    'Di layar sentuh Anda menggeser untuk melewati gambar-gambar itu, bukan mengklik panahnya.',
+  'help.guide.files-preview.tip.2':
+    'Sebuah wallet pass tidak pernah membuka pratinjau: ia langsung diunduh, supaya ponsel bisa menyerahkannya ke aplikasi dompetnya.',
+  'help.guide.files-preview.tip.3':
+    '“Buka di tab baru” dan “Unduh” keduanya mengambil file dengan sesi Anda, jadi tautan yang disalin dari bilah alamat tidak berguna bagi orang lain.',
+  // files-trash
+  'help.guide.files-trash.title': 'Membuang dokumen, dan mengambilnya kembali',
+  'help.guide.files-trash.goal':
+    'Bersihkan apa yang tidak lagi diperlukan perjalanan, tanpa kehilangan apa pun yang ternyata Anda perlukan.',
+  'help.guide.files-trash.step.1':
+    'Klik “Hapus” di ujung sebuah baris. File langsung meninggalkan daftar dan pesannya berbunyi “Dipindahkan ke sampah”. Tidak ada yang bertanya lebih dulu.',
+  'help.guide.files-trash.step.2':
+    '“Sampah” di ujung kanan bilah alat mengalihkan daftar ke apa yang sudah dibuang. Judulnya berbunyi “Sampah” dan tab filter menghilang.',
+  'help.guide.files-trash.step.3':
+    'Baris yang dibuang tampil kelabu dan menyisakan dua tombol: “Pulihkan”, yang membawa file kembali, dan “Hapus”, yang menyingkirkannya untuk selamanya setelah sebuah pertanyaan.',
+  'help.guide.files-trash.step.4':
+    'Klik “Pulihkan”. Pesannya berbunyi “File dipulihkan” dan baris itu meninggalkan sampah, dengan catatan dan tautannya masih melekat.',
+  'help.guide.files-trash.step.5':
+    '“Kosongkan Sampah” di atas membersihkan untuk selamanya semua yang masih ada di sini, dan browser bertanya sekali sebelum melakukannya. “Sampah” beralih kembali ke daftar file.',
+  'help.guide.files-trash.result': 'File kembali ke dalam daftar di tempatnya semula, seolah tidak terjadi apa-apa.',
+  'help.guide.files-trash.tip.1':
+    '“Hapus” pada sebuah baris tidak bertanya lebih dulu, dan untuk itulah sampahnya ada: tidak ada yang meninggalkan TREK sampai Anda mengatakannya di sini.',
+  'help.guide.files-trash.tip.2':
+    'Membuang sebuah file dan mengambilnya kembali memerlukan hak “Hapus file”. Anggota tanpa hak itu tidak melihat “Hapus” pada baris maupun tombol-tombol di dalam sampah.',
+  'help.guide.files-trash.tip.3': 'File yang dihapus untuk selamanya di dalam sampah tidak bisa dibawa kembali.',
+
+  // ── Screen: trip-day-detail ───────────────────────────────────────────────────────────
+  'help.ctx.trip-day-detail.title': 'Detail hari',
+  'help.ctx.trip-day-detail.summary':
+    'Panel yang dibuka oleh kepala sebuah hari di atas peta: hari itu secara keseluruhan, namanya dan tanggalnya, cuaca di tempat Anda akan berada, pemesanan yang jatuh pada hari itu dan malam-malam yang dipesan untuknya.',
+  'help.ctx.trip-day-detail.bullet.1':
+    'Klik kepala sebuah hari di kolom hari dan panel terbuka di atas bagian tengah peta. Kepala yang sama sekali lagi, atau tanda X di kanannya, menutupnya dan melepaskan hari itu.',
+  'help.ctx.trip-day-detail.bullet.2':
+    'Kepala itu membawa nama hari dan tanggalnya. Ikon pensil di sebelah nama mengganti nama hari, chevron ganda melipat panel menjadi bilah tipis sehingga peta bebas lagi.',
+  'help.ctx.trip-day-detail.bullet.3':
+    'Di atas, cuaca hari itu. “Prakiraan untuk” menyebut tempat yang dimaksud: perhentian pertama hari itu, atau hotel tempat Anda bangun.',
+  'help.ctx.trip-day-detail.bullet.4':
+    '“Reservasi” mendaftar pemesanan hari itu, masing-masing dengan jenisnya, perhentian yang memilikinya dan waktunya. Hijau berarti dikonfirmasi, amber masih tertunda; ini hanya bacaan, pemesanan diubah di tab “Pemesanan”.',
+  'help.ctx.trip-day-detail.bullet.5':
+    '“Akomodasi” menampilkan setiap malam yang dipesan pada hari ini, dengan “Check-in” dan “Check-out” pada hari terjadinya, jendela check-in, waktu check-out dan nomor konfirmasi.',
+  'help.ctx.trip-day-detail.bullet.6':
+    '“Tambah akomodasi” memesan satu malam pada hari ini: pilih propertinya dari tempat-tempat perjalanan, tentukan hari mana saja yang tercakup, lalu tambahkan waktu dan kodenya.',
+  // day-panel
+  'help.guide.day-panel.title': 'Membuka sebuah hari dan membaca detailnya',
+  'help.guide.day-panel.goal':
+    'Lihat satu hari secara utuh, cuacanya, pemesanannya dan tempat Anda tidur, tanpa meninggalkan peta.',
+  'help.guide.day-panel.step.1':
+    'Klik kepala sebuah hari di kolom hari. Hari itu terpilih dan detailnya terbuka di atas bagian tengah peta.',
+  'help.guide.day-panel.step.2':
+    'Kepala itu menamai hari, “Hari 1” sampai Anda memberinya nama, dengan tanggalnya di bawah.',
+  'help.guide.day-panel.step.3':
+    'Di atas, cuaca hari itu. “Prakiraan untuk” mengatakan tempat mana yang dimaksud: perhentian pertama hari itu, atau hotel tempat Anda bangun.',
+  'help.guide.day-panel.step.4':
+    '“Reservasi” di bawahnya mendaftar pemesanan yang jatuh pada hari ini, beserta waktunya.',
+  'help.guide.day-panel.step.5':
+    '“Akomodasi” menampilkan malam-malam yang dipesan pada hari ini, dengan “Check-in” dan “Check-out” pada hari terjadinya.',
+  'help.guide.day-panel.step.6':
+    'Chevron ganda di kepala melipat panel menjadi bilah tipis. Tanda X di sebelahnya menutup panel dan melepaskan hari itu.',
+  'help.guide.day-panel.result':
+    'Terlipat menjadi bilah, panel membiarkan peta bebas dan hari tetap terpilih; tertutup, hari itu tidak lagi terpilih dan rencana kembali seperti semula.',
+  'help.guide.day-panel.tip.1':
+    'Mengklik di mana saja pada bilah kepala panel juga melipatnya. Chevron hanyalah tombol untuk itu.',
+  'help.guide.day-panel.tip.2':
+    'Membuka sebuah tempat dari kolom tempat menaruh detail tempat itu di posisi panel. Tutup detailnya dan hari itu kembali.',
+  // day-weather
+  'help.guide.day-weather.title': 'Membaca cuaca hari itu',
+  'help.guide.day-weather.goal': 'Ketahui akan seperti apa hari itu di tempat Anda benar-benar berada pada hari itu.',
+  'help.guide.day-weather.step.1':
+    '“Prakiraan untuk” menyebut tempat yang menjadi acuan angka-angka itu: perhentian pertama hari itu, atau, pada hari tanpa perhentian, hotel tempat Anda bangun.',
+  'help.guide.day-weather.step.2':
+    'Angka besar adalah suhu hari itu, di sebelahnya suhu terendah dan tertinggi, serta kondisinya dalam kata-kata.',
+  'help.guide.day-weather.step.3':
+    'Chip di bawahnya: peluang hujan, seberapa banyak hujannya, angin terkuat, serta matahari terbit dan terbenam.',
+  'help.guide.day-weather.step.4':
+    'Di bagian bawah, hari itu jam demi jam, setiap dua jam: waktunya, ikonnya, suhunya dan peluang hujannya. Jam dengan lebih dari 50% diberi warna biru.',
+  'help.guide.day-weather.result':
+    'Kartu hari itu di kolom hari membawa cuaca yang sama dalam ukuran kecil di bawah nomornya, sehingga seluruh perjalanan terbaca sekali pandang.',
+  'help.guide.day-weather.tip.1':
+    'Derajat dan angin mengikuti pilihan Anda di “Tampilan” dalam Pengaturan: beralihlah ke Fahrenheit dan prakiraan yang sama dibacakan dalam °F dan mph.',
+  'help.guide.day-weather.tip.2':
+    'Hari tanpa perhentian berkoordinat dan tanpa hotel tempat bangun sama sekali tidak menampilkan cuaca: prakiraan selalu untuk sebuah tempat, tidak pernah untuk perjalanan.',
+  'help.guide.day-weather.tip.3':
+    'Lebih dari 16 hari ke depan tidak ada prakiraan yang bisa didapat. Angkanya lalu berupa rata-rata tahun-tahun sebelumnya untuk tanggal itu, ditandai dengan Ø dan disebutkan di bawahnya.',
+  // rename-day
+  'help.guide.rename-day.title': 'Memberi nama pada sebuah hari',
+  'help.guide.rename-day.goal':
+    'Sebut sebuah hari sesuai isinya, “Tiba di Kyoto” atau “Hari istirahat”, alih-alih “Hari 5”.',
+  'help.guide.rename-day.step.1': 'Buka hari itu. Kepalanya berbunyi “Hari 5”, dengan tanggal di bawahnya.',
+  'help.guide.rename-day.step.2': 'Klik ikon pensil di sebelah nama.',
+  'help.guide.rename-day.step.3': 'Nama berubah menjadi kolom isian. Ketik nama yang Anda inginkan.',
+  'help.guide.rename-day.step.4':
+    'Tekan Enter, atau cukup klik di tempat lain; Escape membuang perubahan itu. Kartu hari di kolom hari juga membawa nama tersebut.',
+  'help.guide.rename-day.result':
+    'Nama itu menggantikan “Hari 5” di panel dan di kartu hari pada kolom hari; tanggalnya tetap di tempatnya.',
+  'help.guide.rename-day.tip.1':
+    'Kosongkan kolom isian lalu simpan, dan hari itu menjadi “Hari 5” lagi: nomornya yang muncul ketika tidak ada nama.',
+  'help.guide.rename-day.tip.2':
+    'Nama itu milik hari, bukan milik tanggalnya. Urutkan ulang hari-harinya dan nama itu ikut berpindah bersama semua isi hari tersebut.',
+  // add-accommodation
+  'help.guide.add-accommodation.title': 'Memesan satu malam pada sebuah hari',
+  'help.guide.add-accommodation.goal':
+    'Masukkan hotel ke dalam rencana satu kali saja, dengan hari-hari yang dicakupnya, waktunya dan nomor konfirmasinya.',
+  'help.guide.add-accommodation.step.1':
+    'Properti itu harus lebih dulu menjadi tempat dalam perjalanan. Buat di kolom tempat seperti Anda membuat tempat lain: pemilihnya hanya menawarkan apa yang sudah ada.',
+  'help.guide.add-accommodation.step.2': 'Buka hari kedatangan Anda dan klik “Tambah akomodasi” di bawah “Akomodasi”.',
+  'help.guide.add-accommodation.step.3':
+    '“Terapkan ke hari” menentukan malam mana yang dicakup masa menginap itu: hari check-in di sebelah kiri, hari check-out di sebelah kanan. “Semua” mencakup seluruh perjalanan.',
+  'help.guide.add-accommodation.step.4':
+    'Isi “Check-in”, “Sampai” dan “Check-out”, dan tulis nomor pemesanan di bawah “Konfirmasi”. Keempatnya boleh tetap kosong.',
+  'help.guide.add-accommodation.step.5':
+    'Pilih propertinya dari tempat-tempat perjalanan. Chip di atas daftar mempersempitnya ke satu kategori.',
+  'help.guide.add-accommodation.step.6': 'Klik “Simpan”.',
+  'help.guide.add-accommodation.result':
+    'Masa menginap itu tampil pada setiap hari yang dicakupnya, “Check-in” pada hari pertama dan “Check-out” pada hari terakhir. Propertinya menjadi perhentian pada hari check-in, sehingga peta menggambar jalan ke sana, dan sebuah pemesanan “Akomodasi” muncul di tab “Pemesanan”.',
+  'help.guide.add-accommodation.tip.1':
+    'Pemilih terbuka pada hari asal Anda, dengan check-out sehari sesudahnya; keduanya bisa digeser sebelum Anda menyimpan.',
+  'help.guide.add-accommodation.tip.2':
+    'Beri hotel itu kategori Hotel dari perjalanan saat Anda membuatnya, dan chip di atas daftar mempersempitnya ke hotel-hotel Anda dengan satu klik.',
+  'help.guide.add-accommodation.tip.3':
+    'Waktunya semua opsional: masa menginap tanpa check-in dan tanpa kode tetap mencakup malam-malamnya dan tetap menggambar rutenya.',
+  // edit-accommodation
+  'help.guide.edit-accommodation.title': 'Mengubah atau membatalkan malam yang sudah dipesan',
+  'help.guide.edit-accommodation.goal':
+    'Pindahkan sebuah masa menginap, betulkan waktunya, atau keluarkan lagi dari rencana.',
+  'help.guide.edit-accommodation.step.1':
+    'Pada setiap hari masa menginap, kartunya menampilkan propertinya, jendela check-in, waktu check-out dan nomor konfirmasi.',
+  'help.guide.edit-accommodation.step.2':
+    'Ikon pensil di kanannya membuka masa menginap itu lagi. Pop-up sekarang berbunyi “Edit akomodasi”.',
+  'help.guide.edit-accommodation.step.3':
+    'Ubah yang Anda perlukan: hari yang dicakup, “Check-in”, “Sampai”, “Check-out”, “Konfirmasi”, atau propertinya sendiri.',
+  'help.guide.edit-accommodation.step.4': 'Klik “Simpan”.',
+  'help.guide.edit-accommodation.step.5':
+    'Tanda X di sebelah pensil mengakhiri masa menginap itu. Ia tidak bertanya apa pun, dan pemesanan “Akomodasi” yang menyertainya ikut hilang.',
+  'help.guide.edit-accommodation.result':
+    'Perubahan itu sampai ke setiap hari yang dicakup masa menginap sekaligus, dan ke pemesanan “Akomodasi” di tab “Pemesanan” bersamanya.',
+  'help.guide.edit-accommodation.tip.1':
+    'Malam di tengah masa menginap tidak membawa label “Check-in” maupun “Check-out”: hanya hari pertama dan hari terakhir rentang itu yang membawanya.',
+  'help.guide.edit-accommodation.tip.2':
+    'Membatalkan masa menginap juga mengambil perhentian yang ditaruhnya pada hari check-in dan biaya apa pun yang melekat pada pemesanannya. Pesan lagi malamnya bila itu sebuah kekeliruan.',
+  // day-bookings
+  'help.guide.day-bookings.title': 'Pemesanan hari itu sekali pandang',
+  'help.guide.day-bookings.goal':
+    'Lihat di satu tempat apa yang sudah dipesan untuk hari ini dan apakah sudah dikonfirmasi.',
+  'help.guide.day-bookings.step.1':
+    '“Reservasi” mendaftar pemesanan hari itu: yang bertanggal pada hari itu, dan yang menggantung pada salah satu perhentiannya.',
+  'help.guide.day-bookings.step.2':
+    'Sebuah baris menampilkan jenis pemesanannya, namanya dan, bila ia milik sebuah perhentian, perhentian itu setelah sebuah titik. Waktunya berada di ujung kanan.',
+  'help.guide.day-bookings.step.3':
+    'Warnanya mengatakan posisi sebuah pemesanan: baris hijau sudah dikonfirmasi, baris amber masih tertunda. Hotel tidak ada dalam daftar ini, mereka punya blok sendiri di bawah.',
+  'help.guide.day-bookings.step.4':
+    'Daftar ini hanya membacakan pemesanan. Sebuah pemesanan dibuat dan diubah di tab “Pemesanan”.',
+  'help.guide.day-bookings.result':
+    'Semua yang bertanggal pada hari itu, dan semua yang menggantung pada salah satu perhentiannya, ada dalam satu daftar ini.',
+  'help.guide.day-bookings.tip.1':
+    'Sebuah pemesanan mendarat pada sebuah hari menurut tanggalnya sendiri. Ubah tanggalnya di tab “Pemesanan” dan ia berpindah ke hari lain dengan sendirinya.',
+  'help.guide.day-bookings.tip.2':
+    'Tidak adanya blok “Reservasi” berarti hari itu tidak punya pemesanan: ia disembunyikan alih-alih ditampilkan kosong.',
+
+  // ── Screen: trip-map ──────────────────────────────────────────────────────────────────
+  'help.ctx.trip-map.title': 'Peta',
+  'help.ctx.trip-map.summary':
+    'Bagian tengah rencana: setiap tempat perjalanan sebagai pin, rute yang menghubungkannya, dan sakelar di sepanjang tepi peta untuk satelit, untuk seluruh perjalanan sekaligus, dan untuk tempat-tempat di sekitar bagian kota yang sedang Anda lihat.',
+  'help.ctx.trip-map.bullet.1':
+    'Sebuah pin adalah sebuah tempat: fotonya sendiri jika ada, jika tidak warna kategorinya dengan ikon kategori. Arahkan penunjuk ke salah satunya untuk mendapatkan kartu berisi nama, penilaian, kategori dan alamatnya.',
+  'help.ctx.trip-map.bullet.2':
+    'Pin yang terlalu berdekatan untuk dibedakan melipat menjadi satu gelembung gelap dengan sebuah angka. Klik gelembung itu dan peta memperbesar ke isinya.',
+  'help.ctx.trip-map.bullet.3':
+    'Klik sebuah pin untuk membuka tempat itu di bawah peta, dengan penilaiannya, “File” miliknya dan apa yang bisa dilakukan dengannya berikutnya; klik bagian kosong peta untuk melepaskannya lagi.',
+  'help.ctx.trip-map.bullet.4':
+    'Dengan sebuah hari terbuka di kolom hari, perhentiannya membawa lencana putih kecil berisi nomornya pada hari itu, dan tempat yang direncanakan pada dua hari membawa kedua nomor, disambung dengan ·.',
+  'help.ctx.trip-map.bullet.5':
+    'Baris ikon di bagian atas mencari di bagian peta yang terlihat: “Restoran”, “Kafe”, “Bar & hiburan malam”, “Penginapan”, “Tempat wisata”, “Museum & budaya”, “Alam & taman” dan “Aktivitas”. “Cari di area ini” menjalankannya lagi setelah Anda menggeser peta.',
+  'help.ctx.trip-map.bullet.6':
+    'Klik kanan di mana saja pada peta untuk membuka formulir tempat pada titik itu, dengan alamat yang sudah dicarikan. Tombol bundar di kiri bawah menukar peta gambar dengan citra udara.',
+  'help.ctx.trip-map.bullet.7':
+    '“Tampilkan seluruh perjalanan” di kanan bawah menggambar setiap hari perjalanan sekaligus dan mendaftar apa yang ditempuh masing-masing; ikon rute pada baris sebuah pemesanan menggambar pemesanan itu, dan ikon di bilah alat di atas hari menggambar semuanya.',
+  // map-markers
+  'help.guide.map-markers.title': 'Membaca peta',
+  'help.guide.map-markers.goal': 'Ketahui apa yang dikatakan setiap pin, lencana dan gelembung di peta kepada Anda.',
+  'help.guide.map-markers.step.1':
+    'Peta memuat setiap tempat perjalanan. Di tempat pin duduk terlalu berdekatan untuk dibedakan, mereka melipat menjadi satu gelembung gelap yang membawa jumlah tempat di dalamnya.',
+  'help.guide.map-markers.step.2':
+    'Klik gelembung itu. Peta memperbesar ke apa yang ada di dalamnya dan pin-pin itu terpisah; pada perbesaran terdalam peta mengipaskannya alih-alih memperbesar lebih jauh.',
+  'help.guide.map-markers.step.3':
+    'Sebuah pin adalah foto tempat itu sendiri jika ada, jika tidak warna kategorinya dengan ikon kategori. Arahkan penunjuk ke salah satunya dan sebuah kartu memberi nama, penilaian, kategori dan alamatnya.',
+  'help.guide.map-markers.step.4':
+    'Klik sebuah pin dan tempat itu terbuka di bawah peta: koordinatnya, penilaiannya, “File” miliknya, serta “Tambah ke Hari”, “Simpan ke Koleksi”, “Navigasi”, “Sunting” dan “Hapus”. Klik bagian kosong peta untuk melepaskannya lagi.',
+  'help.guide.map-markers.step.5':
+    'Buka sebuah hari di kolom hari dan perhentiannya mendapat nomor: lencana putih kecil di sudut pin adalah urutan perhentian itu pada hari tersebut. Tempat yang direncanakan pada dua hari membawa kedua nomor, disambung dengan ·. Tanpa hari terbuka tidak ada nomor, dan sudut itu membawa penilaian sebagai gantinya.',
+  'help.guide.map-markers.result':
+    'Tidak ada yang berubah pada perjalanan: peta adalah tampilannya, dan setiap pin mengatakan tempat mana, hari mana dan dalam urutan mana.',
+  'help.guide.map-markers.tip.1':
+    'Hari yang dilipat tertutup di kolom hari membawa perhentiannya turun dari peta juga; buka hari itu lagi dan mereka kembali.',
+  'help.guide.map-markers.tip.2':
+    'Filter di atas daftar tempat juga menentukan apa yang digambar peta: pilih “Belum direncanakan” dan hanya tempat yang masih tanpa hari yang tersisa di atasnya.',
+  'help.guide.map-markers.tip.3':
+    'Tidak ada tombol perbesaran pada peta ini: roda tetikus memperbesar dan memperkecil, klik ganda memperbesar satu langkah, dan menyeret memindahkannya.',
+  // map-nearby-places
+  'help.guide.map-nearby-places.title': 'Menemukan tempat di sekitar Anda pada peta',
+  'help.guide.map-nearby-places.goal':
+    'Biarkan peta mencari restoran, tempat wisata atau hotel di bagian kota yang sedang Anda lihat, lalu bawa salah satunya ke perjalanan.',
+  'help.guide.map-nearby-places.step.1':
+    'Baris ikon di bagian atas peta adalah pencarian kategori: “Restoran”, “Kafe”, “Bar & hiburan malam”, “Penginapan”, “Tempat wisata”, “Museum & budaya”, “Alam & taman” dan “Aktivitas”.',
+  'help.guide.map-nearby-places.step.2':
+    'Klik sebuah kategori. TREK mencari tempat jenis itu di bagian peta yang terlihat dan menjatuhkan pin dalam warna kategori untuk setiap temuan. Satu kategori pada satu waktu: mengklik yang lain menukarnya, dan mengklik yang sedang aktif mematikannya.',
+  'help.guide.map-nearby-places.step.3':
+    'Geser peta dan tombol kedua muncul di bawah baris itu: “Cari di area ini” menjalankan pencarian yang sama untuk tampilan baru. Menggeser saja tidak pernah mencari lagi, sehingga jumlah permintaan tetap rendah.',
+  'help.guide.map-nearby-places.step.4':
+    'Pin-pin itu membawa nama dari apa yang ditemukan. Klik salah satunya dan formulir tempat terbuka sudah terisi dari situ: “Nama”, “Alamat”, “Lintang” dan “Bujur”, serta situs web dan nomor telepon di mana OpenStreetMap memilikinya.',
+  'help.guide.map-nearby-places.step.5':
+    'Periksa apa yang terisi dan tambahkan apa yang tidak bisa diketahui pencarian: sebuah “Deskripsi”, sebuah “Kategori”, catatan Anda sendiri.',
+  'help.guide.map-nearby-places.step.6':
+    'Klik “Tambah”. Jika tempat dengan nama yang sama sudah ada di perjalanan, formulir mengatakannya dan tombol berubah menjadi “Tetap tambahkan”.',
+  'help.guide.map-nearby-places.result':
+    'Tempat itu ada di daftar tempat dan di peta sebagai salah satu pin milik perjalanan, di bawah “Belum direncanakan” sampai Anda menaruhnya pada sebuah hari. Pin pencarian tetap ada sampai Anda mematikan kategorinya.',
+  'help.guide.map-nearby-places.tip.1':
+    'Baris itu hilang ketika “Jelajahi tempat di peta” dimatikan di “Pengaturan”, di bawah “Travel & map”.',
+  'help.guide.map-nearby-places.tip.2':
+    'Jawabannya datang dari indeks tempat TREK dan dari OpenStreetMap, jadi ini salah satu dari sedikit hal pada rencana yang membutuhkan koneksi.',
+  'help.guide.map-nearby-places.tip.3':
+    'Sebuah pencarian mencakup apa yang ada di layar, jadi perbesar ke jalan yang Anda tanyakan: satu kota penuh menjawab dengan enam puluh temuan pertama dan sedikit keteraturan di antaranya.',
+  // map-add-place
+  'help.guide.map-add-place.title': 'Membuat tempat dengan klik kanan pada peta',
+  'help.guide.map-add-place.goal':
+    'Taruh sebuah tempat tepat di mana Anda menginginkannya, tanpa mencarinya lebih dulu.',
+  'help.guide.map-add-place.step.1':
+    'Klik kanan titik pada peta yang Anda maksud. Formulir tempat terbuka, berjudul “Tambah Tempat/Aktivitas”.',
+  'help.guide.map-add-place.step.2':
+    '“Lintang” dan “Bujur” sudah berada pada titik itu, dan TREK mencari koordinat tersebut lalu mengisi “Alamat” dari apa yang ditemukannya di sana. Belum ada yang tertulis, jadi timpa apa pun yang keliru.',
+  'help.guide.map-add-place.step.3':
+    'Beri sebuah “Nama” yang akan Anda kenali, dan selebihnya dari apa yang perlu diketahui rencana: “Deskripsi”, “Catatan”, “Kategori”, “Situs web”.',
+  'help.guide.map-add-place.step.4':
+    'Klik “Tambah”. Tempat itu mendarat di daftar sebagai belum direncanakan bahkan dengan sebuah hari terbuka: klik kanan pada peta mengatakan di mana, bukan kapan.',
+  'help.guide.map-add-place.result':
+    'Tempat itu ada di daftar dan di peta, di bawah “Belum direncanakan” sampai Anda menaruhnya pada sebuah hari.',
+  'help.guide.map-add-place.tip.1':
+    'Alamat berasal dari pencarian balik koordinat, jadi bisa terbaca sebagai sebuah jalan alih-alih sebuah nama, dan di atas daerah terbuka bisa kembali kosong. Kedua bidang itu milik Anda untuk ditimpa.',
+  'help.guide.map-add-place.tip.2':
+    'Pada peta MapLibre GL dan Mapbox GL klik tengah melakukan hal yang sama, dan pada layar sentuh tekan lama.',
+  // map-satellite
+  'help.guide.map-satellite.title': 'Beralih ke satelit',
+  'help.guide.map-satellite.goal': 'Tukar peta gambar dengan citra udara, dan kembali lagi.',
+  'help.guide.map-satellite.step.1':
+    'Tombol bundar di kiri bawah peta adalah sakelar lapisan dasar. Ikonnya selalu menunjukkan lapisan yang akan dituju, dan mengarahkan penunjuk ke sana mengatakan yang mana: “Beralih ke tampilan satelit”.',
+  'help.guide.map-satellite.step.2':
+    'Klik tombol itu. Peta menjadi citra udara, cukup dalam untuk membedakan satu bangunan, dan tanpa kunci milik Anda sendiri.',
+  'help.guide.map-satellite.step.3':
+    'Semua yang digambar TREK tetap berada di atasnya: pin, rute hari itu, trek dan rute pemesanan. Klik tombol itu lagi, yang kini berbunyi “Beralih ke tampilan peta”, untuk kembali.',
+  'help.guide.map-satellite.result': 'Peta digambar lagi, dan lapisan yang Anda tinggalkan diingat pada akun Anda.',
+  'help.guide.map-satellite.tip.1':
+    'Pilihan itu disimpan pada akun Anda, bukan pada perjalanan, jadi setiap perjalanan terbuka seperti Anda meninggalkannya, apa pun perender peta yang Anda pakai.',
+  'help.guide.map-satellite.tip.2':
+    'Citra itu tidak membawa tulisan: nama jalan, distrik dan nomor rumah ada pada peta gambar, jadi beralihlah kembali ketika Anda mencari sebuah alamat.',
+  // map-whole-trip
+  'help.guide.map-whole-trip.title': 'Melihat seluruh perjalanan dan jaraknya',
+  'help.guide.map-whole-trip.goal':
+    'Tukar satu hari yang terbuka dengan setiap hari perjalanan, dan baca seberapa jauh masing-masing menempuh.',
+  'help.guide.map-whole-trip.step.1': 'Tombol bundar “Tampilkan seluruh perjalanan” berada di kanan bawah peta.',
+  'help.guide.map-whole-trip.step.2':
+    'Klik tombol itu. Setiap hari perjalanan digambar sekaligus, masing-masing dalam warnanya sendiri di atas selubung putih, sehingga hari yang bertetangga tetap terpisah.',
+  'help.guide.map-whole-trip.step.3':
+    'Kartu di atas tombol mendaftar hari-hari itu: sebuah titik warna, nama hari, sebuah ikon untuk setiap cara Anda menempuhnya, dan jarak yang dicakupnya. “Jarak total” ada di bagian atas.',
+  'help.guide.map-whole-trip.step.4':
+    'Klik sebuah hari di kartu untuk memilihnya, sama seperti memilihnya di kolom hari. Klik tombol itu lagi, yang kini berbunyi “Sembunyikan seluruh perjalanan”, untuk kembali ke satu hari.',
+  'help.guide.map-whole-trip.result':
+    'Setiap hari perjalanan digambar dalam warnanya sendiri, dan kartu itu mengatakan apa yang ditempuh masing-masing dan berapa jumlahnya bagi perjalanan.',
+  'help.guide.map-whole-trip.tip.1':
+    'Totalnya tiba beberapa ruas sekaligus. Selama sebuah … mengikutinya, angka itu masih jumlah sebagian; ia mengendap begitu setiap ruas menjawab.',
+  'help.guide.map-whole-trip.tip.2':
+    'Ruas yang ditolak perute tetap berupa garis lurus dan tidak dihitung, dan kartu itu mengatakannya alih-alih diam-diam terbaca rendah.',
+  'help.guide.map-whole-trip.tip.3':
+    'Hari dengan kurang dari dua perhentian berkoordinat tidak punya rute untuk digambar, jadi ia ditinggalkan dari kartu sepenuhnya.',
+  // map-booking-routes
+  'help.guide.map-booking-routes.title': 'Menampilkan rute sebuah pemesanan di peta',
+  'help.guide.map-booking-routes.goal':
+    'Gambar penerbangan, kereta dan perjalanan mobil yang Anda pesan di peta, lalu singkirkan lagi.',
+  'help.guide.map-booking-routes.step.1':
+    'Rute pemesanan mati sampai Anda meminta salah satunya. Pada baris sebuah pemesanan di kolom hari duduk ikon rute kecil: “Tampilkan rute pemesanan”.',
+  'help.guide.map-booking-routes.step.2':
+    'Klik ikon itu. Pemesanan muncul di peta: penerbangan sebagai busur lingkaran besar, perjalanan mobil menyusuri jalan sungguhan, kereta sebagai rangkaian stasiunnya. “Dikonfirmasi” digambar padat, “Tertunda” putus-putus.',
+  'help.guide.map-booking-routes.step.3':
+    'Ujung-ujung rute adalah pil biru dengan ikon transportasinya. Klik salah satunya untuk membuka pemesanan di baliknya, dengan waktunya, “Kode Pemesanan” dan “Lokasi / Alamat”; “Tutup” menyimpannya lagi.',
+  'help.guide.map-booking-routes.step.4':
+    'Ikon rute di bilah alat di atas hari melakukannya untuk seluruh perjalanan sekaligus: “Tampilkan semua rute pemesanan” menggambar setiap pemesanan yang punya rute.',
+  'help.guide.map-booking-routes.step.5':
+    'Itu adalah papan bersih alih-alih lapisan di atasnya, jadi apa pun yang Anda pilih pemesanan demi pemesanan akan gugur. Tekan lagi, yang kini berbunyi “Sembunyikan semua rute pemesanan”, dan peta menjadi bersih.',
+  'help.guide.map-booking-routes.result':
+    'Pemesanan yang Anda minta digambar di peta, dan pilihan itu disimpan untuk perjalanan ini di peramban ini sampai Anda mengubahnya.',
+  'help.guide.map-booking-routes.tip.1':
+    'Ujung-ujung itu membawa kode bandara atau nama stasiun hanya ketika “Label rute pemesanan” aktif di “Pengaturan”, di bawah “Travel & map”; jika tidak, mereka hanya menampilkan ikonnya.',
+  'help.guide.map-booking-routes.tip.2':
+    '“Selalu tampilkan rute pemesanan”, di pengaturan yang sama, menggambarnya sejak awal pada setiap perjalanan yang belum Anda putuskan.',
+  'help.guide.map-booking-routes.tip.3':
+    'Sebuah pemesanan butuh dua ujung berkoordinat sebelum bisa digambar, jadi hotel atau restoran tidak membawa ikon rute.',
 };
 
 export default help;

@@ -1947,6 +1947,804 @@ const help: TranslationStrings = {
     'A listát nyilvánosan meg kell osztani; egy privát lista linkje semmit sem importál.',
   'help.guide.import-places-list.tip.2':
     'A Helyek gazdagítása a Google-lel akkor jelenik meg a párbeszédablakban, ha a TREK-edhez tartozik Google kulcs: minden importált helyet kikeres, és fotókat, címet és részleteket tölt ki.',
+
+  // ── Screen: trip-days ─────────────────────────────────────────────────────────────────
+  'help.ctx.trip-days.title': 'Napok',
+  'help.ctx.trip-days.summary':
+    'A terv bal oldali oszlopa: naponként egy kártya a megállóival sorrendben, a jegyzetekkel, a nap foglalásaival és közlekedésével, meg a megállók közti útvonallal. Az utazás igazából itt készül.',
+  'help.ctx.trip-days.bullet.1':
+    'A felső eszköztár: Exportálás (PDF, naptár, GPX), Expand all days / Collapse all days, a visszavonás nyíl, a Napok átrendezése és az Összes foglalási útvonal megjelenítése.',
+  'help.ctx.trip-days.bullet.2':
+    'Egy napkártya: szám, időjárás, cím, dátum és a nap költsége a fejlécben; kattints a fejlécre a nap megnyitásához, a jobb oldali nyíl összecsukja a kártyát. A Tömegközlekedés, a Közlekedés hozzáadása és a Jegyzet hozzáadása szintén a fejlécben ül.',
+  'help.ctx.trip-days.bullet.3':
+    'A napon belül: a megállók sorrendben, mindegyik képpel, névvel, időponttal és egy lakattal a képen; jegyzetek; a naphoz tartozó foglalások; a megállók között pedig az egyes szakaszok utazási ideje.',
+  'help.ctx.trip-days.bullet.4':
+    'A megállók alatt az útvonalsáv: az Útvonal felrajzolja a napot a térképre, az Optimalizálás sorba rendezi a megállókat, az Autózás / Gyaloglás beállítja a nap közlekedési módját, a Megnyitás a Google Térképben és a Megnyitás a CoMaps-ben pedig továbbadja a napot.',
+  'help.ctx.trip-days.bullet.5':
+    'A helyek úgy kerülnek egy napra, hogy áthúzol egy sort a helyek oszlopából, az adott sor + jelével, üres napon a Hely hozzáadása ehhez a naphoz ponttal, vagy a hely részleteiből.',
+  'help.ctx.trip-days.bullet.6':
+    'Az alul lévő Összköltség minden árral rendelkező megállót és foglalást összead, az utazás pénznemében.',
+  // read-day-plan
+  'help.guide.read-day-plan.title': 'Egy nap elolvasása',
+  'help.guide.read-day-plan.goal': 'Tudd, mit mond neked a napkártya minden része, mielőtt bármit megváltoztatnál.',
+  'help.guide.read-day-plan.step.1':
+    'A fejléc: a nap száma, a napra szóló előrejelzés, az 1. nap vagy a cím, amit adtál neki, a dátum és a nap költsége. Kattints a fejlécre a nap megnyitásához (a részletei a térkép fölött nyílnak meg); a jobb oldali nyíl összecsukja és kinyitja a kártyát.',
+  'help.guide.read-day-plan.step.2':
+    'Egy megálló: a bal oldali fogantyú húzza, a kép lakatot visel az útvonal-optimalizáláshoz, majd jön a név, a leírás és, ha be van állítva, a Jegyzetek erre a napra. Egy időjelvény a Kezdés és a Befejezés értéket mutatja, ha a megállónak van ilyen; a jobb szélén megjelenő nyilak felfelé vagy lefelé mozgatják.',
+  'help.guide.read-day-plan.step.3':
+    'Egy foglalás a napon: egy közlekedés Indulás vagy Érkezés formában jelenik meg az időpontjával és az útvonalával, egy megállóhoz kötött foglalás pedig Foglalás megerősítve vagy Foglalás függőben jelzéssel látja el a megállót. A közlekedésen lévő kis kapcsoló megmutatja az útvonalát a térképen.',
+  'help.guide.read-day-plan.step.4':
+    'Két megálló között az összekötő megmondja, mennyi ideig tart a szakasz és milyen hosszú, a nap közlekedési módjában; kattints rá, ha csak annál az egy szakasznál akarod a módot megváltoztatni.',
+  'help.guide.read-day-plan.step.5':
+    'A végén az útvonalsáv: az Útvonal felrajzolja a nap útját a térképre, az Optimalizálás átrendezi a megállókat, a módgombok Autózás vagy Gyaloglás közül választanak, a Megnyitás a Google Térképben és a Megnyitás a CoMaps-ben pedig ott nyitja meg a napot.',
+  'help.guide.read-day-plan.result':
+    'A kártyán minden jelnek van jelentése; az alábbi útmutatók mindegyiket megváltoztatják.',
+  'help.guide.read-day-plan.tip.1':
+    'Kattints jobb gombbal egy megállóra a menüjéért: Szerkesztés, Eltávolítás a napról, Weboldal megnyitása, a navigációs alkalmazások (Google Maps, Waze, Apple Maps, OpenStreetMap, CoMaps), Mentés gyűjteménybe, Törlés.',
+  'help.guide.read-day-plan.tip.2':
+    'Vidd az egeret egy megálló fölé, és a végén megjelenik a Foglalás hozzáadása: az ott létrehozott foglalás ehhez a megállóhoz tartozik ezen a napon.',
+  // place-onto-day
+  'help.guide.place-onto-day.title': 'Hely elhelyezése egy napon',
+  'help.guide.place-onto-day.goal':
+    'Csinálj a lista egyik helyéből a nap egyik megállóját, oda, ahová a sorrendben való.',
+  'help.guide.place-onto-day.step.1':
+    'Húzz egy sort a helyek oszlopából a napkártyára. Ejtsd két megálló közé, hogy pontosan oda kerüljön, vagy bárhová a kártyán, hogy a végére fűződjön.',
+  'help.guide.place-onto-day.step.2':
+    'Húzás nélkül: nyisd meg a napot a fejlécére kattintva, aztán kattints a hely sorának végén lévő + jelre, vagy kattints a sorra jobb gombbal, és válaszd a + Nap pontot.',
+  'help.guide.place-onto-day.step.3':
+    'Üres napon a Hely hozzáadása ehhez a naphoz megnyitja a hely űrlapját, és az új hely azonnal a napra kerül.',
+  'help.guide.place-onto-day.step.4':
+    'Egy hely részleteiből a Hozzáadás a naphoz megkérdezi, melyik napra; ha a nap a fejlécéről meg van nyitva, a helyek oszlopában A naphoz egyenesen a megnyitott napon hoz létre új helyet.',
+  'help.guide.place-onto-day.result':
+    'A hely a nap megállója lett, a térképen a nap számával, és a helyek oszlopa a Tervezett alatt számolja.',
+  'help.guide.place-onto-day.tip.1':
+    'Egy hely több napon is lehet: a második napra a helyek oszlopából tedd rá. Egy megálló áthúzása az egyik napkártyáról a másikra viszont átmozgatja.',
+  'help.guide.place-onto-day.tip.2': 'Az eszköztárban a visszavonás nyíl visszaveszi a hozzárendelést.',
+  'help.guide.place-onto-day.tip.3':
+    'Egy megálló nem ejthető két rögzített időpontú bejegyzés közé, sem egy olyan foglalás elé, amelynek már van időpontja; a terv tartja az időrendet.',
+  // reorder-stops
+  'help.guide.reorder-stops.title': 'Egy nap sorrendjének módosítása',
+  'help.guide.reorder-stops.goal': 'Mozgass egy megállót felfelé vagy lefelé, vagy át egy másik napra.',
+  'help.guide.reorder-stops.step.1': 'Húzd a megállót a fogantyújánál fogva a kártyán belüli új helyére.',
+  'help.guide.reorder-stops.step.2':
+    'Vagy használd a megálló jobb szélén lévő nyilakat: kattintásonként egy lépés felfelé vagy lefelé.',
+  'help.guide.reorder-stops.step.3': 'Húzd a megállót egy másik napkártyára, hogy odakerüljön; a régi napot elhagyja.',
+  'help.guide.reorder-stops.step.4':
+    'A rögzített időpontú megálló akkor kérdezi meg, hogy Időpont eltávolítása?, ha a mozgatás megbontaná a nap sorrendjét, mert a helyéről az időpont döntött: a Megerősítés elejti az időpontot, és bárhová engedi.',
+  'help.guide.reorder-stops.result': 'Az útvonal és az utazási idők azonnal követik az új sorrendet.',
+  'help.guide.reorder-stops.tip.1':
+    'A rögzített időpontú foglalások nem rendezhetők át; ott ülnek, ahová az időpontjuk teszi őket.',
+  'help.guide.reorder-stops.tip.2':
+    'Az útvonalsávban az Optimalizálás az egész napot a legrövidebb út szerint rendezi; előbb rögzítsd azt a megállót, amelyik a helyén marad.',
+  // set-stop-times
+  'help.guide.set-stop-times.title': 'Időpont adása egy megállónak',
+  'help.guide.set-stop-times.goal':
+    'Rögzítsd, mikor kezdődik és mikor ér véget egy megálló, hogy a nap menetrendként olvasódjon.',
+  'help.guide.set-stop-times.step.1':
+    'Kattints jobb gombbal a megállóra, és válaszd a Szerkesztés pontot. A napról megnyitva az űrlap alján ott a Kezdés és a Befejezés.',
+  'help.guide.set-stop-times.step.2':
+    'Írd be a Kezdés értéket és, ha akarod, a Befejezés értéket. Az Időbeli átfedés: figyelmeztet, hogy a nap egy másik időzített megállójával átfedés van; a Kezdés előtti Befejezés letiltja a Frissítés gombot.',
+  'help.guide.set-stop-times.step.3':
+    'Kattints a Frissítés gombra. A megálló időjelvényt kap, és oda kerül, ahová az időpontja szerint a napon való.',
+  'help.guide.set-stop-times.result':
+    'Az időzített megállók tartják a helyüket a sorrendben; az időpont nélküliek köréjük rendeződnek.',
+  'help.guide.set-stop-times.tip.1':
+    'Az időpont a megállóhoz tartozik azon a napon; ugyanannak a helynek egy másik napon más időpontja lehet.',
+  'help.guide.set-stop-times.tip.2':
+    'Ha kézzel akarsz mozgatni egy időzített megállót, húzd: az Időpont eltávolítása? kérdés útközben elejti az időpontot, amint a Megerősítés gombra kattintasz.',
+  'help.guide.set-stop-times.tip.3':
+    'Ugyanabban az űrlapban a Jegyzetek erre a napra azt tartja, ami csak ezen a napon érvényes, egy lefoglalt asztal, egy jegyszám.',
+  // remove-from-day
+  'help.guide.remove-from-day.title': 'Megálló levétele a napról',
+  'help.guide.remove-from-day.goal': 'Vedd ki a helyet a tervből anélkül, hogy törölnéd az utazásból.',
+  'help.guide.remove-from-day.step.1': 'Kattints jobb gombbal a megállóra, és válaszd az Eltávolítás a napról pontot.',
+  'help.guide.remove-from-day.step.2':
+    'A megálló eltűnt a napról; a hely a helyek oszlopában marad, a Nem tervezett alatt, ha egyetlen másik napon sincs rajta.',
+  'help.guide.remove-from-day.result':
+    'A nap, az útvonala és a költsége frissül; a visszavonás nyíl visszahozza a megállót.',
+  'help.guide.remove-from-day.tip.1':
+    'Ugyanabban a menüben a Törlés az egész utazásból kiveszi a helyet, minden nappal együtt.',
+  'help.guide.remove-from-day.tip.2':
+    'Az Eltávolítás a napról a hely részletei panelen is ott ül, a Hozzáadás a naphoz mellett.',
+  // lock-stop
+  'help.guide.lock-stop.title': 'Megálló rögzítése a helyén',
+  'help.guide.lock-stop.goal': 'Tartsd a megállót ott, ahol van, amikor az útvonal optimalizálódik.',
+  'help.guide.lock-stop.step.1':
+    'Vidd az egeret a megálló képe fölé, és kattints a lakatra: Pozíció megtartása útvonal-optimalizálás során.',
+  'help.guide.lock-stop.step.2':
+    'Az Optimalizálás mostantól köré rendezi a többi megállót; kattints újra a lakatra (Kattints a feloldáshoz), hogy elengedd.',
+  'help.guide.lock-stop.result': 'A lakat látszik a képen; a megálló tartja a pozícióját, amíg fel nem oldod.',
+  'help.guide.lock-stop.tip.1':
+    'A rögzített időpontú megállót az időpontja zárja le; az optimalizálás során soha nem mozdul.',
+  'help.guide.lock-stop.tip.2':
+    'A lakat erre a látogatásra szól: újratöltés után minden megálló újra szabad, csak az időzített megállók maradnak rögzítve.',
+  // day-note
+  'help.guide.day-note.title': 'Jegyzet hozzáadása egy naphoz',
+  'help.guide.day-note.goal': 'Tarts egy emlékeztetőt, egy jegyszámot vagy egy B tervet egyenesen a napban.',
+  'help.guide.day-note.step.1': 'Kattints a nap fejlécében a Jegyzet hozzáadása gombra.',
+  'help.guide.day-note.step.2':
+    'Adj neki nevet a Jegyzet mezőben, ezt mutatja a nap kártyája, a többit pedig írd a Napi jegyzet alá. A szöveg fölötti sáv formázza (Félkövér, listák, hivatkozások, idézetek), a bal oldali Előnézet pedig megmutatja, milyen kártya lesz belőle.',
+  'help.guide.day-note.step.3':
+    'Válassz Ikont és Színt, hogy a jegyzet kiváljon a megállók közül, aztán kattints a Hozzáadás gombra.',
+  'help.guide.day-note.step.4':
+    'A jegyzet megállóként ül a napban: húzd a helyére, kattints rá jobb gombbal a Szerkesztés és a Törlés pontért.',
+  'help.guide.day-note.result':
+    'A jegyzet a nap része, a PDF-ben is; az időzített jegyzet az időzített megállókkal együtt rendeződik.',
+  'help.guide.day-note.tip.1':
+    'Egy időponttal ellátott jegyzet helyettesítheti azt a közlekedést, amire nincs foglalásod: „08:15 S3 a főpályaudvarról”.',
+  'help.guide.day-note.tip.2':
+    'A jegyzetek naponként szólnak; az egész utazásra szóló jegyzet az Együttműködés alá tartozik.',
+  // day-route
+  'help.guide.day-route.title': 'A nap útvonalának megjelenítése és optimalizálása',
+  'help.guide.day-route.goal':
+    'Lásd a megállók közti utat, válaszd ki, hogyan utazol, és hagyd, hogy a TREK rendezze a sorrendet.',
+  'help.guide.day-route.step.1':
+    'Nyisd meg a napot, és kattints az útvonalsávban az Útvonal gombra: a megállók közti út felrajzolódik a térképre, a megállók közti összekötők pedig mutatják az egyes szakaszok idejét és távolságát.',
+  'help.guide.day-route.step.2':
+    'A mellette lévő Autózás és Gyaloglás beállítja a nap közlekedési módját; a szakaszok újraszámolódnak. A pluginok saját módokat is hozzáadhatnak.',
+  'help.guide.day-route.step.3':
+    'Kattints egy összekötőre, ha csak annál az egy szakasznál akarod a módot cserélni: válassz módot, vagy a Napi alapértelmezett ponttal térj vissza a napéhoz.',
+  'help.guide.day-route.step.4':
+    'Az Optimalizálás a legrövidebb út szerint rendezi át a megállókat. A lakattal vagy rögzített időponttal ellátott megállók tartják a helyüket; ha van szállás a napon, az útvonal onnan indul.',
+  'help.guide.day-route.step.5':
+    'A Megnyitás a Google Térképben vagy a Megnyitás a CoMaps-ben az egész napot útvonalként nyitja meg abban az alkalmazásban, útközbeni navigáláshoz.',
+  'help.guide.day-route.result':
+    'A nap egy útvonal időpontokkal; az Összköltség és a szakaszok a sorrenddel együtt frissülnek.',
+  'help.guide.day-route.tip.1':
+    'Az útvonalak alapból az OSRM-től jönnek; az adminisztrátor az Alapértelmezett beállítások alatt másik útvonaltervező motorra állíthatja a TREK-et.',
+  'help.guide.day-route.tip.2':
+    'Az a szakasz, amelyre nem sikerült útvonalat számolni, nem mutat időt; ellenőrizd, hogy mindkét megállónak van koordinátája.',
+  'help.guide.day-route.tip.3': 'A visszavonás nyíl visszaveszi az optimalizálást.',
+  // manage-days
+  'help.guide.manage-days.title': 'Napok hozzáadása, átrendezése és átnevezése',
+  'help.guide.manage-days.goal': 'Magukat a napokat formáld, ne csak azt, ami rajtuk van.',
+  'help.guide.manage-days.step.1':
+    'A napok az utazás dátumaiból jönnek; módosítsd a dátumokat az utazáskártyán az Irányítópult alatt, és a végeken napok jönnek hozzá vagy esnek ki.',
+  'help.guide.manage-days.step.2':
+    'Az eszköztárban a Napok átrendezése egy listát nyit: a Mozgatás felfelé és a Mozgatás lefelé mindenestül eltolja a napot; a Nap hozzáadása a végére fűz egy napot.',
+  'help.guide.manage-days.step.3':
+    'Egy nap átnevezéséhez nyisd meg, és kattints a címe melletti ceruzára a térkép fölötti részletek panelen; a név a kártyán és a PDF-ben is az 1. nap helyére lép.',
+  'help.guide.manage-days.step.4':
+    'Az eszköztárban az Expand all days és a Collapse all days egyszerre csukja össze az összes kártyát; egyetlen kártya a saját nyilával csukódik össze.',
+  'help.guide.manage-days.result':
+    'A dátumok a pozíciónál maradnak: a felfelé mozgatott nap a korábbi dátumot kapja, a megállói, jegyzetei és foglalásai pedig vele együtt utaznak.',
+  'help.guide.manage-days.tip.1': 'A Napok átrendezése az eszköztárból visszavonható.',
+  'help.guide.manage-days.tip.2':
+    'A nap fejlécében lévő költség az adott nap árral rendelkező megállóit és foglalásait adja össze.',
+  // bookings-in-plan
+  'help.guide.bookings-in-plan.title': 'Foglalások és közlekedés olvasása a tervben',
+  'help.guide.bookings-in-plan.goal':
+    'Tudd, hol jelenik meg egy foglalás, ha már létezik, és melyik képernyő hozza létre.',
+  'help.guide.bookings-in-plan.step.1':
+    'Egy közlekedés (Repülő, Vonat, Komp, Busz, Autó) az indulás napján Indulás, az érkezés napján Érkezés formában jelenik meg, időponttal és útvonallal; a több napos átnyúlik a köztes napokra.',
+  'help.guide.bookings-in-plan.step.2':
+    'A megállóhoz kötött foglalás (egy Étterem, egy Túra) Foglalás megerősítve vagy Foglalás függőben jelzést tesz arra a megállóra; az a foglalás, amelynek van napja, de nincs megállója, saját sor a napban.',
+  'help.guide.bookings-in-plan.step.3':
+    'Egy szállodai éjszaka szállás: a nap részletei panelen ül a Szállás alatt, a Bejelentkezéstől a Kijelentkezésig, és azoknak a napoknak az útvonala onnan indul.',
+  'help.guide.bookings-in-plan.step.4':
+    'A térképen a közlekedés sorában lévő kapcsoló felrajzolja az útvonalát; az eszköztárban az Összes foglalási útvonal megjelenítése mindet felrajzolja.',
+  'help.guide.bookings-in-plan.step.5':
+    'Létrehozás: Foglalás hozzáadása az egérrel megcélzott megállón, Közlekedés hozzáadása és Tömegközlekedés a nap fejlécében, a teljes listához importtal és fájlokkal pedig a Foglalások és a Közlekedés fül.',
+  'help.guide.bookings-in-plan.result': 'Egy foglalás, egy hely a tervben; a fülek ugyanazok a foglalások listaként.',
+  'help.guide.bookings-in-plan.tip.1':
+    'A Megerősítve és a Függőben egy állapot, amit te állítasz be a foglaláson; a terv a megállón mutatja, a Foglalások fül pedig mindkettőt számolja.',
+  'help.guide.bookings-in-plan.tip.2':
+    'A rögzített időpontú közlekedés nem húzható; helyette a foglalásban módosítsd az időpontját.',
+  // export-plan
+  'help.guide.export-plan.title': 'A terv exportálása',
+  'help.guide.export-plan.goal': 'Vidd magaddal a tervet dokumentumként, a naptáradba vagy egy GPS-re.',
+  'help.guide.export-plan.step.1': 'Kattints a napok fölötti eszköztárban az Exportálás gombra.',
+  'help.guide.export-plan.step.2':
+    'Dokumentum: a PDF minden nap nyomtatási nézetét megnyitja a megállóival, jegyzeteivel és foglalásaival; az Oldaltörés naponta minden napot új oldalon kezd, a Mentés PDF-ként pedig letölti.',
+  'help.guide.export-plan.step.3':
+    'Naptár: az .ics letöltése naptárfájlként menti a foglalásokat; a Feliratkozás a naptárra olyan linket ad, amit a naptáralkalmazásod magától frissít.',
+  'help.guide.export-plan.step.4':
+    'Térképek és GPS · GPX: A teljes utazás exportálja a helyeket, a napi útvonalakat és a nyomvonalakat; a Csak a helyek csak a tűket; a Napok útvonalként naponként egy útvonalat, offline térképekhez és GPS-eszközökhöz.',
+  'help.guide.export-plan.result': 'A fájl letöltődik; az utazásban semmi nem változik.',
+  'help.guide.export-plan.tip.1':
+    'Egyetlen nap a saját útvonalsávjából megy át egy térképalkalmazásba: Megnyitás a Google Térképben vagy Megnyitás a CoMaps-ben.',
+  'help.guide.export-plan.tip.2':
+    'A Feliratkozás a naptárra ahhoz kell, hogy a beállításaidban be legyen kapcsolva a naptár-feliratkozás; az Irányítópulthoz van róla útmutató.',
+  'help.guide.export-plan.tip.3': 'Az exportálás olvasás: az utazás minden tagja megteheti.',
+
+  // ── Screen: trip-place ────────────────────────────────────────────────────────────────
+  'help.ctx.trip-place.title': 'Hely részletei',
+  'help.ctx.trip-place.summary':
+    'A kártya, ami a térkép fölött nyílik meg, amikor kiválasztasz egy helyet: minden, amit az utazás tud róla, a csillagok, amiket mindenki adott neki, a képe és a fájljai, meg a gombok, amik a megnyitott napra, egy listába vagy egy térképalkalmazásba teszik.',
+  'help.ctx.trip-place.bullet.1':
+    'Kattints egy sorra a helyek oszlopában, egy megállóra a napon belül, vagy egy jelölőre a térképen, és a kártya megnyílik a térkép fölött. Ha a napon belül választod ki, a kártya megtudja, melyik megállóra gondolsz, és épp ez hozza magával a megálló résztvevőit és a foglalását.',
+  'help.ctx.trip-place.bullet.2':
+    'A fejléc viszi a kerek képet, a nevet, a kategóriát, a címet és a koordinátákat. Kattints a képre, hogy sajátot használj, kattints duplán a névre, hogy helyben átnevezd a helyet, a jobb oldali X pedig bezárja a kártyát.',
+  'help.ctx.trip-place.bullet.3':
+    'Alatta: a csillagok, amiket minden utazó adott a helynek, az ár, ha van, a leírás és a jegyzetek, és a Jegyzetek erre a napra, ha a megálló hoz ilyet.',
+  'help.ctx.trip-place.bullet.4':
+    'Utána a Nyitvatartás, az Útvonal színe, az Útvonal adatok és a Fájlok jönnek, amennyiben érvényesek. A Fájlok bármit elfogadnak a mappáidból, és azt is felsorolják, ami ennek a megállónak a foglalásán lóg.',
+  'help.ctx.trip-place.bullet.5':
+    'A legalsó sor: Hozzáadás a naphoz vagy Eltávolítás a napról, amíg egy nap meg van nyitva, aztán Mentés gyűjteménybe, Navigáció, Weboldal megnyitása, Szerkesztés és Törlés.',
+  'help.ctx.trip-place.bullet.6':
+    'Egy hely, amit a TREK összepárosított egy térképszolgáltatóval, többet mutat: annak a szolgáltatónak az értékelését egy véleménnyel, a telefonszámot, és egy Nyitva vagy Zárva gyűrűt a kép körül, mögötte a hét nyitvatartásával.',
+  // read-place
+  'help.guide.read-place.title': 'Mit mond el a kártya egy helyről',
+  'help.guide.read-place.goal': 'Olvasd el egyetlen kártyán mindazt, amit az utazás egy helyről tud.',
+  'help.guide.read-place.step.1':
+    'A napok oszlopában kattints a megállóra, amit el akarsz olvasni. A kártya megnyílik a térkép fölött, a megálló pedig jelölve marad a napjában.',
+  'help.guide.read-place.step.2':
+    'A fejléc: a kerek kép, a név, a cím és a pontos koordináták. A jobb oldali X újra bezárja a kártyát.',
+  'help.guide.read-place.step.3':
+    'Alatta a csillagok, amiket minden utazó adott a helynek, az átlaggal és a szavazatok számával. Még nincs értékelve, amíg senki sem szavazott.',
+  'help.guide.read-place.step.4':
+    'Aztán a leírás, alatta a jegyzetek. Mindkettő a hely űrlapjáról való szöveg, megjelenítve: a listák, a linkek és a félkövér mind működnek.',
+  'help.guide.read-place.step.5':
+    'A Résztvevők megmondja, ki megy erre a megállóra. Mindenki benne van, amíg ki nem veszel valakit.',
+  'help.guide.read-place.step.6':
+    'A legalsó sor az, amit innen tehetsz: leveheted a helyet a megnyitott napról vagy ráteheted, listába mentheted, megnyithatod egy térképalkalmazásban, szerkesztheted vagy törölheted.',
+  'help.guide.read-place.result':
+    'A kártya addig marad nyitva, amíg be nem zárod az X-szel vagy másik helyet nem választasz, a megálló pedig, amelyikhez tartozik, jelölve marad a napok oszlopában.',
+  'help.guide.read-place.tip.1':
+    'A helyek oszlopából kiválasztva a kártya ismeri a helyet, de a megállót nem, így nem mutat résztvevőket és foglalást sem. Válaszd inkább a megállót a napon belül, és mindkettő ott van.',
+  'help.guide.read-place.tip.2':
+    'Kattints duplán a névre, hogy az űrlap megnyitása nélkül nevezd át a helyet. Az Enter ment, az Escape eldobja a változtatást.',
+  'help.guide.read-place.tip.3':
+    'Egy hely, amit a TREK össze tudott párosítani egy térképszolgáltatóval, mutatja annak a szolgáltatónak az értékelését, egy véleményt, a telefonszámot és a nyitvatartást is.',
+  // rate-place
+  'help.guide.rate-place.title': 'Hely értékelése',
+  'help.guide.rate-place.goal': 'Add meg a helynek a saját csillagaidat, és nézd meg, mit adtak neki a többiek.',
+  'help.guide.rate-place.step.1':
+    'Nyisd meg a helyet. A csillagsor rögtön a fejléc alatt ül, és az eddigi szavazatok átlagát viszi, a számukkal zárójelben.',
+  'help.guide.rate-place.step.2':
+    'Kattints arra a csillagra, amelyikre gondolsz. A csillagok telnek, ahogy végighaladsz rajtuk, így látod, mit készülsz adni.',
+  'help.guide.rate-place.step.3':
+    'A szavazatod azonnal beleszámít az átlagba, a mellette lévő arcok pedig azok, akik szavaztak. Tartsd a mutatót a soron, hogy mindenki csillagait lásd.',
+  'help.guide.rate-place.step.4':
+    'Ugyanaz az átlag ül a hely során a helyek oszlopában, így a jók kitűnnek a listából.',
+  'help.guide.rate-place.result':
+    'A csillagaid ott vannak a helyen az egész utazás szeme előtt, a lista fölötti szűrősorban lévő Szűrés értékelés szerint csillag pedig mostantól csak azokat a helyeket tudja megtartani, amik elérnek egy alsó határt.',
+  'help.guide.rate-place.tip.1':
+    'Minden utazó értékelhet, még olyan utazáson is, ahol a Helyek hozzáadása / szerkesztése / törlése joggal csak néhányan rendelkeznek közületek.',
+  'help.guide.rate-place.tip.2':
+    'Kattints arra a csillagra, amit már megadtál, hogy visszavedd a szavazatodat. Ha senki sem marad, aki szavazott, a helyen újra Még nincs értékelve áll.',
+  'help.guide.rate-place.tip.3':
+    'A csillagok mellé arcként legfeljebb hat szavazó fér; a buboréksúgó mindegyiket megnevezi, és a tiédet megjelöli.',
+  // place-image
+  'help.guide.place-image.title': 'Saját kép egy helyre',
+  'help.guide.place-image.goal': 'Cseréld le az automatikus indexképet a saját fotódra.',
+  'help.guide.place-image.step.1': 'Nyisd meg a helyet a helyek oszlopából.',
+  'help.guide.place-image.step.2':
+    'Tartsd a mutatót a fejléc kerek képén: megjelenik egy fényképezőgép, a buboréksúgóban pedig Kép feltöltése áll. Kattints rá, és válaszd ki a fájlodat.',
+  'help.guide.place-image.step.3': 'A fejléc most a te képedet mutatja, a sarkában egy kis piros X-szel.',
+  'help.guide.place-image.step.4':
+    'Ugyanaz a kép ott van a hely során a helyek oszlopában, és a térképen a jelölőjén is.',
+  'help.guide.place-image.result':
+    'A képed mindenhol a hely képe: a kártyán, a helyek oszlopában, a nap megállóján, a térképen a jelölőn és egy megosztott utazásban.',
+  'help.guide.place-image.tip.1':
+    'A JPG, a PNG, a GIF és a WebP mind mehet, egy iPhone HEIC képe pedig a feltöltés közben átalakul.',
+  'help.guide.place-image.tip.2':
+    'A sarokban lévő X újra eltávolítja a képedet, és visszajön az automatikus. Magához a helyhez nem nyúl.',
+  'help.guide.place-image.tip.3':
+    'Saját kép nélkül a TREK a hely koordinátái alapján keres egyet, ha pedig az sincs, a kategória ikonjára esik vissza.',
+  // place-day-assign
+  'help.guide.place-day-assign.title': 'Tedd a helyet a megnyitott napra, vagy vedd le róla',
+  'help.guide.place-day-assign.goal': 'A kártya saját gombját használd ahelyett, hogy a sort áthúznád a tervezőn.',
+  'help.guide.place-day-assign.step.1':
+    'Kattints egy nap fejlécére a napok oszlopában. Az a nap most a megnyitott, és a kártya ahhoz igazodik.',
+  'help.guide.place-day-assign.step.2':
+    'Kattints a helyek oszlopában egy helyre, ami nincs azon a napon. Megnyílik a kártyája, és a legalsó sor felkínálja a Hozzáadás a naphoz gombot.',
+  'help.guide.place-day-assign.step.3':
+    'Kattints a Hozzáadás a naphoz gombra. A megálló a nap végére érkezik, a gombból pedig Eltávolítás a napról lesz.',
+  'help.guide.place-day-assign.step.4': 'A megálló most a napon van, a lista végén. Húzd fel oda, ahová való.',
+  'help.guide.place-day-assign.step.5':
+    'Az Eltávolítás a napról újra leveszi azt a megállót a napról, a kártya pedig megint felkínálja a Hozzáadás a naphoz gombot.',
+  'help.guide.place-day-assign.result':
+    'A nap viszi a megállót, vagy már nem viszi, maga a hely pedig így is, úgy is érintetlen marad.',
+  'help.guide.place-day-assign.tip.1':
+    'A gomb csak akkor létezik, ha egy nap meg van nyitva. Nap nélkül a kártyának nincs mihez hozzáadnia a helyet.',
+  'help.guide.place-day-assign.tip.2':
+    'Ha leveszel egy megállót egy napról, a hely megmarad az utazásban és a helyek oszlopában. Mindenhonnan a Törlés veszi ki.',
+  'help.guide.place-day-assign.tip.3':
+    'Egy megálló, amit szállásfoglalás tett a napra, egyik gombot sem kínálja: azt az éjszakát a nap Szállás blokkjában adod hozzá és veszed ki.',
+  // place-participants
+  'help.guide.place-participants.title': 'Mondd meg, ki megy erre a megállóra',
+  'help.guide.place-participants.goal': 'Oszd meg a csapatot egyetlen megállóra anélkül, hogy az utazást osztanád meg.',
+  'help.guide.place-participants.step.1':
+    'Kattints a megállóra a napon belül. A kártya megnyílik, a Résztvevők pedig felsorolják mindenkit az utazásban.',
+  'help.guide.place-participants.step.2':
+    'Kattints egy utazó címkéjére, hogy kivedd őt ebből a megállóból. A név áthúzva jelenik meg, ahogy fölé viszed a mutatót.',
+  'help.guide.place-participants.step.3':
+    'Amint valaki hiányzik, megjelenik egy szaggatott +. Kattints rá, hogy lásd, ki nincs a megállón.',
+  'help.guide.place-participants.step.4':
+    'Kattints egy névre, hogy visszatedd. Ha mindenki visszakerült, a megálló megint az egész csapaté.',
+  'help.guide.place-participants.result':
+    'A megálló azokat az utazókat viszi, akiket kiválasztottál, a csapat többi része pedig magának kapja azt a délutánt.',
+  'help.guide.place-participants.tip.1':
+    'A Résztvevők csak kiválasztott megállóval jelennek meg, ezért a helyet a napon belül válaszd, ne a helyek oszlopában, és csak olyan utazáson, ahol egynél több utazó van.',
+  'help.guide.place-participants.tip.2':
+    'Ha senki sincs kiválasztva, az azt jelenti, hogy mindenki megy. Ha az utolsót is kiveszed, mindenki visszakerül.',
+  'help.guide.place-participants.tip.3':
+    'Egy Vendég, akinek nincs saját fiókja, ugyanúgy lehet résztvevő, mint bárki más.',
+  // place-booking
+  'help.guide.place-booking.title': 'A foglalás egy megállón',
+  'help.guide.place-booking.goal': 'Olvasd el a megállóhoz tartozó foglalást, nyisd meg, és tűzz rá egy újat.',
+  'help.guide.place-booking.step.1':
+    'Nyisd meg a megállót, amelyikhez a foglalás tartozik. A kártya egy sávot mutat a Megerősítve vagy Függőben szóval és a foglalás nevével.',
+  'help.guide.place-booking.step.2':
+    'A sáv viszi a Dátumot, az Időpontot és a Foglalási kódot, meg bármilyen jegyzetet, ami a foglaláson van.',
+  'help.guide.place-booking.step.3': 'Kattints a sávra. Megnyílik rajta a foglalás saját űrlapja.',
+  'help.guide.place-booking.step.4':
+    'Az Összekapcsolás napi tervvel az, ami egy foglalást egy megállóhoz tűz, és itt már ezt nevezi meg. Zárd be újra az űrlapot.',
+  'help.guide.place-booking.step.5':
+    'Egy megállóhoz tartozó új foglalás a napok oszlopában kezdődik: vidd a mutatót a megálló fölé, és kattints a végén lévő + jelre. Az űrlap Új foglalás néven nyílik meg, már hozzákapcsolva.',
+  'help.guide.place-booking.result':
+    'A foglalás a megállón lóg: rajta van a kártyán, benne van a napban, és a fájljai itt is fel vannak sorolva a Fájlok alatt.',
+  'help.guide.place-booking.tip.1':
+    'A sáv csak annál a megállónál jelenik meg, amelyikhez a foglalás hozzá van tűzve. A megálló nélküli foglalás a Foglalások fülön él.',
+  'help.guide.place-booking.tip.2':
+    'Több foglalás is osztozhat egy megállón: az ebéd és a túra, ami ugyanabból a kapuból indul.',
+  'help.guide.place-booking.tip.3':
+    'Egy vonat, egy járat vagy egy komp ehelyett a közlekedési űrlapot nyitja meg, azt, amit a Közlekedés fül használ.',
+  // place-files
+  'help.guide.place-files.title': 'Tartsd a hely jegyeit a helynél',
+  'help.guide.place-files.goal': 'Tedd a hely jegyét, utalványát vagy térképét oda, ahol keresni fogod.',
+  'help.guide.place-files.step.1':
+    'Nyisd meg a helyet. A Fájlok a kártya alján van, és amíg a helynek nincs egy sem, Fájlok felirat áll rajta.',
+  'help.guide.place-files.step.2': 'Kattints mellette a Feltöltés gombra, és válaszd ki a fájlt.',
+  'help.guide.place-files.step.3': 'A gomb megszámolja, mit tart a hely, a lista pedig magától kinyílik.',
+  'help.guide.place-files.step.4': 'Minden sor a fájl neve a méretével. Kattints rá, hogy megnyisd a fájlt.',
+  'help.guide.place-files.result': 'A fájl a helyen ül, beleszámolva a kártyába, és ott van az utazás Fájlok fülén is.',
+  'help.guide.place-files.tip.1':
+    'A Fájlok azt is felsorolják, ami ennek a megállónak a foglalásán lóg, így egy szállodai visszaigazolás a szállodánál bukkan fel.',
+  'help.guide.place-files.tip.2': 'A Feltöltés egyszerre több fájlt is elfogad.',
+  'help.guide.place-files.tip.3':
+    'A Fájlok feltöltése jog nélkül a Feltöltés gomb nincs ott; a helyen már meglévő fájlok viszont igen.',
+  // place-navigation
+  'help.guide.place-navigation.title': 'Hely megnyitása térképalkalmazásban vagy a weboldalán',
+  'help.guide.place-navigation.goal': 'Add át a helyet annak az alkalmazásnak, ami tényleg odavisz.',
+  'help.guide.place-navigation.step.1': 'Nyisd meg a helyet, és kattints a legalsó sorban a Navigáció gombra.',
+  'help.guide.place-navigation.step.2':
+    'A lista azok a térképalkalmazások, amik illenek ehhez a helyhez: Google Maps, Waze, Apple Maps, OpenStreetMap és CoMaps.',
+  'help.guide.place-navigation.step.3':
+    'Kattints arra, amelyiket használod. A TREK, ahol tudja, magát a helyet adja át neki, nem csak egy koordinátapárt, így a megfelelő bejáratnál kötsz ki.',
+  'help.guide.place-navigation.step.4':
+    'A mellette lévő Weboldal megnyitása a hely saját oldalát, az időpontjait és a jegyeit nyitja meg új lapon.',
+  'help.guide.place-navigation.result':
+    'A térképalkalmazás a helyen nyílik meg, a weboldal saját lapon, és az utazásban semmi sem változik.',
+  'help.guide.place-navigation.tip.1':
+    'A Waze azonnal navigálni kezd. A többi megnyitja a helyet, és onnan elindulni még egy koppintás.',
+  'help.guide.place-navigation.tip.2':
+    'Hogy melyik alkalmazások jelennek meg, a helytől és a készülékedtől függ: az Apple Maps Androidon kimarad, a 高德地图 csak kínai helynél jön elő, a Waze, az Apple Maps és a CoMaps pedig a hely koordinátáit igényli.',
+  'help.guide.place-navigation.tip.3':
+    'Ha csak egy alkalmazás jöhet szóba, a gomb annak az alkalmazásnak a nevét viseli, és egyből megnyitja.',
+  // place-to-collection
+  'help.guide.place-to-collection.title': 'Hely mentése az egyik listádba',
+  'help.guide.place-to-collection.goal': 'Tartsd meg a következőre azt a helyet, amit ezen az utazáson találtál.',
+  'help.guide.place-to-collection.step.1':
+    'Nyisd meg a helyet, és kattints a kártya alján a Mentés gyűjteménybe gombra.',
+  'help.guide.place-to-collection.step.2':
+    'A Mentés listába minden listádat mutatja, amit birtokolsz vagy megosztva használsz. Pipa jelöli azokat, amikben ez a hely már benne van.',
+  'help.guide.place-to-collection.step.3': 'Kattints a listára. A hely azonnal benne van.',
+  'help.guide.place-to-collection.step.4': 'Zárd be, és a kártyán a gombon Mentve áll.',
+  'help.guide.place-to-collection.result':
+    'A hely ott van a listádban a képével, a jegyzeteivel és a csillagaival, készen a következő utazásra.',
+  'help.guide.place-to-collection.tip.1':
+    'A gomb csak akkor van ott, ha a Gyűjtemények bővítmény be van kapcsolva, amit az adminisztrátor a Bővítmények alatt kapcsol be.',
+  'help.guide.place-to-collection.tip.2':
+    'Egy hely egyszerre több listában is ülhet, mindegyikben saját állapottal: az egyikben Ötlet, a másikban Meglátogatva.',
+  'help.guide.place-to-collection.tip.3':
+    'A Megjelölés látogatottként a hely neve mellett a választóban kipipálja a listában; ha a hely több listádban is benne van, a címkén Mindenhol látogatott áll, és egyszerre intézi mindet.',
+  // place-track
+  'help.guide.place-track.title': 'Olvass le egy nyomvonalat, és adj neki saját színt',
+  'help.guide.place-track.goal':
+    'Nézd meg, milyen hosszú egy importált túra, és különböztesd meg a vonalát a többitől a térképen.',
+  'help.guide.place-track.step.1':
+    'Egy nyomvonal sora a helyek oszlopában rövid vonást visel abban a színben, amivel a vonala rajzolódik. Kattints rá.',
+  'help.guide.place-track.step.2': 'Az Útvonal adatok az útvonal hosszát adják meg, a beállított távolság egységben.',
+  'help.guide.place-track.step.3':
+    'A fölötte lévő Útvonal színe a használatban lévő színt mutatja. Kattints a sorra, hogy megnyisd a színmintákat.',
+  'help.guide.place-track.step.4': 'Válassz színt. A vonal a térképen és a vonás a soron vele együtt változik.',
+  'help.guide.place-track.step.5':
+    'A bal oldali szaggatott cella, az Automatikus szín, visszaadja a nyomvonalnak az örökölt színét; a jobb oldali pipetta, az Egyéni szín kiválasztása, bármi másért megnyitja a rendszered színválasztóját.',
+  'help.guide.place-track.result':
+    'A nyomvonal a választott színben rajzolódik, a kártyán, a helyek oszlopában lévő során és a térképen.',
+  'help.guide.place-track.tip.1':
+    'Ez a két blokk csak olyan helyen van, ami útvonalat visz, GPX, KML vagy KMZ fájlból importálva.',
+  'help.guide.place-track.tip.2':
+    'Egy magasságokkal rögzített nyomvonal a legmagasabb és a legalacsonyabb pontját, a fel és le megtett métereket, meg a túra profilját is mutatja.',
+  'help.guide.place-track.tip.3':
+    'Egy import minden behozott nyomvonalnak saját színt ad, így két túra sosem érkezik ugyanabban.',
+
+  // ── Screen: trip-files ────────────────────────────────────────────────────────────────
+  'help.ctx.trip-files.title': 'Fájlok',
+  'help.ctx.trip-files.summary':
+    'Az utazás minden dokumentuma egy listában: jegyek, visszaigazolások, tárcakártyák és képek, mindegyik megjegyzéssel, a hozzá tartozó helyre vagy foglalásra mutató kapcsolattal, és egy kukával, amiből vissza lehet hozni.',
+  'help.ctx.trip-files.bullet.1':
+    'A felül lévő Húzd ide a fájlokat átveszi a fájlokat; a mezőre kattintva megnyílik a fájlválasztó. Az alatta lévő sor felsorolja, milyen fájltípusokat fogad ez a TREK, és a fájlonkénti 50 MB korlátot.',
+  'help.ctx.trip-files.bullet.2':
+    'A fülek mondják meg, mit mutat a lista: Összes, PDF-ek, Képek és Dokumentumok, mindegyik a maga darabszámával. Egy csillag csatlakozik hozzájuk, amint egy fájl csillagot kap, a Közös jegyzetek pedig, amint egy jegyzet mellékletet visz.',
+  'help.ctx.trip-files.bullet.3':
+    'Egy sor viszi, ki töltötte fel, a nevet, alatta a megjegyzést, a méretet és a dátumot, és kapcsolatonként egy jelvényt: Napi terv és a hely, Foglalás vagy Közlekedés és a foglalás, Közös jegyzetekből.',
+  'help.ctx.trip-files.bullet.4':
+    'A sor végén a Csillag, a Hozzárendelés, a Megnyitás, a Letöltés és a Törlés ül. A Törlés nem kérdez: a fájl a kukába megy, onnan vissza lehet hozni.',
+  'help.ctx.trip-files.bullet.5':
+    'Egy kép vagy egy videó teljes képernyőn nyílik meg, a nyílbillentyűkkel és egy bélyegképsávval; minden más dokumentum az oldal fölötti előnézetben nyílik meg, a Megnyitás új lapon és a Letöltés gombbal. Egy tárcakártya rögtön letöltődik.',
+  'help.ctx.trip-files.bullet.6':
+    'A jobb szélen lévő Kuka a törölt fájlokra váltja a listát, ahol mindegyik visszaállítható vagy véglegesen törölhető, a Kuka ürítése pedig mindet kitakarítja. Ahol egy rendszergazda dokumentumtárat kötött be, ott mellette ül a Dokumentumok szinkronizálása.',
+  // files-upload
+  'help.guide.files-upload.title': 'Dokumentum betétele az utazásba',
+  'help.guide.files-upload.goal':
+    'Hozz ki egy jegyet, egy visszaigazolást vagy egy fotót a letöltések mappájából az utazásba, ahol mindenki eléri, aki benne van.',
+  'help.guide.files-upload.step.1':
+    'Nyisd meg az utazást, és kattints a fülsorban a Fájlok fülre. Ott vannak felsorolva az utazás dokumentumai, fölöttük a feltöltő mezővel.',
+  'help.guide.files-upload.step.2':
+    'Kattints a Húzd ide a fájlokat mezőre, és válassz ki egy vagy több fájlt. Egymás után töltődnek fel, a mezőn pedig közben Feltöltés... áll. A mező alatti sor megmondja, milyen típusokat fogad ez a TREK, és hogy egy fájl legfeljebb 50 MB lehet.',
+  'help.guide.files-upload.step.3':
+    'Amint az utolsó fájl felkerült, magától megnyílik hozzá a Fájl hozzárendelése. A Megjegyzés hozzáadása... egy saját sort ad a fájlnak, az alatta lévő listák pedig helyhez vagy foglaláshoz kötik. Zárd be az ×-szel; a bezárással semmi nem vész el.',
+  'help.guide.files-upload.step.4':
+    'Az új fájlok a lista tetején állnak. Egy sor mutatja, ki töltötte fel, a nevet, a méretet és a dátumot; egy kép bélyegképet kap, minden más fájl a típusát.',
+  'help.guide.files-upload.result':
+    'A dokumentumok az utazásban vannak, és mindenki, aki látja az utazást, megnyithatja és letöltheti őket.',
+  'help.guide.files-upload.tip.1':
+    'Egy fájlt az asztalról egyenesen a mezőre is húzhatsz, ami kivilágosodik, amíg a fájl fölötte van.',
+  'help.guide.files-upload.tip.2':
+    'A vágólapon lévő kép Ctrl+V-vel kerül a listába, így egy foglalásról készült képernyőképet soha nem kell előbb elmenteni.',
+  'help.guide.files-upload.tip.3':
+    'A feltöltéshez Fájlok feltöltése jog kell; enélkül a mező egyáltalán nincs ott. A listán nem szereplő típust vagy az 50 MB fölötti fájlt üzenettel visszautasítja, és semmi nem töltődik fel.',
+  // files-link
+  'help.guide.files-link.title': 'Dokumentum kötése helyhez vagy foglaláshoz',
+  'help.guide.files-link.goal':
+    'Legyen a jegy megtalálható arról a napról is, amelyhez tartozik, ne csak ebből a listából.',
+  'help.guide.files-link.step.1':
+    'Kattints a Hozzárendelés gombra, a sor végén lévő ceruzára. Megnyílik a Fájl hozzárendelése, a fájlról elnevezve.',
+  'help.guide.files-link.step.2':
+    'A Megjegyzés alatt a Megjegyzés hozzáadása... egy sort fogad, ami aztán a fájl neve alatt áll a listában. Abban a pillanatban mentődik, ahogy kilépsz a mezőből.',
+  'help.guide.files-link.step.3':
+    'A Hely alatt az utazás helyei állnak, aszerint a nap szerint csoportosítva, amelyen vannak, a végén pedig a Nincs hozzárendelve azoknak, amelyek egyetlen napon sincsenek. Kattints egyre, és pipát kap.',
+  'help.guide.files-link.step.4':
+    'A Foglalás és a Közlekedés alatt az utazás foglalásai állnak. Kattints arra, amelyikhez a dokumentum tartozik; az is megkapja a maga pipáját.',
+  'help.guide.files-link.step.5':
+    'Zárd be az ×-szel. Itt nincs mentés gomb: minden kattintás abban a pillanatban íródott ki, ahogy megtetted.',
+  'help.guide.files-link.result':
+    'A sor viszi a megjegyzést és kapcsolatonként egy jelvényt, a Napi terv és a hely nevét, a Közlekedés és a járat nevét, a dokumentum pedig a helyen és a foglaláson is ott lóg.',
+  'help.guide.files-link.tip.1':
+    'Egy fájl több kapcsolatot is tarthat egyszerre, így ugyanaz a visszaigazolás a szállodához és az általa fedett éjszakához is tartozik.',
+  'help.guide.files-link.tip.2':
+    'Egy kipipált bejegyzésre újra kattintva elveszed azt a kapcsolatot; maga a fájl marad.',
+  'help.guide.files-link.tip.3':
+    'Fordítva is működik: egy helyhez vagy egy foglaláshoz csatolt dokumentum ebben a listában is benne van, ugyanazzal a jelvénnyel a sorában.',
+  // files-star
+  'help.guide.files-star.title': 'A fontos dokumentumok felül tartása',
+  'help.guide.files-star.goal':
+    'Húzd ki azt a két-három papírt, amire tényleg szükséged lesz, egy listából, ami az egész utazás alatt nő.',
+  'help.guide.files-star.step.1':
+    'Kattints a sor végén a Csillag gombra. Sárgára telik, a fájl neve elé egy második csillag kerül, a gombon pedig most Csillag eltávolítása áll.',
+  'help.guide.files-star.step.2':
+    'A lista újrarendezi magát: a csillagozott fájlok az összes többi fölött állnak, csoportokon belül a legújabbak elöl.',
+  'help.guide.files-star.step.3':
+    'A felső fülekhez csatlakozott egy csillag, mögötte a csillagozott fájlok számával. Kattints rá, és csak azokat látod.',
+  'help.guide.files-star.result': 'A pultnál kellő papírok a lista tetején állnak, és egy fül semmi mást nem mutat.',
+  'help.guide.files-star.tip.1':
+    'A csillag fül csak addig létezik, amíg valami csillagozott. Vedd le a csillagot az utolsó fájlról, és a fül is eltűnik vele.',
+  'help.guide.files-star.tip.2':
+    'A csillagozás szerkesztésnek számít: az a tag, aki csak olvashatja az utazás fájljait, látja a csillagokat, de nem tudja beállítani őket.',
+  // files-filter
+  'help.guide.files-filter.title': 'Dokumentum megtalálása a listában',
+  'help.guide.files-filter.goal': 'Szűkítsd a mindent tartalmazó listát arra az egy papírfajtára, amit keresel.',
+  'help.guide.files-filter.step.1':
+    'A lista fölötti fülek az Összes, a PDF-ek, a Képek és a Dokumentumok, mindegyik mögött a fájlok számával.',
+  'help.guide.files-filter.step.2': 'Kattints a PDF-ek fülre: a lista a PDF-fájlokat tartja meg, mást semmit.',
+  'help.guide.files-filter.step.3':
+    'Még két fül jön és megy azzal, mi van az utazásban: egy csillag, amint egy fájl csillagot kap, és a Közös jegyzetek, amint egy jegyzet az Együttműködés fülön mellékletet visz.',
+  'help.guide.files-filter.step.4': 'Az Összes visszahozza az egész listát.',
+  'help.guide.files-filter.result':
+    'A lista csak azt mutatja, amit a fül megnevez, és a füleken lévő szám megmondja, hány az.',
+  'help.guide.files-filter.tip.1':
+    'Itt nincsenek mappák és nincs átnevezés: a dokumentumot a Fájl hozzárendelése alatti megjegyzés, a helyekhez és foglalásokhoz vezető kapcsolatok és a csillag rendezik.',
+  'help.guide.files-filter.tip.2':
+    'Maga a lista mindig előbb a csillag, aztán a legújabb szerint megy, így egy ma feltöltött dokumentum a múlt hónapi fölött áll.',
+  // files-preview
+  'help.guide.files-preview.title': 'Dokumentum olvasása a TREK elhagyása nélkül',
+  'help.guide.files-preview.goal':
+    'Nézz meg egy jegyet vagy egy képet helyben, és tedd a saját gépedre, amikor ott van rá szükséged.',
+  'help.guide.files-preview.step.1':
+    'Kattints egy kép nevére vagy a bélyegképére. Teljes képernyőn nyílik meg, a fejlécben a fájl nevével és a képek közötti helyével.',
+  'help.guide.files-preview.step.2':
+    'Az oldalt lévő kerek nyilak, a bal és jobb nyílbillentyű és az alul lévő bélyegképsáv végigvezet minden képen, amit a lista éppen mutat.',
+  'help.guide.files-preview.step.3':
+    'A Megnyitás új lapon és a Letöltés a fejlécben ül; az × vagy az Escape újra bezárja a képet.',
+  'help.guide.files-preview.step.4':
+    'Egy dokumentum, ami nem kép, helyette az oldal fölötti előnézetben nyílik meg, ugyanazzal a két gombbal a fejlécében. Ez az ×-re vagy a mellette lévő kattintásra záródik be.',
+  'help.guide.files-preview.step.5':
+    'A sor végén lévő Letöltés egyenesen a gépedre menti a fájlt, anélkül hogy előbb bármit megnyitna.',
+  'help.guide.files-preview.result':
+    'A dokumentum a képernyőn van, és ugyanaz a két gomb teszi böngészőlapra vagy a lemezedre.',
+  'help.guide.files-preview.tip.1': 'Érintőképernyőn a nyilakra kattintás helyett végighúzod az ujjad a képeken.',
+  'help.guide.files-preview.tip.2':
+    'Egy tárcakártya soha nem nyit előnézetet: rögtön letöltődik, hogy a telefon átadhassa a tárcaalkalmazásának.',
+  'help.guide.files-preview.tip.3':
+    'A Megnyitás új lapon és a Letöltés is a te munkameneteddel hozza le a fájlt, így a címsorból kimásolt link senki másnak nem ér semmit.',
+  // files-trash
+  'help.guide.files-trash.title': 'Dokumentum kidobása és visszahozása',
+  'help.guide.files-trash.goal':
+    'Takarítsd ki, amire az utazásnak már nincs szüksége, anélkül hogy elveszítenél bármit, amire mégis szükséged volt.',
+  'help.guide.files-trash.step.1':
+    'Kattints a sor végén a Törlés gombra. A fájl rögtön elhagyja a listát, az üzenet pedig Kukába helyezve. Előtte semmi nem kérdez.',
+  'help.guide.files-trash.step.2':
+    'Az eszköztár jobb szélén lévő Kuka arra váltja a listát, amit kidobtál. A cím Kuka, a szűrőfülek pedig eltűntek.',
+  'help.guide.files-trash.step.3':
+    'Egy kidobott sor ki van szürkítve, és két gombja maradt: a Visszaállítás, ami visszahozza a fájlt, és a Törlés, ami egy kérdés után véglegesen eltávolítja.',
+  'help.guide.files-trash.step.4':
+    'Kattints a Visszaállítás gombra. Az üzenet Fájl visszaállítva, a sor pedig elhagyja a kukát, a megjegyzésével és a kapcsolataival együtt.',
+  'help.guide.files-trash.step.5':
+    'A felül lévő Kuka ürítése véglegesen kitakarít mindent, ami még itt van, és a böngésző egyszer megkérdezi, mielőtt megtenné. A Kuka visszavált a fájlokra.',
+  'help.guide.files-trash.result': 'A fájl megint a listában van, ott, ahol volt, mintha mi sem történt volna.',
+  'help.guide.files-trash.tip.1':
+    'A soron lévő Törlés előbb nem kérdez, és pont ezért van a kuka: semmi nem hagyja el a TREK-et, amíg itt ki nem mondod.',
+  'help.guide.files-trash.tip.2':
+    'Egy fájl kidobásához és visszahozásához Fájlok törlése jog kell. Az a tag, akinek nincs meg, sem a soron lévő Törlést, sem a kukában lévő gombokat nem látja.',
+  'help.guide.files-trash.tip.3': 'A kukában véglegesen törölt fájlt már nem lehet visszahozni.',
+
+  // ── Screen: trip-day-detail ───────────────────────────────────────────────────────────
+  'help.ctx.trip-day-detail.title': 'Nap részletei',
+  'help.ctx.trip-day-detail.summary':
+    'A panel, amit egy nap fejléce nyit meg a térkép fölött: a nap mint egész, a neve és a dátuma, az időjárás ott, ahol leszel, a rá eső foglalások és a rá lefoglalt éjszakák.',
+  'help.ctx.trip-day-detail.bullet.1':
+    'Kattints egy nap fejlécére a napok oszlopában, és a panel a térkép közepe fölött nyílik meg. Ugyanaz a fejléc újra, vagy a jobb szélén lévő X, bezárja és elengedi a napot.',
+  'help.ctx.trip-day-detail.bullet.2':
+    'A fejléc a nap nevét és dátumát viseli. A név melletti ceruza átnevezi a napot, a dupla nyíl keskeny sávvá csukja a panelt, így a térkép újra szabad.',
+  'help.ctx.trip-day-detail.bullet.3':
+    'Legfelül a nap időjárása. Az Előrejelzés megnevezi a helyet, amelyre vonatkozik: a nap első megállóját, vagy a szállodát, ahol felébredsz.',
+  'help.ctx.trip-day-detail.bullet.4':
+    'A Foglalások felsorolja az aznapi foglalásokat, mindegyiket a fajtájával, a megállóval, amelyhez tartozik, és az időpontjaival. A zöld azt jelenti, megerősítve, a borostyánsárga még függőben; ez csak kiolvasás, a foglalásokat a Foglalások fülön módosítod.',
+  'help.ctx.trip-day-detail.bullet.5':
+    'A Szállás megmutatja az erre a napra lefoglalt minden éjszakát, a Bejelentkezés és a Kijelentkezés címkével azokon a napokon, amikor megtörténnek, a bejelentkezési ablakkal, a kijelentkezés idejével és a visszaigazolási számmal.',
+  'help.ctx.trip-day-detail.bullet.6':
+    'A Szállás hozzáadása erre a napra foglal egy éjszakát: válaszd ki a szálláshelyet az utazás helyei közül, mondd meg, mely napokat fedi le, és add meg az időpontokat és a kódot.',
+  // day-panel
+  'help.guide.day-panel.title': 'Nyiss meg egy napot, és olvasd el a részleteit',
+  'help.guide.day-panel.goal':
+    'Láss egy napot egészben, az időjárását, a foglalásait és azt, hol alszol, anélkül, hogy elhagynád a térképet.',
+  'help.guide.day-panel.step.1':
+    'Kattints egy nap fejlécére a napok oszlopában. A nap ki van választva, és a részletei a térkép közepe fölött nyílnak meg.',
+  'help.guide.day-panel.step.2': 'A fejléc megnevezi a napot, 1. nap, amíg nem adsz neki nevet, alatta a dátummal.',
+  'help.guide.day-panel.step.3':
+    'Legfelül a nap időjárása. Az Előrejelzés megmondja, melyik helyre vonatkozik: a nap első megállójára, vagy a szállodára, ahol felébredsz.',
+  'help.guide.day-panel.step.4': 'Alatta a Foglalások felsorolja az erre a napra eső foglalásokat, az időpontjaikkal.',
+  'help.guide.day-panel.step.5':
+    'A Szállás megmutatja az erre a napra lefoglalt éjszakákat, a Bejelentkezés és a Kijelentkezés címkével azokon a napokon, amikor megtörténnek.',
+  'help.guide.day-panel.step.6':
+    'A fejlécben lévő dupla nyíl keskeny sávvá csukja a panelt. A mellette lévő X bezárja a panelt, és elengedi a napot.',
+  'help.guide.day-panel.result':
+    'A sávvá csukott panel szabadon hagyja a térképet, és a nap kiválasztva marad; bezárva a nap kijelölése megszűnik, és a terv olyan, amilyen volt.',
+  'help.guide.day-panel.tip.1':
+    'A panel fejlécsávjának bármelyik pontjára kattintva is összecsukódik. A nyíl csak a gomb hozzá.',
+  'help.guide.day-panel.tip.2':
+    'Ha megnyitsz egy helyet a helyek oszlopából, a hely részletei a panel helyére kerülnek. Zárd be őket, és a nap visszajön.',
+  // day-weather
+  'help.guide.day-weather.title': 'Olvasd le a nap időjárását',
+  'help.guide.day-weather.goal': 'Tudd, milyen lesz a nap ott, ahol azon a napon tényleg vagy.',
+  'help.guide.day-weather.step.1':
+    'Az Előrejelzés megnevezi a helyet, amelyre a számok vonatkoznak: a nap első megállóját, vagy megálló nélküli napon a szállodát, ahol felébredsz.',
+  'help.guide.day-weather.step.2':
+    'A nagy szám a nap hőmérséklete, mellette a minimum és a maximum, és az időjárás szavakkal.',
+  'help.guide.day-weather.step.3':
+    'Alatta a címkék: a csapadék valószínűsége, mennyi lesz belőle, a legerősebb szél, meg a napkelte és a napnyugta.',
+  'help.guide.day-weather.step.4':
+    'Legalul a nap óráról órára, minden második órában: az idő, az ikon, a hőmérséklet és a csapadék valószínűsége. Az 50 százalék fölötti óra kékkel van árnyékolva.',
+  'help.guide.day-weather.result':
+    'A nap kártyája a napok oszlopában ugyanazt az időjárást viseli kicsiben a száma alatt, így az egész utazás egy pillantással olvasható.',
+  'help.guide.day-weather.tip.1':
+    'A fokok és a szél a Beállításokban a Megjelenés alatti választásodat követik: válts Fahrenheit értékre, és ugyanaz az előrejelzés °F és mph egységben olvasható ki.',
+  'help.guide.day-weather.tip.2':
+    'Egy nap, amelynek nincs helyhez kötött megállója és nincs szállodája, ahol felébredni, egyáltalán nem mutat időjárást: az előrejelzés mindig egy helyre szól, sosem az utazásra.',
+  'help.guide.day-weather.tip.3':
+    '16 napnál messzebb előre nincs előrejelzés. A számok ilyenkor a korábbi évek átlagai arra a dátumra, Ø jellel megjelölve, és alatta ez oda is van írva.',
+  // rename-day
+  'help.guide.rename-day.title': 'Adj nevet a napnak',
+  'help.guide.rename-day.goal': 'Hívd a napot annak, ami, Érkezés Kyotoba vagy Pihenőnap, az 5. nap helyett.',
+  'help.guide.rename-day.step.1': 'Nyisd meg a napot. A fejléce 5. nap, alatta a dátummal.',
+  'help.guide.rename-day.step.2': 'Kattints a név melletti ceruzára.',
+  'help.guide.rename-day.step.3': 'A név mezővé változik. Írd be a nevet, amit szeretnél.',
+  'help.guide.rename-day.step.4':
+    'Nyomj Entert, vagy egyszerűen kattints máshová; az Escape eldobja a változtatást. A nap kártyája a napok oszlopában is viseli a nevet.',
+  'help.guide.rename-day.result':
+    'A név az 5. nap helyére lép a panelen és a nap kártyáján a napok oszlopában; a dátum ott marad, ahol volt.',
+  'help.guide.rename-day.tip.1':
+    'Töröld ki a mezőt és ments, és a nap újra 5. nap: a szám az, ami látszik, ha nincs név.',
+  'help.guide.rename-day.tip.2':
+    'A név a naphoz tartozik, nem a dátumához. Rendezd át a napokat, és minden mással együtt vándorol azon a napon.',
+  // add-accommodation
+  'help.guide.add-accommodation.title': 'Foglalj éjszakát egy napra',
+  'help.guide.add-accommodation.goal':
+    'Tedd be a szállodát a tervbe egyszer, a napokkal, amiket lefed, az időpontjaival és a visszaigazolási számával.',
+  'help.guide.add-accommodation.step.1':
+    'A szálláshelynek előbb az utazás helyének kell lennie. Hozd létre a helyek oszlopában, ahogy bármely más helyet: a választó csak azt kínálja, ami már ott van.',
+  'help.guide.add-accommodation.step.2':
+    'Nyisd meg az érkezés napját, és kattints a Szállás alatt a Szállás hozzáadása gombra.',
+  'help.guide.add-accommodation.step.3':
+    'Az Alkalmazás napokra megmondja, mely éjszakákat fedi le a tartózkodás: balra a bejelentkezés napja, jobbra a kijelentkezés napja. Az Összes az egész utazást lefedi.',
+  'help.guide.add-accommodation.step.4':
+    'Töltsd ki a Bejelentkezés, az Eddig és a Kijelentkezés mezőt, a foglalás számát pedig írd a Visszaigazolás alá. Mind a négy maradhat üresen.',
+  'help.guide.add-accommodation.step.5':
+    'Válaszd ki a szálláshelyet az utazás helyei közül. A lista fölötti címkék egyetlen kategóriára szűkítik.',
+  'help.guide.add-accommodation.step.6': 'Kattints a Mentés gombra.',
+  'help.guide.add-accommodation.result':
+    'A tartózkodás minden napon látszik, amit lefed, az elsőn Bejelentkezés, az utolsón Kijelentkezés. A szálláshely megállóvá válik a bejelentkezés napján, így a térkép megrajzolja az odavezető utat, és a Foglalások fülön megjelenik egy Szálloda típusú foglalás.',
+  'help.guide.add-accommodation.tip.1':
+    'A választó azon a napon nyílik, ahonnan jöttél, a kijelentkezés a rá következő napon; mentés előtt mindkettő mozgatható.',
+  'help.guide.add-accommodation.tip.2':
+    'Add a szállodának létrehozáskor az utazás Hotel kategóriáját, és a lista fölötti címkék egy kattintással a szállodáidra szűkítenek.',
+  'help.guide.add-accommodation.tip.3':
+    'Az időpontok mind opcionálisak: a bejelentkezés és kód nélküli tartózkodás is lefedi az éjszakáit, és megrajzolja az útvonalát.',
+  // edit-accommodation
+  'help.guide.edit-accommodation.title': 'Változtass meg vagy mondj le egy lefoglalt éjszakát',
+  'help.guide.edit-accommodation.goal':
+    'Mozgass el egy tartózkodást, javítsd az időpontjait, vagy vedd ki újra a tervből.',
+  'help.guide.edit-accommodation.step.1':
+    'A tartózkodás minden napján a kártya a szálláshelyet, a bejelentkezési ablakot, a kijelentkezés idejét és a visszaigazolási számot mutatja.',
+  'help.guide.edit-accommodation.step.2':
+    'A jobb szélén lévő ceruza újra megnyitja a tartózkodást. Az ablak most Szállás szerkesztése feliratot visel.',
+  'help.guide.edit-accommodation.step.3':
+    'Változtasd meg, amire szükséged van: a lefedett napokat, a Bejelentkezés, az Eddig, a Kijelentkezés, a Visszaigazolás mezőt, vagy magát a szálláshelyet.',
+  'help.guide.edit-accommodation.step.4': 'Kattints a Mentés gombra.',
+  'help.guide.edit-accommodation.step.5':
+    'A ceruza melletti X lezárja a tartózkodást. Semmit sem kérdez, és a hozzá tartozó Szálloda típusú foglalás is vele megy.',
+  'help.guide.edit-accommodation.result':
+    'A változás egyszerre éri el a tartózkodás minden napját, és vele a Foglalások fülön lévő Szálloda típusú foglalást is.',
+  'help.guide.edit-accommodation.tip.1':
+    'A tartózkodás közepén lévő éjszaka sem Bejelentkezés, sem Kijelentkezés címkét nem visel: csak a tartomány első és utolsó napja.',
+  'help.guide.edit-accommodation.tip.2':
+    'Egy tartózkodás lemondása elviszi azt a megállót is, amit a bejelentkezés napjára tett, és a foglalásához csatolt minden költséget. Foglald újra az éjszakát, ha tévedés volt.',
+  // day-bookings
+  'help.guide.day-bookings.title': 'A nap foglalásai egy pillantásra',
+  'help.guide.day-bookings.goal': 'Lásd egy helyen, mi van már lefoglalva erre a napra, és hogy meg van-e erősítve.',
+  'help.guide.day-bookings.step.1':
+    'A Foglalások felsorolja a nap foglalásait: azokat, amiknek a dátuma rá esik, és azokat, amik a megállói valamelyikén lógnak.',
+  'help.guide.day-bookings.step.2':
+    'Egy sor megmutatja, milyen fajta foglalás, a nevét, és ha megállóhoz tartozik, azt a megállót egy pont után. Az időpontjai a jobb szélen ülnek.',
+  'help.guide.day-bookings.step.3':
+    'A szín megmondja, hol tart egy foglalás: a zöld sor meg van erősítve, a borostyánsárga még függőben van. A szállodák nincsenek ebben a listában, nekik lent saját blokkjuk van.',
+  'help.guide.day-bookings.step.4':
+    'A lista csak kiolvassa a foglalásokat. Foglalást a Foglalások fülön hozol létre és módosítasz.',
+  'help.guide.day-bookings.result':
+    'Minden, aminek a dátuma a napra esik, és minden, ami a megállói valamelyikén lóg, ebben az egy listában van.',
+  'help.guide.day-bookings.tip.1':
+    'Egy foglalás a saját dátuma szerint kerül egy napra. Változtasd meg a dátumot a Foglalások fülön, és magától átkerül a másik napra.',
+  'help.guide.day-bookings.tip.2':
+    'Ha nincs Foglalások blokk, a napnak nincsenek foglalásai: inkább rejtve marad, mint hogy üresen jelenjen meg.',
+
+  // ── Screen: trip-map ──────────────────────────────────────────────────────────────────
+  'help.ctx.trip-map.title': 'Térkép',
+  'help.ctx.trip-map.summary':
+    'A terv közepe: az utazás minden helye tűként, az őket összekötő útvonalak, és a térkép szélein a kapcsolók a műholdhoz, a teljes utazáshoz egyszerre és a város éppen nézett részének helyeihez.',
+  'help.ctx.trip-map.bullet.1':
+    'A tű egy hely: saját fotója, ha van neki, egyébként a kategóriája színe a kategória ikonjával. Vidd fölé az egeret, és kapsz egy kártyát a nevével, értékelésével, kategóriájával és címével.',
+  'help.ctx.trip-map.bullet.2':
+    'Az egymáshoz túl közel álló, megkülönböztethetetlen tűk egyetlen sötét buborékba záródnak egy számmal. Kattints a buborékra, és a térkép ráközelít arra, ami benne van.',
+  'help.ctx.trip-map.bullet.3':
+    'Kattints egy tűre, és a hely megnyílik a térkép alatt, az értékelésével, a fájljaival és azzal, mi legyen vele ezután; kattints a térkép egy üres darabjára, és újra elengeded.',
+  'help.ctx.trip-map.bullet.4':
+    'Ha a napok oszlopában meg van nyitva egy nap, a megállói kis fehér jelvényt viselnek az adott napi sorszámukkal, és a két napra tervezett hely mindkét számot viseli, · jellel összekötve.',
+  'help.ctx.trip-map.bullet.5':
+    'A felső ikonsor a térkép látható részében keres: Éttermek, Kávézók, Bárok és éjszakai élet, Szállás, Látnivalók, Múzeumok és kultúra, Természet és parkok, valamint Programok. A Keresés ezen a területen újra lefuttatja, miután elmozgattad a térképet.',
+  'help.ctx.trip-map.bullet.6':
+    'Kattints jobb gombbal bárhová a térképen, és az adott pontnál megnyílik a hely űrlapja, a már kikeresett címmel. A bal alsó kerek gomb a rajzolt térképet légi felvételekre cseréli.',
+  'help.ctx.trip-map.bullet.7':
+    'A jobb alsó Teljes utazás megjelenítése egyszerre rajzolja meg az összes utazási napot, és kilistázza, mit fed le mindegyik; egy foglalás sorában az útvonal ikon azt a foglalást rajzolja meg, a napok fölötti eszköztárban lévő pedig az összeset.',
+  // map-markers
+  'help.guide.map-markers.title': 'Olvasd a térképet',
+  'help.guide.map-markers.goal': 'Tudd, mit mond neked a térképen minden tű, jelvény és buborék.',
+  'help.guide.map-markers.step.1':
+    'A térkép az utazás minden helyét tartja. Ahol a tűk túl közel állnak ahhoz, hogy megkülönböztesd őket, egyetlen sötét buborékba záródnak, amely a benne lévő helyek számát viseli.',
+  'help.guide.map-markers.step.2':
+    'Kattints a buborékra. A térkép ráközelít arra, ami benne volt, és a tűk szétválnak; a legmélyebb nagyításnál további közelítés helyett legyezőbe bontja őket.',
+  'help.guide.map-markers.step.3':
+    'A tű a hely saját fotója, ha van neki, egyébként a kategóriája színe a kategória ikonjával. Vidd fölé az egeret, és egy kártya megadja a nevét, értékelését, kategóriáját és címét.',
+  'help.guide.map-markers.step.4':
+    'Kattints egy tűre, és a hely megnyílik a térkép alatt: a koordinátái, az értékelése, a Fájlok, valamint a Hozzáadás a naphoz, a Mentés gyűjteménybe, a Navigáció, a Szerkesztés és a Törlés. Kattints a térkép egy üres darabjára, és újra elengeded.',
+  'help.guide.map-markers.step.5':
+    'Nyiss meg egy napot a napok oszlopában, és a megállói sorszámot kapnak: a tű sarkában lévő kis fehér jelvény az adott megálló helye a napban. A két napra tervezett hely mindkét számot viseli, · jellel összekötve. Megnyitott nap nélkül nincsenek számok, és a sarok helyettük az értékelést viseli.',
+  'help.guide.map-markers.result':
+    'Az utazáson semmi sem változott: a térkép egy nézete annak, és minden tű megmondja, melyik helyről van szó, melyik napon és milyen sorrendben.',
+  'help.guide.map-markers.tip.1':
+    'A napok oszlopában összecsukott nap magával viszi a megállóit a térképről is; nyisd meg újra a napot, és visszajönnek.',
+  'help.guide.map-markers.tip.2':
+    'A helyek listája fölötti szűrő arról is dönt, mit rajzol a térkép: válaszd a Nem tervezett lehetőséget, és csak a még nap nélküli helyek maradnak rajta.',
+  'help.guide.map-markers.tip.3':
+    'Ezen a térképen nincsenek nagyítógombok: a görgő nagyít, a dupla kattintás egy lépést közelít, a húzás pedig mozgatja.',
+  // map-nearby-places
+  'help.guide.map-nearby-places.title': 'Találj helyeket magad körül a térképen',
+  'help.guide.map-nearby-places.goal':
+    'Kerestess a térképpel éttermet, látnivalót vagy szállodát a város éppen nézett részében, és vegyél be egyet az utazásba.',
+  'help.guide.map-nearby-places.step.1':
+    'A térkép tetején lévő ikonsor a kategóriakeresés: Éttermek, Kávézók, Bárok és éjszakai élet, Szállás, Látnivalók, Múzeumok és kultúra, Természet és parkok, valamint Programok.',
+  'help.guide.map-nearby-places.step.2':
+    'Kattints egy kategóriára. A TREK ilyen fajta helyet keres a térkép látható részében, és minden találathoz letesz egy tűt a kategória színében. Egyszerre egy kategória: egy másikra kattintva lecseréled, a bekapcsoltra kattintva kikapcsolod.',
+  'help.guide.map-nearby-places.step.3':
+    'Mozgasd el a térképet, és a sor alatt megjelenik egy második gomb: a Keresés ezen a területen ugyanazt a keresést futtatja az új nézetre. A puszta mozgatás soha nem keres újra, ez alacsonyan tartja a kérések számát.',
+  'help.guide.map-nearby-places.step.4':
+    'A tűk annak a nevét viselik, amit találtak. Kattints egyre, és a hely űrlapja már abból kitöltve nyílik meg: Név, Cím, Szélességi fok és Hosszúsági fok, valamint a weboldal és a telefonszám ott, ahol az OpenStreetMap ismeri őket.',
+  'help.guide.map-nearby-places.step.5':
+    'Ellenőrizd, mit töltött ki, és add hozzá, amit a keresés nem tudhatott: egy Leírást, egy Kategóriát, saját jegyzeteket.',
+  'help.guide.map-nearby-places.step.6':
+    'Kattints a Hozzáadás gombra. Ha már van azonos nevű hely az utazásban, az űrlap szól, és a gombból Hozzáadás mindenképp lesz.',
+  'help.guide.map-nearby-places.result':
+    'A hely benne van a helyek listájában és a térképen az utazás saját tűinek egyikeként, a Nem tervezett alatt, amíg egy napra nem teszed. A keresés tűi addig maradnak, amíg ki nem kapcsolod a kategóriát.',
+  'help.guide.map-nearby-places.tip.1':
+    'A sor eltűnik, ha a Beállításokban, a Travel & map alatt a Helyek felfedezése a térképen ki van kapcsolva.',
+  'help.guide.map-nearby-places.tip.2':
+    'A válaszok a TREK Places indexből és az OpenStreetMapből jönnek, így ez a terv kevés olyan dolgának egyike, amihez kapcsolat kell.',
+  'help.guide.map-nearby-places.tip.3':
+    'Egy keresés azt fedi le, ami a képernyőn van, ezért nagyíts rá az utcára, amiről kérdezel: egy egész város az első hatvan találattal felel, és kevés renddel közöttük.',
+  // map-add-place
+  'help.guide.map-add-place.title': 'Hozz létre helyet a térképre jobb gombbal kattintva',
+  'help.guide.map-add-place.goal': 'Tedd a helyet pontosan oda, ahová szeretnéd, anélkül hogy előbb rákeresnél.',
+  'help.guide.map-add-place.step.1':
+    'Kattints jobb gombbal a térképen arra a pontra, amelyikre gondolsz. Megnyílik a hely űrlapja Hely/Tevékenység hozzáadása címmel.',
+  'help.guide.map-add-place.step.2':
+    'A Szélességi fok és a Hosszúsági fok már azon a ponton áll, a TREK pedig kikeresi a koordinátákat, és abból tölti ki a Cím mezőt, amit ott talál. Még semmi sincs elmentve, úgyhogy írd felül, ami rossz.',
+  'help.guide.map-add-place.step.3':
+    'Adj neki olyan Nevet, amit felismersz, és a többit, amit a tervnek tudnia kell: Leírás, Jegyzetek, Kategória, Weboldal.',
+  'help.guide.map-add-place.step.4':
+    'Kattints a Hozzáadás gombra. A hely nem tervezettként kerül a listába akkor is, ha meg van nyitva egy nap: a jobb kattintás a térképen azt mondja meg, hol, nem azt, mikor.',
+  'help.guide.map-add-place.result':
+    'A hely benne van a listában és a térképen, a Nem tervezett alatt, amíg egy napra nem teszed.',
+  'help.guide.map-add-place.tip.1':
+    'A cím a koordináták kikereséséből jön, ezért inkább utcaként hangozhat, mint névként, nyílt vidék fölött pedig üresen térhet vissza. Mindkét mezőt felülírhatod.',
+  'help.guide.map-add-place.tip.2':
+    'A MapLibre GL és a Mapbox GL térképeken a középső kattintás ugyanezt teszi, érintőképernyőn pedig a hosszú nyomás.',
+  // map-satellite
+  'help.guide.map-satellite.title': 'Válts műholdra',
+  'help.guide.map-satellite.goal': 'Cseréld a rajzolt térképet légi felvételekre, és vissza.',
+  'help.guide.map-satellite.step.1':
+    'A térkép bal alsó sarkában lévő kerek gomb az alapréteg kapcsolója. Az ikonja mindig azt a réteget mutatja, amelyikre váltana, és fölé víve megmondja, melyiket: Váltás műholdas nézetre.',
+  'help.guide.map-satellite.step.2':
+    'Kattints rá. A térkép légi felvétellé válik, elég mélyen ahhoz, hogy egyetlen épületet ki lehessen venni, és saját kulcs nélkül.',
+  'help.guide.map-satellite.step.3':
+    'Minden, amit a TREK rajzol, fölötte marad: a tűk, a nap útvonala, a nyomvonalak és a foglalási útvonalak. Kattints a gombra újra, amelyen most a Váltás térkép nézetre áll, hogy visszatérj.',
+  'help.guide.map-satellite.result': 'A térkép újra rajzolt, és az a réteg, amelyiken hagytad, megmarad a fiókodban.',
+  'help.guide.map-satellite.tip.1':
+    'A választás a fiókodon marad, nem az utazáson, így minden utazás úgy nyílik meg, ahogy hagytad, bármelyik rajzolómotort használod.',
+  'help.guide.map-satellite.tip.2':
+    'A felvételek nem hordoznak feliratot: az utcanevek, a városrészek és a házszámok a rajzolt térképen vannak, ezért válts vissza, ha címet keresel.',
+  // map-whole-trip
+  'help.guide.map-whole-trip.title': 'Nézd meg a teljes utazást és a távolságait',
+  'help.guide.map-whole-trip.goal':
+    'Cseréld az egy megnyitott napot az utazás összes utazási napjára, és olvasd le, meddig jut mindegyik.',
+  'help.guide.map-whole-trip.step.1': 'A kerek Teljes utazás megjelenítése gomb a térkép jobb alsó sarkában ül.',
+  'help.guide.map-whole-trip.step.2':
+    'Kattints rá. Az utazás minden utazási napja egyszerre rajzolódik ki, mindegyik a saját színében, fehér burkolat fölött, így a szomszédos napok elkülönülnek.',
+  'help.guide.map-whole-trip.step.3':
+    'A gomb fölötti kártya felsorolja ezeket a napokat: egy színes pont, a nap neve, egy ikon minden közlekedési módhoz, amivel megteszed, és a távolság, amit lefed. Legfelül a Teljes távolság áll.',
+  'help.guide.map-whole-trip.step.4':
+    'Kattints egy napra a kártyán a kiválasztásához, ugyanaz, mintha a napok oszlopában választanád. Kattints a gombra újra, amelyen most a Teljes utazás elrejtése áll, hogy visszatérj az egy naphoz.',
+  'help.guide.map-whole-trip.result':
+    'Minden utazási nap a saját színében van megrajzolva, és a kártya megmondja, mit fed le mindegyik, és mennyit tesz ki az utazás.',
+  'help.guide.map-whole-trip.tip.1':
+    'A végösszeg néhány szakaszonként érkezik. Amíg egy … áll utána, a szám még részösszeg; akkor áll be, ha már minden szakasz válaszolt.',
+  'help.guide.map-whole-trip.tip.2':
+    'Az a szakasz, amit az útvonaltervező elutasít, egyenes vonal marad, és semmit sem számít, a kártya pedig ezt megmondja, ahelyett hogy csendben kevesebbet mutatna.',
+  'help.guide.map-whole-trip.tip.3':
+    'Annak a napnak, amelyiknek kettőnél kevesebb koordinátás megállója van, nincs megrajzolható útvonala, ezért teljesen kimarad a kártyából.',
+  // map-booking-routes
+  'help.guide.map-booking-routes.title': 'Mutasd meg egy foglalás útvonalát a térképen',
+  'help.guide.map-booking-routes.goal':
+    'Rajzold ki a térképre a lefoglalt repülőket, vonatokat és autóutakat, és vedd le őket újra.',
+  'help.guide.map-booking-routes.step.1':
+    'A foglalási útvonalak ki vannak kapcsolva, amíg nem kérsz egyet. A napok oszlopában egy foglalás sorában ül egy kis útvonal ikon: Foglalási útvonalak megjelenítése.',
+  'help.guide.map-booking-routes.step.2':
+    'Kattints rá. A foglalás megjelenik a térképen: egy repülőút főkör ívként, egy autóút a valódi utakon, egy vonat az állomásai láncaként. A Megerősítve folytonosan, a Függőben szaggatottan rajzolódik.',
+  'help.guide.map-booking-routes.step.3':
+    'Az útvonal végei kék pirulák a közlekedés ikonjával. Kattints egyre, és megnyílik a mögötte álló foglalás, az időpontjaival, a Foglalási kóddal és a Helyszín / Cím mezővel, ahol indul; a Bezárás újra elteszi.',
+  'help.guide.map-booking-routes.step.4':
+    'A napok fölötti eszköztárban lévő útvonal ikon egyszerre az egész utazást csinálja: az Összes foglalási útvonal megjelenítése minden olyan foglalást megrajzol, amelyiknek van útvonala.',
+  'help.guide.map-booking-routes.step.5':
+    'Ez tiszta lap, nem egy réteg a tetején, így minden elvész, amit foglalásonként kiválasztottál. Nyomd meg újra a gombot, amelyen most az Összes foglalási útvonal elrejtése áll, és a térkép tiszta.',
+  'help.guide.map-booking-routes.result':
+    'A kért foglalások ki vannak rajzolva a térképen, és a választás ehhez az utazáshoz ebben a böngészőben marad, amíg meg nem változtatod.',
+  'help.guide.map-booking-routes.tip.1':
+    'A végek csak akkor viselik a repülőtér kódját vagy az állomás nevét, ha a Beállításokban, a Travel & map alatt az Útvonal-címkék a foglalásokhoz be van kapcsolva; egyébként csak az ikont mutatják.',
+  'help.guide.map-booking-routes.tip.2':
+    'A Mindig jelenjenek meg a foglalási útvonalak, ugyanabban a beállításban, minden olyan utazáson az elejétől megrajzolja őket, amelyikről még nem döntöttél.',
+  'help.guide.map-booking-routes.tip.3':
+    'Egy foglalásnak két koordinátás végre van szüksége, mielőtt megrajzolható lenne, ezért egy szálloda vagy egy étterem nem visel útvonal ikont.',
 };
 
 export default help;

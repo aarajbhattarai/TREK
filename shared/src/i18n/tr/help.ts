@@ -1904,6 +1904,788 @@ const help: TranslationStrings = {
     'Listenin herkese açık paylaşılması gerekir; özel bir listenin bağlantısı hiçbir şey içe aktarmaz.',
   'help.guide.import-places-list.tip.2':
     'Yerleri Google ile zenginleştir, TREK’inizde bir Google anahtarı varsa iletişim kutusunda görünür: içe aktarılan her yeri arayıp fotoğrafları, adresi ve ayrıntıları doldurur.',
+
+  // ── Screen: trip-days ─────────────────────────────────────────────────────────────────
+  'help.ctx.trip-days.title': 'Günler',
+  'help.ctx.trip-days.summary':
+    'Planın sol sütunu: her gün için bir kart, sırayla durakları, notları, o günün rezervasyonları ve ulaşımı ve duraklar arasındaki rota ile. Gezi asıl burada planlanır.',
+  'help.ctx.trip-days.bullet.1':
+    'Üstteki araç çubuğu: Dışa aktar (PDF, takvim, GPX), Tüm günleri genişlet / Tüm günleri daralt, geri alma oku, Günleri yeniden sırala ve Tüm rezervasyon rotalarını göster.',
+  'help.ctx.trip-days.bullet.2':
+    'Bir gün kartı: başlıkta numara, hava durumu, başlık, tarih ve günün maliyeti; günü açmak için başlığa tıklayın, sağdaki ok kartı katlar. Toplu taşıma, Ulaşım ekle ve Not Ekle de başlıkta durur.',
+  'help.ctx.trip-days.bullet.3':
+    'Bir günün içinde: sırayla duraklar, her biri resim, ad, saat ve resmin üzerinde bir kilitle; notlar; güne ait rezervasyonlar; ve duraklar arasında her etabın yolculuk süresi.',
+  'help.ctx.trip-days.bullet.4':
+    "Durakların altında rota çubuğu: Rota günü haritaya çizer, Optimize et durakları sıralar, Araba / Yürüyüş günün ulaşım türünü belirler, Google Haritalar'da aç ve CoMaps'te aç ise günü devreder.",
+  'help.ctx.trip-days.bullet.5':
+    'Yerler bir güne, yerler sütunundan bir satır sürükleyerek, o satırdaki + ile, boş bir günde Bu güne yer ekle ile ya da yerin ayrıntılarından gelir.',
+  'help.ctx.trip-days.bullet.6':
+    'Alttaki Toplam Maliyet, fiyatı olan her durağı ve her rezervasyonu gezinin para biriminde toplar.',
+  // read-day-plan
+  'help.guide.read-day-plan.title': 'Bir günü okuyun',
+  'help.guide.read-day-plan.goal': 'Bir şeyi değiştirmeden önce gün kartının her parçasının size ne söylediğini bilin.',
+  'help.guide.read-day-plan.step.1':
+    'Başlık: gün numarası, o günün tahmini, 1. gün ya da ona verdiğiniz ad, tarih ve günün maliyeti. Günü açmak için başlığa tıklayın (ayrıntı paneli haritanın üzerinde açılır); sağdaki ok kartı katlar ve açar.',
+  'help.guide.read-day-plan.step.2':
+    'Bir durak: soldaki tutamak onu sürükler, resim rota optimizasyonu için bir kilit taşır, sonra ad, açıklama ve ayarlıysa Bu gün için notlar gelir. Durağın saatleri varsa bir saat rozeti Başlangıç ve Son değerlerini gösterir; sağ ucunda beliren oklar onu yukarı ya da aşağı taşır.',
+  'help.guide.read-day-plan.step.3':
+    'Gündeki bir rezervasyon: bir ulaşım, saati ve rotasıyla Kalkış ya da Varış olarak görünür, bir durağa bağlı rezervasyon o durağı Rezervasyon onaylandı ya da Rezervasyon beklemede olarak işaretler. Ulaşımın üzerindeki küçük düğme onun rotasını haritada gösterir.',
+  'help.guide.read-day-plan.step.4':
+    'İki durak arasında bağlayıcı, etabın günün ulaşım türüyle ne kadar sürdüğünü ve ne kadar uzun olduğunu söyler; yalnızca o etabın türünü değiştirmek için üzerine tıklayın.',
+  'help.guide.read-day-plan.step.5':
+    "Sondaki rota çubuğu: Rota günün yolunu haritaya çizer, Optimize et durakları yeniden sıralar, tür düğmeleri Araba ya da Yürüyüş seçer, Google Haritalar'da aç ve CoMaps'te aç ise günü orada açar.",
+  'help.guide.read-day-plan.result':
+    'Karttaki her simgenin bir anlamı var; aşağıdaki kılavuzlar her birini değiştirir.',
+  'help.guide.read-day-plan.tip.1':
+    'Menüsü için bir durağa sağ tıklayın: Düzenle, Günden kaldır, Web Sitesini Aç, navigasyon uygulamaları (Google Maps, Waze, Apple Maps, OpenStreetMap, CoMaps), Koleksiyona kaydet, Sil.',
+  'help.guide.read-day-plan.tip.2':
+    'Bir durağın üzerine gelin, sonunda Rezervasyon ekle belirir: orada oluşturulan rezervasyon bu günkü bu durağa bağlıdır.',
+  // place-onto-day
+  'help.guide.place-onto-day.title': 'Bir yeri bir güne koyun',
+  'help.guide.place-onto-day.goal': 'Listedeki bir yeri, sırada ait olduğu noktada günün bir durağına dönüştürün.',
+  'help.guide.place-onto-day.step.1':
+    'Yerler sütunundan bir satırı gün kartına sürükleyin. Tam oraya koymak için iki durak arasına bırakın, sona eklemek için kartın herhangi bir yerine bırakın.',
+  'help.guide.place-onto-day.step.2':
+    'Sürüklemeden: başlığına tıklayarak günü açın, sonra yerin satırının sonundaki + işaretine tıklayın ya da satıra sağ tıklayıp + Gün seçin.',
+  'help.guide.place-onto-day.step.3': 'Boş bir günde Bu güne yer ekle, yer formunu açar ve yeni yer hemen o güne iner.',
+  'help.guide.place-onto-day.step.4':
+    'Bir yerin ayrıntılarından Güne Ekle hangi gün olduğunu sorar; gün başlığından açıkken yerler sütunundaki Güne, açık günde doğrudan yeni bir yer oluşturur.',
+  'help.guide.place-onto-day.result':
+    'Yer artık günün bir durağı, haritada günün numarasıyla, ve yerler sütunu onu Planlanmış altında sayar.',
+  'help.guide.place-onto-day.tip.1':
+    'Bir yer birkaç günde olabilir: ikinci güne yerler sütunundan koyun. Bir durağı bir gün kartından başkasına sürüklemek ise onu taşır.',
+  'help.guide.place-onto-day.tip.2': 'Araç çubuğundaki geri alma oku atamayı geri alır.',
+  'help.guide.place-onto-day.tip.3':
+    'Bir durak, sabit saatli iki kaydın arasına ya da saati belli bir rezervasyonun önüne bırakılamaz; plan kronolojisini korur.',
+  // reorder-stops
+  'help.guide.reorder-stops.title': 'Bir günün sırasını değiştirin',
+  'help.guide.reorder-stops.goal': 'Bir durağı yukarı ya da aşağı, ya da başka bir güne taşıyın.',
+  'help.guide.reorder-stops.step.1': 'Durağı tutamağından kartın içindeki yeni yerine sürükleyin.',
+  'help.guide.reorder-stops.step.2':
+    'Ya da durağın sağ ucundaki okları kullanın: her tıklamada bir adım yukarı ya da aşağı.',
+  'help.guide.reorder-stops.step.3': 'Durağı başka bir gün kartına sürükleyerek oraya taşıyın; eski günden ayrılır.',
+  'help.guide.reorder-stops.step.4':
+    'Sabit saatli bir durak, bir taşıma günün sırasını bozacaksa Saat kaldırılsın mı? diye sorar, çünkü yerine saati karar vermişti: Onayla saati bırakır ve durağın istediği yere gitmesine izin verir.',
+  'help.guide.reorder-stops.result': 'Rota ve yolculuk süreleri yeni sırayı hemen izler.',
+  'help.guide.reorder-stops.tip.1':
+    'Sabit zamanlı rezervasyonlar yeniden sıralanamaz; saatlerinin koyduğu yerde otururlar.',
+  'help.guide.reorder-stops.tip.2':
+    'Rota çubuğundaki Optimize et bütün günü en kısa yola göre sıralar; yerinde kalmasını istediğiniz durağı önce kilitleyin.',
+  // set-stop-times
+  'help.guide.set-stop-times.title': 'Bir durağa saat verin',
+  'help.guide.set-stop-times.goal':
+    'Bir durağın ne zaman başlayıp bittiğini belirleyin, böylece gün bir program gibi okunur.',
+  'help.guide.set-stop-times.step.1':
+    'Durağa sağ tıklayın ve Düzenle seçin. Günden açıldığında formun altında Başlangıç ve Son bulunur.',
+  'help.guide.set-stop-times.step.2':
+    'Başlangıç değerini, isterseniz Son değerini de girin. Zaman şununla çakışıyor: uyarısı günün saatli başka bir durağıyla çakışmayı bildirir; Başlangıç saatinden önceki bir Son, Güncelle düğmesini engeller.',
+  'help.guide.set-stop-times.step.3':
+    'Güncelle düğmesine tıklayın. Durak bir saat rozeti alır ve saatinin günde ait olduğu yere taşınır.',
+  'help.guide.set-stop-times.result':
+    'Saatli duraklar sıradaki yerlerini korur; saatsiz duraklar onların çevresine dizilir.',
+  'help.guide.set-stop-times.tip.1':
+    'Saat, o günkü durağa aittir; aynı yerin başka bir günde başka bir saati olabilir.',
+  'help.guide.set-stop-times.tip.2':
+    'Saatli bir durağı elle taşımak için sürükleyin: Saat kaldırılsın mı? sorusu, Onayla dediğinizde saati yolda bırakır.',
+  'help.guide.set-stop-times.tip.3':
+    'Aynı formdaki Bu gün için notlar, yalnızca bu gün için geçerli olanı tutar, ayrılan bir masa, bir bilet numarası.',
+  // remove-from-day
+  'help.guide.remove-from-day.title': 'Bir durağı günden çıkarın',
+  'help.guide.remove-from-day.goal': 'Bir yeri geziden silmeden plandan çıkarın.',
+  'help.guide.remove-from-day.step.1': 'Durağa sağ tıklayın ve Günden kaldır seçin.',
+  'help.guide.remove-from-day.step.2':
+    'Durak günden gitti; yer, başka bir günde değilse Planlanmamış altında olmak üzere yerler sütununda kalır.',
+  'help.guide.remove-from-day.result': 'Gün, rotası ve maliyeti güncellenir; geri alma oku durağı geri getirir.',
+  'help.guide.remove-from-day.tip.1': 'Aynı menüdeki Sil, yeri bütün geziden, her gün dahil, kaldırır.',
+  'help.guide.remove-from-day.tip.2': 'Günden Kaldır, yerin ayrıntı panelinde de, Güne Ekle yanında durur.',
+  // lock-stop
+  'help.guide.lock-stop.title': 'Bir durağı yerine kilitleyin',
+  'help.guide.lock-stop.goal': 'Rota optimize edilirken bir durağı olduğu yerde tutun.',
+  'help.guide.lock-stop.step.1':
+    'Durağın resminin üzerine gelin ve kilide tıklayın: Rota optimizasyonunda konumu koru.',
+  'help.guide.lock-stop.step.2':
+    'Optimize et artık diğer durakları onun çevresine sıralar; serbest bırakmak için kilide yeniden tıklayın (Kilidi açmak için tıklayın).',
+  'help.guide.lock-stop.result': 'Kilit resimde görünür; durak siz açana kadar konumunu korur.',
+  'help.guide.lock-stop.tip.1':
+    'Sabit saatli bir durak zaten saatiyle kilitlidir; optimizasyon sırasında hiç kımıldamaz.',
+  'help.guide.lock-stop.tip.2':
+    'Kilit bu ziyaret boyunca sürer: sayfa yeniden yüklendikten sonra her durak yine serbesttir, yalnızca saatli duraklar sabit kalır.',
+  // day-note
+  'help.guide.day-note.title': 'Bir güne not ekleyin',
+  'help.guide.day-note.goal': 'Bir hatırlatmayı, bir bilet numarasını ya da bir B planını doğrudan günün içinde tutun.',
+  'help.guide.day-note.step.1': 'Günün başlığındaki Not Ekle düğmesine tıklayın.',
+  'help.guide.day-note.step.2':
+    'Not alanına bir ad verin, gün kartında görünen budur, gerisini de Günlük Not altına yazın. Metnin üstündeki çubuk onu biçimlendirir (Kalın, listeler, bağlantılar, alıntılar) ve soldaki Önizleme ortaya çıkacak kartı gösterir.',
+  'help.guide.day-note.step.3':
+    'Not duraklardan ayırt edilsin diye bir Simge ve bir Renk seçin, sonra Ekle düğmesine tıklayın.',
+  'help.guide.day-note.step.4':
+    'Not günde bir durak gibi oturur: sürükleyerek yerine koyun, Düzenle ve Sil için sağ tıklayın.',
+  'help.guide.day-note.result':
+    'Not günün bir parçasıdır, PDF içinde de; saatli bir not saatli duraklarla birlikte sıralanır.',
+  'help.guide.day-note.tip.1':
+    'Saatli bir not, rezervasyonunuz olmayan bir ulaşımın yerini tutabilir: “08:15 S3 merkez istasyondan”.',
+  'help.guide.day-note.tip.2': 'Notlar güne özeldir; bütün gezi için bir not İş birliği bölümüne aittir.',
+  // day-route
+  'help.guide.day-route.title': 'Günün rotasını gösterin ve optimize edin',
+  'help.guide.day-route.goal':
+    'Duraklar arasındaki yolu görün, nasıl yolculuk ettiğinizi seçin ve sırayı TREK sıralasın.',
+  'help.guide.day-route.step.1':
+    'Günü açın ve rota çubuğundaki Rota düğmesine tıklayın: duraklar arasındaki yol haritaya çizilir ve duraklar arasındaki bağlayıcılar her etabın süresini ve mesafesini gösterir.',
+  'help.guide.day-route.step.2':
+    'Yanındaki Araba ve Yürüyüş günün ulaşım türünü belirler; etaplar yeniden hesaplanır. Plugin’ler kendi türlerini ekleyebilir.',
+  'help.guide.day-route.step.3':
+    'Yalnızca o etabın türünü değiştirmek için bir bağlayıcıya tıklayın: bir tür seçin ya da günün türüne dönmek için Günün varsayılanını kullan seçin.',
+  'help.guide.day-route.step.4':
+    'Optimize et durakları en kısa yola göre yeniden sıralar. Kilitli ya da sabit saatli duraklar yerlerini korur; günde bir konaklama varsa rota oradan başlar.',
+  'help.guide.day-route.step.5':
+    "Google Haritalar'da aç ya da CoMaps'te aç, bütün günü o uygulamada bir rota olarak açar, yolda yön bulmak için.",
+  'help.guide.day-route.result':
+    'Gün saatleri olan bir rotadır; sıra değiştikçe Toplam Maliyet ve etaplar güncellenir.',
+  'help.guide.day-route.tip.1':
+    'Rotalar varsayılan olarak OSRM’den gelir; yönetici Kullanıcı Varsayılanları altında TREK’i başka bir rota motoruna yönlendirebilir.',
+  'help.guide.day-route.tip.2':
+    'Rotası hesaplanamayan bir etap süre göstermez; iki durağın da koordinatı olduğunu kontrol edin.',
+  'help.guide.day-route.tip.3': 'Geri alma oku bir optimizasyonu geri alır.',
+  // manage-days
+  'help.guide.manage-days.title': 'Gün ekleyin, sıralayın ve yeniden adlandırın',
+  'help.guide.manage-days.goal': 'Yalnızca günlerin üzerindekini değil, günlerin kendisini biçimlendirin.',
+  'help.guide.manage-days.step.1':
+    'Günler gezinin tarihlerinden gelir; Pano altında gezi kartındaki tarihleri değiştirin, uçlarda gün eklenir ya da düşer.',
+  'help.guide.manage-days.step.2':
+    'Araç çubuğundaki Günleri yeniden sırala bir liste açar: Yukarı taşı ve Aşağı taşı bir günü üzerindeki her şeyle birlikte kaydırır; Gün ekle sona bir gün ekler.',
+  'help.guide.manage-days.step.3':
+    'Bir günü yeniden adlandırmak için onu açın ve haritanın üzerindeki ayrıntı panelinde başlığının yanındaki kaleme tıklayın; ad, kartta ve PDF içinde 1. gün yerine geçer.',
+  'help.guide.manage-days.step.4':
+    'Araç çubuğundaki Tüm günleri genişlet ve Tüm günleri daralt bütün kartları birden katlar; tek bir kart kendi okuyla katlanır.',
+  'help.guide.manage-days.result':
+    'Tarihler konumda kalır: yukarı taşınan bir gün daha erken tarihi alır, durakları, notları ve rezervasyonları onunla birlikte gider.',
+  'help.guide.manage-days.tip.1': 'Günleri yeniden sırala işlemi araç çubuğundan geri alınabilir.',
+  'help.guide.manage-days.tip.2':
+    'Bir günün başlığındaki maliyet, o günün fiyat taşıyan duraklarını ve rezervasyonlarını toplar.',
+  // bookings-in-plan
+  'help.guide.bookings-in-plan.title': 'Plandaki rezervasyonları ve ulaşımı okuyun',
+  'help.guide.bookings-in-plan.goal':
+    'Bir rezervasyon var olduktan sonra nerede göründüğünü ve onu hangi ekranın oluşturduğunu bilin.',
+  'help.guide.bookings-in-plan.step.1':
+    'Bir ulaşım (Uçuş, Tren, Feribot, Otobüs, Araba) kalktığı günde Kalkış, vardığı günde Varış olarak saatiyle ve rotasıyla görünür; birkaç gün süren biri aradaki günlere yayılır.',
+  'help.guide.bookings-in-plan.step.2':
+    'Bir durağa bağlı rezervasyon (bir Restoran, bir Tur) o durağı Rezervasyon onaylandı ya da Rezervasyon beklemede olarak işaretler; günü olan ama durağı olmayan bir rezervasyon günde kendi satırıdır.',
+  'help.guide.bookings-in-plan.step.3':
+    'Otelde bir gece bir konaklamadır: günün ayrıntı panelinde Konaklama altında, Giriş saatinden Çıkış saatine kadar oturur ve o günlerin her birinin rotası oradan başlar.',
+  'help.guide.bookings-in-plan.step.4':
+    'Haritada, bir ulaşım satırındaki düğme onun rotasını çizer; araç çubuğundaki Tüm rezervasyon rotalarını göster hepsini çizer.',
+  'help.guide.bookings-in-plan.step.5':
+    'Oluşturma: üzerine gelinen bir durakta Rezervasyon ekle, gün başlığında Ulaşım ekle ve Toplu taşıma, içe aktarma ve dosyalarla tam liste için de Rezervasyonlar ve Ulaşım sekmeleri.',
+  'help.guide.bookings-in-plan.result': 'Bir rezervasyon, planda bir yer; sekmeler aynı rezervasyonların liste hali.',
+  'help.guide.bookings-in-plan.tip.1':
+    'Onaylandı ve Askıda olması, rezervasyona sizin verdiğiniz durumlardır; plan bunları durakta gösterir, Rezervasyonlar sekmesi ikisini de sayar.',
+  'help.guide.bookings-in-plan.tip.2':
+    'Sabit saatli bir ulaşım sürüklenemez; bunun yerine saatini rezervasyonda değiştirin.',
+  // export-plan
+  'help.guide.export-plan.title': 'Planı dışa aktarın',
+  'help.guide.export-plan.goal': 'Planı bir belge olarak, takviminize ya da bir GPS cihazına götürün.',
+  'help.guide.export-plan.step.1': 'Günlerin üstündeki araç çubuğunda Dışa aktar düğmesine tıklayın.',
+  'help.guide.export-plan.step.2':
+    "Belge: PDF'ler her günün durakları, notları ve rezervasyonlarıyla yazdırma görünümünü açar; Her gün için sayfa sonu her günü yeni bir sayfada başlatır, PDF olarak Kaydet ise onu indirir.",
+  'help.guide.export-plan.step.3':
+    'Takvim: .ics indir rezervasyonları bir takvim dosyası olarak kaydeder; Takvime abone ol, takvim uygulamanızın kendi kendine yenilediği bir bağlantı verir.',
+  'help.guide.export-plan.step.4':
+    'Haritalar ve GPS · GPX: Tüm gezi yerleri, gün rotalarını ve izleri dışa aktarır; Yalnızca yerler sadece iğneleri; Günler rota olarak ise çevrimdışı haritalar ve GPS cihazları için her güne bir rota.',
+  'help.guide.export-plan.result': 'Dosya iner; gezide hiçbir şey değişmez.',
+  'help.guide.export-plan.tip.1':
+    "Tek bir gün kendi rota çubuğundan bir harita uygulamasına gider: Google Haritalar'da aç ya da CoMaps'te aç.",
+  'help.guide.export-plan.tip.2':
+    'Takvime abone ol için ayarlarınızda takvim aboneliğinin açık olması gerekir; Pano bunun için bir kılavuz içerir.',
+  'help.guide.export-plan.tip.3': 'Dışa aktarmak okumaktır: gezinin her üyesi yapabilir.',
+
+  // ── Screen: trip-place ────────────────────────────────────────────────────────────────
+  'help.ctx.trip-place.title': 'Yer ayrıntıları',
+  'help.ctx.trip-place.summary':
+    'Bir yer seçtiğinizde haritanın üzerinde açılan kart: gezinin onun hakkında bildiği her şey, herkesin ona verdiği yıldızlar, görseli ve dosyaları, ve onu açık güne, bir listeye ya da bir harita uygulamasına koyan düğmeler.',
+  'help.ctx.trip-place.bullet.1':
+    'Yerler sütununda bir satıra, bir günün içindeki bir durağa ya da haritadaki bir işaretçiye tıklayın, kart haritanın üzerinde açılır. Onu günün içinden seçmek karta hangi durağı kastettiğinizi söyler, durağın katılımcılarını ve rezervasyonunu da beraberinde getiren budur.',
+  'help.ctx.trip-place.bullet.2':
+    'Baş kısım yuvarlak görseli, adı, kategoriyi, adresi ve koordinatları taşır. Kendi görselinizi kullanmak için görsele tıklayın, yeri yerinde yeniden adlandırmak için ada çift tıklayın, sağdaki X ise kartı kapatır.',
+  'help.ctx.trip-place.bullet.3':
+    'Altında: her gezginin yere verdiği yıldızlar, varsa fiyat, açıklama ve notlar, ve durak bir tane taşıyorsa Bu gün için notlar.',
+  'help.ctx.trip-place.bullet.4':
+    'Geçerli oldukları ölçüde Açılış Saatleri, İz rengi, İstatistikleri Takip Et ve Dosyalar gelir. Dosyalar klasörlerinizden her şeyi alır ve bu durağın rezervasyonunda asılı olanı da listeler.',
+  'help.ctx.trip-place.bullet.5':
+    'Alttaki satır: bir gün açıkken Güne Ekle ya da Günden Kaldır, sonra Koleksiyona kaydet, Navigasyon, Web Sitesini Aç, Düzenle ve Sil.',
+  'help.ctx.trip-place.bullet.6':
+    'TREK’in bir harita sağlayıcısıyla eşleştirdiği bir yer daha fazlasını gösterir: o sağlayıcının bir yorumla birlikte puanı, telefon numarası, ve görselin çevresinde arkasında haftanın açılış saatleri duran bir Açık ya da Kapalı halkası.',
+  // read-place
+  'help.guide.read-place.title': 'Kartın size bir yer hakkında anlattıkları',
+  'help.guide.read-place.goal': 'Gezinin tek bir yer hakkında bildiği her şeyi tek bir kartta okuyun.',
+  'help.guide.read-place.step.1':
+    'Günler sütununda okumak istediğiniz durağa tıklayın. Kart haritanın üzerinde açılır ve durak kendi gününde işaretli kalır.',
+  'help.guide.read-place.step.2':
+    'Baş kısım: yuvarlak görsel, ad, adres ve tam koordinatlar. Sağdaki X kartı yeniden kapatır.',
+  'help.guide.read-place.step.3':
+    'Altında her gezginin yere verdiği yıldızlar, ortalamayla ve kaç kişinin oy verdiğiyle. Kimse vermediği sürece Henüz puanlanmadı.',
+  'help.guide.read-place.step.4':
+    'Sonra açıklama ve onun altında notlar. İkisi de yerin formundaki metindir, işlenmiş hâliyle: listeler, bağlantılar ve kalın yazı çalışır.',
+  'help.guide.read-place.step.5':
+    'Katılımcılar bu durağa kimin gittiğini söyler. Siz birini çıkarana kadar herkes içindedir.',
+  'help.guide.read-place.step.6':
+    'Alttaki satır buradan yapabilecekleriniz: yeri açık günden almak ya da oraya koymak, bir listeye kaydetmek, bir harita uygulamasında açmak, düzenlemek ya da silmek.',
+  'help.guide.read-place.result':
+    'Kart, siz X ile kapatana ya da başka bir yer seçene kadar açık kalır ve ait olduğu durak günler sütununda işaretli kalır.',
+  'help.guide.read-place.tip.1':
+    'Yerler sütunundan seçildiğinde kart yeri bilir ama durağı bilmez, bu yüzden katılımcı da rezervasyon da göstermez. Bunun yerine durağı günün içinden seçin, ikisi de oradadır.',
+  'help.guide.read-place.tip.2':
+    'Formu açmadan yeri yeniden adlandırmak için ada çift tıklayın. Enter kaydeder, Escape değişikliği bırakır.',
+  'help.guide.read-place.tip.3':
+    'TREK’in bir harita sağlayıcısıyla eşleştirebildiği bir yer ayrıca o sağlayıcının puanını, bir yorumu, telefon numarasını ve açılış saatlerini gösterir.',
+  // rate-place
+  'help.guide.rate-place.title': 'Bir yeri puanlayın',
+  'help.guide.rate-place.goal': 'Bir yere kendi yıldızlarınızı verin ve herkesin ona ne verdiğini görün.',
+  'help.guide.rate-place.step.1':
+    'Yeri açın. Yıldız satırı tam baş kısmın altında oturur ve şimdiye kadarki oyların ortalamasını, sayıları parantez içinde, taşır.',
+  'help.guide.rate-place.step.2':
+    'Kastettiğiniz yıldıza tıklayın. Üzerlerinde ilerledikçe yıldızlar dolar, böylece ne vermek üzere olduğunuzu görürsünüz.',
+  'help.guide.rate-place.step.3':
+    'Oyunuz ortalamaya hemen sayılır ve yanındaki yüzler oy verenlerdir. Herkesin yıldızlarını görmek için imleci satırın üzerinde bekletin.',
+  'help.guide.rate-place.step.4':
+    'Aynı ortalama yerler sütununda yerin satırında oturur, böylece iyiler listede öne çıkar.',
+  'help.guide.rate-place.result':
+    'Yıldızlarınız yerin üzerinde tüm gezinin göreceği şekilde durur ve listenin üstündeki filtre satırındaki Puana göre filtrele yıldızı artık yalnızca bir alt sınıra ulaşan yerleri tutabilir.',
+  'help.guide.rate-place.tip.1':
+    'Her gezgin puanlayabilir, Yer ekle / düzenle / sil hakkının yalnızca bazılarınızda olduğu bir gezide bile.',
+  'help.guide.rate-place.tip.2':
+    'Oyunuzu geri almak için zaten verdiğiniz yıldıza tıklayın. Oy veren kimse kalmayınca yer yeniden Henüz puanlanmadı der.',
+  'help.guide.rate-place.tip.3':
+    'Yıldızların yanına yüz olarak en fazla altı oy veren sığar; ipucu balonu hepsinin adını verir ve sizinkini işaretler.',
+  // place-image
+  'help.guide.place-image.title': 'Bir yere kendi görselinizi koyun',
+  'help.guide.place-image.goal': 'Otomatik küçük resmi kendi fotoğrafınızla değiştirin.',
+  'help.guide.place-image.step.1': 'Yeri yerler sütunundan açın.',
+  'help.guide.place-image.step.2':
+    'İmleci baş kısımdaki yuvarlak görselin üzerinde bekletin: bir fotoğraf makinesi belirir ve ipucu balonunda Görsel yükle yazar. Ona tıklayın ve dosyanızı seçin.',
+  'help.guide.place-image.step.3': 'Baş kısım artık sizin görselinizi gösterir, köşesinde küçük kırmızı bir X ile.',
+  'help.guide.place-image.step.4': 'Aynı görsel yerler sütununda yerin satırında ve haritadaki işaretçisinde durur.',
+  'help.guide.place-image.result':
+    'Görseliniz her yerde yerin görselidir: kartta, yerler sütununda, gündeki durakta, haritadaki işaretçide ve paylaşılan bir gezide.',
+  'help.guide.place-image.tip.1':
+    'JPG, PNG, GIF ve WebP kabul edilir, bir iPhone’dan gelen HEIC ise içeri girerken dönüştürülür.',
+  'help.guide.place-image.tip.2':
+    'Köşedeki X görselinizi yeniden kaldırır ve otomatik olan geri gelir. Yerin kendisine dokunulmaz.',
+  'help.guide.place-image.tip.3':
+    'Kendi görseliniz yoksa TREK yerin koordinatlarından bir görsel arar, bulamazsa kategorinin simgesine düşer.',
+  // place-day-assign
+  'help.guide.place-day-assign.title': 'Yeri açık güne koyun ya da oradan alın',
+  'help.guide.place-day-assign.goal':
+    'Satırı planlayıcının üzerinden sürüklemek yerine kartın kendi düğmesini kullanın.',
+  'help.guide.place-day-assign.step.1':
+    'Günler sütununda bir günün başlığına tıklayın. O gün artık açık olandır ve kart onu esas alır.',
+  'help.guide.place-day-assign.step.2':
+    'Yerler sütununda o günde olmayan bir yere tıklayın. Kartı açılır ve alttaki satır Güne Ekle sunar.',
+  'help.guide.place-day-assign.step.3':
+    'Güne Ekle düğmesine tıklayın. Durak günün sonuna iner ve düğme Günden Kaldır olur.',
+  'help.guide.place-day-assign.step.4': 'Durak artık gündedir, listede sonuncu. Ait olduğu yere yukarı sürükleyin.',
+  'help.guide.place-day-assign.step.5':
+    'Günden Kaldır o durağı günden yeniden alır ve kart bir kez daha Güne Ekle sunar.',
+  'help.guide.place-day-assign.result':
+    'Gün durağı taşır ya da artık taşımaz, yerin kendisi her iki durumda da dokunulmadan kalır.',
+  'help.guide.place-day-assign.tip.1':
+    'Düğme yalnızca bir gün açıkken vardır. Gün olmadan kartın yeri ekleyeceği bir şey yoktur.',
+  'help.guide.place-day-assign.tip.2':
+    'Bir durağı günden almak yeri gezide ve yerler sütununda bırakır. Onu her yerden kaldıran Sil düğmesidir.',
+  'help.guide.place-day-assign.tip.3':
+    'Bir konaklama rezervasyonunun güne koyduğu bir durak iki düğmeyi de sunmaz: o gece günün Konaklama bölümünde eklenir ve kaldırılır.',
+  // place-participants
+  'help.guide.place-participants.title': 'Bu durağa kimin gittiğini söyleyin',
+  'help.guide.place-participants.goal': 'Geziyi bölmeden grubu tek bir durak için bölün.',
+  'help.guide.place-participants.step.1':
+    'Günün içindeki durağa tıklayın. Kart açılır ve Katılımcılar gezideki herkesi listeler.',
+  'help.guide.place-participants.step.2':
+    'Bir gezgini bu duraktan çıkarmak için onun etiketine tıklayın. İmleci üzerinde gezdirdikçe ad üstü çizili görünür.',
+  'help.guide.place-participants.step.3':
+    'Biri eksilir eksilmez kesik çizgili bir + belirir. Durakta kimin olmadığını görmek için ona tıklayın.',
+  'help.guide.place-participants.step.4':
+    'Birini geri koymak için adına tıklayın. Herkes geri döndüğünde durak yine tüm grubundur.',
+  'help.guide.place-participants.result':
+    'Durak seçtiğiniz gezginleri taşır, grubun geri kalanı ise o öğleden sonrayı kendine ayırır.',
+  'help.guide.place-participants.tip.1':
+    'Katılımcılar yalnızca bir durak seçiliyken görünür, bu yüzden yeri yerler sütunundan değil günün içinden seçin, ve yalnızca birden fazla gezgini olan bir gezide.',
+  'help.guide.place-participants.tip.2':
+    'Kimse seçili değilse herkes gidiyor demektir. Sonuncuyu çıkarmak herkesi geri koyar.',
+  'help.guide.place-participants.tip.3': 'Kendi hesabı olmayan bir Misafir de herkes gibi katılımcı olabilir.',
+  // place-booking
+  'help.guide.place-booking.title': 'Bir duraktaki rezervasyon',
+  'help.guide.place-booking.goal': 'Bir durağa ait rezervasyonu okuyun, açın ve ona yeni bir tane iliştirin.',
+  'help.guide.place-booking.step.1':
+    'Rezervasyonun ait olduğu durağı açın. Kart, Onaylandı ya da Askıda olması ile rezervasyonun adını taşıyan bir şerit gösterir.',
+  'help.guide.place-booking.step.2':
+    'Şerit Tarih, Zaman ve Rezervasyon Kodu ile rezervasyonun sahip olduğu notları taşır.',
+  'help.guide.place-booking.step.3': 'Şeride tıklayın. Rezervasyonun kendi formu onun üzerinde açılır.',
+  'help.guide.place-booking.step.4':
+    'Bir rezervasyonu bir durağa iliştiren şey Gün atamasına bağla alanıdır ve burada zaten bu durağın adını verir. Formu yeniden kapatın.',
+  'help.guide.place-booking.step.5':
+    'Bir durak için yeni bir rezervasyon günler sütununda başlar: imleci durağın üzerine getirin ve sonundaki + işaretine tıklayın. Form Yeni Rezervasyon olarak, ona bağlı hâlde açılır.',
+  'help.guide.place-booking.result':
+    'Rezervasyon durakta asılıdır: karttadır, gündedir ve dosyaları burada da Dosyalar altında listelenir.',
+  'help.guide.place-booking.tip.1':
+    'Şerit yalnızca rezervasyonun iliştirildiği durak için görünür. Durağı olmayan bir rezervasyon Rezervasyonlar sekmesinde yaşar.',
+  'help.guide.place-booking.tip.2':
+    'Birkaç rezervasyon tek bir durağı paylaşabilir: öğle yemeği ve aynı kapıdan başlayan tur.',
+  'help.guide.place-booking.tip.3':
+    'Bir tren, bir uçuş ya da bir feribot bunun yerine ulaşım formunu açar, Ulaşım sekmesinin kullandığı formu.',
+  // place-files
+  'help.guide.place-files.title': 'Bir yerin biletlerini yerin yanında tutun',
+  'help.guide.place-files.goal': 'Bir yere ait bileti, kuponu ya da haritayı arayacağınız yere koyun.',
+  'help.guide.place-files.step.1':
+    'Yeri açın. Dosyalar kartın en altında oturur ve yerin hiç dosyası yokken Dosyalar yazar.',
+  'help.guide.place-files.step.2': 'Yanındaki Yükle düğmesine tıklayın ve dosyayı seçin.',
+  'help.guide.place-files.step.3': 'Düğme yerin tuttuklarını sayar ve liste kendiliğinden açılır.',
+  'help.guide.place-files.step.4': 'Her satır dosyanın adı ve boyutudur. Dosyayı açmak için satıra tıklayın.',
+  'help.guide.place-files.result':
+    'Dosya yerin üzerinde oturur, kartta sayılır ve gezinin Dosyalar sekmesinde de bulunur.',
+  'help.guide.place-files.tip.1':
+    'Dosyalar bu durağın rezervasyonunda asılı olanı da listeler, böylece bir otel onayı otelde görünür.',
+  'help.guide.place-files.tip.2': 'Yükle aynı anda birkaç dosya alır.',
+  'help.guide.place-files.tip.3':
+    'Dosya yükle hakkı olmadan Yükle düğmesi orada değildir; yerde zaten duran dosyalar yine oradadır.',
+  // place-navigation
+  'help.guide.place-navigation.title': 'Bir yeri bir harita uygulamasında ya da web sitesinde açın',
+  'help.guide.place-navigation.goal': 'Yeri, sizi gerçekten oraya götürecek uygulamaya devredin.',
+  'help.guide.place-navigation.step.1': 'Yeri açın ve alttaki satırda Navigasyon düğmesine tıklayın.',
+  'help.guide.place-navigation.step.2':
+    'Liste, bu yere uyan harita uygulamalarıdır: Google Maps, Waze, Apple Maps, OpenStreetMap ve CoMaps.',
+  'help.guide.place-navigation.step.3':
+    'Kullandığınıza tıklayın. TREK yapabildiği yerde ona yalnızca bir çift koordinatı değil, yerin kendisini verir, böylece doğru girişte inersiniz.',
+  'help.guide.place-navigation.step.4':
+    'Yanındaki Web Sitesini Aç, yerin kendi sayfasını, saatlerini ve biletlerini yeni bir sekmede açar.',
+  'help.guide.place-navigation.result':
+    'Harita uygulaması yerin üzerinde açılır, web sitesi kendi sekmesinde, ve gezide hiçbir şey değişmez.',
+  'help.guide.place-navigation.tip.1':
+    'Waze hemen yol tarifine başlar. Diğerleri yeri açar, oradan başlatmak bir dokunuş daha ister.',
+  'help.guide.place-navigation.tip.2':
+    'Hangi uygulamaların sunulduğu yere ve cihazınıza bağlıdır: Apple Maps Android’de dışarıda kalır, 高德地图 yalnızca Çin’deki bir yer için gelir, Waze, Apple Maps ve CoMaps ise yerin koordinatlarına ihtiyaç duyar.',
+  'help.guide.place-navigation.tip.3':
+    'Yalnızca tek bir uygulama geçerliyse düğme o uygulamanın adını taşır ve onu hemen açar.',
+  // place-to-collection
+  'help.guide.place-to-collection.title': 'Bir yeri listelerinizden birine kaydedin',
+  'help.guide.place-to-collection.goal': 'Bu gezide bulduğunuz bir yeri bir sonrakine saklayın.',
+  'help.guide.place-to-collection.step.1': 'Yeri açın ve kartın altındaki Koleksiyona kaydet düğmesine tıklayın.',
+  'help.guide.place-to-collection.step.2':
+    'Listeye kaydet, sahip olduğunuz ya da paylaştığınız her listeyi gösterir. Bir onay işareti bu yeri zaten tutanları işaretler.',
+  'help.guide.place-to-collection.step.3': 'Listeye tıklayın. Yer hemen onun içindedir.',
+  'help.guide.place-to-collection.step.4': 'Kapatın, karttaki düğmede Kaydedildi yazar.',
+  'help.guide.place-to-collection.result':
+    'Yer, görseli, notları ve yıldızlarıyla listenizdedir, bir sonraki geziye hazır.',
+  'help.guide.place-to-collection.tip.1':
+    'Düğme yalnızca Koleksiyonlar eklentisi açıkken vardır, onu yönetici Eklentiler altında açar.',
+  'help.guide.place-to-collection.tip.2':
+    'Bir yer aynı anda birkaç listede durabilir, her birinde kendi durumuyla: birinde Fikir, diğerinde Gidildi.',
+  'help.guide.place-to-collection.tip.3':
+    'Seçicide yerin adının yanındaki Ziyaret edildi işaretle onu listede işaretler; yer sizin birkaç listenizdeyse etikette Her yerde ziyaret edildi yazar ve hepsini aynı anda halleder.',
+  // place-track
+  'help.guide.place-track.title': 'Bir izi okuyun ve ona kendi rengini verin',
+  'help.guide.place-track.goal':
+    'İçe aktarılmış bir yürüyüşün ne kadar uzun olduğunu görün ve çizgisini haritadaki diğerlerinden ayırt edin.',
+  'help.guide.place-track.step.1':
+    'Yerler sütununda bir izin satırı, çizgisinin çizildiği renkte kısa bir çizgi taşır. Ona tıklayın.',
+  'help.guide.place-track.step.2': 'İstatistikleri Takip Et, ayarladığınız mesafe biriminde yolun uzunluğunu verir.',
+  'help.guide.place-track.step.3':
+    'Üstündeki İz rengi kullanılan rengi gösterir. Renk örneklerini açmak için satıra tıklayın.',
+  'help.guide.place-track.step.4': 'Bir renk seçin. Haritadaki çizgi ve satırdaki kısa çizgi onunla birlikte değişir.',
+  'help.guide.place-track.step.5':
+    'Soldaki kesik çizgili hücre, Otomatik renk, ize miras aldığı rengi geri verir; sağdaki damlalık, Özel renk seç, başka her şey için sisteminizin renk seçicisini açar.',
+  'help.guide.place-track.result': 'İz seçtiğiniz renkte çizilir, kartta, yerler sütunundaki satırında ve haritada.',
+  'help.guide.place-track.tip.1':
+    'Bu iki bölüm yalnızca bir yol taşıyan, GPX, KML ya da KMZ dosyasından içe aktarılmış bir yerde bulunur.',
+  'help.guide.place-track.tip.2':
+    'Yüksekliklerle kaydedilmiş bir iz ayrıca en yüksek ve en alçak noktasını, yukarı ve aşağı metreleri ve yürüyüşün profilini gösterir.',
+  'help.guide.place-track.tip.3':
+    'Bir içe aktarma getirdiği her ize kendi rengini verir, böylece iki yürüyüş asla aynı renkle gelmez.',
+
+  // ── Screen: trip-files ────────────────────────────────────────────────────────────────
+  'help.ctx.trip-files.title': 'Dosyalar',
+  'help.ctx.trip-files.summary':
+    'Gezinin her belgesi tek bir listede: biletler, onaylar, cüzdan kartları ve resimler, her biri bir notla, ait olduğu yere ya da rezervasyona bir bağla ve içinden geri çıkabileceği bir çöp kutusuyla.',
+  'help.ctx.trip-files.bullet.1':
+    'Üstteki Dosyaları buraya bırakın dosyaları alır; kutuya bir tıklama dosya seçiciyi açar. Altındaki satır bu TREK’in kabul ettiği dosya türlerini ve dosya başına 50 MB sınırını listeler.',
+  'help.ctx.trip-files.bullet.2':
+    "Sekmeler listenin ne gösterdiğini söyler: Tüm, PDF'ler, Görseller ve Belgeler, her biri kendi sayısıyla. Bir dosya yıldızlanır yıldızlanmaz yanlarına bir yıldız katılır, bir not ek taşır taşımaz da İşbirliği Notları.",
+  'help.ctx.trip-files.bullet.3':
+    'Bir satır kimin yüklediğini, adı, altındaki notu, boyutu ve tarihi taşır, bir de her bağ için bir rozet: Gün Planı ve yer, Rezervasyon ya da Ulaşım ve rezervasyon, İşbirliği notlarından.',
+  'help.ctx.trip-files.bullet.4':
+    'Satırın sonunda Yıldızla, Ata, Aç, İndir ve Sil durur. Sil sormaz: dosya çöp kutusuna gider, oradan geri getirilebilir.',
+  'help.ctx.trip-files.bullet.5':
+    'Bir resim ya da video tam ekran açılır, ok tuşlarıyla ve bir küçük resim şeridiyle; her başka belge sayfanın üstünde bir önizlemede açılır, Yeni sekmede aç ve İndir ile. Bir cüzdan kartı doğrudan indirilir.',
+  'help.ctx.trip-files.bullet.6':
+    'Sağ uçtaki Çöp kutusu listeyi silinen dosyalara çevirir, orada her biri geri yüklenir ya da kalıcı olarak silinir ve Çöp kutusunu boşalt hepsini temizler. Bir yöneticinin bir belge deposu bağladığı yerde yanında Belge eşitleme durur.',
+  // files-upload
+  'help.guide.files-upload.title': 'Geziye bir belge koyun',
+  'help.guide.files-upload.goal':
+    'Bir bileti, bir onayı ya da bir fotoğrafı indirilenler klasörünüzden çıkarıp geziye koyun, orada gezideki herkes ona ulaşabilir.',
+  'help.guide.files-upload.step.1':
+    'Geziyi açın ve sekme çubuğunda Dosyalar’a tıklayın. Gezinin belgeleri orada listelenir, üstlerinde de yükleme kutusu durur.',
+  'help.guide.files-upload.step.2':
+    'Dosyaları buraya bırakın kutusuna tıklayın ve bir ya da birkaç dosya seçin. Birbiri ardına yüklenirler ve bu sürerken kutuda Yükleniyor... yazar. Kutunun altındaki satır bu TREK’in hangi türleri aldığını ve bir dosyanın en fazla 50 MB olabileceğini söyler.',
+  'help.guide.files-upload.step.3':
+    'Son dosya yüklenir yüklenmez onun için Dosya Ata kendiliğinden açılır. Not ekleyin... dosyaya kendine ait bir satır verir, altındaki listeler de onu bir yere ya da bir rezervasyona bağlar. × ile kapatın; kapatmakla hiçbir şey kaybolmaz.',
+  'help.guide.files-upload.step.4':
+    'Yeni dosyalar listenin en üstünde durur. Bir satır kimin yüklediğini, adı, boyutu ve tarihi gösterir; bir resim küçük bir önizleme alır, her başka dosya kendi türünü.',
+  'help.guide.files-upload.result': 'Belgeler gezidedir ve geziyi görebilen herkes onları açabilir ve indirebilir.',
+  'help.guide.files-upload.tip.1':
+    'Bir dosya masaüstünden doğrudan kutunun üzerine de sürüklenebilir; dosya üzerindeyken kutu aydınlanır.',
+  'help.guide.files-upload.tip.2':
+    'Panodaki bir resim Ctrl+V ile listeye girer, böylece bir rezervasyonun ekran görüntüsünü önce kaydetmek hiç gerekmez.',
+  'help.guide.files-upload.tip.3':
+    'Yükleme, Dosya yükle hakkını gerektirir; o olmadan kutu hiç yoktur. Listede olmayan bir tür ya da 50 MB’ı aşan bir dosya bir iletiyle geri çevrilir ve hiçbir şey yüklenmez.',
+  // files-link
+  'help.guide.files-link.title': 'Bir belgeyi bir yere ya da bir rezervasyona bağlayın',
+  'help.guide.files-link.goal': 'Biletin yalnızca bu listeden değil, ait olduğu günden de bulunabilmesini sağlayın.',
+  'help.guide.files-link.step.1':
+    'Satırın sonundaki kalem olan Ata düğmesine tıklayın. Dosyanın adını taşıyan Dosya Ata açılır.',
+  'help.guide.files-link.step.2':
+    'Not altında Not ekleyin... bir satır alır, o da listede dosyanın adının altında durur. Kutudan çıktığınız anda kaydedilir.',
+  'help.guide.files-link.step.3':
+    'Yer altında gezinin yerleri, bulundukları güne göre gruplanmış olarak durur, hiçbir günde olmayanlar için de sonda Atanmamış. Birine tıklayın, bir onay işareti alır.',
+  'help.guide.files-link.step.4':
+    'Rezervasyon ve Ulaşım altında gezinin rezervasyonları durur. Belgenin ait olduğuna tıklayın; o da kendi onay işaretini alır.',
+  'help.guide.files-link.step.5': '× ile kapatın. Burada kaydet düğmesi yoktur: her tıklama, yaptığınız anda yazıldı.',
+  'help.guide.files-link.result':
+    'Satır notu ve her bağ için bir rozet taşır, Gün Planı ve yerin adı, Ulaşım ve uçuşun adı, belge de hem yerde hem rezervasyonda asılı durur.',
+  'help.guide.files-link.tip.1':
+    'Bir dosya aynı anda birkaç bağ tutabilir, böylece aynı onay hem otele hem de kapsadığı geceye ait olur.',
+  'help.guide.files-link.tip.2': 'İşaretli bir girdiye yeniden tıklamak o bağı kaldırır; dosyanın kendisi kalır.',
+  'help.guide.files-link.tip.3':
+    'Tersi de geçerlidir: bir yere ya da bir rezervasyona eklenmiş bir belge bu listede de vardır, satırında aynı rozetle.',
+  // files-star
+  'help.guide.files-star.title': 'Önemli belgeleri üstte tutun',
+  'help.guide.files-star.goal': 'Gezi boyunca büyüyen bir listeden, gerçekten gerekecek iki üç kağıdı çekip çıkarın.',
+  'help.guide.files-star.step.1':
+    'Satırın sonundaki Yıldızla düğmesine tıklayın. Sarıya dolar, dosyanın adının önünde ikinci bir yıldız belirir ve düğmede artık Yıldızı kaldır yazar.',
+  'help.guide.files-star.step.2':
+    'Liste kendini yeniden sıralar: yıldızlı dosyalar diğerlerinin üstünde durur, her grubun içinde en yeniler önce.',
+  'help.guide.files-star.step.3':
+    'Üstteki sekmelere bir yıldız katıldı, arkasında yıldızlı dosyaların sayısıyla. Yalnızca onları görmek için ona tıklayın.',
+  'help.guide.files-star.result':
+    'Gişede gereken kağıtlar listenin en üstünde durur ve bir sekme başka hiçbir şey göstermez.',
+  'help.guide.files-star.tip.1':
+    'Yıldız sekmesi yalnızca bir şey yıldızlıyken vardır. Son dosyanın yıldızını kaldırın, sekme de onunla birlikte gider.',
+  'help.guide.files-star.tip.2':
+    'Yıldızlamak bir düzenleme sayılır: gezinin dosyalarını yalnızca okuyabilen bir üye yıldızları görür ama koyamaz.',
+  // files-filter
+  'help.guide.files-filter.title': 'Listede bir belge bulun',
+  'help.guide.files-filter.goal': 'Her şeyin listesini, aradığınız tek tür kağıda daraltın.',
+  'help.guide.files-filter.step.1':
+    "Listenin üstündeki sekmeler Tüm, PDF'ler, Görseller ve Belgeler’dir, her biri arkasında dosya sayısıyla.",
+  'help.guide.files-filter.step.2': "PDF'ler sekmesine tıklayın: liste PDF dosyalarını tutar, başka hiçbir şeyi değil.",
+  'help.guide.files-filter.step.3':
+    'İki sekme daha gezide ne olduğuna göre gelir gider: bir dosya yıldızlanır yıldızlanmaz bir yıldız ve İş birliği sekmesindeki bir not ek taşır taşımaz İşbirliği Notları.',
+  'help.guide.files-filter.step.4': 'Tüm, listenin tamamını geri getirir.',
+  'help.guide.files-filter.result':
+    'Liste yalnızca sekmenin adlandırdığını gösterir ve her sekmedeki sayı bunun kaç olduğunu söyler.',
+  'help.guide.files-filter.tip.1':
+    'Burada klasör yoktur ve yeniden adlandırma yoktur: bir belge Dosya Ata içindeki nota, yerlere ve rezervasyonlara bağlarına ve yıldıza göre düzenlenir.',
+  'help.guide.files-filter.tip.2':
+    'Listenin kendisi her zaman önce yıldızlı, sonra en yeni sırasıyla gider, böylece bugün yüklenen bir belge geçen ayki bir belgenin üstünde durur.',
+  // files-preview
+  'help.guide.files-preview.title': 'Bir belgeyi TREK’ten çıkmadan okuyun',
+  'help.guide.files-preview.goal':
+    'Bir bilete ya da bir resme yerinde bakın ve gerektiğinde onu kendi makinenize alın.',
+  'help.guide.files-preview.step.1':
+    'Bir resmin adına ya da küçük önizlemesine tıklayın. Tam ekran açılır, başlıkta dosyanın adı ve resimler arasındaki sırası ile.',
+  'help.guide.files-preview.step.2':
+    'Yanlardaki yuvarlak oklar, sol ve sağ ok tuşları ve alttaki küçük resim şeridi, listenin o anda gösterdiği her resmin arasında gezer.',
+  'help.guide.files-preview.step.3': 'Yeni sekmede aç ve İndir başlıkta durur; × ya da Escape resmi yeniden kapatır.',
+  'help.guide.files-preview.step.4':
+    'Resim olmayan bir belge bunun yerine sayfanın üstünde bir önizlemede açılır, başlığında aynı iki düğmeyle. Bu, × ile ya da yanına bir tıklamayla kapanır.',
+  'help.guide.files-preview.step.5':
+    'Satırın sonundaki İndir, önce hiçbir şey açmadan dosyayı doğrudan makinenize kaydeder.',
+  'help.guide.files-preview.result':
+    'Belge ekrandadır ve aynı iki düğme onu bir tarayıcı sekmesine ya da diskinize koyar.',
+  'help.guide.files-preview.tip.1':
+    'Dokunmatik ekranda oklara tıklamak yerine resimler arasında parmağınızla kaydırırsınız.',
+  'help.guide.files-preview.tip.2':
+    'Bir cüzdan kartı hiçbir zaman önizleme açmaz: hemen indirilir, böylece telefon onu cüzdan uygulamasına verebilir.',
+  'help.guide.files-preview.tip.3':
+    'Yeni sekmede aç ve İndir, dosyayı oturumunuzla getirir, bu yüzden adres çubuğundan kopyalanan bir bağlantı başka kimsenin işine yaramaz.',
+  // files-trash
+  'help.guide.files-trash.title': 'Bir belgeyi atın ve geri alın',
+  'help.guide.files-trash.goal':
+    'Gezinin artık ihtiyaç duymadığını temizleyin, sonunda gerçekten gereken hiçbir şeyi kaybetmeden.',
+  'help.guide.files-trash.step.1':
+    'Satırın sonundaki Sil düğmesine tıklayın. Dosya listeden hemen çıkar ve ileti Çöp kutusuna taşındı der. Önce hiçbir şey sormaz.',
+  'help.guide.files-trash.step.2':
+    'Araç çubuğunun sağ ucundaki Çöp kutusu listeyi atılanlara çevirir. Başlık Çöp kutusu der ve filtre sekmeleri yoktur.',
+  'help.guide.files-trash.step.3':
+    'Atılmış bir satır soluklaşır ve iki düğmesi kalır: dosyayı geri getiren Geri yükle ve bir sorudan sonra onu kalıcı olarak kaldıran Sil.',
+  'help.guide.files-trash.step.4':
+    'Geri yükle düğmesine tıklayın. İleti Dosya geri yüklendi der ve satır, notu ve bağları hâlâ üzerindeyken çöp kutusundan çıkar.',
+  'help.guide.files-trash.step.5':
+    'Üstteki Çöp kutusunu boşalt, burada duran her şeyi kalıcı olarak temizler ve tarayıcı bunu yapmadan önce bir kez sorar. Çöp kutusu yeniden dosyalara döner.',
+  'help.guide.files-trash.result': 'Dosya listede durduğu yere, hiçbir şey olmamış gibi geri döner.',
+  'help.guide.files-trash.tip.1':
+    'Satırdaki Sil önce sormaz ve çöp kutusu tam da bunun içindir: burada siz söyleyene kadar hiçbir şey TREK’ten çıkmaz.',
+  'help.guide.files-trash.tip.2':
+    'Bir dosyayı atmak ve geri almak Dosyaları sil hakkını gerektirir. Bu hakkı olmayan bir üye ne satırdaki Sil düğmesini ne de çöp kutusundaki düğmeleri görür.',
+  'help.guide.files-trash.tip.3': 'Çöp kutusunda kalıcı olarak silinen bir dosya geri getirilemez.',
+
+  // ── Screen: trip-day-detail ───────────────────────────────────────────────────────────
+  'help.ctx.trip-day-detail.title': 'Gün ayrıntıları',
+  'help.ctx.trip-day-detail.summary':
+    'Bir gün başlığının harita üzerinde açtığı panel: bütün olarak gün, adı ve tarihi, bulunacağınız yerdeki hava, o güne düşen rezervasyonlar ve o gün için ayrılan geceler.',
+  'help.ctx.trip-day-detail.bullet.1':
+    'Günler sütununda bir günün başlığına tıklayın, panel haritanın ortası üzerinde açılır. Aynı başlık tekrar ya da sağındaki X onu kapatır ve günü bırakır.',
+  'help.ctx.trip-day-detail.bullet.2':
+    'Başlık günün adını ve tarihini taşır. Adın yanındaki kalem günü yeniden adlandırır, çift ok ucu paneli ince bir çubuğa katlar, böylece harita yeniden serbest kalır.',
+  'help.ctx.trip-day-detail.bullet.3':
+    'En üstte günün havası. Yer adı için tahmin ifadesi, tahminin hangi yer için olduğunu adlandırır: günün ilk durağı ya da uyandığınız otel.',
+  'help.ctx.trip-day-detail.bullet.4':
+    'Rezervasyonlar o günün rezervasyonlarını listeler, her birini türü, ait olduğu durağı ve saatleriyle. Yeşil onaylandı demektir, kehribar rengi hâlâ askıda; bu bir okuma listesidir, rezervasyonlar Rezervasyonlar sekmesinde değiştirilir.',
+  'help.ctx.trip-day-detail.bullet.5':
+    'Konaklama bu güne denk gelen her geceyi gösterir, gerçekleştikleri günlerde Giriş ve Çıkış yapmak ile, giriş aralığı, çıkış saati ve onay koduyla birlikte.',
+  'help.ctx.trip-day-detail.bullet.6':
+    'Konaklama ekle bu güne bir gece ayırtır: tesisi gezinin yerlerinden seçin, hangi günleri kapsadığını söyleyin, saatleri ve kodu ekleyin.',
+  // day-panel
+  'help.guide.day-panel.title': 'Bir günü açın ve ayrıntılarını okuyun',
+  'help.guide.day-panel.goal':
+    'Bir günü bütün olarak, havasını, rezervasyonlarını ve nerede uyuduğunuzu haritadan ayrılmadan görün.',
+  'help.guide.day-panel.step.1':
+    'Günler sütununda bir günün başlığına tıklayın. Gün seçilir ve ayrıntıları haritanın ortası üzerinde açılır.',
+  'help.guide.day-panel.step.2': 'Başlık günü adlandırır, siz bir ad verene kadar 1. gün, altında tarihiyle.',
+  'help.guide.day-panel.step.3':
+    'En üstte günün havası. Yer adı için tahmin ifadesi, tahminin hangi yer için olduğunu söyler: günün ilk durağı ya da uyandığınız otel.',
+  'help.guide.day-panel.step.4': 'Altındaki Rezervasyonlar bu güne düşen rezervasyonları saatleriyle listeler.',
+  'help.guide.day-panel.step.5':
+    'Konaklama bu güne denk gelen geceleri gösterir, gerçekleştikleri günlerde Giriş ve Çıkış yapmak ile.',
+  'help.guide.day-panel.step.6':
+    'Başlıktaki çift ok ucu paneli ince bir çubuğa katlar. Yanındaki X paneli kapatır ve günü bırakır.',
+  'help.guide.day-panel.result':
+    'Çubuğuna katlanmış panel haritayı serbest bırakır ve günü seçili tutar; kapatıldığında gün seçimden çıkar ve plan eskisi gibi olur.',
+  'help.guide.day-panel.tip.1':
+    'Panelin başlık çubuğunun herhangi bir yerine tıklamak da onu katlar. Ok ucu bunun yalnızca düğmesidir.',
+  'help.guide.day-panel.tip.2':
+    'Yerler sütunundan bir yer açmak, yerin ayrıntılarını panelin yerine koyar. Onları kapatın, gün geri gelir.',
+  // day-weather
+  'help.guide.day-weather.title': 'Günün havasını okuyun',
+  'help.guide.day-weather.goal': 'O gün gerçekten bulunduğunuz yerde günün nasıl geçeceğini bilin.',
+  'help.guide.day-weather.step.1':
+    'Yer adı için tahmin ifadesi, sayıların hangi yer için olduğunu adlandırır: günün ilk durağı ya da, durağı olmayan bir günde, uyandığınız otel.',
+  'help.guide.day-weather.step.2':
+    'Büyük sayı günün sıcaklığıdır, yanında en düşük ve en yüksek değer ve hava durumu sözcüklerle.',
+  'help.guide.day-weather.step.3':
+    'Altındaki etiketler: yağış olasılığı, ne kadar yağacağı, en güçlü rüzgâr, gün doğumu ve gün batımı.',
+  'help.guide.day-weather.step.4':
+    'En altta gün saat saat, iki saatte bir: saat, simge, sıcaklık ve yağış olasılığı. Yüzde 50 üzerindeki bir saat maviye boyanır.',
+  'help.guide.day-weather.result':
+    'Günler sütunundaki günün kartı aynı havayı numarasının altında küçük olarak taşır, böylece bütün gezi tek bakışta okunur.',
+  'help.guide.day-weather.tip.1':
+    'Dereceler ve rüzgâr Ayarlar’daki Görünüm altındaki seçiminizi izler: Fahrenheit’a geçin, aynı tahmin °F ve mph ile okunur.',
+  'help.guide.day-weather.tip.2':
+    'Konumlu durağı ve uyanacak oteli olmayan bir gün hiç hava göstermez: tahmin her zaman bir yer içindir, hiçbir zaman gezi için değil.',
+  'help.guide.day-weather.tip.3':
+    '16 günden daha ileriye alınacak tahmin yoktur. Sayılar o zaman o tarih için önceki yılların ortalamalarıdır, Ø ile işaretlenir ve altında böyle yazar.',
+  // rename-day
+  'help.guide.rename-day.title': 'Güne bir ad verin',
+  'help.guide.rename-day.goal': 'Bir güne 5. gün yerine ne ise onu deyin, Kyoto’ya varış ya da Dinlenme günü.',
+  'help.guide.rename-day.step.1': 'Günü açın. Başlığı 5. gün yazar, altında tarihiyle.',
+  'help.guide.rename-day.step.2': 'Adın yanındaki kaleme tıklayın.',
+  'help.guide.rename-day.step.3': 'Ad bir alana dönüşür. İstediğiniz adı yazın.',
+  'help.guide.rename-day.step.4':
+    'Enter’a basın ya da başka bir yere tıklayın; Escape değişikliği atar. Günler sütunundaki günün kartı da adı taşır.',
+  'help.guide.rename-day.result':
+    'Ad panelde ve günler sütunundaki günün kartında 5. gün yerine geçer; tarih olduğu yerde kalır.',
+  'help.guide.rename-day.tip.1': 'Alanı boşaltıp kaydedin, gün yeniden 5. gün olur: ad yokken görünen şey numaradır.',
+  'help.guide.rename-day.tip.2':
+    'Ad güne aittir, tarihine değil. Günleri yeniden sıralayın, o günün diğer her şeyiyle birlikte gider.',
+  // add-accommodation
+  'help.guide.add-accommodation.title': 'Bir güne gece ayırtın',
+  'help.guide.add-accommodation.goal': 'Oteli plana bir kez koyun, kapsadığı günler, saatleri ve onay koduyla.',
+  'help.guide.add-accommodation.step.1':
+    'Tesisin önce gezinin bir yeri olması gerekir. Onu yerler sütununda başka herhangi bir yer gibi oluşturun: seçici yalnızca orada zaten olanı sunar.',
+  'help.guide.add-accommodation.step.2': 'Vardığınız günü açın ve Konaklama altında Konaklama ekle düğmesine tıklayın.',
+  'help.guide.add-accommodation.step.3':
+    'Günlere uygula, konaklamanın hangi geceleri kapsadığını söyler: solda giriş günü, sağda çıkış günü. Tüm bütün geziyi kapsar.',
+  'help.guide.add-accommodation.step.4':
+    'Giriş, Kadar ve Çıkış yapmak alanlarını doldurun ve rezervasyonun numarasını Onay kodu altına yazın. Dördü de boş kalabilir.',
+  'help.guide.add-accommodation.step.5':
+    'Tesisi gezinin yerlerinden seçin. Listenin üstündeki etiketler onu tek bir kategoriye daraltır.',
+  'help.guide.add-accommodation.step.6': 'Kaydet düğmesine tıklayın.',
+  'help.guide.add-accommodation.result':
+    'Konaklama kapsadığı her günde görünür, ilkinde Giriş ve sonuncusunda Çıkış yapmak ile. Tesis giriş gününde bir durak olur, böylece harita oraya giden yolu çizer ve Rezervasyonlar sekmesinde Konaklama türünde bir rezervasyon belirir.',
+  'help.guide.add-accommodation.tip.1':
+    'Seçici geldiğiniz günde açılır, çıkış ertesi günde; kaydetmeden önce ikisi de taşınabilir.',
+  'help.guide.add-accommodation.tip.2':
+    'Oteli oluştururken ona gezinin Hotel kategorisini verin, listenin üstündeki etiketler onu tek tıkla otellerinize daraltsın.',
+  'help.guide.add-accommodation.tip.3':
+    'Saatlerin hepsi isteğe bağlıdır: girişi ve kodu olmayan bir konaklama yine gecelerini kapsar ve yine rotasını çizer.',
+  // edit-accommodation
+  'help.guide.edit-accommodation.title': 'Ayrılmış bir geceyi değiştirin ya da iptal edin',
+  'help.guide.edit-accommodation.goal':
+    'Bir konaklamayı taşıyın, saatlerini düzeltin ya da onu plandan yeniden çıkarın.',
+  'help.guide.edit-accommodation.step.1':
+    'Konaklamanın her gününde kart tesisi, giriş aralığını, çıkış saatini ve onay kodunu gösterir.',
+  'help.guide.edit-accommodation.step.2':
+    'Sağındaki kalem konaklamayı yeniden açar. Pencere artık Konaklamayı düzenle yazar.',
+  'help.guide.edit-accommodation.step.3':
+    'Gereken neyse değiştirin: kapsadığı günler, Giriş, Kadar, Çıkış yapmak, Onay kodu ya da tesisin kendisi.',
+  'help.guide.edit-accommodation.step.4': 'Kaydet düğmesine tıklayın.',
+  'help.guide.edit-accommodation.step.5':
+    'Kalemin yanındaki X konaklamayı bitirir. Hiçbir şey sormaz ve ona ait Konaklama türündeki rezervasyon da onunla gider.',
+  'help.guide.edit-accommodation.result':
+    'Değişiklik konaklamanın kapsadığı her güne aynı anda ulaşır, Rezervasyonlar sekmesindeki Konaklama türündeki rezervasyona da.',
+  'help.guide.edit-accommodation.tip.1':
+    'Bir konaklamanın ortasındaki gece ne Giriş ne de Çıkış yapmak etiketini taşır: bunlar yalnızca aralığın ilk ve son gününde olur.',
+  'help.guide.edit-accommodation.tip.2':
+    'Bir konaklamayı iptal etmek, giriş gününe koyduğu durağı ve rezervasyonuna bağlı her maliyeti de alır. Yanlışlıkla olduysa geceyi yeniden ayırtın.',
+  // day-bookings
+  'help.guide.day-bookings.title': 'Günün rezervasyonları tek bakışta',
+  'help.guide.day-bookings.goal': 'Bu gün için nelerin ayırtıldığını ve onaylı olup olmadığını tek yerde görün.',
+  'help.guide.day-bookings.step.1':
+    'Rezervasyonlar günün rezervasyonlarını listeler: tarihi o güne düşenleri ve duraklarından birine bağlı olanları.',
+  'help.guide.day-bookings.step.2':
+    'Bir satır rezervasyonun türünü, adını ve bir durağa ait olduğunda o durağı bir noktadan sonra gösterir. Saatleri sağ uçta durur.',
+  'help.guide.day-bookings.step.3':
+    'Renk bir rezervasyonun nerede olduğunu söyler: yeşil satır onaylandı, kehribar rengi olan hâlâ askıda. Oteller bu listede değildir, aşağıda kendi blokları vardır.',
+  'help.guide.day-bookings.step.4':
+    'Liste rezervasyonları yalnızca okur. Bir rezervasyon Rezervasyonlar sekmesinde oluşturulur ve değiştirilir.',
+  'help.guide.day-bookings.result':
+    'Tarihi o güne düşen her şey ve duraklarından birine bağlı olan her şey bu tek listededir.',
+  'help.guide.day-bookings.tip.1':
+    'Bir rezervasyon güne kendi tarihiyle iner. Tarihi Rezervasyonlar sekmesinde değiştirin, kendiliğinden diğer güne taşınır.',
+  'help.guide.day-bookings.tip.2':
+    'Rezervasyonlar bloğunun olmaması, günün rezervasyonu olmadığı anlamına gelir: boş gösterilmek yerine gizlenir.',
+
+  // ── Screen: trip-map ──────────────────────────────────────────────────────────────────
+  'help.ctx.trip-map.title': 'Harita',
+  'help.ctx.trip-map.summary':
+    'Planın ortası: gezinin her yeri bir iğne, onları birleştiren rotalar ve haritanın kenarları boyunca uydu için, tüm gezi için ve baktığınız şehir parçasının çevresindeki yerler için anahtarlar.',
+  'help.ctx.trip-map.bullet.1':
+    'Bir iğne bir yerdir: varsa kendi fotoğrafı, yoksa kategori rengi ve kategori simgesi. İmleci bir iğnenin üzerine getirin, adını, puanını, kategorisini ve adresini taşıyan bir kart gelir.',
+  'help.ctx.trip-map.bullet.2':
+    'Birbirinden ayırt edilemeyecek kadar yakın duran iğneler, sayıyı taşıyan tek bir koyu baloncukta toplanır. Baloncuğa tıklayın, harita içindekine yakınlaşır.',
+  'help.ctx.trip-map.bullet.3':
+    'Yeri haritanın altında açmak için bir iğneye tıklayın: puanı, dosyaları ve onunla sırada ne yapacağınız oradadır; bırakmak için haritanın boş bir parçasına tıklayın.',
+  'help.ctx.trip-map.bullet.4':
+    'Günler sütununda bir gün açıkken, o günün durakları o gündeki sıra numarasını taşıyan küçük beyaz bir rozet taşır ve iki güne planlanmış bir yer, · ile birleştirilmiş iki numarayı birden taşır.',
+  'help.ctx.trip-map.bullet.5':
+    'Üstteki simge sırası haritanın gördüğünüz parçasında arar: Restoranlar, Kafeler, Bar ve gece hayatı, Konaklama, Gezilecek yerler, Müzeler ve kültür, Doğa ve parklar ile Aktiviteler. Bu alanda ara, haritayı oynattıktan sonra aramayı yeniden çalıştırır.',
+  'help.ctx.trip-map.bullet.6':
+    'Haritanın herhangi bir yerine sağ tıklayarak o noktada yer formunu açın, adres çoktan bulunmuş olur. Sol alttaki yuvarlak düğme çizilmiş haritayı hava görüntüleriyle değiştirir.',
+  'help.ctx.trip-map.bullet.7':
+    'Sağ alttaki Tüm geziyi göster her seyahat gününü aynı anda çizer ve her birinin neyi kapsadığını listeler; bir rezervasyonun satırındaki rota simgesi o rezervasyonu çizer, günlerin üstündeki araç çubuğundaki ise hepsini çizer.',
+  // map-markers
+  'help.guide.map-markers.title': 'Haritayı okuyun',
+  'help.guide.map-markers.goal': 'Haritadaki her iğnenin, rozetin ve baloncuğun size ne söylediğini bilin.',
+  'help.guide.map-markers.step.1':
+    'Harita gezinin her yerini tutar. İğnelerin birbirinden ayırt edilemeyecek kadar yakın durduğu yerde, içlerindeki yer sayısını taşıyan tek bir koyu baloncukta toplanırlar.',
+  'help.guide.map-markers.step.2':
+    'Baloncuğa tıklayın. Harita içinde olana yakınlaşır ve iğneler ayrılır; en derin yakınlaştırmada daha fazla yakınlaşmak yerine onları yelpaze gibi açar.',
+  'help.guide.map-markers.step.3':
+    'Bir iğne, varsa yerin kendi fotoğrafıdır, yoksa kategori rengi ve kategori simgesidir. İmleci üzerine getirin, bir kart adını, puanını, kategorisini ve adresini verir.',
+  'help.guide.map-markers.step.4':
+    'Bir iğneye tıklayın, yer haritanın altında açılır: koordinatları, puanı, Dosyalar ve Güne Ekle, Koleksiyona kaydet, Navigasyon, Düzenle ve Sil. Bırakmak için haritanın boş bir parçasına tıklayın.',
+  'help.guide.map-markers.step.5':
+    'Günler sütununda bir gün açın, durakları numaralanır: iğnenin köşesindeki küçük beyaz rozet o durağın gündeki sırasıdır. İki güne planlanmış bir yer, · ile birleştirilmiş iki numarayı birden taşır. Açık bir gün yokken numara olmaz ve köşe onun yerine puanı taşır.',
+  'help.guide.map-markers.result':
+    'Gezide hiçbir şey değişmedi: harita onun bir görünümüdür ve her iğne hangi yer olduğunu, hangi güne ait olduğunu ve hangi sırada geldiğini söyler.',
+  'help.guide.map-markers.tip.1':
+    'Günler sütununda kapatılmış bir gün, duraklarını haritadan da alıp götürür; günü yeniden açın, geri gelirler.',
+  'help.guide.map-markers.tip.2':
+    'Yerler listesinin üstündeki filtre haritanın ne çizeceğine de karar verir: Planlanmamış’ı seçin, haritada yalnızca hâlâ günü olmayan yerler kalır.',
+  'help.guide.map-markers.tip.3':
+    'Bu haritada yakınlaştırma düğmeleri yoktur: tekerlek yakınlaştırır, çift tıklama bir adım yakınlaştırır ve sürüklemek haritayı taşır.',
+  // map-nearby-places
+  'help.guide.map-nearby-places.title': 'Haritada çevrenizdeki yerleri bulun',
+  'help.guide.map-nearby-places.goal':
+    'Haritanın baktığınız şehir parçasında restoran, gezilecek yer ya da otel aramasını sağlayın ve birini geziye alın.',
+  'help.guide.map-nearby-places.step.1':
+    'Haritanın üstündeki simge sırası kategori aramasıdır: Restoranlar, Kafeler, Bar ve gece hayatı, Konaklama, Gezilecek yerler, Müzeler ve kültür, Doğa ve parklar ile Aktiviteler.',
+  'help.guide.map-nearby-places.step.2':
+    'Bir kategoriye tıklayın. TREK, haritanın gördüğünüz parçasında o tür yeri arar ve her sonuç için kategorinin renginde bir iğne bırakır. Aynı anda tek kategori: başkasına tıklamak onu değiştirir, açık olana tıklamak onu kapatır.',
+  'help.guide.map-nearby-places.step.3':
+    'Haritayı oynatın, sıranın altında ikinci bir düğme belirir: Bu alanda ara aynı aramayı yeni görünüm için çalıştırır. Yalnızca oynatmak asla yeniden aramaz, bu da istek sayısını düşük tutar.',
+  'help.guide.map-nearby-places.step.4':
+    'İğneler buldukları şeyin adını taşır. Birine tıklayın, yer formu ondan doldurulmuş olarak açılır: İsim, Adres, Enlem ve Boylam ile OpenStreetMap’te varsa web sitesi ve telefon numarası.',
+  'help.guide.map-nearby-places.step.5':
+    'Neyi doldurduğunu kontrol edin ve aramanın bilemeyeceğini ekleyin: bir Tanım, bir Kategori, kendi notlarınız.',
+  'help.guide.map-nearby-places.step.6':
+    'Ekle düğmesine tıklayın. Aynı adlı bir yer gezide zaten varsa form bunu söyler ve düğme Yine de ekle olur.',
+  'help.guide.map-nearby-places.result':
+    'Yer, yerler listesinde ve haritada gezinin kendi iğnelerinden biri olarak durur, bir güne koyana kadar Planlanmamış altında. Arama iğneleri, kategoriyi kapatana kadar kalır.',
+  'help.guide.map-nearby-places.tip.1':
+    'Ayarlar içinde, Travel & map altında Haritada yerleri keşfet kapalıysa sıra görünmez.',
+  'help.guide.map-nearby-places.tip.2':
+    'Yanıtlar TREK Places dizininden ve OpenStreetMap’ten gelir, yani bu, plandaki bağlantı gerektiren birkaç şeyden biridir.',
+  'help.guide.map-nearby-places.tip.3':
+    'Bir arama ekranda olanı kapsar, bu yüzden sorduğunuz sokağa yakınlaşın: bütün bir şehir ilk altmış sonuçla ve aralarında pek az düzenle yanıt verir.',
+  // map-add-place
+  'help.guide.map-add-place.title': 'Haritaya sağ tıklayarak yer oluşturun',
+  'help.guide.map-add-place.goal': 'Bir yeri önce aramadan, tam istediğiniz noktaya koyun.',
+  'help.guide.map-add-place.step.1':
+    'Haritada kastettiğiniz noktaya sağ tıklayın. Yer formu Yer/etkinlik Ekle başlığıyla açılır.',
+  'help.guide.map-add-place.step.2':
+    'Enlem ve Boylam zaten o noktadadır ve TREK koordinatları arayıp orada bulduğundan Adres alanını doldurur. Henüz hiçbir şey yazılmadı, yanlış olanın üzerine yazın.',
+  'help.guide.map-add-place.step.3':
+    'Ona tanıyacağınız bir İsim verin ve planın bilmesi gereken geri kalanı: Tanım, Notlar, Kategori, Web sitesi.',
+  'help.guide.map-add-place.step.4':
+    'Ekle düğmesine tıklayın. Bir gün açık olsa bile yer listeye planlanmamış olarak iner: haritaya sağ tıklamak nerede olduğunu söyler, ne zaman olduğunu değil.',
+  'help.guide.map-add-place.result': 'Yer listede ve haritadadır, bir güne koyana kadar Planlanmamış altında.',
+  'help.guide.map-add-place.tip.1':
+    'Adres, koordinatların aranmasından gelir, bu yüzden bir addan çok sokak gibi okunabilir ve açık arazide boş dönebilir. İki alan da sizindir, üzerlerine yazın.',
+  'help.guide.map-add-place.tip.2':
+    'MapLibre GL ve Mapbox GL haritalarında orta tıklama da aynısını yapar, dokunmatik ekranda ise uzun basma.',
+  // map-satellite
+  'help.guide.map-satellite.title': 'Uyduya geçin',
+  'help.guide.map-satellite.goal': 'Çizilmiş haritayı hava görüntüleriyle değiştirin ve geri alın.',
+  'help.guide.map-satellite.step.1':
+    'Haritanın sol alt köşesindeki yuvarlak düğme temel katman anahtarıdır. Simgesi her zaman geçeceği katmanı gösterir, üzerine gelmek hangisi olduğunu söyler: Uydu görünümüne geç.',
+  'help.guide.map-satellite.step.2':
+    'Tıklayın. Harita, tek bir binayı ayırt edebileceğiniz kadar derin ve kendi anahtarınız olmadan hava görüntüsüne dönüşür.',
+  'help.guide.map-satellite.step.3':
+    'TREK’in çizdiği her şey üstte kalır: iğneler, günün rotası, parçalar ve rezervasyon rotaları. Geri dönmek için düğmeye yeniden tıklayın, artık Harita görünümüne geç yazar.',
+  'help.guide.map-satellite.result': 'Harita yeniden çizilir ve onu bıraktığınız katman hesabınızda hatırlanır.',
+  'help.guide.map-satellite.tip.1':
+    'Seçim gezide değil hesabınızda tutulur, bu yüzden hangi çizim motorunu kullanırsanız kullanın her gezi bıraktığınız gibi açılır.',
+  'help.guide.map-satellite.tip.2':
+    'Görüntüler yazı taşımaz: sokak adları, semtler ve kapı numaraları çizilmiş haritadadır, bu yüzden bir adres ararken geri geçin.',
+  // map-whole-trip
+  'help.guide.map-whole-trip.title': 'Tüm geziyi ve mesafelerini görün',
+  'help.guide.map-whole-trip.goal':
+    'Açık olan tek günü gezinin bütün seyahat günleriyle değiştirin ve her birinin ne kadar gittiğini okuyun.',
+  'help.guide.map-whole-trip.step.1': 'Yuvarlak Tüm geziyi göster düğmesi haritanın sağ alt köşesinde durur.',
+  'help.guide.map-whole-trip.step.2':
+    'Tıklayın. Gezinin her seyahat günü aynı anda çizilir, her biri beyaz bir kılıf üzerinde kendi renginde, böylece komşu günler ayrı kalır.',
+  'help.guide.map-whole-trip.step.3':
+    'Düğmenin üstündeki kart o günleri listeler: bir renk noktası, günün adı, onu kat ettiğiniz her ulaşım biçimi için bir simge ve kapsadığı mesafe. Toplam mesafe en üstte.',
+  'help.guide.map-whole-trip.step.4':
+    'Kartta bir güne tıklayıp onu seçin, günler sütununda seçmekle aynıdır. Tek güne dönmek için düğmeye yeniden tıklayın, artık Tüm geziyi gizle yazar.',
+  'help.guide.map-whole-trip.result':
+    'Her seyahat günü kendi renginde çizilir ve kart her birinin neyi kapsadığını ve gezinin toplamda ne ettiğini söyler.',
+  'help.guide.map-whole-trip.tip.1':
+    'Toplam birkaç etap birden gelir. Ardında bir … dururken sayı hâlâ kısmi bir toplamdır; her etap yanıt verdiğinde oturur.',
+  'help.guide.map-whole-trip.tip.2':
+    'Rota motorunun reddettiği bir etap düz çizgi olarak kalır ve hiçbir şey saymaz, kart da sessizce düşük göstermek yerine bunu söyler.',
+  'help.guide.map-whole-trip.tip.3':
+    'İki taneden az konumlu durağı olan bir günün çizecek rotası yoktur, bu yüzden karttan tamamen çıkarılır.',
+  // map-booking-routes
+  'help.guide.map-booking-routes.title': 'Bir rezervasyonun rotasını haritada gösterin',
+  'help.guide.map-booking-routes.goal':
+    'Rezerve ettiğiniz uçuşları, trenleri ve sürüşleri haritada çizin ve yeniden kaldırın.',
+  'help.guide.map-booking-routes.step.1':
+    'Rezervasyon rotaları, siz isteyene kadar kapalıdır. Günler sütununda bir rezervasyonun satırında küçük bir rota simgesi durur: Rezervasyon rotalarını göster.',
+  'help.guide.map-booking-routes.step.2':
+    'Tıklayın. Rezervasyon haritada belirir: bir uçuş büyük daire yayı olarak, bir sürüş gerçek yollar boyunca, bir tren istasyonlarının zinciri olarak. Onaylandı düz çizgiyle, Beklemede kesik çizgiyle çizilir.',
+  'help.guide.map-booking-routes.step.3':
+    'Rotanın uçları, ulaşım simgesini taşıyan mavi haplardır. Birine tıklayarak arkasındaki rezervasyonu açın: saatleri, Rezervasyon Kodu ve başladığı Konum / Adres; Kapat onu yeniden kaldırır.',
+  'help.guide.map-booking-routes.step.4':
+    'Günlerin üstündeki araç çubuğundaki rota simgesi tüm geziyi aynı anda yapar: Tüm rezervasyon rotalarını göster, rotası olan her rezervasyonu çizer.',
+  'help.guide.map-booking-routes.step.5':
+    'Bu, üste eklenen bir katman değil temiz bir sayfadır, bu yüzden rezervasyon rezervasyon seçtikleriniz düşer. Yeniden basın, artık Tüm rezervasyon rotalarını gizle yazar ve harita temizdir.',
+  'help.guide.map-booking-routes.result':
+    'İstediğiniz rezervasyonlar haritada çizilir ve seçim, siz değiştirene kadar bu gezi için bu tarayıcıda tutulur.',
+  'help.guide.map-booking-routes.tip.1':
+    'Uçlar havalimanı kodunu ya da istasyonun adını yalnızca Ayarlar içinde, Travel & map altında Rezervasyon rota etiketleri açıkken taşır; aksi hâlde yalnızca simgeyi gösterir.',
+  'help.guide.map-booking-routes.tip.2':
+    'Aynı ayarlardaki Rezervasyon rotalarını her zaman göster, hakkında henüz karar vermediğiniz her gezide onları en baştan çizer.',
+  'help.guide.map-booking-routes.tip.3':
+    'Bir rezervasyonun çizilebilmesi için koordinatlı iki uca ihtiyacı vardır, bu yüzden bir otel ya da bir restoran rota simgesi taşımaz.',
 };
 
 export default help;

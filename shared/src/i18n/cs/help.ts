@@ -1849,6 +1849,778 @@ const help: TranslationStrings = {
   'help.guide.import-places-list.tip.1': 'Seznam musí být sdílený veřejně; odkaz na soukromý seznam neimportuje nic.',
   'help.guide.import-places-list.tip.2':
     'Obohatit místa přes Google se v dialogu objeví, když má váš TREK klíč Google: vyhledá každé importované místo a doplní fotky, adresu a podrobnosti.',
+
+  // ── Screen: trip-days ─────────────────────────────────────────────────────────────────
+  'help.ctx.trip-days.title': 'Dny',
+  'help.ctx.trip-days.summary':
+    'Levý sloupec plánu: jedna karta na den se zastávkami v pořadí, s poznámkami, s rezervacemi a dopravou toho dne a s trasou mezi zastávkami. Tady se cesta doopravdy plánuje.',
+  'help.ctx.trip-days.bullet.1':
+    'Lišta nástrojů nahoře: Exportovat (PDF, kalendář, GPX), Expand all days / Collapse all days, šipka zpět, Změnit pořadí dnů a Zobrazit všechny trasy rezervací.',
+  'help.ctx.trip-days.bullet.2':
+    'Karta dne: číslo, počasí, název, datum a náklady dne v záhlaví; kliknutím na záhlaví den otevřete, šipka vpravo kartu sbalí. Veřejná doprava, Přidat dopravu a Přidat poznámku sedí v záhlaví také.',
+  'help.ctx.trip-days.bullet.3':
+    'Uvnitř dne: zastávky v pořadí, každá s obrázkem, názvem, časem a zámkem na obrázku; poznámky; rezervace, které ke dni patří; a mezi zastávkami čas jízdy každého úseku.',
+  'help.ctx.trip-days.bullet.4':
+    'Pod zastávkami lišta trasy: Trasa vykreslí den na mapě, Optimalizovat seřadí zastávky, Autem / Pěšky nastaví způsob dopravy dne, Otevřít v Google Mapách a Otevřít v CoMaps den předají dál.',
+  'help.ctx.trip-days.bullet.5':
+    'Místa se na den dostanou přetažením řádku ze sloupce míst, přes + na tom řádku, přes Přidat místo k tomuto dni na prázdném dni nebo z podrobností místa.',
+  'help.ctx.trip-days.bullet.6': 'Celkové náklady dole sečtou každou zastávku a rezervaci s cenou, v měně cesty.',
+  // read-day-plan
+  'help.guide.read-day-plan.title': 'Přečíst den',
+  'help.guide.read-day-plan.goal': 'Poznejte, co vám každá část karty dne říká, dřív než cokoli změníte.',
+  'help.guide.read-day-plan.step.1':
+    'Záhlaví: číslo dne, předpověď na ten den, Den 1 nebo název, který jste dni dali, datum a náklady dne. Kliknutím na záhlaví den otevřete (nad mapou se otevřou jeho podrobnosti); šipka vpravo kartu sbalí a rozbalí.',
+  'help.guide.read-day-plan.step.2':
+    'Zastávka: úchyt vlevo ji táhne, obrázek nese zámek pro optimalizaci trasy, pak jde název, popis a, pokud jsou nastavené, Poznámky pro tento den. Časový štítek ukazuje Od a Do, když je zastávka má; šipky, které se objeví na jejím pravém konci, s ní posunou nahoru nebo dolů.',
+  'help.guide.read-day-plan.step.3':
+    'Rezervace na dni: doprava se ukáže jako Odlet nebo Přílet se svým časem a trasou, rezervace u zastávky označí zastávku Rezervace potvrzena nebo Rezervace čeká. Malý přepínač na dopravě ukáže její trasu na mapě.',
+  'help.guide.read-day-plan.step.4':
+    'Mezi dvěma zastávkami říká spojnice, jak dlouho úsek trvá a jak je dlouhý, ve způsobu dopravy dne; kliknutím na ni změníte způsob pro ten jeden úsek.',
+  'help.guide.read-day-plan.step.5':
+    'Lišta trasy na konci: Trasa vykreslí cestu dne na mapě, Optimalizovat přeuspořádá zastávky, tlačítka způsobu vyberou Autem nebo Pěšky, Otevřít v Google Mapách a Otevřít v CoMaps den otevřou tam.',
+  'help.guide.read-day-plan.result': 'Každý symbol na kartě něco znamená; návody níže každý z nich mění.',
+  'help.guide.read-day-plan.tip.1':
+    'Klikněte na zastávku pravým tlačítkem a dostanete její nabídku: Upravit, Odebrat ze dne, Otevřít webové stránky, navigační aplikace (Google Maps, Waze, Apple Maps, OpenStreetMap, CoMaps), Uložit do sbírky, Smazat.',
+  'help.guide.read-day-plan.tip.2':
+    'Najeďte na zastávku a na jejím konci se objeví Přidat rezervaci: rezervace vytvořená tam patří k této zastávce na tomto dni.',
+  // place-onto-day
+  'help.guide.place-onto-day.title': 'Položit místo na den',
+  'help.guide.place-onto-day.goal': 'Udělejte z místa ze seznamu zastávku dne, tam, kam v pořadí patří.',
+  'help.guide.place-onto-day.step.1':
+    'Přetáhněte řádek ze sloupce míst na kartu dne. Pusťte ho mezi dvě zastávky, aby skončil přesně tam, nebo kamkoli na kartu, aby se připojil na konec.',
+  'help.guide.place-onto-day.step.2':
+    'Bez přetahování: otevřete den kliknutím na jeho záhlaví, pak klikněte na + na konci řádku místa, nebo klikněte na řádek pravým tlačítkem a zvolte + Den.',
+  'help.guide.place-onto-day.step.3':
+    'Na prázdném dni otevře Přidat místo k tomuto dni formulář místa a nové místo přistane na dni hned.',
+  'help.guide.place-onto-day.step.4':
+    'Z podrobností místa se Přidat ke dni zeptá, na který den; s dnem otevřeným z jeho záhlaví vytvoří Ke dni ve sloupci míst nové místo rovnou na otevřeném dni.',
+  'help.guide.place-onto-day.result':
+    'Místo je zastávkou dne, na mapě s číslem dne, a sloupec míst ho počítá pod Naplánované.',
+  'help.guide.place-onto-day.tip.1':
+    'Místo může být na několika dnech: na druhý den ho položte ze sloupce míst. Přetažení zastávky z jedné karty dne na druhou ji naopak přesune.',
+  'help.guide.place-onto-day.tip.2': 'Šipka zpět v liště nástrojů přiřazení vrátí.',
+  'help.guide.place-onto-day.tip.3':
+    'Zastávku nelze pustit mezi dva záznamy s pevným časem ani před rezervaci, která už čas má; plán si drží chronologii.',
+  // reorder-stops
+  'help.guide.reorder-stops.title': 'Změnit pořadí dne',
+  'help.guide.reorder-stops.goal': 'Posuňte zastávku nahoru nebo dolů, nebo na jiný den.',
+  'help.guide.reorder-stops.step.1': 'Táhněte zastávku za úchyt na nové místo v kartě.',
+  'help.guide.reorder-stops.step.2':
+    'Nebo použijte šipky na pravém konci zastávky: jeden krok nahoru nebo dolů na kliknutí.',
+  'help.guide.reorder-stops.step.3': 'Přetáhněte zastávku na kartu jiného dne a přesune se tam; ze starého dne zmizí.',
+  'help.guide.reorder-stops.step.4':
+    'Zastávka s pevným časem se zeptá Odebrat čas?, když by přesun narušil pořadí dne, protože o jejím místě rozhodl čas: Potvrdit čas zahodí a pustí ji kamkoli.',
+  'help.guide.reorder-stops.result': 'Trasa a časy jízdy nové pořadí hned převezmou.',
+  'help.guide.reorder-stops.tip.1': 'Rezervace s pevným časem nelze přeuspořádat; sedí tam, kam je jejich čas dá.',
+  'help.guide.reorder-stops.tip.2':
+    'Optimalizovat v liště trasy seřadí celý den podle nejkratší cesty; zastávku, která má zůstat na svém, nejdřív zamkněte.',
+  // set-stop-times
+  'help.guide.set-stop-times.title': 'Dát zastávce čas',
+  'help.guide.set-stop-times.goal': 'Určete, kdy zastávka začíná a končí, aby se den četl jako rozvrh.',
+  'help.guide.set-stop-times.step.1':
+    'Klikněte na zastávku pravým tlačítkem a zvolte Upravit. Otevřený ze dne má formulář dole Od a Do.',
+  'help.guide.set-stop-times.step.2':
+    'Zadejte Od a, chcete-li, Do. Časový překryv s: upozorní, že se s ní překrývá jiná zastávka dne, která má čas; Do dřív než Od zablokuje Aktualizovat.',
+  'help.guide.set-stop-times.step.3':
+    'Klikněte na Aktualizovat. Zastávka dostane časový štítek a přesune se tam, kam její čas ve dni patří.',
+  'help.guide.set-stop-times.result':
+    'Zastávky s časem si drží své místo v pořadí; zastávky bez času se řadí kolem nich.',
+  'help.guide.set-stop-times.tip.1': 'Čas patří zastávce na tom dni; stejné místo může mít na jiném dni jiný čas.',
+  'help.guide.set-stop-times.tip.2':
+    'Zastávku s časem přesunete ručně přetažením: otázka Odebrat čas? cestou čas zahodí, jakmile kliknete na Potvrdit.',
+  'help.guide.set-stop-times.tip.3':
+    'Poznámky pro tento den v témže formuláři drží to, co platí jen na tomto dni, rezervovaný stůl, číslo vstupenky.',
+  // remove-from-day
+  'help.guide.remove-from-day.title': 'Sundat zastávku ze dne',
+  'help.guide.remove-from-day.goal': 'Odplánujte místo, aniž byste ho smazali z cesty.',
+  'help.guide.remove-from-day.step.1': 'Klikněte na zastávku pravým tlačítkem a zvolte Odebrat ze dne.',
+  'help.guide.remove-from-day.step.2':
+    'Zastávka je ze dne pryč; místo zůstává ve sloupci míst, pod Nezařazené, pokud není na žádném jiném dni.',
+  'help.guide.remove-from-day.result': 'Den, jeho trasa a jeho náklady se přepočítají; šipka zpět zastávku vrátí.',
+  'help.guide.remove-from-day.tip.1': 'Smazat ve stejné nabídce odstraní místo z celé cesty, včetně každého dne.',
+  'help.guide.remove-from-day.tip.2': 'Odebrat ze dne sedí i v podrobnostech místa, vedle Přidat ke dni.',
+  // lock-stop
+  'help.guide.lock-stop.title': 'Zamknout zastávku na místě',
+  'help.guide.lock-stop.goal': 'Nechte zastávku tam, kde je, když se trasa optimalizuje.',
+  'help.guide.lock-stop.step.1':
+    'Najeďte na obrázek zastávky a klikněte na zámek: Zachovat pozici při optimalizaci trasy.',
+  'help.guide.lock-stop.step.2':
+    'Optimalizovat teď seřadí ostatní zastávky kolem ní; dalším kliknutím na zámek (Klikněte pro odemčení) ji uvolníte.',
+  'help.guide.lock-stop.result': 'Zámek je vidět na obrázku; zastávka si drží svou pozici, dokud ji neodemknete.',
+  'help.guide.lock-stop.tip.1': 'Zastávku s pevným časem zamyká její čas; při optimalizaci se nikdy nehne.',
+  'help.guide.lock-stop.tip.2':
+    'Zámek platí pro tuto návštěvu: po načtení stránky je každá zastávka zase volná, pevné zůstanou jen zastávky s časem.',
+  // day-note
+  'help.guide.day-note.title': 'Přidat ke dni poznámku',
+  'help.guide.day-note.goal': 'Mějte připomínku, číslo vstupenky nebo plán B rovnou ve dni.',
+  'help.guide.day-note.step.1': 'Klikněte v záhlaví dne na Přidat poznámku.',
+  'help.guide.day-note.step.2':
+    'Pojmenujte ji v poli Poznámka, to karta dne ukáže, a zbytek napište pod Poznámka ke dni. Lišta nad textem ho formátuje (Tučné, seznamy, odkazy, citace) a Náhled vlevo ukáže kartu, která z něj vznikne.',
+  'help.guide.day-note.step.3':
+    'Vyberte Ikonu a Barvu, aby se poznámka od zastávek odlišila, a pak klikněte na Přidat.',
+  'help.guide.day-note.step.4':
+    'Poznámka sedí ve dni jako zastávka: přetažením ji dáte na místo, pravým tlačítkem dostanete Upravit a Smazat.',
+  'help.guide.day-note.result': 'Poznámka je součástí dne, i v PDF; poznámka s časem se řadí mezi zastávky s časem.',
+  'help.guide.day-note.tip.1':
+    'Poznámka s časem může zastoupit dopravu, na kterou nemáte rezervaci: „08:15 S3 z hlavního nádraží“.',
+  'help.guide.day-note.tip.2': 'Poznámky jsou na den; poznámka pro celou cestu patří do Spolupráce.',
+  // day-route
+  'help.guide.day-route.title': 'Ukázat a optimalizovat trasu dne',
+  'help.guide.day-route.goal':
+    'Podívejte se na cestu mezi zastávkami, vyberte, jak cestujete, a nechte TREK seřadit pořadí.',
+  'help.guide.day-route.step.1':
+    'Otevřete den a klikněte v liště trasy na Trasa: cesta mezi zastávkami se vykreslí na mapě a spojnice mezi zastávkami ukážou čas a vzdálenost každého úseku.',
+  'help.guide.day-route.step.2':
+    'Autem a Pěšky vedle toho nastaví způsob dopravy dne; úseky se přepočítají. Pluginy mohou přidat vlastní způsoby.',
+  'help.guide.day-route.step.3':
+    'Kliknutím na spojnici změníte způsob toho jednoho úseku: vyberte způsob, nebo Použít výchozí dne, aby se vrátil k dennímu.',
+  'help.guide.day-route.step.4':
+    'Optimalizovat přeuspořádá zastávky podle nejkratší cesty. Zastávky se zámkem nebo s pevným časem si své místo drží; když je na dni ubytování, trasa začíná tam.',
+  'help.guide.day-route.step.5':
+    'Otevřít v Google Mapách nebo Otevřít v CoMaps otevře celý den jako trasu v té aplikaci, pro navigaci na cestě.',
+  'help.guide.day-route.result': 'Den je trasa s časy; Celkové náklady a úseky se s pořadím mění.',
+  'help.guide.day-route.tip.1':
+    'Trasy počítá ve výchozím stavu OSRM; správce může TREK nasměrovat na jiný směrovací engine pod Výchozí nastavení uživatele.',
+  'help.guide.day-route.tip.2':
+    'Úsek, který nešlo spočítat, čas neukáže; zkontrolujte, že obě zastávky mají souřadnice.',
+  'help.guide.day-route.tip.3': 'Šipka zpět optimalizaci vrátí.',
+  // manage-days
+  'help.guide.manage-days.title': 'Přidávat, přeuspořádat a přejmenovat dny',
+  'help.guide.manage-days.goal': 'Utvářejte samotné dny, nejen to, co na nich je.',
+  'help.guide.manage-days.step.1':
+    'Dny pocházejí z dat cesty; změňte data na kartě cesty pod Přehled a dny na koncích přibydou nebo ubydou.',
+  'help.guide.manage-days.step.2':
+    'Změnit pořadí dnů v liště nástrojů otevře seznam: Posunout nahoru a Posunout dolů posunou den se vším, co na něm je; Přidat den připojí den na konec.',
+  'help.guide.manage-days.step.3':
+    'Den přejmenujete tak, že ho otevřete a kliknete na tužku vedle jeho názvu v podrobnostech nad mapou; název nahradí Den 1 na kartě i v PDF.',
+  'help.guide.manage-days.step.4':
+    'Expand all days a Collapse all days v liště nástrojů složí všechny karty najednou; jedna karta se složí svou šipkou.',
+  'help.guide.manage-days.result':
+    'Data zůstávají u pozice: den posunutý nahoru dostane dřívější datum a jeho zastávky, poznámky a rezervace cestují s ním.',
+  'help.guide.manage-days.tip.1': 'Změnit pořadí dnů jde z lišty nástrojů vrátit.',
+  'help.guide.manage-days.tip.2': 'Náklady v záhlaví dne sečtou zastávky a rezervace toho dne, které nesou cenu.',
+  // bookings-in-plan
+  'help.guide.bookings-in-plan.title': 'Přečíst rezervace a dopravu v plánu',
+  'help.guide.bookings-in-plan.goal':
+    'Poznejte, kde se rezervace ukáže, jakmile existuje, a která obrazovka ji zakládá.',
+  'help.guide.bookings-in-plan.step.1':
+    'Doprava (Let, Vlak, Trajekt, Autobus, Auto) se ukáže ve dni odjezdu jako Odlet a ve dni příjezdu jako Přílet, s časem a trasou; vícedenní se táhne přes dny mezi tím.',
+  'help.guide.bookings-in-plan.step.2':
+    'Rezervace navázaná na zastávku (Restaurace, Prohlídka) označí tu zastávku Rezervace potvrzena nebo Rezervace čeká; rezervace, která má den, ale ne zastávku, má ve dni vlastní řádek.',
+  'help.guide.bookings-in-plan.step.3':
+    'Noc v hotelu je ubytování: sedí v podrobnostech dne pod Ubytování, od Check-in po Check-out, a trasa každého z těch dnů tam začíná.',
+  'help.guide.bookings-in-plan.step.4':
+    'Na mapě vykreslí přepínač na řádku dopravy její trasu; Zobrazit všechny trasy rezervací v liště nástrojů vykreslí všechny.',
+  'help.guide.bookings-in-plan.step.5':
+    'Zakládání: Přidat rezervaci na zastávce pod kurzorem, Přidat dopravu a Veřejná doprava v záhlaví dne a karty Rezervace a Doprava pro celý seznam s importem a soubory.',
+  'help.guide.bookings-in-plan.result':
+    'Jedna rezervace, jedno místo v plánu; karty jsou ty samé rezervace jako seznam.',
+  'help.guide.bookings-in-plan.tip.1':
+    'Potvrzeno a Čeká na potvrzení je stav, který rezervaci nastavíte; plán ho ukazuje na zastávce, karta Rezervace počítá obojí.',
+  'help.guide.bookings-in-plan.tip.2': 'Dopravu s pevným časem nelze táhnout; změňte místo toho její čas v rezervaci.',
+  // export-plan
+  'help.guide.export-plan.title': 'Exportovat plán',
+  'help.guide.export-plan.goal': 'Vezměte si plán s sebou jako dokument, do kalendáře nebo do GPS.',
+  'help.guide.export-plan.step.1': 'Klikněte na Exportovat v liště nástrojů nad dny.',
+  'help.guide.export-plan.step.2':
+    'Dokument: PDF otevře tiskový náhled každého dne s jeho zastávkami, poznámkami a rezervacemi; Zalomení stránky pro každý den začne každý den na nové stránce, Uložit jako PDF ho stáhne.',
+  'help.guide.export-plan.step.3':
+    'Kalendář: Stáhnout .ics uloží rezervace jako soubor kalendáře; Přihlásit se k odběru kalendáře dá odkaz, který si vaše kalendářová aplikace obnovuje sama.',
+  'help.guide.export-plan.step.4':
+    'Mapy a GPS · GPX: Celá cesta vyexportuje místa, denní trasy a stopy; Jen místa jen špendlíky; Dny jako trasy jednu trasu na den, pro offline mapy a zařízení GPS.',
+  'help.guide.export-plan.result': 'Soubor se stáhne; na cestě se nic nezmění.',
+  'help.guide.export-plan.tip.1':
+    'Jeden den odejde do mapové aplikace ze své lišty trasy: Otevřít v Google Mapách nebo Otevřít v CoMaps.',
+  'help.guide.export-plan.tip.2':
+    'Přihlásit se k odběru kalendáře potřebuje zapnuté odebírání kalendáře ve vašem nastavení; Přehled na to má návod.',
+  'help.guide.export-plan.tip.3': 'Exportovat znamená číst: může to každý člen cesty.',
+
+  // ── Screen: trip-place ────────────────────────────────────────────────────────────────
+  'help.ctx.trip-place.title': 'Podrobnosti místa',
+  'help.ctx.trip-place.summary':
+    'Karta, která se otevře přes mapu, když vyberete místo: všechno, co o něm cesta ví, hvězdy, které mu všichni dali, jeho obrázek a jeho soubory, a tlačítka, která ho položí na otevřený den, do seznamu nebo do mapové aplikace.',
+  'help.ctx.trip-place.bullet.1':
+    'Klikněte na řádek ve sloupci míst, na zastávku uvnitř dne nebo na značku na mapě a karta se otevře přes mapu. Výběr uvnitř dne kartě řekne, kterou zastávku myslíte, a právě to s sebou přinese účastníky zastávky a její rezervaci.',
+  'help.ctx.trip-place.bullet.2':
+    'Hlavička nese kulatý obrázek, název, kategorii, adresu a souřadnice. Kliknutím na obrázek použijete vlastní, dvojklikem na název místo na místě přejmenujete a X vpravo kartu zavře.',
+  'help.ctx.trip-place.bullet.3':
+    'Pod tím: hvězdy, které místu dal každý cestující, cena, pokud ji má, popis a poznámky, a Poznámky pro tento den, když je zastávka nese.',
+  'help.ctx.trip-place.bullet.4':
+    'Následují Otevírací doba, Barva trasy, Data trasy a Soubory, pokud se na místo hodí. Soubory berou cokoli z vašich složek a vypisují také to, co visí na rezervaci této zastávky.',
+  'help.ctx.trip-place.bullet.5':
+    'Řádek dole: Přidat ke dni nebo Odebrat ze dne, dokud je otevřený den, pak Uložit do sbírky, Navigace, Otevřít webové stránky, Upravit a Smazat.',
+  'help.ctx.trip-place.bullet.6':
+    'Místo, které TREK spároval s mapovým poskytovatelem, ukáže víc: hodnocení toho poskytovatele s recenzí, telefonní číslo a prstenec Otevřeno nebo Zavřeno kolem obrázku s otevírací dobou celého týdne za ním.',
+  // read-place
+  'help.guide.read-place.title': 'Co vám karta o místě řekne',
+  'help.guide.read-place.goal': 'Přečtěte si vše, co cesta o jednom místě ví, v jediné kartě.',
+  'help.guide.read-place.step.1':
+    'Klikněte ve sloupci dnů na zastávku, kterou si chcete přečíst. Karta se otevře přes mapu a zastávka zůstane ve svém dni zvýrazněná.',
+  'help.guide.read-place.step.2':
+    'Hlavička: kulatý obrázek, název, adresa a přesné souřadnice. X vpravo kartu zase zavře.',
+  'help.guide.read-place.step.3':
+    'Pod tím hvězdy, které místu dal každý cestující, s průměrem a počtem hlasů. Zatím bez hodnocení, dokud nehlasoval nikdo.',
+  'help.guide.read-place.step.4':
+    'Pak popis a pod ním poznámky. Obojí je text z formuláře místa, vykreslený: seznamy, odkazy i tučné písmo fungují.',
+  'help.guide.read-place.step.5':
+    'Účastníci říkají, kdo na tuto zastávku jde. Dokud někoho neodeberete, jsou uvnitř všichni.',
+  'help.guide.read-place.step.6':
+    'Řádek dole je to, co odsud můžete udělat: sundat místo z otevřeného dne nebo ho na něj položit, uložit ho do seznamu, otevřít ho v mapové aplikaci, upravit ho nebo smazat.',
+  'help.guide.read-place.result':
+    'Karta zůstane otevřená, dokud ji nezavřete křížkem nebo nevyberete jiné místo, a zastávka, ke které patří, zůstane ve sloupci dnů zvýrazněná.',
+  'help.guide.read-place.tip.1':
+    'Vybraná ze sloupce míst zná karta místo, ale ne zastávku, takže neukáže žádné účastníky ani rezervaci. Vyberte raději zastávku uvnitř dne a obojí tam je.',
+  'help.guide.read-place.tip.2':
+    'Dvojklikem na název místo přejmenujete bez otevírání formuláře. Enter uloží, Escape změnu zahodí.',
+  'help.guide.read-place.tip.3':
+    'Místo, které TREK dokázal spárovat s mapovým poskytovatelem, ukáže i hodnocení toho poskytovatele, recenzi, telefonní číslo a otevírací dobu.',
+  // rate-place
+  'help.guide.rate-place.title': 'Ohodnotit místo',
+  'help.guide.rate-place.goal': 'Dejte místu vlastní hvězdy a podívejte se, co mu dali ostatní.',
+  'help.guide.rate-place.step.1':
+    'Otevřete místo. Řádek s hvězdami sedí hned pod hlavičkou a nese průměr dosavadních hlasů, s jejich počtem v závorce.',
+  'help.guide.rate-place.step.2':
+    'Klikněte na hvězdu, kterou myslíte. Hvězdy se plní, jak po nich přejíždíte, takže vidíte, co se chystáte dát.',
+  'help.guide.rate-place.step.3':
+    'Váš hlas se do průměru započítá hned a tváře vedle něj jsou ti, kdo hlasovali. Podržte ukazatel na řádku a uvidíte hvězdy všech.',
+  'help.guide.rate-place.step.4':
+    'Stejný průměr sedí na řádku místa ve sloupci míst, takže ta dobrá v seznamu vyniknou.',
+  'help.guide.rate-place.result':
+    'Vaše hvězdy jsou na místě k vidění pro celou cestu a hvězda Filtrovat podle hodnocení v řádku filtrů nad seznamem teď umí nechat jen místa, která dosáhnou na spodní hranici.',
+  'help.guide.rate-place.tip.1':
+    'Hodnotit smí každý cestující, i na cestě, kde právo Přidat / upravit / smazat místa má jen část z vás.',
+  'help.guide.rate-place.tip.2':
+    'Kliknutím na hvězdu, kterou jste už dali, hlas vezmete zpět. Když nezbude nikdo, kdo hlasoval, místo zase hlásí Zatím bez hodnocení.',
+  'help.guide.rate-place.tip.3':
+    'Vedle hvězd se jako tváře vejde až šest hlasujících; bublina vyjmenuje všechny a ten váš označí.',
+  // place-image
+  'help.guide.place-image.title': 'Dát místu vlastní obrázek',
+  'help.guide.place-image.goal': 'Nahraďte automatický náhled vlastní fotkou.',
+  'help.guide.place-image.step.1': 'Otevřete místo ze sloupce míst.',
+  'help.guide.place-image.step.2':
+    'Podržte ukazatel na kulatém obrázku v hlavičce: objeví se fotoaparát a bublina hlásí Nahrát obrázek. Klikněte na něj a vyberte svůj soubor.',
+  'help.guide.place-image.step.3': 'Hlavička teď ukazuje váš obrázek, s malým červeným křížkem v rohu.',
+  'help.guide.place-image.step.4': 'Stejný obrázek je na řádku místa ve sloupci míst a na jeho značce na mapě.',
+  'help.guide.place-image.result':
+    'Váš obrázek je obrázkem místa všude: na kartě, ve sloupci míst, na zastávce ve dni, na značce na mapě i ve sdílené cestě.',
+  'help.guide.place-image.tip.1': 'Bere JPG, PNG, GIF a WebP, a HEIC z iPhonu se cestou dovnitř převede.',
+  'help.guide.place-image.tip.2':
+    'Křížek v rohu váš obrázek zase odebere a vrátí se ten automatický. Samotného místa se to nedotkne.',
+  'help.guide.place-image.tip.3':
+    'Bez vlastního obrázku si TREK nějaký vyhledá podle souřadnic místa a jinak sáhne po ikoně kategorie.',
+  // place-day-assign
+  'help.guide.place-day-assign.title': 'Položit místo na otevřený den, nebo ho sundat',
+  'help.guide.place-day-assign.goal': 'Použijte vlastní tlačítko karty místo přetahování řádku přes plánovač.',
+  'help.guide.place-day-assign.step.1':
+    'Klikněte ve sloupci dnů na záhlaví dne. Ten den je teď otevřený a karta se vztahuje k němu.',
+  'help.guide.place-day-assign.step.2':
+    'Klikněte ve sloupci míst na místo, které na tom dni není. Jeho karta se otevře a řádek dole nabídne Přidat ke dni.',
+  'help.guide.place-day-assign.step.3':
+    'Klikněte na Přidat ke dni. Zastávka přistane na konci dne a tlačítko se změní na Odebrat ze dne.',
+  'help.guide.place-day-assign.step.4':
+    'Zastávka je teď ve dni, poslední v seznamu. Přetáhněte ji nahoru tam, kam patří.',
+  'help.guide.place-day-assign.step.5':
+    'Odebrat ze dne tu zastávku ze dne zase sundá a karta znovu nabídne Přidat ke dni.',
+  'help.guide.place-day-assign.result':
+    'Den zastávku nese, nebo už ji nenese, a samotného místa se to tak i tak nedotkne.',
+  'help.guide.place-day-assign.tip.1':
+    'Tlačítko existuje jen tehdy, když je otevřený den. Bez něj nemá karta místo kam přidat.',
+  'help.guide.place-day-assign.tip.2':
+    'Sundání zastávky ze dne nechá místo v cestě i ve sloupci míst. Odevšad ho odstraní až Smazat.',
+  'help.guide.place-day-assign.tip.3':
+    'Zastávka, kterou na den položila rezervace ubytování, nenabízí ani jedno tlačítko: ta noc se přidává a odebírá v bloku Ubytování toho dne.',
+  // place-participants
+  'help.guide.place-participants.title': 'Říct, kdo jde na tuto zastávku',
+  'help.guide.place-participants.goal': 'Rozdělte skupinu na jednu zastávku, aniž byste dělili cestu.',
+  'help.guide.place-participants.step.1':
+    'Klikněte na zastávku uvnitř dne. Karta se otevře a Účastníci vypíší všechny v cestě.',
+  'help.guide.place-participants.step.2':
+    'Kliknutím na štítek cestujícího ho z této zastávky odeberete. Jméno se při najetí ukazatelem přeškrtne.',
+  'help.guide.place-participants.step.3':
+    'Jakmile někdo chybí, objeví se čárkované +. Kliknutím na ně uvidíte, kdo na zastávce není.',
+  'help.guide.place-participants.step.4':
+    'Kliknutím na jméno ho vrátíte zpět. Když jsou všichni zase uvnitř, patří zastávka opět celé skupině.',
+  'help.guide.place-participants.result':
+    'Zastávka nese cestující, které jste vybrali, a zbytek skupiny má to odpoledne pro sebe.',
+  'help.guide.place-participants.tip.1':
+    'Účastníci se objeví jen s vybranou zastávkou, takže vyberte místo uvnitř dne, ne ve sloupci míst, a jen na cestě s více než jedním cestujícím.',
+  'help.guide.place-participants.tip.2':
+    'Nikdo vybraný znamená, že jdou všichni. Odebráním posledního se všichni vrátí zpět.',
+  'help.guide.place-participants.tip.3': 'Host, který nemá vlastní účet, může být účastníkem jako kdokoli jiný.',
+  // place-booking
+  'help.guide.place-booking.title': 'Rezervace na zastávce',
+  'help.guide.place-booking.goal': 'Přečtěte si rezervaci, která patří k zastávce, otevřete ji a připněte k ní novou.',
+  'help.guide.place-booking.step.1':
+    'Otevřete zastávku, ke které rezervace patří. Karta ukáže proužek s Potvrzeno nebo Čeká na potvrzení a s názvem rezervace.',
+  'help.guide.place-booking.step.2':
+    'Proužek nese Datum, Čas a Rezervační kód, a jakékoli poznámky, které rezervace má.',
+  'help.guide.place-booking.step.3': 'Klikněte na proužek. Otevře se na něm vlastní formulář rezervace.',
+  'help.guide.place-booking.step.4':
+    'Rezervaci k zastávce připíná Propojit s přiřazením dne a tady už tuhle zastávku jmenuje. Formulář zase zavřete.',
+  'help.guide.place-booking.step.5':
+    'Nová rezervace pro zastávku začíná ve sloupci dnů: najeďte na zastávku a klikněte na + na jejím konci. Formulář se otevře jako Nová rezervace, už s ní propojený.',
+  'help.guide.place-booking.result':
+    'Rezervace visí na zastávce: je na kartě, je ve dni a její soubory jsou vypsané i tady pod Soubory.',
+  'help.guide.place-booking.tip.1':
+    'Proužek se ukáže jen u zastávky, ke které je rezervace připnutá. Rezervace bez zastávky žije na kartě Rezervace.',
+  'help.guide.place-booking.tip.2':
+    'Jednu zastávku může sdílet několik rezervací: oběd a prohlídka, která vychází ze stejných dveří.',
+  'help.guide.place-booking.tip.3':
+    'Vlak, let nebo trajekt otevřou místo toho formulář dopravy, ten, který používá karta Doprava.',
+  // place-files
+  'help.guide.place-files.title': 'Držet vstupenky místa u místa',
+  'help.guide.place-files.goal': 'Dejte vstupenku, voucher nebo mapu k místu tam, kde je budete hledat.',
+  'help.guide.place-files.step.1':
+    'Otevřete místo. Soubory sedí na patě karty a dokud místo žádné nemá, hlásí Soubory.',
+  'help.guide.place-files.step.2': 'Klikněte vedle na Nahrát a vyberte soubor.',
+  'help.guide.place-files.step.3': 'Tlačítko počítá, co místo drží, a seznam se otevře sám.',
+  'help.guide.place-files.step.4': 'Každý řádek je název souboru s jeho velikostí. Kliknutím soubor otevřete.',
+  'help.guide.place-files.result': 'Soubor sedí na místě, započítaný v kartě, a je také na kartě Soubory celé cesty.',
+  'help.guide.place-files.tip.1':
+    'Soubory vypisují také to, co visí na rezervaci této zastávky, takže potvrzení hotelu se ukáže u hotelu.',
+  'help.guide.place-files.tip.2': 'Nahrát bere několik souborů naráz.',
+  'help.guide.place-files.tip.3':
+    'Bez práva Nahrát soubory tlačítko Nahrát není; soubory, které na místě už jsou, tam zůstávají.',
+  // place-navigation
+  'help.guide.place-navigation.title': 'Otevřít místo v mapové aplikaci nebo na jeho webu',
+  'help.guide.place-navigation.goal': 'Předejte místo aplikaci, která vás tam opravdu dovede.',
+  'help.guide.place-navigation.step.1': 'Otevřete místo a klikněte v řádku dole na Navigace.',
+  'help.guide.place-navigation.step.2':
+    'Seznam jsou mapové aplikace, které se k tomuto místu hodí: Google Maps, Waze, Apple Maps, OpenStreetMap a CoMaps.',
+  'help.guide.place-navigation.step.3':
+    'Klikněte na tu, kterou používáte. TREK jí kde může předá samotné místo, ne jen dvojici souřadnic, takže přistanete u správného vchodu.',
+  'help.guide.place-navigation.step.4':
+    'Otevřít webové stránky vedle otevře na nové kartě vlastní stránku místa, jeho časy a jeho vstupenky.',
+  'help.guide.place-navigation.result':
+    'Mapová aplikace se otevře na místě, web ve vlastní kartě, a v cestě se nezmění nic.',
+  'help.guide.place-navigation.tip.1':
+    'Waze začne navigovat hned. Ostatní místo otevřou a spuštění odtud je jedno klepnutí navíc.',
+  'help.guide.place-navigation.tip.2':
+    'Které aplikace se nabídnou, závisí na místě a na vašem zařízení: Apple Maps na Androidu chybí, 高德地图 přijde na řadu jen u místa v Číně a Waze, Apple Maps a CoMaps potřebují souřadnice místa.',
+  'help.guide.place-navigation.tip.3': 'Když se hodí jen jedna aplikace, tlačítko nese její název a otevře ji rovnou.',
+  // place-to-collection
+  'help.guide.place-to-collection.title': 'Uložit místo do jednoho ze svých seznamů',
+  'help.guide.place-to-collection.goal': 'Nechte si místo, které jste našli na této cestě, pro tu příští.',
+  'help.guide.place-to-collection.step.1': 'Otevřete místo a klikněte dole na kartě na Uložit do sbírky.',
+  'help.guide.place-to-collection.step.2':
+    'Uložit do seznamu ukáže každý seznam, který vlastníte nebo sdílíte. Zaškrtnutí označuje ty, které toto místo už drží.',
+  'help.guide.place-to-collection.step.3': 'Klikněte na seznam. Místo je v něm hned.',
+  'help.guide.place-to-collection.step.4': 'Zavřete a tlačítko v kartě hlásí Uloženo.',
+  'help.guide.place-to-collection.result':
+    'Místo je ve vašem seznamu se svým obrázkem, svými poznámkami a svými hvězdami, připravené na příští cestu.',
+  'help.guide.place-to-collection.tip.1':
+    'Tlačítko tam je jen tehdy, když je zapnutý doplněk Sbírky, který správce zapíná pod Doplňky.',
+  'help.guide.place-to-collection.tip.2':
+    'Místo může sedět v několika seznamech naráz, v každém s vlastním stavem: v jednom Nápad, v druhém Navštíveno.',
+  'help.guide.place-to-collection.tip.3':
+    'Označit jako navštívené vedle názvu místa ve výběru ho v seznamu odškrtne; když je místo ve více vašich seznamech, štítek hlásí Navštíveno všude a odbaví je všechny naráz.',
+  // place-track
+  'help.guide.place-track.title': 'Přečíst trasu a dát jí vlastní barvu',
+  'help.guide.place-track.goal':
+    'Podívejte se, jak dlouhá je importovaná trasa, a odlište její čáru od ostatních na mapě.',
+  'help.guide.place-track.step.1':
+    'Řádek trasy ve sloupci míst nese krátkou čárku v barvě, kterou je její čára vykreslená. Klikněte na něj.',
+  'help.guide.place-track.step.2': 'Data trasy udávají délku cesty, v jednotkách vzdálenosti, které jste nastavili.',
+  'help.guide.place-track.step.3':
+    'Barva trasy nad tím ukazuje barvu, která je v užívání. Kliknutím na řádek otevřete vzorník.',
+  'help.guide.place-track.step.4': 'Vyberte barvu. Čára na mapě i čárka na řádku se s ní změní.',
+  'help.guide.place-track.step.5':
+    'Čárkované políčko vlevo, Automatická barva, vrátí trase barvu, kterou dědí; pipeta vpravo, Vybrat vlastní barvu, otevře pro cokoli jiného výběr barev vašeho systému.',
+  'help.guide.place-track.result':
+    'Trasa je vykreslená v barvě, kterou jste vybrali, v kartě, na svém řádku ve sloupci míst i na mapě.',
+  'help.guide.place-track.tip.1':
+    'Tyto dva bloky má jen místo, které nese cestu, importovanou ze souboru GPX, KML nebo KMZ.',
+  'help.guide.place-track.tip.2':
+    'Trasa zaznamenaná s výškami ukáže i svůj nejvyšší a nejnižší bod, metry nahoru a dolů, a profil cesty.',
+  'help.guide.place-track.tip.3':
+    'Import dá každé trase, kterou přinese, vlastní barvu, takže dvě trasy nikdy nepřijdou ve stejné.',
+
+  // ── Screen: trip-files ────────────────────────────────────────────────────────────────
+  'help.ctx.trip-files.title': 'Soubory',
+  'help.ctx.trip-files.summary':
+    'Každý dokument cesty v jednom seznamu: jízdenky, potvrzení, karty do peněženky a obrázky, každý s poznámkou, s propojením na místo nebo rezervaci, ke které patří, a s košem, ze kterého se dá vrátit zpět.',
+  'help.ctx.trip-files.bullet.1':
+    'Přetáhněte soubory sem nahoře soubory převezme; kliknutím na pole se otevře výběr souborů. Řádek pod ním vypisuje typy souborů, které tento TREK přijímá, a limit 50 MB na soubor.',
+  'help.ctx.trip-files.bullet.2':
+    'Karty říkají, co seznam ukazuje: Vše, PDF, Obrázky a Dokumenty, každá se svým počtem. Hvězda se k nim přidá, jakmile je nějaký soubor označený hvězdičkou, Poznámky spolupráce, jakmile nějaká poznámka nese přílohu.',
+  'help.ctx.trip-files.bullet.3':
+    'Řádek nese, kdo soubor nahrál, název, poznámku pod ním, velikost a datum, a jeden odznak na každé propojení: Denní plán a místo, Rezervace nebo Doprava a rezervaci, Z poznámek spolupráce.',
+  'help.ctx.trip-files.bullet.4':
+    'Na konci řádku sedí Označit hvězdičkou, Přiřadit, Otevřít, Stáhnout a Smazat. Smazat se neptá: soubor jde do koše, odkud se dá vrátit.',
+  'help.ctx.trip-files.bullet.5':
+    'Obrázek nebo video se otevře na celou obrazovku, se šipkami na klávesnici a pruhem náhledů; každý jiný dokument se otevře v náhledu přes stránku, s Otevřít v nové kartě a Stáhnout. Karta do peněženky se stáhne rovnou.',
+  'help.ctx.trip-files.bullet.6':
+    'Koš na pravém konci přepne seznam na smazané soubory, kde se každý obnoví nebo smaže natrvalo a Vysypat koš je smaže všechny. Tam, kde správce připojil úložiště dokumentů, sedí vedle něj Synchronizace dokumentů.',
+  // files-upload
+  'help.guide.files-upload.title': 'Vložit dokument do cesty',
+  'help.guide.files-upload.goal':
+    'Dostaňte jízdenku, potvrzení nebo fotku ze složky stažených souborů do cesty, kde se k nim dostanou všichni, kdo v ní jsou.',
+  'help.guide.files-upload.step.1':
+    'Otevřete cestu a klikněte v liště karet na Soubory. Jsou tam vypsané dokumenty cesty a nad nimi pole pro nahrání.',
+  'help.guide.files-upload.step.2':
+    'Klikněte na Přetáhněte soubory sem a vyberte jeden nebo několik souborů. Nahrávají se jeden po druhém a pole mezitím hlásí Nahrávání... Řádek pod polem říká, které typy tento TREK bere a že soubor smí mít nejvýš 50 MB.',
+  'help.guide.files-upload.step.3':
+    'Jakmile je poslední soubor nahoře, samo se pro něj otevře Přiřadit soubor. Přidat poznámku... dá souboru vlastní řádek a seznamy pod ním ho svážou s místem nebo rezervací. Zavřete ho ×; zavřením se nic neztratí.',
+  'help.guide.files-upload.step.4':
+    'Nové soubory stojí nahoře v seznamu. Řádek ukazuje, kdo soubor nahrál, název, velikost a datum; obrázek dostane náhled, každý jiný soubor svůj typ.',
+  'help.guide.files-upload.result': 'Dokumenty jsou v cestě a každý, kdo cestu vidí, je může otevřít a stáhnout.',
+  'help.guide.files-upload.tip.1':
+    'Soubor se dá také přetáhnout z plochy rovnou na pole, které se rozsvítí, dokud je soubor nad ním.',
+  'help.guide.files-upload.tip.2':
+    'Obrázek ve schránce jde do seznamu přes Ctrl+V, takže snímek obrazovky s rezervací není nutné nejdřív ukládat.',
+  'help.guide.files-upload.tip.3':
+    'Nahrávání vyžaduje právo Nahrát soubory; bez něj tam pole vůbec není. Typ, který není na seznamu, nebo soubor nad 50 MB, je odmítnut se zprávou a nic se nenahraje.',
+  // files-link
+  'help.guide.files-link.title': 'Svázat dokument s místem nebo rezervací',
+  'help.guide.files-link.goal': 'Ať je jízdenka k nalezení ze dne, ke kterému patří, ne jen z tohoto seznamu.',
+  'help.guide.files-link.step.1':
+    'Klikněte na Přiřadit, tužku na konci řádku. Otevře se Přiřadit soubor, pojmenované podle souboru.',
+  'help.guide.files-link.step.2':
+    'Pod Poznámka bere Přidat poznámku... jeden řádek, který pak stojí pod názvem souboru v seznamu. Uloží se ve chvíli, kdy pole opustíte.',
+  'help.guide.files-link.step.3':
+    'Pod Místo stojí místa cesty, seskupená podle dne, na kterém jsou, a na konci Nepřiřazeno pro ta, která nejsou na žádném dni. Klikněte na jedno a dostane zaškrtnutí.',
+  'help.guide.files-link.step.4':
+    'Pod Rezervace a Doprava stojí rezervace cesty. Klikněte na tu, ke které dokument patří; dostane své zaškrtnutí také.',
+  'help.guide.files-link.step.5':
+    'Zavřete ×. Tlačítko pro uložení tu není: každé kliknutí bylo zapsáno ve chvíli, kdy jste ho udělali.',
+  'help.guide.files-link.result':
+    'Řádek nese poznámku a jeden odznak na každé propojení, Denní plán a název místa, Doprava a název letu, a dokument visí i na místě a na rezervaci.',
+  'help.guide.files-link.tip.1':
+    'Soubor může držet několik propojení naráz, takže totéž potvrzení patří hotelu i noci, kterou pokrývá.',
+  'help.guide.files-link.tip.2':
+    'Dalším kliknutím na zaškrtnutou položku se propojení zase odebere; soubor sám zůstává.',
+  'help.guide.files-link.tip.3':
+    'Funguje to i obráceně: dokument připojený k místu nebo k rezervaci je i v tomto seznamu, se stejným odznakem na řádku.',
+  // files-star
+  'help.guide.files-star.title': 'Držet důležité dokumenty nahoře',
+  'help.guide.files-star.goal':
+    'Vytáhněte ty dva tři papíry, které opravdu budete potřebovat, ze seznamu, který roste po celou cestu.',
+  'help.guide.files-star.step.1':
+    'Klikněte na Označit hvězdičkou na konci řádku. Vyplní se žlutě, před názvem souboru se objeví druhá hvězdička a tlačítko teď říká Odebrat hvězdičku.',
+  'help.guide.files-star.step.2':
+    'Seznam se znovu seřadí: soubory s hvězdičkou stojí nad všemi ostatními, uvnitř každé skupiny nejnovější první.',
+  'help.guide.files-star.step.3':
+    'Ke kartám nahoře se přidala hvězda, s počtem označených souborů za ní. Klikněte na ni a uvidíte jen je.',
+  'help.guide.files-star.result':
+    'Papíry, které potřebujete u přepážky, stojí nahoře v seznamu a jedna karta neukazuje nic jiného.',
+  'help.guide.files-star.tip.1':
+    'Karta s hvězdou existuje, jen dokud je něco označené. Odeberte hvězdičku poslednímu souboru a karta zmizí s ním.',
+  'help.guide.files-star.tip.2':
+    'Označení hvězdičkou se počítá jako úprava: člen, který smí soubory cesty jen číst, hvězdičky vidí, ale nastavit je nemůže.',
+  // files-filter
+  'help.guide.files-filter.title': 'Najít dokument v seznamu',
+  'help.guide.files-filter.goal': 'Zužte seznam všeho na jeden druh papíru, který hledáte.',
+  'help.guide.files-filter.step.1':
+    'Karty nad seznamem jsou Vše, PDF, Obrázky a Dokumenty, každá s počtem souborů za sebou.',
+  'help.guide.files-filter.step.2': 'Klikněte na PDF: seznam si nechá soubory PDF a nic jiného.',
+  'help.guide.files-filter.step.3':
+    'Další dvě karty přicházejí a odcházejí s tím, co v cestě je: hvězda, jakmile je nějaký soubor označený, a Poznámky spolupráce, jakmile nějaká poznámka na kartě Spolupráce nese přílohu.',
+  'help.guide.files-filter.step.4': 'Vše vrátí celý seznam zpět.',
+  'help.guide.files-filter.result':
+    'Seznam ukazuje jen to, co karta pojmenovává, a počet na každé kartě říká, kolik toho je.',
+  'help.guide.files-filter.tip.1':
+    'Složky tu nejsou a přejmenovat se nedá nic: dokument se třídí podle poznámky v Přiřadit soubor, podle propojení na místa a rezervace a podle hvězdičky.',
+  'help.guide.files-filter.tip.2':
+    'Seznam sám je vždy nejdřív podle hvězdičky, pak podle nejnovějších, takže dokument nahraný dnes stojí nad dokumentem z minulého měsíce.',
+  // files-preview
+  'help.guide.files-preview.title': 'Přečíst dokument bez opuštění TREKu',
+  'help.guide.files-preview.goal':
+    'Podívejte se na jízdenku nebo obrázek na místě a dostaňte je na svůj počítač, když je tam potřebujete.',
+  'help.guide.files-preview.step.1':
+    'Klikněte na název obrázku nebo na jeho náhled. Otevře se na celou obrazovku, s názvem souboru a jeho pořadím mezi obrázky v záhlaví.',
+  'help.guide.files-preview.step.2':
+    'Kulaté šipky po stranách, šipky vlevo a vpravo na klávesnici a pruh náhledů dole procházejí každý obrázek, který seznam právě ukazuje.',
+  'help.guide.files-preview.step.3':
+    'Otevřít v nové kartě a Stáhnout sedí v záhlaví; × nebo Escape obrázek zase zavře.',
+  'help.guide.files-preview.step.4':
+    'Dokument, který není obrázek, se místo toho otevře v náhledu přes stránku, se stejnými dvěma tlačítky v záhlaví. Ten se zavírá ×, nebo kliknutím vedle něj.',
+  'help.guide.files-preview.step.5':
+    'Stáhnout na konci řádku uloží soubor rovnou na váš počítač, aniž by se cokoli předtím otevřelo.',
+  'help.guide.files-preview.result':
+    'Dokument je na obrazovce a tatáž dvě tlačítka ho dají do karty prohlížeče nebo na váš disk.',
+  'help.guide.files-preview.tip.1':
+    'Na dotykové obrazovce mezi obrázky přejíždíte prstem, místo abyste klikali na šipky.',
+  'help.guide.files-preview.tip.2':
+    'Karta do peněženky nikdy náhled neotevře: stáhne se hned, aby ji telefon mohl předat aplikaci peněženky.',
+  'help.guide.files-preview.tip.3':
+    'Otevřít v nové kartě i Stáhnout načítají soubor s vaší relací, takže odkaz zkopírovaný z adresního řádku je nikomu jinému k ničemu.',
+  // files-trash
+  'help.guide.files-trash.title': 'Zahodit dokument a dostat ho zpět',
+  'help.guide.files-trash.goal':
+    'Ukliďte, co cesta už nepotřebuje, aniž byste přišli o něco, co jste přece jen potřebovali.',
+  'help.guide.files-trash.step.1':
+    'Klikněte na Smazat na konci řádku. Soubor hned opustí seznam a zpráva hlásí Přesunuto do koše. Nic se předtím neptá.',
+  'help.guide.files-trash.step.2':
+    'Koš na pravém konci lišty nástrojů přepne seznam na to, co bylo zahozeno. Nadpis říká Koš a karty filtrů jsou pryč.',
+  'help.guide.files-trash.step.3':
+    'Zahozený řádek je zašedlý a zbyla mu dvě tlačítka: Obnovit, které soubor vrátí, a Smazat, které ho po otázce odstraní natrvalo.',
+  'help.guide.files-trash.step.4':
+    'Klikněte na Obnovit. Zpráva hlásí Soubor byl obnoven a řádek opustí koš, i s poznámkou a propojeními.',
+  'help.guide.files-trash.step.5':
+    'Vysypat koš nahoře natrvalo smaže všechno, co tu ještě je, a prohlížeč se jednou zeptá, než to udělá. Koš přepne zpět na soubory.',
+  'help.guide.files-trash.result': 'Soubor je zpátky v seznamu tam, kde byl, jako by se nic nestalo.',
+  'help.guide.files-trash.tip.1':
+    'Smazat na řádku se předtím neptá a od toho tu koš je: z TREKu nic neodejde, dokud to tady neřeknete.',
+  'help.guide.files-trash.tip.2':
+    'Zahodit soubor a dostat ho zpět vyžaduje právo Smazat soubory. Člen, který ho nemá, nevidí ani Smazat na řádku, ani tlačítka v koši.',
+  'help.guide.files-trash.tip.3': 'Soubor natrvalo smazaný v koši se už vrátit nedá.',
+
+  // ── Screen: trip-day-detail ───────────────────────────────────────────────────────────
+  'help.ctx.trip-day-detail.title': 'Podrobnosti dne',
+  'help.ctx.trip-day-detail.summary':
+    'Panel, který záhlaví dne otevře nad mapou: den jako celek, jeho název a datum, počasí tam, kde budete, rezervace, které na něj padnou, a noci na něj rezervované.',
+  'help.ctx.trip-day-detail.bullet.1':
+    'Klikněte ve sloupci dnů na záhlaví dne a panel se otevře nad středem mapy. Stejné záhlaví znovu, nebo X vpravo od něj, ho zavře a den pustí.',
+  'help.ctx.trip-day-detail.bullet.2':
+    'Záhlaví nese název dne a jeho datum. Tužka vedle názvu den přejmenuje, dvojitá šipka panel složí do úzkého pruhu, takže je mapa zase volná.',
+  'help.ctx.trip-day-detail.bullet.3':
+    'Nahoře počasí dne. Předpověď pro pojmenuje místo, kterého se týká: první zastávku dne, nebo hotel, ve kterém se probudíte.',
+  'help.ctx.trip-day-detail.bullet.4':
+    'Rezervace vypisují rezervace toho dne, každou s jejím druhem, zastávkou, ke které patří, a časy. Zelená znamená potvrzeno, jantarová ještě čeká na potvrzení; je to jen výpis, rezervace se mění na kartě Rezervace.',
+  'help.ctx.trip-day-detail.bullet.5':
+    'Ubytování ukazuje každou noc rezervovanou přes tento den, s Check-in a Check-out ve dnech, kdy nastanou, s časovým oknem check-inu, časem check-outu a číslem potvrzení.',
+  'help.ctx.trip-day-detail.bullet.6':
+    'Přidat ubytování rezervuje noc na tomto dni: vyberte objekt z míst cesty, řekněte, které dny pokrývá, a doplňte časy a kód.',
+  // day-panel
+  'help.guide.day-panel.title': 'Otevřít den a přečíst si jeho podrobnosti',
+  'help.guide.day-panel.goal': 'Vidět jeden den celý, jeho počasí, jeho rezervace a kde spíte, bez opuštění mapy.',
+  'help.guide.day-panel.step.1':
+    'Klikněte ve sloupci dnů na záhlaví dne. Den je vybraný a jeho podrobnosti se otevřou nad středem mapy.',
+  'help.guide.day-panel.step.2': 'Záhlaví den pojmenuje, Den 1, dokud mu název nedáte, s datem pod ním.',
+  'help.guide.day-panel.step.3':
+    'Nahoře počasí dne. Předpověď pro říká, kterého místa se týká: první zastávky dne, nebo hotelu, ve kterém se probudíte.',
+  'help.guide.day-panel.step.4': 'Rezervace pod ním vypisují rezervace, které padnou na tento den, s jejich časy.',
+  'help.guide.day-panel.step.5':
+    'Ubytování ukazuje noci rezervované přes tento den, s Check-in a Check-out ve dnech, kdy nastanou.',
+  'help.guide.day-panel.step.6':
+    'Dvojitá šipka v záhlaví složí panel do úzkého pruhu. X vedle ní panel zavře a den pustí.',
+  'help.guide.day-panel.result':
+    'Složený do pruhu nechává panel mapu volnou a den zůstává vybraný; zavřený panel den odznačí a plán je jako předtím.',
+  'help.guide.day-panel.tip.1': 'Kliknutí kamkoli na pruh záhlaví panelu ho také složí. Šipka je jen tlačítko pro to.',
+  'help.guide.day-panel.tip.2':
+    'Otevření místa ze sloupce míst dá podrobnosti místa na místo panelu. Zavřete je a den se vrátí.',
+  // day-weather
+  'help.guide.day-weather.title': 'Přečíst počasí dne',
+  'help.guide.day-weather.goal': 'Vědět, jaký bude den tam, kde ten den opravdu jste.',
+  'help.guide.day-weather.step.1':
+    'Předpověď pro pojmenuje místo, kterého se čísla týkají: první zastávku dne, nebo, ve dni bez ní, hotel, ve kterém se probudíte.',
+  'help.guide.day-weather.step.2': 'Velké číslo je teplota dne, vedle něj minimum a maximum a stav počasí slovy.',
+  'help.guide.day-weather.step.3':
+    'Štítky pod ním: pravděpodobnost srážek, kolik jich bude, nejsilnější vítr a východ a západ slunce.',
+  'help.guide.day-weather.step.4':
+    'Dole den hodinu po hodině, každou druhou hodinu: čas, ikona, teplota a pravděpodobnost srážek. Hodina nad 50 procent je podbarvená modře.',
+  'help.guide.day-weather.result':
+    'Karta dne ve sloupci dnů nese stejné počasí v malém pod svým číslem, takže celou cestu lze přečíst na jeden pohled.',
+  'help.guide.day-weather.tip.1':
+    'Stupně a vítr se řídí vaší volbou pod Zobrazení v Nastavení: přepněte na Fahrenheit a stejná předpověď se vypíše v °F a mph.',
+  'help.guide.day-weather.tip.2':
+    'Den bez umístěné zastávky a bez hotelu, ve kterém se probudit, neukáže počasí vůbec: předpověď je vždy pro místo, nikdy pro cestu.',
+  'help.guide.day-weather.tip.3':
+    'Dál než 16 dnů dopředu žádná předpověď není. Čísla jsou pak průměry dřívějších let pro to datum, označené Ø, a je to pod nimi napsané.',
+  // rename-day
+  'help.guide.rename-day.title': 'Dát dni název',
+  'help.guide.rename-day.goal': 'Pojmenovat den tím, čím je, Příjezd do Kyoto nebo Den odpočinku, místo Den 5.',
+  'help.guide.rename-day.step.1': 'Otevřete den. Jeho záhlaví hlásí Den 5, s datem pod ním.',
+  'help.guide.rename-day.step.2': 'Klikněte na tužku vedle názvu.',
+  'help.guide.rename-day.step.3': 'Název se změní v pole. Napište název, který chcete.',
+  'help.guide.rename-day.step.4':
+    'Stiskněte Enter, nebo jen klikněte jinam; Escape změnu zahodí. Karta dne ve sloupci dnů nese název také.',
+  'help.guide.rename-day.result':
+    'Název nahradí Den 5 v panelu i na kartě dne ve sloupci dnů; datum zůstane, kde bylo.',
+  'help.guide.rename-day.tip.1':
+    'Vymažte pole a uložte a den je zase Den 5: číslo je to, co se ukazuje, když není název.',
+  'help.guide.rename-day.tip.2':
+    'Název patří dni, ne jeho datu. Přeuspořádejte dny a putuje se vším ostatním na tom dni.',
+  // add-accommodation
+  'help.guide.add-accommodation.title': 'Rezervovat noc na dni',
+  'help.guide.add-accommodation.goal':
+    'Dostat hotel do plánu jednou, se dny, které pokrývá, jeho časy a jeho číslem potvrzení.',
+  'help.guide.add-accommodation.step.1':
+    'Objekt musí být nejprve místem cesty. Vytvořte ho ve sloupci míst jako kterékoli jiné místo: výběr nabízí jen to, co už tam je.',
+  'help.guide.add-accommodation.step.2': 'Otevřete den, kdy přijíždíte, a klikněte na Přidat ubytování pod Ubytování.',
+  'help.guide.add-accommodation.step.3':
+    'Použít na dny říká, které noci pobyt pokrývá: den check-inu vlevo, den check-outu vpravo. Vše pokrývá celou cestu.',
+  'help.guide.add-accommodation.step.4':
+    'Vyplňte Check-in, Do a Check-out a číslo rezervace dejte pod Potvrzení. Všechna čtyři mohou zůstat prázdná.',
+  'help.guide.add-accommodation.step.5': 'Vyberte objekt z míst cesty. Štítky nad seznamem ho zúží na jednu kategorii.',
+  'help.guide.add-accommodation.step.6': 'Klikněte na Uložit.',
+  'help.guide.add-accommodation.result':
+    'Pobyt se ukáže na každém dni, který pokrývá, Check-in na prvním a Check-out na posledním. Objekt se stane zastávkou na dni check-inu, takže mapa nakreslí cestu tam, a na kartě Rezervace se objeví rezervace typu Ubytování.',
+  'help.guide.add-accommodation.tip.1':
+    'Výběr se otevře na dni, ze kterého jste přišli, s check-outem den poté; obojí lze před uložením posunout.',
+  'help.guide.add-accommodation.tip.2':
+    'Dejte hotelu při vytváření kategorii cesty Hotel a štítky nad seznamem ho jedním kliknutím zúží na vaše hotely.',
+  'help.guide.add-accommodation.tip.3':
+    'Časy jsou všechny nepovinné: pobyt bez check-inu a bez kódu stále pokrývá své noci a stále kreslí svou trasu.',
+  // edit-accommodation
+  'help.guide.edit-accommodation.title': 'Změnit nebo zrušit rezervovanou noc',
+  'help.guide.edit-accommodation.goal': 'Přesunout pobyt, opravit jeho časy, nebo ho zase vzít z plánu.',
+  'help.guide.edit-accommodation.step.1':
+    'Na každém dni pobytu ukazuje karta objekt, okno check-inu, čas check-outu a číslo potvrzení.',
+  'help.guide.edit-accommodation.step.2': 'Tužka vpravo od ní pobyt zase otevře. Okno teď hlásí Upravit ubytování.',
+  'help.guide.edit-accommodation.step.3':
+    'Změňte, co potřebujete: dny, které pokrývá, Check-in, Do, Check-out, Potvrzení, nebo samotný objekt.',
+  'help.guide.edit-accommodation.step.4': 'Klikněte na Uložit.',
+  'help.guide.edit-accommodation.step.5':
+    'X vedle tužky pobyt ukončí. Na nic se neptá a rezervace typu Ubytování, která k němu patří, jde s ním.',
+  'help.guide.edit-accommodation.result':
+    'Změna dorazí na každý den, který pobyt pokrývá, najednou, a s ní i rezervace typu Ubytování na kartě Rezervace.',
+  'help.guide.edit-accommodation.tip.1':
+    'Noc uprostřed pobytu nenese ani Check-in, ani Check-out: mají je jen první a poslední den rozsahu.',
+  'help.guide.edit-accommodation.tip.2':
+    'Zrušení pobytu vezme i zastávku, kterou dal na den check-inu, a všechny náklady připojené k jeho rezervaci. Pokud to byl omyl, rezervujte noc znovu.',
+  // day-bookings
+  'help.guide.day-bookings.title': 'Rezervace dne na jeden pohled',
+  'help.guide.day-bookings.goal': 'Vidět na jednom místě, co je na tento den už rezervované a zda je to potvrzené.',
+  'help.guide.day-bookings.step.1':
+    'Rezervace vypisují rezervace dne: ty datované na něj a ty, které visí na některé z jeho zastávek.',
+  'help.guide.day-bookings.step.2':
+    'Řádek ukazuje, jaký druh rezervace to je, její název a, když patří k zastávce, tu zastávku za tečkou. Její časy sedí na pravém konci.',
+  'help.guide.day-bookings.step.3':
+    'Barva říká, jak rezervace stojí: zelený řádek je potvrzený, jantarový ještě čeká na potvrzení. Hotely v tomto seznamu nejsou, mají vlastní blok níže.',
+  'help.guide.day-bookings.step.4': 'Seznam rezervace jen vypisuje. Rezervace se vytváří a mění na kartě Rezervace.',
+  'help.guide.day-bookings.result':
+    'Všechno datované na ten den a všechno, co visí na některé z jeho zastávek, je v tomto jednom seznamu.',
+  'help.guide.day-bookings.tip.1':
+    'Rezervace přistane na dni podle svého vlastního data. Změňte datum na kartě Rezervace a přesune se na jiný den sama.',
+  'help.guide.day-bookings.tip.2':
+    'Žádný blok Rezervace znamená, že den nemá rezervace: je skrytý, ne ukázaný prázdný.',
+
+  // ── Screen: trip-map ──────────────────────────────────────────────────────────────────
+  'help.ctx.trip-map.title': 'Mapa',
+  'help.ctx.trip-map.summary':
+    'Střed plánu: každé místo cesty jako špendlík, trasy, které je spojují, a přepínače po okrajích mapy pro satelit, pro celou cestu najednou a pro místa v té části města, na kterou se díváte.',
+  'help.ctx.trip-map.bullet.1':
+    'Špendlík je místo: vlastní fotka, pokud ji má, jinak barva jeho kategorie s ikonou kategorie. Najeďte na něj a dostanete kartu s jeho názvem, hodnocením, kategorií a adresou.',
+  'help.ctx.trip-map.bullet.2':
+    'Špendlíky, které jsou příliš blízko u sebe, než aby se daly rozeznat, se složí do jedné tmavé bubliny s počtem. Klikněte na bublinu a mapa přiblíží to, co je uvnitř.',
+  'help.ctx.trip-map.bullet.3':
+    'Kliknutím na špendlík otevřete místo pod mapou, s jeho hodnocením, soubory a tím, co s ním dál; kliknutím na prázdný kus mapy ho zase pustíte.',
+  'help.ctx.trip-map.bullet.4':
+    'Když je ve sloupci dnů otevřený den, jeho zastávky nesou malý bílý odznak s pořadím v tom dni, a místo naplánované na dva dny nese obě čísla spojená znakem ·.',
+  'help.ctx.trip-map.bullet.5':
+    'Řada ikon nahoře prohledá tu část mapy, kterou vidíte: Restaurace, Kavárny, Bary a noční život, Ubytování, Památky, Muzea a kultura, Příroda a parky a Aktivity. Hledat v této oblasti spustí hledání znovu, když mapou pohnete.',
+  'help.ctx.trip-map.bullet.6':
+    'Kliknutím pravým tlačítkem kamkoli na mapu otevřete formulář místa v tom bodě, s už dohledanou adresou. Kulaté tlačítko vlevo dole vymění kreslenou mapu za letecké snímky.',
+  'help.ctx.trip-map.bullet.7':
+    'Zobrazit celou cestu vpravo dole nakreslí všechny cestovní dny najednou a vypíše, co každý z nich pokrývá; ikona trasy na řádku rezervace nakreslí tu rezervaci a ta v liště nástrojů nad dny nakreslí všechny.',
+  // map-markers
+  'help.guide.map-markers.title': 'Číst mapu',
+  'help.guide.map-markers.goal': 'Vědět, co vám každý špendlík, odznak a bublina na mapě říká.',
+  'help.guide.map-markers.step.1':
+    'Mapa drží každé místo cesty. Tam, kde špendlíky sedí příliš blízko u sebe, než aby se daly rozeznat, se složí do jedné tmavé bubliny, která nese počet míst uvnitř.',
+  'help.guide.map-markers.step.2':
+    'Klikněte na bublinu. Mapa přiblíží to, co bylo uvnitř, a špendlíky se oddělí; při nejhlubším přiblížení je místo dalšího přibližování rozprostře do vějíře.',
+  'help.guide.map-markers.step.3':
+    'Špendlík je vlastní fotka místa, pokud ji má, jinak barva jeho kategorie s ikonou kategorie. Najeďte na něj a karta uvede jeho název, hodnocení, kategorii a adresu.',
+  'help.guide.map-markers.step.4':
+    'Klikněte na špendlík a místo se otevře pod mapou: jeho souřadnice, hodnocení, Soubory a Přidat ke dni, Uložit do sbírky, Navigace, Upravit a Smazat. Kliknutím na prázdný kus mapy ho zase pustíte.',
+  'help.guide.map-markers.step.5':
+    'Otevřete den ve sloupci dnů a jeho zastávky dostanou čísla: malý bílý odznak v rohu špendlíku je pořadí té zastávky ve dni. Místo naplánované na dva dny nese obě čísla spojená znakem ·. Bez otevřeného dne čísla nejsou a roh nese místo nich hodnocení.',
+  'help.guide.map-markers.result':
+    'Na cestě se nic nezměnilo: mapa je pohled na ni a každý špendlík říká, které místo, který den a v jakém pořadí.',
+  'help.guide.map-markers.tip.1':
+    'Den složený ve sloupci dnů si své zastávky odnese z mapy s sebou; otevřete den znovu a jsou zpátky.',
+  'help.guide.map-markers.tip.2':
+    'Filtr nad seznamem míst rozhoduje i o tom, co mapa kreslí: zvolte Nezařazené a zůstanou na ní jen místa, která ještě nemají den.',
+  'help.guide.map-markers.tip.3':
+    'Na této mapě nejsou tlačítka přiblížení: kolečko přibližuje, dvojklik přiblíží o krok a tažením mapou pohnete.',
+  // map-nearby-places
+  'help.guide.map-nearby-places.title': 'Najít místa kolem sebe na mapě',
+  'help.guide.map-nearby-places.goal':
+    'Nechat mapu hledat restaurace, památky nebo hotel v té části města, na kterou se díváte, a jedno z nich vzít do cesty.',
+  'help.guide.map-nearby-places.step.1':
+    'Řada ikon nahoře na mapě je hledání podle kategorií: Restaurace, Kavárny, Bary a noční život, Ubytování, Památky, Muzea a kultura, Příroda a parky a Aktivity.',
+  'help.guide.map-nearby-places.step.2':
+    'Klikněte na kategorii. TREK hledá takový druh místa v té části mapy, kterou vidíte, a pro každý nález položí špendlík v barvě kategorie. Vždy jen jedna kategorie: kliknutím na jinou ji vyměníte a kliknutím na tu zapnutou ji vypnete.',
+  'help.guide.map-nearby-places.step.3':
+    'Pohněte mapou a pod řadou se objeví druhé tlačítko: Hledat v této oblasti spustí stejné hledání pro nový výřez. Samotný pohyb nikdy nehledá znovu, což drží počet dotazů dole.',
+  'help.guide.map-nearby-places.step.4':
+    'Špendlíky nesou název toho, co našly. Klikněte na jeden a formulář místa se otevře už z něj vyplněný: Název, Adresa, Zeměpisná šířka a Zeměpisná délka a web i telefon tam, kde je OpenStreetMap má.',
+  'help.guide.map-nearby-places.step.5':
+    'Zkontrolujte, co vyplnil, a doplňte, co hledání vědět nemohlo: Popis, Kategorii, vlastní poznámky.',
+  'help.guide.map-nearby-places.step.6':
+    'Klikněte na Přidat. Pokud už v cestě je místo stejného názvu, formulář to řekne a tlačítko se změní na Přesto přidat.',
+  'help.guide.map-nearby-places.result':
+    'Místo je v seznamu míst a na mapě jako jeden z vlastních špendlíků cesty, pod Nezařazené, dokud ho nepoložíte na den. Špendlíky hledání zůstanou, dokud kategorii nevypnete.',
+  'help.guide.map-nearby-places.tip.1':
+    'Řada zmizí, když je v Nastavení pod Travel & map vypnuté Objevovat místa na mapě.',
+  'help.guide.map-nearby-places.tip.2':
+    'Odpovědi přicházejí z indexu TREK Places a z OpenStreetMap, takže je to jedna z mála věcí v plánu, která potřebuje připojení.',
+  'help.guide.map-nearby-places.tip.3':
+    'Hledání pokrývá to, co je na obrazovce, takže si přibližte ulici, na kterou se ptáte: celé město odpoví prvními šedesáti nálezy a malým pořádkem v nich.',
+  // map-add-place
+  'help.guide.map-add-place.title': 'Vytvořit místo pravým kliknutím do mapy',
+  'help.guide.map-add-place.goal': 'Položit místo přesně tam, kam chcete, bez toho, abyste ho nejdřív hledali.',
+  'help.guide.map-add-place.step.1':
+    'Klikněte pravým tlačítkem na bod na mapě, který myslíte. Otevře se formulář místa s názvem Přidat místo/aktivitu.',
+  'help.guide.map-add-place.step.2':
+    'Zeměpisná šířka a Zeměpisná délka už jsou v tom bodě a TREK souřadnice dohledá a z toho, co tam najde, vyplní Adresu. Nic ještě není uložené, takže přepište, co je špatně.',
+  'help.guide.map-add-place.step.3':
+    'Dejte mu Název, který poznáte, a zbytek toho, co má plán vědět: Popis, Poznámky, Kategorie, Webové stránky.',
+  'help.guide.map-add-place.step.4':
+    'Klikněte na Přidat. Místo přistane v seznamu jako nezařazené i s otevřeným dnem: pravé kliknutí do mapy říká kde, ne kdy.',
+  'help.guide.map-add-place.result': 'Místo je v seznamu a na mapě, pod Nezařazené, dokud ho nepoložíte na den.',
+  'help.guide.map-add-place.tip.1':
+    'Adresa pochází z dohledání souřadnic, takže může znít spíš jako ulice než jako název a nad volnou krajinou se může vrátit prázdná. Obě pole jsou vaše, přepište je.',
+  'help.guide.map-add-place.tip.2':
+    'Na mapách MapLibre GL a Mapbox GL udělá totéž kliknutí prostředním tlačítkem a na dotykové obrazovce dlouhý stisk.',
+  // map-satellite
+  'help.guide.map-satellite.title': 'Přepnout na satelit',
+  'help.guide.map-satellite.goal': 'Vyměnit kreslenou mapu za letecké snímky a zpátky.',
+  'help.guide.map-satellite.step.1':
+    'Kulaté tlačítko vlevo dole na mapě je přepínač podkladové vrstvy. Jeho ikona vždy ukazuje vrstvu, na kterou by přešlo, a při najetí řekne kterou: Přepnout na satelitní zobrazení.',
+  'help.guide.map-satellite.step.2':
+    'Klikněte na něj. Mapa se změní na letecké snímky, dost hluboké na rozeznání jednotlivé budovy, a bez vlastního klíče.',
+  'help.guide.map-satellite.step.3':
+    'Všechno, co TREK kreslí, zůstane navrchu: špendlíky, trasa dne, trasy a trasy rezervací. Kliknutím na tlačítko znovu, teď s popiskem Přepnout na mapové zobrazení, se vrátíte.',
+  'help.guide.map-satellite.result':
+    'Mapa je zase kreslená a vrstva, na které jste ji nechali, se pamatuje na vašem účtu.',
+  'help.guide.map-satellite.tip.1':
+    'Volba se drží na vašem účtu, ne na cestě, takže každá cesta se otevře tak, jak jste ji nechali, ať používáte kterýkoli vykreslovač mapy.',
+  'help.guide.map-satellite.tip.2':
+    'Snímky nenesou žádný text: názvy ulic, čtvrti a čísla domů jsou na kreslené mapě, takže když hledáte adresu, přepněte zpátky.',
+  // map-whole-trip
+  'help.guide.map-whole-trip.title': 'Vidět celou cestu a její vzdálenosti',
+  'help.guide.map-whole-trip.goal':
+    'Vyměnit jeden otevřený den za všechny cestovní dny cesty a přečíst, jak daleko každý z nich vede.',
+  'help.guide.map-whole-trip.step.1': 'Kulaté tlačítko Zobrazit celou cestu sedí vpravo dole na mapě.',
+  'help.guide.map-whole-trip.step.2':
+    'Klikněte na něj. Všechny cestovní dny cesty se nakreslí najednou, každý ve své barvě přes bílý obal, takže sousední dny zůstanou rozeznatelné.',
+  'help.guide.map-whole-trip.step.3':
+    'Karta nad tlačítkem ty dny vypíše: barevná tečka, název dne, ikona pro každý způsob, jakým ho cestujete, a vzdálenost, kterou pokrývá. Nahoře je Celková vzdálenost.',
+  'help.guide.map-whole-trip.step.4':
+    'Kliknutím na den v kartě ho vyberete, stejně jako když ho zvolíte ve sloupci dnů. Kliknutím na tlačítko znovu, teď s popiskem Skrýt celou cestu, se vrátíte k jednomu dni.',
+  'help.guide.map-whole-trip.result':
+    'Každý cestovní den je nakreslený ve své barvě a karta říká, co každý z nich pokrývá a kolik cesta dává dohromady.',
+  'help.guide.map-whole-trip.tip.1':
+    'Součet přichází po několika úsecích. Dokud za ním stojí …, je číslo ještě dílčí součet; ustálí se, jakmile odpoví každý úsek.',
+  'help.guide.map-whole-trip.tip.2':
+    'Úsek, který směrovací engine odmítne, zůstane rovnou čárou a nepočítá se, a karta to řekne, místo aby tiše ukazovala méně.',
+  'help.guide.map-whole-trip.tip.3':
+    'Den s méně než dvěma zastávkami se souřadnicemi nemá co kreslit, takže z karty vypadne úplně.',
+  // map-booking-routes
+  'help.guide.map-booking-routes.title': 'Zobrazit trasu rezervace na mapě',
+  'help.guide.map-booking-routes.goal':
+    'Nakreslit na mapu lety, vlaky a jízdy, které máte zarezervované, a zase je z ní dostat.',
+  'help.guide.map-booking-routes.step.1':
+    'Trasy rezervací jsou vypnuté, dokud o nějakou nepožádáte. Na řádku rezervace ve sloupci dnů sedí malá ikona trasy: Zobrazit trasy rezervací.',
+  'help.guide.map-booking-routes.step.2':
+    'Klikněte na ni. Rezervace se objeví na mapě: let jako oblouk po ortodromě, jízda po skutečných silnicích, vlak jako řetěz svých stanic. Potvrzeno se kreslí plně, Čeká na potvrzení čárkovaně.',
+  'help.guide.map-booking-routes.step.3':
+    'Konce trasy jsou modré pilulky s ikonou dopravy. Kliknutím na jeden otevřete rezervaci za ním, s jejími časy, Rezervačním kódem a Místem / Adresou, kde začíná; Zavřít ji zase uklidí.',
+  'help.guide.map-booking-routes.step.4':
+    'Ikona trasy v liště nástrojů nad dny udělá celou cestu najednou: Zobrazit všechny trasy rezervací nakreslí každou rezervaci, která nějakou má.',
+  'help.guide.map-booking-routes.step.5':
+    'Je to čistý štít, ne vrstva navrch, takže co jste vybrali rezervaci po rezervaci, padá. Stiskněte ji znovu, teď s popiskem Skrýt všechny trasy rezervací, a mapa je prázdná.',
+  'help.guide.map-booking-routes.result':
+    'Rezervace, o které jste požádali, jsou nakreslené na mapě a volba se drží pro tuto cestu v tomto prohlížeči, dokud ji nezměníte.',
+  'help.guide.map-booking-routes.tip.1':
+    'Konce nesou kód letiště nebo název stanice, jen když je v Nastavení pod Travel & map zapnuté Popisky tras rezervací; jinak ukazují jen ikonu.',
+  'help.guide.map-booking-routes.tip.2':
+    'Vždy zobrazovat trasy rezervací, ve stejném nastavení, je kreslí od začátku na každé cestě, o které jste ještě nerozhodli.',
+  'help.guide.map-booking-routes.tip.3':
+    'Rezervace potřebuje dva konce se souřadnicemi, než se dá nakreslit, takže hotel nebo restaurace ikonu trasy nenese.',
 };
 
 export default help;

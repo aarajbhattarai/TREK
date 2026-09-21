@@ -1928,6 +1928,811 @@ const help: TranslationStrings = {
     'La lista deve essere condivisa pubblicamente; il link di una lista privata non importa nulla.',
   'help.guide.import-places-list.tip.2':
     'Arricchisci i luoghi con Google compare nella finestra quando il tuo TREK ha una chiave Google: cerca ogni luogo importato e completa foto, indirizzo e dettagli.',
+
+  // ── Screen: trip-days ─────────────────────────────────────────────────────────────────
+  'help.ctx.trip-days.title': 'Giorni',
+  'help.ctx.trip-days.summary':
+    'La colonna di sinistra del programma: una scheda per giorno con le sue tappe in ordine, le note, le prenotazioni e i trasporti del giorno e il percorso tra le tappe. È qui che il viaggio viene davvero pianificato.',
+  'help.ctx.trip-days.bullet.1':
+    'La barra in alto: Esporta (PDF, calendario, GPX), Expand all days / Collapse all days, la freccia Annulla, Riordina i giorni e Mostra tutti i percorsi prenotati.',
+  'help.ctx.trip-days.bullet.2':
+    'Una scheda del giorno: numero, meteo, titolo, data e il costo del giorno nell’intestazione; clicca l’intestazione per aprire il giorno, la freccia la richiude. Trasporto pubblico, Aggiungi trasporto e Aggiungi nota stanno anch’essi nell’intestazione.',
+  'help.ctx.trip-days.bullet.3':
+    'Dentro un giorno: le tappe in ordine, ognuna con immagine, nome, orario e un lucchetto sull’immagine; le note; le prenotazioni che appartengono al giorno; e tra le tappe il tempo di viaggio di ogni tratta.',
+  'help.ctx.trip-days.bullet.4':
+    'Sotto le tappe la barra del percorso: Percorso disegna il giorno sulla mappa, Ottimizza ordina le tappe, In auto / A piedi imposta il mezzo di trasporto del giorno, Apri in Google Maps e Apri in CoMaps passano il giorno ad altre app.',
+  'help.ctx.trip-days.bullet.5':
+    'I luoghi arrivano su un giorno trascinando una riga dalla colonna dei luoghi, con il + di quella riga, con Aggiungi luogo a questo giorno su un giorno vuoto, oppure dai dettagli del luogo.',
+  'help.ctx.trip-days.bullet.6':
+    'Costo totale, in fondo, somma ogni tappa e ogni prenotazione con un prezzo, nella valuta del viaggio.',
+  // read-day-plan
+  'help.guide.read-day-plan.title': 'Leggere un giorno',
+  'help.guide.read-day-plan.goal':
+    'Sapere che cosa dice ogni parte di una scheda del giorno prima di cambiare qualcosa.',
+  'help.guide.read-day-plan.step.1':
+    'L’intestazione: il numero del giorno, le previsioni per il giorno, Giorno 1 o il titolo che gli hai dato, la data e il costo del giorno. Clicca l’intestazione per aprire il giorno (i suoi Dettagli del giorno si aprono sopra la mappa); la freccia a destra chiude e riapre la scheda.',
+  'help.guide.read-day-plan.step.2':
+    'Una tappa: la maniglia a sinistra la trascina, l’immagine porta un lucchetto per l’ottimizzazione del percorso, poi il nome, la descrizione e, se ci sono, le Note per questo giorno. Un contrassegno di orario mostra Inizio e Fine quando la tappa li ha; le frecce che compaiono alla sua estremità destra la spostano su o giù.',
+  'help.guide.read-day-plan.step.3':
+    'Una prenotazione nel giorno: un trasporto compare come Partenza o Arrivo con il suo orario e il suo tragitto, una prenotazione su una tappa la segna Prenotazione confermata o Prenotazione in attesa. Il piccolo interruttore su un trasporto mostra il suo percorso sulla mappa.',
+  'help.guide.read-day-plan.step.4':
+    'Tra due tappe il connettore dice quanto dura la tratta e quanto è lunga, nel mezzo di trasporto del giorno; cliccalo per cambiare il mezzo di quella sola tratta.',
+  'help.guide.read-day-plan.step.5':
+    'La barra del percorso alla fine: Percorso disegna la strada del giorno sulla mappa, Ottimizza riordina le tappe, i pulsanti del mezzo scelgono In auto o A piedi, Apri in Google Maps e Apri in CoMaps aprono il giorno lì.',
+  'help.guide.read-day-plan.result':
+    'Ogni simbolo sulla scheda ha un significato; le guide qui sotto cambiano ognuno di essi.',
+  'help.guide.read-day-plan.tip.1':
+    'Fai clic destro su una tappa per il suo menu: Modifica, Rimuovi dal giorno, Apri sito web, le app di navigazione (Google Maps, Waze, Apple Maps, OpenStreetMap, CoMaps), Salva nella raccolta, Elimina.',
+  'help.guide.read-day-plan.tip.2':
+    'Passa il mouse su una tappa e alla sua estremità compare Aggiungi prenotazione: una prenotazione creata lì è legata a questa tappa in questo giorno.',
+  // place-onto-day
+  'help.guide.place-onto-day.title': 'Mettere un luogo su un giorno',
+  'help.guide.place-onto-day.goal':
+    'Trasformare un luogo della lista in una tappa del giorno, dove gli spetta nell’ordine.',
+  'help.guide.place-onto-day.step.1':
+    'Trascina una riga dalla colonna dei luoghi sulla scheda del giorno. Lasciala tra due tappe per metterla esattamente lì, oppure in un punto qualsiasi della scheda per aggiungerla in fondo.',
+  'help.guide.place-onto-day.step.2':
+    'Senza trascinare: apri il giorno cliccando la sua intestazione, poi clicca il + alla fine della riga del luogo, oppure fai clic destro sulla riga e scegli + Giorno.',
+  'help.guide.place-onto-day.step.3':
+    'Su un giorno vuoto, Aggiungi luogo a questo giorno apre il modulo del luogo, e il nuovo luogo finisce subito sul giorno.',
+  'help.guide.place-onto-day.step.4':
+    'Dai dettagli di un luogo, Aggiungi al giorno chiede quale giorno; dall’intestazione del giorno, Al giorno nella colonna dei luoghi crea un nuovo luogo sul giorno aperto.',
+  'help.guide.place-onto-day.result':
+    'Il luogo è una tappa del giorno, sulla mappa con il numero del giorno, e la colonna dei luoghi lo conta sotto Pianificati.',
+  'help.guide.place-onto-day.tip.1':
+    'Un luogo può stare su più giorni: mettilo sul secondo giorno dalla colonna dei luoghi. Trascinare una tappa da una scheda del giorno a un’altra la sposta invece di copiarla.',
+  'help.guide.place-onto-day.tip.2': 'La freccia Annulla nella barra annulla l’assegnazione.',
+  'help.guide.place-onto-day.tip.3':
+    'Una tappa non si può lasciar cadere tra due voci con orari fissi, né prima di una prenotazione che ha già un orario; il programma mantiene la sua cronologia.',
+  // reorder-stops
+  'help.guide.reorder-stops.title': 'Cambiare l’ordine di un giorno',
+  'help.guide.reorder-stops.goal': 'Spostare una tappa su o giù, oppure su un altro giorno.',
+  'help.guide.reorder-stops.step.1': 'Trascina la tappa per la sua maniglia nella nuova posizione dentro la scheda.',
+  'help.guide.reorder-stops.step.2':
+    'Oppure usa le frecce all’estremità destra della tappa: un passo su o giù per ogni clic.',
+  'help.guide.reorder-stops.step.3':
+    'Trascina la tappa su un’altra scheda del giorno per spostarla lì; lascia il giorno di prima.',
+  'help.guide.reorder-stops.step.4':
+    'Una tappa con un orario fisso chiede Rimuovere l’orario? quando lo spostamento romperebbe l’ordine del giorno, perché era l’orario a decidere il suo posto: Conferma toglie l’orario e la lascia andare ovunque.',
+  'help.guide.reorder-stops.result': 'Il percorso e i tempi di viaggio seguono subito il nuovo ordine.',
+  'help.guide.reorder-stops.tip.1':
+    'Le prenotazioni con un orario fisso non possono essere riordinate; restano dove il loro orario le mette.',
+  'help.guide.reorder-stops.tip.2':
+    'Ottimizza nella barra del percorso ordina tutto il giorno secondo la strada più breve; blocca prima una tappa per tenerla dov’è.',
+  // set-stop-times
+  'help.guide.set-stop-times.title': 'Dare un orario a una tappa',
+  'help.guide.set-stop-times.goal':
+    'Fissare quando una tappa inizia e finisce, così il giorno si legge come un orario.',
+  'help.guide.set-stop-times.step.1':
+    'Fai clic destro sulla tappa e scegli Modifica. Aperto dal giorno, il modulo ha Inizio e Fine in fondo.',
+  'help.guide.set-stop-times.step.2':
+    'Inserisci Inizio e, se vuoi, Fine. Sovrapposizione di orario con: avvisa che un’altra tappa del giorno con orario si sovrappone; una Fine prima dell’Inizio blocca Aggiorna.',
+  'help.guide.set-stop-times.step.3':
+    'Clicca Aggiorna. La tappa riceve un contrassegno di orario e si sposta dove il suo orario la colloca nel giorno.',
+  'help.guide.set-stop-times.result':
+    'Le tappe con orario mantengono il loro posto nell’ordine; le tappe senza orario si dispongono intorno a esse.',
+  'help.guide.set-stop-times.tip.1':
+    'L’orario appartiene alla tappa in quel giorno; lo stesso luogo in un altro giorno può avere un altro orario.',
+  'help.guide.set-stop-times.tip.2':
+    'Per spostare a mano una tappa con orario, trascinala: la domanda Rimuovere l’orario? toglie l’orario per strada, non appena clicchi Conferma.',
+  'help.guide.set-stop-times.tip.3':
+    'Il campo Note per questo giorno, nello stesso modulo, tiene quello che vale solo in questo giorno, un tavolo prenotato, un numero di biglietto.',
+  // remove-from-day
+  'help.guide.remove-from-day.title': 'Togliere una tappa da un giorno',
+  'help.guide.remove-from-day.goal': 'Togliere un luogo dalla pianificazione senza cancellarlo dal viaggio.',
+  'help.guide.remove-from-day.step.1': 'Fai clic destro sulla tappa e scegli Rimuovi dal giorno.',
+  'help.guide.remove-from-day.step.2':
+    'La tappa non è più nel giorno; il luogo resta nella colonna dei luoghi, sotto Non pianificati se non sta su nessun altro giorno.',
+  'help.guide.remove-from-day.result':
+    'Il giorno, il suo percorso e il suo costo si aggiornano; la freccia Annulla riporta indietro la tappa.',
+  'help.guide.remove-from-day.tip.1':
+    'Elimina, nello stesso menu, toglie il luogo da tutto il viaggio, ogni giorno compreso.',
+  'help.guide.remove-from-day.tip.2':
+    'Rimuovi dal giorno sta anche nel pannello dei dettagli del luogo, accanto ad Aggiungi al giorno.',
+  // lock-stop
+  'help.guide.lock-stop.title': 'Bloccare una tappa al suo posto',
+  'help.guide.lock-stop.goal': 'Tenere una tappa dov’è quando il percorso viene ottimizzato.',
+  'help.guide.lock-stop.step.1':
+    'Passa il mouse sull’immagine della tappa e clicca il lucchetto: Mantieni la posizione durante l’ottimizzazione del percorso.',
+  'help.guide.lock-stop.step.2':
+    'Ottimizza ora dispone le altre tappe intorno a essa; clicca di nuovo il lucchetto (Clicca per sbloccare) per liberarla.',
+  'help.guide.lock-stop.result':
+    'Il lucchetto si vede sull’immagine; la tappa mantiene la sua posizione finché non la sblocchi.',
+  'help.guide.lock-stop.tip.1':
+    'Una tappa con un orario fisso è bloccata dal suo orario; durante l’ottimizzazione non si muove mai.',
+  'help.guide.lock-stop.tip.2':
+    'Il blocco dura per questa visita: dopo un ricaricamento ogni tappa è di nuovo libera, restano ferme solo le tappe con orario.',
+  // day-note
+  'help.guide.day-note.title': 'Aggiungere una nota a un giorno',
+  'help.guide.day-note.goal': 'Tenere un promemoria, un numero di biglietto o un piano B dentro il giorno.',
+  'help.guide.day-note.step.1': 'Clicca Aggiungi nota nell’intestazione del giorno.',
+  'help.guide.day-note.step.2':
+    'Dalle un nome sotto Nota, è quello che si vede nel giorno, e scrivi il resto sotto Nota giornaliera. La barra degli strumenti sopra formatta il testo (Grassetto, Elenco puntato, Link, Citazione), e Anteprima, a sinistra, mostra come verrà la nota nel giorno.',
+  'help.guide.day-note.step.3': 'Scegli un’Icona e un Colore, così la nota si distingue dalle tappe, poi Aggiungi.',
+  'help.guide.day-note.step.4':
+    'La nota sta nel giorno come una tappa: trascinala al suo posto, fai clic destro per Modifica ed Elimina.',
+  'help.guide.day-note.result':
+    'La nota fa parte del giorno, anche nel PDF; una nota con un orario si ordina con le tappe con orario.',
+  'help.guide.day-note.tip.1':
+    'Una nota con un orario può sostituire un trasporto per cui non hai una prenotazione: «08:15 S3 dalla stazione centrale».',
+  'help.guide.day-note.tip.2': 'Le note valgono per un giorno; una nota per tutto il viaggio sta in Collaborazione.',
+  // day-route
+  'help.guide.day-route.title': 'Mostrare e ottimizzare il percorso del giorno',
+  'help.guide.day-route.goal':
+    'Vedere la strada tra le tappe, scegliere come viaggi e lasciare che TREK ordini la sequenza.',
+  'help.guide.day-route.step.1':
+    'Apri il giorno e clicca Percorso nella barra del percorso: la strada tra le tappe si disegna sulla mappa, e i connettori tra le tappe mostrano il tempo e la distanza di ogni tratta.',
+  'help.guide.day-route.step.2':
+    'In auto e A piedi accanto impostano il mezzo di trasporto del giorno; le tratte si ricalcolano. I plugin possono aggiungere mezzi propri.',
+  'help.guide.day-route.step.3':
+    'Clicca un connettore per cambiare il mezzo di quella sola tratta: scegli un mezzo, oppure Usa predefinito del giorno per tornare a quello del giorno.',
+  'help.guide.day-route.step.4':
+    'Ottimizza riordina le tappe secondo la strada più breve. Le tappe con un lucchetto o con un orario fisso mantengono il loro posto; con un alloggio nel giorno, il percorso parte da lì.',
+  'help.guide.day-route.step.5':
+    'Apri in Google Maps o Apri in CoMaps apre tutto il giorno come itinerario in quell’app, per navigare durante il viaggio.',
+  'help.guide.day-route.result':
+    'Il giorno è un percorso con orari; Costo totale e le tratte si aggiornano quando l’ordine cambia.',
+  'help.guide.day-route.tip.1':
+    'I percorsi arrivano da OSRM in modo predefinito; l’amministratore può puntare TREK su un altro motore di calcolo in Impostazioni predefinite.',
+  'help.guide.day-route.tip.2':
+    'Una tratta che non si è potuta calcolare non mostra un tempo; controlla che entrambe le tappe abbiano le coordinate.',
+  'help.guide.day-route.tip.3': 'La freccia Annulla annulla un’ottimizzazione.',
+  // manage-days
+  'help.guide.manage-days.title': 'Aggiungere, riordinare e rinominare i giorni',
+  'help.guide.manage-days.goal': 'Dare forma ai giorni stessi, non solo a quello che ci sta sopra.',
+  'help.guide.manage-days.step.1':
+    'I giorni nascono dalle date del viaggio; cambia le date sulla scheda del viaggio in Dashboard e i giorni vengono aggiunti o tolti alle estremità.',
+  'help.guide.manage-days.step.2':
+    'Riordina i giorni nella barra apre una lista: Sposta su e Sposta giù spostano un giorno con tutto ciò che porta; Aggiungi giorno aggiunge un giorno alla fine.',
+  'help.guide.manage-days.step.3':
+    'Per rinominare un giorno, aprilo e clicca la matita accanto al suo titolo nei Dettagli del giorno sopra la mappa; il nome sostituisce Giorno 1 nella scheda e nel PDF.',
+  'help.guide.manage-days.step.4':
+    'Expand all days e Collapse all days nella barra chiudono tutte le schede in una volta; una singola scheda si chiude con la sua freccia.',
+  'help.guide.manage-days.result':
+    'Le date restano legate alla posizione: un giorno spostato in su prende la data precedente, e le sue tappe, note e prenotazioni viaggiano con lui.',
+  'help.guide.manage-days.tip.1': 'Riordina i giorni si può annullare dalla barra.',
+  'help.guide.manage-days.tip.2':
+    'Il costo nell’intestazione di un giorno somma le tappe e le prenotazioni di quel giorno che portano un prezzo.',
+  // bookings-in-plan
+  'help.guide.bookings-in-plan.title': 'Leggere prenotazioni e trasporti nel programma',
+  'help.guide.bookings-in-plan.goal':
+    'Sapere dove compare una prenotazione una volta che esiste, e quale schermata la crea.',
+  'help.guide.bookings-in-plan.step.1':
+    'Un trasporto (Volo, Treno, Traghetto, Autobus, Auto) compare nel giorno in cui parte come Partenza e nel giorno in cui arriva come Arrivo, con orario e tragitto; uno che dura più giorni copre i giorni in mezzo.',
+  'help.guide.bookings-in-plan.step.2':
+    'Una prenotazione legata a una tappa (un Ristorante, un Tour) segna quella tappa Prenotazione confermata o Prenotazione in attesa; una prenotazione con un giorno ma senza tappa è una riga a sé nel giorno.',
+  'help.guide.bookings-in-plan.step.3':
+    'Una notte in hotel è un alloggio: sta nei Dettagli del giorno sotto Alloggio, dal Check-in al Check-out, e il percorso di ciascuno di quei giorni parte da lì.',
+  'help.guide.bookings-in-plan.step.4':
+    'Sulla mappa, l’interruttore su una riga di trasporto disegna il suo percorso; Mostra tutti i percorsi prenotati nella barra li disegna tutti.',
+  'help.guide.bookings-in-plan.step.5':
+    'Per crearle: Aggiungi prenotazione su una tappa con il mouse sopra, Aggiungi trasporto e Trasporto pubblico nell’intestazione del giorno, e le schede Prenotazioni e Trasporti per la lista completa con importazione e file.',
+  'help.guide.bookings-in-plan.result':
+    'Una prenotazione, un posto nel programma; le schede sono le stesse prenotazioni sotto forma di lista.',
+  'help.guide.bookings-in-plan.tip.1':
+    'Confermata e In attesa è uno stato che imposti sulla prenotazione; il programma lo mostra sulla tappa, la scheda Prenotazioni le conta entrambe.',
+  'help.guide.bookings-in-plan.tip.2':
+    'Un trasporto con un orario fisso non si può trascinare; cambia invece il suo orario nella prenotazione.',
+  // export-plan
+  'help.guide.export-plan.title': 'Esportare il programma',
+  'help.guide.export-plan.goal': 'Portarsi via il programma come documento, nel calendario o su un GPS.',
+  'help.guide.export-plan.step.1': 'Clicca Esporta nella barra sopra i giorni.',
+  'help.guide.export-plan.step.2':
+    'Documento: PDF apre la vista di stampa di ogni giorno con le sue tappe, note e prenotazioni; Interruzione di pagina per giorno fa iniziare ogni giorno su una pagina nuova, Salva come PDF lo scarica.',
+  'help.guide.export-plan.step.3':
+    'Calendario: Scarica .ics salva le prenotazioni come file di calendario; Abbonati al calendario dà un link che la tua app di calendario aggiorna da sola.',
+  'help.guide.export-plan.step.4':
+    'Mappe e GPS · GPX: Tutto il viaggio esporta luoghi, percorsi dei giorni e tracce; Solo i luoghi i punti; Giorni come itinerari un itinerario per giorno, per mappe offline e dispositivi GPS.',
+  'help.guide.export-plan.result': 'Il file viene scaricato; nel viaggio non cambia nulla.',
+  'help.guide.export-plan.tip.1':
+    'Un singolo giorno va in un’app di mappe dalla sua barra del percorso: Apri in Google Maps o Apri in CoMaps.',
+  'help.guide.export-plan.tip.2':
+    'Abbonati al calendario richiede i feed di calendario attivati nelle tue impostazioni; Dashboard ha una guida per farlo.',
+  'help.guide.export-plan.tip.3': 'Esportare è leggere: ogni membro del viaggio può farlo.',
+
+  // ── Screen: trip-place ────────────────────────────────────────────────────────────────
+  'help.ctx.trip-place.title': 'Dettagli del luogo',
+  'help.ctx.trip-place.summary':
+    'Il riquadro che si apre sopra la mappa quando scegli un luogo: tutto ciò che il viaggio sa di lui, le stelle che gli ha dato ognuno, la sua immagine e i suoi file, e i pulsanti che lo mettono sul giorno aperto, in una lista o in una app di mappe.',
+  'help.ctx.trip-place.bullet.1':
+    'Clicca una riga nella colonna dei luoghi, una tappa dentro un giorno o un marcatore sulla mappa, e il riquadro si apre sopra la mappa. Sceglierlo dentro un giorno dice al riquadro quale tappa intendi, ed è questo che porta con sé i partecipanti della tappa e la sua prenotazione.',
+  'help.ctx.trip-place.bullet.2':
+    'La testata porta l’immagine rotonda, il nome, la categoria, l’indirizzo e le coordinate. Clicca l’immagine per usarne una tua, fai doppio clic sul nome per rinominare il luogo sul posto, e la X a destra chiude il riquadro.',
+  'help.ctx.trip-place.bullet.3':
+    'Sotto: le stelle che ogni viaggiatore ha dato al luogo, il prezzo se ne ha uno, la descrizione e le note, e Note per questo giorno quando la tappa ne porta.',
+  'help.ctx.trip-place.bullet.4':
+    'Seguono Orari di apertura, Colore del percorso, Dati del percorso e File, per quanto si applicano. File prende qualunque cosa dalle tue cartelle ed elenca anche ciò che è appeso alla prenotazione di questa tappa.',
+  'help.ctx.trip-place.bullet.5':
+    'La riga in fondo: Aggiungi al giorno o Rimuovi dal giorno finché un giorno è aperto, poi Salva nella raccolta, Navigazione, Apri sito web, Modifica ed Elimina.',
+  'help.ctx.trip-place.bullet.6':
+    'Un luogo che TREK è riuscito ad abbinare a un fornitore di mappe mostra di più: la valutazione di quel fornitore con una recensione, il numero di telefono e un anello Aperto o Chiuso intorno all’immagine, con gli orari della settimana dietro.',
+  // read-place
+  'help.guide.read-place.title': 'Che cosa il riquadro ti dice di un luogo',
+  'help.guide.read-place.goal': 'Leggi tutto ciò che il viaggio sa di un luogo, in un unico riquadro.',
+  'help.guide.read-place.step.1':
+    'Nella colonna dei giorni, clicca la tappa che vuoi leggere. Il riquadro si apre sopra la mappa e la tappa resta segnata nel suo giorno.',
+  'help.guide.read-place.step.2':
+    'La testata: l’immagine rotonda, il nome, l’indirizzo e le coordinate esatte. La X a destra richiude il riquadro.',
+  'help.guide.read-place.step.3':
+    'Sotto, le stelle che ogni viaggiatore ha dato al luogo, con la media e quanti hanno votato. Non ancora valutato finché nessuno lo ha fatto.',
+  'help.guide.read-place.step.4':
+    'Poi la descrizione e, sotto, le note. Entrambe sono il testo del modulo del luogo, reso: elenchi, link e grassetto funzionano.',
+  'help.guide.read-place.step.5': 'Partecipanti dice chi va a questa tappa. Ci sono tutti finché non togli qualcuno.',
+  'help.guide.read-place.step.6':
+    'La riga in fondo è ciò che puoi fare da qui: togliere il luogo dal giorno aperto o mettercelo, salvarlo in una lista, aprirlo in una app di mappe, modificarlo o eliminarlo.',
+  'help.guide.read-place.result':
+    'Il riquadro resta aperto finché non lo chiudi con la X o scegli un altro luogo, e la tappa a cui appartiene resta segnata nella colonna dei giorni.',
+  'help.guide.read-place.tip.1':
+    'Scelto dalla colonna dei luoghi, il riquadro conosce il luogo ma non una tappa, quindi non mostra né partecipanti né prenotazione. Scegli invece la tappa dentro il giorno e ci sono entrambi.',
+  'help.guide.read-place.tip.2':
+    'Fai doppio clic sul nome per rinominare il luogo senza aprire il modulo. Invio salva, Esc annulla la modifica.',
+  'help.guide.read-place.tip.3':
+    'Un luogo che TREK è riuscito ad abbinare a un fornitore di mappe mostra anche la valutazione di quel fornitore, una recensione, il numero di telefono e gli orari di apertura.',
+  // rate-place
+  'help.guide.rate-place.title': 'Valutare un luogo',
+  'help.guide.rate-place.goal': 'Dai a un luogo le tue stelle, e guarda quelle che gli hanno dato tutti gli altri.',
+  'help.guide.rate-place.step.1':
+    'Apri il luogo. La riga delle stelle sta subito sotto la testata e porta la media dei voti finora, con il loro numero tra parentesi.',
+  'help.guide.rate-place.step.2':
+    'Clicca la stella che intendi. Le stelle si riempiono mentre le percorri, così vedi che cosa stai per dare.',
+  'help.guide.rate-place.step.3':
+    'Il tuo voto entra subito nella media, e i volti accanto sono chi ha votato. Lascia il puntatore sulla riga per vedere le stelle di tutti.',
+  'help.guide.rate-place.step.4':
+    'La stessa media sta sulla riga del luogo nella colonna dei luoghi, così quelli buoni spiccano nella lista.',
+  'help.guide.rate-place.result':
+    'Le tue stelle sono sul luogo, visibili a tutto il viaggio, e la stella nella riga dei filtri sopra la lista può ora tenere solo i luoghi che raggiungono una soglia.',
+  'help.guide.rate-place.tip.1':
+    'Ogni viaggiatore può valutare, anche in un viaggio in cui solo alcuni hanno il permesso Aggiungere / modificare / eliminare luoghi.',
+  'help.guide.rate-place.tip.2':
+    'Clicca la stella che hai già dato per ritirare il tuo voto. Se non vota più nessuno, il luogo torna a dire Non ancora valutato.',
+  'help.guide.rate-place.tip.3':
+    'Accanto alle stelle stanno fino a sei votanti come volti; il tooltip li nomina tutti, e segna il tuo.',
+  // place-image
+  'help.guide.place-image.title': 'Mettere una tua immagine su un luogo',
+  'help.guide.place-image.goal': 'Sostituisci la miniatura automatica con una foto tua.',
+  'help.guide.place-image.step.1': 'Apri il luogo dalla colonna dei luoghi.',
+  'help.guide.place-image.step.2':
+    'Lascia il puntatore sull’immagine rotonda nella testata: compare una fotocamera e il tooltip dice Carica immagine. Cliccala e scegli il tuo file.',
+  'help.guide.place-image.step.3': 'La testata mostra ora la tua immagine, con una piccola X rossa al suo angolo.',
+  'help.guide.place-image.step.4':
+    'La stessa immagine sta sulla riga del luogo nella colonna dei luoghi, e sul suo marcatore sulla mappa.',
+  'help.guide.place-image.result':
+    'La tua immagine è l’immagine del luogo ovunque: il riquadro, la colonna dei luoghi, la tappa nel giorno, il marcatore sulla mappa e un viaggio condiviso.',
+  'help.guide.place-image.tip.1':
+    'JPG, PNG, GIF e WebP vengono accettati, e un HEIC da un iPhone viene convertito all’ingresso.',
+  'help.guide.place-image.tip.2':
+    'La X all’angolo rimuove di nuovo la tua immagine e torna quella automatica. Il luogo stesso resta intatto.',
+  'help.guide.place-image.tip.3':
+    'Senza una tua immagine TREK ne cerca una dalle coordinate del luogo, e ripiega sull’icona della categoria.',
+  // place-day-assign
+  'help.guide.place-day-assign.title': 'Mettere il luogo sul giorno aperto, o toglierlo',
+  'help.guide.place-day-assign.goal': 'Usa il pulsante del riquadro invece di trascinare la riga per il pianificatore.',
+  'help.guide.place-day-assign.step.1':
+    'Clicca l’intestazione di un giorno nella colonna dei giorni. Quel giorno ora è quello aperto, e il riquadro lavora su di lui.',
+  'help.guide.place-day-assign.step.2':
+    'Clicca nella colonna dei luoghi un luogo che non è su quel giorno. Il suo riquadro si apre e la riga in fondo offre Aggiungi al giorno.',
+  'help.guide.place-day-assign.step.3':
+    'Clicca Aggiungi al giorno. La tappa finisce in fondo al giorno e il pulsante diventa Rimuovi dal giorno.',
+  'help.guide.place-day-assign.step.4':
+    'La tappa ora è nel giorno, ultima nella lista. Trascinala in su fino al suo posto.',
+  'help.guide.place-day-assign.step.5':
+    'Rimuovi dal giorno toglie di nuovo quella tappa dal giorno, e il riquadro offre ancora Aggiungi al giorno.',
+  'help.guide.place-day-assign.result':
+    'Il giorno porta la tappa, o non la porta più, e il luogo stesso resta intatto in entrambi i casi.',
+  'help.guide.place-day-assign.tip.1':
+    'Il pulsante esiste solo finché un giorno è aperto. Senza un giorno il riquadro non ha nulla a cui aggiungere il luogo.',
+  'help.guide.place-day-assign.tip.2':
+    'Togliere una tappa da un giorno lascia il luogo nel viaggio e nella colonna dei luoghi. Elimina è ciò che lo toglie ovunque.',
+  'help.guide.place-day-assign.tip.3':
+    'Una tappa che una prenotazione di alloggio ha messo sul giorno non offre nessuno dei due pulsanti: quella notte si aggiunge e si toglie nel blocco Alloggio del giorno.',
+  // place-participants
+  'help.guide.place-participants.title': 'Dire chi va a questa tappa',
+  'help.guide.place-participants.goal': 'Dividi il gruppo per una tappa senza dividere il viaggio.',
+  'help.guide.place-participants.step.1':
+    'Clicca la tappa dentro il giorno. Il riquadro si apre e Partecipanti elenca tutti quelli del viaggio.',
+  'help.guide.place-participants.step.2':
+    'Clicca il nome di un viaggiatore per toglierlo da questa tappa. Il nome viene barrato mentre ci passi sopra.',
+  'help.guide.place-participants.step.3':
+    'Un + tratteggiato compare non appena qualcuno manca. Cliccalo per vedere chi non è sulla tappa.',
+  'help.guide.place-participants.step.4':
+    'Clicca un nome per rimetterlo. Con tutti di nuovo dentro, la tappa torna a essere di tutto il gruppo.',
+  'help.guide.place-participants.result':
+    'La tappa porta i viaggiatori che hai scelto, e il resto del gruppo ha quel pomeriggio per sé.',
+  'help.guide.place-participants.tip.1':
+    'Partecipanti compare solo con una tappa selezionata, quindi scegli il luogo dentro il giorno e non nella colonna dei luoghi, e solo in un viaggio con più di un viaggiatore.',
+  'help.guide.place-participants.tip.2':
+    'Nessuno scelto vuol dire che vanno tutti. Togliere l’ultimo rimette dentro tutti.',
+  'help.guide.place-participants.tip.3':
+    'Un ospite, che non ha un account suo, può essere partecipante come chiunque altro.',
+  // place-booking
+  'help.guide.place-booking.title': 'La prenotazione su una tappa',
+  'help.guide.place-booking.goal':
+    'Leggi la prenotazione che appartiene a una tappa, aprila, e appendine una nuova a quella tappa.',
+  'help.guide.place-booking.step.1':
+    'Apri la tappa a cui appartiene la prenotazione. Il riquadro mostra una striscia con Confermata o In attesa e il nome della prenotazione.',
+  'help.guide.place-booking.step.2':
+    'La striscia porta la Data, l’Ora e il Codice prenotazione, e tutte le note che la prenotazione ha.',
+  'help.guide.place-booking.step.3': 'Clicca la striscia. Il modulo della prenotazione si apre sopra.',
+  'help.guide.place-booking.step.4':
+    'Collega all’assegnazione del giorno è ciò che appende una prenotazione a una tappa, e qui nomina già questa. Richiudi il modulo.',
+  'help.guide.place-booking.step.5':
+    'Una nuova prenotazione per una tappa parte dalla colonna dei giorni: passa sulla tappa e clicca il + alla sua estremità. Il modulo si apre come Nuova prenotazione, già collegata a quella tappa.',
+  'help.guide.place-booking.result':
+    'La prenotazione è appesa alla tappa: sta sul riquadro, sta nel giorno, e i suoi file sono elencati anche qui sotto File.',
+  'help.guide.place-booking.tip.1':
+    'La striscia si mostra solo per la tappa a cui la prenotazione è appesa. Una prenotazione senza tappa vive nella scheda Pren.',
+  'help.guide.place-booking.tip.2':
+    'Più prenotazioni possono condividere una tappa: il pranzo e il tour che parte dalla stessa porta.',
+  'help.guide.place-booking.tip.3':
+    'Un treno, un volo o un traghetto apre invece il modulo di trasporto, lo stesso che usa la scheda Trasporti.',
+  // place-files
+  'help.guide.place-files.title': 'Tenere i biglietti di un luogo con il luogo',
+  'help.guide.place-files.goal': 'Metti il biglietto, il voucher o la mappa di un luogo dove lo cercherai.',
+  'help.guide.place-files.step.1':
+    'Apri il luogo. File sta ai piedi del riquadro e dice File finché il luogo non ne ha.',
+  'help.guide.place-files.step.2': 'Clicca Carica accanto e scegli il file.',
+  'help.guide.place-files.step.3': 'Il pulsante conta ciò che il luogo tiene, e la lista si apre da sola.',
+  'help.guide.place-files.step.4': 'Ogni riga è il nome del file con la sua dimensione. Cliccala per aprire il file.',
+  'help.guide.place-files.result':
+    'Il file sta sul luogo, contato nel riquadro, ed è anche nella scheda File del viaggio.',
+  'help.guide.place-files.tip.1':
+    'File elenca anche ciò che è appeso alla prenotazione di questa tappa, così una conferma d’albergo compare sull’albergo.',
+  'help.guide.place-files.tip.2': 'Carica prende più file alla volta.',
+  'help.guide.place-files.tip.3':
+    'Senza il permesso Caricare file il pulsante Carica non c’è; i file già sul luogo restano.',
+  // place-navigation
+  'help.guide.place-navigation.title': 'Aprire un luogo in una app di mappe o sul suo sito',
+  'help.guide.place-navigation.goal': 'Consegna il luogo alla app che davvero ti ci porta.',
+  'help.guide.place-navigation.step.1': 'Apri il luogo e clicca Navigazione nella riga in fondo.',
+  'help.guide.place-navigation.step.2':
+    'La lista sono le app di mappe che vanno bene per questo luogo: Google Maps, Waze, Apple Maps, OpenStreetMap e CoMaps.',
+  'help.guide.place-navigation.step.3':
+    'Clicca quella che usi. TREK le passa il luogo stesso dove può, non solo un paio di coordinate, così arrivi all’ingresso giusto.',
+  'help.guide.place-navigation.step.4':
+    'Apri sito web accanto apre la pagina propria del luogo, i suoi orari e i suoi biglietti, in una nuova scheda.',
+  'help.guide.place-navigation.result':
+    'La app di mappe si apre sul luogo, il sito in una scheda tutta sua, e nel viaggio non cambia nulla.',
+  'help.guide.place-navigation.tip.1':
+    'Waze parte subito con la navigazione. Le altre aprono il luogo, e partire da lì è un tocco in più.',
+  'help.guide.place-navigation.tip.2':
+    'Quali app vengono offerte dipende dal luogo e dal tuo dispositivo: Apple Maps resta fuori su Android, 高德地图 esce solo per un luogo in Cina, e Waze, Apple Maps e CoMaps hanno bisogno delle coordinate del luogo.',
+  'help.guide.place-navigation.tip.3':
+    'Quando si applica una sola app, il pulsante porta il nome di quella app e la apre subito.',
+  // place-to-collection
+  'help.guide.place-to-collection.title': 'Salvare un luogo in una delle tue liste',
+  'help.guide.place-to-collection.goal': 'Tieni per il prossimo viaggio un luogo che hai trovato in questo.',
+  'help.guide.place-to-collection.step.1': 'Apri il luogo e clicca Salva nella raccolta in fondo al riquadro.',
+  'help.guide.place-to-collection.step.2':
+    'Salva in una lista mostra ogni lista che possiedi o che condividi. Una spunta segna quelle che hanno già questo luogo.',
+  'help.guide.place-to-collection.step.3': 'Clicca la lista. Il luogo ci sta dentro subito.',
+  'help.guide.place-to-collection.step.4': 'Chiudi, e il pulsante nel riquadro dice Salvato.',
+  'help.guide.place-to-collection.result':
+    'Il luogo è nella tua lista con la sua immagine, le sue note e le sue stelle, pronto per il prossimo viaggio.',
+  'help.guide.place-to-collection.tip.1':
+    'Il pulsante c’è solo finché il modulo Raccolte è acceso, cosa che l’amministratore fa sotto Moduli.',
+  'help.guide.place-to-collection.tip.2':
+    'Un luogo può stare in più liste alla volta, con uno stato suo in ognuna: un’Idea in una, Visitato in un’altra.',
+  'help.guide.place-to-collection.tip.3':
+    'Segna come visitato, accanto al nome del luogo nel selettore, lo spunta nella lista; con il luogo in più liste tue la pillola dice Visitato ovunque e le fa tutte in una volta.',
+  // place-track
+  'help.guide.place-track.title': 'Leggere una traccia e darle un colore suo',
+  'help.guide.place-track.goal':
+    'Guarda quanto è lunga una camminata importata, e distingui la sua linea dalle altre sulla mappa.',
+  'help.guide.place-track.step.1':
+    'Nella colonna dei luoghi, la riga di una traccia porta un breve tratto nel colore in cui è disegnata la sua linea. Cliccala.',
+  'help.guide.place-track.step.2':
+    'Dati del percorso dà la lunghezza del cammino, nell’Unità di Distanza che hai impostato.',
+  'help.guide.place-track.step.3':
+    'Colore del percorso sopra mostra il colore in uso. Clicca la riga per aprire i campioni.',
+  'help.guide.place-track.step.4': 'Scegli un colore. La linea sulla mappa e il tratto sulla riga cambiano con lui.',
+  'help.guide.place-track.step.5':
+    'La cella tratteggiata a sinistra, Colore automatico, restituisce alla traccia il colore che eredita; il contagocce a destra apre il selettore di colore del tuo sistema per qualunque altro.',
+  'help.guide.place-track.result':
+    'La traccia è disegnata nel colore che hai scelto, nel riquadro, sulla sua riga nella colonna dei luoghi e sulla mappa.',
+  'help.guide.place-track.tip.1':
+    'Solo un luogo che porta un cammino, importato da un file GPX, KML o KMZ, ha questi due blocchi.',
+  'help.guide.place-track.tip.2':
+    'Una traccia registrata con le quote mostra anche il suo punto più alto e più basso, i metri in salita e in discesa, e il profilo della camminata.',
+  'help.guide.place-track.tip.3':
+    'Un import dà a ogni traccia che porta dentro un colore suo, così due camminate non arrivano mai nello stesso.',
+
+  // ── Screen: trip-files ────────────────────────────────────────────────────────────────
+  'help.ctx.trip-files.title': 'File',
+  'help.ctx.trip-files.summary':
+    'Ogni documento del viaggio in un unico elenco: biglietti, conferme, pass e immagini, ognuno con una nota, un collegamento al luogo o alla prenotazione a cui appartiene, e un cestino da cui può tornare fuori.',
+  'help.ctx.trip-files.bullet.1':
+    'Trascina qui i file, in alto, prende i file; un clic sul riquadro apre la finestra di scelta dei file. La riga sotto elenca i tipi di file che questo TREK accetta e il limite di 50 MB per file.',
+  'help.ctx.trip-files.bullet.2':
+    'Le schede dicono cosa mostra l’elenco: Tutti, PDF, Immagini e Documenti, ognuna con il suo conteggio. Una scheda con la stella si aggiunge appena un file finisce tra i preferiti, Note Collaborazione appena una nota porta un allegato.',
+  'help.ctx.trip-files.bullet.3':
+    'Una riga porta chi l’ha caricato, il nome, la nota sotto, la dimensione e la data, e un contrassegno per ogni collegamento: Programma giornaliero e il luogo, Prenotazione o Trasporto e la prenotazione, Da Note Collaborazione.',
+  'help.ctx.trip-files.bullet.4':
+    'In fondo a una riga stanno Aggiungi ai preferiti, Assegna, Apri, Scarica ed Elimina. Elimina non chiede: il file va nel cestino, da dove può essere riportato indietro.',
+  'help.ctx.trip-files.bullet.5':
+    'Un’immagine o un video si apre a schermo intero, con i tasti freccia e una striscia di miniature; ogni altro documento si apre in un’anteprima sopra la pagina, con Apri in una nuova scheda e Scarica. Un pass per il wallet viene scaricato subito.',
+  'help.ctx.trip-files.bullet.6':
+    'Cestino all’estremità destra porta l’elenco sui file eliminati, dove ognuno viene ripristinato o eliminato per sempre e Svuota cestino li toglie tutti. Dove un amministratore ha collegato un archivio di documenti, accanto sta Sincronizzazione documenti.',
+  // files-upload
+  'help.guide.files-upload.title': 'Mettere un documento nel viaggio',
+  'help.guide.files-upload.goal':
+    'Porta un biglietto, una conferma o una foto dalla tua cartella dei download nel viaggio, dove tutti quelli che ci sono possono raggiungerli.',
+  'help.guide.files-upload.step.1':
+    'Apri il viaggio e clicca File nella barra delle schede. Lì sono elencati i documenti del viaggio, con il riquadro di caricamento sopra.',
+  'help.guide.files-upload.step.2':
+    'Clicca Trascina qui i file e scegli uno o più file. Vengono caricati uno dopo l’altro e nel riquadro si legge Caricamento... finché dura. La riga sotto il riquadro dice quali tipi accetta questo TREK, e che un file può pesare al massimo 50 MB.',
+  'help.guide.files-upload.step.3':
+    'Appena l’ultimo file è caricato, Assegna file si apre da solo per lui. Aggiungi una nota... dà al file una riga tutta sua, e gli elenchi sotto lo legano a un luogo o a una prenotazione. Chiudilo con la ×; chiudendolo non si perde nulla.',
+  'help.guide.files-upload.step.4':
+    'I nuovi file stanno in cima all’elenco. Una riga mostra chi l’ha caricato, il nome, la dimensione e la data; un’immagine riceve una miniatura, ogni altro file il suo tipo.',
+  'help.guide.files-upload.result':
+    'I documenti sono nel viaggio, e chiunque possa vedere il viaggio può aprirli e scaricarli.',
+  'help.guide.files-upload.tip.1':
+    'Un file si può anche trascinare dalla scrivania direttamente sul riquadro, che si illumina finché il file gli sta sopra.',
+  'help.guide.files-upload.tip.2':
+    'Un’immagine negli appunti entra nell’elenco con Ctrl+V, così uno screenshot di una prenotazione non va mai salvato prima.',
+  'help.guide.files-upload.tip.3':
+    'Caricare richiede il diritto Caricare file; senza di quello il riquadro non c’è proprio. Un tipo che non è nell’elenco, o un file oltre 50 MB, viene rifiutato con un messaggio e non viene caricato nulla.',
+  // files-link
+  'help.guide.files-link.title': 'Legare un documento a un luogo o a una prenotazione',
+  'help.guide.files-link.goal': 'Rendi il biglietto trovabile dal giorno a cui appartiene, non solo da questo elenco.',
+  'help.guide.files-link.step.1':
+    'Clicca Assegna, la matita in fondo alla riga. Si apre Assegna file, con il nome del file.',
+  'help.guide.files-link.step.2':
+    'Sotto Nota, Aggiungi una nota... prende una riga, che poi sta sotto il nome del file nell’elenco. Viene salvata nel momento in cui esci dal campo.',
+  'help.guide.files-link.step.3':
+    'Sotto Luogo stanno i luoghi del viaggio, raggruppati per il giorno in cui si trovano, con Non assegnato in fondo per quelli che non stanno in nessun giorno. Cliccane uno e riceve un segno di spunta.',
+  'help.guide.files-link.step.4':
+    'Sotto Prenotazione e Trasporto stanno le prenotazioni del viaggio. Clicca quella a cui appartiene il documento; anche lei riceve la sua spunta.',
+  'help.guide.files-link.step.5':
+    'Chiudi con la ×. Qui non c’è un pulsante di salvataggio: ogni clic è stato scritto mentre lo facevi.',
+  'help.guide.files-link.result':
+    'La riga porta la nota e un contrassegno per ogni collegamento, Programma giornaliero e il nome del luogo, Trasporto e il nome del volo, e il documento è appeso anche al luogo e alla prenotazione.',
+  'help.guide.files-link.tip.1':
+    'Un file può tenere più collegamenti insieme, così la stessa conferma appartiene all’hotel e alla notte che copre.',
+  'help.guide.files-link.tip.2': 'Cliccare di nuovo una voce spuntata toglie quel collegamento; il file in sé resta.',
+  'help.guide.files-link.tip.3':
+    'Funziona anche al contrario: un documento allegato a un luogo o a una prenotazione sta anche in questo elenco, con lo stesso contrassegno sulla sua riga.',
+  // files-star
+  'help.guide.files-star.title': 'Tenere in alto i documenti importanti',
+  'help.guide.files-star.goal':
+    'Tira fuori i due o tre fogli che ti serviranno davvero da un elenco che cresce per tutto il viaggio.',
+  'help.guide.files-star.step.1':
+    'Clicca Aggiungi ai preferiti in fondo a una riga. La stella si riempie di giallo, una seconda stella compare davanti al nome del file, e il pulsante ora dice Rimuovi dai preferiti.',
+  'help.guide.files-star.step.2':
+    'L’elenco si riordina: i file tra i preferiti stanno sopra tutti gli altri, i più recenti per primi dentro ogni gruppo.',
+  'help.guide.files-star.step.3':
+    'In alto una stella si è aggiunta alle schede, con il numero di file preferiti dietro. Cliccala per vedere solo quelli.',
+  'help.guide.files-star.result':
+    'I fogli che ti servono allo sportello stanno in cima all’elenco, e una scheda non mostra altro.',
+  'help.guide.files-star.tip.1':
+    'La scheda con la stella esiste solo finché qualcosa è tra i preferiti. Togli dai preferiti l’ultimo file e la scheda se ne va con lui.',
+  'help.guide.files-star.tip.2':
+    'Mettere tra i preferiti conta come una modifica: un membro che può solo leggere i file del viaggio vede le stelle ma non può metterle.',
+  // files-filter
+  'help.guide.files-filter.title': 'Trovare un documento nell’elenco',
+  'help.guide.files-filter.goal': 'Restringi un elenco che contiene tutto all’unico tipo di foglio che cerchi.',
+  'help.guide.files-filter.step.1':
+    'Le schede sopra l’elenco sono Tutti, PDF, Immagini e Documenti, ognuna con il numero di file dietro.',
+  'help.guide.files-filter.step.2': 'Clicca PDF: l’elenco tiene i file PDF e nient’altro.',
+  'help.guide.files-filter.step.3':
+    'Altre due schede vanno e vengono con ciò che c’è nel viaggio: una stella appena un file finisce tra i preferiti, e Note Collaborazione appena una nota nella scheda Collaborazione porta un allegato.',
+  'help.guide.files-filter.step.4': 'Tutti riporta l’elenco intero.',
+  'help.guide.files-filter.result':
+    'L’elenco mostra solo ciò che la scheda nomina, e il conteggio su ogni scheda dice quanti sono.',
+  'help.guide.files-filter.tip.1':
+    'Qui non ci sono cartelle e non si rinomina nulla: la nota in Assegna file, i collegamenti a luoghi e prenotazioni, e la stella sono ciò per cui un documento viene ordinato.',
+  'help.guide.files-filter.tip.2':
+    'L’elenco stesso mette sempre prima i preferiti, poi i più recenti, così un documento caricato oggi sta sopra a uno del mese scorso.',
+  // files-preview
+  'help.guide.files-preview.title': 'Leggere un documento senza uscire da TREK',
+  'help.guide.files-preview.goal':
+    'Guarda un biglietto o un’immagine sul posto, e portali sulla tua macchina quando ti servono lì.',
+  'help.guide.files-preview.step.1':
+    'Clicca il nome di un’immagine o la sua miniatura. Si apre a schermo intero, con il nome del file e la sua posizione tra le immagini nell’intestazione.',
+  'help.guide.files-preview.step.2':
+    'Le frecce tonde ai lati, i tasti freccia sinistra e destra e la striscia di miniature in basso scorrono tutte le immagini che l’elenco sta mostrando in quel momento.',
+  'help.guide.files-preview.step.3':
+    'Apri in una nuova scheda e Scarica stanno nell’intestazione; la × o Esc richiude l’immagine.',
+  'help.guide.files-preview.step.4':
+    'Un documento che non è un’immagine si apre invece in un’anteprima sopra la pagina, con gli stessi due pulsanti nella sua intestazione. Questa si chiude con la × o con un clic di fianco.',
+  'help.guide.files-preview.step.5':
+    'Scarica in fondo a una riga salva il file direttamente sulla tua macchina, senza aprire prima nulla.',
+  'help.guide.files-preview.result':
+    'Il documento è sullo schermo, e gli stessi due pulsanti lo mettono in una scheda del browser o sul tuo disco.',
+  'help.guide.files-preview.tip.1': 'Su uno schermo touch scorri le immagini con il dito invece di cliccare le frecce.',
+  'help.guide.files-preview.tip.2':
+    'Un pass per il wallet non apre mai un’anteprima: viene scaricato subito, così il telefono può passarlo alla sua app wallet.',
+  'help.guide.files-preview.tip.3':
+    'Apri in una nuova scheda e Scarica prendono entrambi il file con la tua sessione, così un link copiato dalla barra degli indirizzi non serve a nessun altro.',
+  // files-trash
+  'help.guide.files-trash.title': 'Buttare via un documento, e riprenderlo',
+  'help.guide.files-trash.goal':
+    'Fai pulizia di ciò che al viaggio non serve più, senza perdere niente che invece ti serviva.',
+  'help.guide.files-trash.step.1':
+    'Clicca Elimina in fondo a una riga. Il file lascia subito l’elenco e il messaggio dice Spostato nel cestino. Niente chiede prima.',
+  'help.guide.files-trash.step.2':
+    'Cestino all’estremità destra della barra degli strumenti porta l’elenco su ciò che è stato buttato. L’intestazione dice Cestino e le schede dei filtri spariscono.',
+  'help.guide.files-trash.step.3':
+    'Una riga buttata è in grigio e le restano due pulsanti: Ripristina, che riporta indietro il file, ed Elimina, che lo toglie per sempre dopo una domanda.',
+  'help.guide.files-trash.step.4':
+    'Clicca Ripristina. Il messaggio dice File ripristinato e la riga lascia il cestino, con la sua nota e i suoi collegamenti ancora addosso.',
+  'help.guide.files-trash.step.5':
+    'Svuota cestino in alto toglie per sempre tutto ciò che resta qui, e il browser chiede una volta prima di farlo. Cestino torna ai file.',
+  'help.guide.files-trash.result': 'Il file è di nuovo nell’elenco dov’era, come se niente fosse.',
+  'help.guide.files-trash.tip.1':
+    'Elimina su una riga non chiede prima, ed è per questo che c’è il cestino: niente lascia TREK finché non lo dici qui dentro.',
+  'help.guide.files-trash.tip.2':
+    'Buttare via un file e riprenderlo richiede il diritto Eliminare file. Un membro che non ce l’ha non vede né Elimina sulla riga né i pulsanti nel cestino.',
+  'help.guide.files-trash.tip.3': 'Un file eliminato per sempre nel cestino non può essere riportato indietro.',
+
+  // ── Screen: trip-day-detail ───────────────────────────────────────────────────────────
+  'help.ctx.trip-day-detail.title': 'Dettagli del giorno',
+  'help.ctx.trip-day-detail.summary':
+    'Il pannello che l’intestazione di un giorno apre sopra la mappa: il giorno per intero, il suo nome e la sua data, il meteo dove sarai, le prenotazioni che cadono su di esso e le notti prenotate per esso.',
+  'help.ctx.trip-day-detail.bullet.1':
+    'Clicca l’intestazione di un giorno nella colonna dei giorni e il pannello si apre sopra il centro della mappa. La stessa intestazione di nuovo, o la croce alla sua destra, lo chiude e lascia andare il giorno.',
+  'help.ctx.trip-day-detail.bullet.2':
+    'L’intestazione porta il nome del giorno e la sua data. La matita accanto al nome rinomina il giorno, il doppio chevron ripiega il pannello in una barra sottile così la mappa torna libera.',
+  'help.ctx.trip-day-detail.bullet.3':
+    'In cima, il meteo del giorno. Previsioni per nomina il luogo a cui si riferisce: la prima tappa del giorno, o l’alloggio in cui ti svegli.',
+  'help.ctx.trip-day-detail.bullet.4':
+    'Prenotazioni elenca le prenotazioni di quel giorno, ognuna con il suo tipo, la tappa a cui appartiene e i suoi orari. Verde vuol dire confermata, ambra ancora in attesa; è solo una lettura, le prenotazioni si cambiano nella scheda Prenotazioni.',
+  'help.ctx.trip-day-detail.bullet.5':
+    'Alloggio mostra ogni notte prenotata su questo giorno, con Check-in e Check-out nei giorni in cui avvengono, la finestra di check-in, l’ora di check-out e il numero di conferma.',
+  'help.ctx.trip-day-detail.bullet.6':
+    'Aggiungi alloggio prenota una notte su questo giorno: scegli la struttura tra i luoghi del viaggio, indica quali giorni copre, e aggiungi gli orari e il codice.',
+  // day-panel
+  'help.guide.day-panel.title': 'Aprire un giorno e leggerne i dettagli',
+  'help.guide.day-panel.goal':
+    'Vedere un giorno per intero, il suo meteo, le sue prenotazioni e dove dormi, senza lasciare la mappa.',
+  'help.guide.day-panel.step.1':
+    'Clicca l’intestazione di un giorno nella colonna dei giorni. Il giorno viene selezionato e i suoi dettagli si aprono sopra il centro della mappa.',
+  'help.guide.day-panel.step.2':
+    'L’intestazione nomina il giorno, Giorno 1 finché non gli dai un nome, con la sua data sotto.',
+  'help.guide.day-panel.step.3':
+    'In cima, il meteo del giorno. Previsioni per dice a quale luogo si riferisce: la prima tappa del giorno, o l’alloggio in cui ti svegli.',
+  'help.guide.day-panel.step.4':
+    'Prenotazioni sotto elenca le prenotazioni che cadono su questo giorno, con i loro orari.',
+  'help.guide.day-panel.step.5':
+    'Alloggio mostra le notti prenotate su questo giorno, con Check-in e Check-out nei giorni in cui avvengono.',
+  'help.guide.day-panel.step.6':
+    'Il doppio chevron nell’intestazione ripiega il pannello in una barra sottile. La croce accanto chiude il pannello e lascia andare il giorno.',
+  'help.guide.day-panel.result':
+    'Ripiegato nella sua barra il pannello lascia libera la mappa e tiene il giorno selezionato; chiuso, il giorno è deselezionato e il programma è come prima.',
+  'help.guide.day-panel.tip.1':
+    'Anche cliccare in un punto qualsiasi della barra di intestazione del pannello lo ripiega. Il chevron ne è soltanto il pulsante.',
+  'help.guide.day-panel.tip.2':
+    'Aprire un luogo dalla colonna dei luoghi mette i dettagli del luogo al posto del pannello. Chiudili e il giorno torna.',
+  // day-weather
+  'help.guide.day-weather.title': 'Leggere il meteo del giorno',
+  'help.guide.day-weather.goal': 'Sapere come sarà il giorno là dove ti trovi davvero quel giorno.',
+  'help.guide.day-weather.step.1':
+    'Previsioni per nomina il luogo a cui si riferiscono i numeri: la prima tappa del giorno o, in un giorno senza tappe, l’alloggio in cui ti svegli.',
+  'help.guide.day-weather.step.2':
+    'Il numero grande è la temperatura del giorno, accanto la minima e la massima, e la condizione a parole.',
+  'help.guide.day-weather.step.3':
+    'I chip sotto: la probabilità di pioggia, quanta ne cade, il vento più forte, e alba e tramonto.',
+  'help.guide.day-weather.step.4':
+    'In fondo, il giorno ora per ora, ogni due ore: l’ora, l’icona, la temperatura e la probabilità di pioggia. Un’ora oltre il 50 per cento è ombreggiata di blu.',
+  'help.guide.day-weather.result':
+    'Il riquadro del giorno nella colonna dei giorni porta lo stesso meteo in piccolo sotto il suo numero, così l’intero viaggio si legge a colpo d’occhio.',
+  'help.guide.day-weather.tip.1':
+    'Gradi e vento seguono la tua scelta sotto Visualizzazione nelle Impostazioni: passa a Fahrenheit e la stessa previsione viene data in °F e mph.',
+  'help.guide.day-weather.tip.2':
+    'Un giorno senza tappe localizzate e senza un alloggio in cui svegliarsi non mostra alcun meteo: la previsione è sempre per un luogo, mai per il viaggio.',
+  'help.guide.day-weather.tip.3':
+    'Oltre i 16 giorni non c’è previsione da avere. I numeri sono allora le medie degli anni passati per quella data, contrassegnate con Ø e segnalate come tali qui sotto.',
+  // rename-day
+  'help.guide.rename-day.title': 'Dare un nome al giorno',
+  'help.guide.rename-day.goal':
+    'Chiamare un giorno per quello che è, Arrivo a Kyoto o Giorno di riposo, invece di Giorno 5.',
+  'help.guide.rename-day.step.1': 'Apri il giorno. La sua intestazione dice Giorno 5, con la data sotto.',
+  'help.guide.rename-day.step.2': 'Clicca la matita accanto al nome.',
+  'help.guide.rename-day.step.3': 'Il nome diventa un campo. Digita il nome che vuoi.',
+  'help.guide.rename-day.step.4':
+    'Premi Invio, o clicca semplicemente altrove; Esc butta via la modifica. Anche il riquadro del giorno nella colonna dei giorni porta il nome.',
+  'help.guide.rename-day.result':
+    'Il nome sostituisce Giorno 5 nel pannello e sul riquadro del giorno nella colonna dei giorni; la data resta dov’era.',
+  'help.guide.rename-day.tip.1':
+    'Svuota il campo e salva, e il giorno torna a essere Giorno 5: il numero è ciò che compare quando non c’è un nome.',
+  'help.guide.rename-day.tip.2':
+    'Il nome appartiene al giorno, non alla sua data. Riordina i giorni e il nome viaggia con tutto il resto di quel giorno.',
+  // add-accommodation
+  'help.guide.add-accommodation.title': 'Prenotare una notte su un giorno',
+  'help.guide.add-accommodation.goal':
+    'Mettere l’hotel nel programma una volta sola, con i giorni che copre, i suoi orari e il suo numero di conferma.',
+  'help.guide.add-accommodation.step.1':
+    'La struttura deve prima essere un luogo del viaggio. Creala nella colonna dei luoghi come faresti con qualsiasi altro luogo: il selettore offre solo ciò che c’è già.',
+  'help.guide.add-accommodation.step.2': 'Apri il giorno del tuo arrivo e clicca Aggiungi alloggio sotto Alloggio.',
+  'help.guide.add-accommodation.step.3':
+    'Applica ai giorni dice quali notti copre il soggiorno: il giorno di check-in a sinistra, il giorno di check-out a destra. Tutti prende l’intero viaggio.',
+  'help.guide.add-accommodation.step.4':
+    'Compila Check-in, Fino a e Check-out, e metti il numero della prenotazione sotto Conferma. Tutti e quattro possono restare vuoti.',
+  'help.guide.add-accommodation.step.5':
+    'Scegli la struttura tra i luoghi del viaggio. I chip sopra la lista la restringono a una sola categoria.',
+  'help.guide.add-accommodation.step.6': 'Clicca Salva.',
+  'help.guide.add-accommodation.result':
+    'Il soggiorno compare su ogni giorno che copre, Check-in sul primo e Check-out sull’ultimo. La struttura diventa una tappa del giorno di check-in, così la mappa disegna la via fin lì, e nella scheda Prenotazioni compare una prenotazione di tipo Alloggio.',
+  'help.guide.add-accommodation.tip.1':
+    'Il selettore si apre sul giorno da cui sei venuto, con il check-out il giorno dopo; entrambi si possono spostare prima di salvare.',
+  'help.guide.add-accommodation.tip.2':
+    'Dai all’hotel la categoria Hotel del viaggio quando lo crei e i chip sopra la lista la restringono ai tuoi hotel con un clic.',
+  'help.guide.add-accommodation.tip.3':
+    'Gli orari sono tutti facoltativi: un soggiorno senza check-in e senza codice copre comunque le sue notti e disegna comunque il suo percorso.',
+  // edit-accommodation
+  'help.guide.edit-accommodation.title': 'Cambiare o cancellare una notte prenotata',
+  'help.guide.edit-accommodation.goal':
+    'Spostare un soggiorno, correggerne gli orari, o toglierlo di nuovo dal programma.',
+  'help.guide.edit-accommodation.step.1':
+    'Su ogni giorno del soggiorno il riquadro mostra la struttura, la finestra di check-in, l’ora di check-out e il numero di conferma.',
+  'help.guide.edit-accommodation.step.2':
+    'La matita alla sua destra riapre il soggiorno. La finestra ora si intitola Modifica alloggio.',
+  'help.guide.edit-accommodation.step.3':
+    'Cambia ciò che serve: i giorni che copre, Check-in, Fino a, Check-out, Conferma, o la struttura stessa.',
+  'help.guide.edit-accommodation.step.4': 'Clicca Salva.',
+  'help.guide.edit-accommodation.step.5':
+    'La croce accanto alla matita pone fine al soggiorno. Non chiede nulla, e la prenotazione di tipo Alloggio che gli appartiene se ne va con lui.',
+  'help.guide.edit-accommodation.result':
+    'La modifica raggiunge in un colpo solo ogni giorno che il soggiorno copre, e con essa la prenotazione di tipo Alloggio nella scheda Prenotazioni.',
+  'help.guide.edit-accommodation.tip.1':
+    'Una notte in mezzo a un soggiorno non porta né l’etichetta Check-in né Check-out: le portano solo il primo e l’ultimo giorno dell’intervallo.',
+  'help.guide.edit-accommodation.tip.2':
+    'Cancellare un soggiorno porta via anche la tappa che aveva messo sul giorno di check-in e ogni costo legato alla sua prenotazione. Prenota di nuovo la notte se è stato un errore.',
+  // day-bookings
+  'help.guide.day-bookings.title': 'Le prenotazioni del giorno a colpo d’occhio',
+  'help.guide.day-bookings.goal':
+    'Vedere in un solo posto che cosa è già prenotato per questo giorno e se è confermato.',
+  'help.guide.day-bookings.step.1':
+    'Prenotazioni elenca le prenotazioni del giorno: quelle datate su di esso, e quelle legate a una delle sue tappe.',
+  'help.guide.day-bookings.step.2':
+    'Una riga mostra di che tipo di prenotazione si tratta, il suo nome e, quando appartiene a una tappa, quella tappa dopo un punto. I suoi orari stanno all’estremità destra.',
+  'help.guide.day-bookings.step.3':
+    'Il colore dice a che punto è una prenotazione: una riga verde è confermata, una ambra è ancora in attesa. Gli alloggi non sono in questa lista, hanno il loro blocco più sotto.',
+  'help.guide.day-bookings.step.4':
+    'La lista si limita a leggere le prenotazioni. Una prenotazione si crea e si cambia nella scheda Prenotazioni.',
+  'help.guide.day-bookings.result':
+    'Tutto ciò che è datato sul giorno, e tutto ciò che è legato a una delle sue tappe, sta in questa sola lista.',
+  'help.guide.day-bookings.tip.1':
+    'Una prenotazione finisce su un giorno per la sua data. Cambia la data nella scheda Prenotazioni e passa all’altro giorno da sola.',
+  'help.guide.day-bookings.tip.2':
+    'Nessun blocco Prenotazioni vuol dire che il giorno non ha prenotazioni: viene nascosto invece che mostrato vuoto.',
+
+  // ── Screen: trip-map ──────────────────────────────────────────────────────────────────
+  'help.ctx.trip-map.title': 'Mappa',
+  'help.ctx.trip-map.summary':
+    'Il centro del programma: ogni luogo del viaggio come segnaposto, i percorsi che li uniscono e gli interruttori lungo i bordi della mappa per il satellite, per tutto il viaggio insieme e per i luoghi intorno alla zona che stai guardando.',
+  'help.ctx.trip-map.bullet.1':
+    'Un segnaposto è un luogo: la sua foto quando ce l’ha, altrimenti il colore della sua categoria con l’icona della categoria. Poggiaci sopra il puntatore per una scheda con nome, valutazione, categoria e indirizzo.',
+  'help.ctx.trip-map.bullet.2':
+    'I segnaposto troppo vicini per distinguersi si ripiegano in una bolla scura con un conteggio. Clicca la bolla e la mappa si avvicina a ciò che c’è dentro.',
+  'help.ctx.trip-map.bullet.3':
+    'Clicca un segnaposto per aprire il luogo sotto la mappa, con la sua valutazione, i suoi file e cosa farne poi; clicca un punto vuoto della mappa per lasciarlo andare di nuovo.',
+  'help.ctx.trip-map.bullet.4':
+    'Con un giorno aperto nella colonna dei giorni, le sue tappe portano un piccolo distintivo bianco con il loro numero in quel giorno, e un luogo pianificato su due giorni porta entrambi i numeri, uniti da ·.',
+  'help.ctx.trip-map.bullet.5':
+    'La riga di icone in alto cerca nella parte di mappa che vedi: Ristoranti, Caffè, Bar e vita notturna, Alloggi, Attrazioni, Musei e cultura, Natura e parchi e Attività. Cerca in questa zona la rilancia dopo che hai spostato la mappa.',
+  'help.ctx.trip-map.bullet.6':
+    'Un clic destro in un punto qualsiasi della mappa apre il modulo del luogo in quel punto, con l’indirizzo già cercato. Il pulsante rotondo in basso a sinistra scambia la mappa disegnata con le immagini aeree.',
+  'help.ctx.trip-map.bullet.7':
+    'Mostra tutto il viaggio, in basso a destra, disegna ogni giornata di spostamento insieme alle altre ed elenca cosa copre ciascuna; l’icona del percorso sulla riga di una prenotazione disegna quella prenotazione, e quella nella barra degli strumenti sopra i giorni le disegna tutte.',
+  // map-markers
+  'help.guide.map-markers.title': 'Leggere la mappa',
+  'help.guide.map-markers.goal': 'Sapere cosa ti dice ogni segnaposto, distintivo e bolla sulla mappa.',
+  'help.guide.map-markers.step.1':
+    'La mappa porta ogni luogo del viaggio. Dove i segnaposto stanno troppo vicini per distinguersi, si ripiegano in una bolla scura che porta il numero dei luoghi al suo interno.',
+  'help.guide.map-markers.step.2':
+    'Clicca la bolla. La mappa si avvicina a ciò che c’era dentro e i segnaposto si separano; allo zoom più profondo li apre a ventaglio invece di avvicinarsi ancora.',
+  'help.guide.map-markers.step.3':
+    'Un segnaposto è la foto del luogo quando ce l’ha, altrimenti il colore della sua categoria con l’icona della categoria. Poggiaci sopra il puntatore e una scheda dà il nome, la valutazione, la categoria e l’indirizzo.',
+  'help.guide.map-markers.step.4':
+    'Clicca un segnaposto e il luogo si apre sotto la mappa: le sue coordinate, la sua valutazione, i suoi file, e Aggiungi al giorno, Salva nella raccolta, Navigazione, Modifica ed Elimina. Clicca un punto vuoto della mappa per lasciarlo andare di nuovo.',
+  'help.guide.map-markers.step.5':
+    'Apri un giorno nella colonna dei giorni e le sue tappe vengono numerate: il piccolo distintivo bianco all’angolo di un segnaposto è il posto di quella tappa nel giorno. Un luogo pianificato su due giorni porta entrambi i numeri, uniti da ·. Senza un giorno aperto non ci sono numeri, e l’angolo porta invece la valutazione.',
+  'help.guide.map-markers.result':
+    'Nel viaggio non è cambiato nulla: la mappa ne è una vista, e ogni segnaposto dice quale luogo, quale giorno e in che ordine.',
+  'help.guide.map-markers.tip.1':
+    'Un giorno richiuso nella colonna dei giorni si porta via dalla mappa le sue tappe; riapri il giorno e sono di nuovo lì.',
+  'help.guide.map-markers.tip.2':
+    'Il filtro sopra la lista dei luoghi decide anche cosa disegna la mappa: scegli Non pianificati e restano solo i luoghi ancora senza giorno.',
+  'help.guide.map-markers.tip.3':
+    'Questa mappa non ha pulsanti di zoom: la rotellina ingrandisce, un doppio clic avvicina di un passo, e trascinare la sposta.',
+  // map-nearby-places
+  'help.guide.map-nearby-places.title': 'Trovare luoghi intorno a te sulla mappa',
+  'help.guide.map-nearby-places.goal':
+    'Lascia che la mappa cerchi ristoranti, attrazioni o un hotel nella zona che stai guardando, e portane uno nel viaggio.',
+  'help.guide.map-nearby-places.step.1':
+    'La riga di icone in cima alla mappa è la ricerca per categoria: Ristoranti, Caffè, Bar e vita notturna, Alloggi, Attrazioni, Musei e cultura, Natura e parchi e Attività.',
+  'help.guide.map-nearby-places.step.2':
+    'Clicca una categoria. TREK cerca quel tipo di luogo nella parte di mappa che vedi e posa un segnaposto nel colore della categoria per ogni risultato. Una categoria alla volta: cliccarne un’altra la scambia, e cliccare quella attiva la spegne.',
+  'help.guide.map-nearby-places.step.3':
+    'Sposta la mappa e sotto la riga compare un secondo pulsante: Cerca in questa zona rilancia la stessa ricerca per la nuova vista. Spostarla da sola non cerca mai di nuovo, e così le richieste restano poche.',
+  'help.guide.map-nearby-places.step.4':
+    'I segnaposto portano il nome di ciò che è stato trovato. Cliccane uno e il modulo del luogo si apre già compilato da esso: Nome, Indirizzo, Latitudine e Longitudine, e il sito web e il numero di telefono dove OpenStreetMap li ha.',
+  'help.guide.map-nearby-places.step.5':
+    'Controlla cosa è stato compilato e aggiungi ciò che la ricerca non poteva sapere: una Descrizione, una Categoria, note tue.',
+  'help.guide.map-nearby-places.step.6':
+    'Clicca Aggiungi. Se un luogo con lo stesso nome è già nel viaggio, il modulo lo dice e il pulsante diventa Aggiungi comunque.',
+  'help.guide.map-nearby-places.result':
+    'Il luogo è nella lista dei luoghi e sulla mappa come uno dei segnaposto propri del viaggio, sotto Non pianificati finché non lo metti su un giorno. I segnaposto della ricerca restano finché non spegni la categoria.',
+  'help.guide.map-nearby-places.tip.1':
+    'La riga non c’è quando Esplora luoghi sulla mappa è spento nelle Impostazioni, sotto Travel & map.',
+  'help.guide.map-nearby-places.tip.2':
+    'Le risposte arrivano dall’indice dei luoghi di TREK e da OpenStreetMap, quindi è una delle poche cose del programma che ha bisogno di una connessione.',
+  'help.guide.map-nearby-places.tip.3':
+    'Una ricerca copre ciò che è sullo schermo, quindi avvicinati alla via di cui stai chiedendo: una città intera risponde con i primi sessanta risultati e con poco ordine.',
+  // map-add-place
+  'help.guide.map-add-place.title': 'Creare un luogo con un clic destro sulla mappa',
+  'help.guide.map-add-place.goal': 'Metti un luogo esattamente dove lo vuoi, senza cercarlo prima.',
+  'help.guide.map-add-place.step.1':
+    'Fai clic destro sul punto della mappa che intendi. Il modulo del luogo si apre, con il titolo Aggiungi Luogo/Attività.',
+  'help.guide.map-add-place.step.2':
+    'Latitudine e Longitudine sono già su quel punto, e TREK cerca le coordinate e riempie Indirizzo con ciò che trova lì. Non è ancora salvato niente, quindi sovrascrivi tutto ciò che è sbagliato.',
+  'help.guide.map-add-place.step.3':
+    'Dagli un Nome che riconoscerai, e il resto di ciò che il programma deve sapere: Descrizione, Note, Categoria, Sito web.',
+  'help.guide.map-add-place.step.4':
+    'Clicca Aggiungi. Il luogo finisce nella lista come non pianificato anche con un giorno aperto: un clic destro sulla mappa dice dove, non quando.',
+  'help.guide.map-add-place.result':
+    'Il luogo è nella lista e sulla mappa, sotto Non pianificati finché non lo metti su un giorno.',
+  'help.guide.map-add-place.tip.1':
+    'L’indirizzo viene da una ricerca delle coordinate, quindi può leggersi come una via invece che come un nome, e in aperta campagna può tornare vuoto. Tutti e due i campi sono tuoi da sovrascrivere.',
+  'help.guide.map-add-place.tip.2':
+    'Sulle mappe MapLibre GL e Mapbox GL un clic centrale fa lo stesso, e su uno schermo touch una pressione lunga.',
+  // map-satellite
+  'help.guide.map-satellite.title': 'Passare al satellite',
+  'help.guide.map-satellite.goal': 'Scambia la mappa disegnata con le immagini aeree, e torna indietro.',
+  'help.guide.map-satellite.step.1':
+    'Il pulsante rotondo in basso a sinistra della mappa è l’interruttore del livello di base. La sua icona mostra sempre il livello verso cui passerebbe, e passandoci sopra dice quale: Passa alla vista satellitare.',
+  'help.guide.map-satellite.step.2':
+    'Cliccalo. La mappa diventa immagini aeree, abbastanza dettagliate da distinguere un singolo edificio, e senza una chiave tua.',
+  'help.guide.map-satellite.step.3':
+    'Tutto ciò che TREK disegna resta sopra: i segnaposto, il percorso del giorno, le tracce e i percorsi prenotati. Clicca di nuovo il pulsante, che ora dice Passa alla vista mappa, per tornare indietro.',
+  'help.guide.map-satellite.result':
+    'La mappa è di nuovo disegnata, e il livello su cui l’hai lasciata viene ricordato nel tuo account.',
+  'help.guide.map-satellite.tip.1':
+    'La scelta resta sul tuo account e non sul viaggio, quindi ogni viaggio si apre come lo hai lasciato, qualunque motore di mappe tu usi.',
+  'help.guide.map-satellite.tip.2':
+    'Le immagini non portano scritte: i nomi delle vie, i quartieri e i numeri civici stanno sulla mappa disegnata, quindi torna indietro quando cerchi un indirizzo.',
+  // map-whole-trip
+  'help.guide.map-whole-trip.title': 'Vedere tutto il viaggio e le sue distanze',
+  'help.guide.map-whole-trip.goal':
+    'Scambia l’unico giorno aperto con ogni giornata di spostamento del viaggio, e leggi quanto lontano arriva ciascuna.',
+  'help.guide.map-whole-trip.step.1': 'Il pulsante rotondo Mostra tutto il viaggio sta in basso a destra della mappa.',
+  'help.guide.map-whole-trip.step.2':
+    'Cliccalo. Ogni giornata di spostamento del viaggio viene disegnata insieme alle altre, ciascuna nel proprio colore sopra un bordo bianco, così i giorni vicini restano distinti.',
+  'help.guide.map-whole-trip.step.3':
+    'La scheda sopra il pulsante elenca quelle giornate: un punto colorato, il nome del giorno, un’icona per ogni modo in cui lo percorri, e la distanza che copre. Distanza totale sta in cima.',
+  'help.guide.map-whole-trip.step.4':
+    'Clicca un giorno nella scheda per selezionarlo, come se lo scegliessi nella colonna dei giorni. Clicca di nuovo il pulsante, che ora dice Nascondi tutto il viaggio, per tornare all’unico giorno.',
+  'help.guide.map-whole-trip.result':
+    'Ogni giornata di spostamento è disegnata nel proprio colore, e la scheda dice cosa copre ciascuna e a quanto arriva il viaggio.',
+  'help.guide.map-whole-trip.tip.1':
+    'Il totale arriva poche tratte per volta. Finché lo segue un …, il numero è ancora una somma parziale; si ferma una volta che ogni tratta ha risposto.',
+  'help.guide.map-whole-trip.tip.2':
+    'Una tratta che il router rifiuta resta una linea dritta e non conta nulla, e la scheda lo dice invece di mostrare in silenzio un numero troppo basso.',
+  'help.guide.map-whole-trip.tip.3':
+    'Un giorno con meno di due tappe localizzate non ha un percorso da disegnare, quindi resta del tutto fuori dalla scheda.',
+  // map-booking-routes
+  'help.guide.map-booking-routes.title': 'Mostrare il percorso di una prenotazione sulla mappa',
+  'help.guide.map-booking-routes.goal':
+    'Disegna sulla mappa i voli, i treni e i tragitti in auto che hai prenotato, e toglili di nuovo.',
+  'help.guide.map-booking-routes.step.1':
+    'I percorsi prenotati sono spenti finché non ne chiedi uno. Sulla riga di una prenotazione nella colonna dei giorni sta una piccola icona di percorso: Mostra percorsi prenotati.',
+  'help.guide.map-booking-routes.step.2':
+    'Cliccala. La prenotazione compare sulla mappa: un volo come arco di cerchio massimo, un tragitto in auto lungo le strade vere, un treno come la catena delle sue stazioni. Confermata è disegnata continua, In attesa tratteggiata.',
+  'help.guide.map-booking-routes.step.3':
+    'Le estremità del percorso sono pillole blu con l’icona del trasporto. Cliccane una per aprire la prenotazione dietro di essa, con i suoi orari, il suo Codice prenotazione e Posizione / Indirizzo; Chiudi la mette via di nuovo.',
+  'help.guide.map-booking-routes.step.4':
+    'L’icona del percorso nella barra degli strumenti sopra i giorni fa tutto il viaggio in una volta: Mostra tutti i percorsi prenotati disegna ogni prenotazione che ne ha uno.',
+  'help.guide.map-booking-routes.step.5':
+    'È un foglio pulito e non uno strato sopra, quindi ciò che avevi scelto prenotazione per prenotazione viene lasciato cadere. Premila di nuovo, ora che dice Nascondi tutti i percorsi prenotati, e la mappa è pulita.',
+  'help.guide.map-booking-routes.result':
+    'Le prenotazioni che hai chiesto sono disegnate sulla mappa, e la scelta resta per questo viaggio in questo browser finché non la cambi.',
+  'help.guide.map-booking-routes.tip.1':
+    'Le estremità portano il codice dell’aeroporto o il nome della stazione solo quando Etichette percorsi prenotati è attivo nelle Impostazioni, sotto Travel & map; altrimenti mostrano solo l’icona.',
+  'help.guide.map-booking-routes.tip.2':
+    'Mostra sempre i percorsi delle prenotazioni, nelle stesse impostazioni, li disegna fin dall’inizio su ogni viaggio per cui non hai già deciso.',
+  'help.guide.map-booking-routes.tip.3':
+    'Una prenotazione ha bisogno di due estremità con coordinate prima di poter essere disegnata, quindi un hotel o un ristorante non porta l’icona del percorso.',
 };
 
 export default help;

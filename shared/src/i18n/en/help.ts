@@ -966,7 +966,7 @@ const help: TranslationStrings = {
   'help.ctx.settings.summary':
     "Your personal settings, one tab per topic in the sidebar on the left. Most switches apply the moment you flip them; a form with a Save button at the bottom waits for it. Nothing here changes anyone else's TREK.",
   'help.ctx.settings.bullet.1':
-    'Sidebar on the left: General, Appearance, Map, Notifications, Integrations, Offline and Account. Plugins appears once one is installed, About on a self-hosted TREK.',
+    'Sidebar on the left: General, Appearance, Map, Notifications, Integrations, Offline and Account. Plugins appears once one is installed, About wherever the operator has not taken it away.',
   'help.ctx.settings.bullet.2':
     'General is language, units, currency and what the app opens with; Appearance is theme, colours, text size and the dashboard widgets.',
   'help.ctx.settings.bullet.3':
@@ -1873,12 +1873,12 @@ const help: TranslationStrings = {
   'help.guide.read-day-plan.step.3':
     'A booking on the day: a transport shows as Departure or Arrival with its time and route, a reservation at a stop marks the stop Reservation confirmed or Reservation pending. The small toggle on a transport shows its route on the map.',
   'help.guide.read-day-plan.step.4':
-    'Between two stops the connector says how long the leg takes and how far it is, in the day’s travel mode; click it to change the mode for that one leg.',
+    'The connector says how long a leg takes and how far it is, in the day’s travel mode, whether it runs to the next stop or to the night you booked; click it to change the mode for that one leg.',
   'help.guide.read-day-plan.step.5':
     'The route bar at the end: Route draws the day’s way on the map, Optimize reorders the stops, the mode buttons pick Driving or Walking, Open in Google Maps and Open in CoMaps open the day there.',
   'help.guide.read-day-plan.result': 'Every symbol on the card has a meaning; the guides below change each of them.',
   'help.guide.read-day-plan.tip.1':
-    'Right-click a stop for its menu: Edit, Remove from day, Open Website, Save to Collection, Delete.',
+    'Right-click a stop for its menu: Edit, Remove from day, Open Website, the navigation apps (Google Maps, Waze, Apple Maps, OpenStreetMap, CoMaps), Save to Collection, Delete.',
   'help.guide.read-day-plan.tip.2':
     'Hover a stop and Add booking appears at its end: a reservation created there is tied to this stop on this day.',
   // place-onto-day
@@ -1906,7 +1906,7 @@ const help: TranslationStrings = {
   'help.guide.reorder-stops.step.2': 'Or use the arrows at the right end of the stop: one step up or down per click.',
   'help.guide.reorder-stops.step.3': 'Drag the stop onto another day card to move it there; it leaves the old day.',
   'help.guide.reorder-stops.step.4':
-    'A stop with a fixed time asks Remove time? when you move it, because the time decided its place: Remove time & move drops the time and lets it go anywhere.',
+    "A stop with a fixed time asks Remove time? when a move would break the day's order, because the time decided its place: Confirm drops the time and lets it go anywhere.",
   'help.guide.reorder-stops.result': 'The route and the travel times follow the new order at once.',
   'help.guide.reorder-stops.tip.1':
     'Bookings with a fixed time cannot be reordered; they sit where their time puts them.',
@@ -1925,7 +1925,7 @@ const help: TranslationStrings = {
   'help.guide.set-stop-times.tip.1':
     'The time belongs to the stop on that day; the same place on another day can have another time.',
   'help.guide.set-stop-times.tip.2':
-    'To move a timed stop by hand, drag it: Remove time & move drops the time on the way.',
+    'To move a timed stop by hand, drag it: the Remove time? question drops the time on the way, once you Confirm.',
   'help.guide.set-stop-times.tip.3':
     'Notes for this day in the same form hold what only applies on this day, a table reserved, a ticket number.',
   // remove-from-day
@@ -1954,8 +1954,8 @@ const help: TranslationStrings = {
   'help.guide.day-note.goal': 'Keep a reminder, a ticket number or a plan B right in the day.',
   'help.guide.day-note.step.1': 'Click Add Note in the day’s header.',
   'help.guide.day-note.step.2':
-    'Write the note; the toolbar above the text formats it (bold, lists, links, quotes) and Preview shows the result. Time (optional) puts the note at that time of the day.',
-  'help.guide.day-note.step.3': 'Pick an Icon and a Colour, so the note stands out from the stops, then Save.',
+    'Give it a name under Note, that is what the day card shows, and write the rest under Daily Note. The toolbar above it formats the text (bold, lists, links, quotes) and Preview on the left shows the card it becomes.',
+  'help.guide.day-note.step.3': 'Pick an Icon and a Colour, so the note stands out from the stops, then Add.',
   'help.guide.day-note.step.4':
     'The note sits in the day like a stop: drag it into place, right-click it for Edit and Delete.',
   'help.guide.day-note.result': 'The note is part of the day, in the PDF too; a timed note sorts with the timed stops.',
@@ -2030,6 +2030,1642 @@ const help: TranslationStrings = {
   'help.guide.export-plan.tip.2':
     'Subscribe to calendar needs calendar feeds switched on in your settings; Dashboard has a guide for it.',
   'help.guide.export-plan.tip.3': 'Exporting is reading: every member of the trip can do it.',
+
+  // ── Screen: trip-place ────────────────────────────────────────────────────────────────
+  'help.ctx.trip-place.title': 'Place details',
+  'help.ctx.trip-place.summary':
+    'The card that opens over the map when you pick a place: everything the trip knows about it, the stars everyone gave it, its picture and its files, and the buttons that put it on the open day, into a list or into a map app.',
+  'help.ctx.trip-place.bullet.1':
+    'Click a row in the places column, a stop inside a day, or a marker on the map, and the card opens over the map. Picking it inside a day tells the card which stop you mean, and that is what brings the stop’s participants and its booking along.',
+  'help.ctx.trip-place.bullet.2':
+    'The head carries the round picture, the name, the category, the address and the coordinates. Click the picture to use one of your own, double-click the name to rename the place on the spot, and the X on the right closes the card.',
+  'help.ctx.trip-place.bullet.3':
+    'Under it: the stars every traveller gave the place, the price if it has one, the description and the notes, and Notes for this day when the stop carries one.',
+  'help.ctx.trip-place.bullet.4':
+    'Opening Hours, Track color, Track Stats and Files follow, as far as they apply. Files takes anything out of your folders and also lists what hangs on the booking of this stop.',
+  'help.ctx.trip-place.bullet.5':
+    'The row at the bottom: Add to Day or Remove from Day while a day is open, then Save to Collection, Navigation, Open Website, Edit and Delete.',
+  'help.ctx.trip-place.bullet.6':
+    'A place TREK matched with a map provider shows more: that provider’s rating with a review, the phone number, and an Open or Closed ring around the picture with the week’s opening hours behind it.',
+  // read-place
+  'help.guide.read-place.title': 'What the card tells you about a place',
+  'help.guide.read-place.goal': 'Read everything the trip knows about one place, in one card.',
+  'help.guide.read-place.step.1':
+    'In the days column, click the stop you want to read. The card opens over the map and the stop stays marked in its day.',
+  'help.guide.read-place.step.2':
+    'The head: the round picture, the name, the address and the exact coordinates. The X on the right closes the card again.',
+  'help.guide.read-place.step.3':
+    'Under it the stars every traveller gave the place, with the average and how many voted. Not rated yet while nobody has.',
+  'help.guide.read-place.step.4':
+    'Then the description and, below it, the notes. Both are the text from the place’s form, rendered: lists, links and bold all work.',
+  'help.guide.read-place.step.5':
+    'Participants says who is going to this stop. Everybody is in until you take somebody out.',
+  'help.guide.read-place.step.6':
+    'The row at the bottom is what you can do from here: take the place off the open day or put it on, save it to a list, open it in a map app, edit it or delete it.',
+  'help.guide.read-place.result':
+    'The card stays open until you close it with the X or pick another place, and the stop it belongs to stays marked in the days column.',
+  'help.guide.read-place.tip.1':
+    'Picked out of the places column the card knows the place but not a stop, so it shows no participants and no booking. Pick the stop inside the day instead and both are there.',
+  'help.guide.read-place.tip.2':
+    'Double-click the name to rename the place without opening the form. Enter saves, Escape drops the change.',
+  'help.guide.read-place.tip.3':
+    'A place TREK could match with a map provider also shows that provider’s rating, a review, the phone number and the opening hours.',
+  // rate-place
+  'help.guide.rate-place.title': 'Rate a place',
+  'help.guide.rate-place.goal': 'Give a place your own stars, and see what everybody else gave it.',
+  'help.guide.rate-place.step.1':
+    'Open the place. The star row sits right under the head and carries the average of the votes so far, with their number in brackets.',
+  'help.guide.rate-place.step.2':
+    'Click the star you mean. The stars fill as you move across them, so you see what you are about to give.',
+  'help.guide.rate-place.step.3':
+    'Your vote counts into the average straight away, and the faces beside it are who voted. Rest the pointer on the row to see everyone’s stars.',
+  'help.guide.rate-place.step.4':
+    'The same average sits on the place’s row in the places column, so the good ones stand out in the list.',
+  'help.guide.rate-place.result':
+    'Your stars are on the place for the whole trip to see, and the star in the filter row above the list can now keep only the places that reach a floor.',
+  'help.guide.rate-place.tip.1': 'Every traveller may rate, even on a trip where only some of you may change places.',
+  'help.guide.rate-place.tip.2':
+    'Click the star you already gave to take your vote back. With nobody left voting, the place reads Not rated yet again.',
+  'help.guide.rate-place.tip.3':
+    'Up to six voters fit beside the stars as faces; the tooltip names all of them, and marks yours.',
+  // place-image
+  'help.guide.place-image.title': 'Put your own picture on a place',
+  'help.guide.place-image.goal': 'Replace the automatic thumbnail with a photo of your own.',
+  'help.guide.place-image.step.1': 'Open the place from the places column.',
+  'help.guide.place-image.step.2':
+    'Rest the pointer on the round picture in the head: a camera appears and the tooltip reads Upload image. Click it and pick your file.',
+  'help.guide.place-image.step.3': 'The head now shows your picture, with a small red X at its corner.',
+  'help.guide.place-image.step.4':
+    'The same picture is on the place’s row in the places column, and on its marker on the map.',
+  'help.guide.place-image.result':
+    'Your picture is the place’s picture everywhere: the card, the places column, the stop in the day, the marker on the map and a shared trip.',
+  'help.guide.place-image.tip.1':
+    'JPG, PNG, GIF and WebP are taken, and a HEIC from an iPhone is converted on the way in.',
+  'help.guide.place-image.tip.2':
+    'The X at the corner removes your picture again and the automatic one comes back. The place itself is untouched.',
+  'help.guide.place-image.tip.3':
+    'Without a picture of your own TREK looks one up from the place’s coordinates, and falls back to the category’s icon.',
+  // place-day-assign
+  'help.guide.place-day-assign.title': 'Put the place on the open day, or take it off',
+  'help.guide.place-day-assign.goal': 'Use the card’s own button instead of dragging the row across the planner.',
+  'help.guide.place-day-assign.step.1':
+    'Click a day’s header in the days column. That day is the open one now, and the card works against it.',
+  'help.guide.place-day-assign.step.2':
+    'Click a place that is not on that day in the places column. Its card opens and the row at the bottom offers Add to Day.',
+  'help.guide.place-day-assign.step.3':
+    'Click Add to Day. The stop lands at the end of the day and the button turns into Remove from Day.',
+  'help.guide.place-day-assign.step.4': 'The stop is in the day now, last in the list. Drag it up to where it belongs.',
+  'help.guide.place-day-assign.step.5':
+    'Remove from Day takes that stop off the day again, and the card offers Add to Day once more.',
+  'help.guide.place-day-assign.result':
+    'The day carries the stop, or carries it no longer, and the place itself is untouched either way.',
+  'help.guide.place-day-assign.tip.1':
+    'The button only exists while a day is open. Without one the card has nothing to add the place to.',
+  'help.guide.place-day-assign.tip.2':
+    'Taking a stop off a day leaves the place in the trip and in the places column. Delete is what removes it everywhere.',
+  'help.guide.place-day-assign.tip.3':
+    'A stop a lodging booking put on the day offers neither button: that night is added and removed in the day’s overnight block.',
+  // place-participants
+  'help.guide.place-participants.title': 'Say who is going to this stop',
+  'help.guide.place-participants.goal': 'Split the group for one stop without splitting the trip.',
+  'help.guide.place-participants.step.1':
+    'Click the stop inside the day. The card opens and Participants lists everybody in the trip.',
+  'help.guide.place-participants.step.2':
+    'Click a traveller’s chip to take them out of this stop. The name is struck through as you hover it.',
+  'help.guide.place-participants.step.3':
+    'A dashed + appears as soon as somebody is missing. Click it to see who is not on the stop.',
+  'help.guide.place-participants.step.4':
+    'Click a name to put them back. With everybody back in, the stop is the whole group’s again.',
+  'help.guide.place-participants.result':
+    'The stop carries the travellers you chose, and the rest of the group has that afternoon to themselves.',
+  'help.guide.place-participants.tip.1':
+    'Participants only appears with a stop selected, so pick the place inside the day rather than in the places column, and only on a trip with more than one traveller.',
+  'help.guide.place-participants.tip.2':
+    'Nobody chosen means everybody is going. Taking the last one out puts everybody back in.',
+  'help.guide.place-participants.tip.3':
+    'A guest, who has no account of their own, can be a participant like anybody else.',
+  // place-booking
+  'help.guide.place-booking.title': 'The booking on a stop',
+  'help.guide.place-booking.goal': 'Read the booking that belongs to a stop, open it, and pin a new one to it.',
+  'help.guide.place-booking.step.1':
+    'Open the stop the booking belongs to. The card shows a strip with Confirmed or Pending and the booking’s name.',
+  'help.guide.place-booking.step.2':
+    'The strip carries the Date, the Time and the Booking Code, and whatever notes the booking has.',
+  'help.guide.place-booking.step.3': 'Click the strip. The booking’s own form opens on it.',
+  'help.guide.place-booking.step.4':
+    'Link to day assignment is what pins a booking to a stop, and here it already names this one. Close the form again.',
+  'help.guide.place-booking.step.5':
+    'A new booking for a stop starts in the days column: hover the stop and click the + at its end. The form opens as New Reservation, already linked to it.',
+  'help.guide.place-booking.result':
+    'The booking hangs on the stop: it is on the card, it is in the day, and its files are listed under Files here as well.',
+  'help.guide.place-booking.tip.1':
+    'The strip only shows for the stop the booking is pinned to. A booking with no stop lives on the Book tab.',
+  'help.guide.place-booking.tip.2':
+    'Several bookings can share one stop: the lunch and the tour that starts from the same door.',
+  'help.guide.place-booking.tip.3':
+    'A train, a flight or a ferry opens the transport form instead, the one the Transports tab uses.',
+  // place-files
+  'help.guide.place-files.title': 'Keep a place’s tickets with the place',
+  'help.guide.place-files.goal': 'Put the ticket, the voucher or the map for a place where you will look for it.',
+  'help.guide.place-files.step.1':
+    'Open the place. Files sits at the foot of the card and reads Files while the place has none.',
+  'help.guide.place-files.step.2': 'Click Upload beside it and pick the file.',
+  'help.guide.place-files.step.3': 'The button counts what the place holds, and the list opens itself.',
+  'help.guide.place-files.step.4': 'Each row is the file’s name with its size. Click it to open the file.',
+  'help.guide.place-files.result':
+    'The file sits on the place, counted in the card, and it is on the trip’s Files tab as well.',
+  'help.guide.place-files.tip.1':
+    'Files also lists what hangs on the booking of this stop, so a hotel confirmation shows up on the hotel.',
+  'help.guide.place-files.tip.2': 'Upload takes several files at once.',
+  'help.guide.place-files.tip.3':
+    'Without the right to upload files the Upload button is not there; files already on the place still are.',
+  // place-navigation
+  'help.guide.place-navigation.title': 'Open a place in a map app or on its website',
+  'help.guide.place-navigation.goal': 'Hand the place over to the app that will actually take you there.',
+  'help.guide.place-navigation.step.1': 'Open the place and click Navigation in the row at the bottom.',
+  'help.guide.place-navigation.step.2':
+    'The list is the map apps that fit this place: Google Maps, Waze, Apple Maps, OpenStreetMap and CoMaps.',
+  'help.guide.place-navigation.step.3':
+    'Click the one you use. TREK hands it the place itself where it can, not only a pair of coordinates, so you land at the right entrance.',
+  'help.guide.place-navigation.step.4':
+    'Open Website next to it opens the place’s own page, its times and its tickets, in a new tab.',
+  'help.guide.place-navigation.result':
+    'The map app opens on the place, the website in a tab of its own, and nothing in the trip changes.',
+  'help.guide.place-navigation.tip.1':
+    'Waze starts navigating straight away. The others open the place, and starting from there is one more tap.',
+  'help.guide.place-navigation.tip.2':
+    'Which apps are offered depends on the place and on your device: Apple Maps is left out on Android, 高德地图 only comes up for a place in China, and Waze, Apple Maps and CoMaps need the place’s coordinates.',
+  'help.guide.place-navigation.tip.3':
+    'When only one app applies, the button carries that app’s name and opens it straight away.',
+  // place-to-collection
+  'help.guide.place-to-collection.title': 'Save a place to one of your lists',
+  'help.guide.place-to-collection.goal': 'Keep a place you found on this trip for the next one.',
+  'help.guide.place-to-collection.step.1': 'Open the place and click Save to Collection at the bottom of the card.',
+  'help.guide.place-to-collection.step.2':
+    'Save to list shows every list you own or share. A tick marks the ones that already hold this place.',
+  'help.guide.place-to-collection.step.3': 'Click the list. The place is in it straight away.',
+  'help.guide.place-to-collection.step.4': 'Close, and the button in the card reads Saved.',
+  'help.guide.place-to-collection.result':
+    'The place is in your list with its picture, its notes and its stars, ready for the next trip.',
+  'help.guide.place-to-collection.tip.1':
+    'The button is only there while the Collections addon is on, which the admin switches on under Addons.',
+  'help.guide.place-to-collection.tip.2':
+    'A place can sit in several lists at once, with its own status in each: an idea in one, visited in another.',
+  'help.guide.place-to-collection.tip.3':
+    'Mark visited, beside the place’s name in the picker, ticks it off in the list; with the place in several of your lists the pill reads Visited everywhere and does them all at once.',
+  // place-track
+  'help.guide.place-track.title': 'Read a track and give it its own colour',
+  'help.guide.place-track.goal':
+    'See how long an imported walk is, and tell its line apart from the others on the map.',
+  'help.guide.place-track.step.1':
+    'A track’s row in the places column carries a short stroke in the colour its line is drawn in. Click it.',
+  'help.guide.place-track.step.2': 'Track Stats gives the length of the path, in the units you set.',
+  'help.guide.place-track.step.3': 'Track color above it shows the colour in use. Click the row to open the swatches.',
+  'help.guide.place-track.step.4': 'Pick a colour. The line on the map and the stroke on the row change with it.',
+  'help.guide.place-track.step.5':
+    'The dashed cell on the left, Automatic color, hands the track back the colour it inherits; the pipette on the right opens your system’s colour picker for anything else.',
+  'help.guide.place-track.result':
+    'The track is drawn in the colour you picked, in the card, on its row in the places column and on the map.',
+  'help.guide.place-track.tip.1':
+    'Only a place that carries a path, one imported from a GPX, KML or KMZ file, has these two blocks.',
+  'help.guide.place-track.tip.2':
+    'A track recorded with heights also shows its highest and lowest point, the metres up and down, and the profile of the walk.',
+  'help.guide.place-track.tip.3':
+    'An import gives every track it brings in a colour of its own, so two walks never arrive in the same one.',
+
+  // ── Screen: trip-day-detail ───────────────────────────────────────────────────────────
+  'help.ctx.trip-day-detail.title': 'Day details',
+  'help.ctx.trip-day-detail.summary':
+    'The panel a day header opens over the map: the day as a whole, its name and its date, the weather where you will be, the bookings that fall on it and the nights booked for it.',
+  'help.ctx.trip-day-detail.bullet.1':
+    'Click a day’s header in the days column and the panel opens over the middle of the map. The same header again, or the X at its right, closes it and lets go of the day.',
+  'help.ctx.trip-day-detail.bullet.2':
+    'The header carries the day’s name and its date. The pencil next to the name renames the day, the double chevron folds the panel to a slim bar so the map is free again.',
+  'help.ctx.trip-day-detail.bullet.3':
+    'At the top, the weather of the day. Forecast for names the place it is for: the day’s first stop, or the hotel you wake up in.',
+  'help.ctx.trip-day-detail.bullet.4':
+    'Reservations lists the bookings of that day, each with its kind, the stop it belongs to and its times. Green means confirmed, amber still pending; it is a read-out, bookings are changed under Bookings.',
+  'help.ctx.trip-day-detail.bullet.5':
+    'Accommodation shows every night booked over this day, with Check-in and Check-out on the days they happen, the check-in window, the check-out time and the confirmation number.',
+  'help.ctx.trip-day-detail.bullet.6':
+    'Add accommodation books a night on this day: pick the property from the trip’s places, say which days it covers, and add the times and the code.',
+  // day-panel
+  'help.guide.day-panel.title': 'Open a day and read its details',
+  'help.guide.day-panel.goal':
+    'See one day whole, its weather, its bookings and where you sleep, without leaving the map.',
+  'help.guide.day-panel.step.1':
+    'Click a day’s header in the days column. The day is selected and its details open over the middle of the map.',
+  'help.guide.day-panel.step.2': 'The header names the day, Day 1 until you give it a name, with its date underneath.',
+  'help.guide.day-panel.step.3':
+    'At the top, the weather of the day. Forecast for says which place it is for: the day’s first stop, or the hotel you wake up in.',
+  'help.guide.day-panel.step.4': 'Reservations below it lists the bookings that fall on this day, with their times.',
+  'help.guide.day-panel.step.5':
+    'Accommodation shows the nights booked over this day, with Check-in and Check-out on the days they happen.',
+  'help.guide.day-panel.step.6':
+    'The double chevron in the header folds the panel to a slim bar. The X next to it closes the panel and lets go of the day.',
+  'help.guide.day-panel.result':
+    'Folded to its bar the panel leaves the map free and keeps the day selected; closed, the day is deselected and the plan is as it was.',
+  'help.guide.day-panel.tip.1':
+    'Clicking anywhere on the panel’s header bar folds it too. The chevron is only the button for it.',
+  'help.guide.day-panel.tip.2':
+    'Opening a place from the places column puts the place’s details in the panel’s place. Close them and the day comes back.',
+  // day-weather
+  'help.guide.day-weather.title': 'Read the day’s weather',
+  'help.guide.day-weather.goal': 'Know what the day will be like where you actually are that day.',
+  'help.guide.day-weather.step.1':
+    'Forecast for names the place the numbers are for: the day’s first stop, or, on a day without one, the hotel you wake up in.',
+  'help.guide.day-weather.step.2':
+    'The big number is the day’s temperature, next to it the low and the high, and the condition in words.',
+  'help.guide.day-weather.step.3':
+    'The chips under it: the chance of rain, how much of it, the strongest wind, and sunrise and sunset.',
+  'help.guide.day-weather.step.4':
+    'At the bottom, the day hour by hour, every second hour: the time, the icon, the temperature and the chance of rain. An hour over 50 percent is shaded blue.',
+  'help.guide.day-weather.result':
+    'The day’s card in the days column carries the same weather in small under its number, so the whole trip can be read at a glance.',
+  'help.guide.day-weather.tip.1':
+    'Degrees and wind follow your choice under Display in Settings: switch to Fahrenheit and the same forecast is read out in °F and mph.',
+  'help.guide.day-weather.tip.2':
+    'A day with no located stop and no hotel to wake up in shows no weather at all: the forecast is always for a place, never for the trip.',
+  'help.guide.day-weather.tip.3':
+    'More than 16 days ahead there is no forecast to be had. The numbers are then the averages of earlier years for that date, marked with Ø and said so underneath.',
+  // rename-day
+  'help.guide.rename-day.title': 'Give the day a name',
+  'help.guide.rename-day.goal': 'Call a day what it is, Arrival in Kyoto or Rest day, instead of Day 5.',
+  'help.guide.rename-day.step.1': 'Open the day. Its header reads Day 5, with the date underneath.',
+  'help.guide.rename-day.step.2': 'Click the pencil next to the name.',
+  'help.guide.rename-day.step.3': 'The name turns into a field. Type the name you want.',
+  'help.guide.rename-day.step.4':
+    'Press Enter, or simply click elsewhere; Escape throws the change away. The day’s card in the days column carries the name too.',
+  'help.guide.rename-day.result':
+    'The name replaces Day 5 in the panel and on the day’s card in the days column; the date stays where it was.',
+  'help.guide.rename-day.tip.1':
+    'Clear the field and save, and the day is Day 5 again: the number is what shows when there is no name.',
+  'help.guide.rename-day.tip.2':
+    'The name belongs to the day, not to its date. Reorder the days and it travels with everything else on that day.',
+  // add-accommodation
+  'help.guide.add-accommodation.title': 'Book a night on a day',
+  'help.guide.add-accommodation.goal':
+    'Put the hotel into the plan once, with the days it covers, its times and its confirmation number.',
+  'help.guide.add-accommodation.step.1':
+    'The property has to be a place of the trip first. Create it in the places column the way you would any other place: the picker only offers what is already there.',
+  'help.guide.add-accommodation.step.2': 'Open the day you arrive on and click Add accommodation under Accommodation.',
+  'help.guide.add-accommodation.step.3':
+    'Apply to days says which nights the stay covers: the check-in day on the left, the check-out day on the right. All covers the whole trip.',
+  'help.guide.add-accommodation.step.4':
+    'Fill in Check-in, Until and Check-out, and put the booking’s number under Confirmation. All four may stay empty.',
+  'help.guide.add-accommodation.step.5':
+    'Pick the property from the trip’s places. The chips above the list narrow it to one category.',
+  'help.guide.add-accommodation.step.6': 'Click Save.',
+  'help.guide.add-accommodation.result':
+    'The stay shows on every day it covers, Check-in on the first and Check-out on the last. The property becomes a stop on the check-in day, so the map draws the way there, and a Hotel booking appears under Bookings.',
+  'help.guide.add-accommodation.tip.1':
+    'The picker opens on the day you came from, with check-out the day after; both can be moved before you save.',
+  'help.guide.add-accommodation.tip.2':
+    'Give the hotel the Hotel category when you create it and the chips above the list narrow it to your hotels in one click.',
+  'help.guide.add-accommodation.tip.3':
+    'The times are all optional: a stay with no check-in and no code still covers its nights and still draws its route.',
+  // edit-accommodation
+  'help.guide.edit-accommodation.title': 'Change or cancel a booked night',
+  'help.guide.edit-accommodation.goal': 'Move a stay, correct its times, or take it out of the plan again.',
+  'help.guide.edit-accommodation.step.1':
+    'On every day of the stay the card shows the property, the check-in window, the check-out time and the confirmation number.',
+  'help.guide.edit-accommodation.step.2':
+    'The pencil at its right opens the stay again. The popup now reads Edit accommodation.',
+  'help.guide.edit-accommodation.step.3':
+    'Change what you need: the days it covers, Check-in, Until, Check-out, Confirmation, or the property itself.',
+  'help.guide.edit-accommodation.step.4': 'Click Save.',
+  'help.guide.edit-accommodation.step.5':
+    'The X next to the pencil ends the stay. It asks nothing, and the Hotel booking that belongs to it goes with it.',
+  'help.guide.edit-accommodation.result':
+    'The change reaches every day the stay covers at once, and the Hotel booking under Bookings with it.',
+  'help.guide.edit-accommodation.tip.1':
+    'A night in the middle of a stay carries no Check-in and no Check-out label: only the first and the last day of the range do.',
+  'help.guide.edit-accommodation.tip.2':
+    'Cancelling a stay also takes the stop it put on the check-in day and any cost attached to its booking. Book the night again if it was a mistake.',
+  // day-bookings
+  'help.guide.day-bookings.title': 'The day’s bookings at a glance',
+  'help.guide.day-bookings.goal': 'See in one place what is already booked for this day and whether it is confirmed.',
+  'help.guide.day-bookings.step.1':
+    'Reservations lists the bookings of the day: the ones dated on it, and the ones hanging off one of its stops.',
+  'help.guide.day-bookings.step.2':
+    'A row shows what kind of booking it is, its name and, when it belongs to a stop, that stop after a dot. Its times sit at the right end.',
+  'help.guide.day-bookings.step.3':
+    'The colour says where a booking stands: a green row is confirmed, an amber one is still pending. Hotels are not in this list, they have their own block below.',
+  'help.guide.day-bookings.step.4':
+    'The list only reads the bookings out. A booking is created and changed under Bookings.',
+  'help.guide.day-bookings.result':
+    'Everything dated on the day, and everything hanging off one of its stops, is in this one list.',
+  'help.guide.day-bookings.tip.1':
+    'A booking lands on a day by its own date. Change the date under Bookings and it moves to the other day by itself.',
+  'help.guide.day-bookings.tip.2':
+    'No Reservations block means the day has no bookings: it is hidden rather than shown empty.',
+
+  // ── Screen: trip-map ──────────────────────────────────────────────────────────────────
+  'help.ctx.trip-map.title': 'Map',
+  'help.ctx.trip-map.summary':
+    'The middle of the plan: every place of the trip as a pin, the routes that join them, and the switches along the edges of the map for satellite, for the whole trip at once and for the places around the part of town you are looking at.',
+  'help.ctx.trip-map.bullet.1':
+    'A pin is a place: its own photo when it has one, otherwise its category colour with the category icon. Rest the pointer on one for a card with its name, its rating, its category and its address.',
+  'help.ctx.trip-map.bullet.2':
+    'Pins too close together to tell apart fold into one dark bubble with a count. Click the bubble and the map zooms to what is inside.',
+  'help.ctx.trip-map.bullet.3':
+    'Click a pin to open the place under the map, with its rating, its files and what to do with it next; click an empty piece of the map to let it go again.',
+  'help.ctx.trip-map.bullet.4':
+    'With a day open in the days column, its stops carry a small white badge with their number in that day, and a place planned on two days carries both numbers, joined by ·.',
+  'help.ctx.trip-map.bullet.5':
+    'The row of icons at the top searches the part of the map you can see: Restaurants, Cafés, Bars & nightlife, Accommodation, Sights, Museums & culture, Nature & parks and Activities. Search this area runs it again after you move the map.',
+  'help.ctx.trip-map.bullet.6':
+    'Right-click anywhere on the map to open the place form at that point, with the address already looked up. The round button at the bottom left swaps the drawn map for aerial imagery.',
+  'help.ctx.trip-map.bullet.7':
+    'Show whole trip at the bottom right draws every travel day at once and lists what each one covers; the route icon on a booking’s row draws that booking, and the one in the toolbar above the days draws them all.',
+  // map-markers
+  'help.guide.map-markers.title': 'Read the map',
+  'help.guide.map-markers.goal': 'Know what every pin, badge and bubble on the map is telling you.',
+  'help.guide.map-markers.step.1':
+    'The map holds every place of the trip. Where pins sit too close together to tell apart, they fold into one dark bubble carrying the number of places inside it.',
+  'help.guide.map-markers.step.2':
+    'Click the bubble. The map zooms to what was inside and the pins separate; at the deepest zoom it fans them apart instead of zooming further.',
+  'help.guide.map-markers.step.3':
+    'A pin is the place’s own photo when it has one, otherwise its category colour with the category icon. Rest the pointer on one and a card gives its name, its rating, its category and its address.',
+  'help.guide.map-markers.step.4':
+    'Click a pin and the place opens under the map: its coordinates, its rating, its files, and Add to Day, Save to Collection, Navigation, Edit and Delete. Click an empty piece of the map to let it go again.',
+  'help.guide.map-markers.step.5':
+    'Open a day in the days column and its stops get numbered: the small white badge at a pin’s corner is that stop’s place in the day. A place planned on two days carries both numbers, joined by ·. Without a day open there are no numbers, and the corner carries the rating instead.',
+  'help.guide.map-markers.result':
+    'Nothing on the trip has changed: the map is a view of it, and every pin says which place, which day and in which order.',
+  'help.guide.map-markers.tip.1':
+    'A day folded shut in the days column takes its stops off the map with it; open the day again and they are back.',
+  'help.guide.map-markers.tip.2':
+    'The filter above the places list decides what the map draws as well: pick Unplanned and only the places still without a day are left on it.',
+  'help.guide.map-markers.tip.3':
+    'There are no zoom buttons on this map: the wheel zooms, a double click zooms in a step, and dragging moves it.',
+  // map-nearby-places
+  'help.guide.map-nearby-places.title': 'Find places around you on the map',
+  'help.guide.map-nearby-places.goal':
+    'Let the map look for restaurants, sights or a hotel in the part of town you are looking at, and take one into the trip.',
+  'help.guide.map-nearby-places.step.1':
+    'The row of icons at the top of the map is the category search: Restaurants, Cafés, Bars & nightlife, Accommodation, Sights, Museums & culture, Nature & parks and Activities.',
+  'help.guide.map-nearby-places.step.2':
+    'Click a category. TREK looks for that kind of place in the part of the map you can see and drops a pin in the category’s colour for every hit. One category at a time: clicking another swaps it, and clicking the one that is on turns it off.',
+  'help.guide.map-nearby-places.step.3':
+    'Move the map and a second button appears under the row: Search this area runs the same search for the new view. Moving alone never searches again, which keeps the number of requests down.',
+  'help.guide.map-nearby-places.step.4':
+    'The pins carry the name of what they found. Click one and the place form opens already filled in from it: Name, Address, Latitude and Longitude, and the website and phone number where OpenStreetMap has them.',
+  'help.guide.map-nearby-places.step.5':
+    'Check what it filled in and add what the search could not know: a Description, a Category, notes of your own.',
+  'help.guide.map-nearby-places.step.6':
+    'Click Add. If a place of the same name is already in the trip, the form says so and the button turns into Add anyway.',
+  'help.guide.map-nearby-places.result':
+    'The place is in the places list and on the map as one of the trip’s own pins, under Unplanned until you put it on a day. The search pins stay until you switch the category off.',
+  'help.guide.map-nearby-places.tip.1':
+    'The row is gone when Explore places on the map is off in Settings, under Travel & map.',
+  'help.guide.map-nearby-places.tip.2':
+    'The answers come from the TREK Places index and from OpenStreetMap, so this is one of the few things on the plan that needs a connection.',
+  'help.guide.map-nearby-places.tip.3':
+    'A search covers what is on screen, so zoom in to the street you are asking about: a whole city answers with the first sixty hits and little order to them.',
+  // map-add-place
+  'help.guide.map-add-place.title': 'Create a place by right-clicking the map',
+  'help.guide.map-add-place.goal': 'Put a place exactly where you want it, without searching for it first.',
+  'help.guide.map-add-place.step.1':
+    'Right-click the spot on the map you mean. The place form opens, titled Add Place/Activity.',
+  'help.guide.map-add-place.step.2':
+    'Latitude and Longitude are already at that point, and TREK looks the coordinates up and fills Address in from what it finds there. Nothing is written yet, so overwrite whatever is wrong.',
+  'help.guide.map-add-place.step.3':
+    'Give it a Name you will recognise, and the rest of what the plan should know: Description, Notes, Category, Website.',
+  'help.guide.map-add-place.step.4':
+    'Click Add. The place lands in the list as unplanned even with a day open: a right-click on the map says where, not when.',
+  'help.guide.map-add-place.result':
+    'The place is in the list and on the map, under Unplanned until you put it on a day.',
+  'help.guide.map-add-place.tip.1':
+    'The address comes from a look-up of the coordinates, so it can read as a street rather than a name, and over open country it can come back empty. Both fields are yours to overwrite.',
+  'help.guide.map-add-place.tip.2':
+    'On the MapLibre GL and Mapbox GL maps a middle click does the same, and on a touch screen a long press.',
+  // map-satellite
+  'help.guide.map-satellite.title': 'Switch to satellite',
+  'help.guide.map-satellite.goal': 'Swap the drawn map for aerial imagery, and back.',
+  'help.guide.map-satellite.step.1':
+    'The round button at the bottom left of the map is the base layer switch. Its icon always shows the layer it would move to, and hovering it says which: Switch to satellite view.',
+  'help.guide.map-satellite.step.2':
+    'Click it. The map becomes aerial imagery, deep enough to make out a single building, and without a key of your own.',
+  'help.guide.map-satellite.step.3':
+    'Everything TREK draws stays on top of it: the pins, the day’s route, the tracks and the booking routes. Click the button again, now reading Switch to map view, to go back.',
+  'help.guide.map-satellite.result':
+    'The map is drawn again, and the layer you left it on is remembered on your account.',
+  'help.guide.map-satellite.tip.1':
+    'The choice is kept on your account rather than on the trip, so every trip opens the way you left it, whichever map renderer you use.',
+  'help.guide.map-satellite.tip.2':
+    'The imagery carries no writing: street names, districts and house numbers are on the drawn map, so switch back when you are looking for an address.',
+  // map-whole-trip
+  'help.guide.map-whole-trip.title': 'See the whole trip and its distances',
+  'help.guide.map-whole-trip.goal':
+    'Swap the one open day for every travel day of the trip, and read how far each one goes.',
+  'help.guide.map-whole-trip.step.1': 'The round Show whole trip button sits at the bottom right of the map.',
+  'help.guide.map-whole-trip.step.2':
+    'Click it. Every travel day of the trip is drawn at once, each in its own colour over a white casing, so neighbouring days stay apart.',
+  'help.guide.map-whole-trip.step.3':
+    'The card above the button lists those days: a colour dot, the day’s name, an icon for each way you travel it, and the distance it covers. Total distance is at the top.',
+  'help.guide.map-whole-trip.step.4':
+    'Click a day in the card to select it, the same as picking it in the days column. Click the button again, now reading Hide whole trip, to go back to the one day.',
+  'help.guide.map-whole-trip.result':
+    'Every travel day is drawn in its own colour, and the card says what each one covers and what the trip comes to.',
+  'help.guide.map-whole-trip.tip.1':
+    'The total arrives a few legs at a time. While an … follows it, the number is still a partial sum; it settles once every leg has answered.',
+  'help.guide.map-whole-trip.tip.2':
+    'A leg the router refuses stays a straight line and counts nothing, and the card says so rather than quietly reading low.',
+  'help.guide.map-whole-trip.tip.3':
+    'A day with fewer than two located stops has no route to draw, so it is left out of the card entirely.',
+  // map-booking-routes
+  'help.guide.map-booking-routes.title': 'Show a booking’s route on the map',
+  'help.guide.map-booking-routes.goal':
+    'Draw the flights, trains and drives you have booked on the map, and get them off it again.',
+  'help.guide.map-booking-routes.step.1':
+    'Booking routes are off until you ask for one. On a booking’s row in the days column sits a small route icon: Show booking routes.',
+  'help.guide.map-booking-routes.step.2':
+    'Click it. The booking appears on the map: a flight as a great circle arc, a drive along the real roads, a train as the chain of its stations. Confirmed is drawn solid, pending dashed.',
+  'help.guide.map-booking-routes.step.3':
+    'The ends of the route are blue pills with the transport’s icon. Click one to open the booking behind it, with its times, its reference and where it starts; Close puts it away again.',
+  'help.guide.map-booking-routes.step.4':
+    'The route icon in the toolbar above the days does the whole trip at once: Show all booking routes draws every booking that has one.',
+  'help.guide.map-booking-routes.step.5':
+    'It is a clean slate rather than a layer on top, so whatever you picked booking by booking is dropped. Press it again, now reading Hide all booking routes, and the map is clear.',
+  'help.guide.map-booking-routes.result':
+    'The bookings you asked for are drawn on the map, and the choice is kept for this trip in this browser until you change it.',
+  'help.guide.map-booking-routes.tip.1':
+    'The ends carry the airport code or the station’s name only when Booking route labels is on in Settings, under Travel & map; otherwise they show the icon alone.',
+  'help.guide.map-booking-routes.tip.2':
+    'Always show booking routes, in the same settings, draws them from the start on every trip you have not already decided about.',
+  'help.guide.map-booking-routes.tip.3':
+    'A booking needs two ends with coordinates before it can be drawn, so a hotel or a restaurant carries no route icon.',
+
+  // ── Screen: trip-transports ───────────────────────────────────────────────────────────
+  'help.ctx.trip-transports.title': 'Transports',
+  'help.ctx.trip-transports.summary':
+    'Everything that carries you between the stops: flights, trains, buses, cars, taxis, bicycles, cruises, ferries and the public-transit connections TREK looks up for you. The tab is the list of them; they are made and read on the plan as well, and drawn on the map.',
+  'help.ctx.trip-transports.bullet.1':
+    'The tab holds the rides only. Accommodation, restaurants, events and tickets live on Bookings, so the same entry never shows up twice.',
+  'help.ctx.trip-transports.bullet.2':
+    'The toolbar counts them all under All and gives every type in use its own chip with its own count, Flight, Train, Car, Public transit. Transport at the right adds one by hand.',
+  'help.ctx.trip-transports.bullet.3':
+    'The cards come in three groups, each foldable by its heading: Automated public transit for the connections the search planned, then Pending, then Confirmed.',
+  'help.ctx.trip-transports.bullet.4':
+    'A card carries the status, the type, the days it spans, the times, the Booking Code, the route and the airline and flight number or the train number, platform and seat. The pencil opens it, the bin deletes it after a question.',
+  'help.ctx.trip-transports.bullet.5':
+    'Transports are made on the plan too: every day header has a plus for Add transport and a tram button for Public transit, and the travel-time connector between two stops opens the same search for that one leg.',
+  'help.ctx.trip-transports.bullet.6':
+    'A transport with both ends set draws a line on the map. The route icon on its row in the day plan switches that line on, and Show all booking routes in the toolbar above the days flips the whole trip.',
+  // transports-list
+  'help.guide.transports-list.title': 'Read the Transports tab',
+  'help.guide.transports-list.goal': 'Know what the list tells you before you change anything on it.',
+  'help.guide.transports-list.step.1':
+    'Transports is the second tab of the trip. It holds the rides only: hotels, restaurants, events and tickets are on Bookings.',
+  'help.guide.transports-list.step.2':
+    'The toolbar counts every transport under All and gives each type in use its own chip with its own count. Click a chip to keep only that type, click it again to let it go. Several chips can be on at once, and All clears them.',
+  'help.guide.transports-list.step.3':
+    'Automated public transit is a group of its own, the connections the transit search planned. Pending and Confirmed hold everything entered by hand. The arrow next to a heading folds a group away.',
+  'help.guide.transports-list.step.4':
+    'A card says it all: the status dot with Pending or Confirmed, the type, the days it spans with their dates, the times, the Booking Code, the route, and the airline and flight number or the train number, platform and seat.',
+  'help.guide.transports-list.step.5':
+    'The pencil opens the transport for editing, the bin deletes it, after a question that names what goes.',
+  'help.guide.transports-list.result':
+    'The list is narrowed to what you were after, and every card says at a glance whether the ride is booked.',
+  'help.guide.transports-list.tip.1':
+    'The chips and the folded groups are remembered per trip, so the tab opens again the way you left it.',
+  'help.guide.transports-list.tip.2':
+    'Import from file and AirTrail join Transport in the toolbar only when the server can read booking confirmations and when an AirTrail instance is connected. Without them the list is filled by hand and by the transit search.',
+  // add-transport
+  'help.guide.add-transport.title': 'Add a transport to a day',
+  'help.guide.add-transport.goal': 'Put the ride that gets you from one stop to the next into the day it happens on.',
+  'help.guide.add-transport.step.1':
+    'Every day header carries four small buttons at its right. Click the plus, whose tooltip reads Add transport. The form opens with Date already set to that day.',
+  'help.guide.add-transport.step.2':
+    'Booking Type picks what you are taking: Flight, Train, Bus, Car, Taxi, Bicycle, Cruise, Ferry or Other. The form follows. A flight gets an airport on every leg, a train a chain of stations, a car the Pickup and Return wording and Stops along the way.',
+  'help.guide.add-transport.step.3':
+    'Title is the only field that has to be filled; Add stays grey without it. Write what you would recognise on a platform board.',
+  'help.guide.add-transport.step.4':
+    'From and To search a station, a port or an address. Type at least three letters and pick a result from the list. A name that was only typed carries no coordinates, so it draws nothing on the map.',
+  'help.guide.add-transport.step.5':
+    'Date and Start time say when it runs, End date and End time when it is over; a ride that lands the next day takes the next day there. Booking Code, Status with Pending or Confirmed, and Notes are optional.',
+  'help.guide.add-transport.step.6': 'Click Add.',
+  'help.guide.add-transport.result':
+    'The transport is a row on the day, at its time among the stops, and a card in the Transports tab under Pending or Confirmed.',
+  'help.guide.add-transport.tip.1':
+    'The row lands where its start time puts it, after the last stop that starts earlier. Its grip drags it anywhere else in the day, or onto another day.',
+  'help.guide.add-transport.tip.2':
+    'Attach file under Files takes the ticket, and Create expense under Costs saves the booking and opens the Costs editor for the fare.',
+  'help.guide.add-transport.tip.3':
+    'Travelers marks who is on this ride. As soon as one transport has travelers, the toolbar of the tab grows their avatars and filters the list by them.',
+  // plan-transit
+  'help.guide.plan-transit.title': 'Plan a public-transit connection',
+  'help.guide.plan-transit.goal':
+    'Let TREK look up the real trains and buses between two points of a day and put the one you pick into the plan.',
+  'help.guide.plan-transit.step.1':
+    'In the day header, click the tram button, Public transit. The search opens for that day.',
+  'help.guide.plan-transit.step.2':
+    'From and To take a stop or a station. With the box still empty the day’s own stops are offered; typing two letters searches the timetable’s stations instead. Swap between the two boxes turns the connection round.',
+  'help.guide.plan-transit.step.3':
+    'Depart or Arrive with a time says when you want to travel, and Best route, Fewer transfers or Less walking says how the answers should be ordered.',
+  'help.guide.plan-transit.step.4':
+    'The chips below say which modes may be used: Train, Subway, Tram, Bus, Ferry and Cable car. Switch one off to leave it out, at least one stays on. Then click Search.',
+  'help.guide.plan-transit.step.5':
+    'Each result gives departure and arrival, how long it takes, how many transfers and how much walking, and the lines in their own colours. Click one to unfold it stop by stop, with the platforms and the walks between the lines.',
+  'help.guide.plan-transit.step.6': 'Click Add to day.',
+  'help.guide.plan-transit.result':
+    'The connection is a row on the day with its lines, its transfers and its walking time, and a card in the Transports tab under Automated public transit.',
+  'help.guide.plan-transit.tip.1':
+    'The connections come from Transitous, a free community service over public timetable data: no key, no account. An admin can point the search at Google instead.',
+  'help.guide.plan-transit.tip.2':
+    'Nothing found? The feeds cover a region and a period. Try another time, switch more modes on, or pick a station rather than the place itself. The message names the service that answered.',
+  'help.guide.plan-transit.tip.3':
+    'The same search opens for a single leg: click the travel-time connector between two stops and choose Public transit. From, To and the departure time are filled in for you.',
+  // change-transit-route
+  'help.guide.change-transit-route.title': 'Open and change a planned connection',
+  'help.guide.change-transit-route.goal': 'Read the connection stop by stop, rename it, or look the route up again.',
+  'help.guide.change-transit-route.step.1':
+    'In the Transports tab the planned connections sit under Automated public transit. Click the card.',
+  'help.guide.change-transit-route.step.2':
+    'Duration, Transfers and Walking sit at the top. Itinerary below them walks the connection stop by stop, with the platforms and the walks between the lines.',
+  'help.guide.change-transit-route.step.3':
+    'Change route runs the search again, already filled with this connection’s two ends and its day.',
+  'help.guide.change-transit-route.step.4':
+    'Pick another connection and click Add to day; it takes the old one’s place. Edit details, next to Change route, opens the ordinary transport form instead, where the Booking Code, the Status, the travelers and the files live.',
+  'help.guide.change-transit-route.result':
+    'The journey carries the new itinerary, and its card in the Transports tab shows the new lines and times.',
+  'help.guide.change-transit-route.tip.1':
+    'The journey’s title is only text: the pencil next to it renames it without touching the route. Notes underneath take markdown and have an Edit and a Preview tab.',
+  'help.guide.change-transit-route.tip.2':
+    'Delete at the foot of the journey takes the connection out of the trip; the day keeps its stops.',
+  // leg-travel-mode
+  'help.guide.leg-travel-mode.title': 'Change how one leg is travelled',
+  'help.guide.leg-travel-mode.goal':
+    'Walk one leg of a day that is otherwise driven, or hand that leg to the transit search.',
+  'help.guide.leg-travel-mode.step.1':
+    'The connectors between the stops only appear once the day’s route is on. Click the day to open it, then Route under its stops.',
+  'help.guide.leg-travel-mode.step.2':
+    'Each connector names the travel time and the distance of that leg, with the icon of the mode it was routed in: a car for driving, a foot for walking.',
+  'help.guide.leg-travel-mode.step.3':
+    'Click the connector. The menu offers Driving and Walking, Public transit, and Use day default.',
+  'help.guide.leg-travel-mode.step.4': 'Choose Walking. Only this leg changes; the rest of the day keeps its own mode.',
+  'help.guide.leg-travel-mode.result':
+    'The leg shows the foot icon and its walking time, and the day’s other legs keep the day’s mode.',
+  'help.guide.leg-travel-mode.tip.1':
+    'The mode belongs to the leg, not to the day: the Driving and Walking buttons of the whole day never overwrite a leg you set by hand. Use day default gives the leg back to them.',
+  'help.guide.leg-travel-mode.tip.2':
+    'Public transit in the same menu opens the connection search for exactly this leg, with both ends and the departure time already filled in.',
+  'help.guide.leg-travel-mode.tip.3':
+    'The times come from a public router over real roads and footpaths. A leg it cannot answer keeps its straight line and shows no time.',
+  // edit-transport
+  'help.guide.edit-transport.title': 'Change or delete a transport',
+  'help.guide.edit-transport.goal': 'Fix a time, a platform or a booking code, or take the ride out of the trip.',
+  'help.guide.edit-transport.step.1': 'In the day plan a transport is a coloured row between the stops. Click it.',
+  'help.guide.edit-transport.step.2':
+    'The form is the one that created it, with Edit transport in its title bar. Everything can be changed: the type, the route, the days and times, the Booking Code, the Status.',
+  'help.guide.edit-transport.step.3':
+    'A flight’s route is a chain of airports, a train’s a chain of stations. Add stop puts another one in between, and every leg keeps its own times and its own flight or train number.',
+  'help.guide.edit-transport.step.4':
+    'Click Update. To remove the transport altogether, use the bin on its card in the Transports tab and confirm.',
+  'help.guide.edit-transport.result':
+    'The change shows everywhere the transport appears: the Transports tab, the day it runs on, and its line on the map.',
+  'help.guide.edit-transport.tip.1':
+    'The same form opens from both sides, the pencil on the card in the Transports tab and the transport’s own row in the day plan. A planned public-transit connection is the exception: its row opens the journey view, and Edit details there leads to this form.',
+  'help.guide.edit-transport.tip.2':
+    'Moving a transport to another day does not need the form at all: drag its row from one day card to the next.',
+  // transport-on-map
+  'help.guide.transport-on-map.title': 'Draw a transport on the map',
+  'help.guide.transport-on-map.goal': 'See where a flight, a drive or a connection actually goes.',
+  'help.guide.transport-on-map.step.1':
+    'A transport with both ends set carries a small route icon on its row in the day plan. Click it; its label turns into Hide booking routes.',
+  'help.guide.transport-on-map.step.2':
+    'The route is drawn on the map, with a pill marker at each end carrying the transport’s icon.',
+  'help.guide.transport-on-map.step.3':
+    'Click an end marker to read the booking without leaving the map: the times, the airline and flight number, the Booking Code and the notes. Close puts the sheet away.',
+  'help.guide.transport-on-map.step.4':
+    'The route icon in the toolbar above the days does the whole trip at once: Show all booking routes, and Hide all booking routes to clear them again.',
+  'help.guide.transport-on-map.step.5':
+    'A planned public-transit connection has no icon of its own. It is drawn with the day’s Route toggle, which is why Hide all booking routes does not clear it while that day’s route is still on.',
+  'help.guide.transport-on-map.result':
+    'The routes are on the map with a marker at each end, and they stay there until you switch them off again.',
+  'help.guide.transport-on-map.tip.1':
+    'A flight, a cruise and a ferry draw as a curve, a car, a bus, a taxi and a bicycle follow the real roads, and a train or a planned connection runs through the stations it calls at.',
+  'help.guide.transport-on-map.tip.2':
+    'A confirmed booking is a solid line, a pending one a dashed one. The Booking route labels setting prints the airport code or the station name into the end markers.',
+  'help.guide.transport-on-map.tip.3':
+    'Show all booking routes is a clean slate, not a layer: it discards what the single icons had set, so pressing it twice leaves you with everything on or everything off.',
+
+  // ── Screen: trip-bookings ─────────────────────────────────────────────────────────────
+  'help.ctx.trip-bookings.title': 'Bookings',
+  'help.ctx.trip-bookings.summary':
+    'The tab that holds everything booked for the trip that is not a way of getting about: the places to stay, the tables, the tickets, the tours, the parking. Every booking is a card in Pending or in Confirmed, carrying its code, its document, its travellers and its cost.',
+  'help.ctx.trip-bookings.bullet.1':
+    'Manual Booking at the top right opens the form. The six kinds it makes are Accommodation, Restaurant, Event, Tour, Parking and Other; flights, trains and the rest live on the Transports tab and never appear here.',
+  'help.ctx.trip-bookings.bullet.2':
+    'Import from file hands a confirmation to the parser: EML, PDF, PKPass, HTML or TXT, five files of 10 MB at most. The button is only there when the server can read them.',
+  'help.ctx.trip-bookings.bullet.3':
+    'The chips beside the heading filter by type, each with its own count, and All brings everything back. Once a booking names people, the row of avatars next to the chips narrows the tab to one of them.',
+  'help.ctx.trip-bookings.bullet.4':
+    'The cards stand in two sections, Pending and Confirmed, each with its count. A click on a section heading folds it away, and whether it is open is remembered for this trip.',
+  'help.ctx.trip-bookings.bullet.5':
+    'A card carries the status dot, the type, the title, the dates and times, the Booking Code, the Location / Address, what the booking is linked to, its Link, Notes, Files and Travelers.',
+  'help.ctx.trip-bookings.bullet.6':
+    'The pencil on a card opens the same form again; the bin asks once and then the booking is gone. With an accommodation its nights in the day plan and its linked expense go with it.',
+  // create-booking
+  'help.guide.create-booking.title': 'Create a booking',
+  'help.guide.create-booking.goal':
+    'Put a restaurant, an event, a tour, a parking space or anything else into the trip by hand.',
+  'help.guide.create-booking.step.1': 'Click Manual Booking at the top right of the tab. New Reservation opens.',
+  'help.guide.create-booking.step.2':
+    'Pick the Booking Type. Accommodation, Restaurant, Event, Tour, Parking and Other are the six this tab makes, and the form changes with the choice: only Accommodation trades its dates for a range of days.',
+  'help.guide.create-booking.step.3':
+    'Type the Title. It is the one field the form insists on, and Add stays dead until it has something.',
+  'help.guide.create-booking.step.4':
+    'Set Date and Start time, and End date and End time if the booking has an end. The calendars only offer days inside the trip, and an end that is not after the start says so in red and blocks Add.',
+  'help.guide.create-booking.step.5':
+    'Put in the Booking Code from the confirmation and set Status. Pending or Confirmed decides which of the two sections the card lands in.',
+  'help.guide.create-booking.step.6': 'Click Add.',
+  'help.guide.create-booking.result':
+    'The booking is a card in its section with its type chip, its dates and its code, and everyone else in the trip sees it appear.',
+  'help.guide.create-booking.tip.1':
+    'Location / Address offers real addresses while you type; picking one replaces what you wrote, and an address you typed yourself is kept as it is.',
+  'help.guide.create-booking.tip.2':
+    'Link takes the booking’s own page at the provider. The card turns it into a link that opens in a new tab.',
+  'help.guide.create-booking.tip.3': 'Notes are Markdown, so a list or a bold line is rendered as one on the card.',
+  // booking-hotel
+  'help.guide.booking-hotel.title': 'Book a place to stay',
+  'help.guide.booking-hotel.goal':
+    'Enter an accommodation so it counts as a booking and as nights in the day plan at once.',
+  'help.guide.booking-hotel.step.1':
+    'Click Manual Booking and choose Accommodation. The date fields go and a block of hotel fields takes their place.',
+  'help.guide.booking-hotel.step.2':
+    'Pick the hotel under Accommodation. The list is the trip’s own places, and picking one writes its name into Title and its address into Location / Address.',
+  'help.guide.booking-hotel.step.3':
+    'Set From and To: the first night and the morning you leave. Both offer the days of the trip with their dates, and the two keep each other in order.',
+  'help.guide.booking-hotel.step.4':
+    'Fill in Check-in, Check-in until and Check-out, and the Booking Code from the confirmation.',
+  'help.guide.booking-hotel.step.5': 'Click Add.',
+  'help.guide.booking-hotel.result':
+    'The card carries a range of days instead of a date, with the check-in and check-out times and the address, and the same stay now sits on those days of the plan.',
+  'help.guide.booking-hotel.tip.1':
+    'Accommodation is the one type without a Date and a Start time. Its dates are From and To, and they are days of the trip rather than a calendar.',
+  'help.guide.booking-hotel.tip.2':
+    'Leave Accommodation empty and type the address instead: the place is looked up, created and pinned on the map for you.',
+  'help.guide.booking-hotel.tip.3': 'Deleting the booking takes the nights out of the day plan with it.',
+  // link-booking
+  'help.guide.link-booking.title': 'Tie a booking to the plan',
+  'help.guide.link-booking.goal':
+    'Hang a booking off the stop and the place it belongs to, so it turns up where you will want it.',
+  'help.guide.link-booking.step.1': 'Click the pencil on the card you want to link. Edit Reservation opens.',
+  'help.guide.link-booking.step.2':
+    'Open Link to day assignment. The list is your plan: a heading per day, then that day’s stops, numbered and with their times. Pick the one the booking belongs to.',
+  'help.guide.link-booking.step.3':
+    'Place / Activity links the place itself. Pick it there, and Title and Location / Address fill in wherever you left them empty.',
+  'help.guide.link-booking.step.4': 'Click Update.',
+  'help.guide.link-booking.result':
+    'The card names the day and the stop under Link to day assignment, and the booking rides along with that stop in the day plan.',
+  'help.guide.link-booking.tip.1':
+    'No link (standalone) at the top of the list takes the link off again. Accommodation has no stop picker at all: it links through its nights.',
+  'help.guide.link-booking.tip.2':
+    'Picking a stop on a dated day fills an empty Date for you. A date you have already set is left alone.',
+  // booking-travelers
+  'help.guide.booking-travelers.title': 'Say who a booking is for',
+  'help.guide.booking-travelers.goal': 'Mark the travellers a booking covers, and then see only theirs.',
+  'help.guide.booking-travelers.step.1':
+    'Open the booking with the pencil and go down to Travelers. Every member of the trip stands there, named guests among them.',
+  'help.guide.booking-travelers.step.2':
+    'Click the people this booking is for. A chosen one gets a tick; click it again to take it off.',
+  'help.guide.booking-travelers.step.3': 'Click Update.',
+  'help.guide.booking-travelers.step.4':
+    'Up in the toolbar, next to the type chips, click a traveller’s avatar to see only their bookings.',
+  'help.guide.booking-travelers.result':
+    'The card lists the people it is for, and the avatar row narrows the tab to one of them.',
+  'help.guide.booking-travelers.tip.1':
+    'On the card the travellers are only shown, never changed. They are set here, in the form.',
+  'help.guide.booking-travelers.tip.2':
+    'The avatar row appears once the trip has more than one member and at least one booking names somebody. What you pick lasts for this browser session.',
+  // booking-files
+  'help.guide.booking-files.title': 'Keep the voucher with the booking',
+  'help.guide.booking-files.goal': 'Attach the confirmation, the ticket or the pass to the booking it belongs to.',
+  'help.guide.booking-files.step.1':
+    'Open the booking with the pencil, go down to Files and click Attach file. On a booking that already exists the document goes up at once and TREK says File uploaded.',
+  'help.guide.booking-files.step.2': 'The document is listed by its name, with a button to open it and an X beside it.',
+  'help.guide.booking-files.step.3':
+    'Link existing file offers the documents of the trip that are not on this booking yet. Pick one and it is attached without uploading anything again.',
+  'help.guide.booking-files.step.4': 'Click Update.',
+  'help.guide.booking-files.result': 'The card lists the documents under Files, and a click on one of them opens it.',
+  'help.guide.booking-files.tip.1':
+    'On a booking you are still creating the document waits and goes up the moment you click Add.',
+  'help.guide.booking-files.tip.2':
+    'The X next to a document takes the link away, not the document. It stays in the trip’s Files tab.',
+  'help.guide.booking-files.tip.3':
+    'Which kinds of file may be attached is the administrator’s list; documents, text and pictures are allowed out of the box.',
+  // booking-cost
+  'help.guide.booking-cost.title': 'Turn a booking’s price into a cost',
+  'help.guide.booking-cost.goal': 'Get what a booking costs into Costs, split between the people paying for it.',
+  'help.guide.booking-cost.step.1':
+    'Open the booking and go to the foot of the form. Under Costs stands Create expense, with the note Saves the booking, then opens the Costs editor.',
+  'help.guide.booking-cost.step.2':
+    'Click Create expense. The booking is saved and the Costs editor opens on top of it.',
+  'help.guide.booking-cost.step.3':
+    'What was it for? is already the booking’s title. Put in the Total amount and check the Currency and the Day.',
+  'help.guide.booking-cost.step.4':
+    'Category is the one the booking type implies. Set Who paid? and how the amount is split.',
+  'help.guide.booking-cost.step.5': 'Click Add expense.',
+  'help.guide.booking-cost.result':
+    'The booking’s form now reads Linked expense with the amount, and the same expense stands in the Costs tab, tied to this booking.',
+  'help.guide.booking-cost.tip.1':
+    'The category follows the type: Restaurant becomes Food & drink, Accommodation becomes Accommodation, Parking becomes Parking, and Event and Tour both land in Other.',
+  'help.guide.booking-cost.tip.2': 'The bin on Linked expense removes the expense, not the booking.',
+  'help.guide.booking-cost.tip.3':
+    'Costs is in the form only while the Costs addon is on, which the administrator switches under Addons.',
+  // filter-bookings
+  'help.guide.filter-bookings.title': 'Find a booking',
+  'help.guide.filter-bookings.goal': 'Narrow a long tab down to the type, the person or the state you are after.',
+  'help.guide.filter-bookings.step.1':
+    'The chips beside the heading are the types this trip actually uses, each with the number it holds. All is the whole tab.',
+  'help.guide.filter-bookings.step.2': 'Click a chip to keep only that type. Click a second and both are kept.',
+  'help.guide.filter-bookings.step.3': 'All puts everything back.',
+  'help.guide.filter-bookings.step.4':
+    'The avatars next to the chips filter by traveller, one person or several at once.',
+  'help.guide.filter-bookings.step.5':
+    'Pending and Confirmed are the two sections, each with its count. Click a heading to fold one away; it is still folded when you come back.',
+  'help.guide.filter-bookings.result':
+    'The tab shows only what you picked, and it is still picked when you come back to it in this browser session.',
+  'help.guide.filter-bookings.tip.1':
+    'The chips only offer the types the trip has, so a trip without a single tour has no Tour chip.',
+  'help.guide.filter-bookings.tip.2':
+    'A filter that matches nothing leaves the tab empty with No places found. The wording is the places list’s; the meaning is the same.',
+  // import-booking-file
+  'help.guide.import-booking-file.title': 'Read a booking out of its confirmation',
+  'help.guide.import-booking-file.goal':
+    'Let TREK pull the booking out of the mail or the PDF the provider sent, instead of typing it again.',
+  'help.guide.import-booking-file.step.1': 'Click Import from file in the toolbar. Import booking confirmations opens.',
+  'help.guide.import-booking-file.step.2':
+    'Drop the confirmations on the box, or click it and pick them: EML, PDF, PKPass, HTML and TXT, up to five files of 10 MB each. The ones you chose are named on the box.',
+  'help.guide.import-booking-file.step.3':
+    'Click Import. The dialog closes at once, because the reading happens in the background.',
+  'help.guide.import-booking-file.step.4':
+    'A card at the bottom right reports the run, and it follows you through the app and through a reload. When it is done it offers Import, which starts the review: every booking it found opens in the ordinary form, filled in and with its document attached, for you to check and to Add one after another.',
+  'help.guide.import-booking-file.result':
+    'Each booking you confirmed is a card of its own with its code, its dates and the document it came from; an accommodation also got its nights, and with Costs on, a price that was in the confirmation became an expense.',
+  'help.guide.import-booking-file.tip.1':
+    'Import from file is there only when the server can read confirmations, which takes either the extractor or the AI Parsing addon. The administrator switches that one under Addons.',
+  'help.guide.import-booking-file.tip.2':
+    'If nothing could be read the card says so and offers Try AI parsing, which sends the same files straight to the model.',
+  'help.guide.import-booking-file.tip.3':
+    'A finished parse is kept for ten minutes. Start the review inside that window.',
+  // edit-booking
+  'help.guide.edit-booking.title': 'Change a booking',
+  'help.guide.edit-booking.goal':
+    'Correct a time, add the code that arrived later, or move a booking from Pending to Confirmed.',
+  'help.guide.edit-booking.step.1':
+    'Click the pencil in the card’s header. Edit Reservation opens with everything the booking knows.',
+  'help.guide.edit-booking.step.2': 'Change what needs changing, here the Booking Code the operator finally sent.',
+  'help.guide.edit-booking.step.3': 'Put Status on Confirmed.',
+  'help.guide.edit-booking.step.4': 'Click Update.',
+  'help.guide.edit-booking.result':
+    'The card moves: a confirmed booking stands in the Confirmed section behind a green dot, and everyone in the trip sees it move.',
+  'help.guide.edit-booking.tip.1':
+    'A Booking Code you cannot read is Blur Booking Codes in Settings, under Display. Hover it, or click it, and it is legible.',
+  'help.guide.edit-booking.tip.2':
+    'Change the type and the category of a linked expense follows it, unless you had picked a category by hand in the Costs editor.',
+  'help.guide.edit-booking.tip.3': 'An accommodation is edited here too: its From and To days are in the same form.',
+  // delete-booking
+  'help.guide.delete-booking.title': 'Delete a booking',
+  'help.guide.delete-booking.goal': 'Take a booking that fell through out of the trip.',
+  'help.guide.delete-booking.step.1': 'Click the bin in the card’s header.',
+  'help.guide.delete-booking.step.2':
+    'Delete booking? names the one you picked and says it will be permanently deleted.',
+  'help.guide.delete-booking.step.3': 'Click Confirm.',
+  'help.guide.delete-booking.result':
+    'The card is gone, for everyone in the trip. A booking has no undo, so the question is the last stop.',
+  'help.guide.delete-booking.tip.1':
+    'Deleting an accommodation booking also takes its nights out of the day plan and removes the expense that was linked to it.',
+  'help.guide.delete-booking.tip.2':
+    'Documents that were attached stay in the trip’s Files tab; only their link to the booking goes.',
+
+  // ── Screen: trip-lists ────────────────────────────────────────────────────────────────
+  'help.ctx.trip-lists.title': 'Lists',
+  'help.ctx.trip-lists.summary':
+    'Two lists for one trip: the packing list, with who brings what and what it weighs, and the to-do list of everything that has to happen before and during it. The tab is there while the Lists addon is on.',
+  'help.ctx.trip-lists.bullet.1':
+    'Packing List and To-Do at the top switch between the two and count what is on each; the buttons on the right belong to whichever one is open.',
+  'help.ctx.trip-lists.bullet.2':
+    'The packing list is grouped into lists, Documents, Clothing, whatever you call them, each with a colour dot, a packed-of-total badge and three dots holding Rename, Check All, Uncheck All and Delete List. Add list makes a new one.',
+  'help.ctx.trip-lists.bullet.3':
+    'A row is a tick box and a name, then the quantity, the weight in grams and a bag circle while Bag Tracking is on, then the colour dot for Move to List, Sharing, Rename and Delete. The grip on the left drags it up or down inside its list.',
+  'help.ctx.trip-lists.bullet.4':
+    'Shared and My list split the packing list in two: the pool everyone sees, and your own. All, Open and Done narrow whichever one is open, and the bar above counts what is packed.',
+  'help.ctx.trip-lists.bullet.5':
+    'Apply template, Import and Save as template fill or keep a list without typing it out, and the red button beside them names how many items are ticked and clears them away.',
+  'help.ctx.trip-lists.bullet.6':
+    'To-Do has a sidebar of its own: the progress card, the filters All, My Tasks, Overdue and Done, Sort by Priority or Due date, and one row per list. A click on a task opens it in the pane on the right, and Add new task opens the same pane empty.',
+  // packing-categories
+  'help.guide.packing-categories.title': 'Build the packing list',
+  'help.guide.packing-categories.goal':
+    'Group what you are taking into lists, fill them with items and say who looks after each list.',
+  'help.guide.packing-categories.step.1':
+    'Click Add list under the progress bar, type the name into List name (e.g. Clothing) and confirm with the tick.',
+  'help.guide.packing-categories.step.2':
+    'The new list starts with one empty row. Click Add item, type the item into Item name… and press Enter; the field stays open for the next one.',
+  'help.guide.packing-categories.step.3':
+    'Rename a row with the pencil at its right end, or by clicking the name itself.',
+  'help.guide.packing-categories.step.4':
+    'The dashed circle in the list header assigns trip members to the list. Pick a name; the chip that appears removes that person again on a click.',
+  'help.guide.packing-categories.step.5':
+    'The three dots at the end of the header hold the rest: Rename, Check All, Uncheck All, and Delete List, which takes the list and everything in it without asking again.',
+  'help.guide.packing-categories.result':
+    'The new list sits in the grid with its items under it and its colour dot, and its badge counts what is already packed.',
+  'help.guide.packing-categories.tip.1':
+    'A list is only its items. Delete the last one and the row turns into a placeholder so the list keeps its place and its colour; delete that row too and the list is gone.',
+  'help.guide.packing-categories.tip.2':
+    'Assigning someone to a list sends them a packing notification. It does not change who can see the items, that is Sharing, on the row.',
+  'help.guide.packing-categories.tip.3':
+    'Two lists may carry the same name. TREK keeps them apart internally, so the names stay the way you typed them.',
+  // check-off-packing
+  'help.guide.check-off-packing.title': 'Tick things off while you pack',
+  'help.guide.check-off-packing.goal': 'Mark what is in the bag, watch the bar, and clear the packed items away.',
+  'help.guide.check-off-packing.step.1':
+    'Click the box at the left of a row. The name is struck through and the bar moves.',
+  'help.guide.check-off-packing.step.2':
+    'The bar above counts what is packed against everything on the list, as a number and as a percentage.',
+  'help.guide.check-off-packing.step.3':
+    'A whole list at once: the three dots in its header hold Check All and Uncheck All.',
+  'help.guide.check-off-packing.step.4':
+    'All, Open and Done narrow the grid. Open leaves only what is still missing, so a list that is fully packed drops out of it.',
+  'help.guide.check-off-packing.step.5':
+    'Remove 3 checked in the bar above deletes every ticked item at once, after one confirmation from the browser.',
+  'help.guide.check-off-packing.result':
+    'Only what is still open is listed, and the bar above says how far along the packing is.',
+  'help.guide.check-off-packing.tip.1': 'A checked item cannot be renamed. Untick it first.',
+  'help.guide.check-off-packing.tip.2':
+    'Check All and Uncheck All work on one list at a time, from that list’s own three dots.',
+  'help.guide.check-off-packing.tip.3':
+    'When every item is checked the counter is replaced by All packed! and the bar turns green.',
+  // apply-packing-template
+  'help.guide.apply-packing-template.title': 'Apply a packing template',
+  'help.guide.apply-packing-template.goal':
+    'Bring a ready-made list into the trip, and keep this trip’s list for the next one.',
+  'help.guide.apply-packing-template.step.1': 'Click Apply template in the bar above the list.',
+  'help.guide.apply-packing-template.step.2': 'Pick a template. Each line names it and says how many items it holds.',
+  'help.guide.apply-packing-template.step.3':
+    'The items land in the view you are in: Shared puts them in the pool everyone sees, My list makes them yours.',
+  'help.guide.apply-packing-template.step.4':
+    'Keep this trip’s list for the next trip: Save as template, a name, then the tick.',
+  'help.guide.apply-packing-template.result':
+    'The template’s lists and items are in the trip, next to what was already there.',
+  'help.guide.apply-packing-template.tip.1':
+    'A template only carries names and lists. Quantities, weights, bags and what is already ticked stay behind.',
+  'help.guide.apply-packing-template.tip.2':
+    'Apply template is only there once a template exists. Without one the button does not appear at all.',
+  'help.guide.apply-packing-template.tip.3':
+    'Save as template appears for an instance admin only, and only while the list has items. It saves the shared pool plus your own items, never another member’s private ones.',
+  // import-packing-list
+  'help.guide.import-packing-list.title': 'Paste a whole packing list in',
+  'help.guide.import-packing-list.goal': 'Turn a list you already have somewhere else into packing items in one go.',
+  'help.guide.import-packing-list.step.1': 'Click Import in the bar above the list.',
+  'help.guide.import-packing-list.step.2':
+    'One item per line: Category, Name, Weight in g (optional), Bag (optional), checked/unchecked (optional). The grey sample in the box shows all four shapes.',
+  'help.guide.import-packing-list.step.3':
+    'Or load the lines from a file with Load CSV/TXT. It takes a .csv or a .txt and replaces whatever is in the box.',
+  'help.guide.import-packing-list.step.4': 'Click Import. The button counts the lines it understood.',
+  'help.guide.import-packing-list.result':
+    'Every line is a row, in the list its first field names, and nothing that was already there is touched.',
+  'help.guide.import-packing-list.tip.1':
+    'Commas, semicolons and tabs all separate fields, and double quotes hold a field together, so "Shirt, blue" stays one name. A line with a single value is just a name, and a line with no list of its own lands in Other.',
+  'help.guide.import-packing-list.tip.2':
+    'A bag named in the fourth field is created if the trip does not have it yet. This is the only place that loads weights and bags in bulk; a template brings names and lists only.',
+  // share-packing-item
+  'help.guide.share-packing-item.title': 'Decide who sees an item and who brings it',
+  'help.guide.share-packing-item.goal':
+    'Move an item between the group pool, your own list and the people you are bringing it for.',
+  'help.guide.share-packing-item.step.1':
+    'Shared above the lists is the pool everyone sees, My list is your own, and each counts what is in it. Click My list to look at yours.',
+  'help.guide.share-packing-item.step.2':
+    'Back in Shared, open a row’s Sharing control, the share icon next to the pencil.',
+  'help.guide.share-packing-item.step.3':
+    'Three tiers: Shared, in the group pool and visible to everyone; Personal, which only you can see; and Shared with…, where you pick the people the item covers.',
+  'help.guide.share-packing-item.step.4': 'A Personal item is only on My list. Switch over to find it.',
+  'help.guide.share-packing-item.step.5':
+    'Open Sharing again and tick a name under Shared with…. The item shows on that person’s list too, and the row says shared with 1.',
+  'help.guide.share-packing-item.result': 'The item sits in the tier you chose, and the row says who is bringing it.',
+  'help.guide.share-packing-item.tip.1':
+    'Only the person bringing an item changes its sharing. Someone you shared it with sees it on their own My list, marked with your name, and can tick it off.',
+  'help.guide.share-packing-item.tip.2':
+    'On an item somebody else brought you get two other buttons instead: I can bring that too, which adds you next to them, and Copy to my list, which makes a private copy of your own.',
+  'help.guide.share-packing-item.tip.3':
+    'New items inherit the view you add them in. Added in My list they are Personal, added in Shared they go into the pool.',
+  // packing-bags
+  'help.guide.packing-bags.title': 'Weigh the bags',
+  'help.guide.packing-bags.goal':
+    'Put a weight on every item, sort the items into bags and keep each bag under its airline limit.',
+  'help.guide.packing-bags.step.1': 'Type an item’s weight, in grams, into the field before the circle.',
+  'help.guide.packing-bags.step.2': 'The circle at the end of the row is its bag. Click it.',
+  'help.guide.packing-bags.step.3':
+    'No bag yet: Add bag, a name, Enter. The bag is created and the item goes straight into it.',
+  'help.guide.packing-bags.step.4':
+    'The Bags panel appears on the right as soon as one bag exists: name, weight, a fill bar, who carries it and how many items are in it, then Unassigned and Total weight.',
+  'help.guide.packing-bags.step.5': 'Click Set limit and type the limit in kilograms, the way airlines state it.',
+  'help.guide.packing-bags.step.6': 'The dashed plus under a bag’s name says who is carrying it.',
+  'help.guide.packing-bags.result':
+    'The Bags panel on the right shows each bag’s weight against its limit, what is in no bag, and the total.',
+  'help.guide.packing-bags.tip.1':
+    'The weight field, the bag circle and the Bags panel only exist while an admin has Bag Tracking switched on under the Lists addon.',
+  'help.guide.packing-bags.tip.2':
+    'A bag’s weight is summed on the server over every member’s items, including the ones you cannot see, so the number really is what the bag weighs.',
+  'help.guide.packing-bags.tip.3':
+    'A bag without a limit is drawn against the heaviest bag, so the bars stay comparable. Give it a limit and the bar reads against that instead.',
+  // create-todo
+  'help.guide.create-todo.title': 'Add a task',
+  'help.guide.create-todo.goal':
+    'Write down something that has to happen, with a list, a priority, a date and a name against it.',
+  'help.guide.create-todo.step.1': 'Click Add new task at the top right.',
+  'help.guide.create-todo.step.2': 'Name it in Task name, and put anything worth remembering under Description.',
+  'help.guide.create-todo.step.3': 'List groups the task. Pick one, or use the plus next to it to type a new name.',
+  'help.guide.create-todo.step.4': 'Priority is four buttons: None, P1, P2 and P3, red down to blue.',
+  'help.guide.create-todo.step.5': 'Due date opens a calendar, and Assigned to puts a name on the task.',
+  'help.guide.create-todo.step.6': 'Click Create task.',
+  'help.guide.create-todo.result':
+    'The task is in the list with its badges, the priority, the due date, the list and the person it is assigned to, and it opens in the pane on the right.',
+  'help.guide.create-todo.tip.1':
+    'Only the name is required. Everything else can be filled in later from the pane on the right.',
+  'help.guide.create-todo.tip.2': 'With a list selected in the sidebar, a new task starts in that list.',
+  'help.guide.create-todo.tip.3':
+    'Enter in the name field creates the task straight away, without touching the other fields.',
+  // todo-filters
+  'help.guide.todo-filters.title': 'Find and change a task',
+  'help.guide.todo-filters.goal': 'Cut the task list down to what matters now, then edit the task you landed on.',
+  'help.guide.todo-filters.step.1':
+    'Tasks in the sidebar: All is everything still open, My Tasks what is on you, Overdue what has a date in the past, Done what is finished. Each carries its count; click Overdue.',
+  'help.guide.todo-filters.step.2':
+    'Under Lists sits one row per list. Picking one shows that list, finished tasks included.',
+  'help.guide.todo-filters.step.3':
+    'Sort by reorders what is on screen: Priority puts P1 first, Due date puts the nearest deadline first. Only one of the two at a time.',
+  'help.guide.todo-filters.step.4': 'Click a task to open it in the pane on the right.',
+  'help.guide.todo-filters.step.5':
+    'Change what you need, Description, Priority, List, Due date or Assigned to, then Save changes. Delete takes the task away at once.',
+  'help.guide.todo-filters.result':
+    'The list shows only the tasks you asked for, and the pane on the right edits the one you picked.',
+  'help.guide.todo-filters.tip.1':
+    'A list row counts only what is still open, but selecting it shows the finished tasks too. All, My Tasks and Overdue hide what is done; Done shows nothing else.',
+  'help.guide.todo-filters.tip.2':
+    'Sort by Priority and Sort by Due date exclude each other, and while either is on the rows can no longer be dragged into an order of your own.',
+
+  // ── Screen: trip-costs ────────────────────────────────────────────────────────────────
+  'help.ctx.trip-costs.title': 'Costs',
+  'help.ctx.trip-costs.summary':
+    'The trip’s money: every expense as a dated ledger, who put it down and who owes for it, in whatever currency the receipt was in, and, in the right-hand column, who has to pay whom to make it even again.',
+  'help.ctx.trip-costs.bullet.1':
+    'Four cards at the top: You owe and You’re owed are your own side of the settlement, Outstanding amount is what is recorded but has no payer yet, and Total trip spend adds everything up with your share and what you paid under it.',
+  'help.ctx.trip-costs.bullet.2':
+    'Add expense at the top right opens the editor; Settle up beside it records every open transfer at once.',
+  'help.ctx.trip-costs.bullet.3':
+    'The ledger is grouped by day, newest first, with that day’s total on the right. A row carries the category as a coloured tab, the name, the payer chips, the note and the amount, plus you lent or you borrowed when the split leaves you up or down on it.',
+  'help.ctx.trip-costs.bullet.4':
+    "Above the list sit Search expenses…, a category filter, a day filter, the All / Paid by me / I'm owed switch and the Export CSV button.",
+  'help.ctx.trip-costs.bullet.5':
+    'The right-hand column is the answer: Settle up lists who pays whom, Balances shows each traveler’s surplus or deficit, Final budget what the trip costs each of them, and By category where the money went.',
+  'help.ctx.trip-costs.bullet.6':
+    'A recorded payment sits in the same ledger as its own row, with Edit and Undo beside it; an expense has a pencil and a bin, and the bin deletes it without asking.',
+  // add-expense
+  'help.guide.add-expense.title': 'Add an expense',
+  'help.guide.add-expense.goal': 'Record what something cost, who paid it and who it is shared with.',
+  'help.guide.add-expense.step.1':
+    'Click Add expense at the top right of the Costs tab. The editor opens, dated today, with everybody already in the split.',
+  'help.guide.add-expense.step.2':
+    'Type what it was for into What was it for?, the only field that has to be filled in, and the figure from the receipt into Total amount.',
+  'help.guide.add-expense.step.3':
+    'Currency and Day sit under the amount. Currency starts on the trip’s own; change it and the editor shows what the amount is worth in the trip currency. Day starts on today and is what the ledger groups the expense under.',
+  'help.guide.add-expense.step.4':
+    'Pick a Category. There are fourteen of them and they cannot be changed: the one you pick is the coloured tab on the row and the bar in By category.',
+  'help.guide.add-expense.step.5':
+    'Under Who paid?, pick the person who actually put the money down. You is preselected; No one paid yet records the amount without making anyone owe for it, and Multiple people paid splits the bill between several payers.',
+  'help.guide.add-expense.step.6':
+    'Split starts on Equally with everyone included, and each name shows the share it works out to. Click Add expense to save.',
+  'help.guide.add-expense.result':
+    'The expense is in the ledger under its day, counted into Total trip spend, and the settle-up column has recalculated who owes whom.',
+  'help.guide.add-expense.tip.1':
+    'Left as it opens, the expense is in the trip’s currency, dated today and split equally between everyone: only the name and the amount really have to be filled in.',
+  'help.guide.add-expense.tip.2':
+    'The ± beside the amount turns the expense into a refund. A negative total gives money back instead of taking it, and the split runs the other way.',
+  'help.guide.add-expense.tip.3':
+    'Attach receipt / invoice at the bottom takes images and PDFs. They are uploaded when you save, land in the trip’s Files, and a Receipts chip appears beside the name in the list.',
+  // expense-payers
+  'help.guide.expense-payers.title': 'Say who paid the bill',
+  'help.guide.expense-payers.goal':
+    'Record who is out of pocket for an expense, the other half of the settlement maths.',
+  'help.guide.expense-payers.step.1':
+    'Open an expense with the pencil beside its row and look at Who paid?. One person paid is the default: the dropdown names the single person who put the money down.',
+  'help.guide.expense-payers.step.2':
+    'No one paid yet, the first entry of that dropdown, records the amount without making anyone owe anything. The expense still counts toward Total trip spend.',
+  'help.guide.expense-payers.step.3':
+    'Multiple people paid, the link beside the label, opens a row per traveler. Include the ones who paid and type what each of them put in; the amounts have to add up to the total.',
+  'help.guide.expense-payers.step.4':
+    'An expense nobody has paid for is flagged Unfinished on its row and counted into the Outstanding amount card, which is where recorded but unsettled spending collects.',
+  'help.guide.expense-payers.result':
+    'Who paid decides who gets paid back, the split decides who pays, and Balances is the difference between the two.',
+  'help.guide.expense-payers.tip.1':
+    'Who paid? and Split are independent: you can pay for a dinner you were not at, and be split into one you did not pay for.',
+  'help.guide.expense-payers.tip.2':
+    'With several payers the amounts have to add up to the total. Include one more and the others rearrange themselves around it; while they do not match, the editor says Payer amounts must add up to the total and refuses to save.',
+  'help.guide.expense-payers.tip.3':
+    'Removing a payer does not remove the expense: the amount stays in Total trip spend and the row becomes Unfinished.',
+  // split-expense
+  'help.guide.split-expense.title': 'Split a bill between the travelers',
+  'help.guide.split-expense.goal':
+    'Decide who owes for an expense: everyone equally, by amount, or line by line off the receipt.',
+  'help.guide.split-expense.step.1':
+    'In the expense editor, Split lists every traveler. Click a name to leave them out of this expense; an excluded traveler reads Excluded and owes nothing for it.',
+  'help.guide.split-expense.step.2':
+    'Equally is the default: every included traveler gets the same share, and the line under the list says how many ways it is split and what each share comes to.',
+  'help.guide.split-expense.step.3':
+    'Custom swaps the shares for amount fields. Type what each traveler owes; the line underneath counts along and turns green on Split matches total. It will not save while it is off.',
+  'help.guide.split-expense.step.4':
+    'Ticket splits the receipt line by line: Add item, then a name and a price per line, and under Splitting: the travelers who share that line.',
+  'help.guide.split-expense.step.5':
+    'Individual shares under the lines shows what each traveler ends up owing, and Total amount at the top is summed from the lines. Click Save.',
+  'help.guide.split-expense.result':
+    'The split is what every balance is built from. It is saved with the expense and can be changed later without touching anything else.',
+  'help.guide.split-expense.tip.1':
+    'A traveler you leave out reads Excluded and owes nothing for this one expense; the others take their share.',
+  'help.guide.split-expense.tip.2':
+    'Equally is cent-perfect: the leftover cent rotates from expense to expense, so nobody is the one who always pays it.',
+  'help.guide.split-expense.tip.3':
+    'Ticket mode sums Total amount itself and greys the field out: the receipt’s lines are the total.',
+  // expense-currency
+  'help.guide.expense-currency.title': 'Enter an expense in another currency',
+  'help.guide.expense-currency.goal': 'Put in what the receipt actually says and let TREK hold the rate.',
+  'help.guide.expense-currency.step.1':
+    'Open Add expense and fill in the name and the amount exactly as the receipt says, the figure itself and not a conversion of it.',
+  'help.guide.expense-currency.step.2':
+    'Open Currency and pick the receipt’s currency. The list carries every code TREK knows and is searchable: type the three letters.',
+  'help.guide.expense-currency.step.3':
+    'A line appears under the fields with what the amount is worth right now, marked live rate. It is a preview, not what gets stored.',
+  'help.guide.expense-currency.step.4':
+    'Click Add expense. The rate is frozen on the spot: from here on this expense is worth what it was worth on the day you entered it.',
+  'help.guide.expense-currency.step.5':
+    'In the ledger the row carries both figures under the name: what you typed, an arrow, and what it counts as in the trip’s currency. Every total, balance and settle-up above uses the second one.',
+  'help.guide.expense-currency.result':
+    'The expense keeps the amount and the currency you typed. The ledger shows both, and the trip’s totals and balances stay in the trip’s currency.',
+  'help.guide.expense-currency.tip.1':
+    'The rate is frozen the moment you save, so a settled debt does not reopen because the market moved the week after. Only changing the expense’s currency freezes a new one.',
+  'help.guide.expense-currency.tip.2':
+    'Display currency in Settings changes only what you read; the stored amounts never move. Left empty, every trip is shown in its own currency.',
+  'help.guide.expense-currency.tip.3':
+    'The trip currency itself lives on the trip, under Edit trip, and needs the right to edit it. Changing it re-anchors every frozen rate rather than redenominating the amounts.',
+  // filter-costs
+  'help.guide.filter-costs.title': 'Find an expense, or one day’s spending',
+  'help.guide.filter-costs.goal': 'Narrow a long ledger down to what you are actually looking for.',
+  'help.guide.filter-costs.step.1':
+    'Type into Search expenses… above the list. It matches the expense’s name as you type.',
+  'help.guide.filter-costs.step.2':
+    'All categories opens the fourteen categories. Pick one and only that category’s expenses stay.',
+  'help.guide.filter-costs.step.3':
+    'All days lists every day something was spent on. Pick one and a banner replaces the day headers with that day, how many expenses it holds and its total.',
+  'help.guide.filter-costs.step.4':
+    "The All / Paid by me / I'm owed switch is your own view of the ledger: what you put money down for, and what you are still out of pocket on.",
+  'help.guide.filter-costs.step.5':
+    'Export CSV at the end of the row writes every expense to a file, with the original amount, its currency and the converted amount.',
+  'help.guide.filter-costs.result':
+    'The filters combine, and the day groups redraw with their own totals for whatever is left.',
+  'help.guide.filter-costs.tip.1':
+    'Recorded payments carry no name and no category, so a search or a category filter hides them. The day filter keeps them, under the day the payment was recorded.',
+  'help.guide.filter-costs.tip.2':
+    'Export CSV always exports every expense, whatever is filtered on screen, one row per expense.',
+  // settle-up
+  'help.guide.settle-up.title': 'Work out who owes whom, and settle it',
+  'help.guide.settle-up.goal':
+    'Turn a pile of shared expenses into the fewest transfers that make everyone even, and record them as they happen.',
+  'help.guide.settle-up.step.1':
+    'The Settle up card in the right-hand column lists the transfers that would make everyone even: who pays whom, and how much. The number beside the title is how many are still open.',
+  'help.guide.settle-up.step.2':
+    'Settle beside a transfer records it as done. The flow disappears from the card and the balances redraw.',
+  'help.guide.settle-up.step.3':
+    'The recorded transfer is a row in the ledger, under the day it happened, marked Payment with the two travelers and the amount.',
+  'help.guide.settle-up.step.4':
+    'Beside that row the pencil corrects a payment and Undo takes it back, and the transfer returns to the Settle up card.',
+  'help.guide.settle-up.step.5':
+    'Add payment in the card header records a transfer that did not follow a suggestion. Pick From and To, the amount, its currency and the day it happened.',
+  'help.guide.settle-up.step.6':
+    'Settle up in the header at the top of the screen records every open transfer at once, the way a group squares up at the end of a trip.',
+  'help.guide.settle-up.result':
+    "Every recorded transfer is a row in the ledger and a line off the Settle up card. When the card reads Everyone's square, the trip is paid off.",
+  'help.guide.settle-up.tip.1':
+    'The card shows the fewest transfers, not every debt: three people owing each other in a circle collapse into one or two payments.',
+  'help.guide.settle-up.tip.2':
+    'Settle records a transfer, it does not move money. Send it by whatever means you use, then click it.',
+  'help.guide.settle-up.tip.3':
+    'A payment can be made in any currency, so paying a yen debt in euros is normal: the dialog has its own currency picker and freezes that rate too.',
+  // final-budget
+  'help.guide.final-budget.title': 'See what the trip cost each traveler',
+  'help.guide.final-budget.goal':
+    'Read the per-person side of the ledger: the balance today, and the real cost per person.',
+  'help.guide.final-budget.step.1':
+    'Balances shows every traveler’s position: a green bar to the right if the trip owes them, a red bar to the left if they owe it, and the amount beside the name.',
+  'help.guide.final-budget.step.2':
+    'Final budget below it answers a different question: not who owes what right now, but what the trip costs each traveler once everything has been paid back.',
+  'help.guide.final-budget.step.3':
+    'Click a name to open the arithmetic: Expenses paid, then Net reimbursements and Pending reimbursements under it.',
+  'help.guide.final-budget.step.4':
+    'Under each line sit the rows it is made of: the expenses that traveler paid for, the transfers already recorded and the ones still open. They add up to the line above them exactly.',
+  'help.guide.final-budget.result':
+    'Balances is who is up or down today; Final budget is what the trip ends up costing each of you once everything is paid back.',
+  'help.guide.final-budget.tip.1':
+    'Recording a payment does not change anyone’s final budget. It only moves an amount from pending reimbursements to net reimbursements.',
+  'help.guide.final-budget.tip.2':
+    'An expense with no payer stays out of both cards, the same way it stays out of the settle-up suggestions.',
+  // expense-from-booking
+  'help.guide.expense-from-booking.title': 'Turn a booking into an expense',
+  'help.guide.expense-from-booking.goal':
+    'Attach what a flight, a hotel or a place actually cost to the record it belongs to.',
+  'help.guide.expense-from-booking.step.1': 'Open the booking on the Transports or Bookings tab and click its pencil.',
+  'help.guide.expense-from-booking.step.2':
+    'Scroll to the Costs block at the bottom of the form. With nothing linked yet it offers Create expense and says it saves the booking first.',
+  'help.guide.expense-from-booking.step.3':
+    'Click Create expense. The booking is saved, the form closes, and the Costs editor opens with the booking’s title as the name and its type already matched to a category.',
+  'help.guide.expense-from-booking.step.4':
+    'Fill in the amount, who paid and the split as for any expense, and save. Reopening the booking now shows it under Linked expense, with a pencil to edit it and a bin to remove it.',
+  'help.guide.expense-from-booking.result':
+    'The booking carries its cost, and the expense is an ordinary row on the Costs tab, with a payer, a split and a currency like any other.',
+  'help.guide.expense-from-booking.tip.1':
+    'Deleting the booking deletes its linked expense with it. Remove expense in the booking’s Costs block does the opposite: the expense goes, the booking stays.',
+  'help.guide.expense-from-booking.tip.2':
+    'A place has the same block in its form, with Create expense saving the place first.',
+
+  // ── Screen: trip-files ────────────────────────────────────────────────────────────────
+  'help.ctx.trip-files.title': 'Files',
+  'help.ctx.trip-files.summary':
+    'Every document of the trip in one list: tickets, confirmations, passes and pictures, each with a note, a link to the place or the booking it belongs to, and a trash it can come back out of.',
+  'help.ctx.trip-files.bullet.1':
+    'Drop files here at the top takes the files; a click on the box opens the file picker. The line under it lists the file types this TREK accepts and the limit of 50 MB per file.',
+  'help.ctx.trip-files.bullet.2':
+    'The tabs say what the list shows: All, PDFs, Images and Documents, each with its count. A star tab joins them as soon as a file is starred, Collab Notes as soon as a note carries an attachment.',
+  'help.ctx.trip-files.bullet.3':
+    'A row carries who uploaded it, the name, the note under it, the size and the date, and one badge per link: Day Plan and the place, Booking or Transport and the booking, From Collab Notes.',
+  'help.ctx.trip-files.bullet.4':
+    'At the end of a row sit Star, Assign, Open, Download and Delete. Delete does not ask: the file goes to the trash, where it can be brought back.',
+  'help.ctx.trip-files.bullet.5':
+    'A picture or a video opens full screen, with the arrow keys and a strip of thumbnails; every other document opens in a preview over the page, with Open in new tab and Download. A wallet pass is downloaded straight away.',
+  'help.ctx.trip-files.bullet.6':
+    'Trash at the right end switches the list over to the deleted files, where each one is restored or deleted for good and Empty Trash clears them all. Where an administrator has connected a document store, Document sync sits next to it.',
+  // files-upload
+  'help.guide.files-upload.title': 'Put a document into the trip',
+  'help.guide.files-upload.goal':
+    'Get a ticket, a confirmation or a photo out of your downloads folder and into the trip, where everyone on it can reach it.',
+  'help.guide.files-upload.step.1':
+    'Open the trip and click Files in the tab bar. The trip’s documents are listed there, with the upload box above them.',
+  'help.guide.files-upload.step.2':
+    'Click Drop files here and pick one or several files. They are uploaded one after the other and the box reads Uploading… while it runs. The line under the box says which types this TREK takes, and that a file may be 50 MB at most.',
+  'help.guide.files-upload.step.3':
+    'As soon as the last file is up, Assign File opens for it by itself. Add a note… gives the file a line of its own, and the lists under it tie it to a place or a booking. Close it with the ×; nothing is lost by closing it.',
+  'help.guide.files-upload.step.4':
+    'The new files stand at the top of the list. A row shows who uploaded it, the name, the size and the date; a picture gets a thumbnail, every other file its type.',
+  'help.guide.files-upload.result':
+    'The documents are in the trip, and everyone who can see the trip can open and download them.',
+  'help.guide.files-upload.tip.1':
+    'A file can also be dragged from the desktop straight onto the box, which lights up while the file is over it.',
+  'help.guide.files-upload.tip.2':
+    'A picture on the clipboard goes into the list with Ctrl+V, so a screenshot of a booking never has to be saved first.',
+  'help.guide.files-upload.tip.3':
+    'Uploading needs the right to upload files; without it the box is not there at all. A type that is not on the list, or a file over 50 MB, is refused with a message and nothing is uploaded.',
+  // files-link
+  'help.guide.files-link.title': 'Tie a document to a place or a booking',
+  'help.guide.files-link.goal': 'Make the ticket findable from the day it belongs to, not only from this list.',
+  'help.guide.files-link.step.1':
+    'Click Assign, the pencil at the end of the row. Assign File opens, named after the file.',
+  'help.guide.files-link.step.2':
+    'Under Note, Add a note… takes one line, which then stands under the file’s name in the list. It is saved the moment you leave the box.',
+  'help.guide.files-link.step.3':
+    'Under Place stand the trip’s places, grouped by the day they are on, with Unassigned at the end for the ones on no day. Click one and it gets a tick.',
+  'help.guide.files-link.step.4':
+    'Under Booking and Transport stand the trip’s bookings. Click the one the document belongs to; it gets its tick too.',
+  'help.guide.files-link.step.5':
+    'Close with the ×. There is no save button here: every click was written as you made it.',
+  'help.guide.files-link.result':
+    'The row carries the note and one badge per link, Day Plan and the place’s name, Transport and the flight’s name, and the document hangs on the place and on the booking as well.',
+  'help.guide.files-link.tip.1':
+    'A file can hold several links at once, so the same confirmation belongs to the hotel and to the night it covers.',
+  'help.guide.files-link.tip.2': 'Clicking a ticked entry again takes that link away; the file itself stays.',
+  'help.guide.files-link.tip.3':
+    'It works the other way round as well: a document attached to a place or to a booking is in this list too, with the same badge on its row.',
+  // files-star
+  'help.guide.files-star.title': 'Keep the important documents on top',
+  'help.guide.files-star.goal':
+    'Pull the two or three papers you will really need out of a list that grows all trip long.',
+  'help.guide.files-star.step.1':
+    'Click Star at the end of a row. It fills in yellow, a second star appears in front of the file’s name, and the button now reads Unstar.',
+  'help.guide.files-star.step.2':
+    'The list sorts itself again: starred files stand above all the others, newest first within each group.',
+  'help.guide.files-star.step.3':
+    'A star has joined the tabs at the top, with the number of starred files behind it. Click it to see only those.',
+  'help.guide.files-star.result':
+    'The papers you need at the counter stand at the top of the list, and one tab shows nothing else.',
+  'help.guide.files-star.tip.1':
+    'The star tab only exists while something is starred. Unstar the last file and the tab goes away with it.',
+  'help.guide.files-star.tip.2':
+    'Starring counts as an edit: a member who may only read the trip’s files sees the stars but cannot set them.',
+  // files-filter
+  'help.guide.files-filter.title': 'Find a document in the list',
+  'help.guide.files-filter.goal': 'Narrow a list of everything down to the one kind of paper you are after.',
+  'help.guide.files-filter.step.1':
+    'The tabs above the list are All, PDFs, Images and Documents, each with the number of files behind it.',
+  'help.guide.files-filter.step.2': 'Click PDFs: the list keeps the PDF files and nothing else.',
+  'help.guide.files-filter.step.3':
+    'Two more tabs come and go with what is in the trip: a star as soon as a file is starred, and Collab Notes as soon as a note in the Collab tab carries an attachment.',
+  'help.guide.files-filter.step.4': 'All brings the whole list back.',
+  'help.guide.files-filter.result':
+    'The list shows only what the tab names, and the count on each tab says how many that is.',
+  'help.guide.files-filter.tip.1':
+    'There are no folders here and no renaming: the note in Assign File, the links to places and bookings, and the star are what a document is sorted by.',
+  'help.guide.files-filter.tip.2':
+    'The list itself is always starred first, then newest first, so a document uploaded today stands above one from last month.',
+  // files-preview
+  'help.guide.files-preview.title': 'Read a document without leaving TREK',
+  'help.guide.files-preview.goal':
+    'Look at a ticket or a picture on the spot, and get it onto your own machine when you need it there.',
+  'help.guide.files-preview.step.1':
+    'Click a picture’s name or its thumbnail. It opens full screen, with the file’s name and its place in the pictures in the header.',
+  'help.guide.files-preview.step.2':
+    'The round arrows at the sides, the left and right arrow keys and the strip of thumbnails at the bottom move through every picture the list is currently showing.',
+  'help.guide.files-preview.step.3':
+    'Open in new tab and Download sit in the header; the × or Escape closes the picture again.',
+  'help.guide.files-preview.step.4':
+    'A document that is not a picture opens in a preview over the page instead, with the same two buttons in its header. This one closes on the × or on a click beside it.',
+  'help.guide.files-preview.step.5':
+    'Download at the end of a row saves the file straight to your machine, without opening anything first.',
+  'help.guide.files-preview.result':
+    'The document is on screen, and the same two buttons put it in a browser tab or on your disk.',
+  'help.guide.files-preview.tip.1': 'On a touch screen you swipe through the pictures instead of clicking the arrows.',
+  'help.guide.files-preview.tip.2':
+    'A wallet pass never opens a preview: it is downloaded at once, so the phone can hand it to its wallet app.',
+  'help.guide.files-preview.tip.3':
+    'Open in new tab and Download both fetch the file with your session, so a link copied out of the address bar is of no use to anyone else.',
+  // files-trash
+  'help.guide.files-trash.title': 'Throw a document away, and get it back',
+  'help.guide.files-trash.goal':
+    'Clear out what the trip no longer needs, without losing anything you did need after all.',
+  'help.guide.files-trash.step.1':
+    'Click Delete at the end of a row. The file leaves the list at once and the message reads Moved to trash. Nothing asks first.',
+  'help.guide.files-trash.step.2':
+    'Trash at the right end of the toolbar switches the list over to what was thrown away. The heading reads Trash and the filter tabs are gone.',
+  'help.guide.files-trash.step.3':
+    'A thrown-away row is greyed out and has two buttons left: Restore, which brings the file back, and Delete, which removes it for good after a question.',
+  'help.guide.files-trash.step.4':
+    'Click Restore. The message reads File restored and the row leaves the trash, with its note and its links still on it.',
+  'help.guide.files-trash.step.5':
+    'Empty Trash at the top clears everything still in here for good, and the browser asks once before it does. Trash switches back to the files.',
+  'help.guide.files-trash.result': 'The file is back in the list where it was, as if nothing had happened.',
+  'help.guide.files-trash.tip.1':
+    'Delete on a row does not ask first, and that is what the trash is for: nothing leaves TREK until you say so in here.',
+  'help.guide.files-trash.tip.2':
+    'Throwing a file away and getting it back needs the right to delete files. A member without it sees neither Delete on the row nor the buttons in the trash.',
+  'help.guide.files-trash.tip.3': 'A file deleted for good in the trash cannot be brought back.',
+
+  // ── Screen: trip-collab ───────────────────────────────────────────────────────────────
+  'help.ctx.trip-collab.title': 'Collab',
+  'help.ctx.trip-collab.summary':
+    'The tab where the group plans together: the chat on the left, the shared notes and links beside it, the polls under them and What’s Next at the end. Everything written here is on every other member’s screen at once, without a reload.',
+  'help.ctx.trip-collab.bullet.1':
+    'The chat is the column on the left. Write into Type a message… and press Enter; Shift and Enter make a new line. The smiley adds an emoji, Attach images hangs up to four pictures on the message.',
+  'help.ctx.trip-collab.bullet.2':
+    'Hover a message for Reply and, on your own, Delete; right-click it for the eight quick reactions. A deleted message leaves one line saying you deleted it.',
+  'help.ctx.trip-collab.bullet.3':
+    'Notes is the shared pad: New Note writes one, and the gear beside it opens Manage Categories for their names and colours. A card carries Expand, Pin, Edit and Delete.',
+  'help.ctx.trip-collab.bullet.4':
+    'Links collects the addresses the trip runs on. Add link takes a title and an http or https address; Edit link, Pin link and Delete link sit in the chip’s tail, and pinned links stay at the front.',
+  'help.ctx.trip-collab.bullet.5':
+    'Polls decide things. New Poll asks a question with at least two options; a click on an option is your vote, Close ends the voting and Delete removes the poll.',
+  'help.ctx.trip-collab.bullet.6':
+    'What’s Next lists the next eight stops of the trip that are still ahead, with their times and the people on them. It only reads the day plan; the times are set there.',
+  // write-note
+  'help.guide.write-note.title': 'Write a shared note',
+  'help.guide.write-note.goal':
+    'Put what the whole group needs, a rule, an address, a reminder, where everyone finds it again.',
+  'help.guide.write-note.step.1': 'Click New Note at the top of the Notes panel. The form opens.',
+  'help.guide.write-note.step.2':
+    'Note title is the name the card carries. It is the only thing the form insists on: Create stays grey until there is something in it.',
+  'help.guide.write-note.step.3':
+    'The big box under it holds the text and takes Markdown: a bold word, a list, a heading. The card shows the first few lines, and Expand on it opens the whole note.',
+  'help.guide.write-note.step.4':
+    'Under Category, pick the one the note belongs to; its colour becomes the card’s colour. The pills are the categories that already exist, and a new one is made under Manage Categories.',
+  'help.guide.write-note.step.5':
+    'Website takes a link that belongs to the note. The card then carries a Link tile that opens it.',
+  'help.guide.write-note.step.6': 'Click Create.',
+  'help.guide.write-note.result':
+    'The note is a card in the Notes panel, in its category’s colour, and it is already on every other member’s screen.',
+  'help.guide.write-note.tip.1':
+    'Pin on a card keeps it at the top of the panel; everything under it is sorted by when it was last changed.',
+  'help.guide.write-note.tip.2':
+    'The gear beside New Note opens Manage Categories: there a category gets its colour, is renamed everywhere at once, or is added before any note uses it.',
+  'help.guide.write-note.tip.3':
+    'Attach files hangs a document on the note. Attach opens the file picker, and an image or a PDF can also just be pasted into the form.',
+  'help.guide.write-note.tip.4':
+    'Notes is a switch of its own under Addons, below Collab: an admin can turn it off and leave the chat, the links, the polls and What’s Next running.',
+  // shared-links
+  'help.guide.shared-links.title': 'Collect the trip’s links',
+  'help.guide.shared-links.goal':
+    'Keep the booking portal, the shared album and the timetable in one place instead of scrolling the chat for them.',
+  'help.guide.shared-links.step.1': 'Click Add link at the top of the Links panel.',
+  'help.guide.shared-links.step.2':
+    'Give the link a name in Link title, paste the address into the field under it, then click Save link.',
+  'help.guide.shared-links.step.3':
+    'The chip shows the name and the site it points at. A click on it opens the page in a new tab.',
+  'help.guide.shared-links.step.4':
+    'The three small buttons in its tail are Edit link, Pin link and Delete link. Pin link moves the chip to the front of the panel; Delete link asks nothing.',
+  'help.guide.shared-links.result':
+    'The link is a chip in the Links panel, pinned to the front, and on every member’s screen at once.',
+  'help.guide.shared-links.tip.1':
+    'Only http and https addresses are taken; the field refuses anything else before it saves.',
+  'help.guide.shared-links.tip.2':
+    'Pinned links come first, then the newest. The small icon beside a title is the site’s own favicon, fetched from the site itself, so with no internet the chip shows a plain link glyph instead.',
+  'help.guide.shared-links.tip.3':
+    'Links is a switch of its own under Addons, below Collab, so an admin can turn the panel off without touching the rest of the tab.',
+  // create-poll
+  'help.guide.create-poll.title': 'Ask the group',
+  'help.guide.create-poll.goal': 'Turn a question nobody answers in the chat into a poll everybody can tick.',
+  'help.guide.create-poll.step.1': 'Click New Poll at the top of the Polls panel.',
+  'help.guide.create-poll.step.2':
+    'Write the question. Markdown supported under the box means a bold word, a line break or a short list works here.',
+  'help.guide.create-poll.step.3': 'Fill Option 1 and Option 2. Two options with something in them are the minimum.',
+  'help.guide.create-poll.step.4':
+    '+ Add option adds a third, a fourth, as many as you need; the small cross beside a row takes one away again.',
+  'help.guide.create-poll.step.5':
+    'Multiple choice lets everyone tick more than one option. Left off, a vote moves over when somebody picks something else.',
+  'help.guide.create-poll.step.6': 'Click Create Poll.',
+  'help.guide.create-poll.result': 'The poll stands at the top of the Polls panel, open, with nobody having voted yet.',
+  'help.guide.create-poll.tip.1': 'The question is rendered as Markdown; the options stay plain text.',
+  'help.guide.create-poll.tip.2':
+    'Create Poll stays grey until there is a question and at least two options with something in them.',
+  'help.guide.create-poll.tip.3':
+    'A deadline can only be set in the phone app. A poll that has one shows the time left in an amber chip here and counts as closed once it runs out.',
+  'help.guide.create-poll.tip.4':
+    'Polls is a switch of its own under Addons, below Collab: an admin can turn it off and leave the other four panels running.',
+  // vote-poll
+  'help.guide.vote-poll.title': 'Vote and read the result',
+  'help.guide.vote-poll.goal': 'Cast your vote, see where the group stands, and change your mind.',
+  'help.guide.vote-poll.step.1': 'Click the option you want. Its circle fills in and the bar behind it grows.',
+  'help.guide.vote-poll.step.2':
+    'Now the whole result is readable: the bar is the share, the percentage stands on the right, and the small circles are the people who picked that option.',
+  'help.guide.vote-poll.step.3':
+    'Changed your mind? Click another option. On a poll without Multiple choice your vote moves over instead of adding a second one.',
+  'help.guide.vote-poll.step.4':
+    'Under the question stands how many votes the poll has. A click on the option you already chose takes your vote back out, and the counter falls again.',
+  'help.guide.vote-poll.result':
+    'Your tick is on one option, the bars show how the group is split, and the circles say who chose what.',
+  'help.guide.vote-poll.tip.1':
+    'The bars and the percentages only appear once you have voted yourself, or once the poll is closed, so nobody is nudged by the standings.',
+  'help.guide.vote-poll.tip.2':
+    'A vote is never anonymous: hover one of the circles on an option for the name behind it.',
+  // close-poll
+  'help.guide.close-poll.title': 'Close a poll, or remove it',
+  'help.guide.close-poll.goal':
+    'Stop the voting once the group has decided, and clear away a poll nobody needs any more.',
+  'help.guide.close-poll.step.1':
+    'Close, the lock in a poll’s corner, ends the voting. The options stop taking clicks.',
+  'help.guide.close-poll.step.2':
+    'A closed poll sinks under the Closed heading at the bottom of the panel, wears a Closed badge and shows everybody the result, whether they voted or not. The winning option is tinted green.',
+  'help.guide.close-poll.step.3': 'Delete beside it removes the poll. Nothing asks twice, and the votes go with it.',
+  'help.guide.close-poll.result':
+    'The poll is gone from every member’s panel. One you only closed stays readable at the bottom, with its result.',
+  'help.guide.close-poll.tip.1':
+    'Closing cannot be undone: there is no reopen. A poll closed by accident has to be asked again.',
+  'help.guide.close-poll.tip.2':
+    'Delete takes the poll and every vote on it away for everyone, straight away and without a question.',
+  // whats-next
+  'help.guide.whats-next.title': 'Read What’s Next',
+  'help.guide.whats-next.goal': 'See what the group is doing next without opening the plan.',
+  'help.guide.whats-next.step.1':
+    'The panel lists the next eight stops of the trip that are still ahead, in time order, under a heading per day: Today, Tomorrow or the date.',
+  'help.guide.whats-next.step.2':
+    'On the left of a row stands its time: the start, to, and the end when the stop has one, or TBD when no time is set on it yet.',
+  'help.guide.whats-next.step.3':
+    'The chips under the name are the people on that stop. With nobody picked for it, everyone in the trip is listed.',
+  'help.guide.whats-next.result':
+    'A list of what is coming, to read only: it follows the plan, and nothing here changes it.',
+  'help.guide.whats-next.tip.1':
+    'Nothing is set here. The times come from the day plan; change them there and this list follows at once.',
+  'help.guide.whats-next.tip.2':
+    'Only what still lies ahead is listed: a stop whose time has passed drops out, and at the end of a trip the panel is empty.',
+  'help.guide.whats-next.tip.3':
+    'What’s Next is a switch of its own under Addons, below Collab, and it is a desktop panel: the Collab tab of the phone app does not offer it.',
+  // trip-chat
+  'help.guide.trip-chat.title': 'Talk to the group',
+  'help.guide.trip-chat.goal':
+    'Say something, answer one particular message, react to another, and take your own back.',
+  'help.guide.trip-chat.step.1':
+    'Write into Type a message… and press Enter. The blue arrow beside the box does the same; Shift and Enter make a new line instead.',
+  'help.guide.trip-chat.step.2':
+    'The smiley opens the emoji picker, with Smileys, Reactions and Travel in it. What you pick is added to what you are writing, it is not sent by itself.',
+  'help.guide.trip-chat.step.3':
+    'Hover somebody else’s message: a small round button appears at its corner. That is Reply.',
+  'help.guide.trip-chat.step.4':
+    'The message you answer is quoted above the box. Write and send, and the quote rides along in your bubble; the cross on the quote drops it again.',
+  'help.guide.trip-chat.step.5':
+    'Right-click a message for the eight quick reactions. Yours sits under the bubble, and a second click on the same one takes it back.',
+  'help.guide.trip-chat.step.6':
+    'Your own messages carry Delete beside Reply. It takes the message away and leaves one line saying you deleted it: there is no way back.',
+  'help.guide.trip-chat.result':
+    'Your answer sits under the message it quotes, a reaction hangs on a third, and the one you took back leaves a single line saying so.',
+  'help.guide.trip-chat.tip.1':
+    'Enter sends, Shift and Enter make a new line. A message that is nothing but emoji is shown large.',
+  'help.guide.trip-chat.tip.2':
+    'Attach images takes up to four pictures for one message; they can also just be pasted or dropped onto the box.',
+  'help.guide.trip-chat.tip.3':
+    'A message with a link in it gets a preview card underneath, fetched by your own TREK, so a link to something only you can reach stays a plain link.',
+  'help.guide.trip-chat.tip.4':
+    'Chat is a switch of its own under Addons, below Collab: an admin can turn it off and leave the notes, the links, the polls and What’s Next running.',
+
+  // ── Screen: trip-roadtrip ─────────────────────────────────────────────────────────────
+  'help.ctx.trip-roadtrip.title': 'Road trip',
+  'help.ctx.trip-roadtrip.summary':
+    'The plan read as one drive: the same days and the same places, chained into stops with the driving between them, in a rail down the left column and on the map. It says how far and how long, where the tank runs out, and what is along the road.',
+  'help.ctx.trip-roadtrip.bullet.1':
+    'Days and Road trip at the top of the left column switch between the day plan and the drive. Nothing is copied and nothing is changed: Days gives the plan back exactly as it was.',
+  'help.ctx.trip-roadtrip.bullet.2':
+    'The head of the rail totals the trip: Distance, Driving time and Stops. Below it comes one card per day, with the day’s own kilometres, how many stops it is for, whatever it goes over, and a Track badge.',
+  'help.ctx.trip-roadtrip.bullet.3':
+    'A numbered stop is a place the day is for. A stop on the way, fuel, charging, a rest area, wears its kind’s icon instead of a number and is not counted. Click a number to change which it is, and the Stay badge to say how long it takes.',
+  'help.ctx.trip-roadtrip.bullet.4':
+    'Between two stops a drive band gives the leg as distance and time. Click it for Ways to drive this leg, or click the drawn route on the map to bend the leg through a via point.',
+  'help.ctx.trip-roadtrip.bullet.5':
+    'The right column becomes Along the route: pick a day, what to look for and how wide the corridor is, then Search. Add puts a hit on the drive at the point it is really passed.',
+  'help.ctx.trip-roadtrip.bullet.6':
+    'Driving settings under it holds the limits, the car and its range, the daily travel times, what to avoid and how the line is drawn. They belong to the trip, so everyone plans with the same car.',
+  // roadtrip-mode
+  'help.guide.roadtrip-mode.title': 'Read the trip as one drive',
+  'help.guide.roadtrip-mode.goal': 'Switch the plan over to road trip mode and read what the rail tells you.',
+  'help.guide.roadtrip-mode.step.1':
+    'Click Road trip in the Days and Road trip switch at the top of the left column. The day plan is replaced by the drive, and the map draws every day that has routed.',
+  'help.guide.roadtrip-mode.step.2': 'The head of the rail totals the whole trip: Distance, Driving time and Stops.',
+  'help.guide.roadtrip-mode.step.3':
+    'Below it comes one card per day. Its header carries the day’s number and date, the driving as distance and time, and how many stops the day is for.',
+  'help.guide.roadtrip-mode.step.4':
+    'Inside the card the day is a chain: a numbered stop per place, a drive band between each pair, and the arrival time at the right edge.',
+  'help.guide.roadtrip-mode.step.5':
+    'Click a day’s header to fold it away. A folded day comes off the map as well; click the header again to bring it back.',
+  'help.guide.roadtrip-mode.result':
+    'The left column is the drive and the map shows every day of it. Days switches straight back to the plan, unchanged.',
+  'help.guide.roadtrip-mode.tip.1':
+    'The choice is remembered per trip for as long as the browser tab is open, so a reload comes back to the drive.',
+  'help.guide.roadtrip-mode.tip.2':
+    'The switch only exists once an admin has turned the Road trip addon on, under Addons in the admin panel.',
+  'help.guide.roadtrip-mode.tip.3':
+    'On a phone there is no switch: the addon adds a Road trip tab of its own beside Plan.',
+  // roadtrip-stops
+  'help.guide.roadtrip-stops.title': 'Stops on the way, and how long you stay',
+  'help.guide.roadtrip-stops.goal':
+    'Turn a place on the drive into a stop on the way, and say how long each stop takes.',
+  'help.guide.roadtrip-stops.step.1':
+    'Click the number in front of a stop in the rail. Its label is Make it a stop on the way, and it opens Kind of stop.',
+  'help.guide.roadtrip-stops.step.2':
+    'Pick a kind: Accommodation, Fuel, Charging, Rest area, Campsite, Food or Sights. The number turns into that kind’s icon and the stops below it are renumbered.',
+  'help.guide.roadtrip-stops.step.3':
+    'A stop on the way is not a destination, so the day’s header counts one stop fewer.',
+  'help.guide.roadtrip-stops.step.4':
+    'Click the icon again, Change what kind of stop this is, and choose Back to a destination to give the stop its number back.',
+  'help.guide.roadtrip-stops.step.5': 'Every stop carries a Stay badge. Click it to open Time at this stop.',
+  'help.guide.roadtrip-stops.step.6':
+    'Set the length with the slider, with the minus and plus buttons or with one of the presets, watch what Arrive and Leave do, then click Save.',
+  'help.guide.roadtrip-stops.result':
+    'The stop wears its kind’s icon instead of a number, and every arrival after a stay has moved with it.',
+  'help.guide.roadtrip-stops.tip.1':
+    'A stay belongs to the place, not to one visit: a place planned on two days is stood at just as long on both.',
+  'help.guide.roadtrip-stops.tip.2':
+    'Stops on the way show under Days as well. Show in Days too, under Service stops in the Driving settings, keeps them in Road trip only.',
+  'help.guide.roadtrip-stops.tip.3': 'No stay, in the same dialog, takes the time away again.',
+  // roadtrip-corridor
+  'help.guide.roadtrip-corridor.title': 'Find fuel, food and a bed along the route',
+  'help.guide.roadtrip-corridor.goal': 'Search the road you really drive, and put what you find on the right leg.',
+  'help.guide.roadtrip-corridor.step.1':
+    'Pick the day at the top of Along the route. Only days that have routed are offered.',
+  'help.guide.roadtrip-corridor.step.2':
+    'Under Looking for, tick what you need. Fuel, Charging, Rest area, Campsite, Accommodation, Food and Sights can be combined.',
+  'help.guide.roadtrip-corridor.step.3':
+    'Under Within, choose how far either side of the road to look, 2 km, 5 km or 10 km, then click Search.',
+  'help.guide.roadtrip-corridor.step.4':
+    'The hits come back grouped by kind, in the order you pass them, each with how far along the day it lies and how far off the route it is.',
+  'help.guide.roadtrip-corridor.step.5':
+    'Add on a hit opens Add as a stop. It says which day and which position the stop lands on, asks for the kind and the time at the stop, and Add puts it on the drive.',
+  'help.guide.roadtrip-corridor.result':
+    'The hits are listed in the order you pass them and drawn on the map, and the one you added sits on the drive at the point it is really passed.',
+  'help.guide.roadtrip-corridor.tip.1':
+    'Nothing is searched until you press Search: one run is many requests against a shared service.',
+  'help.guide.roadtrip-corridor.tip.2':
+    'Filter by name narrows what came back without asking again, and Clear results empties the list and its pins. Click a hit to bring it into view on the map.',
+  'help.guide.roadtrip-corridor.tip.3':
+    'A hit can also be dragged from the map onto the drawn route, which is how you pick the leg yourself where the same road is driven twice. Add manually, beside Search, looks a place up by name instead.',
+  // roadtrip-via
+  'help.guide.roadtrip-via.title': 'Bend a leg through a via point',
+  'help.guide.roadtrip-via.goal': 'Send a leg down the road you actually want, without adding a stop to it.',
+  'help.guide.roadtrip-via.step.1':
+    'Bring the leg you want into view: click a stop in the rail, then close the card that opens over the map.',
+  'help.guide.roadtrip-via.step.2':
+    'Click the drawn route. A via point is dropped on the leg you clicked, and the leg is routed again through it.',
+  'help.guide.roadtrip-via.step.3':
+    'The rail follows: the day’s header carries the new distance and driving time, and every arrival after the via moves with it.',
+  'help.guide.roadtrip-via.step.4':
+    'Hover the handle and it says what it can do: Drag to reshape the route, right-click to remove. Drag it somewhere else and the leg is redrawn through the new spot.',
+  'help.guide.roadtrip-via.step.5': 'Right-click the handle to take it away. The leg drives the direct way again.',
+  'help.guide.roadtrip-via.result':
+    'The leg follows the road you chose, and the day’s distance, driving time and arrivals are worked out again for it.',
+  'help.guide.roadtrip-via.tip.1':
+    'A via is not a stop: it has no number, no stay and no arrival time, and it is not counted in the day’s stops.',
+  'help.guide.roadtrip-via.tip.2':
+    'The handles are drawn from zoom level 9, so a map fitted to the whole trip shows the line without them.',
+  'help.guide.roadtrip-via.tip.3':
+    'A click more than two kilometres from any drawn leg is ignored, and so is a click on a flight, a train or a ferry.',
+  // roadtrip-alternatives
+  'help.guide.roadtrip-alternatives.title': 'Try another way to drive a leg',
+  'help.guide.roadtrip-alternatives.goal': 'See what else the router offers for one stretch, and take it.',
+  'help.guide.roadtrip-alternatives.step.1':
+    'Click a drive band in the rail, the row between two stops that gives the leg as distance and time. Its label is Other ways.',
+  'help.guide.roadtrip-alternatives.step.2':
+    'Ways to drive this leg opens over the map, one entry per road, each drawn on the map in its own colour.',
+  'help.guide.roadtrip-alternatives.step.3':
+    'Hover an entry to light that road up. Current and Fastest say which is which, and the others say how much quicker or slower they are.',
+  'help.guide.roadtrip-alternatives.step.4': 'Click an entry to drive that way, or Close to keep the road you are on.',
+  'help.guide.roadtrip-alternatives.result':
+    'The leg drives the road you chose, and the rail’s distance and the arrivals after it change with it.',
+  'help.guide.roadtrip-alternatives.tip.1':
+    'Choosing another road places a via point on the leg and replaces any it already had; choosing the router’s own road takes them away again.',
+  'help.guide.roadtrip-alternatives.tip.2':
+    'No motorway, No tolls and No ferry come from a second engine with its own speed model, so their times are not comparable with the others.',
+  // roadtrip-limits
+  'help.guide.roadtrip-limits.title': 'Set the car and the driving limits',
+  'help.guide.roadtrip-limits.goal': 'Tell TREK what you drive and how far you are willing to drive in one go.',
+  'help.guide.roadtrip-limits.step.1':
+    'Driving settings sits under the search in the right column. Its badges say what is set; click it to open.',
+  'help.guide.roadtrip-limits.step.2':
+    'Under Driving, Longest drive at once and Driving per day are minutes. An empty field means off, and nothing is flagged.',
+  'help.guide.roadtrip-limits.step.3':
+    'Under Vehicle, say what you drive. Petrol refills only at fuel stops, Electric only at charging ones, Either at both.',
+  'help.guide.roadtrip-limits.step.4':
+    'Type Range on one tank, or Range on one charge, yourself. Work it out from the car under it takes Tank size and Consumption, or Battery and Consumption, and does the sum.',
+  'help.guide.roadtrip-limits.step.5':
+    'Avoid where possible is a preference, not a ban: a day with no way round still uses the road, and says so in its header.',
+  'help.guide.roadtrip-limits.step.6':
+    'Close the dialog. The card says what is set, and the rail marks every leg and every day that goes over it.',
+  'help.guide.roadtrip-limits.result':
+    'The card’s badges say what is set, and every leg and day over a limit carries a badge in the rail.',
+  'help.guide.roadtrip-limits.tip.1':
+    'The settings belong to the trip, so everyone on it plans with the same car and the same limits.',
+  'help.guide.roadtrip-limits.tip.2':
+    'Fill up to says how full a stop fills, because nobody charges to 100 % on the road. A fuel or charging stop can override it for itself.',
+  'help.guide.roadtrip-limits.tip.3':
+    'Route line decides how the drive is drawn: Connect the days routes the night between two days, and A colour per day gives each day its own.',
+  // roadtrip-day-window
+  'help.guide.roadtrip-day-window.title': 'Give the driving day a start and an end',
+  'help.guide.roadtrip-day-window.goal': 'Stop driving at an hour you choose, and say where the day should end.',
+  'help.guide.roadtrip-day-window.step.1': 'Open Driving settings in the right column and find Daily travel times.',
+  'help.guide.roadtrip-day-window.step.2':
+    'Set a Day start time. On its own it does nothing: both times are needed, as the note under them says.',
+  'help.guide.roadtrip-day-window.step.3':
+    'Set a Day end time. The drive now stops at that hour and carries the rest over to the next morning, as an End of day row and a Continue journey row in the rail.',
+  'help.guide.roadtrip-day-window.step.4':
+    'Under End the day, choose Along the route to pause on the road at the end time, or At the last place to stop before the next drive would pass it.',
+  'help.guide.roadtrip-day-window.step.5':
+    'Close the dialog. The Driving settings card carries the two times as a badge.',
+  'help.guide.roadtrip-day-window.result':
+    'The drive is cut into travel days of the length you set, and whatever does not fit continues on calculated days after the last one. Your days and their places are not changed.',
+  'help.guide.roadtrip-day-window.tip.1':
+    'Clearing either time turns the whole thing off again. Times you pinned on a stop yourself always take priority.',
+  'help.guide.roadtrip-day-window.tip.2':
+    'With daily travel times set the days are always connected: the drive from one day’s last stop to the next day’s first is routed and counted.',
+  'help.guide.roadtrip-day-window.tip.3':
+    'Each day ending is a marker on the map as well, a moon with the day number. Drag it along the route, or onto a place, to end the day somewhere else; right-click it to put the automatic ending back, and Restore automatic day endings in this dialog undoes the lot.',
+  // roadtrip-refuel
+  'help.guide.roadtrip-refuel.title': 'Fill up before the tank runs out',
+  'help.guide.roadtrip-refuel.goal':
+    'Find somewhere to refuel on the stretch the car can still reach, and put it on the drive.',
+  'help.guide.roadtrip-refuel.step.1':
+    'With a range set, the rail draws a band across the leg where it runs out: Tank runs out here, and under it how far into the leg that is.',
+  'help.guide.roadtrip-refuel.step.2':
+    'The lamp on the band is the button. Find fuel looks along the road you have already driven, Looking along the route… while it does.',
+  'help.guide.roadtrip-refuel.step.3':
+    'Up to three stations come back, each with how far off the route it is and how much range it would leave to spare.',
+  'help.guide.roadtrip-refuel.step.4':
+    'The plus on an offer adds it as a fuel stop. Add as a stop opens with the kind and the time already filled in, and Add puts it on the leg at the point it is really passed.',
+  'help.guide.roadtrip-refuel.result':
+    'The stop is on the right leg with its own icon, the range counts again from it, and the band is gone.',
+  'help.guide.roadtrip-refuel.tip.1':
+    'The range counts from the last fuel or charging stop, across days. What you drive decides which stops count: Petrol only fuel, Electric only charging.',
+  'help.guide.roadtrip-refuel.tip.2':
+    'The search looks at the road before the dry point, keeps a reserve and counts the detour twice, so everything it offers is really reachable.',
+  'help.guide.roadtrip-refuel.tip.3':
+    'An empty answer is not a dead end: the lamp turns into Try again, because the place search is a shared service that does time out.',
+  // roadtrip-track
+  'help.guide.roadtrip-track.title': 'Make a day follow an imported track',
+  'help.guide.roadtrip-track.goal': 'Put a day’s drive onto a scenic route you imported as a GPX or KML track.',
+  'help.guide.roadtrip-track.step.1': 'Click the Track badge in a day’s header. The dialog opens on that day.',
+  'help.guide.roadtrip-track.step.2':
+    'Pick a track. Each one says how long it is and how far it lies from this day, nearest first.',
+  'help.guide.roadtrip-track.step.3':
+    'Click Follow this track. TREK drops via points where the drive strays furthest from the track, and routes again, round after round.',
+  'help.guide.roadtrip-track.step.4':
+    'It says how many via points it placed and how close the drive now stays. The button beside it drops those via points again and gives the day back to the router; closing the dialog keeps the track.',
+  'help.guide.roadtrip-track.result':
+    'The day’s drive follows the track instead of the road the router picked, and the Track badge says which track it is following.',
+  'help.guide.roadtrip-track.tip.1':
+    'Import the file under Days with Import file, with its tracks or paths ticked. Until a track is in the trip the badge has nothing to offer.',
+  'help.guide.roadtrip-track.tip.2':
+    'Following a track replaces the via points the day’s legs already had, so shape a leg by hand after the track, not before.',
 };
 
 export default help;
