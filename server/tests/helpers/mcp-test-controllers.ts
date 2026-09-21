@@ -149,7 +149,7 @@ export async function createMcpTestRegistry(): Promise<McpRegistry> {
   );
   const queryHelpersService = new QueryHelpersService(dbService);
   const daysService = new DaysService(dbService, permissionsService, realtimeService, queryHelpersService, await createTestUnitOfWork(dbService.connection));
-  const todoService = new TodoService(dbService, permissionsService, realtimeService);
+  const todoService = new TodoService(dbService, permissionsService, realtimeService, await createTestUnitOfWork(dbService.connection));
   const packingService = new PackingService(dbService, permissionsService, realtimeService, notificationsStub());
   const collabService = new CollabService(dbService, permissionsService, realtimeService, notificationsStub(), generalStorage, new RateLimitService());
   // Exactly one instance, shared by maps, places and share: its stampede guard
@@ -235,7 +235,7 @@ export async function createMcpTestRegistry(): Promise<McpRegistry> {
       new TripPromptsMcp(tripsService, readModelService, packingService, addonsService),
       new ShareMcp(new ShareService(dbService, new SettingsService(dbService, await createTestUnitOfWork(dbService.connection)), permissionsService, queryHelpersService, placePhotoCache), authService, guards),
       new FeedsMcp(new FeedsService(dbService, calendarService), dbService, new RuntimeEnvService(), guards),
-      new TripInviteMcp(new TripInviteService(dbService, permissionsService, new TripMembershipService(dbService)), dbService, new RuntimeEnvService(), guards, new AuditService(dbService)),
+      new TripInviteMcp(new TripInviteService(dbService, permissionsService, new TripMembershipService(dbService), await createTestUnitOfWork(dbService.connection)), dbService, new RuntimeEnvService(), guards, new AuditService(dbService)),
       new MapsMcp(mapsService),
       new PlacesMcp(placesService, mapsService, dbService, authService, journeyDomain, assignmentsService, guards, await createTestUnitOfWork(dbService.connection)),
       new CollectionsMcp(new CollectionsService(dbService, permissionsService, realtimeService, notificationsStub(), generalStorage), dbService, authService, addonsService),

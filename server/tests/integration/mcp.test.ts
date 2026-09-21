@@ -48,7 +48,7 @@ const oauthSvc = new OauthService(oauthDbs, new AddonsService(oauthDbs), new Aud
 async function mintOauthToken(userId: number, audience: string | null, scopes: string[] = ['trips:read']): Promise<{ accessToken: string; clientId: string }> {
   const created = await oauthSvc.createOAuthClient(userId, 'MCP Test Client', ['https://client.example.com/cb'], scopes);
   const clientId = (created.client as { client_id: string }).client_id;
-  const tokens = oauthSvc.issueTokens(clientId, userId, scopes, null, audience);
+  const tokens = await oauthSvc.issueTokens(clientId, userId, scopes, null, audience);
   return { accessToken: tokens.access_token, clientId };
 }
 
@@ -465,8 +465,8 @@ describe('MCP transport parity pins (Nest-hosted /mcp)', () => {
     const { user } = createUser(testDb);
     const created = await oauthSvc.createOAuthClient(user.id, 'Scope Test Client', ['https://client.example.com/cb'], ['trips:read', 'trips:write']);
     const clientId = (created.client as { client_id: string }).client_id;
-    const wide = oauthSvc.issueTokens(clientId, user.id, ['trips:read', 'trips:write'], null, MCP_AUDIENCE);
-    const narrow = oauthSvc.issueTokens(clientId, user.id, ['trips:read'], null, MCP_AUDIENCE);
+    const wide = await oauthSvc.issueTokens(clientId, user.id, ['trips:read', 'trips:write'], null, MCP_AUDIENCE);
+    const narrow = await oauthSvc.issueTokens(clientId, user.id, ['trips:read'], null, MCP_AUDIENCE);
     const sessionId = await createSession(wide.access_token);
 
     // The tool surface was registered from the wide set; resuming with the
@@ -485,8 +485,8 @@ describe('MCP transport parity pins (Nest-hosted /mcp)', () => {
     const { user } = createUser(testDb);
     const created = await oauthSvc.createOAuthClient(user.id, 'Scope Order Client', ['https://client.example.com/cb'], ['trips:read', 'trips:write']);
     const clientId = (created.client as { client_id: string }).client_id;
-    const first = oauthSvc.issueTokens(clientId, user.id, ['trips:read', 'trips:write'], null, MCP_AUDIENCE);
-    const reordered = oauthSvc.issueTokens(clientId, user.id, ['trips:write', 'trips:read'], null, MCP_AUDIENCE);
+    const first = await oauthSvc.issueTokens(clientId, user.id, ['trips:read', 'trips:write'], null, MCP_AUDIENCE);
+    const reordered = await oauthSvc.issueTokens(clientId, user.id, ['trips:write', 'trips:read'], null, MCP_AUDIENCE);
     const sessionId = await createSession(first.access_token);
 
     const res = await request(app)

@@ -55,7 +55,7 @@ export class StorageStatsService {
   }
 
   /** The stored row, parsed; null when absent or unparseable (logged, never a 500). */
-  readUsage(): StorageUsage | null {
+  async readUsage(): Promise<StorageUsage | null> {
     const row = this.db.get<{ value: string }>('SELECT value FROM app_settings WHERE key = ?', USAGE_KEY);
     if (!row) return null;
     try {

@@ -107,7 +107,7 @@ export class TripReadModelService {
       // Scope to the requesting member so other members' private packing items
       // (#858) never land in this viewer's offline cache.
       packingItems: this.packing.listItems(tripId, viewerId),
-      todoItems: this.todo.listItems(tripId),
+      todoItems: await this.todo.listItems(tripId),
       budgetItems: await this.budget.listBudgetItems(tripId),
       reservations: this.reservations.list(tripId),
       files: this.files.listFiles(tripId, false),

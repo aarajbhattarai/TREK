@@ -156,7 +156,7 @@ beforeAll(async () => {
   new ReservationsService(dbs(), new PermissionsService(dbs(), await createTestUnitOfWork(dbs().connection)), budgetSvc, new RealtimeService(), notificationsStub(), new ReservationsReadRepository(dbs()), accommodationsSvc, await createTestUnitOfWork(dbs().connection)),
   new CollabService(dbs(), new PermissionsService(dbs(), await createTestUnitOfWork(dbs().connection)), new RealtimeService(), notificationsStub(), coversFx.storage, new RateLimitService()),
   placesSvc,
-  new TodoService(dbs(), new PermissionsService(dbs(), await createTestUnitOfWork(dbs().connection)), new RealtimeService()),
+  new TodoService(dbs(), new PermissionsService(dbs(), await createTestUnitOfWork(dbs().connection)), new RealtimeService(), await createTestUnitOfWork(dbs().connection)),
   new FilesService(dbs(), new PermissionsService(dbs(), await createTestUnitOfWork(dbs().connection)), new RealtimeService(), new EphemeralTokenService(), coversFx.storage),
 );
 });

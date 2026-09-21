@@ -25,19 +25,19 @@ export class RouteUsageController {
    */
   @Post('report')
   @HttpCode(200)
-  report(@Body() body: RouteUsageReportDto): RouteUsageReportResult {
-    return { recorded: this.usage.record(body) };
+  async report(@Body() body: RouteUsageReportDto): Promise<RouteUsageReportResult> {
+    return { recorded: await this.usage.record(body) };
   }
 
   @Get('summary')
   @UseGuards(JwtAuthGuard, AdminGuard)
-  summary(): RouteUsageSummaryResult {
-    return this.usage.summary();
+  async summary(): Promise<RouteUsageSummaryResult> {
+    return await this.usage.summary();
   }
 
   @Delete()
   @UseGuards(JwtAuthGuard, AdminGuard)
-  clear(): { removed: number } {
-    return { removed: this.usage.clear() };
+  async clear(): Promise<{ removed: number }> {
+    return { removed: await this.usage.clear() };
   }
 }

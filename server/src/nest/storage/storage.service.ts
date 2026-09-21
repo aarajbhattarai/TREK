@@ -290,8 +290,8 @@ export class StorageService {
    * pre-restore one. Same shape as health(): StorageRegistryService stays
    * unexported from the module, this facade is the only way in.
    */
-  reloadConfig(): void {
-    this.registry.reload();
+  async reloadConfig(): Promise<void> {
+    await this.registry.reload();
   }
 
   private resolve(category: ServedCategory, name: string): Resolved {

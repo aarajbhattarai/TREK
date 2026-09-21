@@ -125,7 +125,7 @@ export class McpTransportService {
     private readonly registry: McpRegistryService,
   ) {}
 
-  verifyToken(authHeader: string | undefined): VerifyTokenResult | null {
+  async verifyToken(authHeader: string | undefined): Promise<VerifyTokenResult | null> {
     if (!authHeader) return null;
     // M8: strictly require "Bearer" scheme (RFC 6750)
     const spaceIdx = authHeader.indexOf(' ');
@@ -136,7 +136,7 @@ export class McpTransportService {
 
     // OAuth 2.1 access token (trekoa_...)
     if (token.startsWith('trekoa_')) {
-      const result = this.oauth.getUserByAccessToken(token);
+      const result = await this.oauth.getUserByAccessToken(token);
       if (!result) return null;
       // RFC 8707: audience must always match this resource endpoint.
       // Pre-audit tokens with audience=null are revoked by the SEC-H6 migration.
@@ -164,7 +164,7 @@ export class McpTransportService {
       return;
     }
 
-    const tokenResult = this.verifyToken(req.headers['authorization']);
+    const tokenResult = await this.verifyToken(req.headers['authorization']);
     if (!tokenResult) {
       setAuthChallenge(res);
       res.status(401).json({ error: 'Access token required' });

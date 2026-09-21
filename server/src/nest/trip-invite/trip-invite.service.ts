@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import crypto from 'crypto';
 import { DatabaseService } from '../database/database.service';
+import { UnitOfWork } from '../database/unit-of-work';
 import type { TripAccess } from '../database/database.service';
 import { PermissionsService } from '../permissions/permissions.service';
 import { TripMembershipService } from '../trip-membership/trip-membership.service';
@@ -32,9 +33,10 @@ export class TripInviteService {
     private readonly dbs: DatabaseService,
     private readonly permissions: PermissionsService,
     private readonly membership: TripMembershipService,
+    private readonly uow: UnitOfWork,
   ) {}
 
-  verifyTripAccess(tripId: string, userId: number) {
+  async verifyTripAccess(tripId: string, userId: number) {
     return this.dbs.canAccessTrip(tripId, userId);
   }
 
@@ -43,7 +45,7 @@ export class TripInviteService {
   }
 
   /** The current invite link for a trip, or null if none exists. */
-  get(tripId: string | number): TripInviteInfo | null {
+  async get(tripId: string | number): Promise<TripInviteInfo | null> {
     const row = this.dbs.get<{ token: string; expires_at: string | null; created_at: string }>(
       'SELECT token, expires_at, created_at FROM trip_invite_tokens WHERE trip_id = ?',
       tripId,
@@ -55,7 +57,7 @@ export class TripInviteService {
    * Create the trip's invite link, or rotate it to a fresh token (there is only
    * ever one row per trip). An optional expiry (days) can bound the link's life.
    */
-  createOrRotate(tripId: string | number, createdBy: number, expiresInDays?: number | null): TripInviteInfo {
+  async createOrRotate(tripId: string | number, createdBy: number, expiresInDays?: number | null): Promise<TripInviteInfo> {
     const token = crypto.randomBytes(24).toString('base64url');
     // Any non-positive/absent value (0, negatives, NaN, null, undefined) means
     // "no expiry" — deliberate: the UI sends null when no bound was chosen.
@@ -67,7 +69,7 @@ export class TripInviteService {
     // Probe + write + re-select are one atomic unit so a concurrent rotation
     // can't interleave between them (the trip_id UNIQUE constraint would turn
     // that into a spurious 500).
-    return this.dbs.transaction(() => {
+    return await this.uow.transactional(async () => {
       const existing = this.dbs.get('SELECT id FROM trip_invite_tokens WHERE trip_id = ?', tripId);
       if (existing) {
         this.dbs.run(
@@ -80,12 +82,12 @@ export class TripInviteService {
           tripId, token, createdBy, expiresAt,
         );
       }
-      return this.get(tripId)!;
+      return (await this.get(tripId))!;
     });
   }
 
   /** Remove the trip's invite link entirely (disable). */
-  remove(tripId: string | number): void {
+  async remove(tripId: string | number): Promise<void> {
     this.dbs.run('DELETE FROM trip_invite_tokens WHERE trip_id = ?', tripId);
   }
 
@@ -95,7 +97,7 @@ export class TripInviteService {
    * trip title is safe to return for the join confirmation screen; an anonymous
    * caller never reaches this (the endpoint is JWT-guarded).
    */
-  resolve(token: string): { trip_id: number; title: string } | null {
+  async resolve(token: string): Promise<{ trip_id: number; title: string } | null> {
     const row = this.dbs.get<{ trip_id: number; title: string; expires_at: string | null }>(
       `SELECT t.id AS trip_id, t.title AS title, ti.expires_at AS expires_at
        FROM trip_invite_tokens ti
@@ -114,5 +116,5 @@ export class TripInviteService {
 
   /** Join the resolved trip as the current (authenticated, non-guest) user.
    *  invited_by is null — they joined via a link, not a personal invite. */
-  join(tripId: number, userId: number) { return this.membership.joinTripAsMember(tripId, userId, null); }
+  async join(tripId: number, userId: number) { return await this.membership.joinTripAsMember(tripId, userId, null); }
 }

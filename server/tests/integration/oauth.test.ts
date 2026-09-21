@@ -49,9 +49,11 @@ import { AuditService } from '../../src/nest/audit/audit.service';
 // oauth.pending-codes.ts, so the routes under test see every code written here.
 const oauthDbs = new DatabaseService(testDb);
 const containerSideOauth = new OauthService(oauthDbs, new AddonsService(oauthDbs), new AuditService(oauthDbs));
-const createAuthCode = containerSideOauth.createAuthCode.bind(containerSideOauth);
-const createOAuthClient = containerSideOauth.createOAuthClient.bind(containerSideOauth);
-const getUserByAccessToken = containerSideOauth.getUserByAccessToken.bind(containerSideOauth);
+// Arrow wrappers rather than `.bind`: with `strictBindCallApply: false` a bound
+// alias is typed `any`, which hides a missing `await` on the now-async methods.
+const createAuthCode = (...args: Parameters<OauthService['createAuthCode']>) => containerSideOauth.createAuthCode(...args);
+const createOAuthClient = (...args: Parameters<OauthService['createOAuthClient']>) => containerSideOauth.createOAuthClient(...args);
+const getUserByAccessToken = (...args: Parameters<OauthService['getUserByAccessToken']>) => containerSideOauth.getUserByAccessToken(...args);
 
 let nestApp: INestApplication;
 let app: Application;
@@ -1584,7 +1586,7 @@ describe('POST /oauth/token — client_credentials grant', () => {
             });
 
         expect(res.status).toBe(200);
-        const info = getUserByAccessToken(res.body.access_token);
+        const info = await getUserByAccessToken(res.body.access_token);
         expect(info).not.toBeNull();
         expect(info!.user.id).toBe(user.id);
         expect(info!.scopes).toEqual(['trips:read']);

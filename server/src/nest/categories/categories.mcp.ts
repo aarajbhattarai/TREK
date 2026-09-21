@@ -69,7 +69,7 @@ export class CategoriesMcp {
   async createCategory({ name, color, icon }: { name: string; color?: string; icon?: string }, ctx: McpContext) {
     if (await this.isDemoUser(ctx.userId)) return demoDenied();
     // The palette is instance-wide; the REST route restricts management to admins. Match it.
-    if (!this.guards.isAdminUser(ctx.userId)) return adminRequired();
+    if (!(await this.guards.isAdminUser(ctx.userId))) return adminRequired();
     const category = await this.categories.create(ctx.userId, name, color, icon);
     return ok({ category });
   }
@@ -88,7 +88,7 @@ export class CategoriesMcp {
   })
   async updateCategory({ categoryId, name, color, icon }: { categoryId: number; name?: string; color?: string; icon?: string }, ctx: McpContext) {
     if (await this.isDemoUser(ctx.userId)) return demoDenied();
-    if (!this.guards.isAdminUser(ctx.userId)) return adminRequired();
+    if (!(await this.guards.isAdminUser(ctx.userId))) return adminRequired();
     if (!(await this.categories.getById(categoryId))) return errorResult('Category not found');
     const category = await this.categories.update(categoryId, name, color, icon);
     return ok({ category });
@@ -105,7 +105,7 @@ export class CategoriesMcp {
   })
   async deleteCategory({ categoryId }: { categoryId: number }, ctx: McpContext) {
     if (await this.isDemoUser(ctx.userId)) return demoDenied();
-    if (!this.guards.isAdminUser(ctx.userId)) return adminRequired();
+    if (!(await this.guards.isAdminUser(ctx.userId))) return adminRequired();
     if (!(await this.categories.getById(categoryId))) return errorResult('Category not found');
     await this.categories.remove(categoryId);
     return ok({ success: true });

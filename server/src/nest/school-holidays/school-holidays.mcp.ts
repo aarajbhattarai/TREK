@@ -11,7 +11,7 @@ export class SchoolHolidaysMcp {
   constructor(private readonly holidays: SchoolHolidaysService, private readonly guards: McpToolGuardsService) {}
 
   private async adminWrite(ctx: McpContext, write: () => unknown) {
-    if (!this.guards.isAdminUser(ctx.userId)) return adminRequired();
+    if (!(await this.guards.isAdminUser(ctx.userId))) return adminRequired();
     try { return ok(await write()); }
     catch (error) {
       if (error instanceof HttpException || error instanceof z.ZodError) return errorResult(error.message);

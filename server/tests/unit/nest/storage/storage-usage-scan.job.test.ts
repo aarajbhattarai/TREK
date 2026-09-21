@@ -25,17 +25,17 @@ function statsStub(): StorageStatsService {
 beforeEach(() => vi.restoreAllMocks());
 
 describe('StorageUsageScanJob', () => {
-  it('SCAN-001 registers the nightly 04:15 cron when the registrar gate is open', () => {
+  it('SCAN-001 registers the nightly 04:15 cron when the registrar gate is open', async () => {
     const registrar = registrarStub();
     const job = new StorageUsageScanJob(registrar as unknown as CronRegistrarService, statsStub());
-    job.onApplicationBootstrap();
+    await job.onApplicationBootstrap();
     expect(registrar.register).toHaveBeenCalledWith('storage-usage-scan', '15 4 * * *', expect.any(Function));
   });
 
-  it('SCAN-002 does not register under the test gate (registrar.isEnabled() false)', () => {
+  it('SCAN-002 does not register under the test gate (registrar.isEnabled() false)', async () => {
     const registrar = registrarStub(false);
     const job = new StorageUsageScanJob(registrar as unknown as CronRegistrarService, statsStub());
-    job.onApplicationBootstrap();
+    await job.onApplicationBootstrap();
     expect(registrar.register).not.toHaveBeenCalled();
   });
 
@@ -43,7 +43,7 @@ describe('StorageUsageScanJob', () => {
     const registrar = registrarStub();
     const stats = statsStub();
     const job = new StorageUsageScanJob(registrar as unknown as CronRegistrarService, stats);
-    job.onApplicationBootstrap();
+    await job.onApplicationBootstrap();
     const onTick = registrar.register.mock.calls[0]![2] as () => void;
     onTick();
     await vi.waitFor(() => expect(stats.scan).toHaveBeenCalledTimes(1));

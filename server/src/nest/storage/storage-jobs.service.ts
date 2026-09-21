@@ -147,7 +147,7 @@ export class StorageJobsService {
    * Throws MigrationRequestError (400) / MigrationTargetError (404) /
    * BackfillBusyError (409, shared with backfills — one storage job at a time).
    */
-  startMigration(category: StorageCategory, to: string): void {
+  async startMigration(category: StorageCategory, to: string): Promise<void> {
     if (!STORAGE_CATEGORIES.includes(category)) {
       throw new MigrationRequestError(`'${category}' is not a configurable category`);
     }
@@ -318,13 +318,16 @@ export class StorageJobsService {
     // last object's await (or an empty category, which never enters the loop
     // at all) would otherwise reach the flip unchecked. Everything from here
     // to assignCategory() below is one synchronous stretch, so this is the
-    // last point a cancel can still be honored before the flip.
+    // last point a cancel can still be honored before the flip. (The flip
+    // itself now awaits — assignCategory writes through UnitOfWork — but
+    // nothing between this check and that call yields, so the window is the
+    // same one it always was.)
     if (job.cancelled) {
       job.status = { ...s(), status: 'cancelled', finishedAt: Date.now() };
       return;
     }
     // Phase 2: flip — the job, not the save, owns this.
-    this.registry.assignCategory(s().category, s().to);
+    await this.registry.assignCategory(s().category, s().to);
     // Phase 3: delta sweep + reclaimable tally. Cancellation is ignored here
     // (bounded). Reclaimable stays SOURCE-keyed — it counts what's left to
     // reclaim on the old backend, not where it landed on the new one.

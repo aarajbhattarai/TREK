@@ -30,10 +30,10 @@ export class LlmConfigResolver {
    */
   async resolve(userId: number): Promise<ResolvedLlmConfig | null> {
     if (!(await this.addons.isAddonEnabled(ADDON_IDS.LLM_PARSING))) return null;
-    return this.readInstanceConfig() ?? (await this.readUserConfig(userId));
+    return (await this.readInstanceConfig()) ?? (await this.readUserConfig(userId));
   }
 
-  private readInstanceConfig(): ResolvedLlmConfig | null {
+  private async readInstanceConfig(): Promise<ResolvedLlmConfig | null> {
     const row = this.dbService.get<{ config?: string } | undefined>(
       'SELECT config FROM addons WHERE id = ?',
       ADDON_IDS.LLM_PARSING,

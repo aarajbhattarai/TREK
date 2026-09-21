@@ -172,18 +172,18 @@ describe('BackupController', () => {
     expect(thrown(() => bc(svc(), job({ getAutoSettings: vi.fn(() => { throw new Error('io'); }) })).autoSettings())).toEqual({ status: 500, body: { error: 'Could not load backup settings' } });
   });
 
-  it('PUT /auto-settings maps errors to 500 (with a dev-only detail)', () => {
+  it('PUT /auto-settings maps errors to 500 (with a dev-only detail)', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
     process.env.NODE_ENV = 'development';
-    const r = thrown(() => bc(svc(), job({ updateAutoSettings: vi.fn(() => { throw new Error('parse fail'); }) })).updateAutoSettings(user, {}, req));
+    const r = await thrownAsync(() => bc(svc(), job({ updateAutoSettings: vi.fn(() => { throw new Error('parse fail'); }) })).updateAutoSettings(user, {}, req));
     expect(r.status).toBe(500);
     expect(r.body).toEqual({ error: 'Could not save auto-backup settings', detail: 'parse fail' });
   });
 
-  it('PUT /auto-settings hides the detail in production and stringifies non-Error throws', () => {
+  it('PUT /auto-settings hides the detail in production and stringifies non-Error throws', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
     process.env.NODE_ENV = 'production';
-    const r = thrown(() => bc(svc(), job({ updateAutoSettings: vi.fn(() => { throw 'plain string'; }) })).updateAutoSettings(user, {}, req));
+    const r = await thrownAsync(() => bc(svc(), job({ updateAutoSettings: vi.fn(() => { throw 'plain string'; }) })).updateAutoSettings(user, {}, req));
     expect(r.status).toBe(500);
     expect(r.body).toEqual({ error: 'Could not save auto-backup settings', detail: undefined });
   });

@@ -191,7 +191,7 @@ describe('AdminController read-only getters', () => {
     expect(adminCtl(svc(), undefined, undefined, {}, { listInvites: vi.fn().mockReturnValue([{ id: 1 }]) }).listInvites()).toEqual({ invites: [{ id: 1 }] });
     expect(adminCtl(svc({ listAddons: vi.fn().mockReturnValue([{ id: 'mcp' }]) } as Partial<AdminService>)).listAddons()).toEqual({ addons: [{ id: 'mcp' }] });
     expect(adminCtl(svc(), undefined, undefined, { listAllMcpTokens: vi.fn().mockReturnValue([{ id: 1 }]) }).listMcpTokens()).toEqual({ tokens: [{ id: 1 }] });
-    expect(adminCtl(svc(), undefined, undefined, {}, {}, { listAllOAuthSessions: vi.fn().mockReturnValue([{ id: 1 }]) }).listOAuthSessions()).toEqual({ sessions: [{ id: 1 }] });
+    expect(await adminCtl(svc(), undefined, undefined, {}, {}, { listAllOAuthSessions: vi.fn().mockResolvedValue([{ id: 1 }]) }).listOAuthSessions()).toEqual({ sessions: [{ id: 1 }] });
   });
 
 

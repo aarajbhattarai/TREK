@@ -316,11 +316,11 @@ export class AdminController {
   }
 
   @Get('oauth-sessions')
-  listOAuthSessions() { return { sessions: this.oauth.listAllOAuthSessions() }; }
+  async listOAuthSessions() { return { sessions: await this.oauth.listAllOAuthSessions() }; }
 
   @Delete('oauth-sessions/:id')
   async revokeOAuthSession(@CurrentUser() user: User, @Param('id') id: string, @Req() req: Request) {
-    ok(this.oauth.adminRevokeOAuthSession(id));
+    ok(await this.oauth.adminRevokeOAuthSession(id));
     await this.audit.writeAudit({ userId: user.id, action: 'admin.oauth_session_revoke', resource: String(id), ip: getClientIp(req) });
     return { success: true };
   }

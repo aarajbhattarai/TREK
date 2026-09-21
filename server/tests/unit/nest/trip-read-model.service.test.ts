@@ -120,7 +120,7 @@ const buildReadModel = async (database: DatabaseService, roster: TripMembersServ
     new ReservationsService(dbs(), new PermissionsService(dbs(), await createTestUnitOfWork(dbs().connection)), budgetSvc, new RealtimeService(), notificationsStub(), new ReservationsReadRepository(dbs()), await accommodationsOver(dbs()), await createTestUnitOfWork(dbs().connection)),
     new CollabService(dbs(), new PermissionsService(dbs(), await createTestUnitOfWork(dbs().connection)), new RealtimeService(), notificationsStub(), makeStorageFixture('').storage, new RateLimitService()),
     placesSvc,
-    new TodoService(dbs(), new PermissionsService(dbs(), await createTestUnitOfWork(dbs().connection)), new RealtimeService()),
+    new TodoService(dbs(), new PermissionsService(dbs(), await createTestUnitOfWork(dbs().connection)), new RealtimeService(), await createTestUnitOfWork(dbs().connection)),
     new FilesService(dbs(), new PermissionsService(dbs(), await createTestUnitOfWork(dbs().connection)), new RealtimeService(), new EphemeralTokenService(), makeStorageFixture('').storage),
   );
 

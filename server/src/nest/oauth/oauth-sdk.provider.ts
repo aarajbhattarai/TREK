@@ -44,7 +44,7 @@ function assertValidRedirectUris(uris: string[]): void {
 // Row → SDK client info shape
 // ---------------------------------------------------------------------------
 
-function rowToInfo(row: NonNullable<ReturnType<OauthService['getSdkClient']>>): OAuthClientInformationFull {
+function rowToInfo(row: NonNullable<Awaited<ReturnType<OauthService['getSdkClient']>>>): OAuthClientInformationFull {
     return {
         client_id: row.client_id,
         client_name: row.name,
@@ -65,7 +65,7 @@ export class TrekClientsStore implements OAuthRegisteredClientsStore {
     constructor(private readonly oauth: OauthService) {}
 
     async getClient(clientId: string): Promise<OAuthClientInformationFull | undefined> {
-        const row = this.oauth.getSdkClient(clientId);
+        const row = await this.oauth.getSdkClient(clientId);
         return row ? rowToInfo(row) : undefined;
     }
 
@@ -178,7 +178,7 @@ export class TrekOAuthProvider implements OAuthServerProvider {
         if (!codeVerifier || !this.oauth.verifyPKCE(codeVerifier, pending.codeChallenge))
             throw new Error('Authorization grant is invalid.');
 
-        const tokens = this.oauth.issueTokens(client.client_id, pending.userId, pending.scopes, null, pending.resource ?? null);
+        const tokens = await this.oauth.issueTokens(client.client_id, pending.userId, pending.scopes, null, pending.resource ?? null);
         await this.audit.writeAudit({
             userId: pending.userId,
             action: 'oauth.token.issue',
@@ -200,7 +200,7 @@ export class TrekOAuthProvider implements OAuthServerProvider {
     }
 
     async verifyAccessToken(token: string): Promise<AuthInfo> {
-        const info = this.oauth.getUserByAccessToken(token);
+        const info = await this.oauth.getUserByAccessToken(token);
         if (!info) throw new Error('Invalid or expired token');
         return {
             token,

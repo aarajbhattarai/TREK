@@ -74,7 +74,7 @@ function toRow(r: DbRow): PlaceShadowRow {
 export class PlaceShadowService {
   constructor(private readonly db: DatabaseService) {}
 
-  enabled(): boolean {
+  async enabled(): Promise<boolean> {
     const row = this.db.get<{ value: string }>(
       "SELECT value FROM app_settings WHERE key = 'place_shadow_enabled'",
     );
@@ -87,8 +87,8 @@ export class PlaceShadowService {
    * somebody adds a place would be noise about a feature that is off on
    * purpose.
    */
-  record(pick: PlaceShadowPickRequest): boolean {
-    if (!this.enabled()) return false;
+  async record(pick: PlaceShadowPickRequest): Promise<boolean> {
+    if (!(await this.enabled())) return false;
     // A rank outside the returned list means the client and the server disagree
     // about what was on screen. Storing it would poison the very number the
     // corpus exists to produce, so the row is dropped instead.
@@ -119,7 +119,7 @@ export class PlaceShadowService {
    * previous page; paging by id rather than by offset keeps the pages stable
    * while new rows arrive underneath.
    */
-  export(after?: number, limit = EXPORT_PAGE_SIZE): PlaceShadowExportResult {
+  async export(after?: number, limit = EXPORT_PAGE_SIZE): Promise<PlaceShadowExportResult> {
     const size = Math.min(Math.max(1, limit), EXPORT_PAGE_SIZE);
     const rows = this.db.all<DbRow>(
       `SELECT * FROM place_shadow_picks
@@ -138,8 +138,8 @@ export class PlaceShadowService {
     };
   }
 
-  summary(): PlaceShadowSummaryResult {
-    const enabled = this.enabled();
+  async summary(): Promise<PlaceShadowSummaryResult> {
+    const enabled = await this.enabled();
     const totals = this.db.get<{ total: number; oldest: string | null; newest: string | null }>(
       'SELECT COUNT(*) AS total, MIN(created_at) AS oldest, MAX(created_at) AS newest FROM place_shadow_picks',
     );
@@ -181,12 +181,12 @@ export class PlaceShadowService {
   }
 
   /** Admin wipe. Returns how many rows went. */
-  clear(): number {
+  async clear(): Promise<number> {
     return this.db.run('DELETE FROM place_shadow_picks').changes;
   }
 
   /** Nightly retention. Returns how many rows went. */
-  purgeExpired(retentionDays = RETENTION_DAYS): number {
+  async purgeExpired(retentionDays = RETENTION_DAYS): Promise<number> {
     return this.db.run(
       `DELETE FROM place_shadow_picks
         WHERE created_at < datetime('now', ?)`,

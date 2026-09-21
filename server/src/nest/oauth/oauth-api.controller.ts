@@ -122,7 +122,7 @@ export class OauthApiController {
   @UseGuards(JwtAuthGuard)
   async listClients(@CurrentUser() user: User) {
     await this.requireMcp403();
-    return { clients: this.oauth.listOAuthClients(user.id) };
+    return { clients: await this.oauth.listOAuthClients(user.id) };
   }
 
   @Post('clients')
@@ -164,7 +164,7 @@ export class OauthApiController {
   @UseGuards(JwtAuthGuard)
   async listSessions(@CurrentUser() user: User) {
     await this.requireMcp403();
-    return { sessions: this.oauth.listOAuthSessions(user.id) };
+    return { sessions: await this.oauth.listOAuthSessions(user.id) };
   }
 
   @Delete('sessions/:id')

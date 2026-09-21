@@ -7,6 +7,7 @@ import type {
   RouteUsageSurface,
 } from '@trek/shared';
 import { DatabaseService } from '../database/database.service';
+import { UnitOfWork } from '../database/unit-of-work';
 
 /** Days a counted day survives. Aggregates are tiny, so this is a year and a bit. */
 export const RETENTION_DAYS = 400;
@@ -40,9 +41,12 @@ interface DbRow {
  */
 @Injectable()
 export class RouteUsageService {
-  constructor(private readonly db: DatabaseService) {}
+  constructor(
+    private readonly db: DatabaseService,
+    private readonly uow: UnitOfWork,
+  ) {}
 
-  enabled(): boolean {
+  async enabled(): Promise<boolean> {
     const row = this.db.get<{ value: string }>(
       "SELECT value FROM app_settings WHERE key = 'route_usage_enabled'",
     );
@@ -56,11 +60,11 @@ export class RouteUsageService {
    * switched-off instance answers 200 rather than an error the client would log on
    * every flush.
    */
-  record(report: RouteUsageReportRequest): boolean {
-    if (!this.enabled()) return false;
+  async record(report: RouteUsageReportRequest): Promise<boolean> {
+    if (!(await this.enabled())) return false;
     // One transaction for the batch: a flush is a handful of rows, and a partial
     // one would leave a day counted twice on the client's next retry.
-    this.db.transaction(() => {
+    await this.uow.transactional(async () => {
       for (const entry of report.entries) {
         this.db.run(
           `INSERT INTO route_usage_daily (day, profile, surface, self_hosted, requests, waypoints, km, failed)
@@ -83,7 +87,7 @@ export class RouteUsageService {
     return true;
   }
 
-  rows(): RouteUsageDayRow[] {
+  async rows(): Promise<RouteUsageDayRow[]> {
     const rows = this.db.all<DbRow>(
       'SELECT * FROM route_usage_daily ORDER BY day DESC, profile, surface',
     );
@@ -99,9 +103,9 @@ export class RouteUsageService {
     }));
   }
 
-  summary(): RouteUsageSummaryResult {
-    const rows = this.rows();
-    const enabled = this.enabled();
+  async summary(): Promise<RouteUsageSummaryResult> {
+    const rows = await this.rows();
+    const enabled = await this.enabled();
     const empty: RouteUsageSummaryResult = {
       enabled,
       retentionDays: RETENTION_DAYS,
@@ -169,7 +173,7 @@ export class RouteUsageService {
   }
 
   /** Removes days past the retention window. Returns how many rows went. */
-  purgeExpired(): number {
+  async purgeExpired(): Promise<number> {
     const result = this.db.run(
       `DELETE FROM route_usage_daily WHERE day < date('now', ?)`,
       `-${RETENTION_DAYS} days`,
@@ -178,7 +182,7 @@ export class RouteUsageService {
   }
 
   /** Wipes every counter. The admin's own "start over". */
-  clear(): number {
+  async clear(): Promise<number> {
     const result = this.db.run('DELETE FROM route_usage_daily');
     return result.changes ?? 0;
   }

@@ -481,7 +481,7 @@ export class PackingMcp {
     if (!this.packing.verifyTripAccess(tripId, ctx.userId)) return noAccess();
     if (!(await this.guards.hasTripPermission('packing_edit', tripId, ctx.userId))) return permissionDenied();
     // Templates are global; the REST route restricts saving to admins. Match it.
-    if (!this.guards.isAdminUser(ctx.userId)) return adminRequired();
+    if (!(await this.guards.isAdminUser(ctx.userId))) return adminRequired();
     const template = this.packing.saveAsTemplate(tripId, ctx.userId, templateName);
     if (!template) return errorResult('Nothing to save — the packing list is empty.');
     return ok({ template });
@@ -500,7 +500,7 @@ export class PackingMcp {
   async deletePackingTemplate({ templateId }: { templateId: number }, ctx: McpContext) {
     if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
     // Templates are global; the REST route restricts management to admins. Match it.
-    if (!this.guards.isAdminUser(ctx.userId)) return adminRequired();
+    if (!(await this.guards.isAdminUser(ctx.userId))) return adminRequired();
     const result = this.packing.deletePackingTemplate(String(templateId));
     if ('error' in result) return errorResult(result.error);
     return ok({ success: true, name: result.name });

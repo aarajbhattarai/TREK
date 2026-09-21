@@ -74,7 +74,7 @@ export class McpToolGuardsService {
   }
 
   /** True when the user has the global admin role (mirrors REST `user.role === 'admin'` gates). */
-  isAdminUser(userId: number): boolean {
+  async isAdminUser(userId: number): Promise<boolean> {
     const userRow = this.db.get<{ role?: string }>('SELECT role FROM users WHERE id = ?', userId);
     return userRow?.role === 'admin';
   }

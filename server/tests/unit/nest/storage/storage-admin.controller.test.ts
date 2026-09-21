@@ -31,7 +31,7 @@ const FRESH_STATE = {
 function makeController(over: Partial<Record<keyof StorageAdminService, unknown>> = {}) {
   const writeAudit = vi.fn();
   const service = {
-    state: vi.fn(() => FRESH_STATE),
+    state: vi.fn(async () => FRESH_STATE),
     applyConfig: vi.fn(),
     ...over,
   } as unknown as StorageAdminService;
@@ -61,9 +61,9 @@ const CONFIG = {
 } as StorageConfigDto;
 
 describe('StorageAdminController', () => {
-  it('STORCTL-001 GET returns the service state untouched', () => {
+  it('STORCTL-001 GET returns the service state untouched', async () => {
     const { controller, service } = makeController();
-    expect(controller.get()).toBe(FRESH_STATE);
+    expect(await controller.get()).toBe(FRESH_STATE);
     expect(service.state).toHaveBeenCalledTimes(1);
   });
 

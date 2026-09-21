@@ -135,8 +135,8 @@ describe('FilesController (parity with the legacy /api/trips/:tripId/files route
   });
 
   it('PUT /:id 403 without file_edit, 404 unknown, else updates + broadcasts', async () => {
-    expect(thrown(() => fc(fsvc({ can: vi.fn().mockReturnValue(false) })).update(user, trip, '5', '9', {}))).toEqual({ status: 403, body: { error: 'No permission to edit files' } });
-    expect(thrown(() => fc(fsvc({ getFileById: vi.fn().mockReturnValue(undefined) } as Partial<FilesService>)).update(user, trip, '5', '9', {}))).toEqual({ status: 404, body: { error: 'File not found' } });
+    expect(await rejected(fc(fsvc({ can: vi.fn().mockReturnValue(false) })).update(user, trip, '5', '9', {}))).toEqual({ status: 403, body: { error: 'No permission to edit files' } });
+    expect(await rejected(fc(fsvc({ getFileById: vi.fn().mockReturnValue(undefined) } as Partial<FilesService>)).update(user, trip, '5', '9', {}))).toEqual({ status: 404, body: { error: 'File not found' } });
     const updateFile = vi.fn().mockReturnValue({ id: 9 });
     const s = fsvc({ getFileById: vi.fn().mockReturnValue({ id: 9, description: 'x' }), updateFile, broadcast: vi.fn() } as Partial<FilesService>);
     expect(await fc(s).update(user, trip, '5', '9', { description: 'new' })).toEqual({ file: { id: 9 } });
@@ -147,7 +147,7 @@ describe('FilesController (parity with the legacy /api/trips/:tripId/files route
       getFileById: vi.fn().mockReturnValue({ id: 9 }),
       findForeignLinkTarget: vi.fn().mockReturnValue('budget_item_id'),
     });
-    expect(thrown(() => fc(rejectSvc).update(user, trip, '5', '9', { budget_item_id: '99' }))).toEqual({
+    expect(await rejected(fc(rejectSvc).update(user, trip, '5', '9', { budget_item_id: '99' }))).toEqual({
       status: 400,
       body: { error: 'Linked item does not belong to this trip' },
     });
@@ -168,8 +168,8 @@ describe('FilesController (parity with the legacy /api/trips/:tripId/files route
   });
 
   it('PATCH /:id/star 403/404, else toggles', async () => {
-    expect(thrown(() => fc(fsvc({ can: vi.fn().mockReturnValue(false) })).star(user, trip, '5', '9'))).toEqual({ status: 403, body: { error: 'No permission' } });
-    expect(thrown(() => fc(fsvc({ getFileById: vi.fn().mockReturnValue(undefined) } as Partial<FilesService>)).star(user, trip, '5', '9'))).toEqual({ status: 404, body: { error: 'File not found' } });
+    expect(await rejected(fc(fsvc({ can: vi.fn().mockReturnValue(false) })).star(user, trip, '5', '9'))).toEqual({ status: 403, body: { error: 'No permission' } });
+    expect(await rejected(fc(fsvc({ getFileById: vi.fn().mockReturnValue(undefined) } as Partial<FilesService>)).star(user, trip, '5', '9'))).toEqual({ status: 404, body: { error: 'File not found' } });
     const toggleStarred = vi.fn().mockReturnValue({ id: 9, starred: 1 });
     const s = fsvc({ getFileById: vi.fn().mockReturnValue({ id: 9, starred: 0 }), toggleStarred, broadcast: vi.fn() } as Partial<FilesService>);
     expect(await fc(s).star(user, trip, '5', '9')).toEqual({ file: { id: 9, starred: 1 } });
@@ -177,8 +177,8 @@ describe('FilesController (parity with the legacy /api/trips/:tripId/files route
   });
 
   it('DELETE /:id soft-delete 403/404, else success', async () => {
-    expect(thrown(() => fc(fsvc({ can: vi.fn().mockReturnValue(false) })).remove(user, trip, '5', '9'))).toEqual({ status: 403, body: { error: 'No permission to delete files' } });
-    expect(thrown(() => fc(fsvc({ getFileById: vi.fn().mockReturnValue(undefined) } as Partial<FilesService>)).remove(user, trip, '5', '9'))).toEqual({ status: 404, body: { error: 'File not found' } });
+    expect(await rejected(fc(fsvc({ can: vi.fn().mockReturnValue(false) })).remove(user, trip, '5', '9'))).toEqual({ status: 403, body: { error: 'No permission to delete files' } });
+    expect(await rejected(fc(fsvc({ getFileById: vi.fn().mockReturnValue(undefined) } as Partial<FilesService>)).remove(user, trip, '5', '9'))).toEqual({ status: 404, body: { error: 'File not found' } });
     const softDeleteFile = vi.fn();
     const broadcast = vi.fn();
     const s = fsvc({ getFileById: vi.fn().mockReturnValue({ id: 9 }), softDeleteFile, broadcast } as Partial<FilesService>);
@@ -187,7 +187,7 @@ describe('FilesController (parity with the legacy /api/trips/:tripId/files route
   });
 
   it('POST /:id/restore 404 not in trash, else restores', async () => {
-    expect(thrown(() => fc(fsvc({ getDeletedFile: vi.fn().mockReturnValue(undefined) } as Partial<FilesService>)).restore(user, trip, '5', '9'))).toEqual({ status: 404, body: { error: 'File not found in trash' } });
+    expect(await rejected(fc(fsvc({ getDeletedFile: vi.fn().mockReturnValue(undefined) } as Partial<FilesService>)).restore(user, trip, '5', '9'))).toEqual({ status: 404, body: { error: 'File not found in trash' } });
     const restoreFile = vi.fn().mockReturnValue({ id: 9 });
     const s = fsvc({ getDeletedFile: vi.fn().mockReturnValue({ id: 9 }), restoreFile, broadcast: vi.fn() } as Partial<FilesService>);
     expect(await fc(s).restore(user, trip, '5', '9')).toEqual({ file: { id: 9 } });
@@ -207,7 +207,7 @@ describe('FilesController (parity with the legacy /api/trips/:tripId/files route
   });
 
   it('POST /:id/link 404 unknown file, else links', async () => {
-    expect(thrown(() => fc(fsvc({ getFileById: vi.fn().mockReturnValue(undefined) } as Partial<FilesService>)).link(user, trip, '5', '9', {}))).toEqual({ status: 404, body: { error: 'File not found' } });
+    expect(await rejected(fc(fsvc({ getFileById: vi.fn().mockReturnValue(undefined) } as Partial<FilesService>)).link(user, trip, '5', '9', {}))).toEqual({ status: 404, body: { error: 'File not found' } });
     const createFileLink = vi.fn().mockReturnValue([{ id: 1 }]);
     const s = fsvc({ getFileById: vi.fn().mockReturnValue({ id: 9 }), createFileLink } as Partial<FilesService>);
     expect(await fc(s).link(user, trip, '5', '9', { reservation_id: 2 })).toEqual({ success: true, links: [{ id: 1 }] });
@@ -221,12 +221,13 @@ describe('FilesController (parity with the legacy /api/trips/:tripId/files route
     expect(fc(s).links(user, trip, '5', '9')).toEqual({ links: [{ id: 1 }] });
   });
 
-  it('the link routes resolve the file against :tripId, so a foreign file is 404', () => {
+  it('the link routes resolve the file against :tripId, so a foreign file is 404', async () => {
     const foreign = () => fsvc({ getFileById: vi.fn().mockReturnValue(undefined), deleteFileLink: vi.fn(), getFileLinks: vi.fn() } as Partial<FilesService>);
     const unlinkSvc = foreign();
-    expect(thrown(() => fc(unlinkSvc).unlink(user, trip, '5', '9', '3'))).toEqual({ status: 404, body: { error: 'File not found' } });
+    expect(await rejected(fc(unlinkSvc).unlink(user, trip, '5', '9', '3'))).toEqual({ status: 404, body: { error: 'File not found' } });
     expect(unlinkSvc.deleteFileLink).not.toHaveBeenCalled();
     const listSvc = foreign();
+    // `links` is still a synchronous handler, so it throws rather than rejecting.
     expect(thrown(() => fc(listSvc).links(user, trip, '5', '9'))).toEqual({ status: 404, body: { error: 'File not found' } });
     expect(listSvc.getFileLinks).not.toHaveBeenCalled();
   });
@@ -234,9 +235,9 @@ describe('FilesController (parity with the legacy /api/trips/:tripId/files route
   it('the trash + link routes all reject without file_delete / file_edit', async () => {
     const denied = () => fsvc({ can: vi.fn().mockReturnValue(false) });
     await expect(fc(denied()).permanent(user, trip, '5', '9')).rejects.toMatchObject({ status: 403 });
-    expect(thrown(() => fc(denied()).restore(user, trip, '5', '9'))).toEqual({ status: 403, body: { error: 'No permission' } });
-    expect(thrown(() => fc(denied()).link(user, trip, '5', '9', {}))).toEqual({ status: 403, body: { error: 'No permission' } });
-    expect(thrown(() => fc(denied()).unlink(user, trip, '5', '9', '3'))).toEqual({ status: 403, body: { error: 'No permission' } });
+    expect(await rejected(fc(denied()).restore(user, trip, '5', '9'))).toEqual({ status: 403, body: { error: 'No permission' } });
+    expect(await rejected(fc(denied()).link(user, trip, '5', '9', {}))).toEqual({ status: 403, body: { error: 'No permission' } });
+    expect(await rejected(fc(denied()).unlink(user, trip, '5', '9', '3'))).toEqual({ status: 403, body: { error: 'No permission' } });
   });
 
 });

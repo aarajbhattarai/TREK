@@ -29,26 +29,26 @@ export class PlaceShadowController {
    */
   @Post('pick')
   @HttpCode(200)
-  pick(@Body() body: PlaceShadowPickDto): PlaceShadowPickResult {
-    return { recorded: this.shadow.record(body) };
+  async pick(@Body() body: PlaceShadowPickDto): Promise<PlaceShadowPickResult> {
+    return { recorded: await this.shadow.record(body) };
   }
 
   @Get('summary')
   @UseGuards(JwtAuthGuard, AdminGuard)
-  summary(): PlaceShadowSummaryResult {
-    return this.shadow.summary();
+  async summary(): Promise<PlaceShadowSummaryResult> {
+    return await this.shadow.summary();
   }
 
   @Get('export')
   @UseGuards(JwtAuthGuard, AdminGuard)
-  export(@Query('after') after?: string): PlaceShadowExportResult {
+  async export(@Query('after') after?: string): Promise<PlaceShadowExportResult> {
     const parsed = Number(after);
-    return this.shadow.export(Number.isSafeInteger(parsed) && parsed > 0 ? parsed : undefined);
+    return await this.shadow.export(Number.isSafeInteger(parsed) && parsed > 0 ? parsed : undefined);
   }
 
   @Delete()
   @UseGuards(JwtAuthGuard, AdminGuard)
-  clear(): { removed: number } {
-    return { removed: this.shadow.clear() };
+  async clear(): Promise<{ removed: number }> {
+    return { removed: await this.shadow.clear() };
   }
 }

@@ -72,26 +72,28 @@ const dbs = new DatabaseService(testDb);
 const addonsStub = { isAddonEnabled } as unknown as AddonsService;
 const svc = new OauthService(dbs, addonsStub, new AuditService(dbs));
 
-// Legacy free-function names bound to the service, so the moved cases below read
-// exactly as they did before the fold.
-const createOAuthClient = svc.createOAuthClient.bind(svc);
-const listOAuthClients = svc.listOAuthClients.bind(svc);
-const deleteOAuthClient = svc.deleteOAuthClient.bind(svc);
-const rotateOAuthClientSecret = svc.rotateOAuthClientSecret.bind(svc);
-const createAuthCode = svc.createAuthCode.bind(svc);
-const consumeAuthCode = svc.consumeAuthCode.bind(svc);
-const issueTokens = svc.issueTokens.bind(svc);
-const getUserByAccessToken = svc.getUserByAccessToken.bind(svc);
-const refreshTokens = svc.refreshTokens.bind(svc);
-const revokeToken = svc.revokeToken.bind(svc);
-const listOAuthSessions = svc.listOAuthSessions.bind(svc);
-const revokeSession = svc.revokeSession.bind(svc);
-const validateAuthorizeRequest = svc.validateAuthorizeRequest.bind(svc);
-const verifyPKCE = svc.verifyPKCE.bind(svc);
-const authenticateClient = svc.authenticateClient.bind(svc);
-const saveConsent = svc.saveConsent.bind(svc);
-const getConsent = svc.getConsent.bind(svc);
-const isConsentSufficient = svc.isConsentSufficient.bind(svc);
+// Legacy free-function names delegating to the service, so the moved cases below
+// read exactly as they did before the fold. Arrow wrappers rather than `.bind`:
+// with `strictBindCallApply: false` a bound alias is typed `any`, which would
+// hide every missing `await` on the now-async methods from the type checker.
+const createOAuthClient = (...args: Parameters<OauthService['createOAuthClient']>) => svc.createOAuthClient(...args);
+const listOAuthClients = (...args: Parameters<OauthService['listOAuthClients']>) => svc.listOAuthClients(...args);
+const deleteOAuthClient = (...args: Parameters<OauthService['deleteOAuthClient']>) => svc.deleteOAuthClient(...args);
+const rotateOAuthClientSecret = (...args: Parameters<OauthService['rotateOAuthClientSecret']>) => svc.rotateOAuthClientSecret(...args);
+const createAuthCode = (...args: Parameters<OauthService['createAuthCode']>) => svc.createAuthCode(...args);
+const consumeAuthCode = (...args: Parameters<OauthService['consumeAuthCode']>) => svc.consumeAuthCode(...args);
+const issueTokens = (...args: Parameters<OauthService['issueTokens']>) => svc.issueTokens(...args);
+const getUserByAccessToken = (...args: Parameters<OauthService['getUserByAccessToken']>) => svc.getUserByAccessToken(...args);
+const refreshTokens = (...args: Parameters<OauthService['refreshTokens']>) => svc.refreshTokens(...args);
+const revokeToken = (...args: Parameters<OauthService['revokeToken']>) => svc.revokeToken(...args);
+const listOAuthSessions = (...args: Parameters<OauthService['listOAuthSessions']>) => svc.listOAuthSessions(...args);
+const revokeSession = (...args: Parameters<OauthService['revokeSession']>) => svc.revokeSession(...args);
+const validateAuthorizeRequest = (...args: Parameters<OauthService['validateAuthorizeRequest']>) => svc.validateAuthorizeRequest(...args);
+const verifyPKCE = (...args: Parameters<OauthService['verifyPKCE']>) => svc.verifyPKCE(...args);
+const authenticateClient = (...args: Parameters<OauthService['authenticateClient']>) => svc.authenticateClient(...args);
+const saveConsent = (...args: Parameters<OauthService['saveConsent']>) => svc.saveConsent(...args);
+const getConsent = (...args: Parameters<OauthService['getConsent']>) => svc.getConsent(...args);
+const isConsentSufficient = (...args: Parameters<OauthService['isConsentSufficient']>) => svc.isConsentSufficient(...args);
 
 beforeAll(() => {
   createTables(testDb);
@@ -273,15 +275,15 @@ describe('createOAuthClient', () => {
 // ---------------------------------------------------------------------------
 
 describe('listOAuthClients', () => {
-  it('returns empty array for user with no clients', () => {
+  it('returns empty array for user with no clients', async () => {
     const { user } = createUser(testDb);
-    expect(listOAuthClients(user.id)).toEqual([]);
+    expect(await listOAuthClients(user.id)).toEqual([]);
   });
 
   it('returns created clients with redirect_uris and allowed_scopes as arrays', async () => {
     const { user } = createUser(testDb);
     await makeClient(user.id, { name: 'Client A', redirectUris: ['https://a.com/cb'], scopes: ['trips:read', 'budget:read'] });
-    const clients = listOAuthClients(user.id);
+    const clients = await listOAuthClients(user.id);
     expect(clients).toHaveLength(1);
     expect(clients[0].name).toBe('Client A');
     expect(Array.isArray(clients[0].redirect_uris)).toBe(true);
@@ -301,7 +303,7 @@ describe('deleteOAuthClient', () => {
     const clientRowId = created.client!.id as string;
     const result = await deleteOAuthClient(user.id, clientRowId);
     expect(result.success).toBe(true);
-    expect(listOAuthClients(user.id)).toHaveLength(0);
+    expect(await listOAuthClients(user.id)).toHaveLength(0);
   });
 
   it('returns 404 for non-existent client', async () => {
@@ -345,12 +347,12 @@ describe('rotateOAuthClientSecret', () => {
     const { user } = createUser(testDb);
     const created = await makeClient(user.id);
     const clientId = created.client!.client_id as string;
-    const { access_token } = issueTokens(clientId, user.id, ['trips:read']);
-    expect(getUserByAccessToken(access_token)).not.toBeNull();
+    const { access_token } = await issueTokens(clientId, user.id, ['trips:read']);
+    expect(await getUserByAccessToken(access_token)).not.toBeNull();
 
     await rotateOAuthClientSecret(user.id, created.client!.id as string);
 
-    expect(getUserByAccessToken(access_token)).toBeNull();
+    expect(await getUserByAccessToken(access_token)).toBeNull();
   });
 });
 
@@ -369,6 +371,7 @@ describe('createAuthCode + consumeAuthCode', () => {
       userId: user.id,
       redirectUri: 'https://example.com/callback',
       scopes: ['trips:read'],
+      resource: null,
       codeChallenge: 'abc123',
       codeChallengeMethod: 'S256',
     });
@@ -379,7 +382,7 @@ describe('createAuthCode + consumeAuthCode', () => {
     expect(entry!.clientId).toBe(clientId);
   });
 
-  it('returns null for non-existent code', () => {
+  it('returns null for non-existent code', async () => {
     expect(consumeAuthCode('does-not-exist')).toBeNull();
   });
 
@@ -393,6 +396,7 @@ describe('createAuthCode + consumeAuthCode', () => {
       userId: user.id,
       redirectUri: 'https://example.com/callback',
       scopes: ['trips:read'],
+      resource: null,
       codeChallenge: 'abc123',
       codeChallengeMethod: 'S256',
     });
@@ -412,7 +416,7 @@ describe('issueTokens + getUserByAccessToken', () => {
     const created = await makeClient(user.id);
     const clientId = created.client!.client_id as string;
 
-    const tokens = issueTokens(clientId, user.id, ['trips:read']);
+    const tokens = await issueTokens(clientId, user.id, ['trips:read']);
     expect(tokens.access_token.startsWith('trekoa_')).toBe(true);
     expect(tokens.refresh_token.startsWith('trekrf_')).toBe(true);
     expect(tokens.token_type).toBe('Bearer');
@@ -424,16 +428,16 @@ describe('issueTokens + getUserByAccessToken', () => {
     const created = await makeClient(user.id);
     const clientId = created.client!.client_id as string;
 
-    const { access_token } = issueTokens(clientId, user.id, ['trips:read', 'budget:write']);
-    const info = getUserByAccessToken(access_token);
+    const { access_token } = await issueTokens(clientId, user.id, ['trips:read', 'budget:write']);
+    const info = await getUserByAccessToken(access_token);
     expect(info).not.toBeNull();
     expect(info!.user.email).toBe(user.email);
     expect(info!.scopes).toContain('trips:read');
     expect(info!.scopes).toContain('budget:write');
   });
 
-  it('getUserByAccessToken returns null for unknown token', () => {
-    expect(getUserByAccessToken('trekoa_unknown')).toBeNull();
+  it('getUserByAccessToken returns null for unknown token', async () => {
+    expect(await getUserByAccessToken('trekoa_unknown')).toBeNull();
   });
 
   it('getUserByAccessToken returns null for revoked token', async () => {
@@ -441,9 +445,9 @@ describe('issueTokens + getUserByAccessToken', () => {
     const created = await makeClient(user.id);
     const clientId = created.client!.client_id as string;
 
-    const { access_token } = issueTokens(clientId, user.id, ['trips:read']);
+    const { access_token } = await issueTokens(clientId, user.id, ['trips:read']);
     await revokeToken(access_token, clientId);
-    expect(getUserByAccessToken(access_token)).toBeNull();
+    expect(await getUserByAccessToken(access_token)).toBeNull();
   });
 });
 
@@ -458,7 +462,7 @@ describe('refreshTokens', () => {
     const clientId = created.client!.client_id as string;
     const rawSecret = created.client!.client_secret as string;
 
-    const { refresh_token } = issueTokens(clientId, user.id, ['trips:read']);
+    const { refresh_token } = await issueTokens(clientId, user.id, ['trips:read']);
     const result = await refreshTokens(refresh_token, clientId, rawSecret);
     expect(result.error).toBeUndefined();
     expect(result.tokens).toBeDefined();
@@ -471,9 +475,9 @@ describe('refreshTokens', () => {
     const clientId = created.client!.client_id as string;
     const rawSecret = created.client!.client_secret as string;
 
-    const { access_token, refresh_token } = issueTokens(clientId, user.id, ['trips:read']);
+    const { access_token, refresh_token } = await issueTokens(clientId, user.id, ['trips:read']);
     await refreshTokens(refresh_token, clientId, rawSecret);
-    expect(getUserByAccessToken(access_token)).toBeNull();
+    expect(await getUserByAccessToken(access_token)).toBeNull();
   });
 
   it('does not revoke the active MCP session on a normal (non-replayed) refresh (#1475)', async () => {
@@ -482,7 +486,7 @@ describe('refreshTokens', () => {
     const clientId = created.client!.client_id as string;
     const rawSecret = created.client!.client_secret as string;
 
-    const { refresh_token } = issueTokens(clientId, user.id, ['trips:read']);
+    const { refresh_token } = await issueTokens(clientId, user.id, ['trips:read']);
     const callsBefore = vi.mocked(revokeUserSessionsForClient).mock.calls.length;
     const result = await refreshTokens(refresh_token, clientId, rawSecret);
     expect(result.error).toBeUndefined();
@@ -506,7 +510,7 @@ describe('refreshTokens', () => {
     const clientId = created.client!.client_id as string;
     const rawSecret = created.client!.client_secret as string;
 
-    const { access_token, refresh_token } = issueTokens(clientId, user.id, ['trips:read']);
+    const { access_token, refresh_token } = await issueTokens(clientId, user.id, ['trips:read']);
     await revokeToken(access_token, clientId);
     const result = await refreshTokens(refresh_token, clientId, rawSecret);
     expect(result.error).toBe('invalid_grant');
@@ -517,7 +521,7 @@ describe('refreshTokens', () => {
     const created = await makeClient(user.id);
     const clientId = created.client!.client_id as string;
 
-    const { refresh_token } = issueTokens(clientId, user.id, ['trips:read']);
+    const { refresh_token } = await issueTokens(clientId, user.id, ['trips:read']);
     const result = await refreshTokens(refresh_token, clientId, 'wrong-secret');
     expect(result.error).toBe('invalid_client');
     expect(result.status).toBe(401);
@@ -534,11 +538,11 @@ describe('revokeToken', () => {
     const created = await makeClient(user.id);
     const clientId = created.client!.client_id as string;
 
-    const { access_token } = issueTokens(clientId, user.id, ['trips:read']);
-    expect(getUserByAccessToken(access_token)).not.toBeNull();
+    const { access_token } = await issueTokens(clientId, user.id, ['trips:read']);
+    expect(await getUserByAccessToken(access_token)).not.toBeNull();
 
     await revokeToken(access_token, clientId);
-    expect(getUserByAccessToken(access_token)).toBeNull();
+    expect(await getUserByAccessToken(access_token)).toBeNull();
   });
 });
 
@@ -552,8 +556,8 @@ describe('listOAuthSessions + revokeSession', () => {
     const created = await makeClient(user.id);
     const clientId = created.client!.client_id as string;
 
-    issueTokens(clientId, user.id, ['trips:read']);
-    const sessions = listOAuthSessions(user.id);
+    await issueTokens(clientId, user.id, ['trips:read']);
+    const sessions = await listOAuthSessions(user.id);
     expect(sessions).toHaveLength(1);
     expect(sessions[0].client_id).toBe(clientId);
   });
@@ -563,9 +567,9 @@ describe('listOAuthSessions + revokeSession', () => {
     const created = await makeClient(user.id);
     const clientId = created.client!.client_id as string;
 
-    const { access_token } = issueTokens(clientId, user.id, ['trips:read']);
+    const { access_token } = await issueTokens(clientId, user.id, ['trips:read']);
     await revokeToken(access_token, clientId);
-    const sessions = listOAuthSessions(user.id);
+    const sessions = await listOAuthSessions(user.id);
     expect(sessions).toHaveLength(0);
   });
 
@@ -580,13 +584,13 @@ describe('listOAuthSessions + revokeSession', () => {
     const created = await makeClient(user.id);
     const clientId = created.client!.client_id as string;
 
-    issueTokens(clientId, user.id, ['trips:read']);
-    const sessions = listOAuthSessions(user.id);
+    await issueTokens(clientId, user.id, ['trips:read']);
+    const sessions = await listOAuthSessions(user.id);
     const sessionId = sessions[0].id as number;
 
     const result = await revokeSession(user.id, sessionId);
     expect(result.success).toBe(true);
-    expect(listOAuthSessions(user.id)).toHaveLength(0);
+    expect(await listOAuthSessions(user.id)).toHaveLength(0);
   });
 });
 
@@ -733,13 +737,13 @@ describe('validateAuthorizeRequest', () => {
 // ---------------------------------------------------------------------------
 
 describe('verifyPKCE', () => {
-  it('returns true for valid code_verifier / code_challenge pair (SHA256 base64url)', () => {
+  it('returns true for valid code_verifier / code_challenge pair (SHA256 base64url)', async () => {
     const verifier = 'dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk';
     const challenge = crypto.createHash('sha256').update(verifier).digest('base64url');
     expect(verifyPKCE(verifier, challenge)).toBe(true);
   });
 
-  it('returns false for wrong verifier', () => {
+  it('returns false for wrong verifier', async () => {
     const verifier = 'correct-verifier';
     const challenge = crypto.createHash('sha256').update(verifier).digest('base64url');
     expect(verifyPKCE('wrong-verifier', challenge)).toBe(false);
@@ -757,7 +761,7 @@ describe('authenticateClient', () => {
     const clientId = created.client!.client_id as string;
     const rawSecret = created.client!.client_secret as string;
 
-    const client = authenticateClient(clientId, rawSecret);
+    const client = await authenticateClient(clientId, rawSecret);
     expect(client).not.toBeNull();
     expect(client!.client_id).toBe(clientId);
   });
@@ -767,11 +771,11 @@ describe('authenticateClient', () => {
     const created = await makeClient(user.id);
     const clientId = created.client!.client_id as string;
 
-    expect(authenticateClient(clientId, 'wrong-secret')).toBeNull();
+    expect(await authenticateClient(clientId, 'wrong-secret')).toBeNull();
   });
 
-  it('returns null for unknown client_id', () => {
-    expect(authenticateClient('unknown-client-id', 'any-secret')).toBeNull();
+  it('returns null for unknown client_id', async () => {
+    expect(await authenticateClient('unknown-client-id', 'any-secret')).toBeNull();
   });
 });
 
@@ -786,18 +790,18 @@ describe('saveConsent + getConsent + isConsentSufficient', () => {
     const clientId = created.client!.client_id as string;
 
     await saveConsent(clientId, user.id, ['trips:read', 'budget:write']);
-    const consent = getConsent(clientId, user.id);
+    const consent = await getConsent(clientId, user.id);
     expect(consent).not.toBeNull();
     expect(consent).toContain('trips:read');
     expect(consent).toContain('budget:write');
   });
 
-  it('isConsentSufficient returns true when all requested scopes are in existing', () => {
+  it('isConsentSufficient returns true when all requested scopes are in existing', async () => {
     expect(isConsentSufficient(['trips:read', 'budget:write'], ['trips:read'])).toBe(true);
     expect(isConsentSufficient(['trips:read', 'budget:write'], ['trips:read', 'budget:write'])).toBe(true);
   });
 
-  it('isConsentSufficient returns false when some scopes are missing', () => {
+  it('isConsentSufficient returns false when some scopes are missing', async () => {
     expect(isConsentSufficient(['trips:read'], ['trips:read', 'budget:write'])).toBe(false);
     expect(isConsentSufficient([], ['trips:read'])).toBe(false);
   });
@@ -816,7 +820,7 @@ describe('saveConsent — scope union (M5)', () => {
     await saveConsent(clientId, user.id, ['trips:read']);
     await saveConsent(clientId, user.id, ['budget:write']);
 
-    const consent = getConsent(clientId, user.id);
+    const consent = await getConsent(clientId, user.id);
     expect(consent).toContain('trips:read');
     expect(consent).toContain('budget:write');
   });
@@ -830,7 +834,7 @@ describe('saveConsent — scope union (M5)', () => {
     // approve only trips:read on a later request
     await saveConsent(clientId, user.id, ['trips:read']);
 
-    const consent = getConsent(clientId, user.id);
+    const consent = await getConsent(clientId, user.id);
     // trips:write should NOT be removed (union semantics)
     expect(consent).toContain('trips:read');
     expect(consent).toContain('trips:write');
@@ -845,9 +849,9 @@ describe('saveConsent — scope union (M5)', () => {
     await saveConsent(clientId, user.id, ['budget:write']);
 
     // Should not require consent again for either scope
-    expect(isConsentSufficient(getConsent(clientId, user.id)!, ['trips:read'])).toBe(true);
-    expect(isConsentSufficient(getConsent(clientId, user.id)!, ['budget:write'])).toBe(true);
-    expect(isConsentSufficient(getConsent(clientId, user.id)!, ['trips:read', 'budget:write'])).toBe(true);
+    expect(isConsentSufficient((await getConsent(clientId, user.id))!, ['trips:read'])).toBe(true);
+    expect(isConsentSufficient((await getConsent(clientId, user.id))!, ['budget:write'])).toBe(true);
+    expect(isConsentSufficient((await getConsent(clientId, user.id))!, ['trips:read', 'budget:write'])).toBe(true);
   });
 });
 
@@ -861,8 +865,8 @@ describe('getUserByAccessToken — includes clientId (C2)', () => {
     const created = await makeClient(user.id);
     const clientId = created.client!.client_id as string;
 
-    const { access_token } = issueTokens(clientId, user.id, ['trips:read']);
-    const info = getUserByAccessToken(access_token);
+    const { access_token } = await issueTokens(clientId, user.id, ['trips:read']);
+    const info = await getUserByAccessToken(access_token);
     expect(info).not.toBeNull();
     expect(info!.clientId).toBe(clientId);
   });
@@ -891,7 +895,7 @@ describe('refreshTokens — replay detection (C3)', () => {
     const rawSecret = created.client!.client_secret as string;
 
     // Issue tokens, then rotate once (old token becomes revoked)
-    const { refresh_token: firstRefresh } = issueTokens(clientId, user.id, ['trips:read']);
+    const { refresh_token: firstRefresh } = await issueTokens(clientId, user.id, ['trips:read']);
     const rotateResult = await refreshTokens(firstRefresh, clientId, rawSecret);
     expect(rotateResult.error).toBeUndefined();
     const { refresh_token: secondRefresh } = rotateResult.tokens!;
@@ -915,7 +919,7 @@ describe('refreshTokens — replay detection (C3)', () => {
     const rawSecret = created.client!.client_secret as string;
 
     // Issue → rotate once
-    const { refresh_token: first } = issueTokens(clientId, user.id, ['trips:read']);
+    const { refresh_token: first } = await issueTokens(clientId, user.id, ['trips:read']);
     const r1 = await refreshTokens(first, clientId, rawSecret);
     const { access_token: access2, refresh_token: second } = r1.tokens!;
 
@@ -924,7 +928,7 @@ describe('refreshTokens — replay detection (C3)', () => {
     await refreshTokens(first, clientId, rawSecret);
 
     // The rotated access token should also be dead now
-    expect(getUserByAccessToken(access2)).toBeNull();
+    expect(await getUserByAccessToken(access2)).toBeNull();
 
     // The second refresh token should also be revoked
     const r2 = await refreshTokens(second, clientId, rawSecret);
@@ -937,7 +941,7 @@ describe('refreshTokens — replay detection (C3)', () => {
     const clientId = created.client!.client_id as string;
     const rawSecret = created.client!.client_secret as string;
 
-    const { refresh_token: first } = issueTokens(clientId, user.id, ['trips:read']);
+    const { refresh_token: first } = await issueTokens(clientId, user.id, ['trips:read']);
     // Rotate once
     const r1 = await refreshTokens(first, clientId, rawSecret);
     const { refresh_token: second } = r1.tokens!;
@@ -973,7 +977,7 @@ describe('refreshTokens — concurrent rotation grace (#1007)', () => {
 
   it('OAUTH-GRACE-001: two clients refreshing the same token both get tokens', async () => {
     const { user, clientId, rawSecret } = await setup();
-    const { refresh_token: shared } = issueTokens(clientId, user.id, ['trips:read']);
+    const { refresh_token: shared } = await issueTokens(clientId, user.id, ['trips:read']);
 
     const first = await refreshTokens(shared, clientId, rawSecret);
     const callsBefore = vi.mocked(revokeUserSessionsForClient).mock.calls.length;
@@ -984,13 +988,13 @@ describe('refreshTokens — concurrent rotation grace (#1007)', () => {
     expect(second.tokens!.refresh_token).not.toBe(first.tokens!.refresh_token);
     // The whole point: no chain revocation, no torn-down MCP sessions, no login window.
     expect(vi.mocked(revokeUserSessionsForClient).mock.calls.length).toBe(callsBefore);
-    expect(getUserByAccessToken(first.tokens!.access_token)).not.toBeNull();
-    expect(getUserByAccessToken(second.tokens!.access_token)).not.toBeNull();
+    expect(await getUserByAccessToken(first.tokens!.access_token)).not.toBeNull();
+    expect(await getUserByAccessToken(second.tokens!.access_token)).not.toBeNull();
   });
 
   it('OAUTH-GRACE-002: both successors keep working afterwards', async () => {
     const { user, clientId, rawSecret } = await setup();
-    const { refresh_token: shared } = issueTokens(clientId, user.id, ['trips:read']);
+    const { refresh_token: shared } = await issueTokens(clientId, user.id, ['trips:read']);
     const a = (await refreshTokens(shared, clientId, rawSecret)).tokens!;
     const b = (await refreshTokens(shared, clientId, rawSecret)).tokens!;
 
@@ -1000,7 +1004,7 @@ describe('refreshTokens — concurrent rotation grace (#1007)', () => {
 
   it('OAUTH-GRACE-003: the same token replayed after the window is still theft', async () => {
     const { user, clientId, rawSecret } = await setup();
-    const { refresh_token: shared } = issueTokens(clientId, user.id, ['trips:read']);
+    const { refresh_token: shared } = await issueTokens(clientId, user.id, ['trips:read']);
     const rotated = (await refreshTokens(shared, clientId, rawSecret)).tokens!;
 
     agePastGrace(shared);
@@ -1012,7 +1016,7 @@ describe('refreshTokens — concurrent rotation grace (#1007)', () => {
 
   it('OAUTH-GRACE-004: a token revoked by logout is not re-opened by the window', async () => {
     const { user, clientId, rawSecret } = await setup();
-    const { refresh_token: shared } = issueTokens(clientId, user.id, ['trips:read']);
+    const { refresh_token: shared } = await issueTokens(clientId, user.id, ['trips:read']);
 
     // Explicit revocation leaves no successor, so there is nothing to be
     // concurrent with — the grace must not resurrect it.
@@ -1024,7 +1028,7 @@ describe('refreshTokens — concurrent rotation grace (#1007)', () => {
 
   it('OAUTH-GRACE-005: a chain killed by a real replay stays dead inside the window', async () => {
     const { user, clientId, rawSecret } = await setup();
-    const { refresh_token: first } = issueTokens(clientId, user.id, ['trips:read']);
+    const { refresh_token: first } = await issueTokens(clientId, user.id, ['trips:read']);
     const second = (await refreshTokens(first, clientId, rawSecret)).tokens!;
 
     // Real theft: the first token turns up again once the window has passed.
@@ -1042,24 +1046,24 @@ describe('refreshTokens — concurrent rotation grace (#1007)', () => {
 // ---------------------------------------------------------------------------
 
 describe('verifyPKCE — format validation (H1)', () => {
-  it('returns false for a code_verifier that is too short (< 43 chars)', () => {
+  it('returns false for a code_verifier that is too short (< 43 chars)', async () => {
     const { challenge } = makePkce();
     expect(verifyPKCE('short', challenge)).toBe(false);
   });
 
-  it('returns false for a code_verifier that is too long (> 128 chars)', () => {
+  it('returns false for a code_verifier that is too long (> 128 chars)', async () => {
     const { challenge } = makePkce();
     const longVerifier = 'a'.repeat(129);
     expect(verifyPKCE(longVerifier, challenge)).toBe(false);
   });
 
-  it('returns false for a code_verifier with invalid characters', () => {
+  it('returns false for a code_verifier with invalid characters', async () => {
     const { challenge } = makePkce();
     const badVerifier = 'A'.repeat(42) + ' '; // space is not allowed
     expect(verifyPKCE(badVerifier, challenge)).toBe(false);
   });
 
-  it('returns true for a valid 43-char verifier matching its challenge', () => {
+  it('returns true for a valid 43-char verifier matching its challenge', async () => {
     const { verifier, challenge } = makePkce();
     expect(verifyPKCE(verifier, challenge)).toBe(true);
   });
@@ -1145,7 +1149,7 @@ describe('addon gate and MCP endpoint', () => {
     expect(await svc.mcpEnabled()).toBe(false);
   });
 
-  it('mcpSafeUrl forwards to the app-config helper', () => {
+  it('mcpSafeUrl forwards to the app-config helper', async () => {
     expect(svc.mcpSafeUrl()).toBe(getMcpSafeUrl());
   });
 });
@@ -1161,7 +1165,7 @@ describe('pending-code store', () => {
     codeChallengeMethod: 'S256' as const,
   };
 
-  it('refuses a new code at capacity and the sweep frees it again', () => {
+  it('refuses a new code at capacity and the sweep frees it again', async () => {
     for (let i = 0; i < MAX_PENDING_CODES; i++) createAuthCode(codeParams);
 
     expect(createAuthCode(codeParams)).toBeNull();
@@ -1174,7 +1178,7 @@ describe('pending-code store', () => {
     sweepPendingCodes(Date.now() + 3 * 60 * 1000);
   });
 
-  it('a code past its TTL is consumed as invalid', () => {
+  it('a code past its TTL is consumed as invalid', async () => {
     const code = createAuthCode(codeParams)!;
     const realNow = Date.now;
     Date.now = () => realNow() + 3 * 60 * 1000;
@@ -1191,10 +1195,10 @@ describe('branches the legacy suite could not reach', () => {
     const { user } = createUser(testDb);
     const created = await makeClient(user.id);
     const clientId = (created.client as { client_id: string }).client_id;
-    const tokens = issueTokens(clientId, user.id, ['trips:read']);
+    const tokens = await issueTokens(clientId, user.id, ['trips:read']);
     testDb.prepare("UPDATE oauth_tokens SET access_token_expires_at = '2000-01-01T00:00:00.000Z'").run();
 
-    expect(getUserByAccessToken(tokens.access_token)).toBeNull();
+    expect(await getUserByAccessToken(tokens.access_token)).toBeNull();
   });
 
   it('refreshTokens rejects an unknown client before touching the token', async () => {
@@ -1205,7 +1209,7 @@ describe('branches the legacy suite could not reach', () => {
     const { user } = createUser(testDb);
     const created = await createOAuthClient(user.id, 'Public', ['https://example.com/callback'], ['trips:read'], null, { isPublic: true });
     const clientId = (created.client as { client_id: string }).client_id;
-    const tokens = issueTokens(clientId, user.id, ['trips:read']);
+    const tokens = await issueTokens(clientId, user.id, ['trips:read']);
 
     const result = await refreshTokens(tokens.refresh_token, clientId, undefined);
 
@@ -1220,8 +1224,8 @@ describe('branches the legacy suite could not reach', () => {
     const conf = await makeClient(user.id, { name: 'Confidential' });
     const confId = (conf.client as { client_id: string }).client_id;
 
-    expect(authenticateClient(pubId, undefined)?.client_id).toBe(pubId);
-    expect(authenticateClient(confId, undefined)).toBeNull();
+    expect((await authenticateClient(pubId, undefined))?.client_id).toBe(pubId);
+    expect(await authenticateClient(confId, undefined)).toBeNull();
   });
 
   it('validateAuthorizeRequest rejects a resource that is not the MCP endpoint', async () => {
@@ -1266,7 +1270,7 @@ describe('branches the legacy suite could not reach', () => {
 });
 
 describe('module-scoped OAuth state', () => {
-  it('shares the pending-code map across service instances', () => {
+  it('shares the pending-code map across service instances', async () => {
     // The load-bearing invariant: the consent controller writes the code through
     // the DI singleton, the SDK exchange path reads it back. The map is module-
     // scoped, so even a second hand-built instance must see it — two maps would
@@ -1311,7 +1315,7 @@ describe('OauthModule', () => {
 // ---------------------------------------------------------------------------
 
 describe('admin OAuth sessions', () => {
-  it('ADMIN-SVC-074 — listAllOAuthSessions survives a row with malformed scopes JSON', () => {
+  it('ADMIN-SVC-074 — listAllOAuthSessions survives a row with malformed scopes JSON', async () => {
     const { user } = createUser(testDb);
     testDb.prepare("INSERT INTO oauth_clients (client_id, client_secret_hash, name) VALUES ('c1', 'hash', 'Client')").run();
     testDb.prepare(`
@@ -1320,7 +1324,7 @@ describe('admin OAuth sessions', () => {
       VALUES ('c1', ?, 'ahash', 'rhash', 'not-json{', datetime('now', '+1 hour'), datetime('now', '+1 day'))
     `).run(user.id);
 
-    const sessions = svc.listAllOAuthSessions() as any[];
+    const sessions = (await svc.listAllOAuthSessions()) as any[];
     expect(sessions).toHaveLength(1);
     expect(sessions[0].scopes).toBeNull();
   });

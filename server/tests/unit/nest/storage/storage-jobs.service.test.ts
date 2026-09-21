@@ -30,6 +30,7 @@ import {
   MigrationTargetError,
   StorageJobsService,
 } from '../../../../src/nest/storage/storage-jobs.service';
+import { createTestUnitOfWork } from '../../../helpers/test-uow';
 
 const db = new DatabaseService(testDb);
 
@@ -56,7 +57,7 @@ afterEach(() => {
 });
 
 /** A registry whose backups category routes through mirror 'm' (nas replica). */
-function makeWorld() {
+async function makeWorld() {
   const uploadsRoot = makeTmpDir();
   const backupsRoot = makeTmpDir();
   const nasRoot = makeTmpDir();
@@ -71,8 +72,8 @@ function makeWorld() {
   );
   setSetting('storage.categories', JSON.stringify({ backups: 'm' }));
   const env = { env: () => ({ paths: {} }) } as unknown as RuntimeEnvService;
-  const registry = new StorageRegistryService(db, env, new StorageEventsService());
-  registry.onModuleInit();
+  const registry = new StorageRegistryService(db, env, new StorageEventsService(), await createTestUnitOfWork(testDb));
+  await registry.onModuleInit();
   const storage = new StorageService(registry);
   const jobs = new StorageJobsService(registry);
   return { registry, storage, jobs, backupsRoot, nasRoot };
@@ -87,7 +88,7 @@ async function waitFor(predicate: () => boolean, ms = 5000, intervalMs = 20): Pr
 }
 
 /** A registry with 'files' explicitly routed to 'uploads-local' and an unassigned 'dest-local' target. */
-function makeMigrationWorld() {
+async function makeMigrationWorld() {
   const uploadsRoot = makeTmpDir();
   const backupsRoot = makeTmpDir();
   const destRoot = makeTmpDir();
@@ -101,8 +102,8 @@ function makeMigrationWorld() {
   );
   setSetting('storage.categories', JSON.stringify({ files: 'uploads-local' }));
   const env = { env: () => ({ paths: {} }) } as unknown as RuntimeEnvService;
-  const registry = new StorageRegistryService(db, env, new StorageEventsService());
-  registry.onModuleInit();
+  const registry = new StorageRegistryService(db, env, new StorageEventsService(), await createTestUnitOfWork(testDb));
+  await registry.onModuleInit();
   const storage = new StorageService(registry);
   const jobs = new StorageJobsService(registry);
   return { registry, storage, jobs, uploadsRoot, destRoot };
@@ -114,7 +115,7 @@ function makeMigrationWorld() {
  * plus an unassigned 'dest-local' target that uses the normal prefixed
  * (mode-B) layout for every other backend.
  */
-function makePhotosGoogleMigrationWorld() {
+async function makePhotosGoogleMigrationWorld() {
   const uploadsRoot = makeTmpDir();
   const backupsRoot = makeTmpDir();
   const placePhotoRoot = makeTmpDir();
@@ -128,15 +129,15 @@ function makePhotosGoogleMigrationWorld() {
     ]),
   );
   const env = { env: () => ({ paths: { placePhotoDir: placePhotoRoot } }) } as unknown as RuntimeEnvService;
-  const registry = new StorageRegistryService(db, env, new StorageEventsService());
-  registry.onModuleInit();
+  const registry = new StorageRegistryService(db, env, new StorageEventsService(), await createTestUnitOfWork(testDb));
+  await registry.onModuleInit();
   const storage = new StorageService(registry);
   const jobs = new StorageJobsService(registry);
   return { registry, storage, jobs, placePhotoRoot, destRoot };
 }
 
 /** Combines the migration world's 'dest-local' target with the backfill world's routed mirror 'm'. */
-function makeMigrationBackfillWorld() {
+async function makeMigrationBackfillWorld() {
   const uploadsRoot = makeTmpDir();
   const backupsRoot = makeTmpDir();
   const nasRoot = makeTmpDir();
@@ -153,8 +154,8 @@ function makeMigrationBackfillWorld() {
   );
   setSetting('storage.categories', JSON.stringify({ backups: 'm', files: 'uploads-local' }));
   const env = { env: () => ({ paths: {} }) } as unknown as RuntimeEnvService;
-  const registry = new StorageRegistryService(db, env, new StorageEventsService());
-  registry.onModuleInit();
+  const registry = new StorageRegistryService(db, env, new StorageEventsService(), await createTestUnitOfWork(testDb));
+  await registry.onModuleInit();
   const storage = new StorageService(registry);
   const jobs = new StorageJobsService(registry);
   return { registry, storage, jobs, uploadsRoot, backupsRoot, nasRoot, destRoot };
@@ -176,7 +177,7 @@ async function waitTerminal(jobs: StorageJobsService, category: string) {
 
 describe('StorageJobsService', () => {
   it('JOBS-001 backfills the categories routed through the mirror and lands on done', async () => {
-    const { storage, jobs, nasRoot } = makeWorld();
+    const { storage, jobs, nasRoot } = await makeWorld();
     await storage.put('backups', 'old-backup.zip', Readable.from('zipzip'));
     fs.rmSync(path.join(nasRoot, 'old-backup.zip'), { force: true }); // simulate pre-mirror object
     jobs.startBackfill('m');
@@ -186,14 +187,14 @@ describe('StorageJobsService', () => {
     expect(fs.existsSync(path.join(nasRoot, 'old-backup.zip'))).toBe(true);
   });
 
-  it('JOBS-002 rejects an unrouted or non-mirror name with BackfillTargetError', () => {
-    const { jobs } = makeWorld();
+  it('JOBS-002 rejects an unrouted or non-mirror name with BackfillTargetError', async () => {
+    const { jobs } = await makeWorld();
     expect(() => jobs.startBackfill('nas')).toThrow(BackfillTargetError);
     expect(() => jobs.startBackfill('ghost')).toThrow(BackfillTargetError);
   });
 
   it('JOBS-003 a second start while one runs throws BackfillBusyError (global, either backend)', async () => {
-    const { storage, jobs } = makeWorld();
+    const { storage, jobs } = await makeWorld();
     for (let i = 0; i < 20; i++) await storage.put('backups', `b${i}.zip`, Readable.from('x'.repeat(1000)));
     jobs.startBackfill('m');
     expect(() => jobs.startBackfill('m')).toThrow(BackfillBusyError);
@@ -201,7 +202,7 @@ describe('StorageJobsService', () => {
   });
 
   it('JOBS-004 cancel flips a running job to cancelled; cancelling a finished/unknown one returns false', async () => {
-    const { storage, jobs } = makeWorld();
+    const { storage, jobs } = await makeWorld();
     for (let i = 0; i < 50; i++) await storage.put('backups', `c${i}.zip`, Readable.from('y'.repeat(2000)));
     jobs.startBackfill('m');
     expect(jobs.cancelBackfill('m')).toBe(true);
@@ -214,7 +215,7 @@ describe('StorageJobsService', () => {
   it('JOBS-005 finished statuses expire after the TTL', async () => {
     vi.useFakeTimers();
     try {
-      const { storage, jobs } = makeWorld();
+      const { storage, jobs } = await makeWorld();
       await storage.put('backups', 'one.zip', Readable.from('z'));
       jobs.startBackfill('m');
       // Drain the real async job under fake timers by flushing microtasks.
@@ -227,7 +228,7 @@ describe('StorageJobsService', () => {
   });
 
   it('JOBS-006 an Error rejection from driver.backfill lands the job on "error" with its message, and is logged', async () => {
-    const { jobs } = makeWorld();
+    const { jobs } = await makeWorld();
     const backfillSpy = vi.spyOn(MirrorDriver.prototype, 'backfill').mockRejectedValueOnce(new Error('replica offline'));
     const errorSpy = vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
     jobs.startBackfill('m');
@@ -239,7 +240,7 @@ describe('StorageJobsService', () => {
   });
 
   it('JOBS-006b a non-Error rejection is stringified rather than crashing', async () => {
-    const { jobs } = makeWorld();
+    const { jobs } = await makeWorld();
     const backfillSpy = vi.spyOn(MirrorDriver.prototype, 'backfill').mockRejectedValueOnce('replica gone');
     vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
     jobs.startBackfill('m');
@@ -249,7 +250,7 @@ describe('StorageJobsService', () => {
   });
 
   it('JOBS-007 withTtl builds a service whose finished jobs expire on the given (short) TTL, not the 10-minute default', async () => {
-    const { registry, storage } = makeWorld();
+    const { registry, storage } = await makeWorld();
     await storage.put('backups', 'q.zip', Readable.from('q'));
     const jobs = StorageJobsService.withTtl(registry, 50);
     jobs.startBackfill('m');
@@ -259,7 +260,7 @@ describe('StorageJobsService', () => {
   });
 
   it('JOBS-008 while a backfill is running, starting an unknown/non-mirror name throws BackfillTargetError, not BackfillBusyError', async () => {
-    const { storage, jobs } = makeWorld();
+    const { storage, jobs } = await makeWorld();
     for (let i = 0; i < 20; i++) await storage.put('backups', `d${i}.zip`, Readable.from('x'.repeat(1000)));
     jobs.startBackfill('m');
     expect(() => jobs.startBackfill('ghost')).toThrow(BackfillTargetError);
@@ -270,14 +271,14 @@ describe('StorageJobsService', () => {
 
 describe('StorageJobsService migrations', () => {
   it('MIG-001 happy path: copies, flips the category, sweeps a raced write, tallies reclaimable', async () => {
-    const { storage, jobs, uploadsRoot, destRoot } = makeMigrationWorld();
+    const { storage, jobs, uploadsRoot, destRoot } = await makeMigrationWorld();
     // Sized up (not slept) so the copy phase has real work left when we poll
     // for enumeration-done — a few bytes would finish before the first poll tick.
     const big = 'a'.repeat(4_000_000);
     await storage.put('files', 'a.txt', Readable.from(big));
     await storage.put('files', 'b.txt', Readable.from(big.replace(/a/g, 'b')));
 
-    jobs.startMigration('files', 'dest-local');
+    await jobs.startMigration('files', 'dest-local');
     // Enumeration done — write the raced third object before the copy phase settles.
     // Tight poll interval: the window between "total > 0" and job completion is narrow.
     await waitFor(
@@ -301,13 +302,13 @@ describe('StorageJobsService migrations', () => {
   });
 
   it('MIG-002 a copy failure blocks the flip and ends failed', async () => {
-    const { storage, jobs, destRoot } = makeMigrationWorld();
+    const { storage, jobs, destRoot } = await makeMigrationWorld();
     await storage.put('files', 'a.txt', Readable.from('aaa'));
     await storage.put('files', 'b.txt', Readable.from('bbb'));
     // Pre-create a DIRECTORY at the target key path so the put's rename fails.
     fs.mkdirSync(path.join(destRoot, 'files', 'a.txt'), { recursive: true });
 
-    jobs.startMigration('files', 'dest-local');
+    await jobs.startMigration('files', 'dest-local');
     const final = await waitTerminal(jobs, 'files');
     expect(final.status).toBe('failed');
     expect(final.failed).toBeGreaterThan(0);
@@ -315,12 +316,12 @@ describe('StorageJobsService migrations', () => {
   });
 
   it('MIG-003 cancel before the flip leaves everything untouched', async () => {
-    const { storage, jobs } = makeMigrationWorld();
+    const { storage, jobs } = await makeMigrationWorld();
     // Many, largish objects (not sleeps) so the copy phase is still running
     // when we poll for done >= 1 and issue the cancel.
     for (let i = 0; i < 100; i++) await storage.put('files', `f${i}.txt`, Readable.from('x'.repeat(100_000)));
 
-    jobs.startMigration('files', 'dest-local');
+    await jobs.startMigration('files', 'dest-local');
     await waitFor(() => jobs.migrationStatuses().some((m) => m.category === 'files' && m.done >= 1), 5000, 1);
     expect(jobs.cancelMigration('files')).toBe(true);
 
@@ -333,13 +334,17 @@ describe('StorageJobsService migrations', () => {
     // Deterministic route (no timing race): an EMPTY category never enters
     // either copy loop, so the only place a cancel can be observed is the
     // guard between the failed-check and the flip. `cancelMigration` is
-    // called synchronously right after `startMigration` returns — the
+    // called synchronously right after `startMigration`'s own body runs — the
     // detached runMigration's first `for await` suspends on a microtask
     // before doing any work, so this synchronous call always lands the
-    // cancel flag before the async function resumes.
-    const { jobs } = makeMigrationWorld(); // 'files' has zero objects
-    jobs.startMigration('files', 'dest-local');
+    // cancel flag before the async function resumes. `startMigration` is now
+    // async, so its promise is held and awaited AFTER the cancel rather than
+    // before it: awaiting first would hand runMigration a turn and the flip
+    // could land before the cancel.
+    const { jobs } = await makeMigrationWorld(); // 'files' has zero objects
+    const started = jobs.startMigration('files', 'dest-local');
     expect(jobs.cancelMigration('files')).toBe(true);
+    await started;
 
     const final = await waitTerminal(jobs, 'files');
     expect(final.status).toBe('cancelled');
@@ -347,33 +352,33 @@ describe('StorageJobsService migrations', () => {
   });
 
   it('MIG-004 validations: 400s, 404, and 409 against a running backfill (and vice versa)', async () => {
-    const { storage, jobs } = makeMigrationBackfillWorld();
-    expect(() => jobs.startMigration('files', 'uploads-local')).toThrow(MigrationRequestError); // to === current
-    expect(() => jobs.startMigration('nope' as never, 'dest-local')).toThrow(MigrationRequestError);
-    expect(() => jobs.startMigration('files', 'ghost')).toThrow(MigrationTargetError);
+    const { storage, jobs } = await makeMigrationBackfillWorld();
+    await expect(jobs.startMigration('files', 'uploads-local')).rejects.toThrow(MigrationRequestError); // to === current
+    await expect(jobs.startMigration('nope' as never, 'dest-local')).rejects.toThrow(MigrationRequestError);
+    await expect(jobs.startMigration('files', 'ghost')).rejects.toThrow(MigrationTargetError);
 
     // A running backfill blocks a migration start.
     for (let i = 0; i < 20; i++) await storage.put('backups', `b${i}.zip`, Readable.from('x'.repeat(1000)));
     jobs.startBackfill('m');
-    expect(() => jobs.startMigration('files', 'dest-local')).toThrow(BackfillBusyError);
+    await expect(jobs.startMigration('files', 'dest-local')).rejects.toThrow(BackfillBusyError);
     await waitFor(() => jobs.statuses().some((s) => s.status !== 'running'));
 
     // A running migration blocks a backfill start too.
     await storage.put('files', 'a.txt', Readable.from('a'.repeat(5000)));
-    jobs.startMigration('files', 'dest-local');
+    await jobs.startMigration('files', 'dest-local');
     expect(() => jobs.startBackfill('m')).toThrow(BackfillBusyError);
     await waitFor(() => jobs.migrationStatuses().some((m) => m.status !== 'running'));
   });
 
   it('MIG-005 an object already on the target with a matching size is skipped in the copy phase itself', async () => {
-    const { storage, jobs, destRoot } = makeMigrationWorld();
+    const { storage, jobs, destRoot } = await makeMigrationWorld();
     await storage.put('files', 'a.txt', Readable.from('aaa'));
     // Pre-populate the destination with a byte-identical copy — the shape of
     // a retried/resumed migration, not just the delta sweep's territory.
     fs.mkdirSync(path.join(destRoot, 'files'), { recursive: true });
     fs.writeFileSync(path.join(destRoot, 'files', 'a.txt'), 'aaa');
 
-    jobs.startMigration('files', 'dest-local');
+    await jobs.startMigration('files', 'dest-local');
     const final = await waitTerminal(jobs, 'files');
     expect(final.status).toBe('done');
     expect(final.skipped).toBeGreaterThanOrEqual(1);
@@ -382,7 +387,7 @@ describe('StorageJobsService migrations', () => {
   });
 
   it('MIG-006 a sweep-phase copy failure is reported without undoing the already-flipped category', async () => {
-    const { storage, jobs, registry, uploadsRoot, destRoot } = makeMigrationWorld();
+    const { storage, jobs, registry, uploadsRoot, destRoot } = await makeMigrationWorld();
     await storage.put('files', 'a.txt', Readable.from('aaa'));
 
     // Grab the exact driver instance startMigration will resolve and keep for
@@ -404,7 +409,7 @@ describe('StorageJobsService migrations', () => {
       return originalList(prefix);
     });
 
-    jobs.startMigration('files', 'dest-local');
+    await jobs.startMigration('files', 'dest-local');
     const final = await waitTerminal(jobs, 'files');
     expect(final.status).toBe('done'); // sweep failures don't undo a completed flip
     expect(final.failed).toBeGreaterThanOrEqual(1);
@@ -412,11 +417,11 @@ describe('StorageJobsService migrations', () => {
   });
 
   it('MIG-008 photos-google mode-A (bare "" prefix) migrating to a prefixed backend rewrites destination keys (audit #8)', async () => {
-    const { storage, jobs, placePhotoRoot, destRoot } = makePhotosGoogleMigrationWorld();
+    const { storage, jobs, placePhotoRoot, destRoot } = await makePhotosGoogleMigrationWorld();
     await storage.put('photos-google', 'abc.jpg', Readable.from('img-a'));
     await storage.put('photos-google', 'sub/def.jpg', Readable.from('img-b'));
 
-    jobs.startMigration('photos-google', 'dest-local');
+    await jobs.startMigration('photos-google', 'dest-local');
     const final = await waitTerminal(jobs, 'photos-google');
 
     expect(final.status).toBe('done');
@@ -434,7 +439,7 @@ describe('StorageJobsService migrations', () => {
   });
 
   it('MIG-009 the skip-check on a rewritten-prefix migration stats the DESTINATION key, not the source key', async () => {
-    const { storage, jobs, destRoot } = makePhotosGoogleMigrationWorld();
+    const { storage, jobs, destRoot } = await makePhotosGoogleMigrationWorld();
     await storage.put('photos-google', 'abc.jpg', Readable.from('same-bytes'));
     // Pre-populate the destination at the REWRITTEN key with matching size —
     // if the skip-check mistakenly stat'd the bare source key on the target,
@@ -442,7 +447,7 @@ describe('StorageJobsService migrations', () => {
     fs.mkdirSync(path.join(destRoot, 'photos', 'google'), { recursive: true });
     fs.writeFileSync(path.join(destRoot, 'photos', 'google', 'abc.jpg'), 'same-bytes');
 
-    jobs.startMigration('photos-google', 'dest-local');
+    await jobs.startMigration('photos-google', 'dest-local');
     const final = await waitTerminal(jobs, 'photos-google');
 
     expect(final.status).toBe('done');
@@ -452,11 +457,11 @@ describe('StorageJobsService migrations', () => {
   });
 
   it('MIG-010 the delta sweep rewrites a raced object\'s destination key too', async () => {
-    const { storage, jobs, placePhotoRoot, destRoot } = makePhotosGoogleMigrationWorld();
+    const { storage, jobs, placePhotoRoot, destRoot } = await makePhotosGoogleMigrationWorld();
     const big = 'x'.repeat(2_000_000);
     await storage.put('photos-google', 'a.jpg', Readable.from(big));
 
-    jobs.startMigration('photos-google', 'dest-local');
+    await jobs.startMigration('photos-google', 'dest-local');
     await waitFor(
       () => jobs.migrationStatuses().some((m) => m.category === 'photos-google' && m.total > 0),
       5000,
@@ -474,10 +479,10 @@ describe('StorageJobsService migrations', () => {
   });
 
   it('MIG-011 equal-prefix migrations (files -> dest-local) stay byte-identical: destination key equals the source key', async () => {
-    const { storage, jobs, destRoot } = makeMigrationWorld();
+    const { storage, jobs, destRoot } = await makeMigrationWorld();
     await storage.put('files', 'a.txt', Readable.from('aaa'));
 
-    jobs.startMigration('files', 'dest-local');
+    await jobs.startMigration('files', 'dest-local');
     const final = await waitTerminal(jobs, 'files');
 
     expect(final.status).toBe('done');
@@ -491,7 +496,7 @@ describe('StorageJobsService migrations', () => {
 
 describe('StorageJobsService.cancelJobsForMissingBackends', () => {
   it('JOBS-020 cancels a running backfill whose mirror left the config', async () => {
-    const { storage, jobs, registry } = makeWorld();
+    const { storage, jobs, registry } = await makeWorld();
     for (let i = 0; i < 50; i++) await storage.put('backups', `c${i}.zip`, Readable.from('y'.repeat(2000)));
     jobs.startBackfill('m');
     await waitFor(() => jobs.statuses().some((s) => s.backend === 'm' && s.done >= 1), 5000, 1);
@@ -500,7 +505,7 @@ describe('StorageJobsService.cancelJobsForMissingBackends', () => {
     // to the built-in default ('backups-local'), a self-consistent config.
     setSetting('storage.backends', JSON.stringify([]));
     setSetting('storage.categories', JSON.stringify({}));
-    registry.reload();
+    await registry.reload();
 
     jobs.cancelJobsForMissingBackends();
     await waitFor(() => jobs.statuses().some((s) => s.backend === 'm' && s.status !== 'running'));
@@ -525,13 +530,13 @@ describe('StorageJobsService.cancelJobsForMissingBackends', () => {
     );
     setSetting('storage.categories', JSON.stringify({ files: 'nas' }));
     const env = { env: () => ({ paths: {} }) } as unknown as RuntimeEnvService;
-    const registry = new StorageRegistryService(db, env, new StorageEventsService());
-    registry.onModuleInit();
+    const registry = new StorageRegistryService(db, env, new StorageEventsService(), await createTestUnitOfWork(testDb));
+    await registry.onModuleInit();
     const storage = new StorageService(registry);
     const jobs = new StorageJobsService(registry);
 
     for (let i = 0; i < 100; i++) await storage.put('files', `f${i}.txt`, Readable.from('x'.repeat(100_000)));
-    jobs.startMigration('files', 'dest-local');
+    await jobs.startMigration('files', 'dest-local');
     await waitFor(() => jobs.migrationStatuses().some((m) => m.category === 'files' && m.done >= 1), 5000, 1);
 
     // Simulate a config save: 'files' is rerouted to 'uploads-local' and the
@@ -546,7 +551,7 @@ describe('StorageJobsService.cancelJobsForMissingBackends', () => {
       ]),
     );
     setSetting('storage.categories', JSON.stringify({ files: 'uploads-local' }));
-    registry.reload();
+    await registry.reload();
 
     jobs.cancelJobsForMissingBackends();
     const final = await waitTerminal(jobs, 'files');
@@ -554,9 +559,9 @@ describe('StorageJobsService.cancelJobsForMissingBackends', () => {
   });
 
   it('JOBS-022 cancels a running migration re-routed to a third, still-defined backend (route no longer matches `from`)', async () => {
-    const { storage, jobs, registry } = makeMigrationWorld(); // 'files' -> 'uploads-local'; 'dest-local' is the target
+    const { storage, jobs, registry } = await makeMigrationWorld(); // 'files' -> 'uploads-local'; 'dest-local' is the target
     for (let i = 0; i < 100; i++) await storage.put('files', `f${i}.txt`, Readable.from('x'.repeat(100_000)));
-    jobs.startMigration('files', 'dest-local');
+    await jobs.startMigration('files', 'dest-local');
     await waitFor(() => jobs.migrationStatuses().some((m) => m.category === 'files' && m.done >= 1), 5000, 1);
 
     // A config save re-routes 'files' to a THIRD backend — both the
@@ -574,7 +579,7 @@ describe('StorageJobsService.cancelJobsForMissingBackends', () => {
       ]),
     );
     setSetting('storage.categories', JSON.stringify({ files: 'third-local' }));
-    registry.reload();
+    await registry.reload();
 
     jobs.cancelJobsForMissingBackends();
     const final = await waitTerminal(jobs, 'files');
@@ -583,9 +588,9 @@ describe('StorageJobsService.cancelJobsForMissingBackends', () => {
   });
 
   it('JOBS-023 a save that does not touch the migrating category leaves it running', async () => {
-    const { storage, jobs, registry } = makeMigrationWorld();
+    const { storage, jobs, registry } = await makeMigrationWorld();
     for (let i = 0; i < 100; i++) await storage.put('files', `f${i}.txt`, Readable.from('x'.repeat(100_000)));
-    jobs.startMigration('files', 'dest-local');
+    await jobs.startMigration('files', 'dest-local');
     await waitFor(() => jobs.migrationStatuses().some((m) => m.category === 'files' && m.done >= 1), 5000, 1);
 
     // A save that touches an unrelated category only — 'files' route is untouched.

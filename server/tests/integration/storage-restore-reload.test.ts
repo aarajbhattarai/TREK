@@ -35,6 +35,7 @@ import type { RuntimeEnvService } from '../../src/nest/app-config/runtime-env.se
 import { StorageEventsService } from '../../src/nest/storage/storage-events.service';
 import { BACKENDS_KEY, CATEGORIES_KEY, StorageRegistryService } from '../../src/nest/storage/storage-registry.service';
 import { StorageService } from '../../src/nest/storage/storage.service';
+import { createTestUnitOfWork } from '../helpers/test-uow';
 
 const testDb = new Database(':memory:');
 testDb.exec('PRAGMA journal_mode = WAL');
@@ -80,8 +81,8 @@ describe('C6 — restore reloads the storage registry (audit #4)', () => {
     ]);
     setSetting(CATEGORIES_KEY, { files: 'nas-a' });
 
-    const registry = new StorageRegistryService(db, envStub(), new StorageEventsService());
-    registry.onModuleInit();
+    const registry = new StorageRegistryService(db, envStub(), new StorageEventsService(), await createTestUnitOfWork(testDb));
+    await registry.onModuleInit();
     const storage = new StorageService(registry);
 
     expect(registry.resolve('files').backendName).toBe('nas-a');
@@ -105,7 +106,7 @@ describe('C6 — restore reloads the storage registry (audit #4)', () => {
     // The fix under test: StorageService.reloadConfig(), the narrow passthrough
     // restoreFromZip now calls right after reinitialize() and right before
     // rehydration (see backup.impl.ts).
-    storage.reloadConfig();
+    await storage.reloadConfig();
 
     expect(registry.resolve('files').backendName).toBe('nas-b');
 

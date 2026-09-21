@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import { Injectable, Logger, type OnModuleInit } from '@nestjs/common';
 import { STORAGE_BACKEND_TYPES, storageConfigSchema } from '@trek/shared';
 import { DatabaseService } from '../database/database.service';
+import { UnitOfWork } from '../database/unit-of-work';
 import { RuntimeEnvService } from '../app-config/runtime-env.service';
 import { decrypt_api_key } from '../common/crypto/apiKeyCrypto';
 import { LocalDriver } from './drivers/local.driver';
@@ -133,16 +134,17 @@ export class StorageRegistryService implements OnModuleInit {
     private readonly db: DatabaseService,
     private readonly env: RuntimeEnvService,
     private readonly events: StorageEventsService,
+    private readonly uow: UnitOfWork,
   ) {}
 
-  onModuleInit(): void {
-    this.seedFromFileOnce();
-    this.load(true);
+  async onModuleInit(): Promise<void> {
+    await this.seedFromFileOnce();
+    await this.load(true);
   }
 
   /** Re-read settings, validate, atomically swap. In-flight ops keep their resolved instances. */
-  reload(): void {
-    this.load(false);
+  async reload(): Promise<void> {
+    await this.load(false);
   }
 
   /**
@@ -200,8 +202,8 @@ export class StorageRegistryService implements OnModuleInit {
   }
 
   /** Current optimistic-concurrency counter — 0 when never bumped (fresh install). */
-  currentConfigVersion(): number {
-    return readConfigVersion(this.db);
+  async currentConfigVersion(): Promise<number> {
+    return await readConfigVersion(this.db);
   }
 
   /** Non-null when the last load() fell back (last-good config or built-in defaults) — null once a load succeeds. */
@@ -218,7 +220,7 @@ export class StorageRegistryService implements OnModuleInit {
    * PUT built against the pre-flip version now conflicts instead of silently
    * overwriting this assignment.
    */
-  assignCategory(category: StorageCategory, backend: string): void {
+  async assignCategory(category: StorageCategory, backend: string): Promise<void> {
     // Belt-and-braces alongside the migration job's own pre-flip cancel guard:
     // never persist a category pointing at a backend that doesn't exist in
     // the current snapshot (e.g. a config save removed it mid-migration).
@@ -240,17 +242,17 @@ export class StorageRegistryService implements OnModuleInit {
         `cannot assign '${category}' to '${backend}' — '${owner}' is a mirror replica of '${holder.name}', and that mirror's sync sweep would delete the category's objects`,
       );
     }
-    const stored = new Map(parseCategoryMap(this.readSettings().categories));
+    const stored = new Map(parseCategoryMap((await this.readSettings()).categories));
     stored.set(category, backend);
     const next = Object.fromEntries(stored);
-    this.db.transaction(() => {
+    await this.uow.transactional(async () => {
       const upsert = this.db.prepare(
         'INSERT INTO app_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value',
       );
       upsert.run(CATEGORIES_KEY, JSON.stringify(next));
-      upsert.run(VERSION_KEY, String(readConfigVersion(this.db) + 1));
+      upsert.run(VERSION_KEY, String((await readConfigVersion(this.db)) + 1));
     });
-    this.reload();
+    await this.reload();
   }
 
   recordReplicaFailure(failure: ReplicaFailure): void {
@@ -275,7 +277,7 @@ export class StorageRegistryService implements OnModuleInit {
    * Recovery: stop the server, DELETE FROM app_settings WHERE key LIKE
    * 'storage.%', restart (documented in the README with slice 3).
    */
-  private seedFromFileOnce(): void {
+  private async seedFromFileOnce(): Promise<void> {
     const rowCount = this.db.get<{ n: number }>(
       'SELECT COUNT(*) AS n FROM app_settings WHERE key IN (?, ?)',
       BACKENDS_KEY,
@@ -313,7 +315,7 @@ export class StorageRegistryService implements OnModuleInit {
       return fail(err instanceof Error ? err.message : String(err));
     }
     const encrypted = encryptStorageSecrets(config);
-    this.db.transaction(() => {
+    await this.uow.transactional(async () => {
       const upsert = this.db.prepare(
         'INSERT INTO app_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value',
       );
@@ -330,9 +332,9 @@ export class StorageRegistryService implements OnModuleInit {
    * state is kept (at boot, when there is no previous state, the built-in
    * defaults — which cannot be misconfigured — are loaded instead).
    */
-  private load(boot: boolean): void {
+  private async load(boot: boolean): Promise<void> {
     try {
-      this.state = this.build(this.readSettings(), boot);
+      this.state = this.build(await this.readSettings(), boot);
       this.loadFailure = null;
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
@@ -345,7 +347,7 @@ export class StorageRegistryService implements OnModuleInit {
     }
   }
 
-  private readSettings(): { backends: unknown; categories: unknown } {
+  private async readSettings(): Promise<{ backends: unknown; categories: unknown }> {
     const read = (key: string): unknown => {
       const row = this.db.get<{ value: string }>('SELECT value FROM app_settings WHERE key = ?', key);
       if (!row?.value) return undefined;
@@ -480,7 +482,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 /** Raw read of the version counter row — 0 for an absent/garbage row (fresh install, or a hand-edited DB). */
-function readConfigVersion(db: DatabaseService): number {
+async function readConfigVersion(db: DatabaseService): Promise<number> {
   const row = db.get<{ value: string }>('SELECT value FROM app_settings WHERE key = ?', VERSION_KEY);
   const parsed = row?.value ? Number.parseInt(row.value, 10) : 0;
   return Number.isFinite(parsed) ? parsed : 0;

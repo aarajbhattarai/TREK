@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import Database from 'better-sqlite3';
 import { RouteUsageService, RETENTION_DAYS } from '../../../src/nest/route-usage/route-usage.service';
 import type { RouteUsageEntry } from '@trek/shared';
+import { createTestUnitOfWork } from '../../helpers/test-uow';
 
 /**
  * SRV-ROUTEUSAGE-001..010 — the counters behind "could TREK host a router".
@@ -27,14 +28,15 @@ function makeDb(): Database.Database {
 }
 
 /** The slice of DatabaseService this domain uses. */
-function serviceOver(db: Database.Database): RouteUsageService {
+async function serviceOver(db: Database.Database): Promise<RouteUsageService> {
   const bridge = {
     get: <T>(sql: string, ...p: unknown[]) => db.prepare(sql).get(...p) as T | undefined,
     all: <T>(sql: string, ...p: unknown[]) => db.prepare(sql).all(...p) as T[],
     run: (sql: string, ...p: unknown[]) => db.prepare(sql).run(...p),
-    transaction: <T>(fn: () => T) => db.transaction(fn)(),
   };
-  return new RouteUsageService(bridge as never);
+  // The batch transaction runs through MikroORM on this very handle now, so the
+  // raw statements inside the callback still land inside it.
+  return new RouteUsageService(bridge as never, await createTestUnitOfWork(db));
 }
 
 const entry = (over: Partial<RouteUsageEntry> = {}): RouteUsageEntry => ({
@@ -46,44 +48,44 @@ describe('RouteUsageService', () => {
   let db: Database.Database;
   let svc: RouteUsageService;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     db = makeDb();
-    svc = serviceOver(db);
+    svc = await serviceOver(db);
   });
 
-  it('SRV-ROUTEUSAGE-001: counting is on unless an operator turned it off', () => {
-    expect(svc.enabled()).toBe(true);
+  it('SRV-ROUTEUSAGE-001: counting is on unless an operator turned it off', async () => {
+    expect(await svc.enabled()).toBe(true);
     db.prepare("INSERT INTO app_settings (key, value) VALUES ('route_usage_enabled', 'false')").run();
-    expect(svc.enabled()).toBe(false);
+    expect(await svc.enabled()).toBe(false);
   });
 
-  it('SRV-ROUTEUSAGE-002: a switched-off instance records nothing and says so', () => {
+  it('SRV-ROUTEUSAGE-002: a switched-off instance records nothing and says so', async () => {
     db.prepare("INSERT INTO app_settings (key, value) VALUES ('route_usage_enabled', 'false')").run();
-    expect(svc.record({ entries: [entry()] })).toBe(false);
+    expect(await svc.record({ entries: [entry()] })).toBe(false);
     expect(db.prepare('SELECT COUNT(*) c FROM route_usage_daily').get()).toEqual({ c: 0 });
   });
 
-  it('SRV-ROUTEUSAGE-003: a batch adds onto one row per day, profile, kind and engine', () => {
-    svc.record({ entries: [entry({ requests: 5, waypoints: 12, km: 300, failed: 1 })] });
-    svc.record({ entries: [entry({ requests: 3, waypoints: 6, km: 150, failed: 0 })] });
+  it('SRV-ROUTEUSAGE-003: a batch adds onto one row per day, profile, kind and engine', async () => {
+    await svc.record({ entries: [entry({ requests: 5, waypoints: 12, km: 300, failed: 1 })] });
+    await svc.record({ entries: [entry({ requests: 3, waypoints: 6, km: 150, failed: 0 })] });
 
-    const rows = svc.rows();
+    const rows = await svc.rows();
     expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({ requests: 8, waypoints: 18, km: 450, failed: 1 });
   });
 
-  it('SRV-ROUTEUSAGE-004: a different kind or engine is its own row', () => {
-    svc.record({ entries: [
+  it('SRV-ROUTEUSAGE-004: a different kind or engine is its own row', async () => {
+    await svc.record({ entries: [
       entry({ surface: 'legs' }),
       entry({ surface: 'alternatives' }),
       entry({ surface: 'legs', selfHosted: true }),
       entry({ surface: 'legs', profile: 'walking' }),
     ] });
-    expect(svc.rows()).toHaveLength(4);
+    expect(await svc.rows()).toHaveLength(4);
   });
 
-  it('SRV-ROUTEUSAGE-005: an empty corpus answers with zeroes rather than nothing', () => {
-    const s = svc.summary();
+  it('SRV-ROUTEUSAGE-005: an empty corpus answers with zeroes rather than nothing', async () => {
+    const s = await svc.summary();
     expect(s.totalRequests).toBe(0);
     expect(s.daysCovered).toBe(0);
     expect(s.busiestDay).toBeNull();
@@ -91,12 +93,12 @@ describe('RouteUsageService', () => {
     expect(s.retentionDays).toBe(RETENTION_DAYS);
   });
 
-  it('SRV-ROUTEUSAGE-006: the summary carries the per-day average and the busiest day', () => {
+  it('SRV-ROUTEUSAGE-006: the summary carries the per-day average and the busiest day', async () => {
     // Two days by hand: the service always writes "today", so the spread is set here.
     db.prepare(`INSERT INTO route_usage_daily VALUES ('2026-09-01','driving','legs',0,10,30,900,0)`).run();
     db.prepare(`INSERT INTO route_usage_daily VALUES ('2026-09-02','driving','legs',0,30,60,1800,2)`).run();
 
-    const s = svc.summary();
+    const s = await svc.summary();
     expect(s.totalRequests).toBe(40);
     expect(s.totalFailed).toBe(2);
     expect(s.daysCovered).toBe(2);
@@ -107,30 +109,30 @@ describe('RouteUsageService', () => {
     expect(s.lastDay).toBe('2026-09-02');
   });
 
-  it('SRV-ROUTEUSAGE-007: mean waypoints and kilometres are per request, not per row', () => {
+  it('SRV-ROUTEUSAGE-007: mean waypoints and kilometres are per request, not per row', async () => {
     db.prepare(`INSERT INTO route_usage_daily VALUES ('2026-09-01','driving','legs',0,4,20,400,0)`).run();
-    const s = svc.summary();
+    const s = await svc.summary();
     expect(s.waypointsPerRequest).toBe(5);
     expect(s.kmPerRequest).toBe(100);
   });
 
-  it('SRV-ROUTEUSAGE-008: the self-hosted share is the part already off the public hosts', () => {
+  it('SRV-ROUTEUSAGE-008: the self-hosted share is the part already off the public hosts', async () => {
     db.prepare(`INSERT INTO route_usage_daily VALUES ('2026-09-01','driving','legs',0,30,0,0,0)`).run();
     db.prepare(`INSERT INTO route_usage_daily VALUES ('2026-09-01','driving','legs',1,10,0,0,0)`).run();
-    expect(svc.summary().selfHostedShare).toBe(0.25);
+    expect((await svc.summary()).selfHostedShare).toBe(0.25);
   });
 
-  it('SRV-ROUTEUSAGE-009: retention drops days past the window and keeps the rest', () => {
+  it('SRV-ROUTEUSAGE-009: retention drops days past the window and keeps the rest', async () => {
     db.prepare(`INSERT INTO route_usage_daily VALUES (date('now','-1 day'),'driving','legs',0,1,0,0,0)`).run();
     db.prepare(`INSERT INTO route_usage_daily VALUES (date('now','-${RETENTION_DAYS + 5} days'),'driving','legs',0,1,0,0,0)`).run();
 
-    expect(svc.purgeExpired()).toBe(1);
-    expect(svc.rows()).toHaveLength(1);
+    expect(await svc.purgeExpired()).toBe(1);
+    expect(await svc.rows()).toHaveLength(1);
   });
 
-  it('SRV-ROUTEUSAGE-010: clearing wipes every counter', () => {
-    svc.record({ entries: [entry(), entry({ surface: 'route' })] });
-    expect(svc.clear()).toBe(2);
-    expect(svc.rows()).toHaveLength(0);
+  it('SRV-ROUTEUSAGE-010: clearing wipes every counter', async () => {
+    await svc.record({ entries: [entry(), entry({ surface: 'route' })] });
+    expect(await svc.clear()).toBe(2);
+    expect(await svc.rows()).toHaveLength(0);
   });
 });

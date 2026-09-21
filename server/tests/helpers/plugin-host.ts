@@ -93,7 +93,7 @@ export async function createPluginRpcHostFactory(dbs: DatabaseService): Promise<
   const budget = new BudgetService(dbs, permissions, exchangeRates, realtime, await createTestUnitOfWork(dbs.connection));
   const addons = new AddonsService(dbs);
   const queryHelpers = new QueryHelpersService(dbs);
-  const todos = new TodoService(dbs, permissions, realtime);
+  const todos = new TodoService(dbs, permissions, realtime, await createTestUnitOfWork(dbs.connection));
   const packing = new PackingService(dbs, permissions, realtime, notificationsStub());
   const files = new FilesService(dbs, permissions, realtime, new EphemeralTokenService(), generalStorage);
   const collab = new CollabService(dbs, permissions, realtime, notificationsStub(), generalStorage, new RateLimitService());

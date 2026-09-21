@@ -562,7 +562,7 @@ describe('AddonsService place shadow flag', () => {
       expect(await svc().getPlaceShadow()).toEqual({ enabled: expected });
       expect(dbMock._stmt.get).toHaveBeenLastCalledWith('place_shadow_enabled');
 
-      expect(shadow.enabled()).toBe(expected);
+      expect(await shadow.enabled()).toBe(expected);
       expect(dbMock.prepare).toHaveBeenLastCalledWith(
         "SELECT value FROM app_settings WHERE key = 'place_shadow_enabled'",
       );

@@ -280,7 +280,7 @@ export class TripsMcp {
     const canReadCollab  = collabEnabled  && canRead(ctx.scopes, 'collab');
     const canReadTodos   = packingEnabled && canRead(ctx.scopes, 'todos');
     const canReadRes     = canRead(ctx.scopes, 'reservations');
-    const todos = canReadTodos ? this.todos.listItems(tripId) : [];
+    const todos = canReadTodos ? await this.todos.listItems(tripId) : [];
     let pollCount = 0;
     let messageCount = 0;
     if (canReadCollab) {

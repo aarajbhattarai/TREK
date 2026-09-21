@@ -53,7 +53,8 @@ import { UnitOfWork } from '../../../src/nest/database/unit-of-work';
 
 let svc: TodoService;
 beforeAll(async () => {
-  svc = new TodoService(new DatabaseService(testDb), new PermissionsService(new DatabaseService(testDb), await createTestUnitOfWork(testDb)), new RealtimeService());
+  const uow = await createTestUnitOfWork(testDb);
+  svc = new TodoService(new DatabaseService(testDb), new PermissionsService(new DatabaseService(testDb), uow), new RealtimeService(), uow);
 });
 
 beforeAll(() => {
@@ -72,27 +73,27 @@ afterAll(() => {
 // ── verifyTripAccess ──────────────────────────────────────────────────────────
 
 describe('verifyTripAccess', () => {
-  it('TODO-SVC-001: returns trip for owner', () => {
+  it('TODO-SVC-001: returns trip for owner', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
-    const result = svc.verifyTripAccess(trip.id, user.id);
+    const result = await svc.verifyTripAccess(trip.id, user.id);
     expect(result).toBeDefined();
     expect(result?.id).toBe(trip.id);
   });
 
-  it('TODO-SVC-002: returns null for non-member', () => {
+  it('TODO-SVC-002: returns null for non-member', async () => {
     const { user: owner } = createUser(testDb);
     const { user: stranger } = createUser(testDb);
     const trip = createTrip(testDb, owner.id);
-    expect(svc.verifyTripAccess(trip.id, stranger.id)).toBeFalsy();
+    expect(await svc.verifyTripAccess(trip.id, stranger.id)).toBeFalsy();
   });
 
-  it('TODO-SVC-003: returns trip for member', () => {
+  it('TODO-SVC-003: returns trip for member', async () => {
     const { user: owner } = createUser(testDb);
     const { user: member } = createUser(testDb);
     const trip = createTrip(testDb, owner.id);
     addTripMember(testDb, trip.id, member.id);
-    const result = svc.verifyTripAccess(trip.id, member.id);
+    const result = await svc.verifyTripAccess(trip.id, member.id);
     expect(result).toBeDefined();
   });
 });
@@ -100,16 +101,16 @@ describe('verifyTripAccess', () => {
 // ── listItems / createItem ────────────────────────────────────────────────────
 
 describe('listItems and createItem', () => {
-  it('TODO-SVC-004: listItems returns empty array for new trip', () => {
+  it('TODO-SVC-004: listItems returns empty array for new trip', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
-    expect(svc.listItems(trip.id)).toEqual([]);
+    expect(await svc.listItems(trip.id)).toEqual([]);
   });
 
-  it('TODO-SVC-005: createItem inserts a todo with name only', () => {
+  it('TODO-SVC-005: createItem inserts a todo with name only', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
-    const item = svc.createItem(trip.id, { name: 'Buy snacks' }) as any;
+    const item = (await svc.createItem(trip.id, { name: 'Buy snacks' })) as any;
     expect(item).toBeDefined();
     expect(item.name).toBe('Buy snacks');
     expect(item.checked).toBe(0);
@@ -117,35 +118,35 @@ describe('listItems and createItem', () => {
     expect(item.sort_order).toBe(0);
   });
 
-  it('TODO-SVC-006: createItem assigns incrementing sort_order', () => {
+  it('TODO-SVC-006: createItem assigns incrementing sort_order', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
-    const a = svc.createItem(trip.id, { name: 'A' }) as any;
-    const b = svc.createItem(trip.id, { name: 'B' }) as any;
+    const a = (await svc.createItem(trip.id, { name: 'A' })) as any;
+    const b = (await svc.createItem(trip.id, { name: 'B' })) as any;
     expect(b.sort_order).toBe(a.sort_order + 1);
   });
 
-  it('TODO-SVC-007: createItem stores optional fields', () => {
+  it('TODO-SVC-007: createItem stores optional fields', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
-    const item = svc.createItem(trip.id, {
+    const item = (await svc.createItem(trip.id, {
       name: 'Pack bag',
       category: 'Prep',
       description: 'All the gear',
       priority: 3,
-    }) as any;
+    })) as any;
     expect(item.category).toBe('Prep');
     expect(item.description).toBe('All the gear');
     expect(item.priority).toBe(3);
   });
 
-  it('TODO-SVC-008: listItems returns items ordered by sort_order', () => {
+  it('TODO-SVC-008: listItems returns items ordered by sort_order', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
-    svc.createItem(trip.id, { name: 'First' });
-    svc.createItem(trip.id, { name: 'Second' });
-    svc.createItem(trip.id, { name: 'Third' });
-    const items = svc.listItems(trip.id) as any[];
+    await svc.createItem(trip.id, { name: 'First' });
+    await svc.createItem(trip.id, { name: 'Second' });
+    await svc.createItem(trip.id, { name: 'Third' });
+    const items = (await svc.listItems(trip.id)) as any[];
     expect(items).toHaveLength(3);
     expect(items[0].sort_order).toBeLessThanOrEqual(items[1].sort_order);
     expect(items[1].sort_order).toBeLessThanOrEqual(items[2].sort_order);
@@ -155,36 +156,36 @@ describe('listItems and createItem', () => {
 // ── updateItem ────────────────────────────────────────────────────────────────
 
 describe('updateItem', () => {
-  it('TODO-SVC-009: returns null for non-existent item', () => {
+  it('TODO-SVC-009: returns null for non-existent item', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
-    expect(svc.updateItem(trip.id, 99999, { name: 'Ghost' }, ['name'])).toBeNull();
+    expect(await svc.updateItem(trip.id, 99999, { name: 'Ghost' }, ['name'])).toBeNull();
   });
 
-  it('TODO-SVC-010: toggles checked status', () => {
+  it('TODO-SVC-010: toggles checked status', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
-    const item = svc.createItem(trip.id, { name: 'Visit museum' }) as any;
-    const updated = svc.updateItem(trip.id, item.id, { checked: 1 }, ['checked']) as any;
+    const item = (await svc.createItem(trip.id, { name: 'Visit museum' })) as any;
+    const updated = (await svc.updateItem(trip.id, item.id, { checked: 1 }, ['checked'])) as any;
     expect(updated.checked).toBe(1);
-    const back = svc.updateItem(trip.id, item.id, { checked: 0 }, ['checked']) as any;
+    const back = (await svc.updateItem(trip.id, item.id, { checked: 0 }, ['checked'])) as any;
     expect(back.checked).toBe(0);
   });
 
-  it('TODO-SVC-011: updates name and category', () => {
+  it('TODO-SVC-011: updates name and category', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
-    const item = svc.createItem(trip.id, { name: 'Old' }) as any;
-    const updated = svc.updateItem(trip.id, item.id, { name: 'New', category: 'Misc' }, ['name', 'category']) as any;
+    const item = (await svc.createItem(trip.id, { name: 'Old' })) as any;
+    const updated = (await svc.updateItem(trip.id, item.id, { name: 'New', category: 'Misc' }, ['name', 'category'])) as any;
     expect(updated.name).toBe('New');
     expect(updated.category).toBe('Misc');
   });
 
-  it('TODO-SVC-012: clears due_date when key is present with null value', () => {
+  it('TODO-SVC-012: clears due_date when key is present with null value', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
-    const item = svc.createItem(trip.id, { name: 'Task', due_date: '2026-06-01' }) as any;
-    const updated = svc.updateItem(trip.id, item.id, { due_date: null }, ['due_date']) as any;
+    const item = (await svc.createItem(trip.id, { name: 'Task', due_date: '2026-06-01' })) as any;
+    const updated = (await svc.updateItem(trip.id, item.id, { due_date: null }, ['due_date'])) as any;
     expect(updated.due_date).toBeNull();
   });
 });
@@ -192,32 +193,32 @@ describe('updateItem', () => {
 // ── deleteItem ────────────────────────────────────────────────────────────────
 
 describe('deleteItem', () => {
-  it('TODO-SVC-013: returns false for non-existent item', () => {
+  it('TODO-SVC-013: returns false for non-existent item', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
-    expect(svc.deleteItem(trip.id, 99999)).toBe(false);
+    expect(await svc.deleteItem(trip.id, 99999)).toBe(false);
   });
 
-  it('TODO-SVC-014: deletes item and returns true', () => {
+  it('TODO-SVC-014: deletes item and returns true', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
-    const item = svc.createItem(trip.id, { name: 'Gone' }) as any;
-    expect(svc.deleteItem(trip.id, item.id)).toBe(true);
-    expect(svc.listItems(trip.id)).toHaveLength(0);
+    const item = (await svc.createItem(trip.id, { name: 'Gone' })) as any;
+    expect(await svc.deleteItem(trip.id, item.id)).toBe(true);
+    expect(await svc.listItems(trip.id)).toHaveLength(0);
   });
 });
 
 // ── reorderItems ──────────────────────────────────────────────────────────────
 
 describe('reorderItems', () => {
-  it('TODO-SVC-015: assigns sort_order matching orderedIds array position', () => {
+  it('TODO-SVC-015: assigns sort_order matching orderedIds array position', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
-    const a = svc.createItem(trip.id, { name: 'A' }) as any;
-    const b = svc.createItem(trip.id, { name: 'B' }) as any;
-    const c = svc.createItem(trip.id, { name: 'C' }) as any;
+    const a = (await svc.createItem(trip.id, { name: 'A' })) as any;
+    const b = (await svc.createItem(trip.id, { name: 'B' })) as any;
+    const c = (await svc.createItem(trip.id, { name: 'C' })) as any;
 
-    svc.reorderItems(trip.id, [c.id, a.id, b.id]);
+    await svc.reorderItems(trip.id, [c.id, a.id, b.id]);
 
     const rows = testDb.prepare('SELECT id, sort_order FROM todo_items WHERE trip_id = ? ORDER BY sort_order').all(trip.id) as any[];
     expect(rows[0].id).toBe(c.id);
@@ -229,47 +230,47 @@ describe('reorderItems', () => {
 // ── category assignees ────────────────────────────────────────────────────────
 
 describe('getCategoryAssignees / updateCategoryAssignees', () => {
-  it('TODO-SVC-016: returns empty object for new trip', () => {
+  it('TODO-SVC-016: returns empty object for new trip', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
-    expect(svc.getCategoryAssignees(trip.id)).toEqual({});
+    expect(await svc.getCategoryAssignees(trip.id)).toEqual({});
   });
 
-  it('TODO-SVC-017: updateCategoryAssignees sets assignees for a category', () => {
+  it('TODO-SVC-017: updateCategoryAssignees sets assignees for a category', async () => {
     const { user: owner } = createUser(testDb);
     const { user: member } = createUser(testDb);
     const trip = createTrip(testDb, owner.id);
     addTripMember(testDb, trip.id, member.id);
 
-    const rows = svc.updateCategoryAssignees(trip.id, 'Packing', [owner.id, member.id]);
+    const rows = await svc.updateCategoryAssignees(trip.id, 'Packing', [owner.id, member.id]);
     expect(rows).toHaveLength(2);
 
-    const assignees = svc.getCategoryAssignees(trip.id);
+    const assignees = await svc.getCategoryAssignees(trip.id);
     expect(assignees['Packing']).toHaveLength(2);
   });
 
-  it('TODO-SVC-018: updateCategoryAssignees with empty array clears assignees', () => {
+  it('TODO-SVC-018: updateCategoryAssignees with empty array clears assignees', async () => {
     const { user: owner } = createUser(testDb);
     const trip = createTrip(testDb, owner.id);
 
-    svc.updateCategoryAssignees(trip.id, 'Packing', [owner.id]);
-    const cleared = svc.updateCategoryAssignees(trip.id, 'Packing', []);
+    await svc.updateCategoryAssignees(trip.id, 'Packing', [owner.id]);
+    const cleared = await svc.updateCategoryAssignees(trip.id, 'Packing', []);
     expect(cleared).toHaveLength(0);
 
-    const assignees = svc.getCategoryAssignees(trip.id);
+    const assignees = await svc.getCategoryAssignees(trip.id);
     expect(assignees['Packing']).toBeUndefined();
   });
 
-  it('TODO-SVC-019: getCategoryAssignees groups by category name', () => {
+  it('TODO-SVC-019: getCategoryAssignees groups by category name', async () => {
     const { user: owner } = createUser(testDb);
     const { user: member } = createUser(testDb);
     const trip = createTrip(testDb, owner.id);
     addTripMember(testDb, trip.id, member.id);
 
-    svc.updateCategoryAssignees(trip.id, 'Shopping', [owner.id]);
-    svc.updateCategoryAssignees(trip.id, 'Logistics', [member.id]);
+    await svc.updateCategoryAssignees(trip.id, 'Shopping', [owner.id]);
+    await svc.updateCategoryAssignees(trip.id, 'Logistics', [member.id]);
 
-    const assignees = svc.getCategoryAssignees(trip.id);
+    const assignees = await svc.getCategoryAssignees(trip.id);
     expect(Object.keys(assignees)).toHaveLength(2);
     expect(assignees['Shopping']).toHaveLength(1);
     expect(assignees['Logistics']).toHaveLength(1);
@@ -279,42 +280,42 @@ describe('getCategoryAssignees / updateCategoryAssignees', () => {
   // you name belongs to it. The read-back joins users and hands the caller a
   // display name and an avatar, so an unfiltered id turns the endpoint into a
   // lookup for every account on the instance.
-  it('TODO-SVC-017a: drops a user who is not on the trip, and says nothing about them', () => {
+  it('TODO-SVC-017a: drops a user who is not on the trip, and says nothing about them', async () => {
     const { user: owner } = createUser(testDb);
     const { user: member } = createUser(testDb);
     const { user: stranger } = createUser(testDb);
     const trip = createTrip(testDb, owner.id);
     addTripMember(testDb, trip.id, member.id);
 
-    const rows = svc.updateCategoryAssignees(trip.id, 'Packing', [owner.id, stranger.id, member.id]) as { user_id: number }[];
+    const rows = (await svc.updateCategoryAssignees(trip.id, 'Packing', [owner.id, stranger.id, member.id])) as { user_id: number }[];
 
     expect(rows.map(r => r.user_id).sort()).toEqual([owner.id, member.id].sort());
     expect(JSON.stringify(rows)).not.toContain(stranger.username);
     expect(testDb.prepare('SELECT COUNT(*) AS n FROM todo_category_assignees WHERE user_id = ?').get(stranger.id)).toEqual({ n: 0 });
   });
 
-  it('TODO-SVC-017b: keeps a guest, who is a trip member like any other', () => {
+  it('TODO-SVC-017b: keeps a guest, who is a trip member like any other', async () => {
     const { user: owner } = createUser(testDb);
     const { user: guest } = createUser(testDb);
     testDb.prepare('UPDATE users SET is_guest = 1 WHERE id = ?').run(guest.id);
     const trip = createTrip(testDb, owner.id);
     addTripMember(testDb, trip.id, guest.id);
 
-    const rows = svc.updateCategoryAssignees(trip.id, 'Packing', [guest.id]) as { user_id: number }[];
+    const rows = (await svc.updateCategoryAssignees(trip.id, 'Packing', [guest.id])) as { user_id: number }[];
     expect(rows.map(r => r.user_id)).toEqual([guest.id]);
   });
 
-  it('TODO-SVC-020: updateCategoryAssignees replaces existing assignees (not append)', () => {
+  it('TODO-SVC-020: updateCategoryAssignees replaces existing assignees (not append)', async () => {
     const { user: owner } = createUser(testDb);
     const { user: member } = createUser(testDb);
     const trip = createTrip(testDb, owner.id);
     addTripMember(testDb, trip.id, member.id);
 
-    svc.updateCategoryAssignees(trip.id, 'Food', [owner.id, member.id]);
+    await svc.updateCategoryAssignees(trip.id, 'Food', [owner.id, member.id]);
     // Replace with just owner
-    svc.updateCategoryAssignees(trip.id, 'Food', [owner.id]);
+    await svc.updateCategoryAssignees(trip.id, 'Food', [owner.id]);
 
-    const assignees = svc.getCategoryAssignees(trip.id);
+    const assignees = await svc.getCategoryAssignees(trip.id);
     expect(assignees['Food']).toHaveLength(1);
     expect(assignees['Food'][0].user_id).toBe(owner.id);
   });
@@ -334,7 +335,7 @@ describe('TodoService.canEdit', () => {
   it('TODO-SVC-090 asks for packing_edit and flags a non-owner as shared', async () => {
     const checkPermission = vi.fn(() => true);
     const permissions = { checkPermission } as unknown as PermissionsService;
-    const withStub = new TodoService(new DatabaseService(testDb), permissions, new RealtimeService());
+    const withStub = new TodoService(new DatabaseService(testDb), permissions, new RealtimeService(), await createTestUnitOfWork(testDb));
     const trip = { id: 1, user_id: 1 } as never;
 
     expect(await withStub.canEdit(trip, { id: 1, role: 'user' } as never)).toBe(true);

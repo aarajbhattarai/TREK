@@ -81,12 +81,12 @@ describe('hasTripPermission', () => {
 });
 
 describe('isAdminUser', () => {
-  it('GRD-010: reflects the users.role column and is false for unknown ids', () => {
+  it('GRD-010: reflects the users.role column and is false for unknown ids', async () => {
     const { user } = createUser(testDb);
-    expect(svc.isAdminUser(user.id)).toBe(false);
+    expect(await svc.isAdminUser(user.id)).toBe(false);
     testDb.prepare("UPDATE users SET role = 'admin' WHERE id = ?").run(user.id);
-    expect(svc.isAdminUser(user.id)).toBe(true);
-    expect(svc.isAdminUser(424242)).toBe(false);
+    expect(await svc.isAdminUser(user.id)).toBe(true);
+    expect(await svc.isAdminUser(424242)).toBe(false);
   });
 });
 

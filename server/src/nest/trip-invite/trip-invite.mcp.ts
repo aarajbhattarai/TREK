@@ -47,7 +47,7 @@ export class TripInviteMcp {
 
   /** Trip access first (404-equivalent), then share_manage, which is requireManage() in the controller. */
   private async denyManage(tripId: number, userId: number) {
-    if (!this.invites.verifyTripAccess(String(tripId), userId)) return noAccess();
+    if (!(await this.invites.verifyTripAccess(String(tripId), userId))) return noAccess();
     if (!(await this.guards.hasTripPermission('share_manage', tripId, userId))) return permissionDenied();
     return null;
   }
@@ -69,7 +69,7 @@ export class TripInviteMcp {
   async getTripInviteLink({ tripId }: { tripId: number }, ctx: McpContext) {
     const denied = await this.denyManage(tripId, ctx.userId);
     if ((await denied)) return denied;
-    const info = this.invites.get(tripId);
+    const info = await this.invites.get(tripId);
     return ok({ invite_link: info ? this.describe(info) : null });
   }
 
@@ -98,7 +98,7 @@ export class TripInviteMcp {
       ? Number.parseInt(String(expires_in_days))
       : null;
     const days = Number.isFinite(parsed as number) ? parsed : null;
-    const info = this.invites.createOrRotate(tripId, ctx.userId, days);
+    const info = await this.invites.createOrRotate(tripId, ctx.userId, days);
     // Minting a membership credential is audited wherever it happens, so an
     // admin reading the log sees the same row for a link made through an
     // assistant as for one made in the planner. No request here, hence no ip.
@@ -125,7 +125,7 @@ export class TripInviteMcp {
     if (await this.isDemoUser(ctx.userId)) return demoDenied();
     const denied = await this.denyManage(tripId, ctx.userId);
     if ((await denied)) return denied;
-    this.invites.remove(tripId);
+    await this.invites.remove(tripId);
     await this.audit.writeAudit({
       userId: ctx.userId,
       action: 'trip.invite_link_delete',

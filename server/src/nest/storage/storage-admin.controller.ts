@@ -37,14 +37,14 @@ export class StorageAdminController {
   ) {}
 
   @Get()
-  get() {
-    return this.service.state();
+  async get() {
+    return await this.service.state();
   }
 
   @Put()
   async update(@CurrentUser() user: User, @Body() body: StorageConfigDto, @Req() req: Request) {
     try {
-      this.service.applyConfig(body);
+      await this.service.applyConfig(body);
     } catch (err) {
       // The conflict branch must come before the blanket 400: a
       // StorageConflictError IS an Error, so the generic catch-all below
@@ -127,7 +127,7 @@ export class StorageAdminController {
   async migrationStart(@CurrentUser() user: User, @Body() body: StorageMigrationRequestDto, @Req() req: Request): Promise<{ started: true }> {
     const { category, to } = body;
     try {
-      this.service.startMigration(category, to);
+      await this.service.startMigration(category, to);
     } catch (err) {
       if (err instanceof MigrationRequestError) throw new HttpException({ error: err.message }, 400);
       if (err instanceof MigrationTargetError) throw new HttpException({ error: err.message }, 404);

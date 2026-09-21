@@ -48,7 +48,8 @@ import { UnitOfWork } from '../../../src/nest/database/unit-of-work';
 const dbs = new DatabaseService(testDb);
 let svc: TripInviteService;
 beforeAll(async () => {
-  svc = new TripInviteService(dbs, new PermissionsService(dbs, await createTestUnitOfWork(dbs.connection)), new TripMembershipService(dbs));
+  const uow = await createTestUnitOfWork(dbs.connection);
+  svc = new TripInviteService(dbs, new PermissionsService(dbs, uow), new TripMembershipService(dbs), uow);
 });
 
 beforeAll(() => { createTables(testDb); runMigrations(testDb); });
@@ -62,69 +63,69 @@ function setup() {
 }
 
 describe('TripInviteService', () => {
-  it('TRIP-INVITE-001: no link exists initially', () => {
+  it('TRIP-INVITE-001: no link exists initially', async () => {
     const { trip } = setup();
-    expect(svc.get(trip.id)).toBeNull();
+    expect(await svc.get(trip.id)).toBeNull();
   });
 
-  it('TRIP-INVITE-002: create returns a token and get reads it back', () => {
+  it('TRIP-INVITE-002: create returns a token and get reads it back', async () => {
     const { owner, trip } = setup();
-    const info = svc.createOrRotate(trip.id, owner.id);
+    const info = await svc.createOrRotate(trip.id, owner.id);
     expect(info.token).toMatch(/^[A-Za-z0-9_-]{20,}$/);
-    expect(svc.get(trip.id)?.token).toBe(info.token);
+    expect((await svc.get(trip.id))?.token).toBe(info.token);
   });
 
-  it('TRIP-INVITE-003: rotating replaces the token and keeps a single row', () => {
+  it('TRIP-INVITE-003: rotating replaces the token and keeps a single row', async () => {
     const { owner, trip } = setup();
-    const first = svc.createOrRotate(trip.id, owner.id);
-    const second = svc.createOrRotate(trip.id, owner.id);
+    const first = await svc.createOrRotate(trip.id, owner.id);
+    const second = await svc.createOrRotate(trip.id, owner.id);
     expect(second.token).not.toBe(first.token);
     const count = testDb.prepare('SELECT COUNT(*) as n FROM trip_invite_tokens WHERE trip_id = ?').get(trip.id) as { n: number };
     expect(count.n).toBe(1);
     // The old token no longer resolves.
-    expect(svc.resolve(first.token)).toBeNull();
+    expect(await svc.resolve(first.token)).toBeNull();
   });
 
-  it('TRIP-INVITE-004: resolve returns the trip for a valid token', () => {
+  it('TRIP-INVITE-004: resolve returns the trip for a valid token', async () => {
     const { owner, trip } = setup();
-    const info = svc.createOrRotate(trip.id, owner.id);
-    expect(svc.resolve(info.token)).toEqual({ trip_id: trip.id, title: trip.title });
+    const info = await svc.createOrRotate(trip.id, owner.id);
+    expect(await svc.resolve(info.token)).toEqual({ trip_id: trip.id, title: trip.title });
   });
 
-  it('TRIP-INVITE-005: an expired token does not resolve (ISO expiry, incl. same-day)', () => {
+  it('TRIP-INVITE-005: an expired token does not resolve (ISO expiry, incl. same-day)', async () => {
     const { owner, trip } = setup();
-    const info = svc.createOrRotate(trip.id, owner.id);
+    const info = await svc.createOrRotate(trip.id, owner.id);
     // Use the exact ISO-8601 format the service writes, one hour in the past —
     // this catches the lexicographic-SQL-comparison bug where a same-UTC-day
     // expiry would otherwise still resolve.
     testDb.prepare('UPDATE trip_invite_tokens SET expires_at = ? WHERE trip_id = ?')
       .run(new Date(Date.now() - 3600_000).toISOString(), trip.id);
-    expect(svc.resolve(info.token)).toBeNull();
+    expect(await svc.resolve(info.token)).toBeNull();
   });
 
-  it('TRIP-INVITE-005b: a not-yet-expired token still resolves', () => {
+  it('TRIP-INVITE-005b: a not-yet-expired token still resolves', async () => {
     const { owner, trip } = setup();
-    const info = svc.createOrRotate(trip.id, owner.id);
+    const info = await svc.createOrRotate(trip.id, owner.id);
     testDb.prepare('UPDATE trip_invite_tokens SET expires_at = ? WHERE trip_id = ?')
       .run(new Date(Date.now() + 3600_000).toISOString(), trip.id);
-    expect(svc.resolve(info.token)).toEqual({ trip_id: trip.id, title: trip.title });
+    expect(await svc.resolve(info.token)).toEqual({ trip_id: trip.id, title: trip.title });
   });
 
-  it('TRIP-INVITE-006: delete removes the link', () => {
+  it('TRIP-INVITE-006: delete removes the link', async () => {
     const { owner, trip } = setup();
-    const info = svc.createOrRotate(trip.id, owner.id);
-    svc.remove(trip.id);
-    expect(svc.get(trip.id)).toBeNull();
-    expect(svc.resolve(info.token)).toBeNull();
+    const info = await svc.createOrRotate(trip.id, owner.id);
+    await svc.remove(trip.id);
+    expect(await svc.get(trip.id)).toBeNull();
+    expect(await svc.resolve(info.token)).toBeNull();
   });
 
-  it('TRIP-INVITE-007: an expiry in days is written as an ISO timestamp; non-positive means none', () => {
+  it('TRIP-INVITE-007: an expiry in days is written as an ISO timestamp; non-positive means none', async () => {
     const { owner, trip } = setup();
-    const bounded = svc.createOrRotate(trip.id, owner.id, 7);
+    const bounded = await svc.createOrRotate(trip.id, owner.id, 7);
     const expires = new Date(bounded.expires_at!).getTime();
     expect(expires).toBeGreaterThan(Date.now() + 6 * 86400000);
     expect(expires).toBeLessThan(Date.now() + 8 * 86400000);
-    expect(svc.createOrRotate(trip.id, owner.id, 0).expires_at).toBeNull();
-    expect(svc.createOrRotate(trip.id, owner.id, -3).expires_at).toBeNull();
+    expect((await svc.createOrRotate(trip.id, owner.id, 0)).expires_at).toBeNull();
+    expect((await svc.createOrRotate(trip.id, owner.id, -3)).expires_at).toBeNull();
   });
 });

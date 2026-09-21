@@ -4,6 +4,7 @@ import { RealtimeService } from '../realtime/realtime.service';
 import { PermissionsService } from '../permissions/permissions.service';
 import type { User } from '../../types';
 import { DatabaseService, type TripAccess } from '../database/database.service';
+import { UnitOfWork } from '../database/unit-of-work';
 
 type Trip = TripAccess;
 
@@ -22,9 +23,10 @@ export class TodoService {
     private readonly db: DatabaseService,
     private readonly permissions: PermissionsService,
     private readonly realtime: RealtimeService,
+    private readonly uow: UnitOfWork,
   ) {}
 
-  verifyTripAccess(tripId: string | number, userId: number) {
+  async verifyTripAccess(tripId: string | number, userId: number) {
     return this.db.canAccessTrip(tripId, userId);
   }
 
@@ -36,14 +38,14 @@ export class TodoService {
     this.realtime.broadcast(tripId, event, payload, socketId);
   }
 
-  listItems(tripId: string | number) {
+  async listItems(tripId: string | number) {
     return this.db.all(
       'SELECT * FROM todo_items WHERE trip_id = ? ORDER BY sort_order ASC, created_at ASC',
       tripId
     );
   }
 
-  createItem(tripId: string | number, data: {
+  async createItem(tripId: string | number, data: {
     name: string; category?: string | null; due_date?: string | null; description?: string | null; assigned_user_id?: number | null; priority?: number;
   }) {
     const maxOrder = this.db.get<{ max: number | null }>('SELECT MAX(sort_order) as max FROM todo_items WHERE trip_id = ?', tripId)!;
@@ -58,7 +60,7 @@ export class TodoService {
     return this.db.get('SELECT * FROM todo_items WHERE id = ?', result.lastInsertRowid);
   }
 
-  updateItem(
+  async updateItem(
     tripId: string | number,
     id: string | number,
     data: { name?: string; checked?: number; category?: string | null; due_date?: string | null; description?: string | null; assigned_user_id?: number | null; priority?: number | null },
@@ -96,7 +98,7 @@ export class TodoService {
     return this.db.get('SELECT * FROM todo_items WHERE id = ?', id);
   }
 
-  deleteItem(tripId: string | number, id: string | number): boolean {
+  async deleteItem(tripId: string | number, id: string | number): Promise<boolean> {
     const item = this.db.get('SELECT id FROM todo_items WHERE id = ? AND trip_id = ?', id, tripId);
     if (!item) return false;
 
@@ -104,16 +106,16 @@ export class TodoService {
     return true;
   }
 
-  reorderItems(tripId: string | number, orderedIds: number[]): void {
+  async reorderItems(tripId: string | number, orderedIds: number[]): Promise<void> {
     const update = this.db.prepare('UPDATE todo_items SET sort_order = ? WHERE id = ? AND trip_id = ?');
-    this.db.transaction(() => {
+    await this.uow.transactional(async () => {
       orderedIds.forEach((id, index) => {
         update.run(index, id, tripId);
       });
     });
   }
 
-  getCategoryAssignees(tripId: string | number) {
+  async getCategoryAssignees(tripId: string | number) {
     const rows = this.db.all<{ category_name: string; user_id: number; username: string; avatar: string | null }>(`
     SELECT tca.category_name, tca.user_id, u.username, u.avatar
     FROM todo_category_assignees tca
@@ -130,8 +132,8 @@ export class TodoService {
     return assignees;
   }
 
-  updateCategoryAssignees(tripId: string | number, categoryName: string, userIds: number[] | undefined) {
-    this.db.transaction(() => {
+  async updateCategoryAssignees(tripId: string | number, categoryName: string, userIds: number[] | undefined) {
+    await this.uow.transactional(async () => {
       this.db.run('DELETE FROM todo_category_assignees WHERE trip_id = ? AND category_name = ?', tripId, categoryName);
 
       if (Array.isArray(userIds) && userIds.length > 0) {

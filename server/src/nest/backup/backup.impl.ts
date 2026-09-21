@@ -518,7 +518,7 @@ export async function restoreFromZip(storage: StorageService, zipPath: string): 
       // entirely when reopen failed: with no live DB handle the registry has
       // nothing to read, and the restore is already reported as "restart
       // required" below — rehydrating into a stale/guessed config would be worse.
-      storage.reloadConfig();
+      await storage.reloadConfig();
 
       const extractedUploads = path.join(extractDir, 'uploads');
       if (fs.existsSync(extractedUploads)) {
