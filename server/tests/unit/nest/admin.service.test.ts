@@ -109,7 +109,7 @@ beforeAll(async () => {
   new PasskeyService(dbs, auth, webauthn),
   auth,
   permissions,
-  makeNotificationsService(dbs, realtime),
+  await makeNotificationsService(dbs, realtime),
   userCleanup,
   realtime,
 );

@@ -2722,7 +2722,7 @@ export class MapsService {
     const noPhoto = { photoUrl: null, attribution: null };
 
     // Recent miss — don't hammer the API
-    if (this.photoCache.getErrored(placeId)) return noPhoto;
+    if (await this.photoCache.getErrored(placeId)) return noPhoto;
 
     // Deduplicate concurrent requests for the same placeId
     const existing = this.photoCache.getInFlight(placeId);
@@ -2860,7 +2860,7 @@ export class MapsService {
         const fallback = await fetchWikimediaFallback();
         if (fallback) return fallback;
 
-        this.photoCache.markError(placeId, providerFailed ? 'provider-error' : 'no-photo');
+        await this.photoCache.markError(placeId, providerFailed ? 'provider-error' : 'no-photo');
         return null;
       } finally {
         releasePhotoFetchSlot();

@@ -133,7 +133,7 @@ export interface ExternalChannel {
    * Instance-level readiness, independent of any one recipient (email: is SMTP set
    * up at all?). Absent means "always ready".
    */
-  isInstanceConfigured?(): boolean;
+  isInstanceConfigured?(): boolean | Promise<boolean>;
   /** Does this recipient have credentials for this channel? */
   isConfiguredFor(userId: number): boolean | Promise<boolean>;
   sendToUser(userId: number, msg: ChannelMessage): Promise<unknown>;

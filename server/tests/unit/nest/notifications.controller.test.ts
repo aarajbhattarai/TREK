@@ -32,11 +32,11 @@ describe('NotificationsController (parity with the legacy /api/notifications rou
       expect(getPreferences).toHaveBeenCalledWith(4, 'user');
     });
 
-    it('PUT saves then returns the refreshed matrix', () => {
+    it('PUT saves then returns the refreshed matrix', async () => {
       const setPreferences = vi.fn();
       const getPreferences = vi.fn().mockReturnValue({ preferences: { a: { inapp: true } } });
       const body = { a: { inapp: true } };
-      expect(makeController({ setPreferences, getPreferences }).setPreferences(user, body)).toEqual({ preferences: { a: { inapp: true } } });
+      expect(await makeController({ setPreferences, getPreferences }).setPreferences(user, body)).toEqual({ preferences: { a: { inapp: true } } });
       expect(setPreferences).toHaveBeenCalledWith(4, body);
     });
   });
@@ -141,33 +141,33 @@ describe('NotificationsController (parity with the legacy /api/notifications rou
   });
 
   describe('in-app list + counts', () => {
-    it('clamps limit to 50 and defaults offset/unread', () => {
+    it('clamps limit to 50 and defaults offset/unread', async () => {
       const listInApp = vi.fn().mockReturnValue({ notifications: [], total: 0, unread_count: 0 });
-      makeController({ listInApp }).listInApp(user, '100', '5', 'true');
+      await makeController({ listInApp }).listInApp(user, '100', '5', 'true');
       expect(listInApp).toHaveBeenCalledWith(4, { limit: 50, offset: 5, unreadOnly: true });
     });
 
-    it('defaults limit to 20 when absent/non-numeric', () => {
+    it('defaults limit to 20 when absent/non-numeric', async () => {
       const listInApp = vi.fn().mockReturnValue({ notifications: [], total: 0, unread_count: 0 });
-      makeController({ listInApp }).listInApp(user, undefined, undefined, undefined);
+      await makeController({ listInApp }).listInApp(user, undefined, undefined, undefined);
       expect(listInApp).toHaveBeenCalledWith(4, { limit: 20, offset: 0, unreadOnly: false });
     });
 
-    it('GET unread-count wraps the number', () => {
+    it('GET unread-count wraps the number', async () => {
       const unreadCount = vi.fn().mockReturnValue(7);
-      expect(makeController({ unreadCount }).unreadCount(user)).toEqual({ count: 7 });
+      expect(await makeController({ unreadCount }).unreadCount(user)).toEqual({ count: 7 });
     });
   });
 
   describe('bulk + single mutations', () => {
-    it('read-all returns success + count', () => {
+    it('read-all returns success + count', async () => {
       const markAllRead = vi.fn().mockReturnValue(3);
-      expect(makeController({ markAllRead }).readAll(user)).toEqual({ success: true, count: 3 });
+      expect(await makeController({ markAllRead }).readAll(user)).toEqual({ success: true, count: 3 });
     });
 
-    it('delete-all returns success + count', () => {
+    it('delete-all returns success + count', async () => {
       const deleteAll = vi.fn().mockReturnValue(5);
-      expect(makeController({ deleteAll }).deleteAll(user)).toEqual({ success: true, count: 5 });
+      expect(await makeController({ deleteAll }).deleteAll(user)).toEqual({ success: true, count: 5 });
     });
 
     it('400 on a non-numeric id', () => {
@@ -183,15 +183,15 @@ describe('NotificationsController (parity with the legacy /api/notifications rou
       });
     });
 
-    it('mark-read success', () => {
+    it('mark-read success', async () => {
       const markRead = vi.fn().mockReturnValue(true);
-      expect(makeController({ markRead }).markRead(user, '5')).toEqual({ success: true });
+      expect(await makeController({ markRead }).markRead(user, '5')).toEqual({ success: true });
       expect(markRead).toHaveBeenCalledWith(5, 4);
     });
 
-    it('delete single success', () => {
+    it('delete single success', async () => {
       const deleteOne = vi.fn().mockReturnValue(true);
-      expect(makeController({ deleteOne }).deleteOne(user, '5')).toEqual({ success: true });
+      expect(await makeController({ deleteOne }).deleteOne(user, '5')).toEqual({ success: true });
     });
   });
 

@@ -53,12 +53,14 @@ import { createUser, createAdmin, setAppSetting, setNotificationChannels } from 
 // (notifications.instance.ts died with the last cycle-dodge bridge); a
 // hand-constructed instance still shares the module-scoped channel registry,
 // which is exactly what CHOVR-015 pins.
-import type { NotificationPayload } from '../../../src/nest/notifications/notifications.service';
+import type { NotificationPayload, NotificationsService } from '../../../src/nest/notifications/notifications.service';
 import { makeNotificationsService } from '../../helpers/notifications';
 
 // One instance, built at module load like the old import-time singleton: its
 // constructor is what registers the built-in channels the registry cases read.
-const notifications = makeNotificationsService(new DatabaseService(testDb));
+// Built in beforeAll: the service now takes a UnitOfWork, which is async to build.
+// Its constructor is still what registers the built-in channels the registry cases read.
+let notifications: NotificationsService;
 const send = (payload: NotificationPayload) => notifications.send(payload);
 import { NtfyService } from '../../../src/nest/notifications/transports/ntfy.service';
 import { WebhookService } from '../../../src/nest/notifications/transports/webhook.service';
@@ -66,6 +68,7 @@ import { DatabaseService } from '../../../src/nest/database/database.service';
 import { createPluginRuntime } from '../../helpers/plugin-host';
 import { MailerService } from '../../../src/nest/notifications/mailer/mailer.service';
 import { NotificationPreferencesService } from '../../../src/nest/notifications/notification-preferences.service';
+import { createTestUnitOfWork } from '../../helpers/test-uow';
 
 import {
   setPluginChannelSource,
@@ -77,7 +80,7 @@ import {
 import type { ExternalChannel } from '../../../src/nest/notifications/notification-events';
 
 const prefsDbs = new DatabaseService(testDb);
-const prefsSvc = new NotificationPreferencesService(prefsDbs, new MailerService(prefsDbs));
+let prefsSvc: NotificationPreferencesService;
 // An arrow forwarder rather than `.bind(prefsSvc)`: under `strictBindCallApply: false`
 // a bound alias is typed `any`, which hides a missing `await` from tsc and the lint
 // rules alike (recipe R4).
@@ -85,7 +88,12 @@ const getPreferencesMatrix = (...a: Parameters<NotificationPreferencesService['g
   prefsSvc.getPreferencesMatrix(...a);
 void WebhookService; void NtfyService;
 
-beforeAll(() => { createTables(testDb); runMigrations(testDb); });
+beforeAll(async () => {
+  createTables(testDb);
+  runMigrations(testDb);
+  prefsSvc = new NotificationPreferencesService(prefsDbs, new MailerService(prefsDbs), await createTestUnitOfWork(testDb));
+  notifications = await makeNotificationsService(new DatabaseService(testDb));
+});
 beforeEach(() => { resetTestDb(testDb); setPluginChannelSource(null); });
 
 const rogueSend = vi.fn().mockResolvedValue(true);

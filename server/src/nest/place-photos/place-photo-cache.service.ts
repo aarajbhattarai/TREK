@@ -93,7 +93,7 @@ export class PlacePhotoCacheService {
     return { photoUrl: this.proxyUrl(placeId), attribution: row.attribution };
   }
 
-  getErrored(placeId: string): boolean {
+  async getErrored(placeId: string): Promise<boolean> {
     const failedAt = this.recentFailures.get(placeId);
     if (failedAt !== undefined) {
       if (Date.now() - failedAt < FAILURE_TTL) return true;
@@ -114,7 +114,7 @@ export class PlacePhotoCacheService {
    * provider has an image for this place — and is persisted; 'provider-error' is a
    * failed attempt and is only held in memory for a few minutes.
    */
-  markError(placeId: string, kind: 'no-photo' | 'provider-error' = 'no-photo'): void {
+  async markError(placeId: string, kind: 'no-photo' | 'provider-error' = 'no-photo'): Promise<void> {
     if (kind === 'provider-error') {
       if (this.recentFailures.size >= FAILURE_SWEEP_AT) {
         const cutoff = Date.now() - FAILURE_TTL;
@@ -201,7 +201,7 @@ export class PlacePhotoCacheService {
    * table — otherwise the nightly sweep + trip-place delete would evict a photo
    * still shown on a collection thumbnail (#1081 photo-cache pitfall).
    */
-  private isReferenced(placeId: string): boolean {
+  private async isReferenced(placeId: string): Promise<boolean> {
     const row = this.db.get(
       `SELECT 1 FROM places WHERE google_place_id = ? OR image_url = ?
        UNION ALL
@@ -225,7 +225,7 @@ export class PlacePhotoCacheService {
    * for prompt reclamation; the nightly sweep is the catch-all for every other path.
    */
   async removeIfUnreferenced(placeId: string): Promise<void> {
-    if (this.isReferenced(placeId)) return;
+    if (await this.isReferenced(placeId)) return;
     await this.deleteEntry(placeId);
   }
 
@@ -239,7 +239,7 @@ export class PlacePhotoCacheService {
     const rows = this.db.all<{ place_id: string }>('SELECT place_id FROM google_place_photo_meta');
     const keepFiles = new Set<string>();
     for (const { place_id } of rows) {
-      if (this.isReferenced(place_id)) {
+      if (await this.isReferenced(place_id)) {
         keepFiles.add(this.fileName(place_id));
       } else {
         await this.deleteEntry(place_id);

@@ -88,26 +88,26 @@ beforeEach(() => {
 });
 
 describe('ReminderJobsService bootstrap', () => {
-  it('RJOB-001 — registers both 9 AM crons under their names', () => {
+  it('RJOB-001 — registers both 9 AM crons under their names', async () => {
     const { svc, registered } = makeJobs();
-    svc.onApplicationBootstrap();
+    await svc.onApplicationBootstrap();
     expect(registered.map(r => [r.name, r.expr])).toEqual([
       ['trip-reminders', '0 9 * * *'],
       ['todo-reminders', '0 9 * * *'],
     ]);
   });
 
-  it('RJOB-002 — does nothing under the test gate (no crons, no banners)', () => {
+  it('RJOB-002 — does nothing under the test gate (no crons, no banners)', async () => {
     const { svc, registered, registrar } = makeJobs();
     registrar.isEnabled.mockReturnValue(false);
-    svc.onApplicationBootstrap();
+    await svc.onApplicationBootstrap();
     expect(registered).toHaveLength(0);
     expect(logMock.logInfo).not.toHaveBeenCalled();
   });
 
-  it('RJOB-003 — logs the enabled banners by default and the disabled ones when toggled off', () => {
+  it('RJOB-003 — logs the enabled banners by default and the disabled ones when toggled off', async () => {
     const { svc } = makeJobs();
-    svc.onApplicationBootstrap();
+    await svc.onApplicationBootstrap();
     expect(logMock.logInfo).toHaveBeenCalledWith('Trip reminders: enabled via []');
     expect(logMock.logInfo).toHaveBeenCalledWith('Todo due reminders: enabled (lead 3d)');
 
@@ -115,17 +115,17 @@ describe('ReminderJobsService bootstrap', () => {
     setAppSetting(testDb, 'notify_trip_reminder', 'false');
     setAppSetting(testDb, 'notify_todo_due', 'false');
     const { svc: svc2 } = makeJobs();
-    svc2.onApplicationBootstrap();
+    await svc2.onApplicationBootstrap();
     expect(logMock.logInfo).toHaveBeenCalledWith('Trip reminders: disabled in settings');
     expect(logMock.logInfo).toHaveBeenCalledWith('Todo due reminders: disabled in settings');
   });
 
-  it('RJOB-004 — the trip banner carries the active channels and the reminder-trip count', () => {
+  it('RJOB-004 — the trip banner carries the active channels and the reminder-trip count', async () => {
     const { user } = createUser(testDb);
     setNotificationChannels(testDb, 'email');
     tripWithReminder(user.id, 5);
     const { svc } = makeJobs();
-    svc.onApplicationBootstrap();
+    await svc.onApplicationBootstrap();
     expect(logMock.logInfo).toHaveBeenCalledWith('Trip reminders: enabled via [email], 1 trip(s) with active reminders');
   });
 });

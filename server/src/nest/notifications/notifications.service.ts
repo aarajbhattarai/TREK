@@ -19,6 +19,7 @@ import { getChannel, listChannels } from './channel-registry';
 import { getAction } from './in-app-actions';
 import { avatarUrl } from '../common/avatarUrl';
 import { DatabaseService } from '../database/database.service';
+import { UnitOfWork } from '../database/unit-of-work';
 import { RealtimeService } from '../realtime/realtime.service';
 
 
@@ -272,17 +273,17 @@ async function shouldSendToUser(
   prefs: NotificationPreferencesService,
 ): Promise<boolean> {
   if (!channel.supportsEvent(event)) return false;
-  if (channel.isInstanceConfigured && !channel.isInstanceConfigured()) return false;
+  if (channel.isInstanceConfigured && !(await channel.isInstanceConfigured())) return false;
 
   if (ADMIN_SCOPED_EVENTS.has(event)) {
     if (!channel.bypassesActiveToggleForAdminEvents) return false;
     if (!isAdminGlobalChannel(channel.id)) return false;
-    if (!prefs.getAdminGlobalPref(event, channel.id)) return false;
+    if (!(await prefs.getAdminGlobalPref(event, channel.id))) return false;
   } else {
     // A built-in needs the admin's explicit switch; a plugin channel is on because the
     // admin enabled the plugin — that IS the opt-in (see getActiveChannels).
     if (channel.source === 'builtin' && !activeChannels.includes(channel.id)) return false;
-    if (!prefs.isEnabledForEvent(recipientId, event, channel.id)) return false;
+    if (!(await prefs.isEnabledForEvent(recipientId, event, channel.id))) return false;
   }
 
   return await channel.isConfiguredFor(recipientId);
@@ -316,6 +317,7 @@ export class NotificationsService {
     private readonly webhook: WebhookService,
     private readonly ntfy: NtfyService,
     private readonly prefs: NotificationPreferencesService,
+    private readonly uow: UnitOfWork,
   ) {
     // The registry is a module singleton shared with the plugin runtime and any
     // separately-constructed instance (which never runs onModuleInit), so
@@ -341,8 +343,8 @@ export class NotificationsService {
     }
   }
 
-  setPreferences(userId: number, body: Parameters<NotificationPreferencesService['setPreferences']>[1]): void {
-    this.prefs.setPreferences(userId, body);
+  async setPreferences(userId: number, body: Parameters<NotificationPreferencesService['setPreferences']>[1]): Promise<void> {
+    await this.prefs.setPreferences(userId, body);
   }
 
   testSmtp(to: string): Promise<ChannelTestResult> {
@@ -357,25 +359,25 @@ export class NotificationsService {
     return this.ntfy.testNtfy(cfg);
   }
 
-  userWebhookUrl(userId: number): string | null {
-    return this.webhook.getUserWebhookUrl(userId);
+  async userWebhookUrl(userId: number): Promise<string | null> {
+    return await this.webhook.getUserWebhookUrl(userId);
   }
 
-  adminWebhookUrl(): string | null {
-    return this.webhook.getAdminWebhookUrl();
+  async adminWebhookUrl(): Promise<string | null> {
+    return await this.webhook.getAdminWebhookUrl();
   }
 
-  userNtfyConfig(userId: number): NtfyConfig | null {
-    return this.ntfy.getUserNtfyConfig(userId);
+  async userNtfyConfig(userId: number): Promise<NtfyConfig | null> {
+    return await this.ntfy.getUserNtfyConfig(userId);
   }
 
-  adminNtfyConfig(): NtfyConfig {
-    return this.ntfy.getAdminNtfyConfig();
+  async adminNtfyConfig(): Promise<NtfyConfig> {
+    return await this.ntfy.getAdminNtfyConfig();
   }
 
   // ── In-app notification store (from services/inAppNotifications.ts) ───────
 
-  resolveRecipients(scope: NotificationScope, target: number, excludeUserId?: number | null): number[] {
+  async resolveRecipients(scope: NotificationScope, target: number, excludeUserId?: number | null): Promise<number[]> {
     let userIds: number[] = [];
 
     // Guests (#1362) are trip members for assignment purposes but have no inbox/email,
@@ -410,8 +412,8 @@ export class NotificationsService {
    * one transaction). `send()` resolves recipients itself and uses
    * `createNotificationForRecipient`; this remains for direct callers/tests.
    */
-  createNotification(input: NotificationInput): number[] {
-    const recipients = this.resolveRecipients(input.scope, input.target, input.sender_id);
+  async createNotification(input: NotificationInput): Promise<number[]> {
+    const recipients = await this.resolveRecipients(input.scope, input.target, input.sender_id);
     if (recipients.length === 0) return [];
 
     const titleParams = JSON.stringify(input.title_params ?? {});
@@ -420,7 +422,7 @@ export class NotificationsService {
     // Track inserted id → recipientId pairs (some recipients may be skipped by pref check)
     const insertedPairs: Array<{ id: number; recipientId: number }> = [];
 
-    this.db.transaction(() => {
+    await this.uow.transactional(async () => {
       const stmt = this.db.prepare(`
       INSERT INTO notifications (
         type, scope, target, sender_id, recipient_id,
@@ -432,7 +434,7 @@ export class NotificationsService {
 
       for (const recipientId of recipients) {
         // Check per-user in-app preference if an event_type is provided
-        if (input.event_type && !this.prefs.isEnabledForEvent(recipientId, input.event_type, 'inapp')) {
+        if (input.event_type && !(await this.prefs.isEnabledForEvent(recipientId, input.event_type, 'inapp'))) {
           continue;
         }
 
@@ -492,11 +494,11 @@ export class NotificationsService {
    * Insert a single in-app notification for one pre-resolved recipient and broadcast via WebSocket.
    * Used by send() which handles recipient resolution externally.
    */
-  createNotificationForRecipient(
+  async createNotificationForRecipient(
     input: NotificationInput,
     recipientId: number,
     sender: { username: string; avatar: string | null } | null
-  ): number | null {
+  ): Promise<number | null> {
     const titleParams = JSON.stringify(input.title_params ?? {});
     const textParams = JSON.stringify(input.text_params ?? {});
 
@@ -550,10 +552,10 @@ export class NotificationsService {
 
   // Returns the native service shape (NotificationRow[] is a superset of the
   // client-facing InAppListResult contract); the controller surfaces it as-is.
-  listInApp(
+  async listInApp(
     userId: number,
     options: { limit?: number; offset?: number; unreadOnly?: boolean } = {}
-  ): { notifications: NotificationRow[]; total: number; unread_count: number } {
+  ): Promise<{ notifications: NotificationRow[]; total: number; unread_count: number }> {
     const limit = Math.min(options.limit ?? 20, 50);
     const offset = options.offset ?? 0;
     const unreadOnly = options.unreadOnly ?? false;
@@ -582,32 +584,32 @@ export class NotificationsService {
     return { notifications: mapped, total, unread_count };
   }
 
-  unreadCount(userId: number): number {
+  async unreadCount(userId: number): Promise<number> {
     const row = this.db.get<{ count: number }>('SELECT COUNT(*) as count FROM notifications WHERE recipient_id = ? AND is_read = 0', userId) as { count: number };
     return row.count;
   }
 
-  markRead(notificationId: number, userId: number): boolean {
+  async markRead(notificationId: number, userId: number): Promise<boolean> {
     const result = this.db.run('UPDATE notifications SET is_read = 1 WHERE id = ? AND recipient_id = ?', notificationId, userId);
     return result.changes > 0;
   }
 
-  markUnread(notificationId: number, userId: number): boolean {
+  async markUnread(notificationId: number, userId: number): Promise<boolean> {
     const result = this.db.run('UPDATE notifications SET is_read = 0 WHERE id = ? AND recipient_id = ?', notificationId, userId);
     return result.changes > 0;
   }
 
-  markAllRead(userId: number): number {
+  async markAllRead(userId: number): Promise<number> {
     const result = this.db.run('UPDATE notifications SET is_read = 1 WHERE recipient_id = ? AND is_read = 0', userId);
     return result.changes;
   }
 
-  deleteOne(notificationId: number, userId: number): boolean {
+  async deleteOne(notificationId: number, userId: number): Promise<boolean> {
     const result = this.db.run('DELETE FROM notifications WHERE id = ? AND recipient_id = ?', notificationId, userId);
     return result.changes > 0;
   }
 
-  deleteAll(userId: number): number {
+  async deleteAll(userId: number): Promise<number> {
     const result = this.db.run('DELETE FROM notifications WHERE recipient_id = ?', userId);
     return result.changes;
   }
@@ -682,7 +684,7 @@ export class NotificationsService {
     const { event, actorId, params, scope, targetId, inApp } = payload;
 
     // Resolve recipients based on scope
-    const recipients = this.resolveRecipients(scope, targetId, actorId);
+    const recipients = await this.resolveRecipients(scope, targetId, actorId);
     if (recipients.length === 0) return;
 
     const configEntry = EVENT_NOTIFICATION_CONFIG[event];
@@ -690,7 +692,7 @@ export class NotificationsService {
       logDebug(`notificationService.send: unknown event type "${event}", using fallback`);
       if (readEnv().app.isDevelopment && actorId != null) {
         const devSender = this.db.get<{ username: string; avatar: string | null }>('SELECT username, avatar FROM users WHERE id = ?', actorId) ?? null;
-        this.createNotificationForRecipient({
+        await this.createNotificationForRecipient({
           type: 'simple',
           scope: 'user',
           target: actorId,
@@ -726,7 +728,7 @@ export class NotificationsService {
       const promises: Promise<unknown>[] = [];
 
       // ── In-app ──────────────────────────────────────────────────────────
-      if (this.prefs.isEnabledForEvent(recipientId, event, 'inapp')) {
+      if (await this.prefs.isEnabledForEvent(recipientId, event, 'inapp')) {
         const inAppType = inApp?.type ?? config.inAppType;
         let notifInput: NotificationInput;
 
@@ -790,7 +792,7 @@ export class NotificationsService {
         if (await shouldSendToUser(ch, event, recipientId, activeChannels, this.prefs)) deliverable.push(ch);
       }
       if (deliverable.length > 0) {
-        const lang = this.mailer.getUserLanguage(recipientId);
+        const lang = await this.mailer.getUserLanguage(recipientId);
         const { title, body } = getEventText(lang, event, params);
         const msg: ChannelMessage = {
           event,
@@ -815,9 +817,14 @@ export class NotificationsService {
     // One send per channel, over the admin's own credentials, not per-recipient.
     // Always rendered in English — there is no single recipient to take a language from.
     if (scope === 'admin') {
-      const globalChannels = channels.filter(
-        ch => ch.sendGlobal && ch.supportsEvent(event) && isAdminGlobalChannel(ch.id) && this.prefs.getAdminGlobalPref(event, ch.id),
-      );
+      // R1.4: `filter` cannot await, and the admin global preference is now an
+      // async read. Same channels, same order, one explicit loop.
+      const globalChannels: ExternalChannel[] = [];
+      for (const ch of channels) {
+        if (!ch.sendGlobal || !ch.supportsEvent(event) || !isAdminGlobalChannel(ch.id)) continue;
+        if (!(await this.prefs.getAdminGlobalPref(event, ch.id))) continue;
+        globalChannels.push(ch);
+      }
       if (globalChannels.length > 0) {
         const { title, body } = getEventText('en', event, params);
         const msg: ChannelMessage = { event, title, body, navigateTarget: navigateTarget ?? undefined, url: fullLink };

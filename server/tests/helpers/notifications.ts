@@ -5,6 +5,7 @@ import { NotificationPreferencesService } from '../../src/nest/notifications/not
 import { NotificationsService } from '../../src/nest/notifications/notifications.service';
 import { NtfyService } from '../../src/nest/notifications/transports/ntfy.service';
 import { WebhookService } from '../../src/nest/notifications/transports/webhook.service';
+import { createTestUnitOfWork } from './test-uow';
 
 /**
  * A NotificationsService wired the way Nest wires it.
@@ -13,21 +14,23 @@ import { WebhookService } from '../../src/nest/notifications/transports/webhook.
  * it by hand — every added constructor parameter was an eight-file diff. One
  * helper keeps that at one.
  */
-export function makeNotificationsService(dbs: DatabaseService, realtime = new RealtimeService()): NotificationsService {
+export async function makeNotificationsService(dbs: DatabaseService, realtime = new RealtimeService()): Promise<NotificationsService> {
   const mailer = new MailerService(dbs);
+  const uow = await createTestUnitOfWork(dbs.connection);
   return new NotificationsService(
     dbs,
     realtime,
     mailer,
     new WebhookService(dbs),
     new NtfyService(dbs),
-    new NotificationPreferencesService(dbs, mailer),
+    new NotificationPreferencesService(dbs, mailer, uow),
+    uow,
   );
 }
 
 /** The preferences half on its own, over the same connection. */
-export function makeNotificationPreferencesService(dbs: DatabaseService): NotificationPreferencesService {
-  return new NotificationPreferencesService(dbs, new MailerService(dbs));
+export async function makeNotificationPreferencesService(dbs: DatabaseService): Promise<NotificationPreferencesService> {
+  return new NotificationPreferencesService(dbs, new MailerService(dbs), await createTestUnitOfWork(dbs.connection));
 }
 
 /**

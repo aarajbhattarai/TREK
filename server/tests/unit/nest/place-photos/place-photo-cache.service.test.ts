@@ -233,51 +233,51 @@ describe.each([
         .run(Date.now() - ms, placeId);
     }
 
-    it('PPC-009: a place with no photo stays remembered well past the old five-minute window', () => {
-      cache.markError('photo-less');
+    it('PPC-009: a place with no photo stays remembered well past the old five-minute window', async () => {
+      await cache.markError('photo-less');
 
       ageError('photo-less', 30 * 60 * 1000);
-      expect(cache.getErrored('photo-less')).toBe(true);
+      expect(await cache.getErrored('photo-less')).toBe(true);
 
       ageError('photo-less', 5 * 60 * 60 * 1000);
-      expect(cache.getErrored('photo-less')).toBe(true);
+      expect(await cache.getErrored('photo-less')).toBe(true);
     });
 
-    it('PPC-010: the miss expires once it is a day old', () => {
-      cache.markError('stale-miss');
+    it('PPC-010: the miss expires once it is a day old', async () => {
+      await cache.markError('stale-miss');
       ageError('stale-miss', 24 * 60 * 60 * 1000);
 
-      expect(cache.getErrored('stale-miss')).toBe(false);
+      expect(await cache.getErrored('stale-miss')).toBe(false);
     });
 
     // A failed provider call says nothing about the place, so it must not inherit the
     // long window a real "this place has no photo" answer gets.
-    it('PPC-011: a failed provider call is forgotten after minutes and never persisted', () => {
+    it('PPC-011: a failed provider call is forgotten after minutes and never persisted', async () => {
       vi.useFakeTimers();
       try {
-        cache.markError('flaky', 'provider-error');
-        expect(cache.getErrored('flaky')).toBe(true);
+        await cache.markError('flaky', 'provider-error');
+        expect(await cache.getErrored('flaky')).toBe(true);
         // Nothing on disk — a restart retries instead of inheriting someone's outage.
         expect(testDb.prepare('SELECT 1 FROM google_place_photo_meta WHERE place_id = ?').get('flaky')).toBeUndefined();
 
         vi.advanceTimersByTime(5 * 60 * 1000);
-        expect(cache.getErrored('flaky')).toBe(false);
+        expect(await cache.getErrored('flaky')).toBe(false);
 
         // The long window belongs to the other case: same age, still remembered.
-        cache.markError('photo-less-too');
+        await cache.markError('photo-less-too');
         ageError('photo-less-too', 5 * 60 * 1000);
-        expect(cache.getErrored('photo-less-too')).toBe(true);
+        expect(await cache.getErrored('photo-less-too')).toBe(true);
       } finally {
         vi.useRealTimers();
       }
     });
 
     it('PPC-012: a cached photo clears an earlier failed attempt', async () => {
-      cache.markError('recovered', 'provider-error');
-      expect(cache.getErrored('recovered')).toBe(true);
+      await cache.markError('recovered', 'provider-error');
+      expect(await cache.getErrored('recovered')).toBe(true);
 
       await cache.put('recovered', await makeJpeg(40, 40), null);
-      expect(cache.getErrored('recovered')).toBe(false);
+      expect(await cache.getErrored('recovered')).toBe(false);
     });
   });
 });

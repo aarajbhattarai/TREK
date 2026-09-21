@@ -109,11 +109,11 @@ function encodeHeaderValue(value: string): string {
 export class NtfyService {
   constructor(private readonly db: DatabaseService) {}
 
-  private getAppSetting(key: string): string | null {
+  private async getAppSetting(key: string): Promise<string | null> {
     return this.db.get<{ value: string }>('SELECT value FROM app_settings WHERE key = ?', key)?.value || null;
   }
 
-  getUserNtfyConfig(userId: number): NtfyConfig | null {
+  async getUserNtfyConfig(userId: number): Promise<NtfyConfig | null> {
     const rows = this.db.all<{ key: string; value: string }>(
       "SELECT key, value FROM settings WHERE user_id = ? AND key IN ('ntfy_topic', 'ntfy_server', 'ntfy_token')",
       userId,
@@ -128,10 +128,10 @@ export class NtfyService {
     };
   }
 
-  getAdminNtfyConfig(): NtfyConfig {
-    const topic = this.getAppSetting('admin_ntfy_topic') || null;
-    const server = this.getAppSetting('admin_ntfy_server') || null;
-    const rawToken = this.getAppSetting('admin_ntfy_token') || null;
+  async getAdminNtfyConfig(): Promise<NtfyConfig> {
+    const topic = (await this.getAppSetting('admin_ntfy_topic')) || null;
+    const server = (await this.getAppSetting('admin_ntfy_server')) || null;
+    const rawToken = (await this.getAppSetting('admin_ntfy_token')) || null;
     return {
       topic,
       server,
@@ -197,7 +197,7 @@ export class NtfyService {
     server?: string | null;
     token?: string | null;
   }): Promise<{ success: boolean; error?: string }> {
-    const adminCfg = this.getAdminNtfyConfig();
+    const adminCfg = await this.getAdminNtfyConfig();
     const url = resolveNtfyUrl(adminCfg, { topic: cfg.topic, server: cfg.server ?? null, token: cfg.token ?? null });
     if (!url) return { success: false, error: 'Could not resolve ntfy URL — missing topic' };
     try {

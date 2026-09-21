@@ -59,9 +59,9 @@ export class NotificationsController {
   }
 
   @Put('preferences')
-  setPreferences(@CurrentUser() user: User, @Body() body: PreferencesUpdateDto) {
-    this.notifications.setPreferences(user.id, body);
-    return this.notifications.getPreferences(user.id, user.role);
+  async setPreferences(@CurrentUser() user: User, @Body() body: PreferencesUpdateDto) {
+    await this.notifications.setPreferences(user.id, body);
+    return await this.notifications.getPreferences(user.id, user.role);
   }
 
   @ManagedForbidden('the relay is the operator credential; a test send would use their reputation')
@@ -79,8 +79,8 @@ export class NotificationsController {
   async testWebhook(@CurrentUser() user: User, @Body() body: TestWebhookDto): Promise<ChannelTestResult> {
     let url: string | null | undefined = body.url;
     if (!url || url === MASKED) {
-      url = this.notifications.userWebhookUrl(user.id);
-      if (!url && user.role === 'admin') url = this.notifications.adminWebhookUrl();
+      url = await this.notifications.userWebhookUrl(user.id);
+      if (!url && user.role === 'admin') url = await this.notifications.adminWebhookUrl();
       if (!url) {
         throw new HttpException({ error: 'No webhook URL configured' }, 400);
       }
@@ -97,8 +97,8 @@ export class NotificationsController {
   @HttpCode(200)
   async testNtfy(@CurrentUser() user: User, @Body() body: TestNtfyDto): Promise<ChannelTestResult> {
     const { topic, server, token } = body;
-    const userCfg = this.notifications.userNtfyConfig(user.id);
-    const adminCfg = this.notifications.adminNtfyConfig();
+    const userCfg = await this.notifications.userNtfyConfig(user.id);
+    const adminCfg = await this.notifications.adminNtfyConfig();
 
     const resolvedTopic = topic || userCfg?.topic || undefined;
     const resolvedServer = server || userCfg?.server || adminCfg.server || undefined;
@@ -145,42 +145,42 @@ export class NotificationsController {
   }
 
   @Get('in-app/unread-count')
-  unreadCount(@CurrentUser() user: User): UnreadCountResult {
-    return { count: this.notifications.unreadCount(user.id) };
+  async unreadCount(@CurrentUser() user: User): Promise<UnreadCountResult> {
+    return { count: await this.notifications.unreadCount(user.id) };
   }
 
   @Put('in-app/read-all')
-  readAll(@CurrentUser() user: User): { success: boolean; count: number } {
-    return { success: true, count: this.notifications.markAllRead(user.id) };
+  async readAll(@CurrentUser() user: User): Promise<{ success: boolean; count: number }> {
+    return { success: true, count: await this.notifications.markAllRead(user.id) };
   }
 
   @Delete('in-app/all')
-  deleteAll(@CurrentUser() user: User): { success: boolean; count: number } {
-    return { success: true, count: this.notifications.deleteAll(user.id) };
+  async deleteAll(@CurrentUser() user: User): Promise<{ success: boolean; count: number }> {
+    return { success: true, count: await this.notifications.deleteAll(user.id) };
   }
 
   @Put('in-app/:id/read')
-  markRead(@CurrentUser() user: User, @Param('id') idParam: string): { success: boolean } {
+  async markRead(@CurrentUser() user: User, @Param('id') idParam: string): Promise<{ success: boolean }> {
     const id = this.parseId(idParam);
-    if (!this.notifications.markRead(id, user.id)) {
+    if (!(await this.notifications.markRead(id, user.id))) {
       throw new HttpException({ error: 'Not found' }, 404);
     }
     return { success: true };
   }
 
   @Put('in-app/:id/unread')
-  markUnread(@CurrentUser() user: User, @Param('id') idParam: string): { success: boolean } {
+  async markUnread(@CurrentUser() user: User, @Param('id') idParam: string): Promise<{ success: boolean }> {
     const id = this.parseId(idParam);
-    if (!this.notifications.markUnread(id, user.id)) {
+    if (!(await this.notifications.markUnread(id, user.id))) {
       throw new HttpException({ error: 'Not found' }, 404);
     }
     return { success: true };
   }
 
   @Delete('in-app/:id')
-  deleteOne(@CurrentUser() user: User, @Param('id') idParam: string): { success: boolean } {
+  async deleteOne(@CurrentUser() user: User, @Param('id') idParam: string): Promise<{ success: boolean }> {
     const id = this.parseId(idParam);
-    if (!this.notifications.deleteOne(id, user.id)) {
+    if (!(await this.notifications.deleteOne(id, user.id))) {
       throw new HttpException({ error: 'Not found' }, 404);
     }
     return { success: true };
@@ -230,10 +230,10 @@ export class AdminNotificationPreferencesController {
   }
 
   @Put()
-  set(@CurrentUser() user: User, @Body() body: AdminNotificationPreferencesDto) {
-    this.prefs.setAdminPreferences(user.id, body);
+  async set(@CurrentUser() user: User, @Body() body: AdminNotificationPreferencesDto) {
+    await this.prefs.setAdminPreferences(user.id, body);
     // Answer with the refreshed matrix rather than the raw write result — the admin
     // panel renders straight from this response.
-    return this.prefs.getPreferencesMatrix(user.id, user.role, 'admin');
+    return await this.prefs.getPreferencesMatrix(user.id, user.role, 'admin');
   }
 }

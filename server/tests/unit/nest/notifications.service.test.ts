@@ -101,7 +101,8 @@ import { setPluginChannelSource } from '../../../src/nest/notifications/channel-
 import type { ExternalChannel } from '../../../src/nest/notifications/notification-events';
 import { makeNotificationsService, makeNotificationPreferencesService } from '../../helpers/notifications';
 
-const notifications = makeNotificationsService(new DatabaseService(testDb));
+// Built in beforeAll: the service now takes a UnitOfWork, which is async to build.
+let notifications: NotificationsService;
 const send = (payload: NotificationPayload) => notifications.send(payload);
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -138,9 +139,10 @@ function countAllNotifications(): number {
 
 // ── Setup ──────────────────────────────────────────────────────────────────
 
-beforeAll(() => {
+beforeAll(async () => {
   createTables(testDb);
   runMigrations(testDb);
+  notifications = await makeNotificationsService(new DatabaseService(testDb));
 });
 
 beforeEach(() => {

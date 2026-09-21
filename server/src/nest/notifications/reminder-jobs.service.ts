@@ -26,18 +26,18 @@ export class ReminderJobsService implements OnApplicationBootstrap {
     private readonly registrar: CronRegistrarService,
   ) {}
 
-  private getSetting(key: string): string | undefined {
+  private async getSetting(key: string): Promise<string | undefined> {
     return this.db.get<{ value: string }>('SELECT value FROM app_settings WHERE key = ?', key)?.value;
   }
 
-  onApplicationBootstrap(): void {
+  async onApplicationBootstrap(): Promise<void> {
     if (!this.registrar.isEnabled()) return;
 
     // Boot banners only — the enable gates are read per tick below; these
     // reflect the state at boot.
     try {
-      const reminderEnabled = this.getSetting('notify_trip_reminder') !== 'false';
-      const channelsRaw = this.getSetting('notification_channels') || this.getSetting('notification_channel') || 'none';
+      const reminderEnabled = (await this.getSetting('notify_trip_reminder')) !== 'false';
+      const channelsRaw = (await this.getSetting('notification_channels')) || (await this.getSetting('notification_channel')) || 'none';
       const activeChannels = channelsRaw === 'none' ? [] : channelsRaw.split(',').map(c => c.trim());
       if (!reminderEnabled) {
         logInfo('Trip reminders: disabled in settings');
@@ -46,7 +46,7 @@ export class ReminderJobsService implements OnApplicationBootstrap {
         logInfo(`Trip reminders: enabled via [${activeChannels.join(',')}]${tripCount > 0 ? `, ${tripCount} trip(s) with active reminders` : ''}`);
       }
 
-      if (this.getSetting('notify_todo_due') !== 'false') {
+      if ((await this.getSetting('notify_todo_due')) !== 'false') {
         logInfo(`Todo due reminders: enabled (lead ${TODO_REMINDER_LEAD_DAYS}d)`);
       } else {
         logInfo('Todo due reminders: disabled in settings');
@@ -62,7 +62,7 @@ export class ReminderJobsService implements OnApplicationBootstrap {
   /** Daily check for trips starting exactly reminder_days from now. */
   async tripTick(): Promise<void> {
     try {
-      if (this.getSetting('notify_trip_reminder') === 'false') return;
+      if ((await this.getSetting('notify_trip_reminder')) === 'false') return;
 
       const trips = this.db.all<{ id: number; title: string; user_id: number; reminder_days: number }>(`
         SELECT t.id, t.title, t.user_id, t.reminder_days FROM trips t
@@ -86,7 +86,7 @@ export class ReminderJobsService implements OnApplicationBootstrap {
   /** Daily check for unchecked todos due inside the lead window. */
   async todoTick(): Promise<void> {
     try {
-      if (this.getSetting('notify_todo_due') === 'false') return;
+      if ((await this.getSetting('notify_todo_due')) === 'false') return;
 
       // Select unchecked todos with a due date inside the lead window
       // that haven't been reminded in the last 24 hours. `due_date` is

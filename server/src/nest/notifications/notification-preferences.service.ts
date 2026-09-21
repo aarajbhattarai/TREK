@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
+import { UnitOfWork } from '../database/unit-of-work';
 import { MailerService } from './mailer/mailer.service';
 import { listChannels } from './channel-registry';
 import {
@@ -35,9 +36,10 @@ export class NotificationPreferencesService {
   constructor(
     private readonly db: DatabaseService,
     private readonly mailer: MailerService,
+    private readonly uow: UnitOfWork,
   ) {}
 
-  private getAppSetting(key: string): string | null {
+  private async getAppSetting(key: string): Promise<string | null> {
     return this.db.get<{ value: string }>('SELECT value FROM app_settings WHERE key = ?', key)?.value || null;
   }
 
@@ -69,7 +71,7 @@ export class NotificationPreferencesService {
    * would silently drop any that were).
    */
   async getActiveChannels(): Promise<NotifChannel[]> {
-    const raw = this.getAppSetting('notification_channels') || this.getAppSetting('notification_channel') || 'none';
+    const raw = (await this.getAppSetting('notification_channels')) || (await this.getAppSetting('notification_channel')) || 'none';
     if (raw === 'none') return [];
     const builtins = new Set((await listChannels()).filter(c => c.source === 'builtin').map(c => c.id));
     return raw.split(',').map(c => c.trim()).filter(c => builtins.has(c));
@@ -86,7 +88,7 @@ export class NotificationPreferencesService {
    * Returns true if the user has this event+channel enabled.
    * Default (no row) = enabled. Only returns false if there's an explicit disabled row.
    */
-  isEnabledForEvent(userId: number, eventType: NotifEventType, channel: NotifChannel): boolean {
+  async isEnabledForEvent(userId: number, eventType: NotifEventType, channel: NotifChannel): Promise<boolean> {
     const row = this.db.get<{ enabled: number }>(
       'SELECT enabled FROM notification_channel_preferences WHERE user_id = ? AND event_type = ? AND channel = ?',
       userId, eventType, channel,
@@ -118,9 +120,9 @@ export class NotificationPreferencesService {
     if (scope === 'admin') {
       // Admin-scoped events go out over the admin's own global credentials, which
       // are independent of the per-user `notification_channels` toggle.
-      const hasSmtp = this.mailer.isSmtpConfigured();
-      const hasAdminWebhook = !!this.getAppSetting('admin_webhook_url');
-      const hasAdminNtfy = !!this.getAppSetting('admin_ntfy_topic');
+      const hasSmtp = await this.mailer.isSmtpConfigured();
+      const hasAdminWebhook = !!(await this.getAppSetting('admin_webhook_url'));
+      const hasAdminNtfy = !!(await this.getAppSetting('admin_ntfy_topic'));
       const adminActive: Record<string, boolean> = { email: hasSmtp, webhook: hasAdminWebhook, ntfy: hasAdminNtfy };
       for (const channel of await listChannels()) {
         // Plugin channels are user-scoped only — they never carry admin-global events.
@@ -181,7 +183,7 @@ export class NotificationPreferencesService {
       for (const channel of implemented_combos[eventType]) {
         // Admin-scoped events use global settings for the built-in external channels
         if (scope === 'admin' && ADMIN_SCOPED_EVENTS.has(eventType) && isAdminGlobalChannel(channel)) {
-          preferences[eventType]![channel] = this.getAdminGlobalPref(eventType, channel);
+          preferences[eventType]![channel] = await this.getAdminGlobalPref(eventType, channel);
         } else {
           preferences[eventType]![channel] = stored[eventType]?.[channel] ?? true;
         }
@@ -198,7 +200,7 @@ export class NotificationPreferencesService {
       channels: await this.describeChannels(userId, scope),
       event_types,
       implemented_combos,
-      ...(scope === 'user' && { defaults: { ntfyServer: this.getAppSetting('admin_ntfy_server') || null } }),
+      ...(scope === 'user' && { defaults: { ntfyServer: (await this.getAppSetting('admin_ntfy_server')) || null } }),
     };
   }
 
@@ -209,12 +211,12 @@ export class NotificationPreferencesService {
    * Stored in app_settings as `admin_notif_pref_{event}_{channel}`.
    * Defaults to true (enabled) when no row exists.
    */
-  getAdminGlobalPref(event: NotifEventType, channel: AdminGlobalChannel): boolean {
-    const val = this.getAppSetting(`admin_notif_pref_${event}_${channel}`);
+  async getAdminGlobalPref(event: NotifEventType, channel: AdminGlobalChannel): Promise<boolean> {
+    const val = await this.getAppSetting(`admin_notif_pref_${event}_${channel}`);
     return val !== '0';
   }
 
-  private setAdminGlobalPref(event: NotifEventType, channel: AdminGlobalChannel, enabled: boolean): void {
+  private async setAdminGlobalPref(event: NotifEventType, channel: AdminGlobalChannel, enabled: boolean): Promise<void> {
     this.db.run('INSERT OR REPLACE INTO app_settings (key, value) VALUES (?, ?)',
       `admin_notif_pref_${event}_${channel}`,
       enabled ? '1' : '0',
@@ -224,10 +226,10 @@ export class NotificationPreferencesService {
   // ── Preferences update ─────────────────────────────────────────────────────
 
   /** Shared helper for per-user channel preference upserts. */
-  private applyUserChannelPrefs(
+  private async applyUserChannelPrefs(
     userId: number,
     prefs: Partial<Record<string, Partial<Record<string, boolean>>>>,
-  ): void {
+  ): Promise<void> {
     const upsert = this.db.prepare(
       'INSERT OR REPLACE INTO notification_channel_preferences (user_id, event_type, channel, enabled) VALUES (?, ?, ?, ?)'
     );
@@ -251,11 +253,13 @@ export class NotificationPreferencesService {
    * Bulk-update preferences from the matrix UI.
    * Inserts disabled rows (enabled=0) and removes rows that are enabled (default).
    */
-  setPreferences(
+  async setPreferences(
     userId: number,
     prefs: Partial<Record<string, Partial<Record<string, boolean>>>>
-  ): void {
-    this.db.transaction(() => this.applyUserChannelPrefs(userId, prefs));
+  ): Promise<void> {
+    await this.uow.transactional(async () => {
+      await this.applyUserChannelPrefs(userId, prefs);
+    });
   }
 
   /**
@@ -263,10 +267,10 @@ export class NotificationPreferencesService {
    * email/webhook channels are stored globally in app_settings (not per-user).
    * inapp channel remains per-user in notification_channel_preferences.
    */
-  setAdminPreferences(
+  async setAdminPreferences(
     userId: number,
     prefs: Partial<Record<string, Partial<Record<string, boolean>>>>
-  ): void {
+  ): Promise<void> {
     // Split global (email/webhook) from per-user (inapp) prefs
     const globalPrefs: Partial<Record<string, Partial<Record<string, boolean>>>> = {};
     const userPrefs: Partial<Record<string, Partial<Record<string, boolean>>>> = {};
@@ -289,19 +293,21 @@ export class NotificationPreferencesService {
       if (!channels) continue;
       for (const [channel, enabled] of Object.entries(channels)) {
         if (!isAdminGlobalChannel(channel)) continue;
-        this.setAdminGlobalPref(eventType as NotifEventType, channel, enabled);
+        await this.setAdminGlobalPref(eventType as NotifEventType, channel, enabled);
       }
     }
 
     // Apply per-user (inapp) prefs in a transaction
-    this.db.transaction(() => this.applyUserChannelPrefs(userId, userPrefs));
+    await this.uow.transactional(async () => {
+      await this.applyUserChannelPrefs(userId, userPrefs);
+    });
   }
 
   // ── Instance-level readiness ──────────────────────────────────────────────
 
   /** SMTP set up at all? Kept here because the settings UI asks preferences, not the mailer. */
-  isSmtpConfigured(): boolean {
-    return this.mailer.isSmtpConfigured();
+  async isSmtpConfigured(): Promise<boolean> {
+    return await this.mailer.isSmtpConfigured();
   }
 
   async isWebhookConfigured(): Promise<boolean> {

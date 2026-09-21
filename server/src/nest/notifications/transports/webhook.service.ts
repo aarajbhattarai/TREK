@@ -46,14 +46,14 @@ export function buildWebhookBody(
 export class WebhookService {
   constructor(private readonly db: DatabaseService) {}
 
-  getUserWebhookUrl(userId: number): string | null {
+  async getUserWebhookUrl(userId: number): Promise<string | null> {
     const value = this.db.get<{ value: string }>(
       "SELECT value FROM settings WHERE user_id = ? AND key = 'webhook_url'", userId,
     )?.value || null;
     return value ? decrypt_api_key(value) : null;
   }
 
-  getAdminWebhookUrl(): string | null {
+  async getAdminWebhookUrl(): Promise<string | null> {
     const value = this.db.get<{ value: string }>(
       'SELECT value FROM app_settings WHERE key = ?', 'admin_webhook_url',
     )?.value || null;

@@ -107,7 +107,7 @@ export async function createPluginRpcHostFactory(dbs: DatabaseService): Promise<
   const dayNotes = new DayNotesService(dbs, permissions, realtime);
   const assignments = new AssignmentsService(dbs, permissions, realtime, queryHelpers, journey);
   const membership = new TripMembershipService(dbs);
-  const notifications = makeNotificationsService(dbs, realtime);
+  const notifications = await makeNotificationsService(dbs, realtime);
   const llmConfig = new LlmConfigResolver(new SettingsService(dbs, await createTestUnitOfWork(dbs.connection)), dbs, addons);
   const oauth = new PluginOAuthService(dbs);
   const accommodations = new AccommodationsService(dbs, permissions, realtime, assignments, await createTestUnitOfWork(dbs.connection));

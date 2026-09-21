@@ -43,11 +43,13 @@ import { registerBuiltinChannels } from '../../../src/nest/notifications/channel
 import { NtfyService } from '../../../src/nest/notifications/transports/ntfy.service';
 import { WebhookService } from '../../../src/nest/notifications/transports/webhook.service';
 import { __resetChannelsForTest } from '../../../src/nest/notifications/channel-registry';
+import { createTestUnitOfWork } from '../../helpers/test-uow';
 
 const dbs = new DatabaseService(testDb);
 const mailer = new MailerService(dbs);
 registerBuiltinChannels({ mailer, webhook: new WebhookService(dbs), ntfy: new NtfyService(dbs) });
-const svc = new NotificationPreferencesService(dbs, mailer);
+// Constructed in beforeAll: the service now takes a UnitOfWork, which is async to build.
+let svc: NotificationPreferencesService;
 
 // Legacy free-function names bound to the service, so the moved cases read as before.
 // Arrow forwarders rather than `.bind(svc)`: under `strictBindCallApply: false` a bound
@@ -64,9 +66,10 @@ const isSmtpConfigured = (...a: Parameters<Svc['isSmtpConfigured']>) => svc.isSm
 const isWebhookConfigured = (...a: Parameters<Svc['isWebhookConfigured']>) => svc.isWebhookConfigured(...a);
 
 
-beforeAll(() => {
+beforeAll(async () => {
   createTables(testDb);
   runMigrations(testDb);
+  svc = new NotificationPreferencesService(dbs, mailer, await createTestUnitOfWork(testDb));
 });
 
 beforeEach(() => {
@@ -82,23 +85,23 @@ afterAll(() => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe('isEnabledForEvent', () => {
-  it('NPREF-001 — returns true when no row exists (default enabled)', () => {
+  it('NPREF-001 — returns true when no row exists (default enabled)', async () => {
     const { user } = createUser(testDb);
-    expect(isEnabledForEvent(user.id, 'trip_invite', 'email')).toBe(true);
+    expect(await isEnabledForEvent(user.id, 'trip_invite', 'email')).toBe(true);
   });
 
-  it('NPREF-002 — returns true when row exists with enabled=1', () => {
+  it('NPREF-002 — returns true when row exists with enabled=1', async () => {
     const { user } = createUser(testDb);
     testDb.prepare(
       'INSERT INTO notification_channel_preferences (user_id, event_type, channel, enabled) VALUES (?, ?, ?, 1)'
     ).run(user.id, 'trip_invite', 'email');
-    expect(isEnabledForEvent(user.id, 'trip_invite', 'email')).toBe(true);
+    expect(await isEnabledForEvent(user.id, 'trip_invite', 'email')).toBe(true);
   });
 
-  it('NPREF-003 — returns false when row exists with enabled=0', () => {
+  it('NPREF-003 — returns false when row exists with enabled=0', async () => {
     const { user } = createUser(testDb);
     disableNotificationPref(testDb, user.id, 'trip_invite', 'email');
-    expect(isEnabledForEvent(user.id, 'trip_invite', 'email')).toBe(false);
+    expect(await isEnabledForEvent(user.id, 'trip_invite', 'email')).toBe(false);
   });
 });
 
@@ -189,9 +192,9 @@ describe('getPreferencesMatrix', () => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe('setPreferences', () => {
-  it('NPREF-012 — disabling a preference inserts a row with enabled=0', () => {
+  it('NPREF-012 — disabling a preference inserts a row with enabled=0', async () => {
     const { user } = createUser(testDb);
-    setPreferences(user.id, { trip_invite: { email: false } });
+    await setPreferences(user.id, { trip_invite: { email: false } });
     const row = testDb.prepare(
       'SELECT enabled FROM notification_channel_preferences WHERE user_id = ? AND event_type = ? AND channel = ?'
     ).get(user.id, 'trip_invite', 'email') as { enabled: number } | undefined;
@@ -199,12 +202,12 @@ describe('setPreferences', () => {
     expect(row!.enabled).toBe(0);
   });
 
-  it('NPREF-013 — re-enabling a preference removes the disabled row', () => {
+  it('NPREF-013 — re-enabling a preference removes the disabled row', async () => {
     const { user } = createUser(testDb);
     // First disable
     disableNotificationPref(testDb, user.id, 'trip_invite', 'email');
     // Then re-enable
-    setPreferences(user.id, { trip_invite: { email: true } });
+    await setPreferences(user.id, { trip_invite: { email: true } });
     const row = testDb.prepare(
       'SELECT enabled FROM notification_channel_preferences WHERE user_id = ? AND event_type = ? AND channel = ?'
     ).get(user.id, 'trip_invite', 'email');
@@ -212,16 +215,16 @@ describe('setPreferences', () => {
     expect(row).toBeUndefined();
   });
 
-  it('NPREF-014 — bulk update handles multiple event+channel combos', () => {
+  it('NPREF-014 — bulk update handles multiple event+channel combos', async () => {
     const { user } = createUser(testDb);
-    setPreferences(user.id, {
+    await setPreferences(user.id, {
       trip_invite: { email: false, webhook: false },
       booking_change: { email: false },
       trip_reminder: { webhook: true },
     });
-    expect(isEnabledForEvent(user.id, 'trip_invite', 'email')).toBe(false);
-    expect(isEnabledForEvent(user.id, 'trip_invite', 'webhook')).toBe(false);
-    expect(isEnabledForEvent(user.id, 'booking_change', 'email')).toBe(false);
+    expect(await isEnabledForEvent(user.id, 'trip_invite', 'email')).toBe(false);
+    expect(await isEnabledForEvent(user.id, 'trip_invite', 'webhook')).toBe(false);
+    expect(await isEnabledForEvent(user.id, 'booking_change', 'email')).toBe(false);
     // trip_reminder webhook was set to true → no row, default enabled
     const row = testDb.prepare(
       'SELECT enabled FROM notification_channel_preferences WHERE user_id = ? AND event_type = ? AND channel = ?'
@@ -263,9 +266,9 @@ describe('getActiveChannels', () => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe('channel availability', () => {
-  it('NPREF-019 — detects SMTP config from app_settings.smtp_host', () => {
+  it('NPREF-019 — detects SMTP config from app_settings.smtp_host', async () => {
     setAppSetting(testDb, 'smtp_host', 'mail.example.com');
-    expect(isSmtpConfigured()).toBe(true);
+    expect(await isSmtpConfigured()).toBe(true);
   });
 
   it('NPREF-020 — webhook is active when admin has enabled the webhook channel', async () => {
@@ -273,11 +276,11 @@ describe('channel availability', () => {
     expect(await getActiveChannels()).toContain('webhook');
   });
 
-  it('NPREF-021 — detects SMTP config from env var SMTP_HOST', () => {
+  it('NPREF-021 — detects SMTP config from env var SMTP_HOST', async () => {
     const original = process.env.SMTP_HOST;
     process.env.SMTP_HOST = 'env-mail.example.com';
     try {
-      expect(isSmtpConfigured()).toBe(true);
+      expect(await isSmtpConfigured()).toBe(true);
     } finally {
       if (original === undefined) delete process.env.SMTP_HOST;
       else process.env.SMTP_HOST = original;
@@ -296,17 +299,17 @@ describe('channel availability', () => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe('setAdminPreferences', () => {
-  it('NPREF-022 — disabling email for version_available stores global pref in app_settings', () => {
+  it('NPREF-022 — disabling email for version_available stores global pref in app_settings', async () => {
     const { user } = createAdmin(testDb);
-    setAdminPreferences(user.id, { version_available: { email: false } });
-    expect(getAdminGlobalPref('version_available', 'email')).toBe(false);
+    await setAdminPreferences(user.id, { version_available: { email: false } });
+    expect(await getAdminGlobalPref('version_available', 'email')).toBe(false);
     const row = testDb.prepare("SELECT value FROM app_settings WHERE key = ?").get('admin_notif_pref_version_available_email') as { value: string } | undefined;
     expect(row?.value).toBe('0');
   });
 
-  it('NPREF-023 — disabling inapp for version_available stores per-user row in notification_channel_preferences', () => {
+  it('NPREF-023 — disabling inapp for version_available stores per-user row in notification_channel_preferences', async () => {
     const { user } = createAdmin(testDb);
-    setAdminPreferences(user.id, { version_available: { inapp: false } });
+    await setAdminPreferences(user.id, { version_available: { inapp: false } });
     const row = testDb.prepare(
       'SELECT enabled FROM notification_channel_preferences WHERE user_id = ? AND event_type = ? AND channel = ?'
     ).get(user.id, 'version_available', 'inapp') as { enabled: number } | undefined;
@@ -317,24 +320,24 @@ describe('setAdminPreferences', () => {
     expect(globalRow).toBeUndefined();
   });
 
-  it('NPREF-024 — re-enabling inapp removes the disabled per-user row', () => {
+  it('NPREF-024 — re-enabling inapp removes the disabled per-user row', async () => {
     const { user } = createAdmin(testDb);
     // First disable
     disableNotificationPref(testDb, user.id, 'version_available', 'inapp');
     // Then re-enable via setAdminPreferences
-    setAdminPreferences(user.id, { version_available: { inapp: true } });
+    await setAdminPreferences(user.id, { version_available: { inapp: true } });
     const row = testDb.prepare(
       'SELECT enabled FROM notification_channel_preferences WHERE user_id = ? AND event_type = ? AND channel = ?'
     ).get(user.id, 'version_available', 'inapp');
     expect(row).toBeUndefined();
   });
 
-  it('NPREF-025 — enabling email stores global pref as "1" in app_settings', () => {
+  it('NPREF-025 — enabling email stores global pref as "1" in app_settings', async () => {
     const { user } = createAdmin(testDb);
     // First disable, then re-enable
-    setAdminPreferences(user.id, { version_available: { email: false } });
-    setAdminPreferences(user.id, { version_available: { email: true } });
-    expect(getAdminGlobalPref('version_available', 'email')).toBe(true);
+    await setAdminPreferences(user.id, { version_available: { email: false } });
+    await setAdminPreferences(user.id, { version_available: { email: true } });
+    expect(await getAdminGlobalPref('version_available', 'email')).toBe(true);
     const row = testDb.prepare("SELECT value FROM app_settings WHERE key = ?").get('admin_notif_pref_version_available_email') as { value: string } | undefined;
     expect(row?.value).toBe('1');
   });

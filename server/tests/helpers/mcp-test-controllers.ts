@@ -243,7 +243,7 @@ export async function createMcpTestRegistry(): Promise<McpRegistry> {
       new AtlasMcp(new AtlasService(dbService, await createTestUnitOfWork(dbService.connection)), addonsService, authService),
       new JourneyMcp(journeyDomain, new JourneyShareService(dbService, journeyDomain, new SettingsService(dbService, await createTestUnitOfWork(dbService.connection))), addonsService, authService, captureBackfill),
       new MemoriesMcp(immichService, synologyService, dbService, addonsService),
-      new NotificationsMcp(makeNotificationsService(dbService, realtimeService), authService),
+      new NotificationsMcp(await makeNotificationsService(dbService, realtimeService), authService),
       new AirtrailMcp(new AirtrailService(dbService, new AuditService(dbService), new AirtrailClient()), addonsService),
       new ReservationImportMcp(new AirtrailImportService(dbService, realtimeService, reservationsService, new AirtrailClient(), new AirtrailService(dbService, new AuditService(dbService), new AirtrailClient())), dbService, authService, guards, addonsService),
       new SettingsMcp(new SettingsService(dbService, await createTestUnitOfWork(dbService.connection)), authService),
