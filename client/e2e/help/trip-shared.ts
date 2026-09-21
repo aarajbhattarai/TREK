@@ -47,9 +47,20 @@ export async function openTrip(page: Page, opts: { tab?: string; day?: number | 
 
 /** Click the day's header: selects it and opens its details panel. */
 export async function selectDay(page: Page, n: number): Promise<void> {
-  await page.getByRole('button', { name: new RegExp(`^${n} .*Day ${n} `) }).click()
+  const header = page.getByRole('button', { name: new RegExp(`^${n} .*Day ${n} `) })
+  // The header carries buttons of its own: the booked night in the middle, the
+  // transit, note and fold actions on the right. A click on the centre lands on
+  // the booked night as soon as a day has one, which selects nothing, so the
+  // click goes to the day's number at the left edge.
+  await header.click({ position: { x: 22, y: 20 } })
+  // The details panel is the selection: without it the day's route tools, the
+  // + on a place row and To day are all absent, and a guide fails far from here.
+  await expect(dayDetails(page)).toBeVisible({ timeout: 15_000 })
   await settle(page)
 }
+
+/** The day details panel: the one fixed, floating card over the map. */
+export const dayDetails = (page: Page) => page.locator('div.fixed.z-50').first()
 
 /** The details panel's close is the one unlabelled X button over the map. */
 export async function closeDayDetails(page: Page): Promise<void> {
@@ -60,3 +71,22 @@ export async function closeDayDetails(page: Page): Promise<void> {
   }
 }
 
+/**
+ * Open the trip with day `n` selected and its details panel standing. The panel
+ * IS the selection — closing it deselects the day — and the day's route tools
+ * and the "+" at the end of a place row render for a selected day only, so a
+ * guide about either of them starts here rather than at `openTrip`.
+ */
+export async function openTripOnDay(page: Page, n = 1): Promise<void> {
+  await openTrip(page, { day: null })
+  await selectDay(page, n)
+}
+
+/**
+ * Dismiss a `ContextMenu`. It closes on a document click and ignores Escape,
+ * and a real click would land on the map or on the row underneath.
+ */
+export async function closeMenu(page: Page): Promise<void> {
+  await page.evaluate(() => document.body.click())
+  await settle(page)
+}

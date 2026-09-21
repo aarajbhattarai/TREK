@@ -982,7 +982,7 @@ const help: TranslationStrings = {
   'help.ctx.settings.summary':
     'Suas configurações pessoais, uma aba por assunto na barra lateral à esquerda. A maioria das chaves vale no momento em que você as vira; um formulário com um botão Salvar embaixo espera por ele. Nada aqui muda o TREK de mais ninguém.',
   'help.ctx.settings.bullet.1':
-    'Barra lateral à esquerda: Exibição, Appearance, Mapa, Notificações, Integrações, Offline e Conta. Plugins aparece assim que um estiver instalado, Sobre em um TREK auto-hospedado.',
+    'Barra lateral à esquerda: Exibição, Appearance, Mapa, Notificações, Integrações, Offline e Conta. Plugins aparece assim que um estiver instalado, Sobre onde quer que o admin não o tenha tirado.',
   'help.ctx.settings.bullet.2':
     'Exibição é idioma, unidades, moeda e com o que o app abre; Appearance é tema, cores, tamanho do texto e os widgets do painel.',
   'help.ctx.settings.bullet.3':
@@ -1927,7 +1927,7 @@ const help: TranslationStrings = {
   'help.guide.read-day-plan.step.2':
     'Uma parada: a alça à esquerda a arrasta, a imagem carrega um cadeado para a otimização da rota, depois o nome, a descrição e, se houver, as Notas para este dia. Um selo de horário mostra Início e Fim quando a parada os tem; as setas que aparecem na ponta direita a sobem ou a descem.',
   'help.guide.read-day-plan.step.3':
-    'Uma reserva no dia: um transporte aparece como Partida ou Chegada com seu horário e trajeto, uma reserva numa parada marca a parada como Reserva confirmada ou Reserva pendente. O pequeno botão num transporte mostra a rota dele no mapa.',
+    'Uma reserva no dia: uma reserva numa parada marca a parada como Reserva confirmada ou Reserva pendente, e um transporte aparece como Partida ou Chegada com seu horário e seu trajeto, com um pequeno botão que desenha essa rota no mapa.',
   'help.guide.read-day-plan.step.4':
     'Entre duas paradas, o conector diz quanto tempo o trecho leva e qual é a distância, no meio de transporte do dia; clique nele para mudar o meio só daquele trecho.',
   'help.guide.read-day-plan.step.5':

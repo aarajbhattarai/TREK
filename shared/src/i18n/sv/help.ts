@@ -960,7 +960,7 @@ const help: TranslationStrings = {
   'help.ctx.settings.summary':
     'Dina personliga inställningar, en flik per ämne i sidopanelen till vänster. De flesta reglage slår igenom i samma stund du växlar dem; ett formulär med en Spara-knapp längst ner väntar på den. Inget här ändrar någon annans TREK.',
   'help.ctx.settings.bullet.1':
-    'Sidopanelen till vänster: Visning, Appearance, Karta, Meddelanden, Integrationer, Offline och Konto. Tillägg dyker upp så snart ett är installerat, Om på en TREK du kör själv.',
+    'Sidopanelen till vänster: Visning, Appearance, Karta, Meddelanden, Integrationer, Offline och Konto. Tillägg dyker upp så snart ett är installerat, Om överallt där administratören inte har tagit bort fliken.',
   'help.ctx.settings.bullet.2':
     'Visning är språk, enheter, valuta och vad appen öppnar med; Appearance är tema, färger, textstorlek och översiktens widgetar.',
   'help.ctx.settings.bullet.3':
@@ -1893,7 +1893,7 @@ const help: TranslationStrings = {
   'help.guide.read-day-plan.step.2':
     'Ett stopp: greppet till vänster drar det, bilden bär ett lås för ruttoptimeringen, sedan kommer namnet, beskrivningen och, om de är satta, Anteckningar för denna dag. En tidsbricka visar Börjar och Slutar när stoppet har dem; pilarna som dyker upp i dess högra kant flyttar det upp eller ner.',
   'help.guide.read-day-plan.step.3':
-    'En bokning på dagen: en transport visas som Avgång eller Ankomst med sin tid och sin väg, en bokning vid ett stopp märker stoppet Bokningen bekräftad eller Bokningen väntar på bekräftelse. Den lilla knappen på en transport visar dess väg på kartan.',
+    'En bokning på dagen: en bokning vid ett stopp märker stoppet Bokningen bekräftad eller Bokningen väntar på bekräftelse, och en transport visas som Avgång eller Ankomst med sin tid och sin väg, med en liten knapp som ritar den vägen på kartan.',
   'help.guide.read-day-plan.step.4':
     'Mellan två stopp säger länken hur lång tid etappen tar och hur långt det är, i dagens färdsätt; klicka på den för att byta färdsätt för just den etappen.',
   'help.guide.read-day-plan.step.5':

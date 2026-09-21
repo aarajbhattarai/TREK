@@ -954,7 +954,7 @@ const help: TranslationStrings = {
   'help.ctx.settings.summary':
     'Vaše osobní nastavení, v postranním panelu vlevo jedna karta na téma. Většina přepínačů se projeví hned, jakmile je přepnete; formulář s tlačítkem Uložit dole na něj čeká. Nic tady nemění TREK nikomu jinému.',
   'help.ctx.settings.bullet.1':
-    'Postranní panel vlevo: Zobrazení, Appearance, Mapa, Oznámení, Integrace, Offline a Účet. Doplňky se objeví, jakmile je nějaký nainstalovaný, O aplikaci na TREKu, který hostujete sami.',
+    'Postranní panel vlevo: Zobrazení, Appearance, Mapa, Oznámení, Integrace, Offline a Účet. Doplňky se objeví, jakmile je nějaký nainstalovaný, O aplikaci všude tam, kde ji správce neodebral.',
   'help.ctx.settings.bullet.2':
     'Zobrazení je jazyk, jednotky, měna a to, s čím se aplikace otevře; Appearance je motiv, barvy, velikost textu a widgety přehledu.',
   'help.ctx.settings.bullet.3':
@@ -1873,7 +1873,7 @@ const help: TranslationStrings = {
   'help.guide.read-day-plan.step.2':
     'Zastávka: úchyt vlevo ji táhne, obrázek nese zámek pro optimalizaci trasy, pak jde název, popis a, pokud jsou nastavené, Poznámky pro tento den. Časový štítek ukazuje Od a Do, když je zastávka má; šipky, které se objeví na jejím pravém konci, s ní posunou nahoru nebo dolů.',
   'help.guide.read-day-plan.step.3':
-    'Rezervace na dni: doprava se ukáže jako Odlet nebo Přílet se svým časem a trasou, rezervace u zastávky označí zastávku Rezervace potvrzena nebo Rezervace čeká. Malý přepínač na dopravě ukáže její trasu na mapě.',
+    'Rezervace na dni: rezervace u zastávky označí zastávku Rezervace potvrzena nebo Rezervace čeká a doprava se ukáže jako Odlet nebo Přílet se svým časem a trasou, s malým přepínačem, který tu trasu vykreslí na mapě.',
   'help.guide.read-day-plan.step.4':
     'Mezi dvěma zastávkami říká spojnice, jak dlouho úsek trvá a jak je dlouhý, ve způsobu dopravy dne; kliknutím na ni změníte způsob pro ten jeden úsek.',
   'help.guide.read-day-plan.step.5':

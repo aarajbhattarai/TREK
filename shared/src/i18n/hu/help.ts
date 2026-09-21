@@ -997,7 +997,7 @@ const help: TranslationStrings = {
   'help.ctx.settings.summary':
     'A személyes beállításaid, a bal oldali sávban témánként egy fül. A legtöbb kapcsoló abban a pillanatban érvényes, ahogy átbillented; az alján Mentés gombos űrlap arra vár. Itt semmi sem változtat más TREK-jén.',
   'help.ctx.settings.bullet.1':
-    'Bal oldali sáv: Megjelenés, Appearance, Térkép, Értesítések, Integrációk, Offline és Fiók. A Bővítmények akkor jelenik meg, ha egy telepítve van, a Névjegy saját üzemeltetésű TREK-en.',
+    'Bal oldali sáv: Megjelenés, Appearance, Térkép, Értesítések, Integrációk, Offline és Fiók. A Bővítmények akkor jelenik meg, ha egy telepítve van, a Névjegy mindenütt, ahol az admin nem távolította el.',
   'help.ctx.settings.bullet.2':
     'A Megjelenés a nyelv, a mértékegységek, a pénznem és az, amivel az alkalmazás megnyílik; az Appearance a téma, a színek, a szövegméret és az irányítópult widgetjei.',
   'help.ctx.settings.bullet.3':
@@ -1972,7 +1972,7 @@ const help: TranslationStrings = {
   'help.guide.read-day-plan.step.2':
     'Egy megálló: a bal oldali fogantyú húzza, a kép lakatot visel az útvonal-optimalizáláshoz, majd jön a név, a leírás és, ha be van állítva, a Jegyzetek erre a napra. Egy időjelvény a Kezdés és a Befejezés értéket mutatja, ha a megállónak van ilyen; a jobb szélén megjelenő nyilak felfelé vagy lefelé mozgatják.',
   'help.guide.read-day-plan.step.3':
-    'Egy foglalás a napon: egy közlekedés Indulás vagy Érkezés formában jelenik meg az időpontjával és az útvonalával, egy megállóhoz kötött foglalás pedig Foglalás megerősítve vagy Foglalás függőben jelzéssel látja el a megállót. A közlekedésen lévő kis kapcsoló megmutatja az útvonalát a térképen.',
+    'Egy foglalás a napon: egy megállóhoz kötött foglalás Foglalás megerősítve vagy Foglalás függőben jelzéssel látja el a megállót, egy közlekedés pedig Indulás vagy Érkezés formában jelenik meg az időpontjával és az útvonalával, és a rajta lévő kis kapcsoló felrajzolja azt az útvonalat a térképen.',
   'help.guide.read-day-plan.step.4':
     'Két megálló között az összekötő megmondja, mennyi ideig tart a szakasz és milyen hosszú, a nap közlekedési módjában; kattints rá, ha csak annál az egy szakasznál akarod a módot megváltoztatni.',
   'help.guide.read-day-plan.step.5':

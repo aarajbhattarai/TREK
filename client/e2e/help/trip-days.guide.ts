@@ -1,7 +1,7 @@
 import { test, expect, type Page, type Locator } from '@playwright/test'
 import { captureGuide, captureHero, beat, typeInto, settle, VIEWPORT, type GuideScript } from './guide'
 import { seededTrip, ensureDaysFixtures } from './fixtures'
-import { openTrip, modal, dialog, selectDay, closeDayDetails } from './trip-shared'
+import { openTrip, openTripOnDay, modal, portalDialog, selectDay, closeDayDetails, closeMenu, dayDetails } from './trip-shared'
 import { tripDaysContext, tripDaysGuides } from '../../src/help/contexts/tripDays'
 import type { HelpGuide } from '../../src/help/types'
 
@@ -19,21 +19,62 @@ const guide = (id: string): HelpGuide => {
 }
 
 const SPARE = { name: 'Tsukiji Outer Market', lat: 35.6654, lng: 139.7707, address: '4 Chome Tsukiji, Chuo City, Tokyo' }
+/** The note the day-note guide writes: a name for the card, markdown underneath. */
+const NOTE = { title: 'Rain plan', body: '**Tokyo National Museum** instead of the shrine, tickets at the gate.' }
 
 /** A day card's header button. */
+/**
+ * The day the route guides read. Day 6 is the only one whose two stops sit next
+ * to each other: day 1's are separated by the flight, so it has no leg of its
+ * own and its only connector is the one to the booked night, which depends on a
+ * fixture. Day 6 also carries a reservation at a stop, so one card shows every
+ * row the guide talks about.
+ */
+const ROUTED_DAY = 6
+/** The pencil that renames the open day, in its details panel. */
+const renameDay = (page: Page) => dayDetails(page).getByRole('button', { name: 'Edit', exact: true })
 const dayHeader = (page: Page, n: number) => page.getByRole('button', { name: new RegExp(`^${n} .*Day ${n} `) })
-/** A stop row: the button that holds the lock button and the place's name. */
+/**
+ * A stop row. Every row of a day card is a div with `role="button"`; a stop is
+ * the one whose accessible name opens with the label of the lock on its
+ * picture, which is what tells it from the note and booking rows beside it.
+ */
 const stop = (page: Page, name: string) =>
-  page.locator('button').filter({ has: page.getByRole('button', { name: /Keep position during route optimization|Click to unlock/ }) }).filter({ hasText: name }).first()
+  page
+    .getByRole('button', { name: /^(Keep position during route optimization|Click to unlock) / })
+    .filter({ hasText: name })
+    .first()
+/** A booking row of a day: its phase (Departure / Arrival) and title make its name. */
+const bookingRow = (page: Page, name: RegExp) => page.getByRole('button', { name })
+/** The note the day-note guide left on day 2, as a row of the card. */
+const noteRow = (page: Page) => page.getByRole('button', { name: new RegExp(`^${NOTE.title}`) })
 /** A row of the places column. */
 const placeRow = (page: Page, name: string) => page.getByRole('option', { name: new RegExp(`^${name}`) }).first()
-/** The context menu of a stop or a note. */
-const menu = (page: Page) => page.locator('.trek-popover-enter').last()
-/** The route bar of the open day. */
+/**
+ * The context menu of a stop, a note or a leg. Tooltip renders into the same
+ * `.trek-popover-enter` class and a click on a connector leaves its tooltip
+ * standing, so the menu is the popover that is not one.
+ */
+const menu = (page: Page) => page.locator('.trek-popover-enter:not([role="tooltip"])').last()
+/** The route bar of the open day: Route, the two hand-offs, Optimize, the modes. */
 const routeBar = (page: Page) => page.getByRole('button', { name: 'Route', exact: true }).locator('xpath=..')
 const toolbar = (page: Page) => page.getByRole('button', { name: 'Export' }).locator('xpath=..')
-/** A connector between two stops, once the day's route is computed. */
-const connector = (page: Page) => page.locator('div[role="button"]').filter({ has: page.locator('svg.lucide-car, svg.lucide-footprints') }).first()
+/**
+ * A connector between two stops, once the day's route is computed. The hotel
+ * bookend legs carry the same label and are not between two stops, so they are
+ * filtered out by the hotel icon only they have.
+ */
+/**
+ * A leg between two rows of a day, ringed by its travel time. Day 1's is the one
+ * to the booked night: the flight sits between its two stops, so they have no
+ * leg of their own, and the day fixtures put a hotel on the first four nights.
+ */
+const connector = (page: Page) => page.getByRole('button', { name: 'Change travel mode' }).first()
+/** The note dialog: its own portal with no backdrop class, known by its body field. */
+const noteBody = (page: Page) => page.getByPlaceholder('Details, links, reminders…')
+const noteDialog = (page: Page) => portalDialog(page, noteBody(page))
+/** The question a timed stop asks before it moves; also a portal of its own. */
+const timeConfirm = (page: Page) => portalDialog(page, page.getByText('Remove time?'))
 
 async function createSpare(page: Page): Promise<void> {
   const { tripId } = seededTrip()
@@ -51,9 +92,13 @@ async function deleteByName(page: Page, ...names: string[]): Promise<void> {
   }
 }
 
-/** Open the trip on day 1 and draw its route, so the connectors between the stops exist. */
+/**
+ * Open the trip on day 1 and draw its route, so the connectors between the
+ * stops exist. The day stays selected with its details panel up: the panel is
+ * the selection, and the route tools render for the selected day only.
+ */
 async function openWithRoute(page: Page): Promise<void> {
-  await openTrip(page)
+  await openTripOnDay(page, ROUTED_DAY)
   await page.getByRole('button', { name: 'Route', exact: true }).click()
   await expect(connector(page)).toBeVisible({ timeout: 30_000 })
   await settle(page)
@@ -73,9 +118,9 @@ const SCRIPTS: Record<string, GuideScript> = {
     guide: guide('read-day-plan'),
     start: openWithRoute,
     steps: [
-      only(p => dayHeader(p, 1)),
-      only(p => stop(p, 'Senso-ji Temple')),
-      only(p => p.locator('button').filter({ hasText: /Departure.*LH716/ }).first()),
+      only(p => dayHeader(p, ROUTED_DAY)),
+      only(p => stop(p, 'Arashiyama Bamboo Grove')),
+      only(p => stop(p, 'Nishiki Market')),
       only(connector),
       only(routeBar),
     ],
@@ -84,7 +129,9 @@ const SCRIPTS: Record<string, GuideScript> = {
     guide: guide('place-onto-day'),
     start: async p => {
       await createSpare(p)
-      await openTrip(p)
+      // Day 1 stays open: the "+" of a place row and "To day" exist only while
+      // a day is selected, and steps 2 and 4 are about those two.
+      await openTripOnDay(p, 1)
     },
     steps: [
       {
@@ -97,15 +144,10 @@ const SCRIPTS: Record<string, GuideScript> = {
         },
       },
       {
-        prepare: async p => {
-          // Back to the list for the second way in.
-          await stop(p, SPARE.name).click({ button: 'right' })
-          await menu(p).getByRole('button', { name: 'Remove from day' }).click()
-          await expect(stop(p, SPARE.name)).toHaveCount(0, { timeout: 15_000 })
-          await placeRow(p, SPARE.name).hover()
-          await settle(p)
-        },
-        target: p => placeRow(p, SPARE.name).locator('button').last(),
+        // The "+" offers the OPEN day, so it is still there with the place on
+        // day 2 — and the place stays on a day, which is what the result says.
+        prepare: async p => { await placeRow(p, SPARE.name).hover() },
+        target: p => placeRow(p, SPARE.name).getByRole('button'),
       },
       only(p => p.getByRole('button', { name: 'Add place to this day' }).first()),
       only(p => p.getByRole('button', { name: 'Add to the open day' })),
@@ -130,14 +172,22 @@ const SCRIPTS: Record<string, GuideScript> = {
       },
       {
         prepare: async p => {
-          // Moving the timed stop asks first; the question is the picture.
-          await stop(p, 'Senso-ji Temple').hover()
-          await stop(p, 'Senso-ji Temple').locator('button:has(svg.lucide-chevron-down)').click()
-          await expect(modal(p).getByText('Remove time?')).toBeVisible({ timeout: 10_000 })
+          // Only a move that breaks the day's chronology asks, and the arrows
+          // never do here: the timed stop is the first row of the day. Dropping
+          // it below the 13:05 departure does, and Cancel leaves the day alone.
+          const booking = bookingRow(p, /Departure.*LH716/)
+          const box = await booking.boundingBox()
+          if (!box) throw new Error('the departure row of day 1 has no box')
+          await stop(p, 'Senso-ji Temple').dragTo(booking, { targetPosition: { x: box.width / 2, y: box.height - 4 } })
+          await expect(timeConfirm(p)).toBeVisible({ timeout: 10_000 })
           await settle(p)
         },
-        target: dialog,
-        act: closeModal,
+        target: timeConfirm,
+        act: async p => {
+          await timeConfirm(p).getByRole('button', { name: 'Cancel' }).click()
+          await expect(p.getByText('Remove time?')).toHaveCount(0)
+          await settle(p)
+        },
       },
     ],
   },
@@ -195,9 +245,10 @@ const SCRIPTS: Record<string, GuideScript> = {
     guide: guide('remove-from-day'),
     start: async p => {
       await createSpare(p)
-      await openTrip(p)
+      // The "+" puts the place on the OPEN day, so day 1 stays selected.
+      await openTripOnDay(p, 1)
       await placeRow(p, SPARE.name).hover()
-      await placeRow(p, SPARE.name).locator('button').last().click()
+      await placeRow(p, SPARE.name).getByRole('button').click()
       await expect(stop(p, SPARE.name)).toBeVisible({ timeout: 15_000 })
       await settle(p)
     },
@@ -248,34 +299,37 @@ const SCRIPTS: Record<string, GuideScript> = {
         target: p => dayHeader(p, 2).getByRole('button', { name: 'Add Note' }),
         act: async p => {
           await dayHeader(p, 2).getByRole('button', { name: 'Add Note' }).click()
-          await expect(modal(p).getByPlaceholder('Details, links, reminders…')).toBeVisible()
+          await expect(noteBody(p)).toBeVisible()
           await settle(p)
         },
       },
       {
         prepare: async p => {
-          await typeInto(p, modal(p).getByPlaceholder('Details, links, reminders…'), 'Rain plan: **Tokyo National Museum** instead of the shrine, tickets at the gate.')
+          // Note is the name the day card shows and the only required field;
+          // Daily Note below it is the markdown the toolbar formats.
+          await typeInto(p, noteDialog(p).getByPlaceholder('Note', { exact: true }), NOTE.title)
+          await typeInto(p, noteBody(p), NOTE.body)
           await beat(p, 300)
         },
-        target: p => modal(p).getByPlaceholder('Details, links, reminders…').locator('xpath=ancestor::div[2]'),
+        target: p => noteBody(p).locator('xpath=ancestor::div[2]'),
       },
       {
-        target: p => modal(p).getByText('Colour', { exact: true }).locator('xpath=..'),
+        target: p => noteDialog(p).getByText('Icon', { exact: true }).locator('xpath=../..'),
         act: async p => {
-          await modal(p).getByRole('button', { name: 'Save', exact: true }).click()
-          await expect(modal(p)).toHaveCount(0)
-          await expect(p.getByText('Rain plan:')).toBeVisible({ timeout: 15_000 })
+          await noteDialog(p).getByRole('button', { name: 'Add', exact: true }).click()
+          await expect(noteDialog(p)).toHaveCount(0)
+          await expect(noteRow(p)).toBeVisible({ timeout: 15_000 })
           await settle(p)
         },
       },
       {
         prepare: async p => {
-          await p.locator('button').filter({ hasText: 'Rain plan:' }).first().click({ button: 'right' })
+          await noteRow(p).click({ button: 'right' })
           await expect(menu(p).getByRole('button', { name: 'Edit' })).toBeVisible()
           await beat(p, 300)
         },
-        target: p => p.locator('button').filter({ hasText: 'Rain plan:' }).first(),
-        act: async p => { await p.keyboard.press('Escape') },
+        target: noteRow,
+        act: closeMenu,
       },
     ],
     cleanup: async p => {
@@ -283,14 +337,14 @@ const SCRIPTS: Record<string, GuideScript> = {
       const res = await p.request.get(`/api/trips/${tripId}/days/${dayIds[1]}/notes`)
       const body = (await res.json()) as { notes?: { id: number; text: string }[] } | { id: number; text: string }[]
       const notes = Array.isArray(body) ? body : (body.notes ?? [])
-      for (const note of notes.filter(n => n.text.startsWith('Rain plan:'))) {
+      for (const note of notes.filter(n => n.text.startsWith(NOTE.title))) {
         await p.request.delete(`/api/trips/${tripId}/days/${dayIds[1]}/notes/${note.id}`)
       }
     },
   },
   'day-route': {
     guide: guide('day-route'),
-    start: p => openTrip(p),
+    start: p => openTripOnDay(p, ROUTED_DAY),
     steps: [
       {
         target: p => p.getByRole('button', { name: 'Route', exact: true }),
@@ -308,10 +362,12 @@ const SCRIPTS: Record<string, GuideScript> = {
           await beat(p, 300)
         },
         target: menu,
-        act: async p => { await p.keyboard.press('Escape') },
+        act: closeMenu,
       },
       only(p => p.getByRole('button', { name: 'Optimize' })),
-      only(p => p.getByRole('button', { name: 'Open in Google Maps' }).locator('xpath=..')),
+      // The two hand-offs are siblings with no wrapper of their own: their
+      // parent is the whole route bar, which is already read-day-plan's step 5.
+      only(p => p.getByRole('button', { name: 'Open in Google Maps' })),
     ],
   },
   'manage-days': {
@@ -331,10 +387,12 @@ const SCRIPTS: Record<string, GuideScript> = {
       {
         prepare: async p => {
           await selectDay(p, 1)
-          await expect(p.getByRole('button', { name: 'Edit', exact: true })).toBeVisible()
+          await expect(renameDay(p)).toBeVisible()
           await settle(p)
         },
-        target: p => p.getByRole('button', { name: 'Edit', exact: true }).locator('xpath=..'),
+        // Scoped to the panel: a stop row carries an Edit of its own, so the
+        // bare name matches two buttons as soon as any day is unfolded.
+        target: p => renameDay(p).locator('xpath=..'),
         act: closeDayDetails,
       },
       only(p => p.getByRole('button', { name: /Expand all days|Collapse all days/ })),
@@ -346,7 +404,7 @@ const SCRIPTS: Record<string, GuideScript> = {
       await openTrip(p, { day: 5 })
     },
     steps: [
-      only(p => p.locator('button').filter({ hasText: /Departure.*Nozomi 21/ }).first()),
+      only(p => bookingRow(p, /Departure.*Nozomi 21/)),
       {
         prepare: async p => { await selectDay(p, 6); await closeDayDetails(p) },
         target: p => stop(p, 'Nishiki Market'),
@@ -401,7 +459,9 @@ test('every registered days guide has a script, and only those', async () => {
 
 test('hero: trip-days', async ({ page }) => {
   await page.setViewportSize(VIEWPORT)
-  await captureHero(page, tripDaysContext.id, openWithRoute)
+  // The plan as it opens: the details panel is trip-day-detail's subject and the
+  // route is day-route's, so the hero shows neither.
+  await captureHero(page, tripDaysContext.id, p => openTrip(p))
 })
 
 for (const id of tripDaysContext.guides) {

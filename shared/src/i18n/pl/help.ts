@@ -972,7 +972,7 @@ const help: TranslationStrings = {
   'help.ctx.settings.summary':
     'Twoje osobiste ustawienia, w pasku bocznym po lewej jedna zakładka na temat. Większość przełączników działa od razu po przestawieniu; formularz z przyciskiem Zapisz na dole czeka na niego. Nic tutaj nie zmienia TREK-a nikomu innemu.',
   'help.ctx.settings.bullet.1':
-    'Pasek boczny po lewej: Wygląd, Appearance, Mapa, Powiadomienia, Integracje, Offline i Konto. Wtyczki pojawiają się, gdy jakaś jest zainstalowana, O aplikacji na TREK-u hostowanym samodzielnie.',
+    'Pasek boczny po lewej: Wygląd, Appearance, Mapa, Powiadomienia, Integracje, Offline i Konto. Wtyczki pojawiają się, gdy jakaś jest zainstalowana, O aplikacji wszędzie tam, gdzie administrator jej nie usunął.',
   'help.ctx.settings.bullet.2':
     'Wygląd to język, jednostki, waluta i to, z czym aplikacja się otwiera; Appearance to motyw, kolory, rozmiar tekstu i widżety pulpitu.',
   'help.ctx.settings.bullet.3':
@@ -1918,7 +1918,7 @@ const help: TranslationStrings = {
   'help.guide.read-day-plan.step.2':
     'Przystanek: uchwyt po lewej go przeciąga, zdjęcie nosi kłódkę dla optymalizacji trasy, dalej idą nazwa, opis i, jeśli są ustawione, Notatki na ten dzień. Plakietka godziny pokazuje Początek i Koniec, gdy przystanek je ma; strzałki, które pojawiają się na jego prawym końcu, przesuwają go w górę lub w dół.',
   'help.guide.read-day-plan.step.3':
-    'Rezerwacja w dniu: transport pokazuje się jako Wylot albo Przylot ze swoją godziną i trasą, rezerwacja przy przystanku oznacza przystanek jako Rezerwacja potwierdzona albo Rezerwacja oczekująca. Mały przełącznik na transporcie pokazuje jego trasę na mapie.',
+    'Rezerwacja w dniu: rezerwacja przy przystanku oznacza przystanek jako Rezerwacja potwierdzona albo Rezerwacja oczekująca, a transport pokazuje się jako Wylot albo Przylot ze swoją godziną i trasą, z małym przełącznikiem, który rysuje tę trasę na mapie.',
   'help.guide.read-day-plan.step.4':
     'Między dwoma przystankami łącznik mówi, ile odcinek trwa i jak jest długi, w środku transportu dnia; kliknij go, by zmienić środek dla tego jednego odcinka.',
   'help.guide.read-day-plan.step.5':

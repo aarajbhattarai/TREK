@@ -994,7 +994,7 @@ const help: TranslationStrings = {
   'help.ctx.settings.summary':
     'Pengaturan pribadi Anda, satu tab per topik di bilah samping kiri. Sebagian besar sakelar langsung berlaku begitu Anda mengubahnya; formulir dengan tombol “Simpan” di bawahnya menunggu tombol itu ditekan. Tidak ada yang di sini mengubah TREK milik orang lain.',
   'help.ctx.settings.bullet.1':
-    'Bilah samping kiri: “Tampilan”, “Appearance”, “Peta”, “Notifikasi”, “Integrasi”, “Offline”, dan “Akun”. “Plugin” muncul begitu ada satu yang terpasang, “Tentang” pada TREK yang dihosting sendiri.',
+    'Bilah samping kiri: “Tampilan”, “Appearance”, “Peta”, “Notifikasi”, “Integrasi”, “Offline”, dan “Akun”. “Plugin” muncul begitu ada satu yang terpasang, “Tentang” di mana pun operatornya tidak menghapusnya.',
   'help.ctx.settings.bullet.2':
     '“Tampilan” berisi bahasa, satuan, mata uang, dan apa yang dibuka aplikasi saat mulai; “Appearance” berisi tema, warna, ukuran teks, dan widget dasbor.',
   'help.ctx.settings.bullet.3':
@@ -1965,7 +1965,7 @@ const help: TranslationStrings = {
   'help.guide.read-day-plan.step.2':
     'Sebuah perhentian: pegangan di kiri menyeretnya, gambarnya membawa kunci untuk optimasi rute, lalu nama, deskripsi dan, jika diisi, “Catatan untuk hari ini”. Sebuah lencana waktu menampilkan “Mulai” dan “Selesai” bila perhentian itu punya keduanya; panah yang muncul di ujung kanannya memindahkannya ke atas atau ke bawah.',
   'help.guide.read-day-plan.step.3':
-    'Sebuah pemesanan pada hari itu: transportasi tampil sebagai “Keberangkatan” atau “Kedatangan” dengan waktu dan rutenya, sebuah reservasi pada perhentian menandai perhentian itu “Reservasi dikonfirmasi” atau “Reservasi tertunda”. Sakelar kecil pada transportasi menampilkan rutenya di peta.',
+    'Sebuah pemesanan pada hari itu: sebuah reservasi pada perhentian menandai perhentian itu “Reservasi dikonfirmasi” atau “Reservasi tertunda”, dan transportasi tampil sebagai “Keberangkatan” atau “Kedatangan” dengan waktu dan rutenya, dengan sakelar kecil yang menggambar rute itu di peta.',
   'help.guide.read-day-plan.step.4':
     'Di antara dua perhentian, penghubungnya menyebutkan berapa lama ruas itu dan berapa jauh, dalam moda perjalanan hari itu; klik untuk mengubah moda ruas yang satu itu.',
   'help.guide.read-day-plan.step.5':

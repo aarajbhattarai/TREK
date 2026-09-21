@@ -9,6 +9,16 @@ import { adminContext, adminTabContexts, adminGuides } from './contexts/admin'
 import { tripContext, tripGuides } from './contexts/trip'
 import { tripPlacesContext, tripPlacesGuides } from './contexts/tripPlaces'
 import { tripDaysContext, tripDaysGuides } from './contexts/tripDays'
+import { tripRoadtripContext, tripRoadtripGuides } from './contexts/tripRoadtrip'
+import { tripCollabContext, tripCollabGuides } from './contexts/tripCollab'
+import { tripFilesContext, tripFilesGuides } from './contexts/tripFiles'
+import { tripCostsContext, tripCostsGuides } from './contexts/tripCosts'
+import { tripListsContext, tripListsGuides } from './contexts/tripLists'
+import { tripBookingsContext, tripBookingsGuides } from './contexts/tripBookings'
+import { tripTransportsContext, tripTransportsGuides } from './contexts/tripTransports'
+import { tripMapContext, tripMapGuides } from './contexts/tripMap'
+import { tripDayDetailContext, tripDayDetailGuides } from './contexts/tripDayDetail'
+import { tripPlaceContext, tripPlaceGuides } from './contexts/tripPlace'
 
 /**
  * Everything the help center knows, composed from one file per screen under
@@ -18,12 +28,24 @@ import { tripDaysContext, tripDaysGuides } from './contexts/tripDays'
 
 // The order of the screen switcher: the trip right under My Trips, where it is opened from.
 const CONTEXT_LIST: HelpContext[] = [
-  dashboardContext, tripContext, tripDaysContext, tripPlacesContext, vacayContext, atlasContext, collectionsContext, journeyContext, journalContext, studioContext,
+  dashboardContext,
+  // The trip and its own screens, in the order a reader meets them: the three
+  // columns of the plan, the two panels that open over it, then the tabs in the
+  // order the tab bar has them, and the drive last because an addon decides it.
+  tripContext, tripDaysContext, tripPlacesContext, tripMapContext,
+  tripPlaceContext, tripDayDetailContext,
+  tripTransportsContext, tripBookingsContext, tripListsContext, tripCostsContext, tripFilesContext, tripCollabContext,
+  tripRoadtripContext,
+  vacayContext, atlasContext, collectionsContext, journeyContext, journalContext, studioContext,
   settingsContext, ...settingsTabContexts, adminContext, ...adminTabContexts,
 ]
 const GUIDE_LIST: HelpGuide[] = [
   ...dashboardGuides, ...vacayGuides, ...atlasGuides, ...collectionsGuides, ...journeyGuides, ...journalGuides, ...studioGuides,
-  ...settingsGuides, ...adminGuides, ...tripGuides, ...tripDaysGuides, ...tripPlacesGuides,
+  ...settingsGuides, ...adminGuides,
+  ...tripGuides, ...tripDaysGuides, ...tripPlacesGuides, ...tripMapGuides,
+  ...tripPlaceGuides, ...tripDayDetailGuides,
+  ...tripTransportsGuides, ...tripBookingsGuides, ...tripListsGuides, ...tripCostsGuides, ...tripFilesGuides, ...tripCollabGuides,
+  ...tripRoadtripGuides,
 ]
 
 export const HELP_CONTEXTS: ReadonlyMap<string, HelpContext> = new Map(CONTEXT_LIST.map(c => [c.id, c]))

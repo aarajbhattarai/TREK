@@ -999,7 +999,7 @@ const help: TranslationStrings = {
   'help.ctx.settings.summary':
     'La teva configuració personal, una pestanya per tema a la barra lateral de l’esquerra. La majoria d’interruptors s’apliquen en el moment que els canvies; un formulari amb un botó Desar a baix l’espera. Res d’aquí no canvia el TREK de ningú més.',
   'help.ctx.settings.bullet.1':
-    'Barra lateral esquerra: Pantalla, Aparença, Mapa, Notificacions, Integracions, Fora de línia i Compte. Connectors apareix quan n’hi ha un d’instal·lat, Quant a en un TREK autoallotjat.',
+    'Barra lateral esquerra: Pantalla, Aparença, Mapa, Notificacions, Integracions, Fora de línia i Compte. Connectors apareix quan n’hi ha un d’instal·lat, Quant a allà on l’admin no ho hagi tret.',
   'help.ctx.settings.bullet.2':
     'Pantalla és idioma, unitats, divisa i amb què s’obre l’app; Aparença és tema, colors, mida del text i els ginys del tauler.',
   'help.ctx.settings.bullet.3':
@@ -1967,7 +1967,7 @@ const help: TranslationStrings = {
   'help.guide.read-day-plan.step.2':
     'Una parada: la nansa de l’esquerra l’arrossega, la imatge porta un cadenat per a l’optimització de ruta, després el nom, la descripció i, si n’hi ha, les Notes per a aquest dia. Una etiqueta d’hora mostra Inici i Fi quan la parada els té; les fletxes que apareixen al seu extrem dret la pugen o la baixen.',
   'help.guide.read-day-plan.step.3':
-    'Una reserva del dia: un transport apareix com a Sortida o Arribada amb la seva hora i el seu trajecte, una reserva en una parada la marca com a Reserva confirmada o Reserva pendent. El petit interruptor d’un transport mostra la seva ruta al mapa.',
+    'Una reserva del dia: una reserva en una parada la marca com a Reserva confirmada o Reserva pendent, i un transport apareix com a Sortida o Arribada amb la seva hora i el seu trajecte, amb un petit interruptor que dibuixa aquesta ruta al mapa.',
   'help.guide.read-day-plan.step.4':
     'Entre dues parades, el connector diu quant dura el tram i quina distància fa, en el mitjà de transport del dia; fes-hi clic per canviar el mitjà d’aquell sol tram.',
   'help.guide.read-day-plan.step.5':

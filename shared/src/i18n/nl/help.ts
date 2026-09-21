@@ -999,7 +999,7 @@ const help: TranslationStrings = {
   'help.ctx.settings.summary':
     'Je persoonlijke instellingen, één tabblad per onderwerp in de zijbalk links. De meeste schakelaars gelden zodra je ze omzet; een formulier met een knop Opslaan onderaan wacht daarop. Niets hier verandert de TREK van iemand anders.',
   'help.ctx.settings.bullet.1':
-    'Zijbalk links: Weergave, Appearance, Kaart, Meldingen, Integraties, Offline en Account. Plug-ins verschijnt zodra er een is geïnstalleerd, Over op een zelf gehoste TREK.',
+    'Zijbalk links: Weergave, Appearance, Kaart, Meldingen, Integraties, Offline en Account. Plug-ins verschijnt zodra er een is geïnstalleerd, Over daar waar de beheerder het niet heeft weggehaald.',
   'help.ctx.settings.bullet.2':
     'Weergave is taal, eenheden, valuta en waarmee de app opent; Appearance is thema, kleuren, tekstgrootte en de dashboardwidgets.',
   'help.ctx.settings.bullet.3':
@@ -1972,7 +1972,7 @@ const help: TranslationStrings = {
   'help.guide.read-day-plan.step.2':
     'Een stop: het greepje links sleept hem, de afbeelding draagt een slotje voor de route-optimalisatie, dan de naam, de beschrijving en, als ze er zijn, de Notities voor deze dag. Een tijdlabel toont Starttijd en Einde als de stop die heeft; de pijlen die aan het rechteruiteinde verschijnen zetten hem omhoog of omlaag.',
   'help.guide.read-day-plan.step.3':
-    'Een boeking op de dag: vervoer verschijnt als Vertrek of Aankomst met tijd en traject, een reservering bij een stop markeert die stop als Reservering bevestigd of Reservering in behandeling. Het kleine schakelaartje op een vervoersrij toont de route op de kaart.',
+    'Een boeking op de dag: een reservering bij een stop markeert die stop als Reservering bevestigd of Reservering in behandeling, en vervoer verschijnt als Vertrek of Aankomst met tijd en traject, met een klein schakelaartje dat die route op de kaart tekent.',
   'help.guide.read-day-plan.step.4':
     'Tussen twee stops zegt de verbinding hoe lang het traject duurt en hoe ver het is, in de vervoerswijze van de dag; klik erop om de wijze voor dat ene traject te veranderen.',
   'help.guide.read-day-plan.step.5':

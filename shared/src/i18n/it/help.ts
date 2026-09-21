@@ -994,7 +994,7 @@ const help: TranslationStrings = {
   'help.ctx.settings.summary':
     'Le tue impostazioni personali, una scheda per argomento nella barra laterale a sinistra. La maggior parte degli interruttori si applica nel momento in cui li sposti; un modulo con un pulsante Salva in fondo lo aspetta. Niente qui cambia il TREK di qualcun altro.',
   'help.ctx.settings.bullet.1':
-    'Barra laterale a sinistra: Visualizzazione, Appearance, Mappa, Notifiche, Integrazioni, Offline e Account. Plugin compare appena ne è installato uno, Informazioni su un TREK self-hosted.',
+    'Barra laterale a sinistra: Visualizzazione, Appearance, Mappa, Notifiche, Integrazioni, Offline e Account. Plugin compare appena ne è installato uno, Informazioni ovunque l’admin non l’abbia tolto.',
   'help.ctx.settings.bullet.2':
     'Visualizzazione è lingua, unità, valuta e con cosa si apre l’app; Appearance è tema, colori, dimensione del testo e i widget della dashboard.',
   'help.ctx.settings.bullet.3':
@@ -1954,7 +1954,7 @@ const help: TranslationStrings = {
   'help.guide.read-day-plan.step.2':
     'Una tappa: la maniglia a sinistra la trascina, l’immagine porta un lucchetto per l’ottimizzazione del percorso, poi il nome, la descrizione e, se ci sono, le Note per questo giorno. Un contrassegno di orario mostra Inizio e Fine quando la tappa li ha; le frecce che compaiono alla sua estremità destra la spostano su o giù.',
   'help.guide.read-day-plan.step.3':
-    'Una prenotazione nel giorno: un trasporto compare come Partenza o Arrivo con il suo orario e il suo tragitto, una prenotazione su una tappa la segna Prenotazione confermata o Prenotazione in attesa. Il piccolo interruttore su un trasporto mostra il suo percorso sulla mappa.',
+    'Una prenotazione nel giorno: una prenotazione su una tappa la segna Prenotazione confermata o Prenotazione in attesa, e un trasporto compare come Partenza o Arrivo con il suo orario e il suo tragitto, con un piccolo interruttore che disegna quel percorso sulla mappa.',
   'help.guide.read-day-plan.step.4':
     'Tra due tappe il connettore dice quanto dura la tratta e quanto è lunga, nel mezzo di trasporto del giorno; cliccalo per cambiare il mezzo di quella sola tratta.',
   'help.guide.read-day-plan.step.5':

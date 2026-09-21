@@ -1018,7 +1018,7 @@ const help: TranslationStrings = {
   'help.ctx.settings.summary':
     'Vos réglages personnels, un onglet par sujet dans la barre latérale à gauche. La plupart des interrupteurs s’appliquent dès que vous les basculez ; un formulaire avec un bouton Enregistrer en bas l’attend. Rien ici ne change le TREK de quelqu’un d’autre.',
   'help.ctx.settings.bullet.1':
-    'Barre latérale à gauche : Affichage, Appearance, Carte, Notifications, Intégrations, Offline et Compte. Modules apparaît dès qu’un module est installé, À propos sur un TREK auto-hébergé.',
+    'Barre latérale à gauche : Affichage, Appearance, Carte, Notifications, Intégrations, Offline et Compte. Modules apparaît dès qu’un module est installé, À propos partout où l’admin ne l’a pas retiré.',
   'help.ctx.settings.bullet.2':
     'Affichage, c’est la langue, les unités, la devise et ce sur quoi l’application s’ouvre ; Appearance, c’est le thème, les couleurs, la taille du texte et les widgets du tableau de bord.',
   'help.ctx.settings.bullet.3':
@@ -2020,7 +2020,7 @@ const help: TranslationStrings = {
   'help.guide.read-day-plan.step.2':
     'Une étape : la poignée à gauche la fait glisser, l’image porte un cadenas pour l’optimisation de l’itinéraire, puis le nom, la description et, si elles sont remplies, les Notes pour ce jour. Un badge horaire affiche Début et Fin quand l’étape en a ; les flèches qui apparaissent à son extrémité droite la montent ou la descendent.',
   'help.guide.read-day-plan.step.3':
-    'Une réservation du jour : un transport s’affiche comme Départ ou Arrivée avec son heure et son trajet, une réservation liée à une étape marque celle-ci Réservation confirmée ou Réservation en attente. Le petit interrupteur sur un transport montre son itinéraire sur la carte.',
+    'Une réservation du jour : une réservation liée à une étape marque celle-ci Réservation confirmée ou Réservation en attente, et un transport s’affiche comme Départ ou Arrivée avec son heure et son trajet, avec un petit interrupteur qui trace cet itinéraire sur la carte.',
   'help.guide.read-day-plan.step.4':
     'Entre deux étapes, le connecteur indique combien de temps dure le tronçon et quelle distance il fait, dans le mode de transport du jour ; cliquez dessus pour changer le mode de ce seul tronçon.',
   'help.guide.read-day-plan.step.5':

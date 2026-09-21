@@ -1871,9 +1871,9 @@ const help: TranslationStrings = {
   'help.guide.read-day-plan.step.2':
     'A stop: the grip on the left drags it, the picture carries a lock for route optimization, then the name, the description and, if set, the notes for this day. A time badge shows Start and End when the stop has them; the arrows that appear at its right end move it up or down.',
   'help.guide.read-day-plan.step.3':
-    'A booking on the day: a transport shows as Departure or Arrival with its time and route, a reservation at a stop marks the stop Reservation confirmed or Reservation pending. The small toggle on a transport shows its route on the map.',
+    'A booking on the day: a reservation at a stop marks the stop Reservation confirmed or Reservation pending, and a transport shows as Departure or Arrival with its time and its route, with a small toggle that draws that route on the map.',
   'help.guide.read-day-plan.step.4':
-    'The connector says how long a leg takes and how far it is, in the day’s travel mode, whether it runs to the next stop or to the night you booked; click it to change the mode for that one leg.',
+    'Between two stops the connector says how long the leg takes and how far it is, in the day’s travel mode; click it to change the mode for that one leg.',
   'help.guide.read-day-plan.step.5':
     'The route bar at the end: Route draws the day’s way on the map, Optimize reorders the stops, the mode buttons pick Driving or Walking, Open in Google Maps and Open in CoMaps open the day there.',
   'help.guide.read-day-plan.result': 'Every symbol on the card has a meaning; the guides below change each of them.',
@@ -2040,7 +2040,7 @@ const help: TranslationStrings = {
   'help.ctx.trip-place.bullet.2':
     'The head carries the round picture, the name, the category, the address and the coordinates. Click the picture to use one of your own, double-click the name to rename the place on the spot, and the X on the right closes the card.',
   'help.ctx.trip-place.bullet.3':
-    'Under it: the stars every traveller gave the place, the price if it has one, the description and the notes, and Notes for this day when the stop carries one.',
+    'Under it: the price if it has one, the stars every traveller gave the place, the description and the notes, and Notes for this day when the stop carries one.',
   'help.ctx.trip-place.bullet.4':
     'Opening Hours, Track color, Track Stats and Files follow, as far as they apply. Files takes anything out of your folders and also lists what hangs on the booking of this stop.',
   'help.ctx.trip-place.bullet.5':
@@ -2141,7 +2141,7 @@ const help: TranslationStrings = {
   'help.guide.place-participants.tip.1':
     'Participants only appears with a stop selected, so pick the place inside the day rather than in the places column, and only on a trip with more than one traveller.',
   'help.guide.place-participants.tip.2':
-    'Nobody chosen means everybody is going. Taking the last one out puts everybody back in.',
+    'Nobody chosen means everybody is going, which is why the last traveller left on a stop cannot be taken out.',
   'help.guide.place-participants.tip.3':
     'A guest, who has no account of their own, can be a participant like anybody else.',
   // place-booking
@@ -2206,7 +2206,7 @@ const help: TranslationStrings = {
   'help.guide.place-to-collection.step.3': 'Click the list. The place is in it straight away.',
   'help.guide.place-to-collection.step.4': 'Close, and the button in the card reads Saved.',
   'help.guide.place-to-collection.result':
-    'The place is in your list with its picture, its notes and its stars, ready for the next trip.',
+    'The place is in your list with its picture, its notes and its address, ready for the next trip.',
   'help.guide.place-to-collection.tip.1':
     'The button is only there while the Collections addon is on, which the admin switches on under Addons.',
   'help.guide.place-to-collection.tip.2':
@@ -2283,7 +2283,7 @@ const help: TranslationStrings = {
   'help.guide.day-weather.result':
     'The day’s card in the days column carries the same weather in small under its number, so the whole trip can be read at a glance.',
   'help.guide.day-weather.tip.1':
-    'Degrees and wind follow your choice under Display in Settings: switch to Fahrenheit and the same forecast is read out in °F and mph.',
+    'Degrees and wind follow Temperature Unit under General in Settings: pick °F Fahrenheit and the same forecast is read out in °F and mph.',
   'help.guide.day-weather.tip.2':
     'A day with no located stop and no hotel to wake up in shows no weather at all: the forecast is always for a place, never for the trip.',
   'help.guide.day-weather.tip.3':
@@ -2332,7 +2332,7 @@ const help: TranslationStrings = {
   'help.guide.edit-accommodation.step.2':
     'The pencil at its right opens the stay again. The popup now reads Edit accommodation.',
   'help.guide.edit-accommodation.step.3':
-    'Change what you need: the days it covers, Check-in, Until, Check-out, Confirmation, or the property itself.',
+    'Correct the row of fields: Check-in, Until, Check-out and Confirmation. The days above it and the property below it can be changed here too.',
   'help.guide.edit-accommodation.step.4': 'Click Save.',
   'help.guide.edit-accommodation.step.5':
     'The X next to the pencil ends the stay. It asks nothing, and the Hotel booking that belongs to it goes with it.',
@@ -2365,7 +2365,7 @@ const help: TranslationStrings = {
   'help.ctx.trip-map.summary':
     'The middle of the plan: every place of the trip as a pin, the routes that join them, and the switches along the edges of the map for satellite, for the whole trip at once and for the places around the part of town you are looking at.',
   'help.ctx.trip-map.bullet.1':
-    'A pin is a place: its own photo when it has one, otherwise its category colour with the category icon. Rest the pointer on one for a card with its name, its rating, its category and its address.',
+    'A pin is a place: its own photo when it has one, otherwise its category colour with the category icon. Rest the pointer on one for a card with its name, its rating, its category and its address, and drag it onto a day card to plan it there.',
   'help.ctx.trip-map.bullet.2':
     'Pins too close together to tell apart fold into one dark bubble with a count. Click the bubble and the map zooms to what is inside.',
   'help.ctx.trip-map.bullet.3':
@@ -2382,15 +2382,15 @@ const help: TranslationStrings = {
   'help.guide.map-markers.title': 'Read the map',
   'help.guide.map-markers.goal': 'Know what every pin, badge and bubble on the map is telling you.',
   'help.guide.map-markers.step.1':
-    'The map holds every place of the trip. Where pins sit too close together to tell apart, they fold into one dark bubble carrying the number of places inside it.',
+    'The map holds every place of the trip. Where pins sit too close together to tell apart they fold into one dark bubble carrying the number inside it; click the bubble and the map zooms to what was in it, or, at the deepest zoom, fans the pins apart.',
   'help.guide.map-markers.step.2':
-    'Click the bubble. The map zooms to what was inside and the pins separate; at the deepest zoom it fans them apart instead of zooming further.',
-  'help.guide.map-markers.step.3':
     'A pin is the place’s own photo when it has one, otherwise its category colour with the category icon. Rest the pointer on one and a card gives its name, its rating, its category and its address.',
-  'help.guide.map-markers.step.4':
+  'help.guide.map-markers.step.3':
     'Click a pin and the place opens under the map: its coordinates, its rating, its files, and Add to Day, Save to Collection, Navigation, Edit and Delete. Click an empty piece of the map to let it go again.',
-  'help.guide.map-markers.step.5':
+  'help.guide.map-markers.step.4':
     'Open a day in the days column and its stops get numbered: the small white badge at a pin’s corner is that stop’s place in the day. A place planned on two days carries both numbers, joined by ·. Without a day open there are no numbers, and the corner carries the rating instead.',
+  'help.guide.map-markers.step.5':
+    'Drag a pin off the map onto a day card in the days column and the place is planned on that day, exactly as dragging its row out of the places list would.',
   'help.guide.map-markers.result':
     'Nothing on the trip has changed: the map is a view of it, and every pin says which place, which day and in which order.',
   'help.guide.map-markers.tip.1':
@@ -2398,7 +2398,7 @@ const help: TranslationStrings = {
   'help.guide.map-markers.tip.2':
     'The filter above the places list decides what the map draws as well: pick Unplanned and only the places still without a day are left on it.',
   'help.guide.map-markers.tip.3':
-    'There are no zoom buttons on this map: the wheel zooms, a double click zooms in a step, and dragging moves it.',
+    'There are no zoom buttons on this map: the wheel zooms, a double click zooms in a step, and dragging the map itself moves it.',
   // map-nearby-places
   'help.guide.map-nearby-places.title': 'Find places around you on the map',
   'help.guide.map-nearby-places.goal':
@@ -2444,11 +2444,10 @@ const help: TranslationStrings = {
   'help.guide.map-satellite.title': 'Switch to satellite',
   'help.guide.map-satellite.goal': 'Swap the drawn map for aerial imagery, and back.',
   'help.guide.map-satellite.step.1':
-    'The round button at the bottom left of the map is the base layer switch. Its icon always shows the layer it would move to, and hovering it says which: Switch to satellite view.',
+    'The round button at the bottom left of the map is the base layer switch. Its icon always shows the layer it would move to, and hovering it says which: Switch to satellite view. Click it.',
   'help.guide.map-satellite.step.2':
-    'Click it. The map becomes aerial imagery, deep enough to make out a single building, and without a key of your own.',
-  'help.guide.map-satellite.step.3':
-    'Everything TREK draws stays on top of it: the pins, the day’s route, the tracks and the booking routes. Click the button again, now reading Switch to map view, to go back.',
+    'The map is aerial imagery now, deep enough to make out a single building and without a key of your own. Everything TREK draws stays on top of it: the pins, the day’s route, the tracks and the booking routes.',
+  'help.guide.map-satellite.step.3': 'The button now reads Switch to map view. Click it to go back to the drawn map.',
   'help.guide.map-satellite.result':
     'The map is drawn again, and the layer you left it on is remembered on your account.',
   'help.guide.map-satellite.tip.1':
@@ -2459,13 +2458,14 @@ const help: TranslationStrings = {
   'help.guide.map-whole-trip.title': 'See the whole trip and its distances',
   'help.guide.map-whole-trip.goal':
     'Swap the one open day for every travel day of the trip, and read how far each one goes.',
-  'help.guide.map-whole-trip.step.1': 'The round Show whole trip button sits at the bottom right of the map.',
+  'help.guide.map-whole-trip.step.1':
+    'The round Show whole trip button sits at the bottom right of the map. Click it and every travel day of the trip is drawn at once, each in its own colour over a white casing, so neighbouring days stay apart.',
   'help.guide.map-whole-trip.step.2':
-    'Click it. Every travel day of the trip is drawn at once, each in its own colour over a white casing, so neighbouring days stay apart.',
-  'help.guide.map-whole-trip.step.3':
     'The card above the button lists those days: a colour dot, the day’s name, an icon for each way you travel it, and the distance it covers. Total distance is at the top.',
+  'help.guide.map-whole-trip.step.3':
+    'Click a day in the card to select it, the same as picking it in the days column: the map frames that day, and its stops get their numbers back.',
   'help.guide.map-whole-trip.step.4':
-    'Click a day in the card to select it, the same as picking it in the days column. Click the button again, now reading Hide whole trip, to go back to the one day.',
+    'The button now reads Hide whole trip. Press it to drop back to the one open day.',
   'help.guide.map-whole-trip.result':
     'Every travel day is drawn in its own colour, and the card says what each one covers and what the trip comes to.',
   'help.guide.map-whole-trip.tip.1':
@@ -2481,9 +2481,9 @@ const help: TranslationStrings = {
   'help.guide.map-booking-routes.step.1':
     'Booking routes are off until you ask for one. On a booking’s row in the days column sits a small route icon: Show booking routes.',
   'help.guide.map-booking-routes.step.2':
-    'Click it. The booking appears on the map: a flight as a great circle arc, a drive along the real roads, a train as the chain of its stations. Confirmed is drawn solid, pending dashed.',
+    'Click it and the booking appears on the map: a flight as a great circle arc, a drive along the real roads, a train as the chain of its stations. Confirmed is drawn solid, pending dashed, and the ends of the route are blue pills with the transport’s icon.',
   'help.guide.map-booking-routes.step.3':
-    'The ends of the route are blue pills with the transport’s icon. Click one to open the booking behind it, with its times, its reference and where it starts; Close puts it away again.',
+    'Click an end pill and the booking behind it opens, with its times, its reference and where it starts. Close puts it away again.',
   'help.guide.map-booking-routes.step.4':
     'The route icon in the toolbar above the days does the whole trip at once: Show all booking routes draws every booking that has one.',
   'help.guide.map-booking-routes.step.5':
@@ -2561,7 +2561,7 @@ const help: TranslationStrings = {
   'help.guide.plan-transit.step.1':
     'In the day header, click the tram button, Public transit. The search opens for that day.',
   'help.guide.plan-transit.step.2':
-    'From and To take a stop or a station. With the box still empty the day’s own stops are offered; typing two letters searches the timetable’s stations instead. Swap between the two boxes turns the connection round.',
+    'From and To take a stop or a station. With the box still empty the day’s own stops and the trip’s accommodations are offered; typing two letters searches the timetable’s stations instead. Swap between the two boxes turns the connection round.',
   'help.guide.plan-transit.step.3':
     'Depart or Arrive with a time says when you want to travel, and Best route, Fewer transfers or Less walking says how the answers should be ordered.',
   'help.guide.plan-transit.step.4':
@@ -2637,7 +2637,7 @@ const help: TranslationStrings = {
   'help.guide.transport-on-map.step.2':
     'The route is drawn on the map, with a pill marker at each end carrying the transport’s icon.',
   'help.guide.transport-on-map.step.3':
-    'Click an end marker to read the booking without leaving the map: the times, the airline and flight number, the Booking Code and the notes. Close puts the sheet away.',
+    'Click an end marker to read the booking without leaving the map: the times, the airline and flight number, the Booking Code and the address. Close puts the sheet away.',
   'help.guide.transport-on-map.step.4':
     'The route icon in the toolbar above the days does the whole trip at once: Show all booking routes, and Hide all booking routes to clear them again.',
   'help.guide.transport-on-map.step.5':
@@ -2762,7 +2762,7 @@ const help: TranslationStrings = {
   'help.guide.booking-cost.step.1':
     'Open the booking and go to the foot of the form. Under Costs stands Create expense, with the note Saves the booking, then opens the Costs editor.',
   'help.guide.booking-cost.step.2':
-    'Click Create expense. The booking is saved and the Costs editor opens on top of it.',
+    'Click Create expense. The booking is saved, its form closes and the Costs editor opens.',
   'help.guide.booking-cost.step.3':
     'What was it for? is already the booking’s title. Put in the Total amount and check the Currency and the Day.',
   'help.guide.booking-cost.step.4':
@@ -2856,7 +2856,7 @@ const help: TranslationStrings = {
   'help.ctx.trip-lists.bullet.5':
     'Apply template, Import and Save as template fill or keep a list without typing it out, and the red button beside them names how many items are ticked and clears them away.',
   'help.ctx.trip-lists.bullet.6':
-    'To-Do has a sidebar of its own: the progress card, the filters All, My Tasks, Overdue and Done, Sort by Priority or Due date, and one row per list. A click on a task opens it in the pane on the right, and Add new task opens the same pane empty.',
+    'To-Do has a sidebar of its own: the progress card, the filters All, My Tasks, Overdue and Done, Sort by Priority or Due date, and one row per list. A click on a task opens it in the pane on the right, and Add new task opens the New task form over the middle of the screen.',
   // packing-categories
   'help.guide.packing-categories.title': 'Build the packing list',
   'help.guide.packing-categories.goal':
@@ -3013,7 +3013,7 @@ const help: TranslationStrings = {
   'help.ctx.trip-costs.summary':
     'The trip’s money: every expense as a dated ledger, who put it down and who owes for it, in whatever currency the receipt was in, and, in the right-hand column, who has to pay whom to make it even again.',
   'help.ctx.trip-costs.bullet.1':
-    'Four cards at the top: You owe and You’re owed are your own side of the settlement, Outstanding amount is what is recorded but has no payer yet, and Total trip spend adds everything up with your share and what you paid under it.',
+    "Four cards at the top: You owe and You're owed are your own side of the settlement, Outstanding amount is what is recorded but has no payer yet, and Total trip spend adds everything up with your share and what you paid under it.",
   'help.ctx.trip-costs.bullet.2':
     'Add expense at the top right opens the editor; Settle up beside it records every open transfer at once.',
   'help.ctx.trip-costs.bullet.3':
@@ -3064,7 +3064,7 @@ const help: TranslationStrings = {
   'help.guide.expense-payers.tip.1':
     'Who paid? and Split are independent: you can pay for a dinner you were not at, and be split into one you did not pay for.',
   'help.guide.expense-payers.tip.2':
-    'With several payers the amounts have to add up to the total. Include one more and the others rearrange themselves around it; while they do not match, the editor says Payer amounts must add up to the total and refuses to save.',
+    'With several payers the amounts have to add up to the total. Include one more and the others rearrange themselves around it; while they do not match, the editor says what they have to add up to and refuses to save.',
   'help.guide.expense-payers.tip.3':
     'Removing a payer does not remove the expense: the amount stays in Total trip spend and the row becomes Unfinished.',
   // split-expense
@@ -3181,7 +3181,7 @@ const help: TranslationStrings = {
   'help.guide.expense-from-booking.step.3':
     'Click Create expense. The booking is saved, the form closes, and the Costs editor opens with the booking’s title as the name and its type already matched to a category.',
   'help.guide.expense-from-booking.step.4':
-    'Fill in the amount, who paid and the split as for any expense, and save. Reopening the booking now shows it under Linked expense, with a pencil to edit it and a bin to remove it.',
+    'Fill in the amount and its currency, who paid and the split as for any expense, and save. Reopening the booking now shows it under Linked expense, with a pencil to edit it and a bin to remove it.',
   'help.guide.expense-from-booking.result':
     'The booking carries its cost, and the expense is an ordinary row on the Costs tab, with a payer, a split and a currency like any other.',
   'help.guide.expense-from-booking.tip.1':
@@ -3212,9 +3212,9 @@ const help: TranslationStrings = {
   'help.guide.files-upload.step.1':
     'Open the trip and click Files in the tab bar. The trip’s documents are listed there, with the upload box above them.',
   'help.guide.files-upload.step.2':
-    'Click Drop files here and pick one or several files. They are uploaded one after the other and the box reads Uploading… while it runs. The line under the box says which types this TREK takes, and that a file may be 50 MB at most.',
+    'Click Drop files here and pick one or several files. They are uploaded one after the other and the box reads Uploading... while it runs. The line under the box says which types this TREK takes, and that a file may be 50 MB at most.',
   'help.guide.files-upload.step.3':
-    'As soon as the last file is up, Assign File opens for it by itself. Add a note… gives the file a line of its own, and the lists under it tie it to a place or a booking. Close it with the ×; nothing is lost by closing it.',
+    'As soon as the last file is up, Assign File opens for it by itself. Add a note... gives the file a line of its own, and the lists under it tie it to a place or a booking. Close it with the ×; nothing is lost by closing it.',
   'help.guide.files-upload.step.4':
     'The new files stand at the top of the list. A row shows who uploaded it, the name, the size and the date; a picture gets a thumbnail, every other file its type.',
   'help.guide.files-upload.result':
@@ -3224,14 +3224,14 @@ const help: TranslationStrings = {
   'help.guide.files-upload.tip.2':
     'A picture on the clipboard goes into the list with Ctrl+V, so a screenshot of a booking never has to be saved first.',
   'help.guide.files-upload.tip.3':
-    'Uploading needs the right to upload files; without it the box is not there at all. A type that is not on the list, or a file over 50 MB, is refused with a message and nothing is uploaded.',
+    'Uploading needs the right to upload files; without it the box is not there at all. A type that is not on the list is refused with a message and nothing is uploaded. A file over 50 MB is dropped by the box itself, before anything is sent.',
   // files-link
   'help.guide.files-link.title': 'Tie a document to a place or a booking',
   'help.guide.files-link.goal': 'Make the ticket findable from the day it belongs to, not only from this list.',
   'help.guide.files-link.step.1':
     'Click Assign, the pencil at the end of the row. Assign File opens, named after the file.',
   'help.guide.files-link.step.2':
-    'Under Note, Add a note… takes one line, which then stands under the file’s name in the list. It is saved the moment you leave the box.',
+    'Under Note, Add a note... takes one line, which then stands under the file’s name in the list. It is saved the moment you leave the box.',
   'help.guide.files-link.step.3':
     'Under Place stand the trip’s places, grouped by the day they are on, with Unassigned at the end for the ones on no day. Click one and it gets a tick.',
   'help.guide.files-link.step.4':
@@ -3239,7 +3239,7 @@ const help: TranslationStrings = {
   'help.guide.files-link.step.5':
     'Close with the ×. There is no save button here: every click was written as you made it.',
   'help.guide.files-link.result':
-    'The row carries the note and one badge per link, Day Plan and the place’s name, Transport and the flight’s name, and the document hangs on the place and on the booking as well.',
+    'The row carries the note and one badge per link, Day Plan and the place’s name, Transport and the flight’s name, and the document hangs on the place and on the flight as well.',
   'help.guide.files-link.tip.1':
     'A file can hold several links at once, so the same confirmation belongs to the hotel and to the night it covers.',
   'help.guide.files-link.tip.2': 'Clicking a ticked entry again takes that link away; the file itself stays.',
@@ -3268,7 +3268,7 @@ const help: TranslationStrings = {
     'The tabs above the list are All, PDFs, Images and Documents, each with the number of files behind it.',
   'help.guide.files-filter.step.2': 'Click PDFs: the list keeps the PDF files and nothing else.',
   'help.guide.files-filter.step.3':
-    'Two more tabs come and go with what is in the trip: a star as soon as a file is starred, and Collab Notes as soon as a note in the Collab tab carries an attachment.',
+    'Two more tabs come and go with what is in the trip. Click Collab Notes, which is there as soon as a note in the Collab tab carries an attachment: the list keeps those files and nothing else. A star joins the row the same way, as soon as a file is starred.',
   'help.guide.files-filter.step.4': 'All brings the whole list back.',
   'help.guide.files-filter.result':
     'The list shows only what the tab names, and the count on each tab says how many that is.',
@@ -3333,7 +3333,7 @@ const help: TranslationStrings = {
   'help.ctx.trip-collab.bullet.5':
     'Polls decide things. New Poll asks a question with at least two options; a click on an option is your vote, Close ends the voting and Delete removes the poll.',
   'help.ctx.trip-collab.bullet.6':
-    'What’s Next lists the next eight stops of the trip that are still ahead, with their times and the people on them. It only reads the day plan; the times are set there.',
+    'What’s Next lists the stops of the trip that are still ahead, up to eight of them, with their times and the people on them. It only reads the day plan; the times are set there.',
   // write-note
   'help.guide.write-note.title': 'Write a shared note',
   'help.guide.write-note.goal':
@@ -3421,7 +3421,8 @@ const help: TranslationStrings = {
     'Close, the lock in a poll’s corner, ends the voting. The options stop taking clicks.',
   'help.guide.close-poll.step.2':
     'A closed poll sinks under the Closed heading at the bottom of the panel, wears a Closed badge and shows everybody the result, whether they voted or not. The winning option is tinted green.',
-  'help.guide.close-poll.step.3': 'Delete beside it removes the poll. Nothing asks twice, and the votes go with it.',
+  'help.guide.close-poll.step.3':
+    'Delete, the bin in the same corner, removes the poll. Nothing asks twice, and the votes go with it.',
   'help.guide.close-poll.result':
     'The poll is gone from every member’s panel. One you only closed stays readable at the bottom, with its result.',
   'help.guide.close-poll.tip.1':
@@ -3432,7 +3433,7 @@ const help: TranslationStrings = {
   'help.guide.whats-next.title': 'Read What’s Next',
   'help.guide.whats-next.goal': 'See what the group is doing next without opening the plan.',
   'help.guide.whats-next.step.1':
-    'The panel lists the next eight stops of the trip that are still ahead, in time order, under a heading per day: Today, Tomorrow or the date.',
+    'The panel lists the stops of the trip that are still ahead, up to eight of them, in time order, under a heading per day: Today, Tomorrow or the date.',
   'help.guide.whats-next.step.2':
     'On the left of a row stands its time: the start, to, and the end when the stop has one, or TBD when no time is set on it yet.',
   'help.guide.whats-next.step.3':
@@ -3524,11 +3525,11 @@ const help: TranslationStrings = {
   'help.guide.roadtrip-stops.step.6':
     'Set the length with the slider, with the minus and plus buttons or with one of the presets, watch what Arrive and Leave do, then click Save.',
   'help.guide.roadtrip-stops.result':
-    'The stop wears its kind’s icon instead of a number, and every arrival after a stay has moved with it.',
+    'The stop you timed carries the hour on its Stay badge and every arrival after it has moved with it, and the one you sent to a kind and back is a numbered destination again.',
   'help.guide.roadtrip-stops.tip.1':
     'A stay belongs to the place, not to one visit: a place planned on two days is stood at just as long on both.',
   'help.guide.roadtrip-stops.tip.2':
-    'Stops on the way show under Days as well. Show in Days too, under Service stops in the Driving settings, keeps them in Road trip only.',
+    'Stops on the way show under Days as well. Turning Show in Days too off, under Service stops in the Driving settings, keeps them in Road trip only.',
   'help.guide.roadtrip-stops.tip.3': 'No stay, in the same dialog, takes the time away again.',
   // roadtrip-corridor
   'help.guide.roadtrip-corridor.title': 'Find fuel, food and a bed along the route',
@@ -3579,7 +3580,7 @@ const help: TranslationStrings = {
   'help.guide.roadtrip-alternatives.step.2':
     'Ways to drive this leg opens over the map, one entry per road, each drawn on the map in its own colour.',
   'help.guide.roadtrip-alternatives.step.3':
-    'Hover an entry to light that road up. Current and Fastest say which is which, and the others say how much quicker or slower they are.',
+    'Hover an entry to light that road up. Current is the road being driven and Fastest the quickest; the others say how much slower they are, or which road class they leave out.',
   'help.guide.roadtrip-alternatives.step.4': 'Click an entry to drive that way, or Close to keep the road you are on.',
   'help.guide.roadtrip-alternatives.result':
     'The leg drives the road you chose, and the rail’s distance and the arrivals after it change with it.',
@@ -3655,15 +3656,15 @@ const help: TranslationStrings = {
   'help.guide.roadtrip-track.goal': 'Put a day’s drive onto a scenic route you imported as a GPX or KML track.',
   'help.guide.roadtrip-track.step.1': 'Click the Track badge in a day’s header. The dialog opens on that day.',
   'help.guide.roadtrip-track.step.2':
-    'Pick a track. Each one says how long it is and how far it lies from this day, nearest first.',
+    'Pick a track. Each one says how long it is and whether it runs along this day or how far off it lies, nearest first.',
   'help.guide.roadtrip-track.step.3':
     'Click Follow this track. TREK drops via points where the drive strays furthest from the track, and routes again, round after round.',
   'help.guide.roadtrip-track.step.4':
-    'It says how many via points it placed and how close the drive now stays. The button beside it drops those via points again and gives the day back to the router; closing the dialog keeps the track.',
+    'It says how many via points it placed and how close the drive now stays. The button under it drops those via points again and gives the day back to the router; closing the dialog keeps the track.',
   'help.guide.roadtrip-track.result':
-    'The day’s drive follows the track instead of the road the router picked, and the Track badge says which track it is following.',
+    'The day’s drive follows the track instead of the road the router picked, and its Track badge is lit and names that track when you point at it.',
   'help.guide.roadtrip-track.tip.1':
-    'Import the file under Days with Import file, with its tracks or paths ticked. Until a track is in the trip the badge has nothing to offer.',
+    'Import the file under Days with Import file, with Routes or Tracks ticked. Until the trip holds one, no day carries the badge.',
   'help.guide.roadtrip-track.tip.2':
     'Following a track replaces the via points the day’s legs already had, so shape a leg by hand after the track, not before.',
 };

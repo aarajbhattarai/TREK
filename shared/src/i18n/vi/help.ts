@@ -967,7 +967,7 @@ const help: TranslationStrings = {
   'help.ctx.settings.summary':
     'Cài đặt cá nhân của bạn, mỗi chủ đề một tab trong thanh bên bên trái. Hầu hết công tắc có hiệu lực ngay khi bạn gạt; biểu mẫu có nút “Lưu” ở dưới cùng sẽ chờ bạn nhấn nút đó. Không có gì ở đây làm thay đổi TREK của người khác.',
   'help.ctx.settings.bullet.1':
-    'Thanh bên bên trái: “Hiển thị”, “Giao diện”, “Bản đồ”, “Thông báo”, “Tích hợp”, “Ngoại tuyến” và “Tài khoản”. “Plugin” xuất hiện khi đã cài một plugin, “Về” xuất hiện trên TREK tự lưu trữ.',
+    'Thanh bên bên trái: “Hiển thị”, “Giao diện”, “Bản đồ”, “Thông báo”, “Tích hợp”, “Ngoại tuyến” và “Tài khoản”. “Plugin” xuất hiện khi đã cài một plugin, “Về” xuất hiện ở bất cứ nơi nào người vận hành chưa gỡ nó đi.',
   'help.ctx.settings.bullet.2':
     '“Hiển thị” là ngôn ngữ, đơn vị, tiền tệ và màn hình ứng dụng mở lúc đầu; “Giao diện” là chủ đề, màu sắc, cỡ chữ và các tiện ích của bảng điều khiển.',
   'help.ctx.settings.bullet.3':
@@ -1911,7 +1911,7 @@ const help: TranslationStrings = {
   'help.guide.read-day-plan.step.2':
     'Một điểm dừng: tay nắm ở bên trái để kéo nó, hình ảnh mang một ổ khóa dành cho việc tối ưu hóa lộ trình, rồi đến tên, mô tả và, nếu có, “Ghi chú cho ngày này”. Một huy hiệu thời gian hiển thị “Bắt đầu” và “Kết thúc” khi điểm dừng có chúng; các mũi tên hiện ra ở đầu bên phải sẽ đưa nó lên hoặc xuống.',
   'help.guide.read-day-plan.step.3':
-    'Một đặt chỗ trong ngày: phương tiện di chuyển hiện ra là “Khởi hành” hoặc “Đến” cùng giờ và lộ trình của nó, còn một đặt chỗ gắn với điểm dừng sẽ đánh dấu điểm dừng đó là “Đã xác nhận đặt chỗ” hoặc “Đang chờ đặt chỗ”. Công tắc nhỏ trên một phương tiện di chuyển hiển thị lộ trình của nó trên bản đồ.',
+    'Một đặt chỗ trong ngày: một đặt chỗ gắn với điểm dừng sẽ đánh dấu điểm dừng đó là “Đã xác nhận đặt chỗ” hoặc “Đang chờ đặt chỗ”, còn phương tiện di chuyển hiện ra là “Khởi hành” hoặc “Đến” cùng giờ và lộ trình của nó, với một công tắc nhỏ vẽ lộ trình đó lên bản đồ.',
   'help.guide.read-day-plan.step.4':
     'Giữa hai điểm dừng, đường nối cho biết chặng đó mất bao lâu và xa bao nhiêu, theo phương thức di chuyển của ngày; nhấp vào đó để đổi phương thức cho riêng chặng ấy.',
   'help.guide.read-day-plan.step.5':

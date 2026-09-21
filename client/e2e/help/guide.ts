@@ -29,6 +29,24 @@ export const OUT_DIR = path.join(process.cwd(), 'e2e', '.tmp', 'help-media')
  */
 export const VIEWPORT = { width: 1920, height: 1080 }
 
+/**
+ * The day every picture is taken on.
+ *
+ * The seeded trip runs to 2026-09-21, and a picture of it has to look the same
+ * whoever runs this and whenever: a day later the trip is over, My Trips moves
+ * it out of the boarding pass and into the grid, What's Next has nothing left
+ * to list, and the forecast for a day in the past is not a forecast. Only the
+ * browser's `Date` is pinned, so timers keep running and nothing that waits
+ * stops waiting; the server keeps its own clock, which none of the pictures
+ * read.
+ */
+const PICTURE_DAY = new Date('2026-09-21T09:00:00.000Z')
+
+/** Put the page on the day the pictures are taken on. Call before navigating. */
+async function pinClock(page: Page): Promise<void> {
+  await page.clock.setFixedTime(PICTURE_DAY)
+}
+
 export interface StepAction {
   /** Bring the screen to where the step starts (runs after the previous step's `act`). */
   prepare?: (page: Page) => Promise<void>
@@ -86,6 +104,7 @@ export async function typeInto(page: Page, locator: Locator, text: string): Prom
 /** Run a guide and take its pictures. Throws (fails the test) when a step cannot be performed. */
 export async function captureGuide(page: Page, script: GuideScript): Promise<void> {
   mode = 'still'
+  await pinClock(page)
   const { guide } = script
   if (script.steps.length !== guide.steps) {
     throw new Error(`guide "${guide.id}" registers ${guide.steps} steps but the script has ${script.steps.length}`)
@@ -153,6 +172,7 @@ export async function captureGuide(page: Page, script: GuideScript): Promise<voi
 /** The screen overview picture for a context. */
 export async function captureHero(page: Page, contextId: string, start: (page: Page) => Promise<void>): Promise<void> {
   mode = 'still'
+  await pinClock(page)
   const dir = path.join(OUT_DIR, 'ctx')
   mkdirSync(dir, { recursive: true })
   await start(page)

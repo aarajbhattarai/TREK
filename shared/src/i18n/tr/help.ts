@@ -978,7 +978,7 @@ const help: TranslationStrings = {
   'help.ctx.settings.summary':
     'Kişisel ayarlarınız, soldaki kenar çubuğunda her konu için bir sekme. Anahtarların çoğu çevirdiğiniz anda uygulanır; altında Kaydet düğmesi olan bir form onu bekler. Buradaki hiçbir şey başkasının TREK’ini değiştirmez.',
   'help.ctx.settings.bullet.1':
-    'Soldaki kenar çubuğu: Görünüm, Appearance, Harita, Bildirimler, Entegrasyonlar, Çevrimdışı ve Hesap. Eklentiler bir tane kurulduğunda, Hakkında ise kendi barındırdığınız bir TREK’te görünür.',
+    'Soldaki kenar çubuğu: Görünüm, Appearance, Harita, Bildirimler, Entegrasyonlar, Çevrimdışı ve Hesap. Eklentiler bir tane kurulduğunda, Hakkında ise yöneticinin kaldırmadığı her yerde görünür.',
   'help.ctx.settings.bullet.2':
     'Görünüm dil, birimler, para birimi ve uygulamanın neyle açılacağıdır; Appearance tema, renkler, metin boyutu ve pano bileşenleridir.',
   'help.ctx.settings.bullet.3':
@@ -1929,7 +1929,7 @@ const help: TranslationStrings = {
   'help.guide.read-day-plan.step.2':
     'Bir durak: soldaki tutamak onu sürükler, resim rota optimizasyonu için bir kilit taşır, sonra ad, açıklama ve ayarlıysa Bu gün için notlar gelir. Durağın saatleri varsa bir saat rozeti Başlangıç ve Son değerlerini gösterir; sağ ucunda beliren oklar onu yukarı ya da aşağı taşır.',
   'help.guide.read-day-plan.step.3':
-    'Gündeki bir rezervasyon: bir ulaşım, saati ve rotasıyla Kalkış ya da Varış olarak görünür, bir durağa bağlı rezervasyon o durağı Rezervasyon onaylandı ya da Rezervasyon beklemede olarak işaretler. Ulaşımın üzerindeki küçük düğme onun rotasını haritada gösterir.',
+    'Gündeki bir rezervasyon: bir durağa bağlı rezervasyon o durağı Rezervasyon onaylandı ya da Rezervasyon beklemede olarak işaretler, bir ulaşım ise saati ve rotasıyla Kalkış ya da Varış olarak görünür; üzerindeki küçük düğme o rotayı haritada çizer.',
   'help.guide.read-day-plan.step.4':
     'İki durak arasında bağlayıcı, etabın günün ulaşım türüyle ne kadar sürdüğünü ve ne kadar uzun olduğunu söyler; yalnızca o etabın türünü değiştirmek için üzerine tıklayın.',
   'help.guide.read-day-plan.step.5':

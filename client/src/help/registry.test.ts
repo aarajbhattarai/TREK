@@ -13,6 +13,16 @@ import { adminGuides } from './contexts/admin'
 import { tripGuides } from './contexts/trip'
 import { tripPlacesGuides } from './contexts/tripPlaces'
 import { tripDaysGuides } from './contexts/tripDays'
+import { tripRoadtripGuides } from './contexts/tripRoadtrip'
+import { tripCollabGuides } from './contexts/tripCollab'
+import { tripFilesGuides } from './contexts/tripFiles'
+import { tripCostsGuides } from './contexts/tripCosts'
+import { tripListsGuides } from './contexts/tripLists'
+import { tripBookingsGuides } from './contexts/tripBookings'
+import { tripTransportsGuides } from './contexts/tripTransports'
+import { tripMapGuides } from './contexts/tripMap'
+import { tripDayDetailGuides } from './contexts/tripDayDetail'
+import { tripPlaceGuides } from './contexts/tripPlace'
 import {
   HELP_CONTEXTS, HELP_GUIDES, getHelpContext, getHelpGuide, guidesFor, allHelpGuides,
   ctxKey, ctxBulletKey, guideKey, guideStepKey, guideTipKey, helpMedia, docsRoute,
@@ -85,6 +95,16 @@ describe('help registry: structure', () => {
     const lists = [
       dashboardGuides, vacayGuides, atlasGuides, collectionsGuides, journeyGuides, journalGuides, studioGuides,
       settingsGuides, adminGuides, tripGuides, tripDaysGuides, tripPlacesGuides,
+      tripRoadtripGuides,
+      tripCollabGuides,
+      tripFilesGuides,
+      tripCostsGuides,
+      tripListsGuides,
+      tripBookingsGuides,
+      tripTransportsGuides,
+      tripMapGuides,
+      tripDayDetailGuides,
+      tripPlaceGuides,
     ]
     const ids = lists.flat().map(g => g.id)
     const dupes = ids.filter((id, i) => ids.indexOf(id) !== i)

@@ -1006,7 +1006,7 @@ const help: TranslationStrings = {
   'help.ctx.settings.summary':
     'Deine persönlichen Einstellungen, ein Tab pro Thema in der Seitenleiste links. Die meisten Schalter greifen in dem Moment, in dem du sie umlegst; ein Formular mit einem Speichern-Button unten wartet darauf. Nichts hier verändert das TREK von jemand anderem.',
   'help.ctx.settings.bullet.1':
-    'Seitenleiste links: Allgemein, Erscheinungsbild, Karte, Mitteilungen, Integrationen, Offline und Konto. Plugins erscheint, sobald eines installiert ist, Über auf einem selbst gehosteten TREK.',
+    'Seitenleiste links: Allgemein, Erscheinungsbild, Karte, Mitteilungen, Integrationen, Offline und Konto. Plugins erscheint, sobald eines installiert ist, Über dort, wo der Admin es nicht entfernt hat.',
   'help.ctx.settings.bullet.2':
     'Allgemein ist Sprache, Einheiten, Währung und womit die App öffnet; Erscheinungsbild ist Theme, Farben, Textgröße und die Dashboard-Widgets.',
   'help.ctx.settings.bullet.3':
@@ -1983,7 +1983,7 @@ const help: TranslationStrings = {
   'help.guide.read-day-plan.step.2':
     'Ein Stopp: der Griff links zieht ihn, das Bild trägt ein Schloss für die Routenoptimierung, dann der Name, die Beschreibung und, wenn gesetzt, die Notizen für diesen Tag. Ein Zeit-Abzeichen zeigt Startzeit und Ende, wenn der Stopp sie hat; die Pfeile, die an seinem rechten Ende erscheinen, schieben ihn nach oben oder nach unten.',
   'help.guide.read-day-plan.step.3':
-    'Eine Buchung am Tag: ein Transport erscheint als Abflug oder Ankunft mit seiner Zeit und Strecke, eine Reservierung an einem Stopp markiert den Stopp als Reservierung bestätigt oder Reservierung ausstehend. Der kleine Schalter an einem Transport zeigt seine Route auf der Karte.',
+    'Eine Buchung am Tag: eine Reservierung an einem Stopp markiert den Stopp als Reservierung bestätigt oder Reservierung ausstehend, und ein Transport erscheint als Abflug oder Ankunft mit seiner Zeit und seiner Strecke, mit einem kleinen Schalter, der diese Route auf der Karte zeichnet.',
   'help.guide.read-day-plan.step.4':
     'Zwischen zwei Stopps sagt das Verbindungsstück, wie lange die Etappe dauert und wie weit sie ist, im Verkehrsmittel des Tages; klick es an, um das Verkehrsmittel für diese eine Etappe zu ändern.',
   'help.guide.read-day-plan.step.5':

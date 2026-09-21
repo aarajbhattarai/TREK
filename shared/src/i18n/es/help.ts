@@ -1001,7 +1001,7 @@ const help: TranslationStrings = {
   'help.ctx.settings.summary':
     'Tus ajustes personales, una pestaña por tema en la barra lateral de la izquierda. La mayoría de los interruptores se aplican en cuanto los cambias; un formulario con un botón Guardar abajo espera a que lo pulses. Nada de aquí cambia el TREK de nadie más.',
   'help.ctx.settings.bullet.1':
-    'Barra lateral izquierda: Pantalla, Appearance, Mapa, Notificaciones, Integraciones, Offline y Cuenta. Complementos aparece en cuanto hay uno instalado, Acerca de en un TREK autoalojado.',
+    'Barra lateral izquierda: Pantalla, Appearance, Mapa, Notificaciones, Integraciones, Offline y Cuenta. Complementos aparece en cuanto hay uno instalado, Acerca de allí donde el admin no lo haya quitado.',
   'help.ctx.settings.bullet.2':
     'Pantalla es idioma, unidades, moneda y con qué se abre la app; Appearance es tema, colores, tamaño del texto y los widgets del panel.',
   'help.ctx.settings.bullet.3':
@@ -1975,7 +1975,7 @@ const help: TranslationStrings = {
   'help.guide.read-day-plan.step.2':
     'Una parada: el asidero de la izquierda la arrastra, la imagen lleva un candado para la optimización de ruta, luego el nombre, la descripción y, si las hay, las Notas para este día. Una insignia de hora muestra Inicio y Fin cuando la parada los tiene; las flechas que aparecen en su extremo derecho la suben o la bajan.',
   'help.guide.read-day-plan.step.3':
-    'Una reserva del día: un transporte aparece como Salida o Llegada con su hora y su trayecto, una reserva en una parada la marca como Reserva confirmada o Reserva pendiente. El pequeño interruptor de un transporte muestra su ruta en el mapa.',
+    'Una reserva del día: una reserva en una parada la marca como Reserva confirmada o Reserva pendiente, y un transporte aparece como Salida o Llegada con su hora y su trayecto, con un pequeño interruptor que dibuja esa ruta en el mapa.',
   'help.guide.read-day-plan.step.4':
     'Entre dos paradas el conector dice cuánto dura el tramo y qué distancia tiene, en el medio de transporte del día; haz clic en él para cambiar el medio de ese único tramo.',
   'help.guide.read-day-plan.step.5':
