@@ -16,6 +16,7 @@ npm run test:coverage     # istanbul coverage; per-domain ratchet over src/nest/
 npm run gen:plugin-facts  # regenerate the plugin-protocol tables into plugin-sdk/ + shared/
 npm run check:plugin-facts # CI gate — fails if the generated copies drifted
 node scripts/coverage-thresholds.mjs  # after test:coverage — prints the ratchet block for vitest.config.ts
+npm run db:call-graph -- --sync --tx [--domains nest/days,…]  # sync DB-touching methods + transaction sites (exit 1 if any)
 ```
 
 Single test: `npx vitest run tests/unit/nest/weather.controller.test.ts`, or `npx vitest run -t "returns 401 without cookie"`.
@@ -38,7 +39,7 @@ Nest owns everything. Every domain is a DI module under `src/nest/<domain>/` (`c
 
 - **Thin controller → injectable provider.** Never resurrect a plain function-module service; don't grow god services — split a domain into several modules when it outgrows one class (trips and auth already are).
 - **Inject, don't reach for module globals.** No new imports of the global `db` proxy from `nest/` layers; no new code depending on the `ws` singleton or event-sink globals. Modules must be importable without side effects.
-- **Transactions are not optional.** Multi-statement writes go in `db.transaction()`; never hand-roll `BEGIN`/`COMMIT`. Bind values with `?`; identifiers only via a literal allow-list.
+- **Transactions are not optional.** Multi-statement writes go in `await this.uow.transactional(async () => …)` (`UnitOfWork` from `nest/database`, provided by the global `OrmModule`); never hand-roll `BEGIN`/`COMMIT` and never call `db.transaction()` (the Phase 1 async sweep removes it). Every DB-touching method is `async`; `@typescript-eslint/no-floating-promises` and `no-misused-promises` are errors, so an unawaited call or a `Promise` in a condition fails lint. Bind values with `?`; identifiers only via a literal allow-list.
 - **Migrations are append-only.** A migration is identified by its class name in `mikro_orm_migrations`, and files sort by the timestamp in that name — never rename or delete one that has shipped, and never edit its body; add a new one. No env interpolation in SQL. (The old positional `schema_version` array is gone; `db/migrations.ts` is retained for tests and is not appended to.)
 - **Every write endpoint validates** through the Zod pipe with a schema from `@trek/shared` — no `Record<string, unknown>` + ad-hoc checks. Also verify every referenced id exists and belongs to the same trip.
 - **Every outbound `fetch`** gets a timeout, a response-size cap and boundary validation — no `as`-casting provider responses, no silent `catch → null`. User-influenced URLs go through the SSRF guard. Never fall back to another user's API key.

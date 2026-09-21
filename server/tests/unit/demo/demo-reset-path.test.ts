@@ -68,8 +68,8 @@ describe('demo-reset DB path', () => {
     expect(copyFileSync).toHaveBeenCalledWith(LIVE_DB, BASELINE);
   });
 
-  it('DEMORESET-002: restores the baseline onto that same file, not data/travel.db', () => {
-    resetDemoUser();
+  it('DEMORESET-002: restores the baseline onto that same file, not data/travel.db', async () => {
+    await resetDemoUser();
     expect(copyFileSync).toHaveBeenCalledWith(BASELINE, LIVE_DB);
     // Closed before the copy and reopened after it — copying over an open
     // SQLite file is how a database ends up half of each.
@@ -77,10 +77,10 @@ describe('demo-reset DB path', () => {
     expect(databaseModule.reinitialize).toHaveBeenCalled();
   });
 
-  it('DEMORESET-003: an in-memory database is left alone rather than copied around', () => {
+  it('DEMORESET-003: an in-memory database is left alone rather than copied around', async () => {
     dbStub.name = ':memory:';
     saveBaseline();
-    resetDemoUser();
+    await resetDemoUser();
     expect(copyFileSync).not.toHaveBeenCalled();
   });
 });

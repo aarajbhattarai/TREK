@@ -79,9 +79,9 @@ describe('DemoResetJob', () => {
     expect(logMock.logInfo).not.toHaveBeenCalled();
   });
 
-  it('AJOB-006 — the tick runs resetDemoUser and contains a throw to the Demo reset log line', () => {
+  it('AJOB-006 — the tick runs resetDemoUser and contains a throw to the Demo reset log line', async () => {
     const { job } = make(true);
-    job.tick();
+    await job.tick();
     expect(resetDemoUserMock).toHaveBeenCalledTimes(1);
 
     resetDemoUserMock.mockImplementation(() => { throw new Error('baseline gone'); });

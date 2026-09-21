@@ -64,7 +64,9 @@ export function scheduleJobs(
 export function stopJobs(tasks: CronJob[] | undefined): void {
   for (const t of tasks ?? []) {
     try {
-      t.stop();
+      // cron's stop() is async; the rejection is swallowed for the same reason
+      // the synchronous throw below is — teardown must never throw.
+      void t.stop().catch(() => undefined);
     } catch {
       /* ignore — teardown must never throw */
     }

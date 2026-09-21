@@ -75,7 +75,9 @@ export class ExchangeRatesService {
 
     // Coalesce concurrent fetches for the same base.
     let p = inflight.get(key);
-    if (!p) {
+    // `=== undefined`, not `!p`: a Promise is always truthy, so the truthiness
+    // test reads as a live check but never is one (no-misused-promises).
+    if (p === undefined) {
       p = fetchRates(key)
         .then(rates => {
           if (rates) cache.set(key, { rates, ts: Date.now() });

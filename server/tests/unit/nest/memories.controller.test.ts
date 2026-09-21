@@ -128,19 +128,19 @@ describe('UnifiedMemoriesController (parity with /api/integrations/memories/unif
   });
 
   describe('DELETE /trips/:tripId/photos', () => {
-    it('removes the photo on success', () => {
+    it('removes the photo on success', async () => {
       const removeTripPhoto = vi.fn().mockReturnValue({ data: {} });
       const svc = makeService({ removeTripPhoto });
       const res = makeRes();
-      new UnifiedMemoriesController(svc).removePhoto(user, '5', { photo_id: 11 }, res);
+      await new UnifiedMemoriesController(svc).removePhoto(user, '5', { photo_id: 11 }, res);
       expect(removeTripPhoto).toHaveBeenCalledWith('5', 7, 11);
       expect(res.json).toHaveBeenCalledWith({ success: true });
     });
 
-    it('maps the error envelope', () => {
+    it('maps the error envelope', async () => {
       const svc = makeService({ removeTripPhoto: vi.fn().mockReturnValue({ error: { status: 404, message: 'Photo not found' } }) });
       const res = makeRes();
-      new UnifiedMemoriesController(svc).removePhoto(user, '5', { photo_id: 11 }, res);
+      await new UnifiedMemoriesController(svc).removePhoto(user, '5', { photo_id: 11 }, res);
       expect(res.status).toHaveBeenCalledWith(404);
       expect(res.json).toHaveBeenCalledWith({ error: 'Photo not found' });
     });

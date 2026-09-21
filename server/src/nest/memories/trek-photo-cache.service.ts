@@ -91,7 +91,10 @@ export class TrekPhotoCacheService {
 
   setInFlight(key: string, promise: Promise<Buffer | null>): void {
     inFlight.set(key, promise);
-    promise.finally(() => inFlight.delete(key));
+    // Book-keeping only: the caller awaits `promise` itself and observes its
+    // rejection, so the derived chain swallows the same one rather than raising
+    // a second, unhandled rejection.
+    void promise.finally(() => inFlight.delete(key)).catch(() => undefined);
   }
 
   async sweepExpired(): Promise<void> {

@@ -292,7 +292,9 @@ export async function createBackup(storage: StorageService, prefix: 'backup' | '
         }
       }
 
-      archive.finalize();
+      // finalize() is async: without this catch a failure that never reached the
+      // 'error' listener above would hang this promise and reject unobserved.
+      archive.finalize().catch(reject);
     });
 
     // The commit — and, under a mirror backend, the replica fan-out point.

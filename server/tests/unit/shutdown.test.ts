@@ -94,8 +94,9 @@ describe('runShutdown', () => {
     const deps = makeDeps({ getWsClients: () => [socket] });
     const server = deps.server as unknown as ReturnType<typeof makeServer>;
 
-    // Never resolves on its own: this is the hang #2193 died on.
-    runShutdown('SIGTERM', deps);
+    // Never resolves on its own: this is the hang #2193 died on. Deliberately
+    // not awaited, so the rejection path is logged rather than left unobserved.
+    void runShutdown('SIGTERM', deps).catch((err: unknown) => console.error(err));
     await vi.advanceTimersByTimeAsync(SOCKET_DRAIN_MS);
 
     expect(socket.terminate).toHaveBeenCalled();
@@ -117,7 +118,9 @@ describe('runShutdown', () => {
     // WAL behind for boot-time recovery on every restart.
     const deps = makeDeps({ closeNestApp: vi.fn(() => new Promise<void>(() => {})) });
 
-    runShutdown('SIGTERM', deps);
+    // Deliberately not awaited: the close callback never fires, so this promise
+    // only settles through the forced exit below.
+    void runShutdown('SIGTERM', deps).catch((err: unknown) => console.error(err));
     await vi.advanceTimersByTimeAsync(FORCED_EXIT_MS);
 
     expect(deps.closeDb).toHaveBeenCalledTimes(1);

@@ -61,13 +61,13 @@ describe('BudgetController (parity with the legacy /api/trips/:tripId/budget rou
     expect(settlement).toHaveBeenLastCalledWith('5', undefined, 'EUR');
   });
 
-  it('GET /settlement forwards the base query and the trip currency', () => {
+  it('GET /settlement forwards the base query and the trip currency', async () => {
     const settlement = vi.fn().mockReturnValue({ transfers: [] });
     const svc = makeService({
       verifyTripAccess: vi.fn().mockReturnValue({ id: 5, user_id: 1, currency: 'USD' }),
       settlement,
     } as Partial<BudgetService>);
-    new BudgetController(svc).settlement(user, tripRow, '5', 'GBP');
+    await new BudgetController(svc).settlement(user, tripRow, '5', 'GBP');
     expect(settlement).toHaveBeenCalledWith('5', 'GBP', 'USD');
   });
 

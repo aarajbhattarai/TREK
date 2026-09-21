@@ -99,7 +99,7 @@ describe('CollectionsController', () => {
       const c = new CollectionsController(svc, new RuntimeEnvService(), storageStub);
       c.savePlace(user, { collection_id: 3, name: 'A' } as never, 'sid');
       expect(svc.savePlace).toHaveBeenCalledWith(1, { collection_id: 3, name: 'A' }, 'sid');
-      c.updatePlace(user, '9', { name: 'B' } as never, 'sid');
+      await c.updatePlace(user, '9', { name: 'B' } as never, 'sid');
       expect(svc.updatePlace).toHaveBeenCalledWith(1, 9, { name: 'B' }, 'sid');
       c.setStatus(user, '9', { status: 'want' } as never, 'sid');
       expect(svc.setStatus).toHaveBeenCalledWith(1, 9, 'want', 'sid');

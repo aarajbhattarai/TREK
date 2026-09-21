@@ -26,8 +26,47 @@ export default tseslint.config(
   ...tseslint.configs.recommended,
   eslintConfigPrettier,
   {
+    files: ['src/**/*.ts'],
+    languageOptions: {
+      parserOptions: {
+        // Type-aware linting for src/: the project service asks TypeScript which
+        // config owns a file, the way an editor does, so there is no `project`
+        // array to keep in sync. Every file under src/ is in tsconfig.json's
+        // `include`, so the service resolves them all.
+        projectService: true,
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
+  },
+  {
+    // tests/ needs the classic `project` instead. The project service looks for
+    // the tsconfig.json nearest the file and refuses a file that config does not
+    // include ("was not found by the project service"); tsconfig.json includes
+    // only `src`, and its `allowDefaultProject` escape hatch rejects any glob
+    // containing `**`, so it cannot cover a tree this size. `tsconfig.tests.json`
+    // (the one `npm run typecheck:tests` uses) includes src + tests, which is
+    // exactly the program these files need.
+    files: ['tests/**/*.ts'],
+    languageOptions: {
+      parserOptions: {
+        project: ['./tsconfig.tests.json'],
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
+  },
+  {
     files: ['src/**/*.ts', 'tests/**/*.ts'],
     rules: {
+      // --- The promise safety net for the Phase 1 async sweep (ORM migration) ---
+      // Turning a DB-touching method `async` makes every unawaited call site a
+      // silently reordered write, and every `if (svc.exists(id))` permanently
+      // true — neither of which the type checker reports. These two rules are
+      // the only thing that catches them, so they are errors, not warnings.
+      '@typescript-eslint/no-floating-promises': ['error', { ignoreVoid: true }],
+      '@typescript-eslint/no-misused-promises': [
+        'error',
+        { checksConditionals: true, checksVoidReturn: false, checksSpreads: true },
+      ],
       // --- Severities tuned to keep CI green on a codebase that was never linted ---
       // (each rule below has pre-existing violations; surfaced as warnings, not blockers)
       '@typescript-eslint/no-explicit-any': 'warn',

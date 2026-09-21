@@ -229,7 +229,7 @@ describe('BackupService (wrapper)', () => {
     await expect(wrapper.restoreBackup('svc.zip')).resolves.toEqual({ success: true });
     expect(backupSvc.restoreBackup).toHaveBeenCalledWith(storage, 'svc.zip');
 
-    wrapper.deleteBackup('svc.zip');
+    await wrapper.deleteBackup('svc.zip');
     expect(backupSvc.deleteBackup).toHaveBeenCalledWith(storage, 'svc.zip');
 
     expect(wrapper.isValidBackupFilename('svc.zip')).toBe(true);
