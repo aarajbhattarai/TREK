@@ -27,8 +27,8 @@ export class AtlasRpc {
     const userId = this.requireAtlasUser(ctx, 'reads');
     await this.requireAtlasAddon();
     return {
-      countries: this.atlas.listVisitedCountries(userId),
-      regions: this.atlas.listManuallyVisitedRegions(userId),
+      countries: await this.atlas.listVisitedCountries(userId),
+      regions: await this.atlas.listManuallyVisitedRegions(userId),
     };
   }
 
@@ -36,7 +36,7 @@ export class AtlasRpc {
   async bucketList(_params: Record<string, unknown>, ctx: PluginRpcContext): Promise<unknown> {
     const userId = this.requireAtlasUser(ctx, 'reads');
     await this.requireAtlasAddon();
-    return this.atlas.bucketList(userId) as unknown[];
+    return (await this.atlas.bucketList(userId)) as unknown[];
   }
 
   @PluginMethod('atlas.markCountry', { permission: 'db:write:atlas' })
@@ -44,7 +44,7 @@ export class AtlasRpc {
     const userId = this.requireAtlasUser(ctx, 'writes');
     const code = this.code(params.code, 'code');
     await this.requireAtlasAddon();
-    this.atlas.markCountry(userId, code);
+    await this.atlas.markCountry(userId, code);
     return { visited: true };
   }
 
@@ -53,7 +53,7 @@ export class AtlasRpc {
     const userId = this.requireAtlasUser(ctx, 'writes');
     const code = this.code(params.code, 'code');
     await this.requireAtlasAddon();
-    this.atlas.unmarkCountry(userId, code);
+    await this.atlas.unmarkCountry(userId, code);
     return { visited: false };
   }
 
@@ -67,7 +67,7 @@ export class AtlasRpc {
     const regionCode = this.code(params.regionCode, 'regionCode');
     const countryCode = this.code(params.countryCode, 'countryCode');
     await this.requireAtlasAddon();
-    this.atlas.markRegion(userId, regionCode, regionName, countryCode);
+    await this.atlas.markRegion(userId, regionCode, regionName, countryCode);
     return { visited: true };
   }
 
@@ -76,7 +76,7 @@ export class AtlasRpc {
     const userId = this.requireAtlasUser(ctx, 'writes');
     const regionCode = this.code(params.regionCode, 'regionCode');
     await this.requireAtlasAddon();
-    this.atlas.unmarkRegion(userId, regionCode);
+    await this.atlas.unmarkRegion(userId, regionCode);
     return { visited: false };
   }
 
@@ -87,7 +87,7 @@ export class AtlasRpc {
     if (typeof input.name !== 'string' || input.name.trim() === '') throw new BadParams('bucket item name is required');
     await this.requireAtlasAddon();
     try {
-      return this.atlas.createBucketItem(userId, input as never);
+      return await this.atlas.createBucketItem(userId, input as never);
     } catch (err) {
       // #1898: a repeated wish is the caller's mistake, not ours. Without this the
       // plugin sees a generic internal error and cannot tell the two apart.
@@ -101,7 +101,7 @@ export class AtlasRpc {
     const userId = this.requireAtlasUser(ctx, 'writes');
     const itemId = num(params.itemId, 'itemId');
     await this.requireAtlasAddon();
-    if (!this.atlas.deleteBucketItem(userId, itemId)) {
+    if (!(await this.atlas.deleteBucketItem(userId, itemId))) {
       throw new ForbiddenResource(`no bucket item ${itemId} for this user`);
     }
     return { deleted: true };

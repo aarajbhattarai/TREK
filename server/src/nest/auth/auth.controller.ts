@@ -160,21 +160,21 @@ export class AuthController {
   async mapsKey(@CurrentUser() user: User, @Body() body: MapsKeyUpdateDto, @Req() req: Request) {
     // changedKeys is for the audit line, not for the client: destructured off so
     // the response body stays what it always was.
-    const { changedKeys = [], ...result } = this.profile.updateMapsKey(user.id, body.maps_api_key);
+    const { changedKeys = [], ...result } = await this.profile.updateMapsKey(user.id, body.maps_api_key);
     await this.auditApiKeys(user.id, changedKeys, req);
     return result;
   }
 
   @Put('me/api-keys')
   async apiKeys(@CurrentUser() user: User, @Body() body: ApiKeysUpdateDto, @Req() req: Request) {
-    const { changedKeys = [], ...result } = this.profile.updateApiKeys(user.id, body);
+    const { changedKeys = [], ...result } = await this.profile.updateApiKeys(user.id, body);
     await this.auditApiKeys(user.id, changedKeys, req);
     return result;
   }
 
   @Put('me/settings')
   async updateSettings(@CurrentUser() user: User, @Body() body: SettingsUpdateDto, @Req() req: Request) {
-    const result = this.profile.updateSettings(user.id, body);
+    const result = await this.profile.updateSettings(user.id, body);
     if (result.error) {
       throw new HttpException({ error: result.error }, result.status!);
     }
@@ -183,8 +183,8 @@ export class AuthController {
   }
 
   @Get('me/settings')
-  getSettings(@CurrentUser() user: User) {
-    const result = this.profile.getSettings(user.id);
+  async getSettings(@CurrentUser() user: User) {
+    const result = await this.profile.getSettings(user.id);
     if (result.error) {
       throw new HttpException({ error: result.error }, result.status!);
     }

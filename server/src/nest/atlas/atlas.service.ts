@@ -3,6 +3,7 @@ import { CONTINENT_MAP, strongerVisitStatus, todayUtc, tripVisitStatus, VisitSta
 import type { AtlasLocateResponse } from '@trek/shared';
 import { Trip, Place } from '../../types';
 import { DatabaseService } from '../database/database.service';
+import { UnitOfWork } from '../database/unit-of-work';
 import {
   getCountryFromCoords,
   getCountryGeoGz,
@@ -109,11 +110,14 @@ function markedSource(row: { source?: string | null } | undefined): string | nul
  */
 @Injectable()
 export class AtlasService {
-  constructor(private readonly db: DatabaseService) {}
+  constructor(
+    private readonly db: DatabaseService,
+    private readonly uow: UnitOfWork,
+  ) {}
 
   // ── Shared query: all trips the user owns or is a member of ───────────────
 
-  private getUserTrips(userId: number): Trip[] {
+  private async getUserTrips(userId: number): Promise<Trip[]> {
     return this.db
       .prepare(
         `
@@ -126,7 +130,7 @@ export class AtlasService {
       .all(userId, userId, userId) as Trip[];
   }
 
-  private getPlacesForTrips(tripIds: number[]): Place[] {
+  private async getPlacesForTrips(tripIds: number[]): Promise<Place[]> {
     if (tripIds.length === 0) return [];
     const placeholders = tripIds.map(() => '?').join(',');
     return this.db.prepare(`SELECT * FROM places WHERE trip_id IN (${placeholders})`).all(...tripIds) as Place[];
@@ -143,7 +147,7 @@ export class AtlasService {
 
   // ── Country resolution (batch DB cache + sync fallback + background geocoding) ──
 
-  private resolvePlaceCountries(places: Place[]): Map<number, string> {
+  private async resolvePlaceCountries(places: Place[]): Promise<Map<number, string>> {
     const out = new Map<number, string>();
     const geoPlaces = places.filter((p) => p.lat && p.lng);
     const placeIds = geoPlaces.map((p) => p.id);
@@ -204,11 +208,11 @@ export class AtlasService {
   // ── Stats ─────────────────────────────────────────────────────────────────
 
   async stats(userId: number) {
-    const trips = this.getUserTrips(userId);
+    const trips = await this.getUserTrips(userId);
     const tripIds = trips.map((t) => t.id);
 
     if (tripIds.length === 0) {
-      const hiddenOnly = this.getHiddenCountries(userId);
+      const hiddenOnly = await this.getHiddenCountries(userId);
       const manualCountries = this.db
         .prepare('SELECT country_code FROM visited_countries WHERE user_id = ?')
         .all(userId) as {
@@ -224,7 +228,7 @@ export class AtlasService {
       };
     }
 
-    const places = this.getPlacesForTrips(tripIds);
+    const places = await this.getPlacesForTrips(tripIds);
     const now = todayUtc();
     const tripStatus = this.tripStatusMap(trips, now);
 
@@ -234,7 +238,7 @@ export class AtlasService {
       tripIds: Set<number>;
       status: VisitStatus;
     }
-    const placeCountries = this.resolvePlaceCountries(places);
+    const placeCountries = await this.resolvePlaceCountries(places);
     const countrySet = new Map<string, CountryEntry>();
     for (const place of places) {
       const code = placeCountries.get(place.id);
@@ -302,7 +306,7 @@ export class AtlasService {
     // Countries the user explicitly removed. Only the zero-count passes below are
     // suppressed — a country with real places isn't removable in the UI anyway, and once
     // the user adds a place there the tombstone should stop mattering (#1490).
-    const hidden = this.getHiddenCountries(userId);
+    const hidden = await this.getHiddenCountries(userId);
 
     // Merge manually marked countries
     const manualCountries = this.db
@@ -489,8 +493,8 @@ export class AtlasService {
 
   // ── Country places ────────────────────────────────────────────────────────
 
-  countryPlaces(userId: number, code: string) {
-    const trips = this.getUserTrips(userId);
+  async countryPlaces(userId: number, code: string) {
+    const trips = await this.getUserTrips(userId);
     const tripIds = trips.map((t) => t.id);
     if (tripIds.length === 0) {
       // Post-fold quirk fix: the legacy early return hardcoded manually_marked
@@ -508,7 +512,7 @@ export class AtlasService {
       };
     }
 
-    const places = this.getPlacesForTrips(tripIds);
+    const places = await this.getPlacesForTrips(tripIds);
 
     const matchingPlaces: {
       id: number;
@@ -565,14 +569,14 @@ export class AtlasService {
 
   // ── Mark / unmark country ─────────────────────────────────────────────────
 
-  listVisitedCountries(userId: number): { country_code: string; created_at: string; source: string }[] {
+  async listVisitedCountries(userId: number): Promise<{ country_code: string; created_at: string; source: string }[]> {
     return this.db
       .prepare('SELECT country_code, created_at, source FROM visited_countries WHERE user_id = ? ORDER BY created_at DESC')
       .all(userId) as { country_code: string; created_at: string; source: string }[];
   }
 
   /** Countries the user explicitly removed, which stats() must not re-derive (#1490). */
-  getHiddenCountries(userId: number): Set<string> {
+  async getHiddenCountries(userId: number): Promise<Set<string>> {
     const rows = this.db.prepare('SELECT country_code FROM hidden_countries WHERE user_id = ?').all(userId) as {
       country_code: string;
     }[];
@@ -589,8 +593,8 @@ export class AtlasService {
    * Returns whether this actually added the country, so a caller reporting
    * "3 countries added" is not counting the ones that were already there.
    */
-  markCountry(userId: number, code: string, source: 'manual' | 'dawarich' = 'manual'): boolean {
-    return this.db.transaction(() => {
+  async markCountry(userId: number, code: string, source: 'manual' | 'dawarich' = 'manual'): Promise<boolean> {
+    return this.uow.transactional(async () => {
       const inserted = this.db
         .prepare('INSERT OR IGNORE INTO visited_countries (user_id, country_code, source) VALUES (?, ?, ?)')
         .run(userId, code, source).changes > 0;
@@ -600,8 +604,8 @@ export class AtlasService {
     });
   }
 
-  unmarkCountry(userId: number, code: string): void {
-    this.db.transaction(() => {
+  async unmarkCountry(userId: number, code: string): Promise<void> {
+    await this.uow.transactional(async () => {
       this.db.prepare('DELETE FROM visited_countries WHERE user_id = ? AND country_code = ?').run(userId, code);
       this.db.prepare('DELETE FROM visited_regions WHERE user_id = ? AND country_code = ?').run(userId, code);
       // A country derived from a place or a transport endpoint has no visited_countries row,
@@ -613,7 +617,7 @@ export class AtlasService {
 
   // ── Mark / unmark region ──────────────────────────────────────────────────
 
-  listManuallyVisitedRegions(userId: number): { region_code: string; region_name: string; country_code: string }[] {
+  async listManuallyVisitedRegions(userId: number): Promise<{ region_code: string; region_name: string; country_code: string }[]> {
     return this.db
       .prepare(
         'SELECT region_code, region_name, country_code FROM visited_regions WHERE user_id = ? ORDER BY created_at DESC',
@@ -622,15 +626,15 @@ export class AtlasService {
   }
 
   /** Regions the user explicitly removed, which visitedRegions() must not re-derive. */
-  getHiddenRegions(userId: number): Set<string> {
+  async getHiddenRegions(userId: number): Promise<Set<string>> {
     const rows = this.db.prepare('SELECT region_code FROM hidden_regions WHERE user_id = ?').all(userId) as {
       region_code: string;
     }[];
     return new Set(rows.map((r) => r.region_code));
   }
 
-  markRegion(userId: number, code: string, name: string, countryCode: string): void {
-    this.db.transaction(() => {
+  async markRegion(userId: number, code: string, name: string, countryCode: string): Promise<void> {
+    await this.uow.transactional(async () => {
       this.db
         .prepare(
           'INSERT OR IGNORE INTO visited_regions (user_id, region_code, region_name, country_code) VALUES (?, ?, ?, ?)',
@@ -651,9 +655,9 @@ export class AtlasService {
   // True when the given country still has at least one region that would show as visited —
   // derived from place_regions or manually marked — after excluding the given user's hidden
   // regions. Used to decide whether removing a region should cascade into hiding the country.
-  private hasVisibleRegionForCountry(userId: number, countryCode: string, hidden: Set<string>): boolean {
-    const tripIds = this.getUserTrips(userId).map((t) => t.id);
-    const placeIds = this.getPlacesForTrips(tripIds)
+  private async hasVisibleRegionForCountry(userId: number, countryCode: string, hidden: Set<string>): Promise<boolean> {
+    const tripIds = (await this.getUserTrips(userId)).map((t) => t.id);
+    const placeIds = (await this.getPlacesForTrips(tripIds))
       .filter((p) => p.lat && p.lng)
       .map((p) => p.id);
     const placeRegionCodes =
@@ -674,10 +678,10 @@ export class AtlasService {
     return [...placeRegionCodes, ...manualRegionCodes].some((code) => !hidden.has(code));
   }
 
-  unmarkRegion(userId: number, code: string): void {
+  async unmarkRegion(userId: number, code: string): Promise<void> {
     // One transaction across the delete, the tombstone and the country cascade —
-    // better-sqlite3 turns the nested unmarkCountry() transaction into a savepoint.
-    this.db.transaction(() => {
+    // MikroORM turns the nested unmarkCountry() transaction into a savepoint.
+    await this.uow.transactional(async () => {
       const region = this.db
         .prepare('SELECT country_code FROM visited_regions WHERE user_id = ? AND region_code = ?')
         .get(userId, code) as { country_code: string } | undefined;
@@ -695,9 +699,9 @@ export class AtlasService {
 
         // If that was the country's last visible region, hide the country too — otherwise it
         // keeps showing "visited" on the world map with nothing left to drill into.
-        const hidden = this.getHiddenRegions(userId);
-        if (!this.hasVisibleRegionForCountry(userId, countryCode, hidden)) {
-          this.unmarkCountry(userId, countryCode);
+        const hidden = await this.getHiddenRegions(userId);
+        if (!(await this.hasVisibleRegionForCountry(userId, countryCode, hidden))) {
+          await this.unmarkCountry(userId, countryCode);
         }
       }
     });
@@ -711,9 +715,9 @@ export class AtlasService {
       { code: string; name: string; placeCount: number; status: VisitStatus; manuallyMarked?: boolean }[]
     >;
   }> {
-    const trips = this.getUserTrips(userId);
+    const trips = await this.getUserTrips(userId);
     const tripIds = trips.map((t) => t.id);
-    const places = this.getPlacesForTrips(tripIds);
+    const places = await this.getPlacesForTrips(tripIds);
 
     // Regions carry the same status as their country, otherwise zooming into a merely
     // planned country would reveal regions painted as visited (#1048).
@@ -787,7 +791,7 @@ export class AtlasService {
     }
 
     // Merge manually marked regions
-    const manualRegions = this.listManuallyVisitedRegions(userId);
+    const manualRegions = await this.listManuallyVisitedRegions(userId);
     for (const r of manualRegions) {
       if (!result[r.country_code]) result[r.country_code] = [];
       const existing = result[r.country_code].find((x) => x.code === r.region_code);
@@ -807,7 +811,7 @@ export class AtlasService {
     // Suppress regions the user explicitly removed, same as stats() does for countries
     // via getHiddenCountries (#1490) — otherwise a region derived fresh from place_regions
     // (or a manual mark) on every request could never actually be dismissed.
-    const hidden = this.getHiddenRegions(userId);
+    const hidden = await this.getHiddenRegions(userId);
     if (hidden.size > 0) {
       for (const country of Object.keys(result)) {
         result[country] = result[country].filter((r) => !hidden.has(r.code));
@@ -850,7 +854,7 @@ export class AtlasService {
 
   // ── Bucket list CRUD ──────────────────────────────────────────────────────
 
-  bucketList(userId: number) {
+  async bucketList(userId: number) {
     return this.db.prepare('SELECT * FROM bucket_list WHERE user_id = ? ORDER BY created_at DESC').all(userId);
   }
 
@@ -864,7 +868,7 @@ export class AtlasService {
    * "no coordinates" instead of the NULL-is-never-equal SQLite default.
    * `lower()` is ASCII-only in SQLite, which is what the client mirrors.
    */
-  private findDuplicateBucketItem(userId: number, key: BucketIdentity, excludeId?: number): { id: number } | undefined {
+  private async findDuplicateBucketItem(userId: number, key: BucketIdentity, excludeId?: number): Promise<{ id: number } | undefined> {
     return this.db
       .prepare(
         `SELECT id FROM bucket_list
@@ -882,7 +886,7 @@ export class AtlasService {
       | undefined;
   }
 
-  createBucketItem(userId: number, data: CreateBucketData) {
+  async createBucketItem(userId: number, data: CreateBucketData) {
     const identity: BucketIdentity = {
       name: data.name.trim(),
       lat: data.lat ?? null,
@@ -892,7 +896,7 @@ export class AtlasService {
     };
     // #1898: the same wish must not stack up. A different target date (or a
     // different place under the same name) is a different wish and still lands.
-    if (this.findDuplicateBucketItem(userId, identity)) throw new BucketItemExistsError();
+    if (await this.findDuplicateBucketItem(userId, identity)) throw new BucketItemExistsError();
     const result = this.db
       .prepare(
         'INSERT INTO bucket_list (user_id, name, lat, lng, country_code, notes, target_date) VALUES (?, ?, ?, ?, ?, ?, ?)',
@@ -909,7 +913,7 @@ export class AtlasService {
     return this.db.prepare('SELECT * FROM bucket_list WHERE id = ?').get(result.lastInsertRowid);
   }
 
-  updateBucketItem(userId: number, itemId: string | number, data: UpdateBucketData) {
+  async updateBucketItem(userId: number, itemId: string | number, data: UpdateBucketData) {
     const item = this.db.prepare('SELECT * FROM bucket_list WHERE id = ? AND user_id = ?').get(itemId, userId) as
       | (BucketIdentity & { id: number })
       | undefined;
@@ -924,7 +928,7 @@ export class AtlasService {
       country_code: data.country_code !== undefined ? blankToNull(data.country_code) : blankToNull(item.country_code),
       target_date: data.target_date !== undefined ? blankToNull(data.target_date) : blankToNull(item.target_date),
     };
-    if (this.findDuplicateBucketItem(userId, next, item.id)) throw new BucketItemExistsError();
+    if (await this.findDuplicateBucketItem(userId, next, item.id)) throw new BucketItemExistsError();
     // Post-fold quirk fixes: the value bindings use `?? null` (the legacy
     // `|| null` wrote NULL for lat/lng 0 and empty-string notes), and the
     // UPDATE + re-select are user-scoped (defense-in-depth; the ownership
@@ -959,7 +963,7 @@ export class AtlasService {
     return this.db.prepare('SELECT * FROM bucket_list WHERE id = ? AND user_id = ?').get(itemId, userId);
   }
 
-  deleteBucketItem(userId: number, itemId: string | number): boolean {
+  async deleteBucketItem(userId: number, itemId: string | number): Promise<boolean> {
     const item = this.db.prepare('SELECT * FROM bucket_list WHERE id = ? AND user_id = ?').get(itemId, userId);
     if (!item) return false;
     // Post-fold quirk fix: user-scoped DELETE (defense-in-depth, see updateBucketItem).
@@ -1000,7 +1004,7 @@ export class AtlasService {
    * much to spend on a label. An unresolved trip reports an empty list, which the
    * caller renders as "no country" rather than as a wrong one.
    */
-  lastTrip(userId: number): { title: string; start_date: string | null; end_date: string | null; countries: string[] } | null {
+  async lastTrip(userId: number): Promise<{ title: string; start_date: string | null; end_date: string | null; countries: string[] } | null> {
     const trip = this.db.get<{ id: number; title: string; start_date: string | null; end_date: string | null }>(`
     SELECT t.id, t.title, t.start_date, t.end_date
     FROM trips t
@@ -1030,7 +1034,7 @@ export class AtlasService {
     };
   }
 
-  getTravelStats(userId: number) {
+  async getTravelStats(userId: number) {
     // The resolved region rides along so cityFromAddress can tell the city apart from
     // the region sitting right above it in the same address (#1115).
     const places = this.db.all<{ address: string | null; lat: number | null; lng: number | null; region_name: string | null }>(`
@@ -1131,7 +1135,7 @@ export class AtlasService {
 
     // Countries the user removed in Atlas stay removed on the dashboard too, so the
     // passport card and the Atlas map agree (#1490).
-    for (const code of this.getHiddenCountries(userId)) countryCodes.delete(code.toUpperCase());
+    for (const code of await this.getHiddenCountries(userId)) countryCodes.delete(code.toUpperCase());
 
     return {
       countries: [...countryCodes],
@@ -1140,7 +1144,7 @@ export class AtlasService {
       totalTrips: tripStats?.trips || 0,
       totalDays: tripStats?.days || 0,
       totalPlaces: places.length,
-      totalDistanceKm: this.flightDistanceKm(userId),
+      totalDistanceKm: await this.flightDistanceKm(userId),
     };
   }
 
@@ -1170,7 +1174,7 @@ export class AtlasService {
     (NOT EXISTS (SELECT 1 FROM reservation_travelers rt WHERE rt.reservation_id = r.id)
      OR EXISTS (SELECT 1 FROM reservation_travelers rt WHERE rt.reservation_id = r.id AND rt.user_id = ?))`;
 
-  private flightDistanceKm(userId: number): number {
+  private async flightDistanceKm(userId: number): Promise<number> {
     const rows = this.db.all<{ reservation_id: number; lat: number; lng: number }>(`
       SELECT re.reservation_id, re.lat, re.lng
       FROM reservation_endpoints re

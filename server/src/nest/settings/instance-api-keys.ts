@@ -47,7 +47,7 @@ const USER_ROW_SQL: Record<InstanceApiKeyName, string> = {
 };
 
 /** The instance-wide value in cleartext, or null when unset/cleared. */
-export function readInstanceApiKey(db: DatabaseService, name: InstanceApiKeyName): string | null {
+export async function readInstanceApiKey(db: DatabaseService, name: InstanceApiKeyName): Promise<string | null> {
   const row = db.get<{ value: string | null }>('SELECT value FROM app_settings WHERE key = ?', name);
   if (!row?.value) return null;
   return decrypt_api_key(row.value) || null;
@@ -59,7 +59,7 @@ export function readInstanceApiKey(db: DatabaseService, name: InstanceApiKeyName
  * key", and a missing row would let the resolver fall through to whatever old
  * value still sits in their own users column.
  */
-export function writeInstanceApiKey(db: DatabaseService, name: InstanceApiKeyName, value: unknown): void {
+export async function writeInstanceApiKey(db: DatabaseService, name: InstanceApiKeyName, value: unknown): Promise<void> {
   db.run(
     `INSERT INTO app_settings (key, value) VALUES (?, ?)
      ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
@@ -80,15 +80,15 @@ export function writeInstanceApiKey(db: DatabaseService, name: InstanceApiKeyNam
  * `userId` 0 means "nobody is asking" (the unauthenticated app-config read):
  * there is no personal key to find, so the chain ends at the instance.
  */
-export function resolveApiKey(
+export async function resolveApiKey(
   db: DatabaseService,
   name: InstanceApiKeyName,
   userId: number,
   operatorKey: string | undefined,
-): { key: string | null; source: ApiKeySource | null } {
+): Promise<{ key: string | null; source: ApiKeySource | null }> {
   if (operatorKey) return { key: operatorKey, source: 'operator-env' };
 
-  const instance = readInstanceApiKey(db, name);
+  const instance = await readInstanceApiKey(db, name);
   if (instance) return { key: instance, source: 'instance' };
   if (!userId) return { key: null, source: null };
 

@@ -14,34 +14,34 @@ export class SchoolHolidaysController {
   constructor(private readonly holidays: SchoolHolidaysService) {}
 
   @Get()
-  catalog() { return this.holidays.catalog(); }
+  async catalog() { return this.holidays.catalog(); }
 
   @Get('regions/:id')
-  region(@Param('id', ParseIntPipe) id: number) { return this.holidays.region(id); }
+  async region(@Param('id', ParseIntPipe) id: number) { return this.holidays.region(id); }
 
   @Get('regions/:id/holidays/:year')
-  forYear(@Param('id', ParseIntPipe) id: number, @Param('year') year: string) {
+  async forYear(@Param('id', ParseIntPipe) id: number, @Param('year') year: string) {
     if (!/^\d{4}$/.test(year)) throw new BadRequestException('Invalid year');
     return this.holidays.holidays(id, year);
   }
 
   @Post('countries')
   @UseGuards(AdminGuard)
-  createCountry(@Body() body: SchoolHolidayCountryDto) { return this.holidays.createCountry(body); }
+  async createCountry(@Body() body: SchoolHolidayCountryDto) { return this.holidays.createCountry(body); }
 
   @Delete('countries/:code')
   @UseGuards(AdminGuard)
-  deleteCountry(@Param('code') code: string) { return this.holidays.deleteCountry(code); }
+  async deleteCountry(@Param('code') code: string) { return this.holidays.deleteCountry(code); }
 
   @Post('countries/:code/regions')
   @UseGuards(AdminGuard)
-  createRegion(@Param('code') code: string, @Body() body: SchoolHolidayRegionDto) { return this.holidays.createRegion(code, body); }
+  async createRegion(@Param('code') code: string, @Body() body: SchoolHolidayRegionDto) { return this.holidays.createRegion(code, body); }
 
   @Put('regions/:id')
   @UseGuards(AdminGuard)
-  updateRegion(@Param('id', ParseIntPipe) id: number, @Body() body: SchoolHolidayRegionDto) { return this.holidays.updateRegion(id, body); }
+  async updateRegion(@Param('id', ParseIntPipe) id: number, @Body() body: SchoolHolidayRegionDto) { return this.holidays.updateRegion(id, body); }
 
   @Delete('regions/:id')
   @UseGuards(AdminGuard)
-  deleteRegion(@Param('id', ParseIntPipe) id: number, @Query('revision', ParseIntPipe) revision: number) { return this.holidays.deleteRegion(id, revision); }
+  async deleteRegion(@Param('id', ParseIntPipe) id: number, @Query('revision', ParseIntPipe) revision: number) { return this.holidays.deleteRegion(id, revision); }
 }

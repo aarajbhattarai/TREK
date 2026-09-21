@@ -236,7 +236,7 @@ function stopFrom(stop: GoogleStop | undefined, fallback: GoogleLatLng | undefin
 export class GoogleTransitProvider {
   constructor(private readonly database: DatabaseService) {}
 
-  private resolveKey(userId: number): { key: string | null; source: ApiKeySource | null } {
+  private async resolveKey(userId: number): Promise<{ key: string | null; source: ApiKeySource | null }> {
     return resolveApiKey(this.database, 'maps_api_key', userId, readEnv().maps.placesApiKey);
   }
 
@@ -248,7 +248,7 @@ export class GoogleTransitProvider {
    */
   async isActive(userId: number): Promise<boolean> {
     if ((await readTransitProvider(this.database)) !== 'google') return false;
-    return !!this.resolveKey(userId).key;
+    return !!(await this.resolveKey(userId)).key;
   }
 
   private async call(endpoint: string, label: string, apiKey: string, body: unknown, fieldMask: string): Promise<unknown> {
@@ -284,7 +284,7 @@ export class GoogleTransitProvider {
 
   /** Station/place search for the from/to pickers. `near` biases results. */
   async geocode(text: string, language: string | undefined, near: string | undefined, userId: number): Promise<{ results: TransitPlace[] }> {
-    const { key: apiKey, source } = this.resolveKey(userId);
+    const { key: apiKey, source } = await this.resolveKey(userId);
     if (!apiKey) {
       const err = new Error('Transit provider error (no Google API key configured)') as Error & { status: number };
       err.status = 502;
@@ -333,7 +333,7 @@ export class GoogleTransitProvider {
 
   /** Route search between two coordinates. Returns the same compact shape MOTIS is mapped to. */
   async plan(q: PlanQuery, language: string | undefined, userId: number): Promise<{ itineraries: TransitItinerary[] }> {
-    const { key: apiKey, source } = this.resolveKey(userId);
+    const { key: apiKey, source } = await this.resolveKey(userId);
     if (!apiKey) {
       const err = new Error('Transit provider error (no Google API key configured)') as Error & { status: number };
       err.status = 502;

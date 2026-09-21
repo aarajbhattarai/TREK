@@ -28,7 +28,7 @@ export class TravelStatsController {
   constructor(private readonly atlas: AtlasService) {}
 
   @Get('travel-stats')
-  travelStats(@CurrentUser() user: User) {
+  async travelStats(@CurrentUser() user: User) {
     return this.atlas.getTravelStats(user.id);
   }
 }

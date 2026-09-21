@@ -442,9 +442,9 @@ describe('JourneyPublicController', () => {
     expect((Reflect.getMetadata('__guards__', JourneyPublicController) ?? [])[0]).toBe(AddonGuard);
   });
 
-  it('GET /:token 404 / json', () => {
-    expect(thrown(() => new JourneyPublicController(svc({ getPublicJourney: vi.fn().mockReturnValue(null) } as Partial<JourneyService>), storageStub).get('tok'))).toEqual({ status: 404, body: { error: 'Not found' } });
-    expect(new JourneyPublicController(svc({ getPublicJourney: vi.fn().mockReturnValue({ id: 1 }) } as Partial<JourneyService>), storageStub).get('tok')).toEqual({ id: 1 });
+  it('GET /:token 404 / json', async () => {
+    expect(await thrownAsync(() => new JourneyPublicController(svc({ getPublicJourney: vi.fn().mockReturnValue(null) } as Partial<JourneyService>), storageStub).get('tok'))).toEqual({ status: 404, body: { error: 'Not found' } });
+    expect(await new JourneyPublicController(svc({ getPublicJourney: vi.fn().mockReturnValue({ id: 1 }) } as Partial<JourneyService>), storageStub).get('tok')).toEqual({ id: 1 });
   });
 
   it('photo proxy 404 on invalid token, else streams', async () => {

@@ -159,37 +159,37 @@ describe('unsplashService.searchUnsplashPhotos', () => {
 });
 
 describe('unsplashService.getUnsplashKey', () => {
-  it('UNSPLASH-012: prefers the UNSPLASH_ACCESS_KEY env var over any stored key', () => {
+  it('UNSPLASH-012: prefers the UNSPLASH_ACCESS_KEY env var over any stored key', async () => {
     process.env.UNSPLASH_ACCESS_KEY = 'env-key';
     mockDbGet.mockReturnValue({ unsplash_api_key: 'user-key' });
-    expect(getUnsplashKey(1)).toBe('env-key');
+    expect(await getUnsplashKey(1)).toBe('env-key');
     expect(mockDbGet).not.toHaveBeenCalled();
   });
 
-  it('UNSPLASH-013: returns the user key when set and no env var', () => {
+  it('UNSPLASH-013: returns the user key when set and no env var', async () => {
     delete process.env.UNSPLASH_ACCESS_KEY;
     mockDbGet.mockReturnValueOnce({ unsplash_api_key: 'user-key' });
-    expect(getUnsplashKey(1)).toBe('user-key');
+    expect(await getUnsplashKey(1)).toBe('user-key');
   });
 
-  it('UNSPLASH-014: the instance-wide key wins over the user own key (#1939)', () => {
+  it('UNSPLASH-014: the instance-wide key wins over the user own key (#1939)', async () => {
     delete process.env.UNSPLASH_ACCESS_KEY;
     mockInstanceGet.mockReturnValue({ value: 'instance-key' });
     mockDbGet.mockReturnValue({ unsplash_api_key: 'user-key' });
-    expect(getUnsplashKey(1)).toBe('instance-key');
+    expect(await getUnsplashKey(1)).toBe('instance-key');
     expect(mockDbGet).not.toHaveBeenCalled(); // the own row is not even read
   });
 
-  it('UNSPLASH-015: returns null when neither env, instance, nor the user has a key', () => {
+  it('UNSPLASH-015: returns null when neither env, instance, nor the user has a key', async () => {
     delete process.env.UNSPLASH_ACCESS_KEY;
     mockDbGet.mockReturnValue(undefined);
-    expect(getUnsplashKey(1)).toBeNull();
+    expect(await getUnsplashKey(1)).toBeNull();
   });
 
-  it("UNSPLASH-015b: never reads another user's key — the admin fallback is gone (#1939)", () => {
+  it("UNSPLASH-015b: never reads another user's key — the admin fallback is gone (#1939)", async () => {
     delete process.env.UNSPLASH_ACCESS_KEY;
     mockDbGet.mockReturnValue(undefined);
-    expect(getUnsplashKey(1)).toBeNull();
+    expect(await getUnsplashKey(1)).toBeNull();
     // Both reads are scoped: the instance row and this caller's own row.
     expect(mockDbGet).toHaveBeenCalledTimes(1);
     expect(mockDbGet).toHaveBeenCalledWith(1);

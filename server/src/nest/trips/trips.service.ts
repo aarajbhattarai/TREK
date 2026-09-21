@@ -378,8 +378,8 @@ export class TripsService {
     return this.db.prepare('SELECT * FROM trips WHERE id = ?').get(tripId) as Trip | undefined;
   }
 
-  searchCoverImages(query: string, userId: number) {
-    return this.unsplash.searchUnsplashPhotos(query, 9, this.unsplash.getUnsplashKey(userId));
+  async searchCoverImages(query: string, userId: number) {
+    return this.unsplash.searchUnsplashPhotos(query, 9, await this.unsplash.getUnsplashKey(userId));
   }
 
   getOwner(tripId: string | number): { user_id: number } | undefined {

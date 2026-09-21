@@ -151,7 +151,7 @@ export class RoadtripRouterService {
     profile: string,
     avoid: RouteAvoidClass[],
   ): Promise<RoadtripRoute> {
-    const settings = this.settings.getUserSettings(userId);
+    const settings = await this.settings.getUserSettings(userId);
     const key = JSON.stringify([
       userId,
       tripId,

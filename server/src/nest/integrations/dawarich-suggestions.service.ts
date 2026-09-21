@@ -627,15 +627,15 @@ export class DawarichSuggestionsService {
    * `INSERT OR IGNORE` underneath means a country already marked by hand keeps
    * its own provenance — confirming it again does not relabel it as imported.
    */
-  acceptAtlasCountries(userId: number, codes: string[]): number {
+  async acceptAtlasCountries(userId: number, codes: string[]): Promise<number> {
     let marked = 0;
-    this.db.transaction(() => {
+    await this.uow.transactional(async () => {
       for (const raw of codes) {
         const code = raw.trim().toUpperCase();
         if (!/^[A-Z]{2}$/.test(code)) continue;
         // Counted only when it was actually added: "3 countries added" must not
         // include ones that were already on the map.
-        if (this.atlas.markCountry(userId, code, 'dawarich')) marked++;
+        if (await this.atlas.markCountry(userId, code, 'dawarich')) marked++;
       }
     });
     return marked;

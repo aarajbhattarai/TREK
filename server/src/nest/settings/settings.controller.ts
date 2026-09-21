@@ -55,12 +55,12 @@ export class SettingsController {
   }
 
   @Get()
-  list(@CurrentUser() user: User) {
-    return { settings: this.settings.getUserSettings(user.id) };
+  async list(@CurrentUser() user: User) {
+    return { settings: await this.settings.getUserSettings(user.id) };
   }
 
   @Put()
-  upsert(@CurrentUser() user: User, @Body() body: SettingUpsertDto) {
+  async upsert(@CurrentUser() user: User, @Body() body: SettingUpsertDto) {
     this.assertMayWriteInstanceEndpoint({ [body.key]: body.value });
     // assertMayWriteInstanceEndpoint only covers llm_base_url and provider 'local'.
     // llm_api_key and llm_model are writable by every user, and on a managed
@@ -72,17 +72,17 @@ export class SettingsController {
     if (body.value === MASKED_SETTING_VALUE) {
       return { success: true, key: body.key, unchanged: true };
     }
-    this.settings.upsertSetting(user.id, body.key, body.value);
+    await this.settings.upsertSetting(user.id, body.key, body.value);
     return { success: true, key: body.key, value: body.value };
   }
 
   @Post('bulk')
   @HttpCode(200) // Express answers bulk with res.json (200), not the POST-default 201.
-  bulk(@CurrentUser() user: User, @Body() body: SettingsBulkDto) {
+  async bulk(@CurrentUser() user: User, @Body() body: SettingsBulkDto) {
     this.assertMayWriteInstanceEndpoint(body.settings);
     const { allowed, blocked } = splitManagedKeys(body.settings, this.env.isManaged());
     try {
-      const updated = this.settings.bulkUpsertSettings(user.id, allowed);
+      const updated = await this.settings.bulkUpsertSettings(user.id, allowed);
       return { success: true, updated, ...(blocked.length ? { managed_keys: blocked } : {}) };
     } catch (err) {
       console.error('Error saving settings:', err);
@@ -108,7 +108,7 @@ export class AdminDefaultUserSettingsController {
   ) {}
 
   @Get()
-  get() {
+  async get() {
     return this.settings.getAdminUserDefaults();
   }
 
@@ -123,7 +123,7 @@ export class AdminDefaultUserSettingsController {
         body as unknown as Record<string, unknown>,
         this.env.isManaged(),
       );
-      this.settings.setAdminUserDefaults(allowed);
+      await this.settings.setAdminUserDefaults(allowed);
       await this.audit.writeAudit({
         userId: user.id,
         action: 'admin.default_user_settings_update',

@@ -1488,7 +1488,7 @@ export class PlacesService {
   async enrichImportedPlaces(tripId: string, userId: number, places: EnrichablePlace[], lang?: string): Promise<void> {
     try {
       if (!places.length) return;
-      if (!this.maps.getMapsKey(userId)) return;
+      if (!(await this.maps.getMapsKey(userId))) return;
       await mapWithConcurrency(places, ENRICH_CONCURRENCY, async (place) => {
         try {
           await this.enrichOne(tripId, userId, place, lang);
@@ -1566,7 +1566,7 @@ export class PlacesService {
     const place = this.dbs.get<Place>('SELECT * FROM places WHERE id = ? AND trip_id = ?', placeId, tripId);
     if (!place) return { error: 'Place not found', status: 404 };
 
-    return this.unsplash.searchUnsplashPhotos(place.name + (place.address ? ' ' + place.address : ''), 5, this.unsplash.getUnsplashKey(userId));
+    return this.unsplash.searchUnsplashPhotos(place.name + (place.address ? ' ' + place.address : ''), 5, await this.unsplash.getUnsplashKey(userId));
   }
 
   // -------------------------------------------------------------------------

@@ -41,17 +41,19 @@ import { JourneyDomainService } from '../../../src/nest/journey/journey-domain.s
 import { JourneyShareService } from '../../../src/nest/journey/journey-share.service';
 import { SettingsService } from '../../../src/nest/settings/settings.service';
 import { db as dbConn } from '../../../src/db/database';
+import { createTestUnitOfWork } from '../../helpers/test-uow';
 
 const dbs = new DatabaseService(dbConn);
-const svc = new JourneyShareService(
-  dbs,
-  new JourneyDomainService(dbs, new RealtimeService(), new TrekPhotosRepository(dbs)),
-  new SettingsService(dbs),
-);
+let svc: JourneyShareService;
 
-beforeAll(() => {
+beforeAll(async () => {
   createTables(testDb);
   runMigrations(testDb);
+  svc = new JourneyShareService(
+    dbs,
+    new JourneyDomainService(dbs, new RealtimeService(), new TrekPhotosRepository(dbs)),
+    new SettingsService(dbs, await createTestUnitOfWork(testDb)),
+  );
 });
 
 beforeEach(() => {
@@ -412,12 +414,12 @@ describe('validateShareTokenForAsset', () => {
 });
 
 describe('getPublicJourney', () => {
-  it('JOURNEY-SHARE-016: returns null for invalid token', () => {
-    const result = svc.getPublicJourney('invalid-token');
+  it('JOURNEY-SHARE-016: returns null for invalid token', async () => {
+    const result = await svc.getPublicJourney('invalid-token');
     expect(result).toBeNull();
   });
 
-  it('JOURNEY-SHARE-017: returns journey data with entries, stats, and permissions', () => {
+  it('JOURNEY-SHARE-017: returns journey data with entries, stats, and permissions', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id, {
       title: 'Japan 2026',
@@ -442,7 +444,7 @@ describe('getPublicJourney', () => {
       share_map: false,
     });
 
-    const result = svc.getPublicJourney(token);
+    const result = await svc.getPublicJourney(token);
 
     expect(result).not.toBeNull();
     expect(result!.journey.title).toBe('Japan 2026');
@@ -460,7 +462,7 @@ describe('getPublicJourney', () => {
     expect(result!.permissions.share_map).toBe(false);
   });
 
-  it('JOURNEY-SHARE-017b: a field the owner switched off is switched off for the reader too', () => {
+  it('JOURNEY-SHARE-017b: a field the owner switched off is switched off for the reader too', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
     testDb.prepare('UPDATE journeys SET show_mood = 0, show_weather = 0 WHERE id = ?').run(journey.id);
@@ -469,12 +471,12 @@ describe('getPublicJourney', () => {
       share_timeline: true, share_gallery: false, share_map: true,
     });
 
-    const result = svc.getPublicJourney(token)!;
+    const result = (await svc.getPublicJourney(token))!;
 
     expect(result.journey).toMatchObject({ show_mood: 0, show_weather: 0, show_verdict: 1 });
   });
 
-  it('JOURNEY-SHARE-018: excludes skeleton entries from public view', () => {
+  it('JOURNEY-SHARE-018: excludes skeleton entries from public view', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
     createJourneyEntry(testDb, journey.id, user.id, {
@@ -489,14 +491,14 @@ describe('getPublicJourney', () => {
     });
     const { token } = svc.createOrUpdateJourneyShareLink(journey.id, user.id, {});
 
-    const result = svc.getPublicJourney(token);
+    const result = await svc.getPublicJourney(token);
 
     expect(result).not.toBeNull();
     expect(result!.entries).toHaveLength(1);
     expect(result!.entries[0].title).toBe('Visible Entry');
   });
 
-  it('JOURNEY-SHARE-019: enriches entries with parsed tags and photos', () => {
+  it('JOURNEY-SHARE-019: enriches entries with parsed tags and photos', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
     const entry = createJourneyEntry(testDb, journey.id, user.id, {
@@ -510,7 +512,7 @@ describe('getPublicJourney', () => {
     insertJourneyPhoto(entry.id, { filePath: '/photos/b.jpg' });
     const { token } = svc.createOrUpdateJourneyShareLink(journey.id, user.id, {});
 
-    const result = svc.getPublicJourney(token);
+    const result = await svc.getPublicJourney(token);
 
     expect(result).not.toBeNull();
     const enriched = result!.entries[0];
@@ -518,12 +520,12 @@ describe('getPublicJourney', () => {
     expect(enriched.photos).toHaveLength(2);
   });
 
-  it('JOURNEY-SHARE-020: returns empty entries array for journey with no entries', () => {
+  it('JOURNEY-SHARE-020: returns empty entries array for journey with no entries', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id, { title: 'Empty Journey' });
     const { token } = svc.createOrUpdateJourneyShareLink(journey.id, user.id, {});
 
-    const result = svc.getPublicJourney(token);
+    const result = await svc.getPublicJourney(token);
 
     expect(result).not.toBeNull();
     expect(result!.entries).toEqual([]);
@@ -532,7 +534,7 @@ describe('getPublicJourney', () => {
     expect(result!.stats.places).toBe(0);
   });
 
-  it('JOURNEY-SHARE-021: withholds timeline, gallery and GPS when all flags are off', () => {
+  it('JOURNEY-SHARE-021: withholds timeline, gallery and GPS when all flags are off', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id, { title: 'Secret' });
     const entry = createJourneyEntry(testDb, journey.id, user.id, {
@@ -544,13 +546,13 @@ describe('getPublicJourney', () => {
       share_timeline: false, share_gallery: false, share_map: false,
     });
 
-    const result = svc.getPublicJourney(token)!;
+    const result = (await svc.getPublicJourney(token))!;
     expect(result.entries).toEqual([]); // no timeline / story / GPS leaked
     expect(result.gallery).toEqual([]); // no gallery leaked
     expect(result.stats.entries).toBe(1); // counts stay accurate
   });
 
-  it('JOURNEY-SHARE-022: shares the timeline but strips GPS when the map flag is off', () => {
+  it('JOURNEY-SHARE-022: shares the timeline but strips GPS when the map flag is off', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
     const entry = createJourneyEntry(testDb, journey.id, user.id, {
@@ -561,7 +563,7 @@ describe('getPublicJourney', () => {
       share_timeline: true, share_gallery: true, share_map: false,
     });
 
-    const result = svc.getPublicJourney(token)!;
+    const result = (await svc.getPublicJourney(token))!;
     expect(result.entries).toHaveLength(1);
     const e = result.entries[0] as Record<string, unknown>;
     expect(e.story).toBe('notes'); // narrative present
@@ -569,7 +571,7 @@ describe('getPublicJourney', () => {
     expect(e.location_lng).toBeNull();
   });
 
-  it('JOURNEY-SHARE-023: map-only share exposes coordinates but not the story', () => {
+  it('JOURNEY-SHARE-023: map-only share exposes coordinates but not the story', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
     const entry = createJourneyEntry(testDb, journey.id, user.id, {
@@ -580,7 +582,7 @@ describe('getPublicJourney', () => {
       share_timeline: false, share_gallery: false, share_map: true,
     });
 
-    const result = svc.getPublicJourney(token)!;
+    const result = (await svc.getPublicJourney(token))!;
     expect(result.entries).toHaveLength(1);
     const e = result.entries[0] as Record<string, unknown>;
     expect(e.location_lat).toBe(48.8566); // coords for the map
@@ -590,7 +592,7 @@ describe('getPublicJourney', () => {
   // #1614 — a photo now carries the coordinates it was taken at. That is a place
   // the owner never typed, so it has to follow the same switch the entry
   // coordinates follow rather than riding in on the gallery flag.
-  it('JOURNEY-SHARE-025: withholds photo capture coordinates when the map flag is off', () => {
+  it('JOURNEY-SHARE-025: withholds photo capture coordinates when the map flag is off', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
     const entry = createJourneyEntry(testDb, journey.id, user.id, {
@@ -604,7 +606,7 @@ describe('getPublicJourney', () => {
       share_timeline: true, share_gallery: true, share_map: false,
     });
 
-    const result = svc.getPublicJourney(token)!;
+    const result = (await svc.getPublicJourney(token))!;
     const gallery = result.gallery as Record<string, unknown>[];
     expect(gallery).toHaveLength(1);
     expect(gallery[0].lat).toBeNull();
@@ -617,7 +619,7 @@ describe('getPublicJourney', () => {
     expect(inline[0].lng).toBeNull();
   });
 
-  it('JOURNEY-SHARE-026: hands out photo coordinates once the map is shared', () => {
+  it('JOURNEY-SHARE-026: hands out photo coordinates once the map is shared', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
     const entry = createJourneyEntry(testDb, journey.id, user.id, {
@@ -631,12 +633,12 @@ describe('getPublicJourney', () => {
       share_timeline: true, share_gallery: true, share_map: true,
     });
 
-    const gallery = svc.getPublicJourney(token)!.gallery as Record<string, unknown>[];
+    const gallery = (await svc.getPublicJourney(token))!.gallery as Record<string, unknown>[];
     expect(gallery[0].lat).toBe(48.8584);
     expect(gallery[0].lng).toBe(2.2945);
   });
 
-  it('JOURNEY-SHARE-024: strips inline entry photos (and their asset metadata) when the gallery is off', () => {
+  it('JOURNEY-SHARE-024: strips inline entry photos (and their asset metadata) when the gallery is off', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
     const entry = createJourneyEntry(testDb, journey.id, user.id, {
@@ -647,7 +649,7 @@ describe('getPublicJourney', () => {
       share_timeline: true, share_gallery: false, share_map: true,
     });
 
-    const result = svc.getPublicJourney(token)!;
+    const result = (await svc.getPublicJourney(token))!;
     expect(result.gallery).toEqual([]); // gallery array withheld
     expect(result.entries).toHaveLength(1);
     expect((result.entries[0] as Record<string, unknown>).photos).toEqual([]); // inline photos withheld too
@@ -655,7 +657,7 @@ describe('getPublicJourney', () => {
 
   // #2200: the reader of a shared journey gets the same chronology as the owner,
   // so the public gallery cannot fall back to upload order.
-  it('JOURNEY-SHARE-031: the public gallery reads in capture order, not upload order', () => {
+  it('JOURNEY-SHARE-031: the public gallery reads in capture order, not upload order', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
     const day1 = createJourneyEntry(testDb, journey.id, user.id, {
@@ -673,19 +675,19 @@ describe('getPublicJourney', () => {
       share_timeline: true, share_gallery: true, share_map: true,
     });
 
-    const gallery = svc.getPublicJourney(token)!.gallery as Record<string, unknown>[];
+    const gallery = (await svc.getPublicJourney(token))!.gallery as Record<string, unknown>[];
     expect(gallery.map(p => p.file_path)).toEqual(['/photos/day1.jpg', '/photos/day2.jpg']);
   });
 
-  it('JOURNEY-SHARE-030: cartoApiKey resolves owner setting → admin instance default → empty (#2054)', () => {
+  it('JOURNEY-SHARE-030: cartoApiKey resolves owner setting → admin instance default → empty (#2054)', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
     const { token } = svc.createOrUpdateJourneyShareLink(journey.id, user.id, { share_map: true });
 
-    expect(svc.getPublicJourney(token)!.cartoApiKey).toBe('');
+    expect((await svc.getPublicJourney(token))!.cartoApiKey).toBe('');
     testDb.prepare("INSERT INTO app_settings (key, value) VALUES ('default_user_setting_carto_api_key', 'instance-key')").run();
-    expect(svc.getPublicJourney(token)!.cartoApiKey).toBe('instance-key');
+    expect((await svc.getPublicJourney(token))!.cartoApiKey).toBe('instance-key');
     testDb.prepare("INSERT INTO settings (user_id, key, value) VALUES (?, 'carto_api_key', ' owner-key ')").run(user.id);
-    expect(svc.getPublicJourney(token)!.cartoApiKey).toBe('owner-key');
+    expect((await svc.getPublicJourney(token))!.cartoApiKey).toBe('owner-key');
   });
 });

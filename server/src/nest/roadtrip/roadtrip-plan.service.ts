@@ -145,7 +145,7 @@ export class RoadtripPlanService {
       throw new HttpException({ error: 'This trip exceeds the 150-visit calculation limit.' }, 400);
     const asked = new Set<string>();
     const distanceUnit: DistanceUnit =
-      this.settings.getUserSettings(userId).distance_unit === 'imperial' ? 'imperial' : 'metric';
+      (await this.settings.getUserSettings(userId)).distance_unit === 'imperial' ? 'imperial' : 'metric';
     const fetchRun = async (stops: RoadtripStop[], dayId: number, profile: string) => {
       const points: { lat: number; lng: number }[] = [];
       const stopAt: number[] = [];

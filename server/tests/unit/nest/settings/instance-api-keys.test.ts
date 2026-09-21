@@ -54,86 +54,86 @@ const storedValue = (key: string) =>
   (testDb.prepare('SELECT value FROM app_settings WHERE key = ?').get(key) as { value: string } | undefined)?.value;
 
 describe('instance API keys', () => {
-  it('INSTKEY-001: round-trips through encryption at rest', () => {
-    writeInstanceApiKey(db, 'maps_api_key', 'AIza-instance-key');
+  it('INSTKEY-001: round-trips through encryption at rest', async () => {
+    await writeInstanceApiKey(db, 'maps_api_key', 'AIza-instance-key');
     expect(storedValue('maps_api_key')).toMatch(/^enc:v1:/);
     expect(storedValue('maps_api_key')).not.toContain('AIza-instance-key');
-    expect(readInstanceApiKey(db, 'maps_api_key')).toBe('AIza-instance-key');
+    expect(await readInstanceApiKey(db, 'maps_api_key')).toBe('AIza-instance-key');
   });
 
-  it('INSTKEY-002: a second write of the same value replaces the row (no second one)', () => {
-    writeInstanceApiKey(db, 'maps_api_key', 'same-key');
+  it('INSTKEY-002: a second write of the same value replaces the row (no second one)', async () => {
+    await writeInstanceApiKey(db, 'maps_api_key', 'same-key');
     const first = storedValue('maps_api_key');
-    writeInstanceApiKey(db, 'maps_api_key', 'same-key');
+    await writeInstanceApiKey(db, 'maps_api_key', 'same-key');
     // Same plaintext, different blob — the IV is random. That is exactly why
     // "did this change?" is never asked of the stored value.
     expect(storedValue('maps_api_key')).not.toBe(first);
-    expect(readInstanceApiKey(db, 'maps_api_key')).toBe('same-key');
+    expect(await readInstanceApiKey(db, 'maps_api_key')).toBe('same-key');
     const rows = testDb.prepare("SELECT COUNT(*) AS n FROM app_settings WHERE key = 'maps_api_key'").get() as { n: number };
     expect(rows.n).toBe(1);
   });
 
-  it('INSTKEY-003: a blank value reads back as unset but keeps the row', () => {
-    writeInstanceApiKey(db, 'unsplash_api_key', '   ');
+  it('INSTKEY-003: a blank value reads back as unset but keeps the row', async () => {
+    await writeInstanceApiKey(db, 'unsplash_api_key', '   ');
     expect(storedValue('unsplash_api_key')).toBe('');
-    expect(readInstanceApiKey(db, 'unsplash_api_key')).toBeNull();
+    expect(await readInstanceApiKey(db, 'unsplash_api_key')).toBeNull();
   });
 
-  it('INSTKEY-004: a legacy plaintext row still reads', () => {
+  it('INSTKEY-004: a legacy plaintext row still reads', async () => {
     testDb.prepare("INSERT INTO app_settings (key, value) VALUES ('maps_api_key', 'plain-old-key')").run();
-    expect(readInstanceApiKey(db, 'maps_api_key')).toBe('plain-old-key');
+    expect(await readInstanceApiKey(db, 'maps_api_key')).toBe('plain-old-key');
   });
 
-  it('INSTKEY-005: the operator env key wins and the database is never read', () => {
+  it('INSTKEY-005: the operator env key wins and the database is never read', async () => {
     process.env.PLACES_API_KEY = 'operator-key';
-    writeInstanceApiKey(db, 'maps_api_key', 'instance-key');
-    expect(resolveApiKey(db, 'maps_api_key', 1, process.env.PLACES_API_KEY)).toEqual({
+    await writeInstanceApiKey(db, 'maps_api_key', 'instance-key');
+    expect(await resolveApiKey(db, 'maps_api_key', 1, process.env.PLACES_API_KEY)).toEqual({
       key: 'operator-key',
       source: 'operator-env',
     });
   });
 
-  it('INSTKEY-006: the instance value wins over the caller own row', () => {
+  it('INSTKEY-006: the instance value wins over the caller own row', async () => {
     const { user } = createAdmin(testDb);
     testDb.prepare('UPDATE users SET maps_api_key = ? WHERE id = ?').run('personal-key', user.id);
-    writeInstanceApiKey(db, 'maps_api_key', 'instance-key');
-    expect(resolveApiKey(db, 'maps_api_key', user.id, undefined)).toEqual({ key: 'instance-key', source: 'instance' });
+    await writeInstanceApiKey(db, 'maps_api_key', 'instance-key');
+    expect(await resolveApiKey(db, 'maps_api_key', user.id, undefined)).toEqual({ key: 'instance-key', source: 'instance' });
   });
 
-  it("INSTKEY-007: without an instance value the caller's own row answers — and nobody else's (#1939)", () => {
+  it("INSTKEY-007: without an instance value the caller's own row answers — and nobody else's (#1939)", async () => {
     const { user: admin } = createAdmin(testDb);
     testDb.prepare('UPDATE users SET maps_api_key = ? WHERE id = ?').run('admins-own-key', admin.id);
     const { user: member } = createUser(testDb);
 
     // The admin gets theirs...
-    expect(resolveApiKey(db, 'maps_api_key', admin.id, undefined)).toEqual({
+    expect(await resolveApiKey(db, 'maps_api_key', admin.id, undefined)).toEqual({
       key: 'admins-own-key',
       source: 'user-row',
     });
     // ...and the member gets nothing rather than the admin's, which is the whole
     // point: they used to get it, and Google answered them with a 403.
-    expect(resolveApiKey(db, 'maps_api_key', member.id, undefined)).toEqual({ key: null, source: null });
+    expect(await resolveApiKey(db, 'maps_api_key', member.id, undefined)).toEqual({ key: null, source: null });
   });
 
-  it('INSTKEY-009: userId 0 asks about the instance only', () => {
+  it('INSTKEY-009: userId 0 asks about the instance only', async () => {
     const { user } = createAdmin(testDb);
     testDb.prepare('UPDATE users SET maps_api_key = ? WHERE id = ?').run('personal-key', user.id);
     // app-config is optional-auth: with nobody asking there is no own row, and
     // the answer must not be some other row that happens to be first.
-    expect(resolveApiKey(db, 'maps_api_key', 0, undefined)).toEqual({ key: null, source: null });
-    writeInstanceApiKey(db, 'maps_api_key', 'instance-key');
-    expect(resolveApiKey(db, 'maps_api_key', 0, undefined)).toEqual({ key: 'instance-key', source: 'instance' });
+    expect(await resolveApiKey(db, 'maps_api_key', 0, undefined)).toEqual({ key: null, source: null });
+    await writeInstanceApiKey(db, 'maps_api_key', 'instance-key');
+    expect(await resolveApiKey(db, 'maps_api_key', 0, undefined)).toEqual({ key: 'instance-key', source: 'instance' });
   });
 
-  it('INSTKEY-008: an empty instance value does not fall through to the own row', () => {
+  it('INSTKEY-008: an empty instance value does not fall through to the own row', async () => {
     const { user } = createAdmin(testDb);
     testDb.prepare('UPDATE users SET unsplash_api_key = ? WHERE id = ?').run('stale-personal', user.id);
-    writeInstanceApiKey(db, 'unsplash_api_key', 'to-be-cleared');
-    writeInstanceApiKey(db, 'unsplash_api_key', '');
+    await writeInstanceApiKey(db, 'unsplash_api_key', 'to-be-cleared');
+    await writeInstanceApiKey(db, 'unsplash_api_key', '');
     // The admin who cleared the field cleared their column in the same save, so
     // the fallback finding the old value would only happen on a row nobody
     // touched — here it must not resurrect a cleared instance key for them.
     testDb.prepare('UPDATE users SET unsplash_api_key = NULL WHERE id = ?').run(user.id);
-    expect(resolveApiKey(db, 'unsplash_api_key', user.id, undefined)).toEqual({ key: null, source: null });
+    expect(await resolveApiKey(db, 'unsplash_api_key', user.id, undefined)).toEqual({ key: null, source: null });
   });
 });

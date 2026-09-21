@@ -26,9 +26,9 @@ function controller(over: Partial<SettingsService> = {}) {
   return { c: new AdminDefaultUserSettingsController(settings, { writeAudit } as unknown as AuditService, { isManaged: () => false } as unknown as RuntimeEnvService), settings };
 }
 
-const thrown = (run: () => unknown) => {
+const thrown = async (run: () => unknown) => {
   try {
-    run();
+    await run();
     return null;
   } catch (e) {
     return e instanceof HttpException ? { status: e.getStatus(), body: e.getResponse() } : e;
@@ -40,8 +40,8 @@ describe('AdminDefaultUserSettingsController', () => {
     vi.clearAllMocks();
   });
 
-  it('DEFAULTS-001 GET returns the stored defaults verbatim', () => {
-    expect(controller().c.get()).toEqual({ theme: 'dark' });
+  it('DEFAULTS-001 GET returns the stored defaults verbatim', async () => {
+    expect(await controller().c.get()).toEqual({ theme: 'dark' });
   });
 
   it('DEFAULTS-002 PUT writes, audits, and answers with the STORED defaults', async () => {
@@ -55,26 +55,26 @@ describe('AdminDefaultUserSettingsController', () => {
     );
   });
 
-  it('DEFAULTS-003 a rejected write is a 400 carrying the message, and is not audited', () => {
+  it('DEFAULTS-003 a rejected write is a 400 carrying the message, and is not audited', async () => {
     const { c } = controller({
       setAdminUserDefaults: vi.fn(() => {
         throw new Error('unknown setting: nope');
       }),
     } as Partial<SettingsService>);
-    expect(thrown(() => c.update(user, { nope: 1 } as never, req))).toEqual({
+    expect(await thrown(() => c.update(user, { nope: 1 } as never, req))).toEqual({
       status: 400,
       body: { error: 'unknown setting: nope' },
     });
     expect(writeAudit).not.toHaveBeenCalled();
   });
 
-  it('DEFAULTS-004 a non-Error throw is stringified rather than swallowed', () => {
+  it('DEFAULTS-004 a non-Error throw is stringified rather than swallowed', async () => {
     const { c } = controller({
       setAdminUserDefaults: vi.fn(() => {
         throw 'plain string';
       }),
     } as Partial<SettingsService>);
-    expect(thrown(() => c.update(user, {} as never, req))).toEqual({ status: 400, body: { error: 'plain string' } });
+    expect(await thrown(() => c.update(user, {} as never, req))).toEqual({ status: 400, body: { error: 'plain string' } });
   });
 
   it('DEFAULTS-005 the class is listed in its module controllers', () => {

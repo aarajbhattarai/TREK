@@ -498,48 +498,48 @@ function keys(opts: { google?: string; amap?: string }) {
 }
 
 describe('MapsService.keyedProvider', () => {
-  it('AMAP-070: auto keeps Google when a Google key is configured', () => {
+  it('AMAP-070: auto keeps Google when a Google key is configured', async () => {
     keys({ google: 'gkey', amap: 'akey' });
-    expect(svc.keyedProvider(1)).toMatchObject({ id: 'google', key: 'gkey', source: 'user-row' });
-    expect(svc.resolvePlacesProvider(1)).toBeNull();
+    expect(await svc.keyedProvider(1)).toMatchObject({ id: 'google', key: 'gkey', source: 'user-row' });
+    expect(await svc.resolvePlacesProvider(1)).toBeNull();
   });
 
-  it('AMAP-071: auto falls to Amap only when there is no Google key', () => {
+  it('AMAP-071: auto falls to Amap only when there is no Google key', async () => {
     keys({ amap: 'akey' });
-    expect(svc.keyedProvider(1)?.id).toBe('amap');
-    expect(svc.resolvePlacesProvider(1)).toBeInstanceOf(AmapPlacesProvider);
+    expect((await svc.keyedProvider(1))?.id).toBe('amap');
+    expect(await svc.resolvePlacesProvider(1)).toBeInstanceOf(AmapPlacesProvider);
   });
 
-  it('AMAP-072: auto with no key at all means the OpenStreetMap stack', () => {
+  it('AMAP-072: auto with no key at all means the OpenStreetMap stack', async () => {
     keys({});
-    expect(svc.keyedProvider(1)).toBeNull();
-    expect(svc.resolvePlacesProvider(1)).toBeNull();
+    expect(await svc.keyedProvider(1)).toBeNull();
+    expect(await svc.resolvePlacesProvider(1)).toBeNull();
   });
 
-  it('AMAP-073: an explicit amap choice wins over a configured Google key', () => {
+  it('AMAP-073: an explicit amap choice wins over a configured Google key', async () => {
     mockProviderGet.mockReturnValue({ value: 'amap' });
     keys({ google: 'gkey', amap: 'akey' });
-    expect(svc.resolvePlacesProvider(1)).toBeInstanceOf(AmapPlacesProvider);
+    expect(await svc.resolvePlacesProvider(1)).toBeInstanceOf(AmapPlacesProvider);
   });
 
-  it('AMAP-074: an explicit google choice never silently uses Amap instead', () => {
+  it('AMAP-074: an explicit google choice never silently uses Amap instead', async () => {
     mockProviderGet.mockReturnValue({ value: 'google' });
     keys({ amap: 'akey' });
     // Misconfigured means "answer with OSM", not "bill somebody else's provider".
-    expect(svc.keyedProvider(1)).toBeNull();
+    expect(await svc.keyedProvider(1)).toBeNull();
   });
 
-  it('AMAP-075: openstreetmap ignores both keys', () => {
+  it('AMAP-075: openstreetmap ignores both keys', async () => {
     mockProviderGet.mockReturnValue({ value: 'openstreetmap' });
     keys({ google: 'gkey', amap: 'akey' });
-    expect(svc.keyedProvider(1)).toBeNull();
+    expect(await svc.keyedProvider(1)).toBeNull();
   });
 
-  it('AMAP-076: a hand-edited nonsense value degrades to auto instead of failing', () => {
+  it('AMAP-076: a hand-edited nonsense value degrades to auto instead of failing', async () => {
     mockProviderGet.mockReturnValue({ value: 'not-a-provider' });
     keys({ google: 'gkey' });
     expect(svc.placesProviderChoice()).toBe('auto');
-    expect(svc.keyedProvider(1)?.id).toBe('google');
+    expect((await svc.keyedProvider(1))?.id).toBe('google');
   });
 
   it('AMAP-077: an Amap place stays with Amap even while Google is selected', async () => {

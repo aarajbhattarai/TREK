@@ -101,8 +101,8 @@ export class SettingsMcp {
    * injection before this filter runs, so the caller sees the same effective
    * value the web UI does, minus everything not named on the allow-list.
    */
-  private readDisplayPreferences(userId: number): Record<string, unknown> {
-    const all = this.settings.getUserSettings(userId);
+  private async readDisplayPreferences(userId: number): Promise<Record<string, unknown>> {
+    const all = await this.settings.getUserSettings(userId);
     const picked: Record<string, unknown> = {};
     for (const key of DISPLAY_PREFERENCE_KEYS) {
       if (Object.hasOwn(all, key)) picked[key] = all[key];
@@ -118,7 +118,7 @@ export class SettingsMcp {
     access: { group: 'settings', mode: 'read' },
   })
   async getDisplaySettings(_input: Record<string, never>, ctx: McpContext) {
-    return ok({ settings: this.readDisplayPreferences(ctx.userId) });
+    return ok({ settings: await this.readDisplayPreferences(ctx.userId) });
   }
 
   @Tool({
@@ -163,9 +163,9 @@ export class SettingsMcp {
       validated[key] = parsed.data;
     }
 
-    const updated = this.settings.bulkUpsertSettings(ctx.userId, validated);
+    const updated = await this.settings.bulkUpsertSettings(ctx.userId, validated);
     // Read back rather than echoing the input: an admin default or the managed
     // token injection can still shape what the user ends up seeing.
-    return ok({ success: true, updated, settings: this.readDisplayPreferences(ctx.userId) });
+    return ok({ success: true, updated, settings: await this.readDisplayPreferences(ctx.userId) });
   }
 }

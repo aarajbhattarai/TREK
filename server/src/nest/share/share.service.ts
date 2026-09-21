@@ -431,7 +431,7 @@ export class ShareService {
     // (`||` on purpose: an empty-string trip currency also falls back).
     let baseCurrency = (trip as { currency?: string }).currency || 'EUR';
     const ownerSettings: Record<string, unknown> = shareRow.created_by != null
-      ? this.settings.getUserSettings(shareRow.created_by)
+      ? await this.settings.getUserSettings(shareRow.created_by)
       : {};
     const ownerDefault = ownerSettings['default_currency'];
     if (typeof ownerDefault === 'string' && ownerDefault.trim()) {

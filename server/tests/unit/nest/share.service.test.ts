@@ -60,12 +60,20 @@ import { ShareService, publicReservationMetadata } from '../../../src/nest/share
 import { SettingsService } from '../../../src/nest/settings/settings.service';
 import { QueryHelpersService } from '../../../src/nest/query-helpers/query-helpers.service';
 import type { User } from '../../../src/types';
+import { createTestUnitOfWork } from '../../helpers/test-uow';
 
-const svc = new ShareService(new DatabaseService(testDb), new SettingsService(new DatabaseService(testDb)), permissionsStub, new QueryHelpersService(new DatabaseService(testDb)), photoCacheStub);
+let svc: ShareService;
 
-beforeAll(() => {
+beforeAll(async () => {
   createTables(testDb);
   runMigrations(testDb);
+  svc = new ShareService(
+    new DatabaseService(testDb),
+    new SettingsService(new DatabaseService(testDb), await createTestUnitOfWork(testDb)),
+    permissionsStub,
+    new QueryHelpersService(new DatabaseService(testDb)),
+    photoCacheStub,
+  );
 });
 
 beforeEach(() => {

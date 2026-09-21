@@ -448,7 +448,7 @@ export class PlaceEnrichmentService {
     /** The record the caller already holds; only its category is read. */
     details: Record<string, unknown> | null,
   ): Promise<PlacePhotoCandidate[]> {
-    const apiKey = this.maps.getMapsKey(userId);
+    const apiKey = await this.maps.getMapsKey(userId);
     const wantsGoogle = !!apiKey && !this.maps.photosDisabled() && isGooglePlaceId(placeId);
 
     const { wikidata, wikipedia } = identity;
@@ -693,7 +693,7 @@ export class PlaceEnrichmentService {
     const fromSite = await this.websiteDescription(placeId);
     if (fromSite) return fromSite;
 
-    const apiKey = this.maps.getMapsKey(userId);
+    const apiKey = await this.maps.getMapsKey(userId);
     if (apiKey && !this.maps.detailsDisabled() && isGooglePlaceId(placeId)) {
       const summary = await this.maps.fetchEditorialSummary(placeId, apiKey, req.lang);
       if (summary) {

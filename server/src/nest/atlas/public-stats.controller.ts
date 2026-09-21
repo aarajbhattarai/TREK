@@ -46,13 +46,13 @@ export class PublicStatsController {
   ) {}
 
   @Get('stats')
-  stats(@Req() req: Request): PublicApiStats {
+  async stats(@Req() req: Request): Promise<PublicApiStats> {
     enforcePublicApiRateLimit(this.rl, req);
     requireScope(req, 'stats');
     const userId = requireUserId(req);
 
-    const travel = this.atlas.getTravelStats(userId);
-    const last = this.atlas.lastTrip(userId);
+    const travel = await this.atlas.getTravelStats(userId);
+    const last = await this.atlas.lastTrip(userId);
 
     // Counts, not the arrays behind them. A consumer that wants the members asks
     // /api/v1/trips; this endpoint exists for the one that wants a number.

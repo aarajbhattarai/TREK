@@ -30,10 +30,15 @@ import { resetTestDb } from '../../helpers/test-db';
 import { createUser, createTrip, createPlace, createReservation, addTripMember } from '../../helpers/factories';
 import { AtlasService } from '../../../src/nest/atlas/atlas.service';
 import { DatabaseService } from '../../../src/nest/database/database.service';
+import { createTestUnitOfWork } from '../../helpers/test-uow';
 
-const atlas = new AtlasService(new DatabaseService(testDb));
+let atlas: AtlasService;
 
-beforeAll(() => { createTables(testDb); runMigrations(testDb); });
+beforeAll(async () => {
+  createTables(testDb);
+  runMigrations(testDb);
+  atlas = new AtlasService(new DatabaseService(testDb), await createTestUnitOfWork(testDb));
+});
 beforeEach(() => { resetTestDb(testDb); vi.clearAllMocks(); });
 afterAll(() => { testDb.close(); });
 
@@ -65,19 +70,19 @@ describe('getTravelStats', () => {
   const PAST_START = '2023-05-01';
   const PAST_END = '2023-05-10';
 
-  it('AUTH-DB-047: #1486 counts the from/to countries of a flight', () => {
+  it('AUTH-DB-047: #1486 counts the from/to countries of a flight', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id, { title: 'Tokyo Trip', start_date: PAST_START, end_date: PAST_END });
     const res = createReservation(testDb, trip.id, { type: 'flight' });
     endpoint(res.id, 'from', 0, 50.9014, 4.4844);   // Brussels
     endpoint(res.id, 'to', 1, 35.6762, 139.6503);   // Tokyo
 
-    const stats = atlas.getTravelStats(user.id);
+    const stats = await atlas.getTravelStats(user.id);
     expect(stats.countries).toContain('BE');
     expect(stats.countries).toContain('JP');
   });
 
-  it('AUTH-DB-048: #1486 a connecting-flight layover does NOT count as visited', () => {
+  it('AUTH-DB-048: #1486 a connecting-flight layover does NOT count as visited', async () => {
     // The Atlas query grew a role filter for #1486 but this copy of it did not, so the
     // dashboard passport card still counted a plane change as a visited country.
     const { user } = createUser(testDb);
@@ -87,24 +92,24 @@ describe('getTravelStats', () => {
     endpoint(res.id, 'stop', 1, 35.6762, 139.6503);   // Tokyo — never leaves the airport
     endpoint(res.id, 'to', 2, -33.8688, 151.2093);    // Sydney
 
-    const stats = atlas.getTravelStats(user.id);
+    const stats = await atlas.getTravelStats(user.id);
     expect(stats.countries).toContain('BE');
     expect(stats.countries).toContain('AU');
     expect(stats.countries).not.toContain('JP');
   });
 
-  it('AUTH-DB-049: #1490 a country removed in Atlas is not counted on the dashboard either', () => {
+  it('AUTH-DB-049: #1490 a country removed in Atlas is not counted on the dashboard either', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id, { title: 'Tokyo Trip', start_date: PAST_START, end_date: PAST_END });
     const res = createReservation(testDb, trip.id, { type: 'flight' });
     endpoint(res.id, 'from', 0, 50.9014, 4.4844);
     endpoint(res.id, 'to', 1, 35.6762, 139.6503);
 
-    expect(atlas.getTravelStats(user.id).countries).toContain('JP');
+    expect((await atlas.getTravelStats(user.id)).countries).toContain('JP');
 
-    atlas.unmarkCountry(user.id, 'JP');
+    await atlas.unmarkCountry(user.id, 'JP');
 
-    const after = atlas.getTravelStats(user.id);
+    const after = await atlas.getTravelStats(user.id);
     expect(after.countries).not.toContain('JP');
     expect(after.countries).toContain('BE');
   });
@@ -120,39 +125,39 @@ describe('getTravelStats', () => {
       .run(place.id, countryCode, regionCode, regionCode);
   }
 
-  it('AUTH-DB-094: #1048 a place in a future trip does not stamp its country; a past trip does', () => {
+  it('AUTH-DB-094: #1048 a place in a future trip does not stamp its country; a past trip does', async () => {
     const { user } = createUser(testDb);
     const past = createTrip(testDb, user.id, { title: 'Paris, last month', start_date: iso(-40), end_date: iso(-30) });
     const future = createTrip(testDb, user.id, { title: 'Tokyo, next month', start_date: iso(30), end_date: iso(40) });
     placeInRegion(past.id, 'FR', 'FR-75');
     placeInRegion(future.id, 'JP', 'JP-13');
 
-    const stats = atlas.getTravelStats(user.id);
+    const stats = await atlas.getTravelStats(user.id);
 
     expect(stats.countries).toContain('FR');
     expect(stats.countries).not.toContain('JP');
   });
 
-  it('AUTH-DB-095: #1048 a trip with no dates at all stamps nothing', () => {
+  it('AUTH-DB-095: #1048 a trip with no dates at all stamps nothing', async () => {
     const { user } = createUser(testDb);
     const dateless = createTrip(testDb, user.id, { title: 'Someday: Japan' });
     placeInRegion(dateless.id, 'JP', 'JP-13');
     const res = createReservation(testDb, dateless.id, { type: 'flight' });
     endpoint(res.id, 'from', 0, 50.9014, 4.4844); // Brussels
 
-    const stats = atlas.getTravelStats(user.id);
+    const stats = await atlas.getTravelStats(user.id);
 
     expect(stats.countries).toEqual([]);
   });
 
-  it('AUTH-DB-096: #1048 a flight booked for a future trip does not stamp its endpoints', () => {
+  it('AUTH-DB-096: #1048 a flight booked for a future trip does not stamp its endpoints', async () => {
     const { user } = createUser(testDb);
     const future = createTrip(testDb, user.id, { title: 'Tokyo, next month', start_date: iso(30), end_date: iso(40) });
     const res = createReservation(testDb, future.id, { type: 'flight' });
     endpoint(res.id, 'from', 0, 50.9014, 4.4844);   // Brussels
     endpoint(res.id, 'to', 1, 35.6762, 139.6503);   // Tokyo
 
-    const stats = atlas.getTravelStats(user.id);
+    const stats = await atlas.getTravelStats(user.id);
 
     expect(stats.countries).not.toContain('BE');
     expect(stats.countries).not.toContain('JP');
@@ -172,38 +177,38 @@ describe('getTravelStats', () => {
     endpoint(onward.id, 'to', 1, 40.6413, -73.7781, 'JFK', onwardDate, '15:00');
   }
 
-  it('AUTH-DB-099: #1535 a plane change booked as two flights does not stamp the hub country', () => {
+  it('AUTH-DB-099: #1535 a plane change booked as two flights does not stamp the hub country', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id, { title: 'New York via Helsinki', start_date: PAST_START, end_date: PAST_END });
     splitChainThroughHelsinki(trip.id, '2023-05-01', '11:00');
 
-    const stats = atlas.getTravelStats(user.id);
+    const stats = await atlas.getTravelStats(user.id);
     expect(stats.countries).toContain('BE');
     expect(stats.countries).toContain('US');
     expect(stats.countries).not.toContain('FI');
   });
 
-  it('AUTH-DB-100: #1535 a stopover of two days still stamps the hub country', () => {
+  it('AUTH-DB-100: #1535 a stopover of two days still stamps the hub country', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id, { title: 'Helsinki stopover', start_date: PAST_START, end_date: PAST_END });
     splitChainThroughHelsinki(trip.id, '2023-05-03', '11:00');
 
-    expect(atlas.getTravelStats(user.id).countries).toContain('FI');
+    expect((await atlas.getTravelStats(user.id)).countries).toContain('FI');
   });
 
-  it('AUTH-DB-101: #1490 removing a country still subtracts it around the layover pairing', () => {
+  it('AUTH-DB-101: #1490 removing a country still subtracts it around the layover pairing', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id, { title: 'New York via Helsinki', start_date: PAST_START, end_date: PAST_END });
     splitChainThroughHelsinki(trip.id, '2023-05-01', '11:00');
 
-    atlas.unmarkCountry(user.id, 'BE');
+    await atlas.unmarkCountry(user.id, 'BE');
 
-    const stats = atlas.getTravelStats(user.id);
+    const stats = await atlas.getTravelStats(user.id);
     expect(stats.countries).not.toContain('BE');
     expect(stats.countries).toContain('US');
   });
 
-  it('AUTH-DB-097: #1048 a manually marked country stays stamped regardless of trip dates', () => {
+  it('AUTH-DB-097: #1048 a manually marked country stays stamped regardless of trip dates', async () => {
     // The manual list is the user's own word, not derived from a trip — the date
     // filter must not reach it.
     const { user } = createUser(testDb);
@@ -211,18 +216,18 @@ describe('getTravelStats', () => {
     placeInRegion(future.id, 'JP', 'JP-13');
     testDb.prepare('INSERT INTO visited_countries (user_id, country_code) VALUES (?, ?)').run(user.id, 'JP');
 
-    const stats = atlas.getTravelStats(user.id);
+    const stats = await atlas.getTravelStats(user.id);
 
     expect(stats.countries).toContain('JP');
   });
 });
 
 describe('travel-stats quirk fixes', () => {
-  it('AUTH-DB-089: getTravelStats keeps a place at lat 0 / lng 0 (equator, prime meridian)', () => {
+  it('AUTH-DB-089: getTravelStats keeps a place at lat 0 / lng 0 (equator, prime meridian)', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id, { title: 'Null Island' });
     testDb.prepare('INSERT INTO places (trip_id, name, lat, lng) VALUES (?, ?, ?, ?)').run(trip.id, 'Null Island', 0, 0);
-    const stats = atlas.getTravelStats(user.id);
+    const stats = await atlas.getTravelStats(user.id);
     expect(stats.coords).toContainEqual({ lat: 0, lng: 0 });
   });
 });
@@ -271,13 +276,13 @@ describe('personal figures on a shared trip (#1966)', () => {
     return { alice, bob, trip, fromRome, fromMexico };
   }
 
-  it('credits each traveler with their own flight only', () => {
+  it('credits each traveler with their own flight only', async () => {
     const { alice, bob, fromRome, fromMexico } = sharedTrip();
     assignTo(fromRome.id, alice.id);
     assignTo(fromMexico.id, bob.id);
 
-    const a = atlas.getTravelStats(alice.id);
-    const b = atlas.getTravelStats(bob.id);
+    const a = await atlas.getTravelStats(alice.id);
+    const b = await atlas.getTravelStats(bob.id);
 
     // Rome to New York is a good deal further than Mexico City to New York, so
     // equal distances would mean both are still counting both flights.
@@ -286,48 +291,48 @@ describe('personal figures on a shared trip (#1966)', () => {
     expect(a.totalDistanceKm).not.toBe(b.totalDistanceKm);
   });
 
-  it('does not stamp another traveler s departure country on your passport', () => {
+  it('does not stamp another traveler s departure country on your passport', async () => {
     const { alice, bob, fromRome, fromMexico } = sharedTrip();
     assignTo(fromRome.id, alice.id);
     assignTo(fromMexico.id, bob.id);
 
     // Alice never went through Mexico.
-    expect(atlas.getTravelStats(alice.id).countries).not.toContain('MX');
-    expect(atlas.getTravelStats(bob.id).countries).not.toContain('IT');
+    expect((await atlas.getTravelStats(alice.id)).countries).not.toContain('MX');
+    expect((await atlas.getTravelStats(bob.id)).countries).not.toContain('IT');
   });
 
   /*
    * The case that keeps this from being a breaking change. The assignment table
    * is empty on every install upgrading from 3.4.1.
    */
-  it('still counts a booking nobody is named on, for everyone on the trip', () => {
+  it('still counts a booking nobody is named on, for everyone on the trip', async () => {
     const { alice, bob } = sharedTrip();
 
-    const a = atlas.getTravelStats(alice.id);
-    const b = atlas.getTravelStats(bob.id);
+    const a = await atlas.getTravelStats(alice.id);
+    const b = await atlas.getTravelStats(bob.id);
     expect(a.totalDistanceKm).toBeGreaterThan(0);
     expect(a.totalDistanceKm).toBe(b.totalDistanceKm);
   });
 
-  it('counts a booking they are both named on, once for each of them', () => {
+  it('counts a booking they are both named on, once for each of them', async () => {
     const { alice, bob, fromRome, fromMexico } = sharedTrip();
     assignTo(fromRome.id, alice.id);
     assignTo(fromRome.id, bob.id);
     assignTo(fromMexico.id, alice.id);
     assignTo(fromMexico.id, bob.id);
 
-    const a = atlas.getTravelStats(alice.id);
-    const b = atlas.getTravelStats(bob.id);
+    const a = await atlas.getTravelStats(alice.id);
+    const b = await atlas.getTravelStats(bob.id);
     expect(a.totalDistanceKm).toBe(b.totalDistanceKm);
     expect(a.countries).toEqual(b.countries);
   });
 
-  it('leaves a traveler assigned nothing with the unassigned bookings only', () => {
+  it('leaves a traveler assigned nothing with the unassigned bookings only', async () => {
     const { alice, bob, fromRome } = sharedTrip();
     assignTo(fromRome.id, bob.id);
 
     // Alice keeps the Mexico flight (nobody named) but loses the Rome one.
-    const a = atlas.getTravelStats(alice.id);
+    const a = await atlas.getTravelStats(alice.id);
     expect(a.countries).not.toContain('IT');
     expect(a.totalDistanceKm).toBeGreaterThan(0);
   });

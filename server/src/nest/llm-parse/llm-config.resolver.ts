@@ -30,7 +30,7 @@ export class LlmConfigResolver {
    */
   async resolve(userId: number): Promise<ResolvedLlmConfig | null> {
     if (!(await this.addons.isAddonEnabled(ADDON_IDS.LLM_PARSING))) return null;
-    return this.readInstanceConfig() ?? this.readUserConfig(userId);
+    return this.readInstanceConfig() ?? (await this.readUserConfig(userId));
   }
 
   private readInstanceConfig(): ResolvedLlmConfig | null {
@@ -57,8 +57,8 @@ export class LlmConfigResolver {
     };
   }
 
-  private readUserConfig(userId: number): ResolvedLlmConfig | null {
-    const settings = this.settings.getUserSettings(userId);
+  private async readUserConfig(userId: number): Promise<ResolvedLlmConfig | null> {
+    const settings = await this.settings.getUserSettings(userId);
     const provider = asProvider(settings.llm_provider);
     const model = typeof settings.llm_model === 'string' ? settings.llm_model.trim() : '';
     if (!provider || !model) return null;
@@ -72,7 +72,7 @@ export class LlmConfigResolver {
     // an admin's own row. This is the choke point every consumer passes
     // (booking import and the plugin RPC surface), and the only place that also
     // catches values already sitting in the db.
-    const endpoints = this.settings.getAdminUserDefaults();
+    const endpoints = await this.settings.getAdminUserDefaults();
     // 'local' is an endpoint choice too ("some address I name"), so without an
     // admin-set local endpoint there is no config at all, never a silent
     // redirect to a different provider.
@@ -82,7 +82,7 @@ export class LlmConfigResolver {
         ? endpoints.llm_base_url.trim()
         : undefined;
 
-    const apiKey = this.settings.getDecryptedUserSetting(userId, 'llm_api_key') ?? undefined;
+    const apiKey = (await this.settings.getDecryptedUserSetting(userId, 'llm_api_key')) ?? undefined;
     return {
       provider,
       model,

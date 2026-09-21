@@ -33,7 +33,7 @@ const req = (userId: number | null = 7) =>
     apiToken: FULL_GRANT,
   }) as Request;
 
-const travel = (o: Partial<ReturnType<AtlasService['getTravelStats']>> = {}) => ({
+const travel = (o: Partial<Awaited<ReturnType<AtlasService['getTravelStats']>>> = {}) => ({
   countries: ['JP', 'IT'],
   cities: ['tokyo', 'kyoto', 'rome'],
   coords: [],
@@ -51,8 +51,8 @@ function ctl(atlas: Partial<AtlasService> = {}, rl = new RateLimitService()) {
   );
 }
 
-function thrown(fn: () => unknown): { status: number; body: unknown } {
-  try { fn(); } catch (err) {
+async function thrown(fn: () => unknown): Promise<{ status: number; body: unknown }> {
+  try { await fn(); } catch (err) {
     expect(err).toBeInstanceOf(HttpException);
     const e = err as HttpException;
     return { status: e.getStatus(), body: e.getResponse() };
@@ -61,8 +61,8 @@ function thrown(fn: () => unknown): { status: number; body: unknown } {
 }
 
 describe('PublicStatsController', () => {
-  it('PUBSTATS-001: reports counts, not the arrays behind them', () => {
-    expect(ctl().stats(req())).toEqual({
+  it('PUBSTATS-001: reports counts, not the arrays behind them', async () => {
+    expect(await ctl().stats(req())).toEqual({
       total_trips: 4,
       total_countries: 2,
       total_cities: 3,
@@ -73,19 +73,19 @@ describe('PublicStatsController', () => {
     });
   });
 
-  it('PUBSTATS-002: passes the authenticated user through to the service', () => {
+  it('PUBSTATS-002: passes the authenticated user through to the service', async () => {
     const getTravelStats = vi.fn(() => travel());
     const lastTrip = vi.fn(() => null);
-    ctl({ getTravelStats, lastTrip } as unknown as Partial<AtlasService>).stats(req(42));
+    await ctl({ getTravelStats, lastTrip } as unknown as Partial<AtlasService>).stats(req(42));
     expect(getTravelStats).toHaveBeenCalledWith(42);
     expect(lastTrip).toHaveBeenCalledWith(42);
   });
 
-  it('PUBSTATS-003: last_trip carries the dominant country as the head of the list', () => {
+  it('PUBSTATS-003: last_trip carries the dominant country as the head of the list', async () => {
     const lastTrip = vi.fn(() => ({
       title: 'Interrail', start_date: '2026-03-01', end_date: '2026-03-12', countries: ['CZ', 'AT'],
     }));
-    const out = ctl({ lastTrip } as unknown as Partial<AtlasService>).stats(req());
+    const out = await ctl({ lastTrip } as unknown as Partial<AtlasService>).stats(req());
     expect(out.last_trip).toEqual({
       title: 'Interrail',
       start_date: '2026-03-01',
@@ -95,27 +95,27 @@ describe('PublicStatsController', () => {
     });
   });
 
-  it('PUBSTATS-004: an ungeocoded last trip reports country null rather than a wrong one', () => {
+  it('PUBSTATS-004: an ungeocoded last trip reports country null rather than a wrong one', async () => {
     const lastTrip = vi.fn(() => ({ title: 'Roadtrip', start_date: null, end_date: null, countries: [] }));
-    const out = ctl({ lastTrip } as unknown as Partial<AtlasService>).stats(req());
+    const out = await ctl({ lastTrip } as unknown as Partial<AtlasService>).stats(req());
     expect(out.last_trip).toMatchObject({ country: null, countries: [] });
   });
 
-  it('PUBSTATS-005: shares one rate-limit budget with the rest of /api/v1', () => {
+  it('PUBSTATS-005: shares one rate-limit budget with the rest of /api/v1', async () => {
     const rl = new RateLimitService();
     const c = ctl({}, rl);
-    for (let i = 0; i < PUBLIC_API_RATE_MAX_PER_MINUTE; i++) c.stats(req());
-    expect(thrown(() => c.stats(req()))).toEqual({
+    for (let i = 0; i < PUBLIC_API_RATE_MAX_PER_MINUTE; i++) await c.stats(req());
+    expect(await thrown(() => c.stats(req()))).toEqual({
       status: 429,
       body: { error: 'Too many requests. Please slow down.' },
     });
     // A different caller still gets their own budget.
-    expect(() => c.stats(req(8))).not.toThrow();
+    await expect(c.stats(req(8))).resolves.not.toThrow();
   });
 
-  it('PUBSTATS-006: a request with no resolved user is a 401, not a crash', () => {
+  it('PUBSTATS-006: a request with no resolved user is a 401, not a crash', async () => {
     const getTravelStats = vi.fn(() => travel());
-    expect(thrown(() => ctl({ getTravelStats } as unknown as Partial<AtlasService>).stats(req(null)))).toEqual({
+    expect(await thrown(() => ctl({ getTravelStats } as unknown as Partial<AtlasService>).stats(req(null)))).toEqual({
       status: 401,
       body: { error: 'API token required', code: 'API_TOKEN_REQUIRED' },
     });

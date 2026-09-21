@@ -195,8 +195,8 @@ export class DawarichController {
 
   @Post('atlas/accept')
   @HttpCode(200)
-  acceptAtlasCountries(@CurrentUser() user: User, @Body() body: DawarichAtlasAcceptDto) {
-    return { marked: this.suggestions.acceptAtlasCountries(user.id, body.countryCodes) };
+  async acceptAtlasCountries(@CurrentUser() user: User, @Body() body: DawarichAtlasAcceptDto) {
+    return { marked: await this.suggestions.acceptAtlasCountries(user.id, body.countryCodes) };
   }
 
   // ── Track overlay ──────────────────────────────────────────────────────────

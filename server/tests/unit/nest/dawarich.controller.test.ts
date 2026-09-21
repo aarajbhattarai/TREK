@@ -353,9 +353,9 @@ describe('DawarichController suggestion routes', () => {
     expect(clearBucketVisit).toHaveBeenCalledWith(7, 4);
   });
 
-  it('DAWARICH-CTRL-047: POST atlas/accept wraps the marked count', () => {
+  it('DAWARICH-CTRL-047: POST atlas/accept wraps the marked count', async () => {
     const acceptAtlasCountries = vi.fn().mockReturnValue(2);
-    expect(makeController({ suggestions: { acceptAtlasCountries } })
+    expect(await makeController({ suggestions: { acceptAtlasCountries } })
       .acceptAtlasCountries(user, { countryCodes: ['DE', 'FR'] })).toEqual({ marked: 2 });
     expect(acceptAtlasCountries).toHaveBeenCalledWith(7, ['DE', 'FR']);
   });

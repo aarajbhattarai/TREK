@@ -365,10 +365,10 @@ describe('AuthController (authenticated)', () => {
   });
 
   it('update-settings + get-settings map errors, else return their payloads', async () => {
-    expect(thrown(() => ac(asvc({}), rl(), {}, { updateSettings: vi.fn().mockReturnValue({ error: 'Bad', status: 400 }) }).updateSettings(user, {}, req))).toEqual({ status: 400, body: { error: 'Bad' } });
+    expect(await thrownAsync(() => ac(asvc({}), rl(), {}, { updateSettings: vi.fn().mockReturnValue({ error: 'Bad', status: 400 }) }).updateSettings(user, {}, req))).toEqual({ status: 400, body: { error: 'Bad' } });
     expect(await ac(asvc({}), rl(), {}, { updateSettings: vi.fn().mockReturnValue({ success: true, user: { id: 1 } }) }).updateSettings(user, {}, req)).toEqual({ success: true, user: { id: 1 } });
-    expect(thrown(() => ac(asvc({}), rl(), {}, { getSettings: vi.fn().mockReturnValue({ error: 'Nope', status: 404 }) }).getSettings(user))).toEqual({ status: 404, body: { error: 'Nope' } });
-    expect(ac(asvc({}), rl(), {}, { getSettings: vi.fn().mockReturnValue({ settings: { theme: 'dark' } }) }).getSettings(user)).toEqual({ settings: { theme: 'dark' } });
+    expect(await thrownAsync(() => ac(asvc({}), rl(), {}, { getSettings: vi.fn().mockReturnValue({ error: 'Nope', status: 404 }) }).getSettings(user))).toEqual({ status: 404, body: { error: 'Nope' } });
+    expect(await ac(asvc({}), rl(), {}, { getSettings: vi.fn().mockReturnValue({ settings: { theme: 'dark' } }) }).getSettings(user)).toEqual({ settings: { theme: 'dark' } });
   });
 
   // travel-stats left with getTravelStats; it is covered by

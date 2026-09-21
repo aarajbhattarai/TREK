@@ -267,11 +267,11 @@ export class AuthService {
     // nor hide them from a member who does have one (#1939). Unauthenticated the
     // question is only about the instance, which is the first two steps of the
     // chain; id 0 matches no row.
-    const hasGoogleKey = !!resolveApiKey(this.db, 'maps_api_key', authenticatedUser?.id ?? 0, readEnv().maps.placesApiKey).key;
+    const hasGoogleKey = !!(await resolveApiKey(this.db, 'maps_api_key', authenticatedUser?.id ?? 0, readEnv().maps.placesApiKey)).key;
     // The same question for Amap, asked the same way. The client needs both to
     // tell "search is unavailable" from "search runs on OpenStreetMap", and to
     // know whether the provider the admin selected actually has a credential.
-    const hasAmapKey = !!resolveApiKey(this.db, 'amap_api_key', authenticatedUser?.id ?? 0, readEnv().maps.amapApiKey).key;
+    const hasAmapKey = !!(await resolveApiKey(this.db, 'amap_api_key', authenticatedUser?.id ?? 0, readEnv().maps.amapApiKey)).key;
     const placesProviderRow = this.db.get<{ value: string }>("SELECT value FROM app_settings WHERE key = 'places_provider'")?.value;
     const placesProvider = isPlacesProviderChoice(placesProviderRow) ? placesProviderRow : 'auto';
     const oidcDisplayName = readEnv().oidc.displayName ||

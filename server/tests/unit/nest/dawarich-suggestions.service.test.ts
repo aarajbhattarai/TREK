@@ -1114,10 +1114,10 @@ describe('DawarichSuggestionsService — scanning for stays', () => {
 // ── Atlas ────────────────────────────────────────────────────────────────────
 
 describe('DawarichSuggestionsService — the Atlas hand-off', () => {
-  it('DAWARICH-SUG-028: acceptAtlasCountries marks every code through the Atlas with the dawarich source', () => {
+  it('DAWARICH-SUG-028: acceptAtlasCountries marks every code through the Atlas with the dawarich source', async () => {
     const { user } = createUser(testDb);
 
-    const marked = svc.acceptAtlasCountries(user.id, ['de', ' fr ', 'us']);
+    const marked = await svc.acceptAtlasCountries(user.id, ['de', ' fr ', 'us']);
 
     expect(marked).toBe(3);
     expect(atlasStub.markCountry).toHaveBeenCalledTimes(3);
@@ -1126,19 +1126,19 @@ describe('DawarichSuggestionsService — the Atlas hand-off', () => {
     expect(atlasStub.markCountry).toHaveBeenNthCalledWith(3, user.id, 'US', 'dawarich');
   });
 
-  it('DAWARICH-SUG-042: the count is what was added, not what was asked for', () => {
+  it('DAWARICH-SUG-042: the count is what was added, not what was asked for', async () => {
     const { user } = createUser(testDb);
     // A country already on the map is an INSERT OR IGNORE that changes nothing,
     // and "2 countries added" for one country is a toast that lies.
     atlasStub.markCountry.mockImplementation((_userId: number, code: string) => code === 'FR');
 
-    expect(svc.acceptAtlasCountries(user.id, ['de', 'fr'])).toBe(1);
+    expect(await svc.acceptAtlasCountries(user.id, ['de', 'fr'])).toBe(1);
   });
 
-  it('DAWARICH-SUG-029: anything that is not a two-letter code is skipped rather than written', () => {
+  it('DAWARICH-SUG-029: anything that is not a two-letter code is skipped rather than written', async () => {
     const { user } = createUser(testDb);
 
-    const marked = svc.acceptAtlasCountries(user.id, ['XYZ', 'D', '', '  ', 'D1', 'at']);
+    const marked = await svc.acceptAtlasCountries(user.id, ['XYZ', 'D', '', '  ', 'D1', 'at']);
 
     expect(marked).toBe(1);
     expect(atlasStub.markCountry).toHaveBeenCalledTimes(1);

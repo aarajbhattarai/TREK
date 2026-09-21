@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
+import { UnitOfWork } from '../database/unit-of-work';
 import { decrypt_api_key, maybe_encrypt_api_key } from '../common/crypto/apiKeyCrypto';
 import { MASKED_SETTING_VALUE, normalizeAppearance } from '@trek/shared';
 import { readEnv } from '../../app-config';
@@ -149,9 +150,12 @@ function serializeValue(key: string, value: unknown): string {
  */
 @Injectable()
 export class SettingsService {
-  constructor(private readonly db: DatabaseService) {}
+  constructor(
+    private readonly db: DatabaseService,
+    private readonly uow: UnitOfWork,
+  ) {}
 
-  getAdminUserDefaults(): Record<string, unknown> {
+  async getAdminUserDefaults(): Promise<Record<string, unknown>> {
     const rows = this.db.all<{ key: string; value: string }>(
       "SELECT key, value FROM app_settings WHERE key LIKE 'default_user_setting_%'"
     );
@@ -167,14 +171,14 @@ export class SettingsService {
     return defaults;
   }
 
-  setAdminUserDefaults(partial: Record<string, unknown>): void {
+  async setAdminUserDefaults(partial: Record<string, unknown>): Promise<void> {
     const upsert = this.db.prepare(
       `INSERT INTO app_settings (key, value) VALUES (?, ?)
      ON CONFLICT(key) DO UPDATE SET value = excluded.value`
     );
     const del = this.db.prepare("DELETE FROM app_settings WHERE key = ?");
 
-    this.db.transaction(() => {
+    await this.uow.transactional(async () => {
       for (const [key, value] of Object.entries(partial)) {
         if (!(DEFAULTABLE_USER_SETTING_KEYS as readonly string[]).includes(key)) {
           throw new Error(`Invalid setting key: ${key}`);
@@ -206,8 +210,8 @@ export class SettingsService {
     });
   }
 
-  getUserSettings(userId: number): Record<string, unknown> {
-    const adminDefaults = this.getAdminUserDefaults();
+  async getUserSettings(userId: number): Promise<Record<string, unknown>> {
+    const adminDefaults = await this.getAdminUserDefaults();
 
     const rows = this.db.all<{ key: string; value: string }>('SELECT key, value FROM settings WHERE user_id = ?', userId);
     const userSettings: Record<string, unknown> = {};
@@ -277,20 +281,20 @@ export class SettingsService {
     return merged;
   }
 
-  upsertSetting(userId: number, key: string, value: unknown) {
+  async upsertSetting(userId: number, key: string, value: unknown) {
     this.db.run(`
     INSERT INTO settings (user_id, key, value) VALUES (?, ?, ?)
     ON CONFLICT(user_id, key) DO UPDATE SET value = excluded.value
   `, userId, key, serializeValue(key, value));
   }
 
-  bulkUpsertSettings(userId: number, settings: Record<string, unknown>) {
+  async bulkUpsertSettings(userId: number, settings: Record<string, unknown>) {
     const upsert = this.db.prepare(`
     INSERT INTO settings (user_id, key, value) VALUES (?, ?, ?)
     ON CONFLICT(user_id, key) DO UPDATE SET value = excluded.value
   `);
     let written = 0;
-    this.db.transaction(() => {
+    await this.uow.transactional(async () => {
       for (const [key, value] of Object.entries(settings)) {
         // The client echoes redacted secrets back unchanged — skip them so a
         // bulk save can never overwrite a stored secret with the mask (the
@@ -309,7 +313,7 @@ export class SettingsService {
    * returns the plaintext — for server-side use only (e.g. the LLM config
    * resolver needs the real API key). Returns null when unset.
    */
-  getDecryptedUserSetting(userId: number, key: string): string | null {
+  async getDecryptedUserSetting(userId: number, key: string): Promise<string | null> {
     const row = this.db.get<{ value: string }>('SELECT value FROM settings WHERE user_id = ? AND key = ?', userId, key);
     if (!row || row.value === '' || row.value == null) return null;
     if (ENCRYPTED_SETTING_KEYS.has(key)) return decrypt_api_key(row.value);

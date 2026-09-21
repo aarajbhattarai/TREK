@@ -103,12 +103,12 @@ export async function createPluginRpcHostFactory(dbs: DatabaseService): Promise<
   const unsplash = new UnsplashService(dbs, new RuntimeEnvService(), generalStorage);
   const journey = new JourneyDomainService(dbs, realtime, new TrekPhotosRepository(dbs));
   const collections = new CollectionsService(dbs, permissions, realtime, notificationsStub(), generalStorage);
-  const atlas = new AtlasService(dbs);
+  const atlas = new AtlasService(dbs, await createTestUnitOfWork(dbs.connection));
   const dayNotes = new DayNotesService(dbs, permissions, realtime);
   const assignments = new AssignmentsService(dbs, permissions, realtime, queryHelpers, journey);
   const membership = new TripMembershipService(dbs);
   const notifications = makeNotificationsService(dbs, realtime);
-  const llmConfig = new LlmConfigResolver(new SettingsService(dbs), dbs, addons);
+  const llmConfig = new LlmConfigResolver(new SettingsService(dbs, await createTestUnitOfWork(dbs.connection)), dbs, addons);
   const oauth = new PluginOAuthService(dbs);
   const accommodations = new AccommodationsService(dbs, permissions, realtime, assignments, await createTestUnitOfWork(dbs.connection));
   // After it: deleting a place cancels the nights booked at it through this one.

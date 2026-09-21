@@ -480,32 +480,32 @@ describe('resolveMapsKey', () => {
     else process.env.PLACES_API_KEY = ORIGINAL_PLACES_KEY;
   });
 
-  it('MAPS-015: returns the caller own row key when nothing above it is set', () => {
+  it('MAPS-015: returns the caller own row key when nothing above it is set', async () => {
     mockDbGet.mockReturnValue({ maps_api_key: 'user-api-key' });
-    expect(svc.resolveMapsKey(1)).toEqual({ key: 'user-api-key', source: 'user-row' });
-    expect(svc.getMapsKey(1)).toBe('user-api-key'); // the wrapper reads the same chain
+    expect(await svc.resolveMapsKey(1)).toEqual({ key: 'user-api-key', source: 'user-row' });
+    expect(await svc.getMapsKey(1)).toBe('user-api-key'); // the wrapper reads the same chain
   });
 
-  it('MAPS-016: the instance-wide key wins over the caller own row (#1939)', () => {
+  it('MAPS-016: the instance-wide key wins over the caller own row (#1939)', async () => {
     mockInstanceGet.mockReturnValueOnce({ value: 'instance-api-key' });
     mockDbGet.mockReturnValueOnce({ maps_api_key: 'user-api-key' });
-    expect(svc.resolveMapsKey(1)).toEqual({ key: 'instance-api-key', source: 'instance' });
+    expect(await svc.resolveMapsKey(1)).toEqual({ key: 'instance-api-key', source: 'instance' });
   });
 
-  it('MAPS-017: returns null with no source when nothing is set anywhere', () => {
-    expect(svc.resolveMapsKey(1)).toEqual({ key: null, source: null });
-    expect(svc.getMapsKey(1)).toBeNull();
+  it('MAPS-017: returns null with no source when nothing is set anywhere', async () => {
+    expect(await svc.resolveMapsKey(1)).toEqual({ key: null, source: null });
+    expect(await svc.getMapsKey(1)).toBeNull();
   });
 
-  it('MAPS-017b: the operator env key wins and the database is never asked', () => {
+  it('MAPS-017b: the operator env key wins and the database is never asked', async () => {
     process.env.PLACES_API_KEY = 'operator-key';
-    expect(svc.resolveMapsKey(1)).toEqual({ key: 'operator-key', source: 'operator-env' });
+    expect(await svc.resolveMapsKey(1)).toEqual({ key: 'operator-key', source: 'operator-env' });
     expect(mockInstanceGet).not.toHaveBeenCalled();
     expect(mockDbGet).not.toHaveBeenCalled();
   });
 
-  it("MAPS-017c: never reads another user's row — the admin fallback is gone (#1939)", () => {
-    svc.resolveMapsKey(1);
+  it("MAPS-017c: never reads another user's row — the admin fallback is gone (#1939)", async () => {
+    await svc.resolveMapsKey(1);
     // Two statements, both scoped: the instance row and this caller's own row.
     // The old chain ended in "WHERE role = 'admin' ... LIMIT 1", which handed a
     // stranger's credential to every non-admin.

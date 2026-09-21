@@ -239,15 +239,15 @@ export class AddonsService {
    * personal key gets Google while every other member silently gets Transitous
    * — the #1939 shape, one layer up.
    */
-  private googleKeySource(userId: number): ApiKeySource | null {
-    return resolveApiKey(this.dbs, 'maps_api_key', userId, readEnv().maps.placesApiKey).source;
+  private async googleKeySource(userId: number): Promise<ApiKeySource | null> {
+    return (await resolveApiKey(this.dbs, 'maps_api_key', userId, readEnv().maps.placesApiKey)).source;
   }
 
   async getTransitProvider(userId = 0) {
-    return { provider: await readTransitProvider(this.dbs), googleKeySource: this.googleKeySource(userId) };
+    return { provider: await readTransitProvider(this.dbs), googleKeySource: await this.googleKeySource(userId) };
   }
 
   async updateTransitProvider(provider: TransitProvider, userId = 0) {
-    return { provider: await writeTransitProvider(this.dbs, provider), googleKeySource: this.googleKeySource(userId) };
+    return { provider: await writeTransitProvider(this.dbs, provider), googleKeySource: await this.googleKeySource(userId) };
   }
 }

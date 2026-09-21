@@ -154,7 +154,7 @@ export class JourneyShareService {
     return { ownerId: photo.owner_id || photo.journey_owner_id };
   }
 
-  getPublicJourney(token: string) {
+  async getPublicJourney(token: string) {
     const row = this.db.prepare('SELECT * FROM journey_share_tokens WHERE token = ?').get(token) as any;
     if (!row) return null;
 
@@ -247,7 +247,7 @@ export class JourneyShareService {
     // instance default and the managed-instance key in that order; carto_api_key is
     // encrypted at rest but deliberately unmasked, since it is useless until it
     // reaches a browser.
-    const ownerCartoKey = this.settings.getUserSettings(journey.user_id)['carto_api_key'];
+    const ownerCartoKey = (await this.settings.getUserSettings(journey.user_id))['carto_api_key'];
     const cartoApiKey = typeof ownerCartoKey === 'string' ? ownerCartoKey.trim() : '';
 
     return {

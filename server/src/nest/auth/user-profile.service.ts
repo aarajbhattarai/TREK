@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { readEnv, getAppUrl } from '../../app-config';
 import { DatabaseService } from '../database/database.service';
+import { UnitOfWork } from '../database/unit-of-work';
 import { StorageService } from '../storage/storage.service';
 import { decrypt_api_key, maybe_encrypt_api_key } from '../common/crypto/apiKeyCrypto';
 import { avatarUrl } from '../common/avatarUrl';
@@ -35,6 +36,7 @@ export class UserProfileService {
   constructor(
     private readonly db: DatabaseService,
     private readonly storage: StorageService,
+    private readonly uow: UnitOfWork,
   ) {}
 
   /**
@@ -66,13 +68,13 @@ export class UserProfileService {
    * value, because that is what the panel shows them and what the search uses;
    * their own column only speaks when no instance value has been set yet.
    */
-  private storedKeyPlaintext(
+  private async storedKeyPlaintext(
     name: 'maps_api_key' | 'openweather_api_key' | 'unsplash_api_key' | 'amap_api_key',
     current: Pick<User, 'maps_api_key' | 'openweather_api_key' | 'unsplash_api_key' | 'amap_api_key'> | undefined,
     isAdmin: boolean,
-  ): string {
+  ): Promise<string> {
     if (isAdmin && (INSTANCE_API_KEY_NAMES as readonly string[]).includes(name)) {
-      const instance = readInstanceApiKey(this.db, name as InstanceApiKeyName);
+      const instance = await readInstanceApiKey(this.db, name as InstanceApiKeyName);
       if (instance !== null) return instance;
     }
     return decrypt_api_key(current?.[name]) ?? '';
@@ -89,16 +91,21 @@ export class UserProfileService {
    * `skipped` are the names a managed install refuses to write — auditing them
    * would claim a change that never happened.
    */
-  private changedKeyNames(
+  private async changedKeyNames(
     body: Record<string, unknown>,
     current: Pick<User, 'maps_api_key' | 'openweather_api_key' | 'unsplash_api_key' | 'amap_api_key'> | undefined,
     isAdmin: boolean,
     skipped: string[] = [],
-  ): string[] {
+  ): Promise<string[]> {
     const norm = (v: unknown) => String(v ?? '').trim();
-    return (['maps_api_key', 'openweather_api_key', 'unsplash_api_key', 'amap_api_key'] as const).filter(
-      (name) => body[name] !== undefined && !skipped.includes(name) && norm(body[name]) !== norm(this.storedKeyPlaintext(name, current, isAdmin))
-    );
+    // An explicit loop rather than `.filter`: storedKeyPlaintext reads the
+    // instance row and a filter predicate cannot await. Same order, same names.
+    const changed: string[] = [];
+    for (const name of ['maps_api_key', 'openweather_api_key', 'unsplash_api_key', 'amap_api_key'] as const) {
+      if (body[name] === undefined || skipped.includes(name)) continue;
+      if (norm(body[name]) !== norm(await this.storedKeyPlaintext(name, current, isAdmin))) changed.push(name);
+    }
+    return changed;
   }
 
   /**
@@ -109,40 +116,40 @@ export class UserProfileService {
    * member the instance credential. A non-admin keeps writing their own column,
    * which is still the last step of the resolver.
    */
-  private mirrorInstanceKeys(body: Record<string, unknown>, isAdmin: boolean): void {
+  private async mirrorInstanceKeys(body: Record<string, unknown>, isAdmin: boolean): Promise<void> {
     if (!isAdmin) return;
     for (const name of INSTANCE_API_KEY_NAMES) {
-      if (body[name] !== undefined) writeInstanceApiKey(this.db, name, body[name]);
+      if (body[name] !== undefined) await writeInstanceApiKey(this.db, name, body[name]);
     }
   }
 
-  updateMapsKey(userId: number, key: unknown) {
+  async updateMapsKey(userId: number, key: unknown) {
     const maps_api_key = key as string | null | undefined;
     if (this.managed) {
       return { success: true, maps_api_key: null, managed_keys: ['maps_api_key'], changedKeys: [] };
     }
     const current = this.currentKeys(userId);
     const isAdmin = current?.role === 'admin';
-    const changedKeys = this.changedKeyNames({ maps_api_key }, current, isAdmin);
-    this.db.transaction(() => {
+    const changedKeys = await this.changedKeyNames({ maps_api_key }, current, isAdmin);
+    await this.uow.transactional(async () => {
       this.db.run(
         'UPDATE users SET maps_api_key = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
         maybe_encrypt_api_key(maps_api_key), userId
       );
-      this.mirrorInstanceKeys({ maps_api_key }, isAdmin);
+      await this.mirrorInstanceKeys({ maps_api_key }, isAdmin);
     });
     return { success: true, maps_api_key: mask_stored_api_key(maps_api_key), changedKeys };
   }
 
-  updateApiKeys(userId: number, rawBody: unknown) {
+  async updateApiKeys(userId: number, rawBody: unknown) {
     const body = rawBody as { maps_api_key?: string; openweather_api_key?: string; unsplash_api_key?: string; amap_api_key?: string };
     const { blocked } = splitManagedKeys(body, this.managed);
     for (const key of blocked) delete body[key as keyof typeof body];
     const current = this.currentKeys(userId);
     const isAdmin = current?.role === 'admin';
-    const changedKeys = this.changedKeyNames(body, current, isAdmin, blocked);
+    const changedKeys = await this.changedKeyNames(body, current, isAdmin, blocked);
 
-    this.db.transaction(() => {
+    await this.uow.transactional(async () => {
       // `?? null` instead of the former non-null assertions: a user row deleted
       // mid-request must degrade to a 0-row UPDATE, not a TypeError/500.
       this.db.run(
@@ -153,7 +160,7 @@ export class UserProfileService {
         body.amap_api_key !== undefined ? maybe_encrypt_api_key(body.amap_api_key) : current?.amap_api_key ?? null,
         userId
       );
-      this.mirrorInstanceKeys(body, isAdmin);
+      await this.mirrorInstanceKeys(body, isAdmin);
     });
 
     const updated = this.db.get<Pick<User, 'id' | 'username' | 'email' | 'role' | 'maps_api_key' | 'openweather_api_key' | 'unsplash_api_key' | 'amap_api_key' | 'avatar' | 'mfa_enabled'>>(
@@ -170,10 +177,10 @@ export class UserProfileService {
     };
   }
 
-  updateSettings(
+  async updateSettings(
     userId: number,
     rawBody: unknown
-  ): { error?: string; status?: number; success?: boolean; user?: Record<string, unknown>; changedKeys?: string[] } {
+  ): Promise<{ error?: string; status?: number; success?: boolean; user?: Record<string, unknown>; changedKeys?: string[] }> {
     const body = rawBody as { maps_api_key?: string; openweather_api_key?: string; unsplash_api_key?: string; amap_api_key?: string; username?: string; email?: string };
     const { maps_api_key, openweather_api_key, unsplash_api_key, amap_api_key, username, email } = body;
 
@@ -217,14 +224,14 @@ export class UserProfileService {
     // the same row decides whether the two instance-wide names travel with it.
     const current = this.currentKeys(userId);
     const isAdmin = current?.role === 'admin';
-    const changedKeys = keyLocked ? [] : this.changedKeyNames(body, current, isAdmin, blocked);
+    const changedKeys = keyLocked ? [] : await this.changedKeyNames(body, current, isAdmin, blocked);
 
     if (updates.length > 0) {
       updates.push('updated_at = CURRENT_TIMESTAMP');
       params.push(userId);
-      this.db.transaction(() => {
+      await this.uow.transactional(async () => {
         this.db.run(`UPDATE users SET ${updates.join(', ')} WHERE id = ?`, ...params);
-        if (!keyLocked) this.mirrorInstanceKeys(body, isAdmin);
+        if (!keyLocked) await this.mirrorInstanceKeys(body, isAdmin);
       });
     }
 
@@ -242,7 +249,7 @@ export class UserProfileService {
     };
   }
 
-  getSettings(userId: number): { error?: string; status?: number; settings?: Record<string, unknown> } {
+  async getSettings(userId: number): Promise<{ error?: string; status?: number; settings?: Record<string, unknown> }> {
     const user = this.db.get<Pick<User, 'role' | 'maps_api_key' | 'openweather_api_key' | 'unsplash_api_key' | 'amap_api_key'>>(
       'SELECT role, maps_api_key, openweather_api_key, unsplash_api_key, amap_api_key FROM users WHERE id = ?',
       userId
@@ -272,10 +279,10 @@ export class UserProfileService {
     // instance value exists — on that install it is what the resolver picks too.
     return {
       settings: {
-        maps_api_key: readInstanceApiKey(this.db, 'maps_api_key') ?? decrypt_api_key(user.maps_api_key),
+        maps_api_key: (await readInstanceApiKey(this.db, 'maps_api_key')) ?? decrypt_api_key(user.maps_api_key),
         openweather_api_key: decrypt_api_key(user.openweather_api_key),
-        unsplash_api_key: readInstanceApiKey(this.db, 'unsplash_api_key') ?? decrypt_api_key(user.unsplash_api_key),
-        amap_api_key: readInstanceApiKey(this.db, 'amap_api_key') ?? decrypt_api_key(user.amap_api_key),
+        unsplash_api_key: (await readInstanceApiKey(this.db, 'unsplash_api_key')) ?? decrypt_api_key(user.unsplash_api_key),
+        amap_api_key: (await readInstanceApiKey(this.db, 'amap_api_key')) ?? decrypt_api_key(user.amap_api_key),
       },
     };
   }
@@ -349,7 +356,7 @@ export class UserProfileService {
     // The key a search would actually use, not the one in this admin's column:
     // testing a value nothing resolves to is how "the panel says the key is
     // fine" and "every search 403s" coexisted (#1939).
-    const { key: maps_api_key } = resolveApiKey(this.db, 'maps_api_key', userId, readEnv().maps.placesApiKey);
+    const { key: maps_api_key } = await resolveApiKey(this.db, 'maps_api_key', userId, readEnv().maps.placesApiKey);
     if (maps_api_key) {
       try {
         // Same Referer as maps.service googleFetch — without it, keys with an

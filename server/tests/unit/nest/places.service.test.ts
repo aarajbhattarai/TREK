@@ -1292,7 +1292,7 @@ describe('enrichImportedPlaces', () => {
   });
 
   it('PLACE-SVC-059 — no-ops for an empty batch without touching the provider', async () => {
-    const getMapsKey = vi.fn(() => 'key');
+    const getMapsKey = vi.fn(() => Promise.resolve('key'));
     await (await enrichSvc({ getMapsKey })).enrichImportedPlaces('1', 1, []);
     expect(getMapsKey).not.toHaveBeenCalled();
   });

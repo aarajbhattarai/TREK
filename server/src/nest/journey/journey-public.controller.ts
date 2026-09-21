@@ -33,8 +33,8 @@ export class JourneyPublicController {
   ) {}
 
   @Get(':token')
-  get(@Param('token') token: string) {
-    const data = this.journey.getPublicJourney(token);
+  async get(@Param('token') token: string) {
+    const data = await this.journey.getPublicJourney(token);
     if (!data) {
       throw new HttpException({ error: 'Not found' }, 404);
     }

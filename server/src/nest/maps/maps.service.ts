@@ -1001,16 +1001,16 @@ export class MapsService {
    * everybody else got the lowest-id admin's and a 403 from Google. The source
    * is returned so a provider error can say which of the three was used.
    */
-  resolveMapsKey(userId: number): { key: string | null; source: ApiKeySource | null } {
+  async resolveMapsKey(userId: number): Promise<{ key: string | null; source: ApiKeySource | null }> {
     return resolveApiKey(this.database, 'maps_api_key', userId, readEnv().maps.placesApiKey);
   }
 
-  getMapsKey(userId: number): string | null {
-    return this.resolveMapsKey(userId).key;
+  async getMapsKey(userId: number): Promise<string | null> {
+    return (await this.resolveMapsKey(userId)).key;
   }
 
   /** The Amap credential, resolved through the identical three-step chain. */
-  resolveAmapKey(userId: number): { key: string | null; source: ApiKeySource | null } {
+  async resolveAmapKey(userId: number): Promise<{ key: string | null; source: ApiKeySource | null }> {
     return resolveApiKey(this.database, 'amap_api_key', userId, readEnv().maps.amapApiKey);
   }
 
@@ -1046,12 +1046,12 @@ export class MapsService {
    * walked when there is no Google key, so an install on Google issues exactly
    * the database reads it always did.
    */
-  keyedProvider(userId: number): KeyedProvider | null {
+  async keyedProvider(userId: number): Promise<KeyedProvider | null> {
     const choice = this.placesProviderChoice();
     if (choice === 'openstreetmap') return null;
 
     if (choice !== 'amap') {
-      const google = this.resolveMapsKey(userId);
+      const google = await this.resolveMapsKey(userId);
       if (google.key) return { id: 'google', key: google.key, source: google.source };
       // An explicit 'google' choice with no key is not a reason to query Amap
       // instead: this install is on Google and is misconfigured. OSM answers,
@@ -1059,15 +1059,15 @@ export class MapsService {
       if (choice === 'google') return null;
     }
 
-    const amap = this.resolveAmapKey(userId);
+    const amap = await this.resolveAmapKey(userId);
     return amap.key
       ? { id: 'amap', provider: new AmapPlacesProvider({ key: amap.key, source: amap.source, userId }) }
       : null;
   }
 
   /** The Amap provider, when Amap holds the keyed slot; null otherwise. */
-  resolvePlacesProvider(userId: number): AmapPlacesProvider | null {
-    const keyed = this.keyedProvider(userId);
+  async resolvePlacesProvider(userId: number): Promise<AmapPlacesProvider | null> {
+    const keyed = await this.keyedProvider(userId);
     return keyed?.id === 'amap' ? keyed.provider : null;
   }
 
@@ -1085,9 +1085,9 @@ export class MapsService {
    * install that has since dropped its Amap key. Callers treat that as a miss,
    * not an error.
    */
-  private providerForPlaceId(userId: number, placeId: string): AmapPlacesProvider | null {
+  private async providerForPlaceId(userId: number, placeId: string): Promise<AmapPlacesProvider | null> {
     if (!isAmapPlaceId(placeId)) return null;
-    const amap = this.resolveAmapKey(userId);
+    const amap = await this.resolveAmapKey(userId);
     return amap.key ? new AmapPlacesProvider({ key: amap.key, source: amap.source, userId }) : null;
   }
 
@@ -2023,7 +2023,7 @@ export class MapsService {
     locationBias?: { lat: number; lng: number; radius?: number },
     opts: { googleIdentityOnly?: boolean } = {},
   ): Promise<{ places: Record<string, unknown>[]; source: string }> {
-    const keyed = this.keyedProvider(userId);
+    const keyed = await this.keyedProvider(userId);
     const { key: apiKey, source: keySource } = keyed?.id === 'google' ? keyed : { key: null, source: null };
 
     // The TREK index answers first, whether or not a Google key exists. It is
@@ -2179,7 +2179,7 @@ export class MapsService {
     locationBias?: { low: { lat: number; lng: number }; high: { lat: number; lng: number } },
     sessionToken?: string,
   ): Promise<MapsAutocompleteResult> {
-    const keyed = this.keyedProvider(userId);
+    const keyed = await this.keyedProvider(userId);
     const { key: apiKey, source: keySource } = keyed?.id === 'google' ? keyed : { key: null, source: null };
 
     // This is the path that mattered most. Nominatim's usage policy names
@@ -2468,7 +2468,7 @@ export class MapsService {
     // (the 'de' the legacy service defaulted to was a development leftover;
     // cache rows keyed 'de' for lang-less callers go cold once — 7-day TTL).
     const langKey = toApiLang(lang);
-    const apiKey = this.getMapsKey(userId);
+    const apiKey = await this.getMapsKey(userId);
     // No key means no way to resolve a Google id: they have no OpenStreetMap
     // equivalent to fall back to. That is an empty result, not a client error.
     // Search and autocomplete already answer their keyless case with the OSM
@@ -2567,7 +2567,7 @@ export class MapsService {
     placeId: string,
     lang?: string,
   ): Promise<{ place: Record<string, unknown> | null }> {
-    const provider = this.providerForPlaceId(userId, placeId);
+    const provider = await this.providerForPlaceId(userId, placeId);
     if (!provider) return { place: null };
 
     const langKey = toApiLang(lang);
@@ -2622,7 +2622,7 @@ export class MapsService {
     }
 
     const langKey = toApiLang(lang); // 'en' default — see getPlaceDetails
-    const apiKey = this.getMapsKey(userId);
+    const apiKey = await this.getMapsKey(userId);
     // Same as the lean lookup above: an empty result, not a client error.
     if (!apiKey) return { place: null };
 
@@ -2740,7 +2740,7 @@ export class MapsService {
     const fetchPromise = (async (): Promise<{ attribution: string | null } | null> => {
       await acquirePhotoFetchSlot();
       try {
-        const apiKey = this.getMapsKey(userId);
+        const apiKey = await this.getMapsKey(userId);
 
         // Coordinate-based Wikipedia/Wikimedia lookup. Used for coordinate-only
         // (right-click) places and as a fallback when a Google place yields no photo,
@@ -2890,7 +2890,7 @@ export class MapsService {
     // operator env var and the instance-wide row, and nobody's personal key is
     // read on somebody else's behalf (#1939). Nominatim stays the fallback, so
     // an Amap outage does not take a right-click down with it.
-    const amap = this.resolvePlacesProvider(0);
+    const amap = await this.resolvePlacesProvider(0);
     if (amap) {
       const latNum = Number.parseFloat(lat);
       const lngNum = Number.parseFloat(lng);

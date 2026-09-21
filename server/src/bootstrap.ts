@@ -101,7 +101,7 @@ export async function buildApp(): Promise<INestApplication> {
   // engines go through the same door — the second one answers the avoidance questions
   // the first cannot, and is blocked just as silently when the policy leaves it out.
   const settings = app.get(SettingsService, { strict: false });
-  const defaults = settings?.getAdminUserDefaults();
+  const defaults = await settings?.getAdminUserDefaults();
   const asUrl = (value: unknown) => (typeof value === 'string' ? value : null);
   applyGlobalMiddleware(instance, {
     http,

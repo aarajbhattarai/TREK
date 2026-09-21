@@ -10,9 +10,9 @@ import { SchoolHolidaysService } from './school-holidays.service';
 export class SchoolHolidaysMcp {
   constructor(private readonly holidays: SchoolHolidaysService, private readonly guards: McpToolGuardsService) {}
 
-  private adminWrite(ctx: McpContext, write: () => unknown) {
+  private async adminWrite(ctx: McpContext, write: () => unknown) {
     if (!this.guards.isAdminUser(ctx.userId)) return adminRequired();
-    try { return ok(write()); }
+    try { return ok(await write()); }
     catch (error) {
       if (error instanceof HttpException || error instanceof z.ZodError) return errorResult(error.message);
       throw error;
@@ -25,7 +25,7 @@ export class SchoolHolidaysMcp {
     inputSchema: {}, annotations: TOOL_ANNOTATIONS_READONLY,
     access: { group: 'vacay', mode: 'read' },
   })
-  catalog() { return ok(this.holidays.catalog()); }
+  async catalog() { return ok(await this.holidays.catalog()); }
 
   @Tool({
     name: 'get_manual_school_holiday_region',
@@ -33,7 +33,7 @@ export class SchoolHolidaysMcp {
     inputSchema: { regionId: idSchema }, annotations: TOOL_ANNOTATIONS_READONLY,
     access: { group: 'vacay', mode: 'read' },
   })
-  region({ regionId }: { regionId: number }) { return ok(this.holidays.region(regionId)); }
+  async region({ regionId }: { regionId: number }) { return ok(await this.holidays.region(regionId)); }
 
   @Tool({
     name: 'list_manual_school_holidays',
@@ -41,7 +41,7 @@ export class SchoolHolidaysMcp {
     inputSchema: { regionId: idSchema, year: z.number().int().min(1000).max(9999) },
     annotations: TOOL_ANNOTATIONS_READONLY, access: { group: 'vacay', mode: 'read' },
   })
-  forYear({ regionId, year }: { regionId: number; year: number }) { return ok({ holidays: this.holidays.holidays(regionId, String(year)) }); }
+  async forYear({ regionId, year }: { regionId: number; year: number }) { return ok({ holidays: await this.holidays.holidays(regionId, String(year)) }); }
 
   @Tool({
     name: 'create_manual_school_holiday_country',
@@ -49,7 +49,7 @@ export class SchoolHolidaysMcp {
     inputSchema: schoolHolidayCountryRequestSchema.shape, annotations: TOOL_ANNOTATIONS_NON_IDEMPOTENT,
     access: { group: 'vacay', mode: 'write' },
   })
-  createCountry(body: SchoolHolidayCountryRequest, ctx: McpContext) {
+  async createCountry(body: SchoolHolidayCountryRequest, ctx: McpContext) {
     return this.adminWrite(ctx, () => this.holidays.createCountry(schoolHolidayCountryRequestSchema.parse(body)));
   }
 
@@ -59,7 +59,7 @@ export class SchoolHolidaysMcp {
     inputSchema: { country: schoolHolidayCountryRequestSchema.shape.code, ...schoolHolidayRegionRequestSchema.shape },
     annotations: TOOL_ANNOTATIONS_NON_IDEMPOTENT, access: { group: 'vacay', mode: 'write' },
   })
-  createRegion({ country, ...body }: SchoolHolidayRegionRequest & { country: string }, ctx: McpContext) {
+  async createRegion({ country, ...body }: SchoolHolidayRegionRequest & { country: string }, ctx: McpContext) {
     return this.adminWrite(ctx, () => this.holidays.createRegion(country, schoolHolidayRegionRequestSchema.parse(body)));
   }
 
@@ -69,7 +69,7 @@ export class SchoolHolidaysMcp {
     inputSchema: { regionId: idSchema, ...schoolHolidayRegionRequestSchema.shape },
     annotations: TOOL_ANNOTATIONS_WRITE, access: { group: 'vacay', mode: 'write' },
   })
-  updateRegion({ regionId, ...body }: SchoolHolidayRegionRequest & { regionId: number }, ctx: McpContext) {
+  async updateRegion({ regionId, ...body }: SchoolHolidayRegionRequest & { regionId: number }, ctx: McpContext) {
     return this.adminWrite(ctx, () => this.holidays.updateRegion(regionId, schoolHolidayRegionRequestSchema.parse(body)));
   }
 
@@ -79,7 +79,7 @@ export class SchoolHolidaysMcp {
     inputSchema: { regionId: idSchema, revision: z.number().int().positive() },
     annotations: TOOL_ANNOTATIONS_DELETE, access: { group: 'vacay', mode: 'write' },
   })
-  deleteRegion({ regionId, revision }: { regionId: number; revision: number }, ctx: McpContext) {
+  async deleteRegion({ regionId, revision }: { regionId: number; revision: number }, ctx: McpContext) {
     return this.adminWrite(ctx, () => this.holidays.deleteRegion(regionId, revision));
   }
 
@@ -89,7 +89,7 @@ export class SchoolHolidaysMcp {
     inputSchema: { code: schoolHolidayCountryRequestSchema.shape.code },
     annotations: TOOL_ANNOTATIONS_DELETE, access: { group: 'vacay', mode: 'write' },
   })
-  deleteCountry({ code }: { code: string }, ctx: McpContext) {
+  async deleteCountry({ code }: { code: string }, ctx: McpContext) {
     return this.adminWrite(ctx, () => this.holidays.deleteCountry(code));
   }
 }

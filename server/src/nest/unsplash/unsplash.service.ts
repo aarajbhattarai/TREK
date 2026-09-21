@@ -66,8 +66,8 @@ export class UnsplashService {
  * the answer depend on who asked (#1939). Returns null when none is set, in
  * which case the search falls back to the unauthenticated endpoint.
  */
-  getUnsplashKey(userId: number): string | null {
-    return resolveApiKey(this.db, 'unsplash_api_key', userId, this.env.env().integrations.unsplashAccessKey).key;
+  async getUnsplashKey(userId: number): Promise<string | null> {
+    return (await resolveApiKey(this.db, 'unsplash_api_key', userId, this.env.env().integrations.unsplashAccessKey)).key;
   }
 
   async searchUnsplashPhotos(query: string, perPage = 9, accessKey?: string | null) {
