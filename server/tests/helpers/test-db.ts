@@ -43,105 +43,26 @@ import type { RateLimitService } from '../../src/nest/common/rate-limit.service'
 // that re-enters src/db/database.
 export { CAN_ACCESS_TRIP_SQL, buildDbMock } from './db-mock';
 
-// Tables to clear on reset, child-before-parent to be safe (FK checks are OFF during reset).
-// Keep in sync with schema.ts + migrations.ts. Intentionally excluded: categories, addons,
-// photo_providers, photo_provider_fields, schema_version (seed/config data, not user data).
-const RESET_TABLES = [
-  'school_holiday_periods',
-  'school_holiday_regions',
-  'school_holiday_countries',
-  // Collab
-  'file_links',
-  'collab_message_reactions',
-  'collab_poll_votes',
-  'collab_messages',
-  'collab_polls',
-  'collab_notes',
-  // Road trip (#1797). Both hang off days, so they go before it like the rest
-  // of the day content; a new domain's tables belong here or its rows leak from
-  // one case into the next.
-  'roadtrip_day_tracks',
-  'roadtrip_vias',
-  // Dawarich (#2279). The suggestions reference places and bucket_list, so they
-  // are cleared before both; the connection row hangs off the user.
-  'dawarich_visit_suggestions',
-  'dawarich_connections',
-  // Day content
-  'day_notes',
-  'todo_category_assignees',
-  'todo_items',
-  'assignment_participants',
-  'day_assignments',
-  // Places
-  'place_regions',
-  'place_tags',
-  'places',
-  // Packing
-  'packing_category_assignees',
-  'packing_bag_members',
-  'packing_bags',
-  'packing_template_items',
-  'packing_template_categories',
-  'packing_templates',
-  'packing_items',
-  // Budget
-  'budget_item_members',
-  'budget_items',
-  // Photos & files
-  'trip_photos',
-  'trip_album_links',
-  'trip_files',
-  'photos',
-  // Reservations
-  'reservation_day_positions',
-  'reservations',
-  // Accommodations & days
-  'day_accommodations',
-  'days',
-  // Trip
-  'share_tokens',
-  'trip_invite_tokens',
-  'trip_members',
-  'trips',
-  // Journey
-  'journey_books',
-  'journey_share_tokens',
-  'journey_photos',
-  'journey_entries',
-  'journey_contributors',
-  'journey_trips',
-  'journeys',
-  // Vacay
-  'vacay_user_settings',
-  'vacay_shares',
-  'vacay_entries',
-  'vacay_company_holidays',
-  'vacay_holiday_calendars',
-  'vacay_plan_members',
-  'vacay_user_colors',
-  'vacay_user_years',
-  'vacay_years',
-  'vacay_plans',
-  // Atlas
-  'visited_regions',
-  'visited_countries',
-  'bucket_list',
-  // Notifications & audit
-  'notification_channel_preferences',
-  'notifications',
-  'audit_log',
-  // System notices
-  'user_notice_dismissals',
-  // User data
-  'settings',
-  'mcp_tokens',
-  'invite_tokens',
-  'tags',
-  'app_settings',
-  'webauthn_challenges',
-  'webauthn_credentials',
-  'users',
-];
+/**
+ * Tables `resetTestDb` must NOT clear: seed and config data every test assumes
+ * is present (categories, addons, the provider catalogues) plus the two
+ * migration bookkeeping tables. Everything else in the schema is user data and
+ * is derived from `sqlite_master` at reset time — see `resetTestDb`.
+ */
+const KEEP_TABLES = new Set([
+  // Seeded reference data (`seedDefaults` below re-seeds the first three).
+  'categories',
+  'addons',
+  'photo_providers',
+  'photo_provider_fields',
+  'document_providers',
+  'document_provider_fields',
+  // Migration bookkeeping: clearing these would make the next boot replay the
+  // whole history over a schema that already has it.
+  'schema_version',
+  'migrations',
+  'mikro_orm_migrations',
+]);
 
 const DEFAULT_CATEGORIES = [
   { name: 'Hotel', color: '#3b82f6', icon: '🏨' },
@@ -244,13 +165,18 @@ export function createTestDb(): Database.Database {
  */
 export function resetTestDb(db: Database.Database): void {
   db.exec('PRAGMA foreign_keys = OFF');
-  const existingTables = new Set(
-    (db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all() as { name: string }[]).map(r => r.name)
-  );
-  for (const table of RESET_TABLES) {
-    if (existingTables.has(table)) {
-      db.exec(`DELETE FROM "${table}"`);
-    }
+  // Derived from the live schema, not from a list. This used to be a
+  // hand-mirrored `RESET_TABLES` array kept "in sync with schema.ts +
+  // migrations.ts" — by the time it was replaced it had drifted by ~51 tables
+  // (collections, oauth, plugins, settlements, …), every one of which leaked
+  // its rows from one test into the next. Deletion order does not matter:
+  // foreign_keys is OFF for the duration.
+  const tables = (db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all() as { name: string }[])
+    .map(r => r.name)
+    // sqlite_* are SQLite's own (sqlite_sequence, sqlite_stat1) — never ours.
+    .filter(name => !name.startsWith('sqlite_') && !KEEP_TABLES.has(name));
+  for (const table of tables) {
+    db.exec(`DELETE FROM "${table}"`);
   }
   // No sqlite_sequence reset here, on purpose: the legacy helper never reset
   // sequences either, so ids keep growing across tests within a file. Several

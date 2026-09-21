@@ -1,11 +1,12 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { createTestDb, resetTestDb } from '../../../helpers/test-db';
+import { createSnapshotTestDb } from '../../../helpers/db-mock';
+import { resetTestDb } from '../../../helpers/test-db';
 import { createTestOrm, type TestOrm } from '../../../helpers/test-orm';
 import { createUser } from '../../../helpers/factories';
 import { Users } from '../../../../src/db/entities/Users.entity';
 import { withRequestContext } from '../../../../src/nest/database/request-context';
 
-const testDb = createTestDb();
+const testDb = createSnapshotTestDb();
 let t: TestOrm;
 
 // Global context DISALLOWED here on purpose: this is the production setting.

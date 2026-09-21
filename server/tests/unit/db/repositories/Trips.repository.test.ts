@@ -1,11 +1,12 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { CAN_ACCESS_TRIP_SQL, createTestDb, resetTestDb } from '../../../helpers/test-db';
+import { createSnapshotTestDb } from '../../../helpers/db-mock';
+import { CAN_ACCESS_TRIP_SQL, resetTestDb } from '../../../helpers/test-db';
 import { createTestOrm, type TestOrm } from '../../../helpers/test-orm';
 import { addTripMember, createTrip, createUser } from '../../../helpers/factories';
 import { Trips } from '../../../../src/db/entities/Trips.entity';
 import type { TripsRepository } from '../../../../src/db/repositories/Trips.repository';
 
-const testDb = createTestDb();
+const testDb = createSnapshotTestDb();
 let t: TestOrm;
 let trips: TripsRepository;
 

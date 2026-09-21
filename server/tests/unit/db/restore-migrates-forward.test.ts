@@ -36,11 +36,6 @@ function ormFor(dbName: string): Promise<MikroORM> {
     migrations: { path: MIGRATIONS, pathTs: MIGRATIONS, snapshot: false, silent: true },
     seeder: { path: SEEDERS, pathTs: SEEDERS, defaultSeeder: 'DatabaseSeeder' },
     dbName,
-    // Same as MikroORM's own default, but declared here so the `import()` sits
-    // in a module vitest transforms. MikroORM's copy lives in node_modules and
-    // is loaded raw, where Node's resolver rejects the extensionless imports
-    // these CommonJS-target migrations use.
-    dynamicImportProvider: (id: string) => import(id),
   });
 }
 

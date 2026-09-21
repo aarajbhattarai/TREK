@@ -1,12 +1,13 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { createTestDb, resetTestDb } from '../../../helpers/test-db';
+import { createSnapshotTestDb } from '../../../helpers/db-mock';
+import { resetTestDb } from '../../../helpers/test-db';
 import { createTestOrm, type TestOrm } from '../../../helpers/test-orm';
 import { createDay, createTrip, createUser } from '../../../helpers/factories';
 import { DayNotes } from '../../../../src/db/entities/DayNotes.entity';
 import type { DayNotesRepository } from '../../../../src/db/repositories/DayNotes.repository';
 import { DB_TIMESTAMP_RE } from '../../../../src/db/types';
 
-const testDb = createTestDb();
+const testDb = createSnapshotTestDb();
 let t: TestOrm;
 let notes: DayNotesRepository;
 
