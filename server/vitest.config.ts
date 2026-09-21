@@ -6,6 +6,15 @@ export default defineConfig({
   // (vitest's default esbuild does not emit it -> type-based DI would break).
   plugins: [
     swc.vite({
+      // unplugin-swc's default filter is /\.m?[jt]sx?$/ — anchored at the end of the
+      // id, so anything carrying a query string skips the SWC transform. The istanbul
+      // provider's uncovered-file pass asks vite for every never-imported source as
+      // `<file>.ts?cache=<n>&vitest-uncovered-coverage=true`; with the default filter
+      // those ids come back as raw TypeScript and babel's instrumenter (no TS or
+      // decorator plugins) dies on the first `as const`/`interface`/`@Global()`.
+      // Match the same extensions with an optional query so those ids are transformed
+      // exactly like the imported ones.
+      include: /\.[cm]?[jt]sx?(\?.*)?$/,
       jsc: {
         parser: { syntax: 'typescript', decorators: true },
         transform: { legacyDecorator: true, decoratorMetadata: true },
