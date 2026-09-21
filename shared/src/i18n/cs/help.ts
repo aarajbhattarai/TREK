@@ -1738,7 +1738,7 @@ const help: TranslationStrings = {
   'help.guide.create-place.step.1':
     'Klikněte nahoře ve sloupci míst na Přidat místo/aktivitu (Nové místo, když je otevřený den). Otevře se formulář.',
   'help.guide.create-place.step.2':
-    'Napište místo nahoře do Hledat místa... a vyberte výsledek. Název, Adresa, Zeměpisná šířka a Zeměpisná délka se vyplní a Podrobnosti místa vpravo ukážou obrázky, popis a fakta k němu. Není to správné místo? Hledat na Googlu spustí hledání znovu přes Google.',
+    'Napište místo nahoře do Hledat místa... a vyberte výsledek. Název, Adresa, Zeměpisná šířka, Zeměpisná délka a Webové stránky se vyplní a Podrobnosti místa vlevo ukážou obrázky, otevírací dobu a popis k němu. Na TREKu s klíčem Google sedí pod seznamem Není to správné místo? Hledat na Googlu a spustí stejné hledání přes Google.',
   'help.guide.create-place.step.3':
     'V Podrobnostech místa se kliknutím na obrázek pod Vybrat obrázek stane tento obrázek obrázkem místa; Použít tento text převezme popis do formuláře.',
   'help.guide.create-place.step.4':
@@ -1749,7 +1749,7 @@ const help: TranslationStrings = {
   'help.guide.create-place.tip.1':
     'Soubory a Costs dole ve formuláři připojí k místu dokument nebo hned po uložení otevřou editor Costs pro jeho výdaj.',
   'help.guide.create-place.tip.2':
-    'Bez klíče Google běží hledání přes index TREK a OpenStreetMap: místo najde, jen bez hodnocení, otevírací doby a fotek.',
+    'Hledání na každém TREKu zodpoví index TREK a OpenStreetMap a Podrobnosti místa se plní z Wikipedie, Wikivoyage a Wikimedia. Google přijde na řadu jen tam, kde oba zůstanou prázdné, a jen on přináší hodnocení.',
   'help.guide.create-place.tip.3':
     'Místo může začít i na mapě: klikněte na bod pravým tlačítkem a formulář se otevře s vyplněnými souřadnicemi a adresou.',
   // place-to-open-day
@@ -1829,9 +1829,9 @@ const help: TranslationStrings = {
   'help.guide.import-places-file.step.2':
     'Vyberte soubor nebo ho přetáhněte do rámečku. U GPX zaškrtněte, co se má importovat: Trasové body, Trasy, Trasy GPS (s geometrií); u KML a KMZ Body (Placemarks) a Trasy (LineStrings).',
   'help.guide.import-places-file.step.3':
-    'Obohatit místa přes Google vyhledá každé importované místo a doplní fotky, adresu a podrobnosti; potřebuje klíč Google.',
+    'Rámeček bere několik souborů najednou a jen .gpx, .kml a .kmz. Jiný typ souboru nebo soubor přes 10 MB dialog odmítne a neimportuje.',
   'help.guide.import-places-file.step.4':
-    'Klikněte na Importovat. Souhrn řekne, kolik míst vzniklo a kolik se přeskočilo, protože už v cestě byla.',
+    'Klikněte na Importovat. Zpráva řekne, kolik míst přišlo; u souboru KML nebo KMZ zůstane dialog otevřený se souhrnem toho, co vzniklo a co se přeskočilo.',
   'help.guide.import-places-file.result':
     'Místa jsou v seznamu; trasa nese na svém řádku značku trasy, kreslí se na mapě a dostane vlastní filtr Trasy.',
   'help.guide.import-places-file.tip.1':
@@ -1848,7 +1848,7 @@ const help: TranslationStrings = {
     'Každé místo seznamu je v cestě, pojmenované jako v seznamu; místa, která už v cestě jsou, se přeskočí.',
   'help.guide.import-places-list.tip.1': 'Seznam musí být sdílený veřejně; odkaz na soukromý seznam neimportuje nic.',
   'help.guide.import-places-list.tip.2':
-    'Naver Seznam potřebuje doplněk Naver List Import, který správce zapne pod Doplňky; bez něj tlačítko říká Google Seznam.',
+    'Obohatit místa přes Google se v dialogu objeví, když má váš TREK klíč Google: vyhledá každé importované místo a doplní fotky, adresu a podrobnosti.',
 };
 
 export default help;

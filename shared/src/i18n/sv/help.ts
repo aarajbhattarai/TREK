@@ -1756,7 +1756,7 @@ const help: TranslationStrings = {
   'help.guide.create-place.step.1':
     'Klicka på Lägg till plats/aktivitet högst upp i platskolumnen (Ny plats medan en dag är öppen). Formuläret öppnas.',
   'help.guide.create-place.step.2':
-    'Skriv in platsen i Sök efter platser... högst upp och välj ett resultat. Namn, Adress, Latitud och Longitud fylls i, och Platsdetaljer till höger visar bilder, en beskrivning och fakta om den. Inte rätt plats? Sök på Google i stället kör sökningen igen via Google.',
+    'Skriv in platsen i Sök efter platser... högst upp och välj ett resultat. Namn, Adress, Latitud, Longitud och Hemsida fylls i, och Platsdetaljer till vänster visar bilder, öppettider och en beskrivning av den. På en TREK med en Google-nyckel sitter Inte rätt plats? Sök på Google i stället under listan och kör samma sökning via Google.',
   'help.guide.create-place.step.3':
     'I Platsdetaljer blir en bild platsens bild när du klickar på den under Välj en bild; Använd den här texten tar över beskrivningen till formuläret.',
   'help.guide.create-place.step.4':
@@ -1767,7 +1767,7 @@ const help: TranslationStrings = {
   'help.guide.create-place.tip.1':
     'Filer och Kostnader längst ner i formuläret fäster ett dokument vid platsen, eller öppnar Kostnader-redigeraren för dess utgift direkt efter att du sparat.',
   'help.guide.create-place.tip.2':
-    'Utan en Google-nyckel går sökningen via TREK-indexet och OpenStreetMap: den hittar platsen, bara utan betyg, öppettider och foton.',
+    'TREK-indexet och OpenStreetMap besvarar sökningen på varje TREK, och Platsdetaljer fyller sig själv från Wikipedia, Wikivoyage och Wikimedia. Google frågas bara där båda två inte hittar något, och bara Google ger betyg.',
   'help.guide.create-place.tip.3':
     'En plats kan också börja på kartan: högerklicka stället, så öppnas formuläret med koordinater och adress ifyllda.',
   // place-to-open-day
@@ -1847,9 +1847,9 @@ const help: TranslationStrings = {
   'help.guide.import-places-file.step.2':
     'Välj filen eller dra in den i rutan. För en GPX, bocka för vad som ska importeras: Vägpunkter, Rutter, Spår (med spårgeometri); för KML och KMZ, Punkter (platsmarkeringar) och Stigar (LineStrings).',
   'help.guide.import-places-file.step.3':
-    'Berika platser via Google slår upp varje importerad plats för att fylla i foton, adress och detaljer; det kräver Google-nyckeln.',
+    'Rutan tar flera filer samtidigt, och bara .gpx, .kml och .kmz. En annan sorts fil, eller en över 10 MB, avvisas i dialogen och importeras inte.',
   'help.guide.import-places-file.step.4':
-    'Klicka på Importera. Sammanfattningen säger hur många platser som skapades och hur många som hoppades över för att de redan fanns i resan.',
+    'Klicka på Importera. Ett meddelande säger hur många platser som kom in; för en KML- eller KMZ-fil stannar dialogen kvar med en sammanfattning av vad som skapades och vad som hoppades över.',
   'help.guide.import-places-file.result':
     'Platserna finns i listan; ett spår bär en ruttmarkering på sin rad, ritas ut på kartan och får sitt eget Spår-filter.',
   'help.guide.import-places-file.tip.1':
@@ -1867,7 +1867,7 @@ const help: TranslationStrings = {
   'help.guide.import-places-list.tip.1':
     'Listan måste vara delad offentligt; länken till en privat lista importerar ingenting.',
   'help.guide.import-places-list.tip.2':
-    'Naver-lista kräver tillägget Naver List Import, som administratören slår på under Tillägg; utan det står det Google-lista på knappen.',
+    'Berika platser via Google dyker upp i dialogen när din TREK har en Google-nyckel: den slår upp varje importerad plats och fyller i foton, adress och detaljer.',
 };
 
 export default help;

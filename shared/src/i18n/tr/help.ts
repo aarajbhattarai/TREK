@@ -1789,7 +1789,7 @@ const help: TranslationStrings = {
   'help.guide.create-place.step.1':
     'Yerler sütununun üstündeki Yer/etkinlik Ekle düğmesine tıklayın (bir gün açıkken Yeni yer). Form açılır.',
   'help.guide.create-place.step.2':
-    "Yeri üstteki Yerleri ara... alanına yazın ve bir sonuç seçin. İsim, Adres, Enlem ve Boylam dolar, sağdaki Yer ayrıntıları ise onun için resimleri, bir açıklamayı ve bilgileri gösterir. Doğru yer değil mi? Bunun yerine Google'da ara, aramayı Google üzerinden yeniden çalıştırır.",
+    "Yeri üstteki Yerleri ara... alanına yazın ve bir sonuç seçin. İsim, Adres, Enlem, Boylam ve Web sitesi dolar, soldaki Yer ayrıntıları ise onun için resimleri, çalışma saatlerini ve bir açıklamayı gösterir. Google anahtarı olan bir TREK’te, listenin altında Doğru yer değil mi? Bunun yerine Google'da ara satırı durur ve aynı aramayı Google üzerinden çalıştırır.",
   'help.guide.create-place.step.3':
     'Yer ayrıntıları içinde, Bir görsel seç altındaki bir resme tıklamak onu yerin görseli yapar; Bu metni kullan açıklamayı forma aktarır.',
   'help.guide.create-place.step.4':
@@ -1800,7 +1800,7 @@ const help: TranslationStrings = {
   'help.guide.create-place.tip.1':
     'Formun altındaki Dosyalar ve Costs, yere bir belge ekler ya da kaydettikten hemen sonra gideri için Costs düzenleyicisini açar.',
   'help.guide.create-place.tip.2':
-    'Google anahtarı olmadan arama TREK dizini ve OpenStreetMap üzerinden gider: yeri bulur, yalnızca puanlar, açılış saatleri ve fotoğraflar olmadan.',
+    'Her TREK’te aramayı TREK dizini ve OpenStreetMap yanıtlar, Yer ayrıntıları ise kendini Wikipedia, Wikivoyage ve Wikimedia üzerinden doldurur. Google yalnızca ikisi de boş döndüğünde sorulur ve puanı yalnızca o getirir.',
   'help.guide.create-place.tip.3':
     'Bir yer haritada da başlayabilir: noktaya sağ tıklayın, form koordinatlar ve adres doldurulmuş olarak açılır.',
   // place-to-open-day
@@ -1881,9 +1881,9 @@ const help: TranslationStrings = {
   'help.guide.import-places-file.step.2':
     "Dosyayı seçin ya da kutuya sürükleyin. Bir GPX için neyin içe aktarılacağını işaretleyin: Ara noktalar, Rotalar, İzler (yol geometrisi ile); KML ve KMZ için Noktalar (Yer İşaretleri) ve Yollar (LineString'ler).",
   'help.guide.import-places-file.step.3':
-    'Yerleri Google ile zenginleştir, içe aktarılan her yeri arayıp fotoğrafları, adresi ve ayrıntıları doldurur; bunun için Google anahtarı gerekir.',
+    'Kutu aynı anda birkaç dosya alır ve yalnızca .gpx, .kml ve .kmz kabul eder. Başka türde bir dosya ya da 10 MB üzerindeki bir dosya iletişim kutusunda reddedilir ve içe aktarılmaz.',
   'help.guide.import-places-file.step.4':
-    'İçe aktar düğmesine tıklayın. Özet, kaç yerin oluşturulduğunu ve gezide zaten var oldukları için kaçının atlandığını söyler.',
+    'İçe aktar düğmesine tıklayın. Bir mesaj kaç yerin geldiğini söyler; KML ya da KMZ dosyasında iletişim kutusu, neyin oluşturulduğunun ve neyin atlandığının özetiyle açık kalır.',
   'help.guide.import-places-file.result':
     'Yerler listededir; bir iz satırında bir rota işareti taşır, haritada çizilir ve kendi Parçalar filtresini alır.',
   'help.guide.import-places-file.tip.1':
@@ -1903,7 +1903,7 @@ const help: TranslationStrings = {
   'help.guide.import-places-list.tip.1':
     'Listenin herkese açık paylaşılması gerekir; özel bir listenin bağlantısı hiçbir şey içe aktarmaz.',
   'help.guide.import-places-list.tip.2':
-    'Naver Listesi, yöneticinin Eklentiler altında açtığı Naver List Import eklentisine ihtiyaç duyar; o olmadan düğmede Google Listesi yazar.',
+    'Yerleri Google ile zenginleştir, TREK’inizde bir Google anahtarı varsa iletişim kutusunda görünür: içe aktarılan her yeri arayıp fotoğrafları, adresi ve ayrıntıları doldurur.',
 };
 
 export default help;

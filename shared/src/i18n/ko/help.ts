@@ -1661,7 +1661,7 @@ const help: TranslationStrings = {
   'help.guide.create-place.step.1':
     '장소 열 맨 위의 “장소/활동 추가”를 클릭합니다(날짜가 열려 있으면 “새 장소”). 양식이 열립니다.',
   'help.guide.create-place.step.2':
-    '맨 위의 “장소 검색...”에 장소를 입력하고 결과를 고릅니다. “이름”, “주소”, “위도”, “경도”가 채워지고, 오른쪽의 “장소 세부정보”에 사진과 설명, 그 장소에 대한 정보가 나옵니다. “찾는 장소가 아닌가요? Google에서 검색”은 검색을 Google로 다시 실행합니다.',
+    '맨 위의 “장소 검색...”에 장소를 입력하고 결과를 고릅니다. “이름”, “주소”, “위도”, “경도”, “웹사이트”가 채워지고, 왼쪽의 “장소 세부정보”에 사진과 영업시간, 설명이 나옵니다. Google 키가 있는 TREK에서는 “찾는 장소가 아닌가요? Google에서 검색”이 목록 아래에 있어, 같은 검색을 Google로 실행합니다.',
   'help.guide.create-place.step.3':
     '“장소 세부정보”에서 “사진 선택” 아래의 사진을 클릭하면 그것이 장소의 이미지가 됩니다. “이 텍스트 사용”은 설명을 양식으로 옮깁니다.',
   'help.guide.create-place.step.4':
@@ -1672,7 +1672,7 @@ const help: TranslationStrings = {
   'help.guide.create-place.tip.1':
     '양식 아래의 “파일”과 “Costs”는 장소에 문서를 첨부하거나, 저장한 직후 그 지출의 “Costs” 편집기를 엽니다.',
   'help.guide.create-place.tip.2':
-    'Google 키가 없으면 검색은 TREK 색인과 OpenStreetMap을 거칩니다. 장소는 찾지만 평점, 영업시간, 사진은 없습니다.',
+    '어느 TREK에서나 검색에 답하는 것은 TREK 색인과 OpenStreetMap이고, “장소 세부정보”는 Wikipedia, Wikivoyage, Wikimedia에서 스스로를 채웁니다. Google은 둘 다 아무것도 찾지 못한 곳에서만 쓰이고, 평점을 가져오는 것은 Google뿐입니다.',
   'help.guide.create-place.tip.3':
     '장소는 지도에서 시작할 수도 있습니다. 그 지점을 오른쪽 클릭하면 좌표와 주소가 채워진 양식이 열립니다.',
   // place-to-open-day
@@ -1748,9 +1748,9 @@ const help: TranslationStrings = {
   'help.guide.import-places-file.step.2':
     '파일을 고르거나 상자로 끌어다 놓습니다. GPX는 무엇을 가져올지 체크합니다. “웨이포인트”, “경로”, “트랙 (경로 형상 포함)”입니다. KML과 KMZ는 “포인트 (Placemarks)”와 “경로 (LineStrings)”입니다.',
   'help.guide.import-places-file.step.3':
-    '“Google로 장소 정보 보강”은 가져온 장소를 하나씩 찾아 사진, 주소, 세부정보를 채웁니다. Google 키가 필요합니다.',
+    '상자는 여러 파일을 한 번에 받고, .gpx, .kml, .kmz만 받습니다. 다른 종류의 파일이나 10 MB가 넘는 파일은 대화 상자에서 거부되고 가져오지 않습니다.',
   'help.guide.import-places-file.step.4':
-    '“가져오기”를 클릭합니다. 요약에 장소가 몇 개 만들어졌는지, 이미 여행에 있어서 몇 개가 건너뛰어졌는지 나옵니다.',
+    '“가져오기”를 클릭합니다. 장소가 몇 개 들어왔는지 메시지로 알려 줍니다. KML이나 KMZ 파일이면 무엇이 만들어지고 무엇이 건너뛰어졌는지 요약과 함께 대화 상자가 열린 채로 남습니다.',
   'help.guide.import-places-file.result':
     '장소들이 목록에 있습니다. 트랙은 행에 경로 표시가 붙고, 지도에 그려지며, 자기만의 “트랙” 필터를 얻습니다.',
   'help.guide.import-places-file.tip.1':
@@ -1768,7 +1768,7 @@ const help: TranslationStrings = {
   'help.guide.import-places-list.tip.1':
     '목록은 공개로 공유되어 있어야 합니다. 비공개 목록의 링크는 아무것도 가져오지 않습니다.',
   'help.guide.import-places-list.tip.2':
-    '“네이버 목록”에는 Naver List Import 애드온이 필요하며, 관리자가 “애드온”에서 켭니다. 없으면 버튼은 “Google 목록”으로 표시됩니다.',
+    '“Google로 장소 정보 보강”은 내 TREK에 Google 키가 있을 때 대화 상자에 나타납니다. 가져온 장소를 하나씩 찾아 사진, 주소, 세부정보를 채웁니다.',
 };
 
 export default help;

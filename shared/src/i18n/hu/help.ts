@@ -1831,7 +1831,7 @@ const help: TranslationStrings = {
   'help.guide.create-place.step.1':
     'Kattints a helyek oszlopának tetején a Hely/Tevékenység hozzáadása gombra (Új hely, amíg egy nap meg van nyitva). Megnyílik az űrlap.',
   'help.guide.create-place.step.2':
-    'Írd be a helyet felül a Helyek keresése... mezőbe, és válassz egy találatot. A Név, a Cím, a Szélességi fok és a Hosszúsági fok kitöltődik, a jobb oldali Hely részletei pedig képeket, leírást és adatokat mutat hozzá. A Nem a megfelelő hely? Keresés inkább a Google-ben újra lefuttatja a keresést a Google-ön át.',
+    'Írd be a helyet felül a Helyek keresése... mezőbe, és válassz egy találatot. A Név, a Cím, a Szélességi fok, a Hosszúsági fok és a Weboldal kitöltődik, a bal oldali Hely részletei pedig képeket, nyitvatartást és leírást mutat hozzá. Google kulccsal rendelkező TREK-en a lista alatt ott van a Nem a megfelelő hely? Keresés inkább a Google-ben, és ugyanazt a keresést futtatja le a Google-ön át.',
   'help.guide.create-place.step.3':
     'A Hely részletei alatt egy képre kattintás a Válassz képet résznél a hely képévé teszi azt; a Szöveg átvétele a leírást átveszi az űrlapra.',
   'help.guide.create-place.step.4':
@@ -1843,7 +1843,7 @@ const help: TranslationStrings = {
   'help.guide.create-place.tip.1':
     'Az űrlap alján a Fájlok és a Costs dokumentumot csatol a helyhez, vagy mentés után rögtön megnyitja a Costs szerkesztőt a kiadásához.',
   'help.guide.create-place.tip.2':
-    'Google kulcs nélkül a keresés a TREK indexén és az OpenStreetMapen át fut: megtalálja a helyet, csak értékelések, nyitvatartás és fotók nélkül.',
+    'A keresést minden TREK-en a TREK indexe és az OpenStreetMap válaszolja meg, a Hely részletei pedig a Wikipedia, a Wikivoyage és a Wikimedia forrásaiból tölti fel magát. A Google csak ott kerül sorra, ahol mindkettő üresen marad, és értékelést csak az hoz.',
   'help.guide.create-place.tip.3':
     'Egy hely a térképen is indulhat: kattints jobb gombbal a pontra, és az űrlap kitöltött koordinátákkal és címmel nyílik meg.',
   // place-to-open-day
@@ -1925,9 +1925,9 @@ const help: TranslationStrings = {
   'help.guide.import-places-file.step.2':
     'Válaszd ki a fájlt, vagy húzd a keretbe. GPX esetén pipáld ki, mit importáljon: Útpontok, Útvonalak, Nyomvonalak (útvonalgeometriával); KML és KMZ esetén Pontok (Placemarks) és Útvonalak (LineStrings).',
   'help.guide.import-places-file.step.3':
-    'A Helyek gazdagítása a Google-lel minden importált helyet kikeres, hogy fotókat, címet és részleteket töltsön ki; ehhez kell a Google kulcs.',
+    'A keret egyszerre több fájlt is elfogad, és csak .gpx, .kml és .kmz fájlt. Másfajta fájlt vagy 10 MB fölöttit a párbeszédablak visszautasít, és nem importál.',
   'help.guide.import-places-file.step.4':
-    'Kattints az Importálás gombra. Az összegzés megmondja, hány hely jött létre, és hányat hagyott ki, mert már az utazásban voltak.',
+    'Kattints az Importálás gombra. Egy üzenet megmondja, hány hely jött be; KML vagy KMZ fájlnál a párbeszédablak nyitva marad, és összegzi, mi jött létre és mi maradt ki.',
   'help.guide.import-places-file.result':
     'A helyek a listában vannak; egy nyomvonal útvonaljelet visel a sorában, kirajzolódik a térképen, és saját Nyomvonalak szűrőt kap.',
   'help.guide.import-places-file.tip.1':
@@ -1946,7 +1946,7 @@ const help: TranslationStrings = {
   'help.guide.import-places-list.tip.1':
     'A listát nyilvánosan meg kell osztani; egy privát lista linkje semmit sem importál.',
   'help.guide.import-places-list.tip.2':
-    'A Naver Lista a Naver List Import bővítményt igényli, amit az admin a Bővítmények alatt kapcsol be; nélküle a gombon Google Lista áll.',
+    'A Helyek gazdagítása a Google-lel akkor jelenik meg a párbeszédablakban, ha a TREK-edhez tartozik Google kulcs: minden importált helyet kikeres, és fotókat, címet és részleteket tölt ki.',
 };
 
 export default help;

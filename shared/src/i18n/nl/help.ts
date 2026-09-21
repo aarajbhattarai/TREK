@@ -1829,7 +1829,7 @@ const help: TranslationStrings = {
   'help.guide.create-place.step.1':
     'Klik bovenaan de plekkenkolom op Plaats/activiteit toevoegen (Nieuwe plek zolang een dag open is). Het formulier gaat open.',
   'help.guide.create-place.step.2':
-    'Typ de plek bovenin in Plaatsen zoeken... en kies een resultaat. Naam, Adres, Breedtegraad en Lengtegraad vullen zich, en Plaatsdetails rechts toont afbeeldingen, een beschrijving en gegevens erbij. Niet de juiste plek? Zoek in plaats daarvan op Google draait de zoekopdracht opnieuw via Google.',
+    'Typ de plek bovenin in Plaatsen zoeken... en kies een resultaat. Naam, Adres, Breedtegraad, Lengtegraad en Website vullen zich, en Plaatsdetails links toont afbeeldingen, de openingstijden en een beschrijving erbij. Op een TREK met Google-sleutel staat onder de lijst Niet de juiste plek? Zoek in plaats daarvan op Google, dat dezelfde zoekopdracht nog eens via Google draait.',
   'help.guide.create-place.step.3':
     'In Plaatsdetails maakt een klik op een afbeelding onder Kies een afbeelding deze tot de afbeelding van de plek; Deze tekst gebruiken neemt de beschrijving over in het formulier.',
   'help.guide.create-place.step.4':
@@ -1841,7 +1841,7 @@ const help: TranslationStrings = {
   'help.guide.create-place.tip.1':
     'Bestanden en Kosten onderaan het formulier hangen een document aan de plek, of openen meteen na het opslaan de Kosten-editor voor de uitgave ervan.',
   'help.guide.create-place.tip.2':
-    'Zonder Google-sleutel loopt de zoekopdracht via de TREK-index en OpenStreetMap: hij vindt de plek, alleen zonder beoordelingen, openingstijden en foto’s.',
+    'De TREK-index en OpenStreetMap beantwoorden de zoekopdracht op elke TREK, en Plaatsdetails vult zichzelf uit Wikipedia, Wikivoyage en Wikimedia. Google wordt alleen gevraagd waar die twee leeg blijven, en alleen Google levert beoordelingen.',
   'help.guide.create-place.tip.3':
     'Een plek kan ook op de kaart beginnen: klik met rechts op het punt, en het formulier gaat open met de coördinaten en het adres al ingevuld.',
   // place-to-open-day
@@ -1925,9 +1925,9 @@ const help: TranslationStrings = {
   'help.guide.import-places-file.step.2':
     'Kies het bestand of sleep het in het vak. Bij een GPX vink je aan wat je importeert: Waypoints, Routes, Tracks (met routegeometrie); bij KML en KMZ Punten (Placemarks) en Paden (LineStrings).',
   'help.guide.import-places-file.step.3':
-    'Plaatsen verrijken via Google zoekt elke geïmporteerde plek op om foto’s, adres en details aan te vullen; daarvoor is de Google-sleutel nodig.',
+    'Het vak neemt meerdere bestanden tegelijk, en alleen .gpx, .kml en .kmz. Een ander soort bestand, of een bestand groter dan 10 MB, wordt in het dialoogvenster geweigerd en niet geïmporteerd.',
   'help.guide.import-places-file.step.4':
-    'Klik op Importeren. De samenvatting zegt hoeveel plekken zijn aangemaakt en hoeveel er zijn overgeslagen omdat ze al in de reis zaten.',
+    'Klik op Importeren. Een melding zegt hoeveel plekken er binnen zijn gekomen; bij een KML- of KMZ-bestand blijft het dialoogvenster open met een samenvatting van wat is aangemaakt en wat is overgeslagen.',
   'help.guide.import-places-file.result':
     'De plekken staan in de lijst; een track draagt een routemarkering op zijn rij, tekent zich op de kaart en krijgt zijn eigen filter Tracks.',
   'help.guide.import-places-file.tip.1':
@@ -1946,7 +1946,7 @@ const help: TranslationStrings = {
   'help.guide.import-places-list.tip.1':
     'De lijst moet openbaar gedeeld zijn; de link van een privélijst importeert niets.',
   'help.guide.import-places-list.tip.2':
-    'Naver Lijst heeft de add-on Naver List Import nodig, die de beheerder onder Add-ons aanzet; zonder die add-on heet de knop Google Lijst.',
+    'Plaatsen verrijken via Google verschijnt in het dialoogvenster als jouw TREK een Google-sleutel heeft: het zoekt elke geïmporteerde plek op en vult foto’s, adres en details aan.',
 };
 
 export default help;

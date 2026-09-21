@@ -1736,7 +1736,7 @@ const help: TranslationStrings = {
   'help.guide.create-place.step.1':
     '場所の列の上にある「場所／アクティビティを追加」をクリックします（日が開いている間は「新しい場所」）。フォームが開きます。',
   'help.guide.create-place.step.2':
-    '上の「場所を検索…」に場所を入力し、結果を選びます。「名前」「住所」「緯度」「経度」が埋まり、右の「場所の詳細」に写真、説明、その場所の情報が出ます。「目的の場所ではない？ Google で検索」は、検索をもう一度 Google 経由で実行します。',
+    '上の「場所を検索…」に場所を入力し、結果を選びます。「名前」「住所」「緯度」「経度」「ウェブサイト」が埋まり、左の「場所の詳細」に写真、営業時間、説明が出ます。Google キーのある TREK では、「目的の場所ではない？ Google で検索」が一覧の下に出て、同じ検索を Google 経由で実行します。',
   'help.guide.create-place.step.3':
     '「場所の詳細」で「写真を選ぶ」の下の写真をクリックすると、それが場所の画像になります。「このテキストを使う」は説明をフォームに引き継ぎます。',
   'help.guide.create-place.step.4':
@@ -1747,7 +1747,7 @@ const help: TranslationStrings = {
   'help.guide.create-place.tip.1':
     'フォームの下の「ファイル」と「Costs」は、場所に書類を添付するか、保存の直後にその支出の「Costs」エディターを開きます。',
   'help.guide.create-place.tip.2':
-    'Google キーがない場合、検索は TREK のインデックスと OpenStreetMap を通ります。場所は見つかりますが、評価、営業時間、写真はありません。',
+    'どの TREK でも検索に答えるのは TREK のインデックスと OpenStreetMap で、「場所の詳細」は Wikipedia、Wikivoyage、Wikimedia から自分を埋めます。Google が尋ねられるのは、その両方が空のときだけで、評価をもたらすのは Google だけです。',
   'help.guide.create-place.tip.3':
     '場所は地図から始めることもできます。その地点を右クリックすると、座標と住所が入った状態でフォームが開きます。',
   // place-to-open-day
@@ -1826,9 +1826,9 @@ const help: TranslationStrings = {
   'help.guide.import-places-file.step.2':
     'ファイルを選ぶか、枠にドラッグします。GPX では何をインポートするかにチェックを付けます。「ウェイポイント」「ルート」「トラック（経路付き）」です。KML と KMZ では「ポイント（プレースマーク）」と「パス（ライン）」です。',
   'help.guide.import-places-file.step.3':
-    '「Googleで場所を補完」は、インポートした各場所を調べて写真、住所、詳細を埋めます。これには Google キーが必要です。',
+    '枠は複数のファイルを一度に受け取りますが、.gpx、.kml、.kmz だけです。それ以外の種類のファイルや、10 MB を超えるファイルは、ダイアログで拒否され、インポートされません。',
   'help.guide.import-places-file.step.4':
-    '「インポート」をクリックします。まとめに、いくつの場所が作られ、すでに旅行にあったためにいくつが飛ばされたかが出ます。',
+    '「インポート」をクリックします。いくつの場所が入ったかがメッセージで出ます。KML や KMZ のファイルでは、何が作られ何が飛ばされたかのまとめを付けて、ダイアログが開いたままになります。',
   'help.guide.import-places-file.result':
     '場所はリストに入ります。トラックは行にルートの印が付き、地図に描かれ、専用の「トラック」フィルターを得ます。',
   'help.guide.import-places-file.tip.1':
@@ -1847,7 +1847,7 @@ const help: TranslationStrings = {
   'help.guide.import-places-list.tip.1':
     'リストは公開で共有されている必要があります。非公開のリストのリンクは何もインポートしません。',
   'help.guide.import-places-list.tip.2':
-    '「Naver リスト」には Naver List Import アドオンが必要で、管理者が「アドオン」で有効にします。なければボタンは「Google リスト」と表示されます。',
+    '「Googleで場所を補完」は、あなたの TREK に Google キーがあるときにダイアログに出ます。インポートした場所を一つずつ調べて、写真、住所、詳細を埋めます。',
 };
 
 export default help;

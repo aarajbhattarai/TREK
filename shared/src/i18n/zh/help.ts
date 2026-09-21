@@ -1438,7 +1438,7 @@ const help: TranslationStrings = {
   'help.guide.create-place.goal': '手动添加一个地点或活动，连同计划需要知道的一切。',
   'help.guide.create-place.step.1': '点击地点栏顶部的“添加地点/活动”（某一天打开时是“新地点”）。表单打开。',
   'help.guide.create-place.step.2':
-    '在顶部的“搜索地点...”里输入地点并选一个结果。“名称”“地址”“纬度”和“经度”会自动填好，右侧的“地点详情”显示图片、一段描述和相关资料。“不是想找的地点？改用 Google 搜索”会再通过 Google 跑一次搜索。',
+    '在顶部的“搜索地点...”里输入地点并选一个结果。“名称”“地址”“纬度”“经度”和“网站”会自动填好，左侧的“地点详情”显示图片、营业时间和一段描述。在配了 Google 密钥的 TREK 上，“不是想找的地点？改用 Google 搜索”就在结果列表下方，它用 Google 跑同一个搜索。',
   'help.guide.create-place.step.3':
     '在“地点详情”里，点击“选择图片”下方的一张图片就把它设为地点的配图；“使用此文本”把描述接过来填入表单。',
   'help.guide.create-place.step.4':
@@ -1448,7 +1448,7 @@ const help: TranslationStrings = {
   'help.guide.create-place.tip.1':
     '表单底部的“文件”和“费用”可以给地点附上一份文档，或者在保存之后立刻打开它那笔支出的“费用”编辑器。',
   'help.guide.create-place.tip.2':
-    '没有 Google 密钥时，搜索走 TREK 索引和 OpenStreetMap：照样能找到地点，只是没有评分、营业时间和照片。',
+    '每个 TREK 上回答搜索的都是 TREK 索引和 OpenStreetMap，“地点详情”则自己从 Wikipedia、Wikivoyage 和 Wikimedia 取内容。只有在这两者都查不到时才会去问 Google，而且只有 Google 会带来评分。',
   'help.guide.create-place.tip.3': '地点也可以从地图开始：右键点击那个位置，表单就会带着坐标和地址打开。',
   // place-to-open-day
   'help.guide.place-to-open-day.title': '把地点直接加到打开的那一天',
@@ -1512,8 +1512,9 @@ const help: TranslationStrings = {
   'help.guide.import-places-file.step.2':
     '选择文件或把它拖进方框。对于 GPX，勾选要导入的内容：“路点”“路线”“轨迹（含路径几何）”；对于 KML 和 KMZ，是“点（Placemarks）”和“路径（LineStrings）”。',
   'help.guide.import-places-file.step.3':
-    '“通过 Google 丰富地点信息”会逐个查找导入的地点，补上照片、地址和详情；它需要 Google 密钥。',
-  'help.guide.import-places-file.step.4': '点击“导入”。摘要会说明创建了多少地点，以及因为旅行里已经有了而跳过了多少。',
+    '方框一次可以接收多个文件，而且只接收 .gpx、.kml 和 .kmz。其他类型的文件，或者超过 10 MB 的文件，会在对话框里被拒绝，不会导入。',
+  'help.guide.import-places-file.step.4':
+    '点击“导入”。会有一条消息说明进来了多少地点；如果是 KML 或 KMZ 文件，对话框会继续开着，并给出创建了什么、跳过了什么的摘要。',
   'help.guide.import-places-file.result':
     '地点已经在列表里；轨迹的行上带有路线标记，会画在地图上，并获得自己的“路线”筛选项。',
   'help.guide.import-places-file.tip.1': '文件过大会被拒绝并给出大小上限；去掉照片重新导出，或者把它拆开。',
@@ -1528,7 +1529,7 @@ const help: TranslationStrings = {
   'help.guide.import-places-list.result': '列表里的每个地点都进了旅行，名称与列表中一致；旅行里已有的地点会被跳过。',
   'help.guide.import-places-list.tip.1': '列表必须公开共享；私有列表的链接什么也导不进来。',
   'help.guide.import-places-list.tip.2':
-    '“Naver 列表”需要 Naver List Import 扩展，由管理员在“扩展”下开启；没有它，按钮显示为“Google 列表”。',
+    '当你的 TREK 配有 Google 密钥时，对话框里会出现“通过 Google 丰富地点信息”：它会逐个查找导入的地点，补上照片、地址和详情。',
 };
 
 export default help;

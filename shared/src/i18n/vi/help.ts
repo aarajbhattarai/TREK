@@ -1770,7 +1770,7 @@ const help: TranslationStrings = {
   'help.guide.create-place.step.1':
     'Nhấp “Thêm địa điểm/Hoạt động” ở đầu cột địa điểm (“Địa điểm mới” khi một ngày đang mở). Biểu mẫu mở ra.',
   'help.guide.create-place.step.2':
-    'Gõ địa điểm vào “Tìm kiếm địa điểm...” ở trên cùng và chọn một kết quả. “Tên”, “Địa chỉ”, “Vĩ độ” và “Kinh độ” được điền, và “Chi tiết địa điểm” ở bên phải hiển thị hình ảnh, một mô tả và thông tin về nó. “Không đúng địa điểm? Tìm trên Google” chạy lại tìm kiếm qua Google.',
+    'Gõ địa điểm vào “Tìm kiếm địa điểm...” ở trên cùng và chọn một kết quả. “Tên”, “Địa chỉ”, “Vĩ độ”, “Kinh độ” và “Trang web” được điền, và “Chi tiết địa điểm” ở bên trái hiển thị hình ảnh, giờ mở cửa và một mô tả về nó. Trên một TREK có khóa Google, “Không đúng địa điểm? Tìm trên Google” nằm dưới danh sách và chạy đúng tìm kiếm đó qua Google.',
   'help.guide.create-place.step.3':
     'Trong “Chi tiết địa điểm”, một cú nhấp vào hình ảnh dưới “Chọn một hình ảnh” biến nó thành ảnh của địa điểm; “Dùng văn bản này” đưa phần mô tả sang biểu mẫu.',
   'help.guide.create-place.step.4':
@@ -1782,7 +1782,7 @@ const help: TranslationStrings = {
   'help.guide.create-place.tip.1':
     '“Tập tin” và “Chi phí” ở cuối biểu mẫu đính kèm một tài liệu vào địa điểm, hoặc mở trình soạn “Chi phí” cho khoản chi của nó ngay sau khi lưu.',
   'help.guide.create-place.tip.2':
-    'Không có khóa Google, tìm kiếm chạy qua chỉ mục TREK và OpenStreetMap: nó vẫn tìm ra địa điểm, chỉ là không có đánh giá, giờ mở cửa và ảnh.',
+    'Chỉ mục TREK và OpenStreetMap trả lời tìm kiếm trên mọi TREK, còn “Chi tiết địa điểm” tự điền từ Wikipedia, Wikivoyage và Wikimedia. Google chỉ được hỏi ở những chỗ cả hai đều không có gì, và chỉ nó mới mang lại đánh giá.',
   'help.guide.create-place.tip.3':
     'Một địa điểm cũng có thể bắt đầu từ bản đồ: nhấp chuột phải vào điểm đó, và biểu mẫu mở ra với tọa độ và địa chỉ đã điền sẵn.',
   // place-to-open-day
@@ -1865,9 +1865,9 @@ const help: TranslationStrings = {
   'help.guide.import-places-file.step.2':
     'Chọn tập tin hoặc kéo nó vào ô. Với GPX, tích những gì cần nhập: “Điểm tham chiếu”, “Tuyến đường”, “Đường đi (có hình dạng đường dẫn)”; với KML và KMZ, “Điểm (Dấu vị trí)” và “Đường dẫn (LineStrings)”.',
   'help.guide.import-places-file.step.3':
-    '“Làm phong phú các địa điểm thông qua Google” tra cứu từng địa điểm đã nhập để điền ảnh, địa chỉ và chi tiết; nó cần khóa Google.',
+    'Ô này nhận nhiều tập tin cùng lúc, và chỉ nhận .gpx, .kml và .kmz. Một loại tập tin khác, hoặc tập tin lớn hơn 10 MB, bị từ chối ngay trong hộp thoại và không được nhập.',
   'help.guide.import-places-file.step.4':
-    'Nhấp “Nhập”. Phần tóm tắt cho biết bao nhiêu địa điểm đã được tạo và bao nhiêu bị bỏ qua vì đã có trong chuyến đi.',
+    'Nhấp “Nhập”. Một thông báo cho biết có bao nhiêu địa điểm đã vào; với tập tin KML hoặc KMZ, hộp thoại vẫn mở kèm phần tóm tắt những gì đã được tạo và những gì bị bỏ qua.',
   'help.guide.import-places-file.result':
     'Các địa điểm đã ở trong danh sách; một đường đi mang dấu tuyến trên hàng của nó, được vẽ trên bản đồ và có bộ lọc “Bài hát” riêng.',
   'help.guide.import-places-file.tip.1':
@@ -1885,7 +1885,7 @@ const help: TranslationStrings = {
   'help.guide.import-places-list.tip.1':
     'Danh sách phải được chia sẻ công khai; liên kết của một danh sách riêng tư không nhập được gì.',
   'help.guide.import-places-list.tip.2':
-    '“Danh sách Naver” cần tiện ích Naver List Import, được quản trị viên bật dưới “Tiện ích bổ sung”; không có nó, nút sẽ ghi “Danh sách Google”.',
+    '“Làm phong phú các địa điểm thông qua Google” xuất hiện trong hộp thoại khi TREK của bạn có khóa Google: nó tra cứu từng địa điểm đã nhập và điền ảnh, địa chỉ và chi tiết.',
 };
 
 export default help;

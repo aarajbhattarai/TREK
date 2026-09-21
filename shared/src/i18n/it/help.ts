@@ -1810,7 +1810,7 @@ const help: TranslationStrings = {
   'help.guide.create-place.step.1':
     'Clicca Aggiungi Luogo/Attività in cima alla colonna dei luoghi (Nuovo luogo finché un giorno è aperto). Il modulo si apre.',
   'help.guide.create-place.step.2':
-    'Digita il luogo in Cerca luoghi... in alto e scegli un risultato. Nome, Indirizzo, Latitudine e Longitudine si riempiono, e Dettagli del luogo a destra mostra immagini, una descrizione e dati. Non è il posto giusto? Cerca su Google rilancia la ricerca tramite Google.',
+    'Digita il luogo in Cerca luoghi... in alto e scegli un risultato. Nome, Indirizzo, Latitudine, Longitudine e Sito web si riempiono, e Dettagli del luogo a sinistra mostra immagini, gli orari di apertura e una descrizione. Su un TREK con chiave Google, Non è il posto giusto? Cerca su Google sta sotto la lista e rilancia la stessa ricerca tramite Google.',
   'help.guide.create-place.step.3':
     'In Dettagli del luogo, un clic su un’immagine sotto Scegli un’immagine la rende l’immagine del luogo; Usa questo testo porta la descrizione nel modulo.',
   'help.guide.create-place.step.4':
@@ -1822,7 +1822,7 @@ const help: TranslationStrings = {
   'help.guide.create-place.tip.1':
     'File e Costs in fondo al modulo allegano un documento al luogo, o aprono l’editor Costs per la sua spesa subito dopo il salvataggio.',
   'help.guide.create-place.tip.2':
-    'Senza chiave Google la ricerca passa per l’indice di TREK e OpenStreetMap: trova il luogo, solo senza valutazioni, orari di apertura e foto.',
+    'L’indice di TREK e OpenStreetMap rispondono alla ricerca su ogni TREK, e Dettagli del luogo si riempie da Wikipedia, Wikivoyage e Wikimedia. Google viene interrogato solo dove entrambi restano vuoti, e solo lui porta le valutazioni.',
   'help.guide.create-place.tip.3':
     'Un luogo può anche partire dalla mappa: fai clic destro sul punto, e il modulo si apre con coordinate e indirizzo già compilati.',
   // place-to-open-day
@@ -1906,9 +1906,9 @@ const help: TranslationStrings = {
   'help.guide.import-places-file.step.2':
     'Scegli il file o trascinalo nel riquadro. Per un GPX, spunta cosa importare: Waypoint, Percorsi, Tracce (con geometria percorso); per KML e KMZ, Punti (Placemarks) e Percorsi (LineStrings).',
   'help.guide.import-places-file.step.3':
-    'Arricchisci i luoghi con Google cerca ogni luogo importato per completare foto, indirizzo e dettagli; serve la chiave Google.',
+    'Il riquadro accetta più file alla volta, e solo .gpx, .kml e .kmz. Un altro tipo di file, o uno oltre i 10 MB, viene rifiutato nella finestra e non importato.',
   'help.guide.import-places-file.step.4':
-    'Clicca Importa. Il riepilogo dice quanti luoghi sono stati creati e quanti sono stati saltati perché erano già nel viaggio.',
+    'Clicca Importa. Un messaggio dice quanti luoghi sono entrati; con un file KML o KMZ la finestra resta aperta con un riepilogo di ciò che è stato creato e di ciò che è stato saltato.',
   'help.guide.import-places-file.result':
     'I luoghi sono nella lista; una traccia porta un segno di percorso sulla sua riga, si disegna sulla mappa e ottiene il proprio filtro Tracce.',
   'help.guide.import-places-file.tip.1':
@@ -1927,7 +1927,7 @@ const help: TranslationStrings = {
   'help.guide.import-places-list.tip.1':
     'La lista deve essere condivisa pubblicamente; il link di una lista privata non importa nulla.',
   'help.guide.import-places-list.tip.2':
-    'Lista Naver richiede l’addon Naver List Import, che l’admin accende sotto Moduli; senza di esso il pulsante dice Lista Google.',
+    'Arricchisci i luoghi con Google compare nella finestra quando il tuo TREK ha una chiave Google: cerca ogni luogo importato e completa foto, indirizzo e dettagli.',
 };
 
 export default help;

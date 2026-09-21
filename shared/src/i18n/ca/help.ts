@@ -1825,7 +1825,7 @@ const help: TranslationStrings = {
   'help.guide.create-place.step.1':
     'Fes clic a Afegeix un lloc / activitat, a dalt de la columna de llocs (Lloc nou mentre hi ha un dia obert). S’obre el formulari.',
   'help.guide.create-place.step.2':
-    'Escriu el lloc a Cerca llocs..., a dalt, i tria un resultat. Nom, Adreça, Latitud i Longitud s’omplen, i Detalls del lloc, a la dreta, mostra imatges, una descripció i dades. No és el lloc correcte? Cerca a Google torna a fer la cerca amb Google.',
+    'Escriu el lloc a Cerca llocs..., a dalt, i tria un resultat. Nom, Adreça, Latitud, Longitud i Lloc web s’omplen, i Detalls del lloc, a l’esquerra, mostra imatges, l’horari d’obertura i una descripció. En un TREK amb clau de Google, sota la llista hi ha No és el lloc correcte? Cerca a Google, que torna a fer la mateixa cerca amb Google.',
   'help.guide.create-place.step.3':
     'A Detalls del lloc, un clic en una imatge sota Tria una imatge la converteix en la imatge del lloc; Utilitza aquest text porta la descripció al formulari.',
   'help.guide.create-place.step.4':
@@ -1837,7 +1837,7 @@ const help: TranslationStrings = {
   'help.guide.create-place.tip.1':
     'Fitxers i Despeses, al final del formulari, adjunten un document al lloc, o obren l’editor de Despeses per a la seva despesa just després de desar.',
   'help.guide.create-place.tip.2':
-    'Sense clau de Google la cerca va per l’índex de TREK i OpenStreetMap: troba el lloc, només que sense valoracions, horaris d’obertura ni fotos.',
+    'L’índex de TREK i OpenStreetMap responen la cerca a qualsevol TREK, i Detalls del lloc s’omple amb Wikipedia, Wikivoyage i Wikimedia. Google només es consulta on tots dos queden buits, i només ell porta les valoracions.',
   'help.guide.create-place.tip.3':
     'Un lloc també pot començar al mapa: fes clic dret al punt, i el formulari s’obre amb les coordenades i l’adreça posades.',
   // place-to-open-day
@@ -1921,9 +1921,9 @@ const help: TranslationStrings = {
   'help.guide.import-places-file.step.2':
     'Tria el fitxer o arrossega’l dins el quadre. Per a un GPX, marca què vols importar: Punts de ruta, Rutes, Tracks (amb geometria de ruta); per a KML i KMZ, Punts (Placemarks) i Rutes (LineStrings).',
   'help.guide.import-places-file.step.3':
-    'Enriquir llocs mitjançant Google consulta cada lloc importat per completar fotos, adreça i detalls; necessita la clau de Google.',
+    'El quadre accepta diversos fitxers alhora, i només .gpx, .kml i .kmz. Un altre tipus de fitxer, o un de més de 10 MB, es rebutja al diàleg i no s’importa.',
   'help.guide.import-places-file.step.4':
-    'Fes clic a Importar. El resum diu quants llocs s’han creat i quants s’han omès perquè ja eren al viatge.',
+    'Fes clic a Importar. Un missatge diu quants llocs han entrat; amb un fitxer KML o KMZ el diàleg es queda obert amb un resum del que s’ha creat i del que s’ha omès.',
   'help.guide.import-places-file.result':
     'Els llocs són a la llista; una ruta porta una marca d’itinerari a la seva fila, es dibuixa al mapa i rep el seu propi filtre Rutes.',
   'help.guide.import-places-file.tip.1':
@@ -1941,7 +1941,7 @@ const help: TranslationStrings = {
   'help.guide.import-places-list.tip.1':
     'La llista ha d’estar compartida públicament; l’enllaç d’una llista privada no importa res.',
   'help.guide.import-places-list.tip.2':
-    'Llista de Naver necessita l’addon Naver List Import, que l’admin activa a Complements; sense ell el botó diu Llista de Google.',
+    'Enriquir llocs mitjançant Google apareix al diàleg quan el teu TREK té una clau de Google: consulta cada lloc importat i completa fotos, adreça i detalls.',
 };
 
 export default help;

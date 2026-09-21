@@ -1824,7 +1824,7 @@ const help: TranslationStrings = {
   'help.guide.create-place.step.1':
     'Klik “Tambah Tempat/Aktivitas” di atas kolom tempat (“Tempat baru” selama sebuah hari terbuka). Formulir terbuka.',
   'help.guide.create-place.step.2':
-    'Ketik tempatnya di “Cari tempat...” di atas dan pilih satu hasil. “Nama”, “Alamat”, “Lintang” dan “Bujur” terisi, dan “Detail tempat” di sebelah kanan menampilkan gambar, sebuah deskripsi dan fakta tentangnya. “Bukan tempat yang tepat? Cari di Google saja” menjalankan pencarian sekali lagi lewat Google.',
+    'Ketik tempatnya di “Cari tempat...” di atas dan pilih satu hasil. “Nama”, “Alamat”, “Lintang”, “Bujur” dan “Situs web” terisi, dan “Detail tempat” di sebelah kiri menampilkan gambar, jam buka dan sebuah deskripsi tentangnya. Di TREK yang punya kunci Google, “Bukan tempat yang tepat? Cari di Google saja” berada di bawah daftar dan menjalankan pencarian yang sama lewat Google.',
   'help.guide.create-place.step.3':
     'Di “Detail tempat”, klik pada sebuah gambar di bawah “Pilih gambar” menjadikannya gambar tempat itu; “Gunakan teks ini” memindahkan deskripsinya ke formulir.',
   'help.guide.create-place.step.4':
@@ -1836,7 +1836,7 @@ const help: TranslationStrings = {
   'help.guide.create-place.tip.1':
     '“File” dan “Costs” di bagian bawah formulir melampirkan dokumen ke tempat itu, atau membuka editor “Costs” untuk pengeluarannya tepat setelah menyimpan.',
   'help.guide.create-place.tip.2':
-    'Tanpa kunci Google, pencarian berjalan lewat indeks TREK dan OpenStreetMap: tempatnya tetap ketemu, hanya saja tanpa penilaian, jam buka dan foto.',
+    'Indeks TREK dan OpenStreetMap yang menjawab pencarian di setiap TREK, dan “Detail tempat” mengisi dirinya dari Wikipedia, Wikivoyage dan Wikimedia. Google baru ditanya di tempat yang keduanya tidak menemukan apa pun, dan hanya Google yang membawa penilaian.',
   'help.guide.create-place.tip.3':
     'Sebuah tempat juga bisa dimulai dari peta: klik kanan titiknya, dan formulir terbuka dengan koordinat serta alamat sudah terisi.',
   // place-to-open-day
@@ -1918,9 +1918,9 @@ const help: TranslationStrings = {
   'help.guide.import-places-file.step.2':
     'Pilih filenya atau seret ke dalam kotak. Untuk GPX, centang apa yang akan diimpor: “Titik jalan”, “Rute”, “Trek (dengan geometri jalur)”; untuk KML dan KMZ, “Titik (Placemarks)” dan “Jalur (LineStrings)”.',
   'help.guide.import-places-file.step.3':
-    '“Perkaya tempat via Google” mencari setiap tempat yang diimpor untuk mengisi foto, alamat dan detail; ini membutuhkan kunci Google.',
+    'Kotak itu menerima beberapa file sekaligus, dan hanya .gpx, .kml dan .kmz. Jenis file lain, atau file di atas 10 MB, ditolak di dalam dialog dan tidak diimpor.',
   'help.guide.import-places-file.step.4':
-    'Klik “Impor”. Ringkasannya mengatakan berapa tempat yang dibuat dan berapa yang dilewati karena sudah ada di perjalanan.',
+    'Klik “Impor”. Sebuah pesan mengatakan berapa tempat yang masuk; untuk file KML atau KMZ, dialognya tetap terbuka dengan ringkasan tentang apa yang dibuat dan apa yang dilewati.',
   'help.guide.import-places-file.result':
     'Tempat-tempatnya ada di daftar; sebuah trek membawa penanda rute di barisnya, tergambar di peta dan mendapat filter “Trek” sendiri.',
   'help.guide.import-places-file.tip.1':
@@ -1938,7 +1938,7 @@ const help: TranslationStrings = {
   'help.guide.import-places-list.tip.1':
     'Daftarnya harus dibagikan secara publik; tautan daftar pribadi tidak mengimpor apa pun.',
   'help.guide.import-places-list.tip.2':
-    '“Daftar Naver” membutuhkan addon Naver List Import, yang dinyalakan admin di bawah “Addon”; tanpa itu tombolnya berbunyi “Daftar Google”.',
+    '“Perkaya tempat via Google” muncul di dialog ketika TREK Anda punya kunci Google: ia mencari setiap tempat yang diimpor dan mengisi foto, alamat dan detail.',
 };
 
 export default help;

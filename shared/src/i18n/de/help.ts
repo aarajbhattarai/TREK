@@ -1838,7 +1838,7 @@ const help: TranslationStrings = {
   'help.guide.create-place.step.1':
     'Klick oben in der Orte-Spalte auf Ort/Aktivität hinzufügen (Neuer Ort, solange ein Tag geöffnet ist). Das Formular öffnet sich.',
   'help.guide.create-place.step.2':
-    'Tipp den Ort oben in Ortssuche... ein und wähl ein Ergebnis. Name, Adresse, Breitengrad und Längengrad füllen sich, und Ortsdetails rechts zeigt Bilder, eine Beschreibung und Fakten dazu. Nicht der richtige Ort? Stattdessen bei Google suchen startet die Suche noch einmal über Google.',
+    'Tipp den Ort oben in Ortssuche... ein und wähl ein Ergebnis. Name, Adresse, Breitengrad, Längengrad und Website füllen sich, und Ortsdetails links zeigt Bilder, Öffnungszeiten und eine Beschreibung dazu. Auf einem TREK mit Google-Schlüssel steht unter der Liste Nicht der richtige Ort? Stattdessen bei Google suchen und schickt dieselbe Suche noch einmal über Google.',
   'help.guide.create-place.step.3':
     'In den Ortsdetails macht ein Klick auf ein Bild unter Bild auswählen es zum Bild des Ortes; Text übernehmen trägt die Beschreibung ins Formular.',
   'help.guide.create-place.step.4':
@@ -1850,7 +1850,7 @@ const help: TranslationStrings = {
   'help.guide.create-place.tip.1':
     'Dateien und Kosten unten im Formular hängen ein Dokument an den Ort oder öffnen gleich nach dem Speichern den Kosten-Editor für seine Ausgabe.',
   'help.guide.create-place.tip.2':
-    'Ohne Google-Schlüssel läuft die Suche über den TREK-Index und OpenStreetMap: Sie findet den Ort, nur ohne Bewertungen, Öffnungszeiten und Fotos.',
+    'Der TREK-Index und OpenStreetMap beantworten die Suche auf jedem TREK, und Ortsdetails füllt sich aus Wikipedia, Wikivoyage und Wikimedia. Google wird nur dort gefragt, wo beide leer bleiben, und nur Google bringt Bewertungen.',
   'help.guide.create-place.tip.3':
     'Ein Ort kann auch auf der Karte beginnen: Rechtsklick auf die Stelle, und das Formular öffnet sich mit eingetragenen Koordinaten und Adresse.',
   // place-to-open-day
@@ -1936,9 +1936,9 @@ const help: TranslationStrings = {
   'help.guide.import-places-file.step.2':
     'Wähl die Datei oder zieh sie in das Feld. Bei einer GPX hakst du an, was importiert wird: Wegpunkte, Routen, Tracks (mit Streckenverlauf); bei KML und KMZ Punkte (Placemarks) und Pfade (LineStrings).',
   'help.guide.import-places-file.step.3':
-    'Orte über Google anreichern schlägt jeden importierten Ort nach, um Fotos, Adresse und Details zu ergänzen; dafür braucht es den Google-Schlüssel.',
+    'Das Feld nimmt mehrere Dateien auf einmal, und nur .gpx, .kml und .kmz. Eine andere Art von Datei, oder eine über 10 MB, wird im Dialog abgelehnt und nicht importiert.',
   'help.guide.import-places-file.step.4':
-    'Klick auf Importieren. Die Zusammenfassung sagt, wie viele Orte angelegt und wie viele übersprungen wurden, weil sie schon in der Reise waren.',
+    'Klick auf Importieren. Eine Meldung sagt, wie viele Orte hereingekommen sind; bei einer KML- oder KMZ-Datei bleibt der Dialog offen und zeigt eine Zusammenfassung, was angelegt und was übersprungen wurde.',
   'help.guide.import-places-file.result':
     'Die Orte stehen in der Liste; ein Track trägt in seiner Zeile eine Routenmarkierung, zeichnet sich auf der Karte und bekommt seinen eigenen Filter Tracks.',
   'help.guide.import-places-file.tip.1':
@@ -1957,7 +1957,7 @@ const help: TranslationStrings = {
   'help.guide.import-places-list.tip.1':
     'Die Liste muss öffentlich geteilt sein; der Link einer privaten Liste importiert nichts.',
   'help.guide.import-places-list.tip.2':
-    'Naver Liste braucht das Addon Naver List Import, das der Admin unter Addons einschaltet; ohne es heißt der Knopf Google Liste.',
+    'Orte über Google anreichern erscheint im Dialog, wenn dein TREK einen Google-Schlüssel hat: Es schlägt jeden importierten Ort nach und ergänzt Fotos, Adresse und Details.',
 };
 
 export default help;
