@@ -2773,6 +2773,360 @@ const help: TranslationStrings = {
     'Zpráva s odkazem dostane pod sebou kartu s náhledem, staženou vaším vlastním TREKem, takže odkaz na něco, kam se dostanete jen vy, zůstane prostým odkazem.',
   'help.guide.trip-chat.tip.4':
     'Chat je vlastní přepínač pod Doplňky, pod Spolupráce: administrátor ho může vypnout a nechat běžet poznámky, odkazy, hlasování a Co následuje.',
+
+  // ── Screen: trip-lists ────────────────────────────────────────────────────────────────
+  'help.ctx.trip-lists.title': 'Seznamy',
+  'help.ctx.trip-lists.summary':
+    'Dva seznamy pro jednu cestu: seznam věcí, s tím, kdo co přináší a kolik to váží, a seznam úkolů se vším, co se musí stát před cestou a během ní. Záložka je tu, dokud je zapnutý doplněk Seznamy.',
+  'help.ctx.trip-lists.bullet.1':
+    'Balicí seznam a Úkoly nahoře přepínají mezi oběma a počítají, co v kterém je; tlačítka vpravo patří tomu, který je otevřený.',
+  'help.ctx.trip-lists.bullet.2':
+    'Seznam věcí je rozdělený do seznamů, Dokumenty, Oblečení, jak si je pojmenujete, každý s barevnou tečkou, odznakem zabaleno z celku a třemi tečkami, pod kterými jsou Přejmenovat, Označit vše, Odznačit vše a Smazat seznam. Přidat seznam vytvoří nový.',
+  'help.ctx.trip-lists.bullet.3':
+    'Řádek je zaškrtávací políčko a název, pak počet, hmotnost v gramech a kolečko zavazadla, dokud je zapnuté Sledování zavazadel, a pak barevná tečka pro Přesunout do seznamu, Sdílení, Přejmenovat a Smazat. Úchyt vlevo ho táhne nahoru nebo dolů uvnitř jeho seznamu.',
+  'help.ctx.trip-lists.bullet.4':
+    'Sdílené a Můj seznam dělí seznam věcí na dvě části: fond, který vidí všichni, a ten váš. Vše, K zabalení a Hotovo zužují ten, který je otevřený, a pruh nahoře počítá, co je zabaleno.',
+  'help.ctx.trip-lists.bullet.5':
+    'Použít šablonu, Importovat a Uložit jako šablonu naplní nebo zachovají seznam bez psaní a červené tlačítko vedle nich říká, kolik položek je zaškrtnutých, a odklidí je.',
+  'help.ctx.trip-lists.bullet.6':
+    'Úkoly mají vlastní postranní panel: kartu postupu, filtry Vše, Moje úkoly, Po termínu a Hotové, Řadit podle Priorita nebo Termín splnění a jeden řádek na seznam. Kliknutí na úkol ho otevře v panelu vpravo a Přidat nový úkol otevře stejný panel prázdný.',
+  // packing-categories
+  'help.guide.packing-categories.title': 'Sestavit seznam věcí',
+  'help.guide.packing-categories.goal':
+    'Rozdělte to, co si berete, do seznamů, naplňte je položkami a řekněte, kdo se o který seznam stará.',
+  'help.guide.packing-categories.step.1':
+    'Klikněte pod pruhem postupu na Přidat seznam, napište název do Název seznamu (např. Oblečení) a potvrďte fajfkou.',
+  'help.guide.packing-categories.step.2':
+    'Nový seznam začíná jedním prázdným řádkem. Klikněte na Přidat položku, napište položku do Název položky... a stiskněte Enter; pole zůstane otevřené pro další.',
+  'help.guide.packing-categories.step.3':
+    'Řádek přejmenujete tužkou na jeho pravém konci nebo kliknutím na samotný název.',
+  'help.guide.packing-categories.step.4':
+    'Čárkované kolečko v záhlaví seznamu přiřazuje k seznamu členy cesty. Vyberte jméno; štítek, který se objeví, tu osobu kliknutím zase odebere.',
+  'help.guide.packing-categories.step.5':
+    'Tři tečky na konci záhlaví drží zbytek: Přejmenovat, Označit vše, Odznačit vše a Smazat seznam, které vezme seznam i všechno v něm, aniž by se znovu ptalo.',
+  'help.guide.packing-categories.result':
+    'Nový seznam sedí v mřížce se svými položkami pod sebou a se svou barevnou tečkou a jeho odznak počítá, co je už zabaleno.',
+  'help.guide.packing-categories.tip.1':
+    'Seznam jsou jen jeho položky. Smažte poslední a řádek se změní na zástupce, aby si seznam udržel své místo a svou barvu; smažte i ten řádek a seznam je pryč.',
+  'help.guide.packing-categories.tip.2':
+    'Přiřazení někoho k seznamu mu pošle oznámení o balení. Nemění to, kdo položky vidí, to je Sdílení, na řádku.',
+  'help.guide.packing-categories.tip.3':
+    'Dva seznamy mohou nést stejný název. TREK je uvnitř rozlišuje, takže názvy zůstanou tak, jak jste je napsali.',
+  // check-off-packing
+  'help.guide.check-off-packing.title': 'Odškrtávat při balení',
+  'help.guide.check-off-packing.goal': 'Označte, co je v tašce, sledujte pruh a odkliďte zabalené položky.',
+  'help.guide.check-off-packing.step.1': 'Klikněte na políčko vlevo u řádku. Název se přeškrtne a pruh se pohne.',
+  'help.guide.check-off-packing.step.2':
+    'Pruh nahoře počítá, co je zabaleno, proti všemu na seznamu, číslem i procentem.',
+  'help.guide.check-off-packing.step.3': 'Celý seznam naráz: tři tečky v jeho záhlaví drží Označit vše a Odznačit vše.',
+  'help.guide.check-off-packing.step.4':
+    'Vše, K zabalení a Hotovo zužují mřížku. K zabalení nechá jen to, co ještě chybí, takže seznam, který je celý zabalený, z ní vypadne.',
+  'help.guide.check-off-packing.step.5':
+    'Odstranit 3 hotových v pruhu nahoře smaže všechny zaškrtnuté položky naráz, po jednom potvrzení od prohlížeče.',
+  'help.guide.check-off-packing.result':
+    'Vypsané je jen to, co je ještě otevřené, a pruh nahoře říká, jak daleko balení je.',
+  'help.guide.check-off-packing.tip.1': 'Zaškrtnutou položku nelze přejmenovat. Nejdřív ji odškrtněte.',
+  'help.guide.check-off-packing.tip.2':
+    'Označit vše a Odznačit vše pracují vždy jen s jedním seznamem, z jeho vlastních tří teček.',
+  'help.guide.check-off-packing.tip.3':
+    'Když jsou zaškrtnuté všechny položky, počitadlo nahradí Vše je zabaleno! a pruh zezelená.',
+  // apply-packing-template
+  'help.guide.apply-packing-template.title': 'Použít šablonu balení',
+  'help.guide.apply-packing-template.goal': 'Přineste do cesty hotový seznam a uchovejte seznam této cesty pro další.',
+  'help.guide.apply-packing-template.step.1': 'Klikněte v pruhu nad seznamem na Použít šablonu.',
+  'help.guide.apply-packing-template.step.2':
+    'Vyberte šablonu. Každý řádek ji pojmenuje a říká, kolik položek obsahuje.',
+  'help.guide.apply-packing-template.step.3':
+    'Položky přistanou v pohledu, ve kterém jste: Sdílené je dá do fondu, který vidí všichni, Můj seznam je udělá vašimi.',
+  'help.guide.apply-packing-template.step.4':
+    'Uchovejte seznam této cesty pro další cestu: Uložit jako šablonu, název, pak fajfka.',
+  'help.guide.apply-packing-template.result': 'Seznamy a položky šablony jsou v cestě, vedle toho, co tam už bylo.',
+  'help.guide.apply-packing-template.tip.1':
+    'Šablona nese jen názvy a seznamy. Počty, hmotnosti, zavazadla a to, co je už zaškrtnuté, zůstanou za ní.',
+  'help.guide.apply-packing-template.tip.2':
+    'Použít šablonu je tu, až když nějaká šablona existuje. Bez ní se tlačítko vůbec neobjeví.',
+  'help.guide.apply-packing-template.tip.3':
+    'Uložit jako šablonu se objeví jen správci instance a jen dokud má seznam položky. Uloží sdílený fond plus vaše vlastní položky, nikdy soukromé položky jiného člena.',
+  // import-packing-list
+  'help.guide.import-packing-list.title': 'Vložit celý seznam věcí',
+  'help.guide.import-packing-list.goal': 'Proměňte seznam, který už máte jinde, naráz v položky k zabalení.',
+  'help.guide.import-packing-list.step.1': 'Klikněte v pruhu nad seznamem na Importovat.',
+  'help.guide.import-packing-list.step.2':
+    'Jedna položka na řádek: Kategorie, Název, Váha v g (volitelné), Zavazadlo (volitelné), checked/unchecked (volitelné). Šedá ukázka v poli ukazuje všechny čtyři podoby.',
+  'help.guide.import-packing-list.step.3':
+    'Nebo načtěte řádky ze souboru přes Načíst CSV/TXT. Bere .csv nebo .txt a nahradí to, co je v poli.',
+  'help.guide.import-packing-list.step.4': 'Klikněte na Importovat. Tlačítko počítá řádky, kterým rozumělo.',
+  'help.guide.import-packing-list.result':
+    'Každý řádek je jedna položka, v seznamu, který pojmenuje jeho první pole, a ničeho, co tam už bylo, se to nedotkne.',
+  'help.guide.import-packing-list.tip.1':
+    'Pole oddělují čárky, středníky i tabulátory a uvozovky drží pole pohromadě, takže „Košile, modrá“ zůstane jedním názvem. Řádek s jedinou hodnotou je jen název a řádek bez vlastního seznamu přistane v Ostatní.',
+  'help.guide.import-packing-list.tip.2':
+    'Zavazadlo pojmenované ve čtvrtém poli se vytvoří, pokud ho cesta ještě nemá. Tohle je jediné místo, které hromadně načítá hmotnosti a zavazadla; šablona přináší jen názvy a seznamy.',
+  // share-packing-item
+  'help.guide.share-packing-item.title': 'Určit, kdo položku vidí a kdo ji přináší',
+  'help.guide.share-packing-item.goal':
+    'Přesouvejte položku mezi skupinovým fondem, vaším vlastním seznamem a lidmi, pro které ji berete.',
+  'help.guide.share-packing-item.step.1':
+    'Sdílené nad seznamy je fond, který vidí všichni, Můj seznam je ten váš a každý počítá, co v něm je. Klikněte na Můj seznam, abyste se podívali na ten svůj.',
+  'help.guide.share-packing-item.step.2':
+    'Zpět ve Sdílené otevřete u řádku ovládání Sdílení, ikonu sdílení vedle tužky.',
+  'help.guide.share-packing-item.step.3':
+    'Tři úrovně: Sdílené, ve společném fondu a viditelné pro všechny; Osobní, které vidíte jen vy; a Sdílet s…, kde vyberete lidi, na které se položka vztahuje.',
+  'help.guide.share-packing-item.step.4': 'Osobní položka je jen na Můj seznam. Přepněte, abyste ji našli.',
+  'help.guide.share-packing-item.step.5':
+    'Otevřete znovu Sdílení a zaškrtněte jméno pod Sdílet s…. Položka se ukáže i na seznamu té osoby a řádek říká sdíleno s 1.',
+  'help.guide.share-packing-item.result': 'Položka sedí v úrovni, kterou jste vybrali, a řádek říká, kdo ji přináší.',
+  'help.guide.share-packing-item.tip.1':
+    'Sdílení mění jen ten, kdo položku přináší. Ten, s kým jste ji sdíleli, ji vidí na svém Můj seznam, označenou vaším jménem, a může ji odškrtnout.',
+  'help.guide.share-packing-item.tip.2':
+    'U položky, kterou přináší někdo jiný, dostanete místo toho dvě jiná tlačítka: Můžu to vzít taky, které vás přidá vedle něj, a Kopírovat do mého seznamu, které udělá soukromou kopii pro vás.',
+  'help.guide.share-packing-item.tip.3':
+    'Nové položky dědí pohled, ve kterém je přidáte. Přidané v Můj seznam jsou Osobní, přidané ve Sdílené jdou do fondu.',
+  // packing-bags
+  'help.guide.packing-bags.title': 'Zvážit zavazadla',
+  'help.guide.packing-bags.goal':
+    'Dejte každé položce hmotnost, roztřiďte položky do zavazadel a udržte každé zavazadlo pod limitem aerolinky.',
+  'help.guide.packing-bags.step.1': 'Napište hmotnost položky, v gramech, do pole před kolečkem.',
+  'help.guide.packing-bags.step.2': 'Kolečko na konci řádku je její zavazadlo. Klikněte na ně.',
+  'help.guide.packing-bags.step.3':
+    'Zatím žádné zavazadlo: Přidat zavazadlo, název, Enter. Zavazadlo se vytvoří a položka jde rovnou do něj.',
+  'help.guide.packing-bags.step.4':
+    'Panel Zavazadla se objeví vpravo, jakmile existuje jedno zavazadlo: název, hmotnost, pruh naplnění, kdo ho nese a kolik položek v něm je, pak Nepřiřazeno a Celková váha.',
+  'help.guide.packing-bags.step.5':
+    'Klikněte na Nastavit limit a napište limit v kilogramech, tak, jak ho uvádějí aerolinky.',
+  'help.guide.packing-bags.step.6': 'Čárkované plus pod názvem zavazadla říká, kdo ho nese.',
+  'help.guide.packing-bags.result':
+    'Panel Zavazadla vpravo ukazuje hmotnost každého zavazadla proti jeho limitu, co není v žádném zavazadle, a součet.',
+  'help.guide.packing-bags.tip.1':
+    'Pole hmotnosti, kolečko zavazadla a panel Zavazadla existují jen tehdy, když má správce zapnuté Sledování zavazadel pod doplňkem Seznamy.',
+  'help.guide.packing-bags.tip.2':
+    'Hmotnost zavazadla se sčítá na serveru přes položky všech členů, včetně těch, které nevidíte, takže to číslo je opravdu to, co zavazadlo váží.',
+  'help.guide.packing-bags.tip.3':
+    'Zavazadlo bez limitu se kreslí proti nejtěžšímu zavazadlu, aby pruhy zůstaly porovnatelné. Dejte mu limit a pruh se místo toho čte proti němu.',
+  // create-todo
+  'help.guide.create-todo.title': 'Přidat úkol',
+  'help.guide.create-todo.goal': 'Zapište něco, co se musí stát, se seznamem, prioritou, datem a jménem u toho.',
+  'help.guide.create-todo.step.1': 'Klikněte vpravo nahoře na Přidat nový úkol.',
+  'help.guide.create-todo.step.2': 'Pojmenujte ho v Název úkolu a dejte všechno, co stojí za zapamatování, pod Popis.',
+  'help.guide.create-todo.step.3':
+    'Seznam úkol zařazuje. Vyberte jeden, nebo použijte plus vedle něj a napište nový název.',
+  'help.guide.create-todo.step.4': 'Priorita jsou čtyři tlačítka: Žádná, P1, P2 a P3, od červené po modrou.',
+  'help.guide.create-todo.step.5': 'Termín splnění otevře kalendář a Přiřazeno dá na úkol jméno.',
+  'help.guide.create-todo.step.6': 'Klikněte na Vytvořit úkol.',
+  'help.guide.create-todo.result':
+    'Úkol je v seznamu se svými odznaky, prioritou, termínem, seznamem a osobou, které je přiřazen, a otevře se v panelu vpravo.',
+  'help.guide.create-todo.tip.1': 'Povinný je jen název. Všechno ostatní jde doplnit později z panelu vpravo.',
+  'help.guide.create-todo.tip.2': 'Když je v postranním panelu vybraný seznam, nový úkol začíná v tom seznamu.',
+  'help.guide.create-todo.tip.3': 'Enter v poli názvu vytvoří úkol rovnou, bez dotýkání se ostatních polí.',
+  // todo-filters
+  'help.guide.todo-filters.title': 'Najít a změnit úkol',
+  'help.guide.todo-filters.goal':
+    'Zkraťte seznam úkolů na to, co je teď důležité, a pak upravte úkol, na kterém jste skončili.',
+  'help.guide.todo-filters.step.1':
+    'Úkoly v postranním panelu: Vše je všechno, co je ještě otevřené, Moje úkoly to, co je na vás, Po termínu to, co má datum v minulosti, Hotové to, co je dokončené. Každý nese svůj počet; klikněte na Po termínu.',
+  'help.guide.todo-filters.step.2':
+    'Pod Seznamy sedí jeden řádek na seznam. Když jeden vyberete, ukáže se ten seznam, včetně dokončených úkolů.',
+  'help.guide.todo-filters.step.3':
+    'Řadit podle mění pořadí toho, co je na obrazovce: Priorita dává dopředu P1, Termín splnění dává dopředu nejbližší termín. Vždy jen jedno z těch dvou.',
+  'help.guide.todo-filters.step.4': 'Klikněte na úkol, abyste ho otevřeli v panelu vpravo.',
+  'help.guide.todo-filters.step.5':
+    'Změňte, co potřebujete, Popis, Priorita, Seznam, Termín splnění nebo Přiřazeno, a pak Uložit změny. Smazat úkol odstraní hned.',
+  'help.guide.todo-filters.result':
+    'Seznam ukazuje jen úkoly, na které jste se ptali, a panel vpravo upravuje ten, který jste vybrali.',
+  'help.guide.todo-filters.tip.1':
+    'Řádek seznamu počítá jen to, co je ještě otevřené, ale když ho vyberete, ukáže i dokončené úkoly. Vše, Moje úkoly a Po termínu skrývají to, co je hotové; Hotové neukazují nic jiného.',
+  'help.guide.todo-filters.tip.2':
+    'Řadit podle Priorita a Řadit podle Termín splnění se navzájem vylučují a dokud je jedno z nich zapnuté, řádky už nejde přetáhnout do vlastního pořadí.',
+
+  // ── Screen: trip-bookings ─────────────────────────────────────────────────────────────
+  'help.ctx.trip-bookings.title': 'Rezervace',
+  'help.ctx.trip-bookings.summary':
+    'Karta, která drží všechno rezervované pro cestu, co není způsob přepravy: ubytování, stoly, vstupenky, prohlídky, parkování. Každá rezervace je karta v sekci Čeká na potvrzení nebo v sekci Potvrzeno a nese svůj kód, svůj dokument, své cestující a svou cenu.',
+  'help.ctx.trip-bookings.bullet.1':
+    'Ruční rezervace vpravo nahoře otevře formulář. Šest druhů, které dělá, je Ubytování, Restaurace, Událost, Prohlídka, Parkování a Jiné; lety, vlaky a zbytek žijí na kartě Doprava a tady se nikdy neobjeví.',
+  'help.ctx.trip-bookings.bullet.2':
+    'Importovat ze souboru předá potvrzení parseru: EML, PDF, PKPass, HTML nebo TXT, nejvýše pět souborů po 10 MB. Tlačítko je tam jen tehdy, když je server umí přečíst.',
+  'help.ctx.trip-bookings.bullet.3':
+    'Štítky vedle nadpisu filtrují podle typu, každý se svým vlastním počtem, a Vše vrátí zpátky všechno. Jakmile nějaká rezervace jmenuje lidi, řádek avatarů vedle štítků zúží kartu na jednoho z nich.',
+  'help.ctx.trip-bookings.bullet.4':
+    'Karty stojí ve dvou sekcích, Čeká na potvrzení a Potvrzeno, každá se svým počtem. Kliknutí na nadpis sekce ji složí, a jestli je otevřená, si TREK pro tuto cestu pamatuje.',
+  'help.ctx.trip-bookings.bullet.5':
+    'Karta nese stavovou tečku, typ, název, data a časy, Rezervační kód, Místo / Adresu, to, s čím je rezervace propojená, její Odkaz, Poznámky, Soubory a Cestující.',
+  'help.ctx.trip-bookings.bullet.6':
+    'Tužka na kartě otevře znovu tentýž formulář; koš se zeptá jednou a pak je rezervace pryč. U ubytování s ní jdou i jeho noci v denním plánu a jeho propojený výdaj.',
+  // create-booking
+  'help.guide.create-booking.title': 'Vytvořit rezervaci',
+  'help.guide.create-booking.goal':
+    'Vložte do cesty ručně restauraci, událost, prohlídku, parkovací místo nebo cokoli jiného.',
+  'help.guide.create-booking.step.1': 'Klikněte vpravo nahoře na kartě na Ruční rezervace. Otevře se Nová rezervace.',
+  'help.guide.create-booking.step.2':
+    'Vyberte Typ rezervace. Ubytování, Restaurace, Událost, Prohlídka, Parkování a Jiné je těch šest, které tato karta dělá, a formulář se s volbou mění: jen Ubytování vymění svá data za rozsah dnů.',
+  'help.guide.create-booking.step.3':
+    'Napište Název. Je to jediné pole, na kterém formulář trvá, a Přidat zůstane mrtvé, dokud v něm něco není.',
+  'help.guide.create-booking.step.4':
+    'Nastavte Datum a Čas začátku, a Datum konce a Čas konce, pokud má rezervace konec. Kalendáře nabízejí jen dny uvnitř cesty, a konec, který není po začátku, to řekne červeně a zablokuje Přidat.',
+  'help.guide.create-booking.step.5':
+    'Vložte Rezervační kód z potvrzení a nastavte Stav. Čeká na potvrzení nebo Potvrzeno rozhodne, do které ze dvou sekcí karta padne.',
+  'help.guide.create-booking.step.6': 'Klikněte na Přidat.',
+  'help.guide.create-booking.result':
+    'Rezervace je karta ve své sekci se svým štítkem typu, svými daty a svým kódem, a všichni ostatní v cestě ji vidí přibýt.',
+  'help.guide.create-booking.tip.1':
+    'Místo / Adresa nabízí při psaní skutečné adresy; výběr jedné přepíše to, co jste napsali, a adresa, kterou jste napsali sami, zůstane tak, jak je.',
+  'help.guide.create-booking.tip.2':
+    'Odkaz vede na vlastní stránku rezervace u poskytovatele. Karta z něj udělá odkaz, který se otevře v nové záložce.',
+  'help.guide.create-booking.tip.3':
+    'Poznámky jsou Markdown, takže seznam nebo tučný řádek se na kartě vykreslí jako seznam nebo tučný řádek.',
+  // booking-hotel
+  'help.guide.booking-hotel.title': 'Rezervovat ubytování',
+  'help.guide.booking-hotel.goal':
+    'Zadejte ubytování tak, aby se najednou počítalo jako rezervace i jako noci v denním plánu.',
+  'help.guide.booking-hotel.step.1':
+    'Klikněte na Ruční rezervace a zvolte Ubytování. Pole s daty zmizí a jejich místo zaujme blok hotelových polí.',
+  'help.guide.booking-hotel.step.2':
+    'Vyberte hotel pod Ubytování. Ten seznam jsou vlastní místa cesty, a výběr jednoho zapíše jeho název do pole Název a jeho adresu do Místo / Adresa.',
+  'help.guide.booking-hotel.step.3':
+    'Nastavte Od dne a Do dne: první noc a ráno, kdy odjíždíte. Obojí nabízí dny cesty s jejich daty, a ta dvě pole se navzájem drží v pořadí.',
+  'help.guide.booking-hotel.step.4': 'Vyplňte Check-in, Check-in do a Check-out, a Rezervační kód z potvrzení.',
+  'help.guide.booking-hotel.step.5': 'Klikněte na Přidat.',
+  'help.guide.booking-hotel.result':
+    'Karta nese místo data rozsah dnů, s časy příjezdu a odjezdu a s adresou, a tentýž pobyt teď sedí na těch dnech plánu.',
+  'help.guide.booking-hotel.tip.1':
+    'Ubytování je jediný typ bez pole Datum a Čas začátku. Jeho daty jsou Od dne a Do dne, a to jsou dny cesty, ne kalendář.',
+  'help.guide.booking-hotel.tip.2':
+    'Nechte Ubytování prázdné a napište místo toho adresu: místo se vyhledá, vytvoří a připne za vás na mapu.',
+  'help.guide.booking-hotel.tip.3': 'Smazání rezervace s sebou vezme i noci z denního plánu.',
+  // link-booking
+  'help.guide.link-booking.title': 'Propojit rezervaci s plánem',
+  'help.guide.link-booking.goal':
+    'Pověste rezervaci na zastávku a místo, kam patří, aby se objevila tam, kde ji budete chtít.',
+  'help.guide.link-booking.step.1': 'Klikněte na kartě, kterou chcete propojit, na tužku. Otevře se Upravit rezervaci.',
+  'help.guide.link-booking.step.2':
+    'Otevřete Propojit s přiřazením dne. Ten seznam je váš plán: nadpis na každý den, pak zastávky toho dne, očíslované a se svými časy. Vyberte tu, ke které rezervace patří.',
+  'help.guide.link-booking.step.3':
+    'Místo / Aktivita propojí samotné místo. Vyberte ho tam, a Název a Místo / Adresa se vyplní všude, kde jste je nechali prázdné.',
+  'help.guide.link-booking.step.4': 'Klikněte na Aktualizovat.',
+  'help.guide.link-booking.result':
+    'Karta jmenuje den a zastávku pod Propojit s přiřazením dne, a rezervace jede s tou zastávkou v denním plánu.',
+  'help.guide.link-booking.tip.1':
+    'Bez propojení (samostatné) nahoře v seznamu propojení zase sundá. Ubytování žádný výběr zastávky nemá: propojuje se přes své noci.',
+  'help.guide.link-booking.tip.2':
+    'Výběr zastávky na dni s datem za vás vyplní prázdné Datum. Datum, které jste už nastavili, zůstane nedotčené.',
+  // booking-travelers
+  'help.guide.booking-travelers.title': 'Říct, pro koho rezervace je',
+  'help.guide.booking-travelers.goal': 'Označte cestující, které rezervace pokrývá, a pak si nechte ukázat jen jejich.',
+  'help.guide.booking-travelers.step.1':
+    'Otevřete rezervaci tužkou a sjeďte dolů k poli Cestující. Stojí tam každý člen cesty, jmenovaní hosté mezi nimi.',
+  'help.guide.booking-travelers.step.2':
+    'Klikněte na lidi, pro které tato rezervace je. Vybraný dostane fajfku; dalším kliknutím ji zase sundáte.',
+  'help.guide.booking-travelers.step.3': 'Klikněte na Aktualizovat.',
+  'help.guide.booking-travelers.step.4':
+    'Nahoře v liště, vedle štítků typů, klikněte na avatar cestujícího a uvidíte jen jeho rezervace.',
+  'help.guide.booking-travelers.result':
+    'Karta vypisuje lidi, pro které je, a řádek avatarů zúží kartu na jednoho z nich.',
+  'help.guide.booking-travelers.tip.1':
+    'Na kartě se cestující jen ukazují, nikdy nemění. Nastavují se tady, ve formuláři.',
+  'help.guide.booking-travelers.tip.2':
+    'Řádek avatarů se objeví, jakmile má cesta víc než jednoho člena a aspoň jedna rezervace někoho jmenuje. Co vyberete, vydrží pro tuto relaci prohlížeče.',
+  // booking-files
+  'help.guide.booking-files.title': 'Nechat voucher u rezervace',
+  'help.guide.booking-files.goal': 'Přiložte potvrzení, vstupenku nebo průkaz k rezervaci, ke které patří.',
+  'help.guide.booking-files.step.1':
+    'Otevřete rezervaci tužkou, sjeďte dolů k Soubory a klikněte na Přiložit soubor. U rezervace, která už existuje, jde dokument nahoru rovnou a TREK řekne Soubor byl nahrán.',
+  'help.guide.booking-files.step.2':
+    'Dokument je vypsaný svým jménem, s tlačítkem, které ho otevře, a s křížkem vedle něj.',
+  'help.guide.booking-files.step.3':
+    'Propojit stávající soubor nabízí dokumenty cesty, které u této rezervace ještě nejsou. Vyberte jeden a přiloží se, aniž by se cokoli znovu nahrávalo.',
+  'help.guide.booking-files.step.4': 'Klikněte na Aktualizovat.',
+  'help.guide.booking-files.result': 'Karta vypisuje dokumenty pod Soubory, a kliknutí na jeden z nich ho otevře.',
+  'help.guide.booking-files.tip.1':
+    'U rezervace, kterou teprve vytváříte, dokument počká a jde nahoru ve chvíli, kdy kliknete na Přidat.',
+  'help.guide.booking-files.tip.2':
+    'Křížek vedle dokumentu odebere propojení, ne dokument. Ten zůstane na kartě Soubory dané cesty.',
+  'help.guide.booking-files.tip.3':
+    'Které druhy souborů se smějí přikládat, je seznam správce; dokumenty, text a obrázky jsou povolené rovnou.',
+  // booking-cost
+  'help.guide.booking-cost.title': 'Udělat z ceny rezervace náklad',
+  'help.guide.booking-cost.goal': 'Dostaňte to, co rezervace stojí, do Nákladů, rozdělené mezi lidi, kteří ji platí.',
+  'help.guide.booking-cost.step.1':
+    'Otevřete rezervaci a sjeďte na konec formuláře. Pod Costs stojí Create expense, s poznámkou, že rezervaci uloží a pak otevře editor nákladů.',
+  'help.guide.booking-cost.step.2': 'Klikněte na Create expense. Rezervace se uloží a nad ní se otevře editor nákladů.',
+  'help.guide.booking-cost.step.3':
+    'Za co to bylo? už je název rezervace. Vložte Celkovou částku a zkontrolujte Měnu a Den.',
+  'help.guide.booking-cost.step.4':
+    'Kategorie je ta, kterou typ rezervace napovídá. Nastavte Kdo zaplatil? a to, jak se částka dělí.',
+  'help.guide.booking-cost.step.5': 'Klikněte na Přidat výdaj.',
+  'help.guide.booking-cost.result':
+    'Ve formuláři rezervace teď stojí Linked expense s částkou, a tentýž výdaj stojí na kartě Náklady, svázaný s touto rezervací.',
+  'help.guide.booking-cost.tip.1':
+    'Kategorie jde za typem: z Restaurace je Jídlo a pití, z Ubytování Ubytování, z Parkování Parkování, a Událost i Prohlídka obě padnou do Ostatní.',
+  'help.guide.booking-cost.tip.2': 'Koš u Linked expense odebere výdaj, ne rezervaci.',
+  'help.guide.booking-cost.tip.3':
+    'Costs je ve formuláři jen tehdy, když je zapnutý doplněk Náklady, který správce přepíná pod Doplňky.',
+  // filter-bookings
+  'help.guide.filter-bookings.title': 'Najít rezervaci',
+  'help.guide.filter-bookings.goal': 'Zužte dlouhou kartu na typ, osobu nebo stav, který hledáte.',
+  'help.guide.filter-bookings.step.1':
+    'Štítky vedle nadpisu jsou typy, které tato cesta opravdu používá, každý s počtem, který drží. Vše je celá karta.',
+  'help.guide.filter-bookings.step.2': 'Klikněte na štítek a zůstane jen ten typ. Klikněte na druhý a zůstanou oba.',
+  'help.guide.filter-bookings.step.3': 'Vše vrátí všechno zpátky.',
+  'help.guide.filter-bookings.step.4': 'Avatary vedle štítků filtrují podle cestujícího, jednoho nebo několika naráz.',
+  'help.guide.filter-bookings.step.5':
+    'Čeká na potvrzení a Potvrzeno jsou ty dvě sekce, každá se svým počtem. Kliknutím na nadpis jednu složíte; složená zůstane, i když se vrátíte.',
+  'help.guide.filter-bookings.result':
+    'Karta ukazuje jen to, co jste vybrali, a vybrané to zůstane, i když se na ni v této relaci prohlížeče vrátíte.',
+  'help.guide.filter-bookings.tip.1':
+    'Štítky nabízejí jen typy, které cesta má, takže cesta bez jediné prohlídky nemá štítek Prohlídka.',
+  'help.guide.filter-bookings.tip.2':
+    'Filtr, který nic nenajde, nechá kartu prázdnou se Žádná místa nebyla nalezena. To znění je ze seznamu míst; význam je stejný.',
+  // import-booking-file
+  'help.guide.import-booking-file.title': 'Přečíst rezervaci z jejího potvrzení',
+  'help.guide.import-booking-file.goal':
+    'Nechte TREK vytáhnout rezervaci z mailu nebo z PDF, které poskytovatel poslal, místo abyste ji psali znovu.',
+  'help.guide.import-booking-file.step.1':
+    'Klikněte v liště na Importovat ze souboru. Otevře se Importovat potvrzení rezervace.',
+  'help.guide.import-booking-file.step.2':
+    'Pusťte potvrzení na to pole, nebo na ně klikněte a vyberte je: EML, PDF, PKPass, HTML a TXT, až pět souborů po 10 MB. Ty, které jste vybrali, jsou na poli vypsané jménem.',
+  'help.guide.import-booking-file.step.3':
+    'Klikněte na Importovat. Dialog se hned zavře, protože čtení běží na pozadí.',
+  'help.guide.import-booking-file.step.4':
+    'Karta vpravo dole hlásí průběh a jde s vámi aplikací i přes znovunačtení. Až je hotová, nabídne Importovat, což spustí kontrolu: každá rezervace, kterou našla, se otevře v obyčejném formuláři, vyplněná a se svým dokumentem, abyste ji zkontrolovali a jednu po druhé přidali tlačítkem Přidat.',
+  'help.guide.import-booking-file.result':
+    'Každá rezervace, kterou jste potvrdili, je karta sama pro sebe se svým kódem, svými daty a dokumentem, ze kterého přišla; ubytování dostalo i své noci, a se zapnutými Náklady se z ceny, která byla v potvrzení, stal výdaj.',
+  'help.guide.import-booking-file.tip.1':
+    'Importovat ze souboru je tam jen tehdy, když server umí potvrzení číst, což potřebuje buď extraktor, nebo doplněk Analýza pomocí AI. Ten správce přepíná pod Doplňky.',
+  'help.guide.import-booking-file.tip.2':
+    'Když se nepodařilo přečíst nic, karta to řekne a nabídne Try AI parsing, což pošle tytéž soubory rovnou modelu.',
+  'help.guide.import-booking-file.tip.3': 'Hotové zpracování se drží deset minut. Kontrolu spusťte uvnitř tohoto okna.',
+  // edit-booking
+  'help.guide.edit-booking.title': 'Změnit rezervaci',
+  'help.guide.edit-booking.goal':
+    'Opravte čas, doplňte kód, který přišel později, nebo přesuňte rezervaci z Čeká na potvrzení do Potvrzeno.',
+  'help.guide.edit-booking.step.1':
+    'Klikněte v hlavičce karty na tužku. Otevře se Upravit rezervaci se vším, co rezervace ví.',
+  'help.guide.edit-booking.step.2':
+    'Změňte, co je potřeba změnit, tady Rezervační kód, který provozovatel konečně poslal.',
+  'help.guide.edit-booking.step.3': 'Dejte Stav na Potvrzeno.',
+  'help.guide.edit-booking.step.4': 'Klikněte na Aktualizovat.',
+  'help.guide.edit-booking.result':
+    'Karta se přesune: potvrzená rezervace stojí v sekci Potvrzeno za zelenou tečkou, a všichni v cestě ji vidí se přesunout.',
+  'help.guide.edit-booking.tip.1':
+    'Rezervační kód, který nejde přečíst, je Skrýt rezervační kódy v Nastavení, pod Zobrazení. Najeďte na něj myší, nebo na něj klikněte, a je čitelný.',
+  'help.guide.edit-booking.tip.2':
+    'Změňte typ a kategorie propojeného výdaje jde za ním, ledaže jste kategorii vybrali ručně v editoru nákladů.',
+  'help.guide.edit-booking.tip.3': 'Ubytování se upravuje taky tady: jeho dny Od dne a Do dne jsou v témže formuláři.',
+  // delete-booking
+  'help.guide.delete-booking.title': 'Smazat rezervaci',
+  'help.guide.delete-booking.goal': 'Vezměte z cesty rezervaci, ze které sešlo.',
+  'help.guide.delete-booking.step.1': 'Klikněte v hlavičce karty na koš.',
+  'help.guide.delete-booking.step.2':
+    'Smazat rezervaci? jmenuje tu, kterou jste vybrali, a říká, že bude trvale smazána.',
+  'help.guide.delete-booking.step.3': 'Klikněte na Potvrdit.',
+  'help.guide.delete-booking.result':
+    'Karta je pryč, pro všechny v cestě. Rezervace nemá žádné zpět, takže ta otázka je poslední zastávka.',
+  'help.guide.delete-booking.tip.1':
+    'Smazání rezervace ubytování vezme také jeho noci z denního plánu a odebere výdaj, který k němu byl propojený.',
+  'help.guide.delete-booking.tip.2':
+    'Dokumenty, které byly přiložené, zůstanou na kartě Soubory dané cesty; jde jen jejich propojení s rezervací.',
 };
 
 export default help;

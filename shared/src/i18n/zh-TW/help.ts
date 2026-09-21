@@ -2345,6 +2345,310 @@ const help: TranslationStrings = {
     '帶連結的訊息下面會有一張預覽卡片，由你自己的 TREK 取回，所以指向只有你能存取的東西的連結，仍然只是一個普通連結。',
   'help.guide.trip-chat.tip.4':
     '「聊天」在「擴充套件」下面、「Collab」之下有自己的開關：管理員可以把它關掉，讓「筆記」「連結」「投票」和「下一步」繼續運作。',
+
+  // ── Screen: trip-lists ────────────────────────────────────────────────────────────────
+  'help.ctx.trip-lists.title': '清單',
+  'help.ctx.trip-lists.summary':
+    '一趟旅行的兩份清單：行李清單，記下誰帶什麼、有多重；還有待辦清單，記下出發前和旅途中必須發生的每一件事。只要「行李」擴充套件開著，這個分頁就在。',
+  'help.ctx.trip-lists.bullet.1':
+    '頂部的「行李清單」和「待辦事項」在兩者之間切換，並各自數出裡面有多少；右邊的按鈕屬於當前開啟的那一邊。',
+  'help.ctx.trip-lists.bullet.2':
+    '行李清單依清單分組，證件、衣物，隨你怎麼叫，每份清單帶一個顏色圓點、一個已打包/總數的徽章，以及裝著「重新命名」「全部勾選」「取消全部勾選」和「刪除清單」的三個點。「新增清單」建立一份新的。',
+  'help.ctx.trip-lists.bullet.3':
+    '一列是一個勾選框和一個名稱，然後是「數量」、以克計的重量和行李圓圈（在「行李追蹤」開著時），再是用於「移動到清單」的顏色圓點、「共用」「重新命名」和「刪除」。左邊的抓手把它在所屬清單裡上下拖曳。',
+  'help.ctx.trip-lists.bullet.4':
+    '「共用」和「我的清單」把行李清單一分為二：所有人都看得到的公共區，和你自己的那份。「全部」「未完成」「已完成」收窄當前開啟的那一邊，上方的進度條數出已經打包了多少。',
+  'help.ctx.trip-lists.bullet.5':
+    '「應用模板」「匯入」和「儲存為範本」不用一條條敲就能填滿或留下一份清單，旁邊的紅色按鈕寫出有多少物品已勾選，並把它們清走。',
+  'help.ctx.trip-lists.bullet.6':
+    '「待辦事項」有自己的側欄：進度卡片，「全部」「我的任務」「已逾期」「已完成」幾個篩選，依「優先順序」或「到期日」的「排序方式」，以及每份清單一列。點選一個任務會在右側面板裡開啟它，「新增任務」則把同一個面板空著開啟。',
+  // packing-categories
+  'help.guide.packing-categories.title': '建立行李清單',
+  'help.guide.packing-categories.goal': '把要帶的東西歸進清單，填上物品，並說明誰來負責每一份清單。',
+  'help.guide.packing-categories.step.1':
+    '點選進度條下方的「新增清單」，在「清單名稱（例如：衣物）」裡輸入名稱，用勾選確認。',
+  'help.guide.packing-categories.step.2':
+    '新清單以一個空列開始。點選「新增物品」，在「物品名稱...」裡輸入物品並按 Enter；輸入框會一直開著，等下一個。',
+  'help.guide.packing-categories.step.3': '用一列右端的鉛筆給它改名，或者直接點選名稱本身。',
+  'help.guide.packing-categories.step.4':
+    '清單標題裡的虛線圓圈把旅行成員指派到這份清單。選一個名字；出現的標籤再點一下就把那個人移除。',
+  'help.guide.packing-categories.step.5':
+    '標題末尾的三個點裝著其餘的：「重新命名」「全部勾選」「取消全部勾選」，以及「刪除清單」，它會連清單帶裡面的一切一起拿走，不再問第二遍。',
+  'help.guide.packing-categories.result':
+    '新清單排在格線裡，物品在它下面，帶著自己的顏色圓點，徽章數出已經打包了多少。',
+  'help.guide.packing-categories.tip.1':
+    '一份清單就是它的物品。刪掉最後一個，那一列會變成佔位列，好讓清單保住位置和顏色；把那一列也刪掉，清單就沒了。',
+  'help.guide.packing-categories.tip.2':
+    '把某人指派到一份清單會給他發一則行李通知。這不會改變誰能看到這些物品，那是列上的「共用」。',
+  'help.guide.packing-categories.tip.3': '兩份清單可以同名。TREK 在內部區分它們，所以名字保持你輸入的樣子。',
+  // check-off-packing
+  'help.guide.check-off-packing.title': '一邊收拾一邊打勾',
+  'help.guide.check-off-packing.goal': '標記已經進包的東西，看著進度條，再把打包好的物品清走。',
+  'help.guide.check-off-packing.step.1': '點選一列左邊的方框。名稱被劃掉，進度條往前走。',
+  'help.guide.check-off-packing.step.2': '上方的進度條把已打包的數量對著清單上的全部來數，既給數字也給百分比。',
+  'help.guide.check-off-packing.step.3': '整份清單一次搞定：它標題裡的三個點裝著「全部勾選」和「取消全部勾選」。',
+  'help.guide.check-off-packing.step.4':
+    '「全部」「未完成」「已完成」收窄格線。「未完成」只留下還缺的東西，所以已經裝齊的清單會從裡面消失。',
+  'help.guide.check-off-packing.step.5':
+    '上方進度條裡的「移除 3 個已勾選」在瀏覽器確認一次之後，把所有已勾選的物品一次刪掉。',
+  'help.guide.check-off-packing.result': '列出的只剩還沒完成的，上方的進度條說出打包進行到哪一步。',
+  'help.guide.check-off-packing.tip.1': '已勾選的物品不能改名。先取消勾選。',
+  'help.guide.check-off-packing.tip.2':
+    '「全部勾選」和「取消全部勾選」一次只對一份清單起作用，要從那份清單自己的三個點裡用。',
+  'help.guide.check-off-packing.tip.3': '當每個物品都勾上時，計數會被「全部打包完成！」取代，進度條變綠。',
+  // apply-packing-template
+  'help.guide.apply-packing-template.title': '套用行李範本',
+  'help.guide.apply-packing-template.goal': '把一份現成的清單帶進旅行，並把這趟旅行的清單留給下一趟。',
+  'help.guide.apply-packing-template.step.1': '點選清單上方工具列裡的「應用模板」。',
+  'help.guide.apply-packing-template.step.2': '挑一個範本。每一列寫出它的名字和裡面有多少物品。',
+  'help.guide.apply-packing-template.step.3':
+    '物品落在你當前所在的檢視裡：「共用」把它們放進所有人都看得到的公共區，「我的清單」讓它們歸你。',
+  'help.guide.apply-packing-template.step.4': '把這趟旅行的清單留給下一趟：「儲存為範本」，一個名字，然後勾選。',
+  'help.guide.apply-packing-template.result': '範本的清單和物品已經在旅行裡，就挨著原來就有的東西。',
+  'help.guide.apply-packing-template.tip.1': '範本只帶名稱和清單。數量、重量、行李和已經勾選的狀態都留在原地。',
+  'help.guide.apply-packing-template.tip.2': '只有存在範本時才有「應用模板」。一個都沒有的話，這個按鈕根本不出現。',
+  'help.guide.apply-packing-template.tip.3':
+    '「儲存為範本」只對執行個體管理員出現，而且只在清單裡有物品時出現。它儲存共用區加上你自己的物品，絕不會儲存別的成員的私人物品。',
+  // import-packing-list
+  'help.guide.import-packing-list.title': '整份行李清單貼上來',
+  'help.guide.import-packing-list.goal': '把你已經放在別處的一份清單，一次性變成行李物品。',
+  'help.guide.import-packing-list.step.1': '點選清單上方工具列裡的「匯入」。',
+  'help.guide.import-packing-list.step.2':
+    '每列一個物品：類別, 名稱, 以克計的重量（可選）, 行李（可選）, checked/unchecked（可選）。框裡的灰色範例把四種寫法都展示了。',
+  'help.guide.import-packing-list.step.3':
+    '或者用「載入 CSV/TXT」從檔案裡讀入這些列。它接受一個 .csv 或 .txt，並取代掉框裡的內容。',
+  'help.guide.import-packing-list.step.4': '點選「匯入」。按鈕會數出它讀懂了多少列。',
+  'help.guide.import-packing-list.result':
+    '每一列都成了一條物品，落在它第一個欄位指定的清單裡，原來就有的東西一點沒動。',
+  'help.guide.import-packing-list.tip.1':
+    '逗號、分號和定位字元都能分隔欄位，雙引號把一個欄位攏在一起，所以「Shirt, blue」還是一個名稱。只有一個值的列就只是一個名稱，沒有自己清單的列落進「其他」。',
+  'help.guide.import-packing-list.tip.2':
+    '第四個欄位裡點名的行李，如果旅行裡還沒有就會被建立。這是唯一一處能批次載入重量和行李的地方；範本只帶來名稱和清單。',
+  // share-packing-item
+  'help.guide.share-packing-item.title': '決定誰看得到一件物品、誰來帶',
+  'help.guide.share-packing-item.goal': '把一件物品在群組公共區、你自己的清單和你替他們帶的人之間挪來挪去。',
+  'help.guide.share-packing-item.step.1':
+    '清單上方的「共用」是所有人都看得到的公共區，「我的清單」是你自己的，兩邊各自數出裡面有多少。點選「我的清單」看你自己的。',
+  'help.guide.share-packing-item.step.2': '回到「共用」，開啟某一列的「共用」控制項，也就是鉛筆旁邊的分享圖示。',
+  'help.guide.share-packing-item.step.3':
+    '一共三階：「共用」，在群組公共區裡，所有人可見；「個人」，只有你看得到；還有「共用給…」，在那裡挑出這件物品涵蓋到的人。',
+  'help.guide.share-packing-item.step.4': '「個人」的物品只在「我的清單」裡。切過去才找得到。',
+  'help.guide.share-packing-item.step.5':
+    '再開啟一次「共用」，在「共用給…」下面勾一個名字。這件物品也會出現在那個人的清單上，列上寫著「已共用給 1 人」。',
+  'help.guide.share-packing-item.result': '物品落在你選的那一階裡，列上寫著誰來帶它。',
+  'help.guide.share-packing-item.tip.1':
+    '只有帶這件物品的人才能改它的共用。被你分享到的人會在自己的「我的清單」上看到它，旁邊標著你的名字，並且可以把它勾掉。',
+  'help.guide.share-packing-item.tip.2':
+    '在別人帶的物品上，你拿到的是另外兩個按鈕：「我也可以帶」，把你加到他旁邊；還有「複製到我的清單」，給你自己做一份私人副本。',
+  'help.guide.share-packing-item.tip.3':
+    '新物品繼承你新增它時所在的檢視。在「我的清單」裡加的是「個人」，在「共用」裡加的進公共區。',
+  // packing-bags
+  'help.guide.packing-bags.title': '給行李秤重',
+  'help.guide.packing-bags.goal': '給每件物品寫上重量，把物品分進各件行李，並讓每件行李都不超航空公司的限額。',
+  'help.guide.packing-bags.step.1': '把一件物品的重量，以克為單位，輸入圓圈前面的那個框。',
+  'help.guide.packing-bags.step.2': '列末的圓圈就是它的行李。點它。',
+  'help.guide.packing-bags.step.3': '還沒有行李：「新增行李」，一個名字，Enter。行李被建立，物品直接進去。',
+  'help.guide.packing-bags.step.4':
+    '只要存在一件行李，右側就出現「行李」面板：名稱、重量、一條填充條、誰來背、裡面有多少物品，然後是「未分配」和「總重量」。',
+  'help.guide.packing-bags.step.5': '點選「設定限制」，按航空公司的說法用公斤輸入限額。',
+  'help.guide.packing-bags.step.6': '行李名字下面的虛線加號說明誰來背它。',
+  'help.guide.packing-bags.result':
+    '右側的「行李」面板把每件行李的重量對著它的限額顯示出來，還有不在任何行李裡的東西，以及總計。',
+  'help.guide.packing-bags.tip.1':
+    '重量輸入框、行李圓圈和「行李」面板，只有在管理員於「行李」擴充套件下開啟了「行李追蹤」時才存在。',
+  'help.guide.packing-bags.tip.2':
+    '一件行李的重量是在伺服器上把每位成員的物品加起來的，包括你看不到的那些，所以這個數字真的就是這件行李的重量。',
+  'help.guide.packing-bags.tip.3':
+    '沒有限額的行李按最重的那件來畫，好讓各條進度條仍然可比。給它一個限額，進度條就改成按那個來讀。',
+  // create-todo
+  'help.guide.create-todo.title': '新增一個任務',
+  'help.guide.create-todo.goal': '把必須發生的事記下來，配上清單、優先順序、日期和負責人。',
+  'help.guide.create-todo.step.1': '點選右上角的「新增任務」。',
+  'help.guide.create-todo.step.2': '在「任務名稱」裡給它取名，把值得記住的內容寫在「說明」下面。',
+  'help.guide.create-todo.step.3': '「清單」把任務歸類。選一個，或者用旁邊的加號敲一個新名字。',
+  'help.guide.create-todo.step.4': '「優先順序」是四個按鈕：「無」、P1、P2 和 P3，從紅到藍。',
+  'help.guide.create-todo.step.5': '「到期日」開啟一個日曆，「指派給」給任務寫上一個名字。',
+  'help.guide.create-todo.step.6': '點選「建立任務」。',
+  'help.guide.create-todo.result':
+    '任務已經在清單裡，帶著它的徽章：優先順序、到期日、清單和被指派的人，並且在右側面板裡開啟。',
+  'help.guide.create-todo.tip.1': '只有名稱是必填的。其餘的都可以之後從右側面板補上。',
+  'help.guide.create-todo.tip.2': '側欄裡選中了某份清單時，新任務就從那份清單開始。',
+  'help.guide.create-todo.tip.3': '在名稱框裡按 Enter 會直接建立任務，不用碰其他欄位。',
+  // todo-filters
+  'help.guide.todo-filters.title': '找到並修改一個任務',
+  'help.guide.todo-filters.goal': '把任務清單削到眼下要緊的部分，再編輯你落到的那個任務。',
+  'help.guide.todo-filters.step.1':
+    '側欄裡的「任務」：「全部」是所有還沒完成的，「我的任務」是落在你身上的，「已逾期」是日期已經過去的，「已完成」是做完的。每一項都帶著自己的數字；點選「已逾期」。',
+  'help.guide.todo-filters.step.2': '「清單」下面每份清單一列。選中一列就顯示那份清單，連已完成的任務也在內。',
+  'help.guide.todo-filters.step.3':
+    '「排序方式」重新排列螢幕上的內容：「優先順序」把 P1 放最前，「到期日」把最近的期限放最前。兩者一次只能用一個。',
+  'help.guide.todo-filters.step.4': '點選一個任務，在右側面板裡開啟它。',
+  'help.guide.todo-filters.step.5':
+    '改你需要改的，「說明」「優先順序」「清單」「到期日」或「指派給」，然後「儲存變更」。「刪除」立刻把任務刪掉。',
+  'help.guide.todo-filters.result': '清單只顯示你要的任務，右側面板編輯你選中的那一個。',
+  'help.guide.todo-filters.tip.1':
+    '清單那一列只數還沒完成的，但選中它連已完成的任務也會顯示。「全部」「我的任務」和「已逾期」藏起做完的；「已完成」則只顯示做完的。',
+  'help.guide.todo-filters.tip.2':
+    '依「優先順序」排序和依「到期日」排序互相排斥，而且只要其中一個開著，列就不能再拖成你自己的順序了。',
+
+  // ── Screen: trip-bookings ─────────────────────────────────────────────────────────────
+  'help.ctx.trip-bookings.title': '預訂',
+  'help.ctx.trip-bookings.summary':
+    '這一欄裝著旅行中除交通之外預訂的一切：住的地方、餐位、門票、旅遊團、停車。每筆預訂都是「待確認」或「已確認」裡的一張卡片，帶著它的預訂碼、單據、出行成員和費用。',
+  'help.ctx.trip-bookings.bullet.1':
+    '右上角的「手動新增」開啟表單。它能做出的六類是「住宿」「餐廳」「活動」「旅遊團」「停車」和「其他」；航班、火車之類在「交通」欄裡，絕不會出現在這裡。',
+  'help.ctx.trip-bookings.bullet.2':
+    '「從檔案匯入」把一份訂位確認交給解析：EML、PDF、PKPass、HTML 或 TXT，最多 5 個檔案，每個不超過 10 MB。只有伺服器能讀它們時，這個按鈕才在。',
+  'help.ctx.trip-bookings.bullet.3':
+    '標題旁的篩選片按型別篩選，每片帶著自己的數量，「全部」把一切帶回來。一旦有預訂指定了人，篩選片旁邊那一排頭像就能把這一欄收窄到其中一個人。',
+  'help.ctx.trip-bookings.bullet.4':
+    '卡片分在兩個區裡，「待確認」和「已確認」，各帶自己的數量。點選區標題會把它摺起來，是否展開會為這次旅行記住。',
+  'help.ctx.trip-bookings.bullet.5':
+    '一張卡片帶著狀態圓點、型別、標題、日期和時間、「預訂碼」、「地點 / 地址」、這筆預訂關聯到什麼、它的「連結」、「備註」、「檔案」和「出行成員」。',
+  'help.ctx.trip-bookings.bullet.6':
+    '卡片上的鉛筆再次開啟同一個表單；垃圾桶問一次，然後這筆預訂就沒了。若是住宿，它在日程計劃裡的住宿日和關聯的支出會一併消失。',
+  // create-booking
+  'help.guide.create-booking.title': '建立一筆預訂',
+  'help.guide.create-booking.goal': '把一家餐廳、一場活動、一個旅遊團、一個車位或別的什麼，手動放進這次旅行。',
+  'help.guide.create-booking.step.1': '點選這一欄右上角的「手動新增」。「新建預訂」開啟。',
+  'help.guide.create-booking.step.2':
+    '選「預訂型別」。這一欄做的六類是「住宿」「餐廳」「活動」「旅遊團」「停車」和「其他」，表單隨選擇而變：只有「住宿」會把日期換成一段日子的範圍。',
+  'help.guide.create-booking.step.3': '填「標題」。這是表單唯一堅持要的欄位，在它有內容之前「新增」一直是灰的。',
+  'help.guide.create-booking.step.4':
+    '設定「日期」和「開始時間」，如果這筆預訂有結束，再設「結束日期」和「結束時間」。日曆只給出旅行之內的日子；結束不晚於開始時，會用紅色這樣提示並擋住「新增」。',
+  'help.guide.create-booking.step.5':
+    '填入確認單上的「預訂碼」，並設定「狀態」。是「待確認」還是「已確認」，決定卡片落進兩個區中的哪一個。',
+  'help.guide.create-booking.step.6': '點選「新增」。',
+  'help.guide.create-booking.result':
+    '這筆預訂成了它那個區裡的一張卡片，帶著型別篩選片、日期和預訂碼，旅行中其他所有人也會看到它出現。',
+  'help.guide.create-booking.tip.1':
+    '「地點 / 地址」在你輸入時給出真實地址；選中一個會替換你寫下的內容，而你自己輸入的地址會原樣保留。',
+  'help.guide.create-booking.tip.2': '「連結」放的是這筆預訂在服務商那裡的頁面。卡片會把它變成一個在新分頁開啟的連結。',
+  'help.guide.create-booking.tip.3': '「備註」是 Markdown，所以一個清單或一行粗體在卡片上也照樣呈現。',
+  // booking-hotel
+  'help.guide.booking-hotel.title': '預訂一個住的地方',
+  'help.guide.booking-hotel.goal': '錄入一處住宿，讓它同時算作一筆預訂和日程計劃裡的若干夜。',
+  'help.guide.booking-hotel.step.1': '點選「手動新增」並選「住宿」。日期欄位消失，一組住宿欄位接替它們的位置。',
+  'help.guide.booking-hotel.step.2':
+    '在「住宿」下選飯店。清單是這次旅行自己的地點，選中一個會把它的名稱寫進「標題」，地址寫進「地點 / 地址」。',
+  'help.guide.booking-hotel.step.3':
+    '設定「從」和「到」：第一晚，以及離開的那個早上。兩者都給出旅行的日子及其日期，而且二者會彼此保持先後順序。',
+  'help.guide.booking-hotel.step.4': '填寫「入住」「入住截止」「退房」，以及確認單上的「預訂碼」。',
+  'help.guide.booking-hotel.step.5': '點選「新增」。',
+  'help.guide.booking-hotel.result':
+    '卡片帶的不是一個日期而是一段日子的範圍，附上入住和退房時間以及地址；同一段住宿現在也落在計劃的那些日子上。',
+  'help.guide.booking-hotel.tip.1':
+    '「住宿」是唯一沒有「日期」和「開始時間」的型別。它的日期是「從」和「到」，而且是旅行的日子，不是日曆。',
+  'help.guide.booking-hotel.tip.2': '也可以讓「住宿」空著，改為輸入地址：這個地點會被查出來、建好，並替你釘在地圖上。',
+  'help.guide.booking-hotel.tip.3': '刪除這筆預訂，會把日程計劃裡的那些夜一併帶走。',
+  // link-booking
+  'help.guide.link-booking.title': '把一筆預訂繫到計劃上',
+  'help.guide.link-booking.goal': '把一筆預訂掛到它所屬的那一站和那個地點上，好讓它出現在你會需要它的地方。',
+  'help.guide.link-booking.step.1': '點選你想關聯的那張卡片上的鉛筆。「編輯預訂」開啟。',
+  'help.guide.link-booking.step.2':
+    '開啟「關聯日程分配」。清單就是你的計劃：每天一個標題，下面是那天的各站，帶編號和時間。選中這筆預訂所屬的那一站。',
+  'help.guide.link-booking.step.3':
+    '「地點 / 活動」關聯的是地點本身。在那裡選中它，凡是你留空的「標題」和「地點 / 地址」都會被填上。',
+  'help.guide.link-booking.step.4': '點選「更新」。',
+  'help.guide.link-booking.result': '卡片在「關聯日程分配」下寫出那一天和那一站，這筆預訂也在日程計劃裡跟著那一站走。',
+  'help.guide.link-booking.tip.1':
+    '清單頂部的「無關聯（獨立）」再次取消關聯。「住宿」根本沒有選站的地方：它透過自己的住宿日來關聯。',
+  'help.guide.link-booking.tip.2': '選中某個有日期的日子上的一站，會替你填上空著的「日期」。你已經設過的日期不會被動。',
+  // booking-travelers
+  'help.guide.booking-travelers.title': '說明一筆預訂是給誰的',
+  'help.guide.booking-travelers.goal': '標出一筆預訂涵蓋的出行成員，然後只看他們的。',
+  'help.guide.booking-travelers.step.1':
+    '用鉛筆開啟這筆預訂，往下到「出行成員」。旅行的每位成員都在那裡，其中也包括有名字的「訪客」。',
+  'help.guide.booking-travelers.step.2': '點選這筆預訂是給誰的那些人。被選中的人會得到一個勾；再點一次就取消。',
+  'help.guide.booking-travelers.step.3': '點選「更新」。',
+  'help.guide.booking-travelers.step.4': '在上方工具列裡，型別篩選片旁邊，點選某位出行成員的頭像，就只看他的預訂。',
+  'help.guide.booking-travelers.result': '卡片列出它是給誰的那些人，而頭像那一排把這一欄收窄到其中一個人。',
+  'help.guide.booking-travelers.tip.1': '在卡片上，出行成員只是顯示，永遠改不了。要設定就在這裡，在表單裡。',
+  'help.guide.booking-travelers.tip.2':
+    '頭像那一排要等這次旅行不止一位成員、且至少有一筆預訂指定了某人時才出現。你選的內容在這個瀏覽器工作階段裡一直有效。',
+  // booking-files
+  'help.guide.booking-files.title': '把憑證和預訂放在一起',
+  'help.guide.booking-files.goal': '把確認單、票或通行證附到它所屬的那筆預訂上。',
+  'help.guide.booking-files.step.1':
+    '用鉛筆開啟這筆預訂，往下到「檔案」，點選「附加檔案」。在一筆已經存在的預訂上，單據會立刻上傳，TREK 會說「檔案已上傳」。',
+  'help.guide.booking-files.step.2': '單據按名稱列出，帶一個開啟它的按鈕，旁邊還有一個 X。',
+  'help.guide.booking-files.step.3':
+    '「關聯已有檔案」給出這次旅行中還不在這筆預訂上的單據。選中一個，它就被附上，不必再上傳一次。',
+  'help.guide.booking-files.step.4': '點選「更新」。',
+  'help.guide.booking-files.result': '卡片在「檔案」下列出這些單據，點選其中一個就能開啟。',
+  'help.guide.booking-files.tip.1': '在一筆你還在建立的預訂上，單據會等著，在你點「新增」的那一刻上傳。',
+  'help.guide.booking-files.tip.2': '單據旁的 X 去掉的是關聯，不是單據本身。它仍留在這次旅行的「檔案」欄裡。',
+  'help.guide.booking-files.tip.3':
+    '哪些種類的檔案可以附加，取決於管理員的「允許的檔案型別」清單；開箱即用地允許文件、文字和圖片。',
+  // booking-cost
+  'help.guide.booking-cost.title': '把一筆預訂的金額變成費用',
+  'help.guide.booking-cost.goal': '把一筆預訂花掉的錢記進「費用」，並在付錢的人之間分攤。',
+  'help.guide.booking-cost.step.1':
+    '開啟這筆預訂，走到表單底部。「Costs」下面是「Create expense」，附帶那行說明「Saves the booking, then opens the Costs editor.」',
+  'help.guide.booking-cost.step.2': '點選「Create expense」。預訂被儲存，它的表單關上，費用編輯器開啟。',
+  'help.guide.booking-cost.step.3':
+    '「這筆是什麼支出？」已經是這筆預訂的標題。填入「總金額」，並核對「貨幣」和「日期」。',
+  'help.guide.booking-cost.step.4': '「分類」是預訂型別推出來的那一個。設定「誰付的款？」以及金額怎麼「Split」。',
+  'help.guide.booking-cost.step.5': '點選「新增支出」。',
+  'help.guide.booking-cost.result':
+    '這筆預訂的表單現在顯示「Linked expense」和金額，同一筆支出也立在「費用」欄裡，繫在這筆預訂上。',
+  'help.guide.booking-cost.tip.1':
+    '分類跟著型別走：「餐廳」變成「餐飲」，「住宿」變成「住宿」，「停車」變成「停車」，「活動」和「旅遊團」都落進「其他」。',
+  'help.guide.booking-cost.tip.2': '「Linked expense」上的垃圾桶移除的是這筆支出，不是這筆預訂。',
+  'help.guide.booking-cost.tip.3': '只有在「費用」擴充套件開著時，「Costs」才在表單裡，管理員在「擴充套件」下切換它。',
+  // filter-bookings
+  'help.guide.filter-bookings.title': '找到一筆預訂',
+  'help.guide.filter-bookings.goal': '把一長欄收窄到你要的型別、人或狀態。',
+  'help.guide.filter-bookings.step.1':
+    '標題旁的篩選片是這次旅行實際用到的型別，每片帶著它所含的數量。「全部」就是整欄。',
+  'help.guide.filter-bookings.step.2': '點一片篩選片，只留下那個型別。再點第二片，兩個都留下。',
+  'help.guide.filter-bookings.step.3': '「全部」把一切放回來。',
+  'help.guide.filter-bookings.step.4': '篩選片旁邊的頭像按出行成員篩選，一個人或一次幾個人都行。',
+  'help.guide.filter-bookings.step.5':
+    '「待確認」和「已確認」是那兩個區，各帶自己的數量。點選一個標題把它摺起來；你回來時它仍然是摺著的。',
+  'help.guide.filter-bookings.result': '這一欄只顯示你挑出來的內容，而且在這個瀏覽器工作階段裡你回來時它仍然那樣挑著。',
+  'help.guide.filter-bookings.tip.1':
+    '篩選片只給出這次旅行有的型別，所以一次連一個旅遊團都沒有的旅行，就沒有「旅遊團」這一片。',
+  'help.guide.filter-bookings.tip.2':
+    '一個什麼都比對不到的篩選，會讓這一欄空著，只剩「未找到地點」。措辭是地點清單的；意思是一樣的。',
+  // import-booking-file
+  'help.guide.import-booking-file.title': '從確認單裡讀出一筆預訂',
+  'help.guide.import-booking-file.goal': '讓 TREK 從服務商發來的郵件或 PDF 裡把預訂取出來，而不必再輸一遍。',
+  'help.guide.import-booking-file.step.1': '點選工具列裡的「從檔案匯入」。「匯入訂位確認」開啟。',
+  'help.guide.import-booking-file.step.2':
+    '把確認單拖放到那個框上，或點選它來挑選：EML、PDF、PKPass、HTML 和 TXT，最多 5 個檔案，每個 10 MB。你挑的那些檔案的名字會寫在框上。',
+  'help.guide.import-booking-file.step.3': '點選「匯入」。對話框立刻關上，因為讀取是在背景進行的。',
+  'help.guide.import-booking-file.step.4':
+    '右下角的一張卡片報告這次執行，它會跟著你走遍應用，也挺得過一次重新載入。完成後它給出「匯入」，由此開始核對：它找到的每筆預訂都會在普通表單裡開啟，內容已填好、單據已附上，供你逐筆檢查並「新增」。',
+  'help.guide.import-booking-file.result':
+    '你確認過的每筆預訂都是一張自己的卡片，帶著預訂碼、日期和它出自的那份單據；住宿還得到了它的那些夜，而在「費用」開著時，確認單裡出現過的金額成了一筆支出。',
+  'help.guide.import-booking-file.tip.1':
+    '只有伺服器能讀訂位確認時，「從檔案匯入」才在，這需要伺服器端的擷取器或「AI 解析」擴充套件二者之一。後者由管理員在「擴充套件」下切換。',
+  'help.guide.import-booking-file.tip.2':
+    '如果什麼都讀不出來，卡片會這樣說，並給出「Try AI parsing」，它把同樣的檔案直接送給模型。',
+  'help.guide.import-booking-file.tip.3': '一次完成的解析會保留十分鐘。請在這段時間內開始核對。',
+  // edit-booking
+  'help.guide.edit-booking.title': '修改一筆預訂',
+  'help.guide.edit-booking.goal': '改正一個時間、補上晚到的預訂碼，或者把一筆預訂從「待確認」挪到「已確認」。',
+  'help.guide.edit-booking.step.1': '點選卡片頭部的鉛筆。「編輯預訂」帶著這筆預訂知道的一切開啟。',
+  'help.guide.edit-booking.step.2': '改該改的地方，這裡是業者終於發來的那個「預訂碼」。',
+  'help.guide.edit-booking.step.3': '把「狀態」設為「已確認」。',
+  'help.guide.edit-booking.step.4': '點選「更新」。',
+  'help.guide.edit-booking.result':
+    '卡片挪了位置：一筆已確認的預訂立在「已確認」區裡，前面是一個綠點，旅行中的每個人都看得到它挪動。',
+  'help.guide.edit-booking.tip.1':
+    '讀不出來的「預訂碼」，是設定裡「顯示」下的「模糊預訂程式碼」。把滑鼠停上去，或者點一下，它就清楚了。',
+  'help.guide.edit-booking.tip.2': '改了型別，關聯支出的分類也跟著改，除非你曾在費用編輯器裡手動選過一個分類。',
+  'help.guide.edit-booking.tip.3': '住宿也在這裡編輯：它的「從」和「到」那兩天就在同一個表單裡。',
+  // delete-booking
+  'help.guide.delete-booking.title': '刪除一筆預訂',
+  'help.guide.delete-booking.goal': '把一筆泡湯的預訂從這次旅行裡拿掉。',
+  'help.guide.delete-booking.step.1': '點選卡片頭部的垃圾桶。',
+  'help.guide.delete-booking.step.2': '「刪除預訂？」會說出你選中的那一筆，並說明它將被永久刪除。',
+  'help.guide.delete-booking.step.3': '點選「確認」。',
+  'help.guide.delete-booking.result': '卡片沒了，對旅行中的所有人都是。預訂沒有復原，所以這個問題就是最後一道關。',
+  'help.guide.delete-booking.tip.1': '刪除一筆住宿預訂，還會把它在日程計劃裡的那些夜取走，並移除關聯到它的那筆支出。',
+  'help.guide.delete-booking.tip.2': '附上過的單據仍留在這次旅行的「檔案」欄裡；走掉的只是它們與這筆預訂的關聯。',
 };
 
 export default help;

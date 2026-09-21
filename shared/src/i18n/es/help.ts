@@ -2906,6 +2906,379 @@ const help: TranslationStrings = {
     'Un mensaje con un enlace dentro recibe debajo una tarjeta de vista previa, traída por tu propio TREK, así que un enlace a algo a lo que solo llegas tú sigue siendo un enlace simple.',
   'help.guide.trip-chat.tip.4':
     'Chat es un interruptor propio en Complementos, bajo Colaboración: un administrador puede apagarlo y dejar funcionando las Notas, los Enlaces, las Encuestas y Qué sigue.',
+
+  // ── Screen: trip-lists ────────────────────────────────────────────────────────────────
+  'help.ctx.trip-lists.title': 'Listas',
+  'help.ctx.trip-lists.summary':
+    'Dos listas para un viaje: la lista de equipaje, con quién lleva qué y cuánto pesa, y la lista de todo lo que tiene que pasar antes y durante. La pestaña está ahí mientras el addon Listas esté activo.',
+  'help.ctx.trip-lists.bullet.1':
+    'Lista de equipaje y Por hacer, arriba, cambian entre las dos y cuentan lo que hay en cada una; los botones de la derecha pertenecen a la que esté abierta.',
+  'help.ctx.trip-lists.bullet.2':
+    'La lista de equipaje está agrupada en listas, Documentos, Ropa, como las quieras llamar, cada una con un punto de color, un contador de preparados sobre el total y tres puntos con Renombrar, Marcar todo, Desmarcar todo y Eliminar lista. Añadir lista crea una nueva.',
+  'help.ctx.trip-lists.bullet.3':
+    'Una fila es una casilla y un nombre, luego la cantidad, el peso en gramos y un círculo de equipaje mientras Seguimiento de equipaje esté activo, y después el punto de color para Mover a lista, Compartir, Renombrar y Eliminar. El asa de la izquierda la sube o la baja dentro de su lista.',
+  'help.ctx.trip-lists.bullet.4':
+    'Compartido y Mi lista parten la lista de equipaje en dos: el fondo común que ve todo el mundo, y la tuya. Todo, Pendientes y Hecho estrechan la que esté abierta, y la barra de arriba cuenta lo que está preparado.',
+  'help.ctx.trip-lists.bullet.5':
+    'Aplicar plantilla, Importar y Guardar como plantilla llenan o conservan una lista sin teclearla, y el botón rojo de al lado dice cuántos artículos están marcados y los quita.',
+  'help.ctx.trip-lists.bullet.6':
+    'Por hacer tiene su propia barra lateral: la tarjeta de progreso, los filtros Todo, Mis tareas, Vencida y Hecho, Ordenar por Prioridad o Fecha límite, y una fila por lista. Un clic en una tarea la abre en el panel de la derecha, y Nueva tarea abre ese mismo panel vacío.',
+  // packing-categories
+  'help.guide.packing-categories.title': 'Construir la lista de equipaje',
+  'help.guide.packing-categories.goal':
+    'Agrupa en listas lo que te llevas, llénalas de artículos y di quién se ocupa de cada lista.',
+  'help.guide.packing-categories.step.1':
+    'Haz clic en Añadir lista bajo la barra de progreso, escribe el nombre en Nombre de la lista (p. ej. Ropa) y confirma con la marca.',
+  'help.guide.packing-categories.step.2':
+    'La lista nueva empieza con una fila vacía. Haz clic en Añadir artículo, escribe el artículo en Nombre del artículo... y pulsa Intro; el campo sigue abierto para el siguiente.',
+  'help.guide.packing-categories.step.3':
+    'Renombra una fila con el lápiz de su extremo derecho, o haciendo clic en el nombre mismo.',
+  'help.guide.packing-categories.step.4':
+    'El círculo discontinuo de la cabecera de la lista asigna miembros del viaje a la lista. Elige un nombre; la etiqueta que aparece quita de nuevo a esa persona con un clic.',
+  'help.guide.packing-categories.step.5':
+    'Los tres puntos al final de la cabecera guardan el resto: Renombrar, Marcar todo, Desmarcar todo y Eliminar lista, que se lleva la lista y todo lo que hay en ella sin volver a preguntar.',
+  'help.guide.packing-categories.result':
+    'La lista nueva se sitúa en la cuadrícula con sus artículos debajo y su punto de color, y su contador dice lo que ya está preparado.',
+  'help.guide.packing-categories.tip.1':
+    'Una lista no es más que sus artículos. Elimina el último y la fila se convierte en un marcador de posición para que la lista conserve su sitio y su color; elimina también esa fila y la lista desaparece.',
+  'help.guide.packing-categories.tip.2':
+    'Asignar a alguien a una lista le envía una notificación de equipaje. No cambia quién puede ver los artículos, eso es Compartir, en la fila.',
+  'help.guide.packing-categories.tip.3':
+    'Dos listas pueden llevar el mismo nombre. TREK las distingue internamente, así que los nombres quedan tal como los escribiste.',
+  // check-off-packing
+  'help.guide.check-off-packing.title': 'Ir marcando mientras preparas',
+  'help.guide.check-off-packing.goal':
+    'Marca lo que ya está en la maleta, mira la barra y quita los artículos preparados.',
+  'help.guide.check-off-packing.step.1':
+    'Haz clic en la casilla de la izquierda de una fila. El nombre se tacha y la barra se mueve.',
+  'help.guide.check-off-packing.step.2':
+    'La barra de arriba cuenta lo preparado frente a todo lo que hay en la lista, como número y como porcentaje.',
+  'help.guide.check-off-packing.step.3':
+    'Una lista entera de una vez: los tres puntos de su cabecera guardan Marcar todo y Desmarcar todo.',
+  'help.guide.check-off-packing.step.4':
+    'Todo, Pendientes y Hecho estrechan la cuadrícula. Pendientes deja solo lo que aún falta, así que una lista del todo preparada se cae de ahí.',
+  'help.guide.check-off-packing.step.5':
+    'Eliminar 3 marcados, en la barra de arriba, borra de golpe todos los artículos marcados, tras una confirmación del navegador.',
+  'help.guide.check-off-packing.result':
+    'Solo aparece lo que sigue pendiente, y la barra de arriba dice por dónde va el equipaje.',
+  'help.guide.check-off-packing.tip.1': 'Un artículo marcado no se puede renombrar. Desmárcalo primero.',
+  'help.guide.check-off-packing.tip.2':
+    'Marcar todo y Desmarcar todo actúan sobre una lista cada vez, desde los tres puntos de esa lista.',
+  'help.guide.check-off-packing.tip.3':
+    'Cuando todos los artículos están marcados, ¡Todo preparado! sustituye al contador y la barra se pone verde.',
+  // apply-packing-template
+  'help.guide.apply-packing-template.title': 'Aplicar una plantilla de equipaje',
+  'help.guide.apply-packing-template.goal':
+    'Trae una lista ya hecha al viaje, y guarda la lista de este viaje para el siguiente.',
+  'help.guide.apply-packing-template.step.1': 'Haz clic en Aplicar plantilla en la barra de encima de la lista.',
+  'help.guide.apply-packing-template.step.2':
+    'Elige una plantilla. Cada línea la nombra y dice cuántos artículos tiene.',
+  'help.guide.apply-packing-template.step.3':
+    'Los artículos caen en la vista en la que estás: Compartido los pone en el fondo común que ve todo el mundo, Mi lista los hace tuyos.',
+  'help.guide.apply-packing-template.step.4':
+    'Guardar la lista de este viaje para el próximo: Guardar como plantilla, un nombre, y luego la marca.',
+  'help.guide.apply-packing-template.result':
+    'Las listas y los artículos de la plantilla están en el viaje, junto a lo que ya había.',
+  'help.guide.apply-packing-template.tip.1':
+    'Una plantilla solo lleva nombres y listas. Las cantidades, los pesos, el equipaje y lo que ya está marcado se quedan atrás.',
+  'help.guide.apply-packing-template.tip.2':
+    'Aplicar plantilla solo está ahí una vez que existe una plantilla. Sin ninguna, el botón no aparece.',
+  'help.guide.apply-packing-template.tip.3':
+    'Guardar como plantilla aparece solo para un administrador de la instancia, y solo mientras la lista tiene artículos. Guarda el fondo común más tus propios artículos, nunca los privados de otro miembro.',
+  // import-packing-list
+  'help.guide.import-packing-list.title': 'Pegar una lista de equipaje entera',
+  'help.guide.import-packing-list.goal':
+    'Convierte de una vez una lista que ya tienes en otro sitio en artículos de equipaje.',
+  'help.guide.import-packing-list.step.1': 'Haz clic en Importar en la barra de encima de la lista.',
+  'help.guide.import-packing-list.step.2':
+    'Un artículo por línea: Categoría, Nombre, Peso en g (opcional), Equipaje (opcional), checked/unchecked (opcional). El ejemplo gris del recuadro muestra las cuatro formas.',
+  'help.guide.import-packing-list.step.3':
+    'O carga las líneas desde un archivo con Cargar CSV/TXT. Acepta un .csv o un .txt y sustituye lo que haya en el recuadro.',
+  'help.guide.import-packing-list.step.4': 'Haz clic en Importar. El botón cuenta las líneas que ha entendido.',
+  'help.guide.import-packing-list.result':
+    'Cada línea es una fila, en la lista que nombra su primer campo, y nada de lo que ya había se toca.',
+  'help.guide.import-packing-list.tip.1':
+    'Las comas, los puntos y comas y los tabuladores separan campos, y las comillas mantienen un campo unido, de modo que «Camisa, azul» sigue siendo un solo nombre. Una línea con un único valor es solo un nombre, y una línea sin lista propia cae en Otros.',
+  'help.guide.import-packing-list.tip.2':
+    'Un equipaje nombrado en el cuarto campo se crea si el viaje aún no lo tiene. Este es el único sitio que carga pesos y equipaje en bloque; una plantilla trae solo nombres y listas.',
+  // share-packing-item
+  'help.guide.share-packing-item.title': 'Decidir quién ve un artículo y quién lo lleva',
+  'help.guide.share-packing-item.goal':
+    'Mueve un artículo entre el fondo común del grupo, tu propia lista y las personas para las que lo llevas.',
+  'help.guide.share-packing-item.step.1':
+    'Compartido, encima de las listas, es el fondo común que ve todo el mundo, Mi lista es la tuya, y cada una cuenta lo que contiene. Haz clic en Mi lista para ver la tuya.',
+  'help.guide.share-packing-item.step.2':
+    'De vuelta en Compartido, abre el Compartir de una fila, el icono de compartir junto al lápiz.',
+  'help.guide.share-packing-item.step.3':
+    'Tres niveles: Compartido, en el fondo común del grupo y visible para todos; Personal, que solo ves tú; y Compartir con…, donde eliges a las personas que cubre el artículo.',
+  'help.guide.share-packing-item.step.4':
+    'Un artículo Personal solo está en Mi lista. Cambia de vista para encontrarlo.',
+  'help.guide.share-packing-item.step.5':
+    'Abre Compartir otra vez y marca un nombre bajo Compartir con…. El artículo aparece también en la lista de esa persona, y la fila dice compartido con 1.',
+  'help.guide.share-packing-item.result': 'El artículo queda en el nivel que elegiste, y la fila dice quién lo lleva.',
+  'help.guide.share-packing-item.tip.1':
+    'Solo quien lleva un artículo cambia su forma de compartirlo. Aquel con quien lo compartiste lo ve en su propia Mi lista, marcado con tu nombre, y puede marcarlo.',
+  'help.guide.share-packing-item.tip.2':
+    'En un artículo que lleva otra persona obtienes dos botones distintos: Yo también puedo llevarlo, que te añade a su lado, y Copiar a mi lista, que hace una copia privada tuya.',
+  'help.guide.share-packing-item.tip.3':
+    'Los artículos nuevos heredan la vista en la que los añades. Añadidos en Mi lista son Personal, añadidos en Compartido van al fondo común.',
+  // packing-bags
+  'help.guide.packing-bags.title': 'Pesar el equipaje',
+  'help.guide.packing-bags.goal':
+    'Pon un peso a cada artículo, reparte los artículos en bultos y mantén cada uno por debajo del límite de la aerolínea.',
+  'help.guide.packing-bags.step.1': 'Escribe el peso de un artículo, en gramos, en el campo anterior al círculo.',
+  'help.guide.packing-bags.step.2': 'El círculo del final de la fila es su bulto. Haz clic en él.',
+  'help.guide.packing-bags.step.3':
+    'Todavía sin bulto: Añadir equipaje, un nombre, Intro. El bulto se crea y el artículo entra directamente en él.',
+  'help.guide.packing-bags.step.4':
+    'El panel Equipaje aparece a la derecha en cuanto existe un bulto: nombre, peso, una barra de llenado, quién lo lleva y cuántos artículos tiene, y luego Sin asignar y Peso total.',
+  'help.guide.packing-bags.step.5':
+    'Haz clic en Definir límite y escribe el límite en kilogramos, tal como lo indican las aerolíneas.',
+  'help.guide.packing-bags.step.6': 'El signo más discontinuo bajo el nombre de un bulto dice quién lo lleva.',
+  'help.guide.packing-bags.result':
+    'El panel Equipaje de la derecha muestra el peso de cada bulto frente a su límite, lo que no está en ninguno, y el total.',
+  'help.guide.packing-bags.tip.1':
+    'El campo de peso, el círculo de equipaje y el panel Equipaje solo existen mientras un administrador tenga Seguimiento de equipaje activado bajo el addon Listas.',
+  'help.guide.packing-bags.tip.2':
+    'El peso de un bulto se suma en el servidor sobre los artículos de todos los miembros, incluidos los que tú no puedes ver, así que el número es de verdad lo que pesa el bulto.',
+  'help.guide.packing-bags.tip.3':
+    'Un bulto sin límite se dibuja frente al bulto más pesado, para que las barras sigan siendo comparables. Dale un límite y la barra se mide frente a él.',
+  // create-todo
+  'help.guide.create-todo.title': 'Añadir una tarea',
+  'help.guide.create-todo.goal':
+    'Apunta algo que tiene que pasar, con una lista, una prioridad, una fecha y un nombre al lado.',
+  'help.guide.create-todo.step.1': 'Haz clic en Nueva tarea, arriba a la derecha.',
+  'help.guide.create-todo.step.2':
+    'Ponle nombre en Nombre de la tarea, y escribe lo que valga la pena recordar en Descripción.',
+  'help.guide.create-todo.step.3':
+    'Lista agrupa la tarea. Elige una, o usa el signo más de al lado para escribir un nombre nuevo.',
+  'help.guide.create-todo.step.4': 'Prioridad son cuatro botones: Ninguna, P1, P2 y P3, del rojo al azul.',
+  'help.guide.create-todo.step.5': 'Fecha límite abre un calendario, y Asignado a pone un nombre en la tarea.',
+  'help.guide.create-todo.step.6': 'Haz clic en Crear tarea.',
+  'help.guide.create-todo.result':
+    'La tarea está en la lista con sus distintivos, la prioridad, la fecha límite, la lista y la persona a la que está asignada, y se abre en el panel de la derecha.',
+  'help.guide.create-todo.tip.1':
+    'Solo el nombre es obligatorio. Todo lo demás se puede rellenar después desde el panel de la derecha.',
+  'help.guide.create-todo.tip.2':
+    'Con una lista seleccionada en la barra lateral, una tarea nueva empieza en esa lista.',
+  'help.guide.create-todo.tip.3': 'Intro en el campo del nombre crea la tarea al momento, sin tocar los demás campos.',
+  // todo-filters
+  'help.guide.todo-filters.title': 'Encontrar y cambiar una tarea',
+  'help.guide.todo-filters.goal':
+    'Recorta la lista de tareas a lo que importa ahora, y luego edita la tarea en la que has caído.',
+  'help.guide.todo-filters.step.1':
+    'Tareas en la barra lateral: Todo es todo lo que sigue abierto, Mis tareas lo que recae en ti, Vencida lo que tiene una fecha pasada, Hecho lo que está terminado. Cada uno lleva su cuenta; haz clic en Vencida.',
+  'help.guide.todo-filters.step.2':
+    'Bajo Listas hay una fila por lista. Elegir una muestra esa lista, tareas terminadas incluidas.',
+  'help.guide.todo-filters.step.3':
+    'Ordenar por reordena lo que hay en pantalla: Prioridad pone P1 primero, Fecha límite pone el plazo más cercano primero. Solo uno de los dos a la vez.',
+  'help.guide.todo-filters.step.4': 'Haz clic en una tarea para abrirla en el panel de la derecha.',
+  'help.guide.todo-filters.step.5':
+    'Cambia lo que necesites, Descripción, Prioridad, Lista, Fecha límite o Asignado a, y luego Guardar cambios. Eliminar se lleva la tarea al instante.',
+  'help.guide.todo-filters.result':
+    'La lista muestra solo las tareas que has pedido, y el panel de la derecha edita la que elegiste.',
+  'help.guide.todo-filters.tip.1':
+    'Una fila de lista cuenta solo lo que sigue abierto, pero seleccionarla muestra también las tareas terminadas. Todo, Mis tareas y Vencida ocultan lo hecho; Hecho no muestra nada más.',
+  'help.guide.todo-filters.tip.2':
+    'Ordenar por Prioridad y Ordenar por Fecha límite se excluyen, y mientras uno de los dos esté activo las filas ya no se pueden arrastrar a un orden propio.',
+
+  // ── Screen: trip-bookings ─────────────────────────────────────────────────────────────
+  'help.ctx.trip-bookings.title': 'Reservas',
+  'help.ctx.trip-bookings.summary':
+    'La pestaña que guarda todo lo reservado para el viaje que no es una forma de desplazarse: los alojamientos, las mesas, las entradas, las excursiones, los aparcamientos. Cada reserva es una tarjeta en Pendiente o en Confirmada, con su código, su documento, sus viajeros y su coste.',
+  'help.ctx.trip-bookings.bullet.1':
+    'Reserva manual, arriba a la derecha, abre el formulario. Las seis clases que crea son Alojamiento, Restaurante, Evento, Excursión, Aparcamiento y Otro; los vuelos, los trenes y lo demás viven en la pestaña Transportes y aquí no aparecen nunca.',
+  'help.ctx.trip-bookings.bullet.2':
+    'Importar desde archivo entrega una confirmación al análisis: EML, PDF, PKPass, HTML o TXT, cinco archivos de 10 MB como mucho. El botón solo está ahí si el servidor sabe leerlos.',
+  'help.ctx.trip-bookings.bullet.3':
+    'Los chips junto al título filtran por clase, cada uno con su propia cuenta, y Todo lo trae todo de vuelta. En cuanto una reserva nombra personas, la fila de avatares junto a los chips reduce la pestaña a una de ellas.',
+  'help.ctx.trip-bookings.bullet.4':
+    'Las tarjetas están en dos secciones, Pendiente y Confirmada, cada una con su cuenta. Un clic en el título de una sección la pliega, y si está abierta se recuerda para este viaje.',
+  'help.ctx.trip-bookings.bullet.5':
+    'Una tarjeta lleva el punto de estado, la clase, el título, las fechas y las horas, el Código de reserva, la Ubicación / dirección, aquello a lo que la reserva está vinculada, su Enlace, sus Notas, sus Archivos y sus Viajeros.',
+  'help.ctx.trip-bookings.bullet.6':
+    'El lápiz de una tarjeta vuelve a abrir el mismo formulario; la papelera pregunta una vez y la reserva desaparece. En un alojamiento, sus noches en el Plan por días y su gasto vinculado se van con ella.',
+  // create-booking
+  'help.guide.create-booking.title': 'Crear una reserva',
+  'help.guide.create-booking.goal':
+    'Pon a mano en el viaje un restaurante, un evento, una excursión, una plaza de aparcamiento o cualquier otra cosa.',
+  'help.guide.create-booking.step.1':
+    'Haz clic en Reserva manual, arriba a la derecha de la pestaña. Se abre Nueva reserva.',
+  'help.guide.create-booking.step.2':
+    'Elige el Tipo de reserva. Alojamiento, Restaurante, Evento, Excursión, Aparcamiento y Otro son las seis que hace esta pestaña, y el formulario cambia con la elección: solo Alojamiento cambia sus fechas por un rango de días.',
+  'help.guide.create-booking.step.3':
+    'Escribe el Título. Es el único campo en el que el formulario insiste, y Añadir sigue muerto mientras esté vacío.',
+  'help.guide.create-booking.step.4':
+    'Pon Fecha y Hora de inicio, y Fecha fin y Hora de fin si la reserva tiene final. Los calendarios solo ofrecen días dentro del viaje, y un final que no es posterior al inicio lo dice en rojo y bloquea Añadir.',
+  'help.guide.create-booking.step.5':
+    'Mete el Código de reserva de la confirmación y pon el Estado. Pendiente o Confirmada decide en cuál de las dos secciones aterriza la tarjeta.',
+  'help.guide.create-booking.step.6': 'Haz clic en Añadir.',
+  'help.guide.create-booking.result':
+    'La reserva es una tarjeta en su sección, con su chip de clase, sus fechas y su código, y todos los demás del viaje la ven aparecer.',
+  'help.guide.create-booking.tip.1':
+    'Ubicación / dirección ofrece direcciones reales mientras escribes; elegir una sustituye lo que habías puesto, y una dirección escrita por ti se queda tal cual.',
+  'help.guide.create-booking.tip.2':
+    'Enlace recoge la página de la reserva en el proveedor. La tarjeta lo convierte en un enlace que se abre en una pestaña nueva.',
+  'help.guide.create-booking.tip.3':
+    'Las Notas son Markdown, así que una lista o una línea en negrita se muestran como tales en la tarjeta.',
+  // booking-hotel
+  'help.guide.booking-hotel.title': 'Reservar un alojamiento',
+  'help.guide.booking-hotel.goal':
+    'Mete un alojamiento para que cuente a la vez como reserva y como noches en el Plan por días.',
+  'help.guide.booking-hotel.step.1':
+    'Haz clic en Reserva manual y elige Alojamiento. Los campos de fecha se van y un bloque de campos de hotel ocupa su lugar.',
+  'help.guide.booking-hotel.step.2':
+    'Elige el hotel bajo Alojamiento. La lista son los lugares propios del viaje, y elegir uno escribe su nombre en Título y su dirección en Ubicación / dirección.',
+  'help.guide.booking-hotel.step.3':
+    'Pon Desde y Hasta: la primera noche y la mañana en que te vas. Ambos ofrecen los días del viaje con sus fechas, y los dos se mantienen en orden el uno al otro.',
+  'help.guide.booking-hotel.step.4':
+    'Rellena Registro de entrada, Check-in hasta y Registro de salida, y el Código de reserva de la confirmación.',
+  'help.guide.booking-hotel.step.5': 'Haz clic en Añadir.',
+  'help.guide.booking-hotel.result':
+    'La tarjeta lleva un rango de días en vez de una fecha, con las horas de entrada y de salida y la dirección, y la misma estancia está ahora en esos días del plan.',
+  'help.guide.booking-hotel.tip.1':
+    'Alojamiento es el único tipo sin Fecha ni Hora de inicio. Sus fechas son Desde y Hasta, y son días del viaje en lugar de un calendario.',
+  'help.guide.booking-hotel.tip.2':
+    'Deja Alojamiento vacío y escribe la dirección en su lugar: el lugar se busca, se crea y se marca en el mapa por ti.',
+  'help.guide.booking-hotel.tip.3': 'Eliminar la reserva se lleva las noches del Plan por días con ella.',
+  // link-booking
+  'help.guide.link-booking.title': 'Atar una reserva al plan',
+  'help.guide.link-booking.goal':
+    'Cuelga una reserva de la parada y del lugar a los que pertenece, para que aparezca donde la vas a querer.',
+  'help.guide.link-booking.step.1': 'Haz clic en el lápiz de la tarjeta que quieres vincular. Se abre Editar reserva.',
+  'help.guide.link-booking.step.2':
+    'Abre Vincular a una asignación del día. La lista es tu plan: un título por día y luego las paradas de ese día, numeradas y con sus horas. Elige aquella a la que pertenece la reserva.',
+  'help.guide.link-booking.step.3':
+    'Lugar / Actividad vincula el lugar en sí. Elígelo ahí, y Título y Ubicación / dirección se rellenan allí donde los dejaste vacíos.',
+  'help.guide.link-booking.step.4': 'Haz clic en Actualizar.',
+  'help.guide.link-booking.result':
+    'La tarjeta nombra el día y la parada bajo Vincular a una asignación del día, y la reserva viaja junto a esa parada en el Plan por días.',
+  'help.guide.link-booking.tip.1':
+    'Sin vínculo (independiente), arriba en la lista, quita otra vez el vínculo. Alojamiento no tiene selector de parada alguno: se vincula a través de sus noches.',
+  'help.guide.link-booking.tip.2':
+    'Elegir una parada en un día con fecha rellena una Fecha vacía por ti. Una fecha que ya habías puesto se deja en paz.',
+  // booking-travelers
+  'help.guide.booking-travelers.title': 'Decir para quién es una reserva',
+  'help.guide.booking-travelers.goal': 'Marca los viajeros que cubre una reserva y luego ve solo las suyas.',
+  'help.guide.booking-travelers.step.1':
+    'Abre la reserva con el lápiz y baja hasta Viajeros. Ahí está cada miembro del viaje, los invitados con nombre incluidos.',
+  'help.guide.booking-travelers.step.2':
+    'Haz clic en las personas para las que es esta reserva. Una elegida recibe una marca; vuelve a hacer clic para quitarla.',
+  'help.guide.booking-travelers.step.3': 'Haz clic en Actualizar.',
+  'help.guide.booking-travelers.step.4':
+    'Arriba en la barra de herramientas, junto a los chips de clase, haz clic en el avatar de un viajero para ver solo sus reservas.',
+  'help.guide.booking-travelers.result':
+    'La tarjeta lista las personas para las que es, y la fila de avatares reduce la pestaña a una de ellas.',
+  'help.guide.booking-travelers.tip.1':
+    'En la tarjeta los viajeros solo se muestran, nunca se cambian. Se ponen aquí, en el formulario.',
+  'help.guide.booking-travelers.tip.2':
+    'La fila de avatares aparece en cuanto el viaje tiene más de un miembro y al menos una reserva nombra a alguien. Lo que elijas dura esta sesión del navegador.',
+  // booking-files
+  'help.guide.booking-files.title': 'Guardar el justificante con la reserva',
+  'help.guide.booking-files.goal': 'Adjunta la confirmación, el billete o el pase a la reserva a la que pertenecen.',
+  'help.guide.booking-files.step.1':
+    'Abre la reserva con el lápiz, baja hasta Archivos y haz clic en Adjuntar archivo. En una reserva que ya existe el documento sube al momento y TREK dice Archivo subido.',
+  'help.guide.booking-files.step.2': 'El documento aparece con su nombre, con un botón para abrirlo y una X al lado.',
+  'help.guide.booking-files.step.3':
+    'Vincular archivo existente ofrece los documentos del viaje que aún no están en esta reserva. Elige uno y se adjunta sin volver a subir nada.',
+  'help.guide.booking-files.step.4': 'Haz clic en Actualizar.',
+  'help.guide.booking-files.result':
+    'La tarjeta lista los documentos bajo Archivos, y un clic en uno de ellos lo abre.',
+  'help.guide.booking-files.tip.1':
+    'En una reserva que todavía estás creando el documento espera y sube en el momento en que haces clic en Añadir.',
+  'help.guide.booking-files.tip.2':
+    'La X junto a un documento quita el vínculo, no el documento. Se queda en la pestaña Archivos del viaje.',
+  'help.guide.booking-files.tip.3':
+    'Qué clases de archivo se pueden adjuntar es la lista Tipos de archivo permitidos del administrador; documentos, texto e imágenes están permitidos de serie.',
+  // booking-cost
+  'help.guide.booking-cost.title': 'Convertir el precio de una reserva en un coste',
+  'help.guide.booking-cost.goal':
+    'Lleva lo que cuesta una reserva a los Costes, repartido entre las personas que lo pagan.',
+  'help.guide.booking-cost.step.1':
+    'Abre la reserva y baja al final del formulario. Bajo Costs está Create expense, con la nota Saves the booking, then opens the Costs editor.',
+  'help.guide.booking-cost.step.2':
+    'Haz clic en Create expense. La reserva se guarda y el editor Costs se abre encima.',
+  'help.guide.booking-cost.step.3':
+    '¿Para qué fue? ya es el título de la reserva. Mete el Importe total y comprueba la Moneda y el Día.',
+  'help.guide.booking-cost.step.4':
+    'Categoría es la que implica el tipo de reserva. Pon ¿Quién pagó? y cómo se reparte el importe.',
+  'help.guide.booking-cost.step.5': 'Haz clic en Añadir gasto.',
+  'help.guide.booking-cost.result':
+    'El formulario de la reserva pone ahora Linked expense con el importe, y el mismo gasto está en la pestaña Costes, atado a esta reserva.',
+  'help.guide.booking-cost.tip.1':
+    'La categoría sigue al tipo: Restaurante pasa a Comida y bebida, Alojamiento pasa a Alojamiento, Aparcamiento pasa a Aparcamiento, y Evento y Excursión aterrizan ambos en Otros.',
+  'help.guide.booking-cost.tip.2': 'La papelera de Linked expense quita el gasto, no la reserva.',
+  'help.guide.booking-cost.tip.3':
+    'Costs solo está en el formulario mientras el complemento Costes está activado, algo que el administrador conmuta en Complementos.',
+  // filter-bookings
+  'help.guide.filter-bookings.title': 'Encontrar una reserva',
+  'help.guide.filter-bookings.goal': 'Reduce una pestaña larga a la clase, la persona o el estado que buscas.',
+  'help.guide.filter-bookings.step.1':
+    'Los chips junto al título son las clases que este viaje usa de verdad, cada uno con el número que contiene. Todo es la pestaña entera.',
+  'help.guide.filter-bookings.step.2':
+    'Haz clic en un chip para quedarte solo con esa clase. Haz clic en un segundo y se quedan ambas.',
+  'help.guide.filter-bookings.step.3': 'Todo lo devuelve todo.',
+  'help.guide.filter-bookings.step.4':
+    'Los avatares junto a los chips filtran por viajero, una persona o varias a la vez.',
+  'help.guide.filter-bookings.step.5':
+    'Pendiente y Confirmada son las dos secciones, cada una con su cuenta. Haz clic en un título para plegar una; sigue plegada cuando vuelves.',
+  'help.guide.filter-bookings.result':
+    'La pestaña muestra solo lo que elegiste, y sigue elegido cuando vuelves a ella en esta sesión del navegador.',
+  'help.guide.filter-bookings.tip.1':
+    'Los chips solo ofrecen las clases que el viaje tiene, así que un viaje sin una sola excursión no tiene chip Excursión.',
+  'help.guide.filter-bookings.tip.2':
+    'Un filtro que no encaja con nada deja la pestaña vacía con No se encontraron lugares. La redacción es la de la lista de lugares; el sentido es el mismo.',
+  // import-booking-file
+  'help.guide.import-booking-file.title': 'Leer una reserva de su confirmación',
+  'help.guide.import-booking-file.goal':
+    'Deja que TREK saque la reserva del correo o del PDF que mandó el proveedor, en vez de escribirla otra vez.',
+  'help.guide.import-booking-file.step.1':
+    'Haz clic en Importar desde archivo en la barra de herramientas. Se abre Importar confirmaciones de reserva.',
+  'help.guide.import-booking-file.step.2':
+    'Suelta las confirmaciones en la caja, o haz clic en ella y elígelas: EML, PDF, PKPass, HTML y TXT, hasta cinco archivos de 10 MB cada uno. Las que elegiste aparecen con su nombre en la caja.',
+  'help.guide.import-booking-file.step.3':
+    'Haz clic en Importar. El diálogo se cierra al momento, porque la lectura ocurre en segundo plano.',
+  'help.guide.import-booking-file.step.4':
+    'Una tarjeta abajo a la derecha informa de la ejecución, y te sigue por la aplicación y a través de una recarga. Cuando termina ofrece Importar, que inicia la revisión: cada reserva que encontró se abre en el formulario de siempre, rellenada y con su documento adjunto, para que la compruebes y hagas Añadir una tras otra.',
+  'help.guide.import-booking-file.result':
+    'Cada reserva que confirmaste es una tarjeta propia con su código, sus fechas y el documento del que vino; un alojamiento además recibió sus noches, y con Costes activado, un precio que estaba en la confirmación se convirtió en un gasto.',
+  'help.guide.import-booking-file.tip.1':
+    'Importar desde archivo solo está ahí si el servidor sabe leer confirmaciones, y eso pide o el extractor integrado o el complemento Análisis con IA. Ese lo conmuta el administrador en Complementos.',
+  'help.guide.import-booking-file.tip.2':
+    'Si no se pudo leer nada, la tarjeta lo dice y ofrece Try AI parsing, que manda los mismos archivos directos al modelo.',
+  'help.guide.import-booking-file.tip.3':
+    'Un análisis terminado se guarda diez minutos. Empieza la revisión dentro de ese margen.',
+  // edit-booking
+  'help.guide.edit-booking.title': 'Cambiar una reserva',
+  'help.guide.edit-booking.goal':
+    'Corrige una hora, añade el código que llegó más tarde, o pasa una reserva de Pendiente a Confirmada.',
+  'help.guide.edit-booking.step.1':
+    'Haz clic en el lápiz de la cabecera de la tarjeta. Editar reserva se abre con todo lo que la reserva sabe.',
+  'help.guide.edit-booking.step.2':
+    'Cambia lo que haya que cambiar, aquí el Código de reserva que el operador mandó por fin.',
+  'help.guide.edit-booking.step.3': 'Pon Estado en Confirmada.',
+  'help.guide.edit-booking.step.4': 'Haz clic en Actualizar.',
+  'help.guide.edit-booking.result':
+    'La tarjeta se muda: una reserva confirmada está en la sección Confirmada detrás de un punto verde, y todos en el viaje la ven mudarse.',
+  'help.guide.edit-booking.tip.1':
+    'Un Código de reserva que no puedes leer es Difuminar códigos de reserva en Ajustes, bajo Pantalla. Pasa el ratón por encima, o haz clic, y queda legible.',
+  'help.guide.edit-booking.tip.2':
+    'Cambia el tipo y la categoría de un gasto vinculado le sigue, salvo que hubieras elegido una categoría a mano en el editor Costs.',
+  'help.guide.edit-booking.tip.3':
+    'Un alojamiento se edita aquí también: sus días Desde y Hasta están en el mismo formulario.',
+  // delete-booking
+  'help.guide.delete-booking.title': 'Eliminar una reserva',
+  'help.guide.delete-booking.goal': 'Saca del viaje una reserva que se cayó.',
+  'help.guide.delete-booking.step.1': 'Haz clic en la papelera de la cabecera de la tarjeta.',
+  'help.guide.delete-booking.step.2':
+    '¿Eliminar reserva? nombra la que elegiste y dice que se eliminará permanentemente.',
+  'help.guide.delete-booking.step.3': 'Haz clic en Confirmar.',
+  'help.guide.delete-booking.result':
+    'La tarjeta ya no está, para todos en el viaje. Una reserva no tiene deshacer, así que la pregunta es la última parada.',
+  'help.guide.delete-booking.tip.1':
+    'Eliminar una reserva de alojamiento saca también sus noches del Plan por días y quita el gasto que estaba vinculado a ella.',
+  'help.guide.delete-booking.tip.2':
+    'Los documentos que estaban adjuntos se quedan en la pestaña Archivos del viaje; solo se va su vínculo con la reserva.',
 };
 
 export default help;

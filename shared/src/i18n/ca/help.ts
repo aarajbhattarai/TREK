@@ -2896,6 +2896,376 @@ const help: TranslationStrings = {
     'Un missatge amb un enllaç a dins rep a sota una targeta de vista prèvia, agafada pel teu propi TREK, per això un enllaç a una cosa a la qual només tu pots arribar es queda en un enllaç simple.',
   'help.guide.trip-chat.tip.4':
     'Xat és un interruptor propi a Complements, sota Col·laboració: un administrador el pot apagar i deixar funcionant les Notes, els Enllaços, les Enquestes i Què ve després.',
+
+  // ── Screen: trip-lists ────────────────────────────────────────────────────────────────
+  'help.ctx.trip-lists.title': 'Llistes',
+  'help.ctx.trip-lists.summary':
+    'Dues llistes per a un viatge: la llista d’equipatge, amb qui porta què i quant pesa, i la llista de tot el que ha de passar abans i durant. La pestanya hi és mentre l’addon Llistes està actiu.',
+  'help.ctx.trip-lists.bullet.1':
+    'Llista d’equipatge i Pendents, a dalt, canvien entre les dues i compten què hi ha a cadascuna; els botons de la dreta pertanyen a la que està oberta.',
+  'help.ctx.trip-lists.bullet.2':
+    'La llista d’equipatge està agrupada en llistes, Documents, Roba, com les vulguis anomenar, cadascuna amb un punt de color, un comptador de preparats sobre el total i tres punts amb Canvia el nom, Marca-ho tot, Desmarca-ho tot i Elimina la categoria. Afegeix una categoria en crea una de nova.',
+  'help.ctx.trip-lists.bullet.3':
+    'Una fila és una casella i un nom, després la quantitat, el pes en grams i un cercle d’equipatge mentre Seguiment d’equipatge està actiu, i després el punt de color per a Canvia la categoria, Compartir, Canviar nom i Eliminar. La nansa de l’esquerra la puja o la baixa dins de la seva llista.',
+  'help.ctx.trip-lists.bullet.4':
+    'Compartit i La meva llista parteixen la llista d’equipatge en dues: el fons comú que tothom veu, i la teva. Tot, Pendents i Fet estrenyen la que està oberta, i la barra de sobre compta què hi ha preparat.',
+  'help.ctx.trip-lists.bullet.5':
+    'Aplica una plantilla, Importa i Desa com a plantilla omplen o conserven una llista sense teclejar-la, i el botó vermell del costat diu quants articles estan marcats i els retira.',
+  'help.ctx.trip-lists.bullet.6':
+    'Pendents té una barra lateral pròpia: la targeta de progrés, els filtres Tot, Les meves tasques, Vençuda i Fet, Ordena per Prioritat o Data límit, i una fila per categoria. Un clic en una tasca l’obre al panell de la dreta, i Tasca nova obre aquest mateix panell buit.',
+  // packing-categories
+  'help.guide.packing-categories.title': 'Construir la llista d’equipatge',
+  'help.guide.packing-categories.goal':
+    'Agrupa en llistes el que t’emportes, omple-les d’articles i digues qui s’ocupa de cada llista.',
+  'help.guide.packing-categories.step.1':
+    'Fes clic a Afegeix una categoria sota la barra de progrés, escriu el nom a Nom de la categoria (p. ex. Roba) i confirma amb la marca.',
+  'help.guide.packing-categories.step.2':
+    'La llista nova comença amb una fila buida. Fes clic a Afegeix un article, escriu l’article a Nom de l’article... i prem Retorn; el camp es queda obert per al següent.',
+  'help.guide.packing-categories.step.3':
+    'Canvia el nom d’una fila amb el llapis del seu extrem dret, o fent clic al nom mateix.',
+  'help.guide.packing-categories.step.4':
+    'El cercle discontinu de la capçalera de la llista assigna membres del viatge a la llista. Tria un nom; l’etiqueta que apareix en treu aquella persona amb un clic.',
+  'help.guide.packing-categories.step.5':
+    'Els tres punts al final de la capçalera guarden la resta: Canvia el nom, Marca-ho tot, Desmarca-ho tot i Elimina la categoria, que s’emporta la llista i tot el que hi ha dins sense tornar a preguntar.',
+  'help.guide.packing-categories.result':
+    'La llista nova se situa a la graella amb els seus articles a sota i el seu punt de color, i el seu comptador compta el que ja està preparat.',
+  'help.guide.packing-categories.tip.1':
+    'Una llista només són els seus articles. Elimina l’últim i la fila es converteix en un marcador de posició perquè la llista conservi el seu lloc i el seu color; elimina també aquella fila i la llista desapareix.',
+  'help.guide.packing-categories.tip.2':
+    'Assignar algú a una llista li envia una notificació d’equipatge. No canvia qui pot veure els articles, això és Compartir, a la fila.',
+  'help.guide.packing-categories.tip.3':
+    'Dues llistes poden dur el mateix nom. TREK les distingeix internament, de manera que els noms queden tal com els has escrit.',
+  // check-off-packing
+  'help.guide.check-off-packing.title': 'Marcar mentre prepares l’equipatge',
+  'help.guide.check-off-packing.goal': 'Marca el que ja és a la bossa, mira la barra i retira els articles preparats.',
+  'help.guide.check-off-packing.step.1':
+    'Fes clic a la casella de l’esquerra d’una fila. El nom queda ratllat i la barra es mou.',
+  'help.guide.check-off-packing.step.2':
+    'La barra de sobre compta el que està preparat contra tot el que hi ha a la llista, com a nombre i com a percentatge.',
+  'help.guide.check-off-packing.step.3':
+    'Una llista sencera de cop: els tres punts de la seva capçalera guarden Marca-ho tot i Desmarca-ho tot.',
+  'help.guide.check-off-packing.step.4':
+    'Tot, Pendents i Fet estrenyen la graella. Pendents deixa només el que encara falta, de manera que una llista del tot preparada en surt.',
+  'help.guide.check-off-packing.step.5':
+    'Elimina 3 marcats, a la barra de sobre, esborra tots els articles marcats de cop, després d’una confirmació del navegador.',
+  'help.guide.check-off-packing.result':
+    'Només surt el que encara és obert, i la barra de sobre diu per on va la preparació.',
+  'help.guide.check-off-packing.tip.1': 'Un article marcat no es pot reanomenar. Desmarca’l primer.',
+  'help.guide.check-off-packing.tip.2':
+    'Marca-ho tot i Desmarca-ho tot actuen sobre una llista cada vegada, des dels tres punts d’aquella llista.',
+  'help.guide.check-off-packing.tip.3':
+    'Quan tots els articles estan marcats, Tot preparat! substitueix el comptador i la barra es posa verda.',
+  // apply-packing-template
+  'help.guide.apply-packing-template.title': 'Aplicar una plantilla d’equipatge',
+  'help.guide.apply-packing-template.goal':
+    'Porta una llista ja feta al viatge, i conserva la llista d’aquest viatge per al següent.',
+  'help.guide.apply-packing-template.step.1': 'Fes clic a Aplica una plantilla a la barra de sobre la llista.',
+  'help.guide.apply-packing-template.step.2': 'Tria una plantilla. Cada línia la nomena i diu quants articles conté.',
+  'help.guide.apply-packing-template.step.3':
+    'Els articles cauen a la vista on ets: Compartit els posa al fons comú que tothom veu, La meva llista els fa teus.',
+  'help.guide.apply-packing-template.step.4':
+    'Conservar la llista d’aquest viatge per al següent: Desa com a plantilla, un nom, i després la marca.',
+  'help.guide.apply-packing-template.result':
+    'Les llistes i els articles de la plantilla són al viatge, al costat del que ja hi havia.',
+  'help.guide.apply-packing-template.tip.1':
+    'Una plantilla només porta noms i llistes. Les quantitats, els pesos, l’equipatge i el que ja està marcat es queden enrere.',
+  'help.guide.apply-packing-template.tip.2':
+    'Aplica una plantilla només hi és un cop existeix una plantilla. Sense cap, el botó no apareix gens.',
+  'help.guide.apply-packing-template.tip.3':
+    'Desa com a plantilla apareix només per a un administrador de la instància, i només mentre la llista té articles. Desa el fons comú més els teus propis articles, mai els privats d’un altre membre.',
+  // import-packing-list
+  'help.guide.import-packing-list.title': 'Enganxar una llista d’equipatge sencera',
+  'help.guide.import-packing-list.goal':
+    'Converteix d’una sola vegada una llista que ja tens en un altre lloc en articles d’equipatge.',
+  'help.guide.import-packing-list.step.1': 'Fes clic a Importa a la barra de sobre la llista.',
+  'help.guide.import-packing-list.step.2':
+    'Un article per línia: Categoria, Nom, Pes en g (opcional), Equipatge (opcional), checked/unchecked (opcional). L’exemple gris del quadre mostra les quatre formes.',
+  'help.guide.import-packing-list.step.3':
+    'O carrega les línies d’un fitxer amb Carrega CSV/TXT. Accepta un .csv o un .txt i substitueix el que hi hagi al quadre.',
+  'help.guide.import-packing-list.step.4': 'Fes clic a Importa. El botó compta les línies que ha entès.',
+  'help.guide.import-packing-list.result':
+    'Cada línia és una fila, a la llista que nomena el seu primer camp, i res del que ja hi havia no es toca.',
+  'help.guide.import-packing-list.tip.1':
+    'Les comes, els punts i comes i els tabuladors separen camps, i les cometes mantenen un camp sencer, de manera que «Camisa, blava» continua sent un sol nom. Una línia amb un sol valor és només un nom, i una línia sense llista pròpia va a parar a Altres.',
+  'help.guide.import-packing-list.tip.2':
+    'Una peça d’equipatge anomenada al quart camp es crea si el viatge encara no la té. Aquest és l’únic lloc que carrega pesos i equipatge en bloc; una plantilla només porta noms i llistes.',
+  // share-packing-item
+  'help.guide.share-packing-item.title': 'Decidir qui veu un article i qui el porta',
+  'help.guide.share-packing-item.goal':
+    'Mou un article entre el fons comú del grup, la teva pròpia llista i les persones per a qui el portes.',
+  'help.guide.share-packing-item.step.1':
+    'Compartit, sobre les llistes, és el fons comú que tothom veu, La meva llista és la teva, i cadascuna compta el que conté. Fes clic a La meva llista per mirar la teva.',
+  'help.guide.share-packing-item.step.2':
+    'De tornada a Compartit, obre el Compartir d’una fila, la icona de compartir al costat del llapis.',
+  'help.guide.share-packing-item.step.3':
+    'Tres nivells: Compartit, al fons comú del grup i visible per a tothom; Personal, que només tu pots veure; i Compartit amb…, on tries les persones que l’article cobreix.',
+  'help.guide.share-packing-item.step.4':
+    'Un article Personal només és a La meva llista. Canvia de vista per trobar-lo.',
+  'help.guide.share-packing-item.step.5':
+    'Obre Compartir un altre cop i marca un nom sota Compartit amb…. L’article surt també a la llista d’aquella persona, i la fila diu compartit amb 1.',
+  'help.guide.share-packing-item.result': 'L’article es col·loca al nivell que has triat, i la fila diu qui el porta.',
+  'help.guide.share-packing-item.tip.1':
+    'Només qui porta un article en canvia la manera de compartir-lo. Aquell amb qui l’has compartit el veu a la seva pròpia La meva llista, marcat amb el teu nom, i el pot marcar.',
+  'help.guide.share-packing-item.tip.2':
+    'En un article que porta una altra persona obtens dos botons diferents: Jo també puc portar això, que t’afegeix al seu costat, i Copiar a la meva llista, que en fa una còpia privada teva.',
+  'help.guide.share-packing-item.tip.3':
+    'Els articles nous hereten la vista on els afegeixes. Afegits a La meva llista són Personal, afegits a Compartit van al fons comú.',
+  // packing-bags
+  'help.guide.packing-bags.title': 'Pesar l’equipatge',
+  'help.guide.packing-bags.goal':
+    'Posa un pes a cada article, reparteix els articles a les peces d’equipatge i mantén cadascuna per sota del límit de la companyia aèria.',
+  'help.guide.packing-bags.step.1': 'Escriu el pes d’un article, en grams, al camp anterior al cercle.',
+  'help.guide.packing-bags.step.2': 'El cercle del final de la fila és la seva peça d’equipatge. Fes-hi clic.',
+  'help.guide.packing-bags.step.3':
+    'Encara sense equipatge: Afegeix equipatge, un nom, Retorn. La peça es crea i l’article hi entra directament.',
+  'help.guide.packing-bags.step.4':
+    'El panell Equipatge apareix a la dreta tan bon punt existeix una peça: nom, pes, una barra d’ompliment, qui la porta i quants articles hi ha a dins, i després Sense assignar i Pes total.',
+  'help.guide.packing-bags.step.5':
+    'Fes clic a Defineix un límit i escriu el límit en quilograms, tal com l’indiquen les companyies aèries.',
+  'help.guide.packing-bags.step.6': 'El signe més discontinu sota el nom d’una peça diu qui la porta.',
+  'help.guide.packing-bags.result':
+    'El panell Equipatge de la dreta mostra el pes de cada peça contra el seu límit, el que no és a cap peça, i el total.',
+  'help.guide.packing-bags.tip.1':
+    'El camp de pes, el cercle d’equipatge i el panell Equipatge només existeixen mentre un administrador té Seguiment d’equipatge activat sota l’addon Llistes.',
+  'help.guide.packing-bags.tip.2':
+    'El pes d’una peça se suma al servidor sobre els articles de tots els membres, inclosos els que tu no pots veure, de manera que el nombre és realment el que pesa la peça.',
+  'help.guide.packing-bags.tip.3':
+    'Una peça sense límit es dibuixa contra la més pesada, perquè les barres continuïn sent comparables. Dona-li un límit i la barra es llegeix contra aquest.',
+  // create-todo
+  'help.guide.create-todo.title': 'Afegir una tasca',
+  'help.guide.create-todo.goal':
+    'Apunta alguna cosa que ha de passar, amb una categoria, una prioritat, una data i un nom al costat.',
+  'help.guide.create-todo.step.1': 'Fes clic a Tasca nova, a dalt a la dreta.',
+  'help.guide.create-todo.step.2':
+    'Posa-li nom a Nom de la tasca, i escriu sota Descripció tot el que valgui la pena recordar.',
+  'help.guide.create-todo.step.3':
+    'Categoria agrupa la tasca. Tria’n una, o fes servir el signe més del costat per escriure un nom nou.',
+  'help.guide.create-todo.step.4': 'Prioritat són quatre botons: Cap, P1, P2 i P3, del vermell al blau.',
+  'help.guide.create-todo.step.5': 'Data límit obre un calendari, i Assignada a posa un nom a la tasca.',
+  'help.guide.create-todo.step.6': 'Fes clic a Crea una tasca.',
+  'help.guide.create-todo.result':
+    'La tasca és a la llista amb els seus distintius, la prioritat, la data límit, la categoria i la persona a qui està assignada, i s’obre al panell de la dreta.',
+  'help.guide.create-todo.tip.1':
+    'Només el nom és obligatori. Tota la resta es pot omplir més tard des del panell de la dreta.',
+  'help.guide.create-todo.tip.2':
+    'Amb una categoria seleccionada a la barra lateral, una tasca nova comença en aquella categoria.',
+  'help.guide.create-todo.tip.3': 'Retorn al camp del nom crea la tasca de seguida, sense tocar els altres camps.',
+  // todo-filters
+  'help.guide.todo-filters.title': 'Trobar i canviar una tasca',
+  'help.guide.todo-filters.goal':
+    'Retalla la llista de tasques fins al que importa ara, i després edita la tasca on has anat a parar.',
+  'help.guide.todo-filters.step.1':
+    'Tasques a la barra lateral: Tot és tot el que encara és obert, Les meves tasques el que et toca a tu, Vençuda el que té una data passada, Fet el que està acabat. Cadascun porta el seu recompte; fes clic a Vençuda.',
+  'help.guide.todo-filters.step.2':
+    'Sota Categories hi ha una fila per categoria. Triar-ne una mostra aquella categoria, tasques acabades incloses.',
+  'help.guide.todo-filters.step.3':
+    'Ordena per reordena el que hi ha a la pantalla: Prioritat posa P1 primer, Data límit posa el termini més proper primer. Només un dels dos alhora.',
+  'help.guide.todo-filters.step.4': 'Fes clic en una tasca per obrir-la al panell de la dreta.',
+  'help.guide.todo-filters.step.5':
+    'Canvia el que et calgui, Descripció, Prioritat, Categoria, Data límit o Assignada a, i després Desa els canvis. Elimina s’emporta la tasca a l’instant.',
+  'help.guide.todo-filters.result':
+    'La llista mostra només les tasques que has demanat, i el panell de la dreta edita la que has triat.',
+  'help.guide.todo-filters.tip.1':
+    'Una fila de categoria compta només el que encara és obert, però seleccionar-la mostra també les tasques acabades. Tot, Les meves tasques i Vençuda amaguen el que està fet; Fet no mostra res més.',
+  'help.guide.todo-filters.tip.2':
+    'Ordena per Prioritat i Ordena per Data límit s’exclouen, i mentre un dels dos està actiu les files ja no es poden arrossegar a un ordre propi.',
+
+  // ── Screen: trip-bookings ─────────────────────────────────────────────────────────────
+  'help.ctx.trip-bookings.title': 'Reserves',
+  'help.ctx.trip-bookings.summary':
+    'La pestanya que guarda tot el que s’ha reservat per al viatge i no és una manera de desplaçar-se: els allotjaments, les taules, les entrades, les excursions, els aparcaments. Cada reserva és una targeta a Pendent o a Confirmada, amb el seu codi, el seu document, els seus viatgers i el seu cost.',
+  'help.ctx.trip-bookings.bullet.1':
+    'Reserva manual, a dalt a la dreta, obre el formulari. Els sis tipus que crea són Allotjament, Restaurant, Esdeveniment, Excursió, Aparcament i Altres; els vols, els trens i la resta viuen a la pestanya Transports i aquí no apareixen mai.',
+  'help.ctx.trip-bookings.bullet.2':
+    'Importa des d’un fitxer lliura una confirmació a l’anàlisi: EML, PDF, PKPass, HTML o TXT, com a màxim cinc fitxers de 10 MB. El botó només hi és si el servidor els sap llegir.',
+  'help.ctx.trip-bookings.bullet.3':
+    'Els xips al costat del títol filtren per tipus, cadascun amb el seu propi recompte, i Tot ho torna a portar tot. Un cop una reserva anomena persones, la filera d’avatars al costat dels xips estreny la pestanya a una d’elles.',
+  'help.ctx.trip-bookings.bullet.4':
+    'Les targetes estan en dues seccions, Pendent i Confirmada, cadascuna amb el seu recompte. Un clic al títol d’una secció la plega, i si està oberta es recorda per a aquest viatge.',
+  'help.ctx.trip-bookings.bullet.5':
+    'Una targeta porta el punt d’estat, el tipus, el títol, les dates i les hores, el Codi de reserva, la Ubicació / adreça, allò a què la reserva està vinculada, el seu Enllaç, les Notes, els Fitxers i els Viatgers.',
+  'help.ctx.trip-bookings.bullet.6':
+    'El llapis d’una targeta torna a obrir el mateix formulari; la paperera pregunta un cop i llavors la reserva ja no hi és. Amb un allotjament, les seves nits al Pla per dies i la seva despesa vinculada se’n van amb ella.',
+  // create-booking
+  'help.guide.create-booking.title': 'Crear una reserva',
+  'help.guide.create-booking.goal':
+    'Posa a mà al viatge un restaurant, un esdeveniment, una excursió, una plaça d’aparcament o qualsevol altra cosa.',
+  'help.guide.create-booking.step.1':
+    'Fes clic a Reserva manual, a dalt a la dreta de la pestanya. S’obre Reserva nova.',
+  'help.guide.create-booking.step.2':
+    'Tria el Tipus de reserva. Allotjament, Restaurant, Esdeveniment, Excursió, Aparcament i Altres són els sis que fa aquesta pestanya, i el formulari canvia amb la tria: només Allotjament bescanvia les dates per un interval de dies.',
+  'help.guide.create-booking.step.3':
+    'Escriu el Títol. És l’únic camp en què el formulari insisteix, i Afegir es queda mort fins que hi hagi alguna cosa.',
+  'help.guide.create-booking.step.4':
+    'Posa Data i Hora d’inici, i Data de fi i Hora de fi si la reserva té un final. Els calendaris només ofereixen dies de dins del viatge, i un final que no és posterior a l’inici ho diu en vermell i bloqueja Afegir.',
+  'help.guide.create-booking.step.5':
+    'Posa el Codi de reserva de la confirmació i posa l’Estat. Pendent o Confirmada decideix a quina de les dues seccions aterra la targeta.',
+  'help.guide.create-booking.step.6': 'Fes clic a Afegir.',
+  'help.guide.create-booking.result':
+    'La reserva és una targeta a la seva secció, amb el seu xip de tipus, les seves dates i el seu codi, i tothom més del viatge la veu aparèixer.',
+  'help.guide.create-booking.tip.1':
+    'Ubicació / adreça ofereix adreces reals mentre escrius; triar-ne una substitueix el que havies escrit, i una adreça escrita per tu es queda tal com és.',
+  'help.guide.create-booking.tip.2':
+    'Enllaç recull la pàgina pròpia de la reserva al proveïdor. La targeta en fa un enllaç que s’obre en una pestanya nova.',
+  'help.guide.create-booking.tip.3':
+    'Les Notes són Markdown, així que una llista o una línia en negreta es mostren com a tals a la targeta.',
+  // booking-hotel
+  'help.guide.booking-hotel.title': 'Reservar un allotjament',
+  'help.guide.booking-hotel.goal':
+    'Introdueix un allotjament perquè compti alhora com a reserva i com a nits al Pla per dies.',
+  'help.guide.booking-hotel.step.1':
+    'Fes clic a Reserva manual i tria Allotjament. Els camps de data se’n van i un bloc de camps d’hotel ocupa el seu lloc.',
+  'help.guide.booking-hotel.step.2':
+    'Tria l’hotel sota Allotjament. La llista són els llocs propis del viatge, i triar-ne un escriu el seu nom a Títol i la seva adreça a Ubicació / adreça.',
+  'help.guide.booking-hotel.step.3':
+    'Posa Des del i Fins al: la primera nit i el matí que marxes. Tots dos ofereixen els dies del viatge amb les seves dates, i es mantenen en ordre l’un a l’altre.',
+  'help.guide.booking-hotel.step.4':
+    'Omple Registre d’entrada, Registre fins a i Registre de sortida, i el Codi de reserva de la confirmació.',
+  'help.guide.booking-hotel.step.5': 'Fes clic a Afegir.',
+  'help.guide.booking-hotel.result':
+    'La targeta porta un interval de dies en comptes d’una data, amb les hores d’entrada i de sortida i l’adreça, i la mateixa estada ara seu en aquells dies del pla.',
+  'help.guide.booking-hotel.tip.1':
+    'Allotjament és l’únic tipus sense Data ni Hora d’inici. Les seves dates són Des del i Fins al, i són dies del viatge en lloc d’un calendari.',
+  'help.guide.booking-hotel.tip.2':
+    'Deixa Allotjament buit i escriu l’adreça al seu lloc: el lloc es cerca, es crea i es marca al mapa per tu.',
+  'help.guide.booking-hotel.tip.3': 'Eliminar la reserva s’emporta les nits del Pla per dies amb ella.',
+  // link-booking
+  'help.guide.link-booking.title': 'Lligar una reserva al pla',
+  'help.guide.link-booking.goal':
+    'Penja una reserva de la parada i del lloc als quals pertany, perquè aparegui allà on la voldràs.',
+  'help.guide.link-booking.step.1': 'Fes clic al llapis de la targeta que vols vincular. S’obre Edita la reserva.',
+  'help.guide.link-booking.step.2':
+    'Obre Vincula a una assignació del dia. La llista és el teu pla: un títol per dia, després les parades d’aquell dia, numerades i amb les seves hores. Tria aquella a la qual pertany la reserva.',
+  'help.guide.link-booking.step.3':
+    'Lloc / Activitat vincula el lloc mateix. Tria’l allà, i Títol i Ubicació / adreça s’omplen allà on els havies deixat buits.',
+  'help.guide.link-booking.step.4': 'Fes clic a Actualitzar.',
+  'help.guide.link-booking.result':
+    'La targeta anomena el dia i la parada sota Vincula a una assignació del dia, i la reserva viatja amb aquella parada al Pla per dies.',
+  'help.guide.link-booking.tip.1':
+    'Sense vincle (independent), a dalt de la llista, torna a treure el vincle. Allotjament no té cap selector de parada: es vincula a través de les seves nits.',
+  'help.guide.link-booking.tip.2':
+    'Triar una parada en un dia amb data omple una Data buida per tu. Una data que ja havies posat es deixa estar.',
+  // booking-travelers
+  'help.guide.booking-travelers.title': 'Dir per a qui és una reserva',
+  'help.guide.booking-travelers.goal': 'Marca els viatgers que cobreix una reserva i després mira només les seves.',
+  'help.guide.booking-travelers.step.1':
+    'Obre la reserva amb el llapis i baixa fins a Viatgers. Allà hi ha cada membre del viatge, els convidats amb nom inclosos.',
+  'help.guide.booking-travelers.step.2':
+    'Fes clic a les persones per a qui és aquesta reserva. La que tries rep una marca; torna-hi a fer clic per treure-la.',
+  'help.guide.booking-travelers.step.3': 'Fes clic a Actualitzar.',
+  'help.guide.booking-travelers.step.4':
+    'A dalt, a la barra d’eines, al costat dels xips de tipus, fes clic a l’avatar d’un viatger per veure només les seves reserves.',
+  'help.guide.booking-travelers.result':
+    'La targeta llista les persones per a qui és, i la filera d’avatars estreny la pestanya a una d’elles.',
+  'help.guide.booking-travelers.tip.1':
+    'A la targeta els viatgers només es mostren, mai no es canvien. Es posen aquí, al formulari.',
+  'help.guide.booking-travelers.tip.2':
+    'La filera d’avatars apareix un cop el viatge té més d’un membre i almenys una reserva anomena algú. El que tries dura aquesta sessió del navegador.',
+  // booking-files
+  'help.guide.booking-files.title': 'Guardar el comprovant amb la reserva',
+  'help.guide.booking-files.goal': 'Adjunta la confirmació, el bitllet o el passi a la reserva a la qual pertanyen.',
+  'help.guide.booking-files.step.1':
+    'Obre la reserva amb el llapis, baixa fins a Fitxers i fes clic a Adjunta un fitxer. En una reserva que ja existeix el document puja de seguida i TREK diu Fitxer pujat.',
+  'help.guide.booking-files.step.2': 'El document apareix amb el seu nom, amb un botó per obrir-lo i una X al costat.',
+  'help.guide.booking-files.step.3':
+    'Vincula un fitxer existent ofereix els documents del viatge que encara no són en aquesta reserva. Tria’n un i s’adjunta sense tornar a pujar res.',
+  'help.guide.booking-files.step.4': 'Fes clic a Actualitzar.',
+  'help.guide.booking-files.result': 'La targeta llista els documents sota Fitxers, i un clic en un d’ells l’obre.',
+  'help.guide.booking-files.tip.1':
+    'En una reserva que encara estàs creant el document espera i puja en el moment que fas clic a Afegir.',
+  'help.guide.booking-files.tip.2':
+    'La X al costat d’un document treu el vincle, no el document. Es queda a la pestanya Fitxers del viatge.',
+  'help.guide.booking-files.tip.3':
+    'Quins tipus de fitxer es poden adjuntar és la llista Tipus de fitxer permesos de l’administrador; els documents, el text i les imatges estan permesos de sèrie.',
+  // booking-cost
+  'help.guide.booking-cost.title': 'Convertir el preu d’una reserva en un cost',
+  'help.guide.booking-cost.goal':
+    'Porta el que costa una reserva a les Despeses, repartit entre les persones que ho paguen.',
+  'help.guide.booking-cost.step.1':
+    'Obre la reserva i vés al peu del formulari. Sota Despeses hi ha Crear despesa, amb la nota Desa la reserva i obre l’editor de Despeses.',
+  'help.guide.booking-cost.step.2':
+    'Fes clic a Crear despesa. La reserva es desa i l’editor de Despeses s’obre al damunt.',
+  'help.guide.booking-cost.step.3':
+    'Per a què ha estat? ja és el títol de la reserva. Posa l’Import total i comprova la Divisa i el Dia.',
+  'help.guide.booking-cost.step.4':
+    'Categoria és la que implica el tipus de reserva. Posa Qui ha pagat? i com es reparteix l’import.',
+  'help.guide.booking-cost.step.5': 'Fes clic a Afegir despesa.',
+  'help.guide.booking-cost.result':
+    'El formulari de la reserva ara diu Despesa vinculada amb l’import, i la mateixa despesa és a la pestanya Despeses, lligada a aquesta reserva.',
+  'help.guide.booking-cost.tip.1':
+    'La categoria segueix el tipus: Restaurant passa a Menjar i beguda, Allotjament passa a Allotjament, Aparcament passa a Aparcament, i Esdeveniment i Excursió cauen tots dos a Altres.',
+  'help.guide.booking-cost.tip.2': 'La paperera de Despesa vinculada treu la despesa, no la reserva.',
+  'help.guide.booking-cost.tip.3':
+    'Despeses només és al formulari mentre l’addon Pressupost està activat, que l’administrador engega a Complements.',
+  // filter-bookings
+  'help.guide.filter-bookings.title': 'Trobar una reserva',
+  'help.guide.filter-bookings.goal': 'Redueix una pestanya llarga al tipus, a la persona o a l’estat que busques.',
+  'help.guide.filter-bookings.step.1':
+    'Els xips al costat del títol són els tipus que aquest viatge fa servir de debò, cadascun amb el nombre que conté. Tot és la pestanya sencera.',
+  'help.guide.filter-bookings.step.2':
+    'Fes clic a un xip per quedar-te només amb aquell tipus. Fes clic a un segon i tots dos es mantenen.',
+  'help.guide.filter-bookings.step.3': 'Tot ho torna a posar tot.',
+  'help.guide.filter-bookings.step.4':
+    'Els avatars al costat dels xips filtren per viatger, una persona o diverses alhora.',
+  'help.guide.filter-bookings.step.5':
+    'Pendent i Confirmada són les dues seccions, cadascuna amb el seu recompte. Fes clic a un títol per plegar-ne una; encara està plegada quan tornes.',
+  'help.guide.filter-bookings.result':
+    'La pestanya mostra només el que has triat, i encara està triat quan hi tornes en aquesta sessió del navegador.',
+  'help.guide.filter-bookings.tip.1':
+    'Els xips només ofereixen els tipus que el viatge té, així que un viatge sense ni una sola excursió no té xip Excursió.',
+  'help.guide.filter-bookings.tip.2':
+    'Un filtre que no coincideix amb res deixa la pestanya buida amb No s’han trobat llocs. La redacció és la de la llista de llocs; el sentit és el mateix.',
+  // import-booking-file
+  'help.guide.import-booking-file.title': 'Llegir una reserva de la seva confirmació',
+  'help.guide.import-booking-file.goal':
+    'Deixa que TREK tregui la reserva del correu o del PDF que ha enviat el proveïdor, en lloc de tornar-la a escriure.',
+  'help.guide.import-booking-file.step.1':
+    'Fes clic a Importa des d’un fitxer a la barra d’eines. S’obre Importa confirmacions de reserva.',
+  'help.guide.import-booking-file.step.2':
+    'Deixa anar les confirmacions sobre la caixa, o fes-hi clic i tria-les: EML, PDF, PKPass, HTML i TXT, fins a cinc fitxers de 10 MB cadascun. Les que has triat surten amb el seu nom a la caixa.',
+  'help.guide.import-booking-file.step.3':
+    'Fes clic a Importar. El diàleg es tanca de seguida, perquè la lectura passa en segon pla.',
+  'help.guide.import-booking-file.step.4':
+    'Una targeta a baix a la dreta informa de l’execució, i et segueix per l’aplicació i a través d’una recàrrega. Quan ha acabat ofereix Importar, que engega la revisió: cada reserva que ha trobat s’obre al formulari de sempre, omplerta i amb el seu document adjunt, perquè la comprovis i facis Afegir una darrere l’altra.',
+  'help.guide.import-booking-file.result':
+    'Cada reserva que has confirmat és una targeta pròpia amb el seu codi, les seves dates i el document d’on va sortir; un allotjament també ha rebut les seves nits, i amb Despeses activat, un preu que era a la confirmació s’ha convertit en una despesa.',
+  'help.guide.import-booking-file.tip.1':
+    'Importa des d’un fitxer només hi és si el servidor sap llegir confirmacions, i això demana o bé l’extractor integrat o bé l’addon Anàlisi amb IA. Aquest l’administrador l’engega a Complements.',
+  'help.guide.import-booking-file.tip.2':
+    'Si no s’ha pogut llegir res, la targeta ho diu i ofereix Provar l’anàlisi per IA, que envia els mateixos fitxers directament al model.',
+  'help.guide.import-booking-file.tip.3':
+    'Una anàlisi acabada es guarda deu minuts. Engega la revisió dins d’aquest marge.',
+  // edit-booking
+  'help.guide.edit-booking.title': 'Canviar una reserva',
+  'help.guide.edit-booking.goal':
+    'Corregeix una hora, afegeix el codi que ha arribat més tard, o passa una reserva de Pendent a Confirmada.',
+  'help.guide.edit-booking.step.1':
+    'Fes clic al llapis de la capçalera de la targeta. Edita la reserva s’obre amb tot el que la reserva sap.',
+  'help.guide.edit-booking.step.2':
+    'Canvia el que calgui canviar, aquí el Codi de reserva que l’operador ha acabat enviant.',
+  'help.guide.edit-booking.step.3': 'Posa Estat a Confirmada.',
+  'help.guide.edit-booking.step.4': 'Fes clic a Actualitzar.',
+  'help.guide.edit-booking.result':
+    'La targeta es mou: una reserva confirmada és a la secció Confirmada darrere d’un punt verd, i tothom del viatge la veu moure’s.',
+  'help.guide.edit-booking.tip.1':
+    'Un Codi de reserva que no pots llegir és Difumina els codis de reserva a la Configuració, sota Pantalla. Passa-hi el ratolí per sobre, o fes-hi clic, i es torna llegible.',
+  'help.guide.edit-booking.tip.2':
+    'Canvia el tipus i la categoria d’una despesa vinculada el segueix, tret que haguessis triat una categoria a mà a l’editor de Despeses.',
+  'help.guide.edit-booking.tip.3':
+    'Un allotjament també s’edita aquí: els seus dies Des del i Fins al són al mateix formulari.',
+  // delete-booking
+  'help.guide.delete-booking.title': 'Eliminar una reserva',
+  'help.guide.delete-booking.goal': 'Treu del viatge una reserva que ha fallat.',
+  'help.guide.delete-booking.step.1': 'Fes clic a la paperera de la capçalera de la targeta.',
+  'help.guide.delete-booking.step.2':
+    'Vols eliminar la reserva? anomena la que has triat i diu que s’eliminarà permanentment.',
+  'help.guide.delete-booking.step.3': 'Fes clic a Confirmar.',
+  'help.guide.delete-booking.result':
+    'La targeta ja no hi és, per a tothom del viatge. Una reserva no té desfer, així que la pregunta és l’última parada.',
+  'help.guide.delete-booking.tip.1':
+    'Eliminar una reserva d’allotjament també treu les seves nits del Pla per dies i elimina la despesa que hi estava vinculada.',
+  'help.guide.delete-booking.tip.2':
+    'Els documents que hi havia adjunts es queden a la pestanya Fitxers del viatge; només se’n va el seu vincle amb la reserva.',
 };
 
 export default help;

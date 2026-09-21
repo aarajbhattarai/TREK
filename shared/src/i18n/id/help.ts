@@ -2907,6 +2907,381 @@ const help: TranslationStrings = {
     'Pesan yang berisi tautan mendapat kartu pratinjau di bawahnya, diambil oleh TREK Anda sendiri, jadi tautan ke sesuatu yang hanya bisa Anda capai tetap berupa tautan biasa.',
   'help.guide.trip-chat.tip.4':
     '“Chat” adalah sakelar tersendiri di bawah “Addon”, di bawah “Collab”: admin bisa mematikannya dan membiarkan “Catatan”, “Tautan”, “Jajak Pendapat” dan “Selanjutnya” tetap berjalan.',
+
+  // ── Screen: trip-lists ────────────────────────────────────────────────────────────────
+  'help.ctx.trip-lists.title': 'Daftar',
+  'help.ctx.trip-lists.summary':
+    'Dua daftar untuk satu perjalanan: daftar bawaan, dengan siapa membawa apa dan berapa beratnya, dan daftar tugas berisi semua yang harus terjadi sebelum dan selama perjalanan. Tab ini ada selama addon “Daftar” menyala.',
+  'help.ctx.trip-lists.bullet.1':
+    '“Daftar Perlengkapan” dan “Tugas” di atas berganti antara keduanya dan menghitung isi masing-masing; tombol di sebelah kanan milik mana pun yang sedang terbuka.',
+  'help.ctx.trip-lists.bullet.2':
+    'Daftar bawaan dikelompokkan ke dalam daftar, Dokumen, Pakaian, terserah Anda menamainya, masing-masing dengan titik warna, lencana sudah dikemas dari total, dan tiga titik berisi “Ganti Nama”, “Centang Semua”, “Hapus Centang Semua” dan “Hapus daftar”. “Tambah daftar” membuat yang baru.',
+  'help.ctx.trip-lists.bullet.3':
+    'Sebuah baris adalah kotak centang dan nama, lalu “Jml”, berat dalam gram dan lingkaran tas selama “Pelacak Tas” menyala, lalu titik warna untuk “Pindahkan ke daftar”, “Berbagi”, “Ganti nama” dan “Hapus”. Pegangan di sebelah kiri menyeretnya naik atau turun di dalam daftarnya.',
+  'help.ctx.trip-lists.bullet.4':
+    '“Bersama” dan “Daftar saya” membelah daftar bawaan menjadi dua: kumpulan yang dilihat semua orang, dan milik Anda sendiri. “Semua”, “Belum” dan “Selesai” mempersempit mana pun yang terbuka, dan bilah di atas menghitung apa yang sudah dikemas.',
+  'help.ctx.trip-lists.bullet.5':
+    '“Terapkan template”, “Impor” dan “Simpan sebagai template” mengisi atau menyimpan sebuah daftar tanpa mengetiknya, dan tombol merah di sebelahnya menyebut berapa item yang tercentang lalu menyingkirkannya.',
+  'help.ctx.trip-lists.bullet.6':
+    '“Tugas” punya bilah sisi sendiri: kartu kemajuan, filter “Semua”, “Tugasku”, “Terlambat” dan “Selesai”, “Urutkan” menurut “Prioritas” atau “Tenggat waktu”, dan satu baris per daftar. Klik pada sebuah tugas membukanya di panel sebelah kanan, dan “Tugas baru” membuka panel yang sama dalam keadaan kosong.',
+  // packing-categories
+  'help.guide.packing-categories.title': 'Membangun daftar bawaan',
+  'help.guide.packing-categories.goal':
+    'Kelompokkan apa yang Anda bawa ke dalam daftar, isi dengan item, dan tentukan siapa yang mengurus tiap daftar.',
+  'help.guide.packing-categories.step.1':
+    'Klik “Tambah daftar” di bawah bilah kemajuan, ketik namanya ke “Nama daftar (mis. Pakaian)” dan konfirmasi dengan tanda centang.',
+  'help.guide.packing-categories.step.2':
+    'Daftar baru dimulai dengan satu baris kosong. Klik “Tambah item”, ketik item ke “Nama item...” lalu tekan Enter; kolomnya tetap terbuka untuk item berikutnya.',
+  'help.guide.packing-categories.step.3':
+    'Ganti nama sebuah baris dengan pensil di ujung kanannya, atau dengan mengklik namanya sendiri.',
+  'help.guide.packing-categories.step.4':
+    'Lingkaran putus-putus di kepala daftar menetapkan anggota perjalanan ke daftar itu. Pilih sebuah nama; chip yang muncul menghapus orang itu lagi dengan satu klik.',
+  'help.guide.packing-categories.step.5':
+    'Tiga titik di ujung kepala daftar memuat sisanya: “Ganti Nama”, “Centang Semua”, “Hapus Centang Semua”, dan “Hapus daftar”, yang mengambil daftar itu beserta seluruh isinya tanpa bertanya lagi.',
+  'help.guide.packing-categories.result':
+    'Daftar baru duduk di kisi dengan item-itemnya di bawahnya dan titik warnanya, dan lencananya menghitung apa yang sudah dikemas.',
+  'help.guide.packing-categories.tip.1':
+    'Sebuah daftar hanyalah item-itemnya. Hapus yang terakhir dan baris itu berubah menjadi penampung sehingga daftar mempertahankan tempat dan warnanya; hapus baris itu juga dan daftarnya lenyap.',
+  'help.guide.packing-categories.tip.2':
+    'Menetapkan seseorang ke sebuah daftar mengirimkan notifikasi daftar bawaan kepadanya. Itu tidak mengubah siapa yang bisa melihat item, itu urusan “Berbagi” di baris.',
+  'help.guide.packing-categories.tip.3':
+    'Dua daftar boleh memakai nama yang sama. TREK memisahkan keduanya secara internal, jadi namanya tetap seperti yang Anda ketik.',
+  // check-off-packing
+  'help.guide.check-off-packing.title': 'Mencentang sambil berkemas',
+  'help.guide.check-off-packing.goal':
+    'Tandai apa yang sudah masuk tas, perhatikan bilahnya, dan bersihkan item yang sudah dikemas.',
+  'help.guide.check-off-packing.step.1':
+    'Klik kotak di sebelah kiri sebuah baris. Namanya dicoret dan bilahnya bergerak.',
+  'help.guide.check-off-packing.step.2':
+    'Bilah di atas menghitung apa yang sudah dikemas terhadap seluruh isi daftar, sebagai angka dan sebagai persentase.',
+  'help.guide.check-off-packing.step.3':
+    'Satu daftar penuh sekaligus: tiga titik di kepalanya memuat “Centang Semua” dan “Hapus Centang Semua”.',
+  'help.guide.check-off-packing.step.4':
+    '“Semua”, “Belum” dan “Selesai” mempersempit kisi. “Belum” hanya menyisakan yang masih kurang, jadi daftar yang sudah terkemas penuh keluar dari situ.',
+  'help.guide.check-off-packing.step.5':
+    '“Hapus 3 yang dicentang” di bilah atas menghapus setiap item tercentang sekaligus, setelah satu konfirmasi dari peramban.',
+  'help.guide.check-off-packing.result':
+    'Hanya yang masih terbuka yang terdaftar, dan bilah di atas mengatakan sejauh mana pengemasan sudah berjalan.',
+  'help.guide.check-off-packing.tip.1': 'Item yang tercentang tidak bisa diganti namanya. Lepaskan centangnya dulu.',
+  'help.guide.check-off-packing.tip.2':
+    '“Centang Semua” dan “Hapus Centang Semua” bekerja pada satu daftar saja, dari tiga titik milik daftar itu sendiri.',
+  'help.guide.check-off-packing.tip.3':
+    'Ketika setiap item tercentang, penghitungnya digantikan oleh “Semua sudah dikemas!” dan bilahnya menjadi hijau.',
+  // apply-packing-template
+  'help.guide.apply-packing-template.title': 'Menerapkan template bawaan',
+  'help.guide.apply-packing-template.goal':
+    'Bawa daftar siap pakai ke dalam perjalanan, dan simpan daftar perjalanan ini untuk perjalanan berikutnya.',
+  'help.guide.apply-packing-template.step.1': 'Klik “Terapkan template” di bilah atas daftar.',
+  'help.guide.apply-packing-template.step.2':
+    'Pilih sebuah template. Tiap baris menyebut namanya dan berapa item yang dimuatnya.',
+  'help.guide.apply-packing-template.step.3':
+    'Item mendarat di tampilan tempat Anda berada: “Bersama” menaruhnya di kumpulan yang dilihat semua orang, “Daftar saya” menjadikannya milik Anda.',
+  'help.guide.apply-packing-template.step.4':
+    'Simpan daftar perjalanan ini untuk perjalanan berikutnya: “Simpan sebagai template”, sebuah nama, lalu tanda centang.',
+  'help.guide.apply-packing-template.result':
+    'Daftar dan item dari template ada di perjalanan, di samping apa yang sudah ada sebelumnya.',
+  'help.guide.apply-packing-template.tip.1':
+    'Sebuah template hanya membawa nama dan daftar. Jumlah, berat, tas dan apa yang sudah tercentang tertinggal.',
+  'help.guide.apply-packing-template.tip.2':
+    '“Terapkan template” baru ada begitu sebuah template ada. Tanpa template, tombolnya tidak muncul sama sekali.',
+  'help.guide.apply-packing-template.tip.3':
+    '“Simpan sebagai template” hanya muncul untuk admin instans, dan hanya selama daftarnya berisi item. Ia menyimpan kumpulan bersama ditambah item Anda sendiri, tidak pernah item pribadi anggota lain.',
+  // import-packing-list
+  'help.guide.import-packing-list.title': 'Menempelkan seluruh daftar bawaan',
+  'help.guide.import-packing-list.goal':
+    'Ubah daftar yang sudah Anda punya di tempat lain menjadi item bawaan sekaligus.',
+  'help.guide.import-packing-list.step.1': 'Klik “Impor” di bilah atas daftar.',
+  'help.guide.import-packing-list.step.2':
+    'Satu item per baris: Kategori, Nama, Berat dalam g (opsional), Tas (opsional), checked/unchecked (opsional). Contoh abu-abu di dalam kotak memperlihatkan keempat bentuknya.',
+  'help.guide.import-packing-list.step.3':
+    'Atau muat barisnya dari sebuah file dengan “Muat CSV/TXT”. Ia menerima .csv atau .txt dan menggantikan apa pun yang ada di kotak.',
+  'help.guide.import-packing-list.step.4': 'Klik “Impor”. Tombolnya menghitung baris yang berhasil dipahami.',
+  'help.guide.import-packing-list.result':
+    'Setiap baris menjadi satu baris item, di daftar yang disebut bidang pertamanya, dan tidak ada yang sudah ada di sana yang tersentuh.',
+  'help.guide.import-packing-list.tip.1':
+    'Koma, titik koma dan tab sama-sama memisahkan bidang, dan tanda kutip ganda menyatukan sebuah bidang, jadi “Shirt, blue” tetap satu nama. Baris dengan satu nilai hanyalah sebuah nama, dan baris tanpa daftar sendiri mendarat di “Lainnya”.',
+  'help.guide.import-packing-list.tip.2':
+    'Tas yang disebut di bidang keempat dibuat jika perjalanan belum memilikinya. Ini satu-satunya tempat yang memuat berat dan tas secara massal; sebuah template hanya membawa nama dan daftar.',
+  // share-packing-item
+  'help.guide.share-packing-item.title': 'Menentukan siapa melihat sebuah item dan siapa membawanya',
+  'help.guide.share-packing-item.goal':
+    'Pindahkan sebuah item antara kumpulan grup, daftar Anda sendiri dan orang-orang yang Anda bawakan.',
+  'help.guide.share-packing-item.step.1':
+    '“Bersama” di atas daftar adalah kumpulan yang dilihat semua orang, “Daftar saya” adalah milik Anda, dan masing-masing menghitung isinya. Klik “Daftar saya” untuk melihat milik Anda.',
+  'help.guide.share-packing-item.step.2':
+    'Kembali di “Bersama”, buka kontrol “Berbagi” sebuah baris, ikon berbagi di sebelah pensil.',
+  'help.guide.share-packing-item.step.3':
+    'Tiga tingkat: “Bersama”, di kumpulan grup dan terlihat oleh semua orang; “Pribadi”, yang hanya Anda yang melihatnya; dan “Bagikan dengan…”, tempat Anda memilih orang-orang yang tercakup item itu.',
+  'help.guide.share-packing-item.step.4':
+    'Item “Pribadi” hanya ada di “Daftar saya”. Pindah ke sana untuk menemukannya.',
+  'help.guide.share-packing-item.step.5':
+    'Buka “Berbagi” lagi dan centang sebuah nama di bawah “Bagikan dengan…”. Item itu tampil di daftar orang tersebut juga, dan barisnya berbunyi “dibagikan dengan 1”.',
+  'help.guide.share-packing-item.result':
+    'Item itu berada di tingkat yang Anda pilih, dan barisnya mengatakan siapa yang membawanya.',
+  'help.guide.share-packing-item.tip.1':
+    'Hanya orang yang membawa sebuah item yang mengubah berbaginya. Orang yang Anda beri bagian melihatnya di “Daftar saya” miliknya sendiri, ditandai dengan nama Anda, dan bisa mencentangnya.',
+  'help.guide.share-packing-item.tip.2':
+    'Pada item yang dibawa orang lain, Anda malah mendapat dua tombol lain: “Saya juga bisa membawanya”, yang menambahkan Anda di sebelahnya, dan “Salin ke daftar saya”, yang membuat salinan pribadi milik Anda sendiri.',
+  'help.guide.share-packing-item.tip.3':
+    'Item baru mewarisi tampilan tempat Anda menambahkannya. Ditambahkan di “Daftar saya” item menjadi “Pribadi”, ditambahkan di “Bersama” item masuk ke kumpulan.',
+  // packing-bags
+  'help.guide.packing-bags.title': 'Menimbang tas',
+  'help.guide.packing-bags.goal':
+    'Beri berat pada setiap item, pilah item ke dalam tas, dan jaga tiap tas tetap di bawah batas maskapai.',
+  'help.guide.packing-bags.step.1': 'Ketik berat sebuah item, dalam gram, ke kolom sebelum lingkaran.',
+  'help.guide.packing-bags.step.2': 'Lingkaran di ujung baris adalah tasnya. Klik lingkaran itu.',
+  'help.guide.packing-bags.step.3':
+    'Belum ada tas: “Tambah tas”, sebuah nama, Enter. Tas itu dibuat dan itemnya langsung masuk ke dalamnya.',
+  'help.guide.packing-bags.step.4':
+    'Panel “Tas” muncul di sebelah kanan begitu satu tas ada: nama, berat, bilah isian, siapa yang membawanya dan berapa item di dalamnya, lalu “Belum ditugaskan” dan “Total berat”.',
+  'help.guide.packing-bags.step.5':
+    'Klik “Atur batas” dan ketik batasnya dalam kilogram, sebagaimana maskapai menyebutkannya.',
+  'help.guide.packing-bags.step.6': 'Tanda plus putus-putus di bawah nama sebuah tas mengatakan siapa yang membawanya.',
+  'help.guide.packing-bags.result':
+    'Panel “Tas” di sebelah kanan memperlihatkan berat tiap tas terhadap batasnya, apa yang tidak berada di tas mana pun, dan totalnya.',
+  'help.guide.packing-bags.tip.1':
+    'Kolom berat, lingkaran tas dan panel “Tas” hanya ada selama seorang admin menyalakan “Pelacak Tas” di bawah addon “Daftar”.',
+  'help.guide.packing-bags.tip.2':
+    'Berat sebuah tas dijumlahkan di server atas item setiap anggota, termasuk yang tidak bisa Anda lihat, jadi angkanya benar-benar berat tas itu.',
+  'help.guide.packing-bags.tip.3':
+    'Tas tanpa batas digambarkan terhadap tas terberat, sehingga bilahnya tetap bisa dibandingkan. Beri batas dan bilahnya dibaca terhadap batas itu.',
+  // create-todo
+  'help.guide.create-todo.title': 'Menambahkan tugas',
+  'help.guide.create-todo.goal':
+    'Catat sesuatu yang harus terjadi, dengan sebuah daftar, prioritas, tanggal dan nama di belakangnya.',
+  'help.guide.create-todo.step.1': 'Klik “Tugas baru” di kanan atas.',
+  'help.guide.create-todo.step.2':
+    'Beri nama di “Nama tugas”, dan taruh apa pun yang layak diingat di bawah “Deskripsi”.',
+  'help.guide.create-todo.step.3':
+    '“Daftar” mengelompokkan tugas. Pilih satu, atau gunakan tanda plus di sebelahnya untuk mengetik nama baru.',
+  'help.guide.create-todo.step.4':
+    '“Prioritas” adalah empat tombol: “Tidak ada”, P1, P2 dan P3, dari merah turun ke biru.',
+  'help.guide.create-todo.step.5':
+    '“Tenggat waktu” membuka kalender, dan “Ditugaskan ke” menaruh sebuah nama pada tugas.',
+  'help.guide.create-todo.step.6': 'Klik “Buat tugas”.',
+  'help.guide.create-todo.result':
+    'Tugas itu ada di daftar dengan lencananya, prioritas, tenggat waktu, daftar dan orang yang ditugaskan, dan ia terbuka di panel sebelah kanan.',
+  'help.guide.create-todo.tip.1':
+    'Hanya namanya yang wajib. Semua yang lain bisa diisi belakangan dari panel di sebelah kanan.',
+  'help.guide.create-todo.tip.2': 'Dengan sebuah daftar terpilih di bilah sisi, tugas baru dimulai di daftar itu.',
+  'help.guide.create-todo.tip.3': 'Enter di kolom nama langsung membuat tugasnya, tanpa menyentuh kolom yang lain.',
+  // todo-filters
+  'help.guide.todo-filters.title': 'Menemukan dan mengubah tugas',
+  'help.guide.todo-filters.goal':
+    'Pangkas daftar tugas sampai tinggal yang penting sekarang, lalu sunting tugas yang Anda dapati.',
+  'help.guide.todo-filters.step.1':
+    '“Tugas” di bilah sisi: “Semua” adalah semua yang masih terbuka, “Tugasku” apa yang menjadi tanggungan Anda, “Terlambat” apa yang tanggalnya sudah lewat, “Selesai” apa yang sudah rampung. Masing-masing membawa jumlahnya; klik “Terlambat”.',
+  'help.guide.todo-filters.step.2':
+    'Di bawah “Daftar” duduk satu baris per daftar. Memilih salah satunya menampilkan daftar itu, termasuk tugas yang sudah selesai.',
+  'help.guide.todo-filters.step.3':
+    '“Urutkan” menata ulang apa yang ada di layar: “Prioritas” menaruh P1 di depan, “Tenggat waktu” menaruh tenggat terdekat di depan. Hanya satu dari keduanya pada satu waktu.',
+  'help.guide.todo-filters.step.4': 'Klik sebuah tugas untuk membukanya di panel sebelah kanan.',
+  'help.guide.todo-filters.step.5':
+    'Ubah apa yang perlu, “Deskripsi”, “Prioritas”, “Daftar”, “Tenggat waktu” atau “Ditugaskan ke”, lalu “Simpan perubahan”. “Hapus” menyingkirkan tugas itu seketika.',
+  'help.guide.todo-filters.result':
+    'Daftar hanya menampilkan tugas yang Anda minta, dan panel di sebelah kanan menyunting yang Anda pilih.',
+  'help.guide.todo-filters.tip.1':
+    'Baris daftar hanya menghitung yang masih terbuka, tetapi memilihnya menampilkan tugas yang sudah selesai juga. “Semua”, “Tugasku” dan “Terlambat” menyembunyikan yang sudah rampung; “Selesai” tidak menampilkan yang lain.',
+  'help.guide.todo-filters.tip.2':
+    '“Urutkan” menurut “Prioritas” dan “Urutkan” menurut “Tenggat waktu” saling meniadakan, dan selama salah satunya menyala baris tidak bisa lagi diseret ke urutan Anda sendiri.',
+
+  // ── Screen: trip-bookings ─────────────────────────────────────────────────────────────
+  'help.ctx.trip-bookings.title': 'Pemesanan',
+  'help.ctx.trip-bookings.summary':
+    'Tab yang memuat segala sesuatu yang dipesan untuk perjalanan ini selain cara berpindah: tempat menginap, meja restoran, tiket, tur, parkir. Setiap pemesanan adalah sebuah kartu di “Tertunda” atau di “Dikonfirmasi”, membawa kodenya, dokumennya, pesertanya dan biayanya.',
+  'help.ctx.trip-bookings.bullet.1':
+    '“Pemesanan Manual” di kanan atas membuka formulirnya. Enam jenis yang dibuatnya adalah “Akomodasi”, “Restoran”, “Acara”, “Tur”, “Parkir” dan “Lainnya”; penerbangan, kereta dan selebihnya ada di tab “Transportasi” dan tidak pernah muncul di sini.',
+  'help.ctx.trip-bookings.bullet.2':
+    '“Impor dari file” menyerahkan sebuah konfirmasi kepada pengurai: EML, PDF, PKPass, HTML atau TXT, paling banyak lima file berukuran 10 MB. Tombol itu hanya ada bila server dapat membacanya.',
+  'help.ctx.trip-bookings.bullet.3':
+    'Chip di samping judul menyaring menurut jenis, masing-masing dengan jumlahnya sendiri, dan “Semua” membawa semuanya kembali. Begitu sebuah pemesanan menyebut orang, baris avatar di sebelah chip mempersempit tab ini ke salah satu dari mereka.',
+  'help.ctx.trip-bookings.bullet.4':
+    'Kartu berdiri dalam dua bagian, “Tertunda” dan “Dikonfirmasi”, masing-masing dengan jumlahnya. Satu klik pada judul bagian melipatnya, dan apakah ia terbuka diingat untuk perjalanan ini.',
+  'help.ctx.trip-bookings.bullet.5':
+    'Sebuah kartu membawa titik status, jenisnya, judulnya, tanggal dan waktunya, “Kode Pemesanan”, “Lokasi / Alamat”, apa yang dihubungkan dengan pemesanan itu, “Tautan”, “Catatan”, “File” dan “Peserta”.',
+  'help.ctx.trip-bookings.bullet.6':
+    'Pensil pada sebuah kartu membuka kembali formulir yang sama; tempat sampah bertanya sekali lalu pemesanan itu hilang. Pada sebuah akomodasi, malam-malamnya di “Rencana Hari” dan pengeluaran yang terhubung dengannya ikut pergi.',
+  // create-booking
+  'help.guide.create-booking.title': 'Membuat sebuah pemesanan',
+  'help.guide.create-booking.goal':
+    'Masukkan sebuah restoran, acara, tur, tempat parkir atau apa pun lainnya ke dalam perjalanan dengan tangan.',
+  'help.guide.create-booking.step.1': 'Klik “Pemesanan Manual” di kanan atas tab. “Reservasi Baru” terbuka.',
+  'help.guide.create-booking.step.2':
+    'Pilih “Jenis Pemesanan”. “Akomodasi”, “Restoran”, “Acara”, “Tur”, “Parkir” dan “Lainnya” adalah enam jenis yang dibuat tab ini, dan formulirnya berubah mengikuti pilihan: hanya “Akomodasi” yang menukar tanggalnya dengan rentang hari.',
+  'help.guide.create-booking.step.3':
+    'Ketik “Judul”. Inilah satu-satunya isian yang diharuskan oleh formulir, dan “Tambah” tetap mati sampai ia terisi.',
+  'help.guide.create-booking.step.4':
+    'Atur “Tanggal” dan “Waktu mulai”, serta “Tanggal selesai” dan “Waktu selesai” bila pemesanan itu punya akhir. Kalender hanya menawarkan hari di dalam perjalanan, dan akhir yang tidak sesudah awal dikatakan dengan warna merah lalu menghalangi “Tambah”.',
+  'help.guide.create-booking.step.5':
+    'Masukkan “Kode Pemesanan” dari konfirmasi dan atur “Status”. “Tertunda” atau “Dikonfirmasi” menentukan di bagian mana dari keduanya kartu itu mendarat.',
+  'help.guide.create-booking.step.6': 'Klik “Tambah”.',
+  'help.guide.create-booking.result':
+    'Pemesanan itu menjadi sebuah kartu di bagiannya dengan chip jenisnya, tanggalnya dan kodenya, dan semua orang lain di perjalanan melihatnya muncul.',
+  'help.guide.create-booking.tip.1':
+    '“Lokasi / Alamat” menawarkan alamat nyata sementara Anda mengetik; memilih salah satunya menggantikan apa yang Anda tulis, dan alamat yang Anda ketik sendiri dibiarkan apa adanya.',
+  'help.guide.create-booking.tip.2':
+    '“Tautan” memuat halaman pemesanan itu sendiri di penyedianya. Kartu mengubahnya menjadi tautan yang terbuka di tab baru.',
+  'help.guide.create-booking.tip.3':
+    '“Catatan” memakai Markdown, jadi sebuah daftar atau baris tebal ditampilkan sebagaimana mestinya di kartu.',
+  // booking-hotel
+  'help.guide.booking-hotel.title': 'Memesan tempat menginap',
+  'help.guide.booking-hotel.goal':
+    'Masukkan sebuah akomodasi supaya ia sekaligus terhitung sebagai pemesanan dan sebagai malam-malam di “Rencana Hari”.',
+  'help.guide.booking-hotel.step.1':
+    'Klik “Pemesanan Manual” dan pilih “Akomodasi”. Isian tanggal menghilang dan sekelompok isian hotel menggantikan tempatnya.',
+  'help.guide.booking-hotel.step.2':
+    'Pilih hotelnya di bawah “Akomodasi”. Daftarnya adalah tempat-tempat milik perjalanan ini, dan memilih salah satunya menuliskan namanya ke “Judul” dan alamatnya ke “Lokasi / Alamat”.',
+  'help.guide.booking-hotel.step.3':
+    'Atur “Dari” dan “Sampai”: malam pertama dan pagi Anda pergi. Keduanya menawarkan hari-hari perjalanan beserta tanggalnya, dan keduanya saling menjaga urutan.',
+  'help.guide.booking-hotel.step.4':
+    'Isi “Check-in”, “Check-in sampai” dan “Check-out”, serta “Kode Pemesanan” dari konfirmasi.',
+  'help.guide.booking-hotel.step.5': 'Klik “Tambah”.',
+  'help.guide.booking-hotel.result':
+    'Kartu itu membawa rentang hari, bukan sebuah tanggal, dengan waktu check-in dan check-out serta alamatnya, dan menginap yang sama kini duduk pada hari-hari itu di rencana.',
+  'help.guide.booking-hotel.tip.1':
+    '“Akomodasi” adalah satu-satunya jenis tanpa “Tanggal” dan “Waktu mulai”. Tanggalnya adalah “Dari” dan “Sampai”, dan itu hari-hari perjalanan, bukan kalender.',
+  'help.guide.booking-hotel.tip.2':
+    'Biarkan “Akomodasi” kosong dan ketik alamatnya saja: tempat itu dicari, dibuat dan disematkan di peta untuk Anda.',
+  'help.guide.booking-hotel.tip.3': 'Menghapus pemesanan itu membawa serta malam-malamnya keluar dari “Rencana Hari”.',
+  // link-booking
+  'help.guide.link-booking.title': 'Mengikat pemesanan ke rencana',
+  'help.guide.link-booking.goal':
+    'Gantungkan sebuah pemesanan pada perhentian dan tempat yang menjadi miliknya, supaya ia muncul di tempat Anda akan menginginkannya.',
+  'help.guide.link-booking.step.1': 'Klik pensil pada kartu yang ingin Anda hubungkan. “Edit Reservasi” terbuka.',
+  'help.guide.link-booking.step.2':
+    'Buka “Hubungkan ke jadwal harian”. Daftarnya adalah rencana Anda: satu judul per hari, lalu perhentian hari itu, bernomor dan dengan waktunya. Pilih yang menjadi milik pemesanan itu.',
+  'help.guide.link-booking.step.3':
+    '“Tempat / Aktivitas” menghubungkan tempatnya sendiri. Pilih di sana, dan “Judul” serta “Lokasi / Alamat” terisi di mana pun Anda meninggalkannya kosong.',
+  'help.guide.link-booking.step.4': 'Klik “Perbarui”.',
+  'help.guide.link-booking.result':
+    'Kartu itu menyebut hari dan perhentiannya di bawah “Hubungkan ke jadwal harian”, dan pemesanan itu ikut bersama perhentian tersebut di “Rencana Hari”.',
+  'help.guide.link-booking.tip.1':
+    '“Tanpa tautan (mandiri)” di puncak daftar melepaskan hubungan itu lagi. “Akomodasi” sama sekali tidak punya pemilih perhentian: ia terhubung lewat malam-malamnya.',
+  'help.guide.link-booking.tip.2':
+    'Memilih sebuah perhentian pada hari yang bertanggal mengisikan “Tanggal” yang kosong untuk Anda. Tanggal yang sudah Anda atur dibiarkan saja.',
+  // booking-travelers
+  'help.guide.booking-travelers.title': 'Menyebut untuk siapa sebuah pemesanan dibuat',
+  'help.guide.booking-travelers.goal': 'Tandai peserta yang dicakup sebuah pemesanan, lalu lihat hanya milik mereka.',
+  'help.guide.booking-travelers.step.1':
+    'Buka pemesanan itu dengan pensil dan turun ke “Peserta”. Setiap anggota perjalanan berdiri di sana, termasuk “Tamu” yang bernama.',
+  'help.guide.booking-travelers.step.2':
+    'Klik orang-orang yang menjadi tujuan pemesanan ini. Yang terpilih mendapat centang; klik lagi untuk melepasnya.',
+  'help.guide.booking-travelers.step.3': 'Klik “Perbarui”.',
+  'help.guide.booking-travelers.step.4':
+    'Di bilah alat atas, di sebelah chip jenis, klik avatar seorang peserta untuk melihat hanya pemesanan miliknya.',
+  'help.guide.booking-travelers.result':
+    'Kartu itu mendaftar orang-orang yang menjadi tujuannya, dan baris avatar mempersempit tab ke salah satu dari mereka.',
+  'help.guide.booking-travelers.tip.1':
+    'Di kartu, peserta hanya ditampilkan, tidak pernah diubah. Mereka diatur di sini, di formulir.',
+  'help.guide.booking-travelers.tip.2':
+    'Baris avatar muncul begitu perjalanan punya lebih dari satu anggota dan setidaknya satu pemesanan menyebut seseorang. Apa yang Anda pilih bertahan selama sesi peramban ini.',
+  // booking-files
+  'help.guide.booking-files.title': 'Menyimpan vocer bersama pemesanannya',
+  'help.guide.booking-files.goal': 'Lampirkan konfirmasi, tiket atau pas ke pemesanan yang menjadi miliknya.',
+  'help.guide.booking-files.step.1':
+    'Buka pemesanan itu dengan pensil, turun ke “File” dan klik “Lampirkan file”. Pada pemesanan yang sudah ada, dokumen itu langsung naik dan TREK mengatakan “File diunggah”.',
+  'help.guide.booking-files.step.2':
+    'Dokumen itu terdaftar dengan namanya, dengan sebuah tombol untuk membukanya dan sebuah X di sebelahnya.',
+  'help.guide.booking-files.step.3':
+    '“Hubungkan file yang ada” menawarkan dokumen perjalanan yang belum ada pada pemesanan ini. Pilih satu dan ia terlampir tanpa mengunggah apa pun lagi.',
+  'help.guide.booking-files.step.4': 'Klik “Perbarui”.',
+  'help.guide.booking-files.result':
+    'Kartu itu mendaftar dokumen di bawah “File”, dan satu klik pada salah satunya membukanya.',
+  'help.guide.booking-files.tip.1':
+    'Pada pemesanan yang masih Anda buat, dokumen itu menunggu dan naik pada saat Anda mengklik “Tambah”.',
+  'help.guide.booking-files.tip.2':
+    'X di sebelah dokumen melepaskan hubungannya, bukan dokumennya. Dokumen itu tetap ada di tab “File” perjalanan.',
+  'help.guide.booking-files.tip.3':
+    'Jenis file mana yang boleh dilampirkan adalah daftar “Jenis File yang Diizinkan” milik administrator; dokumen, teks dan gambar diizinkan sejak awal.',
+  // booking-cost
+  'help.guide.booking-cost.title': 'Mengubah harga sebuah pemesanan menjadi biaya',
+  'help.guide.booking-cost.goal':
+    'Bawa apa yang dihabiskan sebuah pemesanan ke “Biaya”, terbagi di antara orang-orang yang membayarnya.',
+  'help.guide.booking-cost.step.1':
+    'Buka pemesanan itu dan pergi ke kaki formulir. Di bawah “Costs” berdiri “Create expense”, dengan catatan “Saves the booking, then opens the Costs editor.”',
+  'help.guide.booking-cost.step.2':
+    'Klik “Create expense”. Pemesanan itu tersimpan, formulirnya tertutup dan penyunting biaya terbuka.',
+  'help.guide.booking-cost.step.3':
+    '“Untuk apa?” sudah berisi judul pemesanan itu. Masukkan “Jumlah total” dan periksa “Mata uang” serta “Hari”.',
+  'help.guide.booking-cost.step.4':
+    '“Kategori” adalah yang tersirat dari jenis pemesanannya. Atur “Siapa yang membayar?” dan bagaimana jumlahnya dibagi lewat “Split”.',
+  'help.guide.booking-cost.step.5': 'Klik “Tambah pengeluaran”.',
+  'help.guide.booking-cost.result':
+    'Formulir pemesanan itu kini berbunyi “Linked expense” dengan jumlahnya, dan pengeluaran yang sama berdiri di tab “Biaya”, terikat pada pemesanan ini.',
+  'help.guide.booking-cost.tip.1':
+    'Kategorinya mengikuti jenisnya: “Restoran” menjadi “Makanan & minuman”, “Akomodasi” menjadi “Akomodasi”, “Parkir” menjadi “Parkir”, dan “Acara” serta “Tur” keduanya mendarat di “Lainnya”.',
+  'help.guide.booking-cost.tip.2': 'Tempat sampah pada “Linked expense” menghapus pengeluarannya, bukan pemesanannya.',
+  'help.guide.booking-cost.tip.3':
+    '“Costs” ada di formulir hanya selama addon “Biaya” menyala, yang dialihkan administrator di bawah “Addon”.',
+  // filter-bookings
+  'help.guide.filter-bookings.title': 'Menemukan sebuah pemesanan',
+  'help.guide.filter-bookings.goal': 'Persempit tab yang panjang ke jenis, orang atau keadaan yang Anda cari.',
+  'help.guide.filter-bookings.step.1':
+    'Chip di samping judul adalah jenis yang benar-benar dipakai perjalanan ini, masing-masing dengan angka yang dikandungnya. “Semua” adalah seluruh tab.',
+  'help.guide.filter-bookings.step.2':
+    'Klik sebuah chip untuk menyisakan hanya jenis itu. Klik yang kedua dan keduanya disisakan.',
+  'help.guide.filter-bookings.step.3': '“Semua” mengembalikan segalanya.',
+  'help.guide.filter-bookings.step.4':
+    'Avatar di sebelah chip menyaring menurut peserta, satu orang atau beberapa sekaligus.',
+  'help.guide.filter-bookings.step.5':
+    '“Tertunda” dan “Dikonfirmasi” adalah dua bagiannya, masing-masing dengan jumlahnya. Klik sebuah judul untuk melipat salah satunya; ia masih terlipat ketika Anda kembali.',
+  'help.guide.filter-bookings.result':
+    'Tab itu hanya menampilkan apa yang Anda pilih, dan pilihan itu masih ada ketika Anda kembali kepadanya dalam sesi peramban ini.',
+  'help.guide.filter-bookings.tip.1':
+    'Chip hanya menawarkan jenis yang dimiliki perjalanan, jadi perjalanan tanpa satu pun tur tidak punya chip “Tur”.',
+  'help.guide.filter-bookings.tip.2':
+    'Saringan yang tidak cocok dengan apa pun meninggalkan tab kosong dengan “Tidak ada tempat ditemukan”. Kata-katanya milik daftar tempat; maknanya sama.',
+  // import-booking-file
+  'help.guide.import-booking-file.title': 'Membaca sebuah pemesanan dari konfirmasinya',
+  'help.guide.import-booking-file.goal':
+    'Biarkan TREK menarik pemesanan itu keluar dari surel atau PDF yang dikirim penyedianya, alih-alih mengetiknya lagi.',
+  'help.guide.import-booking-file.step.1':
+    'Klik “Impor dari file” di bilah alat. “Impor konfirmasi pemesanan” terbuka.',
+  'help.guide.import-booking-file.step.2':
+    'Jatuhkan konfirmasinya ke kotak itu, atau klik kotaknya lalu pilih: EML, PDF, PKPass, HTML dan TXT, sampai lima file berukuran 10 MB masing-masing. Yang Anda pilih disebut namanya di kotak itu.',
+  'help.guide.import-booking-file.step.3':
+    'Klik “Impor”. Dialog itu langsung tertutup, karena pembacaannya terjadi di latar belakang.',
+  'help.guide.import-booking-file.step.4':
+    'Sebuah kartu di kanan bawah melaporkan jalannya proses, dan ia mengikuti Anda melintasi aplikasi dan melewati pemuatan ulang. Ketika selesai ia menawarkan “Impor”, yang memulai peninjauan: setiap pemesanan yang ditemukannya terbuka di formulir biasa, sudah terisi dan dengan dokumennya terlampir, untuk Anda periksa dan “Tambah” satu demi satu.',
+  'help.guide.import-booking-file.result':
+    'Setiap pemesanan yang Anda konfirmasi menjadi kartu tersendiri dengan kodenya, tanggalnya dan dokumen asalnya; sebuah akomodasi juga mendapat malam-malamnya, dan dengan “Biaya” menyala, harga yang ada di konfirmasi itu menjadi sebuah pengeluaran.',
+  'help.guide.import-booking-file.tip.1':
+    '“Impor dari file” hanya ada bila server dapat membaca konfirmasi, dan itu menuntut salah satu dari dua hal: pengekstrak di sisi server atau addon “Analisis AI”. Yang terakhir dialihkan administrator di bawah “Addon”.',
+  'help.guide.import-booking-file.tip.2':
+    'Bila tidak ada yang dapat dibaca, kartu itu mengatakannya dan menawarkan “Try AI parsing”, yang mengirimkan file yang sama langsung ke modelnya.',
+  'help.guide.import-booking-file.tip.3':
+    'Penguraian yang selesai disimpan selama sepuluh menit. Mulailah peninjauan di dalam jendela waktu itu.',
+  // edit-booking
+  'help.guide.edit-booking.title': 'Mengubah sebuah pemesanan',
+  'help.guide.edit-booking.goal':
+    'Perbaiki sebuah waktu, tambahkan kode yang datang belakangan, atau pindahkan sebuah pemesanan dari “Tertunda” ke “Dikonfirmasi”.',
+  'help.guide.edit-booking.step.1':
+    'Klik pensil di kepala kartu. “Edit Reservasi” terbuka dengan segala yang diketahui pemesanan itu.',
+  'help.guide.edit-booking.step.2':
+    'Ubah apa yang perlu diubah, di sini “Kode Pemesanan” yang akhirnya dikirim operatornya.',
+  'help.guide.edit-booking.step.3': 'Letakkan “Status” pada “Dikonfirmasi”.',
+  'help.guide.edit-booking.step.4': 'Klik “Perbarui”.',
+  'help.guide.edit-booking.result':
+    'Kartu itu berpindah: pemesanan yang dikonfirmasi berdiri di bagian “Dikonfirmasi” di belakang sebuah titik hijau, dan semua orang di perjalanan melihatnya berpindah.',
+  'help.guide.edit-booking.tip.1':
+    '“Kode Pemesanan” yang tidak bisa Anda baca adalah “Sembunyikan Kode Pemesanan” di Pengaturan, di bawah “Tampilan”. Arahkan tetikus ke sana, atau klik, dan ia terbaca.',
+  'help.guide.edit-booking.tip.2':
+    'Ubah jenisnya dan kategori pengeluaran yang terhubung mengikutinya, kecuali Anda sudah memilih kategori dengan tangan di penyunting biaya.',
+  'help.guide.edit-booking.tip.3':
+    'Sebuah akomodasi juga disunting di sini: hari “Dari” dan “Sampai” miliknya ada di formulir yang sama.',
+  // delete-booking
+  'help.guide.delete-booking.title': 'Menghapus sebuah pemesanan',
+  'help.guide.delete-booking.goal': 'Keluarkan dari perjalanan sebuah pemesanan yang batal.',
+  'help.guide.delete-booking.step.1': 'Klik tempat sampah di kepala kartu.',
+  'help.guide.delete-booking.step.2':
+    '“Hapus pemesanan?” menyebut yang Anda pilih dan mengatakan bahwa ia akan dihapus permanen.',
+  'help.guide.delete-booking.step.3': 'Klik “Konfirmasi”.',
+  'help.guide.delete-booking.result':
+    'Kartu itu hilang, bagi semua orang di perjalanan. Sebuah pemesanan tidak punya pembatalan, jadi pertanyaan itulah perhentian terakhir.',
+  'help.guide.delete-booking.tip.1':
+    'Menghapus pemesanan akomodasi juga mengeluarkan malam-malamnya dari “Rencana Hari” dan membuang pengeluaran yang terhubung dengannya.',
+  'help.guide.delete-booking.tip.2':
+    'Dokumen yang pernah dilampirkan tetap ada di tab “File” perjalanan; hanya hubungannya dengan pemesanan itu yang pergi.',
 };
 
 export default help;

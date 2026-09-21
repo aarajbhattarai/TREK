@@ -2666,6 +2666,346 @@ const help: TranslationStrings = {
     '링크가 든 메시지에는 그 아래에 미리보기 카드가 붙습니다. 그것을 가져오는 것은 당신 자신의 TREK이므로, 당신만 닿을 수 있는 곳으로 가는 링크는 평범한 링크로 남습니다.',
   'help.guide.trip-chat.tip.4':
     '“채팅”은 “애드온” 아래, “Collab” 밑에 있는 독립된 스위치입니다. 관리자는 이것만 꺼서 “메모”, “링크”, “투표”, “다음 할 일”은 계속 돌아가게 둘 수 있습니다.',
+
+  // ── Screen: trip-lists ────────────────────────────────────────────────────────────────
+  'help.ctx.trip-lists.title': '목록',
+  'help.ctx.trip-lists.summary':
+    '한 여행에 목록이 둘입니다. 누가 무엇을 가져가고 무게가 얼마인지까지 담는 짐 목록과, 여행 전과 도중에 일어나야 할 모든 것을 적는 할 일 목록입니다. 이 탭은 “목록” 애드온이 켜져 있는 동안 있습니다.',
+  'help.ctx.trip-lists.bullet.1':
+    '위쪽의 “짐 목록”과 “할 일”이 둘 사이를 전환하고 각각에 무엇이 있는지 셉니다. 오른쪽 버튼들은 지금 열려 있는 쪽의 것입니다.',
+  'help.ctx.trip-lists.bullet.2':
+    '짐 목록은 목록별로 묶입니다. 서류, 의류, 무엇이라 부르든 상관없습니다. 각 목록에는 색 점과, 챙긴 개수와 전체 개수를 보여 주는 배지와, “이름 변경”, “전체 체크”, “전체 체크 해제”, “목록 삭제”가 든 점 세 개가 있습니다. “목록 추가”가 새 목록을 만듭니다.',
+  'help.ctx.trip-lists.bullet.3':
+    '한 행은 체크 상자와 이름, 그다음 “수량”, 그리고 “가방 추적”이 켜져 있으면 그램 단위 무게와 가방 동그라미, 그다음 “목록으로 이동”을 위한 색 점과 “공유”, “이름 변경”, “삭제”입니다. 왼쪽의 손잡이는 그 행을 자기 목록 안에서 위아래로 끕니다.',
+  'help.ctx.trip-lists.bullet.4':
+    '“공동”과 “내 목록”이 짐 목록을 둘로 나눕니다. 모두가 보는 공용 묶음과, 내 것입니다. “전체”, “미완료”, “완료”가 열려 있는 쪽을 좁히고, 위쪽 막대가 얼마나 챙겼는지 셉니다.',
+  'help.ctx.trip-lists.bullet.5':
+    '“템플릿 적용”, “가져오기”, “템플릿으로 저장”은 일일이 입력하지 않고도 목록을 채우거나 남겨 둡니다. 그 옆의 빨간 버튼은 체크된 항목이 몇 개인지 말하고 그것들을 치웁니다.',
+  'help.ctx.trip-lists.bullet.6':
+    '“할 일”에는 전용 사이드바가 있습니다. 진행 카드, “전체”, “내 작업”, “기한 초과”, “완료” 필터, “우선순위”나 “마감일”로 하는 “정렬 기준”, 그리고 목록마다 한 행입니다. 작업을 클릭하면 오른쪽 패널에서 열리고, “새 작업 추가”는 같은 패널을 비어 있는 채로 엽니다.',
+  // packing-categories
+  'help.guide.packing-categories.title': '짐 목록 만들기',
+  'help.guide.packing-categories.goal': '가져갈 것을 목록으로 묶고, 항목을 채우고, 각 목록을 누가 맡는지 정합니다.',
+  'help.guide.packing-categories.step.1':
+    '진행 막대 아래의 “목록 추가”를 클릭하고, “목록 이름 (예: 의류)”에 이름을 입력한 뒤 체크 표시로 확정합니다.',
+  'help.guide.packing-categories.step.2':
+    '새 목록은 빈 행 하나로 시작합니다. “항목 추가”를 클릭하고 “항목 이름...”에 항목을 입력한 뒤 Enter를 누릅니다. 입력란은 다음 항목을 위해 열린 채로 있습니다.',
+  'help.guide.packing-categories.step.3': '행의 이름은 오른쪽 끝의 연필로, 또는 이름 자체를 클릭해서 바꿉니다.',
+  'help.guide.packing-categories.step.4':
+    '목록 헤더의 점선 원은 여행 멤버를 그 목록에 배정합니다. 이름을 고르면 나타나는 칩을 클릭하면 그 사람이 다시 빠집니다.',
+  'help.guide.packing-categories.step.5':
+    '헤더 끝의 점 세 개에 나머지가 들어 있습니다. “이름 변경”, “전체 체크”, “전체 체크 해제”, 그리고 “목록 삭제”인데, 이것은 목록과 그 안의 모든 것을 다시 묻지 않고 없앱니다.',
+  'help.guide.packing-categories.result':
+    '새 목록이 항목들을 아래에 두고 색 점과 함께 격자에 자리 잡고, 배지가 이미 챙긴 개수를 셉니다.',
+  'help.guide.packing-categories.tip.1':
+    '목록은 그 항목들일 뿐입니다. 마지막 항목을 지우면 그 행이 자리 표시자로 바뀌어 목록이 자리와 색을 지킵니다. 그 행까지 지우면 목록이 사라집니다.',
+  'help.guide.packing-categories.tip.2':
+    '누군가를 목록에 배정하면 그 사람에게 짐 알림이 갑니다. 항목을 누가 볼 수 있는지는 바뀌지 않습니다. 그것은 행에 있는 “공유”입니다.',
+  'help.guide.packing-categories.tip.3':
+    '두 목록이 같은 이름을 가져도 됩니다. TREK이 내부에서 둘을 구분하므로 이름은 입력한 그대로 남습니다.',
+  // check-off-packing
+  'help.guide.check-off-packing.title': '짐을 싸면서 체크하기',
+  'help.guide.check-off-packing.goal': '가방에 들어간 것을 표시하고, 막대를 보고, 챙긴 항목을 치웁니다.',
+  'help.guide.check-off-packing.step.1': '행 왼쪽의 상자를 클릭합니다. 이름에 취소선이 그어지고 막대가 움직입니다.',
+  'help.guide.check-off-packing.step.2': '위쪽 막대는 목록에 있는 전부에 대해 챙긴 개수를 숫자로도 백분율로도 셉니다.',
+  'help.guide.check-off-packing.step.3':
+    '목록 전체를 한 번에 하려면, 그 헤더의 점 세 개에 “전체 체크”와 “전체 체크 해제”가 있습니다.',
+  'help.guide.check-off-packing.step.4':
+    '“전체”, “미완료”, “완료”가 격자를 좁힙니다. “미완료”는 아직 빠진 것만 남기므로, 다 챙긴 목록은 거기에서 빠집니다.',
+  'help.guide.check-off-packing.step.5':
+    '위쪽 막대의 “체크된 3개 제거”는 브라우저의 확인을 한 번 거친 뒤, 체크된 항목을 모두 한꺼번에 삭제합니다.',
+  'help.guide.check-off-packing.result': '아직 남은 것만 보이고, 위쪽 막대가 짐 싸기가 어디까지 왔는지 말해 줍니다.',
+  'help.guide.check-off-packing.tip.1': '체크된 항목은 이름을 바꿀 수 없습니다. 먼저 체크를 해제하세요.',
+  'help.guide.check-off-packing.tip.2':
+    '“전체 체크”와 “전체 체크 해제”는 그 목록 자신의 점 세 개에서, 한 번에 한 목록에만 작동합니다.',
+  'help.guide.check-off-packing.tip.3': '모든 항목이 체크되면 카운터가 “모두 완료!”로 바뀌고 막대가 초록색이 됩니다.',
+  // apply-packing-template
+  'help.guide.apply-packing-template.title': '짐 템플릿 적용하기',
+  'help.guide.apply-packing-template.goal':
+    '이미 만들어진 목록을 여행에 들여오고, 이번 여행의 목록을 다음 여행을 위해 남깁니다.',
+  'help.guide.apply-packing-template.step.1': '목록 위 막대에서 “템플릿 적용”을 클릭합니다.',
+  'help.guide.apply-packing-template.step.2':
+    '템플릿을 고릅니다. 각 줄이 이름과 항목이 몇 개 들어 있는지를 알려 줍니다.',
+  'help.guide.apply-packing-template.step.3':
+    '항목은 지금 보고 있는 화면에 들어갑니다. “공동”이면 모두가 보는 묶음에, “내 목록”이면 내 것이 됩니다.',
+  'help.guide.apply-packing-template.step.4':
+    '이번 여행의 목록을 다음 여행을 위해 남기려면 “템플릿으로 저장”, 이름, 그다음 체크 표시입니다.',
+  'help.guide.apply-packing-template.result': '템플릿의 목록과 항목이 원래 있던 것 옆에 여행 안으로 들어옵니다.',
+  'help.guide.apply-packing-template.tip.1':
+    '템플릿이 나르는 것은 이름과 목록뿐입니다. 수량, 무게, 가방, 이미 체크된 상태는 따라오지 않습니다.',
+  'help.guide.apply-packing-template.tip.2':
+    '“템플릿 적용”은 템플릿이 하나라도 있어야 나타납니다. 없으면 버튼 자체가 보이지 않습니다.',
+  'help.guide.apply-packing-template.tip.3':
+    '“템플릿으로 저장”은 인스턴스 관리자에게만, 그리고 목록에 항목이 있는 동안에만 나타납니다. 공용 묶음과 내 항목을 저장하고, 다른 멤버의 개인 항목은 절대 저장하지 않습니다.',
+  // import-packing-list
+  'help.guide.import-packing-list.title': '짐 목록을 통째로 붙여넣기',
+  'help.guide.import-packing-list.goal': '다른 곳에 이미 있는 목록을 한 번에 짐 항목으로 바꿉니다.',
+  'help.guide.import-packing-list.step.1': '목록 위 막대에서 “가져오기”를 클릭합니다.',
+  'help.guide.import-packing-list.step.2':
+    '한 줄에 한 항목입니다. 카테고리, 이름, 무게(g, 선택), 가방(선택), checked/unchecked(선택). 상자 안의 회색 예시가 네 가지 형태를 모두 보여 줍니다.',
+  'help.guide.import-packing-list.step.3':
+    '또는 “CSV/TXT 불러오기”로 파일에서 줄을 읽어 옵니다. .csv나 .txt를 받아서 상자 안에 있던 것을 대체합니다.',
+  'help.guide.import-packing-list.step.4': '“가져오기”를 클릭합니다. 버튼이 알아들은 줄 수를 셉니다.',
+  'help.guide.import-packing-list.result':
+    '모든 줄이 한 행이 되어 첫 필드가 가리키는 목록에 들어가고, 이미 있던 것은 아무것도 건드리지 않습니다.',
+  'help.guide.import-packing-list.tip.1':
+    '쉼표, 세미콜론, 탭이 모두 필드를 나누고, 큰따옴표는 필드를 하나로 묶습니다. 그래서 “Shirt, blue”는 한 이름으로 남습니다. 값이 하나뿐인 줄은 그냥 이름이고, 자기 목록이 없는 줄은 “기타”에 들어갑니다.',
+  'help.guide.import-packing-list.tip.2':
+    '네 번째 필드에 적힌 가방은 여행에 아직 없으면 만들어집니다. 무게와 가방을 한꺼번에 불러오는 곳은 여기뿐이고, 템플릿은 이름과 목록만 가져옵니다.',
+  // share-packing-item
+  'help.guide.share-packing-item.title': '누가 항목을 보고 누가 가져갈지 정하기',
+  'help.guide.share-packing-item.goal':
+    '항목을 그룹 공용 묶음과 내 목록, 그리고 내가 대신 챙겨 주는 사람들 사이에서 옮깁니다.',
+  'help.guide.share-packing-item.step.1':
+    '목록 위의 “공동”은 모두가 보는 묶음이고 “내 목록”은 내 것이며, 각각 그 안의 개수를 셉니다. “내 목록”을 클릭해 내 것을 봅니다.',
+  'help.guide.share-packing-item.step.2': '다시 “공동”에서 어떤 행의 “공유”를 엽니다. 연필 옆의 공유 아이콘입니다.',
+  'help.guide.share-packing-item.step.3':
+    '단계는 셋입니다. “공동”은 그룹 공용 묶음에 있고 모두에게 보입니다. “개인”은 나만 볼 수 있습니다. “공유 대상…”에서는 그 항목이 누구를 위한 것인지 고릅니다.',
+  'help.guide.share-packing-item.step.4': '“개인” 항목은 “내 목록”에만 있습니다. 그쪽으로 옮겨 가서 찾으세요.',
+  'help.guide.share-packing-item.step.5':
+    '“공유”를 다시 열고 “공유 대상…” 아래에서 이름을 체크합니다. 그 항목이 그 사람의 목록에도 보이고, 행에는 “1명과 공유”라고 나옵니다.',
+  'help.guide.share-packing-item.result': '항목이 고른 단계에 놓이고, 행이 누가 가져가는지 말해 줍니다.',
+  'help.guide.share-packing-item.tip.1':
+    '항목의 공유를 바꾸는 사람은 그것을 가져가는 사람뿐입니다. 공유받은 사람은 자기 “내 목록”에서 내 이름이 붙은 채로 그것을 보고, 체크할 수 있습니다.',
+  'help.guide.share-packing-item.tip.2':
+    '다른 사람이 가져가는 항목에서는 대신 다른 버튼 두 개가 나옵니다. “저도 가져갈 수 있어요”는 나를 그 사람 옆에 더하고, “내 목록으로 복사”는 나만의 비공개 사본을 만듭니다.',
+  'help.guide.share-packing-item.tip.3':
+    '새 항목은 추가한 화면을 물려받습니다. “내 목록”에서 추가하면 “개인”이 되고, “공동”에서 추가하면 공용 묶음으로 들어갑니다.',
+  // packing-bags
+  'help.guide.packing-bags.title': '가방 무게 재기',
+  'help.guide.packing-bags.goal':
+    '모든 항목에 무게를 넣고, 항목을 가방에 나눠 담고, 각 가방을 항공사 제한 아래로 유지합니다.',
+  'help.guide.packing-bags.step.1': '항목의 무게를 그램 단위로 동그라미 앞의 칸에 입력합니다.',
+  'help.guide.packing-bags.step.2': '행 끝의 동그라미가 그 항목의 가방입니다. 클릭하세요.',
+  'help.guide.packing-bags.step.3':
+    '아직 가방이 없으면 “가방 추가”, 이름, Enter입니다. 가방이 만들어지고 항목이 곧장 그 안에 들어갑니다.',
+  'help.guide.packing-bags.step.4':
+    '가방이 하나라도 생기면 오른쪽에 “가방” 패널이 나타납니다. 이름, 무게, 채움 막대, 누가 드는지와 안에 항목이 몇 개인지, 그다음 “미배정”과 “총 무게”입니다.',
+  'help.guide.packing-bags.step.5': '“제한 설정”을 클릭하고 항공사가 말하는 방식대로 제한을 킬로그램으로 입력합니다.',
+  'help.guide.packing-bags.step.6': '가방 이름 아래의 점선 더하기가 누가 그것을 드는지 알려 줍니다.',
+  'help.guide.packing-bags.result':
+    '오른쪽의 “가방” 패널이 각 가방의 무게를 제한과 나란히, 어느 가방에도 없는 것, 그리고 합계를 보여 줍니다.',
+  'help.guide.packing-bags.tip.1':
+    '무게 칸과 가방 동그라미와 “가방” 패널은 관리자가 “목록” 애드온 아래에서 “가방 추적”을 켜 둔 동안에만 있습니다.',
+  'help.guide.packing-bags.tip.2':
+    '가방의 무게는 내가 볼 수 없는 것까지 포함해 모든 멤버의 항목에 대해 서버에서 합산됩니다. 그래서 그 숫자는 정말로 그 가방의 무게입니다.',
+  'help.guide.packing-bags.tip.3':
+    '제한이 없는 가방은 가장 무거운 가방을 기준으로 그려져 막대들이 서로 비교 가능하게 남습니다. 제한을 주면 막대는 그 제한을 기준으로 읽힙니다.',
+  // create-todo
+  'help.guide.create-todo.title': '작업 추가하기',
+  'help.guide.create-todo.goal': '일어나야 할 일을 목록, 우선순위, 날짜, 그리고 담당자와 함께 적어 둡니다.',
+  'help.guide.create-todo.step.1': '오른쪽 위의 “새 작업 추가”를 클릭합니다.',
+  'help.guide.create-todo.step.2': '“작업 이름”에 이름을 붙이고, 기억해 둘 만한 것은 “설명”에 적습니다.',
+  'help.guide.create-todo.step.3': '“목록”이 작업을 묶습니다. 하나를 고르거나, 옆의 더하기로 새 이름을 입력합니다.',
+  'help.guide.create-todo.step.4':
+    '“우선순위”는 버튼 네 개입니다. “없음”, P1, P2, P3이고 빨강에서 파랑으로 내려갑니다.',
+  'help.guide.create-todo.step.5': '“마감일”은 달력을 열고, “배정 대상”은 작업에 이름을 붙입니다.',
+  'help.guide.create-todo.step.6': '“작업 만들기”를 클릭합니다.',
+  'help.guide.create-todo.result':
+    '작업이 우선순위, 마감일, 목록, 배정된 사람이라는 배지를 달고 목록에 들어가며, 오른쪽 패널에서 열립니다.',
+  'help.guide.create-todo.tip.1': '필수는 이름뿐입니다. 나머지는 나중에 오른쪽 패널에서 채울 수 있습니다.',
+  'help.guide.create-todo.tip.2': '사이드바에서 목록을 선택해 두면 새 작업은 그 목록에서 시작합니다.',
+  'help.guide.create-todo.tip.3': '이름 칸에서 Enter를 누르면 다른 칸을 건드리지 않고 곧바로 작업이 만들어집니다.',
+  // todo-filters
+  'help.guide.todo-filters.title': '작업 찾아서 고치기',
+  'help.guide.todo-filters.goal': '작업 목록을 지금 중요한 것만 남게 줄이고, 도달한 작업을 편집합니다.',
+  'help.guide.todo-filters.step.1':
+    '사이드바의 “작업”입니다. “전체”는 아직 열려 있는 전부, “내 작업”은 나에게 걸린 것, “기한 초과”는 날짜가 지난 것, “완료”는 끝난 것입니다. 각각 개수를 달고 있습니다. “기한 초과”를 클릭하세요.',
+  'help.guide.todo-filters.step.2':
+    '“목록” 아래에는 목록마다 한 행이 있습니다. 하나를 고르면 끝난 작업까지 포함해 그 목록이 보입니다.',
+  'help.guide.todo-filters.step.3':
+    '“정렬 기준”은 화면에 있는 것을 다시 늘어놓습니다. “우선순위”는 P1을 앞에, “마감일”은 가장 가까운 기한을 앞에 둡니다. 둘 중 하나만 한 번에 됩니다.',
+  'help.guide.todo-filters.step.4': '작업을 클릭해 오른쪽 패널에서 엽니다.',
+  'help.guide.todo-filters.step.5':
+    '필요한 것을 바꿉니다. “설명”, “우선순위”, “목록”, “마감일”, “배정 대상”입니다. 그다음 “변경 사항 저장”입니다. “삭제”는 작업을 즉시 없앱니다.',
+  'help.guide.todo-filters.result': '목록에는 요청한 작업만 보이고, 오른쪽 패널이 고른 작업을 편집합니다.',
+  'help.guide.todo-filters.tip.1':
+    '목록 행은 아직 열려 있는 것만 세지만, 선택하면 끝난 작업도 보입니다. “전체”, “내 작업”, “기한 초과”는 끝난 것을 감추고, “완료”는 그것만 보여 줍니다.',
+  'help.guide.todo-filters.tip.2':
+    '“정렬 기준” “우선순위”와 “정렬 기준” “마감일”은 서로를 배제하며, 둘 중 하나가 켜져 있는 동안에는 행을 내가 정한 순서로 끌어 옮길 수 없습니다.',
+
+  // ── Screen: trip-bookings ─────────────────────────────────────────────────────────────
+  'help.ctx.trip-bookings.title': '예약',
+  'help.ctx.trip-bookings.summary':
+    '이동 수단을 뺀, 여행을 위해 예약한 모든 것이 있는 탭입니다. 묵을 곳, 식당 자리, 티켓, 투어, 주차가 여기에 있습니다. 예약은 저마다 “대기 중”이나 “확정됨”의 카드가 되어 코드와 서류와 동행자와 비용을 지니고 있습니다.',
+  'help.ctx.trip-bookings.bullet.1':
+    '오른쪽 위의 “직접 예약”이 양식을 엽니다. 여기서 만드는 여섯 가지는 “숙박”, “레스토랑”, “이벤트”, “투어”, “주차”, “기타”입니다. 항공편과 기차 등은 “교통” 탭에 있고 여기에는 나타나지 않습니다.',
+  'help.ctx.trip-bookings.bullet.2':
+    '“파일에서 가져오기”는 확인서를 분석기에 넘깁니다. EML, PDF, PKPass, HTML, TXT를 쓸 수 있고, 파일당 10 MB, 최대 5개입니다. 이 버튼은 서버가 그것들을 읽을 수 있을 때만 있습니다.',
+  'help.ctx.trip-bookings.bullet.3':
+    '제목 옆의 칩은 유형으로 거르며, 저마다 자기 개수를 지니고 있습니다. “전체”가 모두를 되돌립니다. 예약이 사람을 지정하면, 칩 옆의 아바타 줄이 탭을 그중 한 사람으로 좁힙니다.',
+  'help.ctx.trip-bookings.bullet.4':
+    '카드는 “대기 중”과 “확정됨”의 두 구역에 서고, 각각 개수가 붙습니다. 구역 제목을 클릭하면 접히고, 열려 있는지 여부는 이 여행에 대해 기억됩니다.',
+  'help.ctx.trip-bookings.bullet.5':
+    '카드는 상태 점, 유형, 제목, 날짜와 시간, “예약 코드”, “위치 / 주소”, 예약이 연결된 대상, “링크”, “메모”, “파일”, “동행자”를 담습니다.',
+  'help.ctx.trip-bookings.bullet.6':
+    '카드의 연필은 같은 양식을 다시 엽니다. 휴지통은 한 번 묻고 그러면 예약은 사라집니다. 숙박이라면 일별 계획의 숙박일과 연결된 지출도 함께 사라집니다.',
+  // create-booking
+  'help.guide.create-booking.title': '예약 만들기',
+  'help.guide.create-booking.goal': '식당, 이벤트, 투어, 주차 자리, 그 밖의 무엇이든 손으로 여행에 넣습니다.',
+  'help.guide.create-booking.step.1': '탭 오른쪽 위의 “직접 예약”을 클릭합니다. “새 예약”이 열립니다.',
+  'help.guide.create-booking.step.2':
+    '“예약 유형”을 고릅니다. 이 탭이 만드는 여섯 가지는 “숙박”, “레스토랑”, “이벤트”, “투어”, “주차”, “기타”이고, 고른 것에 따라 양식이 바뀝니다. 날짜를 날의 범위로 바꾸는 것은 “숙박”뿐입니다.',
+  'help.guide.create-booking.step.3':
+    '“제목”을 입력합니다. 양식이 꼭 요구하는 항목은 이 하나뿐이고, 무언가 들어가기 전까지 “추가”는 눌리지 않습니다.',
+  'help.guide.create-booking.step.4':
+    '“날짜”와 “시작 시간”을 정하고, 끝이 있는 예약이라면 “종료 날짜”와 “종료 시간”도 정합니다. 달력은 여행 안의 날만 내어 주고, 끝이 시작보다 뒤가 아니면 빨간색으로 그렇게 알리며 “추가”를 막습니다.',
+  'help.guide.create-booking.step.5':
+    '확인서의 “예약 코드”를 넣고 “상태”를 정합니다. “대기 중”이냐 “확정됨”이냐가 카드가 두 구역 가운데 어디에 놓일지를 결정합니다.',
+  'help.guide.create-booking.step.6': '“추가”를 클릭합니다.',
+  'help.guide.create-booking.result':
+    '예약은 유형 칩과 날짜와 코드를 단 카드로 제 구역에 서고, 여행의 다른 모두에게도 나타납니다.',
+  'help.guide.create-booking.tip.1':
+    '“위치 / 주소”는 입력하는 동안 실제 주소를 내어 줍니다. 하나를 고르면 쓴 내용이 바뀌고, 직접 입력한 주소는 그대로 남습니다.',
+  'help.guide.create-booking.tip.2':
+    '“링크”에는 제공처에 있는 그 예약의 페이지를 넣습니다. 카드는 그것을 새 탭에서 열리는 링크로 만듭니다.',
+  'help.guide.create-booking.tip.3': '“메모”는 Markdown이라 목록이나 굵은 줄도 카드에서 그대로 표시됩니다.',
+  // booking-hotel
+  'help.guide.booking-hotel.title': '묵을 곳 예약하기',
+  'help.guide.booking-hotel.goal': '숙박을 넣어 예약으로도, 일별 계획의 숙박일로도 한 번에 세어지게 합니다.',
+  'help.guide.booking-hotel.step.1':
+    '“직접 예약”을 클릭하고 “숙박”을 고릅니다. 날짜 항목이 사라지고 그 자리에 숙소용 항목 묶음이 들어섭니다.',
+  'help.guide.booking-hotel.step.2':
+    '“숙박”에서 호텔을 고릅니다. 목록은 이 여행에 있는 장소이고, 하나를 고르면 그 이름이 “제목”에, 주소가 “위치 / 주소”에 적힙니다.',
+  'help.guide.booking-hotel.step.3':
+    '“부터”와 “까지”를 정합니다. 첫 숙박일과 떠나는 날 아침입니다. 둘 다 여행의 날을 날짜와 함께 내어 주고, 두 값은 서로 순서가 어긋나지 않게 유지됩니다.',
+  'help.guide.booking-hotel.step.4': '“체크인”, “체크인 마감”, “체크아웃”과 확인서의 “예약 코드”를 채웁니다.',
+  'help.guide.booking-hotel.step.5': '“추가”를 클릭합니다.',
+  'help.guide.booking-hotel.result':
+    '카드는 날짜 대신 날의 범위를 지니고, 체크인과 체크아웃 시간과 주소가 함께 붙습니다. 같은 숙박이 이제 계획의 그 날들에도 자리를 잡습니다.',
+  'help.guide.booking-hotel.tip.1':
+    '“숙박”은 “날짜”와 “시작 시간”이 없는 유일한 유형입니다. 그 날짜는 “부터”와 “까지”이고, 달력이 아니라 여행의 날에서 고릅니다.',
+  'help.guide.booking-hotel.tip.2':
+    '“숙박”을 비워 두고 대신 주소를 입력해도 됩니다. 그 장소를 찾아 만들고 지도에 핀으로 꽂아 줍니다.',
+  'help.guide.booking-hotel.tip.3': '예약을 지우면 일별 계획의 숙박일도 함께 사라집니다.',
+  // link-booking
+  'help.guide.link-booking.title': '예약을 계획에 묶기',
+  'help.guide.link-booking.goal': '예약을 그것이 속한 들를 곳과 장소에 걸어, 필요한 자리에 나타나게 합니다.',
+  'help.guide.link-booking.step.1': '연결하려는 카드의 연필을 클릭합니다. “예약 편집”이 열립니다.',
+  'help.guide.link-booking.step.2':
+    '“날 배정에 연결”을 엽니다. 목록은 계획 그 자체입니다. 날마다 제목이 있고, 그 아래에 그날의 들를 곳이 번호와 시간과 함께 있습니다. 예약이 속한 것을 고릅니다.',
+  'help.guide.link-booking.step.3':
+    '“장소 / 활동”은 장소 자체를 연결합니다. 거기서 고르면 비워 둔 “제목”과 “위치 / 주소”가 채워집니다.',
+  'help.guide.link-booking.step.4': '“업데이트”를 클릭합니다.',
+  'help.guide.link-booking.result':
+    '카드는 “날 배정에 연결” 아래에 그 날과 들를 곳을 적고, 예약은 일별 계획에서 그 들를 곳과 함께 움직입니다.',
+  'help.guide.link-booking.tip.1':
+    '목록 맨 위의 “연결 없음 (독립)”이 연결을 다시 풉니다. “숙박”에는 들를 곳을 고르는 칸 자체가 없습니다. 숙박일을 통해 연결됩니다.',
+  'help.guide.link-booking.tip.2':
+    '날짜가 있는 날의 들를 곳을 고르면 비어 있던 “날짜”가 대신 채워집니다. 이미 정해 둔 날짜는 건드리지 않습니다.',
+  // booking-travelers
+  'help.guide.booking-travelers.title': '예약이 누구를 위한 것인지 밝히기',
+  'help.guide.booking-travelers.goal': '예약이 포함하는 동행자를 표시하고, 그런 다음 그 사람의 것만 봅니다.',
+  'help.guide.booking-travelers.step.1':
+    '연필로 예약을 열고 “동행자”까지 내려갑니다. 여행의 모든 구성원이 거기 서 있고, 이름이 있는 “게스트”도 그 안에 있습니다.',
+  'help.guide.booking-travelers.step.2':
+    '이 예약이 해당하는 사람을 클릭합니다. 고른 사람에게는 체크가 붙고, 다시 클릭하면 풀립니다.',
+  'help.guide.booking-travelers.step.3': '“업데이트”를 클릭합니다.',
+  'help.guide.booking-travelers.step.4':
+    '위쪽 도구 모음에서, 유형 칩 옆에 있는 동행자의 아바타를 클릭하면 그 사람의 예약만 보입니다.',
+  'help.guide.booking-travelers.result': '카드는 해당하는 사람을 적고, 아바타 줄은 탭을 그중 한 사람으로 좁힙니다.',
+  'help.guide.booking-travelers.tip.1':
+    '카드에서 동행자는 보이기만 할 뿐 바뀌지 않습니다. 지정은 여기, 양식에서 합니다.',
+  'help.guide.booking-travelers.tip.2':
+    '아바타 줄은 여행에 구성원이 둘 이상이고 적어도 한 예약이 누군가를 지정했을 때 나타납니다. 고른 내용은 이 브라우저 세션 동안 이어집니다.',
+  // booking-files
+  'help.guide.booking-files.title': '바우처를 예약과 함께 두기',
+  'help.guide.booking-files.goal': '확인서, 티켓, 패스를 그것이 속한 예약에 첨부합니다.',
+  'help.guide.booking-files.step.1':
+    '연필로 예약을 열고 “파일”까지 내려가 “파일 첨부”를 클릭합니다. 이미 있는 예약이라면 서류가 곧바로 올라가고 TREK이 “파일이 업로드되었습니다”라고 알립니다.',
+  'help.guide.booking-files.step.2': '서류는 이름으로 나열되고, 여는 버튼과 그 옆의 X가 붙습니다.',
+  'help.guide.booking-files.step.3':
+    '“기존 파일 연결”은 아직 이 예약에 없는 여행의 서류를 내어 줍니다. 하나를 고르면 다시 올리지 않고 첨부됩니다.',
+  'help.guide.booking-files.step.4': '“업데이트”를 클릭합니다.',
+  'help.guide.booking-files.result': '카드는 “파일” 아래에 서류를 나열하고, 그중 하나를 클릭하면 열립니다.',
+  'help.guide.booking-files.tip.1': '아직 만들고 있는 예약에서는 서류가 기다렸다가 “추가”를 클릭하는 순간 올라갑니다.',
+  'help.guide.booking-files.tip.2':
+    '서류 옆의 X는 연결만 없앨 뿐 서류를 없애지는 않습니다. 서류는 여행의 “파일” 탭에 남습니다.',
+  'help.guide.booking-files.tip.3':
+    '어떤 종류의 파일을 첨부할 수 있는지는 관리자의 “허용된 파일 형식” 목록에 달려 있습니다. 기본 상태에서는 문서, 텍스트, 그림이 허용됩니다.',
+  // booking-cost
+  'help.guide.booking-cost.title': '예약 금액을 비용으로 바꾸기',
+  'help.guide.booking-cost.goal': '예약에 드는 금액을 “비용”에 넣고, 내는 사람들끼리 나눕니다.',
+  'help.guide.booking-cost.step.1':
+    '예약을 열고 양식의 맨 아래로 갑니다. “Costs” 아래에 “Create expense”가 있고, 그 아래에 “Saves the booking, then opens the Costs editor.”라는 안내가 붙어 있습니다.',
+  'help.guide.booking-cost.step.2':
+    '“Create expense”를 클릭합니다. 예약이 저장되고, 그 양식이 닫히며, 비용 편집 창이 열립니다.',
+  'help.guide.booking-cost.step.3':
+    '“무엇을 위한 것인가요?”에는 이미 예약의 제목이 들어 있습니다. “총 금액”을 넣고 “통화”와 “날짜”를 확인합니다.',
+  'help.guide.booking-cost.step.4':
+    '“카테고리”는 예약 유형이 정해 주는 것입니다. “누가 지불했나요?”와 금액을 나누는 방식인 “Split”을 설정합니다.',
+  'help.guide.booking-cost.step.5': '“지출 추가”를 클릭합니다.',
+  'help.guide.booking-cost.result':
+    '예약의 양식에는 이제 금액과 함께 “Linked expense”가 보이고, 같은 지출이 이 예약에 묶인 채 “비용” 탭에 섭니다.',
+  'help.guide.booking-cost.tip.1':
+    '카테고리는 유형을 따릅니다. “레스토랑”은 “식음료”가 되고, “숙박”은 “숙박”이 되고, “주차”는 “주차”가 되며, “이벤트”와 “투어”는 둘 다 “기타”로 갑니다.',
+  'help.guide.booking-cost.tip.2': '“Linked expense”의 휴지통은 지출을 없애지, 예약을 없애지는 않습니다.',
+  'help.guide.booking-cost.tip.3':
+    '“Costs”가 양식에 있는 것은 “비용” 애드온이 켜져 있는 동안뿐이고, 관리자가 “애드온”에서 그것을 켜고 끕니다.',
+  // filter-bookings
+  'help.guide.filter-bookings.title': '예약 찾기',
+  'help.guide.filter-bookings.goal': '긴 탭을 찾는 유형, 사람, 상태로 좁힙니다.',
+  'help.guide.filter-bookings.step.1':
+    '제목 옆의 칩은 이 여행이 실제로 쓰는 유형이고, 저마다 담고 있는 개수를 답니다. “전체”는 탭 전부입니다.',
+  'help.guide.filter-bookings.step.2': '칩을 클릭하면 그 유형만 남습니다. 두 번째를 클릭하면 둘 다 남습니다.',
+  'help.guide.filter-bookings.step.3': '“전체”가 모두를 되돌립니다.',
+  'help.guide.filter-bookings.step.4':
+    '칩 옆의 아바타는 동행자로 거르며, 한 사람이든 여러 사람이든 한꺼번에 고를 수 있습니다.',
+  'help.guide.filter-bookings.step.5':
+    '“대기 중”과 “확정됨”이 두 구역이고, 각각 개수가 붙습니다. 제목을 클릭하면 하나가 접히고, 돌아와도 여전히 접혀 있습니다.',
+  'help.guide.filter-bookings.result':
+    '탭은 고른 것만 보여 주고, 이 브라우저 세션 안에서는 돌아와도 여전히 그대로 골라져 있습니다.',
+  'help.guide.filter-bookings.tip.1':
+    '칩은 여행에 있는 유형만 내어 주므로, 투어가 하나도 없는 여행에는 “투어” 칩이 없습니다.',
+  'help.guide.filter-bookings.tip.2':
+    '아무것도 맞지 않는 거르기는 탭을 비우고 “장소를 찾을 수 없습니다”를 남깁니다. 문구는 장소 목록의 것이지만 뜻은 같습니다.',
+  // import-booking-file
+  'help.guide.import-booking-file.title': '확인서에서 예약 읽어 오기',
+  'help.guide.import-booking-file.goal':
+    '다시 입력하는 대신, 제공처가 보낸 메일이나 PDF에서 TREK이 예약을 끌어내게 합니다.',
+  'help.guide.import-booking-file.step.1':
+    '도구 모음의 “파일에서 가져오기”를 클릭합니다. “예약 확인서 가져오기”가 열립니다.',
+  'help.guide.import-booking-file.step.2':
+    '확인서를 상자에 끌어다 놓거나, 상자를 클릭해 고릅니다. EML, PDF, PKPass, HTML, TXT를 쓸 수 있고, 파일당 10 MB로 최대 5개입니다. 고른 파일의 이름이 상자에 적힙니다.',
+  'help.guide.import-booking-file.step.3':
+    '“가져오기”를 클릭합니다. 읽는 일은 뒤에서 일어나므로 대화 상자는 곧바로 닫힙니다.',
+  'help.guide.import-booking-file.step.4':
+    '오른쪽 아래의 카드가 진행 상황을 알리고, 앱 안을 옮겨 다녀도 새로 고쳐도 따라옵니다. 끝나면 “가져오기”를 내어 주고, 그것이 검토를 시작합니다. 찾아낸 예약이 하나씩, 내용이 채워지고 서류가 첨부된 보통의 양식으로 열리니, 확인하고 차례로 “추가”하면 됩니다.',
+  'help.guide.import-booking-file.result':
+    '확인한 예약은 저마다 코드와 날짜와 출처가 된 서류를 지닌 제 카드가 됩니다. 숙박이라면 숙박일도 얻고, “비용”이 켜져 있다면 확인서에 있던 금액이 지출이 되었습니다.',
+  'help.guide.import-booking-file.tip.1':
+    '“파일에서 가져오기”는 서버가 확인서를 읽을 수 있을 때만 있고, 그러려면 서버 쪽 추출기나 “AI 분석” 애드온 가운데 하나가 필요합니다. 뒤엣것은 관리자가 “애드온”에서 켜고 끕니다.',
+  'help.guide.import-booking-file.tip.2':
+    '아무것도 읽어 내지 못하면 카드가 그렇게 알리고 “Try AI parsing”을 내어 줍니다. 그것은 같은 파일을 곧장 모델로 보냅니다.',
+  'help.guide.import-booking-file.tip.3': '끝난 분석은 10분 동안 보관됩니다. 검토는 그 안에 시작하세요.',
+  // edit-booking
+  'help.guide.edit-booking.title': '예약 바꾸기',
+  'help.guide.edit-booking.goal':
+    '시간을 고치거나, 나중에 온 코드를 넣거나, 예약을 “대기 중”에서 “확정됨”으로 옮깁니다.',
+  'help.guide.edit-booking.step.1':
+    '카드 머리의 연필을 클릭합니다. “예약 편집”이 그 예약이 아는 모든 것과 함께 열립니다.',
+  'help.guide.edit-booking.step.2': '바꿀 것을 바꿉니다. 여기서는 업체가 마침내 보내온 “예약 코드”입니다.',
+  'help.guide.edit-booking.step.3': '“상태”를 “확정됨”으로 둡니다.',
+  'help.guide.edit-booking.step.4': '“업데이트”를 클릭합니다.',
+  'help.guide.edit-booking.result':
+    '카드가 옮겨 갑니다. 확정된 예약은 초록 점 뒤, “확정됨” 구역에 서고, 여행의 모두가 그 이동을 봅니다.',
+  'help.guide.edit-booking.tip.1':
+    '읽을 수 없는 “예약 코드”는 설정의 “화면”에 있는 “예약 코드 흐리게” 때문입니다. 마우스를 올리거나 클릭하면 읽힙니다.',
+  'help.guide.edit-booking.tip.2':
+    '유형을 바꾸면 연결된 지출의 카테고리도 따라갑니다. 비용 편집 창에서 손으로 카테고리를 고른 경우에는 그렇지 않습니다.',
+  'help.guide.edit-booking.tip.3': '숙박도 여기서 편집합니다. 그 “부터”와 “까지” 날도 같은 양식에 있습니다.',
+  // delete-booking
+  'help.guide.delete-booking.title': '예약 지우기',
+  'help.guide.delete-booking.goal': '무산된 예약을 여행에서 덜어 냅니다.',
+  'help.guide.delete-booking.step.1': '카드 머리의 휴지통을 클릭합니다.',
+  'help.guide.delete-booking.step.2': '“예약을 삭제할까요?”가 고른 예약의 이름을 대고 영구히 삭제된다고 알립니다.',
+  'help.guide.delete-booking.step.3': '“확인”을 클릭합니다.',
+  'help.guide.delete-booking.result':
+    '카드는 여행의 모두에게서 사라집니다. 예약에는 되돌리기가 없으니 이 물음이 마지막 관문입니다.',
+  'help.guide.delete-booking.tip.1':
+    '숙박 예약을 지우면 일별 계획에서 그 숙박일도 빠지고, 거기 연결되어 있던 지출도 없어집니다.',
+  'help.guide.delete-booking.tip.2':
+    '첨부되어 있던 서류는 여행의 “파일” 탭에 남습니다. 사라지는 것은 예약과의 연결뿐입니다.',
 };
 
 export default help;

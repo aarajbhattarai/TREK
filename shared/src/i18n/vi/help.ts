@@ -2827,6 +2827,370 @@ const help: TranslationStrings = {
     'Một tin nhắn có liên kết sẽ có thẻ xem trước bên dưới, do chính TREK của bạn lấy về, nên một liên kết tới thứ chỉ mình bạn vào được vẫn chỉ là một liên kết thường.',
   'help.guide.trip-chat.tip.4':
     '“Trò chuyện” là một công tắc riêng dưới “Tiện ích bổ sung”, bên dưới “Cộng tác”: quản trị viên có thể tắt nó đi mà vẫn để “Ghi chú”, “Liên kết”, “Thăm dò ý kiến” và “Tiếp theo là gì” chạy tiếp.',
+
+  // ── Screen: trip-lists ────────────────────────────────────────────────────────────────
+  'help.ctx.trip-lists.title': 'Danh sách',
+  'help.ctx.trip-lists.summary':
+    'Hai danh sách cho một chuyến đi: danh sách đóng gói, với ai mang gì và nặng bao nhiêu, và danh sách việc cần làm gồm mọi thứ phải xảy ra trước và trong chuyến đi. Tab này có mặt khi tiện ích bổ sung “Danh sách” đang bật.',
+  'help.ctx.trip-lists.bullet.1':
+    '“Danh sách đóng gói” và “Việc cần làm” ở trên cùng chuyển qua lại giữa hai bên và đếm những gì có ở mỗi bên; các nút bên phải thuộc về bên nào đang mở.',
+  'help.ctx.trip-lists.bullet.2':
+    'Danh sách đóng gói được gom thành các danh sách, Tài liệu, Quần áo, hay bất cứ tên nào bạn đặt, mỗi danh sách có một chấm màu, một huy hiệu đã đóng gói trên tổng số và ba chấm chứa “Đổi tên”, “Kiểm tra tất cả”, “Bỏ chọn tất cả” và “Xóa danh sách”. “Thêm danh sách” tạo một danh sách mới.',
+  'help.ctx.trip-lists.bullet.3':
+    'Một hàng gồm ô đánh dấu và tên, rồi “SL”, trọng lượng tính bằng gam và vòng tròn túi khi “Theo dõi túi” đang bật, rồi chấm màu cho “Chuyển sang danh sách”, “Chia sẻ”, “Đổi tên” và “Xóa bỏ”. Tay nắm bên trái kéo hàng lên hoặc xuống trong danh sách của nó.',
+  'help.ctx.trip-lists.bullet.4':
+    '“Chung” và “Danh sách của tôi” chia danh sách đóng gói làm hai: kho chung mọi người đều thấy, và của riêng bạn. “Tất cả”, “Mở” và “Xong” thu hẹp bên nào đang mở, và thanh phía trên đếm những gì đã đóng gói.',
+  'help.ctx.trip-lists.bullet.5':
+    '“Áp dụng mẫu”, “Nhập” và “Lưu dưới dạng mẫu” lấp đầy hoặc giữ lại một danh sách mà không phải gõ ra, và nút đỏ bên cạnh nêu có bao nhiêu mục đã được đánh dấu rồi dọn chúng đi.',
+  'help.ctx.trip-lists.bullet.6':
+    '“Việc cần làm” có thanh bên riêng: thẻ tiến độ, các bộ lọc “Tất cả”, “Nhiệm vụ của tôi”, “Quá hạn” và “Xong”, “Sắp xếp theo” “Sự ưu tiên” hoặc “Ngày đến hạn”, và một hàng cho mỗi danh sách. Nhấp vào một nhiệm vụ sẽ mở nó ở khung bên phải, và “Thêm nhiệm vụ mới” mở chính khung đó khi còn trống.',
+  // packing-categories
+  'help.guide.packing-categories.title': 'Dựng danh sách đóng gói',
+  'help.guide.packing-categories.goal':
+    'Gom những thứ bạn mang theo thành các danh sách, đổ mục vào đó và nói ai lo mỗi danh sách.',
+  'help.guide.packing-categories.step.1':
+    'Nhấp “Thêm danh sách” dưới thanh tiến độ, gõ tên vào “Tên danh sách (vd. Quần áo)” và xác nhận bằng dấu tích.',
+  'help.guide.packing-categories.step.2':
+    'Danh sách mới bắt đầu với một hàng trống. Nhấp “Thêm mục”, gõ tên mục vào “Tên mặt hàng...” rồi nhấn Enter; ô nhập vẫn mở cho mục kế tiếp.',
+  'help.guide.packing-categories.step.3':
+    'Đổi tên một hàng bằng cây bút chì ở đầu bên phải của nó, hoặc bằng cách nhấp vào chính cái tên.',
+  'help.guide.packing-categories.step.4':
+    'Vòng tròn nét đứt trên đầu danh sách gán thành viên chuyến đi vào danh sách. Chọn một tên; chiếc thẻ hiện ra sẽ gỡ người đó ra lại khi bạn nhấp vào.',
+  'help.guide.packing-categories.step.5':
+    'Ba chấm ở cuối đầu danh sách chứa phần còn lại: “Đổi tên”, “Kiểm tra tất cả”, “Bỏ chọn tất cả”, và “Xóa danh sách”, thứ lấy đi cả danh sách lẫn mọi thứ trong đó mà không hỏi lại.',
+  'help.guide.packing-categories.result':
+    'Danh sách mới nằm trong lưới với các mục của nó ở dưới và chấm màu của nó, và huy hiệu đếm những gì đã đóng gói.',
+  'help.guide.packing-categories.tip.1':
+    'Một danh sách chỉ là các mục của nó. Xóa mục cuối cùng thì hàng đó biến thành chỗ giữ chỗ để danh sách giữ được vị trí và màu của mình; xóa luôn hàng đó thì danh sách biến mất.',
+  'help.guide.packing-categories.tip.2':
+    'Gán ai đó vào một danh sách sẽ gửi cho họ một thông báo đóng gói. Việc đó không đổi ai được thấy các mục, đó là “Chia sẻ” trên hàng.',
+  'help.guide.packing-categories.tip.3':
+    'Hai danh sách có thể mang cùng một tên. TREK phân biệt chúng bên trong, nên các tên vẫn y như bạn đã gõ.',
+  // check-off-packing
+  'help.guide.check-off-packing.title': 'Đánh dấu trong lúc xếp đồ',
+  'help.guide.check-off-packing.goal':
+    'Đánh dấu thứ đã nằm trong túi, theo dõi thanh tiến độ, và dọn đi các mục đã đóng gói.',
+  'help.guide.check-off-packing.step.1': 'Nhấp vào ô ở bên trái một hàng. Tên bị gạch đi và thanh tiến độ nhích lên.',
+  'help.guide.check-off-packing.step.2':
+    'Thanh phía trên đếm những gì đã đóng gói so với mọi thứ trong danh sách, bằng con số và bằng phần trăm.',
+  'help.guide.check-off-packing.step.3':
+    'Cả một danh sách cùng lúc: ba chấm trên đầu danh sách chứa “Kiểm tra tất cả” và “Bỏ chọn tất cả”.',
+  'help.guide.check-off-packing.step.4':
+    '“Tất cả”, “Mở” và “Xong” thu hẹp lưới. “Mở” chỉ để lại những gì còn thiếu, nên một danh sách đã đóng gói xong sẽ rơi ra khỏi đó.',
+  'help.guide.check-off-packing.step.5':
+    '“Xóa 3 đã chọn” ở thanh phía trên xóa mọi mục đã đánh dấu cùng lúc, sau một lần xác nhận từ trình duyệt.',
+  'help.guide.check-off-packing.result':
+    'Chỉ những gì còn dang dở được liệt kê, và thanh phía trên cho biết việc đóng gói đã đi được tới đâu.',
+  'help.guide.check-off-packing.tip.1': 'Một mục đã đánh dấu thì không đổi tên được. Bỏ đánh dấu trước đã.',
+  'help.guide.check-off-packing.tip.2':
+    '“Kiểm tra tất cả” và “Bỏ chọn tất cả” chỉ tác động lên một danh sách mỗi lần, từ ba chấm của chính danh sách đó.',
+  'help.guide.check-off-packing.tip.3':
+    'Khi mọi mục đều được đánh dấu, bộ đếm được thay bằng “Tất cả đã được đóng gói!” và thanh chuyển sang màu xanh lá.',
+  // apply-packing-template
+  'help.guide.apply-packing-template.title': 'Áp dụng một mẫu đóng gói',
+  'help.guide.apply-packing-template.goal':
+    'Đưa một danh sách làm sẵn vào chuyến đi, và giữ danh sách của chuyến này cho chuyến sau.',
+  'help.guide.apply-packing-template.step.1': 'Nhấp “Áp dụng mẫu” ở thanh phía trên danh sách.',
+  'help.guide.apply-packing-template.step.2':
+    'Chọn một mẫu. Mỗi dòng nêu tên mẫu và cho biết nó chứa bao nhiêu mặt hàng.',
+  'help.guide.apply-packing-template.step.3':
+    'Các mục rơi vào chế độ xem bạn đang ở: “Chung” đặt chúng vào kho chung mọi người đều thấy, “Danh sách của tôi” biến chúng thành của bạn.',
+  'help.guide.apply-packing-template.step.4':
+    'Giữ danh sách của chuyến này cho chuyến sau: “Lưu dưới dạng mẫu”, một cái tên, rồi dấu tích.',
+  'help.guide.apply-packing-template.result':
+    'Các danh sách và mục của mẫu đã ở trong chuyến đi, bên cạnh những gì vốn có.',
+  'help.guide.apply-packing-template.tip.1':
+    'Một mẫu chỉ mang theo tên và danh sách. Số lượng, trọng lượng, túi và những gì đã được đánh dấu thì không đi theo.',
+  'help.guide.apply-packing-template.tip.2':
+    '“Áp dụng mẫu” chỉ có mặt khi đã tồn tại một mẫu. Không có mẫu nào thì nút đó không hiện ra.',
+  'help.guide.apply-packing-template.tip.3':
+    '“Lưu dưới dạng mẫu” chỉ hiện với quản trị viên của phiên bản cài đặt, và chỉ khi danh sách còn có mục. Nó lưu kho chung cùng các mục của riêng bạn, không bao giờ lưu mục riêng tư của thành viên khác.',
+  // import-packing-list
+  'help.guide.import-packing-list.title': 'Dán nguyên một danh sách đóng gói vào',
+  'help.guide.import-packing-list.goal':
+    'Biến một danh sách bạn đã có ở nơi khác thành các mục đóng gói trong một lần.',
+  'help.guide.import-packing-list.step.1': 'Nhấp “Nhập” ở thanh phía trên danh sách.',
+  'help.guide.import-packing-list.step.2':
+    'Mỗi dòng một mục: Danh mục, Tên, Trọng lượng tính bằng g (tùy chọn), Túi (tùy chọn), checked/unchecked (tùy chọn). Mẫu màu xám trong ô cho thấy cả bốn dạng.',
+  'help.guide.import-packing-list.step.3':
+    'Hoặc nạp các dòng từ một tập tin bằng “Tải CSV/TXT”. Nó nhận một tập tin .csv hoặc .txt và thay thế mọi thứ đang có trong ô.',
+  'help.guide.import-packing-list.step.4': 'Nhấp “Nhập”. Nút đó đếm số dòng nó hiểu được.',
+  'help.guide.import-packing-list.result':
+    'Mỗi dòng thành một hàng, nằm trong danh sách mà trường đầu tiên của nó nêu tên, và không có gì vốn đã ở đó bị đụng tới.',
+  'help.guide.import-packing-list.tip.1':
+    'Dấu phẩy, dấu chấm phẩy và dấu tab đều tách các trường, còn dấu nháy kép giữ một trường lại với nhau, nên “Shirt, blue” vẫn là một cái tên. Một dòng chỉ có một giá trị thì đó là tên, và một dòng không có danh sách riêng sẽ rơi vào “Khác”.',
+  'help.guide.import-packing-list.tip.2':
+    'Túi được nêu tên ở trường thứ tư sẽ được tạo nếu chuyến đi chưa có nó. Đây là nơi duy nhất nạp trọng lượng và túi hàng loạt; một mẫu chỉ mang theo tên và danh sách.',
+  // share-packing-item
+  'help.guide.share-packing-item.title': 'Quyết định ai thấy một mục và ai mang nó',
+  'help.guide.share-packing-item.goal':
+    'Chuyển một mục qua lại giữa kho chung của nhóm, danh sách riêng của bạn và những người bạn mang giùm.',
+  'help.guide.share-packing-item.step.1':
+    '“Chung” phía trên các danh sách là kho mọi người đều thấy, “Danh sách của tôi” là của riêng bạn, và mỗi bên đều đếm những gì có trong đó. Nhấp “Danh sách của tôi” để xem phần của bạn.',
+  'help.guide.share-packing-item.step.2':
+    'Quay lại “Chung”, mở điều khiển “Chia sẻ” của một hàng, tức biểu tượng chia sẻ bên cạnh cây bút chì.',
+  'help.guide.share-packing-item.step.3':
+    'Ba mức: “Chung”, nằm trong kho của nhóm và mọi người đều thấy; “Cá nhân”, chỉ mình bạn thấy; và “Chia sẻ với…”, nơi bạn chọn những người mà mục đó lo cho.',
+  'help.guide.share-packing-item.step.4': 'Một mục “Cá nhân” chỉ nằm ở “Danh sách của tôi”. Chuyển qua đó để tìm nó.',
+  'help.guide.share-packing-item.step.5':
+    'Mở “Chia sẻ” lần nữa và đánh dấu một tên dưới “Chia sẻ với…”. Mục đó cũng hiện trên danh sách của người ấy, và hàng ghi “chia sẻ với 1”.',
+  'help.guide.share-packing-item.result': 'Mục nằm ở mức bạn đã chọn, và hàng cho biết ai đang mang nó.',
+  'help.guide.share-packing-item.tip.1':
+    'Chỉ người mang một mục mới đổi được cách chia sẻ của nó. Người bạn chia sẻ cùng sẽ thấy nó trên “Danh sách của tôi” của chính họ, có gắn tên bạn, và có thể đánh dấu nó.',
+  'help.guide.share-packing-item.tip.2':
+    'Trên một mục do người khác mang, bạn nhận được hai nút khác: “Tôi cũng có thể mang”, thêm bạn vào bên cạnh họ, và “Sao chép vào danh sách của tôi”, tạo một bản riêng tư của bạn.',
+  'help.guide.share-packing-item.tip.3':
+    'Mục mới thừa hưởng chế độ xem nơi bạn thêm chúng. Thêm ở “Danh sách của tôi” thì chúng là “Cá nhân”, thêm ở “Chung” thì chúng vào kho chung.',
+  // packing-bags
+  'help.guide.packing-bags.title': 'Cân các túi',
+  'help.guide.packing-bags.goal':
+    'Đặt trọng lượng cho từng mục, xếp các mục vào túi và giữ mỗi túi dưới giới hạn của hãng bay.',
+  'help.guide.packing-bags.step.1': 'Gõ trọng lượng của một mục, tính bằng gam, vào ô trước vòng tròn.',
+  'help.guide.packing-bags.step.2': 'Vòng tròn ở cuối hàng là túi của mục đó. Nhấp vào nó.',
+  'help.guide.packing-bags.step.3':
+    'Chưa có túi nào: “Thêm túi”, một cái tên, Enter. Túi được tạo và mục đi thẳng vào đó.',
+  'help.guide.packing-bags.step.4':
+    'Bảng “Túi xách” hiện ra bên phải ngay khi có một túi: tên, trọng lượng, một thanh mức đầy, ai mang nó và có bao nhiêu mặt hàng trong đó, rồi “Chưa được chỉ định” và “Tổng trọng lượng”.',
+  'help.guide.packing-bags.step.5':
+    'Nhấp “Đặt giới hạn” và gõ giới hạn tính bằng kilôgam, đúng cách các hãng bay nêu ra.',
+  'help.guide.packing-bags.step.6': 'Dấu cộng nét đứt dưới tên một túi cho biết ai đang mang nó.',
+  'help.guide.packing-bags.result':
+    'Bảng “Túi xách” bên phải cho thấy trọng lượng từng túi so với giới hạn của nó, những gì không nằm trong túi nào, và tổng cộng.',
+  'help.guide.packing-bags.tip.1':
+    'Ô trọng lượng, vòng tròn túi và bảng “Túi xách” chỉ tồn tại khi một quản trị viên đã bật “Theo dõi túi” trong tiện ích bổ sung “Danh sách”.',
+  'help.guide.packing-bags.tip.2':
+    'Trọng lượng của một túi được cộng trên máy chủ trên các mục của mọi thành viên, kể cả những mục bạn không thấy, nên con số đó đúng là trọng lượng thật của túi.',
+  'help.guide.packing-bags.tip.3':
+    'Một túi không có giới hạn được vẽ so với túi nặng nhất, để các thanh vẫn so sánh được với nhau. Đặt cho nó một giới hạn thì thanh sẽ đọc theo giới hạn đó.',
+  // create-todo
+  'help.guide.create-todo.title': 'Thêm một nhiệm vụ',
+  'help.guide.create-todo.goal':
+    'Ghi lại một việc phải làm, kèm một danh sách, một mức ưu tiên, một ngày và một cái tên.',
+  'help.guide.create-todo.step.1': 'Nhấp “Thêm nhiệm vụ mới” ở trên cùng bên phải.',
+  'help.guide.create-todo.step.2': 'Đặt tên ở “Tên nhiệm vụ”, và ghi mọi thứ đáng nhớ vào “Miêu tả”.',
+  'help.guide.create-todo.step.3':
+    '“Danh sách” gom nhóm nhiệm vụ. Chọn một, hoặc dùng dấu cộng bên cạnh để gõ một tên mới.',
+  'help.guide.create-todo.step.4': '“Sự ưu tiên” là bốn nút: “Không có”, P1, P2 và P3, từ đỏ xuống xanh lam.',
+  'help.guide.create-todo.step.5': '“Ngày đến hạn” mở một lịch, và “Được giao cho” đặt một cái tên lên nhiệm vụ.',
+  'help.guide.create-todo.step.6': 'Nhấp “Tạo nhiệm vụ”.',
+  'help.guide.create-todo.result':
+    'Nhiệm vụ nằm trong danh sách cùng các huy hiệu của nó, mức ưu tiên, ngày đến hạn, danh sách và người được giao, và nó mở ra ở khung bên phải.',
+  'help.guide.create-todo.tip.1': 'Chỉ cái tên là bắt buộc. Mọi thứ khác có thể điền sau từ khung bên phải.',
+  'help.guide.create-todo.tip.2':
+    'Khi một danh sách đang được chọn ở thanh bên, nhiệm vụ mới bắt đầu trong danh sách đó.',
+  'help.guide.create-todo.tip.3': 'Nhấn Enter trong ô tên sẽ tạo nhiệm vụ ngay, không cần đụng tới các ô còn lại.',
+  // todo-filters
+  'help.guide.todo-filters.title': 'Tìm và sửa một nhiệm vụ',
+  'help.guide.todo-filters.goal':
+    'Rút danh sách nhiệm vụ xuống còn những gì quan trọng lúc này, rồi sửa nhiệm vụ bạn vừa mở.',
+  'help.guide.todo-filters.step.1':
+    '“Nhiệm vụ” ở thanh bên: “Tất cả” là mọi thứ còn dang dở, “Nhiệm vụ của tôi” là phần thuộc về bạn, “Quá hạn” là những gì có ngày đã qua, “Xong” là những gì đã hoàn thành. Mỗi mục đều mang con số của nó; nhấp “Quá hạn”.',
+  'help.guide.todo-filters.step.2':
+    'Dưới “Danh sách” là một hàng cho mỗi danh sách. Chọn một hàng sẽ hiện danh sách đó, gồm cả các nhiệm vụ đã hoàn thành.',
+  'help.guide.todo-filters.step.3':
+    '“Sắp xếp theo” xếp lại những gì đang trên màn hình: “Sự ưu tiên” đưa P1 lên trước, “Ngày đến hạn” đưa hạn gần nhất lên trước. Mỗi lần chỉ một trong hai.',
+  'help.guide.todo-filters.step.4': 'Nhấp một nhiệm vụ để mở nó ở khung bên phải.',
+  'help.guide.todo-filters.step.5':
+    'Đổi những gì bạn cần, “Miêu tả”, “Sự ưu tiên”, “Danh sách”, “Ngày đến hạn” hoặc “Được giao cho”, rồi “Lưu thay đổi”. “Xóa bỏ” xóa nhiệm vụ đi ngay lập tức.',
+  'help.guide.todo-filters.result':
+    'Danh sách chỉ hiện những nhiệm vụ bạn đã yêu cầu, và khung bên phải sửa nhiệm vụ bạn đã chọn.',
+  'help.guide.todo-filters.tip.1':
+    'Một hàng danh sách chỉ đếm những gì còn dang dở, nhưng chọn nó thì các nhiệm vụ đã hoàn thành cũng hiện ra. “Tất cả”, “Nhiệm vụ của tôi” và “Quá hạn” giấu những gì đã xong; “Xong” thì không hiện gì khác.',
+  'help.guide.todo-filters.tip.2':
+    '“Sắp xếp theo” “Sự ưu tiên” và “Sắp xếp theo” “Ngày đến hạn” loại trừ lẫn nhau, và khi một trong hai đang bật thì không còn kéo các hàng vào thứ tự riêng của bạn được nữa.',
+
+  // ── Screen: trip-bookings ─────────────────────────────────────────────────────────────
+  'help.ctx.trip-bookings.title': 'Đặt chỗ',
+  'help.ctx.trip-bookings.summary':
+    'Thẻ chứa mọi thứ đã đặt cho chuyến đi mà không phải là cách di chuyển: chỗ ở, bàn ăn, vé, chuyến du lịch, bãi đỗ xe. Mỗi đặt chỗ là một thẻ trong “Chưa giải quyết” hoặc trong “Đã xác nhận”, mang theo mã, giấy tờ, người đi và chi phí của nó.',
+  'help.ctx.trip-bookings.bullet.1':
+    '“Thêm đặt chỗ” ở trên cùng bên phải mở biểu mẫu. Sáu loại nó tạo ra là “Chỗ ở”, “Nhà hàng”, “Sự kiện”, “Chuyến du lịch”, “Bãi đỗ xe” và “Khác”; chuyến bay, tàu hỏa và phần còn lại nằm ở thẻ “Di chuyển” và không bao giờ xuất hiện ở đây.',
+  'help.ctx.trip-bookings.bullet.2':
+    '“Nhập từ tập tin” giao một bản xác nhận cho bộ phân tích: EML, PDF, PKPass, HTML hoặc TXT, nhiều nhất năm tập tin 10 MB. Nút đó chỉ có mặt khi máy chủ đọc được chúng.',
+  'help.ctx.trip-bookings.bullet.3':
+    'Các chip bên cạnh tiêu đề lọc theo loại, mỗi chip mang số đếm riêng, và “Tất cả” đưa mọi thứ trở lại. Khi một đặt chỗ đã nêu tên người, hàng ảnh đại diện cạnh các chip thu hẹp thẻ này về một trong số họ.',
+  'help.ctx.trip-bookings.bullet.4':
+    'Các thẻ đứng trong hai phần, “Chưa giải quyết” và “Đã xác nhận”, mỗi phần có số đếm của nó. Một cú nhấp lên tiêu đề của một phần sẽ gấp nó lại, và việc nó đang mở hay không được nhớ cho chuyến đi này.',
+  'help.ctx.trip-bookings.bullet.5':
+    'Một thẻ mang chấm trạng thái, loại, tiêu đề, ngày và giờ, “Mã đặt chỗ”, “Vị trí / Địa chỉ”, thứ mà đặt chỗ được liên kết tới, “Liên kết” của nó, “Ghi chú”, “Tập tin” và “Người đi”.',
+  'help.ctx.trip-bookings.bullet.6':
+    'Cây bút chì trên một thẻ mở lại chính biểu mẫu đó; thùng rác hỏi một lần rồi đặt chỗ biến mất. Với một chỗ ở thì những đêm của nó trong “Kế hoạch ngày” và chi phí liên kết cũng đi theo.',
+  // create-booking
+  'help.guide.create-booking.title': 'Tạo một đặt chỗ',
+  'help.guide.create-booking.goal':
+    'Đưa một nhà hàng, một sự kiện, một chuyến du lịch, một chỗ đỗ xe hay bất cứ thứ gì khác vào chuyến đi bằng tay.',
+  'help.guide.create-booking.step.1': 'Nhấp “Thêm đặt chỗ” ở trên cùng bên phải của thẻ. “Đặt chỗ mới” mở ra.',
+  'help.guide.create-booking.step.2':
+    'Chọn “Loại đặt chỗ”. “Chỗ ở”, “Nhà hàng”, “Sự kiện”, “Chuyến du lịch”, “Bãi đỗ xe” và “Khác” là sáu loại thẻ này tạo ra, và biểu mẫu thay đổi theo lựa chọn: chỉ “Chỗ ở” mới đổi ngày của nó lấy một khoảng các ngày.',
+  'help.guide.create-booking.step.3':
+    'Gõ “Tiêu đề”. Đó là ô duy nhất biểu mẫu nhất định đòi, và “Thêm” vẫn nằm im cho tới khi nó có nội dung.',
+  'help.guide.create-booking.step.4':
+    'Đặt “Ngày” và “Thời gian bắt đầu”, cùng “Ngày kết thúc” và “Thời gian kết thúc” nếu đặt chỗ có điểm kết thúc. Lịch chỉ đưa ra những ngày nằm trong chuyến đi, và một điểm kết thúc không sau điểm bắt đầu sẽ báo bằng màu đỏ và chặn “Thêm”.',
+  'help.guide.create-booking.step.5':
+    'Điền “Mã đặt chỗ” từ bản xác nhận và đặt “Trạng thái”. “Chưa giải quyết” hay “Đã xác nhận” quyết định thẻ rơi vào phần nào trong hai phần.',
+  'help.guide.create-booking.step.6': 'Nhấp “Thêm”.',
+  'help.guide.create-booking.result':
+    'Đặt chỗ là một thẻ trong phần của nó với chip loại, ngày và mã của nó, và mọi người khác trong chuyến đi đều thấy nó xuất hiện.',
+  'help.guide.create-booking.tip.1':
+    '“Vị trí / Địa chỉ” đưa ra các địa chỉ có thật trong lúc bạn gõ; chọn một cái sẽ thay thế thứ bạn đã viết, còn địa chỉ bạn tự gõ thì được giữ nguyên.',
+  'help.guide.create-booking.tip.2':
+    '“Liên kết” nhận trang riêng của đặt chỗ ở phía nhà cung cấp. Thẻ biến nó thành một liên kết mở trong tab mới.',
+  'help.guide.create-booking.tip.3':
+    '“Ghi chú” dùng Markdown, nên một danh sách hay một dòng in đậm cũng được hiển thị đúng như vậy trên thẻ.',
+  // booking-hotel
+  'help.guide.booking-hotel.title': 'Đặt một chỗ ở',
+  'help.guide.booking-hotel.goal':
+    'Nhập một chỗ ở để nó vừa tính là một đặt chỗ vừa tính là những đêm trong “Kế hoạch ngày”.',
+  'help.guide.booking-hotel.step.1':
+    'Nhấp “Thêm đặt chỗ” và chọn “Chỗ ở”. Các ô ngày biến mất và một khối ô dành cho khách sạn thế chỗ chúng.',
+  'help.guide.booking-hotel.step.2':
+    'Chọn khách sạn dưới “Chỗ ở”. Danh sách chính là các địa điểm của chuyến đi, và chọn một cái sẽ viết tên nó vào “Tiêu đề” và địa chỉ nó vào “Vị trí / Địa chỉ”.',
+  'help.guide.booking-hotel.step.3':
+    'Đặt “Từ” và “Đến”: đêm đầu tiên và buổi sáng bạn rời đi. Cả hai đều đưa ra các ngày của chuyến đi kèm ngày tháng, và hai ô giữ cho nhau đúng thứ tự.',
+  'help.guide.booking-hotel.step.4':
+    'Điền “Nhận phòng”, “Nhận phòng cho đến khi” và “Trả phòng”, cùng “Mã đặt chỗ” từ bản xác nhận.',
+  'help.guide.booking-hotel.step.5': 'Nhấp “Thêm”.',
+  'help.guide.booking-hotel.result':
+    'Thẻ mang một khoảng các ngày thay vì một ngày, với giờ nhận phòng và trả phòng cùng địa chỉ, và chính kỳ lưu trú đó giờ nằm trên những ngày ấy của kế hoạch.',
+  'help.guide.booking-hotel.tip.1':
+    '“Chỗ ở” là loại duy nhất không có “Ngày” và “Thời gian bắt đầu”. Ngày của nó là “Từ” và “Đến”, và đó là các ngày của chuyến đi chứ không phải một cuốn lịch.',
+  'help.guide.booking-hotel.tip.2':
+    'Hãy để “Chỗ ở” trống và gõ địa chỉ thay vào đó: địa điểm sẽ được tra cứu, tạo ra và ghim lên bản đồ giúp bạn.',
+  'help.guide.booking-hotel.tip.3': 'Xóa đặt chỗ sẽ mang những đêm ấy ra khỏi “Kế hoạch ngày” theo.',
+  // link-booking
+  'help.guide.link-booking.title': 'Buộc một đặt chỗ vào kế hoạch',
+  'help.guide.link-booking.goal':
+    'Treo một đặt chỗ vào điểm dừng và địa điểm mà nó thuộc về, để nó hiện ra ở nơi bạn sẽ cần đến nó.',
+  'help.guide.link-booking.step.1': 'Nhấp cây bút chì trên thẻ bạn muốn liên kết. “Chỉnh sửa đặt chỗ” mở ra.',
+  'help.guide.link-booking.step.2':
+    'Mở “Liên kết đến bài tập trong ngày”. Danh sách chính là kế hoạch của bạn: một tiêu đề cho mỗi ngày, rồi các điểm dừng của ngày đó, được đánh số và kèm giờ. Chọn điểm mà đặt chỗ thuộc về.',
+  'help.guide.link-booking.step.3':
+    '“Địa điểm / Hoạt động” liên kết chính địa điểm đó. Chọn nó ở đấy, và “Tiêu đề” cùng “Vị trí / Địa chỉ” sẽ tự điền ở bất cứ chỗ nào bạn đã để trống.',
+  'help.guide.link-booking.step.4': 'Nhấp “Cập nhật”.',
+  'help.guide.link-booking.result':
+    'Thẻ nêu ngày và điểm dừng dưới “Liên kết đến bài tập trong ngày”, và đặt chỗ đi cùng điểm dừng ấy trong “Kế hoạch ngày”.',
+  'help.guide.link-booking.tip.1':
+    '“Không có liên kết (độc lập)” ở đầu danh sách gỡ liên kết ra lần nữa. “Chỗ ở” hoàn toàn không có ô chọn điểm dừng: nó liên kết qua những đêm của mình.',
+  'help.guide.link-booking.tip.2':
+    'Chọn một điểm dừng trên một ngày đã có ngày tháng sẽ điền giúp bạn ô “Ngày” còn trống. Một ngày bạn đã đặt sẵn thì được để yên.',
+  // booking-travelers
+  'help.guide.booking-travelers.title': 'Nói một đặt chỗ là dành cho ai',
+  'help.guide.booking-travelers.goal': 'Đánh dấu những người đi mà một đặt chỗ bao gồm, rồi chỉ xem phần của họ.',
+  'help.guide.booking-travelers.step.1':
+    'Mở đặt chỗ bằng cây bút chì và đi xuống “Người đi”. Mọi thành viên của chuyến đi đều đứng đó, kể cả những “Khách” đã có tên.',
+  'help.guide.booking-travelers.step.2':
+    'Nhấp vào những người mà đặt chỗ này dành cho. Người được chọn sẽ có một dấu tích; nhấp lại để bỏ ra.',
+  'help.guide.booking-travelers.step.3': 'Nhấp “Cập nhật”.',
+  'help.guide.booking-travelers.step.4':
+    'Ở thanh công cụ phía trên, cạnh các chip loại, nhấp ảnh đại diện của một người đi để chỉ xem các đặt chỗ của họ.',
+  'help.guide.booking-travelers.result':
+    'Thẻ liệt kê những người mà nó dành cho, và hàng ảnh đại diện thu hẹp thẻ này về một trong số họ.',
+  'help.guide.booking-travelers.tip.1':
+    'Trên thẻ, người đi chỉ được hiển thị chứ không bao giờ thay đổi được. Họ được đặt ở đây, trong biểu mẫu.',
+  'help.guide.booking-travelers.tip.2':
+    'Hàng ảnh đại diện xuất hiện khi chuyến đi có nhiều hơn một thành viên và ít nhất một đặt chỗ nêu tên ai đó. Thứ bạn chọn còn lại trong suốt phiên trình duyệt này.',
+  // booking-files
+  'help.guide.booking-files.title': 'Giữ phiếu cùng với đặt chỗ',
+  'help.guide.booking-files.goal': 'Đính bản xác nhận, vé hoặc thẻ vào đúng đặt chỗ mà nó thuộc về.',
+  'help.guide.booking-files.step.1':
+    'Mở đặt chỗ bằng cây bút chì, đi xuống “Tập tin” và nhấp “Đính kèm tập tin”. Trên một đặt chỗ đã tồn tại, giấy tờ được tải lên ngay và TREK báo “Tệp đã được tải lên”.',
+  'help.guide.booking-files.step.2': 'Giấy tờ được liệt kê theo tên, kèm một nút để mở nó và một dấu X bên cạnh.',
+  'help.guide.booking-files.step.3':
+    '“Liên kết tập tin hiện có” đưa ra những giấy tờ của chuyến đi chưa nằm trên đặt chỗ này. Chọn một cái và nó được đính vào mà không phải tải lên lần nữa.',
+  'help.guide.booking-files.step.4': 'Nhấp “Cập nhật”.',
+  'help.guide.booking-files.result':
+    'Thẻ liệt kê các giấy tờ dưới “Tập tin”, và một cú nhấp lên một trong số chúng sẽ mở nó ra.',
+  'help.guide.booking-files.tip.1':
+    'Trên một đặt chỗ bạn còn đang tạo, giấy tờ sẽ chờ và được tải lên đúng lúc bạn nhấp “Thêm”.',
+  'help.guide.booking-files.tip.2':
+    'Dấu X cạnh một giấy tờ chỉ gỡ liên kết, không gỡ giấy tờ. Nó vẫn nằm trong thẻ “Tập tin” của chuyến đi.',
+  'help.guide.booking-files.tip.3':
+    'Những loại tập tin nào được phép đính kèm là danh sách “Các loại tệp được phép” của quản trị viên; tài liệu, văn bản và hình ảnh được cho phép ngay từ đầu.',
+  // booking-cost
+  'help.guide.booking-cost.title': 'Biến giá của một đặt chỗ thành chi phí',
+  'help.guide.booking-cost.goal': 'Đưa số tiền một đặt chỗ tốn vào “Chi phí”, chia cho những người trả tiền cho nó.',
+  'help.guide.booking-cost.step.1':
+    'Mở đặt chỗ và đi xuống chân biểu mẫu. Dưới “Chi phí” là “Tạo chi phí”, kèm ghi chú “Lưu đặt chỗ, sau đó mở trình chỉnh sửa Chi phí.”',
+  'help.guide.booking-cost.step.2':
+    'Nhấp “Tạo chi phí”. Đặt chỗ được lưu, biểu mẫu của nó đóng lại và trình chỉnh sửa chi phí mở ra.',
+  'help.guide.booking-cost.step.3':
+    '“Nó dùng để làm gì?” đã sẵn là tiêu đề của đặt chỗ. Điền “Tổng số tiền” và kiểm tra “Tiền tệ” cùng “Ngày”.',
+  'help.guide.booking-cost.step.4':
+    '“Loại” là loại mà kiểu đặt chỗ gợi ra. Đặt “Ai đã trả tiền?” và cách số tiền được “Chia tiền”.',
+  'help.guide.booking-cost.step.5': 'Nhấp “Thêm chi phí”.',
+  'help.guide.booking-cost.result':
+    'Biểu mẫu của đặt chỗ giờ ghi “Chi phí liên kết” kèm số tiền, và chính khoản chi ấy đứng trong thẻ “Chi phí”, buộc vào đặt chỗ này.',
+  'help.guide.booking-cost.tip.1':
+    'Loại đi theo kiểu: “Nhà hàng” thành “Thức ăn và đồ uống”, “Chỗ ở” thành “Chỗ ở”, “Bãi đỗ xe” thành “Bãi đỗ xe”, còn “Sự kiện” và “Chuyến du lịch” đều rơi vào “Khác”.',
+  'help.guide.booking-cost.tip.2': 'Thùng rác trên “Chi phí liên kết” gỡ khoản chi, không gỡ đặt chỗ.',
+  'help.guide.booking-cost.tip.3':
+    '“Chi phí” chỉ có trong biểu mẫu khi tiện ích “Chi phí” đang bật, thứ mà quản trị viên bật tắt dưới “Tiện ích bổ sung”.',
+  // filter-bookings
+  'help.guide.filter-bookings.title': 'Tìm một đặt chỗ',
+  'help.guide.filter-bookings.goal': 'Thu hẹp một thẻ dài về đúng loại, đúng người hoặc đúng trạng thái bạn đang tìm.',
+  'help.guide.filter-bookings.step.1':
+    'Các chip bên cạnh tiêu đề là những loại mà chuyến đi này thật sự dùng, mỗi chip kèm số lượng nó chứa. “Tất cả” là toàn bộ thẻ.',
+  'help.guide.filter-bookings.step.2':
+    'Nhấp một chip để chỉ giữ loại đó. Nhấp thêm một chip nữa thì cả hai đều được giữ.',
+  'help.guide.filter-bookings.step.3': '“Tất cả” đưa mọi thứ trở lại.',
+  'help.guide.filter-bookings.step.4':
+    'Các ảnh đại diện cạnh các chip lọc theo người đi, một người hoặc nhiều người cùng lúc.',
+  'help.guide.filter-bookings.step.5':
+    '“Chưa giải quyết” và “Đã xác nhận” là hai phần, mỗi phần có số đếm của nó. Nhấp một tiêu đề để gấp một phần lại; nó vẫn còn gấp khi bạn quay lại.',
+  'help.guide.filter-bookings.result':
+    'Thẻ chỉ hiện thứ bạn đã chọn, và nó vẫn được chọn như thế khi bạn quay lại trong phiên trình duyệt này.',
+  'help.guide.filter-bookings.tip.1':
+    'Các chip chỉ đưa ra những loại mà chuyến đi có, nên một chuyến đi không có lấy một chuyến du lịch nào thì không có chip “Chuyến du lịch”.',
+  'help.guide.filter-bookings.tip.2':
+    'Một bộ lọc không khớp với gì cả sẽ để lại thẻ trống với dòng “Không tìm thấy địa điểm nào”. Cách diễn đạt là của danh sách địa điểm; ý nghĩa thì vẫn thế.',
+  // import-booking-file
+  'help.guide.import-booking-file.title': 'Đọc một đặt chỗ ra từ bản xác nhận của nó',
+  'help.guide.import-booking-file.goal':
+    'Để TREK rút đặt chỗ ra từ thư hay tập tin PDF mà nhà cung cấp đã gửi, thay vì gõ lại lần nữa.',
+  'help.guide.import-booking-file.step.1': 'Nhấp “Nhập từ tập tin” trên thanh công cụ. “Nhập xác nhận đặt chỗ” mở ra.',
+  'help.guide.import-booking-file.step.2':
+    'Thả các bản xác nhận lên ô đó, hoặc nhấp vào ô rồi chọn chúng: EML, PDF, PKPass, HTML và TXT, tối đa năm tập tin, mỗi tập tin 10 MB. Những tập tin bạn chọn được nêu tên trên ô.',
+  'help.guide.import-booking-file.step.3': 'Nhấp “Nhập”. Hộp thoại đóng lại ngay, vì việc đọc diễn ra ở nền.',
+  'help.guide.import-booking-file.step.4':
+    'Một thẻ ở dưới cùng bên phải báo cáo lượt chạy, và nó theo bạn khắp ứng dụng và qua cả một lần tải lại. Khi xong, nó đưa ra “Nhập”, thứ bắt đầu phần rà soát: mỗi đặt chỗ nó tìm thấy sẽ mở trong biểu mẫu thông thường, đã điền sẵn và có giấy tờ đính kèm, để bạn kiểm tra rồi “Thêm” lần lượt từng cái.',
+  'help.guide.import-booking-file.result':
+    'Mỗi đặt chỗ bạn đã xác nhận là một thẻ riêng với mã, ngày và giấy tờ mà nó đến từ đó; một chỗ ở còn nhận được những đêm của nó, và khi “Chi phí” đang bật, một mức giá có trong bản xác nhận đã trở thành một khoản chi.',
+  'help.guide.import-booking-file.tip.1':
+    '“Nhập từ tập tin” chỉ có mặt khi máy chủ đọc được các bản xác nhận, việc này cần bộ trích xuất phía máy chủ hoặc tiện ích “Phân tích bằng AI”. Quản trị viên bật tắt cái sau dưới “Tiện ích bổ sung”.',
+  'help.guide.import-booking-file.tip.2':
+    'Nếu không đọc được gì, thẻ sẽ nói vậy và đưa ra “Thử phân tích bằng AI”, thứ gửi thẳng chính những tập tin ấy tới mô hình.',
+  'help.guide.import-booking-file.tip.3':
+    'Một lượt phân tích đã xong được giữ trong mười phút. Hãy bắt đầu rà soát trong khoảng thời gian đó.',
+  // edit-booking
+  'help.guide.edit-booking.title': 'Thay đổi một đặt chỗ',
+  'help.guide.edit-booking.goal':
+    'Sửa một giờ, thêm mã đến muộn, hoặc chuyển một đặt chỗ từ “Chưa giải quyết” sang “Đã xác nhận”.',
+  'help.guide.edit-booking.step.1':
+    'Nhấp cây bút chì ở đầu thẻ. “Chỉnh sửa đặt chỗ” mở ra với mọi thứ mà đặt chỗ biết.',
+  'help.guide.edit-booking.step.2':
+    'Thay đổi thứ cần thay đổi, ở đây là “Mã đặt chỗ” mà nhà cung cấp cuối cùng cũng gửi tới.',
+  'help.guide.edit-booking.step.3': 'Đặt “Trạng thái” thành “Đã xác nhận”.',
+  'help.guide.edit-booking.step.4': 'Nhấp “Cập nhật”.',
+  'help.guide.edit-booking.result':
+    'Thẻ chuyển chỗ: một đặt chỗ đã xác nhận đứng trong phần “Đã xác nhận” sau một chấm xanh lá, và mọi người trong chuyến đi đều thấy nó chuyển.',
+  'help.guide.edit-booking.tip.1':
+    'Một “Mã đặt chỗ” bạn không đọc được chính là “Mã đặt chỗ mờ” trong Cài đặt, dưới “Hiển thị”. Đưa chuột lên, hoặc nhấp vào, là nó đọc được.',
+  'help.guide.edit-booking.tip.2':
+    'Đổi kiểu thì loại của khoản chi liên kết cũng đổi theo, trừ khi bạn đã tự tay chọn một loại trong trình chỉnh sửa chi phí.',
+  'help.guide.edit-booking.tip.3':
+    'Một chỗ ở cũng được sửa ở đây: các ngày “Từ” và “Đến” của nó nằm trong cùng biểu mẫu.',
+  // delete-booking
+  'help.guide.delete-booking.title': 'Xóa một đặt chỗ',
+  'help.guide.delete-booking.goal': 'Đưa một đặt chỗ đã đổ bể ra khỏi chuyến đi.',
+  'help.guide.delete-booking.step.1': 'Nhấp thùng rác ở đầu thẻ.',
+  'help.guide.delete-booking.step.2': '“Xóa đặt chỗ?” nêu tên cái bạn đã chọn và nói rằng nó sẽ bị xóa vĩnh viễn.',
+  'help.guide.delete-booking.step.3': 'Nhấp “Xác nhận”.',
+  'help.guide.delete-booking.result':
+    'Thẻ biến mất, với mọi người trong chuyến đi. Một đặt chỗ không có hoàn tác, nên câu hỏi ấy là chặng cuối cùng.',
+  'help.guide.delete-booking.tip.1':
+    'Xóa một đặt chỗ ở còn đưa những đêm của nó ra khỏi “Kế hoạch ngày” và gỡ khoản chi đã liên kết với nó.',
+  'help.guide.delete-booking.tip.2':
+    'Những giấy tờ từng được đính kèm vẫn ở lại trong thẻ “Tập tin” của chuyến đi; chỉ liên kết của chúng với đặt chỗ là mất đi.',
 };
 
 export default help;

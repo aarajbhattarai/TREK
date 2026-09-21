@@ -2963,6 +2963,380 @@ const help: TranslationStrings = {
     'Un message contenant un lien reçoit une carte d’aperçu en dessous, récupérée par votre propre TREK, donc un lien vers quelque chose que vous seul pouvez atteindre reste un simple lien.',
   'help.guide.trip-chat.tip.4':
     'Chat est un interrupteur à part sous Extensions, sous Collaboration : un administrateur peut l’éteindre et laisser tourner les Notes, les Liens, les Sondages ainsi que Et ensuite.',
+
+  // ── Screen: trip-lists ────────────────────────────────────────────────────────────────
+  'help.ctx.trip-lists.title': 'Listes',
+  'help.ctx.trip-lists.summary':
+    'Deux listes pour un voyage : la liste de bagages, avec qui apporte quoi et ce que cela pèse, et la liste de tout ce qui doit se faire avant et pendant. L’onglet est là tant que l’addon Listes est activé.',
+  'help.ctx.trip-lists.bullet.1':
+    'Liste de bagages et À faire en haut basculent entre les deux et comptent ce que chacune contient ; les boutons à droite appartiennent à celle qui est ouverte.',
+  'help.ctx.trip-lists.bullet.2':
+    'La liste de bagages est groupée en listes, Documents, Vêtements, comme vous voulez les appeler, chacune avec une pastille de couleur, un compteur emballé sur total et trois points contenant Renommer, Tout cocher, Tout décocher et Supprimer la liste. Ajouter une liste en crée une nouvelle.',
+  'help.ctx.trip-lists.bullet.3':
+    'Une ligne, c’est une case à cocher et un nom, puis la quantité, le poids en grammes et une pastille de bagage tant que Suivi des bagages est activé, puis la pastille de couleur pour Déplacer vers une liste, Partage, Renommer et Supprimer. La poignée à gauche la fait monter ou descendre dans sa liste.',
+  'help.ctx.trip-lists.bullet.4':
+    'Partagé et Ma liste coupent la liste de bagages en deux : le fonds commun que tout le monde voit, et la vôtre. Tous, À faire et Fait restreignent celle qui est ouverte, et la barre au-dessus compte ce qui est emballé.',
+  'help.ctx.trip-lists.bullet.5':
+    'Appliquer un modèle, Importer et Enregistrer comme modèle remplissent ou conservent une liste sans la retaper, et le bouton rouge à côté indique combien d’articles sont cochés et les efface.',
+  'help.ctx.trip-lists.bullet.6':
+    'À faire a sa propre barre latérale : la carte de progression, les filtres Tout, Mes tâches, En retard et Terminé, Trier par Priorité ou Date d’échéance, et une ligne par liste. Un clic sur une tâche l’ouvre dans le panneau de droite, et Nouvelle tâche ouvre le même panneau vide.',
+  // packing-categories
+  'help.guide.packing-categories.title': 'Construire la liste de bagages',
+  'help.guide.packing-categories.goal':
+    'Groupez ce que vous emportez en listes, remplissez-les d’articles et dites qui s’occupe de chaque liste.',
+  'help.guide.packing-categories.step.1':
+    'Cliquez sur Ajouter une liste sous la barre de progression, tapez le nom dans Nom de la liste (ex. Vêtements) et confirmez avec la coche.',
+  'help.guide.packing-categories.step.2':
+    'La nouvelle liste commence par une ligne vide. Cliquez sur Ajouter un article, tapez l’article dans Nom de l’article… et appuyez sur Entrée ; le champ reste ouvert pour le suivant.',
+  'help.guide.packing-categories.step.3':
+    'Renommez une ligne avec le crayon à son extrémité droite, ou en cliquant sur le nom lui-même.',
+  'help.guide.packing-categories.step.4':
+    'Le cercle en pointillés dans l’en-tête de la liste attribue des membres du voyage à la liste. Choisissez un nom ; la pastille qui apparaît retire de nouveau cette personne d’un clic.',
+  'help.guide.packing-categories.step.5':
+    'Les trois points au bout de l’en-tête contiennent le reste : Renommer, Tout cocher, Tout décocher, et Supprimer la liste, qui emporte la liste et tout ce qu’elle contient sans demander de nouveau.',
+  'help.guide.packing-categories.result':
+    'La nouvelle liste s’installe dans la grille avec ses articles en dessous et sa pastille de couleur, et son compteur indique ce qui est déjà emballé.',
+  'help.guide.packing-categories.tip.1':
+    'Une liste n’est que ses articles. Supprimez le dernier et la ligne devient un espace réservé pour que la liste garde sa place et sa couleur ; supprimez aussi cette ligne et la liste disparaît.',
+  'help.guide.packing-categories.tip.2':
+    'Attribuer quelqu’un à une liste lui envoie une notification de bagages. Cela ne change pas qui peut voir les articles, c’est Partage, sur la ligne.',
+  'help.guide.packing-categories.tip.3':
+    'Deux listes peuvent porter le même nom. TREK les distingue en interne, les noms restent donc tels que vous les avez tapés.',
+  // check-off-packing
+  'help.guide.check-off-packing.title': 'Cocher au fur et à mesure',
+  'help.guide.check-off-packing.goal':
+    'Marquez ce qui est dans le sac, regardez la barre, et effacez les articles emballés.',
+  'help.guide.check-off-packing.step.1':
+    'Cliquez sur la case à gauche d’une ligne. Le nom est barré et la barre bouge.',
+  'help.guide.check-off-packing.step.2':
+    'La barre au-dessus compte ce qui est emballé par rapport à tout ce qui est sur la liste, en nombre et en pourcentage.',
+  'help.guide.check-off-packing.step.3':
+    'Une liste entière d’un coup : les trois points de son en-tête contiennent Tout cocher et Tout décocher.',
+  'help.guide.check-off-packing.step.4':
+    'Tous, À faire et Fait restreignent la grille. À faire ne laisse que ce qui manque encore, une liste entièrement emballée en sort donc.',
+  'help.guide.check-off-packing.step.5':
+    'Supprimer 3 cochés dans la barre au-dessus supprime tous les articles cochés d’un coup, après une confirmation du navigateur.',
+  'help.guide.check-off-packing.result':
+    'Seul ce qui reste ouvert est listé, et la barre au-dessus dit où en est l’emballage.',
+  'help.guide.check-off-packing.tip.1': 'Un article coché ne peut pas être renommé. Décochez-le d’abord.',
+  'help.guide.check-off-packing.tip.2':
+    'Tout cocher et Tout décocher agissent sur une liste à la fois, depuis les trois points de cette liste.',
+  'help.guide.check-off-packing.tip.3':
+    'Quand chaque article est coché, le compteur est remplacé par Tout est emballé ! et la barre passe au vert.',
+  // apply-packing-template
+  'help.guide.apply-packing-template.title': 'Appliquer un modèle de bagages',
+  'help.guide.apply-packing-template.goal':
+    'Faites entrer une liste toute prête dans le voyage, et gardez la liste de ce voyage pour le suivant.',
+  'help.guide.apply-packing-template.step.1': 'Cliquez sur Appliquer un modèle dans la barre au-dessus de la liste.',
+  'help.guide.apply-packing-template.step.2':
+    'Choisissez un modèle. Chaque ligne le nomme et dit combien d’articles il contient.',
+  'help.guide.apply-packing-template.step.3':
+    'Les articles arrivent dans la vue où vous êtes : Partagé les met dans le fonds commun que tout le monde voit, Ma liste les rend vôtres.',
+  'help.guide.apply-packing-template.step.4':
+    'Garder la liste de ce voyage pour le prochain : Enregistrer comme modèle, un nom, puis la coche.',
+  'help.guide.apply-packing-template.result':
+    'Les listes et les articles du modèle sont dans le voyage, à côté de ce qui s’y trouvait déjà.',
+  'help.guide.apply-packing-template.tip.1':
+    'Un modèle ne porte que des noms et des listes. Les quantités, les poids, les bagages et ce qui est déjà coché restent en arrière.',
+  'help.guide.apply-packing-template.tip.2':
+    'Appliquer un modèle n’est là qu’une fois qu’un modèle existe. Sans modèle, le bouton n’apparaît pas du tout.',
+  'help.guide.apply-packing-template.tip.3':
+    'Enregistrer comme modèle n’apparaît que pour un administrateur de l’instance, et seulement tant que la liste a des articles. Il enregistre le fonds commun plus vos propres articles, jamais les articles privés d’un autre membre.',
+  // import-packing-list
+  'help.guide.import-packing-list.title': 'Coller une liste de bagages entière',
+  'help.guide.import-packing-list.goal':
+    'Transformez d’un seul coup une liste que vous avez déjà ailleurs en articles de bagages.',
+  'help.guide.import-packing-list.step.1': 'Cliquez sur Importer dans la barre au-dessus de la liste.',
+  'help.guide.import-packing-list.step.2':
+    'Un article par ligne : Catégorie, Nom, Poids en g (facultatif), Bagage (facultatif), checked/unchecked (facultatif). L’exemple gris dans le cadre montre les quatre formes.',
+  'help.guide.import-packing-list.step.3':
+    'Ou chargez les lignes depuis un fichier avec Charger CSV/TXT. Il prend un .csv ou un .txt et remplace ce qui est dans le cadre.',
+  'help.guide.import-packing-list.step.4': 'Cliquez sur Importer. Le bouton compte les lignes qu’il a comprises.',
+  'help.guide.import-packing-list.result':
+    'Chaque ligne devient un article, dans la liste que nomme son premier champ, et rien de ce qui était déjà là n’est touché.',
+  'help.guide.import-packing-list.tip.1':
+    'Les virgules, les points-virgules et les tabulations séparent les champs de la même façon, et les guillemets tiennent un champ ensemble, de sorte que « Chemise, bleue » reste un seul nom. Une ligne avec une seule valeur n’est qu’un nom, et une ligne sans liste à elle atterrit dans Autre.',
+  'help.guide.import-packing-list.tip.2':
+    'Un bagage nommé dans le quatrième champ est créé si le voyage ne l’a pas encore. C’est le seul endroit qui charge des poids et des bagages en masse ; un modèle n’apporte que des noms et des listes.',
+  // share-packing-item
+  'help.guide.share-packing-item.title': 'Décider qui voit un article et qui l’apporte',
+  'help.guide.share-packing-item.goal':
+    'Déplacez un article entre le fonds commun du groupe, votre propre liste et les personnes pour qui vous l’apportez.',
+  'help.guide.share-packing-item.step.1':
+    'Partagé au-dessus des listes est le fonds commun que tout le monde voit, Ma liste est la vôtre, et chacune compte ce qu’elle contient. Cliquez sur Ma liste pour regarder la vôtre.',
+  'help.guide.share-packing-item.step.2':
+    'De retour dans Partagé, ouvrez le Partage d’une ligne, l’icône de partage à côté du crayon.',
+  'help.guide.share-packing-item.step.3':
+    'Trois niveaux : Partagé, dans le fonds commun du groupe et visible par tous ; Personnel, que vous seul voyez ; et Partager avec…, où vous choisissez les personnes que l’article couvre.',
+  'help.guide.share-packing-item.step.4': 'Un article Personnel n’est que sur Ma liste. Basculez pour le retrouver.',
+  'help.guide.share-packing-item.step.5':
+    'Ouvrez de nouveau Partage et cochez un nom sous Partager avec…. L’article apparaît aussi sur la liste de cette personne, et la ligne dit partagé avec 1.',
+  'help.guide.share-packing-item.result':
+    'L’article se place dans le niveau que vous avez choisi, et la ligne dit qui l’apporte.',
+  'help.guide.share-packing-item.tip.1':
+    'Seule la personne qui apporte un article change son partage. Celui avec qui vous l’avez partagé le voit sur sa propre Ma liste, marqué de votre nom, et peut le cocher.',
+  'help.guide.share-packing-item.tip.2':
+    'Sur un article apporté par quelqu’un d’autre, vous obtenez deux autres boutons à la place : Je peux l’apporter aussi, qui vous ajoute à côté, et Copier dans ma liste, qui en fait une copie privée à vous.',
+  'help.guide.share-packing-item.tip.3':
+    'Les nouveaux articles héritent de la vue dans laquelle vous les ajoutez. Ajoutés dans Ma liste ils sont Personnel, ajoutés dans Partagé ils vont dans le fonds commun.',
+  // packing-bags
+  'help.guide.packing-bags.title': 'Peser les bagages',
+  'help.guide.packing-bags.goal':
+    'Mettez un poids sur chaque article, répartissez les articles dans les bagages et gardez chaque bagage sous sa limite de compagnie aérienne.',
+  'help.guide.packing-bags.step.1': 'Tapez le poids d’un article, en grammes, dans le champ avant le cercle.',
+  'help.guide.packing-bags.step.2': 'Le cercle au bout de la ligne est son bagage. Cliquez dessus.',
+  'help.guide.packing-bags.step.3':
+    'Pas encore de bagage : Ajouter un bagage, un nom, Entrée. Le bagage est créé et l’article y va directement.',
+  'help.guide.packing-bags.step.4':
+    'Le panneau Bagages apparaît à droite dès qu’un bagage existe : nom, poids, une barre de remplissage, qui le porte et combien d’articles il contient, puis Non assigné et Poids total.',
+  'help.guide.packing-bags.step.5':
+    'Cliquez sur Définir une limite et tapez la limite en kilogrammes, comme les compagnies aériennes l’indiquent.',
+  'help.guide.packing-bags.step.6': 'Le signe plus en pointillés sous le nom d’un bagage dit qui le porte.',
+  'help.guide.packing-bags.result':
+    'Le panneau Bagages à droite montre le poids de chaque bagage face à sa limite, ce qui n’est dans aucun bagage, et le total.',
+  'help.guide.packing-bags.tip.1':
+    'Le champ de poids, la pastille de bagage et le panneau Bagages n’existent que tant qu’un administrateur a activé Suivi des bagages sous l’addon Listes.',
+  'help.guide.packing-bags.tip.2':
+    'Le poids d’un bagage est additionné sur le serveur sur les articles de tous les membres, y compris ceux que vous ne pouvez pas voir, le chiffre est donc vraiment ce que pèse le bagage.',
+  'help.guide.packing-bags.tip.3':
+    'Un bagage sans limite est dessiné par rapport au bagage le plus lourd, pour que les barres restent comparables. Donnez-lui une limite et la barre se lit par rapport à elle.',
+  // create-todo
+  'help.guide.create-todo.title': 'Ajouter une tâche',
+  'help.guide.create-todo.goal':
+    'Notez quelque chose qui doit se faire, avec une liste, une priorité, une date et un nom en face.',
+  'help.guide.create-todo.step.1': 'Cliquez sur Nouvelle tâche en haut à droite.',
+  'help.guide.create-todo.step.2':
+    'Nommez-la dans Nom de la tâche, et mettez tout ce qui vaut la peine d’être retenu sous Description.',
+  'help.guide.create-todo.step.3':
+    'Liste groupe la tâche. Choisissez-en une, ou utilisez le signe plus à côté pour taper un nouveau nom.',
+  'help.guide.create-todo.step.4': 'Priorité, ce sont quatre boutons : Aucune, P1, P2 et P3, du rouge au bleu.',
+  'help.guide.create-todo.step.5': 'Date d’échéance ouvre un calendrier, et Assigné à met un nom sur la tâche.',
+  'help.guide.create-todo.step.6': 'Cliquez sur Créer la tâche.',
+  'help.guide.create-todo.result':
+    'La tâche est dans la liste avec ses badges, la priorité, la date d’échéance, la liste et la personne à qui elle est assignée, et elle s’ouvre dans le panneau de droite.',
+  'help.guide.create-todo.tip.1':
+    'Seul le nom est obligatoire. Tout le reste peut être rempli plus tard depuis le panneau de droite.',
+  'help.guide.create-todo.tip.2':
+    'Avec une liste sélectionnée dans la barre latérale, une nouvelle tâche démarre dans cette liste.',
+  'help.guide.create-todo.tip.3':
+    'Entrée dans le champ du nom crée la tâche tout de suite, sans toucher aux autres champs.',
+  // todo-filters
+  'help.guide.todo-filters.title': 'Trouver et modifier une tâche',
+  'help.guide.todo-filters.goal':
+    'Réduisez la liste des tâches à ce qui compte maintenant, puis modifiez la tâche sur laquelle vous êtes tombé.',
+  'help.guide.todo-filters.step.1':
+    'Tâches dans la barre latérale : Tout, c’est tout ce qui reste ouvert, Mes tâches ce qui est sur vous, En retard ce qui a une date passée, Terminé ce qui est fini. Chacun porte son compte ; cliquez sur En retard.',
+  'help.guide.todo-filters.step.2':
+    'Sous Listes se trouve une ligne par liste. En choisir une montre cette liste, tâches terminées comprises.',
+  'help.guide.todo-filters.step.3':
+    'Trier par réordonne ce qui est à l’écran : Priorité met P1 en premier, Date d’échéance met l’échéance la plus proche en premier. Un seul des deux à la fois.',
+  'help.guide.todo-filters.step.4': 'Cliquez sur une tâche pour l’ouvrir dans le panneau de droite.',
+  'help.guide.todo-filters.step.5':
+    'Changez ce qu’il vous faut, Description, Priorité, Liste, Date d’échéance ou Assigné à, puis Enregistrer les modifications. Supprimer emporte la tâche aussitôt.',
+  'help.guide.todo-filters.result':
+    'La liste ne montre que les tâches que vous avez demandées, et le panneau de droite modifie celle que vous avez choisie.',
+  'help.guide.todo-filters.tip.1':
+    'Une ligne de liste ne compte que ce qui reste ouvert, mais la sélectionner montre aussi les tâches terminées. Tout, Mes tâches et En retard cachent ce qui est fait ; Terminé ne montre rien d’autre.',
+  'help.guide.todo-filters.tip.2':
+    'Trier par Priorité et Trier par Date d’échéance s’excluent, et tant que l’un des deux est actif, les lignes ne peuvent plus être glissées dans un ordre à vous.',
+
+  // ── Screen: trip-bookings ─────────────────────────────────────────────────────────────
+  'help.ctx.trip-bookings.title': 'Réservations',
+  'help.ctx.trip-bookings.summary':
+    'L’onglet qui tient tout ce qui est réservé pour le voyage sans être un moyen de se déplacer : les hébergements, les tables, les billets, les visites, les parkings. Chaque réservation est une carte dans En attente ou dans Confirmée, avec son code, son document, ses voyageurs et son coût.',
+  'help.ctx.trip-bookings.bullet.1':
+    'Réservation manuelle, en haut à droite, ouvre le formulaire. Les six sortes qu’il crée sont Hébergement, Restaurant, Événement, Visite, Parking et Autre ; les vols, les trains et le reste vivent dans l’onglet Transports et n’apparaissent jamais ici.',
+  'help.ctx.trip-bookings.bullet.2':
+    'Importer depuis un fichier remet une confirmation à l’analyse : EML, PDF, PKPass, HTML ou TXT, cinq fichiers de 10 Mo au plus. Le bouton n’est là que si le serveur sait les lire.',
+  'help.ctx.trip-bookings.bullet.3':
+    'Les pastilles à côté du titre filtrent par sorte, chacune avec son propre compte, et Tout ramène tout. Dès qu’une réservation nomme des personnes, la rangée d’avatars à côté des pastilles réduit l’onglet à l’une d’elles.',
+  'help.ctx.trip-bookings.bullet.4':
+    'Les cartes se tiennent dans deux sections, En attente et Confirmée, chacune avec son compte. Un clic sur le titre d’une section la replie, et le fait qu’elle soit ouverte est retenu pour ce voyage.',
+  'help.ctx.trip-bookings.bullet.5':
+    'Une carte porte le point de statut, la sorte, le titre, les dates et les heures, son Code de réservation, son Lieu / Adresse, ce à quoi la réservation est liée, son Lien, ses Notes, ses Fichiers et ses Voyageurs.',
+  'help.ctx.trip-bookings.bullet.6':
+    'Le crayon d’une carte rouvre le même formulaire ; la corbeille demande une fois et la réservation a disparu. Pour un hébergement, ses nuits dans le Plan du jour et sa dépense liée partent avec elle.',
+  // create-booking
+  'help.guide.create-booking.title': 'Créer une réservation',
+  'help.guide.create-booking.goal':
+    'Ajoutez à la main au voyage un restaurant, un événement, une visite, une place de parking ou n’importe quoi d’autre.',
+  'help.guide.create-booking.step.1':
+    'Cliquez sur Réservation manuelle en haut à droite de l’onglet. Nouvelle réservation s’ouvre.',
+  'help.guide.create-booking.step.2':
+    'Choisissez le Type de réservation. Hébergement, Restaurant, Événement, Visite, Parking et Autre sont les six que cet onglet crée, et le formulaire change avec le choix : seul Hébergement échange ses dates contre une plage de jours.',
+  'help.guide.create-booking.step.3':
+    'Tapez le Titre. C’est le seul champ sur lequel le formulaire insiste, et Ajouter reste mort tant qu’il est vide.',
+  'help.guide.create-booking.step.4':
+    'Réglez Date et Heure de début, puis Date de fin et Heure de fin si la réservation a une fin. Les calendriers ne proposent que les jours à l’intérieur du voyage, et une fin qui n’est pas après le début le dit en rouge et bloque Ajouter.',
+  'help.guide.create-booking.step.5':
+    'Entrez le Code de réservation de la confirmation et réglez Statut. En attente ou Confirmée décide dans laquelle des deux sections la carte atterrit.',
+  'help.guide.create-booking.step.6': 'Cliquez sur Ajouter.',
+  'help.guide.create-booking.result':
+    'La réservation est une carte dans sa section, avec sa pastille de sorte, ses dates et son code, et tous les autres du voyage la voient apparaître.',
+  'help.guide.create-booking.tip.1':
+    'Lieu / Adresse propose de vraies adresses pendant que vous tapez ; en choisir une remplace ce que vous aviez écrit, et une adresse que vous avez tapée vous-même est gardée telle quelle.',
+  'help.guide.create-booking.tip.2':
+    'Lien prend la page de la réservation chez le prestataire. La carte en fait un lien qui s’ouvre dans un nouvel onglet.',
+  'help.guide.create-booking.tip.3':
+    'Les Notes sont du Markdown, une liste ou une ligne en gras est donc rendue comme telle sur la carte.',
+  // booking-hotel
+  'help.guide.booking-hotel.title': 'Réserver un hébergement',
+  'help.guide.booking-hotel.goal':
+    'Entrez un hébergement pour qu’il compte à la fois comme réservation et comme nuits dans le Plan du jour.',
+  'help.guide.booking-hotel.step.1':
+    'Cliquez sur Réservation manuelle et choisissez Hébergement. Les champs de date s’en vont et un bloc de champs d’hôtel prend leur place.',
+  'help.guide.booking-hotel.step.2':
+    'Choisissez l’hôtel sous Hébergement. La liste, ce sont les lieux du voyage, et en choisir un écrit son nom dans Titre et son adresse dans Lieu / Adresse.',
+  'help.guide.booking-hotel.step.3':
+    'Réglez Du et Au : la première nuit et le matin de votre départ. Les deux proposent les jours du voyage avec leurs dates, et ils se tiennent en ordre l’un l’autre.',
+  'help.guide.booking-hotel.step.4':
+    'Remplissez Arrivée, Check-in jusqu’à et Départ, ainsi que le Code de réservation de la confirmation.',
+  'help.guide.booking-hotel.step.5': 'Cliquez sur Ajouter.',
+  'help.guide.booking-hotel.result':
+    'La carte porte une plage de jours au lieu d’une date, avec les heures d’arrivée et de départ et l’adresse, et le même séjour se trouve désormais sur ces jours du plan.',
+  'help.guide.booking-hotel.tip.1':
+    'Hébergement est le seul type sans Date ni Heure de début. Ses dates sont Du et Au, et ce sont des jours du voyage plutôt qu’un calendrier.',
+  'help.guide.booking-hotel.tip.2':
+    'Laissez Hébergement vide et tapez plutôt l’adresse : le lieu est cherché, créé et épinglé sur la carte pour vous.',
+  'help.guide.booking-hotel.tip.3': 'Supprimer la réservation retire les nuits du Plan du jour avec elle.',
+  // link-booking
+  'help.guide.link-booking.title': 'Rattacher une réservation au plan',
+  'help.guide.link-booking.goal':
+    'Accrochez une réservation à l’étape et au lieu auxquels elle appartient, pour qu’elle apparaisse là où vous en aurez besoin.',
+  'help.guide.link-booking.step.1':
+    'Cliquez sur le crayon de la carte que vous voulez lier. Modifier la réservation s’ouvre.',
+  'help.guide.link-booking.step.2':
+    'Ouvrez Lier à l’affectation du jour. La liste, c’est votre plan : un titre par jour, puis les étapes de ce jour, numérotées et avec leurs heures. Choisissez celle à laquelle la réservation appartient.',
+  'help.guide.link-booking.step.3':
+    'Lieu / Activité lie le lieu lui-même. Choisissez-le là, et Titre et Lieu / Adresse se remplissent partout où vous les avez laissés vides.',
+  'help.guide.link-booking.step.4': 'Cliquez sur Mettre à jour.',
+  'help.guide.link-booking.result':
+    'La carte nomme le jour et l’étape sous Lier à l’affectation du jour, et la réservation voyage avec cette étape dans le Plan du jour.',
+  'help.guide.link-booking.tip.1':
+    'Aucun lien (autonome), en haut de la liste, retire le lien. Hébergement n’a aucun sélecteur d’étape : il se lie par ses nuits.',
+  'help.guide.link-booking.tip.2':
+    'Choisir une étape sur un jour daté remplit une Date vide pour vous. Une date que vous avez déjà réglée est laissée telle quelle.',
+  // booking-travelers
+  'help.guide.booking-travelers.title': 'Dire pour qui est une réservation',
+  'help.guide.booking-travelers.goal': 'Marquez les voyageurs que couvre une réservation, puis ne voyez que les leurs.',
+  'help.guide.booking-travelers.step.1':
+    'Ouvrez la réservation avec le crayon et descendez jusqu’à Voyageurs. Chaque membre du voyage s’y trouve, les invités nommés compris.',
+  'help.guide.booking-travelers.step.2':
+    'Cliquez les personnes pour qui est cette réservation. Une personne choisie reçoit une coche ; cliquez-la de nouveau pour l’enlever.',
+  'help.guide.booking-travelers.step.3': 'Cliquez sur Mettre à jour.',
+  'help.guide.booking-travelers.step.4':
+    'En haut, dans la barre d’outils, à côté des pastilles de sorte, cliquez l’avatar d’un voyageur pour ne voir que ses réservations.',
+  'help.guide.booking-travelers.result':
+    'La carte liste les personnes pour qui elle est, et la rangée d’avatars réduit l’onglet à l’une d’elles.',
+  'help.guide.booking-travelers.tip.1':
+    'Sur la carte, les voyageurs sont seulement montrés, jamais modifiés. Ils se règlent ici, dans le formulaire.',
+  'help.guide.booking-travelers.tip.2':
+    'La rangée d’avatars apparaît dès que le voyage a plus d’un membre et qu’au moins une réservation nomme quelqu’un. Ce que vous choisissez dure le temps de cette session du navigateur.',
+  // booking-files
+  'help.guide.booking-files.title': 'Garder le justificatif avec la réservation',
+  'help.guide.booking-files.goal':
+    'Joignez la confirmation, le billet ou le laissez-passer à la réservation à laquelle ils appartiennent.',
+  'help.guide.booking-files.step.1':
+    'Ouvrez la réservation avec le crayon, descendez jusqu’à Fichiers et cliquez sur Joindre un fichier. Sur une réservation qui existe déjà, le document part tout de suite et TREK dit Fichier importé.',
+  'help.guide.booking-files.step.2': 'Le document est listé par son nom, avec un bouton pour l’ouvrir et un X à côté.',
+  'help.guide.booking-files.step.3':
+    'Lier un fichier existant propose les documents du voyage qui ne sont pas encore sur cette réservation. Choisissez-en un et il est joint sans rien importer de nouveau.',
+  'help.guide.booking-files.step.4': 'Cliquez sur Mettre à jour.',
+  'help.guide.booking-files.result': 'La carte liste les documents sous Fichiers, et un clic sur l’un d’eux l’ouvre.',
+  'help.guide.booking-files.tip.1':
+    'Sur une réservation que vous êtes en train de créer, le document attend et part au moment où vous cliquez sur Ajouter.',
+  'help.guide.booking-files.tip.2':
+    'Le X à côté d’un document retire le lien, pas le document. Il reste dans l’onglet Fichiers du voyage.',
+  'help.guide.booking-files.tip.3':
+    'Quels types de fichiers peuvent être joints relève de la liste Types de fichiers autorisés de l’administrateur ; les documents, le texte et les images sont permis d’origine.',
+  // booking-cost
+  'help.guide.booking-cost.title': 'Transformer le prix d’une réservation en coût',
+  'help.guide.booking-cost.goal':
+    'Faites entrer ce que coûte une réservation dans les Coûts, partagé entre les personnes qui paient.',
+  'help.guide.booking-cost.step.1':
+    'Ouvrez la réservation et descendez au bas du formulaire. Sous Costs se trouve Create expense, avec la note Saves the booking, then opens the Costs editor.',
+  'help.guide.booking-cost.step.2':
+    'Cliquez sur Create expense. La réservation est enregistrée et l’éditeur Costs s’ouvre par-dessus.',
+  'help.guide.booking-cost.step.3':
+    'C’était pour quoi ? est déjà le titre de la réservation. Entrez le Montant total et vérifiez la Devise et le Jour.',
+  'help.guide.booking-cost.step.4':
+    'Catégorie est celle qu’implique le type de réservation. Réglez Qui a payé ? et la façon dont le montant est partagé.',
+  'help.guide.booking-cost.step.5': 'Cliquez sur Ajouter une dépense.',
+  'help.guide.booking-cost.result':
+    'Le formulaire de la réservation affiche maintenant Linked expense avec le montant, et la même dépense se trouve dans l’onglet Coûts, rattachée à cette réservation.',
+  'help.guide.booking-cost.tip.1':
+    'La catégorie suit le type : Restaurant devient Nourriture et boissons, Hébergement devient Hébergement, Parking devient Parking, et Événement et Visite atterrissent tous deux dans Autre.',
+  'help.guide.booking-cost.tip.2': 'La corbeille sur Linked expense retire la dépense, pas la réservation.',
+  'help.guide.booking-cost.tip.3':
+    'Costs n’est dans le formulaire que tant que l’extension Coûts est activée, ce que l’administrateur règle sous Extensions.',
+  // filter-bookings
+  'help.guide.filter-bookings.title': 'Retrouver une réservation',
+  'help.guide.filter-bookings.goal': 'Réduisez un onglet long à la sorte, à la personne ou à l’état que vous cherchez.',
+  'help.guide.filter-bookings.step.1':
+    'Les pastilles à côté du titre sont les sortes que ce voyage utilise vraiment, chacune avec le nombre qu’elle contient. Tout, c’est l’onglet entier.',
+  'help.guide.filter-bookings.step.2':
+    'Cliquez une pastille pour ne garder que cette sorte. Cliquez-en une deuxième et les deux sont gardées.',
+  'help.guide.filter-bookings.step.3': 'Tout remet tout en place.',
+  'help.guide.filter-bookings.step.4':
+    'Les avatars à côté des pastilles filtrent par voyageur, une personne ou plusieurs à la fois.',
+  'help.guide.filter-bookings.step.5':
+    'En attente et Confirmée sont les deux sections, chacune avec son compte. Cliquez un titre pour en replier une ; elle est encore repliée quand vous revenez.',
+  'help.guide.filter-bookings.result':
+    'L’onglet ne montre que ce que vous avez choisi, et c’est encore choisi quand vous y revenez dans cette session du navigateur.',
+  'help.guide.filter-bookings.tip.1':
+    'Les pastilles ne proposent que les sortes que le voyage a, un voyage sans une seule visite n’a donc pas de pastille Visite.',
+  'help.guide.filter-bookings.tip.2':
+    'Un filtre qui ne trouve rien laisse l’onglet vide avec Aucun lieu trouvé. La formulation est celle de la liste des lieux ; le sens est le même.',
+  // import-booking-file
+  'help.guide.import-booking-file.title': 'Lire une réservation dans sa confirmation',
+  'help.guide.import-booking-file.goal':
+    'Laissez TREK tirer la réservation du courriel ou du PDF envoyé par le prestataire, au lieu de la retaper.',
+  'help.guide.import-booking-file.step.1':
+    'Cliquez sur Importer depuis un fichier dans la barre d’outils. Importer des confirmations de réservation s’ouvre.',
+  'help.guide.import-booking-file.step.2':
+    'Déposez les confirmations sur la zone, ou cliquez-la et choisissez-les : EML, PDF, PKPass, HTML et TXT, jusqu’à cinq fichiers de 10 Mo chacun. Celles que vous avez choisies sont nommées sur la zone.',
+  'help.guide.import-booking-file.step.3':
+    'Cliquez sur Importer. La fenêtre se ferme aussitôt, car la lecture se fait en arrière-plan.',
+  'help.guide.import-booking-file.step.4':
+    'Une carte en bas à droite rend compte de l’exécution, et elle vous suit à travers l’application et à travers un rechargement. Quand elle a fini, elle propose Importer, ce qui lance la revue : chaque réservation trouvée s’ouvre dans le formulaire ordinaire, remplie et avec son document joint, pour que vous la contrôliez et fassiez Ajouter l’une après l’autre.',
+  'help.guide.import-booking-file.result':
+    'Chaque réservation que vous avez confirmée est une carte à elle, avec son code, ses dates et le document dont elle vient ; un hébergement a aussi reçu ses nuits, et avec Coûts activé, un prix qui était dans la confirmation est devenu une dépense.',
+  'help.guide.import-booking-file.tip.1':
+    'Importer depuis un fichier n’est là que si le serveur sait lire les confirmations, ce qui demande soit l’extracteur intégré, soit l’extension Analyse par IA. Celle-ci, l’administrateur la règle sous Extensions.',
+  'help.guide.import-booking-file.tip.2':
+    'Si rien n’a pu être lu, la carte le dit et propose Try AI parsing, qui envoie les mêmes fichiers directement au modèle.',
+  'help.guide.import-booking-file.tip.3': 'Une analyse terminée est gardée dix minutes. Lancez la revue dans ce délai.',
+  // edit-booking
+  'help.guide.edit-booking.title': 'Modifier une réservation',
+  'help.guide.edit-booking.goal':
+    'Corrigez une heure, ajoutez le code arrivé plus tard, ou faites passer une réservation de En attente à Confirmée.',
+  'help.guide.edit-booking.step.1':
+    'Cliquez sur le crayon dans l’en-tête de la carte. Modifier la réservation s’ouvre avec tout ce que la réservation sait.',
+  'help.guide.edit-booking.step.2':
+    'Changez ce qui doit changer, ici le Code de réservation que le prestataire a fini par envoyer.',
+  'help.guide.edit-booking.step.3': 'Mettez Statut sur Confirmée.',
+  'help.guide.edit-booking.step.4': 'Cliquez sur Mettre à jour.',
+  'help.guide.edit-booking.result':
+    'La carte se déplace : une réservation confirmée se tient dans la section Confirmée derrière un point vert, et tout le monde dans le voyage la voit bouger.',
+  'help.guide.edit-booking.tip.1':
+    'Un Code de réservation que vous n’arrivez pas à lire, c’est Masquer les codes de réservation dans les Paramètres, sous Affichage. Survolez-le, ou cliquez-le, et il devient lisible.',
+  'help.guide.edit-booking.tip.2':
+    'Changez le type et la catégorie d’une dépense liée suit, sauf si vous aviez choisi une catégorie à la main dans l’éditeur Costs.',
+  'help.guide.edit-booking.tip.3':
+    'Un hébergement se modifie ici aussi : ses jours Du et Au sont dans le même formulaire.',
+  // delete-booking
+  'help.guide.delete-booking.title': 'Supprimer une réservation',
+  'help.guide.delete-booking.goal': 'Sortez du voyage une réservation qui est tombée à l’eau.',
+  'help.guide.delete-booking.step.1': 'Cliquez sur la corbeille dans l’en-tête de la carte.',
+  'help.guide.delete-booking.step.2':
+    'Supprimer la réservation ? nomme celle que vous avez choisie et dit qu’elle sera définitivement supprimée.',
+  'help.guide.delete-booking.step.3': 'Cliquez sur Confirmer.',
+  'help.guide.delete-booking.result':
+    'La carte a disparu, pour tout le monde dans le voyage. Une réservation n’a pas d’annulation, la question est donc le dernier arrêt.',
+  'help.guide.delete-booking.tip.1':
+    'Supprimer une réservation d’hébergement retire aussi ses nuits du Plan du jour et supprime la dépense qui y était liée.',
+  'help.guide.delete-booking.tip.2':
+    'Les documents qui étaient joints restent dans l’onglet Fichiers du voyage ; seul leur lien avec la réservation s’en va.',
 };
 
 export default help;

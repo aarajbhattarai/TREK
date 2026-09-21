@@ -2889,6 +2889,376 @@ const help: TranslationStrings = {
     'Un messaggio che contiene un link riceve sotto una scheda di anteprima, presa dal tuo TREK, quindi un link a qualcosa che raggiungi solo tu resta un link semplice.',
   'help.guide.trip-chat.tip.4':
     'Chat è un interruttore a sé sotto Moduli, sotto Collaborazione: un amministratore può spegnerla e lasciare accesi Note, Link, Sondaggi e Prossimi passi.',
+
+  // ── Screen: trip-lists ────────────────────────────────────────────────────────────────
+  'help.ctx.trip-lists.title': 'Liste',
+  'help.ctx.trip-lists.summary':
+    'Due liste per un viaggio: la lista valigia, con chi porta cosa e quanto pesa, e la lista di tutto quello che deve succedere prima e durante. La scheda c’è finché l’addon Liste è attivo.',
+  'help.ctx.trip-lists.bullet.1':
+    'Lista di imballaggio e Da fare in alto passano dall’una all’altra e contano che cosa c’è in ciascuna; i pulsanti a destra appartengono a quella aperta.',
+  'help.ctx.trip-lists.bullet.2':
+    'La lista valigia è raggruppata in liste, Documenti, Abbigliamento, comunque tu le chiami, ognuna con un punto colorato, un contatore di quanto è in valigia sul totale e tre puntini con Rinomina, Seleziona tutti, Deseleziona tutti ed Elimina lista. Aggiungi lista ne crea una nuova.',
+  'help.ctx.trip-lists.bullet.3':
+    'Una riga è una casella e un nome, poi la quantità, il peso in grammi e un cerchio della valigia finché Tracciamento valigia è attivo, poi il punto colorato per Sposta nella lista, Condivisione, Rinomina ed Elimina. La maniglia a sinistra la trascina su o giù dentro la sua lista.',
+  'help.ctx.trip-lists.bullet.4':
+    'Condiviso e La mia lista dividono la lista valigia in due: il fondo comune che vedono tutti, e la tua. Tutti, Da fare e Fatto restringono quella aperta, e la barra sopra conta che cosa è in valigia.',
+  'help.ctx.trip-lists.bullet.5':
+    'Applica modello, Importa e Salva come modello riempiono o conservano una lista senza digitarla, e il pulsante rosso accanto dice quanti elementi sono spuntati e li porta via.',
+  'help.ctx.trip-lists.bullet.6':
+    'Da fare ha una barra laterale propria: la scheda di avanzamento, i filtri Tutti, Le mie attività, Scaduta e Fatto, Ordina per Priorità o Scadenza, e una riga per lista. Un clic su un’attività la apre nel pannello a destra, e Nuova attività apre lo stesso pannello vuoto.',
+  // packing-categories
+  'help.guide.packing-categories.title': 'Costruire la lista valigia',
+  'help.guide.packing-categories.goal':
+    'Raggruppa in liste quello che porti, riempile di elementi e indica chi si occupa di ogni lista.',
+  'help.guide.packing-categories.step.1':
+    'Clicca Aggiungi lista sotto la barra di avanzamento, digita il nome in Nome della lista (es. Abbigliamento) e conferma con la spunta.',
+  'help.guide.packing-categories.step.2':
+    'La nuova lista parte con una riga vuota. Clicca Aggiungi elemento, digita l’elemento in Nome elemento... e premi Invio; il campo resta aperto per il successivo.',
+  'help.guide.packing-categories.step.3':
+    'Rinomina una riga con la matita alla sua estremità destra, oppure cliccando il nome stesso.',
+  'help.guide.packing-categories.step.4':
+    'Il cerchio tratteggiato nell’intestazione della lista assegna membri del viaggio alla lista. Scegli un nome; il chip che compare rimuove di nuovo quella persona con un clic.',
+  'help.guide.packing-categories.step.5':
+    'I tre puntini in fondo all’intestazione tengono il resto: Rinomina, Seleziona tutti, Deseleziona tutti ed Elimina lista, che porta via la lista e tutto quello che contiene senza chiedere di nuovo.',
+  'help.guide.packing-categories.result':
+    'La nuova lista sta nella griglia con i suoi elementi sotto e il suo punto colorato, e il suo contatore dice quanto è già in valigia.',
+  'help.guide.packing-categories.tip.1':
+    'Una lista non è altro che i suoi elementi. Elimina l’ultimo e la riga diventa un segnaposto, così la lista tiene il suo posto e il suo colore; elimina anche quella riga e la lista sparisce.',
+  'help.guide.packing-categories.tip.2':
+    'Assegnare qualcuno a una lista gli manda una notifica sulla valigia. Non cambia chi può vedere gli elementi, quella è Condivisione, sulla riga.',
+  'help.guide.packing-categories.tip.3':
+    'Due liste possono portare lo stesso nome. TREK le tiene distinte internamente, quindi i nomi restano come li hai digitati.',
+  // check-off-packing
+  'help.guide.check-off-packing.title': 'Spuntare mentre fai la valigia',
+  'help.guide.check-off-packing.goal':
+    'Segna che cosa è già dentro, guarda la barra e porta via gli elementi in valigia.',
+  'help.guide.check-off-packing.step.1':
+    'Clicca la casella a sinistra di una riga. Il nome viene barrato e la barra si muove.',
+  'help.guide.check-off-packing.step.2':
+    'La barra sopra conta quello che è in valigia rispetto a tutto quello che sta sulla lista, come numero e come percentuale.',
+  'help.guide.check-off-packing.step.3':
+    'Una lista intera in un colpo: i tre puntini nella sua intestazione tengono Seleziona tutti e Deseleziona tutti.',
+  'help.guide.check-off-packing.step.4':
+    'Tutti, Da fare e Fatto restringono la griglia. Da fare lascia solo quello che manca ancora, quindi una lista del tutto in valigia ne esce.',
+  'help.guide.check-off-packing.step.5':
+    'Rimuovi 3 spuntati nella barra sopra elimina tutti gli elementi spuntati in una volta, dopo una conferma del browser.',
+  'help.guide.check-off-packing.result':
+    'Resta elencato solo quello che è ancora aperto, e la barra sopra dice a che punto è la valigia.',
+  'help.guide.check-off-packing.tip.1': 'Un elemento spuntato non si può rinominare. Togligli prima la spunta.',
+  'help.guide.check-off-packing.tip.2':
+    'Seleziona tutti e Deseleziona tutti agiscono su una lista alla volta, dai tre puntini di quella lista.',
+  'help.guide.check-off-packing.tip.3':
+    'Quando ogni elemento è spuntato, il contatore viene sostituito da Tutto in valigia! e la barra diventa verde.',
+  // apply-packing-template
+  'help.guide.apply-packing-template.title': 'Applicare un modello di valigia',
+  'help.guide.apply-packing-template.goal':
+    'Porta nel viaggio una lista già pronta, e conserva la lista di questo viaggio per il prossimo.',
+  'help.guide.apply-packing-template.step.1': 'Clicca Applica modello nella barra sopra la lista.',
+  'help.guide.apply-packing-template.step.2': 'Scegli un modello. Ogni riga lo nomina e dice quanti elementi contiene.',
+  'help.guide.apply-packing-template.step.3':
+    'Gli elementi finiscono nella vista in cui sei: Condiviso li mette nel fondo comune che vedono tutti, La mia lista li rende tuoi.',
+  'help.guide.apply-packing-template.step.4':
+    'Conservare la lista di questo viaggio per il prossimo: Salva come modello, un nome, poi la spunta.',
+  'help.guide.apply-packing-template.result':
+    'Le liste e gli elementi del modello sono nel viaggio, accanto a quello che c’era già.',
+  'help.guide.apply-packing-template.tip.1':
+    'Un modello porta solo nomi e liste. Quantità, pesi, valigie e quello che è già spuntato restano indietro.',
+  'help.guide.apply-packing-template.tip.2':
+    'Applica modello c’è solo una volta che esiste un modello. Senza, il pulsante non compare affatto.',
+  'help.guide.apply-packing-template.tip.3':
+    'Salva come modello compare solo per un amministratore dell’istanza, e solo finché la lista ha elementi. Salva il fondo comune più i tuoi elementi, mai quelli privati di un altro membro.',
+  // import-packing-list
+  'help.guide.import-packing-list.title': 'Incollare dentro un’intera lista valigia',
+  'help.guide.import-packing-list.goal':
+    'Trasforma in un colpo solo una lista che hai già altrove in elementi della valigia.',
+  'help.guide.import-packing-list.step.1': 'Clicca Importa nella barra sopra la lista.',
+  'help.guide.import-packing-list.step.2':
+    'Un elemento per riga: Categoria, Nome, Peso in g (opzionale), Borsa (opzionale), checked/unchecked (opzionale). L’esempio grigio nel riquadro mostra tutte e quattro le forme.',
+  'help.guide.import-packing-list.step.3':
+    'Oppure carica le righe da un file con Carica CSV/TXT. Accetta un .csv o un .txt e sostituisce quello che sta nel riquadro.',
+  'help.guide.import-packing-list.step.4': 'Clicca Importa. Il pulsante conta le righe che ha capito.',
+  'help.guide.import-packing-list.result':
+    'Ogni riga diventa un elemento, nella lista che nomina il suo primo campo, e niente di quello che c’era già viene toccato.',
+  'help.guide.import-packing-list.tip.1':
+    'Virgole, punti e virgola e tabulazioni separano i campi allo stesso modo, e le virgolette tengono insieme un campo, così «Camicia, blu» resta un solo nome. Una riga con un unico valore è solo un nome, e una riga senza una lista propria finisce in Altro.',
+  'help.guide.import-packing-list.tip.2':
+    'Una borsa nominata nel quarto campo viene creata se il viaggio non ce l’ha ancora. Questo è l’unico posto che carica pesi e valigie in blocco; un modello porta solo nomi e liste.',
+  // share-packing-item
+  'help.guide.share-packing-item.title': 'Decidere chi vede un elemento e chi lo porta',
+  'help.guide.share-packing-item.goal':
+    'Sposta un elemento tra il fondo comune del gruppo, la tua lista e le persone per cui lo porti.',
+  'help.guide.share-packing-item.step.1':
+    'Condiviso sopra le liste è il fondo comune che vedono tutti, La mia lista è la tua, e ognuna conta quello che contiene. Clicca La mia lista per guardare la tua.',
+  'help.guide.share-packing-item.step.2':
+    'Di nuovo in Condiviso, apri la Condivisione di una riga, l’icona di condivisione accanto alla matita.',
+  'help.guide.share-packing-item.step.3':
+    'Tre livelli: Condiviso, nel fondo comune del gruppo e visibile a tutti; Personale, che vedi solo tu; e Condividi con…, dove scegli le persone che l’elemento copre.',
+  'help.guide.share-packing-item.step.4': 'Un elemento Personale sta solo su La mia lista. Passa di là per trovarlo.',
+  'help.guide.share-packing-item.step.5':
+    'Apri di nuovo Condivisione e spunta un nome sotto Condividi con…. L’elemento compare anche sulla lista di quella persona, e la riga dice condiviso con 1.',
+  'help.guide.share-packing-item.result': 'L’elemento sta nel livello che hai scelto, e la riga dice chi lo porta.',
+  'help.guide.share-packing-item.tip.1':
+    'Solo chi porta un elemento ne cambia la condivisione. Chi l’ha ricevuto da te lo vede sulla sua La mia lista, segnato con il tuo nome, e può spuntarlo.',
+  'help.guide.share-packing-item.tip.2':
+    'Su un elemento portato da qualcun altro ottieni invece due pulsanti diversi: Posso portarlo anch’io, che ti mette accanto, e Copia nella mia lista, che ne fa una copia privata tua.',
+  'help.guide.share-packing-item.tip.3':
+    'I nuovi elementi ereditano la vista in cui li aggiungi. Aggiunti in La mia lista sono Personale, aggiunti in Condiviso vanno nel fondo comune.',
+  // packing-bags
+  'help.guide.packing-bags.title': 'Pesare le valigie',
+  'help.guide.packing-bags.goal':
+    'Metti un peso su ogni elemento, smista gli elementi nelle valigie e tieni ogni valigia sotto il limite della compagnia aerea.',
+  'help.guide.packing-bags.step.1': 'Digita il peso di un elemento, in grammi, nel campo prima del cerchio.',
+  'help.guide.packing-bags.step.2': 'Il cerchio in fondo alla riga è la sua valigia. Cliccalo.',
+  'help.guide.packing-bags.step.3':
+    'Nessuna valigia ancora: Aggiungi valigia, un nome, Invio. La valigia viene creata e l’elemento ci finisce dentro subito.',
+  'help.guide.packing-bags.step.4':
+    'Il pannello Valigie compare a destra appena esiste una valigia: nome, peso, una barra di riempimento, chi la porta e quanti elementi contiene, poi Non assegnato e Peso totale.',
+  'help.guide.packing-bags.step.5':
+    'Clicca Imposta limite e digita il limite in chilogrammi, come lo indicano le compagnie aeree.',
+  'help.guide.packing-bags.step.6': 'Il segno più tratteggiato sotto il nome di una valigia dice chi la porta.',
+  'help.guide.packing-bags.result':
+    'Il pannello Valigie a destra mostra il peso di ogni valigia rispetto al suo limite, quello che non sta in nessuna, e il totale.',
+  'help.guide.packing-bags.tip.1':
+    'Il campo del peso, il cerchio della valigia e il pannello Valigie esistono solo finché un amministratore tiene Tracciamento valigia acceso sotto l’addon Liste.',
+  'help.guide.packing-bags.tip.2':
+    'Il peso di una valigia viene sommato sul server su tutti gli elementi di ogni membro, compresi quelli che non puoi vedere, quindi il numero è davvero quanto pesa la valigia.',
+  'help.guide.packing-bags.tip.3':
+    'Una valigia senza limite viene disegnata rispetto alla valigia più pesante, così le barre restano confrontabili. Dalle un limite e la barra si legge rispetto a quello.',
+  // create-todo
+  'help.guide.create-todo.title': 'Aggiungere un’attività',
+  'help.guide.create-todo.goal':
+    'Annota qualcosa che deve succedere, con una lista, una priorità, una data e un nome accanto.',
+  'help.guide.create-todo.step.1': 'Clicca Nuova attività in alto a destra.',
+  'help.guide.create-todo.step.2':
+    'Dalle un nome in Nome attività, e metti sotto Descrizione tutto quello che vale la pena ricordare.',
+  'help.guide.create-todo.step.3':
+    'Lista raggruppa l’attività. Scegline una, oppure usa il segno più accanto per digitare un nome nuovo.',
+  'help.guide.create-todo.step.4': 'Priorità sono quattro pulsanti: Nessuna, P1, P2 e P3, dal rosso al blu.',
+  'help.guide.create-todo.step.5': 'Scadenza apre un calendario, e Assegnato a mette un nome sull’attività.',
+  'help.guide.create-todo.step.6': 'Clicca Crea attività.',
+  'help.guide.create-todo.result':
+    'L’attività è nella lista con i suoi distintivi, la priorità, la scadenza, la lista e la persona a cui è assegnata, e si apre nel pannello a destra.',
+  'help.guide.create-todo.tip.1':
+    'Solo il nome è obbligatorio. Tutto il resto si può riempire dopo dal pannello a destra.',
+  'help.guide.create-todo.tip.2':
+    'Con una lista selezionata nella barra laterale, una nuova attività parte in quella lista.',
+  'help.guide.create-todo.tip.3': 'Invio nel campo del nome crea l’attività subito, senza toccare gli altri campi.',
+  // todo-filters
+  'help.guide.todo-filters.title': 'Trovare e cambiare un’attività',
+  'help.guide.todo-filters.goal':
+    'Riduci la lista delle attività a quello che conta adesso, poi modifica l’attività su cui sei finito.',
+  'help.guide.todo-filters.step.1':
+    'Attività nella barra laterale: Tutti è tutto quello che è ancora aperto, Le mie attività quello che tocca a te, Scaduta quello che ha una data passata, Fatto quello che è finito. Ognuno porta il suo conteggio; clicca Scaduta.',
+  'help.guide.todo-filters.step.2':
+    'Sotto Liste sta una riga per lista. Sceglierne una mostra quella lista, attività finite comprese.',
+  'help.guide.todo-filters.step.3':
+    'Ordina per riordina quello che è sullo schermo: Priorità mette P1 per primo, Scadenza mette la scadenza più vicina per prima. Solo uno dei due alla volta.',
+  'help.guide.todo-filters.step.4': 'Clicca un’attività per aprirla nel pannello a destra.',
+  'help.guide.todo-filters.step.5':
+    'Cambia quello che ti serve, Descrizione, Priorità, Lista, Scadenza o Assegnato a, poi Salva modifiche. Elimina porta via l’attività all’istante.',
+  'help.guide.todo-filters.result':
+    'La lista mostra solo le attività che hai chiesto, e il pannello a destra modifica quella che hai scelto.',
+  'help.guide.todo-filters.tip.1':
+    'Una riga di lista conta solo quello che è ancora aperto, ma selezionarla mostra anche le attività finite. Tutti, Le mie attività e Scaduta nascondono quello che è fatto; Fatto non mostra altro.',
+  'help.guide.todo-filters.tip.2':
+    'Ordina per Priorità e Ordina per Scadenza si escludono, e finché uno dei due è attivo le righe non si possono più trascinare in un ordine tuo.',
+
+  // ── Screen: trip-bookings ─────────────────────────────────────────────────────────────
+  'help.ctx.trip-bookings.title': 'Prenotazioni',
+  'help.ctx.trip-bookings.summary':
+    'La scheda che raccoglie tutto ciò che è prenotato per il viaggio e non serve a spostarsi: gli alloggi, i tavoli, i biglietti, i tour, i parcheggi. Ogni prenotazione è una scheda in In attesa o in Confermata, con il suo codice, il suo documento, i suoi viaggiatori e il suo costo.',
+  'help.ctx.trip-bookings.bullet.1':
+    'Prenotazione manuale in alto a destra apre il modulo. I sei generi che crea sono Alloggio, Ristorante, Evento, Tour, Parcheggio e Altro; voli, treni e il resto vivono nella scheda Trasporti e qui non compaiono mai.',
+  'help.ctx.trip-bookings.bullet.2':
+    'Importa da file consegna una conferma all’analisi: EML, PDF, PKPass, HTML o TXT, cinque file da 10 MB al massimo. Il pulsante c’è solo se il server sa leggerli.',
+  'help.ctx.trip-bookings.bullet.3':
+    'I chip accanto al titolo filtrano per genere, ognuno con il proprio conteggio, e Tutti riporta indietro tutto. Non appena una prenotazione nomina delle persone, la fila di avatar accanto ai chip restringe la scheda a una di loro.',
+  'help.ctx.trip-bookings.bullet.4':
+    'Le schede delle prenotazioni stanno in due sezioni, In attesa e Confermata, ognuna con il suo conteggio. Un clic sul titolo di una sezione la ripiega, e se è aperta viene ricordato per questo viaggio.',
+  'help.ctx.trip-bookings.bullet.5':
+    'Una scheda porta il punto di stato, il genere, il titolo, le date e gli orari, il Codice prenotazione, Posizione / Indirizzo, ciò a cui la prenotazione è collegata, il suo Link, le Note, i File e i Viaggiatori.',
+  'help.ctx.trip-bookings.bullet.6':
+    'La matita su una scheda riapre lo stesso modulo; il cestino chiede una volta e poi la prenotazione è sparita. Con un alloggio se ne vanno anche le sue notti nel Programma giornaliero e la sua spesa collegata.',
+  // create-booking
+  'help.guide.create-booking.title': 'Creare una prenotazione',
+  'help.guide.create-booking.goal':
+    'Metti a mano nel viaggio un ristorante, un evento, un tour, un posto auto o qualsiasi altra cosa.',
+  'help.guide.create-booking.step.1':
+    'Clicca Prenotazione manuale in alto a destra nella scheda. Si apre Nuova prenotazione.',
+  'help.guide.create-booking.step.2':
+    'Scegli il Tipo di prenotazione. Alloggio, Ristorante, Evento, Tour, Parcheggio e Altro sono i sei che questa scheda crea, e il modulo cambia con la scelta: solo Alloggio scambia le sue date con un intervallo di giorni.',
+  'help.guide.create-booking.step.3':
+    'Digita il Titolo. È l’unico campo su cui il modulo insiste, e Aggiungi resta morto finché non c’è qualcosa.',
+  'help.guide.create-booking.step.4':
+    'Imposta Data e Ora di inizio, e Data fine e Ora di fine se la prenotazione ha una fine. I calendari offrono solo i giorni dentro il viaggio, e una fine che non è successiva all’inizio lo dice in rosso e blocca Aggiungi.',
+  'help.guide.create-booking.step.5':
+    'Inserisci il Codice prenotazione dalla conferma e imposta Stato. In attesa o Confermata decide in quale delle due sezioni finisce la scheda.',
+  'help.guide.create-booking.step.6': 'Clicca Aggiungi.',
+  'help.guide.create-booking.result':
+    'La prenotazione è una scheda nella sua sezione, con il suo chip di genere, le sue date e il suo codice, e tutti gli altri nel viaggio la vedono comparire.',
+  'help.guide.create-booking.tip.1':
+    'Posizione / Indirizzo propone indirizzi veri mentre digiti; sceglierne uno sostituisce ciò che avevi scritto, e un indirizzo digitato da te resta com’è.',
+  'help.guide.create-booking.tip.2':
+    'Link prende la pagina della prenotazione presso il fornitore. La scheda ne fa un collegamento che si apre in una nuova scheda del browser.',
+  'help.guide.create-booking.tip.3':
+    'Le Note sono Markdown, quindi un elenco o una riga in grassetto vengono resi come tali sulla scheda.',
+  // booking-hotel
+  'help.guide.booking-hotel.title': 'Prenotare un alloggio',
+  'help.guide.booking-hotel.goal':
+    'Inserisci un alloggio perché valga insieme come prenotazione e come notti nel Programma giornaliero.',
+  'help.guide.booking-hotel.step.1':
+    'Clicca Prenotazione manuale e scegli Alloggio. I campi della data se ne vanno e un blocco di campi d’albergo prende il loro posto.',
+  'help.guide.booking-hotel.step.2':
+    'Scegli l’albergo sotto Alloggio. La lista sono i luoghi del viaggio, e sceglierne uno scrive il suo nome in Titolo e il suo indirizzo in Posizione / Indirizzo.',
+  'help.guide.booking-hotel.step.3':
+    'Imposta Da e A: la prima notte e la mattina in cui parti. Entrambi offrono i giorni del viaggio con le loro date, e i due si tengono in ordine a vicenda.',
+  'help.guide.booking-hotel.step.4':
+    'Compila Check-in, Check-in fino a e Check-out, e il Codice prenotazione dalla conferma.',
+  'help.guide.booking-hotel.step.5': 'Clicca Aggiungi.',
+  'help.guide.booking-hotel.result':
+    'La scheda porta un intervallo di giorni invece di una data, con gli orari di check-in e check-out e l’indirizzo, e lo stesso soggiorno ora sta su quei giorni del programma.',
+  'help.guide.booking-hotel.tip.1':
+    'Alloggio è l’unico tipo senza Data e senza Ora di inizio. Le sue date sono Da e A, e sono giorni del viaggio invece che un calendario.',
+  'help.guide.booking-hotel.tip.2':
+    'Lascia Alloggio vuoto e digita invece l’indirizzo: il luogo viene cercato, creato e messo sulla mappa per te.',
+  'help.guide.booking-hotel.tip.3': 'Eliminare la prenotazione porta via con sé le notti dal Programma giornaliero.',
+  // link-booking
+  'help.guide.link-booking.title': 'Legare una prenotazione al programma',
+  'help.guide.link-booking.goal':
+    'Aggancia una prenotazione alla tappa e al luogo a cui appartiene, così spunta dove ti servirà.',
+  'help.guide.link-booking.step.1': 'Clicca la matita sulla scheda che vuoi collegare. Si apre Modifica prenotazione.',
+  'help.guide.link-booking.step.2':
+    'Apri Collega all’assegnazione del giorno. La lista è il tuo programma: un titolo per giorno, poi le tappe di quel giorno, numerate e con i loro orari. Scegli quella a cui la prenotazione appartiene.',
+  'help.guide.link-booking.step.3':
+    'Luogo / Attività collega il luogo stesso. Scegli lì, e Titolo e Posizione / Indirizzo si riempiono ovunque tu li abbia lasciati vuoti.',
+  'help.guide.link-booking.step.4': 'Clicca Aggiorna.',
+  'help.guide.link-booking.result':
+    'La scheda nomina il giorno e la tappa sotto Collega all’assegnazione del giorno, e la prenotazione viaggia insieme a quella tappa nel Programma giornaliero.',
+  'help.guide.link-booking.tip.1':
+    'Nessun collegamento (autonomo) in cima alla lista toglie di nuovo il collegamento. Alloggio non ha nessun selettore di tappa: si collega tramite le sue notti.',
+  'help.guide.link-booking.tip.2':
+    'Scegliere una tappa in un giorno con data riempie per te una Data vuota. Una data che hai già impostato viene lasciata stare.',
+  // booking-travelers
+  'help.guide.booking-travelers.title': 'Dire per chi è una prenotazione',
+  'help.guide.booking-travelers.goal': 'Segna i viaggiatori che una prenotazione copre, e poi vedi solo le loro.',
+  'help.guide.booking-travelers.step.1':
+    'Apri la prenotazione con la matita e scendi fino a Viaggiatori. Lì sta ogni membro del viaggio, ospiti con nome compresi.',
+  'help.guide.booking-travelers.step.2':
+    'Clicca le persone per cui è questa prenotazione. Una scelta riceve una spunta; cliccala di nuovo per toglierla.',
+  'help.guide.booking-travelers.step.3': 'Clicca Aggiorna.',
+  'help.guide.booking-travelers.step.4':
+    'In alto nella barra degli strumenti, accanto ai chip di genere, clicca l’avatar di un viaggiatore per vedere solo le sue prenotazioni.',
+  'help.guide.booking-travelers.result':
+    'La scheda elenca le persone per cui è, e la fila di avatar restringe la scheda delle prenotazioni a una di loro.',
+  'help.guide.booking-travelers.tip.1':
+    'Sulla scheda i viaggiatori vengono solo mostrati, mai cambiati. Si impostano qui, nel modulo.',
+  'help.guide.booking-travelers.tip.2':
+    'La fila di avatar compare non appena il viaggio ha più di un membro e almeno una prenotazione nomina qualcuno. Ciò che scegli dura per questa sessione del browser.',
+  // booking-files
+  'help.guide.booking-files.title': 'Tenere il voucher con la prenotazione',
+  'help.guide.booking-files.goal': 'Allega la conferma, il biglietto o il pass alla prenotazione a cui appartengono.',
+  'help.guide.booking-files.step.1':
+    'Apri la prenotazione con la matita, scendi fino a File e clicca Allega file. Su una prenotazione che esiste già il documento sale subito e TREK dice File caricato.',
+  'help.guide.booking-files.step.2':
+    'Il documento è elencato con il suo nome, con un pulsante per aprirlo e una X accanto.',
+  'help.guide.booking-files.step.3':
+    'Collega file esistente offre i documenti del viaggio che non stanno ancora su questa prenotazione. Scegline uno e viene allegato senza caricare di nuovo nulla.',
+  'help.guide.booking-files.step.4': 'Clicca Aggiorna.',
+  'help.guide.booking-files.result': 'La scheda elenca i documenti sotto File, e un clic su uno di essi lo apre.',
+  'help.guide.booking-files.tip.1':
+    'Su una prenotazione che stai ancora creando il documento aspetta e sale nel momento in cui clicchi Aggiungi.',
+  'help.guide.booking-files.tip.2':
+    'La X accanto a un documento toglie il collegamento, non il documento. Resta nella scheda File del viaggio.',
+  'help.guide.booking-files.tip.3':
+    'Quali generi di file si possono allegare è la lista Tipi di File Consentiti dell’amministratore; documenti, testo e immagini sono permessi di serie.',
+  // booking-cost
+  'help.guide.booking-cost.title': 'Trasformare il prezzo di una prenotazione in un costo',
+  'help.guide.booking-cost.goal': 'Porta ciò che una prenotazione costa nei Costi, diviso fra le persone che pagano.',
+  'help.guide.booking-cost.step.1':
+    'Apri la prenotazione e vai in fondo al modulo. Sotto Costs sta Create expense, con la nota Saves the booking, then opens the Costs editor.',
+  'help.guide.booking-cost.step.2':
+    'Clicca Create expense. La prenotazione viene salvata e l’editor Costs si apre sopra di essa.',
+  'help.guide.booking-cost.step.3':
+    'Per cosa era? è già il titolo della prenotazione. Inserisci l’Importo totale e controlla la Valuta e il Giorno.',
+  'help.guide.booking-cost.step.4':
+    'Categoria è quella che il tipo di prenotazione implica. Imposta Chi ha pagato? e come l’importo viene diviso.',
+  'help.guide.booking-cost.step.5': 'Clicca Aggiungi spesa.',
+  'help.guide.booking-cost.result':
+    'Il modulo della prenotazione ora dice Linked expense con l’importo, e la stessa spesa sta nella scheda Costi, legata a questa prenotazione.',
+  'help.guide.booking-cost.tip.1':
+    'La categoria segue il tipo: Ristorante diventa Cibo e bevande, Alloggio diventa Alloggio, Parcheggio diventa Parcheggio, ed Evento e Tour finiscono entrambi in Altro.',
+  'help.guide.booking-cost.tip.2': 'Il cestino su Linked expense rimuove la spesa, non la prenotazione.',
+  'help.guide.booking-cost.tip.3':
+    'Costs sta nel modulo solo finché l’addon Costi è attivo, che l’amministratore accende sotto Moduli.',
+  // filter-bookings
+  'help.guide.filter-bookings.title': 'Trovare una prenotazione',
+  'help.guide.filter-bookings.goal': 'Restringi una scheda lunga al genere, alla persona o allo stato che cerchi.',
+  'help.guide.filter-bookings.step.1':
+    'I chip accanto al titolo sono i generi che questo viaggio usa davvero, ognuno con il numero che contiene. Tutti è la scheda intera.',
+  'help.guide.filter-bookings.step.2':
+    'Clicca un chip per tenere solo quel genere. Cliccane un secondo e restano entrambi.',
+  'help.guide.filter-bookings.step.3': 'Tutti rimette tutto.',
+  'help.guide.filter-bookings.step.4':
+    'Gli avatar accanto ai chip filtrano per viaggiatore, una persona o diverse insieme.',
+  'help.guide.filter-bookings.step.5':
+    'In attesa e Confermata sono le due sezioni, ognuna con il suo conteggio. Clicca un titolo per ripiegarne una; è ancora ripiegata quando torni.',
+  'help.guide.filter-bookings.result':
+    'La scheda mostra solo ciò che hai scelto, ed è ancora scelto quando ci torni in questa sessione del browser.',
+  'help.guide.filter-bookings.tip.1':
+    'I chip offrono solo i generi che il viaggio ha, quindi un viaggio senza un solo tour non ha il chip Tour.',
+  'help.guide.filter-bookings.tip.2':
+    'Un filtro che non trova nulla lascia la scheda vuota con Nessun luogo trovato. La formulazione è quella della lista dei luoghi; il senso è lo stesso.',
+  // import-booking-file
+  'help.guide.import-booking-file.title': 'Leggere una prenotazione dalla sua conferma',
+  'help.guide.import-booking-file.goal':
+    'Lascia che TREK tiri fuori la prenotazione dalla mail o dal PDF che il fornitore ha mandato, invece di digitarla di nuovo.',
+  'help.guide.import-booking-file.step.1':
+    'Clicca Importa da file nella barra degli strumenti. Si apre Importa conferme di prenotazione.',
+  'help.guide.import-booking-file.step.2':
+    'Lascia cadere le conferme sul riquadro, oppure cliccalo e sceglile: EML, PDF, PKPass, HTML e TXT, fino a cinque file da 10 MB ciascuno. Quelle che hai scelto sono nominate sul riquadro.',
+  'help.guide.import-booking-file.step.3':
+    'Clicca Importa. La finestra si chiude subito, perché la lettura avviene in secondo piano.',
+  'help.guide.import-booking-file.step.4':
+    'Una scheda in basso a destra racconta l’esecuzione, e ti segue attraverso l’app e attraverso un ricaricamento. Quando ha finito offre Importa, che avvia la revisione: ogni prenotazione trovata si apre nel modulo ordinario, compilata e con il suo documento allegato, perché tu la controlli e faccia Aggiungi una dopo l’altra.',
+  'help.guide.import-booking-file.result':
+    'Ogni prenotazione che hai confermato è una scheda a sé con il suo codice, le sue date e il documento da cui è venuta; un alloggio ha anche ricevuto le sue notti, e con Costi attivo, un prezzo che stava nella conferma è diventato una spesa.',
+  'help.guide.import-booking-file.tip.1':
+    'Importa da file c’è solo se il server sa leggere le conferme, e questo richiede o l’estrattore integrato o l’addon Analisi con IA. Quello l’amministratore lo accende sotto Moduli.',
+  'help.guide.import-booking-file.tip.2':
+    'Se non si è potuto leggere nulla la scheda lo dice e offre Try AI parsing, che manda gli stessi file dritti al modello.',
+  'help.guide.import-booking-file.tip.3':
+    'Un’analisi finita viene tenuta per dieci minuti. Avvia la revisione dentro quella finestra.',
+  // edit-booking
+  'help.guide.edit-booking.title': 'Cambiare una prenotazione',
+  'help.guide.edit-booking.goal':
+    'Correggi un orario, aggiungi il codice arrivato più tardi, o sposta una prenotazione da In attesa a Confermata.',
+  'help.guide.edit-booking.step.1':
+    'Clicca la matita nell’intestazione della scheda. Modifica prenotazione si apre con tutto ciò che la prenotazione sa.',
+  'help.guide.edit-booking.step.2':
+    'Cambia ciò che va cambiato, qui il Codice prenotazione che l’operatore ha finalmente mandato.',
+  'help.guide.edit-booking.step.3': 'Metti Stato su Confermata.',
+  'help.guide.edit-booking.step.4': 'Clicca Aggiorna.',
+  'help.guide.edit-booking.result':
+    'La scheda si sposta: una prenotazione confermata sta nella sezione Confermata dietro un punto verde, e tutti nel viaggio la vedono spostarsi.',
+  'help.guide.edit-booking.tip.1':
+    'Un Codice prenotazione che non riesci a leggere è Nascondi codici di prenotazione nelle Impostazioni, sotto Visualizzazione. Passaci sopra, o cliccalo, ed è leggibile.',
+  'help.guide.edit-booking.tip.2':
+    'Cambia il tipo e la categoria di una spesa collegata lo segue, a meno che tu non avessi scelto una categoria a mano nell’editor Costs.',
+  'help.guide.edit-booking.tip.3':
+    'Un alloggio si modifica anche qui: i suoi giorni Da e A stanno nello stesso modulo.',
+  // delete-booking
+  'help.guide.delete-booking.title': 'Eliminare una prenotazione',
+  'help.guide.delete-booking.goal': 'Togli dal viaggio una prenotazione saltata.',
+  'help.guide.delete-booking.step.1': 'Clicca il cestino nell’intestazione della scheda.',
+  'help.guide.delete-booking.step.2':
+    'Eliminare la prenotazione? nomina quella che hai scelto e dice che verrà eliminata in modo permanente.',
+  'help.guide.delete-booking.step.3': 'Clicca Conferma.',
+  'help.guide.delete-booking.result':
+    'La scheda è sparita, per tutti nel viaggio. Una prenotazione non ha un annulla, quindi la domanda è l’ultima fermata.',
+  'help.guide.delete-booking.tip.1':
+    'Eliminare una prenotazione di alloggio toglie anche le sue notti dal Programma giornaliero e rimuove la spesa che era collegata a essa.',
+  'help.guide.delete-booking.tip.2':
+    'I documenti che erano allegati restano nella scheda File del viaggio; se ne va solo il loro collegamento con la prenotazione.',
 };
 
 export default help;

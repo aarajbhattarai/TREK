@@ -2902,6 +2902,383 @@ const help: TranslationStrings = {
     'Az olyan üzenet, amelyben link van, előnézeti kártyát kap alá, amelyet a saját TREK-ed tölt le, így az olyan dologra mutató link, amelyet csak te érsz el, sima link marad.',
   'help.guide.trip-chat.tip.4':
     'A Chat saját kapcsoló a Bővítmények alatt, az Együttműködés részben: egy adminisztrátor kikapcsolhatja, és futni hagyhatja a jegyzeteket, a linkeket, a szavazásokat és a Mi következik panelt.',
+
+  // ── Screen: trip-lists ────────────────────────────────────────────────────────────────
+  'help.ctx.trip-lists.title': 'Listák',
+  'help.ctx.trip-lists.summary':
+    'Két lista egy utazáshoz: a csomagolási lista azzal, hogy ki mit hoz és mennyit nyom, és a teendőlista mindennel, aminek az utazás előtt és alatt meg kell történnie. A fül addig van ott, amíg a Listák bővítmény be van kapcsolva.',
+  'help.ctx.trip-lists.bullet.1':
+    'A Csomagolási lista és a Teendők felül a kettő között vált, és megszámolja, mi van mindegyikben; a jobb oldali gombok ahhoz tartoznak, amelyik nyitva van.',
+  'help.ctx.trip-lists.bullet.2':
+    'A csomagolási lista listákba van csoportosítva, Dokumentumok, Ruházat, ahogy éppen elnevezed őket, mindegyik egy színes ponttal, egy becsomagolva az összesből jelvénnyel és három ponttal, ami alatt az Átnevezés, az Összes kipipálása, az Összes jelölés törlése és a Lista törlése ül. A Lista hozzáadása újat készít.',
+  'help.ctx.trip-lists.bullet.3':
+    'Egy sor egy jelölőnégyzet és egy név, aztán a mennyiség, a súly grammban és egy táskakör, amíg a Poggyászkövetés be van kapcsolva, aztán a színes pont az Áthelyezés listába, a Megosztás, az Átnevezés és a Törlés mellett. A bal oldali fogantyú fel vagy le húzza a saját listáján belül.',
+  'help.ctx.trip-lists.bullet.4':
+    'A Megosztott és a Saját lista kettéosztja a csomagolási listát: a mindenki által látott közösre és a sajátodra. Az Összes, a Nyitott és a Kész szűkíti azt, amelyik nyitva van, a fenti sáv pedig számolja, mi van becsomagolva.',
+  'help.ctx.trip-lists.bullet.5':
+    'A Sablon alkalmazása, az Importálás és a Mentés sablonként gépelés nélkül tölti fel vagy őrzi meg a listát, a mellettük lévő piros gomb pedig megmondja, hány tétel van kipipálva, és eltakarítja őket.',
+  'help.ctx.trip-lists.bullet.6':
+    'A Teendőknek saját oldalsávja van: a haladási kártya, a Mind, a Saját feladataim, a Lejárt és a Kész szűrők, a Rendezés Prioritás vagy Határidő szerint, és listánként egy sor. Egy feladatra kattintva a jobb oldali panelen nyílik meg, az Új feladat pedig ugyanazt a panelt nyitja meg üresen.',
+  // packing-categories
+  'help.guide.packing-categories.title': 'Csomagolási lista felépítése',
+  'help.guide.packing-categories.goal':
+    'Csoportosítsd listákba, amit viszel, töltsd fel őket tételekkel, és mondd meg, ki gondoskodik melyik listáról.',
+  'help.guide.packing-categories.step.1':
+    'Kattints a haladási sáv alatt a Lista hozzáadása gombra, írd be a nevet a Lista neve (pl. Ruházat) mezőbe, és erősítsd meg a pipával.',
+  'help.guide.packing-categories.step.2':
+    'Az új lista egy üres sorral indul. Kattints a Tétel hozzáadása gombra, írd be a tételt a Tétel neve... mezőbe, és nyomj Entert; a mező nyitva marad a következőnek.',
+  'help.guide.packing-categories.step.3':
+    'Egy sort a jobb szélén lévő ceruzával nevezel át, vagy magára a névre kattintva.',
+  'help.guide.packing-categories.step.4':
+    'A lista fejlécében lévő szaggatott kör utazási tagokat rendel a listához. Válassz egy nevet; a megjelenő címke egy kattintásra újra leveszi azt a személyt.',
+  'help.guide.packing-categories.step.5':
+    'A fejléc végén lévő három pont tartja a többit: Átnevezés, Összes kipipálása, Összes jelölés törlése és Lista törlése, ami a listát és mindent, ami benne van, újabb kérdés nélkül elvisz.',
+  'help.guide.packing-categories.result':
+    'Az új lista a rácsban ül, a tételeivel alatta és a színes pontjával, a jelvénye pedig számolja, mi van már becsomagolva.',
+  'help.guide.packing-categories.tip.1':
+    'Egy lista csak a tételeiből áll. Töröld az utolsót, és a sor helykitöltővé válik, hogy a lista megtartsa a helyét és a színét; töröld azt a sort is, és a lista eltűnik.',
+  'help.guide.packing-categories.tip.2':
+    'Ha valakit hozzárendelsz egy listához, csomagolási értesítést kap. Nem változtat azon, ki látja a tételeket, azt a soron lévő Megosztás intézi.',
+  'help.guide.packing-categories.tip.3':
+    'Két lista viselheti ugyanazt a nevet. A TREK belül elkülöníti őket, így a nevek úgy maradnak, ahogy beírtad.',
+  // check-off-packing
+  'help.guide.check-off-packing.title': 'Kipipálás csomagolás közben',
+  'help.guide.check-off-packing.goal':
+    'Jelöld, mi van a táskában, figyeld a sávot, és takarítsd el a becsomagolt tételeket.',
+  'help.guide.check-off-packing.step.1':
+    'Kattints a sor bal oldalán lévő négyzetre. A név áthúzódik, a sáv pedig elmozdul.',
+  'help.guide.check-off-packing.step.2': 'A fenti sáv a becsomagoltat a lista egészéhez méri, számként és százalékban.',
+  'help.guide.check-off-packing.step.3':
+    'Egy egész lista egyszerre: a fejlécében lévő három pont tartja az Összes kipipálása és az Összes jelölés törlése pontot.',
+  'help.guide.check-off-packing.step.4':
+    'Az Összes, a Nyitott és a Kész szűkíti a rácsot. A Nyitott csak azt hagyja meg, ami még hiányzik, így egy teljesen becsomagolt lista kiesik belőle.',
+  'help.guide.check-off-packing.step.5':
+    'A fenti sávban a 3 kipipált eltávolítása egyetlen böngészős megerősítés után minden kipipált tételt egyszerre töröl.',
+  'help.guide.check-off-packing.result':
+    'Csak az szerepel, ami még nyitott, a fenti sáv pedig megmondja, hol tart a csomagolás.',
+  'help.guide.check-off-packing.tip.1': 'Kipipált tételt nem lehet átnevezni. Előbb vedd le róla a pipát.',
+  'help.guide.check-off-packing.tip.2':
+    'Az Összes kipipálása és az Összes jelölés törlése egyszerre egy listán dolgozik, az adott lista saját három pontjából.',
+  'help.guide.check-off-packing.tip.3':
+    'Amikor minden tétel ki van pipálva, a számláló helyére a Minden be van csomagolva! kerül, és a sáv zöldre vált.',
+  // apply-packing-template
+  'help.guide.apply-packing-template.title': 'Csomagolási sablon alkalmazása',
+  'help.guide.apply-packing-template.goal':
+    'Hozz be egy kész listát az utazásba, és őrizd meg ennek az utazásnak a listáját a következőre.',
+  'help.guide.apply-packing-template.step.1': 'Kattints a lista fölötti sávban a Sablon alkalmazása gombra.',
+  'help.guide.apply-packing-template.step.2':
+    'Válassz sablont. Minden sor megnevezi, és megmondja, hány tételt tartalmaz.',
+  'help.guide.apply-packing-template.step.3':
+    'A tételek abban a nézetben landolnak, amelyikben vagy: a Megosztott a mindenki által látott közösbe teszi őket, a Saját lista a tieddé teszi őket.',
+  'help.guide.apply-packing-template.step.4':
+    'Őrizd meg ennek az utazásnak a listáját a következő utazásra: Mentés sablonként, egy név, aztán a pipa.',
+  'help.guide.apply-packing-template.result':
+    'A sablon listái és tételei az utazásban vannak, amellett, ami már ott volt.',
+  'help.guide.apply-packing-template.tip.1':
+    'Egy sablon csak neveket és listákat visz. A mennyiségek, a súlyok, a táskák és az, ami már ki van pipálva, itt maradnak.',
+  'help.guide.apply-packing-template.tip.2':
+    'A Sablon alkalmazása csak akkor van ott, ha létezik sablon. Enélkül a gomb meg sem jelenik.',
+  'help.guide.apply-packing-template.tip.3':
+    'A Mentés sablonként csak példányadminisztrátornak jelenik meg, és csak addig, amíg a listában van tétel. A megosztott közöset menti a saját tételeiddel együtt, egy másik tag privát tételeit soha.',
+  // import-packing-list
+  'help.guide.import-packing-list.title': 'Egy egész csomagolási lista beillesztése',
+  'help.guide.import-packing-list.goal':
+    'Alakítsd át egy mozdulattal csomagolási tételekké azt a listát, ami máshol már megvan.',
+  'help.guide.import-packing-list.step.1': 'Kattints a lista fölötti sávban az Importálás gombra.',
+  'help.guide.import-packing-list.step.2':
+    'Soronként egy tétel: Kategória, Név, Súly g-ban (opcionális), Táska (opcionális), checked/unchecked (opcionális). A mezőben lévő szürke minta mind a négy alakot mutatja.',
+  'help.guide.import-packing-list.step.3':
+    'Vagy töltsd be a sorokat fájlból a CSV/TXT betöltése gombbal. Egy .csv vagy egy .txt fájlt fogad, és lecseréli, ami a mezőben van.',
+  'help.guide.import-packing-list.step.4':
+    'Kattints az Importálás gombra. A gomb megszámolja a sorokat, amelyeket megértett.',
+  'help.guide.import-packing-list.result':
+    'Minden sorból egy tétel lesz, abban a listában, amit az első mezője megnevez, és semmihez nem nyúl, ami már ott volt.',
+  'help.guide.import-packing-list.tip.1':
+    'A mezőket vessző, pontosvessző és tabulátor is elválasztja, az idézőjelek pedig egyben tartanak egy mezőt, így az „Ing, kék” egyetlen név marad. Az egyetlen értékből álló sor csak egy név, a saját lista nélküli sor pedig az Egyéb listába kerül.',
+  'help.guide.import-packing-list.tip.2':
+    'A negyedik mezőben megnevezett táska létrejön, ha az utazásnak még nincs meg. Ez az egyetlen hely, ami tömegesen tölt be súlyokat és táskákat; egy sablon csak neveket és listákat hoz.',
+  // share-packing-item
+  'help.guide.share-packing-item.title': 'Döntsd el, ki látja a tételt és ki hozza',
+  'help.guide.share-packing-item.goal':
+    'Mozgasd a tételt a csoportos közös, a saját listád és azok között, akiknek hozod.',
+  'help.guide.share-packing-item.step.1':
+    'A listák fölötti Megosztott a mindenki által látott közös, a Saját lista a tiéd, és mindkettő megszámolja, mi van benne. Kattints a Saját lista fülre, hogy a sajátodat nézd.',
+  'help.guide.share-packing-item.step.2':
+    'Vissza a Megosztott nézetben nyisd meg egy sor Megosztás vezérlőjét, a ceruza melletti megosztás ikont.',
+  'help.guide.share-packing-item.step.3':
+    'Három szint: Megosztott, a csoportban és mindenki láthatja; Személyes, amit csak te látsz; és Megosztás vele…, ahol kiválasztod, kikre vonatkozik a tétel.',
+  'help.guide.share-packing-item.step.4':
+    'Egy Személyes tétel csak a Saját lista nézetben van. Válts át, hogy megtaláld.',
+  'help.guide.share-packing-item.step.5':
+    'Nyisd meg újra a Megosztás vezérlőt, és pipálj ki egy nevet a Megosztás vele… alatt. A tétel annak a személynek a listáján is megjelenik, a soron pedig megosztva 1 fővel áll.',
+  'help.guide.share-packing-item.result': 'A tétel az általad választott szinten ül, a sor pedig megmondja, ki hozza.',
+  'help.guide.share-packing-item.tip.1':
+    'Egy tétel megosztását csak az változtatja, aki hozza. Akivel megosztottad, a saját Saját lista nézetében látja, a te neveddel megjelölve, és ki tudja pipálni.',
+  'help.guide.share-packing-item.tip.2':
+    'Egy tételnél, amit más hoz, helyette két másik gombot kapsz: Én is tudom hozni, ami melléje ír téged, és Másolás a listámra, ami saját privát másolatot készít.',
+  'help.guide.share-packing-item.tip.3':
+    'Az új tételek azt a nézetet öröklik, amelyikben felveszed őket. A Saját lista nézetben felvettek Személyes tételek, a Megosztott nézetben felvettek a közösbe kerülnek.',
+  // packing-bags
+  'help.guide.packing-bags.title': 'A táskák megmérése',
+  'help.guide.packing-bags.goal':
+    'Adj minden tételnek súlyt, oszd szét a tételeket táskákba, és tartsd minden táskát a légitársaság korlátja alatt.',
+  'help.guide.packing-bags.step.1': 'Írd be a tétel súlyát, grammban, a kör előtti mezőbe.',
+  'help.guide.packing-bags.step.2': 'A sor végén lévő kör a táskája. Kattints rá.',
+  'help.guide.packing-bags.step.3':
+    'Még nincs táska: Táska hozzáadása, egy név, Enter. A táska létrejön, és a tétel egyenesen bele kerül.',
+  'help.guide.packing-bags.step.4':
+    'A Táskák panel jobb oldalt jelenik meg, amint egy táska létezik: név, súly, egy telítettségsáv, ki viszi és hány tétel van benne, aztán a Nincs hozzárendelve és az Összsúly.',
+  'help.guide.packing-bags.step.5':
+    'Kattints a Korlát beállítása gombra, és írd be a korlátot kilogrammban, ahogy a légitársaságok megadják.',
+  'help.guide.packing-bags.step.6': 'A táska neve alatti szaggatott plusz megmondja, ki viszi.',
+  'help.guide.packing-bags.result':
+    'A jobb oldali Táskák panel minden táska súlyát a korlátjához mérve mutatja, azt, ami egyik táskában sincs, és az összeget.',
+  'help.guide.packing-bags.tip.1':
+    'A súlymező, a táskakör és a Táskák panel csak addig létezik, amíg egy adminisztrátor a Listák bővítmény alatt bekapcsolva tartja a Poggyászkövetést.',
+  'help.guide.packing-bags.tip.2':
+    'Egy táska súlyát a szerver minden tag tételein át adja össze, azokon is, amelyeket nem látsz, így a szám tényleg az, amennyit a táska nyom.',
+  'help.guide.packing-bags.tip.3':
+    'A korlát nélküli táska a legnehezebb táskához mérve rajzolódik ki, hogy a sávok összehasonlíthatók maradjanak. Adj neki korlátot, és a sáv ahhoz mérve olvasható.',
+  // create-todo
+  'help.guide.create-todo.title': 'Feladat hozzáadása',
+  'help.guide.create-todo.goal':
+    'Írj le valamit, aminek meg kell történnie, listával, prioritással, dátummal és névvel.',
+  'help.guide.create-todo.step.1': 'Kattints jobbra fent az Új feladat gombra.',
+  'help.guide.create-todo.step.2':
+    'Nevezd el a Feladat neve mezőben, és tedd a Leírás alá mindazt, amit érdemes megjegyezni.',
+  'help.guide.create-todo.step.3':
+    'A Lista csoportosítja a feladatot. Válassz egyet, vagy használd a mellette lévő pluszt új név beírásához.',
+  'help.guide.create-todo.step.4': 'A Prioritás négy gomb: Nincs, P1, P2 és P3, a pirostól a kékig.',
+  'help.guide.create-todo.step.5': 'A Határidő naptárat nyit, a Hozzárendelve pedig nevet tesz a feladatra.',
+  'help.guide.create-todo.step.6': 'Kattints a Feladat létrehozása gombra.',
+  'help.guide.create-todo.result':
+    'A feladat benne van a listában a jelvényeivel, a prioritásával, a határidejével, a listájával és azzal a személlyel, akihez hozzá van rendelve, és a jobb oldali panelen nyílik meg.',
+  'help.guide.create-todo.tip.1': 'Csak a név kötelező. Minden mást később is ki lehet tölteni a jobb oldali panelen.',
+  'help.guide.create-todo.tip.2': 'Ha az oldalsávban ki van választva egy lista, az új feladat abban a listában indul.',
+  'help.guide.create-todo.tip.3':
+    'A név mezőben az Enter azonnal létrehozza a feladatot, a többi mező érintése nélkül.',
+  // todo-filters
+  'help.guide.todo-filters.title': 'Feladat megtalálása és módosítása',
+  'help.guide.todo-filters.goal':
+    'Szűkítsd a feladatlistát arra, ami most számít, aztán szerkeszd a feladatot, amire ráakadtál.',
+  'help.guide.todo-filters.step.1':
+    'Az oldalsávban a Feladatok: a Mind minden, ami még nyitott, a Saját feladataim az, ami rád vár, a Lejárt az, aminek múltbeli dátuma van, a Kész az, ami befejeződött. Mindegyik viszi a saját darabszámát; kattints a Lejárt pontra.',
+  'help.guide.todo-filters.step.2':
+    'A Listák alatt listánként egy sor ül. Ha kiválasztasz egyet, azt a listát mutatja, a befejezett feladatokkal együtt.',
+  'help.guide.todo-filters.step.3':
+    'A Rendezés átrendezi, ami a képernyőn van: a Prioritás a P1 elemeket teszi előre, a Határidő a legközelebbi határidőt. Egyszerre csak a kettő egyike.',
+  'help.guide.todo-filters.step.4': 'Kattints egy feladatra, hogy a jobb oldali panelen nyíljon meg.',
+  'help.guide.todo-filters.step.5':
+    'Változtasd meg, amit kell, Leírás, Prioritás, Lista, Határidő vagy Hozzárendelve, aztán Módosítások mentése. A Törlés azonnal elviszi a feladatot.',
+  'help.guide.todo-filters.result':
+    'A lista csak azokat a feladatokat mutatja, amiket kértél, a jobb oldali panel pedig azt szerkeszti, amit kiválasztottál.',
+  'help.guide.todo-filters.tip.1':
+    'Egy listasor csak azt számolja, ami még nyitott, de ha kiválasztod, a befejezett feladatokat is mutatja. A Mind, a Saját feladataim és a Lejárt elrejti, ami kész; a Kész mást nem mutat.',
+  'help.guide.todo-filters.tip.2':
+    'A Rendezés Prioritás szerint és a Rendezés Határidő szerint kizárja egymást, és amíg bármelyik be van kapcsolva, a sorokat már nem lehet saját sorrendbe húzni.',
+
+  // ── Screen: trip-bookings ─────────────────────────────────────────────────────────────
+  'help.ctx.trip-bookings.title': 'Foglalások',
+  'help.ctx.trip-bookings.summary':
+    'A fül, ami mindent tart, amit az utazásra lefoglaltál és nem közlekedési mód: a szállásokat, az asztalokat, a jegyeket, a túrákat, a parkolást. Minden foglalás egy kártya a Függőben vagy a Megerősítve szakaszban, és viszi a kódját, a dokumentumát, az utasait és a költségét.',
+  'help.ctx.trip-bookings.bullet.1':
+    'A jobbra fent lévő Kézi foglalás megnyitja az űrlapot. A hatféle, amit készít, a Szálloda, az Étterem, az Esemény, a Túra, a Parkolás és az Egyéb; a repülők, a vonatok és a többi a Közlekedés fülön laknak, és itt soha nem jelennek meg.',
+  'help.ctx.trip-bookings.bullet.2':
+    'Az Importálás fájlból egy visszaigazolást ad át a feldolgozónak: EML, PDF, PKPass, HTML vagy TXT, legfeljebb öt fájl, egyenként 10 MB. A gomb csak akkor van ott, ha a szerver el tudja olvasni őket.',
+  'help.ctx.trip-bookings.bullet.3':
+    'A cím melletti címkék típus szerint szűrnek, mindegyik a saját számával, az Összes pedig mindent visszahoz. Amint egy foglalás megnevez embereket, a címkék melletti avatársor egyetlenegyükre szűkíti a fület.',
+  'help.ctx.trip-bookings.bullet.4':
+    'A kártyák két szakaszban állnak, Függőben és Megerősítve, mindegyik a saját számával. Egy szakaszcímre kattintva összecsukod, és hogy nyitva van-e, azt a TREK megjegyzi erre az utazásra.',
+  'help.ctx.trip-bookings.bullet.5':
+    'Egy kártya viszi az állapotpontot, a típust, a címet, a dátumokat és időpontokat, a Foglalási kódot, a Helyszín / Cím mezőt, azt, amihez a foglalás kapcsolódik, a Hivatkozását, a Jegyzeteit, a Fájljait és az Utasait.',
+  'help.ctx.trip-bookings.bullet.6':
+    'A kártyán lévő ceruza újra ugyanazt az űrlapot nyitja meg; a kuka egyszer kérdez, és utána a foglalás nincs többé. Szállásnál vele mennek a napi tervben lévő éjszakái és a hozzá kapcsolt költsége is.',
+  // create-booking
+  'help.guide.create-booking.title': 'Foglalás létrehozása',
+  'help.guide.create-booking.goal':
+    'Tegyél be kézzel egy éttermet, egy eseményt, egy túrát, egy parkolóhelyet vagy bármi mást az utazásba.',
+  'help.guide.create-booking.step.1':
+    'Kattints a fül jobb felső sarkában a Kézi foglalás gombra. Megnyílik az Új foglalás.',
+  'help.guide.create-booking.step.2':
+    'Válaszd ki a Foglalás típusa értéket. A Szálloda, az Étterem, az Esemény, a Túra, a Parkolás és az Egyéb az a hat, amit ez a fül készít, és az űrlap a választással együtt változik: csak a Szálloda cseréli a dátumait egy napokból álló tartományra.',
+  'help.guide.create-booking.step.3':
+    'Írd be a Cím mezőt. Ez az egyetlen mező, amihez az űrlap ragaszkodik, és a Hozzáadás halott marad, amíg nincs benne valami.',
+  'help.guide.create-booking.step.4':
+    'Állítsd be a Dátum és a Kezdési idő mezőt, és a Befejezés dátuma meg a Befejezési idő mezőt is, ha a foglalásnak van vége. A naptárak csak az utazáson belüli napokat kínálják, és egy olyan vég, ami nincs a kezdés után, ezt pirossal megmondja, és letiltja a Hozzáadás gombot.',
+  'help.guide.create-booking.step.5':
+    'Vidd be a visszaigazolásból a Foglalási kódot, és állítsd be az Állapot mezőt. A Függőben vagy a Megerősítve dönti el, a két szakasz közül melyikbe kerül a kártya.',
+  'help.guide.create-booking.step.6': 'Kattints a Hozzáadás gombra.',
+  'help.guide.create-booking.result':
+    'A foglalás egy kártya a saját szakaszában, a típuscímkéjével, a dátumaival és a kódjával, és az utazásban mindenki más látja megjelenni.',
+  'help.guide.create-booking.tip.1':
+    'A Helyszín / Cím írás közben valódi címeket kínál; ha kiválasztasz egyet, az felülírja, amit írtál, a magad által beírt cím pedig úgy marad, ahogy van.',
+  'help.guide.create-booking.tip.2':
+    'A Hivatkozás a foglalás saját oldalára visz a szolgáltatónál. A kártya linket csinál belőle, ami új lapon nyílik meg.',
+  'help.guide.create-booking.tip.3':
+    'A Jegyzetek Markdown, így egy lista vagy egy félkövér sor a kártyán is listaként vagy félkövér sorként jelenik meg.',
+  // booking-hotel
+  'help.guide.booking-hotel.title': 'Szállás lefoglalása',
+  'help.guide.booking-hotel.goal':
+    'Vigyél be egy szállást úgy, hogy egyszerre számítson foglalásnak és a napi tervben éjszakáknak.',
+  'help.guide.booking-hotel.step.1':
+    'Kattints a Kézi foglalás gombra, és válaszd a Szálloda típust. A dátummezők eltűnnek, és a helyüket egy szállodai mezőkből álló blokk veszi át.',
+  'help.guide.booking-hotel.step.2':
+    'Válaszd ki a szállodát a Szálloda alatt. A lista az utazás saját helyei, és ha kiválasztasz egyet, a neve a Cím mezőbe, a címe pedig a Helyszín / Cím mezőbe kerül.',
+  'help.guide.booking-hotel.step.3':
+    'Állítsd be az Ettől és az Eddig mezőt: az első éjszakát és azt a reggelt, amikor elutazol. Mindkettő az utazás napjait kínálja a dátumaikkal, és a kettő rendben tartja egymást.',
+  'help.guide.booking-hotel.step.4':
+    'Töltsd ki a Bejelentkezés, a Bejelentkezés eddig és a Kijelentkezés mezőt, meg a visszaigazolásból a Foglalási kódot.',
+  'help.guide.booking-hotel.step.5': 'Kattints a Hozzáadás gombra.',
+  'help.guide.booking-hotel.result':
+    'A kártya dátum helyett napok tartományát viszi, a be- és kijelentkezés idejével meg a címmel, és ugyanaz a tartózkodás most már ott ül a terv azon napjain.',
+  'help.guide.booking-hotel.tip.1':
+    'A Szálloda az egyetlen típus Dátum és Kezdési idő nélkül. A dátumai az Ettől és az Eddig, és ezek az utazás napjai, nem naptár.',
+  'help.guide.booking-hotel.tip.2':
+    'Hagyd üresen a Szálloda mezőt, és írd be helyette a címet: a helyet megkeresi, létrehozza és kitűzi neked a térképre.',
+  'help.guide.booking-hotel.tip.3': 'A foglalás törlése magával viszi az éjszakákat is a napi tervből.',
+  // link-booking
+  'help.guide.link-booking.title': 'Foglalás kötése a tervhez',
+  'help.guide.link-booking.goal':
+    'Akaszd a foglalást arra a megállóra és helyre, ahová tartozik, hogy ott bukkanjon fel, ahol kelleni fog.',
+  'help.guide.link-booking.step.1':
+    'Kattints a ceruzára azon a kártyán, amelyiket össze akarod kapcsolni. Megnyílik a Foglalás szerkesztése.',
+  'help.guide.link-booking.step.2':
+    'Nyisd meg az Összekapcsolás napi tervvel mezőt. A lista a te terved: naponként egy cím, majd az adott nap megállói, számozva és az időpontjaikkal. Válaszd ki azt, amelyikhez a foglalás tartozik.',
+  'help.guide.link-booking.step.3':
+    'A Hely / Tevékenység magát a helyet kapcsolja össze. Válaszd ki ott, és a Cím meg a Helyszín / Cím kitöltődik mindenhol, ahol üresen hagytad őket.',
+  'help.guide.link-booking.step.4': 'Kattints a Frissítés gombra.',
+  'help.guide.link-booking.result':
+    'A kártya megnevezi a napot és a megállót az Összekapcsolás napi tervvel alatt, és a foglalás a napi tervben együtt utazik azzal a megállóval.',
+  'help.guide.link-booking.tip.1':
+    'A lista tetején lévő Nincs összekapcsolás (önálló) újra leveszi a kapcsolatot. A Szállodának egyáltalán nincs megállóválasztója: az éjszakáin keresztül kapcsolódik.',
+  'help.guide.link-booking.tip.2':
+    'Ha dátumozott napon választasz megállót, az kitölti neked az üres Dátum mezőt. Egy dátumot, amit már beállítottál, békén hagy.',
+  // booking-travelers
+  'help.guide.booking-travelers.title': 'A foglalás utasainak megadása',
+  'help.guide.booking-travelers.goal':
+    'Jelöld meg az utasokat, akikre a foglalás vonatkozik, és utána csak az övéiket nézd.',
+  'help.guide.booking-travelers.step.1':
+    'Nyisd meg a foglalást a ceruzával, és menj le az Utasok mezőig. Ott áll az utazás minden tagja, köztük a megnevezett vendégek is.',
+  'help.guide.booking-travelers.step.2':
+    'Kattints azokra, akiknek ez a foglalás szól. A kiválasztott pipát kap; kattints rá újra, és leveszed.',
+  'help.guide.booking-travelers.step.3': 'Kattints a Frissítés gombra.',
+  'help.guide.booking-travelers.step.4':
+    'Fent az eszköztárban, a típuscímkék mellett kattints egy utas avatarjára, és csak az ő foglalásait látod.',
+  'help.guide.booking-travelers.result':
+    'A kártya felsorolja azokat, akiknek szól, az avatársor pedig egyetlenegyükre szűkíti a fület.',
+  'help.guide.booking-travelers.tip.1':
+    'A kártyán az utasokat csak mutatja, soha nem változtatod meg őket. Itt, az űrlapon állítod be őket.',
+  'help.guide.booking-travelers.tip.2':
+    'Az avatársor akkor jelenik meg, ha az utazásnak egynél több tagja van, és legalább egy foglalás megnevez valakit. Amit kiválasztasz, kitart erre a böngészőmenetre.',
+  // booking-files
+  'help.guide.booking-files.title': 'A voucher megtartása a foglalásnál',
+  'help.guide.booking-files.goal':
+    'Csatold a visszaigazolást, a jegyet vagy a belépőt ahhoz a foglaláshoz, amelyikhez tartozik.',
+  'help.guide.booking-files.step.1':
+    'Nyisd meg a foglalást a ceruzával, menj le a Fájlok részhez, és kattints a Fájl csatolása gombra. Egy már létező foglalásnál a dokumentum azonnal felmegy, és a TREK azt mondja, Fájl feltöltve.',
+  'help.guide.booking-files.step.2':
+    'A dokumentum a nevével szerepel a listán, egy gombbal, ami megnyitja, és egy X-szel mellette.',
+  'help.guide.booking-files.step.3':
+    'A Meglévő fájl csatolása az utazás azon dokumentumait kínálja, amelyek még nincsenek ezen a foglaláson. Válassz egyet, és úgy csatolódik, hogy semmit nem kell újra feltölteni.',
+  'help.guide.booking-files.step.4': 'Kattints a Frissítés gombra.',
+  'help.guide.booking-files.result':
+    'A kártya felsorolja a dokumentumokat a Fájlok alatt, és ha rákattintasz az egyikre, megnyílik.',
+  'help.guide.booking-files.tip.1':
+    'Olyan foglalásnál, amit még csak most hozol létre, a dokumentum vár, és abban a pillanatban megy fel, amikor a Hozzáadás gombra kattintasz.',
+  'help.guide.booking-files.tip.2':
+    'A dokumentum melletti X a kapcsolatot veszi el, nem a dokumentumot. Az ott marad az utazás Fájlok fülén.',
+  'help.guide.booking-files.tip.3':
+    'Hogy milyen fájltípusokat lehet csatolni, az az adminisztrátor listája; a dokumentumok, a szöveg és a képek alapból engedélyezettek.',
+  // booking-cost
+  'help.guide.booking-cost.title': 'A foglalás árának költséggé alakítása',
+  'help.guide.booking-cost.goal':
+    'Vidd be azt, amibe egy foglalás kerül, a Költségek közé, elosztva a fizető emberek között.',
+  'help.guide.booking-cost.step.1':
+    'Nyisd meg a foglalást, és menj az űrlap aljára. A Costs alatt áll a Create expense, azzal a megjegyzéssel, hogy elmenti a foglalást, majd megnyitja a költségszerkesztőt.',
+  'help.guide.booking-cost.step.2':
+    'Kattints a Create expense gombra. A foglalás elmentődik, és fölötte megnyílik a költségszerkesztő.',
+  'help.guide.booking-cost.step.3':
+    'A Mire volt? már a foglalás címe. Vidd be a Teljes összeg mezőt, és ellenőrizd a Pénznem meg a Nap értékét.',
+  'help.guide.booking-cost.step.4':
+    'A Kategória az, amit a foglalás típusa sugall. Állítsd be a Ki fizetett? mezőt és azt, hogyan oszlik meg az összeg.',
+  'help.guide.booking-cost.step.5': 'Kattints a Költség hozzáadása gombra.',
+  'help.guide.booking-cost.result':
+    'A foglalás űrlapján most már a Linked expense áll az összeggel, és ugyanaz a költség ott áll a Költségek fülön, ehhez a foglaláshoz kötve.',
+  'help.guide.booking-cost.tip.1':
+    'A kategória a típust követi: az Étteremből Étel és ital lesz, a Szállodából Szállás, a Parkolásból Parkolás, az Esemény és a Túra pedig mindkettő az Egyéb kategóriába esik.',
+  'help.guide.booking-cost.tip.2': 'A Linked expense melletti kuka a költséget törli, nem a foglalást.',
+  'help.guide.booking-cost.tip.3':
+    'A Costs csak addig van az űrlapon, amíg a Költségek bővítmény be van kapcsolva, amit az adminisztrátor a Bővítmények alatt kapcsolgat.',
+  // filter-bookings
+  'help.guide.filter-bookings.title': 'Foglalás megtalálása',
+  'help.guide.filter-bookings.goal':
+    'Szűkítsd le a hosszú fület arra a típusra, személyre vagy állapotra, amit keresel.',
+  'help.guide.filter-bookings.step.1':
+    'A cím melletti címkék azok a típusok, amiket ez az utazás tényleg használ, mindegyik a hozzá tartozó darabszámmal. Az Összes a teljes fül.',
+  'help.guide.filter-bookings.step.2':
+    'Kattints egy címkére, és csak az a típus marad. Kattints egy másodikra, és mindkettő megmarad.',
+  'help.guide.filter-bookings.step.3': 'Az Összes mindent visszatesz.',
+  'help.guide.filter-bookings.step.4':
+    'A címkék melletti avatarok utas szerint szűrnek, egy személyre vagy többre egyszerre.',
+  'help.guide.filter-bookings.step.5':
+    'A Függőben és a Megerősítve a két szakasz, mindkettő a saját számával. Kattints egy címre, hogy összecsukd az egyiket; összecsukva marad, amikor visszajössz.',
+  'help.guide.filter-bookings.result':
+    'A fül csak azt mutatja, amit kiválasztottál, és még mindig az van kiválasztva, amikor ebben a böngészőmenetben visszatérsz rá.',
+  'help.guide.filter-bookings.tip.1':
+    'A címkék csak azokat a típusokat kínálják, amik az utazásnak vannak, így egy egyetlen túra nélküli utazásnak nincs Túra címkéje.',
+  'help.guide.filter-bookings.tip.2':
+    'Egy szűrő, ami semmire nem illik, üresen hagyja a fület a Nem találhatók helyek felirattal. A megfogalmazás a helyek listájáé; az értelme ugyanaz.',
+  // import-booking-file
+  'help.guide.import-booking-file.title': 'Foglalás kiolvasása a visszaigazolásból',
+  'help.guide.import-booking-file.goal':
+    'Hagyd, hogy a TREK kihúzza a foglalást abból a levélből vagy PDF-ből, amit a szolgáltató küldött, ahelyett hogy újra begépelnéd.',
+  'help.guide.import-booking-file.step.1':
+    'Kattints az eszköztárban az Importálás fájlból gombra. Megnyílik a Foglalási visszaigazolások importálása.',
+  'help.guide.import-booking-file.step.2':
+    'Ejtsd a visszaigazolásokat a mezőre, vagy kattints rá, és válaszd ki őket: EML, PDF, PKPass, HTML és TXT, legfeljebb öt fájl, egyenként 10 MB. Amiket kiválasztottál, azok neve ott áll a mezőn.',
+  'help.guide.import-booking-file.step.3':
+    'Kattints az Importálás gombra. A párbeszédablak azonnal bezárul, mert az olvasás a háttérben történik.',
+  'help.guide.import-booking-file.step.4':
+    'Jobbra lent egy kártya számol be a futásról, és követ téged az alkalmazáson át, egy újratöltésen át is. Amikor kész, felkínálja az Importálás lehetőséget, ami elindítja az átnézést: minden megtalált foglalás a szokásos űrlapon nyílik meg, kitöltve és a dokumentumával együtt, hogy ellenőrizd, és egymás után a Hozzáadás gombbal bevidd.',
+  'help.guide.import-booking-file.result':
+    'Minden foglalás, amit megerősítettél, saját kártya a kódjával, a dátumaival és azzal a dokumentummal, amiből jött; egy szállás megkapta az éjszakáit is, és bekapcsolt Költségek mellett a visszaigazolásban szereplő árból költség lett.',
+  'help.guide.import-booking-file.tip.1':
+    'Az Importálás fájlból csak akkor van ott, ha a szerver el tud olvasni visszaigazolásokat, ehhez pedig vagy a kiolvasó, vagy az MI-elemzés bővítmény kell. Ez utóbbit az adminisztrátor a Bővítmények alatt kapcsolgatja.',
+  'help.guide.import-booking-file.tip.2':
+    'Ha semmit nem sikerült kiolvasni, a kártya ezt megmondja, és felkínálja a Try AI parsing lehetőséget, ami ugyanazokat a fájlokat egyenesen a modellnek küldi.',
+  'help.guide.import-booking-file.tip.3':
+    'Egy kész feldolgozás tíz percig marad meg. Ezen az időn belül indítsd el az átnézést.',
+  // edit-booking
+  'help.guide.edit-booking.title': 'Foglalás módosítása',
+  'help.guide.edit-booking.goal':
+    'Javíts egy időpontot, írd be a később érkezett kódot, vagy told át a foglalást a Függőben szakaszból a Megerősítve szakaszba.',
+  'help.guide.edit-booking.step.1':
+    'Kattints a kártya fejlécében a ceruzára. Megnyílik a Foglalás szerkesztése mindennel, amit a foglalás tud.',
+  'help.guide.edit-booking.step.2':
+    'Változtasd meg, amit meg kell változtatni, itt a Foglalási kódot, amit a szolgáltató végre elküldött.',
+  'help.guide.edit-booking.step.3': 'Tedd az Állapot mezőt Megerősítve értékre.',
+  'help.guide.edit-booking.step.4': 'Kattints a Frissítés gombra.',
+  'help.guide.edit-booking.result':
+    'A kártya átköltözik: egy megerősített foglalás a Megerősítve szakaszban áll egy zöld pont mögött, és az utazásban mindenki látja átköltözni.',
+  'help.guide.edit-booking.tip.1':
+    'Egy Foglalási kód, amit nem tudsz elolvasni, a Beállítások Megjelenés lapján lévő Foglalási kódok elrejtése. Vidd rá az egeret, vagy kattints rá, és olvashatóvá válik.',
+  'help.guide.edit-booking.tip.2':
+    'Változtasd meg a típust, és a kapcsolt költség kategóriája követi, hacsak nem választottál kézzel kategóriát a költségszerkesztőben.',
+  'help.guide.edit-booking.tip.3':
+    'Egy szállást is itt szerkesztesz: az Ettől és Eddig napjai ugyanezen az űrlapon vannak.',
+  // delete-booking
+  'help.guide.delete-booking.title': 'Foglalás törlése',
+  'help.guide.delete-booking.goal': 'Vedd ki az utazásból azt a foglalást, ami meghiúsult.',
+  'help.guide.delete-booking.step.1': 'Kattints a kártya fejlécében a kukára.',
+  'help.guide.delete-booking.step.2':
+    'A Foglalás törlése? megnevezi azt, amelyiket kiválasztottad, és azt mondja, hogy véglegesen törlődik.',
+  'help.guide.delete-booking.step.3': 'Kattints a Megerősítés gombra.',
+  'help.guide.delete-booking.result':
+    'A kártya eltűnt, mindenki számára az utazásban. Egy foglalásnál nincs visszavonás, így az a kérdés az utolsó állomás.',
+  'help.guide.delete-booking.tip.1':
+    'Egy szállásfoglalás törlése az éjszakáit is kiveszi a napi tervből, és eltávolítja a hozzá kapcsolt költséget.',
+  'help.guide.delete-booking.tip.2':
+    'A csatolt dokumentumok az utazás Fájlok fülén maradnak; csak a foglaláshoz fűződő kapcsolatuk szűnik meg.',
 };
 
 export default help;

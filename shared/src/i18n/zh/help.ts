@@ -2298,6 +2298,308 @@ const help: TranslationStrings = {
     '带链接的消息下面会有一张预览卡片，由你自己的 TREK 取回，所以指向只有你能访问的东西的链接，仍然只是一个普通链接。',
   'help.guide.trip-chat.tip.4':
     '“聊天”在“扩展”下面、“协作”之下有自己的开关：管理员可以把它关掉，让“笔记”“链接”“投票”和“下一步”继续运行。',
+
+  // ── Screen: trip-lists ────────────────────────────────────────────────────────────────
+  'help.ctx.trip-lists.title': '列表',
+  'help.ctx.trip-lists.summary':
+    '一次旅行的两份清单：行李清单，记下谁带什么、有多重；还有待办清单，记下出发前和旅途中必须发生的每一件事。只要“列表”扩展开着，这个标签页就在。',
+  'help.ctx.trip-lists.bullet.1':
+    '顶部的“行李清单”和“待办事项”在两者之间切换，并各自数出里面有多少；右边的按钮属于当前打开的那一边。',
+  'help.ctx.trip-lists.bullet.2':
+    '行李清单按清单分组，证件、衣物，随你怎么叫，每份清单带一个颜色圆点、一个已打包/总数的徽章，以及装着“重命名”“全部勾选”“取消全部勾选”和“删除清单”的三个点。“添加清单”新建一份。',
+  'help.ctx.trip-lists.bullet.3':
+    '一行是一个勾选框和一个名称，然后是“数量”、以克计的重量和行李圆圈（在“行李追踪”开着时），再是用于“移动到清单”的颜色圆点、“共享”“重命名”和“删除”。左边的抓手把它在所属清单里上下拖动。',
+  'help.ctx.trip-lists.bullet.4':
+    '“共享”和“我的清单”把行李清单一分为二：所有人都看得到的公共池，和你自己的那份。“全部”“未完成”“已完成”收窄当前打开的那一边，上方的进度条数出已经打包了多少。',
+  'help.ctx.trip-lists.bullet.5':
+    '“应用模板”“导入”和“保存为模板”不用一条条敲就能填满或留下一份清单，旁边的红色按钮写出有多少物品已勾选，并把它们清走。',
+  'help.ctx.trip-lists.bullet.6':
+    '“待办事项”有自己的侧栏：进度卡片，“全部”“我的任务”“已逾期”“已完成”几个筛选，按“优先级”或“截止日期”的“排序方式”，以及每份清单一行。点击一个任务会在右侧面板里打开它，“新建任务”则把同一个面板空着打开。',
+  // packing-categories
+  'help.guide.packing-categories.title': '搭建行李清单',
+  'help.guide.packing-categories.goal': '把要带的东西归进清单，填上物品，并说明谁来负责每一份清单。',
+  'help.guide.packing-categories.step.1':
+    '点击进度条下方的“添加清单”，在“清单名称（例如：衣物）”里输入名称，用对勾确认。',
+  'help.guide.packing-categories.step.2':
+    '新清单以一个空行开始。点击“添加物品”，在“物品名称...”里输入物品并按 Enter；输入框会一直开着，等下一个。',
+  'help.guide.packing-categories.step.3': '用一行右端的铅笔给它改名，或者直接点击名称本身。',
+  'help.guide.packing-categories.step.4':
+    '清单标题里的虚线圆圈把旅行成员分配到这份清单。选一个名字；出现的标签再点一下就把那个人移除。',
+  'help.guide.packing-categories.step.5':
+    '标题末尾的三个点装着其余的：“重命名”“全部勾选”“取消全部勾选”，以及“删除清单”，它会连清单带里面的一切一起拿走，不再问第二遍。',
+  'help.guide.packing-categories.result':
+    '新清单排在网格里，物品在它下面，带着自己的颜色圆点，徽章数出已经打包了多少。',
+  'help.guide.packing-categories.tip.1':
+    '一份清单就是它的物品。删掉最后一个，那一行会变成占位行，好让清单保住位置和颜色；把那一行也删掉，清单就没了。',
+  'help.guide.packing-categories.tip.2':
+    '把某人分配到一份清单会给他发一条行李通知。这不会改变谁能看到这些物品，那是行上的“共享”。',
+  'help.guide.packing-categories.tip.3': '两份清单可以同名。TREK 在内部区分它们，所以名字保持你输入的样子。',
+  // check-off-packing
+  'help.guide.check-off-packing.title': '一边收拾一边打勾',
+  'help.guide.check-off-packing.goal': '标记已经进包的东西，看着进度条，再把打包好的物品清走。',
+  'help.guide.check-off-packing.step.1': '点击一行左边的方框。名称被划掉，进度条往前走。',
+  'help.guide.check-off-packing.step.2': '上方的进度条把已打包的数量对着清单上的全部来数，既给数字也给百分比。',
+  'help.guide.check-off-packing.step.3': '整份清单一次搞定：它标题里的三个点装着“全部勾选”和“取消全部勾选”。',
+  'help.guide.check-off-packing.step.4':
+    '“全部”“未完成”“已完成”收窄网格。“未完成”只留下还缺的东西，所以已经装齐的清单会从里面消失。',
+  'help.guide.check-off-packing.step.5':
+    '上方进度条里的“移除 3 个已勾选”在浏览器确认一次之后，把所有已勾选的物品一次删掉。',
+  'help.guide.check-off-packing.result': '列出的只剩还没完成的，上方的进度条说出打包进行到哪一步。',
+  'help.guide.check-off-packing.tip.1': '已勾选的物品不能改名。先取消勾选。',
+  'help.guide.check-off-packing.tip.2':
+    '“全部勾选”和“取消全部勾选”一次只对一份清单起作用，要从那份清单自己的三个点里用。',
+  'help.guide.check-off-packing.tip.3': '当每个物品都勾上时，计数会被“全部打包完成！”取代，进度条变绿。',
+  // apply-packing-template
+  'help.guide.apply-packing-template.title': '应用行李模板',
+  'help.guide.apply-packing-template.goal': '把一份现成的清单带进旅行，并把这次旅行的清单留给下一次。',
+  'help.guide.apply-packing-template.step.1': '点击清单上方工具条里的“应用模板”。',
+  'help.guide.apply-packing-template.step.2': '挑一个模板。每一行写出它的名字和里面有多少物品。',
+  'help.guide.apply-packing-template.step.3':
+    '物品落在你当前所在的视图里：“共享”把它们放进所有人都看得到的公共池，“我的清单”让它们归你。',
+  'help.guide.apply-packing-template.step.4': '把这次旅行的清单留给下次旅行：“保存为模板”，一个名字，然后对勾。',
+  'help.guide.apply-packing-template.result': '模板的清单和物品已经在旅行里，就挨着原来就有的东西。',
+  'help.guide.apply-packing-template.tip.1': '模板只带名称和清单。数量、重量、行李和已经勾选的状态都留在原地。',
+  'help.guide.apply-packing-template.tip.2': '只有存在模板时才有“应用模板”。一个都没有的话，这个按钮根本不出现。',
+  'help.guide.apply-packing-template.tip.3':
+    '“保存为模板”只对实例管理员出现，而且只在清单里有物品时出现。它保存共享池加上你自己的物品，绝不会保存别的成员的私人物品。',
+  // import-packing-list
+  'help.guide.import-packing-list.title': '整份行李清单粘贴进来',
+  'help.guide.import-packing-list.goal': '把你已经放在别处的一份清单，一次性变成行李物品。',
+  'help.guide.import-packing-list.step.1': '点击清单上方工具条里的“导入”。',
+  'help.guide.import-packing-list.step.2':
+    '每行一个物品：类别, 名称, 以克计的重量（可选）, 行李（可选）, checked/unchecked（可选）。框里的灰色示例把四种写法都展示了。',
+  'help.guide.import-packing-list.step.3':
+    '或者用“加载 CSV/TXT”从文件里读入这些行。它接受一个 .csv 或 .txt，并替换掉框里的内容。',
+  'help.guide.import-packing-list.step.4': '点击“导入”。按钮会数出它读懂了多少行。',
+  'help.guide.import-packing-list.result':
+    '每一行都成了一条物品，落在它第一个字段指定的清单里，原来就有的东西一点没动。',
+  'help.guide.import-packing-list.tip.1':
+    '逗号、分号和制表符都能分隔字段，双引号把一个字段拢在一起，所以“Shirt, blue”还是一个名称。只有一个值的行就只是一个名称，没有自己清单的行落进“其他”。',
+  'help.guide.import-packing-list.tip.2':
+    '第四个字段里点名的行李，如果旅行里还没有就会被创建。这是唯一一处能批量载入重量和行李的地方；模板只带来名称和清单。',
+  // share-packing-item
+  'help.guide.share-packing-item.title': '决定谁看得到一件物品、谁来带',
+  'help.guide.share-packing-item.goal': '把一件物品在小组公共池、你自己的清单和你替他们带的人之间挪来挪去。',
+  'help.guide.share-packing-item.step.1':
+    '清单上方的“共享”是所有人都看得到的公共池，“我的清单”是你自己的，两边各自数出里面有多少。点击“我的清单”看你自己的。',
+  'help.guide.share-packing-item.step.2': '回到“共享”，打开某一行的“共享”控件，也就是铅笔旁边的共享图标。',
+  'help.guide.share-packing-item.step.3':
+    '一共三档：“共享”，在小组公共池里，所有人可见；“个人”，只有你看得到；还有“共享给…”，在那里挑出这件物品覆盖到的人。',
+  'help.guide.share-packing-item.step.4': '“个人”的物品只在“我的清单”里。切过去才找得到。',
+  'help.guide.share-packing-item.step.5':
+    '再打开一次“共享”，在“共享给…”下面勾一个名字。这件物品也会出现在那个人的清单上，行上写着“已共享给 1 人”。',
+  'help.guide.share-packing-item.result': '物品落在你选的那一档里，行上写着谁来带它。',
+  'help.guide.share-packing-item.tip.1':
+    '只有带这件物品的人才能改它的共享。被你分享到的人会在自己的“我的清单”上看到它，旁边标着你的名字，并且可以把它勾掉。',
+  'help.guide.share-packing-item.tip.2':
+    '在别人带的物品上，你拿到的是另外两个按钮：“我也可以带”，把你加到他旁边；还有“复制到我的清单”，给你自己做一份私人副本。',
+  'help.guide.share-packing-item.tip.3':
+    '新物品继承你添加它时所在的视图。在“我的清单”里加的是“个人”，在“共享”里加的进公共池。',
+  // packing-bags
+  'help.guide.packing-bags.title': '给行李称重',
+  'help.guide.packing-bags.goal': '给每件物品写上重量，把物品分进各件行李，并让每件行李都不超航空公司的限额。',
+  'help.guide.packing-bags.step.1': '把一件物品的重量，以克为单位，输入圆圈前面的那个框。',
+  'help.guide.packing-bags.step.2': '行末的圆圈就是它的行李。点它。',
+  'help.guide.packing-bags.step.3': '还没有行李：“添加行李”，一个名字，Enter。行李被创建，物品直接进去。',
+  'help.guide.packing-bags.step.4':
+    '只要存在一件行李，右侧就出现“行李”面板：名称、重量、一条填充条、谁来背、里面有多少物品，然后是“未分配”和“总重量”。',
+  'help.guide.packing-bags.step.5': '点击“设置限制”，按航空公司的说法用千克输入限额。',
+  'help.guide.packing-bags.step.6': '行李名字下面的虚线加号说明谁来背它。',
+  'help.guide.packing-bags.result':
+    '右侧的“行李”面板把每件行李的重量对着它的限额显示出来，还有不在任何行李里的东西，以及总计。',
+  'help.guide.packing-bags.tip.1':
+    '重量输入框、行李圆圈和“行李”面板，只有在管理员于“列表”扩展下打开了“行李追踪”时才存在。',
+  'help.guide.packing-bags.tip.2':
+    '一件行李的重量是在服务器上把每位成员的物品加起来的，包括你看不到的那些，所以这个数字真的就是这件行李的重量。',
+  'help.guide.packing-bags.tip.3':
+    '没有限额的行李按最重的那件来画，好让各条进度条仍然可比。给它一个限额，进度条就改成按那个来读。',
+  // create-todo
+  'help.guide.create-todo.title': '添加一个任务',
+  'help.guide.create-todo.goal': '把必须发生的事记下来，配上清单、优先级、日期和负责人。',
+  'help.guide.create-todo.step.1': '点击右上角的“新建任务”。',
+  'help.guide.create-todo.step.2': '在“任务名称”里给它起名，把值得记住的内容写在“描述”下面。',
+  'help.guide.create-todo.step.3': '“清单”把任务归类。选一个，或者用旁边的加号敲一个新名字。',
+  'help.guide.create-todo.step.4': '“优先级”是四个按钮：“无”、P1、P2 和 P3，从红到蓝。',
+  'help.guide.create-todo.step.5': '“截止日期”打开一个日历，“分配给”给任务写上一个名字。',
+  'help.guide.create-todo.step.6': '点击“创建任务”。',
+  'help.guide.create-todo.result':
+    '任务已经在列表里，带着它的徽章：优先级、截止日期、清单和被分配的人，并且在右侧面板里打开。',
+  'help.guide.create-todo.tip.1': '只有名称是必填的。其余的都可以之后从右侧面板补上。',
+  'help.guide.create-todo.tip.2': '侧栏里选中了某份清单时，新任务就从那份清单开始。',
+  'help.guide.create-todo.tip.3': '在名称框里按 Enter 会直接创建任务，不用碰其他字段。',
+  // todo-filters
+  'help.guide.todo-filters.title': '找到并修改一个任务',
+  'help.guide.todo-filters.goal': '把任务列表削到眼下要紧的部分，再编辑你落到的那个任务。',
+  'help.guide.todo-filters.step.1':
+    '侧栏里的“任务”：“全部”是所有还没完成的，“我的任务”是落在你身上的，“已逾期”是日期已经过去的，“已完成”是做完的。每一项都带着自己的数字；点击“已逾期”。',
+  'help.guide.todo-filters.step.2': '“清单”下面每份清单一行。选中一行就显示那份清单，连已完成的任务也在内。',
+  'help.guide.todo-filters.step.3':
+    '“排序方式”重新排列屏幕上的内容：“优先级”把 P1 放最前，“截止日期”把最近的期限放最前。两者一次只能用一个。',
+  'help.guide.todo-filters.step.4': '点击一个任务，在右侧面板里打开它。',
+  'help.guide.todo-filters.step.5':
+    '改你需要改的，“描述”“优先级”“清单”“截止日期”或“分配给”，然后“保存更改”。“删除”立刻把任务删掉。',
+  'help.guide.todo-filters.result': '列表只显示你要的任务，右侧面板编辑你选中的那一个。',
+  'help.guide.todo-filters.tip.1':
+    '清单那一行只数还没完成的，但选中它连已完成的任务也会显示。“全部”“我的任务”和“已逾期”藏起做完的；“已完成”则只显示做完的。',
+  'help.guide.todo-filters.tip.2':
+    '按“优先级”排序和按“截止日期”排序互相排斥，而且只要其中一个开着，行就不能再拖成你自己的顺序了。',
+
+  // ── Screen: trip-bookings ─────────────────────────────────────────────────────────────
+  'help.ctx.trip-bookings.title': '预订',
+  'help.ctx.trip-bookings.summary':
+    '这一栏装着旅行中除交通之外预订的一切：住的地方、餐位、门票、旅游团、停车。每条预订都是“待确认”或“已确认”里的一张卡片，带着它的预订码、单据、出行人和费用。',
+  'help.ctx.trip-bookings.bullet.1':
+    '右上角的“手动添加”打开表单。它能做出的六类是“住宿”“餐厅”“活动”“旅游团”“停车”和“其他”；航班、火车之类在“交通”栏里，绝不会出现在这里。',
+  'help.ctx.trip-bookings.bullet.2':
+    '“从文件导入”把一份预订确认交给解析：EML、PDF、PKPass、HTML 或 TXT，最多 5 个文件，每个不超过 10 MB。只有服务器能读它们时，这个按钮才在。',
+  'help.ctx.trip-bookings.bullet.3':
+    '标题旁的筛选片按类型筛选，每片带着自己的数量，“全部”把一切带回来。一旦有预订指定了人，筛选片旁边那一排头像就能把这一栏收窄到其中一个人。',
+  'help.ctx.trip-bookings.bullet.4':
+    '卡片分在两个区里，“待确认”和“已确认”，各带自己的数量。点击区标题会把它折起来，是否展开会为这次旅行记住。',
+  'help.ctx.trip-bookings.bullet.5':
+    '一张卡片带着状态圆点、类型、标题、日期和时间、“预订码”、“地点 / 地址”、这条预订关联到什么、它的“链接”、“备注”、“文件”和“出行人”。',
+  'help.ctx.trip-bookings.bullet.6':
+    '卡片上的铅笔再次打开同一个表单；垃圾桶问一次，然后这条预订就没了。若是住宿，它在日程计划里的住宿日和关联的支出会一并消失。',
+  // create-booking
+  'help.guide.create-booking.title': '创建一条预订',
+  'help.guide.create-booking.goal': '把一家餐厅、一场活动、一个旅游团、一个车位或别的什么，手动放进这次旅行。',
+  'help.guide.create-booking.step.1': '点击这一栏右上角的“手动添加”。“新建预订”打开。',
+  'help.guide.create-booking.step.2':
+    '选“预订类型”。这一栏做的六类是“住宿”“餐厅”“活动”“旅游团”“停车”和“其他”，表单随选择而变：只有“住宿”会把日期换成一段日子的范围。',
+  'help.guide.create-booking.step.3': '填“标题”。这是表单唯一坚持要的字段，在它有内容之前“添加”一直是灰的。',
+  'help.guide.create-booking.step.4':
+    '设置“日期”和“开始时间”，如果这条预订有结束，再设“结束日期”和“结束时间”。日历只给出旅行之内的日子；结束不晚于开始时，会用红色这样提示并挡住“添加”。',
+  'help.guide.create-booking.step.5':
+    '填入确认单上的“预订码”，并设置“状态”。是“待确认”还是“已确认”，决定卡片落进两个区中的哪一个。',
+  'help.guide.create-booking.step.6': '点击“添加”。',
+  'help.guide.create-booking.result':
+    '这条预订成了它那个区里的一张卡片，带着类型筛选片、日期和预订码，旅行中其他所有人也会看到它出现。',
+  'help.guide.create-booking.tip.1':
+    '“地点 / 地址”在你输入时给出真实地址；选中一个会替换你写下的内容，而你自己输入的地址会原样保留。',
+  'help.guide.create-booking.tip.2': '“链接”放的是这条预订在服务商那里的页面。卡片会把它变成一个在新标签页打开的链接。',
+  'help.guide.create-booking.tip.3': '“备注”是 Markdown，所以一个列表或一行加粗在卡片上也照样呈现。',
+  // booking-hotel
+  'help.guide.booking-hotel.title': '预订一个住的地方',
+  'help.guide.booking-hotel.goal': '录入一处住宿，让它同时算作一条预订和日程计划里的若干夜。',
+  'help.guide.booking-hotel.step.1': '点击“手动添加”并选“住宿”。日期字段消失，一组住宿字段接替它们的位置。',
+  'help.guide.booking-hotel.step.2':
+    '在“住宿”下选酒店。列表是这次旅行自己的地点，选中一个会把它的名称写进“标题”，地址写进“地点 / 地址”。',
+  'help.guide.booking-hotel.step.3':
+    '设置“从”和“到”：第一晚，以及离开的那个早上。两者都给出旅行的日子及其日期，而且二者会彼此保持先后顺序。',
+  'help.guide.booking-hotel.step.4': '填写“入住”“入住截止”“退房”，以及确认单上的“预订码”。',
+  'help.guide.booking-hotel.step.5': '点击“添加”。',
+  'help.guide.booking-hotel.result':
+    '卡片带的不是一个日期而是一段日子的范围，附上入住和退房时间以及地址；同一段住宿现在也落在计划的那些日子上。',
+  'help.guide.booking-hotel.tip.1':
+    '“住宿”是唯一没有“日期”和“开始时间”的类型。它的日期是“从”和“到”，而且是旅行的日子，不是日历。',
+  'help.guide.booking-hotel.tip.2': '也可以让“住宿”空着，改为输入地址：这个地点会被查出来、建好，并替你钉在地图上。',
+  'help.guide.booking-hotel.tip.3': '删除这条预订，会把日程计划里的那些夜一并带走。',
+  // link-booking
+  'help.guide.link-booking.title': '把一条预订系到计划上',
+  'help.guide.link-booking.goal': '把一条预订挂到它所属的那一站和那个地点上，好让它出现在你会需要它的地方。',
+  'help.guide.link-booking.step.1': '点击你想关联的那张卡片上的铅笔。“编辑预订”打开。',
+  'help.guide.link-booking.step.2':
+    '打开“关联日程分配”。列表就是你的计划：每天一个标题，下面是那天的各站，带编号和时间。选中这条预订所属的那一站。',
+  'help.guide.link-booking.step.3':
+    '“地点 / 活动”关联的是地点本身。在那里选中它，凡是你留空的“标题”和“地点 / 地址”都会被填上。',
+  'help.guide.link-booking.step.4': '点击“更新”。',
+  'help.guide.link-booking.result': '卡片在“关联日程分配”下写出那一天和那一站，这条预订也在日程计划里跟着那一站走。',
+  'help.guide.link-booking.tip.1':
+    '列表顶部的“无关联（独立）”再次取消关联。“住宿”根本没有选站的地方：它通过自己的住宿日来关联。',
+  'help.guide.link-booking.tip.2': '选中某个有日期的日子上的一站，会替你填上空着的“日期”。你已经设过的日期不会被动。',
+  // booking-travelers
+  'help.guide.booking-travelers.title': '说明一条预订是给谁的',
+  'help.guide.booking-travelers.goal': '标出一条预订涵盖的出行人，然后只看他们的。',
+  'help.guide.booking-travelers.step.1':
+    '用铅笔打开这条预订，往下到“出行人”。旅行的每位成员都在那里，其中也包括有名字的“访客”。',
+  'help.guide.booking-travelers.step.2': '点击这条预订是给谁的那些人。被选中的人会得到一个勾；再点一次就取消。',
+  'help.guide.booking-travelers.step.3': '点击“更新”。',
+  'help.guide.booking-travelers.step.4': '在上方工具栏里，类型筛选片旁边，点击某位出行人的头像，就只看他的预订。',
+  'help.guide.booking-travelers.result': '卡片列出它是给谁的那些人，而头像那一排把这一栏收窄到其中一个人。',
+  'help.guide.booking-travelers.tip.1': '在卡片上，出行人只是显示，永远改不了。要设置就在这里，在表单里。',
+  'help.guide.booking-travelers.tip.2':
+    '头像那一排要等这次旅行不止一位成员、且至少有一条预订指定了某人时才出现。你选的内容在这个浏览器会话里一直有效。',
+  // booking-files
+  'help.guide.booking-files.title': '把凭证和预订放在一起',
+  'help.guide.booking-files.goal': '把确认单、票或通行证附到它所属的那条预订上。',
+  'help.guide.booking-files.step.1':
+    '用铅笔打开这条预订，往下到“文件”，点击“附加文件”。在一条已经存在的预订上，单据会立刻上传，TREK 会说“文件已上传”。',
+  'help.guide.booking-files.step.2': '单据按名称列出，带一个打开它的按钮，旁边还有一个 X。',
+  'help.guide.booking-files.step.3':
+    '“关联已有文件”给出这次旅行中还不在这条预订上的单据。选中一个，它就被附上，不必再上传一次。',
+  'help.guide.booking-files.step.4': '点击“更新”。',
+  'help.guide.booking-files.result': '卡片在“文件”下列出这些单据，点击其中一个就能打开。',
+  'help.guide.booking-files.tip.1': '在一条你还在创建的预订上，单据会等着，在你点“添加”的那一刻上传。',
+  'help.guide.booking-files.tip.2': '单据旁的 X 去掉的是关联，不是单据本身。它仍留在这次旅行的“文件”栏里。',
+  'help.guide.booking-files.tip.3':
+    '哪些种类的文件可以附加，取决于管理员的“允许的文件类型”清单；开箱即用地允许文档、文本和图片。',
+  // booking-cost
+  'help.guide.booking-cost.title': '把一条预订的金额变成费用',
+  'help.guide.booking-cost.goal': '把一条预订花掉的钱记进“费用”，并在付钱的人之间分摊。',
+  'help.guide.booking-cost.step.1':
+    '打开这条预订，走到表单底部。“费用”下面是“创建支出”，附带那行说明“先保存预订，然后打开费用编辑器。”',
+  'help.guide.booking-cost.step.2': '点击“创建支出”。预订被保存，它的表单关上，费用编辑器打开。',
+  'help.guide.booking-cost.step.3': '“这笔花在哪了？”已经是这条预订的标题。填入“总金额”，并核对“货币”和“日期”。',
+  'help.guide.booking-cost.step.4': '“分类”是预订类型推出来的那一个。设置“谁支付的？”以及金额怎么“分摊”。',
+  'help.guide.booking-cost.step.5': '点击“添加支出”。',
+  'help.guide.booking-cost.result':
+    '这条预订的表单现在显示“关联支出”和金额，同一笔支出也立在“费用”栏里，系在这条预订上。',
+  'help.guide.booking-cost.tip.1':
+    '分类跟着类型走：“餐厅”变成“餐饮”，“住宿”变成“住宿”，“停车”变成“停车”，“活动”和“旅游团”都落进“其他”。',
+  'help.guide.booking-cost.tip.2': '“关联支出”上的垃圾桶移除的是这笔支出，不是这条预订。',
+  'help.guide.booking-cost.tip.3': '只有在“费用”扩展开着时，“费用”才在表单里，管理员在“扩展”下切换它。',
+  // filter-bookings
+  'help.guide.filter-bookings.title': '找到一条预订',
+  'help.guide.filter-bookings.goal': '把一长栏收窄到你要的类型、人或状态。',
+  'help.guide.filter-bookings.step.1': '标题旁的筛选片是这次旅行实际用到的类型，每片带着它所含的数量。“全部”就是整栏。',
+  'help.guide.filter-bookings.step.2': '点一片筛选片，只留下那个类型。再点第二片，两个都留下。',
+  'help.guide.filter-bookings.step.3': '“全部”把一切放回来。',
+  'help.guide.filter-bookings.step.4': '筛选片旁边的头像按出行人筛选，一个人或一次几个人都行。',
+  'help.guide.filter-bookings.step.5':
+    '“待确认”和“已确认”是那两个区，各带自己的数量。点击一个标题把它折起来；你回来时它仍然是折着的。',
+  'help.guide.filter-bookings.result': '这一栏只显示你挑出来的内容，而且在这个浏览器会话里你回来时它仍然那样挑着。',
+  'help.guide.filter-bookings.tip.1':
+    '筛选片只给出这次旅行有的类型，所以一次连一个旅游团都没有的旅行，就没有“旅游团”这一片。',
+  'help.guide.filter-bookings.tip.2':
+    '一个什么都匹配不到的筛选，会让这一栏空着，只剩“未找到地点”。措辞是地点列表的；意思是一样的。',
+  // import-booking-file
+  'help.guide.import-booking-file.title': '从确认单里读出一条预订',
+  'help.guide.import-booking-file.goal': '让 TREK 从服务商发来的邮件或 PDF 里把预订取出来，而不必再输一遍。',
+  'help.guide.import-booking-file.step.1': '点击工具栏里的“从文件导入”。“导入预订确认”打开。',
+  'help.guide.import-booking-file.step.2':
+    '把确认单拖放到那个框上，或点击它来挑选：EML、PDF、PKPass、HTML 和 TXT，最多 5 个文件，每个 10 MB。你挑的那些文件的名字会写在框上。',
+  'help.guide.import-booking-file.step.3': '点击“导入”。对话框立刻关上，因为读取是在后台进行的。',
+  'help.guide.import-booking-file.step.4':
+    '右下角的一张卡片报告这次运行，它会跟着你走遍应用，也挺得过一次刷新。完成后它给出“导入”，由此开始核对：它找到的每条预订都会在普通表单里打开，内容已填好、单据已附上，供你逐条检查并“添加”。',
+  'help.guide.import-booking-file.result':
+    '你确认过的每条预订都是一张自己的卡片，带着预订码、日期和它出自的那份单据；住宿还得到了它的那些夜，而在“费用”开着时，确认单里出现过的金额成了一笔支出。',
+  'help.guide.import-booking-file.tip.1':
+    '只有服务器能读预订确认时，“从文件导入”才在，这需要服务器端的提取器或“AI 解析”扩展二者之一。后者由管理员在“扩展”下切换。',
+  'help.guide.import-booking-file.tip.2':
+    '如果什么都读不出来，卡片会这样说，并给出“尝试 AI 解析”，它把同样的文件直接送给模型。',
+  'help.guide.import-booking-file.tip.3': '一次完成的解析会保留十分钟。请在这段时间内开始核对。',
+  // edit-booking
+  'help.guide.edit-booking.title': '修改一条预订',
+  'help.guide.edit-booking.goal': '改正一个时间、补上晚到的预订码，或者把一条预订从“待确认”挪到“已确认”。',
+  'help.guide.edit-booking.step.1': '点击卡片头部的铅笔。“编辑预订”带着这条预订知道的一切打开。',
+  'help.guide.edit-booking.step.2': '改该改的地方，这里是运营商终于发来的那个“预订码”。',
+  'help.guide.edit-booking.step.3': '把“状态”设为“已确认”。',
+  'help.guide.edit-booking.step.4': '点击“更新”。',
+  'help.guide.edit-booking.result':
+    '卡片挪了位置：一条已确认的预订立在“已确认”区里，前面是一个绿点，旅行中的每个人都看得到它挪动。',
+  'help.guide.edit-booking.tip.1':
+    '读不出来的“预订码”，是设置里“显示”下的“隐藏预订编号”。把鼠标停上去，或者点一下，它就清楚了。',
+  'help.guide.edit-booking.tip.2': '改了类型，关联支出的分类也跟着改，除非你曾在费用编辑器里手动选过一个分类。',
+  'help.guide.edit-booking.tip.3': '住宿也在这里编辑：它的“从”和“到”那两天就在同一个表单里。',
+  // delete-booking
+  'help.guide.delete-booking.title': '删除一条预订',
+  'help.guide.delete-booking.goal': '把一条泡汤的预订从这次旅行里拿掉。',
+  'help.guide.delete-booking.step.1': '点击卡片头部的垃圾桶。',
+  'help.guide.delete-booking.step.2': '“删除预订？”会说出你选中的那一条，并说明它将被永久删除。',
+  'help.guide.delete-booking.step.3': '点击“确认”。',
+  'help.guide.delete-booking.result': '卡片没了，对旅行中的所有人都是。预订没有撤销，所以这个问题就是最后一道关。',
+  'help.guide.delete-booking.tip.1': '删除一条住宿预订，还会把它在日程计划里的那些夜取走，并移除关联到它的那笔支出。',
+  'help.guide.delete-booking.tip.2': '附上过的单据仍留在这次旅行的“文件”栏里；走掉的只是它们与这条预订的关联。',
 };
 
 export default help;

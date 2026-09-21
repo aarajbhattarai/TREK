@@ -2763,6 +2763,354 @@ const help: TranslationStrings = {
     'リンクの入ったメッセージには、その下にプレビューカードが付きます。取ってくるのはあなた自身の TREK ですから、あなたしか届かない先へのリンクは素のリンクのままです。',
   'help.guide.trip-chat.tip.4':
     '「チャット」は「アドオン」の下、「Collab」の下にある独立したスイッチです。管理者はこれだけを切って、「ノート」「リンク」「投票」「次にすること」を動かしたままにできます。',
+
+  // ── Screen: trip-lists ────────────────────────────────────────────────────────────────
+  'help.ctx.trip-lists.title': 'リスト',
+  'help.ctx.trip-lists.summary':
+    '1つの旅行に2つのリストです。誰が何を持っていき、それが何グラムかまで入る持ち物リストと、旅行の前と最中に起きるべきことを並べるToDoリスト。このタブは「リスト」アドオンが有効な間だけあります。',
+  'help.ctx.trip-lists.bullet.1':
+    '上の「持ち物リスト」と「ToDo」が2つを切り替え、それぞれに何があるかも数えます。右のボタンは、開いているほうのものです。',
+  'help.ctx.trip-lists.bullet.2':
+    '持ち物リストはリストごとにまとまります。書類、衣類、名前は自由です。それぞれに色の点と、梱包済みと全体の数を出すバッジと、「名前を変更」「すべてチェック」「すべて解除」「リストを削除」が入った三つの点があります。「リストを追加」が新しいリストを作ります。',
+  'help.ctx.trip-lists.bullet.3':
+    '1行はチェックボックスと名前、そして「数量」、「バッグ管理」が有効ならグラム単位の重さとバッグの丸、さらに「リストへ移動」のための色の点、「共有」「名前を変更」「削除」です。左のつまみは、その行を自分のリストの中で上下に動かします。',
+  'help.ctx.trip-lists.bullet.4':
+    '「みんなで」と「マイリスト」が持ち物リストを2つに分けます。全員が見るプールと、あなた自身のものです。「すべて」「未完了」「完了」が開いているほうを絞り込み、上のバーが梱包済みの数を数えます。',
+  'help.ctx.trip-lists.bullet.5':
+    '「テンプレートを適用」「インポート」「テンプレートとして保存」は、打ち込まずにリストを埋めたり残したりします。その隣の赤いボタンはチェック済みのアイテムが何件あるかを出し、まとめて片づけます。',
+  'help.ctx.trip-lists.bullet.6':
+    '「ToDo」には専用のサイドバーがあります。進捗カード、「すべて」「自分のタスク」「期限切れ」「完了」のフィルター、「優先度」か「期限」での「並び替え」、そしてリストごとに1行です。タスクをクリックすると右のパネルで開き、「新しいタスクを追加...」は同じパネルを空のまま開きます。',
+  // packing-categories
+  'help.guide.packing-categories.title': '持ち物リストを作る',
+  'help.guide.packing-categories.goal':
+    '持っていくものをリストにまとめ、アイテムを入れ、どのリストを誰が受け持つかを決めます。',
+  'help.guide.packing-categories.step.1':
+    'バーの下の「リストを追加」をクリックし、「リスト名（例：衣類）」に名前を入力して、チェックで確定します。',
+  'help.guide.packing-categories.step.2':
+    '新しいリストは空の行が1つの状態で始まります。「項目を追加」をクリックし、「項目名...」に入力してEnterを押します。入力欄は次のために開いたままです。',
+  'help.guide.packing-categories.step.3': '行の名前は、右端の鉛筆か、名前そのものをクリックして変えます。',
+  'help.guide.packing-categories.step.4':
+    'リストのヘッダーにある破線の丸は、旅行メンバーをそのリストに割り当てます。名前を選ぶと出てくるチップは、クリックするとその人をまた外します。',
+  'help.guide.packing-categories.step.5':
+    'ヘッダーの端の三つの点に残りが入っています。「名前を変更」「すべてチェック」「すべて解除」、そして「リストを削除」で、これはリストと中身のすべてを、もう一度確認せずに消します。',
+  'help.guide.packing-categories.result':
+    '新しいリストは、アイテムを下に従え、色の点を付けてグリッドに並び、バッジがもう梱包済みの数を数えます。',
+  'help.guide.packing-categories.tip.1':
+    'リストはそのアイテムそのものです。最後の1つを削除すると行はプレースホルダーに変わり、リストは場所と色を保ちます。その行も削除すると、リストはなくなります。',
+  'help.guide.packing-categories.tip.2':
+    '誰かをリストに割り当てると、その人に持ち物の通知が届きます。アイテムを誰が見られるかは変わりません。それは行の「共有」です。',
+  'help.guide.packing-categories.tip.3':
+    '2つのリストが同じ名前でも構いません。TREKは内部で区別するので、名前は入力したままになります。',
+  // check-off-packing
+  'help.guide.check-off-packing.title': '荷造りしながらチェックしていく',
+  'help.guide.check-off-packing.goal': 'バッグに入れたものに印を付け、バーを見て、梱包済みのアイテムを片づけます。',
+  'help.guide.check-off-packing.step.1': '行の左のボックスをクリックします。名前に取り消し線が入り、バーが動きます。',
+  'help.guide.check-off-packing.step.2':
+    '上のバーは、リストにあるすべてに対して梱包済みの数を、件数でもパーセントでも数えます。',
+  'help.guide.check-off-packing.step.3':
+    'リストをまるごと一度に扱うなら、そのヘッダーの三つの点に「すべてチェック」と「すべて解除」があります。',
+  'help.guide.check-off-packing.step.4':
+    '「すべて」「未完了」「完了」がグリッドを絞ります。「未完了」はまだ足りないものだけを残すので、すっかり梱包済みのリストはそこから外れます。',
+  'help.guide.check-off-packing.step.5':
+    '上のバーの「チェック済み3件を削除」は、ブラウザの確認を1回はさんでから、チェック済みのアイテムをすべて一度に削除します。',
+  'help.guide.check-off-packing.result': 'まだ未完了のものだけが並び、上のバーが荷造りの進み具合を伝えます。',
+  'help.guide.check-off-packing.tip.1': 'チェック済みのアイテムは名前を変えられません。先にチェックを外してください。',
+  'help.guide.check-off-packing.tip.2':
+    '「すべてチェック」と「すべて解除」は、そのリスト自身の三つの点から、一度に1つのリストにだけ効きます。',
+  'help.guide.check-off-packing.tip.3':
+    'すべてのアイテムにチェックが入ると、カウンターは「すべて梱包済み！」に変わり、バーが緑になります。',
+  // apply-packing-template
+  'help.guide.apply-packing-template.title': '持ち物テンプレートを適用する',
+  'help.guide.apply-packing-template.goal': '出来合いのリストを旅行に取り込み、この旅行のリストを次のために残します。',
+  'help.guide.apply-packing-template.step.1': 'リストの上のバーで「テンプレートを適用」をクリックします。',
+  'help.guide.apply-packing-template.step.2': 'テンプレートを選びます。各行に名前と、入っているアイテムの数が出ます。',
+  'help.guide.apply-packing-template.step.3':
+    'アイテムは今いるビューに入ります。「みんなで」なら全員が見るプールに、「マイリスト」ならあなたのものになります。',
+  'help.guide.apply-packing-template.step.4':
+    'この旅行のリストを次の旅行のために残すには、「テンプレートとして保存」、名前、そしてチェックです。',
+  'help.guide.apply-packing-template.result':
+    'テンプレートのリストとアイテムが、もとからあったものの隣に、旅行の中にあります。',
+  'help.guide.apply-packing-template.tip.1':
+    'テンプレートが運ぶのは名前とリストだけです。数量、重さ、バッグ、すでにチェックが入っているかどうかは引き継がれません。',
+  'help.guide.apply-packing-template.tip.2':
+    '「テンプレートを適用」はテンプレートが1つできてから出ます。なければボタン自体が出ません。',
+  'help.guide.apply-packing-template.tip.3':
+    '「テンプレートとして保存」はインスタンスの管理者にだけ、しかもリストにアイテムがある間だけ出ます。保存されるのは共有プールとあなた自身のアイテムで、他のメンバーの個人のものは決して入りません。',
+  // import-packing-list
+  'help.guide.import-packing-list.title': '持ち物リストをまるごと貼り付ける',
+  'help.guide.import-packing-list.goal': 'どこかにすでにあるリストを、一度で持ち物のアイテムに変えます。',
+  'help.guide.import-packing-list.step.1': 'リストの上のバーで「インポート」をクリックします。',
+  'help.guide.import-packing-list.step.2':
+    '1行につき1項目です。カテゴリ, 名前, 重量(g・任意), バッグ(任意), checked/unchecked(任意)。ボックスの中の灰色の見本が4つの形をすべて見せています。',
+  'help.guide.import-packing-list.step.3':
+    'または「CSV/TXTを読み込む」で行をファイルから読み込みます。.csvか.txtを受け取り、ボックスの中身を置き換えます。',
+  'help.guide.import-packing-list.step.4': '「インポート」をクリックします。ボタンは読み取れた行の数を出します。',
+  'help.guide.import-packing-list.result':
+    'どの行も1つの行になり、最初のフィールドが指すリストに入ります。もとからあったものには何も触れません。',
+  'help.guide.import-packing-list.tip.1':
+    'カンマ、セミコロン、タブがどれもフィールドを区切り、二重引用符はフィールドをひとまとめにするので、「Shirt, blue」は1つの名前のままです。値が1つだけの行はただの名前で、自分のリストを持たない行は「その他」に入ります。',
+  'help.guide.import-packing-list.tip.2':
+    '4番目のフィールドで名前を挙げたバッグは、旅行にまだなければ作られます。重さとバッグをまとめて読み込めるのはここだけで、テンプレートが運ぶのは名前とリストだけです。',
+  // share-packing-item
+  'help.guide.share-packing-item.title': 'アイテムを誰が見て誰が持っていくかを決める',
+  'help.guide.share-packing-item.goal':
+    'アイテムを、グループのプール、自分のリスト、そして持っていってあげる相手の間で動かします。',
+  'help.guide.share-packing-item.step.1':
+    'リストの上の「みんなで」は全員が見るプール、「マイリスト」はあなた自身のもので、どちらも中の数を数えます。「マイリスト」をクリックして自分のほうを見ます。',
+  'help.guide.share-packing-item.step.2': '「みんなで」に戻り、行の「共有」を開きます。鉛筆の隣の共有アイコンです。',
+  'help.guide.share-packing-item.step.3':
+    '段階は3つです。「みんなで」はグループのプールに入り、全員に見えます。「個人」は自分だけが見られます。「共有する相手…」では、そのアイテムの対象になる人を選びます。',
+  'help.guide.share-packing-item.step.4':
+    '「個人」のアイテムは「マイリスト」にしかありません。切り替えて探してください。',
+  'help.guide.share-packing-item.step.5':
+    'もう一度「共有」を開き、「共有する相手…」の下で名前にチェックを入れます。アイテムはその人のリストにも出て、行には「1 人と共有」と出ます。',
+  'help.guide.share-packing-item.result': 'アイテムは選んだ段階に収まり、行には誰が持っていくかが出ます。',
+  'help.guide.share-packing-item.tip.1':
+    'アイテムの共有を変えられるのは、それを持っていく人だけです。共有された相手は自分の「マイリスト」でそれを見て、あなたの名前が付いた状態でチェックを入れられます。',
+  'help.guide.share-packing-item.tip.2':
+    '他の人が持っていくアイテムでは、代わりに別の2つのボタンが出ます。「私も持っていけます」はあなたをその人の隣に加え、「マイリストにコピー」は自分用の非公開のコピーを作ります。',
+  'help.guide.share-packing-item.tip.3':
+    '新しいアイテムは、追加したビューを受け継ぎます。「マイリスト」で追加すれば「個人」、「みんなで」で追加すればプールに入ります。',
+  // packing-bags
+  'help.guide.packing-bags.title': 'バッグの重さを量る',
+  'help.guide.packing-bags.goal':
+    'すべてのアイテムに重さを付け、アイテムをバッグに分け、どのバッグも航空会社の制限内に収めます。',
+  'help.guide.packing-bags.step.1': 'アイテムの重さをグラムで、丸の手前の欄に入力します。',
+  'help.guide.packing-bags.step.2': '行の端の丸が、そのアイテムのバッグです。クリックします。',
+  'help.guide.packing-bags.step.3':
+    'バッグがまだなければ、「バッグを追加」、名前、Enterです。バッグが作られ、アイテムはそのまま中に入ります。',
+  'help.guide.packing-bags.step.4':
+    'バッグが1つできるとすぐ、右に「バッグ」パネルが出ます。名前、重さ、満たし具合のバー、運ぶ人、入っているアイテムの数、そして「未割り当て」と「総重量」です。',
+  'help.guide.packing-bags.step.5':
+    '「制限を設定」をクリックし、航空会社の言い方どおり、制限をキログラムで入力します。',
+  'help.guide.packing-bags.step.6': 'バッグの名前の下の破線のプラスが、誰が運ぶかを示します。',
+  'help.guide.packing-bags.result':
+    '右の「バッグ」パネルが、各バッグの重さを制限と並べて、どのバッグにも入っていないもの、そして合計を出します。',
+  'help.guide.packing-bags.tip.1':
+    '重さの欄、バッグの丸、「バッグ」パネルは、管理者が「リスト」アドオンの下で「バッグ管理」を有効にしている間だけあります。',
+  'help.guide.packing-bags.tip.2':
+    'バッグの重さはサーバー側で、あなたに見えないものも含めて全メンバーのアイテムを合計します。だからその数字は、本当にそのバッグの重さです。',
+  'help.guide.packing-bags.tip.3':
+    '制限のないバッグは、いちばん重いバッグを基準に描かれるので、バーは比べられるままです。制限を付ければ、バーはそちらを基準に読まれます。',
+  // create-todo
+  'help.guide.create-todo.title': 'タスクを追加する',
+  'help.guide.create-todo.goal': 'やるべきことを、リスト、優先度、日付、担当者を添えて書き留めます。',
+  'help.guide.create-todo.step.1': '右上の「新しいタスクを追加...」をクリックします。',
+  'help.guide.create-todo.step.2': '「タスク名」で名前を付け、覚えておきたいことは「説明」に入れます。',
+  'help.guide.create-todo.step.3':
+    '「リスト」がタスクをまとめます。1つ選ぶか、その隣のプラスで新しい名前を入力します。',
+  'help.guide.create-todo.step.4': '「優先度」は4つのボタンです。「なし」、P1、P2、P3で、赤から青へと下がります。',
+  'help.guide.create-todo.step.5': '「期限」はカレンダーを開き、「担当者」はタスクに名前を付けます。',
+  'help.guide.create-todo.step.6': '「タスクを作成」をクリックします。',
+  'help.guide.create-todo.result':
+    'タスクは、優先度、期限、リスト、担当者のバッジを付けて一覧に入り、右のパネルで開きます。',
+  'help.guide.create-todo.tip.1': '必須なのは名前だけです。ほかはあとから右のパネルで埋められます。',
+  'help.guide.create-todo.tip.2': 'サイドバーでリストを選んでいると、新しいタスクはそのリストから始まります。',
+  'help.guide.create-todo.tip.3': '名前の欄でEnterを押すと、ほかの欄に触れずにそのままタスクができます。',
+  // todo-filters
+  'help.guide.todo-filters.title': 'タスクを見つけて変える',
+  'help.guide.todo-filters.goal': 'タスクの一覧を今だいじなものまで絞り、たどり着いたタスクを編集します。',
+  'help.guide.todo-filters.step.1':
+    'サイドバーの「タスク」です。「すべて」はまだ未完了のものすべて、「自分のタスク」はあなたに掛かっているもの、「期限切れ」は日付が過ぎたもの、「完了」は終わったものです。どれにも件数が付いています。「期限切れ」をクリックします。',
+  'help.guide.todo-filters.step.2':
+    '「リスト」の下にはリストごとに1行あります。1つ選ぶと、そのリストが、終わったタスクも含めて出ます。',
+  'help.guide.todo-filters.step.3':
+    '「並び替え」は画面にあるものを並べ替えます。「優先度」はP1を先に、「期限」はいちばん近い締め切りを先にします。2つは一度に片方だけです。',
+  'help.guide.todo-filters.step.4': 'タスクをクリックすると、右のパネルで開きます。',
+  'help.guide.todo-filters.step.5':
+    '必要なところを変えます。「説明」「優先度」「リスト」「期限」「担当者」です。それから「変更を保存」。「削除」はタスクをその場で消します。',
+  'help.guide.todo-filters.result': '一覧には求めたタスクだけが出て、右のパネルが選んだ1つを編集します。',
+  'help.guide.todo-filters.tip.1':
+    'リストの行が数えるのはまだ未完了のものだけですが、選ぶと終わったタスクも出ます。「すべて」「自分のタスク」「期限切れ」は終わったものを隠し、「完了」はそれしか出しません。',
+  'help.guide.todo-filters.tip.2':
+    '「並び替え」の「優先度」と「期限」は互いを排除し、どちらかが効いている間は、行を自分の順に並べ替えることはできません。',
+
+  // ── Screen: trip-bookings ─────────────────────────────────────────────────────────────
+  'help.ctx.trip-bookings.title': '予約',
+  'help.ctx.trip-bookings.summary':
+    '移動手段以外に旅行で予約したものをすべて収めるタブです。宿泊先、レストランの席、チケット、ツアー、駐車場が入ります。予約はどれも「保留」か「確定」のカードになり、予約コード、書類、同行者、費用を携えています。',
+  'help.ctx.trip-bookings.bullet.1':
+    '右上の「手動予約」がフォームを開きます。ここで作れるのは「宿泊」「レストラン」「イベント」「ツアー」「駐車場」「その他」の6種類です。航空便や列車などは「移動」タブにあり、ここには現れません。',
+  'help.ctx.trip-bookings.bullet.2':
+    '「ファイルからインポート」は確認書を解析に渡します。EML、PDF、PKPass、HTML、TXT が使え、1ファイル 10 MB まで、最大 5 ファイルです。このボタンは、サーバーがそれらを読めるときだけ現れます。',
+  'help.ctx.trip-bookings.bullet.3':
+    '見出しの横のチップは種類で絞り込み、それぞれが自分の件数を持ちます。「すべて」で全部が戻ります。予約に人が指定されると、チップの隣のアバターの行がタブをその一人に絞り込みます。',
+  'help.ctx.trip-bookings.bullet.4':
+    'カードは「保留」と「確定」の2つのセクションに並び、それぞれに件数が付きます。セクションの見出しをクリックすると折りたたまれ、開いているかどうかはこの旅行ごとに記憶されます。',
+  'help.ctx.trip-bookings.bullet.5':
+    'カードにはステータスの点、種類、タイトル、日付と時刻、「予約コード」、「場所／住所」、予約のリンク先、「リンク」、「メモ」、「ファイル」、「同行者」が載ります。',
+  'help.ctx.trip-bookings.bullet.6':
+    'カードの鉛筆は同じフォームをもう一度開きます。ごみ箱は一度だけ尋ね、それで予約は消えます。宿泊の場合は、日別計画の宿泊日とリンクされた支出も一緒に消えます。',
+  // create-booking
+  'help.guide.create-booking.title': '予約を作成する',
+  'help.guide.create-booking.goal': 'レストラン、イベント、ツアー、駐車場など、何でも手入力で旅行に入れます。',
+  'help.guide.create-booking.step.1': 'タブの右上の「手動予約」をクリックします。「新しい予約」が開きます。',
+  'help.guide.create-booking.step.2':
+    '「予約タイプ」を選びます。このタブが作るのは「宿泊」「レストラン」「イベント」「ツアー」「駐車場」「その他」の6種類で、選択に応じてフォームが変わります。日付を日の範囲に取り替えるのは「宿泊」だけです。',
+  'help.guide.create-booking.step.3':
+    '「タイトル」を入力します。フォームが必ず求めるのはこの項目だけで、何か入るまで「追加」は押せません。',
+  'help.guide.create-booking.step.4':
+    '「日付」と「開始時刻」を設定し、終わりのある予約なら「終了日」と「終了時刻」も設定します。カレンダーは旅行期間内の日しか示さず、終わりが始まりより後でなければ赤でそう伝えて「追加」を止めます。',
+  'help.guide.create-booking.step.5':
+    '確認書の「予約コード」を入れて「ステータス」を設定します。「保留」か「確定」かで、カードが2つのセクションのどちらに入るかが決まります。',
+  'help.guide.create-booking.step.6': '「追加」をクリックします。',
+  'help.guide.create-booking.result':
+    '予約は種類のチップと日付と予約コードを持つカードとしてそのセクションに並び、旅行のほかの全員にも現れます。',
+  'help.guide.create-booking.tip.1':
+    '「場所／住所」は入力中に実在の住所を示します。選ぶと書いた内容が置き換わり、自分で入力した住所はそのまま残ります。',
+  'help.guide.create-booking.tip.2':
+    '「リンク」には提供元にあるその予約のページを入れます。カードではそれが新しいタブで開くリンクになります。',
+  'help.guide.create-booking.tip.3': '「メモ」は Markdown なので、箇条書きや太字の行はカードでもそのまま表示されます。',
+  // booking-hotel
+  'help.guide.booking-hotel.title': '宿泊先を予約する',
+  'help.guide.booking-hotel.goal':
+    '宿泊先を入力して、予約としても日別計画の宿泊日としても同時に数えられるようにします。',
+  'help.guide.booking-hotel.step.1':
+    '「手動予約」をクリックして「宿泊」を選びます。日付の項目が消え、その場所に宿泊用の項目がまとめて入ります。',
+  'help.guide.booking-hotel.step.2':
+    '「宿泊先」でホテルを選びます。一覧は旅行に登録された場所で、選ぶとその名前が「タイトル」に、住所が「場所／住所」に書き込まれます。',
+  'help.guide.booking-hotel.step.3':
+    '「開始」と「終了」を設定します。最初の宿泊日と、出発する朝です。どちらも旅行の日を日付付きで示し、2つは前後が入れ替わらないように保たれます。',
+  'help.guide.booking-hotel.step.4':
+    '「チェックイン」「チェックイン期限」「チェックアウト」と、確認書の「予約コード」を入力します。',
+  'help.guide.booking-hotel.step.5': '「追加」をクリックします。',
+  'help.guide.booking-hotel.result':
+    'カードは日付ではなく日の範囲を持ち、チェックインとチェックアウトの時刻と住所が付きます。同じ滞在が計画のその日にも入ります。',
+  'help.guide.booking-hotel.tip.1':
+    '「宿泊」は「日付」と「開始時刻」を持たない唯一の種類です。その日付は「開始」と「終了」で、カレンダーではなく旅行の日から選びます。',
+  'help.guide.booking-hotel.tip.2':
+    '「宿泊先」を空のままにして、代わりに住所を入力することもできます。その場所が検索され、作成され、地図にピンが立ちます。',
+  'help.guide.booking-hotel.tip.3': '予約を削除すると、日別計画の宿泊日も一緒になくなります。',
+  // link-booking
+  'help.guide.link-booking.title': '予約を計画に結び付ける',
+  'help.guide.link-booking.goal':
+    '予約をそれが属する立ち寄り先と場所にぶら下げて、必要になるところに現れるようにします。',
+  'help.guide.link-booking.step.1': '結び付けたいカードの鉛筆をクリックします。「予約を編集」が開きます。',
+  'help.guide.link-booking.step.2':
+    '「日への割り当てにリンク」を開きます。一覧はあなたの計画そのもので、日ごとの見出しの下に、その日の立ち寄り先が番号と時刻付きで並びます。予約が属するものを選びます。',
+  'help.guide.link-booking.step.3':
+    '「場所 / アクティビティ」は場所そのものを結び付けます。そこで選ぶと、空のままにしてあった「タイトル」と「場所／住所」が埋まります。',
+  'help.guide.link-booking.step.4': '「更新」をクリックします。',
+  'help.guide.link-booking.result':
+    'カードの「日への割り当てにリンク」にその日と立ち寄り先が示され、予約は日別計画でその立ち寄り先と一緒に動きます。',
+  'help.guide.link-booking.tip.1':
+    '一覧の先頭にある「リンクなし（単独）」で結び付けをまた外せます。「宿泊」には立ち寄り先の選択そのものがなく、宿泊日を通して結び付きます。',
+  'help.guide.link-booking.tip.2':
+    '日付のある日の立ち寄り先を選ぶと、空の「日付」が代わりに埋まります。すでに設定してある日付はそのままです。',
+  // booking-travelers
+  'help.guide.booking-travelers.title': '予約が誰のためかを示す',
+  'help.guide.booking-travelers.goal': '予約が対象とする同行者を指定し、そのうえでその人の分だけを表示します。',
+  'help.guide.booking-travelers.step.1':
+    '鉛筆で予約を開き、「同行者」まで下がります。旅行のメンバーが全員そこに並び、名前の付いた「ゲスト」も含まれます。',
+  'help.guide.booking-travelers.step.2':
+    'この予約の対象となる人をクリックします。選ばれた人にはチェックが付き、もう一度クリックすると外れます。',
+  'help.guide.booking-travelers.step.3': '「更新」をクリックします。',
+  'help.guide.booking-travelers.step.4':
+    '上のツールバーで、種類のチップの隣にある同行者のアバターをクリックすると、その人の予約だけが表示されます。',
+  'help.guide.booking-travelers.result': 'カードに対象の人が並び、アバターの行がタブをその一人に絞り込みます。',
+  'help.guide.booking-travelers.tip.1':
+    'カードでは同行者は表示されるだけで、変更はできません。指定はここ、フォームで行います。',
+  'help.guide.booking-travelers.tip.2':
+    'アバターの行は、旅行のメンバーが2人以上いて、少なくとも1件の予約に誰かが指定されると現れます。選んだ内容はこのブラウザーのセッションの間だけ続きます。',
+  // booking-files
+  'help.guide.booking-files.title': 'バウチャーを予約と一緒に保管する',
+  'help.guide.booking-files.goal': '確認書、チケット、パスを、それが属する予約に添付します。',
+  'help.guide.booking-files.step.1':
+    '鉛筆で予約を開き、「ファイル」まで下がって「ファイルを添付」をクリックします。すでに存在する予約では書類がすぐに上がり、TREK が「ファイルをアップロードしました」と伝えます。',
+  'help.guide.booking-files.step.2': '書類は名前で並び、開くためのボタンと、その隣の X が付きます。',
+  'help.guide.booking-files.step.3':
+    '「既存ファイルをリンク」は、まだこの予約に付いていない旅行の書類を示します。選べば、もう一度アップロードすることなく添付されます。',
+  'help.guide.booking-files.step.4': '「更新」をクリックします。',
+  'help.guide.booking-files.result': 'カードの「ファイル」に書類が並び、そのひとつをクリックすると開きます。',
+  'help.guide.booking-files.tip.1': 'まだ作成中の予約では、書類は待機し、「追加」をクリックした瞬間に上がります。',
+  'help.guide.booking-files.tip.2':
+    '書類の隣の X が外すのは結び付きだけで、書類そのものではありません。書類は旅行の「ファイル」タブに残ります。',
+  'help.guide.booking-files.tip.3':
+    'どの種類のファイルを添付できるかは管理者の「許可するファイル形式」の一覧次第です。初期状態では書類、テキスト、画像が許可されています。',
+  // booking-cost
+  'help.guide.booking-cost.title': '予約の金額を費用にする',
+  'help.guide.booking-cost.goal': '予約にかかる金額を「費用」に入れ、支払う人たちで分けます。',
+  'help.guide.booking-cost.step.1':
+    '予約を開き、フォームの一番下まで進みます。「Costs」の下に「Create expense」があり、「Saves the booking, then opens the Costs editor.」という注記が付いています。',
+  'help.guide.booking-cost.step.2':
+    '「Create expense」をクリックします。予約が保存され、そのフォームが閉じて、費用の編集画面が開きます。',
+  'help.guide.booking-cost.step.3':
+    '「何の支出ですか？」にはすでに予約のタイトルが入っています。「合計金額」を入れ、「通貨」と「日」を確かめます。',
+  'help.guide.booking-cost.step.4':
+    '「カテゴリ」は予約タイプから決まるものです。「誰が支払いましたか？」と、金額の分け方である「Split」を設定します。',
+  'help.guide.booking-cost.step.5': '「支出を追加」をクリックします。',
+  'help.guide.booking-cost.result':
+    '予約のフォームには金額とともに「Linked expense」が表示され、同じ支出がこの予約に結び付いた形で「費用」タブにも並びます。',
+  'help.guide.booking-cost.tip.1':
+    'カテゴリは種類に従います。「レストラン」は「飲食」に、「宿泊」は「宿泊」に、「駐車場」は「駐車場」になり、「イベント」と「ツアー」はどちらも「その他」に入ります。',
+  'help.guide.booking-cost.tip.2': '「Linked expense」のごみ箱が消すのは支出だけで、予約ではありません。',
+  'help.guide.booking-cost.tip.3':
+    '「Costs」がフォームにあるのは「費用」アドオンが有効な間だけで、管理者が「アドオン」で切り替えます。',
+  // filter-bookings
+  'help.guide.filter-bookings.title': '予約を見つける',
+  'help.guide.filter-bookings.goal': '長いタブを、探している種類、人、状態に絞り込みます。',
+  'help.guide.filter-bookings.step.1':
+    '見出しの横のチップは、この旅行が実際に使っている種類で、それぞれが持っている件数を添えています。「すべて」はタブ全体です。',
+  'help.guide.filter-bookings.step.2':
+    'チップをクリックするとその種類だけが残ります。もうひとつクリックすると両方が残ります。',
+  'help.guide.filter-bookings.step.3': '「すべて」で全部が戻ります。',
+  'help.guide.filter-bookings.step.4': 'チップの隣のアバターは同行者で絞り込み、1人でも一度に数人でも選べます。',
+  'help.guide.filter-bookings.step.5':
+    '「保留」と「確定」が2つのセクションで、それぞれに件数が付きます。見出しをクリックすると片方が折りたたまれ、戻ってきても折りたたまれたままです。',
+  'help.guide.filter-bookings.result':
+    'タブには選んだものだけが表示され、このブラウザーのセッションの間は戻ってきても選んだままです。',
+  'help.guide.filter-bookings.tip.1':
+    'チップは旅行にある種類しか示さないので、ツアーが1件もない旅行には「ツアー」のチップがありません。',
+  'help.guide.filter-bookings.tip.2':
+    '何にも一致しない絞り込みでは、タブが空になり「場所が見つかりません」と出ます。文言は場所の一覧のものですが、意味は同じです。',
+  // import-booking-file
+  'help.guide.import-booking-file.title': '確認書から予約を読み取る',
+  'help.guide.import-booking-file.goal':
+    'もう一度入力する代わりに、提供元が送ってきたメールや PDF から TREK に予約を取り出させます。',
+  'help.guide.import-booking-file.step.1':
+    'ツールバーの「ファイルからインポート」をクリックします。「予約確認書のインポート」が開きます。',
+  'help.guide.import-booking-file.step.2':
+    '確認書を枠にドロップするか、枠をクリックして選びます。EML、PDF、PKPass、HTML、TXT が使え、1ファイル 10 MB まで、最大 5 ファイルです。選んだファイルの名前が枠に出ます。',
+  'help.guide.import-booking-file.step.3':
+    '「インポート」をクリックします。読み取りは背後で進むので、ダイアログはすぐに閉じます。',
+  'help.guide.import-booking-file.step.4':
+    '右下のカードが処理の様子を伝え、アプリの中を移動しても再読み込みしても付いてきます。終わると「インポート」が現れ、それが確認を始めます。見つかった予約が1件ずつ、内容が入り書類が添付された通常のフォームで開くので、確かめて次々に「追加」します。',
+  'help.guide.import-booking-file.result':
+    '確認した予約はそれぞれ、予約コードと日付と元になった書類を持つ独自のカードになります。宿泊なら宿泊日も入り、「費用」が有効なら確認書にあった金額が支出になります。',
+  'help.guide.import-booking-file.tip.1':
+    '「ファイルからインポート」は、サーバーが確認書を読めるときだけあります。それにはサーバー側の抽出処理か「AI 解析」アドオンのどちらかが要ります。後者は管理者が「アドオン」で切り替えます。',
+  'help.guide.import-booking-file.tip.2':
+    '何も読み取れなかった場合はカードがそう伝え、「Try AI parsing」を示します。これは同じファイルをそのままモデルに送ります。',
+  'help.guide.import-booking-file.tip.3': '終わった解析は10分間保たれます。確認はその間に始めてください。',
+  // edit-booking
+  'help.guide.edit-booking.title': '予約を変更する',
+  'help.guide.edit-booking.goal':
+    '時刻を直したり、後から届いた予約コードを足したり、予約を「保留」から「確定」に移したりします。',
+  'help.guide.edit-booking.step.1':
+    'カードの見出しにある鉛筆をクリックします。「予約を編集」が、その予約の持つ情報すべてとともに開きます。',
+  'help.guide.edit-booking.step.2':
+    '変える必要のあるところを変えます。ここでは業者がようやく送ってきた「予約コード」です。',
+  'help.guide.edit-booking.step.3': '「ステータス」を「確定」にします。',
+  'help.guide.edit-booking.step.4': '「更新」をクリックします。',
+  'help.guide.edit-booking.result':
+    'カードが移ります。確定した予約は緑の点の後ろ、「確定」のセクションに並び、旅行の全員にその移動が見えます。',
+  'help.guide.edit-booking.tip.1':
+    '「予約コード」が読めないのは、設定の「表示」にある「予約コードをぼかす」です。カーソルを乗せるか、クリックすれば読めます。',
+  'help.guide.edit-booking.tip.2':
+    '種類を変えると、リンクされた支出のカテゴリもそれに従います。ただし費用の編集画面で自分でカテゴリを選んでいた場合は変わりません。',
+  'help.guide.edit-booking.tip.3': '宿泊もここで編集します。その「開始」と「終了」の日も同じフォームにあります。',
+  // delete-booking
+  'help.guide.delete-booking.title': '予約を削除する',
+  'help.guide.delete-booking.goal': '流れてしまった予約を旅行から取り除きます。',
+  'help.guide.delete-booking.step.1': 'カードの見出しにあるごみ箱をクリックします。',
+  'help.guide.delete-booking.step.2': '「予約を削除しますか？」が選んだ予約の名前を示し、完全に削除されると伝えます。',
+  'help.guide.delete-booking.step.3': '「確認」をクリックします。',
+  'help.guide.delete-booking.result':
+    'カードは旅行の全員から消えます。予約に取り消しはないので、この問いが最後の関門です。',
+  'help.guide.delete-booking.tip.1':
+    '宿泊の予約を削除すると、日別計画からその宿泊日も消え、結び付いていた支出も削除されます。',
+  'help.guide.delete-booking.tip.2':
+    '添付されていた書類は旅行の「ファイル」タブに残ります。消えるのは予約との結び付きだけです。',
 };
 
 export default help;

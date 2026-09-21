@@ -2800,6 +2800,370 @@ const help: TranslationStrings = {
     'Ett meddelande med en länk i sig får ett förhandsvisningskort under sig, hämtat av din egen TREK, så en länk till något bara du når förblir en vanlig länk.',
   'help.guide.trip-chat.tip.4':
     'Chatt är en egen växel under Tillägg, nedanför Samarbete: en administratör kan stänga av den och låta noteringarna, länkarna, omröstningarna och Vad händer härnäst? fortsätta.',
+
+  // ── Screen: trip-lists ────────────────────────────────────────────────────────────────
+  'help.ctx.trip-lists.title': 'Listor',
+  'help.ctx.trip-lists.summary':
+    'Två listor för en resa: packlistan, med vem som tar med vad och vad det väger, och att göra-listan med allt som måste hända före och under resan. Fliken finns så länge tillägget Listor är på.',
+  'help.ctx.trip-lists.bullet.1':
+    'Packlista och Att göra högst upp växlar mellan de två och räknar vad som ligger i var och en; knapparna till höger hör till den som är öppen.',
+  'help.ctx.trip-lists.bullet.2':
+    'Packlistan är grupperad i listor, Dokument, Kläder, vad du nu kallar dem, var och en med en färgprick, en packat-av-totalt-bricka och tre punkter som håller Döp om, Markera alla, Avmarkera alla och Ta bort lista. Lägg till lista gör en ny.',
+  'help.ctx.trip-lists.bullet.3':
+    'En rad är en kryssruta och ett namn, sedan antalet, vikten i gram och en väskcirkel medan Spårning av väskor är på, sedan färgpricken för Flytta till lista, Delning, Döp om och Ta bort. Greppet till vänster drar den uppåt eller nedåt inuti sin lista.',
+  'help.ctx.trip-lists.bullet.4':
+    'Delat och Min lista delar packlistan i två: poolen alla ser, och din egen. Alla, Öppna och Klar smalnar av den som är öppen, och stapeln ovanför räknar vad som är packat.',
+  'help.ctx.trip-lists.bullet.5':
+    'Använd mall, Importera och Spara som mall fyller eller behåller en lista utan att du skriver den, och den röda knappen bredvid dem säger hur många föremål som är markerade och sopar bort dem.',
+  'help.ctx.trip-lists.bullet.6':
+    'Att göra har en egen sidopanel: framstegskortet, filtren Alla, Mina uppgifter, Förfallen och Slutförda, Sortera efter Prioritet eller Förfallodag, och en rad per lista. Ett klick på en uppgift öppnar den i rutan till höger, och Lägg till ny uppgift öppnar samma ruta tom.',
+  // packing-categories
+  'help.guide.packing-categories.title': 'Bygg packlistan',
+  'help.guide.packing-categories.goal':
+    'Gruppera det du tar med i listor, fyll dem med föremål och säg vem som sköter varje lista.',
+  'help.guide.packing-categories.step.1':
+    'Klicka på Lägg till lista under förloppsstapeln, skriv namnet i Listnamn (t.ex. Kläder) och bekräfta med bocken.',
+  'help.guide.packing-categories.step.2':
+    'Den nya listan börjar med en tom rad. Klicka på Lägg till föremål, skriv föremålet i Föremålsnamn... och tryck Enter; fältet står kvar öppet för nästa.',
+  'help.guide.packing-categories.step.3':
+    'Döp om en rad med pennan i dess högra ände, eller genom att klicka på själva namnet.',
+  'help.guide.packing-categories.step.4':
+    'Den streckade cirkeln i listans rubrik tilldelar resedeltagare till listan. Välj ett namn; brickan som dyker upp tar bort den personen igen med ett klick.',
+  'help.guide.packing-categories.step.5':
+    'De tre punkterna i slutet av rubriken håller resten: Döp om, Markera alla, Avmarkera alla och Ta bort lista, som tar listan och allt i den utan att fråga igen.',
+  'help.guide.packing-categories.result':
+    'Den nya listan sitter i rutnätet med sina föremål under sig och sin färgprick, och dess bricka räknar vad som redan är packat.',
+  'help.guide.packing-categories.tip.1':
+    'En lista är bara sina föremål. Ta bort det sista så blir raden en platshållare, så att listan behåller sin plats och sin färg; ta bort den raden också och listan är borta.',
+  'help.guide.packing-categories.tip.2':
+    'Att tilldela någon till en lista skickar en packningsnotis till personen. Det ändrar inte vem som ser föremålen, det gör Delning, på raden.',
+  'help.guide.packing-categories.tip.3':
+    'Två listor får bära samma namn. TREK håller isär dem internt, så namnen står kvar som du skrev dem.',
+  // check-off-packing
+  'help.guide.check-off-packing.title': 'Bocka av medan du packar',
+  'help.guide.check-off-packing.goal':
+    'Markera vad som ligger i väskan, håll koll på stapeln, och sopa bort de packade föremålen.',
+  'help.guide.check-off-packing.step.1':
+    'Klicka på rutan till vänster på en rad. Namnet stryks över och stapeln rör sig.',
+  'help.guide.check-off-packing.step.2':
+    'Stapeln ovanför räknar vad som är packat mot allt på listan, som ett tal och som en procentsats.',
+  'help.guide.check-off-packing.step.3':
+    'En hel lista på en gång: de tre punkterna i dess rubrik håller Markera alla och Avmarkera alla.',
+  'help.guide.check-off-packing.step.4':
+    'Alla, Öppna och Klar smalnar av rutnätet. Öppna lämnar bara det som fortfarande fattas, så en lista som är fullpackad faller ur.',
+  'help.guide.check-off-packing.step.5':
+    'Ta bort 3 markerade i raden ovanför raderar varje markerat föremål på en gång, efter en bekräftelse från webbläsaren.',
+  'help.guide.check-off-packing.result':
+    'Bara det som fortfarande är öppet listas, och stapeln ovanför säger hur långt packningen har kommit.',
+  'help.guide.check-off-packing.tip.1': 'Ett markerat föremål går inte att döpa om. Avmarkera det först.',
+  'help.guide.check-off-packing.tip.2':
+    'Markera alla och Avmarkera alla arbetar på en lista i taget, från den listans egna tre punkter.',
+  'help.guide.check-off-packing.tip.3':
+    'När varje föremål är markerat byts räknaren mot Allt packat! och stapeln blir grön.',
+  // apply-packing-template
+  'help.guide.apply-packing-template.title': 'Använd en packmall',
+  'help.guide.apply-packing-template.goal':
+    'Ta in en färdig lista i resan, och behåll den här resans lista till nästa.',
+  'help.guide.apply-packing-template.step.1': 'Klicka på Använd mall i raden ovanför listan.',
+  'help.guide.apply-packing-template.step.2':
+    'Välj en mall. Varje rad namnger den och säger hur många föremål den håller.',
+  'help.guide.apply-packing-template.step.3':
+    'Föremålen hamnar i den vy du står i: Delat lägger dem i poolen alla ser, Min lista gör dem till dina.',
+  'help.guide.apply-packing-template.step.4':
+    'Behåll den här resans lista till nästa resa: Spara som mall, ett namn, sedan bocken.',
+  'help.guide.apply-packing-template.result':
+    'Mallens listor och föremål finns i resan, bredvid det som redan fanns där.',
+  'help.guide.apply-packing-template.tip.1':
+    'En mall bär bara namn och listor. Antal, vikter, väskor och vad som redan är markerat stannar kvar.',
+  'help.guide.apply-packing-template.tip.2':
+    'Använd mall finns bara när det finns en mall. Utan en syns knappen inte alls.',
+  'help.guide.apply-packing-template.tip.3':
+    'Spara som mall syns bara för en instansadministratör, och bara medan listan har föremål. Den sparar den delade poolen plus dina egna föremål, aldrig en annan deltagares privata.',
+  // import-packing-list
+  'help.guide.import-packing-list.title': 'Klistra in en hel packlista',
+  'help.guide.import-packing-list.goal': 'Gör om en lista du redan har någon annanstans till packföremål i ett svep.',
+  'help.guide.import-packing-list.step.1': 'Klicka på Importera i raden ovanför listan.',
+  'help.guide.import-packing-list.step.2':
+    'Ett föremål per rad: Kategori, Namn, Vikt i g (valfritt), Väska (valfritt), checked/unchecked (valfritt). Det grå exemplet i rutan visar alla fyra formerna.',
+  'help.guide.import-packing-list.step.3':
+    'Eller ladda raderna från en fil med Ladda CSV/TXT. Den tar en .csv eller en .txt och ersätter det som står i rutan.',
+  'help.guide.import-packing-list.step.4': 'Klicka på Importera. Knappen räknar raderna den förstod.',
+  'help.guide.import-packing-list.result':
+    'Varje rad blir ett föremål, i den lista som dess första fält namnger, och inget som redan fanns där rörs.',
+  'help.guide.import-packing-list.tip.1':
+    'Kommatecken, semikolon och tabbar skiljer alla fält åt, och citattecken håller ihop ett fält, så ”Skjorta, blå” förblir ett namn. En rad med ett enda värde är bara ett namn, och en rad utan egen lista hamnar i Övrigt.',
+  'help.guide.import-packing-list.tip.2':
+    'En väska som namnges i det fjärde fältet skapas om resan inte redan har den. Det här är enda stället som laddar in vikter och väskor i bulk; en mall tar bara med namn och listor.',
+  // share-packing-item
+  'help.guide.share-packing-item.title': 'Bestäm vem som ser ett föremål och vem som tar med det',
+  'help.guide.share-packing-item.goal':
+    'Flytta ett föremål mellan grupp-poolen, din egen lista och de personer du tar med det åt.',
+  'help.guide.share-packing-item.step.1':
+    'Delat ovanför listorna är poolen alla ser, Min lista är din egen, och var och en räknar vad som ligger i den. Klicka på Min lista för att titta på din.',
+  'help.guide.share-packing-item.step.2': 'Tillbaka i Delat, öppna en rads Delning, delningsikonen bredvid pennan.',
+  'help.guide.share-packing-item.step.3':
+    'Tre nivåer: Delat, i grupp-poolen och synligt för alla; Personlig, som bara du ser; och Dela med…, där du väljer de personer föremålet gäller.',
+  'help.guide.share-packing-item.step.4':
+    'Ett Personlig-föremål ligger bara på Min lista. Växla över för att hitta det.',
+  'help.guide.share-packing-item.step.5':
+    'Öppna Delning igen och bocka i ett namn under Dela med…. Föremålet syns på den personens lista också, och raden säger delat med 1.',
+  'help.guide.share-packing-item.result': 'Föremålet ligger på den nivå du valde, och raden säger vem som tar med det.',
+  'help.guide.share-packing-item.tip.1':
+    'Bara den som tar med ett föremål ändrar dess delning. Den du delade det med ser det på sin egen Min lista, märkt med ditt namn, och kan bocka av det.',
+  'help.guide.share-packing-item.tip.2':
+    'På ett föremål som någon annan tar med får du två andra knappar i stället: Jag kan ta med det också, som lägger dig bredvid personen, och Kopiera till min lista, som gör en privat kopia åt dig.',
+  'help.guide.share-packing-item.tip.3':
+    'Nya föremål ärver den vy du lägger till dem i. Tillagda i Min lista är de Personlig, tillagda i Delat går de till poolen.',
+  // packing-bags
+  'help.guide.packing-bags.title': 'Väg väskorna',
+  'help.guide.packing-bags.goal':
+    'Sätt en vikt på varje föremål, sortera föremålen i väskor och håll varje väska under sin flygbolagsgräns.',
+  'help.guide.packing-bags.step.1': 'Skriv ett föremåls vikt, i gram, i fältet före cirkeln.',
+  'help.guide.packing-bags.step.2': 'Cirkeln i slutet av raden är dess väska. Klicka på den.',
+  'help.guide.packing-bags.step.3':
+    'Ingen väska ännu: Lägg till väska, ett namn, Enter. Väskan skapas och föremålet går rakt in i den.',
+  'help.guide.packing-bags.step.4':
+    'Panelen Väskor dyker upp till höger så snart en väska finns: namn, vikt, en fyllnadsstapel, vem som bär den och hur många föremål som ligger i den, sedan Ej tilldelad och Totalvikt.',
+  'help.guide.packing-bags.step.5': 'Klicka på Ange gräns och skriv gränsen i kilogram, så som flygbolagen anger den.',
+  'help.guide.packing-bags.step.6': 'Det streckade plusset under en väskas namn säger vem som bär den.',
+  'help.guide.packing-bags.result':
+    'Panelen Väskor till höger visar varje väskas vikt mot dess gräns, vad som inte ligger i någon väska, och totalen.',
+  'help.guide.packing-bags.tip.1':
+    'Viktfältet, väskcirkeln och panelen Väskor finns bara medan en administratör har slagit på Spårning av väskor under tillägget Listor.',
+  'help.guide.packing-bags.tip.2':
+    'En väskas vikt summeras på servern över varje deltagares föremål, även de du inte kan se, så talet är verkligen vad väskan väger.',
+  'help.guide.packing-bags.tip.3':
+    'En väska utan gräns ritas mot den tyngsta väskan, så att staplarna förblir jämförbara. Ge den en gräns så läses stapeln mot den i stället.',
+  // create-todo
+  'help.guide.create-todo.title': 'Lägg till en uppgift',
+  'help.guide.create-todo.goal':
+    'Skriv ner något som måste hända, med en lista, en prioritet, ett datum och ett namn på.',
+  'help.guide.create-todo.step.1': 'Klicka på Lägg till ny uppgift högst upp till höger.',
+  'help.guide.create-todo.step.2': 'Ge den ett namn i Uppgiftsnamn, och lägg allt värt att minnas under Beskrivning.',
+  'help.guide.create-todo.step.3':
+    'Lista grupperar uppgiften. Välj en, eller använd plusset bredvid för att skriva ett nytt namn.',
+  'help.guide.create-todo.step.4': 'Prioritet är fyra knappar: Ingen, P1, P2 och P3, rött ner till blått.',
+  'help.guide.create-todo.step.5': 'Förfallodag öppnar en kalender, och Tilldelad till sätter ett namn på uppgiften.',
+  'help.guide.create-todo.step.6': 'Klicka på Skapa uppgift.',
+  'help.guide.create-todo.result':
+    'Uppgiften ligger i listan med sina brickor, prioriteten, förfallodagen, listan och personen den är tilldelad, och den öppnas i rutan till höger.',
+  'help.guide.create-todo.tip.1': 'Bara namnet krävs. Allt annat går att fylla i senare från rutan till höger.',
+  'help.guide.create-todo.tip.2': 'Med en lista vald i sidopanelen startar en ny uppgift i den listan.',
+  'help.guide.create-todo.tip.3': 'Enter i namnfältet skapar uppgiften direkt, utan att du rör de andra fälten.',
+  // todo-filters
+  'help.guide.todo-filters.title': 'Hitta och ändra en uppgift',
+  'help.guide.todo-filters.goal':
+    'Skär ner uppgiftslistan till det som betyder något nu, och redigera sedan uppgiften du landade på.',
+  'help.guide.todo-filters.step.1':
+    'Uppgifter i sidopanelen: Alla är allt som fortfarande är öppet, Mina uppgifter det som ligger på dig, Förfallen det som har ett datum i det förflutna, Slutförda det som är klart. Var och en bär sitt antal; klicka på Förfallen.',
+  'help.guide.todo-filters.step.2':
+    'Under Listor sitter en rad per lista. Att välja en visar den listan, slutförda uppgifter inräknade.',
+  'help.guide.todo-filters.step.3':
+    'Sortera efter ordnar om det som står på skärmen: Prioritet lägger P1 först, Förfallodag lägger den närmaste deadlinen först. Bara en av de två åt gången.',
+  'help.guide.todo-filters.step.4': 'Klicka på en uppgift för att öppna den i rutan till höger.',
+  'help.guide.todo-filters.step.5':
+    'Ändra det du behöver, Beskrivning, Prioritet, Lista, Förfallodag eller Tilldelad till, sedan Spara ändringar. Radera tar bort uppgiften på en gång.',
+  'help.guide.todo-filters.result':
+    'Listan visar bara de uppgifter du bad om, och rutan till höger redigerar den du valde.',
+  'help.guide.todo-filters.tip.1':
+    'En listrad räknar bara det som fortfarande är öppet, men att välja den visar de slutförda uppgifterna också. Alla, Mina uppgifter och Förfallen döljer det som är klart; Slutförda visar inget annat.',
+  'help.guide.todo-filters.tip.2':
+    'Sortera efter Prioritet och Sortera efter Förfallodag utesluter varandra, och medan någon av dem är på går raderna inte längre att dra i en egen ordning.',
+
+  // ── Screen: trip-bookings ─────────────────────────────────────────────────────────────
+  'help.ctx.trip-bookings.title': 'Bokningar',
+  'help.ctx.trip-bookings.summary':
+    'Fliken som håller allt som är bokat för resan och inte är ett sätt att ta sig fram: boendena, borden, biljetterna, turerna, parkeringen. Varje bokning är ett kort i Väntar på beslut eller i Bekräftat, med sin kod, sitt dokument, sina resenärer och sin kostnad.',
+  'help.ctx.trip-bookings.bullet.1':
+    'Manuell bokning högst upp till höger öppnar formuläret. De sex sorter det gör är Boende, Restaurang, Evenemang, Rundtur, Parkering och Övrigt; flyg, tåg och resten bor på fliken Transporter och dyker aldrig upp här.',
+  'help.ctx.trip-bookings.bullet.2':
+    'Importera från fil räcker en bekräftelse till tolken: EML, PDF, PKPass, HTML eller TXT, fem filer på högst 10 MB. Knappen finns bara när servern kan läsa dem.',
+  'help.ctx.trip-bookings.bullet.3':
+    'Brickorna bredvid rubriken filtrerar på typ, var och en med sitt eget antal, och Alla tar tillbaka allt. När en bokning väl namnger personer smalnar raden med avatarer bredvid brickorna av fliken till en av dem.',
+  'help.ctx.trip-bookings.bullet.4':
+    'Korten står i två avsnitt, Väntar på beslut och Bekräftat, vart och ett med sitt antal. Ett klick på en avsnittsrubrik fäller ihop den, och om den är öppen minns TREK för den här resan.',
+  'help.ctx.trip-bookings.bullet.5':
+    'Ett kort bär statusprickan, typen, titeln, datumen och tiderna, Bokningskoden, Plats / Adress, vad bokningen är länkad till, dess Länk, Noteringar, Filer och Resenärer.',
+  'help.ctx.trip-bookings.bullet.6':
+    'Pennan på ett kort öppnar samma formulär igen; papperskorgen frågar en gång och sedan är bokningen borta. Med ett boende följer dess nätter i dagsplanen och dess länkade utgift med.',
+  // create-booking
+  'help.guide.create-booking.title': 'Skapa en bokning',
+  'help.guide.create-booking.goal':
+    'Lägg in en restaurang, ett evenemang, en rundtur, en parkeringsplats eller vad som helst annat i resan för hand.',
+  'help.guide.create-booking.step.1': 'Klicka på Manuell bokning högst upp till höger på fliken. Ny bokning öppnas.',
+  'help.guide.create-booking.step.2':
+    'Välj Bokningstyp. Boende, Restaurang, Evenemang, Rundtur, Parkering och Övrigt är de sex som den här fliken gör, och formuläret ändras med valet: bara Boende byter sina datum mot ett spann av dagar.',
+  'help.guide.create-booking.step.3':
+    'Skriv in Titel. Det är det enda fältet formuläret kräver, och Lägg till är död tills det står något i det.',
+  'help.guide.create-booking.step.4':
+    'Ställ in Datum och Starttid, och Slutdatum och Sluttid om bokningen har ett slut. Kalendrarna erbjuder bara dagar inom resan, och ett slut som inte ligger efter starten säger det i rött och spärrar Lägg till.',
+  'help.guide.create-booking.step.5':
+    'Skriv in Bokningskoden från bekräftelsen och sätt Status. Väntar på beslut eller Bekräftat avgör vilket av de två avsnitten kortet hamnar i.',
+  'help.guide.create-booking.step.6': 'Klicka på Lägg till.',
+  'help.guide.create-booking.result':
+    'Bokningen är ett kort i sitt avsnitt med sin typbricka, sina datum och sin kod, och alla andra på resan ser den dyka upp.',
+  'help.guide.create-booking.tip.1':
+    'Plats / Adress erbjuder riktiga adresser medan du skriver; att välja en ersätter det du skrev, och en adress du skrivit själv lämnas som den är.',
+  'help.guide.create-booking.tip.2':
+    'Länk går till bokningens egen sida hos leverantören. Kortet gör den till en länk som öppnas i en ny flik.',
+  'help.guide.create-booking.tip.3':
+    'Noteringar är Markdown, så en lista eller en fet rad visas som en sådan på kortet.',
+  // booking-hotel
+  'help.guide.booking-hotel.title': 'Boka ett boende',
+  'help.guide.booking-hotel.goal':
+    'Lägg in ett boende så att det räknas som en bokning och som nätter i dagsplanen på en gång.',
+  'help.guide.booking-hotel.step.1':
+    'Klicka på Manuell bokning och välj Boende. Datumfälten försvinner och ett block med hotellfält tar deras plats.',
+  'help.guide.booking-hotel.step.2':
+    'Välj hotellet under Boende. Listan är resans egna platser, och att välja ett skriver in dess namn i Titel och dess adress i Plats / Adress.',
+  'help.guide.booking-hotel.step.3':
+    'Ställ in Från och Till: första natten och morgonen du reser. Båda erbjuder resans dagar med deras datum, och de två håller varandra i ordning.',
+  'help.guide.booking-hotel.step.4':
+    'Fyll i Incheckning, Incheckning fram till och Utcheckning, och Bokningskoden från bekräftelsen.',
+  'help.guide.booking-hotel.step.5': 'Klicka på Lägg till.',
+  'help.guide.booking-hotel.result':
+    'Kortet bär ett spann av dagar i stället för ett datum, med tiderna för in- och utcheckning och adressen, och samma vistelse sitter nu på de dagarna i planen.',
+  'help.guide.booking-hotel.tip.1':
+    'Boende är den enda typen utan ett Datum och en Starttid. Dess datum är Från och Till, och de är dagar i resan snarare än en kalender.',
+  'help.guide.booking-hotel.tip.2':
+    'Lämna Boende tomt och skriv adressen i stället: platsen slås upp, skapas och nålas fast på kartan åt dig.',
+  'help.guide.booking-hotel.tip.3': 'Att ta bort bokningen tar nätterna ur dagsplanen med sig.',
+  // link-booking
+  'help.guide.link-booking.title': 'Knyt en bokning till planen',
+  'help.guide.link-booking.goal':
+    'Häng en bokning på det stopp och den plats den hör till, så att den dyker upp där du kommer att vilja ha den.',
+  'help.guide.link-booking.step.1': 'Klicka på pennan på kortet du vill länka. Redigera reservation öppnas.',
+  'help.guide.link-booking.step.2':
+    'Öppna Länk till dagsuppgift. Listan är din plan: en rubrik per dag, sedan den dagens stopp, numrerade och med sina tider. Välj det bokningen hör till.',
+  'help.guide.link-booking.step.3':
+    'Plats / Aktivitet länkar själva platsen. Välj den där, så fylls Titel och Plats / Adress i överallt där du lämnat dem tomma.',
+  'help.guide.link-booking.step.4': 'Klicka på Uppdatera.',
+  'help.guide.link-booking.result':
+    'Kortet namnger dagen och stoppet under Länk till dagsuppgift, och bokningen följer med det stoppet i dagsplanen.',
+  'help.guide.link-booking.tip.1':
+    'Ingen länk (fristående) högst upp i listan tar bort länken igen. Boende har ingen stoppväljare alls: det länkas genom sina nätter.',
+  'help.guide.link-booking.tip.2':
+    'Att välja ett stopp på en daterad dag fyller i ett tomt Datum åt dig. Ett datum du redan satt lämnas i fred.',
+  // booking-travelers
+  'help.guide.booking-travelers.title': 'Säg vem en bokning gäller',
+  'help.guide.booking-travelers.goal': 'Märk ut resenärerna en bokning täcker, och se sedan bara deras.',
+  'help.guide.booking-travelers.step.1':
+    'Öppna bokningen med pennan och gå ner till Resenärer. Varje medlem i resan står där, namngivna gäster bland dem.',
+  'help.guide.booking-travelers.step.2':
+    'Klicka på personerna den här bokningen gäller. En vald får en bock; klicka igen för att ta bort den.',
+  'help.guide.booking-travelers.step.3': 'Klicka på Uppdatera.',
+  'help.guide.booking-travelers.step.4':
+    'Uppe i verktygsraden, bredvid typbrickorna, klicka på en resenärs avatar för att bara se dennes bokningar.',
+  'help.guide.booking-travelers.result':
+    'Kortet listar personerna den gäller, och avatarraden smalnar av fliken till en av dem.',
+  'help.guide.booking-travelers.tip.1':
+    'På kortet visas resenärerna bara, de ändras aldrig. De sätts här, i formuläret.',
+  'help.guide.booking-travelers.tip.2':
+    'Avatarraden dyker upp när resan har mer än en medlem och minst en bokning namnger någon. Det du väljer håller för den här webbläsarsessionen.',
+  // booking-files
+  'help.guide.booking-files.title': 'Håll vouchern hos bokningen',
+  'help.guide.booking-files.goal': 'Bifoga bekräftelsen, biljetten eller passerkortet till den bokning det hör till.',
+  'help.guide.booking-files.step.1':
+    'Öppna bokningen med pennan, gå ner till Filer och klicka på Bifoga fil. På en bokning som redan finns går dokumentet upp med en gång och TREK säger Fil uppladdad.',
+  'help.guide.booking-files.step.2':
+    'Dokumentet listas med sitt namn, med en knapp för att öppna det och ett kryss bredvid.',
+  'help.guide.booking-files.step.3':
+    'Länka till befintlig fil erbjuder resans dokument som inte redan sitter på den här bokningen. Välj ett så bifogas det utan att något laddas upp igen.',
+  'help.guide.booking-files.step.4': 'Klicka på Uppdatera.',
+  'help.guide.booking-files.result': 'Kortet listar dokumenten under Filer, och ett klick på ett av dem öppnar det.',
+  'help.guide.booking-files.tip.1':
+    'På en bokning du fortfarande skapar väntar dokumentet och går upp i samma stund som du klickar på Lägg till.',
+  'help.guide.booking-files.tip.2':
+    'Krysset bredvid ett dokument tar bort länken, inte dokumentet. Det stannar på resans flik Filer.',
+  'help.guide.booking-files.tip.3':
+    'Vilka sorters filer som får bifogas är administratörens lista; dokument, text och bilder är tillåtna från början.',
+  // booking-cost
+  'help.guide.booking-cost.title': 'Gör en boknings pris till en kostnad',
+  'help.guide.booking-cost.goal': 'Få in det en bokning kostar i Kostnader, fördelat mellan dem som betalar för den.',
+  'help.guide.booking-cost.step.1':
+    'Öppna bokningen och gå till formulärets fot. Under Kostnader står Skapa utgift, med noteringen Sparar bokningen och öppnar sedan kostnadsredigeraren.',
+  'help.guide.booking-cost.step.2':
+    'Klicka på Skapa utgift. Bokningen sparas och kostnadsredigeraren öppnas ovanpå den.',
+  'help.guide.booking-cost.step.3':
+    'Vad var det till för? är redan bokningens titel. Skriv in Totalt belopp och kontrollera Valuta och Dag.',
+  'help.guide.booking-cost.step.4':
+    'Kategori är den som bokningstypen antyder. Sätt Vem betalade? och hur beloppet fördelas.',
+  'help.guide.booking-cost.step.5': 'Klicka på Lägg till utgift.',
+  'help.guide.booking-cost.result':
+    'Bokningens formulär läser nu Relaterade kostnader med beloppet, och samma utgift står på fliken Kostnader, knuten till den här bokningen.',
+  'help.guide.booking-cost.tip.1':
+    'Kategorin följer typen: Restaurang blir Mat och dryck, Boende blir Boende, Parkering blir Parkering, och Evenemang och Rundtur hamnar båda i Annat.',
+  'help.guide.booking-cost.tip.2': 'Papperskorgen på Relaterade kostnader tar bort utgiften, inte bokningen.',
+  'help.guide.booking-cost.tip.3':
+    'Kostnader finns i formuläret bara medan tillägget Kostnader är på, vilket administratören slår om under Tillägg.',
+  // filter-bookings
+  'help.guide.filter-bookings.title': 'Hitta en bokning',
+  'help.guide.filter-bookings.goal': 'Smalna av en lång flik till den typ, den person eller det läge du är ute efter.',
+  'help.guide.filter-bookings.step.1':
+    'Brickorna bredvid rubriken är de typer resan faktiskt använder, var och en med antalet den rymmer. Alla är hela fliken.',
+  'help.guide.filter-bookings.step.2':
+    'Klicka på en bricka för att bara behålla den typen. Klicka på en till så behålls båda.',
+  'help.guide.filter-bookings.step.3': 'Alla tar tillbaka allt.',
+  'help.guide.filter-bookings.step.4':
+    'Avatarerna bredvid brickorna filtrerar på resenär, en person eller flera på en gång.',
+  'help.guide.filter-bookings.step.5':
+    'Väntar på beslut och Bekräftat är de två avsnitten, vart och ett med sitt antal. Klicka på en rubrik för att fälla ihop ett; det är fortfarande ihopfällt när du kommer tillbaka.',
+  'help.guide.filter-bookings.result':
+    'Fliken visar bara det du valde, och det är fortfarande valt när du kommer tillbaka till den i den här webbläsarsessionen.',
+  'help.guide.filter-bookings.tip.1':
+    'Brickorna erbjuder bara de typer resan har, så en resa utan en enda rundtur har ingen bricka Rundtur.',
+  'help.guide.filter-bookings.tip.2':
+    'Ett filter som inte träffar något lämnar fliken tom med Inga platser hittades. Ordalydelsen är platslistans; innebörden är densamma.',
+  // import-booking-file
+  'help.guide.import-booking-file.title': 'Läs en bokning ur dess bekräftelse',
+  'help.guide.import-booking-file.goal':
+    'Låt TREK dra ut bokningen ur mejlet eller den PDF leverantören skickade, i stället för att skriva in den igen.',
+  'help.guide.import-booking-file.step.1':
+    'Klicka på Importera från fil i verktygsraden. Importera bokningsbekräftelser öppnas.',
+  'help.guide.import-booking-file.step.2':
+    'Släpp bekräftelserna på rutan, eller klicka på den och välj dem: EML, PDF, PKPass, HTML och TXT, upp till fem filer på 10 MB var. De du valde namnges på rutan.',
+  'help.guide.import-booking-file.step.3':
+    'Klicka på Importera. Dialogen stängs med en gång, eftersom läsningen sker i bakgrunden.',
+  'help.guide.import-booking-file.step.4':
+    'Ett kort nere till höger rapporterar körningen, och det följer dig genom appen och genom en omladdning. När det är klart erbjuder det Importera, som startar genomgången: varje bokning det hittade öppnas i det vanliga formuläret, ifylld och med sitt dokument bifogat, för dig att kontrollera och att Lägg till en efter en.',
+  'help.guide.import-booking-file.result':
+    'Varje bokning du bekräftade är ett eget kort med sin kod, sina datum och dokumentet det kom ur; ett boende fick också sina nätter, och med Kostnader på blev ett pris som stod i bekräftelsen en utgift.',
+  'help.guide.import-booking-file.tip.1':
+    'Importera från fil finns bara när servern kan läsa bekräftelser, vilket kräver antingen extraktorn eller tillägget AI-tolkning. Det senare slår administratören om under Tillägg.',
+  'help.guide.import-booking-file.tip.2':
+    'Om inget kunde läsas säger kortet det och erbjuder Försök med AI-analys, som skickar samma filer rakt till modellen.',
+  'help.guide.import-booking-file.tip.3':
+    'En färdig tolkning sparas i tio minuter. Starta genomgången inom det fönstret.',
+  // edit-booking
+  'help.guide.edit-booking.title': 'Ändra en bokning',
+  'help.guide.edit-booking.goal':
+    'Rätta en tid, lägg till koden som kom senare, eller flytta en bokning från Väntar på beslut till Bekräftat.',
+  'help.guide.edit-booking.step.1':
+    'Klicka på pennan i kortets huvud. Redigera reservation öppnas med allt bokningen vet.',
+  'help.guide.edit-booking.step.2':
+    'Ändra det som behöver ändras, här Bokningskoden som operatören till slut skickade.',
+  'help.guide.edit-booking.step.3': 'Sätt Status på Bekräftat.',
+  'help.guide.edit-booking.step.4': 'Klicka på Uppdatera.',
+  'help.guide.edit-booking.result':
+    'Kortet flyttar sig: en bekräftad bokning står i avsnittet Bekräftat bakom en grön prick, och alla på resan ser den flytta sig.',
+  'help.guide.edit-booking.tip.1':
+    'En Bokningskod du inte kan läsa är Blurra bokningskoder i Inställningar, under Visning. Håll musen över den, eller klicka på den, så är den läsbar.',
+  'help.guide.edit-booking.tip.2':
+    'Byt typ så följer kategorin på en länkad utgift med, om du inte hade valt en kategori för hand i kostnadsredigeraren.',
+  'help.guide.edit-booking.tip.3': 'Ett boende redigeras också här: dess dagar Från och Till står i samma formulär.',
+  // delete-booking
+  'help.guide.delete-booking.title': 'Ta bort en bokning',
+  'help.guide.delete-booking.goal': 'Ta ur resan en bokning som gick om intet.',
+  'help.guide.delete-booking.step.1': 'Klicka på papperskorgen i kortets huvud.',
+  'help.guide.delete-booking.step.2':
+    'Ta bort bokningen? namnger den du valde och säger att den kommer att raderas permanent.',
+  'help.guide.delete-booking.step.3': 'Klicka på Godkänn.',
+  'help.guide.delete-booking.result':
+    'Kortet är borta, för alla på resan. En bokning har ingen ångra, så frågan är sista anhalten.',
+  'help.guide.delete-booking.tip.1':
+    'Att ta bort en boendebokning tar också dess nätter ur dagsplanen och tar bort utgiften som var länkad till den.',
+  'help.guide.delete-booking.tip.2':
+    'Dokument som var bifogade stannar på resans flik Filer; bara deras länk till bokningen försvinner.',
 };
 
 export default help;
