@@ -222,7 +222,7 @@ export class AssignmentsMcp {
     if (!this.assignments.verifyTripAccess(tripId, ctx.userId)) return noAccess();
     if (!(await this.guards.hasTripPermission('day_edit', tripId, ctx.userId))) return permissionDenied();
     if (!this.assignments.getAssignmentForTrip(assignmentId, tripId)) return errorResult('Assignment not found.');
-    if (!this.days.getDay(newDayId, tripId)) return errorResult('Day not found.');
+    if (!(await this.days.getDay(newDayId, tripId))) return errorResult('Day not found.');
     const result = await this.assignments.moveAssignment(assignmentId, newDayId, orderIndex ?? 0);
     // REST parity shape ({ assignment, oldDayId, newDayId }) — the client keys its
     // per-day assignment map on newDayId, so omitting it filed the moved assignment
@@ -294,7 +294,7 @@ export class AssignmentsMcp {
     if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
     if (!this.assignments.verifyTripAccess(tripId, ctx.userId)) return noAccess();
     if (!(await this.guards.hasTripPermission('day_edit', tripId, ctx.userId))) return permissionDenied();
-    if (!this.days.getDay(dayId, tripId)) return errorResult('Day not found.');
+    if (!(await this.days.getDay(dayId, tripId))) return errorResult('Day not found.');
     this.assignments.reorderAssignments(dayId, assignmentIds);
     // REST parity shape ({ dayId, orderedIds }) — the client only reads orderedIds,
     // so broadcasting the tool-input key name emptied the day for collaborators.

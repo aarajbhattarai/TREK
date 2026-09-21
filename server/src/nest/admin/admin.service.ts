@@ -248,7 +248,7 @@ export class AdminService {
     };
   }
 
-  deleteUser(id: string, currentUserId: number) {
+  async deleteUser(id: string, currentUserId: number) {
     if (Number.parseInt(id) === currentUserId) {
       return { error: 'Cannot delete own account', status: 400 };
     }
@@ -256,7 +256,7 @@ export class AdminService {
     const userToDel = this.db.get<{ id: number; email: string }>('SELECT id, email FROM users WHERE id = ?', id);
     if (!userToDel) return { error: 'User not found', status: 404 };
 
-    this.userCleanup.deleteUserCompletely(userToDel.id);
+    await this.userCleanup.deleteUserCompletely(userToDel.id);
     emitUserDeleted(userToDel.id); // let plugins erase their own per-user data
     return { email: userToDel.email };
   }

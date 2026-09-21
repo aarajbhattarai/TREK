@@ -73,8 +73,8 @@ const dbs = () => new DatabaseService(testDb);
 let budgetSvc: BudgetService;
 let roster: TripMembersService;
 beforeAll(async () => {
-  budgetSvc = new BudgetService(dbs(), new PermissionsService(dbs(), await createTestUnitOfWork(dbs().connection)), new ExchangeRatesService(), new RealtimeService());
-  roster = new TripMembersService(dbs(), budgetSvc, new UserCleanupService(dbs(), budgetSvc), new PermissionsService(dbs(), await createTestUnitOfWork(dbs().connection)), new RealtimeService(), notificationsStub(notifySend));
+  budgetSvc = new BudgetService(dbs(), new PermissionsService(dbs(), await createTestUnitOfWork(dbs().connection)), new ExchangeRatesService(), new RealtimeService(), await createTestUnitOfWork(dbs().connection));
+  roster = new TripMembersService(dbs(), budgetSvc, new UserCleanupService(dbs(), budgetSvc, await createTestUnitOfWork(dbs().connection)), new PermissionsService(dbs(), await createTestUnitOfWork(dbs().connection)), new RealtimeService(), notificationsStub(notifySend), await createTestUnitOfWork(dbs().connection));
 });
 
 /**
@@ -105,7 +105,7 @@ async function rosterWithMissingRow(match: string) {
     },
   });
   const frozen = { connection: conn, canAccessTrip: dbMock.canAccessTrip, isOwner: dbMock.isOwner } as unknown as DatabaseService;
-  return new TripMembersService(frozen, budgetSvc, new UserCleanupService(dbs(), budgetSvc), new PermissionsService(dbs(), await createTestUnitOfWork(dbs().connection)), new RealtimeService(), notificationsStub(notifySend));
+  return new TripMembersService(frozen, budgetSvc, new UserCleanupService(dbs(), budgetSvc, await createTestUnitOfWork(dbs().connection)), new PermissionsService(dbs(), await createTestUnitOfWork(dbs().connection)), new RealtimeService(), notificationsStub(notifySend), await createTestUnitOfWork(dbs().connection));
 }
 
 beforeAll(() => {
@@ -314,7 +314,7 @@ describe('guest name validation', () => {
     expect((testDb.prepare('SELECT display_name FROM users WHERE id = ?').get(guest.id) as { display_name: string }).display_name).toBe('Ida M.');
   });
 
-  it("MEMBERS-SVC-014: deleteGuest is trip-scoped — another trip's owner cannot erase this trip's guest", () => {
+  it("MEMBERS-SVC-014: deleteGuest is trip-scoped — another trip's owner cannot erase this trip's guest", async () => {
     const { user: owner } = createUser(testDb);
     const { user: other } = createUser(testDb);
     const trip = createTrip(testDb, owner.id);
@@ -324,7 +324,7 @@ describe('guest name validation', () => {
     // The route only proves ownership of the trip in the URL, so this check is the
     // only thing between it and a foreign guest's users row — and the delete
     // cascades every assignment that guest is on.
-    expect(roster.deleteGuest(otherTrip.id, guest.id)).toBe(false);
+    expect(await roster.deleteGuest(otherTrip.id, guest.id)).toBe(false);
     expect(testDb.prepare('SELECT id FROM users WHERE id = ?').get(guest.id)).toBeDefined();
   });
 });

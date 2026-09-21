@@ -33,7 +33,7 @@ export class DayNotesService {
     private readonly realtime: RealtimeService,
   ) {}
 
-  verifyTripAccess(tripId: string | number, userId: number): TripAccess | undefined {
+  async verifyTripAccess(tripId: string | number, userId: number): Promise<TripAccess | undefined> {
     return this.dbs.canAccessTrip(tripId, userId);
   }
 
@@ -45,22 +45,22 @@ export class DayNotesService {
     this.realtime.broadcast(tripId, event, payload, socketId);
   }
 
-  list(dayId: string | number, tripId: string | number) {
+  async list(dayId: string | number, tripId: string | number) {
     return this.dbs.all(
       'SELECT * FROM day_notes WHERE day_id = ? AND trip_id = ? ORDER BY sort_order ASC, created_at ASC',
       dayId, tripId,
     );
   }
 
-  dayExists(dayId: string | number, tripId: string | number) {
+  async dayExists(dayId: string | number, tripId: string | number) {
     return this.dbs.get('SELECT id FROM days WHERE id = ? AND trip_id = ?', dayId, tripId);
   }
 
-  getNote(id: string | number, dayId: string | number, tripId: string | number) {
+  async getNote(id: string | number, dayId: string | number, tripId: string | number) {
     return this.dbs.get<DayNote>('SELECT * FROM day_notes WHERE id = ? AND day_id = ? AND trip_id = ?', id, dayId, tripId);
   }
 
-  create(dayId: string | number, tripId: string | number, text: string, time?: string | null, icon?: string | null, sortOrder?: number, color?: string | null) {
+  async create(dayId: string | number, tripId: string | number, text: string, time?: string | null, icon?: string | null, sortOrder?: number, color?: string | null) {
     const result = this.dbs.run(
       'INSERT INTO day_notes (day_id, trip_id, text, time, icon, sort_order, color) VALUES (?, ?, ?, ?, ?, ?, ?)',
       dayId, tripId, text.trim(), time || null, icon || '📝', sortOrder ?? 9999, normalizeNoteColor(color),
@@ -68,7 +68,7 @@ export class DayNotesService {
     return this.dbs.get('SELECT * FROM day_notes WHERE id = ?', result.lastInsertRowid);
   }
 
-  update(id: string | number, current: DayNote, fields: { text?: string; time?: string | null; icon?: string | null; sort_order?: number; color?: string | null }) {
+  async update(id: string | number, current: DayNote, fields: { text?: string; time?: string | null; icon?: string | null; sort_order?: number; color?: string | null }) {
     this.dbs.run(
       'UPDATE day_notes SET text = ?, time = ?, icon = ?, sort_order = ?, color = ? WHERE id = ?',
       fields.text !== undefined ? fields.text.trim() : current.text,
@@ -81,7 +81,7 @@ export class DayNotesService {
     return this.dbs.get('SELECT * FROM day_notes WHERE id = ?', id);
   }
 
-  remove(id: string | number): void {
+  async remove(id: string | number): Promise<void> {
     this.dbs.run('DELETE FROM day_notes WHERE id = ?', id);
   }
 }

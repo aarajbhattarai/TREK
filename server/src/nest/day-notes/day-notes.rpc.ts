@@ -28,9 +28,9 @@ export class DayNotesRpc {
   ) {}
 
   @PluginMethod('daynotes.list', { permission: 'db:read:daynotes' })
-  list(params: Record<string, unknown>, ctx: PluginRpcContext): unknown {
-    return this.guards.tripRead(params, ctx, () =>
-      this.dayNotes.list(num(params.dayId, 'dayId'), num(params.tripId, 'tripId')),
+  async list(params: Record<string, unknown>, ctx: PluginRpcContext): Promise<unknown> {
+    return await this.guards.tripRead(params, ctx, async () =>
+      await this.dayNotes.list(num(params.dayId, 'dayId'), num(params.tripId, 'tripId')),
     );
   }
 
@@ -42,9 +42,9 @@ export class DayNotesRpc {
     const input = asPayload(params.input);
     if (typeof input.text !== 'string' || input.text.trim() === '') throw new BadParams('note text is required');
     await this.guards.requireTripEdit(tripId, actor, DAY_NOTE_EDIT_ACTION);
-    if (!this.dayNotes.dayExists(dayId, tripId)) throw new ForbiddenResource(`no day ${dayId} on trip ${tripId}`);
+    if (!(await this.dayNotes.dayExists(dayId, tripId))) throw new ForbiddenResource(`no day ${dayId} on trip ${tripId}`);
     const i = input as DayNoteInput;
-    const note = this.dayNotes.create(dayId, tripId, i.text ?? '', i.time, i.icon, i.sort_order);
+    const note = await this.dayNotes.create(dayId, tripId, i.text ?? '', i.time, i.icon, i.sort_order);
     this.realtime.broadcast(tripId, 'dayNote:created', { dayId, note }, undefined);
     return note;
   }
@@ -56,9 +56,9 @@ export class DayNotesRpc {
     const noteId = num(params.noteId, 'noteId');
     const actor = this.guards.requireActor(ctx, 'day note');
     await this.guards.requireTripEdit(tripId, actor, DAY_NOTE_EDIT_ACTION);
-    const current = this.dayNotes.getNote(noteId, dayId, tripId);
+    const current = await this.dayNotes.getNote(noteId, dayId, tripId);
     if (!current) throw new ForbiddenResource(`no note ${noteId} on day ${dayId}`);
-    const note = this.dayNotes.update(noteId, current as never, asPayload(params.input) as DayNoteInput);
+    const note = await this.dayNotes.update(noteId, current as never, asPayload(params.input) as DayNoteInput);
     this.realtime.broadcast(tripId, 'dayNote:updated', { dayId, note }, undefined);
     return note;
   }
@@ -70,9 +70,9 @@ export class DayNotesRpc {
     const noteId = num(params.noteId, 'noteId');
     const actor = this.guards.requireActor(ctx, 'day note');
     await this.guards.requireTripEdit(tripId, actor, DAY_NOTE_EDIT_ACTION);
-    const current = this.dayNotes.getNote(noteId, dayId, tripId);
+    const current = await this.dayNotes.getNote(noteId, dayId, tripId);
     if (!current) throw new ForbiddenResource(`no note ${noteId} on day ${dayId}`);
-    this.dayNotes.remove(noteId);
+    await this.dayNotes.remove(noteId);
     this.realtime.broadcast(tripId, 'dayNote:deleted', { noteId, dayId }, undefined);
     return { deleted: true };
   }

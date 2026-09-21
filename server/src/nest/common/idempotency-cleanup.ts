@@ -18,11 +18,11 @@ export interface PurgeDb {
 /** Delete idempotency keys older than the configured TTL. Returns rows removed.
  *  The db is a required parameter now (DatabaseService satisfies PurgeDb
  *  structurally) — the old lazy-require default died with the scheduler. */
-export function purgeExpiredIdempotencyKeys(
+export async function purgeExpiredIdempotencyKeys(
   now: number = Date.now(),
   ttlSeconds: number = readEnv().session.idempotencyTtlSeconds,
   database: PurgeDb,
-): number {
+): Promise<number> {
   const cutoff = Math.floor(now / 1000) - ttlSeconds;
   const result = database.prepare('DELETE FROM idempotency_keys WHERE created_at < ?').run(cutoff);
   return result.changes;

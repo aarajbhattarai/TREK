@@ -6,6 +6,7 @@ import { PermissionsService } from '../permissions/permissions.service';
 import { QueryHelpersService } from '../query-helpers/query-helpers.service';
 import { formatAssignmentWithPlace } from '../common/rowShape';
 import type { AssignmentRow, Day, DayNote, User } from '../../types';
+import { UnitOfWork } from '../database/unit-of-work';
 
 type Trip = TripAccess;
 
@@ -47,7 +48,7 @@ export class DayReorderError extends Error {}
  * legacy services/dayService.ts: identical statements, the `||` falsy-coercion
  * defaults, the post-write re-selects, the two-phase negative-day_number
  * renumber and the reservation re-stamping). The legacy hand-rolled
- * BEGIN/COMMIT blocks in reorder/insert became db.transaction() (same
+ * BEGIN/COMMIT blocks in reorder/insert became uow.transactional() (same
  * rollback-on-throw semantics, savepoint-safe when nested). Verified defects
  * were fixed after the port (2026-07): update() now presence-sentinels BOTH
  * columns (the legacy always-write wiped notes when only a title was sent),
@@ -66,9 +67,10 @@ export class DaysService {
     private readonly permissions: PermissionsService,
     private readonly realtime: RealtimeService,
     private readonly queryHelpers: QueryHelpersService,
+    private readonly uow: UnitOfWork,
   ) {}
 
-  verifyTripAccess(tripId: string | number, userId: number) {
+  async verifyTripAccess(tripId: string | number, userId: number) {
     return this.db.canAccessTrip(Number(tripId), userId);
   }
 
@@ -216,7 +218,7 @@ export class DaysService {
     return { days: daysWithAssignments };
   }
 
-  create(tripId: string | number, date?: string, notes?: string) {
+  async create(tripId: string | number, date?: string, notes?: string) {
     const maxDay = this.db.get<{ max: number | null }>('SELECT MAX(day_number) as max FROM days WHERE trip_id = ?', tripId)!;
     const dayNumber = (maxDay.max || 0) + 1;
 
@@ -229,7 +231,7 @@ export class DaysService {
     return { ...day, assignments: [] };
   }
 
-  getDay(id: string | number, tripId: string | number) {
+  async getDay(id: string | number, tripId: string | number) {
     return this.db.get<Day>('SELECT * FROM days WHERE id = ? AND trip_id = ?', id, tripId);
   }
 
@@ -258,7 +260,7 @@ export class DaysService {
     return { ...updatedDay, assignments: await this.getAssignmentsForDay(id) };
   }
 
-  remove(id: string | number): void {
+  async remove(id: string | number): Promise<void> {
     this.db.run('DELETE FROM days WHERE id = ?', id);
   }
 
@@ -281,11 +283,11 @@ export class DaysService {
    * date (time-of-day preserved). Transport endpoints (flight legs) shift by the
    * same per-booking day delta so multi-leg timing stays internally consistent.
    */
-  restampReservationDates(
+  async restampReservationDates(
     tripId: string | number,
     oldDateById: Map<number, string | null>,
     newDateById: Map<number, string | null>,
-  ): void {
+  ): Promise<void> {
     const reservations = this.db.all<{
       id: number; day_id: number | null; end_day_id: number | null;
       reservation_time: string | null; reservation_end_time: string | null;
@@ -325,7 +327,7 @@ export class DaysService {
   }
 
   /** A stay must not end before it begins after a reorder/insert. */
-  private assertNoInvertedAccommodation(tripId: string | number): void {
+  private async assertNoInvertedAccommodation(tripId: string | number): Promise<void> {
     const spans = this.db.all<{ id: number; start_no: number; end_no: number }>(`
     SELECT a.id, s.day_number AS start_no, e.day_number AS end_no
     FROM day_accommodations a
@@ -350,10 +352,10 @@ export class DaysService {
    * whole trip still shifts everything together. The linked hotel reservation follows
    * its accommodation's start day in both branches.
    */
-  resyncAccommodationDays(
+  async resyncAccommodationDays(
     tripId: string | number,
     prevDateByDayId: Map<number, string | null>,
-  ): void {
+  ): Promise<void> {
     const stays = this.db.all<{ id: number; start_day_id: number; end_day_id: number }>(
       'SELECT id, start_day_id, end_day_id FROM day_accommodations WHERE trip_id = ?',
       tripId
@@ -405,7 +407,7 @@ export class DaysService {
    * Reorder whole days. `orderedIds` is the desired full sequence of this trip's
    * day ids (a permutation of the current ids).
    */
-  reorder(tripId: string | number, orderedIds: number[]) {
+  async reorder(tripId: string | number, orderedIds: number[]) {
     const rows = this.db.all<{ id: number; day_number: number; date: string | null }>(
       'SELECT id, day_number, date FROM days WHERE trip_id = ? ORDER BY day_number',
       tripId
@@ -424,7 +426,7 @@ export class DaysService {
     const setDayNumber = this.db.prepare('UPDATE days SET day_number = ? WHERE id = ?');
     const setDayNumberAndDate = this.db.prepare('UPDATE days SET day_number = ?, date = ? WHERE id = ?');
 
-    this.db.transaction(() => {
+    await this.uow.transactional(async () => {
       // Two-phase renumber to dodge UNIQUE(trip_id, day_number) collisions.
       orderedIds.forEach((id, i) => setDayNumber.run(-(i + 1), id));
       const newDateById = new Map<number, string | null>();
@@ -434,11 +436,11 @@ export class DaysService {
         newDateById.set(id, date);
       });
 
-      if (isDated) this.restampReservationDates(tripId, oldDateById, newDateById);
-      this.assertNoInvertedAccommodation(tripId);
+      if (isDated) await this.restampReservationDates(tripId, oldDateById, newDateById);
+      await this.assertNoInvertedAccommodation(tripId);
     });
 
-    return this.list(tripId);
+    return await this.list(tripId);
   }
 
   /**
@@ -447,7 +449,7 @@ export class DaysService {
    * stay contiguous, the trip's end_date extends by one day, and bookings on
    * shifted days have their dates re-stamped (same rules as reorder).
    */
-  insert(tripId: string | number, position?: number) {
+  async insert(tripId: string | number, position?: number) {
     const rows = this.db.all<{ id: number; day_number: number; date: string | null }>(
       'SELECT id, day_number, date FROM days WHERE trip_id = ? ORDER BY day_number',
       tripId
@@ -460,7 +462,7 @@ export class DaysService {
     const setDayNumber = this.db.prepare('UPDATE days SET day_number = ? WHERE id = ?');
 
     if (!isDated) {
-      const newRowid = this.db.transaction(() => {
+      const newRowid = await this.uow.transactional(async () => {
         const toShift = rows.filter(r => r.day_number >= pos);
         toShift.forEach(r => setDayNumber.run(-r.day_number, r.id));
         const result = this.db.run('INSERT INTO days (trip_id, day_number, date) VALUES (?, ?, NULL)', tripId, pos);
@@ -477,7 +479,7 @@ export class DaysService {
     const oldDateById = new Map(rows.map(r => [r.id, r.date]));
     const setDayNumberAndDate = this.db.prepare('UPDATE days SET day_number = ?, date = ? WHERE id = ?');
 
-    const newId = this.db.transaction(() => {
+    const newId = await this.uow.transactional(async () => {
       rows.forEach((r, i) => setDayNumber.run(-(i + 1), r.id));
       const result = this.db.run('INSERT INTO days (trip_id, day_number, date) VALUES (?, ?, ?)', tripId, pos, dates[pos - 1]);
       const insertedId = Number(result.lastInsertRowid);
@@ -490,8 +492,8 @@ export class DaysService {
         newDateById.set(id, dates[i]);
       });
 
-      this.restampReservationDates(tripId, oldDateById, newDateById);
-      this.assertNoInvertedAccommodation(tripId);
+      await this.restampReservationDates(tripId, oldDateById, newDateById);
+      await this.assertNoInvertedAccommodation(tripId);
       this.db.run('UPDATE trips SET end_date = ? WHERE id = ?', dates[dates.length - 1], tripId);
 
       return insertedId;

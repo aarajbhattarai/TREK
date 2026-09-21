@@ -57,17 +57,17 @@ export class BudgetController {
 
 
   @Get()
-  list(@CurrentUser() user: User, @Param('tripId') tripId: string) {
-    return { items: this.budget.list(tripId) };
+  async list(@CurrentUser() user: User, @Param('tripId') tripId: string) {
+    return { items: await this.budget.list(tripId) };
   }
 
   @Get('summary/per-person')
-  perPerson(@CurrentUser() user: User, @Param('tripId') tripId: string) {
-    return { summary: this.budget.perPersonSummary(tripId) };
+  async perPerson(@CurrentUser() user: User, @Param('tripId') tripId: string) {
+    return { summary: await this.budget.perPersonSummary(tripId) };
   }
 
   @Get('settlement')
-  settlement(
+  async settlement(
     @CurrentUser() user: User,
     @Trip() trip: TripAccess,
     @Param('tripId') tripId: string,
@@ -77,8 +77,8 @@ export class BudgetController {
   }
 
   @Get('settlements')
-  listSettlements(@CurrentUser() user: User, @Param('tripId') tripId: string) {
-    return { settlements: this.budget.listSettlements(tripId) };
+  async listSettlements(@CurrentUser() user: User, @Param('tripId') tripId: string) {
+    return { settlements: await this.budget.listSettlements(tripId) };
   }
 
   @RequirePermission('budget_edit')
@@ -128,13 +128,13 @@ export class BudgetController {
 
   @RequirePermission('budget_edit')
   @Delete('settlements/:settlementId')
-  deleteSettlement(
+  async deleteSettlement(
     @CurrentUser() user: User,
     @Param('tripId') tripId: string,
     @Param('settlementId') settlementId: string,
     @Headers('x-socket-id') socketId?: string,
   ) {
-    if (!this.budget.deleteSettlement(settlementId, tripId)) {
+    if (!(await this.budget.deleteSettlement(settlementId, tripId))) {
       throw new HttpException({ error: 'Settlement not found' }, 404);
     }
     this.budget.broadcast(tripId, 'budget:settlement-deleted', { settlementId: Number(settlementId) }, socketId);
@@ -156,26 +156,26 @@ export class BudgetController {
 
   @RequirePermission('budget_edit')
   @Put('reorder/items')
-  reorderItems(
+  async reorderItems(
     @CurrentUser() user: User,
     @Param('tripId') tripId: string,
     @Body() body: BudgetReorderItemsDto,
     @Headers('x-socket-id') socketId?: string,
   ) {
-    this.budget.reorderItems(tripId, body.orderedIds);
+    await this.budget.reorderItems(tripId, body.orderedIds);
     this.budget.broadcast(tripId, 'budget:reordered', { orderedIds: body.orderedIds }, socketId);
     return { success: true };
   }
 
   @RequirePermission('budget_edit')
   @Put('reorder/categories')
-  reorderCategories(
+  async reorderCategories(
     @CurrentUser() user: User,
     @Param('tripId') tripId: string,
     @Body() body: BudgetReorderCategoriesDto,
     @Headers('x-socket-id') socketId?: string,
   ) {
-    this.budget.reorderCategories(tripId, body.orderedCategories);
+    await this.budget.reorderCategories(tripId, body.orderedCategories);
     this.budget.broadcast(tripId, 'budget:reordered', { orderedCategories: body.orderedCategories }, socketId);
     return { success: true };
   }
@@ -194,7 +194,7 @@ export class BudgetController {
       throw new HttpException({ error: 'Budget item not found' }, 404);
     }
     if (updated.reservation_id && body.total_price !== undefined) {
-      this.budget.syncReservationPrice(tripId, updated.reservation_id, updated.total_price, socketId);
+      await this.budget.syncReservationPrice(tripId, updated.reservation_id, updated.total_price, socketId);
     }
     this.budget.broadcast(tripId, 'budget:updated', { item: updated }, socketId);
     return { item: updated };
@@ -202,14 +202,14 @@ export class BudgetController {
 
   @RequirePermission('budget_edit')
   @Put(':id/members')
-  updateMembers(
+  async updateMembers(
     @CurrentUser() user: User,
     @Param('tripId') tripId: string,
     @Param('id') id: string,
     @Body() body: BudgetUpdateMembersDto,
     @Headers('x-socket-id') socketId?: string,
   ) {
-    const result = this.budget.updateMembers(id, tripId, body.user_ids);
+    const result = await this.budget.updateMembers(id, tripId, body.user_ids);
     if (!result) {
       throw new HttpException({ error: 'Budget item not found' }, 404);
     }
@@ -219,14 +219,14 @@ export class BudgetController {
 
   @RequirePermission('budget_edit')
   @Put(':id/payers')
-  setPayers(
+  async setPayers(
     @CurrentUser() user: User,
     @Param('tripId') tripId: string,
     @Param('id') id: string,
     @Body() body: BudgetUpdatePayersDto,
     @Headers('x-socket-id') socketId?: string,
   ) {
-    const item = this.budget.setPayers(id, tripId, body.payers);
+    const item = await this.budget.setPayers(id, tripId, body.payers);
     if (!item) {
       throw new HttpException({ error: 'Budget item not found' }, 404);
     }
@@ -236,7 +236,7 @@ export class BudgetController {
 
   @RequirePermission('budget_edit')
   @Put(':id/members/:userId/paid')
-  toggleMemberPaid(
+  async toggleMemberPaid(
     @CurrentUser() user: User,
     @Param('tripId') tripId: string,
     @Param('id') id: string,
@@ -244,20 +244,20 @@ export class BudgetController {
     @Body() body: BudgetToggleMemberPaidDto,
     @Headers('x-socket-id') socketId?: string,
   ) {
-    const member = this.budget.toggleMemberPaid(id, tripId, userId, body.paid);
+    const member = await this.budget.toggleMemberPaid(id, tripId, userId, body.paid);
     this.budget.broadcast(tripId, 'budget:member-paid-updated', { itemId: Number(id), userId: Number(userId), paid: body.paid ? 1 : 0 }, socketId);
     return { member };
   }
 
   @RequirePermission('budget_edit')
   @Delete(':id')
-  remove(
+  async remove(
     @CurrentUser() user: User,
     @Param('tripId') tripId: string,
     @Param('id') id: string,
     @Headers('x-socket-id') socketId?: string,
   ) {
-    if (!this.budget.remove(id, tripId)) {
+    if (!(await this.budget.remove(id, tripId))) {
       throw new HttpException({ error: 'Budget item not found' }, 404);
     }
     this.budget.broadcast(tripId, 'budget:deleted', { itemId: Number(id) }, socketId);

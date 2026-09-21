@@ -25,8 +25,8 @@ function makeService(overrides: Partial<ReservationsService> = {}): Reservations
   } as unknown as ReservationsService;
 }
 
-function thrown(fn: () => unknown): { status: number; body: unknown } {
-  try { fn(); } catch (err) {
+async function thrown(fn: () => unknown): Promise<{ status: number; body: unknown }> {
+  try { await fn(); } catch (err) {
     expect(err).toBeInstanceOf(HttpException);
     const e = err as HttpException;
     return { status: e.getStatus(), body: e.getResponse() };
@@ -58,19 +58,19 @@ describe('ReservationsController (parity with the legacy /api/trips/:tripId/rese
       expect(notifyBookingChange).toHaveBeenCalledWith('5', user.id, 'Hotel', 'lodging');
     });
 
-    it('400s on a body id belonging to another trip, without writing', () => {
+    it('400s on a body id belonging to another trip, without writing', async () => {
       const create = vi.fn();
       const svc = makeService({
         create,
         referencesOutsideTrip: vi.fn().mockReturnValue(['accommodation_id']),
       } as Partial<ReservationsService>);
       const body = { title: 'Hotel', accommodation_id: 4711 };
-      expect(thrown(() => new ReservationsController(svc, airtrailLink).create(user, '5', body)))
+      expect(await thrown(() => new ReservationsController(svc, airtrailLink).create(user, '5', body)))
         .toEqual({ status: 400, body: { error: 'Not part of this trip: accommodation_id' } });
       expect(create).not.toHaveBeenCalled();
     });
 
-    it('400s on a body id that exists nowhere, in its own words, without writing', () => {
+    it('400s on a body id that exists nowhere, in its own words, without writing', async () => {
       const create = vi.fn();
       const svc = makeService({
         create,
@@ -79,18 +79,18 @@ describe('ReservationsController (parity with the legacy /api/trips/:tripId/rese
       const body = { title: 'Hotel', place_id: 4711 };
       // Not 'Not part of this trip': an id that is part of nothing would send
       // the caller looking for it on another trip.
-      expect(thrown(() => new ReservationsController(svc, airtrailLink).create(user, '5', body)))
+      expect(await thrown(() => new ReservationsController(svc, airtrailLink).create(user, '5', body)))
         .toEqual({ status: 400, body: { error: 'Unknown reference: place_id' } });
       expect(create).not.toHaveBeenCalled();
     });
 
-    it('answers a foreign id with the older message when it is both', () => {
+    it('answers a foreign id with the older message when it is both', async () => {
       const svc = makeService({
         create: vi.fn(),
         referencesOutsideTrip: vi.fn().mockReturnValue(['place_id']),
         unresolvedReferences: vi.fn().mockReturnValue(['place_id']),
       } as Partial<ReservationsService>);
-      expect(thrown(() => new ReservationsController(svc, airtrailLink).create(user, '5', { title: 'Hotel', place_id: 4711 })))
+      expect(await thrown(() => new ReservationsController(svc, airtrailLink).create(user, '5', { title: 'Hotel', place_id: 4711 })))
         .toEqual({ status: 400, body: { error: 'Not part of this trip: place_id' } });
     });
   });
@@ -110,9 +110,9 @@ describe('ReservationsController (parity with the legacy /api/trips/:tripId/rese
   });
 
   describe('PUT /:id', () => {
-    it('404 when the reservation is missing', () => {
+    it('404 when the reservation is missing', async () => {
       const svc = makeService({ getReservation: vi.fn().mockReturnValue(undefined) } as Partial<ReservationsService>);
-      expect(thrown(() => new ReservationsController(svc, airtrailLink).update(user, '5', '9', { title: 'X' }))).toEqual({ status: 404, body: { error: 'Reservation not found' } });
+      expect(await thrown(() => new ReservationsController(svc, airtrailLink).update(user, '5', '9', { title: 'X' }))).toEqual({ status: 404, body: { error: 'Reservation not found' } });
     });
 
     it('updates, syncs budget with current fallbacks, broadcasts + notifies', async () => {
@@ -126,19 +126,19 @@ describe('ReservationsController (parity with the legacy /api/trips/:tripId/rese
       expect(notifyBookingChange).toHaveBeenCalledWith('5', user.id, 'Old', 'lodging');
     });
 
-    it('400s on a body id belonging to another trip, without writing', () => {
+    it('400s on a body id belonging to another trip, without writing', async () => {
       const update = vi.fn();
       const svc = makeService({
         getReservation: vi.fn().mockReturnValue({ title: 'Old', type: 'lodging' }),
         update,
         referencesOutsideTrip: vi.fn().mockReturnValue(['day_id', 'place_id']),
       } as Partial<ReservationsService>);
-      expect(thrown(() => new ReservationsController(svc, airtrailLink).update(user, '5', '9', { day_id: 1, place_id: 2 })))
+      expect(await thrown(() => new ReservationsController(svc, airtrailLink).update(user, '5', '9', { day_id: 1, place_id: 2 })))
         .toEqual({ status: 400, body: { error: 'Not part of this trip: day_id, place_id' } });
       expect(update).not.toHaveBeenCalled();
     });
 
-    it('400s on a body id that exists nowhere, without writing', () => {
+    it('400s on a body id that exists nowhere, without writing', async () => {
       const update = vi.fn();
       const svc = makeService({
         getReservation: vi.fn().mockReturnValue({ title: 'Old', type: 'lodging' }),
@@ -147,7 +147,7 @@ describe('ReservationsController (parity with the legacy /api/trips/:tripId/rese
       } as Partial<ReservationsService>);
       // The reporter's request: a foreign-key error used to reach the caller as
       // a bare 500 here.
-      expect(thrown(() => new ReservationsController(svc, airtrailLink).update(user, '5', '9', { day_id: 1, place_id: 2 })))
+      expect(await thrown(() => new ReservationsController(svc, airtrailLink).update(user, '5', '9', { day_id: 1, place_id: 2 })))
         .toEqual({ status: 400, body: { error: 'Unknown reference: day_id, place_id' } });
       expect(update).not.toHaveBeenCalled();
     });
@@ -157,9 +157,9 @@ describe('ReservationsController (parity with the legacy /api/trips/:tripId/rese
     // The 'user_ids must be an array' 400 moved to the global
     // ZodValidationPipe (ReservationTravelersDto).
 
-    it('404 when the reservation is off-trip / missing', () => {
+    it('404 when the reservation is off-trip / missing', async () => {
       const svc = makeService({ setTravelers: vi.fn().mockReturnValue(null) } as Partial<ReservationsService>);
-      expect(thrown(() => new ReservationsController(svc, airtrailLink).updateTravelers(user, '5', '9', { user_ids: [1] }))).toEqual({ status: 404, body: { error: 'Reservation not found' } });
+      expect(await thrown(() => new ReservationsController(svc, airtrailLink).updateTravelers(user, '5', '9', { user_ids: [1] }))).toEqual({ status: 404, body: { error: 'Reservation not found' } });
     });
 
     it('assigns travelers, broadcasts, and returns { travelers, reservation }', () => {
@@ -175,9 +175,9 @@ describe('ReservationsController (parity with the legacy /api/trips/:tripId/rese
   });
 
   describe('DELETE /:id', () => {
-    it('404 when nothing deleted', () => {
+    it('404 when nothing deleted', async () => {
       const svc = makeService({ remove: vi.fn().mockReturnValue({ deleted: undefined, accommodationDeleted: false, deletedBudgetItemId: null }) } as Partial<ReservationsService>);
-      expect(thrown(() => new ReservationsController(svc, airtrailLink).remove(user, '5', '9'))).toEqual({ status: 404, body: { error: 'Reservation not found' } });
+      expect(await thrown(() => new ReservationsController(svc, airtrailLink).remove(user, '5', '9'))).toEqual({ status: 404, body: { error: 'Reservation not found' } });
     });
 
     it('broadcasts the accommodation + budget cascade then reservation:deleted', async () => {

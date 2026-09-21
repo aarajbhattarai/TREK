@@ -58,8 +58,8 @@ import { PermissionsService } from '../../../src/nest/permissions/permissions.se
 import { DaysService, DayReorderError, addDays } from '../../../src/nest/days/days.service';
 // Was days.bridge, deleted with the other three that had no consumer outside the
 // container. The assertions stayed; they point at the service now.
-const bridgeGetDay = (id: string | number, tripId: string | number) => svc.getDay(id, tripId);
-const bridgeListDays = (tripId: string | number) => svc.list(tripId);
+const bridgeGetDay = async (id: string | number, tripId: string | number) => await svc.getDay(id, tripId);
+const bridgeListDays = async (tripId: string | number) => await svc.list(tripId);
 import { RealtimeService } from '../../../src/nest/realtime/realtime.service';
 import { QueryHelpersService } from '../../../src/nest/query-helpers/query-helpers.service';
 import { makeAccommodationsService } from '../../helpers/accommodations-service';
@@ -69,7 +69,7 @@ import { UnitOfWork } from '../../../src/nest/database/unit-of-work';
 
 let svc: DaysService;
 beforeAll(async () => {
-  svc = new DaysService(new DatabaseService(testDb), new PermissionsService(new DatabaseService(testDb), await createTestUnitOfWork(testDb)), new RealtimeService(), new QueryHelpersService(new DatabaseService(testDb)));
+  svc = new DaysService(new DatabaseService(testDb), new PermissionsService(new DatabaseService(testDb), await createTestUnitOfWork(testDb)), new RealtimeService(), new QueryHelpersService(new DatabaseService(testDb)), await createTestUnitOfWork(testDb));
 });
 let accommodations: Awaited<ReturnType<typeof makeAccommodationsService>>;
 beforeAll(async () => {
@@ -92,19 +92,19 @@ afterAll(() => {
 // ── verifyTripAccess ──────────────────────────────────────────────────────────
 
 describe('verifyTripAccess', () => {
-  it('DAY-SVC-001 — returns trip row for owner', () => {
+  it('DAY-SVC-001 — returns trip row for owner', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
-    const result = svc.verifyTripAccess(trip.id, user.id) as any;
+    const result = await svc.verifyTripAccess(trip.id, user.id) as any;
     expect(result).toBeDefined();
     expect(result.id).toBe(trip.id);
   });
 
-  it('DAY-SVC-002 — returns falsy for non-member', () => {
+  it('DAY-SVC-002 — returns falsy for non-member', async () => {
     const { user: owner } = createUser(testDb);
     const { user: stranger } = createUser(testDb);
     const trip = createTrip(testDb, owner.id);
-    expect(svc.verifyTripAccess(trip.id, stranger.id)).toBeFalsy();
+    expect(await svc.verifyTripAccess(trip.id, stranger.id)).toBeFalsy();
   });
 });
 
@@ -199,19 +199,19 @@ describe('list', () => {
 // ── create ────────────────────────────────────────────────────────────────────
 
 describe('create (service)', () => {
-  it('DAY-SVC-009 — creates a day with auto-incremented day_number', () => {
+  it('DAY-SVC-009 — creates a day with auto-incremented day_number', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
-    const d1 = svc.create(trip.id) as any;
-    const d2 = svc.create(trip.id) as any;
+    const d1 = await svc.create(trip.id) as any;
+    const d2 = await svc.create(trip.id) as any;
     expect(d1.day_number).toBe(1);
     expect(d2.day_number).toBe(2);
   });
 
-  it('DAY-SVC-010 — returns day with empty assignments array', () => {
+  it('DAY-SVC-010 — returns day with empty assignments array', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
-    const day = svc.create(trip.id) as any;
+    const day = await svc.create(trip.id) as any;
     expect(Array.isArray(day.assignments)).toBe(true);
     expect(day.assignments).toHaveLength(0);
   });
@@ -220,19 +220,19 @@ describe('create (service)', () => {
 // ── getDay / update / remove ──────────────────────────────────────────────────
 
 describe('getDay', () => {
-  it('DAY-SVC-011 — returns day when id and tripId match', () => {
+  it('DAY-SVC-011 — returns day when id and tripId match', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const day = createDay(testDb, trip.id) as any;
-    const found = svc.getDay(day.id, trip.id) as any;
+    const found = await svc.getDay(day.id, trip.id) as any;
     expect(found).toBeDefined();
     expect(found.id).toBe(day.id);
   });
 
-  it('DAY-SVC-012 — returns undefined for non-existent day', () => {
+  it('DAY-SVC-012 — returns undefined for non-existent day', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
-    expect(svc.getDay(99999, trip.id)).toBeUndefined();
+    expect(await svc.getDay(99999, trip.id)).toBeUndefined();
   });
 });
 
@@ -256,12 +256,12 @@ describe('update', () => {
 });
 
 describe('remove', () => {
-  it('DAY-SVC-015 — deletes the day', () => {
+  it('DAY-SVC-015 — deletes the day', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const day = createDay(testDb, trip.id) as any;
-    svc.remove(day.id);
-    expect(svc.getDay(day.id, trip.id)).toBeUndefined();
+    await svc.remove(day.id);
+    expect(await svc.getDay(day.id, trip.id)).toBeUndefined();
   });
 });
 
@@ -282,12 +282,12 @@ describe('remove', () => {
 // 029/031/032 pin the same behavior on the service.
 
 describe('DaysService — the surface the deleted bridge exposed', () => {
-  it('DAY-SVC-027 — getDay delegates to DaysService.getDay', () => {
+  it('DAY-SVC-027 — getDay delegates to DaysService.getDay', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const day = createDay(testDb, trip.id);
-    expect(bridgeGetDay(day.id, trip.id)!.id).toBe(day.id);
-    expect(bridgeGetDay(99999, trip.id)).toBeUndefined();
+    expect((await bridgeGetDay(day.id, trip.id))!.id).toBe(day.id);
+    expect(await bridgeGetDay(99999, trip.id)).toBeUndefined();
   });
 
   it('DAY-SVC-028 — listDays delegates to DaysService.list', async () => {
@@ -305,7 +305,7 @@ describe('DaysService — the surface the deleted bridge exposed', () => {
     expect(addDays('2026-06-07', -7)).toBe('2026-05-31');
   });
 
-  it('DAY-SVC-031 — restampReservationDates re-stamps a booking onto its day\'s new date', () => {
+  it('DAY-SVC-031 — restampReservationDates re-stamps a booking onto its day\'s new date', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const day = createDay(testDb, trip.id, { date: '2026-01-01' });
@@ -313,7 +313,7 @@ describe('DaysService — the surface the deleted bridge exposed', () => {
       'INSERT INTO reservations (trip_id, day_id, title, reservation_time) VALUES (?, ?, ?, ?)'
     ).run(trip.id, day.id, 'Dinner', '2026-01-01T19:00');
 
-    svc.restampReservationDates(
+    await svc.restampReservationDates(
       trip.id,
       new Map([[day.id, '2026-01-01']]),
       new Map([[day.id, '2026-01-05']]),
@@ -323,7 +323,7 @@ describe('DaysService — the surface the deleted bridge exposed', () => {
     expect(row.reservation_time).toBe('2026-01-05T19:00');
   });
 
-  it('DAY-SVC-032 — resyncAccommodationDays re-anchors a stay to the day holding its old date', () => {
+  it('DAY-SVC-032 — resyncAccommodationDays re-anchors a stay to the day holding its old date', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const d1 = createDay(testDb, trip.id, { date: '2026-01-01' });
@@ -338,7 +338,7 @@ describe('DaysService — the surface the deleted bridge exposed', () => {
     testDb.prepare('UPDATE days SET date = ? WHERE id = ?').run('2026-01-01', d2.id);
     testDb.prepare('UPDATE days SET day_number = 0 WHERE id = ?').run(d2.id);
 
-    svc.resyncAccommodationDays(trip.id, new Map([[d1.id, '2026-01-01'], [d2.id, '2026-01-02']]));
+    await svc.resyncAccommodationDays(trip.id, new Map([[d1.id, '2026-01-01'], [d2.id, '2026-01-02']]));
 
     const row = testDb.prepare('SELECT start_day_id, end_day_id FROM day_accommodations WHERE id = ?').get(accom.id) as { start_day_id: number; end_day_id: number };
     expect(row.start_day_id).toBe(d2.id);
@@ -411,7 +411,7 @@ describe('quirk fixes', () => {
 // jumps to the wrong day.
 
 describe('restampReservationDates', () => {
-  it('DAY-SVC-037 — leaves a booking alone when it has no day, no time, or its day did not move', () => {
+  it('DAY-SVC-037 — leaves a booking alone when it has no day, no time, or its day did not move', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const stayer = createDay(testDb, trip.id, { date: '2026-01-01' });
@@ -425,7 +425,7 @@ describe('restampReservationDates', () => {
     const offMap = Number(insert.run(trip.id, unmapped.id, 'Off map', '2026-01-02T12:00').lastInsertRowid);
     const halfOff = Number(insert.run(trip.id, halfMapped.id, 'Half off', '2026-01-03T12:00').lastInsertRowid);
 
-    svc.restampReservationDates(
+    await svc.restampReservationDates(
       trip.id,
       new Map([[stayer.id, '2026-01-01'], [halfMapped.id, '2026-01-03']]),
       // stayer keeps its date, unmapped is in neither map, halfMapped only in the old one.
@@ -445,7 +445,7 @@ describe('restampReservationDates', () => {
     });
   });
 
-  it('DAY-SVC-038 — shifts every transport leg by the booking\'s day delta and skips a leg with no date', () => {
+  it('DAY-SVC-038 — shifts every transport leg by the booking\'s day delta and skips a leg with no date', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const day = createDay(testDb, trip.id, { date: '2026-01-01' });
@@ -462,7 +462,7 @@ describe('restampReservationDates', () => {
     const arrival = Number(endpoint.run(flight, 'to', 1, 'NRT', 35.76, 140.38, '2026-01-02').lastInsertRowid);
     const undated = Number(endpoint.run(flight, 'to', 2, 'Unknown', 0, 0, null).lastInsertRowid);
 
-    svc.restampReservationDates(trip.id, new Map([[day.id, '2026-01-01']]), new Map([[day.id, '2026-01-04']]));
+    await svc.restampReservationDates(trip.id, new Map([[day.id, '2026-01-01']]), new Map([[day.id, '2026-01-04']]));
 
     const legs = Object.fromEntries(
       (testDb.prepare('SELECT id, local_date FROM reservation_endpoints WHERE reservation_id = ?').all(flight) as { id: number; local_date: string | null }[])
@@ -471,7 +471,7 @@ describe('restampReservationDates', () => {
     expect(legs).toEqual({ [departure]: '2026-01-04', [arrival]: '2026-01-05', [undated]: null });
   });
 
-  it('DAY-SVC-039 — follows end_day_id and keeps a date-only end time date-only', () => {
+  it('DAY-SVC-039 — follows end_day_id and keeps a date-only end time date-only', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const start = createDay(testDb, trip.id, { date: '2026-01-01' });
@@ -483,7 +483,7 @@ describe('restampReservationDates', () => {
     const spanning = Number(insert.run(trip.id, start.id, end.id, 'Sleeper train', '2026-01-01T15:00', '2026-01-03').lastInsertRowid);
     const openEnded = Number(insert.run(trip.id, null, end.id, 'Open ended', null, null).lastInsertRowid);
 
-    svc.restampReservationDates(
+    await svc.restampReservationDates(
       trip.id,
       new Map([[start.id, '2026-01-01'], [end.id, '2026-01-03']]),
       new Map([[start.id, '2026-01-02'], [end.id, '2026-01-05']]),
@@ -506,19 +506,19 @@ describe('resyncAccommodationDays', () => {
       "INSERT INTO reservations (trip_id, day_id, title, type, accommodation_id, reservation_time) VALUES (?, ?, 'Hotel', 'hotel', ?, ?)"
     ).run(tripId, dayId, accId, time).lastInsertRowid);
 
-  it('DAY-SVC-040 — returns before touching a hotel booking when the trip has no stays', () => {
+  it('DAY-SVC-040 — returns before touching a hotel booking when the trip has no stays', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const day = createDay(testDb, trip.id, { date: '2026-05-01' });
     const res = linkHotel(trip.id, 4242, null, null);
 
-    svc.resyncAccommodationDays(trip.id, new Map([[day.id, '2026-04-01']]));
+    await svc.resyncAccommodationDays(trip.id, new Map([[day.id, '2026-04-01']]));
 
     // No stay owns this booking any more, so the restamp must not adopt it.
     expect(testDb.prepare('SELECT day_id FROM reservations WHERE id = ?').get(res)).toMatchObject({ day_id: null });
   });
 
-  it('DAY-SVC-041 — leaves a stay glued to its rows when the snapshot has no date for them', () => {
+  it('DAY-SVC-041 — leaves a stay glued to its rows when the snapshot has no date for them', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const d1 = createDay(testDb, trip.id, { date: '2026-05-01' });
@@ -527,7 +527,7 @@ describe('resyncAccommodationDays', () => {
     const stay = createDayAccommodation(testDb, trip.id, place.id, d1.id, d2.id);
     const res = linkHotel(trip.id, stay.id, d2.id, '2026-04-30T14:00');
 
-    svc.resyncAccommodationDays(trip.id, new Map());
+    await svc.resyncAccommodationDays(trip.id, new Map());
 
     expect(testDb.prepare('SELECT start_day_id, end_day_id FROM day_accommodations WHERE id = ?').get(stay.id))
       .toMatchObject({ start_day_id: d1.id, end_day_id: d2.id });
@@ -537,7 +537,7 @@ describe('resyncAccommodationDays', () => {
       .toMatchObject({ day_id: d1.id, reservation_time: '2026-05-01T14:00' });
   });
 
-  it('DAY-SVC-042 — does not rewrite a stay whose days already hold their old dates', () => {
+  it('DAY-SVC-042 — does not rewrite a stay whose days already hold their old dates', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const d1 = createDay(testDb, trip.id, { date: '2026-05-01' });
@@ -546,7 +546,7 @@ describe('resyncAccommodationDays', () => {
     const stay = createDayAccommodation(testDb, trip.id, place.id, d1.id, d2.id);
     const res = linkHotel(trip.id, stay.id, d1.id, null);
 
-    svc.resyncAccommodationDays(trip.id, new Map([[d1.id, '2026-05-01'], [d2.id, '2026-05-02']]));
+    await svc.resyncAccommodationDays(trip.id, new Map([[d1.id, '2026-05-01'], [d2.id, '2026-05-02']]));
 
     expect(testDb.prepare('SELECT start_day_id, end_day_id FROM day_accommodations WHERE id = ?').get(stay.id))
       .toMatchObject({ start_day_id: d1.id, end_day_id: d2.id });
@@ -555,7 +555,7 @@ describe('resyncAccommodationDays', () => {
       .toMatchObject({ reservation_time: '2026-05-01' });
   });
 
-  it('DAY-SVC-043 — refuses to re-anchor a stay onto an inverted day pair', () => {
+  it('DAY-SVC-043 — refuses to re-anchor a stay onto an inverted day pair', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const d1 = createDay(testDb, trip.id, { date: '2026-05-01' });
@@ -568,13 +568,13 @@ describe('resyncAccommodationDays', () => {
     testDb.prepare('UPDATE days SET date = ? WHERE id = ?').run('2026-05-02', d1.id);
     testDb.prepare('UPDATE days SET date = ? WHERE id = ?').run('2026-05-01', d2.id);
 
-    svc.resyncAccommodationDays(trip.id, new Map([[d1.id, '2026-05-01'], [d2.id, '2026-05-02']]));
+    await svc.resyncAccommodationDays(trip.id, new Map([[d1.id, '2026-05-01'], [d2.id, '2026-05-02']]));
 
     expect(testDb.prepare('SELECT start_day_id, end_day_id FROM day_accommodations WHERE id = ?').get(stay.id))
       .toMatchObject({ start_day_id: d1.id, end_day_id: d2.id });
   });
 
-  it('DAY-SVC-044 — leaves a stay alone when one of its old dates is outside the new range', () => {
+  it('DAY-SVC-044 — leaves a stay alone when one of its old dates is outside the new range', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const d1 = createDay(testDb, trip.id, { date: '2026-05-01' });
@@ -586,7 +586,7 @@ describe('resyncAccommodationDays', () => {
     const endGone = createDayAccommodation(testDb, trip.id, place.id, d1.id, d2.id);
     const startGone = createDayAccommodation(testDb, trip.id, place.id, d2.id, d3.id);
 
-    svc.resyncAccommodationDays(
+    await svc.resyncAccommodationDays(
       trip.id,
       new Map([[d1.id, '2026-05-01'], [d2.id, '2026-04-29'], [d3.id, '2026-05-03']]),
     );
@@ -597,7 +597,7 @@ describe('resyncAccommodationDays', () => {
       .toMatchObject({ start_day_id: d2.id, end_day_id: d3.id });
   });
 
-  it('DAY-SVC-045 — skips the linked-booking restamp when the start day has no date', () => {
+  it('DAY-SVC-045 — skips the linked-booking restamp when the start day has no date', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const day = createDay(testDb, trip.id);
@@ -605,7 +605,7 @@ describe('resyncAccommodationDays', () => {
     const stay = createDayAccommodation(testDb, trip.id, place.id, day.id, day.id);
     const res = linkHotel(trip.id, stay.id, null, null);
 
-    svc.resyncAccommodationDays(trip.id, new Map([[day.id, null]]));
+    await svc.resyncAccommodationDays(trip.id, new Map([[day.id, null]]));
 
     // On a dateless trip there is no date to stamp; writing one would invent a
     // calendar the trip does not have.
@@ -619,7 +619,7 @@ describe('reorder', () => {
     testDb.prepare('SELECT id, day_number, date FROM days WHERE trip_id = ? ORDER BY day_number').all(tripId) as
       { id: number; day_number: number; date: string | null }[];
 
-  it('DAY-SVC-046 — rejects a same-length list that contains a foreign day id', () => {
+  it('DAY-SVC-046 — rejects a same-length list that contains a foreign day id', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const d1 = createDay(testDb, trip.id);
@@ -628,7 +628,7 @@ describe('reorder', () => {
     // Same length as the trip's day list, so only the membership check can catch
     // it — without it the renumber would leave one day orphaned at a negative
     // day_number and drop another out of the itinerary.
-    expect(() => svc.reorder(trip.id, [d1.id, 999999])).toThrow(DayReorderError);
+    await expect(svc.reorder(trip.id, [d1.id, 999999])).rejects.toThrow(DayReorderError);
     expect(orderedDays(trip.id).map(d => d.day_number)).toEqual([1, 2]);
   });
 
@@ -682,7 +682,7 @@ describe('reorder', () => {
     await svc.reorder(trip.id, [d1.id, d3.id, d2.id]);
     expect(orderedDays(trip.id).map(d => d.id)).toEqual([d1.id, d3.id, d2.id]);
 
-    expect(() => svc.reorder(trip.id, [d2.id, d3.id, d1.id])).toThrow(DayReorderError);
+    await expect(svc.reorder(trip.id, [d2.id, d3.id, d1.id])).rejects.toThrow(DayReorderError);
     // The guard runs inside the transaction, so the rejected move leaves the
     // day numbers AND the re-pinned dates exactly as the legal move left them.
     expect(orderedDays(trip.id)).toEqual([
@@ -694,13 +694,13 @@ describe('reorder', () => {
 });
 
 describe('insert', () => {
-  it('DAY-SVC-050 — appends at the end when no position is given and shifts nothing', () => {
+  it('DAY-SVC-050 — appends at the end when no position is given and shifts nothing', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const d1 = createDay(testDb, trip.id);
     const d2 = createDay(testDb, trip.id);
 
-    const created = svc.insert(trip.id);
+    const created = await svc.insert(trip.id);
 
     expect(created).toMatchObject({ day_number: 3, date: null, assignments: [], notes_items: [] });
     const rows = testDb.prepare('SELECT id, day_number FROM days WHERE trip_id = ? ORDER BY day_number').all(trip.id) as
@@ -779,7 +779,7 @@ describe('day shaping', () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
 
-    const day = svc.create(trip.id, '2026-09-14', 'Ferry to the island');
+    const day = await svc.create(trip.id, '2026-09-14', 'Ferry to the island');
     expect(day).toMatchObject({ date: '2026-09-14', notes: 'Ferry to the island' });
 
     // The MCP update_day tool clears a title by sending null, which must reach
@@ -799,7 +799,7 @@ describe('DaysService.canEdit', () => {
   it('DAY-SVC-090 asks for day_edit and flags a non-owner as shared', async () => {
     const checkPermission = vi.fn(() => true);
     const permissions = { checkPermission } as unknown as PermissionsService;
-    const withStub = new DaysService(new DatabaseService(testDb), permissions, new RealtimeService(), new QueryHelpersService(new DatabaseService(testDb)));
+    const withStub = new DaysService(new DatabaseService(testDb), permissions, new RealtimeService(), new QueryHelpersService(new DatabaseService(testDb)), await createTestUnitOfWork(testDb));
     const trip = { id: 1, user_id: 1 } as never;
 
     expect(await withStub.canEdit(trip, { id: 1, role: 'user' } as never)).toBe(true);

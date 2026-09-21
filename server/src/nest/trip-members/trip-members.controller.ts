@@ -153,8 +153,8 @@ export class TripMembersController {
   @Delete(':id/guests/:userId')
   @UseGuards(TripOwnerGuard)
   @RequireTripOwner('Only the owner can manage guests', { param: 'id' })
-  deleteGuest(@CurrentUser() user: User, @Param('id') id: string, @Param('userId') userId: string) {
-    if (!this.roster.deleteGuest(id, Number.parseInt(userId))) {
+  async deleteGuest(@CurrentUser() user: User, @Param('id') id: string, @Param('userId') userId: string) {
+    if (!(await this.roster.deleteGuest(id, Number.parseInt(userId)))) {
       throw new HttpException({ error: 'Guest not found' }, 404);
     }
     return { success: true };

@@ -520,20 +520,20 @@ describe('ReservationsService (DI-native, real SQL)', () => {
   });
 
   describe('syncBudgetOnCreate', () => {
-    it('does nothing without a positive price', () => {
-      svc.syncBudgetOnCreate('5', 9, 'Hotel', 'lodging', undefined, 'sock');
-      svc.syncBudgetOnCreate('5', 9, 'Hotel', 'lodging', { total_price: 0 }, 'sock');
+    it('does nothing without a positive price', async () => {
+      await svc.syncBudgetOnCreate('5', 9, 'Hotel', 'lodging', undefined, 'sock');
+      await svc.syncBudgetOnCreate('5', 9, 'Hotel', 'lodging', { total_price: 0 }, 'sock');
       expect(budget.linkBudgetItemToReservation).not.toHaveBeenCalled();
     });
 
-    it('links a budget item and broadcasts budget:created', () => {
+    it('links a budget item and broadcasts budget:created', async () => {
       budget.linkBudgetItemToReservation.mockReturnValue({ id: 7 });
-      svc.syncBudgetOnCreate('5', 9, 'Hotel', 'lodging', { total_price: 200, category: 'Lodging' }, 'sock');
+      await svc.syncBudgetOnCreate('5', 9, 'Hotel', 'lodging', { total_price: 200, category: 'Lodging' }, 'sock');
       expect(budget.linkBudgetItemToReservation).toHaveBeenCalledWith('5', 9, { name: 'Hotel', category: 'Lodging', total_price: 200 });
       expect(broadcast).toHaveBeenCalledWith('5', 'budget:created', { item: { id: 7 } }, 'sock');
     });
 
-    it('falls back to type then "Other" for the category and swallows errors', () => {
+    it('falls back to type then "Other" for the category and swallows errors', async () => {
       budget.linkBudgetItemToReservation.mockImplementation(() => { throw new Error('boom'); });
       expect(() => svc.syncBudgetOnCreate('5', 9, 'Hotel', undefined, { total_price: 50 }, 'sock')).not.toThrow();
     });
@@ -548,43 +548,43 @@ describe('ReservationsService (DI-native, real SQL)', () => {
       return { trip, res, item };
     }
 
-    it('deletes the linked item when the price is explicitly cleared (total_price 0)', () => {
+    it('deletes the linked item when the price is explicitly cleared (total_price 0)', async () => {
       const { trip, res, item } = linkedItem();
-      svc.syncBudgetOnUpdate(String(trip.id), String(res.id), 'Hotel', 'lodging', 'Hotel', 'lodging', { total_price: 0 }, 'sock');
+      await svc.syncBudgetOnUpdate(String(trip.id), String(res.id), 'Hotel', 'lodging', 'Hotel', 'lodging', { total_price: 0 }, 'sock');
       expect(budget.deleteBudgetItem).toHaveBeenCalledWith(item.id, String(trip.id));
       expect(broadcast).toHaveBeenCalledWith(String(trip.id), 'budget:deleted', { itemId: item.id }, 'sock');
     });
 
-    it('leaves the linked item alone when no budget entry is on the payload (no wipe)', () => {
+    it('leaves the linked item alone when no budget entry is on the payload (no wipe)', async () => {
       const { trip, res } = linkedItem();
-      svc.syncBudgetOnUpdate(String(trip.id), String(res.id), 'Hotel', 'lodging', 'Hotel', 'lodging', undefined, 'sock');
+      await svc.syncBudgetOnUpdate(String(trip.id), String(res.id), 'Hotel', 'lodging', 'Hotel', 'lodging', undefined, 'sock');
       expect(budget.deleteBudgetItem).not.toHaveBeenCalled();
       expect(budget.updateBudgetItem).not.toHaveBeenCalled();
       expect(budget.createBudgetItem).not.toHaveBeenCalled();
     });
 
-    it('syncs the linked expense category when the booking type changes', () => {
+    it('syncs the linked expense category when the booking type changes', async () => {
       const { trip, res, item } = linkedItem({ category: 'other' });
       budget.updateBudgetItem.mockReturnValue({ id: item.id, category: 'flights' });
-      svc.syncBudgetOnUpdate(String(trip.id), String(res.id), 'X', 'flight', 'X', 'other', undefined, 'sock');
+      await svc.syncBudgetOnUpdate(String(trip.id), String(res.id), 'X', 'flight', 'X', 'other', undefined, 'sock');
       expect(budget.updateBudgetItem).toHaveBeenCalledWith(item.id, String(trip.id), { category: 'flights' });
       expect(broadcast).toHaveBeenCalledWith(String(trip.id), 'budget:updated', { item: { id: item.id, category: 'flights' } }, 'sock');
     });
 
-    it('updates an existing linked item when a price is provided', () => {
+    it('updates an existing linked item when a price is provided', async () => {
       const { trip, res, item } = linkedItem();
       budget.updateBudgetItem.mockReturnValue({ id: item.id });
-      svc.syncBudgetOnUpdate(String(trip.id), String(res.id), 'New', 'lodging', 'Old', 'lodging', { total_price: 80 }, 'sock');
+      await svc.syncBudgetOnUpdate(String(trip.id), String(res.id), 'New', 'lodging', 'Old', 'lodging', { total_price: 80 }, 'sock');
       expect(budget.updateBudgetItem).toHaveBeenCalledWith(item.id, String(trip.id), { name: 'New', category: 'lodging', total_price: 80 });
       expect(broadcast).toHaveBeenCalledWith(String(trip.id), 'budget:updated', { item: { id: item.id } }, 'sock');
     });
 
-    it('creates + links a new item when none exists, using the current title fallback', () => {
+    it('creates + links a new item when none exists, using the current title fallback', async () => {
       const { trip } = ownerTrip();
       const res = createReservation(testDb, trip.id);
       const created = createBudgetItem(testDb, trip.id); // the row the mocked create "returns"
       budget.createBudgetItem.mockReturnValue({ id: created.id });
-      svc.syncBudgetOnUpdate(String(trip.id), String(res.id), '', undefined, 'Old title', 'flight', { total_price: 120 }, 'sock');
+      await svc.syncBudgetOnUpdate(String(trip.id), String(res.id), '', undefined, 'Old title', 'flight', { total_price: 120 }, 'sock');
       expect(budget.createBudgetItem).toHaveBeenCalledWith(String(trip.id), { name: 'Old title', category: 'flight', total_price: 120 });
       // The service back-links the created item to the reservation itself.
       expect(testDb.prepare('SELECT reservation_id FROM budget_items WHERE id = ?').get(created.id)).toEqual({ reservation_id: res.id });
@@ -926,19 +926,19 @@ describe('ReservationsService — legacy branch parity (coverage of the folded c
     }));
   });
 
-  it('RESV-SVC-030: syncBudgetOnUpdate type-change sync is a no-op without a linked item or when the category was hand-picked', () => {
+  it('RESV-SVC-030: syncBudgetOnUpdate type-change sync is a no-op without a linked item or when the category was hand-picked', async () => {
     const { trip } = ownerTrip();
     const res = createReservation(testDb, trip.id);
     // no linked item at all
-    svc.syncBudgetOnUpdate(String(trip.id), String(res.id), 'X', 'flight', 'X', 'other', undefined, undefined);
+    await svc.syncBudgetOnUpdate(String(trip.id), String(res.id), 'X', 'flight', 'X', 'other', undefined, undefined);
     expect(budget.updateBudgetItem).not.toHaveBeenCalled();
     // linked item whose category no longer matches the auto-derived one
     const item = createBudgetItem(testDb, trip.id, { category: 'Hand picked' });
     testDb.prepare('UPDATE budget_items SET reservation_id = ? WHERE id = ?').run(res.id, item.id);
-    svc.syncBudgetOnUpdate(String(trip.id), String(res.id), 'X', 'flight', 'X', 'other', undefined, undefined);
+    await svc.syncBudgetOnUpdate(String(trip.id), String(res.id), 'X', 'flight', 'X', 'other', undefined, undefined);
     expect(budget.updateBudgetItem).not.toHaveBeenCalled();
     // explicit clear with no linked item deletes nothing
-    svc.syncBudgetOnUpdate(String(trip.id), '999999', 'X', 'flight', 'X', 'flight', { total_price: 0 }, undefined);
+    await svc.syncBudgetOnUpdate(String(trip.id), '999999', 'X', 'flight', 'X', 'flight', { total_price: 0 }, undefined);
     expect(budget.deleteBudgetItem).not.toHaveBeenCalled();
   });
 

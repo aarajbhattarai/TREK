@@ -35,13 +35,13 @@ export class DaysController {
   constructor(private readonly days: DaysService) {}
 
   @Get()
-  list(@CurrentUser() user: User, @Param('tripId') tripId: string) {
-    return this.days.list(tripId);
+  async list(@CurrentUser() user: User, @Param('tripId') tripId: string) {
+    return await this.days.list(tripId);
   }
 
   @RequirePermission('day_edit')
   @Post()
-  create(
+  async create(
     @CurrentUser() user: User,
     @Param('tripId') tripId: string,
     @Body() body: DayCreateDto,
@@ -50,8 +50,8 @@ export class DaysController {
     // A `position` means "insert a new empty day here" (which on a dated trip
     // extends the trip and re-pins dates); without it, the legacy append.
     const day = body.position !== undefined
-      ? this.days.insert(tripId, body.position)
-      : this.days.create(tripId, body.date, body.notes);
+      ? await this.days.insert(tripId, body.position)
+      : await this.days.create(tripId, body.date, body.notes);
     // An insert can shuffle dates/positions of other days, so collaborators
     // refetch the whole list; a plain append only needs the new day.
     const event = body.position !== undefined ? 'day:reordered' : 'day:created';
@@ -91,7 +91,7 @@ export class DaysController {
     @Body() body: DayUpdateDto,
     @Headers('x-socket-id') socketId?: string,
   ) {
-    const current = this.days.getDay(id, tripId);
+    const current = await this.days.getDay(id, tripId);
     if (!current) {
       throw new HttpException({ error: 'Day not found' }, 404);
     }
@@ -112,7 +112,7 @@ export class DaysController {
     @Body() body: DayTransportDto,
     @Headers('x-socket-id') socketId?: string,
   ) {
-    if (!this.days.getDay(id, tripId)) {
+    if (!(await this.days.getDay(id, tripId))) {
       throw new HttpException({ error: 'Day not found' }, 404);
     }
     const day = await this.days.setDefaultTransportMode(id, body.transport_mode ?? null);
@@ -122,16 +122,16 @@ export class DaysController {
 
   @RequirePermission('day_edit')
   @Delete(':id')
-  remove(
+  async remove(
     @CurrentUser() user: User,
     @Param('tripId') tripId: string,
     @Param('id') id: string,
     @Headers('x-socket-id') socketId?: string,
   ) {
-    if (!this.days.getDay(id, tripId)) {
+    if (!(await this.days.getDay(id, tripId))) {
       throw new HttpException({ error: 'Day not found' }, 404);
     }
-    this.days.remove(id);
+    await this.days.remove(id);
     this.days.broadcast(tripId, 'day:deleted', { dayId: Number(id) }, socketId);
     return { success: true };
   }

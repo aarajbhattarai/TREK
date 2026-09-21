@@ -42,7 +42,7 @@ async function makeImportService(): Promise<AirtrailImportService> {
     new ReservationsService(
       dbs(),
       permissions,
-      new BudgetService(dbs(), permissions, new ExchangeRatesService(), realtime),
+      new BudgetService(dbs(), permissions, new ExchangeRatesService(), realtime, await createTestUnitOfWork(dbs().connection)),
       realtime,
       notificationsStub(),
       new ReservationsReadRepository(dbs()),

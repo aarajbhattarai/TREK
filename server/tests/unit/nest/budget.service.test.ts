@@ -39,9 +39,17 @@ const exchangeRatesStub = { getRates } as unknown as ExchangeRatesService;
 
 import { BudgetService } from '../../../src/nest/budget/budget.service';
 import { RealtimeService } from '../../../src/nest/realtime/realtime.service';
+import { UnitOfWork } from '../../../src/nest/database/unit-of-work';
+
+/**
+ * There is no database behind this suite — every statement is served by the
+ * prepare stub above — so the UnitOfWork is a pass-through: it runs the callback
+ * as MikroORM would, with no transaction to open on.
+ */
+const uowStub = { transactional: <T>(fn: () => Promise<T>) => fn() } as unknown as UnitOfWork;
 
 function svc() {
-  return new BudgetService(new DatabaseService(dbConn), permissionsStub, exchangeRatesStub, new RealtimeService());
+  return new BudgetService(new DatabaseService(dbConn), permissionsStub, exchangeRatesStub, new RealtimeService(), uowStub);
 }
 
 beforeEach(() => {
@@ -50,9 +58,9 @@ beforeEach(() => {
 });
 
 describe('BudgetService', () => {
-  it('verifyTripAccess resolves through DatabaseService.canAccessTrip', () => {
+  it('verifyTripAccess resolves through DatabaseService.canAccessTrip', async () => {
     canAccessTrip.mockReturnValue({ id: 5, user_id: 2 });
-    expect(svc().verifyTripAccess('5', 2)).toEqual({ id: 5, user_id: 2 });
+    expect(await svc().verifyTripAccess('5', 2)).toEqual({ id: 5, user_id: 2 });
     expect(canAccessTrip).toHaveBeenCalledWith('5', 2);
   });
 
@@ -73,20 +81,20 @@ describe('BudgetService', () => {
     expect(broadcast).toHaveBeenCalledWith('5', 'budget:created', { item: { id: 1 } }, 'sock');
   });
 
-  it('list / perPersonSummary resolve through the folded SQL methods', () => {
+  it('list / perPersonSummary resolve through the folded SQL methods', async () => {
     const s = svc();
-    const listSpy = vi.spyOn(s, 'listBudgetItems').mockReturnValue([{ id: 1 }] as never);
-    expect(s.list('5')).toEqual([{ id: 1 }]);
+    const listSpy = vi.spyOn(s, 'listBudgetItems').mockResolvedValue([{ id: 1 }] as never);
+    expect(await s.list('5')).toEqual([{ id: 1 }]);
     expect(listSpy).toHaveBeenCalledWith('5');
-    const summarySpy = vi.spyOn(s, 'getPerPersonSummary').mockReturnValue([{ userId: 1 }] as never);
-    expect(s.perPersonSummary('5')).toEqual([{ userId: 1 }]);
+    const summarySpy = vi.spyOn(s, 'getPerPersonSummary').mockResolvedValue([{ userId: 1 }] as never);
+    expect(await s.perPersonSummary('5')).toEqual([{ userId: 1 }]);
     expect(summarySpy).toHaveBeenCalledWith('5');
   });
 
   describe('settlement', () => {
     it('upper-cases the explicit base and forwards the rates', async () => {
       const s = svc();
-      const calcSpy = vi.spyOn(s, 'calculateSettlement').mockReturnValue({ transfers: [] } as never);
+      const calcSpy = vi.spyOn(s, 'calculateSettlement').mockResolvedValue({ transfers: [] } as never);
       getRates.mockResolvedValue({ USD: 1.1 });
       await s.settlement('5', 'usd', 'EUR');
       expect(getRates).toHaveBeenCalledWith('USD');
@@ -95,7 +103,7 @@ describe('BudgetService', () => {
 
     it('falls back to the trip currency when no base is given', async () => {
       const s = svc();
-      const calcSpy = vi.spyOn(s, 'calculateSettlement').mockReturnValue({ transfers: [] } as never);
+      const calcSpy = vi.spyOn(s, 'calculateSettlement').mockResolvedValue({ transfers: [] } as never);
       getRates.mockResolvedValue(null);
       await s.settlement('5', undefined, 'gbp');
       expect(getRates).toHaveBeenCalledWith('GBP');
@@ -104,7 +112,7 @@ describe('BudgetService', () => {
 
     it('falls back to EUR when neither base nor trip currency is present', async () => {
       const s = svc();
-      const calcSpy = vi.spyOn(s, 'calculateSettlement').mockReturnValue({ transfers: [] } as never);
+      const calcSpy = vi.spyOn(s, 'calculateSettlement').mockResolvedValue({ transfers: [] } as never);
       getRates.mockResolvedValue(null);
       await s.settlement('5', undefined, '');
       expect(getRates).toHaveBeenCalledWith('EUR');
@@ -127,14 +135,14 @@ describe('BudgetService', () => {
     expect(updateSpy).toHaveBeenCalledWith('9', '5', { name: 'X' });
   });
 
-  it('remove / setPayers resolve through the folded SQL methods', () => {
+  it('remove / setPayers resolve through the folded SQL methods', async () => {
     const s = svc();
-    const deleteSpy = vi.spyOn(s, 'deleteBudgetItem').mockReturnValue(true);
-    expect(s.remove('9', '5')).toBe(true);
+    const deleteSpy = vi.spyOn(s, 'deleteBudgetItem').mockResolvedValue(true);
+    expect(await s.remove('9', '5')).toBe(true);
     expect(deleteSpy).toHaveBeenCalledWith('9', '5');
 
-    const payersSpy = vi.spyOn(s, 'setItemPayers').mockReturnValue({ id: 9 } as never);
-    s.setPayers('9', '5', [{ user_id: 2, amount: 10 }]);
+    const payersSpy = vi.spyOn(s, 'setItemPayers').mockResolvedValue({ id: 9 } as never);
+    await s.setPayers('9', '5', [{ user_id: 2, amount: 10 }]);
     expect(payersSpy).toHaveBeenCalledWith('9', '5', [{ user_id: 2, amount: 10 }]);
   });
 
@@ -183,33 +191,33 @@ describe('BudgetService', () => {
   });
 
   describe('syncReservationPrice', () => {
-    it('returns early when the reservation is not found', () => {
+    it('returns early when the reservation is not found', async () => {
       dbMock._stmt.get.mockReturnValueOnce(undefined);
-      svc().syncReservationPrice('5', 42, 250, 'sock');
+      await svc().syncReservationPrice('5', 42, 250, 'sock');
       expect(dbMock._stmt.run).not.toHaveBeenCalled();
       expect(broadcast).not.toHaveBeenCalled();
     });
 
-    it('merges into existing metadata and broadcasts reservation:updated', () => {
+    it('merges into existing metadata and broadcasts reservation:updated', async () => {
       dbMock._stmt.get
         .mockReturnValueOnce({ id: 42, metadata: '{"vendor":"ACME"}' }) // lookup
         .mockReturnValueOnce({ id: 42, metadata: '{"vendor":"ACME","price":"250"}' }); // reload
-      svc().syncReservationPrice('5', 42, 250, 'sock');
+      await svc().syncReservationPrice('5', 42, 250, 'sock');
       const writtenMeta = JSON.parse(dbMock._stmt.run.mock.calls[0][0] as string);
       expect(writtenMeta).toEqual({ vendor: 'ACME', price: '250' });
       expect(broadcast).toHaveBeenCalledWith('5', 'reservation:updated', { reservation: { id: 42, metadata: '{"vendor":"ACME","price":"250"}' } }, 'sock');
     });
 
-    it('starts from an empty object when the reservation has no metadata', () => {
+    it('starts from an empty object when the reservation has no metadata', async () => {
       dbMock._stmt.get.mockReturnValueOnce({ id: 42, metadata: null }).mockReturnValueOnce({ id: 42 });
-      svc().syncReservationPrice('5', 42, 99, undefined);
+      await svc().syncReservationPrice('5', 42, 99, undefined);
       const writtenMeta = JSON.parse(dbMock._stmt.run.mock.calls[0][0] as string);
       expect(writtenMeta).toEqual({ price: '99' });
     });
 
-    it('swallows errors so a sync failure never breaks the budget update', () => {
+    it('swallows errors so a sync failure never breaks the budget update', async () => {
       dbMock.prepare.mockImplementationOnce(() => { throw new Error('db gone'); });
-      expect(() => svc().syncReservationPrice('5', 42, 250, 'sock')).not.toThrow();
+      await expect(svc().syncReservationPrice('5', 42, 250, 'sock')).resolves.toBeUndefined();
       expect(broadcast).not.toHaveBeenCalled();
     });
   });

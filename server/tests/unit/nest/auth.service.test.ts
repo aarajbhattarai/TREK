@@ -106,7 +106,7 @@ beforeAll(async () => {
   new PermissionsService(new DatabaseService(testDb), await createTestUnitOfWork(testDb)),
   membershipStub,
   new WebauthnConfigService(new DatabaseService(testDb)),
-  new UserCleanupService(new DatabaseService(testDb), new BudgetService(new DatabaseService(testDb), new PermissionsService(new DatabaseService(testDb), await createTestUnitOfWork(testDb)), new ExchangeRatesService(), new RealtimeService())),
+  new UserCleanupService(new DatabaseService(testDb), new BudgetService(new DatabaseService(testDb), new PermissionsService(new DatabaseService(testDb), await createTestUnitOfWork(testDb)), new ExchangeRatesService(), new RealtimeService(), await createTestUnitOfWork(testDb)), await createTestUnitOfWork(testDb)),
   mailerStub,
   new EphemeralTokenService(),
   new AllowedFileTypesService(new DatabaseService(testDb)), await createTestUnitOfWork(testDb),
@@ -780,22 +780,22 @@ describe('getCurrentUser', () => {
 });
 
 describe('deleteAccount', () => {
-  it('AUTH-DB-065: refuses to delete the last admin', () => {
+  it('AUTH-DB-065: refuses to delete the last admin', async () => {
     const { user } = createAdmin(testDb);
-    expect(svc.deleteAccount(user.id, user.email, 'admin'))
+    expect(await svc.deleteAccount(user.id, user.email, 'admin'))
       .toEqual({ error: 'Cannot delete the last admin account', status: 400 });
   });
 
-  it('AUTH-DB-066: demo mode blocks deletion', () => {
+  it('AUTH-DB-066: demo mode blocks deletion', async () => {
     vi.stubEnv('DEMO_MODE', 'true');
-    expect(svc.deleteAccount(1, 'demo@nomad.app', 'user'))
+    expect(await svc.deleteAccount(1, 'demo@nomad.app', 'user'))
       .toEqual({ error: 'Account deletion is disabled in demo mode.', status: 403 });
     vi.unstubAllEnvs();
   });
 
-  it('AUTH-DB-067: deletes a regular user row', () => {
+  it('AUTH-DB-067: deletes a regular user row', async () => {
     const { user } = createUser(testDb);
-    expect(svc.deleteAccount(user.id, user.email, 'user')).toEqual({ success: true });
+    expect(await svc.deleteAccount(user.id, user.email, 'user')).toEqual({ success: true });
     expect(testDb.prepare('SELECT id FROM users WHERE id = ?').get(user.id)).toBeUndefined();
   });
 });

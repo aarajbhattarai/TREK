@@ -37,8 +37,8 @@ function svc(o: Partial<TripMembersService> = {}): TripMembersService {
   } as unknown as TripMembersService;
 }
 
-function thrown(fn: () => unknown): { status: number; body: unknown } {
-  try { fn(); } catch (err) {
+async function thrown(fn: () => unknown): Promise<{ status: number; body: unknown }> {
+  try { await fn(); } catch (err) {
     expect(err).toBeInstanceOf(HttpException);
     const e = err as HttpException;
     return { status: e.getStatus(), body: e.getResponse() };
@@ -50,14 +50,14 @@ beforeEach(() => vi.clearAllMocks());
 
 describe('TripMembersController', () => {
 describe('members', () => {
-  it('GET 404 without access, else owner+members+current_user_id', () => {
-    expect(thrown(() => tc(svc({ canAccessTrip: vi.fn().mockReturnValue(undefined) })).members(user, '9'))).toEqual({ status: 404, body: { error: 'Trip not found' } });
+  it('GET 404 without access, else owner+members+current_user_id', async () => {
+    expect(await thrown(() => tc(svc({ canAccessTrip: vi.fn().mockReturnValue(undefined) })).members(user, '9'))).toEqual({ status: 404, body: { error: 'Trip not found' } });
     const s = svc({ listMembers: vi.fn().mockReturnValue({ owner: { id: 1 }, members: [] }) } as Partial<TripMembersService>);
     expect(tc(s).members(user, '9')).toEqual({ owner: { id: 1 }, members: [], current_user_id: 1 });
   });
 
   it('POST 403 without member_manage, else adds + notifies', async () => {
-    expect(thrown(() => tc(svc({ can: vi.fn().mockReturnValue(false) })).addMember(user, '9', { identifier: 'bob@x.y' }))).toEqual({ status: 403, body: { error: 'No permission to manage members' } });
+    expect(await thrown(() => tc(svc({ can: vi.fn().mockReturnValue(false) })).addMember(user, '9', { identifier: 'bob@x.y' }))).toEqual({ status: 403, body: { error: 'No permission to manage members' } });
     const addMember = vi.fn().mockReturnValue({ member: { id: 2, email: 'bob@x.y' }, targetUserId: 2, tripTitle: 'T' });
     const notifyInvite = vi.fn();
     const s = svc({ addMember, notifyInvite } as Partial<TripMembersService>);
@@ -65,23 +65,23 @@ describe('members', () => {
     expect(notifyInvite).toHaveBeenCalledWith('9', user, 2, 'T', 'bob@x.y');
   });
 
-  it('POST 404 without trip access', () => {
+  it('POST 404 without trip access', async () => {
     const s = svc({ canAccessTrip: vi.fn().mockReturnValue(undefined) });
-    expect(thrown(() => tc(s).addMember(user, '9', { identifier: 'bob@x.y' }))).toEqual({ status: 404, body: { error: 'Trip not found' } });
+    expect(await thrown(() => tc(s).addMember(user, '9', { identifier: 'bob@x.y' }))).toEqual({ status: 404, body: { error: 'Trip not found' } });
   });
 
   it('POST maps NotFoundError to 404, ValidationError to 400, re-throws others', async () => {
     const nf = svc({ addMember: vi.fn().mockImplementation(() => { throw new NotFoundError('no user'); }) } as Partial<TripMembersService>);
-    expect(thrown(() => tc(nf).addMember(user, '9', { identifier: 'bob@x.y' }))).toEqual({ status: 404, body: { error: 'no user' } });
+    expect(await thrown(() => tc(nf).addMember(user, '9', { identifier: 'bob@x.y' }))).toEqual({ status: 404, body: { error: 'no user' } });
     const ve = svc({ addMember: vi.fn().mockImplementation(() => { throw new ValidationError('already a member'); }) } as Partial<TripMembersService>);
-    expect(thrown(() => tc(ve).addMember(user, '9', { identifier: 'bob@x.y' }))).toEqual({ status: 400, body: { error: 'already a member' } });
+    expect(await thrown(() => tc(ve).addMember(user, '9', { identifier: 'bob@x.y' }))).toEqual({ status: 400, body: { error: 'already a member' } });
     const other = svc({ addMember: vi.fn().mockImplementation(() => { throw new Error('boom'); }) } as Partial<TripMembersService>);
     await expect(tc(other).addMember(user, '9', { identifier: 'bob@x.y' })).rejects.toThrow('boom');
   });
 
-  it('DELETE 404 without trip access', () => {
+  it('DELETE 404 without trip access', async () => {
     const s = svc({ canAccessTrip: vi.fn().mockReturnValue(undefined) });
-    expect(thrown(() => tc(s).removeMember(user, '9', '2'))).toEqual({ status: 404, body: { error: 'Trip not found' } });
+    expect(await thrown(() => tc(s).removeMember(user, '9', '2'))).toEqual({ status: 404, body: { error: 'Trip not found' } });
   });
 
   it('DELETE self needs no permission; removing others needs member_manage', async () => {
@@ -89,7 +89,7 @@ describe('members', () => {
     const s = svc({ can: vi.fn().mockReturnValue(false), removeMember } as Partial<TripMembersService>);
     // self-removal (targetId === user.id) bypasses the permission check
     expect(await tc(s).removeMember(user, '9', '1')).toEqual({ success: true });
-    expect(thrown(() => tc(s).removeMember(user, '9', '2'))).toEqual({ status: 403, body: { error: 'No permission to remove members' } });
+    expect(await thrown(() => tc(s).removeMember(user, '9', '2'))).toEqual({ status: 403, body: { error: 'No permission to remove members' } });
   });
 });
 
@@ -117,44 +117,44 @@ describe('POST /:id/transfer (#973)', () => {
     expect(broadcast).toHaveBeenCalledWith('9', 'trip:updated', { trip: { id: 9, user_id: 2 } }, 'sock');
   });
 
-  it('maps NotFoundError to 404 and ValidationError to 400', () => {
+  it('maps NotFoundError to 404 and ValidationError to 400', async () => {
     const nf = svc({ transferOwnership: vi.fn().mockImplementation(() => { throw new NotFoundError('User not found'); }) } as Partial<TripMembersService>);
-    expect(thrown(() => tc(nf).transferOwnership(user, '9', { newOwnerId: 2 }, req))).toEqual({ status: 404, body: { error: 'User not found' } });
+    expect(await thrown(() => tc(nf).transferOwnership(user, '9', { newOwnerId: 2 }, req))).toEqual({ status: 404, body: { error: 'User not found' } });
     const ve = svc({ transferOwnership: vi.fn().mockImplementation(() => { throw new ValidationError('New owner must be a trip member'); }) } as Partial<TripMembersService>);
-    expect(thrown(() => tc(ve).transferOwnership(user, '9', { newOwnerId: 2 }, req))).toEqual({ status: 400, body: { error: 'New owner must be a trip member' } });
+    expect(await thrown(() => tc(ve).transferOwnership(user, '9', { newOwnerId: 2 }, req))).toEqual({ status: 400, body: { error: 'New owner must be a trip member' } });
   });
 });
 
 describe('guests (#1362)', () => {
   // Ownership is TripOwnerGuard's job now (OWNER-002 pins the exact message).
-  it('400 without a name; else creates', () => {
+  it('400 without a name; else creates', async () => {
     // A whitespace-only name still 400s with the legacy body — the service
     // throws after trimming (the schema only enforces 1..50 chars).
     const wsGuest = svc({ createGuest: vi.fn().mockImplementation(() => { throw new ValidationError('Guest name is required'); }) } as Partial<TripMembersService>);
-    expect(thrown(() => tc(wsGuest).createGuest(user, '9', { name: '  ' }))).toEqual({ status: 400, body: { error: 'Guest name is required' } });
+    expect(await thrown(() => tc(wsGuest).createGuest(user, '9', { name: '  ' }))).toEqual({ status: 400, body: { error: 'Guest name is required' } });
     const createGuest = vi.fn().mockReturnValue({ member: { id: 7, username: 'Anna', is_guest: true } });
     const s = svc({ createGuest } as Partial<TripMembersService>);
     expect(tc(s).createGuest(user, '9', { name: 'Anna' })).toEqual({ member: { id: 7, username: 'Anna', is_guest: true } });
     expect(createGuest).toHaveBeenCalledWith('9', 'Anna', user.id);
   });
 
-  it('rename: 404 when the guest is missing, else success', () => {
+  it('rename: 404 when the guest is missing, else success', async () => {
     const miss = svc({ renameGuest: vi.fn().mockReturnValue(false) } as Partial<TripMembersService>);
-    expect(thrown(() => tc(miss).renameGuest(user, '9', '7', { name: 'Bob' }))).toEqual({ status: 404, body: { error: 'Guest not found' } });
+    expect(await thrown(() => tc(miss).renameGuest(user, '9', '7', { name: 'Bob' }))).toEqual({ status: 404, body: { error: 'Guest not found' } });
     const ok = svc({ renameGuest: vi.fn().mockReturnValue(true) } as Partial<TripMembersService>);
     expect(tc(ok).renameGuest(user, '9', '7', { name: 'Bob' })).toEqual({ success: true });
   });
 
-  it('delete: 404 when the guest is missing, else success', () => {
-    const miss = svc({ deleteGuest: vi.fn().mockReturnValue(false) } as Partial<TripMembersService>);
-    expect(thrown(() => tc(miss).deleteGuest(user, '9', '7'))).toEqual({ status: 404, body: { error: 'Guest not found' } });
-    const ok = svc({ deleteGuest: vi.fn().mockReturnValue(true) } as Partial<TripMembersService>);
-    expect(tc(ok).deleteGuest(user, '9', '7')).toEqual({ success: true });
+  it('delete: 404 when the guest is missing, else success', async () => {
+    const miss = svc({ deleteGuest: vi.fn().mockResolvedValue(false) } as Partial<TripMembersService>);
+    expect(await thrown(() => tc(miss).deleteGuest(user, '9', '7'))).toEqual({ status: 404, body: { error: 'Guest not found' } });
+    const ok = svc({ deleteGuest: vi.fn().mockResolvedValue(true) } as Partial<TripMembersService>);
+    expect(await tc(ok).deleteGuest(user, '9', '7')).toEqual({ success: true });
   });
 
-  it('maps a ValidationError from createGuest to 400', () => {
+  it('maps a ValidationError from createGuest to 400', async () => {
     const ve = svc({ createGuest: vi.fn().mockImplementation(() => { throw new ValidationError('Guest name must be 50 characters or fewer'); }) } as Partial<TripMembersService>);
-    expect(thrown(() => tc(ve).createGuest(user, '9', { name: 'x'.repeat(60) }))).toEqual({ status: 400, body: { error: 'Guest name must be 50 characters or fewer' } });
+    expect(await thrown(() => tc(ve).createGuest(user, '9', { name: 'x'.repeat(60) }))).toEqual({ status: 400, body: { error: 'Guest name must be 50 characters or fewer' } });
   });
 });
 

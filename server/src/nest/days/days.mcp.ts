@@ -63,9 +63,9 @@ export class DaysMcp {
     ctx: McpContext,
   ) {
     if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
-    if (!this.days.verifyTripAccess(tripId, ctx.userId)) return noAccess();
+    if (!(await this.days.verifyTripAccess(tripId, ctx.userId))) return noAccess();
     if (!(await this.guards.hasTripPermission('day_edit', tripId, ctx.userId))) return permissionDenied();
-    const current = this.days.getDay(dayId, tripId);
+    const current = await this.days.getDay(dayId, tripId);
     if (!current) return errorResult('Day not found.');
     // The rest spread carries only the keys the caller actually sent, which is
     // what update()'s presence sentinels need: naming the two fields here would
@@ -92,15 +92,15 @@ export class DaysMcp {
     ctx: McpContext,
   ) {
     if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
-    if (!this.days.verifyTripAccess(tripId, ctx.userId)) return noAccess();
+    if (!(await this.days.verifyTripAccess(tripId, ctx.userId))) return noAccess();
     if (!(await this.guards.hasTripPermission('day_edit', tripId, ctx.userId))) return permissionDenied();
     if (position === undefined) {
-      const day = this.days.create(tripId, date, notes);
+      const day = await this.days.create(tripId, date, notes);
       this.guards.safeBroadcast(tripId, 'day:created', { day });
       return ok({ day });
     }
     try {
-      const day = this.days.insert(tripId, position);
+      const day = await this.days.insert(tripId, position);
       // An insert renumbers and re-dates every later day, so collaborators get
       // the list-wide event and refetch, the same one the REST create route sends.
       this.guards.safeBroadcast(tripId, 'day:reordered', { day });
@@ -127,7 +127,7 @@ export class DaysMcp {
     ctx: McpContext,
   ) {
     if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
-    if (!this.days.verifyTripAccess(tripId, ctx.userId)) return noAccess();
+    if (!(await this.days.verifyTripAccess(tripId, ctx.userId))) return noAccess();
     if (!(await this.guards.hasTripPermission('day_edit', tripId, ctx.userId))) return permissionDenied();
     try {
       await this.days.reorder(tripId, orderedIds);
@@ -154,10 +154,10 @@ export class DaysMcp {
   })
   async deleteDay({ tripId, dayId }: { tripId: number; dayId: number }, ctx: McpContext) {
     if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
-    if (!this.days.verifyTripAccess(tripId, ctx.userId)) return noAccess();
+    if (!(await this.days.verifyTripAccess(tripId, ctx.userId))) return noAccess();
     if (!(await this.guards.hasTripPermission('day_edit', tripId, ctx.userId))) return permissionDenied();
-    if (!this.days.getDay(dayId, tripId)) return errorResult('Day not found.');
-    this.days.remove(dayId);
+    if (!(await this.days.getDay(dayId, tripId))) return errorResult('Day not found.');
+    await this.days.remove(dayId);
     // REST parity shape ({ dayId }) — the client reads payload.dayId, so the { id }
     // variant never removed the day from collaborator screens.
     this.guards.safeBroadcast(tripId, 'day:deleted', { dayId });
@@ -180,9 +180,9 @@ export class DaysMcp {
     ctx: McpContext,
   ) {
     if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
-    if (!this.days.verifyTripAccess(tripId, ctx.userId)) return noAccess();
+    if (!(await this.days.verifyTripAccess(tripId, ctx.userId))) return noAccess();
     if (!(await this.guards.hasTripPermission('day_edit', tripId, ctx.userId))) return permissionDenied();
-    if (!this.days.getDay(dayId, tripId)) return errorResult('Day not found.');
+    if (!(await this.days.getDay(dayId, tripId))) return errorResult('Day not found.');
     const day = await this.days.setDefaultTransportMode(dayId, transport_mode ?? null);
     this.guards.safeBroadcast(tripId, 'day:updated', { day });
     return ok({ day });
@@ -197,7 +197,7 @@ export class DaysMcp {
   })
   async tripDaysResource(uri: URL, { tripId }: { tripId: string | string[] }, ctx: McpContext) {
     const id = parseId(tripId);
-    if (id === null || !this.days.verifyTripAccess(id, ctx.userId)) {
+    if (id === null || !(await this.days.verifyTripAccess(id, ctx.userId))) {
       return {
         contents: [{
           uri: uri.href,

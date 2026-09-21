@@ -79,7 +79,7 @@ let auth: AuthService;
 let svc: AdminService;
 beforeAll(async () => {
   permissions = new PermissionsService(dbs, await createTestUnitOfWork(dbs.connection));
-  userCleanup = new UserCleanupService(dbs, new BudgetService(dbs, permissions, new ExchangeRatesService(), realtime));
+  userCleanup = new UserCleanupService(dbs, new BudgetService(dbs, permissions, new ExchangeRatesService(), realtime, await createTestUnitOfWork(dbs.connection)), await createTestUnitOfWork(dbs.connection));
   auth = new AuthService(dbs, permissions, new TripMembershipService(dbs), webauthn, userCleanup, new MailerService(dbs), new EphemeralTokenService(), new AllowedFileTypesService(dbs), await createTestUnitOfWork(dbs.connection));
   svc = new AdminService(
   dbs,

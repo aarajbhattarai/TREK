@@ -153,7 +153,7 @@ describe('Trips e2e (real auth guard + temp SQLite)', () => {
     seedUser(db as never, { id: 1 });
     app = await build();
     checkPermission = vi.spyOn(app.get(PermissionsService), 'checkPermission');
-    vi.spyOn(app.get(BudgetService), 'listBudgetItems').mockReturnValue([]);
+    vi.spyOn(app.get(BudgetService), 'listBudgetItems').mockResolvedValue([]);
     vi.spyOn(app.get(BudgetService), 'rebaseTripCurrency').mockResolvedValue();
     server = app.getHttpServer();
   });

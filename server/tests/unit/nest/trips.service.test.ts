@@ -123,8 +123,8 @@ let svc: TripsService;
 let membersSvc: TripMembersService;
 let readModelSvc: TripReadModelService;
 beforeAll(async () => {
-  budgetSvc = new BudgetService(dbs(), new PermissionsService(dbs(), await createTestUnitOfWork(dbs().connection)), new ExchangeRatesService(), new RealtimeService());
-  daysSvc = new DaysService(dbs(), new PermissionsService(dbs(), await createTestUnitOfWork(dbs().connection)), new RealtimeService(), new QueryHelpersService(dbs()));
+  budgetSvc = new BudgetService(dbs(), new PermissionsService(dbs(), await createTestUnitOfWork(dbs().connection)), new ExchangeRatesService(), new RealtimeService(), await createTestUnitOfWork(dbs().connection));
+  daysSvc = new DaysService(dbs(), new PermissionsService(dbs(), await createTestUnitOfWork(dbs().connection)), new RealtimeService(), new QueryHelpersService(dbs()), await createTestUnitOfWork(dbs().connection));
   placesSvc = new PlacesService(
   dbs(),
   new PermissionsService(dbs(), await createTestUnitOfWork(dbs().connection)),
@@ -147,8 +147,9 @@ beforeAll(async () => {
   new RealtimeService(),
   undefined as never, // unsplash — not exercised here
   coversFx.storage,
+  await createTestUnitOfWork(dbs().connection),
 );
-  membersSvc = new TripMembersService(dbs(), budgetSvc, new UserCleanupService(dbs(), budgetSvc), new PermissionsService(dbs(), await createTestUnitOfWork(dbs().connection)), new RealtimeService(), notificationsStub());
+  membersSvc = new TripMembersService(dbs(), budgetSvc, new UserCleanupService(dbs(), budgetSvc, await createTestUnitOfWork(dbs().connection)), new PermissionsService(dbs(), await createTestUnitOfWork(dbs().connection)), new RealtimeService(), notificationsStub(), await createTestUnitOfWork(dbs().connection));
   readModelSvc = new TripReadModelService(
   dbs(), membersSvc, daysSvc, accommodationsSvc, budgetSvc,
   new PackingService(dbs(), new PermissionsService(dbs(), await createTestUnitOfWork(dbs().connection)), new RealtimeService(), notificationsStub()),
@@ -465,24 +466,24 @@ describe('resyncReservationDays (#1288)', () => {
       "INSERT INTO reservations (trip_id, day_id, title, reservation_time, type, status) VALUES (?, ?, 'Dinner', ?, 'restaurant', 'pending')",
     ).run(tripId, dayId, time).lastInsertRowid);
 
-  it('TRIP-SVC-018: changing the start date re-anchors a dated reservation to the day matching its time', () => {
+  it('TRIP-SVC-018: changing the start date re-anchors a dated reservation to the day matching its time', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id, { start_date: '2025-06-01', end_date: '2025-06-05' });
     const resId = insertDatedReservation(trip.id, dayFor(trip.id, '2025-06-02'), '2025-06-02T19:00:00');
     // Shift the whole range one day forward (days become 2025-06-02..06).
-    svc.updateTrip(trip.id, user.id, { start_date: '2025-06-02', end_date: '2025-06-06' }, 'user');
+    await svc.updateTrip(trip.id, user.id, { start_date: '2025-06-02', end_date: '2025-06-06' }, 'user');
     const res = testDb.prepare('SELECT day_id FROM reservations WHERE id = ?').get(resId) as { day_id: number };
     // The booking stays on its absolute date (2025-06-02) instead of shifting with its old day row.
     expect(res.day_id).toBe(dayFor(trip.id, '2025-06-02'));
   });
 
-  it('TRIP-SVC-019: a reservation whose date falls outside the new range keeps its day_id (not nulled)', () => {
+  it('TRIP-SVC-019: a reservation whose date falls outside the new range keeps its day_id (not nulled)', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id, { start_date: '2025-06-01', end_date: '2025-06-05' });
     const origDayId = dayFor(trip.id, '2025-06-02');
     const resId = insertDatedReservation(trip.id, origDayId, '2025-06-02T19:00:00');
     // Shift far forward so 2025-06-02 is no longer covered by any day.
-    svc.updateTrip(trip.id, user.id, { start_date: '2025-06-10', end_date: '2025-06-14' }, 'user');
+    await svc.updateTrip(trip.id, user.id, { start_date: '2025-06-10', end_date: '2025-06-14' }, 'user');
     const res = testDb.prepare('SELECT day_id FROM reservations WHERE id = ?').get(resId) as { day_id: number };
     expect(res.day_id).toBe(origDayId);
   });
@@ -515,7 +516,7 @@ describe('resyncAccommodationDays (#1288)', () => {
     const trip = createTrip(testDb, user.id, { start_date: '2025-06-10', end_date: '2025-06-14' });
     const { accId, linkedResId } = await insertAccommodation(trip.id, dayFor(trip.id, '2025-06-11'), dayFor(trip.id, '2025-06-13'));
     // Add a day at the start: days re-date positionally (old 06-11 row becomes 06-10, …).
-    svc.updateTrip(trip.id, user.id, { start_date: '2025-06-09', end_date: '2025-06-14' }, 'user');
+    await svc.updateTrip(trip.id, user.id, { start_date: '2025-06-09', end_date: '2025-06-14' }, 'user');
     const acc = getAcc(accId);
     expect(acc.start_day_id).toBe(dayFor(trip.id, '2025-06-11'));
     expect(acc.end_day_id).toBe(dayFor(trip.id, '2025-06-13'));
@@ -534,7 +535,7 @@ describe('resyncAccommodationDays (#1288)', () => {
     const stopOf = () => testDb.prepare('SELECT day_id FROM day_assignments WHERE accommodation_id = ?').get(accId) as { day_id: number };
     expect(stopOf().day_id).toBe(dayFor(trip.id, '2025-06-11'));
 
-    svc.updateTrip(trip.id, user.id, { start_date: '2025-06-09', end_date: '2025-06-14' }, 'user');
+    await svc.updateTrip(trip.id, user.id, { start_date: '2025-06-09', end_date: '2025-06-14' }, 'user');
 
     expect(stopOf().day_id).toBe(getAcc(accId).start_day_id);
     expect(stopOf().day_id).toBe(dayFor(trip.id, '2025-06-11'));
@@ -546,7 +547,7 @@ describe('resyncAccommodationDays (#1288)', () => {
     const startDayId = dayFor(trip.id, '2025-06-02');
     const endDayId = dayFor(trip.id, '2025-06-03');
     const { accId, linkedResId } = await insertAccommodation(trip.id, startDayId, endDayId);
-    svc.updateTrip(trip.id, user.id, { start_date: '2025-07-01', end_date: '2025-07-05' }, 'user');
+    await svc.updateTrip(trip.id, user.id, { start_date: '2025-07-01', end_date: '2025-07-05' }, 'user');
     const acc = getAcc(accId);
     expect(acc.start_day_id).toBe(startDayId);
     expect(acc.end_day_id).toBe(endDayId);
@@ -564,7 +565,7 @@ describe('resyncAccommodationDays (#1288)', () => {
       "INSERT INTO reservations (trip_id, day_id, title, reservation_time, type, status) VALUES (?, ?, 'Dinner', '2025-06-02T19:00:00', 'restaurant', 'pending')",
     ).run(trip.id, origDayId).lastInsertRowid);
     const { accId } = await insertAccommodation(trip.id, origDayId, dayFor(trip.id, '2025-06-03'));
-    svc.updateTrip(trip.id, user.id, { start_date: '2025-06-03', end_date: '2025-06-07', date_shift_mode: 'shift_all' }, 'user');
+    await svc.updateTrip(trip.id, user.id, { start_date: '2025-06-03', end_date: '2025-06-07', date_shift_mode: 'shift_all' }, 'user');
     // The booking stays on its day row (now 2025-06-04) and its time follows.
     const res = testDb.prepare('SELECT day_id, reservation_time FROM reservations WHERE id = ?').get(resId) as
       { day_id: number; reservation_time: string };
@@ -575,13 +576,13 @@ describe('resyncAccommodationDays (#1288)', () => {
     expect(acc.start_day_id).toBe(origDayId);
   });
 
-  it('TRIP-SVC-037: a dated hotel reservation without a linked accommodation is re-anchored like other bookings', () => {
+  it('TRIP-SVC-037: a dated hotel reservation without a linked accommodation is re-anchored like other bookings', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id, { start_date: '2025-06-01', end_date: '2025-06-05' });
     const resId = Number(testDb.prepare(
       "INSERT INTO reservations (trip_id, day_id, title, reservation_time, type, status) VALUES (?, ?, 'Imported hotel', ?, 'hotel', 'pending')",
     ).run(trip.id, dayFor(trip.id, '2025-06-02'), '2025-06-02T15:00:00').lastInsertRowid);
-    svc.updateTrip(trip.id, user.id, { start_date: '2025-06-02', end_date: '2025-06-06' }, 'user');
+    await svc.updateTrip(trip.id, user.id, { start_date: '2025-06-02', end_date: '2025-06-06' }, 'user');
     const res = testDb.prepare('SELECT day_id FROM reservations WHERE id = ?').get(resId) as { day_id: number };
     expect(res.day_id).toBe(dayFor(trip.id, '2025-06-02'));
   });
@@ -684,15 +685,15 @@ describe('guest members (#1362)', () => {
     expect(membersSvc.renameGuest(otherTrip.id, member.id, 'Nope')).toBe(false);
   });
 
-  it('TRIP-SVC-033: deleteGuest removes the user (cascading membership), guest-only + trip-scoped', () => {
+  it('TRIP-SVC-033: deleteGuest removes the user (cascading membership), guest-only + trip-scoped', async () => {
     const { user: owner } = createUser(testDb);
     const trip = createTrip(testDb, owner.id);
     const { member } = membersSvc.createGuest(trip.id, 'Carol', owner.id);
 
     // Real members are not deletable via the guest path.
-    expect(membersSvc.deleteGuest(trip.id, owner.id)).toBe(false);
+    expect(await membersSvc.deleteGuest(trip.id, owner.id)).toBe(false);
 
-    expect(membersSvc.deleteGuest(trip.id, member.id)).toBe(true);
+    expect(await membersSvc.deleteGuest(trip.id, member.id)).toBe(true);
     expect(testDb.prepare('SELECT id FROM users WHERE id = ?').get(member.id)).toBeUndefined();
     expect(testDb.prepare('SELECT id FROM trip_members WHERE user_id = ?').get(member.id)).toBeUndefined();
   });
@@ -1058,56 +1059,56 @@ describe('TripsService wrapper helpers', () => {
 // ── Branch coverage for the folded update/export/copy quirks ─────────────────
 
 describe('folded quirk branches', () => {
-  it('TRIP-SVC-047: updateTrip admin edit collects changes and the owner email; reminder 0 reads "none"', () => {
+  it('TRIP-SVC-047: updateTrip admin edit collects changes and the owner email; reminder 0 reads "none"', async () => {
     const { user: owner } = createUser(testDb);
     const { user: admin } = createUser(testDb);
     testDb.prepare("UPDATE users SET role = 'admin' WHERE id = ?").run(admin.id);
     const trip = createTrip(testDb, owner.id, { title: 'Old' });
 
-    const result = svc.updateTrip(trip.id, admin.id, { title: 'New', is_archived: true, reminder_days: 0 }, 'admin');
+    const result = await svc.updateTrip(trip.id, admin.id, { title: 'New', is_archived: true, reminder_days: 0 }, 'admin');
 
     expect(result.isAdminEdit).toBe(true);
     expect(result.ownerEmail).toBe(owner.email);
     expect(result.changes).toMatchObject({ title: 'New', archived: true, reminder_days: 'none' });
     expect(result.newTitle).toBe('New');
     // || coercion: an empty-string title falls back to the stored one.
-    const kept = svc.updateTrip(trip.id, owner.id, { title: '' }, 'user');
+    const kept = await svc.updateTrip(trip.id, owner.id, { title: '' }, 'user');
     expect(kept.newTitle).toBe('New');
     // Missing trips throw the byte-identical error; invalid ranges reject.
-    expect(() => svc.updateTrip(99999, owner.id, {}, 'user')).toThrow('Trip not found');
-    expect(() => svc.updateTrip(trip.id, owner.id, { start_date: '2025-06-10', end_date: '2025-06-01' }, 'user')).toThrow('End date must be after start date');
+    await expect(svc.updateTrip(99999, owner.id, {}, 'user')).rejects.toThrow('Trip not found');
+    await expect(svc.updateTrip(trip.id, owner.id, { start_date: '2025-06-10', end_date: '2025-06-01' }, 'user')).rejects.toThrow('End date must be after start date');
   });
 
-  it('TRIP-SVC-065: updateTrip refuses a range past MAX_TRIP_DAYS before touching the row', () => {
+  it('TRIP-SVC-065: updateTrip refuses a range past MAX_TRIP_DAYS before touching the row', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id, { title: 'Week', start_date: '2026-07-01', end_date: '2026-07-07' });
-    expect(() => svc.updateTrip(trip.id, user.id, { title: 'Decade', end_date: '2036-07-01' }, 'user'))
-      .toThrow(`A trip can span at most ${MAX_TRIP_DAYS} days`);
+    await expect(svc.updateTrip(trip.id, user.id, { title: 'Decade', end_date: '2036-07-01' }, 'user'))
+      .rejects.toThrow(`A trip can span at most ${MAX_TRIP_DAYS} days`);
     expect(testDb.prepare('SELECT title, end_date FROM trips WHERE id = ?').get(trip.id)).toEqual({ title: 'Week', end_date: '2026-07-07' });
     expect(getDays(trip.id)).toHaveLength(7);
     // Moving only the start keeps the stored end and is measured against it.
-    expect(() => svc.updateTrip(trip.id, user.id, { start_date: '2020-01-01' }, 'user'))
-      .toThrow(`A trip can span at most ${MAX_TRIP_DAYS} days`);
+    await expect(svc.updateTrip(trip.id, user.id, { start_date: '2020-01-01' }, 'user'))
+      .rejects.toThrow(`A trip can span at most ${MAX_TRIP_DAYS} days`);
   });
 
-  it('TRIP-SVC-066: a trip whose stored range already exceeds the limit can still be renamed', () => {
+  it('TRIP-SVC-066: a trip whose stored range already exceeds the limit can still be renamed', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id, { title: 'Legacy' });
     testDb.prepare("UPDATE trips SET start_date = '2020-01-01', end_date = '2030-01-01' WHERE id = ?").run(trip.id);
-    const result = svc.updateTrip(trip.id, user.id, { title: 'Renamed' }, 'user');
+    const result = await svc.updateTrip(trip.id, user.id, { title: 'Renamed' }, 'user');
     expect(result.newTitle).toBe('Renamed');
     expect(result.changes).toEqual({ title: 'Renamed' });
     // A day_count would rebuild the grid over the whole stored range, so it is held to the limit too.
-    expect(() => svc.updateTrip(trip.id, user.id, { day_count: 5 }, 'user'))
-      .toThrow(`A trip can span at most ${MAX_TRIP_DAYS} days`);
+    await expect(svc.updateTrip(trip.id, user.id, { day_count: 5 }, 'user'))
+      .rejects.toThrow(`A trip can span at most ${MAX_TRIP_DAYS} days`);
     expect(getDays(trip.id)).toHaveLength(0);
   });
 
-  it('TRIP-SVC-067: a start date moved past the stored end is refused instead of emptying the trip', () => {
+  it('TRIP-SVC-067: a start date moved past the stored end is refused instead of emptying the trip', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id, { title: 'Week', start_date: '2026-07-01', end_date: '2026-07-07' });
-    expect(() => svc.updateTrip(trip.id, user.id, { start_date: '2026-07-10' }, 'user'))
-      .toThrow('End date must be after start date');
+    await expect(svc.updateTrip(trip.id, user.id, { start_date: '2026-07-10' }, 'user'))
+      .rejects.toThrow('End date must be after start date');
     expect(testDb.prepare('SELECT start_date FROM trips WHERE id = ?').get(trip.id)).toEqual({ start_date: '2026-07-01' });
     expect(getDays(trip.id)).toHaveLength(7);
   });
@@ -1213,15 +1214,16 @@ describe('quirk fixes', () => {
       new RealtimeService(),
       undefined as never,
       coversFx.storage,
+      await createTestUnitOfWork(dbs().connection),
     );
   }
 
   /** Same frozen connection, for the guest deletion that now lives on the roster. */
   async function failingMembers(match: string) {
     return new TripMembersService(
-      failingConnection(match), budgetSvc, new UserCleanupService(dbs(), budgetSvc),
+      failingConnection(match), budgetSvc, new UserCleanupService(dbs(), budgetSvc, await createTestUnitOfWork(dbs().connection)),
       new PermissionsService(dbs(), await createTestUnitOfWork(dbs().connection)), new RealtimeService(),
-      notificationsStub(),
+      notificationsStub(), await createTestUnitOfWork(dbs().connection),
     );
   }
 
@@ -1247,10 +1249,10 @@ describe('quirk fixes', () => {
     const { user: owner } = createUser(testDb);
     const trip = createTrip(testDb, owner.id);
     const { member: guest } = membersSvc.createGuest(trip.id, 'Gia', owner.id);
-    const item = budgetSvc.createBudgetItem(trip.id, { name: 'Dinner', total_price: 80, member_ids: [owner.id, guest.id] });
+    const item = await budgetSvc.createBudgetItem(trip.id, { name: 'Dinner', total_price: 80, member_ids: [owner.id, guest.id] });
 
     const broken = await failingMembers('DELETE FROM users WHERE id = ? AND is_guest = 1');
-    expect(() => broken.deleteGuest(trip.id, guest.id)).toThrow('boom');
+    await expect(broken.deleteGuest(trip.id, guest.id)).rejects.toThrow('boom');
 
     // Neither the guest nor their split membership was touched.
     expect(testDb.prepare('SELECT id FROM users WHERE id = ?').get(guest.id)).toBeDefined();

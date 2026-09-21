@@ -12,6 +12,7 @@ import { VacayService } from '../vacay/vacay.service';
 import { UnsplashService } from '../unsplash/unsplash.service';
 import { StorageService } from '../storage/storage.service';
 import { NotFoundError, ValidationError } from '../common/domain-errors';
+import { UnitOfWork } from '../database/unit-of-work';
 
 export const MS_PER_DAY = 86400000;
 
@@ -159,6 +160,7 @@ export class TripsService {
     private readonly realtime: RealtimeService,
     private readonly unsplash: UnsplashService,
     private readonly storage: StorageService,
+    private readonly uow: UnitOfWork,
   ) {}
 
   private get db() {
@@ -391,7 +393,7 @@ export class TripsService {
    * through update() below; the plugin RPC host calls this directly (parity:
    * the legacy host path never rebased).
    */
-  updateTrip(tripId: string | number, userId: number, data: UpdateTripData, userRole: string): UpdateTripResult {
+  async updateTrip(tripId: string | number, userId: number, data: UpdateTripData, userRole: string): Promise<UpdateTripResult> {
     const trip = this.db.prepare('SELECT * FROM trips WHERE id = ?').get(tripId) as Trip & { reminder_days?: number } | undefined;
     if (!trip) throw new NotFoundError('Trip not found');
 
@@ -418,7 +420,7 @@ export class TripsService {
       this.vacay.shiftOwnerEntriesForTripWindow(trip.user_id, trip.start_date, trip.end_date, newStart);
 
     if (regenerate) {
-      this.db.transaction(() => {
+      await this.uow.transactional(async () => {
         // Accommodations have no absolute date columns, so their pre-change dates must be
         // snapshotted before generateDays re-dates the day rows in place.
         const prevDateByDayId = new Map(
@@ -433,15 +435,15 @@ export class TripsService {
             (this.db.prepare('SELECT id, date FROM days WHERE trip_id = ?').all(tripId) as { id: number; date: string | null }[])
               .map(d => [d.id, d.date]),
           );
-          this.days.restampReservationDates(tripId, prevDateByDayId, newDateByDayId);
+          await this.days.restampReservationDates(tripId, prevDateByDayId, newDateByDayId);
         } else {
           // Default: generateDays re-dates day rows positionally; re-anchor dated bookings to
           // the day matching their absolute reservation_time, and accommodations (+ their
           // linked hotel reservations) to the days now holding their pre-change dates (#1288).
           this.reservations.resyncReservationDays(tripId);
-          this.days.resyncAccommodationDays(tripId, prevDateByDayId);
+          await this.days.resyncAccommodationDays(tripId, prevDateByDayId);
         }
-      })();
+      });
     }
 
     const changes: Record<string, unknown> = {};
@@ -491,7 +493,7 @@ export class TripsService {
     // otherwise the frozen FX rates and the currency-less expenses that inherit the
     // trip's base are left pointing at a currency that no longer exists (#1543).
     await this.budget.rebaseTripCurrency(tripId, body.currency);
-    return this.updateTrip(tripId, userId, body, role);
+    return await this.updateTrip(tripId, userId, body, role);
   }
 
   // ── Delete ─────────────────────────────────────────────────────────────────

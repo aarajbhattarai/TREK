@@ -101,7 +101,7 @@ let auth: AuthService;
 let svc: AdminService;
 beforeAll(async () => {
   permissions = new PermissionsService(dbs, await createTestUnitOfWork(dbs.connection));
-  userCleanup = new UserCleanupService(dbs, new BudgetService(dbs, permissions, new ExchangeRatesService(), realtime));
+  userCleanup = new UserCleanupService(dbs, new BudgetService(dbs, permissions, new ExchangeRatesService(), realtime, await createTestUnitOfWork(dbs.connection)), await createTestUnitOfWork(dbs.connection));
   auth = new AuthService(dbs, permissions, new TripMembershipService(dbs), webauthn, userCleanup, new MailerService(dbs), new EphemeralTokenService(), new AllowedFileTypesService(dbs), await createTestUnitOfWork(dbs.connection));
   svc = new AdminService(
   dbs,
@@ -247,22 +247,22 @@ describe('updateUser', () => {
 // ── deleteUser ────────────────────────────────────────────────────────────────
 
 describe('deleteUser', () => {
-  it('ADMIN-SVC-015 — deletes user successfully', () => {
+  it('ADMIN-SVC-015 — deletes user successfully', async () => {
     const { user: admin } = createAdmin(testDb);
     const { user } = createUser(testDb);
-    const result = deleteUser(String(user.id), admin.id) as any;
+    const result = await deleteUser(String(user.id), admin.id) as any;
     expect(result.email).toBe(user.email);
   });
 
-  it('ADMIN-SVC-016 — returns 400 when deleting own account', () => {
+  it('ADMIN-SVC-016 — returns 400 when deleting own account', async () => {
     const { user: admin } = createAdmin(testDb);
-    const result = deleteUser(String(admin.id), admin.id) as any;
+    const result = await deleteUser(String(admin.id), admin.id) as any;
     expect(result.status).toBe(400);
   });
 
-  it('ADMIN-SVC-017 — returns 404 for non-existent user', () => {
+  it('ADMIN-SVC-017 — returns 404 for non-existent user', async () => {
     const { user: admin } = createAdmin(testDb);
-    const result = deleteUser('99999', admin.id) as any;
+    const result = await deleteUser('99999', admin.id) as any;
     expect(result.status).toBe(404);
   });
 });

@@ -133,7 +133,7 @@ export class TripsRpc {
     try {
       // The no-rebase core, parity with the legacy host path, which never
       // re-anchored the budget currency.
-      const result = this.trips.updateTrip(tripId, actor, input as Parameters<TripsService['updateTrip']>[2], user?.role ?? 'user');
+      const result = await this.trips.updateTrip(tripId, actor, input as Parameters<TripsService['updateTrip']>[2], user?.role ?? 'user');
       this.realtime.broadcast(tripId, 'trip:updated', { trip: result.updatedTrip });
       return result.updatedTrip;
     } catch (e) {

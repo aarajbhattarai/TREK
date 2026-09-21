@@ -39,8 +39,8 @@ export class CategoriesMcp {
   ) {}
 
   /** The AuthService.isDemoUser check without the auth graph (demo-write.ts). */
-  private isDemoUser(userId: number): boolean {
-    return isDemoUserId(this.env, this.db, userId);
+  private async isDemoUser(userId: number): Promise<boolean> {
+    return await isDemoUserId(this.env, this.db, userId);
   }
 
   @Tool({
@@ -67,7 +67,7 @@ export class CategoriesMcp {
     access: { group: 'places', mode: 'write' },
   })
   async createCategory({ name, color, icon }: { name: string; color?: string; icon?: string }, ctx: McpContext) {
-    if (this.isDemoUser(ctx.userId)) return demoDenied();
+    if (await this.isDemoUser(ctx.userId)) return demoDenied();
     // The palette is instance-wide; the REST route restricts management to admins. Match it.
     if (!this.guards.isAdminUser(ctx.userId)) return adminRequired();
     const category = await this.categories.create(ctx.userId, name, color, icon);
@@ -87,7 +87,7 @@ export class CategoriesMcp {
     access: { group: 'places', mode: 'write' },
   })
   async updateCategory({ categoryId, name, color, icon }: { categoryId: number; name?: string; color?: string; icon?: string }, ctx: McpContext) {
-    if (this.isDemoUser(ctx.userId)) return demoDenied();
+    if (await this.isDemoUser(ctx.userId)) return demoDenied();
     if (!this.guards.isAdminUser(ctx.userId)) return adminRequired();
     if (!(await this.categories.getById(categoryId))) return errorResult('Category not found');
     const category = await this.categories.update(categoryId, name, color, icon);
@@ -104,7 +104,7 @@ export class CategoriesMcp {
     access: { group: 'places', mode: 'write' },
   })
   async deleteCategory({ categoryId }: { categoryId: number }, ctx: McpContext) {
-    if (this.isDemoUser(ctx.userId)) return demoDenied();
+    if (await this.isDemoUser(ctx.userId)) return demoDenied();
     if (!this.guards.isAdminUser(ctx.userId)) return adminRequired();
     if (!(await this.categories.getById(categoryId))) return errorResult('Category not found');
     await this.categories.remove(categoryId);

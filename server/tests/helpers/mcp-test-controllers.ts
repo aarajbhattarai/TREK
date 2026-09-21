@@ -136,19 +136,19 @@ export async function createMcpTestRegistry(): Promise<McpRegistry> {
   const realtimeService = new RealtimeService();
   const guards = new McpToolGuardsService(dbService, permissionsService, realtimeService);
   const exchangeRatesService = new ExchangeRatesService();
-  const budgetService = new BudgetService(dbService, permissionsService, exchangeRatesService, realtimeService);
+  const budgetService = new BudgetService(dbService, permissionsService, exchangeRatesService, realtimeService, await createTestUnitOfWork(dbService.connection));
   const authService = new AuthService(
     dbService,
     permissionsService,
     new TripMembershipService(dbService),
     new WebauthnConfigService(dbService),
-    new UserCleanupService(dbService, budgetService),
+    new UserCleanupService(dbService, budgetService, await createTestUnitOfWork(dbService.connection)),
     new MailerService(dbService),
     new EphemeralTokenService(),
     new AllowedFileTypesService(dbService), await createTestUnitOfWork(dbService.connection),
   );
   const queryHelpersService = new QueryHelpersService(dbService);
-  const daysService = new DaysService(dbService, permissionsService, realtimeService, queryHelpersService);
+  const daysService = new DaysService(dbService, permissionsService, realtimeService, queryHelpersService, await createTestUnitOfWork(dbService.connection));
   const todoService = new TodoService(dbService, permissionsService, realtimeService);
   const packingService = new PackingService(dbService, permissionsService, realtimeService, notificationsStub());
   const collabService = new CollabService(dbService, permissionsService, realtimeService, notificationsStub(), generalStorage, new RateLimitService());
@@ -177,7 +177,7 @@ export async function createMcpTestRegistry(): Promise<McpRegistry> {
   );
   // Built after it: a hotel booking writes the stay's day stop through this one.
   const reservationsService = new ReservationsService(dbService, permissionsService, budgetService, realtimeService, notificationsStub(), new ReservationsReadRepository(dbService), accommodationsService, await createTestUnitOfWork(dbService.connection));
-  const membersService = new TripMembersService(dbService, budgetService, new UserCleanupService(dbService, budgetService), permissionsService, realtimeService, notificationsStub());
+  const membersService = new TripMembersService(dbService, budgetService, new UserCleanupService(dbService, budgetService, await createTestUnitOfWork(dbService.connection)), permissionsService, realtimeService, notificationsStub(), await createTestUnitOfWork(dbService.connection));
   const tripsService = new TripsService(
     dbService,
     reservationsService,
@@ -188,6 +188,7 @@ export async function createMcpTestRegistry(): Promise<McpRegistry> {
     realtimeService,
     new UnsplashService(dbService, new RuntimeEnvService(), generalStorage),
     generalStorage,
+    await createTestUnitOfWork(dbService.connection),
   );
   const readModelService = new TripReadModelService(
     dbService, membersService, daysService, accommodationsService, budgetService,
@@ -219,7 +220,7 @@ export async function createMcpTestRegistry(): Promise<McpRegistry> {
       new AuthMcp(),
       new TodoMcp(todoService, authService, addonsService, guards),
       new PackingMcp(packingService, authService, addonsService, guards),
-      new BudgetMcp(budgetService, exchangeRatesService, dbService, new RuntimeEnvService(), new TripMembershipService(dbService), addonsService, guards),
+      new BudgetMcp(budgetService, exchangeRatesService, dbService, new RuntimeEnvService(), new TripMembershipService(dbService), addonsService, guards, await createTestUnitOfWork(dbService.connection)),
       new ReservationsMcp(reservationsService, daysService, budgetService, authService, assignmentsService, guards),
       new DayNotesMcp(new DayNotesService(dbService, permissionsService, realtimeService), authService, guards),
       new DaysMcp(daysService, authService, guards),

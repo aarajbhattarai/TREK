@@ -157,7 +157,7 @@ export class PluginMcpToolsService implements OnApplicationBootstrap, OnModuleDe
     if (!pluginsEnabled()) return errorResult('Plugins are disabled on this server.');
     // The plugins domain's first demo gate. The child has none of its own, and
     // the ~40 isDemoUser checks elsewhere are per-handler, so it belongs here.
-    if (isDemoUserId(this.env, this.dbs, ctx.userId)) return demoDenied();
+    if (await isDemoUserId(this.env, this.dbs, ctx.userId)) return demoDenied();
 
     try {
       const raw = await this.hooks.callMcpTool(pluginId, { name, args: args ?? {} }, ctx.userId);

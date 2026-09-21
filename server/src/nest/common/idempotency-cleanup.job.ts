@@ -21,9 +21,9 @@ export class IdempotencyCleanupJob implements OnApplicationBootstrap {
     this.registrar.register('idempotency-cleanup', '0 3 * * *', () => this.tick());
   }
 
-  tick(): void {
+  async tick(): Promise<void> {
     try {
-      const removed = purgeExpiredIdempotencyKeys(undefined, undefined, this.db);
+      const removed = await purgeExpiredIdempotencyKeys(undefined, undefined, this.db);
       if (removed > 0) {
         logInfo(`Idempotency cleanup: removed ${removed} expired key(s)`);
       }

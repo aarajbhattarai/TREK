@@ -37,10 +37,10 @@ export class CostsRpc {
   ) {}
 
   @PluginMethod('costs.getByTrip', { permission: 'db:read:costs' })
-  getByTrip(params: Record<string, unknown>, ctx: PluginRpcContext): unknown {
-    return this.guards.tripRead(params, ctx, async () => {
+  async getByTrip(params: Record<string, unknown>, ctx: PluginRpcContext): Promise<unknown> {
+    return await this.guards.tripRead(params, ctx, async () => {
       await this.requireBudgetAddon();
-      return this.budget.listBudgetItems(num(params.tripId, 'tripId'));
+      return await this.budget.listBudgetItems(num(params.tripId, 'tripId'));
     });
   }
 
@@ -54,7 +54,11 @@ export class CostsRpc {
     // one, so injecting TripsService here would close a cycle. Same id set,
     // same newest-first order.
     const tripIds = await this.membership.listAccessibleTripIds(ctx.actingUserId);
-    return tripIds.flatMap((id) => this.budget.listBudgetItems(id));
+    // Sequential, not Promise.all: the legacy flatMap read each trip's items one
+    // after the other, in id order, and the output order is the contract here.
+    const items: unknown[] = [];
+    for (const id of tripIds) items.push(...(await this.budget.listBudgetItems(id)));
+    return items;
   }
 
   @PluginMethod('costs.create', { permission: 'db:write:costs' })
@@ -95,7 +99,7 @@ export class CostsRpc {
     const actor = this.requireCostActor(ctx);
     await this.requireBudgetAddon();
     await this.requireCostEdit(tripId, actor);
-    if (!this.budget.remove(String(itemId), String(tripId))) {
+    if (!(await this.budget.remove(String(itemId), String(tripId)))) {
       throw new ForbiddenResource(`no cost ${itemId} on trip ${tripId}`);
     }
     this.realtime.broadcast(tripId, 'budget:deleted', { itemId });

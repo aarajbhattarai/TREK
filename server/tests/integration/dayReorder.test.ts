@@ -30,10 +30,10 @@ import { UnitOfWork } from '../../src/nest/database/unit-of-work';
 
 let svc: DaysService;
 beforeAll(async () => {
-  svc = new DaysService(new DatabaseService(testDb), new PermissionsService(new DatabaseService(testDb), await createTestUnitOfWork(testDb)), new RealtimeService(), new QueryHelpersService(new DatabaseService(testDb)));
+  svc = new DaysService(new DatabaseService(testDb), new PermissionsService(new DatabaseService(testDb), await createTestUnitOfWork(testDb)), new RealtimeService(), new QueryHelpersService(new DatabaseService(testDb)), await createTestUnitOfWork(testDb));
 });
-const reorderDays = (tripId: number, orderedIds: number[]) => svc.reorder(tripId, orderedIds);
-const insertDay = (tripId: number, position?: number) => svc.insert(tripId, position);
+const reorderDays = async (tripId: number, orderedIds: number[]) => await svc.reorder(tripId, orderedIds);
+const insertDay = async (tripId: number, position?: number) => await svc.insert(tripId, position);
 
 let userId: number;
 
@@ -79,20 +79,20 @@ describe('reorderDays', () => {
     expect(r.reservation_time).toBe('2026-03-01T19:00');
   });
 
-  it('rejects an orderedIds list that is not a permutation of the trip days', () => {
+  it('rejects an orderedIds list that is not a permutation of the trip days', async () => {
     const trip = createTrip(testDb, userId, { start_date: '2026-03-01', end_date: '2026-03-03' });
     const [d1, d2] = orderedDays(trip.id);
-    expect(() => reorderDays(trip.id, [d1.id, d2.id])).toThrow(DayReorderError);
+    await expect(reorderDays(trip.id, [d1.id, d2.id])).rejects.toThrow(DayReorderError);
   });
 
-  it('blocks a move that would make an accommodation end before it starts, and rolls back', () => {
+  it('blocks a move that would make an accommodation end before it starts, and rolls back', async () => {
     const trip = createTrip(testDb, userId, { start_date: '2026-03-01', end_date: '2026-03-03' });
     const [d1, d2, d3] = orderedDays(trip.id);
     const place = createPlace(testDb, trip.id);
     createDayAccommodation(testDb, trip.id, place.id, d1.id, d2.id); // stay spans day 1 -> day 2
 
     // Put the start day (d1) after the end day (d2): [d2, d3, d1]
-    expect(() => reorderDays(trip.id, [d2.id, d3.id, d1.id])).toThrow(DayReorderError);
+    await expect(reorderDays(trip.id, [d2.id, d3.id, d1.id])).rejects.toThrow(DayReorderError);
 
     // Transaction rolled back: original order intact
     expect(orderedDays(trip.id).map(d => d.id)).toEqual([d1.id, d2.id, d3.id]);
@@ -100,13 +100,13 @@ describe('reorderDays', () => {
 });
 
 describe('insertDay', () => {
-  it('inserts an empty day at a position on a dateless trip and shifts the rest', () => {
+  it('inserts an empty day at a position on a dateless trip and shifts the rest', async () => {
     const trip = createTrip(testDb, userId);
     const d1 = createDay(testDb, trip.id);
     const d2 = createDay(testDb, trip.id);
     const d3 = createDay(testDb, trip.id);
 
-    const created = insertDay(trip.id, 1);
+    const created = await insertDay(trip.id, 1);
 
     const after = orderedDays(trip.id);
     expect(after).toHaveLength(4);
@@ -115,11 +115,11 @@ describe('insertDay', () => {
     expect(after.slice(1).map(d => d.id)).toEqual([d1.id, d2.id, d3.id]);
   });
 
-  it('inserts at the front of a dated trip: dates stay contiguous and the trip extends', () => {
+  it('inserts at the front of a dated trip: dates stay contiguous and the trip extends', async () => {
     const trip = createTrip(testDb, userId, { start_date: '2026-03-01', end_date: '2026-03-03' });
     const [d1, d2, d3] = orderedDays(trip.id);
 
-    const created = insertDay(trip.id, 1);
+    const created = await insertDay(trip.id, 1);
 
     const after = orderedDays(trip.id);
     expect(after).toHaveLength(4);

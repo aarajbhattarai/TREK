@@ -327,7 +327,7 @@ export class BookingImportService {
               // Freeze the live FX rate for a foreign-currency booking price so a
               // settled position isn't re-opened when live rates drift (#1445).
               await this.budget.freezeForeignRate(tripId, budgetData);
-              const budgetItem = this.budget.createBudgetItem(tripId, budgetData);
+              const budgetItem = await this.budget.createBudgetItem(tripId, budgetData);
               this.realtime.broadcast(tripId, 'budget:created', { item: budgetItem }, socketId);
             } catch (err) {
               console.error(

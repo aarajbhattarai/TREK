@@ -6,6 +6,7 @@ import { DatabaseService } from '../database/database.service';
 // AuthModule -> BudgetModule cycle that used to force budget.bridge here.
 import { BudgetService } from '../budget/budget.service';
 import { pluginsDataRoot } from '../plugins/paths';
+import { UnitOfWork } from '../database/unit-of-work';
 
 /**
  * Account erasure — everything that has to happen around `DELETE FROM users`
@@ -24,6 +25,7 @@ export class UserCleanupService {
   constructor(
     private readonly db: DatabaseService,
     private readonly budget: BudgetService,
+    private readonly uow: UnitOfWork,
   ) {}
 
   /**
@@ -63,10 +65,10 @@ export class UserCleanupService {
     } catch { /* plugins / queue table absent (slim schema) */ }
   }
 
-  private cleanupUserReferences(userId: number): void {
+  private async cleanupUserReferences(userId: number): Promise<void> {
     this.db.run('UPDATE trip_members SET invited_by = NULL WHERE invited_by = ?', userId);
     this.db.run('UPDATE budget_items SET paid_by_user_id = NULL WHERE paid_by_user_id = ?', userId);
-    this.budget.removeUserFromBudgetItems(userId);
+    await this.budget.removeUserFromBudgetItems(userId);
     this.db.run('DELETE FROM share_tokens WHERE created_by = ?', userId);
     this.db.run('DELETE FROM journey_share_tokens WHERE created_by = ?', userId);
     // Owned journeys cascade-delete their entries/contributors/share_tokens/photos via journey_id FKs
@@ -76,9 +78,9 @@ export class UserCleanupService {
     this.db.run('DELETE FROM journey_contributors WHERE user_id = ?', userId);
   }
 
-  deleteUserCompletely(userId: number): void {
-    this.db.transaction(() => {
-      this.cleanupUserReferences(userId);
+  async deleteUserCompletely(userId: number): Promise<void> {
+    await this.uow.transactional(async () => {
+      await this.cleanupUserReferences(userId);
       this.erasePluginUserData(userId);
       this.db.run('DELETE FROM users WHERE id = ?', userId);
     });

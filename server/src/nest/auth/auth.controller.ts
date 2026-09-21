@@ -126,7 +126,7 @@ export class AuthController {
 
   @Delete('me')
   async deleteAccount(@CurrentUser() user: User, @Req() req: Request) {
-    const result = this.auth.deleteAccount(user.id, user.email, user.role);
+    const result = await this.auth.deleteAccount(user.id, user.email, user.role);
     if (result.error) {
       throw new HttpException({ error: result.error }, result.status!);
     }

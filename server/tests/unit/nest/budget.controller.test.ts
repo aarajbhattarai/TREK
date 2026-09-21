@@ -44,20 +44,20 @@ const tripRow = { id: 5, user_id: 42, currency: 'USD' } as never;
 
 describe('BudgetController (parity with the legacy /api/trips/:tripId/budget route)', () => {
 
-  it('GET / returns items', () => {
-    const svc = makeService({ list: vi.fn().mockReturnValue([{ id: 1 }]) } as Partial<BudgetService>);
-    expect(new BudgetController(svc).list(user, '5')).toEqual({ items: [{ id: 1 }] });
+  it('GET / returns items', async () => {
+    const svc = makeService({ list: vi.fn().mockResolvedValue([{ id: 1 }]) } as Partial<BudgetService>);
+    expect(await new BudgetController(svc).list(user, '5')).toEqual({ items: [{ id: 1 }] });
   });
 
-  it('GET /summary/per-person + /settlement delegate', () => {
-    const settlement = vi.fn().mockReturnValue({ transfers: [] });
+  it('GET /summary/per-person + /settlement delegate', async () => {
+    const settlement = vi.fn().mockResolvedValue({ transfers: [] });
     const svc = makeService({
-      perPersonSummary: vi.fn().mockReturnValue([{ userId: 1, owes: 10 }]),
+      perPersonSummary: vi.fn().mockResolvedValue([{ userId: 1, owes: 10 }]),
       settlement,
     } as Partial<BudgetService>);
-    expect(new BudgetController(svc).perPerson(user, '5')).toEqual({ summary: [{ userId: 1, owes: 10 }] });
+    expect(await new BudgetController(svc).perPerson(user, '5')).toEqual({ summary: [{ userId: 1, owes: 10 }] });
     // A trip with no currency set falls back to EUR rather than passing undefined on.
-    expect(new BudgetController(svc).settlement(user, { id: 5, user_id: 42 } as never, '5')).toEqual({ transfers: [] });
+    expect(await new BudgetController(svc).settlement(user, { id: 5, user_id: 42 } as never, '5')).toEqual({ transfers: [] });
     expect(settlement).toHaveBeenLastCalledWith('5', undefined, 'EUR');
   });
 
@@ -72,9 +72,9 @@ describe('BudgetController (parity with the legacy /api/trips/:tripId/budget rou
   });
 
   describe('settlements ledger', () => {
-    it('GET /settlements lists', () => {
-      const svc = makeService({ listSettlements: vi.fn().mockReturnValue([{ id: 1 }]) } as Partial<BudgetService>);
-      expect(new BudgetController(svc).listSettlements(user, '5')).toEqual({ settlements: [{ id: 1 }] });
+    it('GET /settlements lists', async () => {
+      const svc = makeService({ listSettlements: vi.fn().mockResolvedValue([{ id: 1 }]) } as Partial<BudgetService>);
+      expect(await new BudgetController(svc).listSettlements(user, '5')).toEqual({ settlements: [{ id: 1 }] });
     });
 
 
@@ -92,17 +92,17 @@ describe('BudgetController (parity with the legacy /api/trips/:tripId/budget rou
       expect(broadcast).toHaveBeenCalledWith('5', 'budget:settlement-created', { settlement: { id: 3, amount: 0 } }, 'sock');
     });
 
-    it('DELETE /settlements/:id 404 when missing', () => {
-      const svc = makeService({ deleteSettlement: vi.fn().mockReturnValue(false) } as Partial<BudgetService>);
-      expect(thrown(() => new BudgetController(svc).deleteSettlement(user, '5', '7'))).toEqual({
+    it('DELETE /settlements/:id 404 when missing', async () => {
+      const svc = makeService({ deleteSettlement: vi.fn().mockResolvedValue(false) } as Partial<BudgetService>);
+      expect(await thrownAsync(() => new BudgetController(svc).deleteSettlement(user, '5', '7'))).toEqual({
         status: 404, body: { error: 'Settlement not found' },
       });
     });
 
-    it('DELETE /settlements/:id success broadcasts the numeric id', () => {
+    it('DELETE /settlements/:id success broadcasts the numeric id', async () => {
       const broadcast = vi.fn();
-      const svc = makeService({ deleteSettlement: vi.fn().mockReturnValue(true), broadcast } as Partial<BudgetService>);
-      expect(new BudgetController(svc).deleteSettlement(user, '5', '7', 'sock')).toEqual({ success: true });
+      const svc = makeService({ deleteSettlement: vi.fn().mockResolvedValue(true), broadcast } as Partial<BudgetService>);
+      expect(await new BudgetController(svc).deleteSettlement(user, '5', '7', 'sock')).toEqual({ success: true });
       expect(broadcast).toHaveBeenCalledWith('5', 'budget:settlement-deleted', { settlementId: 7 }, 'sock');
     });
 
@@ -171,18 +171,18 @@ describe('BudgetController (parity with the legacy /api/trips/:tripId/budget rou
     // The legacy 'user_ids must be an array' 400 is now produced by the global
     // ZodValidationPipe (budgetUpdateMembersRequestSchema) before the handler runs.
 
-    it('404 when the item is missing', () => {
-      const svc = makeService({ updateMembers: vi.fn().mockReturnValue(null) } as Partial<BudgetService>);
-      expect(thrown(() => new BudgetController(svc).updateMembers(user, '5', '9', { user_ids: [2, 3] }))).toEqual({
+    it('404 when the item is missing', async () => {
+      const svc = makeService({ updateMembers: vi.fn().mockResolvedValue(null) } as Partial<BudgetService>);
+      expect(await thrownAsync(() => new BudgetController(svc).updateMembers(user, '5', '9', { user_ids: [2, 3] }))).toEqual({
         status: 404, body: { error: 'Budget item not found' },
       });
     });
 
-    it('updates members and broadcasts persons count', () => {
-      const updateMembers = vi.fn().mockReturnValue({ members: [{ user_id: 2 }], item: { persons: 1 } });
+    it('updates members and broadcasts persons count', async () => {
+      const updateMembers = vi.fn().mockResolvedValue({ members: [{ user_id: 2 }], item: { persons: 1 } });
       const broadcast = vi.fn();
       const svc = makeService({ updateMembers, broadcast } as Partial<BudgetService>);
-      const res = new BudgetController(svc).updateMembers(user, '5', '9', { user_ids: [2] }, 'sock');
+      const res = await new BudgetController(svc).updateMembers(user, '5', '9', { user_ids: [2] }, 'sock');
       expect(res).toEqual({ members: [{ user_id: 2 }], item: { persons: 1 } });
       expect(updateMembers).toHaveBeenCalledWith('9', '5', [2]);
       expect(broadcast).toHaveBeenCalledWith('5', 'budget:members-updated', { itemId: 9, members: [{ user_id: 2 }], persons: 1 }, 'sock');
@@ -193,55 +193,55 @@ describe('BudgetController (parity with the legacy /api/trips/:tripId/budget rou
     // The legacy 'payers must be an array' 400 is now produced by the global
     // ZodValidationPipe (budgetUpdatePayersRequestSchema) before the handler runs.
 
-    it('404 when the item is missing', () => {
-      const svc = makeService({ setPayers: vi.fn().mockReturnValue(null) } as Partial<BudgetService>);
-      expect(thrown(() => new BudgetController(svc).setPayers(user, '5', '9', { payers: [{ user_id: 2, amount: 10 }] }))).toEqual({
+    it('404 when the item is missing', async () => {
+      const svc = makeService({ setPayers: vi.fn().mockResolvedValue(null) } as Partial<BudgetService>);
+      expect(await thrownAsync(() => new BudgetController(svc).setPayers(user, '5', '9', { payers: [{ user_id: 2, amount: 10 }] }))).toEqual({
         status: 404, body: { error: 'Budget item not found' },
       });
     });
 
-    it('sets payers and broadcasts budget:updated', () => {
-      const setPayers = vi.fn().mockReturnValue({ id: 9, payers: [{ user_id: 2, amount: 10 }] });
+    it('sets payers and broadcasts budget:updated', async () => {
+      const setPayers = vi.fn().mockResolvedValue({ id: 9, payers: [{ user_id: 2, amount: 10 }] });
       const broadcast = vi.fn();
       const svc = makeService({ setPayers, broadcast } as Partial<BudgetService>);
-      const res = new BudgetController(svc).setPayers(user, '5', '9', { payers: [{ user_id: 2, amount: 10 }] }, 'sock');
+      const res = await new BudgetController(svc).setPayers(user, '5', '9', { payers: [{ user_id: 2, amount: 10 }] }, 'sock');
       expect(res).toEqual({ item: { id: 9, payers: [{ user_id: 2, amount: 10 }] } });
       expect(setPayers).toHaveBeenCalledWith('9', '5', [{ user_id: 2, amount: 10 }]);
       expect(broadcast).toHaveBeenCalledWith('5', 'budget:updated', { item: { id: 9, payers: [{ user_id: 2, amount: 10 }] } }, 'sock');
     });
   });
 
-  it('PUT /:id/members/:userId/paid toggles + broadcasts normalised paid flag', () => {
-    const toggleMemberPaid = vi.fn().mockReturnValue({ user_id: 2, paid: 1 });
+  it('PUT /:id/members/:userId/paid toggles + broadcasts normalised paid flag', async () => {
+    const toggleMemberPaid = vi.fn().mockResolvedValue({ user_id: 2, paid: 1 });
     const broadcast = vi.fn();
     const svc = makeService({ toggleMemberPaid, broadcast } as Partial<BudgetService>);
-    expect(new BudgetController(svc).toggleMemberPaid(user, '5', '9', '2', { paid: true }, 'sock')).toEqual({ member: { user_id: 2, paid: 1 } });
+    expect(await new BudgetController(svc).toggleMemberPaid(user, '5', '9', '2', { paid: true }, 'sock')).toEqual({ member: { user_id: 2, paid: 1 } });
     expect(broadcast).toHaveBeenCalledWith('5', 'budget:member-paid-updated', { itemId: 9, userId: 2, paid: 1 }, 'sock');
   });
 
-  it('PUT /:id/members/:userId/paid broadcasts paid: 0 when toggled off', () => {
+  it('PUT /:id/members/:userId/paid broadcasts paid: 0 when toggled off', async () => {
     const toggleMemberPaid = vi.fn().mockReturnValue({ user_id: 2, paid: 0 });
     const broadcast = vi.fn();
     const svc = makeService({ toggleMemberPaid, broadcast } as Partial<BudgetService>);
-    new BudgetController(svc).toggleMemberPaid(user, '5', '9', '2', { paid: false }, 'sock');
+    await new BudgetController(svc).toggleMemberPaid(user, '5', '9', '2', { paid: false }, 'sock');
     expect(broadcast).toHaveBeenCalledWith('5', 'budget:member-paid-updated', { itemId: 9, userId: 2, paid: 0 }, 'sock');
   });
 
-  it('DELETE /:id 404 when missing, success otherwise', () => {
-    const missing = makeService({ remove: vi.fn().mockReturnValue(false) } as Partial<BudgetService>);
-    expect(thrown(() => new BudgetController(missing).remove(user, '5', '9'))).toEqual({
+  it('DELETE /:id 404 when missing, success otherwise', async () => {
+    const missing = makeService({ remove: vi.fn().mockResolvedValue(false) } as Partial<BudgetService>);
+    expect(await thrownAsync(() => new BudgetController(missing).remove(user, '5', '9'))).toEqual({
       status: 404, body: { error: 'Budget item not found' },
     });
-    const ok = makeService({ remove: vi.fn().mockReturnValue(true), broadcast: vi.fn() } as Partial<BudgetService>);
-    expect(new BudgetController(ok).remove(user, '5', '9')).toEqual({ success: true });
+    const ok = makeService({ remove: vi.fn().mockResolvedValue(true), broadcast: vi.fn() } as Partial<BudgetService>);
+    expect(await new BudgetController(ok).remove(user, '5', '9')).toEqual({ success: true });
   });
 
-  it('PUT /reorder/items + /reorder/categories broadcast budget:reordered', () => {
+  it('PUT /reorder/items + /reorder/categories broadcast budget:reordered', async () => {
     const reorderItems = vi.fn(); const reorderCategories = vi.fn(); const broadcast = vi.fn();
     const svc = makeService({ reorderItems, reorderCategories, broadcast } as Partial<BudgetService>);
-    expect(new BudgetController(svc).reorderItems(user, '5', { orderedIds: [3, 1] }, 'sock')).toEqual({ success: true });
+    expect(await new BudgetController(svc).reorderItems(user, '5', { orderedIds: [3, 1] }, 'sock')).toEqual({ success: true });
     expect(reorderItems).toHaveBeenCalledWith('5', [3, 1]);
-    expect(new BudgetController(svc).reorderCategories(user, '5', { orderedCategories: ['food', 'fun'] }, 'sock')).toEqual({ success: true });
+    expect(await new BudgetController(svc).reorderCategories(user, '5', { orderedCategories: ['food', 'fun'] }, 'sock')).toEqual({ success: true });
     expect(reorderCategories).toHaveBeenCalledWith('5', ['food', 'fun']);
   });
 });

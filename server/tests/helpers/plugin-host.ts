@@ -90,7 +90,7 @@ export async function createPluginRpcHostFactory(dbs: DatabaseService): Promise<
   const permissions = new PermissionsService(dbs, await createTestUnitOfWork(dbs.connection));
   const exchangeRates = new ExchangeRatesService();
   const realtime = new RealtimeService();
-  const budget = new BudgetService(dbs, permissions, exchangeRates, realtime);
+  const budget = new BudgetService(dbs, permissions, exchangeRates, realtime, await createTestUnitOfWork(dbs.connection));
   const addons = new AddonsService(dbs);
   const queryHelpers = new QueryHelpersService(dbs);
   const todos = new TodoService(dbs, permissions, realtime);
@@ -98,7 +98,7 @@ export async function createPluginRpcHostFactory(dbs: DatabaseService): Promise<
   const files = new FilesService(dbs, permissions, realtime, new EphemeralTokenService(), generalStorage);
   const collab = new CollabService(dbs, permissions, realtime, notificationsStub(), generalStorage, new RateLimitService());
   const vacay = new VacayService(dbs, realtime, notificationsStub());
-  const days = new DaysService(dbs, permissions, realtime, queryHelpers);
+  const days = new DaysService(dbs, permissions, realtime, queryHelpers, await createTestUnitOfWork(dbs.connection));
   const photoCache = new PlacePhotoCacheService(dbs, makeStorageFixture('photos/google/').storage);
   const unsplash = new UnsplashService(dbs, new RuntimeEnvService(), generalStorage);
   const journey = new JourneyDomainService(dbs, realtime, new TrekPhotosRepository(dbs));
@@ -115,8 +115,8 @@ export async function createPluginRpcHostFactory(dbs: DatabaseService): Promise<
   const places = new PlacesService(dbs, permissions, realtime, new MapsService(dbs, photoCache), queryHelpers, unsplash, photoCache, journey, generalStorage, accommodations, await createTestUnitOfWork(dbs.connection));
   // After accommodations: a hotel booking writes the stay's day stop through it.
   const reservations = new ReservationsService(dbs, permissions, budget, realtime, notificationsStub(), new ReservationsReadRepository(dbs), accommodations, await createTestUnitOfWork(dbs.connection));
-  const trips = new TripsService(dbs, reservations, days, permissions, budget, vacay, realtime, unsplash, generalStorage);
-  const members = new TripMembersService(dbs, budget, new UserCleanupService(dbs, budget), permissions, realtime, notificationsStub());
+  const trips = new TripsService(dbs, reservations, days, permissions, budget, vacay, realtime, unsplash, generalStorage, await createTestUnitOfWork(dbs.connection));
+  const members = new TripMembersService(dbs, budget, new UserCleanupService(dbs, budget, await createTestUnitOfWork(dbs.connection)), permissions, realtime, notificationsStub(), await createTestUnitOfWork(dbs.connection));
   const guards = new PluginGuards(dbs, permissions, addons);
 
   const registry = createTestPluginRegistry([

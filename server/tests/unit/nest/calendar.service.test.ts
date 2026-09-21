@@ -67,7 +67,7 @@ const dbs = () => new DatabaseService(testDb);
 let budgetSvc: BudgetService;
 let svc: CalendarService;
 beforeAll(async () => {
-  budgetSvc = new BudgetService(dbs(), new PermissionsService(dbs(), await createTestUnitOfWork(dbs().connection)), new ExchangeRatesService(), new RealtimeService());
+  budgetSvc = new BudgetService(dbs(), new PermissionsService(dbs(), await createTestUnitOfWork(dbs().connection)), new ExchangeRatesService(), new RealtimeService(), await createTestUnitOfWork(dbs().connection));
   svc = new CalendarService(
   dbs(),
   new ReservationsService(dbs(), new PermissionsService(dbs(), await createTestUnitOfWork(dbs().connection)), budgetSvc, new RealtimeService(), notificationsStub(), new ReservationsReadRepository(dbs()), await accommodationsOver(dbs()), await createTestUnitOfWork(dbs().connection)),

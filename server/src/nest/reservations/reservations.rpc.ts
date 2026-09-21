@@ -42,7 +42,7 @@ export class ReservationsRpc {
     const { reservation, accommodationCreated } = await this.reservations.create(String(tripId), input as never);
     if (accommodationCreated) this.realtime.broadcast(tripId, 'accommodation:created', {}, undefined);
     const i = input as { title?: string; type?: string; create_budget_entry?: unknown };
-    this.reservations.syncBudgetOnCreate(String(tripId), reservation.id, i.title ?? '', i.type, i.create_budget_entry as never, undefined);
+    await this.reservations.syncBudgetOnCreate(String(tripId), reservation.id, i.title ?? '', i.type, i.create_budget_entry as never, undefined);
     this.realtime.broadcast(tripId, 'reservation:created', { reservation }, undefined);
     this.notifyBooking(actor, tripId, i.title ?? '', i.type ?? '');
     return reservation;
@@ -65,7 +65,7 @@ export class ReservationsRpc {
     if (accommodationChanged) this.realtime.broadcast(tripId, 'accommodation:updated', {}, undefined);
     const cur = current as { title: string; type?: string };
     const i = input as { title?: string; type?: string; create_budget_entry?: unknown };
-    this.reservations.syncBudgetOnUpdate(String(tripId), String(reservationId), i.title ?? '', i.type, cur.title, cur.type, i.create_budget_entry as never, undefined);
+    await this.reservations.syncBudgetOnUpdate(String(tripId), String(reservationId), i.title ?? '', i.type, cur.title, cur.type, i.create_budget_entry as never, undefined);
     this.realtime.broadcast(tripId, 'reservation:updated', { reservation }, undefined);
     this.notifyBooking(actor, tripId, i.title || cur.title, i.type || cur.type || '');
     return reservation;

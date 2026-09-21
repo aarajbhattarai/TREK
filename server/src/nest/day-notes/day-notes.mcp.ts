@@ -68,10 +68,10 @@ export class DayNotesMcp {
     ctx: McpContext,
   ) {
     if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
-    if (!this.notes.verifyTripAccess(tripId, ctx.userId)) return noAccess();
+    if (!(await this.notes.verifyTripAccess(tripId, ctx.userId))) return noAccess();
     if (!(await this.guards.hasTripPermission('day_edit', tripId, ctx.userId))) return permissionDenied();
-    if (!this.notes.dayExists(dayId, tripId)) return { content: [{ type: 'text' as const, text: 'Day not found.' }], isError: true };
-    const note = this.notes.create(dayId, tripId, text, time, icon, sort_order, color);
+    if (!(await this.notes.dayExists(dayId, tripId))) return { content: [{ type: 'text' as const, text: 'Day not found.' }], isError: true };
+    const note = await this.notes.create(dayId, tripId, text, time, icon, sort_order, color);
     this.guards.safeBroadcast(tripId, 'dayNote:created', { dayId, note });
     return ok({ note });
   }
@@ -99,11 +99,11 @@ export class DayNotesMcp {
     ctx: McpContext,
   ) {
     if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
-    if (!this.notes.verifyTripAccess(tripId, ctx.userId)) return noAccess();
+    if (!(await this.notes.verifyTripAccess(tripId, ctx.userId))) return noAccess();
     if (!(await this.guards.hasTripPermission('day_edit', tripId, ctx.userId))) return permissionDenied();
-    const existing = this.notes.getNote(noteId, dayId, tripId);
+    const existing = await this.notes.getNote(noteId, dayId, tripId);
     if (!existing) return { content: [{ type: 'text' as const, text: 'Note not found.' }], isError: true };
-    const note = this.notes.update(noteId, existing, { text, time: time !== undefined ? time : undefined, icon, color, sort_order });
+    const note = await this.notes.update(noteId, existing, { text, time: time !== undefined ? time : undefined, icon, color, sort_order });
     this.guards.safeBroadcast(tripId, 'dayNote:updated', { dayId, note });
     return ok({ note });
   }
@@ -121,11 +121,11 @@ export class DayNotesMcp {
   })
   async deleteDayNote({ tripId, dayId, noteId }: { tripId: number; dayId: number; noteId: number }, ctx: McpContext) {
     if (this.auth.isDemoUser(ctx.userId)) return demoDenied();
-    if (!this.notes.verifyTripAccess(tripId, ctx.userId)) return noAccess();
+    if (!(await this.notes.verifyTripAccess(tripId, ctx.userId))) return noAccess();
     if (!(await this.guards.hasTripPermission('day_edit', tripId, ctx.userId))) return permissionDenied();
-    const note = this.notes.getNote(noteId, dayId, tripId);
+    const note = await this.notes.getNote(noteId, dayId, tripId);
     if (!note) return { content: [{ type: 'text' as const, text: 'Note not found.' }], isError: true };
-    this.notes.remove(noteId);
+    await this.notes.remove(noteId);
     this.guards.safeBroadcast(tripId, 'dayNote:deleted', { noteId, dayId });
     return ok({ success: true });
   }
@@ -140,7 +140,7 @@ export class DayNotesMcp {
   async dayNotesResource(uri: URL, { tripId, dayId }: { tripId: string | string[]; dayId: string | string[] }, ctx: McpContext) {
     const tId = parseId(tripId);
     const dId = parseId(dayId);
-    if (tId === null || dId === null || !this.notes.verifyTripAccess(tId, ctx.userId)) {
+    if (tId === null || dId === null || !(await this.notes.verifyTripAccess(tId, ctx.userId))) {
       return {
         contents: [{
           uri: uri.href,
@@ -149,7 +149,7 @@ export class DayNotesMcp {
         }],
       };
     }
-    const notes = this.notes.list(dId, tId);
+    const notes = await this.notes.list(dId, tId);
     return {
       contents: [{
         uri: uri.href,

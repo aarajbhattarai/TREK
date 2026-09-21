@@ -4,6 +4,7 @@ import { DatabaseService } from '../database/database.service';
 import type { User } from '../../types';
 import { avatarUrl } from '../common/avatarUrl';
 import { UserCleanupService } from '../auth/user-cleanup.service';
+import { UnitOfWork } from '../database/unit-of-work';
 import { BudgetService } from '../budget/budget.service';
 import { PermissionsService } from '../permissions/permissions.service';
 import { RealtimeService } from '../realtime/realtime.service';
@@ -66,6 +67,7 @@ export class TripMembersService {
     private readonly permissions: PermissionsService,
     private readonly realtime: RealtimeService,
     private readonly notifications: NotificationsService,
+    private readonly uow: UnitOfWork,
   ) {}
 
   private get db() {
@@ -249,7 +251,7 @@ export class TripMembersService {
     return true;
   }
 
-  deleteGuest(tripId: string | number, guestUserId: number): boolean {
+  async deleteGuest(tripId: string | number, guestUserId: number): Promise<boolean> {
     if (!this.guestOfTrip(tripId, guestUserId)) return false;
     // A guest is still a user id a plugin may hold data for, so erase that too — the
     // host-side per-user tables + a durable own-db erasure per granted plugin — exactly
@@ -259,14 +261,14 @@ export class TripMembersService {
     // run in one transaction, so a failure mid-flow can't leave the expense
     // divisors re-derived for a guest that still exists (or vice versa). The
     // plugin-side erasure/notification keep their order around it.
-    this.db.transaction(() => {
+    await this.uow.transactional(async () => {
       // Re-split the expenses they were part of before the cascade takes their member
       // rows away — the divisor is denormalized and cannot follow a foreign key (#1553).
-      this.budget.removeUserFromBudgetItems(guestUserId);
+      await this.budget.removeUserFromBudgetItems(guestUserId);
       // Deleting the guest's users row cascades its membership and every assignment join
       // (trip_members, budget/packing/assignment links) via the ON DELETE foreign keys.
       this.db.prepare('DELETE FROM users WHERE id = ? AND is_guest = 1').run(guestUserId);
-    })();
+    });
     emitUserDeleted(guestUserId); // deliver the erasure to any active plugin now
     return true;
   }

@@ -73,7 +73,7 @@ export class ReservationsController {
     if (accommodationCreated) {
       this.reservations.broadcast(tripId, 'accommodation:created', {}, socketId);
     }
-    this.reservations.syncBudgetOnCreate(tripId, reservation.id, body.title, body.type, body.create_budget_entry, socketId);
+    await this.reservations.syncBudgetOnCreate(tripId, reservation.id, body.title, body.type, body.create_budget_entry, socketId);
     this.reservations.broadcast(tripId, 'reservation:created', { reservation }, socketId);
     this.reservations.notifyBookingChange(tripId, user.id, body.title, body.type ?? '');
     return { reservation };
@@ -114,7 +114,7 @@ export class ReservationsController {
       this.reservations.broadcast(tripId, 'accommodation:updated', {}, socketId);
     }
     const cur = current as { title: string; type?: string };
-    this.reservations.syncBudgetOnUpdate(tripId, id, body.title ?? '', body.type, cur.title, cur.type, body.create_budget_entry, socketId);
+    await this.reservations.syncBudgetOnUpdate(tripId, id, body.title ?? '', body.type, cur.title, cur.type, body.create_budget_entry, socketId);
     this.reservations.broadcast(tripId, 'reservation:updated', { reservation }, socketId);
     // Push a locally-edited AirTrail flight back to AirTrail (fire-and-forget,
     // under the importer's credentials — see airtrailSync). #214

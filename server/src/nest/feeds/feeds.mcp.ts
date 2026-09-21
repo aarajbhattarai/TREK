@@ -41,8 +41,8 @@ export class FeedsMcp {
   ) {}
 
   /** The AuthService.isDemoUser check without the auth graph (demo-write.ts). */
-  private isDemoUser(userId: number): boolean {
-    return isDemoUserId(this.env, this.db, userId);
+  private async isDemoUser(userId: number): Promise<boolean> {
+    return await isDemoUserId(this.env, this.db, userId);
   }
 
   /**
@@ -90,7 +90,7 @@ export class FeedsMcp {
     access: { group: 'trips', mode: 'share' },
   })
   async enableTripCalendarFeed({ tripId }: { tripId: number }, ctx: McpContext) {
-    if (this.isDemoUser(ctx.userId)) return demoDenied();
+    if (await this.isDemoUser(ctx.userId)) return demoDenied();
     const denied = await this.denyTripFeed(tripId, ctx.userId);
     if ((await denied)) return denied;
     return ok(this.feeds.generateTripToken(String(tripId), ctx.userId, this.base()));
@@ -106,7 +106,7 @@ export class FeedsMcp {
     access: { group: 'trips', mode: 'share' },
   })
   async rotateTripCalendarFeed({ tripId }: { tripId: number }, ctx: McpContext) {
-    if (this.isDemoUser(ctx.userId)) return demoDenied();
+    if (await this.isDemoUser(ctx.userId)) return demoDenied();
     const denied = await this.denyTripFeed(tripId, ctx.userId);
     if ((await denied)) return denied;
     return ok(this.feeds.rotateTripToken(String(tripId), ctx.userId, this.base()));
@@ -122,7 +122,7 @@ export class FeedsMcp {
     access: { group: 'trips', mode: 'share' },
   })
   async disableTripCalendarFeed({ tripId }: { tripId: number }, ctx: McpContext) {
-    if (this.isDemoUser(ctx.userId)) return demoDenied();
+    if (await this.isDemoUser(ctx.userId)) return demoDenied();
     const denied = await this.denyTripFeed(tripId, ctx.userId);
     if ((await denied)) return denied;
     this.feeds.disableTripToken(String(tripId), ctx.userId);
@@ -153,7 +153,7 @@ export class FeedsMcp {
     access: { group: 'trips', mode: 'share' },
   })
   async enableAllTripsCalendarFeed(_input: Record<string, never>, ctx: McpContext) {
-    if (this.isDemoUser(ctx.userId)) return demoDenied();
+    if (await this.isDemoUser(ctx.userId)) return demoDenied();
     return ok(this.feeds.generateUserToken(ctx.userId, this.base()));
   }
 
@@ -165,7 +165,7 @@ export class FeedsMcp {
     access: { group: 'trips', mode: 'share' },
   })
   async rotateAllTripsCalendarFeed(_input: Record<string, never>, ctx: McpContext) {
-    if (this.isDemoUser(ctx.userId)) return demoDenied();
+    if (await this.isDemoUser(ctx.userId)) return demoDenied();
     return ok(this.feeds.rotateUserToken(ctx.userId, this.base()));
   }
 
@@ -177,7 +177,7 @@ export class FeedsMcp {
     access: { group: 'trips', mode: 'share' },
   })
   async disableAllTripsCalendarFeed(_input: Record<string, never>, ctx: McpContext) {
-    if (this.isDemoUser(ctx.userId)) return demoDenied();
+    if (await this.isDemoUser(ctx.userId)) return demoDenied();
     this.feeds.disableUserToken(ctx.userId);
     return ok({ feed_url: null });
   }

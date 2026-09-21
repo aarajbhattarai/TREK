@@ -43,7 +43,7 @@ describe('IdempotencyInterceptor (parity with the legacy applyIdempotency middle
     const db = makeDb();
     const h = handler('weather');
     const out = await lastValueFrom(
-      new IdempotencyInterceptor(db).intercept(ctx({ method: 'GET', headers: {} }, makeRes()), h),
+      await new IdempotencyInterceptor(db).intercept(ctx({ method: 'GET', headers: {} }, makeRes()), h),
     );
     expect(out).toBe('weather');
     expect(h.handle).toHaveBeenCalled();
@@ -54,7 +54,7 @@ describe('IdempotencyInterceptor (parity with the legacy applyIdempotency middle
     const db = makeDb();
     const h = handler('done');
     await lastValueFrom(
-      new IdempotencyInterceptor(db).intercept(ctx({ method: 'POST', headers: {}, user: { id: 1 } }, makeRes()), h),
+      await new IdempotencyInterceptor(db).intercept(ctx({ method: 'POST', headers: {}, user: { id: 1 } }, makeRes()), h),
     );
     expect(h.handle).toHaveBeenCalled();
     expect(db.get).not.toHaveBeenCalled();
@@ -64,23 +64,26 @@ describe('IdempotencyInterceptor (parity with the legacy applyIdempotency middle
     const db = makeDb();
     const h = handler('done');
     await lastValueFrom(
-      new IdempotencyInterceptor(db).intercept(ctx({ method: 'POST', headers: { 'x-idempotency-key': 'k' } }, makeRes()), h),
+      await new IdempotencyInterceptor(db).intercept(ctx({ method: 'POST', headers: { 'x-idempotency-key': 'k' } }, makeRes()), h),
     );
     expect(h.handle).toHaveBeenCalled();
     expect(db.get).not.toHaveBeenCalled();
   });
 
-  it('rejects an over-long key with the exact legacy 400 body', () => {
+  it('rejects an over-long key with the exact legacy 400 body', async () => {
     const db = makeDb();
     const h = handler('done');
+    // `intercept` is async now, so the cap is reported as a rejection. Nest's
+    // InterceptorsConsumer already awaited the interceptor's result, so a
+    // synchronous throw reached it as a rejected promise too: same 400 body.
     const run = () =>
       new IdempotencyInterceptor(db).intercept(
         ctx({ method: 'POST', headers: { 'x-idempotency-key': 'x'.repeat(129) }, user: { id: 1 } }, makeRes()),
         h,
       );
-    expect(run).toThrow(HttpException);
+    await expect(run()).rejects.toThrow(HttpException);
     try {
-      run();
+      await run();
     } catch (err) {
       const e = err as HttpException;
       expect(e.getStatus()).toBe(400);
@@ -94,7 +97,7 @@ describe('IdempotencyInterceptor (parity with the legacy applyIdempotency middle
     const res = makeRes();
     const h = handler('should-not-run');
     const out = await lastValueFrom(
-      new IdempotencyInterceptor(db).intercept(
+      await new IdempotencyInterceptor(db).intercept(
         ctx({ method: 'POST', headers: { 'x-idempotency-key': 'k' }, path: '/api/categories', user: { id: 1 } }, res),
         h,
       ),
@@ -114,7 +117,7 @@ describe('IdempotencyInterceptor (parity with the legacy applyIdempotency middle
     const res = makeRes();
     const h = handler({ created: true });
     await lastValueFrom(
-      new IdempotencyInterceptor(db).intercept(
+      await new IdempotencyInterceptor(db).intercept(
         ctx({ method: 'POST', headers: { 'x-idempotency-key': 'k' }, path: '/api/categories', user: { id: 1 } }, res),
         h,
       ),
@@ -135,7 +138,7 @@ describe('IdempotencyInterceptor (parity with the legacy applyIdempotency middle
     const res = makeRes();
     const h = handler({ error: 'bad' });
     await lastValueFrom(
-      new IdempotencyInterceptor(db).intercept(
+      await new IdempotencyInterceptor(db).intercept(
         ctx({ method: 'POST', headers: { 'x-idempotency-key': 'k' }, path: '/api/categories', user: { id: 1 } }, res),
         h,
       ),
@@ -152,7 +155,7 @@ describe('IdempotencyInterceptor (parity with the legacy applyIdempotency middle
     const big = { blob: 'x'.repeat(300 * 1024) };
     const h = handler(big);
     await lastValueFrom(
-      new IdempotencyInterceptor(db).intercept(
+      await new IdempotencyInterceptor(db).intercept(
         ctx({ method: 'POST', headers: { 'x-idempotency-key': 'k' }, path: '/api/categories', user: { id: 1 } }, res),
         h,
       ),
@@ -170,7 +173,7 @@ describe('IdempotencyInterceptor (parity with the legacy applyIdempotency middle
     const res = makeRes();
     const h = handler({ ok: true });
     await lastValueFrom(
-      new IdempotencyInterceptor(db).intercept(
+      await new IdempotencyInterceptor(db).intercept(
         ctx({ method: 'POST', headers: { 'x-idempotency-key': 'k' }, path: '/api/categories', user: { id: 1 } }, res),
         h,
       ),
@@ -198,11 +201,11 @@ describe('IdempotencyInterceptor (parity with the legacy applyIdempotency middle
     let finish!: (value: unknown) => void;
     const slow = { handle: vi.fn(() => from(new Promise((resolve) => { finish = resolve; }))) };
     const firstRes = makeRes();
-    const first = lastValueFrom(interceptor.intercept(ctx({ method: 'POST', headers: { 'x-idempotency-key': 'k' }, path: '/api/places', user: { id: 1 } }, firstRes), slow));
+    const first = lastValueFrom(await interceptor.intercept(ctx({ method: 'POST', headers: { 'x-idempotency-key': 'k' }, path: '/api/places', user: { id: 1 } }, firstRes), slow));
 
     const secondHandler = handler({ id: 'second' });
     const secondRes = makeRes();
-    const second = lastValueFrom(interceptor.intercept(ctx({ method: 'POST', headers: { 'x-idempotency-key': 'k' }, path: '/api/places', user: { id: 1 } }, secondRes), secondHandler));
+    const second = lastValueFrom(await interceptor.intercept(ctx({ method: 'POST', headers: { 'x-idempotency-key': 'k' }, path: '/api/places', user: { id: 1 } }, secondRes), secondHandler));
 
     // The order Nest uses, and the one that makes this test worth having: the
     // handler's observable completes FIRST, and the response - which is what
@@ -228,13 +231,13 @@ describe('IdempotencyInterceptor (parity with the legacy applyIdempotency middle
 
     let finish!: (value: unknown) => void;
     const slow = { handle: vi.fn(() => from(new Promise((resolve) => { finish = resolve; }))) };
-    const first = lastValueFrom(interceptor.intercept(
+    const first = lastValueFrom(await interceptor.intercept(
       ctx({ method: 'POST', headers: { 'x-idempotency-key': 'k' }, path: '/api/places', user: { id: 1 } }, makeRes()),
       slow,
     ));
 
     const secondHandler = handler({ id: 'second' });
-    const second = lastValueFrom(interceptor.intercept(
+    const second = lastValueFrom(await interceptor.intercept(
       ctx({ method: 'POST', headers: { 'x-idempotency-key': 'k' }, path: '/api/places', user: { id: 1 } }, makeRes()),
       secondHandler,
     ));
@@ -252,7 +255,7 @@ describe('IdempotencyInterceptor (parity with the legacy applyIdempotency middle
     const res = makeRes();
     const h = handler('done');
     await lastValueFrom(
-      new IdempotencyInterceptor(db).intercept(
+      await new IdempotencyInterceptor(db).intercept(
         ctx({ method: 'PATCH', headers: { 'x-idempotency-key': 'k' }, path: '/api/categories/1', user: { id: 1 } }, res),
         h,
       ),

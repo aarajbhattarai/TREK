@@ -16,6 +16,7 @@ import { BudgetService } from './budget.service';
 import { ExchangeRatesService } from './exchange-rates.service';
 import { addonGate } from '../addons/addon-gate';
 import { AddonsService } from '../addons/addons.service';
+import { UnitOfWork } from '../database/unit-of-work';
 
 /** Legacy registrar gate: the whole budget surface rides the budget addon. */
 const budgetAddonOn = addonGate(ADDON_IDS.BUDGET);
@@ -84,11 +85,12 @@ export class BudgetMcp {
     private readonly membership: TripMembershipService,
     readonly addons: AddonsService,
     private readonly guards: McpToolGuardsService,
+    private readonly uow: UnitOfWork,
   ) {}
 
   /** The AuthService.isDemoUser check without the auth graph (demo-write.ts). */
-  private isDemoUser(userId: number): boolean {
-    return isDemoUserId(this.env, this.db, userId);
+  private async isDemoUser(userId: number): Promise<boolean> {
+    return await isDemoUserId(this.env, this.db, userId);
   }
 
   /**
@@ -111,12 +113,12 @@ export class BudgetMcp {
    * (the write path overwrites total_price with their sum), so the stated total
    * is not necessarily the figure that ends up in the row.
    */
-  private settledTotalCents(
+  private async settledTotalCents(
     tripId: number,
     payers: { user_id: number; amount: number }[] | undefined,
     total_price: number | undefined,
     fallbackCents: number,
-  ): number {
+  ): Promise<number> {
     // Once payers are sent at all, the write path derives the total from them and
     // an empty list therefore means zero, not "no opinion". Reading total_price
     // here instead would certify a split against a figure the row never receives.
@@ -138,12 +140,12 @@ export class BudgetMcp {
    * user_id is refused for the same reason: the write path drops both silently,
    * which would unbalance a split that had just been checked.
    */
-  private splitRefusal(
+  private async splitRefusal(
     tripId: number,
     members: { user_id: number; amount: number }[],
     totalCents: number,
     payers?: { user_id: number; amount: number }[],
-  ): string | null {
+  ): Promise<string | null> {
     const roster = this.db.rosterUserIds(tripId);
     const strangers = members.filter(m => !roster.has(m.user_id)).map(m => m.user_id);
     if (strangers.length > 0) {
@@ -169,7 +171,7 @@ export class BudgetMcp {
   }
 
   /** The sibling tools' foreign-id rule: a linked id must live on the same trip. */
-  private placeOnTrip(tripId: number, placeId: number): boolean {
+  private async placeOnTrip(tripId: number, placeId: number): Promise<boolean> {
     return !!this.db.get('SELECT id FROM places WHERE id = ? AND trip_id = ?', placeId, tripId);
   }
 
@@ -203,13 +205,13 @@ export class BudgetMcp {
     },
     ctx: McpContext,
   ) {
-    if (this.isDemoUser(ctx.userId)) return demoDenied();
-    if (!this.budget.verifyTripAccess(tripId, ctx.userId)) return noAccess();
+    if (await this.isDemoUser(ctx.userId)) return demoDenied();
+    if (!(await this.budget.verifyTripAccess(tripId, ctx.userId))) return noAccess();
     if (!(await this.guards.hasTripPermission('budget_edit', tripId, ctx.userId))) return permissionDenied();
     if (members !== undefined && member_ids !== undefined) return errorResult('Pass either members (uneven split) or member_ids (equal split), not both.');
-    if (place_id != null && !this.placeOnTrip(tripId, place_id)) return errorResult('place_id does not belong to this trip.');
+    if (place_id != null && !(await this.placeOnTrip(tripId, place_id))) return errorResult('place_id does not belong to this trip.');
     if (members !== undefined) {
-      const refusal = this.splitRefusal(tripId, members, this.settledTotalCents(tripId, payers, total_price, toCents(total_price)), payers);
+      const refusal = await this.splitRefusal(tripId, members, await this.settledTotalCents(tripId, payers, total_price, toCents(total_price)), payers);
       if (refusal) return errorResult(refusal);
     }
     // The split participants are the members of an uneven split; the equal-split
@@ -219,7 +221,7 @@ export class BudgetMcp {
     // Freeze the live FX rate at entry time so a settled position isn't re-opened
     // when live rates drift (#1445) — same as the REST create path.
     await this.budget.freezeForeignRate(tripId, itemData);
-    const item = this.budget.createBudgetItem(tripId, itemData);
+    const item = await this.budget.createBudgetItem(tripId, itemData);
     this.guards.safeBroadcast(tripId, 'budget:created', { item });
     return ok({ item });
   }
@@ -236,10 +238,10 @@ export class BudgetMcp {
     access: { group: 'budget', mode: 'write' },
   })
   async deleteBudgetItem({ tripId, itemId }: { tripId: number; itemId: number }, ctx: McpContext) {
-    if (this.isDemoUser(ctx.userId)) return demoDenied();
-    if (!this.budget.verifyTripAccess(tripId, ctx.userId)) return noAccess();
+    if (await this.isDemoUser(ctx.userId)) return demoDenied();
+    if (!(await this.budget.verifyTripAccess(tripId, ctx.userId))) return noAccess();
     if (!(await this.guards.hasTripPermission('budget_edit', tripId, ctx.userId))) return permissionDenied();
-    const deleted = this.budget.deleteBudgetItem(itemId, tripId);
+    const deleted = await this.budget.deleteBudgetItem(itemId, tripId);
     if (!deleted) return errorResult('Budget item not found.');
     this.guards.safeBroadcast(tripId, 'budget:deleted', { itemId });
     return ok({ success: true });
@@ -278,16 +280,16 @@ export class BudgetMcp {
     },
     ctx: McpContext,
   ) {
-    if (this.isDemoUser(ctx.userId)) return demoDenied();
-    if (!this.budget.verifyTripAccess(tripId, ctx.userId)) return noAccess();
+    if (await this.isDemoUser(ctx.userId)) return demoDenied();
+    if (!(await this.budget.verifyTripAccess(tripId, ctx.userId))) return noAccess();
     if (!(await this.guards.hasTripPermission('budget_edit', tripId, ctx.userId))) return permissionDenied();
     if (members !== undefined && member_ids !== undefined) return errorResult('Pass either members (uneven split) or member_ids (equal split), not both.');
     if (members !== undefined) {
       // An edit that leaves the total alone still has to reconcile against it, so
       // the stored figure stands in when the call does not restate one.
-      const existing = this.budget.getBudgetItem(itemId, tripId);
+      const existing = await this.budget.getBudgetItem(itemId, tripId);
       if (!existing) return errorResult('Budget item not found.');
-      const refusal = this.splitRefusal(tripId, members, this.settledTotalCents(tripId, payers, total_price, toCents(existing.total_price)), payers);
+      const refusal = await this.splitRefusal(tripId, members, await this.settledTotalCents(tripId, payers, total_price, toCents(existing.total_price)), payers);
       if (refusal) return errorResult(refusal);
     }
     // Freeze-then-write composite: a currency change re-freezes the rate at entry
@@ -322,16 +324,16 @@ export class BudgetMcp {
     },
     ctx: McpContext,
   ) {
-    if (this.isDemoUser(ctx.userId)) return demoDenied();
-    if (!this.budget.verifyTripAccess(tripId, ctx.userId)) return noAccess();
+    if (await this.isDemoUser(ctx.userId)) return demoDenied();
+    if (!(await this.budget.verifyTripAccess(tripId, ctx.userId))) return noAccess();
     if (!(await this.guards.hasTripPermission('budget_edit', tripId, ctx.userId))) return permissionDenied();
-    if (place_id != null && !this.placeOnTrip(tripId, place_id)) return errorResult('place_id does not belong to this trip.');
+    if (place_id != null && !(await this.placeOnTrip(tripId, place_id))) return errorResult('place_id does not belong to this trip.');
     // Omitted userIds → default to the whole trip, matching create_budget_item.
     const members = (userIds && userIds.length > 0) ? userIds : await this.resolveMemberIds(tripId, undefined);
     try {
-      const item = this.db.transaction(() => {
-        const created = this.budget.createBudgetItem(tripId, { category, name, total_price, note, member_ids: members, place_id });
-        return this.budget.getBudgetItem(created.id, tripId)!;
+      const item = await this.uow.transactional(async () => {
+        const created = await this.budget.createBudgetItem(tripId, { category, name, total_price, note, member_ids: members, place_id });
+        return (await this.budget.getBudgetItem(created.id, tripId))!;
       });
       this.guards.safeBroadcast(tripId, 'budget:created', { item });
       if (members && members.length > 0) this.guards.safeBroadcast(tripId, 'budget:members-updated', { itemId: item.id, members: item.members, persons: item.persons });
@@ -354,12 +356,12 @@ export class BudgetMcp {
     access: { group: 'budget', mode: 'write' },
   })
   async setBudgetItemMembers({ tripId, itemId, userIds }: { tripId: number; itemId: number; userIds: number[] }, ctx: McpContext) {
-    if (this.isDemoUser(ctx.userId)) return demoDenied();
-    if (!this.budget.verifyTripAccess(tripId, ctx.userId)) return noAccess();
+    if (await this.isDemoUser(ctx.userId)) return demoDenied();
+    if (!(await this.budget.verifyTripAccess(tripId, ctx.userId))) return noAccess();
     if (!(await this.guards.hasTripPermission('budget_edit', tripId, ctx.userId))) return permissionDenied();
-    const result = this.budget.updateMembers(itemId, tripId, userIds);
+    const result = await this.budget.updateMembers(itemId, tripId, userIds);
     if (!result) return errorResult('Budget item not found.');
-    const item = this.budget.getBudgetItem(itemId, tripId);
+    const item = await this.budget.getBudgetItem(itemId, tripId);
     this.guards.safeBroadcast(tripId, 'budget:members-updated', { itemId, members: result.members, persons: result.item.persons });
     return ok({ item });
   }
@@ -378,10 +380,10 @@ export class BudgetMcp {
     access: { group: 'budget', mode: 'write' },
   })
   async toggleBudgetMemberPaid({ tripId, itemId, memberId, paid }: { tripId: number; itemId: number; memberId: number; paid: boolean }, ctx: McpContext) {
-    if (this.isDemoUser(ctx.userId)) return demoDenied();
-    if (!this.budget.verifyTripAccess(tripId, ctx.userId)) return noAccess();
+    if (await this.isDemoUser(ctx.userId)) return demoDenied();
+    if (!(await this.budget.verifyTripAccess(tripId, ctx.userId))) return noAccess();
     if (!(await this.guards.hasTripPermission('budget_edit', tripId, ctx.userId))) return permissionDenied();
-    const member = this.budget.toggleMemberPaid(itemId, tripId, memberId, paid);
+    const member = await this.budget.toggleMemberPaid(itemId, tripId, memberId, paid);
     this.guards.safeBroadcast(tripId, 'budget:member-paid-updated', { itemId, userId: memberId, paid: paid ? 1 : 0 });
     return ok({ member });
   }
@@ -400,12 +402,12 @@ export class BudgetMcp {
     access: { group: 'budget', mode: 'read' },
   })
   async getSettlementSummary({ tripId, base }: { tripId: number; base?: string }, ctx: McpContext) {
-    if (!this.budget.verifyTripAccess(tripId, ctx.userId)) return noAccess();
+    if (!(await this.budget.verifyTripAccess(tripId, ctx.userId))) return noAccess();
     const trip = this.db.get<{ currency?: string }>('SELECT currency FROM trips WHERE id = ?', tripId);
     const tripCurrency = trip?.currency || 'EUR';
     const effectiveBase = (base || tripCurrency).toUpperCase();
     const rates = await this.exchangeRates.getRates(effectiveBase);
-    const summary = this.budget.calculateSettlement(tripId, { base: effectiveBase, rates, tripCurrency });
+    const summary = await this.budget.calculateSettlement(tripId, { base: effectiveBase, rates, tripCurrency });
     return ok({ summary });
   }
 
@@ -420,8 +422,8 @@ export class BudgetMcp {
     access: { group: 'budget', mode: 'read' },
   })
   async listSettlements({ tripId }: { tripId: number }, ctx: McpContext) {
-    if (!this.budget.verifyTripAccess(tripId, ctx.userId)) return noAccess();
-    return ok({ settlements: this.budget.listSettlements(tripId) });
+    if (!(await this.budget.verifyTripAccess(tripId, ctx.userId))) return noAccess();
+    return ok({ settlements: await this.budget.listSettlements(tripId) });
   }
 
   @Tool({
@@ -443,8 +445,8 @@ export class BudgetMcp {
     { tripId, from_user_id, to_user_id, amount, currency, settled_at }: { tripId: number; from_user_id: number; to_user_id: number; amount: number; currency?: string | null; settled_at?: string | null },
     ctx: McpContext,
   ) {
-    if (this.isDemoUser(ctx.userId)) return demoDenied();
-    if (!this.budget.verifyTripAccess(tripId, ctx.userId)) return noAccess();
+    if (await this.isDemoUser(ctx.userId)) return demoDenied();
+    if (!(await this.budget.verifyTripAccess(tripId, ctx.userId))) return noAccess();
     if (!(await this.guards.hasTripPermission('budget_edit', tripId, ctx.userId))) return permissionDenied();
     // Freeze-then-write composite, same as the REST path: the rate for the display
     // currency is frozen at entry time (#1445).
@@ -474,8 +476,8 @@ export class BudgetMcp {
     { tripId, settlementId, from_user_id, to_user_id, amount, currency, settled_at }: { tripId: number; settlementId: number; from_user_id: number; to_user_id: number; amount: number; currency?: string | null; settled_at?: string | null },
     ctx: McpContext,
   ) {
-    if (this.isDemoUser(ctx.userId)) return demoDenied();
-    if (!this.budget.verifyTripAccess(tripId, ctx.userId)) return noAccess();
+    if (await this.isDemoUser(ctx.userId)) return demoDenied();
+    if (!(await this.budget.verifyTripAccess(tripId, ctx.userId))) return noAccess();
     if (!(await this.guards.hasTripPermission('budget_edit', tripId, ctx.userId))) return permissionDenied();
     // Freeze-then-write composite, same as the REST path: an edit that leaves the
     // currency alone keeps the rate frozen at settle time.
@@ -497,10 +499,10 @@ export class BudgetMcp {
     access: { group: 'budget', mode: 'write' },
   })
   async deleteSettlement({ tripId, settlementId }: { tripId: number; settlementId: number }, ctx: McpContext) {
-    if (this.isDemoUser(ctx.userId)) return demoDenied();
-    if (!this.budget.verifyTripAccess(tripId, ctx.userId)) return noAccess();
+    if (await this.isDemoUser(ctx.userId)) return demoDenied();
+    if (!(await this.budget.verifyTripAccess(tripId, ctx.userId))) return noAccess();
     if (!(await this.guards.hasTripPermission('budget_edit', tripId, ctx.userId))) return permissionDenied();
-    const deleted = this.budget.deleteSettlement(settlementId, tripId);
+    const deleted = await this.budget.deleteSettlement(settlementId, tripId);
     if (!deleted) return errorResult('Settlement not found.');
     this.guards.safeBroadcast(tripId, 'budget:settlement-deleted', { settlementId });
     return ok({ success: true });
@@ -518,7 +520,7 @@ export class BudgetMcp {
   })
   async tripBudgetResource(uri: URL, { tripId }: { tripId: string | string[] }, ctx: McpContext) {
     const id = parseId(tripId);
-    if (id === null || !this.budget.verifyTripAccess(id, ctx.userId)) {
+    if (id === null || !(await this.budget.verifyTripAccess(id, ctx.userId))) {
       return {
         contents: [{
           uri: uri.href,
@@ -527,7 +529,7 @@ export class BudgetMcp {
         }],
       };
     }
-    const items = this.budget.listBudgetItems(id);
+    const items = await this.budget.listBudgetItems(id);
     return {
       contents: [{
         uri: uri.href,
@@ -547,7 +549,7 @@ export class BudgetMcp {
   })
   async tripBudgetPerPersonResource(uri: URL, { tripId }: { tripId: string | string[] }, ctx: McpContext) {
     const id = parseId(tripId);
-    if (id === null || !this.budget.verifyTripAccess(id, ctx.userId)) {
+    if (id === null || !(await this.budget.verifyTripAccess(id, ctx.userId))) {
       return {
         contents: [{
           uri: uri.href,
@@ -556,7 +558,7 @@ export class BudgetMcp {
         }],
       };
     }
-    const summary = this.budget.getPerPersonSummary(id);
+    const summary = await this.budget.getPerPersonSummary(id);
     return {
       contents: [{
         uri: uri.href,
@@ -576,7 +578,7 @@ export class BudgetMcp {
   })
   async tripBudgetSettlementResource(uri: URL, { tripId }: { tripId: string | string[] }, ctx: McpContext) {
     const id = parseId(tripId);
-    if (id === null || !this.budget.verifyTripAccess(id, ctx.userId)) {
+    if (id === null || !(await this.budget.verifyTripAccess(id, ctx.userId))) {
       return {
         contents: [{
           uri: uri.href,
@@ -592,7 +594,7 @@ export class BudgetMcp {
     const tripCurrency = trip?.currency || 'EUR';
     const effectiveBase = tripCurrency.toUpperCase();
     const rates = await this.exchangeRates.getRates(effectiveBase);
-    const settlement = this.budget.calculateSettlement(id, { base: effectiveBase, rates, tripCurrency });
+    const settlement = await this.budget.calculateSettlement(id, { base: effectiveBase, rates, tripCurrency });
     return {
       contents: [{
         uri: uri.href,

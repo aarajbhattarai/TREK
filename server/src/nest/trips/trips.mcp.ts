@@ -493,7 +493,7 @@ export class TripsMcp {
     const ownerRow = this.trips.getOwner(tripId);
     if (!ownerRow || ownerRow.user_id !== ctx.userId)
       return { content: [{ type: 'text' as const, text: 'Only the trip owner can manage guests.' }], isError: true };
-    if (!this.members.deleteGuest(tripId, guestId))
+    if (!(await this.members.deleteGuest(tripId, guestId)))
       return { content: [{ type: 'text' as const, text: 'Guest not found.' }], isError: true };
     this.guards.safeBroadcast(tripId, 'member:removed', { userId: guestId });
     return ok({ success: true });

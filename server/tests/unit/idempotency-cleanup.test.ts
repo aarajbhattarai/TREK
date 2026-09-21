@@ -36,27 +36,27 @@ afterEach(() => {
 });
 
 describe('purgeExpiredIdempotencyKeys', () => {
-  it('removes keys older than the 30-day default, keeps recent ones', () => {
+  it('removes keys older than the 30-day default, keeps recent ones', async () => {
     insertKey('old', 31 * DAY);
     insertKey('fresh', 5 * DAY);
 
-    const removed = purgeExpiredIdempotencyKeys(NOW, undefined, db);
+    const removed = await purgeExpiredIdempotencyKeys(NOW, undefined, db);
 
     expect(removed).toBe(1);
     const keys = db.prepare('SELECT key FROM idempotency_keys').all().map((r: { key: string }) => r.key);
     expect(keys).toEqual(['fresh']);
   });
 
-  it('keeps a 25-day-old key that the old 24h TTL would have dropped', () => {
+  it('keeps a 25-day-old key that the old 24h TTL would have dropped', async () => {
     insertKey('offline-trip', 25 * DAY);
-    expect(purgeExpiredIdempotencyKeys(NOW, undefined, db)).toBe(0);
+    expect(await purgeExpiredIdempotencyKeys(NOW, undefined, db)).toBe(0);
     expect(db.prepare('SELECT COUNT(*) c FROM idempotency_keys').get()).toMatchObject({ c: 1 });
   });
 
-  it('respects the IDEMPOTENCY_TTL_SECONDS override', () => {
+  it('respects the IDEMPOTENCY_TTL_SECONDS override', async () => {
     process.env.IDEMPOTENCY_TTL_SECONDS = String(DAY);
     insertKey('twoDays', 2 * DAY);
-    expect(purgeExpiredIdempotencyKeys(NOW, undefined, db)).toBe(1);
+    expect(await purgeExpiredIdempotencyKeys(NOW, undefined, db)).toBe(1);
   });
 });
 
@@ -89,7 +89,7 @@ describe('IdempotencyCleanupJob', () => {
     expect(off.registrar.register).not.toHaveBeenCalled();
   });
 
-  it('the tick purges through the injected DatabaseService', () => {
+  it('the tick purges through the injected DatabaseService', async () => {
     // The tick uses the live clock, so these fixtures age against Date.now()
     // (the pure-function cases above pin their own fixed NOW instead).
     const liveNowSec = Math.floor(Date.now() / 1000);
@@ -102,7 +102,7 @@ describe('IdempotencyCleanupJob', () => {
     liveInsert('fresh', 5 * DAY);
 
     const { job } = makeJob();
-    job.tick();
+    await job.tick();
     const keys = db.prepare('SELECT key FROM idempotency_keys').all().map((r: { key: string }) => r.key);
     expect(keys).toEqual(['fresh']);
   });

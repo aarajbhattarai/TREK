@@ -41,8 +41,8 @@ export class TripInviteMcp {
   ) {}
 
   /** The AuthService.isDemoUser check without the auth graph (demo-write.ts). */
-  private isDemoUser(userId: number): boolean {
-    return isDemoUserId(this.env, this.db, userId);
+  private async isDemoUser(userId: number): Promise<boolean> {
+    return await isDemoUserId(this.env, this.db, userId);
   }
 
   /** Trip access first (404-equivalent), then share_manage, which is requireManage() in the controller. */
@@ -88,7 +88,7 @@ export class TripInviteMcp {
     { tripId, expires_in_days }: { tripId: number } & TripInviteLinkCreateRequest,
     ctx: McpContext,
   ) {
-    if (this.isDemoUser(ctx.userId)) return demoDenied();
+    if (await this.isDemoUser(ctx.userId)) return demoDenied();
     const denied = await this.denyManage(tripId, ctx.userId);
     if ((await denied)) return denied;
     // The route's own coercion, kept verbatim: the shared contract admits a
@@ -122,7 +122,7 @@ export class TripInviteMcp {
     access: (ctx) => canShareTrips(ctx.scopes) && canWrite(ctx.scopes, 'trips'),
   })
   async deleteTripInviteLink({ tripId }: { tripId: number }, ctx: McpContext) {
-    if (this.isDemoUser(ctx.userId)) return demoDenied();
+    if (await this.isDemoUser(ctx.userId)) return demoDenied();
     const denied = await this.denyManage(tripId, ctx.userId);
     if ((await denied)) return denied;
     this.invites.remove(tripId);

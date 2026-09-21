@@ -95,7 +95,7 @@ export class AdminController {
 
   @Delete('users/:id')
   async deleteUser(@CurrentUser() user: User, @Param('id') id: string, @Req() req: Request) {
-    const result = ok(this.admin.deleteUser(id, user.id));
+    const result = ok(await this.admin.deleteUser(id, user.id));
     await this.audit.writeAudit({ userId: user.id, action: 'admin.user_delete', resource: String(id), ip: getClientIp(req), details: { targetUser: result.email } });
     logInfo(`Admin ${user.email} deleted user ${result.email}`);
     return { success: true };

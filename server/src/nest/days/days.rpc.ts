@@ -31,7 +31,7 @@ export class DaysRpc {
     if (!parsed.success) throw new BadParams(`invalid day: ${schemaMessage(parsed.error)}`);
     await this.guards.requireTripEdit(tripId, actor, DAY_EDIT_ACTION);
     const input = parsed.data as { date?: string; notes?: string };
-    const day = this.days.create(tripId, input.date, input.notes);
+    const day = await this.days.create(tripId, input.date, input.notes);
     this.realtime.broadcast(tripId, 'day:created', { day });
     return day;
   }
@@ -45,7 +45,7 @@ export class DaysRpc {
     if (!parsed.success) throw new BadParams(`invalid day: ${schemaMessage(parsed.error)}`);
     await this.guards.requireTripEdit(tripId, actor, DAY_EDIT_ACTION);
     // getDay scopes the row to the trip before the write touches it.
-    const current = this.days.getDay(dayId, tripId);
+    const current = await this.days.getDay(dayId, tripId);
     if (!current) throw new ForbiddenResource(`no day ${dayId} on trip ${tripId}`);
     const day = await this.days.update(dayId, current, parsed.data as { notes?: string; title?: string | null });
     this.realtime.broadcast(tripId, 'day:updated', { day });
@@ -58,8 +58,8 @@ export class DaysRpc {
     const dayId = num(params.dayId, 'dayId');
     const actor = this.guards.requireActor(ctx, 'day');
     await this.guards.requireTripEdit(tripId, actor, DAY_EDIT_ACTION);
-    if (!this.days.getDay(dayId, tripId)) throw new ForbiddenResource(`no day ${dayId} on trip ${tripId}`);
-    this.days.remove(dayId);
+    if (!(await this.days.getDay(dayId, tripId))) throw new ForbiddenResource(`no day ${dayId} on trip ${tripId}`);
+    await this.days.remove(dayId);
     this.realtime.broadcast(tripId, 'day:deleted', { dayId });
     return { deleted: true };
   }

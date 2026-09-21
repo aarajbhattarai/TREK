@@ -1,7 +1,7 @@
 import { CallHandler, ExecutionContext, HttpException, Injectable, NestInterceptor } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { Observable, from, of } from 'rxjs';
-import { finalize, switchMap } from 'rxjs/operators';
+import { finalize, mergeAll, switchMap } from 'rxjs/operators';
 import { DatabaseService } from '../database/database.service';
 
 /**
@@ -53,7 +53,7 @@ interface IdempotencyRow {
 export class IdempotencyInterceptor implements NestInterceptor {
   constructor(private readonly database: DatabaseService) {}
 
-  intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
+  async intercept(context: ExecutionContext, next: CallHandler): Promise<Observable<unknown>> {
     const req = context.switchToHttp().getRequest<Request & { user?: { id: number } }>();
     const res = context.switchToHttp().getResponse<Response>();
 
@@ -71,32 +71,48 @@ export class IdempotencyInterceptor implements NestInterceptor {
       throw new HttpException({ error: 'X-Idempotency-Key exceeds maximum length of 128 characters' }, 400);
     }
 
-    const existing = this.lookup(key, userId, req);
+    const existing = await this.lookup(key, userId, req);
     if (existing) return this.replay(existing, res);
 
     const signature = `${userId}|${req.method}|${req.path}|${key}`;
     const pending = inFlight.get(signature);
     if (pending !== undefined) {
+      // The wait stays inside the stream, where it was: `intercept` answers at
+      // once with an Observable that only produces when the first request has.
+      // `afterPending` is async now (the store read is), so what switchMap emits
+      // is itself an Observable and needs the extra mergeAll to be flattened.
       return from(pending).pipe(
-        switchMap(() => {
-          const stored = this.lookup(key, userId, req);
-          if (stored) return this.replay(stored, res);
-          // The first request answered without caching anything (it failed, or
-          // it never went through res.json). Run this one normally rather than
-          // inventing a response for it.
-          return this.run(signature, key, userId, req, res, next);
-        }),
+        switchMap(() => this.afterPending(signature, key, userId, req, res, next)),
+        mergeAll(),
       );
     }
 
-    return this.run(signature, key, userId, req, res, next);
+    return await this.run(signature, key, userId, req, res, next);
+  }
+
+  /**
+   * What a waiter does once the request holding its key has answered: replay the
+   * response that request stored, or — when it stored nothing (it failed, or it
+   * never went through res.json) — run normally rather than inventing one.
+   */
+  private async afterPending(
+    signature: string,
+    key: string,
+    userId: number,
+    req: Request,
+    res: Response,
+    next: CallHandler,
+  ): Promise<Observable<unknown>> {
+    const stored = await this.lookup(key, userId, req);
+    if (stored) return this.replay(stored, res);
+    return await this.run(signature, key, userId, req, res, next);
   }
 
   /**
    * Scope the lookup by method + path as well as user, so the same key replayed
    * against a different endpoint can't return an unrelated cached body.
    */
-  private lookup(key: string, userId: number, req: Request): IdempotencyRow | undefined {
+  private async lookup(key: string, userId: number, req: Request): Promise<IdempotencyRow | undefined> {
     return this.database.get<IdempotencyRow>(
       'SELECT status_code, response_body FROM idempotency_keys WHERE key = ? AND user_id = ? AND method = ? AND path = ?',
       key, userId, req.method, req.path,
@@ -108,14 +124,14 @@ export class IdempotencyInterceptor implements NestInterceptor {
     return of(JSON.parse(row.response_body));
   }
 
-  private run(
+  private async run(
     signature: string,
     key: string,
     userId: number,
     req: Request,
     res: Response,
     next: CallHandler,
-  ): Observable<unknown> {
+  ): Promise<Observable<unknown>> {
     const originalJson = res.json.bind(res);
     const database = this.database;
 

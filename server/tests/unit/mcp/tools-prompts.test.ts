@@ -136,13 +136,14 @@ beforeAll(async () => {
   promptPackingService = new PackingService(promptDbs(), new PermissionsService(promptDbs(), await createTestUnitOfWork(promptDbs().connection)), new RealtimeService(), notificationsStub());
   packingMcp = new PackingMcp(promptPackingService, authStub, addonsStub, promptGuards);
   budgetMcp = new BudgetMcp(
-  new BudgetService(promptDbs(), new PermissionsService(promptDbs(), await createTestUnitOfWork(promptDbs().connection)), new ExchangeRatesService(), new RealtimeService()),
+  new BudgetService(promptDbs(), new PermissionsService(promptDbs(), await createTestUnitOfWork(promptDbs().connection)), new ExchangeRatesService(), new RealtimeService(), await createTestUnitOfWork(promptDbs().connection)),
   new ExchangeRatesService(),
   promptDbs(),
   new RuntimeEnvService(),
   new TripMembershipService(promptDbs()),
   addonsStub,
   promptGuards,
+  await createTestUnitOfWork(promptDbs().connection),
 );
   tripPromptsMcp = new TripPromptsMcp(tripsStub, readModelStub, promptPackingService, addonsStub);
 });

@@ -100,8 +100,8 @@ let daysSvc: DaysService;
 let placesSvc: PlacesService;
 let membersSvc: TripMembersService;
 beforeAll(async () => {
-  budgetSvc = new BudgetService(dbs(), new PermissionsService(dbs(), await createTestUnitOfWork(dbs().connection)), new ExchangeRatesService(), new RealtimeService());
-  daysSvc = new DaysService(dbs(), new PermissionsService(dbs(), await createTestUnitOfWork(dbs().connection)), new RealtimeService(), new QueryHelpersService(dbs()));
+  budgetSvc = new BudgetService(dbs(), new PermissionsService(dbs(), await createTestUnitOfWork(dbs().connection)), new ExchangeRatesService(), new RealtimeService(), await createTestUnitOfWork(dbs().connection));
+  daysSvc = new DaysService(dbs(), new PermissionsService(dbs(), await createTestUnitOfWork(dbs().connection)), new RealtimeService(), new QueryHelpersService(dbs()), await createTestUnitOfWork(dbs().connection));
   placesSvc = new PlacesService(
   dbs(), new PermissionsService(dbs(), await createTestUnitOfWork(dbs().connection)), new RealtimeService(),
   new MapsService(dbs(), photoCache), new QueryHelpersService(dbs()),
@@ -110,7 +110,7 @@ beforeAll(async () => {
   makeStorageFixture('').storage,
   await accommodationsOver(dbs()), await createTestUnitOfWork(dbs().connection),
 );
-  membersSvc = new TripMembersService(dbs(), budgetSvc, new UserCleanupService(dbs(), budgetSvc), new PermissionsService(dbs(), await createTestUnitOfWork(dbs().connection)), new RealtimeService(), notificationsStub());
+  membersSvc = new TripMembersService(dbs(), budgetSvc, new UserCleanupService(dbs(), budgetSvc, await createTestUnitOfWork(dbs().connection)), new PermissionsService(dbs(), await createTestUnitOfWork(dbs().connection)), new RealtimeService(), notificationsStub(), await createTestUnitOfWork(dbs().connection));
 });
 
 const buildReadModel = async (database: DatabaseService, roster: TripMembersService = membersSvc) =>

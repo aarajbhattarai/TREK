@@ -610,7 +610,7 @@ export class AuthService {
     return { success: true, token };
   }
 
-  deleteAccount(userId: number, userEmail: string, userRole: string): { error?: string; status?: number; success?: boolean } {
+  async deleteAccount(userId: number, userEmail: string, userRole: string): Promise<{ error?: string; status?: number; success?: boolean }> {
     if (readEnv().demo.enabled && isDemoEmail(userEmail)) {
       return { error: 'Account deletion is disabled in demo mode.', status: 403 };
     }
@@ -620,7 +620,7 @@ export class AuthService {
         return { error: 'Cannot delete the last admin account', status: 400 };
       }
     }
-    this.userCleanup.deleteUserCompletely(userId);
+    await this.userCleanup.deleteUserCompletely(userId);
     emitUserDeleted(userId); // let plugins erase their own per-user data
     return { success: true };
   }

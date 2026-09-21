@@ -62,7 +62,7 @@ export class TripReadModelService {
 
     const accommodations = this.accommodations.list(tripId);
 
-    const budgetItems = this.budget.listBudgetItems(tripId);
+    const budgetItems = await this.budget.listBudgetItems(tripId);
     const budget = {
       items: budgetItems,
       item_count: budgetItems.length,
@@ -108,7 +108,7 @@ export class TripReadModelService {
       // (#858) never land in this viewer's offline cache.
       packingItems: this.packing.listItems(tripId, viewerId),
       todoItems: this.todo.listItems(tripId),
-      budgetItems: this.budget.listBudgetItems(tripId),
+      budgetItems: await this.budget.listBudgetItems(tripId),
       reservations: this.reservations.list(tripId),
       files: this.files.listFiles(tripId, false),
       accommodations: this.accommodations.list(tripId),

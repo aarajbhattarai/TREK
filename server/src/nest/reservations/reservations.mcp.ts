@@ -156,7 +156,7 @@ interface LegPlan {
   reservationEndTime?: string;
   // A day row carries an optional date, so the caller cannot promise one. Every
   // read below treats a dateless day as "no date known" rather than stamping undefined.
-  lookupDay: (id: number) => { date?: string | null } | undefined;
+  lookupDay: (id: number) => Promise<{ date?: string | null } | undefined>;
 }
 
 interface LegOutcome {
@@ -174,7 +174,7 @@ interface LegOutcome {
  * Validate the legs against the endpoints and fold them into the metadata.
  * Returns the values the write should use, or the first error as text.
  */
-function applyLegs(plan: LegPlan): LegOutcome | { error: string } {
+async function applyLegs(plan: LegPlan): Promise<LegOutcome | { error: string }> {
   const { legs, lookupDay } = plan;
   const last = legs.length - 1;
 
@@ -190,7 +190,7 @@ function applyLegs(plan: LegPlan): LegOutcome | { error: string } {
   for (let i = 0; i < legs.length; i++) {
     for (const field of ['dep_day_id', 'arr_day_id'] as const) {
       const dayId = legs[i][field];
-      if (dayId != null && !lookupDay(dayId))
+      if (dayId != null && !(await lookupDay(dayId)))
         return { error: `legs[${i}].${field} does not belong to this trip.` };
     }
   }
@@ -204,10 +204,10 @@ function applyLegs(plan: LegPlan): LegOutcome | { error: string } {
 
   const endpoints = plan.endpoints.map(e => ({ ...e }));
   let endpointsChanged = false;
-  const syncEndpoint = (index: number, time: string | null | undefined, dayId: number | null | undefined, label: string): string | null => {
+  const syncEndpoint = async (index: number, time: string | null | undefined, dayId: number | null | undefined, label: string): Promise<string | null> => {
     const ep = endpoints[index];
     if (dayId != null && !ep.local_date) {
-      const day = lookupDay(dayId);
+      const day = await lookupDay(dayId);
       if (day?.date) { ep.local_date = day.date; endpointsChanged = true; }
     }
     if (!time) return null;
@@ -229,7 +229,7 @@ function applyLegs(plan: LegPlan): LegOutcome | { error: string } {
     if (leg.to && arrEp.code && leg.to.toUpperCase() !== arrEp.code.toUpperCase())
       return { error: `legs[${i}].to (${leg.to}) does not match endpoints[${i + 1}] (${arrEp.code}).` };
 
-    const depConflict = syncEndpoint(i, leg.dep_time, leg.dep_day_id, `legs[${i}].dep_time`);
+    const depConflict = await syncEndpoint(i, leg.dep_time, leg.dep_day_id, `legs[${i}].dep_time`);
     if (depConflict) return { error: depConflict };
 
     const entry: MetaRecord = {
@@ -251,7 +251,7 @@ function applyLegs(plan: LegPlan): LegOutcome | { error: string } {
     merged.push(entry);
   }
 
-  const arrConflict = syncEndpoint(legs.length, legs[last].arr_time, lastArrDay, `legs[${last}].arr_time`);
+  const arrConflict = await syncEndpoint(legs.length, legs[last].arr_time, lastArrDay, `legs[${last}].arr_time`);
   if (arrConflict) return { error: arrConflict };
 
   const metadata: MetaRecord = { ...plan.baseMetadata, legs: merged };
@@ -278,9 +278,9 @@ function applyLegs(plan: LegPlan): LegOutcome | { error: string } {
   const endDayId = plan.endDayId ?? lastArrDay ?? undefined;
   // Same fallback as the form's buildTime: date the time when the day is known,
   // otherwise keep the bare 'HH:mm' rather than dropping it.
-  const stamp = (day: number | undefined, time: string | null | undefined) => {
+  const stamp = async (day: number | undefined, time: string | null | undefined) => {
     if (!time) return undefined;
-    const row = day === undefined ? undefined : lookupDay(day);
+    const row = day === undefined ? undefined : await lookupDay(day);
     return row?.date ? `${row.date}T${time}` : time;
   };
 
@@ -290,8 +290,8 @@ function applyLegs(plan: LegPlan): LegOutcome | { error: string } {
     endpointsChanged,
     day_id: dayId,
     end_day_id: endDayId,
-    reservation_time: plan.reservationTime ?? stamp(dayId, legs[0].dep_time),
-    reservation_end_time: plan.reservationEndTime ?? stamp(endDayId, legs[last].arr_time),
+    reservation_time: plan.reservationTime ?? await stamp(dayId, legs[0].dep_time),
+    reservation_end_time: plan.reservationEndTime ?? await stamp(endDayId, legs[last].arr_time),
   };
 }
 
@@ -366,13 +366,13 @@ export class ReservationsMcp {
     if (!(await this.guards.hasTripPermission('reservation_edit', tripId, ctx.userId))) return permissionDenied();
 
     // Validate that all referenced IDs belong to this trip
-    if (day_id && !this.days.getDay(day_id, tripId))
+    if (day_id && !(await this.days.getDay(day_id, tripId)))
       return errorResult('day_id does not belong to this trip.');
     if (place_id && !this.assignments.placeExists(place_id, tripId))
       return errorResult('place_id does not belong to this trip.');
-    if (start_day_id && !this.days.getDay(start_day_id, tripId))
+    if (start_day_id && !(await this.days.getDay(start_day_id, tripId)))
       return errorResult('start_day_id does not belong to this trip.');
-    if (end_day_id && !this.days.getDay(end_day_id, tripId))
+    if (end_day_id && !(await this.days.getDay(end_day_id, tripId)))
       return errorResult('end_day_id does not belong to this trip.');
     if (assignment_id && !this.assignments.getAssignmentForTrip(assignment_id, tripId))
       return errorResult('assignment_id does not belong to this trip.');
@@ -395,7 +395,7 @@ export class ReservationsMcp {
     }
 
     if (price != null && price > 0) {
-      const item = this.budget.linkBudgetItemToReservation(tripId, reservation.id, {
+      const item = await this.budget.linkBudgetItemToReservation(tripId, reservation.id, {
         name: title,
         category: budget_category || type,
         total_price: price,
@@ -540,7 +540,7 @@ export class ReservationsMcp {
     // The service scopes the write to the trip on its own, so a foreign id is
     // already harmless — say so rather than reporting a success that moved
     // nothing, the way the sibling tools above do.
-    if (dayId && !this.days.getDay(dayId, tripId))
+    if (dayId && !(await this.days.getDay(dayId, tripId)))
       return errorResult('dayId does not belong to this trip.');
 
     this.reservations.updatePositions(tripId, positions, dayId);
@@ -579,9 +579,9 @@ export class ReservationsMcp {
 
     if (!this.assignments.placeExists(place_id, tripId))
       return errorResult('place_id does not belong to this trip.');
-    if (!this.days.getDay(start_day_id, tripId))
+    if (!(await this.days.getDay(start_day_id, tripId)))
       return errorResult('start_day_id does not belong to this trip.');
-    if (!this.days.getDay(end_day_id, tripId))
+    if (!(await this.days.getDay(end_day_id, tripId)))
       return errorResult('end_day_id does not belong to this trip.');
 
     const isNewAccommodation = !current.accommodation_id;
@@ -700,9 +700,9 @@ export class ReservationsMcp {
 
     if (metadata && 'legs' in metadata) return errorResult(LEGS_IN_METADATA_ERROR);
 
-    if (start_day_id && !this.days.getDay(start_day_id, tripId))
+    if (start_day_id && !(await this.days.getDay(start_day_id, tripId)))
       return errorResult('start_day_id does not belong to this trip.');
-    if (end_day_id && !this.days.getDay(end_day_id, tripId))
+    if (end_day_id && !(await this.days.getDay(end_day_id, tripId)))
       return errorResult('end_day_id does not belong to this trip.');
 
     const resolved = resolveEndpointCoords(endpoints);
@@ -716,7 +716,7 @@ export class ReservationsMcp {
     let arrivalTime = reservation_end_time;
 
     if (legs !== undefined) {
-      const applied = applyLegs({
+      const applied = await applyLegs({
         legs,
         type,
         endpoints: resolved.endpoints,
@@ -757,7 +757,7 @@ export class ReservationsMcp {
     });
 
     if (price != null && price > 0) {
-      const item = this.budget.linkBudgetItemToReservation(tripId, reservation.id, {
+      const item = await this.budget.linkBudgetItemToReservation(tripId, reservation.id, {
         name: title,
         category: budget_category || type,
         total_price: price,
@@ -815,9 +815,9 @@ export class ReservationsMcp {
     if (!(TRANSPORT_TYPES as readonly string[]).includes(resolvedType))
       return errorResult('Reservation is not a transport type. Use update_reservation instead.');
 
-    if (start_day_id && !this.days.getDay(start_day_id, tripId))
+    if (start_day_id && !(await this.days.getDay(start_day_id, tripId)))
       return errorResult('start_day_id does not belong to this trip.');
-    if (end_day_id && !this.days.getDay(end_day_id, tripId))
+    if (end_day_id && !(await this.days.getDay(end_day_id, tripId)))
       return errorResult('end_day_id does not belong to this trip.');
 
     // Only resolve when endpoints are explicitly provided; undefined leaves them untouched.
@@ -836,7 +836,7 @@ export class ReservationsMcp {
 
     if (legs !== undefined) {
       const stored = parseStoredMetadata(existing.metadata);
-      const applied = applyLegs({
+      const applied = await applyLegs({
         legs,
         type: resolvedType,
         // Endpoints the caller did not replace stay the geometry the legs run

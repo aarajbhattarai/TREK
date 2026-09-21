@@ -57,8 +57,8 @@ const dbs = new DatabaseService(testDb);
 let budget: BudgetService;
 let svc: UserCleanupService;
 beforeAll(async () => {
-  budget = new BudgetService(dbs, new PermissionsService(dbs, await createTestUnitOfWork(dbs.connection)), new ExchangeRatesService(), new RealtimeService());
-  svc = new UserCleanupService(dbs, budget);
+  budget = new BudgetService(dbs, new PermissionsService(dbs, await createTestUnitOfWork(dbs.connection)), new ExchangeRatesService(), new RealtimeService(), await createTestUnitOfWork(dbs.connection));
+  svc = new UserCleanupService(dbs, budget, await createTestUnitOfWork(dbs.connection));
 });
 
 const installPlugin = (id: string, permissions: string[] | null) => {
@@ -149,11 +149,11 @@ describe('erasePluginUserData', () => {
     }
   });
 
-  it('USER-CLEANUP-005: survives a slim schema without the plugin tables', () => {
+  it('USER-CLEANUP-005: survives a slim schema without the plugin tables', async () => {
     const slim = new (require('better-sqlite3'))(':memory:');
     slim.exec('CREATE TABLE users (id INTEGER PRIMARY KEY)');
     slim.prepare('INSERT INTO users (id) VALUES (1)').run();
-    const slimSvc = new UserCleanupService(new DatabaseService(slim), budget);
+    const slimSvc = new UserCleanupService(new DatabaseService(slim), budget, await createTestUnitOfWork(testDb));
 
     expect(() => slimSvc.erasePluginUserData(1)).not.toThrow();
 
@@ -162,7 +162,7 @@ describe('erasePluginUserData', () => {
 });
 
 describe('deleteUserCompletely', () => {
-  it('USER-CLEANUP-006: removes the user and nulls the references that have no cascade', () => {
+  it('USER-CLEANUP-006: removes the user and nulls the references that have no cascade', async () => {
     const { user: owner } = createUser(testDb);
     const { user: victim } = createUser(testDb, { username: 'victim' });
     const trip = createTrip(testDb, owner.id);
@@ -171,14 +171,14 @@ describe('deleteUserCompletely', () => {
     testDb.prepare("INSERT INTO share_tokens (trip_id, token, created_by) VALUES (?, 'tok', ?)")
       .run(trip.id, victim.id);
 
-    svc.deleteUserCompletely(victim.id);
+    await svc.deleteUserCompletely(victim.id);
 
     expect(testDb.prepare('SELECT id FROM users WHERE id = ?').get(victim.id)).toBeUndefined();
     expect((testDb.prepare('SELECT invited_by FROM trip_members WHERE user_id = ?').get(owner.id) as { invited_by: number | null }).invited_by).toBeNull();
     expect(testDb.prepare('SELECT COUNT(*) AS c FROM share_tokens').get()).toEqual({ c: 0 });
   });
 
-  it('USER-CLEANUP-007: deletes their journeys and the entries they authored elsewhere', () => {
+  it('USER-CLEANUP-007: deletes their journeys and the entries they authored elsewhere', async () => {
     const { user: owner } = createUser(testDb);
     const { user: victim } = createUser(testDb, { username: 'victim' });
     const ownJourney = createJourney(victim.id, 'Mine');
@@ -186,28 +186,28 @@ describe('deleteUserCompletely', () => {
     testDb.prepare("INSERT INTO journey_entries (journey_id, author_id, type, title, entry_date, created_at, updated_at) VALUES (?, ?, 'note', 'Guest post', '2026-08-08', 0, 0)")
       .run(foreignJourney, victim.id);
 
-    svc.deleteUserCompletely(victim.id);
+    await svc.deleteUserCompletely(victim.id);
 
     expect(testDb.prepare('SELECT id FROM journeys WHERE id = ?').get(ownJourney)).toBeUndefined();
     expect(testDb.prepare('SELECT id FROM journeys WHERE id = ?').get(foreignJourney)).toBeDefined();
     expect(testDb.prepare('SELECT COUNT(*) AS c FROM journey_entries').get()).toEqual({ c: 0 });
   });
 
-  it('USER-CLEANUP-008: re-derives the expense divisor before the member rows cascade away', () => {
+  it('USER-CLEANUP-008: re-derives the expense divisor before the member rows cascade away', async () => {
     const { user: owner } = createUser(testDb);
     const { user: victim } = createUser(testDb, { username: 'victim' });
     const trip = createTrip(testDb, owner.id);
     testDb.prepare('INSERT INTO trip_members (trip_id, user_id) VALUES (?, ?)').run(trip.id, victim.id);
-    const item = budget.createBudgetItem(trip.id, { name: 'Dinner', total_price: 80, member_ids: [owner.id, victim.id] });
+    const item = await budget.createBudgetItem(trip.id, { name: 'Dinner', total_price: 80, member_ids: [owner.id, victim.id] });
     testDb.prepare('UPDATE budget_items SET paid_by_user_id = ? WHERE id = ?').run(victim.id, item.id);
 
-    svc.deleteUserCompletely(victim.id);
+    await svc.deleteUserCompletely(victim.id);
 
     const row = testDb.prepare('SELECT persons, paid_by_user_id FROM budget_items WHERE id = ?').get(item.id) as { persons: number | null; paid_by_user_id: number | null };
     expect(row).toEqual({ persons: 1, paid_by_user_id: null });
   });
 
-  it('USER-CLEANUP-009: is atomic — a failing users DELETE rolls the reference cleanup back', () => {
+  it('USER-CLEANUP-009: is atomic — a failing users DELETE rolls the reference cleanup back', async () => {
     const { user: owner } = createUser(testDb);
     const { user: victim } = createUser(testDb, { username: 'victim' });
     const trip = createTrip(testDb, owner.id);
@@ -222,7 +222,7 @@ describe('deleteUserCompletely', () => {
       return realRun(sql, ...params);
     });
 
-    expect(() => new UserCleanupService(failing, budget).deleteUserCompletely(victim.id)).toThrow('boom');
+    await expect(new UserCleanupService(failing, budget, await createTestUnitOfWork(testDb)).deleteUserCompletely(victim.id)).rejects.toThrow('boom');
 
     expect(testDb.prepare('SELECT id FROM users WHERE id = ?').get(victim.id)).toBeDefined();
     expect((testDb.prepare('SELECT invited_by FROM trip_members WHERE user_id = ?').get(owner.id) as { invited_by: number | null }).invited_by).toBe(victim.id);

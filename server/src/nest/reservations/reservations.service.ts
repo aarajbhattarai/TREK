@@ -1031,10 +1031,10 @@ export class ReservationsService {
   }
 
   /** POST side effect: auto-create a linked budget item when a price is provided. */
-  syncBudgetOnCreate(tripId: string, reservationId: number, title: string, type: string | undefined, entry: BudgetEntry, socketId: string | undefined): void {
+  async syncBudgetOnCreate(tripId: string, reservationId: number, title: string, type: string | undefined, entry: BudgetEntry, socketId: string | undefined): Promise<void> {
     if (!entry || !(Number(entry.total_price) > 0)) return;
     try {
-      const item = this.budget.linkBudgetItemToReservation(tripId, reservationId, {
+      const item = await this.budget.linkBudgetItemToReservation(tripId, reservationId, {
         name: title,
         category: entry.category || type || 'Other',
         total_price: entry.total_price!,
@@ -1046,7 +1046,7 @@ export class ReservationsService {
   }
 
   /** PUT side effect: drop the linked budget item when the price is cleared, else create/update it. */
-  syncBudgetOnUpdate(tripId: string, id: string, title: string, type: string | undefined, currentTitle: string, currentType: string | undefined, entry: BudgetEntry, socketId: string | undefined): void {
+  async syncBudgetOnUpdate(tripId: string, id: string, title: string, type: string | undefined, currentTitle: string, currentType: string | undefined, entry: BudgetEntry, socketId: string | undefined): Promise<void> {
     // When the booking type changes, keep a linked expense's category in sync —
     // but only if it still carries the auto-derived category (so a manual pick in
     // the Costs editor is preserved). Runs regardless of create_budget_entry.
@@ -1056,7 +1056,7 @@ export class ReservationsService {
         const oldCat = typeToCostCategory(currentType);
         const newCat = typeToCostCategory(type);
         if (oldCat !== newCat && linked.category === oldCat) {
-          const updated = this.budget.updateBudgetItem(linked.id, tripId, { category: newCat });
+          const updated = await this.budget.updateBudgetItem(linked.id, tripId, { category: newCat });
           this.realtime.broadcast(tripId, 'budget:updated', { item: updated }, socketId);
         }
       }
@@ -1071,7 +1071,7 @@ export class ReservationsService {
       // Explicit clear (total_price 0/empty) — drop the linked item.
       const linked = this.db.get<{ id: number }>('SELECT id FROM budget_items WHERE trip_id = ? AND reservation_id = ?', tripId, id);
       if (linked) {
-        this.budget.deleteBudgetItem(linked.id, tripId);
+        await this.budget.deleteBudgetItem(linked.id, tripId);
         this.realtime.broadcast(tripId, 'budget:deleted', { itemId: linked.id }, socketId);
       }
       return;
@@ -1082,10 +1082,10 @@ export class ReservationsService {
       const category = entry.category || type || currentType || 'Other';
       const existing = this.db.get<{ id: number }>('SELECT id FROM budget_items WHERE trip_id = ? AND reservation_id = ?', tripId, id);
       if (existing) {
-        const updated = this.budget.updateBudgetItem(existing.id, tripId, { name: itemName, category, total_price: entry.total_price });
+        const updated = await this.budget.updateBudgetItem(existing.id, tripId, { name: itemName, category, total_price: entry.total_price });
         this.realtime.broadcast(tripId, 'budget:updated', { item: updated }, socketId);
       } else {
-        const item = this.budget.createBudgetItem(tripId, { name: itemName, category, total_price: entry.total_price });
+        const item = await this.budget.createBudgetItem(tripId, { name: itemName, category, total_price: entry.total_price });
         this.db.run('UPDATE budget_items SET reservation_id = ? WHERE id = ?', id, item.id);
         item.reservation_id = Number(id);
         this.realtime.broadcast(tripId, 'budget:created', { item }, socketId);
