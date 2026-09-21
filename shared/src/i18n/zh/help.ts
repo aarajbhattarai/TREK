@@ -1342,6 +1342,81 @@ const help: TranslationStrings = {
   'help.guide.audit-log.result': '一份可以交给任何询问为什么有变动的人的记录。',
   'help.guide.audit-log.tip.1': '时间以服务器的时区显示，时区名称在表格上方。',
   'help.guide.audit-log.tip.2': '日志只增不改；这里的任何内容都不能从应用里编辑或删除。',
+
+  // ── Screen: trip ──────────────────────────────────────────────────────────────────────
+  'help.ctx.trip.title': '旅行',
+  'help.ctx.trip.summary':
+    '一次旅行的全部：包含天数、地图和地点的计划，以及交通、预订、列表、费用、文件和协作的标签页。它们每一个都有自己的帮助页面，就在本页面下方。',
+  'help.ctx.trip.bullet.1':
+    '标签栏：“计划”“交通”“预订”“列表”“费用”“文件”和“协作”。哪些标签页存在，由你的 TREK 上的扩展和插件决定。',
+  'help.ctx.trip.bullet.2':
+    '“计划”是三栏：左边是天数，中间是地图，右边是地点。预订和交通就住在计划里，位于停靠点上和停靠点之间；标签页把它们列出来。',
+  'help.ctx.trip.bullet.3': '右上角的“分享”打开旅行里的人：成员、访客、邀请链接和只读的公开链接。',
+  'help.ctx.trip.bullet.4': '标题、日期、封面和货币在“我的旅行”里编辑，用旅行卡片上的铅笔。',
+  'help.ctx.trip.bullet.5': '栏内侧边缘的折叠箭头把这一栏收起来，地图占据空间；栏旁边的细分隔线改变它的宽度。',
+  'help.ctx.trip.bullet.6': '天数工具栏里的撤销箭头收回对计划的上一次更改。',
+  // add-member
+  'help.guide.add-member.title': '添加成员',
+  'help.guide.add-member.goal': '让有 TREK 账户的人可以访问这次旅行。',
+  'help.guide.add-member.step.1': '点击右上角的“分享”。',
+  'help.guide.add-member.step.2': '在“邀请用户”下，从列表中选中此人并点击“邀请”。',
+  'help.guide.add-member.step.3': '此人现在出现在“访问权限”下。皇冠标记所有者；行末的图标可再次移除访问权限。',
+  'help.guide.add-member.result': '成员像你一样查看和编辑旅行，范围在管理员于“权限设置”下设定的级别之内。',
+  'help.guide.add-member.tip.1': '列表里没有的人还没有 TREK 账户：把他们添加为访客，或者让他们通过邀请链接注册。',
+  'help.guide.add-member.tip.2': '“访问权限”旁边的数字统计旅行里的人数；访客在下方单独列出。',
+  // trip-invite-link
+  'help.guide.trip-invite-link.title': '通过链接邀请',
+  'help.guide.trip-invite-link.goal': '让别人自己加入旅行。',
+  'help.guide.trip-invite-link.step.1': '点击“分享”，然后在“行程邀请链接”下点击“创建邀请链接”。',
+  'help.guide.trip-invite-link.step.2': '点击“复制”并发送链接。任何有 TREK 账户的人打开它就会以成员身份加入。',
+  'help.guide.trip-invite-link.step.3': '“重新生成”会替换链接并让旧链接失效；“停用”会关闭它。',
+  'help.guide.trip-invite-link.result': '打开链接的人就在旅行里了，并显示在“访问权限”下。',
+  'help.guide.trip-invite-link.tip.1':
+    '没有账户的人用不了它。管理员在“管理后台”、“用户”下分发注册链接，并可以把其中一个绑定到这次旅行。',
+  'help.guide.trip-invite-link.tip.2': '链接发错了聊天时就重新生成：旧链接立刻失效。',
+  // add-guest
+  'help.guide.add-guest.title': '添加没有账户的访客',
+  'help.guide.add-guest.goal': '把一个不用 TREK 的人算进来。',
+  'help.guide.add-guest.step.1': '点击“分享”并滚动到“访客”。',
+  'help.guide.add-guest.step.2': '在“访客姓名”中输入名字，然后点击“添加访客”。',
+  'help.guide.add-guest.result': '访客可以被分配到费用、行李物品和任务，但无法登录。',
+  'help.guide.add-guest.tip.1': '铅笔可以给访客改名；行末的图标会把他们连同其分摊和分配一起移除。',
+  'help.guide.add-guest.tip.2': '如果这个人后来有了账户，就把他们邀请为成员，并移除访客。',
+  // public-link
+  'help.guide.public-link.title': '发布只读链接',
+  'help.guide.public-link.goal': '把旅行展示给不应编辑它的人。',
+  'help.guide.public-link.step.1':
+    '点击“分享”；在右侧的“公开链接”下，勾选链接可以显示的内容。“地图与计划”始终开启；“预订”“行李”“费用”和“聊天”由你决定。',
+  'help.guide.public-link.step.2': '点击“创建链接”，然后点击“复制”。',
+  'help.guide.public-link.step.3': '链接存在期间可以随时更改勾选；“删除链接”会让它停止。',
+  'help.guide.public-link.result': '任何有链接的人无需登录就能看到所选部分，并且什么都改不了。',
+  'help.guide.public-link.tip.1': '这个链接不会列在任何地方；谁拿到它都能打开，所以要像对待密码一样对待它。',
+  'help.guide.public-link.tip.2': '要给编辑权限，就改为把此人添加为成员。',
+  // transfer-ownership
+  'help.guide.transfer-ownership.title': '移交旅行或退出旅行',
+  'help.guide.transfer-ownership.goal': '让别人成为所有者，或者退出一次不属于你的旅行。',
+  'help.guide.transfer-ownership.step.1': '点击“分享”。在“访问权限”下，成员行上的皇冠会让此人成为所有者；确认提问。',
+  'help.guide.transfer-ownership.step.2': '你自己那一行上的“退出旅行”会把你带出旅行；作为所有者，请先移交。',
+  'help.guide.transfer-ownership.result': '新所有者管理成员并可以删除旅行；你仍是普通成员。',
+  'help.guide.transfer-ownership.tip.1': '在移交之前，所有者就是创建旅行的人；删除旅行只有所有者能做。',
+  'help.guide.transfer-ownership.tip.2': '另一行上的“移除访问权限”是同一个按钮的反向操作：所有者把成员请出去。',
+  // collapse-columns
+  'help.guide.collapse-columns.title': '给地图腾出空间',
+  'help.guide.collapse-columns.goal': '收起一栏，或者给它更多宽度。',
+  'help.guide.collapse-columns.step.1':
+    '点击天数栏内侧边缘的折叠箭头把它收起来；地图占据这块空间。地点栏有同样的箭头。',
+  'help.guide.collapse-columns.step.2': '再次点击折叠箭头，把这一栏找回来。',
+  'help.guide.collapse-columns.step.3': '拖动栏与地图之间的细分隔线来改变栏的宽度。',
+  'help.guide.collapse-columns.result': '宽度会被记住；下次访问时各栏会恢复展开。',
+  'help.guide.collapse-columns.tip.1': '两栏可以同时收起，得到只有地图的视图。',
+  'help.guide.collapse-columns.tip.2': '手机上没有栏：“计划”和“地点”是地图底部的两个按钮。',
+  // undo-change
+  'help.guide.undo-change.title': '撤销上一次更改',
+  'help.guide.undo-change.goal': '收回你刚刚对计划做的事。',
+  'help.guide.undo-change.step.1': '点击天数上方工具栏里的撤销箭头；它的提示会写出将要收回的更改。',
+  'help.guide.undo-change.result': '计划恢复原样，箭头变灰，直到下一次更改。',
+  'help.guide.undo-change.tip.1': '撤销覆盖计划：分配、移除、重新排序和移动地点，优化路线，删除地点，类别更改和导入。',
+  'help.guide.undo-change.tip.2': '它只有一步深：只能收回最新的一次更改，新的更改会取代它。',
 };
 
 export default help;

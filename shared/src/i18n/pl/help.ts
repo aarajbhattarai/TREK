@@ -1663,6 +1663,101 @@ const help: TranslationStrings = {
   'help.guide.audit-log.tip.1': 'Czasy są pokazane w strefie czasowej serwera, nazwanej nad tabelą.',
   'help.guide.audit-log.tip.2':
     'Dziennik jest tylko dopisywany; niczego tutaj nie da się edytować ani usunąć z aplikacji.',
+
+  // ── Screen: trip ──────────────────────────────────────────────────────────────────────
+  'help.ctx.trip.title': 'Podróż',
+  'help.ctx.trip.summary':
+    'Jedna podróż, w całości: plan z jego dniami, mapą i miejscami oraz zakładki transportu, rezerwacji, list, kosztów, plików i współpracy. Każda z nich ma własny ekran pomocy poniżej tego.',
+  'help.ctx.trip.bullet.1':
+    'Pasek zakładek: Plan, Transport, Rezerwacje, Listy, Koszty, Pliki i Współpraca. O tym, które zakładki istnieją na Twoim TREK-u, decydują dodatki i wtyczki.',
+  'help.ctx.trip.bullet.2':
+    'Plan to trzy kolumny: dni po lewej, mapa pośrodku, miejsca po prawej. Rezerwacje i transport żyją wewnątrz planu, przy przystanku i między przystankami; zakładki je wypisują.',
+  'help.ctx.trip.bullet.3':
+    'Udostępnij u góry po prawej otwiera ludzi podróży: członków, gości, link zaproszenia i publiczny link tylko do odczytu.',
+  'help.ctx.trip.bullet.4': 'Tytuł, daty, okładkę i walutę edytujesz z Moje podróże, ołówkiem na karcie podróży.',
+  'help.ctx.trip.bullet.5':
+    'Strzałki przy wewnętrznej krawędzi kolumny zwijają ją, a mapa zajmuje miejsce; cienki separator obok kolumny zmienia jej szerokość.',
+  'help.ctx.trip.bullet.6': 'Strzałka cofania na pasku narzędzi dni cofa ostatnią zmianę w planie.',
+  // add-member
+  'help.guide.add-member.title': 'Dodać członka',
+  'help.guide.add-member.goal': 'Daj komuś z kontem TREK dostęp do tej podróży.',
+  'help.guide.add-member.step.1': 'Kliknij Udostępnij u góry po prawej.',
+  'help.guide.add-member.step.2': 'Pod Zaproś użytkownika wybierz osobę z listy i kliknij Zaproś.',
+  'help.guide.add-member.step.3':
+    'Osoba pojawia się teraz pod Dostęp. Korona oznacza właściciela; ikona na końcu wiersza znów usuwa dostęp.',
+  'help.guide.add-member.result':
+    'Członek widzi i edytuje podróż tak jak Ty, w granicach poziomów, które administrator ustawił pod Ustawienia uprawnień.',
+  'help.guide.add-member.tip.1':
+    'Kto nie figuruje na liście, nie ma jeszcze konta TREK: dodaj go jako gościa albo pozwól mu zarejestrować się przez link zaproszenia.',
+  'help.guide.add-member.tip.2': 'Liczba obok Dostęp zlicza osoby w podróży; goście są wypisani osobno poniżej.',
+  // trip-invite-link
+  'help.guide.trip-invite-link.title': 'Zaprosić linkiem',
+  'help.guide.trip-invite-link.goal': 'Pozwól ludziom samodzielnie dołączyć do podróży.',
+  'help.guide.trip-invite-link.step.1':
+    'Kliknij Udostępnij, a potem pod Link zaproszenia do podróży kliknij Utwórz link zaproszenia.',
+  'help.guide.trip-invite-link.step.2':
+    'Kliknij Kopiuj i wyślij link. Każdy z kontem TREK, kto go otworzy, dołącza jako członek.',
+  'help.guide.trip-invite-link.step.3': 'Wygeneruj ponownie zastępuje link i unieważnia stary; Wyłącz go wyłącza.',
+  'help.guide.trip-invite-link.result': 'Kto otworzy link, jest w podróży i pojawia się pod Dostęp.',
+  'help.guide.trip-invite-link.tip.1':
+    'Ktoś bez konta nie może go użyć. Administrator rozdaje linki rejestracyjne pod Administracja, Użytkownicy, i może powiązać jeden z tą podróżą.',
+  'help.guide.trip-invite-link.tip.2':
+    'Użyj Wygeneruj ponownie, gdy link trafił na zły czat: stary od razu przestaje działać.',
+  // add-guest
+  'help.guide.add-guest.title': 'Dodać gościa bez konta',
+  'help.guide.add-guest.goal': 'Uwzględnij kogoś, kto nie używa TREK-a.',
+  'help.guide.add-guest.step.1': 'Kliknij Udostępnij i przewiń do Goście.',
+  'help.guide.add-guest.step.2': 'Wpisz imię w Imię gościa i kliknij Dodaj gościa.',
+  'help.guide.add-guest.result':
+    'Gościa można przypisać do kosztów, rzeczy do spakowania i zadań, ale nie może się zalogować.',
+  'help.guide.add-guest.tip.1':
+    'Ołówek zmienia nazwę gościa; ikona na końcu wiersza usuwa go razem z jego udziałami i przypisaniami.',
+  'help.guide.add-guest.tip.2': 'Jeśli ta osoba założy później konto, zaproś ją jako członka i usuń gościa.',
+  // public-link
+  'help.guide.public-link.title': 'Opublikować link tylko do odczytu',
+  'help.guide.public-link.goal': 'Pokaż podróż osobom, które nie powinny jej edytować.',
+  'help.guide.public-link.step.1':
+    'Kliknij Udostępnij; po prawej, pod Publiczny link, zaznacz, co link może pokazywać. Mapa i plan jest zawsze włączone; Rezerwacje, Lista pakowania, Koszty i Czat zależą od Ciebie.',
+  'help.guide.public-link.step.2': 'Kliknij Utwórz link, a potem Kopiuj.',
+  'help.guide.public-link.step.3': 'Zaznaczenia można zmieniać, dopóki link istnieje; Usuń link go kończy.',
+  'help.guide.public-link.result': 'Każdy z linkiem widzi wybrane części bez logowania i nie może niczego zmienić.',
+  'help.guide.public-link.tip.1':
+    'Link nie jest nigdzie wypisany; kto go ma, może go otworzyć, więc traktuj go jak hasło.',
+  'help.guide.public-link.tip.2': 'Dla praw do edycji dodaj tę osobę zamiast tego jako członka.',
+  // transfer-ownership
+  'help.guide.transfer-ownership.title': 'Przekazać podróż albo ją opuścić',
+  'help.guide.transfer-ownership.goal': 'Zrób kogoś innego właścicielem albo wyjdź z podróży, która nie jest Twoja.',
+  'help.guide.transfer-ownership.step.1':
+    'Kliknij Udostępnij. Pod Dostęp korona w wierszu członka czyni tę osobę właścicielem; potwierdź pytanie.',
+  'help.guide.transfer-ownership.step.2':
+    'Opuść podróż w Twoim własnym wierszu zabiera Cię z podróży; jako właściciel najpierw ją przekaż.',
+  'help.guide.transfer-ownership.result':
+    'Nowy właściciel zarządza członkami i może usunąć podróż; Ty zostajesz zwykłym członkiem.',
+  'help.guide.transfer-ownership.tip.1':
+    'Właścicielem jest ten, kto utworzył podróż, dopóki jej nie przekaże; usunięcie podróży należy tylko do niego.',
+  'help.guide.transfer-ownership.tip.2':
+    'Usuń dostęp w cudzym wierszu to ten sam przycisk w drugą stronę: właściciel usuwa członka.',
+  // collapse-columns
+  'help.guide.collapse-columns.title': 'Zrobić miejsce dla mapy',
+  'help.guide.collapse-columns.goal': 'Zwiń kolumnę albo daj jej więcej szerokości.',
+  'help.guide.collapse-columns.step.1':
+    'Kliknij strzałkę przy wewnętrznej krawędzi kolumny dni, żeby ją zwinąć; mapa zajmuje miejsce. Kolumna miejsc ma taką samą strzałkę.',
+  'help.guide.collapse-columns.step.2': 'Kliknij strzałkę ponownie, żeby przywrócić kolumnę.',
+  'help.guide.collapse-columns.step.3':
+    'Przeciągnij cienki separator między kolumną a mapą, żeby zmienić szerokość kolumny.',
+  'help.guide.collapse-columns.result': 'Szerokości są zapamiętywane; kolumny wracają otwarte przy następnej wizycie.',
+  'help.guide.collapse-columns.tip.1': 'Obie kolumny można zwinąć naraz, by widzieć samą mapę.',
+  'help.guide.collapse-columns.tip.2': 'Na telefonie nie ma kolumn: Plan i Miejsca to dwa przyciski na dole mapy.',
+  // undo-change
+  'help.guide.undo-change.title': 'Cofnąć ostatnią zmianę',
+  'help.guide.undo-change.goal': 'Cofnij to, co właśnie zrobiłeś w planie.',
+  'help.guide.undo-change.step.1':
+    'Kliknij strzałkę cofania na pasku narzędzi nad dniami; jej podpowiedź nazywa zmianę, którą cofnie.',
+  'help.guide.undo-change.result': 'Plan jest znów taki, jaki był, a strzałka szarzeje do następnej zmiany.',
+  'help.guide.undo-change.tip.1':
+    'Cofanie obejmuje plan: przypisywanie, usuwanie, zmianę kolejności i przenoszenie miejsc, optymalizację trasy, kasowanie miejsc, zmiany kategorii i importy.',
+  'help.guide.undo-change.tip.2':
+    'Sięga jeden krok wstecz: cofnąć można tylko ostatnią zmianę, a nowa zmiana ją zastępuje.',
 };
 
 export default help;

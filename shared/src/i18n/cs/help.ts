@@ -1623,6 +1623,98 @@ const help: TranslationStrings = {
   'help.guide.audit-log.result': 'Stopa, kterou můžete předat komukoli, kdo se ptá, proč se něco změnilo.',
   'help.guide.audit-log.tip.1': 'Časy se zobrazují v časovém pásmu serveru, uvedeném nad tabulkou.',
   'help.guide.audit-log.tip.2': 'Protokol je jen pro přidávání; nic tady nelze z aplikace upravit ani smazat.',
+
+  // ── Screen: trip ──────────────────────────────────────────────────────────────────────
+  'help.ctx.trip.title': 'Cesta',
+  'help.ctx.trip.summary':
+    'Jedna cesta, celá: plán s jeho dny, mapou a místy a karty pro dopravu, rezervace, seznamy, náklady, soubory a spolupráci. Každá z nich má vlastní obrazovku nápovědy pod touto.',
+  'help.ctx.trip.bullet.1':
+    'Lišta karet: Plán, Doprava, Rezervace, Seznamy, Náklady, Soubory a Spolupráce. Které karty na vašem TREKu existují, určují doplňky a pluginy.',
+  'help.ctx.trip.bullet.2':
+    'Plán má tři sloupce: vlevo dny, uprostřed mapu, vpravo místa. Rezervace a doprava žijí uvnitř plánu, u zastávky a mezi zastávkami; karty je vypisují.',
+  'help.ctx.trip.bullet.3':
+    'Sdílet vpravo nahoře otevře lidi cesty: členy, hosty, odkaz pro pozvání a veřejný odkaz jen pro čtení.',
+  'help.ctx.trip.bullet.4': 'Název, data, úvodní fotku a měnu upravíte z Moje cesty, tužkou na kartě cesty.',
+  'help.ctx.trip.bullet.5':
+    'Šipky na vnitřním okraji sloupce ho složí a místo zabere mapa; tenký oddělovač vedle sloupce mění jeho šířku.',
+  'help.ctx.trip.bullet.6': 'Šipka zpět v liště nástrojů dnů vrátí poslední změnu plánu.',
+  // add-member
+  'help.guide.add-member.title': 'Přidat člena',
+  'help.guide.add-member.goal': 'Dejte někomu s účtem TREK přístup k této cestě.',
+  'help.guide.add-member.step.1': 'Klikněte na Sdílet vpravo nahoře.',
+  'help.guide.add-member.step.2': 'Pod Pozvat uživatele vyberte osobu ze seznamu a klikněte na Pozvat.',
+  'help.guide.add-member.step.3':
+    'Osoba se teď objeví pod Přístup. Korunka označuje vlastníka; ikona na konci řádku přístup zase odebere.',
+  'help.guide.add-member.result':
+    'Člen vidí a upravuje cestu jako vy, v mezích úrovní, které správce nastavil pod Nastavení oprávnění.',
+  'help.guide.add-member.tip.1':
+    'Kdo v seznamu chybí, nemá ještě účet TREK: přidejte ho jako hosta, nebo ho nechte zaregistrovat přes odkaz pro pozvání.',
+  'help.guide.add-member.tip.2': 'Číslo vedle Přístup počítá lidi v cestě; hosté jsou vypsaní zvlášť níže.',
+  // trip-invite-link
+  'help.guide.trip-invite-link.title': 'Pozvat odkazem',
+  'help.guide.trip-invite-link.goal': 'Nechte lidi, ať se k cestě připojí sami.',
+  'help.guide.trip-invite-link.step.1':
+    'Klikněte na Sdílet a pak pod Odkaz pro pozvání na cestu klikněte na Vytvořit odkaz pro pozvání.',
+  'help.guide.trip-invite-link.step.2':
+    'Klikněte na Kopírovat a odkaz pošlete. Kdokoli s účtem TREK, kdo ho otevře, se připojí jako člen.',
+  'help.guide.trip-invite-link.step.3': 'Vygenerovat znovu odkaz nahradí a ten starý znehodnotí; Deaktivovat ho vypne.',
+  'help.guide.trip-invite-link.result': 'Kdo odkaz otevře, je v cestě a objeví se pod Přístup.',
+  'help.guide.trip-invite-link.tip.1':
+    'Kdo nemá účet, ho nemůže použít. Registrační odkazy rozdává správce pod Administrace, Uživatelé, a může jeden navázat na tuto cestu.',
+  'help.guide.trip-invite-link.tip.2':
+    'Použijte Vygenerovat znovu, když odkaz skončil ve špatném chatu: ten starý přestane fungovat okamžitě.',
+  // add-guest
+  'help.guide.add-guest.title': 'Přidat hosta bez účtu',
+  'help.guide.add-guest.goal': 'Započítejte někoho, kdo TREK nepoužívá.',
+  'help.guide.add-guest.step.1': 'Klikněte na Sdílet a sjeďte k Hosté.',
+  'help.guide.add-guest.step.2': 'Napište jméno do Jméno hosta a klikněte na Přidat hosta.',
+  'help.guide.add-guest.result': 'Hosta lze přiřadit k nákladům, položkám balení a úkolům, ale nemůže se přihlásit.',
+  'help.guide.add-guest.tip.1':
+    'Tužka hosta přejmenuje; ikona na konci řádku ho odebere i s jeho podíly a přiřazeními.',
+  'help.guide.add-guest.tip.2': 'Pokud si ta osoba později založí účet, pozvěte ji jako člena a hosta odeberte.',
+  // public-link
+  'help.guide.public-link.title': 'Zveřejnit odkaz jen pro čtení',
+  'help.guide.public-link.goal': 'Ukažte cestu lidem, kteří ji nemají upravovat.',
+  'help.guide.public-link.step.1':
+    'Klikněte na Sdílet; vpravo pod Veřejný odkaz zaškrtněte, co smí odkaz ukázat. Mapa a plán je vždy zapnuté; Rezervace, Balení, Náklady a Chat jsou na vás.',
+  'help.guide.public-link.step.2': 'Klikněte na Vytvořit odkaz a pak na Kopírovat.',
+  'help.guide.public-link.step.3': 'Zaškrtnutí lze měnit, dokud odkaz existuje; Smazat odkaz ho ukončí.',
+  'help.guide.public-link.result': 'Kdokoli s odkazem vidí zvolené části bez přihlášení a nemůže nic změnit.',
+  'help.guide.public-link.tip.1':
+    'Odkaz není nikde vypsaný; kdo ho má, může ho otevřít, tak s ním zacházejte jako s heslem.',
+  'help.guide.public-link.tip.2': 'Pro práva k úpravám přidejte osobu raději jako člena.',
+  // transfer-ownership
+  'help.guide.transfer-ownership.title': 'Předat cestu nebo ji opustit',
+  'help.guide.transfer-ownership.goal': 'Udělejte vlastníkem někoho jiného, nebo vystupte z cesty, která není vaše.',
+  'help.guide.transfer-ownership.step.1':
+    'Klikněte na Sdílet. Pod Přístup udělá korunka na řádku člena z této osoby vlastníka; potvrďte dotaz.',
+  'help.guide.transfer-ownership.step.2':
+    'Opustit cestu na vašem řádku vás z cesty odebere; jako vlastník ji nejdřív předejte.',
+  'help.guide.transfer-ownership.result':
+    'Nový vlastník spravuje členy a může cestu smazat; vy zůstáváte běžným členem.',
+  'help.guide.transfer-ownership.tip.1':
+    'Vlastníkem je ten, kdo cestu založil, dokud ji nepředá; smazat cestu může jen on.',
+  'help.guide.transfer-ownership.tip.2':
+    'Odebrat přístup na cizím řádku je totéž tlačítko obráceně: vlastník člena odebere.',
+  // collapse-columns
+  'help.guide.collapse-columns.title': 'Udělat místo mapě',
+  'help.guide.collapse-columns.goal': 'Složte sloupec, nebo mu dejte větší šířku.',
+  'help.guide.collapse-columns.step.1':
+    'Klikněte na šipku na vnitřním okraji sloupce dnů a sloupec se složí; místo zabere mapa. Sloupec míst má stejnou šipku.',
+  'help.guide.collapse-columns.step.2': 'Kliknutím na šipku znovu sloupec vrátíte.',
+  'help.guide.collapse-columns.step.3': 'Tažením tenkého oddělovače mezi sloupcem a mapou změníte šířku sloupce.',
+  'help.guide.collapse-columns.result': 'Šířky si aplikace pamatuje; sloupce se při příští návštěvě vrátí otevřené.',
+  'help.guide.collapse-columns.tip.1': 'Oba sloupce lze složit najednou pro zobrazení jen s mapou.',
+  'help.guide.collapse-columns.tip.2': 'Na telefonu sloupce nejsou: Plán a Místa jsou dvě tlačítka dole na mapě.',
+  // undo-change
+  'help.guide.undo-change.title': 'Vrátit poslední změnu',
+  'help.guide.undo-change.goal': 'Vezměte zpět, co jste právě v plánu udělali.',
+  'help.guide.undo-change.step.1':
+    'Klikněte na šipku zpět v liště nástrojů nad dny; její popisek pojmenuje změnu, kterou vrátí.',
+  'help.guide.undo-change.result': 'Plán je zase takový, jaký byl, a šipka zešedne až do další změny.',
+  'help.guide.undo-change.tip.1':
+    'Zpět pokrývá plán: přiřazení, odebrání, přeřazení a přesun míst, optimalizaci trasy, mazání míst, změny kategorií a importy.',
+  'help.guide.undo-change.tip.2': 'Má jen jeden krok: vrátit lze pouze poslední změnu a nová změna ji nahradí.',
 };
 
 export default help;

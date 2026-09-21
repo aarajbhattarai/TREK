@@ -1745,6 +1745,113 @@ const help: TranslationStrings = {
     'Les heures sont affichées dans le fuseau horaire du serveur, nommé au-dessus du tableau.',
   'help.guide.audit-log.tip.2':
     'Le journal est en ajout seul ; rien ici ne peut être modifié ou supprimé depuis l’application.',
+
+  // ── Screen: trip ──────────────────────────────────────────────────────────────────────
+  'help.ctx.trip.title': 'Voyage',
+  'help.ctx.trip.summary':
+    'Un voyage, tout entier : le plan avec ses jours, sa carte et ses lieux, et les onglets pour les transports, les réservations, les listes, les coûts, les fichiers et la collaboration. Chacun d’eux a sa propre page d’aide sous celle-ci.',
+  'help.ctx.trip.bullet.1':
+    'La barre d’onglets : Plan, Transports, Réservations, Listes, Coûts, Fichiers et Collaboration. Les modules et les plugins décident quels onglets existent sur votre TREK.',
+  'help.ctx.trip.bullet.2':
+    'Plan, ce sont trois colonnes : les jours à gauche, la carte au milieu, les lieux à droite. Les réservations et les transports vivent dans le plan, à l’étape et entre les étapes ; les onglets les listent.',
+  'help.ctx.trip.bullet.3':
+    'Partager, en haut à droite, ouvre les personnes du voyage : membres, invités, le lien d’invitation et le lien public en lecture seule.',
+  'help.ctx.trip.bullet.4':
+    'Le titre, les dates, la couverture et la devise se modifient depuis Mes voyages, avec le crayon sur la carte du voyage.',
+  'help.ctx.trip.bullet.5':
+    'Les chevrons au bord intérieur d’une colonne la replient et la carte prend la place ; le fin séparateur à côté d’une colonne change sa largeur.',
+  'help.ctx.trip.bullet.6':
+    'La flèche d’annulation dans la barre d’outils des jours reprend la dernière modification du plan.',
+  // add-member
+  'help.guide.add-member.title': 'Ajouter un membre',
+  'help.guide.add-member.goal': 'Donnez à quelqu’un qui a un compte TREK l’accès à ce voyage.',
+  'help.guide.add-member.step.1': 'Cliquez sur Partager en haut à droite.',
+  'help.guide.add-member.step.2':
+    'Sous Inviter un utilisateur, choisissez la personne dans la liste et cliquez sur Inviter.',
+  'help.guide.add-member.step.3':
+    'La personne apparaît maintenant sous Accès. La couronne marque le propriétaire ; l’icône au bout d’une ligne retire l’accès.',
+  'help.guide.add-member.result':
+    'Le membre voit et modifie le voyage comme vous, dans les limites des niveaux fixés par l’admin sous Paramètres des permissions.',
+  'help.guide.add-member.tip.1':
+    'Quelqu’un qui manque dans la liste n’a pas encore de compte TREK : ajoutez-le comme invité, ou laissez-le s’inscrire via un lien d’invitation.',
+  'help.guide.add-member.tip.2':
+    'Le nombre à côté d’Accès compte les personnes du voyage ; les invités sont listés à part, en dessous.',
+  // trip-invite-link
+  'help.guide.trip-invite-link.title': 'Inviter par lien',
+  'help.guide.trip-invite-link.goal': 'Laissez les gens rejoindre le voyage eux-mêmes.',
+  'help.guide.trip-invite-link.step.1':
+    'Cliquez sur Partager, puis sous Lien d’invitation au voyage, cliquez sur Créer un lien d’invitation.',
+  'help.guide.trip-invite-link.step.2':
+    'Cliquez sur Copier et envoyez le lien. Quiconque a un compte TREK et l’ouvre rejoint le voyage comme membre.',
+  'help.guide.trip-invite-link.step.3':
+    'Régénérer remplace le lien et rend l’ancien inutilisable ; Désactiver l’éteint.',
+  'help.guide.trip-invite-link.result': 'Quiconque ouvre le lien est dans le voyage et apparaît sous Accès.',
+  'help.guide.trip-invite-link.tip.1':
+    'Quelqu’un sans compte ne peut pas l’utiliser. Un admin distribue des liens d’inscription sous Administration, Utilisateurs, et peut en lier un à ce voyage.',
+  'help.guide.trip-invite-link.tip.2':
+    'Régénérez quand un lien est parti dans le mauvais chat : l’ancien cesse de fonctionner aussitôt.',
+  // add-guest
+  'help.guide.add-guest.title': 'Ajouter un invité sans compte',
+  'help.guide.add-guest.goal': 'Comptez quelqu’un qui n’utilise pas TREK.',
+  'help.guide.add-guest.step.1': 'Cliquez sur Partager et faites défiler jusqu’à Invités.',
+  'help.guide.add-guest.step.2': 'Tapez le nom dans Nom de l’invité et cliquez sur Ajouter un invité.',
+  'help.guide.add-guest.result':
+    'L’invité peut être assigné à des coûts, des articles de bagages et des tâches, mais ne peut pas se connecter.',
+  'help.guide.add-guest.tip.1':
+    'Le crayon renomme un invité ; l’icône au bout de la ligne le retire avec ses parts et ses assignations.',
+  'help.guide.add-guest.tip.2':
+    'Si la personne obtient un compte plus tard, invitez-la comme membre et retirez l’invité.',
+  // public-link
+  'help.guide.public-link.title': 'Publier un lien en lecture seule',
+  'help.guide.public-link.goal': 'Montrez le voyage à des personnes qui ne doivent pas le modifier.',
+  'help.guide.public-link.step.1':
+    'Cliquez sur Partager ; à droite, sous Lien public, cochez ce que le lien peut montrer. Carte et plan est toujours actif ; Réservations, Bagages, Coûts et Chat sont à votre choix.',
+  'help.guide.public-link.step.2': 'Cliquez sur Créer un lien, puis sur Copier.',
+  'help.guide.public-link.step.3':
+    'Les cases peuvent être changées tant que le lien existe ; Supprimer le lien l’arrête.',
+  'help.guide.public-link.result':
+    'Quiconque a le lien voit les parties choisies sans se connecter et ne peut rien changer.',
+  'help.guide.public-link.tip.1':
+    'Le lien n’est listé nulle part ; quiconque l’a peut l’ouvrir, traitez-le donc comme un mot de passe.',
+  'help.guide.public-link.tip.2': 'Pour des droits de modification, ajoutez plutôt la personne comme membre.',
+  // transfer-ownership
+  'help.guide.transfer-ownership.title': 'Transmettre le voyage ou le quitter',
+  'help.guide.transfer-ownership.goal':
+    'Faites de quelqu’un d’autre le propriétaire, ou sortez d’un voyage qui n’est pas le vôtre.',
+  'help.guide.transfer-ownership.step.1':
+    'Cliquez sur Partager. Sous Accès, la couronne sur la ligne d’un membre fait de cette personne le propriétaire ; confirmez la question.',
+  'help.guide.transfer-ownership.step.2':
+    'Quitter le voyage sur votre propre ligne vous sort du voyage ; en tant que propriétaire, transmettez-le d’abord.',
+  'help.guide.transfer-ownership.result':
+    'Le nouveau propriétaire gère les membres et peut supprimer le voyage ; vous restez un membre ordinaire.',
+  'help.guide.transfer-ownership.tip.1':
+    'Le propriétaire est celui qui a créé le voyage, jusqu’à ce qu’il soit transmis ; supprimer le voyage n’appartient qu’à lui.',
+  'help.guide.transfer-ownership.tip.2':
+    'Retirer l’accès sur une autre ligne est le même bouton dans l’autre sens : le propriétaire sort un membre.',
+  // collapse-columns
+  'help.guide.collapse-columns.title': 'Faire de la place pour la carte',
+  'help.guide.collapse-columns.goal': 'Repliez une colonne ou donnez-lui plus de largeur.',
+  'help.guide.collapse-columns.step.1':
+    'Cliquez sur le chevron au bord intérieur de la colonne des jours pour la replier ; la carte prend l’espace. La colonne des lieux a le même chevron.',
+  'help.guide.collapse-columns.step.2': 'Cliquez de nouveau sur le chevron pour ramener la colonne.',
+  'help.guide.collapse-columns.step.3':
+    'Faites glisser le fin séparateur entre une colonne et la carte pour changer la largeur de la colonne.',
+  'help.guide.collapse-columns.result':
+    'Les largeurs sont mémorisées ; les colonnes reviennent ouvertes à la prochaine visite.',
+  'help.guide.collapse-columns.tip.1': 'Les deux colonnes peuvent être repliées à la fois pour une vue carte seule.',
+  'help.guide.collapse-columns.tip.2':
+    'Sur un téléphone, il n’y a pas de colonnes : Plan et Lieux sont les deux boutons en bas de la carte.',
+  // undo-change
+  'help.guide.undo-change.title': 'Annuler la dernière modification',
+  'help.guide.undo-change.goal': 'Reprenez ce que vous venez de faire au plan.',
+  'help.guide.undo-change.step.1':
+    'Cliquez sur la flèche d’annulation dans la barre d’outils au-dessus des jours ; son infobulle nomme la modification qu’elle va reprendre.',
+  'help.guide.undo-change.result':
+    'Le plan est revenu tel qu’il était, et la flèche se grise jusqu’à la prochaine modification.',
+  'help.guide.undo-change.tip.1':
+    'L’annulation couvre le plan : assigner, retirer, réordonner et déplacer des lieux, optimiser un itinéraire, supprimer des lieux, les changements de catégorie et les imports.',
+  'help.guide.undo-change.tip.2':
+    'Elle n’a qu’un cran de profondeur : seule la dernière modification peut être reprise, et une nouvelle modification la remplace.',
 };
 
 export default help;

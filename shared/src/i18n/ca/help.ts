@@ -1701,6 +1701,107 @@ const help: TranslationStrings = {
   'help.guide.audit-log.result': 'Un rastre que pots entregar a qui pregunti per què ha canviat alguna cosa.',
   'help.guide.audit-log.tip.1': 'Les hores es mostren en la zona horària del servidor, indicada a sobre de la taula.',
   'help.guide.audit-log.tip.2': 'El registre és només d’afegir; res d’aquí no es pot editar ni eliminar des de l’app.',
+
+  // ── Screen: trip ──────────────────────────────────────────────────────────────────────
+  'help.ctx.trip.title': 'Viatge',
+  'help.ctx.trip.summary':
+    'Un viatge, tot sencer: el pla amb els seus dies, mapa i llocs, i les pestanyes de transports, reserves, llistes, despeses, fitxers i col·laboració. Cadascuna és una pantalla d’ajuda pròpia sota aquesta.',
+  'help.ctx.trip.bullet.1':
+    'La barra de pestanyes: Planificació, Transports, Reserves, Llistes, Despeses, Fitxers i Col·laboració. Els addons i els plugins decideixen quines pestanyes hi ha al teu TREK.',
+  'help.ctx.trip.bullet.2':
+    'Planificació són tres columnes: els dies a l’esquerra, el mapa al mig, els llocs a la dreta. Les reserves i els transports viuen dins del pla, a la parada i entre parades; les pestanyes els llisten.',
+  'help.ctx.trip.bullet.3':
+    'Comparteix, a dalt a la dreta, obre la gent del viatge: membres, convidats, l’enllaç d’invitació i l’enllaç públic de només lectura.',
+  'help.ctx.trip.bullet.4':
+    'El títol, les dates, la portada i la moneda s’editen des d’Els meus viatges, amb el llapis de la targeta del viatge.',
+  'help.ctx.trip.bullet.5':
+    'Els chevrons de la vora interior d’una columna la pleguen i el mapa ocupa l’espai; el separador prim al costat d’una columna en canvia l’amplada.',
+  'help.ctx.trip.bullet.6': 'La fletxa de desfer a la barra d’eines dels dies retira l’últim canvi al pla.',
+  // add-member
+  'help.guide.add-member.title': 'Afegir un membre',
+  'help.guide.add-member.goal': 'Dona accés a aquest viatge a algú amb compte de TREK.',
+  'help.guide.add-member.step.1': 'Fes clic a Comparteix, a dalt a la dreta.',
+  'help.guide.add-member.step.2': 'A Convida un usuari, tria la persona de la llista i fes clic a Convida.',
+  'help.guide.add-member.step.3':
+    'La persona ara apareix a Accés. La corona marca el propietari; la icona al final d’una fila torna a treure l’accés.',
+  'help.guide.add-member.result':
+    'El membre veu i edita el viatge com tu, dins dels nivells que l’admin ha fixat a Configuració de permisos.',
+  'help.guide.add-member.tip.1':
+    'Qui falti a la llista encara no té compte de TREK: afegeix-lo com a convidat, o deixa que es registri amb un enllaç d’invitació.',
+  'help.guide.add-member.tip.2':
+    'El nombre al costat d’Accés compta la gent del viatge; els convidats es llisten a part, a sota.',
+  // trip-invite-link
+  'help.guide.trip-invite-link.title': 'Convidar per enllaç',
+  'help.guide.trip-invite-link.goal': 'Deixa que la gent s’uneixi al viatge pel seu compte.',
+  'help.guide.trip-invite-link.step.1':
+    'Fes clic a Comparteix i després, a Enllaç d’invitació al viatge, fes clic a Crear enllaç d’invitació.',
+  'help.guide.trip-invite-link.step.2':
+    'Fes clic a Copiar i envia l’enllaç. Qualsevol amb compte de TREK que l’obri s’hi uneix com a membre.',
+  'help.guide.trip-invite-link.step.3':
+    'Tornar a generar substitueix l’enllaç i deixa l’antic inservible; Desactivar l’apaga.',
+  'help.guide.trip-invite-link.result': 'Qui obri l’enllaç és al viatge i apareix a Accés.',
+  'help.guide.trip-invite-link.tip.1':
+    'Algú sense compte no el pot fer servir. Un admin reparteix enllaços de registre a Administració, Usuaris, i en pot lligar un a aquest viatge.',
+  'help.guide.trip-invite-link.tip.2':
+    'Torna a generar-lo quan un enllaç hagi anat al xat equivocat: l’antic deixa de funcionar a l’instant.',
+  // add-guest
+  'help.guide.add-guest.title': 'Afegir un convidat sense compte',
+  'help.guide.add-guest.goal': 'Compta amb algú que no fa servir TREK.',
+  'help.guide.add-guest.step.1': 'Fes clic a Comparteix i baixa fins a Convidats.',
+  'help.guide.add-guest.step.2': 'Escriu el nom a Nom del convidat i fes clic a Afegir convidat.',
+  'help.guide.add-guest.result':
+    'El convidat es pot assignar a despeses, articles d’equipatge i tasques, però no pot iniciar sessió.',
+  'help.guide.add-guest.tip.1':
+    'El llapis reanomena un convidat; la icona al final de la fila el treu juntament amb les seves parts i assignacions.',
+  'help.guide.add-guest.tip.2':
+    'Si la persona obté un compte més endavant, convida-la com a membre i treu el convidat.',
+  // public-link
+  'help.guide.public-link.title': 'Publicar un enllaç de només lectura',
+  'help.guide.public-link.goal': 'Mostra el viatge a gent que no l’ha d’editar.',
+  'help.guide.public-link.step.1':
+    'Fes clic a Comparteix; a la dreta, a Enllaç públic, marca el que l’enllaç pot mostrar. Mapa i pla sempre està actiu; Reserves, Equipatge, Pressupost i Xat els tries tu.',
+  'help.guide.public-link.step.2': 'Fes clic a Crea l’enllaç i després a Copiar.',
+  'help.guide.public-link.step.3': 'Les marques es poden canviar mentre l’enllaç existeixi; Elimina l’enllaç l’atura.',
+  'help.guide.public-link.result':
+    'Qualsevol amb l’enllaç veu les parts triades sense iniciar sessió i no pot canviar res.',
+  'help.guide.public-link.tip.1':
+    'L’enllaç no apareix llistat enlloc; qui el tingui el pot obrir, així que tracta’l com una contrasenya.',
+  'help.guide.public-link.tip.2': 'Per a drets d’edició, afegeix la persona com a membre en lloc d’això.',
+  // transfer-ownership
+  'help.guide.transfer-ownership.title': 'Cedir el viatge o abandonar-lo',
+  'help.guide.transfer-ownership.goal': 'Fes propietari algú altre, o surt d’un viatge que no és teu.',
+  'help.guide.transfer-ownership.step.1':
+    'Fes clic a Comparteix. A Accés, la corona a la fila d’un membre fa propietària aquella persona; confirma la pregunta.',
+  'help.guide.transfer-ownership.step.2':
+    'Abandona el viatge a la teva pròpia fila et treu del viatge; com a propietari, cedeix-lo primer.',
+  'help.guide.transfer-ownership.result':
+    'El nou propietari gestiona els membres i pot eliminar el viatge; tu et quedes com a membre normal.',
+  'help.guide.transfer-ownership.tip.1':
+    'El propietari és qui va crear el viatge fins que el cedeix; eliminar el viatge és cosa seva i de ningú més.',
+  'help.guide.transfer-ownership.tip.2':
+    'Treure l’accés en una altra fila és el mateix botó a l’inrevés: el propietari treu un membre.',
+  // collapse-columns
+  'help.guide.collapse-columns.title': 'Fer lloc per al mapa',
+  'help.guide.collapse-columns.goal': 'Plega una columna o dona-li més amplada.',
+  'help.guide.collapse-columns.step.1':
+    'Fes clic al chevron de la vora interior de la columna dels dies per plegar-la; el mapa ocupa l’espai. La columna dels llocs té el mateix chevron.',
+  'help.guide.collapse-columns.step.2': 'Torna a fer clic al chevron per recuperar la columna.',
+  'help.guide.collapse-columns.step.3':
+    'Arrossega el separador prim entre una columna i el mapa per canviar l’amplada de la columna.',
+  'help.guide.collapse-columns.result': 'Les amplades es recorden; les columnes tornen obertes a la propera visita.',
+  'help.guide.collapse-columns.tip.1': 'Les dues columnes es poden plegar alhora per a una vista només de mapa.',
+  'help.guide.collapse-columns.tip.2':
+    'En un telèfon no hi ha columnes: Planificació i Llocs són els dos botons a la part de baix del mapa.',
+  // undo-change
+  'help.guide.undo-change.title': 'Desfer l’últim canvi',
+  'help.guide.undo-change.goal': 'Retira el que acabes de fer al pla.',
+  'help.guide.undo-change.step.1':
+    'Fes clic a la fletxa de desfer de la barra d’eines sobre els dies; el seu rètol anomena el canvi que retirarà.',
+  'help.guide.undo-change.result': 'El pla torna a ser com era, i la fletxa es posa grisa fins al proper canvi.',
+  'help.guide.undo-change.tip.1':
+    'Desfer cobreix el pla: assignar, treure, reordenar i moure llocs, optimitzar una ruta, eliminar llocs, canvis de categoria i importacions.',
+  'help.guide.undo-change.tip.2':
+    'Només té un pas de profunditat: només es pot retirar l’últim canvi, i un canvi nou el substitueix.',
 };
 
 export default help;

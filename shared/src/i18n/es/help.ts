@@ -1707,6 +1707,110 @@ const help: TranslationStrings = {
   'help.guide.audit-log.tip.1': 'Las horas se muestran en la zona horaria del servidor, indicada encima de la tabla.',
   'help.guide.audit-log.tip.2':
     'El registro es solo de adición; nada de aquí se puede editar ni eliminar desde la app.',
+
+  // ── Screen: trip ──────────────────────────────────────────────────────────────────────
+  'help.ctx.trip.title': 'Viaje',
+  'help.ctx.trip.summary':
+    'Un viaje, todo él: el plan con sus días, mapa y lugares, y las pestañas de transportes, reservas, listas, costes, archivos y colaboración. Cada una es su propia pantalla de ayuda debajo de esta.',
+  'help.ctx.trip.bullet.1':
+    'La barra de pestañas: Plan, Transportes, Reservas, Listas, Costes, Archivos y Colaboración. Los addons y los plugins deciden qué pestañas existen en tu TREK.',
+  'help.ctx.trip.bullet.2':
+    'Plan son tres columnas: los días a la izquierda, el mapa en el centro, los lugares a la derecha. Las reservas y los transportes viven dentro del plan, en la parada y entre paradas; las pestañas los listan.',
+  'help.ctx.trip.bullet.3':
+    'Compartir, arriba a la derecha, abre a la gente del viaje: miembros, invitados, el enlace de invitación y el enlace público de solo lectura.',
+  'help.ctx.trip.bullet.4':
+    'El título, las fechas, la portada y la moneda se editan desde Mis viajes, con el lápiz de la tarjeta del viaje.',
+  'help.ctx.trip.bullet.5':
+    'Los chevrones del borde interior de una columna la pliegan y el mapa ocupa el sitio; el separador fino junto a una columna cambia su anchura.',
+  'help.ctx.trip.bullet.6':
+    'La flecha de deshacer en la barra de herramientas de los días revierte el último cambio al plan.',
+  // add-member
+  'help.guide.add-member.title': 'Añadir un miembro',
+  'help.guide.add-member.goal': 'Da acceso a este viaje a alguien con cuenta de TREK.',
+  'help.guide.add-member.step.1': 'Haz clic en Compartir, arriba a la derecha.',
+  'help.guide.add-member.step.2': 'En Invitar usuario, elige a la persona de la lista y haz clic en Invitar.',
+  'help.guide.add-member.step.3':
+    'La persona aparece ahora en Acceso. La corona marca al propietario; el icono al final de una fila quita el acceso de nuevo.',
+  'help.guide.add-member.result':
+    'El miembro ve y edita el viaje como tú, dentro de los niveles que el admin fijó en Configuración de permisos.',
+  'help.guide.add-member.tip.1':
+    'Quien falte en la lista aún no tiene cuenta de TREK: añádelo como invitado, o deja que se registre con un enlace de invitación.',
+  'help.guide.add-member.tip.2':
+    'El número junto a Acceso cuenta a la gente del viaje; los invitados se listan aparte, debajo.',
+  // trip-invite-link
+  'help.guide.trip-invite-link.title': 'Invitar por enlace',
+  'help.guide.trip-invite-link.goal': 'Deja que la gente se una al viaje por su cuenta.',
+  'help.guide.trip-invite-link.step.1':
+    'Haz clic en Compartir y luego, en Enlace de invitación al viaje, en Crear enlace de invitación.',
+  'help.guide.trip-invite-link.step.2':
+    'Haz clic en Copiar y envía el enlace. Cualquiera con cuenta de TREK que lo abra se une como miembro.',
+  'help.guide.trip-invite-link.step.3':
+    'Regenerar sustituye el enlace y deja el antiguo inservible; Desactivar lo apaga.',
+  'help.guide.trip-invite-link.result': 'Quien abra el enlace está en el viaje y aparece en Acceso.',
+  'help.guide.trip-invite-link.tip.1':
+    'Alguien sin cuenta no puede usarlo. Un admin reparte enlaces de registro en Administración, Usuarios, y puede vincular uno a este viaje.',
+  'help.guide.trip-invite-link.tip.2':
+    'Regenera cuando un enlace haya ido al chat equivocado: el antiguo deja de funcionar al instante.',
+  // add-guest
+  'help.guide.add-guest.title': 'Añadir un invitado sin cuenta',
+  'help.guide.add-guest.goal': 'Cuenta con alguien que no usa TREK.',
+  'help.guide.add-guest.step.1': 'Haz clic en Compartir y baja hasta Invitados.',
+  'help.guide.add-guest.step.2': 'Escribe el nombre en Nombre del invitado y haz clic en Añadir invitado.',
+  'help.guide.add-guest.result':
+    'El invitado puede asignarse a costes, artículos de equipaje y tareas, pero no puede iniciar sesión.',
+  'help.guide.add-guest.tip.1':
+    'El lápiz renombra a un invitado; el icono al final de la fila lo quita junto con sus partes y asignaciones.',
+  'help.guide.add-guest.tip.2':
+    'Si la persona consigue una cuenta más adelante, invítala como miembro y quita al invitado.',
+  // public-link
+  'help.guide.public-link.title': 'Publicar un enlace de solo lectura',
+  'help.guide.public-link.goal': 'Muestra el viaje a gente que no debe editarlo.',
+  'help.guide.public-link.step.1':
+    'Haz clic en Compartir; a la derecha, en Enlace público, marca lo que el enlace puede mostrar. Mapa y plan está siempre activo; Reservas, Equipaje, Costes y Chat los eliges tú.',
+  'help.guide.public-link.step.2': 'Haz clic en Crear enlace y luego en Copiar.',
+  'help.guide.public-link.step.3': 'Las marcas pueden cambiarse mientras el enlace exista; Eliminar enlace lo detiene.',
+  'help.guide.public-link.result':
+    'Cualquiera con el enlace ve las partes elegidas sin iniciar sesión y no puede cambiar nada.',
+  'help.guide.public-link.tip.1':
+    'El enlace no aparece listado en ningún sitio; quien lo tenga puede abrirlo, así que trátalo como una contraseña.',
+  'help.guide.public-link.tip.2': 'Para derechos de edición, añade a la persona como miembro en su lugar.',
+  // transfer-ownership
+  'help.guide.transfer-ownership.title': 'Ceder el viaje o abandonarlo',
+  'help.guide.transfer-ownership.goal': 'Haz propietario a otra persona, o sal de un viaje que no es tuyo.',
+  'help.guide.transfer-ownership.step.1':
+    'Haz clic en Compartir. En Acceso, la corona en la fila de un miembro hace propietaria a esa persona; confirma la pregunta.',
+  'help.guide.transfer-ownership.step.2':
+    'Abandonar viaje en tu propia fila te saca del viaje; como propietario, cédelo primero.',
+  'help.guide.transfer-ownership.result':
+    'El nuevo propietario gestiona a los miembros y puede eliminar el viaje; tú te quedas como miembro normal.',
+  'help.guide.transfer-ownership.tip.1':
+    'El propietario es quien creó el viaje hasta que lo cede; eliminar el viaje es solo cosa suya.',
+  'help.guide.transfer-ownership.tip.2':
+    'Quitar acceso en otra fila es el mismo botón al revés: el propietario saca a un miembro.',
+  // collapse-columns
+  'help.guide.collapse-columns.title': 'Hacer sitio para el mapa',
+  'help.guide.collapse-columns.goal': 'Pliega una columna o dale más anchura.',
+  'help.guide.collapse-columns.step.1':
+    'Haz clic en el chevrón del borde interior de la columna de días para plegarla; el mapa ocupa el espacio. La columna de lugares tiene el mismo chevrón.',
+  'help.guide.collapse-columns.step.2': 'Haz clic de nuevo en el chevrón para recuperar la columna.',
+  'help.guide.collapse-columns.step.3':
+    'Arrastra el separador fino entre una columna y el mapa para cambiar la anchura de la columna.',
+  'help.guide.collapse-columns.result':
+    'Las anchuras se recuerdan; las columnas vuelven abiertas en la próxima visita.',
+  'help.guide.collapse-columns.tip.1': 'Las dos columnas pueden plegarse a la vez para una vista solo de mapa.',
+  'help.guide.collapse-columns.tip.2':
+    'En un teléfono no hay columnas: Plan y Lugares son los dos botones en la parte inferior del mapa.',
+  // undo-change
+  'help.guide.undo-change.title': 'Deshacer el último cambio',
+  'help.guide.undo-change.goal': 'Revierte lo que acabas de hacer en el plan.',
+  'help.guide.undo-change.step.1':
+    'Haz clic en la flecha de deshacer de la barra de herramientas sobre los días; su tooltip nombra el cambio que va a revertir.',
+  'help.guide.undo-change.result':
+    'El plan vuelve a estar como estaba, y la flecha se pone gris hasta el próximo cambio.',
+  'help.guide.undo-change.tip.1':
+    'Deshacer cubre el plan: asignar, quitar, reordenar y mover lugares, optimizar una ruta, eliminar lugares, cambios de categoría e importaciones.',
+  'help.guide.undo-change.tip.2':
+    'Tiene un solo paso de profundidad: solo el último cambio puede revertirse, y un cambio nuevo lo sustituye.',
 };
 
 export default help;

@@ -1702,6 +1702,109 @@ const help: TranslationStrings = {
   'help.guide.audit-log.tip.1': 'Tijden worden getoond in de tijdzone van de server, die boven de tabel staat.',
   'help.guide.audit-log.tip.2':
     'Het logboek is alleen-toevoegen; niets hier kan vanuit de app worden bewerkt of verwijderd.',
+
+  // ── Screen: trip ──────────────────────────────────────────────────────────────────────
+  'help.ctx.trip.title': 'Reis',
+  'help.ctx.trip.summary':
+    'Eén reis, helemaal: het plan met zijn dagen, kaart en plekken, en de tabbladen voor transport, boekingen, lijsten, onkosten, bestanden en samenwerking. Elk daarvan is een eigen hulpscherm onder dit scherm.',
+  'help.ctx.trip.bullet.1':
+    'De tabbladbalk: Plan, Transport, Boekingen, Lijsten, Onkosten, Bestanden en Samenwerking. Add-ons en plugins bepalen welke tabbladen er op jouw TREK zijn.',
+  'help.ctx.trip.bullet.2':
+    'Plan is drie kolommen: de dagen links, de kaart in het midden, de plekken rechts. Boekingen en transport leven in het plan, bij de stop en tussen stops; de tabbladen zetten ze op een rij.',
+  'help.ctx.trip.bullet.3':
+    'Delen rechtsboven opent de mensen van de reis: leden, gasten, de uitnodigingslink en de openbare alleen-lezen link.',
+  'help.ctx.trip.bullet.4':
+    'Titel, data, cover en valuta bewerk je vanuit Mijn reizen, met het potlood op de reiskaart.',
+  'help.ctx.trip.bullet.5':
+    'De chevrons aan de binnenrand van een kolom klappen haar weg en de kaart neemt de ruimte; de dunne scheidingslijn naast een kolom verandert haar breedte.',
+  'help.ctx.trip.bullet.6':
+    'De ongedaan-maken-pijl in de werkbalk van de dagen neemt de laatste wijziging aan het plan terug.',
+  // add-member
+  'help.guide.add-member.title': 'Een lid toevoegen',
+  'help.guide.add-member.goal': 'Geef iemand met een TREK-account toegang tot deze reis.',
+  'help.guide.add-member.step.1': 'Klik rechtsboven op Delen.',
+  'help.guide.add-member.step.2': 'Kies onder Gebruiker uitnodigen de persoon uit de lijst en klik op Uitnodigen.',
+  'help.guide.add-member.step.3':
+    'De persoon staat nu onder Toegang. De kroon markeert de eigenaar; het pictogram aan het eind van een rij verwijdert de toegang weer.',
+  'help.guide.add-member.result':
+    'Het lid ziet en bewerkt de reis zoals jij, binnen de niveaus die de beheerder onder Rechtinstellingen heeft ingesteld.',
+  'help.guide.add-member.tip.1':
+    'Wie in de lijst ontbreekt, heeft nog geen TREK-account: voeg die persoon toe als gast, of laat hem of haar zich registreren via een uitnodigingslink.',
+  'help.guide.add-member.tip.2': 'Het getal naast Toegang telt de mensen in de reis; gasten staan apart, eronder.',
+  // trip-invite-link
+  'help.guide.trip-invite-link.title': 'Uitnodigen via link',
+  'help.guide.trip-invite-link.goal': 'Laat mensen zelf bij de reis aansluiten.',
+  'help.guide.trip-invite-link.step.1':
+    'Klik op Delen en dan onder Uitnodigingslink voor reis op Uitnodigingslink maken.',
+  'help.guide.trip-invite-link.step.2':
+    'Klik op Kopiëren en stuur de link. Iedereen met een TREK-account die hem opent, sluit aan als lid.',
+  'help.guide.trip-invite-link.step.3':
+    'Opnieuw genereren vervangt de link en maakt de oude onbruikbaar; Uitschakelen zet hem uit.',
+  'help.guide.trip-invite-link.result': 'Wie de link opent, zit in de reis en verschijnt onder Toegang.',
+  'help.guide.trip-invite-link.tip.1':
+    'Iemand zonder account kan hem niet gebruiken. Een beheerder deelt registratielinks uit onder Beheer, Gebruikers, en kan er een aan deze reis koppelen.',
+  'help.guide.trip-invite-link.tip.2':
+    'Genereer opnieuw als een link in de verkeerde chat is beland: de oude werkt meteen niet meer.',
+  // add-guest
+  'help.guide.add-guest.title': 'Een gast zonder account toevoegen',
+  'help.guide.add-guest.goal': 'Tel iemand mee die TREK niet gebruikt.',
+  'help.guide.add-guest.step.1': 'Klik op Delen en scrol naar Gasten.',
+  'help.guide.add-guest.step.2': 'Typ de naam in Naam van gast en klik op Gast toevoegen.',
+  'help.guide.add-guest.result':
+    'De gast kan aan onkosten, inpakitems en taken worden toegewezen, maar kan niet inloggen.',
+  'help.guide.add-guest.tip.1':
+    'Het potlood hernoemt een gast; het pictogram aan het eind van de rij verwijdert de gast samen met zijn aandelen en toewijzingen.',
+  'help.guide.add-guest.tip.2':
+    'Krijgt de persoon later een account, nodig hem of haar dan uit als lid en verwijder de gast.',
+  // public-link
+  'help.guide.public-link.title': 'Een alleen-lezen link publiceren',
+  'help.guide.public-link.goal': 'Laat de reis zien aan mensen die hem niet mogen bewerken.',
+  'help.guide.public-link.step.1':
+    'Klik op Delen; rechts, onder Openbare link, vink aan wat de link mag tonen. Kaart en plan staat altijd aan; Boekingen, Inpaklijst, Onkosten en Chat kies je zelf.',
+  'help.guide.public-link.step.2': 'Klik op Link aanmaken en dan op Kopiëren.',
+  'help.guide.public-link.step.3': 'De vinkjes kun je veranderen zolang de link bestaat; Link verwijderen stopt hem.',
+  'help.guide.public-link.result':
+    'Iedereen met de link ziet de gekozen delen zonder in te loggen en kan niets veranderen.',
+  'help.guide.public-link.tip.1':
+    'De link staat nergens vermeld; wie hem heeft, kan hem openen, dus behandel hem als een wachtwoord.',
+  'help.guide.public-link.tip.2': 'Voor bewerkrechten voeg je de persoon in plaats daarvan toe als lid.',
+  // transfer-ownership
+  'help.guide.transfer-ownership.title': 'De reis overdragen of verlaten',
+  'help.guide.transfer-ownership.goal': 'Maak iemand anders eigenaar, of stap uit een reis die niet van jou is.',
+  'help.guide.transfer-ownership.step.1':
+    'Klik op Delen. Onder Toegang maakt de kroon op de rij van een lid die persoon eigenaar; bevestig de vraag.',
+  'help.guide.transfer-ownership.step.2':
+    'Reis verlaten op je eigen rij haalt je uit de reis; als eigenaar draag je hem eerst over.',
+  'help.guide.transfer-ownership.result':
+    'De nieuwe eigenaar beheert de leden en kan de reis verwijderen; jij blijft een gewoon lid.',
+  'help.guide.transfer-ownership.tip.1':
+    'De eigenaar is wie de reis heeft aangemaakt, tot hij wordt overgedragen; de reis verwijderen mag alleen de eigenaar.',
+  'help.guide.transfer-ownership.tip.2':
+    'Toegang verwijderen op een andere rij is dezelfde knop andersom: de eigenaar haalt een lid eruit.',
+  // collapse-columns
+  'help.guide.collapse-columns.title': 'Ruimte maken voor de kaart',
+  'help.guide.collapse-columns.goal': 'Klap een kolom weg of geef haar meer breedte.',
+  'help.guide.collapse-columns.step.1':
+    'Klik op de chevron aan de binnenrand van de dagenkolom om haar in te klappen; de kaart neemt de ruimte. De plekkenkolom heeft dezelfde chevron.',
+  'help.guide.collapse-columns.step.2': 'Klik nog eens op de chevron om de kolom terug te halen.',
+  'help.guide.collapse-columns.step.3':
+    'Sleep de dunne scheidingslijn tussen een kolom en de kaart om de breedte van de kolom te veranderen.',
+  'help.guide.collapse-columns.result':
+    'De breedtes worden onthouden; de kolommen komen bij het volgende bezoek open terug.',
+  'help.guide.collapse-columns.tip.1':
+    'Beide kolommen kunnen tegelijk worden weggeklapt voor een weergave met alleen de kaart.',
+  'help.guide.collapse-columns.tip.2':
+    'Op een telefoon zijn er geen kolommen: Plan en Plaatsen zijn de twee knoppen onderaan de kaart.',
+  // undo-change
+  'help.guide.undo-change.title': 'De laatste wijziging ongedaan maken',
+  'help.guide.undo-change.goal': 'Neem terug wat je net aan het plan hebt gedaan.',
+  'help.guide.undo-change.step.1':
+    'Klik op de ongedaan-maken-pijl in de werkbalk boven de dagen; zijn tooltip noemt de wijziging die hij terugneemt.',
+  'help.guide.undo-change.result': 'Het plan is weer zoals het was, en de pijl wordt grijs tot de volgende wijziging.',
+  'help.guide.undo-change.tip.1':
+    'Ongedaan maken dekt het plan: plekken toewijzen, verwijderen, herschikken en verplaatsen, een route optimaliseren, plekken wissen, categoriewijzigingen en imports.',
+  'help.guide.undo-change.tip.2':
+    'Het gaat één stap diep: alleen de laatste wijziging kan worden teruggenomen, en een nieuwe wijziging vervangt haar.',
 };
 
 export default help;

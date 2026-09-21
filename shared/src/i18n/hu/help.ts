@@ -1704,6 +1704,109 @@ const help: TranslationStrings = {
     'Az időpontok a szerver időzónájában látszanak, amely a táblázat felett van megnevezve.',
   'help.guide.audit-log.tip.2':
     'A napló csak bővíthető; itt semmit nem lehet szerkeszteni vagy törölni az alkalmazásból.',
+
+  // ── Screen: trip ──────────────────────────────────────────────────────────────────────
+  'help.ctx.trip.title': 'Utazás',
+  'help.ctx.trip.summary':
+    'Egy utazás, az egész: a terv a napjaival, térképével és helyeivel, meg a fülek a közlekedéshez, foglalásokhoz, listákhoz, költségekhez, fájlokhoz és együttműködéshez. Mindegyiknek saját súgóképernyője van ez alatt.',
+  'help.ctx.trip.bullet.1':
+    'A fülsor: Terv, Közlekedés, Foglalások, Listák, Költségek, Fájlok és Együttműködés. Hogy melyik fülek léteznek a TREK-eden, azt a bővítmények és pluginok döntik el.',
+  'help.ctx.trip.bullet.2':
+    'A Terv három oszlop: balra a napok, középen a térkép, jobbra a helyek. A foglalások és a közlekedés a terven belül élnek, a megállónál és a megállók között; a fülek felsorolják őket.',
+  'help.ctx.trip.bullet.3':
+    'A jobb felső Megosztás az utazás embereit nyitja meg: tagok, vendégek, a meghívó link és a csak olvasható nyilvános link.',
+  'help.ctx.trip.bullet.4':
+    'A címet, a dátumokat, a borítót és a pénznemet az Utazásaim alatt szerkeszted, az utazáskártya ceruzájával.',
+  'help.ctx.trip.bullet.5':
+    'Az oszlop belső szélén lévő nyilak összecsukják, és a helyet a térkép veszi át; az oszlop melletti vékony elválasztó a szélességét változtatja.',
+  'help.ctx.trip.bullet.6': 'A napok eszköztárában a visszavonás nyíl visszaveszi a terv utolsó módosítását.',
+  // add-member
+  'help.guide.add-member.title': 'Tag hozzáadása',
+  'help.guide.add-member.goal': 'Adj hozzáférést ehhez az utazáshoz valakinek, akinek van TREK-fiókja.',
+  'help.guide.add-member.step.1': 'Kattints a jobb felső Megosztás gombra.',
+  'help.guide.add-member.step.2':
+    'A Felhasználó meghívása alatt válaszd ki a személyt a listából, és kattints a Meghívás gombra.',
+  'help.guide.add-member.step.3':
+    'A személy most a Hozzáférés alatt jelenik meg. A korona a tulajdonost jelöli; a sor végén lévő ikon újra eltávolítja a hozzáférést.',
+  'help.guide.add-member.result':
+    'A tag ugyanúgy látja és szerkeszti az utazást, mint te, azokon a szinteken belül, amelyeket az admin a Jogosultsági beállítások alatt megadott.',
+  'help.guide.add-member.tip.1':
+    'Aki hiányzik a listáról, annak még nincs TREK-fiókja: add hozzá vendégként, vagy hagyd, hogy meghívó linken keresztül regisztráljon.',
+  'help.guide.add-member.tip.2':
+    'A Hozzáférés melletti szám az utazás embereit számolja; a vendégek külön, lejjebb szerepelnek.',
+  // trip-invite-link
+  'help.guide.trip-invite-link.title': 'Meghívás linkkel',
+  'help.guide.trip-invite-link.goal': 'Hagyd, hogy az emberek maguk csatlakozzanak az utazáshoz.',
+  'help.guide.trip-invite-link.step.1':
+    'Kattints a Megosztás gombra, majd a Meghívó link az utazáshoz alatt a Meghívó link létrehozása gombra.',
+  'help.guide.trip-invite-link.step.2':
+    'Kattints a Másolás gombra, és küldd el a linket. Bárki, akinek van TREK-fiókja és megnyitja, tagként csatlakozik.',
+  'help.guide.trip-invite-link.step.3':
+    'Az Újragenerálás lecseréli a linket, és a régit használhatatlanná teszi; a Letiltás kikapcsolja.',
+  'help.guide.trip-invite-link.result':
+    'Aki megnyitja a linket, benne van az utazásban, és megjelenik a Hozzáférés alatt.',
+  'help.guide.trip-invite-link.tip.1':
+    'Aki fiók nélkül van, nem tudja használni. Az admin az Adminisztráció, Felhasználók alatt oszt regisztrációs linkeket, és egyet ehhez az utazáshoz is köthet.',
+  'help.guide.trip-invite-link.tip.2':
+    'Használd az Újragenerálás gombot, ha egy link rossz csevegésbe került: a régi azonnal megszűnik működni.',
+  // add-guest
+  'help.guide.add-guest.title': 'Vendég hozzáadása fiók nélkül',
+  'help.guide.add-guest.goal': 'Számíts bele valakit, aki nem használja a TREK-et.',
+  'help.guide.add-guest.step.1': 'Kattints a Megosztás gombra, és görgess a Vendégek részhez.',
+  'help.guide.add-guest.step.2': 'Írd be a nevet a Vendég neve mezőbe, és kattints a Vendég hozzáadása gombra.',
+  'help.guide.add-guest.result':
+    'A vendég hozzárendelhető költségekhez, csomagolási tételekhez és feladatokhoz, de nem tud bejelentkezni.',
+  'help.guide.add-guest.tip.1':
+    'A ceruza átnevezi a vendéget; a sor végén lévő ikon a részesedéseivel és hozzárendeléseivel együtt eltávolítja.',
+  'help.guide.add-guest.tip.2': 'Ha a személy később fiókot kap, hívd meg tagként, és távolítsd el a vendéget.',
+  // public-link
+  'help.guide.public-link.title': 'Csak olvasható link közzététele',
+  'help.guide.public-link.goal': 'Mutasd meg az utazást olyanoknak, akiknek nem szabad szerkeszteniük.',
+  'help.guide.public-link.step.1':
+    'Kattints a Megosztás gombra; jobbra, a Nyilvános link alatt pipáld ki, mit mutathat a link. A Térkép és terv mindig be van kapcsolva; a Foglalások, Csomagolás, Költségek és Csevegés rajtad múlik.',
+  'help.guide.public-link.step.2': 'Kattints a Link létrehozása, majd a Másolás gombra.',
+  'help.guide.public-link.step.3': 'A pipák változtathatók, amíg a link létezik; a Link törlése leállítja.',
+  'help.guide.public-link.result':
+    'Bárki, akinél ott a link, bejelentkezés nélkül látja a kiválasztott részeket, és semmit sem módosíthat.',
+  'help.guide.public-link.tip.1':
+    'A link sehol nincs felsorolva; aki birtokolja, megnyithatja, ezért kezeld jelszóként.',
+  'help.guide.public-link.tip.2': 'Szerkesztési jogokhoz inkább tagként add hozzá a személyt.',
+  // transfer-ownership
+  'help.guide.transfer-ownership.title': 'Az utazás átadása vagy elhagyása',
+  'help.guide.transfer-ownership.goal': 'Tegyél mást tulajdonossá, vagy lépj ki egy utazásból, amely nem a tiéd.',
+  'help.guide.transfer-ownership.step.1':
+    'Kattints a Megosztás gombra. A Hozzáférés alatt a tag sorában lévő korona azt a személyt teszi tulajdonossá; erősítsd meg a kérdést.',
+  'help.guide.transfer-ownership.step.2':
+    'A saját sorodban az Utazás elhagyása kivesz az utazásból; tulajdonosként előbb add át.',
+  'help.guide.transfer-ownership.result':
+    'Az új tulajdonos kezeli a tagokat, és törölheti az utazást; te sima tag maradsz.',
+  'help.guide.transfer-ownership.tip.1':
+    'A tulajdonos az, aki az utazást létrehozta, amíg át nem adja; az utazás törlése egyedül az övé.',
+  'help.guide.transfer-ownership.tip.2':
+    'A Hozzáférés eltávolítása egy másik sorban ugyanaz a gomb fordítva: a tulajdonos kivesz egy tagot.',
+  // collapse-columns
+  'help.guide.collapse-columns.title': 'Hely a térképnek',
+  'help.guide.collapse-columns.goal': 'Csukj össze egy oszlopot, vagy adj neki nagyobb szélességet.',
+  'help.guide.collapse-columns.step.1':
+    'Kattints a napok oszlopának belső szélén lévő nyílra az összecsukásához; a helyet a térkép veszi át. A helyek oszlopán ugyanez a nyíl van.',
+  'help.guide.collapse-columns.step.2': 'Kattints újra a nyílra, hogy visszahozd az oszlopot.',
+  'help.guide.collapse-columns.step.3':
+    'Húzd az oszlop és a térkép közötti vékony elválasztót az oszlop szélességének módosításához.',
+  'help.guide.collapse-columns.result':
+    'A szélességeket megjegyzi; az oszlopok a következő látogatáskor nyitva térnek vissza.',
+  'help.guide.collapse-columns.tip.1': 'Mindkét oszlop egyszerre összecsukható, csak térképes nézethez.',
+  'help.guide.collapse-columns.tip.2':
+    'Telefonon nincsenek oszlopok: a Tervezés és a Helyek a térkép alján lévő két gomb.',
+  // undo-change
+  'help.guide.undo-change.title': 'Az utolsó módosítás visszavonása',
+  'help.guide.undo-change.goal': 'Vedd vissza, amit az imént a tervvel tettél.',
+  'help.guide.undo-change.step.1':
+    'Kattints a visszavonás nyílra a napok feletti eszköztárban; az elemleírása megnevezi a módosítást, amelyet visszavesz.',
+  'help.guide.undo-change.result': 'A terv újra olyan, amilyen volt, a nyíl pedig a következő módosításig kiszürkül.',
+  'help.guide.undo-change.tip.1':
+    'A visszavonás a tervre terjed ki: helyek hozzárendelése, eltávolítása, átrendezése és mozgatása, útvonal optimalizálása, helyek törlése, kategóriamódosítások és importok.',
+  'help.guide.undo-change.tip.2':
+    'Egy lépés mély: csak a legutóbbi módosítás vehető vissza, és egy új módosítás felülírja.',
 };
 
 export default help;

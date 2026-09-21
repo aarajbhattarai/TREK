@@ -1637,6 +1637,102 @@ const help: TranslationStrings = {
   'help.guide.audit-log.result': 'Ett spår du kan lämna till den som frågar varför något ändrades.',
   'help.guide.audit-log.tip.1': 'Tiderna visas i serverns tidszon, som namnges ovanför tabellen.',
   'help.guide.audit-log.tip.2': 'Loggen kan bara byggas på; inget här kan redigeras eller tas bort från appen.',
+
+  // ── Screen: trip ──────────────────────────────────────────────────────────────────────
+  'help.ctx.trip.title': 'Resa',
+  'help.ctx.trip.summary':
+    'En resa, hela den: planen med sina dagar, sin karta och sina platser, och flikarna för transporter, bokningar, listor, kostnader, filer och samarbete. Var och en av dem har sin egen hjälpsida under den här.',
+  'help.ctx.trip.bullet.1':
+    'Flikraden: Plan, Transporter, Bokningar, Listor, Kostnader, Filer och Samarbete. Tillägg och plugins avgör vilka flikar som finns på din TREK.',
+  'help.ctx.trip.bullet.2':
+    'Plan är tre kolumner: dagarna till vänster, kartan i mitten, platserna till höger. Bokningar och transporter bor inne i planen, vid stoppet och mellan stoppen; flikarna listar dem.',
+  'help.ctx.trip.bullet.3':
+    'Dela uppe till höger öppnar resans människor: medlemmar, gäster, inbjudningslänken och den skrivskyddade allmänna länken.',
+  'help.ctx.trip.bullet.4': 'Titel, datum, omslag och valuta redigeras från Mina resor, med pennan på resekortet.',
+  'help.ctx.trip.bullet.5':
+    'Vinkelpilarna vid en kolumns inre kant fäller ihop den och kartan tar utrymmet; den tunna avdelaren bredvid en kolumn ändrar dess bredd.',
+  'help.ctx.trip.bullet.6': 'Ångra-pilen i dagarnas verktygsrad tar tillbaka den senaste ändringen i planen.',
+  // add-member
+  'help.guide.add-member.title': 'Lägg till en medlem',
+  'help.guide.add-member.goal': 'Ge någon med ett TREK-konto åtkomst till den här resan.',
+  'help.guide.add-member.step.1': 'Klicka på Dela uppe till höger.',
+  'help.guide.add-member.step.2': 'Under Bjud in användare väljer du personen i listan och klickar på Bjud in.',
+  'help.guide.add-member.step.3':
+    'Personen syns nu under Åtkomst. Kronan markerar ägaren; ikonen i slutet av en rad tar bort åtkomsten igen.',
+  'help.guide.add-member.result':
+    'Medlemmen ser och redigerar resan som du, inom de nivåer administratören satt under Behörighetsinställningar.',
+  'help.guide.add-member.tip.1':
+    'Den som saknas i listan har inget TREK-konto ännu: lägg till personen som gäst, eller låt personen registrera sig via en inbjudningslänk.',
+  'help.guide.add-member.tip.2': 'Siffran intill Åtkomst räknar människorna i resan; gäster listas separat nedanför.',
+  // trip-invite-link
+  'help.guide.trip-invite-link.title': 'Bjud in via länk',
+  'help.guide.trip-invite-link.goal': 'Låt folk gå med i resan själva.',
+  'help.guide.trip-invite-link.step.1':
+    'Klicka på Dela, och sedan under Inbjudningslänk till resa på Skapa inbjudningslänk.',
+  'help.guide.trip-invite-link.step.2':
+    'Klicka på Kopiera och skicka länken. Alla med ett TREK-konto som öppnar den går med som medlem.',
+  'help.guide.trip-invite-link.step.3':
+    'Skapa ny byter ut länken och gör den gamla oanvändbar; Inaktivera stänger av den.',
+  'help.guide.trip-invite-link.result': 'Den som öppnar länken är med i resan och dyker upp under Åtkomst.',
+  'help.guide.trip-invite-link.tip.1':
+    'Någon utan konto kan inte använda den. En administratör delar ut registreringslänkar under Administration, Användare, och kan knyta en till den här resan.',
+  'help.guide.trip-invite-link.tip.2':
+    'Använd Skapa ny när en länk hamnat i fel chatt: den gamla slutar fungera på en gång.',
+  // add-guest
+  'help.guide.add-guest.title': 'Lägg till en gäst utan konto',
+  'help.guide.add-guest.goal': 'Räkna med någon som inte använder TREK.',
+  'help.guide.add-guest.step.1': 'Klicka på Dela och rulla ner till Gäster.',
+  'help.guide.add-guest.step.2': 'Skriv namnet i Gästens namn och klicka på Lägg till gäst.',
+  'help.guide.add-guest.result': 'Gästen kan tilldelas kostnader, packlistposter och uppgifter, men kan inte logga in.',
+  'help.guide.add-guest.tip.1':
+    'Pennan byter namn på en gäst; ikonen i slutet av raden tar bort gästen tillsammans med dess andelar och tilldelningar.',
+  'help.guide.add-guest.tip.2': 'Får personen ett konto senare, bjud in den som medlem och ta bort gästen.',
+  // public-link
+  'help.guide.public-link.title': 'Publicera en skrivskyddad länk',
+  'help.guide.public-link.goal': 'Visa resan för människor som inte ska redigera den.',
+  'help.guide.public-link.step.1':
+    'Klicka på Dela; till höger, under Allmän länk, bockar du för vad länken får visa. Karta & Plan är alltid på; Bokningar, Packning, Kostnader och Chatt väljer du själv.',
+  'help.guide.public-link.step.2': 'Klicka på Skapa länk, sedan på Kopiera.',
+  'help.guide.public-link.step.3': 'Bockarna kan ändras så länge länken finns; Radera länk stoppar den.',
+  'help.guide.public-link.result': 'Alla med länken ser de valda delarna utan att logga in och kan inte ändra något.',
+  'help.guide.public-link.tip.1':
+    'Länken listas ingenstans; den som har den kan öppna den, så behandla den som ett lösenord.',
+  'help.guide.public-link.tip.2': 'För redigeringsrätt lägger du i stället till personen som medlem.',
+  // transfer-ownership
+  'help.guide.transfer-ownership.title': 'Lämna över resan eller lämna den',
+  'help.guide.transfer-ownership.goal': 'Gör någon annan till ägare, eller kliv ur en resa som inte är din.',
+  'help.guide.transfer-ownership.step.1':
+    'Klicka på Dela. Under Åtkomst gör kronan på en medlems rad den personen till ägare; bekräfta frågan.',
+  'help.guide.transfer-ownership.step.2':
+    'Lämna resan på din egen rad tar dig ur resan; som ägare lämnar du över först.',
+  'help.guide.transfer-ownership.result':
+    'Den nya ägaren hanterar medlemmar och kan ta bort resan; du förblir en vanlig medlem.',
+  'help.guide.transfer-ownership.tip.1':
+    'Ägaren är den som skapade resan tills den lämnas över; att ta bort resan är ägarens ensak.',
+  'help.guide.transfer-ownership.tip.2':
+    'Ta bort åtkomst på en annan rad är samma knapp åt andra hållet: ägaren tar ut en medlem.',
+  // collapse-columns
+  'help.guide.collapse-columns.title': 'Ge kartan mer plats',
+  'help.guide.collapse-columns.goal': 'Fäll ihop en kolumn eller ge den mer bredd.',
+  'help.guide.collapse-columns.step.1':
+    'Klicka på vinkelpilen vid dagkolumnens inre kant för att fälla ihop den; kartan tar utrymmet. Platskolumnen har samma vinkelpil.',
+  'help.guide.collapse-columns.step.2': 'Klicka på vinkelpilen igen för att ta tillbaka kolumnen.',
+  'help.guide.collapse-columns.step.3':
+    'Dra den tunna avdelaren mellan en kolumn och kartan för att ändra kolumnens bredd.',
+  'help.guide.collapse-columns.result': 'Bredderna sparas; kolumnerna kommer tillbaka öppna vid nästa besök.',
+  'help.guide.collapse-columns.tip.1': 'Båda kolumnerna kan fällas ihop samtidigt för en vy med bara kartan.',
+  'help.guide.collapse-columns.tip.2':
+    'På en telefon finns inga kolumner: Plan och Platser är de två knapparna längst ner på kartan.',
+  // undo-change
+  'help.guide.undo-change.title': 'Ångra den senaste ändringen',
+  'help.guide.undo-change.goal': 'Ta tillbaka det du just gjorde med planen.',
+  'help.guide.undo-change.step.1':
+    'Klicka på ångra-pilen i verktygsraden ovanför dagarna; dess verktygstips anger vilken ändring den tar tillbaka.',
+  'help.guide.undo-change.result': 'Planen är som den var igen, och pilen gråas ut tills nästa ändring.',
+  'help.guide.undo-change.tip.1':
+    'Ångra täcker planen: tilldela, ta bort, ordna om och flytta platser, optimera en rutt, radera platser, kategoriändringar och importer.',
+  'help.guide.undo-change.tip.2':
+    'Den går ett steg djupt: bara den senaste ändringen kan tas tillbaka, och en ny ändring ersätter den.',
 };
 
 export default help;

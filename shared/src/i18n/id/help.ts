@@ -1699,6 +1699,107 @@ const help: TranslationStrings = {
     'Jejak yang bisa Anda serahkan kepada siapa pun yang bertanya mengapa sesuatu berubah.',
   'help.guide.audit-log.tip.1': 'Waktu ditampilkan dalam zona waktu server, yang disebutkan di atas tabel.',
   'help.guide.audit-log.tip.2': 'Log hanya bisa ditambah; tidak ada yang bisa disunting atau dihapus dari aplikasi.',
+
+  // ── Screen: trip ──────────────────────────────────────────────────────────────────────
+  'help.ctx.trip.title': 'Perjalanan',
+  'help.ctx.trip.summary':
+    'Satu perjalanan, seluruhnya: rencana dengan hari-harinya, peta dan tempat, serta tab untuk transportasi, pemesanan, daftar, biaya, file, dan kolaborasi. Masing-masing punya layar bantuan sendiri di bawah layar ini.',
+  'help.ctx.trip.bullet.1':
+    'Bilah tab: “Rencana”, “Transportasi”, “Pemesanan”, “Daftar”, “Biaya”, “File”, dan “Collab”. Addon dan plugin menentukan tab mana yang ada di TREK Anda.',
+  'help.ctx.trip.bullet.2':
+    '“Rencana” terdiri dari tiga kolom: hari di kiri, peta di tengah, tempat di kanan. Pemesanan dan transportasi hidup di dalam rencana, pada perhentian dan di antara perhentian; tab-tab itu mendaftarnya.',
+  'help.ctx.trip.bullet.3':
+    '“Bagikan” di kanan atas membuka orang-orang dalam perjalanan: anggota, tamu, tautan undangan, dan tautan publik hanya-baca.',
+  'help.ctx.trip.bullet.4':
+    'Judul, tanggal, sampul, dan mata uang disunting dari “Perjalananku”, dengan ikon pensil di kartu perjalanan.',
+  'help.ctx.trip.bullet.5':
+    'Chevron di tepi dalam sebuah kolom melipatnya dan peta mengambil ruangnya; pembatas tipis di sebelah kolom mengubah lebarnya.',
+  'help.ctx.trip.bullet.6': 'Panah batalkan di bilah alat hari mengembalikan perubahan terakhir pada rencana.',
+  // add-member
+  'help.guide.add-member.title': 'Menambahkan anggota',
+  'help.guide.add-member.goal': 'Beri seseorang yang punya akun TREK akses ke perjalanan ini.',
+  'help.guide.add-member.step.1': 'Klik “Bagikan” di kanan atas.',
+  'help.guide.add-member.step.2': 'Di bawah “Undang Pengguna”, pilih orangnya dari daftar dan klik “Undang”.',
+  'help.guide.add-member.step.3':
+    'Orang itu kini muncul di bawah “Akses”. Mahkota menandai pemilik; ikon di ujung baris menghapus akses lagi.',
+  'help.guide.add-member.result':
+    'Anggota melihat dan menyunting perjalanan seperti Anda, dalam batas tingkat yang ditetapkan admin di bawah “Pengaturan Izin”.',
+  'help.guide.add-member.tip.1':
+    'Seseorang yang tidak ada di daftar belum punya akun TREK: tambahkan sebagai tamu, atau biarkan mereka mendaftar lewat tautan undangan.',
+  'help.guide.add-member.tip.2':
+    'Angka di sebelah “Akses” menghitung orang dalam perjalanan; tamu didaftar terpisah di bawahnya.',
+  // trip-invite-link
+  'help.guide.trip-invite-link.title': 'Mengundang lewat tautan',
+  'help.guide.trip-invite-link.goal': 'Biarkan orang bergabung ke perjalanan sendiri.',
+  'help.guide.trip-invite-link.step.1':
+    'Klik “Bagikan”, lalu di bawah “Tautan undangan perjalanan” klik “Buat tautan undangan”.',
+  'help.guide.trip-invite-link.step.2':
+    'Klik “Salin” dan kirim tautannya. Siapa pun yang punya akun TREK dan membukanya bergabung sebagai anggota.',
+  'help.guide.trip-invite-link.step.3':
+    '“Buat ulang” mengganti tautan dan membuat yang lama tidak berguna; “Nonaktifkan” mematikannya.',
+  'help.guide.trip-invite-link.result':
+    'Siapa pun yang membuka tautan masuk ke perjalanan dan muncul di bawah “Akses”.',
+  'help.guide.trip-invite-link.tip.1':
+    'Orang tanpa akun tidak bisa memakainya. Admin membagikan tautan pendaftaran di bawah “Administrasi”, “Pengguna”, dan bisa mengaitkan satu tautan ke perjalanan ini.',
+  'help.guide.trip-invite-link.tip.2':
+    'Buat ulang ketika tautan terkirim ke chat yang salah: yang lama langsung berhenti bekerja.',
+  // add-guest
+  'help.guide.add-guest.title': 'Menambahkan tamu tanpa akun',
+  'help.guide.add-guest.goal': 'Ikutkan seseorang yang tidak memakai TREK.',
+  'help.guide.add-guest.step.1': 'Klik “Bagikan” dan gulir ke “Tamu”.',
+  'help.guide.add-guest.step.2': 'Ketik namanya di “Nama tamu” dan klik “Tambah tamu”.',
+  'help.guide.add-guest.result': 'Tamu bisa ditugaskan ke biaya, barang bawaan, dan tugas, tetapi tidak bisa masuk.',
+  'help.guide.add-guest.tip.1':
+    'Pensil mengganti nama tamu; ikon di ujung baris menghapusnya beserta bagian dan penugasannya.',
+  'help.guide.add-guest.tip.2': 'Jika orang itu nanti punya akun, undang sebagai anggota dan hapus tamunya.',
+  // public-link
+  'help.guide.public-link.title': 'Menerbitkan tautan hanya-baca',
+  'help.guide.public-link.goal': 'Tunjukkan perjalanan kepada orang yang tidak boleh menyuntingnya.',
+  'help.guide.public-link.step.1':
+    'Klik “Bagikan”; di kanan, di bawah “Tautan Publik”, centang apa yang boleh ditampilkan tautan. “Peta & Rencana” selalu aktif; “Pemesanan”, “Bawaan”, “Biaya”, dan “Chat” terserah Anda.',
+  'help.guide.public-link.step.2': 'Klik “Buat tautan”, lalu “Salin”.',
+  'help.guide.public-link.step.3': 'Centangnya bisa diubah selama tautan ada; “Hapus tautan” menghentikannya.',
+  'help.guide.public-link.result':
+    'Siapa pun yang punya tautan melihat bagian yang dipilih tanpa masuk dan tidak bisa mengubah apa pun.',
+  'help.guide.public-link.tip.1':
+    'Tautan ini tidak terdaftar di mana pun; siapa pun yang memegangnya bisa membukanya, jadi perlakukan seperti kata sandi.',
+  'help.guide.public-link.tip.2': 'Untuk hak menyunting, tambahkan orang itu sebagai anggota saja.',
+  // transfer-ownership
+  'help.guide.transfer-ownership.title': 'Menyerahkan perjalanan atau keluar darinya',
+  'help.guide.transfer-ownership.goal':
+    'Jadikan orang lain pemilik, atau keluar dari perjalanan yang bukan milik Anda.',
+  'help.guide.transfer-ownership.step.1':
+    'Klik “Bagikan”. Di bawah “Akses”, mahkota di baris seorang anggota menjadikan orang itu pemilik; konfirmasi pertanyaannya.',
+  'help.guide.transfer-ownership.step.2':
+    '“Keluar dari perjalanan” di baris Anda sendiri mengeluarkan Anda dari perjalanan; sebagai pemilik, serahkan dulu.',
+  'help.guide.transfer-ownership.result':
+    'Pemilik baru mengelola anggota dan bisa menghapus perjalanan; Anda tetap anggota biasa.',
+  'help.guide.transfer-ownership.tip.1':
+    'Pemilik adalah siapa pun yang membuat perjalanan sampai diserahkan; menghapus perjalanan hanya bisa dilakukan olehnya.',
+  'help.guide.transfer-ownership.tip.2':
+    '“Hapus akses” di baris orang lain adalah tombol yang sama dari arah sebaliknya: pemilik mengeluarkan seorang anggota.',
+  // collapse-columns
+  'help.guide.collapse-columns.title': 'Memberi ruang untuk peta',
+  'help.guide.collapse-columns.goal': 'Lipat sebuah kolom atau beri lebar lebih.',
+  'help.guide.collapse-columns.step.1':
+    'Klik chevron di tepi dalam kolom hari untuk melipatnya; peta mengambil ruangnya. Kolom tempat punya chevron yang sama.',
+  'help.guide.collapse-columns.step.2': 'Klik chevron lagi untuk mengembalikan kolom.',
+  'help.guide.collapse-columns.step.3': 'Seret pembatas tipis antara kolom dan peta untuk mengubah lebar kolom.',
+  'help.guide.collapse-columns.result': 'Lebarnya diingat; kolom kembali terbuka pada kunjungan berikutnya.',
+  'help.guide.collapse-columns.tip.1': 'Kedua kolom bisa dilipat sekaligus untuk tampilan peta saja.',
+  'help.guide.collapse-columns.tip.2':
+    'Di ponsel tidak ada kolom: “Rencana” dan “Tempat” adalah dua tombol di bagian bawah peta.',
+  // undo-change
+  'help.guide.undo-change.title': 'Membatalkan perubahan terakhir',
+  'help.guide.undo-change.goal': 'Tarik kembali apa yang baru saja Anda lakukan pada rencana.',
+  'help.guide.undo-change.step.1':
+    'Klik panah batalkan di bilah alat di atas hari; tooltip-nya menyebut perubahan yang akan ditarik kembali.',
+  'help.guide.undo-change.result':
+    'Rencana kembali seperti semula, dan panahnya berubah abu-abu sampai perubahan berikutnya.',
+  'help.guide.undo-change.tip.1':
+    'Batalkan mencakup rencana: menugaskan, menghapus, mengurutkan ulang, dan memindahkan tempat, mengoptimalkan rute, menghapus tempat, perubahan kategori, dan impor.',
+  'help.guide.undo-change.tip.2':
+    'Dalamnya satu langkah: hanya perubahan terakhir yang bisa ditarik kembali, dan perubahan baru menggantikannya.',
 };
 
 export default help;

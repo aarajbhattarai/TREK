@@ -1545,6 +1545,99 @@ const help: TranslationStrings = {
   'help.guide.audit-log.result': '왜 무언가가 바뀌었는지 묻는 사람에게 건넬 수 있는 기록입니다.',
   'help.guide.audit-log.tip.1': '시간은 서버의 시간대로 표시되며, 표 위에 그 이름이 있습니다.',
   'help.guide.audit-log.tip.2': '로그는 추가 전용입니다. 여기의 어떤 것도 앱에서 편집하거나 삭제할 수 없습니다.',
+
+  // ── Screen: trip ──────────────────────────────────────────────────────────────────────
+  'help.ctx.trip.title': '여행',
+  'help.ctx.trip.summary':
+    '여행 하나의 모든 것: 일자, 지도, 장소가 있는 계획과 교통, 예약, 목록, 비용, 파일, 협업 탭입니다. 각각은 이 화면 아래에 자기만의 도움말 화면이 있습니다.',
+  'help.ctx.trip.bullet.1':
+    '탭 바: “계획”, “교통”, “예약”, “목록”, “비용”, “파일”, “Collab”. 어떤 탭이 있는지는 나의 TREK에 있는 애드온과 플러그인이 정합니다.',
+  'help.ctx.trip.bullet.2':
+    '“계획”은 세 개의 열입니다. 왼쪽에 일자, 가운데에 지도, 오른쪽에 장소. 예약과 교통은 계획 안에, 즉 경유지와 경유지 사이에 있고, 탭은 그것들을 목록으로 보여줍니다.',
+  'help.ctx.trip.bullet.3':
+    '오른쪽 위의 “공유”는 여행의 사람들을 엽니다. 멤버, 게스트, 초대 링크, 그리고 읽기 전용 공개 링크입니다.',
+  'help.ctx.trip.bullet.4': '제목, 날짜, 커버, 통화는 “내 여행”에서 여행 카드의 연필로 편집합니다.',
+  'help.ctx.trip.bullet.5':
+    '열의 안쪽 가장자리에 있는 셰브론은 열을 접고, 지도가 그 자리를 차지합니다. 열 옆의 얇은 구분선은 열의 너비를 바꿉니다.',
+  'help.ctx.trip.bullet.6': '일자 도구 모음의 실행 취소 화살표는 계획에 대한 마지막 변경을 되돌립니다.',
+  // add-member
+  'help.guide.add-member.title': '멤버 추가하기',
+  'help.guide.add-member.goal': 'TREK 계정이 있는 사람에게 이 여행에 대한 접근 권한을 줍니다.',
+  'help.guide.add-member.step.1': '오른쪽 위의 “공유”를 클릭합니다.',
+  'help.guide.add-member.step.2': '“사용자 초대” 아래에서 목록에서 그 사람을 고르고 “초대”를 클릭합니다.',
+  'help.guide.add-member.step.3':
+    '이제 그 사람이 “접근” 아래에 나타납니다. 왕관은 소유자를 표시하고, 행 끝의 아이콘은 접근 권한을 다시 제거합니다.',
+  'help.guide.add-member.result':
+    '멤버는 나와 똑같이 여행을 보고 편집합니다. 관리자가 “권한 설정”에서 정한 수준 안에서입니다.',
+  'help.guide.add-member.tip.1':
+    '목록에 없는 사람은 아직 TREK 계정이 없습니다. 게스트로 추가하거나 초대 링크로 가입하게 하세요.',
+  'help.guide.add-member.tip.2': '“접근” 옆의 숫자는 여행에 있는 사람 수입니다. 게스트는 아래에 따로 나열됩니다.',
+  // trip-invite-link
+  'help.guide.trip-invite-link.title': '링크로 초대하기',
+  'help.guide.trip-invite-link.goal': '사람들이 스스로 여행에 참여하게 합니다.',
+  'help.guide.trip-invite-link.step.1':
+    '“공유”를 클릭한 다음 “여행 초대 링크” 아래에서 “초대 링크 만들기”를 클릭합니다.',
+  'help.guide.trip-invite-link.step.2':
+    '“복사”를 클릭하고 링크를 보냅니다. TREK 계정이 있는 사람이 링크를 열면 멤버로 참여합니다.',
+  'help.guide.trip-invite-link.step.3':
+    '“다시 생성”은 링크를 교체하고 이전 링크를 쓸 수 없게 합니다. “비활성화”는 링크를 끕니다.',
+  'help.guide.trip-invite-link.result': '링크를 연 사람은 여행에 들어와 “접근” 아래에 나타납니다.',
+  'help.guide.trip-invite-link.tip.1':
+    '계정이 없는 사람은 쓸 수 없습니다. 관리자는 “관리자”, “사용자”에서 가입 링크를 나눠 주며, 링크 하나를 이 여행에 묶을 수 있습니다.',
+  'help.guide.trip-invite-link.tip.2':
+    '링크가 엉뚱한 채팅방으로 갔다면 다시 생성하세요. 이전 링크는 즉시 작동을 멈춥니다.',
+  // add-guest
+  'help.guide.add-guest.title': '계정 없는 게스트 추가하기',
+  'help.guide.add-guest.goal': 'TREK을 쓰지 않는 사람을 여행에 포함합니다.',
+  'help.guide.add-guest.step.1': '“공유”를 클릭하고 “게스트”까지 스크롤합니다.',
+  'help.guide.add-guest.step.2': '“게스트 이름”에 이름을 입력하고 “게스트 추가”를 클릭합니다.',
+  'help.guide.add-guest.result': '게스트는 비용, 짐 항목, 할 일에 배정할 수 있지만 로그인할 수는 없습니다.',
+  'help.guide.add-guest.tip.1':
+    '연필은 게스트의 이름을 바꾸고, 행 끝의 아이콘은 게스트를 분담과 배정과 함께 제거합니다.',
+  'help.guide.add-guest.tip.2': '그 사람이 나중에 계정을 만들면 멤버로 초대하고 게스트를 제거하세요.',
+  // public-link
+  'help.guide.public-link.title': '읽기 전용 링크 게시하기',
+  'help.guide.public-link.goal': '편집하면 안 되는 사람에게 여행을 보여 줍니다.',
+  'help.guide.public-link.step.1':
+    '“공유”를 클릭합니다. 오른쪽의 “공개 링크” 아래에서 링크가 보여 줄 수 있는 항목에 체크합니다. “지도 및 계획”은 항상 켜져 있고, “예약”, “짐 목록”, “비용”, “채팅”은 내가 고릅니다.',
+  'help.guide.public-link.step.2': '“링크 만들기”를 클릭한 다음 “복사”를 클릭합니다.',
+  'help.guide.public-link.step.3': '체크는 링크가 있는 동안 바꿀 수 있습니다. “링크 삭제”는 링크를 멈춥니다.',
+  'help.guide.public-link.result': '링크가 있는 사람은 로그인 없이 선택된 부분을 보지만 아무것도 바꿀 수 없습니다.',
+  'help.guide.public-link.tip.1':
+    '이 링크는 어디에도 나열되지 않습니다. 가진 사람은 누구나 열 수 있으니 비밀번호처럼 다루세요.',
+  'help.guide.public-link.tip.2': '편집 권한이 필요하면 대신 그 사람을 멤버로 추가하세요.',
+  // transfer-ownership
+  'help.guide.transfer-ownership.title': '여행을 넘기거나 떠나기',
+  'help.guide.transfer-ownership.goal': '다른 사람을 소유자로 만들거나, 내 것이 아닌 여행에서 빠져나옵니다.',
+  'help.guide.transfer-ownership.step.1':
+    '“공유”를 클릭합니다. “접근” 아래에서 멤버 행의 왕관을 누르면 그 사람이 소유자가 됩니다. 확인 질문에 답합니다.',
+  'help.guide.transfer-ownership.step.2': '내 행의 “여행 떠나기”는 나를 여행에서 내보냅니다. 소유자라면 먼저 넘기세요.',
+  'help.guide.transfer-ownership.result':
+    '새 소유자가 멤버를 관리하고 여행을 삭제할 수 있습니다. 나는 일반 멤버로 남습니다.',
+  'help.guide.transfer-ownership.tip.1':
+    '넘기기 전까지는 여행을 만든 사람이 소유자입니다. 여행 삭제는 소유자만 할 수 있습니다.',
+  'help.guide.transfer-ownership.tip.2':
+    '다른 사람 행의 “접근 권한 제거”는 같은 버튼의 반대 방향입니다. 소유자가 멤버를 내보냅니다.',
+  // collapse-columns
+  'help.guide.collapse-columns.title': '지도에 공간 내주기',
+  'help.guide.collapse-columns.goal': '열을 접거나 더 넓게 만듭니다.',
+  'help.guide.collapse-columns.step.1':
+    '일자 열의 안쪽 가장자리에 있는 셰브론을 클릭해 접습니다. 지도가 그 공간을 차지합니다. 장소 열에도 같은 셰브론이 있습니다.',
+  'help.guide.collapse-columns.step.2': '셰브론을 다시 클릭하면 열이 돌아옵니다.',
+  'help.guide.collapse-columns.step.3': '열과 지도 사이의 얇은 구분선을 끌어 열의 너비를 바꿉니다.',
+  'help.guide.collapse-columns.result': '너비는 기억됩니다. 다음에 열면 열은 펼쳐진 상태로 돌아옵니다.',
+  'help.guide.collapse-columns.tip.1': '두 열을 한꺼번에 접으면 지도만 보이는 화면이 됩니다.',
+  'help.guide.collapse-columns.tip.2': '휴대전화에는 열이 없습니다. “계획”과 “장소”가 지도 아래쪽의 두 버튼입니다.',
+  // undo-change
+  'help.guide.undo-change.title': '마지막 변경 실행 취소하기',
+  'help.guide.undo-change.goal': '방금 계획에 한 일을 되돌립니다.',
+  'help.guide.undo-change.step.1':
+    '일자 위의 도구 모음에서 실행 취소 화살표를 클릭합니다. 툴팁에 되돌릴 변경이 표시됩니다.',
+  'help.guide.undo-change.result': '계획은 원래대로 돌아가고, 화살표는 다음 변경 때까지 회색이 됩니다.',
+  'help.guide.undo-change.tip.1':
+    '실행 취소는 계획을 다룹니다. 장소 배정, 제거, 순서 변경, 이동, 경로 최적화, 장소 삭제, 카테고리 변경, 가져오기입니다.',
+  'help.guide.undo-change.tip.2':
+    '깊이는 한 단계입니다. 최근 변경만 되돌릴 수 있고, 새 변경이 생기면 그것으로 대체됩니다.',
 };
 
 export default help;

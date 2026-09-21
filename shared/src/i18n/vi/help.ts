@@ -1647,6 +1647,106 @@ const help: TranslationStrings = {
   'help.guide.audit-log.result': 'Một dấu vết bạn có thể đưa cho bất kỳ ai hỏi vì sao thứ gì đó đã thay đổi.',
   'help.guide.audit-log.tip.1': 'Thời gian hiển thị theo múi giờ của máy chủ, được nêu tên phía trên bảng.',
   'help.guide.audit-log.tip.2': 'Nhật ký chỉ thêm vào; không gì ở đây có thể chỉnh sửa hay xóa từ ứng dụng.',
+
+  // ── Screen: trip ──────────────────────────────────────────────────────────────────────
+  'help.ctx.trip.title': 'Chuyến đi',
+  'help.ctx.trip.summary':
+    'Một chuyến đi, trọn vẹn: kế hoạch với các ngày, bản đồ và địa điểm, cùng các tab cho di chuyển, đặt chỗ, danh sách, chi phí, tập tin và cộng tác. Mỗi phần đó có màn hình trợ giúp riêng bên dưới màn hình này.',
+  'help.ctx.trip.bullet.1':
+    'Thanh tab: “Kế hoạch”, “Di chuyển”, “Đặt chỗ”, “Danh sách”, “Chi phí”, “Tập tin” và “Cộng tác”. Tiện ích bổ sung và plugin quyết định tab nào có trên TREK của bạn.',
+  'help.ctx.trip.bullet.2':
+    '“Kế hoạch” gồm ba cột: các ngày bên trái, bản đồ ở giữa, địa điểm bên phải. Đặt chỗ và di chuyển nằm trong kế hoạch, tại điểm dừng và giữa các điểm dừng; các tab liệt kê chúng.',
+  'help.ctx.trip.bullet.3':
+    '“Chia sẻ” ở góc trên bên phải mở ra những người trong chuyến đi: thành viên, khách, liên kết mời và liên kết công khai chỉ đọc.',
+  'help.ctx.trip.bullet.4':
+    'Tiêu đề, ngày, ảnh bìa và tiền tệ được sửa từ “Chuyến đi”, bằng cây bút chì trên thẻ chuyến đi.',
+  'help.ctx.trip.bullet.5':
+    'Mũi tên nhỏ ở mép trong của một cột sẽ gập cột lại và bản đồ chiếm chỗ đó; vạch chia mỏng cạnh cột thay đổi độ rộng của nó.',
+  'help.ctx.trip.bullet.6': 'Mũi tên hoàn tác trên thanh công cụ của các ngày lấy lại thay đổi gần nhất trên kế hoạch.',
+  // add-member
+  'help.guide.add-member.title': 'Thêm thành viên',
+  'help.guide.add-member.goal': 'Cho một người có tài khoản TREK quyền truy cập chuyến đi này.',
+  'help.guide.add-member.step.1': 'Nhấp “Chia sẻ” ở góc trên bên phải.',
+  'help.guide.add-member.step.2': 'Dưới “Mời người dùng”, chọn người đó trong danh sách và nhấp “Mời”.',
+  'help.guide.add-member.step.3':
+    'Người đó giờ xuất hiện dưới “Truy cập”. Vương miện đánh dấu người sở hữu; biểu tượng ở cuối hàng xóa quyền truy cập trở lại.',
+  'help.guide.add-member.result':
+    'Thành viên xem và sửa chuyến đi như bạn, trong các mức mà quản trị viên đã đặt dưới “Cài đặt quyền”.',
+  'help.guide.add-member.tip.1':
+    'Ai không có trong danh sách là chưa có tài khoản TREK: thêm họ làm khách, hoặc để họ đăng ký qua liên kết mời.',
+  'help.guide.add-member.tip.2':
+    'Con số cạnh “Truy cập” đếm số người trong chuyến đi; khách được liệt kê riêng ở bên dưới.',
+  // trip-invite-link
+  'help.guide.trip-invite-link.title': 'Mời bằng liên kết',
+  'help.guide.trip-invite-link.goal': 'Để mọi người tự tham gia chuyến đi.',
+  'help.guide.trip-invite-link.step.1':
+    'Nhấp “Chia sẻ”, rồi dưới “Liên kết mời tham gia chuyến đi” nhấp “Tạo liên kết mời”.',
+  'help.guide.trip-invite-link.step.2':
+    'Nhấp “Sao chép” và gửi liên kết. Bất kỳ ai có tài khoản TREK mở nó sẽ tham gia với tư cách thành viên.',
+  'help.guide.trip-invite-link.step.3':
+    '“Tạo lại” thay thế liên kết và làm liên kết cũ vô dụng; “Vô hiệu hóa” tắt nó đi.',
+  'help.guide.trip-invite-link.result': 'Ai mở liên kết sẽ có mặt trong chuyến đi và hiện dưới “Truy cập”.',
+  'help.guide.trip-invite-link.tip.1':
+    'Người không có tài khoản không dùng được. Quản trị viên phát liên kết đăng ký dưới “Sự quản lý”, “Người dùng”, và có thể gắn một liên kết với chuyến đi này.',
+  'help.guide.trip-invite-link.tip.2':
+    'Tạo lại khi liên kết đã đi nhầm vào cuộc trò chuyện khác: liên kết cũ ngừng hoạt động ngay lập tức.',
+  // add-guest
+  'help.guide.add-guest.title': 'Thêm khách không có tài khoản',
+  'help.guide.add-guest.goal': 'Tính cả một người không dùng TREK.',
+  'help.guide.add-guest.step.1': 'Nhấp “Chia sẻ” và cuộn tới “Khách”.',
+  'help.guide.add-guest.step.2': 'Gõ tên vào “Tên khách” và nhấp “Thêm khách”.',
+  'help.guide.add-guest.result':
+    'Khách có thể được gán vào chi phí, món đồ cần mang và việc cần làm, nhưng không thể đăng nhập.',
+  'help.guide.add-guest.tip.1':
+    'Bút chì đổi tên khách; biểu tượng ở cuối hàng xóa khách cùng với các phần chia và phân công của họ.',
+  'help.guide.add-guest.tip.2': 'Nếu người đó có tài khoản sau này, hãy mời họ làm thành viên và xóa khách đi.',
+  // public-link
+  'help.guide.public-link.title': 'Đăng liên kết chỉ đọc',
+  'help.guide.public-link.goal': 'Cho những người không nên sửa chuyến đi xem nó.',
+  'help.guide.public-link.step.1':
+    'Nhấp “Chia sẻ”; ở bên phải, dưới “Liên kết công khai”, đánh dấu những gì liên kết được phép hiển thị. “Bản đồ & Kế hoạch” luôn bật; “Đặt chỗ”, “Đóng gói”, “Chi phí” và “Trò chuyện” tùy bạn chọn.',
+  'help.guide.public-link.step.2': 'Nhấp “Tạo liên kết”, rồi “Sao chép”.',
+  'help.guide.public-link.step.3': 'Các dấu chọn có thể thay đổi khi liên kết còn tồn tại; “Xóa liên kết” dừng nó.',
+  'help.guide.public-link.result':
+    'Bất kỳ ai có liên kết đều xem được các phần đã chọn mà không cần đăng nhập và không thể thay đổi gì.',
+  'help.guide.public-link.tip.1':
+    'Liên kết không được liệt kê ở đâu cả; ai có nó đều mở được, nên hãy coi nó như mật khẩu.',
+  'help.guide.public-link.tip.2': 'Để cấp quyền sửa, hãy thêm người đó làm thành viên thay vì thế.',
+  // transfer-ownership
+  'help.guide.transfer-ownership.title': 'Chuyển giao chuyến đi hoặc rời khỏi nó',
+  'help.guide.transfer-ownership.goal':
+    'Đặt người khác làm chủ sở hữu, hoặc rút khỏi một chuyến đi không phải của bạn.',
+  'help.guide.transfer-ownership.step.1':
+    'Nhấp “Chia sẻ”. Dưới “Truy cập”, vương miện trên hàng của một thành viên đặt người đó làm chủ sở hữu; xác nhận câu hỏi.',
+  'help.guide.transfer-ownership.step.2':
+    '“Rời khỏi chuyến đi” trên hàng của chính bạn đưa bạn ra khỏi chuyến đi; nếu là chủ sở hữu, hãy chuyển giao trước.',
+  'help.guide.transfer-ownership.result':
+    'Chủ sở hữu mới quản lý thành viên và có thể xóa chuyến đi; bạn vẫn là thành viên bình thường.',
+  'help.guide.transfer-ownership.tip.1':
+    'Chủ sở hữu là người đã tạo chuyến đi cho đến khi nó được chuyển giao; chỉ riêng họ mới xóa được chuyến đi.',
+  'help.guide.transfer-ownership.tip.2':
+    '“Xóa quyền truy cập” trên hàng của người khác là cùng nút đó theo chiều ngược lại: chủ sở hữu đưa một thành viên ra.',
+  // collapse-columns
+  'help.guide.collapse-columns.title': 'Nhường chỗ cho bản đồ',
+  'help.guide.collapse-columns.goal': 'Gập một cột lại hoặc cho nó rộng hơn.',
+  'help.guide.collapse-columns.step.1':
+    'Nhấp mũi tên nhỏ ở mép trong của cột các ngày để thu gọn nó; bản đồ chiếm chỗ đó. Cột địa điểm có mũi tên nhỏ giống vậy.',
+  'help.guide.collapse-columns.step.2': 'Nhấp mũi tên nhỏ lần nữa để đưa cột trở lại.',
+  'help.guide.collapse-columns.step.3': 'Kéo vạch chia mỏng giữa cột và bản đồ để thay đổi độ rộng của cột.',
+  'help.guide.collapse-columns.result': 'Độ rộng được ghi nhớ; các cột trở lại ở trạng thái mở trong lần truy cập sau.',
+  'help.guide.collapse-columns.tip.1': 'Có thể gập cả hai cột cùng lúc để chỉ xem bản đồ.',
+  'help.guide.collapse-columns.tip.2':
+    'Trên điện thoại không có cột: “Kế hoạch” và “Địa điểm” là hai nút ở dưới cùng bản đồ.',
+  // undo-change
+  'help.guide.undo-change.title': 'Hoàn tác thay đổi gần nhất',
+  'help.guide.undo-change.goal': 'Lấy lại điều bạn vừa làm với kế hoạch.',
+  'help.guide.undo-change.step.1':
+    'Nhấp mũi tên hoàn tác trên thanh công cụ phía trên các ngày; chú giải của nó nêu tên thay đổi sẽ được lấy lại.',
+  'help.guide.undo-change.result': 'Kế hoạch trở lại như cũ, và mũi tên chuyển xám cho đến thay đổi tiếp theo.',
+  'help.guide.undo-change.tip.1':
+    'Hoàn tác bao gồm kế hoạch: gán, gỡ, sắp xếp lại và di chuyển địa điểm, tối ưu hóa tuyến đường, xóa địa điểm, đổi danh mục và nhập dữ liệu.',
+  'help.guide.undo-change.tip.2':
+    'Chỉ sâu một bước: chỉ thay đổi gần nhất mới lấy lại được, và một thay đổi mới sẽ thay thế nó.',
 };
 
 export default help;

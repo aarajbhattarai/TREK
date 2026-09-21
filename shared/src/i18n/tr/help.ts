@@ -1665,6 +1665,106 @@ const help: TranslationStrings = {
   'help.guide.audit-log.tip.1': 'Saatler, tablonun üstünde adı geçen sunucu saat diliminde gösterilir.',
   'help.guide.audit-log.tip.2':
     'Günlük yalnızca eklemelidir; buradaki hiçbir şey uygulamadan düzenlenemez ya da silinemez.',
+
+  // ── Screen: trip ──────────────────────────────────────────────────────────────────────
+  'help.ctx.trip.title': 'Seyahat',
+  'help.ctx.trip.summary':
+    'Tek bir seyahat, hepsi bir arada: günleri, haritası ve yerleriyle plan, ayrıca ulaşım, rezervasyonlar, listeler, maliyetler, dosyalar ve iş birliği sekmeleri. Bunların her birinin bu ekranın altında kendi yardım ekranı var.',
+  'help.ctx.trip.bullet.1':
+    'Sekme çubuğu: Planı, Ulaşım, Rezervasyonlar, Listeler, Maliyetler, Dosyalar ve İş birliği. TREK’inizde hangi sekmelerin bulunacağına eklentiler ve plugin’ler karar verir.',
+  'help.ctx.trip.bullet.2':
+    'Planı üç sütundur: solda günler, ortada harita, sağda yerler. Rezervasyonlar ve ulaşım planın içinde yaşar, durakta ve duraklar arasında; sekmeler onları listeler.',
+  'help.ctx.trip.bullet.3':
+    'Sağ üstteki Paylaş seyahatin insanlarını açar: üyeler, misafirler, davet bağlantısı ve salt okunur genel bağlantı.',
+  'help.ctx.trip.bullet.4':
+    'Başlık, tarihler, kapak ve para birimi Seyahatlerim’den, seyahat kartındaki kalemle düzenlenir.',
+  'help.ctx.trip.bullet.5':
+    'Bir sütunun iç kenarındaki ok uçları onu katlar ve yeri harita alır; sütunun yanındaki ince ayırıcı genişliğini değiştirir.',
+  'help.ctx.trip.bullet.6': 'Günlerin araç çubuğundaki geri alma oku plandaki son değişikliği geri alır.',
+  // add-member
+  'help.guide.add-member.title': 'Üye ekleyin',
+  'help.guide.add-member.goal': 'TREK hesabı olan birine bu seyahate erişim verin.',
+  'help.guide.add-member.step.1': 'Sağ üstteki Paylaş düğmesine tıklayın.',
+  'help.guide.add-member.step.2': 'Kullanıcı davet et altında kişiyi listeden seçin ve Davet et düğmesine tıklayın.',
+  'help.guide.add-member.step.3':
+    'Kişi artık Erişim altında görünür. Taç sahibi işaretler; satırın sonundaki simge erişimi yeniden kaldırır.',
+  'help.guide.add-member.result':
+    'Üye seyahati sizin gibi görür ve düzenler, yöneticinin İzin Ayarları altında belirlediği seviyeler dahilinde.',
+  'help.guide.add-member.tip.1':
+    'Listede olmayan birinin henüz TREK hesabı yoktur: onu misafir olarak ekleyin ya da bir davet bağlantısıyla kaydolmasına izin verin.',
+  'help.guide.add-member.tip.2':
+    'Erişim yanındaki sayı seyahatteki kişileri sayar; misafirler aşağıda ayrıca listelenir.',
+  // trip-invite-link
+  'help.guide.trip-invite-link.title': 'Bağlantıyla davet edin',
+  'help.guide.trip-invite-link.goal': 'İnsanların seyahate kendilerinin katılmasına izin verin.',
+  'help.guide.trip-invite-link.step.1':
+    'Paylaş düğmesine tıklayın, sonra Seyahat davet bağlantısı altında Davet bağlantısı oluştur düğmesine tıklayın.',
+  'help.guide.trip-invite-link.step.2':
+    'Kopyala düğmesine tıklayın ve bağlantıyı gönderin. Onu açan TREK hesaplı herkes üye olarak katılır.',
+  'help.guide.trip-invite-link.step.3':
+    'Yeniden oluştur bağlantıyı değiştirir ve eskisini işe yaramaz hale getirir; Devre dışı bırak onu kapatır.',
+  'help.guide.trip-invite-link.result': 'Bağlantıyı kim açarsa seyahattedir ve Erişim altında görünür.',
+  'help.guide.trip-invite-link.tip.1':
+    'Hesabı olmayan biri onu kullanamaz. Yönetici, kayıt bağlantılarını Yönetim, Kullanıcılar altında dağıtır ve birini bu seyahate bağlayabilir.',
+  'help.guide.trip-invite-link.tip.2':
+    'Bir bağlantı yanlış sohbete gittiyse Yeniden oluştur kullanın: eskisi hemen çalışmayı bırakır.',
+  // add-guest
+  'help.guide.add-guest.title': 'Hesabı olmayan bir misafir ekleyin',
+  'help.guide.add-guest.goal': 'TREK kullanmayan birini de hesaba katın.',
+  'help.guide.add-guest.step.1': 'Paylaş düğmesine tıklayın ve Misafirler bölümüne kaydırın.',
+  'help.guide.add-guest.step.2': 'Adı Misafir adı alanına yazın ve Misafir ekle düğmesine tıklayın.',
+  'help.guide.add-guest.result': 'Misafir maliyetlere, bavul öğelerine ve görevlere atanabilir ama oturum açamaz.',
+  'help.guide.add-guest.tip.1':
+    'Kalem bir misafiri yeniden adlandırır; satırın sonundaki simge onu payları ve atamalarıyla birlikte kaldırır.',
+  'help.guide.add-guest.tip.2': 'Kişi sonradan hesap açarsa onu üye olarak davet edin ve misafiri kaldırın.',
+  // public-link
+  'help.guide.public-link.title': 'Salt okunur bir bağlantı yayınlayın',
+  'help.guide.public-link.goal': 'Seyahati düzenlememesi gereken kişilere gösterin.',
+  'help.guide.public-link.step.1':
+    'Paylaş düğmesine tıklayın; sağda, Genel Bağlantı altında bağlantının neyi gösterebileceğini işaretleyin. Harita ve Plan her zaman açıktır; Rezervasyonlar, Ambalaj, Maliyetler ve Sohbet sizin seçiminizdir.',
+  'help.guide.public-link.step.2': 'Bağlantı oluştur düğmesine, sonra Kopyala düğmesine tıklayın.',
+  'help.guide.public-link.step.3':
+    'İşaretler bağlantı var olduğu sürece değiştirilebilir; Bağlantıyı sil onu durdurur.',
+  'help.guide.public-link.result':
+    'Bağlantısı olan herkes seçilen bölümleri oturum açmadan görür ve hiçbir şeyi değiştiremez.',
+  'help.guide.public-link.tip.1':
+    'Bağlantı hiçbir yerde listelenmez; elinde olan herkes açabilir, bu yüzden ona bir şifre gibi davranın.',
+  'help.guide.public-link.tip.2': 'Düzenleme hakları için kişiyi bunun yerine üye olarak ekleyin.',
+  // transfer-ownership
+  'help.guide.transfer-ownership.title': 'Seyahati devredin ya da seyahatten ayrılın',
+  'help.guide.transfer-ownership.goal': 'Başkasını sahip yapın ya da sizin olmayan bir seyahatten çıkın.',
+  'help.guide.transfer-ownership.step.1':
+    'Paylaş düğmesine tıklayın. Erişim altında bir üyenin satırındaki taç o kişiyi sahip yapar; soruyu onaylayın.',
+  'help.guide.transfer-ownership.step.2':
+    'Kendi satırınızdaki Seyahatten ayrıl sizi seyahatten çıkarır; sahipseniz önce devredin.',
+  'help.guide.transfer-ownership.result':
+    'Yeni sahip üyeleri yönetir ve seyahati silebilir; siz sıradan bir üye olarak kalırsınız.',
+  'help.guide.transfer-ownership.tip.1':
+    'Devredilene kadar sahip, seyahati oluşturan kişidir; seyahati silmek yalnızca ona aittir.',
+  'help.guide.transfer-ownership.tip.2':
+    'Başka bir satırdaki Erişimi kaldır aynı düğmenin tersidir: sahip bir üyeyi çıkarır.',
+  // collapse-columns
+  'help.guide.collapse-columns.title': 'Haritaya yer açın',
+  'help.guide.collapse-columns.goal': 'Bir sütunu katlayın ya da ona daha fazla genişlik verin.',
+  'help.guide.collapse-columns.step.1':
+    'Günler sütununun iç kenarındaki ok ucuna tıklayarak onu daraltın; yeri harita alır. Yerler sütununda da aynı ok ucu vardır.',
+  'help.guide.collapse-columns.step.2': 'Sütunu geri getirmek için ok ucuna yeniden tıklayın.',
+  'help.guide.collapse-columns.step.3':
+    'Sütunun genişliğini değiştirmek için sütunla harita arasındaki ince ayırıcıyı sürükleyin.',
+  'help.guide.collapse-columns.result':
+    'Genişlikler hatırlanır; sütunlar bir sonraki ziyarette açık olarak geri gelir.',
+  'help.guide.collapse-columns.tip.1': 'Yalnızca harita görünümü için iki sütun da aynı anda katlanabilir.',
+  'help.guide.collapse-columns.tip.2': 'Telefonda sütun yoktur: Planı ve Yerler haritanın altındaki iki düğmedir.',
+  // undo-change
+  'help.guide.undo-change.title': 'Son değişikliği geri alın',
+  'help.guide.undo-change.goal': 'Planda az önce yaptığınızı geri alın.',
+  'help.guide.undo-change.step.1':
+    'Günlerin üstündeki araç çubuğunda geri alma okuna tıklayın; ipucu, geri alacağı değişikliği adlandırır.',
+  'help.guide.undo-change.result': 'Plan eski haline döner ve ok bir sonraki değişikliğe kadar grileşir.',
+  'help.guide.undo-change.tip.1':
+    'Geri alma planı kapsar: yerleri atama, çıkarma, yeniden sıralama ve taşıma, rota optimizasyonu, yer silme, kategori değişiklikleri ve içe aktarmalar.',
+  'help.guide.undo-change.tip.2':
+    'Tek adım derinliğindedir: yalnızca en son değişiklik geri alınabilir ve yeni bir değişiklik onun yerini alır.',
 };
 
 export default help;

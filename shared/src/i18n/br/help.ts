@@ -1665,6 +1665,106 @@ const help: TranslationStrings = {
   'help.guide.audit-log.result': 'Um rastro que você pode entregar a quem perguntar por que algo mudou.',
   'help.guide.audit-log.tip.1': 'Os horários são mostrados no fuso horário do servidor, indicado acima da tabela.',
   'help.guide.audit-log.tip.2': 'O registro é só de acréscimo; nada aqui pode ser editado ou excluído pelo app.',
+
+  // ── Screen: trip ──────────────────────────────────────────────────────────────────────
+  'help.ctx.trip.title': 'Viagem',
+  'help.ctx.trip.summary':
+    'Uma viagem, inteira: o plano com seus dias, mapa e lugares, e as abas de transportes, reservas, listas, custos, arquivos e colaboração. Cada uma delas é uma tela de ajuda própria abaixo desta.',
+  'help.ctx.trip.bullet.1':
+    'A barra de abas: Plano, Transportes, Reservas, Listas, Custos, Arquivos e Colab. Addons e plugins decidem quais abas existem no seu TREK.',
+  'help.ctx.trip.bullet.2':
+    'Plano são três colunas: os dias à esquerda, o mapa no meio, os lugares à direita. Reservas e transportes vivem dentro do plano, na parada e entre paradas; as abas os listam.',
+  'help.ctx.trip.bullet.3':
+    'Compartilhar, no canto superior direito, abre as pessoas da viagem: membros, convidados, o link de convite e o link público somente leitura.',
+  'help.ctx.trip.bullet.4':
+    'Título, datas, capa e moeda são editados em Minhas viagens, com o lápis no cartão da viagem.',
+  'help.ctx.trip.bullet.5':
+    'Os chevrons na borda interna de uma coluna a recolhem e o mapa ocupa o espaço; o divisor fino ao lado de uma coluna muda a largura dela.',
+  'help.ctx.trip.bullet.6': 'A seta de desfazer na barra de ferramentas dos dias reverte a última alteração no plano.',
+  // add-member
+  'help.guide.add-member.title': 'Adicionar um membro',
+  'help.guide.add-member.goal': 'Dê a alguém com conta no TREK acesso a esta viagem.',
+  'help.guide.add-member.step.1': 'Clique em Compartilhar no canto superior direito.',
+  'help.guide.add-member.step.2': 'Em Convidar usuário, escolha a pessoa na lista e clique em Convidar.',
+  'help.guide.add-member.step.3':
+    'A pessoa agora aparece em Acesso. A coroa marca o proprietário; o ícone no fim de uma linha remove o acesso de novo.',
+  'help.guide.add-member.result':
+    'O membro vê e edita a viagem como você, dentro dos níveis que o admin definiu em Configurações de Permissões.',
+  'help.guide.add-member.tip.1':
+    'Quem falta na lista ainda não tem conta no TREK: adicione a pessoa como convidado, ou deixe que ela se registre por um link de convite.',
+  'help.guide.add-member.tip.2':
+    'O número ao lado de Acesso conta as pessoas na viagem; os convidados são listados à parte, abaixo.',
+  // trip-invite-link
+  'help.guide.trip-invite-link.title': 'Convidar por link',
+  'help.guide.trip-invite-link.goal': 'Deixe as pessoas entrarem na viagem por conta própria.',
+  'help.guide.trip-invite-link.step.1':
+    'Clique em Compartilhar e depois, em Link de convite da viagem, clique em Criar link de convite.',
+  'help.guide.trip-invite-link.step.2':
+    'Clique em Copiar e envie o link. Qualquer pessoa com conta no TREK que o abrir entra como membro.',
+  'help.guide.trip-invite-link.step.3':
+    'Gerar novamente substitui o link e torna o antigo inútil; Desativar o desliga.',
+  'help.guide.trip-invite-link.result': 'Quem abrir o link está na viagem e aparece em Acesso.',
+  'help.guide.trip-invite-link.tip.1':
+    'Alguém sem conta não consegue usá-lo. Um admin distribui links de registro em Administração, Usuários, e pode vincular um a esta viagem.',
+  'help.guide.trip-invite-link.tip.2':
+    'Gere novamente quando um link foi parar no chat errado: o antigo para de funcionar na hora.',
+  // add-guest
+  'help.guide.add-guest.title': 'Adicionar um convidado sem conta',
+  'help.guide.add-guest.goal': 'Conte com alguém que não usa o TREK.',
+  'help.guide.add-guest.step.1': 'Clique em Compartilhar e role até Convidados.',
+  'help.guide.add-guest.step.2': 'Digite o nome em Nome do convidado e clique em Adicionar convidado.',
+  'help.guide.add-guest.result':
+    'O convidado pode ser atribuído a custos, itens da mala e tarefas, mas não consegue fazer login.',
+  'help.guide.add-guest.tip.1':
+    'O lápis renomeia um convidado; o ícone no fim da linha o remove junto com suas partes e atribuições.',
+  'help.guide.add-guest.tip.2': 'Se a pessoa criar uma conta depois, convide-a como membro e remova o convidado.',
+  // public-link
+  'help.guide.public-link.title': 'Publicar um link somente leitura',
+  'help.guide.public-link.goal': 'Mostre a viagem a pessoas que não devem editá-la.',
+  'help.guide.public-link.step.1':
+    'Clique em Compartilhar; à direita, em Link público, marque o que o link pode mostrar. Mapa e plano está sempre ligado; Reservas, Mala, Custos e Chat são escolha sua.',
+  'help.guide.public-link.step.2': 'Clique em Criar link e depois em Copiar.',
+  'help.guide.public-link.step.3': 'As marcações podem ser mudadas enquanto o link existir; Excluir link o encerra.',
+  'help.guide.public-link.result':
+    'Qualquer pessoa com o link vê as partes escolhidas sem fazer login e não consegue mudar nada.',
+  'help.guide.public-link.tip.1':
+    'O link não é listado em lugar nenhum; quem o tem consegue abri-lo, então trate-o como uma senha.',
+  'help.guide.public-link.tip.2': 'Para direitos de edição, adicione a pessoa como membro em vez disso.',
+  // transfer-ownership
+  'help.guide.transfer-ownership.title': 'Passar a viagem adiante ou sair dela',
+  'help.guide.transfer-ownership.goal': 'Torne outra pessoa o proprietário, ou saia de uma viagem que não é sua.',
+  'help.guide.transfer-ownership.step.1':
+    'Clique em Compartilhar. Em Acesso, a coroa na linha de um membro torna essa pessoa o proprietário; confirme a pergunta.',
+  'help.guide.transfer-ownership.step.2':
+    'Sair da viagem na sua própria linha tira você da viagem; como proprietário, passe-a adiante primeiro.',
+  'help.guide.transfer-ownership.result':
+    'O novo proprietário gerencia os membros e pode excluir a viagem; você continua como membro comum.',
+  'help.guide.transfer-ownership.tip.1':
+    'O proprietário é quem criou a viagem, até que ela seja passada adiante; excluir a viagem cabe só a ele.',
+  'help.guide.transfer-ownership.tip.2':
+    'Remover acesso em outra linha é o mesmo botão ao contrário: o proprietário tira um membro.',
+  // collapse-columns
+  'help.guide.collapse-columns.title': 'Abrir espaço para o mapa',
+  'help.guide.collapse-columns.goal': 'Recolha uma coluna ou dê mais largura a ela.',
+  'help.guide.collapse-columns.step.1':
+    'Clique no chevron na borda interna da coluna dos dias para recolhê-la; o mapa ocupa o espaço. A coluna dos lugares tem o mesmo chevron.',
+  'help.guide.collapse-columns.step.2': 'Clique no chevron de novo para trazer a coluna de volta.',
+  'help.guide.collapse-columns.step.3':
+    'Arraste o divisor fino entre uma coluna e o mapa para mudar a largura da coluna.',
+  'help.guide.collapse-columns.result': 'As larguras são lembradas; as colunas voltam abertas na próxima visita.',
+  'help.guide.collapse-columns.tip.1': 'As duas colunas podem ser recolhidas ao mesmo tempo para uma visão só do mapa.',
+  'help.guide.collapse-columns.tip.2':
+    'No celular não há colunas: Plano e Lugares são os dois botões na parte de baixo do mapa.',
+  // undo-change
+  'help.guide.undo-change.title': 'Desfazer a última alteração',
+  'help.guide.undo-change.goal': 'Reverta o que você acabou de fazer no plano.',
+  'help.guide.undo-change.step.1':
+    'Clique na seta de desfazer na barra de ferramentas acima dos dias; a dica dela nomeia a alteração que vai reverter.',
+  'help.guide.undo-change.result': 'O plano volta a ser como era, e a seta fica cinza até a próxima alteração.',
+  'help.guide.undo-change.tip.1':
+    'Desfazer cobre o plano: atribuir, remover, reordenar e mover lugares, otimizar uma rota, excluir lugares, mudanças de categoria e importações.',
+  'help.guide.undo-change.tip.2':
+    'Tem um passo só de profundidade: apenas a última alteração pode ser revertida, e uma nova alteração a substitui.',
 };
 
 export default help;

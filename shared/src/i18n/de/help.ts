@@ -1712,6 +1712,108 @@ const help: TranslationStrings = {
   'help.guide.audit-log.tip.1': 'Zeiten werden in der Zeitzone des Servers gezeigt, die über der Tabelle steht.',
   'help.guide.audit-log.tip.2':
     'Das Protokoll ist nur anhängend; nichts hier lässt sich aus der App heraus bearbeiten oder löschen.',
+
+  // ── Screen: trip ──────────────────────────────────────────────────────────────────────
+  'help.ctx.trip.title': 'Reise',
+  'help.ctx.trip.summary':
+    'Eine Reise, alles an einem Ort: der Plan mit seinen Tagen, der Karte und den Orten, dazu die Tabs für Transport, Buchungen, Listen, Kosten, Dateien und Zusammenarbeit. Jeder davon ist eine eigene Hilfeseite unter dieser hier.',
+  'help.ctx.trip.bullet.1':
+    'Die Tab-Leiste: Karte, Transport, Buchungen, Listen, Kosten, Dateien und Collab. Addons und Plugins entscheiden, welche Tabs es auf deinem TREK gibt.',
+  'help.ctx.trip.bullet.2':
+    'Der Tab Karte hat drei Spalten: links die Tage, in der Mitte die Karte, rechts die Orte. Buchungen und Transporte leben im Plan, am Stopp und zwischen den Stopps; die Tabs listen sie auf.',
+  'help.ctx.trip.bullet.3':
+    'Teilen oben rechts öffnet die Leute der Reise: Mitglieder, Gäste, den Einladungslink und den öffentlichen Nur-Lese-Link.',
+  'help.ctx.trip.bullet.4':
+    'Titel, Daten, Cover und Währung bearbeitest du unter Meine Trips, mit dem Stift auf der Reisekarte.',
+  'help.ctx.trip.bullet.5':
+    'Die Chevrons an der Innenkante einer Spalte klappen sie weg, und die Karte nimmt den Platz; der schmale Trenner neben einer Spalte ändert ihre Breite.',
+  'help.ctx.trip.bullet.6':
+    'Der Rückgängig-Pfeil in der Werkzeugleiste der Tage nimmt die letzte Änderung am Plan zurück.',
+  // add-member
+  'help.guide.add-member.title': 'Ein Mitglied hinzufügen',
+  'help.guide.add-member.goal': 'Gib jemandem mit TREK-Konto Zugriff auf diese Reise.',
+  'help.guide.add-member.step.1': 'Klick oben rechts auf Teilen.',
+  'help.guide.add-member.step.2': 'Wähl unter Benutzer einladen die Person aus der Liste und klick auf Einladen.',
+  'help.guide.add-member.step.3':
+    'Die Person erscheint jetzt unter Zugriff. Die Krone markiert den Eigentümer; das Symbol am Ende einer Zeile entfernt den Zugriff wieder.',
+  'help.guide.add-member.result':
+    'Das Mitglied sieht und bearbeitet die Reise wie du, innerhalb der Stufen, die der Admin unter Berechtigungseinstellungen festgelegt hat.',
+  'help.guide.add-member.tip.1':
+    'Wer in der Liste fehlt, hat noch kein TREK-Konto: Trag die Person als Gast ein, oder lass sie sich über einen Einladungslink registrieren.',
+  'help.guide.add-member.tip.2': 'Die Zahl neben Zugriff zählt die Leute in der Reise; Gäste stehen separat darunter.',
+  // trip-invite-link
+  'help.guide.trip-invite-link.title': 'Per Link einladen',
+  'help.guide.trip-invite-link.goal': 'Lass Leute der Reise selbst beitreten.',
+  'help.guide.trip-invite-link.step.1':
+    'Klick auf Teilen, dann unter Trip-Einladungslink auf Einladungslink erstellen.',
+  'help.guide.trip-invite-link.step.2':
+    'Klick auf Kopieren und verschick den Link. Wer ein TREK-Konto hat und ihn öffnet, tritt als Mitglied bei.',
+  'help.guide.trip-invite-link.step.3':
+    'Neu generieren ersetzt den Link und macht den alten unbrauchbar; Deaktivieren schaltet ihn ab.',
+  'help.guide.trip-invite-link.result': 'Wer den Link öffnet, ist in der Reise und taucht unter Zugriff auf.',
+  'help.guide.trip-invite-link.tip.1':
+    'Wer kein Konto hat, kann ihn nicht nutzen. Ein Admin verteilt Registrierungslinks unter Administration, Benutzer, und kann einen an diese Reise binden.',
+  'help.guide.trip-invite-link.tip.2':
+    'Generier neu, wenn ein Link im falschen Chat gelandet ist: Der alte hört sofort auf zu funktionieren.',
+  // add-guest
+  'help.guide.add-guest.title': 'Einen Gast ohne Konto hinzufügen',
+  'help.guide.add-guest.goal': 'Zähl jemanden mit, der TREK nicht nutzt.',
+  'help.guide.add-guest.step.1': 'Klick auf Teilen und scroll zu Gäste.',
+  'help.guide.add-guest.step.2': 'Tipp den Namen in Name des Gasts und klick auf Gast hinzufügen.',
+  'help.guide.add-guest.result':
+    'Der Gast lässt sich Kosten, Packlisten-Einträgen und Aufgaben zuweisen, kann sich aber nicht anmelden.',
+  'help.guide.add-guest.tip.1':
+    'Der Stift benennt einen Gast um; das Symbol am Ende der Zeile entfernt ihn samt seiner Anteile und Zuweisungen.',
+  'help.guide.add-guest.tip.2': 'Bekommt die Person später ein Konto, lad sie als Mitglied ein und entfern den Gast.',
+  // public-link
+  'help.guide.public-link.title': 'Einen Nur-Lese-Link veröffentlichen',
+  'help.guide.public-link.goal': 'Zeig die Reise Leuten, die sie nicht bearbeiten sollen.',
+  'help.guide.public-link.step.1':
+    'Klick auf Teilen; rechts unter Öffentlicher Link hakst du an, was der Link zeigen darf. Karte & Plan ist immer an; Buchungen, Packliste, Kosten und Chat sind deine Wahl.',
+  'help.guide.public-link.step.2': 'Klick auf Link erstellen, dann auf Kopieren.',
+  'help.guide.public-link.step.3': 'Die Haken lassen sich ändern, solange der Link besteht; Link löschen beendet ihn.',
+  'help.guide.public-link.result': 'Wer den Link hat, sieht die gewählten Teile ohne Anmeldung und kann nichts ändern.',
+  'help.guide.public-link.tip.1':
+    'Der Link ist nirgends gelistet; wer ihn hat, kann ihn öffnen, also behandle ihn wie ein Passwort.',
+  'help.guide.public-link.tip.2': 'Für Bearbeitungsrechte füg die Person stattdessen als Mitglied hinzu.',
+  // transfer-ownership
+  'help.guide.transfer-ownership.title': 'Die Reise übergeben oder verlassen',
+  'help.guide.transfer-ownership.goal':
+    'Mach jemand anderen zum Eigentümer, oder steig aus einer Reise aus, die nicht deine ist.',
+  'help.guide.transfer-ownership.step.1':
+    'Klick auf Teilen. Unter Zugriff macht die Krone in der Zeile eines Mitglieds diese Person zum Eigentümer; bestätige die Rückfrage.',
+  'help.guide.transfer-ownership.step.2':
+    'Reise verlassen in deiner eigenen Zeile nimmt dich aus der Reise; als Eigentümer übergib sie vorher.',
+  'help.guide.transfer-ownership.result':
+    'Der neue Eigentümer verwaltet die Mitglieder und kann die Reise löschen; du bleibst normales Mitglied.',
+  'help.guide.transfer-ownership.tip.1':
+    'Eigentümer ist, wer die Reise erstellt hat, bis sie übergeben wird; die Reise löschen darf allein der Eigentümer.',
+  'help.guide.transfer-ownership.tip.2':
+    'Zugriff entfernen in einer anderen Zeile ist derselbe Button in die andere Richtung: Der Eigentümer nimmt ein Mitglied heraus.',
+  // collapse-columns
+  'help.guide.collapse-columns.title': 'Platz für die Karte schaffen',
+  'help.guide.collapse-columns.goal': 'Klapp eine Spalte weg oder gib ihr mehr Breite.',
+  'help.guide.collapse-columns.step.1':
+    'Klick auf den Chevron an der Innenkante der Tage-Spalte, um sie einzuklappen; die Karte nimmt den Platz. Die Orte-Spalte hat denselben Chevron.',
+  'help.guide.collapse-columns.step.2': 'Klick noch einmal auf den Chevron, um die Spalte zurückzuholen.',
+  'help.guide.collapse-columns.step.3':
+    'Zieh den schmalen Trenner zwischen einer Spalte und der Karte, um die Breite der Spalte zu ändern.',
+  'help.guide.collapse-columns.result':
+    'Die Breiten werden gemerkt; die Spalten kommen beim nächsten Besuch offen zurück.',
+  'help.guide.collapse-columns.tip.1': 'Beide Spalten lassen sich zugleich wegklappen, für eine reine Kartenansicht.',
+  'help.guide.collapse-columns.tip.2':
+    'Auf dem Handy gibt es keine Spalten: Planung und Orte sind die zwei Buttons unten an der Karte.',
+  // undo-change
+  'help.guide.undo-change.title': 'Die letzte Änderung rückgängig machen',
+  'help.guide.undo-change.goal': 'Nimm zurück, was du gerade am Plan gemacht hast.',
+  'help.guide.undo-change.step.1':
+    'Klick auf den Rückgängig-Pfeil in der Werkzeugleiste über den Tagen; sein Tooltip nennt die Änderung, die er zurücknimmt.',
+  'help.guide.undo-change.result':
+    'Der Plan ist wieder wie vorher, und der Pfeil bleibt grau bis zur nächsten Änderung.',
+  'help.guide.undo-change.tip.1':
+    'Rückgängig deckt den Plan ab: Orte zuweisen, entfernen, umsortieren und verschieben, eine Route optimieren, Orte löschen, Kategoriewechsel und Importe.',
+  'help.guide.undo-change.tip.2':
+    'Es geht nur einen Schritt tief: Nur die letzte Änderung lässt sich zurücknehmen, und eine neue Änderung ersetzt sie.',
 };
 
 export default help;

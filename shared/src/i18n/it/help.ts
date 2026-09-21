@@ -1684,6 +1684,108 @@ const help: TranslationStrings = {
   'help.guide.audit-log.tip.1': 'Gli orari sono mostrati nel fuso orario del server, indicato sopra la tabella.',
   'help.guide.audit-log.tip.2':
     'Il registro è in sola aggiunta; niente qui può essere modificato o eliminato dall’app.',
+
+  // ── Screen: trip ──────────────────────────────────────────────────────────────────────
+  'help.ctx.trip.title': 'Viaggio',
+  'help.ctx.trip.summary':
+    'Un viaggio, tutto intero: il programma con i suoi giorni, la mappa e i luoghi, e le schede per trasporti, prenotazioni, liste, costi, file e collaborazione. Ognuna di queste ha la sua schermata di aiuto sotto questa.',
+  'help.ctx.trip.bullet.1':
+    'La barra delle schede: Programma, Trasporti, Prenotazioni, Liste, Costi, File e Collaborazione. Addon e plugin decidono quali schede esistono sul tuo TREK.',
+  'help.ctx.trip.bullet.2':
+    'Programma è tre colonne: i giorni a sinistra, la mappa al centro, i luoghi a destra. Prenotazioni e trasporti vivono dentro il programma, alla tappa e tra le tappe; le schede li elencano.',
+  'help.ctx.trip.bullet.3':
+    'Condividi in alto a destra apre le persone del viaggio: membri, ospiti, il link di invito e il link pubblico in sola lettura.',
+  'help.ctx.trip.bullet.4':
+    'Titolo, date, copertina e valuta si modificano da I miei viaggi, con la matita sulla scheda del viaggio.',
+  'help.ctx.trip.bullet.5':
+    'I chevron sul bordo interno di una colonna la ripiegano e la mappa prende lo spazio; il divisore sottile accanto a una colonna ne cambia la larghezza.',
+  'help.ctx.trip.bullet.6':
+    'La freccia di annullamento nella barra degli strumenti dei giorni ritira l’ultima modifica al programma.',
+  // add-member
+  'help.guide.add-member.title': 'Aggiungere un membro',
+  'help.guide.add-member.goal': 'Dai a qualcuno con un account TREK l’accesso a questo viaggio.',
+  'help.guide.add-member.step.1': 'Clicca Condividi in alto a destra.',
+  'help.guide.add-member.step.2': 'Sotto Invita utente, scegli la persona dalla lista e clicca Invita.',
+  'help.guide.add-member.step.3':
+    'La persona compare ora sotto Accesso. La corona segna il proprietario; l’icona in fondo a una riga rimuove di nuovo l’accesso.',
+  'help.guide.add-member.result':
+    'Il membro vede e modifica il viaggio come te, entro i livelli che l’admin ha impostato sotto Impostazioni dei permessi.',
+  'help.guide.add-member.tip.1':
+    'Chi manca dalla lista non ha ancora un account TREK: aggiungilo come ospite, o lascia che si registri tramite un link di invito.',
+  'help.guide.add-member.tip.2':
+    'Il numero accanto ad Accesso conta le persone nel viaggio; gli ospiti sono elencati a parte, sotto.',
+  // trip-invite-link
+  'help.guide.trip-invite-link.title': 'Invitare tramite link',
+  'help.guide.trip-invite-link.goal': 'Lascia che le persone entrino nel viaggio da sole.',
+  'help.guide.trip-invite-link.step.1':
+    'Clicca Condividi, poi sotto Link di invito al viaggio clicca Crea link di invito.',
+  'help.guide.trip-invite-link.step.2':
+    'Clicca Copia e invia il link. Chiunque abbia un account TREK e lo apra entra come membro.',
+  'help.guide.trip-invite-link.step.3': 'Rigenera sostituisce il link e rende inutile il vecchio; Disattiva lo spegne.',
+  'help.guide.trip-invite-link.result': 'Chi apre il link è nel viaggio e compare sotto Accesso.',
+  'help.guide.trip-invite-link.tip.1':
+    'Chi non ha un account non può usarlo. Un admin distribuisce link di registrazione sotto Amministrazione, Utenti, e può legarne uno a questo viaggio.',
+  'help.guide.trip-invite-link.tip.2':
+    'Rigenera quando un link è finito nella chat sbagliata: il vecchio smette subito di funzionare.',
+  // add-guest
+  'help.guide.add-guest.title': 'Aggiungere un ospite senza account',
+  'help.guide.add-guest.goal': 'Conta qualcuno che non usa TREK.',
+  'help.guide.add-guest.step.1': 'Clicca Condividi e scorri fino a Ospiti.',
+  'help.guide.add-guest.step.2': 'Digita il nome in Nome ospite e clicca Aggiungi ospite.',
+  'help.guide.add-guest.result':
+    'L’ospite può essere assegnato a costi, oggetti della valigia e attività, ma non può accedere.',
+  'help.guide.add-guest.tip.1':
+    'La matita rinomina un ospite; l’icona in fondo alla riga lo rimuove insieme alle sue quote e assegnazioni.',
+  'help.guide.add-guest.tip.2': 'Se la persona ottiene un account più tardi, invitala come membro e rimuovi l’ospite.',
+  // public-link
+  'help.guide.public-link.title': 'Pubblicare un link in sola lettura',
+  'help.guide.public-link.goal': 'Mostra il viaggio a persone che non devono modificarlo.',
+  'help.guide.public-link.step.1':
+    'Clicca Condividi; a destra, sotto Link pubblico, spunta ciò che il link può mostrare. Mappa e programma è sempre attivo; Prenotazioni, Valigia, Costi e Chat li scegli tu.',
+  'help.guide.public-link.step.2': 'Clicca Crea link, poi Copia.',
+  'help.guide.public-link.step.3': 'Le spunte si possono cambiare finché il link esiste; Elimina link lo ferma.',
+  'help.guide.public-link.result':
+    'Chiunque abbia il link vede le parti scelte senza accedere e non può cambiare nulla.',
+  'help.guide.public-link.tip.1':
+    'Il link non è elencato da nessuna parte; chi lo ha può aprirlo, quindi trattalo come una password.',
+  'help.guide.public-link.tip.2': 'Per i diritti di modifica, aggiungi invece la persona come membro.',
+  // transfer-ownership
+  'help.guide.transfer-ownership.title': 'Cedere il viaggio o abbandonarlo',
+  'help.guide.transfer-ownership.goal': 'Rendi proprietario qualcun altro, o esci da un viaggio che non è tuo.',
+  'help.guide.transfer-ownership.step.1':
+    'Clicca Condividi. Sotto Accesso, la corona sulla riga di un membro rende quella persona il proprietario; conferma la domanda.',
+  'help.guide.transfer-ownership.step.2':
+    'Abbandona viaggio sulla tua riga ti toglie dal viaggio; come proprietario, cedilo prima.',
+  'help.guide.transfer-ownership.result':
+    'Il nuovo proprietario gestisce i membri e può eliminare il viaggio; tu resti un membro normale.',
+  'help.guide.transfer-ownership.tip.1':
+    'Il proprietario è chi ha creato il viaggio, finché non viene ceduto; eliminare il viaggio spetta solo a lui.',
+  'help.guide.transfer-ownership.tip.2':
+    'Rimuovi accesso su un’altra riga è lo stesso pulsante al contrario: il proprietario toglie un membro.',
+  // collapse-columns
+  'help.guide.collapse-columns.title': 'Fare spazio alla mappa',
+  'help.guide.collapse-columns.goal': 'Ripiega una colonna o dalle più larghezza.',
+  'help.guide.collapse-columns.step.1':
+    'Clicca il chevron sul bordo interno della colonna dei giorni per ripiegarla; la mappa prende lo spazio. La colonna dei luoghi ha lo stesso chevron.',
+  'help.guide.collapse-columns.step.2': 'Clicca di nuovo il chevron per riportare la colonna.',
+  'help.guide.collapse-columns.step.3':
+    'Trascina il divisore sottile tra una colonna e la mappa per cambiare la larghezza della colonna.',
+  'help.guide.collapse-columns.result':
+    'Le larghezze vengono ricordate; le colonne tornano aperte alla prossima visita.',
+  'help.guide.collapse-columns.tip.1': 'Entrambe le colonne si possono ripiegare insieme per una vista di sola mappa.',
+  'help.guide.collapse-columns.tip.2':
+    'Su un telefono non ci sono colonne: Programma e Luoghi sono i due pulsanti in fondo alla mappa.',
+  // undo-change
+  'help.guide.undo-change.title': 'Annullare l’ultima modifica',
+  'help.guide.undo-change.goal': 'Ritira ciò che hai appena fatto al programma.',
+  'help.guide.undo-change.step.1':
+    'Clicca la freccia di annullamento nella barra degli strumenti sopra i giorni; il suo tooltip nomina la modifica che ritirerà.',
+  'help.guide.undo-change.result':
+    'Il programma è tornato com’era, e la freccia diventa grigia fino alla prossima modifica.',
+  'help.guide.undo-change.tip.1':
+    'L’annullamento copre il programma: assegnare, rimuovere, riordinare e spostare luoghi, ottimizzare un percorso, eliminare luoghi, cambi di categoria e importazioni.',
+  'help.guide.undo-change.tip.2':
+    'È profondo un solo passo: solo l’ultima modifica può essere ritirata, e una nuova modifica la sostituisce.',
 };
 
 export default help;

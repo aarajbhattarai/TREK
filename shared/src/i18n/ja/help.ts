@@ -1618,6 +1618,101 @@ const help: TranslationStrings = {
   'help.guide.audit-log.result': 'なぜ何かが変わったのかを尋ねる人に渡せる記録です。',
   'help.guide.audit-log.tip.1': '時刻はサーバーのタイムゾーンで表示され、テーブルの上にその名前があります。',
   'help.guide.audit-log.tip.2': 'ログは追記専用です。ここにあるものはアプリからは編集も削除もできません。',
+
+  // ── Screen: trip ──────────────────────────────────────────────────────────────────────
+  'help.ctx.trip.title': '旅行',
+  'help.ctx.trip.summary':
+    '1つの旅行のすべてがここにあります。日程、地図、場所を含む計画と、移動、予約、リスト、費用、ファイル、コラボレーションのタブです。それぞれに、この画面の下に専用のヘルプ画面があります。',
+  'help.ctx.trip.bullet.1':
+    'タブバー：「計画」「移動」「予約」「リスト」「費用」「ファイル」「Collab」。どのタブがあるかは、あなたのTREKのアドオンとプラグインで決まります。',
+  'help.ctx.trip.bullet.2':
+    '「計画」は3つの列です。左に日程、中央に地図、右に場所。予約と移動は計画の中に、つまり立ち寄り先とその間にあり、タブはそれらを一覧にします。',
+  'help.ctx.trip.bullet.3':
+    '右上の「共有」は旅行の人たちを開きます。メンバー、ゲスト、招待リンク、そして読み取り専用の公開リンクです。',
+  'help.ctx.trip.bullet.4': 'タイトル、日付、カバー、通貨は「マイ旅行」から、旅行カードの鉛筆で編集します。',
+  'help.ctx.trip.bullet.5':
+    '列の内側の端にあるシェブロンは列を折りたたみ、地図がその場所を使います。列の隣の細い仕切りは列の幅を変えます。',
+  'help.ctx.trip.bullet.6': '日程のツールバーにある元に戻す矢印は、計画への最後の変更を取り消します。',
+  // add-member
+  'help.guide.add-member.title': 'メンバーを追加する',
+  'help.guide.add-member.goal': 'TREKアカウントを持つ人にこの旅行へのアクセスを与えます。',
+  'help.guide.add-member.step.1': '右上の「共有」をクリックします。',
+  'help.guide.add-member.step.2': '「ユーザーを招待」で一覧からその人を選び、「招待」をクリックします。',
+  'help.guide.add-member.step.3':
+    'その人が「アクセス」に表示されるようになります。王冠はオーナーの印です。行の末尾のアイコンでアクセスを再び削除できます。',
+  'help.guide.add-member.result':
+    'メンバーはあなたと同じように旅行を見て編集できます。管理者が「権限設定」で決めたレベルの範囲内です。',
+  'help.guide.add-member.tip.1':
+    '一覧にない人はまだTREKアカウントを持っていません。ゲストとして追加するか、招待リンクから登録してもらいます。',
+  'help.guide.add-member.tip.2': '「アクセス」の横の数字は旅行の人数です。ゲストはその下に別に並びます。',
+  // trip-invite-link
+  'help.guide.trip-invite-link.title': 'リンクで招待する',
+  'help.guide.trip-invite-link.goal': '人が自分で旅行に参加できるようにします。',
+  'help.guide.trip-invite-link.step.1':
+    '「共有」をクリックし、「旅行の招待リンク」で「招待リンクを作成」をクリックします。',
+  'help.guide.trip-invite-link.step.2':
+    '「コピー」をクリックしてリンクを送ります。TREKアカウントを持つ人がそれを開くと、メンバーとして参加します。',
+  'help.guide.trip-invite-link.step.3':
+    '「再生成」はリンクを置き換え、古いものを無効にします。「無効にする」はリンクをオフにします。',
+  'help.guide.trip-invite-link.result': 'リンクを開いた人は旅行に入り、「アクセス」に表示されます。',
+  'help.guide.trip-invite-link.tip.1':
+    'アカウントのない人は使えません。管理者は「管理」の「ユーザー」で登録リンクを配布でき、それをこの旅行に結びつけることもできます。',
+  'help.guide.trip-invite-link.tip.2':
+    'リンクを間違ったチャットに送ってしまったら再生成してください。古いリンクはすぐに使えなくなります。',
+  // add-guest
+  'help.guide.add-guest.title': 'アカウントのないゲストを追加する',
+  'help.guide.add-guest.goal': 'TREKを使っていない人を旅行に数えます。',
+  'help.guide.add-guest.step.1': '「共有」をクリックし、「ゲスト」までスクロールします。',
+  'help.guide.add-guest.step.2': '「ゲスト名」に名前を入力し、「ゲストを追加」をクリックします。',
+  'help.guide.add-guest.result': 'ゲストは費用、持ち物、タスクに割り当てできますが、ログインはできません。',
+  'help.guide.add-guest.tip.1':
+    '鉛筆でゲストの名前を変えられます。行の末尾のアイコンは、負担分と割り当てごとゲストを削除します。',
+  'help.guide.add-guest.tip.2': 'その人が後でアカウントを作ったら、メンバーとして招待し、ゲストを削除してください。',
+  // public-link
+  'help.guide.public-link.title': '読み取り専用リンクを公開する',
+  'help.guide.public-link.goal': '編集させたくない人に旅行を見せます。',
+  'help.guide.public-link.step.1':
+    '「共有」をクリックし、右側の「公開リンク」でリンクに表示してよいものにチェックを付けます。「地図・プラン」は常にオンです。「予約」「持ち物」「費用」「チャット」はあなたが選びます。',
+  'help.guide.public-link.step.2': '「リンク作成」をクリックし、次に「コピー」をクリックします。',
+  'help.guide.public-link.step.3': 'チェックはリンクがある間いつでも変えられます。「リンク削除」でリンクは止まります。',
+  'help.guide.public-link.result': 'リンクを持つ人は、ログインせずに選ばれた部分を見られますが、何も変更できません。',
+  'help.guide.public-link.tip.1':
+    'このリンクはどこにも一覧されません。持っている人は誰でも開けるので、パスワードのように扱ってください。',
+  'help.guide.public-link.tip.2': '編集権限が必要なら、代わりにその人をメンバーとして追加してください。',
+  // transfer-ownership
+  'help.guide.transfer-ownership.title': '旅行を引き渡す、または退出する',
+  'help.guide.transfer-ownership.goal': 'ほかの人をオーナーにするか、自分のものではない旅行から抜けます。',
+  'help.guide.transfer-ownership.step.1':
+    '「共有」をクリックします。「アクセス」でメンバーの行の王冠をクリックすると、その人がオーナーになります。確認の質問に答えます。',
+  'help.guide.transfer-ownership.step.2':
+    '自分の行の「旅行を退出」で旅行から抜けます。オーナーの場合は、先に引き渡してください。',
+  'help.guide.transfer-ownership.result':
+    '新しいオーナーがメンバーを管理し、旅行を削除できます。あなたは通常のメンバーとして残ります。',
+  'help.guide.transfer-ownership.tip.1':
+    '引き渡すまで、旅行を作った人がオーナーです。旅行の削除はオーナーだけができます。',
+  'help.guide.transfer-ownership.tip.2':
+    'ほかの人の行にある「アクセスを削除」は同じボタンの逆向きです。オーナーがメンバーを外します。',
+  // collapse-columns
+  'help.guide.collapse-columns.title': '地図のためにスペースを空ける',
+  'help.guide.collapse-columns.goal': '列を折りたたむか、列の幅を広げます。',
+  'help.guide.collapse-columns.step.1':
+    '日程の列の内側の端にあるシェブロンをクリックして折りたたみます。地図がそのスペースを使います。場所の列にも同じシェブロンがあります。',
+  'help.guide.collapse-columns.step.2': 'シェブロンをもう一度クリックすると列が戻ります。',
+  'help.guide.collapse-columns.step.3': '列と地図の間にある細い仕切りをドラッグして、列の幅を変えます。',
+  'help.guide.collapse-columns.result': '幅は記憶されます。次に開いたとき、列は開いた状態で戻ります。',
+  'help.guide.collapse-columns.tip.1': '両方の列を同時に折りたたむと、地図だけの表示になります。',
+  'help.guide.collapse-columns.tip.2':
+    'スマートフォンには列がありません。「計画」と「場所」が地図の下部にある2つのボタンです。',
+  // undo-change
+  'help.guide.undo-change.title': '最後の変更を元に戻す',
+  'help.guide.undo-change.goal': '計画にたった今行ったことを取り消します。',
+  'help.guide.undo-change.step.1':
+    '日程の上のツールバーにある元に戻す矢印をクリックします。ツールチップに、取り消される変更が表示されます。',
+  'help.guide.undo-change.result': '計画は元の状態に戻り、矢印は次の変更までグレーになります。',
+  'help.guide.undo-change.tip.1':
+    '元に戻すの対象は計画です。場所の割り当て・取り外し・並び替え・移動、ルートの最適化、場所の削除、カテゴリの変更、インポートです。',
+  'help.guide.undo-change.tip.2':
+    '深さは1段階です。取り消せるのは最新の変更だけで、新しい変更があるとそれに置き換わります。',
 };
 
 export default help;

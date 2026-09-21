@@ -1374,6 +1374,83 @@ const help: TranslationStrings = {
   'help.guide.audit-log.result': '一份可以交給任何詢問為什麼有變動的人的紀錄。',
   'help.guide.audit-log.tip.1': '時間以伺服器的時區顯示，時區名稱在表格上方。',
   'help.guide.audit-log.tip.2': '日誌只增不改；這裡的任何內容都不能從應用程式裡編輯或刪除。',
+
+  // ── Screen: trip ──────────────────────────────────────────────────────────────────────
+  'help.ctx.trip.title': '旅行',
+  'help.ctx.trip.summary':
+    '一次旅行的全部：包含天數、地圖和地點的計劃，以及交通、預訂、清單、費用、檔案和協作的分頁。它們每一個都有自己的說明頁面，就在本頁面下方。',
+  'help.ctx.trip.bullet.1':
+    '分頁列：「計劃」「交通」「預訂」「清單」「費用」「檔案」和「Collab」。哪些分頁存在，由你的 TREK 上的擴充套件和外掛決定。',
+  'help.ctx.trip.bullet.2':
+    '「計劃」是三欄：左邊是天數，中間是地圖，右邊是地點。預訂和交通就住在計劃裡，位於停靠點上和停靠點之間；分頁把它們列出來。',
+  'help.ctx.trip.bullet.3': '右上角的「分享」開啟旅行裡的人：成員、訪客、邀請連結和唯讀的公開連結。',
+  'help.ctx.trip.bullet.4': '標題、日期、封面和貨幣在「我的旅行」裡編輯，用旅行卡片上的鉛筆。',
+  'help.ctx.trip.bullet.5': '欄內側邊緣的折疊箭頭把這一欄收起來，地圖佔據空間；欄旁邊的細分隔線改變它的寬度。',
+  'help.ctx.trip.bullet.6': '天數工具列裡的撤銷箭頭收回對計劃的上一次變更。',
+  // add-member
+  'help.guide.add-member.title': '新增成員',
+  'help.guide.add-member.goal': '讓有 TREK 帳號的人可以存取這次旅行。',
+  'help.guide.add-member.step.1': '點選右上角的「分享」。',
+  'help.guide.add-member.step.2': '在「邀請使用者」下，從清單中選取此人並點選「邀請」。',
+  'help.guide.add-member.step.3': '此人現在出現在「訪問許可權」下。皇冠標記所有者；列末的圖示可再次移除訪問許可權。',
+  'help.guide.add-member.result': '成員像你一樣檢視和編輯旅行，範圍在管理員於「許可權設定」下設定的層級之內。',
+  'help.guide.add-member.tip.1': '清單裡沒有的人還沒有 TREK 帳號：把他們新增為訪客，或者讓他們透過邀請連結註冊。',
+  'help.guide.add-member.tip.2': '「訪問許可權」旁邊的數字統計旅行裡的人數；訪客在下方另外列出。',
+  // trip-invite-link
+  'help.guide.trip-invite-link.title': '透過連結邀請',
+  'help.guide.trip-invite-link.goal': '讓別人自己加入旅行。',
+  'help.guide.trip-invite-link.step.1': '點選「分享」，然後在「行程邀請連結」下點選「建立邀請連結」。',
+  'help.guide.trip-invite-link.step.2': '點選「複製」並傳送連結。任何有 TREK 帳號的人開啟它就會以成員身分加入。',
+  'help.guide.trip-invite-link.step.3': '「重新產生」會取代連結並讓舊連結失效；「停用」會關閉它。',
+  'help.guide.trip-invite-link.result': '開啟連結的人就在旅行裡了，並顯示在「訪問許可權」下。',
+  'help.guide.trip-invite-link.tip.1':
+    '沒有帳號的人用不了它。管理員在「管理後臺」、「使用者」下發放註冊連結，並可以把其中一個綁定到這次旅行。',
+  'help.guide.trip-invite-link.tip.2': '連結傳錯了聊天時就重新產生：舊連結立刻失效。',
+  // add-guest
+  'help.guide.add-guest.title': '新增沒有帳號的訪客',
+  'help.guide.add-guest.goal': '把一個不用 TREK 的人算進來。',
+  'help.guide.add-guest.step.1': '點選「分享」並捲動到「訪客」。',
+  'help.guide.add-guest.step.2': '在「訪客姓名」中輸入名字，然後點選「新增訪客」。',
+  'help.guide.add-guest.result': '訪客可以被指派到費用、行李物品和任務，但無法登入。',
+  'help.guide.add-guest.tip.1': '鉛筆可以幫訪客改名；列末的圖示會把他們連同其分攤和指派一起移除。',
+  'help.guide.add-guest.tip.2': '如果這個人後來有了帳號，就把他們邀請為成員，並移除訪客。',
+  // public-link
+  'help.guide.public-link.title': '發布唯讀連結',
+  'help.guide.public-link.goal': '把旅行展示給不應編輯它的人。',
+  'help.guide.public-link.step.1':
+    '點選「分享」；在右側的「公開連結」下，勾選連結可以顯示的內容。「地圖與計劃」始終開啟；「預訂」「行李」「費用」和「聊天」由你決定。',
+  'help.guide.public-link.step.2': '點選「建立連結」，然後點選「複製」。',
+  'help.guide.public-link.step.3': '連結存在期間可以隨時變更勾選；「刪除連結」會讓它停止。',
+  'help.guide.public-link.result': '任何有連結的人無需登入就能看到所選部分，並且什麼都改不了。',
+  'help.guide.public-link.tip.1': '這個連結不會列在任何地方；誰拿到它都能開啟，所以要像對待密碼一樣對待它。',
+  'help.guide.public-link.tip.2': '要給編輯權限，就改為把此人新增為成員。',
+  // transfer-ownership
+  'help.guide.transfer-ownership.title': '移交旅行或退出旅行',
+  'help.guide.transfer-ownership.goal': '讓別人成為所有者，或者退出一次不屬於你的旅行。',
+  'help.guide.transfer-ownership.step.1':
+    '點選「分享」。在「訪問許可權」下，成員列上的皇冠會讓此人成為所有者；確認提問。',
+  'help.guide.transfer-ownership.step.2': '你自己那一列上的「退出旅行」會把你帶出旅行；作為所有者，請先移交。',
+  'help.guide.transfer-ownership.result': '新所有者管理成員並可以刪除旅行；你仍是一般成員。',
+  'help.guide.transfer-ownership.tip.1': '在移交之前，所有者就是建立旅行的人；刪除旅行只有所有者能做。',
+  'help.guide.transfer-ownership.tip.2': '另一列上的「移除訪問許可權」是同一個按鈕的反向操作：所有者把成員請出去。',
+  // collapse-columns
+  'help.guide.collapse-columns.title': '給地圖騰出空間',
+  'help.guide.collapse-columns.goal': '收起一欄，或者給它更多寬度。',
+  'help.guide.collapse-columns.step.1':
+    '點選天數欄內側邊緣的折疊箭頭把它收起來；地圖佔據這塊空間。地點欄有同樣的箭頭。',
+  'help.guide.collapse-columns.step.2': '再次點選折疊箭頭，把這一欄找回來。',
+  'help.guide.collapse-columns.step.3': '拖曳欄與地圖之間的細分隔線來改變欄的寬度。',
+  'help.guide.collapse-columns.result': '寬度會被記住；下次造訪時各欄會恢復展開。',
+  'help.guide.collapse-columns.tip.1': '兩欄可以同時收起，得到只有地圖的檢視。',
+  'help.guide.collapse-columns.tip.2': '手機上沒有欄：「計劃」和「地點」是地圖底部的兩個按鈕。',
+  // undo-change
+  'help.guide.undo-change.title': '撤銷上一次變更',
+  'help.guide.undo-change.goal': '收回你剛剛對計劃做的事。',
+  'help.guide.undo-change.step.1': '點選天數上方工具列裡的撤銷箭頭；它的提示會寫出將要收回的變更。',
+  'help.guide.undo-change.result': '計劃恢復原樣，箭頭變灰，直到下一次變更。',
+  'help.guide.undo-change.tip.1':
+    '撤銷涵蓋計劃：指派、移除、重新排序和移動地點，最佳化路線，刪除地點，類別變更和匯入。',
+  'help.guide.undo-change.tip.2': '它只有一步深：只能收回最新的一次變更，新的變更會取代它。',
 };
 
 export default help;
