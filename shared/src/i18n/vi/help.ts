@@ -2673,6 +2673,160 @@ const help: TranslationStrings = {
     '“Luôn hiển thị tuyến đường đặt chỗ”, trong cùng phần cài đặt đó, vẽ chúng ngay từ đầu trên mọi chuyến đi bạn chưa quyết định.',
   'help.guide.map-booking-routes.tip.3':
     'Một đặt chỗ cần hai đầu có tọa độ trước khi có thể được vẽ, nên một khách sạn hay một nhà hàng không mang biểu tượng tuyến.',
+
+  // ── Screen: trip-collab ───────────────────────────────────────────────────────────────
+  'help.ctx.trip-collab.title': 'Cộng tác',
+  'help.ctx.trip-collab.summary':
+    'Tab nơi cả nhóm cùng lên kế hoạch: “Trò chuyện” ở bên trái, “Ghi chú” và “Liên kết” dùng chung bên cạnh, “Thăm dò ý kiến” ở dưới và “Tiếp theo là gì” ở cuối. Mọi thứ viết ở đây đều có mặt trên màn hình của mọi thành viên khác ngay lập tức, không cần tải lại.',
+  'help.ctx.trip-collab.bullet.1':
+    '“Trò chuyện” là cột bên trái. Viết vào “Nhập tin nhắn...” rồi nhấn Enter; Shift và Enter tạo một dòng mới. Mặt cười thêm một biểu tượng cảm xúc, “Đính kèm ảnh” treo tối đa bốn tấm ảnh lên tin nhắn.',
+  'help.ctx.trip-collab.bullet.2':
+    'Rê chuột lên một tin nhắn để có “Hồi đáp” và, với tin nhắn của chính bạn, “Xóa bỏ”; nhấp chuột phải để có tám phản ứng nhanh. Một tin nhắn đã xóa để lại một dòng ghi “đã xóa một tin nhắn”.',
+  'help.ctx.trip-collab.bullet.3':
+    '“Ghi chú” là tập giấy dùng chung: “Ghi chú mới” viết một tờ, và bánh răng bên cạnh mở “Quản lý danh mục” để đặt tên và màu cho chúng. Một thẻ mang “Mở rộng”, “Ghim”, “Chỉnh sửa” và “Xóa bỏ”.',
+  'help.ctx.trip-collab.bullet.4':
+    '“Liên kết” gom những địa chỉ mà chuyến đi dựa vào. “Thêm liên kết” nhận một tiêu đề và một địa chỉ http hoặc https; “Chỉnh sửa liên kết”, “Ghim liên kết” và “Xóa liên kết” nằm ở đuôi chip, và những liên kết đã ghim ở lại phía trước.',
+  'help.ctx.trip-collab.bullet.5':
+    '“Thăm dò ý kiến” quyết định mọi chuyện. “Cuộc thăm dò mới” đặt một câu hỏi với ít nhất hai tùy chọn; một cú nhấp vào một tùy chọn là lá phiếu của bạn, “Đóng” kết thúc việc bỏ phiếu và “Xóa bỏ” gỡ cuộc thăm dò đi.',
+  'help.ctx.trip-collab.bullet.6':
+    '“Tiếp theo là gì” liệt kê tám điểm dừng kế tiếp của chuyến đi còn ở phía trước, cùng giờ giấc và những người có mặt ở đó. Nó chỉ đọc kế hoạch ngày; giờ giấc được đặt ở đó.',
+  // write-note
+  'help.guide.write-note.title': 'Viết một ghi chú chung',
+  'help.guide.write-note.goal':
+    'Đặt những gì cả nhóm cần, một quy định, một địa chỉ, một lời nhắc, vào nơi ai cũng tìm lại được.',
+  'help.guide.write-note.step.1': 'Nhấp “Ghi chú mới” ở đầu bảng “Ghi chú”. Biểu mẫu mở ra.',
+  'help.guide.write-note.step.2':
+    '“tiêu đề ghi chú” là cái tên mà thẻ mang. Đó là thứ duy nhất biểu mẫu bắt buộc: “Tạo nên” vẫn xám cho tới khi có gì đó trong đó.',
+  'help.guide.write-note.step.3':
+    'Ô lớn bên dưới chứa phần chữ và nhận Markdown: một từ in đậm, một danh sách, một tiêu đề. Thẻ hiện vài dòng đầu, và “Mở rộng” trên đó mở toàn bộ ghi chú.',
+  'help.guide.write-note.step.4':
+    'Dưới “Loại”, chọn loại mà ghi chú thuộc về; màu của nó trở thành màu của thẻ. Những viên thuốc là các danh mục đã có, còn danh mục mới được tạo trong “Quản lý danh mục”.',
+  'help.guide.write-note.step.5':
+    '“Trang web” nhận một liên kết thuộc về ghi chú. Khi đó thẻ mang một ô Link để mở nó.',
+  'help.guide.write-note.step.6': 'Nhấp “Tạo nên”.',
+  'help.guide.write-note.result':
+    'Ghi chú là một thẻ trong bảng “Ghi chú”, mang màu của danh mục, và đã có sẵn trên màn hình của mọi thành viên khác.',
+  'help.guide.write-note.tip.1':
+    '“Ghim” trên một thẻ giữ nó ở đầu bảng; mọi thứ bên dưới được sắp theo lần thay đổi gần nhất.',
+  'help.guide.write-note.tip.2':
+    'Bánh răng bên cạnh “Ghi chú mới” mở “Quản lý danh mục”: ở đó một danh mục nhận màu của nó, được đổi tên ở mọi nơi cùng lúc, hoặc được thêm vào trước khi có ghi chú nào dùng tới.',
+  'help.guide.write-note.tip.3':
+    '“Đính kèm tập tin” treo một tài liệu lên ghi chú. “Gắn” mở trình chọn tập tin, và một hình ảnh hay một tệp PDF cũng có thể chỉ cần dán thẳng vào biểu mẫu.',
+  'help.guide.write-note.tip.4':
+    '“Ghi chú” là một công tắc riêng dưới “Tiện ích bổ sung”, bên dưới “Cộng tác”: quản trị viên có thể tắt nó đi mà vẫn để “Trò chuyện”, “Liên kết”, “Thăm dò ý kiến” và “Tiếp theo là gì” chạy tiếp.',
+  // shared-links
+  'help.guide.shared-links.title': 'Gom các liên kết của chuyến đi',
+  'help.guide.shared-links.goal':
+    'Giữ cổng đặt chỗ, album chung và bảng giờ ở một chỗ thay vì cuộn phần trò chuyện để tìm chúng.',
+  'help.guide.shared-links.step.1': 'Nhấp “Thêm liên kết” ở đầu bảng “Liên kết”.',
+  'help.guide.shared-links.step.2':
+    'Đặt tên cho liên kết trong “Tiêu đề liên kết”, dán địa chỉ vào ô bên dưới, rồi nhấp “Lưu liên kết”.',
+  'help.guide.shared-links.step.3':
+    'Chip hiện cái tên và trang mà nó trỏ tới. Một cú nhấp lên nó mở trang đó trong một tab mới.',
+  'help.guide.shared-links.step.4':
+    'Ba nút nhỏ ở đuôi nó là “Chỉnh sửa liên kết”, “Ghim liên kết” và “Xóa liên kết”. “Ghim liên kết” đưa chip ra đầu bảng; “Xóa liên kết” không hỏi gì cả.',
+  'help.guide.shared-links.result':
+    'Liên kết là một chip trong bảng “Liên kết”, được ghim ra phía trước, và có trên màn hình của mọi thành viên cùng lúc.',
+  'help.guide.shared-links.tip.1': 'Chỉ các địa chỉ http và https được nhận; ô đó từ chối mọi thứ khác trước khi lưu.',
+  'help.guide.shared-links.tip.2':
+    'Liên kết đã ghim đứng trước, rồi tới cái mới nhất. Biểu tượng nhỏ bên cạnh một tiêu đề là favicon của chính trang đó, được lấy từ trang ấy, nên khi không có internet chip hiện một biểu tượng liên kết thường thay vào đó.',
+  'help.guide.shared-links.tip.3':
+    '“Liên kết” là một công tắc riêng dưới “Tiện ích bổ sung”, bên dưới “Cộng tác”, nên quản trị viên có thể tắt bảng này mà không đụng tới phần còn lại của tab.',
+  // create-poll
+  'help.guide.create-poll.title': 'Hỏi cả nhóm',
+  'help.guide.create-poll.goal':
+    'Biến một câu hỏi không ai trả lời trong phần trò chuyện thành một cuộc thăm dò mà ai cũng đánh dấu được.',
+  'help.guide.create-poll.step.1': 'Nhấp “Cuộc thăm dò mới” ở đầu bảng “Thăm dò ý kiến”.',
+  'help.guide.create-poll.step.2':
+    'Viết câu hỏi. “Hỗ trợ Markdown” dưới ô đó nghĩa là một từ in đậm, một lần xuống dòng hay một danh sách ngắn đều dùng được ở đây.',
+  'help.guide.create-poll.step.3': 'Điền “Tùy chọn 1” và “Tùy chọn 2”. Hai tùy chọn có nội dung là mức tối thiểu.',
+  'help.guide.create-poll.step.4':
+    '“+ Thêm tùy chọn” thêm cái thứ ba, cái thứ tư, bao nhiêu tùy bạn; dấu nhân nhỏ bên cạnh một hàng lại lấy đi một cái.',
+  'help.guide.create-poll.step.5':
+    '“Nhiều lựa chọn” cho phép mọi người đánh dấu hơn một tùy chọn. Nếu để tắt, một lá phiếu sẽ chuyển sang khi ai đó chọn thứ khác.',
+  'help.guide.create-poll.step.6': 'Nhấp “Tạo cuộc thăm dò ý kiến”.',
+  'help.guide.create-poll.result': 'Cuộc thăm dò đứng ở đầu bảng “Thăm dò ý kiến”, đang mở, và chưa ai bỏ phiếu.',
+  'help.guide.create-poll.tip.1': 'Câu hỏi được dựng theo Markdown; các tùy chọn vẫn là văn bản thuần.',
+  'help.guide.create-poll.tip.2':
+    '“Tạo cuộc thăm dò ý kiến” vẫn xám cho tới khi có một câu hỏi và ít nhất hai tùy chọn có nội dung.',
+  'help.guide.create-poll.tip.3':
+    'Thời hạn chỉ đặt được trong ứng dụng điện thoại. Một cuộc thăm dò có thời hạn sẽ hiện thời gian còn lại ở đây trong một chip màu hổ phách và được tính là đã đóng khi hết giờ.',
+  'help.guide.create-poll.tip.4':
+    '“Thăm dò ý kiến” là một công tắc riêng dưới “Tiện ích bổ sung”, bên dưới “Cộng tác”: quản trị viên có thể tắt nó đi mà vẫn để bốn bảng còn lại chạy tiếp.',
+  // vote-poll
+  'help.guide.vote-poll.title': 'Bỏ phiếu và đọc kết quả',
+  'help.guide.vote-poll.goal': 'Bỏ lá phiếu của bạn, xem cả nhóm đang đứng ở đâu, và đổi ý.',
+  'help.guide.vote-poll.step.1': 'Nhấp tùy chọn bạn muốn. Vòng tròn của nó được tô đầy và thanh phía sau dài ra.',
+  'help.guide.vote-poll.step.2':
+    'Giờ thì đọc được toàn bộ kết quả: thanh là tỉ lệ, phần trăm đứng bên phải, và những vòng tròn nhỏ là những người đã chọn tùy chọn đó.',
+  'help.guide.vote-poll.step.3':
+    'Đổi ý rồi? Nhấp một tùy chọn khác. Trong một cuộc thăm dò không có “Nhiều lựa chọn”, lá phiếu của bạn chuyển sang chứ không thêm một lá thứ hai.',
+  'help.guide.vote-poll.step.4':
+    'Dưới câu hỏi ghi cuộc thăm dò đã có bao nhiêu phiếu. Một cú nhấp vào tùy chọn bạn đã chọn sẽ rút lá phiếu của bạn ra, và con số lại giảm xuống.',
+  'help.guide.vote-poll.result':
+    'Dấu của bạn nằm trên một tùy chọn, các thanh cho thấy nhóm chia ra thế nào, và các vòng tròn nói ai chọn gì.',
+  'help.guide.vote-poll.tip.1':
+    'Các thanh và phần trăm chỉ hiện ra khi chính bạn đã bỏ phiếu, hoặc khi cuộc thăm dò đã đóng, để không ai bị cục diện hiện tại tác động.',
+  'help.guide.vote-poll.tip.2':
+    'Một lá phiếu không bao giờ ẩn danh: rê chuột lên một trong các vòng tròn của một tùy chọn để thấy cái tên đằng sau nó.',
+  // close-poll
+  'help.guide.close-poll.title': 'Đóng một cuộc thăm dò, hoặc gỡ nó đi',
+  'help.guide.close-poll.goal': 'Dừng việc bỏ phiếu khi cả nhóm đã quyết, và dọn đi một cuộc thăm dò không ai còn cần.',
+  'help.guide.close-poll.step.1':
+    '“Đóng”, cái ổ khóa ở góc một cuộc thăm dò, kết thúc việc bỏ phiếu. Các tùy chọn thôi nhận cú nhấp.',
+  'help.guide.close-poll.step.2':
+    'Một cuộc thăm dò đã đóng chìm xuống dưới tiêu đề “Đã đóng” ở đáy bảng, đeo huy hiệu “Đã đóng” và cho mọi người thấy kết quả, dù họ có bỏ phiếu hay không. Tùy chọn thắng được tô xanh lá.',
+  'help.guide.close-poll.step.3':
+    '“Xóa bỏ” bên cạnh nó gỡ cuộc thăm dò đi. Không có gì hỏi lại lần nữa, và các lá phiếu đi theo.',
+  'help.guide.close-poll.result':
+    'Cuộc thăm dò biến khỏi bảng của mọi thành viên. Cái mà bạn chỉ đóng thì vẫn đọc được ở dưới cùng, cùng với kết quả của nó.',
+  'help.guide.close-poll.tip.1':
+    'Đóng thì không hoàn tác được: không có mở lại. Một cuộc thăm dò lỡ tay đóng phải hỏi lại từ đầu.',
+  'help.guide.close-poll.tip.2':
+    '“Xóa bỏ” lấy đi cuộc thăm dò và mọi lá phiếu trong đó khỏi tất cả mọi người, ngay lập tức và không hỏi gì.',
+  // whats-next
+  'help.guide.whats-next.title': 'Đọc “Tiếp theo là gì”',
+  'help.guide.whats-next.goal': 'Xem cả nhóm sắp làm gì mà không cần mở kế hoạch.',
+  'help.guide.whats-next.step.1':
+    'Bảng này liệt kê tám điểm dừng kế tiếp của chuyến đi còn ở phía trước, theo thứ tự thời gian, dưới một tiêu đề cho mỗi ngày: “Hôm nay”, “Ngày mai” hoặc ngày tháng.',
+  'help.guide.whats-next.step.2':
+    'Bên trái một hàng là giờ của nó: giờ bắt đầu, “ĐẾN”, và giờ kết thúc khi điểm dừng có, hoặc TBD khi chưa đặt giờ nào cho nó.',
+  'help.guide.whats-next.step.3':
+    'Các chip dưới cái tên là những người có mặt ở điểm dừng đó. Khi không chọn ai cho nó, tất cả mọi người trong chuyến đi được liệt kê.',
+  'help.guide.whats-next.result':
+    'Một danh sách những gì sắp tới, chỉ để đọc: nó đi theo kế hoạch, và không gì ở đây thay đổi kế hoạch.',
+  'help.guide.whats-next.tip.1':
+    'Ở đây không đặt gì cả. Giờ giấc đến từ kế hoạch ngày; đổi ở đó thì danh sách này theo ngay.',
+  'help.guide.whats-next.tip.2':
+    'Chỉ những gì còn ở phía trước mới được liệt kê: một điểm dừng đã qua giờ sẽ rơi ra, và vào cuối chuyến đi bảng này trống.',
+  'help.guide.whats-next.tip.3':
+    '“Tiếp theo là gì” là một công tắc riêng dưới “Tiện ích bổ sung”, bên dưới “Cộng tác”, và nó là một bảng dành cho máy tính: tab “Cộng tác” của ứng dụng điện thoại không có nó.',
+  // trip-chat
+  'help.guide.trip-chat.title': 'Nói chuyện với cả nhóm',
+  'help.guide.trip-chat.goal':
+    'Nói một điều gì đó, trả lời đúng một tin nhắn, phản ứng với một tin khác, và rút lại tin của chính bạn.',
+  'help.guide.trip-chat.step.1':
+    'Viết vào “Nhập tin nhắn...” rồi nhấn Enter. Mũi tên xanh bên cạnh ô đó làm y như vậy; còn Shift và Enter thì tạo một dòng mới.',
+  'help.guide.trip-chat.step.2':
+    'Mặt cười mở bảng chọn biểu tượng cảm xúc, trong đó có Smileys, Reactions và Travel. Cái bạn chọn được thêm vào những gì bạn đang viết, nó không tự gửi đi.',
+  'help.guide.trip-chat.step.3':
+    'Rê chuột lên tin nhắn của người khác: một nút tròn nhỏ hiện ra ở góc. Đó là “Hồi đáp”.',
+  'help.guide.trip-chat.step.4':
+    'Tin nhắn bạn trả lời được trích ở trên ô nhập. Viết và gửi, phần trích đi theo trong bong bóng của bạn; dấu nhân trên phần trích bỏ nó đi.',
+  'help.guide.trip-chat.step.5':
+    'Nhấp chuột phải một tin nhắn để có tám phản ứng nhanh. Phản ứng của bạn nằm dưới bong bóng, và một cú nhấp thứ hai lên đúng nó sẽ rút lại.',
+  'help.guide.trip-chat.step.6':
+    'Tin nhắn của chính bạn mang “Xóa bỏ” bên cạnh “Hồi đáp”. Nó lấy tin nhắn đi và để lại một dòng ghi “đã xóa một tin nhắn”: không có đường quay lại.',
+  'help.guide.trip-chat.result':
+    'Câu trả lời của bạn nằm dưới tin nhắn mà nó trích, một phản ứng treo trên một tin thứ ba, và cái bạn rút lại để lại đúng một dòng nói vậy.',
+  'help.guide.trip-chat.tip.1':
+    'Enter gửi đi, Shift và Enter tạo một dòng mới. Một tin nhắn chỉ toàn biểu tượng cảm xúc được hiện to.',
+  'help.guide.trip-chat.tip.2':
+    '“Đính kèm ảnh” nhận tối đa bốn tấm ảnh cho một tin nhắn; ảnh cũng có thể chỉ cần dán hoặc thả lên ô nhập.',
+  'help.guide.trip-chat.tip.3':
+    'Một tin nhắn có liên kết sẽ có thẻ xem trước bên dưới, do chính TREK của bạn lấy về, nên một liên kết tới thứ chỉ mình bạn vào được vẫn chỉ là một liên kết thường.',
+  'help.guide.trip-chat.tip.4':
+    '“Trò chuyện” là một công tắc riêng dưới “Tiện ích bổ sung”, bên dưới “Cộng tác”: quản trị viên có thể tắt nó đi mà vẫn để “Ghi chú”, “Liên kết”, “Thăm dò ý kiến” và “Tiếp theo là gì” chạy tiếp.',
 };
 
 export default help;

@@ -2752,6 +2752,162 @@ const help: TranslationStrings = {
     'Boekingsroutes altijd tonen, in dezelfde instellingen, tekent ze vanaf het begin op elke reis waarover je nog niet hebt beslist.',
   'help.guide.map-booking-routes.tip.3':
     'Een boeking heeft twee uiteinden met coördinaten nodig voordat hij getekend kan worden, dus een hotel of een restaurant draagt geen route-icoon.',
+
+  // ── Screen: trip-collab ───────────────────────────────────────────────────────────────
+  'help.ctx.trip-collab.title': 'Samenwerking',
+  'help.ctx.trip-collab.summary':
+    'Het tabblad waar de groep samen plant: links de chat, daarnaast de gedeelde notities en links, daaronder de polls en aan het eind Wat komt er. Alles wat hier geschreven wordt, staat meteen op het scherm van elk ander lid, zonder herladen.',
+  'help.ctx.trip-collab.bullet.1':
+    'De chat is de linkerkolom. Typ in Typ een bericht... en druk op Enter; Shift en Enter maken een nieuwe regel. De smiley zet er een emoji in, Afbeeldingen toevoegen hangt tot vier afbeeldingen aan het bericht.',
+  'help.ctx.trip-collab.bullet.2':
+    'Ga met de muis over een bericht voor Beantwoorden en, bij je eigen bericht, Verwijderen; met rechts klikken komen de acht snelle reacties. Een verwijderd bericht laat één regel achter die zegt dat jij het verwijderd hebt.',
+  'help.ctx.trip-collab.bullet.3':
+    'Notities is het gedeelde blok: Nieuwe notitie schrijft er een, en het tandwiel ernaast opent Categorieën beheren voor hun namen en kleuren. Een kaart draagt Uitvouwen, Vastpinnen, Bewerken en Verwijderen.',
+  'help.ctx.trip-collab.bullet.4':
+    'Links verzamelt de adressen waar de reis op draait. Link toevoegen neemt een titel en een http- of https-adres; Link bewerken, Link vastmaken en Link verwijderen zitten aan het eind van de chip, en vastgemaakte links blijven vooraan.',
+  'help.ctx.trip-collab.bullet.5':
+    'Polls beslissen dingen. Nieuwe poll stelt een vraag met minstens twee opties; een klik op een optie is jouw stem, Sluiten beëindigt de stemming en Verwijderen haalt de poll weg.',
+  'help.ctx.trip-collab.bullet.6':
+    'Wat komt er toont de volgende acht stops van de reis die nog voor je liggen, met hun tijden en de mensen die erbij zijn. Het leest alleen het dagplan; de tijden worden daar gezet.',
+  // write-note
+  'help.guide.write-note.title': 'Een gedeelde notitie schrijven',
+  'help.guide.write-note.goal':
+    'Zet wat de hele groep nodig heeft, een afspraak, een adres, een herinnering, daar waar iedereen het terugvindt.',
+  'help.guide.write-note.step.1': 'Klik bovenaan het paneel Notities op Nieuwe notitie. Het formulier gaat open.',
+  'help.guide.write-note.step.2':
+    'Notitietitel is de naam die de kaart draagt. Het is het enige waar het formulier op staat: Aanmaken blijft grijs zolang er niets in staat.',
+  'help.guide.write-note.step.3':
+    'Het grote vak eronder bevat de tekst en neemt Markdown: een vet woord, een lijst, een kop. De kaart toont de eerste regels, en Uitvouwen erop opent de hele notitie.',
+  'help.guide.write-note.step.4':
+    'Kies onder Categorie die waar de notitie bij hoort; haar kleur wordt de kleur van de kaart. De pillen zijn de categorieën die al bestaan, en een nieuwe maak je onder Categorieën beheren.',
+  'help.guide.write-note.step.5':
+    'Website neemt een link die bij de notitie hoort. De kaart draagt dan een tegel Link die hem opent.',
+  'help.guide.write-note.step.6': 'Klik op Aanmaken.',
+  'help.guide.write-note.result':
+    'De notitie is een kaart in het paneel Notities, in de kleur van haar categorie, en staat al op het scherm van elk ander lid.',
+  'help.guide.write-note.tip.1':
+    'Vastpinnen op een kaart houdt hem bovenaan het paneel; alles daaronder is gesorteerd op wanneer het het laatst is gewijzigd.',
+  'help.guide.write-note.tip.2':
+    'Het tandwiel naast Nieuwe notitie opent Categorieën beheren: daar krijgt een categorie haar kleur, wordt ze overal in één keer hernoemd, of wordt ze aangemaakt voordat een notitie haar gebruikt.',
+  'help.guide.write-note.tip.3':
+    'Bestanden bijvoegen hangt een document aan de notitie. Bijvoegen opent de bestandskiezer, en een afbeelding of een PDF kun je ook gewoon in het formulier plakken.',
+  'help.guide.write-note.tip.4':
+    'Notities is een eigen schakelaar onder Add-ons, onder Samenwerking: een beheerder kan hem uitzetten en de Chat, de Links, de Polls en Wat nu laten draaien.',
+  // shared-links
+  'help.guide.shared-links.title': 'De links van de reis verzamelen',
+  'help.guide.shared-links.goal':
+    'Houd het boekingsportaal, het gedeelde album en de dienstregeling op één plek in plaats van er de chat voor door te scrollen.',
+  'help.guide.shared-links.step.1': 'Klik bovenaan het paneel Links op Link toevoegen.',
+  'help.guide.shared-links.step.2':
+    'Geef de link een naam in Linktitel, plak het adres in het veld eronder en klik dan op Link opslaan.',
+  'help.guide.shared-links.step.3':
+    'De chip toont de naam en de site waar hij naartoe wijst. Een klik erop opent de pagina in een nieuw tabblad.',
+  'help.guide.shared-links.step.4':
+    'De drie kleine knoppen aan het eind zijn Link bewerken, Link vastmaken en Link verwijderen. Link vastmaken zet de chip vooraan in het paneel; Link verwijderen vraagt niets.',
+  'help.guide.shared-links.result':
+    'De link is een chip in het paneel Links, vooraan vastgemaakt, en tegelijk op het scherm van elk lid.',
+  'help.guide.shared-links.tip.1':
+    'Alleen http- en https-adressen worden aangenomen; het veld weigert al het andere voordat het opslaat.',
+  'help.guide.shared-links.tip.2':
+    'Vastgemaakte links komen eerst, dan de nieuwste. Het kleine pictogram naast een titel is de eigen favicon van de site, opgehaald bij de site zelf, dus zonder internet toont de chip in plaats daarvan een gewoon linkteken.',
+  'help.guide.shared-links.tip.3':
+    'Links is een eigen schakelaar onder Add-ons, onder Samenwerking, zodat een beheerder het paneel kan uitzetten zonder de rest van het tabblad aan te raken.',
+  // create-poll
+  'help.guide.create-poll.title': 'De groep vragen',
+  'help.guide.create-poll.goal':
+    'Maak van een vraag die in de chat niemand beantwoordt een poll die iedereen kan aantikken.',
+  'help.guide.create-poll.step.1': 'Klik bovenaan het paneel Polls op Nieuwe poll.',
+  'help.guide.create-poll.step.2':
+    'Schrijf de vraag. Markdown wordt ondersteund onder het vak betekent dat een vet woord, een regeleinde of een korte lijst hier werkt.',
+  'help.guide.create-poll.step.3': 'Vul Optie 1 en Optie 2 in. Twee opties met iets erin zijn het minimum.',
+  'help.guide.create-poll.step.4':
+    '+ Optie toevoegen voegt een derde toe, een vierde, zoveel als je nodig hebt; het kleine kruisje naast een rij haalt er weer een weg.',
+  'help.guide.create-poll.step.5':
+    'Meerkeuze laat iedereen meer dan één optie aantikken. Staat hij uit, dan schuift een stem mee als iemand iets anders kiest.',
+  'help.guide.create-poll.step.6': 'Klik op Poll aanmaken.',
+  'help.guide.create-poll.result': 'De poll staat bovenaan het paneel Polls, open, en niemand heeft nog gestemd.',
+  'help.guide.create-poll.tip.1': 'De vraag wordt als Markdown weergegeven; de opties blijven platte tekst.',
+  'help.guide.create-poll.tip.2':
+    'Poll aanmaken blijft grijs tot er een vraag is en minstens twee opties met iets erin.',
+  'help.guide.create-poll.tip.3':
+    'Een deadline kun je alleen in de telefoonapp zetten. Een poll die er een heeft toont hier de resterende tijd in een amberkleurige chip en geldt als gesloten zodra die afloopt.',
+  'help.guide.create-poll.tip.4':
+    'Polls is een eigen schakelaar onder Add-ons, onder Samenwerking: een beheerder kan hem uitzetten en de andere vier panelen laten draaien.',
+  // vote-poll
+  'help.guide.vote-poll.title': 'Stemmen en het resultaat lezen',
+  'help.guide.vote-poll.goal': 'Breng je stem uit, zie waar de groep staat, en verander van gedachten.',
+  'help.guide.vote-poll.step.1': 'Klik op de optie die je wilt. De cirkel ervan vult zich en de balk erachter groeit.',
+  'help.guide.vote-poll.step.2':
+    'Nu is het hele resultaat te lezen: de balk is het aandeel, het percentage staat rechts, en de kleine cirkels zijn de mensen die die optie kozen.',
+  'help.guide.vote-poll.step.3':
+    'Van gedachten veranderd? Klik op een andere optie. Bij een poll zonder Meerkeuze schuift je stem mee in plaats van dat er een tweede bij komt.',
+  'help.guide.vote-poll.step.4':
+    'Onder de vraag staat hoeveel stemmen de poll heeft. Een klik op de optie die je al koos haalt je stem er weer uit, en de teller daalt.',
+  'help.guide.vote-poll.result':
+    'Je vinkje staat op één optie, de balken tonen hoe de groep verdeeld is, en de cirkels zeggen wie wat koos.',
+  'help.guide.vote-poll.tip.1':
+    'De balken en de percentages verschijnen pas als je zelf gestemd hebt, of als de poll gesloten is, zodat niemand door de tussenstand gestuurd wordt.',
+  'help.guide.vote-poll.tip.2':
+    'Een stem is nooit anoniem: ga met de muis over een van de cirkels bij een optie voor de naam erachter.',
+  // close-poll
+  'help.guide.close-poll.title': 'Een poll sluiten of weghalen',
+  'help.guide.close-poll.goal':
+    'Stop de stemming zodra de groep beslist heeft, en ruim een poll op die niemand meer nodig heeft.',
+  'help.guide.close-poll.step.1':
+    'Sluiten, het slotje in de hoek van een poll, beëindigt de stemming. De opties nemen geen klikken meer aan.',
+  'help.guide.close-poll.step.2':
+    'Een gesloten poll zakt onder de kop Gesloten onderaan het paneel, draagt een badge Gesloten en toont iedereen het resultaat, of ze nu gestemd hebben of niet. De winnende optie krijgt een groene tint.',
+  'help.guide.close-poll.step.3':
+    'Verwijderen ernaast haalt de poll weg. Niets vraagt het twee keer, en de stemmen gaan mee.',
+  'help.guide.close-poll.result':
+    'De poll is uit het paneel van elk lid verdwenen. Een die je alleen gesloten hebt, blijft onderaan leesbaar, met zijn resultaat.',
+  'help.guide.close-poll.tip.1':
+    'Sluiten kan niet ongedaan gemaakt worden: heropenen bestaat niet. Een poll die per ongeluk gesloten is, moet opnieuw gesteld worden.',
+  'help.guide.close-poll.tip.2':
+    'Verwijderen haalt de poll en elke stem erop voor iedereen weg, meteen en zonder vraag.',
+  // whats-next
+  'help.guide.whats-next.title': 'Wat komt er lezen',
+  'help.guide.whats-next.goal': 'Zie wat de groep hierna doet zonder het plan te openen.',
+  'help.guide.whats-next.step.1':
+    'Het paneel toont de volgende acht stops van de reis die nog voor je liggen, op tijd gesorteerd, onder een kop per dag: Vandaag, Morgen of de datum.',
+  'help.guide.whats-next.step.2':
+    'Links in een rij staat de tijd: het begin, tot, en het einde als de stop dat heeft, of TBD als er nog geen tijd op gezet is.',
+  'help.guide.whats-next.step.3':
+    'De chips onder de naam zijn de mensen bij die stop. Is er niemand voor gekozen, dan staat iedereen in de reis er.',
+  'help.guide.whats-next.result':
+    'Een lijst van wat eraan komt, alleen om te lezen: hij volgt het plan, en niets hier verandert het.',
+  'help.guide.whats-next.tip.1':
+    'Hier wordt niets gezet. De tijden komen uit het dagplan; verander ze daar en deze lijst volgt meteen.',
+  'help.guide.whats-next.tip.2':
+    'Alleen wat nog voor je ligt staat erin: een stop waarvan de tijd voorbij is valt eruit, en aan het eind van een reis is het paneel leeg.',
+  'help.guide.whats-next.tip.3':
+    'Wat nu is een eigen schakelaar onder Add-ons, onder Samenwerking, en het is een paneel voor de desktop: het tabblad Samenwerking van de telefoonapp biedt het niet.',
+  // trip-chat
+  'help.guide.trip-chat.title': 'Met de groep praten',
+  'help.guide.trip-chat.goal':
+    'Zeg iets, antwoord op één bepaald bericht, reageer op een ander, en neem je eigen bericht terug.',
+  'help.guide.trip-chat.step.1':
+    'Typ in Typ een bericht... en druk op Enter. De blauwe pijl naast het vak doet hetzelfde; Shift en Enter maken in plaats daarvan een nieuwe regel.',
+  'help.guide.trip-chat.step.2':
+    'De smiley opent de emojikiezer, met Smileys, Reactions en Travel erin. Wat je kiest wordt toegevoegd aan wat je aan het schrijven bent, het wordt niet op zichzelf verstuurd.',
+  'help.guide.trip-chat.step.3':
+    'Ga met de muis over het bericht van iemand anders: in de hoek verschijnt een klein rond knopje. Dat is Beantwoorden.',
+  'help.guide.trip-chat.step.4':
+    'Het bericht waarop je antwoordt staat als citaat boven het vak. Schrijf en verstuur, en het citaat reist mee in je bubbel; het kruisje op het citaat laat het weer vallen.',
+  'help.guide.trip-chat.step.5':
+    'Klik met rechts op een bericht voor de acht snelle reacties. De jouwe zit onder de bubbel, en een tweede klik op dezelfde haalt hem terug.',
+  'help.guide.trip-chat.step.6':
+    'Je eigen berichten dragen Verwijderen naast Beantwoorden. Het haalt het bericht weg en laat één regel achter die zegt dat jij het verwijderd hebt: terug kan niet.',
+  'help.guide.trip-chat.result':
+    'Je antwoord staat onder het bericht dat het citeert, een reactie hangt aan een derde, en het bericht dat je terugnam laat één enkele regel achter die dat zegt.',
+  'help.guide.trip-chat.tip.1':
+    'Enter verstuurt, Shift en Enter maken een nieuwe regel. Een bericht dat alleen uit emoji bestaat wordt groot getoond.',
+  'help.guide.trip-chat.tip.2':
+    'Afbeeldingen toevoegen neemt tot vier afbeeldingen voor één bericht; ze kunnen ook gewoon geplakt of op het vak gesleept worden.',
+  'help.guide.trip-chat.tip.3':
+    'Een bericht met een link erin krijgt er een voorbeeldkaart onder, opgehaald door je eigen TREK, dus een link naar iets wat alleen jij kunt bereiken blijft een gewone link.',
+  'help.guide.trip-chat.tip.4':
+    'Chat is een eigen schakelaar onder Add-ons, onder Samenwerking: een beheerder kan hem uitzetten en de Notities, de Links, de Polls en Wat nu laten draaien.',
 };
 
 export default help;

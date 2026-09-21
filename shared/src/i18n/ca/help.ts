@@ -2741,6 +2741,161 @@ const help: TranslationStrings = {
     'Mostra sempre les rutes de reserva, a la mateixa configuració, les dibuixa des del principi a cada viatge sobre el qual encara no has decidit.',
   'help.guide.map-booking-routes.tip.3':
     'Una reserva necessita dos extrems amb coordenades abans de poder-se dibuixar, així que un hotel o un restaurant no porta icona de ruta.',
+
+  // ── Screen: trip-collab ───────────────────────────────────────────────────────────────
+  'help.ctx.trip-collab.title': 'Col·laboració',
+  'help.ctx.trip-collab.summary':
+    'La pestanya on el grup planifica plegat: Missatges a l’esquerra, les notes compartides i els enllaços al costat, les enquestes a sota i Què ve ara al final. Tot el que s’escriu aquí és a l’instant a la pantalla de tots els altres membres, sense recarregar.',
+  'help.ctx.trip-collab.bullet.1':
+    'Missatges és la columna de l’esquerra. Escriu a Escriu un missatge... i prem Enter; Shift i Enter fan una línia nova. El smiley hi posa un emoji, Adjunta imatges penja fins a quatre imatges al missatge.',
+  'help.ctx.trip-collab.bullet.2':
+    'Passa el ratolí per sobre d’un missatge per a Respon i, en els teus, Eliminar; amb clic dret surten les vuit reaccions ràpides. Un missatge eliminat deixa una línia que diu que l’has eliminat.',
+  'help.ctx.trip-collab.bullet.3':
+    'Notes és el bloc compartit: Nota nova en escriu una, i l’engranatge del costat obre Gestiona les categories per als seus noms i colors. Una targeta porta Ampliar, Fixa, Edita i Elimina.',
+  'help.ctx.trip-collab.bullet.4':
+    'Enllaços recull les adreces sobre les quals va el viatge. Afegeix un enllaç pren un títol i una adreça http o https; Edita l’enllaç, Fixa l’enllaç i Suprimeix l’enllaç són al final de la fitxa, i els enllaços fixats es queden al davant.',
+  'help.ctx.trip-collab.bullet.5':
+    'Enquestes decideix les coses. Enquesta nova planteja una pregunta amb almenys dues opcions; un clic en una opció és el teu vot, Tanca acaba la votació i Elimina treu l’enquesta.',
+  'help.ctx.trip-collab.bullet.6':
+    'Què ve ara llista les vuit parades següents del viatge que encara són al davant, amb les seves hores i la gent que hi va. Només llegeix el pla del dia; les hores es fixen allà.',
+  // write-note
+  'help.guide.write-note.title': 'Escriure una nota compartida',
+  'help.guide.write-note.goal':
+    'Posa el que necessita tot el grup, una norma, una adreça, un recordatori, allà on tothom ho torna a trobar.',
+  'help.guide.write-note.step.1': 'Fes clic a Nota nova a dalt del panell Notes. S’obre el formulari.',
+  'help.guide.write-note.step.2':
+    'Títol de la nota és el nom que porta la targeta. És l’única cosa que el formulari exigeix: Crea es queda gris mentre no hi hagi res.',
+  'help.guide.write-note.step.3':
+    'El requadre gran de sota conté el text i accepta Markdown: una paraula en negreta, una llista, un títol. La targeta mostra les primeres línies, i Ampliar a sobre obre la nota sencera.',
+  'help.guide.write-note.step.4':
+    'A Categoria, tria la que correspon a la nota; el seu color passa a ser el color de la targeta. Les píndoles són les categories que ja existeixen, i una de nova es crea a Gestiona les categories.',
+  'help.guide.write-note.step.5':
+    'Lloc web recull un enllaç que pertany a la nota. La targeta porta llavors un requadre Link que l’obre.',
+  'help.guide.write-note.step.6': 'Fes clic a Crea.',
+  'help.guide.write-note.result':
+    'La nota és una targeta al panell Notes, amb el color de la seva categoria, i ja és a la pantalla de tots els altres membres.',
+  'help.guide.write-note.tip.1':
+    'Fixa en una targeta la manté a dalt del panell; tot el que hi ha a sota s’ordena per quan es va canviar per última vegada.',
+  'help.guide.write-note.tip.2':
+    'L’engranatge del costat de Nota nova obre Gestiona les categories: allà una categoria rep el seu color, es reanomena arreu de cop, o s’afegeix abans que cap nota la faci servir.',
+  'help.guide.write-note.tip.3':
+    'Adjunta fitxers penja un document a la nota. Adjunta obre el selector de fitxers, i una imatge o un PDF també es poden enganxar directament al formulari.',
+  'help.guide.write-note.tip.4':
+    'Notes és un interruptor propi a Complements, sota Col·laboració: un administrador la pot apagar i deixar funcionant el Xat, els Enllaços, les Enquestes i Què ve després.',
+  // shared-links
+  'help.guide.shared-links.title': 'Recollir els enllaços del viatge',
+  'help.guide.shared-links.goal':
+    'Tingues el portal de reserves, l’àlbum compartit i l’horari en un sol lloc en comptes de buscar-los per Missatges.',
+  'help.guide.shared-links.step.1': 'Fes clic a Afegeix un enllaç a dalt del panell Enllaços.',
+  'help.guide.shared-links.step.2':
+    'Dona un nom a l’enllaç a Títol de l’enllaç, enganxa l’adreça al camp de sota i després fes clic a Desa l’enllaç.',
+  'help.guide.shared-links.step.3':
+    'La fitxa mostra el nom i el lloc al qual apunta. Un clic a sobre obre la pàgina en una pestanya nova.',
+  'help.guide.shared-links.step.4':
+    'Els tres botons petits del final són Edita l’enllaç, Fixa l’enllaç i Suprimeix l’enllaç. Fixa l’enllaç mou la fitxa al davant del panell; Suprimeix l’enllaç no pregunta res.',
+  'help.guide.shared-links.result':
+    'L’enllaç és una fitxa al panell Enllaços, fixada al davant, i a la pantalla de tots els membres alhora.',
+  'help.guide.shared-links.tip.1':
+    'Només s’accepten adreces http i https; el camp rebutja qualsevol altra cosa abans de desar.',
+  'help.guide.shared-links.tip.2':
+    'Els enllaços fixats van primer, després els més nous. La icona petita del costat d’un títol és la favicon del lloc mateix, agafada del lloc, per això sense internet la fitxa mostra un símbol d’enllaç senzill.',
+  'help.guide.shared-links.tip.3':
+    'Enllaços és un interruptor propi a Complements, sota Col·laboració, de manera que un administrador pot apagar el panell sense tocar la resta de la pestanya.',
+  // create-poll
+  'help.guide.create-poll.title': 'Preguntar al grup',
+  'help.guide.create-poll.goal':
+    'Converteix una pregunta que ningú no respon a Missatges en una enquesta que tothom pot marcar.',
+  'help.guide.create-poll.step.1': 'Fes clic a Enquesta nova a dalt del panell Enquestes.',
+  'help.guide.create-poll.step.2':
+    'Escriu la pregunta. Compatible amb Markdown, sota el requadre, vol dir que aquí funcionen una paraula en negreta, un salt de línia o una llista curta.',
+  'help.guide.create-poll.step.3': 'Omple Opció 1 i Opció 2. Dues opcions amb alguna cosa a dins són el mínim.',
+  'help.guide.create-poll.step.4':
+    '+ Afegeix una opció n’afegeix una tercera, una quarta, tantes com calgui; la creueta del costat d’una fila en treu una.',
+  'help.guide.create-poll.step.5':
+    'Selecció múltiple deixa que tothom marqui més d’una opció. Si es deixa apagada, un vot es trasllada quan algú tria una altra cosa.',
+  'help.guide.create-poll.step.6': 'Fes clic a Crea l’enquesta.',
+  'help.guide.create-poll.result': 'L’enquesta és a dalt del panell Enquestes, oberta, i encara no ha votat ningú.',
+  'help.guide.create-poll.tip.1': 'La pregunta es mostra com a Markdown; les opcions es queden en text pla.',
+  'help.guide.create-poll.tip.2':
+    'Crea l’enquesta es queda gris fins que hi ha una pregunta i almenys dues opcions amb alguna cosa a dins.',
+  'help.guide.create-poll.tip.3':
+    'Una data límit només es pot posar a l’aplicació de mòbil. Una enquesta que en té una mostra aquí el temps que queda en una fitxa ambre i compta com a tancada quan s’acaba.',
+  'help.guide.create-poll.tip.4':
+    'Enquestes és un interruptor propi a Complements, sota Col·laboració: un administrador les pot apagar i deixar funcionant els altres quatre panells.',
+  // vote-poll
+  'help.guide.vote-poll.title': 'Votar i llegir el resultat',
+  'help.guide.vote-poll.goal': 'Dona el teu vot, mira on és el grup i canvia d’opinió.',
+  'help.guide.vote-poll.step.1': 'Fes clic a l’opció que vulguis. El seu cercle s’omple i la barra de darrere creix.',
+  'help.guide.vote-poll.step.2':
+    'Ara es llegeix tot el resultat: la barra és la proporció, el percentatge és a la dreta, i els cercles petits són les persones que han triat aquella opció.',
+  'help.guide.vote-poll.step.3':
+    'Has canviat d’opinió? Fes clic en una altra opció. En una enquesta sense Selecció múltiple el teu vot es trasllada en comptes d’afegir-ne un segon.',
+  'help.guide.vote-poll.step.4':
+    'Sota la pregunta hi ha quants vots té l’enquesta. Un clic a l’opció que ja havies triat et torna a treure el vot, i el comptador baixa.',
+  'help.guide.vote-poll.result':
+    'La teva marca és en una opció, les barres mostren com es reparteix el grup, i els cercles diuen qui ha triat què.',
+  'help.guide.vote-poll.tip.1':
+    'Les barres i els percentatges només apareixen quan has votat tu mateix, o quan l’enquesta està tancada, perquè ningú no es deixi influir pel resultat provisional.',
+  'help.guide.vote-poll.tip.2':
+    'Un vot no és mai anònim: passa el ratolí per un dels cercles d’una opció per veure el nom que hi ha darrere.',
+  // close-poll
+  'help.guide.close-poll.title': 'Tancar una enquesta o treure-la',
+  'help.guide.close-poll.goal':
+    'Atura la votació quan el grup ja ha decidit, i treu del mig una enquesta que ja no necessita ningú.',
+  'help.guide.close-poll.step.1':
+    'Tanca, el cadenat de la cantonada d’una enquesta, acaba la votació. Les opcions deixen d’acceptar clics.',
+  'help.guide.close-poll.step.2':
+    'Una enquesta tancada baixa sota el títol Tancades al final del panell, porta una insígnia Tancada i ensenya el resultat a tothom, hagin votat o no. L’opció guanyadora es tenyeix de verd.',
+  'help.guide.close-poll.step.3':
+    'Elimina, al costat, treu l’enquesta. Res no pregunta dues vegades, i els vots se’n van amb ella.',
+  'help.guide.close-poll.result':
+    'L’enquesta ha desaparegut del panell de tots els membres. Una que només has tancat es queda llegible a baix, amb el seu resultat.',
+  'help.guide.close-poll.tip.1':
+    'Tancar no es pot desfer: no hi ha cap reobertura. Una enquesta tancada sense voler s’ha de tornar a plantejar.',
+  'help.guide.close-poll.tip.2':
+    'Elimina treu l’enquesta i tots els seus vots a tothom, de seguida i sense cap pregunta.',
+  // whats-next
+  'help.guide.whats-next.title': 'Llegir Què ve ara',
+  'help.guide.whats-next.goal': 'Mira què fa el grup a continuació sense obrir el pla.',
+  'help.guide.whats-next.step.1':
+    'El panell llista les vuit parades següents del viatge que encara són al davant, en ordre d’hora, sota un títol per dia: Avui, Demà o la data.',
+  'help.guide.whats-next.step.2':
+    'A l’esquerra d’una fila hi ha la seva hora: l’inici, fins a, i el final quan la parada en té, o TBD quan encara no s’hi ha posat cap hora.',
+  'help.guide.whats-next.step.3':
+    'Les fitxes de sota el nom són les persones d’aquella parada. Si no s’hi ha triat ningú, hi surt tothom del viatge.',
+  'help.guide.whats-next.result': 'Una llista del que ve, només per llegir: segueix el pla, i res d’aquí no el canvia.',
+  'help.guide.whats-next.tip.1':
+    'Aquí no es fixa res. Les hores vénen del pla del dia; canvia-les allà i aquesta llista ho segueix a l’instant.',
+  'help.guide.whats-next.tip.2':
+    'Només es llista el que encara és al davant: una parada amb l’hora ja passada en surt, i al final d’un viatge el panell és buit.',
+  'help.guide.whats-next.tip.3':
+    'Què ve després és un interruptor propi a Complements, sota Col·laboració, i és un panell d’escriptori: la pestanya Col·laboració de l’aplicació de mòbil no l’ofereix.',
+  // trip-chat
+  'help.guide.trip-chat.title': 'Parlar amb el grup',
+  'help.guide.trip-chat.goal':
+    'Digues alguna cosa, respon a un missatge concret, reacciona a un altre i retira el teu.',
+  'help.guide.trip-chat.step.1':
+    'Escriu a Escriu un missatge... i prem Enter. La fletxa blava del costat del requadre fa el mateix; Shift i Enter, en canvi, fan una línia nova.',
+  'help.guide.trip-chat.step.2':
+    'El smiley obre el selector d’emojis, amb Smileys, Reactions i Travel a dins. El que tries s’afegeix al que estàs escrivint, no s’envia tot sol.',
+  'help.guide.trip-chat.step.3':
+    'Passa el ratolí per sobre del missatge d’una altra persona: a la seva cantonada apareix un botó rodó petit. Aquest és Respon.',
+  'help.guide.trip-chat.step.4':
+    'El missatge que respons queda citat sobre el requadre. Escriu i envia, i la citació viatja dins la teva bombolla; la creu de la citació la deixa anar.',
+  'help.guide.trip-chat.step.5':
+    'Fes clic dret en un missatge per a les vuit reaccions ràpides. La teva es posa sota la bombolla, i un segon clic a la mateixa la retira.',
+  'help.guide.trip-chat.step.6':
+    'Els teus missatges porten Eliminar al costat de Respon. Treu el missatge i deixa una línia que diu que l’has eliminat: no hi ha marxa enrere.',
+  'help.guide.trip-chat.result':
+    'La teva resposta és sota el missatge que cita, una reacció penja d’un tercer, i el que has retirat deixa una sola línia que ho diu.',
+  'help.guide.trip-chat.tip.1':
+    'Enter envia, Shift i Enter fan una línia nova. Un missatge que només són emojis es mostra gros.',
+  'help.guide.trip-chat.tip.2':
+    'Adjunta imatges pren fins a quatre imatges per a un missatge; també es poden enganxar o deixar caure al requadre.',
+  'help.guide.trip-chat.tip.3':
+    'Un missatge amb un enllaç a dins rep a sota una targeta de vista prèvia, agafada pel teu propi TREK, per això un enllaç a una cosa a la qual només tu pots arribar es queda en un enllaç simple.',
+  'help.guide.trip-chat.tip.4':
+    'Xat és un interruptor propi a Complements, sota Col·laboració: un administrador el pot apagar i deixar funcionant les Notes, els Enllaços, les Enquestes i Què ve després.',
 };
 
 export default help;

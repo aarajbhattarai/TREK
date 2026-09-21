@@ -2221,6 +2221,130 @@ const help: TranslationStrings = {
   'help.guide.map-booking-routes.tip.2':
     '同一處設定裡的「一律顯示訂票路線」，會在你還沒有做過決定的每一個行程上，從一開始就把它們畫出來。',
   'help.guide.map-booking-routes.tip.3': '一筆預訂必須有兩個帶座標的端點才能被畫出來，所以旅館或餐廳不會帶路線圖示。',
+
+  // ── Screen: trip-collab ───────────────────────────────────────────────────────────────
+  'help.ctx.trip-collab.title': 'Collab',
+  'help.ctx.trip-collab.summary':
+    '群組一起規劃的分頁：左邊是「聊天」，旁邊是共用的「筆記」和「連結」，它們下面是「投票」，最後是「接下來」。這裡寫下的一切都會同時出現在其他每位成員的畫面上，不用重新載入。',
+  'help.ctx.trip-collab.bullet.1':
+    '「聊天」是左邊那一欄。在「輸入訊息...」裡寫字並按 Enter；Shift 加 Enter 換行。笑臉加上表情符號，「附加圖片」替訊息掛上最多四張圖片。',
+  'help.ctx.trip-collab.bullet.2':
+    '把滑鼠移到一則訊息上會出現「回覆」，自己的訊息上還有「刪除」；按右鍵可得到八個快捷反應。刪除的訊息只留下一行「刪除了一條訊息」。',
+  'help.ctx.trip-collab.bullet.3':
+    '「筆記」是共用的記事本：「新建筆記」寫一則，旁邊的齒輪開啟「管理分類」，處理分類的名稱和顏色。卡片上帶著「展開」「置頂」「編輯」和「刪除」。',
+  'help.ctx.trip-collab.bullet.4':
+    '「連結」收集旅行賴以運作的網址。「新增連結」接受一個標題和一個 http 或 https 位址；「編輯連結」「釘選連結」和「刪除連結」在小塊的尾端，釘選過的連結留在最前面。',
+  'help.ctx.trip-collab.bullet.5':
+    '「投票」用來拍板。「新建投票」提一個問題，至少配兩個選項；點一下某個選項就是你的一票，「關閉」結束投票，「刪除」移除這個投票。',
+  'help.ctx.trip-collab.bullet.6':
+    '「接下來」列出旅行中還在前面的下八個停靠點，連同它們的時間和參與的人。它只讀取當天的計劃；時間在那裡設定。',
+  // write-note
+  'help.guide.write-note.title': '寫一則共用筆記',
+  'help.guide.write-note.goal': '把整個群組都需要的東西，一條規矩、一個地址、一個提醒，放在人人都能再找到的地方。',
+  'help.guide.write-note.step.1': '點選「筆記」面板頂部的「新建筆記」。表單開啟。',
+  'help.guide.write-note.step.2':
+    '「筆記標題」是卡片帶的名字。它是表單唯一堅持要的東西：裡面沒有內容，「建立」就一直是灰的。',
+  'help.guide.write-note.step.3':
+    '它下面的大框放內文，接受 Markdown：一個粗體詞、一個清單、一個標題。卡片顯示開頭幾行，卡片上的「展開」開啟整則筆記。',
+  'help.guide.write-note.step.4':
+    '在「分類」下面選這則筆記所屬的那一個；它的顏色成為卡片的顏色。那些藥丸形狀的是已經存在的分類，新分類在「管理分類」裡建立。',
+  'help.guide.write-note.step.5': '「網站」接受一個屬於這則筆記的連結。卡片隨後會帶一個開啟它的 Link 方塊。',
+  'help.guide.write-note.step.6': '點選「建立」。',
+  'help.guide.write-note.result':
+    '筆記成為「筆記」面板裡的一張卡片，帶著所屬分類的顏色，而且已經在其他每位成員的畫面上。',
+  'help.guide.write-note.tip.1': '卡片上的「置頂」把它留在面板最上面；它下面的一切按最後修改時間排序。',
+  'help.guide.write-note.tip.2':
+    '「新建筆記」旁邊的齒輪開啟「管理分類」：在那裡給分類配顏色，一次在所有地方改名，或者在任何筆記用到它之前就先建好。',
+  'help.guide.write-note.tip.3':
+    '「附加檔案」替筆記掛上一份文件。「附加」開啟檔案選擇器，圖片或 PDF 也可以直接貼進表單。',
+  'help.guide.write-note.tip.4':
+    '「筆記」在「擴充套件」下面、「Collab」之下有自己的開關：管理員可以把它關掉，讓「聊天」「連結」「投票」和「下一步」繼續運作。',
+  // shared-links
+  'help.guide.shared-links.title': '收集旅行的連結',
+  'help.guide.shared-links.goal': '把訂房入口、共用相簿和時刻表放在一處，不必再翻聊天紀錄去找它們。',
+  'help.guide.shared-links.step.1': '點選「連結」面板頂部的「新增連結」。',
+  'help.guide.shared-links.step.2': '在「連結標題」裡給連結取個名字，把網址貼進它下面的欄位，然後點選「儲存連結」。',
+  'help.guide.shared-links.step.3': '小塊顯示名字和它指向的網站。點一下就在新分頁裡開啟那個頁面。',
+  'help.guide.shared-links.step.4':
+    '它尾端的三個小按鈕是「編輯連結」「釘選連結」和「刪除連結」。「釘選連結」把小塊移到面板最前面；「刪除連結」什麼也不問。',
+  'help.guide.shared-links.result': '連結成為「連結」面板裡的一個小塊，釘選在最前面，而且同時出現在每位成員的畫面上。',
+  'help.guide.shared-links.tip.1': '只接受 http 和 https 位址；其他東西，欄位在儲存之前就拒絕。',
+  'help.guide.shared-links.tip.2':
+    '釘選的連結排在前面，然後是最新的。標題旁邊的小圖示是網站自己的網站圖示，從網站本身取來，所以沒有網路時小塊改為顯示一個普通的連結符號。',
+  'help.guide.shared-links.tip.3':
+    '「連結」在「擴充套件」下面、「Collab」之下有自己的開關，所以管理員可以關掉這個面板而不動分頁的其餘部分。',
+  // create-poll
+  'help.guide.create-poll.title': '問問群組',
+  'help.guide.create-poll.goal': '把聊天裡沒人回答的問題，變成人人都能勾選的投票。',
+  'help.guide.create-poll.step.1': '點選「投票」面板頂部的「新建投票」。',
+  'help.guide.create-poll.step.2': '寫下問題。框下面的「支援 Markdown」意思是粗體詞、換行或者短清單在這裡都管用。',
+  'help.guide.create-poll.step.3': '填寫「選項 1」和「選項 2」。兩個有內容的選項是最低要求。',
+  'help.guide.create-poll.step.4': '「+ 新增選項」加上第三個、第四個，要多少加多少；某一列旁邊的小叉再把一個去掉。',
+  'help.guide.create-poll.step.5': '「多選」讓每個人都能勾選不止一個選項。保持關閉時，有人改選別的，票就轉過去。',
+  'help.guide.create-poll.step.6': '點選「建立投票」。',
+  'help.guide.create-poll.result': '投票立在「投票」面板的最上面，處於開放狀態，還沒有人投過票。',
+  'help.guide.create-poll.tip.1': '問題按 Markdown 呈現；選項保持純文字。',
+  'help.guide.create-poll.tip.2': '在有了一個問題和至少兩個有內容的選項之前，「建立投票」一直是灰的。',
+  'help.guide.create-poll.tip.3':
+    '截止時間只能在手機應用程式裡設定。有截止時間的投票在這裡用一個琥珀色小塊顯示剩餘時間，時間一到就算已關閉。',
+  'help.guide.create-poll.tip.4':
+    '「投票」在「擴充套件」下面、「Collab」之下有自己的開關：管理員可以把它關掉，讓另外四個面板繼續運作。',
+  // vote-poll
+  'help.guide.vote-poll.title': '投票並讀懂結果',
+  'help.guide.vote-poll.goal': '投下你的一票，看看群組的態度，再改變主意。',
+  'help.guide.vote-poll.step.1': '點選你想要的選項。它的圓圈被填滿，後面的長條隨之變長。',
+  'help.guide.vote-poll.step.2': '現在整個結果都可讀了：長條是占比，百分比在右邊，小圓圈是選了那個選項的人。',
+  'help.guide.vote-poll.step.3': '改主意了？點選另一個選項。在沒有「多選」的投票裡，你的票會轉過去，而不是再加一票。',
+  'help.guide.vote-poll.step.4':
+    '問題下面寫著這個投票有多少票。點一下你已經選過的選項就把你的票收回來，計數也跟著降下去。',
+  'help.guide.vote-poll.result': '你的勾在一個選項上，長條顯示群組怎樣分開，圓圈說明誰選了什麼。',
+  'help.guide.vote-poll.tip.1':
+    '長條和百分比只有在你自己投過票之後，或者投票關閉之後才出現，這樣沒人會被當前的票勢影響。',
+  'help.guide.vote-poll.tip.2': '投票從不匿名：把滑鼠移到某個選項上的一個圓圈上，就能看到它背後的名字。',
+  // close-poll
+  'help.guide.close-poll.title': '關閉一個投票，或者移除它',
+  'help.guide.close-poll.goal': '群組做出決定後停止投票，並清掉已經沒人需要的投票。',
+  'help.guide.close-poll.step.1': '「關閉」，也就是投票角上的那把鎖，結束投票。選項不再接受點選。',
+  'help.guide.close-poll.step.2':
+    '關閉的投票沉到面板底部的「已關閉」標題下面，戴上「已關閉」徽章，並向所有人顯示結果，無論他們投沒投票。勝出的選項染成綠色。',
+  'help.guide.close-poll.step.3': '旁邊的「刪除」移除這個投票。沒有任何二次詢問，票也一起消失。',
+  'help.guide.close-poll.result': '投票從每位成員的面板上消失了。只被你關閉的那個仍然留在底部可讀，連同它的結果。',
+  'help.guide.close-poll.tip.1': '關閉不能復原：沒有重新開啟。誤關的投票只能重新再問一次。',
+  'help.guide.close-poll.tip.2': '「刪除」把這個投票和上面的每一張票，對所有人一併拿走，立刻生效，也不會詢問。',
+  // whats-next
+  'help.guide.whats-next.title': '讀懂「接下來」',
+  'help.guide.whats-next.goal': '不用開啟計劃，就看到群組接下來要做什麼。',
+  'help.guide.whats-next.step.1':
+    '這個面板按時間順序列出旅行中還在前面的下八個停靠點，每天一個標題：「今天」「明天」或者日期。',
+  'help.guide.whats-next.step.2':
+    '一列的左邊立著它的時間：開始時間、「至」，以及停靠點有結束時間時的結束時間；還沒有給它設定時間時則是 TBD。',
+  'help.guide.whats-next.step.3': '名字下面的小塊是這個停靠點上的人。如果沒有給它選人，旅行裡的每個人都會列出來。',
+  'help.guide.whats-next.result': '一份即將到來的清單，只供閱讀：它跟著計劃走，這裡的任何東西都不會改動計劃。',
+  'help.guide.whats-next.tip.1': '這裡什麼也不設定。時間來自當天的計劃；在那裡改動，這份清單立刻跟上。',
+  'help.guide.whats-next.tip.2': '只列出還在前面的：時間已過的停靠點會掉出去，旅行到了尾聲，面板就是空的。',
+  'help.guide.whats-next.tip.3':
+    '「下一步」在「擴充套件」下面、「Collab」之下有自己的開關，而且它是桌面版的面板：手機應用程式的「Collab」分頁裡沒有它。',
+  // trip-chat
+  'help.guide.trip-chat.title': '和群組說話',
+  'help.guide.trip-chat.goal': '說點什麼，回答某一則特定的訊息，對另一則做出反應，再把自己的收回來。',
+  'help.guide.trip-chat.step.1':
+    '在「輸入訊息...」裡寫字並按 Enter。框旁邊的藍色箭頭做同樣的事；Shift 加 Enter 則是換行。',
+  'help.guide.trip-chat.step.2':
+    '笑臉開啟表情選擇器，裡面有 Smileys、Reactions 和 Travel。你選中的會加進正在寫的內容裡，它不會自己送出去。',
+  'help.guide.trip-chat.step.3': '把滑鼠移到別人的訊息上：角落會出現一個小圓按鈕。那就是「回覆」。',
+  'help.guide.trip-chat.step.4':
+    '你要回答的訊息會被引用在輸入框上方。寫好並傳送，引用就跟著進入你的泡泡；引用上的叉再把它去掉。',
+  'help.guide.trip-chat.step.5': '按右鍵點一則訊息可得到八個快捷反應。你的反應待在泡泡下面，再點一次同一個就收回。',
+  'help.guide.trip-chat.step.6':
+    '你自己的訊息在「回覆」旁邊帶著「刪除」。它把訊息拿走，只留下一行「刪除了一條訊息」：沒有回頭路。',
+  'help.guide.trip-chat.result':
+    '你的回答待在它引用的那則訊息下面，一個反應掛在第三則上，被你收回的那則只留下一行說明。',
+  'help.guide.trip-chat.tip.1': 'Enter 傳送，Shift 加 Enter 換行。整則只有表情符號的訊息會放大顯示。',
+  'help.guide.trip-chat.tip.2': '「附加圖片」一則訊息最多收四張圖片；圖片也可以直接貼上或拖放到框裡。',
+  'help.guide.trip-chat.tip.3':
+    '帶連結的訊息下面會有一張預覽卡片，由你自己的 TREK 取回，所以指向只有你能存取的東西的連結，仍然只是一個普通連結。',
+  'help.guide.trip-chat.tip.4':
+    '「聊天」在「擴充套件」下面、「Collab」之下有自己的開關：管理員可以把它關掉，讓「筆記」「連結」「投票」和「下一步」繼續運作。',
 };
 
 export default help;

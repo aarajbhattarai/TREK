@@ -2766,6 +2766,163 @@ const help: TranslationStrings = {
     'Buchungsrouten immer anzeigen, in denselben Einstellungen, zeichnet sie von Anfang an auf jeder Reise, über die du nicht schon entschieden hast.',
   'help.guide.map-booking-routes.tip.3':
     'Eine Buchung braucht zwei Enden mit Koordinaten, bevor sie gezeichnet werden kann, ein Hotel oder ein Restaurant trägt also kein Routensymbol.',
+
+  // ── Screen: trip-collab ───────────────────────────────────────────────────────────────
+  'help.ctx.trip-collab.title': 'Collab',
+  'help.ctx.trip-collab.summary':
+    'Der Tab, in dem die Gruppe gemeinsam plant: links der Chat, daneben die gemeinsamen Notizen und Links, darunter die Umfragen und am Ende Nächste. Alles, was hier geschrieben wird, steht sofort auf dem Bildschirm jedes anderen Mitglieds, ohne Neuladen.',
+  'help.ctx.trip-collab.bullet.1':
+    'Der Chat ist die linke Spalte. Schreib in Nachricht eingeben... und drück Enter; Shift und Enter machen eine neue Zeile. Das Smiley setzt ein Emoji ein, Bilder anhängen hängt bis zu vier Bilder an die Nachricht.',
+  'help.ctx.trip-collab.bullet.2':
+    'Fahr über eine Nachricht für Antworten und, bei deiner eigenen, Löschen; mit Rechtsklick kommen die acht schnellen Reaktionen. Eine gelöschte Nachricht hinterlässt eine Zeile, die sagt, dass du sie gelöscht hast.',
+  'help.ctx.trip-collab.bullet.3':
+    'Notizen ist der gemeinsame Block: Neue Notiz schreibt eine, und das Zahnrad daneben öffnet Kategorien verwalten für ihre Namen und Farben. Eine Karte trägt Erweitern, Anheften, Bearbeiten und Löschen.',
+  'help.ctx.trip-collab.bullet.4':
+    'Links sammelt die Adressen, auf denen die Reise läuft. Link hinzufügen nimmt einen Titel und eine http- oder https-Adresse; Link bearbeiten, Link anheften und Link löschen sitzen am Ende des Chips, und angeheftete Links bleiben vorn.',
+  'help.ctx.trip-collab.bullet.5':
+    'Umfragen entscheiden Dinge. Neue Umfrage stellt eine Frage mit mindestens zwei Optionen; ein Klick auf eine Option ist deine Stimme, Schließen beendet die Abstimmung und Löschen entfernt die Umfrage.',
+  'help.ctx.trip-collab.bullet.6':
+    'Nächste listet die nächsten acht Stopps der Reise, die noch bevorstehen, mit ihren Uhrzeiten und den Leuten, die dabei sind. Es liest nur den Tagesplan; die Zeiten werden dort gesetzt.',
+  // write-note
+  'help.guide.write-note.title': 'Eine gemeinsame Notiz schreiben',
+  'help.guide.write-note.goal':
+    'Leg das, was die ganze Gruppe braucht, eine Regel, eine Adresse, eine Erinnerung, dorthin, wo es jeder wiederfindet.',
+  'help.guide.write-note.step.1': 'Klick oben im Notizen-Panel auf Neue Notiz. Das Formular öffnet sich.',
+  'help.guide.write-note.step.2':
+    'Notiztitel ist der Name, den die Karte trägt. Er ist das Einzige, worauf das Formular besteht: Erstellen bleibt grau, solange nichts darin steht.',
+  'help.guide.write-note.step.3':
+    'Das große Feld darunter hält den Text und nimmt Markdown: ein fettes Wort, eine Liste, eine Überschrift. Die Karte zeigt die ersten Zeilen, und Erweitern darauf öffnet die ganze Notiz.',
+  'help.guide.write-note.step.4':
+    'Wähl unter Kategorie die, zu der die Notiz gehört; ihre Farbe wird zur Farbe der Karte. Die Pillen sind die Kategorien, die es schon gibt, und eine neue entsteht unter Kategorien verwalten.',
+  'help.guide.write-note.step.5':
+    'Website nimmt einen Link, der zur Notiz gehört. Die Karte trägt dann eine Kachel Link, die ihn öffnet.',
+  'help.guide.write-note.step.6': 'Klick auf Erstellen.',
+  'help.guide.write-note.result':
+    'Die Notiz ist eine Karte im Notizen-Panel, in der Farbe ihrer Kategorie, und sie steht schon auf dem Bildschirm jedes anderen Mitglieds.',
+  'help.guide.write-note.tip.1':
+    'Anheften auf einer Karte hält sie oben im Panel; alles darunter ist danach sortiert, wann es zuletzt geändert wurde.',
+  'help.guide.write-note.tip.2':
+    'Das Zahnrad neben Neue Notiz öffnet Kategorien verwalten: dort bekommt eine Kategorie ihre Farbe, wird überall auf einmal umbenannt oder wird angelegt, bevor eine Notiz sie benutzt.',
+  'help.guide.write-note.tip.3':
+    'Dateien anhängen hängt ein Dokument an die Notiz. Anhängen öffnet die Dateiauswahl, und ein Bild oder ein PDF lässt sich auch einfach ins Formular einfügen.',
+  'help.guide.write-note.tip.4':
+    'Notizen ist ein eigener Schalter unter Addons, unter Collab: ein Admin kann sie ausschalten und den Chat, die Links, die Umfragen und Was kommt als Nächstes laufen lassen.',
+  // shared-links
+  'help.guide.shared-links.title': 'Die Links der Reise sammeln',
+  'help.guide.shared-links.goal':
+    'Halt das Buchungsportal, das geteilte Album und den Fahrplan an einem Ort, statt den Chat danach abzusuchen.',
+  'help.guide.shared-links.step.1': 'Klick oben im Links-Panel auf Link hinzufügen.',
+  'help.guide.shared-links.step.2':
+    'Gib dem Link in Linktitel einen Namen, füg die Adresse in das Feld darunter ein und klick dann auf Link speichern.',
+  'help.guide.shared-links.step.3':
+    'Der Chip zeigt den Namen und die Seite, auf die er zeigt. Ein Klick darauf öffnet die Seite in einem neuen Tab.',
+  'help.guide.shared-links.step.4':
+    'Die drei kleinen Knöpfe an seinem Ende sind Link bearbeiten, Link anheften und Link löschen. Link anheften schiebt den Chip an den Anfang des Panels; Link löschen fragt nichts.',
+  'help.guide.shared-links.result':
+    'Der Link ist ein Chip im Links-Panel, vorn angeheftet, und sofort auf dem Bildschirm jedes Mitglieds.',
+  'help.guide.shared-links.tip.1':
+    'Nur http- und https-Adressen werden genommen; das Feld weist alles andere ab, bevor es speichert.',
+  'help.guide.shared-links.tip.2':
+    'Angeheftete Links kommen zuerst, dann die neuesten. Das kleine Symbol neben einem Titel ist das eigene Favicon der Seite, von der Seite selbst geholt, ohne Internet zeigt der Chip also stattdessen ein einfaches Link-Zeichen.',
+  'help.guide.shared-links.tip.3':
+    'Links ist ein eigener Schalter unter Addons, unter Collab, ein Admin kann das Panel also ausschalten, ohne den Rest des Tabs anzurühren.',
+  // create-poll
+  'help.guide.create-poll.title': 'Die Gruppe fragen',
+  'help.guide.create-poll.goal':
+    'Mach aus einer Frage, die im Chat niemand beantwortet, eine Umfrage, die jeder ankreuzen kann.',
+  'help.guide.create-poll.step.1': 'Klick oben im Umfragen-Panel auf Neue Umfrage.',
+  'help.guide.create-poll.step.2':
+    'Schreib die Frage. Markdown wird unterstützt unter dem Feld heißt: ein fettes Wort, ein Zeilenumbruch oder eine kurze Liste funktionieren hier.',
+  'help.guide.create-poll.step.3': 'Füll Option 1 und Option 2 aus. Zwei Optionen mit Inhalt sind das Minimum.',
+  'help.guide.create-poll.step.4':
+    '+ Option hinzufügen fügt eine dritte an, eine vierte, so viele wie du brauchst; das kleine Kreuz neben einer Zeile nimmt eine wieder weg.',
+  'help.guide.create-poll.step.5':
+    'Mehrfachauswahl lässt jeden mehr als eine Option ankreuzen. Bleibt sie aus, wandert eine Stimme mit, wenn jemand etwas anderes wählt.',
+  'help.guide.create-poll.step.6': 'Klick auf Umfrage erstellen.',
+  'help.guide.create-poll.result': 'Die Umfrage steht oben im Umfragen-Panel, offen, und noch hat niemand abgestimmt.',
+  'help.guide.create-poll.tip.1': 'Die Frage wird als Markdown gerendert; die Optionen bleiben einfacher Text.',
+  'help.guide.create-poll.tip.2':
+    'Umfrage erstellen bleibt grau, bis es eine Frage und mindestens zwei Optionen mit Inhalt gibt.',
+  'help.guide.create-poll.tip.3':
+    'Eine Frist lässt sich nur in der Handy-App setzen. Eine Umfrage, die eine hat, zeigt hier die verbleibende Zeit in einem bernsteinfarbenen Chip und gilt als geschlossen, sobald sie abläuft.',
+  'help.guide.create-poll.tip.4':
+    'Umfragen ist ein eigener Schalter unter Addons, unter Collab: ein Admin kann sie ausschalten und die anderen vier Panels laufen lassen.',
+  // vote-poll
+  'help.guide.vote-poll.title': 'Abstimmen und das Ergebnis lesen',
+  'help.guide.vote-poll.goal': 'Gib deine Stimme ab, sieh, wo die Gruppe steht, und ändere deine Meinung.',
+  'help.guide.vote-poll.step.1':
+    'Klick die Option an, die du willst. Ihr Kreis füllt sich und der Balken dahinter wächst.',
+  'help.guide.vote-poll.step.2':
+    'Jetzt ist das ganze Ergebnis lesbar: der Balken ist der Anteil, der Prozentwert steht rechts, und die kleinen Kreise sind die Leute, die diese Option gewählt haben.',
+  'help.guide.vote-poll.step.3':
+    'Meinung geändert? Klick eine andere Option an. In einer Umfrage ohne Mehrfachauswahl wandert deine Stimme mit, statt eine zweite dazuzulegen.',
+  'help.guide.vote-poll.step.4':
+    'Unter der Frage steht, wie viele Stimmen die Umfrage hat. Ein Klick auf die Option, die du schon gewählt hast, nimmt deine Stimme wieder heraus, und der Zähler fällt.',
+  'help.guide.vote-poll.result':
+    'Dein Haken sitzt auf einer Option, die Balken zeigen, wie die Gruppe geteilt ist, und die Kreise sagen, wer was gewählt hat.',
+  'help.guide.vote-poll.tip.1':
+    'Die Balken und die Prozentwerte erscheinen erst, wenn du selbst abgestimmt hast oder die Umfrage geschlossen ist, damit niemand vom Zwischenstand beeinflusst wird.',
+  'help.guide.vote-poll.tip.2':
+    'Eine Stimme ist nie anonym: fahr über einen der Kreise an einer Option für den Namen dahinter.',
+  // close-poll
+  'help.guide.close-poll.title': 'Eine Umfrage schließen oder entfernen',
+  'help.guide.close-poll.goal':
+    'Beende die Abstimmung, sobald die Gruppe entschieden hat, und räum eine Umfrage weg, die niemand mehr braucht.',
+  'help.guide.close-poll.step.1':
+    'Schließen, das Schloss in der Ecke einer Umfrage, beendet die Abstimmung. Die Optionen nehmen keine Klicks mehr an.',
+  'help.guide.close-poll.step.2':
+    'Eine geschlossene Umfrage sinkt unter die Überschrift Geschlossen am Ende des Panels, trägt ein Abzeichen Geschlossen und zeigt jedem das Ergebnis, ob er abgestimmt hat oder nicht. Die Gewinneroption ist grün eingefärbt.',
+  'help.guide.close-poll.step.3':
+    'Löschen daneben entfernt die Umfrage. Nichts fragt ein zweites Mal, und die Stimmen gehen mit.',
+  'help.guide.close-poll.result':
+    'Die Umfrage ist aus dem Panel jedes Mitglieds verschwunden. Eine, die du nur geschlossen hast, bleibt unten lesbar, mit ihrem Ergebnis.',
+  'help.guide.close-poll.tip.1':
+    'Schließen lässt sich nicht rückgängig machen: ein Wiederöffnen gibt es nicht. Eine versehentlich geschlossene Umfrage muss neu gestellt werden.',
+  'help.guide.close-poll.tip.2':
+    'Löschen nimmt die Umfrage und jede Stimme darin allen weg, sofort und ohne Nachfrage.',
+  // whats-next
+  'help.guide.whats-next.title': 'Nächste lesen',
+  'help.guide.whats-next.goal': 'Sieh, was die Gruppe als Nächstes tut, ohne den Plan zu öffnen.',
+  'help.guide.whats-next.step.1':
+    'Das Panel listet die nächsten acht Stopps der Reise, die noch bevorstehen, in zeitlicher Reihenfolge, unter einer Überschrift pro Tag: Heute, Morgen oder das Datum.',
+  'help.guide.whats-next.step.2':
+    'Links in einer Zeile steht ihre Zeit: der Anfang, bis, und das Ende, wenn der Stopp eines hat, oder TBD, wenn noch keine Zeit darauf gesetzt ist.',
+  'help.guide.whats-next.step.3':
+    'Die Chips unter dem Namen sind die Leute an diesem Stopp. Ist niemand dafür gewählt, sind alle aus der Reise aufgeführt.',
+  'help.guide.whats-next.result':
+    'Eine Liste dessen, was kommt, nur zum Lesen: sie folgt dem Plan, und nichts hier ändert ihn.',
+  'help.guide.whats-next.tip.1':
+    'Hier wird nichts gesetzt. Die Zeiten kommen aus dem Tagesplan; änder sie dort, und diese Liste folgt sofort.',
+  'help.guide.whats-next.tip.2':
+    'Aufgeführt wird nur, was noch bevorsteht: ein Stopp, dessen Zeit vorbei ist, fällt heraus, und am Ende einer Reise ist das Panel leer.',
+  'help.guide.whats-next.tip.3':
+    'Was kommt als Nächstes ist ein eigener Schalter unter Addons, unter Collab, und es ist ein Panel für den Desktop: der Collab-Tab der Handy-App bietet es nicht.',
+  // trip-chat
+  'help.guide.trip-chat.title': 'Mit der Gruppe reden',
+  'help.guide.trip-chat.goal':
+    'Sag etwas, antworte auf eine bestimmte Nachricht, reagier auf eine andere und nimm deine eigene zurück.',
+  'help.guide.trip-chat.step.1':
+    'Schreib in Nachricht eingeben... und drück Enter. Der blaue Pfeil neben dem Feld tut dasselbe; Shift und Enter machen stattdessen eine neue Zeile.',
+  'help.guide.trip-chat.step.2':
+    'Das Smiley öffnet die Emoji-Auswahl, mit Smileys, Reactions und Travel darin. Was du wählst, wird an das gehängt, was du gerade schreibst, es wird nicht für sich allein gesendet.',
+  'help.guide.trip-chat.step.3':
+    'Fahr über die Nachricht von jemand anderem: an ihrer Ecke erscheint ein kleiner runder Knopf. Das ist Antworten.',
+  'help.guide.trip-chat.step.4':
+    'Die Nachricht, auf die du antwortest, steht als Zitat über dem Feld. Schreib und sende, und das Zitat reist in deiner Blase mit; das Kreuz am Zitat verwirft es wieder.',
+  'help.guide.trip-chat.step.5':
+    'Rechtsklick auf eine Nachricht öffnet die acht schnellen Reaktionen. Deine sitzt unter der Blase, und ein zweiter Klick auf dieselbe nimmt sie zurück.',
+  'help.guide.trip-chat.step.6':
+    'Deine eigenen Nachrichten tragen Löschen neben Antworten. Es nimmt die Nachricht weg und hinterlässt eine Zeile, die sagt, dass du sie gelöscht hast: zurück geht es nicht.',
+  'help.guide.trip-chat.result':
+    'Deine Antwort sitzt unter der Nachricht, die sie zitiert, eine Reaktion hängt an einer dritten, und die, die du zurückgenommen hast, hinterlässt eine einzige Zeile, die das sagt.',
+  'help.guide.trip-chat.tip.1':
+    'Enter sendet, Shift und Enter machen eine neue Zeile. Eine Nachricht, die nur aus Emoji besteht, wird groß angezeigt.',
+  'help.guide.trip-chat.tip.2':
+    'Bilder anhängen nimmt bis zu vier Bilder für eine Nachricht; sie lassen sich auch einfach einfügen oder auf das Feld fallen lassen.',
+  'help.guide.trip-chat.tip.3':
+    'Eine Nachricht mit einem Link darin bekommt darunter eine Vorschaukarte, geholt von deinem eigenen TREK, ein Link auf etwas, das nur du erreichst, bleibt also ein einfacher Link.',
+  'help.guide.trip-chat.tip.4':
+    'Chat ist ein eigener Schalter unter Addons, unter Collab: ein Admin kann ihn ausschalten und die Notizen, die Links, die Umfragen und Was kommt als Nächstes laufen lassen.',
 };
 
 export default help;

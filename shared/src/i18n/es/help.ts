@@ -2750,6 +2750,162 @@ const help: TranslationStrings = {
     'Mostrar siempre las rutas de reserva, en los mismos ajustes, las dibuja desde el principio en todos los viajes sobre los que aún no has decidido.',
   'help.guide.map-booking-routes.tip.3':
     'Una reserva necesita dos extremos con coordenadas antes de poder dibujarse, así que un hotel o un restaurante no lleva icono de ruta.',
+
+  // ── Screen: trip-collab ───────────────────────────────────────────────────────────────
+  'help.ctx.trip-collab.title': 'Colaboración',
+  'help.ctx.trip-collab.summary':
+    'La pestaña en la que el grupo planifica en común: Mensajes a la izquierda, las notas compartidas y los enlaces al lado, las encuestas debajo y Qué viene ahora al final. Todo lo que se escribe aquí está al momento en la pantalla de todos los demás miembros, sin recargar.',
+  'help.ctx.trip-collab.bullet.1':
+    'Mensajes es la columna de la izquierda. Escribe en Escribe un mensaje... y pulsa Enter; Shift y Enter hacen un salto de línea. El smiley añade un emoji, Adjuntar imágenes cuelga hasta cuatro fotos del mensaje.',
+  'help.ctx.trip-collab.bullet.2':
+    'Pasa el ratón por un mensaje para Responder y, en los tuyos, Eliminar; con clic derecho salen las ocho reacciones rápidas. Un mensaje eliminado deja una línea que dice que lo has eliminado.',
+  'help.ctx.trip-collab.bullet.3':
+    'Notas es el bloc compartido: Nueva nota escribe una, y el engranaje de al lado abre Gestionar categorías para sus nombres y colores. Una tarjeta lleva Expandir, Fijar, Editar y Eliminar.',
+  'help.ctx.trip-collab.bullet.4':
+    'Enlaces reúne las direcciones con las que funciona el viaje. Añadir enlace toma un título y una dirección http o https; Editar enlace, Fijar enlace y Eliminar enlace están al final de la ficha, y los enlaces fijados se quedan delante.',
+  'help.ctx.trip-collab.bullet.5':
+    'Encuestas decide las cosas. Nueva encuesta plantea una pregunta con al menos dos opciones; un clic en una opción es tu voto, Cerrar termina la votación y Eliminar quita la encuesta.',
+  'help.ctx.trip-collab.bullet.6':
+    'Qué viene ahora lista las ocho próximas paradas del viaje que aún están por delante, con sus horas y las personas que van en ellas. Solo lee el plan del día; las horas se fijan allí.',
+  // write-note
+  'help.guide.write-note.title': 'Escribir una nota compartida',
+  'help.guide.write-note.goal':
+    'Pon lo que todo el grupo necesita, una regla, una dirección, un recordatorio, donde todos lo vuelvan a encontrar.',
+  'help.guide.write-note.step.1':
+    'Haz clic en Nueva nota en la parte de arriba del panel Notas. Se abre el formulario.',
+  'help.guide.write-note.step.2':
+    'Título de la nota es el nombre que lleva la tarjeta. Es lo único en lo que el formulario insiste: Crear sigue gris mientras esté vacío.',
+  'help.guide.write-note.step.3':
+    'La caja grande de debajo guarda el texto y acepta Markdown: una palabra en negrita, una lista, un título. La tarjeta muestra las primeras líneas, y Expandir en ella abre la nota entera.',
+  'help.guide.write-note.step.4':
+    'Bajo Categoría, elige la que corresponde a la nota; su color pasa a ser el color de la tarjeta. Las píldoras son las categorías que ya existen, y una nueva se crea en Gestionar categorías.',
+  'help.guide.write-note.step.5':
+    'Sitio web recoge un enlace que pertenece a la nota. La tarjeta lleva entonces un recuadro Link que lo abre.',
+  'help.guide.write-note.step.6': 'Haz clic en Crear.',
+  'help.guide.write-note.result':
+    'La nota es una tarjeta en el panel Notas, en el color de su categoría, y ya está en la pantalla de todos los demás miembros.',
+  'help.guide.write-note.tip.1':
+    'Fijar en una tarjeta la mantiene arriba del panel; todo lo de debajo se ordena por cuándo se cambió por última vez.',
+  'help.guide.write-note.tip.2':
+    'El engranaje junto a Nueva nota abre Gestionar categorías: allí una categoría recibe su color, se renombra en todas partes a la vez, o se añade antes de que ninguna nota la use.',
+  'help.guide.write-note.tip.3':
+    'Adjuntar archivos cuelga un documento de la nota. Adjuntar abre el selector de archivos, y una imagen o un PDF también se pueden pegar sin más en el formulario.',
+  'help.guide.write-note.tip.4':
+    'Notas es un interruptor propio en Complementos, bajo Colaboración: un administrador puede apagarlas y dejar funcionando el Chat, los Enlaces, las Encuestas y Qué sigue.',
+  // shared-links
+  'help.guide.shared-links.title': 'Reunir los enlaces del viaje',
+  'help.guide.shared-links.goal':
+    'Ten el portal de reservas, el álbum compartido y el horario en un solo sitio en vez de rebuscarlos en Mensajes.',
+  'help.guide.shared-links.step.1': 'Haz clic en Añadir enlace en la parte de arriba del panel Enlaces.',
+  'help.guide.shared-links.step.2':
+    'Dale un nombre al enlace en Título del enlace, pega la dirección en el campo de debajo y haz clic en Guardar enlace.',
+  'help.guide.shared-links.step.3':
+    'La ficha muestra el nombre y el sitio al que apunta. Un clic en ella abre la página en una pestaña nueva.',
+  'help.guide.shared-links.step.4':
+    'Los tres botones pequeños de su final son Editar enlace, Fijar enlace y Eliminar enlace. Fijar enlace mueve la ficha al principio del panel; Eliminar enlace no pregunta nada.',
+  'help.guide.shared-links.result':
+    'El enlace es una ficha en el panel Enlaces, fijada al principio, y en la pantalla de todos los miembros a la vez.',
+  'help.guide.shared-links.tip.1':
+    'Solo se aceptan direcciones http y https; el campo rechaza cualquier otra cosa antes de guardar.',
+  'help.guide.shared-links.tip.2':
+    'Los enlaces fijados van primero, luego los más nuevos. El iconito junto a un título es el favicon del propio sitio, traído del sitio mismo, así que sin internet la ficha muestra un símbolo de enlace simple en su lugar.',
+  'help.guide.shared-links.tip.3':
+    'Enlaces es un interruptor propio en Complementos, bajo Colaboración, así que un administrador puede apagar el panel sin tocar el resto de la pestaña.',
+  // create-poll
+  'help.guide.create-poll.title': 'Preguntar al grupo',
+  'help.guide.create-poll.goal':
+    'Convierte una pregunta que nadie contesta en Mensajes en una encuesta que todos pueden marcar.',
+  'help.guide.create-poll.step.1': 'Haz clic en Nueva encuesta en la parte de arriba del panel Encuestas.',
+  'help.guide.create-poll.step.2':
+    'Escribe la pregunta. Compatible con Markdown debajo de la caja significa que aquí funcionan una palabra en negrita, un salto de línea o una lista corta.',
+  'help.guide.create-poll.step.3': 'Rellena Opción 1 y Opción 2. Dos opciones con algo dentro son el mínimo.',
+  'help.guide.create-poll.step.4':
+    '+ Añadir opción añade una tercera, una cuarta, tantas como necesites; la crucecita junto a una fila quita una otra vez.',
+  'help.guide.create-poll.step.5':
+    'Selección múltiple deja que todos marquen más de una opción. Sin activarla, un voto se traslada cuando alguien elige otra cosa.',
+  'help.guide.create-poll.step.6': 'Haz clic en Crear encuesta.',
+  'help.guide.create-poll.result':
+    'La encuesta está arriba del panel Encuestas, abierta, y todavía no ha votado nadie.',
+  'help.guide.create-poll.tip.1': 'La pregunta se muestra como Markdown; las opciones siguen siendo texto plano.',
+  'help.guide.create-poll.tip.2':
+    'Crear encuesta sigue gris hasta que hay una pregunta y al menos dos opciones con algo dentro.',
+  'help.guide.create-poll.tip.3':
+    'Una fecha límite solo se puede poner en la app del móvil. Una encuesta que la tiene muestra aquí el tiempo que queda en una ficha ámbar y cuenta como cerrada en cuanto se acaba.',
+  'help.guide.create-poll.tip.4':
+    'Encuestas es un interruptor propio en Complementos, bajo Colaboración: un administrador puede apagarlas y dejar funcionando los otros cuatro paneles.',
+  // vote-poll
+  'help.guide.vote-poll.title': 'Votar y leer el resultado',
+  'help.guide.vote-poll.goal': 'Da tu voto, mira cómo está el grupo y cambia de idea.',
+  'help.guide.vote-poll.step.1': 'Haz clic en la opción que quieras. Su círculo se llena y la barra de detrás crece.',
+  'help.guide.vote-poll.step.2':
+    'Ahora se lee el resultado entero: la barra es la proporción, el porcentaje está a la derecha, y los círculos pequeños son las personas que eligieron esa opción.',
+  'help.guide.vote-poll.step.3':
+    '¿Has cambiado de idea? Haz clic en otra opción. En una encuesta sin Selección múltiple tu voto se traslada en vez de añadir un segundo.',
+  'help.guide.vote-poll.step.4':
+    'Bajo la pregunta está cuántos votos tiene la encuesta. Un clic en la opción que ya elegiste vuelve a sacar tu voto, y el contador baja.',
+  'help.guide.vote-poll.result':
+    'Tu marca está en una opción, las barras muestran cómo se reparte el grupo, y los círculos dicen quién eligió qué.',
+  'help.guide.vote-poll.tip.1':
+    'Las barras y los porcentajes solo aparecen cuando has votado tú, o cuando la encuesta está cerrada, para que a nadie le influyan los resultados provisionales.',
+  'help.guide.vote-poll.tip.2':
+    'Un voto nunca es anónimo: pasa el ratón por uno de los círculos de una opción para ver el nombre que hay detrás.',
+  // close-poll
+  'help.guide.close-poll.title': 'Cerrar una encuesta o quitarla',
+  'help.guide.close-poll.goal':
+    'Para la votación cuando el grupo ya ha decidido, y quita de en medio una encuesta que ya no necesita nadie.',
+  'help.guide.close-poll.step.1':
+    'Cerrar, el candado en la esquina de una encuesta, termina la votación. Las opciones dejan de aceptar clics.',
+  'help.guide.close-poll.step.2':
+    'Una encuesta cerrada baja bajo el encabezado Cerradas al final del panel, lleva una insignia Cerrada y enseña el resultado a todos, hayan votado o no. La opción ganadora se tiñe de verde.',
+  'help.guide.close-poll.step.3':
+    'Eliminar al lado quita la encuesta. Nada pregunta dos veces, y los votos se van con ella.',
+  'help.guide.close-poll.result':
+    'La encuesta ha desaparecido del panel de todos los miembros. Una que solo has cerrado sigue legible abajo, con su resultado.',
+  'help.guide.close-poll.tip.1':
+    'Cerrar no se puede deshacer: no hay reapertura. Una encuesta cerrada sin querer hay que volver a plantearla.',
+  'help.guide.close-poll.tip.2':
+    'Eliminar quita la encuesta y todos sus votos a todo el mundo, al momento y sin preguntar.',
+  // whats-next
+  'help.guide.whats-next.title': 'Leer Qué viene ahora',
+  'help.guide.whats-next.goal': 'Mira qué hace el grupo a continuación sin abrir el plan.',
+  'help.guide.whats-next.step.1':
+    'El panel lista las ocho próximas paradas del viaje que aún están por delante, en orden de hora, bajo un encabezado por día: Hoy, Mañana o la fecha.',
+  'help.guide.whats-next.step.2':
+    'A la izquierda de una fila está su hora: el comienzo, hasta, y el final cuando la parada lo tiene, o TBD cuando todavía no se le ha puesto hora.',
+  'help.guide.whats-next.step.3':
+    'Las fichas bajo el nombre son las personas que van en esa parada. Si no se ha elegido a nadie, se lista a todo el viaje.',
+  'help.guide.whats-next.result': 'Una lista de lo que viene, solo para leer: sigue el plan, y nada de aquí lo cambia.',
+  'help.guide.whats-next.tip.1':
+    'Aquí no se fija nada. Las horas vienen del plan del día; cámbialas allí y esta lista lo sigue al momento.',
+  'help.guide.whats-next.tip.2':
+    'Solo se lista lo que todavía está por delante: una parada cuya hora ya pasó se cae, y al final de un viaje el panel está vacío.',
+  'help.guide.whats-next.tip.3':
+    'Qué sigue es un interruptor propio en Complementos, bajo Colaboración, y es un panel de escritorio: la pestaña Colaboración de la app del móvil no lo ofrece.',
+  // trip-chat
+  'help.guide.trip-chat.title': 'Hablar con el grupo',
+  'help.guide.trip-chat.goal': 'Di algo, responde a un mensaje concreto, reacciona a otro y retira el tuyo.',
+  'help.guide.trip-chat.step.1':
+    'Escribe en Escribe un mensaje... y pulsa Enter. La flecha azul junto a la caja hace lo mismo; Shift y Enter hacen un salto de línea en su lugar.',
+  'help.guide.trip-chat.step.2':
+    'El smiley abre el selector de emojis, con Smileys, Reactions y Travel dentro. Lo que eliges se añade a lo que estás escribiendo, no se envía por sí solo.',
+  'help.guide.trip-chat.step.3':
+    'Pasa el ratón por el mensaje de otra persona: en su esquina aparece un botón redondo pequeño. Ese es Responder.',
+  'help.guide.trip-chat.step.4':
+    'El mensaje al que respondes queda citado sobre la caja. Escribe y envía, y la cita viaja en tu burbuja; la cruz de la cita la descarta.',
+  'help.guide.trip-chat.step.5':
+    'Haz clic derecho en un mensaje para las ocho reacciones rápidas. La tuya queda bajo la burbuja, y un segundo clic en la misma la retira.',
+  'help.guide.trip-chat.step.6':
+    'Tus propios mensajes llevan Eliminar junto a Responder. Quita el mensaje y deja una línea que dice que lo has eliminado: no hay vuelta atrás.',
+  'help.guide.trip-chat.result':
+    'Tu respuesta está bajo el mensaje que cita, una reacción cuelga de un tercero, y el que retiraste deja una sola línea que lo dice.',
+  'help.guide.trip-chat.tip.1':
+    'Enter envía, Shift y Enter hacen un salto de línea. Un mensaje que es solo emoji se muestra grande.',
+  'help.guide.trip-chat.tip.2':
+    'Adjuntar imágenes toma hasta cuatro fotos para un mensaje; también se pueden pegar o soltar sin más sobre la caja.',
+  'help.guide.trip-chat.tip.3':
+    'Un mensaje con un enlace dentro recibe debajo una tarjeta de vista previa, traída por tu propio TREK, así que un enlace a algo a lo que solo llegas tú sigue siendo un enlace simple.',
+  'help.guide.trip-chat.tip.4':
+    'Chat es un interruptor propio en Complementos, bajo Colaboración: un administrador puede apagarlo y dejar funcionando las Notas, los Enlaces, las Encuestas y Qué sigue.',
 };
 
 export default help;

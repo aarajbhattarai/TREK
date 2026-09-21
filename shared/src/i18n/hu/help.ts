@@ -2745,6 +2745,163 @@ const help: TranslationStrings = {
     'A Mindig jelenjenek meg a foglalási útvonalak, ugyanabban a beállításban, minden olyan utazáson az elejétől megrajzolja őket, amelyikről még nem döntöttél.',
   'help.guide.map-booking-routes.tip.3':
     'Egy foglalásnak két koordinátás végre van szüksége, mielőtt megrajzolható lenne, ezért egy szálloda vagy egy étterem nem visel útvonal ikont.',
+
+  // ── Screen: trip-collab ───────────────────────────────────────────────────────────────
+  'help.ctx.trip-collab.title': 'Együttműködés',
+  'help.ctx.trip-collab.summary':
+    'A fül, ahol a csapat együtt tervez: balra a csevegés, mellette a közös jegyzetek és linkek, alattuk a szavazások, a végén pedig a Mi következik. Minden, amit ide írnak, egyszerre ott áll minden másik tag képernyőjén, újratöltés nélkül.',
+  'help.ctx.trip-collab.bullet.1':
+    'A csevegés a bal oldali oszlop. Írj az Üzenet írása... mezőbe, és nyomj Entert; a Shift és az Enter új sort csinál. A mosolygó arc emodzsit ad hozzá, a Képek csatolása pedig legfeljebb négy képet akaszt az üzenetre.',
+  'help.ctx.trip-collab.bullet.2':
+    'Vidd az egeret egy üzenet fölé a Válasz gombért, a sajátodon a Törlés gombért is; kattints rá jobb gombbal a nyolc gyors reakcióért. A törölt üzenet után egyetlen sor marad, amely szerint töröltél egy üzenetet.',
+  'help.ctx.trip-collab.bullet.3':
+    'A Jegyzetek a közös füzet: az Új jegyzet ír egyet, a mellette lévő fogaskerék pedig a Kategóriák kezelése ablakot nyitja meg a nevükhöz és a színükhöz. Egy kártya Kibontás, Kitűzés, Szerkesztés és Törlés gombot visel.',
+  'help.ctx.trip-collab.bullet.4':
+    'A Linkek gyűjtik a címeket, amelyeken az utazás fut. A Link hozzáadása egy címet és egy http vagy https webcímet vesz át; a Link szerkesztése, a Link rögzítése és a Link törlése a jelvény végén ül, a rögzített linkek pedig elöl maradnak.',
+  'help.ctx.trip-collab.bullet.5':
+    'A Szavazások döntenek. Az Új szavazás legalább két opcióval tesz fel egy kérdést; egy opcióra kattintás a te szavazatod, a Lezárás befejezi a szavazást, a Törlés pedig eltünteti a szavazást.',
+  'help.ctx.trip-collab.bullet.6':
+    'A Mi következik az utazás következő nyolc, még előtted álló megállóját sorolja fel, az idejükkel és a rajtuk lévő emberekkel. Csak a napi tervet olvassa; az időpontokat ott állítod be.',
+  // write-note
+  'help.guide.write-note.title': 'Közös jegyzet írása',
+  'help.guide.write-note.goal':
+    'Tedd azt, amire az egész csapatnak szüksége van, egy szabályt, egy címet, egy emlékeztetőt, oda, ahol mindenki újra megtalálja.',
+  'help.guide.write-note.step.1': 'Kattints a Jegyzetek panel tetején az Új jegyzet gombra. Megnyílik az űrlap.',
+  'help.guide.write-note.step.2':
+    'A Jegyzet címe az a név, amelyet a kártya visel. Ez az egyetlen, amihez az űrlap ragaszkodik: a Létrehozás szürke marad, amíg nincs benne valami.',
+  'help.guide.write-note.step.3':
+    'Az alatta lévő nagy mező tartja a szöveget, és elfogadja a Markdownt: egy félkövér szót, egy listát, egy címsort. A kártya az első néhány sort mutatja, a rajta lévő Kibontás pedig az egész jegyzetet megnyitja.',
+  'help.guide.write-note.step.4':
+    'A Kategória alatt válaszd ki azt, amelyikhez a jegyzet tartozik; a színe lesz a kártya színe. A pirulák a már létező kategóriák, újat pedig a Kategóriák kezelése alatt lehet csinálni.',
+  'help.guide.write-note.step.5':
+    'A Weboldal egy olyan linket vesz át, amely a jegyzethez tartozik. A kártya ekkor egy Link csempét visel, amely megnyitja.',
+  'help.guide.write-note.step.6': 'Kattints a Létrehozás gombra.',
+  'help.guide.write-note.result':
+    'A jegyzet egy kártya a Jegyzetek panelen, a kategóriája színében, és már ott van minden másik tag képernyőjén.',
+  'help.guide.write-note.tip.1':
+    'A kártyán lévő Kitűzés a panel tetején tartja; minden alatta aszerint rendeződik, mikor változott utoljára.',
+  'help.guide.write-note.tip.2':
+    'Az Új jegyzet melletti fogaskerék a Kategóriák kezelése ablakot nyitja meg: ott kap egy kategória színt, nevezed át egyszerre mindenhol, vagy adod hozzá még azelőtt, hogy bármelyik jegyzet használná.',
+  'help.guide.write-note.tip.3':
+    'A Fájlok csatolása egy dokumentumot akaszt a jegyzetre. A Csatolás megnyitja a fájlválasztót, egy képet vagy egy PDF-et pedig egyszerűen be is illeszthetsz az űrlapba.',
+  'help.guide.write-note.tip.4':
+    'A Jegyzetek saját kapcsoló a Bővítmények alatt, az Együttműködés részben: egy adminisztrátor kikapcsolhatja, és futni hagyhatja a csevegést, a linkeket, a szavazásokat és a Mi következik panelt.',
+  // shared-links
+  'help.guide.shared-links.title': 'Az utazás linkjeinek összegyűjtése',
+  'help.guide.shared-links.goal':
+    'Tartsd a foglalási oldalt, a közös albumot és a menetrendet egy helyen, ahelyett hogy a csevegést görgetnéd értük.',
+  'help.guide.shared-links.step.1': 'Kattints a Linkek panel tetején a Link hozzáadása gombra.',
+  'help.guide.shared-links.step.2':
+    'Adj a linknek nevet a Link címe mezőben, illeszd be a webcímet az alatta lévő mezőbe, majd kattints a Link mentése gombra.',
+  'help.guide.shared-links.step.3':
+    'A jelvény a nevet és azt az oldalt mutatja, amelyre mutat. Egy kattintás rajta új lapon nyitja meg az oldalt.',
+  'help.guide.shared-links.step.4':
+    'A végén lévő három kis gomb a Link szerkesztése, a Link rögzítése és a Link törlése. A Link rögzítése a panel elejére viszi a jelvényt; a Link törlése semmit sem kérdez.',
+  'help.guide.shared-links.result':
+    'A link egy jelvény a Linkek panelen, elöl rögzítve, és egyszerre ott van minden tag képernyőjén.',
+  'help.guide.shared-links.tip.1': 'Csak http és https címeket fogad el; a mező mentés előtt minden mást visszautasít.',
+  'help.guide.shared-links.tip.2':
+    'Először a rögzített linkek jönnek, aztán a legújabbak. A cím melletti kis ikon az oldal saját faviconja, magáról az oldalról lehívva, így internet nélkül a jelvény egy egyszerű linkjelet mutat helyette.',
+  'help.guide.shared-links.tip.3':
+    'A Linkek saját kapcsoló a Bővítmények alatt, az Együttműködés részben, így egy adminisztrátor kikapcsolhatja a panelt anélkül, hogy a fül többi részéhez hozzányúlna.',
+  // create-poll
+  'help.guide.create-poll.title': 'A csapat megkérdezése',
+  'help.guide.create-poll.goal':
+    'Alakítsd át a kérdést, amelyre a csevegésben senki sem válaszol, szavazássá, amelyet mindenki be tud jelölni.',
+  'help.guide.create-poll.step.1': 'Kattints a Szavazások panel tetején az Új szavazás gombra.',
+  'help.guide.create-poll.step.2':
+    'Írd meg a kérdést. A mező alatti Markdown támogatott azt jelenti, hogy egy félkövér szó, egy sortörés vagy egy rövid lista működik itt.',
+  'help.guide.create-poll.step.3':
+    'Töltsd ki az Opció 1 és az Opció 2 mezőt. Két opció, amelyben van valami, a minimum.',
+  'help.guide.create-poll.step.4':
+    'Az Opció hozzáadása hoz egy harmadikat, egy negyediket, annyit, amennyire szükséged van; a sor melletti kis kereszt egyet újra elvesz.',
+  'help.guide.create-poll.step.5':
+    'A Többszörös választás engedi, hogy mindenki egynél több opciót jelöljön be. Kikapcsolva hagyva a szavazat átvándorol, amikor valaki mást választ.',
+  'help.guide.create-poll.step.6': 'Kattints a Szavazás létrehozása gombra.',
+  'help.guide.create-poll.result': 'A szavazás a Szavazások panel tetején áll, nyitva, és még senki sem szavazott.',
+  'help.guide.create-poll.tip.1': 'A kérdés Markdownként jelenik meg; az opciók sima szöveg maradnak.',
+  'help.guide.create-poll.tip.2':
+    'A Szavazás létrehozása szürke marad, amíg nincs kérdés és legalább két opció, amelyben van valami.',
+  'help.guide.create-poll.tip.3':
+    'Határidőt csak a telefonos alkalmazásban lehet beállítani. Az a szavazás, amelynek van, itt egy borostyánszínű jelvényben mutatja a hátralévő időt, és lezártnak számít, amint az idő lejár.',
+  'help.guide.create-poll.tip.4':
+    'A Szavazások saját kapcsoló a Bővítmények alatt, az Együttműködés részben: egy adminisztrátor kikapcsolhatja, és futni hagyhatja a másik négy panelt.',
+  // vote-poll
+  'help.guide.vote-poll.title': 'Szavazás és az eredmény olvasása',
+  'help.guide.vote-poll.goal': 'Add le a szavazatodat, nézd meg, hol áll a csapat, és gondold meg magad.',
+  'help.guide.vote-poll.step.1':
+    'Kattints arra az opcióra, amelyiket szeretnéd. A köre kitöltődik, a mögötte lévő sáv pedig megnő.',
+  'help.guide.vote-poll.step.2':
+    'Most az egész eredmény olvasható: a sáv az arány, a százalék jobbra áll, a kis körök pedig azok az emberek, akik azt az opciót választották.',
+  'help.guide.vote-poll.step.3':
+    'Meggondoltad magad? Kattints egy másik opcióra. Többszörös választás nélküli szavazásban a szavazatod átvándorol, ahelyett hogy egy másodikat adna hozzá.',
+  'help.guide.vote-poll.step.4':
+    'A kérdés alatt áll, hány szavazata van a szavazásnak. Ha arra az opcióra kattintasz, amelyet már választottál, visszaveszed a szavazatodat, és a számláló újra csökken.',
+  'help.guide.vote-poll.result':
+    'A jelölésed egy opción áll, a sávok mutatják, hogyan oszlik meg a csapat, a körök pedig megmondják, ki mit választott.',
+  'help.guide.vote-poll.tip.1':
+    'A sávok és a százalékok csak akkor jelennek meg, ha már magad is szavaztál, vagy ha a szavazás le van zárva, így az állás senkit sem terel.',
+  'help.guide.vote-poll.tip.2':
+    'Egy szavazat soha nem névtelen: vidd az egeret egy opció körei közül az egyik fölé a mögötte álló névért.',
+  // close-poll
+  'help.guide.close-poll.title': 'Szavazás lezárása vagy eltávolítása',
+  'help.guide.close-poll.goal':
+    'Állítsd le a szavazást, amint a csapat döntött, és takarítsd el azt a szavazást, amelyre már senkinek sincs szüksége.',
+  'help.guide.close-poll.step.1':
+    'A Lezárás, a lakat a szavazás sarkában, befejezi a szavazást. Az opciók nem fogadnak több kattintást.',
+  'help.guide.close-poll.step.2':
+    'A lezárt szavazás a panel alján a Lezárva fejléc alá süllyed, Lezárva jelvényt visel, és mindenkinek mutatja az eredményt, akár szavazott, akár nem. A győztes opció zöldre színeződik.',
+  'help.guide.close-poll.step.3':
+    'A mellette lévő Törlés eltünteti a szavazást. Semmi sem kérdez kétszer, és a szavazatok is vele mennek.',
+  'help.guide.close-poll.result':
+    'A szavazás eltűnt minden tag paneljéről. Amelyiket csak lezártad, az az eredményével együtt olvasható marad alul.',
+  'help.guide.close-poll.tip.1':
+    'A lezárást nem lehet visszavonni: nincs újranyitás. A véletlenül lezárt szavazást újra fel kell tenni.',
+  'help.guide.close-poll.tip.2':
+    'A Törlés mindenkitől elveszi a szavazást és minden rá adott szavazatot, azonnal és kérdés nélkül.',
+  // whats-next
+  'help.guide.whats-next.title': 'A Mi következik olvasása',
+  'help.guide.whats-next.goal': 'Nézd meg, mit csinál a csapat ezután, anélkül hogy megnyitnád a tervet.',
+  'help.guide.whats-next.step.1':
+    'A panel az utazás következő nyolc, még előtted álló megállóját sorolja fel, idő szerint, naponkénti fejléc alatt: Ma, Holnap vagy a dátum.',
+  'help.guide.whats-next.step.2':
+    'Egy sor bal oldalán az ideje áll: a kezdés, az -ig, és a vége, ha a megállónak van, vagy TBD, ha még nincs rajta beállítva idő.',
+  'help.guide.whats-next.step.3':
+    'A név alatti jelvények az azon a megállón lévő emberek. Ha senkit sem választottak ki rá, az utazás minden tagja fel van sorolva.',
+  'help.guide.whats-next.result':
+    'Annak a listája, ami jön, csak olvasásra: a tervet követi, és semmi sem változtatja meg itt.',
+  'help.guide.whats-next.tip.1':
+    'Itt semmit sem állítasz be. Az időpontok a napi tervből jönnek; változtasd meg őket ott, és ez a lista azonnal követi.',
+  'help.guide.whats-next.tip.2':
+    'Csak az van felsorolva, ami még előtted áll: az a megálló, amelynek az ideje elmúlt, kiesik, az utazás végén pedig a panel üres.',
+  'help.guide.whats-next.tip.3':
+    'A Mi következik saját kapcsoló a Bővítmények alatt, az Együttműködés részben, és asztali panel: a telefonos alkalmazás Együttműködés füle nem kínálja.',
+  // trip-chat
+  'help.guide.trip-chat.title': 'Beszélgetés a csapattal',
+  'help.guide.trip-chat.goal':
+    'Mondj valamit, válaszolj egy bizonyos üzenetre, reagálj egy másikra, és vedd vissza a sajátodat.',
+  'help.guide.trip-chat.step.1':
+    'Írj az Üzenet írása... mezőbe, és nyomj Entert. A mező melletti kék nyíl ugyanezt teszi; a Shift és az Enter ehelyett új sort csinál.',
+  'help.guide.trip-chat.step.2':
+    'A mosolygó arc megnyitja az emodzsiválasztót, benne a Smileys, a Reactions és a Travel lappal. Amit kiválasztasz, hozzáadódik ahhoz, amit írsz, magától nem küldődik el.',
+  'help.guide.trip-chat.step.3':
+    'Vidd az egeret valaki más üzenete fölé: a sarkában megjelenik egy kis kerek gomb. Az a Válasz.',
+  'help.guide.trip-chat.step.4':
+    'Az az üzenet, amelyre válaszolsz, idézetként áll a mező fölött. Írj és küldd el, és az idézet együtt utazik a buborékodban; az idézeten lévő kereszt újra elengedi.',
+  'help.guide.trip-chat.step.5':
+    'Kattints jobb gombbal egy üzenetre a nyolc gyors reakcióért. A tiéd a buborék alatt ül, és ha másodszor is ugyanarra kattintasz, visszaveszed.',
+  'help.guide.trip-chat.step.6':
+    'A saját üzeneteid a Válasz mellett Törlés gombot is viselnek. Elveszi az üzenetet, és egyetlen sort hagy, amely szerint töröltél egy üzenetet: nincs visszaút.',
+  'help.guide.trip-chat.result':
+    'A válaszod az alatt az üzenet alatt ül, amelyet idéz, egy reakció egy harmadikon lóg, és az, amelyet visszavettél, egyetlen sort hagy, amely ezt mondja.',
+  'help.guide.trip-chat.tip.1':
+    'Az Enter küld, a Shift és az Enter új sort csinál. Az az üzenet, amely semmi más, csak emodzsi, nagyban jelenik meg.',
+  'help.guide.trip-chat.tip.2':
+    'A Képek csatolása egy üzenethez legfeljebb négy képet vesz át; ezeket egyszerűen be is illesztheted, vagy rá is ejtheted a mezőre.',
+  'help.guide.trip-chat.tip.3':
+    'Az olyan üzenet, amelyben link van, előnézeti kártyát kap alá, amelyet a saját TREK-ed tölt le, így az olyan dologra mutató link, amelyet csak te érsz el, sima link marad.',
+  'help.guide.trip-chat.tip.4':
+    'A Chat saját kapcsoló a Bővítmények alatt, az Együttműködés részben: egy adminisztrátor kikapcsolhatja, és futni hagyhatja a jegyzeteket, a linkeket, a szavazásokat és a Mi következik panelt.',
 };
 
 export default help;

@@ -2805,6 +2805,164 @@ const help: TranslationStrings = {
     'Toujours afficher les itinéraires de réservation, dans les mêmes paramètres, les dessine dès le départ sur chaque voyage pour lequel vous n’avez pas déjà décidé.',
   'help.guide.map-booking-routes.tip.3':
     'Une réservation a besoin de deux extrémités avec des coordonnées avant de pouvoir être dessinée, un hôtel ou un restaurant ne porte donc pas d’icône d’itinéraire.',
+
+  // ── Screen: trip-collab ───────────────────────────────────────────────────────────────
+  'help.ctx.trip-collab.title': 'Collaboration',
+  'help.ctx.trip-collab.summary':
+    'L’onglet où le groupe planifie ensemble : la Discussion à gauche, les notes partagées et les liens à côté, les sondages en dessous et À venir à la fin. Tout ce qui s’écrit ici est aussitôt sur l’écran de chaque autre membre, sans rechargement.',
+  'help.ctx.trip-collab.bullet.1':
+    'La Discussion est la colonne de gauche. Écrivez dans Écrire un message… et appuyez sur Enter ; Shift et Enter font un saut de ligne. Le smiley ajoute un emoji, Joindre des images accroche jusqu’à quatre images au message.',
+  'help.ctx.trip-collab.bullet.2':
+    'Survolez un message pour Répondre et, sur les vôtres, Supprimer ; le clic droit ouvre les huit réactions rapides. Un message supprimé laisse une ligne qui dit que vous l’avez supprimé.',
+  'help.ctx.trip-collab.bullet.3':
+    'Notes est le bloc partagé : Nouvelle note en écrit une, et l’engrenage à côté ouvre Gérer les catégories pour leurs noms et leurs couleurs. Une carte porte Développer, Épingler, Modifier et Supprimer.',
+  'help.ctx.trip-collab.bullet.4':
+    'Liens rassemble les adresses sur lesquelles tourne le voyage. Ajouter un lien prend un titre et une adresse http ou https ; Modifier le lien, Épingler le lien et Supprimer le lien sont au bout de la pastille, et les liens épinglés restent devant.',
+  'help.ctx.trip-collab.bullet.5':
+    'Sondages tranche les questions. Nouveau sondage pose une question avec au moins deux options ; un clic sur une option est votre vote, Fermer met fin au vote et Supprimer retire le sondage.',
+  'help.ctx.trip-collab.bullet.6':
+    'À venir liste les huit prochaines étapes du voyage encore devant vous, avec leurs heures et les personnes qui y sont. Il ne fait que lire le plan du jour ; les heures se règlent là-bas.',
+  // write-note
+  'help.guide.write-note.title': 'Écrire une note partagée',
+  'help.guide.write-note.goal':
+    'Mettez ce dont tout le groupe a besoin, une règle, une adresse, un rappel, là où chacun le retrouve.',
+  'help.guide.write-note.step.1': 'Cliquez sur Nouvelle note en haut du panneau Notes. Le formulaire s’ouvre.',
+  'help.guide.write-note.step.2':
+    'Titre de la note est le nom que porte la carte. C’est la seule chose que le formulaire exige : Créer reste gris tant qu’il est vide.',
+  'help.guide.write-note.step.3':
+    'La grande zone en dessous contient le texte et accepte le Markdown : un mot en gras, une liste, un titre. La carte montre les premières lignes, et Développer dessus ouvre la note entière.',
+  'help.guide.write-note.step.4':
+    'Sous Catégorie, choisissez celle à laquelle la note appartient ; sa couleur devient la couleur de la carte. Les pastilles sont les catégories qui existent déjà, et une nouvelle se crée sous Gérer les catégories.',
+  'help.guide.write-note.step.5':
+    'Site web prend un lien qui appartient à la note. La carte porte alors une tuile Link qui l’ouvre.',
+  'help.guide.write-note.step.6': 'Cliquez sur Créer.',
+  'help.guide.write-note.result':
+    'La note est une carte dans le panneau Notes, dans la couleur de sa catégorie, et elle est déjà sur l’écran de chaque autre membre.',
+  'help.guide.write-note.tip.1':
+    'Épingler sur une carte la garde en haut du panneau ; tout ce qui est en dessous est trié par date de dernière modification.',
+  'help.guide.write-note.tip.2':
+    'L’engrenage à côté de Nouvelle note ouvre Gérer les catégories : là, une catégorie reçoit sa couleur, est renommée partout d’un coup, ou est ajoutée avant qu’une note l’utilise.',
+  'help.guide.write-note.tip.3':
+    'Joindre des fichiers accroche un document à la note. Joindre ouvre le sélecteur de fichiers, et une image ou un PDF peut aussi être simplement collé dans le formulaire.',
+  'help.guide.write-note.tip.4':
+    'Notes est un interrupteur à part sous Extensions, sous Collaboration : un administrateur peut l’éteindre et laisser tourner le Chat, les Liens, les Sondages ainsi que Et ensuite.',
+  // shared-links
+  'help.guide.shared-links.title': 'Rassembler les liens du voyage',
+  'help.guide.shared-links.goal':
+    'Gardez le portail de réservation, l’album partagé et les horaires au même endroit au lieu de fouiller la Discussion pour les retrouver.',
+  'help.guide.shared-links.step.1': 'Cliquez sur Ajouter un lien en haut du panneau Liens.',
+  'help.guide.shared-links.step.2':
+    'Donnez un nom au lien dans Titre du lien, collez l’adresse dans le champ en dessous, puis cliquez sur Enregistrer le lien.',
+  'help.guide.shared-links.step.3':
+    'La pastille montre le nom et le site vers lequel elle pointe. Un clic dessus ouvre la page dans un nouvel onglet.',
+  'help.guide.shared-links.step.4':
+    'Les trois petits boutons au bout sont Modifier le lien, Épingler le lien et Supprimer le lien. Épingler le lien déplace la pastille devant le panneau ; Supprimer le lien ne demande rien.',
+  'help.guide.shared-links.result':
+    'Le lien est une pastille dans le panneau Liens, épinglée devant, et sur l’écran de chaque membre en même temps.',
+  'help.guide.shared-links.tip.1':
+    'Seules les adresses http et https sont acceptées ; le champ refuse tout le reste avant d’enregistrer.',
+  'help.guide.shared-links.tip.2':
+    'Les liens épinglés viennent d’abord, puis les plus récents. La petite icône à côté d’un titre est le favicon du site, récupéré sur le site lui-même, donc sans internet la pastille montre un simple symbole de lien à la place.',
+  'help.guide.shared-links.tip.3':
+    'Liens est un interrupteur à part sous Extensions, sous Collaboration, un administrateur peut donc éteindre le panneau sans toucher au reste de l’onglet.',
+  // create-poll
+  'help.guide.create-poll.title': 'Demander au groupe',
+  'help.guide.create-poll.goal':
+    'Transformez une question à laquelle personne ne répond dans la Discussion en un sondage que tout le monde peut cocher.',
+  'help.guide.create-poll.step.1': 'Cliquez sur Nouveau sondage en haut du panneau Sondages.',
+  'help.guide.create-poll.step.2':
+    'Écrivez la question. Markdown pris en charge sous la zone signifie qu’un mot en gras, un saut de ligne ou une courte liste fonctionnent ici.',
+  'help.guide.create-poll.step.3':
+    'Remplissez Option 1 et Option 2. Deux options avec quelque chose dedans sont le minimum.',
+  'help.guide.create-poll.step.4':
+    '+ Ajouter une option en ajoute une troisième, une quatrième, autant que nécessaire ; la petite croix à côté d’une ligne en retire une.',
+  'help.guide.create-poll.step.5':
+    'Choix multiples laisse chacun cocher plus d’une option. Laissé éteint, un vote se déplace quand quelqu’un choisit autre chose.',
+  'help.guide.create-poll.step.6': 'Cliquez sur Créer le sondage.',
+  'help.guide.create-poll.result': 'Le sondage est en haut du panneau Sondages, ouvert, et personne n’a encore voté.',
+  'help.guide.create-poll.tip.1': 'La question est rendue en Markdown ; les options restent du texte brut.',
+  'help.guide.create-poll.tip.2':
+    'Créer le sondage reste gris tant qu’il n’y a pas une question et au moins deux options avec quelque chose dedans.',
+  'help.guide.create-poll.tip.3':
+    'Une date limite ne peut être fixée que dans l’application mobile. Un sondage qui en a une montre ici le temps restant dans une pastille ambre et compte comme fermé dès qu’il est écoulé.',
+  'help.guide.create-poll.tip.4':
+    'Sondages est un interrupteur à part sous Extensions, sous Collaboration : un administrateur peut l’éteindre et laisser tourner les quatre autres panneaux.',
+  // vote-poll
+  'help.guide.vote-poll.title': 'Voter et lire le résultat',
+  'help.guide.vote-poll.goal': 'Donnez votre voix, voyez où en est le groupe, et changez d’avis.',
+  'help.guide.vote-poll.step.1':
+    'Cliquez sur l’option que vous voulez. Son cercle se remplit et la barre derrière elle grandit.',
+  'help.guide.vote-poll.step.2':
+    'Maintenant tout le résultat est lisible : la barre est la part, le pourcentage est à droite, et les petits cercles sont les personnes qui ont choisi cette option.',
+  'help.guide.vote-poll.step.3':
+    'Vous avez changé d’avis ? Cliquez sur une autre option. Sur un sondage sans Choix multiples, votre vote se déplace au lieu d’en ajouter un second.',
+  'help.guide.vote-poll.step.4':
+    'Sous la question figure le nombre de votes du sondage. Un clic sur l’option que vous avez déjà choisie retire votre vote, et le compteur redescend.',
+  'help.guide.vote-poll.result':
+    'Votre coche est sur une option, les barres montrent comment le groupe se partage, et les cercles disent qui a choisi quoi.',
+  'help.guide.vote-poll.tip.1':
+    'Les barres et les pourcentages n’apparaissent qu’une fois que vous avez voté vous-même, ou une fois le sondage fermé, pour que personne ne soit influencé par les résultats en cours.',
+  'help.guide.vote-poll.tip.2':
+    'Un vote n’est jamais anonyme : survolez l’un des cercles d’une option pour le nom derrière.',
+  // close-poll
+  'help.guide.close-poll.title': 'Fermer un sondage, ou le retirer',
+  'help.guide.close-poll.goal':
+    'Arrêtez le vote une fois que le groupe a décidé, et enlevez un sondage dont personne n’a plus besoin.',
+  'help.guide.close-poll.step.1':
+    'Fermer, le cadenas dans le coin d’un sondage, met fin au vote. Les options n’acceptent plus les clics.',
+  'help.guide.close-poll.step.2':
+    'Un sondage fermé descend sous le titre Fermés en bas du panneau, porte un badge Fermé et montre le résultat à tout le monde, que l’on ait voté ou non. L’option gagnante est teintée en vert.',
+  'help.guide.close-poll.step.3':
+    'Supprimer à côté retire le sondage. Rien ne demande deux fois, et les votes partent avec lui.',
+  'help.guide.close-poll.result':
+    'Le sondage a disparu du panneau de chaque membre. Celui que vous avez seulement fermé reste lisible en bas, avec son résultat.',
+  'help.guide.close-poll.tip.1':
+    'Fermer ne s’annule pas : il n’y a pas de réouverture. Un sondage fermé par erreur doit être reposé.',
+  'help.guide.close-poll.tip.2':
+    'Supprimer retire le sondage et chacun de ses votes à tout le monde, tout de suite et sans question.',
+  // whats-next
+  'help.guide.whats-next.title': 'Lire À venir',
+  'help.guide.whats-next.goal': 'Voyez ce que le groupe fait ensuite sans ouvrir le plan.',
+  'help.guide.whats-next.step.1':
+    'Le panneau liste les huit prochaines étapes du voyage encore devant vous, dans l’ordre chronologique, sous un titre par jour : Aujourd’hui, Demain ou la date.',
+  'help.guide.whats-next.step.2':
+    'À gauche d’une ligne figure son heure : le début, à, et la fin quand l’étape en a une, ou TBD quand aucune heure n’est encore fixée.',
+  'help.guide.whats-next.step.3':
+    'Les pastilles sous le nom sont les personnes présentes à cette étape. Si personne n’a été choisi, tout le monde dans le voyage est listé.',
+  'help.guide.whats-next.result':
+    'Une liste de ce qui vient, en lecture seule : elle suit le plan, et rien ici ne le change.',
+  'help.guide.whats-next.tip.1':
+    'Rien ne se règle ici. Les heures viennent du plan du jour ; changez-les là-bas et cette liste suit aussitôt.',
+  'help.guide.whats-next.tip.2':
+    'Seul ce qui est encore devant est listé : une étape dont l’heure est passée sort de la liste, et à la fin d’un voyage le panneau est vide.',
+  'help.guide.whats-next.tip.3':
+    'Et ensuite est un interrupteur à part sous Extensions, sous Collaboration, et c’est un panneau de bureau : l’onglet Collaboration de l’application mobile ne le propose pas.',
+  // trip-chat
+  'help.guide.trip-chat.title': 'Parler au groupe',
+  'help.guide.trip-chat.goal':
+    'Dites quelque chose, répondez à un message précis, réagissez à un autre, et reprenez le vôtre.',
+  'help.guide.trip-chat.step.1':
+    'Écrivez dans Écrire un message… et appuyez sur Enter. La flèche bleue à côté de la zone fait la même chose ; Shift et Enter font un saut de ligne à la place.',
+  'help.guide.trip-chat.step.2':
+    'Le smiley ouvre le sélecteur d’emoji, avec Smileys, Reactions et Travel dedans. Ce que vous choisissez s’ajoute à ce que vous êtes en train d’écrire, ce n’est pas envoyé tout seul.',
+  'help.guide.trip-chat.step.3':
+    'Survolez le message de quelqu’un d’autre : un petit bouton rond apparaît dans son coin. C’est Répondre.',
+  'help.guide.trip-chat.step.4':
+    'Le message auquel vous répondez est cité au-dessus de la zone. Écrivez et envoyez, et la citation voyage avec votre bulle ; la croix sur la citation l’abandonne.',
+  'help.guide.trip-chat.step.5':
+    'Faites un clic droit sur un message pour les huit réactions rapides. La vôtre se place sous la bulle, et un second clic sur la même la retire.',
+  'help.guide.trip-chat.step.6':
+    'Vos propres messages portent Supprimer à côté de Répondre. Cela retire le message et laisse une ligne qui dit que vous l’avez supprimé : il n’y a pas de retour.',
+  'help.guide.trip-chat.result':
+    'Votre réponse est sous le message qu’elle cite, une réaction est accrochée à un troisième, et celui que vous avez repris laisse une seule ligne qui le dit.',
+  'help.guide.trip-chat.tip.1':
+    'Enter envoie, Shift et Enter font un saut de ligne. Un message qui n’est fait que d’emoji est affiché en grand.',
+  'help.guide.trip-chat.tip.2':
+    'Joindre des images prend jusqu’à quatre images pour un message ; elles peuvent aussi être simplement collées ou déposées sur la zone.',
+  'help.guide.trip-chat.tip.3':
+    'Un message contenant un lien reçoit une carte d’aperçu en dessous, récupérée par votre propre TREK, donc un lien vers quelque chose que vous seul pouvez atteindre reste un simple lien.',
+  'help.guide.trip-chat.tip.4':
+    'Chat est un interrupteur à part sous Extensions, sous Collaboration : un administrateur peut l’éteindre et laisser tourner les Notes, les Liens, les Sondages ainsi que Et ensuite.',
 };
 
 export default help;

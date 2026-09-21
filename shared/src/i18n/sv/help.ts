@@ -2646,6 +2646,160 @@ const help: TranslationStrings = {
     'Visa alltid bokningsrutter, i samma inställningar, ritar dem från början på varje resa du inte redan bestämt om.',
   'help.guide.map-booking-routes.tip.3':
     'En bokning behöver två ändar med koordinater innan den kan ritas, så ett hotell eller en restaurang bär ingen ruttikon.',
+
+  // ── Screen: trip-collab ───────────────────────────────────────────────────────────────
+  'help.ctx.trip-collab.title': 'Samarbete',
+  'help.ctx.trip-collab.summary':
+    'Fliken där gruppen planerar tillsammans: chatten till vänster, de gemensamma noteringarna och länkarna bredvid den, omröstningarna under dem och Vad händer härnäst? sist. Allt som skrivs här står på varje annan medlems skärm på en gång, utan omladdning.',
+  'help.ctx.trip-collab.bullet.1':
+    'Chatten är kolumnen till vänster. Skriv i Skriv ett meddelande... och tryck Enter; Shift och Enter ger en ny rad. Smileyn lägger till en emoji, Bifoga bilder hänger upp till fyra bilder på meddelandet.',
+  'help.ctx.trip-collab.bullet.2':
+    'Håll musen över ett meddelande för Svara och, på ditt eget, Ta bort; högerklicka det för de åtta snabba reaktionerna. Ett borttaget meddelande lämnar en rad som säger att du raderade ett meddelande.',
+  'help.ctx.trip-collab.bullet.3':
+    'Noteringar är det gemensamma blocket: Ny notering skriver en, och kugghjulet bredvid öppnar Hantera kategorier för deras namn och färger. Ett kort bär Expandera, Fäst, Redigera och Radera.',
+  'help.ctx.trip-collab.bullet.4':
+    'Länkar samlar adresserna som resan går på. Lägg till länk tar en titel och en http- eller https-adress; Redigera länk, Fäst länk och Ta bort länk sitter i brickans svans, och fästa länkar stannar längst fram.',
+  'help.ctx.trip-collab.bullet.5':
+    'Omröstningar avgör saker. Ny omröstning ställer en fråga med minst två alternativ; ett klick på ett alternativ är din röst, Stäng avslutar röstningen och Ta bort tar bort omröstningen.',
+  'help.ctx.trip-collab.bullet.6':
+    'Vad händer härnäst? listar resans åtta nästa stopp som fortfarande ligger framför, med deras tider och personerna på dem. Den läser bara dagsplanen; tiderna sätts där.',
+  // write-note
+  'help.guide.write-note.title': 'Skriv en gemensam notering',
+  'help.guide.write-note.goal':
+    'Lägg det hela gruppen behöver, en regel, en adress, en påminnelse, där alla hittar det igen.',
+  'help.guide.write-note.step.1': 'Klicka på Ny notering högst upp i panelen Noteringar. Formuläret öppnas.',
+  'help.guide.write-note.step.2':
+    'Noterings titel är namnet kortet bär. Det är det enda formuläret kräver: Skapa förblir grå tills det står något i det.',
+  'help.guide.write-note.step.3':
+    'Den stora rutan under den håller texten och tar Markdown: ett fett ord, en lista, en rubrik. Kortet visar de första raderna, och Expandera på det öppnar hela noteringen.',
+  'help.guide.write-note.step.4':
+    'Under Kategori väljer du den som noteringen hör till; dess färg blir kortets färg. Pillerna är de kategorier som redan finns, och en ny görs under Hantera kategorier.',
+  'help.guide.write-note.step.5':
+    'Hemsida tar en länk som hör till noteringen. Kortet bär då en Link-bricka som öppnar den.',
+  'help.guide.write-note.step.6': 'Klicka på Skapa.',
+  'help.guide.write-note.result':
+    'Noteringen är ett kort i panelen Noteringar, i sin kategoris färg, och den står redan på varje annan medlems skärm.',
+  'help.guide.write-note.tip.1':
+    'Fäst på ett kort håller det högst upp i panelen; allt under det sorteras efter när det ändrades senast.',
+  'help.guide.write-note.tip.2':
+    'Kugghjulet bredvid Ny notering öppnar Hantera kategorier: där får en kategori sin färg, byter namn överallt på en gång, eller läggs till innan någon notering använder den.',
+  'help.guide.write-note.tip.3':
+    'Bifoga filer hänger ett dokument på noteringen. Bifoga öppnar filväljaren, och en bild eller en PDF kan också bara klistras in i formuläret.',
+  'help.guide.write-note.tip.4':
+    'Noteringar är en egen växel under Tillägg, nedanför Samarbete: en administratör kan stänga av den och låta chatten, länkarna, omröstningarna och Vad händer härnäst? fortsätta.',
+  // shared-links
+  'help.guide.shared-links.title': 'Samla resans länkar',
+  'help.guide.shared-links.goal':
+    'Håll bokningsportalen, det delade albumet och tidtabellen på ett ställe i stället för att skrolla chatten efter dem.',
+  'help.guide.shared-links.step.1': 'Klicka på Lägg till länk högst upp i panelen Länkar.',
+  'help.guide.shared-links.step.2':
+    'Ge länken ett namn i Länktitel, klistra in adressen i fältet under den, och klicka sedan på Spara länk.',
+  'help.guide.shared-links.step.3':
+    'Brickan visar namnet och sidan den pekar på. Ett klick på den öppnar sidan i en ny flik.',
+  'help.guide.shared-links.step.4':
+    'De tre små knapparna i dess svans är Redigera länk, Fäst länk och Ta bort länk. Fäst länk flyttar brickan längst fram i panelen; Ta bort länk frågar ingenting.',
+  'help.guide.shared-links.result':
+    'Länken är en bricka i panelen Länkar, fäst längst fram, och på varje medlems skärm på en gång.',
+  'help.guide.shared-links.tip.1': 'Bara http- och https-adresser tas emot; fältet vägrar allt annat innan det sparar.',
+  'help.guide.shared-links.tip.2':
+    'Fästa länkar kommer först, sedan de nyaste. Den lilla ikonen bredvid en titel är sidans egen favikon, hämtad från sidan själv, så utan internet visar brickan en enkel länksymbol i stället.',
+  'help.guide.shared-links.tip.3':
+    'Länkar är en egen växel under Tillägg, nedanför Samarbete, så en administratör kan stänga av panelen utan att röra resten av fliken.',
+  // create-poll
+  'help.guide.create-poll.title': 'Fråga gruppen',
+  'help.guide.create-poll.goal': 'Gör en fråga som ingen svarar på i chatten till en omröstning alla kan kryssa i.',
+  'help.guide.create-poll.step.1': 'Klicka på Ny omröstning högst upp i panelen Omröstning.',
+  'help.guide.create-poll.step.2':
+    'Skriv frågan. Markdown stöds under rutan betyder att ett fett ord, en radbrytning eller en kort lista fungerar här.',
+  'help.guide.create-poll.step.3': 'Fyll i Val 1 och Val 2. Två alternativ med något i dem är minimum.',
+  'help.guide.create-poll.step.4':
+    '+ Lägg till alternativ lägger till ett tredje, ett fjärde, så många du behöver; det lilla krysset bredvid en rad tar bort ett igen.',
+  'help.guide.create-poll.step.5':
+    'Flera val låter alla kryssa i mer än ett alternativ. Lämnat avstängt flyttar en röst över när någon väljer något annat.',
+  'help.guide.create-poll.step.6': 'Klicka på Skapa omröstning.',
+  'help.guide.create-poll.result': 'Omröstningen står högst upp i panelen Omröstning, öppen, och ingen har röstat än.',
+  'help.guide.create-poll.tip.1': 'Frågan renderas som Markdown; alternativen förblir ren text.',
+  'help.guide.create-poll.tip.2':
+    'Skapa omröstning förblir grå tills det finns en fråga och minst två alternativ med något i dem.',
+  'help.guide.create-poll.tip.3':
+    'En Tidsfrist kan bara sättas i telefonappen. En omröstning som har en visar tiden som är kvar i en bärnstensfärgad bricka här och räknas som stängd när den tar slut.',
+  'help.guide.create-poll.tip.4':
+    'Omröstningar är en egen växel under Tillägg, nedanför Samarbete: en administratör kan stänga av den och låta de andra fyra panelerna fortsätta.',
+  // vote-poll
+  'help.guide.vote-poll.title': 'Rösta och läs resultatet',
+  'help.guide.vote-poll.goal': 'Lägg din röst, se var gruppen står, och ändra dig.',
+  'help.guide.vote-poll.step.1': 'Klicka på alternativet du vill ha. Dess cirkel fylls i och stapeln bakom den växer.',
+  'help.guide.vote-poll.step.2':
+    'Nu går hela resultatet att läsa: stapeln är andelen, procenten står till höger, och de små cirklarna är personerna som valde det alternativet.',
+  'help.guide.vote-poll.step.3':
+    'Ändrat dig? Klicka på ett annat alternativ. I en omröstning utan Flera val flyttar din röst över i stället för att lägga till en andra.',
+  'help.guide.vote-poll.step.4':
+    'Under frågan står hur många röster omröstningen har. Ett klick på alternativet du redan valde tar tillbaka din röst, och räknaren faller igen.',
+  'help.guide.vote-poll.result':
+    'Ditt kryss sitter på ett alternativ, staplarna visar hur gruppen är delad, och cirklarna säger vem som valde vad.',
+  'help.guide.vote-poll.tip.1':
+    'Staplarna och procenten dyker upp först när du har röstat själv, eller när omröstningen är stängd, så att ingen puffas av ställningen.',
+  'help.guide.vote-poll.tip.2':
+    'En röst är aldrig anonym: håll musen över en av cirklarna på ett alternativ för namnet bakom den.',
+  // close-poll
+  'help.guide.close-poll.title': 'Stäng en omröstning, eller ta bort den',
+  'help.guide.close-poll.goal':
+    'Stoppa röstningen när gruppen har bestämt sig, och städa undan en omröstning ingen behöver längre.',
+  'help.guide.close-poll.step.1':
+    'Stäng, låset i en omröstnings hörn, avslutar röstningen. Alternativen slutar ta emot klick.',
+  'help.guide.close-poll.step.2':
+    'En stängd omröstning sjunker under rubriken Stängd längst ner i panelen, bär en Stängd-markering och visar resultatet för alla, oavsett om de röstade eller inte. Det vinnande alternativet tonas grönt.',
+  'help.guide.close-poll.step.3':
+    'Ta bort bredvid den tar bort omröstningen. Ingenting frågar två gånger, och rösterna följer med.',
+  'help.guide.close-poll.result':
+    'Omröstningen är borta från varje medlems panel. En du bara stängde stannar läsbar längst ner, med sitt resultat.',
+  'help.guide.close-poll.tip.1':
+    'Att stänga går inte att ångra: det finns inget sätt att öppna igen. En omröstning som stängdes av misstag måste ställas på nytt.',
+  'help.guide.close-poll.tip.2':
+    'Ta bort tar bort omröstningen och varje röst på den för alla, direkt och utan en fråga.',
+  // whats-next
+  'help.guide.whats-next.title': 'Läs Vad händer härnäst?',
+  'help.guide.whats-next.goal': 'Se vad gruppen gör härnäst utan att öppna planen.',
+  'help.guide.whats-next.step.1':
+    'Panelen listar resans åtta nästa stopp som fortfarande ligger framför, i tidsordning, under en rubrik per dag: Idag, I morgon eller datumet.',
+  'help.guide.whats-next.step.2':
+    'Till vänster på en rad står dess tid: starten, till, och slutet när stoppet har ett, eller TBD när ingen tid är satt på det än.',
+  'help.guide.whats-next.step.3':
+    'Brickorna under namnet är personerna på det stoppet. Med ingen vald för det listas alla i resan.',
+  'help.guide.whats-next.result':
+    'En lista över vad som kommer, bara att läsa: den följer planen, och ingenting här ändrar den.',
+  'help.guide.whats-next.tip.1':
+    'Ingenting sätts här. Tiderna kommer från dagsplanen; ändra dem där och den här listan följer med direkt.',
+  'help.guide.whats-next.tip.2':
+    'Bara det som fortfarande ligger framför listas: ett stopp vars tid har passerat faller bort, och i slutet av en resa är panelen tom.',
+  'help.guide.whats-next.tip.3':
+    'Vad händer härnäst? är en egen växel under Tillägg, nedanför Samarbete, och det är en skrivbordspanel: fliken Samarbete i telefonappen erbjuder den inte.',
+  // trip-chat
+  'help.guide.trip-chat.title': 'Prata med gruppen',
+  'help.guide.trip-chat.goal':
+    'Säg något, svara på ett bestämt meddelande, reagera på ett annat, och ta tillbaka ditt eget.',
+  'help.guide.trip-chat.step.1':
+    'Skriv i Skriv ett meddelande... och tryck Enter. Den blå pilen bredvid rutan gör samma sak; Shift och Enter ger en ny rad i stället.',
+  'help.guide.trip-chat.step.2':
+    'Smileyn öppnar emojiväljaren, med Smileys, Reactions och Travel i sig. Det du väljer läggs till i det du skriver, det skickas inte av sig självt.',
+  'help.guide.trip-chat.step.3':
+    'Håll musen över någon annans meddelande: en liten rund knapp dyker upp i dess hörn. Det är Svara.',
+  'help.guide.trip-chat.step.4':
+    'Meddelandet du svarar på citeras ovanför rutan. Skriv och skicka, så följer citatet med i din bubbla; krysset på citatet släpper det igen.',
+  'help.guide.trip-chat.step.5':
+    'Högerklicka ett meddelande för de åtta snabba reaktionerna. Din sitter under bubblan, och ett andra klick på samma tar tillbaka den.',
+  'help.guide.trip-chat.step.6':
+    'Dina egna meddelanden bär Ta bort bredvid Svara. Det tar bort meddelandet och lämnar en rad som säger att du raderade ett meddelande: det finns ingen väg tillbaka.',
+  'help.guide.trip-chat.result':
+    'Ditt svar sitter under meddelandet det citerar, en reaktion hänger på ett tredje, och det du tog tillbaka lämnar en enda rad som säger det.',
+  'help.guide.trip-chat.tip.1':
+    'Enter skickar, Shift och Enter ger en ny rad. Ett meddelande som inte är annat än emoji visas stort.',
+  'help.guide.trip-chat.tip.2':
+    'Bifoga bilder tar upp till fyra bilder för ett meddelande; de kan också bara klistras in eller släppas på rutan.',
+  'help.guide.trip-chat.tip.3':
+    'Ett meddelande med en länk i sig får ett förhandsvisningskort under sig, hämtat av din egen TREK, så en länk till något bara du når förblir en vanlig länk.',
+  'help.guide.trip-chat.tip.4':
+    'Chatt är en egen växel under Tillägg, nedanför Samarbete: en administratör kan stänga av den och låta noteringarna, länkarna, omröstningarna och Vad händer härnäst? fortsätta.',
 };
 
 export default help;

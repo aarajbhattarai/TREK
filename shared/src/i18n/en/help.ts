@@ -2365,7 +2365,7 @@ const help: TranslationStrings = {
   'help.ctx.trip-map.summary':
     'The middle of the plan: every place of the trip as a pin, the routes that join them, and the switches along the edges of the map for satellite, for the whole trip at once and for the places around the part of town you are looking at.',
   'help.ctx.trip-map.bullet.1':
-    'A pin is a place: its own photo when it has one, otherwise its category colour with the category icon. Rest the pointer on one for a card with its name, its rating, its category and its address, and drag it onto a day card to plan it there.',
+    'A pin is a place: its own photo when it has one, otherwise its category colour with the category icon. Rest the pointer on one for a card with its name and its address, plus its category and its rating where the place carries them. Drag a pin onto a day card to plan the place there.',
   'help.ctx.trip-map.bullet.2':
     'Pins too close together to tell apart fold into one dark bubble with a count. Click the bubble and the map zooms to what is inside.',
   'help.ctx.trip-map.bullet.3':
@@ -2384,9 +2384,9 @@ const help: TranslationStrings = {
   'help.guide.map-markers.step.1':
     'The map holds every place of the trip. Where pins sit too close together to tell apart they fold into one dark bubble carrying the number inside it; click the bubble and the map zooms to what was in it, or, at the deepest zoom, fans the pins apart.',
   'help.guide.map-markers.step.2':
-    'A pin is the place’s own photo when it has one, otherwise its category colour with the category icon. Rest the pointer on one and a card gives its name, its rating, its category and its address.',
+    'A pin is the place’s own photo when it has one, otherwise its category colour with the category icon. Rest the pointer on one and a card gives its name and its address, with its category and its rating where the place carries them.',
   'help.guide.map-markers.step.3':
-    'Click a pin and the place opens under the map: its coordinates, its rating, its files, and Add to Day, Save to Collection, Navigation, Edit and Delete. Click an empty piece of the map to let it go again.',
+    'Click a pin and the place opens in a card under the map: its coordinates, its rating, its files, and along the bottom what to do with it next, Navigation, Edit and Delete among them, with Add to Day while a day is open. Click an empty piece of the map to let it go again.',
   'help.guide.map-markers.step.4':
     'Open a day in the days column and its stops get numbered: the small white badge at a pin’s corner is that stop’s place in the day. A place planned on two days carries both numbers, joined by ·. Without a day open there are no numbers, and the corner carries the rating instead.',
   'help.guide.map-markers.step.5':
@@ -2429,7 +2429,7 @@ const help: TranslationStrings = {
   'help.guide.map-add-place.step.1':
     'Right-click the spot on the map you mean. The place form opens, titled Add Place/Activity.',
   'help.guide.map-add-place.step.2':
-    'Latitude and Longitude are already at that point, and TREK looks the coordinates up and fills Address in from what it finds there. Nothing is written yet, so overwrite whatever is wrong.',
+    'Latitude and Longitude are already at that point, and TREK looks the coordinates up and fills Address in from what it finds there, and the Name too where the look-up has one to give. Nothing is written yet, so overwrite whatever is wrong.',
   'help.guide.map-add-place.step.3':
     'Give it a Name you will recognise, and the rest of what the plan should know: Description, Notes, Category, Website.',
   'help.guide.map-add-place.step.4':

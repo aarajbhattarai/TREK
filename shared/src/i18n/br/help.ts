@@ -2690,6 +2690,158 @@ const help: TranslationStrings = {
     'Sempre mostrar rotas de reserva, nas mesmas configurações, desenha as rotas desde o início em toda viagem sobre a qual você ainda não decidiu.',
   'help.guide.map-booking-routes.tip.3':
     'Uma reserva precisa de duas pontas com coordenadas antes de poder ser desenhada, então um hotel ou um restaurante não leva ícone de rota.',
+
+  // ── Screen: trip-collab ───────────────────────────────────────────────────────────────
+  'help.ctx.trip-collab.title': 'Colab',
+  'help.ctx.trip-collab.summary':
+    'A aba onde o grupo planeja junto: o chat à esquerda, as notas compartilhadas e os links ao lado, as enquetes embaixo e Próximos passos no fim. Tudo o que é escrito aqui está na hora na tela de todos os outros membros, sem recarregar.',
+  'help.ctx.trip-collab.bullet.1':
+    'O chat é a coluna da esquerda. Escreva em Digite uma mensagem... e aperte Enter; Shift e Enter criam uma nova linha. O smiley insere um emoji, Anexar imagens pendura até quatro fotos na mensagem.',
+  'help.ctx.trip-collab.bullet.2':
+    'Passe o mouse sobre uma mensagem para Responder e, nas suas, Excluir; o clique com o botão direito abre as oito reações rápidas. Uma mensagem excluída deixa uma linha dizendo que você a excluiu.',
+  'help.ctx.trip-collab.bullet.3':
+    'Notas é o bloco compartilhado: Nova nota escreve uma, e a engrenagem ao lado abre Gerenciar categorias para os nomes e as cores delas. Um cartão traz Expandir, Fixar, Editar e Excluir.',
+  'help.ctx.trip-collab.bullet.4':
+    'Links reúne os endereços em que a viagem se apoia. Adicionar link recebe um título e um endereço http ou https; Editar link, Fixar link e Excluir link ficam no fim da ficha, e os links fixados continuam na frente.',
+  'help.ctx.trip-collab.bullet.5':
+    'Enquetes decide as coisas. Nova enquete faz uma pergunta com pelo menos duas opções; um clique numa opção é o seu voto, Encerrar termina a votação e Excluir tira a enquete.',
+  'help.ctx.trip-collab.bullet.6':
+    'Próximos passos lista as próximas oito paradas da viagem que ainda estão por vir, com seus horários e as pessoas que vão nelas. Ele só lê o plano do dia; os horários são definidos lá.',
+  // write-note
+  'help.guide.write-note.title': 'Escrever uma nota compartilhada',
+  'help.guide.write-note.goal':
+    'Ponha o que o grupo inteiro precisa, uma regra, um endereço, um lembrete, onde todo mundo encontra de novo.',
+  'help.guide.write-note.step.1': 'Clique em Nova nota no topo do painel Notas. O formulário abre.',
+  'help.guide.write-note.step.2':
+    'Título da nota é o nome que o cartão carrega. É a única coisa que o formulário exige: Criar fica cinza enquanto estiver vazio.',
+  'help.guide.write-note.step.3':
+    'A caixa grande embaixo guarda o texto e aceita Markdown: uma palavra em negrito, uma lista, um título. O cartão mostra as primeiras linhas, e Expandir nele abre a nota inteira.',
+  'help.guide.write-note.step.4':
+    'Em Categoria, escolha aquela a que a nota pertence; a cor dela vira a cor do cartão. As pílulas são as categorias que já existem, e uma nova é criada em Gerenciar categorias.',
+  'help.guide.write-note.step.5':
+    'Site recebe um link que pertence à nota. O cartão passa então a trazer um bloco Link que o abre.',
+  'help.guide.write-note.step.6': 'Clique em Criar.',
+  'help.guide.write-note.result':
+    'A nota é um cartão no painel Notas, na cor da categoria dela, e já está na tela de todos os outros membros.',
+  'help.guide.write-note.tip.1':
+    'Fixar num cartão o mantém no topo do painel; tudo abaixo dele é ordenado pela última alteração.',
+  'help.guide.write-note.tip.2':
+    'A engrenagem ao lado de Nova nota abre Gerenciar categorias: ali uma categoria ganha sua cor, é renomeada em todo lugar de uma vez, ou é criada antes que qualquer nota a use.',
+  'help.guide.write-note.tip.3':
+    'Anexar arquivos pendura um documento na nota. Anexar abre o seletor de arquivos, e uma imagem ou um PDF também podem ser simplesmente colados no formulário.',
+  'help.guide.write-note.tip.4':
+    'Notas é um interruptor próprio em Complementos, abaixo de Colab: um administrador pode desligá-las e deixar o Chat, os Links, as Enquetes e Próximos passos funcionando.',
+  // shared-links
+  'help.guide.shared-links.title': 'Reunir os links da viagem',
+  'help.guide.shared-links.goal':
+    'Mantenha o portal de reservas, o álbum compartilhado e os horários num lugar só, em vez de procurá-los rolando o chat.',
+  'help.guide.shared-links.step.1': 'Clique em Adicionar link no topo do painel Links.',
+  'help.guide.shared-links.step.2':
+    'Dê um nome ao link em Título do link, cole o endereço no campo de baixo e clique em Salvar link.',
+  'help.guide.shared-links.step.3':
+    'A ficha mostra o nome e o site para o qual aponta. Um clique nela abre a página numa nova aba.',
+  'help.guide.shared-links.step.4':
+    'Os três botõezinhos no fim dela são Editar link, Fixar link e Excluir link. Fixar link leva a ficha para a frente do painel; Excluir link não pergunta nada.',
+  'help.guide.shared-links.result':
+    'O link é uma ficha no painel Links, fixada na frente, e na tela de todos os membros ao mesmo tempo.',
+  'help.guide.shared-links.tip.1':
+    'Só endereços http e https são aceitos; o campo recusa qualquer outra coisa antes de salvar.',
+  'help.guide.shared-links.tip.2':
+    'Os links fixados vêm primeiro, depois os mais novos. O ícone pequeno ao lado de um título é o favicon do próprio site, buscado no site em si, então sem internet a ficha mostra um símbolo de link simples no lugar.',
+  'help.guide.shared-links.tip.3':
+    'Links é um interruptor próprio em Complementos, abaixo de Colab, então um administrador pode desligar o painel sem mexer no resto da aba.',
+  // create-poll
+  'help.guide.create-poll.title': 'Perguntar ao grupo',
+  'help.guide.create-poll.goal':
+    'Transforme uma pergunta que ninguém responde no chat numa enquete que todo mundo pode marcar.',
+  'help.guide.create-poll.step.1': 'Clique em Nova enquete no topo do painel Enquetes.',
+  'help.guide.create-poll.step.2':
+    'Escreva a pergunta. Suporta Markdown embaixo da caixa quer dizer que uma palavra em negrito, uma quebra de linha ou uma lista curta funcionam aqui.',
+  'help.guide.create-poll.step.3': 'Preencha Opção 1 e Opção 2. Duas opções com algo dentro são o mínimo.',
+  'help.guide.create-poll.step.4':
+    '+ Adicionar opção põe uma terceira, uma quarta, quantas você precisar; a cruzinha ao lado de uma linha tira uma de volta.',
+  'help.guide.create-poll.step.5':
+    'Múltipla escolha deixa cada um marcar mais de uma opção. Deixada desligada, um voto muda de lugar quando alguém escolhe outra coisa.',
+  'help.guide.create-poll.step.6': 'Clique em Criar enquete.',
+  'help.guide.create-poll.result': 'A enquete fica no topo do painel Enquetes, aberta, e ninguém votou ainda.',
+  'help.guide.create-poll.tip.1': 'A pergunta é exibida como Markdown; as opções continuam texto simples.',
+  'help.guide.create-poll.tip.2':
+    'Criar enquete fica cinza até haver uma pergunta e pelo menos duas opções com algo dentro.',
+  'help.guide.create-poll.tip.3':
+    'Um prazo só pode ser definido no aplicativo de celular. Uma enquete que tem um mostra aqui o tempo restante numa ficha âmbar e conta como encerrada assim que ele acaba.',
+  'help.guide.create-poll.tip.4':
+    'Enquetes é um interruptor próprio em Complementos, abaixo de Colab: um administrador pode desligá-las e deixar os outros quatro painéis funcionando.',
+  // vote-poll
+  'help.guide.vote-poll.title': 'Votar e ler o resultado',
+  'help.guide.vote-poll.goal': 'Dê o seu voto, veja como está o grupo e mude de ideia.',
+  'help.guide.vote-poll.step.1': 'Clique na opção que você quer. O círculo dela se preenche e a barra atrás cresce.',
+  'help.guide.vote-poll.step.2':
+    'Agora o resultado inteiro se lê: a barra é a fatia, a porcentagem fica à direita, e os círculos pequenos são as pessoas que escolheram aquela opção.',
+  'help.guide.vote-poll.step.3':
+    'Mudou de ideia? Clique em outra opção. Numa enquete sem Múltipla escolha o seu voto muda de lugar em vez de somar um segundo.',
+  'help.guide.vote-poll.step.4':
+    'Sob a pergunta está quantos votos a enquete tem. Um clique na opção que você já escolheu tira o seu voto de volta, e o contador cai.',
+  'help.guide.vote-poll.result':
+    'A sua marca está numa opção, as barras mostram como o grupo se divide, e os círculos dizem quem escolheu o quê.',
+  'help.guide.vote-poll.tip.1':
+    'As barras e as porcentagens só aparecem depois que você mesmo votou, ou quando a enquete está encerrada, para que ninguém seja influenciado pelo placar.',
+  'help.guide.vote-poll.tip.2':
+    'Um voto nunca é anônimo: passe o mouse sobre um dos círculos de uma opção para ver o nome por trás.',
+  // close-poll
+  'help.guide.close-poll.title': 'Encerrar uma enquete ou removê-la',
+  'help.guide.close-poll.goal':
+    'Pare a votação assim que o grupo decidir, e tire do caminho uma enquete de que ninguém precisa mais.',
+  'help.guide.close-poll.step.1':
+    'Encerrar, o cadeado no canto de uma enquete, termina a votação. As opções param de aceitar cliques.',
+  'help.guide.close-poll.step.2':
+    'Uma enquete encerrada desce para baixo do título Encerradas no fim do painel, usa um selo Encerrada e mostra o resultado a todos, tendo votado ou não. A opção vencedora fica tingida de verde.',
+  'help.guide.close-poll.step.3': 'Excluir ao lado tira a enquete. Nada pergunta duas vezes, e os votos vão junto.',
+  'help.guide.close-poll.result':
+    'A enquete sumiu do painel de todos os membros. Uma que você só encerrou continua legível lá embaixo, com o resultado dela.',
+  'help.guide.close-poll.tip.1':
+    'Encerrar não pode ser desfeito: não existe reabrir. Uma enquete encerrada sem querer precisa ser feita de novo.',
+  'help.guide.close-poll.tip.2': 'Excluir tira a enquete e cada voto nela de todo mundo, na hora e sem perguntar.',
+  // whats-next
+  'help.guide.whats-next.title': 'Ler Próximos passos',
+  'help.guide.whats-next.goal': 'Veja o que o grupo faz a seguir sem abrir o plano.',
+  'help.guide.whats-next.step.1':
+    'O painel lista as próximas oito paradas da viagem que ainda estão por vir, em ordem de horário, sob um título por dia: Hoje, Amanhã ou a data.',
+  'help.guide.whats-next.step.2':
+    'À esquerda de uma linha fica o horário dela: o começo, até, e o fim quando a parada tem um, ou TBD quando nenhum horário foi definido ainda.',
+  'help.guide.whats-next.step.3':
+    'As fichas embaixo do nome são as pessoas naquela parada. Se ninguém foi escolhido, todo mundo da viagem é listado.',
+  'help.guide.whats-next.result': 'Uma lista do que vem, só para ler: ela segue o plano, e nada aqui o muda.',
+  'help.guide.whats-next.tip.1':
+    'Aqui nada é definido. Os horários vêm do plano do dia; mude-os lá e esta lista segue na hora.',
+  'help.guide.whats-next.tip.2':
+    'Só é listado o que ainda está por vir: uma parada cujo horário já passou sai, e no fim de uma viagem o painel fica vazio.',
+  'help.guide.whats-next.tip.3':
+    'Próximos passos é um interruptor próprio em Complementos, abaixo de Colab, e é um painel de desktop: a aba Colab do aplicativo de celular não o oferece.',
+  // trip-chat
+  'help.guide.trip-chat.title': 'Falar com o grupo',
+  'help.guide.trip-chat.goal': 'Diga algo, responda a uma mensagem específica, reaja a outra e desfaça a sua.',
+  'help.guide.trip-chat.step.1':
+    'Escreva em Digite uma mensagem... e aperte Enter. A seta azul ao lado da caixa faz o mesmo; Shift e Enter criam uma nova linha em vez disso.',
+  'help.guide.trip-chat.step.2':
+    'O smiley abre o seletor de emoji, com Smileys, Reactions e Travel dentro. O que você escolhe é somado ao que está escrevendo, não é enviado sozinho.',
+  'help.guide.trip-chat.step.3':
+    'Passe o mouse sobre a mensagem de outra pessoa: no canto dela aparece um botãozinho redondo. Esse é Responder.',
+  'help.guide.trip-chat.step.4':
+    'A mensagem a que você responde fica citada acima da caixa. Escreva e envie, e a citação viaja junto no seu balão; a cruz na citação a descarta.',
+  'help.guide.trip-chat.step.5':
+    'Clique com o botão direito numa mensagem para as oito reações rápidas. A sua fica embaixo do balão, e um segundo clique na mesma a tira de volta.',
+  'help.guide.trip-chat.step.6':
+    'Suas próprias mensagens trazem Excluir ao lado de Responder. Isso tira a mensagem e deixa uma linha dizendo que você a excluiu: não há volta.',
+  'help.guide.trip-chat.result':
+    'Sua resposta fica embaixo da mensagem que ela cita, uma reação está pendurada numa terceira, e a que você desfez deixa uma única linha dizendo isso.',
+  'help.guide.trip-chat.tip.1':
+    'Enter envia, Shift e Enter criam uma nova linha. Uma mensagem que é só emoji é mostrada grande.',
+  'help.guide.trip-chat.tip.2':
+    'Anexar imagens aceita até quatro fotos para uma mensagem; elas também podem ser simplesmente coladas ou soltas na caixa.',
+  'help.guide.trip-chat.tip.3':
+    'Uma mensagem com um link dentro ganha um cartão de prévia embaixo, buscado pelo seu próprio TREK, então um link para algo que só você alcança continua um link simples.',
+  'help.guide.trip-chat.tip.4':
+    'Chat é um interruptor próprio em Complementos, abaixo de Colab: um administrador pode desligá-lo e deixar as Notas, os Links, as Enquetes e Próximos passos funcionando.',
 };
 
 export default help;

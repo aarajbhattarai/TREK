@@ -2621,6 +2621,158 @@ const help: TranslationStrings = {
     'Vždy zobrazovat trasy rezervací, ve stejném nastavení, je kreslí od začátku na každé cestě, o které jste ještě nerozhodli.',
   'help.guide.map-booking-routes.tip.3':
     'Rezervace potřebuje dva konce se souřadnicemi, než se dá nakreslit, takže hotel nebo restaurace ikonu trasy nenese.',
+
+  // ── Screen: trip-collab ───────────────────────────────────────────────────────────────
+  'help.ctx.trip-collab.title': 'Spolupráce',
+  'help.ctx.trip-collab.summary':
+    'Karta, kde skupina plánuje společně: chat vlevo, sdílené poznámky a odkazy vedle něj, hlasování pod nimi a Co následuje na konci. Všechno, co se sem napíše, stojí naráz na obrazovce každého dalšího člena, bez znovunačtení.',
+  'help.ctx.trip-collab.bullet.1':
+    'Chat je sloupec vlevo. Pište do Napište zprávu... a stiskněte Enter; Shift a Enter udělají nový řádek. Smajlík přidá emoji, Připojit obrázky pověsí na zprávu až čtyři obrázky.',
+  'help.ctx.trip-collab.bullet.2':
+    'Najeďte na zprávu pro Odpovědět a u vlastní i pro Smazat; pravým tlačítkem na ni dostanete osm rychlých reakcí. Po smazané zprávě zůstane jediný řádek, že jste zprávu smazali.',
+  'help.ctx.trip-collab.bullet.3':
+    'Poznámky jsou sdílený blok: Nová poznámka jednu napíše a ozubené kolečko vedle otevře Spravovat kategorie pro jejich názvy a barvy. Karta nese Rozbalit, Připnout, Upravit a Smazat.',
+  'help.ctx.trip-collab.bullet.4':
+    'Odkazy sbírají adresy, na kterých cesta stojí. Přidat odkaz vezme název a adresu http nebo https; Upravit odkaz, Připnout odkaz a Smazat odkaz sedí na konci štítku a připnuté odkazy zůstávají vepředu.',
+  'help.ctx.trip-collab.bullet.5':
+    'Hlasování rozhoduje. Nové hlasování položí otázku s nejméně dvěma možnostmi; kliknutí na možnost je váš hlas, Uzavřít ukončí hlasování a Smazat hlasování odstraní.',
+  'help.ctx.trip-collab.bullet.6':
+    'Co následuje vypisuje příštích osm zastávek cesty, které jsou ještě před vámi, s jejich časy a lidmi na nich. Čte jen denní plán; časy se nastavují tam.',
+  // write-note
+  'help.guide.write-note.title': 'Napsat sdílenou poznámku',
+  'help.guide.write-note.goal':
+    'Dejte to, co potřebuje celá skupina, pravidlo, adresu, připomínku, tam, kde to každý zase najde.',
+  'help.guide.write-note.step.1': 'Klikněte nahoře v panelu Poznámky na Nová poznámka. Otevře se formulář.',
+  'help.guide.write-note.step.2':
+    'Poznámka... je název, který karta nese. Je to jediné, na čem formulář trvá: Vytvořit zůstane šedé, dokud v něm něco nebude.',
+  'help.guide.write-note.step.3':
+    'Velké pole pod ním drží text a bere Markdown: tučné slovo, seznam, nadpis. Karta ukáže prvních pár řádků a Rozbalit na ní otevře celou poznámku.',
+  'help.guide.write-note.step.4':
+    'Pod Kategorie vyberte tu, do které poznámka patří; její barva se stane barvou karty. Pilulky jsou kategorie, které už existují, a nová se dělá ve Spravovat kategorie.',
+  'help.guide.write-note.step.5':
+    'Webové stránky berou odkaz, který k poznámce patří. Karta pak nese dlaždici Link, která ho otevře.',
+  'help.guide.write-note.step.6': 'Klikněte na Vytvořit.',
+  'help.guide.write-note.result':
+    'Poznámka je karta v panelu Poznámky, v barvě své kategorie, a je už na obrazovce každého dalšího člena.',
+  'help.guide.write-note.tip.1':
+    'Připnout na kartě ji drží nahoře v panelu; všechno pod ní je řazené podle toho, kdy se naposledy změnilo.',
+  'help.guide.write-note.tip.2':
+    'Ozubené kolečko vedle Nová poznámka otevře Spravovat kategorie: tam kategorie dostane barvu, přejmenuje se naráz všude nebo se přidá dřív, než ji nějaká poznámka použije.',
+  'help.guide.write-note.tip.3':
+    'Přiložit soubory pověsí na poznámku dokument. Přiložit otevře výběr souborů a obrázek nebo PDF se dá také jen vložit do formuláře.',
+  'help.guide.write-note.tip.4':
+    'Poznámky jsou vlastní přepínač pod Doplňky, pod Spolupráce: administrátor je může vypnout a nechat běžet chat, odkazy, hlasování a Co následuje.',
+  // shared-links
+  'help.guide.shared-links.title': 'Sesbírat odkazy cesty',
+  'help.guide.shared-links.goal':
+    'Mějte rezervační portál, sdílené album a jízdní řád na jednom místě, místo abyste je hledali rolováním v chatu.',
+  'help.guide.shared-links.step.1': 'Klikněte nahoře v panelu Odkazy na Přidat odkaz.',
+  'help.guide.shared-links.step.2':
+    'Dejte odkazu jméno v Název odkazu, vložte adresu do pole pod ním a pak klikněte na Uložit odkaz.',
+  'help.guide.shared-links.step.3':
+    'Štítek ukazuje jméno a web, na který míří. Kliknutí na něj otevře stránku v nové kartě.',
+  'help.guide.shared-links.step.4':
+    'Tři malá tlačítka na jeho konci jsou Upravit odkaz, Připnout odkaz a Smazat odkaz. Připnout odkaz posune štítek dopředu v panelu; Smazat odkaz se na nic neptá.',
+  'help.guide.shared-links.result':
+    'Odkaz je štítek v panelu Odkazy, připnutý dopředu, a naráz na obrazovce každého člena.',
+  'help.guide.shared-links.tip.1': 'Berou se jen adresy http a https; pole cokoli jiného odmítne ještě před uložením.',
+  'help.guide.shared-links.tip.2':
+    'Připnuté odkazy jdou první, pak ty nejnovější. Malá ikona vedle názvu je vlastní favicona webu, stažená přímo z něj, takže bez internetu ukáže štítek místo ní prostý symbol odkazu.',
+  'help.guide.shared-links.tip.3':
+    'Odkazy jsou vlastní přepínač pod Doplňky, pod Spolupráce, takže administrátor může panel vypnout, aniž by sáhl na zbytek karty.',
+  // create-poll
+  'help.guide.create-poll.title': 'Zeptat se skupiny',
+  'help.guide.create-poll.goal':
+    'Udělejte z otázky, kterou v chatu nikdo nezodpoví, hlasování, které může každý odškrtnout.',
+  'help.guide.create-poll.step.1': 'Klikněte nahoře v panelu Hlasování na Nové hlasování.',
+  'help.guide.create-poll.step.2':
+    'Napište otázku. Podporuje Markdown pod polem znamená, že tučné slovo, zalomení řádku nebo krátký seznam tu fungují.',
+  'help.guide.create-poll.step.3': 'Vyplňte Možnost 1 a Možnost 2. Dvě možnosti s něčím v nich jsou minimum.',
+  'help.guide.create-poll.step.4':
+    '+ Přidat možnost přidá třetí, čtvrtou, kolik jich potřebujete; malý křížek vedle řádku jednu zase odebere.',
+  'help.guide.create-poll.step.5':
+    'Více možností nechá každého odškrtnout víc než jednu možnost. Když zůstane vypnuté, hlas se přesune, jakmile někdo vybere něco jiného.',
+  'help.guide.create-poll.step.6': 'Klikněte na Vytvořit hlasování.',
+  'help.guide.create-poll.result': 'Hlasování stojí nahoře v panelu Hlasování, otevřené a zatím bez jediného hlasu.',
+  'help.guide.create-poll.tip.1': 'Otázka se vykresluje jako Markdown; možnosti zůstávají prostým textem.',
+  'help.guide.create-poll.tip.2':
+    'Vytvořit hlasování zůstane šedé, dokud tam nebude otázka a aspoň dvě možnosti s něčím v nich.',
+  'help.guide.create-poll.tip.3':
+    'Termín se dá nastavit jen v telefonní aplikaci. Hlasování, které ho má, tu ukazuje zbývající čas v jantarovém štítku a jakmile čas vyprší, počítá se za uzavřené.',
+  'help.guide.create-poll.tip.4':
+    'Hlasování má pod Doplňky, pod Spolupráce, vlastní přepínač Ankety: administrátor je může vypnout a nechat běžet ostatní čtyři panely.',
+  // vote-poll
+  'help.guide.vote-poll.title': 'Hlasovat a přečíst výsledek',
+  'help.guide.vote-poll.goal': 'Odevzdejte svůj hlas, podívejte se, kde skupina stojí, a změňte názor.',
+  'help.guide.vote-poll.step.1': 'Klikněte na možnost, kterou chcete. Její kolečko se vyplní a pruh za ní povyroste.',
+  'help.guide.vote-poll.step.2':
+    'Teď je čitelný celý výsledek: pruh je podíl, procento stojí vpravo a malá kolečka jsou lidé, kteří tu možnost vybrali.',
+  'help.guide.vote-poll.step.3':
+    'Změnili jste názor? Klikněte na jinou možnost. U hlasování bez Více možností se váš hlas přesune, místo aby přibyl druhý.',
+  'help.guide.vote-poll.step.4':
+    'Pod otázkou stojí, kolik má hlasování hlasů. Kliknutí na možnost, kterou jste už vybrali, váš hlas zase stáhne a počitadlo zase klesne.',
+  'help.guide.vote-poll.result':
+    'Vaše odškrtnutí je na jedné možnosti, pruhy ukazují, jak je skupina rozdělená, a kolečka říkají, kdo co vybral.',
+  'help.guide.vote-poll.tip.1':
+    'Pruhy a procenta se objeví, až když jste sami hlasovali, nebo až je hlasování uzavřené, aby průběžný stav nikoho neovlivnil.',
+  'help.guide.vote-poll.tip.2':
+    'Hlas není nikdy anonymní: najeďte na jedno z koleček u možnosti a dostanete jméno za ním.',
+  // close-poll
+  'help.guide.close-poll.title': 'Uzavřít hlasování, nebo ho odstranit',
+  'help.guide.close-poll.goal':
+    'Zastavte hlasování, jakmile se skupina rozhodla, a ukliďte hlasování, které už nikdo nepotřebuje.',
+  'help.guide.close-poll.step.1':
+    'Uzavřít, zámek v rohu hlasování, hlasování ukončí. Možnosti přestanou brát kliknutí.',
+  'help.guide.close-poll.step.2':
+    'Uzavřené hlasování klesne pod nadpis Uzavřené dole v panelu, nese odznak Uzavřeno a ukazuje výsledek všem, ať hlasovali, nebo ne. Vítězná možnost je zabarvená zeleně.',
+  'help.guide.close-poll.step.3': 'Smazat vedle něj hlasování odstraní. Nic se neptá dvakrát a hlasy jdou s ním.',
+  'help.guide.close-poll.result':
+    'Hlasování je pryč z panelu každého člena. To, které jste jen uzavřeli, zůstane dole čitelné, se svým výsledkem.',
+  'help.guide.close-poll.tip.1':
+    'Uzavření se nedá vrátit: znovu otevřít nejde. Hlasování uzavřené omylem se musí položit znovu.',
+  'help.guide.close-poll.tip.2': 'Smazat vezme hlasování a každý hlas na něm pryč všem, hned a bez otázky.',
+  // whats-next
+  'help.guide.whats-next.title': 'Číst Co následuje',
+  'help.guide.whats-next.goal': 'Podívejte se, co skupina dělá dál, bez otevírání plánu.',
+  'help.guide.whats-next.step.1':
+    'Panel vypisuje příštích osm zastávek cesty, které jsou ještě před vámi, v pořadí podle času, pod nadpisem na každý den: Dnes, Zítra nebo datum.',
+  'help.guide.whats-next.step.2':
+    'Vlevo u řádku stojí jeho čas: začátek, do, a konec, když ho zastávka má, nebo TBD, když na ní ještě žádný čas nastavený není.',
+  'help.guide.whats-next.step.3':
+    'Štítky pod názvem jsou lidé na té zastávce. Když pro ni není vybraný nikdo, vypíšou se všichni na cestě.',
+  'help.guide.whats-next.result': 'Seznam toho, co přijde, jen ke čtení: řídí se plánem a nic tady ho nemění.',
+  'help.guide.whats-next.tip.1':
+    'Tady se nic nenastavuje. Časy přicházejí z denního plánu; změňte je tam a tenhle seznam je hned následuje.',
+  'help.guide.whats-next.tip.2':
+    'Vypisuje se jen to, co ještě leží před vámi: zastávka, jejíž čas uplynul, vypadne a na konci cesty je panel prázdný.',
+  'help.guide.whats-next.tip.3':
+    'Co následuje má pod Doplňky, pod Spolupráce, vlastní přepínač Co dál, a je to panel pro počítač: karta Spolupráce v telefonní aplikaci ho nenabízí.',
+  // trip-chat
+  'help.guide.trip-chat.title': 'Mluvit se skupinou',
+  'help.guide.trip-chat.goal':
+    'Řekněte něco, odpovězte na jednu konkrétní zprávu, zareagujte na jinou a svou vlastní vezměte zpátky.',
+  'help.guide.trip-chat.step.1':
+    'Pište do Napište zprávu... a stiskněte Enter. Modrá šipka vedle pole dělá totéž; Shift a Enter místo toho udělají nový řádek.',
+  'help.guide.trip-chat.step.2':
+    'Smajlík otevře výběr emoji, se Smileys, Reactions a Travel v něm. To, co vyberete, se přidá k tomu, co píšete, samo se to neodešle.',
+  'help.guide.trip-chat.step.3':
+    'Najeďte na zprávu někoho jiného: v jejím rohu se objeví malé kulaté tlačítko. To je Odpovědět.',
+  'help.guide.trip-chat.step.4':
+    'Zpráva, na kterou odpovídáte, je citovaná nad polem. Napište a odešlete, a citace jede s sebou ve vaší bublině; křížek na citaci ji zase zahodí.',
+  'help.guide.trip-chat.step.5':
+    'Pravým tlačítkem na zprávu dostanete osm rychlých reakcí. Vaše sedí pod bublinou a druhé kliknutí na tu samou ji vezme zpátky.',
+  'help.guide.trip-chat.step.6':
+    'Vaše vlastní zprávy nesou vedle Odpovědět i Smazat. Vezme zprávu pryč a nechá jediný řádek, že jste zprávu smazali: cesta zpátky není.',
+  'help.guide.trip-chat.result':
+    'Vaše odpověď sedí pod zprávou, kterou cituje, reakce visí na třetí a ta, kterou jste vzali zpátky, nechává jediný řádek, který to říká.',
+  'help.guide.trip-chat.tip.1':
+    'Enter odesílá, Shift a Enter udělají nový řádek. Zpráva, která není nic než emoji, se ukazuje velká.',
+  'help.guide.trip-chat.tip.2':
+    'Připojit obrázky bere na jednu zprávu až čtyři obrázky; dají se také jen vložit nebo pustit na pole.',
+  'help.guide.trip-chat.tip.3':
+    'Zpráva s odkazem dostane pod sebou kartu s náhledem, staženou vaším vlastním TREKem, takže odkaz na něco, kam se dostanete jen vy, zůstane prostým odkazem.',
+  'help.guide.trip-chat.tip.4':
+    'Chat je vlastní přepínač pod Doplňky, pod Spolupráce: administrátor ho může vypnout a nechat běžet poznámky, odkazy, hlasování a Co následuje.',
 };
 
 export default help;

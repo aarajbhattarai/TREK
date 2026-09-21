@@ -2750,6 +2750,163 @@ const help: TranslationStrings = {
     '“Selalu tampilkan rute pemesanan”, di pengaturan yang sama, menggambarnya sejak awal pada setiap perjalanan yang belum Anda putuskan.',
   'help.guide.map-booking-routes.tip.3':
     'Sebuah pemesanan butuh dua ujung berkoordinat sebelum bisa digambar, jadi hotel atau restoran tidak membawa ikon rute.',
+
+  // ── Screen: trip-collab ───────────────────────────────────────────────────────────────
+  'help.ctx.trip-collab.title': 'Collab',
+  'help.ctx.trip-collab.summary':
+    'Tab tempat kelompok merencanakan bersama: “Chat” di kiri, “Catatan” dan “Tautan” bersama di sebelahnya, “Polling” di bawahnya dan “Berikutnya” di akhir. Semua yang ditulis di sini langsung ada di layar setiap anggota lain, tanpa memuat ulang.',
+  'help.ctx.trip-collab.bullet.1':
+    '“Chat” adalah kolom di kiri. Tulis di “Ketik pesan...” lalu tekan Enter; Shift dan Enter membuat baris baru. Wajah tersenyum menambahkan emoji, “Lampirkan gambar” menggantungkan sampai empat gambar pada pesan.',
+  'help.ctx.trip-collab.bullet.2':
+    'Arahkan kursor ke sebuah pesan untuk “Balas” dan, pada pesan Anda sendiri, “Hapus”; klik kanan untuk delapan reaksi cepat. Pesan yang dihapus meninggalkan satu baris yang berbunyi “menghapus pesan”.',
+  'help.ctx.trip-collab.bullet.3':
+    '“Catatan” adalah papan bersama: “Catatan Baru” menulis satu, dan roda gigi di sebelahnya membuka “Kelola Kategori” untuk nama dan warnanya. Sebuah kartu membawa “Perluas”, “Sematkan”, “Edit” dan “Hapus”.',
+  'help.ctx.trip-collab.bullet.4':
+    '“Tautan” mengumpulkan alamat yang menjadi sandaran perjalanan. “Tambah tautan” menerima sebuah judul dan alamat http atau https; “Edit tautan”, “Sematkan tautan” dan “Hapus tautan” ada di ekor chip, dan tautan yang disematkan tetap di depan.',
+  'help.ctx.trip-collab.bullet.5':
+    '“Polling” memutuskan perkara. “Polling Baru” mengajukan sebuah pertanyaan dengan sedikitnya dua pilihan; satu klik pada sebuah pilihan adalah suara Anda, “Tutup” mengakhiri pemungutan suara dan “Hapus” menyingkirkan polling itu.',
+  'help.ctx.trip-collab.bullet.6':
+    '“Berikutnya” mendaftar delapan perhentian perjalanan berikutnya yang masih di depan, dengan waktunya dan orang-orang di dalamnya. Ia hanya membaca rencana harian; waktunya diatur di sana.',
+  // write-note
+  'help.guide.write-note.title': 'Menulis catatan bersama',
+  'help.guide.write-note.goal':
+    'Taruh apa yang dibutuhkan seluruh kelompok, sebuah aturan, sebuah alamat, sebuah pengingat, di tempat semua orang menemukannya lagi.',
+  'help.guide.write-note.step.1': 'Klik “Catatan Baru” di atas panel “Catatan”. Formulir terbuka.',
+  'help.guide.write-note.step.2':
+    '“Judul catatan” adalah nama yang dibawa kartu. Itu satu-satunya yang diwajibkan formulir: “Buat” tetap abu-abu selama belum ada isinya.',
+  'help.guide.write-note.step.3':
+    'Kotak besar di bawahnya memuat teks dan menerima Markdown: sebuah kata tebal, sebuah daftar, sebuah judul. Kartu menampilkan beberapa baris pertama, dan “Perluas” padanya membuka seluruh catatan.',
+  'help.guide.write-note.step.4':
+    'Di bawah “Kategori”, pilih yang sesuai untuk catatan itu; warnanya menjadi warna kartu. Pil-pil itu adalah kategori yang sudah ada, dan yang baru dibuat di bawah “Kelola Kategori”.',
+  'help.guide.write-note.step.5':
+    '“Website” menerima sebuah tautan yang menjadi milik catatan. Kartu lalu membawa ubin Link yang membukanya.',
+  'help.guide.write-note.step.6': 'Klik “Buat”.',
+  'help.guide.write-note.result':
+    'Catatan menjadi sebuah kartu di panel “Catatan”, dalam warna kategorinya, dan sudah ada di layar setiap anggota lain.',
+  'help.guide.write-note.tip.1':
+    '“Sematkan” pada sebuah kartu menahannya di atas panel; semua yang di bawahnya diurutkan menurut kapan terakhir diubah.',
+  'help.guide.write-note.tip.2':
+    'Roda gigi di sebelah “Catatan Baru” membuka “Kelola Kategori”: di sana sebuah kategori mendapat warnanya, diganti namanya di semua tempat sekaligus, atau ditambahkan sebelum ada catatan yang memakainya.',
+  'help.guide.write-note.tip.3':
+    '“Lampirkan file” menggantungkan sebuah dokumen pada catatan. “Lampirkan” membuka pemilih file, dan sebuah gambar atau PDF juga bisa cukup ditempelkan ke formulir.',
+  'help.guide.write-note.tip.4':
+    '“Catatan” adalah sakelar tersendiri di bawah “Addon”, di bawah “Collab”: admin bisa mematikannya dan membiarkan “Chat”, “Tautan”, “Jajak Pendapat” dan “Selanjutnya” tetap berjalan.',
+  // shared-links
+  'help.guide.shared-links.title': 'Mengumpulkan tautan perjalanan',
+  'help.guide.shared-links.goal':
+    'Simpan portal pemesanan, album bersama dan jadwal di satu tempat alih-alih menggulir chat untuk mencarinya.',
+  'help.guide.shared-links.step.1': 'Klik “Tambah tautan” di atas panel “Tautan”.',
+  'help.guide.shared-links.step.2':
+    'Beri tautan itu sebuah nama di “Judul tautan”, tempelkan alamatnya ke kolom di bawahnya, lalu klik “Simpan tautan”.',
+  'help.guide.shared-links.step.3':
+    'Chip menampilkan nama dan situs yang dituju. Satu klik padanya membuka halaman itu di tab baru.',
+  'help.guide.shared-links.step.4':
+    'Tiga tombol kecil di ekornya adalah “Edit tautan”, “Sematkan tautan” dan “Hapus tautan”. “Sematkan tautan” memindahkan chip ke depan panel; “Hapus tautan” tidak bertanya apa pun.',
+  'help.guide.shared-links.result':
+    'Tautan itu menjadi sebuah chip di panel “Tautan”, tersemat di depan, dan langsung ada di layar setiap anggota.',
+  'help.guide.shared-links.tip.1':
+    'Hanya alamat http dan https yang diterima; kolom itu menolak yang lain sebelum menyimpan.',
+  'help.guide.shared-links.tip.2':
+    'Tautan yang disematkan datang lebih dulu, lalu yang terbaru. Ikon kecil di sebelah sebuah judul adalah favicon situs itu sendiri, diambil dari situsnya, jadi tanpa internet chip menampilkan lambang tautan biasa sebagai gantinya.',
+  'help.guide.shared-links.tip.3':
+    '“Tautan” adalah sakelar tersendiri di bawah “Addon”, di bawah “Collab”, jadi admin bisa mematikan panel itu tanpa menyentuh sisa tab.',
+  // create-poll
+  'help.guide.create-poll.title': 'Bertanya kepada kelompok',
+  'help.guide.create-poll.goal':
+    'Ubah pertanyaan yang tak dijawab siapa pun di chat menjadi polling yang bisa dicentang semua orang.',
+  'help.guide.create-poll.step.1': 'Klik “Polling Baru” di atas panel “Polling”.',
+  'help.guide.create-poll.step.2':
+    'Tulis pertanyaannya. “Mendukung Markdown” di bawah kotak berarti sebuah kata tebal, sebuah pemutus baris atau daftar pendek berfungsi di sini.',
+  'help.guide.create-poll.step.3': 'Isi “Pilihan 1” dan “Pilihan 2”. Dua pilihan yang ada isinya adalah minimumnya.',
+  'help.guide.create-poll.step.4':
+    '“+ Tambah pilihan” menambahkan yang ketiga, yang keempat, sebanyak yang Anda perlukan; tanda silang kecil di sebelah sebuah baris menghapusnya lagi.',
+  'help.guide.create-poll.step.5':
+    '“Pilihan ganda” membuat semua orang bisa mencentang lebih dari satu pilihan. Kalau dibiarkan mati, sebuah suara berpindah ketika seseorang memilih yang lain.',
+  'help.guide.create-poll.step.6': 'Klik “Buat Polling”.',
+  'help.guide.create-poll.result':
+    'Polling itu berdiri di atas panel “Polling”, terbuka, dan belum ada yang memberi suara.',
+  'help.guide.create-poll.tip.1': 'Pertanyaan ditampilkan sebagai Markdown; pilihan tetap teks biasa.',
+  'help.guide.create-poll.tip.2':
+    '“Buat Polling” tetap abu-abu selama belum ada pertanyaan dan sedikitnya dua pilihan yang ada isinya.',
+  'help.guide.create-poll.tip.3':
+    'Tenggat waktu hanya bisa diatur di aplikasi ponsel. Polling yang punya tenggat menampilkan sisa waktu di sini dalam chip kuning tua dan dihitung tertutup begitu waktunya habis.',
+  'help.guide.create-poll.tip.4':
+    '“Jajak Pendapat” adalah sakelar tersendiri di bawah “Addon”, di bawah “Collab”: admin bisa mematikannya dan membiarkan empat panel lainnya tetap berjalan.',
+  // vote-poll
+  'help.guide.vote-poll.title': 'Memberi suara dan membaca hasilnya',
+  'help.guide.vote-poll.goal': 'Berikan suara Anda, lihat di mana kelompok berdiri, dan ubah pikiran Anda.',
+  'help.guide.vote-poll.step.1': 'Klik pilihan yang Anda mau. Lingkarannya terisi dan batang di belakangnya tumbuh.',
+  'help.guide.vote-poll.step.2':
+    'Sekarang seluruh hasilnya terbaca: batang adalah porsinya, persentase berdiri di kanan, dan lingkaran-lingkaran kecil adalah orang-orang yang memilih pilihan itu.',
+  'help.guide.vote-poll.step.3':
+    'Berubah pikiran? Klik pilihan lain. Pada polling tanpa “Pilihan ganda”, suara Anda berpindah alih-alih menambah suara kedua.',
+  'help.guide.vote-poll.step.4':
+    'Di bawah pertanyaan berdiri berapa suara yang sudah dimiliki polling itu. Satu klik pada pilihan yang sudah Anda pilih menarik kembali suara Anda, dan penghitungnya turun lagi.',
+  'help.guide.vote-poll.result':
+    'Centang Anda ada pada satu pilihan, batang-batang menunjukkan bagaimana kelompok terbagi, dan lingkaran-lingkaran mengatakan siapa memilih apa.',
+  'help.guide.vote-poll.tip.1':
+    'Batang dan persentase baru muncul setelah Anda sendiri memberi suara, atau setelah polling ditutup, sehingga tak ada yang terdorong oleh posisi sementara.',
+  'help.guide.vote-poll.tip.2':
+    'Sebuah suara tidak pernah anonim: arahkan kursor ke salah satu lingkaran pada sebuah pilihan untuk melihat nama di baliknya.',
+  // close-poll
+  'help.guide.close-poll.title': 'Menutup polling, atau menyingkirkannya',
+  'help.guide.close-poll.goal':
+    'Hentikan pemungutan suara begitu kelompok memutuskan, dan bersihkan polling yang tak lagi dibutuhkan siapa pun.',
+  'help.guide.close-poll.step.1':
+    '“Tutup”, gembok di sudut sebuah polling, mengakhiri pemungutan suara. Pilihan-pilihan berhenti menerima klik.',
+  'help.guide.close-poll.step.2':
+    'Polling yang ditutup turun ke bawah judul “Ditutup” di dasar panel, mengenakan lencana “Ditutup” dan menunjukkan hasilnya kepada semua orang, entah mereka memberi suara atau tidak. Pilihan yang menang diberi warna hijau.',
+  'help.guide.close-poll.step.3':
+    '“Hapus” di sebelahnya menyingkirkan polling itu. Tidak ada yang bertanya dua kali, dan suara-suaranya ikut pergi.',
+  'help.guide.close-poll.result':
+    'Polling itu lenyap dari panel setiap anggota. Yang hanya Anda tutup tetap terbaca di bawah, beserta hasilnya.',
+  'help.guide.close-poll.tip.1':
+    'Penutupan tidak bisa dibatalkan: tidak ada buka kembali. Polling yang tertutup karena keliru harus ditanyakan lagi.',
+  'help.guide.close-poll.tip.2':
+    '“Hapus” membawa pergi polling dan setiap suara di dalamnya untuk semua orang, langsung dan tanpa pertanyaan.',
+  // whats-next
+  'help.guide.whats-next.title': 'Membaca “Berikutnya”',
+  'help.guide.whats-next.goal': 'Lihat apa yang akan dilakukan kelompok berikutnya tanpa membuka rencana.',
+  'help.guide.whats-next.step.1':
+    'Panel ini mendaftar delapan perhentian perjalanan berikutnya yang masih di depan, urut waktu, di bawah satu judul per hari: “Hari ini”, “Besok” atau tanggalnya.',
+  'help.guide.whats-next.step.2':
+    'Di kiri sebuah baris berdiri waktunya: awalnya, “sampai”, dan akhirnya bila perhentian itu punya, atau TBD bila belum ada waktu yang diatur padanya.',
+  'help.guide.whats-next.step.3':
+    'Chip di bawah nama adalah orang-orang pada perhentian itu. Bila tidak ada yang dipilih untuknya, semua orang dalam perjalanan didaftar.',
+  'help.guide.whats-next.result':
+    'Sebuah daftar tentang apa yang akan datang, hanya untuk dibaca: ia mengikuti rencana, dan tidak ada di sini yang mengubahnya.',
+  'help.guide.whats-next.tip.1':
+    'Tidak ada yang diatur di sini. Waktunya datang dari rencana harian; ubah di sana dan daftar ini langsung mengikuti.',
+  'help.guide.whats-next.tip.2':
+    'Hanya yang masih di depan yang didaftar: perhentian yang waktunya sudah lewat rontok, dan di akhir perjalanan panel ini kosong.',
+  'help.guide.whats-next.tip.3':
+    '“Selanjutnya” adalah sakelar tersendiri di bawah “Addon”, di bawah “Collab”, dan ia adalah panel desktop: tab “Collab” aplikasi ponsel tidak menawarkannya.',
+  // trip-chat
+  'help.guide.trip-chat.title': 'Berbicara dengan kelompok',
+  'help.guide.trip-chat.goal':
+    'Katakan sesuatu, jawab satu pesan tertentu, beri reaksi pada yang lain, dan tarik kembali pesan Anda sendiri.',
+  'help.guide.trip-chat.step.1':
+    'Tulis di “Ketik pesan...” lalu tekan Enter. Panah biru di sebelah kotak melakukan hal yang sama; Shift dan Enter justru membuat baris baru.',
+  'help.guide.trip-chat.step.2':
+    'Wajah tersenyum membuka pemilih emoji, dengan Smileys, Reactions dan Travel di dalamnya. Yang Anda pilih ditambahkan ke apa yang sedang Anda tulis, bukan dikirim sendiri.',
+  'help.guide.trip-chat.step.3':
+    'Arahkan kursor ke pesan orang lain: sebuah tombol bulat kecil muncul di sudutnya. Itulah “Balas”.',
+  'help.guide.trip-chat.step.4':
+    'Pesan yang Anda jawab dikutip di atas kotak. Tulis dan kirim, dan kutipan itu ikut dalam gelembung Anda; tanda silang pada kutipan membuangnya lagi.',
+  'help.guide.trip-chat.step.5':
+    'Klik kanan sebuah pesan untuk delapan reaksi cepat. Reaksi Anda duduk di bawah gelembung, dan klik kedua pada reaksi yang sama menariknya kembali.',
+  'help.guide.trip-chat.step.6':
+    'Pesan Anda sendiri membawa “Hapus” di sebelah “Balas”. Itu membawa pergi pesannya dan meninggalkan satu baris yang berbunyi “menghapus pesan”: tidak ada jalan kembali.',
+  'help.guide.trip-chat.result':
+    'Jawaban Anda duduk di bawah pesan yang dikutipnya, sebuah reaksi menggantung pada pesan ketiga, dan yang Anda tarik kembali meninggalkan satu baris yang mengatakannya.',
+  'help.guide.trip-chat.tip.1':
+    'Enter mengirim, Shift dan Enter membuat baris baru. Pesan yang isinya hanya emoji ditampilkan besar.',
+  'help.guide.trip-chat.tip.2':
+    '“Lampirkan gambar” menerima sampai empat gambar untuk satu pesan; gambar juga bisa cukup ditempelkan atau dijatuhkan ke kotak.',
+  'help.guide.trip-chat.tip.3':
+    'Pesan yang berisi tautan mendapat kartu pratinjau di bawahnya, diambil oleh TREK Anda sendiri, jadi tautan ke sesuatu yang hanya bisa Anda capai tetap berupa tautan biasa.',
+  'help.guide.trip-chat.tip.4':
+    '“Chat” adalah sakelar tersendiri di bawah “Addon”, di bawah “Collab”: admin bisa mematikannya dan membiarkan “Catatan”, “Tautan”, “Jajak Pendapat” dan “Selanjutnya” tetap berjalan.',
 };
 
 export default help;

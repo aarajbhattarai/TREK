@@ -2733,6 +2733,162 @@ const help: TranslationStrings = {
     'Mostra sempre i percorsi delle prenotazioni, nelle stesse impostazioni, li disegna fin dall’inizio su ogni viaggio per cui non hai già deciso.',
   'help.guide.map-booking-routes.tip.3':
     'Una prenotazione ha bisogno di due estremità con coordinate prima di poter essere disegnata, quindi un hotel o un ristorante non porta l’icona del percorso.',
+
+  // ── Screen: trip-collab ───────────────────────────────────────────────────────────────
+  'help.ctx.trip-collab.title': 'Collaborazione',
+  'help.ctx.trip-collab.summary':
+    'La scheda in cui il gruppo pianifica insieme: la chat a sinistra, accanto le note condivise e i link, sotto i sondaggi e alla fine Cosa c’è dopo. Tutto quello che si scrive qui è subito sullo schermo di ogni altro membro, senza ricaricare.',
+  'help.ctx.trip-collab.bullet.1':
+    'La chat è la colonna di sinistra. Scrivi in Scrivi un messaggio... e premi Enter; Shift e Enter vanno a capo. Lo smiley inserisce un emoji, Allega immagini attacca fino a quattro immagini al messaggio.',
+  'help.ctx.trip-collab.bullet.2':
+    'Passa il mouse su un messaggio per Rispondi e, sui tuoi, Elimina; con il clic destro escono le otto reazioni rapide. Un messaggio eliminato lascia una riga che dice che lo hai eliminato.',
+  'help.ctx.trip-collab.bullet.3':
+    'Note è il blocco condiviso: Nuova nota ne scrive una, e l’ingranaggio accanto apre Gestisci categorie per i loro nomi e colori. Una scheda porta Espandi, Fissa, Modifica ed Elimina.',
+  'help.ctx.trip-collab.bullet.4':
+    'Link raccoglie gli indirizzi su cui gira il viaggio. Aggiungi link prende un titolo e un indirizzo http o https; Modifica link, Fissa link ed Elimina link stanno in fondo al chip, e i link fissati restano davanti.',
+  'help.ctx.trip-collab.bullet.5':
+    'Sondaggi decide le cose. Nuovo sondaggio pone una domanda con almeno due opzioni; un clic su un’opzione è il tuo voto, Chiudi termina la votazione ed Elimina toglie il sondaggio.',
+  'help.ctx.trip-collab.bullet.6':
+    'Cosa c’è dopo elenca le prossime otto tappe del viaggio ancora davanti, con i loro orari e le persone che ci sono. Legge solo il programma del giorno; gli orari si impostano lì.',
+  // write-note
+  'help.guide.write-note.title': 'Scrivere una nota condivisa',
+  'help.guide.write-note.goal':
+    'Metti quello che serve a tutto il gruppo, una regola, un indirizzo, un promemoria, dove ognuno lo ritrova.',
+  'help.guide.write-note.step.1': 'Clicca Nuova nota in cima al pannello Note. Si apre il modulo.',
+  'help.guide.write-note.step.2':
+    'Titolo della nota è il nome che porta la scheda. È l’unica cosa su cui il modulo insiste: Crea resta grigio finché è vuoto.',
+  'help.guide.write-note.step.3':
+    'Il riquadro grande sotto contiene il testo e accetta Markdown: una parola in grassetto, un elenco, un titolo. La scheda mostra le prime righe, ed Espandi su di essa apre tutta la nota.',
+  'help.guide.write-note.step.4':
+    'Sotto Categoria scegli quella a cui appartiene la nota; il suo colore diventa il colore della scheda. Le pillole sono le categorie che esistono già, e una nuova si crea sotto Gestisci categorie.',
+  'help.guide.write-note.step.5':
+    'Sito web prende un link che appartiene alla nota. La scheda porta allora un riquadro Link che lo apre.',
+  'help.guide.write-note.step.6': 'Clicca Crea.',
+  'help.guide.write-note.result':
+    'La nota è una scheda nel pannello Note, nel colore della sua categoria, ed è già sullo schermo di ogni altro membro.',
+  'help.guide.write-note.tip.1':
+    'Fissa su una scheda la tiene in cima al pannello; tutto quello che sta sotto è ordinato per ultima modifica.',
+  'help.guide.write-note.tip.2':
+    'L’ingranaggio accanto a Nuova nota apre Gestisci categorie: lì una categoria riceve il suo colore, viene rinominata ovunque in una volta, oppure viene aggiunta prima che qualche nota la usi.',
+  'help.guide.write-note.tip.3':
+    'Allega file attacca un documento alla nota. Allega apre il selettore di file, e un’immagine o un PDF si possono anche semplicemente incollare nel modulo.',
+  'help.guide.write-note.tip.4':
+    'Note è un interruttore a sé sotto Moduli, sotto Collaborazione: un amministratore può spegnerlo e lasciare accesi Chat, Link, Sondaggi e Prossimi passi.',
+  // shared-links
+  'help.guide.shared-links.title': 'Raccogliere i link del viaggio',
+  'help.guide.shared-links.goal':
+    'Tieni il portale delle prenotazioni, l’album condiviso e gli orari in un posto solo invece di cercarli scorrendo la chat.',
+  'help.guide.shared-links.step.1': 'Clicca Aggiungi link in cima al pannello Link.',
+  'help.guide.shared-links.step.2':
+    'Dai un nome al link in Titolo del link, incolla l’indirizzo nel campo sotto, poi clicca Salva link.',
+  'help.guide.shared-links.step.3':
+    'Il chip mostra il nome e il sito a cui punta. Un clic su di esso apre la pagina in una nuova scheda del browser.',
+  'help.guide.shared-links.step.4':
+    'I tre pulsantini in fondo sono Modifica link, Fissa link ed Elimina link. Fissa link sposta il chip all’inizio del pannello; Elimina link non chiede nulla.',
+  'help.guide.shared-links.result':
+    'Il link è un chip nel pannello Link, fissato all’inizio, e sullo schermo di ogni membro nello stesso momento.',
+  'help.guide.shared-links.tip.1':
+    'Vengono accettati solo indirizzi http e https; il campo rifiuta tutto il resto prima di salvare.',
+  'help.guide.shared-links.tip.2':
+    'I link fissati vengono per primi, poi i più recenti. L’iconcina accanto a un titolo è la favicon del sito, presa dal sito stesso, quindi senza internet il chip mostra al suo posto un semplice simbolo di link.',
+  'help.guide.shared-links.tip.3':
+    'Link è un interruttore a sé sotto Moduli, sotto Collaborazione, quindi un amministratore può spegnere il pannello senza toccare il resto della scheda.',
+  // create-poll
+  'help.guide.create-poll.title': 'Chiedere al gruppo',
+  'help.guide.create-poll.goal':
+    'Trasforma una domanda a cui nella chat non risponde nessuno in un sondaggio che tutti possono spuntare.',
+  'help.guide.create-poll.step.1': 'Clicca Nuovo sondaggio in cima al pannello Sondaggi.',
+  'help.guide.create-poll.step.2':
+    'Scrivi la domanda. Markdown supportato sotto il riquadro significa che qui funzionano una parola in grassetto, un a capo o un breve elenco.',
+  'help.guide.create-poll.step.3': 'Compila Opzione 1 e Opzione 2. Due opzioni con qualcosa dentro sono il minimo.',
+  'help.guide.create-poll.step.4':
+    '+ Aggiungi opzione ne aggiunge una terza, una quarta, quante ne servono; la crocetta accanto a una riga ne toglie una.',
+  'help.guide.create-poll.step.5':
+    'Scelta multipla lascia che ognuno spunti più di un’opzione. Lasciata spenta, un voto si sposta quando qualcuno sceglie altro.',
+  'help.guide.create-poll.step.6': 'Clicca Crea sondaggio.',
+  'help.guide.create-poll.result':
+    'Il sondaggio sta in cima al pannello Sondaggi, aperto, e non ha ancora votato nessuno.',
+  'help.guide.create-poll.tip.1': 'La domanda viene resa come Markdown; le opzioni restano testo semplice.',
+  'help.guide.create-poll.tip.2':
+    'Crea sondaggio resta grigio finché non ci sono una domanda e almeno due opzioni con qualcosa dentro.',
+  'help.guide.create-poll.tip.3':
+    'Una scadenza si può impostare solo nell’app per telefono. Un sondaggio che ne ha una mostra qui il tempo rimasto in un chip ambra e conta come chiuso appena scade.',
+  'help.guide.create-poll.tip.4':
+    'Sondaggi è un interruttore a sé sotto Moduli, sotto Collaborazione: un amministratore può spegnerlo e lasciare accesi gli altri quattro pannelli.',
+  // vote-poll
+  'help.guide.vote-poll.title': 'Votare e leggere il risultato',
+  'help.guide.vote-poll.goal': 'Dai il tuo voto, guarda a che punto è il gruppo e cambia idea.',
+  'help.guide.vote-poll.step.1': 'Clicca l’opzione che vuoi. Il suo cerchio si riempie e la barra dietro cresce.',
+  'help.guide.vote-poll.step.2':
+    'Ora tutto il risultato è leggibile: la barra è la quota, la percentuale sta a destra, e i cerchietti sono le persone che hanno scelto quell’opzione.',
+  'help.guide.vote-poll.step.3':
+    'Cambiato idea? Clicca un’altra opzione. In un sondaggio senza Scelta multipla il tuo voto si sposta invece di aggiungerne un secondo.',
+  'help.guide.vote-poll.step.4':
+    'Sotto la domanda sta quanti voti ha il sondaggio. Un clic sull’opzione che hai già scelto ritira il tuo voto, e il contatore scende.',
+  'help.guide.vote-poll.result':
+    'La tua spunta è su un’opzione, le barre mostrano come è diviso il gruppo, e i cerchi dicono chi ha scelto cosa.',
+  'help.guide.vote-poll.tip.1':
+    'Le barre e le percentuali compaiono solo dopo che hai votato tu, o una volta chiuso il sondaggio, così nessuno viene condizionato dai risultati parziali.',
+  'help.guide.vote-poll.tip.2':
+    'Un voto non è mai anonimo: passa il mouse su uno dei cerchi di un’opzione per il nome che c’è dietro.',
+  // close-poll
+  'help.guide.close-poll.title': 'Chiudere un sondaggio o toglierlo',
+  'help.guide.close-poll.goal':
+    'Ferma la votazione una volta che il gruppo ha deciso, e togli di mezzo un sondaggio che non serve più a nessuno.',
+  'help.guide.close-poll.step.1':
+    'Chiudi, il lucchetto nell’angolo di un sondaggio, termina la votazione. Le opzioni non accettano più clic.',
+  'help.guide.close-poll.step.2':
+    'Un sondaggio chiuso scende sotto il titolo Chiusi in fondo al pannello, porta un distintivo Chiuso e mostra a tutti il risultato, che abbiano votato o no. L’opzione vincente è tinta di verde.',
+  'help.guide.close-poll.step.3':
+    'Elimina accanto toglie il sondaggio. Niente chiede due volte, e i voti se ne vanno con lui.',
+  'help.guide.close-poll.result':
+    'Il sondaggio è sparito dal pannello di ogni membro. Quello che hai solo chiuso resta leggibile in fondo, con il suo risultato.',
+  'help.guide.close-poll.tip.1':
+    'Chiudere non si annulla: una riapertura non c’è. Un sondaggio chiuso per sbaglio va rifatto.',
+  'help.guide.close-poll.tip.2':
+    'Elimina toglie a tutti il sondaggio e ogni voto che contiene, subito e senza domande.',
+  // whats-next
+  'help.guide.whats-next.title': 'Leggere Cosa c’è dopo',
+  'help.guide.whats-next.goal': 'Guarda cosa fa il gruppo dopo senza aprire il programma.',
+  'help.guide.whats-next.step.1':
+    'Il pannello elenca le prossime otto tappe del viaggio ancora davanti, in ordine di orario, sotto un titolo per giorno: Oggi, Domani o la data.',
+  'help.guide.whats-next.step.2':
+    'A sinistra di una riga sta il suo orario: l’inizio, a, e la fine quando la tappa ce l’ha, oppure TBD quando non è ancora impostato nessun orario.',
+  'help.guide.whats-next.step.3':
+    'I chip sotto il nome sono le persone su quella tappa. Se non è stato scelto nessuno, sono elencati tutti quelli del viaggio.',
+  'help.guide.whats-next.result':
+    'Un elenco di quello che arriva, da leggere soltanto: segue il programma, e niente qui lo cambia.',
+  'help.guide.whats-next.tip.1':
+    'Qui non si imposta niente. Gli orari vengono dal programma del giorno; cambiali lì e questo elenco segue subito.',
+  'help.guide.whats-next.tip.2':
+    'Viene elencato solo quello che è ancora davanti: una tappa il cui orario è passato esce, e alla fine di un viaggio il pannello è vuoto.',
+  'help.guide.whats-next.tip.3':
+    'Prossimi passi è un interruttore a sé sotto Moduli, sotto Collaborazione, ed è un pannello da desktop: la scheda Collaborazione dell’app per telefono non lo offre.',
+  // trip-chat
+  'help.guide.trip-chat.title': 'Parlare con il gruppo',
+  'help.guide.trip-chat.goal': 'Dì qualcosa, rispondi a un messaggio preciso, reagisci a un altro e ritira il tuo.',
+  'help.guide.trip-chat.step.1':
+    'Scrivi in Scrivi un messaggio... e premi Enter. La freccia blu accanto al riquadro fa lo stesso; Shift e Enter vanno invece a capo.',
+  'help.guide.trip-chat.step.2':
+    'Lo smiley apre il selettore di emoji, con dentro Smileys, Reactions e Travel. Quello che scegli si aggiunge a ciò che stai scrivendo, non viene inviato da solo.',
+  'help.guide.trip-chat.step.3':
+    'Passa il mouse sul messaggio di qualcun altro: nel suo angolo compare un pulsantino rotondo. Quello è Rispondi.',
+  'help.guide.trip-chat.step.4':
+    'Il messaggio a cui rispondi è citato sopra il riquadro. Scrivi e invia, e la citazione viaggia nella tua bolla; la crocetta sulla citazione la lascia cadere.',
+  'help.guide.trip-chat.step.5':
+    'Clic destro su un messaggio per le otto reazioni rapide. La tua sta sotto la bolla, e un secondo clic sulla stessa la ritira.',
+  'help.guide.trip-chat.step.6':
+    'I tuoi messaggi portano Elimina accanto a Rispondi. Toglie il messaggio e lascia una riga che dice che lo hai eliminato: non si torna indietro.',
+  'help.guide.trip-chat.result':
+    'La tua risposta sta sotto il messaggio che cita, una reazione è appesa a un terzo, e quello che hai ritirato lascia una sola riga che lo dice.',
+  'help.guide.trip-chat.tip.1':
+    'Enter invia, Shift e Enter vanno a capo. Un messaggio fatto solo di emoji viene mostrato grande.',
+  'help.guide.trip-chat.tip.2':
+    'Allega immagini prende fino a quattro immagini per un messaggio; si possono anche solo incollare o lasciar cadere sul riquadro.',
+  'help.guide.trip-chat.tip.3':
+    'Un messaggio che contiene un link riceve sotto una scheda di anteprima, presa dal tuo TREK, quindi un link a qualcosa che raggiungi solo tu resta un link semplice.',
+  'help.guide.trip-chat.tip.4':
+    'Chat è un interruttore a sé sotto Moduli, sotto Collaborazione: un amministratore può spegnerla e lasciare accesi Note, Link, Sondaggi e Prossimi passi.',
 };
 
 export default help;

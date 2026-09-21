@@ -2174,6 +2174,130 @@ const help: TranslationStrings = {
   'help.guide.map-booking-routes.tip.2':
     '同一处设置里的“始终显示预订路线”，会在你还没有做过决定的每一个行程上，从一开始就把它们画出来。',
   'help.guide.map-booking-routes.tip.3': '一笔预订必须有两个带坐标的端点才能被画出来，所以酒店或餐厅不会带路线图标。',
+
+  // ── Screen: trip-collab ───────────────────────────────────────────────────────────────
+  'help.ctx.trip-collab.title': '协作',
+  'help.ctx.trip-collab.summary':
+    '群组一起规划的标签页：左边是“聊天”，旁边是共享的“笔记”和“链接”，它们下面是“投票”，最后是“接下来”。这里写下的一切都会同时出现在其他每位成员的屏幕上，不用刷新。',
+  'help.ctx.trip-collab.bullet.1':
+    '“聊天”是左边那一栏。在“输入消息...”里写字并按 Enter；Shift 加 Enter 换行。笑脸添加表情符号，“附加图片”给消息挂上最多四张图片。',
+  'help.ctx.trip-collab.bullet.2':
+    '把鼠标移到一条消息上会出现“回复”，自己的消息上还有“删除”；右键点击它可得到八个快捷反应。删除的消息只留下一行“删除了一条消息”。',
+  'help.ctx.trip-collab.bullet.3':
+    '“笔记”是共享的记事本：“新建笔记”写一条，旁边的齿轮打开“管理分类”，处理分类的名称和颜色。卡片上带着“展开”“置顶”“编辑”和“删除”。',
+  'help.ctx.trip-collab.bullet.4':
+    '“链接”收集旅行赖以运转的网址。“添加链接”接受一个标题和一个 http 或 https 地址；“编辑链接”“固定链接”和“删除链接”在小块的尾部，固定过的链接留在最前面。',
+  'help.ctx.trip-collab.bullet.5':
+    '“投票”用来拍板。“新建投票”提一个问题，至少配两个选项；点一下某个选项就是你的一票，“关闭”结束投票，“删除”移除这个投票。',
+  'help.ctx.trip-collab.bullet.6':
+    '“接下来”列出旅行中还在前面的下八个停靠点，连同它们的时间和参与的人。它只读取当天的计划；时间在那里设置。',
+  // write-note
+  'help.guide.write-note.title': '写一条共享笔记',
+  'help.guide.write-note.goal': '把整个群组都需要的东西，一条规矩、一个地址、一个提醒，放在人人都能再找到的地方。',
+  'help.guide.write-note.step.1': '点击“笔记”面板顶部的“新建笔记”。表单打开。',
+  'help.guide.write-note.step.2':
+    '“笔记标题”是卡片带的名字。它是表单唯一坚持要的东西：里面没有内容，“创建”就一直是灰的。',
+  'help.guide.write-note.step.3':
+    '它下面的大框放正文，接受 Markdown：一个粗体词、一个列表、一个标题。卡片显示开头几行，卡片上的“展开”打开整条笔记。',
+  'help.guide.write-note.step.4':
+    '在“分类”下面选这条笔记所属的那一个；它的颜色成为卡片的颜色。那些药丸形状的是已经存在的分类，新分类在“管理分类”里建。',
+  'help.guide.write-note.step.5': '“网站”接受一个属于这条笔记的链接。卡片随后会带一个打开它的 Link 方块。',
+  'help.guide.write-note.step.6': '点击“创建”。',
+  'help.guide.write-note.result':
+    '笔记成为“笔记”面板里的一张卡片，带着所属分类的颜色，并且已经在其他每位成员的屏幕上。',
+  'help.guide.write-note.tip.1': '卡片上的“置顶”把它留在面板最上面；它下面的一切按最后修改时间排序。',
+  'help.guide.write-note.tip.2':
+    '“新建笔记”旁边的齿轮打开“管理分类”：在那里给分类配颜色，一次性在所有地方改名，或者在任何笔记用到它之前就先建好。',
+  'help.guide.write-note.tip.3':
+    '“附加文件”给笔记挂上一份文档。“附加”打开文件选择器，图片或 PDF 也可以直接粘贴进表单。',
+  'help.guide.write-note.tip.4':
+    '“笔记”在“扩展”下面、“协作”之下有自己的开关：管理员可以把它关掉，让“聊天”“链接”“投票”和“下一步”继续运行。',
+  // shared-links
+  'help.guide.shared-links.title': '收集旅行的链接',
+  'help.guide.shared-links.goal': '把预订门户、共享相册和时刻表放在一处，不必再翻聊天记录去找它们。',
+  'help.guide.shared-links.step.1': '点击“链接”面板顶部的“添加链接”。',
+  'help.guide.shared-links.step.2': '在“链接标题”里给链接起个名字，把网址粘进它下面的字段，然后点击“保存链接”。',
+  'help.guide.shared-links.step.3': '小块显示名字和它指向的站点。点一下就在新标签页里打开那个页面。',
+  'help.guide.shared-links.step.4':
+    '它尾部的三个小按钮是“编辑链接”“固定链接”和“删除链接”。“固定链接”把小块挪到面板最前面；“删除链接”什么也不问。',
+  'help.guide.shared-links.result': '链接成为“链接”面板里的一个小块，固定在最前面，并且同时出现在每位成员的屏幕上。',
+  'help.guide.shared-links.tip.1': '只接受 http 和 https 地址；别的东西，字段在保存之前就拒绝。',
+  'help.guide.shared-links.tip.2':
+    '固定的链接排在前面，然后是最新的。标题旁边的小图标是站点自己的网站图标，从站点本身取来，所以没有网络时小块改为显示一个普通的链接符号。',
+  'help.guide.shared-links.tip.3':
+    '“链接”在“扩展”下面、“协作”之下有自己的开关，所以管理员可以关掉这个面板而不动标签页的其余部分。',
+  // create-poll
+  'help.guide.create-poll.title': '问问群组',
+  'help.guide.create-poll.goal': '把聊天里没人回答的问题，变成人人都能勾选的投票。',
+  'help.guide.create-poll.step.1': '点击“投票”面板顶部的“新建投票”。',
+  'help.guide.create-poll.step.2': '写下问题。框下面的“支持 Markdown”意思是粗体词、换行或者短列表在这里都管用。',
+  'help.guide.create-poll.step.3': '填写“选项 1”和“选项 2”。两个有内容的选项是最低要求。',
+  'help.guide.create-poll.step.4': '“+ 添加选项”加上第三个、第四个，要多少加多少；某一行旁边的小叉子再把一个去掉。',
+  'help.guide.create-poll.step.5': '“多选”让每个人都能勾选不止一个选项。保持关闭时，有人改选别的，票就转过去。',
+  'help.guide.create-poll.step.6': '点击“创建投票”。',
+  'help.guide.create-poll.result': '投票立在“投票”面板的最上面，处于开放状态，还没有人投过票。',
+  'help.guide.create-poll.tip.1': '问题按 Markdown 渲染；选项保持纯文本。',
+  'help.guide.create-poll.tip.2': '在有了一个问题和至少两个有内容的选项之前，“创建投票”一直是灰的。',
+  'help.guide.create-poll.tip.3':
+    '截止时间只能在手机应用里设置。有截止时间的投票在这里用一个琥珀色小块显示剩余时间，时间一到就算已关闭。',
+  'help.guide.create-poll.tip.4':
+    '“投票”在“扩展”下面、“协作”之下有自己的开关：管理员可以把它关掉，让另外四个面板继续运行。',
+  // vote-poll
+  'help.guide.vote-poll.title': '投票并读懂结果',
+  'help.guide.vote-poll.goal': '投下你的一票，看看群组的态度，再改变主意。',
+  'help.guide.vote-poll.step.1': '点击你想要的选项。它的圆圈被填满，后面的条形随之变长。',
+  'help.guide.vote-poll.step.2': '现在整个结果都可读了：条形是占比，百分比在右边，小圆圈是选了那个选项的人。',
+  'help.guide.vote-poll.step.3': '改主意了？点击另一个选项。在没有“多选”的投票里，你的票会转过去，而不是再加一票。',
+  'help.guide.vote-poll.step.4':
+    '问题下面写着这个投票有多少票。点一下你已经选过的选项就把你的票撤回来，计数也跟着降下去。',
+  'help.guide.vote-poll.result': '你的勾在一个选项上，条形显示群组怎样分开，圆圈说明谁选了什么。',
+  'help.guide.vote-poll.tip.1':
+    '条形和百分比只有在你自己投过票之后，或者投票关闭之后才出现，这样没人会被当前的票势影响。',
+  'help.guide.vote-poll.tip.2': '投票从不匿名：把鼠标移到某个选项上的一个圆圈上，就能看到它背后的名字。',
+  // close-poll
+  'help.guide.close-poll.title': '关闭一个投票，或者移除它',
+  'help.guide.close-poll.goal': '群组做出决定后停止投票，并清掉已经没人需要的投票。',
+  'help.guide.close-poll.step.1': '“关闭”，也就是投票角上的那把锁，结束投票。选项不再接受点击。',
+  'help.guide.close-poll.step.2':
+    '关闭的投票沉到面板底部的“已关闭”标题下面，戴上“已关闭”徽章，并向所有人显示结果，无论他们投没投票。胜出的选项染成绿色。',
+  'help.guide.close-poll.step.3': '旁边的“删除”移除这个投票。没有任何二次询问，票也一起消失。',
+  'help.guide.close-poll.result': '投票从每位成员的面板上消失了。只被你关闭的那个仍然留在底部可读，连同它的结果。',
+  'help.guide.close-poll.tip.1': '关闭不能撤销：没有重新开启。误关的投票只能重新再问一次。',
+  'help.guide.close-poll.tip.2': '“删除”把这个投票和上面的每一张票，对所有人一并拿走，立刻生效，也不会询问。',
+  // whats-next
+  'help.guide.whats-next.title': '读懂“接下来”',
+  'help.guide.whats-next.goal': '不用打开计划，就看到群组接下来要做什么。',
+  'help.guide.whats-next.step.1':
+    '这个面板按时间顺序列出旅行中还在前面的下八个停靠点，每天一个标题：“今天”“明天”或者日期。',
+  'help.guide.whats-next.step.2':
+    '一行的左边立着它的时间：开始时间、“至”，以及停靠点有结束时间时的结束时间；还没有给它设置时间时则是 TBD。',
+  'help.guide.whats-next.step.3': '名字下面的小块是这个停靠点上的人。如果没有给它选人，旅行里的每个人都会列出来。',
+  'help.guide.whats-next.result': '一份即将到来的清单，只供阅读：它跟着计划走，这里的任何东西都不会改动计划。',
+  'help.guide.whats-next.tip.1': '这里什么也不设置。时间来自当天的计划；在那里改动，这份清单立刻跟上。',
+  'help.guide.whats-next.tip.2': '只列出还在前面的：时间已过的停靠点会掉出去，旅行到了尾声，面板就是空的。',
+  'help.guide.whats-next.tip.3':
+    '“下一步”在“扩展”下面、“协作”之下有自己的开关，而且它是桌面端的面板：手机应用的“协作”标签页里没有它。',
+  // trip-chat
+  'help.guide.trip-chat.title': '和群组说话',
+  'help.guide.trip-chat.goal': '说点什么，回答某一条特定的消息，对另一条做出反应，再把自己的收回来。',
+  'help.guide.trip-chat.step.1':
+    '在“输入消息...”里写字并按 Enter。框旁边的蓝色箭头做同样的事；Shift 加 Enter 则是换行。',
+  'help.guide.trip-chat.step.2':
+    '笑脸打开表情选择器，里面有 Smileys、Reactions 和 Travel。你选中的会加进正在写的内容里，它不会自己发出去。',
+  'help.guide.trip-chat.step.3': '把鼠标移到别人的消息上：角落会出现一个小圆按钮。那就是“回复”。',
+  'help.guide.trip-chat.step.4':
+    '你要回答的消息会被引用在输入框上方。写好并发送，引用就跟着进入你的气泡；引用上的叉子再把它去掉。',
+  'help.guide.trip-chat.step.5': '右键点击一条消息可得到八个快捷反应。你的反应待在气泡下面，再点一次同一个就收回。',
+  'help.guide.trip-chat.step.6':
+    '你自己的消息在“回复”旁边带着“删除”。它把消息拿走，只留下一行“删除了一条消息”：没有回头路。',
+  'help.guide.trip-chat.result':
+    '你的回答待在它引用的那条消息下面，一个反应挂在第三条上，被你收回的那条只留下一行说明。',
+  'help.guide.trip-chat.tip.1': 'Enter 发送，Shift 加 Enter 换行。整条只有表情符号的消息会放大显示。',
+  'help.guide.trip-chat.tip.2': '“附加图片”一条消息最多收四张图片；图片也可以直接粘贴或拖放到框里。',
+  'help.guide.trip-chat.tip.3':
+    '带链接的消息下面会有一张预览卡片，由你自己的 TREK 取回，所以指向只有你能访问的东西的链接，仍然只是一个普通链接。',
+  'help.guide.trip-chat.tip.4':
+    '“聊天”在“扩展”下面、“协作”之下有自己的开关：管理员可以把它关掉，让“笔记”“链接”“投票”和“下一步”继续运行。',
 };
 
 export default help;

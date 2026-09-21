@@ -2686,6 +2686,162 @@ const help: TranslationStrings = {
     'Aynı ayarlardaki Rezervasyon rotalarını her zaman göster, hakkında henüz karar vermediğiniz her gezide onları en baştan çizer.',
   'help.guide.map-booking-routes.tip.3':
     'Bir rezervasyonun çizilebilmesi için koordinatlı iki uca ihtiyacı vardır, bu yüzden bir otel ya da bir restoran rota simgesi taşımaz.',
+
+  // ── Screen: trip-collab ───────────────────────────────────────────────────────────────
+  'help.ctx.trip-collab.title': 'İş birliği',
+  'help.ctx.trip-collab.summary':
+    'Grubun birlikte planladığı sekme: solda sohbet, yanında ortak notlar ve bağlantılar, onların altında anketler ve en sonda What’s Next. Buraya yazılan her şey, sayfa yeniden yüklenmeden, aynı anda diğer her üyenin ekranında durur.',
+  'help.ctx.trip-collab.bullet.1':
+    'Sohbet soldaki sütundur. Mesaj yazın... kutusuna yazın ve Enter’a basın; Shift ve Enter yeni bir satır açar. Gülen yüz emoji ekler, Görsel ekle mesaja dört taneye kadar resim iliştirir.',
+  'help.ctx.trip-collab.bullet.2':
+    'Yanıtla için bir mesajın üzerine gelin, kendi mesajınızda yanında Sil de çıkar; sekiz hızlı tepki için mesaja sağ tıklayın. Silinen bir mesajdan geriye, bir mesajı sildiğinizi söyleyen tek bir satır kalır.',
+  'help.ctx.trip-collab.bullet.3':
+    'Notlar ortak bloknottur: Yeni Not bir tane yazar, yanındaki dişli ise adları ve renkleri için Kategorileri Yönet penceresini açar. Bir kart Genişlet, Sabitle, Düzenle ve Sil taşır.',
+  'help.ctx.trip-collab.bullet.4':
+    'Bağlantılar gezinin üzerinde yürüdüğü adresleri toplar. Bağlantı ekle bir başlık ve bir http ya da https adresi alır; Bağlantıyı düzenle, Bağlantıyı sabitle ve Bağlantıyı sil etiketin kuyruğunda oturur, sabitlenen bağlantılar ise en önde kalır.',
+  'help.ctx.trip-collab.bullet.5':
+    'Anketler işleri karara bağlar. Yeni Anket en az iki seçenekli bir soru sorar; bir seçeneğe tıklamak sizin oyunuzdur, Kapat oylamayı bitirir ve Sil anketi kaldırır.',
+  'help.ctx.trip-collab.bullet.6':
+    'What’s Next gezinin hâlâ önde duran sonraki sekiz durağını, saatleri ve üzerlerindeki kişilerle birlikte listeler. Yalnızca gün planını okur; saatler orada ayarlanır.',
+  // write-note
+  'help.guide.write-note.title': 'Ortak bir not yazın',
+  'help.guide.write-note.goal':
+    'Bütün grubun ihtiyaç duyduğu şeyi, bir kuralı, bir adresi, bir hatırlatmayı, herkesin yeniden bulacağı yere koyun.',
+  'help.guide.write-note.step.1': 'Notlar panelinin üstündeki Yeni Not düğmesine tıklayın. Form açılır.',
+  'help.guide.write-note.step.2':
+    'Not başlığı kartın taşıdığı addır. Formun ısrar ettiği tek şey odur: içinde bir şey olana kadar Oluştur gri kalır.',
+  'help.guide.write-note.step.3':
+    'Altındaki büyük kutu metni tutar ve Markdown alır: kalın bir kelime, bir liste, bir başlık. Kart ilk birkaç satırı gösterir, üzerindeki Genişlet ise notun tamamını açar.',
+  'help.guide.write-note.step.4':
+    'Kategori altında notun ait olduğu kategoriyi seçin; onun rengi kartın rengi olur. Haplar zaten var olan kategorilerdir, yenisi ise Kategorileri Yönet altında yapılır.',
+  'help.guide.write-note.step.5': 'Web sitesi nota ait bir bağlantı alır. Kart o zaman onu açan bir Link karosu taşır.',
+  'help.guide.write-note.step.6': 'Oluştur düğmesine tıklayın.',
+  'help.guide.write-note.result':
+    'Not, Notlar panelinde kendi kategorisinin renginde bir karttır ve şimdiden diğer her üyenin ekranındadır.',
+  'help.guide.write-note.tip.1':
+    'Bir karttaki Sabitle onu panelin en üstünde tutar; altındaki her şey en son ne zaman değiştirildiğine göre sıralanır.',
+  'help.guide.write-note.tip.2':
+    'Yeni Not yanındaki dişli Kategorileri Yönet penceresini açar: orada bir kategori rengini alır, bir kerede her yerde yeniden adlandırılır ya da herhangi bir not onu kullanmadan önce eklenir.',
+  'help.guide.write-note.tip.3':
+    'Dosya ekle nota bir belge iliştirir. Ekle dosya seçiciyi açar, bir görsel ya da bir PDF ise forma yapıştırılabilir de.',
+  'help.guide.write-note.tip.4':
+    'Notlar, Eklentiler altında, İş birliği bölümünde kendi anahtarına sahiptir: bir yönetici onu kapatıp sohbeti, bağlantıları, anketleri ve What’s Next bölümünü çalışır bırakabilir.',
+  // shared-links
+  'help.guide.shared-links.title': 'Gezinin bağlantılarını toplayın',
+  'help.guide.shared-links.goal':
+    'Rezervasyon portalını, ortak albümü ve tarifeyi sohbeti kaydırarak aramak yerine tek bir yerde tutun.',
+  'help.guide.shared-links.step.1': 'Bağlantılar panelinin üstündeki Bağlantı ekle düğmesine tıklayın.',
+  'help.guide.shared-links.step.2':
+    'Bağlantı başlığı alanında bağlantıya bir ad verin, adresi altındaki alana yapıştırın, sonra Bağlantıyı kaydet düğmesine tıklayın.',
+  'help.guide.shared-links.step.3':
+    'Etiket adı ve işaret ettiği siteyi gösterir. Üzerine tıklamak sayfayı yeni bir sekmede açar.',
+  'help.guide.shared-links.step.4':
+    'Kuyruğundaki üç küçük düğme Bağlantıyı düzenle, Bağlantıyı sabitle ve Bağlantıyı sil düğmeleridir. Bağlantıyı sabitle etiketi panelin en önüne taşır; Bağlantıyı sil hiçbir şey sormaz.',
+  'help.guide.shared-links.result':
+    'Bağlantı, Bağlantılar panelinde en öne sabitlenmiş bir etikettir ve aynı anda her üyenin ekranındadır.',
+  'help.guide.shared-links.tip.1':
+    'Yalnızca http ve https adresleri alınır; alan, kaydetmeden önce başka her şeyi reddeder.',
+  'help.guide.shared-links.tip.2':
+    'Önce sabitlenen bağlantılar gelir, sonra en yenileri. Bir başlığın yanındaki küçük simge sitenin kendi faviconudur, sitenin kendisinden alınır, bu yüzden internet yokken etiket onun yerine düz bir bağlantı işareti gösterir.',
+  'help.guide.shared-links.tip.3':
+    'Bağlantılar, Eklentiler altında, İş birliği bölümünde kendi anahtarına sahiptir, böylece bir yönetici sekmenin geri kalanına dokunmadan paneli kapatabilir.',
+  // create-poll
+  'help.guide.create-poll.title': 'Gruba sorun',
+  'help.guide.create-poll.goal':
+    'Sohbette kimsenin yanıtlamadığı bir soruyu, herkesin işaretleyebileceği bir ankete dönüştürün.',
+  'help.guide.create-poll.step.1': 'Anketler panelinin üstündeki Yeni Anket düğmesine tıklayın.',
+  'help.guide.create-poll.step.2':
+    'Soruyu yazın. Kutunun altındaki Markdown desteklenir, kalın bir kelimenin, bir satır sonunun ya da kısa bir listenin burada işe yaradığı anlamına gelir.',
+  'help.guide.create-poll.step.3':
+    'Seçenek 1 ve Seçenek 2 alanlarını doldurun. İçinde bir şey olan iki seçenek en alt sınırdır.',
+  'help.guide.create-poll.step.4':
+    '+ Seçenek ekle üçüncüyü, dördüncüyü, ihtiyacınız kadarını ekler; bir satırın yanındaki küçük çarpı birini geri alır.',
+  'help.guide.create-poll.step.5':
+    'Çoklu seçim herkesin birden fazla seçeneği işaretlemesine izin verir. Kapalı bırakıldığında, biri başka bir şey seçince oyu oraya kayar.',
+  'help.guide.create-poll.step.6': 'Anket Oluştur düğmesine tıklayın.',
+  'help.guide.create-poll.result':
+    'Anket, Anketler panelinin en üstünde, açık ve henüz kimse oy vermemiş olarak durur.',
+  'help.guide.create-poll.tip.1': 'Soru Markdown olarak işlenir; seçenekler düz metin kalır.',
+  'help.guide.create-poll.tip.2':
+    'Bir soru ve içinde bir şey olan en az iki seçenek olana kadar Anket Oluştur gri kalır.',
+  'help.guide.create-poll.tip.3':
+    'Son tarih yalnızca telefon uygulamasında ayarlanabilir. Son tarihi olan bir anket burada kalan süreyi kehribar renkli bir etikette gösterir ve süre dolunca kapalı sayılır.',
+  'help.guide.create-poll.tip.4':
+    'Anketler, Eklentiler altında, İş birliği bölümünde kendi anahtarına sahiptir: bir yönetici onu kapatıp diğer dört paneli çalışır bırakabilir.',
+  // vote-poll
+  'help.guide.vote-poll.title': 'Oy verin ve sonucu okuyun',
+  'help.guide.vote-poll.goal': 'Oyunuzu verin, grubun nerede durduğunu görün ve fikrinizi değiştirin.',
+  'help.guide.vote-poll.step.1': 'İstediğiniz seçeneğe tıklayın. Dairesi dolar ve arkasındaki çubuk büyür.',
+  'help.guide.vote-poll.step.2':
+    'Artık sonucun tamamı okunur: çubuk paydır, yüzde sağda durur ve küçük daireler o seçeneği seçen kişilerdir.',
+  'help.guide.vote-poll.step.3':
+    'Fikriniz mi değişti? Başka bir seçeneğe tıklayın. Çoklu seçim olmayan bir ankette oyunuz ikinci bir oy eklemek yerine oraya kayar.',
+  'help.guide.vote-poll.step.4':
+    'Sorunun altında anketin kaç oyu olduğu durur. Zaten seçtiğiniz seçeneğe tıklamak oyunuzu geri çeker ve sayaç yeniden düşer.',
+  'help.guide.vote-poll.result':
+    'İşaretiniz bir seçenekte durur, çubuklar grubun nasıl bölündüğünü gösterir ve daireler kimin neyi seçtiğini söyler.',
+  'help.guide.vote-poll.tip.1':
+    'Çubuklar ve yüzdeler ancak siz kendiniz oy verdikten sonra ya da anket kapandıktan sonra görünür, böylece kimse duruma bakıp yönlendirilmez.',
+  'help.guide.vote-poll.tip.2':
+    'Bir oy asla gizli değildir: arkasındaki adı görmek için bir seçenekteki dairelerden birinin üzerine gelin.',
+  // close-poll
+  'help.guide.close-poll.title': 'Bir anketi kapatın ya da kaldırın',
+  'help.guide.close-poll.goal':
+    'Grup karar verdikten sonra oylamayı durdurun ve artık kimsenin ihtiyaç duymadığı bir anketi temizleyin.',
+  'help.guide.close-poll.step.1':
+    'Bir anketin köşesindeki kilit olan Kapat, oylamayı bitirir. Seçenekler tıklama almayı bırakır.',
+  'help.guide.close-poll.step.2':
+    'Kapatılan bir anket panelin altındaki Kapalı başlığının altına iner, bir Kapalı rozeti taşır ve oy versinler ya da vermesinler sonucu herkese gösterir. Kazanan seçenek yeşile boyanır.',
+  'help.guide.close-poll.step.3':
+    'Yanındaki Sil anketi kaldırır. Hiçbir şey iki kez sormaz ve oylar da onunla birlikte gider.',
+  'help.guide.close-poll.result':
+    'Anket her üyenin panelinden gitmiştir. Yalnızca kapattığınız bir anket ise sonucuyla birlikte altta okunur durumda kalır.',
+  'help.guide.close-poll.tip.1':
+    'Kapatmak geri alınamaz: yeniden açmak yoktur. Yanlışlıkla kapatılan bir anketin yeniden sorulması gerekir.',
+  'help.guide.close-poll.tip.2': 'Sil, anketi ve üzerindeki her oyu herkes için, hemen ve soru sormadan kaldırır.',
+  // whats-next
+  'help.guide.whats-next.title': 'What’s Next bölümünü okuyun',
+  'help.guide.whats-next.goal': 'Planı açmadan grubun sırada ne yaptığını görün.',
+  'help.guide.whats-next.step.1':
+    'Panel, gezinin hâlâ önde duran sonraki sekiz durağını zaman sırasıyla, her gün için bir başlık altında listeler: Bugün, Yarın ya da tarih.',
+  'help.guide.whats-next.step.2':
+    'Bir satırın solunda saati durur: başlangıç, aradaki ayraç ve durağın varsa bitiş saati, ya da üzerinde henüz saat ayarlanmamışsa TBD.',
+  'help.guide.whats-next.step.3':
+    'Adın altındaki etiketler o duraktaki kişilerdir. Onun için kimse seçilmemişse gezideki herkes listelenir.',
+  'help.guide.whats-next.result':
+    'Gelecek olanların yalnızca okunacak bir listesi: planı izler ve buradaki hiçbir şey onu değiştirmez.',
+  'help.guide.whats-next.tip.1':
+    'Burada hiçbir şey ayarlanmaz. Saatler gün planından gelir; onları orada değiştirin, bu liste hemen ardından gelir.',
+  'help.guide.whats-next.tip.2':
+    'Yalnızca hâlâ önde duranlar listelenir: saati geçmiş bir durak listeden düşer ve bir gezinin sonunda panel boştur.',
+  'help.guide.whats-next.tip.3':
+    'What’s Next, Eklentiler altında, İş birliği bölümünde kendi anahtarına sahiptir ve bir masaüstü panelidir: telefon uygulamasının İş birliği sekmesi onu sunmaz.',
+  // trip-chat
+  'help.guide.trip-chat.title': 'Grupla konuşun',
+  'help.guide.trip-chat.goal':
+    'Bir şey söyleyin, belirli bir mesajı yanıtlayın, bir başkasına tepki verin ve kendi mesajınızı geri alın.',
+  'help.guide.trip-chat.step.1':
+    'Mesaj yazın... kutusuna yazın ve Enter’a basın. Kutunun yanındaki mavi ok da aynısını yapar; Shift ve Enter ise bunun yerine yeni bir satır açar.',
+  'help.guide.trip-chat.step.2':
+    'Gülen yüz, içinde Smileys, Reactions ve Travel bulunan emoji seçiciyi açar. Seçtiğiniz şey yazmakta olduğunuza eklenir, kendi başına gönderilmez.',
+  'help.guide.trip-chat.step.3':
+    'Başka birinin mesajının üzerine gelin: köşesinde küçük yuvarlak bir düğme belirir. O, Yanıtla düğmesidir.',
+  'help.guide.trip-chat.step.4':
+    'Yanıtladığınız mesaj kutunun üstünde alıntılanır. Yazıp gönderin, alıntı da baloncuğunuzun içinde birlikte gider; alıntının üzerindeki çarpı onu yeniden bırakır.',
+  'help.guide.trip-chat.step.5':
+    'Sekiz hızlı tepki için bir mesaja sağ tıklayın. Sizinki baloncuğun altında oturur, aynısına ikinci kez tıklamak onu geri alır.',
+  'help.guide.trip-chat.step.6':
+    'Kendi mesajlarınız Yanıtla yanında Sil de taşır. Mesajı kaldırır ve bir mesajı sildiğinizi söyleyen tek bir satır bırakır: geri dönüş yoktur.',
+  'help.guide.trip-chat.result':
+    'Yanıtınız alıntıladığı mesajın altında oturur, bir tepki üçüncü bir mesajda asılı durur ve geri aldığınız mesaj bunu söyleyen tek bir satır bırakır.',
+  'help.guide.trip-chat.tip.1':
+    'Enter gönderir, Shift ve Enter yeni bir satır açar. Emojiden başka bir şey içermeyen bir mesaj büyük gösterilir.',
+  'help.guide.trip-chat.tip.2':
+    'Görsel ekle bir mesaj için dört taneye kadar resim alır; bunlar ayrıca yapıştırılabilir ya da kutunun üzerine bırakılabilir.',
+  'help.guide.trip-chat.tip.3':
+    'İçinde bağlantı olan bir mesaj, altında kendi TREK’inizin getirdiği bir önizleme kartı alır, bu yüzden yalnızca sizin erişebildiğiniz bir şeye giden bağlantı düz bir bağlantı olarak kalır.',
+  'help.guide.trip-chat.tip.4':
+    'Sohbet, Eklentiler altında, İş birliği bölümünde kendi anahtarına sahiptir: bir yönetici onu kapatıp notları, bağlantıları, anketleri ve What’s Next bölümünü çalışır bırakabilir.',
 };
 
 export default help;

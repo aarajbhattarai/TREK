@@ -2686,6 +2686,158 @@ const help: TranslationStrings = {
     'Zawsze pokazuj trasy rezerwacji, w tych samych ustawieniach, rysuje je od początku w każdej podróży, o której jeszcze nie zdecydowałeś.',
   'help.guide.map-booking-routes.tip.3':
     'Rezerwacja potrzebuje dwóch końców ze współrzędnymi, zanim da się ją narysować, więc hotel albo restauracja nie niesie ikony trasy.',
+
+  // ── Screen: trip-collab ───────────────────────────────────────────────────────────────
+  'help.ctx.trip-collab.title': 'Współpraca',
+  'help.ctx.trip-collab.summary':
+    'Zakładka, w której grupa planuje razem: czat po lewej, obok niego wspólne notatki i linki, pod nimi ankiety, a na końcu Co dalej. Wszystko, co tu napiszesz, stoi od razu na ekranie każdego innego uczestnika, bez przeładowania.',
+  'help.ctx.trip-collab.bullet.1':
+    'Czat to kolumna po lewej. Pisz w Napisz wiadomość... i naciśnij Enter; Shift i Enter robią nowy wiersz. Uśmiech dodaje emoji, a Dołącz obrazy wiesza na wiadomości do czterech zdjęć.',
+  'help.ctx.trip-collab.bullet.2':
+    'Najedź na wiadomość po Odpowiedz, a na własnej także po Usuń; kliknij ją prawym przyciskiem po osiem szybkich reakcji. Po usuniętej wiadomości zostaje jeden wiersz mówiący, że usunięto wiadomość.',
+  'help.ctx.trip-collab.bullet.3':
+    'Notatki to wspólny brulion: Nowa notatka pisze jedną, a kółko zębate obok otwiera Zarządzaj kategoriami dla ich nazw i kolorów. Karta niesie Rozwiń, Przypnij, Edytuj i Usuń.',
+  'help.ctx.trip-collab.bullet.4':
+    'Linki zbierają adresy, na których stoi podróż. Dodaj link bierze tytuł i adres http albo https; Edytuj link, Przypnij link i Usuń link siedzą na ogonie plakietki, a przypięte linki zostają z przodu.',
+  'help.ctx.trip-collab.bullet.5':
+    'Ankiety rozstrzygają sprawy. Nowa ankieta zadaje pytanie z co najmniej dwiema opcjami; kliknięcie opcji to twój głos, Zamknij kończy głosowanie, a Usuń usuwa ankietę.',
+  'help.ctx.trip-collab.bullet.6':
+    'Co dalej wypisuje osiem kolejnych przystanków podróży, które są jeszcze przed tobą, z ich godzinami i osobami na nich. Czyta tylko plan dnia; godziny ustawia się tam.',
+  // write-note
+  'help.guide.write-note.title': 'Napisać wspólną notatkę',
+  'help.guide.write-note.goal':
+    'Umieść to, czego potrzebuje cała grupa, zasadę, adres, przypomnienie, tam, gdzie każdy znajdzie to znowu.',
+  'help.guide.write-note.step.1': 'Kliknij Nowa notatka u góry panelu Notatki. Otwiera się formularz.',
+  'help.guide.write-note.step.2':
+    'Tytuł notatki to nazwa, którą niesie karta. To jedyne, przy czym formularz się upiera: Utwórz zostaje szare, dopóki nic w nim nie stoi.',
+  'help.guide.write-note.step.3':
+    'Duże pole pod nim trzyma tekst i bierze Markdown: pogrubione słowo, listę, nagłówek. Karta pokazuje kilka pierwszych wierszy, a Rozwiń na niej otwiera całą notatkę.',
+  'help.guide.write-note.step.4':
+    'Pod Kategoria wybierz tę, do której notatka należy; jej kolor staje się kolorem karty. Pigułki to kategorie, które już istnieją, a nową robi się w Zarządzaj kategoriami.',
+  'help.guide.write-note.step.5':
+    'Strona internetowa bierze link, który należy do notatki. Karta niesie wtedy kafelek Link, który go otwiera.',
+  'help.guide.write-note.step.6': 'Kliknij Utwórz.',
+  'help.guide.write-note.result':
+    'Notatka jest kartą w panelu Notatki, w kolorze swojej kategorii, i stoi już na ekranie każdego innego uczestnika.',
+  'help.guide.write-note.tip.1':
+    'Przypnij na karcie trzyma ją na górze panelu; wszystko pod nią jest ułożone według tego, kiedy zmieniono to ostatnio.',
+  'help.guide.write-note.tip.2':
+    'Kółko zębate obok Nowa notatka otwiera Zarządzaj kategoriami: tam kategoria dostaje swój kolor, zostaje przemianowana wszędzie naraz albo zostaje dodana, zanim użyje jej jakakolwiek notatka.',
+  'help.guide.write-note.tip.3':
+    'Załącz pliki wiesza na notatce dokument. Załącz otwiera wybór plików, a obraz albo PDF można też po prostu wkleić do formularza.',
+  'help.guide.write-note.tip.4':
+    'Notatki to własny przełącznik pod Dodatki, pod Współpraca: administrator może go wyłączyć i zostawić działające czat, linki, ankiety i Co dalej.',
+  // shared-links
+  'help.guide.shared-links.title': 'Zebrać linki podróży',
+  'help.guide.shared-links.goal':
+    'Trzymaj portal rezerwacji, wspólny album i rozkład w jednym miejscu, zamiast szukać ich przewijaniem czatu.',
+  'help.guide.shared-links.step.1': 'Kliknij Dodaj link u góry panelu Linki.',
+  'help.guide.shared-links.step.2':
+    'Nadaj linkowi nazwę w Tytuł linku, wklej adres w pole pod nim, a potem kliknij Zapisz link.',
+  'help.guide.shared-links.step.3':
+    'Plakietka pokazuje nazwę i stronę, na którą wskazuje. Kliknięcie jej otwiera stronę w nowej karcie.',
+  'help.guide.shared-links.step.4':
+    'Trzy małe przyciski na jej ogonie to Edytuj link, Przypnij link i Usuń link. Przypnij link przesuwa plakietkę na przód panelu; Usuń link o nic nie pyta.',
+  'help.guide.shared-links.result':
+    'Link jest plakietką w panelu Linki, przypiętą z przodu, i stoi od razu na ekranie każdego uczestnika.',
+  'help.guide.shared-links.tip.1': 'Brane są tylko adresy http i https; pole odrzuca cokolwiek innego, zanim zapisze.',
+  'help.guide.shared-links.tip.2':
+    'Przypięte linki idą pierwsze, potem najnowsze. Mała ikona obok tytułu to własna favicona strony, pobrana z niej samej, więc bez internetu plakietka pokazuje zamiast niej zwykły znak linku.',
+  'help.guide.shared-links.tip.3':
+    'Linki to własny przełącznik pod Dodatki, pod Współpraca, więc administrator może wyłączyć panel, nie dotykając reszty zakładki.',
+  // create-poll
+  'help.guide.create-poll.title': 'Zapytać grupę',
+  'help.guide.create-poll.goal':
+    'Zamień pytanie, na które nikt nie odpowiada na czacie, w ankietę, którą każdy może odhaczyć.',
+  'help.guide.create-poll.step.1': 'Kliknij Nowa ankieta u góry panelu Ankiety.',
+  'help.guide.create-poll.step.2':
+    'Napisz pytanie. Obsługuje Markdown pod polem znaczy, że pogrubione słowo, łamanie wiersza albo krótka lista tu działają.',
+  'help.guide.create-poll.step.3': 'Wypełnij Opcja 1 i Opcja 2. Dwie opcje z czymś w środku to minimum.',
+  'help.guide.create-poll.step.4':
+    '+ Dodaj opcję dokłada trzecią, czwartą, tyle, ile potrzebujesz; mały krzyżyk obok wiersza zabiera jedną z powrotem.',
+  'help.guide.create-poll.step.5':
+    'Wielokrotny wybór pozwala każdemu odhaczyć więcej niż jedną opcję. Zostawiony wyłączony sprawia, że głos przenosi się, gdy ktoś wybierze coś innego.',
+  'help.guide.create-poll.step.6': 'Kliknij Utwórz ankietę.',
+  'help.guide.create-poll.result': 'Ankieta stoi na górze panelu Ankiety, otwarta, i nikt jeszcze nie zagłosował.',
+  'help.guide.create-poll.tip.1': 'Pytanie jest renderowane jako Markdown; opcje zostają zwykłym tekstem.',
+  'help.guide.create-poll.tip.2':
+    'Utwórz ankietę zostaje szare, dopóki nie ma pytania i co najmniej dwóch opcji z czymś w środku.',
+  'help.guide.create-poll.tip.3':
+    'Koniec da się ustawić tylko w aplikacji na telefon. Ankieta, która go ma, pokazuje tu pozostały czas w bursztynowej plakietce i liczy się jako zamknięta, gdy czas minie.',
+  'help.guide.create-poll.tip.4':
+    'Ankiety to własny przełącznik pod Dodatki, pod Współpraca: administrator może go wyłączyć i zostawić działające pozostałe cztery panele.',
+  // vote-poll
+  'help.guide.vote-poll.title': 'Zagłosować i odczytać wynik',
+  'help.guide.vote-poll.goal': 'Oddaj swój głos, zobacz, gdzie stoi grupa, i zmień zdanie.',
+  'help.guide.vote-poll.step.1': 'Kliknij opcję, którą chcesz. Jej kółko wypełnia się, a pasek za nią rośnie.',
+  'help.guide.vote-poll.step.2':
+    'Teraz czytelny jest cały wynik: pasek to udział, procent stoi po prawej, a małe kółka to osoby, które wybrały tę opcję.',
+  'help.guide.vote-poll.step.3':
+    'Zmieniłeś zdanie? Kliknij inną opcję. W ankiecie, w której Wielokrotny wybór jest wyłączony, twój głos przenosi się, zamiast dokładać drugi.',
+  'help.guide.vote-poll.step.4':
+    'Pod pytaniem stoi, ile głosów ma ankieta. Kliknięcie opcji, którą już wybrałeś, zabiera twój głos z powrotem, a licznik znowu spada.',
+  'help.guide.vote-poll.result':
+    'Twój ptaszek stoi na jednej opcji, paski pokazują, jak grupa jest podzielona, a kółka mówią, kto co wybrał.',
+  'help.guide.vote-poll.tip.1':
+    'Paski i procenty pojawiają się dopiero, gdy sam zagłosujesz albo gdy ankieta jest zamknięta, żeby nikogo nie popychał bieżący wynik.',
+  'help.guide.vote-poll.tip.2':
+    'Głos nigdy nie jest anonimowy: najedź na jedno z kółek przy opcji, a dostaniesz stojące za nim imię.',
+  // close-poll
+  'help.guide.close-poll.title': 'Zamknąć ankietę albo ją usunąć',
+  'help.guide.close-poll.goal':
+    'Zatrzymaj głosowanie, gdy grupa już zdecydowała, i sprzątnij ankietę, której nikt już nie potrzebuje.',
+  'help.guide.close-poll.step.1': 'Zamknij, kłódka w rogu ankiety, kończy głosowanie. Opcje przestają brać kliknięcia.',
+  'help.guide.close-poll.step.2':
+    'Zamknięta ankieta opada pod nagłówek Zamknięte na dole panelu, nosi plakietkę Zamknięta i pokazuje wynik wszystkim, czy głosowali, czy nie. Zwycięska opcja jest podbarwiona na zielono.',
+  'help.guide.close-poll.step.3': 'Usuń obok niej usuwa ankietę. Nic nie pyta dwa razy, a głosy idą razem z nią.',
+  'help.guide.close-poll.result':
+    'Ankieta zniknęła z panelu każdego uczestnika. Ta, którą tylko zamknięto, zostaje czytelna na dole, ze swoim wynikiem.',
+  'help.guide.close-poll.tip.1':
+    'Zamknięcia nie da się cofnąć: nie ma otwarcia z powrotem. Ankietę zamkniętą przez pomyłkę trzeba zadać jeszcze raz.',
+  'help.guide.close-poll.tip.2': 'Usuń zabiera ankietę i każdy oddany na nią głos wszystkim, od razu i bez pytania.',
+  // whats-next
+  'help.guide.whats-next.title': 'Czytać Co dalej',
+  'help.guide.whats-next.goal': 'Zobacz, co grupa robi dalej, bez otwierania planu.',
+  'help.guide.whats-next.step.1':
+    'Panel wypisuje osiem kolejnych przystanków podróży, które są jeszcze przed tobą, w kolejności czasu, pod nagłówkiem na każdy dzień: Dzisiaj, Jutro albo data.',
+  'help.guide.whats-next.step.2':
+    'Po lewej stronie wiersza stoi jego godzina: początek, do, i koniec, gdy przystanek go ma, albo TBD, gdy nie ustawiono na nim jeszcze żadnej godziny.',
+  'help.guide.whats-next.step.3':
+    'Plakietki pod nazwą to osoby na tym przystanku. Gdy nikogo do niego nie wybrano, wypisani są wszyscy w podróży.',
+  'help.guide.whats-next.result':
+    'Lista tego, co nadchodzi, tylko do czytania: idzie za planem i nic tutaj go nie zmienia.',
+  'help.guide.whats-next.tip.1':
+    'Tutaj nic się nie ustawia. Godziny biorą się z planu dnia; zmień je tam, a ta lista od razu za nimi idzie.',
+  'help.guide.whats-next.tip.2':
+    'Wypisane jest tylko to, co jeszcze leży przed tobą: przystanek, którego godzina minęła, wypada, a na końcu podróży panel jest pusty.',
+  'help.guide.whats-next.tip.3':
+    'Co dalej to własny przełącznik pod Dodatki, pod Współpraca, i jest to panel na komputer: zakładka Współpraca w aplikacji na telefon go nie oferuje.',
+  // trip-chat
+  'help.guide.trip-chat.title': 'Rozmawiać z grupą',
+  'help.guide.trip-chat.goal':
+    'Powiedz coś, odpowiedz na jedną konkretną wiadomość, zareaguj na inną i zabierz własną z powrotem.',
+  'help.guide.trip-chat.step.1':
+    'Pisz w Napisz wiadomość... i naciśnij Enter. Niebieska strzałka obok pola robi to samo; Shift i Enter robią zamiast tego nowy wiersz.',
+  'help.guide.trip-chat.step.2':
+    'Uśmiech otwiera wybór emoji, ze Smileys, Reactions i Travel w środku. To, co wybierzesz, dokłada się do tego, co piszesz, samo się nie wysyła.',
+  'help.guide.trip-chat.step.3':
+    'Najedź na czyjąś wiadomość: w jej rogu pojawia się mały okrągły przycisk. To jest Odpowiedz.',
+  'help.guide.trip-chat.step.4':
+    'Wiadomość, na którą odpowiadasz, jest cytowana nad polem. Napisz i wyślij, a cytat jedzie razem w twoim dymku; krzyżyk na cytacie znowu go porzuca.',
+  'help.guide.trip-chat.step.5':
+    'Kliknij wiadomość prawym przyciskiem po osiem szybkich reakcji. Twoja siedzi pod dymkiem, a drugie kliknięcie tej samej zabiera ją z powrotem.',
+  'help.guide.trip-chat.step.6':
+    'Twoje własne wiadomości niosą Usuń obok Odpowiedz. Zabiera wiadomość i zostawia jeden wiersz mówiący, że usunięto wiadomość: drogi powrotnej nie ma.',
+  'help.guide.trip-chat.result':
+    'Twoja odpowiedź siedzi pod wiadomością, którą cytuje, reakcja wisi na trzeciej, a ta, którą zabrałeś z powrotem, zostawia jeden wiersz, który o tym mówi.',
+  'help.guide.trip-chat.tip.1':
+    'Enter wysyła, Shift i Enter robią nowy wiersz. Wiadomość, która jest niczym innym niż emoji, pokazuje się duża.',
+  'help.guide.trip-chat.tip.2':
+    'Dołącz obrazy bierze do czterech zdjęć na jedną wiadomość; można je też po prostu wkleić albo upuścić na pole.',
+  'help.guide.trip-chat.tip.3':
+    'Wiadomość z linkiem dostaje pod sobą kartę podglądu, pobraną przez twój własny TREK, więc link do czegoś, dokąd tylko ty masz dostęp, zostaje zwykłym linkiem.',
+  'help.guide.trip-chat.tip.4':
+    'Czat to własny przełącznik pod Dodatki, pod Współpraca: administrator może go wyłączyć i zostawić działające notatki, linki, ankiety i Co dalej.',
 };
 
 export default help;
