@@ -362,8 +362,8 @@ describe('instance-scope actions (admin)', () => {
       .run(pluginId, key, key, scope);
   }
   const adminReq = { user: { id: 42 } } as unknown as Request;
-  function controller(invoke = vi.fn(async () => ({ ok: true, message: 'pong' }))) {
-    const rt = createPluginRuntime(new DatabaseService(dbConn));
+  async function controller(invoke = vi.fn(async () => ({ ok: true, message: 'pong' }))) {
+    const rt = await createPluginRuntime(new DatabaseService(dbConn));
     // isActive normally reflects the supervisor's live child map, which nothing here
     // spawns — so it's stubbed to read the same DB status the test itself flips,
     // mirroring what an actually-activated plugin would report.
@@ -375,25 +375,25 @@ describe('instance-scope actions (admin)', () => {
 
   beforeEach(() => { testDb.prepare('DELETE FROM plugin_actions').run(); });
 
-  it('ACT-ADM-001 — GET config lists the instance actions and none of the user ones', () => {
+  it('ACT-ADM-001 — GET config lists the instance actions and none of the user ones', async () => {
     install('p');
     declareAction('p', 'purge', 'instance');
     declareAction('p', 'testConnection', 'user');
-    const { c } = controller();
+    const { c } = await controller();
     expect(c.getConfig('p').actions).toEqual([{ key: 'purge', label: 'purge', hint: undefined, danger: false, scope: 'instance' }]);
   });
 
   it('ACT-ADM-002 — POST runs the action as the clicking admin in the instance scope', async () => {
     install('p');
     testDb.prepare("UPDATE plugins SET status = 'active', enabled = 1 WHERE id = 'p'").run();
-    const { c, invoke } = controller();
+    const { c, invoke } = await controller();
     expect(await c.runAction('p', 'purge', adminReq)).toEqual({ ok: true, message: 'pong' });
     expect(invoke).toHaveBeenCalledWith('p', 'purge', 42, 'instance');
   });
 
   it('ACT-ADM-003 — an inactive plugin answers 404 like the user route', async () => {
     install('p');
-    const { c, invoke } = controller();
+    const { c, invoke } = await controller();
     await expect(c.runAction('p', 'purge', adminReq)).rejects.toMatchObject({ status: 404, response: { error: 'Plugin is not active' } });
     expect(invoke).not.toHaveBeenCalled();
   });
@@ -401,7 +401,7 @@ describe('instance-scope actions (admin)', () => {
   it('ACT-ADM-004 — a refused key is a failed RESULT, not a server error', async () => {
     install('p');
     testDb.prepare("UPDATE plugins SET status = 'active', enabled = 1 WHERE id = 'p'").run();
-    const { c } = controller(vi.fn(async () => { throw new Error('plugin p did not declare action "x" in scope instance'); }));
+    const { c } = await controller(vi.fn(async () => { throw new Error('plugin p did not declare action "x" in scope instance'); }));
     expect(await c.runAction('p', 'x', adminReq)).toEqual({ ok: false, message: 'plugin p did not declare action "x" in scope instance' });
   });
 });

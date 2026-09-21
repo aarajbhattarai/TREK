@@ -4,6 +4,11 @@ import gitignore from 'eslint-config-flat-gitignore';
 import eslintConfigPrettier from 'eslint-config-prettier';
 import tseslint from 'typescript-eslint';
 
+import noPromiseAsValue from './eslint-rules/no-promise-as-value.mjs';
+
+// Local rules live in eslint-rules/ and are exposed under the `trek/` prefix.
+const trek = { rules: { 'no-promise-as-value': noPromiseAsValue } };
+
 export default tseslint.config(
   gitignore({ strict: false }),
   {
@@ -56,7 +61,14 @@ export default tseslint.config(
   },
   {
     files: ['src/**/*.ts', 'tests/**/*.ts'],
+    plugins: { trek },
     rules: {
+      // trek/no-promise-as-value closes the hole the two rules below leave open:
+      // with `strict: false`, a promise used as a plain VALUE (element access,
+      // comparison, interpolation, spread, iteration, Object.keys/JSON.stringify)
+      // type-checks clean and silently produces `any`, `false` or `[object
+      // Promise]`. See eslint-rules/no-promise-as-value.mjs.
+      'trek/no-promise-as-value': 'error',
       // --- The promise safety net for the Phase 1 async sweep (ORM migration) ---
       // Turning a DB-touching method `async` makes every unawaited call site a
       // silently reordered write, and every `if (svc.exists(id))` permanently
