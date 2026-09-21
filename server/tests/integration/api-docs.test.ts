@@ -8,25 +8,10 @@ import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest';
 import request from 'supertest';
 import type { INestApplication } from '@nestjs/common';
 
-const { testDb, dbMock } = vi.hoisted(() => {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const Database = require('better-sqlite3');
-  const db = new Database(':memory:');
-  db.exec('PRAGMA journal_mode = WAL');
-  db.exec('PRAGMA foreign_keys = ON');
-  db.exec('PRAGMA busy_timeout = 5000');
-  const mock = {
-    db,
-    closeDb: () => {},
-    reinitialize: () => {},
-    getPlaceWithTags: () => null,
-    canAccessTrip: () => undefined,
-    isOwner: () => false,
-  };
-  return { testDb: db, dbMock: mock };
+vi.mock('../../src/db/database', async () => {
+  const { createSnapshotTestDb, buildDbMock } = await import('../helpers/db-mock');
+  return buildDbMock(createSnapshotTestDb());
 });
-
-vi.mock('../../src/db/database', () => dbMock);
 vi.mock('../../src/config', () => ({
   JWT_SECRET: 'test-jwt-secret-for-trek-testing-only',
   ENCRYPTION_KEY: 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6a7b8c9d0e1f2a3b4c5d6a7b8c9d0e1f2',
@@ -38,8 +23,7 @@ vi.mock('../../src/config', () => ({
 }));
 vi.mock('../../src/websocket', () => ({ broadcast: vi.fn(), broadcastToUser: vi.fn() }));
 
-import { createTables } from '../../src/db/schema';
-import { runMigrations } from '../../src/db/migrations';
+import { db as testDb } from '../../src/db/database';
 import { resetTestDb } from '../helpers/test-db';
 import { buildApp } from '../../src/bootstrap';
 import { apiDocsEnabled } from '../../src/nest/common/api-docs.kill-switch';
@@ -50,8 +34,6 @@ describe('API-DOCS (#1412) — flag-gated OpenAPI surface', () => {
   let prevFlag: string | undefined;
 
   beforeAll(async () => {
-    createTables(testDb);
-    runMigrations(testDb);
     resetTestDb(testDb);
     prevFlag = process.env.TREK_API_DOCS_ENABLED;
     process.env.TREK_API_DOCS_ENABLED = 'true';

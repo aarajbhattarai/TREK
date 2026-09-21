@@ -14,24 +14,10 @@ import type { Application } from 'express';
 import type { INestApplication } from '@nestjs/common';
 import crypto from 'crypto';
 
-const { testDb, dbMock } = vi.hoisted(() => {
-    const Database = require('better-sqlite3');
-    const db = new Database(':memory:');
-    db.exec('PRAGMA journal_mode = WAL');
-    db.exec('PRAGMA foreign_keys = ON');
-    db.exec('PRAGMA busy_timeout = 5000');
-    const mock = {
-        db,
-        closeDb: () => {},
-        reinitialize: () => {},
-        getPlaceWithTags: () => null,
-        canAccessTrip: () => undefined,
-        isOwner: () => false,
-    };
-    return { testDb: db, dbMock: mock };
+vi.mock('../../src/db/database', async () => {
+  const { createSnapshotTestDb, buildDbMock } = await import('../helpers/db-mock');
+  return buildDbMock(createSnapshotTestDb());
 });
-
-vi.mock('../../src/db/database', () => dbMock);
 vi.mock('../../src/config', () => ({
     JWT_SECRET: 'test-jwt-secret-for-trek-testing-only',
     ENCRYPTION_KEY: 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6a7b8c9d0e1f2a3b4c5d6a7b8c9d0e1f2',
@@ -50,9 +36,8 @@ vi.mock('../../src/app-config', async (importOriginal) => {
 vi.mock('../../src/websocket', () => ({ broadcast: vi.fn(), broadcastToUser: vi.fn() }));
 vi.mock('../../src/mcp/sessionManager', () => ({ revokeUserSessions: vi.fn(), revokeUserSessionsForClient: vi.fn(), sessions: new Map() }));
 
+import { db as testDb } from '../../src/db/database';
 import { buildApp } from '../../src/bootstrap';
-import { createTables } from '../../src/db/schema';
-import { runMigrations } from '../../src/db/migrations';
 import { resetTestDb, resetRateLimits } from '../helpers/test-db';
 import { createUser } from '../helpers/factories';
 import { OauthService } from '../../src/nest/oauth/oauth.service';
@@ -93,8 +78,6 @@ async function registerClient(redirectUri = 'https://client.example.com/cb', sco
 }
 
 beforeAll(async () => {
-    createTables(testDb);
-    runMigrations(testDb);
     nestApp = await buildApp();
     app = nestApp.getHttpAdapter().getInstance();
 });

@@ -1,19 +1,26 @@
 /**
  * In-memory SQLite test database helper.
  *
- * Usage in an integration test file:
+ * Usage in a `buildApp()` integration test file — `createSnapshotTestDb`/
+ * `buildDbMock` come through the `db-mock.ts` leaf module directly, not
+ * through this file, so the mock factory doesn't re-enter `src/db/database`
+ * while it is still being built (see db-mock.ts's header comment):
  *
- *   import { createTestDb, resetTestDb } from '../helpers/test-db';
- *   import { buildDbMock } from '../helpers/test-db';
- *
- *   // Declare at module scope (before vi.mock so it's available in factory)
- *   const testDb = createTestDb();
- *
- *   vi.mock('../../src/db/database', () => buildDbMock(testDb));
+ *   vi.mock('../../src/db/database', async () => {
+ *     const { createSnapshotTestDb, buildDbMock } = await import('../helpers/db-mock');
+ *     return buildDbMock(createSnapshotTestDb());
+ *   });
  *   vi.mock('../../src/config', () => TEST_CONFIG);
+ *
+ *   import { db as testDb } from '../../src/db/database';
+ *   import { resetTestDb, resetRateLimits } from '../helpers/test-db';
  *
  *   beforeEach(() => resetTestDb(testDb));
  *   afterAll(() => testDb.close());
+ *
+ * For unit suites that never boot the app, `createTestDb()` (this file) still
+ * builds its own throwaway `:memory:` database via the legacy schema/migration
+ * scripts.
  */
 
 import Database from 'better-sqlite3';
@@ -22,6 +29,15 @@ import { createTables } from '../../src/db/schema';
 import { runMigrations } from '../../src/db/migrations';
 import { AuthPublicController } from '../../src/nest/auth/auth-public.controller';
 import type { RateLimitService } from '../../src/nest/common/rate-limit.service';
+
+// createSnapshotTestDb / buildDbMock / CAN_ACCESS_TRIP_SQL live in db-mock.ts, a
+// leaf module with no src/nest imports — see its header comment for why. This
+// file imports AuthPublicController (for resetRateLimits below), so a vi.mock
+// factory MUST import from db-mock.ts directly, never from here, or it
+// re-enters src/db/database while its own mock for that module is still being
+// built and captures the real one. Re-exported so existing non-factory
+// importers of test-db.ts keep working unchanged.
+export { CAN_ACCESS_TRIP_SQL, createSnapshotTestDb, buildDbMock } from './db-mock';
 
 // Tables to clear on reset, child-before-parent to be safe (FK checks are OFF during reset).
 // Keep in sync with schema.ts + migrations.ts. Intentionally excluded: categories, addons,
@@ -185,8 +201,14 @@ export function setCollabFeature(
 }
 
 function seedDefaults(db: Database.Database): void {
-  const insertCat = db.prepare('INSERT OR IGNORE INTO categories (name, color, icon) VALUES (?, ?, ?)');
-  for (const cat of DEFAULT_CATEGORIES) insertCat.run(cat.name, cat.color, cat.icon);
+  // Not INSERT OR IGNORE: categories.name has no unique constraint, and the
+  // migrated snapshot (createSnapshotTestDb) already holds the same ten rows —
+  // IGNORE only dedupes on a conflicting constraint, so it would insert a
+  // second copy of each. Absence-of-name is what both callers actually want.
+  const insertCat = db.prepare(
+    'INSERT INTO categories (name, color, icon) SELECT ?, ?, ? WHERE NOT EXISTS (SELECT 1 FROM categories WHERE name = ?)',
+  );
+  for (const cat of DEFAULT_CATEGORIES) insertCat.run(cat.name, cat.color, cat.icon, cat.name);
 
   const insertAddon = db.prepare('INSERT OR IGNORE INTO addons (id, name, description, type, icon, enabled, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?)');
   for (const a of DEFAULT_ADDONS) insertAddon.run(a.id, a.name, a.description, a.type, a.icon, a.enabled, a.sort_order);
@@ -226,79 +248,16 @@ export function resetTestDb(db: Database.Database): void {
       db.exec(`DELETE FROM "${table}"`);
     }
   }
+  // Restart ids at 1, exactly as a fresh legacy database did — the snapshot's
+  // seeded `admin` user (id 1) was just deleted above, and the factories assume
+  // a clean autoincrement sequence.
+  const seqTable = existingTables.has('sqlite_sequence');
+  if (seqTable) {
+    const clear = db.prepare('DELETE FROM sqlite_sequence WHERE name = ?');
+    for (const table of RESET_TABLES) if (existingTables.has(table)) clear.run(table);
+  }
   db.exec('PRAGMA foreign_keys = ON');
   seedDefaults(db);
-}
-
-/**
- * Byte-for-byte the statement in src/db/database.ts.
- *
- * Exported because the same query is copied into ~90 test files, and every one
- * of those copies had dropped `t.currency` — so the budget domain, which reads
- * exactly that column off the access row, was only ever exercising its 'EUR'
- * fallback. Import this instead of retyping it.
- */
-export const CAN_ACCESS_TRIP_SQL = `
-        SELECT t.id, t.user_id, t.currency FROM trips t
-        LEFT JOIN trip_members m ON m.trip_id = t.id AND m.user_id = ?
-        WHERE t.id = ? AND (t.user_id = ? OR m.user_id IS NOT NULL)
-      `;
-
-/**
- * Returns the mock factory for vi.mock('../../src/db/database', ...).
- * The returned object mirrors the shape of database.ts exports.
- *
- * @example
- *   const testDb = createTestDb();
- *   vi.mock('../../src/db/database', () => buildDbMock(testDb));
- */
-export function buildDbMock(testDb: Database.Database) {
-  return {
-    db: testDb,
-    closeDb: () => {},
-    reinitialize: () => {},
-    getPlaceWithTags: (placeId: number | string) => {
-      interface PlaceRow {
-        id: number;
-        category_id: number | null;
-        category_name: string | null;
-        category_color: string | null;
-        category_icon: string | null;
-        [key: string]: unknown;
-      }
-      const place = testDb.prepare(`
-        SELECT p.*, c.name as category_name, c.color as category_color, c.icon as category_icon
-        FROM places p
-        LEFT JOIN categories c ON p.category_id = c.id
-        WHERE p.id = ?
-      `).get(placeId) as PlaceRow | undefined;
-
-      if (!place) return null;
-
-      const tags = testDb.prepare(`
-        SELECT t.* FROM tags t
-        JOIN place_tags pt ON t.id = pt.tag_id
-        WHERE pt.place_id = ?
-      `).all(placeId);
-
-      return {
-        ...place,
-        category: place.category_id ? {
-          id: place.category_id,
-          name: place.category_name,
-          color: place.category_color,
-          icon: place.category_icon,
-        } : null,
-        tags,
-      };
-    },
-    canAccessTrip: (tripId: number | string, userId: number) => {
-      return testDb.prepare(CAN_ACCESS_TRIP_SQL).get(userId, tripId, userId);
-    },
-    isOwner: (tripId: number | string, userId: number) => {
-      return !!testDb.prepare('SELECT id FROM trips WHERE id = ? AND user_id = ?').get(tripId, userId);
-    },
-  };
 }
 
 /**

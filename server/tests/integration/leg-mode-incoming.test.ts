@@ -71,31 +71,10 @@ describe('incoming_leg_transport_mode migration', () => {
 // tests/integration/assignments.test.ts verbatim.
 // ─────────────────────────────────────────────────────────────────────────────
 
-const { testDb2, dbMock } = vi.hoisted(() => {
-  const Database2 = require('better-sqlite3');
-  const db = new Database2(':memory:');
-  db.exec('PRAGMA journal_mode = WAL');
-  db.exec('PRAGMA foreign_keys = ON');
-  db.exec('PRAGMA busy_timeout = 5000');
-  const mock = {
-    db,
-    closeDb: () => {},
-    reinitialize: () => {},
-    getPlaceWithTags: (placeId: number) => {
-      const place: any = db.prepare(`SELECT p.*, c.name as category_name, c.color as category_color, c.icon as category_icon FROM places p LEFT JOIN categories c ON p.category_id = c.id WHERE p.id = ?`).get(placeId);
-      if (!place) return null;
-      const tags = db.prepare(`SELECT t.* FROM tags t JOIN place_tags pt ON t.id = pt.tag_id WHERE pt.place_id = ?`).all(placeId);
-      return { ...place, category: place.category_id ? { id: place.category_id, name: place.category_name, color: place.category_color, icon: place.category_icon } : null, tags };
-    },
-    canAccessTrip: (tripId: any, userId: number) =>
-      db.prepare(`SELECT t.id, t.user_id FROM trips t LEFT JOIN trip_members m ON m.trip_id = t.id AND m.user_id = ? WHERE t.id = ? AND (t.user_id = ? OR m.user_id IS NOT NULL)`).get(userId, tripId, userId),
-    isOwner: (tripId: any, userId: number) =>
-      !!db.prepare('SELECT id FROM trips WHERE id = ? AND user_id = ?').get(tripId, userId),
-  };
-  return { testDb2: db, dbMock: mock };
+vi.mock('../../src/db/database', async () => {
+  const { createSnapshotTestDb, buildDbMock } = await import('../helpers/db-mock');
+  return buildDbMock(createSnapshotTestDb());
 });
-
-vi.mock('../../src/db/database', () => dbMock);
 vi.mock('../../src/config', () => ({
   JWT_SECRET: 'test-jwt-secret-for-trek-testing-only',
   ENCRYPTION_KEY: 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6a7b8c9d0e1f2a3b4c5d6a7b8c9d0e1f2',
@@ -107,6 +86,7 @@ vi.mock('../../src/config', () => ({
 }));
 vi.mock('../../src/websocket', () => ({ broadcast: vi.fn(), broadcastToUser: vi.fn() }));
 
+import { db as testDb2 } from '../../src/db/database';
 import { buildApp } from '../../src/bootstrap';
 import { resetTestDb, resetRateLimits } from '../helpers/test-db';
 import { createUser, createTrip, createDay, createPlace } from '../helpers/factories';
@@ -117,8 +97,6 @@ describe('incoming_leg_transport_mode read-path parity', () => {
   let app: Application;
 
   beforeAll(async () => {
-    createTables(testDb2);
-    runMigrations(testDb2);
     nestApp = await buildApp();
     app = nestApp.getHttpAdapter().getInstance();
   });
@@ -180,7 +158,7 @@ describe('incoming_leg_transport_mode read-path parity', () => {
         .send({ transport_mode: 'cycling' });
       expect(res.status).toBe(200);
 
-      const row = testDb2.prepare('SELECT leg_transport_mode, incoming_leg_transport_mode FROM day_assignments WHERE id = ?').get(assignmentId);
+      const row = testDb2.prepare('SELECT leg_transport_mode, incoming_leg_transport_mode FROM day_assignments WHERE id = ?').get(assignmentId) as { leg_transport_mode: string | null; incoming_leg_transport_mode: string | null };
       expect(row.leg_transport_mode).toBe('cycling');
       expect(row.incoming_leg_transport_mode).toBeNull();
     });
@@ -203,7 +181,7 @@ describe('incoming_leg_transport_mode read-path parity', () => {
         .send({ transport_mode: 'transit', direction: 'incoming' });
       expect(res.status).toBe(200);
 
-      const row = testDb2.prepare('SELECT incoming_leg_transport_mode FROM day_assignments WHERE id = ?').get(assignmentId);
+      const row = testDb2.prepare('SELECT incoming_leg_transport_mode FROM day_assignments WHERE id = ?').get(assignmentId) as { incoming_leg_transport_mode: string | null };
       expect(row.incoming_leg_transport_mode).toBe('transit');
     });
 
@@ -250,7 +228,7 @@ describe('incoming_leg_transport_mode read-path parity', () => {
         .send({ transport_mode: 'transit', direction: 'incoming' })
         .expect(200);
 
-      const row = testDb2.prepare('SELECT leg_transport_mode, incoming_leg_transport_mode FROM day_assignments WHERE id = ?').get(assignmentId);
+      const row = testDb2.prepare('SELECT leg_transport_mode, incoming_leg_transport_mode FROM day_assignments WHERE id = ?').get(assignmentId) as { leg_transport_mode: string | null; incoming_leg_transport_mode: string | null };
       expect(row.leg_transport_mode).toBe('cycling');
       expect(row.incoming_leg_transport_mode).toBe('transit');
 

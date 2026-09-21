@@ -10,9 +10,8 @@
 import { describe, it, expect, vi } from 'vitest';
 
 vi.mock('../../../src/db/database', async () => {
-  const Database = (await import('better-sqlite3')).default;
-  const db = new Database(':memory:');
-  return { db, closeDb: () => {}, reinitialize: () => {}, canAccessTrip: () => null, isOwner: () => false, getPlaceWithTags: () => null };
+  const { createSnapshotTestDb, buildDbMock } = await import('../../helpers/db-mock');
+  return buildDbMock(createSnapshotTestDb());
 });
 
 import { Test } from '@nestjs/testing';
