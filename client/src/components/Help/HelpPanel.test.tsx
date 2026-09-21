@@ -221,12 +221,15 @@ describe('HelpPanel', () => {
     expect(list).toBeInTheDocument()
     expect(screen.getByRole('option', { name: /Journal/ })).toHaveAttribute('aria-selected', 'true')
     expect(screen.getByRole('option', { name: /Studio/ })).toBeInTheDocument()
-    // Folding the group hides the sub-screens; the top-level screens stay.
-    fireEvent.click(screen.getByRole('button', { name: '2 sub-screens' }))
+    // Folding the group hides the sub-screens; the top-level screens stay. The
+    // toggle is looked up inside its own row: every screen with sub-screens has
+    // one, and the trip has as many as the plan has columns, panels and tabs.
+    const journeyFold = () => within(screen.getByRole('option', { name: /^Journey/ })).getByRole('button', { name: /sub-screens/ })
+    fireEvent.click(journeyFold())
     expect(screen.queryByRole('option', { name: /Studio/ })).toBeNull()
     expect(screen.getByRole('option', { name: /Atlas/ })).toBeInTheDocument()
     // Picking a sub-screen browses to it; the breadcrumb on the overview shows the trail.
-    fireEvent.click(screen.getByRole('button', { name: '2 sub-screens' }))
+    fireEvent.click(journeyFold())
     fireEvent.click(screen.getByRole('option', { name: /Studio/ }).querySelector('button')!)
     expect(useHelpStore.getState().browseId).toBe('journey-studio')
     expect(screen.getByRole('heading', { level: 1, name: 'Studio' })).toBeInTheDocument()
