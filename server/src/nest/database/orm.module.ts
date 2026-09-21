@@ -5,8 +5,9 @@ import { UnitOfWork } from './unit-of-work';
  * The ORM-side container module: the home of providers that depend on MikroORM
  * itself rather than on the raw better-sqlite3 handle `DatabaseModule` owns.
  *
- * Deliberately separate from `DatabaseModule`, which 41 e2e suites compose
- * standalone (`Test.createTestingModule({ imports: [DatabaseModule, ...] })`)
+ * Deliberately separate from `DatabaseModule`, which the e2e suites that
+ * compose `DatabaseModule` without the ORM build standalone
+ * (`Test.createTestingModule({ imports: [DatabaseModule, ...] })`)
  * with no ORM in the container: a provider there that injects the core
  * `EntityManager` fails every one of them at `compile()`, because Nest
  * instantiates providers eagerly. Nothing is imported here — the

@@ -152,8 +152,8 @@ import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
     LlmParseModule,
     ManagedExtModule,
     MikroOrmModule.forRoot(mikroOrmConfig),
-    // Not part of DatabaseModule: 41 e2e suites compose that module without the
-    // ORM, and an EntityManager-dependent provider there fails their containers.
+    // Not part of DatabaseModule: the e2e suites that compose `DatabaseModule`
+    // without the ORM would fail on an EntityManager-dependent provider there.
     OrmModule,
   ],
   providers: [

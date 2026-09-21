@@ -107,6 +107,135 @@ export default tseslint.config(
     },
   },
   {
+    // D4: the driver is an implementation detail of src/db. Nothing else in
+    // src/ names `better-sqlite3` — a domain module that imports it is coupled
+    // to the engine the ORM exists to abstract, and (for the value import)
+    // reaches a connection the DI graph never handed it.
+    //
+    // `no-restricted-imports` is repeated rather than added to the src/services
+    // block above because ESLint flat config REPLACES a rule's options with the
+    // last matching config object's — a block that set only the driver path
+    // would silently drop the services wall for every file it matches.
+    files: ['src/**/*.ts'],
+    ignores: [
+      // The connection and the ORM's bound driver: this is where the engine lives.
+      'src/db/database.ts',
+      'src/db/orm-driver.ts',
+      'src/db/durability.ts',
+      // The plugin sandbox opens its own per-plugin database files, deliberately
+      // outside the app's ORM and connection.
+      'src/nest/plugins/host/plugin-data.service.ts',
+      // Backup/restore operates on database FILES, not on rows.
+      'src/nest/backup/backup.impl.ts',
+      // Demo-mode seeding, and the legacy schema/migration/seed scripts the test
+      // suite still builds its throwaway databases from (guarded by
+      // tests/unit/db/schema-parity.test.ts).
+      'src/demo/**',
+      'src/db/schema.ts',
+      'src/db/migrations.ts',
+      'src/db/seeds.ts',
+      // TODO(plan 4): pre-existing importers, to be migrated onto the ORM /
+      // DatabaseService rather than by loosening this rule. All type-only except
+      // reseat-booked-nights.ts, which opens its own handle.
+      'src/db/reseat-booked-nights.ts',
+      'src/db/document-provider-seed.ts',
+      'src/nest/database/database.service.ts',
+      'src/nest/plugins/contributions/plugin-route-normalize.ts',
+      'src/nest/plugins/host/plugin-host-state.ts',
+      'src/nest/plugins/install/discovery.ts',
+      'src/nest/plugins/settings-defaults.ts',
+      'src/nest/plugins/signature-status.ts',
+    ],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: 'better-sqlite3',
+              message:
+                'The SQLite driver is an implementation detail of src/db. Go through the ORM (src/db/entities + src/db/repositories) or the injected DatabaseService; the handle itself is owned by src/db/database.ts.',
+            },
+          ],
+          patterns: [
+            {
+              group: ['**/services/*', '**/services/**/*'],
+              message:
+                'src/services/ is deleted. New backend code goes to src/nest/<domain>/ (service + controller + module, registered in app.module.ts). See src/nest/README.md.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    // D4/D10: a repository is dialect-neutral. It talks to the ORM through
+    // @mikro-orm/core and @mikro-orm/sql — never to a concrete driver package,
+    // never to better-sqlite3 (the driver is wired once, in src/db/orm-driver.ts)
+    // — and it never spells raw SQL inline: every database function goes through
+    // src/db/dialect/sql-functions.ts, which dispatches on the live platform.
+    //
+    // Both rules restate the blocks above for the same flat-config reason: the
+    // last matching config object's options REPLACE, not extend, the earlier
+    // ones, so dropping either restatement would open a hole under
+    // src/db/repositories/ only.
+    files: ['src/db/repositories/**/*.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: '@mikro-orm/sqlite',
+              message:
+                'Repositories are dialect-neutral: import from @mikro-orm/sql / @mikro-orm/core. The driver lives in src/db/orm-driver.ts.',
+            },
+            {
+              name: '@mikro-orm/postgresql',
+              message:
+                'Repositories are dialect-neutral: import from @mikro-orm/sql / @mikro-orm/core. The driver lives in src/db/orm-driver.ts.',
+            },
+            {
+              name: 'better-sqlite3',
+              message:
+                'Repositories are dialect-neutral: import from @mikro-orm/sql / @mikro-orm/core. The driver lives in src/db/orm-driver.ts.',
+            },
+          ],
+          patterns: [
+            {
+              group: ['**/services/*', '**/services/**/*'],
+              message:
+                'src/services/ is deleted. New backend code goes to src/nest/<domain>/ (service + controller + module, registered in app.module.ts). See src/nest/README.md.',
+            },
+          ],
+        },
+      ],
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: "MemberExpression[object.name='process'][property.name='env']",
+          message:
+            'Read configuration via src/app-config (readEnv()/derive/tokens), not process.env. Exemptions: eslint.config.mjs + src/app-config/README.md.',
+        },
+        {
+          selector: "MemberExpression[object.name='process'][property.value='env']",
+          message:
+            'Read configuration via src/app-config (readEnv()/derive/tokens), not process.env. Exemptions: eslint.config.mjs + src/app-config/README.md.',
+        },
+        {
+          selector: "CallExpression[callee.name='raw']",
+          message:
+            'Dialect SQL goes through src/db/dialect/sql-functions.ts, which dispatches on the live MikroORM platform. A repository must not spell raw SQL.',
+        },
+        {
+          selector: "TaggedTemplateExpression[tag.name='sql']",
+          message:
+            'Dialect SQL goes through src/db/dialect/sql-functions.ts, which dispatches on the live MikroORM platform. A repository must not spell raw SQL.',
+        },
+      ],
+    },
+  },
+  {
     // The plugin RPC decorator kit is written to stay extractable into its own
     // package, so its dependencies are pinned to Nest plus the two host modules it
     // genuinely needs. See src/nest/plugins/host/rpc-kit/README.md for what an

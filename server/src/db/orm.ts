@@ -56,8 +56,8 @@ export async function runSchemaBootstrap(orm: AnyOrm): Promise<void> {
 export function attachOrm(orm: AnyOrm): void {
   registerReinitializeHook(async () => {
     const connection = orm.em.getConnection();
-    // The old handle is already closed by this point; better-sqlite3's close()
-    // is idempotent, so letting Kysely destroy it again is harmless.
+    // The handle is owned and closed by `database.ts`; the bound driver's
+    // `destroy()` is a no-op (see `orm-driver.ts`), so this close never reaches it.
     await connection.close(true);
     await connection.connect();
     await runSchemaBootstrap(orm);

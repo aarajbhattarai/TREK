@@ -1,4 +1,4 @@
-import { Type, type EntityProperty, type Platform, type TransformContext } from '@mikro-orm/core';
+import { Type, type EntityProperty, type Platform } from '@mikro-orm/core';
 
 /** The text every DATETIME column holds and every API response emits. */
 export const DB_TIMESTAMP_RE = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/;
@@ -25,7 +25,9 @@ type TimestampValue = string | null | undefined;
  * text on the way in, and text is written as text on the way out.
  */
 export class DbTimestampType extends Type<TimestampValue, TimestampValue> {
-  override convertToDatabaseValue(value: TimestampValue, platform: Platform, context?: TransformContext): TimestampValue {
+  // Both converters drop the base class's `platform`/`context` parameters: the
+  // wire format is the same text on every dialect, so neither is consulted.
+  override convertToDatabaseValue(value: TimestampValue): TimestampValue {
     if (value == null) {
       return value;
     }
@@ -33,14 +35,10 @@ export class DbTimestampType extends Type<TimestampValue, TimestampValue> {
     if ((value as unknown) instanceof Date) {
       return dbNow(value as unknown as Date);
     }
-    if (typeof value === 'string') {
-      return value;
-    }
-    // Default: convert to string
-    return String(value);
+    return value;
   }
 
-  override convertToJSValue(value: TimestampValue, platform: Platform, context?: TransformContext): TimestampValue {
+  override convertToJSValue(value: TimestampValue): TimestampValue {
     if (value == null) {
       return value;
     }
@@ -48,16 +46,12 @@ export class DbTimestampType extends Type<TimestampValue, TimestampValue> {
     if ((value as unknown) instanceof Date) {
       return dbNow(value as unknown as Date);
     }
-    // Handle millisecond integers (legacy format)
-    if (typeof value === 'number' || (value as unknown) instanceof Number) {
-      const numValue = typeof value === 'number' ? value : (value as unknown as number);
-      return dbNow(new Date(numValue));
+    // Handle millisecond integers (legacy format) — a Date written by the stock
+    // DateTimeType reads back as a number.
+    if (typeof value === 'number') {
+      return dbNow(new Date(value as unknown as number));
     }
-    if (typeof value === 'string') {
-      return value;
-    }
-    // Default: convert to string
-    return String(value);
+    return value;
   }
 
   override getColumnType(prop: EntityProperty, platform: Platform): string {
