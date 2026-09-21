@@ -1,4 +1,6 @@
-import { Collection, type Ref, defineEntity, p, EntityRepository } from '@mikro-orm/core';
+import { Collection, type Ref, defineEntity, p } from '@mikro-orm/core';
+import { TripsRepository } from '../repositories/Trips.repository';
+import { DbTimestampType } from '../types';
 import { BudgetCategoryOrder } from './BudgetCategoryOrder.entity';
 import { BudgetItems } from './BudgetItems.entity';
 import { BudgetSettlements } from './BudgetSettlements.entity';
@@ -34,50 +36,49 @@ import { Users } from './Users.entity';
 export class Trips {
   id?: number | null;
   user!: Ref<Users>;
+  user_id!: number;
   title!: string;
   description?: string | null;
-  startDate?: string | null;
-  endDate?: string | null;
+  start_date?: string | null;
+  end_date?: string | null;
   currency?: string | null = 'EUR';
-  coverImage?: string | null;
-  isArchived?: number | null = 0;
-  reminderDays?: number | null = 3;
-  feedToken?: string | null;
-  createdAt?: Date | null;
-  updatedAt?: Date | null;
-  budgetCategoryOrderCollection = new Collection<BudgetCategoryOrder>(this);
-  budgetItemsCollection = new Collection<BudgetItems>(this);
-  budgetSettlementsCollection = new Collection<BudgetSettlements>(this);
-  collabLinksCollection = new Collection<CollabLinks>(this);
-  collabMessagesCollection = new Collection<CollabMessages>(this);
-  collabNotesCollection = new Collection<CollabNotes>(this);
-  collabPollsCollection = new Collection<CollabPolls>(this);
-  dawarichVisitSuggestionsCollection = new Collection<DawarichVisitSuggestions>(this);
-  dayAccommodationsCollection = new Collection<DayAccommodations>(this);
-  dayNotesCollection = new Collection<DayNotes>(this);
-  daysCollection = new Collection<Days>(this);
-  inviteTokensCollection = new Collection<InviteTokens>(this);
-  journeyEntriesCollection = new Collection<JourneyEntries>(this);
-  journeyTripsCollection = new Collection<JourneyTrips>(this);
-  packingBagsCollection = new Collection<PackingBags>(this);
-  packingCategoryAssigneesCollection = new Collection<PackingCategoryAssignees>(this);
-  packingItemsCollection = new Collection<PackingItems>(this);
-  photosCollection = new Collection<Photos>(this);
-  placesCollection = new Collection<Places>(this);
-  reservationsCollection = new Collection<Reservations>(this);
-  roadtripDayBoundariesCollection = new Collection<RoadtripDayBoundaries>(this);
-  roadtripPreferencesCollection = new Collection<RoadtripPreferences>(this);
-  shareTokensCollection = new Collection<ShareTokens>(this);
-  todoCategoryAssigneesCollection = new Collection<TodoCategoryAssignees>(this);
-  todoItemsCollection = new Collection<TodoItems>(this);
-  tripAlbumLinksCollection = new Collection<TripAlbumLinks>(this);
-  tripFilesCollection = new Collection<TripFiles>(this);
-  tripInviteTokensCollection = new Collection<TripInviteTokens>(this);
-  tripMembersCollection = new Collection<TripMembers>(this);
-  tripPhotosCollection = new Collection<TripPhotos>(this);
+  cover_image?: string | null;
+  is_archived?: number | null = 0;
+  reminder_days?: number | null = 3;
+  feed_token?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+  budget_category_order_collection = new Collection<BudgetCategoryOrder>(this);
+  budget_items_collection = new Collection<BudgetItems>(this);
+  budget_settlements_collection = new Collection<BudgetSettlements>(this);
+  collab_links_collection = new Collection<CollabLinks>(this);
+  collab_messages_collection = new Collection<CollabMessages>(this);
+  collab_notes_collection = new Collection<CollabNotes>(this);
+  collab_polls_collection = new Collection<CollabPolls>(this);
+  dawarich_visit_suggestions_collection = new Collection<DawarichVisitSuggestions>(this);
+  day_accommodations_collection = new Collection<DayAccommodations>(this);
+  day_notes_collection = new Collection<DayNotes>(this);
+  days_collection = new Collection<Days>(this);
+  invite_tokens_collection = new Collection<InviteTokens>(this);
+  journey_entries_collection = new Collection<JourneyEntries>(this);
+  journey_trips_collection = new Collection<JourneyTrips>(this);
+  packing_bags_collection = new Collection<PackingBags>(this);
+  packing_category_assignees_collection = new Collection<PackingCategoryAssignees>(this);
+  packing_items_collection = new Collection<PackingItems>(this);
+  photos_collection = new Collection<Photos>(this);
+  places_collection = new Collection<Places>(this);
+  reservations_collection = new Collection<Reservations>(this);
+  roadtrip_day_boundaries_collection = new Collection<RoadtripDayBoundaries>(this);
+  roadtrip_preferences_collection = new Collection<RoadtripPreferences>(this);
+  share_tokens_collection = new Collection<ShareTokens>(this);
+  todo_category_assignees_collection = new Collection<TodoCategoryAssignees>(this);
+  todo_items_collection = new Collection<TodoItems>(this);
+  trip_album_links_collection = new Collection<TripAlbumLinks>(this);
+  trip_files_collection = new Collection<TripFiles>(this);
+  trip_invite_tokens_collection = new Collection<TripInviteTokens>(this);
+  trip_members_collection = new Collection<TripMembers>(this);
+  trip_photos_collection = new Collection<TripPhotos>(this);
 }
-
-export class TripsRepository extends EntityRepository<Trips> {}
 
 export const TripsSchema = defineEntity({
   class: Trips,
@@ -86,52 +87,53 @@ export const TripsSchema = defineEntity({
     {
       name: 'idx_trips_feed_token',
       where: 'feed_token IS NOT NULL',
-      properties: ['feedToken'],
+      properties: ['feed_token'],
     },
   ],
   properties: {
     id: p.integer().primary().autoincrement(),
-    user: () => p.manyToOne(Users).ref().deleteRule('cascade').index('idx_trips_user_id'),
+    user: () => p.manyToOne(Users).ref().hidden().deleteRule('cascade').index('idx_trips_user_id'),
+    user_id: p.integer().persist(false),
     title: p.text(),
     description: p.text().nullable(),
-    startDate: p.text().nullable(),
-    endDate: p.text().nullable(),
+    start_date: p.text().nullable(),
+    end_date: p.text().nullable(),
     currency: p.text().nullable(),
-    coverImage: p.text().nullable(),
-    isArchived: p.integer().nullable(),
-    reminderDays: p.integer().nullable(),
-    feedToken: p.text().nullable(),
-    createdAt: p.datetime().nullable().onCreate(() => new Date()).index('idx_trips_created_at'),
-    updatedAt: p.datetime().nullable().onCreate(() => new Date()),
-    budgetCategoryOrderCollection: () => p.oneToMany(BudgetCategoryOrder).mappedBy('trip'),
-    budgetItemsCollection: () => p.oneToMany(BudgetItems).mappedBy('trip'),
-    budgetSettlementsCollection: () => p.oneToMany(BudgetSettlements).mappedBy('trip'),
-    collabLinksCollection: () => p.oneToMany(CollabLinks).mappedBy('trip'),
-    collabMessagesCollection: () => p.oneToMany(CollabMessages).mappedBy('trip'),
-    collabNotesCollection: () => p.oneToMany(CollabNotes).mappedBy('trip'),
-    collabPollsCollection: () => p.oneToMany(CollabPolls).mappedBy('trip'),
-    dawarichVisitSuggestionsCollection: () => p.oneToMany(DawarichVisitSuggestions).mappedBy('trip'),
-    dayAccommodationsCollection: () => p.oneToMany(DayAccommodations).mappedBy('trip'),
-    dayNotesCollection: () => p.oneToMany(DayNotes).mappedBy('trip'),
-    daysCollection: () => p.oneToMany(Days).mappedBy('trip'),
-    inviteTokensCollection: () => p.oneToMany(InviteTokens).mappedBy('trip'),
-    journeyEntriesCollection: () => p.oneToMany(JourneyEntries).mappedBy('sourceTrip'),
-    journeyTripsCollection: () => p.oneToMany(JourneyTrips).mappedBy('trip'),
-    packingBagsCollection: () => p.oneToMany(PackingBags).mappedBy('trip'),
-    packingCategoryAssigneesCollection: () => p.oneToMany(PackingCategoryAssignees).mappedBy('trip'),
-    packingItemsCollection: () => p.oneToMany(PackingItems).mappedBy('trip'),
-    photosCollection: () => p.oneToMany(Photos).mappedBy('trip'),
-    placesCollection: () => p.oneToMany(Places).mappedBy('trip'),
-    reservationsCollection: () => p.oneToMany(Reservations).mappedBy('trip'),
-    roadtripDayBoundariesCollection: () => p.oneToMany(RoadtripDayBoundaries).mappedBy('trip'),
-    roadtripPreferencesCollection: () => p.oneToMany(RoadtripPreferences).mappedBy('trip'),
-    shareTokensCollection: () => p.oneToMany(ShareTokens).mappedBy('trip'),
-    todoCategoryAssigneesCollection: () => p.oneToMany(TodoCategoryAssignees).mappedBy('trip'),
-    todoItemsCollection: () => p.oneToMany(TodoItems).mappedBy('trip'),
-    tripAlbumLinksCollection: () => p.oneToMany(TripAlbumLinks).mappedBy('trip'),
-    tripFilesCollection: () => p.oneToMany(TripFiles).mappedBy('trip'),
-    tripInviteTokensCollection: () => p.oneToMany(TripInviteTokens).mappedBy('trip'),
-    tripMembersCollection: () => p.oneToMany(TripMembers).mappedBy('trip'),
-    tripPhotosCollection: () => p.oneToMany(TripPhotos).mappedBy('trip'),
+    cover_image: p.text().nullable(),
+    is_archived: p.integer().nullable(),
+    reminder_days: p.integer().nullable(),
+    feed_token: p.text().nullable(),
+    created_at: p.type(DbTimestampType).nullable().index('idx_trips_created_at').defaultRaw('CURRENT_TIMESTAMP'),
+    updated_at: p.type(DbTimestampType).nullable().defaultRaw('CURRENT_TIMESTAMP'),
+    budget_category_order_collection: () => p.oneToMany(BudgetCategoryOrder).hidden().mappedBy('trip'),
+    budget_items_collection: () => p.oneToMany(BudgetItems).hidden().mappedBy('trip'),
+    budget_settlements_collection: () => p.oneToMany(BudgetSettlements).hidden().mappedBy('trip'),
+    collab_links_collection: () => p.oneToMany(CollabLinks).hidden().mappedBy('trip'),
+    collab_messages_collection: () => p.oneToMany(CollabMessages).hidden().mappedBy('trip'),
+    collab_notes_collection: () => p.oneToMany(CollabNotes).hidden().mappedBy('trip'),
+    collab_polls_collection: () => p.oneToMany(CollabPolls).hidden().mappedBy('trip'),
+    dawarich_visit_suggestions_collection: () => p.oneToMany(DawarichVisitSuggestions).hidden().mappedBy('trip'),
+    day_accommodations_collection: () => p.oneToMany(DayAccommodations).hidden().mappedBy('trip'),
+    day_notes_collection: () => p.oneToMany(DayNotes).hidden().mappedBy('trip'),
+    days_collection: () => p.oneToMany(Days).hidden().mappedBy('trip'),
+    invite_tokens_collection: () => p.oneToMany(InviteTokens).hidden().mappedBy('trip'),
+    journey_entries_collection: () => p.oneToMany(JourneyEntries).hidden().mappedBy('sourceTrip'),
+    journey_trips_collection: () => p.oneToMany(JourneyTrips).hidden().mappedBy('trip'),
+    packing_bags_collection: () => p.oneToMany(PackingBags).hidden().mappedBy('trip'),
+    packing_category_assignees_collection: () => p.oneToMany(PackingCategoryAssignees).hidden().mappedBy('trip'),
+    packing_items_collection: () => p.oneToMany(PackingItems).hidden().mappedBy('trip'),
+    photos_collection: () => p.oneToMany(Photos).hidden().mappedBy('trip'),
+    places_collection: () => p.oneToMany(Places).hidden().mappedBy('trip'),
+    reservations_collection: () => p.oneToMany(Reservations).hidden().mappedBy('trip'),
+    roadtrip_day_boundaries_collection: () => p.oneToMany(RoadtripDayBoundaries).hidden().mappedBy('trip'),
+    roadtrip_preferences_collection: () => p.oneToMany(RoadtripPreferences).hidden().mappedBy('trip'),
+    share_tokens_collection: () => p.oneToMany(ShareTokens).hidden().mappedBy('trip'),
+    todo_category_assignees_collection: () => p.oneToMany(TodoCategoryAssignees).hidden().mappedBy('trip'),
+    todo_items_collection: () => p.oneToMany(TodoItems).hidden().mappedBy('trip'),
+    trip_album_links_collection: () => p.oneToMany(TripAlbumLinks).hidden().mappedBy('trip'),
+    trip_files_collection: () => p.oneToMany(TripFiles).hidden().mappedBy('trip'),
+    trip_invite_tokens_collection: () => p.oneToMany(TripInviteTokens).hidden().mappedBy('trip'),
+    trip_members_collection: () => p.oneToMany(TripMembers).hidden().mappedBy('trip'),
+    trip_photos_collection: () => p.oneToMany(TripPhotos).hidden().mappedBy('trip'),
   },
 });

@@ -1,4 +1,5 @@
-import { Collection, type Ref, defineEntity, p, EntityRepository } from '@mikro-orm/core';
+import { Collection, type Ref, defineEntity, p } from '@mikro-orm/core';
+import { DaysRepository } from '../repositories/Days.repository';
 import { DayAccommodations } from './DayAccommodations.entity';
 import { DayAssignments } from './DayAssignments.entity';
 import { DayNotes } from './DayNotes.entity';
@@ -12,45 +13,45 @@ import { Trips } from './Trips.entity';
 export class Days {
   id?: number | null;
   trip!: Ref<Trips>;
-  dayNumber!: number;
+  trip_id!: number;
+  day_number!: number;
   date?: string | null;
   notes?: string | null;
   title?: string | null;
-  defaultTransportMode?: string | null;
-  dayAccommodationsCollection = new Collection<DayAccommodations>(this);
-  dayAccommodationsCollection1 = new Collection<DayAccommodations>(this);
-  dayAssignmentsCollection = new Collection<DayAssignments>(this);
-  dayNotesCollection = new Collection<DayNotes>(this);
-  photosCollection = new Collection<Photos>(this);
-  reservationDayPositionsCollection = new Collection<ReservationDayPositions>(this);
-  reservationsCollection = new Collection<Reservations>(this);
-  reservationsCollection1 = new Collection<Reservations>(this);
-  roadtripDayTracks: Ref<RoadtripDayTracks> | null = null;
-  roadtripViasCollection = new Collection<RoadtripVias>(this);
+  default_transport_mode?: string | null;
+  day_accommodations_collection = new Collection<DayAccommodations>(this);
+  day_accommodations_collection1 = new Collection<DayAccommodations>(this);
+  day_assignments_collection = new Collection<DayAssignments>(this);
+  day_notes_collection = new Collection<DayNotes>(this);
+  photos_collection = new Collection<Photos>(this);
+  reservation_day_positions_collection = new Collection<ReservationDayPositions>(this);
+  reservations_collection = new Collection<Reservations>(this);
+  reservations_collection1 = new Collection<Reservations>(this);
+  roadtrip_day_tracks: Ref<RoadtripDayTracks> | null = null;
+  roadtrip_vias_collection = new Collection<RoadtripVias>(this);
 }
-
-export class DaysRepository extends EntityRepository<Days> {}
 
 export const DaysSchema = defineEntity({
   class: Days,
   repository: () => DaysRepository,
   properties: {
     id: p.integer().primary().autoincrement(),
-    trip: () => p.manyToOne(Trips).ref().deleteRule('cascade').index('idx_days_trip_id'),
-    dayNumber: p.integer(),
+    trip: () => p.manyToOne(Trips).ref().hidden().deleteRule('cascade').index('idx_days_trip_id'),
+    trip_id: p.integer().persist(false),
+    day_number: p.integer(),
     date: p.text().nullable(),
     notes: p.text().nullable(),
     title: p.text().nullable(),
-    defaultTransportMode: p.text().nullable(),
-    dayAccommodationsCollection: () => p.oneToMany(DayAccommodations).mappedBy('startDay'),
-    dayAccommodationsCollection1: () => p.oneToMany(DayAccommodations).mappedBy('endDay'),
-    dayAssignmentsCollection: () => p.oneToMany(DayAssignments).mappedBy('day'),
-    dayNotesCollection: () => p.oneToMany(DayNotes).mappedBy('day'),
-    photosCollection: () => p.oneToMany(Photos).mappedBy('day'),
-    reservationDayPositionsCollection: () => p.oneToMany(ReservationDayPositions).mappedBy('day'),
-    reservationsCollection: () => p.oneToMany(Reservations).mappedBy('day'),
-    reservationsCollection1: () => p.oneToMany(Reservations).mappedBy('endDay'),
-    roadtripDayTracks: () => p.oneToOne(RoadtripDayTracks).ref().mappedBy('day'),
-    roadtripViasCollection: () => p.oneToMany(RoadtripVias).mappedBy('day'),
+    default_transport_mode: p.text().nullable(),
+    day_accommodations_collection: () => p.oneToMany(DayAccommodations).hidden().mappedBy('startDay'),
+    day_accommodations_collection1: () => p.oneToMany(DayAccommodations).hidden().mappedBy('endDay'),
+    day_assignments_collection: () => p.oneToMany(DayAssignments).hidden().mappedBy('day'),
+    day_notes_collection: () => p.oneToMany(DayNotes).hidden().mappedBy('day'),
+    photos_collection: () => p.oneToMany(Photos).hidden().mappedBy('day'),
+    reservation_day_positions_collection: () => p.oneToMany(ReservationDayPositions).hidden().mappedBy('day'),
+    reservations_collection: () => p.oneToMany(Reservations).hidden().mappedBy('day'),
+    reservations_collection1: () => p.oneToMany(Reservations).hidden().mappedBy('endDay'),
+    roadtrip_day_tracks: () => p.oneToOne(RoadtripDayTracks).ref().hidden().mappedBy('day'),
+    roadtrip_vias_collection: () => p.oneToMany(RoadtripVias).hidden().mappedBy('day'),
   },
 });
