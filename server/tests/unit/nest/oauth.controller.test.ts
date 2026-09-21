@@ -35,8 +35,8 @@ function makeRes() {
   };
   return res as unknown as Response & { statusCode: number; headers: Record<string, string>; body: unknown; ended: boolean };
 }
-function thrown(fn: () => unknown): { status: number; body: unknown } {
-  try { fn(); } catch (err) {
+async function thrownAsync(fn: () => Promise<unknown>): Promise<{ status: number; body: unknown }> {
+  try { await fn(); } catch (err) {
     expect(err).toBeInstanceOf(HttpException);
     const e = err as HttpException;
     return { status: e.getStatus(), body: e.getResponse() };
@@ -348,7 +348,7 @@ describe('OauthApiController', () => {
   });
 
   it('clients/sessions: 403 when MCP off, else CRUD', async () => {
-    expect(thrown(() => new OauthApiController(osvc({ mcpEnabled: vi.fn().mockReturnValue(false) }), rl()).listClients(user))).toEqual({ status: 403, body: { error: 'MCP is not enabled' } });
+    expect(await thrownAsync(() => new OauthApiController(osvc({ mcpEnabled: vi.fn().mockReturnValue(false) }), rl()).listClients(user))).toEqual({ status: 403, body: { error: 'MCP is not enabled' } });
     expect(await new OauthApiController(osvc({ listOAuthClients: vi.fn().mockReturnValue([{ id: 'c1' }]) }), rl()).listClients(user)).toEqual({ clients: [{ id: 'c1' }] });
     expect(await new OauthApiController(osvc({ createOAuthClient: vi.fn().mockReturnValue({ client_id: 'c1', client_secret: 's' }) }), rl()).createClient(user, { name: 'CLI', allowed_scopes: ['a'] }, req)).toEqual({ client_id: 'c1', client_secret: 's' });
     expect(await new OauthApiController(osvc({ deleteOAuthClient: vi.fn().mockReturnValue({}) }), rl()).deleteClient(user, 'c1', req)).toEqual({ success: true });
@@ -357,7 +357,7 @@ describe('OauthApiController', () => {
   });
 
   it('rotate maps a service error, else returns the new secret', async () => {
-    expect(thrown(() => new OauthApiController(osvc({ rotateOAuthClientSecret: vi.fn().mockReturnValue({ error: 'not_found', status: 404 }) }), rl()).rotateClient(user, 'c1', req))).toEqual({ status: 404, body: { error: 'not_found' } });
+    expect(await thrownAsync(() => new OauthApiController(osvc({ rotateOAuthClientSecret: vi.fn().mockReturnValue({ error: 'not_found', status: 404 }) }), rl()).rotateClient(user, 'c1', req))).toEqual({ status: 404, body: { error: 'not_found' } });
     expect(await new OauthApiController(osvc({ rotateOAuthClientSecret: vi.fn().mockReturnValue({ client_secret: 'new' }) }), rl()).rotateClient(user, 'c1', req)).toEqual({ client_secret: 'new' });
   });
 
@@ -365,19 +365,19 @@ describe('OauthApiController', () => {
     const res = makeRes2();
     const anon = await new OauthApiController(osvc({ validateAuthorizeRequest: vi.fn().mockReturnValue({ valid: false, error: 'x' }) }), rl()).validate({ ...req, user: undefined } as Request, {}, res);
     expect(anon).toEqual({ valid: false, error: 'invalid_request', error_description: 'Invalid authorization request' });
-    expect(thrown(() => new OauthApiController(osvc({ createOAuthClient: vi.fn().mockReturnValue({ error: 'invalid_redirect_uri', status: 400 }) }), rl()).createClient(user, { name: 'X', allowed_scopes: ['a'] }, req))).toEqual({ status: 400, body: { error: 'invalid_redirect_uri' } });
+    expect(await thrownAsync(() => new OauthApiController(osvc({ createOAuthClient: vi.fn().mockReturnValue({ error: 'invalid_redirect_uri', status: 400 }) }), rl()).createClient(user, { name: 'X', allowed_scopes: ['a'] }, req))).toEqual({ status: 400, body: { error: 'invalid_redirect_uri' } });
   });
 
-  it('authorize: 400 when re-validation fails, 503 when the auth code cannot be issued', () => {
-    expect(thrown(() => new OauthApiController(osvc({ validateAuthorizeRequest: vi.fn().mockReturnValue({ valid: false, error: 'invalid_scope', error_description: 'bad' }) }), rl()).authorize(user, { client_id: 'c', redirect_uri: 'https://cb', scope: 's', code_challenge: 'cc', code_challenge_method: 'S256', approved: true }, req))).toEqual({ status: 400, body: { error: 'invalid_scope', error_description: 'bad' } });
-    expect(thrown(() => new OauthApiController(osvc({ validateAuthorizeRequest: vi.fn().mockReturnValue({ valid: true, scopes: ['s'], resource: null }), saveConsent: vi.fn(), createAuthCode: vi.fn().mockReturnValue(null) }), rl()).authorize(user, { client_id: 'c', redirect_uri: 'https://cb', scope: 's', code_challenge: 'cc', code_challenge_method: 'S256', approved: true }, req))).toEqual({ status: 503, body: { error: 'server_error', error_description: 'Authorization server is temporarily unavailable' } });
+  it('authorize: 400 when re-validation fails, 503 when the auth code cannot be issued', async () => {
+    expect(await thrownAsync(() => new OauthApiController(osvc({ validateAuthorizeRequest: vi.fn().mockReturnValue({ valid: false, error: 'invalid_scope', error_description: 'bad' }) }), rl()).authorize(user, { client_id: 'c', redirect_uri: 'https://cb', scope: 's', code_challenge: 'cc', code_challenge_method: 'S256', approved: true }, req))).toEqual({ status: 400, body: { error: 'invalid_scope', error_description: 'bad' } });
+    expect(await thrownAsync(() => new OauthApiController(osvc({ validateAuthorizeRequest: vi.fn().mockReturnValue({ valid: true, scopes: ['s'], resource: null }), saveConsent: vi.fn(), createAuthCode: vi.fn().mockReturnValue(null) }), rl()).authorize(user, { client_id: 'c', redirect_uri: 'https://cb', scope: 's', code_challenge: 'cc', code_challenge_method: 'S256', approved: true }, req))).toEqual({ status: 503, body: { error: 'server_error', error_description: 'Authorization server is temporarily unavailable' } });
   });
 
-  it('validate: 429 when the per-ip bucket is exhausted', () => {
+  it('validate: 429 when the per-ip bucket is exhausted', async () => {
     const s = rl();
     for (let i = 0; i < 30; i++) s.check('oauth_validate', '1.2.3.4', 30, 60000, Date.now());
     const res = makeRes2();
-    expect(thrown(() => new OauthApiController(osvc(), s).validate({ ...req } as Request, {}, res))).toEqual({
+    expect(await thrownAsync(() => new OauthApiController(osvc(), s).validate({ ...req } as Request, {}, res))).toEqual({
       status: 429,
       body: { error: 'too_many_requests', error_description: 'Too many attempts. Please try again later.' },
     });
@@ -399,8 +399,8 @@ describe('OauthApiController', () => {
     expect(validateAuthorizeRequest).toHaveBeenCalledWith(expect.objectContaining({ resource: 'https://r' }), 9);
   });
 
-  it('authorize: 403 when MCP is disabled', () => {
-    expect(thrown(() => new OauthApiController(osvc({ mcpEnabled: vi.fn().mockReturnValue(false) }), rl())
+  it('authorize: 403 when MCP is disabled', async () => {
+    expect(await thrownAsync(() => new OauthApiController(osvc({ mcpEnabled: vi.fn().mockReturnValue(false) }), rl())
       .authorize(user, { client_id: 'c', redirect_uri: 'https://cb', scope: 's', code_challenge: 'cc', code_challenge_method: 'S256', approved: false }, req)))
       .toEqual({ status: 403, body: { error: 'MCP is not enabled' } });
   });
@@ -416,32 +416,32 @@ describe('OauthApiController', () => {
     expect((ok as { redirect: string }).redirect).toContain('state=xyz');
   });
 
-  it('authorize: a denial is validated too, so the redirect can only be a registered URI', () => {
+  it('authorize: a denial is validated too, so the redirect can only be a registered URI', async () => {
     const validateAuthorizeRequest = vi.fn().mockReturnValue({ valid: false, error: 'invalid_redirect_uri', error_description: 'Invalid redirect URI' });
     const svc = osvc({ validateAuthorizeRequest, saveConsent: vi.fn(), createAuthCode: vi.fn() });
-    expect(thrown(() => new OauthApiController(svc, rl())
+    expect(await thrownAsync(() => new OauthApiController(svc, rl())
       .authorize(user, { client_id: 'c', redirect_uri: 'not a url', scope: 's', code_challenge: 'cc', code_challenge_method: 'S256', approved: false }, req)))
       .toEqual({ status: 400, body: { error: 'invalid_redirect_uri', error_description: 'Invalid redirect URI' } });
     expect(validateAuthorizeRequest).toHaveBeenCalled();
   });
 
-  it('client/session errors default the status to 400 when the service omits it', () => {
-    expect(thrown(() => new OauthApiController(osvc({ createOAuthClient: vi.fn().mockReturnValue({ error: 'bad' }) }), rl()).createClient(user, { name: 'X', allowed_scopes: ['a'] }, req)))
+  it('client/session errors default the status to 400 when the service omits it', async () => {
+    expect(await thrownAsync(() => new OauthApiController(osvc({ createOAuthClient: vi.fn().mockReturnValue({ error: 'bad' }) }), rl()).createClient(user, { name: 'X', allowed_scopes: ['a'] }, req)))
       .toEqual({ status: 400, body: { error: 'bad' } });
-    expect(thrown(() => new OauthApiController(osvc({ rotateOAuthClientSecret: vi.fn().mockReturnValue({ error: 'bad' }) }), rl()).rotateClient(user, 'c1', req)))
+    expect(await thrownAsync(() => new OauthApiController(osvc({ rotateOAuthClientSecret: vi.fn().mockReturnValue({ error: 'bad' }) }), rl()).rotateClient(user, 'c1', req)))
       .toEqual({ status: 400, body: { error: 'bad' } });
-    expect(thrown(() => new OauthApiController(osvc({ deleteOAuthClient: vi.fn().mockReturnValue({ error: 'not_found', status: 404 }) }), rl()).deleteClient(user, 'c1', req)))
+    expect(await thrownAsync(() => new OauthApiController(osvc({ deleteOAuthClient: vi.fn().mockReturnValue({ error: 'not_found', status: 404 }) }), rl()).deleteClient(user, 'c1', req)))
       .toEqual({ status: 404, body: { error: 'not_found' } });
-    expect(thrown(() => new OauthApiController(osvc({ deleteOAuthClient: vi.fn().mockReturnValue({ error: 'bad' }) }), rl()).deleteClient(user, 'c1', req)))
+    expect(await thrownAsync(() => new OauthApiController(osvc({ deleteOAuthClient: vi.fn().mockReturnValue({ error: 'bad' }) }), rl()).deleteClient(user, 'c1', req)))
       .toEqual({ status: 400, body: { error: 'bad' } });
-    expect(thrown(() => new OauthApiController(osvc({ revokeSession: vi.fn().mockReturnValue({ error: 'not_found', status: 404 }) }), rl()).revokeSession(user, '1', req)))
+    expect(await thrownAsync(() => new OauthApiController(osvc({ revokeSession: vi.fn().mockReturnValue({ error: 'not_found', status: 404 }) }), rl()).revokeSession(user, '1', req)))
       .toEqual({ status: 404, body: { error: 'not_found' } });
-    expect(thrown(() => new OauthApiController(osvc({ revokeSession: vi.fn().mockReturnValue({ error: 'bad' }) }), rl()).revokeSession(user, '1', req)))
+    expect(await thrownAsync(() => new OauthApiController(osvc({ revokeSession: vi.fn().mockReturnValue({ error: 'bad' }) }), rl()).revokeSession(user, '1', req)))
       .toEqual({ status: 400, body: { error: 'bad' } });
   });
 
-  it('sessions: 403 when MCP is off on the list', () => {
-    expect(thrown(() => new OauthApiController(osvc({ mcpEnabled: vi.fn().mockReturnValue(false) }), rl()).listSessions(user)))
+  it('sessions: 403 when MCP is off on the list', async () => {
+    expect(await thrownAsync(() => new OauthApiController(osvc({ mcpEnabled: vi.fn().mockReturnValue(false) }), rl()).listSessions(user)))
       .toEqual({ status: 403, body: { error: 'MCP is not enabled' } });
   });
 });
