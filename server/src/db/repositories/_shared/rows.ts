@@ -1,4 +1,4 @@
-import { wrap, type EntityDTO } from '@mikro-orm/core';
+import { wrap, type Collection, type EntityDTO, type Reference } from '@mikro-orm/core';
 
 /**
  * The plain row a service (and, through it, the API) sees.
@@ -12,3 +12,22 @@ import { wrap, type EntityDTO } from '@mikro-orm/core';
 export function toRow<T extends object>(entity: T): EntityDTO<T> {
   return wrap(entity).toObject() as EntityDTO<T>;
 }
+
+/** The scalar (column-backed) keys of an entity class: everything that is not a relation or a collection. */
+export type ScalarKeys<T> = {
+  [K in keyof T]-?: NonNullable<T[K]> extends Collection<object> | Reference<object> ? never : K;
+}[keyof T];
+
+/**
+ * Compile-time parity between a hand-written row interface and the entity's
+ * scalar keys: a column added to or removed from the entity fails `tsc` here
+ * instead of leaking silently through `toRow`'s cast. Types (nullability)
+ * stay hand-maintained in the interface on purpose — that is where the API
+ * shape is documented.
+ */
+export type AssertRowKeys<Row, Entity> = [
+  Exclude<keyof Row, ScalarKeys<Entity>>,
+  Exclude<ScalarKeys<Entity>, keyof Row>,
+] extends [never, never]
+  ? true
+  : never;

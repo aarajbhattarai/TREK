@@ -68,6 +68,6 @@ describe('TripsRepository.findAccessible — parity with canAccessTrip', () => {
     const entity = await t.repo(Trips).findOneOrFail({ id: trip.id });
     const raw = testDb.prepare('SELECT * FROM trips WHERE id = ?').get(trip.id) as Record<string, unknown>;
     const { wrap } = await import('@mikro-orm/core');
-    expect(wrap(entity).toObject()).toEqual(raw);
+    expect(wrap(entity).toObject()).toStrictEqual(raw);
   });
 });

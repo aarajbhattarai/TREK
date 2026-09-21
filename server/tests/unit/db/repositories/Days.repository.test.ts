@@ -26,7 +26,7 @@ describe('DaysRepository', () => {
     const trip = createTrip(testDb, user.id);
     const day = createDay(testDb, trip.id, { date: '2026-07-01', title: 'Arrival' });
     const [row] = await days.listByTrip(trip.id);
-    expect(row).toEqual(rawDay(day.id));
+    expect(row).toStrictEqual(rawDay(day.id));
   });
 
   it('DAYREPO-002: the scalar FK hydrates without loading the trip', async () => {
@@ -60,15 +60,18 @@ describe('DaysRepository', () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     expect(await days.maxDayNumber(trip.id)).toBe(0);
-    createDay(testDb, trip.id, { day_number: 3 });
-    expect(await days.maxDayNumber(trip.id)).toBe(3);
+    createDay(testDb, trip.id, { day_number: 1 });
+    createDay(testDb, trip.id, { day_number: 10 });
+    createDay(testDb, trip.id, { day_number: 2 });
+    // 10, not '2': the descending order has to be numeric, not lexicographic.
+    expect(await days.maxDayNumber(trip.id)).toBe(10);
   });
 
   it('DAYREPO-006: createDay writes the legacy column set and returns the re-read row', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
-    const row = await days.createDay({ trip_id: trip.id, day_number: 1, date: '2026-07-01' });
-    expect(row).toEqual(rawDay(row.id));
+    const row = await days.createDay({ trip_id: trip.id, day_number: 1, date: '2026-07-01', notes: null });
+    expect(row).toStrictEqual(rawDay(row.id));
     expect(row.notes).toBeNull();
     expect(row.trip_id).toBe(trip.id);
   });

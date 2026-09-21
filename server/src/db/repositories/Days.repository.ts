@@ -1,5 +1,5 @@
 import type { Days } from '../entities/Days.entity';
-import { toRow } from './_shared/rows';
+import { toRow, type AssertRowKeys } from './_shared/rows';
 import { EntityRepository } from '@mikro-orm/sql';
 
 /** A `days` row as the API emits it. */
@@ -12,6 +12,8 @@ export interface DayRow {
   title: string | null;
   default_transport_mode: string | null;
 }
+
+const _dayRowKeys: AssertRowKeys<DayRow, Days> = true;
 
 export class DaysRepository extends EntityRepository<Days> {
   /** `SELECT * FROM days WHERE trip_id = ? ORDER BY day_number ASC` */
@@ -45,27 +47,31 @@ export class DaysRepository extends EntityRepository<Days> {
   }
 
   /**
-   * `INSERT INTO days (trip_id, day_number, date, notes) VALUES (?, ?, ?, ?)`
-   * followed by the legacy re-select, so the caller gets the stored row (with
-   * every column default applied) and not what it asked to store.
+   * The column set of the legacy INSERT:
+   * `INSERT INTO days (trip_id, day_number, date, notes) VALUES (?, ?, ?, ?)`.
    *
-   * The re-select is not optional: the insert's `returning` clause carries only
-   * the generated and `defaultRaw` columns, so a column this insert never named
-   * (`title`, `default_transport_mode`) would still be `undefined` on the
-   * entity and would simply be missing from the row.
+   * The caller passes already-coerced values — every field is required and is
+   * written verbatim, because a default or a coercion belongs to the service
+   * that owns the rule, not to the statement that stores it.
+   *
+   * The insert is followed by the legacy re-select, so the caller gets the
+   * stored row rather than what it asked to store. That re-select is not
+   * optional: the insert's `returning` clause carries only the generated and
+   * `defaultRaw` columns, so a column this insert never names (`title`,
+   * `default_transport_mode`) would still be `undefined` on the entity and
+   * would simply be missing from the row.
    */
   async createDay(input: {
     trip_id: number;
     day_number: number;
-    date?: string | null;
-    notes?: string | null;
+    date: string | null;
+    notes: string | null;
   }): Promise<DayRow> {
     const day = this.create({
       trip: input.trip_id,
-      trip_id: input.trip_id,
       day_number: input.day_number,
-      date: input.date ?? null,
-      notes: input.notes ?? null,
+      date: input.date,
+      notes: input.notes,
     });
     await this.getEntityManager().persist(day).flush();
     await this.getEntityManager().refresh(day);

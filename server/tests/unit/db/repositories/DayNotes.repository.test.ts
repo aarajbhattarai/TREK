@@ -22,19 +22,19 @@ describe('DayNotesRepository timestamps', () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const day = createDay(testDb, trip.id);
-    const row = await notes.createNote({ day_id: day.id, trip_id: trip.id, text: 'Lunch' });
+    const row = await notes.createNote({ day_id: day.id, trip_id: trip.id, text: 'Lunch', time: null, icon: '📝', sort_order: 0, color: null });
     const stored = testDb.prepare('SELECT created_at, typeof(created_at) AS kind FROM day_notes WHERE id = ?').get(row.id) as { created_at: string; kind: string };
     expect(stored.kind).toBe('text');
     expect(stored.created_at).toMatch(DB_TIMESTAMP_RE);
     expect(row.created_at).toBe(stored.created_at);
   });
 
-  it('NOTEREPO-002: the returned row is the SELECT * row and the defaults are the legacy ones', async () => {
+  it('NOTEREPO-002: the returned row is the SELECT * row, with the values the caller passed written verbatim', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const day = createDay(testDb, trip.id);
-    const row = await notes.createNote({ day_id: day.id, trip_id: trip.id, text: 'Lunch' });
-    expect(row).toEqual(testDb.prepare('SELECT * FROM day_notes WHERE id = ?').get(row.id));
+    const row = await notes.createNote({ day_id: day.id, trip_id: trip.id, text: 'Lunch', time: null, icon: '📝', sort_order: 0, color: null });
+    expect(row).toStrictEqual(testDb.prepare('SELECT * FROM day_notes WHERE id = ?').get(row.id));
     expect(row.icon).toBe('📝');
     expect(row.sort_order).toBe(0);
   });
@@ -43,7 +43,7 @@ describe('DayNotesRepository timestamps', () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const day = createDay(testDb, trip.id);
-    const row = await notes.createNote({ day_id: day.id, trip_id: trip.id, text: 'Lunch' });
+    const row = await notes.createNote({ day_id: day.id, trip_id: trip.id, text: 'Lunch', time: null, icon: '📝', sort_order: 0, color: null });
     const d = testDb.prepare('SELECT date(created_at) AS d FROM day_notes WHERE id = ?').get(row.id) as { d: string };
     expect(d.d).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   });
