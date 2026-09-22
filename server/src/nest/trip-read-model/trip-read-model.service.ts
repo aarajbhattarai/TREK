@@ -41,7 +41,7 @@ export class TripReadModelService {
     return this.dbs.connection;
   }
 
-  private getOwner(tripId: string | number): { user_id: number } | undefined {
+  private async getOwner(tripId: string | number): Promise<{ user_id: number } | undefined> {
     return this.db.prepare('SELECT user_id FROM trips WHERE id = ?').get(tripId) as { user_id: number } | undefined;
   }
 
@@ -53,7 +53,7 @@ export class TripReadModelService {
     );
     if (!trip) return null;
 
-    const ownerRow = this.getOwner(tripId);
+    const ownerRow = await this.getOwner(tripId);
     if (!ownerRow) return null;
     const { owner, members } = await this.members.listMembers(tripId, ownerRow.user_id);
 

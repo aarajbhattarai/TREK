@@ -121,13 +121,13 @@ describe('trip feed token lifecycle', () => {
   it('FEED-SVC-001: reports no URL while the trip has no token', async () => {
     const { user, tripId } = seedTrip();
 
-    expect(svc.getTripToken(tripId, user.id, BASE)).toEqual({ feed_url: null });
+    expect(await svc.getTripToken(tripId, user.id, BASE)).toEqual({ feed_url: null });
   });
 
   it('FEED-SVC-002: reports the absolute feed URL once a token exists', async () => {
     const { user, tripId } = seedTrip('tok-trip');
 
-    expect(svc.getTripToken(tripId, user.id, BASE)).toEqual({
+    expect(await svc.getTripToken(tripId, user.id, BASE)).toEqual({
       feed_url: `${BASE}/api/feed/trip/tok-trip.ics`,
     });
   });
@@ -137,7 +137,7 @@ describe('trip feed token lifecycle', () => {
     // otherwise produce https://host//api/feed/... which some clients reject.
     const { user, tripId } = seedTrip('tok-trip');
 
-    expect(svc.getTripToken(tripId, user.id, `${BASE}/`).feed_url).toBe(
+    expect((await svc.getTripToken(tripId, user.id, `${BASE}/`)).feed_url).toBe(
       `${BASE}/api/feed/trip/tok-trip.ics`,
     );
   });
@@ -148,7 +148,7 @@ describe('trip feed token lifecycle', () => {
     const { tripId } = seedTrip('tok-trip');
     const { user: outsider } = createUser(testDb);
 
-    expect(svc.getTripToken(tripId, outsider.id, BASE)).toEqual({ feed_url: null });
+    expect(await svc.getTripToken(tripId, outsider.id, BASE)).toEqual({ feed_url: null });
   });
 
   // Membership is what the service checks, and that stays true: whether the
@@ -159,7 +159,7 @@ describe('trip feed token lifecycle', () => {
     const { user: member } = createUser(testDb);
     addTripMember(testDb, trip.id, member.id);
 
-    expect(svc.getTripToken(tripId, member.id, BASE).feed_url).toBe(
+    expect((await svc.getTripToken(tripId, member.id, BASE)).feed_url).toBe(
       `${BASE}/api/feed/trip/tok-trip.ics`,
     );
   });
@@ -169,8 +169,8 @@ describe('trip feed token lifecycle', () => {
     // calendar client — that is what rotate is for.
     const { user, tripId } = seedTrip();
 
-    const first = svc.generateTripToken(tripId, user.id, BASE);
-    const second = svc.generateTripToken(tripId, user.id, BASE);
+    const first = await svc.generateTripToken(tripId, user.id, BASE);
+    const second = await svc.generateTripToken(tripId, user.id, BASE);
 
     expect(first.feed_url).toMatch(new RegExp(`^${BASE}/api/feed/trip/[0-9a-f-]+\\.ics$`));
     expect(second.feed_url).toBe(first.feed_url);
@@ -178,10 +178,10 @@ describe('trip feed token lifecycle', () => {
 
   it('FEED-SVC-007: rotate issues a fresh token and the previous URL stops resolving', async () => {
     const { user, tripId } = seedTrip();
-    const before = svc.generateTripToken(tripId, user.id, BASE).feed_url;
+    const before = (await svc.generateTripToken(tripId, user.id, BASE)).feed_url;
     const oldToken = before.match(/trip\/([0-9a-f-]+)\.ics$/)![1];
 
-    const after = svc.rotateTripToken(tripId, user.id, BASE).feed_url;
+    const after = (await svc.rotateTripToken(tripId, user.id, BASE)).feed_url;
 
     expect(after).not.toBe(before);
     expect(await svc.buildTripIcs(oldToken)).toBeNull();
@@ -189,12 +189,12 @@ describe('trip feed token lifecycle', () => {
 
   it('FEED-SVC-008: disable clears the column so the public URL dies', async () => {
     const { user, tripId } = seedTrip();
-    const url = svc.generateTripToken(tripId, user.id, BASE).feed_url;
+    const url = (await svc.generateTripToken(tripId, user.id, BASE)).feed_url;
     const token = url.match(/trip\/([0-9a-f-]+)\.ics$/)![1];
 
-    svc.disableTripToken(tripId, user.id);
+    await svc.disableTripToken(tripId, user.id);
 
-    expect(svc.getTripToken(tripId, user.id, BASE)).toEqual({ feed_url: null });
+    expect(await svc.getTripToken(tripId, user.id, BASE)).toEqual({ feed_url: null });
     expect(await svc.buildTripIcs(token)).toBeNull();
   });
 
@@ -204,13 +204,13 @@ describe('trip feed token lifecycle', () => {
     // a trip id it merely guessed.
     const { user, tripId } = seedTrip();
     const { user: outsider } = createUser(testDb);
-    const mine = svc.generateTripToken(tripId, user.id, BASE).feed_url;
+    const mine = (await svc.generateTripToken(tripId, user.id, BASE)).feed_url;
     const myToken = mine.match(/trip\/([0-9a-f-]+)\.ics$/)![1];
 
-    svc.rotateTripToken(tripId, outsider.id, BASE);
-    expect(svc.getTripToken(tripId, user.id, BASE).feed_url).toBe(mine);
+    await svc.rotateTripToken(tripId, outsider.id, BASE);
+    expect((await svc.getTripToken(tripId, user.id, BASE)).feed_url).toBe(mine);
 
-    svc.disableTripToken(tripId, outsider.id);
+    await svc.disableTripToken(tripId, outsider.id);
     expect(await svc.buildTripIcs(myToken)).not.toBeNull();
   });
 });
@@ -221,29 +221,29 @@ describe('user feed token lifecycle', () => {
   it('FEED-SVC-009: reports null before and the absolute URL after generation', async () => {
     const { user } = createUser(testDb);
 
-    expect(svc.getUserToken(user.id, BASE)).toEqual({ feed_url: null });
+    expect(await svc.getUserToken(user.id, BASE)).toEqual({ feed_url: null });
 
-    const generated = svc.generateUserToken(user.id, BASE).feed_url;
+    const generated = (await svc.generateUserToken(user.id, BASE)).feed_url;
 
     expect(generated).toMatch(new RegExp(`^${BASE}/api/feed/user/[0-9a-f-]+\\.ics$`));
-    expect(svc.getUserToken(user.id, BASE).feed_url).toBe(generated);
+    expect((await svc.getUserToken(user.id, BASE)).feed_url).toBe(generated);
   });
 
   it('FEED-SVC-010: generate is idempotent — the existing URL is returned unchanged', async () => {
     const { user } = createUser(testDb);
 
-    const first = svc.generateUserToken(user.id, BASE);
-    const second = svc.generateUserToken(user.id, BASE);
+    const first = await svc.generateUserToken(user.id, BASE);
+    const second = await svc.generateUserToken(user.id, BASE);
 
     expect(second.feed_url).toBe(first.feed_url);
   });
 
   it('FEED-SVC-011: rotate issues a fresh token and the previous URL stops resolving', async () => {
     const { user } = createUser(testDb);
-    const before = svc.generateUserToken(user.id, BASE).feed_url;
+    const before = (await svc.generateUserToken(user.id, BASE)).feed_url;
     const oldToken = before.match(/user\/([0-9a-f-]+)\.ics$/)![1];
 
-    const after = svc.rotateUserToken(user.id, BASE).feed_url;
+    const after = (await svc.rotateUserToken(user.id, BASE)).feed_url;
 
     expect(after).not.toBe(before);
     expect(await svc.buildUserIcs(oldToken)).toBeNull();
@@ -251,12 +251,12 @@ describe('user feed token lifecycle', () => {
 
   it('FEED-SVC-012: disable clears the column so the public URL dies', async () => {
     const { user } = createUser(testDb);
-    const url = svc.generateUserToken(user.id, BASE).feed_url;
+    const url = (await svc.generateUserToken(user.id, BASE)).feed_url;
     const token = url.match(/user\/([0-9a-f-]+)\.ics$/)![1];
 
-    svc.disableUserToken(user.id);
+    await svc.disableUserToken(user.id);
 
-    expect(svc.getUserToken(user.id, BASE)).toEqual({ feed_url: null });
+    expect(await svc.getUserToken(user.id, BASE)).toEqual({ feed_url: null });
     expect(await svc.buildUserIcs(token)).toBeNull();
   });
 });

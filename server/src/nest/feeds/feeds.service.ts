@@ -29,7 +29,7 @@ export class FeedsService {
 
   // ── Trip feed token ─────────────────────────────────────────────────────
 
-  private tripTokenRow(tripId: string, userId: number) {
+  private async tripTokenRow(tripId: string, userId: number) {
     return this.db
       .prepare(
         'SELECT feed_token FROM trips WHERE id = ? AND (user_id = ? OR id IN (SELECT trip_id FROM trip_members WHERE user_id = ?))',
@@ -37,8 +37,8 @@ export class FeedsService {
       .get(tripId, userId, userId) as { feed_token: string | null } | undefined;
   }
 
-  getTripToken(tripId: string, userId: number, base: string): { feed_url: string | null } {
-    const row = this.tripTokenRow(tripId, userId);
+  async getTripToken(tripId: string, userId: number, base: string): Promise<{ feed_url: string | null }> {
+    const row = await this.tripTokenRow(tripId, userId);
     return { feed_url: row?.feed_token ? feedUrl(row.feed_token, 'trip', base) : null };
   }
 
@@ -53,8 +53,8 @@ export class FeedsService {
     'id = ? AND (user_id = ? OR id IN (SELECT trip_id FROM trip_members WHERE user_id = ?))';
 
   /** Enable (idempotent): mint a token only if the trip has none yet. */
-  generateTripToken(tripId: string, userId: number, base: string): { feed_url: string } {
-    const row = this.tripTokenRow(tripId, userId);
+  async generateTripToken(tripId: string, userId: number, base: string): Promise<{ feed_url: string }> {
+    const row = await this.tripTokenRow(tripId, userId);
     if (row?.feed_token) return { feed_url: feedUrl(row.feed_token, 'trip', base) };
     const token = randomUUID();
     this.db
@@ -64,7 +64,7 @@ export class FeedsService {
   }
 
   /** Rotate: always issue a fresh token, invalidating the previous URL. */
-  rotateTripToken(tripId: string, userId: number, base: string): { feed_url: string } {
+  async rotateTripToken(tripId: string, userId: number, base: string): Promise<{ feed_url: string }> {
     const token = randomUUID();
     this.db
       .prepare(`UPDATE trips SET feed_token = ? WHERE ${FeedsService.REACHABLE}`)
@@ -73,7 +73,7 @@ export class FeedsService {
   }
 
   /** Disable: clear the token so the public URL stops resolving. */
-  disableTripToken(tripId: string, userId: number): void {
+  async disableTripToken(tripId: string, userId: number): Promise<void> {
     this.db
       .prepare(`UPDATE trips SET feed_token = NULL WHERE ${FeedsService.REACHABLE}`)
       .run(tripId, userId, userId);
@@ -81,28 +81,28 @@ export class FeedsService {
 
   // ── User (all-trips) feed token ──────────────────────────────────────────
 
-  getUserToken(userId: number, base: string): { feed_url: string | null } {
+  async getUserToken(userId: number, base: string): Promise<{ feed_url: string | null }> {
     const row = this.db.prepare('SELECT feed_token FROM users WHERE id = ?').get(userId) as
       | { feed_token: string | null }
       | undefined;
     return { feed_url: row?.feed_token ? feedUrl(row.feed_token, 'user', base) : null };
   }
 
-  generateUserToken(userId: number, base: string): { feed_url: string } {
-    const existing = this.getUserToken(userId, base);
+  async generateUserToken(userId: number, base: string): Promise<{ feed_url: string }> {
+    const existing = await this.getUserToken(userId, base);
     if (existing.feed_url) return { feed_url: existing.feed_url };
     const token = randomUUID();
     this.db.prepare('UPDATE users SET feed_token = ? WHERE id = ?').run(token, userId);
     return { feed_url: feedUrl(token, 'user', base) };
   }
 
-  rotateUserToken(userId: number, base: string): { feed_url: string } {
+  async rotateUserToken(userId: number, base: string): Promise<{ feed_url: string }> {
     const token = randomUUID();
     this.db.prepare('UPDATE users SET feed_token = ? WHERE id = ?').run(token, userId);
     return { feed_url: feedUrl(token, 'user', base) };
   }
 
-  disableUserToken(userId: number): void {
+  async disableUserToken(userId: number): Promise<void> {
     this.db.prepare('UPDATE users SET feed_token = NULL WHERE id = ?').run(userId);
   }
 

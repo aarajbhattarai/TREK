@@ -77,7 +77,7 @@ export class FeedsMcp {
   async getTripCalendarFeed({ tripId }: { tripId: number }, ctx: McpContext) {
     const denied = await this.denyTripFeed(tripId, ctx.userId);
     if ((await denied)) return denied;
-    return ok(this.feeds.getTripToken(String(tripId), ctx.userId, this.base()));
+    return ok(await this.feeds.getTripToken(String(tripId), ctx.userId, this.base()));
   }
 
   @Tool({
@@ -93,7 +93,7 @@ export class FeedsMcp {
     if (await this.isDemoUser(ctx.userId)) return demoDenied();
     const denied = await this.denyTripFeed(tripId, ctx.userId);
     if ((await denied)) return denied;
-    return ok(this.feeds.generateTripToken(String(tripId), ctx.userId, this.base()));
+    return ok(await this.feeds.generateTripToken(String(tripId), ctx.userId, this.base()));
   }
 
   @Tool({
@@ -109,7 +109,7 @@ export class FeedsMcp {
     if (await this.isDemoUser(ctx.userId)) return demoDenied();
     const denied = await this.denyTripFeed(tripId, ctx.userId);
     if ((await denied)) return denied;
-    return ok(this.feeds.rotateTripToken(String(tripId), ctx.userId, this.base()));
+    return ok(await this.feeds.rotateTripToken(String(tripId), ctx.userId, this.base()));
   }
 
   @Tool({
@@ -125,7 +125,7 @@ export class FeedsMcp {
     if (await this.isDemoUser(ctx.userId)) return demoDenied();
     const denied = await this.denyTripFeed(tripId, ctx.userId);
     if ((await denied)) return denied;
-    this.feeds.disableTripToken(String(tripId), ctx.userId);
+    await this.feeds.disableTripToken(String(tripId), ctx.userId);
     // Matches the route, which answers the cleared token as a null URL.
     return ok({ feed_url: null });
   }
@@ -142,7 +142,7 @@ export class FeedsMcp {
     access: { group: 'trips', mode: 'share' },
   })
   async getAllTripsCalendarFeed(_input: Record<string, never>, ctx: McpContext) {
-    return ok(this.feeds.getUserToken(ctx.userId, this.base()));
+    return ok(await this.feeds.getUserToken(ctx.userId, this.base()));
   }
 
   @Tool({
@@ -154,7 +154,7 @@ export class FeedsMcp {
   })
   async enableAllTripsCalendarFeed(_input: Record<string, never>, ctx: McpContext) {
     if (await this.isDemoUser(ctx.userId)) return demoDenied();
-    return ok(this.feeds.generateUserToken(ctx.userId, this.base()));
+    return ok(await this.feeds.generateUserToken(ctx.userId, this.base()));
   }
 
   @Tool({
@@ -166,7 +166,7 @@ export class FeedsMcp {
   })
   async rotateAllTripsCalendarFeed(_input: Record<string, never>, ctx: McpContext) {
     if (await this.isDemoUser(ctx.userId)) return demoDenied();
-    return ok(this.feeds.rotateUserToken(ctx.userId, this.base()));
+    return ok(await this.feeds.rotateUserToken(ctx.userId, this.base()));
   }
 
   @Tool({
@@ -178,7 +178,7 @@ export class FeedsMcp {
   })
   async disableAllTripsCalendarFeed(_input: Record<string, never>, ctx: McpContext) {
     if (await this.isDemoUser(ctx.userId)) return demoDenied();
-    this.feeds.disableUserToken(ctx.userId);
+    await this.feeds.disableUserToken(ctx.userId);
     return ok({ feed_url: null });
   }
 }

@@ -119,7 +119,7 @@ export class TripsMcp {
       return { content: [{ type: 'text' as const, text: 'End date must be after start date.' }], isError: true };
     }
     try {
-      const { trip } = this.trips.create(ctx.userId, { title, description, start_date, end_date, currency, day_count, reminder_days });
+      const { trip } = await this.trips.create(ctx.userId, { title, description, start_date, end_date, currency, day_count, reminder_days });
       return ok({ trip });
     } catch (err) {
       if (err instanceof ValidationError) return errorResult(err.message);
@@ -160,7 +160,7 @@ export class TripsMcp {
     ctx: McpContext,
   ) {
     if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
-    if (!this.trips.canAccessTrip(tripId, ctx.userId)) return noAccess();
+    if (!(await this.trips.canAccessTrip(tripId, ctx.userId))) return noAccess();
     if (!(await this.guards.hasTripPermission('trip_edit', tripId, ctx.userId))) return permissionDenied();
     if (clear_dates && (start_date || end_date))
       return errorResult('clear_dates cannot be combined with start_date or end_date.');
@@ -224,8 +224,8 @@ export class TripsMcp {
   })
   async deleteTrip({ tripId }: { tripId: number }, ctx: McpContext) {
     if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
-    if (!this.trips.isOwner(tripId, ctx.userId)) return noAccess();
-    this.trips.remove(tripId, ctx.userId, 'user');
+    if (!(await this.trips.isOwner(tripId, ctx.userId))) return noAccess();
+    await this.trips.remove(tripId, ctx.userId, 'user');
     return ok({ success: true, tripId });
   }
 
@@ -241,7 +241,7 @@ export class TripsMcp {
   })
   async listTrips({ include_archived }: { include_archived?: boolean }, ctx: McpContext) {
     const notice = ctx.getDeprecationNotice ? ctx.getDeprecationNotice() : null;
-    const trips = this.trips.list(ctx.userId, include_archived ? null : 0);
+    const trips = await this.trips.list(ctx.userId, include_archived ? null : 0);
     if (notice) return {
       isError: true as const,
       content: [
@@ -263,7 +263,7 @@ export class TripsMcp {
     annotations: TOOL_ANNOTATIONS_READONLY,
   })
   async getTripSummary({ tripId }: { tripId: number }, ctx: McpContext) {
-    if (!this.trips.canAccessTrip(tripId, ctx.userId)) return noAccess();
+    if (!(await this.trips.canAccessTrip(tripId, ctx.userId))) return noAccess();
     const summary = await this.readModel.getTripSummary(tripId, ctx.userId);
     if (!summary) return noAccess();
     const R = canReadTrips(ctx.scopes);
@@ -332,8 +332,8 @@ export class TripsMcp {
     access: (ctx) => canReadTrips(ctx.scopes),
   })
   async listTripMembers({ tripId }: { tripId: number }, ctx: McpContext) {
-    if (!this.trips.canAccessTrip(tripId, ctx.userId)) return noAccess();
-    const ownerRow = this.trips.getOwner(tripId);
+    if (!(await this.trips.canAccessTrip(tripId, ctx.userId))) return noAccess();
+    const ownerRow = await this.trips.getOwner(tripId);
     if (!ownerRow) return noAccess();
     const { owner, members } = await this.members.listMembers(tripId, ownerRow.user_id);
     return ok({ owner, members });
@@ -351,8 +351,8 @@ export class TripsMcp {
   })
   async addTripMember({ tripId, identifier }: { tripId: number; identifier: string }, ctx: McpContext) {
     if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
-    if (!this.trips.canAccessTrip(tripId, ctx.userId)) return noAccess();
-    const ownerRow = this.trips.getOwner(tripId);
+    if (!(await this.trips.canAccessTrip(tripId, ctx.userId))) return noAccess();
+    const ownerRow = await this.trips.getOwner(tripId);
     if (!ownerRow) return noAccess();
     // member_manage rather than a hardcoded owner test: the action is admin-lowerable
     // in the permission matrix, and POST /api/trips/:id/members has always honoured
@@ -380,7 +380,7 @@ export class TripsMcp {
   })
   async removeTripMember({ tripId, memberId }: { tripId: number; memberId: number }, ctx: McpContext) {
     if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
-    if (!this.trips.canAccessTrip(tripId, ctx.userId)) return noAccess();
+    if (!(await this.trips.canAccessTrip(tripId, ctx.userId))) return noAccess();
     // Giving up your own access is not member management, so it carries no permission
     // requirement: the same self-removal bypass DELETE /api/trips/:id/members/:userId has.
     if (memberId !== ctx.userId && !(await this.guards.hasTripPermission('member_manage', tripId, ctx.userId)))
@@ -401,8 +401,8 @@ export class TripsMcp {
   })
   async leaveTrip({ tripId }: { tripId: number }, ctx: McpContext) {
     if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
-    if (!this.trips.canAccessTrip(tripId, ctx.userId)) return noAccess();
-    const ownerRow = this.trips.getOwner(tripId);
+    if (!(await this.trips.canAccessTrip(tripId, ctx.userId))) return noAccess();
+    const ownerRow = await this.trips.getOwner(tripId);
     if (!ownerRow) return noAccess();
     // removeMember only deletes a trip_members row, and the owner has none, so an
     // owner calling this would get a success that changed nothing. Say so instead.
@@ -435,8 +435,8 @@ export class TripsMcp {
   })
   async createTripGuest({ tripId, name }: { tripId: number; name: string }, ctx: McpContext) {
     if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
-    if (!this.trips.canAccessTrip(tripId, ctx.userId)) return noAccess();
-    const ownerRow = this.trips.getOwner(tripId);
+    if (!(await this.trips.canAccessTrip(tripId, ctx.userId))) return noAccess();
+    const ownerRow = await this.trips.getOwner(tripId);
     if (!ownerRow || ownerRow.user_id !== ctx.userId)
       return { content: [{ type: 'text' as const, text: 'Only the trip owner can manage guests.' }], isError: true };
     try {
@@ -463,8 +463,8 @@ export class TripsMcp {
   })
   async renameTripGuest({ tripId, guestId, name }: { tripId: number; guestId: number; name: string }, ctx: McpContext) {
     if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
-    if (!this.trips.canAccessTrip(tripId, ctx.userId)) return noAccess();
-    const ownerRow = this.trips.getOwner(tripId);
+    if (!(await this.trips.canAccessTrip(tripId, ctx.userId))) return noAccess();
+    const ownerRow = await this.trips.getOwner(tripId);
     if (!ownerRow || ownerRow.user_id !== ctx.userId)
       return { content: [{ type: 'text' as const, text: 'Only the trip owner can manage guests.' }], isError: true };
     try {
@@ -489,8 +489,8 @@ export class TripsMcp {
   })
   async deleteTripGuest({ tripId, guestId }: { tripId: number; guestId: number }, ctx: McpContext) {
     if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
-    if (!this.trips.canAccessTrip(tripId, ctx.userId)) return noAccess();
-    const ownerRow = this.trips.getOwner(tripId);
+    if (!(await this.trips.canAccessTrip(tripId, ctx.userId))) return noAccess();
+    const ownerRow = await this.trips.getOwner(tripId);
     if (!ownerRow || ownerRow.user_id !== ctx.userId)
       return { content: [{ type: 'text' as const, text: 'Only the trip owner can manage guests.' }], isError: true };
     if (!(await this.members.deleteGuest(tripId, guestId)))
@@ -511,10 +511,10 @@ export class TripsMcp {
   })
   async copyTrip({ tripId, title }: { tripId: number; title?: string }, ctx: McpContext) {
     if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
-    if (!this.trips.canAccessTrip(tripId, ctx.userId)) return noAccess();
+    if (!(await this.trips.canAccessTrip(tripId, ctx.userId))) return noAccess();
     try {
-      const newTripId = this.trips.copy(tripId, ctx.userId, title);
-      const newTrip = this.trips.canAccessTrip(newTripId, ctx.userId);
+      const newTripId = await this.trips.copy(tripId, ctx.userId, title);
+      const newTrip = await this.trips.canAccessTrip(newTripId, ctx.userId);
       return ok({ trip: { id: newTripId, ...newTrip } });
     } catch {
       return { content: [{ type: 'text' as const, text: 'Failed to copy trip.' }], isError: true };
@@ -531,7 +531,7 @@ export class TripsMcp {
     access: (ctx) => canReadTrips(ctx.scopes),
   })
   async exportTripIcs({ tripId }: { tripId: number }, ctx: McpContext) {
-    if (!this.trips.canAccessTrip(tripId, ctx.userId)) return noAccess();
+    if (!(await this.trips.canAccessTrip(tripId, ctx.userId))) return noAccess();
     try {
       const { ics, filename } = await this.calendar.exportICS(tripId);
       return ok({ ics, filename });
@@ -550,7 +550,7 @@ export class TripsMcp {
     access: (ctx) => canReadTrips(ctx.scopes),
   })
   async tripsResource(uri: URL, ctx: McpContext) {
-    const trips = this.trips.list(ctx.userId, 0);
+    const trips = await this.trips.list(ctx.userId, 0);
     return jsonContent(uri.href, trips);
   }
 
@@ -563,8 +563,8 @@ export class TripsMcp {
   })
   async tripResource(uri: URL, { tripId }: { tripId: string | string[] }, ctx: McpContext) {
     const id = parseId(tripId);
-    if (id === null || !this.trips.canAccessTrip(id, ctx.userId)) return accessDenied(uri.href);
-    const trip = this.trips.get(id, ctx.userId);
+    if (id === null || !(await this.trips.canAccessTrip(id, ctx.userId))) return accessDenied(uri.href);
+    const trip = await this.trips.get(id, ctx.userId);
     return jsonContent(uri.href, trip);
   }
 
@@ -577,8 +577,8 @@ export class TripsMcp {
   })
   async tripMembersResource(uri: URL, { tripId }: { tripId: string | string[] }, ctx: McpContext) {
     const id = parseId(tripId);
-    if (id === null || !this.trips.canAccessTrip(id, ctx.userId)) return accessDenied(uri.href);
-    const ownerRow = this.trips.getOwner(id);
+    if (id === null || !(await this.trips.canAccessTrip(id, ctx.userId))) return accessDenied(uri.href);
+    const ownerRow = await this.trips.getOwner(id);
     if (!ownerRow) return accessDenied(uri.href);
     const { owner, members } = await this.members.listMembers(id, ownerRow.user_id);
     return jsonContent(uri.href, { owner, members });
@@ -595,7 +595,7 @@ export class TripsMcp {
     },
   })
   async tripSummaryPrompt({ tripId }: { tripId: number }, ctx: McpContext) {
-    if (!this.trips.canAccessTrip(tripId, ctx.userId)) {
+    if (!(await this.trips.canAccessTrip(tripId, ctx.userId))) {
       return { messages: [{ role: 'user' as const, content: { type: 'text' as const, text: 'Trip not found or access denied.' } }] };
     }
     const summary = await this.readModel.getTripSummary(tripId, ctx.userId);

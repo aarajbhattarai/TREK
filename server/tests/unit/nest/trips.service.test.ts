@@ -198,7 +198,7 @@ function addDaysIso(date: string, n: number) {
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 describe('generateDays', () => {
-  it('TRIP-SVC-010: full range shift preserves day assignments and notes positionally', () => {
+  it('TRIP-SVC-010: full range shift preserves day assignments and notes positionally', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id, { start_date: '2025-06-01', end_date: '2025-06-05' });
     const daysBefore = getDays(trip.id);
@@ -209,7 +209,7 @@ describe('generateDays', () => {
     const note = createDayNote(testDb, daysBefore[1].id, trip.id, { text: 'packed' });
 
     // Shift forward 9 days — zero overlap with original dates
-    svc.generateDays(trip.id, '2025-06-10', '2025-06-14');
+    await svc.generateDays(trip.id, '2025-06-10', '2025-06-14');
 
     const daysAfter = getDays(trip.id);
     expect(daysAfter).toHaveLength(5);
@@ -226,7 +226,7 @@ describe('generateDays', () => {
     expect(getNotes(day2.id)[0].id).toBe(note.id);
   });
 
-  it('TRIP-SVC-011: shrinking range deletes overflow days and their assignments (issue #909)', () => {
+  it('TRIP-SVC-011: shrinking range deletes overflow days and their assignments (issue #909)', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id, { start_date: '2025-07-01', end_date: '2025-07-05' });
     const daysBefore = getDays(trip.id);
@@ -237,20 +237,20 @@ describe('generateDays', () => {
     createDayAssignment(testDb, daysBefore[4].id, place.id);
 
     // Shrink from 5 to 3 days — surplus days and their content are removed
-    svc.generateDays(trip.id, '2025-07-01', '2025-07-03');
+    await svc.generateDays(trip.id, '2025-07-01', '2025-07-03');
 
     const daysAfter = getDays(trip.id);
     expect(daysAfter).toHaveLength(3);
     expect(daysAfter.map(d => d.date)).toEqual(['2025-07-01', '2025-07-02', '2025-07-03']);
   });
 
-  it('TRIP-SVC-016: shrinking range deletes empty overflow days (issue #909)', () => {
+  it('TRIP-SVC-016: shrinking range deletes empty overflow days (issue #909)', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id, { start_date: '2025-07-01', end_date: '2025-07-07' });
     expect(getDays(trip.id)).toHaveLength(7);
 
     // Shrink 7 → 5; days 6 and 7 have no content
-    svc.generateDays(trip.id, '2025-07-01', '2025-07-05');
+    await svc.generateDays(trip.id, '2025-07-01', '2025-07-05');
 
     const daysAfter = getDays(trip.id);
     expect(daysAfter).toHaveLength(5);
@@ -259,7 +259,7 @@ describe('generateDays', () => {
     ]);
   });
 
-  it('TRIP-SVC-012: growing range keeps existing day content and appends new empty days', () => {
+  it('TRIP-SVC-012: growing range keeps existing day content and appends new empty days', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id, { start_date: '2025-08-01', end_date: '2025-08-03' });
     const daysBefore = getDays(trip.id);
@@ -269,7 +269,7 @@ describe('generateDays', () => {
     const assignment = createDayAssignment(testDb, daysBefore[0].id, place.id);
 
     // Grow to 5 days
-    svc.generateDays(trip.id, '2025-08-01', '2025-08-05');
+    await svc.generateDays(trip.id, '2025-08-01', '2025-08-05');
 
     const daysAfter = getDays(trip.id);
     expect(daysAfter).toHaveLength(5);
@@ -286,25 +286,25 @@ describe('generateDays', () => {
     expect(getAssignments(daysAfter[4].id)).toHaveLength(0);
   });
 
-  it('TRIP-SVC-062: a range longer than a year gets every one of its days (#2403)', () => {
+  it('TRIP-SVC-062: a range longer than a year gets every one of its days (#2403)', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id, { start_date: '2025-01-26', end_date: '2025-01-28' });
     // The reporter's range: 368 days, and the days used to stop at 365.
-    svc.generateDays(trip.id, '2025-01-26', '2026-01-28');
+    await svc.generateDays(trip.id, '2025-01-26', '2026-01-28');
     const days = getDays(trip.id);
     expect(days).toHaveLength(368);
     expect(days[364].date).toBe('2026-01-25');
     expect(days[367]).toMatchObject({ day_number: 368, date: '2026-01-28' });
   });
 
-  it('TRIP-SVC-063: a dateless day_count is clamped to MAX_TRIP_DAYS', () => {
+  it('TRIP-SVC-063: a dateless day_count is clamped to MAX_TRIP_DAYS', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
-    svc.generateDays(trip.id, null, null, MAX_TRIP_DAYS + 50);
+    await svc.generateDays(trip.id, null, null, MAX_TRIP_DAYS + 50);
     expect(getDays(trip.id)).toHaveLength(MAX_TRIP_DAYS);
   });
 
-  it('TRIP-SVC-013: clearing dates converts all days to dateless without destroying assignments', () => {
+  it('TRIP-SVC-013: clearing dates converts all days to dateless without destroying assignments', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id, { start_date: '2025-09-01', end_date: '2025-09-04' });
     const daysBefore = getDays(trip.id);
@@ -314,7 +314,7 @@ describe('generateDays', () => {
     const assignment = createDayAssignment(testDb, daysBefore[1].id, place.id);
 
     // Clear both dates
-    svc.generateDays(trip.id, null, null);
+    await svc.generateDays(trip.id, null, null);
 
     const daysAfter = getDays(trip.id);
     expect(daysAfter).toHaveLength(4);
@@ -327,7 +327,7 @@ describe('generateDays', () => {
     expect(getAssignments(formerDay2!.id)[0].id).toBe(assignment.id);
   });
 
-  it('TRIP-SVC-014: partial overlap shift remaps by position (day 1→3 kept, 4-5 overflow)', () => {
+  it('TRIP-SVC-014: partial overlap shift remaps by position (day 1→3 kept, 4-5 overflow)', async () => {
     // Original: Jun 1-5. New: Jun 3-7 (overlap on Jun 3-5, but we map by position)
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id, { start_date: '2025-10-01', end_date: '2025-10-05' });
@@ -337,7 +337,7 @@ describe('generateDays', () => {
     for (const day of daysBefore) createDayAssignment(testDb, day.id, place.id);
 
     // Shift forward 2 days (partial overlap with original range)
-    svc.generateDays(trip.id, '2025-10-03', '2025-10-07');
+    await svc.generateDays(trip.id, '2025-10-03', '2025-10-07');
 
     const daysAfter = getDays(trip.id);
     expect(daysAfter).toHaveLength(5);
@@ -351,7 +351,7 @@ describe('generateDays', () => {
     }
   });
 
-  it('TRIP-SVC-015: growing into dateless days reuses them; leftover dateless renumber without UNIQUE collision', () => {
+  it('TRIP-SVC-015: growing into dateless days reuses them; leftover dateless renumber without UNIQUE collision', async () => {
     // 3 dated days + 2 pre-existing dateless days. Resize to 4 dated days.
     // Main loop: dated[0..2] → positions 1-3, dateless[0] → position 4 (consumed).
     // Unused dateless: dateless[1] should land at position 5, NOT 4 (collision bug).
@@ -372,7 +372,7 @@ describe('generateDays', () => {
 
     // Grow from 3 to 4 dated days — consumes dateless[0], leaves dateless[1] unused
     // This is the scenario that triggered the UNIQUE collision bug
-    svc.generateDays(trip.id, '2025-11-01', '2025-11-04');
+    await svc.generateDays(trip.id, '2025-11-01', '2025-11-04');
 
     const daysAfter = getDays(trip.id);
     expect(daysAfter).toHaveLength(5);
@@ -391,11 +391,11 @@ describe('generateDays', () => {
     expect(nums).toEqual([1, 2, 3, 4, 5]);
   });
 
-  it('TRIP-SVC-017: switching a dateless trip to a shorter dated range drops empty leftover days but keeps ones with content (#1083)', () => {
+  it('TRIP-SVC-017: switching a dateless trip to a shorter dated range drops empty leftover days but keeps ones with content (#1083)', async () => {
     const { user } = createUser(testDb);
     // A 7-day trip, then cleared to dateless placeholders (day_count = 7).
     const trip = createTrip(testDb, user.id, { start_date: '2025-12-01', end_date: '2025-12-07' });
-    svc.generateDays(trip.id, null, null);
+    await svc.generateDays(trip.id, null, null);
     const dateless = getDays(trip.id);
     expect(dateless).toHaveLength(7);
     expect(dateless.every(d => d.date === null)).toBe(true);
@@ -406,7 +406,7 @@ describe('generateDays', () => {
 
     // Now set an explicit 2-day range. The first two dateless days are reused for
     // the dates; the four empty leftovers must be removed, the one with content kept.
-    svc.generateDays(trip.id, '2026-01-10', '2026-01-11');
+    await svc.generateDays(trip.id, '2026-01-10', '2026-01-11');
 
     const daysAfter = getDays(trip.id);
     const dated = daysAfter.filter(d => d.date !== null);
@@ -738,7 +738,7 @@ describe('folded trip CRUD', () => {
     expect(await readModelSvc.getTripSummary(99999)).toBeNull();
   });
 
-  it('TRIP-SVC-043: list returns owned + shared trips with is_owner, honoring the archived filter', () => {
+  it('TRIP-SVC-043: list returns owned + shared trips with is_owner, honoring the archived filter', async () => {
     const { user: owner } = createUser(testDb);
     const { user: other } = createUser(testDb);
     const own = createTrip(testDb, owner.id, { title: 'Mine' });
@@ -747,18 +747,18 @@ describe('folded trip CRUD', () => {
     const archived = createTrip(testDb, owner.id, { title: 'Old' });
     testDb.prepare('UPDATE trips SET is_archived = 1 WHERE id = ?').run(archived.id);
 
-    const active = svc.list(owner.id, 0) as any[];
+    const active = (await svc.list(owner.id, 0)) as any[];
     expect(active.map(t => t.id).sort()).toEqual([own.id, shared.id].sort());
     expect(active.find(t => t.id === own.id).is_owner).toBe(1);
     expect(active.find(t => t.id === shared.id).is_owner).toBe(0);
 
-    const all = svc.list(owner.id, null) as any[];
+    const all = (await svc.list(owner.id, null)) as any[];
     expect(all.map(t => t.id).sort()).toEqual([own.id, shared.id, archived.id].sort());
   });
 
-  it('TRIP-SVC-044: create applies || defaults, clamps reminder_days and generates days', () => {
+  it('TRIP-SVC-044: create applies || defaults, clamps reminder_days and generates days', async () => {
     const { user } = createUser(testDb);
-    const { trip, tripId, reminderDays } = svc.create(user.id, {
+    const { trip, tripId, reminderDays } = await svc.create(user.id, {
       title: 'New Trip', start_date: '2025-06-01', end_date: '2025-06-03', reminder_days: 99,
     });
     expect(reminderDays).toBe(3); // out-of-range → default 3
@@ -766,18 +766,18 @@ describe('folded trip CRUD', () => {
     expect(getDays(tripId)).toHaveLength(3);
   });
 
-  it('TRIP-SVC-064: create refuses a range past MAX_TRIP_DAYS and writes nothing', () => {
+  it('TRIP-SVC-064: create refuses a range past MAX_TRIP_DAYS and writes nothing', async () => {
     const { user } = createUser(testDb);
     const before = (testDb.prepare('SELECT COUNT(*) AS n FROM trips').get() as { n: number }).n;
-    expect(() => svc.create(user.id, { title: 'Decade', start_date: '2026-01-01', end_date: '2036-01-01' }))
-      .toThrow(`A trip can span at most ${MAX_TRIP_DAYS} days`);
+    await expect(svc.create(user.id, { title: 'Decade', start_date: '2026-01-01', end_date: '2036-01-01' }))
+      .rejects.toThrow(`A trip can span at most ${MAX_TRIP_DAYS} days`);
     expect((testDb.prepare('SELECT COUNT(*) AS n FROM trips').get() as { n: number }).n).toBe(before);
     // The longest allowed range goes through in full.
-    const { tripId } = svc.create(user.id, { title: 'Longest', start_date: '2026-01-01', end_date: addDaysIso('2026-01-01', MAX_TRIP_DAYS - 1) });
+    const { tripId } = await svc.create(user.id, { title: 'Longest', start_date: '2026-01-01', end_date: addDaysIso('2026-01-01', MAX_TRIP_DAYS - 1) });
     expect(getDays(tripId)).toHaveLength(MAX_TRIP_DAYS);
   });
 
-  it('TRIP-SVC-045: remove deletes the trip, cleans skeleton journey entries and detaches filled ones', () => {
+  it('TRIP-SVC-045: remove deletes the trip, cleans skeleton journey entries and detaches filled ones', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const journeyId = Number(testDb.prepare(
@@ -790,7 +790,7 @@ describe('folded trip CRUD', () => {
       "INSERT INTO journey_entries (journey_id, source_trip_id, author_id, type, title, entry_date, created_at, updated_at) VALUES (?, ?, ?, 'story', 'F', '2025-06-01', 0, 0)",
     ).run(journeyId, trip.id, user.id).lastInsertRowid);
 
-    const info = svc.remove(trip.id, user.id, 'user');
+    const info = await svc.remove(trip.id, user.id, 'user');
     expect(info).toMatchObject({ tripId: trip.id, ownerId: user.id, isAdminDelete: false });
 
     expect(testDb.prepare('SELECT id FROM trips WHERE id = ?').get(trip.id)).toBeUndefined();
@@ -799,10 +799,10 @@ describe('folded trip CRUD', () => {
     expect(filled.source_trip_id).toBeNull();
 
     // Missing trips throw the byte-identical error.
-    expect(() => svc.remove(99999, user.id, 'user')).toThrow('Trip not found');
+    await expect(svc.remove(99999, user.id, 'user')).rejects.toThrow('Trip not found');
   });
 
-  it('TRIP-SVC-046: copy duplicates days/places/assignments and resets packing to unchecked', () => {
+  it('TRIP-SVC-046: copy duplicates days/places/assignments and resets packing to unchecked', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id, { title: 'Origin', start_date: '2025-06-01', end_date: '2025-06-02' });
     const days = getDays(trip.id);
@@ -810,7 +810,7 @@ describe('folded trip CRUD', () => {
     createDayAssignment(testDb, days[0].id, place.id);
     testDb.prepare("INSERT INTO packing_items (trip_id, name, checked) VALUES (?, 'Socks', 1)").run(trip.id);
 
-    const newTripId = svc.copy(trip.id, user.id, 'Clone');
+    const newTripId = await svc.copy(trip.id, user.id, 'Clone');
 
     const copied = testDb.prepare('SELECT title, is_archived FROM trips WHERE id = ?').get(newTripId) as any;
     expect(copied.title).toBe('Clone');
@@ -823,11 +823,11 @@ describe('folded trip CRUD', () => {
     expect(packing).toEqual([{ checked: 0 }]);
 
     // No title → source title (|| fallback).
-    const secondCopy = svc.copy(trip.id, user.id);
+    const secondCopy = await svc.copy(trip.id, user.id);
     expect((testDb.prepare('SELECT title FROM trips WHERE id = ?').get(secondCopy) as any).title).toBe('Origin');
   });
 
-  it('TRIP-SVC-061: copy carries the road-trip shaping, not just the places', () => {
+  it('TRIP-SVC-061: copy carries the road-trip shaping, not just the places', async () => {
     // A via is the road the traveller chose over the one the router prefers, and
     // a day track is the line a day was fitted to. Leaving them behind gave back
     // a trip that looks complete and quietly drives somewhere else — noticed
@@ -846,7 +846,7 @@ describe('folded trip CRUD', () => {
     testDb.prepare('INSERT INTO roadtrip_day_tracks (day_id, place_id, stray_km) VALUES (?, ?, 1.5)')
       .run(days[0].id, track.id);
 
-    const newTripId = svc.copy(trip.id, user.id, 'Clone');
+    const newTripId = await svc.copy(trip.id, user.id, 'Clone');
     const newDays = getDays(newTripId);
 
     // The kind of stop each place is survives the copy.
@@ -873,7 +873,7 @@ describe('folded trip CRUD', () => {
     expect(testDb.prepare('SELECT COUNT(*) c FROM roadtrip_vias WHERE day_id = ?').get(days[0].id)).toEqual({ c: 2 });
   });
 
-  it('TRIP-SVC-060: copying a trip keeps a staged booking staged', () => {
+  it('TRIP-SVC-060: copying a trip keeps a staged booking staged', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id, { title: 'Origin', start_date: '2025-06-01', end_date: '2025-06-02' });
     testDb.prepare(`INSERT INTO reservations (trip_id, title, type, status, ingest_state)
@@ -881,7 +881,7 @@ describe('folded trip CRUD', () => {
     testDb.prepare(`INSERT INTO reservations (trip_id, title, type, status)
       VALUES (?, 'Booked', 'flight', 'confirmed')`).run(trip.id);
 
-    const newTripId = svc.copy(trip.id, user.id, 'Clone');
+    const newTripId = await svc.copy(trip.id, user.id, 'Clone');
 
     // Without ingest_state on the duplicate INSERT the staged row falls back to
     // the column default and shows up in the copy's public feed.
@@ -899,7 +899,7 @@ describe('folded trip CRUD', () => {
    * member's Personal or Shared item reappeared in the copy as a Common item
    * that everyone on the new trip could read (GHSA-vh2h-288v-ggch).
    */
-  it("TRIP-SVC-046b: copy leaves other members' restricted packing items behind", () => {
+  it("TRIP-SVC-046b: copy leaves other members' restricted packing items behind", async () => {
     const { user: owner } = createUser(testDb);
     const { user: member } = createUser(testDb);
     const trip = createTrip(testDb, owner.id, { title: 'Origin', start_date: '2025-06-01', end_date: '2025-06-02' });
@@ -908,7 +908,7 @@ describe('folded trip CRUD', () => {
     ins.run(trip.id, "Owner's diary", 1, owner.id);      // the owner's Personal
     ins.run(trip.id, "Member's meds", 1, member.id);     // the copier's own Personal
 
-    const newTripId = svc.copy(trip.id, member.id, 'Copy');
+    const newTripId = await svc.copy(trip.id, member.id, 'Copy');
     const rows = testDb.prepare('SELECT name, is_private, owner_id FROM packing_items WHERE trip_id = ? ORDER BY name').all(newTripId) as any[];
 
     // The owner's private row is gone, not relabelled as Common.
@@ -918,7 +918,7 @@ describe('folded trip CRUD', () => {
     expect(rows.find(r => r.name === "Member's meds")).toMatchObject({ is_private: 1, owner_id: member.id });
   });
 
-  it('TRIP-SVC-059: copy remaps cross-links and carries splits/participants (smoke-test I-01)', () => {
+  it('TRIP-SVC-059: copy remaps cross-links and carries splits/participants (smoke-test I-01)', async () => {
     const { user: owner } = createUser(testDb);
     const { user: friend } = createUser(testDb);
     const trip = createTrip(testDb, owner.id, { title: 'Linked', start_date: '2025-06-01', end_date: '2025-06-02' });
@@ -946,7 +946,7 @@ describe('folded trip CRUD', () => {
     testDb.prepare('INSERT INTO budget_item_payers (budget_item_id, user_id, amount) VALUES (?, ?, 240)').run(itemId, owner.id);
     testDb.prepare("INSERT INTO todo_items (trip_id, name, checked) VALUES (?, 'Book transfer', 1)").run(trip.id);
 
-    const newTripId = svc.copy(trip.id, owner.id, 'Linked copy');
+    const newTripId = await svc.copy(trip.id, owner.id, 'Linked copy');
 
     // Budget → reservation link points at the copied reservation, not null / not the old id.
     const newItem = testDb.prepare('SELECT * FROM budget_items WHERE trip_id = ?').get(newTripId) as any;
@@ -1020,7 +1020,7 @@ describe('TripsService wrapper helpers', () => {
   it('canAccessTrip delegates to the db helper; can() delegates to checkPermission; broadcast forwards', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
-    expect(svc.canAccessTrip(String(trip.id), user.id)).toMatchObject({ user_id: user.id });
+    expect(await svc.canAccessTrip(String(trip.id), user.id)).toMatchObject({ user_id: user.id });
 
     expect(await svc.can('trip_edit', 'user', user.id, user.id, false)).toBe(true);
 
@@ -1028,10 +1028,10 @@ describe('TripsService wrapper helpers', () => {
     expect(broadcast).toHaveBeenCalledWith('9', 'trip:updated', { a: 1 }, 'sock');
   });
 
-  it('getCopiedTrip re-reads via the TRIP_SELECT query', () => {
+  it('getCopiedTrip re-reads via the TRIP_SELECT query', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id, { title: 'Copied' });
-    const row = svc.getCopiedTrip(trip.id, user.id) as any;
+    const row = (await svc.getCopiedTrip(trip.id, user.id)) as any;
     expect(row.id).toBe(trip.id);
     expect(row.is_owner).toBe(1);
   });
@@ -1132,7 +1132,7 @@ describe('folded quirk branches', () => {
     expect(testDb.prepare('SELECT id FROM trip_members WHERE trip_id = ? AND user_id = ?').get(trip.id, invitee.id)).toBeUndefined();
   });
 
-  it('TRIP-SVC-050: copy remaps tags, accommodations, reservations, day notes, budget, bags and category order', () => {
+  it('TRIP-SVC-050: copy remaps tags, accommodations, reservations, day notes, budget, bags and category order', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id, { title: 'Deep', start_date: '2025-06-01', end_date: '2025-06-02' });
     const days = getDays(trip.id);
@@ -1153,7 +1153,7 @@ describe('folded quirk branches', () => {
     testDb.prepare("INSERT INTO todo_items (trip_id, name, checked) VALUES (?, 'Book', 1)").run(trip.id);
     testDb.prepare("INSERT INTO budget_category_order (trip_id, category, sort_order) VALUES (?, 'stay', 2)").run(trip.id);
 
-    const newTripId = svc.copy(trip.id, user.id);
+    const newTripId = await svc.copy(trip.id, user.id);
 
     const newDays = getDays(newTripId);
     expect(newDays).toHaveLength(2);
@@ -1178,7 +1178,7 @@ describe('folded quirk branches', () => {
     expect((testDb.prepare('SELECT COUNT(*) AS n FROM day_notes WHERE trip_id = ?').get(newTripId) as any).n).toBe(1);
 
     // Missing source throws the byte-identical error.
-    expect(() => svc.copy(99999, user.id)).toThrow('Trip not found');
+    await expect(svc.copy(99999, user.id)).rejects.toThrow('Trip not found');
   });
 });
 
@@ -1238,7 +1238,7 @@ describe('quirk fixes', () => {
     ).run(journeyId, trip.id, user.id);
 
     const broken = await failingTrips('DELETE FROM trips WHERE id = ?');
-    expect(() => broken.remove(trip.id, user.id, 'user')).toThrow('boom');
+    await expect(broken.remove(trip.id, user.id, 'user')).rejects.toThrow('boom');
 
     // The skeleton cleanup rolled back with the failed delete.
     expect(testDb.prepare("SELECT id FROM journey_entries WHERE type = 'skeleton'").get()).toBeDefined();
@@ -1278,41 +1278,41 @@ describe('quirk fixes', () => {
 describe('activeTrip (startup destination)', () => {
   const TODAY = '2026-08-08';
 
-  it('TRIP-SVC-054: prefers the trip running today over anything upcoming', () => {
+  it('TRIP-SVC-054: prefers the trip running today over anything upcoming', async () => {
     const { user } = createUser(testDb);
     createTrip(testDb, user.id, { title: 'soon', start_date: '2026-08-20', end_date: '2026-08-25' });
     createTrip(testDb, user.id, { title: 'running', start_date: '2026-08-05', end_date: '2026-08-12' });
-    expect(svc.activeTrip(user.id, TODAY)?.title).toBe('running');
+    expect((await svc.activeTrip(user.id, TODAY))?.title).toBe('running');
   });
 
-  it('TRIP-SVC-055: without a running trip it takes the next one starting, earliest first', () => {
+  it('TRIP-SVC-055: without a running trip it takes the next one starting, earliest first', async () => {
     const { user } = createUser(testDb);
     createTrip(testDb, user.id, { title: 'late', start_date: '2026-12-01', end_date: '2026-12-10' });
     createTrip(testDb, user.id, { title: 'soon', start_date: '2026-09-01', end_date: '2026-09-10' });
-    expect(svc.activeTrip(user.id, TODAY)?.title).toBe('soon');
+    expect((await svc.activeTrip(user.id, TODAY))?.title).toBe('soon');
   });
 
-  it('TRIP-SVC-056: falls back to the most recently started trip, undated ones last', () => {
+  it('TRIP-SVC-056: falls back to the most recently started trip, undated ones last', async () => {
     const { user } = createUser(testDb);
     createTrip(testDb, user.id, { title: 'undated' });
     createTrip(testDb, user.id, { title: 'old', start_date: '2020-01-01', end_date: '2020-01-10' });
     createTrip(testDb, user.id, { title: 'recent', start_date: '2026-07-01', end_date: '2026-07-10' });
-    expect(svc.activeTrip(user.id, TODAY)?.title).toBe('recent');
+    expect((await svc.activeTrip(user.id, TODAY))?.title).toBe('recent');
   });
 
-  it('TRIP-SVC-057: skips archived trips and returns undefined when nothing is left', () => {
+  it('TRIP-SVC-057: skips archived trips and returns undefined when nothing is left', async () => {
     const { user } = createUser(testDb);
     const archived = createTrip(testDb, user.id, { title: 'archived', start_date: '2026-08-05', end_date: '2026-08-12' });
     testDb.prepare('UPDATE trips SET is_archived = 1 WHERE id = ?').run(archived.id);
-    expect(svc.activeTrip(user.id, TODAY)).toBeUndefined();
+    expect(await svc.activeTrip(user.id, TODAY)).toBeUndefined();
   });
 
-  it('TRIP-SVC-058: sees shared trips but never another user\'s private ones', () => {
+  it('TRIP-SVC-058: sees shared trips but never another user\'s private ones', async () => {
     const { user: owner } = createUser(testDb);
     const { user: guest } = createUser(testDb);
     createTrip(testDb, owner.id, { title: 'private', start_date: '2026-08-05', end_date: '2026-08-12' });
     const shared = createTrip(testDb, owner.id, { title: 'shared', start_date: '2026-09-01', end_date: '2026-09-10' });
     addTripMember(testDb, shared.id, guest.id);
-    expect(svc.activeTrip(guest.id, TODAY)?.title).toBe('shared');
+    expect((await svc.activeTrip(guest.id, TODAY))?.title).toBe('shared');
   });
 });

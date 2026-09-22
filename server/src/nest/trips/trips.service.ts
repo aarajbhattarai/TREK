@@ -167,11 +167,11 @@ export class TripsService {
     return this.dbs.connection;
   }
 
-  canAccessTrip(tripId: string | number, userId: number) {
+  async canAccessTrip(tripId: string | number, userId: number): Promise<{ user_id: number } | null | undefined> {
     return this.dbs.canAccessTrip(tripId, userId) as { user_id: number } | null | undefined;
   }
 
-  isOwner(tripId: string | number, userId: number): boolean {
+  async isOwner(tripId: string | number, userId: number): Promise<boolean> {
     return this.dbs.isOwner(tripId, userId);
   }
 
@@ -185,7 +185,7 @@ export class TripsService {
 
   // ── Day generation ────────────────────────────────────────────────────────
 
-  generateDays(tripId: number | bigint | string, startDate: string | null, endDate: string | null, dayCount?: number) {
+  async generateDays(tripId: number | bigint | string, startDate: string | null, endDate: string | null, dayCount?: number): Promise<void> {
     const existing = this.db.prepare('SELECT id, day_number, date FROM days WHERE trip_id = ?').all(tripId) as { id: number; day_number: number; date: string | null }[];
     const setDayNumber = this.db.prepare('UPDATE days SET day_number = ? WHERE id = ?');
 
@@ -304,7 +304,7 @@ export class TripsService {
 
   // ── Trip CRUD ─────────────────────────────────────────────────────────────
 
-  list(userId: number, archived: number | null) {
+  async list(userId: number, archived: number | null) {
     if (archived === null) {
       return this.db.prepare(`
         ${TRIP_SELECT}
@@ -321,7 +321,7 @@ export class TripsService {
     `).all({ userId, archived });
   }
 
-  create(userId: number, data: CreateTripData) {
+  async create(userId: number, data: CreateTripData) {
     if (data.start_date && data.end_date) assertTripSpan(data.start_date, data.end_date);
     const rd = data.reminder_days !== undefined
       ? (Number(data.reminder_days) >= 0 && Number(data.reminder_days) <= 30 ? Number(data.reminder_days) : 3)
@@ -333,13 +333,13 @@ export class TripsService {
     `).run(userId, data.title, data.description || null, data.start_date || null, data.end_date || null, data.currency || 'EUR', rd);
 
     const tripId = result.lastInsertRowid;
-    this.generateDays(tripId, data.start_date || null, data.end_date || null, data.day_count);
+    await this.generateDays(tripId, data.start_date || null, data.end_date || null, data.day_count);
 
     const trip = this.db.prepare(`${TRIP_SELECT} WHERE t.id = :tripId`).get({ userId, tripId });
     return { trip, tripId: Number(tripId), reminderDays: rd };
   }
 
-  get(tripId: string | number, userId: number) {
+  async get(tripId: string | number, userId: number) {
     return this.db.prepare(`
       ${TRIP_SELECT}
       LEFT JOIN trip_members m ON m.trip_id = t.id AND m.user_id = :userId
@@ -358,7 +358,7 @@ export class TripsService {
    * a startup redirect, so it reads four columns of one row instead of every
    * trip with its per-trip day/place counts.
    */
-  activeTrip(userId: number, today = new Date().toISOString().slice(0, 10)) {
+  async activeTrip(userId: number, today = new Date().toISOString().slice(0, 10)) {
     return this.db.prepare(`
       SELECT t.id, t.title, t.start_date, t.end_date,
         CASE
@@ -376,7 +376,7 @@ export class TripsService {
     `).get({ userId, today }) as ActiveTrip & { relevance: number } | undefined;
   }
 
-  getRaw(tripId: string | number): Trip | undefined {
+  async getRaw(tripId: string | number): Promise<Trip | undefined> {
     return this.db.prepare('SELECT * FROM trips WHERE id = ?').get(tripId) as Trip | undefined;
   }
 
@@ -384,7 +384,7 @@ export class TripsService {
     return this.unsplash.searchUnsplashPhotos(query, 9, await this.unsplash.getUnsplashKey(userId));
   }
 
-  getOwner(tripId: string | number): { user_id: number } | undefined {
+  async getOwner(tripId: string | number): Promise<{ user_id: number } | undefined> {
     return this.db.prepare('SELECT user_id FROM trips WHERE id = ?').get(tripId) as { user_id: number } | undefined;
   }
 
@@ -427,7 +427,7 @@ export class TripsService {
           (this.db.prepare('SELECT id, date FROM days WHERE trip_id = ?').all(tripId) as { id: number; date: string | null }[])
             .map(d => [d.id, d.date]),
         );
-        this.generateDays(tripId, newStart || null, newEnd || null, dayCount);
+        await this.generateDays(tripId, newStart || null, newEnd || null, dayCount);
         if (data.date_shift_mode === 'shift_all') {
           // Explicit "shift everything": bookings stay glued to their (re-dated) day rows,
           // so re-stamp reservation_time to follow — same rules as reorderDays/insertDay.
@@ -486,7 +486,7 @@ export class TripsService {
   async update(tripId: string | number, userId: number, body: UpdateTripData, role: string) {
     // A refused range must not leave the budget rebased onto a currency the trip
     // never took, so the dates are checked before the first write.
-    const trip = this.getRaw(tripId);
+    const trip = await this.getRaw(tripId);
     if (!trip) throw new NotFoundError('Trip not found');
     this.resolveRange(trip, body);
     // Re-anchor the budget while the outgoing currency is still on the trip row,
@@ -498,7 +498,7 @@ export class TripsService {
 
   // ── Delete ─────────────────────────────────────────────────────────────────
 
-  remove(tripId: string | number, userId: number, userRole: string): DeleteTripInfo {
+  async remove(tripId: string | number, userId: number, userRole: string): Promise<DeleteTripInfo> {
     const trip = this.db.prepare('SELECT title, user_id FROM trips WHERE id = ?').get(tripId) as { title: string; user_id: number } | undefined;
     if (!trip) throw new NotFoundError('Trip not found');
 
@@ -511,7 +511,7 @@ export class TripsService {
     // Quirk fix on top of the 1:1 move: the three-statement delete runs in a
     // transaction, so a failure mid-flow can't leave journey entries detached
     // from a trip that still exists.
-    this.db.transaction(() => {
+    await this.uow.transactional(async () => {
       // Clean up journey entries synced from this trip before deleting
       // Delete skeleton entries (unfilled synced places)
       this.db.prepare(`
@@ -525,7 +525,7 @@ export class TripsService {
       `).run(tripId);
 
       this.db.prepare('DELETE FROM trips WHERE id = ?').run(tripId);
-    })();
+    });
 
     return { tripId: Number(tripId), title: trip.title, ownerId: trip.user_id, isAdminDelete, ownerEmail };
   }
@@ -543,7 +543,7 @@ export class TripsService {
     });
   }
 
-  updateCoverImage(tripId: string | number, coverUrl: string): void {
+  async updateCoverImage(tripId: string | number, coverUrl: string): Promise<void> {
     this.db.prepare('UPDATE trips SET cover_image=?, updated_at=CURRENT_TIMESTAMP WHERE id=?').run(coverUrl, tripId);
   }
 
@@ -557,13 +557,13 @@ export class TripsService {
    * (budget_item_members/payers incl. paid flags, assignment_participants).
    * Packing items and to-dos are reset to unchecked. Returns the new trip's ID.
    */
-  copy(sourceTripId: string | number, newOwnerId: number, title?: string): number {
+  async copy(sourceTripId: string | number, newOwnerId: number, title?: string): Promise<number> {
     const src = this.db.prepare('SELECT * FROM trips WHERE id = ?').get(sourceTripId) as any;
     if (!src) throw new NotFoundError('Trip not found');
 
     const newTitle = title || src.title;
 
-    const fn = this.db.transaction(() => {
+    return await this.uow.transactional(async () => {
       const tripResult = this.db.prepare(`
         INSERT INTO trips (user_id, title, description, start_date, end_date, currency, cover_image, is_archived, reminder_days)
         VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?)
@@ -829,12 +829,10 @@ export class TripsService {
 
       return Number(newTripId);
     });
-
-    return fn();
   }
 
   /** Re-read a freshly copied trip in list shape (mirrors the route's TRIP_SELECT query). */
-  getCopiedTrip(newTripId: number, userId: number) {
+  async getCopiedTrip(newTripId: number, userId: number) {
     return this.db.prepare(`${TRIP_SELECT} WHERE t.id = :tripId`).get({ userId, tripId: newTripId });
   }
 

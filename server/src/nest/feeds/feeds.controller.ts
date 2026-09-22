@@ -92,23 +92,23 @@ export class TripFeedTokenController {
   constructor(private readonly feeds: FeedsService) {}
 
   @Get('token')
-  get(@CurrentUser() user: User, @Param('tripId') tripId: string, @Req() req: Request) {
-    return this.feeds.getTripToken(tripId, user.id, resolveFeedBase(req));
+  async get(@CurrentUser() user: User, @Param('tripId') tripId: string, @Req() req: Request) {
+    return await this.feeds.getTripToken(tripId, user.id, resolveFeedBase(req));
   }
 
   @Post('token')
-  generate(@CurrentUser() user: User, @Param('tripId') tripId: string, @Req() req: Request) {
-    return this.feeds.generateTripToken(tripId, user.id, resolveFeedBase(req));
+  async generate(@CurrentUser() user: User, @Param('tripId') tripId: string, @Req() req: Request) {
+    return await this.feeds.generateTripToken(tripId, user.id, resolveFeedBase(req));
   }
 
   @Put('token')
-  rotate(@CurrentUser() user: User, @Param('tripId') tripId: string, @Req() req: Request) {
-    return this.feeds.rotateTripToken(tripId, user.id, resolveFeedBase(req));
+  async rotate(@CurrentUser() user: User, @Param('tripId') tripId: string, @Req() req: Request) {
+    return await this.feeds.rotateTripToken(tripId, user.id, resolveFeedBase(req));
   }
 
   @Delete('token')
-  disable(@CurrentUser() user: User, @Param('tripId') tripId: string) {
-    this.feeds.disableTripToken(tripId, user.id);
+  async disable(@CurrentUser() user: User, @Param('tripId') tripId: string) {
+    await this.feeds.disableTripToken(tripId, user.id);
     return { feed_url: null };
   }
 }
@@ -123,23 +123,23 @@ export class UserFeedTokenController {
   constructor(private readonly feeds: FeedsService) {}
 
   @Get('token')
-  get(@CurrentUser() user: User, @Req() req: Request) {
-    return this.feeds.getUserToken(user.id, resolveFeedBase(req));
+  async get(@CurrentUser() user: User, @Req() req: Request) {
+    return await this.feeds.getUserToken(user.id, resolveFeedBase(req));
   }
 
   @Post('token')
-  generate(@CurrentUser() user: User, @Req() req: Request) {
-    return this.feeds.generateUserToken(user.id, resolveFeedBase(req));
+  async generate(@CurrentUser() user: User, @Req() req: Request) {
+    return await this.feeds.generateUserToken(user.id, resolveFeedBase(req));
   }
 
   @Put('token')
-  rotate(@CurrentUser() user: User, @Req() req: Request) {
-    return this.feeds.rotateUserToken(user.id, resolveFeedBase(req));
+  async rotate(@CurrentUser() user: User, @Req() req: Request) {
+    return await this.feeds.rotateUserToken(user.id, resolveFeedBase(req));
   }
 
   @Delete('token')
-  disable(@CurrentUser() user: User) {
-    this.feeds.disableUserToken(user.id);
+  async disable(@CurrentUser() user: User) {
+    await this.feeds.disableUserToken(user.id);
     return { feed_url: null };
   }
 }

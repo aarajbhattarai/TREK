@@ -40,7 +40,7 @@ export class TripPromptsMcp {
     when: budgetAddonOn,
   })
   async budgetOverviewPrompt({ tripId }: { tripId: number }, ctx: McpContext) {
-    if (!this.trips.canAccessTrip(tripId, ctx.userId)) {
+    if (!(await this.trips.canAccessTrip(tripId, ctx.userId))) {
       return { messages: [{ role: 'user' as const, content: { type: 'text' as const, text: 'Trip not found or access denied.' } }] };
     }
     const summary = await this.readModel.getTripSummary(tripId, ctx.userId);

@@ -45,7 +45,7 @@ export class TripsRpc {
   ) {}
 
   @PluginMethod('trips.getById', { permission: 'db:read:trips' })
-  getById(params: Record<string, unknown>, ctx: PluginRpcContext): unknown {
+  async getById(params: Record<string, unknown>, ctx: PluginRpcContext): Promise<unknown> {
     return this.guards.tripRead(params, ctx, () =>
       // db:read:trips is a read grant on the trip, not on the credential that
       // publishes it anonymously — see withoutFeedToken.
@@ -54,7 +54,7 @@ export class TripsRpc {
   }
 
   @PluginMethod('trips.getPlaces', { permission: 'db:read:trips' })
-  getPlaces(params: Record<string, unknown>, ctx: PluginRpcContext): unknown {
+  async getPlaces(params: Record<string, unknown>, ctx: PluginRpcContext): Promise<unknown> {
     // The trip's place POOL. Places carry no itinerary position of their own
     // (day_id/order_index live on day_assignments), so order by created_at like the
     // REST list does. trips.getDays is the day-ordered itinerary.
@@ -87,11 +87,11 @@ export class TripsRpc {
   }
 
   @PluginMethod('trips.listMine', { permission: 'db:read:trips' })
-  listMine(_params: Record<string, unknown>, ctx: PluginRpcContext): unknown {
+  async listMine(_params: Record<string, unknown>, ctx: PluginRpcContext): Promise<unknown> {
     // Membership is baked into the service, so there is no tripId to check, but a
     // job or onLoad with no bound user is refused exactly like costs.listMine.
     if (ctx.actingUserId === undefined) throw new ForbiddenResource('trip reads require an authenticated user context');
-    return this.trips.list(ctx.actingUserId, null);
+    return await this.trips.list(ctx.actingUserId, null);
   }
 
   @PluginMethod('reservations.listMine', { permission: 'db:read:trips' })
@@ -99,13 +99,13 @@ export class TripsRpc {
     if (ctx.actingUserId === undefined) {
       throw new ForbiddenResource('reservation reads require an authenticated user context');
     }
-    const trips = this.trips.list(ctx.actingUserId, null) as Array<{ id: number }>;
+    const trips = (await this.trips.list(ctx.actingUserId, null)) as Array<{ id: number }>;
     const perTrip = await Promise.all(trips.map((t) => this.reservations.list(String(t.id))));
     return perTrip.flat();
   }
 
   @PluginMethod('trips.members', { permission: 'db:read:trips' })
-  members(params: Record<string, unknown>, ctx: PluginRpcContext): unknown {
+  async members(params: Record<string, unknown>, ctx: PluginRpcContext): Promise<unknown> {
     return this.guards.tripRead(params, ctx, () =>
       this.db
         .prepare('SELECT u.id, u.username, u.display_name, u.avatar FROM trip_members tm JOIN users u ON u.id = tm.user_id WHERE tm.trip_id = ?')
@@ -154,7 +154,7 @@ export class TripsRpc {
     this.guards.capStrings(parsed.data as Record<string, unknown>, TRIP_STR_LIMITS);
     if (!(await this.canCreateTrip(actor))) throw new ForbiddenResource('no permission to create trips');
     try {
-      return this.trips.create(actor, parsed.data as unknown as Parameters<TripsService['create']>[1]).trip;
+      return (await this.trips.create(actor, parsed.data as unknown as Parameters<TripsService['create']>[1])).trip;
     } catch (e) {
       if (e instanceof ValidationError) throw new BadParams(e.message);
       throw e;

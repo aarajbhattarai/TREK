@@ -58,15 +58,6 @@ function svc(o: Partial<TripsService> = {}): TripsService {
 type CreateBody = Parameters<TripsController['create']>[1];
 const prePipeCreateBody = (body: unknown) => body as CreateBody;
 
-function thrown(fn: () => unknown): { status: number; body: unknown } {
-  try { fn(); } catch (err) {
-    expect(err).toBeInstanceOf(HttpException);
-    const e = err as HttpException;
-    return { status: e.getStatus(), body: e.getResponse() };
-  }
-  throw new Error('expected throw');
-}
-
 async function thrownAsync(fn: () => Promise<unknown>): Promise<{ status: number; body: unknown }> {
   try { await fn(); } catch (err) {
     expect(err).toBeInstanceOf(HttpException);
@@ -79,34 +70,34 @@ async function thrownAsync(fn: () => Promise<unknown>): Promise<{ status: number
 beforeEach(() => vi.clearAllMocks());
 
 describe('TripsController (parity with the legacy /api/trips route)', async () => {
-  it('GET / lists for the user with the archived flag', () => {
+  it('GET / lists for the user with the archived flag', async () => {
     const list = vi.fn().mockReturnValue([{ id: 1 }]);
-    expect(tc(svc({ list } as Partial<TripsService>)).list(user, '1')).toEqual({ trips: [{ id: 1 }] });
+    expect(await tc(svc({ list } as Partial<TripsService>)).list(user, '1')).toEqual({ trips: [{ id: 1 }] });
     expect(list).toHaveBeenCalledWith(1, 1);
   });
 
-  it('GET / defaults the archived flag to 0 when not "1"', () => {
+  it('GET / defaults the archived flag to 0 when not "1"', async () => {
     const list = vi.fn().mockReturnValue([]);
     const c = tc(svc({ list } as Partial<TripsService>));
-    c.list(user, undefined);
+    await c.list(user, undefined);
     expect(list).toHaveBeenLastCalledWith(1, 0);
-    c.list(user, '0');
+    await c.list(user, '0');
     expect(list).toHaveBeenLastCalledWith(1, 0);
   });
 
   describe('GET /active (startup destination)', () => {
-    it('narrows the row to the contract shape and drops the sort helper', () => {
+    it('narrows the row to the contract shape and drops the sort helper', async () => {
       const activeTrip = vi.fn().mockReturnValue({
         id: 7, title: 'Japan', start_date: '2026-09-01', end_date: '2026-09-14', relevance: 1,
       });
-      const res = tc(svc({ activeTrip } as Partial<TripsService>)).active(user);
+      const res = await tc(svc({ activeTrip } as Partial<TripsService>)).active(user);
       expect(res).toEqual({ trip: { id: 7, title: 'Japan', start_date: '2026-09-01', end_date: '2026-09-14' } });
       expect(activeTripResponseSchema.safeParse(res).success).toBe(true);
       expect(activeTrip).toHaveBeenCalledWith(1);
     });
 
-    it('answers null instead of 404 when the user has no trip, so the caller can fall back', () => {
-      const res = tc(svc({ activeTrip: vi.fn().mockReturnValue(undefined) } as Partial<TripsService>)).active(user);
+    it('answers null instead of 404 when the user has no trip, so the caller can fall back', async () => {
+      const res = await tc(svc({ activeTrip: vi.fn().mockReturnValue(undefined) } as Partial<TripsService>)).active(user);
       expect(res).toEqual({ trip: null });
       expect(activeTripResponseSchema.safeParse(res).success).toBe(true);
     });
@@ -204,13 +195,13 @@ describe('TripsController (parity with the legacy /api/trips route)', async () =
     });
   });
 
-  it('GET /:id 404 when missing', () => {
-    expect(thrown(() => tc(svc({ get: vi.fn().mockReturnValue(undefined) } as Partial<TripsService>)).get(user, '9'))).toEqual({ status: 404, body: { error: 'Trip not found' } });
+  it('GET /:id 404 when missing', async () => {
+    expect(await thrownAsync(() => tc(svc({ get: vi.fn().mockReturnValue(undefined) } as Partial<TripsService>)).get(user, '9'))).toEqual({ status: 404, body: { error: 'Trip not found' } });
   });
 
-  it('GET /:id returns the trip when present', () => {
+  it('GET /:id returns the trip when present', async () => {
     const s = svc({ get: vi.fn().mockReturnValue({ id: 9 }) } as Partial<TripsService>);
-    expect(tc(s).get(user, '9')).toEqual({ trip: { id: 9 } });
+    expect(await tc(s).get(user, '9')).toEqual({ trip: { id: 9 } });
   });
 
   describe('PUT /:id', () => {
@@ -329,7 +320,7 @@ describe('TripsController (parity with the legacy /api/trips route)', async () =
   });
 
   it('GET /:id/bundle 404 then aggregates', async () => {
-    expect(thrown(() => tc(svc({ get: vi.fn().mockReturnValue(undefined) } as Partial<TripsService>)).bundle(user, '9'))).toEqual({ status: 404, body: { error: 'Trip not found' } });
+    expect(await thrownAsync(() => tc(svc({ get: vi.fn().mockReturnValue(undefined) } as Partial<TripsService>)).bundle(user, '9'))).toEqual({ status: 404, body: { error: 'Trip not found' } });
     const bundle = vi.fn().mockReturnValue({ trip: { id: 9 }, days: [] });
     const s = svc({ get: vi.fn().mockReturnValue({ user_id: 1 }) } as Partial<TripsService>);
     expect(await tc(s, undefined, { bundle }).bundle(user, '9')).toEqual({ trip: { id: 9 }, days: [] });
