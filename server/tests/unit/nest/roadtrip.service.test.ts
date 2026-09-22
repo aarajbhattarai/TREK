@@ -42,7 +42,6 @@ async function makeService() {
     get: <T>(sql: string, ...params: unknown[]) => raw.prepare(sql).get(...params as never[]) as T | undefined,
     all: <T>(sql: string, ...params: unknown[]) => raw.prepare(sql).all(...params as never[]) as T[],
     run: (sql: string, ...params: unknown[]) => raw.prepare(sql).run(...params as never[]),
-    transaction: <T>(fn: (conn: unknown) => T) => raw.transaction(() => fn(raw))(),
   };
   // The realtime side is exercised through the controller and the MCP layer; here the
   // service is under test for what it writes, so a broadcast that goes nowhere is right.

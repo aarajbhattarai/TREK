@@ -914,8 +914,9 @@ cycle seams are folded, nothing on the websocket path imports one, and the
 crons all inject now (`*.job.ts` providers on `scheduling/CronRegistrarService`).
 
 1. **Move the SQL** into `<domain>.service.ts` as methods over an injected
-   `DatabaseService` (`this.db.all<T>/get<T>/run/prepare/transaction`; strict
-   constructor injection, no `@Optional()`). Preserve every quirk: falsy-coercion
+   `DatabaseService` (`this.db.all<T>/get<T>/run/prepare`; multi-statement writes go
+   through `await this.uow.transactional(...)` instead — see the root `CLAUDE.md`;
+   strict constructor injection, no `@Optional()`). Preserve every quirk: falsy-coercion
    defaults (`x || fallback`, never `??`), post-insert/post-update re-selects (no
    RETURNING), `COALESCE` semantics. If a controller already wraps the legacy
    functions, do not change the service's method surface. The module needs no

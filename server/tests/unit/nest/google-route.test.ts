@@ -13,7 +13,7 @@ const routeTestDb = new Database(':memory:');
 
 async function setup() {
   const maps = { geocodeQuery: vi.fn(), reverseGeocode: vi.fn().mockResolvedValue({ name: null, address: null }) };
-  const db = { canAccessTrip: vi.fn(() => ({ user_id: 7 })), get: () => ({ role: 'user' }), transaction: <T>(fn: () => T) => fn() };
+  const db = { canAccessTrip: vi.fn(() => ({ user_id: 7 })), get: () => ({ role: 'user' }) };
   const places = { create: vi.fn((_trip: string, stop: { name: string }) => ({ id: stop.name })), broadcast: vi.fn() };
   const assignments = { dayExists: vi.fn(() => true), createAssignment: vi.fn((dayId: number, placeId: string) => ({ dayId, placeId })), broadcast: vi.fn(), reconcile: vi.fn() };
   const permissions = { checkPermission: vi.fn(() => true) };

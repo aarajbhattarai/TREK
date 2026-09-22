@@ -19,18 +19,15 @@ describe('DatabaseService (typed query helpers)', () => {
     expect(svc.all('SELECT 3 AS three')).toEqual([{ three: 3 }]);
   });
 
-  it('run + transaction operate on a scratch table', () => {
+  it('run operates on a scratch table', () => {
     svc.run('CREATE TEMP TABLE IF NOT EXISTS _dbsvc_test (n INTEGER)');
     svc.run('DELETE FROM _dbsvc_test');
 
     const info = svc.run('INSERT INTO _dbsvc_test (n) VALUES (?)', 41);
     expect(info.changes).toBe(1);
 
-    const total = svc.transaction((conn) => {
-      conn.prepare('INSERT INTO _dbsvc_test (n) VALUES (?)').run(1);
-      return conn.prepare('SELECT SUM(n) AS s FROM _dbsvc_test').get() as { s: number };
-    });
-    expect(total.s).toBe(42);
+    const total = svc.get('SELECT SUM(n) AS s FROM _dbsvc_test') as { s: number };
+    expect(total.s).toBe(41);
 
     svc.run('DROP TABLE _dbsvc_test');
   });

@@ -40,7 +40,6 @@ function setup() {
     run: vi.fn((_sql: string, tripId: number, key: string, value: string) =>
       tripSettings.set(tripId, { ...tripSettings.get(tripId), [key]: JSON.parse(value) }),
     ),
-    transaction: (fn: () => unknown) => fn(),
   };
   const preferences = new RoadtripPreferencesService(preferenceDb as never, realtime as never, uowStub);
   const days = [{ id: 1, day_number: 1, title: null, date: '2026-09-11', default_transport_mode: 'driving' }];

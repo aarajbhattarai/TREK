@@ -38,11 +38,6 @@ export class DatabaseService {
     return this.conn.prepare(sql).run(...params);
   }
 
-  /** Run `fn` inside a synchronous better-sqlite3 transaction. */
-  transaction<T>(fn: (conn: Database.Database) => T): T {
-    return this.conn.transaction(() => fn(this.conn))();
-  }
-
   // Trip-access helpers delegate to the db/database exports (not this.conn):
   // tests vi.mock that module and stub the helpers themselves, so the stubs
   // must keep flowing through here.
