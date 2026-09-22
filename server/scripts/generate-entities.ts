@@ -823,6 +823,78 @@ export function RULE10_repositoryTypeMarker(metadata: EntityMetadata[]): Reposit
   return fixups;
 }
 
+/** An owning relation whose FK targets a non-PK column on its target entity — Rule 11. */
+export interface ReferencedColumnsFixup {
+  className: string;
+  propName: string;
+  referencedColumnNames: readonly string[];
+}
+
+/**
+ * Rule 11 (metadata level: detection only, no mutation; text level: the
+ * actual insertion — see `injectReferencedColumns` below. This split, and why
+ * it cannot be a pure metadata rule, mirrors Rule 5's `.joinColumn()`
+ * injection and Rule 10's repository marker.
+ *
+ * `@mikro-orm/sql`'s SQLite introspection (`SqliteSchemaHelper.js`, straight
+ * from `PRAGMA foreign_key_list`'s `to` column) already sets
+ * `prop.referencedColumnNames` correctly for every owning to-one relation —
+ * confirmed empirically with a throwaway `onProcessedMetadata` probe against
+ * the real migrated schema, BEFORE any rule in this file runs:
+ * `OauthTokens.client`/`OauthConsents.client` already carry
+ * `referencedColumnNames: ['client_id']` (the schema's real FK target,
+ * `Migration20200101012500_oauth_2.ts`'s `REFERENCES oauth_clients(client_id)`
+ * — a UNIQUE natural key, not `OauthClients`'s PK, `id`), while every other
+ * owning relation in the whole schema (`OauthTokens.user`, `.parentToken`,
+ * `SchoolHolidayRegions.countryRef` -> `school_holiday_countries(code)`,
+ * which IS that table's PK, …) already carries `referencedColumnNames` equal
+ * to its target's own PK.
+ *
+ * The generator's own RENDERER never emits this correct, already-introspected
+ * fact into the generated text, though — it is not something an earlier rule
+ * in this file drops. Read directly out of
+ * `node_modules/@mikro-orm/entity-generator/{EntityGenerator,SourceFile}.js`,
+ * not assumed: `SourceFile.js#getForeignKeyDecoratorOptions` (shared by every
+ * output mode, including `defineEntity`, through
+ * `EntitySchemaSourceFile.getPropertyOptions` -> `DefineEntitySourceFile`)
+ * only ever emits `.referencedColumnNames([...])` when
+ * `prop.ownColumns && prop.ownColumns.length !== prop.fieldNames.length` — a
+ * COMPOSITE-FK partial-ownership column-COUNT mismatch, never a check of
+ * whether the referenced column differs from the target's PK. `prop.ownColumns`
+ * itself is only ever set by `EntityGenerator.js#generate()` when
+ * `targetPrimaryColumns.length !== prop.referencedColumnNames.length` — again
+ * a length comparison, not a content comparison. For a single-column FK
+ * against a single-column PK (exactly the `client_id` case here), both
+ * lengths are 1 either way, so `ownColumns` is never set and the renderer's
+ * emission check never fires, no matter which column is actually referenced.
+ * This is a real gap in `@mikro-orm/entity-generator` 7.2.1's own renderer,
+ * not a defect our earlier text passes introduce or could avoid at the
+ * metadata level.
+ *
+ * Detection compares `prop.referencedColumnNames` (already correct) against
+ * the target entity's OWN primary-key field names
+ * (`targetMeta.getPrimaryProps().flatMap(pk => pk.fieldNames)`) — never a
+ * hard-coded table list, so a future migration adding another FK against a
+ * non-PK column is caught automatically the next time this generator runs,
+ * not silently missed.
+ */
+export function RULE11_referencedColumns(metadata: EntityMetadata[]): ReferencedColumnsFixup[] {
+  const fixups: ReferencedColumnsFixup[] = [];
+  for (const meta of metadata) {
+    for (const prop of meta.relations) {
+      if (!isOwningToOne(prop)) continue;
+      const targetMeta = metadata.find((m) => m.className === prop.type);
+      if (!targetMeta) continue; // unresolved relation target — nothing this rule can compare against
+      const targetPk = targetMeta.getPrimaryProps().flatMap((pk) => pk.fieldNames);
+      const referenced = prop.referencedColumnNames ?? [];
+      const matchesTargetPk = referenced.length === targetPk.length && referenced.every((column, i) => column === targetPk[i]);
+      if (matchesTargetPk) continue;
+      fixups.push({ className: meta.className, propName: prop.name, referencedColumnNames: [...referenced] });
+    }
+  }
+  return fixups;
+}
+
 /** A scalar property whose literal default the renderer's own heuristic drops or mis-renders — see below. */
 export interface DefaultFixup {
   className: string;
@@ -899,6 +971,8 @@ export interface RuleFixups {
   retypedScalars: RetypedScalarFixup[];
   /** Rule 10's repository-type markers — one per entity class. */
   repositoryMarkers: RepositoryTypeMarkerFixup[];
+  /** Rule 11's non-PK FK referenced-column fixups. */
+  referencedColumns: ReferencedColumnsFixup[];
 }
 
 /**
@@ -932,6 +1006,10 @@ export function applyRules(
   RULE9_addImplicitUniqueConstraints(metadata, implicitUniques);
   const defaults = RULE_normalizeLiteralDefaults(metadata);
   const repositoryMarkers = RULE10_repositoryTypeMarker(metadata);
+  // Runs after RULE5 so it reads the FINAL (post-rename) owning-relation
+  // property names — the same names the text pass below must find in the
+  // rendered `properties: {...}` block.
+  const referencedColumns = RULE11_referencedColumns(metadata);
   return {
     joinColumns,
     defaults,
@@ -939,6 +1017,7 @@ export function applyRules(
     jsonColumns,
     retypedScalars: [...retypedByRule1, ...timestamps, ...jsonColumns],
     repositoryMarkers,
+    referencedColumns,
   };
 }
 
@@ -1444,6 +1523,43 @@ export function injectRepositoryTypeMarker(source: string, fixups: readonly Repo
   return result;
 }
 
+/**
+ * The text half of Rule 11: appends `.referencedColumnNames(<col>, …)` to a
+ * FK relation's property line whenever the renderer left it out despite the
+ * metadata already carrying the real (non-PK) referenced column — see
+ * `RULE11_referencedColumns`'s doc comment for why the renderer never emits
+ * this itself for a single-column FK. `p.manyToOne(...)`'s
+ * `.referencedColumnNames(...)` is a rest-args method (confirmed against the
+ * installed `node_modules/@mikro-orm/core/entity/defineEntity.d.ts`), so this
+ * renders bare comma-separated quoted column names, never a `[...]` array
+ * literal. A property line that already has an explicit
+ * `.referencedColumnNames(` call is a legitimate no-op (never observed today
+ * — the renderer's own emission path never fires for this shape, see the
+ * rule's doc comment — but a future generator upgrade could change that);
+ * anything else finding no trailing comma to anchor on throws.
+ */
+export function injectReferencedColumns(source: string, fixups: readonly ReferencedColumnsFixup[]): string {
+  let result = source;
+  for (const { className, propName, referencedColumnNames } of fixups) {
+    const match = findPropertyBuilderLine(result, propName);
+    if (!match) {
+      throw new Error(`generate-entities: injectReferencedColumns could not find the property line for "${className}.${propName}".`);
+    }
+    const line = match[1];
+    if (line.includes('.referencedColumnNames(')) continue; // already explicit — nothing to do
+    const quoted = referencedColumnNames.map((column) => `'${column}'`).join(', ');
+    const appended = appendCallBeforeTrailingComma(line, `.referencedColumnNames(${quoted})`);
+    if (appended === undefined) {
+      throw new Error(
+        `generate-entities: injectReferencedColumns found the property line for "${className}.${propName}" but could not append ` +
+          `.referencedColumnNames(${quoted}) to it — check the renderer shape.`,
+      );
+    }
+    result = result.slice(0, match.index) + appended + result.slice(match.index + line.length);
+  }
+  return result;
+}
+
 /** Every text pass, applied in order. */
 export function applyTextPasses(source: string, fixups: RuleFixups): string {
   let result = injectJoinColumns(source, fixups.joinColumns);
@@ -1456,6 +1572,7 @@ export function applyTextPasses(source: string, fixups: RuleFixups): string {
   result = removeUnusedCoreImportIfUnused(result, 'IType');
   result = stripHiddenTypeAnnotation(result);
   result = injectRepositoryTypeMarker(result, fixups.repositoryMarkers);
+  result = injectReferencedColumns(result, fixups.referencedColumns);
   return result;
 }
 
@@ -1550,6 +1667,7 @@ export async function generateEntities(): Promise<GenerateResult> {
         jsonColumns: [],
         retypedScalars: [],
         repositoryMarkers: [],
+        referencedColumns: [],
       };
       const rawFiles = await generator.generate({
         entityDefinition: 'defineEntity',
@@ -1585,6 +1703,7 @@ export async function generateEntities(): Promise<GenerateResult> {
           jsonColumns: fixups.jsonColumns.filter((f) => f.className === className),
           retypedScalars: fixups.retypedScalars.filter((f) => f.className === className),
           repositoryMarkers: fixups.repositoryMarkers.filter((f) => f.className === className),
+          referencedColumns: fixups.referencedColumns.filter((f) => f.className === className),
         };
         files.set(`${className}.entity.ts`, applyTextPasses(raw, relevantFixups));
       }

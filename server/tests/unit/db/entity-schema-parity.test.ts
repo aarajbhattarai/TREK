@@ -303,34 +303,83 @@ describe('entity ↔ migrated-schema parity', () => {
   });
 
   /**
-   * FK targets/deleteRule and index names, against `PRAGMA foreign_key_list`
-   * and `PRAGMA index_list` — the plan's second, allow-listed check
-   * (Task 0, Step 3). Task 0 found deleteRule disagreeing on 11 of 180
-   * owning relations; Task 3's rewrite fixed one of those eleven as a side
-   * effect (`school_holiday_regions.country` now has a real, explicit
-   * `joinColumn`, so it reports a genuine FK row) and re-ran this check
-   * against the other 124 rewritten/added entities, composite-PK relations
-   * included (`packing_item_contributors`, `vacay_user_settings`,
-   * `document_connections`, `trip_document_links` — their `.entity.ts`
-   * source never spells `.deleteRule(...)` on those relations, but MikroORM
-   * discovery still resolves the correct rule at runtime, confirmed by
-   * running this check, so they are not drift): the count is now exactly 10,
-   * unchanged in substance from Task 0's list minus the one now-fixed row
-   * (`trip_members.invited_by` entity=set null vs db=no action,
-   * `roadtrip_day_tracks.day_id` entity=set null vs db=cascade,
-   * `reservation_travelers.reservation_id`/`.user_id` and
+   * FK targets, against `PRAGMA foreign_key_list` — the plan's second,
+   * allow-listed check (Task 0, Step 3), the REFERENCED-COLUMN half. Task 0
+   * left the whole check (referenced column + deleteRule + index names)
+   * `it.skip`'d and report-only. This half is un-skipped as of Plan 3b
+   * interlude A: `RULE11_referencedColumns` (`scripts/generate-entities.ts`)
+   * closed the one gap that made it fail — `OauthTokens.client`/
+   * `OauthConsents.client` targeted `oauth_clients.id` (the generator's
+   * default assumption for an owning to-one relation) instead of the schema's
+   * real FK target, the UNIQUE natural key `oauth_clients.client_id`
+   * (`Migration20200101012500_oauth_2.ts`). Every other owning relation in
+   * the schema already agreed with `PRAGMA foreign_key_list`'s `to` column,
+   * `school_holiday_regions.country -> school_holiday_countries.code`
+   * included (`code` IS that table's primary key, so the generator's default
+   * assumption was already correct there — unchanged by Rule 11, confirmed
+   * by this same test). The deleteRule half stays skipped — see
+   * `PARITY-009b` immediately below for why and by how many rows.
+   */
+  it('PARITY-009: FK referenced columns agree with PRAGMA foreign_key_list', () => {
+    const failures: string[] = [];
+    for (const meta of tableBackedMetas()) {
+      const table = meta.tableName;
+      const fkRows = testDb.prepare(`PRAGMA foreign_key_list("${table}")`).all() as {
+        from: string;
+        table: string;
+        to: string;
+      }[];
+      const fkByColumn = new Map(fkRows.map((row) => [row.from, row]));
+      for (const prop of meta.props) {
+        const isOwningToOne =
+          prop.kind === ReferenceKind.MANY_TO_ONE || (prop.kind === ReferenceKind.ONE_TO_ONE && prop.owner);
+        if (!isOwningToOne) continue;
+        const fieldName = prop.fieldNames[0];
+        const fk = fkByColumn.get(fieldName);
+        if (!fk) {
+          failures.push(`${table}.${fieldName}: entity relation has no matching db foreign key`);
+          continue;
+        }
+        const entityReferencedColumn = prop.referencedColumnNames?.[0];
+        if (entityReferencedColumn !== fk.to) {
+          failures.push(`${table}.${fieldName}: referencedColumn entity=${String(entityReferencedColumn)} vs db=${fk.to}`);
+        }
+      }
+    }
+    expect(failures).toEqual([]);
+  });
+
+  /**
+   * The deleteRule half of the same check (Task 0, Step 3). Task 0 found
+   * deleteRule disagreeing on 11 of 180 owning relations; Task 3's rewrite
+   * fixed one of those eleven as a side effect (`school_holiday_regions.
+   * country` now has a real, explicit `joinColumn`, so it reports a genuine
+   * FK row) and re-ran this check against the other 124 rewritten/added
+   * entities, composite-PK relations included (`packing_item_contributors`,
+   * `vacay_user_settings`, `document_connections`, `trip_document_links` —
+   * their `.entity.ts` source never spells `.deleteRule(...)` on those
+   * relations, but MikroORM discovery still resolves the correct rule at
+   * runtime, confirmed by running this check, so they are not drift): the
+   * count was 10. Plan 3b interlude A's `RULE11_referencedColumns` only
+   * touches the referenced COLUMN, never `deleteRule` (`OauthTokens.client`/
+   * `OauthConsents.client` already agreed on `deleteRule('cascade')` —
+   * unaffected either way), so re-running this exact query still finds
+   * **10** disagreements, unchanged: `trip_members.invited_by` entity=set
+   * null vs db=no action, `roadtrip_day_tracks.day_id` entity=set null vs
+   * db=cascade, `reservation_travelers.reservation_id`/`.user_id` and
    * `assignment_participants.assignment_id`/`.user_id` entity=no action vs
    * db=cascade, `oauth_tokens.parent_token_id` entity=set null vs db=no
    * action, `journey_contributors.user_id` entity=cascade vs db=no action,
    * `budget_settlements.created_by_user_id`/`budget_items.paid_by_user_id`
-   * entity=set null vs db=no action). None of these are in Task 0's or
-   * Task 3's scope; an allow-list would need 10 one-line entries for drift
-   * neither task was asked to fix, and index-name parity looked clean on
-   * inspection but was not exhaustively checked. Left skipped, with the
-   * findings above, for Plan 4 to turn into either fixes or a real
-   * allow-list.
+   * entity=set null vs db=no action. None of these are in this task's scope
+   * (or Task 0's/Task 3's); an allow-list would need 10 one-line entries for
+   * drift no task so far was asked to fix. Index-name parity looked clean on
+   * inspection but was not exhaustively checked either, and stays out of
+   * scope here too. Left skipped, with the count pinned above (Plan 4 owns
+   * turning this into either fixes or a real allow-list — the number to
+   * reconcile against is exactly 10, not "some").
    */
-  it.skip('PARITY-009 (report-only, deferred to Plan 4): FK deleteRule and index names agree', () => {
+  it.skip('PARITY-009b (report-only, deferred to Plan 4): FK deleteRule agrees — 10 known disagreements, see doc comment', () => {
     const failures: string[] = [];
     for (const meta of tableBackedMetas()) {
       const table = meta.tableName;

@@ -13,6 +13,7 @@ import {
   JoinColumnFixup,
   JsonColumnFixup,
   KNOWN_DIFFS,
+  ReferencedColumnsFixup,
   RepositoryTypeMarkerFixup,
   RULE1_fixUnknownScalarTypes,
   RULE1b_markJsonColumns,
@@ -27,6 +28,7 @@ import {
   RULE8_bindRepositories,
   RULE9_addImplicitUniqueConstraints,
   RULE10_repositoryTypeMarker,
+  RULE11_referencedColumns,
   RULE_normalizeLiteralDefaults,
   applyTextPasses,
   checkEntities,
@@ -38,6 +40,7 @@ import {
   injectJsonInterfaces,
   injectJsonTypeParams,
   injectMissingDefaults,
+  injectReferencedColumns,
   injectRepositoryTypeMarker,
   regenerateEntitiesIndex,
   stripHiddenTypeAnnotation,
@@ -437,6 +440,58 @@ describe('RULE10_repositoryTypeMarker', () => {
   });
 });
 
+describe('RULE11_referencedColumns', () => {
+  it('RULE11-001: an FK targeting its target\'s own single-column PK gets no fixup (the common case)', () => {
+    const rel = fixtureProp({ name: 'user', kind: ReferenceKind.MANY_TO_ONE, fieldNames: ['user_id'], type: 'Users', referencedColumnNames: ['id'] });
+    const owner = fixtureMeta('OauthTokens', 'oauth_tokens', [rel]);
+    const target = fixtureMeta('Users', 'users', [fixtureProp({ name: 'id', primary: true })]);
+    const fixups = RULE11_referencedColumns([owner, target]);
+    expect(fixups).toEqual([]);
+  });
+
+  it('RULE11-002: an FK targeting a non-PK column (the real oauth_tokens.client_id -> oauth_clients.client_id case) gets a fixup', () => {
+    const rel = fixtureProp({ name: 'client', kind: ReferenceKind.MANY_TO_ONE, fieldNames: ['client_id'], type: 'OauthClients', referencedColumnNames: ['client_id'] });
+    const owner = fixtureMeta('OauthTokens', 'oauth_tokens', [rel]);
+    const target = fixtureMeta('OauthClients', 'oauth_clients', [fixtureProp({ name: 'id', primary: true })]);
+    const fixups = RULE11_referencedColumns([owner, target]);
+    expect(fixups).toEqual<ReferencedColumnsFixup[]>([{ className: 'OauthTokens', propName: 'client', referencedColumnNames: ['client_id'] }]);
+  });
+
+  it('RULE11-003: a text PK target whose FK genuinely references that PK (school_holiday_regions.country -> school_holiday_countries.code) gets no fixup', () => {
+    const rel = fixtureProp({ name: 'countryRef', kind: ReferenceKind.MANY_TO_ONE, fieldNames: ['country'], type: 'SchoolHolidayCountries', referencedColumnNames: ['code'] });
+    const owner = fixtureMeta('SchoolHolidayRegions', 'school_holiday_regions', [rel]);
+    const target = fixtureMeta('SchoolHolidayCountries', 'school_holiday_countries', [fixtureProp({ name: 'code', primary: true })]);
+    const fixups = RULE11_referencedColumns([owner, target]);
+    expect(fixups).toEqual([]);
+  });
+
+  it('RULE11-004: an unresolved relation target (no matching metadata) is skipped, not thrown or flagged', () => {
+    const rel = fixtureProp({ name: 'something', kind: ReferenceKind.MANY_TO_ONE, fieldNames: ['something_id'], type: 'Nowhere', referencedColumnNames: ['id'] });
+    const owner = fixtureMeta('X', 'x', [rel]);
+    expect(() => RULE11_referencedColumns([owner])).not.toThrow();
+    expect(RULE11_referencedColumns([owner])).toEqual([]);
+  });
+
+  it('RULE11-005: an inverse relation (oneToMany) is never a candidate — only an owning to-one is checked', () => {
+    const inverse = fixtureProp({ name: 'oauth_tokens_collection', kind: ReferenceKind.ONE_TO_MANY, type: 'OauthTokens', mappedBy: 'client', referencedColumnNames: ['id'] });
+    const owner = fixtureMeta('OauthClients', 'oauth_clients', [inverse]);
+    const target = fixtureMeta('OauthTokens', 'oauth_tokens', [fixtureProp({ name: 'id', primary: true })]);
+    const fixups = RULE11_referencedColumns([owner, target]);
+    expect(fixups).toEqual([]);
+  });
+
+  it('RULE11-006: a composite-PK target compares the full column list, in order', () => {
+    const rel = fixtureProp({ name: 'setting', kind: ReferenceKind.MANY_TO_ONE, fieldNames: ['a', 'b'], type: 'Composite', referencedColumnNames: ['b', 'a'] });
+    const owner = fixtureMeta('X', 'x', [rel]);
+    const target = fixtureMeta('Composite', 'composite', [
+      fixtureProp({ name: 'a', primary: true }),
+      fixtureProp({ name: 'b', primary: true }),
+    ]);
+    const fixups = RULE11_referencedColumns([owner, target]);
+    expect(fixups).toEqual<ReferencedColumnsFixup[]>([{ className: 'X', propName: 'setting', referencedColumnNames: ['b', 'a'] }]);
+  });
+});
+
 describe('RULE9_addImplicitUniqueConstraints', () => {
   it('RULE9-001: a table with a matching implicit-unique entry gets a uniques: block referencing the columns as properties — a plain (non-FK) column keeps its own name', () => {
     const userId = fixtureProp({ name: 'user_id', primary: false });
@@ -806,6 +861,51 @@ describe('injectRepositoryTypeMarker', () => {
   });
 });
 
+describe('injectReferencedColumns', () => {
+  it('TEXT-REFCOL-001: appends .referencedColumnNames(<col>) before the trailing comma (the real client_id shape)', () => {
+    const source = "    client: () => p.manyToOne(OauthClients).ref().name('client_id').deleteRule('cascade').hidden(),\n";
+    const out = injectReferencedColumns(source, [{ className: 'OauthTokens', propName: 'client', referencedColumnNames: ['client_id'] }]);
+    expect(out).toBe("    client: () => p.manyToOne(OauthClients).ref().name('client_id').deleteRule('cascade').hidden().referencedColumnNames('client_id'),\n");
+  });
+
+  it('TEXT-REFCOL-002: multiple referenced columns render as bare comma-separated quoted strings, no array brackets (rest-args API)', () => {
+    const source = '    setting: () => p.manyToOne(Composite).ref(),\n';
+    const out = injectReferencedColumns(source, [{ className: 'X', propName: 'setting', referencedColumnNames: ['b', 'a'] }]);
+    expect(out).toContain(".referencedColumnNames('b', 'a')");
+    expect(out).not.toContain('[');
+  });
+
+  it('TEXT-REFCOL-003: a line already carrying an explicit .referencedColumnNames( call is left untouched (legitimate no-op)', () => {
+    const source = "    client: () => p.manyToOne(OauthClients).ref().referencedColumnNames('client_id'),\n";
+    const out = injectReferencedColumns(source, [{ className: 'X', propName: 'client', referencedColumnNames: ['client_id'] }]);
+    expect(out).toBe(source);
+  });
+
+  it('TEXT-REFCOL-004: appends before a trailing comma even with a line comment after it', () => {
+    const source = '    client: () => p.manyToOne(Y).ref(), // pins client\n';
+    const out = injectReferencedColumns(source, [{ className: 'X', propName: 'client', referencedColumnNames: ['client_id'] }]);
+    expect(out).toBe("    client: () => p.manyToOne(Y).ref().referencedColumnNames('client_id'), // pins client\n");
+  });
+
+  it('TEXT-REFCOL-005: throws, naming the class and property, if the property line is not found', () => {
+    expect(() => injectReferencedColumns('', [{ className: 'X', propName: 'client', referencedColumnNames: ['client_id'] }])).toThrow(
+      /could not find the property line for "X\.client"/,
+    );
+  });
+
+  it('TEXT-REFCOL-006: throws if the property line has no trailing comma to anchor on', () => {
+    const source = '    client: () => p.manyToOne(Y).ref()';
+    expect(() => injectReferencedColumns(source, [{ className: 'X', propName: 'client', referencedColumnNames: ['client_id'] }])).toThrow(
+      /could not append/,
+    );
+  });
+
+  it('TEXT-REFCOL-007: an empty fixups list is a no-op', () => {
+    const source = "    client: () => p.manyToOne(OauthClients).ref().name('client_id'),\n";
+    expect(injectReferencedColumns(source, [])).toBe(source);
+  });
+});
+
 describe('applyTextPasses', () => {
   it('TEXT-ALL-001: composes every pass without one undoing another', () => {
     const source =
@@ -821,8 +921,10 @@ describe('applyTextPasses', () => {
       jsonColumns: [],
       retypedScalars: [],
       repositoryMarkers: [{ className: 'X', repositoryClassName: 'XRepository' }],
+      referencedColumns: [{ className: 'X', propName: 'countryRef', referencedColumnNames: ['code'] }],
     });
     expect(out).toContain(".joinColumn('country')");
+    expect(out).toContain(".referencedColumnNames('code')");
     expect(out).not.toContain('& Hidden');
     expect(out).toContain('export class X {\n  [EntityRepositoryType]?: XRepository;\n  countryRef!: Ref<Y>;\n');
   });

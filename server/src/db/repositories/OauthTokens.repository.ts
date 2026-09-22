@@ -1,14 +1,17 @@
 import { OauthTokens } from '../entities/OauthTokens.entity';
 import { type AssertRowKeys } from './_shared/rows';
-import { columnRef, currentTimestamp, currentTimestampKysely } from '../dialect/sql-functions';
+import { columnRef, currentTimestamp } from '../dialect/sql-functions';
 import { EntityRepository } from '@mikro-orm/sql';
 
 /**
- * The Kysely-side table shapes `em.getKysely()` needs for the two escape
- * hatches in this repository (the recursive CTE and the `oauth_clients`
- * join — see `collectChainIds`/`listActiveByUser`'s docstrings for why the
- * QueryBuilder can't express either). Column-shaped, not entity-shaped: this
- * is the raw driver's view of the tables, independent of MikroORM metadata.
+ * The Kysely-side table shape `em.getKysely()` needs for `collectChainIds`'s
+ * recursive CTE (D4's T6 tier — the QueryBuilder has no recursive-CTE
+ * support at all, so this one escape hatch stays regardless of the `client`
+ * relation's referenced column). `oauth_clients`/`users` are no longer part
+ * of this interface: `listActiveByUser`/`listAllActiveWithClientAndUser`
+ * (OA26/OA31) moved to the QueryBuilder once the generator learned to emit
+ * `.referencedColumnNames('client_id')` for `OauthTokens.client` (Plan 3b
+ * interlude A) — see those methods' docstrings.
  */
 interface OauthTokensKyselyDB {
   oauth_tokens: {
@@ -21,14 +24,6 @@ interface OauthTokensKyselyDB {
     revoked_at: string | null;
     created_at: string | null;
     parent_token_id: number | null;
-  };
-  oauth_clients: {
-    client_id: string;
-    name: string;
-  };
-  users: {
-    id: number;
-    username: string;
   };
 }
 
@@ -146,27 +141,25 @@ const _oauthTokenScalarProbe: AssertRowKeys<OauthTokenScalarColumns, OauthTokens
  * `OauthService` does (`hashToken`/`generateAccessToken`/…), this
  * repository only ever sees an already-computed hash string.
  *
- * **The `client` relation targets the wrong column.** The generator built
- * `client: p.manyToOne(OauthClients).ref().name('client_id')` with no
- * `referencedColumnNames` override, so MikroORM's QueryBuilder joins it as
- * `ot.client_id = oc.id` (`OauthClients`'s primary key) — verified
- * empirically (`qb.getFormattedQuery()`). The actual schema
- * (`Migration20200101012500_oauth_2.ts`) has `oauth_tokens.client_id
- * REFERENCES oauth_clients(client_id)`, the UNIQUE natural key, not `oc.id`
- * — the two are independently generated UUIDs
- * (`OauthService.createOAuthClient`'s `id`/`clientId` locals). A plain
- * equality filter/write on the `client` property (`{ client: clientId }` in
- * a `find`/`nativeUpdate`) is unaffected — it binds the given scalar
- * straight into the `client_id` column, no join involved, verified
- * empirically — but an ORM-level JOIN through this relation
- * (`.innerJoin('ot.client', 'oc')`) silently returns the WRONG rows. This
- * repository never joins that relation: `listActiveByUser`/
- * `listAllActiveWithClientAndUser` (OA26/OA31, the two legacy statements
- * that actually join `oauth_clients`) go through `em.getKysely()` instead,
- * joining on the real `oc.client_id` column directly, entity metadata
- * bypassed entirely. This is a pre-existing entity-generation defect
- * (outside this task's scope to fix — `src/db/entities/**` is off limits
- * here); flagged for Task 7 / the entity generator's own follow-up.
+ * **The `client` relation now correctly targets `oauth_clients.client_id`.**
+ * The schema (`Migration20200101012500_oauth_2.ts`) has `oauth_tokens.
+ * client_id REFERENCES oauth_clients(client_id)`, the UNIQUE natural key —
+ * NOT `oauth_clients.id`, its primary key; the two are independently
+ * generated UUIDs (`OauthService.createOAuthClient`'s `id`/`clientId`
+ * locals). Task 4 found the generated entity's `client` relation had no
+ * `referencedColumnNames` override and so silently joined on `oc.id`
+ * instead — a pre-existing `@mikro-orm/entity-generator` 7.2.1 defect (a
+ * single-column FK's renderer never emits `.referencedColumnNames(...)`
+ * unless the target's own PK has a DIFFERENT column count, never a
+ * different column identity) — and worked around it with `em.getKysely()`
+ * for the two legacy statements that actually join `oauth_clients`
+ * (OA26/OA31). Plan 3b interlude A (`RULE11_referencedColumns` in
+ * `scripts/generate-entities.ts`) closed that gap at the generator level:
+ * `OauthTokens.entity.ts`'s `client` relation now carries an explicit
+ * `.referencedColumnNames('client_id')`, so `.innerJoin('ot.client', 'oc')`
+ * joins on the real column — verified empirically (`qb.getFormattedQuery()`,
+ * OAUTHTOKREPO-030) — and `listActiveByUser`/`listAllActiveWithClientAndUser`
+ * below use the QueryBuilder like every other join in this file.
  */
 export class OauthTokensRepository extends EntityRepository<OauthTokens> {
   // ---------------------------------------------------------------------
@@ -260,8 +253,9 @@ export class OauthTokensRepository extends EntityRepository<OauthTokens> {
    * (unlike `ot.client`) is a NORMAL relation — its column
    * (`user_id`, default naming, no override) genuinely references
    * `users.id`, verified empirically — so `.innerJoin('ot.user', 'u')` joins
-   * correctly and this stays on the QueryBuilder (D4's T5 tier), unlike
-   * OA26/OA31 below. `columnRef` for both FK scalars in the select list:
+   * correctly and this stays on the QueryBuilder (D4's T5 tier) — as do
+   * OA26/OA31 below, since Plan 3b interlude A. `columnRef` for both FK
+   * scalars in the select list:
    * `ot.user_id` because the same relation is also joined (the
    * `McpTokensRepository.listAllWithUsername` finding — selecting a
    * relation property while also joining it collapses into the join rather
@@ -502,30 +496,35 @@ export class OauthTokensRepository extends EntityRepository<OauthTokens> {
    * ORDER BY ot.created_at DESC
    * ```
    *
-   * `em.getKysely()`, NOT the QueryBuilder (this class's docstring): the
-   * join is `ot.client_id = oc.client_id`, the real FK target per the
-   * migration, which `.innerJoin('ot.client', 'oc')` cannot express
-   * correctly (it would join `ot.client_id = oc.id` instead — silently
-   * wrong, not an error). `currentTimestampKysely` for the same
-   * `CURRENT_TIMESTAMP` literal `currentTimestamp` spells for the
-   * QueryBuilder/`nativeUpdate` — Kysely has its own expression system and
-   * cannot consume a MikroORM `RawQueryFragment` directly (see
-   * `sql-functions.ts`'s docstring on that helper). Verified empirically
-   * against a real seeded row before committing to this shape (see the
-   * task report).
+   * The QueryBuilder (Plan 3b interlude A — this class's docstring):
+   * `.innerJoin('ot.client', 'oc')` now joins on the real `oc.client_id`
+   * column, the generated entity's `client` relation carrying an explicit
+   * `.referencedColumnNames('client_id')`. `columnRef(platform,
+   * 'ot.client_id')` in the select list for the same reason OA16's
+   * `findByAccessTokenHashWithUser` needs it: selecting a relation property
+   * while ALSO joining that same relation collapses into the join rather
+   * than emitting the FK scalar column (the `McpTokensRepository
+   * .listAllWithUsername` finding). `{ $gt: currentTimestamp(platform) }`
+   * for the `refresh_token_expires_at > CURRENT_TIMESTAMP` predicate — a
+   * `RawQueryFragment` is a normal filter value here, no Kysely-specific
+   * spelling needed once the query itself is a QueryBuilder query.
    */
   async listActiveByUser(userId: number): Promise<OauthSessionRow[]> {
     const platform = this.getEntityManager().getPlatform();
-    const rows = await this.getEntityManager()
-      .getKysely<OauthTokensKyselyDB>()
-      .selectFrom('oauth_tokens as ot')
-      .innerJoin('oauth_clients as oc', 'oc.client_id', 'ot.client_id')
-      .select(['ot.id', 'ot.client_id', 'oc.name as client_name', 'ot.scopes', 'ot.access_token_expires_at', 'ot.refresh_token_expires_at', 'ot.created_at'])
-      .where('ot.user_id', '=', userId)
-      .where('ot.revoked_at', 'is', null)
-      .where('ot.refresh_token_expires_at', '>', currentTimestampKysely(platform))
-      .orderBy('ot.created_at', 'desc')
-      .execute();
+    const rows = await this.qb('ot')
+      .innerJoin('ot.client', 'oc')
+      .select([
+        'ot.id',
+        columnRef(platform, 'ot.client_id'),
+        'oc.name as client_name',
+        'ot.scopes',
+        'ot.access_token_expires_at',
+        'ot.refresh_token_expires_at',
+        'ot.created_at',
+      ])
+      .where({ 'ot.user_id': userId, 'ot.revoked_at': null, 'ot.refresh_token_expires_at': { $gt: currentTimestamp(platform) } })
+      .orderBy({ 'ot.created_at': 'desc' })
+      .execute<OauthSessionRow[]>('all', false);
     return rows.map((row) => ({
       id: row.id,
       client_id: row.client_id,
@@ -562,25 +561,37 @@ export class OauthTokensRepository extends EntityRepository<OauthTokens> {
    * ORDER BY ot.created_at DESC
    * ```
    *
-   * `em.getKysely()`, same reason as `listActiveByUser` (OA26) — the
-   * `oauth_clients` join. `users` joins correctly either way (its relation
-   * is normally mapped), joined here through Kysely too for one consistent
-   * query shape rather than mixing a QueryBuilder join into a Kysely query.
+   * The QueryBuilder, same reason as `listActiveByUser` (OA26) — the
+   * `client` relation now carries the real referenced column (see this
+   * class's docstring). `users` joins correctly either way (`ot.user` is a
+   * normal relation), joined here through the QueryBuilder too for one
+   * consistent query shape rather than a Kysely query. `columnRef` for both
+   * `client_id`/`user_id`: both relations are also joined in this same
+   * query, so a plain `'ot.client_id'`/`'ot.user_id'` select would collapse
+   * into their respective joins (same finding as `listActiveByUser`/OA16).
    * Malformed `scopes` JSON degrading to `null` per-row (not a 500) stays
    * in the SERVICE, unchanged — this repository returns the raw column
    * text.
    */
   async listAllActiveWithClientAndUser(): Promise<OauthSessionWithUserRow[]> {
-    const rows = await this.getEntityManager()
-      .getKysely<OauthTokensKyselyDB>()
-      .selectFrom('oauth_tokens as ot')
-      .innerJoin('oauth_clients as oc', 'oc.client_id', 'ot.client_id')
-      .innerJoin('users as u', 'u.id', 'ot.user_id')
-      .select(['ot.id', 'ot.client_id', 'oc.name as client_name', 'ot.user_id', 'u.username', 'ot.scopes', 'ot.access_token_expires_at', 'ot.refresh_token_expires_at', 'ot.created_at'])
-      .where('ot.revoked_at', 'is', null)
-      .where('ot.refresh_token_expires_at', '>', currentTimestampKysely(this.getEntityManager().getPlatform()))
-      .orderBy('ot.created_at', 'desc')
-      .execute();
+    const platform = this.getEntityManager().getPlatform();
+    const rows = await this.qb('ot')
+      .innerJoin('ot.client', 'oc')
+      .innerJoin('ot.user', 'u')
+      .select([
+        'ot.id',
+        columnRef(platform, 'ot.client_id'),
+        'oc.name as client_name',
+        columnRef(platform, 'ot.user_id'),
+        'u.username',
+        'ot.scopes',
+        'ot.access_token_expires_at',
+        'ot.refresh_token_expires_at',
+        'ot.created_at',
+      ])
+      .where({ 'ot.revoked_at': null, 'ot.refresh_token_expires_at': { $gt: currentTimestamp(platform) } })
+      .orderBy({ 'ot.created_at': 'desc' })
+      .execute<OauthSessionWithUserRow[]>('all', false);
     return rows.map((row) => ({
       id: row.id,
       client_id: row.client_id,

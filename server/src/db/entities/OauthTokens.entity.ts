@@ -33,7 +33,7 @@ export const OauthTokensSchema = defineEntity({
   ],
   properties: {
     id: p.integer().primary(),
-    client: () => p.manyToOne(OauthClients).ref().name('client_id').deleteRule('cascade').hidden(),
+    client: () => p.manyToOne(OauthClients).ref().name('client_id').deleteRule('cascade').hidden().referencedColumnNames('client_id'),
     client_id: p.text().persist(false),
     user: () => p.manyToOne(Users).ref().deleteRule('cascade').hidden().index('idx_oauth_tokens_user'),
     user_id: p.integer().persist(false).index('idx_oauth_tokens_user'),

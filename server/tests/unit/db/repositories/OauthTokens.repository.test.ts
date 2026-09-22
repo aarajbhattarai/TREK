@@ -344,7 +344,7 @@ describe('OauthTokensRepository', () => {
     });
   });
 
-  describe('listActiveByUser (OA26) — Kysely join on the real oauth_clients.client_id column', () => {
+  describe('listActiveByUser (OA26) — QueryBuilder join on the real oauth_clients.client_id column', () => {
     it('OAUTHTOKREPO-022: lists only this user\'s non-revoked, non-expired-refresh sessions, newest first, with the client name joined in', async () => {
       const { user } = createUser(testDb);
       const { user: other } = createUser(testDb);
@@ -431,6 +431,57 @@ describe('OauthTokensRepository', () => {
       expect((testDb.prepare('SELECT revoked_at FROM oauth_tokens WHERE id = ?').get(idB) as { revoked_at: string | null }).revoked_at).not.toBeNull();
       expect((testDb.prepare('SELECT revoked_at FROM oauth_tokens WHERE id = ?').get(idAlready) as { revoked_at: string }).revoked_at).toBe('2020-01-01 00:00:00');
       expect((testDb.prepare('SELECT revoked_at FROM oauth_tokens WHERE id = ?').get(idOther) as { revoked_at: string | null }).revoked_at).toBeNull();
+    });
+  });
+
+  describe('client relation join (Plan 3b interlude A — RULE11_referencedColumns)', () => {
+    it('OAUTHTOKREPO-030: a QueryBuilder join on the client relation resolves the right client, even though oauth_clients.id !== client_id', async () => {
+      const { user } = createUser(testDb);
+      // seedClient's own `id` ("row-<clientId>") is already never equal to
+      // `client_id` — this test additionally asserts the two literally
+      // differ, so a future fixture change can't silently make the
+      // distinction disappear and hide a regression.
+      seedClient(user.id, 'proto-30', 'Client Thirty');
+      const clientRow = testDb.prepare('SELECT id, client_id FROM oauth_clients WHERE client_id = ?').get('proto-30') as { id: string; client_id: string };
+      expect(clientRow.id).not.toBe(clientRow.client_id);
+      const id = seedToken({ clientId: 'proto-30', userId: user.id });
+
+      const em = t.orm.em.fork();
+      const qb = em.getRepository(OauthTokens).qb('ot').innerJoin('ot.client', 'oc').select(['ot.id', 'oc.name as client_name']).where({ 'ot.id': id });
+      expect(qb.getFormattedQuery()).toContain('inner join `oauth_clients` as `oc` on `ot`.`client_id` = `oc`.`client_id`');
+      const row = await qb.execute<{ id: number; client_name: string }>('get', false);
+      expect(row).toEqual({ id, client_name: 'Client Thirty' });
+    });
+
+    it('OAUTHTOKREPO-031: a DECOY client whose row id equals the real client_id — regression-proofs the join against silently falling back to oauth_clients.id (task-4-review.md, "For Task 5 / interlude A")', async () => {
+      const { user } = createUser(testDb);
+      seedClient(user.id, 'proto-31-real', 'Real Client');
+      const realClientRow = testDb
+        .prepare('SELECT id, client_id FROM oauth_clients WHERE client_id = ?')
+        .get('proto-31-real') as { id: string; client_id: string };
+      // The decoy's own PRIMARY KEY (`id`) is deliberately set to the REAL
+      // client's `client_id` — a wrong join (`oc.id = ot.client_id`, the pre-
+      // Rule-11 defect) would match THIS row instead of the real one, and
+      // return the decoy's name, not silently return nothing. A regression
+      // to the wrong column is caught by a WRONG answer, not just an absent
+      // one — the strongest form of this proof.
+      testDb.prepare(
+        `INSERT INTO oauth_clients (id, user_id, name, client_id, client_secret_hash, redirect_uris, allowed_scopes) VALUES (?, ?, ?, ?, ?, '[]', '[]')`,
+      ).run(realClientRow.client_id, user.id, 'Decoy Client', 'proto-31-decoy', 'hash');
+
+      const id = seedToken({ clientId: 'proto-31-real', userId: user.id });
+
+      const em = t.orm.em.fork();
+      const qb = em.getRepository(OauthTokens).qb('ot').innerJoin('ot.client', 'oc').select(['ot.id', 'oc.name as client_name']).where({ 'ot.id': id });
+      const row = await qb.execute<{ id: number; client_name: string }>('get', false);
+      expect(row).toEqual({ id, client_name: 'Real Client' });
+
+      // Same proof through the actual repository methods (OA26/OA31), not
+      // just a hand-rolled QueryBuilder query.
+      const active = await tokens.listActiveByUser(user.id);
+      expect(active.map((r) => r.client_name)).toEqual(['Real Client']);
+      const allActive = await tokens.listAllActiveWithClientAndUser();
+      expect(allActive.map((r) => r.client_name)).toEqual(['Real Client']);
     });
   });
 
