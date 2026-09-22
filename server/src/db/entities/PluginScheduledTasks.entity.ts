@@ -14,6 +14,7 @@ export class PluginScheduledTasks {
 export const PluginScheduledTasksSchema = defineEntity({
   class: PluginScheduledTasks,
   repository: () => PluginScheduledTasksRepository,
+  uniques: [{ properties: ['plugin_id', 'name'] }],
   properties: {
     id: p.integer().primary(),
     plugin_id: p.text(),

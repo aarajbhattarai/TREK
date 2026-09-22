@@ -17,6 +17,7 @@ export class PasswordResetTokens {
 export const PasswordResetTokensSchema = defineEntity({
   class: PasswordResetTokens,
   repository: () => PasswordResetTokensRepository,
+  uniques: [{ properties: ['token_hash'] }],
   properties: {
     id: p.integer().primary(),
     user: () => p.manyToOne(Users).ref().deleteRule('cascade').hidden().index('idx_prt_user'),

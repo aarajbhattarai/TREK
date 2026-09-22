@@ -17,6 +17,7 @@ export class IdempotencyKeys {
 export const IdempotencyKeysSchema = defineEntity({
   class: IdempotencyKeys,
   repository: () => IdempotencyKeysRepository,
+  uniques: [{ properties: ['key', 'user_id', 'method', 'path'] }],
   properties: {
     key: p.text().primary(),
     user: () => p.manyToOne(Users).primary().ref().deleteRule('cascade').hidden(),

@@ -11,6 +11,7 @@ export class PluginUserErasureQueue {
 export const PluginUserErasureQueueSchema = defineEntity({
   class: PluginUserErasureQueue,
   repository: () => PluginUserErasureQueueRepository,
+  uniques: [{ properties: ['plugin_id', 'user_id'] }],
   properties: {
     id: p.integer().primary(),
     plugin_id: p.text().index('idx_plugin_erasure_plugin'),

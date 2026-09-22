@@ -52,6 +52,7 @@ export const TripDocumentLinksSchema = defineEntity({
       where: 'webhook_token IS NOT NULL',
       properties: ['webhook_token'],
     },
+    { properties: ['trip_id', 'connection_id', 'remote_scope_key'] },
   ],
   properties: {
     id: p.integer().primary(),

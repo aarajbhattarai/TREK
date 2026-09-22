@@ -13,6 +13,7 @@ export class Settings {
 export const SettingsSchema = defineEntity({
   class: Settings,
   repository: () => SettingsRepository,
+  uniques: [{ properties: ['user_id', 'key'] }],
   properties: {
     id: p.integer().primary(),
     user: () => p.manyToOne(Users).ref().deleteRule('cascade').hidden(),

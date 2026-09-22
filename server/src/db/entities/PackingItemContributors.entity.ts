@@ -17,6 +17,7 @@ export class PackingItemContributors {
 export const PackingItemContributorsSchema = defineEntity({
   class: PackingItemContributors,
   repository: () => PackingItemContributorsRepository,
+  uniques: [{ properties: ['item_id', 'user_id'] }],
   properties: {
     item: () => p.manyToOne(PackingItems).primary().ref().hidden(),
     item_id: p.integer().persist(false),

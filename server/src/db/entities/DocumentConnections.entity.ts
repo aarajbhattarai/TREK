@@ -30,6 +30,7 @@ export class DocumentConnections {
 export const DocumentConnectionsSchema = defineEntity({
   class: DocumentConnections,
   repository: () => DocumentConnectionsRepository,
+  uniques: [{ properties: ['trip_id', 'provider_id'] }],
   properties: {
     id: p.integer().primary(),
     trip: () => p.manyToOne(Trips).ref().deleteRule('cascade').hidden().index('idx_document_connections_trip'),

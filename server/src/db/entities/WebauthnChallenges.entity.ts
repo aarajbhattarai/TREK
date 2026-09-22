@@ -16,6 +16,7 @@ export class WebauthnChallenges {
 export const WebauthnChallengesSchema = defineEntity({
   class: WebauthnChallenges,
   repository: () => WebauthnChallengesRepository,
+  uniques: [{ properties: ['challenge'] }],
   properties: {
     id: p.integer().primary(),
     challenge: p.text(),

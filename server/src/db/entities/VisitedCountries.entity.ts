@@ -15,6 +15,7 @@ export class VisitedCountries {
 export const VisitedCountriesSchema = defineEntity({
   class: VisitedCountries,
   repository: () => VisitedCountriesRepository,
+  uniques: [{ properties: ['user_id', 'country_code'] }],
   properties: {
     id: p.integer().primary(),
     user: () => p.manyToOne(Users).ref().deleteRule('cascade').hidden(),

@@ -26,6 +26,10 @@ export class OauthTokens {
 export const OauthTokensSchema = defineEntity({
   class: OauthTokens,
   repository: () => OauthTokensRepository,
+  uniques: [
+    { properties: ['refresh_token_hash'] },
+    { properties: ['access_token_hash'] },
+  ],
   properties: {
     id: p.integer().primary(),
     client: () => p.manyToOne(OauthClients).ref().name('client_id').deleteRule('cascade').hidden(),

@@ -20,6 +20,7 @@ export class InviteTokens {
 export const InviteTokensSchema = defineEntity({
   class: InviteTokens,
   repository: () => InviteTokensRepository,
+  uniques: [{ properties: ['token'] }],
   properties: {
     id: p.integer().primary(),
     token: p.text(),

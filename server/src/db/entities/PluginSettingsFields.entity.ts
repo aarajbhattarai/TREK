@@ -21,6 +21,7 @@ export class PluginSettingsFields {
 export const PluginSettingsFieldsSchema = defineEntity({
   class: PluginSettingsFields,
   repository: () => PluginSettingsFieldsRepository,
+  uniques: [{ properties: ['plugin_id', 'field_key'] }],
   properties: {
     id: p.integer().primary(),
     plugin_id: p.text(),

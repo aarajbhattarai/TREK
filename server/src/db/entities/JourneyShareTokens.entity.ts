@@ -21,6 +21,7 @@ export class JourneyShareTokens {
 export const JourneyShareTokensSchema = defineEntity({
   class: JourneyShareTokens,
   repository: () => JourneyShareTokensRepository,
+  uniques: [{ properties: ['token'] }],
   properties: {
     id: p.integer().primary(),
     journey: () => p.oneToOne(Journeys).ref().deleteRule('cascade').hidden().unique('idx_journey_share_journey'),

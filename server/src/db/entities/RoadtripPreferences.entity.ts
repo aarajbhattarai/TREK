@@ -13,6 +13,7 @@ export class RoadtripPreferences {
 export const RoadtripPreferencesSchema = defineEntity({
   class: RoadtripPreferences,
   repository: () => RoadtripPreferencesRepository,
+  uniques: [{ properties: ['trip_id', 'key'] }],
   properties: {
     trip: () => p.manyToOne(Trips).primary().ref().deleteRule('cascade').hidden(),
     trip_id: p.integer().persist(false),

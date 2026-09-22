@@ -23,6 +23,7 @@ export class ShareTokens {
 export const ShareTokensSchema = defineEntity({
   class: ShareTokens,
   repository: () => ShareTokensRepository,
+  uniques: [{ properties: ['token'] }],
   properties: {
     id: p.integer().primary(),
     trip: () => p.manyToOne(Trips).ref().deleteRule('cascade').hidden(),

@@ -17,6 +17,7 @@ export class CollabPollVotes {
 export const CollabPollVotesSchema = defineEntity({
   class: CollabPollVotes,
   repository: () => CollabPollVotesRepository,
+  uniques: [{ properties: ['poll_id', 'user_id', 'option_index'] }],
   properties: {
     id: p.integer().primary(),
     poll: () => p.manyToOne(CollabPolls).ref().deleteRule('cascade').hidden(),

@@ -17,6 +17,7 @@ export class VacayUserYears {
 export const VacayUserYearsSchema = defineEntity({
   class: VacayUserYears,
   repository: () => VacayUserYearsRepository,
+  uniques: [{ properties: ['user_id', 'plan_id', 'year'] }],
   properties: {
     id: p.integer().primary(),
     user: () => p.manyToOne(Users).ref().deleteRule('cascade').hidden(),

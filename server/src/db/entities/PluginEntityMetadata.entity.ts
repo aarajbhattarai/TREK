@@ -20,6 +20,7 @@ export const PluginEntityMetadataSchema = defineEntity({
       properties: ['plugin_id', 'entity_type', 'entity_id'],
     },
   ],
+  uniques: [{ properties: ['plugin_id', 'entity_type', 'entity_id', 'key'] }],
   properties: {
     id: p.integer().primary(),
     plugin_id: p.text(),

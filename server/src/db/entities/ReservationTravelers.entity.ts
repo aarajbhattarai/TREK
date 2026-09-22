@@ -14,6 +14,7 @@ export class ReservationTravelers {
 export const ReservationTravelersSchema = defineEntity({
   class: ReservationTravelers,
   repository: () => ReservationTravelersRepository,
+  uniques: [{ properties: ['reservation_id', 'user_id'] }],
   properties: {
     id: p.integer().primary(),
     reservation: () => p.manyToOne(Reservations).ref().hidden().index('idx_reservation_travelers_res'),

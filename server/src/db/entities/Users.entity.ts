@@ -201,6 +201,8 @@ export const UsersSchema = defineEntity({
       where: 'feed_token IS NOT NULL',
       properties: ['feed_token'],
     },
+    { properties: ['email'] },
+    { properties: ['username'] },
   ],
   properties: {
     id: p.integer().primary(),

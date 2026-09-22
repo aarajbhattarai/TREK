@@ -57,6 +57,7 @@ import path from 'node:path';
 import {
   ReferenceKind,
   UnderscoreNamingStrategy,
+  type Connection,
   type EntityMetadata,
   type EntityProperty,
   type ImportsResolver,
@@ -655,6 +656,78 @@ export function RULE8_bindRepositories(metadata: EntityMetadata[]): void {
   }
 }
 
+/**
+ * Rule 9 (metadata level; DB-dependent — see `collectImplicitUniqueIndexes`
+ * below for the half that actually queries the schema): every column-set an
+ * inline `UNIQUE(...)` table constraint (or a column-level `UNIQUE`) names
+ * gets a matching `uniques: [{ properties: [...] }]` entry.
+ *
+ * Why this is needed at all: SQLite backs every such constraint with an
+ * unnamed `sqlite_autoindex_<table>_<n>` index, and `@mikro-orm/sql`'s own
+ * `SqliteSchemaHelper.getIndexes()` calls `isImplicitIndex(name)` — true for
+ * any index whose name starts with `sqlite_` — to filter exactly these out
+ * before `entity-generator` ever sees them (read directly out of
+ * `node_modules/@mikro-orm/sql/dialects/sqlite/SqliteSchemaHelper.js`, not
+ * assumed): "Ignore indexes with reserved names, e.g. autoindexes". A NAMED
+ * `CREATE UNIQUE INDEX` (`Trips.idx_trips_feed_token`, `Reservations.
+ * idx_reservations_external`, …) survives that filter and already renders
+ * correctly with no help from this rule — only the inline/unnamed spelling is
+ * silently dropped. `settings`'s `UNIQUE(user_id, key)` is the ruling's
+ * trigger case (the ON CONFLICT target `em.upsert` needs), but the same gap
+ * exists on ~40 other tables in the schema (grep `UNIQUE(` across
+ * `db/migrations/*.ts`), so this rule is general — every table, not just
+ * `settings` — and this task's report says which entities' `uniques:` this
+ * adds where none existed in the hand-written baseline before.
+ *
+ * `implicitUniques` is precomputed once per generator run and handed in as
+ * plain data (table name -> one string[] of column names per implicit unique
+ * index) specifically so this rule itself stays a pure, fixture-testable
+ * function like every other rule in this file — it never opens a connection
+ * itself.
+ *
+ * Column names double as property names here without a naming-strategy
+ * lookup: `SnakeProps.columnNameToProperty` is the identity (D1), and every
+ * FK's persisted scalar twin is already named exactly like its column
+ * (`trip_id`, `user_id`) — see the composite `uniques:` blocks already
+ * hand-written on `Reservations`/`DocumentSyncItems`/`TrekPhotos`/`FileLinks`,
+ * which reference the twin, never the relation. A column an implicit index
+ * names that has no matching property (naming-strategy mismatch, or a typo in
+ * the migration) throws, naming the table/columns/entity, rather than
+ * silently emitting a `uniques:` entry the ORM would reject at discovery
+ * time.
+ *
+ * A column set that is exactly the table's own primary key is skipped: a
+ * non-`INTEGER` (or composite) PRIMARY KEY gets the identical kind of
+ * unnamed `sqlite_autoindex_` entry a table-level `UNIQUE(...)` does
+ * (`AppSettings.key`, `Addons.id` — both `TEXT PRIMARY KEY`, confirmed by
+ * running this rule unfiltered against the real schema before adding this
+ * check), and it is already unique by construction and already `.primary()`
+ * on every one of its columns — a `uniques:` entry for it is pure noise, not
+ * a second constraint.
+ */
+export function RULE9_addImplicitUniqueConstraints(
+  metadata: EntityMetadata[],
+  implicitUniques: ReadonlyMap<string, string[][]>,
+): void {
+  for (const meta of metadata) {
+    const indexes = implicitUniques.get(meta.tableName);
+    if (!indexes) continue;
+    const primaryKeys = new Set(meta.primaryKeys);
+    for (const columns of indexes) {
+      if (columns.length === primaryKeys.size && columns.every((column) => primaryKeys.has(column))) continue;
+      for (const column of columns) {
+        if (!meta.properties[column]) {
+          throw new Error(
+            `generate-entities: implicit unique index on ${meta.tableName}(${columns.join(', ')}) references ` +
+              `column "${column}", which has no matching property on ${meta.className} (naming-strategy mismatch?).`,
+          );
+        }
+      }
+      meta.uniques.push({ properties: [...columns] });
+    }
+  }
+}
+
 /** A scalar property whose literal default the renderer's own heuristic drops or mis-renders — see below. */
 export interface DefaultFixup {
   className: string;
@@ -731,8 +804,16 @@ export interface RuleFixups {
   retypedScalars: RetypedScalarFixup[];
 }
 
-/** Every rule above, composed into the single hook MikroORM calls. Order matters (see comments). */
-export function applyRules(metadata: EntityMetadata[], _platform: Platform): RuleFixups {
+/**
+ * Every rule above, composed into the single hook MikroORM calls. Order
+ * matters (see comments). `implicitUniques` defaults to empty so a caller
+ * (the fixture tests) that doesn't care about Rule 9 need not pass it.
+ */
+export function applyRules(
+  metadata: EntityMetadata[],
+  _platform: Platform,
+  implicitUniques: ReadonlyMap<string, string[][]> = new Map(),
+): RuleFixups {
   const retypedByRule1 = RULE1_fixUnknownScalarTypes(metadata);
   const jsonColumns = RULE1b_markJsonColumns(metadata);
   // Unlike Rule 1's/Rule 1b's retypes, a boolean column's own declaration
@@ -751,8 +832,47 @@ export function applyRules(metadata: EntityMetadata[], _platform: Platform): Rul
   RULE6_renameInverseCollections(metadata);
   RULE7_dropNoActionRules(metadata);
   RULE8_bindRepositories(metadata);
+  RULE9_addImplicitUniqueConstraints(metadata, implicitUniques);
   const defaults = RULE_normalizeLiteralDefaults(metadata);
   return { joinColumns, defaults, timestamps, jsonColumns, retypedScalars: [...retypedByRule1, ...timestamps, ...jsonColumns] };
+}
+
+/**
+ * DB-dependent half of Rule 9: for every table name given, finds its implicit
+ * (`sqlite_autoindex_...`) UNIQUE indexes via the same two PRAGMAs
+ * `SqliteSchemaHelper.getIndexes()` itself uses (`index_list`, `index_info`),
+ * and returns their column sets in declared order (`index_info.seqno`).
+ *
+ * Kept separate from `RULE9_addImplicitUniqueConstraints` so that rule stays
+ * a pure function over plain data — this is the only piece of Rule 9 that
+ * touches a `Connection`, and it is exercised end-to-end (not unit-tested in
+ * isolation) by `generateEntities()`'s own tests against the real migrated
+ * schema.
+ */
+export async function collectImplicitUniqueIndexes(
+  connection: Connection,
+  tableNames: readonly string[],
+): Promise<Map<string, string[][]>> {
+  const result = new Map<string, string[][]>();
+  for (const tableName of tableNames) {
+    const indexList = (await connection.execute(`pragma index_list(\`${tableName}\`)`, [], 'all')) as {
+      name: string;
+      unique: number;
+    }[];
+    const autoUniques = indexList.filter((idx) => idx.unique && idx.name.startsWith('sqlite_autoindex_'));
+    if (autoUniques.length === 0) continue;
+    const perTable: string[][] = [];
+    for (const idx of autoUniques) {
+      const info = (await connection.execute(`pragma index_info(\`${idx.name}\`)`, [], 'all')) as {
+        seqno: number;
+        cid: number;
+        name: string;
+      }[];
+      perTable.push([...info].sort((a, b) => a.seqno - b.seqno).map((c) => c.name));
+    }
+    result.set(tableName, perTable);
+  }
+  return result;
 }
 
 // ---------------------------------------------------------------------------
@@ -1252,8 +1372,15 @@ export async function generateEntities(): Promise<GenerateResult> {
         skipTables: ['mikro_orm_migrations'],
         fileName: (className: string) => `${className}.entity`,
         onImport,
-        onProcessedMetadata: (metadata, platform) => {
-          fixups = applyRules(metadata, platform);
+        onProcessedMetadata: async (metadata, platform) => {
+          // Same connection the generator itself just introspected the schema
+          // through (`orm`, in scope from just above) — Rule 9 needs no
+          // second connection or a second migrated temp DB.
+          const implicitUniques = await collectImplicitUniqueIndexes(
+            orm.em.getConnection(),
+            metadata.map((meta) => meta.tableName),
+          );
+          fixups = applyRules(metadata, platform, implicitUniques);
         },
       });
 

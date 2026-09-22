@@ -24,6 +24,7 @@ export class TripAlbumLinks {
 export const TripAlbumLinksSchema = defineEntity({
   class: TripAlbumLinks,
   repository: () => TripAlbumLinksRepository,
+  uniques: [{ properties: ['trip_id', 'user_id', 'provider', 'album_id'] }],
   properties: {
     id: p.integer().primary(),
     trip: () => p.manyToOne(Trips).ref().deleteRule('cascade').hidden().index('idx_trip_album_links_trip'),

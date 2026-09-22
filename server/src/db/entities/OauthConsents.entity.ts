@@ -17,6 +17,7 @@ export class OauthConsents {
 export const OauthConsentsSchema = defineEntity({
   class: OauthConsents,
   repository: () => OauthConsentsRepository,
+  uniques: [{ properties: ['client_id', 'user_id'] }],
   properties: {
     id: p.integer().primary(),
     client: () => p.manyToOne(OauthClients).ref().name('client_id').deleteRule('cascade').hidden(),

@@ -11,6 +11,7 @@ export class PluginEgressHosts {
 export const PluginEgressHostsSchema = defineEntity({
   class: PluginEgressHosts,
   repository: () => PluginEgressHostsRepository,
+  uniques: [{ properties: ['plugin_id', 'host'] }],
   properties: {
     id: p.integer().primary(),
     plugin_id: p.text().index('idx_plugin_egress_hosts_plugin'),

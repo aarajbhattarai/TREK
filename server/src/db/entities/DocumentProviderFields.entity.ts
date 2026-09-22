@@ -19,6 +19,7 @@ export class DocumentProviderFields {
 export const DocumentProviderFieldsSchema = defineEntity({
   class: DocumentProviderFields,
   repository: () => DocumentProviderFieldsRepository,
+  uniques: [{ properties: ['provider_id', 'field_key'] }],
   properties: {
     id: p.integer().primary(),
     provider: () => p.manyToOne(DocumentProviders).ref().deleteRule('cascade').hidden(),

@@ -14,6 +14,7 @@ export class HiddenCountries {
 export const HiddenCountriesSchema = defineEntity({
   class: HiddenCountries,
   repository: () => HiddenCountriesRepository,
+  uniques: [{ properties: ['user_id', 'country_code'] }],
   properties: {
     id: p.integer().primary(),
     user: () => p.manyToOne(Users).ref().deleteRule('cascade').hidden().index('idx_hidden_countries_user'),

@@ -16,6 +16,7 @@ export class VacayShares {
 export const VacaySharesSchema = defineEntity({
   class: VacayShares,
   repository: () => VacaySharesRepository,
+  uniques: [{ properties: ['owner_id', 'user_id'] }],
   properties: {
     id: p.integer().primary(),
     owner: () => p.manyToOne(Users).ref().deleteRule('cascade').hidden(),

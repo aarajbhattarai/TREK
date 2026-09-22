@@ -15,6 +15,7 @@ export class ReservationDayPositions {
 export const ReservationDayPositionsSchema = defineEntity({
   class: ReservationDayPositions,
   repository: () => ReservationDayPositionsRepository,
+  uniques: [{ properties: ['reservation_id', 'day_id'] }],
   properties: {
     reservation: () => p.manyToOne(Reservations).primary().ref().hidden(),
     reservation_id: p.integer().persist(false),

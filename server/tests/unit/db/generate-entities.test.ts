@@ -20,6 +20,7 @@ import {
   RULE6_renameInverseCollections,
   RULE7_dropNoActionRules,
   RULE8_bindRepositories,
+  RULE9_addImplicitUniqueConstraints,
   RULE_normalizeLiteralDefaults,
   applyTextPasses,
   checkEntities,
@@ -411,6 +412,67 @@ describe('RULE8_bindRepositories', () => {
     const meta = fixtureMeta('Days', 'days', []);
     RULE8_bindRepositories([meta]);
     expect(meta.repositoryClass).toBe('DaysRepository');
+  });
+});
+
+describe('RULE9_addImplicitUniqueConstraints', () => {
+  it('RULE9-001: a table with a matching implicit-unique entry gets a uniques: block referencing the columns as properties', () => {
+    const userId = fixtureProp({ name: 'user_id', primary: false });
+    const key = fixtureProp({ name: 'key', primary: false });
+    const meta = fixtureMeta('Settings', 'settings', [userId, key]);
+    const implicitUniques = new Map([['settings', [['user_id', 'key']]]]);
+    RULE9_addImplicitUniqueConstraints([meta], implicitUniques);
+    expect(meta.uniques).toEqual([{ properties: ['user_id', 'key'] }]);
+  });
+
+  it('RULE9-002: a column set identical to the table\'s own primary key is skipped (Addons.id/AppSettings.key noise, real schema)', () => {
+    const id = fixtureProp({ name: 'id', primary: true });
+    const meta = fixtureMeta('Addons', 'addons', [id]);
+    const implicitUniques = new Map([['addons', [['id']]]]);
+    RULE9_addImplicitUniqueConstraints([meta], implicitUniques);
+    expect(meta.uniques).toEqual([]);
+  });
+
+  it('RULE9-003: a column set that only partially overlaps the primary key (different size) is NOT treated as the PK and is kept', () => {
+    const id = fixtureProp({ name: 'id', primary: true });
+    const tripId = fixtureProp({ name: 'trip_id', primary: false });
+    const dayNumber = fixtureProp({ name: 'day_number', primary: false });
+    const meta = fixtureMeta('Days', 'days', [id, tripId, dayNumber]);
+    const implicitUniques = new Map([['days', [['trip_id', 'day_number']]]]);
+    RULE9_addImplicitUniqueConstraints([meta], implicitUniques);
+    expect(meta.uniques).toEqual([{ properties: ['trip_id', 'day_number'] }]);
+  });
+
+  it('RULE9-004: a table absent from the map (no implicit unique index at all) is left untouched', () => {
+    const meta = fixtureMeta('Days', 'days', [fixtureProp({ name: 'id', primary: true })]);
+    RULE9_addImplicitUniqueConstraints([meta], new Map());
+    expect(meta.uniques).toEqual([]);
+  });
+
+  it('RULE9-005: multiple implicit unique indexes on one table each get their own entry', () => {
+    const a = fixtureProp({ name: 'file_id' });
+    const b = fixtureProp({ name: 'place_id' });
+    const c = fixtureProp({ name: 'assignment_id' });
+    const meta = fixtureMeta('FileLinks', 'file_links', [a, b, c]);
+    const implicitUniques = new Map([
+      [
+        'file_links',
+        [
+          ['file_id', 'place_id'],
+          ['file_id', 'assignment_id'],
+        ],
+      ],
+    ]);
+    RULE9_addImplicitUniqueConstraints([meta], implicitUniques);
+    expect(meta.uniques).toEqual([{ properties: ['file_id', 'place_id'] }, { properties: ['file_id', 'assignment_id'] }]);
+  });
+
+  it('RULE9-006: throws, naming the table/columns/entity, when an implicit index names a column with no matching property (I3)', () => {
+    const meta = fixtureMeta('Settings', 'settings', [fixtureProp({ name: 'key' })]);
+    const implicitUniques = new Map([['settings', [['user_id', 'key']]]]);
+    expect(() => RULE9_addImplicitUniqueConstraints([meta], implicitUniques)).toThrow(
+      /settings\(user_id, key\).*"user_id".*Settings/s,
+    );
   });
 });
 
@@ -993,6 +1055,20 @@ describe('generateEntities — validation diff against the five reference entiti
     }
     expect(offenders).toEqual([]);
   }, 30_000);
+
+  it(
+    'UNIQUE-001: Rule 9 end-to-end against the real schema — settings gets the inline UNIQUE(user_id, key) as uniques:, AppSettings/Addons do NOT get a redundant entry for their own (TEXT) primary key',
+    async () => {
+      const { files } = await generateEntities();
+      const settings = files.get('Settings.entity.ts');
+      expect(settings).toContain("uniques: [{ properties: ['user_id', 'key'] }],");
+      const appSettings = files.get('AppSettings.entity.ts');
+      expect(appSettings).not.toMatch(/uniques:/);
+      const addons = files.get('Addons.entity.ts');
+      expect(addons).not.toMatch(/uniques:/);
+    },
+    30_000,
+  );
 });
 
 describe('PENDING_ENTITIES ratchet (I7)', () => {

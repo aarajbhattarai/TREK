@@ -16,6 +16,7 @@ export class JourneyEntryPhotos {
 export const JourneyEntryPhotosSchema = defineEntity({
   class: JourneyEntryPhotos,
   repository: () => JourneyEntryPhotosRepository,
+  uniques: [{ properties: ['entry_id', 'journey_photo_id'] }],
   properties: {
     entry: () => p.manyToOne(JourneyEntries).primary().ref().hidden().index('idx_journey_entry_photos_entry'),
     entry_id: p.integer().persist(false).index('idx_journey_entry_photos_entry'),

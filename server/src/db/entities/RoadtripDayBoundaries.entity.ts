@@ -18,6 +18,7 @@ export class RoadtripDayBoundaries {
 export const RoadtripDayBoundariesSchema = defineEntity({
   class: RoadtripDayBoundaries,
   repository: () => RoadtripDayBoundariesRepository,
+  uniques: [{ properties: ['trip_id', 'day_number'] }],
   checks: [
     {
       name: 'roadtrip_day_boundaries_fraction_check',

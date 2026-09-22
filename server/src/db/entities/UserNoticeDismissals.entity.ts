@@ -14,6 +14,7 @@ export class UserNoticeDismissals {
 export const UserNoticeDismissalsSchema = defineEntity({
   class: UserNoticeDismissals,
   repository: () => UserNoticeDismissalsRepository,
+  uniques: [{ properties: ['user_id', 'notice_id'] }],
   properties: {
     user: () => p.manyToOne(Users).primary().ref().deleteRule('cascade').hidden(),
     user_id: p.integer().persist(false),

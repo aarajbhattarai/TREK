@@ -18,6 +18,7 @@ export class TripInviteTokens {
 export const TripInviteTokensSchema = defineEntity({
   class: TripInviteTokens,
   repository: () => TripInviteTokensRepository,
+  uniques: [{ properties: ['token'] }, { properties: ['trip_id'] }],
   properties: {
     id: p.integer().primary(),
     trip: () => p.manyToOne(Trips).ref().deleteRule('cascade').hidden(),

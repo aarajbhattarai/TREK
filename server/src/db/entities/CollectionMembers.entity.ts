@@ -18,6 +18,7 @@ export class CollectionMembers {
 export const CollectionMembersSchema = defineEntity({
   class: CollectionMembers,
   repository: () => CollectionMembersRepository,
+  uniques: [{ properties: ['collection_id', 'user_id'] }],
   properties: {
     id: p.integer().primary(),
     collection: () => p.manyToOne(Collections).ref().deleteRule('cascade').hidden(),

@@ -22,6 +22,7 @@ export class WebauthnCredentials {
 export const WebauthnCredentialsSchema = defineEntity({
   class: WebauthnCredentials,
   repository: () => WebauthnCredentialsRepository,
+  uniques: [{ properties: ['credential_id'] }],
   properties: {
     id: p.integer().primary(),
     user: () => p.manyToOne(Users).ref().deleteRule('cascade').hidden().index('idx_webauthn_credentials_user'),
