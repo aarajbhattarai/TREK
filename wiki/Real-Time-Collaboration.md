@@ -34,7 +34,7 @@ The Collab addon (`collab`) must be enabled by an admin before the panel is visi
 |-------------|-----------------|
 | **Chat** | Group chat with reactions, replies, images, and URL previews |
 | **Notes** | Categorized, pinnable, markdown-formatted shared notes |
-| **Links** | Shared web addresses with a title, pinnable, synced live between members |
+| **Links** | Shared web addresses with a title, editable and pinnable, synced live between members |
 | **Polls** | Single- or multiple-choice votes with optional deadlines |
 | **What's Next** | Upcoming assigned places across all trip days |
 
@@ -44,7 +44,9 @@ On **desktop** the panel shows Chat as a fixed 380 px column on the left when ot
 
 ### Links
 
-The **Links** tab collects the web addresses a trip runs on: the booking portal, the shared photo album, the restaurant's menu. **Add link** asks for a title and an `http(s)` address; anything else is refused. Each link opens in a new tab, and members with `collab_edit` can **pin** it to the top of the list or **delete** it. Pinned links come first, then the newest. Adding, pinning and deleting show up for every connected member at once.
+The **Links** panel (a card beside Notes on desktop, a tab on the phone) collects the web addresses a trip runs on: the booking portal, the shared photo album, the restaurant's menu. **Add link** opens a small form with a **Link title** and the address; **Save link** takes only `http(s)` addresses and refuses anything else with an error, leaving the form open to correct it. Each link is a chip with its title, the site's host and the site's own favicon (a plain link glyph when that cannot be loaded), and opens the page in a new tab.
+
+Members with `collab_edit` get three buttons in the chip's tail: **Edit link** changes the title or the address in place, **Pin link** moves the chip to the front (and **Unpin link** back), **Delete link** removes it without asking. Pinned links come first, then the newest. Members without `collab_edit` can open links but see none of the buttons. Adding, editing, pinning and deleting show up for every connected member at once.
 
 ## Conflict handling
 
@@ -56,7 +58,7 @@ There is no operational-transform or CRDT merge — simultaneous edits to the sa
 
 ## Access control
 
-All Collab reads require trip membership. Writing — sending messages, creating notes, adding links, creating polls, voting — requires the `collab_edit` permission. Members without `collab_edit` can read but cannot post or interact.
+All Collab reads require trip membership. Writing (sending messages, creating notes, adding or editing links, creating polls, voting) requires the `collab_edit` permission. Members without `collab_edit` can read but cannot post or interact.
 
 ## Related pages
 
