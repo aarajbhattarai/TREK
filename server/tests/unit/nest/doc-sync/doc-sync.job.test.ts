@@ -106,48 +106,48 @@ function makeJob(over: Partial<Setup> = {}) {
 beforeEach(() => vi.clearAllMocks());
 
 describe('DocSyncJob bootstrap', () => {
-  it('schedules nothing, reads nothing and logs nothing while the registrar is off', () => {
+  it('schedules nothing, reads nothing and logs nothing while the registrar is off', async () => {
     // The test gate. A job that registered past it would have every suite boot
     // start polling whatever document store sits in the fixture database.
     const { job, registrar, db } = makeJob({ registrarEnabled: false });
-    job.onApplicationBootstrap();
+    await job.onApplicationBootstrap();
     expect(registrar.register).not.toHaveBeenCalled();
     expect(db.get).not.toHaveBeenCalled();
     expect(log.logInfo).not.toHaveBeenCalled();
   });
 
-  it('registers one cron under a name of its own, on the minute', () => {
+  it('registers one cron under a name of its own, on the minute', async () => {
     // Every minute, with the tick deciding whether it is due. Baking the
     // interval into the expression at bootstrap meant a changed setting did
     // nothing until a restart, which is the opposite of what this job's own
     // comment promises, and nothing re-registers it (auto-backup has a start()
     // its settings save calls; this has no such path).
     const { job, registrar } = makeJob();
-    job.onApplicationBootstrap();
+    await job.onApplicationBootstrap();
     expect(registrar.register).toHaveBeenCalledWith('docsync', '* * * * *', expect.any(Function));
     expect(log.logInfo).toHaveBeenCalledWith('Document sync: polling every 300s');
   });
 
-  it('reads the interval from its own app_settings key', () => {
+  it('reads the interval from its own app_settings key', async () => {
     const { job, db } = makeJob({ interval: '600' });
-    job.onApplicationBootstrap();
+    await job.onApplicationBootstrap();
     expect(db.get).toHaveBeenCalledWith('SELECT value FROM app_settings WHERE key = ?', SETTING_POLL_INTERVAL);
   });
 
   it('hands the registrar the tick itself, so a fired cron reaches the sync', async () => {
     const { job, sync, takeTick } = makeJob({ links: [link(1)] });
-    job.onApplicationBootstrap();
+    await job.onApplicationBootstrap();
     const tick = takeTick();
     expect(tick).toBeTypeOf('function');
     await tick?.();
     expect(sync.syncLink).toHaveBeenCalledTimes(1);
   });
 
-  it('does not decide at bootstrap whether the addon is on', () => {
+  it('does not decide at bootstrap whether the addon is on', async () => {
     // Asking here would freeze the answer for the life of the process, and the
     // bug would read as "the documents toggle needs a restart".
     const { job, addons } = makeJob();
-    job.onApplicationBootstrap();
+    await job.onApplicationBootstrap();
     expect(addons.isAddonEnabled).not.toHaveBeenCalled();
   });
 });
@@ -421,9 +421,10 @@ describe('DocSyncJob and a provider switched off in the admin panel', () => {
 
   const addons = { isAddonEnabled: vi.fn(() => true) } as unknown as AddonsService;
   const registry = new DocumentProviderRegistry([paperless, nextcloud] as unknown as DocumentProvider[]);
-  const config = new DocSyncConfigService(dbs, registry);
-  // Built in beforeAll: DocSyncService now takes a UnitOfWork, and
-  // createTestUnitOfWork is async — module-scope construction cannot await it.
+  // Built in beforeAll: DocSyncConfigService and DocSyncService now take a
+  // UnitOfWork, and createTestUnitOfWork is async — module-scope construction
+  // cannot await it.
+  let config: DocSyncConfigService;
   let service: DocSyncService;
   const registrar = { isEnabled: () => false } as unknown as CronRegistrarService;
   /** A job of its own per pass, so the interval never decides whether a tick runs. */
@@ -434,6 +435,7 @@ describe('DocSyncJob and a provider switched off in the admin panel', () => {
   const linkRow = (id: number) => testDb.prepare('SELECT * FROM trip_document_links WHERE id = ?').get(id);
 
   beforeAll(async () => {
+    config = new DocSyncConfigService(dbs, registry, await createTestUnitOfWork(testDb));
     service = new DocSyncService(
       dbs, config, registry,
       {} as StorageService, {} as FilesService, new AllowedFileTypesService(dbs),

@@ -2,6 +2,7 @@ import { Injectable, BadRequestException } from '@nestjs/common';
 import { manualSchoolRegionId } from '@trek/shared';
 import { RealtimeService } from '../realtime/realtime.service';
 import { DatabaseService } from '../database/database.service';
+import { UnitOfWork } from '../database/unit-of-work';
 import { NotificationsService } from '../notifications/notifications.service';
 import { discardBody, readCappedJson } from '../../utils/cappedFetch';
 
@@ -187,6 +188,7 @@ export class VacayService {
     private readonly db: DatabaseService,
     private readonly realtime: RealtimeService,
     private readonly notifications: NotificationsService,
+    private readonly uow: UnitOfWork,
   ) {}
 
   private readonly holidayCache = new Map<string, { data: unknown; time: number }>();
@@ -200,12 +202,12 @@ export class VacayService {
    * half day (#552) counts as 0.5 and a full day as 1. Entries predating the
    * feature have fraction = 1, so this matches the old COUNT(*) for them.
    */
-  private usedDays(userId: number, planId: number, year: number): number {
+  private async usedDays(userId: number, planId: number, year: number): Promise<number> {
     // Comp/Flex days (#1074) are free — kind='comp' contributes 0 to the entitlement,
     // vacation days contribute their fraction. Entries predating the column are
     // 'vacation' by default. The window (#737) is the user's leave-year period; for
     // 'calendar' it is Jan 1 – Dec 31, byte-identical to the old date-prefix match.
-    const { start, end } = this.resolveYearWindow(userId, year);
+    const { start, end } = await this.resolveYearWindow(userId, year);
     const row = this.db.get<{ used: number }>(
       "SELECT COALESCE(SUM(CASE WHEN kind = 'comp' THEN 0 ELSE fraction END), 0) AS used FROM vacay_entries WHERE user_id = ? AND plan_id = ? AND date >= ? AND date < ?",
       userId, planId, start, end
@@ -214,8 +216,8 @@ export class VacayService {
   }
 
   /** Comp/Flex days (#1074) used in a user's leave-year period — SUM of fractions for kind='comp'. */
-  private compUsedDays(userId: number, planId: number, year: number): number {
-    const { start, end } = this.resolveYearWindow(userId, year);
+  private async compUsedDays(userId: number, planId: number, year: number): Promise<number> {
+    const { start, end } = await this.resolveYearWindow(userId, year);
     const row = this.db.get<{ used: number }>(
       "SELECT COALESCE(SUM(fraction), 0) AS used FROM vacay_entries WHERE user_id = ? AND plan_id = ? AND date >= ? AND date < ? AND kind = 'comp'",
       userId, planId, start, end
@@ -227,13 +229,13 @@ export class VacayService {
   // Configurable vacation year (#737)
   // -------------------------------------------------------------------------
 
-  getUserYearSettings(userId: number): VacayUserSettings | undefined {
+  async getUserYearSettings(userId: number): Promise<VacayUserSettings | undefined> {
     return this.db.get<VacayUserSettings>('SELECT * FROM vacay_user_settings WHERE user_id = ?', userId);
   }
 
   /** A user's leave-year settings with the calendar defaults filled in (#737). */
-  getYearSettings(userId: number): VacayUserSettings {
-    return this.getUserYearSettings(userId) ?? { user_id: userId, year_type: 'calendar', year_start_month: 1, year_start_day: 1, hire_date: null };
+  async getYearSettings(userId: number): Promise<VacayUserSettings> {
+    return (await this.getUserYearSettings(userId)) ?? { user_id: userId, year_type: 'calendar', year_start_month: 1, year_start_day: 1, hire_date: null };
   }
 
   /**
@@ -244,8 +246,8 @@ export class VacayService {
    * end exclusive. Because periods are consecutive, `year-1` is always the window that
    * ends where `year`'s begins, so the carry-over chains stay valid unchanged.
    */
-  resolveYearWindow(userId: number, year: number): { start: string; end: string } {
-    const s = this.getUserYearSettings(userId);
+  async resolveYearWindow(userId: number, year: number): Promise<{ start: string; end: string }> {
+    const s = await this.getUserYearSettings(userId);
     // 'anniversary' before a hire date is entered has nothing to anchor to, so it
     // reads as the calendar default rather than borrowing a month left behind by a
     // previous 'fiscal' setting — the client mirror resolves it the same way.
@@ -272,13 +274,13 @@ export class VacayService {
    * (#737). Without a viewer — MCP resources, which are plan-scoped — it stays the
    * plain calendar year, which is exactly what a 'calendar' user resolves to.
    */
-  private viewerWindow(year: number | string, viewerId?: number): { start: string; end: string } {
+  private async viewerWindow(year: number | string, viewerId?: number): Promise<{ start: string; end: string }> {
     const y = typeof year === 'number' ? year : Number.parseInt(year, 10);
     // A non-numeric year matched nothing under the old date prefix; an empty range
     // matches nothing either, so a bad parameter still yields an empty result.
     if (!Number.isFinite(y)) return { start: '', end: '' };
     if (viewerId == null) return { start: `${y}-01-01`, end: `${y + 1}-01-01` };
-    return this.resolveYearWindow(viewerId, y);
+    return await this.resolveYearWindow(viewerId, y);
   }
 
   /**
@@ -294,8 +296,8 @@ export class VacayService {
    * only the grid's edges are approximate. Rendering a 13th month card would fix it
    * and was deliberately not taken.
    */
-  private viewerGridWindow(year: number | string, viewerId?: number): { start: string; end: string } {
-    const w = this.viewerWindow(year, viewerId);
+  private async viewerGridWindow(year: number | string, viewerId?: number): Promise<{ start: string; end: string }> {
+    const w = await this.viewerWindow(year, viewerId);
     if (!w.start) return w;
     return { start: `${w.start.slice(0, 7)}-01`, end: `${w.end.slice(0, 7)}-01` };
   }
@@ -305,17 +307,17 @@ export class VacayService {
    * window that starts later in the year, today still belongs to the period named
    * after the previous calendar year — 'calendar' users always get today's year.
    */
-  currentPeriodYear(userId: number, date = new Date()): number {
+  async currentPeriodYear(userId: number, date = new Date()): Promise<number> {
     const y = date.getFullYear();
     const iso = `${y}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
-    return iso < this.resolveYearWindow(userId, y).start ? y - 1 : y;
+    return iso < (await this.resolveYearWindow(userId, y)).start ? y - 1 : y;
   }
 
   /** Upsert a user's leave-year settings (#737). */
-  updateYearSettings(
+  async updateYearSettings(
     userId: number,
     data: { year_type?: unknown; year_start_month?: unknown; year_start_day?: unknown; hire_date?: unknown },
-  ): VacayUserSettings {
+  ): Promise<VacayUserSettings> {
     const type = normalizeYearType(data.year_type);
     const month = Math.min(12, Math.max(1, Number.parseInt(String(data.year_start_month ?? 1), 10) || 1));
     const day = Math.min(31, Math.max(1, Number.parseInt(String(data.year_start_day ?? 1), 10) || 1));
@@ -326,21 +328,21 @@ export class VacayService {
     ON CONFLICT(user_id) DO UPDATE SET year_type = excluded.year_type, year_start_month = excluded.year_start_month,
       year_start_day = excluded.year_start_day, hire_date = excluded.hire_date
   `, userId, type, month, day, hire);
-    return this.getUserYearSettings(userId)!;
+    return (await this.getUserYearSettings(userId))!;
   }
 
   // -------------------------------------------------------------------------
   // Plan management
   // -------------------------------------------------------------------------
 
-  getOwnPlan(userId: number): VacayPlan {
+  async getOwnPlan(userId: number): Promise<VacayPlan> {
     let plan = this.db.get<VacayPlan>('SELECT * FROM vacay_plans WHERE owner_id = ?', userId);
     if (!plan) {
       this.db.run('INSERT INTO vacay_plans (owner_id) VALUES (?)', userId);
       plan = this.db.get<VacayPlan>('SELECT * FROM vacay_plans WHERE owner_id = ?', userId)!;
       // Seed the period today falls into — with a shifted leave year (#737) that is
       // not necessarily the current calendar year.
-      const yr = this.currentPeriodYear(userId);
+      const yr = await this.currentPeriodYear(userId);
       this.db.run('INSERT OR IGNORE INTO vacay_years (plan_id, year) VALUES (?, ?)', plan.id, yr);
       this.db.run('INSERT OR IGNORE INTO vacay_user_years (user_id, plan_id, year, vacation_days, carried_over) VALUES (?, ?, ?, 30, 0)', userId, plan.id, yr);
       this.db.run('INSERT OR IGNORE INTO vacay_user_colors (user_id, plan_id, color) VALUES (?, ?, ?)', userId, plan.id, '#6366f1');
@@ -348,26 +350,26 @@ export class VacayService {
     return plan;
   }
 
-  getActivePlan(userId: number): VacayPlan {
+  async getActivePlan(userId: number): Promise<VacayPlan> {
     const membership = this.db.get<{ plan_id: number }>(`
     SELECT plan_id FROM vacay_plan_members WHERE user_id = ? AND status = 'accepted'
   `, userId);
     if (membership) {
       return this.db.get<VacayPlan>('SELECT * FROM vacay_plans WHERE id = ?', membership.plan_id)!;
     }
-    return this.getOwnPlan(userId);
+    return await this.getOwnPlan(userId);
   }
 
-  getActivePlanId(userId: number): number {
-    return this.getActivePlan(userId).id;
+  async getActivePlanId(userId: number): Promise<number> {
+    return (await this.getActivePlan(userId)).id;
   }
 
-  shiftOwnerEntriesForTripWindow(
+  async shiftOwnerEntriesForTripWindow(
     ownerId: number,
     oldStart: string,
     oldEnd: string,
     newStart: string
-  ): void {
+  ): Promise<void> {
     const row = this.db.get<{ days: number }>(
       'SELECT CAST(julianday(?) - julianday(?) AS INTEGER) AS days',
       newStart, oldStart
@@ -375,7 +377,7 @@ export class VacayService {
     const offset = row?.days ?? 0;
     if (offset === 0) return;
 
-    const plan = this.getOwnPlan(ownerId);
+    const plan = await this.getOwnPlan(ownerId);
 
     this.db.run(
       `UPDATE OR IGNORE vacay_entries
@@ -387,7 +389,7 @@ export class VacayService {
     );
   }
 
-  getPlanUsers(planId: number): VacayUser[] {
+  async getPlanUsers(planId: number): Promise<VacayUser[]> {
     const plan = this.db.get<VacayPlan>('SELECT * FROM vacay_plans WHERE id = ?', planId);
     if (!plan) return [];
     const owner = this.db.get<VacayUser>('SELECT id, username, email FROM users WHERE id = ?', plan.owner_id)!;
@@ -403,11 +405,11 @@ export class VacayService {
   // WebSocket notifications
   // -------------------------------------------------------------------------
 
-  notifyPlanUsers(
+  async notifyPlanUsers(
     planId: number,
     excludeSid: string | undefined,
     event: 'vacay:update' | 'vacay:settings' | 'vacay:accepted' | 'vacay:declined' = 'vacay:update',
-  ): void {
+  ): Promise<void> {
     try {
       const plan = this.db.get<{ owner_id: number }>('SELECT owner_id FROM vacay_plans WHERE id = ?', planId);
       if (!plan) return;
@@ -420,12 +422,12 @@ export class VacayService {
       // union proves invite/cancelled never reach this method — their senders
       // call broadcastToUser directly — so only declined needs excluding here.)
       if (event !== 'vacay:declined') {
-        this.notifyShareViewers(userIds, excludeSid);
+        await this.notifyShareViewers(userIds, excludeSid);
       }
     } catch { /* websocket not available */ }
   }
 
-  notifyShareViewers(ownerIds: number[], excludeSid?: string): void {
+  async notifyShareViewers(ownerIds: number[], excludeSid?: string): Promise<void> {
     if (ownerIds.length === 0) return;
     try {
       const rows = this.db.all<{ user_id: number }>(
@@ -449,11 +451,11 @@ export class VacayService {
     // A shifted leave year (#737) runs into the next calendar year, so collect the
     // calendar years the members' windows actually touch — not just the period ids.
     // With everyone on 'calendar' this is the same set as before.
-    const members = this.getPlanUsers(planId);
+    const members = await this.getPlanUsers(planId);
     const calendarYears = new Set<number>();
     for (const { year } of years) {
       calendarYears.add(year);
-      for (const m of members) calendarYears.add(windowEndYear(this.resolveYearWindow(m.id, year).end));
+      for (const m of members) calendarYears.add(windowEndYear((await this.resolveYearWindow(m.id, year)).end));
     }
     for (const cal of calendars) {
       const country = cal.region.split('-')[0];
@@ -537,14 +539,14 @@ export class VacayService {
     if (carry_over_enabled === true) {
       // The chained per-year/per-user recompute is atomic — a failure mid-chain
       // would otherwise leave later years carrying stale balances.
-      this.db.transaction(() => {
+      await this.uow.transactional(async () => {
         const years = this.db.all<{ year: number }>('SELECT year FROM vacay_years WHERE plan_id = ? ORDER BY year', planId);
-        const users = this.getPlanUsers(planId);
+        const users = await this.getPlanUsers(planId);
         for (let i = 0; i < years.length - 1; i++) {
           const yr = years[i].year;
           const nextYr = years[i + 1].year;
           for (const u of users) {
-            const used = this.usedDays(u.id, planId, yr);
+            const used = await this.usedDays(u.id, planId, yr);
             const config = this.db.get<VacayUserYear>('SELECT * FROM vacay_user_years WHERE user_id = ? AND plan_id = ? AND year = ?', u.id, planId, yr);
             const total = (config ? config.vacation_days : 30) + (config ? config.carried_over : 0);
             const carry = Math.max(0, total - used);
@@ -557,7 +559,7 @@ export class VacayService {
       });
     }
 
-    this.notifyPlanUsers(planId, socketId, 'vacay:settings');
+    await this.notifyPlanUsers(planId, socketId, 'vacay:settings');
 
     const updated = this.db.get<VacayPlan>('SELECT * FROM vacay_plans WHERE id = ?', planId)!;
     const updatedCalendars = this.db.all<VacayHolidayCalendar>('SELECT * FROM vacay_holiday_calendars WHERE plan_id = ? ORDER BY sort_order, id', planId);
@@ -578,26 +580,26 @@ export class VacayService {
   // Holiday calendars CRUD
   // -------------------------------------------------------------------------
 
-  addHolidayCalendar(planId: number, region: string, label: string | null, color: string | undefined, sortOrder: number | undefined, socketId: string | undefined, type: 'public_holiday' | 'school_holiday' = 'public_holiday') {
-    this.validateManualRegion(region, type);
+  async addHolidayCalendar(planId: number, region: string, label: string | null, color: string | undefined, sortOrder: number | undefined, socketId: string | undefined, type: 'public_holiday' | 'school_holiday' = 'public_holiday') {
+    await this.validateManualRegion(region, type);
     const result = this.db.run(
       'INSERT INTO vacay_holiday_calendars (plan_id, type, region, label, color, sort_order) VALUES (?, ?, ?, ?, ?, ?)',
       planId, type, region, label || null, color || (type === 'school_holiday' ? '#a5f3fc' : '#fecaca'), sortOrder ?? 0
     );
     const cal = this.db.get<VacayHolidayCalendar>('SELECT * FROM vacay_holiday_calendars WHERE id = ?', result.lastInsertRowid)!;
-    this.notifyPlanUsers(planId, socketId, 'vacay:settings');
+    await this.notifyPlanUsers(planId, socketId, 'vacay:settings');
     return cal;
   }
 
-  updateHolidayCalendar(
+  async updateHolidayCalendar(
     calId: number,
     planId: number,
     body: { region?: string; label?: string | null; color?: string; sort_order?: number; type?: 'public_holiday' | 'school_holiday' },
     socketId: string | undefined,
-  ): VacayHolidayCalendar | null {
+  ): Promise<VacayHolidayCalendar | null> {
     const cal = this.db.get<VacayHolidayCalendar>('SELECT * FROM vacay_holiday_calendars WHERE id = ? AND plan_id = ?', calId, planId);
     if (!cal) return null;
-    this.validateManualRegion(body.region ?? cal.region, body.type ?? cal.type);
+    await this.validateManualRegion(body.region ?? cal.region, body.type ?? cal.type);
     const { region, label, color, sort_order, type } = body;
     const updates: string[] = [];
     const params: (string | number | null)[] = [];
@@ -611,19 +613,19 @@ export class VacayService {
       this.db.run(`UPDATE vacay_holiday_calendars SET ${updates.join(', ')} WHERE id = ?`, ...params);
     }
     const updated = this.db.get<VacayHolidayCalendar>('SELECT * FROM vacay_holiday_calendars WHERE id = ?', calId)!;
-    this.notifyPlanUsers(planId, socketId, 'vacay:settings');
+    await this.notifyPlanUsers(planId, socketId, 'vacay:settings');
     return updated;
   }
 
-  deleteHolidayCalendar(calId: number, planId: number, socketId: string | undefined): boolean {
+  async deleteHolidayCalendar(calId: number, planId: number, socketId: string | undefined): Promise<boolean> {
     const cal = this.db.get('SELECT * FROM vacay_holiday_calendars WHERE id = ? AND plan_id = ?', calId, planId);
     if (!cal) return false;
     this.db.run('DELETE FROM vacay_holiday_calendars WHERE id = ?', calId);
-    this.notifyPlanUsers(planId, socketId, 'vacay:settings');
+    await this.notifyPlanUsers(planId, socketId, 'vacay:settings');
     return true;
   }
 
-  private validateManualRegion(code: string, type: string) {
+  private async validateManualRegion(code: string, type: string) {
     if (!code.includes('-MANUAL-')) return;
     const id = manualSchoolRegionId(code);
     if (type !== 'school_holiday' || !id || !this.db.get('SELECT id FROM school_holiday_regions WHERE id = ? AND country = ?', id, code.slice(0, 2))) {
@@ -635,19 +637,19 @@ export class VacayService {
   // User colors
   // -------------------------------------------------------------------------
 
-  setUserColor(userId: number, planId: number, color: string | undefined, socketId: string | undefined): void {
+  async setUserColor(userId: number, planId: number, color: string | undefined, socketId: string | undefined): Promise<void> {
     this.db.run(`
     INSERT INTO vacay_user_colors (user_id, plan_id, color) VALUES (?, ?, ?)
     ON CONFLICT(user_id, plan_id) DO UPDATE SET color = excluded.color
   `, userId, planId, color || '#6366f1');
-    this.notifyPlanUsers(planId, socketId, 'vacay:update');
+    await this.notifyPlanUsers(planId, socketId, 'vacay:update');
   }
 
   // -------------------------------------------------------------------------
   // Invitations
   // -------------------------------------------------------------------------
 
-  sendInvite(planId: number, inviterId: number, inviterUsername: string, inviterEmail: string, targetUserId: number): { error?: string; status?: number } {
+  async sendInvite(planId: number, inviterId: number, inviterUsername: string, inviterEmail: string, targetUserId: number): Promise<{ error?: string; status?: number }> {
     if (targetUserId === inviterId) return { error: 'Cannot invite yourself', status: 400 };
 
     // The picker no longer offers guests, but the id arrives from the client, so the
@@ -684,10 +686,10 @@ export class VacayService {
     return {};
   }
 
-  acceptInvite(userId: number, planId: number, socketId: string | undefined): { error?: string; status?: number } {
+  async acceptInvite(userId: number, planId: number, socketId: string | undefined): Promise<{ error?: string; status?: number }> {
     // The accept flow is a multi-statement write (status flip + entry/year/color
     // migration + seeding) — atomic, so a failure can't leave the member half-fused.
-    const result = this.db.transaction((): { error?: string; status?: number } => {
+    const result = await this.uow.transactional(async (): Promise<{ error?: string; status?: number }> => {
       const invite = this.db.get<VacayPlanMember>("SELECT * FROM vacay_plan_members WHERE plan_id = ? AND user_id = ? AND status = 'pending'", planId, userId);
       if (!invite) return { error: 'No pending invite', status: 404 };
 
@@ -731,16 +733,16 @@ export class VacayService {
 
     // Only announce a fusion that actually happened — the transaction returns the
     // refusal for an invite that was already gone.
-    if (!result.error) this.notifyPlanUsers(planId, socketId, 'vacay:accepted');
+    if (!result.error) await this.notifyPlanUsers(planId, socketId, 'vacay:accepted');
     return result;
   }
 
-  declineInvite(userId: number, planId: number, socketId: string | undefined): void {
+  async declineInvite(userId: number, planId: number, socketId: string | undefined): Promise<void> {
     this.db.run("DELETE FROM vacay_plan_members WHERE plan_id = ? AND user_id = ? AND status = 'pending'", planId, userId);
-    this.notifyPlanUsers(planId, socketId, 'vacay:declined');
+    await this.notifyPlanUsers(planId, socketId, 'vacay:declined');
   }
 
-  cancelInvite(planId: number, targetUserId: number): void {
+  async cancelInvite(planId: number, targetUserId: number): Promise<void> {
     this.db.run("DELETE FROM vacay_plan_members WHERE plan_id = ? AND user_id = ? AND status = 'pending'", planId, targetUserId);
 
     try {
@@ -752,20 +754,20 @@ export class VacayService {
   // Plan dissolution
   // -------------------------------------------------------------------------
 
-  dissolvePlan(userId: number, socketId: string | undefined): void {
+  async dissolvePlan(userId: number, socketId: string | undefined): Promise<void> {
     // Dissolution moves every member's entries back to their own plan and copies
     // the company holidays — atomic, so a failure can't strand entries between plans.
-    const allUserIds = this.db.transaction(() => {
-      const plan = this.getActivePlan(userId);
+    const allUserIds = await this.uow.transactional(async () => {
+      const plan = await this.getActivePlan(userId);
       const isOwnerFlag = plan.owner_id === userId;
 
-      const userIds = this.getPlanUsers(plan.id).map(u => u.id);
+      const userIds = (await this.getPlanUsers(plan.id)).map(u => u.id);
       const companyHolidays = this.db.all<{ date: string; note: string }>('SELECT date, note FROM vacay_company_holidays WHERE plan_id = ?', plan.id);
 
       if (isOwnerFlag) {
         const members = this.db.all<{ user_id: number }>("SELECT user_id FROM vacay_plan_members WHERE plan_id = ? AND status = 'accepted'", plan.id);
         for (const m of members) {
-          const memberPlan = this.getOwnPlan(m.user_id);
+          const memberPlan = await this.getOwnPlan(m.user_id);
           this.db.run('UPDATE vacay_entries SET plan_id = ? WHERE plan_id = ? AND user_id = ?', memberPlan.id, plan.id, m.user_id);
           for (const ch of companyHolidays) {
             this.db.run('INSERT OR IGNORE INTO vacay_company_holidays (plan_id, date, note) VALUES (?, ?, ?)', memberPlan.id, ch.date, ch.note);
@@ -773,7 +775,7 @@ export class VacayService {
         }
         this.db.run('DELETE FROM vacay_plan_members WHERE plan_id = ?', plan.id);
       } else {
-        const ownPlan = this.getOwnPlan(userId);
+        const ownPlan = await this.getOwnPlan(userId);
         this.db.run('UPDATE vacay_entries SET plan_id = ? WHERE plan_id = ? AND user_id = ?', ownPlan.id, plan.id, userId);
         for (const ch of companyHolidays) {
           this.db.run('INSERT OR IGNORE INTO vacay_company_holidays (plan_id, date, note) VALUES (?, ?, ?)', ownPlan.id, ch.date, ch.note);
@@ -787,14 +789,14 @@ export class VacayService {
       allUserIds.filter(id => id !== userId).forEach(id => this.realtime.broadcastToUser(id, { type: 'vacay:dissolved' }));
     } catch { /* */ }
     // Everyone's entries just moved back to their own plans — refresh read-only viewers.
-    this.notifyShareViewers(allUserIds, socketId);
+    await this.notifyShareViewers(allUserIds, socketId);
   }
 
   // -------------------------------------------------------------------------
   // Available users
   // -------------------------------------------------------------------------
 
-  getAvailableUsers(userId: number, planId: number) {
+  async getAvailableUsers(userId: number, planId: number) {
     return this.db.all(`
     SELECT u.id, u.username, u.email FROM users u
     WHERE u.id != ?
@@ -818,7 +820,7 @@ export class VacayService {
   // the owner's entries in whatever plan the owner is currently active in.
 
   /** Like getActivePlan, but never lazily creates a plan for the user. */
-  private peekActivePlan(userId: number): VacayPlan | undefined {
+  private async peekActivePlan(userId: number): Promise<VacayPlan | undefined> {
     const membership = this.db.get<{ plan_id: number }>(`
     SELECT plan_id FROM vacay_plan_members WHERE user_id = ? AND status = 'accepted'
   `, userId);
@@ -829,8 +831,8 @@ export class VacayService {
   }
 
   /** Colors already taken in the viewer's own calendar (their plan's members). */
-  private viewerColors(viewerId: number): Set<string> {
-    const plan = this.peekActivePlan(viewerId);
+  private async viewerColors(viewerId: number): Promise<Set<string>> {
+    const plan = await this.peekActivePlan(viewerId);
     if (!plan) return new Set(['#6366f1']);
     const rows = this.db.all<{ color: string }>('SELECT color FROM vacay_user_colors WHERE plan_id = ?', plan.id);
     return new Set(rows.length > 0 ? rows.map(r => r.color) : ['#6366f1']);
@@ -842,8 +844,8 @@ export class VacayService {
    * members or an earlier share — otherwise two people on the default indigo
    * would be indistinguishable in the overlay.
    */
-  private shareDisplayColor(ownerId: number, usedColors: Set<string>): string {
-    const plan = this.peekActivePlan(ownerId);
+  private async shareDisplayColor(ownerId: number, usedColors: Set<string>): Promise<string> {
+    const plan = await this.peekActivePlan(ownerId);
     const row = plan
       ? this.db.get<{ color: string }>('SELECT color FROM vacay_user_colors WHERE user_id = ? AND plan_id = ?', ownerId, plan.id)
       : undefined;
@@ -857,12 +859,12 @@ export class VacayService {
   }
 
   /** Users the viewer already sees in full via their active plan (owner + members). */
-  private viewerCoMemberIds(viewerId: number): Set<number> {
-    const plan = this.peekActivePlan(viewerId);
-    return new Set(plan ? this.getPlanUsers(plan.id).map(u => u.id) : []);
+  private async viewerCoMemberIds(viewerId: number): Promise<Set<number>> {
+    const plan = await this.peekActivePlan(viewerId);
+    return new Set(plan ? (await this.getPlanUsers(plan.id)).map(u => u.id) : []);
   }
 
-  listShares(userId: number) {
+  async listShares(userId: number) {
     // Usernames only, like the share picker — emails stay out of the share surface.
     const outgoing = this.db.all<{ id: number; user_id: number; username: string }>(`
     SELECT s.id, s.user_id, u.username
@@ -876,19 +878,25 @@ export class VacayService {
   `, userId);
     // Shares from someone the viewer is meanwhile fused with lie dormant — the
     // plan already shows that calendar in full. They resume after dissolution.
-    const coMembers = this.viewerCoMemberIds(userId);
-    const usedColors = this.viewerColors(userId);
-    const incoming = incomingRows.filter(s => !coMembers.has(s.owner_id)).map(s => ({
-      id: s.id,
-      owner_id: s.owner_id,
-      username: s.username,
-      color: this.shareDisplayColor(s.owner_id, usedColors),
-      hidden: !!s.hidden,
-    }));
+    const coMembers = await this.viewerCoMemberIds(userId);
+    const usedColors = await this.viewerColors(userId);
+    // `map` cannot await, and `shareDisplayColor` mutates `usedColors` as it
+    // hands colors out, so the projection runs as an explicit loop — same rows,
+    // same order, same color-allocation sequence.
+    const incoming = [];
+    for (const s of incomingRows.filter(s => !coMembers.has(s.owner_id))) {
+      incoming.push({
+        id: s.id,
+        owner_id: s.owner_id,
+        username: s.username,
+        color: await this.shareDisplayColor(s.owner_id, usedColors),
+        hidden: !!s.hidden,
+      });
+    }
     return { outgoing, incoming };
   }
 
-  shareCalendar(ownerId: number, ownerEmail: string, targetUserId: number, socketId?: string): { error?: string; status?: number } {
+  async shareCalendar(ownerId: number, ownerEmail: string, targetUserId: number, socketId?: string): Promise<{ error?: string; status?: number }> {
     if (targetUserId === ownerId) return { error: 'Cannot share with yourself', status: 400 };
 
     const targetUser = this.db.get('SELECT id FROM users WHERE id = ? AND COALESCE(is_guest, 0) = 0', targetUserId);
@@ -898,7 +906,7 @@ export class VacayService {
     if (existing) return { error: 'Already shared', status: 400 };
 
     // Plan members already see the whole calendar — sharing with them is moot.
-    if (this.getPlanUsers(this.getActivePlanId(ownerId)).find(u => u.id === targetUserId)) {
+    if ((await this.getPlanUsers(await this.getActivePlanId(ownerId))).find(u => u.id === targetUserId)) {
       return { error: 'User is already in your calendar', status: 400 };
     }
 
@@ -915,7 +923,7 @@ export class VacayService {
     return {};
   }
 
-  removeShare(shareId: number, userId: number, socketId?: string): boolean {
+  async removeShare(shareId: number, userId: number, socketId?: string): Promise<boolean> {
     const share = this.db.get<VacayShare>('SELECT * FROM vacay_shares WHERE id = ?', shareId);
     // The owner revokes, the viewer removes — both may delete, nobody else.
     if (!share || (share.owner_id !== userId && share.user_id !== userId)) return false;
@@ -927,7 +935,7 @@ export class VacayService {
     return true;
   }
 
-  setShareHidden(shareId: number, userId: number, hidden: boolean, socketId?: string): boolean {
+  async setShareHidden(shareId: number, userId: number, hidden: boolean, socketId?: string): Promise<boolean> {
     const share = this.db.get<VacayShare>('SELECT * FROM vacay_shares WHERE id = ?', shareId);
     if (!share || share.user_id !== userId) return false;
     this.db.run('UPDATE vacay_shares SET hidden = ? WHERE id = ?', hidden ? 1 : 0, shareId);
@@ -938,8 +946,8 @@ export class VacayService {
     return true;
   }
 
-  getShareAvailableUsers(userId: number) {
-    const planId = this.getActivePlanId(userId);
+  async getShareAvailableUsers(userId: number) {
+    const planId = await this.getActivePlanId(userId);
     // Username only — unlike the fusion picker this lists users from other plans
     // too, so exposing their emails here would widen the instance directory.
     return this.db.all(`
@@ -956,10 +964,10 @@ export class VacayService {
   `, userId, userId, planId, planId);
   }
 
-  getSharedCalendars(viewerId: number, year: string) {
+  async getSharedCalendars(viewerId: number, year: string) {
     // Shared calendars are drawn into the viewer's grid, so they load over the
     // viewer's range (#737) even when the owner's leave year is shaped differently.
-    const { start, end } = this.viewerGridWindow(year, viewerId);
+    const { start, end } = await this.viewerGridWindow(year, viewerId);
     const shares = this.db.all<{ id: number; owner_id: number; hidden: number; username: string }>(`
     SELECT s.id, s.owner_id, s.hidden, u.username
     FROM vacay_shares s JOIN users u ON s.owner_id = u.id
@@ -967,13 +975,18 @@ export class VacayService {
   `, viewerId);
 
     // Same dormancy rule as listShares: fused co-members are already fully visible.
-    const coMembers = this.viewerCoMemberIds(viewerId);
-    const usedColors = this.viewerColors(viewerId);
-    return shares.filter(s => !coMembers.has(s.owner_id)).map(s => {
-      const color = this.shareDisplayColor(s.owner_id, usedColors);
-      const plan = this.peekActivePlan(s.owner_id);
+    const coMembers = await this.viewerCoMemberIds(viewerId);
+    const usedColors = await this.viewerColors(viewerId);
+    // `map` cannot await, and `shareDisplayColor` mutates `usedColors` as it
+    // hands colors out, so the projection runs as an explicit loop — same rows,
+    // same order, same color-allocation sequence.
+    const calendars = [];
+    for (const s of shares.filter(s => !coMembers.has(s.owner_id))) {
+      const color = await this.shareDisplayColor(s.owner_id, usedColors);
+      const plan = await this.peekActivePlan(s.owner_id);
       if (!plan) {
-        return { share_id: s.id, owner_id: s.owner_id, owner_name: s.username, color, hidden: !!s.hidden, entries: [], companyHolidays: [] };
+        calendars.push({ share_id: s.id, owner_id: s.owner_id, owner_name: s.username, color, hidden: !!s.hidden, entries: [], companyHolidays: [] });
+        continue;
       }
       const entries = this.db.all(
         'SELECT date, fraction, kind FROM vacay_entries WHERE plan_id = ? AND user_id = ? AND date >= ? AND date < ? ORDER BY date',
@@ -985,36 +998,37 @@ export class VacayService {
       const companyHolidays = plan.company_holidays_enabled
         ? this.db.all('SELECT date FROM vacay_company_holidays WHERE plan_id = ? AND date >= ? AND date < ? ORDER BY date', plan.id, start, end)
         : [];
-      return { share_id: s.id, owner_id: s.owner_id, owner_name: s.username, color, hidden: !!s.hidden, entries, companyHolidays };
-    });
+      calendars.push({ share_id: s.id, owner_id: s.owner_id, owner_name: s.username, color, hidden: !!s.hidden, entries, companyHolidays });
+    }
+    return calendars;
   }
 
   // -------------------------------------------------------------------------
   // Years
   // -------------------------------------------------------------------------
 
-  listYears(planId: number): number[] {
+  async listYears(planId: number): Promise<number[]> {
     const rows = this.db.all<{ year: number }>('SELECT year FROM vacay_years WHERE plan_id = ? ORDER BY year', planId);
     return rows.map(y => y.year);
   }
 
-  addYear(planId: number, year: number, socketId: string | undefined): number[] {
+  async addYear(planId: number, year: number, socketId: string | undefined): Promise<number[]> {
     // A duplicate year is a no-op (the legacy blanket try/catch was written for
     // exactly this constraint hit); real errors now propagate instead of being
     // swallowed. The insert + per-user seeding runs atomically.
     const exists = this.db.get('SELECT id FROM vacay_years WHERE plan_id = ? AND year = ?', planId, year);
     if (!exists) {
-      this.db.transaction(() => {
+      await this.uow.transactional(async () => {
         this.db.run('INSERT INTO vacay_years (plan_id, year) VALUES (?, ?)', planId, year);
         const plan = this.db.get<VacayPlan>('SELECT * FROM vacay_plans WHERE id = ?', planId);
         const carryOverEnabled = plan ? !!plan.carry_over_enabled : true;
-        const users = this.getPlanUsers(planId);
+        const users = await this.getPlanUsers(planId);
         for (const u of users) {
           let carriedOver = 0;
           if (carryOverEnabled) {
             const prevConfig = this.db.get<VacayUserYear>('SELECT * FROM vacay_user_years WHERE user_id = ? AND plan_id = ? AND year = ?', u.id, planId, year - 1);
             if (prevConfig) {
-              const used = this.usedDays(u.id, planId, year - 1);
+              const used = await this.usedDays(u.id, planId, year - 1);
               const total = prevConfig.vacation_days + prevConfig.carried_over;
               carriedOver = Math.max(0, total - used);
             }
@@ -1023,21 +1037,21 @@ export class VacayService {
         }
       });
     }
-    this.notifyPlanUsers(planId, socketId, 'vacay:settings');
-    return this.listYears(planId);
+    await this.notifyPlanUsers(planId, socketId, 'vacay:settings');
+    return await this.listYears(planId);
   }
 
-  deleteYear(planId: number, year: number, socketId: string | undefined): number[] {
+  async deleteYear(planId: number, year: number, socketId: string | undefined): Promise<number[]> {
     // Year removal deletes across four tables and recomputes the next year's
     // carry-over — atomic, so a failure can't leave entries without their year.
-    this.db.transaction(() => {
+    await this.uow.transactional(async () => {
       this.db.run('DELETE FROM vacay_years WHERE plan_id = ? AND year = ?', planId, year);
       // Members can be on differently shaped leave years (#737), so entries go per
       // author over that author's period rather than by one shared year prefix.
       // Authors are read off the entries themselves so orphans are cleared too.
       const authors = this.db.all<{ user_id: number }>('SELECT DISTINCT user_id FROM vacay_entries WHERE plan_id = ?', planId);
       for (const { user_id } of authors) {
-        const { start, end } = this.resolveYearWindow(user_id, year);
+        const { start, end } = await this.resolveYearWindow(user_id, year);
         this.db.run('DELETE FROM vacay_entries WHERE plan_id = ? AND user_id = ? AND date >= ? AND date < ?', planId, user_id, start, end);
       }
       // Company holidays belong to the plan, not to a member, and every member sees
@@ -1045,8 +1059,13 @@ export class VacayService {
       // range is therefore the intersection of all member windows — anything outside
       // it still sits inside a period somebody else has not deleted.
       const owner = this.db.get<{ owner_id: number }>('SELECT owner_id FROM vacay_plans WHERE id = ?', planId);
-      const members = this.getPlanUsers(planId);
-      const windows = (members.length > 0 ? members.map(m => m.id) : [owner?.owner_id ?? -1]).map(id => this.resolveYearWindow(id, year));
+      const members = await this.getPlanUsers(planId);
+      // `map` cannot await the per-member window read, so it runs as an explicit
+      // loop — same ids, same order.
+      const windows = [];
+      for (const id of members.length > 0 ? members.map(m => m.id) : [owner?.owner_id ?? -1]) {
+        windows.push(await this.resolveYearWindow(id, year));
+      }
       const holidayStart = windows.reduce((a, w) => (w.start > a ? w.start : a), windows[0].start);
       const holidayEnd = windows.reduce((a, w) => (w.end < a ? w.end : a), windows[0].end);
       if (holidayStart < holidayEnd) {
@@ -1059,7 +1078,7 @@ export class VacayService {
       if (nextYearExists) {
         const plan = this.db.get<VacayPlan>('SELECT * FROM vacay_plans WHERE id = ?', planId);
         const carryOverEnabled = plan ? !!plan.carry_over_enabled : true;
-        const users = this.getPlanUsers(planId);
+        const users = await this.getPlanUsers(planId);
         const prevYear = this.db.get<{ year: number }>('SELECT year FROM vacay_years WHERE plan_id = ? AND year < ? ORDER BY year DESC LIMIT 1', planId, year + 1);
 
         for (const u of users) {
@@ -1067,7 +1086,7 @@ export class VacayService {
           if (carryOverEnabled && prevYear) {
             const prevConfig = this.db.get<VacayUserYear>('SELECT * FROM vacay_user_years WHERE user_id = ? AND plan_id = ? AND year = ?', u.id, planId, prevYear.year);
             if (prevConfig) {
-              const used = this.usedDays(u.id, planId, prevYear.year);
+              const used = await this.usedDays(u.id, planId, prevYear.year);
               const total = prevConfig.vacation_days + prevConfig.carried_over;
               carry = Math.max(0, total - used);
             }
@@ -1077,8 +1096,8 @@ export class VacayService {
       }
     });
 
-    this.notifyPlanUsers(planId, socketId, 'vacay:settings');
-    return this.listYears(planId);
+    await this.notifyPlanUsers(planId, socketId, 'vacay:settings');
+    return await this.listYears(planId);
   }
 
   // -------------------------------------------------------------------------
@@ -1090,8 +1109,8 @@ export class VacayService {
    * window (#737) — a shifted year spans two calendar years, so the old year prefix
    * would drop the second half. For 'calendar' the range is Jan 1 – Dec 31 again.
    */
-  getEntries(planId: number, year: string, viewerId?: number) {
-    const { start, end } = this.viewerGridWindow(year, viewerId);
+  async getEntries(planId: number, year: string, viewerId?: number) {
+    const { start, end } = await this.viewerGridWindow(year, viewerId);
     const entries = this.db.all(`
     SELECT e.*, u.username as person_name, COALESCE(c.color, '#6366f1') as person_color
     FROM vacay_entries e
@@ -1103,7 +1122,7 @@ export class VacayService {
     return { entries, companyHolidays };
   }
 
-  toggleEntry(userId: number, planId: number, date: string, fraction?: unknown, kind?: unknown, socketId?: string): { action?: string; fraction?: number; kind?: string; error?: string } {
+  async toggleEntry(userId: number, planId: number, date: string, fraction?: unknown, kind?: unknown, socketId?: string): Promise<{ action?: string; fraction?: number; kind?: string; error?: string }> {
     const frac = normalizeFraction(fraction);
     const knd = normalizeKind(kind);
     const plan = this.db.get<VacayPlan>('SELECT * FROM vacay_plans WHERE id = ?', planId);
@@ -1114,32 +1133,32 @@ export class VacayService {
       // clicking a different type or fraction converts it in place (#552/#1074).
       if (existing.fraction === frac && (existing.kind || 'vacation') === knd) {
         this.db.run('DELETE FROM vacay_entries WHERE id = ?', existing.id);
-        this.notifyPlanUsers(planId, socketId);
+        await this.notifyPlanUsers(planId, socketId);
         return { action: 'removed' };
       }
       // Removing a stray entry on a blocked day stays possible; keeping one
       // there (converted in place) does not.
       if (weekendBlocked) return { error: 'weekend_blocked' };
       this.db.run('UPDATE vacay_entries SET fraction = ?, kind = ? WHERE id = ?', frac, knd, existing.id);
-      this.notifyPlanUsers(planId, socketId);
+      await this.notifyPlanUsers(planId, socketId);
       return { action: 'updated', fraction: frac, kind: knd };
     }
     if (weekendBlocked) return { error: 'weekend_blocked' };
     this.db.run('INSERT INTO vacay_entries (plan_id, user_id, date, note, fraction, kind) VALUES (?, ?, ?, ?, ?, ?)', planId, userId, date, '', frac, knd);
-    this.notifyPlanUsers(planId, socketId);
+    await this.notifyPlanUsers(planId, socketId);
     return { action: 'added', fraction: frac, kind: knd };
   }
 
-  toggleCompanyHoliday(planId: number, date: string, note: string | undefined, socketId: string | undefined): { action: string } {
+  async toggleCompanyHoliday(planId: number, date: string, note: string | undefined, socketId: string | undefined): Promise<{ action: string }> {
     const existing = this.db.get<{ id: number }>('SELECT id FROM vacay_company_holidays WHERE plan_id = ? AND date = ?', planId, date);
     if (existing) {
       this.db.run('DELETE FROM vacay_company_holidays WHERE id = ?', existing.id);
-      this.notifyPlanUsers(planId, socketId);
+      await this.notifyPlanUsers(planId, socketId);
       return { action: 'removed' };
     } else {
       this.db.run('INSERT INTO vacay_company_holidays (plan_id, date, note) VALUES (?, ?, ?)', planId, date, note || '');
       this.db.run('DELETE FROM vacay_entries WHERE plan_id = ? AND date = ?', planId, date);
-      this.notifyPlanUsers(planId, socketId);
+      await this.notifyPlanUsers(planId, socketId);
       return { action: 'added' };
     }
   }
@@ -1148,14 +1167,17 @@ export class VacayService {
   // Stats
   // -------------------------------------------------------------------------
 
-  getStats(planId: number, year: number) {
+  async getStats(planId: number, year: number) {
     const plan = this.db.get<VacayPlan>('SELECT * FROM vacay_plans WHERE id = ?', planId);
     const carryOverEnabled = plan ? !!plan.carry_over_enabled : true;
-    const users = this.getPlanUsers(planId);
+    const users = await this.getPlanUsers(planId);
 
-    return users.map(u => {
-      const used = this.usedDays(u.id, planId, year);
-      const compUsed = this.compUsedDays(u.id, planId, year);
+    // `map` cannot await, and the body also writes next year's carry-over, so
+    // the projection runs as an explicit loop — same users, same order, same writes.
+    const rows = [];
+    for (const u of users) {
+      const used = await this.usedDays(u.id, planId, year);
+      const compUsed = await this.compUsedDays(u.id, planId, year);
       const config = this.db.get<VacayUserYear>('SELECT * FROM vacay_user_years WHERE user_id = ? AND plan_id = ? AND year = ?', u.id, planId, year);
       const vacationDays = config ? config.vacation_days : 30;
       const carriedOver = carryOverEnabled ? (config ? config.carried_over : 0) : 0;
@@ -1164,7 +1186,7 @@ export class VacayService {
       const colorRow = this.db.get<{ color: string }>('SELECT color FROM vacay_user_colors WHERE user_id = ? AND plan_id = ?', u.id, planId);
       // The period this row was computed over (#737) — the UI labels the window and
       // the carry-over source with it instead of assuming Jan–Dec / year − 1.
-      const window = this.resolveYearWindow(u.id, year);
+      const window = await this.resolveYearWindow(u.id, year);
 
       const nextYearExists = this.db.get('SELECT id FROM vacay_years WHERE plan_id = ? AND year = ?', planId, year + 1);
       if (nextYearExists && carryOverEnabled) {
@@ -1175,32 +1197,33 @@ export class VacayService {
       `, u.id, planId, year + 1, carry, carry);
       }
 
-      return {
+      rows.push({
         user_id: u.id, person_name: u.username, person_color: colorRow?.color || '#6366f1',
         year, vacation_days: vacationDays, carried_over: carriedOver,
         total_available: total, used, remaining, comp_used: compUsed,
         window_start: window.start, window_end: window.end,
-      };
-    });
+      });
+    }
+    return rows;
   }
 
-  updateStats(userId: number, planId: number, year: number, vacationDays: number, socketId: string | undefined): void {
+  async updateStats(userId: number, planId: number, year: number, vacationDays: number, socketId: string | undefined): Promise<void> {
     this.db.run(`
     INSERT INTO vacay_user_years (user_id, plan_id, year, vacation_days, carried_over) VALUES (?, ?, ?, ?, 0)
     ON CONFLICT(user_id, plan_id, year) DO UPDATE SET vacation_days = excluded.vacation_days
   `, userId, planId, year, vacationDays);
-    this.notifyPlanUsers(planId, socketId);
+    await this.notifyPlanUsers(planId, socketId);
   }
 
   // -------------------------------------------------------------------------
   // GET /plan composite
   // -------------------------------------------------------------------------
 
-  getPlanData(userId: number) {
-    const plan = this.getActivePlan(userId);
+  async getPlanData(userId: number) {
+    const plan = await this.getActivePlan(userId);
     const activePlanId = plan.id;
 
-    const users = this.getPlanUsers(activePlanId).map(u => {
+    const users = (await this.getPlanUsers(activePlanId)).map(u => {
       const colorRow = this.db.get<{ color: string }>('SELECT color FROM vacay_user_colors WHERE user_id = ? AND plan_id = ?', u.id, activePlanId);
       return { ...u, color: colorRow?.color || '#6366f1' };
     });

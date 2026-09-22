@@ -143,7 +143,7 @@ beforeAll(async () => {
   daysSvc,
   new PermissionsService(dbs(), await createTestUnitOfWork(dbs().connection)),
   budgetSvc,
-  new VacayService(dbs(), new RealtimeService(), notificationsStub()),
+  new VacayService(dbs(), new RealtimeService(), notificationsStub(), await createTestUnitOfWork(dbs().connection)),
   new RealtimeService(),
   undefined as never, // unsplash — not exercised here
   coversFx.storage,
@@ -1210,7 +1210,7 @@ describe('quirk fixes', () => {
       daysSvc,
       new PermissionsService(dbs(), await createTestUnitOfWork(dbs().connection)),
       budgetSvc,
-      new VacayService(dbs(), new RealtimeService(), notificationsStub()),
+      new VacayService(dbs(), new RealtimeService(), notificationsStub(), await createTestUnitOfWork(dbs().connection)),
       new RealtimeService(),
       undefined as never,
       coversFx.storage,

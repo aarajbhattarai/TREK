@@ -112,6 +112,7 @@ beforeAll(async () => {
   await makeNotificationsService(dbs, realtime),
   userCleanup,
   realtime,
+  await createTestUnitOfWork(dbs.connection),
 );
 });
 
@@ -147,10 +148,10 @@ afterAll(() => {
 // ── listUsers ─────────────────────────────────────────────────────────────────
 
 describe('listUsers', () => {
-  it('ADMIN-SVC-001 — returns all users with online:false', () => {
+  it('ADMIN-SVC-001 — returns all users with online:false', async () => {
     createUser(testDb);
     createUser(testDb);
-    const users = listUsers() as any[];
+    const users = (await listUsers()) as any[];
     expect(users.length).toBeGreaterThanOrEqual(2);
     expect(users.every((u: any) => u.online === false)).toBe(true);
   });
@@ -159,38 +160,38 @@ describe('listUsers', () => {
 // ── createUser ────────────────────────────────────────────────────────────────
 
 describe('createUser (service)', () => {
-  it('ADMIN-SVC-002 — creates a user successfully', () => {
-    const result = svcCreateUser({ username: 'newuser', email: 'new@test.com', password: 'ValidPass1!' }) as any;
+  it('ADMIN-SVC-002 — creates a user successfully', async () => {
+    const result = (await svcCreateUser({ username: 'newuser', email: 'new@test.com', password: 'ValidPass1!' })) as any;
     expect(result.user).toBeDefined();
     expect(result.user.email).toBe('new@test.com');
   });
 
-  it('ADMIN-SVC-003 — returns 400 when username is missing', () => {
-    const result = svcCreateUser({ username: '', email: 'x@x.com', password: 'ValidPass1!' }) as any;
+  it('ADMIN-SVC-003 — returns 400 when username is missing', async () => {
+    const result = (await svcCreateUser({ username: '', email: 'x@x.com', password: 'ValidPass1!' })) as any;
     expect(result.status).toBe(400);
   });
 
-  it('ADMIN-SVC-004 — returns 400 for invalid role', () => {
-    const result = svcCreateUser({ username: 'u1', email: 'u1@test.com', password: 'ValidPass1!', role: 'superuser' }) as any;
+  it('ADMIN-SVC-004 — returns 400 for invalid role', async () => {
+    const result = (await svcCreateUser({ username: 'u1', email: 'u1@test.com', password: 'ValidPass1!', role: 'superuser' })) as any;
     expect(result.status).toBe(400);
     expect(result.error).toMatch(/invalid role/i);
   });
 
-  it('ADMIN-SVC-005 — returns 409 for duplicate username', () => {
+  it('ADMIN-SVC-005 — returns 409 for duplicate username', async () => {
     createUser(testDb);
     const { user } = createUser(testDb);
-    const result = svcCreateUser({ username: user.username, email: 'unique@test.com', password: 'ValidPass1!' }) as any;
+    const result = (await svcCreateUser({ username: user.username, email: 'unique@test.com', password: 'ValidPass1!' })) as any;
     expect(result.status).toBe(409);
   });
 
-  it('ADMIN-SVC-006 — returns 409 for duplicate email', () => {
+  it('ADMIN-SVC-006 — returns 409 for duplicate email', async () => {
     const { user } = createUser(testDb);
-    const result = svcCreateUser({ username: 'uniqueuser', email: user.email, password: 'ValidPass1!' }) as any;
+    const result = (await svcCreateUser({ username: 'uniqueuser', email: user.email, password: 'ValidPass1!' })) as any;
     expect(result.status).toBe(409);
   });
 
-  it('ADMIN-SVC-007 — returns 400 for weak password', () => {
-    const result = svcCreateUser({ username: 'weakpwuser', email: 'weakpw@test.com', password: 'short' }) as any;
+  it('ADMIN-SVC-007 — returns 400 for weak password', async () => {
+    const result = (await svcCreateUser({ username: 'weakpwuser', email: 'weakpw@test.com', password: 'short' })) as any;
     expect(result.status).toBe(400);
   });
 });
@@ -198,47 +199,47 @@ describe('createUser (service)', () => {
 // ── updateUser ────────────────────────────────────────────────────────────────
 
 describe('updateUser', () => {
-  it('ADMIN-SVC-008 — updates username successfully', () => {
+  it('ADMIN-SVC-008 — updates username successfully', async () => {
     const { user } = createUser(testDb);
-    const result = updateUser(String(user.id), { username: 'updatedname' }) as any;
+    const result = (await updateUser(String(user.id), { username: 'updatedname' })) as any;
     expect(result.user).toBeDefined();
     expect(result.user.username).toBe('updatedname');
   });
 
-  it('ADMIN-SVC-009 — returns 404 for non-existent user', () => {
-    const result = updateUser('99999', { username: 'ghost' }) as any;
+  it('ADMIN-SVC-009 — returns 404 for non-existent user', async () => {
+    const result = (await updateUser('99999', { username: 'ghost' })) as any;
     expect(result.status).toBe(404);
   });
 
-  it('ADMIN-SVC-010 — returns 400 for invalid role', () => {
+  it('ADMIN-SVC-010 — returns 400 for invalid role', async () => {
     const { user } = createUser(testDb);
-    const result = updateUser(String(user.id), { role: 'superadmin' }) as any;
+    const result = (await updateUser(String(user.id), { role: 'superadmin' })) as any;
     expect(result.status).toBe(400);
   });
 
-  it('ADMIN-SVC-011 — returns 409 when username is taken', () => {
+  it('ADMIN-SVC-011 — returns 409 when username is taken', async () => {
     const { user: u1 } = createUser(testDb);
     const { user: u2 } = createUser(testDb);
-    const result = updateUser(String(u2.id), { username: u1.username }) as any;
+    const result = (await updateUser(String(u2.id), { username: u1.username })) as any;
     expect(result.status).toBe(409);
   });
 
-  it('ADMIN-SVC-012 — returns 409 when email is taken', () => {
+  it('ADMIN-SVC-012 — returns 409 when email is taken', async () => {
     const { user: u1 } = createUser(testDb);
     const { user: u2 } = createUser(testDb);
-    const result = updateUser(String(u2.id), { email: u1.email }) as any;
+    const result = (await updateUser(String(u2.id), { email: u1.email })) as any;
     expect(result.status).toBe(409);
   });
 
-  it('ADMIN-SVC-013 — returns 400 for weak password', () => {
+  it('ADMIN-SVC-013 — returns 400 for weak password', async () => {
     const { user } = createUser(testDb);
-    const result = updateUser(String(user.id), { password: 'weak' }) as any;
+    const result = (await updateUser(String(user.id), { password: 'weak' })) as any;
     expect(result.status).toBe(400);
   });
 
-  it('ADMIN-SVC-014 — tracks changed fields in result', () => {
+  it('ADMIN-SVC-014 — tracks changed fields in result', async () => {
     const { user } = createUser(testDb);
-    const result = updateUser(String(user.id), { username: 'newname', role: 'admin' }) as any;
+    const result = (await updateUser(String(user.id), { username: 'newname', role: 'admin' })) as any;
     expect(result.changed).toContain('username');
     expect(result.changed).toContain('role');
   });
@@ -270,8 +271,8 @@ describe('deleteUser', () => {
 // ── getStats ──────────────────────────────────────────────────────────────────
 
 describe('getStats', () => {
-  it('ADMIN-SVC-018 — returns numeric counts for all stats', () => {
-    const stats = getStats() as any;
+  it('ADMIN-SVC-018 — returns numeric counts for all stats', async () => {
+    const stats = (await getStats()) as any;
     expect(typeof stats.totalUsers).toBe('number');
     expect(typeof stats.totalTrips).toBe('number');
     expect(typeof stats.totalPlaces).toBe('number');
@@ -299,22 +300,22 @@ describe('Permissions', () => {
 // ── getAuditLog ───────────────────────────────────────────────────────────────
 
 describe('getAuditLog', () => {
-  it('ADMIN-SVC-021 — returns entries array with total', () => {
-    const result = getAuditLog({}) as any;
+  it('ADMIN-SVC-021 — returns entries array with total', async () => {
+    const result = (await getAuditLog({})) as any;
     expect(Array.isArray(result.entries)).toBe(true);
     expect(typeof result.total).toBe('number');
     expect(result.limit).toBe(100);
     expect(result.offset).toBe(0);
   });
 
-  it('ADMIN-SVC-022 — respects limit and offset params', () => {
-    const result = getAuditLog({ limit: '10', offset: '0' }) as any;
+  it('ADMIN-SVC-022 — respects limit and offset params', async () => {
+    const result = (await getAuditLog({ limit: '10', offset: '0' })) as any;
     expect(result.limit).toBe(10);
     expect(result.offset).toBe(0);
   });
 
-  it('ADMIN-SVC-023 — caps limit at 500', () => {
-    const result = getAuditLog({ limit: '9999' }) as any;
+  it('ADMIN-SVC-023 — caps limit at 500', async () => {
+    const result = (await getAuditLog({ limit: '9999' })) as any;
     expect(result.limit).toBe(500);
   });
 });
@@ -322,24 +323,24 @@ describe('getAuditLog', () => {
 // ── getAuditLog — JSON details parsing ───────────────────────────────────────
 
 describe('getAuditLog — JSON details', () => {
-  it('ADMIN-SVC-045 — parses JSON details when present', () => {
+  it('ADMIN-SVC-045 — parses JSON details when present', async () => {
     const { user } = createUser(testDb);
     testDb.prepare('INSERT INTO audit_log (user_id, action, details) VALUES (?, ?, ?)').run(
       user.id, 'test_action', JSON.stringify({ key: 'val' })
     );
-    const result = getAuditLog({}) as any;
+    const result = (await getAuditLog({})) as any;
     expect(result.entries.length).toBeGreaterThanOrEqual(1);
     const entry = result.entries.find((e: any) => e.action === 'test_action');
     expect(entry).toBeDefined();
     expect(entry.details).toEqual({ key: 'val' });
   });
 
-  it('ADMIN-SVC-046 — falls back to the raw string when details are not valid JSON', () => {
+  it('ADMIN-SVC-046 — falls back to the raw string when details are not valid JSON', async () => {
     const { user } = createUser(testDb);
     testDb.prepare('INSERT INTO audit_log (user_id, action, details) VALUES (?, ?, ?)').run(
       user.id, 'bad_json_action', 'not-valid-json{'
     );
-    const result = getAuditLog({}) as any;
+    const result = (await getAuditLog({})) as any;
     const entry = result.entries.find((e: any) => e.action === 'bad_json_action');
     expect(entry).toBeDefined();
     // Was { _parse_error: true } before the 2026-08 quirk fix — the admin UI
@@ -477,8 +478,8 @@ describe('checkVersion', () => {
 // ── listAddons ────────────────────────────────────────────────────────────────
 
 describe('listAddons', () => {
-  it('ADMIN-SVC-065 — listAddons returns array containing seeded addon entries', () => {
-    const result = listAddons() as any[];
+  it('ADMIN-SVC-065 — listAddons returns array containing seeded addon entries', async () => {
+    const result = (await listAddons()) as any[];
     expect(Array.isArray(result)).toBe(true);
     expect(result.length).toBeGreaterThan(0);
     const addonIds = result.map((a: any) => a.id);
@@ -597,10 +598,10 @@ describe('version-check job', () => {
 
 describe('admin quirk fixes (post-fold)', () => {
 
-  it('ADMIN-SVC-072 — updateUser rejects an empty username/email instead of silently no-opping', () => {
+  it('ADMIN-SVC-072 — updateUser rejects an empty username/email instead of silently no-opping', async () => {
     const { user } = createUser(testDb);
-    expect(updateUser(String(user.id), { username: '' }) as any).toMatchObject({ status: 400, error: 'Username cannot be empty' });
-    expect(updateUser(String(user.id), { email: '  ' }) as any).toMatchObject({ status: 400, error: 'Email cannot be empty' });
+    expect((await updateUser(String(user.id), { username: '' })) as any).toMatchObject({ status: 400, error: 'Username cannot be empty' });
+    expect((await updateUser(String(user.id), { email: '  ' })) as any).toMatchObject({ status: 400, error: 'Email cannot be empty' });
     // The row is untouched.
     const row = testDb.prepare('SELECT username FROM users WHERE id = ?').get(user.id) as { username: string };
     expect(row.username).toBe(user.username);
@@ -619,7 +620,7 @@ const mcpTokenCount = (id: number): number =>
   (testDb.prepare('SELECT COUNT(*) AS n FROM mcp_tokens WHERE user_id = ?').get(id) as { n: number }).n;
 
 describe('admin password reset revokes what an intruder already holds', () => {
-  it('ADMIN-SVC-080 — setting a password bumps password_version, so existing cookies stop working', () => {
+  it('ADMIN-SVC-080 — setting a password bumps password_version, so existing cookies stop working', async () => {
     // An admin sets somebody else's password for one reason: the account is
     // believed compromised. Without the bump, verifyJwtAndLoadUser keeps
     // accepting every cookie the intruder holds, and the one action taken to
@@ -627,26 +628,26 @@ describe('admin password reset revokes what an intruder already holds', () => {
     const { user } = createUser(testDb);
     const before = pv(user.id);
 
-    updateUser(String(user.id), { password: 'ANewStrongPass123!' });
+    await updateUser(String(user.id), { password: 'ANewStrongPass123!' });
 
     expect(pv(user.id)).toBe(before + 1);
   });
 
-  it('ADMIN-SVC-081 — and clears the MCP tokens, which the version bump does not reach', () => {
+  it('ADMIN-SVC-081 — and clears the MCP tokens, which the version bump does not reach', async () => {
     const { user } = createUser(testDb);
     testDb.prepare("INSERT INTO mcp_tokens (user_id, token_hash, token_prefix, name) VALUES (?, 'hash', 'trek_ab', 'cli')").run(user.id);
 
-    updateUser(String(user.id), { password: 'ANewStrongPass123!' });
+    await updateUser(String(user.id), { password: 'ANewStrongPass123!' });
 
     expect(mcpTokenCount(user.id)).toBe(0);
   });
 
-  it('ADMIN-SVC-082 — renaming a user touches neither, so an ordinary edit stays ordinary', () => {
+  it('ADMIN-SVC-082 — renaming a user touches neither, so an ordinary edit stays ordinary', async () => {
     const { user } = createUser(testDb);
     const before = pv(user.id);
     testDb.prepare("INSERT INTO mcp_tokens (user_id, token_hash, token_prefix, name) VALUES (?, 'hash', 'trek_ab', 'cli')").run(user.id);
 
-    updateUser(String(user.id), { username: 'renamed' });
+    await updateUser(String(user.id), { username: 'renamed' });
 
     expect(pv(user.id)).toBe(before);
     expect(mcpTokenCount(user.id)).toBe(1);
@@ -654,14 +655,14 @@ describe('admin password reset revokes what an intruder already holds', () => {
 });
 
 describe('resetUserMfa', () => {
-  it('ADMIN-SVC-083 — clears the three columns disableMfa clears, so both paths leave one state', () => {
+  it('ADMIN-SVC-083 — clears the three columns disableMfa clears, so both paths leave one state', async () => {
     // The passkey half has existed since passkeys landed; TOTP never had an
     // answer, which left "somebody on the trip lost their phone" with no way out
     // short of an operator reaching into the database.
     const admin = createAdmin(testDb);
     const { user } = createUserWithMfa(testDb);
 
-    const result = svc.resetUserMfa(String(user.id), admin.user.id) as { success?: boolean; email?: string };
+    const result = (await svc.resetUserMfa(String(user.id), admin.user.id)) as { success?: boolean; email?: string };
 
     expect(result.success).toBe(true);
     expect(result.email).toBe(user.email);
@@ -673,22 +674,22 @@ describe('resetUserMfa', () => {
     expect(row.mfa_backup_codes).toBeNull();
   });
 
-  it('ADMIN-SVC-084 — refuses to strip the callers own second factor', () => {
+  it('ADMIN-SVC-084 — refuses to strip the callers own second factor', async () => {
     // Reachable from a stolen admin session otherwise, and it would take the
     // second factor off the very account that session came from. The
     // self-service path in Settings asks for the current password.
     const admin = createAdmin(testDb);
 
-    const result = svc.resetUserMfa(String(admin.user.id), admin.user.id) as { error?: string; status?: number };
+    const result = (await svc.resetUserMfa(String(admin.user.id), admin.user.id)) as { error?: string; status?: number };
 
     expect(result.status).toBe(400);
     expect(result.error).toMatch(/your own/i);
   });
 
-  it('ADMIN-SVC-085 — 404 for a user that is not there', () => {
+  it('ADMIN-SVC-085 — 404 for a user that is not there', async () => {
     const admin = createAdmin(testDb);
 
-    expect(svc.resetUserMfa('99999', admin.user.id) as { status?: number }).toMatchObject({ status: 404 });
+    expect((await svc.resetUserMfa('99999', admin.user.id)) as { status?: number }).toMatchObject({ status: 404 });
   });
 });
 

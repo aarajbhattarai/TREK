@@ -90,6 +90,7 @@ beforeAll(async () => {
   await makeNotificationsService(dbs, realtime),
   userCleanup,
   realtime,
+  await createTestUnitOfWork(dbs.connection),
 );
 });
 const checkAndNotifyVersion = () => svc.checkAndNotifyVersion();

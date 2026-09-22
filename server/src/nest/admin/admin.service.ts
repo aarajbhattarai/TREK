@@ -22,6 +22,7 @@ import { getPhotoProviderConfig } from '../memories/memories.helpers';
 import { validatePassword } from '../common/passwordPolicy';
 import { UserCleanupService } from '../auth/user-cleanup.service';
 import { DatabaseService } from '../database/database.service';
+import { UnitOfWork } from '../database/unit-of-work';
 import { AddonsService } from '../addons/addons.service';
 import { RealtimeService } from '../realtime/realtime.service';
 import { PasskeyService } from '../auth/passkey.service';
@@ -76,11 +77,12 @@ export class AdminService {
     private readonly notifications: NotificationsService,
     private readonly userCleanup: UserCleanupService,
     private readonly realtime: RealtimeService,
+    private readonly uow: UnitOfWork,
   ) {}
 
   // ── User CRUD ──────────────────────────────────────────────────────────────
 
-  listUsers() {
+  async listUsers() {
     // Guests (#1362) are accountless trip participants, not real users — keep them out
     // of admin user management entirely.
     const users = this.db.all<
@@ -109,7 +111,7 @@ export class AdminService {
     }));
   }
 
-  createUser(data: { username: string; email: string; password: string; role?: string }) {
+  async createUser(data: { username: string; email: string; password: string; role?: string }) {
     const username = data.username?.trim();
     const email = data.email?.trim();
     const password = data.password?.trim();
@@ -151,7 +153,7 @@ export class AdminService {
     };
   }
 
-  updateUser(id: string, data: { username?: string; email?: string; role?: string; password?: string }) {
+  async updateUser(id: string, data: { username?: string; email?: string; role?: string; password?: string }) {
     const username = typeof data.username === 'string' ? data.username.trim() : data.username;
     const email = typeof data.email === 'string' ? data.email.trim() : data.email;
     const { role, password } = data;
@@ -200,7 +202,7 @@ export class AdminService {
     // (changePassword, resetPassword) have always done this; this one had not.
     const newPv = password ? ((user as User & { password_version?: number }).password_version ?? 0) + 1 : null;
 
-    this.db.transaction(() => {
+    await this.uow.transactional(async () => {
       this.db.run(
         `
     UPDATE users SET
@@ -276,7 +278,7 @@ export class AdminService {
    * making that reachable from here would turn a stolen admin session into a
    * way to strip the second factor off the very account it came from.
    */
-  resetUserMfa(id: string, actingUserId: number): { error?: string; status?: number; success?: boolean; email?: string } {
+  async resetUserMfa(id: string, actingUserId: number): Promise<{ error?: string; status?: number; success?: boolean; email?: string }> {
     const targetId = Number(id);
     if (targetId === actingUserId) {
       return { error: 'Use Settings to change your own two-factor setup', status: 400 };
@@ -299,7 +301,7 @@ export class AdminService {
 
   // ── Stats ──────────────────────────────────────────────────────────────────
 
-  getStats() {
+  async getStats() {
     const totalUsers = this.db.get<{ count: number }>('SELECT COUNT(*) as count FROM users WHERE COALESCE(is_guest, 0) = 0')!.count;
     const totalTrips = this.db.get<{ count: number }>('SELECT COUNT(*) as count FROM trips')!.count;
     const totalPlaces = this.db.get<{ count: number }>('SELECT COUNT(*) as count FROM places')!.count;
@@ -327,7 +329,7 @@ export class AdminService {
 
   // ── Audit Log ──────────────────────────────────────────────────────────────
 
-  getAuditLog(query: { limit?: string; offset?: string }) {
+  async getAuditLog(query: { limit?: string; offset?: string }) {
     const limitRaw = Number.parseInt(String(query.limit || '100'), 10);
     const offsetRaw = Number.parseInt(String(query.offset || '0'), 10);
     const limit = Math.min(Math.max(Number.isFinite(limitRaw) ? limitRaw : 100, 1), 500);
@@ -538,7 +540,7 @@ export class AdminService {
 
   // ── Addons ─────────────────────────────────────────────────────────────────
 
-  listAddons() {
+  async listAddons() {
     const addons = this.db
       .all<Addon>('SELECT * FROM addons ORDER BY sort_order, id')
       // Hidden rather than shown-and-refused, because a toggle that answers 403
@@ -693,7 +695,7 @@ export class AdminService {
       return { error: 'Enable the Documents addon first', status: 409 };
     }
 
-    this.db.transaction(() => {
+    await this.uow.transactional(async () => {
     if (addon) {
       if (data.enabled !== undefined) {
         this.db.run('UPDATE addons SET enabled = ? WHERE id = ?', data.enabled ? 1 : 0, id);

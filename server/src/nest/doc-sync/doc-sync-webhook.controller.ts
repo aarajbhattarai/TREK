@@ -74,7 +74,7 @@ export class DocSyncWebhookController implements OnModuleDestroy {
   @Public('A provider cannot hold a TREK session; the per-link token in the URL is the authentication, and the call can only ever trigger a sync run.')
   @HttpCode(200)
   async nudge(@Param('token') token: string, @Req() req: Request) {
-    const link = this.config.getLinkByToken(token);
+    const link = await this.config.getLinkByToken(token);
     // Always 200, even for an unknown token: a 404 here would let anyone probe
     // which tokens exist, and a provider that gets an error will retry anyway.
     if (!link || link.sync_enabled !== 1) return { received: true };
@@ -115,7 +115,7 @@ export class DocSyncWebhookController implements OnModuleDestroy {
     const timer = setTimeout(() => {
       void (async () => {
         this.pending.delete(linkId);
-        const fresh = reload();
+        const fresh = await reload();
         if (!fresh || fresh.sync_enabled !== 1) return;
         if (!(await this.syncIsOn(fresh))) return;
         void this.sync.syncLink(fresh).then((res) => {

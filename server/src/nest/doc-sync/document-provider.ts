@@ -88,7 +88,7 @@ export interface DocumentConnectionRef {
    * stored but never changes it: the values on screen may be for another
    * account, or never be saved at all.
    */
-  saveSecret?: (key: string, value: string | null) => void;
+  saveSecret?: (key: string, value: string | null) => Promise<void>;
 }
 
 /** The container at the provider that one trip is bound to. */

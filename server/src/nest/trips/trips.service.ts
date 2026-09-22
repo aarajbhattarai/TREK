@@ -417,7 +417,7 @@ export class TripsService {
     `).run(newTitle, newDesc, newStart || null, newEnd || null, newCurrency, newArchived, newCover, newReminder, tripId);
 
     if (trip.start_date && trip.end_date && newStart && newStart !== trip.start_date)
-      this.vacay.shiftOwnerEntriesForTripWindow(trip.user_id, trip.start_date, trip.end_date, newStart);
+      await this.vacay.shiftOwnerEntriesForTripWindow(trip.user_id, trip.start_date, trip.end_date, newStart);
 
     if (regenerate) {
       await this.uow.transactional(async () => {

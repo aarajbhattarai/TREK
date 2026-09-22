@@ -97,7 +97,7 @@ export async function createPluginRpcHostFactory(dbs: DatabaseService): Promise<
   const packing = new PackingService(dbs, permissions, realtime, notificationsStub(), await createTestUnitOfWork(dbs.connection));
   const files = new FilesService(dbs, permissions, realtime, new EphemeralTokenService(), generalStorage);
   const collab = new CollabService(dbs, permissions, realtime, notificationsStub(), generalStorage, new RateLimitService(), await createTestUnitOfWork(dbs.connection));
-  const vacay = new VacayService(dbs, realtime, notificationsStub());
+  const vacay = new VacayService(dbs, realtime, notificationsStub(), await createTestUnitOfWork(dbs.connection));
   const days = new DaysService(dbs, permissions, realtime, queryHelpers, await createTestUnitOfWork(dbs.connection));
   const photoCache = new PlacePhotoCacheService(dbs, makeStorageFixture('photos/google/').storage);
   const unsplash = new UnsplashService(dbs, new RuntimeEnvService(), generalStorage);

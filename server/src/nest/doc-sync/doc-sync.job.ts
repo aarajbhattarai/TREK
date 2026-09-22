@@ -50,9 +50,9 @@ export class DocSyncJob implements OnApplicationBootstrap {
   /** When the last pass started; null until the first one, which is never skipped. */
   private lastRunAt: number | null = null;
 
-  onApplicationBootstrap(): void {
+  async onApplicationBootstrap(): Promise<void> {
     if (!this.registrar.isEnabled()) return;
-    logInfo(`Document sync: polling every ${this.intervalSeconds()}s`);
+    logInfo(`Document sync: polling every ${await this.intervalSeconds()}s`);
     this.registrar.register('docsync', '* * * * *', () => this.tick());
   }
 
@@ -64,16 +64,16 @@ export class DocSyncJob implements OnApplicationBootstrap {
    * boundaries fall. Comparing against the last run keeps the setting's own
    * resolution; the cost of the extra wake-ups is one read of app_settings.
    */
-  private isDue(now: number): boolean {
+  private async isDue(now: number): Promise<boolean> {
     // Null rather than 0: comparing against the epoch means "due" only once the
     // clock has passed the interval since 1970, which is true in production and
     // false for any test that picks a small timestamp, a difference that would
     // have hidden here rather than in the behaviour it is supposed to describe.
     if (this.lastRunAt === null) return true;
-    return now - this.lastRunAt >= this.intervalSeconds() * 1000;
+    return now - this.lastRunAt >= (await this.intervalSeconds()) * 1000;
   }
 
-  private intervalSeconds(): number {
+  private async intervalSeconds(): Promise<number> {
     const raw = this.db.get<{ value: string }>('SELECT value FROM app_settings WHERE key = ?', SETTING_POLL_INTERVAL)?.value;
     const parsed = Number.parseInt(raw || '', 10);
     if (!Number.isFinite(parsed)) return DEFAULT_POLL_INTERVAL_SECONDS;
@@ -89,15 +89,15 @@ export class DocSyncJob implements OnApplicationBootstrap {
       if (killSwitch === 'false') return;
 
       const now = Date.now();
-      if (!this.isDue(now)) return;
+      if (!(await this.isDue(now))) return;
       this.lastRunAt = now;
 
       // Cheap, and it catches a binding whose owner left the trip through a
       // path that has no hook to attach to: a transfer, a direct DB edit.
-      const orphaned = this.config.markOrphanedLinks();
+      const orphaned = await this.config.markOrphanedLinks();
       if (orphaned > 0) logInfo(`Document sync: ${orphaned} link(s) orphaned, owner no longer on the trip`);
 
-      const links = this.sync.dueLinks();
+      const links = await this.sync.dueLinks();
       for (const link of links) {
         // One failing provider must not stop the others: an unreachable NAS on
         // one trip is not a reason to skip a Paperless binding on another.

@@ -78,6 +78,7 @@ import type {
   DocsyncLinkDto,
 } from '../../../../src/nest/doc-sync/doc-sync.dto';
 import type { User } from '../../../../src/types';
+import { createTestUnitOfWork } from '../../../helpers/test-uow';
 
 const CAPS = {
   push: 'webhook-self-registered' as const,
@@ -124,9 +125,11 @@ const sync = {
 
 const registry = new DocumentProviderRegistry([paperless, nextcloud] as unknown as DocumentProvider[]);
 const dbs = new DatabaseService(testDb);
-const config = new DocSyncConfigService(dbs, registry);
 const realtime = { broadcast: vi.fn() };
-const controller = new DocSyncController(config, sync as unknown as DocSyncService, registry, dbs, realtime as unknown as RealtimeService);
+// Built in beforeAll: DocSyncConfigService now takes a UnitOfWork, and
+// createTestUnitOfWork is async — module-scope construction cannot await it.
+let config: DocSyncConfigService;
+let controller: DocSyncController;
 
 /** Only what publicOrigin reads: header lookup plus the connection's own scheme. */
 function makeReq(headers: Record<string, string> = {}, protocol = 'http'): Request {
@@ -178,7 +181,9 @@ let admin: User;
 let tripId: number;
 let otherTripId: number;
 
-beforeAll(() => {
+beforeAll(async () => {
+  config = new DocSyncConfigService(dbs, registry, await createTestUnitOfWork(testDb));
+  controller = new DocSyncController(config, sync as unknown as DocSyncService, registry, dbs, realtime as unknown as RealtimeService);
   createTables(testDb);
   runMigrations(testDb);
   const o = createUser(testDb, { username: 'owner', email: 'owner@test.local' }).user;
@@ -233,8 +238,8 @@ describe('who may change a trip binding', () => {
 });
 
 describe('providers', () => {
-  it('reports an enabled provider with no registered adapter as unavailable instead of hiding it', () => {
-    const rows = controller.providers() as Array<{ id: string; available: boolean }>;
+  it('reports an enabled provider with no registered adapter as unavailable instead of hiding it', async () => {
+    const rows = (await controller.providers()) as Array<{ id: string; available: boolean }>;
     const byId = Object.fromEntries(rows.map((r) => [r.id, r.available]));
     // papra is switched on in the DB, but no adapter is registered in this suite.
     expect(byId.papra).toBe(false);
@@ -242,8 +247,8 @@ describe('providers', () => {
     expect(byId.nextcloud).toBe(true);
   });
 
-  it('hands the form flags to the client as booleans rather than the 0/1 the column stores', () => {
-    const rows = controller.providers() as Array<{ id: string; fields: Array<{ field_key: string; secret: boolean; required: boolean }> }>;
+  it('hands the form flags to the client as booleans rather than the 0/1 the column stores', async () => {
+    const rows = (await controller.providers()) as Array<{ id: string; fields: Array<{ field_key: string; secret: boolean; required: boolean }> }>;
     const fields = rows.find((r) => r.id === 'paperless')!.fields;
     const token = fields.find((f) => f.field_key === 'api_token')!;
     expect(token.secret).toBe(true);
@@ -262,7 +267,7 @@ describe('storing a connection', () => {
 
     expect(res.secrets.api_token).not.toContain('super-secret');
 
-    const listed = controller.listConnections(String(tripId)) as Array<{ id: number; secrets: Record<string, string> }>;
+    const listed = (await controller.listConnections(String(tripId))) as Array<{ id: number; secrets: Record<string, string> }>;
     expect(listed).toHaveLength(1);
     expect(listed[0].id).toBe(res.id);
     // The list is what the form renders from, so the secret must not survive
@@ -273,7 +278,7 @@ describe('storing a connection', () => {
   it('refuses a base URL the SSRF guard turns down', async () => {
     const err = await thrown(() => controller.upsertConnection(String(tripId), owner, connBody({ baseUrl: 'https://blocked.invalid' })));
     expect(err.getStatus()).toBe(400);
-    expect(config.listConnections(tripId)).toHaveLength(0);
+    expect(await config.listConnections(tripId)).toHaveLength(0);
   });
 
   it('refuses to point the stored secret at another server when the form leaves it blank', async () => {
@@ -285,8 +290,8 @@ describe('storing a connection', () => {
       controller.upsertConnection(String(tripId), admin, connBody({ baseUrl: 'https://elsewhere.example', credentials: {} })),
     );
     expect(err.getStatus()).toBe(400);
-    expect(config.getConnection(conn.id)!.base_url).toBe('https://paperless.example.com');
-    expect(config.getConnection(conn.id)!.owner_user_id).toBe(Number(owner.id));
+    expect((await config.getConnection(conn.id))!.base_url).toBe('https://paperless.example.com');
+    expect((await config.getConnection(conn.id))!.owner_user_id).toBe(Number(owner.id));
   });
 
   it('refuses a provider the instance admin has not switched on, and names it', async () => {
@@ -372,14 +377,14 @@ describe('probing form values', () => {
   it('writes a successful probe onto the stored connection, so the status panel has something to show', async () => {
     const conn = await storedPaperless();
     await controller.testConnection(String(tripId), owner, connBody({ credentials: { api_token: '' } }) as DocsyncConnectionTestDto);
-    const row = config.getConnection(conn.id)!;
+    const row = (await config.getConnection(conn.id))!;
     expect(row.last_probe_state).toBe('ok');
     expect(JSON.parse(row.capabilities!)).toMatchObject({ push: 'webhook-self-registered' });
   });
 
   it('leaves no probe record behind when the form values belong to no stored connection yet', async () => {
     await controller.testConnection(String(tripId), owner, connBody({ credentials: { api_token: 'first-try' } }) as DocsyncConnectionTestDto);
-    expect(config.listConnections(tripId)).toHaveLength(0);
+    expect(await config.listConnections(tripId)).toHaveLength(0);
     expect(paperless.probe.mock.calls[0][0]).toMatchObject({ connectionId: 0, secrets: { api_token: 'first-try' } });
   });
 });
@@ -395,9 +400,9 @@ describe('a secret the adapter earned itself', () => {
       credentials: { username: 'anna', password: 'nas-pw' },
     });
     const created = (await controller.upsertConnection(String(tripId), owner, nas)) as { id: number };
-    config.saveEarnedSecret(created.id, 'device_token', EARNED);
+    await config.saveEarnedSecret(created.id, 'device_token', EARNED);
 
-    const listed = JSON.stringify(controller.listConnections(String(tripId)));
+    const listed = JSON.stringify(await controller.listConnections(String(tripId)));
     const edited = JSON.stringify(
       await controller.upsertConnection(String(tripId), owner, { ...nas, credentials: { username: 'anna', password: 'rotated' } }),
     );
@@ -405,12 +410,12 @@ describe('a secret the adapter earned itself', () => {
       expect(payload).not.toContain('DEVICE-SECRET');
       expect(payload).not.toContain('device_token');
     }
-    expect(config.toRef(config.getConnection(created.id)!).secrets.device_token).toBe(EARNED);
+    expect(config.toRef((await config.getConnection(created.id))!).secrets.device_token).toBe(EARNED);
   });
 
   it('reaches a probe of the saved form, which gets no way to write', async () => {
     const conn = await storedPaperless();
-    config.saveEarnedSecret(conn.id, 'device_token', EARNED);
+    await config.saveEarnedSecret(conn.id, 'device_token', EARNED);
     const res = await controller.testConnection(String(tripId), owner, connBody({ credentials: { api_token: '' } }) as DocsyncConnectionTestDto);
 
     const ref = paperless.probe.mock.calls[0][0];
@@ -446,7 +451,7 @@ describe('removing a connection', () => {
     );
 
     await expect(controller.deleteConnection(String(tripId), String(conn.id), owner)).resolves.toEqual({ success: true });
-    expect(config.getConnection(conn.id)).toBeUndefined();
+    expect(await config.getConnection(conn.id)).toBeUndefined();
     expect(testDb.prepare('SELECT id FROM trip_files WHERE id = ?').get(fileId)).toBeTruthy();
   });
 
@@ -469,8 +474,8 @@ describe('removing a connection', () => {
 
     expect(paperless.unregisterWebhook.mock.calls.map((c) => c[1]).sort()).toEqual(['sub-7', 'sub-8']);
     expect(paperless.unregisterWebhook.mock.calls[0][0]).toMatchObject({ connectionId: conn.id, secrets: { api_token: 'stored-token' } });
-    expect(config.getConnection(conn.id)).toBeUndefined();
-    expect(config.getLink(first.id)).toBeUndefined();
+    expect(await config.getConnection(conn.id)).toBeUndefined();
+    expect(await config.getLink(first.id)).toBeUndefined();
   });
 
   it('still unbinds when the provider refuses to take a subscription down', async () => {
@@ -479,14 +484,14 @@ describe('removing a connection', () => {
     paperless.unregisterWebhook.mockResolvedValueOnce({ success: false, error: { code: 'unreachable' } } as never);
 
     await expect(controller.deleteConnection(String(tripId), String(conn.id), owner)).resolves.toEqual({ success: true });
-    expect(config.getConnection(conn.id)).toBeUndefined();
+    expect(await config.getConnection(conn.id)).toBeUndefined();
   });
 
   it('refuses a connection that belongs to a different trip', async () => {
     const conn = await storedPaperless();
     const err = await thrown(() => controller.deleteConnection(String(otherTripId), String(conn.id), admin));
     expect(err.getStatus()).toBe(404);
-    expect(config.getConnection(conn.id)).toBeTruthy();
+    expect(await config.getConnection(conn.id)).toBeTruthy();
     expect(realtime.broadcast).not.toHaveBeenCalled();
   });
 
@@ -498,14 +503,14 @@ describe('removing a connection', () => {
       credentials: { login_name: 'alice', app_password: 'app-pw', base_path: '/TREK' },
     }));
     if ('error' in cloud) throw new Error(`fixture failed: ${cloud.error.code}`);
-    const bind = (connectionId: number, scopeKey: string) => {
-      const res = config.createLink(tripId, Number(owner.id), linkBody(connectionId, { scopeKey }));
+    const bind = async (connectionId: number, scopeKey: string) => {
+      const res = await config.createLink(tripId, Number(owner.id), linkBody(connectionId, { scopeKey }));
       if ('error' in res) throw new Error(`fixture failed: ${res.error.code}`);
       return res.data.id;
     };
-    const first = bind(conn.id, 'tag:1');
-    const second = bind(conn.id, 'tag:2');
-    bind(cloud.data.id, 'folder:1');
+    const first = await bind(conn.id, 'tag:1');
+    const second = await bind(conn.id, 'tag:2');
+    await bind(cloud.data.id, 'folder:1');
 
     await controller.deleteConnection(String(tripId), String(conn.id), owner);
 
@@ -593,7 +598,7 @@ describe('creating a binding', () => {
       makeReq({ 'x-forwarded-proto': 'https', 'x-forwarded-host': 'trek.example' }),
     )) as { id: number };
 
-    const row = config.getLink(link.id)!;
+    const row = (await config.getLink(link.id))!;
     expect(row.webhook_subscription_id).toBe('sub-7');
     expect(paperless.registerWebhook.mock.calls[0][2]).toBe(`https://trek.example/api/docsync/webhook/${row.webhook_token}`);
     // The secret handed to the provider is the plaintext one, not the stored blob.
@@ -611,7 +616,7 @@ describe('creating a binding', () => {
       makeReq({ 'x-forwarded-host': 'trek.example' }),
     )) as { id: number; syncEnabled: boolean };
 
-    const row = config.getLink(link.id)!;
+    const row = (await config.getLink(link.id))!;
     expect(row.webhook_subscription_id).toBeNull();
     expect(row.sync_enabled).toBe(1);
   });
@@ -675,7 +680,7 @@ describe('changing a binding', () => {
     const conn = await storedPaperless();
     const created = (await controller.createLink(String(tripId), owner, linkBody(conn.id), makeReq())) as { id: number };
 
-    const res = controller.updateLink(String(tripId), String(created.id), owner, { syncEnabled: false }, makeReq()) as {
+    const res = (await controller.updateLink(String(tripId), String(created.id), owner, { syncEnabled: false }, makeReq())) as {
       syncEnabled: boolean;
       direction: string;
       remoteLabel: string;
@@ -691,7 +696,7 @@ describe('changing a binding', () => {
     const created = (await controller.createLink(String(tripId), owner, linkBody(conn.id), makeReq())) as { id: number };
     const err = await thrown(() => controller.updateLink(String(otherTripId), String(created.id), admin, { syncEnabled: false }, makeReq()));
     expect(err.getStatus()).toBe(404);
-    expect(config.getLink(created.id)!.sync_enabled).toBe(1);
+    expect((await config.getLink(created.id))!.sync_enabled).toBe(1);
   });
 });
 
@@ -775,14 +780,14 @@ describe('the document list', () => {
 
   it('carries the local file name, so the list reads as documents rather than as ids', async () => {
     await seedItems();
-    const rows = controller.items(String(tripId)) as Array<{ trek_doc_uid: string; file_name: string | null }>;
+    const rows = (await controller.items(String(tripId))) as Array<{ trek_doc_uid: string; file_name: string | null }>;
     expect(rows).toHaveLength(2);
     expect(rows.find((r) => r.trek_doc_uid === 'uid-1')!.file_name).toBe('boarding.pdf');
   });
 
   it('narrows to one state when asked, and never leaves the trip', async () => {
     await seedItems();
-    const rows = controller.items(String(tripId), 'conflict') as Array<{ trek_doc_uid: string }>;
+    const rows = (await controller.items(String(tripId), 'conflict')) as Array<{ trek_doc_uid: string }>;
     expect(rows.map((r) => r.trek_doc_uid)).toEqual(['uid-2']);
   });
 });
@@ -817,7 +822,7 @@ describe('removing a binding', () => {
 
     expect(res).toEqual({ success: true, documentsKept: true });
     expect(paperless.unregisterWebhook.mock.calls[0][1]).toBe('sub-7');
-    expect(config.getLink(created.id)).toBeUndefined();
+    expect(await config.getLink(created.id)).toBeUndefined();
     expect(testDb.prepare('SELECT id FROM trip_files WHERE id = ?').get(fileId)).toBeTruthy();
   });
 
@@ -839,7 +844,7 @@ describe('removing a binding', () => {
     realtime.broadcast.mockClear();
     const err = await thrown(() => controller.deleteLink(String(otherTripId), String(created.id), admin));
     expect(err.getStatus()).toBe(404);
-    expect(config.getLink(created.id)).toBeTruthy();
+    expect(await config.getLink(created.id)).toBeTruthy();
     expect(realtime.broadcast).not.toHaveBeenCalled();
   });
 });
@@ -848,30 +853,30 @@ describe('the callback origin a provider is given', () => {
   async function linkedTrip() {
     const conn = await storedPaperless();
     const created = (await controller.createLink(String(tripId), owner, linkBody(conn.id), makeReq())) as { id: number };
-    return config.getLink(created.id)!;
+    return (await config.getLink(created.id))!;
   }
 
   it('builds the callback URL from the forwarded proto and host', async () => {
     const row = await linkedTrip();
-    const [link] = controller.listLinks(String(tripId), makeReq({ 'x-forwarded-proto': 'https', 'x-forwarded-host': 'docs.example' })) as Array<{ webhookUrl: string }>;
+    const [link] = (await controller.listLinks(String(tripId), makeReq({ 'x-forwarded-proto': 'https', 'x-forwarded-host': 'docs.example' }))) as Array<{ webhookUrl: string }>;
     expect(link.webhookUrl).toBe(`https://docs.example/api/docsync/webhook/${row.webhook_token}`);
   });
 
   it('takes the first hop when a proxy chain appends its own protocol', async () => {
     await linkedTrip();
-    const [link] = controller.listLinks(String(tripId), makeReq({ 'x-forwarded-proto': 'https, http', 'x-forwarded-host': 'docs.example' })) as Array<{ webhookUrl: string }>;
+    const [link] = (await controller.listLinks(String(tripId), makeReq({ 'x-forwarded-proto': 'https, http', 'x-forwarded-host': 'docs.example' }))) as Array<{ webhookUrl: string }>;
     expect(link.webhookUrl).toMatch(/^https:\/\/docs\.example\//);
   });
 
   it('falls back to the Host header and the connection scheme when nothing is forwarded', async () => {
     await linkedTrip();
-    const [link] = controller.listLinks(String(tripId), makeReq({ host: 'trek.lan:3001' }, 'http')) as Array<{ webhookUrl: string }>;
+    const [link] = (await controller.listLinks(String(tripId), makeReq({ host: 'trek.lan:3001' }, 'http'))) as Array<{ webhookUrl: string }>;
     expect(link.webhookUrl).toMatch(/^http:\/\/trek\.lan:3001\//);
   });
 
   it('offers no callback URL when a proxy strips the host', async () => {
     await linkedTrip();
-    const [link] = controller.listLinks(String(tripId), makeReq()) as Array<{ webhookUrl: string | null }>;
+    const [link] = (await controller.listLinks(String(tripId), makeReq())) as Array<{ webhookUrl: string | null }>;
     expect(link.webhookUrl).toBeNull();
   });
 
@@ -879,15 +884,15 @@ describe('the callback origin a provider is given', () => {
     // Synology takes no webhook. Showing the address with "paste this into
     // your provider" next to it promised something there was nowhere to do.
     const row = await linkedTrip();
-    config.recordProbe(row.connection_id, 'ok', null, { ...CAPS, push: 'none' });
-    const [link] = controller.listLinks(String(tripId), makeReq({ host: 'trek.example' })) as Array<{ webhookUrl: string | null }>;
+    await config.recordProbe(row.connection_id, 'ok', null, { ...CAPS, push: 'none' });
+    const [link] = (await controller.listLinks(String(tripId), makeReq({ host: 'trek.example' }))) as Array<{ webhookUrl: string | null }>;
     expect(link.webhookUrl).toBeNull();
   });
 
   it('keeps offering it for a store the probe found able to take one', async () => {
     const row = await linkedTrip();
-    config.recordProbe(row.connection_id, 'ok', null, { ...CAPS, push: 'webhook-manual' });
-    const [link] = controller.listLinks(String(tripId), makeReq({ host: 'trek.example' })) as Array<{ webhookUrl: string | null }>;
+    await config.recordProbe(row.connection_id, 'ok', null, { ...CAPS, push: 'webhook-manual' });
+    const [link] = (await controller.listLinks(String(tripId), makeReq({ host: 'trek.example' }))) as Array<{ webhookUrl: string | null }>;
     expect(link.webhookUrl).toBe(`http://trek.example/api/docsync/webhook/${row.webhook_token}`);
   });
 });

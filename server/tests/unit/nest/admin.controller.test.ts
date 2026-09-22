@@ -84,7 +84,7 @@ afterEach(() => { delete process.env.NODE_ENV; });
 
 describe('AdminController users', () => {
   it('lists, creates (201 + audit), maps an error', async () => {
-    expect(adminCtl(svc({ listUsers: vi.fn().mockReturnValue([{ id: 1 }]) } as Partial<AdminService>)).listUsers()).toEqual({ users: [{ id: 1 }] });
+    expect(await adminCtl(svc({ listUsers: vi.fn().mockReturnValue([{ id: 1 }]) } as Partial<AdminService>)).listUsers()).toEqual({ users: [{ id: 1 }] });
     expect(await thrown(() => adminCtl(svc({ createUser: vi.fn().mockReturnValue({ error: 'Email taken', status: 409 }) } as Partial<AdminService>)).createUser(user, {}, req))).toEqual({ status: 409, body: { error: 'Email taken' } });
     const c = adminCtl(svc({ createUser: vi.fn().mockReturnValue({ user: { id: 2 }, insertedId: 2, auditDetails: {} }) } as Partial<AdminService>));
     expect(await c.createUser(user, { email: 'a@b.c' }, req)).toEqual({ user: { id: 2 } });
@@ -184,12 +184,12 @@ describe('AdminController error envelope fallbacks', () => {
 describe('AdminController read-only getters', () => {
   it('return service values verbatim', async () => {
     expect(await adminCtl(svc({ resetUserPasskeys: vi.fn().mockReturnValue({ email: 'a@b.c', deleted: 2 }) } as Partial<AdminService>)).resetUserPasskeys(user, '4', req)).toEqual({ success: true, deleted: 2 });
-    expect(adminCtl(svc({ getStats: vi.fn().mockReturnValue({ users: 3 }) } as Partial<AdminService>)).stats()).toEqual({ users: 3 });
+    expect(await adminCtl(svc({ getStats: vi.fn().mockReturnValue({ users: 3 }) } as Partial<AdminService>)).stats()).toEqual({ users: 3 });
     expect(await adminCtl(svc({ getPermissions: vi.fn().mockReturnValue({ a: 1 }) } as Partial<AdminService>)).permissions()).toEqual({ a: 1 });
-    expect(adminCtl(svc({ getAuditLog: vi.fn().mockReturnValue({ entries: [] }) } as Partial<AdminService>)).auditLog({})).toEqual({ entries: [] });
+    expect(await adminCtl(svc({ getAuditLog: vi.fn().mockReturnValue({ entries: [] }) } as Partial<AdminService>)).auditLog({})).toEqual({ entries: [] });
     await expect(adminCtl(svc({ checkVersion: vi.fn().mockResolvedValue({ current: '1' }) } as Partial<AdminService>)).versionCheck()).resolves.toEqual({ current: '1' });
     expect(await adminCtl(svc(), undefined, undefined, {}, { listInvites: vi.fn().mockReturnValue([{ id: 1 }]) }).listInvites()).toEqual({ invites: [{ id: 1 }] });
-    expect(adminCtl(svc({ listAddons: vi.fn().mockReturnValue([{ id: 'mcp' }]) } as Partial<AdminService>)).listAddons()).toEqual({ addons: [{ id: 'mcp' }] });
+    expect(await adminCtl(svc({ listAddons: vi.fn().mockReturnValue([{ id: 'mcp' }]) } as Partial<AdminService>)).listAddons()).toEqual({ addons: [{ id: 'mcp' }] });
     expect(await adminCtl(svc(), undefined, undefined, { listAllMcpTokens: vi.fn().mockReturnValue([{ id: 1 }]) }).listMcpTokens()).toEqual({ tokens: [{ id: 1 }] });
     expect(await adminCtl(svc(), undefined, undefined, {}, {}, { listAllOAuthSessions: vi.fn().mockResolvedValue([{ id: 1 }]) }).listOAuthSessions()).toEqual({ sessions: [{ id: 1 }] });
   });

@@ -69,9 +69,9 @@ export class DocSyncMcp {
   })
   async listIssues({ tripId }: { tripId: number }, ctx: McpContext) {
     if (!(await this.files.verifyTripAccess(tripId, ctx.userId))) return noAccess();
-    const links = this.config.listLinks(tripId);
+    const links = await this.config.listLinks(tripId);
     if (links.length === 0) return ok({ configured: false, issues: [] });
-    return ok({ configured: true, issues: this.sync.issues(tripId) });
+    return ok({ configured: true, issues: await this.sync.issues(tripId) });
   }
 
   @Tool({
@@ -92,7 +92,7 @@ export class DocSyncMcp {
   })
   async syncNow({ tripId, full }: { tripId: number; full?: boolean }, ctx: McpContext) {
     if (!(await this.files.verifyTripAccess(tripId, ctx.userId))) return noAccess();
-    const links = this.config.listLinks(tripId);
+    const links = await this.config.listLinks(tripId);
     if (links.length === 0) {
       return errorResult('This trip is not connected to a document store. Connect one in the trip\'s file manager first.');
     }
@@ -101,7 +101,7 @@ export class DocSyncMcp {
       // An orphaned binding stays stopped, as it does on the REST route and for
       // the scheduler: its credential belongs to somebody who has left the trip,
       // and a run would use it anyway.
-      if (this.config.isOrphaned(link)) {
+      if (await this.config.isOrphaned(link)) {
         results.push({ linkId: link.id, provider: link.provider_id, state: 'orphaned', errorCode: 'orphaned' });
         continue;
       }
@@ -116,7 +116,7 @@ export class DocSyncMcp {
       // that were shelved after too many failures. The REST route does the
       // same thing before its run; a tool that skipped it would answer "in
       // sync" while leaving them shelved.
-      this.sync.retryShelvedItems(link.id);
+      await this.sync.retryShelvedItems(link.id);
       results.push({ linkId: link.id, provider: link.provider_id, ...(await this.sync.syncLink(link, { full: full === true })) });
     }
     if (results.every((r) => r.errorCode === PROVIDER_DISABLED)) {

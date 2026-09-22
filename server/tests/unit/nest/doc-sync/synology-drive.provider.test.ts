@@ -470,7 +470,7 @@ describe('SynologyDriveDocumentProvider: device tokens', () => {
   function saved(store: Record<string, string>, overrides: Partial<DocumentConnectionRef> = {}): DocumentConnectionRef {
     return connection({
       secrets: { ...store },
-      saveSecret: (key, value) => {
+      saveSecret: async (key, value) => {
         writes.push([key, value]);
         if (value === null) delete store[key];
         else store[key] = value;

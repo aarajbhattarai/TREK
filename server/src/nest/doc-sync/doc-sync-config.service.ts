@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import crypto from 'crypto';
 import { DOCSYNC_SECRET_MASK, type DocsyncConnectionInput, type DocsyncLinkInput } from '@trek/shared';
 import { DatabaseService } from '../database/database.service';
+import { UnitOfWork } from '../database/unit-of-work';
 import { checkSsrf } from '../../utils/ssrfGuard';
 import { DocumentProviderRegistry } from './document-provider.registry';
 import type { DocumentConnectionRef, DocumentScopeRef, DocResult } from './document-provider';
@@ -86,19 +87,20 @@ export class DocSyncConfigService {
   constructor(
     private readonly db: DatabaseService,
     private readonly registry: DocumentProviderRegistry,
+    private readonly uow: UnitOfWork,
   ) {}
 
   // ── Provider metadata ──────────────────────────────────────────────────────
 
   /** Only providers the instance admin switched on may be configured. */
-  enabledProviderIds(): string[] {
+  async enabledProviderIds(): Promise<string[]> {
     return this.db.connection
       .prepare('SELECT id FROM document_providers WHERE enabled = 1 ORDER BY sort_order')
       .all()
       .map((r) => (r as { id: string }).id);
   }
 
-  providerFields(providerId: string): ProviderFieldRow[] {
+  async providerFields(providerId: string): Promise<ProviderFieldRow[]> {
     // Every column the form needs, not just the three the secret bookkeeping
     // uses: the client renders the field from this row, and a missing `label`
     // turns into a literal "docsync.undefined" on screen.
@@ -110,8 +112,8 @@ export class DocSyncConfigService {
       .all(providerId) as ProviderFieldRow[];
   }
 
-  private secretKeys(providerId: string): string[] {
-    return this.providerFields(providerId).filter((f) => f.secret === 1).map((f) => f.field_key);
+  private async secretKeys(providerId: string): Promise<string[]> {
+    return (await this.providerFields(providerId)).filter((f) => f.secret === 1).map((f) => f.field_key);
   }
 
   /**
@@ -119,7 +121,7 @@ export class DocSyncConfigService {
    * admin switching its provider off, and the client only gets names for the
    * providers that are still on, so without this it would show the raw id.
    */
-  private providerName(providerId: string): string {
+  private async providerName(providerId: string): Promise<string> {
     const row = this.db.connection
       .prepare('SELECT name FROM document_providers WHERE id = ?')
       .get(providerId) as { name: string } | undefined;
@@ -128,11 +130,11 @@ export class DocSyncConfigService {
 
   // ── Connections ────────────────────────────────────────────────────────────
 
-  getConnection(id: number): ConnectionRow | undefined {
+  async getConnection(id: number): Promise<ConnectionRow | undefined> {
     return this.db.connection.prepare('SELECT * FROM document_connections WHERE id = ?').get(id) as ConnectionRow | undefined;
   }
 
-  listConnections(tripId: number): ConnectionRow[] {
+  async listConnections(tripId: number): Promise<ConnectionRow[]> {
     return this.db.connection
       .prepare('SELECT * FROM document_connections WHERE trip_id = ? ORDER BY id')
       .all(tripId) as ConnectionRow[];
@@ -183,9 +185,9 @@ export class DocSyncConfigService {
    * caller's ref: a sync run holds its ref for minutes, and writing that
    * snapshot back would undo a password the owner changed in the meantime.
    */
-  saveEarnedSecret(connectionId: number, key: string, value: string | null): void {
-    this.db.transaction(() => {
-      const row = this.getConnection(connectionId);
+  async saveEarnedSecret(connectionId: number, key: string, value: string | null): Promise<void> {
+    await this.uow.transactional(async () => {
+      const row = await this.getConnection(connectionId);
       if (!row) return;
       const secrets = decryptSecrets(row.secrets);
       if (value === null) delete secrets[key];
@@ -197,7 +199,7 @@ export class DocSyncConfigService {
   }
 
   /** What a client may see: no secret values, only whether each one is set. */
-  publicConnection(row: ConnectionRow): Record<string, unknown> {
+  async publicConnection(row: ConnectionRow): Promise<Record<string, unknown>> {
     const ref = this.toRef(row);
     return {
       id: row.id,
@@ -206,7 +208,7 @@ export class DocSyncConfigService {
       ownerUserId: row.owner_user_id,
       baseUrl: row.base_url,
       settings: ref.settings,
-      secrets: maskSecrets(ref.secrets, this.secretKeys(row.provider_id)),
+      secrets: maskSecrets(ref.secrets, await this.secretKeys(row.provider_id)),
       allowInsecureTls: row.allow_insecure_tls === 1,
       capabilities: row.capabilities ? safeParse(row.capabilities) : null,
       lastProbeAt: row.last_probe_at,
@@ -266,7 +268,7 @@ export class DocSyncConfigService {
     const urlCheck = await this.validateBaseUrl(input.baseUrl);
     if (docFailed(urlCheck)) return { success: false, error: urlCheck.error };
 
-    const fields = this.providerFields(input.providerId);
+    const fields = await this.providerFields(input.providerId);
     const secretKeys = fields.filter((f) => f.secret === 1).map((f) => f.field_key);
     const plainKeys = fields.filter((f) => f.secret !== 1).map((f) => f.field_key);
 
@@ -316,7 +318,7 @@ export class DocSyncConfigService {
     const settingsJson = JSON.stringify(settings);
     const insecure = input.allowInsecureTls ? 1 : 0;
 
-    const row = this.db.transaction(() => {
+    const row = await this.uow.transactional(async () => {
       if (existing) {
         this.db.connection
           .prepare(
@@ -326,7 +328,7 @@ export class DocSyncConfigService {
               WHERE id = ?`,
           )
           .run(urlCheck.data.url, encrypted, settingsJson, insecure, ownerId, existing.id);
-        return this.getConnection(existing.id) as ConnectionRow;
+        return (await this.getConnection(existing.id)) as ConnectionRow;
       }
       const info = this.db.connection
         .prepare(
@@ -334,13 +336,13 @@ export class DocSyncConfigService {
            VALUES (?, ?, ?, ?, ?, ?, ?)`,
         )
         .run(tripId, input.providerId, userId, urlCheck.data.url, encrypted, settingsJson, insecure);
-      return this.getConnection(Number(info.lastInsertRowid)) as ConnectionRow;
+      return (await this.getConnection(Number(info.lastInsertRowid))) as ConnectionRow;
     });
 
     return { success: true, data: row };
   }
 
-  recordProbe(connectionId: number, state: 'ok' | 'failed', error: string | null, capabilities: unknown): void {
+  async recordProbe(connectionId: number, state: 'ok' | 'failed', error: string | null, capabilities: unknown): Promise<void> {
     this.db.connection
       .prepare(
         `UPDATE document_connections
@@ -356,23 +358,23 @@ export class DocSyncConfigService {
    * more: the same promise Dawarich's disconnect makes, and the only version
    * of this action that is safe to offer without a confirmation dialog.
    */
-  deleteConnection(id: number): void {
+  async deleteConnection(id: number): Promise<void> {
     this.db.connection.prepare('DELETE FROM document_connections WHERE id = ?').run(id);
   }
 
   // ── Trip bindings ──────────────────────────────────────────────────────────
 
-  listLinks(tripId: number): LinkRow[] {
+  async listLinks(tripId: number): Promise<LinkRow[]> {
     return this.db.connection
       .prepare('SELECT * FROM trip_document_links WHERE trip_id = ? ORDER BY id')
       .all(tripId) as LinkRow[];
   }
 
-  getLink(id: number): LinkRow | undefined {
+  async getLink(id: number): Promise<LinkRow | undefined> {
     return this.db.connection.prepare('SELECT * FROM trip_document_links WHERE id = ?').get(id) as LinkRow | undefined;
   }
 
-  getLinkByToken(token: string): LinkRow | undefined {
+  async getLinkByToken(token: string): Promise<LinkRow | undefined> {
     return this.db.connection
       .prepare('SELECT * FROM trip_document_links WHERE webhook_token = ?')
       .get(token) as LinkRow | undefined;
@@ -397,8 +399,8 @@ export class DocSyncConfigService {
    * still goes through the connection's own credential, so it cannot open
    * anything that credential could not open anyway.
    */
-  createLink(tripId: number, userId: number, input: DocsyncLinkInput): DocResult<LinkRow> {
-    const conn = this.getConnection(input.connectionId);
+  async createLink(tripId: number, userId: number, input: DocsyncLinkInput): Promise<DocResult<LinkRow>> {
+    const conn = await this.getConnection(input.connectionId);
     if (!conn || conn.trip_id !== tripId) {
       return { success: false, error: { code: 'not_found', detail: 'connection not found for this trip' } };
     }
@@ -436,18 +438,18 @@ export class DocSyncConfigService {
         String(encryptSecrets({ webhook: secret })),
         userId,
       );
-    return { success: true, data: this.getLink(Number(info.lastInsertRowid)) as LinkRow };
+    return { success: true, data: (await this.getLink(Number(info.lastInsertRowid))) as LinkRow };
   }
 
-  updateLink(id: number, patch: Partial<DocsyncLinkInput>): LinkRow | undefined {
+  async updateLink(id: number, patch: Partial<DocsyncLinkInput>): Promise<LinkRow | undefined> {
     const sets: string[] = [];
     const values: unknown[] = [];
     // Sync automatically is the way back for an orphaned binding, but only once
     // the person whose credential it runs under is on the trip again. Until
     // then the switch stays off rather than handing that credential back.
-    const current = patch.syncEnabled === true ? this.getLink(id) : undefined;
+    const current = patch.syncEnabled === true ? await this.getLink(id) : undefined;
     if (current?.last_sync_state === 'orphaned') {
-      if (this.ownerLeft(current.connection_id)) patch = { ...patch, syncEnabled: undefined };
+      if (await this.ownerLeft(current.connection_id)) patch = { ...patch, syncEnabled: undefined };
       else sets.push("last_sync_state = 'never'");
     }
     if (patch.direction !== undefined) { sets.push('direction = ?'); values.push(patch.direction); }
@@ -455,10 +457,10 @@ export class DocSyncConfigService {
     if (patch.conflictPolicy !== undefined) { sets.push('conflict_policy = ?'); values.push(patch.conflictPolicy); }
     if (patch.syncEnabled !== undefined) { sets.push('sync_enabled = ?'); values.push(patch.syncEnabled ? 1 : 0); }
     if (patch.remoteLabel !== undefined) { sets.push('remote_label = ?'); values.push(patch.remoteLabel); }
-    if (sets.length === 0) return this.getLink(id);
+    if (sets.length === 0) return await this.getLink(id);
     sets.push('updated_at = CURRENT_TIMESTAMP');
     this.db.connection.prepare(`UPDATE trip_document_links SET ${sets.join(', ')} WHERE id = ?`).run(...values, id);
-    return this.getLink(id);
+    return await this.getLink(id);
   }
 
   /**
@@ -466,8 +468,8 @@ export class DocSyncConfigService {
    * document on either side. A user who wants that does it deliberately, in
    * the system that holds the file.
    */
-  deleteLink(id: number): void {
-    this.db.transaction(() => {
+  async deleteLink(id: number): Promise<void> {
+    await this.uow.transactional(async () => {
       this.db.connection.prepare('DELETE FROM document_sync_items WHERE link_id = ?').run(id);
       this.db.connection.prepare('DELETE FROM trip_document_links WHERE id = ?').run(id);
     });
@@ -478,13 +480,13 @@ export class DocSyncConfigService {
   }
 
   /** The masked view a client gets, with the webhook URL it may need to paste. */
-  publicLink(link: LinkRow, webhookBaseUrl: string | null): Record<string, unknown> {
+  async publicLink(link: LinkRow, webhookBaseUrl: string | null): Promise<Record<string, unknown>> {
     return {
       id: link.id,
       tripId: link.trip_id,
       connectionId: link.connection_id,
       providerId: link.provider_id,
-      providerName: this.providerName(link.provider_id),
+      providerName: await this.providerName(link.provider_id),
       scopeKey: link.remote_scope_key,
       remoteRootId: link.remote_root_id,
       remoteRootPath: link.remote_root_path,
@@ -501,7 +503,7 @@ export class DocSyncConfigService {
       // subscribe on its own (Papra, and Nextcloud without admin rights). Not
       // for a provider that takes no webhook at all: an address with nowhere
       // to paste it only promises what the timer delivers anyway.
-      webhookUrl: webhookBaseUrl && link.webhook_token && this.takesWebhook(link)
+      webhookUrl: webhookBaseUrl && link.webhook_token && (await this.takesWebhook(link))
         ? `${webhookBaseUrl}/api/docsync/webhook/${link.webhook_token}`
         : null,
       webhookSecret: link.webhook_secret ? DOCSYNC_SECRET_MASK : null,
@@ -513,8 +515,8 @@ export class DocSyncConfigService {
    * recorded it. Unknown counts as yes: a connection that was never probed
    * still gets the address, and a stale answer costs nothing but a line.
    */
-  private takesWebhook(link: LinkRow): boolean {
-    const recorded = this.getConnection(link.connection_id)?.capabilities;
+  private async takesWebhook(link: LinkRow): Promise<boolean> {
+    const recorded = (await this.getConnection(link.connection_id))?.capabilities;
     const caps = recorded ? safeParse(recorded) : null;
     return !(caps && typeof caps === 'object' && (caps as { push?: unknown }).push === 'none');
   }
@@ -525,11 +527,11 @@ export class DocSyncConfigService {
    * marked; every path that starts a run asks here rather than reading the
    * mark alone.
    */
-  isOrphaned(link: LinkRow): boolean {
-    return link.last_sync_state === 'orphaned' || this.ownerLeft(link.connection_id);
+  async isOrphaned(link: LinkRow): Promise<boolean> {
+    return link.last_sync_state === 'orphaned' || (await this.ownerLeft(link.connection_id));
   }
 
-  private ownerLeft(connectionId: number): boolean {
+  private async ownerLeft(connectionId: number): Promise<boolean> {
     return !!this.db.connection
       .prepare(
         `SELECT 1 FROM document_connections c
@@ -550,7 +552,7 @@ export class DocSyncConfigService {
    * and a binding that keeps using an ex-member's token is the kind of thing
    * nobody notices until it is a complaint.
    */
-  markOrphanedLinks(): number {
+  async markOrphanedLinks(): Promise<number> {
     const info = this.db.connection
       .prepare(
         `UPDATE trip_document_links

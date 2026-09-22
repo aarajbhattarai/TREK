@@ -75,19 +75,19 @@ export class AdminController {
 
   // ── Users ──
   @Get('users')
-  listUsers() { return { users: this.admin.listUsers() }; }
+  async listUsers() { return { users: await this.admin.listUsers() }; }
 
   @Post('users')
   @HttpCode(201)
   async createUser(@CurrentUser() user: User, @Body() body: AdminUserCreateDto, @Req() req: Request) {
-    const result = ok(this.admin.createUser(body as Parameters<AdminService['createUser']>[0]));
+    const result = ok(await this.admin.createUser(body as Parameters<AdminService['createUser']>[0]));
     await this.audit.writeAudit({ userId: user.id, action: 'admin.user_create', resource: String(result.insertedId), ip: getClientIp(req), details: result.auditDetails });
     return { user: result.user };
   }
 
   @Put('users/:id')
   async updateUser(@CurrentUser() user: User, @Param('id') id: string, @Body() body: AdminUserUpdateDto, @Req() req: Request) {
-    const result = ok(this.admin.updateUser(id, body));
+    const result = ok(await this.admin.updateUser(id, body));
     await this.audit.writeAudit({ userId: user.id, action: 'admin.user_update', resource: String(id), ip: getClientIp(req), details: { targetUser: result.previousEmail, fields: result.changed } });
     logInfo(`Admin ${user.email} edited user ${result.previousEmail} (fields: ${result.changed.join(', ')})`);
     return { user: result.user };
@@ -110,7 +110,7 @@ export class AdminController {
 
   @Delete('users/:id/mfa')
   async resetUserMfa(@CurrentUser() user: User, @Param('id') id: string, @Req() req: Request) {
-    const result = ok(this.admin.resetUserMfa(id, user.id));
+    const result = ok(await this.admin.resetUserMfa(id, user.id));
     await this.audit.writeAudit({ userId: user.id, action: 'admin.user_mfa_reset', resource: String(id), ip: getClientIp(req), details: { targetUser: result.email } });
     return { success: true };
   }
@@ -280,7 +280,7 @@ export class AdminController {
 
   // ── Addons ──
   @Get('addons')
-  listAddons() { return { addons: this.admin.listAddons() }; }
+  async listAddons() { return { addons: await this.admin.listAddons() }; }
 
   @Put('addons/:id')
   async updateAddon(@CurrentUser() user: User, @Param('id') id: string, @Body() body: AdminAddonUpdateDto, @Req() req: Request) {

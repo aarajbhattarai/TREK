@@ -60,32 +60,32 @@ export class VacayController {
 
   @Put('plan')
   async updatePlan(@CurrentUser() user: User, @Body() body: VacayUpdatePlanDto, @Headers('x-socket-id') socketId?: string) {
-    const planId = this.vacay.getActivePlanId(user.id);
+    const planId = await this.vacay.getActivePlanId(user.id);
     return this.vacay.updatePlan(planId, body, socketId);
   }
 
   @Post('plan/holiday-calendars')
   @HttpCode(200)
-  addHolidayCalendar(
+  async addHolidayCalendar(
     @CurrentUser() user: User,
     @Body() body: VacayAddHolidayCalendarDto,
     @Headers('x-socket-id') socketId?: string,
   ) {
-    const planId = this.vacay.getActivePlanId(user.id);
-    const calendar = this.vacay.addHolidayCalendar(planId, body.region, body.label ?? null, body.color, body.sort_order, socketId, body.type);
+    const planId = await this.vacay.getActivePlanId(user.id);
+    const calendar = await this.vacay.addHolidayCalendar(planId, body.region, body.label ?? null, body.color, body.sort_order, socketId, body.type);
     return { calendar };
   }
 
   @Put('plan/holiday-calendars/:id')
-  updateHolidayCalendar(
+  async updateHolidayCalendar(
     @CurrentUser() user: User,
     @Param('id') idParam: string,
     @Body() body: VacayUpdateHolidayCalendarDto,
     @Headers('x-socket-id') socketId?: string,
   ) {
     const id = Number.parseInt(idParam);
-    const planId = this.vacay.getActivePlanId(user.id);
-    const calendar = this.vacay.updateHolidayCalendar(id, planId, body, socketId);
+    const planId = await this.vacay.getActivePlanId(user.id);
+    const calendar = await this.vacay.updateHolidayCalendar(id, planId, body, socketId);
     if (!calendar) {
       throw new HttpException({ error: 'Calendar not found' }, 404);
     }
@@ -93,38 +93,38 @@ export class VacayController {
   }
 
   @Delete('plan/holiday-calendars/:id')
-  deleteHolidayCalendar(@CurrentUser() user: User, @Param('id') idParam: string, @Headers('x-socket-id') socketId?: string) {
+  async deleteHolidayCalendar(@CurrentUser() user: User, @Param('id') idParam: string, @Headers('x-socket-id') socketId?: string) {
     const id = Number.parseInt(idParam);
-    const planId = this.vacay.getActivePlanId(user.id);
-    if (!this.vacay.deleteHolidayCalendar(id, planId, socketId)) {
+    const planId = await this.vacay.getActivePlanId(user.id);
+    if (!(await this.vacay.deleteHolidayCalendar(id, planId, socketId))) {
       throw new HttpException({ error: 'Calendar not found' }, 404);
     }
     return { success: true };
   }
 
   @Put('color')
-  setColor(
+  async setColor(
     @CurrentUser() user: User,
     @Body() body: VacaySetColorDto,
     @Headers('x-socket-id') socketId?: string,
   ) {
-    const planId = this.vacay.getActivePlanId(user.id);
+    const planId = await this.vacay.getActivePlanId(user.id);
     const userId = body.target_user_id ? Number.parseInt(String(body.target_user_id)) : user.id;
-    if (!this.vacay.getPlanUsers(planId).find((u) => u.id === userId)) {
+    if (!(await this.vacay.getPlanUsers(planId)).find((u) => u.id === userId)) {
       throw new HttpException({ error: 'User not in plan' }, 403);
     }
-    this.vacay.setUserColor(userId, planId, body.color, socketId);
+    await this.vacay.setUserColor(userId, planId, body.color, socketId);
     return { success: true };
   }
 
   @Post('invite')
   @HttpCode(200)
-  invite(@CurrentUser() user: User, @Body() body: VacayInviteDto) {
+  async invite(@CurrentUser() user: User, @Body() body: VacayInviteDto) {
     if (!body.user_id) {
       throw new HttpException({ error: 'user_id required' }, 400);
     }
-    const plan = this.vacay.getActivePlan(user.id);
-    const result = this.vacay.sendInvite(plan.id, user.id, user.username, user.email, body.user_id as number);
+    const plan = await this.vacay.getActivePlan(user.id);
+    const result = await this.vacay.sendInvite(plan.id, user.id, user.username, user.email, body.user_id as number);
     if (result.error) {
       throw new HttpException({ error: result.error }, result.status!);
     }
@@ -133,8 +133,8 @@ export class VacayController {
 
   @Post('invite/accept')
   @HttpCode(200)
-  acceptInvite(@CurrentUser() user: User, @Body() body: VacayInviteActionDto, @Headers('x-socket-id') socketId?: string) {
-    const result = this.vacay.acceptInvite(user.id, body.plan_id as number, socketId);
+  async acceptInvite(@CurrentUser() user: User, @Body() body: VacayInviteActionDto, @Headers('x-socket-id') socketId?: string) {
+    const result = await this.vacay.acceptInvite(user.id, body.plan_id as number, socketId);
     if (result.error) {
       throw new HttpException({ error: result.error }, result.status!);
     }
@@ -143,71 +143,71 @@ export class VacayController {
 
   @Post('invite/decline')
   @HttpCode(200)
-  declineInvite(@CurrentUser() user: User, @Body() body: VacayInviteActionDto, @Headers('x-socket-id') socketId?: string) {
-    this.vacay.declineInvite(user.id, body.plan_id as number, socketId);
+  async declineInvite(@CurrentUser() user: User, @Body() body: VacayInviteActionDto, @Headers('x-socket-id') socketId?: string) {
+    await this.vacay.declineInvite(user.id, body.plan_id as number, socketId);
     return { success: true };
   }
 
   @Post('invite/cancel')
   @HttpCode(200)
-  cancelInvite(@CurrentUser() user: User, @Body() body: VacayInviteDto) {
-    const plan = this.vacay.getActivePlan(user.id);
-    this.vacay.cancelInvite(plan.id, body.user_id as number);
+  async cancelInvite(@CurrentUser() user: User, @Body() body: VacayInviteDto) {
+    const plan = await this.vacay.getActivePlan(user.id);
+    await this.vacay.cancelInvite(plan.id, body.user_id as number);
     return { success: true };
   }
 
   @Post('dissolve')
   @HttpCode(200)
-  dissolve(@CurrentUser() user: User, @Headers('x-socket-id') socketId?: string) {
-    this.vacay.dissolvePlan(user.id, socketId);
+  async dissolve(@CurrentUser() user: User, @Headers('x-socket-id') socketId?: string) {
+    await this.vacay.dissolvePlan(user.id, socketId);
     return { success: true };
   }
 
   @Get('available-users')
-  availableUsers(@CurrentUser() user: User) {
-    const planId = this.vacay.getActivePlanId(user.id);
-    return { users: this.vacay.getAvailableUsers(user.id, planId) };
+  async availableUsers(@CurrentUser() user: User) {
+    const planId = await this.vacay.getActivePlanId(user.id);
+    return { users: await this.vacay.getAvailableUsers(user.id, planId) };
   }
 
   @Get('years')
-  years(@CurrentUser() user: User) {
-    const planId = this.vacay.getActivePlanId(user.id);
-    return { years: this.vacay.listYears(planId) };
+  async years(@CurrentUser() user: User) {
+    const planId = await this.vacay.getActivePlanId(user.id);
+    return { years: await this.vacay.listYears(planId) };
   }
 
   @Post('years')
   @HttpCode(200)
-  addYear(@CurrentUser() user: User, @Body() body: VacayAddYearDto, @Headers('x-socket-id') socketId?: string) {
+  async addYear(@CurrentUser() user: User, @Body() body: VacayAddYearDto, @Headers('x-socket-id') socketId?: string) {
     if (!body.year) {
       throw new HttpException({ error: 'Year required' }, 400);
     }
-    const planId = this.vacay.getActivePlanId(user.id);
-    return { years: this.vacay.addYear(planId, body.year as number, socketId) };
+    const planId = await this.vacay.getActivePlanId(user.id);
+    return { years: await this.vacay.addYear(planId, body.year as number, socketId) };
   }
 
   @Delete('years/:year')
-  deleteYear(@CurrentUser() user: User, @Param('year') yearParam: string, @Headers('x-socket-id') socketId?: string) {
+  async deleteYear(@CurrentUser() user: User, @Param('year') yearParam: string, @Headers('x-socket-id') socketId?: string) {
     const year = Number.parseInt(yearParam);
-    const planId = this.vacay.getActivePlanId(user.id);
-    return { years: this.vacay.deleteYear(planId, year, socketId) };
+    const planId = await this.vacay.getActivePlanId(user.id);
+    return { years: await this.vacay.deleteYear(planId, year, socketId) };
   }
 
   @Get('year-settings')
-  yearSettings(@CurrentUser() user: User) {
-    return { settings: this.vacay.getYearSettings(user.id) };
+  async yearSettings(@CurrentUser() user: User) {
+    return { settings: await this.vacay.getYearSettings(user.id) };
   }
 
   @Put('year-settings')
-  updateYearSettings(
+  async updateYearSettings(
     @CurrentUser() user: User,
     @Body() body: VacayYearSettingsDto,
   ) {
-    return { settings: this.vacay.updateYearSettings(user.id, body) };
+    return { settings: await this.vacay.updateYearSettings(user.id, body) };
   }
 
   @Get('entries/:year')
-  entries(@CurrentUser() user: User, @Param('year') year: string) {
-    const planId = this.vacay.getActivePlanId(user.id);
+  async entries(@CurrentUser() user: User, @Param('year') year: string) {
+    const planId = await this.vacay.getActivePlanId(user.id);
     // Entries load over the caller's leave-year window (#737), so a shifted year
     // returns both calendar halves the grid renders.
     return this.vacay.getEntries(planId, year, user.id);
@@ -215,21 +215,21 @@ export class VacayController {
 
   @Post('entries/toggle')
   @HttpCode(200)
-  toggleEntry(
+  async toggleEntry(
     @CurrentUser() user: User,
     @Body() body: VacayToggleEntryDto,
     @Headers('x-socket-id') socketId?: string,
   ) {
-    const planId = this.vacay.getActivePlanId(user.id);
+    const planId = await this.vacay.getActivePlanId(user.id);
     let userId = user.id;
     if (body.target_user_id && Number.parseInt(String(body.target_user_id)) !== user.id) {
       const tid = Number.parseInt(String(body.target_user_id));
-      if (!this.vacay.getPlanUsers(planId).find((u) => u.id === tid)) {
+      if (!(await this.vacay.getPlanUsers(planId)).find((u) => u.id === tid)) {
         throw new HttpException({ error: 'User not in plan' }, 403);
       }
       userId = tid;
     }
-    const result = this.vacay.toggleEntry(userId, planId, body.date, body.fraction, body.kind, socketId);
+    const result = await this.vacay.toggleEntry(userId, planId, body.date, body.fraction, body.kind, socketId);
     if (result.error === 'weekend_blocked') {
       throw new HttpException({ error: 'Weekend days are blocked on this plan' }, 400);
     }
@@ -238,36 +238,36 @@ export class VacayController {
 
   @Post('entries/company-holiday')
   @HttpCode(200)
-  companyHoliday(
+  async companyHoliday(
     @CurrentUser() user: User,
     @Body() body: VacayCompanyHolidayDto,
     @Headers('x-socket-id') socketId?: string,
   ) {
-    const planId = this.vacay.getActivePlanId(user.id);
+    const planId = await this.vacay.getActivePlanId(user.id);
     return this.vacay.toggleCompanyHoliday(planId, body.date, body.note, socketId);
   }
 
   @Get('stats/:year')
-  stats(@CurrentUser() user: User, @Param('year') yearParam: string) {
+  async stats(@CurrentUser() user: User, @Param('year') yearParam: string) {
     const year = Number.parseInt(yearParam);
-    const planId = this.vacay.getActivePlanId(user.id);
-    return { stats: this.vacay.getStats(planId, year) };
+    const planId = await this.vacay.getActivePlanId(user.id);
+    return { stats: await this.vacay.getStats(planId, year) };
   }
 
   @Put('stats/:year')
-  updateStats(
+  async updateStats(
     @CurrentUser() user: User,
     @Param('year') yearParam: string,
     @Body() body: VacayUpdateStatsDto,
     @Headers('x-socket-id') socketId?: string,
   ) {
     const year = Number.parseInt(yearParam);
-    const planId = this.vacay.getActivePlanId(user.id);
+    const planId = await this.vacay.getActivePlanId(user.id);
     const userId = body.target_user_id ? Number.parseInt(String(body.target_user_id)) : user.id;
-    if (!this.vacay.getPlanUsers(planId).find((u) => u.id === userId)) {
+    if (!(await this.vacay.getPlanUsers(planId)).find((u) => u.id === userId)) {
       throw new HttpException({ error: 'User not in plan' }, 403);
     }
-    this.vacay.updateStats(userId, planId, year, body.vacation_days as number, socketId);
+    await this.vacay.updateStats(userId, planId, year, body.vacation_days as number, socketId);
     return { success: true };
   }
 
@@ -278,7 +278,7 @@ export class VacayController {
 
   @Post('shares')
   @HttpCode(200)
-  share(
+  async share(
     @CurrentUser() user: User,
     @Body() body: VacayShareDto,
     @Headers('x-socket-id') socketId?: string,
@@ -286,7 +286,7 @@ export class VacayController {
     if (!body.user_id) {
       throw new HttpException({ error: 'user_id required' }, 400);
     }
-    const result = this.vacay.shareCalendar(user.id, user.email, Number.parseInt(String(body.user_id)), socketId);
+    const result = await this.vacay.shareCalendar(user.id, user.email, Number.parseInt(String(body.user_id)), socketId);
     if (result.error) {
       throw new HttpException({ error: result.error }, result.status!);
     }
@@ -294,31 +294,31 @@ export class VacayController {
   }
 
   @Get('shares/available-users')
-  shareAvailableUsers(@CurrentUser() user: User) {
-    return { users: this.vacay.getShareAvailableUsers(user.id) };
+  async shareAvailableUsers(@CurrentUser() user: User) {
+    return { users: await this.vacay.getShareAvailableUsers(user.id) };
   }
 
   @Get('shares/calendars/:year')
-  sharedCalendars(@CurrentUser() user: User, @Param('year') year: string) {
-    return { calendars: this.vacay.getSharedCalendars(user.id, year) };
+  async sharedCalendars(@CurrentUser() user: User, @Param('year') year: string) {
+    return { calendars: await this.vacay.getSharedCalendars(user.id, year) };
   }
 
   @Put('shares/:id')
-  updateShare(
+  async updateShare(
     @CurrentUser() user: User,
     @Param('id') idParam: string,
     @Body() body: VacayShareUpdateDto,
     @Headers('x-socket-id') socketId?: string,
   ) {
-    if (!this.vacay.setShareHidden(Number.parseInt(idParam), user.id, body.hidden, socketId)) {
+    if (!(await this.vacay.setShareHidden(Number.parseInt(idParam), user.id, body.hidden, socketId))) {
       throw new HttpException({ error: 'Share not found' }, 404);
     }
     return { success: true };
   }
 
   @Delete('shares/:id')
-  deleteShare(@CurrentUser() user: User, @Param('id') idParam: string, @Headers('x-socket-id') socketId?: string) {
-    if (!this.vacay.removeShare(Number.parseInt(idParam), user.id, socketId)) {
+  async deleteShare(@CurrentUser() user: User, @Param('id') idParam: string, @Headers('x-socket-id') socketId?: string) {
+    if (!(await this.vacay.removeShare(Number.parseInt(idParam), user.id, socketId))) {
       throw new HttpException({ error: 'Share not found' }, 404);
     }
     return { success: true };

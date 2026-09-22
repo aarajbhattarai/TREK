@@ -109,7 +109,7 @@ export class DocSyncService {
    * than stood down per run. It never runs, so it never gets a `last_sync_at`,
    * and twenty of them would sort first on every tick and take every slot.
    */
-  dueLinks(limit = 20): LinkRow[] {
+  async dueLinks(limit = 20): Promise<LinkRow[]> {
     return this.db.connection
       .prepare(
         `SELECT * FROM trip_document_links
@@ -137,7 +137,7 @@ export class DocSyncService {
    */
   async isSwitchedOff(link: Pick<LinkRow, 'provider_id'>): Promise<boolean> {
     if (!(await this.addons.isAddonEnabled(ADDON_IDS.DOCUMENTS))) return true;
-    return !this.config.enabledProviderIds().includes(link.provider_id);
+    return !(await this.config.enabledProviderIds()).includes(link.provider_id);
   }
 
   /**
@@ -163,7 +163,7 @@ export class DocSyncService {
       return await this.runLink(link, opts);
     } catch (err) {
       this.logger.error(`link ${link.id} failed: ${err instanceof Error ? err.message : String(err)}`);
-      this.recordLinkFailure(link, 'unknown');
+      await this.recordLinkFailure(link, 'unknown');
       return { state: 'failed', pulled: 0, pushed: 0, conflicts: 0, missing: 0, errorCode: 'unknown' };
     } finally {
       this.running.delete(link.id);
@@ -182,17 +182,17 @@ export class DocSyncService {
     // An orphaned binding runs for nobody. Its credential belongs to somebody
     // who has left the trip, and a webhook or a resolved conflict reach this
     // without asking beforehand.
-    if (this.config.isOrphaned(link)) {
+    if (await this.config.isOrphaned(link)) {
       return { state: 'orphaned', pulled: 0, pushed: 0, conflicts: 0, missing: 0 };
     }
-    const conn = this.config.getConnection(link.connection_id);
+    const conn = await this.config.getConnection(link.connection_id);
     if (!conn) {
-      this.recordLinkFailure(link, 'not_found');
+      await this.recordLinkFailure(link, 'not_found');
       return { state: 'failed', pulled: 0, pushed: 0, conflicts: 0, missing: 0, errorCode: 'not_found' };
     }
     const provider = this.registry.get(link.provider_id);
     if (!provider) {
-      this.recordLinkFailure(link, 'provider_error');
+      await this.recordLinkFailure(link, 'provider_error');
       return { state: 'failed', pulled: 0, pushed: 0, conflicts: 0, missing: 0, errorCode: 'provider_error' };
     }
 
@@ -204,20 +204,20 @@ export class DocSyncService {
     const resolved = await provider.resolveScope(ref, scope);
     if (docFailed(resolved)) {
       const code = resolved.error.code === 'not_found' || resolved.error.code === 'scope_missing' ? 'scope_missing' : resolved.error.code;
-      this.recordLinkFailure(link, code, code === 'scope_missing' ? 'scope_lost' : undefined);
+      await this.recordLinkFailure(link, code, code === 'scope_missing' ? 'scope_lost' : undefined);
       return { state: code === 'scope_missing' ? 'scope_lost' : 'failed', pulled: 0, pushed: 0, conflicts: 0, missing: 0, errorCode: code };
     }
 
     // Read before the listing because they decide how much of it is needed: a
     // file restored in TREK waits for a listing that shows its copy.
-    const items = this.loadItems(link.id);
-    const local = this.loadLocalDocuments(link);
+    const items = await this.loadItems(link.id);
+    const local = await this.loadLocalDocuments(link);
     if (opts.full || needsFullListing(items, local)) scope.cursor = null;
 
     const listing = await provider.list(ref, scope);
     if (docFailed(listing)) {
       const state = listing.error.code === 'unauthorized' ? 'needs_reauth' : 'failed';
-      this.recordLinkFailure(link, listing.error.code, state);
+      await this.recordLinkFailure(link, listing.error.code, state);
       return { state, pulled: 0, pushed: 0, conflicts: 0, missing: 0, errorCode: listing.error.code };
     }
 
@@ -237,7 +237,7 @@ export class DocSyncService {
       // Refusing the whole run is the point: the listing is not trustworthy, so
       // nothing in it should be acted on, not even the parts that look fine.
       this.logger.warn(`link ${link.id}: mass-delete guard tripped (${plan.missingCount} of ${items.length} gone), run abandoned`);
-      this.recordLinkFailure(link, 'mass_delete_guard', 'partial');
+      await this.recordLinkFailure(link, 'mass_delete_guard', 'partial');
       return { state: 'partial', pulled: 0, pushed: 0, conflicts: 0, missing: plan.missingCount, errorCode: 'mass_delete_guard' };
     }
 
@@ -283,7 +283,7 @@ export class DocSyncService {
      * clean.
      */
     const cursor = state === 'ok' && !wroteUpstream ? listing.data.cursor : null;
-    this.recordLinkSuccess(link, cursor, state, softFailure ?? null);
+    await this.recordLinkSuccess(link, cursor, state, softFailure ?? null);
     if (pulled > 0 || pushed > 0) {
       this.realtime.broadcast(link.trip_id, 'docsync:changed', { linkId: link.id, pulled, pushed });
     }
@@ -468,17 +468,17 @@ export class DocSyncService {
     // when it arrives through the store instead.
     const allowed = isVideoExtension(path.extname(name)) || isAllowedByOperator(name, await this.allowedTypes.get());
     if (isBlockedName(name) || !allowed) {
-      this.upsertItem(ctx.link, { itemId, remote, state: 'rejected_type', errorCode: 'unsupported_type' });
+      await this.upsertItem(ctx.link, { itemId, remote, state: 'rejected_type', errorCode: 'unsupported_type' });
       return 'unsupported_type';
     }
     if (remote.size !== null && remote.size > MAX_FILE_SIZE) {
-      this.upsertItem(ctx.link, { itemId, remote, state: 'too_large', errorCode: 'too_large' });
+      await this.upsertItem(ctx.link, { itemId, remote, state: 'too_large', errorCode: 'too_large' });
       return 'too_large';
     }
 
     const fetched = await ctx.provider.fetch(ctx.ref, ctx.scope, remote.remoteId);
     if (docFailed(fetched)) {
-      this.upsertItem(ctx.link, { itemId, remote, state: 'error', errorCode: fetched.error.code });
+      await this.upsertItem(ctx.link, { itemId, remote, state: 'error', errorCode: fetched.error.code });
       return fetched.error.code;
     }
 
@@ -506,7 +506,7 @@ export class DocSyncService {
     } catch (err) {
       await fs.promises.rm(tmpPath, { force: true });
       const code: DocsyncErrorCode = err instanceof Error && err.message === 'too_large' ? 'too_large' : 'provider_error';
-      this.upsertItem(ctx.link, { itemId, remote, state: code === 'too_large' ? 'too_large' : 'error', errorCode: code });
+      await this.upsertItem(ctx.link, { itemId, remote, state: code === 'too_large' ? 'too_large' : 'error', errorCode: code });
       return code;
     }
 
@@ -531,7 +531,7 @@ export class DocSyncService {
     // here would read it as TREK's own and send the old name back up.
     if (superseded && !superseded.deleted_at && pairing?.content_sha256 === sha256) {
       await fs.promises.rm(tmpPath, { force: true });
-      this.upsertItem(ctx.link, {
+      await this.upsertItem(ctx.link, {
         itemId,
         remote,
         state: 'synced',
@@ -545,7 +545,7 @@ export class DocSyncService {
       await this.storage.put('files', storageKey, { tmpPath });
     } catch {
       await fs.promises.rm(tmpPath, { force: true });
-      this.upsertItem(ctx.link, { itemId, remote, state: 'error', errorCode: 'provider_error' });
+      await this.upsertItem(ctx.link, { itemId, remote, state: 'error', errorCode: 'provider_error' });
       return 'provider_error';
     }
 
@@ -568,7 +568,7 @@ export class DocSyncService {
         { filename: storageKey, originalname: name, size: bytes, mimetype: remote.mimeType || 'application/octet-stream' },
         // Attributed to the person whose connection brought it in, which is the
         // only honest answer: nobody in TREK uploaded it.
-        this.config.getConnection(ctx.link.connection_id)?.owner_user_id ?? 0,
+        (await this.config.getConnection(ctx.link.connection_id))?.owner_user_id ?? 0,
         {
           place_id: superseded?.place_id ?? null,
           reservation_id: superseded?.reservation_id ?? null,
@@ -587,7 +587,7 @@ export class DocSyncService {
           .run(file.id, supersededId);
         await this.files.softDeleteFile(supersededId as number);
       }
-      this.upsertItem(ctx.link, {
+      await this.upsertItem(ctx.link, {
         itemId,
         remote,
         state: 'synced',
@@ -618,11 +618,11 @@ export class DocSyncService {
     // Paperless refuses anything outside its parser list with a 400. Checking
     // first turns a recurring hard failure into one visible row that says why.
     if (caps.acceptedMimeTypes && !caps.acceptedMimeTypes.includes(mime)) {
-      this.upsertItem(ctx.link, { itemId, fileId: local.fileId, state: 'rejected_type', errorCode: 'unsupported_type' });
+      await this.upsertItem(ctx.link, { itemId, fileId: local.fileId, state: 'rejected_type', errorCode: 'unsupported_type' });
       return 'unsupported_type';
     }
     if (caps.maxUploadBytes !== null && local.size > caps.maxUploadBytes) {
-      this.upsertItem(ctx.link, { itemId, fileId: local.fileId, state: 'too_large', errorCode: 'too_large' });
+      await this.upsertItem(ctx.link, { itemId, fileId: local.fileId, state: 'too_large', errorCode: 'too_large' });
       return 'too_large';
     }
 
@@ -644,11 +644,11 @@ export class DocSyncService {
       const got = await this.storage.getStream('files', String(file.filename));
       stream = got.stream;
     } catch {
-      this.upsertItem(ctx.link, { itemId, fileId: local.fileId, state: 'error', errorCode: 'provider_error' });
+      await this.upsertItem(ctx.link, { itemId, fileId: local.fileId, state: 'error', errorCode: 'provider_error' });
       return 'provider_error';
     }
 
-    const uid = this.existingUid(ctx.link.id, itemId) ?? newTrekDocUid();
+    const uid = (await this.existingUid(ctx.link.id, itemId)) ?? newTrekDocUid();
     const res = await ctx.provider.push(ctx.ref, ctx.scope, {
       body: stream,
       fileName: local.name,
@@ -662,7 +662,7 @@ export class DocSyncService {
     });
 
     if (docFailed(res)) {
-      this.upsertItem(ctx.link, { itemId, fileId: local.fileId, state: 'error', errorCode: res.error.code, trekDocUid: uid });
+      await this.upsertItem(ctx.link, { itemId, fileId: local.fileId, state: 'error', errorCode: res.error.code, trekDocUid: uid });
       return res.error.code;
     }
 
@@ -672,9 +672,9 @@ export class DocSyncService {
     // the unique index on (link_id, remote_id) would abort this run (and every
     // run after it) with a constraint error. The upload happened, so nothing is
     // lost; what must not happen is the pairing moving off the file that owns it.
-    const heldBy = this.pairingOwner(ctx.link.id, res.data.remoteId, itemId);
+    const heldBy = await this.pairingOwner(ctx.link.id, res.data.remoteId, itemId);
     if (heldBy !== null) {
-      this.upsertItem(ctx.link, {
+      await this.upsertItem(ctx.link, {
         itemId,
         fileId: local.fileId,
         state: 'error',
@@ -684,7 +684,7 @@ export class DocSyncService {
       return 'conflict';
     }
 
-    this.upsertItem(ctx.link, {
+    await this.upsertItem(ctx.link, {
       itemId,
       fileId: local.fileId,
       state: 'synced',
@@ -718,7 +718,7 @@ export class DocSyncService {
    * and the only way to find out is to try again. The scheduler never calls
    * this: automatic retries are exactly what the limit exists to stop.
    */
-  retryShelvedItems(linkId: number): void {
+  async retryShelvedItems(linkId: number): Promise<void> {
     this.db.connection
       .prepare(
         `UPDATE document_sync_items
@@ -730,7 +730,7 @@ export class DocSyncService {
 
   // ── State loading and writing ──────────────────────────────────────────────
 
-  private loadItems(linkId: number): SyncItemState[] {
+  private async loadItems(linkId: number): Promise<SyncItemState[]> {
     const rows = this.db.connection
       .prepare(
         `SELECT id, file_id, trek_doc_uid, remote_id, remote_version, remote_name, remote_size, remote_modified_at,
@@ -771,7 +771,7 @@ export class DocSyncService {
    * Paperless, everything else to Nextcloud": splitting a trip across bindings
    * would need a per-document assignment that nothing in the UI offers yet.
    */
-  private loadLocalDocuments(link: LinkRow): LocalDocument[] {
+  private async loadLocalDocuments(link: LinkRow): Promise<LocalDocument[]> {
     const rows = this.db.connection
       .prepare(
         `SELECT f.id, f.original_name, f.file_size, f.mime_type, f.deleted_at
@@ -797,7 +797,7 @@ export class DocSyncService {
   }
 
   /** The item already paired with this remote document, if it is a different one. */
-  private pairingOwner(linkId: number, remoteId: string, itemId: number | null): number | null {
+  private async pairingOwner(linkId: number, remoteId: string, itemId: number | null): Promise<number | null> {
     const row = this.db.connection
       .prepare('SELECT id FROM document_sync_items WHERE link_id = ? AND remote_id = ?')
       .get(linkId, remoteId) as { id?: number } | undefined;
@@ -805,7 +805,7 @@ export class DocSyncService {
     return itemId !== null && Number(row.id) === Number(itemId) ? null : Number(row.id);
   }
 
-  private existingUid(linkId: number, itemId: number | null): string | null {
+  private async existingUid(linkId: number, itemId: number | null): Promise<string | null> {
     if (itemId === null) return null;
     const row = this.db.connection
       .prepare('SELECT trek_doc_uid FROM document_sync_items WHERE id = ? AND link_id = ?')
@@ -820,7 +820,7 @@ export class DocSyncService {
     return hash.digest('hex');
   }
 
-  private upsertItem(
+  private async upsertItem(
     link: LinkRow,
     patch: {
       itemId: number | null;
@@ -839,7 +839,7 @@ export class DocSyncService {
       pushedSha256?: string;
       trekDocUid?: string;
     },
-  ): void {
+  ): Promise<void> {
     const failed = patch.state === 'error';
     /**
      * A failed transfer leaves the pairing describing the copy TREK holds.
@@ -946,7 +946,7 @@ export class DocSyncService {
       );
   }
 
-  private recordLinkSuccess(link: LinkRow, cursor: string | null, state: string, errorCode: string | null): void {
+  private async recordLinkSuccess(link: LinkRow, cursor: string | null, state: string, errorCode: string | null): Promise<void> {
     this.db.connection
       .prepare(
         `UPDATE trip_document_links
@@ -957,7 +957,7 @@ export class DocSyncService {
       .run(cursor, state, errorCode, link.id);
   }
 
-  private recordLinkFailure(link: LinkRow, code: string, state = 'failed'): void {
+  private async recordLinkFailure(link: LinkRow, code: string, state = 'failed'): Promise<void> {
     const failures = link.failure_count + 1;
     const wait = backoffSeconds(LINK_BACKOFF_SECONDS, failures);
     this.db.connection
@@ -998,7 +998,7 @@ export class DocSyncService {
    * next run to sort out rather than the owner's choice being refused.
    */
   private async renameRemoteTo(link: LinkRow, remoteId: string, name: string, itemId: number): Promise<void> {
-    const conn = this.config.getConnection(link.connection_id);
+    const conn = await this.config.getConnection(link.connection_id);
     const provider = this.registry.get(link.provider_id);
     if (!conn || !provider) return;
     const res = await provider.rename(this.config.toRef(conn), this.config.toScopeRef(link), remoteId, name);
@@ -1017,7 +1017,7 @@ export class DocSyncService {
       .get(itemId) as Record<string, unknown> | undefined;
     if (!item || item.state !== 'conflict') return false;
     if (tripId !== undefined && Number(item.trip_id) !== Number(tripId)) return false;
-    const link = this.config.getLink(Number(item.link_id));
+    const link = await this.config.getLink(Number(item.link_id));
     if (!link) return false;
 
     /**
@@ -1087,7 +1087,7 @@ export class DocSyncService {
    * that vanished upstream. Deliberately not "everything not synced": a row
    * waiting for its turn is not a problem anyone should be shown.
    */
-  issues(tripId: number): Array<Record<string, unknown>> {
+  async issues(tripId: number): Promise<Array<Record<string, unknown>>> {
     return this.db.connection
       .prepare(
         `SELECT i.id, i.state, i.error_code, i.remote_name, i.remote_missing_at, f.original_name AS file_name
@@ -1103,7 +1103,7 @@ export class DocSyncService {
 
   /** Per-trip view for the UI: what is synced, what needs attention. */
   async status(tripId: number): Promise<Record<string, unknown>> {
-    const links = this.config.listLinks(tripId);
+    const links = await this.config.listLinks(tripId);
     const counts = this.db.connection
       .prepare('SELECT state, COUNT(*) AS n FROM document_sync_items WHERE trip_id = ? GROUP BY state')
       .all(tripId) as Array<{ state: string; n: number }>;
@@ -1146,7 +1146,7 @@ export class DocSyncService {
     for (const l of links) {
       const row = byLink.get(l.id);
       linkCards.push({
-        ...this.config.publicLink(l, null),
+        ...(await this.config.publicLink(l, null)),
         // Paused rather than failed, so the card can say why nothing moves
         // without the binding's own state being touched.
         providerOff: await this.isSwitchedOff(l),
