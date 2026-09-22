@@ -1740,7 +1740,7 @@ const help: TranslationStrings = {
   'help.ctx.trip-place.bullet.2':
     '頭部帶著圓形圖片、名稱、分類、地址和座標。點選圖片可以換成你自己的，按兩下名稱可以當場重新命名地點，右邊的 X 關閉卡片。',
   'help.ctx.trip-place.bullet.3':
-    '下面是：每位旅行者給這個地點的星、有價格的話還有價格、描述和備註，以及停靠點帶有備註時的「當天備註」。',
+    '下面是：有價格時的價格、每位旅行者給這個地點的星、描述和備註，以及停靠點帶有備註時的「當天備註」。',
   'help.ctx.trip-place.bullet.4':
     '接著按適用情況顯示「營業時間」「軌跡顏色」「軌跡資料」和「檔案」。「檔案」接收你資料夾裡的任何東西，也會列出掛在這個停靠點預訂上的檔案。',
   'help.ctx.trip-place.bullet.5':
@@ -1817,7 +1817,8 @@ const help: TranslationStrings = {
   'help.guide.place-participants.result': '停靠點帶著你選取的旅行者，隊伍裡的其他人那個下午可以自己安排。',
   'help.guide.place-participants.tip.1':
     '「參與者」只在選取了停靠點時才出現，所以請在某一天裡選地點，而不是在地點欄裡，而且只在旅行者不止一位的旅行裡出現。',
-  'help.guide.place-participants.tip.2': '一個人都沒選表示所有人都去。把最後一個人移出去，所有人就又都回來了。',
+  'help.guide.place-participants.tip.2':
+    '一個人都沒選表示所有人都去，正因為如此，停靠點上剩下的最後一個人是沒法移出去的。',
   'help.guide.place-participants.tip.3': '沒有自己帳號的「訪客」也可以像其他人一樣成為參與者。',
   // place-booking
   'help.guide.place-booking.title': '停靠點上的預訂',
@@ -1867,7 +1868,7 @@ const help: TranslationStrings = {
     '「儲存到清單」會顯示你擁有或共享的每一個清單。已經裝著這個地點的清單帶有勾選。',
   'help.guide.place-to-collection.step.3': '點選那個清單。地點立刻就在裡面了。',
   'help.guide.place-to-collection.step.4': '關閉後，卡片裡的按鈕顯示「已儲存」。',
-  'help.guide.place-to-collection.result': '地點帶著它的圖片、備註和星，留在你的清單裡，為下一趟旅行做好準備。',
+  'help.guide.place-to-collection.result': '地點帶著它的圖片、備註和地址，留在你的清單裡，為下一趟旅行做好準備。',
   'help.guide.place-to-collection.tip.1': '這個按鈕只在「收藏」擴充套件開啟時才有，而它由管理員在「擴充套件」下開啟。',
   'help.guide.place-to-collection.tip.2':
     '一個地點可以同時待在多個清單裡，在每個清單裡有各自的狀態：在一個裡是「想法」，在另一個裡是「已造訪」。',
@@ -1919,7 +1920,7 @@ const help: TranslationStrings = {
   'help.guide.files-upload.tip.1': '檔案也可以從桌面直接拖到這個方塊上，檔案懸在上面時方塊會亮起來。',
   'help.guide.files-upload.tip.2': '剪貼簿裡的圖片用 Ctrl+V 就進了清單，所以預訂的截圖不必先存一份。',
   'help.guide.files-upload.tip.3':
-    '上傳需要「上傳檔案」這項權限；沒有它，這個方塊根本不會出現。不在清單上的類型，或超過 50 MB 的檔案，會連同一條提示被拒絕，什麼也不會上傳。',
+    '上傳需要「上傳檔案」這項權限；沒有它，這個方塊根本不會出現。不在清單上的類型會連同一條提示被拒絕，什麼也不會上傳。超過 50 MB 的檔案在任何東西被送出之前，就被這個方塊自己擋下。',
   // files-link
   'help.guide.files-link.title': '把文件繫到地點或預訂上',
   'help.guide.files-link.goal': '讓這張票從它所屬的那一天也能找到，而不只是從這份清單裡。',
@@ -1931,7 +1932,7 @@ const help: TranslationStrings = {
   'help.guide.files-link.step.4': '「預訂」和「交通」下面是旅行的各筆預訂。點文件所屬的那一筆，它也會打上勾。',
   'help.guide.files-link.step.5': '用 × 關掉。這裡沒有儲存按鈕：每一次點選在你點的那一刻就已經寫下了。',
   'help.guide.files-link.result':
-    '這一列帶著備註，每條連結一個徽章，「日程計劃」和地點的名字，「交通」和航班的名字，同時這份文件也掛在那個地點和那筆預訂上。',
+    '這一列帶著備註，每條連結一個徽章，「日程計劃」和地點的名字，「交通」和航班的名字，同時這份文件也掛在那個地點和那個航班上。',
   'help.guide.files-link.tip.1': '一個檔案可以同時帶多條連結，所以同一份確認單既屬於飯店，也屬於它所涵蓋的那一晚。',
   'help.guide.files-link.tip.2': '再點一次已打勾的項目就取消那條連結；檔案本身還在。',
   'help.guide.files-link.tip.3': '反過來也成立：附在某個地點或某筆預訂上的文件同樣在這份清單裡，列上帶著同樣的徽章。',
@@ -1952,7 +1953,7 @@ const help: TranslationStrings = {
   'help.guide.files-filter.step.1': '清單上方的標籤是「全部」「PDF」「圖片」和「文件」，每個後面帶著檔案數量。',
   'help.guide.files-filter.step.2': '點選「PDF」：清單只留下 PDF 檔案，別的都不留。',
   'help.guide.files-filter.step.3':
-    '另外兩個標籤會隨旅行裡的內容來去：只要有檔案被收藏就出現一顆星，只要 Collab 標籤裡的筆記帶了附件就出現「協作筆記」。',
+    '另外兩個標籤會隨旅行裡的內容來去。點選「協作筆記」，只要 Collab 標籤裡的筆記帶了附件它就在：清單裡只留下那些檔案，別的都沒有。一顆星也以同樣的方式加進這一排，只要有檔案被收藏。',
   'help.guide.files-filter.step.4': '「全部」把整份清單帶回來。',
   'help.guide.files-filter.result': '清單只顯示標籤所指的東西，每個標籤上的數字說明那是多少份。',
   'help.guide.files-filter.tip.1':
@@ -2032,7 +2033,7 @@ const help: TranslationStrings = {
     '最下面是這一天的逐小時情況，每隔兩小時一格：時間、圖示、氣溫和降水機率。超過 50% 的小時會染成藍色。',
   'help.guide.day-weather.result': '天數欄裡這一天的卡片，也在它的編號下面用小字帶著同樣的天氣，整趟行程一眼就能讀完。',
   'help.guide.day-weather.tip.1':
-    '溫度和風跟隨你在設定的「顯示」裡的選擇：切到 Fahrenheit，同一份預報就用 °F 和 mph 讀出來。',
+    '溫度和風跟隨設定裡「顯示」下的「溫度單位」：選「°F Fahrenheit」，同一份預報就用 °F 和 mph 讀出來。',
   'help.guide.day-weather.tip.2':
     '既沒有帶座標的停靠點、也沒有可以醒來的飯店的一天，完全不顯示天氣：預報永遠是針對一個地點，而不是針對整趟旅行。',
   'help.guide.day-weather.tip.3':
@@ -2071,7 +2072,7 @@ const help: TranslationStrings = {
   'help.guide.edit-accommodation.step.1': '在住宿的每一天裡，卡片都顯示住處、入住時間區間、退房時間和確認號。',
   'help.guide.edit-accommodation.step.2': '它右邊的鉛筆重新開啟這次住宿。彈出視窗此時寫著「編輯住宿」。',
   'help.guide.edit-accommodation.step.3':
-    '改你需要改的：它涵蓋的天數、「入住」「截止」「退房」「確認號」，或者住處本身。',
+    '改這一排欄位：「入住」「截止」「退房」和「確認號」。它上面的天數和它下面的住處，在這裡也能改。',
   'help.guide.edit-accommodation.step.4': '點選「儲存」。',
   'help.guide.edit-accommodation.step.5':
     '鉛筆旁邊的 X 結束這次住宿。它什麼都不問，屬於它的那筆「住宿」預訂也一併消失。',
@@ -2100,7 +2101,7 @@ const help: TranslationStrings = {
   'help.ctx.trip-map.summary':
     '計劃的中間：旅行的每一個地點都是一枚圖釘，還有把它們連起來的路線，以及地圖邊緣那些開關，用於衛星影像、一次看完整趟行程，以及尋找你正在看的這片城區周圍的地點。',
   'help.ctx.trip-map.bullet.1':
-    '一枚圖釘就是一個地點：有照片時用它自己的照片，否則用它的分類顏色加分類圖示。把指標停在一枚圖釘上，會出現一張卡片，寫著它的名稱、評分、分類和地址。',
+    '一枚圖釘就是一個地點：有照片時用它自己的照片，否則用它的分類顏色加分類圖示。把指標停在一枚圖釘上，會出現一張卡片，寫著它的名稱和地址，地點帶有分類和評分時也會寫上。把圖釘拖到某一天的卡片上，就把這個地點安排到那一天。',
   'help.ctx.trip-map.bullet.2':
     '靠得太近分不開的圖釘會摺疊成一個深色泡泡，上面帶著數量。點選泡泡，地圖就縮放到裡面的內容。',
   'help.ctx.trip-map.bullet.3':
@@ -2117,22 +2118,22 @@ const help: TranslationStrings = {
   'help.guide.map-markers.title': '讀懂地圖',
   'help.guide.map-markers.goal': '知道地圖上每一枚圖釘、每一個徽章和每一個泡泡在告訴你什麼。',
   'help.guide.map-markers.step.1':
-    '地圖上有旅行的每一個地點。圖釘靠得太近分不開的地方，它們會摺疊成一個深色泡泡，上面帶著裡面的地點數量。',
+    '地圖上有旅行的每一個地點。圖釘靠得太近分不開的地方，它們會摺疊成一個深色泡泡，上面帶著裡面的數量；點選泡泡，地圖就縮放到剛才在裡面的內容，在最深的縮放層級上則把圖釘像扇子一樣攤開。',
   'help.guide.map-markers.step.2':
-    '點選泡泡。地圖縮放到剛才在裡面的內容，圖釘就分開了；在最深的縮放層級上，它會把圖釘像扇子一樣攤開，而不是繼續放大。',
+    '一枚圖釘是這個地點自己的照片（如果有的話），否則是它的分類顏色加分類圖示。把指標停在一枚上，卡片會給出它的名稱和地址，地點帶有分類和評分時也會給出。',
   'help.guide.map-markers.step.3':
-    '一枚圖釘是這個地點自己的照片（如果有的話），否則是它的分類顏色加分類圖示。把指標停在一枚上，卡片會給出它的名稱、評分、分類和地址。',
+    '點選一枚圖釘，地點就在地圖下方的一張卡片裡開啟：它的座標、它的評分、它的「檔案」，最下面一排則是接下來能對它做的事，其中有「導航」「編輯」和「刪除」，開啟了某一天時還有「新增到當天」。點選地圖上空白的地方就又把它放開。',
   'help.guide.map-markers.step.4':
-    '點選一枚圖釘，地點就在地圖下方開啟：它的座標、它的評分、它的「檔案」，以及「新增到當天」「儲存到收藏」「導航」「編輯」和「刪除」。點選地圖上空白的地方就又把它放開。',
-  'help.guide.map-markers.step.5':
     '在天數欄裡開啟某一天，它的停靠點就會被編號：圖釘角上的白色小徽章就是這個停靠點在這一天裡的次序。被安排在兩天上的地點會帶著兩個序號，中間用 · 連起來。沒有開啟任何一天時就沒有編號，角上改為顯示評分。',
+  'help.guide.map-markers.step.5':
+    '把一枚圖釘從地圖上拖到天數欄裡某一天的卡片上，這個地點就被安排到那一天，和把它在地點清單裡的那一列拖出去完全一樣。',
   'help.guide.map-markers.result':
     '旅行本身沒有任何變化：地圖只是看它的一種方式，而每一枚圖釘都說明是哪個地點、哪一天、按什麼順序。',
   'help.guide.map-markers.tip.1':
     '在天數欄裡被摺疊起來的一天，會把它的停靠點一起從地圖上帶走；再把這一天開啟，它們就回來了。',
   'help.guide.map-markers.tip.2':
     '地點清單上方的篩選也決定地圖畫什麼：選「未規劃」，地圖上就只剩下還沒有排進某一天的地點。',
-  'help.guide.map-markers.tip.3': '這張地圖上沒有縮放按鈕：滾輪縮放，按兩下放大一級，拖曳則移動它。',
+  'help.guide.map-markers.tip.3': '這張地圖上沒有縮放按鈕：滾輪縮放，按兩下放大一級，拖曳地圖本身則移動它。',
   // map-nearby-places
   'help.guide.map-nearby-places.title': '在地圖上尋找你周圍的地點',
   'help.guide.map-nearby-places.goal': '讓地圖在你正在看的這片城區裡找餐廳、景點或一家旅館，並把其中一個帶進旅行。',
@@ -2161,7 +2162,7 @@ const help: TranslationStrings = {
   'help.guide.map-add-place.goal': '把一個地點準確放在你想要的位置上，不必先去搜尋它。',
   'help.guide.map-add-place.step.1': '在地圖上你想要的位置按右鍵。地點表單開啟，標題是「新增地點/活動」。',
   'help.guide.map-add-place.step.2':
-    '「緯度」和「經度」已經就在那個點上，TREK 會去查這組座標，並用在那裡找到的內容填好「地址」。還什麼都沒有寫進去，所以哪裡不對就覆蓋掉。',
+    '「緯度」和「經度」已經就在那個點上，TREK 會去查這組座標，並用在那裡找到的內容填好「地址」，查到名字時也把「名稱」填上。還什麼都沒有寫進去，所以哪裡不對就覆蓋掉。',
   'help.guide.map-add-place.step.3':
     '給它一個你認得出來的「名稱」，再寫上計劃應該知道的其餘內容：「描述」「備註」「分類」「網站」。',
   'help.guide.map-add-place.step.4':
@@ -2175,10 +2176,10 @@ const help: TranslationStrings = {
   'help.guide.map-satellite.title': '切換到衛星',
   'help.guide.map-satellite.goal': '把繪製的地圖換成空拍影像，再換回來。',
   'help.guide.map-satellite.step.1':
-    '地圖左下角的圓形按鈕就是底圖圖層開關。它的圖示始終顯示它將要切換到的那一層，把指標停上去會說明是哪一層：「切換到衛星檢視」。',
-  'help.guide.map-satellite.step.2': '點選它。地圖變成空拍影像，清晰到能分辨出單獨一棟建築，而且不需要你自己的金鑰。',
-  'help.guide.map-satellite.step.3':
-    'TREK 畫的一切都留在它上面：圖釘、當天的路線、軌跡和預訂路線。再點一次這個按鈕，它現在寫著「切換到地圖檢視」，就能換回來。',
+    '地圖左下角的圓形按鈕就是底圖圖層開關。它的圖示始終顯示它將要切換到的那一層，把指標停上去會說明是哪一層：「切換到衛星檢視」。點選它。',
+  'help.guide.map-satellite.step.2':
+    '地圖現在是空拍影像，清晰到能分辨出單獨一棟建築，而且不需要你自己的金鑰。TREK 畫的一切都留在它上面：圖釘、當天的路線、軌跡和預訂路線。',
+  'help.guide.map-satellite.step.3': '按鈕現在寫著「切換到地圖檢視」。點選它就回到繪製的地圖。',
   'help.guide.map-satellite.result': '地圖又變回繪製的地圖，而你最後停留的那一層會記在你的帳戶上。',
   'help.guide.map-satellite.tip.1':
     '這個選擇儲存在你的帳戶上，而不是在行程上，所以不管你用哪一種地圖算繪引擎，每一個行程都會按你離開時的樣子開啟。',
@@ -2187,13 +2188,13 @@ const help: TranslationStrings = {
   // map-whole-trip
   'help.guide.map-whole-trip.title': '檢視整趟行程和它的距離',
   'help.guide.map-whole-trip.goal': '把開啟的那一天換成行程的每一個出行日，並讀出每一天走了多遠。',
-  'help.guide.map-whole-trip.step.1': '圓形的「顯示整趟行程」按鈕位於地圖右下角。',
+  'help.guide.map-whole-trip.step.1':
+    '圓形的「顯示整趟行程」按鈕位於地圖右下角。點選它，行程的每一個出行日都會被一次畫出來，每一天用自己的顏色畫在白色外框之上，這樣相鄰的日子也分得清。',
   'help.guide.map-whole-trip.step.2':
-    '點選它。行程的每一個出行日都會被一次畫出來，每一天用自己的顏色畫在白色外框之上，這樣相鄰的日子也分得清。',
-  'help.guide.map-whole-trip.step.3':
     '按鈕上方的卡片把這些日子列出來：一個色點、這一天的名稱、你在這一天每種出行方式的圖示，以及它涵蓋的距離。「總距離」在最上面。',
-  'help.guide.map-whole-trip.step.4':
-    '在卡片裡點選某一天就選取它，和在天數欄裡選它是一樣的。再點一次這個按鈕，它現在寫著「隱藏整趟行程」，就回到單獨的一天。',
+  'help.guide.map-whole-trip.step.3':
+    '在卡片裡點選某一天就選取它，和在天數欄裡選它是一樣的：地圖把那一天框進畫面，它的停靠點也重新有了編號。',
+  'help.guide.map-whole-trip.step.4': '按鈕現在寫著「隱藏整趟行程」。按一下就回到開啟的那一天。',
   'help.guide.map-whole-trip.result':
     '每一個出行日都用自己的顏色畫出來，卡片說明每一天走了什麼，以及整趟行程加起來是多少。',
   'help.guide.map-whole-trip.tip.1':
@@ -2207,9 +2208,9 @@ const help: TranslationStrings = {
   'help.guide.map-booking-routes.step.1':
     '預訂路線在你提出要求之前是關著的。天數欄裡預訂那一列上有一個小小的路線圖示：「顯示預訂路線」。',
   'help.guide.map-booking-routes.step.2':
-    '點選它。這筆預訂就出現在地圖上：航班畫成一條大圓弧，自駕沿著真實的道路，火車畫成它各個車站串成的鏈條。「已確認」畫成實線，「待確認」畫成虛線。',
+    '點選它。這筆預訂就出現在地圖上：航班畫成一條大圓弧，自駕沿著真實的道路，火車畫成它各個車站串成的鏈條。「已確認」畫成實線，「待確認」畫成虛線，路線兩端是帶著交通方式圖示的藍色膠囊。',
   'help.guide.map-booking-routes.step.3':
-    '路線兩端是帶著交通方式圖示的藍色膠囊。點選其中一端就開啟它背後的那筆預訂，帶著它的時間、它的「預訂碼」和「地點 / 地址」；「關閉」把它收起來。',
+    '點選其中一端的膠囊，就開啟它背後的那筆預訂，帶著它的時間、它的「預訂碼」和「地點 / 地址」；「關閉」把它收起來。',
   'help.guide.map-booking-routes.step.4':
     '天數欄上方工具列裡的那個路線圖示一次處理整趟行程：「顯示所有預訂路線」會把每一筆有路線的預訂都畫出來。',
   'help.guide.map-booking-routes.step.5':
@@ -2237,7 +2238,7 @@ const help: TranslationStrings = {
   'help.ctx.trip-collab.bullet.5':
     '「投票」用來拍板。「新建投票」提一個問題，至少配兩個選項；點一下某個選項就是你的一票，「關閉」結束投票，「刪除」移除這個投票。',
   'help.ctx.trip-collab.bullet.6':
-    '「接下來」列出旅行中還在前面的下八個停靠點，連同它們的時間和參與的人。它只讀取當天的計劃；時間在那裡設定。',
+    '「接下來」列出旅行中還在前面的停靠點，最多八個，連同它們的時間和參與的人。它只讀取當天的計劃；時間在那裡設定。',
   // write-note
   'help.guide.write-note.title': '寫一則共用筆記',
   'help.guide.write-note.goal': '把整個群組都需要的東西，一條規矩、一個地址、一個提醒，放在人人都能再找到的地方。',
@@ -2307,7 +2308,7 @@ const help: TranslationStrings = {
   'help.guide.close-poll.step.1': '「關閉」，也就是投票角上的那把鎖，結束投票。選項不再接受點選。',
   'help.guide.close-poll.step.2':
     '關閉的投票沉到面板底部的「已關閉」標題下面，戴上「已關閉」徽章，並向所有人顯示結果，無論他們投沒投票。勝出的選項染成綠色。',
-  'help.guide.close-poll.step.3': '旁邊的「刪除」移除這個投票。沒有任何二次詢問，票也一起消失。',
+  'help.guide.close-poll.step.3': '同一個角上的垃圾桶「刪除」移除這個投票。沒有任何二次詢問，票也一起消失。',
   'help.guide.close-poll.result': '投票從每位成員的面板上消失了。只被你關閉的那個仍然留在底部可讀，連同它的結果。',
   'help.guide.close-poll.tip.1': '關閉不能復原：沒有重新開啟。誤關的投票只能重新再問一次。',
   'help.guide.close-poll.tip.2': '「刪除」把這個投票和上面的每一張票，對所有人一併拿走，立刻生效，也不會詢問。',
@@ -2315,7 +2316,7 @@ const help: TranslationStrings = {
   'help.guide.whats-next.title': '讀懂「接下來」',
   'help.guide.whats-next.goal': '不用開啟計劃，就看到群組接下來要做什麼。',
   'help.guide.whats-next.step.1':
-    '這個面板按時間順序列出旅行中還在前面的下八個停靠點，每天一個標題：「今天」「明天」或者日期。',
+    '這個面板按時間順序列出旅行中還在前面的停靠點，最多八個，每天一個標題：「今天」「明天」或者日期。',
   'help.guide.whats-next.step.2':
     '一列的左邊立著它的時間：開始時間、「至」，以及停靠點有結束時間時的結束時間；還沒有給它設定時間時則是 TBD。',
   'help.guide.whats-next.step.3': '名字下面的小塊是這個停靠點上的人。如果沒有給它選人，旅行裡的每個人都會列出來。',
@@ -2361,7 +2362,7 @@ const help: TranslationStrings = {
   'help.ctx.trip-lists.bullet.5':
     '「應用模板」「匯入」和「儲存為範本」不用一條條敲就能填滿或留下一份清單，旁邊的紅色按鈕寫出有多少物品已勾選，並把它們清走。',
   'help.ctx.trip-lists.bullet.6':
-    '「待辦事項」有自己的側欄：進度卡片，「全部」「我的任務」「已逾期」「已完成」幾個篩選，依「優先順序」或「到期日」的「排序方式」，以及每份清單一列。點選一個任務會在右側面板裡開啟它，「新增任務」則把同一個面板空著開啟。',
+    '「待辦事項」有自己的側欄：進度卡片，「全部」「我的任務」「已逾期」「已完成」幾個篩選，依「優先順序」或「到期日」的「排序方式」，以及每份清單一列。點選一個任務會在右側面板裡開啟它，「新增任務」則在螢幕中央開啟「新任務」表單。',
   // packing-categories
   'help.guide.packing-categories.title': '建立行李清單',
   'help.guide.packing-categories.goal': '把要帶的東西歸進清單，填上物品，並說明誰來負責每一份清單。',
@@ -2700,7 +2701,7 @@ const help: TranslationStrings = {
   'help.guide.expense-payers.tip.1':
     '「誰付的款？」和 Split 彼此獨立：你可以為一頓自己沒去的晚餐付錢，也可以被算進一頓自己沒付錢的晚餐。',
   'help.guide.expense-payers.tip.2':
-    '有幾個付款人時，金額必須加起來等於總額。再加入一個人，其餘的人會圍著他重新排布；在它們還不相符時，編輯器會說付款人金額總和必須為總額，並拒絕儲存。',
+    '有幾個付款人時，金額必須加起來等於總額。再加入一個人，其餘的人會圍著他重新排布；在它們還不相符時，編輯器會說出它們該加到多少，並拒絕儲存。',
   'help.guide.expense-payers.tip.3':
     '移除一個付款人並不會移除這筆支出：金額仍留在「旅程總支出」裡，而這一列會變成「未完成」。',
   // split-expense
@@ -2798,7 +2799,7 @@ const help: TranslationStrings = {
   'help.guide.expense-from-booking.step.3':
     '點選 Create expense。預訂被儲存，表單關閉，費用編輯器隨即打開，預訂的標題作為名稱，它的類型也已經對應到了一個分類。',
   'help.guide.expense-from-booking.step.4':
-    '像填任何一筆支出那樣填好金額、誰付的錢和分攤，然後儲存。此時再打開該預訂，就能在 Linked expense 下看到它，旁邊有鉛筆可以編輯，有垃圾桶可以移除。',
+    '像填任何一筆支出那樣填好金額和它的幣別、誰付的錢和分攤，然後儲存。此時再打開該預訂，就能在 Linked expense 下看到它，旁邊有鉛筆可以編輯，有垃圾桶可以移除。',
   'help.guide.expense-from-booking.result':
     '預訂帶上了它的花費，而這筆支出就是「費用」分頁上一條普通的列，和別的支出一樣有付款人、分攤和貨幣。',
   'help.guide.expense-from-booking.tip.1':
@@ -2865,7 +2866,7 @@ const help: TranslationStrings = {
   'help.guide.plan-transit.goal': '讓 TREK 查出某一天兩點之間真實的火車和公車，把你選中的那一條放進計劃。',
   'help.guide.plan-transit.step.1': '在日期標題裡點選路面電車按鈕，「大眾運輸」。搜尋為那一天開啟。',
   'help.guide.plan-transit.step.2':
-    '「起點」和「終點」接受一個站點或車站。欄位還空著時，會先給出當天自己的地點；輸入兩個字母則改為搜尋時刻表裡的車站。兩個欄位之間的「對調」把路線掉頭。',
+    '「起點」和「終點」接受一個站點或車站。欄位還空著時，會先給出當天自己的地點和這趟旅行的住處；輸入兩個字母則改為搜尋時刻表裡的車站。兩個欄位之間的「對調」把路線掉頭。',
   'help.guide.plan-transit.step.3':
     '「出發」或「抵達」加上一個時間說明你想什麼時候走，「最佳路線」「較少轉乘」或「較少步行」說明結果該怎麼排序。',
   'help.guide.plan-transit.step.4':
@@ -2932,7 +2933,7 @@ const help: TranslationStrings = {
     '兩端都設好的交通，會在日程裡它那一列上帶一個小小的路線圖示。點選它，它的標籤就變成「隱藏預訂路線」。',
   'help.guide.transport-on-map.step.2': '路線畫在地圖上，兩端各有一個帶著這段交通圖示的膠囊形標記。',
   'help.guide.transport-on-map.step.3':
-    '點選端點標記，不用離開地圖就能讀到這筆預訂：時間、「航空公司」和「航班號」、「預訂碼」以及備註。「關閉」把這張卡片收起來。',
+    '點選端點標記，不用離開地圖就能讀到這筆預訂：時間、「航空公司」和「航班號」、「預訂碼」以及地址。「關閉」把這張卡片收起來。',
   'help.guide.transport-on-map.step.4':
     '日期上方工具列裡的路線圖示一次處理整趟旅行：「顯示所有預訂路線」，以及用來再次清空的「隱藏所有預訂路線」。',
   'help.guide.transport-on-map.step.5':
@@ -2991,7 +2992,7 @@ const help: TranslationStrings = {
   'help.guide.roadtrip-stops.step.6':
     '用滑桿、用減號和加號按鈕，或者用其中一個預設值來設定時長，看看「抵達」和「出發」怎麼變，然後點「儲存」。',
   'help.guide.roadtrip-stops.result':
-    '這個停靠點戴上了它那一類的圖示而不是編號，停留之後的每一個抵達時間都跟著移動了。',
+    '你定了時間的那個停靠點在它的「停留」標記上帶著鐘點，它之後的每一個抵達時間都跟著移動了；那個被你送去某一類又送回來的停靠點，重新成了帶編號的目的地。',
   'help.guide.roadtrip-stops.tip.1': '停留屬於地點，而不屬於某一次到訪：安排在兩天裡的同一個地點，兩天都停留同樣久。',
   'help.guide.roadtrip-stops.tip.2':
     '途中停靠在「依日」下面也會顯示。把「駕駛設定」中「服務停靠點」裡的「也顯示於每日行程」關掉，它們就只留在「公路旅行」裡。',
@@ -3038,7 +3039,7 @@ const help: TranslationStrings = {
   'help.guide.roadtrip-alternatives.step.2':
     '「這一段的走法」在地圖上方開啟，每條路一項，每一項都以自己的顏色畫在地圖上。',
   'help.guide.roadtrip-alternatives.step.3':
-    '把滑鼠停在某一項上會點亮那條路。「目前」和「最快」說明哪個是哪個，其他項則說明自己快多少或慢多少。',
+    '把滑鼠停在某一項上會點亮那條路。「目前」是正在走的那條路，「最快」是最快的那條；其他項則說明自己慢多少，或者避開了哪一類道路。',
   'help.guide.roadtrip-alternatives.step.4': '點選一項就走那條路，點「關閉」就保持你正在走的路。',
   'help.guide.roadtrip-alternatives.result': '這一段走你選的路，行程條上的距離和它之後的抵達時間也隨之改變。',
   'help.guide.roadtrip-alternatives.tip.1':
@@ -3104,15 +3105,16 @@ const help: TranslationStrings = {
   'help.guide.roadtrip-track.title': '讓某一天沿著匯入的軌跡走',
   'help.guide.roadtrip-track.goal': '把某一天的駕駛放到你以 GPX 或 KML 軌跡匯入的風景路線上。',
   'help.guide.roadtrip-track.step.1': '點選某一天標題裡的「軌跡」標記。對話方塊就在那一天上開啟。',
-  'help.guide.roadtrip-track.step.2': '選一條軌跡。每一條都會說明它有多長、離這一天有多遠，最近的排在最前面。',
+  'help.guide.roadtrip-track.step.2':
+    '選一條軌跡。每一條都會說明它有多長，以及它是沿著這一天走的，還是離這一天有多遠，最近的排在最前面。',
   'help.guide.roadtrip-track.step.3':
     '點選「沿此軌跡行駛」。TREK 會在駕駛偏離軌跡最遠的地方放下途經點，然後一輪又一輪地重新算路線。',
   'help.guide.roadtrip-track.step.4':
-    '它會說明放了多少個途經點，以及駕駛現在貼得有多近。旁邊的按鈕會再把那些途經點去掉，把這一天交回給路線引擎；關閉對話方塊則保留軌跡。',
+    '它會說明放了多少個途經點，以及駕駛現在貼得有多近。它下面的按鈕會再把那些途經點去掉，把這一天交回給路線引擎；關閉對話方塊則保留軌跡。',
   'help.guide.roadtrip-track.result':
-    '這一天的駕駛沿著軌跡走，而不是路線引擎挑的那條路，「軌跡」標記會說明它正在沿著哪條軌跡。',
+    '這一天的駕駛沿著軌跡走，而不是路線引擎挑的那條路，它的「軌跡」標記亮著，把指標停上去就會說出那條軌跡的名字。',
   'help.guide.roadtrip-track.tip.1':
-    '在「依日」下面用「匯入檔案」匯入這個檔案，並勾上「軌跡（含路徑幾何）」或「路徑（LineStrings）」。在旅行裡有軌跡之前，這個標記沒有什麼可提供的。',
+    '在「依日」下面用「匯入檔案」匯入這個檔案，並勾上「路線」或「軌跡（含路徑幾何）」。在旅行裡有一條之前，沒有哪一天會帶著這個標記。',
   'help.guide.roadtrip-track.tip.2':
     '沿著軌跡走會替換這一天各路段原有的途經點，所以要手動調整某一段，請在軌跡之後做，而不是之前。',
 };

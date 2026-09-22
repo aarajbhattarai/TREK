@@ -2069,7 +2069,7 @@ const help: TranslationStrings = {
   'help.ctx.trip-place.bullet.2':
     'Huvudet bär den runda bilden, namnet, kategorin, adressen och koordinaterna. Klicka på bilden för att använda en egen, dubbelklicka på namnet för att byta namn på platsen på stället, och X till höger stänger kortet.',
   'help.ctx.trip-place.bullet.3':
-    'Under det: stjärnorna varje resenär gav platsen, priset om den har ett, beskrivningen och noteringarna, och Anteckningar för denna dag när stoppet bär sådana.',
+    'Under det: priset om den har ett, stjärnorna varje resenär gav platsen, beskrivningen och noteringarna, och Anteckningar för denna dag när stoppet bär sådana.',
   'help.ctx.trip-place.bullet.4':
     'Öppettider, Spårfärg, Spåra statistik och Filer följer, så långt de gäller. Filer tar vad som helst ur dina mappar och listar också det som hänger på det här stoppets bokning.',
   'help.ctx.trip-place.bullet.5':
@@ -2168,7 +2168,8 @@ const help: TranslationStrings = {
     'Stoppet bär de resenärer du valde, och resten av gruppen har den eftermiddagen för sig själva.',
   'help.guide.place-participants.tip.1':
     'Deltagare dyker bara upp med ett stopp valt, så välj platsen inne i dagen i stället för i platskolumnen, och bara på en resa med mer än en resenär.',
-  'help.guide.place-participants.tip.2': 'Ingen vald betyder att alla går. Att ta ut den sista lägger tillbaka alla.',
+  'help.guide.place-participants.tip.2':
+    'Ingen vald betyder att alla går, och därför går den sista resenären som är kvar på ett stopp inte att ta ut.',
   'help.guide.place-participants.tip.3':
     'En Gäst, som inte har något eget konto, kan vara deltagare som vem som helst annan.',
   // place-booking
@@ -2231,7 +2232,7 @@ const help: TranslationStrings = {
   'help.guide.place-to-collection.step.3': 'Klicka på listan. Platsen ligger i den direkt.',
   'help.guide.place-to-collection.step.4': 'Stäng, och knappen i kortet säger Sparad.',
   'help.guide.place-to-collection.result':
-    'Platsen ligger i din lista med sin bild, sina noteringar och sina stjärnor, redo för nästa resa.',
+    'Platsen ligger i din lista med sin bild, sina noteringar och sin adress, redo för nästa resa.',
   'help.guide.place-to-collection.tip.1':
     'Knappen finns bara medan tillägget Samlingar är på, vilket administratören slår på under Tillägg.',
   'help.guide.place-to-collection.tip.2':
@@ -2292,7 +2293,7 @@ const help: TranslationStrings = {
   'help.guide.files-upload.tip.2':
     'En bild i urklipp hamnar i listan med Ctrl+V, så en skärmbild av en bokning behöver aldrig sparas först.',
   'help.guide.files-upload.tip.3':
-    'Uppladdning kräver rätten Ladda upp filer; utan den finns rutan inte alls. En typ som inte står på listan, eller en fil över 50 MB, avvisas med ett meddelande och ingenting laddas upp.',
+    'Uppladdning kräver rätten Ladda upp filer; utan den finns rutan inte alls. En typ som inte står på listan avvisas med ett meddelande och ingenting laddas upp. En fil över 50 MB fälls av rutan själv, innan någonting skickas.',
   // files-link
   'help.guide.files-link.title': 'Knyt ett dokument till en plats eller en bokning',
   'help.guide.files-link.goal': 'Gör biljetten hittbar från dagen den hör till, inte bara från den här listan.',
@@ -2307,7 +2308,7 @@ const help: TranslationStrings = {
   'help.guide.files-link.step.5':
     'Stäng med ×. Det finns ingen sparaknapp här: varje klick skrevs i samma stund du gjorde det.',
   'help.guide.files-link.result':
-    'Raden bär noteringen och en bricka per koppling, Dagsplan och platsens namn, Transport och flygets namn, och dokumentet hänger på platsen och på bokningen också.',
+    'Raden bär noteringen och en bricka per koppling, Dagsplan och platsens namn, Transport och flygets namn, och dokumentet hänger på platsen och på flyget också.',
   'help.guide.files-link.tip.1':
     'En fil kan hålla flera kopplingar på en gång, så att samma bekräftelse hör till hotellet och till natten den täcker.',
   'help.guide.files-link.tip.2': 'Ett nytt klick på en bockad post tar bort den kopplingen; filen själv blir kvar.',
@@ -2336,7 +2337,7 @@ const help: TranslationStrings = {
     'Flikarna ovanför listan är Alla, PDFs, Bilder och Dokument, var och en med antalet filer efter sig.',
   'help.guide.files-filter.step.2': 'Klicka på PDFs: listan behåller PDF-filerna och inget annat.',
   'help.guide.files-filter.step.3':
-    'Två flikar till kommer och går med vad som finns i resan: en stjärna så snart en fil är stjärnmärkt, och Samarbetsanteckningar så snart en anteckning i fliken Samarbete bär en bilaga.',
+    'Två flikar till kommer och går med vad som finns i resan. Klicka på Samarbetsanteckningar, som finns där så snart en anteckning i fliken Samarbete bär en bilaga: listan behåller de filerna och inget annat. En stjärna sällar sig till raden på samma sätt, så snart en fil är stjärnmärkt.',
   'help.guide.files-filter.step.4': 'Alla tar tillbaka hela listan.',
   'help.guide.files-filter.result':
     'Listan visar bara det fliken heter, och antalet på varje flik säger hur många det är.',
@@ -2435,7 +2436,7 @@ const help: TranslationStrings = {
   'help.guide.day-weather.result':
     'Dagens kort i dagkolumnen bär samma väder i smått under sitt nummer, så hela resan kan läsas med en blick.',
   'help.guide.day-weather.tip.1':
-    'Grader och vind följer ditt val under Visning i Inställningar: byt till Fahrenheit så läses samma prognos ut i °F och mph.',
+    'Grader och vind följer Temperaturenhet under Visning i Inställningar: välj °F Fahrenheit så läses samma prognos ut i °F och mph.',
   'help.guide.day-weather.tip.2':
     'En dag utan ett placerat stopp och utan hotell att vakna på visar inget väder alls: prognosen gäller alltid en plats, aldrig resan.',
   'help.guide.day-weather.tip.3':
@@ -2484,7 +2485,7 @@ const help: TranslationStrings = {
   'help.guide.edit-accommodation.step.2':
     'Pennan till höger om det öppnar vistelsen igen. Rutan läser nu Redigera boende.',
   'help.guide.edit-accommodation.step.3':
-    'Ändra det du behöver: dagarna den täcker, Incheckning, Tills, Utcheckning, Bekräftelse, eller anläggningen själv.',
+    'Rätta raden av fält: Incheckning, Tills, Utcheckning och Bekräftelse. Dagarna ovanför den och anläggningen under den går att ändra här också.',
   'help.guide.edit-accommodation.step.4': 'Klicka på Spara.',
   'help.guide.edit-accommodation.step.5':
     'X bredvid pennan avslutar vistelsen. Den frågar inget, och bokningen av sorten Boende som hör till den följer med.',
@@ -2516,7 +2517,7 @@ const help: TranslationStrings = {
   'help.ctx.trip-map.summary':
     'Mitten av planen: varje plats i resan som en nål, rutterna som förenar dem, och reglagen längs kartans kanter för satellit, för hela resan på en gång och för platserna runt den del av staden du tittar på.',
   'help.ctx.trip-map.bullet.1':
-    'En nål är en plats: dess egen bild när den har en, annars kategorins färg med kategorins ikon. Håll muspekaren över en för ett kort med namn, betyg, kategori och adress.',
+    'En nål är en plats: dess egen bild när den har en, annars kategorins färg med kategorins ikon. Håll muspekaren över en för ett kort med namn och adress, plus kategori och betyg där platsen bär sådana. Dra en nål till ett dagkort för att planera platsen på den dagen.',
   'help.ctx.trip-map.bullet.2':
     'Nålar som sitter för tätt för att skiljas åt fälls ihop till en mörk bubbla med ett antal. Klicka på bubblan så zoomar kartan till det som finns inuti.',
   'help.ctx.trip-map.bullet.3':
@@ -2533,15 +2534,15 @@ const help: TranslationStrings = {
   'help.guide.map-markers.title': 'Läs kartan',
   'help.guide.map-markers.goal': 'Veta vad varje nål, bricka och bubbla på kartan säger dig.',
   'help.guide.map-markers.step.1':
-    'Kartan håller varje plats i resan. Där nålar sitter för tätt för att skiljas åt fälls de ihop till en mörk bubbla som bär antalet platser inuti.',
+    'Kartan håller varje plats i resan. Där nålar sitter för tätt för att skiljas åt fälls de ihop till en mörk bubbla som bär antalet inuti; klicka på bubblan så zoomar kartan till det som fanns i den, eller sprider ut nålarna i en solfjäder vid djupaste zoom.',
   'help.guide.map-markers.step.2':
-    'Klicka på bubblan. Kartan zoomar till det som fanns inuti och nålarna skiljs åt; vid djupaste zoom sprider den ut dem i en solfjäder i stället för att zooma vidare.',
+    'En nål är platsens egen bild när den har en, annars kategorins färg med kategorins ikon. Håll muspekaren över en så ger ett kort dess namn och adress, med kategori och betyg där platsen bär sådana.',
   'help.guide.map-markers.step.3':
-    'En nål är platsens egen bild när den har en, annars kategorins färg med kategorins ikon. Håll muspekaren över en så ger ett kort dess namn, betyg, kategori och adress.',
+    'Klicka på en nål så öppnas platsen i ett kort under kartan: dess koordinater, dess betyg, Filer och längs nederkanten vad du gör med den härnäst, bland dem Navigation, Redigera och Ta bort, och Lägg till i dagen så länge en dag är öppen. Klicka på en tom bit av kartan för att släppa den igen.',
   'help.guide.map-markers.step.4':
-    'Klicka på en nål så öppnas platsen under kartan: dess koordinater, dess betyg, Filer samt Lägg till i dagen, Spara i samling, Navigation, Redigera och Ta bort. Klicka på en tom bit av kartan för att släppa den igen.',
-  'help.guide.map-markers.step.5':
     'Öppna en dag i dagkolumnen så numreras dess stopp: den lilla vita brickan i nålens hörn är stoppets plats i dagen. En plats som är planerad på två dagar bär båda numren, förenade med ·. Utan en öppen dag finns inga nummer, och hörnet bär betyget i stället.',
+  'help.guide.map-markers.step.5':
+    'Dra en nål från kartan till ett dagkort i dagkolumnen så är platsen planerad på den dagen, precis som att dra ut dess rad ur platslistan.',
   'help.guide.map-markers.result':
     'Inget i resan har ändrats: kartan är en vy av den, och varje nål säger vilken plats, vilken dag och i vilken ordning.',
   'help.guide.map-markers.tip.1':
@@ -2549,7 +2550,7 @@ const help: TranslationStrings = {
   'help.guide.map-markers.tip.2':
     'Filtret ovanför platslistan bestämmer även vad kartan ritar: välj Oplanerat så blir bara platserna som fortfarande saknar dag kvar på den.',
   'help.guide.map-markers.tip.3':
-    'Den här kartan har inga zoomknappar: hjulet zoomar, ett dubbelklick zoomar in ett steg, och dragning flyttar den.',
+    'Den här kartan har inga zoomknappar: hjulet zoomar, ett dubbelklick zoomar in ett steg, och att dra i själva kartan flyttar den.',
   // map-nearby-places
   'help.guide.map-nearby-places.title': 'Hitta platser omkring dig på kartan',
   'help.guide.map-nearby-places.goal':
@@ -2580,7 +2581,7 @@ const help: TranslationStrings = {
   'help.guide.map-add-place.step.1':
     'Högerklicka stället på kartan du menar. Platsformuläret öppnas, med titeln Lägg till plats/aktivitet.',
   'help.guide.map-add-place.step.2':
-    'Latitud och Longitud står redan på den punkten, och TREK slår upp koordinaterna och fyller i Adress från det den hittar där. Inget är skrivet än, så skriv över det som är fel.',
+    'Latitud och Longitud står redan på den punkten, och TREK slår upp koordinaterna och fyller i Adress från det den hittar där, och Namn också där uppslagningen har ett att ge. Inget är skrivet än, så skriv över det som är fel.',
   'help.guide.map-add-place.step.3':
     'Ge den ett Namn du känner igen, och resten av det planen bör veta: Beskrivning, Noteringar, Kategori, Hemsida.',
   'help.guide.map-add-place.step.4':
@@ -2595,11 +2596,11 @@ const help: TranslationStrings = {
   'help.guide.map-satellite.title': 'Byt till satellit',
   'help.guide.map-satellite.goal': 'Byt den ritade kartan mot flygbilder, och tillbaka.',
   'help.guide.map-satellite.step.1':
-    'Den runda knappen längst ner till vänster på kartan är växlaren för bakgrundslagret. Dess ikon visar alltid lagret den skulle byta till, och muspekaren säger vilket: Byt till satellitvy.',
+    'Den runda knappen längst ner till vänster på kartan är växlaren för bakgrundslagret. Dess ikon visar alltid lagret den skulle byta till, och muspekaren säger vilket: Byt till satellitvy. Klicka på den.',
   'help.guide.map-satellite.step.2':
-    'Klicka på den. Kartan blir flygbilder, djupa nog att urskilja en enskild byggnad, och utan en egen nyckel.',
+    'Kartan är flygbilder nu, djupa nog att urskilja en enskild byggnad och utan en egen nyckel. Allt TREK ritar stannar ovanpå dem: nålarna, dagens rutt, spåren och bokningsvägarna.',
   'help.guide.map-satellite.step.3':
-    'Allt TREK ritar stannar ovanpå dem: nålarna, dagens rutt, spåren och bokningsvägarna. Klicka på knappen igen, som nu lyder Byt till kartvy, för att gå tillbaka.',
+    'Knappen lyder nu Byt till kartvy. Klicka på den för att gå tillbaka till den ritade kartan.',
   'help.guide.map-satellite.result': 'Kartan är ritad igen, och lagret du lämnade den på sparas på ditt konto.',
   'help.guide.map-satellite.tip.1':
     'Valet hålls på ditt konto snarare än på resan, så varje resa öppnas som du lämnade den, vilken renderare du än använder.',
@@ -2609,13 +2610,14 @@ const help: TranslationStrings = {
   'help.guide.map-whole-trip.title': 'Se hela resan och dess avstånd',
   'help.guide.map-whole-trip.goal':
     'Byt den ena öppna dagen mot varje resdag i resan, och läs hur långt var och en går.',
-  'help.guide.map-whole-trip.step.1': 'Den runda knappen Visa hela resan sitter längst ner till höger på kartan.',
+  'help.guide.map-whole-trip.step.1':
+    'Den runda knappen Visa hela resan sitter längst ner till höger på kartan. Klicka på den så ritas varje resdag i resan på en gång, var och en i sin egen färg över en vit kant, så att grannliggande dagar hålls isär.',
   'help.guide.map-whole-trip.step.2':
-    'Klicka på den. Varje resdag i resan ritas på en gång, var och en i sin egen färg över en vit kant, så att grannliggande dagar hålls isär.',
-  'help.guide.map-whole-trip.step.3':
     'Kortet ovanför knappen listar de dagarna: en färgprick, dagens namn, en ikon för varje sätt du färdas den, och sträckan den täcker. Total sträcka står högst upp.',
+  'help.guide.map-whole-trip.step.3':
+    'Klicka på en dag i kortet för att välja den, precis som att plocka den i dagkolumnen: kartan ramar in den dagen, och dess stopp får tillbaka sina nummer.',
   'help.guide.map-whole-trip.step.4':
-    'Klicka på en dag i kortet för att välja den, precis som att plocka den i dagkolumnen. Klicka på knappen igen, som nu lyder Dölj hela resan, för att gå tillbaka till den ena dagen.',
+    'Knappen lyder nu Dölj hela resan. Tryck på den för att falla tillbaka till den ena öppna dagen.',
   'help.guide.map-whole-trip.result':
     'Varje resdag är ritad i sin egen färg, och kortet säger vad var och en täcker och vad resan kommer upp i.',
   'help.guide.map-whole-trip.tip.1':
@@ -2631,9 +2633,9 @@ const help: TranslationStrings = {
   'help.guide.map-booking-routes.step.1':
     'Bokningsvägar är av tills du ber om en. På en boknings rad i dagkolumnen sitter en liten ruttikon: Visa bokningsvägar.',
   'help.guide.map-booking-routes.step.2':
-    'Klicka på den. Bokningen dyker upp på kartan: ett flyg som en storcirkelbåge, en körning längs de verkliga vägarna, ett tåg som kedjan av sina stationer. Bekräftat ritas heldraget, Väntar på beslut streckat.',
+    'Klicka på den så dyker bokningen upp på kartan: ett flyg som en storcirkelbåge, en körning längs de verkliga vägarna, ett tåg som kedjan av sina stationer. Bekräftat ritas heldraget, Väntar på beslut streckat, och vägens ändar är blå piller med transportens ikon.',
   'help.guide.map-booking-routes.step.3':
-    'Vägens ändar är blå piller med transportens ikon. Klicka på en för att öppna bokningen bakom den, med dess tider, dess Bokningskod och Plats / Adress där den börjar; Stäng lägger undan den igen.',
+    'Klicka på ett ändpiller så öppnas bokningen bakom det, med dess tider, dess Bokningskod och Plats / Adress där den börjar. Stäng lägger undan den igen.',
   'help.guide.map-booking-routes.step.4':
     'Ruttikonen i verktygsraden ovanför dagarna gör hela resan på en gång: Visa alla bokningsvägar ritar varje bokning som har en.',
   'help.guide.map-booking-routes.step.5':
@@ -2662,7 +2664,7 @@ const help: TranslationStrings = {
   'help.ctx.trip-collab.bullet.5':
     'Omröstningar avgör saker. Ny omröstning ställer en fråga med minst två alternativ; ett klick på ett alternativ är din röst, Stäng avslutar röstningen och Ta bort tar bort omröstningen.',
   'help.ctx.trip-collab.bullet.6':
-    'Vad händer härnäst? listar resans åtta nästa stopp som fortfarande ligger framför, med deras tider och personerna på dem. Den läser bara dagsplanen; tiderna sätts där.',
+    'Vad händer härnäst? listar resans stopp som fortfarande ligger framför, upp till åtta av dem, med deras tider och personerna på dem. Den läser bara dagsplanen; tiderna sätts där.',
   // write-note
   'help.guide.write-note.title': 'Skriv en gemensam notering',
   'help.guide.write-note.goal':
@@ -2750,7 +2752,7 @@ const help: TranslationStrings = {
   'help.guide.close-poll.step.2':
     'En stängd omröstning sjunker under rubriken Stängd längst ner i panelen, bär en Stängd-markering och visar resultatet för alla, oavsett om de röstade eller inte. Det vinnande alternativet tonas grönt.',
   'help.guide.close-poll.step.3':
-    'Ta bort bredvid den tar bort omröstningen. Ingenting frågar två gånger, och rösterna följer med.',
+    'Ta bort, papperskorgen i samma hörn, tar bort omröstningen. Ingenting frågar två gånger, och rösterna följer med.',
   'help.guide.close-poll.result':
     'Omröstningen är borta från varje medlems panel. En du bara stängde stannar läsbar längst ner, med sitt resultat.',
   'help.guide.close-poll.tip.1':
@@ -2761,7 +2763,7 @@ const help: TranslationStrings = {
   'help.guide.whats-next.title': 'Läs Vad händer härnäst?',
   'help.guide.whats-next.goal': 'Se vad gruppen gör härnäst utan att öppna planen.',
   'help.guide.whats-next.step.1':
-    'Panelen listar resans åtta nästa stopp som fortfarande ligger framför, i tidsordning, under en rubrik per dag: Idag, I morgon eller datumet.',
+    'Panelen listar resans stopp som fortfarande ligger framför, upp till åtta av dem, i tidsordning, under en rubrik per dag: Idag, I morgon eller datumet.',
   'help.guide.whats-next.step.2':
     'Till vänster på en rad står dess tid: starten, till, och slutet när stoppet har ett, eller TBD när ingen tid är satt på det än.',
   'help.guide.whats-next.step.3':
@@ -2816,7 +2818,7 @@ const help: TranslationStrings = {
   'help.ctx.trip-lists.bullet.5':
     'Använd mall, Importera och Spara som mall fyller eller behåller en lista utan att du skriver den, och den röda knappen bredvid dem säger hur många föremål som är markerade och sopar bort dem.',
   'help.ctx.trip-lists.bullet.6':
-    'Att göra har en egen sidopanel: framstegskortet, filtren Alla, Mina uppgifter, Förfallen och Slutförda, Sortera efter Prioritet eller Förfallodag, och en rad per lista. Ett klick på en uppgift öppnar den i rutan till höger, och Lägg till ny uppgift öppnar samma ruta tom.',
+    'Att göra har en egen sidopanel: framstegskortet, filtren Alla, Mina uppgifter, Förfallen och Slutförda, Sortera efter Prioritet eller Förfallodag, och en rad per lista. Ett klick på en uppgift öppnar den i rutan till höger, och Lägg till ny uppgift öppnar formuläret Ny uppgift över mitten av skärmen.',
   // packing-categories
   'help.guide.packing-categories.title': 'Bygg packlistan',
   'help.guide.packing-categories.goal':
@@ -3083,7 +3085,7 @@ const help: TranslationStrings = {
   'help.guide.booking-cost.step.1':
     'Öppna bokningen och gå till formulärets fot. Under Kostnader står Skapa utgift, med noteringen Sparar bokningen och öppnar sedan kostnadsredigeraren.',
   'help.guide.booking-cost.step.2':
-    'Klicka på Skapa utgift. Bokningen sparas och kostnadsredigeraren öppnas ovanpå den.',
+    'Klicka på Skapa utgift. Bokningen sparas, dess formulär stängs och kostnadsredigeraren öppnas.',
   'help.guide.booking-cost.step.3':
     'Vad var det till för? är redan bokningens titel. Skriv in Totalt belopp och kontrollera Valuta och Dag.',
   'help.guide.booking-cost.step.4':
@@ -3221,7 +3223,7 @@ const help: TranslationStrings = {
   'help.guide.expense-payers.tip.1':
     'Vem betalade? och Split är oberoende: du kan betala för en middag du inte var på, och fördelas in i en du inte betalade för.',
   'help.guide.expense-payers.tip.2':
-    'Med flera betalare måste beloppen bli totalbeloppet. Inkludera en till så ordnar de andra om sig runt den; medan de inte stämmer säger redigeraren att Betalarnas belopp måste bli totalbeloppet och vägrar spara.',
+    'Med flera betalare måste beloppen bli totalbeloppet. Inkludera en till så ordnar de andra om sig runt den; medan de inte stämmer säger redigeraren vad de måste bli och vägrar spara.',
   'help.guide.expense-payers.tip.3':
     'Att ta bort en betalare tar inte bort utgiften: beloppet stannar i Totala resekostnader och raden blir Oavslutad.',
   // split-expense
@@ -3339,7 +3341,7 @@ const help: TranslationStrings = {
   'help.guide.expense-from-booking.step.3':
     'Klicka på Skapa utgift. Bokningen sparas, formuläret stängs, och Kostnader-redigeraren öppnas med bokningens titel som namn och dess typ redan matchad mot en kategori.',
   'help.guide.expense-from-booking.step.4':
-    'Fyll i beloppet, vem som betalade och fördelningen som för vilken utgift som helst, och spara. Öppnar du bokningen igen visas den nu under Relaterade kostnader, med en penna för att redigera den och en papperskorg för att ta bort den.',
+    'Fyll i beloppet och dess valuta, vem som betalade och fördelningen som för vilken utgift som helst, och spara. Öppnar du bokningen igen visas den nu under Relaterade kostnader, med en penna för att redigera den och en papperskorg för att ta bort den.',
   'help.guide.expense-from-booking.result':
     'Bokningen bär sin kostnad, och utgiften är en vanlig rad på fliken Kostnader, med en betalare, en fördelning och en valuta som vilken annan som helst.',
   'help.guide.expense-from-booking.tip.1':
@@ -3411,7 +3413,7 @@ const help: TranslationStrings = {
   'help.guide.plan-transit.step.1':
     'Klicka på spårvagnsknappen i dagrubriken, Kollektivtrafik. Sökningen öppnas för den dagen.',
   'help.guide.plan-transit.step.2':
-    'Från och Till tar ett stopp eller en station. Med rutan fortfarande tom erbjuds dagens egna stopp; skriver du två bokstäver söks tidtabellens stationer i stället. Byt plats mellan de två rutorna vänder förbindelsen.',
+    'Från och Till tar ett stopp eller en station. Med rutan fortfarande tom erbjuds dagens egna stopp och resans boenden; skriver du två bokstäver söks tidtabellens stationer i stället. Byt plats mellan de två rutorna vänder förbindelsen.',
   'help.guide.plan-transit.step.3':
     'Avgång eller Ankomst med en tid säger när du vill resa, och Bästa resväg, Färre byten eller Mindre gång säger hur svaren ska ordnas.',
   'help.guide.plan-transit.step.4':
@@ -3489,7 +3491,7 @@ const help: TranslationStrings = {
   'help.guide.transport-on-map.step.2':
     'Resvägen ritas på kartan, med en avlång markör i varje ände som bär transportens ikon.',
   'help.guide.transport-on-map.step.3':
-    'Klicka på en ändmarkör för att läsa bokningen utan att lämna kartan: tiderna, Flygbolaget och Flygnumret, Bokningskoden och noteringarna. Stäng lägger undan bladet.',
+    'Klicka på en ändmarkör för att läsa bokningen utan att lämna kartan: tiderna, Flygbolaget och Flygnumret, Bokningskoden och adressen. Stäng lägger undan bladet.',
   'help.guide.transport-on-map.step.4':
     'Ruttikonen i verktygsfältet ovanför dagarna gör hela resan på en gång: Visa alla bokningsvägar, och Dölj alla bokningsvägar för att rensa dem igen.',
   'help.guide.transport-on-map.step.5':
@@ -3554,11 +3556,11 @@ const help: TranslationStrings = {
   'help.guide.roadtrip-stops.step.6':
     'Ställ in längden med reglaget, med minus- och plusknapparna eller med en av de färdiga tiderna, se vad Ankomst och Avfard gör, och klicka sedan på Spara.',
   'help.guide.roadtrip-stops.result':
-    'Stoppet bär sin sorts ikon i stället för ett nummer, och varje ankomst efter en vistelse har flyttat med den.',
+    'Stoppet du satte tid på bär timmen på sin Stopp-bricka och varje ankomst efter det har flyttat med, och det du skickade till en typ och tillbaka är ett numrerat resmål igen.',
   'help.guide.roadtrip-stops.tip.1':
     'En vistelse hör till platsen, inte till ett besök: en plats som är planerad på två dagar står man lika länge vid båda dagarna.',
   'help.guide.roadtrip-stops.tip.2':
-    'Stopp på vägen syns även under Dagar. Visa även i Dagar, under Servicestopp i Körinställningar, håller dem bara i Bilresa.',
+    'Stopp på vägen syns även under Dagar. Att slå av Visa även i Dagar, under Servicestopp i Körinställningar, håller dem bara i Bilresa.',
   'help.guide.roadtrip-stops.tip.3': 'Ingen vistelse, i samma dialog, tar bort tiden igen.',
   // roadtrip-corridor
   'help.guide.roadtrip-corridor.title': 'Hitta bensin, mat och en säng längs rutten',
@@ -3609,7 +3611,7 @@ const help: TranslationStrings = {
   'help.guide.roadtrip-alternatives.step.2':
     'Vägar för den här sträckan öppnas över kartan, en post per väg, var och en ritad på kartan i sin egen färg.',
   'help.guide.roadtrip-alternatives.step.3':
-    'Håll muspekaren över en post för att tända den vägen. Nuvarande och Snabbast säger vilken som är vilken, och de andra säger hur mycket snabbare eller långsammare de är.',
+    'Håll muspekaren över en post för att tända den vägen. Nuvarande är vägen som körs och Snabbast den kvickaste; de andra säger hur mycket långsammare de är, eller vilken vägklass de lämnar utanför.',
   'help.guide.roadtrip-alternatives.step.4':
     'Klicka på en post för att köra den vägen, eller Stäng för att behålla vägen du är på.',
   'help.guide.roadtrip-alternatives.result':
@@ -3686,15 +3688,15 @@ const help: TranslationStrings = {
     'Lägg en dags körning på en vacker väg du har importerat som ett GPX- eller KML-spår.',
   'help.guide.roadtrip-track.step.1': 'Klicka på Spår-brickan i en dags rubrik. Dialogen öppnas på den dagen.',
   'help.guide.roadtrip-track.step.2':
-    'Välj ett spår. Varje spår säger hur långt det är och hur långt det ligger från den här dagen, närmast först.',
+    'Välj ett spår. Varje spår säger hur långt det är och om det löper längs den här dagen eller hur långt bort det ligger, närmast först.',
   'help.guide.roadtrip-track.step.3':
     'Klicka på Följ det här spåret. TREK släpper mellanpunkter där körningen viker av mest från spåret, och ruttar om, runda efter runda.',
   'help.guide.roadtrip-track.step.4':
-    'Den säger hur många mellanpunkter den satte och hur nära körningen nu håller sig. Knappen bredvid tar bort de mellanpunkterna igen och ger tillbaka dagen till ruttberäknaren; att stänga dialogen behåller spåret.',
+    'Den säger hur många mellanpunkter den satte och hur nära körningen nu håller sig. Knappen under den tar bort de mellanpunkterna igen och ger tillbaka dagen till ruttberäknaren; att stänga dialogen behåller spåret.',
   'help.guide.roadtrip-track.result':
-    'Dagens körning följer spåret i stället för vägen ruttberäknaren valde, och Spår-brickan säger vilket spår den följer.',
+    'Dagens körning följer spåret i stället för vägen ruttberäknaren valde, och dess Spår-bricka lyser och namnger det spåret när du pekar på den.',
   'help.guide.roadtrip-track.tip.1':
-    'Importera filen under Dagar med Importera fil, med dess spår eller stigar förbockade. Tills ett spår finns i resan har brickan inget att erbjuda.',
+    'Importera filen under Dagar med Importera fil, med Rutter eller Spår förbockade. Tills resan håller ett bär ingen dag brickan.',
   'help.guide.roadtrip-track.tip.2':
     'Att följa ett spår ersätter de mellanpunkter dagens sträckor redan hade, så forma en sträcka för hand efter spåret, inte före.',
 };

@@ -2167,7 +2167,7 @@ const help: TranslationStrings = {
   'help.ctx.trip-place.bullet.2':
     'Der Kopf trägt das runde Bild, den Namen, die Kategorie, die Adresse und die Koordinaten. Klick auf das Bild, um ein eigenes zu nehmen, doppelklick auf den Namen, um den Ort auf der Stelle umzubenennen, und das X rechts schließt die Ansicht.',
   'help.ctx.trip-place.bullet.3':
-    'Darunter: die Sterne, die jeder Mitreisende dem Ort gegeben hat, der Preis, falls er einen hat, die Beschreibung und die Notizen, und Notizen für diesen Tag, wenn der Stopp welche trägt.',
+    'Darunter: der Preis, falls er einen hat, die Sterne, die jeder Mitreisende dem Ort gegeben hat, die Beschreibung und die Notizen, und Notizen für diesen Tag, wenn der Stopp welche trägt.',
   'help.ctx.trip-place.bullet.4':
     'Öffnungszeiten, Streckenfarbe, Streckendaten und Dateien folgen, soweit sie zutreffen. Dateien nimmt alles aus deinen Ordnern und listet außerdem, was an der Buchung dieses Stopps hängt.',
   'help.ctx.trip-place.bullet.5':
@@ -2270,7 +2270,7 @@ const help: TranslationStrings = {
   'help.guide.place-participants.tip.1':
     'Teilnehmer erscheint nur mit einem gewählten Stopp, wähl den Ort also im Tag statt in der Orte-Spalte, und nur auf einer Reise mit mehr als einem Mitreisenden.',
   'help.guide.place-participants.tip.2':
-    'Niemand gewählt heißt, alle gehen mit. Nimmst du den letzten heraus, sind wieder alle dabei.',
+    'Niemand gewählt heißt, alle gehen mit; darum lässt sich der letzte Mitreisende, der an einem Stopp übrig ist, nicht herausnehmen.',
   'help.guide.place-participants.tip.3': 'Ein Gast, der kein eigenes Konto hat, kann Teilnehmer sein wie jeder andere.',
   // place-booking
   'help.guide.place-booking.title': 'Die Buchung an einem Stopp',
@@ -2336,7 +2336,7 @@ const help: TranslationStrings = {
   'help.guide.place-to-collection.step.3': 'Klick auf die Liste. Der Ort ist sofort darin.',
   'help.guide.place-to-collection.step.4': 'Schließ das Fenster, und der Knopf in den Ortsdetails heißt Gespeichert.',
   'help.guide.place-to-collection.result':
-    'Der Ort liegt in deiner Liste, mit Bild, Notizen und Sternen, bereit für die nächste Reise.',
+    'Der Ort liegt in deiner Liste, mit Bild, Notizen und Adresse, bereit für die nächste Reise.',
   'help.guide.place-to-collection.tip.1':
     'Den Knopf gibt es nur, solange das Addon Sammlungen an ist, das der Admin unter Addons einschaltet.',
   'help.guide.place-to-collection.tip.2':
@@ -2401,7 +2401,7 @@ const help: TranslationStrings = {
   'help.guide.files-upload.tip.2':
     'Ein Bild in der Zwischenablage kommt mit Ctrl+V in die Liste, sodass ein Screenshot einer Buchung nie erst gespeichert werden muss.',
   'help.guide.files-upload.tip.3':
-    'Hochladen braucht das Recht Dateien hochladen; ohne das ist das Feld gar nicht da. Ein Typ, der nicht auf der Liste steht, oder eine Datei über 50 MB wird mit einer Meldung abgelehnt, und nichts wird hochgeladen.',
+    'Hochladen braucht das Recht Dateien hochladen; ohne das ist das Feld gar nicht da. Ein Typ, der nicht auf der Liste steht, wird mit einer Meldung abgelehnt, und nichts wird hochgeladen. Eine Datei über 50 MB lässt das Feld selbst fallen, noch bevor etwas gesendet wird.',
   // files-link
   'help.guide.files-link.title': 'Ein Dokument an einen Ort oder eine Buchung binden',
   'help.guide.files-link.goal':
@@ -2417,7 +2417,7 @@ const help: TranslationStrings = {
   'help.guide.files-link.step.5':
     'Schließ mit dem ×. Einen Speichern-Knopf gibt es hier nicht: Jeder Klick wurde geschrieben, während du ihn gemacht hast.',
   'help.guide.files-link.result':
-    'Die Zeile trägt die Notiz und ein Abzeichen je Verknüpfung, Tagesplan und den Namen des Ortes, Transport und den Namen des Fluges, und das Dokument hängt auch am Ort und an der Buchung.',
+    'Die Zeile trägt die Notiz und ein Abzeichen je Verknüpfung, Tagesplan und den Namen des Ortes, Transport und den Namen des Fluges, und das Dokument hängt auch am Ort und am Flug.',
   'help.guide.files-link.tip.1':
     'Eine Datei kann mehrere Verknüpfungen auf einmal halten, sodass dieselbe Bestätigung zum Hotel und zu der Nacht gehört, die sie abdeckt.',
   'help.guide.files-link.tip.2':
@@ -2447,7 +2447,7 @@ const help: TranslationStrings = {
     'Die Reiter über der Liste sind Alle, PDFs, Bilder und Dokumente, jeder mit der Zahl der Dateien dahinter.',
   'help.guide.files-filter.step.2': 'Klick auf PDFs: Die Liste behält die PDF-Dateien und sonst nichts.',
   'help.guide.files-filter.step.3':
-    'Zwei weitere Reiter kommen und gehen mit dem, was in der Reise liegt: ein Stern, sobald eine Datei markiert ist, und Collab Notizen, sobald eine Notiz im Reiter Collab einen Anhang trägt.',
+    'Zwei weitere Reiter kommen und gehen mit dem, was in der Reise liegt. Klick auf Collab Notizen, der da ist, sobald eine Notiz im Reiter Collab einen Anhang trägt: Die Liste behält diese Dateien und sonst nichts. Ein Stern reiht sich genauso ein, sobald eine Datei markiert ist.',
   'help.guide.files-filter.step.4': 'Alle holt die ganze Liste zurück.',
   'help.guide.files-filter.result':
     'Die Liste zeigt nur, was der Reiter nennt, und die Zahl an jedem Reiter sagt, wie viele das sind.',
@@ -2550,7 +2550,7 @@ const help: TranslationStrings = {
   'help.guide.day-weather.result':
     'Die Tageskarte in der Tage-Spalte trägt dasselbe Wetter klein unter ihrer Nummer, sodass die ganze Reise auf einen Blick lesbar ist.',
   'help.guide.day-weather.tip.1':
-    'Grad und Wind folgen deiner Wahl unter Allgemein in den Einstellungen: stell auf Fahrenheit um, und dieselbe Vorhersage wird in °F und mph ausgegeben.',
+    'Grad und Wind folgen Temperatureinheit unter Allgemein in den Einstellungen: wähl °F Fahrenheit, und dieselbe Vorhersage wird in °F und mph ausgegeben.',
   'help.guide.day-weather.tip.2':
     'Ein Tag ohne verorteten Stopp und ohne Hotel zum Aufwachen zeigt gar kein Wetter: die Vorhersage gilt immer einem Ort, nie der Reise.',
   'help.guide.day-weather.tip.3':
@@ -2601,7 +2601,7 @@ const help: TranslationStrings = {
   'help.guide.edit-accommodation.step.2':
     'Der Stift an ihrem rechten Rand öffnet den Aufenthalt wieder. Das Fenster heißt jetzt Unterkunft bearbeiten.',
   'help.guide.edit-accommodation.step.3':
-    'Änder, was du brauchst: die Tage, die er abdeckt, Check-in, Bis, Check-out, Bestätigung oder das Haus selbst.',
+    'Korrigier die Reihe der Felder: Check-in, Bis, Check-out und Bestätigung. Die Tage darüber und das Haus darunter lassen sich hier ebenfalls ändern.',
   'help.guide.edit-accommodation.step.4': 'Klick auf Speichern.',
   'help.guide.edit-accommodation.step.5':
     'Das X neben dem Stift beendet den Aufenthalt. Es fragt nichts, und die Buchung vom Typ Unterkunft, die zu ihm gehört, geht mit.',
@@ -2635,7 +2635,7 @@ const help: TranslationStrings = {
   'help.ctx.trip-map.summary':
     'Die Mitte des Plans: jeder Ort der Reise als Pin, die Routen, die sie verbinden, und die Schalter an den Rändern der Karte für Satellit, für die ganze Reise auf einmal und für die Orte rund um den Stadtteil, den du gerade ansiehst.',
   'help.ctx.trip-map.bullet.1':
-    'Ein Pin ist ein Ort: sein eigenes Foto, wenn er eines hat, sonst die Farbe seiner Kategorie mit dem Kategorie-Symbol. Halt den Zeiger darauf, und ein Kärtchen zeigt seinen Namen, seine Bewertung, seine Kategorie und seine Adresse.',
+    'Ein Pin ist ein Ort: sein eigenes Foto, wenn er eines hat, sonst die Farbe seiner Kategorie mit dem Kategorie-Symbol. Halt den Zeiger darauf, und ein Kärtchen zeigt seinen Namen und seine Adresse, dazu seine Kategorie und seine Bewertung, wo der Ort sie trägt. Zieh einen Pin auf eine Tageskarte, um den Ort dort einzuplanen.',
   'help.ctx.trip-map.bullet.2':
     'Pins, die zu dicht beieinander liegen, um sie auseinanderzuhalten, fallen zu einer dunklen Blase mit einer Zahl zusammen. Klick die Blase an, und die Karte zoomt auf das, was darin steckt.',
   'help.ctx.trip-map.bullet.3':
@@ -2652,15 +2652,15 @@ const help: TranslationStrings = {
   'help.guide.map-markers.title': 'Die Karte lesen',
   'help.guide.map-markers.goal': 'Wissen, was dir jeder Pin, jedes Abzeichen und jede Blase auf der Karte sagt.',
   'help.guide.map-markers.step.1':
-    'Die Karte trägt jeden Ort der Reise. Wo Pins zu dicht beieinander sitzen, um sie auseinanderzuhalten, fallen sie zu einer dunklen Blase zusammen, die die Zahl der Orte darin trägt.',
+    'Die Karte trägt jeden Ort der Reise. Wo Pins zu dicht beieinander sitzen, um sie auseinanderzuhalten, fallen sie zu einer dunklen Blase zusammen, die die Zahl darin trägt; klick die Blase an, und die Karte zoomt auf das, was darin war, oder fächert die Pins bei der tiefsten Zoomstufe auf.',
   'help.guide.map-markers.step.2':
-    'Klick die Blase an. Die Karte zoomt auf das, was darin war, und die Pins trennen sich; bei der tiefsten Zoomstufe fächert sie sie auf, statt weiter zu zoomen.',
+    'Ein Pin ist das eigene Foto des Ortes, wenn er eines hat, sonst die Farbe seiner Kategorie mit dem Kategorie-Symbol. Halt den Zeiger darauf, und ein Kärtchen nennt seinen Namen und seine Adresse, dazu seine Kategorie und seine Bewertung, wo der Ort sie trägt.',
   'help.guide.map-markers.step.3':
-    'Ein Pin ist das eigene Foto des Ortes, wenn er eines hat, sonst die Farbe seiner Kategorie mit dem Kategorie-Symbol. Halt den Zeiger darauf, und ein Kärtchen nennt seinen Namen, seine Bewertung, seine Kategorie und seine Adresse.',
+    'Klick einen Pin an, und der Ort öffnet sich in einem Kärtchen unter der Karte: seine Koordinaten, seine Bewertung, seine Dateien und am unteren Rand, was als Nächstes mit ihm geschehen soll, darunter Navigation, Bearbeiten und Löschen, und Zum Tag hinzufügen, solange ein Tag geöffnet ist. Ein Klick auf eine leere Stelle der Karte schließt ihn wieder.',
   'help.guide.map-markers.step.4':
-    'Klick einen Pin an, und der Ort öffnet sich unter der Karte: seine Koordinaten, seine Bewertung, seine Dateien sowie Zum Tag hinzufügen, In Sammlung speichern, Navigation, Bearbeiten und Löschen. Ein Klick auf eine leere Stelle der Karte schließt ihn wieder.',
-  'help.guide.map-markers.step.5':
     'Öffne in der Tage-Spalte einen Tag, und seine Stopps werden nummeriert: Das kleine weiße Abzeichen an der Ecke eines Pins ist der Platz dieses Stopps im Tag. Ein Ort, der an zwei Tagen geplant ist, trägt beide Nummern, verbunden durch ·. Ohne geöffneten Tag gibt es keine Nummern, und die Ecke trägt stattdessen die Bewertung.',
+  'help.guide.map-markers.step.5':
+    'Zieh einen Pin von der Karte auf eine Tageskarte in der Tage-Spalte, und der Ort ist an diesem Tag eingeplant, genau wie wenn du seine Zeile aus der Orte-Liste ziehst.',
   'help.guide.map-markers.result':
     'An der Reise hat sich nichts geändert: Die Karte ist eine Ansicht davon, und jeder Pin sagt, welcher Ort, welcher Tag und in welcher Reihenfolge.',
   'help.guide.map-markers.tip.1':
@@ -2668,7 +2668,7 @@ const help: TranslationStrings = {
   'help.guide.map-markers.tip.2':
     'Der Filter über der Orte-Liste entscheidet auch, was die Karte zeichnet: Wähl Ungeplant, und es bleiben nur die Orte darauf, die noch keinen Tag haben.',
   'help.guide.map-markers.tip.3':
-    'Auf dieser Karte gibt es keine Zoom-Knöpfe: Das Mausrad zoomt, ein Doppelklick zoomt eine Stufe hinein, und Ziehen verschiebt sie.',
+    'Auf dieser Karte gibt es keine Zoom-Knöpfe: Das Mausrad zoomt, ein Doppelklick zoomt eine Stufe hinein, und das Ziehen der Karte selbst verschiebt sie.',
   // map-nearby-places
   'help.guide.map-nearby-places.title': 'Orte in deiner Umgebung auf der Karte finden',
   'help.guide.map-nearby-places.goal':
@@ -2699,7 +2699,7 @@ const help: TranslationStrings = {
   'help.guide.map-add-place.step.1':
     'Rechtsklick auf die Stelle der Karte, die du meinst. Das Ortsformular öffnet sich, überschrieben mit Ort/Aktivität hinzufügen.',
   'help.guide.map-add-place.step.2':
-    'Breitengrad und Längengrad stehen schon auf dieser Stelle, und TREK schlägt die Koordinaten nach und füllt Adresse mit dem, was es dort findet. Gespeichert ist noch nichts, überschreib also, was nicht stimmt.',
+    'Breitengrad und Längengrad stehen schon auf dieser Stelle, und TREK schlägt die Koordinaten nach und füllt Adresse mit dem, was es dort findet, und auch Name, wo die Suche einen hergibt. Gespeichert ist noch nichts, überschreib also, was nicht stimmt.',
   'help.guide.map-add-place.step.3':
     'Gib ihm einen Namen, den du wiedererkennst, und den Rest, den der Plan wissen soll: Beschreibung, Notizen, Kategorie, Website.',
   'help.guide.map-add-place.step.4':
@@ -2714,11 +2714,11 @@ const help: TranslationStrings = {
   'help.guide.map-satellite.title': 'Auf Satellit umschalten',
   'help.guide.map-satellite.goal': 'Tausch die gezeichnete Karte gegen Luftbilder und wieder zurück.',
   'help.guide.map-satellite.step.1':
-    'Der runde Knopf unten links auf der Karte ist der Umschalter für die Grundebene. Sein Symbol zeigt immer die Ebene, zu der er wechseln würde, und wenn du darauf zeigst, sagt er welche: Zur Satellitenansicht wechseln.',
+    'Der runde Knopf unten links auf der Karte ist der Umschalter für die Grundebene. Sein Symbol zeigt immer die Ebene, zu der er wechseln würde, und wenn du darauf zeigst, sagt er welche: Zur Satellitenansicht wechseln. Klick ihn an.',
   'help.guide.map-satellite.step.2':
-    'Klick ihn an. Die Karte wird zu Luftbildern, tief genug, um ein einzelnes Gebäude zu erkennen, und ohne eigenen Schlüssel.',
+    'Die Karte ist jetzt ein Luftbild, tief genug, um ein einzelnes Gebäude zu erkennen, und ohne eigenen Schlüssel. Alles, was TREK zeichnet, bleibt darüber: die Pins, die Route des Tages, die Tracks und die Buchungsrouten.',
   'help.guide.map-satellite.step.3':
-    'Alles, was TREK zeichnet, bleibt darüber: die Pins, die Route des Tages, die Tracks und die Buchungsrouten. Klick den Knopf noch einmal an, der jetzt Zur Kartenansicht wechseln heißt, um zurückzugehen.',
+    'Der Knopf heißt jetzt Zur Kartenansicht wechseln. Klick ihn an, um zur gezeichneten Karte zurückzugehen.',
   'help.guide.map-satellite.result':
     'Die Karte ist wieder gezeichnet, und die Ebene, auf der du sie gelassen hast, wird in deinem Konto gemerkt.',
   'help.guide.map-satellite.tip.1':
@@ -2729,13 +2729,14 @@ const help: TranslationStrings = {
   'help.guide.map-whole-trip.title': 'Die ganze Reise und ihre Entfernungen sehen',
   'help.guide.map-whole-trip.goal':
     'Tausch den einen geöffneten Tag gegen jeden Reisetag der Reise und lies ab, wie weit jeder führt.',
-  'help.guide.map-whole-trip.step.1': 'Der runde Knopf Ganze Reise anzeigen sitzt unten rechts auf der Karte.',
+  'help.guide.map-whole-trip.step.1':
+    'Der runde Knopf Ganze Reise anzeigen sitzt unten rechts auf der Karte. Klick ihn an, und jeder Reisetag der Reise wird auf einmal gezeichnet, jeder in seiner eigenen Farbe über einer weißen Umrandung, damit benachbarte Tage auseinanderbleiben.',
   'help.guide.map-whole-trip.step.2':
-    'Klick ihn an. Jeder Reisetag der Reise wird auf einmal gezeichnet, jeder in seiner eigenen Farbe über einer weißen Umrandung, damit benachbarte Tage auseinanderbleiben.',
-  'help.guide.map-whole-trip.step.3':
     'Das Kärtchen über dem Knopf listet diese Tage auf: ein Farbpunkt, der Name des Tages, ein Symbol für jede Art, wie du ihn zurücklegst, und die Strecke, die er abdeckt. Gesamtstrecke steht ganz oben.',
+  'help.guide.map-whole-trip.step.3':
+    'Klick im Kärtchen einen Tag an, um ihn zu wählen, genau wie in der Tage-Spalte: Die Karte rückt diesen Tag ins Bild, und seine Stopps bekommen ihre Nummern zurück.',
   'help.guide.map-whole-trip.step.4':
-    'Klick im Kärtchen einen Tag an, um ihn zu wählen, genau wie in der Tage-Spalte. Klick den Knopf noch einmal an, der jetzt Ganze Reise ausblenden heißt, um zum einen Tag zurückzukehren.',
+    'Der Knopf heißt jetzt Ganze Reise ausblenden. Drück ihn, um auf den einen geöffneten Tag zurückzugehen.',
   'help.guide.map-whole-trip.result':
     'Jeder Reisetag ist in seiner eigenen Farbe gezeichnet, und das Kärtchen sagt, was jeder abdeckt und worauf die Reise kommt.',
   'help.guide.map-whole-trip.tip.1':
@@ -2751,9 +2752,9 @@ const help: TranslationStrings = {
   'help.guide.map-booking-routes.step.1':
     'Buchungsrouten sind aus, bis du eine anforderst. In der Zeile einer Buchung in der Tage-Spalte sitzt ein kleines Routensymbol: Buchungsrouten anzeigen.',
   'help.guide.map-booking-routes.step.2':
-    'Klick es an. Die Buchung erscheint auf der Karte: ein Flug als Großkreisbogen, eine Fahrt entlang der echten Straßen, ein Zug als Kette seiner Bahnhöfe. Bestätigt wird durchgezogen gezeichnet, Ausstehend gestrichelt.',
+    'Klick es an, und die Buchung erscheint auf der Karte: ein Flug als Großkreisbogen, eine Fahrt entlang der echten Straßen, ein Zug als Kette seiner Bahnhöfe. Bestätigt wird durchgezogen gezeichnet, Ausstehend gestrichelt, und die Enden der Route sind blaue Pillen mit dem Symbol des Transports.',
   'help.guide.map-booking-routes.step.3':
-    'Die Enden der Route sind blaue Pillen mit dem Symbol des Transports. Klick eines an, um die Buchung dahinter zu öffnen, mit ihren Zeiten, ihrem Buchungscode und Ort / Adresse; Schließen räumt sie wieder weg.',
+    'Klick eine Endpille an, und die Buchung dahinter öffnet sich, mit ihren Zeiten, ihrer Referenz und dem Ort, an dem sie beginnt. Schließen räumt sie wieder weg.',
   'help.guide.map-booking-routes.step.4':
     'Das Routensymbol in der Werkzeugleiste über den Tagen macht die ganze Reise auf einmal: Alle Buchungsrouten anzeigen zeichnet jede Buchung, die eine hat.',
   'help.guide.map-booking-routes.step.5':
@@ -2782,7 +2783,7 @@ const help: TranslationStrings = {
   'help.ctx.trip-collab.bullet.5':
     'Umfragen entscheiden Dinge. Neue Umfrage stellt eine Frage mit mindestens zwei Optionen; ein Klick auf eine Option ist deine Stimme, Schließen beendet die Abstimmung und Löschen entfernt die Umfrage.',
   'help.ctx.trip-collab.bullet.6':
-    'Nächste listet die nächsten acht Stopps der Reise, die noch bevorstehen, mit ihren Uhrzeiten und den Leuten, die dabei sind. Es liest nur den Tagesplan; die Zeiten werden dort gesetzt.',
+    'Nächste listet die Stopps der Reise, die noch bevorstehen, bis zu acht davon, mit ihren Uhrzeiten und den Leuten, die dabei sind. Es liest nur den Tagesplan; die Zeiten werden dort gesetzt.',
   // write-note
   'help.guide.write-note.title': 'Eine gemeinsame Notiz schreiben',
   'help.guide.write-note.goal':
@@ -2873,7 +2874,7 @@ const help: TranslationStrings = {
   'help.guide.close-poll.step.2':
     'Eine geschlossene Umfrage sinkt unter die Überschrift Geschlossen am Ende des Panels, trägt ein Abzeichen Geschlossen und zeigt jedem das Ergebnis, ob er abgestimmt hat oder nicht. Die Gewinneroption ist grün eingefärbt.',
   'help.guide.close-poll.step.3':
-    'Löschen daneben entfernt die Umfrage. Nichts fragt ein zweites Mal, und die Stimmen gehen mit.',
+    'Löschen, der Papierkorb in derselben Ecke, entfernt die Umfrage. Nichts fragt ein zweites Mal, und die Stimmen gehen mit.',
   'help.guide.close-poll.result':
     'Die Umfrage ist aus dem Panel jedes Mitglieds verschwunden. Eine, die du nur geschlossen hast, bleibt unten lesbar, mit ihrem Ergebnis.',
   'help.guide.close-poll.tip.1':
@@ -2884,7 +2885,7 @@ const help: TranslationStrings = {
   'help.guide.whats-next.title': 'Nächste lesen',
   'help.guide.whats-next.goal': 'Sieh, was die Gruppe als Nächstes tut, ohne den Plan zu öffnen.',
   'help.guide.whats-next.step.1':
-    'Das Panel listet die nächsten acht Stopps der Reise, die noch bevorstehen, in zeitlicher Reihenfolge, unter einer Überschrift pro Tag: Heute, Morgen oder das Datum.',
+    'Das Panel listet die Stopps der Reise, die noch bevorstehen, bis zu acht davon, in zeitlicher Reihenfolge, unter einer Überschrift pro Tag: Heute, Morgen oder das Datum.',
   'help.guide.whats-next.step.2':
     'Links in einer Zeile steht ihre Zeit: der Anfang, bis, und das Ende, wenn der Stopp eines hat, oder TBD, wenn noch keine Zeit darauf gesetzt ist.',
   'help.guide.whats-next.step.3':
@@ -2939,7 +2940,7 @@ const help: TranslationStrings = {
   'help.ctx.trip-lists.bullet.5':
     'Vorlage anwenden, Importieren und Als Vorlage speichern füllen oder bewahren eine Liste, ohne sie abzutippen, und der rote Knopf daneben nennt, wie viele Einträge abgehakt sind, und räumt sie weg.',
   'help.ctx.trip-lists.bullet.6':
-    'Aufgaben hat eine eigene Seitenleiste: die Fortschrittskarte, die Filter Alle, Meine Aufgaben, Überfällig und Erledigt, Sortieren nach Priorität oder Fällig am, und eine Zeile pro Liste. Ein Klick auf eine Aufgabe öffnet sie im Panel rechts, und Neue Aufgabe hinzufügen öffnet dasselbe Panel leer.',
+    'Aufgaben hat eine eigene Seitenleiste: die Fortschrittskarte, die Filter Alle, Meine Aufgaben, Überfällig und Erledigt, Sortieren nach Priorität oder Fällig am, und eine Zeile pro Liste. Ein Klick auf eine Aufgabe öffnet sie im Panel rechts, und Neue Aufgabe hinzufügen öffnet das Formular Neue Aufgabe über der Mitte des Bildschirms.',
   // packing-categories
   'help.guide.packing-categories.title': 'Die Packliste aufbauen',
   'help.guide.packing-categories.goal':
@@ -3216,7 +3217,7 @@ const help: TranslationStrings = {
   'help.guide.booking-cost.step.1':
     'Öffne die Buchung und geh ans Ende des Formulars. Unter Kosten steht Ausgabe erstellen, mit dem Hinweis Speichert die Buchung und öffnet dann den Kosten-Editor.',
   'help.guide.booking-cost.step.2':
-    'Klick auf Ausgabe erstellen. Die Buchung wird gespeichert, und der Kosten-Editor öffnet sich darüber.',
+    'Klick auf Ausgabe erstellen. Die Buchung wird gespeichert, ihr Formular schließt sich, und der Kosten-Editor öffnet sich.',
   'help.guide.booking-cost.step.3':
     'Wofür war es? ist schon der Titel der Buchung. Trag den Gesamtbetrag ein und prüf Währung und Tag.',
   'help.guide.booking-cost.step.4':
@@ -3356,7 +3357,7 @@ const help: TranslationStrings = {
   'help.guide.expense-payers.tip.1':
     'Wer hat bezahlt? und Aufteilen sind unabhängig voneinander: Du kannst ein Abendessen bezahlen, bei dem du nicht warst, und in eines aufgeteilt werden, das du nicht bezahlt hast.',
   'help.guide.expense-payers.tip.2':
-    'Bei mehreren Zahlenden müssen die Beträge zusammen die Gesamtsumme ergeben. Bezieh einen weiteren ein, und die anderen ordnen sich darum herum neu; solange sie nicht passen, sagt der Editor Die Beträge der Zahlenden müssen zusammen die Gesamtsumme ergeben und speichert nicht.',
+    'Bei mehreren Zahlenden müssen die Beträge zusammen die Gesamtsumme ergeben. Bezieh einen weiteren ein, und die anderen ordnen sich darum herum neu; solange sie nicht passen, sagt der Editor, worauf sie sich summieren müssen, und speichert nicht.',
   'help.guide.expense-payers.tip.3':
     'Einen Zahler zu entfernen entfernt nicht die Ausgabe: Der Betrag bleibt in Gesamtausgaben, und die Zeile wird Offen.',
   // split-expense
@@ -3474,7 +3475,7 @@ const help: TranslationStrings = {
   'help.guide.expense-from-booking.step.3':
     'Klick auf Ausgabe erstellen. Die Buchung wird gespeichert, das Formular schließt sich, und der Kosten-Editor öffnet sich mit dem Titel der Buchung als Namen und ihrem Typ, der schon einer Kategorie zugeordnet ist.',
   'help.guide.expense-from-booking.step.4':
-    'Trag den Betrag ein, wer bezahlt hat, und die Aufteilung wie bei jeder Ausgabe, und speichere. Öffnest du die Buchung jetzt wieder, steht sie unter Verknüpfte Ausgabe, mit einem Stift zum Bearbeiten und einem Papierkorb zum Entfernen.',
+    'Trag den Betrag und seine Währung ein, wer bezahlt hat, und die Aufteilung wie bei jeder Ausgabe, und speichere. Öffnest du die Buchung jetzt wieder, steht sie unter Verknüpfte Ausgabe, mit einem Stift zum Bearbeiten und einem Papierkorb zum Entfernen.',
   'help.guide.expense-from-booking.result':
     'Die Buchung trägt ihre Kosten, und die Ausgabe ist eine ganz normale Zeile im Reiter Kosten, mit Zahler, Aufteilung und Währung wie jede andere.',
   'help.guide.expense-from-booking.tip.1':
@@ -3547,7 +3548,7 @@ const help: TranslationStrings = {
   'help.guide.plan-transit.step.1':
     'Klick im Tageskopf auf den Tram-Knopf, Öffentliche Verkehrsmittel. Die Suche öffnet sich für diesen Tag.',
   'help.guide.plan-transit.step.2':
-    'Von und Nach nehmen eine Haltestelle oder einen Bahnhof. Solange das Feld leer ist, werden die eigenen Stopps des Tages angeboten; ab zwei Buchstaben wird stattdessen in den Stationen des Fahrplans gesucht. Tauschen zwischen den beiden Feldern dreht die Verbindung um.',
+    'Von und Nach nehmen eine Haltestelle oder einen Bahnhof. Solange das Feld leer ist, werden die eigenen Stopps des Tages und die Unterkünfte der Reise angeboten; ab zwei Buchstaben wird stattdessen in den Stationen des Fahrplans gesucht. Tauschen zwischen den beiden Feldern dreht die Verbindung um.',
   'help.guide.plan-transit.step.3':
     'Abfahrt oder Ankunft mit einer Uhrzeit sagt, wann du fahren willst, und Beste Route, Wenige Umstiege oder Wenig Fußweg sagt, wie die Antworten sortiert werden sollen.',
   'help.guide.plan-transit.step.4':
@@ -3627,7 +3628,7 @@ const help: TranslationStrings = {
   'help.guide.transport-on-map.step.2':
     'Die Route wird auf der Karte gezeichnet, mit einem Pillen-Marker an jedem Ende, der das Symbol des Transports trägt.',
   'help.guide.transport-on-map.step.3':
-    'Klick einen Endmarker an, um die Buchung zu lesen, ohne die Karte zu verlassen: die Zeiten, die Fluggesellschaft samt Flugnr., den Buchungscode und die Notizen. Schließen räumt das Blatt weg.',
+    'Klick einen Endmarker an, um die Buchung zu lesen, ohne die Karte zu verlassen: die Zeiten, die Fluggesellschaft samt Flugnr., den Buchungscode und die Adresse. Schließen räumt das Blatt weg.',
   'help.guide.transport-on-map.step.4':
     'Das Routen-Symbol in der Leiste über den Tagen macht die ganze Reise auf einmal: Alle Buchungsrouten anzeigen, und Alle Buchungsrouten ausblenden, um sie wieder abzuräumen.',
   'help.guide.transport-on-map.step.5':
@@ -3694,11 +3695,11 @@ const help: TranslationStrings = {
   'help.guide.roadtrip-stops.step.6':
     'Stell die Länge mit dem Schieber ein, mit den Knöpfen minus und plus oder mit einer der Voreinstellungen, sieh zu, was Ankunft und Abfahrt tun, und klick dann Speichern.',
   'help.guide.roadtrip-stops.result':
-    'Der Stopp trägt statt einer Nummer das Symbol seiner Art, und jede Ankunft nach einem Aufenthalt ist mitgewandert.',
+    'Der Stopp, dem du eine Zeit gegeben hast, trägt die Stunde auf seinem Abzeichen Dauer, und jede Ankunft danach ist mitgewandert; und der, den du zu einer Art und wieder zurück geschickt hast, ist wieder ein nummeriertes Ziel.',
   'help.guide.roadtrip-stops.tip.1':
     'Ein Aufenthalt gehört zum Ort, nicht zu einem Besuch: an einem Ort, der an zwei Tagen geplant ist, steht man an beiden gleich lang.',
   'help.guide.roadtrip-stops.tip.2':
-    'Halte unterwegs erscheinen auch unter Tage. Auch in Days anzeigen, unter Service Stops in den Fahreinstellungen, hält sie nur im Roadtrip.',
+    'Halte unterwegs erscheinen auch unter Tage. Schaltest du Auch in Days anzeigen aus, unter Service Stops in den Fahreinstellungen, bleiben sie nur im Roadtrip.',
   'help.guide.roadtrip-stops.tip.3': 'Kein Aufenthalt, im selben Dialog, nimmt die Zeit wieder weg.',
   // roadtrip-corridor
   'help.guide.roadtrip-corridor.title': 'Tanken, Essen und ein Bett entlang der Route finden',
@@ -3752,7 +3753,7 @@ const help: TranslationStrings = {
   'help.guide.roadtrip-alternatives.step.2':
     'Wege für diese Etappe öffnet sich über der Karte, ein Eintrag je Straße, jede in ihrer eigenen Farbe auf der Karte gezeichnet.',
   'help.guide.roadtrip-alternatives.step.3':
-    'Fahr über einen Eintrag, um diese Straße aufleuchten zu lassen. Aktuell und Schnellste sagen, welche welche ist, und die übrigen sagen, wie viel kürzer oder länger sie brauchen.',
+    'Fahr über einen Eintrag, um diese Straße aufleuchten zu lassen. Aktuell ist die Straße, die gerade gefahren wird, und Schnellste die schnellste; die übrigen sagen, wie viel länger sie brauchen oder welche Straßenklasse sie auslassen.',
   'help.guide.roadtrip-alternatives.step.4':
     'Klick einen Eintrag an, um so zu fahren, oder Schließen, um bei der Straße zu bleiben, auf der du bist.',
   'help.guide.roadtrip-alternatives.result':
@@ -3833,15 +3834,15 @@ const help: TranslationStrings = {
   'help.guide.roadtrip-track.step.1':
     'Klick das Abzeichen Spur in der Kopfzeile eines Tages an. Der Dialog öffnet sich auf diesem Tag.',
   'help.guide.roadtrip-track.step.2':
-    'Wähl eine Spur. Jede sagt, wie lang sie ist und wie weit sie von diesem Tag entfernt liegt, die nächste zuerst.',
+    'Wähl eine Spur. Jede sagt, wie lang sie ist und ob sie an diesem Tag entlangläuft oder wie weit sie abseits liegt, die nächste zuerst.',
   'help.guide.roadtrip-track.step.3':
     'Klick Dieser Spur folgen an. TREK setzt Zwischenpunkte dort, wo die Fahrt am weitesten von der Spur abweicht, und routet neu, Runde um Runde.',
   'help.guide.roadtrip-track.step.4':
-    'Es sagt, wie viele Zwischenpunkte es gesetzt hat und wie nah die Fahrt nun bleibt. Der Knopf daneben entfernt diese Zwischenpunkte wieder und gibt den Tag dem Router zurück; den Dialog zu schließen behält die Spur.',
+    'Es sagt, wie viele Zwischenpunkte es gesetzt hat und wie nah die Fahrt nun bleibt. Der Knopf darunter entfernt diese Zwischenpunkte wieder und gibt den Tag dem Router zurück; den Dialog zu schließen behält die Spur.',
   'help.guide.roadtrip-track.result':
-    'Die Fahrt des Tages folgt der Spur statt der Straße, die der Router gewählt hat, und das Abzeichen Spur sagt, welcher Spur sie folgt.',
+    'Die Fahrt des Tages folgt der Spur statt der Straße, die der Router gewählt hat, und ihr Abzeichen Spur leuchtet und nennt diese Spur, wenn du darauf zeigst.',
   'help.guide.roadtrip-track.tip.1':
-    'Importier die Datei unter Tage mit Dateimport, und hak dabei Tracks (mit Streckenverlauf) oder Pfade (LineStrings) an. Solange keine Spur in der Reise ist, hat das Abzeichen nichts anzubieten.',
+    'Importier die Datei unter Tage mit Dateimport, und hak dabei Routen oder Tracks an. Solange die Reise keine trägt, trägt kein Tag das Abzeichen.',
   'help.guide.roadtrip-track.tip.2':
     'Einer Spur zu folgen ersetzt die Zwischenpunkte, die die Etappen des Tages schon hatten, form eine Etappe also nach der Spur von Hand, nicht davor.',
 };

@@ -2150,7 +2150,7 @@ const help: TranslationStrings = {
   'help.ctx.trip-place.bullet.2':
     'Bagian kepala membawa gambar bulat, nama, kategori, alamat dan koordinat. Klik gambarnya untuk memakai gambar Anda sendiri, klik ganda namanya untuk mengganti nama tempat di tempat itu juga, dan tanda X di sebelah kanan menutup kartu.',
   'help.ctx.trip-place.bullet.3':
-    'Di bawahnya: bintang yang diberikan setiap pelancong kepada tempat itu, harganya jika ada, deskripsi dan catatan, serta “Catatan untuk hari ini” bila perhentian itu membawanya.',
+    'Di bawahnya: harganya jika ada, bintang yang diberikan setiap pelancong kepada tempat itu, deskripsi dan catatan, serta “Catatan untuk hari ini” bila perhentian itu membawanya.',
   'help.ctx.trip-place.bullet.4':
     '“Jam Buka”, “Warna jalur”, “Statistik Jalur” dan “File” menyusul, sejauh berlaku. “File” menerima apa pun dari folder Anda dan juga mendaftar apa yang menggantung pada pemesanan perhentian ini.',
   'help.ctx.trip-place.bullet.5':
@@ -2253,7 +2253,7 @@ const help: TranslationStrings = {
   'help.guide.place-participants.tip.1':
     '“Peserta” hanya muncul dengan sebuah perhentian terpilih, jadi pilihlah tempatnya di dalam hari dan bukan di kolom tempat, dan hanya pada perjalanan dengan lebih dari satu pelancong.',
   'help.guide.place-participants.tip.2':
-    'Tidak memilih siapa pun berarti semua orang pergi. Mengeluarkan yang terakhir memasukkan semua orang kembali.',
+    'Tidak memilih siapa pun berarti semua orang pergi, dan karena itulah pelancong terakhir yang tersisa pada sebuah perhentian tidak bisa dikeluarkan.',
   'help.guide.place-participants.tip.3':
     'Seorang “Tamu”, yang tidak punya akun sendiri, bisa menjadi peserta seperti orang lain.',
   // place-booking
@@ -2321,7 +2321,7 @@ const help: TranslationStrings = {
   'help.guide.place-to-collection.step.3': 'Klik daftarnya. Tempat itu langsung ada di dalamnya.',
   'help.guide.place-to-collection.step.4': 'Tutup, dan tombol di kartu berbunyi “Tersimpan”.',
   'help.guide.place-to-collection.result':
-    'Tempat itu ada di daftar Anda dengan gambarnya, catatannya dan bintangnya, siap untuk perjalanan berikutnya.',
+    'Tempat itu ada di daftar Anda dengan gambarnya, catatannya dan alamatnya, siap untuk perjalanan berikutnya.',
   'help.guide.place-to-collection.tip.1':
     'Tombol itu hanya ada selama addon “Koleksi” aktif, yang dinyalakan admin di bawah “Addon”.',
   'help.guide.place-to-collection.tip.2':
@@ -2385,7 +2385,7 @@ const help: TranslationStrings = {
   'help.guide.files-upload.tip.2':
     'Sebuah gambar di papan klip masuk ke daftar dengan Ctrl+V, jadi tangkapan layar sebuah pemesanan tidak perlu disimpan lebih dulu.',
   'help.guide.files-upload.tip.3':
-    'Mengunggah memerlukan hak “Unggah file”; tanpa itu kotaknya sama sekali tidak ada. Tipe yang tidak ada dalam daftar, atau file di atas 50 MB, ditolak dengan sebuah pesan dan tidak ada yang diunggah.',
+    'Mengunggah memerlukan hak “Unggah file”; tanpa itu kotaknya sama sekali tidak ada. Tipe yang tidak ada dalam daftar ditolak dengan sebuah pesan dan tidak ada yang diunggah. File di atas 50 MB dijatuhkan oleh kotak itu sendiri, sebelum apa pun dikirim.',
   // files-link
   'help.guide.files-link.title': 'Mengikat dokumen ke sebuah tempat atau pemesanan',
   'help.guide.files-link.goal':
@@ -2401,7 +2401,7 @@ const help: TranslationStrings = {
   'help.guide.files-link.step.5':
     'Tutup dengan tanda ×. Tidak ada tombol simpan di sini: setiap klik sudah ditulis saat Anda melakukannya.',
   'help.guide.files-link.result':
-    'Baris itu membawa catatannya dan satu lencana per tautan, “Rencana Harian” dan nama tempatnya, “Transportasi” dan nama penerbangannya, dan dokumen itu juga menggantung pada tempat dan pada pemesanan.',
+    'Baris itu membawa catatannya dan satu lencana per tautan, “Rencana Harian” dan nama tempatnya, “Transportasi” dan nama penerbangannya, dan dokumen itu juga menggantung pada tempat dan pada penerbangan itu.',
   'help.guide.files-link.tip.1':
     'Sebuah file bisa memegang beberapa tautan sekaligus, jadi konfirmasi yang sama menjadi milik hotel dan milik malam yang dicakupnya.',
   'help.guide.files-link.tip.2':
@@ -2431,7 +2431,7 @@ const help: TranslationStrings = {
     'Tab di atas daftar adalah “Semua”, “PDFs”, “Gambar” dan “Dokumen”, masing-masing dengan jumlah file di belakangnya.',
   'help.guide.files-filter.step.2': 'Klik “PDFs”: daftar menyimpan file PDF dan tidak ada yang lain.',
   'help.guide.files-filter.step.3':
-    'Dua tab lagi datang dan pergi mengikuti apa yang ada di perjalanan: sebuah bintang begitu ada file yang ditandai bintang, dan “Catatan Collab” begitu sebuah catatan di tab Collab membawa lampiran.',
+    'Dua tab lagi datang dan pergi mengikuti apa yang ada di perjalanan. Klik “Catatan Collab”, yang ada begitu sebuah catatan di tab Collab membawa lampiran: daftarnya menyimpan file-file itu dan tidak ada yang lain. Sebuah bintang bergabung ke deretan itu dengan cara yang sama, begitu ada file yang ditandai bintang.',
   'help.guide.files-filter.step.4': '“Semua” membawa kembali seluruh daftar.',
   'help.guide.files-filter.result':
     'Daftar hanya menampilkan apa yang disebut tab itu, dan angka pada setiap tab mengatakan berapa banyaknya.',
@@ -2534,7 +2534,7 @@ const help: TranslationStrings = {
   'help.guide.day-weather.result':
     'Kartu hari itu di kolom hari membawa cuaca yang sama dalam ukuran kecil di bawah nomornya, sehingga seluruh perjalanan terbaca sekali pandang.',
   'help.guide.day-weather.tip.1':
-    'Derajat dan angin mengikuti pilihan Anda di “Tampilan” dalam Pengaturan: beralihlah ke Fahrenheit dan prakiraan yang sama dibacakan dalam °F dan mph.',
+    'Derajat dan angin mengikuti “Satuan Suhu” di bawah “Tampilan” dalam Pengaturan: pilih “°F Fahrenheit” dan prakiraan yang sama dibacakan dalam °F dan mph.',
   'help.guide.day-weather.tip.2':
     'Hari tanpa perhentian berkoordinat dan tanpa hotel tempat bangun sama sekali tidak menampilkan cuaca: prakiraan selalu untuk sebuah tempat, tidak pernah untuk perjalanan.',
   'help.guide.day-weather.tip.3':
@@ -2585,7 +2585,7 @@ const help: TranslationStrings = {
   'help.guide.edit-accommodation.step.2':
     'Ikon pensil di kanannya membuka masa menginap itu lagi. Pop-up sekarang berbunyi “Edit akomodasi”.',
   'help.guide.edit-accommodation.step.3':
-    'Ubah yang Anda perlukan: hari yang dicakup, “Check-in”, “Sampai”, “Check-out”, “Konfirmasi”, atau propertinya sendiri.',
+    'Perbaiki deretan isian itu: “Check-in”, “Sampai”, “Check-out” dan “Konfirmasi”. Hari-hari di atasnya dan properti di bawahnya juga bisa diubah di sini.',
   'help.guide.edit-accommodation.step.4': 'Klik “Simpan”.',
   'help.guide.edit-accommodation.step.5':
     'Tanda X di sebelah pensil mengakhiri masa menginap itu. Ia tidak bertanya apa pun, dan pemesanan “Akomodasi” yang menyertainya ikut hilang.',
@@ -2619,7 +2619,7 @@ const help: TranslationStrings = {
   'help.ctx.trip-map.summary':
     'Bagian tengah rencana: setiap tempat perjalanan sebagai pin, rute yang menghubungkannya, dan sakelar di sepanjang tepi peta untuk satelit, untuk seluruh perjalanan sekaligus, dan untuk tempat-tempat di sekitar bagian kota yang sedang Anda lihat.',
   'help.ctx.trip-map.bullet.1':
-    'Sebuah pin adalah sebuah tempat: fotonya sendiri jika ada, jika tidak warna kategorinya dengan ikon kategori. Arahkan penunjuk ke salah satunya untuk mendapatkan kartu berisi nama, penilaian, kategori dan alamatnya.',
+    'Sebuah pin adalah sebuah tempat: fotonya sendiri jika ada, jika tidak warna kategorinya dengan ikon kategori. Arahkan penunjuk ke salah satunya untuk mendapatkan kartu berisi nama dan alamatnya, ditambah kategori dan penilaiannya bila tempat itu membawanya. Seret sebuah pin ke kartu hari untuk merencanakan tempat itu di sana.',
   'help.ctx.trip-map.bullet.2':
     'Pin yang terlalu berdekatan untuk dibedakan melipat menjadi satu gelembung gelap dengan sebuah angka. Klik gelembung itu dan peta memperbesar ke isinya.',
   'help.ctx.trip-map.bullet.3':
@@ -2636,15 +2636,15 @@ const help: TranslationStrings = {
   'help.guide.map-markers.title': 'Membaca peta',
   'help.guide.map-markers.goal': 'Ketahui apa yang dikatakan setiap pin, lencana dan gelembung di peta kepada Anda.',
   'help.guide.map-markers.step.1':
-    'Peta memuat setiap tempat perjalanan. Di tempat pin duduk terlalu berdekatan untuk dibedakan, mereka melipat menjadi satu gelembung gelap yang membawa jumlah tempat di dalamnya.',
+    'Peta memuat setiap tempat perjalanan. Di tempat pin duduk terlalu berdekatan untuk dibedakan, mereka melipat menjadi satu gelembung gelap yang membawa jumlahnya di dalamnya; klik gelembung itu dan peta memperbesar ke apa yang tadi ada di dalamnya, atau, pada perbesaran terdalam, mengipaskan pin-pin itu.',
   'help.guide.map-markers.step.2':
-    'Klik gelembung itu. Peta memperbesar ke apa yang ada di dalamnya dan pin-pin itu terpisah; pada perbesaran terdalam peta mengipaskannya alih-alih memperbesar lebih jauh.',
+    'Sebuah pin adalah foto tempat itu sendiri jika ada, jika tidak warna kategorinya dengan ikon kategori. Arahkan penunjuk ke salah satunya dan sebuah kartu memberi nama dan alamatnya, dengan kategori dan penilaiannya bila tempat itu membawanya.',
   'help.guide.map-markers.step.3':
-    'Sebuah pin adalah foto tempat itu sendiri jika ada, jika tidak warna kategorinya dengan ikon kategori. Arahkan penunjuk ke salah satunya dan sebuah kartu memberi nama, penilaian, kategori dan alamatnya.',
+    'Klik sebuah pin dan tempat itu terbuka dalam sebuah kartu di bawah peta: koordinatnya, penilaiannya, “File” miliknya, dan di sepanjang bagian bawah apa yang bisa dilakukan berikutnya dengannya, di antaranya “Navigasi”, “Sunting” dan “Hapus”, serta “Tambah ke Hari” selama sebuah hari terbuka. Klik bagian kosong peta untuk melepaskannya lagi.',
   'help.guide.map-markers.step.4':
-    'Klik sebuah pin dan tempat itu terbuka di bawah peta: koordinatnya, penilaiannya, “File” miliknya, serta “Tambah ke Hari”, “Simpan ke Koleksi”, “Navigasi”, “Sunting” dan “Hapus”. Klik bagian kosong peta untuk melepaskannya lagi.',
-  'help.guide.map-markers.step.5':
     'Buka sebuah hari di kolom hari dan perhentiannya mendapat nomor: lencana putih kecil di sudut pin adalah urutan perhentian itu pada hari tersebut. Tempat yang direncanakan pada dua hari membawa kedua nomor, disambung dengan ·. Tanpa hari terbuka tidak ada nomor, dan sudut itu membawa penilaian sebagai gantinya.',
+  'help.guide.map-markers.step.5':
+    'Seret sebuah pin dari peta ke kartu hari di kolom hari dan tempat itu direncanakan pada hari tersebut, persis seperti menyeret barisnya keluar dari daftar tempat.',
   'help.guide.map-markers.result':
     'Tidak ada yang berubah pada perjalanan: peta adalah tampilannya, dan setiap pin mengatakan tempat mana, hari mana dan dalam urutan mana.',
   'help.guide.map-markers.tip.1':
@@ -2652,7 +2652,7 @@ const help: TranslationStrings = {
   'help.guide.map-markers.tip.2':
     'Filter di atas daftar tempat juga menentukan apa yang digambar peta: pilih “Belum direncanakan” dan hanya tempat yang masih tanpa hari yang tersisa di atasnya.',
   'help.guide.map-markers.tip.3':
-    'Tidak ada tombol perbesaran pada peta ini: roda tetikus memperbesar dan memperkecil, klik ganda memperbesar satu langkah, dan menyeret memindahkannya.',
+    'Tidak ada tombol perbesaran pada peta ini: roda tetikus memperbesar dan memperkecil, klik ganda memperbesar satu langkah, dan menyeret petanya sendiri memindahkannya.',
   // map-nearby-places
   'help.guide.map-nearby-places.title': 'Menemukan tempat di sekitar Anda pada peta',
   'help.guide.map-nearby-places.goal':
@@ -2684,7 +2684,7 @@ const help: TranslationStrings = {
   'help.guide.map-add-place.step.1':
     'Klik kanan titik pada peta yang Anda maksud. Formulir tempat terbuka, berjudul “Tambah Tempat/Aktivitas”.',
   'help.guide.map-add-place.step.2':
-    '“Lintang” dan “Bujur” sudah berada pada titik itu, dan TREK mencari koordinat tersebut lalu mengisi “Alamat” dari apa yang ditemukannya di sana. Belum ada yang tertulis, jadi timpa apa pun yang keliru.',
+    '“Lintang” dan “Bujur” sudah berada pada titik itu, dan TREK mencari koordinat tersebut lalu mengisi “Alamat” dari apa yang ditemukannya di sana, dan “Nama” juga bila pencarian itu punya satu untuk diberikan. Belum ada yang tertulis, jadi timpa apa pun yang keliru.',
   'help.guide.map-add-place.step.3':
     'Beri sebuah “Nama” yang akan Anda kenali, dan selebihnya dari apa yang perlu diketahui rencana: “Deskripsi”, “Catatan”, “Kategori”, “Situs web”.',
   'help.guide.map-add-place.step.4':
@@ -2699,11 +2699,11 @@ const help: TranslationStrings = {
   'help.guide.map-satellite.title': 'Beralih ke satelit',
   'help.guide.map-satellite.goal': 'Tukar peta gambar dengan citra udara, dan kembali lagi.',
   'help.guide.map-satellite.step.1':
-    'Tombol bundar di kiri bawah peta adalah sakelar lapisan dasar. Ikonnya selalu menunjukkan lapisan yang akan dituju, dan mengarahkan penunjuk ke sana mengatakan yang mana: “Beralih ke tampilan satelit”.',
+    'Tombol bundar di kiri bawah peta adalah sakelar lapisan dasar. Ikonnya selalu menunjukkan lapisan yang akan dituju, dan mengarahkan penunjuk ke sana mengatakan yang mana: “Beralih ke tampilan satelit”. Klik tombol itu.',
   'help.guide.map-satellite.step.2':
-    'Klik tombol itu. Peta menjadi citra udara, cukup dalam untuk membedakan satu bangunan, dan tanpa kunci milik Anda sendiri.',
+    'Peta kini adalah citra udara, cukup dalam untuk membedakan satu bangunan dan tanpa kunci milik Anda sendiri. Semua yang digambar TREK tetap berada di atasnya: pin, rute hari itu, trek dan rute pemesanan.',
   'help.guide.map-satellite.step.3':
-    'Semua yang digambar TREK tetap berada di atasnya: pin, rute hari itu, trek dan rute pemesanan. Klik tombol itu lagi, yang kini berbunyi “Beralih ke tampilan peta”, untuk kembali.',
+    'Tombol itu kini berbunyi “Beralih ke tampilan peta”. Klik untuk kembali ke peta yang digambar.',
   'help.guide.map-satellite.result': 'Peta digambar lagi, dan lapisan yang Anda tinggalkan diingat pada akun Anda.',
   'help.guide.map-satellite.tip.1':
     'Pilihan itu disimpan pada akun Anda, bukan pada perjalanan, jadi setiap perjalanan terbuka seperti Anda meninggalkannya, apa pun perender peta yang Anda pakai.',
@@ -2713,13 +2713,14 @@ const help: TranslationStrings = {
   'help.guide.map-whole-trip.title': 'Melihat seluruh perjalanan dan jaraknya',
   'help.guide.map-whole-trip.goal':
     'Tukar satu hari yang terbuka dengan setiap hari perjalanan, dan baca seberapa jauh masing-masing menempuh.',
-  'help.guide.map-whole-trip.step.1': 'Tombol bundar “Tampilkan seluruh perjalanan” berada di kanan bawah peta.',
+  'help.guide.map-whole-trip.step.1':
+    'Tombol bundar “Tampilkan seluruh perjalanan” berada di kanan bawah peta. Klik tombol itu dan setiap hari perjalanan digambar sekaligus, masing-masing dalam warnanya sendiri di atas selubung putih, sehingga hari yang bertetangga tetap terpisah.',
   'help.guide.map-whole-trip.step.2':
-    'Klik tombol itu. Setiap hari perjalanan digambar sekaligus, masing-masing dalam warnanya sendiri di atas selubung putih, sehingga hari yang bertetangga tetap terpisah.',
-  'help.guide.map-whole-trip.step.3':
     'Kartu di atas tombol mendaftar hari-hari itu: sebuah titik warna, nama hari, sebuah ikon untuk setiap cara Anda menempuhnya, dan jarak yang dicakupnya. “Jarak total” ada di bagian atas.',
+  'help.guide.map-whole-trip.step.3':
+    'Klik sebuah hari di kartu untuk memilihnya, sama seperti memilihnya di kolom hari: peta membingkai hari itu, dan perhentiannya mendapat nomornya kembali.',
   'help.guide.map-whole-trip.step.4':
-    'Klik sebuah hari di kartu untuk memilihnya, sama seperti memilihnya di kolom hari. Klik tombol itu lagi, yang kini berbunyi “Sembunyikan seluruh perjalanan”, untuk kembali ke satu hari.',
+    'Tombol itu kini berbunyi “Sembunyikan seluruh perjalanan”. Tekan untuk turun kembali ke satu hari yang terbuka.',
   'help.guide.map-whole-trip.result':
     'Setiap hari perjalanan digambar dalam warnanya sendiri, dan kartu itu mengatakan apa yang ditempuh masing-masing dan berapa jumlahnya bagi perjalanan.',
   'help.guide.map-whole-trip.tip.1':
@@ -2735,9 +2736,9 @@ const help: TranslationStrings = {
   'help.guide.map-booking-routes.step.1':
     'Rute pemesanan mati sampai Anda meminta salah satunya. Pada baris sebuah pemesanan di kolom hari duduk ikon rute kecil: “Tampilkan rute pemesanan”.',
   'help.guide.map-booking-routes.step.2':
-    'Klik ikon itu. Pemesanan muncul di peta: penerbangan sebagai busur lingkaran besar, perjalanan mobil menyusuri jalan sungguhan, kereta sebagai rangkaian stasiunnya. “Dikonfirmasi” digambar padat, “Tertunda” putus-putus.',
+    'Klik ikon itu. Pemesanan muncul di peta: penerbangan sebagai busur lingkaran besar, perjalanan mobil menyusuri jalan sungguhan, kereta sebagai rangkaian stasiunnya. “Dikonfirmasi” digambar padat, “Tertunda” putus-putus, dan ujung-ujung rute adalah pil biru dengan ikon transportasinya.',
   'help.guide.map-booking-routes.step.3':
-    'Ujung-ujung rute adalah pil biru dengan ikon transportasinya. Klik salah satunya untuk membuka pemesanan di baliknya, dengan waktunya, “Kode Pemesanan” dan “Lokasi / Alamat”; “Tutup” menyimpannya lagi.',
+    'Klik sebuah pil ujung dan pemesanan di baliknya terbuka, dengan waktunya, “Kode Pemesanan” dan “Lokasi / Alamat”. “Tutup” menyimpannya lagi.',
   'help.guide.map-booking-routes.step.4':
     'Ikon rute di bilah alat di atas hari melakukannya untuk seluruh perjalanan sekaligus: “Tampilkan semua rute pemesanan” menggambar setiap pemesanan yang punya rute.',
   'help.guide.map-booking-routes.step.5':
@@ -2766,7 +2767,7 @@ const help: TranslationStrings = {
   'help.ctx.trip-collab.bullet.5':
     '“Polling” memutuskan perkara. “Polling Baru” mengajukan sebuah pertanyaan dengan sedikitnya dua pilihan; satu klik pada sebuah pilihan adalah suara Anda, “Tutup” mengakhiri pemungutan suara dan “Hapus” menyingkirkan polling itu.',
   'help.ctx.trip-collab.bullet.6':
-    '“Berikutnya” mendaftar delapan perhentian perjalanan berikutnya yang masih di depan, dengan waktunya dan orang-orang di dalamnya. Ia hanya membaca rencana harian; waktunya diatur di sana.',
+    '“Berikutnya” mendaftar perhentian perjalanan yang masih di depan, paling banyak delapan, dengan waktunya dan orang-orang di dalamnya. Ia hanya membaca rencana harian; waktunya diatur di sana.',
   // write-note
   'help.guide.write-note.title': 'Menulis catatan bersama',
   'help.guide.write-note.goal':
@@ -2857,7 +2858,7 @@ const help: TranslationStrings = {
   'help.guide.close-poll.step.2':
     'Polling yang ditutup turun ke bawah judul “Ditutup” di dasar panel, mengenakan lencana “Ditutup” dan menunjukkan hasilnya kepada semua orang, entah mereka memberi suara atau tidak. Pilihan yang menang diberi warna hijau.',
   'help.guide.close-poll.step.3':
-    '“Hapus” di sebelahnya menyingkirkan polling itu. Tidak ada yang bertanya dua kali, dan suara-suaranya ikut pergi.',
+    '“Hapus”, tempat sampah di sudut yang sama, menyingkirkan polling itu. Tidak ada yang bertanya dua kali, dan suara-suaranya ikut pergi.',
   'help.guide.close-poll.result':
     'Polling itu lenyap dari panel setiap anggota. Yang hanya Anda tutup tetap terbaca di bawah, beserta hasilnya.',
   'help.guide.close-poll.tip.1':
@@ -2868,7 +2869,7 @@ const help: TranslationStrings = {
   'help.guide.whats-next.title': 'Membaca “Berikutnya”',
   'help.guide.whats-next.goal': 'Lihat apa yang akan dilakukan kelompok berikutnya tanpa membuka rencana.',
   'help.guide.whats-next.step.1':
-    'Panel ini mendaftar delapan perhentian perjalanan berikutnya yang masih di depan, urut waktu, di bawah satu judul per hari: “Hari ini”, “Besok” atau tanggalnya.',
+    'Panel ini mendaftar perhentian perjalanan yang masih di depan, paling banyak delapan, urut waktu, di bawah satu judul per hari: “Hari ini”, “Besok” atau tanggalnya.',
   'help.guide.whats-next.step.2':
     'Di kiri sebuah baris berdiri waktunya: awalnya, “sampai”, dan akhirnya bila perhentian itu punya, atau TBD bila belum ada waktu yang diatur padanya.',
   'help.guide.whats-next.step.3':
@@ -2923,7 +2924,7 @@ const help: TranslationStrings = {
   'help.ctx.trip-lists.bullet.5':
     '“Terapkan template”, “Impor” dan “Simpan sebagai template” mengisi atau menyimpan sebuah daftar tanpa mengetiknya, dan tombol merah di sebelahnya menyebut berapa item yang tercentang lalu menyingkirkannya.',
   'help.ctx.trip-lists.bullet.6':
-    '“Tugas” punya bilah sisi sendiri: kartu kemajuan, filter “Semua”, “Tugasku”, “Terlambat” dan “Selesai”, “Urutkan” menurut “Prioritas” atau “Tenggat waktu”, dan satu baris per daftar. Klik pada sebuah tugas membukanya di panel sebelah kanan, dan “Tugas baru” membuka panel yang sama dalam keadaan kosong.',
+    '“Tugas” punya bilah sisi sendiri: kartu kemajuan, filter “Semua”, “Tugasku”, “Terlambat” dan “Selesai”, “Urutkan” menurut “Prioritas” atau “Tenggat waktu”, dan satu baris per daftar. Klik pada sebuah tugas membukanya di panel sebelah kanan, dan “Tugas baru” membuka formulir “Tugas baru” di atas bagian tengah layar.',
   // packing-categories
   'help.guide.packing-categories.title': 'Membangun daftar bawaan',
   'help.guide.packing-categories.goal':
@@ -3339,7 +3340,7 @@ const help: TranslationStrings = {
   'help.guide.expense-payers.tip.1':
     '“Siapa yang membayar?” dan Split saling bebas: Anda bisa membayar makan malam yang tidak Anda hadiri, dan ikut dibagi pada makan malam yang tidak Anda bayar.',
   'help.guide.expense-payers.tip.2':
-    'Dengan beberapa pembayar, jumlah-jumlah itu harus berjumlah totalnya. Sertakan satu orang lagi dan yang lain menata ulang diri di sekitarnya; selama belum cocok, editor mengatakan jumlah para pembayar harus berjumlah totalnya dan menolak menyimpan.',
+    'Dengan beberapa pembayar, jumlah-jumlah itu harus berjumlah totalnya. Sertakan satu orang lagi dan yang lain menata ulang diri di sekitarnya; selama belum cocok, editor menyebutkan berapa yang harus menjadi jumlahnya dan menolak menyimpan.',
   'help.guide.expense-payers.tip.3':
     'Menghapus seorang pembayar tidak menghapus pengeluarannya: jumlahnya tetap ada di “Total pengeluaran perjalanan” dan barisnya menjadi “Belum selesai”.',
   // split-expense
@@ -3456,7 +3457,7 @@ const help: TranslationStrings = {
   'help.guide.expense-from-booking.step.3':
     'Klik Create expense. Pemesanannya disimpan, formulirnya menutup, dan editor Biaya terbuka dengan judul pemesanan sebagai namanya dan jenisnya sudah dicocokkan ke sebuah kategori.',
   'help.guide.expense-from-booking.step.4':
-    'Isi jumlahnya, siapa yang membayar dan pembagiannya seperti pengeluaran mana pun, lalu simpan. Membuka lagi pemesanannya kini menunjukkannya di bawah Linked expense, dengan pensil untuk menyuntingnya dan tempat sampah untuk membuangnya.',
+    'Isi jumlahnya dan mata uangnya, siapa yang membayar dan pembagiannya seperti pengeluaran mana pun, lalu simpan. Membuka lagi pemesanannya kini menunjukkannya di bawah Linked expense, dengan pensil untuk menyuntingnya dan tempat sampah untuk membuangnya.',
   'help.guide.expense-from-booking.result':
     'Pemesanannya membawa biayanya, dan pengeluarannya adalah baris biasa di tab Biaya, dengan pembayar, pembagian dan mata uang seperti yang lain.',
   'help.guide.expense-from-booking.tip.1':
@@ -3529,7 +3530,7 @@ const help: TranslationStrings = {
   'help.guide.plan-transit.step.1':
     'Di kepala hari, klik tombol trem, “Transportasi umum”. Pencarian terbuka untuk hari itu.',
   'help.guide.plan-transit.step.2':
-    '“Dari” dan “Ke” menerima sebuah halte atau stasiun. Selama kotaknya masih kosong, perhentian hari itu sendiri yang ditawarkan; mengetik dua huruf justru mencari stasiun pada jadwal. “Tukar” di antara kedua kotak membalik arah koneksi.',
+    '“Dari” dan “Ke” menerima sebuah halte atau stasiun. Selama kotaknya masih kosong, perhentian hari itu sendiri dan penginapan perjalanan ini yang ditawarkan; mengetik dua huruf justru mencari stasiun pada jadwal. “Tukar” di antara kedua kotak membalik arah koneksi.',
   'help.guide.plan-transit.step.3':
     '“Berangkat” atau “Tiba” dengan sebuah waktu mengatakan kapan Anda ingin bepergian, dan “Rute terbaik”, “Lebih sedikit transit” atau “Lebih sedikit jalan kaki” mengatakan bagaimana jawabannya diurutkan.',
   'help.guide.plan-transit.step.4':
@@ -3610,7 +3611,7 @@ const help: TranslationStrings = {
   'help.guide.transport-on-map.step.2':
     'Rutenya digambar di peta, dengan penanda berbentuk pil di setiap ujung yang membawa ikon transportasi itu.',
   'help.guide.transport-on-map.step.3':
-    'Klik penanda ujung untuk membaca pemesanan tanpa meninggalkan peta: waktunya, “Maskapai” dan “No. Penerbangan”, “Kode Pemesanan” dan catatannya. “Tutup” menyingkirkan lembarannya.',
+    'Klik penanda ujung untuk membaca pemesanan tanpa meninggalkan peta: waktunya, “Maskapai” dan “No. Penerbangan”, “Kode Pemesanan” dan alamatnya. “Tutup” menyingkirkan lembarannya.',
   'help.guide.transport-on-map.step.4':
     'Ikon rute di bilah alat di atas hari-hari melakukannya untuk seluruh perjalanan sekaligus: “Tampilkan semua rute pemesanan”, dan “Sembunyikan semua rute pemesanan” untuk membersihkannya lagi.',
   'help.guide.transport-on-map.step.5':
@@ -3679,7 +3680,7 @@ const help: TranslationStrings = {
   'help.guide.roadtrip-stops.step.6':
     'Atur lamanya dengan penggeser, dengan tombol minus dan plus, atau dengan salah satu nilai siap pakai, perhatikan apa yang terjadi pada “Tiba” dan “Berangkat”, lalu klik “Simpan”.',
   'help.guide.roadtrip-stops.result':
-    'Perhentian itu memakai ikon jenisnya alih-alih nomor, dan setiap waktu tiba setelah sebuah singgah ikut bergeser.',
+    'Perhentian yang Anda beri waktu membawa jamnya pada lencana “Singgah” miliknya dan setiap waktu tiba sesudahnya ikut bergeser, sedangkan yang Anda kirim ke sebuah jenis lalu kembali menjadi tujuan bernomor lagi.',
   'help.guide.roadtrip-stops.tip.1':
     'Lama singgah melekat pada tempat, bukan pada satu kunjungan: tempat yang direncanakan pada dua hari disinggahi sama lamanya pada keduanya.',
   'help.guide.roadtrip-stops.tip.2':
@@ -3737,7 +3738,7 @@ const help: TranslationStrings = {
   'help.guide.roadtrip-alternatives.step.2':
     '“Rute untuk ruas ini” terbuka di atas peta, satu entri per jalan, masing-masing tergambar di peta dengan warnanya sendiri.',
   'help.guide.roadtrip-alternatives.step.3':
-    'Arahkan kursor ke sebuah entri untuk menyalakan jalan itu. “Saat ini” dan “Tercepat” menyebut mana yang mana, dan yang lain menyebut berapa lebih cepat atau lebih lambatnya.',
+    'Arahkan kursor ke sebuah entri untuk menyalakan jalan itu. “Saat ini” adalah jalan yang sedang ditempuh dan “Tercepat” yang paling cepat; yang lain menyebut berapa lebih lambatnya, atau kelas jalan mana yang mereka tinggalkan.',
   'help.guide.roadtrip-alternatives.step.4':
     'Klik sebuah entri untuk menempuh jalan itu, atau “Tutup” untuk tetap di jalan yang sekarang.',
   'help.guide.roadtrip-alternatives.result':
@@ -3818,15 +3819,15 @@ const help: TranslationStrings = {
     'Taruh perjalanan sebuah hari pada rute indah yang Anda impor sebagai jalur GPX atau KML.',
   'help.guide.roadtrip-track.step.1': 'Klik lencana “Jalur” pada kepala sebuah hari. Dialognya terbuka pada hari itu.',
   'help.guide.roadtrip-track.step.2':
-    'Pilih sebuah jalur. Masing-masing menyebutkan panjangnya dan seberapa jauh letaknya dari hari ini, yang terdekat lebih dulu.',
+    'Pilih sebuah jalur. Masing-masing menyebutkan panjangnya dan apakah ia berjalan sepanjang hari ini atau seberapa jauh letaknya, yang terdekat lebih dulu.',
   'help.guide.roadtrip-track.step.3':
     'Klik “Ikuti jalur ini”. TREK menjatuhkan titik lintas di tempat perjalanan paling menyimpang dari jalur, lalu merutekan lagi, putaran demi putaran.',
   'help.guide.roadtrip-track.step.4':
-    'Ia menyebutkan berapa titik lintas yang ditempatkan dan seberapa dekat perjalanan sekarang bertahan. Tombol di sampingnya membuang titik lintas itu lagi dan mengembalikan hari itu kepada mesin rute; menutup dialog mempertahankan jalurnya.',
+    'Ia menyebutkan berapa titik lintas yang ditempatkan dan seberapa dekat perjalanan sekarang bertahan. Tombol di bawahnya membuang titik lintas itu lagi dan mengembalikan hari itu kepada mesin rute; menutup dialog mempertahankan jalurnya.',
   'help.guide.roadtrip-track.result':
-    'Perjalanan hari itu mengikuti jalur alih-alih jalan yang dipilih mesin rute, dan lencana “Jalur” menyebutkan jalur mana yang diikuti.',
+    'Perjalanan hari itu mengikuti jalur alih-alih jalan yang dipilih mesin rute, dan lencana “Jalur” miliknya menyala serta menyebut jalur itu saat Anda mengarahkan penunjuk ke sana.',
   'help.guide.roadtrip-track.tip.1':
-    'Impor berkasnya di bawah “Hari” dengan “Impor file”, dengan “Trek (dengan geometri jalur)” atau “Jalur (LineStrings)” dicentang. Sampai ada jalur di perjalanan ini, lencana itu tidak punya apa-apa untuk ditawarkan.',
+    'Impor berkasnya di bawah “Hari” dengan “Impor file”, dengan “Rute” atau “Trek (dengan geometri jalur)” dicentang. Sampai perjalanan ini memuat satu, tidak ada hari yang membawa lencana itu.',
   'help.guide.roadtrip-track.tip.2':
     'Mengikuti jalur menggantikan titik lintas yang sudah dimiliki ruas-ruas hari itu, jadi bentuklah sebuah ruas dengan tangan setelah jalur, bukan sebelumnya.',
 };

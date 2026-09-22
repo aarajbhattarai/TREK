@@ -2156,7 +2156,7 @@ const help: TranslationStrings = {
   'help.ctx.trip-place.bullet.2':
     'De kop draagt de ronde afbeelding, de naam, de categorie, het adres en de coördinaten. Klik op de afbeelding om er een van jezelf te nemen, dubbelklik op de naam om de plek ter plekke te hernoemen, en de X rechts sluit de details.',
   'help.ctx.trip-place.bullet.3':
-    'Daaronder: de sterren die elke reiziger de plek gaf, de prijs als hij er een heeft, de beschrijving en de notities, en Notities voor deze dag als de stop die draagt.',
+    'Daaronder: de prijs als hij er een heeft, de sterren die elke reiziger de plek gaf, de beschrijving en de notities, en Notities voor deze dag als de stop die draagt.',
   'help.ctx.trip-place.bullet.4':
     'Openingstijden, Routekleur, Routegegevens en Bestanden volgen, voor zover ze van toepassing zijn. Bestanden neemt alles uit je mappen en toont ook wat aan de boeking van deze stop hangt.',
   'help.ctx.trip-place.bullet.5':
@@ -2259,7 +2259,7 @@ const help: TranslationStrings = {
   'help.guide.place-participants.tip.1':
     'Deelnemers verschijnt alleen met een geselecteerde stop, kies de plek dus in de dag en niet in de plekkenkolom, en alleen op een reis met meer dan één reiziger.',
   'help.guide.place-participants.tip.2':
-    'Niemand gekozen betekent dat iedereen meegaat. De laatste eruit halen zet iedereen terug.',
+    'Niemand gekozen betekent dat iedereen meegaat, en daarom kan de laatste reiziger die op een stop over is er niet uit worden gehaald.',
   'help.guide.place-participants.tip.3':
     'Een gast, die geen eigen account heeft, kan net als ieder ander deelnemer zijn.',
   // place-booking
@@ -2325,7 +2325,7 @@ const help: TranslationStrings = {
   'help.guide.place-to-collection.step.3': 'Klik op de lijst. De plek zit er meteen in.',
   'help.guide.place-to-collection.step.4': 'Sluit, en de knop in de details leest Opgeslagen.',
   'help.guide.place-to-collection.result':
-    'De plek zit in je lijst met zijn afbeelding, zijn notities en zijn sterren, klaar voor de volgende reis.',
+    'De plek zit in je lijst met zijn afbeelding, zijn notities en zijn adres, klaar voor de volgende reis.',
   'help.guide.place-to-collection.tip.1':
     'De knop is er alleen zolang de add-on Collecties aan staat, die de beheerder onder Add-ons inschakelt.',
   'help.guide.place-to-collection.tip.2':
@@ -2388,7 +2388,7 @@ const help: TranslationStrings = {
   'help.guide.files-upload.tip.2':
     'Een afbeelding op het klembord komt met Ctrl+V in de lijst, zodat een schermafbeelding van een boeking nooit eerst hoeft te worden opgeslagen.',
   'help.guide.files-upload.tip.3':
-    'Uploaden vraagt het recht Bestanden uploaden; zonder dat recht is het vak er helemaal niet. Een type dat niet op de lijst staat, of een bestand boven 50 MB, wordt met een melding geweigerd en er wordt niets geüpload.',
+    'Uploaden vraagt het recht Bestanden uploaden; zonder dat recht is het vak er helemaal niet. Een type dat niet op de lijst staat wordt met een melding geweigerd en er wordt niets geüpload. Een bestand boven 50 MB laat het vak zelf vallen, nog voordat er iets wordt verstuurd.',
   // files-link
   'help.guide.files-link.title': 'Een document aan een plek of een boeking binden',
   'help.guide.files-link.goal':
@@ -2404,7 +2404,7 @@ const help: TranslationStrings = {
   'help.guide.files-link.step.5':
     'Sluit met de ×. Een opslaanknop is er hier niet: elke klik is geschreven op het moment dat je hem maakte.',
   'help.guide.files-link.result':
-    'De rij draagt de notitie en één label per koppeling, Dagplan en de naam van de plek, Transport en de naam van de vlucht, en het document hangt ook aan de plek en aan de boeking.',
+    'De rij draagt de notitie en één label per koppeling, Dagplan en de naam van de plek, Transport en de naam van de vlucht, en het document hangt ook aan de plek en aan de vlucht.',
   'help.guide.files-link.tip.1':
     'Een bestand kan meerdere koppelingen tegelijk dragen, zodat dezelfde bevestiging bij het hotel hoort en bij de nacht die hij dekt.',
   'help.guide.files-link.tip.2':
@@ -2434,7 +2434,7 @@ const help: TranslationStrings = {
     "De tabbladen boven de lijst zijn Alle, PDF's, Afbeeldingen en Documenten, elk met het aantal bestanden erachter.",
   'help.guide.files-filter.step.2': "Klik op PDF's: de lijst houdt de PDF-bestanden over en niets anders.",
   'help.guide.files-filter.step.3':
-    'Nog twee tabbladen komen en gaan met wat er in de reis zit: een ster zodra een bestand een ster heeft, en Collab-notities zodra een notitie in het tabblad Samenwerking een bijlage draagt.',
+    'Nog twee tabbladen komen en gaan met wat er in de reis zit. Klik op Collab-notities, dat er is zodra een notitie in het tabblad Samenwerking een bijlage draagt: de lijst houdt die bestanden en niets anders. Een ster voegt zich op dezelfde manier bij de rij, zodra een bestand een ster heeft.',
   'help.guide.files-filter.step.4': 'Alle haalt de hele lijst terug.',
   'help.guide.files-filter.result':
     'De lijst toont alleen wat het tabblad noemt, en het aantal op elk tabblad zegt hoeveel dat er zijn.',
@@ -2537,7 +2537,7 @@ const help: TranslationStrings = {
   'help.guide.day-weather.result':
     'De dagkaart in de dagenkolom draagt hetzelfde weer klein onder haar nummer, zodat de hele reis in één oogopslag te lezen is.',
   'help.guide.day-weather.tip.1':
-    'Graden en wind volgen je keuze onder Weergave in Instellingen: zet om naar Fahrenheit en dezelfde voorspelling wordt in °F en mph gegeven.',
+    'Graden en wind volgen Temperatuureenheid onder Weergave in Instellingen: kies °F Fahrenheit en dezelfde voorspelling wordt in °F en mph gegeven.',
   'help.guide.day-weather.tip.2':
     'Een dag zonder gelokaliseerde stop en zonder hotel om in wakker te worden toont helemaal geen weer: de voorspelling geldt altijd voor een plek, nooit voor de reis.',
   'help.guide.day-weather.tip.3':
@@ -2588,7 +2588,7 @@ const help: TranslationStrings = {
   'help.guide.edit-accommodation.step.2':
     'Het potlood aan de rechterkant ervan opent het verblijf opnieuw. Het venster heet nu Accommodatie bewerken.',
   'help.guide.edit-accommodation.step.3':
-    'Wijzig wat nodig is: de dagen die het beslaat, Inchecken, Tot, Uitchecken, Bevestiging, of het pand zelf.',
+    'Verbeter de rij velden: Inchecken, Tot, Uitchecken en Bevestiging. De dagen erboven en het pand eronder zijn hier ook te wijzigen.',
   'help.guide.edit-accommodation.step.4': 'Klik op Opslaan.',
   'help.guide.edit-accommodation.step.5':
     'Het kruisje naast het potlood beëindigt het verblijf. Het vraagt niets, en de boeking van het type Accommodatie die erbij hoort gaat mee.',
@@ -2621,7 +2621,7 @@ const help: TranslationStrings = {
   'help.ctx.trip-map.summary':
     'Het midden van het plan: elke plek van de reis als speld, de routes die ze verbinden, en de schakelaars langs de randen van de kaart voor satelliet, voor de hele reis in één keer en voor de plekken rond de buurt waar je naar kijkt.',
   'help.ctx.trip-map.bullet.1':
-    'Een speld is een plek: de eigen foto als die er is, anders de kleur van zijn categorie met het categorie-icoon. Houd de aanwijzer erop voor een kaartje met zijn naam, zijn beoordeling, zijn categorie en zijn adres.',
+    'Een speld is een plek: de eigen foto als die er is, anders de kleur van zijn categorie met het categorie-icoon. Houd de aanwijzer erop voor een kaartje met zijn naam en zijn adres, plus zijn categorie en zijn beoordeling waar de plek die draagt. Sleep een speld op een dagkaart om de plek daar in te plannen.',
   'help.ctx.trip-map.bullet.2':
     'Spelden die te dicht bij elkaar zitten om uit elkaar te houden, vouwen samen tot één donkere bel met een aantal. Klik op de bel en de kaart zoomt in op wat erin zit.',
   'help.ctx.trip-map.bullet.3':
@@ -2638,15 +2638,15 @@ const help: TranslationStrings = {
   'help.guide.map-markers.title': 'De kaart lezen',
   'help.guide.map-markers.goal': 'Weten wat elke speld, badge en bel op de kaart je vertelt.',
   'help.guide.map-markers.step.1':
-    'De kaart draagt elke plek van de reis. Waar spelden te dicht bij elkaar zitten om uit elkaar te houden, vouwen ze samen tot één donkere bel met het aantal plekken dat erin zit.',
+    'De kaart draagt elke plek van de reis. Waar spelden te dicht bij elkaar zitten om uit elkaar te houden, vouwen ze samen tot één donkere bel met het aantal dat erin zit; klik op de bel en de kaart zoomt in op wat erin zat, of waaiert op het diepste zoomniveau de spelden uit.',
   'help.guide.map-markers.step.2':
-    'Klik op de bel. De kaart zoomt in op wat erin zat en de spelden gaan uit elkaar; op het diepste zoomniveau waaiert hij ze uit in plaats van verder in te zoomen.',
+    'Een speld is de eigen foto van de plek als die er is, anders de kleur van zijn categorie met het categorie-icoon. Houd de aanwijzer erop en een kaartje geeft zijn naam en zijn adres, met zijn categorie en zijn beoordeling waar de plek die draagt.',
   'help.guide.map-markers.step.3':
-    'Een speld is de eigen foto van de plek als die er is, anders de kleur van zijn categorie met het categorie-icoon. Houd de aanwijzer erop en een kaartje geeft zijn naam, zijn beoordeling, zijn categorie en zijn adres.',
+    'Klik op een speld en de plek gaat open in een kaartje onder de kaart: zijn coördinaten, zijn beoordeling, zijn bestanden, en onderaan wat je er daarna mee kunt doen, waaronder Navigatie, Bewerken en Verwijderen, met Toevoegen aan dag zolang er een dag open is. Klik op een leeg stuk van de kaart om hem weer los te laten.',
   'help.guide.map-markers.step.4':
-    'Klik op een speld en de plek gaat open onder de kaart: zijn coördinaten, zijn beoordeling, zijn bestanden, en Toevoegen aan dag, In collectie opslaan, Navigatie, Bewerken en Verwijderen. Klik op een leeg stuk van de kaart om hem weer los te laten.',
-  'help.guide.map-markers.step.5':
     'Open een dag in de dagenkolom en zijn stops krijgen nummers: de kleine witte badge in de hoek van een speld is de plaats van die stop in de dag. Een plek die op twee dagen is gepland draagt beide nummers, verbonden door ·. Zonder open dag zijn er geen nummers, en draagt de hoek in plaats daarvan de beoordeling.',
+  'help.guide.map-markers.step.5':
+    'Sleep een speld van de kaart op een dagkaart in de dagenkolom en de plek is op die dag ingepland, precies zoals wanneer je zijn rij uit de plekkenlijst sleept.',
   'help.guide.map-markers.result':
     'Aan de reis is niets veranderd: de kaart is er een weergave van, en elke speld zegt welke plek, welke dag en in welke volgorde.',
   'help.guide.map-markers.tip.1':
@@ -2654,7 +2654,7 @@ const help: TranslationStrings = {
   'help.guide.map-markers.tip.2':
     'Het filter boven de plekkenlijst bepaalt ook wat de kaart tekent: kies Ongepland en alleen de plekken die nog geen dag hebben blijven erop staan.',
   'help.guide.map-markers.tip.3':
-    'Deze kaart heeft geen zoomknoppen: het wiel zoomt, een dubbele klik zoomt een stap in, en slepen verschuift hem.',
+    'Deze kaart heeft geen zoomknoppen: het wiel zoomt, een dubbele klik zoomt een stap in, en de kaart zelf slepen verschuift hem.',
   // map-nearby-places
   'help.guide.map-nearby-places.title': 'Plekken in je omgeving op de kaart vinden',
   'help.guide.map-nearby-places.goal':
@@ -2685,7 +2685,7 @@ const help: TranslationStrings = {
   'help.guide.map-add-place.step.1':
     'Klik met rechts op het punt op de kaart dat je bedoelt. Het plekformulier gaat open, met de titel Plaats/activiteit toevoegen.',
   'help.guide.map-add-place.step.2':
-    'Breedtegraad en Lengtegraad staan al op dat punt, en TREK zoekt de coördinaten op en vult Adres met wat het daar vindt. Er is nog niets opgeslagen, dus overschrijf wat niet klopt.',
+    'Breedtegraad en Lengtegraad staan al op dat punt, en TREK zoekt de coördinaten op en vult Adres met wat het daar vindt, en Naam ook waar het opzoeken er een oplevert. Er is nog niets opgeslagen, dus overschrijf wat niet klopt.',
   'help.guide.map-add-place.step.3':
     'Geef hem een Naam die je herkent, en de rest van wat het plan moet weten: Beschrijving, Notities, Categorie, Website.',
   'help.guide.map-add-place.step.4':
@@ -2700,11 +2700,11 @@ const help: TranslationStrings = {
   'help.guide.map-satellite.title': 'Overschakelen naar satelliet',
   'help.guide.map-satellite.goal': 'Ruil de getekende kaart in voor luchtbeelden, en terug.',
   'help.guide.map-satellite.step.1':
-    'De ronde knop linksonder op de kaart is de schakelaar voor de onderlaag. Zijn icoon toont altijd de laag waar hij heen zou gaan, en erop zweven zegt welke: Overschakelen naar satellietweergave.',
+    'De ronde knop linksonder op de kaart is de schakelaar voor de onderlaag. Zijn icoon toont altijd de laag waar hij heen zou gaan, en erop zweven zegt welke: Overschakelen naar satellietweergave. Klik erop.',
   'help.guide.map-satellite.step.2':
-    'Klik erop. De kaart wordt luchtbeeld, diep genoeg om een enkel gebouw te onderscheiden, en zonder een eigen sleutel.',
+    'De kaart is nu luchtbeeld, diep genoeg om een enkel gebouw te onderscheiden en zonder een eigen sleutel. Alles wat TREK tekent blijft erbovenop staan: de spelden, de route van de dag, de tracks en de boekingsroutes.',
   'help.guide.map-satellite.step.3':
-    'Alles wat TREK tekent blijft erbovenop staan: de spelden, de route van de dag, de tracks en de boekingsroutes. Klik nog eens op de knop, die nu Overschakelen naar kaartweergave zegt, om terug te gaan.',
+    'De knop zegt nu Overschakelen naar kaartweergave. Klik erop om terug te gaan naar de getekende kaart.',
   'help.guide.map-satellite.result':
     'De kaart is weer getekend, en de laag waarop je hem hebt achtergelaten wordt op je account onthouden.',
   'help.guide.map-satellite.tip.1':
@@ -2715,13 +2715,14 @@ const help: TranslationStrings = {
   'help.guide.map-whole-trip.title': 'De hele reis en zijn afstanden zien',
   'help.guide.map-whole-trip.goal':
     'Ruil de ene open dag in voor elke reisdag van de reis, en lees hoe ver elke dag gaat.',
-  'help.guide.map-whole-trip.step.1': 'De ronde knop Hele reis tonen zit rechtsonder op de kaart.',
+  'help.guide.map-whole-trip.step.1':
+    'De ronde knop Hele reis tonen zit rechtsonder op de kaart. Klik erop en elke reisdag van de reis wordt in één keer getekend, elk in zijn eigen kleur over een witte omlijning, zodat dagen naast elkaar uit elkaar blijven.',
   'help.guide.map-whole-trip.step.2':
-    'Klik erop. Elke reisdag van de reis wordt in één keer getekend, elk in zijn eigen kleur over een witte omlijning, zodat dagen naast elkaar uit elkaar blijven.',
-  'help.guide.map-whole-trip.step.3':
     'Het kaartje boven de knop somt die dagen op: een gekleurde stip, de naam van de dag, een icoon voor elke manier waarop je hem aflegt, en de afstand die hij beslaat. Totale afstand staat bovenaan.',
+  'help.guide.map-whole-trip.step.3':
+    'Klik op een dag in het kaartje om hem te kiezen, net als kiezen in de dagenkolom: de kaart brengt die dag in beeld, en zijn stops krijgen hun nummers terug.',
   'help.guide.map-whole-trip.step.4':
-    'Klik op een dag in het kaartje om hem te kiezen, net als kiezen in de dagenkolom. Klik nog eens op de knop, die nu Hele reis verbergen zegt, om terug te gaan naar die ene dag.',
+    'De knop zegt nu Hele reis verbergen. Druk erop om terug te vallen op die ene open dag.',
   'help.guide.map-whole-trip.result':
     'Elke reisdag is in zijn eigen kleur getekend, en het kaartje zegt wat elke dag beslaat en waar de reis op uitkomt.',
   'help.guide.map-whole-trip.tip.1':
@@ -2737,9 +2738,9 @@ const help: TranslationStrings = {
   'help.guide.map-booking-routes.step.1':
     'Boekingsroutes staan uit tot je erom vraagt. Op de rij van een boeking in de dagenkolom zit een klein route-icoon: Boekingsroutes tonen.',
   'help.guide.map-booking-routes.step.2':
-    'Klik erop. De boeking verschijnt op de kaart: een vlucht als een grootcirkelboog, een rit langs de echte wegen, een trein als de keten van zijn stations. Bevestigd wordt doorgetrokken getekend, In behandeling gestreept.',
+    'Klik erop en de boeking verschijnt op de kaart: een vlucht als een grootcirkelboog, een rit langs de echte wegen, een trein als de keten van zijn stations. Bevestigd wordt doorgetrokken getekend, In behandeling gestreept, en de uiteinden van de route zijn blauwe pillen met het icoon van het vervoer.',
   'help.guide.map-booking-routes.step.3':
-    'De uiteinden van de route zijn blauwe pillen met het icoon van het vervoer. Klik er een aan om de boeking erachter te openen, met de tijden, de Boekingscode en Locatie / Adres; Sluiten bergt hem weer op.',
+    'Klik op een eindpil en de boeking erachter gaat open, met de tijden, de referentie en waar hij begint. Sluiten bergt hem weer op.',
   'help.guide.map-booking-routes.step.4':
     'Het route-icoon in de werkbalk boven de dagen doet de hele reis in één keer: Alle boekingsroutes tonen tekent elke boeking die er een heeft.',
   'help.guide.map-booking-routes.step.5':
@@ -2768,7 +2769,7 @@ const help: TranslationStrings = {
   'help.ctx.trip-collab.bullet.5':
     'Polls beslissen dingen. Nieuwe poll stelt een vraag met minstens twee opties; een klik op een optie is jouw stem, Sluiten beëindigt de stemming en Verwijderen haalt de poll weg.',
   'help.ctx.trip-collab.bullet.6':
-    'Wat komt er toont de volgende acht stops van de reis die nog voor je liggen, met hun tijden en de mensen die erbij zijn. Het leest alleen het dagplan; de tijden worden daar gezet.',
+    'Wat komt er toont de stops van de reis die nog voor je liggen, tot acht ervan, met hun tijden en de mensen die erbij zijn. Het leest alleen het dagplan; de tijden worden daar gezet.',
   // write-note
   'help.guide.write-note.title': 'Een gedeelde notitie schrijven',
   'help.guide.write-note.goal':
@@ -2858,7 +2859,7 @@ const help: TranslationStrings = {
   'help.guide.close-poll.step.2':
     'Een gesloten poll zakt onder de kop Gesloten onderaan het paneel, draagt een badge Gesloten en toont iedereen het resultaat, of ze nu gestemd hebben of niet. De winnende optie krijgt een groene tint.',
   'help.guide.close-poll.step.3':
-    'Verwijderen ernaast haalt de poll weg. Niets vraagt het twee keer, en de stemmen gaan mee.',
+    'Verwijderen, de prullenbak in dezelfde hoek, haalt de poll weg. Niets vraagt het twee keer, en de stemmen gaan mee.',
   'help.guide.close-poll.result':
     'De poll is uit het paneel van elk lid verdwenen. Een die je alleen gesloten hebt, blijft onderaan leesbaar, met zijn resultaat.',
   'help.guide.close-poll.tip.1':
@@ -2869,7 +2870,7 @@ const help: TranslationStrings = {
   'help.guide.whats-next.title': 'Wat komt er lezen',
   'help.guide.whats-next.goal': 'Zie wat de groep hierna doet zonder het plan te openen.',
   'help.guide.whats-next.step.1':
-    'Het paneel toont de volgende acht stops van de reis die nog voor je liggen, op tijd gesorteerd, onder een kop per dag: Vandaag, Morgen of de datum.',
+    'Het paneel toont de stops van de reis die nog voor je liggen, tot acht ervan, op tijd gesorteerd, onder een kop per dag: Vandaag, Morgen of de datum.',
   'help.guide.whats-next.step.2':
     'Links in een rij staat de tijd: het begin, tot, en het einde als de stop dat heeft, of TBD als er nog geen tijd op gezet is.',
   'help.guide.whats-next.step.3':
@@ -2924,7 +2925,7 @@ const help: TranslationStrings = {
   'help.ctx.trip-lists.bullet.5':
     'Sjabloon toepassen, Importeren en Opslaan als sjabloon vullen of bewaren een lijst zonder hem uit te typen, en de rode knop ernaast noemt hoeveel items aangevinkt zijn en ruimt ze op.',
   'help.ctx.trip-lists.bullet.6':
-    'Taken heeft een eigen zijbalk: de voortgangskaart, de filters Alles, Mijn taken, Verlopen en Klaar, Sorteren op Prioriteit of Vervaldatum, en één rij per lijst. Een klik op een taak opent hem in het paneel rechts, en Nieuwe taak opent datzelfde paneel leeg.',
+    'Taken heeft een eigen zijbalk: de voortgangskaart, de filters Alles, Mijn taken, Verlopen en Klaar, Sorteren op Prioriteit of Vervaldatum, en één rij per lijst. Een klik op een taak opent hem in het paneel rechts, en Nieuwe taak opent het formulier Nieuwe taak over het midden van het scherm.',
   // packing-categories
   'help.guide.packing-categories.title': 'De inpaklijst opbouwen',
   'help.guide.packing-categories.goal':
@@ -3198,7 +3199,7 @@ const help: TranslationStrings = {
   'help.guide.booking-cost.step.1':
     'Open de boeking en ga naar de voet van het formulier. Onder Kosten staat Kostenpost aanmaken, met de notitie Boeking opslaan en daarna de Onkosteneditor openen.',
   'help.guide.booking-cost.step.2':
-    'Klik op Kostenpost aanmaken. De boeking wordt opgeslagen en de Kosten-editor gaat erboven open.',
+    'Klik op Kostenpost aanmaken. De boeking wordt opgeslagen, het formulier gaat dicht en de Kosten-editor gaat open.',
   'help.guide.booking-cost.step.3':
     'Waar was het voor? is al de titel van de boeking. Vul het Totaalbedrag in en controleer de Valuta en de Dag.',
   'help.guide.booking-cost.step.4':
@@ -3336,7 +3337,7 @@ const help: TranslationStrings = {
   'help.guide.expense-payers.tip.1':
     'Wie heeft betaald? en Split staan los van elkaar: je kunt een diner betalen waar je niet bij was, en meegeteld worden in de verdeling van een diner dat je niet hebt betaald.',
   'help.guide.expense-payers.tip.2':
-    'Met meerdere betalers moeten de bedragen optellen tot het totaal. Voeg er nog een toe en de anderen schikken zich eromheen; zolang ze niet kloppen, zegt de editor De bedragen van de betalers moeten optellen tot het totaal en slaat niet op.',
+    'Met meerdere betalers moeten de bedragen optellen tot het totaal. Voeg er nog een toe en de anderen schikken zich eromheen; zolang ze niet kloppen, zegt de editor waartoe ze moeten optellen en slaat niet op.',
   'help.guide.expense-payers.tip.3':
     'Een betaler verwijderen verwijdert de uitgave niet: het bedrag blijft in Totale reisuitgaven en de rij wordt Onvoltooid.',
   // split-expense
@@ -3454,7 +3455,7 @@ const help: TranslationStrings = {
   'help.guide.expense-from-booking.step.3':
     'Klik op Kostenpost aanmaken. De boeking wordt opgeslagen, het formulier gaat dicht, en de Onkosteneditor gaat open met de titel van de boeking als naam en zijn type al gekoppeld aan een categorie.',
   'help.guide.expense-from-booking.step.4':
-    'Vul het bedrag, wie heeft betaald en de verdeling in zoals bij elke uitgave, en sla op. Als je de boeking opnieuw opent, staat hij onder Gekoppelde kostenpost, met een potlood om hem te bewerken en een prullenbak om hem te verwijderen.',
+    'Vul het bedrag en de valuta ervan, wie heeft betaald en de verdeling in zoals bij elke uitgave, en sla op. Als je de boeking opnieuw opent, staat hij onder Gekoppelde kostenpost, met een potlood om hem te bewerken en een prullenbak om hem te verwijderen.',
   'help.guide.expense-from-booking.result':
     'De boeking draagt zijn kosten, en de uitgave is een gewone rij op het tabblad Onkosten, met een betaler, een verdeling en een valuta zoals elke andere.',
   'help.guide.expense-from-booking.tip.1':
@@ -3527,7 +3528,7 @@ const help: TranslationStrings = {
   'help.guide.plan-transit.step.1':
     'Klik in de dagkop op de tramknop, Openbaar vervoer. Het zoeken gaat open voor die dag.',
   'help.guide.plan-transit.step.2':
-    'Van en Naar nemen een halte of een station. Zolang het veld leeg is worden de eigen stops van de dag aangeboden; vanaf twee letters worden in plaats daarvan de stations van de dienstregeling doorzocht. Wisselen tussen de twee velden draait de verbinding om.',
+    'Van en Naar nemen een halte of een station. Zolang het veld leeg is worden de eigen stops van de dag en de accommodaties van de reis aangeboden; vanaf twee letters worden in plaats daarvan de stations van de dienstregeling doorzocht. Wisselen tussen de twee velden draait de verbinding om.',
   'help.guide.plan-transit.step.3':
     'Vertrek of Aankomst met een tijd zegt wanneer je wilt reizen, en Beste route, Minder overstappen of Minder lopen zegt hoe de antwoorden geordend moeten worden.',
   'help.guide.plan-transit.step.4':
@@ -3606,7 +3607,7 @@ const help: TranslationStrings = {
   'help.guide.transport-on-map.step.2':
     'De route wordt op de kaart getekend, met aan elk uiteinde een pilvormige markering die het icoon van het transport draagt.',
   'help.guide.transport-on-map.step.3':
-    'Klik op een eindmarkering om de boeking te lezen zonder de kaart te verlaten: de tijden, de Luchtvaartmaatschappij en het Vluchtnr., de Boekingscode en de notities. Sluiten ruimt het blad op.',
+    'Klik op een eindmarkering om de boeking te lezen zonder de kaart te verlaten: de tijden, de Luchtvaartmaatschappij en het Vluchtnr., de Boekingscode en het adres. Sluiten ruimt het blad op.',
   'help.guide.transport-on-map.step.4':
     'Het route-icoon in de balk boven de dagen doet de hele reis in één keer: Alle boekingsroutes tonen, en Alle boekingsroutes verbergen om ze weer op te ruimen.',
   'help.guide.transport-on-map.step.5':
@@ -3671,11 +3672,11 @@ const help: TranslationStrings = {
   'help.guide.roadtrip-stops.step.6':
     'Stel de lengte in met de schuif, met de knoppen min en plus of met een van de voorkeuzes, kijk wat Aankomst en Vertrek doen, en klik dan op Opslaan.',
   'help.guide.roadtrip-stops.result':
-    'De stop draagt het pictogram van zijn soort in plaats van een nummer, en elke aankomst na een verblijf is meegeschoven.',
+    'De stop waarvan je de tijd zette draagt het uur op zijn badge Duur en elke aankomst erna is meegeschoven, en die je naar een soort en weer terug stuurde is weer een genummerde bestemming.',
   'help.guide.roadtrip-stops.tip.1':
     'Een verblijf hoort bij de plek, niet bij één bezoek: op een plek die op twee dagen gepland staat, sta je op beide even lang.',
   'help.guide.roadtrip-stops.tip.2':
-    'Stops onderweg verschijnen ook onder Dagen. Ook in Dagen tonen, onder Servicestops in de Rij-instellingen, houdt ze alleen in Roadtrip.',
+    'Stops onderweg verschijnen ook onder Dagen. Ook in Dagen tonen uitzetten, onder Servicestops in de Rij-instellingen, houdt ze alleen in Roadtrip.',
   'help.guide.roadtrip-stops.tip.3': 'Geen verblijf, in hetzelfde venster, haalt die tijd er weer af.',
   // roadtrip-corridor
   'help.guide.roadtrip-corridor.title': 'Tanken, eten en een bed vinden langs de route',
@@ -3728,7 +3729,7 @@ const help: TranslationStrings = {
   'help.guide.roadtrip-alternatives.step.2':
     'Routes voor dit traject gaat over de kaart open, één regel per weg, elk in een eigen kleur op de kaart getekend.',
   'help.guide.roadtrip-alternatives.step.3':
-    'Ga met de muis over een regel om die weg te laten oplichten. Huidig en Snelste zeggen welke welke is, en de andere zeggen hoeveel sneller of langzamer ze zijn.',
+    'Ga met de muis over een regel om die weg te laten oplichten. Huidig is de weg waarover wordt gereden en Snelste de snelste; de andere zeggen hoeveel langzamer ze zijn, of welke wegklasse ze weglaten.',
   'help.guide.roadtrip-alternatives.step.4':
     'Klik op een regel om zo te rijden, of op Sluiten om de weg te houden waarop je zit.',
   'help.guide.roadtrip-alternatives.result':
@@ -3808,15 +3809,15 @@ const help: TranslationStrings = {
   'help.guide.roadtrip-track.step.1':
     'Klik op de badge Track in de koptekst van een dag. Het venster gaat open op die dag.',
   'help.guide.roadtrip-track.step.2':
-    'Kies een track. Elke track zegt hoe lang hij is en hoe ver hij van deze dag af ligt, de dichtstbijzijnde eerst.',
+    'Kies een track. Elke track zegt hoe lang hij is en of hij langs deze dag loopt of hoe ver hij eraf ligt, de dichtstbijzijnde eerst.',
   'help.guide.roadtrip-track.step.3':
     'Klik op Deze track volgen. TREK zet tussenpunten waar de rit het verst van de track afdwaalt, en berekent opnieuw, ronde na ronde.',
   'help.guide.roadtrip-track.step.4':
-    'Het zegt hoeveel tussenpunten het heeft geplaatst en hoe dicht de rit nu blijft. De knop ernaast haalt die tussenpunten er weer af en geeft de dag terug aan de router; het venster sluiten behoudt de track.',
+    'Het zegt hoeveel tussenpunten het heeft geplaatst en hoe dicht de rit nu blijft. De knop eronder haalt die tussenpunten er weer af en geeft de dag terug aan de router; het venster sluiten behoudt de track.',
   'help.guide.roadtrip-track.result':
-    'De rit van de dag volgt de track in plaats van de weg die de router koos, en de badge Track zegt welke track hij volgt.',
+    'De rit van de dag volgt de track in plaats van de weg die de router koos, en zijn badge Track brandt en noemt die track als je erop wijst.',
   'help.guide.roadtrip-track.tip.1':
-    'Importeer het bestand onder Dagen met Bestand importeren, met Tracks (met routegeometrie) of Paden (LineStrings) aangevinkt. Zolang er geen track in de reis zit, heeft de badge niets te bieden.',
+    'Importeer het bestand onder Dagen met Bestand importeren, met Routes of Tracks aangevinkt. Zolang de reis er geen heeft, draagt geen enkele dag de badge.',
   'help.guide.roadtrip-track.tip.2':
     'Een track volgen vervangt de tussenpunten die de trajecten van de dag al hadden, vorm een traject dus met de hand na de track, niet ervoor.',
 };

@@ -1702,7 +1702,7 @@ const help: TranslationStrings = {
   'help.ctx.trip-place.bullet.2':
     '头部带着圆形图片、名称、分类、地址和坐标。点击图片可以换成你自己的，双击名称可以当场重命名地点，右边的 X 关闭卡片。',
   'help.ctx.trip-place.bullet.3':
-    '下面是：每位旅行者给这个地点的星、有价格的话还有价格、描述和备注，以及停靠点带有备注时的“当天备注”。',
+    '下面是：有价格时的价格、每位旅行者给这个地点的星、描述和备注，以及停靠点带有备注时的“当天备注”。',
   'help.ctx.trip-place.bullet.4':
     '接着按适用情况显示“营业时间”“轨迹颜色”“轨迹数据”和“文件”。“文件”接收你文件夹里的任何东西，也会列出挂在这个停靠点预订上的文件。',
   'help.ctx.trip-place.bullet.5':
@@ -1778,7 +1778,8 @@ const help: TranslationStrings = {
   'help.guide.place-participants.result': '停靠点带着你选中的旅行者，队伍里的其他人那个下午可以自己安排。',
   'help.guide.place-participants.tip.1':
     '“参与者”只在选中了停靠点时才出现，所以请在某一天里选地点，而不是在地点栏里，而且只在旅行者不止一位的旅行里出现。',
-  'help.guide.place-participants.tip.2': '一个人都没选表示所有人都去。把最后一个人移出去，所有人就又都回来了。',
+  'help.guide.place-participants.tip.2':
+    '一个人都没选表示所有人都去，正因为如此，停靠点上剩下的最后一个人是没法移出去的。',
   'help.guide.place-participants.tip.3': '没有自己账号的“访客”也可以像其他人一样成为参与者。',
   // place-booking
   'help.guide.place-booking.title': '停靠点上的预订',
@@ -1828,7 +1829,7 @@ const help: TranslationStrings = {
     '“保存到列表”会显示你拥有或共享的每一个列表。已经装着这个地点的列表带有对勾。',
   'help.guide.place-to-collection.step.3': '点击那个列表。地点立刻就在里面了。',
   'help.guide.place-to-collection.step.4': '关闭后，卡片里的按钮显示“已保存”。',
-  'help.guide.place-to-collection.result': '地点带着它的图片、备注和星，留在你的列表里，为下一趟旅行做好准备。',
+  'help.guide.place-to-collection.result': '地点带着它的图片、备注和地址，留在你的列表里，为下一趟旅行做好准备。',
   'help.guide.place-to-collection.tip.1': '这个按钮只在“收藏”扩展开启时才有，而它由管理员在“扩展”下打开。',
   'help.guide.place-to-collection.tip.2':
     '一个地点可以同时待在多个列表里，在每个列表里有各自的状态：在一个里是“想法”，在另一个里是“已去过”。',
@@ -1880,7 +1881,7 @@ const help: TranslationStrings = {
   'help.guide.files-upload.tip.1': '文件也可以从桌面直接拖到这个框上，文件悬在上面时框会亮起来。',
   'help.guide.files-upload.tip.2': '剪贴板里的图片用 Ctrl+V 就进了列表，所以预订的截图不必先存一份。',
   'help.guide.files-upload.tip.3':
-    '上传需要“上传文件”这项权限；没有它，这个框根本不会出现。不在列表上的类型，或超过 50 MB 的文件，会连同一条提示被拒绝，什么也不会上传。',
+    '上传需要“上传文件”这项权限；没有它，这个框根本不会出现。不在列表上的类型会连同一条提示被拒绝，什么也不会上传。超过 50 MB 的文件在任何东西被送出之前，就被这个框自己挡下。',
   // files-link
   'help.guide.files-link.title': '把文档系到地点或预订上',
   'help.guide.files-link.goal': '让这张票从它所属的那一天也能找到，而不只是从这份列表里。',
@@ -1892,7 +1893,7 @@ const help: TranslationStrings = {
   'help.guide.files-link.step.4': '“预订”和“交通”下面是旅行的各笔预订。点文档所属的那一笔，它也会打上勾。',
   'help.guide.files-link.step.5': '用 × 关掉。这里没有保存按钮：每一次点击在你点的那一刻就已经写下了。',
   'help.guide.files-link.result':
-    '这一行带着备注，每条链接一个徽章，“日程计划”和地点的名字，“交通”和航班的名字，同时这份文档也挂在那个地点和那笔预订上。',
+    '这一行带着备注，每条链接一个徽章，“日程计划”和地点的名字，“交通”和航班的名字，同时这份文档也挂在那个地点和那个航班上。',
   'help.guide.files-link.tip.1': '一个文件可以同时带多条链接，所以同一份确认单既属于酒店，也属于它所覆盖的那一晚。',
   'help.guide.files-link.tip.2': '再点一次已打勾的条目就取消那条链接；文件本身还在。',
   'help.guide.files-link.tip.3': '反过来也成立：附在某个地点或某笔预订上的文档同样在这份列表里，行上带着同样的徽章。',
@@ -1911,7 +1912,7 @@ const help: TranslationStrings = {
   'help.guide.files-filter.step.1': '列表上方的标签是“全部”“PDF”“图片”和“文档”，每个后面带着文件数量。',
   'help.guide.files-filter.step.2': '点击“PDF”：列表只留下 PDF 文件，别的都不留。',
   'help.guide.files-filter.step.3':
-    '另外两个标签会随旅行里的内容来去：只要有文件被收藏就出现一颗星，只要“协作”标签里的笔记带了附件就出现“协作笔记”。',
+    '另外两个标签会随旅行里的内容来去。点击“协作笔记”，只要“协作”标签里的笔记带了附件它就在：列表里只留下那些文件，别的都没有。一颗星也以同样的方式加进这一排，只要有文件被收藏。',
   'help.guide.files-filter.step.4': '“全部”把整份列表带回来。',
   'help.guide.files-filter.result': '列表只显示标签所指的东西，每个标签上的数字说明那是多少份。',
   'help.guide.files-filter.tip.1':
@@ -1989,7 +1990,7 @@ const help: TranslationStrings = {
     '最下面是这一天的逐小时情况，每隔两小时一格：时间、图标、气温和降水概率。超过 50% 的小时会染成蓝色。',
   'help.guide.day-weather.result': '天数栏里这一天的卡片，也在它的编号下面用小字带着同样的天气，整趟行程一眼就能读完。',
   'help.guide.day-weather.tip.1':
-    '温度和风跟随你在设置的“显示”里的选择：切到 Fahrenheit，同一份预报就用 °F 和 mph 读出来。',
+    '温度和风跟随设置里“显示”下的“温度单位”：选“°F Fahrenheit”，同一份预报就用 °F 和 mph 读出来。',
   'help.guide.day-weather.tip.2':
     '既没有带坐标的停靠点、也没有可以醒来的酒店的一天，完全不显示天气：预报永远是针对一个地点，而不是针对整趟旅行。',
   'help.guide.day-weather.tip.3':
@@ -2027,7 +2028,8 @@ const help: TranslationStrings = {
   'help.guide.edit-accommodation.goal': '挪动一次住宿、改正它的时间，或者把它再从计划里拿出去。',
   'help.guide.edit-accommodation.step.1': '在住宿的每一天里，卡片都显示住处、入住时间段、退房时间和确认号。',
   'help.guide.edit-accommodation.step.2': '它右边的铅笔重新打开这次住宿。弹窗此时写着“编辑住宿”。',
-  'help.guide.edit-accommodation.step.3': '改你需要改的：它覆盖的天数、“入住”“截止”“退房”“确认号”，或者住处本身。',
+  'help.guide.edit-accommodation.step.3':
+    '改这一排字段：“入住”“截止”“退房”和“确认号”。它上面的天数和它下面的住处，在这里也能改。',
   'help.guide.edit-accommodation.step.4': '点击“保存”。',
   'help.guide.edit-accommodation.step.5': '铅笔旁边的 X 结束这次住宿。它什么都不问，属于它的那条“住宿”预订也一并消失。',
   'help.guide.edit-accommodation.result': '这次更改一次就到达住宿覆盖的每一天，“预订”标签页里那条“住宿”预订也跟着变。',
@@ -2054,7 +2056,7 @@ const help: TranslationStrings = {
   'help.ctx.trip-map.summary':
     '计划的中间：旅行的每一个地点都是一枚图钉，还有把它们连起来的路线，以及地图边缘那些开关，用于卫星影像、一次看完整个行程，以及查找你正在看的这片城区周围的地点。',
   'help.ctx.trip-map.bullet.1':
-    '一枚图钉就是一个地点：有照片时用它自己的照片，否则用它的分类颜色加分类图标。把指针停在一枚图钉上，会出现一张卡片，写着它的名称、评分、分类和地址。',
+    '一枚图钉就是一个地点：有照片时用它自己的照片，否则用它的分类颜色加分类图标。把指针停在一枚图钉上，会出现一张卡片，写着它的名称和地址，地点带有分类和评分时也会写上。把图钉拖到某一天的卡片上，就把这个地点安排到那一天。',
   'help.ctx.trip-map.bullet.2':
     '挨得太近分不开的图钉会折叠成一个深色气泡，上面带着数量。点击气泡，地图就缩放到里面的内容。',
   'help.ctx.trip-map.bullet.3':
@@ -2071,22 +2073,22 @@ const help: TranslationStrings = {
   'help.guide.map-markers.title': '读懂地图',
   'help.guide.map-markers.goal': '知道地图上每一枚图钉、每一个徽章和每一个气泡在告诉你什么。',
   'help.guide.map-markers.step.1':
-    '地图上有旅行的每一个地点。图钉挨得太近分不开的地方，它们会折叠成一个深色气泡，上面带着里面的地点数量。',
+    '地图上有旅行的每一个地点。图钉挨得太近分不开的地方，它们会折叠成一个深色气泡，上面带着里面的数量；点击气泡，地图就缩放到刚才在里面的内容，在最深的缩放级别上则把图钉像扇子一样摊开。',
   'help.guide.map-markers.step.2':
-    '点击气泡。地图缩放到刚才在里面的内容，图钉就分开了；在最深的缩放级别上，它会把图钉像扇子一样摊开，而不是继续放大。',
+    '一枚图钉是这个地点自己的照片（如果有的话），否则是它的分类颜色加分类图标。把指针停在一枚上，卡片会给出它的名称和地址，地点带有分类和评分时也会给出。',
   'help.guide.map-markers.step.3':
-    '一枚图钉是这个地点自己的照片（如果有的话），否则是它的分类颜色加分类图标。把指针停在一枚上，卡片会给出它的名称、评分、分类和地址。',
+    '点击一枚图钉，地点就在地图下方的一张卡片里打开：它的坐标、它的评分、它的“文件”，最下面一排则是接下来能对它做的事，其中有“导航”“编辑”和“删除”，打开了某一天时还有“添加到当天”。点击地图上空白的地方就又把它放开。',
   'help.guide.map-markers.step.4':
-    '点击一枚图钉，地点就在地图下方打开：它的坐标、它的评分、它的“文件”，以及“添加到当天”“保存到收藏”“导航”“编辑”和“删除”。点击地图上空白的地方就又把它放开。',
-  'help.guide.map-markers.step.5':
     '在天数栏里打开某一天，它的停靠点就会被编号：图钉角上的白色小徽章就是这个停靠点在这一天里的次序。被安排在两天上的地点会带着两个序号，中间用 · 连起来。没有打开任何一天时就没有编号，角上改为显示评分。',
+  'help.guide.map-markers.step.5':
+    '把一枚图钉从地图上拖到天数栏里某一天的卡片上，这个地点就被安排到那一天，和把它在地点列表里的那一行拖出去完全一样。',
   'help.guide.map-markers.result':
     '旅行本身没有任何变化：地图只是看它的一种方式，而每一枚图钉都说明是哪个地点、哪一天、按什么顺序。',
   'help.guide.map-markers.tip.1':
     '在天数栏里被折叠起来的一天，会把它的停靠点一起从地图上带走；再把这一天打开，它们就回来了。',
   'help.guide.map-markers.tip.2':
     '地点列表上方的筛选也决定地图画什么：选“未规划”，地图上就只剩下还没有排进某一天的地点。',
-  'help.guide.map-markers.tip.3': '这张地图上没有缩放按钮：滚轮缩放，双击放大一级，拖动则移动它。',
+  'help.guide.map-markers.tip.3': '这张地图上没有缩放按钮：滚轮缩放，双击放大一级，拖动地图本身则移动它。',
   // map-nearby-places
   'help.guide.map-nearby-places.title': '在地图上查找你周围的地点',
   'help.guide.map-nearby-places.goal': '让地图在你正在看的这片城区里找餐厅、景点或一家酒店，并把其中一个带进旅行。',
@@ -2114,7 +2116,7 @@ const help: TranslationStrings = {
   'help.guide.map-add-place.goal': '把一个地点准确放在你想要的位置上，不必先去搜索它。',
   'help.guide.map-add-place.step.1': '在地图上你想要的位置右键点击。地点表单打开，标题是“添加地点/活动”。',
   'help.guide.map-add-place.step.2':
-    '“纬度”和“经度”已经就在那个点上，TREK 会去查这组坐标，并用在那里找到的内容填好“地址”。还什么都没有写进去，所以哪里不对就覆盖掉。',
+    '“纬度”和“经度”已经就在那个点上，TREK 会去查这组坐标，并用在那里找到的内容填好“地址”，查到名字时也把“名称”填上。还什么都没有写进去，所以哪里不对就覆盖掉。',
   'help.guide.map-add-place.step.3':
     '给它一个你认得出来的“名称”，再写上计划应该知道的其余内容：“描述”“备注”“分类”“网站”。',
   'help.guide.map-add-place.step.4':
@@ -2128,10 +2130,10 @@ const help: TranslationStrings = {
   'help.guide.map-satellite.title': '切换到卫星',
   'help.guide.map-satellite.goal': '把绘制的地图换成航拍影像，再换回来。',
   'help.guide.map-satellite.step.1':
-    '地图左下角的圆形按钮就是底图图层开关。它的图标始终显示它将要切换到的那一层，把指针停上去会说明是哪一层：“切换到卫星视图”。',
-  'help.guide.map-satellite.step.2': '点击它。地图变成航拍影像，清晰到能分辨出单独一栋建筑，而且不需要你自己的密钥。',
-  'help.guide.map-satellite.step.3':
-    'TREK 画的一切都留在它上面：图钉、当天的路线、轨迹和预订路线。再点一次这个按钮，它现在写着“切换到地图视图”，就能换回来。',
+    '地图左下角的圆形按钮就是底图图层开关。它的图标始终显示它将要切换到的那一层，把指针停上去会说明是哪一层：“切换到卫星视图”。点击它。',
+  'help.guide.map-satellite.step.2':
+    '地图现在是航拍影像，清晰到能分辨出单独一栋建筑，而且不需要你自己的密钥。TREK 画的一切都留在它上面：图钉、当天的路线、轨迹和预订路线。',
+  'help.guide.map-satellite.step.3': '按钮现在写着“切换到地图视图”。点击它就回到绘制的地图。',
   'help.guide.map-satellite.result': '地图又变回绘制的地图，而你最后停留的那一层会记在你的账户上。',
   'help.guide.map-satellite.tip.1':
     '这个选择保存在你的账户上，而不是在行程上，所以不管你用哪种地图渲染器，每一个行程都会按你离开时的样子打开。',
@@ -2140,13 +2142,13 @@ const help: TranslationStrings = {
   // map-whole-trip
   'help.guide.map-whole-trip.title': '查看整个行程和它的距离',
   'help.guide.map-whole-trip.goal': '把打开的那一天换成行程的每一个出行日，并读出每一天走了多远。',
-  'help.guide.map-whole-trip.step.1': '圆形的“显示整个行程”按钮位于地图右下角。',
+  'help.guide.map-whole-trip.step.1':
+    '圆形的“显示整个行程”按钮位于地图右下角。点击它，行程的每一个出行日都会被一次画出来，每一天用自己的颜色画在白色外框之上，这样相邻的日子也分得清。',
   'help.guide.map-whole-trip.step.2':
-    '点击它。行程的每一个出行日都会被一次画出来，每一天用自己的颜色画在白色外框之上，这样相邻的日子也分得清。',
-  'help.guide.map-whole-trip.step.3':
     '按钮上方的卡片把这些日子列出来：一个色点、这一天的名称、你在这一天每种出行方式的图标，以及它覆盖的距离。“总距离”在最上面。',
-  'help.guide.map-whole-trip.step.4':
-    '在卡片里点击某一天就选中它，和在天数栏里选它是一样的。再点一次这个按钮，它现在写着“隐藏整个行程”，就回到单独的一天。',
+  'help.guide.map-whole-trip.step.3':
+    '在卡片里点击某一天就选中它，和在天数栏里选它是一样的：地图把那一天框进画面，它的停靠点也重新有了编号。',
+  'help.guide.map-whole-trip.step.4': '按钮现在写着“隐藏整个行程”。按一下就回到打开的那一天。',
   'help.guide.map-whole-trip.result':
     '每一个出行日都用自己的颜色画出来，卡片说明每一天走了什么，以及整个行程加起来是多少。',
   'help.guide.map-whole-trip.tip.1':
@@ -2160,9 +2162,9 @@ const help: TranslationStrings = {
   'help.guide.map-booking-routes.step.1':
     '预订路线在你提出要求之前是关着的。天数栏里预订那一行上有一个小小的路线图标：“显示预订路线”。',
   'help.guide.map-booking-routes.step.2':
-    '点击它。这笔预订就出现在地图上：航班画成一条大圆弧，自驾沿着真实的道路，火车画成它各个车站串成的链条。“已确认”画成实线，“待确认”画成虚线。',
+    '点击它。这笔预订就出现在地图上：航班画成一条大圆弧，自驾沿着真实的道路，火车画成它各个车站串成的链条。“已确认”画成实线，“待确认”画成虚线，路线两端是带着交通方式图标的蓝色药丸。',
   'help.guide.map-booking-routes.step.3':
-    '路线两端是带着交通方式图标的蓝色药丸。点击其中一端就打开它背后的那笔预订，带着它的时间、它的“预订码”和“地点 / 地址”；“关闭”把它收起来。',
+    '点击其中一端的药丸，就打开它背后的那笔预订，带着它的时间、它的“预订码”和“地点 / 地址”；“关闭”把它收起来。',
   'help.guide.map-booking-routes.step.4':
     '天数栏上方工具栏里的那个路线图标一次处理整个行程：“显示所有预订路线”会把每一笔有路线的预订都画出来。',
   'help.guide.map-booking-routes.step.5':
@@ -2190,7 +2192,7 @@ const help: TranslationStrings = {
   'help.ctx.trip-collab.bullet.5':
     '“投票”用来拍板。“新建投票”提一个问题，至少配两个选项；点一下某个选项就是你的一票，“关闭”结束投票，“删除”移除这个投票。',
   'help.ctx.trip-collab.bullet.6':
-    '“接下来”列出旅行中还在前面的下八个停靠点，连同它们的时间和参与的人。它只读取当天的计划；时间在那里设置。',
+    '“接下来”列出旅行中还在前面的停靠点，最多八个，连同它们的时间和参与的人。它只读取当天的计划；时间在那里设置。',
   // write-note
   'help.guide.write-note.title': '写一条共享笔记',
   'help.guide.write-note.goal': '把整个群组都需要的东西，一条规矩、一个地址、一个提醒，放在人人都能再找到的地方。',
@@ -2260,7 +2262,7 @@ const help: TranslationStrings = {
   'help.guide.close-poll.step.1': '“关闭”，也就是投票角上的那把锁，结束投票。选项不再接受点击。',
   'help.guide.close-poll.step.2':
     '关闭的投票沉到面板底部的“已关闭”标题下面，戴上“已关闭”徽章，并向所有人显示结果，无论他们投没投票。胜出的选项染成绿色。',
-  'help.guide.close-poll.step.3': '旁边的“删除”移除这个投票。没有任何二次询问，票也一起消失。',
+  'help.guide.close-poll.step.3': '同一个角上的垃圾桶“删除”移除这个投票。没有任何二次询问，票也一起消失。',
   'help.guide.close-poll.result': '投票从每位成员的面板上消失了。只被你关闭的那个仍然留在底部可读，连同它的结果。',
   'help.guide.close-poll.tip.1': '关闭不能撤销：没有重新开启。误关的投票只能重新再问一次。',
   'help.guide.close-poll.tip.2': '“删除”把这个投票和上面的每一张票，对所有人一并拿走，立刻生效，也不会询问。',
@@ -2268,7 +2270,7 @@ const help: TranslationStrings = {
   'help.guide.whats-next.title': '读懂“接下来”',
   'help.guide.whats-next.goal': '不用打开计划，就看到群组接下来要做什么。',
   'help.guide.whats-next.step.1':
-    '这个面板按时间顺序列出旅行中还在前面的下八个停靠点，每天一个标题：“今天”“明天”或者日期。',
+    '这个面板按时间顺序列出旅行中还在前面的停靠点，最多八个，每天一个标题：“今天”“明天”或者日期。',
   'help.guide.whats-next.step.2':
     '一行的左边立着它的时间：开始时间、“至”，以及停靠点有结束时间时的结束时间；还没有给它设置时间时则是 TBD。',
   'help.guide.whats-next.step.3': '名字下面的小块是这个停靠点上的人。如果没有给它选人，旅行里的每个人都会列出来。',
@@ -2314,7 +2316,7 @@ const help: TranslationStrings = {
   'help.ctx.trip-lists.bullet.5':
     '“应用模板”“导入”和“保存为模板”不用一条条敲就能填满或留下一份清单，旁边的红色按钮写出有多少物品已勾选，并把它们清走。',
   'help.ctx.trip-lists.bullet.6':
-    '“待办事项”有自己的侧栏：进度卡片，“全部”“我的任务”“已逾期”“已完成”几个筛选，按“优先级”或“截止日期”的“排序方式”，以及每份清单一行。点击一个任务会在右侧面板里打开它，“新建任务”则把同一个面板空着打开。',
+    '“待办事项”有自己的侧栏：进度卡片，“全部”“我的任务”“已逾期”“已完成”几个筛选，按“优先级”或“截止日期”的“排序方式”，以及每份清单一行。点击一个任务会在右侧面板里打开它，“新建任务”则在屏幕中央打开“新任务”表单。',
   // packing-categories
   'help.guide.packing-categories.title': '搭建行李清单',
   'help.guide.packing-categories.goal': '把要带的东西归进清单，填上物品，并说明谁来负责每一份清单。',
@@ -2651,7 +2653,7 @@ const help: TranslationStrings = {
   'help.guide.expense-payers.tip.1':
     '“谁支付的？”和“分摊”彼此独立：你可以为一顿自己没去的晚餐付钱，也可以被算进一顿自己没付钱的晚餐。',
   'help.guide.expense-payers.tip.2':
-    '有几个付款人时，金额必须加起来等于总额。再加入一个人，其余的人会围着他重新排布；在它们还不相符时，编辑器会说付款人金额总和必须为总额，并拒绝保存。',
+    '有几个付款人时，金额必须加起来等于总额。再加入一个人，其余的人会围着他重新排布；在它们还不相符时，编辑器会说出它们该加到多少，并拒绝保存。',
   'help.guide.expense-payers.tip.3':
     '移除一个付款人并不会移除这笔支出：金额仍留在“行程总支出”里，而这一行会变成“未完成”。',
   // split-expense
@@ -2747,7 +2749,7 @@ const help: TranslationStrings = {
   'help.guide.expense-from-booking.step.3':
     '点击“创建支出”。预订被保存，表单关闭，费用编辑器随即打开，预订的标题作为名称，它的类型也已经匹配到了一个分类。',
   'help.guide.expense-from-booking.step.4':
-    '像填任何一笔支出那样填好金额、谁付的钱和分摊，然后保存。此时再打开该预订，就能在“关联支出”下看到它，旁边有铅笔可以编辑，有垃圾桶可以移除。',
+    '像填任何一笔支出那样填好金额和它的币种、谁付的钱和分摊，然后保存。此时再打开该预订，就能在“关联支出”下看到它，旁边有铅笔可以编辑，有垃圾桶可以移除。',
   'help.guide.expense-from-booking.result':
     '预订带上了它的花费，而这笔支出就是“费用”标签页上一条普通的行，和别的支出一样有付款人、分摊和货币。',
   'help.guide.expense-from-booking.tip.1':
@@ -2813,7 +2815,7 @@ const help: TranslationStrings = {
   'help.guide.plan-transit.goal': '让 TREK 查出某一天两点之间真实的火车和公交，把你选中的那一条放进计划。',
   'help.guide.plan-transit.step.1': '在日期标题里点击有轨电车按钮，“公共交通”。搜索为那一天打开。',
   'help.guide.plan-transit.step.2':
-    '“出发地”和“目的地”接受一个站点或车站。框还空着时，会先给出当天自己的地点；输入两个字母则改为搜索时刻表里的车站。两个框之间的“交换”把线路掉头。',
+    '“出发地”和“目的地”接受一个站点或车站。框还空着时，会先给出当天自己的地点和这趟旅行的住处；输入两个字母则改为搜索时刻表里的车站。两个框之间的“交换”把线路掉头。',
   'help.guide.plan-transit.step.3':
     '“出发”或“到达”加上一个时间说明你想什么时候走，“最佳路线”“减少换乘”或“减少步行”说明结果该怎么排序。',
   'help.guide.plan-transit.step.4':
@@ -2879,7 +2881,7 @@ const help: TranslationStrings = {
     '两端都设好的交通，会在日程里它那一行上带一个小小的路线图标。点击它，它的标签就变成“隐藏预订路线”。',
   'help.guide.transport-on-map.step.2': '路线画在地图上，两端各有一个带着这段交通图标的胶囊形标记。',
   'help.guide.transport-on-map.step.3':
-    '点击端点标记，不用离开地图就能读到这条预订：时间、“航空公司”和“航班号”、“预订码”以及备注。“关闭”把这张卡片收起来。',
+    '点击端点标记，不用离开地图就能读到这条预订：时间、“航空公司”和“航班号”、“预订码”以及地址。“关闭”把这张卡片收起来。',
   'help.guide.transport-on-map.step.4':
     '日期上方工具栏里的路线图标一次处理整趟旅行：“显示所有预订路线”，以及用来再次清空的“隐藏所有预订路线”。',
   'help.guide.transport-on-map.step.5':
@@ -2937,7 +2939,7 @@ const help: TranslationStrings = {
   'help.guide.roadtrip-stops.step.6':
     '用滑块、用减号和加号按钮，或者用其中一个预设值来设定时长，看看“到达”和“出发”怎么变，然后点“保存”。',
   'help.guide.roadtrip-stops.result':
-    '这个停靠点戴上了它那一类的图标而不是编号，停留之后的每一个到达时间都跟着移动了。',
+    '你定了时间的那个停靠点在它的“停留”标记上带着钟点，它之后的每一个到达时间都跟着移动了；那个被你送去某一类又送回来的停靠点，重新成了带编号的目的地。',
   'help.guide.roadtrip-stops.tip.1': '停留属于地点，而不属于某一次到访：安排在两天里的同一个地点，两天都停留同样久。',
   'help.guide.roadtrip-stops.tip.2':
     '途中停靠在“按天”下面也会显示。把“驾驶设置”中“服务停靠点”里的“也显示于每日行程”关掉，它们就只留在“公路旅行”里。',
@@ -2983,7 +2985,7 @@ const help: TranslationStrings = {
   'help.guide.roadtrip-alternatives.step.2':
     '“这一段的走法”在地图上方打开，每条路一项，每一项都以自己的颜色画在地图上。',
   'help.guide.roadtrip-alternatives.step.3':
-    '把鼠标停在某一项上会点亮那条路。“当前”和“最快”说明哪个是哪个，其他项则说明自己快多少或慢多少。',
+    '把鼠标停在某一项上会点亮那条路。“当前”是正在走的那条路，“最快”是最快的那条；其他项则说明自己慢多少，或者避开了哪一类道路。',
   'help.guide.roadtrip-alternatives.step.4': '点击一项就走那条路，点“关闭”就保持你正在走的路。',
   'help.guide.roadtrip-alternatives.result': '这一段走你选的路，行程条上的距离和它之后的到达时间也随之改变。',
   'help.guide.roadtrip-alternatives.tip.1':
@@ -3048,15 +3050,16 @@ const help: TranslationStrings = {
   'help.guide.roadtrip-track.title': '让某一天沿着导入的轨迹走',
   'help.guide.roadtrip-track.goal': '把某一天的驾驶放到你以 GPX 或 KML 轨迹导入的风景路线上。',
   'help.guide.roadtrip-track.step.1': '点击某一天标题里的“轨迹”标记。对话框就在那一天上打开。',
-  'help.guide.roadtrip-track.step.2': '选一条轨迹。每一条都会说明它有多长、离这一天有多远，最近的排在最前面。',
+  'help.guide.roadtrip-track.step.2':
+    '选一条轨迹。每一条都会说明它有多长，以及它是沿着这一天走的，还是离这一天有多远，最近的排在最前面。',
   'help.guide.roadtrip-track.step.3':
     '点击“沿此轨迹行驶”。TREK 会在驾驶偏离轨迹最远的地方放下途经点，然后一轮又一轮地重新算路线。',
   'help.guide.roadtrip-track.step.4':
-    '它会说明放了多少个途经点，以及驾驶现在贴得有多近。旁边的按钮会再把那些途经点去掉，把这一天交回给路线引擎；关闭对话框则保留轨迹。',
+    '它会说明放了多少个途经点，以及驾驶现在贴得有多近。它下面的按钮会再把那些途经点去掉，把这一天交回给路线引擎；关闭对话框则保留轨迹。',
   'help.guide.roadtrip-track.result':
-    '这一天的驾驶沿着轨迹走，而不是路线引擎挑的那条路，“轨迹”标记会说明它正在沿着哪条轨迹。',
+    '这一天的驾驶沿着轨迹走，而不是路线引擎挑的那条路，它的“轨迹”标记亮着，把指针停上去就会说出那条轨迹的名字。',
   'help.guide.roadtrip-track.tip.1':
-    '在“按天”下面用“导入文件”导入这个文件，并勾上“轨迹（含路径几何）”或“路径（LineStrings）”。在旅行里有轨迹之前，这个标记没有什么可提供的。',
+    '在“按天”下面用“导入文件”导入这个文件，并勾上“路线”或“轨迹（含路径几何）”。在旅行里有一条之前，没有哪一天会带着这个标记。',
   'help.guide.roadtrip-track.tip.2':
     '沿着轨迹走会替换这一天各路段原有的途经点，所以要手动调整某一段，请在轨迹之后做，而不是之前。',
 };
