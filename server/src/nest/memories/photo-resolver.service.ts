@@ -76,7 +76,7 @@ export class PhotoResolverService {
     kind: 'thumbnail' | 'original',
     range?: string,
   ): Promise<void> {
-    const photo = this.photos.resolve(photoId);
+    const photo = await this.photos.resolve(photoId);
     if (!photo) {
       res.status(404).json({ error: 'Photo not found' });
       return;
@@ -92,7 +92,7 @@ export class PhotoResolverService {
           const result = await this.thumbnails.ensureLocalThumbnail(photo.file_path);
           if (result) {
             thumbRel = result.thumbnailRelPath;
-            this.photos.recordLocalThumbnail(photo.id, thumbRel, result.width, result.height);
+            await this.photos.recordLocalThumbnail(photo.id, thumbRel, result.width, result.height);
           }
         }
         if (thumbRel) {
@@ -169,7 +169,7 @@ export class PhotoResolverService {
     userId: number,
     photoId: number,
   ): Promise<ServiceResult<AssetInfo>> {
-    const photo = this.photos.resolve(photoId);
+    const photo = await this.photos.resolve(photoId);
     if (!photo) return fail('Photo not found', 404);
 
     // Local rows answer from the row itself — nothing to ask.

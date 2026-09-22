@@ -68,7 +68,7 @@ const photoCache = new PlacePhotoCacheService(dbs, makeStorageFixture('photos/go
 let packing: PackingService;
 let places: PlacesService;
 beforeAll(async () => {
-  packing = new PackingService(dbs, new PermissionsService(dbs, await createTestUnitOfWork(dbs.connection)), realtime, notificationsStub());
+  packing = new PackingService(dbs, new PermissionsService(dbs, await createTestUnitOfWork(dbs.connection)), realtime, notificationsStub(), await createTestUnitOfWork(dbs.connection));
   places = new PlacesService(
   dbs,
   new PermissionsService(dbs, await createTestUnitOfWork(dbs.connection)),
@@ -145,25 +145,25 @@ describe('PlacesService.update — optimistic concurrency', () => {
 });
 
 describe('updateItem (packing) — optimistic concurrency', () => {
-  it('migration added updated_at and createItem stamps it', () => {
+  it('migration added updated_at and createItem stamps it', async () => {
     const cols = testDb.prepare("PRAGMA table_info('packing_items')").all() as { name: string }[];
     expect(cols.map(c => c.name)).toContain('updated_at');
 
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
-    const item = packing.createItem(trip.id, { name: 'Socks' }) as { id: number; updated_at: string | null };
+    const item = await packing.createItem(trip.id, { name: 'Socks' }) as { id: number; updated_at: string | null };
     expect(item.updated_at).toBeTruthy();
   });
 
-  it('returns a conflict when the packing token is stale', () => {
+  it('returns a conflict when the packing token is stale', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
-    const item = packing.createItem(trip.id, { name: 'Socks' }, user.id) as { id: number; updated_at: string };
+    const item = await packing.createItem(trip.id, { name: 'Socks' }, user.id) as { id: number; updated_at: string };
 
-    const stale = packing.updateItem(trip.id, item.id, { name: 'Mine' }, ['name'], '1999-01-01 00:00:00', user.id);
+    const stale = await packing.updateItem(trip.id, item.id, { name: 'Mine' }, ['name'], '1999-01-01 00:00:00', user.id);
     expect(isUpdateConflict(stale)).toBe(true);
 
-    const fresh = packing.updateItem(trip.id, item.id, { name: 'Edited' }, ['name'], item.updated_at, user.id);
+    const fresh = await packing.updateItem(trip.id, item.id, { name: 'Edited' }, ['name'], item.updated_at, user.id);
     expect(isUpdateConflict(fresh)).toBe(false);
     expect((fresh as { name: string }).name).toBe('Edited');
   });

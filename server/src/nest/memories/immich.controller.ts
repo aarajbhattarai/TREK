@@ -42,7 +42,7 @@ export class ImmichMemoriesController {
       return;
     }
     if (typeof auto_upload === 'boolean') {
-      this.memories.immichSetAutoUpload(user.id, auto_upload);
+      await this.memories.immichSetAutoUpload(user.id, auto_upload);
     }
     if (result.warning) {
       res.json({ success: true, warning: result.warning });
@@ -102,7 +102,7 @@ export class ImmichMemoriesController {
       res.status(400).json({ error: 'Invalid asset ID' });
       return;
     }
-    if (!this.memories.canAccessUserPhoto(user.id, Number(ownerId), tripId, assetId, 'immich')) {
+    if (!(await this.memories.canAccessUserPhoto(user.id, Number(ownerId), tripId, assetId, 'immich'))) {
       res.status(403).json({ error: 'Forbidden' });
       return;
     }
@@ -126,7 +126,7 @@ export class ImmichMemoriesController {
       res.status(400).json({ error: 'Invalid asset ID' });
       return;
     }
-    if (!this.memories.canAccessUserPhoto(user.id, Number(ownerId), tripId, assetId, 'immich')) {
+    if (!(await this.memories.canAccessUserPhoto(user.id, Number(ownerId), tripId, assetId, 'immich'))) {
       res.status(403).json({ error: 'Forbidden' });
       return;
     }
@@ -145,7 +145,7 @@ export class ImmichMemoriesController {
       res.status(400).json({ error: 'Invalid asset ID' });
       return;
     }
-    if (!this.memories.canAccessUserPhoto(user.id, Number(ownerId), tripId, assetId, 'immich')) {
+    if (!(await this.memories.canAccessUserPhoto(user.id, Number(ownerId), tripId, assetId, 'immich'))) {
       res.status(403).json({ error: 'Forbidden' });
       return;
     }

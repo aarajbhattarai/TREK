@@ -15,7 +15,7 @@ import { fail, success, type ServiceResult } from './memories.helpers';
 export class MemoriesAccessService {
   constructor(private readonly db: DatabaseService) {}
 
-  canAccessUserPhoto(requestingUserId: number, ownerUserId: number, tripId: string, assetId: string, provider: string): boolean {
+  async canAccessUserPhoto(requestingUserId: number, ownerUserId: number, tripId: string, assetId: string, provider: string): Promise<boolean> {
     if (requestingUserId === ownerUserId) {
       return true;
     }
@@ -63,7 +63,7 @@ export class MemoriesAccessService {
 
   // ── Unified photo access check (trek_photos based) ──────────────────────
 
-  canAccessTrekPhoto(requestingUserId: number, trekPhotoId: number): boolean {
+  async canAccessTrekPhoto(requestingUserId: number, trekPhotoId: number): Promise<boolean> {
     const photo = this.db.get<{ id: number; provider: string; owner_id: number | null }>('SELECT * FROM trek_photos WHERE id = ?', trekPhotoId);
     if (!photo) return false;
 
@@ -107,7 +107,7 @@ export class MemoriesAccessService {
 
   // ── Album link syncing ──────────────────────────────────────────────────
 
-  getAlbumIdFromLink(tripId: string, linkId: string, userId: number): ServiceResult<string> {
+  async getAlbumIdFromLink(tripId: string, linkId: string, userId: number): Promise<ServiceResult<string>> {
     const access = this.db.canAccessTrip(tripId, userId);
     if (!access) return fail('Trip not found or access denied', 404);
 
@@ -123,7 +123,7 @@ export class MemoriesAccessService {
     }
   }
 
-  getAlbumLinkForSync(tripId: string, linkId: string, userId: number): ServiceResult<{ albumId: string; passphrase?: string }> {
+  async getAlbumLinkForSync(tripId: string, linkId: string, userId: number): Promise<ServiceResult<{ albumId: string; passphrase?: string }>> {
     const access = this.db.canAccessTrip(tripId, userId);
     if (!access) return fail('Trip not found or access denied', 404);
 
@@ -142,7 +142,7 @@ export class MemoriesAccessService {
     }
   }
 
-  updateSyncTimeForAlbumLink(linkId: string): void {
+  async updateSyncTimeForAlbumLink(linkId: string): Promise<void> {
     this.db.run('UPDATE trip_album_links SET last_synced_at = CURRENT_TIMESTAMP WHERE id = ?', linkId);
   }
 }

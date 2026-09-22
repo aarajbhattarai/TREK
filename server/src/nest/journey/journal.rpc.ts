@@ -175,7 +175,7 @@ export class JournalRpc {
     // gallery entry aimed at bytes that never arrived.
     await this.storage.put('journey', filename, Readable.from(buf), { contentType: MIME_BY_EXT[ext] ?? 'image/jpeg' });
 
-    const photo = this.journey.addPhoto(entryId, userId, `journey/${filename}`, undefined, input.caption);
+    const photo = await this.journey.addPhoto(entryId, userId, `journey/${filename}`, undefined, input.caption);
     if (!photo) {
       // Nothing references the object now, and nothing ever would.
       await this.storage.delete('journey', filename).catch(() => {});

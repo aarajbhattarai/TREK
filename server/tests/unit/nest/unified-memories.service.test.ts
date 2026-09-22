@@ -51,32 +51,39 @@ import { DatabaseService } from '../../../src/nest/database/database.service';
 import type { ImmichService } from '../../../src/nest/memories/immich.service';
 import type { SynologyService } from '../../../src/nest/memories/synology.service';
 import { notificationsStub } from '../../helpers/notifications';
+import { createTestUnitOfWork } from '../../helpers/test-uow';
 
 // The album-sync paths are the providers' half and have their own suites; these
 // cases never reach them, so stubs keep the graph small.
 const dbs = new DatabaseService(testDb);
-const svc = new UnifiedMemoriesService(
-  dbs,
-  new TrekPhotosRepository(dbs),
-  {} as ImmichService,
-  {} as SynologyService,
-  new MemoriesAccessService(dbs),
-  notificationsStub(),
-  new AddonsService(dbs),
-);
+let svc: UnifiedMemoriesService;
 
-// Legacy free-function names bound to the service, so the moved cases read as before.
-const listTripPhotos = svc.listTripPhotos.bind(svc);
-const listTripAlbumLinks = svc.listTripAlbumLinks.bind(svc);
-const addTripPhotos = svc.addTripPhotos.bind(svc);
-const setTripPhotoSharing = svc.setTripPhotoSharing.bind(svc);
-const removeTripPhoto = svc.removeTripPhoto.bind(svc);
-const createTripAlbumLink = svc.createTripAlbumLink.bind(svc);
-const removeAlbumLink = svc.removeAlbumLink.bind(svc);
+// Legacy free-function names forwarding to the service, so the moved cases read
+// as before. Typed forwarders rather than `.bind` aliases: a bound alias is
+// typed `any`, which hides a missing `await` from tsc and from all three lint
+// rules now that these methods are async.
+type Svc = UnifiedMemoriesService;
+const listTripPhotos = (...a: Parameters<Svc['listTripPhotos']>) => svc.listTripPhotos(...a);
+const listTripAlbumLinks = (...a: Parameters<Svc['listTripAlbumLinks']>) => svc.listTripAlbumLinks(...a);
+const addTripPhotos = (...a: Parameters<Svc['addTripPhotos']>) => svc.addTripPhotos(...a);
+const setTripPhotoSharing = (...a: Parameters<Svc['setTripPhotoSharing']>) => svc.setTripPhotoSharing(...a);
+const removeTripPhoto = (...a: Parameters<Svc['removeTripPhoto']>) => svc.removeTripPhoto(...a);
+const createTripAlbumLink = (...a: Parameters<Svc['createTripAlbumLink']>) => svc.createTripAlbumLink(...a);
+const removeAlbumLink = (...a: Parameters<Svc['removeAlbumLink']>) => svc.removeAlbumLink(...a);
 
-beforeAll(() => {
+beforeAll(async () => {
   createTables(testDb);
   runMigrations(testDb);
+  svc = new UnifiedMemoriesService(
+    dbs,
+    new TrekPhotosRepository(dbs),
+    {} as ImmichService,
+    {} as SynologyService,
+    new MemoriesAccessService(dbs),
+    notificationsStub(),
+    new AddonsService(dbs),
+    await createTestUnitOfWork(testDb),
+  );
 });
 
 beforeEach(() => {
@@ -200,7 +207,7 @@ describe('addTripPhotos', () => {
 
 describe('setTripPhotoSharing', () => {
   it('MEM-UNIFIED-008: returns 404 when user cannot access trip', async () => {
-    const result = await setTripPhotoSharing('9999', 1, 'immich', 'asset-1', true);
+    const result = await setTripPhotoSharing('9999', 1, 1, true);
     expect(result.success).toBe(false);
     expect((result as any).error.status).toBe(404);
   });
@@ -209,8 +216,8 @@ describe('setTripPhotoSharing', () => {
 // ── removeTripPhoto ───────────────────────────────────────────────────────────
 
 describe('removeTripPhoto', () => {
-  it('MEM-UNIFIED-009: returns 404 when user cannot access trip', () => {
-    const result = removeTripPhoto('9999', 1, 'immich', 'asset-1');
+  it('MEM-UNIFIED-009: returns 404 when user cannot access trip', async () => {
+    const result = await removeTripPhoto('9999', 1, 1);
     expect(result.success).toBe(false);
     expect((result as any).error.status).toBe(404);
   });
@@ -242,8 +249,8 @@ describe('createTripAlbumLink', () => {
 // ── removeAlbumLink ───────────────────────────────────────────────────────────
 
 describe('removeAlbumLink', () => {
-  it('MEM-UNIFIED-012: returns 404 when user cannot access trip', () => {
-    const result = removeAlbumLink('9999', '1', 1);
+  it('MEM-UNIFIED-012: returns 404 when user cannot access trip', async () => {
+    const result = await removeAlbumLink('9999', '1', 1);
     expect(result.success).toBe(false);
     expect((result as any).error.status).toBe(404);
   });

@@ -21,13 +21,13 @@ import type { TrekPhoto } from '../../types';
 export class TrekPhotosRepository {
   constructor(private readonly db: DatabaseService) {}
 
-  getOrCreate(
+  async getOrCreate(
     provider: string,
     assetId: string,
     ownerId: number,
     passphrase?: string,
     mediaType: string = 'image',
-  ): number {
+  ): Promise<number> {
     const existing = this.db.get<{ id: number }>(
       'SELECT id FROM trek_photos WHERE provider = ? AND asset_id = ? AND owner_id = ?',
       provider, assetId, ownerId,
@@ -46,14 +46,14 @@ export class TrekPhotosRepository {
     return Number(res.lastInsertRowid);
   }
 
-  getOrCreateLocal(
+  async getOrCreateLocal(
     filePath: string,
     thumbnailPath?: string | null,
     width?: number | null,
     height?: number | null,
     mediaType: string = 'image',
     durationMs?: number | null,
-  ): number {
+  ): Promise<number> {
     const existing = this.db.get<{ id: number }>(
       "SELECT id FROM trek_photos WHERE provider = 'local' AND file_path = ?", filePath,
     );
@@ -66,12 +66,12 @@ export class TrekPhotosRepository {
     return Number(res.lastInsertRowid);
   }
 
-  resolve(photoId: number): TrekPhoto | null {
+  async resolve(photoId: number): Promise<TrekPhoto | null> {
     return this.db.get<TrekPhoto>('SELECT * FROM trek_photos WHERE id = ?', photoId) || null;
   }
 
   /** Retarget an existing row — used when a local photo is uploaded to Immich. */
-  setProvider(trekPhotoId: number, provider: string, assetId: string, ownerId: number): void {
+  async setProvider(trekPhotoId: number, provider: string, assetId: string, ownerId: number): Promise<void> {
     this.db.run(
       'UPDATE trek_photos SET provider = ?, asset_id = ?, owner_id = ? WHERE id = ?',
       provider, assetId, ownerId, trekPhotoId,
@@ -82,7 +82,7 @@ export class TrekPhotosRepository {
    * Stamp a generated local thumbnail onto the row. COALESCE keeps dimensions
    * that were already known — a re-generated thumbnail must not blank them.
    */
-  recordLocalThumbnail(photoId: number, thumbnailPath: string, width: number, height: number): void {
+  async recordLocalThumbnail(photoId: number, thumbnailPath: string, width: number, height: number): Promise<void> {
     this.db.run(
       'UPDATE trek_photos SET thumbnail_path = ?, width = COALESCE(width, ?), height = COALESCE(height, ?) WHERE id = ?',
       thumbnailPath, width, height, photoId,
@@ -100,10 +100,10 @@ export class TrekPhotosRepository {
    *
    * A photo with neither is the normal case, not a failure.
    */
-  recordCaptureMetadata(
+  async recordCaptureMetadata(
     photoId: number,
     meta: { takenAt?: string | null; lat?: number | null; lng?: number | null },
-  ): void {
+  ): Promise<void> {
     const { takenAt = null, lat = null, lng = null } = meta;
     if (takenAt == null && lat == null && lng == null) return;
     // Coordinates are stored as a pair or not at all — a lone latitude is not a
@@ -123,7 +123,7 @@ export class TrekPhotosRepository {
    * Drop the row once no trip and no journey references it. Local photos are
    * kept: their bytes are ours, and the file would outlive the row.
    */
-  deleteIfOrphan(photoId: number): void {
+  async deleteIfOrphan(photoId: number): Promise<void> {
     const stillUsed = this.db.get(`
       SELECT 1 FROM trip_photos WHERE photo_id = ?
       UNION ALL

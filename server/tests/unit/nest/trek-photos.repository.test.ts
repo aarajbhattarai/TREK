@@ -43,8 +43,8 @@ afterAll(() => testDb.close());
 // A fresh path per call: getOrCreateLocal is keyed on file_path and resetTestDb
 // leaves trek_photos alone, so a shared path would hand every test the same row.
 let seq = 0;
-function makePhoto(): number {
-  return repo.getOrCreateLocal(`/uploads/journey/${++seq}.jpg`, null, null, null, 'image', null);
+async function makePhoto(): Promise<number> {
+  return await repo.getOrCreateLocal(`/uploads/journey/${++seq}.jpg`, null, null, null, 'image', null);
 }
 
 function read(id: number) {
@@ -54,41 +54,41 @@ function read(id: number) {
 }
 
 describe('TrekPhotosRepository.recordCaptureMetadata', () => {
-  it('TREKPHOTO-001: stores the capture time and coordinates', () => {
-    const id = makePhoto();
-    repo.recordCaptureMetadata(id, { takenAt: '2026-03-15T10:20:00Z', lat: 48.8584, lng: 2.2945 });
+  it('TREKPHOTO-001: stores the capture time and coordinates', async () => {
+    const id = await makePhoto();
+    await repo.recordCaptureMetadata(id, { takenAt: '2026-03-15T10:20:00Z', lat: 48.8584, lng: 2.2945 });
 
     expect(read(id)).toEqual({ taken_at: '2026-03-15T10:20:00Z', lat: 48.8584, lng: 2.2945 });
   });
 
-  it('TREKPHOTO-002: a later, emptier answer does not erase what is known', () => {
-    const id = makePhoto();
-    repo.recordCaptureMetadata(id, { takenAt: '2026-03-15T10:20:00Z', lat: 48.8584, lng: 2.2945 });
+  it('TREKPHOTO-002: a later, emptier answer does not erase what is known', async () => {
+    const id = await makePhoto();
+    await repo.recordCaptureMetadata(id, { takenAt: '2026-03-15T10:20:00Z', lat: 48.8584, lng: 2.2945 });
     // The album listing knows the date but not the place.
-    repo.recordCaptureMetadata(id, { takenAt: '2020-01-01T00:00:00Z', lat: null, lng: null });
+    await repo.recordCaptureMetadata(id, { takenAt: '2020-01-01T00:00:00Z', lat: null, lng: null });
 
     expect(read(id)).toEqual({ taken_at: '2026-03-15T10:20:00Z', lat: 48.8584, lng: 2.2945 });
   });
 
-  it('TREKPHOTO-003: fills only the half that was still missing', () => {
-    const id = makePhoto();
-    repo.recordCaptureMetadata(id, { takenAt: '2026-03-15T10:20:00Z' });
-    repo.recordCaptureMetadata(id, { lat: 48.8584, lng: 2.2945 });
+  it('TREKPHOTO-003: fills only the half that was still missing', async () => {
+    const id = await makePhoto();
+    await repo.recordCaptureMetadata(id, { takenAt: '2026-03-15T10:20:00Z' });
+    await repo.recordCaptureMetadata(id, { lat: 48.8584, lng: 2.2945 });
 
     expect(read(id)).toEqual({ taken_at: '2026-03-15T10:20:00Z', lat: 48.8584, lng: 2.2945 });
   });
 
-  it('TREKPHOTO-004: refuses half a coordinate pair rather than landing on null island', () => {
-    const id = makePhoto();
-    repo.recordCaptureMetadata(id, { takenAt: '2026-03-15T10:20:00Z', lat: 48.8584, lng: null });
+  it('TREKPHOTO-004: refuses half a coordinate pair rather than landing on null island', async () => {
+    const id = await makePhoto();
+    await repo.recordCaptureMetadata(id, { takenAt: '2026-03-15T10:20:00Z', lat: 48.8584, lng: null });
 
     expect(read(id)).toEqual({ taken_at: '2026-03-15T10:20:00Z', lat: null, lng: null });
   });
 
-  it('TREKPHOTO-005: an answer with nothing in it touches no row', () => {
-    const id = makePhoto();
-    repo.recordCaptureMetadata(id, { takenAt: '2026-03-15T10:20:00Z', lat: 48.8584, lng: 2.2945 });
-    repo.recordCaptureMetadata(id, {});
+  it('TREKPHOTO-005: an answer with nothing in it touches no row', async () => {
+    const id = await makePhoto();
+    await repo.recordCaptureMetadata(id, { takenAt: '2026-03-15T10:20:00Z', lat: 48.8584, lng: 2.2945 });
+    await repo.recordCaptureMetadata(id, {});
 
     expect(read(id)).toEqual({ taken_at: '2026-03-15T10:20:00Z', lat: 48.8584, lng: 2.2945 });
   });

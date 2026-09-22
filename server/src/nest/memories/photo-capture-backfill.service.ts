@@ -35,7 +35,7 @@ export class PhotoCaptureBackfillService {
   async run(trekPhotoIds: number[], userId: number): Promise<void> {
     for (const id of trekPhotoIds) {
       try {
-        const photo = this.photos.resolve(id);
+        const photo = await this.photos.resolve(id);
         // A row that already knows both has nothing to gain, and a provider call
         // per photo is the expensive part of an album import.
         if (!photo || (photo.taken_at && photo.lat != null && photo.lng != null)) continue;
@@ -44,14 +44,14 @@ export class PhotoCaptureBackfillService {
         // getPhotoInfo would only hand back what the DB row already says.
         if (photo.provider === 'local') {
           const meta = await this.readLocalExif(photo.file_path);
-          if (meta) this.photos.recordCaptureMetadata(id, meta);
+          if (meta) await this.photos.recordCaptureMetadata(id, meta);
           continue;
         }
 
         const info = await this.resolver.getPhotoInfo(userId, id);
         if (!info.success) continue;
 
-        this.photos.recordCaptureMetadata(id, {
+        await this.photos.recordCaptureMetadata(id, {
           takenAt: info.data.takenAt ?? null,
           lat: info.data.lat ?? null,
           lng: info.data.lng ?? null,

@@ -150,7 +150,7 @@ export async function createMcpTestRegistry(): Promise<McpRegistry> {
   const queryHelpersService = new QueryHelpersService(dbService);
   const daysService = new DaysService(dbService, permissionsService, realtimeService, queryHelpersService, await createTestUnitOfWork(dbService.connection));
   const todoService = new TodoService(dbService, permissionsService, realtimeService, await createTestUnitOfWork(dbService.connection));
-  const packingService = new PackingService(dbService, permissionsService, realtimeService, notificationsStub());
+  const packingService = new PackingService(dbService, permissionsService, realtimeService, notificationsStub(), await createTestUnitOfWork(dbService.connection));
   const collabService = new CollabService(dbService, permissionsService, realtimeService, notificationsStub(), generalStorage, new RateLimitService(), await createTestUnitOfWork(dbService.connection));
   // Exactly one instance, shared by maps, places and share: its stampede guard
   // and its on-disk set only work if all three readers see the same maps.
@@ -233,7 +233,7 @@ export async function createMcpTestRegistry(): Promise<McpRegistry> {
       new SchoolHolidaysMcp(new SchoolHolidaysService(dbService, await createTestUnitOfWork(dbService.connection)), guards),
       new TripsMcp(tripsService, todoService, collabService, authService, calendarService, membersService, readModelService, addonsService, guards),
       new TripPromptsMcp(tripsService, readModelService, packingService, addonsService),
-      new ShareMcp(new ShareService(dbService, new SettingsService(dbService, await createTestUnitOfWork(dbService.connection)), permissionsService, queryHelpersService, placePhotoCache), authService, guards),
+      new ShareMcp(new ShareService(dbService, new SettingsService(dbService, await createTestUnitOfWork(dbService.connection)), permissionsService, queryHelpersService, placePhotoCache, await createTestUnitOfWork(dbService.connection)), authService, guards),
       new FeedsMcp(new FeedsService(dbService, calendarService), dbService, new RuntimeEnvService(), guards),
       new TripInviteMcp(new TripInviteService(dbService, permissionsService, new TripMembershipService(dbService), await createTestUnitOfWork(dbService.connection)), dbService, new RuntimeEnvService(), guards, new AuditService(dbService)),
       new MapsMcp(mapsService),

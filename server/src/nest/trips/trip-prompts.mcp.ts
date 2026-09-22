@@ -77,11 +77,11 @@ export class TripPromptsMcp {
     when: packingAddonOn,
   })
   async packingListPrompt({ tripId }: { tripId: number }, ctx: McpContext) {
-    if (!this.packing.verifyTripAccess(tripId, ctx.userId)) {
+    if (!(await this.packing.verifyTripAccess(tripId, ctx.userId))) {
       return { messages: [{ role: 'user' as const, content: { type: 'text' as const, text: 'Trip not found or access denied.' } }] };
     }
     // Hide other members' private items (#858) from the requesting user.
-    const items = this.packing.listItems(tripId, ctx.userId);
+    const items = await this.packing.listItems(tripId, ctx.userId);
     if (!items.length) {
       return { messages: [{ role: 'user' as const, content: { type: 'text' as const, text: 'No packing items found for this trip.' } }] };
     }

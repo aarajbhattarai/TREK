@@ -25,7 +25,7 @@ export class MemoriesService {
   ) {}
 
   // ── Access check (reused by both provider asset routes) ──────────────────
-  canAccessUserPhoto(requestingUserId: number, ownerUserId: number, tripId: string, assetId: string, provider: string): boolean {
+  canAccessUserPhoto(requestingUserId: number, ownerUserId: number, tripId: string, assetId: string, provider: string): Promise<boolean> {
     return this.access.canAccessUserPhoto(requestingUserId, ownerUserId, tripId, assetId, provider);
   }
 
@@ -71,8 +71,8 @@ export class MemoriesService {
     return this.immich.saveImmichSettings(userId, immichUrl, immichApiKey, clientIp);
   }
 
-  immichSetAutoUpload(userId: number, enabled: boolean): void {
-    this.immich.setImmichAutoUpload(userId, enabled);
+  immichSetAutoUpload(userId: number, enabled: boolean): Promise<void> {
+    return this.immich.setImmichAutoUpload(userId, enabled);
   }
 
   immichGetConnectionStatus(userId: number) {

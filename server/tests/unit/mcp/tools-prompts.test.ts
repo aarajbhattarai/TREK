@@ -133,7 +133,7 @@ beforeAll(async () => {
   addonsStub,
   promptGuards,
 );
-  promptPackingService = new PackingService(promptDbs(), new PermissionsService(promptDbs(), await createTestUnitOfWork(promptDbs().connection)), new RealtimeService(), notificationsStub());
+  promptPackingService = new PackingService(promptDbs(), new PermissionsService(promptDbs(), await createTestUnitOfWork(promptDbs().connection)), new RealtimeService(), notificationsStub(), await createTestUnitOfWork(promptDbs().connection));
   packingMcp = new PackingMcp(promptPackingService, authStub, addonsStub, promptGuards);
   budgetMcp = new BudgetMcp(
   new BudgetService(promptDbs(), new PermissionsService(promptDbs(), await createTestUnitOfWork(promptDbs().connection)), new ExchangeRatesService(), new RealtimeService(), await createTestUnitOfWork(promptDbs().connection)),

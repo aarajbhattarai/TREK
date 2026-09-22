@@ -251,7 +251,7 @@ export class JourneyController {
     const refused: Express.Multer.File[] = [];
     for (const file of files) {
       const relativePath = `journey/${file.filename}`;
-      const photo = this.journey.addPhoto(Number(entryId), user.id, relativePath, undefined, body?.caption as string | undefined);
+      const photo = await this.journey.addPhoto(Number(entryId), user.id, relativePath, undefined, body?.caption as string | undefined);
       if (!photo) {
         // No row points at this file, so nothing would ever clean it up.
         refused.push(file);
@@ -262,7 +262,7 @@ export class JourneyController {
         try {
           const immichId = await this.journey.uploadToImmich(user.id, relativePath, file.originalname);
           if (immichId) {
-            this.journey.setPhotoProvider(photo.id, 'immich', immichId, user.id);
+            await this.journey.setPhotoProvider(photo.id, 'immich', immichId, user.id);
             Object.assign(photo, { provider: 'immich', asset_id: immichId, owner_id: user.id });
           }
         } catch {
@@ -314,7 +314,7 @@ export class JourneyController {
     }
     await this.commitJourneyUploads(poster ? [video, poster] : [video]);
     const durationMs = body?.duration_ms != null ? Number(body.duration_ms) : null;
-    const photo = this.journey.addPhoto(
+    const photo = await this.journey.addPhoto(
       Number(entryId),
       user.id,
       `journey/${video.filename}`,
@@ -332,22 +332,23 @@ export class JourneyController {
   }
 
   @Post('entries/:entryId/provider-photos')
-  providerPhotos(@CurrentUser() user: User, @Param('entryId') entryId: string, @Body() body: JourneyProviderPhotosDto) {
+  async providerPhotos(@CurrentUser() user: User, @Param('entryId') entryId: string, @Body() body: JourneyProviderPhotosDto) {
     const pp = body.passphrase && typeof body.passphrase === 'string' ? body.passphrase : undefined;
     if (Array.isArray(body.asset_ids) && body.provider) {
       const added: unknown[] = [];
-      body.asset_ids.forEach((id, i) => {
+      for (let i = 0; i < body.asset_ids.length; i++) {
+        const id = body.asset_ids[i];
         const mt = Array.isArray(body.media_types) && body.media_types[i] === 'video' ? 'video' : 'image';
-        const photo = this.journey.addProviderPhoto(Number(entryId), user.id, String(body.provider), String(id), body.caption as string | undefined, pp, mt);
+        const photo = await this.journey.addProviderPhoto(Number(entryId), user.id, String(body.provider), String(id), body.caption as string | undefined, pp, mt);
         if (photo) added.push(photo);
-      });
+      }
       this.backfillCapture(added, user.id);
       return { photos: added, added: added.length };
     }
     if (!body.provider || !body.asset_id) {
       throw new HttpException({ error: 'provider and asset_id required' }, 400);
     }
-    const photo = this.journey.addProviderPhoto(Number(entryId), user.id, String(body.provider), String(body.asset_id), body.caption as string | undefined, pp, body.media_type === 'video' ? 'video' : 'image');
+    const photo = await this.journey.addProviderPhoto(Number(entryId), user.id, String(body.provider), String(body.asset_id), body.caption as string | undefined, pp, body.media_type === 'video' ? 'video' : 'image');
     if (!photo) {
       throw new HttpException({ error: 'Not allowed or duplicate' }, 403);
     }
@@ -387,7 +388,7 @@ export class JourneyController {
 
   @Delete('photos/:photoId')
   async deletePhoto(@CurrentUser() user: User, @Param('photoId') photoId: string) {
-    const photo = this.journey.deletePhoto(Number(photoId), user.id);
+    const photo = await this.journey.deletePhoto(Number(photoId), user.id);
     if (!photo) {
       throw new HttpException({ error: 'Photo not found' }, 404);
     }
@@ -432,7 +433,7 @@ export class JourneyController {
     }
     await this.commitJourneyUploads(files);
     const filePaths = files.map((f) => ({ path: `journey/${f.filename}` }));
-    const photos = this.journey.uploadGalleryPhotos(Number(id), user.id, filePaths);
+    const photos = await this.journey.uploadGalleryPhotos(Number(id), user.id, filePaths);
     if (!photos.length) {
       await this.discardJourneyUploads(files);
       throw new HttpException({ error: 'Not allowed' }, 403);
@@ -471,7 +472,7 @@ export class JourneyController {
     }
     await this.commitJourneyUploads(poster ? [video, poster] : [video]);
     const durationMs = body?.duration_ms != null ? Number(body.duration_ms) : null;
-    const photos = this.journey.uploadGalleryPhotos(Number(id), user.id, [{
+    const photos = await this.journey.uploadGalleryPhotos(Number(id), user.id, [{
       path: `journey/${video.filename}`,
       thumbnail: poster ? `journey/${poster.filename}` : undefined,
       mediaType: 'video',
@@ -489,22 +490,23 @@ export class JourneyController {
   }
 
   @Post(':id/gallery/provider-photos')
-  galleryProviderPhotos(@CurrentUser() user: User, @Param('id') id: string, @Body() body: JourneyProviderPhotosDto) {
+  async galleryProviderPhotos(@CurrentUser() user: User, @Param('id') id: string, @Body() body: JourneyProviderPhotosDto) {
     const pp = body.passphrase && typeof body.passphrase === 'string' ? body.passphrase : undefined;
     if (Array.isArray(body.asset_ids) && body.provider) {
       const added: unknown[] = [];
-      body.asset_ids.forEach((aid, i) => {
+      for (let i = 0; i < body.asset_ids.length; i++) {
+        const aid = body.asset_ids[i];
         const mt = Array.isArray(body.media_types) && body.media_types[i] === 'video' ? 'video' : 'image';
-        const photo = this.journey.addProviderPhotoToGallery(Number(id), user.id, String(body.provider), String(aid), undefined, pp, mt);
+        const photo = await this.journey.addProviderPhotoToGallery(Number(id), user.id, String(body.provider), String(aid), undefined, pp, mt);
         if (photo) added.push(photo);
-      });
+      }
       this.backfillCapture(added, user.id);
       return { photos: added, added: added.length };
     }
     if (!body.provider || !body.asset_id) {
       throw new HttpException({ error: 'provider and asset_id required' }, 400);
     }
-    const photo = this.journey.addProviderPhotoToGallery(Number(id), user.id, String(body.provider), String(body.asset_id), undefined, pp, body.media_type === 'video' ? 'video' : 'image');
+    const photo = await this.journey.addProviderPhotoToGallery(Number(id), user.id, String(body.provider), String(body.asset_id), undefined, pp, body.media_type === 'video' ? 'video' : 'image');
     if (!photo) {
       throw new HttpException({ error: 'Not allowed or duplicate' }, 403);
     }
@@ -515,7 +517,7 @@ export class JourneyController {
   @Delete(':id/gallery/:journeyPhotoId')
   @HttpCode(204)
   async deleteGalleryPhoto(@CurrentUser() user: User, @Param('journeyPhotoId') journeyPhotoId: string): Promise<void> {
-    const photo = this.journey.deleteGalleryPhoto(Number(journeyPhotoId), user.id);
+    const photo = await this.journey.deleteGalleryPhoto(Number(journeyPhotoId), user.id);
     if (!photo) {
       throw new HttpException({ error: 'Photo not found or not allowed' }, 404);
     }

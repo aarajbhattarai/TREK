@@ -98,13 +98,13 @@ describe('MemoriesService (delegation wrapper over services/memories/*)', () => 
     await svc.setTripPhotoSharing('5', 7, 9, false);
     expect(unified.setTripPhotoSharing).toHaveBeenCalledWith('5', 7, 9, false);
 
-    svc.removeTripPhoto('5', 7, 9);
+    await svc.removeTripPhoto('5', 7, 9);
     expect(unified.removeTripPhoto).toHaveBeenCalledWith('5', 7, 9);
 
     await svc.listTripAlbumLinks('5', 7);
     expect(unified.listTripAlbumLinks).toHaveBeenCalledWith('5', 7);
 
-    svc.removeAlbumLink('5', 'l1', 7);
+    await svc.removeAlbumLink('5', 'l1', 7);
     expect(unified.removeAlbumLink).toHaveBeenCalledWith('5', 'l1', 7);
   });
 
@@ -117,13 +117,13 @@ describe('MemoriesService (delegation wrapper over services/memories/*)', () => 
   });
 
   it('immich methods delegate', async () => {
-    svc.immichGetConnectionSettings(7);
+    await svc.immichGetConnectionSettings(7);
     expect(immich.getConnectionSettings).toHaveBeenCalledWith(7);
 
     await svc.immichSaveSettings(7, 'u', 'k', '1.2.3.4');
     expect(immich.saveImmichSettings).toHaveBeenCalledWith(7, 'u', 'k', '1.2.3.4');
 
-    svc.immichSetAutoUpload(7, true);
+    await svc.immichSetAutoUpload(7, true);
     expect(immich.setImmichAutoUpload).toHaveBeenCalledWith(7, true);
 
     await svc.immichGetConnectionStatus(7);

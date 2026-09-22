@@ -72,7 +72,7 @@ export class UnifiedMemoriesController {
     @Body() body: RemoveTripPhotoDto,
     @Res() res: Response,
   ): Promise<void> {
-    const result = this.memories.removeTripPhoto(tripId, user.id, Number(body?.photo_id));
+    const result = await this.memories.removeTripPhoto(tripId, user.id, Number(body?.photo_id));
     if ('error' in result) {
       res.status(result.error.status).json({ error: result.error.message });
       return;
@@ -108,13 +108,13 @@ export class UnifiedMemoriesController {
   }
 
   @Delete('trips/:tripId/album-links/:linkId')
-  removeAlbumLink(
+  async removeAlbumLink(
     @CurrentUser() user: User,
     @Param('tripId') tripId: string,
     @Param('linkId') linkId: string,
     @Res() res: Response,
-  ): void {
-    const result = this.memories.removeAlbumLink(tripId, linkId, user.id);
+  ): Promise<void> {
+    const result = await this.memories.removeAlbumLink(tripId, linkId, user.id);
     if ('error' in result) {
       res.status(result.error.status).json({ error: result.error.message });
       return;

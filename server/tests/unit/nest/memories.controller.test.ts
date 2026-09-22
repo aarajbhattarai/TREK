@@ -195,19 +195,19 @@ describe('UnifiedMemoriesController (parity with /api/integrations/memories/unif
   });
 
   describe('DELETE /trips/:tripId/album-links/:linkId', () => {
-    it('removes the link on success', () => {
+    it('removes the link on success', async () => {
       const removeAlbumLink = vi.fn().mockReturnValue({ data: {} });
       const svc = makeService({ removeAlbumLink });
       const res = makeRes();
-      new UnifiedMemoriesController(svc).removeAlbumLink(user, '5', 'l1', res);
+      await new UnifiedMemoriesController(svc).removeAlbumLink(user, '5', 'l1', res);
       expect(removeAlbumLink).toHaveBeenCalledWith('5', 'l1', 7);
       expect(res.json).toHaveBeenCalledWith({ success: true });
     });
 
-    it('maps the error envelope', () => {
+    it('maps the error envelope', async () => {
       const svc = makeService({ removeAlbumLink: vi.fn().mockReturnValue({ error: { status: 404, message: 'Link not found' } }) });
       const res = makeRes();
-      new UnifiedMemoriesController(svc).removeAlbumLink(user, '5', 'l1', res);
+      await new UnifiedMemoriesController(svc).removeAlbumLink(user, '5', 'l1', res);
       expect(res.status).toHaveBeenCalledWith(404);
       expect(res.json).toHaveBeenCalledWith({ error: 'Link not found' });
     });

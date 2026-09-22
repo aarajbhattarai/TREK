@@ -94,7 +94,7 @@ export async function createPluginRpcHostFactory(dbs: DatabaseService): Promise<
   const addons = new AddonsService(dbs);
   const queryHelpers = new QueryHelpersService(dbs);
   const todos = new TodoService(dbs, permissions, realtime, await createTestUnitOfWork(dbs.connection));
-  const packing = new PackingService(dbs, permissions, realtime, notificationsStub());
+  const packing = new PackingService(dbs, permissions, realtime, notificationsStub(), await createTestUnitOfWork(dbs.connection));
   const files = new FilesService(dbs, permissions, realtime, new EphemeralTokenService(), generalStorage);
   const collab = new CollabService(dbs, permissions, realtime, notificationsStub(), generalStorage, new RateLimitService(), await createTestUnitOfWork(dbs.connection));
   const vacay = new VacayService(dbs, realtime, notificationsStub());

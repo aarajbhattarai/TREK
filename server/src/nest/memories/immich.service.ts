@@ -40,7 +40,7 @@ export class ImmichService {
     private readonly storage: StorageService,
   ) {}
 
-  getImmichCredentials(userId: number) {
+  async getImmichCredentials(userId: number) {
     const user = this.db.prepare('SELECT immich_url, immich_api_key FROM users WHERE id = ?').get(userId) as any;
     if (!user?.immich_url || !user?.immich_api_key) return null;
     const apiKey = decrypt_api_key(user.immich_api_key);
@@ -71,8 +71,8 @@ export class ImmichService {
 
   // ── Connection Settings ────────────────────────────────────────────────────
 
-  getConnectionSettings(userId: number) {
-    const creds = this.getImmichCredentials(userId);
+  async getConnectionSettings(userId: number) {
+    const creds = await this.getImmichCredentials(userId);
     const prefs = this.db.prepare('SELECT immich_auto_upload FROM users WHERE id = ?').get(userId) as { immich_auto_upload?: number } | undefined;
     return {
       immich_url: creds?.immich_url || '',
@@ -81,7 +81,7 @@ export class ImmichService {
     };
   }
 
-  setImmichAutoUpload(userId: number, enabled: boolean): void {
+  async setImmichAutoUpload(userId: number, enabled: boolean): Promise<void> {
     this.db.prepare('UPDATE users SET immich_auto_upload = ? WHERE id = ?').run(enabled ? 1 : 0, userId);
   }
 
@@ -169,7 +169,7 @@ export class ImmichService {
   async getConnectionStatus(
     userId: number
   ): Promise<{ connected: boolean; error?: string; user?: { name?: string; email?: string } }> {
-    const creds = this.getImmichCredentials(userId);
+    const creds = await this.getImmichCredentials(userId);
     if (!creds) return { connected: false, error: 'Not configured' };
     try {
       const resp = await safeFetch(`${creds.immich_url}/api/users/me`, {
@@ -189,7 +189,7 @@ export class ImmichService {
   async browseTimeline(
     userId: number
   ): Promise<{ buckets?: any; error?: string; status?: number }> {
-    const creds = this.getImmichCredentials(userId);
+    const creds = await this.getImmichCredentials(userId);
     if (!creds) return { error: 'Immich not configured', status: 400 };
 
     try {
@@ -271,7 +271,7 @@ export class ImmichService {
     page: number = 1,
     size: number = 50,
   ): Promise<{ assets?: any[]; hasMore?: boolean; error?: string; status?: number }> {
-    const creds = this.getImmichCredentials(userId);
+    const creds = await this.getImmichCredentials(userId);
     if (!creds) return { error: 'Immich not configured', status: 400 };
 
     // Once a day filter is in play the raw pages and the answered pages stop
@@ -347,7 +347,7 @@ export class ImmichService {
     ownerUserId?: number
   ): Promise<{ data?: any; error?: string; status?: number }> {
     const effectiveUserId = ownerUserId ?? userId;
-    const creds = this.getImmichCredentials(effectiveUserId);
+    const creds = await this.getImmichCredentials(effectiveUserId);
     if (!creds) return { error: 'Not found', status: 404 };
 
     try {
@@ -390,7 +390,7 @@ export class ImmichService {
     ownerUserId?: number
   ): Promise<{ bytes: Buffer; contentType: string } | { error: string; status: number }> {
     const effectiveUserId = ownerUserId ?? userId;
-    const creds = this.getImmichCredentials(effectiveUserId);
+    const creds = await this.getImmichCredentials(effectiveUserId);
     if (!creds) return { error: 'Not found', status: 404 };
 
     const url = `${creds.immich_url}/api/assets/${assetId}/thumbnail?size=thumbnail`;
@@ -430,7 +430,7 @@ export class ImmichService {
     opts?: { mediaType?: string | null; range?: string },
   ): Promise<void> {
     const effectiveUserId = ownerUserId ?? userId;
-    const creds = this.getImmichCredentials(effectiveUserId);
+    const creds = await this.getImmichCredentials(effectiveUserId);
     if (!creds) {
       handleServiceResult(response, fail('Not found', 404));
       return;
@@ -467,7 +467,7 @@ export class ImmichService {
   async listAlbums(
     userId: number
   ): Promise<{ albums?: any[]; error?: string; status?: number }> {
-    const creds = this.getImmichCredentials(userId);
+    const creds = await this.getImmichCredentials(userId);
     if (!creds) return { error: 'Immich not configured', status: 400 };
 
     try {
@@ -591,7 +591,7 @@ export class ImmichService {
     userId: number,
     albumId: string,
   ): Promise<{ assets?: any[]; error?: string; status?: number }> {
-    const creds = this.getImmichCredentials(userId);
+    const creds = await this.getImmichCredentials(userId);
     if (!creds) return { error: 'Immich not configured', status: 400 };
 
     try {
@@ -639,10 +639,10 @@ export class ImmichService {
     linkId: string,
     userId: number,
   ): Promise<{ selection: Selection; total: number } | { error: string; status: number }> {
-    const response = this.access.getAlbumIdFromLink(tripId, linkId, userId);
+    const response = await this.access.getAlbumIdFromLink(tripId, linkId, userId);
     if (!response.success) return { error: 'Album link not found', status: 404 };
 
-    const creds = this.getImmichCredentials(userId);
+    const creds = await this.getImmichCredentials(userId);
     if (!creds) return { error: 'Immich not configured', status: 400 };
 
     try {
@@ -664,7 +664,7 @@ export class ImmichService {
   // ── Upload to Immich ──────────────────────────────────────────────────────
 
   async uploadToImmich(userId: number, filePath: string, fileName: string): Promise<string | null> {
-    const creds = this.getImmichCredentials(userId);
+    const creds = await this.getImmichCredentials(userId);
     if (!creds) return null;
 
     // Journey uploads store the uploads-relative 'journey/<file>' path; only

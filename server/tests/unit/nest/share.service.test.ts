@@ -73,6 +73,7 @@ beforeAll(async () => {
     permissionsStub,
     new QueryHelpersService(new DatabaseService(testDb)),
     photoCacheStub,
+    await createTestUnitOfWork(testDb),
   );
 });
 
@@ -91,10 +92,10 @@ function shareRow(tripId: number | string) {
 }
 
 /** Owner + trip + a share link with all five flags on unless overridden. */
-function seedSharedTrip(flags: Record<string, boolean> = {}) {
+async function seedSharedTrip(flags: Record<string, boolean> = {}) {
   const { user } = createUser(testDb);
   const trip = createTrip(testDb, user.id);
-  const { token } = svc.createOrUpdate(String(trip.id), user.id, {
+  const { token } = await svc.createOrUpdate(String(trip.id), user.id, {
     share_map: true, share_bookings: true, share_packing: true, share_budget: true, share_collab: true,
     ...flags,
   });
@@ -104,15 +105,15 @@ function seedSharedTrip(flags: Record<string, boolean> = {}) {
 // ── verifyTripAccess / canManage ──────────────────────────────────────────────
 
 describe('verifyTripAccess and canManage', () => {
-  it('SHARE-SVC-001: verifyTripAccess returns the trip for owner and member, nothing for a stranger', () => {
+  it('SHARE-SVC-001: verifyTripAccess returns the trip for owner and member, nothing for a stranger', async () => {
     const { user: owner } = createUser(testDb);
     const { user: member } = createUser(testDb);
     const { user: stranger } = createUser(testDb);
     const trip = createTrip(testDb, owner.id);
     addTripMember(testDb, trip.id, member.id);
-    expect(svc.verifyTripAccess(String(trip.id), owner.id)?.id).toBe(trip.id);
-    expect(svc.verifyTripAccess(String(trip.id), member.id)).toBeDefined();
-    expect(svc.verifyTripAccess(String(trip.id), stranger.id)).toBeFalsy();
+    expect((await svc.verifyTripAccess(String(trip.id), owner.id))?.id).toBe(trip.id);
+    expect(await svc.verifyTripAccess(String(trip.id), member.id)).toBeDefined();
+    expect(await svc.verifyTripAccess(String(trip.id), stranger.id)).toBeFalsy();
   });
 
   it('SHARE-SVC-002: canManage forwards the share_manage check with the ownership flag', async () => {
@@ -130,11 +131,11 @@ describe('verifyTripAccess and canManage', () => {
 // ── createOrUpdate ────────────────────────────────────────────────────────────
 
 describe('createOrUpdate', () => {
-  it('SHARE-SVC-003: creates a link with default flags (map/bookings on, rest off) and a 90-day expiry', () => {
+  it('SHARE-SVC-003: creates a link with default flags (map/bookings on, rest off) and a 90-day expiry', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const before = Date.now();
-    const result = svc.createOrUpdate(String(trip.id), user.id, {});
+    const result = await svc.createOrUpdate(String(trip.id), user.id, {});
     expect(result.created).toBe(true);
     expect(result.token).toMatch(/^[A-Za-z0-9_-]+$/); // base64url
     const row = shareRow(trip.id);
@@ -148,10 +149,10 @@ describe('createOrUpdate', () => {
     expect(expires).toBeLessThanOrEqual(Date.now() + ninetyDays + 5000);
   });
 
-  it('SHARE-SVC-004: explicit flags override the defaults in both directions', () => {
+  it('SHARE-SVC-004: explicit flags override the defaults in both directions', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
-    svc.createOrUpdate(String(trip.id), user.id, {
+    await svc.createOrUpdate(String(trip.id), user.id, {
       share_map: false, share_bookings: false, share_packing: true, share_budget: true, share_collab: true,
     });
     const row = shareRow(trip.id);
@@ -159,24 +160,24 @@ describe('createOrUpdate', () => {
       .toEqual([0, 0, 1, 1, 1]);
   });
 
-  it('SHARE-SVC-005: a second call updates the flags, keeps the token, and reports created:false', () => {
+  it('SHARE-SVC-005: a second call updates the flags, keeps the token, and reports created:false', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
-    const first = svc.createOrUpdate(String(trip.id), user.id, {});
-    const second = svc.createOrUpdate(String(trip.id), user.id, { share_budget: true });
+    const first = await svc.createOrUpdate(String(trip.id), user.id, {});
+    const second = await svc.createOrUpdate(String(trip.id), user.id, { share_budget: true });
     expect(second).toEqual({ token: first.token, created: false });
     expect(shareRow(trip.id).share_budget).toBe(1);
   });
 
-  it('SHARE-SVC-006: the update path re-applies the defaults for omitted flags and renews the 90-day expiry', () => {
+  it('SHARE-SVC-006: the update path re-applies the defaults for omitted flags and renews the 90-day expiry', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
-    svc.createOrUpdate(String(trip.id), user.id, { share_packing: true });
+    await svc.createOrUpdate(String(trip.id), user.id, { share_packing: true });
     // Simulate a legacy pre-TTL row (NULL expiry): an explicit update moves it
     // onto the 90-day clock.
     testDb.prepare('UPDATE share_tokens SET expires_at = NULL WHERE trip_id = ?').run(trip.id);
     const before = Date.now();
-    svc.createOrUpdate(String(trip.id), user.id, {});
+    await svc.createOrUpdate(String(trip.id), user.id, {});
     const row = shareRow(trip.id);
     // Omitted share_packing fell back to its default (off) — destructuring
     // defaults apply on every call, not only on create.
@@ -191,17 +192,17 @@ describe('createOrUpdate', () => {
 // ── get / remove ──────────────────────────────────────────────────────────────
 
 describe('get and remove', () => {
-  it('SHARE-SVC-007: get returns null when no link exists', () => {
+  it('SHARE-SVC-007: get returns null when no link exists', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
-    expect(svc.get(String(trip.id))).toBeNull();
+    expect(await svc.get(String(trip.id))).toBeNull();
   });
 
-  it('SHARE-SVC-008: get returns the token with the flags coerced to booleans', () => {
+  it('SHARE-SVC-008: get returns the token with the flags coerced to booleans', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
-    const { token } = svc.createOrUpdate(String(trip.id), user.id, { share_packing: true });
-    const info = svc.get(String(trip.id));
+    const { token } = await svc.createOrUpdate(String(trip.id), user.id, { share_packing: true });
+    const info = await svc.get(String(trip.id));
     expect(info).toEqual({
       token,
       created_at: expect.any(String),
@@ -213,13 +214,13 @@ describe('get and remove', () => {
     });
   });
 
-  it('SHARE-SVC-009: remove deletes the link and is a no-op when none exists', () => {
+  it('SHARE-SVC-009: remove deletes the link and is a no-op when none exists', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
-    svc.createOrUpdate(String(trip.id), user.id, {});
-    svc.remove(String(trip.id));
+    await svc.createOrUpdate(String(trip.id), user.id, {});
+    await svc.remove(String(trip.id));
     expect(shareRow(trip.id)).toBeUndefined();
-    expect(() => svc.remove(String(trip.id))).not.toThrow();
+    await expect(svc.remove(String(trip.id))).resolves.toBeUndefined();
   });
 });
 
@@ -231,7 +232,7 @@ describe('getSharedTripData', () => {
   });
 
   it('SHARE-SVC-011: returns null for an expired token but honours NULL expiry (legacy rows)', async () => {
-    const { trip, token } = seedSharedTrip();
+    const { trip, token } = await seedSharedTrip();
     testDb.prepare('UPDATE share_tokens SET expires_at = ? WHERE trip_id = ?').run('2020-01-01T00:00:00.000Z', trip.id);
     expect(await svc.getSharedTripData(token)).toBeNull();
     testDb.prepare('UPDATE share_tokens SET expires_at = NULL WHERE trip_id = ?').run(trip.id);
@@ -239,7 +240,7 @@ describe('getSharedTripData', () => {
   });
 
   it('SHARE-SVC-012: returns null when the trip row is gone', async () => {
-    const { trip, token } = seedSharedTrip();
+    const { trip, token } = await seedSharedTrip();
     // The token normally cascades away with its trip; orphan it deliberately
     // to pin the defensive `if (!trip) return null` branch.
     testDb.exec('PRAGMA foreign_keys = OFF');
@@ -249,7 +250,7 @@ describe('getSharedTripData', () => {
   });
 
   it('SHARE-SVC-013: returns the trip projection, coerced permissions and grouped itinerary', async () => {
-    const { trip, token } = seedSharedTrip();
+    const { trip, token } = await seedSharedTrip();
     const day = createDay(testDb, trip.id, { date: '2025-06-01' });
     const place = createPlace(testDb, trip.id, { name: 'Louvre' });
     createDayAssignment(testDb, day.id, place.id, { notes: 'go early' });
@@ -275,7 +276,7 @@ describe('getSharedTripData', () => {
   });
 
   it('SHARE-SVC-014: COALESCEs assignment times over place times', async () => {
-    const { trip, token } = seedSharedTrip();
+    const { trip, token } = await seedSharedTrip();
     const day = createDay(testDb, trip.id);
     const place = createPlace(testDb, trip.id);
     testDb.prepare('UPDATE places SET place_time = ?, end_time = ? WHERE id = ?').run('09:00', '10:00', place.id);
@@ -290,7 +291,7 @@ describe('getSharedTripData', () => {
   });
 
   it('SHARE-SVC-015: orders assignments by order_index, then created_at as tiebreaker', async () => {
-    const { trip, token } = seedSharedTrip();
+    const { trip, token } = await seedSharedTrip();
     const day = createDay(testDb, trip.id);
     const p1 = createPlace(testDb, trip.id, { name: 'First' });
     const p2 = createPlace(testDb, trip.id, { name: 'Second' });
@@ -305,7 +306,7 @@ describe('getSharedTripData', () => {
   });
 
   it('SHARE-SVC-016: attaches reservation day_positions, null when a reservation has none', async () => {
-    const { trip, token } = seedSharedTrip();
+    const { trip, token } = await seedSharedTrip();
     const day = createDay(testDb, trip.id);
     const r1 = testDb.prepare("INSERT INTO reservations (trip_id, title, type) VALUES (?, 'Flight', 'flight')").run(trip.id);
     const r2 = testDb.prepare("INSERT INTO reservations (trip_id, title, type) VALUES (?, 'Hotel', 'hotel')").run(trip.id);
@@ -319,7 +320,7 @@ describe('getSharedTripData', () => {
   });
 
   it('SHARE-SVC-017: excludes private packing items from the public payload (#858)', async () => {
-    const { user, trip, token } = seedSharedTrip();
+    const { user, trip, token } = await seedSharedTrip();
     testDb.prepare("INSERT INTO packing_items (trip_id, name, is_private, owner_id) VALUES (?, 'Common', 0, ?)").run(trip.id, user.id);
     testDb.prepare("INSERT INTO packing_items (trip_id, name, is_private, owner_id) VALUES (?, 'Secret', 1, ?)").run(trip.id, user.id);
     const packing = (await (await svc.getSharedTripData(token))!).packing;
@@ -327,19 +328,19 @@ describe('getSharedTripData', () => {
   });
 
   it('SHARE-SVC-018: includes non-deleted collab messages only when share_collab is on', async () => {
-    const { user, trip, token } = seedSharedTrip();
+    const { user, trip, token } = await seedSharedTrip();
     testDb.prepare("INSERT INTO collab_messages (trip_id, user_id, text, deleted) VALUES (?, ?, 'Hello', 0)").run(trip.id, user.id);
     testDb.prepare("INSERT INTO collab_messages (trip_id, user_id, text, deleted) VALUES (?, ?, 'Gone', 1)").run(trip.id, user.id);
     const collab = (await (await svc.getSharedTripData(token))!).collab;
     expect(collab).toHaveLength(1);
     expect(collab[0]).toEqual(expect.objectContaining({ text: 'Hello', username: user.username }));
 
-    svc.createOrUpdate(String(trip.id), user.id, { share_collab: false });
+    await svc.createOrUpdate(String(trip.id), user.id, { share_collab: false });
     expect((await (await svc.getSharedTripData(token))!).collab).toEqual([]);
   });
 
   it('SHARE-SVC-019: withholds each section when its flag is off', async () => {
-    const { trip, token } = seedSharedTrip({
+    const { trip, token } = await seedSharedTrip({
       share_map: false, share_bookings: false, share_packing: false, share_budget: false, share_collab: false,
     });
     const day = createDay(testDb, trip.id);
@@ -361,7 +362,7 @@ describe('getSharedTripData', () => {
   });
 
   it('SHARE-SVC-020: baseCurrency falls back trip currency → EUR, with the owner default_currency winning (#1361)', async () => {
-    const { user, trip, token } = seedSharedTrip();
+    const { user, trip, token } = await seedSharedTrip();
     expect((await (await svc.getSharedTripData(token))!).baseCurrency).toBe('EUR');
     testDb.prepare('UPDATE trips SET currency = ? WHERE id = ?').run('USD', trip.id);
     expect((await (await svc.getSharedTripData(token))!).baseCurrency).toBe('USD');
@@ -370,7 +371,7 @@ describe('getSharedTripData', () => {
   });
 
   it('SHARE-SVC-021: rewrites place-photo proxy URLs to the token-scoped route, passing others through', async () => {
-    const { trip, token } = seedSharedTrip();
+    const { trip, token } = await seedSharedTrip();
     const proxied = createPlace(testDb, trip.id, { name: 'Proxied' });
     const uploaded = createPlace(testDb, trip.id, { name: 'Uploaded' });
     createPlace(testDb, trip.id, { name: 'Bare' });
@@ -385,7 +386,7 @@ describe('getSharedTripData', () => {
   });
 
   it('SHARE-SVC-027: cartoApiKey resolves owner setting → admin instance default → empty (#2054)', async () => {
-    const { user, token } = seedSharedTrip();
+    const { user, token } = await seedSharedTrip();
     expect((await (await svc.getSharedTripData(token))!).cartoApiKey).toBe('');
     testDb.prepare("INSERT INTO app_settings (key, value) VALUES ('default_user_setting_carto_api_key', 'instance-key')").run();
     expect((await (await svc.getSharedTripData(token))!).cartoApiKey).toBe('instance-key');
@@ -394,7 +395,7 @@ describe('getSharedTripData', () => {
   });
 
   it('SHARE-SVC-029: staged bookings stay out of the public payload, confirmation number included', async () => {
-    const { trip, token } = seedSharedTrip();
+    const { trip, token } = await seedSharedTrip();
     testDb.prepare(`INSERT INTO reservations (trip_id, title, type, status, confirmation_number, ingest_state)
       VALUES (?, 'Parked Flight', 'flight', 'confirmed', 'SECRET1', 'staged')`).run(trip.id);
     testDb.prepare(`INSERT INTO reservations (trip_id, title, type, status, confirmation_number)
@@ -408,7 +409,7 @@ describe('getSharedTripData', () => {
   });
 
   it('SHARE-SVC-030: every booking that predates the column stays in the payload', async () => {
-    const { trip, token } = seedSharedTrip();
+    const { trip, token } = await seedSharedTrip();
     for (let i = 0; i < 5; i++) {
       testDb.prepare(`INSERT INTO reservations (trip_id, title, type, status)
         VALUES (?, ?, 'flight', 'confirmed')`).run(trip.id, `Booking ${i}`);
@@ -418,7 +419,7 @@ describe('getSharedTripData', () => {
   });
 
   it('SHARE-SVC-031: accommodations backed only by a staged booking are withheld, unlinked ones are kept', async () => {
-    const { trip, token } = seedSharedTrip();
+    const { trip, token } = await seedSharedTrip();
     const place = createPlace(testDb, trip.id, { name: 'Hotel Bellevue' });
     const day = createDay(testDb, trip.id, { date: '2026-09-01' });
     const stay = (): number => testDb.prepare(`
@@ -440,7 +441,7 @@ describe('getSharedTripData', () => {
 
 describe('getSharedTripData redaction (#2320)', () => {
   it('SHARE-SVC-032: a booking travels without its confirmation, import trail or travellers', async () => {
-    const { trip, token } = seedSharedTrip();
+    const { trip, token } = await seedSharedTrip();
     testDb.prepare(`INSERT INTO reservations
       (trip_id, title, type, status, confirmation_number, notes, url, external_source, external_id, sync_enabled, needs_review)
       VALUES (?, 'Night train', 'train', 'confirmed', 'PNR9XY', 'Bring the tickets', 'https://bahn.example/booking/1', 'kitinerary', 'ext-42', 1, 0)`)
@@ -459,7 +460,7 @@ describe('getSharedTripData redaction (#2320)', () => {
   });
 
   it('SHARE-SVC-033: booking metadata keeps the journey and drops the ticket', async () => {
-    const { trip, token } = seedSharedTrip();
+    const { trip, token } = await seedSharedTrip();
     const metadata = JSON.stringify({
       airline: 'LH', flight_number: 'LH400', departure_airport: 'FRA', arrival_airport: 'JFK',
       seat: '14A', price: 812, passenger_name: 'Ada Lovelace', confirmation_number: 'LOC123',
@@ -489,7 +490,7 @@ describe('getSharedTripData redaction (#2320)', () => {
   });
 
   it('SHARE-SVC-034: a booking carries its ordered stops', async () => {
-    const { trip, token } = seedSharedTrip();
+    const { trip, token } = await seedSharedTrip();
     const id = testDb.prepare(`INSERT INTO reservations (trip_id, title, type, status)
       VALUES (?, 'Coach', 'bus', 'confirmed')`).run(trip.id).lastInsertRowid;
     const ins = testDb.prepare(`INSERT INTO reservation_endpoints (reservation_id, role, sequence, name, code, lat, lng)
@@ -506,7 +507,7 @@ describe('getSharedTripData redaction (#2320)', () => {
   });
 
   it('SHARE-SVC-035: only http(s) links reach the page, on bookings and places alike', async () => {
-    const { trip, token } = seedSharedTrip();
+    const { trip, token } = await seedSharedTrip();
     const day = createDay(testDb, trip.id, { date: '2026-09-01' });
     for (const [title, url] of [['ok', 'https://example.com/x'], ['js', 'javascript:alert(1)'], ['data', 'data:text/html,hi'], ['junk', 'not a url'], ['blank', '   ']]) {
       testDb.prepare(`INSERT INTO reservations (trip_id, title, type, status, url) VALUES (?, ?, 'other', 'confirmed', ?)`).run(trip.id, title, url);
@@ -524,7 +525,7 @@ describe('getSharedTripData redaction (#2320)', () => {
   });
 
   it('SHARE-SVC-036: an assignment carries the place notes, duration and contact, the pool carries no booking notes', async () => {
-    const { trip, token } = seedSharedTrip();
+    const { trip, token } = await seedSharedTrip();
     const day = createDay(testDb, trip.id, { date: '2026-09-01' });
     const place = createPlace(testDb, trip.id, { name: 'Louvre' });
     testDb.prepare(`UPDATE places SET description = 'Big museum', address = 'Rue de Rivoli', notes = 'Skip the pyramid queue',
@@ -547,7 +548,7 @@ describe('getSharedTripData redaction (#2320)', () => {
   });
 
   it('SHARE-SVC-037: a stay carries its desk times and note, not its confirmation', async () => {
-    const { trip, token } = seedSharedTrip();
+    const { trip, token } = await seedSharedTrip();
     const place = createPlace(testDb, trip.id, { name: 'Hotel' });
     const day = createDay(testDb, trip.id, { date: '2026-09-01' });
     testDb.prepare(`INSERT INTO day_accommodations (trip_id, place_id, start_day_id, end_day_id, check_in, check_out, confirmation, notes)
@@ -560,7 +561,7 @@ describe('getSharedTripData redaction (#2320)', () => {
     expect(JSON.stringify(data)).not.toContain('HOTEL-777');
   });
 
-  it('SHARE-SVC-038: metadata that is not an object comes back as nothing', () => {
+  it('SHARE-SVC-038: metadata that is not an object comes back as nothing', async () => {
     expect(publicReservationMetadata(null)).toBeNull();
     expect(publicReservationMetadata('not json')).toBeNull();
     expect(publicReservationMetadata('[1,2]')).toBeNull();
@@ -575,14 +576,14 @@ describe('getSharedTripData redaction (#2320)', () => {
 describe('getSharedPlacePhotoKey', () => {
   it('SHARE-SVC-022: returns null for an unknown or expired token', async () => {
     expect(await svc.getSharedPlacePhotoKey('nope', 'ChIJabc')).toBeNull();
-    const { trip, token } = seedSharedTrip();
+    const { trip, token } = await seedSharedTrip();
     testDb.prepare('UPDATE share_tokens SET expires_at = ? WHERE trip_id = ?').run('2020-01-01T00:00:00.000Z', trip.id);
     expect(await svc.getSharedPlacePhotoKey(token, 'ChIJabc')).toBeNull();
     expect(serveKey).not.toHaveBeenCalled();
   });
 
   it('SHARE-SVC-023: returns null when the owner disabled the map section', async () => {
-    const { trip, token } = seedSharedTrip({ share_map: false });
+    const { trip, token } = await seedSharedTrip({ share_map: false });
     const place = createPlace(testDb, trip.id);
     testDb.prepare('UPDATE places SET image_url = ? WHERE id = ?').run('/api/maps/place-photo/ChIJabc/bytes', place.id);
     expect(await svc.getSharedPlacePhotoKey(token, 'ChIJabc')).toBeNull();
@@ -590,13 +591,13 @@ describe('getSharedPlacePhotoKey', () => {
   });
 
   it('SHARE-SVC-024: returns null when no place in the trip carries the proxy URL', async () => {
-    const { token } = seedSharedTrip();
+    const { token } = await seedSharedTrip();
     expect(await svc.getSharedPlacePhotoKey(token, 'ChIJabc')).toBeNull();
     expect(serveKey).not.toHaveBeenCalled();
   });
 
   it('SHARE-SVC-025: resolves via serveKey when the encoded placeId matches the stored URL', async () => {
-    const { trip, token } = seedSharedTrip();
+    const { trip, token } = await seedSharedTrip();
     const place = createPlace(testDb, trip.id);
     // Wikimedia pseudo-IDs contain characters that must round-trip encoded.
     const placeId = 'coords:48.8,2.3';

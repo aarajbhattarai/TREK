@@ -25,7 +25,7 @@ export class TripShareController {
   constructor(private readonly share: ShareService) {}
 
   private async requireManage(tripId: string, user: User) {
-    const trip = this.share.verifyTripAccess(tripId, user.id);
+    const trip = await this.share.verifyTripAccess(tripId, user.id);
     if (!trip) {
       throw new HttpException({ error: 'Trip not found' }, 404);
     }
@@ -42,7 +42,7 @@ export class TripShareController {
     @Res({ passthrough: true }) res: Response,
   ) {
     await this.requireManage(tripId, user);
-    const result = this.share.createOrUpdate(tripId, user.id, {
+    const result = await this.share.createOrUpdate(tripId, user.id, {
       share_map: body.share_map,
       share_bookings: body.share_bookings,
       share_packing: body.share_packing,
@@ -62,14 +62,14 @@ export class TripShareController {
     // trip while signed in; it does not let them hand out a copy that works
     // without an account and outlives their membership.
     await this.requireManage(tripId, user);
-    const info = this.share.get(tripId);
+    const info = await this.share.get(tripId);
     return info ? info : { token: null };
   }
 
   @Delete()
   async remove(@CurrentUser() user: User, @Param('tripId') tripId: string) {
     await this.requireManage(tripId, user);
-    this.share.remove(tripId);
+    await this.share.remove(tripId);
     return { success: true };
   }
 }

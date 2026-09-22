@@ -72,7 +72,7 @@ export class TripReadModelService {
 
     // Thread the viewer so another member's private/personal packing items (#858)
     // stay hidden — without it listItems returns the UNFILTERED list.
-    const packingItems = this.packing.listItems(tripId, viewerUserId);
+    const packingItems = await this.packing.listItems(tripId, viewerUserId);
     const packing = {
       items: packingItems,
       total: packingItems.length,
@@ -106,7 +106,7 @@ export class TripReadModelService {
       places: await this.places.list(String(tripId), {}),
       // Scope to the requesting member so other members' private packing items
       // (#858) never land in this viewer's offline cache.
-      packingItems: this.packing.listItems(tripId, viewerId),
+      packingItems: await this.packing.listItems(tripId, viewerId),
       todoItems: await this.todo.listItems(tripId),
       budgetItems: await this.budget.listBudgetItems(tripId),
       reservations: this.reservations.list(tripId),

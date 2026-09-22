@@ -86,11 +86,11 @@ describe('JourneyController', () => {
     expect(ctl(svc({ deleteEntry: vi.fn().mockReturnValue(true) } as Partial<JourneyService>)).deleteEntry(user, '3')).toEqual({ success: true });
   });
 
-  it('provider-photos: batch, single 400/403, success', () => {
+  it('provider-photos: batch, single 400/403, success', async () => {
     const batch = svc({ addProviderPhoto: vi.fn().mockReturnValue({ id: 1 }) } as Partial<JourneyService>);
-    expect(ctl(batch).providerPhotos(user, '3', { provider: 'immich', asset_ids: ['a', 'b'] })).toEqual({ photos: [{ id: 1 }, { id: 1 }], added: 2 });
-    expect(thrown(() => ctl(svc()).providerPhotos(user, '3', { provider: 'immich' }))).toEqual({ status: 400, body: { error: 'provider and asset_id required' } });
-    expect(thrown(() => ctl(svc({ addProviderPhoto: vi.fn().mockReturnValue(null) } as Partial<JourneyService>)).providerPhotos(user, '3', { provider: 'immich', asset_id: 'a' }))).toEqual({ status: 403, body: { error: 'Not allowed or duplicate' } });
+    expect(await ctl(batch).providerPhotos(user, '3', { provider: 'immich', asset_ids: ['a', 'b'] })).toEqual({ photos: [{ id: 1 }, { id: 1 }], added: 2 });
+    expect(await thrownAsync(() => ctl(svc()).providerPhotos(user, '3', { provider: 'immich' }))).toEqual({ status: 400, body: { error: 'provider and asset_id required' } });
+    expect(await thrownAsync(() => ctl(svc({ addProviderPhoto: vi.fn().mockReturnValue(null) } as Partial<JourneyService>)).providerPhotos(user, '3', { provider: 'immich', asset_id: 'a' }))).toEqual({ status: 403, body: { error: 'Not allowed or duplicate' } });
   });
 
   it('link-photo: 400 without id (accepts legacy photo_id), 403, success', () => {
@@ -136,21 +136,21 @@ describe('JourneyController', () => {
     expect(up2).toHaveBeenCalledWith(3, 1, [{ path: 'journey/v2.mp4', thumbnail: undefined, mediaType: 'video', durationMs: null }]);
   });
 
-  it('provider-photos forwards per-asset media_types for gallery and entries (#823)', () => {
+  it('provider-photos forwards per-asset media_types for gallery and entries (#823)', async () => {
     const add = vi.fn().mockReturnValue({ id: 1 });
-    ctl(svc({ addProviderPhotoToGallery: add } as Partial<JourneyService>)).galleryProviderPhotos(user, '9', { provider: 'immich', asset_ids: ['a', 'b'], media_types: ['video', 'image'] });
+    await ctl(svc({ addProviderPhotoToGallery: add } as Partial<JourneyService>)).galleryProviderPhotos(user, '9', { provider: 'immich', asset_ids: ['a', 'b'], media_types: ['video', 'image'] });
     expect(add).toHaveBeenNthCalledWith(1, 9, 1, 'immich', 'a', undefined, undefined, 'video');
     expect(add).toHaveBeenNthCalledWith(2, 9, 1, 'immich', 'b', undefined, undefined, 'image');
     const addOne = vi.fn().mockReturnValue({ id: 2 });
-    ctl(svc({ addProviderPhotoToGallery: addOne } as Partial<JourneyService>)).galleryProviderPhotos(user, '9', { provider: 'immich', asset_id: 'c', media_type: 'video' });
+    await ctl(svc({ addProviderPhotoToGallery: addOne } as Partial<JourneyService>)).galleryProviderPhotos(user, '9', { provider: 'immich', asset_id: 'c', media_type: 'video' });
     expect(addOne).toHaveBeenCalledWith(9, 1, 'immich', 'c', undefined, undefined, 'video');
 
     // Entry path mirrors the gallery path.
     const eAdd = vi.fn().mockReturnValue({ id: 3 });
-    ctl(svc({ addProviderPhoto: eAdd } as Partial<JourneyService>)).providerPhotos(user, '4', { provider: 'immich', asset_ids: ['x'], media_types: ['video'], caption: 'c' });
+    await ctl(svc({ addProviderPhoto: eAdd } as Partial<JourneyService>)).providerPhotos(user, '4', { provider: 'immich', asset_ids: ['x'], media_types: ['video'], caption: 'c' });
     expect(eAdd).toHaveBeenNthCalledWith(1, 4, 1, 'immich', 'x', 'c', undefined, 'video');
     const eOne = vi.fn().mockReturnValue({ id: 4 });
-    ctl(svc({ addProviderPhoto: eOne } as Partial<JourneyService>)).providerPhotos(user, '4', { provider: 'immich', asset_id: 'y', media_type: 'video' });
+    await ctl(svc({ addProviderPhoto: eOne } as Partial<JourneyService>)).providerPhotos(user, '4', { provider: 'immich', asset_id: 'y', media_type: 'video' });
     expect(eOne).toHaveBeenCalledWith(4, 1, 'immich', 'y', undefined, undefined, 'video');
   });
 
@@ -264,12 +264,12 @@ describe('JourneyController', () => {
     expect(await ctl(noId).uploadEntryPhotos(user, '3', [{ filename: 'a.jpg', originalname: 'a.jpg' } as Express.Multer.File], {})).toEqual({ photos: [{ id: 9 }] });
   });
 
-  it('provider-photos batch passes the passphrase through when present', () => {
+  it('provider-photos batch passes the passphrase through when present', async () => {
     const addProviderPhoto = vi.fn().mockReturnValue({ id: 1 });
-    ctl(svc({ addProviderPhoto } as Partial<JourneyService>)).providerPhotos(user, '3', { provider: 'immich', asset_ids: ['a'], caption: 'cap', passphrase: 'secret' });
+    await ctl(svc({ addProviderPhoto } as Partial<JourneyService>)).providerPhotos(user, '3', { provider: 'immich', asset_ids: ['a'], caption: 'cap', passphrase: 'secret' });
     expect(addProviderPhoto).toHaveBeenCalledWith(3, 1, 'immich', 'a', 'cap', 'secret', 'image');
     // single-photo success path
-    expect(ctl(svc({ addProviderPhoto: vi.fn().mockReturnValue({ id: 2 }) } as Partial<JourneyService>)).providerPhotos(user, '3', { provider: 'immich', asset_id: 'a' })).toEqual({ id: 2 });
+    expect(await ctl(svc({ addProviderPhoto: vi.fn().mockReturnValue({ id: 2 }) } as Partial<JourneyService>)).providerPhotos(user, '3', { provider: 'immich', asset_id: 'a' })).toEqual({ id: 2 });
   });
 
   it('PATCH photos: 404 then returns the updated photo', () => {
@@ -291,14 +291,14 @@ describe('JourneyController', () => {
     expect(storageStub.delete).not.toHaveBeenCalled();
   });
 
-  it('gallery provider-photos: batch (with passphrase), single 400/403, success', () => {
+  it('gallery provider-photos: batch (with passphrase), single 400/403, success', async () => {
     const addProviderPhotoToGallery = vi.fn().mockReturnValue({ id: 1 });
     const batch = ctl(svc({ addProviderPhotoToGallery } as Partial<JourneyService>));
-    expect(batch.galleryProviderPhotos(user, '9', { provider: 'immich', asset_ids: ['a', 'b'], passphrase: 'pw' })).toEqual({ photos: [{ id: 1 }, { id: 1 }], added: 2 });
+    expect(await batch.galleryProviderPhotos(user, '9', { provider: 'immich', asset_ids: ['a', 'b'], passphrase: 'pw' })).toEqual({ photos: [{ id: 1 }, { id: 1 }], added: 2 });
     expect(addProviderPhotoToGallery).toHaveBeenCalledWith(9, 1, 'immich', 'a', undefined, 'pw', 'image');
-    expect(thrown(() => ctl(svc()).galleryProviderPhotos(user, '9', { provider: 'immich' }))).toEqual({ status: 400, body: { error: 'provider and asset_id required' } });
-    expect(thrown(() => ctl(svc({ addProviderPhotoToGallery: vi.fn().mockReturnValue(null) } as Partial<JourneyService>)).galleryProviderPhotos(user, '9', { provider: 'immich', asset_id: 'a' }))).toEqual({ status: 403, body: { error: 'Not allowed or duplicate' } });
-    expect(ctl(svc({ addProviderPhotoToGallery: vi.fn().mockReturnValue({ id: 3 }) } as Partial<JourneyService>)).galleryProviderPhotos(user, '9', { provider: 'immich', asset_id: 'a' })).toEqual({ id: 3 });
+    expect(await thrownAsync(() => ctl(svc()).galleryProviderPhotos(user, '9', { provider: 'immich' }))).toEqual({ status: 400, body: { error: 'provider and asset_id required' } });
+    expect(await thrownAsync(() => ctl(svc({ addProviderPhotoToGallery: vi.fn().mockReturnValue(null) } as Partial<JourneyService>)).galleryProviderPhotos(user, '9', { provider: 'immich', asset_id: 'a' }))).toEqual({ status: 403, body: { error: 'Not allowed or duplicate' } });
+    expect(await ctl(svc({ addProviderPhotoToGallery: vi.fn().mockReturnValue({ id: 3 }) } as Partial<JourneyService>)).galleryProviderPhotos(user, '9', { provider: 'immich', asset_id: 'a' })).toEqual({ id: 3 });
   });
 
   it('DELETE gallery photo: 404, then removes the object when present', async () => {

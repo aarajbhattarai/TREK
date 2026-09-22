@@ -1552,19 +1552,19 @@ export class JourneyDomainService {
    * the entry route could not, which is why a video dropped on an entry came
    * back as a 400 (issue #2341).
    */
-  addPhoto(
+  async addPhoto(
     entryId: number,
     userId: number,
     filePath: string,
     thumbnailPath?: string,
     caption?: string,
     media?: { mediaType?: string; durationMs?: number | null },
-  ): JourneyPhoto | null {
+  ): Promise<JourneyPhoto | null> {
     const entry = this.db.prepare('SELECT * FROM journey_entries WHERE id = ?').get(entryId) as JourneyEntry | undefined;
     if (!entry) return null;
     if (!this.canEdit(entry.journey_id, userId)) return null;
 
-    const trekPhotoId = this.photos.getOrCreateLocal(
+    const trekPhotoId = await this.photos.getOrCreateLocal(
       filePath,
       thumbnailPath,
       null,
@@ -1578,7 +1578,7 @@ export class JourneyDomainService {
     return result;
   }
 
-  addProviderPhoto(
+  async addProviderPhoto(
     entryId: number,
     userId: number,
     provider: string,
@@ -1586,12 +1586,12 @@ export class JourneyDomainService {
     caption?: string,
     passphrase?: string,
     mediaType: string = 'image',
-  ): JourneyPhoto | null {
+  ): Promise<JourneyPhoto | null> {
     const entry = this.db.prepare('SELECT * FROM journey_entries WHERE id = ?').get(entryId) as JourneyEntry | undefined;
     if (!entry) return null;
     if (!this.canEdit(entry.journey_id, userId)) return null;
 
-    const trekPhotoId = this.photos.getOrCreate(provider, assetId, userId, passphrase, mediaType);
+    const trekPhotoId = await this.photos.getOrCreate(provider, assetId, userId, passphrase, mediaType);
 
     // skip if this photo is already linked to this entry
     const alreadyLinked = this.db
@@ -1629,11 +1629,11 @@ export class JourneyDomainService {
   }
 
   // Upload photos to the journey gallery only (no entry association).
-  uploadGalleryPhotos(
+  async uploadGalleryPhotos(
     journeyId: number,
     userId: number,
     filePaths: { path: string; thumbnail?: string; mediaType?: string; durationMs?: number | null }[],
-  ): JourneyPhoto[] {
+  ): Promise<JourneyPhoto[]> {
     if (!this.canEdit(journeyId, userId)) return [];
     const results: any[] = [];
     const now = this.ts();
@@ -1643,7 +1643,7 @@ export class JourneyDomainService {
     let nextOrder = (maxOrderRow?.m ?? -1) + 1;
 
     for (const f of filePaths) {
-      const trekPhotoId = this.photos.getOrCreateLocal(f.path, f.thumbnail, null, null, f.mediaType || 'image', f.durationMs ?? null);
+      const trekPhotoId = await this.photos.getOrCreateLocal(f.path, f.thumbnail, null, null, f.mediaType || 'image', f.durationMs ?? null);
       this.db.prepare(
         `
         INSERT OR IGNORE INTO journey_photos (journey_id, photo_id, shared, sort_order, created_at)
@@ -1659,7 +1659,7 @@ export class JourneyDomainService {
   }
 
   // Add a provider photo to the gallery only (no entry link).
-  addProviderPhotoToGallery(
+  async addProviderPhotoToGallery(
     journeyId: number,
     userId: number,
     provider: string,
@@ -1667,9 +1667,9 @@ export class JourneyDomainService {
     caption?: string,
     passphrase?: string,
     mediaType: string = 'image',
-  ): any | null {
+  ): Promise<any | null> {
     if (!this.canEdit(journeyId, userId)) return null;
-    const trekPhotoId = this.photos.getOrCreate(provider, assetId, userId, passphrase, mediaType);
+    const trekPhotoId = await this.photos.getOrCreate(provider, assetId, userId, passphrase, mediaType);
     const galleryId = this.db.connection.transaction(() => this.ensureInGallery(journeyId, trekPhotoId, caption))();
     return this.db.prepare(`SELECT ${GALLERY_SELECT} FROM ${GALLERY_JOIN} WHERE gp.id = ?`).get(galleryId) ?? null;
   }
@@ -1687,10 +1687,10 @@ export class JourneyDomainService {
   }
 
   // Hard-delete a gallery photo (removes from all entries and the gallery).
-  deleteGalleryPhoto(
+  async deleteGalleryPhoto(
     journeyPhotoId: number,
     userId: number,
-  ): { photo_id: number; file_path?: string | null; thumbnail_path?: string | null } | null {
+  ): Promise<{ photo_id: number; file_path?: string | null; thumbnail_path?: string | null } | null> {
     const row = this.db.prepare('SELECT * FROM journey_photos WHERE id = ?').get(journeyPhotoId) as
       | { id: number; journey_id: number; photo_id: number }
       | undefined;
@@ -1703,18 +1703,18 @@ export class JourneyDomainService {
 
     // cascade on journey_entry_photos.journey_photo_id handles junction cleanup
     this.db.prepare('DELETE FROM journey_photos WHERE id = ?').run(journeyPhotoId);
-    this.photos.deleteIfOrphan(row.photo_id);
+    await this.photos.deleteIfOrphan(row.photo_id);
 
     return { photo_id: row.photo_id, file_path: trekRow?.file_path ?? null, thumbnail_path: trekRow?.thumbnail_path ?? null };
   }
 
-  setPhotoProvider(photoId: number, provider: string, assetId: string, ownerId: number) {
+  async setPhotoProvider(photoId: number, provider: string, assetId: string, ownerId: number) {
     // photoId = journey_photos.id (gallery row); look up the trek_photo_id
     const jp = this.db.prepare('SELECT photo_id FROM journey_photos WHERE id = ?').get(photoId) as
       | { photo_id: number }
       | undefined;
     if (!jp) return;
-    this.photos.setProvider(jp.photo_id, provider, assetId, ownerId);
+    await this.photos.setProvider(jp.photo_id, provider, assetId, ownerId);
     // also denorm on gallery row for fast reads
     this.db.prepare('UPDATE journey_photos SET provider = ?, asset_id = ?, owner_id = ? WHERE id = ?').run(
       provider,
@@ -1752,10 +1752,10 @@ export class JourneyDomainService {
   }
 
   // deletePhoto: hard-delete (backwards compat name used by old route).
-  deletePhoto(
+  async deletePhoto(
     photoId: number,
     userId: number,
-  ): { id: number; photo_id: number; file_path?: string | null; thumbnail_path?: string | null; journey_id: number } | null {
+  ): Promise<{ id: number; photo_id: number; file_path?: string | null; thumbnail_path?: string | null; journey_id: number } | null> {
     const row = this.db.prepare('SELECT id, journey_id, photo_id FROM journey_photos WHERE id = ?').get(photoId) as
       | { id: number; journey_id: number; photo_id: number }
       | undefined;
@@ -1767,7 +1767,7 @@ export class JourneyDomainService {
       | undefined;
 
     this.db.prepare('DELETE FROM journey_photos WHERE id = ?').run(photoId);
-    this.photos.deleteIfOrphan(row.photo_id);
+    await this.photos.deleteIfOrphan(row.photo_id);
 
     return { id: row.id, photo_id: row.photo_id, file_path: trekRow?.file_path ?? null, thumbnail_path: trekRow?.thumbnail_path ?? null, journey_id: row.journey_id };
   }

@@ -47,7 +47,7 @@ export class PackingRpc {
     const parsed = packingCreateItemRequestSchema.safeParse(params.input);
     if (!parsed.success) throw new BadParams(`invalid packing item: ${schemaMessage(parsed.error)}`);
     await this.guards.requireTripEdit(tripId, actor, PACKING_EDIT_ACTION);
-    const item = this.packing.createItem(String(tripId), parsed.data as never, actor) as PrivacyItem;
+    const item = await this.packing.createItem(String(tripId), parsed.data as never, actor) as PrivacyItem;
     // A referenced bag must exist on this trip (#2154), as on the REST route.
     if (isInvalidBagRef(item)) throw new BadParams(`no packing bag ${parsed.data.bag_id} on trip ${tripId}`);
     this.packing.emitToViewers(String(tripId), 'packing:created', { item }, item, undefined);
@@ -64,9 +64,9 @@ export class PackingRpc {
     if (!parsed.success) throw new BadParams(`invalid packing item: ${schemaMessage(parsed.error)}`);
     await this.guards.requireTripEdit(tripId, actor, PACKING_EDIT_ACTION);
     // Read the privacy BEFORE the write, so a public/private toggle routes correctly.
-    const before = this.packing.getItemPrivacy(tripId, itemId);
+    const before = await this.packing.getItemPrivacy(tripId, itemId);
     const input = parsed.data as Record<string, unknown>;
-    const updated = this.packing.updateItem(String(tripId), String(itemId), input as never, Object.keys(input), undefined, actor);
+    const updated = await this.packing.updateItem(String(tripId), String(itemId), input as never, Object.keys(input), undefined, actor);
     if (!updated) throw new ForbiddenResource(`no packing item ${itemId} on trip ${tripId}`);
     if (isUpdateConflict(updated)) throw new BadParams('packing item was modified concurrently');
     // A referenced bag must exist on this trip (#2154), as on the REST route.
@@ -84,7 +84,7 @@ export class PackingRpc {
     const itemId = num(params.itemId, 'itemId');
     const actor = this.guards.requireActor(ctx, 'packing item');
     await this.guards.requireTripEdit(tripId, actor, PACKING_EDIT_ACTION);
-    const deleted = this.packing.deleteItem(String(tripId), String(itemId), actor) as PrivacyItem | null;
+    const deleted = await this.packing.deleteItem(String(tripId), String(itemId), actor) as PrivacyItem | null;
     if (!deleted) throw new ForbiddenResource(`no packing item ${itemId} on trip ${tripId}`);
     this.packing.emitToViewers(String(tripId), 'packing:deleted', { itemId }, deleted, undefined);
     this.packing.broadcastBagTotals(String(tripId));
@@ -95,7 +95,7 @@ export class PackingRpc {
   async listBags(params: Record<string, unknown>, ctx: PluginRpcContext): Promise<unknown[]> {
     // Note the permission: the envelope really does gate this READ on the write
     // grant. The decorator makes the oddity visible instead of burying it.
-    return await this.guards.tripRead(params, ctx, () => this.packing.listBags(String(num(params.tripId, 'tripId'))) as unknown[]);
+    return await this.guards.tripRead(params, ctx, async () => (await this.packing.listBags(String(num(params.tripId, 'tripId')))) as unknown[]);
   }
 
   @PluginMethod('packing.createBag', { permission: 'db:write:packing' })
@@ -105,7 +105,7 @@ export class PackingRpc {
     const input = asPayload(params.input);
     if (typeof input.name !== 'string' || input.name.trim() === '') throw new BadParams('bag name is required');
     await this.guards.requireTripEdit(tripId, actor, PACKING_EDIT_ACTION);
-    const bag = this.packing.createBag(String(tripId), {
+    const bag = await this.packing.createBag(String(tripId), {
       name: input.name,
       color: typeof input.color === 'string' ? input.color : undefined,
       weight_limit_grams: typeof input.weight_limit_grams === 'number' ? input.weight_limit_grams : undefined,
@@ -121,7 +121,7 @@ export class PackingRpc {
     const actor = this.guards.requireActor(ctx, 'packing bag');
     await this.guards.requireTripEdit(tripId, actor, PACKING_EDIT_ACTION);
     const input = asPayload(params.input);
-    const bag = this.packing.updateBag(String(tripId), String(bagId), input as never, Object.keys(input));
+    const bag = await this.packing.updateBag(String(tripId), String(bagId), input as never, Object.keys(input));
     if (!bag) throw new ForbiddenResource(`no packing bag ${bagId} on trip ${tripId}`);
     this.realtime.broadcast(tripId, 'packing:bag-updated', { bag }, undefined);
     return bag;
@@ -133,7 +133,7 @@ export class PackingRpc {
     const bagId = num(params.bagId, 'bagId');
     const actor = this.guards.requireActor(ctx, 'packing bag');
     await this.guards.requireTripEdit(tripId, actor, PACKING_EDIT_ACTION);
-    if (!this.packing.deleteBag(String(tripId), String(bagId))) {
+    if (!(await this.packing.deleteBag(String(tripId), String(bagId)))) {
       throw new ForbiddenResource(`no packing bag ${bagId} on trip ${tripId}`);
     }
     this.realtime.broadcast(tripId, 'packing:bag-deleted', { bagId }, undefined);
@@ -151,7 +151,7 @@ export class PackingRpc {
     // userIds sits on the params object itself, not under `input`.
     const raw = asPayload(params).userIds;
     const userIds = Array.isArray(raw) ? raw.filter((x): x is number => typeof x === 'number') : [];
-    const members = this.packing.setBagMembers(String(tripId), String(bagId), userIds);
+    const members = await this.packing.setBagMembers(String(tripId), String(bagId), userIds);
     if (!members) throw new ForbiddenResource(`no packing bag ${bagId} on trip ${tripId}`);
     this.realtime.broadcast(tripId, 'packing:bag-members-updated', { bagId, members }, undefined);
     return members;

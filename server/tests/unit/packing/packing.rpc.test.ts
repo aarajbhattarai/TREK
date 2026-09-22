@@ -32,7 +32,7 @@ type Item = { id: number; name?: string; is_private?: number; owner_id?: number 
  */
 function build(opts: { canEdit?: boolean; before?: Item | undefined; updated?: Item | null } = {}) {
   const realtime = { broadcast: vi.fn() } as unknown as RealtimeService & { broadcast: ReturnType<typeof vi.fn> };
-  const packing = new PackingService({} as never, {} as never, realtime, notificationsStub());
+  const packing = new PackingService({} as never, {} as never, realtime, notificationsStub(), {} as never);
   const data = {
     listItems: vi.fn(() => [{ id: 70, name: 'Socks' }]),
     // The bodies here are the boring fixture; the item writes are typed as Item so a

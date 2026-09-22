@@ -116,7 +116,7 @@ beforeAll(async () => {
 const buildReadModel = async (database: DatabaseService, roster: TripMembersService = membersSvc) =>
   new TripReadModelService(
     database, roster, daysSvc, accommodationsSvc, budgetSvc,
-    new PackingService(dbs(), new PermissionsService(dbs(), await createTestUnitOfWork(dbs().connection)), new RealtimeService(), notificationsStub()),
+    new PackingService(dbs(), new PermissionsService(dbs(), await createTestUnitOfWork(dbs().connection)), new RealtimeService(), notificationsStub(), await createTestUnitOfWork(dbs().connection)),
     new ReservationsService(dbs(), new PermissionsService(dbs(), await createTestUnitOfWork(dbs().connection)), budgetSvc, new RealtimeService(), notificationsStub(), new ReservationsReadRepository(dbs()), await accommodationsOver(dbs()), await createTestUnitOfWork(dbs().connection)),
     new CollabService(dbs(), new PermissionsService(dbs(), await createTestUnitOfWork(dbs().connection)), new RealtimeService(), notificationsStub(), makeStorageFixture('').storage, new RateLimitService(), await createTestUnitOfWork(dbs().connection)),
     placesSvc,

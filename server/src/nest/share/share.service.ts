@@ -7,6 +7,7 @@ import { QueryHelpersService } from '../query-helpers/query-helpers.service';
 import { PlacePhotoCacheService } from '../place-photos/place-photo-cache.service';
 import { publicReservationSql, publicStaySql } from '../reservations/reservation-visibility';
 import { SettingsService } from '../settings/settings.service';
+import { UnitOfWork } from '../database/unit-of-work';
 import type { User } from '../../types';
 
 type Trip = TripAccess;
@@ -155,9 +156,10 @@ export class ShareService {
     private readonly permissions: PermissionsService,
     private readonly queryHelpers: QueryHelpersService,
     private readonly photoCache: PlacePhotoCacheService,
+    private readonly uow: UnitOfWork,
   ) {}
 
-  verifyTripAccess(tripId: string, userId: number) {
+  async verifyTripAccess(tripId: string, userId: number) {
     return this.dbs.canAccessTrip(tripId, userId);
   }
 
@@ -174,7 +176,7 @@ export class ShareService {
    * before the expires_at migration keep NULL until touched and remain valid
    * indefinitely; an explicit update moves them onto the TTL.
    */
-  createOrUpdate(tripId: string, userId: number, permissions: SharePermissions): { token: string; created: boolean } {
+  async createOrUpdate(tripId: string, userId: number, permissions: SharePermissions): Promise<{ token: string; created: boolean }> {
     const {
       share_map = true,
       share_bookings = true,
@@ -184,7 +186,7 @@ export class ShareService {
     } = permissions;
 
     const expiresAt = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString();
-    return this.dbs.transaction(() => {
+    return await this.uow.transactional(async () => {
       const existing = this.dbs.get<{ token: string }>('SELECT token FROM share_tokens WHERE trip_id = ?', tripId);
       if (existing) {
         this.dbs.run(
@@ -206,7 +208,7 @@ export class ShareService {
   /**
    * Returns share token info for a trip, or null if no share link exists.
    */
-  get(tripId: string): ShareTokenInfo | null {
+  async get(tripId: string): Promise<ShareTokenInfo | null> {
     const row = this.dbs.get<any>('SELECT * FROM share_tokens WHERE trip_id = ?', tripId);
     if (!row) return null;
     return {
@@ -223,7 +225,7 @@ export class ShareService {
   /**
    * Deletes the share token for a trip.
    */
-  remove(tripId: string): void {
+  async remove(tripId: string): Promise<void> {
     this.dbs.run('DELETE FROM share_tokens WHERE trip_id = ?', tripId);
   }
 
@@ -243,7 +245,7 @@ export class ShareService {
    * route from these, and a trip with forty bookings is not forty round trips
    * to the database.
    */
-  private publicEndpointsByReservation(tripId: number): Map<number, Array<Record<string, unknown>>> {
+  private async publicEndpointsByReservation(tripId: number): Promise<Map<number, Array<Record<string, unknown>>>> {
     const rows = this.dbs.all<{ reservation_id: number } & Record<string, unknown>>(
       `SELECT e.reservation_id, e.role, e.sequence, e.name, e.code, e.lat, e.lng, e.timezone, e.local_date, e.local_time
          FROM reservation_endpoints e JOIN reservations r ON r.id = e.reservation_id
@@ -380,7 +382,7 @@ export class ShareService {
       // an imported ticket keeps its seat and its record locator. A public
       // link shows what the booking is, not what it would take to change it
       // (#2320). The endpoints ride along, since the map draws from them.
-      const endpoints = this.publicEndpointsByReservation(tripId);
+      const endpoints = await this.publicEndpointsByReservation(tripId);
       reservations = this.dbs.all<any>(
         `SELECT ${PUBLIC_RESERVATION_COLUMNS} FROM reservations r
          WHERE r.trip_id = ? AND ${publicReservationSql('r')}

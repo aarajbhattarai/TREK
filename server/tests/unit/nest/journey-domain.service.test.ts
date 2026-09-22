@@ -78,7 +78,7 @@ afterAll(() => {
 // -- Access control -----------------------------------------------------------
 
 describe('canAccessJourney', () => {
-  it('JOURNEY-SVC-001: returns journey for owner', () => {
+  it('JOURNEY-SVC-001: returns journey for owner', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id, { title: 'My Journey' });
 
@@ -89,7 +89,7 @@ describe('canAccessJourney', () => {
     expect(result!.title).toBe('My Journey');
   });
 
-  it('JOURNEY-SVC-002: returns journey for contributor', () => {
+  it('JOURNEY-SVC-002: returns journey for contributor', async () => {
     const { user: owner } = createUser(testDb);
     const { user: contrib } = createUser(testDb);
     const journey = createJourney(testDb, owner.id);
@@ -101,7 +101,7 @@ describe('canAccessJourney', () => {
     expect(result!.id).toBe(journey.id);
   });
 
-  it('JOURNEY-SVC-003: returns null for stranger', () => {
+  it('JOURNEY-SVC-003: returns null for stranger', async () => {
     const { user: owner } = createUser(testDb);
     const { user: stranger } = createUser(testDb);
     const journey = createJourney(testDb, owner.id);
@@ -113,14 +113,14 @@ describe('canAccessJourney', () => {
 });
 
 describe('isOwner', () => {
-  it('JOURNEY-SVC-004: returns true for owner', () => {
+  it('JOURNEY-SVC-004: returns true for owner', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
 
     expect(svc.isOwner(journey.id, user.id)).toBe(true);
   });
 
-  it('JOURNEY-SVC-005: returns false for contributor', () => {
+  it('JOURNEY-SVC-005: returns false for contributor', async () => {
     const { user: owner } = createUser(testDb);
     const { user: contrib } = createUser(testDb);
     const journey = createJourney(testDb, owner.id);
@@ -129,7 +129,7 @@ describe('isOwner', () => {
     expect(svc.isOwner(journey.id, contrib.id)).toBe(false);
   });
 
-  it('JOURNEY-SVC-006: returns false for stranger', () => {
+  it('JOURNEY-SVC-006: returns false for stranger', async () => {
     const { user: owner } = createUser(testDb);
     const { user: stranger } = createUser(testDb);
     const journey = createJourney(testDb, owner.id);
@@ -139,14 +139,14 @@ describe('isOwner', () => {
 });
 
 describe('canEdit', () => {
-  it('JOURNEY-SVC-007: owner can edit', () => {
+  it('JOURNEY-SVC-007: owner can edit', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
 
     expect(svc.canEdit(journey.id, user.id)).toBe(true);
   });
 
-  it('JOURNEY-SVC-008: editor contributor can edit', () => {
+  it('JOURNEY-SVC-008: editor contributor can edit', async () => {
     const { user: owner } = createUser(testDb);
     const { user: editor } = createUser(testDb);
     const journey = createJourney(testDb, owner.id);
@@ -155,7 +155,7 @@ describe('canEdit', () => {
     expect(svc.canEdit(journey.id, editor.id)).toBe(true);
   });
 
-  it('JOURNEY-SVC-009: viewer contributor cannot edit', () => {
+  it('JOURNEY-SVC-009: viewer contributor cannot edit', async () => {
     const { user: owner } = createUser(testDb);
     const { user: viewer } = createUser(testDb);
     const journey = createJourney(testDb, owner.id);
@@ -164,7 +164,7 @@ describe('canEdit', () => {
     expect(svc.canEdit(journey.id, viewer.id)).toBe(false);
   });
 
-  it('JOURNEY-SVC-010: stranger cannot edit', () => {
+  it('JOURNEY-SVC-010: stranger cannot edit', async () => {
     const { user: owner } = createUser(testDb);
     const { user: stranger } = createUser(testDb);
     const journey = createJourney(testDb, owner.id);
@@ -176,7 +176,7 @@ describe('canEdit', () => {
 // -- Journey CRUD -------------------------------------------------------------
 
 describe('listJourneys', () => {
-  it('JOURNEY-SVC-011: returns owned journeys with counts', () => {
+  it('JOURNEY-SVC-011: returns owned journeys with counts', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id, { title: 'Road Trip' });
     createJourneyEntry(testDb, journey.id, user.id, { entry_date: '2026-03-01', location_name: 'Paris' });
@@ -190,7 +190,7 @@ describe('listJourneys', () => {
     expect(result[0].place_count).toBe(2);
   });
 
-  it('JOURNEY-SVC-012: includes journeys where user is contributor', () => {
+  it('JOURNEY-SVC-012: includes journeys where user is contributor', async () => {
     const { user: owner } = createUser(testDb);
     const { user: contrib } = createUser(testDb);
     const journey = createJourney(testDb, owner.id, { title: 'Shared Trip' });
@@ -202,7 +202,7 @@ describe('listJourneys', () => {
     expect(result[0].title).toBe('Shared Trip');
   });
 
-  it('JOURNEY-SVC-013: does not include other users journeys', () => {
+  it('JOURNEY-SVC-013: does not include other users journeys', async () => {
     const { user: owner } = createUser(testDb);
     const { user: other } = createUser(testDb);
     createJourney(testDb, owner.id, { title: 'Private' });
@@ -212,7 +212,7 @@ describe('listJourneys', () => {
     expect(result).toHaveLength(0);
   });
 
-  it('JOURNEY-SVC-013b: returns trip_date_min/max aggregated from linked trips', () => {
+  it('JOURNEY-SVC-013b: returns trip_date_min/max aggregated from linked trips', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id, { title: 'Multi Trip' });
     const trip1 = createTrip(testDb, user.id, { title: 'Trip A', start_date: '2025-06-01', end_date: '2025-06-10' });
@@ -229,7 +229,7 @@ describe('listJourneys', () => {
 });
 
 describe('createJourney (service)', () => {
-  it('JOURNEY-SVC-014: creates journey with contributor record', () => {
+  it('JOURNEY-SVC-014: creates journey with contributor record', async () => {
     const { user } = createUser(testDb);
 
     const journey = svc.createJourney(user.id, { title: 'New Journey', subtitle: 'Subtitle' });
@@ -247,7 +247,7 @@ describe('createJourney (service)', () => {
     expect(contrib!.role).toBe('owner');
   });
 
-  it('JOURNEY-SVC-015: links trips when trip_ids provided', () => {
+  it('JOURNEY-SVC-015: links trips when trip_ids provided', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id, { title: 'Paris 2026' });
 
@@ -261,7 +261,7 @@ describe('createJourney (service)', () => {
 });
 
 describe('getJourneyFull', () => {
-  it('JOURNEY-SVC-016: returns full journey with entries, trips, contributors', () => {
+  it('JOURNEY-SVC-016: returns full journey with entries, trips, contributors', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id, { title: 'Full Journey' });
     createJourneyEntry(testDb, journey.id, user.id, {
@@ -280,7 +280,7 @@ describe('getJourneyFull', () => {
     expect(result!.stats.entries).toBe(1);
   });
 
-  it('JOURNEY-SVC-017: returns null for unauthorized user', () => {
+  it('JOURNEY-SVC-017: returns null for unauthorized user', async () => {
     const { user: owner } = createUser(testDb);
     const { user: stranger } = createUser(testDb);
     const journey = createJourney(testDb, owner.id);
@@ -292,7 +292,7 @@ describe('getJourneyFull', () => {
 });
 
 describe('updateJourney', () => {
-  it('JOURNEY-SVC-018: owner can update title and subtitle', () => {
+  it('JOURNEY-SVC-018: owner can update title and subtitle', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id, { title: 'Old Title' });
 
@@ -303,7 +303,7 @@ describe('updateJourney', () => {
     expect(updated!.subtitle).toBe('New Sub');
   });
 
-  it('JOURNEY-SVC-019: editor contributor cannot update journey settings (#732)', () => {
+  it('JOURNEY-SVC-019: editor contributor cannot update journey settings (#732)', async () => {
     // Post-#732: journey-level settings (title/cover/status) are owner-only.
     // Editors keep access to entries and photos, but not the journey shell.
     const { user: owner } = createUser(testDb);
@@ -316,7 +316,7 @@ describe('updateJourney', () => {
     expect(updated).toBeNull();
   });
 
-  it('JOURNEY-SVC-020: viewer cannot update', () => {
+  it('JOURNEY-SVC-020: viewer cannot update', async () => {
     const { user: owner } = createUser(testDb);
     const { user: viewer } = createUser(testDb);
     const journey = createJourney(testDb, owner.id);
@@ -327,7 +327,7 @@ describe('updateJourney', () => {
     expect(result).toBeNull();
   });
 
-  it('JOURNEY-SVC-021: returns journey unchanged when no valid fields provided', () => {
+  it('JOURNEY-SVC-021: returns journey unchanged when no valid fields provided', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id, { title: 'Same' });
 
@@ -337,7 +337,7 @@ describe('updateJourney', () => {
     expect(result!.title).toBe('Same');
   });
 
-  it('JOURNEY-SVC-021b: accepts archived status', () => {
+  it('JOURNEY-SVC-021b: accepts archived status', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id, { title: 'To Archive' });
 
@@ -347,7 +347,7 @@ describe('updateJourney', () => {
     expect(result!.status).toBe('archived');
   });
 
-  it('JOURNEY-SVC-021c: ignores invalid status value', () => {
+  it('JOURNEY-SVC-021c: ignores invalid status value', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id, { title: 'Stay Active' });
 
@@ -357,7 +357,7 @@ describe('updateJourney', () => {
     expect(result!.status).toBe('active');
   });
 
-  it('JOURNEY-SVC-021d: trip GPX tracks are off until the owner switches them on (#2194)', () => {
+  it('JOURNEY-SVC-021d: trip GPX tracks are off until the owner switches them on (#2194)', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id, { title: 'Norway' });
 
@@ -370,7 +370,7 @@ describe('updateJourney', () => {
     expect(svc.updateJourney(journey.id, user.id, { show_trip_tracks: false })!.show_trip_tracks).toBe(0);
   });
 
-  it('JOURNEY-SVC-021e: an editor cannot switch the trip tracks on (#2194)', () => {
+  it('JOURNEY-SVC-021e: an editor cannot switch the trip tracks on (#2194)', async () => {
     const { user } = createUser(testDb);
     const { user: editor } = createUser(testDb, { username: 'tracks-editor' });
     const journey = createJourney(testDb, user.id, { title: 'Norway' });
@@ -383,7 +383,7 @@ describe('updateJourney', () => {
 });
 
 describe('deleteJourney', () => {
-  it('JOURNEY-SVC-022: owner can delete', () => {
+  it('JOURNEY-SVC-022: owner can delete', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
 
@@ -394,7 +394,7 @@ describe('deleteJourney', () => {
     expect(row).toBeUndefined();
   });
 
-  it('JOURNEY-SVC-023: non-owner cannot delete', () => {
+  it('JOURNEY-SVC-023: non-owner cannot delete', async () => {
     const { user: owner } = createUser(testDb);
     const { user: editor } = createUser(testDb);
     const journey = createJourney(testDb, owner.id);
@@ -411,7 +411,7 @@ describe('deleteJourney', () => {
 // -- Trip management ----------------------------------------------------------
 
 describe('addTripToJourney / removeTripFromJourney', () => {
-  it('JOURNEY-SVC-024: links a trip to a journey', () => {
+  it('JOURNEY-SVC-024: links a trip to a journey', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
     const trip = createTrip(testDb, user.id, { title: 'Linked Trip' });
@@ -425,7 +425,7 @@ describe('addTripToJourney / removeTripFromJourney', () => {
     expect(link).toBeDefined();
   });
 
-  it('JOURNEY-SVC-024b: refuses to link a trip the caller cannot access (IDOR guard)', () => {
+  it('JOURNEY-SVC-024b: refuses to link a trip the caller cannot access (IDOR guard)', async () => {
     const { user } = createUser(testDb);
     const { user: stranger } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
@@ -441,7 +441,7 @@ describe('addTripToJourney / removeTripFromJourney', () => {
     expect(link).toBeUndefined();
   });
 
-  it('JOURNEY-SVC-025: syncs places as skeleton entries when linking a trip', () => {
+  it('JOURNEY-SVC-025: syncs places as skeleton entries when linking a trip', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
     const trip = createTrip(testDb, user.id, {
@@ -461,7 +461,7 @@ describe('addTripToJourney / removeTripFromJourney', () => {
     expect(skeletons.length).toBe(1);
   });
 
-  it('JOURNEY-SVC-026: owner can remove a trip from journey', () => {
+  it('JOURNEY-SVC-026: owner can remove a trip from journey', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
     const trip = createTrip(testDb, user.id, { title: 'Remove Me' });
@@ -476,7 +476,7 @@ describe('addTripToJourney / removeTripFromJourney', () => {
     expect(link).toBeUndefined();
   });
 
-  it('JOURNEY-SVC-027: non-owner cannot remove a trip', () => {
+  it('JOURNEY-SVC-027: non-owner cannot remove a trip', async () => {
     const { user: owner } = createUser(testDb);
     const { user: editor } = createUser(testDb);
     const journey = createJourney(testDb, owner.id);
@@ -493,7 +493,7 @@ describe('addTripToJourney / removeTripFromJourney', () => {
 // -- Entries ------------------------------------------------------------------
 
 describe('listEntries', () => {
-  it('JOURNEY-SVC-028: returns entries with photos for authorized user', () => {
+  it('JOURNEY-SVC-028: returns entries with photos for authorized user', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
     const entry = createJourneyEntry(testDb, journey.id, user.id, {
@@ -509,7 +509,7 @@ describe('listEntries', () => {
     expect(result![0].photos).toEqual([]);
   });
 
-  it('JOURNEY-SVC-029: returns null for unauthorized user', () => {
+  it('JOURNEY-SVC-029: returns null for unauthorized user', async () => {
     const { user: owner } = createUser(testDb);
     const { user: stranger } = createUser(testDb);
     const journey = createJourney(testDb, owner.id);
@@ -524,7 +524,7 @@ describe('listEntries', () => {
    * The column holds 0 or 1; a client handed the integer on one read and the
    * boolean on another could compare against neither.
    */
-  it('answers stats_excluded as a boolean, on the list and on the full journey alike', () => {
+  it('answers stats_excluded as a boolean, on the list and on the full journey alike', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
     const off = createJourneyEntry(testDb, journey.id, user.id, { entry_date: '2026-03-01', stats_excluded: 1 });
@@ -540,7 +540,7 @@ describe('listEntries', () => {
 });
 
 describe('createEntry', () => {
-  it('JOURNEY-SVC-030: creates entry for editor', () => {
+  it('JOURNEY-SVC-030: creates entry for editor', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
 
@@ -561,7 +561,7 @@ describe('createEntry', () => {
     expect(entry!.author_id).toBe(user.id);
   });
 
-  it('JOURNEY-SVC-031: viewer cannot create entry', () => {
+  it('JOURNEY-SVC-031: viewer cannot create entry', async () => {
     const { user: owner } = createUser(testDb);
     const { user: viewer } = createUser(testDb);
     const journey = createJourney(testDb, owner.id);
@@ -577,7 +577,7 @@ describe('createEntry', () => {
 });
 
 describe('updateEntry', () => {
-  it('JOURNEY-SVC-032: updates entry fields', () => {
+  it('JOURNEY-SVC-032: updates entry fields', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
     const entry = createJourneyEntry(testDb, journey.id, user.id, {
@@ -592,7 +592,7 @@ describe('updateEntry', () => {
     expect(updated!.mood).toBe('excited');
   });
 
-  it('JOURNEY-SVC-033: promotes skeleton to entry when story is added', () => {
+  it('JOURNEY-SVC-033: promotes skeleton to entry when story is added', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
     const entry = createJourneyEntry(testDb, journey.id, user.id, {
@@ -616,7 +616,7 @@ describe('updateEntry', () => {
    * string, the client spread it into an entry it had typed as `string[]`, and
    * the journey page threw `tags.map is not a function`.
    */
-  it('answers with tags decoded, not as the JSON string the column holds', () => {
+  it('answers with tags decoded, not as the JSON string the column holds', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
     const entry = svc.createEntry(journey.id, user.id, {
@@ -629,7 +629,7 @@ describe('updateEntry', () => {
     expect(updated!.tags).toEqual(['beach', 'sunset']);
   });
 
-  it('decodes an emptied tag list rather than answering the string "[]"', () => {
+  it('decodes an emptied tag list rather than answering the string "[]"', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
     const entry = createJourneyEntry(testDb, journey.id, user.id, { entry_date: '2026-03-01' });
@@ -640,7 +640,7 @@ describe('updateEntry', () => {
     expect(updated!.tags).toEqual([]);
   });
 
-  it('decodes pros_cons the same way, on create and on update', () => {
+  it('decodes pros_cons the same way, on create and on update', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
     const prosCons = { pros: ['warm'], cons: ['crowded'] };
@@ -653,7 +653,7 @@ describe('updateEntry', () => {
   });
 
   /* An update that changes nothing takes its own early return out of the method. */
-  it('decodes on the no-op update too', () => {
+  it('decodes on the no-op update too', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
     const entry = svc.createEntry(journey.id, user.id, {
@@ -668,7 +668,7 @@ describe('updateEntry', () => {
    * — the journey page reloads on any event — so this is about not leaving a
    * payload that contradicts every read path for a listener to trust later.
    */
-  it('broadcasts the decoded entry, not the row', () => {
+  it('broadcasts the decoded entry, not the row', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
     const entry = svc.createEntry(journey.id, user.id, {
@@ -692,7 +692,7 @@ describe('updateEntry', () => {
    * be the boolean on the way out as well as the integer on the way in, and
    * the broadcast has to say the same thing the answer does.
    */
-  it('switches a stop off and back on, and answers with the flag as a boolean', () => {
+  it('switches a stop off and back on, and answers with the flag as a boolean', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
     const entry = createJourneyEntry(testDb, journey.id, user.id, { entry_date: '2026-03-01' });
@@ -715,7 +715,7 @@ describe('updateEntry', () => {
     }
   });
 
-  it('a viewer cannot switch a stop off', () => {
+  it('a viewer cannot switch a stop off', async () => {
     const { user: owner } = createUser(testDb);
     const { user: viewer } = createUser(testDb);
     const journey = createJourney(testDb, owner.id);
@@ -726,7 +726,7 @@ describe('updateEntry', () => {
     expect(svc.listEntries(journey.id, owner.id)![0].stats_excluded).toBe(false);
   });
 
-  it('JOURNEY-SVC-034: returns null for non-existent entry', () => {
+  it('JOURNEY-SVC-034: returns null for non-existent entry', async () => {
     const { user } = createUser(testDb);
 
     const result = svc.updateEntry(99999, user.id, { title: 'No Such Entry' });
@@ -734,7 +734,7 @@ describe('updateEntry', () => {
     expect(result).toBeNull();
   });
 
-  it('JOURNEY-SVC-034b: ignores injection column keys and mass-assignment attempts', () => {
+  it('JOURNEY-SVC-034b: ignores injection column keys and mass-assignment attempts', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
     const entry = createJourneyEntry(testDb, journey.id, user.id, {
@@ -762,7 +762,7 @@ describe('updateEntry', () => {
 });
 
 describe('deleteEntry', () => {
-  it('JOURNEY-SVC-035: deletes entry for editor', () => {
+  it('JOURNEY-SVC-035: deletes entry for editor', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
     const entry = createJourneyEntry(testDb, journey.id, user.id, { entry_date: '2026-03-01' });
@@ -774,13 +774,13 @@ describe('deleteEntry', () => {
     expect(row).toBeUndefined();
   });
 
-  it('JOURNEY-SVC-036: returns false for non-existent entry', () => {
+  it('JOURNEY-SVC-036: returns false for non-existent entry', async () => {
     const { user } = createUser(testDb);
 
     expect(svc.deleteEntry(99999, user.id)).toBe(false);
   });
 
-  it('JOURNEY-SVC-037: viewer cannot delete entry', () => {
+  it('JOURNEY-SVC-037: viewer cannot delete entry', async () => {
     const { user: owner } = createUser(testDb);
     const { user: viewer } = createUser(testDb);
     const journey = createJourney(testDb, owner.id);
@@ -790,7 +790,7 @@ describe('deleteEntry', () => {
     expect(svc.deleteEntry(entry.id, viewer.id)).toBe(false);
   });
 
-  it('JOURNEY-SVC-037b: deleting a filled skeleton reverts it back to skeleton', () => {
+  it('JOURNEY-SVC-037b: deleting a filled skeleton reverts it back to skeleton', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
     const trip = createTrip(testDb, user.id);
@@ -818,7 +818,7 @@ describe('deleteEntry', () => {
     expect(reverted.title).toBe('Tokyo Tower');
   });
 
-  it('JOURNEY-SVC-037c: deleting an independent entry permanently removes it', () => {
+  it('JOURNEY-SVC-037c: deleting an independent entry permanently removes it', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
     const entry = createJourneyEntry(testDb, journey.id, user.id, { entry_date: '2026-03-01', story: 'Manual entry' });
@@ -834,12 +834,12 @@ describe('deleteEntry', () => {
 // -- Photos -------------------------------------------------------------------
 
 describe('addPhoto / addProviderPhoto / deletePhoto', () => {
-  it('JOURNEY-SVC-038: addPhoto creates a local photo on an entry', () => {
+  it('JOURNEY-SVC-038: addPhoto creates a local photo on an entry', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
     const entry = createJourneyEntry(testDb, journey.id, user.id, { entry_date: '2026-03-01' });
 
-    const photo = svc.addPhoto(entry.id, user.id, '/uploads/photo.jpg', '/uploads/thumb.jpg', 'Sunset');
+    const photo = await svc.addPhoto(entry.id, user.id, '/uploads/photo.jpg', '/uploads/thumb.jpg', 'Sunset');
 
     expect(photo).not.toBeNull();
     expect(photo!.file_path).toBe('/uploads/photo.jpg');
@@ -848,20 +848,20 @@ describe('addPhoto / addProviderPhoto / deletePhoto', () => {
     expect(photo!.provider).toBe('local');
   });
 
-  it('JOURNEY-SVC-039: addPhoto returns null for non-existent entry', () => {
+  it('JOURNEY-SVC-039: addPhoto returns null for non-existent entry', async () => {
     const { user } = createUser(testDb);
 
-    const result = svc.addPhoto(99999, user.id, '/uploads/photo.jpg');
+    const result = await svc.addPhoto(99999, user.id, '/uploads/photo.jpg');
 
     expect(result).toBeNull();
   });
 
-  it('JOURNEY-SVC-040: addProviderPhoto creates a provider-backed photo', () => {
+  it('JOURNEY-SVC-040: addProviderPhoto creates a provider-backed photo', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
     const entry = createJourneyEntry(testDb, journey.id, user.id, { entry_date: '2026-03-01' });
 
-    const photo = svc.addProviderPhoto(entry.id, user.id, 'immich', 'asset-123', 'My caption');
+    const photo = await svc.addProviderPhoto(entry.id, user.id, 'immich', 'asset-123', 'My caption');
 
     expect(photo).not.toBeNull();
     expect(photo!.provider).toBe('immich');
@@ -869,24 +869,24 @@ describe('addPhoto / addProviderPhoto / deletePhoto', () => {
     expect(photo!.caption).toBe('My caption');
   });
 
-  it('JOURNEY-SVC-041: addProviderPhoto skips duplicate asset', () => {
+  it('JOURNEY-SVC-041: addProviderPhoto skips duplicate asset', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
     const entry = createJourneyEntry(testDb, journey.id, user.id, { entry_date: '2026-03-01' });
 
-    svc.addProviderPhoto(entry.id, user.id, 'immich', 'dup-asset');
-    const duplicate = svc.addProviderPhoto(entry.id, user.id, 'immich', 'dup-asset');
+    await svc.addProviderPhoto(entry.id, user.id, 'immich', 'dup-asset');
+    const duplicate = await svc.addProviderPhoto(entry.id, user.id, 'immich', 'dup-asset');
 
     expect(duplicate).toBeNull();
   });
 
-  it('JOURNEY-SVC-042: deletePhoto removes photo and returns it', () => {
+  it('JOURNEY-SVC-042: deletePhoto removes photo and returns it', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
     const entry = createJourneyEntry(testDb, journey.id, user.id, { entry_date: '2026-03-01' });
-    const photo = svc.addPhoto(entry.id, user.id, '/uploads/delete-me.jpg');
+    const photo = await svc.addPhoto(entry.id, user.id, '/uploads/delete-me.jpg');
 
-    const deleted = svc.deletePhoto(photo!.id, user.id);
+    const deleted = await svc.deletePhoto(photo!.id, user.id);
 
     expect(deleted).not.toBeNull();
     expect(deleted!.id).toBe(photo!.id);
@@ -894,20 +894,20 @@ describe('addPhoto / addProviderPhoto / deletePhoto', () => {
     expect(row).toBeUndefined();
   });
 
-  it('JOURNEY-SVC-043: deletePhoto returns null for non-existent photo', () => {
+  it('JOURNEY-SVC-043: deletePhoto returns null for non-existent photo', async () => {
     const { user } = createUser(testDb);
 
-    expect(svc.deletePhoto(99999, user.id)).toBeNull();
+    expect(await svc.deletePhoto(99999, user.id)).toBeNull();
   });
 
-  it('JOURNEY-SVC-044: viewer cannot add photo', () => {
+  it('JOURNEY-SVC-044: viewer cannot add photo', async () => {
     const { user: owner } = createUser(testDb);
     const { user: viewer } = createUser(testDb);
     const journey = createJourney(testDb, owner.id);
     addJourneyContributor(testDb, journey.id, viewer.id, 'viewer');
     const entry = createJourneyEntry(testDb, journey.id, owner.id, { entry_date: '2026-03-01' });
 
-    const result = svc.addPhoto(entry.id, viewer.id, '/uploads/no.jpg');
+    const result = await svc.addPhoto(entry.id, viewer.id, '/uploads/no.jpg');
 
     expect(result).toBeNull();
   });
@@ -916,7 +916,7 @@ describe('addPhoto / addProviderPhoto / deletePhoto', () => {
 // -- Contributors -------------------------------------------------------------
 
 describe('addContributor / updateContributorRole / removeContributor', () => {
-  it('JOURNEY-SVC-045: owner can add contributor', () => {
+  it('JOURNEY-SVC-045: owner can add contributor', async () => {
     const { user: owner } = createUser(testDb);
     const { user: newContrib } = createUser(testDb);
     const journey = createJourney(testDb, owner.id);
@@ -931,7 +931,7 @@ describe('addContributor / updateContributorRole / removeContributor', () => {
     expect(row!.role).toBe('editor');
   });
 
-  it('JOURNEY-SVC-046: non-owner cannot add contributor', () => {
+  it('JOURNEY-SVC-046: non-owner cannot add contributor', async () => {
     const { user: owner } = createUser(testDb);
     const { user: editor } = createUser(testDb);
     const { user: newUser } = createUser(testDb);
@@ -943,7 +943,7 @@ describe('addContributor / updateContributorRole / removeContributor', () => {
     expect(result).toBe(false);
   });
 
-  it('JOURNEY-SVC-047: owner cannot add themselves as contributor', () => {
+  it('JOURNEY-SVC-047: owner cannot add themselves as contributor', async () => {
     const { user: owner } = createUser(testDb);
     const journey = createJourney(testDb, owner.id);
 
@@ -952,7 +952,7 @@ describe('addContributor / updateContributorRole / removeContributor', () => {
     expect(result).toBe(false);
   });
 
-  it('JOURNEY-SVC-048: owner can update contributor role', () => {
+  it('JOURNEY-SVC-048: owner can update contributor role', async () => {
     const { user: owner } = createUser(testDb);
     const { user: contrib } = createUser(testDb);
     const journey = createJourney(testDb, owner.id);
@@ -967,7 +967,7 @@ describe('addContributor / updateContributorRole / removeContributor', () => {
     expect(row.role).toBe('editor');
   });
 
-  it('JOURNEY-SVC-049: non-owner cannot update contributor role', () => {
+  it('JOURNEY-SVC-049: non-owner cannot update contributor role', async () => {
     const { user: owner } = createUser(testDb);
     const { user: editor } = createUser(testDb);
     const { user: target } = createUser(testDb);
@@ -980,7 +980,7 @@ describe('addContributor / updateContributorRole / removeContributor', () => {
     expect(result).toBe(false);
   });
 
-  it('JOURNEY-SVC-050: owner can remove contributor', () => {
+  it('JOURNEY-SVC-050: owner can remove contributor', async () => {
     const { user: owner } = createUser(testDb);
     const { user: contrib } = createUser(testDb);
     const journey = createJourney(testDb, owner.id);
@@ -995,7 +995,7 @@ describe('addContributor / updateContributorRole / removeContributor', () => {
     expect(row).toBeUndefined();
   });
 
-  it('JOURNEY-SVC-051: removeContributor does not remove owner contributor record', () => {
+  it('JOURNEY-SVC-051: removeContributor does not remove owner contributor record', async () => {
     const { user: owner } = createUser(testDb);
     const journey = createJourney(testDb, owner.id);
 
@@ -1013,7 +1013,7 @@ describe('addContributor / updateContributorRole / removeContributor', () => {
 // -- Suggestions --------------------------------------------------------------
 
 describe('getSuggestions', () => {
-  it('JOURNEY-SVC-052: returns recently ended trips not yet in a journey', () => {
+  it('JOURNEY-SVC-052: returns recently ended trips not yet in a journey', async () => {
     const { user } = createUser(testDb);
     // Trip that ended 5 days ago (within 30-day window)
     const fiveDaysAgo = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
@@ -1030,7 +1030,7 @@ describe('getSuggestions', () => {
     expect((suggestions[0] as any).title).toBe('Recent Trip');
   });
 
-  it('JOURNEY-SVC-053: excludes trips already linked to a journey', () => {
+  it('JOURNEY-SVC-053: excludes trips already linked to a journey', async () => {
     const { user } = createUser(testDb);
     const fiveDaysAgo = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
     const tenDaysAgo = new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
@@ -1047,7 +1047,7 @@ describe('getSuggestions', () => {
     expect(suggestions.length).toBe(0);
   });
 
-  it('JOURNEY-SVC-054: excludes trips ending in the future', () => {
+  it('JOURNEY-SVC-054: excludes trips ending in the future', async () => {
     const { user } = createUser(testDb);
     const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0];
     createTrip(testDb, user.id, {
@@ -1065,7 +1065,7 @@ describe('getSuggestions', () => {
 // -- syncTripPlaces ------------------------------------------------------------
 
 describe('syncTripPlaces', () => {
-  it('JOURNEY-SVC-055: creates skeleton entries for each trip place', () => {
+  it('JOURNEY-SVC-055: creates skeleton entries for each trip place', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
     const trip = createTrip(testDb, user.id, {
@@ -1089,7 +1089,7 @@ describe('syncTripPlaces', () => {
     expect(names).toEqual(['Eiffel Tower', 'Louvre']);
   });
 
-  it('JOURNEY-SVC-056: skips places that already have skeleton entries', () => {
+  it('JOURNEY-SVC-056: skips places that already have skeleton entries', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
     const trip = createTrip(testDb, user.id, {
@@ -1110,7 +1110,7 @@ describe('syncTripPlaces', () => {
     expect(skeletons.length).toBe(1);
   });
 
-  it('JOURNEY-SVC-057: uses day date for skeleton entry_date when available', () => {
+  it('JOURNEY-SVC-057: uses day date for skeleton entry_date when available', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
     // Trip with dates auto-creates days; grab an existing day to assign the place
@@ -1138,7 +1138,7 @@ describe('syncTripPlaces', () => {
 // -- onPlaceCreated / onPlaceUpdated / onPlaceDeleted -------------------------
 
 describe('onPlaceCreated', () => {
-  it('JOURNEY-SVC-058: creates skeleton entry in linked journeys', () => {
+  it('JOURNEY-SVC-058: creates skeleton entry in linked journeys', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
     const trip = createTrip(testDb, user.id, {
@@ -1160,7 +1160,7 @@ describe('onPlaceCreated', () => {
     expect(skeleton).toBeDefined();
   });
 
-  it('JOURNEY-SVC-059: does nothing if trip is not linked to any journey', () => {
+  it('JOURNEY-SVC-059: does nothing if trip is not linked to any journey', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id, { title: 'Unlinked Trip' });
     const place = createPlace(testDb, trip.id, { name: 'Remote Place' });
@@ -1173,7 +1173,7 @@ describe('onPlaceCreated', () => {
     expect(entries.length).toBe(0);
   });
 
-  it('JOURNEY-SVC-060: does not duplicate if skeleton already exists', () => {
+  it('JOURNEY-SVC-060: does not duplicate if skeleton already exists', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
     const trip = createTrip(testDb, user.id, {
@@ -1197,7 +1197,7 @@ describe('onPlaceCreated', () => {
 });
 
 describe('onPlaceUpdated', () => {
-  it('JOURNEY-SVC-061: updates skeleton entry fields when place changes', () => {
+  it('JOURNEY-SVC-061: updates skeleton entry fields when place changes', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
     const trip = createTrip(testDb, user.id, {
@@ -1222,7 +1222,7 @@ describe('onPlaceUpdated', () => {
     expect(entry.location_name).toBe('New Address');
   });
 
-  it('JOURNEY-SVC-062: only updates location on filled entries, not title', () => {
+  it('JOURNEY-SVC-062: only updates location on filled entries, not title', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
     const trip = createTrip(testDb, user.id, {
@@ -1252,7 +1252,7 @@ describe('onPlaceUpdated', () => {
     expect(entry.location_name).toBe('Changed Addr'); // location updated
   });
 
-  it('JOURNEY-SVC-063: does nothing if place has no linked entries', () => {
+  it('JOURNEY-SVC-063: does nothing if place has no linked entries', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id, { title: 'Orphan Trip' });
     const place = createPlace(testDb, trip.id, { name: 'Orphan Place' });
@@ -1268,7 +1268,7 @@ describe('onPlaceUpdated', () => {
 });
 
 describe('onPlaceDeleted', () => {
-  it('JOURNEY-SVC-064: deletes empty skeleton entries', () => {
+  it('JOURNEY-SVC-064: deletes empty skeleton entries', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
     const trip = createTrip(testDb, user.id, {
@@ -1287,7 +1287,7 @@ describe('onPlaceDeleted', () => {
     expect(entry).toBeUndefined();
   });
 
-  it('JOURNEY-SVC-065: detaches filled entries and adds note instead of deleting', () => {
+  it('JOURNEY-SVC-065: detaches filled entries and adds note instead of deleting', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
     const trip = createTrip(testDb, user.id, {
@@ -1317,7 +1317,7 @@ describe('onPlaceDeleted', () => {
     expect(entry.story).toContain('original trip place was removed');
   });
 
-  it('JOURNEY-SVC-066: does nothing for unlinked places', () => {
+  it('JOURNEY-SVC-066: does nothing for unlinked places', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id, { title: 'Unlinked' });
     const place = createPlace(testDb, trip.id, { name: 'Nowhere' });
@@ -1334,13 +1334,13 @@ describe('onPlaceDeleted', () => {
 // -- linkPhotoToEntry ----------------------------------------------------------
 
 describe('linkPhotoToEntry', () => {
-  it('JOURNEY-SVC-067: moves photo from one entry to another', () => {
+  it('JOURNEY-SVC-067: moves photo from one entry to another', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
     const entry1 = createJourneyEntry(testDb, journey.id, user.id, { entry_date: '2026-03-01' });
     const entry2 = createJourneyEntry(testDb, journey.id, user.id, { entry_date: '2026-03-02' });
 
-    const photo = svc.addPhoto(entry1.id, user.id, '/uploads/link-test.jpg');
+    const photo = await svc.addPhoto(entry1.id, user.id, '/uploads/link-test.jpg');
     expect(photo).not.toBeNull();
 
     const result = svc.linkPhotoToEntry(entry2.id, photo!.id, user.id);
@@ -1348,11 +1348,11 @@ describe('linkPhotoToEntry', () => {
     expect(result!.entry_id).toBe(entry2.id);
   });
 
-  it('JOURNEY-SVC-068: returns same photo if already on target entry', () => {
+  it('JOURNEY-SVC-068: returns same photo if already on target entry', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
     const entry = createJourneyEntry(testDb, journey.id, user.id, { entry_date: '2026-03-01' });
-    const photo = svc.addPhoto(entry.id, user.id, '/uploads/same-entry.jpg');
+    const photo = await svc.addPhoto(entry.id, user.id, '/uploads/same-entry.jpg');
 
     const result = svc.linkPhotoToEntry(entry.id, photo!.id, user.id);
     expect(result).not.toBeNull();
@@ -1360,14 +1360,14 @@ describe('linkPhotoToEntry', () => {
     expect(result!.entry_id).toBe(entry.id);
   });
 
-  it('JOURNEY-SVC-069: returns null for non-existent entry', () => {
+  it('JOURNEY-SVC-069: returns null for non-existent entry', async () => {
     const { user } = createUser(testDb);
 
     const result = svc.linkPhotoToEntry(99999, 1, user.id);
     expect(result).toBeNull();
   });
 
-  it('JOURNEY-SVC-070: returns null for non-existent photo', () => {
+  it('JOURNEY-SVC-070: returns null for non-existent photo', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
     const entry = createJourneyEntry(testDb, journey.id, user.id, { entry_date: '2026-03-01' });
@@ -1376,13 +1376,13 @@ describe('linkPhotoToEntry', () => {
     expect(result).toBeNull();
   });
 
-  it('JOURNEY-SVC-071: viewer cannot link photo', () => {
+  it('JOURNEY-SVC-071: viewer cannot link photo', async () => {
     const { user: owner } = createUser(testDb);
     const { user: viewer } = createUser(testDb);
     const journey = createJourney(testDb, owner.id);
     addJourneyContributor(testDb, journey.id, viewer.id, 'viewer');
     const entry = createJourneyEntry(testDb, journey.id, owner.id, { entry_date: '2026-03-01' });
-    const photo = svc.addPhoto(entry.id, owner.id, '/uploads/owner-photo.jpg');
+    const photo = await svc.addPhoto(entry.id, owner.id, '/uploads/owner-photo.jpg');
 
     const result = svc.linkPhotoToEntry(entry.id, photo!.id, viewer.id);
     expect(result).toBeNull();
@@ -1392,13 +1392,13 @@ describe('linkPhotoToEntry', () => {
 // -- setPhotoProvider ----------------------------------------------------------
 
 describe('setPhotoProvider', () => {
-  it('JOURNEY-SVC-072: sets provider info on an existing photo', () => {
+  it('JOURNEY-SVC-072: sets provider info on an existing photo', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
     const entry = createJourneyEntry(testDb, journey.id, user.id, { entry_date: '2026-03-01' });
-    const photo = svc.addPhoto(entry.id, user.id, '/uploads/provider-test.jpg');
+    const photo = await svc.addPhoto(entry.id, user.id, '/uploads/provider-test.jpg');
 
-    svc.setPhotoProvider(photo!.id, 'immich', 'immich-asset-789', user.id);
+    await svc.setPhotoProvider(photo!.id, 'immich', 'immich-asset-789', user.id);
 
     const updated = testDb.prepare(`
       SELECT jp.*, tkp.provider, tkp.asset_id, tkp.owner_id
@@ -1414,11 +1414,11 @@ describe('setPhotoProvider', () => {
 // -- updatePhoto ---------------------------------------------------------------
 
 describe('updatePhoto', () => {
-  it('JOURNEY-SVC-073: updates caption on photo', () => {
+  it('JOURNEY-SVC-073: updates caption on photo', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
     const entry = createJourneyEntry(testDb, journey.id, user.id, { entry_date: '2026-03-01' });
-    const photo = svc.addPhoto(entry.id, user.id, '/uploads/caption-test.jpg', undefined, 'Old caption');
+    const photo = await svc.addPhoto(entry.id, user.id, '/uploads/caption-test.jpg', undefined, 'Old caption');
 
     const result = svc.updatePhoto(photo!.id, user.id, { caption: 'New caption' });
 
@@ -1426,11 +1426,11 @@ describe('updatePhoto', () => {
     expect(result!.caption).toBe('New caption');
   });
 
-  it('JOURNEY-SVC-074: updates sort_order on photo', () => {
+  it('JOURNEY-SVC-074: updates sort_order on photo', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
     const entry = createJourneyEntry(testDb, journey.id, user.id, { entry_date: '2026-03-01' });
-    const photo = svc.addPhoto(entry.id, user.id, '/uploads/sort-test.jpg');
+    const photo = await svc.addPhoto(entry.id, user.id, '/uploads/sort-test.jpg');
 
     const result = svc.updatePhoto(photo!.id, user.id, { sort_order: 10 });
 
@@ -1438,18 +1438,18 @@ describe('updatePhoto', () => {
     expect(result!.sort_order).toBe(10);
   });
 
-  it('JOURNEY-SVC-075: returns null for non-existent photo', () => {
+  it('JOURNEY-SVC-075: returns null for non-existent photo', async () => {
     const { user } = createUser(testDb);
 
     const result = svc.updatePhoto(99999, user.id, { caption: 'Nope' });
     expect(result).toBeNull();
   });
 
-  it('JOURNEY-SVC-076: returns photo unchanged when no fields provided', () => {
+  it('JOURNEY-SVC-076: returns photo unchanged when no fields provided', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
     const entry = createJourneyEntry(testDb, journey.id, user.id, { entry_date: '2026-03-01' });
-    const photo = svc.addPhoto(entry.id, user.id, '/uploads/noop-test.jpg', undefined, 'Stay');
+    const photo = await svc.addPhoto(entry.id, user.id, '/uploads/noop-test.jpg', undefined, 'Stay');
 
     const result = svc.updatePhoto(photo!.id, user.id, {});
 
@@ -1457,13 +1457,13 @@ describe('updatePhoto', () => {
     expect(result!.caption).toBe('Stay');
   });
 
-  it('JOURNEY-SVC-077: viewer cannot update photo', () => {
+  it('JOURNEY-SVC-077: viewer cannot update photo', async () => {
     const { user: owner } = createUser(testDb);
     const { user: viewer } = createUser(testDb);
     const journey = createJourney(testDb, owner.id);
     addJourneyContributor(testDb, journey.id, viewer.id, 'viewer');
     const entry = createJourneyEntry(testDb, journey.id, owner.id, { entry_date: '2026-03-01' });
-    const photo = svc.addPhoto(entry.id, owner.id, '/uploads/viewer-update.jpg');
+    const photo = await svc.addPhoto(entry.id, owner.id, '/uploads/viewer-update.jpg');
 
     const result = svc.updatePhoto(photo!.id, viewer.id, { caption: 'Hacked' });
     expect(result).toBeNull();
@@ -1473,7 +1473,7 @@ describe('updatePhoto', () => {
 // -- listUserTrips -------------------------------------------------------------
 
 describe('listUserTrips', () => {
-  it('JOURNEY-SVC-078: returns all user trips', () => {
+  it('JOURNEY-SVC-078: returns all user trips', async () => {
     const { user } = createUser(testDb);
     createTrip(testDb, user.id, { title: 'Trip A', start_date: '2026-01-01', end_date: '2026-01-03' });
     createTrip(testDb, user.id, { title: 'Trip B', start_date: '2026-02-01', end_date: '2026-02-03' });
@@ -1486,7 +1486,7 @@ describe('listUserTrips', () => {
     expect((trips[1] as any).title).toBe('Trip A');
   });
 
-  it('JOURNEY-SVC-079: returns empty for user with no trips', () => {
+  it('JOURNEY-SVC-079: returns empty for user with no trips', async () => {
     const { user } = createUser(testDb);
 
     const trips = svc.listUserTrips(user.id);
@@ -1494,7 +1494,7 @@ describe('listUserTrips', () => {
     expect(trips.length).toBe(0);
   });
 
-  it('JOURNEY-SVC-080: does not return other users trips', () => {
+  it('JOURNEY-SVC-080: does not return other users trips', async () => {
     const { user: user1 } = createUser(testDb);
     const { user: user2 } = createUser(testDb);
     createTrip(testDb, user1.id, { title: 'User1 Trip' });
@@ -1508,11 +1508,11 @@ describe('listUserTrips', () => {
 // -- Edge cases ----------------------------------------------------------------
 
 describe('Edge cases', () => {
-  it('JOURNEY-SVC-081: deleteEntry deletes photos along with the entry', () => {
+  it('JOURNEY-SVC-081: deleteEntry deletes photos along with the entry', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
     const entry = createJourneyEntry(testDb, journey.id, user.id, { entry_date: '2026-03-01' });
-    const photo = svc.addPhoto(entry.id, user.id, '/uploads/gallery-move.jpg');
+    const photo = await svc.addPhoto(entry.id, user.id, '/uploads/gallery-move.jpg');
 
     const result = svc.deleteEntry(entry.id, user.id);
     expect(result).toBe(true);
@@ -1523,7 +1523,7 @@ describe('Edge cases', () => {
     expect(junctionRow).toBeUndefined();
   });
 
-  it('JOURNEY-SVC-082: updateJourney can set cover_gradient', () => {
+  it('JOURNEY-SVC-082: updateJourney can set cover_gradient', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
 
@@ -1533,7 +1533,7 @@ describe('Edge cases', () => {
     expect((result as any).cover_gradient).toBe('linear-gradient(to right, #ff0000, #0000ff)');
   });
 
-  it('JOURNEY-SVC-083: updateJourney ignores unknown fields', () => {
+  it('JOURNEY-SVC-083: updateJourney ignores unknown fields', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id, { title: 'Original' });
 
@@ -1543,7 +1543,7 @@ describe('Edge cases', () => {
     expect(result!.title).toBe('Original');
   });
 
-  it('JOURNEY-SVC-084: createEntry stores tags and pros_cons as JSON', () => {
+  it('JOURNEY-SVC-084: createEntry stores tags and pros_cons as JSON', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
 
@@ -1560,7 +1560,7 @@ describe('Edge cases', () => {
     expect(JSON.parse(raw.pros_cons)).toEqual({ pros: ['Great view'], cons: ['Expensive'] });
   });
 
-  it('JOURNEY-SVC-085: updateEntry handles tags and pros_cons update', () => {
+  it('JOURNEY-SVC-085: updateEntry handles tags and pros_cons update', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
     const entry = createJourneyEntry(testDb, journey.id, user.id, { entry_date: '2026-03-01' });
@@ -1580,7 +1580,7 @@ describe('Edge cases', () => {
   // trip_photos into the gallery; that surface lost its UI in 3.1.0, nothing
   // writes to it on a newer install, and the copy was how a photo one member had
   // chosen not to share could reach a journey at all.
-  it('JOURNEY-SVC-086: addTripToJourney no longer pulls trip photos into the gallery', () => {
+  it('JOURNEY-SVC-086: addTripToJourney no longer pulls trip photos into the gallery', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
     const trip = createTrip(testDb, user.id, {
@@ -1596,7 +1596,7 @@ describe('Edge cases', () => {
     expect(photos).toHaveLength(0);
   });
 
-  it('JOURNEY-SVC-087: removeTripFromJourney detaches filled entries, deletes skeletons', () => {
+  it('JOURNEY-SVC-087: removeTripFromJourney detaches filled entries, deletes skeletons', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
     const trip = createTrip(testDb, user.id, {
@@ -1638,12 +1638,12 @@ describe('Edge cases', () => {
 // -- Passphrase on addProviderPhoto -------------------------------------------
 
 describe('addProviderPhoto — passphrase', () => {
-  it('JOURNEY-SVC-088: addProviderPhoto with passphrase stores encrypted value on trek_photos', () => {
+  it('JOURNEY-SVC-088: addProviderPhoto with passphrase stores encrypted value on trek_photos', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
     const entry = createJourneyEntry(testDb, journey.id, user.id, { entry_date: '2026-03-15' });
 
-    const photo = svc.addProviderPhoto(entry.id, user.id, 'synologyphotos', 'pp-asset-1', undefined, 'secret-pp');
+    const photo = await svc.addProviderPhoto(entry.id, user.id, 'synologyphotos', 'pp-asset-1', undefined, 'secret-pp');
 
     expect(photo).not.toBeNull();
 
@@ -1668,7 +1668,7 @@ function insertEntry(journeyId: number, authorId: number, opts: { entry_date: st
 }
 
 describe('reorderEntries', () => {
-  it('JOURNEY-SVC-089: reorder persists and listEntries returns requested order regardless of entry_time', () => {
+  it('JOURNEY-SVC-089: reorder persists and listEntries returns requested order regardless of entry_time', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
     const e1 = insertEntry(journey.id, user.id, { entry_date: '2026-08-01', entry_time: '09:00', sort_order: 0 });
@@ -1682,7 +1682,7 @@ describe('reorderEntries', () => {
     expect(dayEntries.map(e => e.id)).toEqual([e2.id, e1.id]);
   });
 
-  it('JOURNEY-SVC-090: reorderEntries rejects ids from another journey', () => {
+  it('JOURNEY-SVC-090: reorderEntries rejects ids from another journey', async () => {
     const { user } = createUser(testDb);
     const j1 = createJourney(testDb, user.id);
     const j2 = createJourney(testDb, user.id);
@@ -1692,7 +1692,7 @@ describe('reorderEntries', () => {
     expect(ok).toBe(false);
   });
 
-  it('JOURNEY-SVC-091: reorderEntries does not affect entries on other days', () => {
+  it('JOURNEY-SVC-091: reorderEntries does not affect entries on other days', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
     const day1a = insertEntry(journey.id, user.id, { entry_date: '2026-08-01', sort_order: 0 });
@@ -1708,7 +1708,7 @@ describe('reorderEntries', () => {
 });
 
 describe('syncTripPlaces sort_order', () => {
-  it('JOURNEY-SVC-092: assigns unique sequential sort_order per date for same-day places', () => {
+  it('JOURNEY-SVC-092: assigns unique sequential sort_order per date for same-day places', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
     const trip = createTrip(testDb, user.id, {
@@ -1736,7 +1736,7 @@ describe('syncTripPlaces sort_order', () => {
 });
 
 describe('onPlaceCreated sort_order', () => {
-  it('JOURNEY-SVC-093: assigns MAX+1 sort_order when entries already exist on the target date', () => {
+  it('JOURNEY-SVC-093: assigns MAX+1 sort_order when entries already exist on the target date', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
     const trip = createTrip(testDb, user.id, {
@@ -1790,7 +1790,7 @@ describe('reconcileTripSkeletons', () => {
       .get(journeyId, placeId) as any;
   }
 
-  it('JOURNEY-SVC-094: adds a skeleton for a newly assigned place', () => {
+  it('JOURNEY-SVC-094: adds a skeleton for a newly assigned place', async () => {
     const { journey, trip } = linkedJourneyTrip();
     const days = daysOf(trip.id);
     const place = createPlace(testDb, trip.id, { name: 'New Museum' });
@@ -1805,7 +1805,7 @@ describe('reconcileTripSkeletons', () => {
     expect(skeleton.entry_date).toBe(days[0].date);
   });
 
-  it('JOURNEY-SVC-095: removes a pure skeleton when its place is unassigned', () => {
+  it('JOURNEY-SVC-095: removes a pure skeleton when its place is unassigned', async () => {
     const { journey, trip } = linkedJourneyTrip();
     const days = daysOf(trip.id);
     const place = createPlace(testDb, trip.id, { name: 'To Remove' });
@@ -1819,7 +1819,7 @@ describe('reconcileTripSkeletons', () => {
     expect(skeletonFor(journey.id, place.id)).toBeUndefined();
   });
 
-  it('JOURNEY-SVC-096: preserves a filled entry on unassign (detaches + notes it)', () => {
+  it('JOURNEY-SVC-096: preserves a filled entry on unassign (detaches + notes it)', async () => {
     const { journey, trip } = linkedJourneyTrip();
     const days = daysOf(trip.id);
     const place = createPlace(testDb, trip.id, { name: 'Filled Place' });
@@ -1843,7 +1843,7 @@ describe('reconcileTripSkeletons', () => {
     expect(kept.story).toContain('was removed from the trip plan');
   });
 
-  it('JOURNEY-SVC-097: refreshes skeleton entry_date when a place is moved to another day', () => {
+  it('JOURNEY-SVC-097: refreshes skeleton entry_date when a place is moved to another day', async () => {
     const { journey, trip } = linkedJourneyTrip();
     const days = daysOf(trip.id);
     const place = createPlace(testDb, trip.id, { name: 'Moving Place' });
@@ -1857,7 +1857,7 @@ describe('reconcileTripSkeletons', () => {
     expect(skeletonFor(journey.id, place.id).entry_date).toBe(days[1].date);
   });
 
-  it('JOURNEY-SVC-098: is idempotent — a second call makes no changes', () => {
+  it('JOURNEY-SVC-098: is idempotent — a second call makes no changes', async () => {
     const { journey, trip } = linkedJourneyTrip();
     const days = daysOf(trip.id);
     const place = createPlace(testDb, trip.id, { name: 'Stable Place' });
@@ -1875,7 +1875,7 @@ describe('reconcileTripSkeletons', () => {
     expect(after).toEqual(before);
   });
 
-  it('JOURNEY-SVC-099: no-ops when the trip is linked to no journey', () => {
+  it('JOURNEY-SVC-099: no-ops when the trip is linked to no journey', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id, { title: 'Unlinked', start_date: '2026-05-01', end_date: '2026-05-02' });
     const days = daysOf(trip.id);
@@ -1916,7 +1916,7 @@ describe('a place standing on more than one day', () => {
       .all(journeyId, placeId) as any[];
   }
 
-  it('JOURNEY-SVC-REPEAT-001: syncTripPlaces writes one skeleton per day, not one per place', () => {
+  it('JOURNEY-SVC-REPEAT-001: syncTripPlaces writes one skeleton per day, not one per place', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
     const trip = createTrip(testDb, user.id, { title: 'Two Nights', start_date: '2026-05-01', end_date: '2026-05-03' });
@@ -1930,7 +1930,7 @@ describe('a place standing on more than one day', () => {
     expect(skeletonsFor(journey.id, place.id).map((e) => e.entry_date)).toEqual([days[0].date, days[1].date]);
   });
 
-  it('JOURNEY-SVC-REPEAT-002: a second call adds nothing', () => {
+  it('JOURNEY-SVC-REPEAT-002: a second call adds nothing', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
     const trip = createTrip(testDb, user.id, { title: 'Idempotent', start_date: '2026-05-01', end_date: '2026-05-03' });
@@ -1945,7 +1945,7 @@ describe('a place standing on more than one day', () => {
     expect(skeletonsFor(journey.id, place.id)).toHaveLength(2);
   });
 
-  it('JOURNEY-SVC-REPEAT-003: onPlaceCreated fires once per day the place already stands on', () => {
+  it('JOURNEY-SVC-REPEAT-003: onPlaceCreated fires once per day the place already stands on', async () => {
     const { journey, trip } = linkedJourneyTrip();
     const days = daysOf(trip.id);
     const place = createPlace(testDb, trip.id, { name: 'Höfn' });
@@ -1957,7 +1957,7 @@ describe('a place standing on more than one day', () => {
     expect(skeletonsFor(journey.id, place.id).map((e) => e.entry_date)).toEqual([days[1].date, days[2].date]);
   });
 
-  it('JOURNEY-SVC-REPEAT-004: assigning the place to a second day adds a second entry and keeps the first', () => {
+  it('JOURNEY-SVC-REPEAT-004: assigning the place to a second day adds a second entry and keeps the first', async () => {
     const { journey, trip } = linkedJourneyTrip();
     const days = daysOf(trip.id);
     const place = createPlace(testDb, trip.id, { name: 'Akureyri' });
@@ -1976,7 +1976,7 @@ describe('a place standing on more than one day', () => {
     expect(both[1].type).toBe('skeleton');
   });
 
-  it('JOURNEY-SVC-REPEAT-005: unassigning one day drops only that day', () => {
+  it('JOURNEY-SVC-REPEAT-005: unassigning one day drops only that day', async () => {
     const { journey, trip } = linkedJourneyTrip();
     const days = daysOf(trip.id);
     const place = createPlace(testDb, trip.id, { name: 'Selfoss' });
@@ -1991,7 +1991,7 @@ describe('a place standing on more than one day', () => {
     expect(skeletonsFor(journey.id, place.id).map((e) => e.entry_date)).toEqual([days[0].date]);
   });
 
-  it('JOURNEY-SVC-REPEAT-006: moving one of the two assignments moves its entry rather than replacing it', () => {
+  it('JOURNEY-SVC-REPEAT-006: moving one of the two assignments moves its entry rather than replacing it', async () => {
     const { journey, trip } = linkedJourneyTrip();
     const days = daysOf(trip.id);
     const place = createPlace(testDb, trip.id, { name: 'Geysir' });
@@ -2008,7 +2008,7 @@ describe('a place standing on more than one day', () => {
     expect(after[1].id).toBe(movedId);
   });
 
-  it('JOURNEY-SVC-REPEAT-007: editing the place leaves each entry on its own day', () => {
+  it('JOURNEY-SVC-REPEAT-007: editing the place leaves each entry on its own day', async () => {
     const { journey, trip } = linkedJourneyTrip();
     const days = daysOf(trip.id);
     const place = createPlace(testDb, trip.id, { name: 'Old Name' });
@@ -2024,7 +2024,7 @@ describe('a place standing on more than one day', () => {
     expect(after.map((e) => e.title)).toEqual(['New Name', 'New Name']);
   });
 
-  it('JOURNEY-SVC-REPEAT-008: an entry with no assignment link is claimed, not annotated out', () => {
+  it('JOURNEY-SVC-REPEAT-008: an entry with no assignment link is claimed, not annotated out', async () => {
     const { journey, trip } = linkedJourneyTrip();
     const days = daysOf(trip.id);
     const place = createPlace(testDb, trip.id, { name: 'Legacy Stop' });
@@ -2068,7 +2068,7 @@ function skeletonsOf(journeyId: number) {
 }
 
 describe('skeleton sync', () => {
-  it('JOURNEY-SVC-SKEL-001: linking a trip materialises one skeleton per assigned place', () => {
+  it('JOURNEY-SVC-SKEL-001: linking a trip materialises one skeleton per assigned place', async () => {
     const { user } = createUser(testDb);
     const { trip, place } = tripWithPlace(user.id);
     const journey = svc.createJourney(user.id, { title: 'J', trip_ids: [trip.id] });
@@ -2080,7 +2080,7 @@ describe('skeleton sync', () => {
     expect(skeletons[0].source_trip_id).toBe(trip.id);
   });
 
-  it('JOURNEY-SVC-SKEL-002: syncing the same trip twice does not duplicate skeletons', () => {
+  it('JOURNEY-SVC-SKEL-002: syncing the same trip twice does not duplicate skeletons', async () => {
     const { user } = createUser(testDb);
     const { trip } = tripWithPlace(user.id);
     const journey = svc.createJourney(user.id, { title: 'J', trip_ids: [trip.id] });
@@ -2088,7 +2088,7 @@ describe('skeleton sync', () => {
     expect(skeletonsOf(journey.id)).toHaveLength(1);
   });
 
-  it('JOURNEY-SVC-SKEL-003: onPlaceCreated adds a skeleton to every journey the trip is linked to', () => {
+  it('JOURNEY-SVC-SKEL-003: onPlaceCreated adds a skeleton to every journey the trip is linked to', async () => {
     const { user } = createUser(testDb);
     const { trip, day } = tripWithPlace(user.id);
     const a = svc.createJourney(user.id, { title: 'A', trip_ids: [trip.id] });
@@ -2103,13 +2103,13 @@ describe('skeleton sync', () => {
     }
   });
 
-  it('JOURNEY-SVC-SKEL-004: onPlaceCreated is a no-op for a trip in no journey', () => {
+  it('JOURNEY-SVC-SKEL-004: onPlaceCreated is a no-op for a trip in no journey', async () => {
     const { user } = createUser(testDb);
     const { trip, place } = tripWithPlace(user.id);
     expect(() => svc.onPlaceCreated(trip.id, place.id)).not.toThrow();
   });
 
-  it('JOURNEY-SVC-SKEL-005: onPlaceUpdated carries the rename and the new address onto the skeleton', () => {
+  it('JOURNEY-SVC-SKEL-005: onPlaceUpdated carries the rename and the new address onto the skeleton', async () => {
     const { user } = createUser(testDb);
     const { trip, place } = tripWithPlace(user.id);
     const journey = svc.createJourney(user.id, { title: 'J', trip_ids: [trip.id] });
@@ -2122,13 +2122,13 @@ describe('skeleton sync', () => {
     expect(skeleton.location_name).toBe('1 Kinkakujicho');
   });
 
-  it('JOURNEY-SVC-SKEL-006: onPlaceUpdated is a no-op when no skeleton points at the place', () => {
+  it('JOURNEY-SVC-SKEL-006: onPlaceUpdated is a no-op when no skeleton points at the place', async () => {
     const { user } = createUser(testDb);
     const { place } = tripWithPlace(user.id);
     expect(() => svc.onPlaceUpdated(place.id)).not.toThrow();
   });
 
-  it('JOURNEY-SVC-SKEL-007: onPlaceDeleted drops an empty skeleton outright', () => {
+  it('JOURNEY-SVC-SKEL-007: onPlaceDeleted drops an empty skeleton outright', async () => {
     const { user } = createUser(testDb);
     const { trip, place } = tripWithPlace(user.id);
     const journey = svc.createJourney(user.id, { title: 'J', trip_ids: [trip.id] });
@@ -2138,7 +2138,7 @@ describe('skeleton sync', () => {
     expect(skeletonsOf(journey.id)).toHaveLength(0);
   });
 
-  it('JOURNEY-SVC-SKEL-008: onPlaceDeleted keeps a skeleton that has a story, detaches it and appends the note', () => {
+  it('JOURNEY-SVC-SKEL-008: onPlaceDeleted keeps a skeleton that has a story, detaches it and appends the note', async () => {
     const { user } = createUser(testDb);
     const { trip, place } = tripWithPlace(user.id);
     const journey = svc.createJourney(user.id, { title: 'J', trip_ids: [trip.id] });
@@ -2156,7 +2156,7 @@ describe('skeleton sync', () => {
     expect(kept.story).toContain('removed from the trip plan');
   });
 
-  it('JOURNEY-SVC-SKEL-009: reconcileTripSkeletons adds what is missing and removes what is gone', () => {
+  it('JOURNEY-SVC-SKEL-009: reconcileTripSkeletons adds what is missing and removes what is gone', async () => {
     const { user } = createUser(testDb);
     const { trip, day, place } = tripWithPlace(user.id);
     const journey = svc.createJourney(user.id, { title: 'J', trip_ids: [trip.id] });
@@ -2173,13 +2173,13 @@ describe('skeleton sync', () => {
     expect(titles).not.toContain('Fushimi Inari');
   });
 
-  it('JOURNEY-SVC-SKEL-010: reconcileTripSkeletons is a no-op for a trip in no journey', () => {
+  it('JOURNEY-SVC-SKEL-010: reconcileTripSkeletons is a no-op for a trip in no journey', async () => {
     const { user } = createUser(testDb);
     const { trip } = tripWithPlace(user.id);
     expect(() => svc.reconcileTripSkeletons(trip.id)).not.toThrow();
   });
 
-  it('JOURNEY-SVC-SKEL-011: createJourney takes its cover from the first linked trip and strips the /uploads prefix', () => {
+  it('JOURNEY-SVC-SKEL-011: createJourney takes its cover from the first linked trip and strips the /uploads prefix', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     testDb.prepare('UPDATE trips SET cover_image = ? WHERE id = ?').run('/uploads/covers/kyoto.jpg', trip.id);
@@ -2198,29 +2198,29 @@ describe('journey gallery', () => {
     return { user, journey, entry };
   }
 
-  it('JOURNEY-SVC-PHOTO-001: addPhoto puts the file in the gallery and links it to the entry', () => {
+  it('JOURNEY-SVC-PHOTO-001: addPhoto puts the file in the gallery and links it to the entry', async () => {
     const { user, journey, entry } = ownedEntry();
-    const photo = svc.addPhoto(entry.id, user.id, 'journey/a.jpg', 'journey/a-thumb.jpg', 'Torii');
+    const photo = await svc.addPhoto(entry.id, user.id, 'journey/a.jpg', 'journey/a-thumb.jpg', 'Torii');
     expect(photo).toBeTruthy();
 
     const entries = svc.listEntries(journey.id, user.id)!;
     expect(entries.find((e) => e.id === entry.id)!.photos).toHaveLength(1);
   });
 
-  it('JOURNEY-SVC-PHOTO-002: addPhoto refuses an unknown entry and a non-editor', () => {
+  it('JOURNEY-SVC-PHOTO-002: addPhoto refuses an unknown entry and a non-editor', async () => {
     const { entry } = ownedEntry();
     const { user: stranger } = createUser(testDb);
-    expect(svc.addPhoto(999999, 1, 'journey/a.jpg')).toBeNull();
-    expect(svc.addPhoto(entry.id, stranger.id, 'journey/a.jpg')).toBeNull();
+    expect(await svc.addPhoto(999999, 1, 'journey/a.jpg')).toBeNull();
+    expect(await svc.addPhoto(entry.id, stranger.id, 'journey/a.jpg')).toBeNull();
   });
 
-  it('JOURNEY-SVC-PHOTO-003: uploadGalleryPhotos appends in order and refuses a non-editor', () => {
+  it('JOURNEY-SVC-PHOTO-003: uploadGalleryPhotos appends in order and refuses a non-editor', async () => {
     const { user } = createUser(testDb);
     const { user: stranger } = createUser(testDb);
     const journey = svc.createJourney(user.id, { title: 'J' });
 
-    const first = svc.uploadGalleryPhotos(journey.id, user.id, [{ path: 'journey/1.jpg' }]);
-    const second = svc.uploadGalleryPhotos(journey.id, user.id, [
+    const first = await svc.uploadGalleryPhotos(journey.id, user.id, [{ path: 'journey/1.jpg' }]);
+    const second = await svc.uploadGalleryPhotos(journey.id, user.id, [
       { path: 'journey/2.jpg', thumbnail: 'journey/2-t.jpg' },
       { path: 'journey/3.mp4', mediaType: 'video', durationMs: 4200 },
     ]);
@@ -2232,12 +2232,12 @@ describe('journey gallery', () => {
       .all(journey.id) as any[];
     expect(orders.map((o) => o.sort_order)).toEqual([0, 1, 2]);
 
-    expect(svc.uploadGalleryPhotos(journey.id, stranger.id, [{ path: 'journey/x.jpg' }])).toEqual([]);
+    expect(await svc.uploadGalleryPhotos(journey.id, stranger.id, [{ path: 'journey/x.jpg' }])).toEqual([]);
   });
 
-  it('JOURNEY-SVC-PHOTO-004: linkPhotoToEntry attaches a gallery row, unlinkPhotoFromEntry detaches it', () => {
+  it('JOURNEY-SVC-PHOTO-004: linkPhotoToEntry attaches a gallery row, unlinkPhotoFromEntry detaches it', async () => {
     const { user, journey, entry } = ownedEntry();
-    const [gallery] = svc.uploadGalleryPhotos(journey.id, user.id, [{ path: 'journey/a.jpg' }]);
+    const [gallery] = await svc.uploadGalleryPhotos(journey.id, user.id, [{ path: 'journey/a.jpg' }]);
 
     expect(svc.linkPhotoToEntry(entry.id, gallery.id, user.id)).toBeTruthy();
     expect(svc.listEntries(journey.id, user.id)!.find((e) => e.id === entry.id)!.photos).toHaveLength(1);
@@ -2248,10 +2248,10 @@ describe('journey gallery', () => {
     expect(testDb.prepare('SELECT 1 FROM journey_photos WHERE id = ?').get(gallery.id)).toBeDefined();
   });
 
-  it('JOURNEY-SVC-PHOTO-005: link/unlink refuse an unknown entry and a non-editor', () => {
+  it('JOURNEY-SVC-PHOTO-005: link/unlink refuse an unknown entry and a non-editor', async () => {
     const { user, journey, entry } = ownedEntry();
     const { user: stranger } = createUser(testDb);
-    const [gallery] = svc.uploadGalleryPhotos(journey.id, user.id, [{ path: 'journey/a.jpg' }]);
+    const [gallery] = await svc.uploadGalleryPhotos(journey.id, user.id, [{ path: 'journey/a.jpg' }]);
 
     expect(svc.linkPhotoToEntry(999999, gallery.id, user.id)).toBeNull();
     expect(svc.linkPhotoToEntry(entry.id, gallery.id, stranger.id)).toBeNull();
@@ -2259,38 +2259,38 @@ describe('journey gallery', () => {
     expect(svc.unlinkPhotoFromEntry(entry.id, gallery.id, stranger.id)).toBe(false);
   });
 
-  it('JOURNEY-SVC-PHOTO-006: deleteGalleryPhoto removes the row and refuses an unknown id', () => {
+  it('JOURNEY-SVC-PHOTO-006: deleteGalleryPhoto removes the row and refuses an unknown id', async () => {
     const { user } = createUser(testDb);
     const journey = svc.createJourney(user.id, { title: 'J' });
-    const [gallery] = svc.uploadGalleryPhotos(journey.id, user.id, [{ path: 'journey/a.jpg' }]);
+    const [gallery] = await svc.uploadGalleryPhotos(journey.id, user.id, [{ path: 'journey/a.jpg' }]);
 
-    expect(svc.deleteGalleryPhoto(gallery.id, user.id)).toBeTruthy();
+    expect(await svc.deleteGalleryPhoto(gallery.id, user.id)).toBeTruthy();
     expect(testDb.prepare('SELECT 1 FROM journey_photos WHERE id = ?').get(gallery.id)).toBeUndefined();
-    expect(svc.deleteGalleryPhoto(999999, user.id)).toBeNull();
+    expect(await svc.deleteGalleryPhoto(999999, user.id)).toBeNull();
   });
 
-  it('JOURNEY-SVC-PHOTO-007: deleteGalleryPhoto refuses a non-editor', () => {
+  it('JOURNEY-SVC-PHOTO-007: deleteGalleryPhoto refuses a non-editor', async () => {
     const { user } = createUser(testDb);
     const { user: stranger } = createUser(testDb);
     const journey = svc.createJourney(user.id, { title: 'J' });
-    const [gallery] = svc.uploadGalleryPhotos(journey.id, user.id, [{ path: 'journey/a.jpg' }]);
-    expect(svc.deleteGalleryPhoto(gallery.id, stranger.id)).toBeNull();
+    const [gallery] = await svc.uploadGalleryPhotos(journey.id, user.id, [{ path: 'journey/a.jpg' }]);
+    expect(await svc.deleteGalleryPhoto(gallery.id, stranger.id)).toBeNull();
   });
 
   // #2200: the gallery used to come out in upload order, so pictures caught up
   // with after the trip landed behind the ones added while it was running.
-  it('JOURNEY-SVC-PHOTO-008: the gallery reads in capture order, not upload order', () => {
+  it('JOURNEY-SVC-PHOTO-008: the gallery reads in capture order, not upload order', async () => {
     const { user } = createUser(testDb);
     const journey = svc.createJourney(user.id, { title: 'J' });
 
-    const shot = (path: string, takenAt: string) => {
-      const [row] = svc.uploadGalleryPhotos(journey.id, user.id, [{ path }]);
+    const shot = async (path: string, takenAt: string) => {
+      const [row] = await svc.uploadGalleryPhotos(journey.id, user.id, [{ path }]);
       testDb.prepare('UPDATE trek_photos SET taken_at = ? WHERE id = ?').run(takenAt, row.photo_id);
     };
 
-    shot('journey/day3.jpg', '2026-05-03T18:00:00.000Z');
-    shot('journey/day1.jpg', '2026-05-01T08:30:00.000Z');
-    shot('journey/day2.jpg', '2026-05-02T12:00:00.000Z');
+    await shot('journey/day3.jpg', '2026-05-03T18:00:00.000Z');
+    await shot('journey/day1.jpg', '2026-05-01T08:30:00.000Z');
+    await shot('journey/day2.jpg', '2026-05-02T12:00:00.000Z');
 
     const gallery = svc.getJourneyFull(journey.id, user.id)!.gallery as { file_path: string }[];
     expect(gallery.map((p) => p.file_path)).toEqual([
@@ -2300,7 +2300,7 @@ describe('journey gallery', () => {
     ]);
   });
 
-  it('JOURNEY-SVC-PHOTO-009: a photo with no capture time rides on the date of the stop it hangs on', () => {
+  it('JOURNEY-SVC-PHOTO-009: a photo with no capture time rides on the date of the stop it hangs on', async () => {
     const { user } = createUser(testDb);
     const journey = svc.createJourney(user.id, { title: 'J' });
     const day1 = svc.createEntry(journey.id, user.id, { entry_date: '2026-05-01', title: 'Day 1' })!;
@@ -2308,9 +2308,9 @@ describe('journey gallery', () => {
 
     // Day two was sorted out first and day one caught up afterwards, with the
     // EXIF gone (an iPhone upload is converted before it leaves the browser).
-    const [dayTwoPhoto] = svc.uploadGalleryPhotos(journey.id, user.id, [{ path: 'journey/day2.jpg' }]);
-    const [dayOnePhoto] = svc.uploadGalleryPhotos(journey.id, user.id, [{ path: 'journey/day1.jpg' }]);
-    const [loose] = svc.uploadGalleryPhotos(journey.id, user.id, [{ path: 'journey/loose.jpg' }]);
+    const [dayTwoPhoto] = await svc.uploadGalleryPhotos(journey.id, user.id, [{ path: 'journey/day2.jpg' }]);
+    const [dayOnePhoto] = await svc.uploadGalleryPhotos(journey.id, user.id, [{ path: 'journey/day1.jpg' }]);
+    const [loose] = await svc.uploadGalleryPhotos(journey.id, user.id, [{ path: 'journey/loose.jpg' }]);
     svc.linkPhotoToEntry(day2.id, dayTwoPhoto.id, user.id);
     svc.linkPhotoToEntry(day1.id, dayOnePhoto.id, user.id);
     // Pin the loose photo's upload time so the run does not depend on today's date.
@@ -2328,21 +2328,21 @@ describe('journey gallery', () => {
 });
 
 describe('per-user journey preferences', () => {
-  it('JOURNEY-SVC-PREF-001: hide_skeletons round-trips for the owner', () => {
+  it('JOURNEY-SVC-PREF-001: hide_skeletons round-trips for the owner', async () => {
     const { user } = createUser(testDb);
     const journey = svc.createJourney(user.id, { title: 'J' });
     expect(svc.updateJourneyPreferences(journey.id, user.id, { hide_skeletons: true })).toEqual({ hide_skeletons: true });
     expect(svc.updateJourneyPreferences(journey.id, user.id, { hide_skeletons: false })).toEqual({ hide_skeletons: false });
   });
 
-  it('JOURNEY-SVC-PREF-002: an empty patch is accepted and changes nothing', () => {
+  it('JOURNEY-SVC-PREF-002: an empty patch is accepted and changes nothing', async () => {
     const { user } = createUser(testDb);
     const journey = svc.createJourney(user.id, { title: 'J' });
     svc.updateJourneyPreferences(journey.id, user.id, { hide_skeletons: true });
     expect(svc.updateJourneyPreferences(journey.id, user.id, {})).toEqual({ hide_skeletons: true });
   });
 
-  it('JOURNEY-SVC-PREF-003: a stranger gets null, not a row', () => {
+  it('JOURNEY-SVC-PREF-003: a stranger gets null, not a row', async () => {
     const { user } = createUser(testDb);
     const { user: stranger } = createUser(testDb);
     const journey = svc.createJourney(user.id, { title: 'J' });
@@ -2351,7 +2351,7 @@ describe('per-user journey preferences', () => {
 });
 
 describe('entry enrichment', () => {
-  it('JOURNEY-SVC-ENRICH-001: tags and pros_cons come back parsed, and source_trip_name is resolved', () => {
+  it('JOURNEY-SVC-ENRICH-001: tags and pros_cons come back parsed, and source_trip_name is resolved', async () => {
     const { user } = createUser(testDb);
     const { trip } = tripWithPlace(user.id);
     testDb.prepare('UPDATE trips SET title = ? WHERE id = ?').run('Japan 2026', trip.id);
@@ -2368,7 +2368,7 @@ describe('entry enrichment', () => {
     expect((entry as any).source_trip_name).toBe('Japan 2026');
   });
 
-  it('JOURNEY-SVC-ENRICH-002: an entry with no trip and no tags gets [] and null, not undefined', () => {
+  it('JOURNEY-SVC-ENRICH-002: an entry with no trip and no tags gets [] and null, not undefined', async () => {
     const { user } = createUser(testDb);
     const journey = svc.createJourney(user.id, { title: 'J' });
     const created = svc.createEntry(journey.id, user.id, { entry_date: '2026-05-01', title: 'Solo' })!;
@@ -2388,7 +2388,7 @@ describe('journeyTracks', () => {
       .prepare('UPDATE places SET route_geometry = ?, route_color = ? WHERE id = ?')
       .run(typeof geometry === 'string' ? geometry : JSON.stringify(geometry), color, placeId);
 
-  it('JOURNEY-SVC-TRACKS-001: returns the tracks of the trips the entries came from', () => {
+  it('JOURNEY-SVC-TRACKS-001: returns the tracks of the trips the entries came from', async () => {
     const { user } = createUser(testDb);
     const { trip, place } = tripWithPlace(user.id);
     withGeometry(place.id, [[35.1, 135.7], [35.2, 135.8]], '#ff0000');
@@ -2400,7 +2400,7 @@ describe('journeyTracks', () => {
     expect(tracks[0].points).toEqual([[35.1, 135.7], [35.2, 135.8]]);
   });
 
-  it('JOURNEY-SVC-TRACKS-002: keeps the elevation out and the pair in', () => {
+  it('JOURNEY-SVC-TRACKS-002: keeps the elevation out and the pair in', async () => {
     const { user } = createUser(testDb);
     const { trip, place } = tripWithPlace(user.id);
     // The importer keeps elevation as a third value where the file had it.
@@ -2410,7 +2410,7 @@ describe('journeyTracks', () => {
     expect(svc.journeyTracks(journey.id, user.id)![0].points).toEqual([[47.1, 11.2], [47.2, 11.3]]);
   });
 
-  it('JOURNEY-SVC-TRACKS-003: a place without geometry contributes nothing', () => {
+  it('JOURNEY-SVC-TRACKS-003: a place without geometry contributes nothing', async () => {
     const { user } = createUser(testDb);
     const { trip } = tripWithPlace(user.id);
     const journey = svc.createJourney(user.id, { title: 'J', trip_ids: [trip.id] });
@@ -2418,7 +2418,7 @@ describe('journeyTracks', () => {
     expect(svc.journeyTracks(journey.id, user.id)).toEqual([]);
   });
 
-  it('JOURNEY-SVC-TRACKS-004: unusable geometry is skipped, not fatal', () => {
+  it('JOURNEY-SVC-TRACKS-004: unusable geometry is skipped, not fatal', async () => {
     const { user } = createUser(testDb);
     const { trip, place } = tripWithPlace(user.id);
     const second = createPlace(testDb, trip.id, { name: 'Good one' });
@@ -2430,7 +2430,7 @@ describe('journeyTracks', () => {
     expect(tracks.map(t => t.place_id)).toEqual([second.id]);
   });
 
-  it('JOURNEY-SVC-TRACKS-005: a single point is a pin, not a line', () => {
+  it('JOURNEY-SVC-TRACKS-005: a single point is a pin, not a line', async () => {
     const { user } = createUser(testDb);
     const { trip, place } = tripWithPlace(user.id);
     withGeometry(place.id, [[35.1, 135.7]]);
@@ -2439,7 +2439,7 @@ describe('journeyTracks', () => {
     expect(svc.journeyTracks(journey.id, user.id)).toEqual([]);
   });
 
-  it('JOURNEY-SVC-TRACKS-006: a stranger gets null, not another user route', () => {
+  it('JOURNEY-SVC-TRACKS-006: a stranger gets null, not another user route', async () => {
     const { user } = createUser(testDb);
     const { user: stranger } = createUser(testDb);
     const { trip, place } = tripWithPlace(user.id);
@@ -2453,7 +2453,7 @@ describe('journeyTracks', () => {
 // ── Trip linking: whose journey, and whose photos (#1614 review) ─────────────
 
 describe('addTripToJourney guards', () => {
-  it('JOURNEY-SVC-100: refuses to link into a journey the caller cannot reach', () => {
+  it('JOURNEY-SVC-100: refuses to link into a journey the caller cannot reach', async () => {
     const { user: owner } = createUser(testDb);
     const { user: stranger } = createUser(testDb);
     const journey = createJourney(testDb, owner.id, { title: "Owner's journey" });
@@ -2465,7 +2465,7 @@ describe('addTripToJourney guards', () => {
     expect(links).toHaveLength(0);
   });
 
-  it('JOURNEY-SVC-101: a contributor may still link, the owner obviously too', () => {
+  it('JOURNEY-SVC-101: a contributor may still link, the owner obviously too', async () => {
     const { user: owner } = createUser(testDb);
     const { user: helper } = createUser(testDb);
     const journey = createJourney(testDb, owner.id, { title: 'Shared journey' });
@@ -2476,7 +2476,7 @@ describe('addTripToJourney guards', () => {
     expect(svc.addTripToJourney(journey.id, trip.id, helper.id)).toBe(true);
   });
 
-  it('JOURNEY-SVC-102: not even a shared trip photo is copied any more', () => {
+  it('JOURNEY-SVC-102: not even a shared trip photo is copied any more', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id, { title: 'Photo journey' });
     const trip = createTrip(testDb, user.id, { title: 'Photo trip' });
@@ -2497,7 +2497,7 @@ describe('addTripToJourney guards', () => {
 // -- Dismissing a suggestion (discussion #2299) --------------------------------
 
 describe('dismissed suggestions', () => {
-  it('JOURNEY-SVC-103: a dismissed suggestion leaves every read but keeps its row', () => {
+  it('JOURNEY-SVC-103: a dismissed suggestion leaves every read but keeps its row', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
     const keep = createJourneyEntry(testDb, journey.id, user.id, { type: 'skeleton', title: 'Museum' });
@@ -2514,7 +2514,7 @@ describe('dismissed suggestions', () => {
     });
   });
 
-  it('JOURNEY-SVC-104: the journey reports how many were dismissed', () => {
+  it('JOURNEY-SVC-104: the journey reports how many were dismissed', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
     const a = createJourneyEntry(testDb, journey.id, user.id, { type: 'skeleton' });
@@ -2527,7 +2527,7 @@ describe('dismissed suggestions', () => {
     expect(svc.getJourneyFull(journey.id, user.id)!.dismissed_count).toBe(2);
   });
 
-  it('JOURNEY-SVC-105: a dismissed place is not offered again by the trip sync', () => {
+  it('JOURNEY-SVC-105: a dismissed place is not offered again by the trip sync', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
     const trip = createTrip(testDb, user.id);
@@ -2544,7 +2544,7 @@ describe('dismissed suggestions', () => {
     expect(svc.listEntries(journey.id, user.id)!.filter((e) => e.type === 'skeleton')).toHaveLength(0);
   });
 
-  it('JOURNEY-SVC-106: restoring brings them all back and says how many', () => {
+  it('JOURNEY-SVC-106: restoring brings them all back and says how many', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
     const a = createJourneyEntry(testDb, journey.id, user.id, { type: 'skeleton' });
@@ -2556,14 +2556,14 @@ describe('dismissed suggestions', () => {
     expect(svc.listEntries(journey.id, user.id)).toHaveLength(2);
   });
 
-  it('JOURNEY-SVC-107: restoring nothing is not an error', () => {
+  it('JOURNEY-SVC-107: restoring nothing is not an error', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
 
     expect(svc.restoreDismissedSuggestions(journey.id, user.id)).toEqual({ restored: 0 });
   });
 
-  it('JOURNEY-SVC-108: a viewer may not restore', () => {
+  it('JOURNEY-SVC-108: a viewer may not restore', async () => {
     const { user: owner } = createUser(testDb);
     const { user: viewer } = createUser(testDb);
     const journey = createJourney(testDb, owner.id);
@@ -2576,7 +2576,7 @@ describe('dismissed suggestions', () => {
 // -- The country behind an entry's coordinates ---------------------------------
 
 describe('country_code', () => {
-  it('JOURNEY-SVC-109: a created entry resolves its country from its coordinates', () => {
+  it('JOURNEY-SVC-109: a created entry resolves its country from its coordinates', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
 
@@ -2589,7 +2589,7 @@ describe('country_code', () => {
     expect(entry.country_code).toBe('DE');
   });
 
-  it('JOURNEY-SVC-110: an entry with no coordinates has no country', () => {
+  it('JOURNEY-SVC-110: an entry with no coordinates has no country', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
 
@@ -2598,7 +2598,7 @@ describe('country_code', () => {
     expect(entry.country_code).toBeNull();
   });
 
-  it('JOURNEY-SVC-111: moving the pin moves the country with it', () => {
+  it('JOURNEY-SVC-111: moving the pin moves the country with it', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
     const entry = svc.createEntry(journey.id, user.id, {
@@ -2612,7 +2612,7 @@ describe('country_code', () => {
     expect(moved.country_code).toBe('FR');
   });
 
-  it('JOURNEY-SVC-112: taking the pin off clears the country', () => {
+  it('JOURNEY-SVC-112: taking the pin off clears the country', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
     const entry = svc.createEntry(journey.id, user.id, {
@@ -2629,7 +2629,7 @@ describe('country_code', () => {
     expect(cleared.country_code).toBeNull();
   });
 
-  it('JOURNEY-SVC-114: a place that moves across a border moves its skeleton entry country too', () => {
+  it('JOURNEY-SVC-114: a place that moves across a border moves its skeleton entry country too', async () => {
     // The pin can also move without anybody editing the entry: the place it came
     // from is dragged, and the trip sync writes the new coordinates onto the
     // skeleton. The flag has to follow that write like it follows a manual one.
@@ -2655,7 +2655,7 @@ describe('country_code', () => {
     expect(after.country_code).toBe('DE');
   });
 
-  it('JOURNEY-SVC-115: and so does a filled entry, whose location follows the place silently', () => {
+  it('JOURNEY-SVC-115: and so does a filled entry, whose location follows the place silently', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
     const trip = createTrip(testDb, user.id, { title: 'Border 2', start_date: '2026-08-01', end_date: '2026-08-03' });
@@ -2675,7 +2675,7 @@ describe('country_code', () => {
     expect(after).toMatchObject({ country_code: 'DE', location_lat: 52.52 });
   });
 
-  it('JOURNEY-SVC-113: an edit that does not touch the pin leaves the country alone', () => {
+  it('JOURNEY-SVC-113: an edit that does not touch the pin leaves the country alone', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
     const entry = svc.createEntry(journey.id, user.id, {
@@ -2693,7 +2693,7 @@ describe('country_code', () => {
 // -- Which optional fields a journey keeps -------------------------------------
 
 describe('entry field switches', () => {
-  it('JOURNEY-SVC-114: a fresh journey keeps all three', () => {
+  it('JOURNEY-SVC-114: a fresh journey keeps all three', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
 
@@ -2702,7 +2702,7 @@ describe('entry field switches', () => {
     expect([row.show_verdict, row.show_mood, row.show_weather]).toEqual([1, 1, 1]);
   });
 
-  it('JOURNEY-SVC-115: the owner can put one away, and booleans reach the INTEGER column', () => {
+  it('JOURNEY-SVC-115: the owner can put one away, and booleans reach the INTEGER column', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
 
@@ -2712,7 +2712,7 @@ describe('entry field switches', () => {
     expect([row.show_verdict, row.show_mood, row.show_weather]).toEqual([1, 0, 0]);
   });
 
-  it('JOURNEY-SVC-116: an editor may not reshape the journey', () => {
+  it('JOURNEY-SVC-116: an editor may not reshape the journey', async () => {
     const { user: owner } = createUser(testDb);
     const { user: editor } = createUser(testDb);
     const journey = createJourney(testDb, owner.id);

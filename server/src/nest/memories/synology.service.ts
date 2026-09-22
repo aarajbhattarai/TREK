@@ -134,7 +134,7 @@ export class SynologyService {
     private readonly notifications: NotificationsService,
   ) {}
 
-  private _readSynologyUser(userId: number, columns: string[]): ServiceResult<SynologyUserRecord> {
+  private async _readSynologyUser(userId: number, columns: string[]): Promise<ServiceResult<SynologyUserRecord>> {
       try {
           const row = this.db.prepare(`SELECT synology_url, synology_username, synology_password, synology_sid, synology_did, synology_skip_ssl FROM users WHERE id = ?`).get(userId) as SynologyUserRecord | undefined;
 
@@ -153,8 +153,8 @@ export class SynologyService {
       }
   }
 
-  private _getSynologyCredentials(userId: number): ServiceResult<SynologyCredentials> {
-      const user = this._readSynologyUser(userId, ['synology_url', 'synology_username', 'synology_password', 'synology_skip_ssl']);
+  private async _getSynologyCredentials(userId: number): Promise<ServiceResult<SynologyCredentials>> {
+      const user = await this._readSynologyUser(userId, ['synology_url', 'synology_username', 'synology_password', 'synology_skip_ssl']);
       if (!user.success) return user as ServiceResult<SynologyCredentials>;
       if (!user?.data.synology_url || !user.data.synology_username || !user.data.synology_password) return fail('Synology not configured', 400);
       const password = decrypt_api_key(user.data.synology_password);
@@ -251,7 +251,7 @@ export class SynologyService {
   }
 
   private async _requestSynologyApi<T>(userId: number, params: ApiCallParams): Promise<ServiceResult<T>> {
-      const creds = this._getSynologyCredentials(userId);
+      const creds = await this._getSynologyCredentials(userId);
       if (!creds.success) {
           return creds as ServiceResult<T>;
       }
@@ -266,7 +266,7 @@ export class SynologyService {
       const result = await this._fetchSynologyJson<T>(creds.data.synology_url, body, skipSsl);
       // 106 = session timeout, 107 = duplicate login kicked us out, 119 = SID not found/invalid
       if ('error' in result && [106, 107, 119].includes(result.error.status)) {
-          this._clearSynologySID(userId);
+          await this._clearSynologySID(userId);
           const retrySession = await this._getSynologySession(userId);
           if (!retrySession.success || !retrySession.data) {
               return retrySession as ServiceResult<T>;
@@ -305,11 +305,11 @@ export class SynologyService {
   }
 
 
-  private _clearSynologySID(userId: number): void {
+  private async _clearSynologySID(userId: number): Promise<void> {
       this.db.prepare('UPDATE users SET synology_sid = NULL WHERE id = ?').run(userId);
   }
 
-  private _clearSynologySession(userId: number): void {
+  private async _clearSynologySession(userId: number): Promise<void> {
       this.db.prepare('UPDATE users SET synology_sid = NULL, synology_did = NULL WHERE id = ?').run(userId);
   }
 
@@ -322,15 +322,15 @@ export class SynologyService {
   }
 
   private async _getSynologySession(userId: number): Promise<ServiceResult<string>> {
-      const cached = this._readSynologyUser(userId, ['synology_sid', 'synology_did']);
+      const cached = await this._readSynologyUser(userId, ['synology_sid', 'synology_did']);
       if (cached.success && cached.data?.synology_sid) {
           const decryptedSid = decrypt_api_key(cached.data.synology_sid);
           if (decryptedSid) return success(decryptedSid);
           // Decryption failed (e.g. key rotation) — clear the stale SID and re-login
-          this._clearSynologySID(userId);
+          await this._clearSynologySID(userId);
       }
 
-      const creds = this._getSynologyCredentials(userId);
+      const creds = await this._getSynologyCredentials(userId);
       if (!creds.success) {
           return creds as ServiceResult<string>;
       }
@@ -354,7 +354,7 @@ export class SynologyService {
   }
 
   async getSynologySettings(userId: number): Promise<ServiceResult<SynologySettings>> {
-      const creds = this._getSynologyCredentials(userId);
+      const creds = await this._getSynologyCredentials(userId);
       if (!creds.success) return creds as ServiceResult<SynologySettings>;
       const session = await this._getSynologySession(userId);
       return success({
@@ -372,7 +372,7 @@ export class SynologyService {
           return fail(ssrf.error, 400);
       }
 
-      const result = this._readSynologyUser(userId, ['synology_password'])
+      const result = await this._readSynologyUser(userId, ['synology_password'])
       if (!result.success) return result as ServiceResult<string>;
       const existingEncryptedPassword = result.data?.synology_password || null;
 
@@ -383,12 +383,12 @@ export class SynologyService {
       // Only invalidate the session when the account itself changes (different URL or username).
       // If the user just tested the connection, testSynologyConnection already stored a fresh
       // sid + did — clearing them here would force an unnecessary re-login that may fail (MFA).
-      const existing = this._readSynologyUser(userId, ['synology_url', 'synology_username']);
+      const existing = await this._readSynologyUser(userId, ['synology_url', 'synology_username']);
       const urlChanged = existing.success && existing.data.synology_url !== synologyUrl;
       const userChanged = existing.success && existing.data.synology_username !== synologyUsername;
       const sessionCleared = urlChanged || userChanged;
       if (sessionCleared) {
-          this._clearSynologySession(userId);
+          await this._clearSynologySession(userId);
           // Fire-and-forget like unifiedService's photos_shared send — without the
           // .catch an in-app insert failure became an unhandled rejection.
           // Injected, not imported from the old notifications bridge — that module built
@@ -537,7 +537,7 @@ export class SynologyService {
    * immichService for why the trip-side write lives in the unified service now.
    */
   async collectSynologyAlbumSelection(userId: number, tripId: string, linkId: string): Promise<ServiceResult<{ selection: Selection; total: number }>> {
-      const response = this.access.getAlbumLinkForSync(tripId, linkId, userId);
+      const response = await this.access.getAlbumLinkForSync(tripId, linkId, userId);
       if (!response.success) return response as ServiceResult<{ selection: Selection; total: number }>;
 
       const { albumId, passphrase } = response.data;
@@ -654,7 +654,7 @@ export class SynologyService {
       const parsedId = this._splitPackedSynologyId(photoId);
       if (!parsedId) return { error: 'Invalid photo ID format', status: 400 };
 
-      const synology_credentials = this._getSynologyCredentials(targetUserId);
+      const synology_credentials = await this._getSynologyCredentials(targetUserId);
       if (!synology_credentials.success) return { error: 'Credentials error', status: 500 };
 
       const sid = await this._getSynologySession(targetUserId);
@@ -704,7 +704,7 @@ export class SynologyService {
           return;
       }
 
-      const synology_credentials = this._getSynologyCredentials(targetUserId);
+      const synology_credentials = await this._getSynologyCredentials(targetUserId);
       if (!synology_credentials.success) {
           handleServiceResult(response, synology_credentials);
           return;

@@ -562,13 +562,14 @@ export class JourneyMcp {
     }
 
     const photos: unknown[] = [];
-    asset_ids.forEach((assetId, i) => {
+    for (let i = 0; i < asset_ids.length; i++) {
+      const assetId = asset_ids[i];
       const mediaType = media_types?.[i] === 'video' ? 'video' : 'image';
       const photo = entryId === undefined
-        ? this.journey.addProviderPhotoToGallery(journeyId, ctx.userId, provider, assetId, undefined, passphrase, mediaType)
-        : this.journey.addProviderPhoto(entryId, ctx.userId, provider, assetId, caption, passphrase, mediaType);
+        ? await this.journey.addProviderPhotoToGallery(journeyId, ctx.userId, provider, assetId, undefined, passphrase, mediaType)
+        : await this.journey.addProviderPhoto(entryId, ctx.userId, provider, assetId, caption, passphrase, mediaType);
       if (photo) photos.push(photo);
-    });
+    }
 
     // Detached, exactly as the REST routes schedule it: the provider is asked
     // when and where each photo was taken, and without that answer an attached

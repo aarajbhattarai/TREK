@@ -91,27 +91,27 @@ beforeEach(() => {
 afterAll(() => testDb.close());
 
 describe('getImmichCredentials', () => {
-  it('IMMICH-001: returns null when the user row is missing', () => {
-    expect(svc.getImmichCredentials(999)).toBeNull();
+  it('IMMICH-001: returns null when the user row is missing', async () => {
+    expect(await svc.getImmichCredentials(999)).toBeNull();
   });
 
-  it('IMMICH-002: returns null without a URL', () => {
+  it('IMMICH-002: returns null without a URL', async () => {
     seedUser(2, null, 'key');
-    expect(svc.getImmichCredentials(2)).toBeNull();
+    expect(await svc.getImmichCredentials(2)).toBeNull();
   });
 
-  it('IMMICH-003: returns null without an API key', () => {
+  it('IMMICH-003: returns null without an API key', async () => {
     seedUser(3, 'https://immich.test', null);
-    expect(svc.getImmichCredentials(3)).toBeNull();
+    expect(await svc.getImmichCredentials(3)).toBeNull();
   });
 
-  it('IMMICH-004: returns null when the stored key cannot be decrypted', () => {
+  it('IMMICH-004: returns null when the stored key cannot be decrypted', async () => {
     decryptMock.mockReturnValue(null);
-    expect(svc.getImmichCredentials(USER)).toBeNull();
+    expect(await svc.getImmichCredentials(USER)).toBeNull();
   });
 
-  it('IMMICH-005: returns the decrypted pair otherwise', () => {
-    expect(svc.getImmichCredentials(USER)).toEqual({ immich_url: 'https://immich.test', immich_api_key: 'key-1' });
+  it('IMMICH-005: returns the decrypted pair otherwise', async () => {
+    expect(await svc.getImmichCredentials(USER)).toEqual({ immich_url: 'https://immich.test', immich_api_key: 'key-1' });
   });
 });
 
@@ -124,20 +124,20 @@ describe('isValidAssetId', () => {
 });
 
 describe('getConnectionSettings / setImmichAutoUpload', () => {
-  it('IMMICH-007: reports connected with the URL when configured', () => {
-    expect(svc.getConnectionSettings(USER)).toEqual({ immich_url: 'https://immich.test', connected: true, auto_upload: false });
+  it('IMMICH-007: reports connected with the URL when configured', async () => {
+    expect(await svc.getConnectionSettings(USER)).toEqual({ immich_url: 'https://immich.test', connected: true, auto_upload: false });
   });
 
-  it('IMMICH-008: reports an empty URL and not connected when it is not', () => {
+  it('IMMICH-008: reports an empty URL and not connected when it is not', async () => {
     seedUser(4, null, null);
-    expect(svc.getConnectionSettings(4)).toEqual({ immich_url: '', connected: false, auto_upload: false });
+    expect(await svc.getConnectionSettings(4)).toEqual({ immich_url: '', connected: false, auto_upload: false });
   });
 
-  it('IMMICH-009: surfaces the auto-upload flag both ways', () => {
-    svc.setImmichAutoUpload(USER, true);
-    expect(svc.getConnectionSettings(USER).auto_upload).toBe(true);
-    svc.setImmichAutoUpload(USER, false);
-    expect(svc.getConnectionSettings(USER).auto_upload).toBe(false);
+  it('IMMICH-009: surfaces the auto-upload flag both ways', async () => {
+    await svc.setImmichAutoUpload(USER, true);
+    expect((await svc.getConnectionSettings(USER)).auto_upload).toBe(true);
+    await svc.setImmichAutoUpload(USER, false);
+    expect((await svc.getConnectionSettings(USER)).auto_upload).toBe(false);
   });
 });
 
@@ -148,14 +148,14 @@ describe('saveImmichSettings', () => {
     const result = await svc.saveImmichSettings(USER, 'http://169.254.169.254', 'k', null);
 
     expect(result).toEqual({ success: false, error: 'Invalid Immich URL: blocked host' });
-    expect(svc.getImmichCredentials(USER)!.immich_url).toBe('https://immich.test');
+    expect((await svc.getImmichCredentials(USER))!.immich_url).toBe('https://immich.test');
   });
 
   it('IMMICH-011: stores a trimmed URL and reports plain success', async () => {
     const result = await svc.saveImmichSettings(USER, '  https://new.test  ', 'k2', null);
 
     expect(result).toEqual({ success: true });
-    expect(svc.getImmichCredentials(USER)).toEqual({ immich_url: 'https://new.test', immich_api_key: 'k2' });
+    expect(await svc.getImmichCredentials(USER)).toEqual({ immich_url: 'https://new.test', immich_api_key: 'k2' });
   });
 
   it('IMMICH-012: warns and audits when the URL resolves to a private IP', async () => {
@@ -173,7 +173,7 @@ describe('saveImmichSettings', () => {
 
     expect(result).toEqual({ success: true });
     expect(checkSsrf).not.toHaveBeenCalled();
-    expect(svc.getImmichCredentials(USER)).toBeNull();
+    expect(await svc.getImmichCredentials(USER)).toBeNull();
   });
 });
 

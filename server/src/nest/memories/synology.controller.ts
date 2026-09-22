@@ -148,7 +148,7 @@ export class SynologyMemoriesController {
     @Res() res: Response,
   ): Promise<void> {
     const passphrase = passphraseRaw ? String(passphraseRaw) : undefined;
-    if (!this.memories.canAccessUserPhoto(user.id, Number(ownerId), tripId, photoId, 'synologyphotos')) {
+    if (!(await this.memories.canAccessUserPhoto(user.id, Number(ownerId), tripId, photoId, 'synologyphotos'))) {
       this.handle(res, fail("You don't have access to this photo", 403));
     } else {
       this.handle(res, await this.memories.synologyGetAssetInfo(user.id, photoId, Number(ownerId), passphrase));
@@ -176,7 +176,7 @@ export class SynologyMemoriesController {
       return;
     }
 
-    if (!this.memories.canAccessUserPhoto(user.id, Number(ownerId), tripId, photoId, 'synologyphotos')) {
+    if (!(await this.memories.canAccessUserPhoto(user.id, Number(ownerId), tripId, photoId, 'synologyphotos'))) {
       this.handle(res, fail("You don't have access to this photo", 403));
     } else {
       await this.memories.synologyStreamAsset(res, user.id, Number(ownerId), photoId, kind, String(size), passphrase);

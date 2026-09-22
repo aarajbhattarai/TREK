@@ -17,6 +17,7 @@ import {
   type SyncAlbumResult,
 } from './memories.helpers';
 import { NotificationsService } from '../notifications/notifications.service';
+import { UnitOfWork } from '../database/unit-of-work';
 
 /**
  * The provider-agnostic trip photo surface: which photos a trip shows, which
@@ -34,6 +35,7 @@ export class UnifiedMemoriesService {
     private readonly access: MemoriesAccessService,
     private readonly notifications: NotificationsService,
     private readonly addons: AddonsService,
+    private readonly uow: UnitOfWork,
   ) {}
 
   private async _providers(): Promise<Array<{id: string; enabled: boolean}>> {
@@ -139,7 +141,7 @@ export class UnifiedMemoriesService {
       return providerResult as ServiceResult<boolean>;
     }
     try {
-      const photoId = this.photos.getOrCreate(provider, assetId, userId, passphrase);
+      const photoId = await this.photos.getOrCreate(provider, assetId, userId, passphrase);
       const result = this.db.prepare(
         'INSERT OR IGNORE INTO trip_photos (trip_id, user_id, photo_id, shared, album_link_id) VALUES (?, ?, ?, ?, ?)'
       ).run(tripId, userId, photoId, shared ? 1 : 0, albumLinkId || null);
@@ -221,12 +223,12 @@ export class UnifiedMemoriesService {
     }
   }
 
-  removeTripPhoto(
+  async removeTripPhoto(
     tripId: string,
     userId: number,
     photoId: number,
     sid?: string,
-  ): ServiceResult<true> {
+  ): Promise<ServiceResult<true>> {
     const access = this.db.canAccessTrip(tripId, userId);
     if (!access) {
       return fail('Trip not found or access denied', 404);
@@ -240,7 +242,7 @@ export class UnifiedMemoriesService {
           AND photo_id = ?
       `).run(tripId, userId, photoId);
 
-      this.photos.deleteIfOrphan(photoId);
+      await this.photos.deleteIfOrphan(photoId);
       broadcast(tripId, 'memories:updated', { userId }, sid);
 
       return success(true);
@@ -291,7 +293,7 @@ export class UnifiedMemoriesService {
     }
   }
 
-  removeAlbumLink(tripId: string, linkId: string, userId: number): ServiceResult<true> {
+  async removeAlbumLink(tripId: string, linkId: string, userId: number): Promise<ServiceResult<true>> {
     const access = this.db.canAccessTrip(tripId, userId);
     if (!access) {
       return fail('Trip not found or access denied', 404);
@@ -301,7 +303,7 @@ export class UnifiedMemoriesService {
       const linkedPhotos = this.db.prepare('SELECT photo_id FROM trip_photos WHERE trip_id = ? AND album_link_id = ?')
         .all(tripId, linkId) as Array<{ photo_id: number }>;
 
-      this.db.transaction(() => {
+      await this.uow.transactional(async () => {
         this.db.prepare('DELETE FROM trip_photos WHERE trip_id = ? AND album_link_id = ?')
           .run(tripId, linkId);
         this.db.prepare('DELETE FROM trip_album_links WHERE id = ? AND trip_id = ? AND user_id = ?')
@@ -309,7 +311,7 @@ export class UnifiedMemoriesService {
       });
 
       for (const { photo_id } of linkedPhotos) {
-        this.photos.deleteIfOrphan(photo_id);
+        await this.photos.deleteIfOrphan(photo_id);
       }
 
       return success(true);
@@ -362,7 +364,7 @@ export class UnifiedMemoriesService {
     const result = await this.addTripPhotos(tripId, userId, true, [collected.selection], sid, linkId);
     if ('error' in result) return { error: result.error.message, status: result.error.status };
 
-    this.access.updateSyncTimeForAlbumLink(linkId);
+    await this.access.updateSyncTimeForAlbumLink(linkId);
 
     return { success: true, added: result.data.added, total: collected.total };
   }
@@ -379,7 +381,7 @@ export class UnifiedMemoriesService {
     const result = await this.addTripPhotos(tripId, userId, true, [collected.data.selection], sid, linkId);
     if (!result.success) return result as ServiceResult<SyncAlbumResult>;
 
-    this.access.updateSyncTimeForAlbumLink(linkId);
+    await this.access.updateSyncTimeForAlbumLink(linkId);
 
     return success({ added: result.data.added, total: collected.data.total });
   }

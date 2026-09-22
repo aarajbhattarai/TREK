@@ -57,12 +57,14 @@ import { createTables } from '../../../src/db/schema';
 import { runMigrations } from '../../../src/db/migrations';
 import { resetTestDb } from '../../helpers/test-db';
 import { createUser, createTrip } from '../../helpers/factories';
-import { mapDbError, pipeAsset } from '../../../src/nest/memories/memories.helpers';
+import { mapDbError, pipeAsset, type ServiceResult } from '../../../src/nest/memories/memories.helpers';
 import { MemoriesAccessService } from '../../../src/nest/memories/memories-access.service';
 import { DatabaseService } from '../../../src/nest/database/database.service';
 
 const access = new MemoriesAccessService(new DatabaseService(testDb));
-const getAlbumIdFromLink = access.getAlbumIdFromLink.bind(access);
+// A typed forwarder, not a `.bind` alias: a bound alias is typed `any`, which
+// hides a missing `await` from tsc and from all three lint rules.
+const getAlbumIdFromLink = (...a: Parameters<MemoriesAccessService['getAlbumIdFromLink']>) => access.getAlbumIdFromLink(...a);
 import { SsrfBlockedError } from '../../../src/utils/ssrfGuard';
 
 beforeAll(() => {
@@ -82,7 +84,7 @@ afterAll(() => {
 // ── mapDbError ────────────────────────────────────────────────────────────────
 
 describe('mapDbError', () => {
-  it('MEM-HELPERS-001: returns 409 for unique constraint error', () => {
+  it('MEM-HELPERS-001: returns 409 for unique constraint error', async () => {
     const err = new Error('UNIQUE constraint failed: users.email');
     const result = mapDbError(err, 'fallback');
     expect(result.success).toBe(false);
@@ -90,14 +92,14 @@ describe('mapDbError', () => {
     expect(result.error.message).toBe('Resource already exists');
   });
 
-  it('MEM-HELPERS-002: returns 409 for generic constraint error', () => {
+  it('MEM-HELPERS-002: returns 409 for generic constraint error', async () => {
     const err = new Error('constraint violation');
     const result = mapDbError(err, 'fallback');
     expect(result.success).toBe(false);
     expect(result.error.status).toBe(409);
   });
 
-  it('MEM-HELPERS-003: returns 500 with original message for non-constraint error', () => {
+  it('MEM-HELPERS-003: returns 500 with original message for non-constraint error', async () => {
     const err = new Error('Something went wrong');
     const result = mapDbError(err, 'fallback');
     expect(result.success).toBe(false);
@@ -105,7 +107,7 @@ describe('mapDbError', () => {
     expect(result.error.message).toBe('Something went wrong');
   });
 
-  it('MEM-HELPERS-004: returns 500 for generic DB error', () => {
+  it('MEM-HELPERS-004: returns 500 for generic DB error', async () => {
     const err = new Error('disk I/O error');
     const result = mapDbError(err, 'fallback');
     expect(result.error.status).toBe(500);
@@ -114,24 +116,34 @@ describe('mapDbError', () => {
 
 // ── getAlbumIdFromLink ────────────────────────────────────────────────────────
 
+/**
+ * The failure arm of a ServiceResult. The assertions below used to read
+ * `result.error` through a `.bind` alias that typed the whole thing `any`; the
+ * typed forwarder narrows properly instead of casting.
+ */
+function failureOf(result: ServiceResult<unknown>): { message: string; status: number } {
+  if (!('error' in result)) throw new Error('expected a failing ServiceResult');
+  return result.error;
+}
+
 describe('getAlbumIdFromLink', () => {
-  it('MEM-HELPERS-005: returns 404 when trip access is denied', () => {
-    const result = getAlbumIdFromLink('9999', 'link-1', 1);
+  it('MEM-HELPERS-005: returns 404 when trip access is denied', async () => {
+    const result = await getAlbumIdFromLink('9999', 'link-1', 1);
     expect(result.success).toBe(false);
-    expect(result.error.status).toBe(404);
+    expect(failureOf(result).status).toBe(404);
   });
 
-  it('MEM-HELPERS-006: returns 404 when album link is not found', () => {
+  it('MEM-HELPERS-006: returns 404 when album link is not found', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
 
-    const result = getAlbumIdFromLink(String(trip.id), 'nonexistent-link', user.id);
+    const result = await getAlbumIdFromLink(String(trip.id), 'nonexistent-link', user.id);
     expect(result.success).toBe(false);
-    expect(result.error.status).toBe(404);
-    expect(result.error.message).toBe('Album link not found');
+    expect(failureOf(result).status).toBe(404);
+    expect(failureOf(result).message).toBe('Album link not found');
   });
 
-  it('MEM-HELPERS-007: returns album_id when link exists', () => {
+  it('MEM-HELPERS-007: returns album_id when link exists', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
 
@@ -141,7 +153,7 @@ describe('getAlbumIdFromLink', () => {
     ).run(trip.id, user.id, 'immich', 'album-123', 'My Album');
     const linkId = ins.lastInsertRowid;
 
-    const result = getAlbumIdFromLink(String(trip.id), String(linkId), user.id);
+    const result = await getAlbumIdFromLink(String(trip.id), String(linkId), user.id);
     expect(result.success).toBe(true);
     expect((result as any).data).toBe('album-123');
   });
@@ -308,50 +320,50 @@ function makeJourney(userId: number): number {
 }
 
 describe('canAccessUserPhoto', () => {
-  it('MEM-ACCESS-001: the owner always passes, with no lookup needed', () => {
-    expect(access.canAccessUserPhoto(7, 7, '1', 'asset-1', 'immich')).toBe(true);
+  it('MEM-ACCESS-001: the owner always passes, with no lookup needed', async () => {
+    expect(await access.canAccessUserPhoto(7, 7, '1', 'asset-1', 'immich')).toBe(true);
   });
 
-  it('MEM-ACCESS-002: a trip member sees an asset shared into that trip', () => {
+  it('MEM-ACCESS-002: a trip member sees an asset shared into that trip', async () => {
     const { user: owner } = createUser(testDb);
     const { user: member } = createUser(testDb, { username: 'member' });
     const trip = createTrip(testDb, owner.id);
     testDb.prepare('INSERT INTO trip_members (trip_id, user_id) VALUES (?, ?)').run(trip.id, member.id);
     shareInTrip(trip.id, owner.id, 'asset-shared');
 
-    expect(access.canAccessUserPhoto(member.id, owner.id, String(trip.id), 'asset-shared', 'immich')).toBe(true);
+    expect(await access.canAccessUserPhoto(member.id, owner.id, String(trip.id), 'asset-shared', 'immich')).toBe(true);
   });
 
-  it('MEM-ACCESS-003: an unshared asset stays private even inside the same trip', () => {
+  it('MEM-ACCESS-003: an unshared asset stays private even inside the same trip', async () => {
     const { user: owner } = createUser(testDb);
     const { user: member } = createUser(testDb, { username: 'member' });
     const trip = createTrip(testDb, owner.id);
     testDb.prepare('INSERT INTO trip_members (trip_id, user_id) VALUES (?, ?)').run(trip.id, member.id);
     shareInTrip(trip.id, owner.id, 'asset-private', 'immich', 0);
 
-    expect(access.canAccessUserPhoto(member.id, owner.id, String(trip.id), 'asset-private', 'immich')).toBe(false);
+    expect(await access.canAccessUserPhoto(member.id, owner.id, String(trip.id), 'asset-private', 'immich')).toBe(false);
   });
 
-  it('MEM-ACCESS-004: a stranger is refused even for a shared asset', () => {
+  it('MEM-ACCESS-004: a stranger is refused even for a shared asset', async () => {
     const { user: owner } = createUser(testDb);
     const { user: stranger } = createUser(testDb, { username: 'stranger' });
     const trip = createTrip(testDb, owner.id);
     shareInTrip(trip.id, owner.id, 'asset-shared');
 
-    expect(access.canAccessUserPhoto(stranger.id, owner.id, String(trip.id), 'asset-shared', 'immich')).toBe(false);
+    expect(await access.canAccessUserPhoto(stranger.id, owner.id, String(trip.id), 'asset-shared', 'immich')).toBe(false);
   });
 
-  it('MEM-ACCESS-005: the provider is part of the match — same asset id, other provider, no access', () => {
+  it('MEM-ACCESS-005: the provider is part of the match — same asset id, other provider, no access', async () => {
     const { user: owner } = createUser(testDb);
     const { user: member } = createUser(testDb, { username: 'member' });
     const trip = createTrip(testDb, owner.id);
     testDb.prepare('INSERT INTO trip_members (trip_id, user_id) VALUES (?, ?)').run(trip.id, member.id);
     shareInTrip(trip.id, owner.id, 'same-id', 'immich');
 
-    expect(access.canAccessUserPhoto(member.id, owner.id, String(trip.id), 'same-id', 'synologyphotos')).toBe(false);
+    expect(await access.canAccessUserPhoto(member.id, owner.id, String(trip.id), 'same-id', 'synologyphotos')).toBe(false);
   });
 
-  it('MEM-ACCESS-006: tripId "0" routes through journeys — a contributor passes', () => {
+  it('MEM-ACCESS-006: tripId "0" routes through journeys — a contributor passes', async () => {
     const { user: owner } = createUser(testDb);
     const { user: contributor } = createUser(testDb, { username: 'contrib' });
     const journeyId = makeJourney(owner.id);
@@ -361,10 +373,10 @@ describe('canAccessUserPhoto', () => {
     testDb.prepare('INSERT INTO journey_photos (journey_id, photo_id, created_at) VALUES (?, ?, 0)').run(journeyId, photoId);
     testDb.prepare("INSERT INTO journey_contributors (journey_id, user_id, role, added_at) VALUES (?, ?, 'editor', 0)").run(journeyId, contributor.id);
 
-    expect(access.canAccessUserPhoto(contributor.id, owner.id, '0', 'j-asset', 'immich')).toBe(true);
+    expect(await access.canAccessUserPhoto(contributor.id, owner.id, '0', 'j-asset', 'immich')).toBe(true);
   });
 
-  it('MEM-ACCESS-007: tripId "0" refuses someone with no journey link', () => {
+  it('MEM-ACCESS-007: tripId "0" refuses someone with no journey link', async () => {
     const { user: owner } = createUser(testDb);
     const { user: stranger } = createUser(testDb, { username: 'stranger' });
     const journeyId = makeJourney(owner.id);
@@ -373,31 +385,31 @@ describe('canAccessUserPhoto', () => {
     ).run(owner.id).lastInsertRowid);
     testDb.prepare('INSERT INTO journey_photos (journey_id, photo_id, created_at) VALUES (?, ?, 0)').run(journeyId, photoId);
 
-    expect(access.canAccessUserPhoto(stranger.id, owner.id, '0', 'j-asset-2', 'immich')).toBe(false);
+    expect(await access.canAccessUserPhoto(stranger.id, owner.id, '0', 'j-asset-2', 'immich')).toBe(false);
   });
 
-  it('MEM-ACCESS-008: tripId "0" refuses an asset that is in no journey at all', () => {
+  it('MEM-ACCESS-008: tripId "0" refuses an asset that is in no journey at all', async () => {
     const { user: owner } = createUser(testDb);
     const { user: other } = createUser(testDb, { username: 'other' });
-    expect(access.canAccessUserPhoto(other.id, owner.id, '0', 'not-in-any-journey', 'immich')).toBe(false);
+    expect(await access.canAccessUserPhoto(other.id, owner.id, '0', 'not-in-any-journey', 'immich')).toBe(false);
   });
 });
 
 describe('canAccessTrekPhoto', () => {
-  it('MEM-ACCESS-010: an unknown photo id is refused, not treated as public', () => {
-    expect(access.canAccessTrekPhoto(1, 999999)).toBe(false);
+  it('MEM-ACCESS-010: an unknown photo id is refused, not treated as public', async () => {
+    expect(await access.canAccessTrekPhoto(1, 999999)).toBe(false);
   });
 
-  it('MEM-ACCESS-011: the owner passes', () => {
+  it('MEM-ACCESS-011: the owner passes', async () => {
     const { user } = createUser(testDb);
     const photoId = Number(testDb.prepare(
       "INSERT INTO trek_photos (provider, asset_id, owner_id) VALUES ('immich', 'own', ?)"
     ).run(user.id).lastInsertRowid);
 
-    expect(access.canAccessTrekPhoto(user.id, photoId)).toBe(true);
+    expect(await access.canAccessTrekPhoto(user.id, photoId)).toBe(true);
   });
 
-  it('MEM-ACCESS-012: a trip member passes for a shared photo, a stranger does not', () => {
+  it('MEM-ACCESS-012: a trip member passes for a shared photo, a stranger does not', async () => {
     const { user: owner } = createUser(testDb);
     const { user: member } = createUser(testDb, { username: 'member' });
     const { user: stranger } = createUser(testDb, { username: 'stranger' });
@@ -405,20 +417,20 @@ describe('canAccessTrekPhoto', () => {
     testDb.prepare('INSERT INTO trip_members (trip_id, user_id) VALUES (?, ?)').run(trip.id, member.id);
     const photoId = shareInTrip(trip.id, owner.id, 'trek-shared');
 
-    expect(access.canAccessTrekPhoto(member.id, photoId)).toBe(true);
-    expect(access.canAccessTrekPhoto(stranger.id, photoId)).toBe(false);
+    expect(await access.canAccessTrekPhoto(member.id, photoId)).toBe(true);
+    expect(await access.canAccessTrekPhoto(stranger.id, photoId)).toBe(false);
   });
 
-  it('MEM-ACCESS-013: the trip owner passes without a trip_members row', () => {
+  it('MEM-ACCESS-013: the trip owner passes without a trip_members row', async () => {
     const { user: owner } = createUser(testDb);
     const { user: uploader } = createUser(testDb, { username: 'uploader' });
     const trip = createTrip(testDb, owner.id);
     const photoId = shareInTrip(trip.id, uploader.id, 'owner-path');
 
-    expect(access.canAccessTrekPhoto(owner.id, photoId)).toBe(true);
+    expect(await access.canAccessTrekPhoto(owner.id, photoId)).toBe(true);
   });
 
-  it('MEM-ACCESS-014: a journey contributor passes', () => {
+  it('MEM-ACCESS-014: a journey contributor passes', async () => {
     const { user: owner } = createUser(testDb);
     const { user: contributor } = createUser(testDb, { username: 'contrib' });
     const journeyId = makeJourney(owner.id);
@@ -428,10 +440,10 @@ describe('canAccessTrekPhoto', () => {
     testDb.prepare('INSERT INTO journey_photos (journey_id, photo_id, created_at) VALUES (?, ?, 0)').run(journeyId, photoId);
     testDb.prepare("INSERT INTO journey_contributors (journey_id, user_id, role, added_at) VALUES (?, ?, 'editor', 0)").run(journeyId, contributor.id);
 
-    expect(access.canAccessTrekPhoto(contributor.id, photoId)).toBe(true);
+    expect(await access.canAccessTrekPhoto(contributor.id, photoId)).toBe(true);
   });
 
-  it('MEM-ACCESS-015: an ownerless local upload is reachable only through its journey', () => {
+  it('MEM-ACCESS-015: an ownerless local upload is reachable only through its journey', async () => {
     const { user: owner } = createUser(testDb);
     const { user: outsider } = createUser(testDb, { username: 'outsider' });
     const journeyId = makeJourney(owner.id);
@@ -440,16 +452,16 @@ describe('canAccessTrekPhoto', () => {
     ).run().lastInsertRowid);
     testDb.prepare('INSERT INTO journey_photos (journey_id, photo_id, created_at) VALUES (?, ?, 0)').run(journeyId, photoId);
 
-    expect(access.canAccessTrekPhoto(owner.id, photoId)).toBe(true);
-    expect(access.canAccessTrekPhoto(outsider.id, photoId)).toBe(false);
+    expect(await access.canAccessTrekPhoto(owner.id, photoId)).toBe(true);
+    expect(await access.canAccessTrekPhoto(outsider.id, photoId)).toBe(false);
   });
 
-  it('MEM-ACCESS-016: an ownerless local upload in no journey is reachable by nobody', () => {
+  it('MEM-ACCESS-016: an ownerless local upload in no journey is reachable by nobody', async () => {
     const { user } = createUser(testDb);
     const photoId = Number(testDb.prepare(
       "INSERT INTO trek_photos (provider, file_path) VALUES ('local', 'orphan.jpg')"
     ).run().lastInsertRowid);
 
-    expect(access.canAccessTrekPhoto(user.id, photoId)).toBe(false);
+    expect(await access.canAccessTrekPhoto(user.id, photoId)).toBe(false);
   });
 });

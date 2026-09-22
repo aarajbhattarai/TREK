@@ -15,7 +15,7 @@ export class PhotosService {
     private readonly resolver: PhotoResolverService,
   ) {}
 
-  canAccess(userId: number, photoId: number): boolean {
+  canAccess(userId: number, photoId: number): Promise<boolean> {
     return this.access.canAccessTrekPhoto(userId, photoId);
   }
 

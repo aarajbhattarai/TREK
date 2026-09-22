@@ -54,22 +54,22 @@ describe('trek_photos media_type', () => {
     expect(cols).toContain('duration_ms');
   });
 
-  it('a local photo defaults to image', () => {
-    const id = getOrCreateLocalTrekPhoto('journey/a.jpg');
-    expect(resolveTrekPhoto(id)!.media_type).toBe('image');
+  it('a local photo defaults to image', async () => {
+    const id = await getOrCreateLocalTrekPhoto('journey/a.jpg');
+    expect((await resolveTrekPhoto(id))!.media_type).toBe('image');
   });
 
-  it('a local video stores media_type=video + duration', () => {
-    const id = getOrCreateLocalTrekPhoto('journey/clip.mp4', 'journey/poster.jpg', null, null, 'video', 4200);
-    const row = resolveTrekPhoto(id)!;
+  it('a local video stores media_type=video + duration', async () => {
+    const id = await getOrCreateLocalTrekPhoto('journey/clip.mp4', 'journey/poster.jpg', null, null, 'video', 4200);
+    const row = (await resolveTrekPhoto(id))!;
     expect(row.media_type).toBe('video');
     expect(row.duration_ms).toBe(4200);
     expect(row.thumbnail_path).toBe('journey/poster.jpg');
   });
 
-  it('a provider photo can be registered as video', () => {
+  it('a provider photo can be registered as video', async () => {
     const { user } = createUser(testDb);
-    const id = getOrCreateTrekPhoto('immich', 'asset-1', user.id, undefined, 'video');
-    expect(resolveTrekPhoto(id)!.media_type).toBe('video');
+    const id = await getOrCreateTrekPhoto('immich', 'asset-1', user.id, undefined, 'video');
+    expect((await resolveTrekPhoto(id))!.media_type).toBe('video');
   });
 });

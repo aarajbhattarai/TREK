@@ -39,19 +39,19 @@ export class AdminPackingTemplatesController {
   ) {}
 
   @Get()
-  list() {
-    return { templates: this.packing.listPackingTemplates() };
+  async list() {
+    return { templates: await this.packing.listPackingTemplates() };
   }
 
   @Get(':id')
-  get(@Param('id') id: string) {
-    return ok(this.packing.getPackingTemplate(id));
+  async get(@Param('id') id: string) {
+    return ok(await this.packing.getPackingTemplate(id));
   }
 
   @Post()
   @HttpCode(201)
   async create(@CurrentUser() user: User, @Body() body: AdminTemplateNameDto, @Req() req: Request) {
-    const result = ok(this.packing.createPackingTemplate(body.name, user.id));
+    const result = ok(await this.packing.createPackingTemplate(body.name, user.id));
     await this.audit.writeAudit({
       userId: user.id,
       action: 'admin.packing_template_create',
@@ -63,13 +63,13 @@ export class AdminPackingTemplatesController {
   }
 
   @Put(':id')
-  update(@Param('id') id: string, @Body() body: AdminTemplateNameDto) {
-    return ok(this.packing.updatePackingTemplate(id, body));
+  async update(@Param('id') id: string, @Body() body: AdminTemplateNameDto) {
+    return ok(await this.packing.updatePackingTemplate(id, body));
   }
 
   @Delete(':id')
   async remove(@CurrentUser() user: User, @Param('id') id: string, @Req() req: Request) {
-    const result = ok(this.packing.deletePackingTemplate(id));
+    const result = ok(await this.packing.deletePackingTemplate(id));
     await this.audit.writeAudit({
       userId: user.id,
       action: 'admin.packing_template_delete',
@@ -82,35 +82,35 @@ export class AdminPackingTemplatesController {
 
   @Post(':id/categories')
   @HttpCode(201)
-  createCategory(@Param('id') id: string, @Body() body: AdminTemplateNameDto) {
-    return ok(this.packing.createTemplateCategory(id, body.name));
+  async createCategory(@Param('id') id: string, @Body() body: AdminTemplateNameDto) {
+    return ok(await this.packing.createTemplateCategory(id, body.name));
   }
 
   @Put(':templateId/categories/:catId')
-  updateCategory(@Param('templateId') templateId: string, @Param('catId') catId: string, @Body() body: AdminTemplateNameDto) {
-    return ok(this.packing.updateTemplateCategory(templateId, catId, body));
+  async updateCategory(@Param('templateId') templateId: string, @Param('catId') catId: string, @Body() body: AdminTemplateNameDto) {
+    return ok(await this.packing.updateTemplateCategory(templateId, catId, body));
   }
 
   @Delete(':templateId/categories/:catId')
-  deleteCategory(@Param('templateId') templateId: string, @Param('catId') catId: string) {
-    ok(this.packing.deleteTemplateCategory(templateId, catId));
+  async deleteCategory(@Param('templateId') templateId: string, @Param('catId') catId: string) {
+    ok(await this.packing.deleteTemplateCategory(templateId, catId));
     return { success: true };
   }
 
   @Post(':templateId/categories/:catId/items')
   @HttpCode(201)
-  createItem(@Param('templateId') templateId: string, @Param('catId') catId: string, @Body() body: AdminTemplateNameDto) {
-    return ok(this.packing.createTemplateItem(templateId, catId, body.name));
+  async createItem(@Param('templateId') templateId: string, @Param('catId') catId: string, @Body() body: AdminTemplateNameDto) {
+    return ok(await this.packing.createTemplateItem(templateId, catId, body.name));
   }
 
   @Put(':templateId/items/:itemId')
-  updateItem(@Param('templateId') templateId: string, @Param('itemId') itemId: string, @Body() body: AdminTemplateNameDto) {
-    return ok(this.packing.updateTemplateItem(templateId, itemId, body));
+  async updateItem(@Param('templateId') templateId: string, @Param('itemId') itemId: string, @Body() body: AdminTemplateNameDto) {
+    return ok(await this.packing.updateTemplateItem(templateId, itemId, body));
   }
 
   @Delete(':templateId/items/:itemId')
-  deleteItem(@Param('templateId') templateId: string, @Param('itemId') itemId: string) {
-    ok(this.packing.deleteTemplateItem(templateId, itemId));
+  async deleteItem(@Param('templateId') templateId: string, @Param('itemId') itemId: string) {
+    ok(await this.packing.deleteTemplateItem(templateId, itemId));
     return { success: true };
   }
 }

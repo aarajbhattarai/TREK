@@ -152,7 +152,7 @@ beforeAll(async () => {
   membersSvc = new TripMembersService(dbs(), budgetSvc, new UserCleanupService(dbs(), budgetSvc, await createTestUnitOfWork(dbs().connection)), new PermissionsService(dbs(), await createTestUnitOfWork(dbs().connection)), new RealtimeService(), notificationsStub(), await createTestUnitOfWork(dbs().connection));
   readModelSvc = new TripReadModelService(
   dbs(), membersSvc, daysSvc, accommodationsSvc, budgetSvc,
-  new PackingService(dbs(), new PermissionsService(dbs(), await createTestUnitOfWork(dbs().connection)), new RealtimeService(), notificationsStub()),
+  new PackingService(dbs(), new PermissionsService(dbs(), await createTestUnitOfWork(dbs().connection)), new RealtimeService(), notificationsStub(), await createTestUnitOfWork(dbs().connection)),
   new ReservationsService(dbs(), new PermissionsService(dbs(), await createTestUnitOfWork(dbs().connection)), budgetSvc, new RealtimeService(), notificationsStub(), new ReservationsReadRepository(dbs()), accommodationsSvc, await createTestUnitOfWork(dbs().connection)),
   new CollabService(dbs(), new PermissionsService(dbs(), await createTestUnitOfWork(dbs().connection)), new RealtimeService(), notificationsStub(), coversFx.storage, new RateLimitService(), await createTestUnitOfWork(dbs().connection)),
   placesSvc,
