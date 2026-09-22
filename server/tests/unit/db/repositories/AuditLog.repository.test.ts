@@ -4,6 +4,7 @@ import { resetTestDb } from '../../../helpers/test-db';
 import { createTestOrm, type TestOrm } from '../../../helpers/test-orm';
 import { createUser } from '../../../helpers/factories';
 import { AuditLog } from '../../../../src/db/entities/AuditLog.entity';
+import { AppSettings } from '../../../../src/db/entities/AppSettings.entity';
 import type { AuditLogRepository } from '../../../../src/db/repositories/AuditLog.repository';
 import { DB_TIMESTAMP_RE } from '../../../../src/db/types';
 
@@ -24,8 +25,8 @@ describe('AuditLogRepository', () => {
     await auditLog.insertEntry({ user_id: user.id, action: 'trip.create', resource: 'trip', details: '{"title":"Rome"}', ip: '1.2.3.4' });
     const row = testDb.prepare('SELECT * FROM audit_log').get() as { id: number; created_at: string };
     expect(row).toStrictEqual({
-      id: row.id,
-      created_at: row.created_at,
+      id: expect.any(Number),
+      created_at: expect.stringMatching(DB_TIMESTAMP_RE),
       user_id: user.id,
       action: 'trip.create',
       resource: 'trip',
@@ -60,5 +61,18 @@ describe('AuditLogRepository', () => {
     await expect(
       auditLog.insertEntry({ user_id: user.id, action: 'user.login', resource: null, details: null, ip: null }),
     ).resolves.toBeUndefined();
+  });
+
+  it('AUDITREPO-006: a native insert, not a unit-of-work flush — another pending entity on the same EM stays unwritten', async () => {
+    const { user } = createUser(testDb);
+    // Left pending on purpose: `t.em.create` stages a change without flushing it.
+    t.em.create(AppSettings, { key: 'pending-during-audit-insert', value: 'should-not-be-written' });
+    await auditLog.insertEntry({ user_id: user.id, action: 'trip.create', resource: 'trip', details: null, ip: null });
+
+    const pendingCount = (testDb.prepare('SELECT COUNT(*) AS n FROM app_settings WHERE key = ?').get('pending-during-audit-insert') as { n: number }).n;
+    expect(pendingCount).toBe(0);
+
+    const auditRow = testDb.prepare('SELECT action FROM audit_log').get() as { action: string };
+    expect(auditRow.action).toBe('trip.create');
   });
 });

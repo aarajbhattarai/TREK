@@ -65,7 +65,7 @@ import type { AddonsService } from '../../../src/nest/addons/addons.service';
 import { getMcpSafeUrl } from '../../../src/app-config';
 import { ADDON_IDS } from '../../../src/addons';
 import { MAX_PENDING_CODES, sweepPendingCodes } from '../../../src/nest/oauth/oauth.pending-codes';
-import { createTestOrm } from '../../helpers/test-orm';
+import { createTestOrm, type TestOrm } from '../../helpers/test-orm';
 import { AuditLog } from '../../../src/db/entities/AuditLog.entity';
 import type { AuditLogRepository } from '../../../src/db/repositories/AuditLog.repository';
 import { Users } from '../../../src/db/entities/Users.entity';
@@ -78,6 +78,7 @@ const addonsStub = { isAddonEnabled } as unknown as AddonsService;
 let svc: OauthService;
 let auditLogRepo: AuditLogRepository;
 let usersRepo: UsersRepository;
+let t: TestOrm;
 
 // Legacy free-function names delegating to the service, so the moved cases below
 // read exactly as they did before the fold. Arrow wrappers rather than `.bind`:
@@ -105,7 +106,7 @@ const isConsentSufficient = (...args: Parameters<OauthService['isConsentSufficie
 beforeAll(async () => {
   createTables(testDb);
   runMigrations(testDb);
-  const t = await createTestOrm(testDb);
+  t = await createTestOrm(testDb);
   auditLogRepo = t.repo(AuditLog) as AuditLogRepository;
   usersRepo = t.repo(Users) as UsersRepository;
   svc = new OauthService(dbs, addonsStub, new AuditService(auditLogRepo, usersRepo));
@@ -120,7 +121,8 @@ beforeEach(() => {
   isAddonEnabled.mockReturnValue(true);
 });
 
-afterAll(() => {
+afterAll(async () => {
+  await t.close();
   testDb.close();
 });
 

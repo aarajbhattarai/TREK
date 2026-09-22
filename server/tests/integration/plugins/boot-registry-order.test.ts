@@ -59,7 +59,7 @@ import { PluginRpcHostFactory } from '../../../src/nest/plugins/host/plugin-rpc-
 import { PluginRpcRegistry } from '../../../src/nest/plugins/host/rpc-kit/registry';
 import type { PluginRpcRegistryService } from '../../../src/nest/plugins/host/rpc-kit/registry.service';
 import { DbRpc } from '../../../src/nest/plugins/host/rpc/db.rpc';
-import { createTestOrm } from '../../helpers/test-orm';
+import { createTestOrm, type TestOrm } from '../../helpers/test-orm';
 import { AuditLog } from '../../../src/db/entities/AuditLog.entity';
 import type { AuditLogRepository } from '../../../src/db/repositories/AuditLog.repository';
 import { Users } from '../../../src/db/entities/Users.entity';
@@ -68,6 +68,7 @@ import type { UsersRepository } from '../../../src/db/repositories/Users.reposit
 let codeRoot: string;
 let dataRoot: string;
 let mod: TestingModule;
+let t: TestOrm | undefined;
 
 beforeAll(() => {
   codeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'trekplug-boot-code-'));
@@ -94,6 +95,7 @@ beforeAll(() => {
 
 afterAll(async () => {
   await mod?.close();
+  await t?.close();
   delete process.env.TREK_PLUGINS_DIR;
   delete process.env.TREK_PLUGINS_DATA_DIR;
   delete process.env.TREK_PLUGINS_ENABLED;
@@ -109,7 +111,7 @@ describe('plugin boot vs registry scan ordering', () => {
     // own onModuleInit scan has run.
     const registry = new PluginRpcRegistry();
     const hostFactory = new PluginRpcHostFactory(dbs, registry as unknown as PluginRpcRegistryService);
-    const t = await createTestOrm(dbConn);
+    t = await createTestOrm(dbConn);
     const auditLogRepo = t.repo(AuditLog) as AuditLogRepository;
     const usersRepo = t.repo(Users) as UsersRepository;
 

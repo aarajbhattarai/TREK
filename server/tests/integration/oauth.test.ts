@@ -41,7 +41,7 @@ import { OauthService } from '../../src/nest/oauth/oauth.service';
 import { DatabaseService } from '../../src/nest/database/database.service';
 import { AddonsService } from '../../src/nest/addons/addons.service';
 import { AuditService } from '../../src/nest/audit/audit.service';
-import { createTestOrm } from '../helpers/test-orm';
+import { createTestOrm, type TestOrm } from '../helpers/test-orm';
 import { AuditLog } from '../../src/db/entities/AuditLog.entity';
 import type { AuditLogRepository } from '../../src/db/repositories/AuditLog.repository';
 import { Users } from '../../src/db/entities/Users.entity';
@@ -62,6 +62,7 @@ const getUserByAccessToken = (...args: Parameters<OauthService['getUserByAccessT
 
 let nestApp: INestApplication;
 let app: Application;
+let t: TestOrm;
 
 // PKCE helpers
 function makePkce() {
@@ -83,7 +84,7 @@ function setMcpEnabled(enabled: boolean) {
 beforeAll(async () => {
     nestApp = await buildApp();
     app = nestApp.getHttpAdapter().getInstance();
-    const t = await createTestOrm(testDb);
+    t = await createTestOrm(testDb);
     containerSideOauth = new OauthService(oauthDbs, new AddonsService(oauthDbs), new AuditService(t.repo(AuditLog) as AuditLogRepository, t.repo(Users) as UsersRepository));
 });
 
@@ -95,6 +96,7 @@ beforeEach(() => {
 
 afterAll(async () => {
     await nestApp.close();
+    await t.close();
     testDb.close();
 });
 

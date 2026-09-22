@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeAll, beforeEach, afterAll } from 'vitest';
 
 // Avoid any real DNS/network from the SSRF guard during saveSettings and the probe.
 vi.mock('../../../src/utils/ssrfGuard', () => ({
@@ -12,7 +12,7 @@ import { AirtrailService } from '../../../src/nest/integrations/airtrail.service
 import type { AirtrailClient } from '../../../src/nest/integrations/airtrail.client';
 import { DatabaseService } from '../../../src/nest/database/database.service';
 import { AuditService } from '../../../src/nest/audit/audit.service';
-import { createTestOrm } from '../../helpers/test-orm';
+import { createTestOrm, type TestOrm } from '../../helpers/test-orm';
 import { AuditLog } from '../../../src/db/entities/AuditLog.entity';
 import type { AuditLogRepository } from '../../../src/db/repositories/AuditLog.repository';
 import { Users } from '../../../src/db/entities/Users.entity';
@@ -22,14 +22,19 @@ import type { UsersRepository } from '../../../src/db/repositories/Users.reposit
 // stub; the credential handling around it runs against the real row.
 const listFlights = vi.fn();
 let svc: AirtrailService;
+let t: TestOrm;
 
 beforeAll(async () => {
-  const t = await createTestOrm(db);
+  t = await createTestOrm(db);
   svc = new AirtrailService(
     new DatabaseService(db),
     new AuditService(t.repo(AuditLog) as AuditLogRepository, t.repo(Users) as UsersRepository),
     { listFlights } as unknown as AirtrailClient,
   );
+});
+
+afterAll(async () => {
+  await t.close();
 });
 
 const MASK = '••••••••';

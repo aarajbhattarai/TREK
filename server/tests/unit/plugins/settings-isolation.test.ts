@@ -9,7 +9,7 @@
  * field with such a name reported as configured for a user who had configured nothing —
  * which for a notification channel meant being dispatched to everyone with no credentials.
  */
-import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeAll, beforeEach, afterAll } from 'vitest';
 
 const { testDb, dbMock } = vi.hoisted(() => {
   const Database = require('better-sqlite3');
@@ -28,7 +28,7 @@ import { runMigrations } from '../../../src/db/migrations';
 import { createUser } from '../../helpers/factories';
 import { PluginUserSettingsService } from '../../../src/nest/plugins/plugin-user-settings.service';
 import { parseManifest, ManifestError } from '../../../src/nest/plugins/install/manifest';
-import { createTestOrm } from '../../helpers/test-orm';
+import { createTestOrm, type TestOrm } from '../../helpers/test-orm';
 import { AuditLog } from '../../../src/db/entities/AuditLog.entity';
 import type { AuditLogRepository } from '../../../src/db/repositories/AuditLog.repository';
 import { Users } from '../../../src/db/entities/Users.entity';
@@ -37,6 +37,11 @@ import type { UsersRepository } from '../../../src/db/repositories/Users.reposit
 const userSettings = () => new PluginUserSettingsService(new DatabaseService(dbConn));
 
 let uid: number;
+let t: TestOrm | undefined;
+
+afterAll(async () => {
+  await t?.close();
+});
 
 function declareField(pluginId: string, key: string, opts: { required?: boolean; secret?: boolean } = {}) {
   testDb.prepare(
@@ -131,7 +136,7 @@ describe('a plugin channel label is bounded by the host', () => {
        VALUES ('loud', 'Loud', 'active', 1, '1.0.0', '[]', '[]', ?, '{}')`,
     ).run(JSON.stringify({ notificationChannel: { title: '🎉'.repeat(5) + 'A'.repeat(500) } }));
 
-    const t = await createTestOrm(dbConn);
+    t = await createTestOrm(dbConn);
     const rt = new PluginRuntimeService(
       new DatabaseService(dbConn),
       new AuditService(t.repo(AuditLog) as AuditLogRepository, t.repo(Users) as UsersRepository),

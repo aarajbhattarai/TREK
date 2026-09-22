@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeAll } from 'vitest';
+import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest';
 
 // Avoid any real DNS/network from the SSRF guard during saveSettings.
 vi.mock('../../../src/utils/ssrfGuard', () => ({
@@ -12,7 +12,7 @@ import { AirtrailService } from '../../../src/nest/integrations/airtrail.service
 import { AirtrailClient } from '../../../src/nest/integrations/airtrail.client';
 import { DatabaseService } from '../../../src/nest/database/database.service';
 import { AuditService } from '../../../src/nest/database/../audit/audit.service';
-import { createTestOrm } from '../../helpers/test-orm';
+import { createTestOrm, type TestOrm } from '../../helpers/test-orm';
 import { AuditLog } from '../../../src/db/entities/AuditLog.entity';
 import type { AuditLogRepository } from '../../../src/db/repositories/AuditLog.repository';
 import { Users } from '../../../src/db/entities/Users.entity';
@@ -24,9 +24,10 @@ let svc: AirtrailService;
 let getConnectionSettings: (...args: Parameters<AirtrailService['getConnectionSettings']>) => ReturnType<AirtrailService['getConnectionSettings']>;
 let isAirtrailWriteEnabled: (...args: Parameters<AirtrailService['isAirtrailWriteEnabled']>) => ReturnType<AirtrailService['isAirtrailWriteEnabled']>;
 let saveSettings: (...args: Parameters<AirtrailService['saveSettings']>) => ReturnType<AirtrailService['saveSettings']>;
+let t: TestOrm;
 
 beforeAll(async () => {
-  const t = await createTestOrm(db);
+  t = await createTestOrm(db);
   svc = new AirtrailService(
     new DatabaseService(db),
     new AuditService(t.repo(AuditLog) as AuditLogRepository, t.repo(Users) as UsersRepository),
@@ -35,6 +36,10 @@ beforeAll(async () => {
   getConnectionSettings = (...args) => svc.getConnectionSettings(...args);
   isAirtrailWriteEnabled = (...args) => svc.isAirtrailWriteEnabled(...args);
   saveSettings = (...args) => svc.saveSettings(...args);
+});
+
+afterAll(async () => {
+  await t.close();
 });
 
 describe('airtrail writeback opt-in persistence (#1240)', () => {
