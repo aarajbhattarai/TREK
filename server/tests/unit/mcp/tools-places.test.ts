@@ -247,6 +247,23 @@ describe('Tool: update_place', () => {
     });
   });
 
+  it('refuses a misspelt field instead of silently updating nothing', async () => {
+    // An assistant wrote stopType for stop_type; the call used to come back as a
+    // success with the place untouched, and the road trip never got its fuel stop.
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const place = createPlace(testDb, trip.id, { name: 'Aral Bad Segeberg' });
+    await withHarness(user.id, async (h) => {
+      const refused = await h.client.callTool({ name: 'update_place', arguments: { tripId: trip.id, placeId: place.id, stopType: 'fuel' } });
+      expect(refused.isError).toBe(true);
+      expect((refused.content as Array<{ text: string }>)[0].text).toMatch(/Unrecognized key.*stopType/);
+      expect((testDb.prepare('SELECT stop_type FROM places WHERE id = ?').get(place.id) as { stop_type: string | null }).stop_type).toBeNull();
+      expect(broadcastMock).not.toHaveBeenCalled();
+      const fixed = parseToolResult(await h.client.callTool({ name: 'update_place', arguments: { tripId: trip.id, placeId: place.id, stop_type: 'fuel' } })) as any;
+      expect(fixed.place.stop_type).toBe('fuel');
+    });
+  });
+
   it('sets image_url on an existing place (#37)', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);

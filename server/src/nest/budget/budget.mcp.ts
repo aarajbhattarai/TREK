@@ -25,13 +25,13 @@ const budgetAddonOn = addonGate(ADDON_IDS.BUDGET);
  * signed like the REST contract's (#2176): a negative payer is the recipient
  * of a refund recorded as a negative expense.
  */
-const payersSchema = z.array(z.object({
+const payersSchema = z.array(z.strictObject({
   user_id: z.number().int().positive(),
   amount: z.number(),
 })).describe('Who actually paid, and how much each paid, in the expense currency. Ask the user; do not guess.');
 
 /** Reusable Zod shape for an unequal split: what each participant owes. Signed, like the REST contract (#2176). */
-const splitMembersSchema = z.array(z.object({
+const splitMembersSchema = z.array(z.strictObject({
   user_id: z.number().int().positive(),
   amount: z.number(),
 })).describe('Unequal split: what each participant owes, in the expense currency. The amounts must add up to the expense total. Ask the user; do not guess.');

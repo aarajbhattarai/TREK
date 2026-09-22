@@ -95,7 +95,7 @@ export class MapsMcp {
         z.enum(POI_CATEGORY_KEYS),
         z.array(z.enum(POI_CATEGORY_KEYS)).min(1).max(MAX_POI_CATEGORIES),
       ]).describe('Which kind of place to look for. Pass several to cover them in one query rather than one request per kind'),
-      bbox: z.object({
+      bbox: z.strictObject({
         south: z.number().min(-90).max(90).describe('Southern edge, latitude'),
         west: z.number().min(-180).max(180).describe('Western edge, longitude'),
         north: z.number().min(-90).max(90).describe('Northern edge, latitude'),

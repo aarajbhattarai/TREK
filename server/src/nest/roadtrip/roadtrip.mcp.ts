@@ -89,14 +89,14 @@ export class RoadtripMcp {
     inputSchema: {
       tripId: z.number().int().positive(),
       dayId: z.number().int().positive(),
-      vias: z.array(z.object({
+      vias: z.array(z.strictObject({
         after_order_index: z.number().int().min(0).describe('Which stop of the day this via follows, counting from 0'),
         lat: z.number().min(-90).max(90),
         lng: z.number().min(-180).max(180),
       })).max(100).describe('In the order the drive passes through them'),
       replace_legs: z.array(z.number().int().min(0)).max(100).optional()
         .describe('Legs to clear before inserting, by the index of the stop they follow'),
-      track: z.object({
+      track: z.strictObject({
         place_id: z.number().int().positive().describe('The imported track this chain was fitted to, as its place id'),
         stray_km: z.number().min(0).max(40_000).nullable().optional()
           .describe('How far the fitted route still runs from the track at its worst point'),
@@ -139,7 +139,7 @@ export class RoadtripMcp {
     inputSchema: {
       tripId: z.number().int().positive(),
       dayId: z.number().int().positive(),
-      vias: z.array(z.object({
+      vias: z.array(z.strictObject({
         id: z.number().int().positive(),
         after_order_index: z.number().int().min(0).describe('Which stop of the day the via now follows, counting from 0'),
       })).max(500),

@@ -47,7 +47,7 @@ const urlField = reservationUrlSchema.max(2000).optional()
 type TransportType = typeof CREATABLE_TRANSPORT_TYPES[number];
 type BookingType = typeof BOOKING_TYPES[number];
 
-const endpointObjectSchema = z.object({
+const endpointObjectSchema = z.strictObject({
   role: z.enum(['from', 'to', 'stop']).describe('Endpoint role: "from" (origin), "to" (destination), or "stop" (intermediate)'),
   sequence: z.number().int().min(0).describe('Order within the route (0-based)'),
   name: z.string().min(1).describe('Location name (e.g. "Paris Gare de Lyon", "ZRH Terminal 2")'),
@@ -520,7 +520,7 @@ export class ReservationsMcp {
     description: 'Update the display order of reservations within a day.',
     inputSchema: {
       tripId: z.number().int().positive(),
-      positions: z.array(z.object({
+      positions: z.array(z.strictObject({
         id: z.number().int().positive(),
         day_plan_position: z.number().int().min(0),
       })).describe('Array of { id, day_plan_position } pairs'),
