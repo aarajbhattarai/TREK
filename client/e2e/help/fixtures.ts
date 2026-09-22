@@ -4,7 +4,7 @@ import path from 'node:path'
 import { gzipSync } from 'node:zlib'
 import { request as apiRequest, type APIRequestContext, type Page } from '@playwright/test'
 import { E2E_BASE_URL } from '../../playwright.config'
-import { OUT_DIR } from './guide'
+import { OUT_DIR, PICTURE_DAY } from './guide'
 
 /**
  * What the dashboard guides act on beyond the seeded trip.
@@ -1414,17 +1414,14 @@ export async function ensureCollabFixtures(api: APIRequestContext): Promise<void
 
   const pad = (n: number): string => String(n).padStart(2, '0')
   const clock = (d: Date): string => `${pad(d.getHours())}:${pad(d.getMinutes())}`
-  const now = new Date()
-  const from = new Date(now.getTime() + 45 * 60_000)
-  const until = new Date(now.getTime() + 165 * 60_000)
-  // A start that has already passed drops the stop out of the panel, and a time
-  // after midnight belongs to a day the trip does not have. Both cases end in no
-  // time at all: an untimed stop on today is always listed, and reads TBD.
-  const stillToday = until.getDate() === now.getDate()
-  // Written on every run, not only on the first: a time left over from an older
-  // run would be in the past by now.
+  // Timed against the day the pictures are taken on, not against the wall clock
+  // of whoever is running this. What's Next only lists a stop whose start is
+  // still ahead, and the browser's clock is pinned, so a time worked out from
+  // the real hour is in the panel's past as often as not.
+  const from = new Date(PICTURE_DAY.getTime() + 45 * 60_000)
+  const until = new Date(PICTURE_DAY.getTime() + 165 * 60_000)
   const timed = await api.put(`/api/trips/${tripId}/assignments/${timedId}/time`, {
-    data: stillToday ? { place_time: clock(from), end_time: clock(until) } : { place_time: null, end_time: null },
+    data: { place_time: clock(from), end_time: clock(until) },
   })
   if (!timed.ok()) throw new Error(`could not time the What's Next stop: ${timed.status()} ${await timed.text()}`)
 }

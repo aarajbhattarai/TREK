@@ -33,7 +33,8 @@ export async function openTrip(page: Page, opts: { tab?: string; day?: number | 
   await page.goto(`/trips/${tripId}${tab ? `?tab=${tab}` : ''}`)
   await clearNotices(page)
   await dismissReleaseNotice(page)
-  await expect(page.getByRole('button', { name: 'Share' })).toBeVisible({ timeout: 30_000 })
+  // Exact: the Lists tab carries a Shared button, which the loose name also matches.
+  await expect(page.getByRole('button', { name: 'Share', exact: true })).toBeVisible({ timeout: 30_000 })
   await settle(page)
   if (!tab && day) {
     // The trip is running, so the plan opens on today, an empty day at the

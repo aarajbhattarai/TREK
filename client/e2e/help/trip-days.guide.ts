@@ -404,7 +404,9 @@ const SCRIPTS: Record<string, GuideScript> = {
       await openTrip(p, { day: 5 })
     },
     steps: [
-      only(p => bookingRow(p, /Departure.*Nozomi 21/)),
+      // The flight, not the train: Departure and Arrival are what a booking
+      // gets when it crosses days, and the train starts and ends on one.
+      only(p => bookingRow(p, /^Departure LH716/)),
       {
         prepare: async p => { await selectDay(p, 6); await closeDayDetails(p) },
         target: p => stop(p, 'Nishiki Market'),

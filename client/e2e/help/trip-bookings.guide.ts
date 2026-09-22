@@ -341,10 +341,10 @@ const SCRIPTS: Record<string, GuideScript> = {
         },
       },
       {
-        target: p => travellers(p).getByRole('button', { name: 'jonas' }),
+        target: p => travellers(p).getByTitle('jonas'),
         act: async p => {
-          await travellers(p).getByRole('button', { name: 'jonas' }).click()
-          await expect(travellers(p).getByRole('button', { name: 'jonas' })).toHaveAttribute('aria-pressed', 'true')
+          await travellers(p).getByTitle('jonas').click()
+          await expect(travellers(p).getByTitle('jonas')).toHaveAttribute('aria-pressed', 'true')
           await settle(p)
         },
       },

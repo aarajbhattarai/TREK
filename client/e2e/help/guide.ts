@@ -40,7 +40,7 @@ export const VIEWPORT = { width: 1920, height: 1080 }
  * stops waiting; the server keeps its own clock, which none of the pictures
  * read.
  */
-const PICTURE_DAY = new Date('2026-09-21T09:00:00.000Z')
+export const PICTURE_DAY = new Date('2026-09-21T09:00:00.000Z')
 
 /** Put the page on the day the pictures are taken on. Call before navigating. */
 async function pinClock(page: Page): Promise<void> {

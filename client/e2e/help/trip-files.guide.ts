@@ -206,10 +206,12 @@ const SCRIPTS: Record<string, GuideScript> = {
         },
       },
       {
-        target: p => assignDialog(p).getByRole('button', { name: PLACE }),
+        // Exact: the bookings fixture names a booking after this place, and the
+        // dialog lists both under the same opening words.
+        target: p => assignDialog(p).getByRole('button', { name: PLACE, exact: true }),
         act: async p => {
-          await assignDialog(p).getByRole('button', { name: PLACE }).click()
-          await expect(assignDialog(p).getByRole('button', { name: PLACE }).locator('svg.lucide-check')).toBeVisible({ timeout: 20_000 })
+          await assignDialog(p).getByRole('button', { name: PLACE, exact: true }).click()
+          await expect(assignDialog(p).getByRole('button', { name: PLACE, exact: true }).locator('svg.lucide-check')).toBeVisible({ timeout: 20_000 })
         },
       },
       {

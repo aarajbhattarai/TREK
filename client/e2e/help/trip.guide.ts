@@ -27,7 +27,7 @@ const leftToggle = (page: Page) => page.locator('button[title="Collapse"], butto
 
 async function openShare(page: Page): Promise<void> {
   await openTrip(page)
-  await page.getByRole('button', { name: 'Share' }).click()
+  await page.getByRole('button', { name: 'Share', exact: true }).click()
   await expect(modal(page)).toBeVisible()
   await expect(modal(page).getByRole('heading', { name: 'Share Trip' })).toBeVisible()
   await settle(page)
@@ -46,9 +46,9 @@ const SCRIPTS: Record<string, GuideScript> = {
     start: p => openTrip(p),
     steps: [
       {
-        target: p => p.getByRole('button', { name: 'Share' }),
+        target: p => p.getByRole('button', { name: 'Share', exact: true }),
         act: async p => {
-          await p.getByRole('button', { name: 'Share' }).click()
+          await p.getByRole('button', { name: 'Share', exact: true }).click()
           await expect(modal(p).getByRole('heading', { name: 'Share Trip' })).toBeVisible()
           await settle(p)
         },

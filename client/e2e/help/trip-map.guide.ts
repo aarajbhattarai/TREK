@@ -102,16 +102,36 @@ async function reachable(locator: Locator, fromEnd = false): Promise<number> {
  * rather than a mouse drag: a drag has to start on bare map, and after a search
  * there are sixty result pins that each swallow the press it starts with.
  */
+/**
+ * Drag the map the way a reader would.
+ *
+ * Not the arrow keys: Leaflet only listens for them while its container has
+ * focus, and focusing it from here did not take, so the map never moved and the
+ * button that only exists once it has never appeared. The drag starts from a
+ * point checked to be empty, because a press on a marker drags the place onto a
+ * day instead of moving the map.
+ */
 async function panMap(page: Page): Promise<void> {
-  await map(page).focus()
-  for (let i = 0; i < 4; i++) {
-    await page.keyboard.press('ArrowLeft')
-    await page.waitForTimeout(250)
+  const box = await map(page).boundingBox()
+  if (!box) throw new Error('the map has no box to drag')
+  const candidates = [0.3, 0.7, 0.5].flatMap(fx => [0.75, 0.25].map(fy => ({
+    x: Math.round(box.x + box.width * fx),
+    y: Math.round(box.y + box.height * fy),
+  })))
+  let from: { x: number; y: number } | undefined
+  for (const point of candidates) {
+    const clear = await page.evaluate(({ x, y }) => {
+      const el = document.elementFromPoint(x, y)
+      return !!el && !el.closest('.leaflet-marker-icon, button, [role="button"], .leaflet-control')
+    }, point)
+    if (clear) { from = point; break }
   }
-  for (let i = 0; i < 2; i++) {
-    await page.keyboard.press('ArrowUp')
-    await page.waitForTimeout(250)
-  }
+  if (!from) throw new Error('found nowhere on the map to take hold of')
+  await page.mouse.move(from.x, from.y)
+  await page.mouse.down()
+  // In steps, so Leaflet reads a drag rather than a click.
+  for (let i = 1; i <= 8; i++) await page.mouse.move(from.x - i * 22, from.y - i * 9, { steps: 2 })
+  await page.mouse.up()
   await settle(page)
 }
 
