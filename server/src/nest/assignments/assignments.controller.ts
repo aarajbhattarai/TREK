@@ -26,9 +26,6 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { RequirePermission, TripAccessGuard } from '../permissions/trip-access.guard';
 
-type Trip = NonNullable<ReturnType<AssignmentsService['verifyTripAccess']>>;
-
-
 
 /**
  * /api/trips/:tripId/days/:dayId/assignments — the day's ordered itinerary items.
