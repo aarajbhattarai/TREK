@@ -66,6 +66,8 @@ export class ChargingService {
   private loadTariffs(source: string): Promise<ChargingTariff[]> {
     const cached = this.tariffs.get(source);
     if (cached && cached.expires > Date.now()) return cached.value;
+    // Memoised in-flight fetch, not a missing await: the promise itself is cached
+    // so concurrent callers within the TTL share one request; the caller awaits it.
     const value = this.fetchTariffs(source);
     this.tariffs.set(source, { expires: Date.now() + 300000, value });
     return value;

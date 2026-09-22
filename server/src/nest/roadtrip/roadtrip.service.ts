@@ -104,7 +104,7 @@ export class RoadtripService {
       track?: { place_id: number; stray_km?: number | null } | null;
     },
   ): Promise<RoadtripVia[]> {
-    return this.uow.transactional(async () => {
+    return await this.uow.transactional(async () => {
       // Inside the same transaction as the chain it describes. A day that says it follows
       // a road whose vias never landed is worse than a day that says nothing.
       if (input.track === null) {
@@ -222,7 +222,7 @@ export class RoadtripService {
     dayId: string | number,
     input: { vias: { id: number; after_order_index: number }[]; remove?: number[] },
   ): Promise<RoadtripVia[]> {
-    return this.uow.transactional(async () => {
+    return await this.uow.transactional(async () => {
       // Read before writing: the OLD anchor is what says which of two merged
       // legs came first, and after the updates that information is gone.
       const before = new Map(

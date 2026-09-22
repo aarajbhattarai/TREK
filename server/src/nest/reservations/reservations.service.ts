@@ -779,7 +779,7 @@ export class ReservationsService {
     return { reservation, accommodationCreated, stayMirror };
   }
 
-  async updatePositions(tripId: string | number, positions: { id: number; day_plan_position?: number }[], dayId?: number | string | null): Promise<void> {
+  async updatePositions(tripId: string | number, positions: { id: number; day_plan_position?: number }[], dayId?: number | string | null) {
     if (dayId) {
       // Per-day positions for multi-day reservations, scoped the way the legacy
       // branch below already scopes its update. The table carries no trip_id and

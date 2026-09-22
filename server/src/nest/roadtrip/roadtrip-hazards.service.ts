@@ -33,6 +33,8 @@ export class RoadtripHazardsService {
   async read(): Promise<RoadtripHazards> {
     if (this.cached && Date.now() - Date.parse(this.cached.fetchedAt) < 600000) return this.cached;
     if (this.pending !== undefined) return this.pending;
+    // Memoised in-flight load, not a missing await: concurrent readers join the
+    // pending promise above, and this frame awaits it below.
     this.pending = this.load();
     try { this.cached = await this.pending; return this.cached; }
     finally { this.pending = undefined; }
