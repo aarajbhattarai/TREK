@@ -19,7 +19,7 @@ export const { context: tripPlaceContext, guides: tripPlaceGuides } = defineScre
   bullets: 6,
   docs: [{ slug: PLACES }, { slug: 'Trip-Planner-Overview' }],
   guides: [
-    ['read-place', 'eye', 'guide', 6, 3, FIELDS, ['rate-place', 'place-day-assign', 'edit-place'], true],
+    ['read-place', 'eye', 'guide', 7, 3, FIELDS, ['rate-place', 'place-day-assign', 'edit-place'], true],
     ['rate-place', 'star', 'quick', 4, 3, { slug: PLACES, anchor: 'rating-a-place' }, ['read-place', 'filter-places'], true],
     ['place-image', 'image', 'guide', 4, 3, { slug: PLACES, anchor: 'custom-place-image' }, ['read-place', 'edit-place'], true],
     ['place-day-assign', 'calendarCheck', 'guide', 5, 3, { slug: 'Day-Plans-and-Notes', anchor: 'assigning-places-to-a-day' }, ['place-onto-day', 'remove-from-day', 'undo-change']],

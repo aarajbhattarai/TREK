@@ -5,6 +5,7 @@ import { gzipSync } from 'node:zlib'
 import { request as apiRequest, type APIRequestContext, type Page } from '@playwright/test'
 import { E2E_BASE_URL } from '../../playwright.config'
 import { OUT_DIR, PICTURE_DAY } from './guide'
+import { at, day, emlDate, mailHeaderDate, short } from '../dates'
 
 /**
  * What the dashboard guides act on beyond the seeded trip.
@@ -17,8 +18,8 @@ import { OUT_DIR, PICTURE_DAY } from './guide'
  */
 
 export const EXTRA_TRIPS = [
-  { title: 'Weekend in Lisbon', description: 'Pastéis, miradouros and a day trip to Sintra.', start_date: '2026-10-16', end_date: '2026-10-18', currency: 'EUR' },
-  { title: 'Norway Road Trip', description: 'Bergen to the Lofoten, fjord by fjord.', start_date: '2027-06-05', end_date: '2027-06-19', currency: 'NOK' },
+  { title: 'Weekend in Lisbon', description: 'Pastéis, miradouros and a day trip to Sintra.', start_date: day(25), end_date: day(27), currency: 'EUR' },
+  { title: 'Norway Road Trip', description: 'Bergen to the Lofoten, fjord by fjord.', start_date: day(257), end_date: day(271), currency: 'NOK' },
 ]
 
 export async function ensureExtraTrips(api: APIRequestContext): Promise<void> {
@@ -145,7 +146,7 @@ const ENTRIES = [
 /** A second, future journey, so the list has a card below the banner. */
 export const SECOND_JOURNEY = { title: 'Fjords and ferries', subtitle: 'Norway, next summer', trip: 'Norway Road Trip' }
 /** A trip no journey has claimed, for the guide that links one. */
-export const SPARE_TRIP = { title: 'Alps by rail', description: 'Zurich to Venice over the Bernina.', start_date: '2027-02-12', end_date: '2027-02-19', currency: 'CHF' }
+export const SPARE_TRIP = { title: 'Alps by rail', description: 'Zurich to Venice over the Bernina.', start_date: day(144), end_date: day(151), currency: 'CHF' }
 
 export async function ensureJourneyFixtures(api: APIRequestContext): Promise<number> {
   const listRes = await api.get('/api/journeys')
@@ -211,9 +212,9 @@ const SCHOOL_REGION = {
   name: 'Bavaria',
   revision: 0,
   holidays: [
-    { name: 'Autumn break', startDate: '2026-11-02', endDate: '2026-11-06' },
-    { name: 'Christmas break', startDate: '2026-12-24', endDate: '2027-01-06' },
-    { name: 'Easter break', startDate: '2027-03-29', endDate: '2027-04-09' },
+    { name: 'Autumn break', startDate: day(42), endDate: day(46) },
+    { name: 'Christmas break', startDate: day(94), endDate: day(107) },
+    { name: 'Easter break', startDate: day(189), endDate: day(200) },
   ],
 }
 
@@ -414,7 +415,7 @@ export async function ensureDaysFixtures(api: APIRequestContext): Promise<void> 
     await api.post(`/api/trips/${tripId}/reservations`, {
       data: {
         title: 'Lunch at Nishiki', type: 'restaurant', status: 'confirmed', day_id: dayIds[5],
-        place_id: market.place_id, assignment_id: market.id, reservation_time: '2026-09-17T12:30:00', confirmation_number: 'NK-2211',
+        place_id: market.place_id, assignment_id: market.id, reservation_time: at(-4, '12:30'), confirmation_number: 'NK-2211',
       },
     })
   }
@@ -424,11 +425,11 @@ export async function ensureDaysFixtures(api: APIRequestContext): Promise<void> 
     await api.post(`/api/trips/${tripId}/reservations`, {
       data: {
         title: 'Nozomi 21 Tokyo → Kyoto', type: 'train', status: 'confirmed', location: 'Tokyo Station',
-        reservation_time: '2026-09-16T08:30:00', reservation_end_time: '2026-09-16T10:45:00', confirmation_number: 'JR-58204',
+        reservation_time: at(-5, '08:30'), reservation_end_time: at(-5, '10:45'), confirmation_number: 'JR-58204',
         metadata: { train_number: 'Nozomi 21', platform: '17', seat: '8A' },
         endpoints: [
-          { role: 'from', sequence: 0, name: 'Tokyo Station', lat: 35.6812, lng: 139.7671, timezone: 'Asia/Tokyo', local_date: '2026-09-16', local_time: '08:30' },
-          { role: 'to', sequence: 1, name: 'Kyoto Station', lat: 34.9858, lng: 135.7588, timezone: 'Asia/Tokyo', local_date: '2026-09-16', local_time: '10:45' },
+          { role: 'from', sequence: 0, name: 'Tokyo Station', lat: 35.6812, lng: 139.7671, timezone: 'Asia/Tokyo', local_date: day(-5), local_time: '08:30' },
+          { role: 'to', sequence: 1, name: 'Kyoto Station', lat: 34.9858, lng: 135.7588, timezone: 'Asia/Tokyo', local_date: day(-5), local_time: '10:45' },
         ],
       },
     })
@@ -484,7 +485,9 @@ export async function ensureDaysFixtures(api: APIRequestContext): Promise<void> 
  * What the place card needs beyond the seed: a website on one place so the
  * footer offers Open Website at all, a note on the first stop so the card can
  * show Notes for this day, and two other travellers' star votes so the rating
- * row has an average and a voter list rather than one lonely face.
+ * row has an average and a voter list rather than one lonely face. An
+ * OpenStreetMap id on three places, so the card shows real hours, a ring and a
+ * phone number; see OSM_PLACES.
  *
  * The votes are cast as the members themselves. A login on the shared context
  * would set the trek_session cookie on it, and the server reads that cookie
@@ -504,9 +507,132 @@ const MEMBER_VOTES = [
   { username: 'jonas', email: 'jonas@example.com', password: 'DemoSeed12345!', rating: 4 },
 ]
 
+/**
+ * The OpenStreetMap element behind three of the seeded places, so their cards
+ * show what a place picked from the search shows: the hours, the Open or
+ * Closed ring, the phone number and the website. The seed posts bare rows, and
+ * a place with neither a Google nor an OpenStreetMap id asks no provider at
+ * all (PlaceInspector's usePlaceDetails), which is why every picture of the
+ * card had been without them.
+ *
+ * The id is looked up at run time through TREK's own autocomplete, which
+ * answers from the OpenStreetMap layer of the TREK index, so a re-mapped
+ * element does not quietly blank the picture; the id written here is the
+ * fallback for when the index is unreachable or names something else. Every
+ * candidate is then asked from the details route, the call the card makes,
+ * and only one that answers with a week of hours is written. Senso-ji is the
+ * place the read-place guide pictures, so a run that cannot get its hours and
+ * phone number fails here rather than promoting a picture of a card without
+ * the feature the text describes; the other two only make their own guides'
+ * cards look like a real place's, so a thin answer is warned about and the
+ * id kept.
+ *
+ * Nishiki Market is left out on purpose: its OpenStreetMap hours ("Mo-Su,PH
+ * 10:00-18:00+") are a shape the server's parser rejects, and Fushimi Inari
+ * and Meiji Jingu carry no hours tag at all.
+ */
+interface OsmPlace {
+  /** The seeded place's name. */
+  place: string
+  /** What the resolver types into the autocomplete. */
+  query: string
+  /** What the suggestion's name has to contain, letters and digits only. */
+  key: string
+  /** The element the last probe found, used when the index cannot say. */
+  osmId: string
+  /** Whether the answer has to carry a phone number as well as the hours. */
+  phone: boolean
+  /** Fail the run when the details do not come; otherwise warn and keep the id. */
+  strict: boolean
+}
+
+export const OSM_PLACES: OsmPlace[] = [
+  { place: 'Senso-ji Temple', query: 'Senso-ji', key: 'sensoji', osmId: 'way:173154847', phone: true, strict: true },
+  { place: 'teamLab Planets', query: 'teamLab Planets', key: 'teamlab', osmId: 'node:6291685287', phone: false, strict: false },
+  { place: 'Arashiyama Bamboo Grove', query: 'Arashiyama Bamboo Grove', key: 'bamboo', osmId: 'relation:17656638', phone: false, strict: false },
+]
+
+/** The id form the details route resolves (maps.helpers.ts OSM_PLACE_ID). */
+const OSM_PLACE_ID = /^(node|way|relation):\d+$/
+
+/** Letters and digits, diacritics dropped: "Sensō-ji" and "Senso-ji Temple" both open with "sensoji". */
+const plain = (value: string): string =>
+  value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '')
+
+/** Metres between two pins; flat arithmetic is exact enough for a few hundred of them. */
+function metresApart(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
+  const dLat = (b.lat - a.lat) * 111_320
+  const dLng = (b.lng - a.lng) * 111_320 * Math.cos(((a.lat + b.lat) / 2) * (Math.PI / 180))
+  return Math.hypot(dLat, dLng)
+}
+
+interface Suggestion {
+  placeId: string
+  mainText: string
+  source?: string
+  lat?: number
+  lng?: number
+}
+
+/**
+ * The element the index knows the place by: an OpenStreetMap row of TREK's own
+ * autocomplete, biased to the seed's pin, called like the place and within a
+ * few hundred metres of it. Undefined when the index is unreachable or names
+ * nothing that is this place; the caller then falls back to the written id.
+ */
+async function resolveOsmId(api: APIRequestContext, wanted: OsmPlace, pin: { lat: number; lng: number }): Promise<string | undefined> {
+  const res = await api.post('/api/maps/autocomplete', {
+    data: {
+      input: wanted.query,
+      locationBias: { low: { lat: pin.lat - 0.02, lng: pin.lng - 0.02 }, high: { lat: pin.lat + 0.02, lng: pin.lng + 0.02 } },
+    },
+  })
+  if (!res.ok()) return undefined
+  const body = (await res.json()) as { suggestions?: Suggestion[] }
+  return (body.suggestions ?? []).find(
+    s =>
+      s.source === 'openstreetmap'
+      && OSM_PLACE_ID.test(s.placeId)
+      && plain(s.mainText).includes(wanted.key)
+      && typeof s.lat === 'number'
+      && typeof s.lng === 'number'
+      && metresApart(pin, { lat: s.lat, lng: s.lng }) < 600,
+  )?.placeId
+}
+
+interface ProviderDetails {
+  opening_hours?: string[] | null
+  phone?: string | null
+}
+
+/** Whether a details answer carries what the card is to show for this place. */
+const complete = (details: ProviderDetails | null, wanted: OsmPlace): boolean =>
+  !!details
+  && Array.isArray(details.opening_hours)
+  && details.opening_hours.length === 7
+  && (!wanted.phone || (typeof details.phone === 'string' && details.phone.length > 0))
+
+/**
+ * What the card would get for this id, asked the way the card asks it. The
+ * OpenStreetMap path has no server-side cache and Overpass is regularly
+ * overloaded, so a thin answer is asked again twice before it counts.
+ */
+async function providerDetails(api: APIRequestContext, osmId: string, wanted: OsmPlace): Promise<ProviderDetails | null> {
+  for (let attempt = 1; ; attempt++) {
+    const res = await api.get(`/api/maps/details/${encodeURIComponent(osmId)}?lang=en`)
+    const body = res.ok() ? ((await res.json()) as { place: ProviderDetails | null; disabled?: boolean }) : null
+    if (body?.disabled) throw new Error('Place Details is switched off in the admin settings, so no card gets hours')
+    if (complete(body?.place ?? null, wanted) || attempt === 3) return body?.place ?? null
+    await new Promise(resolve => setTimeout(resolve, 2_000))
+  }
+}
+
 type FixturePlace = {
   id: number
   name: string
+  lat?: number | null
+  lng?: number | null
+  osm_id?: string | null
   website?: string | null
   ratings?: { username?: string | null }[] | null
 }
@@ -523,6 +649,33 @@ export async function ensurePlaceFixtures(api: APIRequestContext): Promise<void>
   if (site && site.website !== PLACE_WEBSITE.url) {
     const res = await api.put(`/api/trips/${tripId}/places/${site.id}`, { data: { website: PLACE_WEBSITE.url } })
     if (!res.ok()) throw new Error(`could not set the website on ${PLACE_WEBSITE.place}: ${res.status()} ${await res.text()}`)
+  }
+
+  // An OpenStreetMap identity on three places, the same PUT: the card then asks
+  // the details route for the hours, the ring and the phone number.
+  for (const wanted of OSM_PLACES) {
+    const place = byName(wanted.place)
+    if (!place || typeof place.lat !== 'number' || typeof place.lng !== 'number') continue
+    const pin = { lat: place.lat, lng: place.lng }
+    const resolved = await resolveOsmId(api, wanted, pin)
+    const candidates = [...new Set([resolved, wanted.osmId].filter((id): id is string => !!id))]
+    let chosen: string | undefined
+    for (const id of candidates) {
+      if (complete(await providerDetails(api, id, wanted), wanted)) {
+        chosen = id
+        break
+      }
+    }
+    if (!chosen) {
+      const what = `${wanted.place}: the details route gives no week of opening hours${wanted.phone ? ' and no phone number' : ''} for ${candidates.join(' or ')}`
+      if (wanted.strict) throw new Error(what)
+      console.warn(`${what}; keeping the id, the card shows what there is`)
+      chosen = candidates[0]
+    }
+    if (place.osm_id !== chosen) {
+      const res = await api.put(`/api/trips/${tripId}/places/${place.id}`, { data: { osm_id: chosen } })
+      if (!res.ok()) throw new Error(`could not set the OpenStreetMap id on ${wanted.place}: ${res.status()} ${await res.text()}`)
+    }
   }
 
   // A note that belongs to the stop rather than to the place, which is the one
@@ -616,7 +769,7 @@ export async function ensureDayDetailFixtures(api: APIRequestContext): Promise<v
       data: {
         title: EVENING_WALK, type: 'tour', status: 'pending', day_id: dayIds[4],
         place_id: inari.place_id, assignment_id: inari.id,
-        reservation_time: '2026-09-16T17:00:00', reservation_end_time: '2026-09-16T19:30:00',
+        reservation_time: at(-5, '17:00'), reservation_end_time: at(-5, '19:30'),
         confirmation_number: 'FIT-3390',
       },
     })
@@ -641,13 +794,13 @@ export async function ensureMapFixtures(api: APIRequestContext): Promise<void> {
   const created = await api.post(`/api/trips/${tripId}/reservations`, {
     data: {
       title: 'Nozomi 21 Tokyo → Kyoto', type: 'train', status: 'confirmed', location: 'Tokyo Station',
-      reservation_time: '2026-09-16T08:30:00', reservation_end_time: '2026-09-16T10:45:00', confirmation_number: 'JR-58204',
+      reservation_time: at(-5, '08:30'), reservation_end_time: at(-5, '10:45'), confirmation_number: 'JR-58204',
       metadata: { train_number: 'Nozomi 21', platform: '17', seat: '8A' },
       // Both ends need coordinates or the endpoints are dropped and the booking
       // draws nothing at all.
       endpoints: [
-        { role: 'from', sequence: 0, name: 'Tokyo Station', lat: 35.6812, lng: 139.7671, timezone: 'Asia/Tokyo', local_date: '2026-09-16', local_time: '08:30' },
-        { role: 'to', sequence: 1, name: 'Kyoto Station', lat: 34.9858, lng: 135.7588, timezone: 'Asia/Tokyo', local_date: '2026-09-16', local_time: '10:45' },
+        { role: 'from', sequence: 0, name: 'Tokyo Station', lat: 35.6812, lng: 139.7671, timezone: 'Asia/Tokyo', local_date: day(-5), local_time: '08:30' },
+        { role: 'to', sequence: 1, name: 'Kyoto Station', lat: 34.9858, lng: 135.7588, timezone: 'Asia/Tokyo', local_date: day(-5), local_time: '10:45' },
       ],
     },
   })
@@ -698,11 +851,11 @@ export async function ensureTransportFixtures(api: APIRequestContext): Promise<v
       data: {
         title: 'Rental car in Kyoto', type: 'car', status: 'pending',
         day_id: dayIds[5], end_day_id: dayIds[7],
-        reservation_time: '2026-09-17T09:00', reservation_end_time: '2026-09-19T18:00',
+        reservation_time: at(-4, '09:00'), reservation_end_time: at(-2, '18:00'),
         confirmation_number: 'TYT-4417',
         endpoints: [
-          { role: 'from', sequence: 0, name: 'Kyoto Station Hachijo Exit', lat: 34.9835, lng: 135.759, timezone: 'Asia/Tokyo', local_date: '2026-09-17', local_time: '09:00' },
-          { role: 'to', sequence: 1, name: 'Kyoto Station Hachijo Exit', lat: 34.9835, lng: 135.759, timezone: 'Asia/Tokyo', local_date: '2026-09-19', local_time: '18:00' },
+          { role: 'from', sequence: 0, name: 'Kyoto Station Hachijo Exit', lat: 34.9835, lng: 135.759, timezone: 'Asia/Tokyo', local_date: day(-4), local_time: '09:00' },
+          { role: 'to', sequence: 1, name: 'Kyoto Station Hachijo Exit', lat: 34.9835, lng: 135.759, timezone: 'Asia/Tokyo', local_date: day(-2), local_time: '18:00' },
         ],
       },
     })
@@ -728,7 +881,7 @@ export async function ensureTransportFixtures(api: APIRequestContext): Promise<v
       data: {
         title: TRANSIT_JOURNEY, type: 'transit', status: 'confirmed',
         day_id: dayIds[5], end_day_id: dayIds[5],
-        reservation_time: '2026-09-17T09:48', reservation_end_time: '2026-09-17T10:25',
+        reservation_time: at(-4, '09:48'), reservation_end_time: at(-4, '10:25'),
         location: null, confirmation_number: null, notes: null,
         metadata: {
           transit: {
@@ -744,9 +897,9 @@ export async function ensureTransportFixtures(api: APIRequestContext): Promise<v
           },
         },
         endpoints: [
-          { role: 'from', sequence: 0, name: 'Arashiyama Bamboo Grove', lat: 35.017, lng: 135.6716, timezone: 'Asia/Tokyo', local_date: '2026-09-17', local_time: '09:48' },
-          { role: 'stop', sequence: 1, name: 'Nijō', lat: 35.0109, lng: 135.7386, timezone: 'Asia/Tokyo', local_date: '2026-09-17', local_time: '10:08' },
-          { role: 'to', sequence: 2, name: 'Nishiki Market', lat: 35.005, lng: 135.7649, timezone: 'Asia/Tokyo', local_date: '2026-09-17', local_time: '10:25' },
+          { role: 'from', sequence: 0, name: 'Arashiyama Bamboo Grove', lat: 35.017, lng: 135.6716, timezone: 'Asia/Tokyo', local_date: day(-4), local_time: '09:48' },
+          { role: 'stop', sequence: 1, name: 'Nijō', lat: 35.0109, lng: 135.7386, timezone: 'Asia/Tokyo', local_date: day(-4), local_time: '10:08' },
+          { role: 'to', sequence: 2, name: 'Nishiki Market', lat: 35.005, lng: 135.7649, timezone: 'Asia/Tokyo', local_date: day(-4), local_time: '10:25' },
         ],
         needs_review: false,
       },
@@ -794,32 +947,174 @@ export function bookingPdfFixture(id: 'teamlab-tickets' | 'kyoto-vouchers'): str
 }
 
 /** The hotel confirmation the import guide hands to the parser; written on first use. */
-export function bookingEmlFixture(): string {
+/**
+ * The files the import guides hand to the extractor, by name. The widget's
+ * card, the drop box and the review's Files row are all found by the name.
+ */
+export const BOOKING_EML = 'gracery-confirmation.eml'
+export const FLIGHT_EML = 'nh203-eticket.eml'
+
+/**
+ * A confirmation mail the way a provider's system sends one: an HTML body
+ * that carries the reservation as schema.org JSON-LD beside the text a person
+ * reads. The structured block is what the extractor reads; the plain-text
+ * mail this used to be parsed to nothing, because KDE Itinerary only knows
+ * structured tickets and the vendors it has templates for.
+ *
+ * Written on every call rather than on first use: the dates are offsets from
+ * the picture day (`e2e/dates.ts`), so a file left over from an earlier run
+ * would carry that run's dates into this one's pictures.
+ */
+function emlFixture(
+  name: string,
+  headers: { from: string; subject: string; date: string },
+  jsonLd: Record<string, unknown>,
+  html: string[],
+): string {
   const dir = path.join(process.cwd(), 'e2e', '.tmp')
   mkdirSync(dir, { recursive: true })
-  const file = path.join(dir, 'gracery-confirmation.eml')
-  if (existsSync(file)) return file
-  writeFileSync(
-    file,
-    [
-      'From: reservations@example-hotels.test',
-      'To: admin@trek.local',
-      'Subject: Your reservation is confirmed - Hotel Granvia Kyoto',
-      'Date: Tue, 1 Sep 2026 09:12:00 +0900',
-      'MIME-Version: 1.0',
-      'Content-Type: text/plain; charset=utf-8',
-      '',
-      'Booking reference: GRK-40218',
-      'Hotel Granvia Kyoto, Shiokoji-sagaru, Karasuma-dori, Shimogyo-ku, Kyoto',
-      'Check-in:  Wednesday 16 September 2026, from 15:00',
-      'Check-out: Saturday 19 September 2026, until 11:00',
-      'Guests: 2   Room: Twin, non-smoking',
-      'Total: JPY 84000',
-      '',
-    ].join('\r\n'),
-    'utf8',
-  )
+  const file = path.join(dir, name)
+  const mail = [
+    `From: ${headers.from}`,
+    'To: admin@trek.local',
+    `Subject: ${headers.subject}`,
+    `Date: ${headers.date}`,
+    'MIME-Version: 1.0',
+    'Content-Type: text/html; charset=utf-8',
+    'Content-Transfer-Encoding: 7bit',
+    '',
+    '<!DOCTYPE html>',
+    '<html><head><meta charset="utf-8">',
+    `<title>${headers.subject}</title>`,
+    '<script type="application/ld+json">',
+    JSON.stringify(jsonLd, null, 2),
+    '</script>',
+    '</head><body>',
+    ...html,
+    '</body></html>',
+    '',
+  ].join('\n')
+  // One line ending for the whole mail, headers and body alike.
+  writeFileSync(file, mail.replace(/\r?\n/g, '\r\n'), 'utf8')
   return file
+}
+
+/**
+ * The hotel confirmation the Bookings import guide hands to the extractor:
+ * the Granvia stay `booking-hotel` books by hand, nights 5 to 8 of the trip,
+ * as a LodgingReservation with the address, the coordinates, the phone, the
+ * website and the price, everything `mapLodging` and the review form read.
+ * The venue name is the trip place `ensureBookingsFixtures` creates, so the
+ * form pre-selects it under Accommodation.
+ */
+export function bookingEmlFixture(): string {
+  return emlFixture(
+    BOOKING_EML,
+    {
+      from: 'reservations@example-hotels.test',
+      subject: `Your reservation is confirmed - ${HOTEL_TO_BOOK.name}`,
+      date: mailHeaderDate(-20, '09:12', '+0900'),
+    },
+    {
+      '@context': 'http://schema.org',
+      '@type': 'LodgingReservation',
+      reservationNumber: 'GRK-40218',
+      reservationStatus: 'http://schema.org/ReservationConfirmed',
+      underName: { '@type': 'Person', name: 'Mira Lindberg' },
+      reservationFor: {
+        '@type': 'LodgingBusiness',
+        name: HOTEL_TO_BOOK.name,
+        address: {
+          '@type': 'PostalAddress',
+          streetAddress: 'Shiokoji-sagaru, Karasuma-dori',
+          addressLocality: 'Kyoto',
+          postalCode: '600-8216',
+          addressCountry: 'JP',
+        },
+        geo: { '@type': 'GeoCoordinates', latitude: HOTEL_TO_BOOK.lat, longitude: HOTEL_TO_BOOK.lng },
+        telephone: '+81 75 344 8888',
+        url: 'https://www.granviakyoto.example/',
+      },
+      checkinTime: `${at(-5, '15:00')}+09:00`,
+      checkoutTime: `${at(-2, '11:00')}+09:00`,
+      totalPrice: '84000',
+      priceCurrency: 'JPY',
+    },
+    [
+      '<p>Dear Ms Lindberg,</p>',
+      `<p>Thank you for choosing ${HOTEL_TO_BOOK.name}. Your reservation is confirmed.</p>`,
+      '<table>',
+      '<tr><td>Booking reference</td><td>GRK-40218</td></tr>',
+      `<tr><td>Check-in</td><td>${emlDate(-5)}, from 15:00</td></tr>`,
+      `<tr><td>Check-out</td><td>${emlDate(-2)}, until 11:00</td></tr>`,
+      '<tr><td>Guests</td><td>2</td></tr>',
+      '<tr><td>Room</td><td>Twin, non-smoking</td></tr>',
+      '<tr><td>Total</td><td>JPY 84,000</td></tr>',
+      '</table>',
+      `<p>${HOTEL_TO_BOOK.name}, ${HOTEL_TO_BOOK.address} 600-8216<br>Tel. +81 75 344 8888</p>`,
+    ],
+  )
+}
+
+/**
+ * The flight the Transports import guide reads: the way home on the trip's
+ * last day, Haneda to Frankfurt. The seed's own flight is LH716 out, and the
+ * AirTrail fixture brings LH717 and NH16 back, so this one is none of those.
+ * The mapper builds the title from airline and number, so a guide finds the
+ * card by the booking code, which is the fixture's own.
+ */
+export const FLIGHT_TO_IMPORT = {
+  airline: 'All Nippon Airways',
+  iata: 'NH',
+  number: '203',
+  code: 'NH9M4LT',
+  from: { iata: 'HND', name: 'Tokyo Haneda International Airport', city: 'Tokyo Haneda' },
+  to: { iata: 'FRA', name: 'Frankfurt Main Airport', city: 'Frankfurt' },
+}
+
+/**
+ * The e-ticket as a FlightReservation: both airports by IATA code, which
+ * `mapFlight` resolves through the built-in airport table, so the review opens
+ * Add transport with both ends placed; departure in Tokyo's offset, arrival
+ * in Frankfurt's, both on the last day of the trip.
+ */
+export function flightEmlFixture(): string {
+  const f = FLIGHT_TO_IMPORT
+  return emlFixture(
+    FLIGHT_EML,
+    {
+      from: 'eticket@example-airlines.test',
+      subject: `Your e-ticket itinerary - ${f.iata} ${f.number} ${f.from.city} to ${f.to.city}`,
+      date: mailHeaderDate(-30, '14:40', '+0900'),
+    },
+    {
+      '@context': 'http://schema.org',
+      '@type': 'FlightReservation',
+      reservationNumber: f.code,
+      reservationStatus: 'http://schema.org/ReservationConfirmed',
+      underName: { '@type': 'Person', name: 'Mira Lindberg' },
+      reservationFor: {
+        '@type': 'Flight',
+        flightNumber: f.number,
+        airline: { '@type': 'Airline', name: f.airline, iataCode: f.iata },
+        departureAirport: { '@type': 'Airport', name: f.from.name, iataCode: f.from.iata },
+        departureTime: `${at(0, '11:20')}+09:00`,
+        arrivalAirport: { '@type': 'Airport', name: f.to.name, iataCode: f.to.iata },
+        arrivalTime: `${at(0, '17:05')}+02:00`,
+      },
+    },
+    [
+      '<p>Dear Ms Lindberg,</p>',
+      `<p>Your booking ${f.code} is confirmed. This is your e-ticket itinerary.</p>`,
+      '<table>',
+      `<tr><td>Flight</td><td>${f.iata} ${f.number}, operated by ${f.airline}</td></tr>`,
+      `<tr><td>From</td><td>${f.from.city} (${f.from.iata}), ${emlDate(0)}, 11:20</td></tr>`,
+      `<tr><td>To</td><td>${f.to.city} (${f.to.iata}), ${emlDate(0)}, 17:05</td></tr>`,
+      '<tr><td>Passenger</td><td>Mira Lindberg</td></tr>',
+      '<tr><td>Class</td><td>Economy</td></tr>',
+      '</table>',
+    ],
+  )
 }
 
 /** One card of every type the Bookings tab can hold, by title. */
@@ -841,32 +1136,32 @@ const BOOKING_FIXTURES: BookingFixture[] = [
   {
     // No place on purpose: picking one is what `link-booking` does.
     title: 'teamLab Planets timed entry', type: 'event', status: 'pending', place: null,
-    reservation_time: '2026-09-12T14:00:00', reservation_end_time: '2026-09-12T16:00:00',
+    reservation_time: at(-9, '14:00'), reservation_end_time: at(-9, '16:00'),
     confirmation_number: 'TL-88213', location: '6-1-16 Toyosu, Koto City, Tokyo',
     url: 'https://www.teamlab.art/e/planets/',
     notes: 'Barefoot from the entrance. Bring shorts, the water room is knee-deep.',
   },
   {
     title: 'Fushimi Inari night walk', type: 'tour', status: 'confirmed', place: 'Fushimi Inari Taisha',
-    reservation_time: '2026-09-16T18:30:00', reservation_end_time: '2026-09-16T21:00:00',
+    reservation_time: at(-5, '18:30'), reservation_end_time: at(-5, '21:00'),
     confirmation_number: 'KY-4471', location: '68 Fukakusa Yabunouchicho, Fushimi Ward, Kyoto',
     url: null, notes: null,
   },
   {
     title: 'Kyoto Cycling Tour', type: 'tour', status: 'pending', place: null,
-    reservation_time: '2026-09-18T09:30:00', reservation_end_time: '2026-09-18T13:00:00',
+    reservation_time: at(-3, '09:30'), reservation_end_time: at(-3, '13:00'),
     confirmation_number: 'KCT-1177', location: 'Kyoto Station, Karasuma exit',
     url: null, notes: null,
   },
   {
     title: 'Haneda Airport P4', type: 'parking', status: 'pending', place: null,
-    reservation_time: '2026-09-12T10:00:00', reservation_end_time: '2026-09-21T22:00:00',
+    reservation_time: at(-9, '10:00'), reservation_end_time: at(0, '22:00'),
     confirmation_number: 'HP4-2209', location: 'Haneda Airport Terminal 3, Ota City, Tokyo',
     url: null, notes: null,
   },
   {
     title: 'Luggage forwarding to Kyoto', type: 'other', status: 'pending', place: null,
-    reservation_time: '2026-09-16T09:00:00', reservation_end_time: null,
+    reservation_time: at(-5, '09:00'), reservation_end_time: null,
     confirmation_number: 'YMT-30915', location: 'Takkyubin counter, Shinjuku',
     url: null, notes: 'Two suitcases, delivered by 17:00 the next day.',
   },
@@ -976,7 +1271,7 @@ interface ListsTodo {
 }
 
 const LISTS_TODOS: ListsTodo[] = [
-  { name: 'Confirm ryokan check-in time', category: 'Before departure', due_date: '2026-09-25', priority: 3, mine: true },
+  { name: 'Confirm ryokan check-in time', category: 'Before departure', due_date: day(4), priority: 3, mine: true },
   { name: 'Buy a Suica top-up', category: 'On arrival', done: true },
 ]
 
@@ -1047,7 +1342,7 @@ const UNPAID_EXPENSE = {
   category: 'transport',
   total_price: 12000,
   currency: 'JPY',
-  expense_date: '2026-09-13',
+  expense_date: day(-8),
   note: 'Nobody has booked it yet, so this is the counter fare for three.',
 }
 
@@ -1080,7 +1375,7 @@ const FILE_PDFS = {
   },
   'LH716-boarding-pass': {
     title: 'Boarding pass LH716',
-    lines: ['Frankfurt FRA to Tokyo Haneda HND', '12 Sep 2026, boarding 12:20, gate A34', 'Seat 34K, window', 'Booking reference LH-4QK2PZ'],
+    lines: ['Frankfurt FRA to Tokyo Haneda HND', `${short(-9)}, boarding 12:20, gate A34`, 'Seat 34K, window', 'Booking reference LH-4QK2PZ'],
   },
   'old-draft-itinerary': {
     title: 'Itinerary, first draft',
@@ -1199,11 +1494,10 @@ const tmpDir = (): string => {
  * A one-page PDF, written by hand because no PDF library is a dependency here.
  * Five objects and an xref table whose offsets are counted off the assembled
  * buffer; everything in it is ASCII, so bytes and characters are the same thing.
+ * Exported for the document-sync guide, which puts two of these into the store
+ * (`external.ts`) rather than into the trip.
  */
-export function filesPdfFixture(id: keyof typeof FILE_PDFS): string {
-  const file = path.join(tmpDir(), `${id}.pdf`)
-  if (existsSync(file)) return file
-  const { title, lines } = FILE_PDFS[id]
+export function drawPdf(title: string, lines: readonly string[]): Buffer {
   const escape = (s: string) => s.replace(/([\\()])/g, '\\$1')
   const content = [
     `BT /F1 26 Tf 64 752 Td (${escape(title)}) Tj ET`,
@@ -1226,7 +1520,18 @@ export function filesPdfFixture(id: keyof typeof FILE_PDFS): string {
   pdf += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`
   for (const offset of offsets) pdf += `${String(offset).padStart(10, '0')} 00000 n \n`
   pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${startxref}\n%%EOF\n`
-  writeFileSync(file, pdf, 'latin1')
+  return Buffer.from(pdf, 'latin1')
+}
+
+/**
+ * One of the trip's PDFs as a file in `e2e/.tmp`. Drawn on every call: the
+ * boarding pass names its day, which is relative to the picture day, so a
+ * file left over from an earlier run would carry that run's date.
+ */
+export function filesPdfFixture(id: keyof typeof FILE_PDFS): string {
+  const file = path.join(tmpDir(), `${id}.pdf`)
+  const { title, lines } = FILE_PDFS[id]
+  writeFileSync(file, drawPdf(title, lines))
   return file
 }
 
@@ -1389,8 +1694,8 @@ export async function ensureCollabFixtures(api: APIRequestContext): Promise<void
   if (!voted.ok()) throw new Error(`could not vote on the spare poll: ${voted.status()} ${await voted.text()}`)
 
   // What's Next lists a stop on a later day, or one on today whose start has not
-  // passed yet. The trip's last day IS today on the seed's dates, so both stops
-  // go there and the time is computed from the clock at fixture time.
+  // passed yet. The trip's last day is the picture day by construction, so both
+  // stops go there and the time is computed from the pinned clock.
   const lastDay = dayIds[dayIds.length - 1]
   const placesRes = await api.get(`/api/trips/${tripId}/places`)
   const placesBody = (await placesRes.json()) as { places?: { id: number; name: string }[] } | { id: number; name: string }[]

@@ -1,5 +1,7 @@
 import { test, expect, type Locator, type Page } from '@playwright/test'
 import { captureGuide, captureHero, beat, typeInto, settle, VIEWPORT, type GuideScript } from './guide'
+import { ordinal, short } from '../dates'
+import { SEED_CHAT } from '../screenshots/seed'
 import { seededTrip, ensureCollabFixtures, COLLAB_SPARE_POLL, WHATS_NEXT_STOPS } from './fixtures'
 import { openTrip } from './trip-shared'
 import { tripCollabContext, tripCollabGuides } from '../../src/help/contexts/tripCollab'
@@ -34,7 +36,7 @@ const POLL = {
   // Plain text on purpose: a bold run in the question would wrap the paragraph
   // in one more element and move the card away from `pollCard`'s ancestor depth.
   question: 'Which evening do we keep for the kaiseki dinner?',
-  options: ['Wed 16th, after Fushimi Inari', 'Thu 17th, after Arashiyama', 'Either, decide on the day'],
+  options: [`${short(-5).split(',')[0]} ${ordinal(-5)}, after Fushimi Inari`, `${short(-4).split(',')[0]} ${ordinal(-4)}, after Arashiyama`, 'Either, decide on the day'],
 }
 /** The seeded poll nobody has voted on yet. */
 const SEEDED_POLL = 'Ryokan or city hotel in Hakone?'
@@ -45,7 +47,7 @@ const CHAT = {
   flag: '🎌',
   theirs: 'Drop bags. I want to be at Senso-ji before the crowds.',
   answer: 'Agreed, bags at the hotel first, then Asakusa.',
-  reactTo: 'Booked the teamLab slot for the 13th, 14:00.',
+  reactTo: SEED_CHAT.teamlab,
   reaction: '👍',
 }
 

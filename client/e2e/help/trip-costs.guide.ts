@@ -1,5 +1,6 @@
 import { test, expect, type Locator, type Page } from '@playwright/test'
 import { captureGuide, captureHero, beat, typeInto, settle, VIEWPORT, type GuideScript } from './guide'
+import { day, long, short } from '../dates'
 import { seededTrip, ensureCostsFixtures } from './fixtures'
 import { openTrip, modal, dialog } from './trip-shared'
 import { tripCostsContext, tripCostsGuides } from '../../src/help/contexts/tripCosts'
@@ -28,7 +29,7 @@ const SEEDED_EUR = 'Flights FRA → HND'
 const BOOKING = 'LH716 FRA → HND'
 const DINNER = 'Kaiseki dinner in Gion'
 const UPGRADE = 'Shinkansen seat upgrade'
-const LUNCH = { name: 'Nishiki Market lunch', category: 'food', total_price: 4800, currency: 'JPY', expense_date: '2026-09-17' }
+const LUNCH = { name: 'Nishiki Market lunch', category: 'food', total_price: 4800, currency: 'JPY', expense_date: day(-4) }
 
 /** The Costs tab, waited out: its panel is lazy and its figures come from the server. */
 const openCosts = async (p: Page): Promise<void> => {
@@ -391,16 +392,16 @@ const SCRIPTS: Record<string, GuideScript> = {
         prepare: async p => {
           await p.getByRole('button', { name: 'All days' }).first().click()
           await beat(p, 300)
-          await dropdown(p).getByRole('button', { name: 'Sat, Sep 12' }).click()
-          await expect(p.getByText(/^Saturday, September 12$/)).toBeVisible()
+          await dropdown(p).getByRole('button', { name: short(-9) }).click()
+          await expect(p.getByText(new RegExp(`^${long(-9)}$`))).toBeVisible()
           await settle(p)
         },
-        target: p => p.getByText(/^Saturday, September 12$/).locator('xpath=../..'),
+        target: p => p.getByText(new RegExp(`^${long(-9)}$`)).locator('xpath=../..'),
         act: async p => {
-          await p.getByRole('button', { name: 'Sat, Sep 12' }).first().click()
+          await p.getByRole('button', { name: short(-9) }).first().click()
           await beat(p, 300)
           await dropdown(p).getByRole('button', { name: 'All days' }).click()
-          await expect(p.getByText(/^Saturday, September 12$/)).toHaveCount(0)
+          await expect(p.getByText(new RegExp(`^${long(-9)}$`))).toHaveCount(0)
           await settle(p)
         },
       },

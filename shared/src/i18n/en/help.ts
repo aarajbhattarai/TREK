@@ -454,6 +454,38 @@ const help: TranslationStrings = {
   'help.guide.stats.tip.2':
     'Countries you marked by hand count in Countries and the continents, but bring no trips, places or days.',
 
+  // dawarich-countries
+  'help.guide.dawarich-countries.title': 'Add countries from your recordings',
+  'help.guide.dawarich-countries.goal':
+    'Let Dawarich say which countries you were in over the last year, and put the ones you confirm on the map.',
+  'help.guide.dawarich-countries.step.1':
+    'With the Dawarich addon connected, a Dawarich panel sits at the bottom of the map, left of the statistics, with two tiles. Click Countries.',
+  'help.guide.dawarich-countries.step.2':
+    'The dialog opens on its Countries tab. Click Look for countries: TREK reads the countries and cities your recordings cover in the last 12 months, a month at a time, so give it a moment. Every country your Atlas does not have yet is listed with its flag, how many cities, and the first of them by name, and starts ticked; click a row to leave it out.',
+  'help.guide.dawarich-countries.step.3':
+    'Confirm with the button at the bottom right, which reads Add 5 countries when five rows are ticked. The dialog says how many were added; close it and the map has re-read itself.',
+  'help.guide.dawarich-countries.result':
+    'The confirmed countries carry a colour on the map and count in Countries, recorded as coming from Dawarich. What you marked by hand is untouched.',
+  'help.guide.dawarich-countries.tip.1':
+    'Countries the Atlas already shows as visited, by hand, from a trip or from an earlier check, are left out, so your own marks are never relabelled. A country you removed from the Atlas earlier comes back when you confirm it here.',
+  'help.guide.dawarich-countries.tip.2':
+    'A country name TREK cannot match is listed under the rows rather than dropped, and Check again asks Dawarich once more. The note under the list says that the last 12 months were looked at; that window is fixed.',
+  // dawarich-wishes
+  'help.guide.dawarich-wishes.title': 'Tick off wishes from your recordings',
+  'help.guide.dawarich-wishes.goal':
+    'Find out which places on your bucket list you have actually reached, and tick them off on the day it happened.',
+  'help.guide.dawarich-wishes.step.1':
+    'In the Dawarich panel at the bottom of the map, left of the statistics, click Wishlist.',
+  'help.guide.dawarich-wishes.step.2':
+    'The dialog opens on its Wishlist tab. Click Check wishlist: TREK looks through your recordings for every entry that has coordinates. A wish you reached is listed with how close you got, how long you stayed and the day, and starts ticked; one you already ticked off says Already ticked off. Under the list a note counts the entries without coordinates, and the rule stands there too: A wish counts as reached within 250 m and after 20 minutes on the spot.',
+  'help.guide.dawarich-wishes.step.3':
+    'Confirm with the button at the bottom right, which reads Tick off 2 when two rows are ticked. Then close the dialog and open the Bucket List tab of the panel beside it.',
+  'help.guide.dawarich-wishes.result':
+    'Each wish carries a green tick with the date of the stay, not of today; its tooltip says Ticked off from your Dawarich recordings, and a click on the date undoes it.',
+  'help.guide.dawarich-wishes.tip.1':
+    'Driving past does not count: the rule needs both closeness and time, and of several stays that qualify the longest wins. A wish without coordinates cannot be checked, so add places through the search in Add place rather than by name alone.',
+  'help.guide.dawarich-wishes.tip.2':
+    'One check looks at up to 50 entries, the ones not ticked off yet first, and says so when there were more. A wish that was already ticked off keeps its own date.',
   // ── Screen: collections ────────────────────────────────────────────────────
   'help.ctx.collections.title': 'Collections',
   'help.ctx.collections.summary':
@@ -1510,6 +1542,19 @@ const help: TranslationStrings = {
   'help.guide.toggle-addon.tip.1': 'MCP off removes the endpoint and the Integrations sections that depend on it.',
   'help.guide.toggle-addon.tip.2':
     'Vacay, Atlas and Journey are the addons users ask for most; Documents needs storage for uploads.',
+  // document-providers
+  'help.guide.document-providers.title': 'Offer a document store',
+  'help.guide.document-providers.goal': 'Decide which stores a trip may keep its documents in step with.',
+  'help.guide.document-providers.step.1':
+    'The Documents tile carries the stores as rows on its shelf: Paperless-ngx, Papra, Nextcloud, OpenCloud and Synology Drive. All five start switched off, and the shelf is only there while Documents itself is on.',
+  'help.guide.document-providers.step.2':
+    'Flip the switch on the Nextcloud row. The message reads Addon updated, and from now on trip owners find Document sync in the Files tab of their trips, with Nextcloud under Connect a provider.',
+  'help.guide.document-providers.result':
+    'The store is on offer on every trip of this TREK; nothing is connected until a trip owner does it.',
+  'help.guide.document-providers.tip.1':
+    'Only whether a store may be offered is decided here. The address and the credentials belong to a trip and are entered in its Files tab by the trip’s owner, never in the admin panel.',
+  'help.guide.document-providers.tip.2':
+    'Switching Documents off switches every store off with it, and a store cannot be switched on while Documents is off: the server answers Enable the Documents addon first. A store on your own network also needs ALLOW_INTERNAL_NETWORK=true on the server.',
   // install-plugin
   'help.guide.install-plugin.title': 'Install a plugin',
   'help.guide.install-plugin.goal': 'Add a third-party plugin and give it exactly the permissions it asks for.',
@@ -2046,30 +2091,32 @@ const help: TranslationStrings = {
   'help.ctx.trip-place.bullet.5':
     'The row at the bottom: Add to Day or Remove from Day while a day is open, then Save to Collection, Navigation, Open Website, Edit and Delete.',
   'help.ctx.trip-place.bullet.6':
-    'A place TREK matched with a map provider shows more: that provider’s rating with a review, the phone number, and an Open or Closed ring around the picture with the week’s opening hours behind it.',
+    'A place picked out of the search carries what the TREK index or OpenStreetMap know about it: a green Open or red Closed ring around the picture, judged by the place’s own clock, the phone number under the stars, Opening Hours further down with the day’s line on the row and the whole week behind a click, and its website behind Open Website. Google’s rating shows only on a place found through Google, on a TREK with a Google key.',
   // read-place
   'help.guide.read-place.title': 'What the card tells you about a place',
   'help.guide.read-place.goal': 'Read everything the trip knows about one place, in one card.',
   'help.guide.read-place.step.1':
     'In the days column, click the stop you want to read. The card opens over the map and the stop stays marked in its day.',
   'help.guide.read-place.step.2':
-    'The head: the round picture, the name, the address and the exact coordinates. The X on the right closes the card again.',
+    'The head: the round picture, the name, the address and the exact coordinates. A green ring with Open, or a red one with Closed, around the picture says whether the place is open right now, by its own clock, once TREK knows its hours. The X on the right closes the card again.',
   'help.guide.read-place.step.3':
-    'Under it the stars every traveller gave the place, with the average and how many voted. Not rated yet while nobody has.',
+    'Under it the stars every traveller gave the place, with the average and how many voted. Not rated yet while nobody has. Right below, the phone number where the place has one: a click on it hands the number to your phone app.',
   'help.guide.read-place.step.4':
     'Then the description and, below it, the notes. Both are the text from the place’s form, rendered: lists, links and bold all work.',
   'help.guide.read-place.step.5':
     'Participants says who is going to this stop. Everybody is in until you take somebody out.',
   'help.guide.read-place.step.6':
+    'Opening Hours, further down: the row carries the hours of the day you are looking at, and a click on it unfolds the whole week with that day in bold. Files stands beside it.',
+  'help.guide.read-place.step.7':
     'The row at the bottom is what you can do from here: take the place off the open day or put it on, save it to a list, open it in a map app, edit it or delete it.',
   'help.guide.read-place.result':
-    'The card stays open until you close it with the X or pick another place, and the stop it belongs to stays marked in the days column.',
+    'The card stays open until you close it with the X or pick another place, the week’s hours stay unfolded, and the stop it belongs to stays marked in the days column.',
   'help.guide.read-place.tip.1':
     'Picked out of the places column the card knows the place but not a stop, so it shows no participants and no booking. Pick the stop inside the day instead and both are there.',
   'help.guide.read-place.tip.2':
     'Double-click the name to rename the place without opening the form. Enter saves, Escape drops the change.',
   'help.guide.read-place.tip.3':
-    'A place TREK could match with a map provider also shows that provider’s rating, a review, the phone number and the opening hours.',
+    'A place typed in by hand shows none of that: the card knows only what its form holds. Open it with Edit, pick it from the suggestions under Search places… and click Update, and the hours, the phone number and the website come with it. Google’s rating needs a Google key.',
   // rate-place
   'help.guide.rate-place.title': 'Rate a place',
   'help.guide.rate-place.goal': 'Give a place your own stars, and see what everybody else gave it.',
@@ -2378,6 +2425,8 @@ const help: TranslationStrings = {
     'Right-click anywhere on the map to open the place form at that point, with the address already looked up. The round button at the bottom left swaps the drawn map for aerial imagery.',
   'help.ctx.trip-map.bullet.7':
     'Show whole trip at the bottom right draws every travel day at once and lists what each one covers; the route icon on a booking’s row draws that booking, and the one in the toolbar above the days draws them all.',
+  'help.ctx.trip-map.bullet.8':
+    'With the Dawarich addon on, the round Dawarich button under Show whole trip draws the route your phone actually recorded: Show recorded route lays it dashed under the planned route, one colour per day, and the button’s label says why there is no line when there is none.',
   // map-markers
   'help.guide.map-markers.title': 'Read the map',
   'help.guide.map-markers.goal': 'Know what every pin, badge and bubble on the map is telling you.',
@@ -2497,6 +2546,36 @@ const help: TranslationStrings = {
   'help.guide.map-booking-routes.tip.3':
     'A booking needs two ends with coordinates before it can be drawn, so a hotel or a restaurant carries no route icon.',
 
+  // map-dawarich-trail
+  'help.guide.map-dawarich-trail.title': 'Show the route you actually travelled',
+  'help.guide.map-dawarich-trail.goal':
+    'Lay the route Dawarich recorded on your phone over the map, dashed beside the one you planned, and read the trip day by day as it really went.',
+  'help.guide.map-dawarich-trail.step.1':
+    'The round Dawarich button sits at the bottom right of the map, under Show whole trip; hovering it says Show recorded route. Click it. TREK asks your Dawarich for the trip’s dates, and a ring spins around the button while the answer is on its way.',
+  'help.guide.map-dawarich-trail.step.2':
+    'The recorded route lands as a dashed line, one colour per day, drawn underneath the planned route so the plan stays readable. The button now reads Hide recorded route. Days are cut at local midnight, and a day folded shut in the days column takes its dashed line off the map along with its stops.',
+  'help.guide.map-dawarich-trail.step.3':
+    'Click Show whole trip as well and every planned day is drawn solid beside the dashed recording. Where the two run together the day went as planned; where the dashed line wanders off is where it did not.',
+  'help.guide.map-dawarich-trail.result':
+    'What you planned and what you actually did are on the map together, dashed against solid, and the card above the buttons still lists the planned days and their distances.',
+  'help.guide.map-dawarich-trail.tip.1':
+    'On or off is remembered per trip for this browser session. While the route is on, TREK asks Dawarich again every two minutes, so a trip under way catches up without a reload; the route itself is never stored, so it is not in TREK’s database, not in backups and not there offline.',
+  'help.guide.map-dawarich-trail.tip.2':
+    'The button’s label explains an empty map: Loading the recorded route… while it is on its way, Nothing was recorded on these dates, The recorded route could not be loaded, or The recorded route needs a connection when TREK is offline.',
+  // map-compass
+  'help.guide.map-compass.title': 'Turn the map and find north again',
+  'help.guide.map-compass.goal':
+    'Rotate the map to face the way you are going, and snap it back to north with one click.',
+  'help.guide.map-compass.step.1':
+    'Turn the map with a right-button drag, or hold Ctrl and drag with the left button; on a touch screen, twist with two fingers. The round compass next to the row of category icons at the top of the map turns with it: its arrow always points north, so it leans as far as you have turned.',
+  'help.guide.map-compass.step.2':
+    'Click the compass. Reset north, as the button is called, eases the map back to north at the top and to a flat view, and the arrow stands upright again.',
+  'help.guide.map-compass.result':
+    'The map is north-up and level again, and nothing on the trip has changed: the compass only moves the camera.',
+  'help.guide.map-compass.tip.1':
+    'The compass exists on the MapLibre GL and Mapbox GL maps only; the Leaflet map cannot be turned, so it has none. Map Provider in Settings, under Map, decides which one you use, and Save Map keeps the choice.',
+  'help.guide.map-compass.tip.2':
+    'The click also takes the tilt out: a right-button drag up or down pitches the view, and Reset north levels it along with the turn. On Mapbox GL with 3D Buildings & Terrain on, that flattens the 3D view too, until you tilt it again.',
   // ── Screen: trip-transports ───────────────────────────────────────────────────────────
   'help.ctx.trip-transports.title': 'Transports',
   'help.ctx.trip-transports.summary':
@@ -2554,6 +2633,26 @@ const help: TranslationStrings = {
     'Attach file under Files takes the ticket, and Create expense under Costs saves the booking and opens the Costs editor for the fare.',
   'help.guide.add-transport.tip.3':
     'Travelers marks who is on this ride. As soon as one transport has travelers, the toolbar of the tab grows their avatars and filters the list by them.',
+  // import-transport-file
+  'help.guide.import-transport-file.title': 'Read a flight out of its e-ticket',
+  'help.guide.import-transport-file.goal':
+    'Let TREK pull a flight, a train or a ferry out of the ticket the carrier sent, and check it before it is saved.',
+  'help.guide.import-transport-file.step.1':
+    'Click Import from file in the toolbar of the Transports tab, next to Transport. Import booking confirmations opens, the same dialog the Bookings tab has.',
+  'help.guide.import-transport-file.step.2':
+    'Drop the ticket on the box, or click it and pick it: EML, PDF, PKPass, HTML and TXT, up to five files of 10 MB each. The files you chose are named on the box.',
+  'help.guide.import-transport-file.step.3':
+    'Click Import. The dialog closes at once; the reading happens in the background.',
+  'help.guide.import-transport-file.step.4':
+    'A card at the bottom right reports the run under the file’s name. Parsing files… turns into a tick when the reading is done, and the card offers Import. Click it.',
+  'help.guide.import-transport-file.step.5':
+    'A flight opens in Add transport, already filled in: Booking Type on Flight, the airline and the flight number in Title, both airports under Route with Departure and Arrival, their times and their time zones, Airline and Flight No., the Booking Code and the ticket under Files. Check it and click Add.',
+  'help.guide.import-transport-file.result':
+    'The flight is a card in Pending on the Transports tab and a row on the day it leaves, with the ticket under Files, and with both airports known it draws its curve on the map.',
+  'help.guide.import-transport-file.tip.1':
+    'The two tabs share one import: a file that holds a flight and a hotel opens the flight in Add transport and the hotel in New Reservation, one after the other, whichever tab you started from.',
+  'help.guide.import-transport-file.tip.2':
+    'Airports are placed by their code. A station or a port the reading could not locate is named in amber on the card; pick it by hand under Route before you click Add, or the transport draws nothing on the map.',
   // plan-transit
   'help.guide.plan-transit.title': 'Plan a public-transit connection',
   'help.guide.plan-transit.goal':
@@ -2651,6 +2750,30 @@ const help: TranslationStrings = {
   'help.guide.transport-on-map.tip.3':
     'Show all booking routes is a clean slate, not a layer: it discards what the single icons had set, so pressing it twice leaves you with everything on or everything off.',
 
+  // airtrail-import
+  'help.guide.airtrail-import.title': 'Import flights from AirTrail',
+  'help.guide.airtrail-import.goal':
+    'Bring the flights you already keep in AirTrail into the trip in one go, and let them follow AirTrail from then on.',
+  'help.guide.airtrail-import.step.1':
+    'With the AirTrail addon on and your instance connected under Integrations in Settings, the toolbar of the Transports tab carries an AirTrail button beside Transport. Click it.',
+  'help.guide.airtrail-import.step.2':
+    'Import from AirTrail lists the flights of your account in two groups. During this trip holds the ones dated inside the trip, already ticked; Other flights holds the rest, unticked. A flight that is in the trip already is greyed out and marked Imported.',
+  'help.guide.airtrail-import.step.3':
+    'Every row is a tick box with the airline and flight number, the two airports and the date. Click a row to take the flight in or to leave it out; the ones under Other flights come in only when you tick them.',
+  'help.guide.airtrail-import.step.4':
+    'Flights that connect, each leaving from the airport the one before landed at within a day, are framed together. The tick underneath, Import as one flight with a layover in that airport, is on already: leave it on for one booking with a stop, or switch it off to import the legs as separate flights.',
+  'help.guide.airtrail-import.step.5':
+    'Click Import. The button counts the ticked flights, and the message afterwards says how many came in.',
+  'help.guide.airtrail-import.step.6':
+    'The flights are cards under Confirmed, each with a blue AirTrail badge beside its status, and rows on the days they run. A joined connection is one card, with its route running through the layover.',
+  'help.guide.airtrail-import.result':
+    'The flights from AirTrail are cards in the Transports tab and rows on their days, each wearing the AirTrail badge that says where it came from.',
+  'help.guide.airtrail-import.tip.1':
+    'A flight that is in the trip already under the same number and date is skipped, and a message says how many were. Undo in the toolbar above the days takes the whole import back.',
+  'help.guide.airtrail-import.tip.2':
+    'AirTrail stays the source of truth. TREK reads its changes when you open the trip and every few minutes in the background; a flight deleted there keeps its card, with the badge turned to Not synced. Edits made in TREK travel back only with Write changes back to AirTrail switched on under Integrations.',
+  'help.guide.airtrail-import.tip.3':
+    'A joined connection has no single AirTrail flight to follow, so it is a one-time import: it keeps the blue badge, and hovering the badge says so. The same happens to a synced flight you give a stop by hand.',
   // ── Screen: trip-bookings ─────────────────────────────────────────────────────────────
   'help.ctx.trip-bookings.title': 'Bookings',
   'help.ctx.trip-bookings.summary':
@@ -2802,15 +2925,17 @@ const help: TranslationStrings = {
   'help.guide.import-booking-file.step.3':
     'Click Import. The dialog closes at once, because the reading happens in the background.',
   'help.guide.import-booking-file.step.4':
-    'A card at the bottom right reports the run, and it follows you through the app and through a reload. When it is done it offers Import, which starts the review: every booking it found opens in the ordinary form, filled in and with its document attached, for you to check and to Add one after another.',
+    'A card at the bottom right reports the run under the file’s name, and it follows you through the app and through a reload. Parsing files… turns into a tick when the reading is done, and the card offers Import. Click it.',
+  'help.guide.import-booking-file.step.5':
+    'Every booking that was found opens in New Reservation, one after another, already filled in. For a hotel that is the name in Title and, when the trip has the place, under Accommodation, its Location / Address, From and To on its nights, Check-in and Check-out, the Booking Code, the confirmation under Files and, with Costs on, the price as Linked expense. Check it and click Add.',
   'help.guide.import-booking-file.result':
-    'Each booking you confirmed is a card of its own with its code, its dates and the document it came from; an accommodation also got its nights, and with Costs on, a price that was in the confirmation became an expense.',
+    'The booking is a card in Pending with its nights, its code and the confirmation under Files, the stay sits on those days of the plan, and with Costs on the price is an expense tied to it.',
   'help.guide.import-booking-file.tip.1':
     'Import from file is there only when the server can read confirmations, which takes either the extractor or the AI Parsing addon. The administrator switches that one under Addons.',
   'help.guide.import-booking-file.tip.2':
-    'If nothing could be read the card says so and offers Try AI parsing, which sends the same files straight to the model.',
+    'If nothing could be read the card says so and offers Try AI parsing, which sends the same files straight to the model. A finished parse is kept for ten minutes; start the review inside that window.',
   'help.guide.import-booking-file.tip.3':
-    'A finished parse is kept for ten minutes. Start the review inside that window.',
+    'The confirmation is attached only when its type is on the Allowed File Types of the admin settings. PDF is there out of the box; a mail, EML, has to be added first, or the booking is saved without it.',
   // edit-booking
   'help.guide.edit-booking.title': 'Change a booking',
   'help.guide.edit-booking.goal':
@@ -3318,6 +3443,30 @@ const help: TranslationStrings = {
     'Throwing a file away and getting it back needs the right to delete files. A member without it sees neither Delete on the row nor the buttons in the trash.',
   'help.guide.files-trash.tip.3': 'A file deleted for good in the trash cannot be brought back.',
 
+  // files-sync
+  'help.guide.files-sync.title': 'Keep the documents in step with a Nextcloud folder',
+  'help.guide.files-sync.goal':
+    'Bind the trip to a folder in your own document store, so that what is uploaded here lands there and what is filed there turns up here.',
+  'help.guide.files-sync.step.1':
+    'Click Document sync, next to Trash at the right end of the toolbar. The dialog opens with the trip’s name under its title. On the left, under Connect a provider, stand the stores an administrator has switched on, each with a line on how it files things, Files in a folder for Nextcloud; on the right it reads Nothing connected yet.',
+  'help.guide.files-sync.step.2':
+    'Click Nextcloud. A smaller dialog opens for the connection, named after the store, with the reminder at the top to use an app password rather than your account password.',
+  'help.guide.files-sync.step.3':
+    'Fill in Address, Username, your Nextcloud login name rather than your email address, and App password, which Nextcloud makes under Settings, Security. Base folder is optional: it is where TREK looks for trip folders, /TREK unless you say otherwise, here /Reisen. Accept a self-signed certificate at the bottom is only for an instance on your own network with such a certificate.',
+  'help.guide.files-sync.step.4':
+    'Click Test connection. TREK reaches the store with what you typed and the footer reads Reached it, signed in as followed by the account’s name, here admin. A password that is refused or an address that cannot be reached is named there instead, and nothing is saved either way.',
+  'help.guide.files-sync.step.5':
+    'Click Connect. The connection is saved with the trip and TREK asks Where should this trip live in Nextcloud? Only what is in that folder is synced. Make a new one creates a folder under the base folder on Create, with a name prefilled from the trip’s title; under Or use one you already have stand the folders that are there already. Click one, here Autumn in Japan.',
+  'help.guide.files-sync.step.6':
+    'The dialog is back: Nextcloud stands under This trip on the left, and its card on the right carries the folder, when it last ran and Sync now. A first run starts by itself; Sync now runs one whenever you like. Once a run is through, the Not synced yet badge beside the name gives way to a green dot, In sync when you point at it, and the flow bar counts the documents TREK and Nextcloud each hold, with the lanes Out to the store and In from the store between them. Close the dialog with the ×.',
+  'help.guide.files-sync.result':
+    'The two documents that were already in the folder stand at the top of the list, uploaded in your name, and every document of the trip is in the folder as well. From now on TREK checks the folder in the background and the folder follows the list.',
+  'help.guide.files-sync.tip.1':
+    'Only the trip’s owner or an instance administrator can bind a trip, since the app password reaches that whole Nextcloud account. Every member can open Document sync, read the card and press Sync now.',
+  'help.guide.files-sync.tip.2':
+    'A store on your own network needs ALLOW_INTERNAL_NETWORK=true on the TREK server, and its address has to be the machine’s address on the network, never localhost. Without that, Test connection answers That address is not allowed.',
+  'help.guide.files-sync.tip.3':
+    'Disconnect on the card ends the pairing and keeps every document on both sides. A folder bound a second time is treated as new, and everything in it comes in again, so after a Disconnect bind an empty folder rather than the old one.',
   // ── Screen: trip-collab ───────────────────────────────────────────────────────────────
   'help.ctx.trip-collab.title': 'Collab',
   'help.ctx.trip-collab.summary':

@@ -2,6 +2,7 @@ import { test, expect, type Page, type Locator } from '@playwright/test'
 import { clearNotices } from '../screenshots/shot'
 import { captureGuide, captureHero, dismissReleaseNotice, beat, typeInto, settle, VIEWPORT, type GuideScript } from './guide'
 import { ensureAdminFixtures, pluginPackage } from './fixtures'
+import { toggleAddon } from './external'
 import { adminContext, adminTabContexts, adminGuides } from '../../src/help/contexts/admin'
 import type { HelpGuide } from '../../src/help/types'
 
@@ -358,6 +359,26 @@ const SCRIPTS: Record<string, GuideScript> = {
       },
       only(p => tile(p, 'Lists')),
     ],
+  },
+  'document-providers': {
+    guide: guide('document-providers'),
+    start: opener('admin-addons'),
+    steps: [
+      // The tile with its shelf: Documents is on in the seed, so the five rows are drawn.
+      only(p => tile(p, 'Documents')),
+      {
+        // The row's switch is a ToggleSwitch whose aria-label is the row's title.
+        target: p => tile(p, 'Documents').getByRole('button', { name: 'Nextcloud', exact: true }),
+        act: async p => {
+          const toggle = tile(p, 'Documents').getByRole('button', { name: 'Nextcloud', exact: true })
+          await toggle.click()
+          await expect(toggle).toHaveAttribute('aria-pressed', 'true', { timeout: 10_000 })
+          await settle(p)
+        },
+      },
+    ],
+    // Back to the seed, where every store is off; the files run switches this one on for itself.
+    cleanup: p => toggleAddon(p.request, 'nextcloud', false),
   },
 
   // ── Plugins ──────────────────────────────────────────────────────────────

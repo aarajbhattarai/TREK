@@ -1,7 +1,8 @@
 import { test, expect, type Page, type Locator } from '@playwright/test'
-import { captureGuide, captureHero, typeInto, settle, VIEWPORT, type GuideScript } from './guide'
-import { seededTrip, ensureFilesFixtures, filesPdfFixture, filesImageFixture } from './fixtures'
-import { openTrip, portalDialog } from './trip-shared'
+import { captureGuide, captureHero, typeInto, beat, settle, VIEWPORT, type GuideScript } from './guide'
+import { seededTrip, ensureFilesFixtures, filesPdfFixture, filesImageFixture, drawPdf } from './fixtures'
+import { openTrip, portalDialog, modal, dialog } from './trip-shared'
+import { ensureNextcloudFolder, NEXTCLOUD_CONNECTION, NEXTCLOUD_DOCUMENTS, NEXTCLOUD_FOLDER, resetDocSync, toggleAddon } from './external'
 import { tripFilesContext, tripFilesGuides } from '../../src/help/contexts/tripFiles'
 import type { HelpGuide } from '../../src/help/types'
 
@@ -24,7 +25,6 @@ const STARRED = 'JR-Pass-voucher.pdf'
 const LINKED = 'LH716-boarding-pass.pdf'
 const DOOMED = 'old-draft-itinerary.pdf'
 const PHOTO = 'nishiki-market.jpg'
-const DOCUMENT = 'travel-notes.md'
 /** What the upload guide brings in; these two names exist nowhere else, so cleanup can take them out. */
 const UPLOADED_PDF = 'kyoto-bus-pass.pdf'
 const UPLOADED_PHOTO = 'arashiyama.jpg'
@@ -66,14 +66,40 @@ const noteBox = (page: Page) => assignDialog(page).getByPlaceholder('Add a note.
  */
 const lightbox = (page: Page) =>
   page.locator('div[role="presentation"]').filter({ has: page.getByRole('button', { name: 'Open in new tab' }) }).first()
-/** The preview for everything that is not a picture; markdown renders in `.collab-note-md`. */
-const docPreview = (page: Page) => portalDialog(page, page.locator('.collab-note-md'))
+/**
+ * The preview for everything that is not a picture. For a PDF it is the card
+ * around the browser's embedded viewer, found by the one `<object>` only it
+ * renders; the markdown preview (`.collab-note-md`) has no step of its own.
+ */
+const pdfPreview = (page: Page) => portalDialog(page, page.locator('object[type="application/pdf"]'))
+const pdfViewer = (page: Page) => pdfPreview(page).locator('object[type="application/pdf"]')
 /**
  * The × of a portal. The assign dialog and the document preview have no key
  * handler at all, so it is their only way out; the lightbox does listen for
  * Escape, which is what its own step uses.
  */
 const closeX = (dialog: Locator) => dialog.locator('button:has(svg.lucide-x)').first()
+/** The toolbar's way into document sync; there only while a store is on offer (see beforeAll). */
+const syncButton = (page: Page) => page.getByRole('button', { name: 'Document sync', exact: true })
+/** The dialog's title carries the trip's name under it, so the heading is matched by its first line. */
+const syncTitle = (page: Page) => modal(page).getByRole('heading', { name: /^Document sync/ })
+/**
+ * A store row in the dialog's sidebar. Its accessible name runs on into the
+ * subtitle (Files in a folder), so it is matched by its start.
+ */
+const storeRow = (page: Page, name: string) => modal(page).getByRole('button', { name: new RegExp(`^${name}\\b`) })
+/**
+ * A box of the connection form, by the placeholder the store's field carries.
+ * The labels are no good as locators here: the hint under Username says
+ * "email address", so a lookup by the label Address finds two boxes.
+ */
+const formBox = (page: Page, placeholder: string) => dialog(page).getByPlaceholder(placeholder, { exact: true })
+/** The folder picker's row for the folder the fixture put in the store; the Create button is not in a list. */
+const folderRow = (page: Page) => dialog(page).locator('li button').filter({ hasText: NEXTCLOUD_FOLDER }).first()
+/** The binding card, the one <article> in the dialog once a store is bound. */
+const bindingCard = (page: Page) => dialog(page).locator('article').first()
+/** Reads Syncing, disabled, while a run is going; the locator waits it out. */
+const syncNow = (page: Page) => bindingCard(page).getByRole('button', { name: 'Sync now' })
 
 interface ApiFile {
   id: number
@@ -345,15 +371,31 @@ const SCRIPTS: Record<string, GuideScript> = {
         },
       },
       {
+        // A PDF this time rather than the markdown file: the browser's own
+        // viewer draws the page inside the card, which is what a reader sees
+        // for a ticket. The card gets its source only once the signed download
+        // link is minted (useFileManager.ts: getAuthUrl → setPreviewFileUrl),
+        // and no DOM event says when the viewer has painted, so the step waits
+        // for the file's own response and then a moment more, as the satellite
+        // step of the map guide does for its tiles.
         prepare: async p => {
-          await row(p, DOCUMENT).getByRole('button', { name: DOCUMENT }).last().click()
-          await expect(docPreview(p)).toBeVisible({ timeout: 30_000 })
+          const fetched = p
+            .waitForResponse(r => r.url().includes('/download?token=') && r.ok(), { timeout: 30_000 })
+            .catch(() => null)
+          await row(p, LINKED).getByRole('button', { name: LINKED }).last().click()
+          await expect(pdfPreview(p)).toBeVisible({ timeout: 30_000 })
+          await expect(pdfViewer(p)).toHaveAttribute('data', /\/download\?token=.+#view=FitH$/, { timeout: 30_000 })
+          await fetched
+          // The fallback link inside the <object> is drawn only where the
+          // browser has no viewer; hidden, it proves the picture shows a page.
+          await expect(pdfPreview(p).getByRole('button', { name: 'Download PDF' })).toBeHidden()
           await settle(p)
+          await p.waitForTimeout(1500)
         },
-        target: docPreview,
+        target: pdfPreview,
         act: async p => {
-          await closeX(docPreview(p)).click()
-          await expect(docPreview(p)).toHaveCount(0, { timeout: 20_000 })
+          await closeX(pdfPreview(p)).click()
+          await expect(pdfPreview(p)).toHaveCount(0, { timeout: 20_000 })
           await settle(p)
         },
       },
@@ -422,6 +464,110 @@ const SCRIPTS: Record<string, GuideScript> = {
     ],
     cleanup: p => untrashFile(p, DOOMED),
   },
+
+  'files-sync': {
+    guide: guide('files-sync'),
+    // The store's address and app password come from media.env (external.ts).
+    // They are read inside the guide rather than at import, so a run without
+    // the file fails this one guide and not the whole screen.
+    start: async p => {
+      const { tripId } = seededTrip()
+      await resetDocSync(p.request, tripId)
+      await ensureNextcloudFolder(drawPdf)
+      await openFiles(p)
+      await expect(syncButton(p)).toBeVisible({ timeout: 20_000 })
+    },
+    steps: [
+      {
+        target: syncButton,
+        act: async p => {
+          await syncButton(p).click()
+          await expect(syncTitle(p)).toBeVisible({ timeout: 20_000 })
+          // The stores arrive after a spinner; the heading over them says the list is in.
+          await expect(modal(p).getByText('Connect a provider', { exact: true })).toBeVisible({ timeout: 20_000 })
+          await settle(p)
+        },
+      },
+      {
+        target: p => storeRow(p, 'Nextcloud'),
+        act: async p => {
+          await storeRow(p, 'Nextcloud').click()
+          // The connection dialog stacks on top, so `modal` is now that one.
+          await expect(modal(p).getByRole('heading', { name: 'Nextcloud', exact: true })).toBeVisible({ timeout: 20_000 })
+          await expect(formBox(p, 'https://cloud.example.com')).toBeVisible()
+          await settle(p)
+        },
+      },
+      {
+        prepare: async p => {
+          const store = NEXTCLOUD_CONNECTION()
+          await typeInto(p, formBox(p, 'https://cloud.example.com'), store.baseUrl)
+          await typeInto(p, formBox(p, 'username'), store.credentials.login_name)
+          await typeInto(p, formBox(p, 'app password'), store.credentials.app_password)
+          await typeInto(p, formBox(p, '/TREK'), store.credentials.base_path)
+          await beat(p, 300)
+        },
+        // The whole form, as the create-user step does: the labels and hints belong in the picture.
+        target: dialog,
+      },
+      {
+        target: p => dialog(p).getByRole('button', { name: 'Test connection' }),
+        act: async p => {
+          await dialog(p).getByRole('button', { name: 'Test connection' }).click()
+          await expect(
+            dialog(p).getByText(`Reached it, signed in as ${NEXTCLOUD_CONNECTION().credentials.login_name}`),
+          ).toBeVisible({ timeout: 30_000 })
+          await settle(p)
+        },
+      },
+      {
+        // Connect saves the credentials and opens the folder picker on top of
+        // the dialog; the picture is the picker, with the folder the reader is
+        // told to click, because that is the screen the step is about.
+        prepare: async p => {
+          await dialog(p).getByRole('button', { name: 'Connect', exact: true }).click()
+          await expect(modal(p).getByRole('heading', { name: 'Where should this trip live in Nextcloud?' })).toBeVisible({ timeout: 30_000 })
+          await expect(folderRow(p)).toBeVisible({ timeout: 30_000 })
+          await settle(p)
+        },
+        target: folderRow,
+        act: async p => {
+          await folderRow(p).click()
+          await expect(bindingCard(p)).toBeVisible({ timeout: 30_000 })
+          await settle(p)
+        },
+      },
+      {
+        // Binding starts a run of its own, which the button cannot join: a Sync
+        // now while it is going answers busy and moves nothing, and the card
+        // only learns of that first run from the ping it sends when it is
+        // through. So the click is repeated until the card reports In sync,
+        // which is a dot with a title once the state is good.
+        prepare: async p => {
+          await expect(async () => {
+            await syncNow(p).click({ timeout: 15_000 })
+            await expect(bindingCard(p).getByTitle('In sync')).toBeVisible({ timeout: 15_000 })
+          }).toPass({ timeout: 120_000, intervals: [3_000] })
+          await settle(p)
+        },
+        target: bindingCard,
+        act: async p => {
+          await p.keyboard.press('Escape')
+          await expect(modal(p)).toHaveCount(0, { timeout: 20_000 })
+          // The run's file:created events put the pulled documents at the top of the list.
+          for (const name of NEXTCLOUD_DOCUMENTS) await expect(row(p, name)).toBeVisible({ timeout: 30_000 })
+          await settle(p)
+        },
+      },
+    ],
+    cleanup: async p => {
+      const { tripId } = seededTrip()
+      await resetDocSync(p.request, tripId)
+      await removeFiles(p, NEXTCLOUD_DOCUMENTS)
+      // The run pushed the trip's own documents into the folder; back to its two.
+      await ensureNextcloudFolder(drawPdf)
+    },
+  },
 }
 
 // ── Run ───────────────────────────────────────────────────────────────────────
@@ -430,6 +576,17 @@ test.describe.configure({ mode: 'serial' })
 
 test.beforeAll(async ({ request }) => {
   await ensureFilesFixtures(request)
+  // A store on offer puts Document sync next to Trash for the trip's owner,
+  // which is how bullet 6 of the screen text describes the toolbar; on for the
+  // whole file, so the hero and all seven guides show the same toolbar.
+  await toggleAddon(request, 'nextcloud', true)
+})
+
+test.afterAll(async ({ request }) => {
+  // Instance-wide, not trip-scoped: every store ships off, and the other
+  // screens' pictures must not grow the button. Here rather than in the last
+  // guide's cleanup, so a failed run puts it back too (as trip-roadtrip does).
+  await toggleAddon(request, 'nextcloud', false)
 })
 
 test('every registered files guide has a script, and only those', async () => {

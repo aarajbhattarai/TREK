@@ -1,6 +1,7 @@
 import { test, expect, type Page, type Locator } from '@playwright/test'
 import { clearNotices } from '../screenshots/shot'
 import { captureGuide, captureHero, dismissReleaseNotice, beat, typeInto, settle, VIEWPORT, type GuideScript } from './guide'
+import { monthName, year } from '../dates'
 import { vacayGuides, vacayContext } from '../../src/help/contexts/vacay'
 import type { HelpGuide } from '../../src/help/types'
 
@@ -12,7 +13,9 @@ import type { HelpGuide } from '../../src/help/types'
  * looks like anyway.
  */
 
-const YEAR = 2026
+const YEAR = year()
+/** The month after the picture day's: the first one the planner draws after the current. */
+const NEXT_MONTH = monthName(1)
 
 const guide = (id: string): HelpGuide => {
   const g = vacayGuides.find(x => x.id === id)
@@ -25,7 +28,7 @@ async function openVacay(page: Page): Promise<void> {
   await clearNotices(page)
   await dismissReleaseNotice(page)
   await expect(toolbar(page)).toBeVisible()
-  await expect(monthCard(page, 'October')).toBeVisible()
+  await expect(monthCard(page, NEXT_MONTH)).toBeVisible()
 }
 
 /** The floating mode toolbar under the grid. */
@@ -78,16 +81,16 @@ const SCRIPTS: Record<string, GuideScript> = {
     steps: [
       { target: p => toolbar(p).getByRole('button').first() },
       {
-        target: p => day(p, 'October', 14),
-        act: async p => { await day(p, 'October', 14).click(); await beat(p, 600) },
+        target: p => day(p, NEXT_MONTH, 14),
+        act: async p => { await day(p, NEXT_MONTH, 14).click(); await beat(p, 600) },
       },
       {
-        target: p => day(p, 'October', 14),
+        target: p => day(p, NEXT_MONTH, 14),
         act: async p => {
-          await day(p, 'October', 14).click()
+          await day(p, NEXT_MONTH, 14).click()
           await beat(p, 600)
           // Leave the day logged for the after-picture and the guides that follow.
-          await day(p, 'October', 14).click()
+          await day(p, NEXT_MONTH, 14).click()
           await settle(p)
         },
       },
@@ -103,8 +106,8 @@ const SCRIPTS: Record<string, GuideScript> = {
         act: async p => { await p.getByRole('button', { name: 'Half day' }).click() },
       },
       {
-        target: p => day(p, 'October', 15),
-        act: async p => { await day(p, 'October', 15).click(); await settle(p) },
+        target: p => day(p, NEXT_MONTH, 15),
+        act: async p => { await day(p, NEXT_MONTH, 15).click(); await settle(p) },
       },
       {
         target: p => p.getByRole('button', { name: 'Half day' }),
@@ -122,9 +125,9 @@ const SCRIPTS: Record<string, GuideScript> = {
         act: async p => { await p.getByRole('button', { name: 'Comp / Flex' }).click() },
       },
       {
-        target: p => day(p, 'October', 16),
+        target: p => day(p, NEXT_MONTH, 16),
         act: async p => {
-          await day(p, 'October', 16).click()
+          await day(p, NEXT_MONTH, 16).click()
           await settle(p)
           await p.getByRole('button', { name: 'Comp / Flex' }).click()
         },

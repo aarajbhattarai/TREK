@@ -7,6 +7,7 @@ import type { HelpContext, HelpGuide } from '../types'
  */
 
 const ATLAS = 'Atlas'
+const DAWARICH = 'Dawarich'
 
 export const atlasGuides: HelpGuide[] = [
   {
@@ -108,6 +109,28 @@ export const atlasGuides: HelpGuide[] = [
     docs: { slug: ATLAS, anchor: 'statistics' },
     related: ['country-details'],
   },
+  {
+    id: 'dawarich-countries',
+    context: 'atlas',
+    icon: 'globe',
+    size: 'guide',
+    steps: 3,
+    tips: 2,
+    media: { steps: true, result: true },
+    docs: { slug: DAWARICH, anchor: 'countries' },
+    related: ['mark-country', 'dawarich-wishes', 'stats'],
+  },
+  {
+    id: 'dawarich-wishes',
+    context: 'atlas',
+    icon: 'checkCircle',
+    size: 'guide',
+    steps: 3,
+    tips: 2,
+    media: { steps: true, result: true },
+    docs: { slug: DAWARICH, anchor: 'wishlist' },
+    related: ['bucket-place', 'bucket-country', 'dawarich-countries'],
+  },
 ]
 
 export const atlasContext: HelpContext = {
@@ -116,6 +139,6 @@ export const atlasContext: HelpContext = {
   icon: 'globe',
   bullets: 6,
   guides: atlasGuides.map(g => g.id),
-  docs: [{ slug: ATLAS }, { slug: 'Dawarich' }, { slug: 'Admin-Addons' }],
+  docs: [{ slug: ATLAS }, { slug: DAWARICH }, { slug: 'Admin-Addons' }],
   hero: true,
 }

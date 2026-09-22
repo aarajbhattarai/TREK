@@ -53,5 +53,39 @@ change the theme, the language or the zoom for a picture.
   tree once (`page.locator('body').ariaSnapshot()`) instead of guessing locators.
 - A plugin installed by a run lives in `server/data/plugins/`; the dev server
   imports it on its next restart. Guides that install one uninstall it in `cleanup`.
-- The trip is running on the seed's dates: the plan opens on today's (empty) day;
-  `openTrip` in `trip-shared.ts` selects day 1 and closes its details panel.
+- The trip's last day is the run day by construction (`e2e/dates.ts`: every
+  seeded date is an offset from `E2E_PICTURE_DAY`, which `run.mjs` fixes to today
+  once for the whole run), so the plan opens on today, the trip's last and empty
+  day; `openTrip` in `trip-shared.ts` selects day 1 and closes its details panel.
+  A guide that has to find a date by its label builds it with the same helpers
+  (`short`, `long`, `pickerLabel`, `dotted`) instead of writing a calendar date.
+
+## The guides that show another service
+
+A few guides picture TREK talking to something outside it: AirTrail (flights
+into the Transports tab), Dawarich (the recorded route on the map, countries
+and wishes in the Atlas), a document store (Nextcloud on the Files tab) and the
+booking extractor (confirmations into Bookings and Transports). Their fixtures
+in `external.ts` fill each service themselves through its API, so the pictures
+do not depend on what happens to be in it; they need its address and key from
+`e2e/help/media.env` (copy `media.env.example`, not committed). Without the
+file those guides fail loudly at their first step and every other guide runs
+as before.
+
+- Every address has to be the machine's LAN address: the server's SSRF guard
+  refuses loopback whatever `ALLOW_INTERNAL_NETWORK` says, and that flag has to
+  be `true` in the same file for a private network to be reachable at all.
+- AirTrail: any instance with one user and an API key from Settings > Security.
+  The fixture puts four flights into that account.
+- Dawarich: any 1.15 instance with a user and their API key; add the LAN address
+  to its `APPLICATION_HOSTS`, and give it a reverse geocoder (Nominatim works)
+  or the Atlas dialog finds no countries. The fixture uploads a synthetic
+  recording of the trip and of the year before it (`dawarich-track.ts`).
+- Nextcloud: an app password. The fixture keeps a folder under `/Reisen` with
+  two documents, and the guide binds the trip to it.
+- The extractor: `KITINERARY_EXTRACTOR_PATH` must point at a program the
+  server can run with one file argument. On Linux that is the package's binary
+  (`libkitinerary-bin`); on Windows, a small executable that runs it inside the
+  TREK Docker image (`docker run --rm -v <dir>:/in:ro --entrypoint
+  /usr/local/bin/kitinerary-extractor <image> /in/<file>`) and answers
+  `--version` by itself.

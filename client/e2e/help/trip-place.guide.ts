@@ -2,6 +2,7 @@ import { test, expect, type Page, type Locator } from '@playwright/test'
 import { captureGuide, captureHero, beat, settle, VIEWPORT, type GuideScript } from './guide'
 import { seededTrip, coverFixture, ensureTrack, ensureDaysFixtures, ensurePlaceFixtures, PLACE_WEBSITE, RATED_PLACE } from './fixtures'
 import { openTrip, selectDay, modal, dialog } from './trip-shared'
+import { long } from '../dates'
 import { tripPlaceContext, tripPlaceGuides } from '../../src/help/contexts/tripPlace'
 import type { HelpGuide } from '../../src/help/types'
 
@@ -31,6 +32,8 @@ const TRACK_PICKED_COLOR = '#ea580c'
 const BOOKING = 'Lunch at Nishiki'
 /** The only list the seed creates. */
 const LIST = 'Kyoto shortlist'
+/** The list's row in the picker: its name, then the status chip once the place is in it. */
+const LIST_ROW = new RegExp(`^${LIST}(?: (?:Idea|Planned|Visited))?$`)
 const UPLOADED = 'cover-fixture.jpg'
 
 /** The card itself: the scroll body's parent holds head, body and footer. */
@@ -56,6 +59,82 @@ const bookingStrip = (page: Page) => card(page).getByRole('button', { name: 'Edi
 const bookingFields = (page: Page) => bookingStrip(page).locator('> div').nth(1)
 const dayHeader = (page: Page, n: number) => page.getByRole('button', { name: new RegExp(`^${n} .*Day ${n} `) })
 const swatch = (page: Page) => card(page).getByRole('button', { name: TRACK_PICKED_COLOR })
+/** The seed's day 1: the trip starts nine days before the picture day (`start_date: day(-9)`). */
+const DAY_ONE = -9
+/** The weekday the English UI prints for a seeded day, `Saturday` on a run where day 1 is one. */
+const weekday = (offset: number) => long(offset).split(',')[0]
+/**
+ * The Opening Hours row: the one button of the card with a clock in it. Found
+ * by the icon rather than the label, because the label is the open day's line
+ * ("Saturday: 06:00-17:00") and the day moves with the run.
+ */
+const hoursRow = (page: Page) => card(page).locator('button:has(svg.lucide-clock)')
+/** The hours box: the row and, once unfolded, the week under it. */
+const hoursBox = (page: Page) => hoursRow(page).locator('xpath=..')
+
+/** The card's own X, the one in its head; the day panel over the map has another. */
+async function closeCard(page: Page): Promise<void> {
+  await head(page).locator('button:has(svg.lucide-x)').click()
+  await expect(card(page)).toHaveCount(0)
+}
+
+/**
+ * Put the provider's answer for a place into the card's own cache before the
+ * card asks for it. The card reads `sessionStorage` under this key first
+ * (PlaceInspector's usePlaceDetails) and only then asks the server, with an
+ * eight-second limit that Overpass exceeds as often as not; asked here over
+ * the API there is no such limit, and a thin answer is asked again.
+ */
+async function primeDetails(page: Page, placeName: string): Promise<void> {
+  const { tripId } = seededTrip()
+  const res = await page.request.get(`/api/trips/${tripId}/places`)
+  const body = (await res.json()) as { places?: { name: string; osm_id?: string | null }[] } | { name: string; osm_id?: string | null }[]
+  const places = Array.isArray(body) ? body : (body.places ?? [])
+  const osmId = places.find(p => p.name === placeName)?.osm_id
+  if (!osmId) throw new Error(`${placeName} carries no OpenStreetMap id; ensurePlaceFixtures did not run`)
+  type Details = { opening_hours?: string[] | null } | null
+  const hasWeek = (d: Details): boolean => Array.isArray(d?.opening_hours) && d.opening_hours.length === 7
+  let details: Details = null
+  for (let attempt = 1; attempt <= 3 && !hasWeek(details); attempt++) {
+    const answer = await page.request.get(`/api/maps/details/${encodeURIComponent(osmId)}?lang=en`, { timeout: 45_000 })
+    details = answer.ok() ? ((await answer.json()) as { place: Details }).place : null
+  }
+  if (!hasWeek(details)) throw new Error(`no opening hours for ${placeName} (${osmId}) from the details route`)
+  await page.evaluate(([key, value]) => sessionStorage.setItem(key, value), [`gdetails_${osmId}_en`, JSON.stringify(details)])
+}
+
+/**
+ * Open a place that carries an OpenStreetMap id and wait until the provider's
+ * answer is on the card.
+ *
+ * The hours, the ring and the phone number arrive one request after the card:
+ * the server asks Overpass and Nominatim for them, caches nothing on that path,
+ * and the card swallows a lookup that times out. `settle` waits five seconds
+ * for the network at most, which a slow mirror exceeds, and the card would then
+ * be pictured without the feature the text is about. So this waits for the
+ * hours row itself, and when it has not come, closes the card and opens the
+ * place again, which fires the lookup afresh (closing clears the id the hook
+ * watches). A third miss fails the run. With `day` the row's line is checked
+ * against that day's weekday, which is what the step text promises; with
+ * `phone` the tel link has to be there too.
+ */
+async function openWithHours(
+  page: Page,
+  open: (p: Page) => Promise<void>,
+  opts: { day?: number; phone?: RegExp; place?: string } = {},
+): Promise<void> {
+  await primeDetails(page, opts.place ?? 'Senso-ji Temple')
+  for (let attempt = 1; ; attempt++) {
+    await open(page)
+    const shown = await hoursRow(page).waitFor({ state: 'visible', timeout: 15_000 }).then(() => true, () => false)
+    if (shown) break
+    if (attempt === 3) throw new Error(`no opening hours on the card after ${attempt} openings`)
+    await closeCard(page)
+  }
+  if (opts.day !== undefined) await expect(hoursRow(page)).toHaveText(new RegExp(`^${weekday(opts.day)}: `))
+  if (opts.phone) await expect(card(page).getByRole('link', { name: opts.phone })).toBeVisible()
+  await settle(page)
+}
 
 async function openPlace(page: Page, name: string): Promise<void> {
   await row(page, name).click()
@@ -145,12 +224,23 @@ const SCRIPTS: Record<string, GuideScript> = {
     steps: [
       {
         target: p => stop(p, 'Senso-ji Temple'),
-        act: p => openStop(p, 'Senso-ji Temple'),
+        act: p => openWithHours(p, q => openStop(q, 'Senso-ji Temple'), { day: DAY_ONE, phone: /^\+81/ }),
       },
       only(head),
       only(ratingRow),
       only(p => card(p).locator('.collab-note-md').first()),
       only(participants),
+      {
+        // Unfolded before the picture: the step is about the week, and a ring
+        // around the collapsed row would show the reader one line of it.
+        prepare: async p => {
+          await hoursRow(p).click()
+          await expect(hoursRow(p)).toHaveText('Opening Hours')
+          await expect(hoursBox(p).getByText(/^Sunday: /)).toBeVisible()
+          await settle(p)
+        },
+        target: hoursBox,
+      },
       only(footer),
     ],
   },
@@ -381,7 +471,7 @@ const SCRIPTS: Record<string, GuideScript> = {
     guide: guide('place-navigation'),
     start: async p => {
       await openTrip(p, { day: null })
-      await openPlace(p, PLACE_WEBSITE.place)
+      await openWithHours(p, q => openPlace(q, PLACE_WEBSITE.place), { place: PLACE_WEBSITE.place })
     },
     steps: [
       {
@@ -409,7 +499,7 @@ const SCRIPTS: Record<string, GuideScript> = {
     start: async p => {
       await unsaveEverywhere(p, 'Senso-ji Temple')
       await openTrip(p, { day: null })
-      await openPlace(p, 'Senso-ji Temple')
+      await openWithHours(p, q => openPlace(q, 'Senso-ji Temple'))
     },
     steps: [
       {
@@ -422,12 +512,13 @@ const SCRIPTS: Record<string, GuideScript> = {
       },
       only(dialog),
       {
-        // Exact: the Collections guides leave a list behind whose name opens
-        // with this one's.
-        target: p => modal(p).getByRole('button', { name: LIST, exact: true }),
+        // Anchored, not exact: the Collections guides leave a list behind whose
+        // name opens with this one's, and once the place is saved the row's
+        // name grows the status chip (Idea, Planned, Visited).
+        target: p => modal(p).getByRole('button', { name: LIST_ROW }),
         act: async p => {
-          await modal(p).getByRole('button', { name: LIST, exact: true }).click()
-          await expect(modal(p).getByRole('button', { name: LIST, exact: true })).toHaveClass(/border-accent/, { timeout: 20_000 })
+          await modal(p).getByRole('button', { name: LIST_ROW }).click()
+          await expect(modal(p).getByRole('button', { name: LIST_ROW })).toHaveClass(/border-accent/, { timeout: 20_000 })
           await settle(p)
         },
       },
@@ -496,7 +587,7 @@ test('hero: trip-place', async ({ page }) => {
   await captureHero(page, tripPlaceContext.id, async p => {
     await openTrip(p, { day: null })
     await selectDay(p, 1)
-    await openStop(p, 'Senso-ji Temple')
+    await openWithHours(p, q => openStop(q, 'Senso-ji Temple'), { day: DAY_ONE, phone: /^\+81/ })
   })
 })
 

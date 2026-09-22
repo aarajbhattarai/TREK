@@ -2,6 +2,7 @@ import { test, expect, type Locator, type Page } from '@playwright/test'
 import { captureGuide, captureHero, settle, typeInto, VIEWPORT, type GuideScript } from './guide'
 import { seededTrip, ensureMapFixtures } from './fixtures'
 import { openTrip, openTripOnDay, selectDay, modal } from './trip-shared'
+import { ensureDawarichConnection, disconnectDawarich } from './external'
 import { tripMapContext, tripMapGuides } from '../../src/help/contexts/tripMap'
 import type { HelpGuide } from '../../src/help/types'
 
@@ -54,6 +55,28 @@ const connection = (page: Page, shown: boolean) =>
 const allConnections = (page: Page, shown: boolean) =>
   page.locator(`button[aria-label="${shown ? 'Hide' : 'Show'} all booking routes"]`)
 const overviewPanel = (page: Page) => page.getByTestId('trip-overview-panel')
+/** The round Dawarich button under the whole-trip one; its label is its state. */
+const trailPill = (page: Page) => page.getByTestId('dawarich-trail-pill')
+/**
+ * The recorded route. Leaflet writes the dash pattern onto the path, and "6 5"
+ * is this layer's alone: the pending booking routes use "6, 6", the picked
+ * alternative "2 7", so the dashed days are the one thing on the map with it.
+ */
+const trail = (page: Page) => page.locator('#trek-map path[stroke-dasharray="6 5"]')
+/**
+ * The GL renderer. There is no `#trek-map` on it: `MapViewGL` mounts a bare
+ * `div.w-full.h-full` and MapLibre puts its own canvas inside, so the compass
+ * guide goes by that class. The map itself is reached through
+ * `window.__trek_map`, which `MapViewGL` publishes on build for exactly this.
+ */
+const glCanvas = (page: Page) => page.locator('.maplibregl-canvas')
+/**
+ * The compass button and the frosted pill around it. The planner renders the
+ * pill twice, once in the desktop cluster beside the category row and once for
+ * phones, `md:hidden` at this width; `getByRole` leaves the hidden copy out.
+ */
+const resetNorth = (page: Page) => page.getByRole('button', { name: 'Reset north' })
+const compassPill = (page: Page) => resetNorth(page).locator('xpath=..')
 /** The sheet a booking's endpoint opens. Its own portal, and the only Close on the plan. */
 const sheetClose = (page: Page) => page.getByRole('button', { name: 'Close', exact: true })
 /** A row of the places column. */
@@ -155,6 +178,38 @@ async function openOnTokyo(page: Page): Promise<void> {
   await collapseDayDetails(page).last().click()
   await expect(badged(page, 1)).toBeVisible({ timeout: 20_000 })
   await settle(page)
+}
+
+/**
+ * Which renderer draws the planner and the journals. On the account, not on
+ * the trip: `MapViewAuto` reads `settings.map_provider`, and `loadSettings`
+ * runs on every page load, so a `page.goto` after this sees the new map.
+ */
+async function setMapProvider(page: Page, provider: 'leaflet' | 'maplibre-gl'): Promise<void> {
+  const res = await page.request.post('/api/settings/bulk', { data: { settings: { map_provider: provider } } })
+  if (!res.ok()) throw new Error(`could not set map_provider=${provider}: ${res.status()} ${await res.text()}`)
+}
+
+/** The slice of the GL map the compass guide reads and moves, on `window.__trek_map`. */
+interface TrekGlMap {
+  getBearing: () => number
+  getPitch: () => number
+  loaded: () => boolean
+  areTilesLoaded: () => boolean
+  isMoving: () => boolean
+  easeTo: (o: { bearing: number; pitch: number; duration: number }) => unknown
+}
+
+/** Wait until the GL map has its style, its tiles and a still camera. */
+async function glMapIdle(page: Page): Promise<void> {
+  await page.waitForFunction(
+    () => {
+      const m = (window as unknown as { __trek_map?: TrekGlMap }).__trek_map
+      return !!m && m.loaded() && m.areTilesLoaded() && !m.isMoving()
+    },
+    undefined,
+    { timeout: 60_000 },
+  )
 }
 
 async function deleteByName(page: Page, ...names: string[]): Promise<void> {
@@ -474,6 +529,119 @@ const SCRIPTS: Record<string, GuideScript> = {
       await p.evaluate(id => localStorage.removeItem(`trek:visible-connections:${id}`), tripId)
     },
   },
+  'map-dawarich-trail': {
+    guide: guide('map-dawarich-trail'),
+    // Day 1 in Tokyo: at the whole-trip zoom the recording is one dashed line
+    // along the Shinkansen and the walks through the cities vanish under the
+    // pins, so the map is framed on a day before the button is pressed;
+    // nothing fits the map to the trail.
+    start: openOnTokyo,
+    steps: [
+      {
+        target: trailPill,
+        act: async p => {
+          await trailPill(p).click()
+          // One read of the trip's dates from the Dawarich, thinned to 600
+          // points a day. The label is the reliable signal: anything but Hide
+          // (nothing recorded, unreachable, offline) is not a picture worth
+          // taking, so the wait fails on it rather than shooting an empty map.
+          await expect(trailPill(p)).toHaveAttribute('aria-label', 'Hide recorded route', { timeout: 120_000 })
+          await expect(trail(p).first()).toBeAttached({ timeout: 30_000 })
+          await settle(p)
+          await p.waitForTimeout(600)
+        },
+      },
+      {
+        // The whole map: the dashed day under the planned route, with the
+        // pointer parked on an empty spot so no pin's card is in the picture.
+        target: map,
+        hover: async p => {
+          const box = await map(p).boundingBox()
+          if (!box) throw new Error('the map has no box')
+          await p.mouse.move(box.x + EMPTY.x, box.y + EMPTY.y)
+        },
+      },
+      {
+        target: p => p.getByTestId('trip-overview-pill'),
+        act: async p => {
+          await p.getByTestId('trip-overview-pill').click()
+          // One router request per leg, paced; the total carries an … until
+          // every leg has answered, and the result picture waits for that.
+          await expect(overviewPanel(p)).toBeVisible({ timeout: 60_000 })
+          await expect(overviewPanel(p)).not.toContainText('…', { timeout: 90_000 })
+          await settle(p)
+        },
+      },
+    ],
+    cleanup: async p => {
+      const off = p.getByRole('button', { name: 'Hide whole trip' })
+      if (await off.isVisible().catch(() => false)) await off.click()
+      if ((await trailPill(p).getAttribute('aria-pressed').catch(() => null)) === 'true') await trailPill(p).click()
+      // Per trip and per browser session; the test's context ends here, but
+      // be explicit rather than trust that.
+      const { tripId } = seededTrip()
+      await p.evaluate(id => sessionStorage.removeItem(`trip-dawarich-${id}`), tripId)
+    },
+  },
+
+  'map-compass': {
+    guide: guide('map-compass'),
+    // The compass only exists on the GL renderers, so the guide switches the
+    // account to MapLibre GL (no token, OpenFreeMap tiles) before opening the
+    // trip, and `cleanup` puts Leaflet back: every other map guide goes by
+    // `#trek-map`, which the GL map does not have.
+    start: async p => {
+      await setMapProvider(p, 'maplibre-gl')
+      await openTrip(p)
+      // MapViewAuto shows Leaflet while the GL chunk loads, then swaps; WebGL
+      // runs on SwiftShader headless at 1920×1080×2, so the style, the vector
+      // tiles from tiles.openfreemap.org and the day-1 framing take their time.
+      await expect(glCanvas(p)).toBeVisible({ timeout: 60_000 })
+      await expect(resetNorth(p)).toBeVisible({ timeout: 30_000 })
+      await glMapIdle(p)
+      await settle(p)
+      // `settle` counts `<img>` loads; a WebGL canvas has none, so give the
+      // tiles a moment to paint or the picture catches the blank canvas.
+      await p.waitForTimeout(2000)
+    },
+    steps: [
+      {
+        // The turn itself is the map's own camera move rather than a synthetic
+        // right-button drag: a drag has to start on bare canvas, and the pins,
+        // the two floating columns and the explore pill all sit over it. 35°
+        // is enough for the streets to lie visibly askew and the arrow to lean.
+        prepare: async p => {
+          await p.evaluate(() => {
+            const m = (window as unknown as { __trek_map?: TrekGlMap }).__trek_map
+            if (!m) throw new Error('no GL map on the page')
+            m.easeTo({ bearing: 35, pitch: 0, duration: 0 })
+          })
+          await p.waitForFunction(() => {
+            const m = (window as unknown as { __trek_map?: TrekGlMap }).__trek_map
+            return !!m && Math.abs(m.getBearing() - 35) < 0.5 && !m.isMoving()
+          })
+          await settle(p)
+        },
+        target: compassPill,
+      },
+      {
+        target: compassPill,
+        act: async p => {
+          await resetNorth(p).click()
+          // `easeTo` takes 300 ms; the compass is only upright once it has landed.
+          await p.waitForFunction(() => {
+            const m = (window as unknown as { __trek_map?: TrekGlMap }).__trek_map
+            return !!m && Math.abs(m.getBearing()) < 0.5 && Math.abs(m.getPitch()) < 0.5 && !m.isMoving()
+          })
+          await settle(p)
+        },
+      },
+    ],
+    // The renderer is kept on the account, not on the trip: left on MapLibre it
+    // would be the map of every picture taken after this guide, and every
+    // `#trek-map` locator in the other guides would find nothing.
+    cleanup: p => setMapProvider(p, 'leaflet'),
+  },
 }
 
 // ── Run ───────────────────────────────────────────────────────────────────────
@@ -482,6 +650,21 @@ test.describe.configure({ mode: 'serial' })
 
 test.beforeAll(async ({ request }) => {
   await ensureMapFixtures(request)
+  // The recorded route: the addon on, the signed-in user connected to the
+  // Dawarich from media.env, the synthetic recording of the trip uploaded.
+  await ensureDawarichConnection(request)
+})
+
+test.afterAll(async ({ request }) => {
+  // Instance-wide, not trip-scoped: while the addon is on, every trip map
+  // carries the round Dawarich button in its bottom-right corner. This file's
+  // pictures show it on purpose; the other trip screens' do not, so it goes
+  // off again here, whatever happened in between. The renderer likewise: the
+  // compass guide puts Leaflet back in its cleanup, but a guide that fails
+  // never reaches its cleanup, and every `#trek-map` locator in the files that
+  // run after this one would find a GL canvas instead.
+  await disconnectDawarich(request)
+  await request.post('/api/settings/bulk', { data: { settings: { map_provider: 'leaflet' } } })
 })
 
 test('every registered map guide has a script, and only those', async () => {

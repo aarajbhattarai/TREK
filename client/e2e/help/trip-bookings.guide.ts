@@ -1,7 +1,9 @@
 import { test, expect, type Locator, type Page } from '@playwright/test'
 import { captureGuide, captureHero, beat, typeInto, settle, VIEWPORT, type GuideScript } from './guide'
-import { seededTrip, ensureBookingsFixtures, bookingPdfFixture, bookingEmlFixture, HOTEL_TO_BOOK, UNATTACHED_FILE } from './fixtures'
-import { openTrip, modal, portalDialog } from './trip-shared'
+import { dotted } from '../dates'
+import { seededTrip, ensureBookingsFixtures, bookingPdfFixture, bookingEmlFixture, BOOKING_EML, HOTEL_TO_BOOK, UNATTACHED_FILE } from './fixtures'
+import { openTrip, modal, dialog, portalDialog, importSteps, importTask, dismissImportTask, deleteTripFiles } from './trip-shared'
+import { requireExtractor, allowEmlUploads } from './external'
 import { tripBookingsContext, tripBookingsGuides } from '../../src/help/contexts/tripBookings'
 import type { HelpGuide } from '../../src/help/types'
 
@@ -55,10 +57,6 @@ const travellers = (page: Page) => page.locator('[aria-label="Travelers"]')
 
 /** The card's delete question is its own portal, with no backdrop class to find it by. */
 const deleteAsk = (page: Page) => portalDialog(page, page.getByText('Delete booking?', { exact: true }))
-/** BookingImportModal is another bare portal; the heading is what tells it apart. */
-const importDialog = (page: Page) => portalDialog(page, page.getByText('Import booking confirmations', { exact: true }))
-/** The background widget's card for the running parse. */
-const importTask = (page: Page) => page.locator('.bg-surface-card').filter({ hasText: 'gracery-confirmation.eml' }).last()
 
 /** Open the CustomSelect that belongs to a label and take one option out of it. */
 async function chooseIn(page: Page, field: RegExp, option: RegExp, search?: string): Promise<void> {
@@ -128,15 +126,6 @@ async function clearPanelState(page: Page): Promise<void> {
   }, tripId)
 }
 
-/**
- * Import from file is rendered only when the server can read a confirmation,
- * which here means the AI Parsing addon: no extractor binary is installed.
- */
-async function setAiParsing(page: Page, enabled: boolean): Promise<void> {
-  const res = await page.request.put('/api/admin/addons/llm_parsing', { data: { enabled } })
-  if (!res.ok()) throw new Error(`could not switch AI Parsing ${enabled ? 'on' : 'off'}: ${res.status()} ${await res.text()}`)
-}
-
 const closeModal = async (page: Page): Promise<void> => {
   if (await modal(page).isVisible().catch(() => false)) {
     await page.keyboard.press('Escape')
@@ -179,9 +168,9 @@ const SCRIPTS: Record<string, GuideScript> = {
       },
       {
         prepare: async p => {
-          await setDate(p, 0, '19.09.2026')
+          await setDate(p, 0, dotted(-2))
           await timeBox(p).nth(0).fill('16:30')
-          await setDate(p, 1, '19.09.2026')
+          await setDate(p, 1, dotted(-2))
           await timeBox(p).nth(1).fill('20:00')
           await settle(p)
         },
@@ -503,58 +492,54 @@ const SCRIPTS: Record<string, GuideScript> = {
   },
   'import-booking-file': {
     guide: guide('import-booking-file'),
+    // The extractor, and no addon: with it answering, the dialog sends mode
+    // no-ai and no model is asked. The mail has to be an allowed file type or
+    // the review would save the booking and drop the document without a word.
     start: async p => {
-      await setAiParsing(p, true)
+      await requireExtractor(p.request)
+      await allowEmlUploads(p.request, true)
       await openBookings(p)
     },
     steps: [
-      {
-        target: p => p.getByRole('button', { name: 'Import from file' }),
-        act: async p => {
-          await p.getByRole('button', { name: 'Import from file' }).click()
-          await expect(importDialog(p)).toBeVisible()
-          await settle(p)
-        },
-      },
+      ...importSteps(bookingEmlFixture, BOOKING_EML),
       {
         prepare: async p => {
-          await importDialog(p).locator('input[type="file"]').setInputFiles(bookingEmlFixture())
-          await expect(importDialog(p).getByText('gracery-confirmation.eml')).toBeVisible()
+          // The card is there at once, spinning. The picture wants it finished:
+          // the tick and the Import it offers. The extractor has 30 s in the
+          // backend, and on a Windows media host that is a docker run, so the
+          // wait is generous rather than tight.
+          await expect(importTask(p, BOOKING_EML).getByRole('button', { name: 'Import', exact: true })).toBeVisible({ timeout: 90_000 })
           await settle(p)
         },
-        target: p => importDialog(p).getByText('gracery-confirmation.eml').locator('xpath=ancestor::button[1]'),
-        act: settle,
-      },
-      {
-        target: p => importDialog(p).getByRole('button', { name: 'Import', exact: true }),
+        target: p => importTask(p, BOOKING_EML),
         act: async p => {
-          await importDialog(p).getByRole('button', { name: 'Import', exact: true }).click()
-          await expect(importDialog(p)).toHaveCount(0, { timeout: 20_000 })
+          await importTask(p, BOOKING_EML).getByRole('button', { name: 'Import', exact: true }).click()
+          await expect(modal(p).getByRole('heading', { name: 'New Reservation' })).toBeVisible({ timeout: 20_000 })
+          await expect(titleBox(p)).toHaveValue(HOTEL_TO_BOOK.name)
+          await expect(codeBox(p)).toHaveValue('GRK-40218')
+          await expect(modal(p).getByText(BOOKING_EML)).toBeVisible()
           await settle(p)
         },
       },
       {
-        prepare: async p => {
-          await expect(importTask(p)).toBeVisible({ timeout: 30_000 })
+        target: dialog,
+        act: async p => {
+          await saveButton(p, 'Add').click()
+          await expect(modal(p)).toHaveCount(0, { timeout: 20_000 })
+          await expect(bookingCard(p, HOTEL_TO_BOOK.name)).toBeVisible({ timeout: 20_000 })
           await settle(p)
         },
-        target: importTask,
-        act: settle,
       },
     ],
     cleanup: async p => {
-      // The widget only offers its Close once the run has stopped, and a card
-      // left standing would sit in the corner of every later guide's pictures.
-      // The wait is bounded well inside the 150 s a help-media test gets
-      // (playwright.config.ts): the four steps take about 40 s of it, so a
-      // longer one would fail the whole guide over a card nobody can close.
-      const close = importTask(p).getByRole('button', { name: 'Close' })
-      await close.waitFor({ state: 'visible', timeout: 45_000 }).catch(() => {})
-      if (await close.isVisible().catch(() => false)) await close.click()
-      await setAiParsing(p, false)
+      await closeModal(p)
+      await dismissImportTask(p, BOOKING_EML)
+      await allowEmlUploads(p.request, false)
       await clearPanelState(p)
-      // A parse that did produce something would have left its bookings behind.
-      await deleteBookings(p, 'Hotel Granvia Kyoto')
+      // The route takes the stay and the expense with the booking; the mail it
+      // attached stays behind in Files like any unlinked document.
+      await deleteBookings(p, HOTEL_TO_BOOK.name)
+      await deleteTripFiles(p, BOOKING_EML)
     },
   },
   'edit-booking': {

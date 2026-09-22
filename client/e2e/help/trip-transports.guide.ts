@@ -1,7 +1,8 @@
 import { test, expect, type Locator, type Page } from '@playwright/test'
 import { captureGuide, captureHero, beat, typeInto, settle, VIEWPORT, type GuideScript } from './guide'
-import { seededTrip, ensureTransportFixtures, TRANSIT_JOURNEY } from './fixtures'
-import { openTrip, openTripOnDay, selectDay, modal, dialog, portalDialog } from './trip-shared'
+import { seededTrip, ensureTransportFixtures, TRANSIT_JOURNEY, flightEmlFixture, FLIGHT_EML, FLIGHT_TO_IMPORT } from './fixtures'
+import { openTrip, openTripOnDay, selectDay, modal, dialog, portalDialog, importSteps, importTask, dismissImportTask, deleteTripFiles } from './trip-shared'
+import { ensureAirtrailConnection, disconnectAirtrail, AIRTRAIL_FLIGHTS, requireExtractor, allowEmlUploads } from './external'
 import { tripTransportsContext, tripTransportsGuides } from '../../src/help/contexts/tripTransports'
 import type { HelpGuide } from '../../src/help/types'
 
@@ -88,15 +89,53 @@ async function pickStop(page: Page, box: Locator, name: string): Promise<void> {
   await expect(box).toHaveValue(name, { timeout: 10_000 })
 }
 
-async function deleteByTitle(page: Page, ...titles: string[]): Promise<void> {
+type ReservationRow = { id: number; title: string; confirmation_number: string | null }
+
+async function deleteWhere(page: Page, matches: (r: ReservationRow) => boolean): Promise<void> {
   const { tripId } = seededTrip()
   const res = await page.request.get(`/api/trips/${tripId}/reservations`)
-  const body = (await res.json()) as { reservations?: { id: number; title: string }[] } | { id: number; title: string }[]
+  const body = (await res.json()) as { reservations?: ReservationRow[] } | ReservationRow[]
   const list = Array.isArray(body) ? body : (body.reservations ?? [])
-  for (const r of list.filter(x => titles.includes(x.title))) {
+  for (const r of list.filter(matches)) {
     await page.request.delete(`/api/trips/${tripId}/reservations/${r.id}`)
   }
 }
+
+const deleteByTitle = (page: Page, ...titles: string[]) => deleteWhere(page, r => titles.includes(r.title))
+/** The imported flight's title is the extractor's; its booking code is the fixture's. */
+const deleteByCode = (page: Page, code: string) => deleteWhere(page, r => r.confirmation_number === code)
+
+/**
+ * What import-transport-file reads out of its e-ticket. The title is the
+ * mapper's (airline and number joined), so the form and the card are checked
+ * by what the fixture owns: the code, and the two airports the built-in table
+ * resolves from their IATA codes.
+ */
+const IMPORTED = { code: FLIGHT_TO_IMPORT.code, from: /\(HND\)$/, to: /\(FRA\)$/ }
+/** The two AirportSelect boxes of a flight's form, departure first. */
+const airportBoxes = (page: Page) => modal(page).getByPlaceholder('Airport code or city (e.g. FRA)')
+
+/**
+ * What the AirTrail account holds (external.ts): two flights home on the last
+ * day that connect in Tokyo, which the picker offers to join, and the Lisbon
+ * weekend in spring for its Other flights. The joined booking's title is the
+ * mapper's route, the airport codes joined by arrows (airtrail.mapper.ts).
+ */
+const [OUT_LEG, HOME_LEG, , OTHER] = AIRTRAIL_FLIGHTS
+const JOINED = { title: `${OUT_LEG.from} → ${OUT_LEG.to} → ${HOME_LEG.to}`, layover: OUT_LEG.to }
+
+/** The toolbar's AirTrail button; its label is visible at this viewport, the title is the picker's name. */
+const airtrailButton = (page: Page) => page.getByRole('button', { name: 'AirTrail', exact: true })
+/** The flight picker is a bare portal like the booking import; its title tells it apart. */
+const airtrailPicker = (page: Page) => portalDialog(page, page.getByText('Import from AirTrail', { exact: true }))
+/** A flight's row in the picker: a button named by the airline and the flight number. */
+const flightRow = (page: Page, flightNumber: string) =>
+  airtrailPicker(page).getByRole('button', { name: new RegExp(`\\b${flightNumber}\\b`) })
+/** The join tick under a connection's legs, and the framed group it belongs to. */
+const joinToggle = (page: Page) =>
+  airtrailPicker(page).getByRole('button', { name: /^Import as one flight with a layover in / })
+const connectionGroup = (page: Page) => joinToggle(page).locator('xpath=..')
+const importCta = (page: Page) => airtrailPicker(page).getByRole('button', { name: /^Import \d+$/ })
 
 /** Give a day's legs back to the day's own mode, whichever stop carries the one that was set. */
 async function resetLegModes(page: Page, dayIndex: number): Promise<void> {
@@ -224,6 +263,57 @@ const SCRIPTS: Record<string, GuideScript> = {
       },
     ],
     cleanup: p => deleteByTitle(p, TAXI.title),
+  },
+  'import-transport-file': {
+    guide: guide('import-transport-file'),
+    // See import-booking-file: the extractor and no addon, and the mail has to
+    // be an allowed file type for the review to keep it under Files.
+    start: async p => {
+      await requireExtractor(p.request)
+      await allowEmlUploads(p.request, true)
+      await openTrip(p, { tab: 'transports' })
+    },
+    steps: [
+      ...importSteps(flightEmlFixture, FLIGHT_EML),
+      {
+        prepare: async p => {
+          await expect(importTask(p, FLIGHT_EML).getByRole('button', { name: 'Import', exact: true })).toBeVisible({ timeout: 90_000 })
+          await settle(p)
+        },
+        target: p => importTask(p, FLIGHT_EML),
+        act: async p => {
+          await importTask(p, FLIGHT_EML).getByRole('button', { name: 'Import', exact: true }).click()
+          await expect(modal(p).getByRole('heading', { name: 'Add transport' })).toBeVisible({ timeout: 20_000 })
+          await expect(modal(p).getByPlaceholder('e.g. Lufthansa LH123, Hotel Adlon, ...')).toHaveValue(/203/)
+          // Both airports came out of the built-in table by their codes: the
+          // airport boxes are the two with an airport code in brackets.
+          await expect(airportBoxes(p).nth(0)).toHaveValue(IMPORTED.from)
+          await expect(airportBoxes(p).nth(1)).toHaveValue(IMPORTED.to)
+          await expect(modal(p).getByPlaceholder('e.g. ABC12345')).toHaveValue(IMPORTED.code)
+          await expect(modal(p).getByText(FLIGHT_EML)).toBeVisible()
+          await settle(p)
+        },
+      },
+      {
+        target: dialog,
+        act: async p => {
+          await modal(p).getByRole('button', { name: 'Add', exact: true }).click()
+          await expect(modal(p)).toHaveCount(0, { timeout: 20_000 })
+          await expect(card(p, IMPORTED.code)).toBeVisible({ timeout: 20_000 })
+          await settle(p)
+        },
+      },
+    ],
+    cleanup: async p => {
+      await closeModal(p)
+      await dismissImportTask(p, FLIGHT_EML)
+      await allowEmlUploads(p.request, false)
+      await p.evaluate(() => {
+        try { localStorage.removeItem('trek.bg-import-tasks') } catch { /* nothing was stored */ }
+      })
+      await deleteByCode(p, IMPORTED.code)
+      await deleteTripFiles(p, FLIGHT_EML)
+    },
   },
   'plan-transit': {
     guide: guide('plan-transit'),
@@ -451,6 +541,81 @@ const SCRIPTS: Record<string, GuideScript> = {
       await p.evaluate(id => {
         try { localStorage.removeItem(`trek:visible-connections:${id}`) } catch { /* nothing was stored */ }
       }, tripId)
+    },
+  },
+  'airtrail-import': {
+    guide: guide('airtrail-import'),
+    // The connection is made here and taken away in cleanup, so the hero and
+    // the guides before this one keep a toolbar without the AirTrail button.
+    start: async p => {
+      await ensureAirtrailConnection(p.request)
+      await openTrip(p, { tab: 'transports' })
+      // The addon list and the connection probe are read once, when the app
+      // loads. One more load now that the connection exists, and the button
+      // is waited for, so a missing connection fails here and not at step 1.
+      await p.reload()
+      await expect(p.getByRole('button', { name: 'Share', exact: true })).toBeVisible({ timeout: 30_000 })
+      await expect(airtrailButton(p)).toBeVisible({ timeout: 30_000 })
+      await settle(p)
+    },
+    steps: [
+      {
+        target: airtrailButton,
+        act: async p => {
+          await airtrailButton(p).click()
+          await expect(airtrailPicker(p)).toBeVisible()
+          // The rows come from the AirTrail instance itself, over the LAN.
+          await expect(flightRow(p, HOME_LEG.flightNumber)).toBeVisible({ timeout: 30_000 })
+          await expect(flightRow(p, OTHER.flightNumber)).toBeVisible()
+          await settle(p)
+        },
+      },
+      // The whole picker: During this trip with its ticked rows, Other flights below.
+      only(airtrailPicker),
+      // A row under Other flights, unticked, as the text says those are. Not
+      // clicked: a spring flight imported into an autumn trip would be clamped
+      // onto day 1 and spoil the result picture.
+      only(p => flightRow(p, OTHER.flightNumber)),
+      {
+        // Joined by default: the tick under the two legs is on before anyone touches it.
+        prepare: async p => {
+          await expect(joinToggle(p)).toContainText(`Import as one flight with a layover in ${JOINED.layover}`)
+          await expect(joinToggle(p).locator('svg.lucide-check')).toBeVisible()
+        },
+        target: connectionGroup,
+      },
+      {
+        // The two flights home and nothing else are ticked.
+        prepare: async p => {
+          await expect(importCta(p)).toHaveText('Import 2')
+        },
+        target: importCta,
+        act: async p => {
+          await importCta(p).click()
+          await expect(p.getByText('Import from AirTrail', { exact: true })).toHaveCount(0, { timeout: 30_000 })
+          // The toast counts flight ids, so the joined pair reports two.
+          const toast = p.getByText('2 flight(s) imported', { exact: true })
+          await expect(toast).toBeVisible({ timeout: 15_000 })
+          await expect(card(p, JOINED.title)).toBeVisible({ timeout: 20_000 })
+          // The toast fades after three seconds; the card's picture and the
+          // result are taken without a half-faded message in the corner.
+          await expect(toast).toHaveCount(0, { timeout: 10_000 })
+          await settle(p)
+        },
+      },
+      {
+        prepare: async p => {
+          await expect(card(p, JOINED.title).getByText('AirTrail', { exact: true })).toBeVisible()
+        },
+        target: p => card(p, JOINED.title),
+      },
+    ],
+    cleanup: async p => {
+      // By every title the import can produce: the joined route, or one
+      // flight number per card when the join was off.
+      await deleteByTitle(p, JOINED.title, ...AIRTRAIL_FLIGHTS.map(f => f.flightNumber))
+      await disconnectAirtrail(p.request)
+      await p.evaluate(() => { try { sessionStorage.clear() } catch { /* a locked-down browser keeps its filters */ } })
     },
   },
 }

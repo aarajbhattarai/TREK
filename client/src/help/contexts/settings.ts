@@ -29,7 +29,7 @@ export const settingsGuides: HelpGuide[] = [
   guide('readability', 'settings-appearance', 'eye', 'quick', 2, 2, { slug: APPEARANCE }, ['theme-scheme'], false),
   guide('dashboard-widgets', 'settings-appearance', 'layout', 'quick', 2, 2, { slug: APPEARANCE }, ['theme-scheme'], false),
   // Map
-  guide('map-provider', 'settings-map', 'map', 'guide', 3, 2, { slug: MAP }, ['travel-map-prefs'], false),
+  guide('map-provider', 'settings-map', 'map', 'guide', 3, 2, { slug: MAP }, ['travel-map-prefs', 'map-compass'], false),
   // Notifications
   guide('notification-channels', 'settings-notifications', 'bell', 'guide', 3, 2, { slug: NOTIFICATIONS, anchor: 'notification-channels' }, [], false),
   // Integrations

@@ -1,6 +1,6 @@
 import { expect, type Locator, type Page } from '@playwright/test'
 import { clearNotices } from '../screenshots/shot'
-import { dismissReleaseNotice, settle } from './guide'
+import { dismissReleaseNotice, settle, type StepAction } from './guide'
 import { seededTrip } from './fixtures'
 
 /**
@@ -90,4 +90,85 @@ export async function openTripOnDay(page: Page, n = 1): Promise<void> {
 export async function closeMenu(page: Page): Promise<void> {
   await page.evaluate(() => document.body.click())
   await settle(page)
+}
+
+// ── Import from file ──────────────────────────────────────────────────────────
+
+/**
+ * Import from file, on the Bookings and the Transports tab alike. The dialog
+ * is another bare portal, told apart by its heading; the parse it starts is
+ * reported by the background widget, a fixed portal in the bottom-right
+ * corner (the one at z-index 50000) with a card per run.
+ */
+export const importDialog = (page: Page) =>
+  portalDialog(page, page.getByText('Import booking confirmations', { exact: true }))
+export const importWidget = (page: Page) => page.locator('body > div[style*="z-index: 50000"]')
+/** The widget's card for the run that parses `file`; the card is labelled with the file names. */
+export const importTask = (page: Page, file: string) =>
+  importWidget(page).locator('.bg-surface-card').filter({ hasText: file }).last()
+
+/**
+ * The first three steps of an import guide, the same on either tab: the
+ * toolbar button, the drop box with the file named on it, and Import.
+ */
+export function importSteps(fixture: () => string, file: string): StepAction[] {
+  return [
+    {
+      target: p => p.getByRole('button', { name: 'Import from file' }),
+      act: async p => {
+        await p.getByRole('button', { name: 'Import from file' }).click()
+        await expect(importDialog(p)).toBeVisible()
+        await settle(p)
+      },
+    },
+    {
+      prepare: async p => {
+        // Set the hidden input directly: the box opens the file picker of the
+        // operating system, which Playwright cannot photograph.
+        await importDialog(p).locator('input[type="file"]').setInputFiles(fixture())
+        await expect(importDialog(p).getByText(file)).toBeVisible()
+        await settle(p)
+      },
+      target: p => importDialog(p).getByText(file).locator('xpath=ancestor::button[1]'),
+      act: settle,
+    },
+    {
+      target: p => importDialog(p).getByRole('button', { name: 'Import', exact: true }),
+      act: async p => {
+        await importDialog(p).getByRole('button', { name: 'Import', exact: true }).click()
+        await expect(importDialog(p)).toHaveCount(0, { timeout: 20_000 })
+        await settle(p)
+      },
+    },
+  ]
+}
+
+/**
+ * Put the widget away after an import guide. The review takes the card with
+ * it when it starts, so one still standing means the run stopped before
+ * that, and it would sit in the corner of every later guide's pictures. Close
+ * is only offered once the parse has stopped, and the wait is bounded so a
+ * card nobody can close does not fail the guide from its cleanup.
+ */
+export async function dismissImportTask(page: Page, file: string): Promise<void> {
+  const task = importTask(page, file)
+  if (!(await task.isVisible().catch(() => false))) return
+  const close = task.getByRole('button', { name: 'Close' })
+  await close.waitFor({ state: 'visible', timeout: 45_000 }).catch(() => {})
+  if (await close.isVisible().catch(() => false)) await close.click()
+}
+
+/**
+ * Take a document a guide uploaded out of the trip for good. DELETE alone is
+ * the trash, and the Files guides photograph the trash, so the permanent
+ * delete follows.
+ */
+export async function deleteTripFiles(page: Page, ...names: string[]): Promise<void> {
+  const { tripId } = seededTrip()
+  const res = await page.request.get(`/api/trips/${tripId}/files`)
+  const { files = [] } = (await res.json()) as { files?: { id: number; original_name: string }[] }
+  for (const file of files.filter(f => names.includes(f.original_name))) {
+    await page.request.delete(`/api/trips/${tripId}/files/${file.id}`)
+    await page.request.delete(`/api/trips/${tripId}/files/${file.id}/permanent`)
+  }
 }

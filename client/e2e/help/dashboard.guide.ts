@@ -1,6 +1,7 @@
 import { test, expect, type Page } from '@playwright/test'
 import { clearNotices } from '../screenshots/shot'
 import { captureGuide, captureHero, dismissReleaseNotice, beat, typeInto, settle, VIEWPORT, type GuideScript } from './guide'
+import { monthName, monthsAhead, pickerLabelOn } from '../dates'
 import { ensureExtraTrips, coverFixture, card, EXTRA_TRIPS } from './fixtures'
 import { dashboardGuides, dashboardContext } from '../../src/help/contexts/dashboard'
 import type { HelpGuide } from '../../src/help/types'
@@ -56,6 +57,9 @@ async function pickDate(page: Page, trigger: ReturnType<Page['getByRole']>, mont
 /** Hover-revealed action on a card. */
 const cardAction = (page: Page, title: string, name: string) => card(page, title).locator(`.trip-action-btn[aria-label="${name}"]`)
 
+/** The trip the create guide makes, eight months out, named after the month it lands in. */
+const NEW_TRIP = `Amalfi Coast in ${monthName(8)}`
+
 const SCRIPTS: Record<string, GuideScript> = {
   'create-trip': {
     guide: guide('create-trip'),
@@ -67,15 +71,15 @@ const SCRIPTS: Record<string, GuideScript> = {
       },
       {
         target: p => titleField(p),
-        act: async p => { await typeInto(p, titleField(p), 'Amalfi Coast in May') },
+        act: async p => { await typeInto(p, titleField(p), NEW_TRIP) },
       },
       {
         target: p => datePicker(p, 'Start Date'),
         act: async p => {
-          await pickDate(p, datePicker(p, 'Start Date'), 8, 'May 8, 2027')
+          await pickDate(p, datePicker(p, 'Start Date'), 8, pickerLabelOn(monthsAhead(8, 8)))
           await beat(p, 500)
           // The end date follows the start date, so its calendar already opens on May.
-          await pickDate(p, datePicker(p, 'End Date'), 0, 'May 15, 2027')
+          await pickDate(p, datePicker(p, 'End Date'), 0, pickerLabelOn(monthsAhead(8, 15)))
         },
       },
       {
@@ -85,7 +89,7 @@ const SCRIPTS: Record<string, GuideScript> = {
         target: p => modal(p).getByRole('button', { name: 'Create New Trip' }),
         act: async p => {
           await modal(p).getByRole('button', { name: 'Create New Trip' }).click()
-          await expect(card(p, 'Amalfi Coast in May')).toBeVisible({ timeout: 15_000 })
+          await expect(card(p, NEW_TRIP)).toBeVisible({ timeout: 15_000 })
         },
       },
     ],
@@ -213,18 +217,18 @@ const SCRIPTS: Record<string, GuideScript> = {
     guide: guide('delete-trip'),
     start: async p => {
       await openDashboard(p)
-      await expect(card(p, 'Amalfi Coast in May')).toBeVisible()
+      await expect(card(p, NEW_TRIP)).toBeVisible()
     },
     steps: [
       {
-        target: p => cardAction(p, 'Amalfi Coast in May', 'Delete'),
-        act: async p => { await cardAction(p, 'Amalfi Coast in May', 'Delete').click() },
+        target: p => cardAction(p, NEW_TRIP, 'Delete'),
+        act: async p => { await cardAction(p, NEW_TRIP, 'Delete').click() },
       },
       {
         target: p => dialog(p).getByRole('button', { name: 'Delete', exact: true }),
         act: async p => {
           await dialog(p).getByRole('button', { name: 'Delete', exact: true }).click()
-          await expect(card(p, 'Amalfi Coast in May')).toBeHidden({ timeout: 15_000 })
+          await expect(card(p, NEW_TRIP)).toBeHidden({ timeout: 15_000 })
         },
       },
     ],

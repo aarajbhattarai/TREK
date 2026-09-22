@@ -4,7 +4,7 @@ import {
   Repeat, UserPlus, Share2, Globe, MapPin, Search, Star, Eye, LandPlot, BarChart3, MinusCircle, Landmark,
   DownloadCloud, CheckCircle2, PanelRight, Tags, Upload, FileInput, Library, Bookmark, BookOpen, Sparkles, ThumbsUp, Images, Link,
   Book, Palette, Map, Bell, Plug, CloudOff, User, Lock, ShieldCheck, Fingerprint, KeyRound,
-  Route, Users, UserRound, Crown, PanelLeftClose, Undo2, Ticket, Train, ListChecks, Wallet, FolderOpen, MessagesSquare,
+  Route, Users, UserRound, Crown, PanelLeftClose, Undo2, Ticket, Train, Plane, ListChecks, Wallet, FolderOpen, MessagesSquare,
   type LucideIcon,
 } from 'lucide-react'
 import type { HelpIcon } from '../../help/types'
@@ -78,6 +78,7 @@ const ICONS: Record<HelpIcon, LucideIcon> = {
   undo: Undo2,
   ticket: Ticket,
   train: Train,
+  plane: Plane,
   listChecks: ListChecks,
   wallet: Wallet,
   folder: FolderOpen,

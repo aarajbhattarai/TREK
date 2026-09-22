@@ -21,6 +21,15 @@ const WEB_PORT = Number(process.env.E2E_WEB_PORT) || 5173
 const API_PORT = Number(process.env.E2E_API_PORT) || 3001
 export const E2E_BASE_URL = `http://localhost:${WEB_PORT}`
 
+// The day the seed and the pictures are relative to (e2e/dates.ts). Fixed here
+// for every project and worker that loads this file, so a run that crosses
+// midnight still agrees with itself; `help:media` sets it before this runs.
+if (!process.env.E2E_PICTURE_DAY) {
+  const d = new Date()
+  const pad = (n: number) => String(n).padStart(2, '0')
+  process.env.E2E_PICTURE_DAY = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}
+
 export default defineConfig({
   testDir: './e2e',
   fullyParallel: false,
@@ -84,6 +93,11 @@ export default defineConfig({
       timeout: 240_000,
       use: {
         ...devices['Desktop Chrome'],
+        // The full Chrome for Testing build rather than the headless shell the
+        // other projects run on. Only the full build carries the PDF viewer,
+        // and the Files tab's preview embeds a PDF as <object>, which the
+        // shell leaves as a "Download PDF" link. Still headless.
+        channel: 'chromium',
         storageState: 'e2e/.tmp/state.json',
         viewport: { width: 1920, height: 1080 },
         deviceScaleFactor: 2,

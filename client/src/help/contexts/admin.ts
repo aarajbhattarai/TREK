@@ -44,7 +44,8 @@ export const adminGuides: HelpGuide[] = [
   guide('places-transit', 'admin-settings', 'search', 'quick', 2, 2, { slug: 'Places-and-Search' }, ['instance-keys']),
   guide('file-types', 'admin-settings', 'fileInput', 'quick', 1, 1, { slug: 'Documents-and-Files' }, ['storage-backends']),
   // Addons
-  guide('toggle-addon', 'admin-addons', 'sliders', 'quick', 2, 2, { slug: ADDONS }, ['install-plugin']),
+  guide('toggle-addon', 'admin-addons', 'sliders', 'quick', 2, 2, { slug: ADDONS }, ['install-plugin', 'document-providers']),
+  guide('document-providers', 'admin-addons', 'plug', 'quick', 2, 2, { slug: 'Document-Sync', anchor: 'switching-stores-on' }, ['toggle-addon', 'files-sync']),
   // Plugins
   guide('install-plugin', 'admin-plugins', 'plug', 'guide', 3, 2, { slug: PLUGINS }, ['toggle-addon']),
   // Storage

@@ -1,5 +1,6 @@
 import { test, expect, type Page, type Locator } from '@playwright/test'
 import { captureGuide, captureHero, beat, typeInto, settle, VIEWPORT, type GuideScript } from './guide'
+import { pickerLabel } from '../dates'
 import { seededTrip, ensureListsFixtures } from './fixtures'
 import { openTrip, modal } from './trip-shared'
 import { tripListsContext, tripListsGuides } from '../../src/help/contexts/tripLists'
@@ -36,7 +37,7 @@ const OTHER_TASK_LIST = 'Before departure'
 const EDITED_TASK = 'Activate JR Pass'
 const ASSIGNEE = 'jonas'
 /** The date picker labels a day cell with the whole date, in the run's English. */
-const DUE_DAY = 'September 25, 2026'
+const DUE_DAY = pickerLabel(4)
 /** The fixtures' template, and the lists it brings with it. */
 const TEMPLATE = { name: 'Japan autumn basics', category: 'Rain kit', items: ['Umbrella', 'Quick-dry towel', 'Dry bag', 'SIM card', 'Plug adapter'] }
 const IMPORT_LINES = 'Toiletries, Toothbrush\nToiletries, Sunscreen, 90\nHealth, Plasters, 30'

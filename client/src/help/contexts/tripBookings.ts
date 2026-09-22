@@ -30,7 +30,7 @@ export const { context: tripBookingsContext, guides: tripBookingsGuides } = defi
     ['booking-files', 'folder', 'guide', 4, 3, { slug: 'Documents-and-Files', anchor: 'linking-files-to-places-reservations-or-assignments' }, ['create-booking', 'import-booking-file', 'files-link']],
     ['booking-cost', 'coins', 'guide', 5, 3, { slug: 'Budget-Tracking', anchor: 'expenses-linked-to-a-booking-or-a-place' }, ['create-booking', 'edit-booking', 'expense-from-booking'], true],
     ['filter-bookings', 'filter', 'quick', 5, 2, SECTIONS, ['booking-travelers', 'edit-booking']],
-    ['import-booking-file', 'fileInput', 'guide', 4, 3, IMPORT, ['booking-files', 'create-booking']],
+    ['import-booking-file', 'fileInput', 'guide', 5, 3, IMPORT, ['booking-files', 'create-booking', 'import-transport-file'], true],
     ['edit-booking', 'pencil', 'quick', 4, 3, CHANGE, ['create-booking', 'delete-booking']],
     ['delete-booking', 'trash', 'quick', 3, 2, CHANGE, ['edit-booking', 'booking-hotel']],
   ],

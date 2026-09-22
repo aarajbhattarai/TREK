@@ -1,4 +1,5 @@
 import { expect, type Locator, type Page } from '@playwright/test'
+import { PICTURE_DAY_ISO } from '../dates'
 import { mkdirSync } from 'node:fs'
 import path from 'node:path'
 import type { HelpGuide } from '../../src/help/types'
@@ -30,17 +31,18 @@ export const OUT_DIR = path.join(process.cwd(), 'e2e', '.tmp', 'help-media')
 export const VIEWPORT = { width: 1920, height: 1080 }
 
 /**
- * The day every picture is taken on.
+ * The instant every picture is taken at: nine in the morning, UTC, on the
+ * picture day (`e2e/dates.ts`), which is the seeded trip's last day.
  *
- * The seeded trip runs to 2026-09-21, and a picture of it has to look the same
- * whoever runs this and whenever: a day later the trip is over, My Trips moves
- * it out of the boarding pass and into the grid, What's Next has nothing left
- * to list, and the forecast for a day in the past is not a forecast. Only the
- * browser's `Date` is pinned, so timers keep running and nothing that waits
- * stops waiting; the server keeps its own clock, which none of the pictures
- * read.
+ * A picture has to look the same whoever runs this and whenever, and the seed
+ * is relative to that day, so the browser's clock is pinned to it: were it
+ * left on the wall clock, a run late in the evening would see the trip's last
+ * stops in the past, and What's Next would have nothing left to list. Only
+ * the browser's `Date` is pinned, so timers keep running and nothing that
+ * waits stops waiting; the server keeps its own clock, which none of the
+ * pictures read.
  */
-export const PICTURE_DAY = new Date('2026-09-21T09:00:00.000Z')
+export const PICTURE_DAY = new Date(`${PICTURE_DAY_ISO}T09:00:00.000Z`)
 
 /** Put the page on the day the pictures are taken on. Call before navigating. */
 async function pinClock(page: Page): Promise<void> {

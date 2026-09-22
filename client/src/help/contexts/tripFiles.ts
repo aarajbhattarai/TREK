@@ -24,5 +24,8 @@ export const { context: tripFilesContext, guides: tripFilesGuides } = defineScre
     ['files-filter', 'filter', 'quick', 4, 2, { slug: FILES, anchor: 'browsing-and-filtering' }, ['files-star', 'files-preview']],
     ['files-preview', 'eye', 'guide', 5, 3, { slug: FILES, anchor: 'previewing-files' }, ['files-filter', 'files-upload']],
     ['files-trash', 'trash', 'guide', 5, 3, { slug: FILES, anchor: 'trash' }, ['files-upload', 'files-star'], true],
+    // Last: the one guide of this screen that needs a document store on the
+    // network; a missing one fails this picture and none of the others.
+    ['files-sync', 'repeat', 'guide', 6, 3, { slug: 'Document-Sync', anchor: 'binding-a-trip' }, ['files-upload', 'document-providers'], true],
   ],
 })

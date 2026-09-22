@@ -96,6 +96,7 @@ export type HelpIcon =
   | 'undo'
   | 'ticket'
   | 'train'
+  | 'plane'
   | 'listChecks'
   | 'wallet'
   | 'folder'
