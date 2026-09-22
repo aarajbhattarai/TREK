@@ -164,11 +164,17 @@ const SCRIPTS: Record<string, GuideScript> = {
       },
     ],
     cleanup: async p => {
-      // Drop the copy over the API so the grid is back to the seed for the next guide.
+      // Drop the copy over the API so the grid is back to the seed for the next
+      // guide. By title, not by position: the list came back in an order that
+      // left the copy standing, and a trip nobody expected then broke a guide
+      // three files later, in a screen that has nothing to do with this one.
       const res = await p.request.get('/api/trips')
-      const { trips } = (await res.json()) as { trips: { id: number; title: string }[] }
-      const copies = trips.filter(t => t.title.startsWith(LISBON)).slice(1)
-      for (const t of copies) await p.request.delete(`/api/trips/${t.id}`)
+      const body = (await res.json()) as { trips?: { id: number; title: string }[] } | { id: number; title: string }[]
+      const trips = Array.isArray(body) ? body : (body.trips ?? [])
+      for (const t of trips.filter(x => x.title !== LISBON && x.title.startsWith(LISBON))) {
+        const dropped = await p.request.delete(`/api/trips/${t.id}`)
+        if (!dropped.ok()) throw new Error(`could not drop the copy "${t.title}": ${dropped.status()}`)
+      }
     },
   },
 

@@ -147,7 +147,9 @@ const SCRIPTS: Record<string, GuideScript> = {
         act: async p => {
           await typeInto(p, dialog(p).locator('input').first(), 'Lisbon weekend')
           await typeInto(p, dialog(p).locator('input').nth(1), 'Two days of tiles and custard tarts')
-          await dialog(p).getByRole('checkbox').filter({ hasText: 'Weekend in Lisbon' }).click()
+          // By accessible name, not by a substring: a copy of the trip made by
+          // another screen's guide is also "Weekend in Lisbon something".
+          await dialog(p).getByRole('checkbox', { name: /^Weekend in Lisbon \d+ days/ }).click()
           await beat(p, 400)
         },
       },
