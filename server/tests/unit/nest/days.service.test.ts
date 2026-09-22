@@ -65,7 +65,6 @@ import { QueryHelpersService } from '../../../src/nest/query-helpers/query-helpe
 import { makeAccommodationsService } from '../../helpers/accommodations-service';
 import type { Day } from '../../../src/types';
 import { createTestUnitOfWork } from '../../helpers/test-uow';
-import { UnitOfWork } from '../../../src/nest/database/unit-of-work';
 
 let svc: DaysService;
 beforeAll(async () => {

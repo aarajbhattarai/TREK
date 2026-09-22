@@ -86,8 +86,6 @@ import { TokensModule } from '../../src/nest/tokens/tokens.module';
 import { PublicStatsController } from '../../src/nest/atlas/public-stats.controller';
 import { AtlasService } from '../../src/nest/atlas/atlas.service';
 import { TrekExceptionFilter } from '../../src/nest/common/trek-exception.filter';
-import { createTestUnitOfWork } from '../helpers/test-uow';
-import { UnitOfWork } from '../../src/nest/database/unit-of-work';
 import { TestUnitOfWorkModule } from '../helpers/test-uow';
 
 /** Mints a token the way TokenService does, so the guard's hash lookup is real. */

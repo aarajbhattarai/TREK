@@ -86,8 +86,8 @@ function parseArgs(argv) {
     else if (a === '--json') opts.json = true;
     else if (a === '--domains') opts.domains = splitDomains(argv[++i]);
     else if (a.startsWith('--domains=')) opts.domains = splitDomains(a.slice('--domains='.length));
-    // --root is intentionally undocumented: it exists so the __fixtures__ suite can point
-    // the whole analysis at a tiny sample tree instead of server/src.
+    // --root is intentionally undocumented: it exists so tests/unit/scripts/db-call-graph.test.ts
+    // can point the whole analysis at a tiny sample tree instead of server/src.
     else if (a === '--root') opts.root = argv[++i];
     else if (a.startsWith('--root=')) opts.root = a.slice('--root='.length);
     else if (a === '--help' || a === '-h') opts.help = true;

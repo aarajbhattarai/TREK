@@ -61,7 +61,6 @@ import { makeNotificationsService, makeNotificationPreferencesService } from '..
 import { EphemeralTokenService } from '../../../src/nest/auth/ephemeral-token.service';
 import { AllowedFileTypesService } from '../../../src/nest/files/allowed-file-types.service';
 import { createTestUnitOfWork } from '../../helpers/test-uow';
-import { UnitOfWork } from '../../../src/nest/database/unit-of-work';
 
 const dbs = new DatabaseService(testDb);
 const realtime = new RealtimeService();

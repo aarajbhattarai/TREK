@@ -88,7 +88,6 @@ import type { CollabService } from '../../../src/nest/collab/collab.service';
 import { AddonsService } from '../../../src/nest/addons/addons.service';
 import { notificationsStub } from '../../helpers/notifications';
 import { createTestUnitOfWork } from '../../helpers/test-uow';
-import { UnitOfWork } from '../../../src/nest/database/unit-of-work';
 
 // The trip-summary prompt moved to the DI-discovered TripsMcp — its cases below
 // exercise it through a hand-built registry over a stub TripsService whose

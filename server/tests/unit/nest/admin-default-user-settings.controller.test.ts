@@ -80,4 +80,15 @@ describe('AdminDefaultUserSettingsController', () => {
   it('DEFAULTS-005 the class is listed in its module controllers', () => {
     expectRegisteredController(SettingsModule, AdminDefaultUserSettingsController);
   });
+
+  it('DEFAULTS-006 a rejected read-back after a successful write is still a 400, not a 500', async () => {
+    const { c, settings } = controller({
+      getAdminUserDefaults: vi.fn(() => Promise.reject(new Error('read-back failed'))),
+    } as Partial<SettingsService>);
+    expect(await thrown(() => c.update(user, { theme: 'light' } as never, req))).toEqual({
+      status: 400,
+      body: { error: 'read-back failed' },
+    });
+    expect(settings.setAdminUserDefaults).toHaveBeenCalledWith({ theme: 'light' });
+  });
 });

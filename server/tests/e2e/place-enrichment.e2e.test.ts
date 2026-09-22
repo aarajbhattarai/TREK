@@ -37,8 +37,6 @@ import { DatabaseModule } from '../../src/nest/database/database.module';
 import { RateLimitService } from '../../src/nest/common/rate-limit.service';
 import { TrekExceptionFilter } from '../../src/nest/common/trek-exception.filter';
 import { ZodValidationPipe } from '../../src/nest/common/zod-validation.pipe';
-import { createTestUnitOfWork } from '../helpers/test-uow';
-import { UnitOfWork } from '../../src/nest/database/unit-of-work';
 import { TestUnitOfWorkModule } from '../helpers/test-uow';
 
 const BODY = { lat: 50.9, lng: 6.96, name: 'Museum Ludwig', placeId: 'way:12345' };

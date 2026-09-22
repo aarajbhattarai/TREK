@@ -33,6 +33,7 @@ import { authCookie } from '../helpers/auth';
 import { SYSTEM_NOTICES } from '../../src/systemNotices/registry';
 import { getCurrentAppVersion } from '../../src/systemNotices/service';
 import type { SystemNotice } from '../../src/systemNotices/types';
+import { ADDON_IDS } from '../../src/addons';
 
 let nestApp: INestApplication;
 let app: Application;
@@ -46,6 +47,21 @@ const TEST_NOTICE: SystemNotice = {
   bodyKey: 'system_notice.test_first_login_notice.body',
   dismissible: true,
   conditions: [{ kind: 'firstLogin' }],
+  publishedAt: '2026-01-01T00:00:00Z',
+  priority: 0,
+};
+
+// Test notice gated on an addon, so the addonFlags lookup in getActiveNoticesFor
+// (built once per call from every addonEnabled condition in SYSTEM_NOTICES) is
+// exercised for both the enabled and the disabled case.
+const TEST_NOTICE_ADDON: SystemNotice = {
+  id: 'test-addon-notice',
+  display: 'modal',
+  severity: 'info',
+  titleKey: 'system_notice.test_addon_notice.title',
+  bodyKey: 'system_notice.test_addon_notice.body',
+  dismissible: true,
+  conditions: [{ kind: 'addonEnabled', addonId: ADDON_IDS.JOURNEY }],
   publishedAt: '2026-01-01T00:00:00Z',
   priority: 0,
 };
@@ -115,6 +131,31 @@ describe('GET /api/system-notices/active', () => {
       expect(testNotice.maxVersion).toBeUndefined();
     } finally {
       const idx = SYSTEM_NOTICES.indexOf(TEST_NOTICE);
+      if (idx !== -1) SYSTEM_NOTICES.splice(idx, 1);
+    }
+  });
+
+  it('an addonEnabled-gated notice appears only while the addon is on', async () => {
+    SYSTEM_NOTICES.push(TEST_NOTICE_ADDON);
+    try {
+      const { user } = createUser(testDb);
+      testDb.prepare('UPDATE addons SET enabled = 0 WHERE id = ?').run(ADDON_IDS.JOURNEY);
+
+      const off = await request(app)
+        .get('/api/system-notices/active')
+        .set('Cookie', authCookie(user.id));
+      expect(off.status).toBe(200);
+      expect(off.body.find((n: { id: string }) => n.id === TEST_NOTICE_ADDON.id)).toBeUndefined();
+
+      testDb.prepare('UPDATE addons SET enabled = 1 WHERE id = ?').run(ADDON_IDS.JOURNEY);
+
+      const on = await request(app)
+        .get('/api/system-notices/active')
+        .set('Cookie', authCookie(user.id));
+      expect(on.status).toBe(200);
+      expect(on.body.find((n: { id: string }) => n.id === TEST_NOTICE_ADDON.id)).toBeDefined();
+    } finally {
+      const idx = SYSTEM_NOTICES.indexOf(TEST_NOTICE_ADDON);
       if (idx !== -1) SYSTEM_NOTICES.splice(idx, 1);
     }
   });

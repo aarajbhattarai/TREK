@@ -107,7 +107,6 @@ import { AllowedFileTypesService } from '../../../src/nest/files/allowed-file-ty
 import { OidcService } from '../../../src/nest/oidc/oidc.service';
 import { MailerService } from '../../../src/nest/notifications/mailer/mailer.service';
 import { createTestUnitOfWork } from '../../helpers/test-uow';
-import { UnitOfWork } from '../../../src/nest/database/unit-of-work';
 
 // MailerService is injected since the notifications fold — a stub instead of a
 // module mock. sendPasswordResetEmail is the only thing auth reaches for.

@@ -68,7 +68,6 @@ import type { AssignmentsService } from '../../../src/nest/assignments/assignmen
 import type { PermissionsService } from '../../../src/nest/permissions/permissions.service';
 import type { JourneyDomainService } from '../../../src/nest/journey/journey-domain.service';
 import { createTestUnitOfWork } from '../../helpers/test-uow';
-import { UnitOfWork } from '../../../src/nest/database/unit-of-work';
 
 // ── Collaborator stubs ───────────────────────────────────────────────────────
 //

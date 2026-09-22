@@ -49,7 +49,6 @@ import { PermissionsService } from '../../../src/nest/permissions/permissions.se
 import { TodoService } from '../../../src/nest/todo/todo.service';
 import { RealtimeService } from '../../../src/nest/realtime/realtime.service';
 import { createTestUnitOfWork } from '../../helpers/test-uow';
-import { UnitOfWork } from '../../../src/nest/database/unit-of-work';
 
 let svc: TodoService;
 beforeAll(async () => {

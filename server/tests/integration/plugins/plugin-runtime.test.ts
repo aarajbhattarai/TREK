@@ -208,7 +208,7 @@ describe('PluginRuntimeService (M2 end-to-end)', () => {
 
     // erasure: enqueue (durable) + drain → the plugin deletes its rows and the queue clears
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (runtime as any).enqueueUserErasure(5);
+    await (runtime as any).enqueueUserErasure(5);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await (runtime as any).drainUserErasures();
     expect(testDb.prepare("SELECT COUNT(*) c FROM plugin_user_erasure_queue WHERE plugin_id='gdpr'").get()).toMatchObject({ c: 0 });
@@ -245,7 +245,7 @@ describe('PluginRuntimeService (M2 end-to-end)', () => {
     // granted the hook but NOT active → enqueue keeps the row, drain leaves it
     testDb.prepare("INSERT INTO plugins (id, status, permissions, config) VALUES ('offliner','inactive','[\"db:own\",\"hook:user-data\"]','{}')").run();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (runtime as any).enqueueUserErasure(9);
+    await (runtime as any).enqueueUserErasure(9);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await (runtime as any).drainUserErasures();
     expect(testDb.prepare("SELECT COUNT(*) c FROM plugin_user_erasure_queue WHERE plugin_id='offliner' AND user_id=9").get()).toMatchObject({ c: 1 });

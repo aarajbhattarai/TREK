@@ -56,8 +56,6 @@ import { OauthService } from '../../src/nest/oauth/oauth.service';
 import { AddonsService } from '../../src/nest/addons/addons.service';
 import { DatabaseModule } from '../../src/nest/database/database.module';
 import { TrekExceptionFilter } from '../../src/nest/common/trek-exception.filter';
-import { createTestUnitOfWork } from '../helpers/test-uow';
-import { UnitOfWork } from '../../src/nest/database/unit-of-work';
 import { TestUnitOfWorkModule } from '../helpers/test-uow';
 
 describe('OAuth e2e (real guards + temp SQLite)', () => {

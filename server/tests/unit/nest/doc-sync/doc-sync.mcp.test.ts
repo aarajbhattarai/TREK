@@ -59,7 +59,7 @@ function makeMcp(over: Partial<Setup> = {}) {
     retryShelvedItems: vi.fn(),
     isSwitchedOff: vi.fn((l: LinkRow) => setup.off.includes(l.id)),
   };
-  const addons = { isAddonEnabled: vi.fn(() => setup.addonOn) };
+  const addons = { isAddonEnabled: vi.fn(() => Promise.resolve(setup.addonOn)) };
   const mcp = new DocSyncMcp(
     config as unknown as DocSyncConfigService,
     sync as unknown as DocSyncService,
@@ -115,15 +115,15 @@ describe('DocSyncMcp surface', () => {
     expect([...new Set(fields)].sort()).toEqual(['full', 'tripId']);
   });
 
-  it.each(registeredMethods())('%s disappears while the documents addon is off', (method) => {
+  it.each(registeredMethods())('%s disappears while the documents addon is off', async (method) => {
     const { mcp, addons } = makeMcp({ addonOn: false });
     const { when } = toolOptions(method);
     expect(typeof when).toBe('function');
-    expect(when?.(ctx, mcp)).toBe(false);
+    await expect(when?.(ctx, mcp)).resolves.toBe(false);
     expect(addons.isAddonEnabled).toHaveBeenCalledWith(ADDON_IDS.DOCUMENTS);
 
-    addons.isAddonEnabled.mockReturnValue(true);
-    expect(when?.(ctx, mcp)).toBe(true);
+    addons.isAddonEnabled.mockResolvedValue(true);
+    await expect(when?.(ctx, mcp)).resolves.toBe(true);
   });
 
   it.each([

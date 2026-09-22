@@ -56,7 +56,6 @@ import { PlacePhotoCacheService } from '../../../src/nest/place-photos/place-pho
 import { makeStorageFixture } from '../../helpers/storage-fixture';
 import { notificationsStub } from '../../helpers/notifications';
 import { createTestUnitOfWork } from '../../helpers/test-uow';
-import { UnitOfWork } from '../../../src/nest/database/unit-of-work';
 
 const storageFx = makeStorageFixture('');
 let svc: CollectionsService;

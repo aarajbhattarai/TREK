@@ -74,7 +74,7 @@ describe('IdempotencyCleanupJob', () => {
     return { job, registrar };
   }
 
-  it('registers the nightly 3 AM cron, and stays out of the registry under the test gate', () => {
+  it('registers the nightly 3 AM cron, and stays out of the registry under the test gate', async () => {
     const on = makeJob();
     on.job.onApplicationBootstrap();
     expect(on.registrar.register).toHaveBeenCalledWith('idempotency-cleanup', '0 3 * * *', expect.any(Function));
@@ -82,7 +82,7 @@ describe('IdempotencyCleanupJob', () => {
     // The registered callback IS the tick — drive it once over an empty table
     // (nothing to purge → no log, no throw).
     const onTick = on.registrar.register.mock.calls[0][2];
-    expect(() => onTick()).not.toThrow();
+    await expect(onTick()).resolves.toBeUndefined();
 
     const off = makeJob(false);
     off.job.onApplicationBootstrap();
@@ -107,14 +107,14 @@ describe('IdempotencyCleanupJob', () => {
     expect(keys).toEqual(['fresh']);
   });
 
-  it('a failing purge is contained to the Idempotency cleanup log line', () => {
+  it('a failing purge is contained to the Idempotency cleanup log line', async () => {
     const broken = { prepare: () => { throw new Error('db gone'); } } as unknown as DatabaseService;
     const job = new IdempotencyCleanupJob(broken, { isEnabled: () => true } as unknown as CronRegistrarService);
-    expect(() => job.tick()).not.toThrow();
+    await expect(job.tick()).resolves.toBeUndefined();
 
     // Non-Error throws are stringified rather than crashing the catch itself.
     const brokenString = { prepare: () => { throw 'db string'; } } as unknown as DatabaseService;
     const job2 = new IdempotencyCleanupJob(brokenString, { isEnabled: () => true } as unknown as CronRegistrarService);
-    expect(() => job2.tick()).not.toThrow();
+    await expect(job2.tick()).resolves.toBeUndefined();
   });
 });

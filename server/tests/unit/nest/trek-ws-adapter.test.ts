@@ -235,7 +235,7 @@ describe('TrekWsAdapter server creation', () => {
   /** A real http.Server is never listened on; ws only needs it to hang an upgrade handler. */
   const httpServer = { on: vi.fn(), once: vi.fn(), removeListener: vi.fn(), emit: vi.fn() } as unknown as HttpServer;
 
-  it('WSAD-030: attaches to the http server it was given, on the gateway path', () => {
+  it('WSAD-030: attaches to the http server it was given, on the gateway path', async () => {
     const ad = new TrekWsAdapter(httpServer);
     const server = ad.create(0, { path: '/ws' }) as { options: Record<string, unknown> };
     try {
@@ -244,11 +244,11 @@ describe('TrekWsAdapter server creation', () => {
       // silently goes nowhere.
       expect(getServer()).toBe(server);
     } finally {
-      void ad.close(server as never);
+      await ad.close(server as never);
     }
   });
 
-  it('WSAD-031: with no allowlist configured, ws gets no verifyClient at all', () => {
+  it('WSAD-031: with no allowlist configured, ws gets no verifyClient at all', async () => {
     // Rather than one that always says yes: an always-true hook is a hook that
     // can be broken into a false later without anyone noticing.
     wsOrigins.value = null;
@@ -257,11 +257,11 @@ describe('TrekWsAdapter server creation', () => {
     try {
       expect(typeof server.options.verifyClient).not.toBe('function');
     } finally {
-      void ad.close(server as never);
+      await ad.close(server as never);
     }
   });
 
-  it('WSAD-031b: with an allowlist, a foreign origin is refused 403 before a socket exists', () => {
+  it('WSAD-031b: with an allowlist, a foreign origin is refused 403 before a socket exists', async () => {
     wsOrigins.value = ['https://trip.example'];
     const ad = new TrekWsAdapter(httpServer);
     const server = ad.create(0, { path: '/ws' }) as { options: { verifyClient?: unknown } };
@@ -278,22 +278,22 @@ describe('TrekWsAdapter server creation', () => {
       verify({ origin: '' }, (...args) => seen.push(args));
       expect(seen).toEqual([[false, 403, 'Origin not allowed'], [true], [true]]);
     } finally {
-      void ad.close(server as never);
+      await ad.close(server as never);
     }
   });
 
-  it('WSAD-030b: falls back to /ws when the gateway declares no path', () => {
+  it('WSAD-030b: falls back to /ws when the gateway declares no path', async () => {
     wsOrigins.value = null;
     const ad = new TrekWsAdapter(httpServer);
     const server = ad.create(0, {}) as { options: Record<string, unknown> };
     try {
       expect(server.options.path).toBe('/ws');
     } finally {
-      void ad.close(server as never);
+      await ad.close(server as never);
     }
   });
 
-  it('WSAD-031c: a server-level error is LOGGED, never swallowed', () => {
+  it('WSAD-031c: a server-level error is LOGGED, never swallowed', async () => {
     // ws forwards the http server's errors here, so an empty handler eats the
     // bind failure too and the process survives EADDRINUSE serving nothing.
     // index.ts owns the fatal decision; this handler owes a log line.
@@ -309,7 +309,7 @@ describe('TrekWsAdapter server creation', () => {
       server.emit('error', 'ECONNRESET');
       expect(logError).toHaveBeenCalledWith(expect.stringContaining('ECONNRESET'));
     } finally {
-      void ad.close(server as never);
+      await ad.close(server as never);
     }
   });
 

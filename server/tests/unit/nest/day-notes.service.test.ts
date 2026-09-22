@@ -52,7 +52,6 @@ import { DayNotesService } from '../../../src/nest/day-notes/day-notes.service';
 import type { DayNote } from '../../../src/types';
 import { RealtimeService } from '../../../src/nest/realtime/realtime.service';
 import { createTestUnitOfWork } from '../../helpers/test-uow';
-import { UnitOfWork } from '../../../src/nest/database/unit-of-work';
 
 let svc: DayNotesService;
 beforeAll(async () => {

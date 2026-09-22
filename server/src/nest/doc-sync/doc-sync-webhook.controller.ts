@@ -118,13 +118,12 @@ export class DocSyncWebhookController implements OnModuleDestroy {
         const fresh = await reload();
         if (!fresh || fresh.sync_enabled !== 1) return;
         if (!(await this.syncIsOn(fresh))) return;
-        void this.sync.syncLink(fresh).then((res) => {
-          // A run that was already in flight answers `busy`, and the changes this
-          // nudge was about may have landed after that run read the folder. Ask
-          // again once rather than waiting out a whole poll interval: once, and
-          // only for `busy`, so this cannot become a loop.
-          if (res?.state === 'busy' && !isRetry) this.schedule(linkId, reload, true);
-        });
+        const res = await this.sync.syncLink(fresh);
+        // A run that was already in flight answers `busy`, and the changes this
+        // nudge was about may have landed after that run read the folder. Ask
+        // again once rather than waiting out a whole poll interval: once, and
+        // only for `busy`, so this cannot become a loop.
+        if (res?.state === 'busy' && !isRetry) this.schedule(linkId, reload, true);
       })().catch((err: unknown) => {
         logError(`Document sync webhook nudge failed for link ${linkId}: ${err instanceof Error ? err.message : String(err)}`);
       });

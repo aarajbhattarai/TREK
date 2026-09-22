@@ -55,7 +55,6 @@ import { RuntimeEnvService } from '../../../src/nest/app-config/runtime-env.serv
 import { notificationsStub } from '../../helpers/notifications';
 import { makeStorageFixture } from '../../helpers/storage-fixture';
 import { createTestUnitOfWork } from '../../helpers/test-uow';
-import { UnitOfWork } from '../../../src/nest/database/unit-of-work';
 
 const dbs = new DatabaseService(testDb);
 const realtime = new RealtimeService();

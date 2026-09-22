@@ -77,8 +77,6 @@ import { TrekExceptionFilter } from '../../src/nest/common/trek-exception.filter
 import { AppConfigModule } from '../../src/nest/app-config/app-config.module';
 import { GlobalAuthGuard } from '../../src/nest/auth/global-auth.guard';
 import { MfaPolicyGuard } from '../../src/nest/auth/mfa-policy.guard';
-import { createTestUnitOfWork } from '../helpers/test-uow';
-import { UnitOfWork } from '../../src/nest/database/unit-of-work';
 import { TestUnitOfWorkModule } from '../helpers/test-uow';
 
 const BASE = 'https://trek.example.test';

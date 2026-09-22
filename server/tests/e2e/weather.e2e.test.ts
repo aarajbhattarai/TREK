@@ -30,8 +30,6 @@ vi.mock('../../src/nest/weather/weather.impl', async (importActual) => {
 
 import { WeatherModule } from '../../src/nest/weather/weather.module';
 import { TrekExceptionFilter } from '../../src/nest/common/trek-exception.filter';
-import { createTestUnitOfWork } from '../helpers/test-uow';
-import { UnitOfWork } from '../../src/nest/database/unit-of-work';
 import { TestUnitOfWorkModule } from '../helpers/test-uow';
 
 describe('Weather e2e (real auth guard + temp SQLite)', () => {

@@ -41,7 +41,6 @@ import { PermissionsService } from '../../../src/nest/permissions/permissions.se
 import { TripMembershipService } from '../../../src/nest/trip-membership/trip-membership.service';
 import { TripInviteService } from '../../../src/nest/trip-invite/trip-invite.service';
 import { createTestUnitOfWork } from '../../helpers/test-uow';
-import { UnitOfWork } from '../../../src/nest/database/unit-of-work';
 
 // One DatabaseService over the shared in-memory handle, so every collaborator
 // reads and writes the same rows.

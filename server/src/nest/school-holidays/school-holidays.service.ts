@@ -30,7 +30,7 @@ export class SchoolHolidaysService {
   }
 
   async deleteCountry(code: string) {
-    return this.uow.transactional(async () => {
+    return await this.uow.transactional(async () => {
       await this.country(code);
       if (this.db.get('SELECT id FROM school_holiday_regions WHERE country = ? LIMIT 1', code)) {
         throw new ConflictException('Remove the regions before deleting this country');
@@ -59,7 +59,7 @@ export class SchoolHolidaysService {
   }
 
   async createRegion(country: string, body: SchoolHolidayRegionRequest) {
-    return this.uow.transactional(async () => {
+    return await this.uow.transactional(async () => {
       await this.country(country);
       await this.checkName(country, body.name, 0);
       if (body.revision !== 0) throw new ConflictException('New regions must have revision zero');
@@ -71,7 +71,7 @@ export class SchoolHolidaysService {
   }
 
   async updateRegion(id: number, body: SchoolHolidayRegionRequest) {
-    return this.uow.transactional(async () => {
+    return await this.uow.transactional(async () => {
       const region = await this.region(id);
       await this.checkName(region.country, body.name, id);
       const updated = this.db.run('UPDATE school_holiday_regions SET name = ?, revision = revision + 1 WHERE id = ? AND revision = ?', body.name, id, body.revision);
@@ -82,7 +82,7 @@ export class SchoolHolidaysService {
   }
 
   async deleteRegion(id: number, revision: number) {
-    return this.uow.transactional(async () => {
+    return await this.uow.transactional(async () => {
       const region = await this.region(id);
       if (region.revision !== revision) throw new ConflictException('This region changed. Reload before deleting it.');
       if (this.db.get("SELECT id FROM vacay_holiday_calendars WHERE type = 'school_holiday' AND region = ? LIMIT 1", region.code)) {

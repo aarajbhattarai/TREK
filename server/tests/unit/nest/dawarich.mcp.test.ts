@@ -162,17 +162,17 @@ describe('DawarichMcp surface', () => {
 
   it.each(registeredMethods())(
     'DAWARICH-MCP-003: %s is gated on the dawarich addon, the same gate the controller gets from @RequireAddon',
-    (method) => {
-      const isAddonEnabled = vi.fn().mockReturnValue(false);
+    async (method) => {
+      const isAddonEnabled = vi.fn().mockResolvedValue(false);
       const mcp = makeMcp({ addons: { isAddonEnabled } });
       const { when } = toolOptions(method);
 
       expect(typeof when).toBe('function');
-      expect(when(ctx, mcp)).toBe(false);
+      await expect(when(ctx, mcp)).resolves.toBe(false);
       expect(isAddonEnabled).toHaveBeenCalledWith(ADDON_IDS.DAWARICH);
 
-      isAddonEnabled.mockReturnValue(true);
-      expect(when(ctx, mcp)).toBe(true);
+      isAddonEnabled.mockResolvedValue(true);
+      await expect(when(ctx, mcp)).resolves.toBe(true);
     },
   );
 

@@ -755,7 +755,7 @@ export class AccommodationsService {
     deletedBudgetItemIds: number[];
     mirror: AccommodationMirror;
   }> {
-    return this.uow.transactional(async () => {
+    return await this.uow.transactional(async () => {
       const linkedRes = this.db.all<{ id: number }>('SELECT id FROM reservations WHERE accommodation_id = ?', Number(id));
       const deletedBudgetItemIds: number[] = [];
       for (const res of linkedRes) {

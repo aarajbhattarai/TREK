@@ -73,7 +73,7 @@ export async function getActiveNoticesFor(
     user: { ...user, noTrips: tripCount },
     currentAppVersion,
     now,
-    addonEnabled: (addonId: string) => addonFlags.get(addonId) ?? false,
+    addonEnabled: (addonId: string) => addonFlags.get(addonId),
     managed,
   };
   const appVer = semver.coerce(currentAppVersion)?.version ?? '0.0.0';

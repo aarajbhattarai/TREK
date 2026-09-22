@@ -66,7 +66,6 @@ import { NotFoundError, ValidationError } from '../../../src/nest/common/domain-
 import type { User } from '../../../src/types';
 import { notificationsStub } from '../../helpers/notifications';
 import { createTestUnitOfWork } from '../../helpers/test-uow';
-import { UnitOfWork } from '../../../src/nest/database/unit-of-work';
 
 const dbs = () => new DatabaseService(testDb);
 

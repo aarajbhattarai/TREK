@@ -56,7 +56,6 @@ import { QueryHelpersService } from '../../../src/nest/query-helpers/query-helpe
 import { JourneyDomainService } from '../../../src/nest/journey/journey-domain.service';
 import { TrekPhotosRepository } from '../../../src/nest/photos/trek-photos.repository';
 import { createTestUnitOfWork } from '../../helpers/test-uow';
-import { UnitOfWork } from '../../../src/nest/database/unit-of-work';
 
 const dbs = new DatabaseService(testDb);
 const realtime = new RealtimeService();
@@ -280,9 +279,9 @@ describe('moveAssignment', () => {
     const { trip, day, place } = fixture();
     const target = createDay(testDb, trip.id);
     const a = createDayAssignment(testDb, day.id, place.id, { order_index: 7 });
-    expect((await (await svc.moveAssignment(a.id, target.id, undefined)).assignment!).order_index).toBe(0);
-    expect((await (await svc.moveAssignment(a.id, day.id, null)).assignment!).order_index).toBe(0);
-    expect((await (await svc.moveAssignment(a.id, target.id, 0)).assignment!).order_index).toBe(0);
+    expect((await svc.moveAssignment(a.id, target.id, undefined)).assignment!.order_index).toBe(0);
+    expect((await svc.moveAssignment(a.id, day.id, null)).assignment!.order_index).toBe(0);
+    expect((await svc.moveAssignment(a.id, target.id, 0)).assignment!.order_index).toBe(0);
   });
 });
 

@@ -41,6 +41,7 @@ import {
 } from './journey.dto';
 import { isVideoMime, isVideoExtension, MAX_VIDEO_SIZE } from '../files/files.constants';
 import { AllowedFileTypesService } from '../files/allowed-file-types.service';
+import { logError } from '../audit/audit-log.logger';
 
 /**
  * One filename hook for all four journey upload routes (consumed by
@@ -89,7 +90,7 @@ export function journeyImageFileFilter(allowedTypes: AllowedFileTypesService): O
     // refuses the file, so the filter still fails closed. Only the await is
     // wrapped in try/catch, so a throw from cb() itself is never re-routed
     // into a second cb() call.
-    void (async () => {
+    (async () => {
       let allowed: string[];
       try {
         allowed = (await allowedTypes.get()).split(',').map((e) => e.trim().toLowerCase());
@@ -98,7 +99,10 @@ export function journeyImageFileFilter(allowedTypes: AllowedFileTypesService): O
       }
       if (!allowed.includes('*') && !allowed.includes(ext)) return reject();
       cb(null, true);
-    })();
+    })().catch((err: unknown) => {
+      logError(`journey photo fileFilter: ${err instanceof Error ? err.message : String(err)}`);
+      cb(err instanceof Error ? err : new Error(String(err)));
+    });
   };
 }
 

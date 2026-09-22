@@ -351,7 +351,7 @@ If `ALLOWED_ORIGINS` is not set, the default is **same-origin only** — cross-o
 
 | Code | Reason |
 |------|--------|
-| `4001` | No token, expired/invalid token, or user not found — re-login required |
+| `4001` | No token, expired/invalid token, or user not found — re-login required; or an unexpected error during connection setup (reason `connection setup failed`) — reconnect; if it persists check the server log |
 | `4403` | MFA is required globally but the user has not enabled it |
 
 **Fix:**

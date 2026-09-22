@@ -50,7 +50,6 @@ import { AirtrailImportService } from '../../../src/nest/integrations/airtrail-i
 import { PermissionsService } from '../../../src/nest/permissions/permissions.service';
 import { DatabaseService } from '../../../src/nest/database/database.service';
 import { createTestUnitOfWork } from '../../helpers/test-uow';
-import { UnitOfWork } from '../../../src/nest/database/unit-of-work';
 
 // The permissions cache is module-scoped, so a write through any instance is
 // what the tool's own checkPermission call reads back.

@@ -50,7 +50,6 @@ import { AccommodationsDomainModule } from '../../../src/nest/accommodations/acc
 import { AccommodationsController } from '../../../src/nest/accommodations/accommodations.controller';
 import { expectRegisteredProvider, expectRegisteredController } from '../../helpers/module-providers';
 import { createTestUnitOfWork } from '../../helpers/test-uow';
-import { UnitOfWork } from '../../../src/nest/database/unit-of-work';
 
 // Named `svc` so the moved cases read exactly as they did on DaysService.
 let svc: Awaited<ReturnType<typeof makeAccommodationsService>>;

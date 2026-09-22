@@ -594,7 +594,7 @@ export class AtlasService {
    * "3 countries added" is not counting the ones that were already there.
    */
   async markCountry(userId: number, code: string, source: 'manual' | 'dawarich' = 'manual'): Promise<boolean> {
-    return this.uow.transactional(async () => {
+    return await this.uow.transactional(async () => {
       const inserted = this.db
         .prepare('INSERT OR IGNORE INTO visited_countries (user_id, country_code, source) VALUES (?, ?, ?)')
         .run(userId, code, source).changes > 0;

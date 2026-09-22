@@ -40,8 +40,6 @@ vi.mock('../../src/db/database', () => ({
 
 import { PlaceShadowModule } from '../../src/nest/place-shadow/place-shadow.module';
 import { TrekExceptionFilter } from '../../src/nest/common/trek-exception.filter';
-import { createTestUnitOfWork } from '../helpers/test-uow';
-import { UnitOfWork } from '../../src/nest/database/unit-of-work';
 import { TestUnitOfWorkModule } from '../helpers/test-uow';
 
 const PICK = {

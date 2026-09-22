@@ -41,6 +41,11 @@ export default defineConfig({
       // though every test passes). `istanbul` instruments the source directly, so
       // coverage is measured independently of the transform pipeline.
       provider: 'istanbul',
+      // Serialises report processing: three identical runs otherwise gave 13/6/6
+      // threshold errors (files like platform/api-docs.ts flipping between 0% and
+      // 100%) because the default concurrency processes per-file coverage results
+      // out of order against istanbul's shared state.
+      processingConcurrency: 1,
       // json-summary is what the per-domain ratchet below is derived from: the text
       // reporter prints one row per DIRECTORY, not a recursive total, so reading the
       // thresholds off it silently understates any domain with subdirectories.

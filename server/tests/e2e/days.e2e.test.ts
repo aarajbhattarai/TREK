@@ -90,8 +90,6 @@ import { DaysModule } from '../../src/nest/days/days.module';
 import { DayNotesModule } from '../../src/nest/day-notes/day-notes.module';
 import { TrekExceptionFilter } from '../../src/nest/common/trek-exception.filter';
 import { ZodValidationPipe } from '../../src/nest/common/zod-validation.pipe';
-import { createTestUnitOfWork } from '../helpers/test-uow';
-import { UnitOfWork } from '../../src/nest/database/unit-of-work';
 import { TestUnitOfWorkModule } from '../helpers/test-uow';
 
 describe('Days + day-notes e2e (real auth guard + temp SQLite, real day SQL)', () => {

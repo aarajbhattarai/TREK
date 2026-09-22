@@ -50,7 +50,6 @@ import { RealtimeService } from '../../../src/nest/realtime/realtime.service';
 import { BudgetService } from '../../../src/nest/budget/budget.service';
 import { UserCleanupService } from '../../../src/nest/auth/user-cleanup.service';
 import { createTestUnitOfWork } from '../../helpers/test-uow';
-import { UnitOfWork } from '../../../src/nest/database/unit-of-work';
 
 const dbs = new DatabaseService(testDb);
 
@@ -153,7 +152,7 @@ describe('erasePluginUserData', () => {
     const slim = new (require('better-sqlite3'))(':memory:');
     slim.exec('CREATE TABLE users (id INTEGER PRIMARY KEY)');
     slim.prepare('INSERT INTO users (id) VALUES (1)').run();
-    const slimSvc = new UserCleanupService(new DatabaseService(slim), budget, await createTestUnitOfWork(testDb));
+    const slimSvc = new UserCleanupService(new DatabaseService(slim), budget, await createTestUnitOfWork(slim));
 
     await expect(slimSvc.erasePluginUserData(1)).resolves.toBeUndefined();
 

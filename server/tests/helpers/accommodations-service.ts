@@ -8,7 +8,6 @@ import { QueryHelpersService } from '../../src/nest/query-helpers/query-helpers.
 import { RealtimeService } from '../../src/nest/realtime/realtime.service';
 import { TrekPhotosRepository } from '../../src/nest/photos/trek-photos.repository';
 import { createTestUnitOfWork } from './test-uow';
-import { UnitOfWork } from '../../src/nest/database/unit-of-work';
 
 /**
  * AccommodationsService over a test connection.

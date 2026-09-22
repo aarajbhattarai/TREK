@@ -32,6 +32,7 @@ import { Trip } from '../permissions/trip.decorator';
 import { MAX_FILE_SIZE, BLOCKED_EXTENSIONS, isVideoExtension } from './files.constants';
 import { FileUploadDto, FileUpdateDto, FileLinkDto } from './files.dto';
 import { AllowedFileTypesService } from './allowed-file-types.service';
+import { logError } from '../audit/audit-log.logger';
 
 /**
  * Trip-file upload filter, built from the container.
@@ -59,7 +60,7 @@ export function filesUploadFileFilter(allowedTypes: AllowedFileTypesService): Op
     // rejection refuses the file, so the filter still fails closed. Only the
     // await is wrapped in try/catch, so a throw from cb() itself is never
     // re-routed into a second cb() call.
-    void (async () => {
+    (async () => {
       let allowed: string[];
       try {
         allowed = (await allowedTypes.get()).split(',').map((e) => e.trim().toLowerCase());
@@ -70,7 +71,10 @@ export function filesUploadFileFilter(allowedTypes: AllowedFileTypesService): Op
       // Video is accepted as media regardless of the admin doc-types allowlist (#823).
       if (allowed.includes(fileExt) || isVideoExtension(fileExt) || (allowed.includes('*') && !BLOCKED_EXTENSIONS.includes(ext))) return cb(null, true);
       reject();
-    })();
+    })().catch((err: unknown) => {
+      logError(`files upload fileFilter: ${err instanceof Error ? err.message : String(err)}`);
+      cb(err instanceof Error ? err : new Error(String(err)));
+    });
   };
 }
 

@@ -3,7 +3,6 @@ import Database from 'better-sqlite3';
 import { GoogleRouteService } from '../../../src/nest/roadtrip/google-route.service';
 import { safeFetchFollow } from '../../../src/utils/ssrfGuard';
 import { createTestUnitOfWork } from '../../helpers/test-uow';
-import { UnitOfWork } from '../../../src/nest/database/unit-of-work';
 
 vi.mock('../../../src/utils/ssrfGuard', () => ({ safeFetchFollow: vi.fn() }));
 

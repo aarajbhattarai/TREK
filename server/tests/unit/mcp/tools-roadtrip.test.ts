@@ -49,7 +49,6 @@ import { PermissionsService } from '../../../src/nest/permissions/permissions.se
 import { DatabaseService } from '../../../src/nest/database/database.service';
 import { DEMO_EMAIL_PRIMARY } from '../../../src/nest/common/demo';
 import { createTestUnitOfWork } from '../../helpers/test-uow';
-import { UnitOfWork } from '../../../src/nest/database/unit-of-work';
 
 // The permissions cache is module-scoped, so a write through any instance is
 // what the tool's own check reads back.

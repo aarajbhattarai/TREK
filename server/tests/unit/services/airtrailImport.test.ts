@@ -24,7 +24,6 @@ import type { AirtrailService } from '../../../src/nest/integrations/airtrail.se
 import { notificationsStub } from '../../helpers/notifications';
 import { accommodationsOver } from '../../helpers/accommodations-service';
 import { createTestUnitOfWork } from '../../helpers/test-uow';
-import { UnitOfWork } from '../../../src/nest/database/unit-of-work';
 
 // The client and the per-user credentials are the only stubs; the reservation
 // writes go through the real service against the real test DB, as before. They

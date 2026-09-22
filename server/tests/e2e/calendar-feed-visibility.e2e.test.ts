@@ -36,8 +36,6 @@ import { runMigrations } from '../../src/db/migrations';
 import { DatabaseModule } from '../../src/nest/database/database.module';
 import { FeedsModule } from '../../src/nest/feeds/feeds.module';
 import { TrekExceptionFilter } from '../../src/nest/common/trek-exception.filter';
-import { createTestUnitOfWork } from '../helpers/test-uow';
-import { UnitOfWork } from '../../src/nest/database/unit-of-work';
 import { TestUnitOfWorkModule } from '../helpers/test-uow';
 
 describe('Calendar feed visibility e2e (real CalendarService over temp SQLite)', () => {

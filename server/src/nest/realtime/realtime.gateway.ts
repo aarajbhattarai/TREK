@@ -91,7 +91,9 @@ export class RealtimeGateway
    * Every rejection closes with the code the client already handles: 4001 for
    * anything about identity, 4403 for the MFA policy. The order matters and is
    * unchanged — a missing token is refused before the store is touched, and the
-   * password-version gate runs before the MFA one.
+   * password-version gate runs before the MFA one. An unexpected error anywhere
+   * in the handshake is also closed as 4001, reason 'connection setup failed',
+   * instead of escaping as an uncaught exception.
    */
   async handleConnection(socket: TrekWebSocket, request: IncomingMessage): Promise<void> {
     // TrekWsAdapter.bindClientConnect fires this from a plain 'connection'

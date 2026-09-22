@@ -132,7 +132,7 @@ export class AdminDefaultUserSettingsController {
       });
       // Answer with the stored defaults, not the request body: the service normalises
       // and drops unknown keys, and the admin panel renders straight from this.
-      return this.settings.getAdminUserDefaults();
+      return await this.settings.getAdminUserDefaults();
     } catch (err) {
       throw new HttpException({ error: err instanceof Error ? err.message : String(err) }, 400);
     }

@@ -46,7 +46,6 @@ import { ReservationsService } from '../../../src/nest/reservations/reservations
 import type { TransitPlace } from '../../../src/nest/transit/transit.helpers';
 import { TransitService } from '../../../src/nest/transit/transit.service';
 import { createTestUnitOfWork } from '../../helpers/test-uow';
-import { UnitOfWork } from '../../../src/nest/database/unit-of-work';
 
 // savePermissions is no longer bridged; write through a service instance — the
 // permissions cache is module-scoped, so the MCP _shared checkPermission path

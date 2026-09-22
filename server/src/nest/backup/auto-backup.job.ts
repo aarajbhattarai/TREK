@@ -68,7 +68,11 @@ export class AutoBackupJob implements OnApplicationBootstrap {
 
     const settings = loadSettings();
     if (settings.keep_days > 0) {
-      await cleanupOldBackups(this.storage, settings.keep_days);
+      try {
+        await cleanupOldBackups(this.storage, settings.keep_days);
+      } catch (err: unknown) {
+        logError(`Auto-Backup cleanup: ${err instanceof Error ? err.message : String(err)}`);
+      }
     }
   }
 

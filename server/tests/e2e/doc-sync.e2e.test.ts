@@ -83,8 +83,6 @@ import { SynologyDriveDocumentProvider } from '../../src/nest/doc-sync/providers
 import { NextcloudDocumentProvider, OpencloudDocumentProvider } from '../../src/nest/doc-sync/providers/webdav.provider';
 import { TrekExceptionFilter } from '../../src/nest/common/trek-exception.filter';
 import { ZodValidationPipe } from '../../src/nest/common/zod-validation.pipe';
-import { createTestUnitOfWork } from '../helpers/test-uow';
-import { UnitOfWork } from '../../src/nest/database/unit-of-work';
 import { TestUnitOfWorkModule } from '../helpers/test-uow';
 
 /** A provider that answers plausibly but never opens a socket. */

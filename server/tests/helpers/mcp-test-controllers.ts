@@ -115,7 +115,6 @@ import { ReservationImportMcp } from '../../src/nest/reservation-import/reservat
 import { HelpMcp } from '../../src/nest/help/help.mcp';
 import { AddonsMcp } from '../../src/nest/addons/addons.mcp';
 import { createTestUnitOfWork } from './test-uow';
-import { UnitOfWork } from '../../src/nest/database/unit-of-work';
 
 /**
  * Hand-wired counterpart of the boot-time discovery in McpRegistryService,

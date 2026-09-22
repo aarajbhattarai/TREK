@@ -58,7 +58,6 @@ import { expectRegisteredProvider } from '../../helpers/module-providers';
 import { notificationsStub } from '../../helpers/notifications';
 import { accommodationsOver } from '../../helpers/accommodations-service';
 import { createTestUnitOfWork } from '../../helpers/test-uow';
-import { UnitOfWork } from '../../../src/nest/database/unit-of-work';
 
 const dbs = () => new DatabaseService(testDb);
 
@@ -399,8 +398,7 @@ describe('exportICS', () => {
     insertEp.run(reservation.id, 'from', 0, 'Paris CDG', 'CDG', 49.0, 2.5, 'Not/AZone', '09:00', '2025-06-02');
     insertEp.run(reservation.id, 'to', 1, 'New York JFK', 'JFK', 40.6, -73.8, 'garbage', '12:00', '2025-06-02');
 
-    let ics: string;
-    ics = (await svc.exportICS(trip.id)).ics;
+    const ics = (await svc.exportICS(trip.id)).ics;
     // Falls back to a floating local time (no TZID) and never emits a bogus VTIMEZONE.
     expect(ics).toContain('DTSTART:20250602T090000');
     expect(ics).not.toContain('TZID=Not/AZone');
@@ -682,8 +680,7 @@ describe('exportICS', () => {
     const assignment = createDayAssignment(testDb, day.id, place.id);
     testDb.prepare('UPDATE day_assignments SET assignment_time=? WHERE id=?').run('09:00', assignment.id);
 
-    let ics: string;
-    ics = (await svc.exportICS(trip.id)).ics;
+    const ics = (await svc.exportICS(trip.id)).ics;
 
     expect(ics).toContain('DTSTART;TZID=Asia/Tokyo:20251345T090000');
     expect(ics).toContain('BEGIN:VTIMEZONE\r\nTZID:Asia/Tokyo');

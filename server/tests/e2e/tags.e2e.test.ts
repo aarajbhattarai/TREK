@@ -37,8 +37,6 @@ vi.mock('../../src/db/database', () => ({ db, closeDb: () => {}, reinitialize: (
 import { DatabaseModule } from '../../src/nest/database/database.module';
 import { TagsModule } from '../../src/nest/tags/tags.module';
 import { TrekExceptionFilter } from '../../src/nest/common/trek-exception.filter';
-import { createTestUnitOfWork } from '../helpers/test-uow';
-import { UnitOfWork } from '../../src/nest/database/unit-of-work';
 import { TestUnitOfWorkModule } from '../helpers/test-uow';
 
 function insertTag(userId: number, name: string, color = '#10b981'): number {

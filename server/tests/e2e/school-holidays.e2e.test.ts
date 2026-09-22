@@ -22,8 +22,6 @@ import { TrekExceptionFilter } from '../../src/nest/common/trek-exception.filter
 import { validateBodyContracts } from '../../src/nest/common/validate-body-contracts';
 import { createTestRegistry } from '../../src/nest-mcp';
 import { trekMcpAccessPolicy, trekMcpValidateAccess } from '../../src/mcp/nest-mcp-policy';
-import { createTestUnitOfWork } from '../helpers/test-uow';
-import { UnitOfWork } from '../../src/nest/database/unit-of-work';
 import { TestUnitOfWorkModule } from '../helpers/test-uow';
 
 const base = '/api/school-holiday-catalog';

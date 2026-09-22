@@ -11,8 +11,16 @@ vi.mock('../../../src/plugin-event-sink', () => ({
   emitPluginEvent: vi.fn(),
   pluginEventMeta: vi.fn(() => ({})),
 }));
+vi.mock('../../../src/nest/audit/audit-log.logger', () => ({
+  LOG_LEVEL: 'error',
+  logInfo: vi.fn(),
+  logDebug: vi.fn(),
+  logError: vi.fn(),
+  logWarn: vi.fn(),
+}));
 
 import { RealtimeGateway } from '../../../src/nest/realtime/realtime.gateway';
+import { logError } from '../../../src/nest/audit/audit-log.logger';
 import {
   bookPeers,
   broadcast,
@@ -154,6 +162,37 @@ describe('RealtimeGateway handshake', () => {
     expect(held).toBeDefined();
     expect(held).not.toHaveProperty('password_version');
     expect(held).toMatchObject({ id: 3, email: 'm@x.test' });
+  });
+
+  it('WSGW-009: an unexpected handshake error is logged and closes 4001, reason "connection setup failed"', async () => {
+    // Anything thrown inside the try — here, the user-row lookup blowing up —
+    // must still answer the callback rather than escape as an uncaught
+    // exception (recipe R1.5's catch site).
+    const throwing = {
+      get: () => { throw new Error('db exploded'); },
+      canAccessTrip: (tripId: number) => tripId === 7,
+    } as unknown as DatabaseService;
+    const gw = new RealtimeGateway(throwing, tokens, journeys);
+    const ws = socket();
+
+    await gw.handleConnection(ws, { url: '/ws?token=x' } as never);
+
+    expect(ws.closedWith).toEqual([4001, 'connection setup failed']);
+    expect(logError).toHaveBeenCalledWith(expect.stringContaining('db exploded'));
+  });
+
+  it('WSGW-009b: a non-Error thrown during the handshake is stringified rather than crashing the catch itself', async () => {
+    const throwing = {
+      get: () => { throw 'db string'; }, // non-Error throw, pinning the ternary's String(err) fallback
+      canAccessTrip: (tripId: number) => tripId === 7,
+    } as unknown as DatabaseService;
+    const gw = new RealtimeGateway(throwing, tokens, journeys);
+    const ws = socket();
+
+    await gw.handleConnection(ws, { url: '/ws?token=x' } as never);
+
+    expect(ws.closedWith).toEqual([4001, 'connection setup failed']);
+    expect(logError).toHaveBeenCalledWith(expect.stringContaining('db string'));
   });
 });
 

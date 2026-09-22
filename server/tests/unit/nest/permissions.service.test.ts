@@ -48,7 +48,6 @@ import {
   invalidatePermissionsCache as invalidateSharedCache,
 } from '../../../src/nest/permissions/permissions-cache';
 import { createTestUnitOfWork } from '../../helpers/test-uow';
-import { UnitOfWork } from '../../../src/nest/database/unit-of-work';
 
 let svc: PermissionsService;
 beforeAll(async () => {

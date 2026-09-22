@@ -183,6 +183,9 @@ jobs:
       - name: Lint
         run: cd server && npm run lint:check
 
+      - name: DB call-graph gate (no sync DB-touching methods, no raw transactions)
+        run: cd server && npm run db:call-graph -- --sync --tx
+
   client-quality:
     name: Client Types & Lint
     runs-on: ubuntu-latest

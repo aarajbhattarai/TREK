@@ -73,7 +73,6 @@ import { TrekPhotosRepository } from '../../src/nest/photos/trek-photos.reposito
 import { RuntimeEnvService } from '../../src/nest/app-config/runtime-env.service';
 import { makeStorageFixture } from './storage-fixture';
 import { createTestUnitOfWork } from './test-uow';
-import { UnitOfWork } from '../../src/nest/database/unit-of-work';
 
 /**
  * Hand-wired counterpart of the PluginsModule DI graph for no-Nest tests

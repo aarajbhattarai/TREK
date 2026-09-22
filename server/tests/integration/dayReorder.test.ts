@@ -26,7 +26,6 @@ import { DaysService, DayReorderError } from '../../src/nest/days/days.service';
 import { RealtimeService } from '../../src/nest/realtime/realtime.service';
 import { QueryHelpersService } from '../../src/nest/query-helpers/query-helpers.service';
 import { createTestUnitOfWork } from '../helpers/test-uow';
-import { UnitOfWork } from '../../src/nest/database/unit-of-work';
 
 let svc: DaysService;
 beforeAll(async () => {

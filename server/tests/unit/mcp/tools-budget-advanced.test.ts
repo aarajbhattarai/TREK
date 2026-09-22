@@ -48,7 +48,6 @@ import { RealtimeService } from '../../../src/nest/realtime/realtime.service';
 import type { TripAccess } from '../../../src/nest/database/database.service';
 import type { User } from '../../../src/types';
 import { createTestUnitOfWork } from '../../helpers/test-uow';
-import { UnitOfWork } from '../../../src/nest/database/unit-of-work';
 
 beforeAll(() => {
   createTables(testDb);

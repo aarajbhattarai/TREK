@@ -80,6 +80,22 @@ describe('filesUploadFileFilter', () => {
     expect(cb).toHaveBeenCalledTimes(1);
     expect(cb).toHaveBeenCalledWith(null, true);
   });
+
+  it('UPLOAD-FILTER-007: an error escaping the detached IIFE (outside the allow-list try/catch) still answers cb, not an unhandled rejection', async () => {
+    const allowedTypes = allowedTypesStub('jpg,png');
+    const filter = filesUploadFileFilter(allowedTypes)!;
+    const cb = vi.fn().mockImplementationOnce(() => { throw new Error('cb blew up'); });
+    filter(req, fakeFile({ originalname: 'photo.jpg', mimetype: 'image/jpeg' }), cb);
+    await flush();
+    // First call is the filter's own cb(null, true), which throws; the outer
+    // .catch() answers a second time with the escaped error rather than
+    // leaving the request hanging or crashing the process.
+    expect(cb).toHaveBeenCalledTimes(2);
+    expect(cb).toHaveBeenNthCalledWith(1, null, true);
+    const secondErr = cb.mock.calls[1][0] as Error;
+    expect(secondErr).toBeInstanceOf(Error);
+    expect(secondErr.message).toBe('cb blew up');
+  });
 });
 
 describe('journeyImageFileFilter', () => {
@@ -116,5 +132,18 @@ describe('journeyImageFileFilter', () => {
     await flush();
     expect(cb).toHaveBeenCalledTimes(1);
     expect(cb).toHaveBeenCalledWith(null, true);
+  });
+
+  it('UPLOAD-FILTER-007: an error escaping the detached IIFE (outside the allow-list try/catch) still answers cb, not an unhandled rejection', async () => {
+    const allowedTypes = allowedTypesStub('jpg,png');
+    const filter = journeyImageFileFilter(allowedTypes)!;
+    const cb = vi.fn().mockImplementationOnce(() => { throw new Error('cb blew up'); });
+    filter(req, fakeFile({ originalname: 'photo.jpg', mimetype: 'image/jpeg' }), cb);
+    await flush();
+    expect(cb).toHaveBeenCalledTimes(2);
+    expect(cb).toHaveBeenNthCalledWith(1, null, true);
+    const secondErr = cb.mock.calls[1][0] as Error;
+    expect(secondErr).toBeInstanceOf(Error);
+    expect(secondErr.message).toBe('cb blew up');
   });
 });

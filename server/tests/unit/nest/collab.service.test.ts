@@ -88,7 +88,6 @@ import { notificationsStub } from '../../helpers/notifications';
 import { makeStorageFixture } from '../../helpers/storage-fixture';
 import { RateLimitService } from '../../../src/nest/common/rate-limit.service';
 import { createTestUnitOfWork } from '../../helpers/test-uow';
-import { UnitOfWork } from '../../../src/nest/database/unit-of-work';
 
 const collabFx = makeStorageFixture('files/');
 const rateLimit = new RateLimitService();
