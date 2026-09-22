@@ -167,7 +167,7 @@ export class TripsService {
     return this.dbs.connection;
   }
 
-  async canAccessTrip(tripId: string | number, userId: number): Promise<{ user_id: number } | null | undefined> {
+  async canAccessTrip(tripId: string | number, userId: number) {
     return this.dbs.canAccessTrip(tripId, userId) as { user_id: number } | null | undefined;
   }
 
@@ -185,7 +185,7 @@ export class TripsService {
 
   // ── Day generation ────────────────────────────────────────────────────────
 
-  async generateDays(tripId: number | bigint | string, startDate: string | null, endDate: string | null, dayCount?: number): Promise<void> {
+  async generateDays(tripId: number | bigint | string, startDate: string | null, endDate: string | null, dayCount?: number) {
     const existing = this.db.prepare('SELECT id, day_number, date FROM days WHERE trip_id = ?').all(tripId) as { id: number; day_number: number; date: string | null }[];
     const setDayNumber = this.db.prepare('UPDATE days SET day_number = ? WHERE id = ?');
 
