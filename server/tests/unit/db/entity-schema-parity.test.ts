@@ -1,6 +1,7 @@
 import { ReferenceKind, type EntityMetadata, type EntityProperty } from '@mikro-orm/core';
 import type Database from 'better-sqlite3';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { ALL_ENTITIES } from '../../../src/db/entities';
 import { createSnapshotTestDb } from '../../helpers/db-mock';
 import { createTestOrm, type TestOrm } from '../../helpers/test-orm';
 
@@ -81,7 +82,7 @@ function tableInfo(db: Database.Database, table: string): DbColumn[] {
  * migration SQL for `migrations.name`); the entity's `p.string()` already
  * reports `text` on SQLite.
  */
-export function normaliseColumnType(type: string): string {
+function normaliseColumnType(type: string): string {
   const stripped = type.trim().toLowerCase().replace(/\(\d+(,\s*\d+)?\)/, '');
   if (stripped === 'double') return 'real';
   if (stripped === 'varchar' || stripped === 'json') return 'text';
@@ -97,7 +98,7 @@ export function normaliseColumnType(type: string): string {
  * a timestamp column `TEXT` (SQLite gives it the same storage class either
  * way), and that must not be a drift.
  */
-export function columnTypesEqual(entityType: string, dbType: string): boolean {
+function columnTypesEqual(entityType: string, dbType: string): boolean {
   const a = normaliseColumnType(entityType);
   const b = normaliseColumnType(dbType);
   if (a === b) return true;
@@ -114,20 +115,33 @@ function isPersistedColumnProperty(prop: EntityProperty): boolean {
   return true;
 }
 
+/**
+ * MikroORM flags a declared `pivotEntity` (`PackingItemContributors`, which
+ * carries `status`/`created_at` payload columns) with `pivotTable: true` just
+ * like the synthetic pivots it invents for a bare `manyToMany`. Only the
+ * synthetic ones have no class of their own — a declared pivot entity is a
+ * real table-backed entity and is held to the schema like any other.
+ */
+const DECLARED_ENTITY_CLASSES = new Set(ALL_ENTITIES.map((schema) => schema.meta.className));
+
+function isSyntheticPivot(meta: EntityMetadata): boolean {
+  return Boolean(meta.pivotTable) && !DECLARED_ENTITY_CLASSES.has(meta.className);
+}
+
 /** Entity metadata this test holds against a table: skips MikroORM's own synthetic/non-table entries. */
 function isTableBackedMeta(meta: EntityMetadata): boolean {
-  return !meta.pivotTable && !meta.embeddable && !meta.virtual && !meta.abstract;
+  return !isSyntheticPivot(meta) && !meta.embeddable && !meta.virtual && !meta.abstract;
 }
 
 function tableBackedMetas(): EntityMetadata[] {
   return [...t.orm.getMetadata().getAll().values()].filter(isTableBackedMeta);
 }
 
-/** Table names MikroORM itself registers as pivot tables (`manyToMany` + `pivotTable`, or a `pivotEntity`) — covered by the owning relation, never their own entity. */
+/** Table names of the SYNTHETIC pivots MikroORM registers for a bare `manyToMany` + `pivotTable` — covered by the owning relation, never their own entity. */
 function pivotTableNames(): Set<string> {
   const names = new Set<string>();
   for (const meta of t.orm.getMetadata().getAll().values()) {
-    if (meta.pivotTable) names.add(meta.tableName);
+    if (isSyntheticPivot(meta)) names.add(meta.tableName);
   }
   return names;
 }
@@ -169,11 +183,14 @@ describe('entity ↔ migrated-schema parity', () => {
       const columns = new Map(tableInfo(testDb, table).map((c) => [c.name, c]));
       for (const prop of meta.props) {
         if (!isPersistedColumnProperty(prop)) continue;
-        const entityType = prop.columnTypes[0];
-        if (!entityType) continue;
-        for (const fieldName of prop.fieldNames) {
+        for (const [i, fieldName] of prop.fieldNames.entries()) {
           const column = columns.get(fieldName);
           if (!column) continue; // reported by PARITY-002
+          const entityType = prop.columnTypes[i];
+          if (!entityType) {
+            failures.push(`${table}.${fieldName}: entity property "${meta.className}.${prop.name}" declares no column type`);
+            continue;
+          }
           if (!columnTypesEqual(entityType, column.type)) {
             failures.push(`${table}.${fieldName}: entity ${normaliseColumnType(entityType)} vs db ${normaliseColumnType(column.type)}`);
           }
@@ -278,7 +295,9 @@ describe('entity ↔ migrated-schema parity', () => {
   it('PARITY-008: ENTITIES_STILL_MISSING stays accurate — none of them may already have an entity', () => {
     const entityTables = new Set(tableBackedMetas().map((m) => m.tableName));
     const failures: string[] = [];
+    const tables = dbTables(testDb);
     for (const table of ENTITIES_STILL_MISSING) {
+      if (!tables.has(table)) failures.push(`${table}: listed in ENTITIES_STILL_MISSING but is not a db table`);
       if (entityTables.has(table)) {
         failures.push(`${table}: has an entity now — remove it from ENTITIES_STILL_MISSING`);
       }
