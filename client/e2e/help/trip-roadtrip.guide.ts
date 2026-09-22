@@ -239,9 +239,11 @@ const SCRIPTS: Record<string, GuideScript> = {
     start: openRoadtrip,
     steps: [
       {
-        target: p => stopItem(p, 'Meiji Jingu').getByRole('button', { name: 'Make it a stop on the way' }),
+        // The disc itself, by its own label: the row button around it takes the
+        // disc's label into its accessible name, so the role query matches both.
+        target: p => stopItem(p, 'Meiji Jingu').locator('[aria-label="Make it a stop on the way"]'),
         act: async p => {
-          await stopItem(p, 'Meiji Jingu').getByRole('button', { name: 'Make it a stop on the way' }).click()
+          await stopItem(p, 'Meiji Jingu').locator('[aria-label="Make it a stop on the way"]').click()
           await expect(kindDialog(p)).toBeVisible()
           await settle(p)
         },
@@ -268,7 +270,7 @@ const SCRIPTS: Record<string, GuideScript> = {
         act: async p => {
           await kindDialog(p).getByRole('button', { name: 'Back to a destination' }).click()
           await expect(kindDialog(p)).toHaveCount(0)
-          await expect(stopItem(p, 'Meiji Jingu').getByRole('button', { name: 'Make it a stop on the way' })).toBeVisible({
+          await expect(stopItem(p, 'Meiji Jingu').locator('[aria-label="Make it a stop on the way"]')).toBeVisible({
             timeout: 20_000,
           })
           await settle(p)
