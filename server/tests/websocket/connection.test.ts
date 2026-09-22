@@ -34,15 +34,19 @@ import { createUser, createTrip } from '../helpers/factories';
 import { authCookie } from '../helpers/auth';
 import { createEphemeralToken } from '../../src/nest/auth/ephemeral-tokens';
 import { TokenService } from '../../src/nest/tokens/token.service';
-import { DatabaseService } from '../../src/nest/database/database.service';
 import { EphemeralTokenService } from '../../src/nest/auth/ephemeral-token.service';
+import { createTestMcpTokensRepo, createTestUsersRepo } from '../helpers/test-uow';
 
 // The gateway consumes ws-tokens through its injected TokenService; the
 // ephemeral store is module-scoped on purpose, so a directly-constructed
 // instance mints tokens the app under test accepts (TokenService is a leaf —
-// its own unit suite constructs it the same way).
-const tokenService = new TokenService(new DatabaseService(testDb), new EphemeralTokenService());
-const createWsToken = (...args: Parameters<typeof tokenService.createWsToken>) =>
+// its own unit suite constructs it the same way). `createSnapshotTestDb`
+// (behind the `../../src/db/database` mock above) already carries the full
+// migrated schema, so the repositories can build immediately — no
+// `createTables`/`runMigrations` step needed first, unlike suites that start
+// from a bare `:memory:` handle.
+let tokenService: TokenService;
+const createWsToken = (...args: Parameters<TokenService['createWsToken']>) =>
   tokenService.createWsToken(...args);
 
 let server: http.Server;
@@ -50,6 +54,7 @@ let wsUrl: string;
 let nestApp: INestApplication;
 
 beforeAll(async () => {
+  tokenService = new TokenService(await createTestMcpTokensRepo(testDb), await createTestUsersRepo(testDb), new EphemeralTokenService());
   // Real WebSocket against the unified NestJS app (Express is gone). buildApp owns
   // the same composition production uses; we attach the real ws server to it.
   nestApp = await buildApp();

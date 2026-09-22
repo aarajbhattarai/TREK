@@ -12,6 +12,14 @@ import { Settings } from '../../src/db/entities/Settings.entity';
 import type { SettingsRepository } from '../../src/db/repositories/Settings.repository';
 import { Users } from '../../src/db/entities/Users.entity';
 import type { UsersRepository } from '../../src/db/repositories/Users.repository';
+import { WebauthnCredentials } from '../../src/db/entities/WebauthnCredentials.entity';
+import type { WebauthnCredentialsRepository } from '../../src/db/repositories/WebauthnCredentials.repository';
+import { WebauthnChallenges } from '../../src/db/entities/WebauthnChallenges.entity';
+import type { WebauthnChallengesRepository } from '../../src/db/repositories/WebauthnChallenges.repository';
+import { InviteTokens } from '../../src/db/entities/InviteTokens.entity';
+import type { InviteTokensRepository } from '../../src/db/repositories/InviteTokens.repository';
+import { McpTokens } from '../../src/db/entities/McpTokens.entity';
+import type { McpTokensRepository } from '../../src/db/repositories/McpTokens.repository';
 
 const perHandle = new WeakMap<Database.Database, Promise<UnitOfWork>>();
 const appSettingsPerHandle = new WeakMap<Database.Database, Promise<AppSettingsRepository>>();
@@ -171,4 +179,65 @@ export class TestUnitOfWorkModule {
       exports: [UnitOfWork],
     };
   }
+}
+
+// ---------------------------------------------------------------------------
+// Plan 3b Task 2 (TokenService) — appended after every Task 0/1/3a helper
+// above, before Task 3's own block (which appends after this one, per each
+// task's file-ownership rule). Same memoisation-per-handle pattern as every
+// helper above.
+// ---------------------------------------------------------------------------
+
+const mcpTokensPerHandle = new WeakMap<Database.Database, Promise<McpTokensRepository>>();
+
+/** The `McpTokensRepository` a hand-constructed `TokenService` needs (Plan 3b Task 2). */
+export function createTestMcpTokensRepo(db: Database.Database): Promise<McpTokensRepository> {
+  const existing = mcpTokensPerHandle.get(db);
+  if (existing !== undefined) return existing;
+  const pending = sharedTestOrm(db).then((t) => t.repo(McpTokens));
+  mcpTokensPerHandle.set(db, pending);
+  return pending;
+}
+
+// ---------------------------------------------------------------------------
+// Plan 3b Task 3 (PasskeyService / RegistrationInvitesService) — appended at
+// the end per the task's own file-ownership rule (Task 2 owns everything
+// above this point in this file). Same memoisation-per-handle pattern as
+// every helper above: one ORM per test file's better-sqlite3 handle, shared
+// with whatever `UnitOfWork`/other repository that same file also builds.
+// ---------------------------------------------------------------------------
+
+const webauthnCredentialsPerHandle = new WeakMap<Database.Database, Promise<WebauthnCredentialsRepository>>();
+const webauthnChallengesPerHandle = new WeakMap<Database.Database, Promise<WebauthnChallengesRepository>>();
+const inviteTokensPerHandle = new WeakMap<Database.Database, Promise<InviteTokensRepository>>();
+
+/** The `WebauthnCredentialsRepository` a hand-constructed `PasskeyService` needs. */
+export function createTestWebauthnCredentialsRepo(db: Database.Database): Promise<WebauthnCredentialsRepository> {
+  const existing = webauthnCredentialsPerHandle.get(db);
+  if (existing !== undefined) return existing;
+  const pending = sharedTestOrm(db).then((t) => t.repo(WebauthnCredentials));
+  webauthnCredentialsPerHandle.set(db, pending);
+  return pending;
+}
+
+/** The `WebauthnChallengesRepository` a hand-constructed `PasskeyService` needs. */
+export function createTestWebauthnChallengesRepo(db: Database.Database): Promise<WebauthnChallengesRepository> {
+  const existing = webauthnChallengesPerHandle.get(db);
+  if (existing !== undefined) return existing;
+  const pending = sharedTestOrm(db).then((t) => t.repo(WebauthnChallenges));
+  webauthnChallengesPerHandle.set(db, pending);
+  return pending;
+}
+
+/**
+ * The `InviteTokensRepository` a hand-constructed `RegistrationInvitesService`
+ * (or `AuthService`) needs — Task 0 built the class, this is the first test
+ * helper for it.
+ */
+export function createTestInviteTokensRepo(db: Database.Database): Promise<InviteTokensRepository> {
+  const existing = inviteTokensPerHandle.get(db);
+  if (existing !== undefined) return existing;
+  const pending = sharedTestOrm(db).then((t) => t.repo(InviteTokens));
+  inviteTokensPerHandle.set(db, pending);
+  return pending;
 }

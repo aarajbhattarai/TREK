@@ -71,8 +71,10 @@ import { createTables } from '../../../src/db/schema';
 import { runMigrations } from '../../../src/db/migrations';
 import { resetTestDb } from '../../helpers/test-db';
 import { createUser } from '../../helpers/factories';
-import { DatabaseService } from '../../../src/nest/database/database.service';
 import { TokenService } from '../../../src/nest/tokens/token.service';
+import type { McpTokensRepository } from '../../../src/db/repositories/McpTokens.repository';
+import type { UsersRepository } from '../../../src/db/repositories/Users.repository';
+import { createTestMcpTokensRepo, createTestUsersRepo } from '../../helpers/test-uow';
 import { EphemeralTokenService } from '../../../src/nest/auth/ephemeral-token.service';
 import { ApiTokenGuard } from '../../../src/nest/public-api/api-token.guard';
 import { PublicApiController } from '../../../src/nest/public-api/public-api.controller';
@@ -394,11 +396,12 @@ describe('PublicStatsController — the widest answer on the surface', () => {
 // ---------------------------------------------------------------------------
 
 describe('TokenService — storing and resolving a grant', () => {
-  const tokens = new TokenService(new DatabaseService(testDb), new EphemeralTokenService());
+  let tokens: TokenService;
 
-  beforeAll(() => {
+  beforeAll(async () => {
     createTables(testDb);
     runMigrations(testDb);
+    tokens = new TokenService(await createTestMcpTokensRepo(testDb), await createTestUsersRepo(testDb), new EphemeralTokenService());
   });
 
   beforeEach(() => {
@@ -446,15 +449,20 @@ describe('TokenService — storing and resolving a grant', () => {
   /**
    * The backwards-compatibility case, at the layer that decides it. A row written
    * before the columns existed carries neither value; the ALTER backfills
-   * 'all', and a DatabaseService that hands back NULL anyway must land in the
-   * same place. Both are "nobody ever narrowed this key".
+   * 'all', and a repository read that hands back NULL anyway must land in the
+   * same place — `McpTokensRepository.findGrantByHash`'s row type states
+   * `scope_mode`/`api_scopes` as non-nullable (the column is `NOT NULL
+   * DEFAULT 'all'`), so this fakes the repository directly rather than a raw
+   * row, the same way the legacy version faked `DatabaseService` directly.
+   * Both are "nobody ever narrowed this key".
    */
   it('PUBAPI-SCOPE-U042: a row with no narrowing at all still reads everything', async () => {
     const noColumns = new TokenService(
       {
-        get: () => ({ id: 3, username: 'ada', email: 'a@b.c', role: 'user', scope_mode: null, api_scopes: null }),
-        run: () => ({ changes: 1 }),
-      } as unknown as DatabaseService,
+        findGrantByHash: async () => ({ id: 3, username: 'ada', email: 'a@b.c', role: 'user', scope_mode: null, api_scopes: null }),
+        touchLastUsedByHash: async () => {},
+      } as unknown as McpTokensRepository,
+      {} as UsersRepository,
       new EphemeralTokenService(),
     );
     expect((await noColumns.verifyApiTokenWithGrant('trek_legacy'))?.grant).toEqual({

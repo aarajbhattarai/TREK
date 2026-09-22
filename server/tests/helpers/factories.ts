@@ -472,14 +472,17 @@ export interface TestMcpToken {
 export function createMcpToken(
   db: Database.Database,
   userId: number,
-  overrides: Partial<{ name: string; rawToken: string }> = {}
+  overrides: Partial<{ name: string; rawToken: string; kind: string; scope_mode: string; api_scopes: string | null }> = {}
 ): TestMcpToken {
   const rawToken = overrides.rawToken ?? `trek_test_${Date.now()}_${Math.random().toString(36).slice(2)}`;
   const tokenHash = createHash('sha256').update(rawToken).digest('hex');
   const tokenPrefix = rawToken.slice(0, 12);
   const result = db.prepare(
-    'INSERT INTO mcp_tokens (user_id, token_hash, token_prefix, name) VALUES (?, ?, ?, ?)'
-  ).run(userId, tokenHash, tokenPrefix, overrides.name ?? 'Test Token');
+    'INSERT INTO mcp_tokens (user_id, token_hash, token_prefix, name, kind, scope_mode, api_scopes) VALUES (?, ?, ?, ?, ?, ?, ?)'
+  ).run(
+    userId, tokenHash, tokenPrefix, overrides.name ?? 'Test Token',
+    overrides.kind ?? 'mcp', overrides.scope_mode ?? 'all', overrides.api_scopes ?? null,
+  );
   return { id: result.lastInsertRowid as number, tokenHash, rawToken };
 }
 

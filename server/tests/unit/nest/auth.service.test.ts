@@ -84,7 +84,7 @@ import { MailerService } from '../../../src/nest/notifications/mailer/mailer.ser
 import { EphemeralTokenService } from '../../../src/nest/auth/ephemeral-token.service';
 import { AllowedFileTypesService } from '../../../src/nest/files/allowed-file-types.service';
 import { DEFAULT_ALLOWED_EXTENSIONS } from '../../../src/nest/files/files.constants';
-import { createTestUnitOfWork, createTestAppSettingsRepo, createTestUsersRepo } from '../../helpers/test-uow';
+import { createTestUnitOfWork, createTestAppSettingsRepo, createTestUsersRepo, createTestMcpTokensRepo } from '../../helpers/test-uow';
 
 // MailerService is injected since the notifications fold — a stub instead of a
 // module mock. sendPasswordResetEmail is the only thing auth reaches for.
@@ -97,9 +97,10 @@ const membershipStub = { joinTripAsMember } as unknown as TripMembershipService;
 // Tokens left AuthService for tokens/token.service.ts. The two cases below still
 // need one as a fixture: changePassword prunes MCP tokens, and the bridge parity
 // case verifies a token it just minted.
-const tokens = new TokenService(new DatabaseService(testDb), new EphemeralTokenService());
+let tokens: TokenService;
 let svc: AuthService;
 beforeAll(async () => {
+  tokens = new TokenService(await createTestMcpTokensRepo(testDb), await createTestUsersRepo(testDb), new EphemeralTokenService());
   svc = new AuthService(
   new DatabaseService(testDb),
   new PermissionsService(await createTestAppSettingsRepo(testDb), await createTestUnitOfWork(testDb)),

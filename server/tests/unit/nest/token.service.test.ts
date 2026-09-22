@@ -42,17 +42,22 @@ import { resetTestDb } from '../../helpers/test-db';
 import { createUser } from '../../helpers/factories';
 import { TokenService } from '../../../src/nest/tokens/token.service';
 import { TokensModule } from '../../../src/nest/tokens/tokens.module';
-import { DatabaseService } from '../../../src/nest/database/database.service';
 import { createEphemeralToken } from '../../../src/nest/auth/ephemeral-tokens';
 import { revokeUserSessions } from '../../../src/mcp/sessionManager';
 import { expectRegisteredProvider } from '../../helpers/module-providers';
 import { EphemeralTokenService } from '../../../src/nest/auth/ephemeral-token.service';
+import { createTestMcpTokensRepo, createTestUsersRepo } from '../../helpers/test-uow';
 
-const svc = new TokenService(new DatabaseService(testDb), new EphemeralTokenService());
+// Schema first, then the ORM-backed repositories `TokenService` now takes
+// (Plan 3b Task 2) — `sharedTestOrm` (behind `createTestMcpTokensRepo`/
+// `createTestUsersRepo`) shares this suite's own better-sqlite3 handle, so
+// the tables must already exist before it initialises.
+let svc: TokenService;
 
-beforeAll(() => {
+beforeAll(async () => {
   createTables(testDb);
   runMigrations(testDb);
+  svc = new TokenService(await createTestMcpTokensRepo(testDb), await createTestUsersRepo(testDb), new EphemeralTokenService());
 });
 
 beforeEach(() => {
@@ -262,7 +267,7 @@ describe('MCP token service (admin view)', () => {
     await svc.createMcpToken(user.id, 'a');
     await svc.createMcpToken(other.id, 'b');
 
-    const all = await svc.listAllMcpTokens() as Record<string, unknown>[];
+    const all = await svc.listAllMcpTokens() as unknown as Record<string, unknown>[];
     expect(all).toHaveLength(2);
     expect(all.every(t => typeof t.username === 'string')).toBe(true);
     expect(all.some(t => t.token_hash !== undefined)).toBe(false);
