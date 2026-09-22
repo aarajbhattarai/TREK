@@ -36,7 +36,13 @@ import type { EntityRepository, FilterQuery, FilterValue, OrderDefinition } from
  *
  *   listForOwner<Tags, 'user', 'name'>(tags, 'user', userId, 'name');
  *   findOwnedByUser<Tags, 'user'>(tags, id, 'user', userId);
- *   findOwnedByUser<Tags, 'user'>(tags, id, 'user', userId, { refresh: true });
+ *
+ * Both helpers pass `disableIdentityMap: true` (Plan 3b Task 1 fix round,
+ * supersedes Plan 3a's I1 "`refresh: true` on every PK-only `findOne`" — see
+ * `Users.repository.ts`'s class-level docstring and
+ * `.superpowers/sdd/2026-09-22-orm-phase3b/task-1-review.md` B1): both are
+ * "rows out" reads whose entity is converted via `toRow` and discarded, never
+ * assigned to nor flushed, so a throwaway forked context is exactly right.
  *
  * Typing (Task 0 review, I2): `T extends { id: unknown }` and `K extends
  * keyof T` tie `ownerField` to a real property of `T` and `ownerId` to
@@ -64,6 +70,7 @@ export async function listForOwner<T extends { id: unknown }, K extends keyof T,
 ): Promise<T[]> {
   return repo.find({ [ownerField]: ownerId } as FilterQuery<T>, {
     orderBy: { [orderField]: 'asc' } as OrderDefinition<T>,
+    disableIdentityMap: true,
   });
 }
 
@@ -71,24 +78,15 @@ export async function listForOwner<T extends { id: unknown }, K extends keyof T,
  * Find one row by id, strictly scoped to an owner:
  * `SELECT * FROM <table> WHERE id = ? AND <ownerField> = ?`.
  *
- * `options.refresh` passes straight through to the underlying `findOne`
- * (Task 0 review, I1's PK-read ruling: a caller whose read can follow a
- * raw/native write on the same row within the same request sets it). This
- * filter is `{ id, [ownerField]: ownerId }` — not PK-only — so MikroORM's
- * identity-map short-circuit never engages here: that short-circuit fires
- * only when the filter is exactly the primary key (Task 3 review, Important
- * 2's correction — `fields` has nothing to do with it, unlike what an
- * earlier version of this docstring claimed). `refresh` is a harmless
- * no-op on every call this helper serves today; it stays threaded through
- * to match the blanket ruling and to stay correct if a future caller
- * narrows the filter to PK-only.
+ * `disableIdentityMap: true` per the module-level docstring above — this is
+ * always a "rows out" read here, never a caller's staging read for
+ * `assign`+`flush`.
  */
 export async function findOwnedByUser<T extends { id: unknown }, K extends keyof T>(
   repo: EntityRepository<T>,
   id: T['id'],
   ownerField: K,
   ownerId: FilterValue<T[K]>,
-  options?: { refresh?: boolean },
 ): Promise<T | null> {
-  return repo.findOne({ id, [ownerField]: ownerId } as FilterQuery<T>, options);
+  return repo.findOne({ id, [ownerField]: ownerId } as FilterQuery<T>, { disableIdentityMap: true });
 }

@@ -13,28 +13,33 @@ export interface SettingRow {
 const _settingRowKeys: AssertRowKeys<SettingRow, Settings> = true;
 
 export class SettingsRepository extends EntityRepository<Settings> {
-  /** `SELECT key, value FROM settings WHERE user_id = ?` */
+  /**
+   * `SELECT key, value FROM settings WHERE user_id = ?`
+   *
+   * `disableIdentityMap: true` (Plan 3b Task 1 fix round) — a "rows out"
+   * read, converted via `toRow` and discarded.
+   */
   async getForUser(userId: number): Promise<SettingRow[]> {
-    const rows = await this.find({ user: userId });
+    const rows = await this.find({ user: userId }, { disableIdentityMap: true });
     return rows.map((row) => toRow(row) as SettingRow);
   }
 
   /**
    * `SELECT value FROM settings WHERE user_id = ? AND key = ?`
    *
-   * No `refresh: true`: the identity-map short-circuit (Task 0 review, I1;
-   * corrected by the Task 3 review — it is NOT about a `fields` restriction)
-   * only fires for a PRIMARY-KEY-ONLY filter (`findOne({ id })` / `findOne(pk)`):
-   * MikroORM answers that shape straight from the identity map with zero
-   * queries, invisible to a write on the same row earlier in the request.
-   * This filter is `(user, key)` — `Settings`'s PK is the surrogate `id`, not
-   * this composite — so it is never PK-only and always re-queries, the same
-   * guarantee a `find()` call gets. `SETTINGSREPO-012`/`013` pin this
-   * directly (a raw UPDATE/DELETE on the same row, then `getOne` in the same
-   * request, sees it) rather than assume it.
+   * `disableIdentityMap: true` (Plan 3b Task 1 fix round, supersedes Plan
+   * 3a's I1 — see `Users.repository.ts`'s class-level docstring and
+   * `.superpowers/sdd/2026-09-22-orm-phase3b/task-1-review.md` B1): this
+   * filter is `(user, key)` — `Settings`'s PK is the surrogate `id`, not
+   * this composite — so it was never PK-only and always re-queried even
+   * before this ruling; `disableIdentityMap: true` is applied uniformly
+   * regardless, matching every other read in this repository.
+   * `SETTINGSREPO-012`/`013` pin the always-fresh-read property directly (a
+   * raw UPDATE/DELETE on the same row, then `getOne` in the same request,
+   * sees it) rather than assume it.
    */
   async getOne(userId: number, key: string): Promise<SettingRow | null> {
-    const row = await this.findOne({ user: userId, key });
+    const row = await this.findOne({ user: userId, key }, { disableIdentityMap: true });
     return row ? (toRow(row) as SettingRow) : null;
   }
 

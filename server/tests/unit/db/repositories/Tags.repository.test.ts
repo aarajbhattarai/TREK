@@ -92,14 +92,10 @@ describe('TagsRepository', () => {
       expect(entity?.user.isInitialized()).toBe(false);
     });
 
-    // I1 (Task 0 review): findByIdAndUser carries `{ refresh: true }` (via
-    // the shared findOwnedByUser helper), the ruling every Plan 3 PK read
-    // follows. This call's filter is `{ id, user }`, not PK-only, so it
-    // always re-queries and merges fresh data regardless of `refresh` (Task
-    // 3 review, Important 2's correction: the identity-map short-circuit
-    // fires only for an exactly-PK filter, not for a `fields` restriction)
-    // — this proves the (still correct) outcome in one query rather than a
-    // refresh-vs-no-refresh contrast.
+    // Plan 3b Task 1 fix round (task-1-review.md B1): findByIdAndUser
+    // carries `disableIdentityMap: true` (via the shared findOwnedByUser
+    // helper) — always re-queries and merges fresh data, in one query, and
+    // never lands in the request's identity map.
     it('TAGREPO-009: a raw UPDATE on the same row then findByIdAndUser reads the new value, in one query', async () => {
       const { user } = createUser(testDb);
       const created = createTag(testDb, user.id, { name: 'Stale', color: '#111111' });

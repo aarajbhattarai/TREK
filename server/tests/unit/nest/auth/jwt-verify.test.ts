@@ -37,8 +37,21 @@ function makeReq(overrides: {
   } as unknown as Request;
 }
 
-/** A fake `UsersRepository` whose `findByIdWithPasswordVersion` returns the given row. */
-function usersRepo(row: UserWithPasswordVersion | null): UsersRepository {
+/**
+ * A fake `UsersRepository` whose `findByIdWithPasswordVersion` returns the
+ * given row.
+ *
+ * `password_version` is widened to `number | null` here, unlike the real
+ * `UserWithPasswordVersion.password_version: number` — the column is
+ * `INTEGER NOT NULL DEFAULT 0`, so a real row can never carry `null`, but
+ * AUTH-JWT-009 (task-1-review.md F5) still needs to pin
+ * `verifyJwtAndLoadUser`'s `typeof row.password_version === 'number' ? … :
+ * 0` fallback branch, which is otherwise unreachable through the real type.
+ * Widening the fake, not `UserWithPasswordVersion` itself (which would
+ * loosen a production type for a test-only case), keeps that column's real
+ * NOT-NULL guarantee intact everywhere else.
+ */
+function usersRepo(row: (Omit<UserWithPasswordVersion, 'password_version'> & { password_version: number | null }) | null): UsersRepository {
   return { findByIdWithPasswordVersion: vi.fn(async () => row) } as unknown as UsersRepository;
 }
 
@@ -125,8 +138,12 @@ describe('verifyJwtAndLoadUser', () => {
     expect(await verifyJwtAndLoadUser(current, users)).not.toBeNull();
   });
 
-  it('AUTH-JWT-009: a pre-pv token still works against a never-reset user (both read as 0)', async () => {
-    const users = usersRepo({ id: 1, username: 'alice', email: 'alice@example.com', role: 'user', password_version: 0 });
+  it('AUTH-JWT-009: a pre-pv token still works against a row whose password_version reads as unset (both fall back to 0)', async () => {
+    // password_version: null pins the `typeof row.password_version === 'number' ? … : 0`
+    // fallback branch directly (task-1-review.md F5) — unreachable through
+    // the real UsersRepository, whose column is NOT NULL DEFAULT 0, but
+    // worth keeping covered rather than deleting the branch it guards.
+    const users = usersRepo({ id: 1, username: 'alice', email: 'alice@example.com', role: 'user', password_version: null });
     const legacy = jwt.sign({ id: 1 }, 'test-secret', { algorithm: 'HS256' });
 
     expect(await verifyJwtAndLoadUser(legacy, users)).not.toBeNull();

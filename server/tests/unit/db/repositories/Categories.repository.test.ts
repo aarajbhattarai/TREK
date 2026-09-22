@@ -88,10 +88,9 @@ describe('CategoriesRepository', () => {
       expect(entity?.user?.isInitialized()).toBe(false);
     });
 
-    // I1 (Task 0 review): findById carries `refresh: true`, the ruling every
-    // Plan 3 PK read follows — and it is load-bearing here (Task 3 review,
-    // Important 2's correction): `{ id }` is exactly the primary key, so
-    // without `refresh` this would be served from the identity map with
+    // Plan 3b Task 1 fix round (task-1-review.md B1): findById carries
+    // `disableIdentityMap: true` — `{ id }` is exactly the primary key, so
+    // without it this would risk being served from the identity map with
     // zero queries and the stale pre-UPDATE color. `queries === 1` proves
     // the real re-query happens.
     it('CATREPO-008: a raw UPDATE on the same row then findById reads the new value, in one query', async () => {

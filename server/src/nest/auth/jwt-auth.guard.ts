@@ -27,9 +27,21 @@ import { extractToken, verifyJwtAndLoadUser } from './jwt-verify';
  * ORM owns `users` everywhere else too) — so no module needs new wiring.
  * `this.em.getRepository(Users)` inside `canActivate` is the same
  * `orm.em.getRepository(Users)`-inside-the-request pattern
- * `platform.routes.ts::servePhoto` uses (Task 0); `this.em` here is already
- * the request-scoped fork, since `canActivate` only ever runs inside a real
- * HTTP request Nest's `@mikro-orm/nestjs` middleware has already wrapped.
+ * `platform.routes.ts::servePhoto` uses (Task 0).
+ *
+ * **Correction (Plan 3b Task 1 fix round, task-1-review.md's Ruling):**
+ * `this.em` here is NOT a request-scoped fork — with no `scope` on
+ * `MikroOrmModule.forRoot` and no `Scope.REQUEST` anywhere in `src/`,
+ * `@mikro-orm/nestjs`'s provider factory injects `orm.em`, the ORM's single
+ * GLOBAL, context-resolving `EntityManager`, the same object every request
+ * shares. It resolves to the request's transactional fork at QUERY TIME:
+ * `EntityRepository.getRepository` builds the repository holding a
+ * reference to `this.em` with no `getContext()` call, and
+ * `EntityRepository.findOne` calls `this.getEntityManager().findOne(...)`,
+ * which resolves the live `AsyncLocalStorage`/`TransactionContext` inside
+ * that call — so the repository built here still finds the request's own
+ * fork correctly, even though `this.em` itself is the shared global
+ * instance, not a per-request object.
  */
 @Injectable()
 export class JwtAuthGuard implements CanActivate {

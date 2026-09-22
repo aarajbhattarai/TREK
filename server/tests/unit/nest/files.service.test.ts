@@ -560,13 +560,17 @@ describe('authenticateDownload', () => {
     verifyJwtAndLoadUser.mockReturnValue({ id: 42 });
     const result = await svc.authenticateDownload(req({ cookie: 'cookie-jwt', bearer: 'bearer-jwt' }));
     expect(result).toEqual({ userId: 42 });
-    expect(verifyJwtAndLoadUser).toHaveBeenCalledWith('cookie-jwt', expect.anything());
+    // The concrete expected argument, not expect.anything(): emStub.getRepository
+    // always returns a fresh `{}` (task-1-review.md F6) — deep-equal, not a
+    // reference match, so this pins WHICH repository (an empty object, this
+    // suite's stand-in for UsersRepository), not merely "a repository".
+    expect(verifyJwtAndLoadUser).toHaveBeenCalledWith('cookie-jwt', {});
   });
 
   it('FILE-SVC-033: a bearer token is used when no cookie is present; invalid JWTs 401', async () => {
     verifyJwtAndLoadUser.mockReturnValue({ id: 7 });
     expect(await svc.authenticateDownload(req({ bearer: 'bearer-jwt' }))).toEqual({ userId: 7 });
-    expect(verifyJwtAndLoadUser).toHaveBeenCalledWith('bearer-jwt', expect.anything());
+    expect(verifyJwtAndLoadUser).toHaveBeenCalledWith('bearer-jwt', {}); // see FILE-SVC-032's comment
 
     verifyJwtAndLoadUser.mockReturnValue(null);
     expect(await svc.authenticateDownload(req({ bearer: 'stale' }))).toEqual({ error: 'Invalid or expired token', status: 401 });

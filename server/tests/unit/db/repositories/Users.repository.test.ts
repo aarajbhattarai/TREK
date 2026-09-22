@@ -20,7 +20,8 @@ afterAll(async () => { await t.close(); testDb.close(); });
 /**
  * Runs `fn` while counting queries MikroORM actually issues over the shared
  * connection — see `AppSettings.repository.test.ts` for why a value-only
- * assertion can't catch the identity-map bug I1 fixed (Task 0 review).
+ * assertion can't catch a regression in the `disableIdentityMap: true`
+ * ruling (Plan 3b Task 1 fix round, `task-1-review.md` B1).
  */
 async function withQueryCount<T>(fn: () => Promise<T>): Promise<{ value: T; queries: number }> {
   const connection = t.orm.em.getConnection();
@@ -70,11 +71,13 @@ describe('UsersRepository', () => {
     expect(await users.getApiKeyColumn(999999, 'maps_api_key')).toBeNull();
   });
 
-  // I1 (Task 0 review): getEmail/getApiKeyColumn are primary-key findOne
-  // calls, which MikroORM answers from the identity map on a repeat call
-  // unless `refresh: true` is set — invisible to a raw UPDATE on the same
-  // user id inside the same request. Pins the fix at one query each.
-  describe('getEmail/getApiKeyColumn see a raw UPDATE on the same user in the same request (I1, identity-map regression)', () => {
+  // Plan 3b Task 1 fix round (task-1-review.md B1): getEmail/getApiKeyColumn
+  // are primary-key findOne calls, which MikroORM would answer from the
+  // identity map on a repeat call absent `disableIdentityMap: true` —
+  // invisible to a raw UPDATE on the same user id inside the same request.
+  // Pins the fix at one query each; the property is preserved (B1's fix
+  // dropped `refresh: true`, not this guarantee).
+  describe('getEmail/getApiKeyColumn see a raw UPDATE on the same user in the same request (disableIdentityMap regression)', () => {
     it('USERSREPO-007: a raw UPDATE users SET email then getEmail reads the new email, in one query', async () => {
       const { user } = createUser(testDb, { email: 'old@example.com' });
       expect(await users.getEmail(user.id)).toBe('old@example.com'); // populate the identity map
@@ -200,6 +203,37 @@ describe('UsersRepository', () => {
       expect(row.role).toBe('admin');
       expect(row.login_count).toBe(0);
     });
+
+    it('USERSREPO-057: insertUser (F2) never flushes an unrelated pending entity in the same EM', async () => {
+      // Simulate an unrelated pending change elsewhere in the request's EM —
+      // a managed entity persist()-ed but not yet flushed by its own code
+      // path. Before F2's fix, `insertUser`'s `persist().flush()` committed
+      // the WHOLE unit of work, so this row would land in the DB too.
+      const pending = t.em.create(Users, {
+        username: 'pending-unflushed',
+        email: 'pending@example.com',
+        password_hash: 'x',
+        role: 'user',
+        first_seen_version: '9.9.9',
+        login_count: 0,
+      });
+      t.em.persist(pending);
+
+      await users.insertUser({
+        username: 'freshuser',
+        email: 'fresh@example.com',
+        password_hash: 'hashed',
+        role: 'user',
+        first_seen_version: '1.2.3',
+      });
+
+      const pendingRow = testDb.prepare('SELECT * FROM users WHERE username = ?').get('pending-unflushed');
+      expect(pendingRow).toBeUndefined(); // insertUser must not have flushed it
+      const freshRow = testDb.prepare('SELECT * FROM users WHERE username = ?').get('freshuser');
+      expect(freshRow).toBeDefined(); // but the intended row is there
+
+      t.em.clear(); // discard the still-pending unflushed entity before the next test
+    });
   });
 
   describe('findByEmailCI (AU12/O4)', () => {
@@ -215,6 +249,26 @@ describe('UsersRepository', () => {
       const { user } = createUser(testDb, { email: 'guest2@example.com' });
       testDb.prepare('UPDATE users SET is_guest = 1 WHERE id = ?').run(user.id);
       expect(await users.findByEmailCI('guest2@example.com')).toBeNull();
+    });
+  });
+
+  // Plan 3b Task 1 fix round item 7 — AuthService.demoLogin's exact statement
+  // (`SELECT * FROM users WHERE email = ?`), missing from the inventory,
+  // added now so Task 5 has it.
+  describe('findByEmailExact (AuthService.demoLogin, inventory correction)', () => {
+    it('USERSREPO-057B: matches only the exact case, unlike every other email lookup here', async () => {
+      const { user } = createUser(testDb, { email: 'Demo.User@Example.com' });
+      const row = await users.findByEmailExact('Demo.User@Example.com');
+      expect(row?.id).toBe(user.id);
+      expect(await users.findByEmailExact('demo.user@example.com')).toBeNull(); // different case — no match
+      expect(await users.findByEmailExact('nope@example.com')).toBeNull();
+    });
+
+    it('USERSREPO-057C: a guest row IS returned — no guest filter, unlike findByEmailCI/findForPasswordReset', async () => {
+      const { user } = createUser(testDb, { email: 'demoguest@example.com' });
+      testDb.prepare('UPDATE users SET is_guest = 1 WHERE id = ?').run(user.id);
+      const row = await users.findByEmailExact('demoguest@example.com');
+      expect(row?.id).toBe(user.id);
     });
   });
 
@@ -315,7 +369,7 @@ describe('UsersRepository', () => {
       expect(await users.findById(999999)).toBeNull();
     });
 
-    it('USERSREPO-031: sees a raw UPDATE on the same id in the same request (I1, identity-map regression)', async () => {
+    it('USERSREPO-031: sees a raw UPDATE on the same id in the same request (disableIdentityMap regression)', async () => {
       const { user } = createUser(testDb, { username: 'before' });
       await users.findById(user.id); // populate the identity map
       testDb.prepare('UPDATE users SET username = ? WHERE id = ?').run('after', user.id);

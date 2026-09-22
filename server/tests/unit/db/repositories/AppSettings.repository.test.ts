@@ -27,8 +27,9 @@ function insertRaw(key: string, value: string | null): void {
 /**
  * Runs `fn` while counting queries MikroORM actually issues over the shared
  * connection, so a regression test can assert "one query, with this value"
- * rather than only the value — the identity-map bug I1 fixed (Task 0 review)
- * returned the *right* value from a stale cache with *zero* queries, which a
+ * rather than only the value — a regression in the `disableIdentityMap: true`
+ * ruling (Plan 3b Task 1 fix round, `task-1-review.md` B1) would return the
+ * *right* value from a stale identity-map hit with *zero* queries, which a
  * value-only assertion would never catch.
  */
 async function withQueryCount<T>(fn: () => Promise<T>): Promise<{ value: T; queries: number }> {
@@ -67,12 +68,12 @@ describe('AppSettingsRepository', () => {
     expect(values.has('collab_links_enabled')).toBe(false);
   });
 
-  // I1 (Task 0 review): getValue is a primary-key findOne, which MikroORM
-  // answers from the identity map on a repeat call unless `refresh: true` is
-  // set — invisible to a raw write or delete on the same key inside the same
-  // request. These reproduce the review's two failing probes and pin the
+  // Plan 3b Task 1 fix round (task-1-review.md B1): getValue is a
+  // primary-key findOne, which MikroORM would answer from the identity map
+  // on a repeat call absent `disableIdentityMap: true` — invisible to a raw
+  // write or delete on the same key inside the same request. These pin the
   // fix at one query each.
-  describe('getValue sees a raw write/delete on the same key in the same request (I1, identity-map regression)', () => {
+  describe('getValue sees a raw write/delete on the same key in the same request (disableIdentityMap regression)', () => {
     it('APPSETREPO-013: deleteValue then getValue reads null, not the deleted row, in one query', async () => {
       insertRaw('bag_tracking_enabled', 'v');
       expect(await appSettings.getValue('bag_tracking_enabled')).toBe('v'); // populate the identity map

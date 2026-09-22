@@ -21,9 +21,12 @@ export class PhotoProvidersRepository extends EntityRepository<PhotoProviders> {
    * entity (unlike `Addons.enabled`, which is `p.boolean()`), so it comes
    * back as the raw stored `0`/`1`; `AddonsService.list()` does the `!!`
    * coercion itself, matching the legacy `!!p.enabled`.
+   *
+   * `disableIdentityMap: true` (Plan 3b Task 1 fix round) — a "rows out"
+   * read, converted via `toRow` and discarded.
    */
   async listEnabled(): Promise<PhotoProviderRow[]> {
-    const rows = await this.find({ enabled: 1 }, { orderBy: { sort_order: 'asc', id: 'asc' } });
+    const rows = await this.find({ enabled: 1 }, { orderBy: { sort_order: 'asc', id: 'asc' }, disableIdentityMap: true });
     return rows.map((row) => toRow(row) as PhotoProviderRow);
   }
 }

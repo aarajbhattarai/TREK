@@ -60,27 +60,19 @@ describe('findOwnedByUser', () => {
     expect(await findOwnedByUser<Tags, 'user'>(tags, 999999, 'user', owner.id)).toBeNull();
   });
 
-  // Task 0 review I1's PK-read ruling, extended to this helper (Task 3):
-  // `options.refresh` passes through to `findOne`. This helper's filter is
-  // `{ id, [ownerField]: ownerId }`, not PK-only, so it always re-queries
-  // and merges fresh data regardless of `refresh` (proven below: a raw
-  // write on the same row is visible either way) — the identity-map
-  // short-circuit (and the staleness it can cause without `refresh`) fires
-  // only when the filter is exactly the primary key, which is what
-  // AppSettingsRepository.getValue's PK-only `findOne` hit and this
-  // multi-condition filter never does (Task 3 review, Important 2's
-  // correction — `fields` has nothing to do with it). `refresh` stays on
-  // this helper regardless, matching the Task 0 review's blanket PK-read
-  // ruling and staying correct if a future caller narrows the filter to
-  // PK-only.
-  it('OWNEDLOOKUP-006: { refresh: true } sees a raw UPDATE on the same row in the same request, in one query', async () => {
+  // Plan 3b Task 1 fix round (task-1-review.md B1): `findOwnedByUser` always
+  // passes `disableIdentityMap: true` now (no longer an opt-in `options`
+  // parameter) — every call answers from a throwaway forked context, so a
+  // raw write on the same row earlier in the request is always visible, in
+  // one query, and the entity never lands in the request's identity map.
+  it('OWNEDLOOKUP-006: sees a raw UPDATE on the same row in the same request, in one query (disableIdentityMap)', async () => {
     const { user: owner } = createUser(testDb);
     const tag = createTag(testDb, owner.id, { name: 'Old' });
-    expect((await findOwnedByUser<Tags, 'user'>(tags, tag.id, 'user', owner.id))?.name).toBe('Old'); // populate the identity map
+    expect((await findOwnedByUser<Tags, 'user'>(tags, tag.id, 'user', owner.id))?.name).toBe('Old');
     testDb.prepare('UPDATE tags SET name = ? WHERE id = ?').run('New', tag.id);
     const connection = t.orm.em.getConnection();
     const spy = vi.spyOn(connection, 'execute');
-    const found = await findOwnedByUser<Tags, 'user'>(tags, tag.id, 'user', owner.id, { refresh: true });
+    const found = await findOwnedByUser<Tags, 'user'>(tags, tag.id, 'user', owner.id);
     expect(found?.name).toBe('New');
     expect(spy.mock.calls.length).toBe(1);
     spy.mockRestore();

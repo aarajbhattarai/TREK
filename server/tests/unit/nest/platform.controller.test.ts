@@ -178,7 +178,7 @@ describe('applyPlatformUploads', () => {
         res,
         next,
       );
-      expect(h.verifyJwtAndLoadUser).toHaveBeenCalledWith('jwt123', expect.anything());
+      expect(h.verifyJwtAndLoadUser).toHaveBeenCalledWith('jwt123', expect.objectContaining({ findByIdWithPasswordVersion: expect.any(Function) }));
       expect(h.sendToResponse).toHaveBeenCalledWith('photos', 'a.jpg', res);
     });
 
@@ -188,7 +188,7 @@ describe('applyPlatformUploads', () => {
       h.verifyJwtAndLoadUser.mockReturnValue({ id: 1 });
       const res = makeRes();
       await photoHandler()({ params: { filename: 'a.jpg' }, headers: {}, query: { token: 'qtok' } }, res, next);
-      expect(h.verifyJwtAndLoadUser).toHaveBeenCalledWith('qtok', expect.anything());
+      expect(h.verifyJwtAndLoadUser).toHaveBeenCalledWith('qtok', expect.objectContaining({ findByIdWithPasswordVersion: expect.any(Function) }));
       expect(h.sendToResponse).toHaveBeenCalledWith('photos', 'a.jpg', res);
     });
 

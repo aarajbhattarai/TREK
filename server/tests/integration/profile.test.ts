@@ -72,6 +72,36 @@ describe('PROFILE-001 — Get current user profile', () => {
   });
 });
 
+// PUT /api/auth/me/settings — F3 (task-1-review.md): the B1 regression's
+// user-visible symptom was exactly this route answering 200 while silently
+// discarding the write. Asserts the DB row directly, not only the response
+// body, and the response body against a fresh GET /api/auth/me — either one
+// alone would have missed B1 (the response body came from the pre-flush
+// in-memory entity, which still looked right).
+describe('PUT /api/auth/me/settings (F3)', () => {
+  it('PROFILE-016 — a username+email change persists: the response, a fresh GET, and the raw row all agree', async () => {
+    const { user } = createUser(testDb, { username: 'before-name', email: 'before@example.test' });
+
+    const put = await request(app)
+      .put('/api/auth/me/settings')
+      .set('Cookie', authCookie(user.id))
+      .send({ username: 'after-name', email: 'after@example.test' });
+    expect(put.status).toBe(200);
+    expect(put.body.success).toBe(true);
+    expect(put.body.user).toMatchObject({ username: 'after-name', email: 'after@example.test' });
+
+    const get = await request(app)
+      .get('/api/auth/me')
+      .set('Cookie', authCookie(user.id));
+    expect(get.status).toBe(200);
+    expect(get.body.user).toMatchObject({ username: 'after-name', email: 'after@example.test' });
+
+    const row = testDb.prepare('SELECT username, email FROM users WHERE id = ?').get(user.id) as { username: string; email: string };
+    expect(row.username).toBe('after-name');
+    expect(row.email).toBe('after@example.test');
+  });
+});
+
 describe('Avatar', () => {
   it('PROFILE-002 — upload valid JPEG avatar updates avatar_url', async () => {
     const { user } = createUser(testDb);

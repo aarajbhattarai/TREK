@@ -79,6 +79,10 @@ export class MfaPolicyGuard implements CanActivate {
     // A user-verified passkey is phishing-resistant and inherently two-factor, so
     // owning at least one satisfies require_mfa exactly like TOTP does.
     // (All stored passkeys were registered with userVerification required.)
+    // `=== 1`, not the legacy `row.mfa_enabled === 1 || row.mfa_enabled === true`:
+    // `mfa_enabled` is a SQLite INTEGER column, and `UsersRepository.getMfaEnabled`
+    // types it `number | null` — a JS `boolean` from this column never occurs
+    // through the ORM, so the `=== true` half was dead code (task-1-review.md F4).
     const mfaOk = row.mfa_enabled === 1;
     const passkeyOk = await this.webauthnCredentials.hasAny(user.id);
     if (mfaOk || passkeyOk) return true;

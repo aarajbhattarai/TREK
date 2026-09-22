@@ -28,9 +28,12 @@ export class PhotoProviderFieldsRepository extends EntityRepository<PhotoProvide
    * `persist(false)` twin of the `provider` relation (Days.trip_id
    * precedent): reading it back after `find()` needs no extra populate, only
    * a `create()`/twin write would.
+   *
+   * `disableIdentityMap: true` (Plan 3b Task 1 fix round) — a "rows out"
+   * read, converted via `toRow` and discarded.
    */
   async listAllOrdered(): Promise<PhotoProviderFieldRow[]> {
-    const rows = await this.find({}, { orderBy: { sort_order: 'asc', id: 'asc' } });
+    const rows = await this.find({}, { orderBy: { sort_order: 'asc', id: 'asc' }, disableIdentityMap: true });
     return rows.map((row) => toRow(row) as PhotoProviderFieldRow);
   }
 }

@@ -20,14 +20,17 @@ export class AddonsRepository extends EntityRepository<Addons> {
   /**
    * `SELECT enabled FROM addons WHERE id = ?`
    *
-   * `refresh: true` (Task 0 review, I1 — carried forward for every PK read in
-   * this plan): a primary-key `findOne` answers a repeat call from the
-   * identity map, invisible to a write on the same id inside the same
-   * request (`admin.service.ts`'s still-raw `UPDATE addons SET enabled = ?`
-   * on the same connection).
+   * `disableIdentityMap: true` (Plan 3b Task 1 fix round, supersedes Plan
+   * 3a's I1 "`refresh: true` on every PK-only `findOne`" — see
+   * `Users.repository.ts`'s class-level docstring and
+   * `.superpowers/sdd/2026-09-22-orm-phase3b/task-1-review.md` B1): a
+   * throwaway forked context always sees a write on the same id inside the
+   * same request (`admin.service.ts`'s still-raw `UPDATE addons SET enabled
+   * = ?` on the same connection), and the entity never lands in the
+   * request's identity map.
    */
   async isEnabled(id: string): Promise<boolean> {
-    const row = await this.findOne({ id }, { fields: ['enabled'], refresh: true });
+    const row = await this.findOne({ id }, { fields: ['enabled'], disableIdentityMap: true });
     return !!row?.enabled;
   }
 
@@ -40,7 +43,7 @@ export class AddonsRepository extends EntityRepository<Addons> {
    * for no parity benefit.
    */
   async listEnabled(): Promise<AddonRow[]> {
-    const rows = await this.find({ enabled: true }, { orderBy: { sort_order: 'asc' } });
+    const rows = await this.find({ enabled: true }, { orderBy: { sort_order: 'asc' }, disableIdentityMap: true });
     return rows.map((row) => toRow(row) as AddonRow);
   }
 }

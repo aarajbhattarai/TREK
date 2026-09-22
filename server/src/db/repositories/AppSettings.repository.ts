@@ -14,19 +14,17 @@ export class AppSettingsRepository extends EntityRepository<AppSettings> {
   /**
    * `SELECT value FROM app_settings WHERE key = ?`
    *
-   * `refresh: true` (Task 0 review, I1): this is a primary-key lookup, so
-   * without it MikroORM answers a repeat call from the identity map rather
-   * than re-querying — invisible to a raw/native write or `deleteValue` on
-   * the same key inside the same request, which is exactly the coexistence
-   * case this plan is built on (raw SQL and the ORM sharing one connection
-   * while callers convert one at a time). `refresh` keeps this a single
-   * query either way; only a stale identity-map hit is avoided.
-   * Side effect of `refresh`: an UNFLUSHED in-memory change to the selected
-   * field on that entity is discarded (the entity reverts to the row). No
-   * caller mutates these entities before reading, by design (D4: rows out).
+   * `disableIdentityMap: true` (Plan 3b Task 1 fix round, supersedes Plan
+   * 3a's I1 "`refresh: true` on every PK-only `findOne`" — see
+   * `Users.repository.ts`'s class-level docstring for the full mechanism and
+   * `.superpowers/sdd/2026-09-22-orm-phase3b/task-1-review.md` B1): the read
+   * is answered from a throwaway forked context that is cleared afterwards,
+   * so a raw/native write or `deleteValue` on the same key inside the same
+   * request is always seen, and the entity never lands in the request's
+   * identity map to become a stale pending change at a later `flush()`.
    */
   async getValue(key: string): Promise<string | null> {
-    const row = await this.findOne({ key }, { fields: ['value'], refresh: true });
+    const row = await this.findOne({ key }, { fields: ['value'], disableIdentityMap: true });
     return row?.value ?? null;
   }
 
@@ -37,7 +35,7 @@ export class AppSettingsRepository extends EntityRepository<AppSettings> {
    * value" from "no row" (both read as absent).
    */
   async getValues(keys: string[]): Promise<Map<string, string>> {
-    const rows = await this.find({ key: { $in: keys } });
+    const rows = await this.find({ key: { $in: keys } }, { disableIdentityMap: true });
     const values = new Map<string, string>();
     for (const row of rows) {
       if (row.key != null && row.value != null) values.set(row.key, row.value);
@@ -82,7 +80,7 @@ export class AppSettingsRepository extends EntityRepository<AppSettings> {
    * a prefix that itself contains `%`/`_`.
    */
   async findByKeyPrefix(prefix: string): Promise<AppSettingsRow[]> {
-    const rows = await this.find({ key: { $like: `${prefix}%` } });
+    const rows = await this.find({ key: { $like: `${prefix}%` } }, { disableIdentityMap: true });
     return rows.map((row) => toRow(row) as AppSettingsRow);
   }
 

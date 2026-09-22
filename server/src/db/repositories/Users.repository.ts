@@ -1,4 +1,4 @@
-import type { Users } from '../entities/Users.entity';
+import { Users } from '../entities/Users.entity';
 import { toRow, type AssertRowKeys } from './_shared/rows';
 import { columnIncrementedBy, currentTimestamp, lower } from '../dialect/sql-functions';
 import { EntityRepository } from '@mikro-orm/sql';
@@ -177,18 +177,23 @@ export interface ResetTargetRow {
 
 export class UsersRepository extends EntityRepository<Users> {
   /**
-   * `SELECT email FROM users WHERE id = ?`
-   *
-   * `refresh: true` (Task 0 review, I1): a primary-key `findOne` is answered
-   * from the identity map on a repeat call, which would hide a raw/native
-   * `UPDATE users SET email = ...` on the same id inside the same request.
-   * `refresh` keeps this a single query and always sees the current row.
-   * Side effect of `refresh`: an UNFLUSHED in-memory change to the selected
-   * field on that entity is discarded (the entity reverts to the row). No
-   * caller mutates these entities before reading, by design (D4: rows out).
+   * **Ruling (Plan 3b Task 1 fix round, supersedes Plan 3a's I1 "`refresh:
+   * true` on every PK-only `findOne`"):** every row-out read in this
+   * repository (`findOne`/`find`) passes `disableIdentityMap: true` instead.
+   * MikroORM forks the EM with `keepTransactionContext: true`, loads inside
+   * that fork (so the read still sees the transaction's own uncommitted
+   * writes), and clears the fork afterwards
+   * (`node_modules/@mikro-orm/core/EntityManager.js:807-814`) — the entity
+   * is never added to the *request's* identity map, so it can never become a
+   * stale pending change-set entry that a later `flush()` (including the
+   * implicit one at `UnitOfWork.transactional` commit) writes back over an
+   * intervening `nativeUpdate`. `refresh: true` is dropped as redundant: it
+   * only mattered for an entity that stayed in the map, and none does now.
+   * See https://mikro-orm.io/docs/entity-manager#disableidentitymap and
+   * `.superpowers/sdd/2026-09-22-orm-phase3b/task-1-review.md` (B1).
    */
   async getEmail(userId: number): Promise<string | null> {
-    const row = await this.findOne({ id: userId }, { fields: ['email'], refresh: true });
+    const row = await this.findOne({ id: userId }, { fields: ['email'], disableIdentityMap: true });
     return row?.email ?? null;
   }
 
@@ -198,10 +203,10 @@ export class UsersRepository extends EntityRepository<Users> {
    * not an interpolated column — MikroORM's `fields` option only accepts a
    * real property of `Users`, so this can never select an arbitrary column.
    *
-   * `refresh: true` for the same identity-map reason as `getEmail` above.
+   * `disableIdentityMap: true` per the class-level ruling above.
    */
   async getApiKeyColumn(userId: number, name: InstanceApiKeyName): Promise<string | null> {
-    const row = await this.findOne({ id: userId }, { fields: [name], refresh: true });
+    const row = await this.findOne({ id: userId }, { fields: [name], disableIdentityMap: true });
     return row ? (row[name] ?? null) : null;
   }
 
@@ -214,12 +219,12 @@ export class UsersRepository extends EntityRepository<Users> {
    *
    * The canonical session-invalidation read: `verifyJwtAndLoadUser` compares
    * the returned `password_version` against the JWT's `pv` claim on every
-   * request. PK-only `findOne` → `refresh: true` (I1).
+   * request. `disableIdentityMap: true` per the class-level ruling above.
    */
   async findByIdWithPasswordVersion(id: number): Promise<UserWithPasswordVersion | null> {
     const row = await this.findOne(
       { id },
-      { fields: ['id', 'username', 'email', 'role', 'password_version'], refresh: true },
+      { fields: ['id', 'username', 'email', 'role', 'password_version'], disableIdentityMap: true },
     );
     return row ? { id: row.id, username: row.username, email: row.email, role: row.role, password_version: row.password_version } : null;
   }
@@ -230,7 +235,7 @@ export class UsersRepository extends EntityRepository<Users> {
 
   /** `SELECT password_version FROM users WHERE id = ?`. `?? 0` stays in the caller (AU2/TK7/O2 each fall back differently in spirit, identically in value). */
   async getPasswordVersion(id: number): Promise<number | null> {
-    const row = await this.findOne({ id }, { fields: ['password_version'], refresh: true });
+    const row = await this.findOne({ id }, { fields: ['password_version'], disableIdentityMap: true });
     return row?.password_version ?? null;
   }
 
@@ -249,7 +254,7 @@ export class UsersRepository extends EntityRepository<Users> {
 
   /** `SELECT id FROM users WHERE role = 'admin' AND must_change_password = 1 LIMIT 1`. */
   async findAdminNeedingPasswordChange(): Promise<number | null> {
-    const row = await this.findOne({ role: 'admin', must_change_password: 1 }, { fields: ['id'] });
+    const row = await this.findOne({ role: 'admin', must_change_password: 1 }, { fields: ['id'], disableIdentityMap: true });
     return row?.id ?? null;
   }
 
@@ -268,7 +273,7 @@ export class UsersRepository extends EntityRepository<Users> {
         $or: [{ [lower(platform, 'email')]: email.toLowerCase() }, { [lower(platform, 'username')]: username.toLowerCase() }],
         is_guest: 0,
       },
-      { fields: ['id'] },
+      { fields: ['id'], disableIdentityMap: true },
     );
     return row?.id ?? null;
   }
@@ -287,12 +292,19 @@ export class UsersRepository extends EntityRepository<Users> {
    * always the literal `0` on insert, never a parameter, matching both
    * statements exactly.
    *
-   * Followed by `refresh` (D4's create rule), not relied-on `RETURNING`:
-   * the returned row carries the generated `id` and the `defaultRaw`
+   * `em.insert` (F2, Plan 3b Task 1 fix round), never `create()` +
+   * `persist().flush()`: `flush()` commits the *whole* unit of work of the
+   * request's `EntityManager`, not just this row — the review caught it
+   * emitting a full-row `UPDATE users … WHERE id = ?` against an unrelated,
+   * previously-read user in the same EM. `em.insert` fires a single native
+   * INSERT with no side effects on the context/identity map (the same rule
+   * as `AuditLogRepository.insertEntry`). Followed by a read-back
+   * (`findById`, `disableIdentityMap: true` per the class-level ruling): the
+   * returned row carries the generated `id` and the `defaultRaw`
    * `created_at` the same way a legacy INSERT-then-reselect pair did.
    */
   async insertUser(row: NewUserRow): Promise<UserRow> {
-    const user = this.create({
+    const id = await this.getEntityManager().insert(Users, {
       username: row.username,
       email: row.email,
       password_hash: row.password_hash,
@@ -303,9 +315,11 @@ export class UsersRepository extends EntityRepository<Users> {
       oidc_issuer: row.oidc_issuer ?? null,
       avatar: row.avatar ?? null,
     });
-    await this.getEntityManager().persist(user).flush();
-    await this.getEntityManager().refresh(user);
-    return toRow(user) as UserRow;
+    const inserted = await this.findById(id as number);
+    if (!inserted) {
+      throw new Error('insertUser: read-back after insert found no row');
+    }
+    return inserted;
   }
 
   // ---------------------------------------------------------------------
@@ -315,7 +329,27 @@ export class UsersRepository extends EntityRepository<Users> {
   /** `SELECT * FROM users WHERE LOWER(email) = LOWER(?) AND COALESCE(is_guest, 0) = 0` */
   async findByEmailCI(email: string): Promise<UserRow | null> {
     const platform = this.getEntityManager().getPlatform();
-    const user = await this.findOne({ [lower(platform, 'email')]: email.toLowerCase(), is_guest: 0 });
+    const user = await this.findOne(
+      { [lower(platform, 'email')]: email.toLowerCase(), is_guest: 0 },
+      { disableIdentityMap: true },
+    );
+    return user ? (toRow(user) as UserRow) : null;
+  }
+
+  // ---------------------------------------------------------------------
+  // AuthService.demoLogin (auth.service.ts:~376) — inventory-correction
+  // addition, Plan 3b Task 1 fix round item 7 (pre-authorised for Task 5).
+  // ---------------------------------------------------------------------
+
+  /**
+   * `SELECT * FROM users WHERE email = ?` — case-**sensitive**, **no** guest
+   * filter, full row. Distinct from both `findByEmailCI` (case-insensitive
+   * + guest-filtered) and `findForPasswordReset` (case-sensitive but
+   * projected + guest-filtered): `AuthService.demoLogin` needs the exact,
+   * unfiltered legacy statement, including matching a guest row.
+   */
+  async findByEmailExact(email: string): Promise<UserRow | null> {
+    const user = await this.findOne({ email }, { disableIdentityMap: true });
     return user ? (toRow(user) as UserRow) : null;
   }
 
@@ -350,7 +384,7 @@ export class UsersRepository extends EntityRepository<Users> {
       { id },
       {
         fields: ['id', 'username', 'email', 'role', 'avatar', 'oidc_issuer', 'created_at', 'mfa_enabled', 'must_change_password'],
-        refresh: true,
+        disableIdentityMap: true,
       },
     );
     return row
@@ -374,7 +408,7 @@ export class UsersRepository extends EntityRepository<Users> {
 
   /** `SELECT password_hash, password_version FROM users WHERE id = ?` */
   async getPasswordHashAndVersion(id: number): Promise<{ password_hash: string; password_version: number } | null> {
-    const row = await this.findOne({ id }, { fields: ['password_hash', 'password_version'], refresh: true });
+    const row = await this.findOne({ id }, { fields: ['password_hash', 'password_version'], disableIdentityMap: true });
     return row ? { password_hash: row.password_hash, password_version: row.password_version } : null;
   }
 
@@ -410,7 +444,7 @@ export class UsersRepository extends EntityRepository<Users> {
 
   /** `SELECT role FROM users WHERE id = ?` */
   async getRole(id: number): Promise<string | null> {
-    const row = await this.findOne({ id }, { fields: ['role'], refresh: true });
+    const row = await this.findOne({ id }, { fields: ['role'], disableIdentityMap: true });
     return row?.role ?? null;
   }
 
@@ -430,7 +464,7 @@ export class UsersRepository extends EntityRepository<Users> {
    * collapse both into the same value.
    */
   async getMfaEnabled(id: number): Promise<{ mfa_enabled: number | null } | null> {
-    const row = await this.findOne({ id }, { fields: ['mfa_enabled'], refresh: true });
+    const row = await this.findOne({ id }, { fields: ['mfa_enabled'], disableIdentityMap: true });
     return row ? { mfa_enabled: row.mfa_enabled ?? null } : null;
   }
 
@@ -460,10 +494,10 @@ export class UsersRepository extends EntityRepository<Users> {
    * caller that needs more than a handful of columns (AU30 `disableMfa`,
    * AU32 `verifyMfaLogin`, PK4 `passkeyRegisterOptions`, PK10
    * `passkeyLoginVerify`, O15 `findOrCreateUser`'s post-transaction re-select).
-   * PK-only `findOne` → `refresh: true` (I1).
+   * `disableIdentityMap: true` per the class-level ruling above.
    */
   async findById(id: number): Promise<UserRow | null> {
-    const user = await this.findOne({ id }, { refresh: true });
+    const user = await this.findOne({ id }, { disableIdentityMap: true });
     return user ? (toRow(user) as UserRow) : null;
   }
 
@@ -518,7 +552,7 @@ export class UsersRepository extends EntityRepository<Users> {
   async findForPasswordReset(email: string): Promise<PasswordResetLookup | null> {
     const row = await this.findOne(
       { email, is_guest: 0 },
-      { fields: ['id', 'email', 'password_hash', 'oidc_sub'] },
+      { fields: ['id', 'email', 'password_hash', 'oidc_sub'], disableIdentityMap: true },
     );
     return row ? { id: row.id, email: row.email, password_hash: row.password_hash, oidc_sub: row.oidc_sub ?? null } : null;
   }
@@ -531,7 +565,7 @@ export class UsersRepository extends EntityRepository<Users> {
   async findResetTarget(id: number): Promise<ResetTargetRow | null> {
     const row = await this.findOne(
       { id },
-      { fields: ['id', 'email', 'mfa_enabled', 'mfa_secret', 'mfa_backup_codes', 'password_version'], refresh: true },
+      { fields: ['id', 'email', 'mfa_enabled', 'mfa_secret', 'mfa_backup_codes', 'password_version'], disableIdentityMap: true },
     );
     return row
       ? {
@@ -551,7 +585,7 @@ export class UsersRepository extends EntityRepository<Users> {
 
   /** `SELECT password_hash FROM users WHERE id = ?` */
   async getPasswordHash(id: number): Promise<string | null> {
-    const row = await this.findOne({ id }, { fields: ['password_hash'], refresh: true });
+    const row = await this.findOne({ id }, { fields: ['password_hash'], disableIdentityMap: true });
     return row?.password_hash ?? null;
   }
 
@@ -561,7 +595,7 @@ export class UsersRepository extends EntityRepository<Users> {
 
   /** `SELECT id, email FROM users WHERE id = ?` */
   async findIdAndEmail(id: number): Promise<{ id: number; email: string } | null> {
-    const row = await this.findOne({ id }, { fields: ['id', 'email'], refresh: true });
+    const row = await this.findOne({ id }, { fields: ['id', 'email'], disableIdentityMap: true });
     return row ? { id: row.id, email: row.email } : null;
   }
 
@@ -571,7 +605,7 @@ export class UsersRepository extends EntityRepository<Users> {
 
   /** `SELECT * FROM users WHERE oidc_sub = ? AND oidc_issuer = ?` */
   async findByOidcIdentity(sub: string, issuer: string): Promise<UserRow | null> {
-    const user = await this.findOne({ oidc_sub: sub, oidc_issuer: issuer });
+    const user = await this.findOne({ oidc_sub: sub, oidc_issuer: issuer }, { disableIdentityMap: true });
     return user ? (toRow(user) as UserRow) : null;
   }
 
@@ -624,7 +658,7 @@ export class UsersRepository extends EntityRepository<Users> {
     const platform = this.getEntityManager().getPlatform();
     const row = await this.findOne(
       { [lower(platform, 'username')]: username.toLowerCase(), id: { $ne: excludeId }, is_guest: 0 },
-      { fields: ['id'] },
+      { fields: ['id'], disableIdentityMap: true },
     );
     return row?.id ?? null;
   }
@@ -638,7 +672,10 @@ export class UsersRepository extends EntityRepository<Users> {
    */
   async findIdByUsernameCIAny(username: string): Promise<number | null> {
     const platform = this.getEntityManager().getPlatform();
-    const row = await this.findOne({ [lower(platform, 'username')]: username.toLowerCase() }, { fields: ['id'] });
+    const row = await this.findOne(
+      { [lower(platform, 'username')]: username.toLowerCase() },
+      { fields: ['id'], disableIdentityMap: true },
+    );
     return row?.id ?? null;
   }
 
@@ -650,7 +687,7 @@ export class UsersRepository extends EntityRepository<Users> {
   async getApiKeyColumns(id: number): Promise<UserApiKeyColumns | null> {
     const row = await this.findOne(
       { id },
-      { fields: ['role', 'maps_api_key', 'openweather_api_key', 'unsplash_api_key', 'amap_api_key'], refresh: true },
+      { fields: ['role', 'maps_api_key', 'openweather_api_key', 'unsplash_api_key', 'amap_api_key'], disableIdentityMap: true },
     );
     return row
       ? {
@@ -700,7 +737,7 @@ export class UsersRepository extends EntityRepository<Users> {
       { id },
       {
         fields: ['id', 'username', 'email', 'role', 'maps_api_key', 'openweather_api_key', 'unsplash_api_key', 'amap_api_key', 'avatar', 'mfa_enabled'],
-        refresh: true,
+        disableIdentityMap: true,
       },
     );
     return row
@@ -728,7 +765,7 @@ export class UsersRepository extends EntityRepository<Users> {
     const platform = this.getEntityManager().getPlatform();
     const row = await this.findOne(
       { [lower(platform, 'email')]: email.toLowerCase(), id: { $ne: excludeId }, is_guest: 0 },
-      { fields: ['id'] },
+      { fields: ['id'], disableIdentityMap: true },
     );
     return row?.id ?? null;
   }
@@ -761,7 +798,7 @@ export class UsersRepository extends EntityRepository<Users> {
 
   /** `SELECT avatar FROM users WHERE id = ?` */
   async getAvatar(id: number): Promise<string | null> {
-    const row = await this.findOne({ id }, { fields: ['avatar'], refresh: true });
+    const row = await this.findOne({ id }, { fields: ['avatar'], disableIdentityMap: true });
     return row?.avatar ?? null;
   }
 
@@ -785,7 +822,7 @@ export class UsersRepository extends EntityRepository<Users> {
 
   /** `SELECT id, username, email, role, avatar FROM users WHERE id = ?` */
   async findProfileBasic(id: number): Promise<UserProfileBasic | null> {
-    const row = await this.findOne({ id }, { fields: ['id', 'username', 'email', 'role', 'avatar'], refresh: true });
+    const row = await this.findOne({ id }, { fields: ['id', 'username', 'email', 'role', 'avatar'], disableIdentityMap: true });
     return row ? { id: row.id, username: row.username, email: row.email, role: row.role, avatar: row.avatar ?? null } : null;
   }
 
@@ -797,7 +834,7 @@ export class UsersRepository extends EntityRepository<Users> {
   async listOthersNonGuest(excludeId: number): Promise<UserDirectoryRow[]> {
     const rows = await this.find(
       { id: { $ne: excludeId }, is_guest: 0 },
-      { fields: ['id', 'username', 'avatar'], orderBy: { username: 'asc' } },
+      { fields: ['id', 'username', 'avatar'], orderBy: { username: 'asc' }, disableIdentityMap: true },
     );
     return rows.map((row) => ({ id: row.id, username: row.username, avatar: row.avatar ?? null }));
   }
@@ -808,7 +845,7 @@ export class UsersRepository extends EntityRepository<Users> {
 
   /** `SELECT role, openweather_api_key FROM users WHERE id = ?` */
   async getRoleAndWeatherKey(id: number): Promise<{ role: string; openweather_api_key: string | null } | null> {
-    const row = await this.findOne({ id }, { fields: ['role', 'openweather_api_key'], refresh: true });
+    const row = await this.findOne({ id }, { fields: ['role', 'openweather_api_key'], disableIdentityMap: true });
     return row ? { role: row.role, openweather_api_key: row.openweather_api_key ?? null } : null;
   }
 }

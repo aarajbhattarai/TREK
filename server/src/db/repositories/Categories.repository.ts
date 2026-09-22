@@ -17,7 +17,7 @@ const _categoryRowKeys: AssertRowKeys<CategoryRow, Categories> = true;
 export class CategoriesRepository extends EntityRepository<Categories> {
   /** `SELECT * FROM categories ORDER BY name ASC` */
   async list(): Promise<CategoryRow[]> {
-    const categories = await this.find({}, { orderBy: { name: 'asc' } });
+    const categories = await this.find({}, { orderBy: { name: 'asc' }, disableIdentityMap: true });
     return categories.map((category) => toRow(category) as CategoryRow);
   }
 
@@ -30,19 +30,18 @@ export class CategoriesRepository extends EntityRepository<Categories> {
    * global") and was deleted rather than kept as dead code (Task 0
    * re-review, R6; see `_shared/owned-lookup.ts`'s docstring).
    *
-   * `refresh: true` (Task 0 review, I1 — every PK-only `findOne` in a
-   * repository takes it) and it is load-bearing here, not decorative: `{ id
-   * }` is exactly the primary key, so MikroORM answers this call from the
-   * identity map with zero queries whenever the row is already loaded
-   * (Task 3 review, Important 2's correction — the short-circuit is driven
-   * by the filter being PK-only, not by a `fields` restriction, which was
-   * the wrong mechanism this docstring stated before the fix). Without
-   * `refresh`, a raw write to this row earlier in the same request would
-   * make this method return the stale snapshot instead of the current DB
-   * row.
+   * `disableIdentityMap: true` (Plan 3b Task 1 fix round, supersedes Plan
+   * 3a's I1 "`refresh: true` on every PK-only `findOne`" — see
+   * `Users.repository.ts`'s class-level docstring and
+   * `.superpowers/sdd/2026-09-22-orm-phase3b/task-1-review.md` B1): this is
+   * a "rows out" read, converted via `toRow` and discarded — the entity is
+   * loaded in a throwaway forked context and never lands in the request's
+   * identity map, so a raw write to this row earlier in the same request is
+   * always seen, and there is nothing here for a later `flush()` to find
+   * dirty.
    */
   async findById(id: number): Promise<CategoryRow | null> {
-    const category = await this.findOne({ id }, { refresh: true });
+    const category = await this.findOne({ id }, { disableIdentityMap: true });
     return category ? (toRow(category) as CategoryRow) : null;
   }
 
@@ -103,6 +102,16 @@ export class CategoriesRepository extends EntityRepository<Categories> {
    * managed (and now guaranteed-fresh) entity in place, and no column here
    * is DB-computed on UPDATE (unlike `created_at` on insert), so the
    * in-memory entity already holds exactly what was written.
+   *
+   * **Excluded from the Plan 3b Task 1 fix round's `disableIdentityMap: true`
+   * ruling, deliberately** — see `TagsRepository.patch`'s docstring for the
+   * full reasoning: this is not a "rows out" read, the entity must stay
+   * MANAGED for `assign`+`flush`, and `disableIdentityMap: true` would
+   * silently stop the write from persisting (a detached entity is outside
+   * `flush()`'s unit of work). `refresh: true` stays for the identity-map
+   * freshness reason above; there is no B1-shaped staleness risk because
+   * this is the only read of this row left un-`disableIdentityMap`-ed in the
+   * repository.
    */
   async patch(id: number, changes: { name?: string; color?: string; icon?: string }): Promise<CategoryRow | null> {
     const category = await this.findOne({ id }, { refresh: true });

@@ -32,21 +32,12 @@ export class TagsRepository extends EntityRepository<Tags> {
    * own write (`createTag`/`patch` refresh/return their own entity
    * directly).
    *
-   * `refresh: true` (Task 0 review, I1 — the ruling every Plan 3 repository
-   * follows for a PK-scoped read). This call's filter is `{ id, user }`,
-   * not PK-only, so MikroORM's identity-map short-circuit — which fires
-   * only when the filter is exactly the primary key, not (as an earlier
-   * version of this docstring said) when a `fields` restriction is present
-   * (Task 3 review, Important 2's correction) — never engages here anyway:
-   * this call already re-queries and merges fresh data on every call
-   * regardless of `refresh`. `refresh` stays threaded through to match the
-   * blanket ruling and to stay correct if a future caller narrows the
-   * filter to PK-only. `findOwnedByUser`'s optional `options` parameter
-   * (added here, not duplicated — Task 0's helper had no reads that needed
-   * it yet) passes straight through to the underlying `findOne`.
+   * `disableIdentityMap: true` per `findOwnedByUser`'s own docstring (Plan
+   * 3b Task 1 fix round, supersedes Plan 3a's I1) — this is a "rows out"
+   * read, converted via `toRow` and discarded.
    */
   async findByIdAndUser(id: number, userId: number): Promise<TagRow | null> {
-    const tag = await findOwnedByUser<Tags, 'user'>(this, id, 'user', userId, { refresh: true });
+    const tag = await findOwnedByUser<Tags, 'user'>(this, id, 'user', userId);
     return tag ? (toRow(tag) as TagRow) : null;
   }
 
@@ -98,6 +89,20 @@ export class TagsRepository extends EntityRepository<Tags> {
    * `CategoriesRepository.patch`: `assign` already mutated the managed (and
    * now guaranteed-fresh) entity in place, and no column here is
    * DB-computed on UPDATE.
+   *
+   * **Excluded from the Plan 3b Task 1 fix round's `disableIdentityMap: true`
+   * ruling, deliberately**: unlike every other read in this repository, this
+   * one is not a "rows out" read — the entity is kept MANAGED on purpose so
+   * `assign`+`flush` can diff and write it. `disableIdentityMap: true` would
+   * return a *detached* entity (per the ruling's own mechanism); `assign`ing
+   * it would still mutate the JS object, but the following `flush()` would
+   * have no effect on it (a detached entity is not in `flush()`'s unit of
+   * work) — the write would silently stop persisting. `refresh: true` stays
+   * here for exactly the reason it always was: this is the only call in the
+   * repository that manages this row, so there is no B1-shaped staleness
+   * risk (that requires a SECOND managed, differently-projected read of the
+   * same row still lingering in the identity map — nothing else here leaves
+   * one now that every other read is `disableIdentityMap: true`).
    */
   async patch(id: number, changes: { name?: string; color?: string }): Promise<TagRow | null> {
     const tag = await this.findOne({ id }, { refresh: true });
