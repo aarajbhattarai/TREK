@@ -1,0 +1,121 @@
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { createSnapshotTestDb } from '../../../helpers/db-mock';
+import { resetTestDb } from '../../../helpers/test-db';
+import { createTestOrm, type TestOrm } from '../../../helpers/test-orm';
+import { AppSettings } from '../../../../src/db/entities/AppSettings.entity';
+import type { AppSettingsRepository } from '../../../../src/db/repositories/AppSettings.repository';
+
+const testDb = createSnapshotTestDb();
+let t: TestOrm;
+let appSettings: AppSettingsRepository;
+
+beforeAll(async () => {
+  t = await createTestOrm(testDb);
+  appSettings = t.repo(AppSettings) as AppSettingsRepository;
+});
+beforeEach(() => { resetTestDb(testDb); t.clear(); });
+afterAll(async () => { await t.close(); testDb.close(); });
+
+function rawRow(key: string): unknown {
+  return testDb.prepare('SELECT * FROM app_settings WHERE key = ?').get(key);
+}
+
+function insertRaw(key: string, value: string | null): void {
+  testDb.prepare('INSERT INTO app_settings (key, value) VALUES (?, ?)').run(key, value);
+}
+
+describe('AppSettingsRepository', () => {
+  it('APPSETREPO-001: getValue reads the stored value', async () => {
+    insertRaw('bag_tracking_enabled', 'true');
+    expect(await appSettings.getValue('bag_tracking_enabled')).toBe('true');
+  });
+
+  it('APPSETREPO-002: getValue returns null for an unset key', async () => {
+    expect(await appSettings.getValue('does_not_exist')).toBeNull();
+  });
+
+  it('APPSETREPO-003: getValues reads several keys into a Map, silently dropping keys with no row', async () => {
+    insertRaw('collab_chat_enabled', 'false');
+    insertRaw('collab_notes_enabled', 'true');
+    const values = await appSettings.getValues(['collab_chat_enabled', 'collab_notes_enabled', 'collab_links_enabled']);
+    expect(values).toEqual(new Map([['collab_chat_enabled', 'false'], ['collab_notes_enabled', 'true']]));
+  });
+
+  it('APPSETREPO-004: setValue inserts a new row exactly as INSERT OR REPLACE would', async () => {
+    await appSettings.setValue('bag_tracking_enabled', 'true');
+    expect(rawRow('bag_tracking_enabled')).toStrictEqual({ key: 'bag_tracking_enabled', value: 'true' });
+  });
+
+  it('APPSETREPO-005: setValue on an existing key replaces the value only — the row (key, value) is byte-identical to INSERT OR REPLACE/ON CONFLICT DO UPDATE, because app_settings has no third column for either to reset', async () => {
+    insertRaw('bag_tracking_enabled', 'false');
+    await appSettings.setValue('bag_tracking_enabled', 'true');
+    expect(rawRow('bag_tracking_enabled')).toStrictEqual({ key: 'bag_tracking_enabled', value: 'true' });
+    // Only the one row exists for that key — no duplicate/ghost row from upsert.
+    expect(testDb.prepare('SELECT COUNT(*) as c FROM app_settings WHERE key = ?').get('bag_tracking_enabled')).toEqual({ c: 1 });
+  });
+
+  it('APPSETREPO-006: deleteValue removes the row and returns the legacy DELETE-affected-row count', async () => {
+    insertRaw('whitespace_migration_collision', 'true');
+    expect(await appSettings.deleteValue('whitespace_migration_collision')).toBe(1);
+    expect(rawRow('whitespace_migration_collision')).toBeUndefined();
+  });
+
+  it('APPSETREPO-007: deleteValue on a missing key is a no-op that reports 0 rows', async () => {
+    expect(await appSettings.deleteValue('does_not_exist')).toBe(0);
+  });
+
+  it('APPSETREPO-008: findByKeyPrefix matches every key sharing the prefix, in whatever order the table returns them', async () => {
+    insertRaw('perm_view_days', '1');
+    insertRaw('perm_edit_budget', '2');
+    insertRaw('unrelated_key', '3');
+    const rows = await appSettings.findByKeyPrefix('perm_');
+    expect(rows.map((r) => r.key).sort()).toEqual(['perm_edit_budget', 'perm_view_days']);
+    expect(rows).toEqual(expect.arrayContaining([
+      { key: 'perm_view_days', value: '1' },
+      { key: 'perm_edit_budget', value: '2' },
+    ]));
+  });
+
+  it('APPSETREPO-009: findByKeyPrefix with no matches returns an empty array', async () => {
+    insertRaw('unrelated_key', 'x');
+    expect(await appSettings.findByKeyPrefix('perm_')).toEqual([]);
+  });
+
+  // LIKE-escaping finding: neither the legacy `LIKE 'prefix%'` literal nor
+  // `$like`'s bound parameter here escapes `%`/`_` in the prefix — a bound
+  // LIKE parameter's wildcards are interpreted by SQLite exactly like a
+  // literal's are, so `findByKeyPrefix` reproduces the legacy statement's
+  // matches (and its same non-escaping quirk) for a prefix containing either
+  // character. These tests compare the repository's result against the
+  // legacy raw-SQL statement directly, not against a hand-picked expectation.
+  describe('LIKE escaping — % and _ in the prefix are wildcards, not escaped, exactly as the legacy statement behaved', () => {
+    function legacyPrefixMatch(prefix: string): { key: string; value: string }[] {
+      return testDb.prepare('SELECT key, value FROM app_settings WHERE key LIKE ?').all(`${prefix}%`) as {
+        key: string;
+        value: string;
+      }[];
+    }
+
+    it('APPSETREPO-010: an underscore in the prefix matches any single character there, like a raw LIKE pattern would', async () => {
+      // 'ab_c%' as a LIKE pattern: '_' matches any one character, so both
+      // 'ab_cd' (literal underscore) and 'abXcd' (any other character) match.
+      insertRaw('ab_cd', '1');
+      insertRaw('abXcd', '2');
+      insertRaw('abcd', '3'); // one character short at that position — no match
+      const rows = await appSettings.findByKeyPrefix('ab_c');
+      expect(rows.map((r) => r.key).sort()).toEqual(legacyPrefixMatch('ab_c').map((r) => r.key).sort());
+      expect(rows.map((r) => r.key).sort()).toEqual(['abXcd', 'ab_cd']);
+    });
+
+    it('APPSETREPO-011: a percent sign in the prefix matches zero or more characters there, like a raw LIKE pattern would', async () => {
+      // 'ab%c%' as a LIKE pattern: '%' matches zero-or-more, so both
+      // 'abc' (zero characters at the % position) and 'abZZc' match.
+      insertRaw('abc', '1');
+      insertRaw('abZZc', '2');
+      insertRaw('abd', '3'); // no 'c' after the gap — no match
+      const rows = await appSettings.findByKeyPrefix('ab%c');
+      expect(rows.map((r) => r.key).sort()).toEqual(legacyPrefixMatch('ab%c').map((r) => r.key).sort());
+      expect(rows.map((r) => r.key).sort()).toEqual(['abZZc', 'abc']);
+    });
+  });
+});

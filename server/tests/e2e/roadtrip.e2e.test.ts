@@ -29,6 +29,7 @@ import type { Server } from 'http';
 import request from 'supertest';
 import { describe, it, expect, beforeAll, afterAll, beforeEach, vi, type MockInstance } from 'vitest';
 import { TestUnitOfWorkModule } from '../helpers/test-uow';
+import { createTestMikroOrmModule } from '../helpers/test-orm';
 
 const { db } = vi.hoisted(() => {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -96,7 +97,7 @@ describe('Roadtrip e2e (real guard chain + temp SQLite)', () => {
 
   async function build() {
     const moduleRef = await Test.createTestingModule({
-      imports: [await TestUnitOfWorkModule.forRoot(db), DatabaseModule, RealtimeModule, RoadtripModule],
+      imports: [await TestUnitOfWorkModule.forRoot(db), await createTestMikroOrmModule(db), DatabaseModule, RealtimeModule, RoadtripModule],
     }).compile();
     const nest = moduleRef.createNestApplication();
     nest.use(cookieParser());

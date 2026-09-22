@@ -73,6 +73,9 @@ import { TrekPhotosRepository } from '../../src/nest/photos/trek-photos.reposito
 import { RuntimeEnvService } from '../../src/nest/app-config/runtime-env.service';
 import { makeStorageFixture } from './storage-fixture';
 import { createTestUnitOfWork } from './test-uow';
+import { createTestOrm } from './test-orm';
+import { AppSettings } from '../../src/db/entities/AppSettings.entity';
+import type { AppSettingsRepository } from '../../src/db/repositories/AppSettings.repository';
 
 /**
  * Hand-wired counterpart of the PluginsModule DI graph for no-Nest tests
@@ -86,6 +89,7 @@ import { createTestUnitOfWork } from './test-uow';
  */
 export async function createPluginRpcHostFactory(dbs: DatabaseService): Promise<PluginRpcHostFactory> {
   const generalStorage = makeStorageFixture('').storage;
+  const appSettings = (await createTestOrm(dbs.connection)).repo(AppSettings) as AppSettingsRepository;
   const permissions = new PermissionsService(dbs, await createTestUnitOfWork(dbs.connection));
   const exchangeRates = new ExchangeRatesService();
   const realtime = new RealtimeService();
@@ -107,7 +111,7 @@ export async function createPluginRpcHostFactory(dbs: DatabaseService): Promise<
   const assignments = new AssignmentsService(dbs, permissions, realtime, queryHelpers, journey, await createTestUnitOfWork(dbs.connection));
   const membership = new TripMembershipService(dbs);
   const notifications = await makeNotificationsService(dbs, realtime);
-  const llmConfig = new LlmConfigResolver(new SettingsService(dbs, await createTestUnitOfWork(dbs.connection)), dbs, addons);
+  const llmConfig = new LlmConfigResolver(new SettingsService(dbs, await createTestUnitOfWork(dbs.connection), appSettings), dbs, addons);
   const oauth = new PluginOAuthService(dbs);
   const accommodations = new AccommodationsService(dbs, permissions, realtime, assignments, await createTestUnitOfWork(dbs.connection));
   // After it: deleting a place cancels the nights booked at it through this one.

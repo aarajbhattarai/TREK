@@ -115,6 +115,9 @@ import { ReservationImportMcp } from '../../src/nest/reservation-import/reservat
 import { HelpMcp } from '../../src/nest/help/help.mcp';
 import { AddonsMcp } from '../../src/nest/addons/addons.mcp';
 import { createTestUnitOfWork } from './test-uow';
+import { createTestOrm } from './test-orm';
+import { AppSettings } from '../../src/db/entities/AppSettings.entity';
+import type { AppSettingsRepository } from '../../src/db/repositories/AppSettings.repository';
 
 /**
  * Hand-wired counterpart of the boot-time discovery in McpRegistryService,
@@ -126,6 +129,7 @@ import { createTestUnitOfWork } from './test-uow';
 export async function createMcpTestRegistry(): Promise<McpRegistry> {
   const dbService = new DatabaseService(db);
   const generalStorage = makeStorageFixture('').storage;
+  const appSettings = (await createTestOrm(dbService.connection)).repo(AppSettings) as AppSettingsRepository;
   const permissionsService = new PermissionsService(dbService, await createTestUnitOfWork(dbService.connection));
   // Same argument list as auth.bridge.ts. AtlasService used to sit in third
   // place; when getTravelStats moved onto AtlasService itself the edge was
@@ -232,7 +236,7 @@ export async function createMcpTestRegistry(): Promise<McpRegistry> {
       new SchoolHolidaysMcp(new SchoolHolidaysService(dbService, await createTestUnitOfWork(dbService.connection)), guards),
       new TripsMcp(tripsService, todoService, collabService, authService, calendarService, membersService, readModelService, addonsService, guards),
       new TripPromptsMcp(tripsService, readModelService, packingService, addonsService),
-      new ShareMcp(new ShareService(dbService, new SettingsService(dbService, await createTestUnitOfWork(dbService.connection)), permissionsService, queryHelpersService, placePhotoCache, await createTestUnitOfWork(dbService.connection)), authService, guards),
+      new ShareMcp(new ShareService(dbService, new SettingsService(dbService, await createTestUnitOfWork(dbService.connection), appSettings), permissionsService, queryHelpersService, placePhotoCache, await createTestUnitOfWork(dbService.connection)), authService, guards),
       new FeedsMcp(new FeedsService(dbService, calendarService), dbService, new RuntimeEnvService(), guards),
       new TripInviteMcp(new TripInviteService(dbService, permissionsService, new TripMembershipService(dbService), await createTestUnitOfWork(dbService.connection)), dbService, new RuntimeEnvService(), guards, new AuditService(dbService)),
       new MapsMcp(mapsService),
@@ -240,12 +244,12 @@ export async function createMcpTestRegistry(): Promise<McpRegistry> {
       new CollectionsMcp(new CollectionsService(dbService, permissionsService, realtimeService, notificationsStub(), generalStorage, await createTestUnitOfWork(dbService.connection)), dbService, authService, addonsService),
       new TransitMcp(new TransitService(new GoogleTransitProvider(dbService)), daysService, reservationsService, dbService, authService, guards),
       new AtlasMcp(new AtlasService(dbService, await createTestUnitOfWork(dbService.connection)), addonsService, authService),
-      new JourneyMcp(journeyDomain, new JourneyShareService(dbService, journeyDomain, new SettingsService(dbService, await createTestUnitOfWork(dbService.connection))), addonsService, authService, captureBackfill),
+      new JourneyMcp(journeyDomain, new JourneyShareService(dbService, journeyDomain, new SettingsService(dbService, await createTestUnitOfWork(dbService.connection), appSettings)), addonsService, authService, captureBackfill),
       new MemoriesMcp(immichService, synologyService, dbService, addonsService),
       new NotificationsMcp(await makeNotificationsService(dbService, realtimeService), authService),
       new AirtrailMcp(new AirtrailService(dbService, new AuditService(dbService), new AirtrailClient()), addonsService),
       new ReservationImportMcp(new AirtrailImportService(dbService, realtimeService, reservationsService, new AirtrailClient(), new AirtrailService(dbService, new AuditService(dbService), new AirtrailClient())), dbService, authService, guards, addonsService),
-      new SettingsMcp(new SettingsService(dbService, await createTestUnitOfWork(dbService.connection)), authService),
+      new SettingsMcp(new SettingsService(dbService, await createTestUnitOfWork(dbService.connection), appSettings), authService),
       new HelpMcp(), new AddonsMcp(addonsService),
       new TripWarningsMcp(new PluginHooks({ providersOf: () => [], invokeHook: async () => [] } as unknown as PluginRuntimeService), dbService),
       new PluginSearchMcp(new PluginHooks({ providersOf: () => [], invokeHook: async () => [] } as unknown as PluginRuntimeService)),

@@ -60,6 +60,7 @@ import { AddonsService } from '../../src/nest/addons/addons.service';
 import { TrekExceptionFilter } from '../../src/nest/common/trek-exception.filter';
 import { ZodValidationPipe } from '../../src/nest/common/zod-validation.pipe';
 import { TestUnitOfWorkModule } from '../helpers/test-uow';
+import { createTestMikroOrmModule } from '../helpers/test-orm';
 
 /**
  * Every outbound call an instance would ever receive, stubbed to throw. A route
@@ -100,7 +101,7 @@ describe('Dawarich e2e (real addon gate + real auth guard + real services + temp
   let strangerSuggestionId: number;
 
   async function build() {
-    const moduleRef = await Test.createTestingModule({ imports: [await TestUnitOfWorkModule.forRoot(db), DatabaseModule, DawarichModule] })
+    const moduleRef = await Test.createTestingModule({ imports: [await TestUnitOfWorkModule.forRoot(db), await createTestMikroOrmModule(db), DatabaseModule, DawarichModule] })
       .overrideProvider(AddonsService)
       .useValue({ isAddonEnabled })
       .overrideProvider(DawarichClient)

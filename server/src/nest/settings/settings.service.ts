@@ -1,9 +1,12 @@
 import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@mikro-orm/nestjs';
 import { DatabaseService } from '../database/database.service';
 import { UnitOfWork } from '../database/unit-of-work';
 import { decrypt_api_key, maybe_encrypt_api_key } from '../common/crypto/apiKeyCrypto';
 import { MASKED_SETTING_VALUE, normalizeAppearance } from '@trek/shared';
 import { readEnv } from '../../app-config';
+import { AppSettings } from '../../db/entities/AppSettings.entity';
+import type { AppSettingsRepository } from '../../db/repositories/AppSettings.repository';
 
 /**
  * Exported so a caller that hands settings to somebody else can assert its own
@@ -153,19 +156,20 @@ export class SettingsService {
   constructor(
     private readonly db: DatabaseService,
     private readonly uow: UnitOfWork,
+    // Wiring proof (Plan 3a Task 0): the rest of this service's app_settings
+    // sites (S2/S3, the admin-defaults writes) stay on `this.db` until Task 5.
+    @InjectRepository(AppSettings) private readonly appSettings: AppSettingsRepository,
   ) {}
 
   async getAdminUserDefaults(): Promise<Record<string, unknown>> {
-    const rows = this.db.all<{ key: string; value: string }>(
-      "SELECT key, value FROM app_settings WHERE key LIKE 'default_user_setting_%'"
-    );
+    const rows = await this.appSettings.findByKeyPrefix('default_user_setting_');
     const defaults: Record<string, unknown> = {};
     for (const row of rows) {
-      const settingKey = row.key.slice('default_user_setting_'.length);
+      const settingKey = (row.key ?? '').slice('default_user_setting_'.length);
       if (ENCRYPTED_SETTING_KEYS.has(settingKey)) {
         defaults[settingKey] = row.value ? (decrypt_api_key(row.value) ?? '') : '';
       } else {
-        defaults[settingKey] = parseValue(row.value);
+        defaults[settingKey] = parseValue(row.value ?? '');
       }
     }
     return defaults;

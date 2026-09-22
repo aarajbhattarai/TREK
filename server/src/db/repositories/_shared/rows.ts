@@ -13,10 +13,17 @@ export function toRow<T extends object>(entity: T): EntityDTO<T> {
   return wrap(entity).toObject() as EntityDTO<T>;
 }
 
-/** The scalar (column-backed) keys of an entity class: everything that is not a relation or a collection. */
+/**
+ * The scalar (column-backed) keys of an entity class: everything that is not
+ * a relation or a collection. `Exclude<keyof T, symbol>` drops MikroORM's
+ * internal meta-properties (`[PrimaryKeyProp]`, `[OptionalProps]`, …) —
+ * `unique symbol`-keyed, declared on an entity whose primary key isn't a
+ * plain autoincrement `id` (e.g. `AppSettings`'s `[PrimaryKeyProp]?: 'key'`)
+ * — which are not columns and have no place in a hand-written row interface.
+ */
 export type ScalarKeys<T> = {
-  [K in keyof T]-?: NonNullable<T[K]> extends Collection<object> | Reference<object> ? never : K;
-}[keyof T];
+  [K in Exclude<keyof T, symbol>]-?: NonNullable<T[K]> extends Collection<object> | Reference<object> ? never : K;
+}[Exclude<keyof T, symbol>];
 
 /**
  * Compile-time parity between a hand-written row interface and the entity's

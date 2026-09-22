@@ -45,23 +45,34 @@ import { createTables } from '../../../src/db/schema';
 import { runMigrations } from '../../../src/db/migrations';
 import { resetTestDb } from '../../helpers/test-db';
 import { createUser } from '../../helpers/factories';
+import { createTestOrm, type TestOrm } from '../../helpers/test-orm';
 import { DatabaseService } from '../../../src/nest/database/database.service';
 import { SettingsService } from '../../../src/nest/settings/settings.service';
 import { createTestUnitOfWork } from '../../helpers/test-uow';
+import { AppSettings } from '../../../src/db/entities/AppSettings.entity';
+import type { AppSettingsRepository } from '../../../src/db/repositories/AppSettings.repository';
 
 let svc: SettingsService;
+let t: TestOrm;
 
 beforeAll(async () => {
   createTables(testDb);
   runMigrations(testDb);
-  svc = new SettingsService(new DatabaseService(testDb), await createTestUnitOfWork(testDb));
+  t = await createTestOrm(testDb);
+  svc = new SettingsService(
+    new DatabaseService(testDb),
+    await createTestUnitOfWork(testDb),
+    t.repo(AppSettings) as AppSettingsRepository,
+  );
 });
 
 beforeEach(() => {
   resetTestDb(testDb);
+  t.clear();
 });
 
-afterAll(() => {
+afterAll(async () => {
+  await t.close();
   testDb.close();
 });
 

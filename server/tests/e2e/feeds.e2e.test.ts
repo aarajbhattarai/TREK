@@ -78,6 +78,7 @@ import { AppConfigModule } from '../../src/nest/app-config/app-config.module';
 import { GlobalAuthGuard } from '../../src/nest/auth/global-auth.guard';
 import { MfaPolicyGuard } from '../../src/nest/auth/mfa-policy.guard';
 import { TestUnitOfWorkModule } from '../helpers/test-uow';
+import { createTestMikroOrmModule } from '../helpers/test-orm';
 
 const BASE = 'https://trek.example.test';
 
@@ -93,7 +94,7 @@ describe('Calendar-feed e2e (real auth guard + temp SQLite)', () => {
     // on the feed controller passed here while production 401'd every calendar
     // client).
     const moduleRef = await Test.createTestingModule({
-      imports: [await TestUnitOfWorkModule.forRoot(db), AppConfigModule, DatabaseModule, RealtimeModule, FeedsModule],
+      imports: [await TestUnitOfWorkModule.forRoot(db), await createTestMikroOrmModule(db), AppConfigModule, DatabaseModule, RealtimeModule, FeedsModule],
       providers: [
         { provide: APP_GUARD, useClass: GlobalAuthGuard },
         { provide: APP_GUARD, useClass: MfaPolicyGuard },

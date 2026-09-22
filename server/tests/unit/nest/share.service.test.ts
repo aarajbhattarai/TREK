@@ -61,15 +61,20 @@ import { SettingsService } from '../../../src/nest/settings/settings.service';
 import { QueryHelpersService } from '../../../src/nest/query-helpers/query-helpers.service';
 import type { User } from '../../../src/types';
 import { createTestUnitOfWork } from '../../helpers/test-uow';
+import { createTestOrm, type TestOrm } from '../../helpers/test-orm';
+import { AppSettings } from '../../../src/db/entities/AppSettings.entity';
+import type { AppSettingsRepository } from '../../../src/db/repositories/AppSettings.repository';
 
 let svc: ShareService;
+let t: TestOrm;
 
 beforeAll(async () => {
   createTables(testDb);
   runMigrations(testDb);
+  t = await createTestOrm(testDb);
   svc = new ShareService(
     new DatabaseService(testDb),
-    new SettingsService(new DatabaseService(testDb), await createTestUnitOfWork(testDb)),
+    new SettingsService(new DatabaseService(testDb), await createTestUnitOfWork(testDb), t.repo(AppSettings) as AppSettingsRepository),
     permissionsStub,
     new QueryHelpersService(new DatabaseService(testDb)),
     photoCacheStub,
@@ -79,11 +84,13 @@ beforeAll(async () => {
 
 beforeEach(() => {
   resetTestDb(testDb);
+  t.clear();
   checkPermission.mockReset();
   serveKey.mockReset();
 });
 
-afterAll(() => {
+afterAll(async () => {
+  await t.close();
   testDb.close();
 });
 

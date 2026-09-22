@@ -1,5 +1,7 @@
 import type { EntityClass, EntityRepository, GetRepository } from '@mikro-orm/core';
 import { MikroORM, type EntityManager } from '@mikro-orm/sqlite';
+import { MikroOrmModule } from '@mikro-orm/nestjs';
+import type { DynamicModule } from '@nestjs/common';
 import type Database from 'better-sqlite3';
 import { ALL_ENTITIES } from '../../src/db/entities';
 import { createBoundSqliteDriver } from '../../src/db/orm-driver';
@@ -64,4 +66,29 @@ export async function createTestOrm(
       await orm.close(false);
     },
   };
+}
+
+/**
+ * `MikroOrmModule.forRoot`, bound to a suite's own better-sqlite3 handle the
+ * same way `createTestOrm` is, for the partial `Test.createTestingModule`
+ * e2e harnesses (`imports: [DatabaseModule, RealtimeModule, SomeModule]`)
+ * that don't go through `buildApp()`.
+ *
+ * `buildApp()` always registers `MikroOrmModule.forRoot` (D5), so any domain
+ * module that uses `@InjectRepository`/`MikroOrmModule.forFeature` needs an
+ * `EntityManager` provider in the graph to resolve at all — a partial harness
+ * that composes such a module without this fails Nest's DI at `compile()`,
+ * not at the assertion. `allowGlobalContext` is left at its production
+ * default (`false`): these are real HTTP requests through
+ * `createNestApplication()`, so `registerRequestContext` (the NestJS
+ * integration's default) forks a context-resolving EntityManager per request
+ * the same way `buildApp()` does — no test-only global context needed here.
+ */
+export function createTestMikroOrmModule(db: Database.Database): DynamicModule | Promise<DynamicModule> {
+  return MikroOrmModule.forRoot({
+    entities: [...ALL_ENTITIES],
+    driver: createBoundSqliteDriver(() => db),
+    dbName: ':memory:',
+    discovery: { warnWhenNoEntities: false },
+  });
 }

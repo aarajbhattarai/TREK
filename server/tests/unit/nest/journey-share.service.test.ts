@@ -42,26 +42,33 @@ import { JourneyShareService } from '../../../src/nest/journey/journey-share.ser
 import { SettingsService } from '../../../src/nest/settings/settings.service';
 import { db as dbConn } from '../../../src/db/database';
 import { createTestUnitOfWork } from '../../helpers/test-uow';
+import { createTestOrm, type TestOrm } from '../../helpers/test-orm';
+import { AppSettings } from '../../../src/db/entities/AppSettings.entity';
+import type { AppSettingsRepository } from '../../../src/db/repositories/AppSettings.repository';
 
 const dbs = new DatabaseService(dbConn);
 let svc: JourneyShareService;
+let t: TestOrm;
 
 beforeAll(async () => {
   createTables(testDb);
   runMigrations(testDb);
   const uow = await createTestUnitOfWork(testDb);
+  t = await createTestOrm(testDb);
   svc = new JourneyShareService(
     dbs,
     new JourneyDomainService(dbs, new RealtimeService(), new TrekPhotosRepository(dbs), uow),
-    new SettingsService(dbs, uow),
+    new SettingsService(dbs, uow, t.repo(AppSettings) as AppSettingsRepository),
   );
 });
 
 beforeEach(() => {
   resetTestDb(testDb);
+  t.clear();
 });
 
-afterAll(() => {
+afterAll(async () => {
+  await t.close();
   testDb.close();
 });
 

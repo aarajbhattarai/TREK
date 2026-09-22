@@ -91,13 +91,14 @@ import { DayNotesModule } from '../../src/nest/day-notes/day-notes.module';
 import { TrekExceptionFilter } from '../../src/nest/common/trek-exception.filter';
 import { ZodValidationPipe } from '../../src/nest/common/zod-validation.pipe';
 import { TestUnitOfWorkModule } from '../helpers/test-uow';
+import { createTestMikroOrmModule } from '../helpers/test-orm';
 
 describe('Days + day-notes e2e (real auth guard + temp SQLite, real day SQL)', () => {
   let server: Server;
   let app: Awaited<ReturnType<typeof build>>;
 
   async function build() {
-    const moduleRef = await Test.createTestingModule({ imports: [await TestUnitOfWorkModule.forRoot(db), DatabaseModule, RealtimeModule, DaysModule, DayNotesModule] }).compile();
+    const moduleRef = await Test.createTestingModule({ imports: [await TestUnitOfWorkModule.forRoot(db), await createTestMikroOrmModule(db), DatabaseModule, RealtimeModule, DaysModule, DayNotesModule] }).compile();
     const nest = moduleRef.createNestApplication();
     nest.use(cookieParser());
     nest.useGlobalPipes(new ZodValidationPipe());
