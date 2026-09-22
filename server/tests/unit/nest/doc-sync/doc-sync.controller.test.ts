@@ -182,10 +182,10 @@ let tripId: number;
 let otherTripId: number;
 
 beforeAll(async () => {
-  config = new DocSyncConfigService(dbs, registry, await createTestUnitOfWork(testDb));
-  controller = new DocSyncController(config, sync as unknown as DocSyncService, registry, dbs, realtime as unknown as RealtimeService);
   createTables(testDb);
   runMigrations(testDb);
+  config = new DocSyncConfigService(dbs, registry, await createTestUnitOfWork(testDb));
+  controller = new DocSyncController(config, sync as unknown as DocSyncService, registry, dbs, realtime as unknown as RealtimeService);
   const o = createUser(testDb, { username: 'owner', email: 'owner@test.local' }).user;
   const m = createUser(testDb, { username: 'member', email: 'member@test.local' }).user;
   const a = createUser(testDb, { username: 'admin', email: 'admin@test.local', role: 'admin' }).user;

@@ -174,7 +174,7 @@ function windowEndYear(end: string): number {
  *
  * Post-migration fixes on top of the relocated legacy behavior: the
  * multi-statement writes (acceptInvite, dissolvePlan, deleteYear, updatePlan's
- * carry-over recompute) run in db.transaction(); every outbound fetch carries
+ * carry-over recompute) run in uow.transactional(); every outbound fetch carries
  * an AbortSignal timeout and the nager.at responses are ok-checked;
  * applyHolidayCalendars honors the cache TTL; addYear no longer swallows real
  * errors; the holiday cache is instance state instead of a module-level map.
@@ -883,7 +883,7 @@ export class VacayService {
     // `map` cannot await, and `shareDisplayColor` mutates `usedColors` as it
     // hands colors out, so the projection runs as an explicit loop — same rows,
     // same order, same color-allocation sequence.
-    const incoming = [];
+    const incoming: { id: number; owner_id: number; username: string; color: string; hidden: boolean }[] = [];
     for (const s of incomingRows.filter(s => !coMembers.has(s.owner_id))) {
       incoming.push({
         id: s.id,
@@ -980,7 +980,11 @@ export class VacayService {
     // `map` cannot await, and `shareDisplayColor` mutates `usedColors` as it
     // hands colors out, so the projection runs as an explicit loop — same rows,
     // same order, same color-allocation sequence.
-    const calendars = [];
+    const calendars: {
+      share_id: number; owner_id: number; owner_name: string; color: string; hidden: boolean;
+      entries: { date: string; fraction: number; kind: string | null }[];
+      companyHolidays: { date: string }[];
+    }[] = [];
     for (const s of shares.filter(s => !coMembers.has(s.owner_id))) {
       const color = await this.shareDisplayColor(s.owner_id, usedColors);
       const plan = await this.peekActivePlan(s.owner_id);
@@ -988,7 +992,7 @@ export class VacayService {
         calendars.push({ share_id: s.id, owner_id: s.owner_id, owner_name: s.username, color, hidden: !!s.hidden, entries: [], companyHolidays: [] });
         continue;
       }
-      const entries = this.db.all(
+      const entries = this.db.all<{ date: string; fraction: number; kind: string | null }>(
         'SELECT date, fraction, kind FROM vacay_entries WHERE plan_id = ? AND user_id = ? AND date >= ? AND date < ? ORDER BY date',
         plan.id, s.owner_id, start, end
       );
@@ -996,7 +1000,7 @@ export class VacayService {
       // only exposed while the owner has the feature enabled, and dates only —
       // the note text may be authored by plan members who aren't part of the share.
       const companyHolidays = plan.company_holidays_enabled
-        ? this.db.all('SELECT date FROM vacay_company_holidays WHERE plan_id = ? AND date >= ? AND date < ? ORDER BY date', plan.id, start, end)
+        ? this.db.all<{ date: string }>('SELECT date FROM vacay_company_holidays WHERE plan_id = ? AND date >= ? AND date < ? ORDER BY date', plan.id, start, end)
         : [];
       calendars.push({ share_id: s.id, owner_id: s.owner_id, owner_name: s.username, color, hidden: !!s.hidden, entries, companyHolidays });
     }
@@ -1062,7 +1066,7 @@ export class VacayService {
       const members = await this.getPlanUsers(planId);
       // `map` cannot await the per-member window read, so it runs as an explicit
       // loop — same ids, same order.
-      const windows = [];
+      const windows: { start: string; end: string }[] = [];
       for (const id of members.length > 0 ? members.map(m => m.id) : [owner?.owner_id ?? -1]) {
         windows.push(await this.resolveYearWindow(id, year));
       }
@@ -1174,7 +1178,12 @@ export class VacayService {
 
     // `map` cannot await, and the body also writes next year's carry-over, so
     // the projection runs as an explicit loop — same users, same order, same writes.
-    const rows = [];
+    const rows: {
+      user_id: number; person_name: string; person_color: string;
+      year: number; vacation_days: number; carried_over: number;
+      total_available: number; used: number; remaining: number; comp_used: number;
+      window_start: string; window_end: string;
+    }[] = [];
     for (const u of users) {
       const used = await this.usedDays(u.id, planId, year);
       const compUsed = await this.compUsedDays(u.id, planId, year);
