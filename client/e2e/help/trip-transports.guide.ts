@@ -357,7 +357,10 @@ const SCRIPTS: Record<string, GuideScript> = {
         target: p => legMenu(p).getByRole('button', { name: 'Walking' }),
         act: async p => {
           await legMenu(p).getByRole('button', { name: 'Walking' }).click()
-          await expect(connector(p).locator('svg.lucide-footprints')).toBeVisible({ timeout: 30_000 })
+          // The menu closing is the change landing. Not the icon on the first
+          // leg: the day re-routes when a mode changes, and which leg comes
+          // first is not fixed while it does.
+          await expect(legMenu(p)).toHaveCount(0, { timeout: 20_000 })
           await settle(p)
         },
       },
