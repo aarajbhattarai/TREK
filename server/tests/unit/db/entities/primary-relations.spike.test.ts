@@ -45,7 +45,7 @@ afterAll(async () => {
 });
 
 describe('primary-relation entities (Task 1 spike)', () => {
-  it('SPIKE-A: BudgetCategoryOrder — composite PK (trip relation + category text) round-trips create, findOne, find and toObject', async () => {
+  it('SPIKE-001: BudgetCategoryOrder — composite PK (trip relation + category text) round-trips create, findOne, find and toObject', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
 
@@ -68,7 +68,7 @@ describe('primary-relation entities (Task 1 spike)', () => {
     expect(wrap(hydrated).toObject()).toStrictEqual(rawInsert);
   });
 
-  it('SPIKE-B: VacayUserSettings — one-to-one PRIMARY relation (user) round-trips the same four facts', async () => {
+  it('SPIKE-002: VacayUserSettings — one-to-one PRIMARY relation (user) round-trips the same four facts', async () => {
     const { user } = createUser(testDb);
 
     const created = t.em.create(VacayUserSettings, {
@@ -100,7 +100,7 @@ describe('primary-relation entities (Task 1 spike)', () => {
     expect(wrap(hydrated).toObject()).toStrictEqual(rawInsert);
   });
 
-  it("SPIKE-C: .name() sets the property's fieldName, but a relation's FK column is only overridden by .joinColumn()", async () => {
+  it("SPIKE-003: .name() sets the property's fieldName, but a relation's FK column is only overridden by .joinColumn()", async () => {
     // A throwaway target whose PK is NOT `id` — the exact shape that made
     // SchoolHolidayRegions.country_code (Task 0) a real bug: the naming
     // strategy composes the FK column from the property name plus the
@@ -159,7 +159,7 @@ describe('primary-relation entities (Task 1 spike)', () => {
     }
   });
 
-  it('SPIKE-D: a nullable text PRIMARY KEY (AppSettings.key) round-trips create → findOne unchanged, and toObject keeps the key', async () => {
+  it('SPIKE-004: a nullable text PRIMARY KEY (AppSettings.key) round-trips create → findOne unchanged, and toObject keeps the key', async () => {
     const created = t.em.create(AppSettings, { key: 'spike_setting', value: 'on' });
     await t.em.persist(created).flush();
     t.em.clear();
