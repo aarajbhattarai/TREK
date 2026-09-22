@@ -288,7 +288,7 @@ describe('the plugin channel source reaches the outside-container instance', () 
     setPluginChannelSource(() => runtime.notificationChannels());
 
     try {
-      expect(getChannel('plugin:gotify')).toBeDefined();
+      expect(await getChannel('plugin:gotify')).toBeDefined();
 
       await send({ ...TRIP_INVITE, targetId: user.id });
 

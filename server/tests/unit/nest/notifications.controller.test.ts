@@ -26,9 +26,9 @@ async function thrown(fn: () => unknown): Promise<{ status: number; body: unknow
 
 describe('NotificationsController (parity with the legacy /api/notifications route)', () => {
   describe('preferences', () => {
-    it('GET returns the matrix for the user', () => {
+    it('GET returns the matrix for the user', async () => {
       const getPreferences = vi.fn().mockReturnValue({ preferences: {} });
-      expect(makeController({ getPreferences }).getPreferences(user)).toEqual({ preferences: {} });
+      expect(await makeController({ getPreferences }).getPreferences(user)).toEqual({ preferences: {} });
       expect(getPreferences).toHaveBeenCalledWith(4, 'user');
     });
 

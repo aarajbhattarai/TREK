@@ -2694,15 +2694,15 @@ describe('kill-switch settings reads', () => {
 });
 
 describe('photoBytesKey', () => {
-  it('returns the cached storage name from placePhotoCache', () => {
+  it('returns the cached storage name from placePhotoCache', async () => {
     mockServeFilePath.mockReturnValue('abc.jpg');
-    expect(svc.photoBytesKey('p1')).toBe('abc.jpg');
+    expect(await svc.photoBytesKey('p1')).toBe('abc.jpg');
     expect(mockServeFilePath).toHaveBeenCalledWith('p1');
   });
 
-  it('returns null when nothing is cached', () => {
+  it('returns null when nothing is cached', async () => {
     mockServeFilePath.mockReturnValue(null);
-    expect(svc.photoBytesKey('p1')).toBeNull();
+    expect(await svc.photoBytesKey('p1')).toBeNull();
   });
 });
 

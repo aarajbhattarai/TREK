@@ -24,6 +24,20 @@
  * `expect(p).resolves`/`.rejects`, or in an existence/identity check
  * (`p === undefined`, `p === null`, `p ?? q`, `a === b` between two promises) —
  * see isExistenceOrIdentityCheck below. A finding is a bug: add the `await`.
+ *
+ * It also reports a bare `expect(p)` (never `expect.soft`/other wrappers)
+ * whose argument is a Promise, unless the call is immediately the object of a
+ * `.resolves`/`.rejects` access, of `.toBeInstanceOf(Promise)` (asking
+ * whether the value itself is a Promise IS the assertion, not a missing
+ * await), or of `.toBe(otherPromise)` where the argument is itself
+ * Promise-typed — the same in-flight-map identity idiom
+ * isExistenceOrIdentityCheck exempts for `===`, just spelled with a matcher
+ * (trek-photo-cache's stampede guard: `expect(svc.getInFlight(k)).toBe(fetch)`
+ * — awaiting would compare the resolved buffer to the unawaited Promise `fetch`
+ * and always fail). `expect(p).toBe(x)` is otherwise a vacuous assertion (it
+ * always passes: a Promise object is never `=== x`), same bug class as the
+ * rest of this rule but with its own message since the fix is either
+ * `expect(await p)` or `await expect(p).resolves…`, not a bare `await`.
  */
 import ts from 'typescript';
 
@@ -93,6 +107,7 @@ export default {
     schema: [],
     messages: {
       promiseAsValue: 'Promise used as a value (missing await?): {{ text }}',
+      expectPromise: 'Promise passed to expect() without .resolves/.rejects (missing await?)',
     },
   },
 
@@ -139,6 +154,82 @@ export default {
 
     function check(node) {
       if (isPromise(node)) report(node);
+    }
+
+    function reportExpect(node) {
+      if (!node || reported.has(node)) return;
+      reported.add(node);
+      context.report({ node, messageId: 'expectPromise' });
+    }
+
+    /** Bare `expect(...)` only — `expect.soft(...)` and other wrappers are untouched. */
+    function isBareExpectCall(node) {
+      return node.callee.type === 'Identifier' && node.callee.name === 'expect';
+    }
+
+    /** `expect(p).resolves` / `expect(p).rejects`, however it is chained further from there. */
+    function isResolvesOrRejectsAccess(node) {
+      const parent = node.parent;
+      return (
+        !!parent &&
+        parent.type === 'MemberExpression' &&
+        parent.object === node &&
+        !parent.computed &&
+        parent.property.type === 'Identifier' &&
+        (parent.property.name === 'resolves' || parent.property.name === 'rejects')
+      );
+    }
+
+    /**
+     * `expect(p).toBeInstanceOf(Promise)` asks whether the VALUE ITSELF is a
+     * Promise object — that is the assertion, not a missing await, and
+     * awaiting it would change what the test checks. Exempt only that literal
+     * shape: the argument must resolve to the global `Promise` constructor, so
+     * `expect(f()).toBeInstanceOf(SomeOtherClass)` is still a reported bug.
+     */
+    function isInstanceOfPromiseCheck(node) {
+      const memberParent = node.parent;
+      if (
+        !memberParent ||
+        memberParent.type !== 'MemberExpression' ||
+        memberParent.object !== node ||
+        memberParent.computed ||
+        memberParent.property.type !== 'Identifier' ||
+        memberParent.property.name !== 'toBeInstanceOf'
+      ) {
+        return false;
+      }
+      const callParent = memberParent.parent;
+      if (!callParent || callParent.type !== 'CallExpression' || callParent.callee !== memberParent) return false;
+      const arg = callParent.arguments[0];
+      const resolved = arg && typeOf(arg);
+      if (!resolved) return false;
+      const symbol = resolved.type.getSymbol();
+      return symbol?.getName() === 'PromiseConstructor';
+    }
+
+    /**
+     * `expect(p).toBe(otherPromise)` — an identity check between two Promise
+     * references (the in-flight-map stampede guard), not a resolved-value
+     * comparison. Mirrors isExistenceOrIdentityCheck's "both sides are
+     * promises" branch for `===`.
+     */
+    function isPromiseIdentityToBe(node) {
+      const memberParent = node.parent;
+      if (
+        !memberParent ||
+        memberParent.type !== 'MemberExpression' ||
+        memberParent.object !== node ||
+        memberParent.computed ||
+        memberParent.property.type !== 'Identifier' ||
+        memberParent.property.name !== 'toBe'
+      ) {
+        return false;
+      }
+      const callParent = memberParent.parent;
+      if (!callParent || callParent.type !== 'CallExpression' || callParent.callee !== memberParent) return false;
+      const arg = callParent.arguments[0];
+      return !!arg && isPromise(arg);
     }
 
     /**
@@ -208,6 +299,18 @@ export default {
       },
 
       CallExpression(node) {
+        if (
+          isBareExpectCall(node) &&
+          node.arguments.length > 0 &&
+          node.arguments[0].type !== 'SpreadElement' &&
+          !isResolvesOrRejectsAccess(node) &&
+          !isInstanceOfPromiseCheck(node) &&
+          !isPromiseIdentityToBe(node) &&
+          isPromise(node.arguments[0])
+        ) {
+          reportExpect(node.arguments[0]);
+          return;
+        }
         if (isValueConsumerCall(node.callee)) {
           node.arguments.forEach((arg) => {
             if (arg.type !== 'SpreadElement') check(arg);

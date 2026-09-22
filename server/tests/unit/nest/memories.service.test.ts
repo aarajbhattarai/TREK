@@ -73,9 +73,9 @@ describe('MemoriesService (delegation wrapper over services/memories/*)', () => 
     );
   });
 
-  it('access check + broadcast forward verbatim', () => {
+  it('access check + broadcast forward verbatim', async () => {
     helpers.canAccessUserPhoto.mockReturnValue(false);
-    expect(svc.canAccessUserPhoto(1, 2, '5', 'a', 'immich')).toBe(false);
+    expect(await svc.canAccessUserPhoto(1, 2, '5', 'a', 'immich')).toBe(false);
     expect(helpers.canAccessUserPhoto).toHaveBeenCalledWith(1, 2, '5', 'a', 'immich');
 
     svc.broadcast('5', 'memories:updated', { userId: 1 }, 'sock');

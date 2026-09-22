@@ -217,7 +217,7 @@ describe('BackupService (wrapper)', () => {
   const wrapper = new RealBackupService(storage);
 
   it('forwards every call straight to the legacy backup service', async () => {
-    expect(wrapper.listBackups()).toEqual([{ filename: 'svc.zip' }]);
+    expect(await wrapper.listBackups()).toEqual([{ filename: 'svc.zip' }]);
     expect(backupSvc.listBackups).toHaveBeenCalledWith(storage);
 
     await expect(wrapper.createBackup()).resolves.toEqual({ filename: 'svc.zip', size: 5 });
@@ -235,7 +235,7 @@ describe('BackupService (wrapper)', () => {
     expect(wrapper.isValidBackupFilename('svc.zip')).toBe(true);
     expect(backupSvc.isValidBackupFilename).toHaveBeenCalledWith('svc.zip');
 
-    expect(wrapper.backupFileExists('svc.zip')).toBe(true);
+    expect(await wrapper.backupFileExists('svc.zip')).toBe(true);
     expect(backupSvc.backupFileExists).toHaveBeenCalledWith(storage, 'svc.zip');
 
     const fakeRes = {} as Response;

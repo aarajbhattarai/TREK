@@ -328,11 +328,11 @@ describe('TripsController (parity with the legacy /api/trips route)', async () =
     });
   });
 
-  it('GET /:id/bundle 404 then aggregates', () => {
+  it('GET /:id/bundle 404 then aggregates', async () => {
     expect(thrown(() => tc(svc({ get: vi.fn().mockReturnValue(undefined) } as Partial<TripsService>)).bundle(user, '9'))).toEqual({ status: 404, body: { error: 'Trip not found' } });
     const bundle = vi.fn().mockReturnValue({ trip: { id: 9 }, days: [] });
     const s = svc({ get: vi.fn().mockReturnValue({ user_id: 1 }) } as Partial<TripsService>);
-    expect(tc(s, undefined, { bundle }).bundle(user, '9')).toEqual({ trip: { id: 9 }, days: [] });
+    expect(await tc(s, undefined, { bundle }).bundle(user, '9')).toEqual({ trip: { id: 9 }, days: [] });
   });
 
   describe('POST /:id/cover', () => {

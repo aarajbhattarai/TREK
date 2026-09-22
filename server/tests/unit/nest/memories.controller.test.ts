@@ -217,10 +217,10 @@ describe('UnifiedMemoriesController (parity with /api/integrations/memories/unif
 // ─────────────────────────────────────────────────────────────────────────────
 describe('ImmichMemoriesController (parity with /api/integrations/memories/immich)', () => {
   describe('GET /settings', () => {
-    it('delegates to the service', () => {
+    it('delegates to the service', async () => {
       const immichGetConnectionSettings = vi.fn().mockReturnValue({ immich_url: 'u' });
       const svc = makeService({ immichGetConnectionSettings });
-      expect(new ImmichMemoriesController(svc).getSettings(user)).toEqual({ immich_url: 'u' });
+      expect(await new ImmichMemoriesController(svc).getSettings(user)).toEqual({ immich_url: 'u' });
       expect(immichGetConnectionSettings).toHaveBeenCalledWith(7);
     });
   });

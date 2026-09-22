@@ -133,12 +133,12 @@ describe('AuthPublicController', () => {
     expect(await apc(asvc({ resetPassword: vi.fn().mockReturnValue({ userId: 1 }) } as Partial<AuthService>), rl()).resetPassword(anyBody(), req)).toEqual({ success: true });
   });
 
-  it('app-config forwards the optional user (present and absent)', () => {
+  it('app-config forwards the optional user (present and absent)', async () => {
     const getAppConfig = vi.fn().mockReturnValue({ version: '3' });
     const c = apc(asvc({ getAppConfig } as Partial<AuthService>), rl());
-    expect(c.appConfig({ user } as unknown as Request)).toEqual({ version: '3' });
+    expect(await c.appConfig({ user } as unknown as Request)).toEqual({ version: '3' });
     expect(getAppConfig).toHaveBeenLastCalledWith(user);
-    expect(c.appConfig({} as Request)).toEqual({ version: '3' });
+    expect(await c.appConfig({} as Request)).toEqual({ version: '3' });
     expect(getAppConfig).toHaveBeenLastCalledWith(undefined);
   });
 

@@ -28,7 +28,15 @@ declare function getRows(): Promise<string[]>;
 declare function maybeSettings(id: number): Promise<Record<string, string>> | null;
 declare function syncName(id: number): string;
 declare const rows: { id: number; active: boolean }[];
-declare const expect: (value: unknown) => { resolves: { toBe(value: unknown): void } };
+declare const expect: (value: unknown) => {
+  resolves: { toBe(value: unknown): void };
+  rejects: { toThrow(value?: unknown): void };
+  toBe(value: unknown): void;
+  toBeNull(): void;
+  toEqual(value: unknown): void;
+  toBeInstanceOf(ctor: unknown): void;
+};
+declare const svc: { rosterIds(id: number): Promise<Set<number>> };
 `;
 
 /** Every case shares the declarations above; offsets never matter, only counts. */
@@ -47,6 +55,16 @@ const valid = [
   `const both = await Promise.all([getName(1), getCount()]); void both;`,
   `const joined = \`\${(await Promise.all([getName(1)]))[0]}\`; void joined;`,
   `expect(getName(1)).resolves.toBe('x');`,
+  `await expect(getName(1)).resolves.toBe('x');`,
+  `await expect(getName(1)).rejects.toThrow();`,
+  `expect(await getName(1)).toBe('x');`,
+  // Asserting the VALUE is a Promise (a live AUTH-DB-024 pattern) is the assertion
+  // itself, not a missing await — it stays exempt, unlike other matchers.
+  `expect(getName(1)).toBeInstanceOf(Promise);`,
+  // Identity between two promise references (the trek-photo-cache stampede-guard
+  // pattern: `expect(svc.getInFlight(k)).toBe(fetch)`) — awaiting would compare a
+  // resolved value against the unawaited Promise and always fail.
+  `const p1 = getName(1); const p2 = getName(2); expect(p1).toBe(p2);`,
   `const isP = getName(1) instanceof Promise; void isP;`,
   // Existence / identity checks on a parked promise: the in-flight-map idiom the
   // server uses everywhere, and the one a truthiness test would get wrong.
@@ -87,15 +105,34 @@ const invalid = [
   `const v = getName(1) || 'x'; void v;`,
   // A predicate callback that returns a promise: every element passes.
   `const active = rows.filter((r) => getName(r.id)); void active;`,
+  // `.has()` on a Promise<Set<...>> — the PackingService.updateBag shape (Task 9):
+  // a member call is still just property access on a promise-typed object.
+  `const s = svc.rosterIds(1); s.has(2);`,
+  `svc.rosterIds(1).has(2);`,
 ].map((code) => ({
   code: withPrelude(code),
   filename: path.join(fixtureRoot, 'file.ts'),
   errors: [{ messageId: 'promiseAsValue' }],
 }));
 
+const invalidExpect = [
+  // Bare `expect(promise)` without `.resolves`/`.rejects`: the assertion always
+  // passes/fails independent of the resolved value — Task 9's vacuous-assertion bug.
+  `const p = getName(1); expect(p).toBe('x');`,
+  `expect(getName(1)).toBeNull();`,
+  `expect(getCount()).toEqual(1);`,
+  // `.toBeInstanceOf` is exempt only for the literal `Promise` constructor —
+  // against anything else the promise itself never matches, still a bug.
+  `expect(getName(1)).toBeInstanceOf(String);`,
+].map((code) => ({
+  code: withPrelude(code),
+  filename: path.join(fixtureRoot, 'file.ts'),
+  errors: [{ messageId: 'expectPromise' }],
+}));
+
 ruleTester.run('trek/no-promise-as-value', noPromiseAsValue as unknown as Rule.RuleModule, {
   valid,
-  invalid,
+  invalid: [...invalid, ...invalidExpect],
 });
 
 // Under strictNullChecks a promise-returning call can genuinely be nullable, and

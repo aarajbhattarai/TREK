@@ -185,7 +185,7 @@ describe('AdminController read-only getters', () => {
   it('return service values verbatim', async () => {
     expect(await adminCtl(svc({ resetUserPasskeys: vi.fn().mockReturnValue({ email: 'a@b.c', deleted: 2 }) } as Partial<AdminService>)).resetUserPasskeys(user, '4', req)).toEqual({ success: true, deleted: 2 });
     expect(adminCtl(svc({ getStats: vi.fn().mockReturnValue({ users: 3 }) } as Partial<AdminService>)).stats()).toEqual({ users: 3 });
-    expect(adminCtl(svc({ getPermissions: vi.fn().mockReturnValue({ a: 1 }) } as Partial<AdminService>)).permissions()).toEqual({ a: 1 });
+    expect(await adminCtl(svc({ getPermissions: vi.fn().mockReturnValue({ a: 1 }) } as Partial<AdminService>)).permissions()).toEqual({ a: 1 });
     expect(adminCtl(svc({ getAuditLog: vi.fn().mockReturnValue({ entries: [] }) } as Partial<AdminService>)).auditLog({})).toEqual({ entries: [] });
     await expect(adminCtl(svc({ checkVersion: vi.fn().mockResolvedValue({ current: '1' }) } as Partial<AdminService>)).versionCheck()).resolves.toEqual({ current: '1' });
     expect(await adminCtl(svc(), undefined, undefined, {}, { listInvites: vi.fn().mockReturnValue([{ id: 1 }]) }).listInvites()).toEqual({ invites: [{ id: 1 }] });
@@ -269,15 +269,15 @@ describe('AdminController feature toggles', () => {
     }
   });
 
-  it('ADMIN-TOGGLE-002 the getters return the AddonsService value verbatim', () => {
+  it('ADMIN-TOGGLE-002 the getters return the AddonsService value verbatim', async () => {
     const c = adminCtl(svc());
-    expect(c.getBagTracking()).toEqual({ enabled: false });
-    expect(c.getPlacesPhotos()).toEqual({ enabled: false });
-    expect(c.getPlacesAutocomplete()).toEqual({ enabled: false });
-    expect(c.getPlacesDetails()).toEqual({ enabled: false });
-    expect(c.getPlaceShadow()).toEqual({ enabled: false });
-    expect(c.getPlacesEnrich()).toEqual({ enabled: true });
-    expect(c.getCollabFeatures()).toEqual({ chat: false });
+    expect(await c.getBagTracking()).toEqual({ enabled: false });
+    expect(await c.getPlacesPhotos()).toEqual({ enabled: false });
+    expect(await c.getPlacesAutocomplete()).toEqual({ enabled: false });
+    expect(await c.getPlacesDetails()).toEqual({ enabled: false });
+    expect(await c.getPlaceShadow()).toEqual({ enabled: false });
+    expect(await c.getPlacesEnrich()).toEqual({ enabled: true });
+    expect(await c.getCollabFeatures()).toEqual({ chat: false });
   });
 
   it('ADMIN-TOGGLE-002b places-enrich updates through the addons domain and is audited', async () => {
@@ -289,7 +289,7 @@ describe('AdminController feature toggles', () => {
   it('ADMIN-TOGGLE-002c transit-provider reads and writes through the addons domain and is audited (#1699)', async () => {
     const addons = addonsStub();
     const c = adminCtl(svc(), undefined, addons);
-    expect(c.getTransitProvider(user)).toEqual({ provider: 'transitous', googleKeySource: null });
+    expect(await c.getTransitProvider(user)).toEqual({ provider: 'transitous', googleKeySource: null });
     expect(await c.updateTransitProvider(user, { provider: 'google' }, req)).toEqual({ provider: 'google', googleKeySource: null });
     // The acting admin's id drives key resolution — the panel warns about the
     // key THEY would search with.
@@ -314,10 +314,10 @@ describe('AdminController feature toggles', () => {
     expect(updatePlaceShadow).toHaveBeenLastCalledWith(false);
   });
 
-  it('ADMIN-TOGGLE-004b place-shadow reads through to AddonsService instead of a controller-side default', () => {
+  it('ADMIN-TOGGLE-004b place-shadow reads through to AddonsService instead of a controller-side default', async () => {
     const getPlaceShadow = vi.fn(() => ({ enabled: true }));
     const c = adminCtl(svc(), undefined, { ...addonsStub(), getPlaceShadow } as unknown as AddonsService);
-    expect(c.getPlaceShadow()).toEqual({ enabled: true });
+    expect(await c.getPlaceShadow()).toEqual({ enabled: true });
     expect(getPlaceShadow).toHaveBeenCalledTimes(1);
     expect(writeAudit).not.toHaveBeenCalled();
   });

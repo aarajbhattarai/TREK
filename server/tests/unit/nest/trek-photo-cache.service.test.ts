@@ -162,7 +162,7 @@ describe('the stampede guard', () => {
     await fetch;
     // Settling clears the slot, so the next request starts a fresh fetch.
     await Promise.resolve();
-    expect(svc.getInFlight(key)).toBeUndefined();
+    expect(await svc.getInFlight(key)).toBeUndefined();
   });
 
   it('CACHE-010: the map is shared across instances (module-scoped stampede guard)', () => {
