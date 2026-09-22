@@ -1,32 +1,15 @@
 /**
  * Unit tests for the DI-native audit domain — AUDIT-SVC-001 through
- * AUDIT-SVC-017 (001–007 are the getClientIp cases moved 1:1 from the legacy
+ * AUDIT-SVC-019 (001–007 are the getClientIp cases moved 1:1 from the legacy
  * tests/unit/services/auditLog.test.ts, which had no case IDs — the IDs are
- * introduced with the move; 008–014 cover writeAudit over a real in-memory
- * SQLite DB, which the legacy suite never exercised; 015–017 pin the
- * audit.bridge delegation). The logger module is mocked (it replaces the old
- * suite's fs mock: the import-time mkdir lives there now, and mocking it lets
- * the exact log-line formats be asserted).
+ * introduced with the move; 008–014, 018, 019 cover writeAudit over a real
+ * in-memory SQLite DB through AuditLogRepository/UsersRepository, which the
+ * legacy suite never exercised). The logger module is mocked (it replaces the
+ * old suite's fs mock: the import-time mkdir lives there now, and mocking it
+ * lets the exact log-line formats be asserted).
  */
 import { describe, it, expect, vi, beforeAll, beforeEach, afterAll } from 'vitest';
 
-// ── DB setup ──────────────────────────────────────────────────────────────────
-
-const { testDb, dbMock } = vi.hoisted(() => {
-  const Database = require('better-sqlite3');
-  const db = new Database(':memory:');
-  db.exec('PRAGMA journal_mode = WAL');
-  db.exec('PRAGMA foreign_keys = ON');
-  db.exec('PRAGMA busy_timeout = 5000');
-  const mock = {
-    db,
-    closeDb: () => {},
-    reinitialize: () => {},
-  };
-  return { testDb: db, dbMock: mock };
-});
-
-vi.mock('../../../src/db/database', () => dbMock);
 vi.mock('../../../src/nest/audit/audit-log.logger', () => ({
   LOG_LEVEL: 'error',
   logInfo: vi.fn(),
@@ -36,27 +19,44 @@ vi.mock('../../../src/nest/audit/audit-log.logger', () => ({
 }));
 
 import type { Request } from 'express';
+import Database from 'better-sqlite3';
 import { createTables } from '../../../src/db/schema';
 import { runMigrations } from '../../../src/db/migrations';
-import { DatabaseService } from '../../../src/nest/database/database.service';
+import { createTestOrm, type TestOrm } from '../../helpers/test-orm';
+import { AuditLog } from '../../../src/db/entities/AuditLog.entity';
+import { Users } from '../../../src/db/entities/Users.entity';
+import type { AuditLogRepository } from '../../../src/db/repositories/AuditLog.repository';
+import type { UsersRepository } from '../../../src/db/repositories/Users.repository';
 import { AuditService } from '../../../src/nest/audit/audit.service';
 import { getClientIp } from '../../../src/nest/audit/client-ip';
 import { logInfo, logDebug, logError } from '../../../src/nest/audit/audit-log.logger';
 
-const svc = new AuditService(new DatabaseService(testDb));
+const testDb = new Database(':memory:');
+testDb.exec('PRAGMA journal_mode = WAL');
+testDb.exec('PRAGMA foreign_keys = ON');
+testDb.exec('PRAGMA busy_timeout = 5000');
 
-beforeAll(() => {
+let t: TestOrm;
+let auditLogRepo: AuditLogRepository;
+let svc: AuditService;
+
+beforeAll(async () => {
   createTables(testDb);
   runMigrations(testDb);
+  t = await createTestOrm(testDb);
+  auditLogRepo = t.repo(AuditLog) as AuditLogRepository;
+  svc = new AuditService(auditLogRepo, t.repo(Users) as UsersRepository);
 });
 
 beforeEach(() => {
   vi.clearAllMocks();
   testDb.prepare('DELETE FROM audit_log').run();
   testDb.prepare('DELETE FROM users').run();
+  t.clear();
 });
 
-afterAll(() => {
+afterAll(async () => {
+  await t.close();
   testDb.close();
 });
 
@@ -111,7 +111,7 @@ describe('getClientIp', () => {
   });
 });
 
-// ── writeAudit (real DB) ──────────────────────────────────────────────────────
+// ── writeAudit (real DB, through the repositories) ────────────────────────────
 
 function seedUser(id: number, email: string): void {
   testDb.prepare(
@@ -180,10 +180,10 @@ describe('writeAudit', () => {
   });
 
   it('AUDIT-SVC-013: never throws — a failed insert reduces to a logError line', async () => {
-    testDb.prepare('ALTER TABLE audit_log RENAME TO audit_log_gone').run();
+    const spy = vi.spyOn(auditLogRepo, 'insertEntry').mockRejectedValueOnce(new Error('insert failed'));
     await expect(svc.writeAudit({ userId: 1, action: 'user.login' })).resolves.not.toThrow();
-    expect(logError).toHaveBeenCalledWith(expect.stringMatching(/^Audit write failed: /));
-    testDb.prepare('ALTER TABLE audit_log_gone RENAME TO audit_log').run();
+    expect(logError).toHaveBeenCalledWith('Audit write failed: insert failed');
+    spy.mockRestore();
   });
 
   it('AUDIT-SVC-018: settings.api_keys_update names the changed keys and nothing else (#1939)', async () => {
@@ -212,4 +212,3 @@ describe('writeAudit', () => {
     expect(logInfo).toHaveBeenLastCalledWith('a@b.c logged in ip=1.1.1.1');
   });
 });
-

@@ -84,6 +84,7 @@ import { NextcloudDocumentProvider, OpencloudDocumentProvider } from '../../src/
 import { TrekExceptionFilter } from '../../src/nest/common/trek-exception.filter';
 import { ZodValidationPipe } from '../../src/nest/common/zod-validation.pipe';
 import { TestUnitOfWorkModule } from '../helpers/test-uow';
+import { createTestMikroOrmModule } from '../helpers/test-orm';
 
 /** A provider that answers plausibly but never opens a socket. */
 function fakeProvider(id: string) {
@@ -137,7 +138,7 @@ describe('Document sync e2e (real guards + real services + temp SQLite)', () => 
       [OpencloudDocumentProvider, 'opencloud'],
       [SynologyDriveDocumentProvider, 'synologydrive'],
     ] as const;
-    let builder = Test.createTestingModule({ imports: [await TestUnitOfWorkModule.forRoot(db), DatabaseModule, DocSyncModule] })
+    let builder = Test.createTestingModule({ imports: [await TestUnitOfWorkModule.forRoot(db), await createTestMikroOrmModule(db), DatabaseModule, DocSyncModule] })
       .overrideProvider(AddonsService)
       .useValue({ isAddonEnabled });
     const fakes = providers.map(([, id]) => fakeProvider(id));

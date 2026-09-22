@@ -1,4 +1,7 @@
 import { Module } from '@nestjs/common';
+import { MikroOrmModule } from '@mikro-orm/nestjs';
+import { AuditLog } from '../../db/entities/AuditLog.entity';
+import { Users } from '../../db/entities/Users.entity';
 import { AuditService } from './audit.service';
 
 /** Cross-cutting audit domain (Wave 2). No controller/MCP surface of its own —
@@ -9,6 +12,7 @@ import { AuditService } from './audit.service';
  *  transitively through each consumer's explicit import. Registered in
  *  AppModule. */
 @Module({
+  imports: [MikroOrmModule.forFeature([AuditLog, Users])],
   providers: [AuditService],
   exports: [AuditService],
 })

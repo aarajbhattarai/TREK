@@ -1,5 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import { DatabaseService } from '../database/database.service';
+import { InjectRepository } from '@mikro-orm/nestjs';
+import { AuditLog } from '../../db/entities/AuditLog.entity';
+import type { AuditLogRepository } from '../../db/repositories/AuditLog.repository';
+import { Users } from '../../db/entities/Users.entity';
+import type { UsersRepository } from '../../db/repositories/Users.repository';
 import { logInfo, logDebug, logError } from './audit-log.logger';
 
 const ACTION_LABELS: Record<string, string> = {
@@ -66,13 +70,16 @@ function buildInfoSummary(action: string, details?: Record<string, unknown>): st
 
 @Injectable()
 export class AuditService {
-  constructor(private readonly dbs: DatabaseService) {}
+  constructor(
+    @InjectRepository(AuditLog) private readonly auditLog: AuditLogRepository,
+    @InjectRepository(Users) private readonly users: UsersRepository,
+  ) {}
 
   private async resolveUserEmail(userId: number | null): Promise<string> {
     if (userId == null) return 'anonymous';
     try {
-      const row = this.dbs.get<{ email: string }>('SELECT email FROM users WHERE id = ?', userId);
-      return row?.email || `uid:${userId}`;
+      const email = await this.users.getEmail(userId);
+      return email || `uid:${userId}`;
     } catch { return `uid:${userId}`; }
   }
 
@@ -87,10 +94,13 @@ export class AuditService {
   }): Promise<void> {
     try {
       const detailsJson = entry.details && Object.keys(entry.details).length > 0 ? JSON.stringify(entry.details) : null;
-      this.dbs.run(
-        `INSERT INTO audit_log (user_id, action, resource, details, ip) VALUES (?, ?, ?, ?, ?)`,
-        entry.userId, entry.action, entry.resource ?? null, detailsJson, entry.ip ?? null
-      );
+      await this.auditLog.insertEntry({
+        user_id: entry.userId,
+        action: entry.action,
+        resource: entry.resource ?? null,
+        details: detailsJson,
+        ip: entry.ip ?? null,
+      });
 
       const email = await this.resolveUserEmail(entry.userId);
       const label = ACTION_LABELS[entry.action] || entry.action;

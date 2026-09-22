@@ -59,6 +59,11 @@ import { PluginRpcHostFactory } from '../../../src/nest/plugins/host/plugin-rpc-
 import { PluginRpcRegistry } from '../../../src/nest/plugins/host/rpc-kit/registry';
 import type { PluginRpcRegistryService } from '../../../src/nest/plugins/host/rpc-kit/registry.service';
 import { DbRpc } from '../../../src/nest/plugins/host/rpc/db.rpc';
+import { createTestOrm } from '../../helpers/test-orm';
+import { AuditLog } from '../../../src/db/entities/AuditLog.entity';
+import type { AuditLogRepository } from '../../../src/db/repositories/AuditLog.repository';
+import { Users } from '../../../src/db/entities/Users.entity';
+import type { UsersRepository } from '../../../src/db/repositories/Users.repository';
 
 let codeRoot: string;
 let dataRoot: string;
@@ -104,6 +109,9 @@ describe('plugin boot vs registry scan ordering', () => {
     // own onModuleInit scan has run.
     const registry = new PluginRpcRegistry();
     const hostFactory = new PluginRpcHostFactory(dbs, registry as unknown as PluginRpcRegistryService);
+    const t = await createTestOrm(dbConn);
+    const auditLogRepo = t.repo(AuditLog) as AuditLogRepository;
+    const usersRepo = t.repo(Users) as UsersRepository;
 
     mod = await Test.createTestingModule({
       providers: [
@@ -112,7 +120,7 @@ describe('plugin boot vs registry scan ordering', () => {
         // (if it had one) first. The boot reconcile must therefore not live there.
         {
           provide: PluginRuntimeService,
-          useFactory: () => new PluginRuntimeService(dbs, new AuditService(dbs), new AddonsService(dbs), userSettings, undefined, hostFactory),
+          useFactory: () => new PluginRuntimeService(dbs, new AuditService(auditLogRepo, usersRepo), new AddonsService(dbs), userSettings, undefined, hostFactory),
         },
         {
           provide: 'REGISTRY_SCAN',

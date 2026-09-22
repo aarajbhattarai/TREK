@@ -40,9 +40,14 @@ import { OauthService } from '../../src/nest/oauth/oauth.service';
 import { DatabaseService } from '../../src/nest/database/database.service';
 import { AddonsService } from '../../src/nest/addons/addons.service';
 import { AuditService } from '../../src/nest/audit/audit.service';
+import { createTestOrm } from '../helpers/test-orm';
+import { AuditLog } from '../../src/db/entities/AuditLog.entity';
+import type { AuditLogRepository } from '../../src/db/repositories/AuditLog.repository';
+import { Users } from '../../src/db/entities/Users.entity';
+import type { UsersRepository } from '../../src/db/repositories/Users.repository';
 
 const oauthDbs = new DatabaseService(testDb);
-const oauthSvc = new OauthService(oauthDbs, new AddonsService(oauthDbs), new AuditService(oauthDbs));
+let oauthSvc: OauthService;
 
 /** Mint a trekoa_ access token for the user via a fresh OAuth client. */
 async function mintOauthToken(userId: number, audience: string | null, scopes: string[] = ['trips:read']): Promise<{ accessToken: string; clientId: string }> {
@@ -69,6 +74,8 @@ let app: Application;
 beforeAll(async () => {
   nestApp = await buildApp();
   app = nestApp.getHttpAdapter().getInstance();
+  const t = await createTestOrm(testDb);
+  oauthSvc = new OauthService(oauthDbs, new AddonsService(oauthDbs), new AuditService(t.repo(AuditLog) as AuditLogRepository, t.repo(Users) as UsersRepository));
 });
 
 beforeEach(() => {

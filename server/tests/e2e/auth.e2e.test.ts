@@ -57,6 +57,7 @@ import { DatabaseModule } from '../../src/nest/database/database.module';
 import { TrekExceptionFilter } from '../../src/nest/common/trek-exception.filter';
 import { ZodValidationPipe } from '../../src/nest/common/zod-validation.pipe';
 import { TestUnitOfWorkModule } from '../helpers/test-uow';
+import { createTestMikroOrmModule } from '../helpers/test-orm';
 
 describe('Auth e2e (real auth guard + real service + real cookie service + temp SQLite)', () => {
   let server: Server;
@@ -66,7 +67,7 @@ describe('Auth e2e (real auth guard + real service + real cookie service + temp 
   let userPassword: string;
 
   async function build() {
-    const moduleRef = await Test.createTestingModule({ imports: [await TestUnitOfWorkModule.forRoot(db), DatabaseModule, AuthModule] })
+    const moduleRef = await Test.createTestingModule({ imports: [await TestUnitOfWorkModule.forRoot(db), await createTestMikroOrmModule(db), DatabaseModule, AuthModule] })
       // The mailer is a provider since the notifications fold; overriding it is
       // the DI-native replacement for the old services/notifications module mock.
       .overrideProvider(MailerService)

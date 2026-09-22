@@ -65,12 +65,19 @@ import type { AddonsService } from '../../../src/nest/addons/addons.service';
 import { getMcpSafeUrl } from '../../../src/app-config';
 import { ADDON_IDS } from '../../../src/addons';
 import { MAX_PENDING_CODES, sweepPendingCodes } from '../../../src/nest/oauth/oauth.pending-codes';
+import { createTestOrm } from '../../helpers/test-orm';
+import { AuditLog } from '../../../src/db/entities/AuditLog.entity';
+import type { AuditLogRepository } from '../../../src/db/repositories/AuditLog.repository';
+import { Users } from '../../../src/db/entities/Users.entity';
+import type { UsersRepository } from '../../../src/db/repositories/Users.repository';
 
 const dbs = new DatabaseService(testDb);
 // Stubbed rather than real: every case drives the MCP gate through this one
 // flag, exactly as the addons.bridge mock did before the fold.
 const addonsStub = { isAddonEnabled } as unknown as AddonsService;
-const svc = new OauthService(dbs, addonsStub, new AuditService(dbs));
+let svc: OauthService;
+let auditLogRepo: AuditLogRepository;
+let usersRepo: UsersRepository;
 
 // Legacy free-function names delegating to the service, so the moved cases below
 // read exactly as they did before the fold. Arrow wrappers rather than `.bind`:
@@ -95,9 +102,13 @@ const saveConsent = (...args: Parameters<OauthService['saveConsent']>) => svc.sa
 const getConsent = (...args: Parameters<OauthService['getConsent']>) => svc.getConsent(...args);
 const isConsentSufficient = (...args: Parameters<OauthService['isConsentSufficient']>) => svc.isConsentSufficient(...args);
 
-beforeAll(() => {
+beforeAll(async () => {
   createTables(testDb);
   runMigrations(testDb);
+  const t = await createTestOrm(testDb);
+  auditLogRepo = t.repo(AuditLog) as AuditLogRepository;
+  usersRepo = t.repo(Users) as UsersRepository;
+  svc = new OauthService(dbs, addonsStub, new AuditService(auditLogRepo, usersRepo));
 });
 
 beforeEach(() => {
@@ -1285,7 +1296,7 @@ describe('module-scoped OAuth state', () => {
       codeChallengeMethod: 'S256',
     })!;
 
-    const secondInstance = new OauthService(dbs, addonsStub, new AuditService(dbs));
+    const secondInstance = new OauthService(dbs, addonsStub, new AuditService(auditLogRepo, usersRepo));
     expect(secondInstance.consumeAuthCode(code)?.userId).toBe(42);
   });
 });

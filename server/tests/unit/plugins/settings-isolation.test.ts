@@ -28,6 +28,11 @@ import { runMigrations } from '../../../src/db/migrations';
 import { createUser } from '../../helpers/factories';
 import { PluginUserSettingsService } from '../../../src/nest/plugins/plugin-user-settings.service';
 import { parseManifest, ManifestError } from '../../../src/nest/plugins/install/manifest';
+import { createTestOrm } from '../../helpers/test-orm';
+import { AuditLog } from '../../../src/db/entities/AuditLog.entity';
+import type { AuditLogRepository } from '../../../src/db/repositories/AuditLog.repository';
+import { Users } from '../../../src/db/entities/Users.entity';
+import type { UsersRepository } from '../../../src/db/repositories/Users.repository';
 /** The host-side settings reads, over the same connection the test seeded. */
 const userSettings = () => new PluginUserSettingsService(new DatabaseService(dbConn));
 
@@ -126,7 +131,13 @@ describe('a plugin channel label is bounded by the host', () => {
        VALUES ('loud', 'Loud', 'active', 1, '1.0.0', '[]', '[]', ?, '{}')`,
     ).run(JSON.stringify({ notificationChannel: { title: '🎉'.repeat(5) + 'A'.repeat(500) } }));
 
-    const rt = new PluginRuntimeService(new DatabaseService(dbConn), new AuditService(new DatabaseService(dbConn)), new AddonsService(new DatabaseService(dbConn)), userSettings());
+    const t = await createTestOrm(dbConn);
+    const rt = new PluginRuntimeService(
+      new DatabaseService(dbConn),
+      new AuditService(t.repo(AuditLog) as AuditLogRepository, t.repo(Users) as UsersRepository),
+      new AddonsService(new DatabaseService(dbConn)),
+      userSettings(),
+    );
     // Stand the plugin up as a granted, active notificationChannel provider.
     (rt as unknown as { supervisor: { running: Map<string, unknown> } }).supervisor.running.set('loud', {
       id: 'loud', status: 'active', hooks: ['notificationChannel'], granted: new Set(['hook:notification-channel']),

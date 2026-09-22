@@ -41,6 +41,11 @@ import { OauthService } from '../../src/nest/oauth/oauth.service';
 import { DatabaseService } from '../../src/nest/database/database.service';
 import { AddonsService } from '../../src/nest/addons/addons.service';
 import { AuditService } from '../../src/nest/audit/audit.service';
+import { createTestOrm } from '../helpers/test-orm';
+import { AuditLog } from '../../src/db/entities/AuditLog.entity';
+import type { AuditLogRepository } from '../../src/db/repositories/AuditLog.repository';
+import { Users } from '../../src/db/entities/Users.entity';
+import type { UsersRepository } from '../../src/db/repositories/Users.repository';
 
 // In production the consent controller writes pending codes through the
 // container instance and the SDK routes read them back through the same
@@ -48,7 +53,7 @@ import { AuditService } from '../../src/nest/audit/audit.service';
 // does: through a service instance. The pending-code map is module-scoped in
 // oauth.pending-codes.ts, so the routes under test see every code written here.
 const oauthDbs = new DatabaseService(testDb);
-const containerSideOauth = new OauthService(oauthDbs, new AddonsService(oauthDbs), new AuditService(oauthDbs));
+let containerSideOauth: OauthService;
 // Arrow wrappers rather than `.bind`: with `strictBindCallApply: false` a bound
 // alias is typed `any`, which hides a missing `await` on the now-async methods.
 const createAuthCode = (...args: Parameters<OauthService['createAuthCode']>) => containerSideOauth.createAuthCode(...args);
@@ -78,6 +83,8 @@ function setMcpEnabled(enabled: boolean) {
 beforeAll(async () => {
     nestApp = await buildApp();
     app = nestApp.getHttpAdapter().getInstance();
+    const t = await createTestOrm(testDb);
+    containerSideOauth = new OauthService(oauthDbs, new AddonsService(oauthDbs), new AuditService(t.repo(AuditLog) as AuditLogRepository, t.repo(Users) as UsersRepository));
 });
 
 beforeEach(() => {
