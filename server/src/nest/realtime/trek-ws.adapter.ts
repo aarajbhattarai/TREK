@@ -166,10 +166,21 @@ export class TrekWsAdapter extends WsAdapter {
       // Must stay above anything that can close early: a socket that never gets
       // this listener can still crash the process while it finishes closing.
       socket.on('error', () => socket.terminate());
+      // D6 (Plan 3b Task 0): this dispatches Nest's OnGatewayConnection hook
+      // (RealtimeGateway.handleConnection) exactly the way bindMessageHandlers
+      // below dispatches a @SubscribeMessage handler — no HTTP request behind
+      // it, so nothing forks an EntityManager for it unless this ONE wrapper
+      // does. Confirmed unwrapped before this change (WSAD-050): a repository
+      // read during the handshake threw cannotUseGlobalContext. Same
+      // fail-closed shape as bindMessageHandlers: throw before calling rather
+      // than run the connection handler unwrapped.
+      if (!this.orm) {
+        throw new Error('TrekWsAdapter: no MikroORM available to build a request context for this connection');
+      }
       // The request rides along: the handshake reads the ws token off its query
       // string, so dropping it here would leave handleConnection with nothing
       // to authenticate.
-      callback(socket, request);
+      withRequestContext(this.orm, () => callback(socket, request));
     });
   }
 

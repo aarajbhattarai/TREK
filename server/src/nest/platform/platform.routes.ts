@@ -1,9 +1,11 @@
 import express, { Request, Response, NextFunction } from 'express';
 import path from 'node:path';
+import type { EntityManager } from '@mikro-orm/core';
 
 import { readEnv } from '../../app-config';
 import { verifyJwtAndLoadUser } from '../auth/jwt-verify';
 import { db } from '../../db/database';
+import { withRequestContext } from '../database/request-context';
 import { StorageService } from '../storage/storage.service';
 import { StorageInvalidKeyError, StorageNotFoundError, type StorageCategory } from '../storage/storage.types';
 
@@ -125,8 +127,30 @@ async function servePhoto(storage: StorageService, req: Request, res: Response):
 /**
  * Static + guarded /uploads/* routes. Must be applied BEFORE the API route mounts
  * (identical to its original position near the top of createApp).
+ *
+ * `orm` (Plan 3b Task 0, D6/plan3b-sql-inventory.md §5/§6): `servePhoto` is
+ * mounted here, on the raw Express instance, BEFORE `app.init()` — every
+ * `/uploads/photos/*` request runs this handler entirely outside Nest's
+ * per-request EntityManager fork, forever, not just during a boot window.
+ * `verifyJwtAndLoadUser` (`jwt-verify.ts`) reads `users` through the legacy
+ * `db` proxy today, so nothing here needs the ORM yet — but the inventory's
+ * proposed conversion (`UsersRepository.findByIdWithPasswordVersion`, Task 1)
+ * would throw `cannotUseGlobalContext` on every photo request the instant it
+ * lands, because nothing forks a context for this pre-init route. Wrapping
+ * the handler in `withRequestContext` NOW, before any repository call exists
+ * on this path, means Task 1 converts `jwt-verify.ts` without touching this
+ * file again and without a single broken photo request in between.
+ *
+ * Optional at the type level only, the same shape `TrekWsAdapter` uses for
+ * its own D6 wrapper (`src/nest/realtime/trek-ws.adapter.ts`): `bootstrap.ts`
+ * always passes the real `MikroORM` it already resolved. Fail-closed shape
+ * per the Plan 3b Rulings — a request-time choke point THROWS when the ORM
+ * is absent rather than running `servePhoto` unwrapped: the photo route
+ * answers 500 through Express's error path (`next(err)`), the same shape the
+ * WS adapter's message dispatch already uses (throw before calling the
+ * handler at all, never a silent degrade).
  */
-export function applyPlatformUploads(app: express.Application, storage: StorageService): void {
+export function applyPlatformUploads(app: express.Application, storage: StorageService, orm?: { em: EntityManager }): void {
   // Static: avatars, covers, and journey photos.
   //
   // Security model (audit SEC-M9): these paths are unauthenticated by
@@ -155,9 +179,13 @@ export function applyPlatformUploads(app: express.Application, storage: StorageS
   // photo's trip. Previously any share token for any trip could request
   // any photo filename by UUID — fine in practice because UUIDs are
   // unguessable, but the auth model was wrong.
-  app.get('/uploads/photos/:filename', (req: Request, res: Response, next: NextFunction) =>
-    servePhoto(storage, req, res).catch(next),
-  );
+  app.get('/uploads/photos/:filename', (req: Request, res: Response, next: NextFunction) => {
+    if (!orm) {
+      next(new Error('applyPlatformUploads: no MikroORM available to build a request context for /uploads/photos/*'));
+      return;
+    }
+    return withRequestContext(orm, () => servePhoto(storage, req, res)).catch(next);
+  });
 
   // Block direct access to /uploads/files
   app.use('/uploads/files', (_req: Request, res: Response) => {

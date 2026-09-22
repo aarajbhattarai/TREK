@@ -125,6 +125,18 @@ export class McpTransportService {
     private readonly registry: McpRegistryService,
   ) {}
 
+  /**
+   * D6 (Plan 3b Task 0): this bearer-token verification step already runs
+   * inside a per-request EntityManager fork — no wrapper needed here. `/mcp`
+   * is an ordinary (`@Public()`) Nest-routed controller, so
+   * `@mikro-orm/nestjs`'s `MikroOrmMiddleware` (`MikroOrmModule.forRoot`'s
+   * default `registerRequestContext`, applied via `NestModule.configure()`
+   * for ALL routes) forks a context before any guard — and therefore before
+   * this method — ever runs. Verified, not assumed: see
+   * `tests/integration/mcp.test.ts`'s "MCP bearer-token verification runs
+   * inside the HTTP request context" suite (MCP-CTX-001/002), which forces a
+   * genuine repository read at this exact point and confirms it succeeds.
+   */
   async verifyToken(authHeader: string | undefined): Promise<VerifyTokenResult | null> {
     if (!authHeader) return null;
     // M8: strictly require "Bearer" scheme (RFC 6750)

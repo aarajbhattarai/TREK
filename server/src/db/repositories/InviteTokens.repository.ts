@@ -1,4 +1,111 @@
 import type { InviteTokens } from '../entities/InviteTokens.entity';
+import { toRow, type AssertRowKeys } from './_shared/rows';
+import { columnIncrementedBy, columnRef } from '../dialect/sql-functions';
 import { EntityRepository } from '@mikro-orm/sql';
 
-export class InviteTokensRepository extends EntityRepository<InviteTokens> {}
+/** An `invite_tokens` row as the API emits it. */
+export interface InviteTokenRow {
+  id: number;
+  token: string;
+  max_uses: number;
+  used_count: number;
+  expires_at: string | null;
+  created_by: number;
+  created_at: string | null;
+  trip_id: number | null;
+}
+
+const _inviteTokenRowKeys: AssertRowKeys<InviteTokenRow, InviteTokens> = true;
+
+/** The column set `RegistrationInvitesService.createInvite` (Task 3) writes. */
+export interface NewInviteTokenRow {
+  token: string;
+  max_uses: number;
+  expires_at: string | null;
+  created_by: number;
+  trip_id?: number | null;
+}
+
+/**
+ * Shared by `AuthService` (registration), `RegistrationInvitesService` (admin
+ * invite management, Task 3) and `OidcService` (SSO-bound registration,
+ * Task 6) — one table, one repository, per the inventory's §6 cross-domain
+ * ruling. Task 0 builds the three methods every later task needs in common;
+ * Task 3 extends this with the admin list/create/delete surface (RI1/RI5-RI7).
+ */
+export class InviteTokensRepository extends EntityRepository<InviteTokens> {
+  /**
+   * `SELECT * FROM invite_tokens WHERE token = ?`
+   *
+   * Not a primary-key filter — `token` is a unique column, not `id` — so this
+   * always re-queries; no `{ refresh: true }` needed (Task 3a review's
+   * precision ruling: the identity-map short-circuit only fires for a
+   * PK-only filter).
+   */
+  async findValid(token: string): Promise<InviteTokenRow | null> {
+    const invite = await this.findOne({ token });
+    return invite ? (toRow(invite) as InviteTokenRow) : null;
+  }
+
+  /**
+   * `INSERT INTO invite_tokens (token, max_uses, expires_at, created_by, trip_id)
+   *  VALUES (?, ?, ?, ?, ?)`, re-selected (RI4/RI5's column set — Task 3 is
+   * the first real caller). `created_by`/`trip_id` are FK columns backed by
+   * `persist(false)` scalar mirrors on the entity (same pattern as
+   * `Categories.user`/`user_id`); the repository writes them through the
+   * `Ref`-typed relation properties, which MikroORM accepts a raw primary
+   * key for.
+   */
+  async insertInvite(row: NewInviteTokenRow): Promise<InviteTokenRow> {
+    const invite = this.create({
+      token: row.token,
+      max_uses: row.max_uses,
+      expires_at: row.expires_at,
+      createdByRef: row.created_by,
+      trip: row.trip_id ?? null,
+    });
+    await this.getEntityManager().persist(invite).flush();
+    await this.getEntityManager().refresh(invite);
+    return toRow(invite) as InviteTokenRow;
+  }
+
+  /**
+   * `UPDATE invite_tokens SET used_count = used_count + 1
+   *  WHERE token = ? AND (max_uses = 0 OR used_count < max_uses)
+   *  RETURNING *`
+   *
+   * ONE conditional UPDATE … RETURNING statement (the QueryBuilder, D4's T5
+   * tier) — race-safe: D6's single SQLite connection serialises writers, so
+   * the WHERE clause's capacity check and the increment commit as one
+   * statement. Two callers racing the same one-use invite can never both
+   * see `used_count < max_uses` true and both write: exactly one UPDATE
+   * matches and its RETURNING carries the new row back; the other's WHERE
+   * clause fails once the first has committed, and it gets `null` — no
+   * second SELECT, no SELECT→await→UPDATE window for either caller to lose.
+   *
+   * `null` means "no row matched" — a bad/unknown token OR an invite already
+   * at capacity are indistinguishable from inside this method by design
+   * (this repository never interprets the miss): `AuthService`'s `AU11`
+   * only warns and continues on a miss, `OidcService`'s `O13` throws — both
+   * keep their own interpretation, calling this one shared method.
+   *
+   * `used_count < max_uses` compares two columns of the SAME row, and
+   * `used_count = used_count + 1` needs a sibling-column reference too — both
+   * go through `sql-functions.ts` (`columnRef`/`columnIncrementedBy`), never
+   * a hand-spelled `raw()` call here: repositories don't spell dialect SQL
+   * inline (ESLint enforces this on `src/db/repositories/**`), even for an
+   * expression that happens to be portable across dialects already.
+   */
+  async incrementUsedCount(token: string): Promise<InviteTokenRow | null> {
+    const platform = this.getEntityManager().getPlatform();
+    const result = await this.qb()
+      .update({ used_count: columnIncrementedBy(platform, 'used_count', 1) })
+      .where({
+        token,
+        $or: [{ max_uses: 0 }, { used_count: { $lt: columnRef(platform, 'max_uses') } }],
+      })
+      .returning('*')
+      .execute('run');
+    return result.row ? (result.row as InviteTokenRow) : null;
+  }
+}

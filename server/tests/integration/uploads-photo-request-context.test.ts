@@ -1,0 +1,147 @@
+/**
+ * Plan 3b Task 0 (D6): `servePhoto` — the pre-init `/uploads/photos/:filename`
+ * Express route mounted by `applyPlatformUploads` (`bootstrap.ts`, BEFORE
+ * `app.init()`) — now runs inside `withRequestContext(orm, …)`.
+ *
+ * Per the inventory (§5/§6): `applyPlatformUploads` is mounted permanently on
+ * the raw Express instance, not just during a boot window, so every request
+ * to `/uploads/photos/*` forever ran outside Nest's per-request EntityManager
+ * fork. Converting `jwt-verify.ts`'s read off the raw `db` proxy (Task 1)
+ * without this wrapper first would break every authenticated photo request
+ * the moment it landed.
+ *
+ * Three proofs, mirroring Plan 3a's WSAD-040/041 shape:
+ *  - PHOTOCTX-001: parity — an authenticated request still 200s exactly as
+ *    before the wrap.
+ *  - PHOTOCTX-002: load-bearing (positive) — a repository read forced inside
+ *    the handler (as Task 1's `jwt-verify.ts` conversion will add one)
+ *    succeeds, because `withRequestContext` genuinely covers the whole async
+ *    chain of `servePhoto`, not just its synchronous prologue.
+ *  - PHOTOCTX-003: load-bearing (negative) — the SAME real, exported
+ *    `applyPlatformUploads`, called with no ORM, answers 500 through
+ *    Express's error path BEFORE `servePhoto` ever runs (fail-closed, per
+ *    the Plan 3b Rulings) — proving the wrapper is what makes PHOTOCTX-002
+ *    succeed, not an accident of the test setup.
+ */
+import { describe, it, expect, vi, beforeAll, afterAll, beforeEach } from 'vitest';
+import request from 'supertest';
+import express from 'express';
+import type { Application } from 'express';
+import type { INestApplication } from '@nestjs/common';
+import fs from 'node:fs';
+import path from 'node:path';
+import { MikroORM } from '@mikro-orm/core';
+
+vi.mock('../../src/db/database', async () => {
+  const { createSnapshotTestDb, buildDbMock } = await import('../helpers/db-mock');
+  return buildDbMock(createSnapshotTestDb());
+});
+vi.mock('../../src/config', () => ({
+  JWT_SECRET: 'test-jwt-secret-for-trek-testing-only',
+  ENCRYPTION_KEY: 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6a7b8c9d0e1f2a3b4c5d6a7b8c9d0e1f2',
+  updateJwtSecret: () => {},
+  SESSION_DURATION: '24h',
+  SESSION_DURATION_MS: 86400000,
+  SESSION_DURATION_SECONDS: 86400,
+  DEFAULT_LANGUAGE: 'en',
+}));
+vi.mock('../../src/websocket', () => ({ broadcast: vi.fn(), broadcastToUser: vi.fn() }));
+
+import { db as testDb } from '../../src/db/database';
+import { buildApp } from '../../src/bootstrap';
+import { resetTestDb } from '../helpers/test-db';
+import { createUser } from '../helpers/factories';
+import { generateToken } from '../helpers/auth';
+import { applyPlatformUploads } from '../../src/nest/platform/platform.routes';
+import { StorageService } from '../../src/nest/storage/storage.service';
+import { Users } from '../../src/db/entities/Users.entity';
+
+let nestApp: INestApplication;
+let app: Application;
+
+// A real file under the local driver's actual 'photos' root (DEFAULT_UPLOADS_ROOT,
+// server/uploads — same fixture pattern as tests/e2e/share.e2e.test.ts's
+// photos-google fixture, one category over).
+const photoName = 'trek-context-photo.integration.jpg';
+const photoFile = path.join(__dirname, '../../uploads/photos', photoName);
+const photoBytes = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10]); // JPEG-ish header
+
+beforeAll(async () => {
+  fs.mkdirSync(path.dirname(photoFile), { recursive: true });
+  fs.writeFileSync(photoFile, photoBytes);
+  nestApp = await buildApp();
+  app = nestApp.getHttpAdapter().getInstance();
+});
+
+afterAll(async () => {
+  await nestApp.close();
+  try { fs.unlinkSync(photoFile); } catch { /* ignore */ }
+});
+
+beforeEach(() => {
+  resetTestDb(testDb);
+});
+
+describe('GET /uploads/photos/:filename — request context (Plan 3b Task 0, D6)', () => {
+  it('PHOTOCTX-001: a valid JWT session still serves the photo — the wrap changes nothing observable', async () => {
+    const { user } = createUser(testDb);
+    const res = await request(app)
+      .get(`/uploads/photos/${photoName}`)
+      .set('Authorization', `Bearer ${generateToken(user.id)}`);
+    expect(res.status).toBe(200);
+    expect(Buffer.from(res.body as Buffer)).toEqual(photoBytes);
+  });
+
+  it('PHOTOCTX-002: a repository read forced inside the handler succeeds under the wrap (load-bearing positive proof)', async () => {
+    const { user } = createUser(testDb);
+    const storage = nestApp.get(StorageService);
+    const orm = nestApp.get(MikroORM);
+    let caught: unknown;
+    let found: unknown;
+    // storage.exists is the very first thing servePhoto calls — forcing a
+    // genuine repository read here, as if a converted jwt-verify.ts (Task 1)
+    // already read `users` through UsersRepository, proves withRequestContext
+    // covers the wrapped call's entire async chain, not just its synchronous
+    // prologue (RequestContext.create is AsyncLocalStorage.run; see
+    // trek-ws.adapter.ts's docstring for the same property on the WS side).
+    const spy = vi.spyOn(storage, 'exists').mockImplementation(async () => {
+      try {
+        found = await orm.em.getRepository(Users).findOne({ id: user.id });
+      } catch (e) {
+        caught = e;
+      }
+      return true;
+    });
+    try {
+      const res = await request(app)
+        .get(`/uploads/photos/${photoName}`)
+        .set('Authorization', `Bearer ${generateToken(user.id)}`);
+      expect(caught).toBeUndefined();
+      expect(found).toBeTruthy();
+      expect(res.status).toBe(200);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+});
+
+describe('applyPlatformUploads without an ORM — fail-closed (Plan 3b Task 0, D6; mutation proof for PHOTOCTX-001/002)', () => {
+  it('PHOTOCTX-003: the SAME real registration, called with no ORM, answers 500 BEFORE servePhoto ever runs', async () => {
+    const bare = express();
+    const storage = nestApp.get(StorageService);
+    const existsSpy = vi.spyOn(storage, 'exists');
+    // The real, exported applyPlatformUploads — no test double, no hand-call
+    // of a private wrapper — with its optional `orm` param simply omitted,
+    // the same shape TrekWsAdapter's WSAD-040 uses to prove its own D6 wrap.
+    applyPlatformUploads(bare, storage);
+    try {
+      const res = await request(bare).get(`/uploads/photos/${photoName}`);
+      expect(res.status).toBe(500);
+      // The fail-closed branch throws BEFORE servePhoto calls storage.exists —
+      // the handler never even started, exactly like WSAD-040's handlerRan check.
+      expect(existsSpy).not.toHaveBeenCalled();
+    } finally {
+      existsSpy.mockRestore();
+    }
+  });
+});

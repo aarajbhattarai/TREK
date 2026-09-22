@@ -261,6 +261,61 @@ describe('TrekWsAdapter connection binding', () => {
 });
 
 /**
+ * D6 request context on the CONNECTION dispatch (Plan 3b Task 0), the same
+ * property WSAD-040/041 above already pin for the MESSAGE dispatch.
+ * `bindClientConnect` fires Nest's OnGatewayConnection hook
+ * (RealtimeGateway.handleConnection) — no HTTP request behind it either, and
+ * a different lifecycle hook than bindMessageHandlers, so its own wrapper (or
+ * lack of one) had to be checked separately (plan3b-sql-inventory.md §5
+ * flagged it unverified). Global context disallowed on purpose, same as
+ * WSAD-040/041 — allowGlobalContext: false is the production setting.
+ */
+describe('TrekWsAdapter D6 request context on connect (Plan 3b Task 0)', () => {
+  function connectServer(socket: ReturnType<typeof fakeSocket>, request: unknown) {
+    return { on: (_event: string, cb: (s: unknown, r: unknown) => void) => cb(socket, request) };
+  }
+
+  it('WSAD-050: without MikroORM passed to the adapter, the connection dispatch THROWS rather than running handleConnection unwrapped', () => {
+    const ad = new TrekWsAdapter({} as HttpServer); // no orm
+    const socket = fakeSocket();
+    let handlerRan = false;
+    expect(() =>
+      ad.bindClientConnect(connectServer(socket, { url: '/ws?token=abc' }) as never, () => {
+        handlerRan = true;
+      }),
+    ).toThrow(/no MikroORM available/i);
+    // Same fail-closed shape as WSAD-040: the wrapper throws BEFORE the
+    // connection callback ever runs.
+    expect(handlerRan).toBe(false);
+  });
+
+  it('WSAD-051: with MikroORM passed to the adapter, a repository read inside the connection callback succeeds — the wrapper is load-bearing', async () => {
+    const t = await createTestOrm(testDb, { allowGlobalContext: false });
+    try {
+      let result: unknown;
+      let caught: unknown;
+      const ad = new TrekWsAdapter({} as HttpServer, t.orm);
+      const socket = fakeSocket();
+      let captured: Promise<unknown> | undefined;
+      ad.bindClientConnect(connectServer(socket, { url: '/ws?token=abc' }) as never, () => {
+        captured = (async () => {
+          try {
+            result = await t.orm.em.find(Users, {});
+          } catch (e) {
+            caught = e;
+          }
+        })();
+      });
+      await captured;
+      expect(caught).toBeUndefined();
+      expect(Array.isArray(result)).toBe(true);
+    } finally {
+      await t.close();
+    }
+  });
+});
+
+/**
  * The pointer exemption (#1973).
  *
  * Studio's pointers move about ten times a second per editor, three times what

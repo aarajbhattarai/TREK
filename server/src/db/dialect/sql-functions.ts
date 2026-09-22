@@ -48,3 +48,29 @@ export function currentTimestamp(platform: Platform): RawQueryFragment {
   if (platform instanceof SqlitePlatform) return raw('CURRENT_TIMESTAMP');
   return unsupported(platform);
 }
+
+/**
+ * A bare reference to another column of the same row, for a filter or update
+ * value that must compare against or combine with a sibling column instead
+ * of a bound parameter (e.g. `used_count < max_uses` — `InviteTokensRepository
+ * .incrementUsedCount`'s capacity guard). Portable across dialects on its own,
+ * but still routed through this file (not spelled with `raw()` in a
+ * repository) so every escape hatch stays in one place ESLint's
+ * `no-restricted-syntax` rule for `src/db/repositories/**` can enforce.
+ */
+export function columnRef(platform: Platform, ref: string): RawQueryFragment {
+  if (platform instanceof SqlitePlatform) return raw(column(ref));
+  return unsupported(platform);
+}
+
+/** A column shifted by a signed integer amount: `<col> + n` / `<col> - n`. */
+export function columnIncrementedBy(platform: Platform, ref: string, amount: number): RawQueryFragment {
+  if (!Number.isInteger(amount)) {
+    throw new Error(`sql-functions: columnIncrementedBy needs an integer amount, got ${amount}`);
+  }
+  if (platform instanceof SqlitePlatform) {
+    const sign = amount < 0 ? '-' : '+';
+    return raw(`${column(ref)} ${sign} ${Math.abs(amount)}`);
+  }
+  return unsupported(platform);
+}

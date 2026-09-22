@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
 import { NotFoundException } from '@nestjs/common';
 
 // --- hoisted mock fns so the vi.mock factories can reference them -----------------
@@ -21,6 +21,8 @@ import {
 import { SpaFallbackFilter } from '../../../src/nest/platform/spa-fallback.filter';
 import { StorageNotFoundError, StorageInvalidKeyError } from '../../../src/nest/storage/storage.types';
 import type { StorageService } from '../../../src/nest/storage/storage.service';
+import { createSnapshotTestDb } from '../../helpers/db-mock';
+import { createTestOrm, type TestOrm } from '../../helpers/test-orm';
 
 // The serving swap addresses files as (category, name) on the injected facade;
 // these unit tests only assert routing/auth/error mapping, so a two-method stub
@@ -75,6 +77,23 @@ function makeRes() {
   return res;
 }
 
+// Task 0 (D6): applyPlatformUploads now wraps servePhoto in withRequestContext,
+// so every call site below needs a real `{ em }` to hand it — none of these
+// cases touch the ORM (jwt-verify and db/database are both mocked above), but
+// RequestContext.create needs a genuine EntityManager to open the ALS scope
+// around, not a hand-built stub.
+const uploadsTestDb = createSnapshotTestDb();
+let uploadsOrm: TestOrm;
+
+beforeAll(async () => {
+  uploadsOrm = await createTestOrm(uploadsTestDb);
+});
+
+afterAll(async () => {
+  await uploadsOrm.close();
+  uploadsTestDb.close();
+});
+
 beforeEach(() => {
   vi.clearAllMocks();
 });
@@ -82,7 +101,7 @@ beforeEach(() => {
 describe('applyPlatformUploads', () => {
   it('registers the four static mounts + the files block', () => {
     const { app, calls } = fakeApp();
-    applyPlatformUploads(app, storage);
+    applyPlatformUploads(app, storage, uploadsOrm.orm);
     const paths = calls.filter((c) => c.method === 'use').map((c) => c.path);
     expect(paths).toEqual(
       expect.arrayContaining([
@@ -97,7 +116,7 @@ describe('applyPlatformUploads', () => {
 
   it('the /uploads/files block always answers 401', () => {
     const { app, calls } = fakeApp();
-    applyPlatformUploads(app, storage);
+    applyPlatformUploads(app, storage, uploadsOrm.orm);
     const filesBlock = calls.find((c) => c.path === '/uploads/files')!.handlers[0];
     const res = makeRes();
     filesBlock({}, res);
@@ -108,7 +127,7 @@ describe('applyPlatformUploads', () => {
   describe('GET /uploads/photos/:filename', () => {
     function photoHandler() {
       const { app, calls } = fakeApp();
-      applyPlatformUploads(app, storage);
+      applyPlatformUploads(app, storage, uploadsOrm.orm);
       return calls.find((c) => c.method === 'get' && c.path === '/uploads/photos/:filename')!.handlers[0];
     }
     const next = vi.fn();
