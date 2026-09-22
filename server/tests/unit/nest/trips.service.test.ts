@@ -108,10 +108,10 @@ const coversFx = makeStorageFixture('covers/');
 
 
 let accommodationsSvc: Awaited<ReturnType<typeof makeAccommodationsService>>;
-let createAccommodation: typeof accommodationsSvc.createAccommodation;
+let createAccommodation: (...args: Parameters<typeof accommodationsSvc.createAccommodation>) => ReturnType<typeof accommodationsSvc.createAccommodation>;
 beforeAll(async () => {
   accommodationsSvc = await makeAccommodationsService(testDb);
-  createAccommodation = accommodationsSvc.createAccommodation.bind(accommodationsSvc);
+  createAccommodation = (...args) => accommodationsSvc.createAccommodation(...args);
 });
 
 
