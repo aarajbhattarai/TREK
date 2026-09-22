@@ -142,7 +142,7 @@ beforeAll(async () => {
   await createTestInviteTokensRepo(testDb), await createTestMcpTokensRepo(testDb), await createTestOauthTokensRepo(testDb),
   await createTestWebauthnCredentialsRepo(testDb), await createTestPasswordResetTokensRepo(testDb),
 );
-  svc = new OidcService(new DatabaseService(testDb), auth, membership, await createTestUnitOfWork(testDb));
+  svc = new OidcService(auth, membership, await createTestUnitOfWork(testDb), await createTestUsersRepo(testDb), await createTestInviteTokensRepo(testDb), await createTestAppSettingsRepo(testDb));
 });
 
 const MOCK_CONFIG = {
@@ -776,6 +776,69 @@ describe('findOrCreateUser', () => {
     expect(row.oidc_issuer).toBe('https://new-idp.example.com');
   });
 
+  // Plan 3b Task 6 (O5/O6, `linkOidcIdentity`) — the repository write names only
+  // `oidc_sub`/`oidc_issuer`; pinning the WHOLE row (not just those two columns,
+  // as OIDC-SVC-025/062 already do) proves no other column moved — the exact
+  // identity-map-stale-write-back shape the program's disableIdentityMap ruling
+  // exists to foreclose (task-1-fix-report.md).
+  it('OIDC-SVC-090: identity linking (O5) leaves the rest of the users row byte-identical', async () => {
+    const { user } = createUser(testDb, { email: 'linkrow@example.com', username: 'linkrowuser' });
+    testDb.prepare('UPDATE users SET oidc_sub = NULL, oidc_issuer = NULL WHERE id = ?').run(user.id);
+    const before = testDb.prepare('SELECT * FROM users WHERE id = ?').get(user.id) as Record<string, unknown>;
+
+    await svc.findOrCreateUser(
+      { sub: 'sub-linkrow', email: 'linkrow@example.com', name: 'Link Row', email_verified: true },
+      MOCK_CONFIG,
+    );
+
+    const after = testDb.prepare('SELECT * FROM users WHERE id = ?').get(user.id) as Record<string, unknown>;
+    expect(after).toEqual({ ...before, oidc_sub: 'sub-linkrow', oidc_issuer: MOCK_CONFIG.issuer });
+  });
+
+  it('OIDC-SVC-091: the provider-switch branch (O6) leaves the rest of the users row byte-identical', async () => {
+    const { user } = createUser(testDb, { email: 'switchrow@example.com', username: 'switchrowuser' });
+    testDb.prepare('UPDATE users SET oidc_sub = ?, oidc_issuer = ? WHERE id = ?')
+      .run('sub-old-row', 'https://old-idp.example.com', user.id);
+    const before = testDb.prepare('SELECT * FROM users WHERE id = ?').get(user.id) as Record<string, unknown>;
+
+    await svc.findOrCreateUser(
+      { sub: 'sub-new-row', email: 'switchrow@example.com', name: 'Switch Row', email_verified: true },
+      { ...MOCK_CONFIG, issuer: 'https://new-idp-row.example.com' },
+    );
+
+    const after = testDb.prepare('SELECT * FROM users WHERE id = ?').get(user.id) as Record<string, unknown>;
+    expect(after).toEqual({ ...before, oidc_sub: 'sub-new-row', oidc_issuer: 'https://new-idp-row.example.com' });
+  });
+
+  // Plan 3b Task 6 (O13, `InviteTokensRepository.incrementUsedCount`) — the
+  // ruling: a `null` result inside `uow.transactional` throws the same
+  // reference-compared `inviteRaceError` sentinel the legacy `changes === 0`
+  // branch threw, mapped to the same `registration_disabled` outcome. Mirrors
+  // `WebauthnChallenges.repository.test.ts`'s `Promise.all` concurrent-claim
+  // proof (WEBAUTHN-CHAL-REPO-011) — same single-SQLite-connection
+  // serialization, one winner.
+  it('OIDC-SVC-092: two concurrent SSO registrations racing the same one-use invite — the loser gets registration_disabled, byte-identical to the legacy invite_exhausted outcome', async () => {
+    const { user: creator } = createUser(testDb, { email: 'racecreator@example.com' });
+    testDb.prepare(
+      "INSERT INTO invite_tokens (token, max_uses, used_count, created_by) VALUES ('tok-race', 1, 0, ?)"
+    ).run(creator.id);
+
+    const [first, second] = await Promise.all([
+      svc.findOrCreateUser({ sub: 'sub-race-1', email: 'racer1@example.com', name: 'Racer One' }, MOCK_CONFIG, 'tok-race'),
+      svc.findOrCreateUser({ sub: 'sub-race-2', email: 'racer2@example.com', name: 'Racer Two' }, MOCK_CONFIG, 'tok-race'),
+    ]);
+
+    const outcomes = [first, second];
+    const winners = outcomes.filter((r) => 'user' in r);
+    const losers = outcomes.filter((r) => 'error' in r) as Array<{ error: string }>;
+    expect(winners).toHaveLength(1);
+    expect(losers).toHaveLength(1);
+    expect(losers[0]!.error).toBe('registration_disabled');
+
+    const token = testDb.prepare("SELECT used_count FROM invite_tokens WHERE token = 'tok-race'").get() as { used_count: number };
+    expect(token.used_count).toBe(1);
+  });
+
   it('OIDC-SVC-053: returns no_email when the email claim is missing (no throw)', async () => {
     const result = await svc.findOrCreateUser({ sub: 'sub-no-email', name: 'No Email' }, MOCK_CONFIG);
     expect('error' in result).toBe(true);
@@ -925,7 +988,7 @@ describe('findOrCreateUser role mapping', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     // The warning is deduped per claim name for the life of the process, so this
     // case needs an instance that has not seen the claim yet.
-    const fresh = new OidcService(new DatabaseService(testDb), auth, membership, await createTestUnitOfWork(testDb));
+    const fresh = new OidcService(auth, membership, await createTestUnitOfWork(testDb), await createTestUsersRepo(testDb), await createTestInviteTokensRepo(testDb), await createTestAppSettingsRepo(testDb));
 
     try {
       const info = { sub: 'sub-warned', email: 'warned@example.com', groups: ['authentik Admins'] };
@@ -1028,7 +1091,7 @@ describe('findOrCreateUser role mapping', () => {
     ssoUser('shared-admin@example.com', 'sub-shared-admin', 'admin');
     ssoUser('shared-plain@example.com', 'sub-shared-plain', 'user');
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    const fresh = new OidcService(new DatabaseService(testDb), auth, membership, await createTestUnitOfWork(testDb));
+    const fresh = new OidcService(auth, membership, await createTestUnitOfWork(testDb), await createTestUsersRepo(testDb), await createTestInviteTokensRepo(testDb), await createTestAppSettingsRepo(testDb));
 
     try {
       await fresh.findOrCreateUser({ sub: 'sub-shared-admin', email: 'shared-admin@example.com' }, MOCK_CONFIG);
