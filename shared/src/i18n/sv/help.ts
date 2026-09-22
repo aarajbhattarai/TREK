@@ -445,6 +445,38 @@ const help: TranslationStrings = {
     'Städer läses ur adresstexten, slås inte upp, så en kort adress som ”Osteria Francescana, Italy” eller en som slutar på en prefektur kan ge en region i stället för en stad.',
   'help.guide.stats.tip.2':
     'Handmarkerade länder räknas i Länder och kontinenterna, men tar inte med några resor, platser eller dagar.',
+  // dawarich-countries
+  'help.guide.dawarich-countries.title': 'Lägg till länder från dina inspelningar',
+  'help.guide.dawarich-countries.goal':
+    'Låt Dawarich säga vilka länder du varit i under det senaste året, och sätt de du bekräftar på kartan.',
+  'help.guide.dawarich-countries.step.1':
+    'Med tillägget Dawarich anslutet sitter en Dawarich-panel längst ner på kartan, till vänster om statistiken, med två rutor. Klicka på Länder.',
+  'help.guide.dawarich-countries.step.2':
+    'Dialogen öppnas på sin flik Länder. Klicka på Leta efter länder: TREK läser de länder och städer dina inspelningar täcker under de senaste 12 månaderna, en månad i taget, så ge det ett ögonblick. Varje land din Atlas inte har än listas med sin flagga, hur många städer och den första av dem vid namn, och börjar ibockat; klicka på en rad för att lämna den utanför.',
+  'help.guide.dawarich-countries.step.3':
+    'Bekräfta med knappen nere till höger, som lyder Lägg till 5 länder när fem rader är ibockade. Dialogen säger hur många som lades till; stäng den så har kartan läst om sig själv.',
+  'help.guide.dawarich-countries.result':
+    'De bekräftade länderna bär en färg på kartan och räknas i Länder, noterade som komna från Dawarich. Det du markerade för hand rörs inte.',
+  'help.guide.dawarich-countries.tip.1':
+    'Länder som Atlas redan visar som besökta, för hand, från en resa eller från en tidigare kontroll, lämnas utanför, så dina egna markeringar märks aldrig om. Ett land du tidigare tog bort ur Atlas kommer tillbaka när du bekräftar det här.',
+  'help.guide.dawarich-countries.tip.2':
+    'Ett landsnamn TREK inte kan matcha listas under raderna i stället för att slängas, och Kontrollera igen frågar Dawarich en gång till. Noteringen under listan säger att de senaste 12 månaderna har genomsökts; det fönstret är fast.',
+  // dawarich-wishes
+  'help.guide.dawarich-wishes.title': 'Bocka av önskningar från dina inspelningar',
+  'help.guide.dawarich-wishes.goal':
+    'Ta reda på vilka platser på din bucketlista du faktiskt nått, och bocka av dem den dag det hände.',
+  'help.guide.dawarich-wishes.step.1':
+    'I Dawarich-panelen längst ner på kartan, till vänster om statistiken, klicka på Önskelista.',
+  'help.guide.dawarich-wishes.step.2':
+    'Dialogen öppnas på sin flik Önskelista. Klicka på Stäm av önskelistan: TREK går igenom dina inspelningar efter varje post som har koordinater. En önskning du nått listas med hur nära du kom, hur länge du stannade och dagen, och börjar ibockad; en du redan bockat av lyder Redan avbockad. Under listan räknar en notering posterna utan koordinater, och regeln står där också: En önskning räknas som uppfylld inom 250 m och efter 20 minuter på plats.',
+  'help.guide.dawarich-wishes.step.3':
+    'Bekräfta med knappen nere till höger, som lyder Bocka av 2 när två rader är ibockade. Stäng sedan dialogen och öppna fliken Bucketlista i panelen bredvid.',
+  'help.guide.dawarich-wishes.result':
+    'Varje önskning bär en grön bock med datumet för vistelsen, inte dagens; dess verktygstips lyder Avbockad utifrån dina Dawarich-inspelningar, och ett klick på datumet ångrar det.',
+  'help.guide.dawarich-wishes.tip.1':
+    'Att köra förbi räknas inte: regeln kräver både närhet och tid, och av flera vistelser som uppfyller den vinner den längsta. En önskning utan koordinater kan inte kontrolleras, så lägg till platser via sökningen i Lägg till plats i stället för bara vid namn.',
+  'help.guide.dawarich-wishes.tip.2':
+    'En kontroll tittar på upp till 50 poster, de som inte bockats av än först, och säger till när det fanns fler. En önskning som redan var avbockad behåller sitt eget datum.',
 
   // ── Screen: collections ───────────────────────────────────────────────────────────────
   'help.ctx.collections.title': 'Samlingar',
@@ -1637,6 +1669,19 @@ const help: TranslationStrings = {
   'help.guide.audit-log.result': 'Ett spår du kan lämna till den som frågar varför något ändrades.',
   'help.guide.audit-log.tip.1': 'Tiderna visas i serverns tidszon, som namnges ovanför tabellen.',
   'help.guide.audit-log.tip.2': 'Loggen kan bara byggas på; inget här kan redigeras eller tas bort från appen.',
+  // document-providers
+  'help.guide.document-providers.title': 'Erbjud ett dokumentlager',
+  'help.guide.document-providers.goal': 'Bestäm vilka lager en resa får hålla sina dokument i takt med.',
+  'help.guide.document-providers.step.1':
+    'Rutan Dokument bär lagren som rader på sin hylla: Paperless-ngx, Papra, Nextcloud, OpenCloud och Synology Drive. Alla fem börjar avstängda, och hyllan finns bara medan Dokument självt är på.',
+  'help.guide.document-providers.step.2':
+    'Slå om reglaget på raden Nextcloud. Meddelandet lyder Tillägget har uppdaterats, och från och med nu hittar reseägare Dokumentsynkronisering i fliken Filer på sina resor, med Nextcloud under Anslut en leverantör.',
+  'help.guide.document-providers.result':
+    'Lagret erbjuds på varje resa i denna TREK; inget är anslutet förrän en reseägare gör det.',
+  'help.guide.document-providers.tip.1':
+    'Här bestäms bara om ett lager får erbjudas. Adressen och inloggningsuppgifterna hör till en resa och skrivs in i dess flik Filer av resans ägare, aldrig i adminpanelen.',
+  'help.guide.document-providers.tip.2':
+    'Att stänga av Dokument stänger av varje lager med det, och ett lager kan inte slås på medan Dokument är av: servern svarar Enable the Documents addon first. Ett lager i ditt eget nätverk behöver också ALLOW_INTERNAL_NETWORK=true på servern.',
 
   // ── Screen: trip ──────────────────────────────────────────────────────────────────────
   'help.ctx.trip.title': 'Resa',
@@ -2075,30 +2120,30 @@ const help: TranslationStrings = {
   'help.ctx.trip-place.bullet.5':
     'Raden längst ner: Lägg till i dagen eller Ta bort från dag medan en dag är öppen, sedan Spara i samling, Navigation, Öppna hemsida, Redigera och Ta bort.',
   'help.ctx.trip-place.bullet.6':
-    'En plats som TREK matchat med en kartleverantör visar mer: den leverantörens betyg med en recension, telefonnumret, och en ring med Öppen eller Stängd runt bilden med veckans öppettider bakom sig.',
+    'En plats plockad ur sökningen bär det TREK-indexet eller OpenStreetMap vet om den: en grön ring med Öppen eller en röd med Stängd runt bilden, bedömd efter platsens egen klocka, telefonnumret under stjärnorna, Öppettider längre ner med dagens tider på raden och hela veckan bakom ett klick, och dess webbplats bakom Öppna hemsida. Googles betyg visas bara på en plats hittad via Google, på en TREK med en Google-nyckel.',
   // read-place
   'help.guide.read-place.title': 'Vad kortet berättar om en plats',
   'help.guide.read-place.goal': 'Läs allt resan vet om en plats, i ett enda kort.',
   'help.guide.read-place.step.1':
     'Klicka i dagkolumnen på stoppet du vill läsa. Kortet öppnas över kartan och stoppet förblir markerat i sin dag.',
   'help.guide.read-place.step.2':
-    'Huvudet: den runda bilden, namnet, adressen och de exakta koordinaterna. X till höger stänger kortet igen.',
+    'Huvudet: den runda bilden, namnet, adressen och de exakta koordinaterna. En grön ring med Öppen, eller en röd med Stängd, runt bilden säger om platsen är öppen just nu, efter sin egen klocka, så snart TREK känner till dess tider. X till höger stänger kortet igen.',
   'help.guide.read-place.step.3':
-    'Under det stjärnorna varje resenär gav platsen, med snittet och hur många som röstat. Inte betygsatt ännu så länge ingen gjort det.',
+    'Under det stjärnorna varje resenär gav platsen, med snittet och hur många som röstat. Inte betygsatt ännu så länge ingen gjort det. Strax under, telefonnumret där platsen har ett: ett klick på det lämnar numret till din telefonapp.',
   'help.guide.read-place.step.4':
     'Sedan beskrivningen och, under den, noteringarna. Båda är texten från platsens formulär, renderad: listor, länkar och fetstil fungerar alla.',
   'help.guide.read-place.step.5':
     'Deltagare säger vilka som går till det här stoppet. Alla är med tills du tar ut någon.',
   'help.guide.read-place.step.6':
-    'Raden längst ner är vad du kan göra härifrån: ta bort platsen från den öppna dagen eller lägga den där, spara den i en lista, öppna den i en kartapp, redigera den eller ta bort den.',
+    'Öppettider, längre ner: raden bär tiderna för den dag du tittar på, och ett klick på den vecklar ut hela veckan med den dagen i fetstil. Filer står bredvid.',
   'help.guide.read-place.result':
-    'Kortet står öppet tills du stänger det med X eller väljer en annan plats, och stoppet det hör till förblir markerat i dagkolumnen.',
+    'Kortet står öppet tills du stänger det med X eller väljer en annan plats, veckans tider förblir utvecklade, och stoppet det hör till förblir markerat i dagkolumnen.',
   'help.guide.read-place.tip.1':
     'Plockat ur platskolumnen känner kortet platsen men inget stopp, så det visar inga deltagare och ingen bokning. Välj stoppet inne i dagen i stället, så finns båda där.',
   'help.guide.read-place.tip.2':
     'Dubbelklicka på namnet för att byta namn på platsen utan att öppna formuläret. Enter sparar, Escape släpper ändringen.',
   'help.guide.read-place.tip.3':
-    'En plats som TREK kunde matcha med en kartleverantör visar också den leverantörens betyg, en recension, telefonnumret och öppettiderna.',
+    'En plats inskriven för hand visar inget av det: kortet känner bara det som dess formulär rymmer. Öppna den med Redigera, plocka den ur förslagen under Sök efter platser… och klicka på Uppdatera, så följer tiderna, telefonnumret och webbplatsen med. Googles betyg kräver en Google-nyckel.',
   // rate-place
   'help.guide.rate-place.title': 'Betygsätt en plats',
   'help.guide.rate-place.goal': 'Ge en plats dina egna stjärnor, och se vad alla andra gav den.',
@@ -2258,6 +2303,9 @@ const help: TranslationStrings = {
     'Ett spår som spelats in med höjder visar också sin högsta och lägsta punkt, metrarna upp och ner, och vandringens profil.',
   'help.guide.place-track.tip.3':
     'En import ger varje spår den tar in en egen färg, så två vandringar kommer aldrig in i samma.',
+  // read-place
+  'help.guide.read-place.step.7':
+    'Raden längst ner är vad du kan göra härifrån: ta bort platsen från den öppna dagen eller lägga den där, spara den i en lista, öppna den i en kartapp, redigera den eller ta bort den.',
 
   // ── Screen: trip-files ────────────────────────────────────────────────────────────────
   'help.ctx.trip-files.title': 'Filer',
@@ -2385,6 +2433,30 @@ const help: TranslationStrings = {
   'help.guide.files-trash.tip.2':
     'Att slänga en fil och få tillbaka den kräver rätten Ta bort filer. En medlem utan den ser varken Ta bort på raden eller knapparna i papperskorgen.',
   'help.guide.files-trash.tip.3': 'En fil som tagits bort för gott i papperskorgen kan inte hämtas tillbaka.',
+  // files-sync
+  'help.guide.files-sync.title': 'Håll dokumenten i takt med en Nextcloud-mapp',
+  'help.guide.files-sync.goal':
+    'Bind resan till en mapp i ditt eget dokumentlager, så att det som laddas upp här hamnar där och det som arkiveras där dyker upp här.',
+  'help.guide.files-sync.step.1':
+    'Klicka på Dokumentsynkronisering, bredvid Papperskorgen i verktygsradens högra ände. Dialogen öppnas med resans namn under sin titel. Till vänster, under Anslut en leverantör, står de lager en administratör slagit på, vart och ett med en rad om hur det sorterar, Sorterar i en mapp för Nextcloud; till höger lyder det Inget anslutet än.',
+  'help.guide.files-sync.step.2':
+    'Klicka på Nextcloud. En mindre dialog öppnas för anslutningen, uppkallad efter lagret, med påminnelsen högst upp om att använda ett applösenord i stället för ditt kontolösenord.',
+  'help.guide.files-sync.step.3':
+    'Fyll i Adress, Användarnamn, ditt inloggningsnamn i Nextcloud i stället för din e-postadress, och Applösenord, som Nextcloud skapar under Inställningar, Säkerhet. Basmapp är valfri: det är där TREK letar efter resmappar, /TREK om du inte säger annat, här /Reisen. Tillåt självsignerat certifikat längst ner är bara för en instans i ditt eget nätverk med ett sådant certifikat.',
+  'help.guide.files-sync.step.4':
+    'Klicka på Testa anslutningen. TREK når lagret med det du skrev och sidfoten lyder Nådde den, inloggad som följt av kontots namn, här admin. Ett lösenord som avvisas eller en adress som inte kan nås namnges där i stället, och inget sparas i något av fallen.',
+  'help.guide.files-sync.step.5':
+    'Klicka på Anslut. Anslutningen sparas med resan och TREK frågar Var ska den här resan ligga i Nextcloud? Bara det som finns i den mappen synkroniseras. Skapa en ny skapar en mapp under basmappen vid Skapa, med ett namn förifyllt från resans titel; under Eller använd en du redan har står mapparna som redan finns. Klicka på en, här Autumn in Japan.',
+  'help.guide.files-sync.step.6':
+    'Dialogen är tillbaka: Nextcloud står under Den här resan till vänster, och dess kort till höger bär mappen, när den senast kördes och Synkronisera nu. En första körning startar av sig själv; Synkronisera nu kör en när du vill. När en körning är klar ger brickan Inte synkroniserad än bredvid namnet vika för en grön prick, Synkroniserad när du pekar på den, och flödesfältet räknar dokumenten TREK och Nextcloud var för sig har, med körfälten Ut till arkivet och In från arkivet mellan dem. Stäng dialogen med ×.',
+  'help.guide.files-sync.result':
+    'De två dokument som redan låg i mappen står överst i listan, uppladdade i ditt namn, och varje dokument på resan finns i mappen också. Från och med nu kontrollerar TREK mappen i bakgrunden och mappen följer listan.',
+  'help.guide.files-sync.tip.1':
+    'Bara resans ägare eller en instansadministratör kan binda en resa, eftersom applösenordet når hela det Nextcloud-kontot. Varje medlem kan öppna Dokumentsynkronisering, läsa kortet och trycka på Synkronisera nu.',
+  'help.guide.files-sync.tip.2':
+    'Ett lager i ditt eget nätverk behöver ALLOW_INTERNAL_NETWORK=true på TREK-servern, och dess adress måste vara maskinens adress i nätverket, aldrig localhost. Utan det svarar Testa anslutningen Den adressen är inte tillåten.',
+  'help.guide.files-sync.tip.3':
+    'Koppla från på kortet avslutar parningen och behåller varje dokument på båda sidor. En mapp som binds en andra gång behandlas som ny, och allt i den kommer in igen, så efter ett Koppla från bind en tom mapp i stället för den gamla.',
 
   // ── Screen: trip-day-detail ───────────────────────────────────────────────────────────
   'help.ctx.trip-day-detail.title': 'Information om dagen',
@@ -2648,6 +2720,38 @@ const help: TranslationStrings = {
     'Visa alltid bokningsrutter, i samma inställningar, ritar dem från början på varje resa du inte redan bestämt om.',
   'help.guide.map-booking-routes.tip.3':
     'En bokning behöver två ändar med koordinater innan den kan ritas, så ett hotell eller en restaurang bär ingen ruttikon.',
+  'help.ctx.trip-map.bullet.8':
+    'Med tillägget Dawarich på ritar den runda Dawarich-knappen under Visa hela resan den rutt din telefon faktiskt spelade in: Visa inspelad rutt lägger den streckad under den planerade rutten, en färg per dag, och knappens etikett säger varför det inte finns någon linje när det inte gör det.',
+  // map-dawarich-trail
+  'help.guide.map-dawarich-trail.title': 'Visa rutten du faktiskt reste',
+  'help.guide.map-dawarich-trail.goal':
+    'Lägg rutten Dawarich spelade in på din telefon över kartan, streckad bredvid den du planerade, och läs resan dag för dag som den verkligen gick.',
+  'help.guide.map-dawarich-trail.step.1':
+    'Den runda Dawarich-knappen sitter nere till höger på kartan, under Visa hela resan; håller du över den lyder den Visa inspelad rutt. Klicka på den. TREK frågar din Dawarich efter resans datum, och en ring snurrar runt knappen medan svaret är på väg.',
+  'help.guide.map-dawarich-trail.step.2':
+    'Den inspelade rutten landar som en streckad linje, en färg per dag, ritad under den planerade rutten så att planen förblir läsbar. Knappen lyder nu Dölj inspelad rutt. Dagar klipps vid lokal midnatt, och en dag som är ihopfälld i dagkolumnen tar sin streckade linje bort från kartan tillsammans med sina stopp.',
+  'help.guide.map-dawarich-trail.step.3':
+    'Klicka på Visa hela resan också så ritas varje planerad dag heldragen bredvid den streckade inspelningen. Där de två löper ihop gick dagen som planerat; där den streckade linjen vandrar iväg är där den inte gjorde det.',
+  'help.guide.map-dawarich-trail.result':
+    'Det du planerade och det du faktiskt gjorde ligger på kartan tillsammans, streckat mot heldraget, och kortet ovanför knapparna listar fortfarande de planerade dagarna och deras avstånd.',
+  'help.guide.map-dawarich-trail.tip.1':
+    'På eller av kommer ihåg per resa för den här webbläsarsessionen. Medan rutten är på frågar TREK Dawarich igen varannan minut, så en pågående resa hinner ikapp utan omladdning; rutten i sig lagras aldrig, så den finns inte i TREK:s databas, inte i säkerhetskopior och inte offline.',
+  'help.guide.map-dawarich-trail.tip.2':
+    'Knappens etikett förklarar en tom karta: Laddar den inspelade rutten… medan den är på väg, Ingenting spelades in de här datumen, Den inspelade rutten kunde inte laddas, eller Den inspelade rutten kräver en anslutning när TREK är offline.',
+  // map-compass
+  'help.guide.map-compass.title': 'Vrid kartan och hitta norr igen',
+  'help.guide.map-compass.goal':
+    'Rotera kartan så att den pekar dit du är på väg, och snäpp tillbaka den till norr med ett klick.',
+  'help.guide.map-compass.step.1':
+    'Vrid kartan genom att dra med höger musknapp, eller håll ner Ctrl och dra med vänster knapp; på en pekskärm vrider du med två fingrar. Den runda kompassen bredvid raden med kategoriikoner högst upp på kartan vrids med: dess pil pekar alltid mot norr, så den lutar så långt som du har vridit.',
+  'help.guide.map-compass.step.2':
+    'Klicka på kompassen. Reset north, som knappen heter, för kartan mjukt tillbaka till norr uppåt och till en platt vy, och pilen står rak igen.',
+  'help.guide.map-compass.result':
+    'Kartan är norr-upp och plan igen, och inget på resan har ändrats: kompassen flyttar bara kameran.',
+  'help.guide.map-compass.tip.1':
+    'Kompassen finns bara på kartorna MapLibre GL och Mapbox GL; Leaflet-kartan kan inte vridas, så den har ingen. Kartleverantör i Inställningar, under Karta, avgör vilken du använder, och Spara karta behåller valet.',
+  'help.guide.map-compass.tip.2':
+    'Klicket tar också bort lutningen: att dra med höger knapp uppåt eller neråt lutar vyn, och Reset north planar ut den tillsammans med vridningen. På Mapbox GL med 3D-byggnader och terräng på plattar det till 3D-vyn också, tills du lutar den igen.',
 
   // ── Screen: trip-collab ───────────────────────────────────────────────────────────────
   'help.ctx.trip-collab.title': 'Samarbete',
@@ -3127,15 +3231,15 @@ const help: TranslationStrings = {
   'help.guide.import-booking-file.step.3':
     'Klicka på Importera. Dialogen stängs med en gång, eftersom läsningen sker i bakgrunden.',
   'help.guide.import-booking-file.step.4':
-    'Ett kort nere till höger rapporterar körningen, och det följer dig genom appen och genom en omladdning. När det är klart erbjuder det Importera, som startar genomgången: varje bokning det hittade öppnas i det vanliga formuläret, ifylld och med sitt dokument bifogat, för dig att kontrollera och att Lägg till en efter en.',
+    'Ett kort nere till höger rapporterar körningen under filens namn, och det följer dig genom appen och genom en omladdning. Analyserar filer… blir en bock när läsningen är klar, och kortet erbjuder Importera. Klicka på det.',
   'help.guide.import-booking-file.result':
-    'Varje bokning du bekräftade är ett eget kort med sin kod, sina datum och dokumentet det kom ur; ett boende fick också sina nätter, och med Kostnader på blev ett pris som stod i bekräftelsen en utgift.',
+    'Bokningen är ett kort i Väntar på beslut med sina nätter, sin kod och bekräftelsen under Filer, vistelsen ligger på de dagarna i planen, och med Kostnader på är priset en utgift knuten till den.',
   'help.guide.import-booking-file.tip.1':
     'Importera från fil finns bara när servern kan läsa bekräftelser, vilket kräver antingen extraktorn eller tillägget AI-tolkning. Det senare slår administratören om under Tillägg.',
   'help.guide.import-booking-file.tip.2':
-    'Om inget kunde läsas säger kortet det och erbjuder Försök med AI-analys, som skickar samma filer rakt till modellen.',
+    'Om inget kunde läsas säger kortet det och erbjuder Försök med AI-analys, som skickar samma filer rakt till modellen. En färdig tolkning sparas i tio minuter; starta genomgången inom det fönstret.',
   'help.guide.import-booking-file.tip.3':
-    'En färdig tolkning sparas i tio minuter. Starta genomgången inom det fönstret.',
+    'Bekräftelsen bifogas bara när dess typ finns bland Tillåtna filtyper i admininställningarna. PDF finns där från början; ett mejl, EML, måste läggas till först, annars sparas bokningen utan den.',
   // edit-booking
   'help.guide.edit-booking.title': 'Ändra en bokning',
   'help.guide.edit-booking.goal':
@@ -3166,6 +3270,9 @@ const help: TranslationStrings = {
     'Att ta bort en boendebokning tar också dess nätter ur dagsplanen och tar bort utgiften som var länkad till den.',
   'help.guide.delete-booking.tip.2':
     'Dokument som var bifogade stannar på resans flik Filer; bara deras länk till bokningen försvinner.',
+  // import-booking-file
+  'help.guide.import-booking-file.step.5':
+    'Varje bokning som hittades öppnas i Ny bokning, den ena efter den andra, redan ifylld. För ett hotell är det namnet i Titel och, när resan har platsen, under Boende, dess Plats / Adress, Från och Till på dess nätter, Incheckning och Utcheckning, Bokningskod, bekräftelsen under Filer och, med Kostnader på, priset som Relaterade kostnader. Kontrollera den och klicka på Lägg till.',
 
   // ── Screen: trip-costs ────────────────────────────────────────────────────────────────
   'help.ctx.trip-costs.title': 'Kostnader',
@@ -3504,6 +3611,50 @@ const help: TranslationStrings = {
     'En bekräftad bokning är en heldragen linje, en väntande en streckad. Inställningen Etiketter för bokningsrutter skriver ut flygplatskoden eller stationsnamnet i ändmarkörerna.',
   'help.guide.transport-on-map.tip.3':
     'Visa alla bokningsvägar är ett blankt blad, inte ett lager: den kastar det som de enskilda ikonerna hade satt, så att trycka två gånger lämnar dig med allt på eller allt av.',
+  // import-transport-file
+  'help.guide.import-transport-file.title': 'Läs en flygning ur dess e-biljett',
+  'help.guide.import-transport-file.goal':
+    'Låt TREK dra ut en flygning, ett tåg eller en färja ur biljetten transportören skickade, och kontrollera den innan den sparas.',
+  'help.guide.import-transport-file.step.1':
+    'Klicka på Importera från fil i verktygsfältet i fliken Transporter, bredvid Transport. Importera bokningsbekräftelser öppnas, samma dialog som fliken Bokningar har.',
+  'help.guide.import-transport-file.step.2':
+    'Släpp biljetten på rutan, eller klicka på den och välj den: EML, PDF, PKPass, HTML och TXT, upp till fem filer på 10 MB var. Filerna du valde namnges på rutan.',
+  'help.guide.import-transport-file.step.3':
+    'Klicka på Importera. Dialogen stängs med en gång; läsningen sker i bakgrunden.',
+  'help.guide.import-transport-file.step.4':
+    'Ett kort nere till höger rapporterar körningen under filens namn. Analyserar filer… blir en bock när läsningen är klar, och kortet erbjuder Importera. Klicka på det.',
+  'help.guide.import-transport-file.step.5':
+    'En flygning öppnas i Lägg till transport, redan ifylld: Bokningstyp på Flygning, flygbolaget och flightnumret i Titel, båda flygplatserna under Rutt med Avgång och Ankomst, deras tider och deras tidszoner, Flygbolag och Flygnummer, Bokningskod och biljetten under Filer. Kontrollera den och klicka på Lägg till.',
+  'help.guide.import-transport-file.result':
+    'Flygningen är ett kort i Väntar på beslut i fliken Transporter och en rad på dagen den avgår, med biljetten under Filer, och med båda flygplatserna kända ritar den sin båge på kartan.',
+  'help.guide.import-transport-file.tip.1':
+    'De två flikarna delar en import: en fil som rymmer en flygning och ett hotell öppnar flygningen i Lägg till transport och hotellet i Ny bokning, det ena efter det andra, vilken flik du än började från.',
+  'help.guide.import-transport-file.tip.2':
+    'Flygplatser placeras efter sin kod. En station eller en hamn som läsningen inte kunde hitta namnges i bärnstensgult på kortet; välj den för hand under Rutt innan du klickar på Lägg till, annars ritar transporten inget på kartan.',
+  // airtrail-import
+  'help.guide.airtrail-import.title': 'Importera flygningar från AirTrail',
+  'help.guide.airtrail-import.goal':
+    'Ta in de flygningar du redan har i AirTrail i resan på en gång, och låt dem följa AirTrail från och med då.',
+  'help.guide.airtrail-import.step.1':
+    'Med tillägget AirTrail på och din instans ansluten under Integrationer i Inställningar bär verktygsfältet i fliken Transporter en AirTrail-knapp bredvid Transport. Klicka på den.',
+  'help.guide.airtrail-import.step.2':
+    'Importera från AirTrail listar flygningarna på ditt konto i två grupper. Under denna resa rymmer de som är daterade inom resan, redan ibockade; Övriga flygningar rymmer resten, obockade. En flygning som redan finns i resan är gråad och märkt Importerad.',
+  'help.guide.airtrail-import.step.3':
+    'Varje rad är en kryssruta med flygbolaget och flightnumret, de två flygplatserna och datumet. Klicka på en rad för att ta med flygningen eller lämna den utanför; de under Övriga flygningar kommer med bara när du bockar i dem.',
+  'help.guide.airtrail-import.step.4':
+    'Flygningar som hänger ihop, var och en avgående från flygplatsen den förra landade på inom ett dygn, ramas in tillsammans. Bocken under, Importera som en flygning med mellanlandning i den flygplatsen, är redan på: låt den vara på för en bokning med ett stopp, eller stäng av den för att importera benen som separata flygningar.',
+  'help.guide.airtrail-import.step.5':
+    'Klicka på Importera. Knappen räknar de ibockade flygningarna, och meddelandet efteråt säger hur många som kom in.',
+  'help.guide.airtrail-import.step.6':
+    'Flygningarna är kort under Bekräftat, vart och ett med en blå AirTrail-bricka bredvid sin status, och rader på dagarna de går. En sammanslagen förbindelse är ett kort, med sin rutt genom mellanlandningen.',
+  'help.guide.airtrail-import.result':
+    'Flygningarna från AirTrail är kort i fliken Transporter och rader på sina dagar, vart och ett med AirTrail-brickan som säger var det kom ifrån.',
+  'help.guide.airtrail-import.tip.1':
+    'En flygning som redan finns i resan med samma nummer och datum hoppas över, och ett meddelande säger hur många det var. Ångra i verktygsraden ovanför dagarna tar tillbaka hela importen.',
+  'help.guide.airtrail-import.tip.2':
+    'AirTrail förblir källan till sanningen. TREK läser dess ändringar när du öppnar resan och med några minuters mellanrum i bakgrunden; en flygning som tagits bort där behåller sitt kort, med brickan ändrad till Ej synkroniserad. Ändringar gjorda i TREK går tillbaka bara med Skriv tillbaka ändringarna till AirTrail påslaget under Integrationer.',
+  'help.guide.airtrail-import.tip.3':
+    'En sammanslagen förbindelse har ingen enskild AirTrail-flygning att följa, så den är en engångsimport: den behåller den blå brickan, och att hålla över brickan säger det. Samma sak händer en synkroniserad flygning du ger ett stopp för hand.',
 
   // ── Screen: trip-roadtrip ─────────────────────────────────────────────────────────────
   'help.ctx.trip-roadtrip.title': 'Bilresa',

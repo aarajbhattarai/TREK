@@ -465,6 +465,38 @@ const help: TranslationStrings = {
     'A városokat a cím szövegéből olvassa ki, nem keresi meg, így egy rövid cím, mint az „Osteria Francescana, Italy”, vagy egy prefektúrával végződő cím régiót adhat város helyett.',
   'help.guide.stats.tip.2':
     'A kézzel megjelölt országok számítanak az Országokban és a kontinenseknél, de nem hoznak utazást, helyet vagy napot.',
+  // dawarich-countries
+  'help.guide.dawarich-countries.title': 'Országok hozzáadása a felvételeidből',
+  'help.guide.dawarich-countries.goal':
+    'Hagyd, hogy a Dawarich megmondja, mely országokban jártál az elmúlt évben, és tedd a térképre azokat, amiket megerősítesz.',
+  'help.guide.dawarich-countries.step.1':
+    'A csatlakoztatott Dawarich bővítménnyel a térkép alján, a statisztikától balra egy Dawarich panel ül két csempével. Kattints az Országok csempére.',
+  'help.guide.dawarich-countries.step.2':
+    'A párbeszédablak az Országok fülön nyílik meg. Kattints az Országok keresése gombra: a TREK kiolvassa, mely országokat és városokat fednek le a felvételeid az elmúlt 12 hónapban, havonta egyet, úgyhogy adj neki egy pillanatot. Minden ország, ami még nincs az Atlasodban, a zászlajával, a városai számával és az első város nevével szerepel, és kipipálva indul; kattints egy sorra, hogy kihagyd.',
+  'help.guide.dawarich-countries.step.3':
+    'Erősítsd meg a jobb alsó gombbal, amin 5 ország hozzáadása áll, ha öt sor van kipipálva. A párbeszédablak megmondja, hány került be; zárd be, és a térkép már újraolvasta magát.',
+  'help.guide.dawarich-countries.result':
+    'A megerősített országok színt viselnek a térképen és beleszámítanak az Országok számába, a Dawarich forrásaként rögzítve. Amit kézzel jelöltél, érintetlen marad.',
+  'help.guide.dawarich-countries.tip.1':
+    'Azok az országok, amelyeket az Atlas már meglátogatottként mutat, kézzel, egy utazásból vagy egy korábbi ellenőrzésből, kimaradnak, így a saját jelöléseid soha nem kapnak új címkét. Egy ország, amit korábban eltávolítottál az Atlasból, visszajön, ha itt megerősíted.',
+  'help.guide.dawarich-countries.tip.2':
+    'Egy országnevet, amit a TREK nem tud párosítani, nem dob el, hanem a sorok alatt sorolja fel, és az Ellenőrzés újra még egyszer megkérdezi a Dawarichot. A lista alatti megjegyzés azt mondja, hogy az elmúlt 12 hónapot néztük át; ez az ablak rögzített.',
+  // dawarich-wishes
+  'help.guide.dawarich-wishes.title': 'Kívánságok kipipálása a felvételeidből',
+  'help.guide.dawarich-wishes.goal':
+    'Tudd meg, a bakancslistád mely helyeit érted el valóban, és pipáld ki őket azon a napon, amikor megtörtént.',
+  'help.guide.dawarich-wishes.step.1':
+    'A térkép alján, a statisztikától balra lévő Dawarich panelen kattints a Kívánságlista csempére.',
+  'help.guide.dawarich-wishes.step.2':
+    'A párbeszédablak a Kívánságlista fülön nyílik meg. Kattints a Kívánságlista ellenőrzése gombra: a TREK átnézi a felvételeidet minden bejegyzéshez, aminek van koordinátája. Egy elért kívánság azzal szerepel, milyen közel jutottál, mennyi ideig maradtál és melyik napon, és kipipálva indul; amit már kipipáltál, azon Már kipipálva áll. A lista alatt egy megjegyzés számolja a koordináta nélküli bejegyzéseket, és ott áll a szabály is: Egy kívánság 250 méteren belül és 20 perc helyszíni idő után számít teljesítettnek.',
+  'help.guide.dawarich-wishes.step.3':
+    'Erősítsd meg a jobb alsó gombbal, amin 2 kipipálása áll, ha két sor van kipipálva. Aztán zárd be a párbeszédablakot, és nyisd meg a mellette lévő panel Bakancslista fülét.',
+  'help.guide.dawarich-wishes.result':
+    'Minden kívánság zöld pipát visel az ott-tartózkodás dátumával, nem a maival; a buboréksúgója azt mondja: A Dawarich-rögzítéseid alapján kipipálva, és egy kattintás a dátumra visszavonja.',
+  'help.guide.dawarich-wishes.tip.1':
+    'Az elhaladás nem számít: a szabályhoz közelség és idő is kell, és több megfelelő tartózkodás közül a leghosszabb nyer. Egy koordináta nélküli kívánság nem ellenőrizhető, ezért a helyeket a Hely hozzáadása keresőjén át add hozzá, ne csak név szerint.',
+  'help.guide.dawarich-wishes.tip.2':
+    'Egy ellenőrzés legfeljebb 50 bejegyzést néz meg, először a még ki nem pipáltakat, és szól, ha több volt. Egy már kipipált kívánság megtartja a saját dátumát.',
 
   // ── Screen: collections ───────────────────────────────────────────────────────────────
   'help.ctx.collections.title': 'Gyűjtemények',
@@ -1704,6 +1736,19 @@ const help: TranslationStrings = {
     'Az időpontok a szerver időzónájában látszanak, amely a táblázat felett van megnevezve.',
   'help.guide.audit-log.tip.2':
     'A napló csak bővíthető; itt semmit nem lehet szerkeszteni vagy törölni az alkalmazásból.',
+  // document-providers
+  'help.guide.document-providers.title': 'Dokumentumtár felkínálása',
+  'help.guide.document-providers.goal': 'Döntsd el, mely tárolókkal tarthatja egy utazás a dokumentumait szinkronban.',
+  'help.guide.document-providers.step.1':
+    'A Dokumentumok csempe a polcán sorokként viszi a tárolókat: Paperless-ngx, Papra, Nextcloud, OpenCloud és Synology Drive. Mind az öt kikapcsolva indul, és a polc csak addig van ott, amíg maga a Dokumentumok be van kapcsolva.',
+  'help.guide.document-providers.step.2':
+    'Billentsd át a kapcsolót a Nextcloud sorában. Az üzenet Bővítmény frissítve, és ezentúl az utak tulajdonosai megtalálják a Dokumentumok szinkronizálása gombot az utazásaik Fájlok fülén, a Nextcloudot pedig a Szolgáltató csatlakoztatása alatt.',
+  'help.guide.document-providers.result':
+    'A tároló ennek a TREK-nek minden utazásán felkínálva áll; semmi nincs csatlakoztatva, amíg egy út tulajdonosa meg nem teszi.',
+  'help.guide.document-providers.tip.1':
+    'Itt csak az dől el, felkínálható-e egy tároló. A cím és a hitelesítő adatok egy utazáshoz tartoznak, és az út tulajdonosa adja meg őket a Fájlok fülön, soha nem az adminfelületen.',
+  'help.guide.document-providers.tip.2':
+    'A Dokumentumok kikapcsolása minden tárolót kikapcsol vele együtt, és egy tároló nem kapcsolható be, amíg a Dokumentumok ki van kapcsolva: a szerver azt válaszolja: Enable the Documents addon first. A saját hálózatodon lévő tárolóhoz a szerveren ALLOW_INTERNAL_NETWORK=true is kell.',
 
   // ── Screen: trip ──────────────────────────────────────────────────────────────────────
   'help.ctx.trip.title': 'Utazás',
@@ -2162,30 +2207,30 @@ const help: TranslationStrings = {
   'help.ctx.trip-place.bullet.5':
     'A legalsó sor: Hozzáadás a naphoz vagy Eltávolítás a napról, amíg egy nap meg van nyitva, aztán Mentés gyűjteménybe, Navigáció, Weboldal megnyitása, Szerkesztés és Törlés.',
   'help.ctx.trip-place.bullet.6':
-    'Egy hely, amit a TREK összepárosított egy térképszolgáltatóval, többet mutat: annak a szolgáltatónak az értékelését egy véleménnyel, a telefonszámot, és egy Nyitva vagy Zárva gyűrűt a kép körül, mögötte a hét nyitvatartásával.',
+    'A keresésből kiválasztott hely magával hozza, amit a TREK-index vagy az OpenStreetMap tud róla: egy zöld Nyitva vagy piros Zárva gyűrűt a kép körül, a hely saját órája szerint megítélve, a telefonszámot a csillagok alatt, lejjebb a Nyitvatartást a nap sorával a soron és az egész héttel egy kattintás mögött, és a weboldalát a Weboldal megnyitása mögött. A Google értékelése csak a Google-lel talált helyen látszik, egy Google-kulcsos TREK-en.',
   // read-place
   'help.guide.read-place.title': 'Mit mond el a kártya egy helyről',
   'help.guide.read-place.goal': 'Olvasd el egyetlen kártyán mindazt, amit az utazás egy helyről tud.',
   'help.guide.read-place.step.1':
     'A napok oszlopában kattints a megállóra, amit el akarsz olvasni. A kártya megnyílik a térkép fölött, a megálló pedig jelölve marad a napjában.',
   'help.guide.read-place.step.2':
-    'A fejléc: a kerek kép, a név, a cím és a pontos koordináták. A jobb oldali X újra bezárja a kártyát.',
+    'A fejléc: a kerek kép, a név, a cím és a pontos koordináták. Egy zöld gyűrű Nyitva, vagy egy piros Zárva felirattal a kép körül megmondja, nyitva van-e a hely épp most, a saját órája szerint, amint a TREK ismeri a nyitvatartását. A jobb oldali X újra bezárja a kártyát.',
   'help.guide.read-place.step.3':
-    'Alatta a csillagok, amiket minden utazó adott a helynek, az átlaggal és a szavazatok számával. Még nincs értékelve, amíg senki sem szavazott.',
+    'Alatta a csillagok, amiket minden utazó adott a helynek, az átlaggal és a szavazatok számával. Még nincs értékelve, amíg senki sem szavazott. Rögtön alatta a telefonszám, ahol a helynek van: egy kattintás rá átadja a számot a telefonalkalmazásodnak.',
   'help.guide.read-place.step.4':
     'Aztán a leírás, alatta a jegyzetek. Mindkettő a hely űrlapjáról való szöveg, megjelenítve: a listák, a linkek és a félkövér mind működnek.',
   'help.guide.read-place.step.5':
     'A Résztvevők megmondja, ki megy erre a megállóra. Mindenki benne van, amíg ki nem veszel valakit.',
   'help.guide.read-place.step.6':
-    'A legalsó sor az, amit innen tehetsz: leveheted a helyet a megnyitott napról vagy ráteheted, listába mentheted, megnyithatod egy térképalkalmazásban, szerkesztheted vagy törölheted.',
+    'A Nyitvatartás, lejjebb: a sor annak a napnak az óráit viszi, amelyiket épp nézed, és egy kattintás rá kibontja az egész hetet, azzal a nappal félkövéren. Mellette a Fájlok áll.',
   'help.guide.read-place.result':
-    'A kártya addig marad nyitva, amíg be nem zárod az X-szel vagy másik helyet nem választasz, a megálló pedig, amelyikhez tartozik, jelölve marad a napok oszlopában.',
+    'A kártya addig marad nyitva, amíg be nem zárod az X-szel vagy másik helyet nem választasz, a hét órái kibontva maradnak, a megálló pedig, amelyikhez tartozik, jelölve marad a napok oszlopában.',
   'help.guide.read-place.tip.1':
     'A helyek oszlopából kiválasztva a kártya ismeri a helyet, de a megállót nem, így nem mutat résztvevőket és foglalást sem. Válaszd inkább a megállót a napon belül, és mindkettő ott van.',
   'help.guide.read-place.tip.2':
     'Kattints duplán a névre, hogy az űrlap megnyitása nélkül nevezd át a helyet. Az Enter ment, az Escape eldobja a változtatást.',
   'help.guide.read-place.tip.3':
-    'Egy hely, amit a TREK össze tudott párosítani egy térképszolgáltatóval, mutatja annak a szolgáltatónak az értékelését, egy véleményt, a telefonszámot és a nyitvatartást is.',
+    'Egy kézzel beírt hely ebből semmit nem mutat: a kártya csak azt tudja, amit az űrlapja tart. Nyisd meg a Szerkesztés gombbal, válaszd ki a Helyek keresése... alatti javaslatokból, és kattints a Frissítés gombra, és vele jön a nyitvatartás, a telefonszám és a weboldal. A Google értékeléséhez Google-kulcs kell.',
   // rate-place
   'help.guide.rate-place.title': 'Hely értékelése',
   'help.guide.rate-place.goal': 'Add meg a helynek a saját csillagaidat, és nézd meg, mit adtak neki a többiek.',
@@ -2350,6 +2395,9 @@ const help: TranslationStrings = {
     'Egy magasságokkal rögzített nyomvonal a legmagasabb és a legalacsonyabb pontját, a fel és le megtett métereket, meg a túra profilját is mutatja.',
   'help.guide.place-track.tip.3':
     'Egy import minden behozott nyomvonalnak saját színt ad, így két túra sosem érkezik ugyanabban.',
+  // read-place
+  'help.guide.read-place.step.7':
+    'A legalsó sor az, amit innen tehetsz: leveheted a helyet a megnyitott napról vagy ráteheted, listába mentheted, megnyithatod egy térképalkalmazásban, szerkesztheted vagy törölheted.',
 
   // ── Screen: trip-files ────────────────────────────────────────────────────────────────
   'help.ctx.trip-files.title': 'Fájlok',
@@ -2480,6 +2528,30 @@ const help: TranslationStrings = {
   'help.guide.files-trash.tip.2':
     'Egy fájl kidobásához és visszahozásához Fájlok törlése jog kell. Az a tag, akinek nincs meg, sem a soron lévő Törlést, sem a kukában lévő gombokat nem látja.',
   'help.guide.files-trash.tip.3': 'A kukában véglegesen törölt fájlt már nem lehet visszahozni.',
+  // files-sync
+  'help.guide.files-sync.title': 'A dokumentumok szinkronban tartása egy Nextcloud-mappával',
+  'help.guide.files-sync.goal':
+    'Kösd az utazást egy mappához a saját dokumentumtáradban, hogy ami itt feltöltődik, ott landoljon, és ami ott kerül lerakásra, itt bukkanjon fel.',
+  'help.guide.files-sync.step.1':
+    'Kattints a Dokumentumok szinkronizálása gombra, a Kuka mellett az eszköztár jobb végén. A párbeszédablak az utazás nevével nyílik meg a címe alatt. Balra, a Szolgáltató csatlakoztatása alatt állnak a tárolók, amiket egy rendszergazda bekapcsolt, mindegyik egy sorral arról, hogyan rendszerez, a Nextcloudnál Mappába rendszerez; jobbra Még nincs semmi csatlakoztatva áll.',
+  'help.guide.files-sync.step.2':
+    'Kattints a Nextcloudra. Egy kisebb párbeszédablak nyílik meg a kapcsolathoz, a tárolóról elnevezve, a tetején az emlékeztetővel, hogy alkalmazásjelszót használj a fiókod jelszava helyett.',
+  'help.guide.files-sync.step.3':
+    'Töltsd ki a Cím, a Felhasználónév, ami a Nextcloud bejelentkezési neved, nem az e-mail-címed, és az Alkalmazásjelszó mezőt, amit a Nextcloud a Beállítások, Biztonság alatt készít. Az Alapmappa nem kötelező: ott keresi a TREK az utak mappáit, /TREK, hacsak mást nem mondasz, itt /Reisen. Az alul lévő Saját aláírású tanúsítvány elfogadása csak a saját hálózatodon lévő, ilyen tanúsítványú példányhoz való.',
+  'help.guide.files-sync.step.4':
+    'Kattints a Kapcsolat tesztelése gombra. A TREK eléri a tárolót azzal, amit beírtál, és a láblécen Elértem, bejelentkezve mint áll, utána a fiók nevével, itt admin. Egy visszautasított jelszót vagy egy elérhetetlen címet helyette ott nevez meg, és egyik esetben sem ment semmit.',
+  'help.guide.files-sync.step.5':
+    'Kattints a Csatlakozás gombra. A kapcsolat az utazással együtt mentődik, és a TREK megkérdezi: Hová kerüljön ez az út a(z) Nextcloud tárolóban? Csak az szinkronizálódik, ami abban a mappában van. Az Új létrehozása a Létrehozás gombra mappát hoz létre az alapmappa alatt, az utazás címéből előre kitöltött névvel; a Vagy használj egy meglévőt alatt állnak a már meglévő mappák. Kattints egyre, itt Autumn in Japan.',
+  'help.guide.files-sync.step.6':
+    'A párbeszédablak visszajött: a Nextcloud balra az Ez az út alatt áll, a kártyája jobbra pedig viszi a mappát, hogy mikor futott utoljára, és a Szinkronizálás most gombot. Az első futás magától indul; a Szinkronizálás most bármikor lefuttat egyet. Amint egy futás átment, a név melletti Még nincs szinkronizálva jelvény zöld pontnak adja át a helyét, Naprakész, ha rámutatsz, és a folyamsáv számolja a dokumentumokat, amiket a TREK és a Nextcloud külön-külön tart, köztük a Ki a tárolóba és a Be a tárolóból sávokkal. Zárd be a párbeszédablakot a × jellel.',
+  'help.guide.files-sync.result':
+    'A két dokumentum, ami már a mappában volt, a lista tetején áll, a te nevedben feltöltve, és az utazás minden dokumentuma a mappában is megvan. Mostantól a TREK a háttérben ellenőrzi a mappát, és a mappa követi a listát.',
+  'help.guide.files-sync.tip.1':
+    'Csak az utazás tulajdonosa vagy egy példány-rendszergazda kötheti be az utazást, mivel az alkalmazásjelszó az egész Nextcloud-fiókot eléri. Minden tag megnyithatja a Dokumentumok szinkronizálása ablakot, elolvashatja a kártyát és megnyomhatja a Szinkronizálás most gombot.',
+  'help.guide.files-sync.tip.2':
+    'A saját hálózatodon lévő tárolóhoz ALLOW_INTERNAL_NETWORK=true kell a TREK-szerveren, és a címének a gép hálózati címének kell lennie, soha nem localhost. Enélkül a Kapcsolat tesztelése azt válaszolja: Ez a cím nem engedélyezett.',
+  'help.guide.files-sync.tip.3':
+    'A kártyán lévő Leválasztás megszünteti a párosítást, és mindkét oldalon megtart minden dokumentumot. Egy másodszor bekötött mappát újként kezel, és minden, ami benne van, újra bejön, ezért egy Leválasztás után inkább üres mappát köss be, ne a régit.',
 
   // ── Screen: trip-day-detail ───────────────────────────────────────────────────────────
   'help.ctx.trip-day-detail.title': 'Nap részletei',
@@ -2746,6 +2818,38 @@ const help: TranslationStrings = {
     'A Mindig jelenjenek meg a foglalási útvonalak, ugyanabban a beállításban, minden olyan utazáson az elejétől megrajzolja őket, amelyikről még nem döntöttél.',
   'help.guide.map-booking-routes.tip.3':
     'Egy foglalásnak két koordinátás végre van szüksége, mielőtt megrajzolható lenne, ezért egy szálloda vagy egy étterem nem visel útvonal ikont.',
+  'help.ctx.trip-map.bullet.8':
+    'Bekapcsolt Dawarich bővítménnyel a Teljes utazás megjelenítése alatti kerek Dawarich gomb azt az útvonalat rajzolja meg, amit a telefonod valóban rögzített: a Rögzített útvonal megjelenítése szaggatottan a tervezett útvonal alá fekteti, naponta egy színnel, és a gomb felirata megmondja, miért nincs vonal, amikor nincs.',
+  // map-dawarich-trail
+  'help.guide.map-dawarich-trail.title': 'A valóban megtett útvonal megjelenítése',
+  'help.guide.map-dawarich-trail.goal':
+    'Fektesd a térképre az útvonalat, amit a Dawarich a telefonodon rögzített, szaggatottan a tervezett mellé, és olvasd az utazást napról napra úgy, ahogy valóban zajlott.',
+  'help.guide.map-dawarich-trail.step.1':
+    'A kerek Dawarich gomb a térkép jobb alsó sarkában ül, a Teljes utazás megjelenítése alatt; ha fölé viszed az egeret, azt mondja: Rögzített útvonal megjelenítése. Kattints rá. A TREK megkérdezi a Dawarichodat az utazás dátumairól, és egy gyűrű forog a gomb körül, amíg a válasz úton van.',
+  'help.guide.map-dawarich-trail.step.2':
+    'A rögzített útvonal szaggatott vonalként érkezik, naponta egy színnel, a tervezett útvonal alá rajzolva, hogy a terv olvasható maradjon. A gombon most Rögzített útvonal elrejtése áll. A napok helyi éjfélkor vannak elvágva, és a napok oszlopában összecsukott nap a megállóival együtt a szaggatott vonalát is leveszi a térképről.',
+  'help.guide.map-dawarich-trail.step.3':
+    'Kattints a Teljes utazás megjelenítése gombra is, és minden tervezett nap folytonosan rajzolódik ki a szaggatott felvétel mellé. Ahol a kettő együtt fut, a nap terv szerint ment; ahol a szaggatott vonal elkalandozik, ott nem.',
+  'help.guide.map-dawarich-trail.result':
+    'Amit terveztél és amit valóban tettél, együtt van a térképen, szaggatott a folytonos mellett, és a gombok fölötti kártya továbbra is a tervezett napokat és a távolságaikat sorolja.',
+  'help.guide.map-dawarich-trail.tip.1':
+    'Hogy be vagy ki van kapcsolva, utazásonként megjegyzi erre a böngésző-munkamenetre. Amíg az útvonal be van kapcsolva, a TREK kétpercenként újra kérdezi a Dawarichot, így egy folyamatban lévő utazás újratöltés nélkül utoléri magát; magát az útvonalat soha nem tárolja, tehát nincs a TREK adatbázisában, a biztonsági mentésekben és offline sem.',
+  'help.guide.map-dawarich-trail.tip.2':
+    'A gomb felirata megmagyarázza az üres térképet: Rögzített útvonal betöltése… amíg úton van, Ezeken a napokon nem készült rögzítés, A rögzített útvonalat nem sikerült betölteni, vagy A rögzített útvonalhoz kapcsolat kell, amikor a TREK offline.',
+  // map-compass
+  'help.guide.map-compass.title': 'A térkép elforgatása és észak megtalálása',
+  'help.guide.map-compass.goal':
+    'Forgasd el a térképet, hogy arra nézzen, amerre mész, és pattintsd vissza északra egy kattintással.',
+  'help.guide.map-compass.step.1':
+    'Forgasd a térképet jobb gombos húzással, vagy tartsd lenyomva a Ctrl-t és húzd bal gombbal; érintőképernyőn csavard két ujjal. A térkép tetején a kategóriaikonok sora melletti kerek iránytű együtt fordul vele: a nyila mindig északra mutat, így annyira dől, amennyit forgattál.',
+  'help.guide.map-compass.step.2':
+    'Kattints az iránytűre. A Reset north, ahogy a gombot hívják, finoman visszaviszi a térképet északkal felülre és sík nézetbe, és a nyíl újra egyenesen áll.',
+  'help.guide.map-compass.result':
+    'A térkép újra észak felé és vízszintes, és az utazáson semmi nem változott: az iránytű csak a kamerát mozgatja.',
+  'help.guide.map-compass.tip.1':
+    'Az iránytű csak a MapLibre GL és a Mapbox GL térképeken létezik; a Leaflet térkép nem forgatható, ezért nincs neki. A Beállítások Térkép része alatti Térkép szolgáltató dönti el, melyiket használod, és a Térkép mentése megőrzi a választást.',
+  'help.guide.map-compass.tip.2':
+    'A kattintás a döntést is kiveszi: egy jobb gombos húzás fel vagy le megdönti a nézetet, és a Reset north a forgatással együtt ezt is kiegyenesíti. A Mapbox GL-en bekapcsolt 3D épületek és terep mellett ez a 3D nézetet is lelapítja, amíg újra meg nem döntöd.',
 
   // ── Screen: trip-collab ───────────────────────────────────────────────────────────────
   'help.ctx.trip-collab.title': 'Együttműködés',
@@ -3240,15 +3344,15 @@ const help: TranslationStrings = {
   'help.guide.import-booking-file.step.3':
     'Kattints az Importálás gombra. A párbeszédablak azonnal bezárul, mert az olvasás a háttérben történik.',
   'help.guide.import-booking-file.step.4':
-    'Jobbra lent egy kártya számol be a futásról, és követ téged az alkalmazáson át, egy újratöltésen át is. Amikor kész, felkínálja az Importálás lehetőséget, ami elindítja az átnézést: minden megtalált foglalás a szokásos űrlapon nyílik meg, kitöltve és a dokumentumával együtt, hogy ellenőrizd, és egymás után a Hozzáadás gombbal bevidd.',
+    'Jobbra lent egy kártya számol be a futásról a fájl neve alatt, és követ téged az alkalmazáson át, egy újratöltésen át is. A Fájlok feldolgozása… pipává válik, amikor az olvasás kész, és a kártya felkínálja az Importálás lehetőséget. Kattints rá.',
   'help.guide.import-booking-file.result':
-    'Minden foglalás, amit megerősítettél, saját kártya a kódjával, a dátumaival és azzal a dokumentummal, amiből jött; egy szállás megkapta az éjszakáit is, és bekapcsolt Költségek mellett a visszaigazolásban szereplő árból költség lett.',
+    'A foglalás egy kártya a Függőben alatt az éjszakáival, a kódjával és a visszaigazolással a Fájlok alatt, a szállás a terv azon napjain ül, és bekapcsolt Költségek mellett az ár egy hozzá kötött költség.',
   'help.guide.import-booking-file.tip.1':
     'Az Importálás fájlból csak akkor van ott, ha a szerver el tud olvasni visszaigazolásokat, ehhez pedig vagy a kiolvasó, vagy az MI-elemzés bővítmény kell. Ez utóbbit az adminisztrátor a Bővítmények alatt kapcsolgatja.',
   'help.guide.import-booking-file.tip.2':
-    'Ha semmit nem sikerült kiolvasni, a kártya ezt megmondja, és felkínálja a Try AI parsing lehetőséget, ami ugyanazokat a fájlokat egyenesen a modellnek küldi.',
+    'Ha semmit nem sikerült kiolvasni, a kártya ezt megmondja, és felkínálja a Try AI parsing lehetőséget, ami ugyanazokat a fájlokat egyenesen a modellnek küldi. Egy kész feldolgozás tíz percig marad meg; ezen az időn belül indítsd el az átnézést.',
   'help.guide.import-booking-file.tip.3':
-    'Egy kész feldolgozás tíz percig marad meg. Ezen az időn belül indítsd el az átnézést.',
+    'A visszaigazolás csak akkor kerül csatolásra, ha a típusa szerepel az adminbeállítások Engedélyezett fájltípusok listáján. A PDF alapból ott van; egy levelet, EML-t, előbb hozzá kell adni, különben a foglalás nélküle kerül mentésre.',
   // edit-booking
   'help.guide.edit-booking.title': 'Foglalás módosítása',
   'help.guide.edit-booking.goal':
@@ -3280,6 +3384,9 @@ const help: TranslationStrings = {
     'Egy szállásfoglalás törlése az éjszakáit is kiveszi a napi tervből, és eltávolítja a hozzá kapcsolt költséget.',
   'help.guide.delete-booking.tip.2':
     'A csatolt dokumentumok az utazás Fájlok fülén maradnak; csak a foglaláshoz fűződő kapcsolatuk szűnik meg.',
+  // import-booking-file
+  'help.guide.import-booking-file.step.5':
+    'Minden megtalált foglalás az Új foglalás űrlapon nyílik meg, egymás után, már kitöltve. Egy szállodánál ez a név a Címben és, ha az utazásban megvan a hely, a Szálloda alatt, a Helyszín / Cím, az Ettől és az Eddig az éjszakáira, a Bejelentkezés és a Kijelentkezés, a Foglalási kód, a visszaigazolás a Fájlok alatt, és bekapcsolt Költségek mellett az ár Linked expense gyanánt. Ellenőrizd, és kattints a Hozzáadás gombra.',
 
   // ── Screen: trip-costs ────────────────────────────────────────────────────────────────
   'help.ctx.trip-costs.title': 'Költségek',
@@ -3620,6 +3727,50 @@ const help: TranslationStrings = {
     'A megerősített foglalás folytonos vonal, a függőben lévő szaggatott. Az Útvonal-címkék a foglalásokhoz beállítás a reptérkódot vagy az állomásnevet írja a végjelölőkbe.',
   'help.guide.transport-on-map.tip.3':
     'Az Összes foglalási útvonal megjelenítése tiszta lap, nem réteg: eldobja, amit az egyes ikonok beállítottak, így kétszer megnyomva vagy minden be, vagy minden ki lesz kapcsolva.',
+  // import-transport-file
+  'help.guide.import-transport-file.title': 'Járat kiolvasása az e-jegyéből',
+  'help.guide.import-transport-file.goal':
+    'Hagyd, hogy a TREK kihúzza a járatot, a vonatot vagy a kompot a jegyből, amit a fuvarozó küldött, és ellenőrizd, mielőtt mentésre kerül.',
+  'help.guide.import-transport-file.step.1':
+    'Kattints az Importálás fájlból gombra a Közlekedés fül eszköztárában, a Közlekedés mellett. Megnyílik a Foglalási visszaigazolások importálása, ugyanaz a párbeszédablak, ami a Foglalások fülön van.',
+  'help.guide.import-transport-file.step.2':
+    'Ejtsd a jegyet a mezőre, vagy kattints rá, és válaszd ki: EML, PDF, PKPass, HTML és TXT, legfeljebb öt fájl, egyenként 10 MB. A kiválasztott fájlok neve ott áll a mezőn.',
+  'help.guide.import-transport-file.step.3':
+    'Kattints az Importálás gombra. A párbeszédablak azonnal bezárul; az olvasás a háttérben történik.',
+  'help.guide.import-transport-file.step.4':
+    'Jobbra lent egy kártya számol be a futásról a fájl neve alatt. A Fájlok feldolgozása… pipává válik, amikor az olvasás kész, és a kártya felkínálja az Importálás lehetőséget. Kattints rá.',
+  'help.guide.import-transport-file.step.5':
+    'Egy járat nyílik meg a Közlekedés hozzáadása űrlapon, már kitöltve: a Foglalás típusa Repülőn, a légitársaság és a járatszám a Címben, mindkét repülőtér az Útvonal alatt Indulással és Érkezéssel, az időpontjaik és az időzónáik, a Légitársaság és a Járatszám, a Foglalási kód és a jegy a Fájlok alatt. Ellenőrizd, és kattints a Hozzáadás gombra.',
+  'help.guide.import-transport-file.result':
+    'A járat egy kártya a Függőben alatt a Közlekedés fülön és egy sor azon a napon, amelyiken indul, a jeggyel a Fájlok alatt, és mivel mindkét repülőtér ismert, megrajzolja az ívét a térképen.',
+  'help.guide.import-transport-file.tip.1':
+    'A két fül egy importot oszt meg: egy fájl, ami egy járatot és egy szállodát tart, a járatot a Közlekedés hozzáadása, a szállodát az Új foglalás űrlapon nyitja meg, egymás után, bármelyik fülről is indultál.',
+  'help.guide.import-transport-file.tip.2':
+    'A repülőtereket a kódjuk alapján helyezi el. Egy állomást vagy kikötőt, amit az olvasás nem tudott elhelyezni, borostyánsárgán nevez meg a kártya; válaszd ki kézzel az Útvonal alatt, mielőtt a Hozzáadás gombra kattintasz, különben a közlekedés semmit nem rajzol a térképre.',
+  // airtrail-import
+  'help.guide.airtrail-import.title': 'Járatok importálása az AirTrailből',
+  'help.guide.airtrail-import.goal':
+    'Hozd be az utazásba egy menetben a járatokat, amiket már az AirTrailben vezetsz, és hagyd, hogy onnantól az AirTrailt kövessék.',
+  'help.guide.airtrail-import.step.1':
+    'Bekapcsolt AirTrail bővítménnyel és a Beállítások Integrációk része alatt csatlakoztatott példánnyal a Közlekedés fül eszköztára egy AirTrail gombot visz a Közlekedés mellett. Kattints rá.',
+  'help.guide.airtrail-import.step.2':
+    'Az Importálás az AirTrailből két csoportban sorolja a fiókod járatait. Az utazás ideje alatt tartja az utazáson belülre datáltakat, már kipipálva; az Egyéb járatok a többit, kipipálatlanul. Egy járat, ami már az utazásban van, szürkén jelenik meg és Importálva jelölést visel.',
+  'help.guide.airtrail-import.step.3':
+    'Minden sor egy jelölőnégyzet a légitársasággal és a járatszámmal, a két repülőtérrel és a dátummal. Kattints egy sorra, hogy bevedd a járatot vagy kihagyd; az Egyéb járatok alattiak csak akkor jönnek be, ha kipipálod őket.',
+  'help.guide.airtrail-import.step.4':
+    'A csatlakozó járatok, amelyek mindegyike egy napon belül indul arról a repülőtérről, ahol az előző leszállt, együtt vannak bekeretezve. Az alatta lévő pipa, Importálás egyetlen járatként, átszállással itt: és az a repülőtér, már be van kapcsolva: hagyd bekapcsolva egyetlen foglaláshoz megállóval, vagy kapcsold ki, hogy a szakaszokat külön járatokként importáld.',
+  'help.guide.airtrail-import.step.5':
+    'Kattints az Importálás gombra. A gomb számolja a kipipált járatokat, és az utána jövő üzenet megmondja, hány jött be.',
+  'help.guide.airtrail-import.step.6':
+    'A járatok kártyák a Megerősítve alatt, mindegyik egy kék AirTrail jelvénnyel az állapota mellett, és sorok azokon a napokon, amikor közlekednek. Egy összekapcsolt csatlakozás egy kártya, az útvonala az átszálláson át fut.',
+  'help.guide.airtrail-import.result':
+    'Az AirTrailből jött járatok kártyák a Közlekedés fülön és sorok a napjaikon, mindegyik az AirTrail jelvényt viseli, ami megmondja, honnan jött.',
+  'help.guide.airtrail-import.tip.1':
+    'Egy járat, ami ugyanazzal a számmal és dátummal már az utazásban van, kimarad, és egy üzenet megmondja, hány maradt ki. A napok fölötti eszköztár Visszavonás gombja az egész importot visszaveszi.',
+  'help.guide.airtrail-import.tip.2':
+    'Az AirTrail marad az igazság forrása. A TREK az utazás megnyitásakor és néhány percenként a háttérben olvassa a változásait; egy ott törölt járat megtartja a kártyáját, a jelvénye Nincs szinkronizálva lesz. A TREK-ben végzett szerkesztések csak az Integrációk alatt bekapcsolt Módosítások visszaírása az AirTrailbe mellett mennek vissza.',
+  'help.guide.airtrail-import.tip.3':
+    'Egy összekapcsolt csatlakozásnak nincs egyetlen AirTrail-járata, amit követhetne, ezért egyszeri import: megtartja a kék jelvényt, és a jelvény fölé vitt egér ezt meg is mondja. Ugyanez történik egy szinkronizált járattal, aminek kézzel adsz megállót.',
 
   // ── Screen: trip-roadtrip ─────────────────────────────────────────────────────────────
   'help.ctx.trip-roadtrip.title': 'Autós út',

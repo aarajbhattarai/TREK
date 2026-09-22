@@ -367,6 +367,35 @@ const help: TranslationStrings = {
   'help.guide.stats.tip.1':
     '城市是从地址文本中读出来的，不做查询，所以像“Osteria Francescana, Italy”这样的短地址，或以县级行政区结尾的地址，可能得到一个地区而不是城市。',
   'help.guide.stats.tip.2': '手动标记的国家会计入“国家”和各大洲，但不会带来旅行、地点或天数。',
+  // dawarich-countries
+  'help.guide.dawarich-countries.title': '从你的记录里添加国家',
+  'help.guide.dawarich-countries.goal': '让 Dawarich 说出你去年都在哪些国家待过，并把你确认的那些放到地图上。',
+  'help.guide.dawarich-countries.step.1':
+    '连接 Dawarich 扩展后，地图底部、统计左侧会有一个 Dawarich 面板，带两块磁贴。点击“国家”。',
+  'help.guide.dawarich-countries.step.2':
+    '对话框在它的“国家”标签页上打开。点击“查找国家”：TREK 逐月读取你的记录在最近 12 个月里覆盖的国家和城市，所以请稍等片刻。你的 Atlas 还没有的每个国家都会列出，带着国旗、城市数量和其中第一个城市的名字，并且一开始就已勾选；点击一行可以把它排除。',
+  'help.guide.dawarich-countries.step.3':
+    '用右下角的按钮确认，勾选了五行时它写着“添加 5 个国家”。对话框会说添加了多少个；关掉它，地图已经自己重新读取过了。',
+  'help.guide.dawarich-countries.result':
+    '确认过的国家在地图上带上颜色，并计入“国家”，记录为来自 Dawarich。你手动标记的内容不受影响。',
+  'help.guide.dawarich-countries.tip.1':
+    'Atlas 已经显示为已访问的国家，不论是手动标记、来自某次旅行还是来自更早的一次核对，都会被排除，所以你自己的标记永远不会被重新标注。你之前从 Atlas 里移除的国家，在这里确认后会回来。',
+  'help.guide.dawarich-countries.tip.2':
+    'TREK 匹配不上的国家名会列在各行下方，而不是被丢掉，“再查一次”会再问 Dawarich 一遍。列表下方的备注说明查看的是最近 12 个月；这个范围是固定的。',
+  // dawarich-wishes
+  'help.guide.dawarich-wishes.title': '从你的记录里勾掉心愿',
+  'help.guide.dawarich-wishes.goal': '找出你的心愿单上实际已经到过的地方，并按实际到达的那一天把它们勾掉。',
+  'help.guide.dawarich-wishes.step.1': '在地图底部、统计左侧的 Dawarich 面板里，点击“心愿单”。',
+  'help.guide.dawarich-wishes.step.2':
+    '对话框在它的“心愿单”标签页上打开。点击“核对愿望清单”：TREK 会在你的记录里查找每一条带坐标的条目。你到过的心愿会列出，带着你靠得多近、待了多久和那一天，并且一开始就已勾选；已经勾掉的会写着“已勾掉”。列表下方有一条备注统计没有坐标的条目，规则也写在那里：“在 250 米以内停留 20 分钟以上，才算实现心愿。”',
+  'help.guide.dawarich-wishes.step.3':
+    '用右下角的按钮确认，勾选了两行时它写着“勾掉 2 项”。然后关掉对话框，打开旁边面板的“心愿单”标签页。',
+  'help.guide.dawarich-wishes.result':
+    '每个心愿都带一个绿色对勾，日期是停留的那一天，而不是今天；它的提示写着“依据你的 Dawarich 记录勾掉”，点击日期可以撤销。',
+  'help.guide.dawarich-wishes.tip.1':
+    '路过不算：规则同时需要距离和时间，几次都符合的停留里，最长的那次胜出。没有坐标的心愿无法核对，所以请通过“添加地点”里的搜索来添加地点，而不是只凭名字。',
+  'help.guide.dawarich-wishes.tip.2':
+    '一次核对最多查看 50 条，先看还没勾掉的，条目更多时会说明。已经勾掉的心愿保留它自己的日期。',
 
   // ── Screen: collections ───────────────────────────────────────────────────────────────
   'help.ctx.collections.title': '收藏',
@@ -1342,6 +1371,19 @@ const help: TranslationStrings = {
   'help.guide.audit-log.result': '一份可以交给任何询问为什么有变动的人的记录。',
   'help.guide.audit-log.tip.1': '时间以服务器的时区显示，时区名称在表格上方。',
   'help.guide.audit-log.tip.2': '日志只增不改；这里的任何内容都不能从应用里编辑或删除。',
+  // document-providers
+  'help.guide.document-providers.title': '提供一个文档存储',
+  'help.guide.document-providers.goal': '决定旅行可以让它的文档与哪些存储保持同步。',
+  'help.guide.document-providers.step.1':
+    '“文档”卡片在它的搁板上以行的形式列着各个存储：Paperless-ngx、Papra、Nextcloud、OpenCloud 和 Synology Drive。五个一开始都是关的，而且搁板只在“文档”本身开着时才在。',
+  'help.guide.document-providers.step.2':
+    '拨动 Nextcloud 那一行的开关。提示写着“扩展已更新”，从此旅行所有者会在他们旅行的“文件”标签页里看到“文档同步”，Nextcloud 列在“连接文档服务”下。',
+  'help.guide.document-providers.result':
+    '这个存储在这台 TREK 的每个旅行上都可供使用；在旅行所有者去连接之前，什么都没有连上。',
+  'help.guide.document-providers.tip.1':
+    '这里只决定一个存储是否可以提供。地址和凭据属于某个旅行，由旅行的所有者在它的“文件”标签页里输入，绝不在管理面板里。',
+  'help.guide.document-providers.tip.2':
+    '关掉“文档”会连带关掉每个存储，而“文档”关着时也开不了任何存储：服务器会回答“Enable the Documents addon first”。你自己网络里的存储还需要服务器上设置 ALLOW_INTERNAL_NETWORK=true。',
 
   // ── Screen: trip ──────────────────────────────────────────────────────────────────────
   'help.ctx.trip.title': '旅行',
@@ -1708,25 +1750,27 @@ const help: TranslationStrings = {
   'help.ctx.trip-place.bullet.5':
     '底部那一行：某一天打开时是“添加到当天”或“从当天移除”，然后是“保存到收藏”“导航”“打开网站”“编辑”和“删除”。',
   'help.ctx.trip-place.bullet.6':
-    'TREK 与地图服务商匹配上的地点会显示更多：该服务商的评分和一条评论、电话号码，以及图片周围的“营业中”或“已关闭”圆环，其背后是一周的营业时间。',
+    '从搜索里挑出来的地点带着 TREK 索引或 OpenStreetMap 对它的了解：图片周围绿色的“营业中”或红色的“已关闭”圆环，按地点自己的时钟判断；星星下方的电话号码；再往下的“营业时间”，那一行写着当天的时段，点一下展开整周；以及“打开网站”背后的网站。Google 的评分只在通过 Google 找到的地点上显示，且这台 TREK 要有 Google 密钥。',
   // read-place
   'help.guide.read-place.title': '卡片告诉你关于一个地点的什么',
   'help.guide.read-place.goal': '在一张卡片里读到旅行关于一个地点知道的一切。',
   'help.guide.read-place.step.1': '在天数栏里点击你想读的停靠点。卡片在地图上打开，该停靠点在它那一天里保持高亮。',
-  'help.guide.read-place.step.2': '头部：圆形图片、名称、地址和精确坐标。右边的 X 再次关闭卡片。',
-  'help.guide.read-place.step.3': '下面是每位旅行者给这个地点的星，带平均分和投票人数。还没有人评分时显示“暂无评分”。',
+  'help.guide.read-place.step.2':
+    '头部：圆形图片、名称、地址和精确坐标。图片周围带“营业中”的绿色圆环或带“已关闭”的红色圆环，说明这个地点此刻是否营业，按它自己的时钟判断，前提是 TREK 知道它的营业时间。右边的 X 再次关闭卡片。',
+  'help.guide.read-place.step.3':
+    '下面是每位旅行者给这个地点的星，带平均分和投票人数。还没有人评分时显示“暂无评分”。紧接着是电话号码，如果地点有的话：点一下就把号码交给你的电话应用。',
   'help.guide.read-place.step.4':
     '然后是描述，下面是备注。两者都是地点表单里的文本渲染后的样子：列表、链接和粗体都有效。',
   'help.guide.read-place.step.5': '“参与者”说明谁会去这个停靠点。在你把某人移出去之前，所有人都在。',
   'help.guide.read-place.step.6':
-    '底部那一行是你在这里能做的事：把地点从打开的那一天移出或放进去、保存到某个列表、在地图应用里打开、编辑或删除。',
+    '再往下是“营业时间”：那一行写着你正在看的那一天的时段，点一下展开整周，那一天以粗体显示。“文件”就在它旁边。',
   'help.guide.read-place.result':
-    '卡片会一直开着，直到你用 X 关闭它或选中另一个地点，而它所属的停靠点在天数栏里保持高亮。',
+    '卡片会一直开着，直到你用 X 关闭它或选中另一个地点，整周的营业时间保持展开，而它所属的停靠点在天数栏里保持高亮。',
   'help.guide.read-place.tip.1':
     '从地点栏选中时，卡片认得这个地点但不认得某个停靠点，所以不显示参与者也不显示预订。改在某一天里选中那个停靠点，两者就都在。',
   'help.guide.read-place.tip.2': '双击名称可以不打开表单就重命名地点。Enter 保存，Escape 放弃修改。',
   'help.guide.read-place.tip.3':
-    'TREK 能与地图服务商匹配上的地点还会显示该服务商的评分、一条评论、电话号码和营业时间。',
+    '手动输入的地点不显示这些：卡片只知道它表单里的内容。用“编辑”打开它，在“搜索地点...”下方的建议里选中它，再点击“更新”，营业时间、电话号码和网站就会一起带进来。Google 的评分需要 Google 密钥。',
   // rate-place
   'help.guide.rate-place.title': '给一个地点评分',
   'help.guide.rate-place.goal': '给地点打上你自己的星，并看看别人都给了多少。',
@@ -1849,6 +1893,9 @@ const help: TranslationStrings = {
   'help.guide.place-track.tip.2':
     '记录了高度的轨迹还会显示它的最高点和最低点、上升和下降的米数，以及这段步行的剖面图。',
   'help.guide.place-track.tip.3': '一次导入会给它带进来的每条轨迹一个各自的颜色，所以两段步行绝不会以同一个颜色到达。',
+  // read-place
+  'help.guide.read-place.step.7':
+    '底部那一行是你在这里能做的事：把地点从打开的那一天移出或放进去、保存到某个列表、在地图应用里打开、编辑或删除。',
 
   // ── Screen: trip-files ────────────────────────────────────────────────────────────────
   'help.ctx.trip-files.title': '文件',
@@ -1948,6 +1995,30 @@ const help: TranslationStrings = {
   'help.guide.files-trash.tip.2':
     '扔掉一个文件再把它找回来，需要“删除文件”这项权限。没有这项权限的成员既看不到行上的“删除”，也看不到回收站里的按钮。',
   'help.guide.files-trash.tip.3': '在回收站里被永久删除的文件无法再找回来。',
+  // files-sync
+  'help.guide.files-sync.title': '让文档与一个 Nextcloud 文件夹保持同步',
+  'help.guide.files-sync.goal':
+    '把旅行绑定到你自己文档存储里的一个文件夹，这样在这里上传的会落到那里，在那里归档的会出现在这里。',
+  'help.guide.files-sync.step.1':
+    '点击“文档同步”，它在工具栏右端“回收站”的旁边。对话框打开，标题下写着旅行的名称。左侧“连接文档服务”下列着管理员开启的存储，每个带一行说明它怎样归档，Nextcloud 是“归档到文件夹”；右侧写着“尚未连接任何服务”。',
+  'help.guide.files-sync.step.2':
+    '点击 Nextcloud。一个较小的对话框为这次连接打开，以存储命名，顶部提醒你用应用密码而不是账户密码。',
+  'help.guide.files-sync.step.3':
+    '填写“地址”、“用户名”，也就是你的 Nextcloud 登录名而不是邮箱地址，以及“应用密码”，它在 Nextcloud 的设置、安全下创建。“基础文件夹”是可选的：那是 TREK 查找旅行文件夹的地方，除非你另有指定，否则是 /TREK，这里是 /Reisen。底部的“接受自签名证书”只给你自己网络里带这种证书的实例用。',
+  'help.guide.files-sync.step.4':
+    '点击“测试连接”。TREK 用你输入的内容去连存储，页脚写着“已连接，登录身份为”加上账户名，这里是 admin。密码被拒绝或地址连不上时，会在那里写明，而且无论哪种情况都不会保存。',
+  'help.guide.files-sync.step.5':
+    '点击“连接”。连接随旅行保存，TREK 问“此行程应存放在 Nextcloud 的什么位置？”只有那个文件夹里的内容会同步。“新建一个”在点击“创建”时于基础文件夹下建一个文件夹，名称已按旅行标题预填；“或使用已有的”下列着已经存在的文件夹。点击一个，这里是 Autumn in Japan。',
+  'help.guide.files-sync.step.6':
+    '对话框回来了：Nextcloud 在左侧“本次行程”下，右侧它的卡片带着文件夹、上次运行时间和“立即同步”。第一次运行会自己开始；“立即同步”随时再跑一次。一次运行完成后，名称旁的“尚未同步”徽章让位给一个绿点，指向它时显示“已同步”，流向条统计 TREK 和 Nextcloud 各自持有的文档数，中间是“发往文档服务”和“来自文档服务”两条通道。用 × 关闭对话框。',
+  'help.guide.files-sync.result':
+    '文件夹里原本就有的两份文档排在列表顶部，以你的名义上传，而旅行的每份文档也都进了文件夹。从此 TREK 在后台检查文件夹，文件夹跟随列表。',
+  'help.guide.files-sync.tip.1':
+    '只有旅行的所有者或实例管理员能绑定旅行，因为应用密码能触及整个 Nextcloud 账户。每位成员都可以打开“文档同步”、查看卡片并按“立即同步”。',
+  'help.guide.files-sync.tip.2':
+    '你自己网络里的存储需要 TREK 服务器上设置 ALLOW_INTERNAL_NETWORK=true，而且它的地址必须是那台机器在网络里的地址，绝不能是 localhost。没有这些，“测试连接”会回答“不允许使用该地址。”',
+  'help.guide.files-sync.tip.3':
+    '卡片上的“断开连接”结束配对，并保留两边的每一份文档。第二次绑定的文件夹被当作新的，里面的一切都会再进来一次，所以“断开连接”之后请绑定一个空文件夹，而不是原来那个。',
 
   // ── Screen: trip-day-detail ───────────────────────────────────────────────────────────
   'help.ctx.trip-day-detail.title': '日程详情',
@@ -2176,6 +2247,36 @@ const help: TranslationStrings = {
   'help.guide.map-booking-routes.tip.2':
     '同一处设置里的“始终显示预订路线”，会在你还没有做过决定的每一个行程上，从一开始就把它们画出来。',
   'help.guide.map-booking-routes.tip.3': '一笔预订必须有两个带坐标的端点才能被画出来，所以酒店或餐厅不会带路线图标。',
+  'help.ctx.trip-map.bullet.8':
+    '开着 Dawarich 扩展时，“显示整个行程”下方的圆形 Dawarich 按钮会画出你的手机实际记录的路线：“显示记录的路线”把它用虚线铺在计划路线下方，每天一种颜色，而在没有线的时候，按钮的标签会说明为什么没有。',
+  // map-dawarich-trail
+  'help.guide.map-dawarich-trail.title': '显示你实际走过的路线',
+  'help.guide.map-dawarich-trail.goal':
+    '把 Dawarich 在你手机上记录的路线铺到地图上，用虚线放在你计划的路线旁边，一天一天地读这次旅行实际是怎么走的。',
+  'help.guide.map-dawarich-trail.step.1':
+    '圆形 Dawarich 按钮在地图右下角，“显示整个行程”的下方；悬停时它写着“显示记录的路线”。点击它。TREK 向你的 Dawarich 查询这次旅行的日期，答案还在路上时，按钮周围有一个圆环在转。',
+  'help.guide.map-dawarich-trail.step.2':
+    '记录的路线以一条虚线落到地图上，每天一种颜色，画在计划路线下方，这样计划仍然可读。按钮现在写着“隐藏记录的路线”。天与天之间以当地午夜为界，在天数栏里折起的一天会把它的虚线连同它的停靠点一起从地图上收走。',
+  'help.guide.map-dawarich-trail.step.3':
+    '再点击“显示整个行程”，每个计划中的日子都以实线画在虚线记录旁边。两条线走在一起的地方，那一天按计划进行了；虚线跑偏的地方，就是没按计划的地方。',
+  'help.guide.map-dawarich-trail.result':
+    '你计划的和你实际做的一起在地图上，虚线对实线，而按钮上方的卡片仍然列着计划中的日子和它们的距离。',
+  'help.guide.map-dawarich-trail.tip.1':
+    '开或关按旅行记住，在这个浏览器会话内有效。路线开着时，TREK 每两分钟再问一次 Dawarich，所以进行中的旅行不用刷新也能跟上；路线本身从不保存，所以它不在 TREK 的数据库里，不在备份里，离线时也没有。',
+  'help.guide.map-dawarich-trail.tip.2':
+    '按钮的标签会解释空白的地图：还在路上时是“正在加载记录的路线…”，或者是“这些日期没有任何记录”“无法加载记录的路线”，TREK 离线时则是“查看记录的路线需要网络连接”。',
+  // map-compass
+  'help.guide.map-compass.title': '转动地图并重新找到北',
+  'help.guide.map-compass.goal': '把地图转到你前进的方向，再用一下点击把它弹回正北。',
+  'help.guide.map-compass.step.1':
+    '用右键拖动来转动地图，或者按住 Ctrl 用左键拖动；在触摸屏上，用两根手指扭转。地图顶部分类图标那一排旁边的圆形罗盘会跟着转：它的箭头始终指向北，所以你转了多少，它就斜多少。',
+  'help.guide.map-compass.step.2':
+    '点击罗盘。这个按钮叫“Reset north”，它把地图平缓地转回北在上方的平视状态，箭头重新竖直。',
+  'help.guide.map-compass.result': '地图重新北朝上、恢复水平，旅行里什么都没变：罗盘只移动镜头。',
+  'help.guide.map-compass.tip.1':
+    '罗盘只在 MapLibre GL 和 Mapbox GL 地图上有；Leaflet 地图不能转动，所以没有罗盘。“设置”里“地图”下的“地图提供商”决定你用哪一个，“保存地图”保留这个选择。',
+  'help.guide.map-compass.tip.2':
+    '点击同时也去掉倾斜：右键上下拖动会让视角俯仰，“Reset north”在回正的同时把它放平。在 Mapbox GL 上开着“3D 建筑和地形”时，这也会把 3D 视图压平，直到你再次倾斜。',
 
   // ── Screen: trip-collab ───────────────────────────────────────────────────────────────
   'help.ctx.trip-collab.title': '协作',
@@ -2572,14 +2673,15 @@ const help: TranslationStrings = {
     '把确认单拖放到那个框上，或点击它来挑选：EML、PDF、PKPass、HTML 和 TXT，最多 5 个文件，每个 10 MB。你挑的那些文件的名字会写在框上。',
   'help.guide.import-booking-file.step.3': '点击“导入”。对话框立刻关上，因为读取是在后台进行的。',
   'help.guide.import-booking-file.step.4':
-    '右下角的一张卡片报告这次运行，它会跟着你走遍应用，也挺得过一次刷新。完成后它给出“导入”，由此开始核对：它找到的每条预订都会在普通表单里打开，内容已填好、单据已附上，供你逐条检查并“添加”。',
+    '右下角的一张卡片在文件名下报告这次运行，它会跟着你走遍应用，也挺得过一次刷新。读取完成后，“正在解析文件…”变成一个对勾，卡片给出“导入”。点击它。',
   'help.guide.import-booking-file.result':
-    '你确认过的每条预订都是一张自己的卡片，带着预订码、日期和它出自的那份单据；住宿还得到了它的那些夜，而在“费用”开着时，确认单里出现过的金额成了一笔支出。',
+    '这条预订是“待确认”里的一张卡片，带着它的夜数、预订码和“文件”下的确认单，住宿落在计划里的那几天上，而在“费用”开着时，价格是一笔挂在它上面的支出。',
   'help.guide.import-booking-file.tip.1':
-    '只有服务器能读预订确认时，“从文件导入”才在，这需要服务器端的提取器或“AI 解析”扩展二者之一。后者由管理员在“扩展”下切换。',
+    '只有服务器能读预订确认时，“从文件导入”才在，这需要提取器或“AI 解析”扩展二者之一。后者由管理员在“扩展”下切换。',
   'help.guide.import-booking-file.tip.2':
-    '如果什么都读不出来，卡片会这样说，并给出“尝试 AI 解析”，它把同样的文件直接送给模型。',
-  'help.guide.import-booking-file.tip.3': '一次完成的解析会保留十分钟。请在这段时间内开始核对。',
+    '如果什么都读不出来，卡片会这样说，并给出“尝试 AI 解析”，它把同样的文件直接送给模型。一次完成的解析会保留十分钟；请在这段时间内开始核对。',
+  'help.guide.import-booking-file.tip.3':
+    '只有确认单的类型在管理设置的“允许的文件类型”里时，它才会被附上。PDF 开箱即在；邮件，也就是 EML，得先加进去，否则预订保存时不带它。',
   // edit-booking
   'help.guide.edit-booking.title': '修改一条预订',
   'help.guide.edit-booking.goal': '改正一个时间、补上晚到的预订码，或者把一条预订从“待确认”挪到“已确认”。',
@@ -2602,6 +2704,9 @@ const help: TranslationStrings = {
   'help.guide.delete-booking.result': '卡片没了，对旅行中的所有人都是。预订没有撤销，所以这个问题就是最后一道关。',
   'help.guide.delete-booking.tip.1': '删除一条住宿预订，还会把它在日程计划里的那些夜取走，并移除关联到它的那笔支出。',
   'help.guide.delete-booking.tip.2': '附上过的单据仍留在这次旅行的“文件”栏里；走掉的只是它们与这条预订的关联。',
+  // import-booking-file
+  'help.guide.import-booking-file.step.5':
+    '找到的每条预订都会在“新建预订”里逐条打开，内容已填好。对酒店来说，那是“标题”里的名称，旅行里有这个地点时还有“住宿”下的地点，它的“地点 / 地址”，按住宿的夜数填好的“从”和“到”，“入住”和“退房”，“预订码”，“文件”下的确认单，以及在“费用”开着时作为“关联支出”的价格。检查一遍，点击“添加”。',
 
   // ── Screen: trip-costs ────────────────────────────────────────────────────────────────
   'help.ctx.trip-costs.title': '费用',
@@ -2893,6 +2998,47 @@ const help: TranslationStrings = {
     '“已确认”的预订是实线，“待确认”的是虚线。“预订路线标签”这个设置会把机场代码或车站名称印进端点标记里。',
   'help.guide.transport-on-map.tip.3':
     '“显示所有预订路线”是重新来过，而不是叠一层：它会丢掉单个图标设过的状态，所以按两次之后，留给你的要么是全开，要么是全关。',
+  // import-transport-file
+  'help.guide.import-transport-file.title': '从电子票里读出一趟航班',
+  'help.guide.import-transport-file.goal':
+    '让 TREK 从承运方发来的票里取出一趟航班、一趟火车或一班渡轮，并在保存前检查一遍。',
+  'help.guide.import-transport-file.step.1':
+    '点击“交通”标签页工具栏里的“从文件导入”，就在“交通”按钮旁边。“导入预订确认”打开，和“预订”标签页用的是同一个对话框。',
+  'help.guide.import-transport-file.step.2':
+    '把票拖放到那个框上，或点击它来挑选：EML、PDF、PKPass、HTML 和 TXT，最多 5 个文件，每个 10 MB。你挑的那些文件的名字会写在框上。',
+  'help.guide.import-transport-file.step.3': '点击“导入”。对话框立刻关上；读取在后台进行。',
+  'help.guide.import-transport-file.step.4':
+    '右下角的一张卡片在文件名下报告这次运行。读取完成后，“正在解析文件…”变成一个对勾，卡片给出“导入”。点击它。',
+  'help.guide.import-transport-file.step.5':
+    '一趟航班在“添加交通”里打开，内容已填好：“预订类型”是“航班”，航空公司和航班号在“标题”里，两个机场在“航线”下，带“出发”和“到达”、它们的时间和时区，“航空公司”和“航班号”，“预订码”，以及“文件”下的票。检查一遍，点击“添加”。',
+  'help.guide.import-transport-file.result':
+    '这趟航班是“交通”标签页里“待确认”中的一张卡片，也是它出发那天的一行，票在“文件”下；两个机场都已知时，它会在地图上画出自己的弧线。',
+  'help.guide.import-transport-file.tip.1':
+    '两个标签页共用一个导入：一份既有航班又有酒店的文件，会先后把航班在“添加交通”里、把酒店在“新建预订”里打开，不论你从哪个标签页开始。',
+  'help.guide.import-transport-file.tip.2':
+    '机场按代码定位。读取时定位不到的车站或港口会在卡片上以琥珀色标出名字；在点击“添加”之前先在“航线”下手动选好它，否则这条交通在地图上什么都画不出来。',
+  // airtrail-import
+  'help.guide.airtrail-import.title': '从 AirTrail 导入航班',
+  'help.guide.airtrail-import.goal': '把你已经记在 AirTrail 里的航班一次带进旅行，并让它们从此跟随 AirTrail。',
+  'help.guide.airtrail-import.step.1':
+    '开着 AirTrail 扩展，并在“设置”的“集成”下连接了你的实例之后，“交通”标签页的工具栏里“交通”旁边会有一个“AirTrail”按钮。点击它。',
+  'help.guide.airtrail-import.step.2':
+    '“从 AirTrail 导入”把你账户里的航班分两组列出。“行程期间”是日期落在旅行内的那些，已经勾选；“其他航班”是其余的，未勾选。已经在旅行里的航班灰显并标着“已导入”。',
+  'help.guide.airtrail-import.step.3':
+    '每一行是一个勾选框，带航空公司和航班号、两个机场和日期。点击一行把航班收进来或排除出去；“其他航班”下的只有在你勾选时才会进来。',
+  'help.guide.airtrail-import.step.4':
+    '相连的航班，即每一趟都在一天之内从上一趟降落的机场起飞，会被框在一起。下方的勾选框“导入为一个航班（在该机场中转）”已经勾上：留着它就得到一条带经停的预订，取消它则把各航段作为单独的航班导入。',
+  'help.guide.airtrail-import.step.5': '点击“导入”。按钮会统计勾选的航班数，之后的提示会说进来了多少趟。',
+  'help.guide.airtrail-import.step.6':
+    '这些航班是“已确认”下的卡片，每张状态旁边都带一个蓝色的 AirTrail 徽章，也是它们运行那些天上的行。合并的联程是一张卡片，航线穿过中转地。',
+  'help.guide.airtrail-import.result':
+    '来自 AirTrail 的航班是“交通”标签页里的卡片和各自日期上的行，每一条都带着说明来源的 AirTrail 徽章。',
+  'help.guide.airtrail-import.tip.1':
+    '同一航班号、同一日期已经在旅行里的航班会被跳过，提示会说跳过了多少趟。天数上方工具栏里的“撤销”把整次导入收回。',
+  'help.guide.airtrail-import.tip.2':
+    'AirTrail 仍是事实来源。TREK 在你打开旅行时以及后台每隔几分钟读取它的更改；在那边删掉的航班保留它的卡片，徽章变为“未同步”。在 TREK 里做的修改只有在“集成”下开着“将更改写回 AirTrail”时才会传回去。',
+  'help.guide.airtrail-import.tip.3':
+    '合并的联程没有单独一趟 AirTrail 航班可跟随，所以它是一次性导入：它保留蓝色徽章，悬停徽章会这样说明。你手动加了经停的已同步航班也是如此。',
 
   // ── Screen: trip-roadtrip ─────────────────────────────────────────────────────────────
   'help.ctx.trip-roadtrip.title': '公路旅行',

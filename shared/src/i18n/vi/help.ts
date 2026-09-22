@@ -445,6 +445,38 @@ const help: TranslationStrings = {
     'Thành phố được đọc từ văn bản địa chỉ, không tra cứu, nên một địa chỉ ngắn như “Osteria Francescana, Italy” hoặc một địa chỉ kết thúc bằng tên tỉnh có thể cho ra một khu vực thay vì thành phố.',
   'help.guide.stats.tip.2':
     'Quốc gia bạn đánh dấu thủ công được tính vào Quốc gia và các châu lục, nhưng không mang theo chuyến đi, địa điểm hay ngày.',
+  // dawarich-countries
+  'help.guide.dawarich-countries.title': 'Thêm quốc gia từ các bản ghi của bạn',
+  'help.guide.dawarich-countries.goal':
+    'Để Dawarich cho biết bạn đã ở những quốc gia nào trong năm qua, và đưa những nước bạn xác nhận lên bản đồ.',
+  'help.guide.dawarich-countries.step.1':
+    'Khi tiện ích Dawarich đã kết nối, một bảng Dawarich nằm ở dưới cùng bản đồ, bên trái phần thống kê, với hai ô. Nhấp “Quốc gia”.',
+  'help.guide.dawarich-countries.step.2':
+    'Hộp thoại mở ra ở tab “Quốc gia” của nó. Nhấp “Tìm quốc gia”: TREK đọc các quốc gia và thành phố mà bản ghi của bạn bao phủ trong 12 tháng gần nhất, từng tháng một, nên hãy chờ một chút. Mỗi quốc gia mà Atlas của bạn chưa có được liệt kê với lá cờ, số thành phố và tên thành phố đầu tiên trong số đó, và được đánh dấu sẵn; nhấp vào một hàng để bỏ nó ra.',
+  'help.guide.dawarich-countries.step.3':
+    'Xác nhận bằng nút ở dưới cùng bên phải, nút này ghi “Thêm 5 quốc gia” khi năm hàng đang được đánh dấu. Hộp thoại cho biết bao nhiêu nước đã được thêm; đóng nó lại và bản đồ đã tự đọc lại.',
+  'help.guide.dawarich-countries.result':
+    'Các quốc gia đã xác nhận mang một màu trên bản đồ và được tính vào “Quốc gia”, được ghi là đến từ Dawarich. Những gì bạn đánh dấu bằng tay không bị đụng tới.',
+  'help.guide.dawarich-countries.tip.1':
+    'Những quốc gia mà Atlas đã hiện là đã ghé thăm, dù bằng tay, từ một chuyến đi hay từ một lần kiểm tra trước, đều được bỏ qua, nên các đánh dấu của riêng bạn không bao giờ bị gắn nhãn lại. Một quốc gia bạn đã gỡ khỏi Atlas trước đây sẽ trở lại khi bạn xác nhận nó ở đây.',
+  'help.guide.dawarich-countries.tip.2':
+    'Một tên quốc gia mà TREK không khớp được sẽ được liệt kê bên dưới các hàng thay vì bị bỏ đi, và “Kiểm tra lại” hỏi Dawarich thêm một lần nữa. Ghi chú dưới danh sách nói rằng đã xem 12 tháng gần nhất; khoảng thời gian đó là cố định.',
+  // dawarich-wishes
+  'help.guide.dawarich-wishes.title': 'Đánh dấu hoàn thành điều ước từ các bản ghi của bạn',
+  'help.guide.dawarich-wishes.goal':
+    'Tìm ra những nơi trong danh sách nhóm mà bạn đã thực sự đến, và đánh dấu hoàn thành chúng vào đúng ngày điều đó xảy ra.',
+  'help.guide.dawarich-wishes.step.1':
+    'Trong bảng Dawarich ở dưới cùng bản đồ, bên trái phần thống kê, nhấp “Danh sách điều ước”.',
+  'help.guide.dawarich-wishes.step.2':
+    'Hộp thoại mở ra ở tab “Danh sách điều ước” của nó. Nhấp “Kiểm tra danh sách mong muốn”: TREK dò qua các bản ghi của bạn cho mọi mục có tọa độ. Một điều ước bạn đã đến được liệt kê với khoảng cách bạn đã tới gần, thời gian bạn đã ở lại và ngày hôm đó, và được đánh dấu sẵn; mục đã đánh dấu hoàn thành từ trước ghi “Đã đánh dấu hoàn thành”. Dưới danh sách, một ghi chú đếm các mục không có tọa độ, và quy tắc cũng đứng ở đó: “Một điều ước được tính là đã đến khi trong vòng 250 m và sau 20 phút tại chỗ.”',
+  'help.guide.dawarich-wishes.step.3':
+    'Xác nhận bằng nút ở dưới cùng bên phải, nút này ghi “Đánh dấu 2 mục” khi hai hàng đang được đánh dấu. Rồi đóng hộp thoại và mở tab “Danh sách nhóm” của bảng bên cạnh.',
+  'help.guide.dawarich-wishes.result':
+    'Mỗi điều ước mang một dấu tích xanh lá với ngày của lần lưu lại, không phải ngày hôm nay; chú giải của nó ghi “Được đánh dấu từ các bản ghi Dawarich của bạn”, và một cú nhấp vào ngày sẽ hoàn tác.',
+  'help.guide.dawarich-wishes.tip.1':
+    'Đi ngang qua không được tính: quy tắc cần cả khoảng cách gần lẫn thời gian, và trong nhiều lần lưu lại đủ điều kiện thì lần dài nhất thắng. Một điều ước không có tọa độ không thể kiểm tra được, nên hãy thêm địa điểm qua ô tìm kiếm trong “Thêm địa điểm” thay vì chỉ bằng tên.',
+  'help.guide.dawarich-wishes.tip.2':
+    'Một lần kiểm tra xem tối đa 50 mục, ưu tiên những mục chưa đánh dấu hoàn thành, và sẽ nói rõ khi còn nhiều hơn. Một điều ước đã được đánh dấu hoàn thành từ trước giữ nguyên ngày của riêng nó.',
 
   // ── Screen: collections ───────────────────────────────────────────────────────────────
   'help.ctx.collections.title': 'Bộ sưu tập',
@@ -1647,6 +1679,19 @@ const help: TranslationStrings = {
   'help.guide.audit-log.result': 'Một dấu vết bạn có thể đưa cho bất kỳ ai hỏi vì sao thứ gì đó đã thay đổi.',
   'help.guide.audit-log.tip.1': 'Thời gian hiển thị theo múi giờ của máy chủ, được nêu tên phía trên bảng.',
   'help.guide.audit-log.tip.2': 'Nhật ký chỉ thêm vào; không gì ở đây có thể chỉnh sửa hay xóa từ ứng dụng.',
+  // document-providers
+  'help.guide.document-providers.title': 'Cung cấp một kho tài liệu',
+  'help.guide.document-providers.goal': 'Quyết định chuyến đi được phép giữ tài liệu đồng bộ với những kho nào.',
+  'help.guide.document-providers.step.1':
+    'Ô “Tài liệu” mang các kho dưới dạng hàng trên kệ của nó: Paperless-ngx, Papra, Nextcloud, OpenCloud và Synology Drive. Cả năm đều bắt đầu ở trạng thái tắt, và kệ chỉ có mặt khi chính “Tài liệu” đang bật.',
+  'help.guide.document-providers.step.2':
+    'Gạt công tắc trên hàng Nextcloud. Thông báo ghi “Đã cập nhật tiện ích bổ sung”, và từ giờ chủ chuyến đi thấy “Đồng bộ tài liệu” trong tab “Tập tin” của chuyến đi họ, với Nextcloud dưới “Kết nối nhà cung cấp”.',
+  'help.guide.document-providers.result':
+    'Kho được cung cấp trên mọi chuyến đi của TREK này; chưa có gì được kết nối cho đến khi một chủ chuyến đi làm việc đó.',
+  'help.guide.document-providers.tip.1':
+    'Ở đây chỉ quyết định một kho có được phép cung cấp hay không. Địa chỉ và thông tin đăng nhập thuộc về một chuyến đi và được chủ chuyến đi nhập trong tab “Tập tin” của nó, không bao giờ trong bảng quản trị.',
+  'help.guide.document-providers.tip.2':
+    'Tắt “Tài liệu” sẽ tắt mọi kho theo, và không thể bật một kho khi “Tài liệu” đang tắt: máy chủ trả lời “Enable the Documents addon first”. Một kho trên mạng riêng của bạn còn cần ALLOW_INTERNAL_NETWORK=true trên máy chủ.',
 
   // ── Screen: trip ──────────────────────────────────────────────────────────────────────
   'help.ctx.trip.title': 'Chuyến đi',
@@ -2098,29 +2143,30 @@ const help: TranslationStrings = {
   'help.ctx.trip-place.bullet.5':
     'Hàng ở dưới cùng: “Thêm vào ngày” hoặc “Xóa khỏi ngày” khi một ngày đang mở, rồi “Lưu vào Bộ sưu tập”, “Điều hướng”, “Mở trang web”, “Chỉnh sửa” và “Xóa bỏ”.',
   'help.ctx.trip-place.bullet.6':
-    'Một địa điểm mà TREK khớp được với một nhà cung cấp bản đồ cho thấy nhiều hơn: đánh giá của nhà cung cấp đó kèm một nhận xét, số điện thoại, và một vòng “Mở” hoặc “Đã đóng” quanh hình ảnh với giờ mở cửa cả tuần phía sau.',
+    'Một địa điểm được chọn ra từ tìm kiếm mang theo những gì chỉ mục của TREK hoặc OpenStreetMap biết về nó: một vòng “Mở” màu xanh lá hoặc “Đã đóng” màu đỏ quanh hình ảnh, xét theo giờ của chính địa điểm, số điện thoại dưới các ngôi sao, “Giờ mở cửa” xa hơn bên dưới với dòng của ngày hôm đó trên hàng và cả tuần phía sau một cú nhấp, cùng trang web của nó phía sau “Mở trang web”. Đánh giá của Google chỉ hiện ở địa điểm tìm được qua Google, trên một TREK có khóa Google.',
   // read-place
   'help.guide.read-place.title': 'Thẻ cho bạn biết gì về một địa điểm',
   'help.guide.read-place.goal': 'Đọc mọi thứ chuyến đi biết về một địa điểm, trong một thẻ.',
   'help.guide.read-place.step.1':
     'Ở cột các ngày, nhấp vào điểm dừng bạn muốn đọc. Thẻ mở ra trên bản đồ và điểm dừng vẫn được đánh dấu trong ngày của nó.',
-  'help.guide.read-place.step.2': 'Phần đầu: hình tròn, tên, địa chỉ và tọa độ chính xác. Dấu X bên phải đóng thẻ lại.',
+  'help.guide.read-place.step.2':
+    'Phần đầu: hình tròn, tên, địa chỉ và tọa độ chính xác. Một vòng xanh lá với “Mở”, hoặc một vòng đỏ với “Đã đóng”, quanh hình ảnh cho biết địa điểm có đang mở cửa lúc này không, theo giờ của chính nó, một khi TREK biết giờ mở cửa của nó. Dấu X bên phải đóng thẻ lại.',
   'help.guide.read-place.step.3':
-    'Bên dưới là những ngôi sao mà mỗi người đi đã cho địa điểm, kèm mức trung bình và số người đã bình chọn. “Chưa có đánh giá” khi chưa ai cho.',
+    'Bên dưới là những ngôi sao mà mỗi người đi đã cho địa điểm, kèm mức trung bình và số người đã bình chọn. “Chưa có đánh giá” khi chưa ai cho. Ngay bên dưới là số điện thoại nếu địa điểm có: một cú nhấp vào nó chuyển số cho ứng dụng điện thoại của bạn.',
   'help.guide.read-place.step.4':
     'Rồi đến phần mô tả và, bên dưới nó, ghi chú. Cả hai là văn bản từ biểu mẫu của địa điểm, đã được kết xuất: danh sách, liên kết và chữ đậm đều hoạt động.',
   'help.guide.read-place.step.5':
     '“Người tham gia” nói ai sẽ đến điểm dừng này. Mọi người đều có mặt cho đến khi bạn đưa ai đó ra.',
   'help.guide.read-place.step.6':
-    'Hàng ở dưới cùng là những gì bạn làm được từ đây: đưa địa điểm ra khỏi ngày đang mở hoặc đặt nó vào, lưu nó vào một danh sách, mở nó trong ứng dụng bản đồ, chỉnh sửa hoặc xóa nó.',
+    '“Giờ mở cửa”, xa hơn bên dưới: hàng mang giờ của ngày bạn đang xem, và một cú nhấp vào nó mở ra cả tuần với ngày đó in đậm. “Tập tin” đứng bên cạnh.',
   'help.guide.read-place.result':
-    'Thẻ vẫn mở cho đến khi bạn đóng bằng dấu X hoặc chọn địa điểm khác, và điểm dừng mà nó thuộc về vẫn được đánh dấu ở cột các ngày.',
+    'Thẻ vẫn mở cho đến khi bạn đóng bằng dấu X hoặc chọn địa điểm khác, giờ mở cửa cả tuần vẫn được mở ra, và điểm dừng mà nó thuộc về vẫn được đánh dấu ở cột các ngày.',
   'help.guide.read-place.tip.1':
     'Chọn từ cột địa điểm thì thẻ biết địa điểm nhưng không biết điểm dừng, nên nó không hiện người tham gia và không hiện đặt chỗ. Hãy chọn điểm dừng bên trong ngày, và cả hai đều có.',
   'help.guide.read-place.tip.2':
     'Nhấp đúp vào tên để đổi tên địa điểm mà không cần mở biểu mẫu. Enter lưu lại, Escape bỏ thay đổi.',
   'help.guide.read-place.tip.3':
-    'Một địa điểm mà TREK khớp được với một nhà cung cấp bản đồ cũng cho thấy đánh giá của nhà cung cấp đó, một nhận xét, số điện thoại và giờ mở cửa.',
+    'Một địa điểm gõ vào bằng tay không cho thấy gì trong số đó: thẻ chỉ biết những gì biểu mẫu của nó chứa. Mở nó bằng “Chỉnh sửa”, chọn nó từ các gợi ý dưới “Tìm kiếm địa điểm...” và nhấp “Cập nhật”, và giờ mở cửa, số điện thoại cùng trang web sẽ đi theo. Đánh giá của Google cần một khóa Google.',
   // rate-place
   'help.guide.rate-place.title': 'Đánh giá một địa điểm',
   'help.guide.rate-place.goal': 'Cho địa điểm những ngôi sao của riêng bạn, và xem mọi người khác đã cho gì.',
@@ -2284,6 +2330,9 @@ const help: TranslationStrings = {
     'Một đường đi được ghi kèm độ cao còn cho thấy điểm cao nhất và thấp nhất, số mét lên và xuống, cùng trắc đồ của chuyến đi bộ.',
   'help.guide.place-track.tip.3':
     'Mỗi lần nhập sẽ cho mỗi đường đi nó mang vào một màu riêng, nên hai chuyến đi bộ không bao giờ đến với cùng một màu.',
+  // read-place
+  'help.guide.read-place.step.7':
+    'Hàng ở dưới cùng là những gì bạn làm được từ đây: đưa địa điểm ra khỏi ngày đang mở hoặc đặt nó vào, lưu nó vào một danh sách, mở nó trong ứng dụng bản đồ, chỉnh sửa hoặc xóa nó.',
 
   // ── Screen: trip-files ────────────────────────────────────────────────────────────────
   'help.ctx.trip-files.title': 'Tập tin',
@@ -2410,6 +2459,30 @@ const help: TranslationStrings = {
   'help.guide.files-trash.tip.2':
     'Vứt một tập tin đi rồi lấy lại cần quyền “Xóa tập tin”. Một thành viên không có quyền đó thì không thấy “Xóa bỏ” trên hàng, cũng không thấy các nút trong thùng rác.',
   'help.guide.files-trash.tip.3': 'Một tập tin đã bị xóa vĩnh viễn trong thùng rác thì không thể mang trở lại.',
+  // files-sync
+  'help.guide.files-sync.title': 'Giữ tài liệu đồng bộ với một thư mục Nextcloud',
+  'help.guide.files-sync.goal':
+    'Gắn chuyến đi với một thư mục trong kho tài liệu của riêng bạn, để những gì tải lên ở đây đến được đó và những gì lưu ở đó xuất hiện ở đây.',
+  'help.guide.files-sync.step.1':
+    'Nhấp “Đồng bộ tài liệu”, cạnh “Rác” ở đầu bên phải của thanh công cụ. Hộp thoại mở ra với tên chuyến đi dưới tiêu đề. Bên trái, dưới “Kết nối nhà cung cấp”, là các kho mà quản trị viên đã bật, mỗi kho kèm một dòng về cách nó lưu trữ, “Lưu theo thư mục” với Nextcloud; bên phải ghi “Chưa kết nối gì”.',
+  'help.guide.files-sync.step.2':
+    'Nhấp Nextcloud. Một hộp thoại nhỏ hơn mở ra cho kết nối, mang tên kho, với lời nhắc ở trên cùng hãy dùng mật khẩu ứng dụng thay vì mật khẩu tài khoản.',
+  'help.guide.files-sync.step.3':
+    'Điền “Địa chỉ”, “Tên đăng nhập”, tức tên đăng nhập Nextcloud của bạn chứ không phải địa chỉ email, và “Mật khẩu ứng dụng”, thứ Nextcloud tạo dưới Cài đặt, Bảo mật. “Thư mục gốc” là tùy chọn: đó là nơi TREK tìm các thư mục chuyến đi, /TREK trừ khi bạn chỉ định khác, ở đây là /Reisen. “Chấp nhận chứng chỉ tự ký” ở dưới cùng chỉ dành cho máy chủ trên mạng riêng của bạn có chứng chỉ như vậy.',
+  'help.guide.files-sync.step.4':
+    'Nhấp “Kiểm tra kết nối”. TREK liên hệ kho bằng những gì bạn đã gõ và phần chân ghi “Đã kết nối, đăng nhập với tư cách” theo sau là tên tài khoản, ở đây là admin. Một mật khẩu bị từ chối hay một địa chỉ không liên hệ được sẽ được nêu ở đó thay vào, và dù thế nào cũng chưa có gì được lưu.',
+  'help.guide.files-sync.step.5':
+    'Nhấp “Kết nối”. Kết nối được lưu cùng chuyến đi và TREK hỏi “Chuyến đi này nên nằm ở đâu trong Nextcloud?” Chỉ những gì trong thư mục đó được đồng bộ. “Tạo mục mới” tạo một thư mục dưới thư mục gốc khi nhấn “Tạo”, với tên điền sẵn từ tiêu đề chuyến đi; dưới “Hoặc dùng mục bạn đã có” là các thư mục đã có sẵn. Nhấp một thư mục, ở đây là Autumn in Japan.',
+  'help.guide.files-sync.step.6':
+    'Hộp thoại trở lại: Nextcloud đứng dưới “Chuyến đi này” ở bên trái, và thẻ của nó ở bên phải mang thư mục, lần chạy gần nhất và “Đồng bộ ngay”. Lần chạy đầu tiên tự bắt đầu; “Đồng bộ ngay” chạy một lần bất cứ khi nào bạn muốn. Khi một lần chạy xong, huy hiệu “Chưa đồng bộ” cạnh tên nhường chỗ cho một chấm xanh lá, “Đã đồng bộ” khi bạn trỏ vào, và thanh luồng đếm số tài liệu mà TREK và Nextcloud mỗi bên đang giữ, với các làn “Gửi ra kho” và “Nhận từ kho” ở giữa. Đóng hộp thoại bằng dấu ×.',
+  'help.guide.files-sync.result':
+    'Hai tài liệu đã có sẵn trong thư mục đứng đầu danh sách, được tải lên dưới tên bạn, và mọi tài liệu của chuyến đi cũng đã ở trong thư mục. Từ giờ TREK kiểm tra thư mục ở nền và thư mục theo sát danh sách.',
+  'help.guide.files-sync.tip.1':
+    'Chỉ chủ chuyến đi hoặc quản trị viên của máy chủ mới gắn được một chuyến đi, vì mật khẩu ứng dụng chạm tới toàn bộ tài khoản Nextcloud đó. Mọi thành viên đều có thể mở “Đồng bộ tài liệu”, đọc thẻ và nhấn “Đồng bộ ngay”.',
+  'help.guide.files-sync.tip.2':
+    'Một kho trên mạng riêng của bạn cần ALLOW_INTERNAL_NETWORK=true trên máy chủ TREK, và địa chỉ của nó phải là địa chỉ của máy trong mạng, không bao giờ là localhost. Không có vậy, “Kiểm tra kết nối” trả lời “Địa chỉ đó không được phép.”',
+  'help.guide.files-sync.tip.3':
+    '“Ngắt kết nối” trên thẻ chấm dứt ghép nối và giữ mọi tài liệu ở cả hai bên. Một thư mục được gắn lần thứ hai được coi là mới, và mọi thứ trong đó lại đi vào lần nữa, nên sau một lần “Ngắt kết nối” hãy gắn một thư mục trống thay vì thư mục cũ.',
 
   // ── Screen: trip-day-detail ───────────────────────────────────────────────────────────
   'help.ctx.trip-day-detail.title': 'Chi tiết ngày',
@@ -2672,6 +2745,37 @@ const help: TranslationStrings = {
     '“Luôn hiển thị tuyến đường đặt chỗ”, trong cùng phần cài đặt đó, vẽ chúng ngay từ đầu trên mọi chuyến đi bạn chưa quyết định.',
   'help.guide.map-booking-routes.tip.3':
     'Một đặt chỗ cần hai đầu có tọa độ trước khi có thể được vẽ, nên một khách sạn hay một nhà hàng không mang biểu tượng tuyến.',
+  'help.ctx.trip-map.bullet.8':
+    'Khi tiện ích Dawarich đang bật, nút Dawarich tròn bên dưới “Hiện toàn bộ chuyến đi” vẽ lộ trình mà điện thoại của bạn thực sự đã ghi lại: “Hiện lộ trình đã ghi” đặt nó dưới dạng nét đứt bên dưới lộ trình đã lên kế hoạch, mỗi ngày một màu, và nhãn của nút cho biết vì sao không có đường nào khi không có.',
+  // map-dawarich-trail
+  'help.guide.map-dawarich-trail.title': 'Hiện lộ trình bạn đã thực sự đi',
+  'help.guide.map-dawarich-trail.goal':
+    'Đặt lộ trình mà Dawarich đã ghi trên điện thoại của bạn lên bản đồ, dưới dạng nét đứt bên cạnh lộ trình bạn đã lên kế hoạch, và đọc chuyến đi từng ngày một như nó đã thực sự diễn ra.',
+  'help.guide.map-dawarich-trail.step.1':
+    'Nút Dawarich tròn nằm ở góc dưới bên phải bản đồ, bên dưới “Hiện toàn bộ chuyến đi”; đưa con trỏ lên nó thì hiện “Hiện lộ trình đã ghi”. Nhấp vào nó. TREK hỏi Dawarich của bạn về các ngày của chuyến đi, và một vòng quay quanh nút trong khi câu trả lời đang trên đường tới.',
+  'help.guide.map-dawarich-trail.step.2':
+    'Lộ trình đã ghi hiện ra dưới dạng một đường nét đứt, mỗi ngày một màu, được vẽ bên dưới lộ trình đã lên kế hoạch để kế hoạch vẫn đọc được. Nút giờ ghi “Ẩn lộ trình đã ghi”. Các ngày được cắt ở nửa đêm giờ địa phương, và một ngày được gập lại trong cột các ngày sẽ mang đường nét đứt của nó rời khỏi bản đồ cùng với các điểm dừng.',
+  'help.guide.map-dawarich-trail.step.3':
+    'Nhấp cả “Hiện toàn bộ chuyến đi” và mọi ngày đã lên kế hoạch được vẽ bằng nét liền bên cạnh bản ghi nét đứt. Nơi hai đường chạy cùng nhau là ngày đã diễn ra như kế hoạch; nơi đường nét đứt lạc đi là nơi nó đã không như vậy.',
+  'help.guide.map-dawarich-trail.result':
+    'Những gì bạn đã lên kế hoạch và những gì bạn thực sự đã làm cùng nằm trên bản đồ, nét đứt bên nét liền, và thẻ phía trên các nút vẫn liệt kê các ngày đã lên kế hoạch cùng khoảng cách của chúng.',
+  'help.guide.map-dawarich-trail.tip.1':
+    'Bật hay tắt được nhớ theo từng chuyến đi cho phiên trình duyệt này. Khi lộ trình đang bật, TREK hỏi lại Dawarich mỗi hai phút, nên một chuyến đi đang diễn ra sẽ cập nhật mà không cần tải lại; bản thân lộ trình không bao giờ được lưu, nên nó không nằm trong cơ sở dữ liệu của TREK, không trong bản sao lưu và không có khi ngoại tuyến.',
+  'help.guide.map-dawarich-trail.tip.2':
+    'Nhãn của nút giải thích một bản đồ trống: “Đang tải lộ trình đã ghi…” khi nó đang trên đường tới, “Không có gì được ghi lại trong những ngày này”, “Không tải được lộ trình đã ghi”, hoặc “Lộ trình đã ghi cần có kết nối” khi TREK đang ngoại tuyến.',
+  // map-compass
+  'help.guide.map-compass.title': 'Xoay bản đồ và tìm lại hướng bắc',
+  'help.guide.map-compass.goal': 'Xoay bản đồ theo hướng bạn đang đi, và đưa nó về hướng bắc chỉ bằng một cú nhấp.',
+  'help.guide.map-compass.step.1':
+    'Xoay bản đồ bằng cách kéo với nút chuột phải, hoặc giữ Ctrl và kéo với nút trái; trên màn hình cảm ứng, vặn bằng hai ngón tay. La bàn tròn cạnh hàng biểu tượng danh mục ở trên cùng bản đồ xoay theo: mũi tên của nó luôn chỉ hướng bắc, nên nó nghiêng đúng bằng mức bạn đã xoay.',
+  'help.guide.map-compass.step.2':
+    'Nhấp vào la bàn. “Reset north”, như tên của nút, đưa bản đồ nhẹ nhàng trở về với hướng bắc ở trên và góc nhìn phẳng, và mũi tên lại đứng thẳng.',
+  'help.guide.map-compass.result':
+    'Bản đồ lại hướng bắc lên trên và phẳng, và không có gì trong chuyến đi thay đổi: la bàn chỉ di chuyển máy quay.',
+  'help.guide.map-compass.tip.1':
+    'La bàn chỉ có trên bản đồ MapLibre GL và Mapbox GL; bản đồ Leaflet không xoay được, nên không có la bàn. “Nhà cung cấp bản đồ” trong “Cài đặt”, ở mục “Bản đồ”, quyết định bạn dùng cái nào, và “Lưu bản đồ” giữ lựa chọn đó.',
+  'help.guide.map-compass.tip.2':
+    'Cú nhấp cũng bỏ độ nghiêng: kéo với nút chuột phải lên hoặc xuống làm nghiêng góc nhìn, và “Reset north” làm phẳng nó cùng với xoay. Trên Mapbox GL với “Tòa nhà & địa hình 3D” đang bật, điều đó cũng làm phẳng góc nhìn 3D, cho đến khi bạn nghiêng lại.',
 
   // ── Screen: trip-collab ───────────────────────────────────────────────────────────────
   'help.ctx.trip-collab.title': 'Cộng tác',
@@ -3151,15 +3255,15 @@ const help: TranslationStrings = {
     'Thả các bản xác nhận lên ô đó, hoặc nhấp vào ô rồi chọn chúng: EML, PDF, PKPass, HTML và TXT, tối đa năm tập tin, mỗi tập tin 10 MB. Những tập tin bạn chọn được nêu tên trên ô.',
   'help.guide.import-booking-file.step.3': 'Nhấp “Nhập”. Hộp thoại đóng lại ngay, vì việc đọc diễn ra ở nền.',
   'help.guide.import-booking-file.step.4':
-    'Một thẻ ở dưới cùng bên phải báo cáo lượt chạy, và nó theo bạn khắp ứng dụng và qua cả một lần tải lại. Khi xong, nó đưa ra “Nhập”, thứ bắt đầu phần rà soát: mỗi đặt chỗ nó tìm thấy sẽ mở trong biểu mẫu thông thường, đã điền sẵn và có giấy tờ đính kèm, để bạn kiểm tra rồi “Thêm” lần lượt từng cái.',
+    'Một thẻ ở dưới cùng bên phải báo cáo lượt chạy dưới tên tập tin, và nó theo bạn khắp ứng dụng và qua cả một lần tải lại. “Đang phân tích tệp…” đổi thành dấu tích khi việc đọc xong, và thẻ đưa ra “Nhập”. Nhấp vào đó.',
   'help.guide.import-booking-file.result':
-    'Mỗi đặt chỗ bạn đã xác nhận là một thẻ riêng với mã, ngày và giấy tờ mà nó đến từ đó; một chỗ ở còn nhận được những đêm của nó, và khi “Chi phí” đang bật, một mức giá có trong bản xác nhận đã trở thành một khoản chi.',
+    'Đặt chỗ là một thẻ trong “Chưa giải quyết” với các đêm, mã và bản xác nhận dưới “Tập tin”, lần lưu trú nằm trên những ngày đó của kế hoạch, và khi “Chi phí” đang bật, giá là một khoản chi gắn với nó.',
   'help.guide.import-booking-file.tip.1':
-    '“Nhập từ tập tin” chỉ có mặt khi máy chủ đọc được các bản xác nhận, việc này cần bộ trích xuất phía máy chủ hoặc tiện ích “Phân tích bằng AI”. Quản trị viên bật tắt cái sau dưới “Tiện ích bổ sung”.',
+    '“Nhập từ tập tin” chỉ có mặt khi máy chủ đọc được các bản xác nhận, việc này cần bộ trích xuất hoặc tiện ích “Phân tích bằng AI”. Quản trị viên bật tắt cái sau dưới “Tiện ích bổ sung”.',
   'help.guide.import-booking-file.tip.2':
-    'Nếu không đọc được gì, thẻ sẽ nói vậy và đưa ra “Thử phân tích bằng AI”, thứ gửi thẳng chính những tập tin ấy tới mô hình.',
+    'Nếu không đọc được gì, thẻ sẽ nói vậy và đưa ra “Thử phân tích bằng AI”, thứ gửi thẳng chính những tập tin ấy tới mô hình. Một lượt phân tích đã xong được giữ trong mười phút; hãy bắt đầu rà soát trong khoảng thời gian đó.',
   'help.guide.import-booking-file.tip.3':
-    'Một lượt phân tích đã xong được giữ trong mười phút. Hãy bắt đầu rà soát trong khoảng thời gian đó.',
+    'Bản xác nhận chỉ được đính kèm khi loại của nó nằm trong “Các loại tệp được phép” của cài đặt quản trị. PDF có sẵn ngay từ đầu; một bức thư, EML, phải được thêm vào trước, nếu không đặt chỗ được lưu mà không có nó.',
   // edit-booking
   'help.guide.edit-booking.title': 'Thay đổi một đặt chỗ',
   'help.guide.edit-booking.goal':
@@ -3190,6 +3294,9 @@ const help: TranslationStrings = {
     'Xóa một đặt chỗ ở còn đưa những đêm của nó ra khỏi “Kế hoạch ngày” và gỡ khoản chi đã liên kết với nó.',
   'help.guide.delete-booking.tip.2':
     'Những giấy tờ từng được đính kèm vẫn ở lại trong thẻ “Tập tin” của chuyến đi; chỉ liên kết của chúng với đặt chỗ là mất đi.',
+  // import-booking-file
+  'help.guide.import-booking-file.step.5':
+    'Mỗi đặt chỗ được tìm thấy mở ra trong “Đặt chỗ mới”, lần lượt từng cái, đã điền sẵn. Với một khách sạn, đó là tên trong “Tiêu đề” và, khi chuyến đi có địa điểm đó, dưới “Chỗ ở”, “Vị trí / Địa chỉ” của nó, “Từ” và “ĐẾN” theo các đêm của nó, “Nhận phòng” và “Trả phòng”, “Mã đặt chỗ”, bản xác nhận dưới “Tập tin” và, khi “Chi phí” đang bật, giá dưới dạng “Chi phí liên kết”. Kiểm tra rồi nhấp “Thêm”.',
 
   // ── Screen: trip-costs ────────────────────────────────────────────────────────────────
   'help.ctx.trip-costs.title': 'Chi phí',
@@ -3528,6 +3635,49 @@ const help: TranslationStrings = {
     'Một đặt chỗ “Đã xác nhận” là đường liền, một đặt chỗ “Chưa giải quyết” là đường đứt nét. Cài đặt “Nhãn lộ trình đặt chỗ” in mã sân bay hoặc tên nhà ga vào các dấu đầu tuyến.',
   'help.guide.transport-on-map.tip.3':
     '“Hiển thị tất cả lộ trình đặt chỗ” là một tờ giấy trắng, không phải một lớp phủ: nó bỏ đi những gì các biểu tượng riêng lẻ đã đặt, nên bấm hai lần sẽ để bạn lại với tất cả đang bật hoặc tất cả đang tắt.',
+  // import-transport-file
+  'help.guide.import-transport-file.title': 'Đọc một chuyến bay ra từ vé điện tử của nó',
+  'help.guide.import-transport-file.goal':
+    'Để TREK rút một chuyến bay, một chuyến tàu hay một chuyến phà ra từ vé mà hãng vận chuyển đã gửi, và kiểm tra trước khi nó được lưu.',
+  'help.guide.import-transport-file.step.1':
+    'Nhấp “Nhập từ tập tin” trên thanh công cụ của tab “Di chuyển”, cạnh “Phương tiện”. “Nhập xác nhận đặt chỗ” mở ra, cùng hộp thoại mà tab “Đặt chỗ” có.',
+  'help.guide.import-transport-file.step.2':
+    'Thả vé lên ô đó, hoặc nhấp vào ô rồi chọn nó: EML, PDF, PKPass, HTML và TXT, tối đa năm tập tin, mỗi tập tin 10 MB. Những tập tin bạn chọn được nêu tên trên ô.',
+  'help.guide.import-transport-file.step.3': 'Nhấp “Nhập”. Hộp thoại đóng lại ngay; việc đọc diễn ra ở nền.',
+  'help.guide.import-transport-file.step.4':
+    'Một thẻ ở dưới cùng bên phải báo cáo lượt chạy dưới tên tập tin. “Đang phân tích tệp…” đổi thành dấu tích khi việc đọc xong, và thẻ đưa ra “Nhập”. Nhấp vào đó.',
+  'help.guide.import-transport-file.step.5':
+    'Một chuyến bay mở ra trong “Thêm phương tiện di chuyển”, đã điền sẵn: “Loại đặt chỗ” ở “Chuyến bay”, hãng hàng không và số hiệu chuyến bay trong “Tiêu đề”, cả hai sân bay dưới “Tuyến đường” với “Khởi hành” và “Đến”, giờ và múi giờ của chúng, “Hãng hàng không” và “Chuyến bay số”, “Mã đặt chỗ” và vé dưới “Tập tin”. Kiểm tra rồi nhấp “Thêm”.',
+  'help.guide.import-transport-file.result':
+    'Chuyến bay là một thẻ trong “Chưa giải quyết” trên tab “Di chuyển” và một hàng trên ngày nó khởi hành, với vé dưới “Tập tin”, và khi cả hai sân bay đã biết, nó vẽ đường cong của mình trên bản đồ.',
+  'help.guide.import-transport-file.tip.1':
+    'Hai tab dùng chung một lần nhập: một tập tin chứa một chuyến bay và một khách sạn sẽ mở chuyến bay trong “Thêm phương tiện di chuyển” và khách sạn trong “Đặt chỗ mới”, lần lượt từng cái, bất kể bạn bắt đầu từ tab nào.',
+  'help.guide.import-transport-file.tip.2':
+    'Sân bay được đặt theo mã của chúng. Một nhà ga hay một cảng mà việc đọc không định vị được sẽ được nêu tên bằng màu hổ phách trên thẻ; hãy chọn bằng tay dưới “Tuyến đường” trước khi nhấp “Thêm”, nếu không phương tiện sẽ không vẽ gì trên bản đồ.',
+  // airtrail-import
+  'help.guide.airtrail-import.title': 'Nhập chuyến bay từ AirTrail',
+  'help.guide.airtrail-import.goal':
+    'Đưa các chuyến bay bạn đã giữ trong AirTrail vào chuyến đi trong một lần, và để chúng theo AirTrail từ đó về sau.',
+  'help.guide.airtrail-import.step.1':
+    'Khi tiện ích AirTrail đang bật và máy chủ của bạn đã kết nối dưới “Tích hợp” trong “Cài đặt”, thanh công cụ của tab “Di chuyển” mang một nút “AirTrail” cạnh “Phương tiện”. Nhấp vào nó.',
+  'help.guide.airtrail-import.step.2':
+    '“Nhập từ AirTrail” liệt kê các chuyến bay của tài khoản bạn thành hai nhóm. “Trong chuyến đi này” chứa những chuyến có ngày nằm trong chuyến đi, đã được đánh dấu sẵn; “Các chuyến bay khác” chứa phần còn lại, chưa đánh dấu. Một chuyến bay đã có trong chuyến đi bị làm mờ và ghi “Đã nhập”.',
+  'help.guide.airtrail-import.step.3':
+    'Mỗi hàng là một ô đánh dấu với hãng hàng không và số hiệu chuyến bay, hai sân bay và ngày. Nhấp một hàng để lấy chuyến bay vào hoặc bỏ nó ra; những chuyến dưới “Các chuyến bay khác” chỉ vào khi bạn đánh dấu chúng.',
+  'help.guide.airtrail-import.step.4':
+    'Các chuyến bay nối tiếp nhau, mỗi chuyến cất cánh từ sân bay mà chuyến trước đó đã hạ cánh trong vòng một ngày, được đóng khung chung. Ô đánh dấu bên dưới, “Nhập thành một chuyến bay với điểm dừng tại” kèm tên sân bay đó, đã được bật sẵn: để nguyên để có một đặt chỗ với một điểm dừng, hoặc tắt đi để nhập các chặng thành những chuyến bay riêng.',
+  'help.guide.airtrail-import.step.5':
+    'Nhấp “Nhập”. Nút đếm số chuyến bay đã đánh dấu, và thông báo sau đó cho biết bao nhiêu chuyến đã vào.',
+  'help.guide.airtrail-import.step.6':
+    'Các chuyến bay là những thẻ dưới “Đã xác nhận”, mỗi thẻ có một huy hiệu AirTrail màu xanh dương cạnh trạng thái, và là những hàng trên các ngày chúng bay. Một chuyến nối đã ghép là một thẻ, với tuyến đường chạy qua điểm dừng.',
+  'help.guide.airtrail-import.result':
+    'Các chuyến bay từ AirTrail là những thẻ trong tab “Di chuyển” và những hàng trên các ngày của chúng, mỗi thẻ mang huy hiệu AirTrail cho biết nó đến từ đâu.',
+  'help.guide.airtrail-import.tip.1':
+    'Một chuyến bay đã có trong chuyến đi với cùng số hiệu và ngày sẽ bị bỏ qua, và một thông báo cho biết có bao nhiêu chuyến như vậy. “Hoàn tác” trên thanh công cụ phía trên các ngày rút lại toàn bộ lần nhập.',
+  'help.guide.airtrail-import.tip.2':
+    'AirTrail vẫn là nguồn sự thật. TREK đọc các thay đổi của nó khi bạn mở chuyến đi và vài phút một lần ở nền; một chuyến bay bị xóa ở đó vẫn giữ thẻ, với huy hiệu chuyển thành “Chưa được đồng bộ hóa”. Các chỉnh sửa trong TREK chỉ đi ngược lại khi “Viết các thay đổi trở lại AirTrail” đang bật dưới “Tích hợp”.',
+  'help.guide.airtrail-import.tip.3':
+    'Một chuyến nối đã ghép không có chuyến bay AirTrail đơn lẻ nào để theo, nên nó là một lần nhập một chiều: nó giữ huy hiệu xanh dương, và đưa con trỏ lên huy hiệu sẽ nói vậy. Điều tương tự xảy ra với một chuyến bay đã đồng bộ mà bạn thêm điểm dừng bằng tay.',
 
   // ── Screen: trip-roadtrip ─────────────────────────────────────────────────────────────
   'help.ctx.trip-roadtrip.title': 'Chuyến đi đường bộ',

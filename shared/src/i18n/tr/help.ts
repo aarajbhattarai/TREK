@@ -450,6 +450,38 @@ const help: TranslationStrings = {
     'Şehirler adres metninden okunur, aranmaz; bu yüzden “Osteria Francescana, Italy” gibi kısa bir adres ya da bir vilayetle biten bir adres şehir yerine bölge verebilir.',
   'help.guide.stats.tip.2':
     'Elle işaretlenen ülkeler Ülkeler’de ve kıtalarda sayılır ama gezi, yer ya da gün getirmez.',
+  // dawarich-countries
+  'help.guide.dawarich-countries.title': 'Kayıtlarınızdan ülke ekleyin',
+  'help.guide.dawarich-countries.goal':
+    'Son bir yılda hangi ülkelerde bulunduğunuzu Dawarich söylesin ve onayladıklarınız haritaya konsun.',
+  'help.guide.dawarich-countries.step.1':
+    'Dawarich eklentisi bağlıyken haritanın altında, istatistiklerin solunda iki kutucuklu bir Dawarich paneli durur. Ülkeler kutucuğuna tıklayın.',
+  'help.guide.dawarich-countries.step.2':
+    'Pencere Ülkeler sekmesinde açılır. Ülkeleri ara düğmesine tıklayın: TREK, kayıtlarınızın son 12 ayda kapsadığı ülkeleri ve şehirleri ay ay okur, bu yüzden biraz zaman tanıyın. Atlas’ınızda henüz olmayan her ülke bayrağıyla, kaç şehir olduğuyla ve bunların ilkinin adıyla listelenir ve işaretli başlar; dışarıda bırakmak için satıra tıklayın.',
+  'help.guide.dawarich-countries.step.3':
+    'Sağ alttaki düğmeyle onaylayın; beş satır işaretliyken düğmede 5 ülke ekle yazar. Pencere kaç tanesinin eklendiğini söyler; kapatın, harita kendini yeniden okumuştur.',
+  'help.guide.dawarich-countries.result':
+    'Onaylanan ülkeler haritada bir renk taşır ve Ülkeler içinde sayılır, Dawarich’ten geldiği kayıtlıdır. Elle işaretledikleriniz dokunulmamış kalır.',
+  'help.guide.dawarich-countries.tip.1':
+    'Atlas’ın zaten gidilmiş gösterdiği ülkeler, ister elle, ister bir geziden, ister önceki bir denetimden olsun, dışarıda bırakılır, böylece kendi işaretleriniz asla yeniden etiketlenmez. Daha önce Atlas’tan kaldırdığınız bir ülke, burada onayladığınızda geri gelir.',
+  'help.guide.dawarich-countries.tip.2':
+    'TREK’in eşleştiremediği bir ülke adı atılmak yerine satırların altında listelenir ve Yeniden kontrol et Dawarich’e bir kez daha sorar. Listenin altındaki not son 12 ayın incelendiğini söyler; o pencere sabittir.',
+  // dawarich-wishes
+  'help.guide.dawarich-wishes.title': 'Kayıtlarınızdan dilekleri işaretleyin',
+  'help.guide.dawarich-wishes.goal':
+    'Yapılacaklar listenizdeki hangi yerlere gerçekten ulaştığınızı öğrenin ve onları olduğu gün için işaretleyin.',
+  'help.guide.dawarich-wishes.step.1':
+    'Haritanın altında, istatistiklerin solundaki Dawarich panelinde Dilek listesi kutucuğuna tıklayın.',
+  'help.guide.dawarich-wishes.step.2':
+    'Pencere Dilek listesi sekmesinde açılır. Dilek listesini denetle düğmesine tıklayın: TREK, koordinatı olan her kayıt için kayıtlarınızı tarar. Ulaştığınız bir dilek ne kadar yaklaştığınızla, ne kadar kaldığınızla ve günüyle listelenir ve işaretli başlar; zaten işaretlediğiniz birinde Zaten işaretlenmiş yazar. Listenin altında bir not koordinatsız kayıtları sayar ve kural da orada durur: Bir dilek 250 m yakınlıkta ve yerinde 20 dakika sonra ulaşılmış sayılır.',
+  'help.guide.dawarich-wishes.step.3':
+    'Sağ alttaki düğmeyle onaylayın; iki satır işaretliyken düğmede 2 tanesini işaretle yazar. Sonra pencereyi kapatın ve yanındaki panelin Yapılacaklar Listesi sekmesini açın.',
+  'help.guide.dawarich-wishes.result':
+    'Her dilek, bugünün değil kalışın tarihiyle yeşil bir onay işareti taşır; ipucu Dawarich kayıtlarınızdan işaretlendi der ve tarihe bir tıklama bunu geri alır.',
+  'help.guide.dawarich-wishes.tip.1':
+    'Yanından geçmek sayılmaz: kural hem yakınlık hem süre ister ve uyan birkaç kalıştan en uzunu kazanır. Koordinatsız bir dilek denetlenemez, bu yüzden yerleri yalnızca adla değil, Yer ekle içindeki aramayla ekleyin.',
+  'help.guide.dawarich-wishes.tip.2':
+    'Bir denetim en fazla 50 kayda bakar, önce henüz işaretlenmemiş olanlara, ve daha fazlası olduğunda bunu söyler. Zaten işaretlenmiş bir dilek kendi tarihini korur.',
 
   // ── Screen: collections ───────────────────────────────────────────────────────────────
   'help.ctx.collections.title': 'Koleksiyonlar',
@@ -1665,6 +1697,19 @@ const help: TranslationStrings = {
   'help.guide.audit-log.tip.1': 'Saatler, tablonun üstünde adı geçen sunucu saat diliminde gösterilir.',
   'help.guide.audit-log.tip.2':
     'Günlük yalnızca eklemelidir; buradaki hiçbir şey uygulamadan düzenlenemez ya da silinemez.',
+  // document-providers
+  'help.guide.document-providers.title': 'Bir belge deposu sunun',
+  'help.guide.document-providers.goal': 'Bir gezinin belgelerini hangi depolarla eşit tutabileceğine karar verin.',
+  'help.guide.document-providers.step.1':
+    'Belgeler kutucuğu depoları rafında satırlar olarak taşır: Paperless-ngx, Papra, Nextcloud, OpenCloud ve Synology Drive. Beşi de kapalı başlar ve raf yalnızca Belgeler’in kendisi açıkken oradadır.',
+  'help.guide.document-providers.step.2':
+    'Nextcloud satırındaki anahtarı açın. Mesajda Eklenti güncellendi yazar ve bundan sonra gezi sahipleri gezilerinin Dosyalar sekmesinde Belge eşitleme’yi, Sağlayıcı bağla altında da Nextcloud’u bulur.',
+  'help.guide.document-providers.result':
+    'Depo bu TREK’in her gezisinde sunulur; bir gezi sahibi bağlayana kadar hiçbir şey bağlı değildir.',
+  'help.guide.document-providers.tip.1':
+    'Burada yalnızca bir deponun sunulup sunulamayacağına karar verilir. Adres ve kimlik bilgileri bir geziye aittir ve gezinin sahibi tarafından Dosyalar sekmesinde girilir, asla yönetici panelinde değil.',
+  'help.guide.document-providers.tip.2':
+    'Belgeler’i kapatmak her depoyu onunla birlikte kapatır ve Belgeler kapalıyken bir depo açılamaz: sunucu Enable the Documents addon first yanıtını verir. Kendi ağınızdaki bir depo ayrıca sunucuda ALLOW_INTERNAL_NETWORK=true ister.',
 
   // ── Screen: trip ──────────────────────────────────────────────────────────────────────
   'help.ctx.trip.title': 'Seyahat',
@@ -2113,30 +2158,30 @@ const help: TranslationStrings = {
   'help.ctx.trip-place.bullet.5':
     'Alttaki satır: bir gün açıkken Güne Ekle ya da Günden Kaldır, sonra Koleksiyona kaydet, Navigasyon, Web Sitesini Aç, Düzenle ve Sil.',
   'help.ctx.trip-place.bullet.6':
-    'TREK’in bir harita sağlayıcısıyla eşleştirdiği bir yer daha fazlasını gösterir: o sağlayıcının bir yorumla birlikte puanı, telefon numarası, ve görselin çevresinde arkasında haftanın açılış saatleri duran bir Açık ya da Kapalı halkası.',
+    'Aramadan seçilen bir yer, TREK dizininin ya da OpenStreetMap’in onun hakkında bildiklerini taşır: görselin çevresinde, yerin kendi saatine göre yargılanan yeşil bir Açık ya da kırmızı bir Kapalı halkası, yıldızların altında telefon numarası, daha aşağıda satırında günün çizgisi ve bir tıklamanın arkasında bütün haftayla Açılış Saatleri, ve Web Sitesini Aç arkasında web sitesi. Google’ın puanı yalnızca Google ile bulunmuş bir yerde, Google anahtarı olan bir TREK’te görünür.',
   // read-place
   'help.guide.read-place.title': 'Kartın size bir yer hakkında anlattıkları',
   'help.guide.read-place.goal': 'Gezinin tek bir yer hakkında bildiği her şeyi tek bir kartta okuyun.',
   'help.guide.read-place.step.1':
     'Günler sütununda okumak istediğiniz durağa tıklayın. Kart haritanın üzerinde açılır ve durak kendi gününde işaretli kalır.',
   'help.guide.read-place.step.2':
-    'Baş kısım: yuvarlak görsel, ad, adres ve tam koordinatlar. Sağdaki X kartı yeniden kapatır.',
+    'Baş kısım: yuvarlak görsel, ad, adres ve tam koordinatlar. Görselin çevresinde Açık yazan yeşil ya da Kapalı yazan kırmızı bir halka, TREK saatlerini öğrendiğinde, yerin şu anda kendi saatine göre açık olup olmadığını söyler. Sağdaki X kartı yeniden kapatır.',
   'help.guide.read-place.step.3':
-    'Altında her gezginin yere verdiği yıldızlar, ortalamayla ve kaç kişinin oy verdiğiyle. Kimse vermediği sürece Henüz puanlanmadı.',
+    'Altında her gezginin yere verdiği yıldızlar, ortalamayla ve kaç kişinin oy verdiğiyle. Kimse vermediği sürece Henüz puanlanmadı. Hemen altında, yerin varsa telefon numarası: ona tıklamak numarayı telefon uygulamanıza verir.',
   'help.guide.read-place.step.4':
     'Sonra açıklama ve onun altında notlar. İkisi de yerin formundaki metindir, işlenmiş hâliyle: listeler, bağlantılar ve kalın yazı çalışır.',
   'help.guide.read-place.step.5':
     'Katılımcılar bu durağa kimin gittiğini söyler. Siz birini çıkarana kadar herkes içindedir.',
   'help.guide.read-place.step.6':
-    'Alttaki satır buradan yapabilecekleriniz: yeri açık günden almak ya da oraya koymak, bir listeye kaydetmek, bir harita uygulamasında açmak, düzenlemek ya da silmek.',
+    'Daha aşağıda Açılış Saatleri: satır baktığınız günün saatlerini taşır ve ona tıklamak o gün kalın yazılmış olarak bütün haftayı açar. Dosyalar yanında durur.',
   'help.guide.read-place.result':
-    'Kart, siz X ile kapatana ya da başka bir yer seçene kadar açık kalır ve ait olduğu durak günler sütununda işaretli kalır.',
+    'Kart, siz X ile kapatana ya da başka bir yer seçene kadar açık kalır, haftanın saatleri açık kalır ve ait olduğu durak günler sütununda işaretli kalır.',
   'help.guide.read-place.tip.1':
     'Yerler sütunundan seçildiğinde kart yeri bilir ama durağı bilmez, bu yüzden katılımcı da rezervasyon da göstermez. Bunun yerine durağı günün içinden seçin, ikisi de oradadır.',
   'help.guide.read-place.tip.2':
     'Formu açmadan yeri yeniden adlandırmak için ada çift tıklayın. Enter kaydeder, Escape değişikliği bırakır.',
   'help.guide.read-place.tip.3':
-    'TREK’in bir harita sağlayıcısıyla eşleştirebildiği bir yer ayrıca o sağlayıcının puanını, bir yorumu, telefon numarasını ve açılış saatlerini gösterir.',
+    'Elle yazılmış bir yer bunların hiçbirini göstermez: kart yalnızca formunun tuttuğunu bilir. Düzenle ile açın, Yerleri ara... altındaki önerilerden seçin ve Güncelle düğmesine tıklayın; saatler, telefon numarası ve web sitesi onunla gelir. Google’ın puanı bir Google anahtarı ister.',
   // rate-place
   'help.guide.rate-place.title': 'Bir yeri puanlayın',
   'help.guide.rate-place.goal': 'Bir yere kendi yıldızlarınızı verin ve herkesin ona ne verdiğini görün.',
@@ -2299,6 +2344,9 @@ const help: TranslationStrings = {
     'Yüksekliklerle kaydedilmiş bir iz ayrıca en yüksek ve en alçak noktasını, yukarı ve aşağı metreleri ve yürüyüşün profilini gösterir.',
   'help.guide.place-track.tip.3':
     'Bir içe aktarma getirdiği her ize kendi rengini verir, böylece iki yürüyüş asla aynı renkle gelmez.',
+  // read-place
+  'help.guide.read-place.step.7':
+    'Alttaki satır buradan yapabilecekleriniz: yeri açık günden almak ya da oraya koymak, bir listeye kaydetmek, bir harita uygulamasında açmak, düzenlemek ya da silmek.',
 
   // ── Screen: trip-files ────────────────────────────────────────────────────────────────
   'help.ctx.trip-files.title': 'Dosyalar',
@@ -2425,6 +2473,30 @@ const help: TranslationStrings = {
   'help.guide.files-trash.tip.2':
     'Bir dosyayı atmak ve geri almak Dosyaları sil hakkını gerektirir. Bu hakkı olmayan bir üye ne satırdaki Sil düğmesini ne de çöp kutusundaki düğmeleri görür.',
   'help.guide.files-trash.tip.3': 'Çöp kutusunda kalıcı olarak silinen bir dosya geri getirilemez.',
+  // files-sync
+  'help.guide.files-sync.title': 'Belgeleri bir Nextcloud klasörüyle eşit tutun',
+  'help.guide.files-sync.goal':
+    'Geziyi kendi belge deponuzdaki bir klasöre bağlayın, böylece burada yüklenen oraya iner, orada dosyalanan burada belirir.',
+  'help.guide.files-sync.step.1':
+    'Araç çubuğunun sağ ucunda, Çöp kutusu yanındaki Belge eşitleme düğmesine tıklayın. Pencere, başlığının altında gezinin adıyla açılır. Solda, Sağlayıcı bağla altında, bir yöneticinin açtığı depolar durur, her biri nasıl dosyaladığına dair bir satırla, Nextcloud için Bir klasörde tutar; sağda Henüz bir şey bağlanmadı yazar.',
+  'help.guide.files-sync.step.2':
+    'Nextcloud düğmesine tıklayın. Bağlantı için depodan adını alan daha küçük bir pencere açılır, üstünde hesap parolanız yerine bir uygulama parolası kullanmanızı hatırlatan not.',
+  'help.guide.files-sync.step.3':
+    'Adres, Kullanıcı adı, e-posta adresiniz değil Nextcloud oturum açma adınız, ve Nextcloud’un Ayarlar, Güvenlik altında oluşturduğu Uygulama parolası alanlarını doldurun. Temel klasör isteğe bağlıdır: TREK’in gezi klasörlerini aradığı yerdir, siz başka bir şey demedikçe /TREK, burada /Reisen. Alttaki Kendinden imzalı sertifikayı kabul et yalnızca kendi ağınızda böyle bir sertifikası olan bir örnek içindir.',
+  'help.guide.files-sync.step.4':
+    'Bağlantıyı test et düğmesine tıklayın. TREK yazdıklarınızla depoya ulaşır ve alt bilgide hesabın adıyla Ulaşıldı, admin olarak oturum açıldı yazar, buradaki hesap admin. Reddedilen bir parola ya da ulaşılamayan bir adres bunun yerine orada adlandırılır ve iki durumda da hiçbir şey kaydedilmez.',
+  'help.guide.files-sync.step.5':
+    'Bağlan düğmesine tıklayın. Bağlantı geziyle birlikte kaydedilir ve TREK Bu gezi Nextcloud içinde nerede dursun? diye sorar. Yalnızca o klasördeki eşitlenir. Yeni bir tane oluştur, Oluştur ile temel klasörün altında gezinin başlığından önceden doldurulmuş bir adla bir klasör oluşturur; Ya da var olanlardan birini kullanın altında zaten orada olan klasörler durur. Birine tıklayın, burada Autumn in Japan.',
+  'help.guide.files-sync.step.6':
+    'Pencere geri gelir: Nextcloud solda Bu gezi altında durur ve sağdaki kartı klasörü, en son ne zaman çalıştığını ve Şimdi eşitle düğmesini taşır. İlk çalışma kendiliğinden başlar; Şimdi eşitle istediğiniz zaman bir tane çalıştırır. Bir çalışma bittiğinde adın yanındaki Henüz eşitlenmedi rozeti yerini yeşil bir noktaya bırakır, üzerine geldiğinizde Eşit durumda, ve akış çubuğu TREK ile Nextcloud’un her birinin tuttuğu belgeleri sayar, aralarında Depoya giden ve Depodan gelen şeritleriyle. Pencereyi × ile kapatın.',
+  'help.guide.files-sync.result':
+    'Klasörde zaten olan iki belge listenin en üstünde, sizin adınıza yüklenmiş olarak durur ve gezinin her belgesi klasörde de vardır. Bundan sonra TREK klasörü arka planda denetler ve klasör listeyi izler.',
+  'help.guide.files-sync.tip.1':
+    'Bir geziyi yalnızca gezinin sahibi ya da bir örnek yöneticisi bağlayabilir, çünkü uygulama parolası o Nextcloud hesabının tamamına ulaşır. Her üye Belge eşitleme’yi açabilir, kartı okuyabilir ve Şimdi eşitle düğmesine basabilir.',
+  'help.guide.files-sync.tip.2':
+    'Kendi ağınızdaki bir depo TREK sunucusunda ALLOW_INTERNAL_NETWORK=true ister ve adresi makinenin ağdaki adresi olmalıdır, asla localhost değil. Bu olmadan Bağlantıyı test et, Bu adrese izin verilmiyor. yanıtını verir.',
+  'help.guide.files-sync.tip.3':
+    'Karttaki Bağlantıyı kes eşleştirmeyi bitirir ve her belgeyi iki tarafta da tutar. İkinci kez bağlanan bir klasör yeni sayılır ve içindeki her şey yeniden gelir, bu yüzden bir Bağlantıyı kes sonrasında eskisi yerine boş bir klasör bağlayın.',
 
   // ── Screen: trip-day-detail ───────────────────────────────────────────────────────────
   'help.ctx.trip-day-detail.title': 'Gün ayrıntıları',
@@ -2685,6 +2757,38 @@ const help: TranslationStrings = {
     'Aynı ayarlardaki Rezervasyon rotalarını her zaman göster, hakkında henüz karar vermediğiniz her gezide onları en baştan çizer.',
   'help.guide.map-booking-routes.tip.3':
     'Bir rezervasyonun çizilebilmesi için koordinatlı iki uca ihtiyacı vardır, bu yüzden bir otel ya da bir restoran rota simgesi taşımaz.',
+  'help.ctx.trip-map.bullet.8':
+    'Dawarich eklentisi açıkken Tüm geziyi göster altındaki yuvarlak Dawarich düğmesi telefonunuzun gerçekten kaydettiği rotayı çizer: Kaydedilen rotayı göster onu planlanan rotanın altına kesikli olarak, her gün bir renkte serer ve çizgi olmadığında düğmenin etiketi neden olmadığını söyler.',
+  // map-dawarich-trail
+  'help.guide.map-dawarich-trail.title': 'Gerçekten gittiğiniz rotayı gösterin',
+  'help.guide.map-dawarich-trail.goal':
+    'Dawarich’in telefonunuzda kaydettiği rotayı haritaya, planladığınızın yanına kesikli olarak serin ve geziyi gün gün gerçekte nasıl geçtiyse öyle okuyun.',
+  'help.guide.map-dawarich-trail.step.1':
+    'Yuvarlak Dawarich düğmesi haritanın sağ altında, Tüm geziyi göster altında durur; üzerine gelmek Kaydedilen rotayı göster der. Tıklayın. TREK, Dawarich’inize gezinin tarihlerini sorar ve yanıt yoldayken düğmenin çevresinde bir halka döner.',
+  'help.guide.map-dawarich-trail.step.2':
+    'Kaydedilen rota her gün bir renkte kesikli bir çizgi olarak iner, plan okunabilir kalsın diye planlanan rotanın altına çizilir. Düğmede artık Kaydedilen rotayı gizle yazar. Günler yerel gece yarısında kesilir ve günler sütununda kapatılmış bir gün kesikli çizgisini duraklarıyla birlikte haritadan alır.',
+  'help.guide.map-dawarich-trail.step.3':
+    'Tüm geziyi göster düğmesine de tıklayın, her planlanan gün kesikli kaydın yanında düz çizilir. İkisinin birlikte gittiği yerde gün planlandığı gibi geçmiştir; kesikli çizginin saptığı yer geçmediği yerdir.',
+  'help.guide.map-dawarich-trail.result':
+    'Planladığınız ile gerçekte yaptığınız haritada birliktedir, kesikliye karşı düz, ve düğmelerin üstündeki kart hâlâ planlanan günleri ve mesafelerini listeler.',
+  'help.guide.map-dawarich-trail.tip.1':
+    'Açık ya da kapalı olduğu bu tarayıcı oturumu için gezi başına hatırlanır. Rota açıkken TREK her iki dakikada bir Dawarich’e yeniden sorar, böylece süren bir gezi yeniden yükleme olmadan yetişir; rotanın kendisi asla saklanmaz, yani TREK’in veritabanında, yedeklerde ve çevrimdışıyken yoktur.',
+  'help.guide.map-dawarich-trail.tip.2':
+    'Düğmenin etiketi boş bir haritayı açıklar: yoldayken Kaydedilen rota yükleniyor…, Bu tarihlerde hiçbir şey kaydedilmemiş, Kaydedilen rota yüklenemedi ya da TREK çevrimdışıyken Kaydedilen rota için bağlantı gerekir.',
+  // map-compass
+  'help.guide.map-compass.title': 'Haritayı döndürün ve kuzeyi yeniden bulun',
+  'help.guide.map-compass.goal':
+    'Haritayı gittiğiniz yöne bakacak şekilde döndürün ve tek tıklamayla kuzeye geri oturtun.',
+  'help.guide.map-compass.step.1':
+    'Haritayı sağ tuşla sürükleyerek ya da Ctrl basılı tutup sol tuşla sürükleyerek döndürün; dokunmatik ekranda iki parmakla çevirin. Haritanın üstündeki kategori simgeleri sırasının yanındaki yuvarlak pusula onunla döner: oku her zaman kuzeyi gösterir, bu yüzden ne kadar döndürdüyseniz o kadar yatar.',
+  'help.guide.map-compass.step.2':
+    'Pusulaya tıklayın. Düğmenin adı olan Reset north haritayı yumuşakça üstte kuzeye ve düz görünüme geri getirir, ok yeniden dik durur.',
+  'help.guide.map-compass.result':
+    'Harita yeniden kuzey üstte ve düzdür, gezide hiçbir şey değişmemiştir: pusula yalnızca kamerayı oynatır.',
+  'help.guide.map-compass.tip.1':
+    'Pusula yalnızca MapLibre GL ve Mapbox GL haritalarında vardır; Leaflet haritası döndürülemez, bu yüzden pusulası yoktur. Ayarlar içinde Harita altındaki Harita Sağlayıcısı hangisini kullandığınıza karar verir ve Haritayı Kaydet seçimi tutar.',
+  'help.guide.map-compass.tip.2':
+    'Tıklama eğimi de alır: sağ tuşla yukarı ya da aşağı sürüklemek görünümü eğer ve Reset north dönüşle birlikte onu da düzler. 3D Binalar ve Arazi açıkken Mapbox GL üzerinde bu, yeniden eğene kadar 3D görünümü de düzleştirir.',
 
   // ── Screen: trip-collab ───────────────────────────────────────────────────────────────
   'help.ctx.trip-collab.title': 'İş birliği',
@@ -3166,19 +3270,19 @@ const help: TranslationStrings = {
   'help.guide.import-booking-file.step.1':
     'Araç çubuğunda Dosyadan içe aktar düğmesine tıklayın. Rezervasyon onaylarını içe aktar açılır.',
   'help.guide.import-booking-file.step.2':
-    'Onayları kutunun üzerine bırakın ya da kutuya tıklayıp onları seçin: EML, PDF, PKPass, HTML ve TXT, her biri 10 MB olan en fazla beş dosya. Seçtikleriniz kutunun üzerinde adlarıyla yazar.',
+    'Onayları kutunun üzerine bırakın ya da kutuya tıklayıp seçin: EML, PDF, PKPass, HTML ve TXT, her biri 10 MB olan en fazla beş dosya. Seçtikleriniz kutunun üzerinde adlarıyla yazar.',
   'help.guide.import-booking-file.step.3':
     'İçe aktar düğmesine tıklayın. Okuma arka planda olduğu için pencere hemen kapanır.',
   'help.guide.import-booking-file.step.4':
-    'Sağ altta bir kart işin gidişatını bildirir ve uygulama içinde, bir yeniden yüklemede bile sizi izler. Bittiğinde İçe aktar sunar ve bu gözden geçirmeyi başlatır: bulduğu her rezervasyon, doldurulmuş ve belgesi eklenmiş olarak sıradan formda açılır, siz denetleyip birer birer Ekle diyebilesiniz diye.',
+    'Sağ altta bir kart, dosyanın adı altında işin gidişatını bildirir ve uygulama içinde, bir yeniden yüklemede bile sizi izler. Okuma bittiğinde Dosyalar işleniyor… bir onay işaretine dönüşür ve kart İçe aktar sunar. Tıklayın.',
   'help.guide.import-booking-file.result':
-    'Onayladığınız her rezervasyon kendi kartıdır, koduyla, tarihleriyle ve geldiği belgeyle; bir konaklama gecelerini de almıştır ve Maliyetler açıkken onayda duran bir fiyat bir harcamaya dönüşmüştür.',
+    'Rezervasyon, geceleri, kodu ve Dosyalar altındaki onayıyla Askıda olması altında bir karttır, konaklama planın o günlerinde durur ve Maliyetler açıkken fiyat ona bağlı bir harcamadır.',
   'help.guide.import-booking-file.tip.1':
     'Dosyadan içe aktar yalnızca sunucu onayları okuyabildiğinde vardır, bunun için de ya çıkarıcı ya da Yapay zekâ ile ayrıştırma eklentisi gerekir. Yönetici o eklentiyi Eklentiler altından açıp kapatır.',
   'help.guide.import-booking-file.tip.2':
-    'Hiçbir şey okunamadıysa kart bunu söyler ve aynı dosyaları doğrudan modele gönderen Try AI parsing sunar.',
+    'Hiçbir şey okunamadıysa kart bunu söyler ve aynı dosyaları doğrudan modele gönderen Try AI parsing sunar. Biten bir ayrıştırma on dakika saklanır; gözden geçirmeyi bu süre içinde başlatın.',
   'help.guide.import-booking-file.tip.3':
-    'Biten bir ayrıştırma on dakika saklanır. Gözden geçirmeyi bu süre içinde başlatın.',
+    'Onay yalnızca türü yönetici ayarlarındaki İzin Verilen Dosya Türleri arasında olduğunda eklenir. PDF baştan oradadır; bir posta, EML, önce eklenmelidir, yoksa rezervasyon onsuz kaydedilir.',
   // edit-booking
   'help.guide.edit-booking.title': 'Bir rezervasyonu değiştirin',
   'help.guide.edit-booking.goal':
@@ -3209,6 +3313,9 @@ const help: TranslationStrings = {
     'Bir konaklama rezervasyonunu silmek gecelerini de gün planından çıkarır ve ona bağlı olan harcamayı kaldırır.',
   'help.guide.delete-booking.tip.2':
     'Eklenmiş olan belgeler gezinin Dosyalar sekmesinde kalır; yalnızca rezervasyona olan bağları gider.',
+  // import-booking-file
+  'help.guide.import-booking-file.step.5':
+    'Bulunan her rezervasyon Yeni Rezervasyon içinde, art arda ve çoktan doldurulmuş olarak açılır. Bir otel için bu, Başlık içindeki ad ve gezide yer varsa Konaklama altında yer, Konum / Adres bilgisi, geceleri üzerinde İtibaren ve İle, Giriş ve Çıkış yapmak, Rezervasyon Kodu, Dosyalar altında onay ve Maliyetler açıkken Linked expense olarak fiyattır. Denetleyin ve Ekle düğmesine tıklayın.',
 
   // ── Screen: trip-costs ────────────────────────────────────────────────────────────────
   'help.ctx.trip-costs.title': 'Maliyetler',
@@ -3548,6 +3655,50 @@ const help: TranslationStrings = {
     'Onaylanmış bir rezervasyon düz bir çizgidir, askıdaki bir rezervasyon kesik çizgidir. Rezervasyon rota etiketleri ayarı uç işaretçilerine havaalanı kodunu ya da istasyon adını yazar.',
   'help.guide.transport-on-map.tip.3':
     'Tüm rezervasyon rotalarını göster bir katman değil, temiz bir sayfadır: tek tek simgelerin ayarladığını atar, bu yüzden iki kez basmak sizi ya her şey açık ya da her şey kapalı bırakır.',
+  // import-transport-file
+  'help.guide.import-transport-file.title': 'Bir uçuşu e-biletinden okuyun',
+  'help.guide.import-transport-file.goal':
+    'Taşıyıcının gönderdiği biletten bir uçuşu, treni ya da feribotu TREK çekip çıkarsın ve kaydedilmeden önce siz denetleyin.',
+  'help.guide.import-transport-file.step.1':
+    'Ulaşım sekmesinin araç çubuğunda, Ulaşım düğmesinin yanındaki Dosyadan içe aktar düğmesine tıklayın. Rezervasyonlar sekmesindekiyle aynı pencere olan Rezervasyon onaylarını içe aktar açılır.',
+  'help.guide.import-transport-file.step.2':
+    'Bileti kutunun üzerine bırakın ya da kutuya tıklayıp seçin: EML, PDF, PKPass, HTML ve TXT, her biri 10 MB olan en fazla beş dosya. Seçtiğiniz dosyalar kutunun üzerinde adlarıyla yazar.',
+  'help.guide.import-transport-file.step.3':
+    'İçe aktar düğmesine tıklayın. Pencere hemen kapanır; okuma arka planda olur.',
+  'help.guide.import-transport-file.step.4':
+    'Sağ altta bir kart, dosyanın adı altında işin gidişatını bildirir. Okuma bittiğinde Dosyalar işleniyor… bir onay işaretine dönüşür ve kart İçe aktar sunar. Tıklayın.',
+  'help.guide.import-transport-file.step.5':
+    'Ulaşım ekle içinde, çoktan doldurulmuş bir uçuş açılır: Rezervasyon Türü Uçuş üzerinde, havayolu ve uçuş numarası Başlık içinde, iki havalimanı Rota altında Kalkış ve Varış ile, saatleri ve saat dilimleri, Havayolu ve Uçuş No., Rezervasyon Kodu ve Dosyalar altında bilet. Denetleyin ve Ekle düğmesine tıklayın.',
+  'help.guide.import-transport-file.result':
+    'Uçuş, Ulaşım sekmesinde Askıda olması altında bir kart ve kalktığı günde bir satırdır, bilet Dosyalar altındadır ve iki havalimanı da bilindiğinden eğrisini haritaya çizer.',
+  'help.guide.import-transport-file.tip.1':
+    'İki sekme tek bir içe aktarmayı paylaşır: bir uçuş ve bir otel taşıyan bir dosya, hangi sekmeden başlamış olursanız olun, uçuşu Ulaşım ekle içinde, oteli Yeni Rezervasyon içinde art arda açar.',
+  'help.guide.import-transport-file.tip.2':
+    'Havalimanları koduyla yerleştirilir. Okumanın konumlandıramadığı bir istasyon ya da liman kartta kehribar renkte adlandırılır; Ekle düğmesine tıklamadan önce onu Rota altında elle seçin, yoksa ulaşım haritaya hiçbir şey çizmez.',
+  // airtrail-import
+  'help.guide.airtrail-import.title': 'AirTrail’den uçuşları içe aktarın',
+  'help.guide.airtrail-import.goal':
+    'AirTrail’de zaten tuttuğunuz uçuşları tek seferde geziye getirin ve o andan itibaren AirTrail’i izlesinler.',
+  'help.guide.airtrail-import.step.1':
+    'AirTrail eklentisi açıkken ve örneğiniz Ayarlar içindeki Entegrasyonlar altında bağlıyken Ulaşım sekmesinin araç çubuğu, Ulaşım düğmesinin yanında bir AirTrail düğmesi taşır. Tıklayın.',
+  'help.guide.airtrail-import.step.2':
+    "AirTrail'den içe aktar hesabınızın uçuşlarını iki grupta listeler. Bu gezi sırasında gezinin içine tarihlenmiş olanları, çoktan işaretli olarak tutar; Diğer uçuşlar geri kalanı, işaretsiz olarak tutar. Gezide zaten olan bir uçuş gri görünür ve İçe aktarıldı ile işaretlidir.",
+  'help.guide.airtrail-import.step.3':
+    'Her satır havayolu ve uçuş numarasıyla, iki havalimanıyla ve tarihle bir onay kutusudur. Uçuşu almak ya da dışarıda bırakmak için satıra tıklayın; Diğer uçuşlar altındakiler yalnızca siz işaretlerseniz gelir.',
+  'help.guide.airtrail-import.step.4':
+    'Birbirine bağlanan uçuşlar, her biri bir öncekinin indiği havalimanından bir gün içinde kalkanlar, birlikte çerçevelenir. Altındaki onay kutusu, o havalimanı aktarmalı tek uçuş olarak içe aktar, zaten açıktır: aktarmalı tek bir rezervasyon için açık bırakın ya da etapları ayrı uçuşlar olarak içe aktarmak için kapatın.',
+  'help.guide.airtrail-import.step.5':
+    'İçe aktar düğmesine tıklayın. Düğme işaretli uçuşları sayar ve sonraki mesaj kaç tanesinin geldiğini söyler.',
+  'help.guide.airtrail-import.step.6':
+    'Uçuşlar Onaylandı altında kartlardır, her biri durumunun yanında mavi bir AirTrail rozetiyle, ve gittikleri günlerde satırlardır. Birleştirilmiş bir bağlantı tek bir karttır, rotası aktarmadan geçer.',
+  'help.guide.airtrail-import.result':
+    'AirTrail’den gelen uçuşlar Ulaşım sekmesinde kartlar ve günlerinde satırlardır, her biri nereden geldiğini söyleyen AirTrail rozetini taşır.',
+  'help.guide.airtrail-import.tip.1':
+    'Aynı numara ve tarihle gezide zaten olan bir uçuş atlanır ve bir mesaj kaç tanesinin atlandığını söyler. Günlerin üstündeki araç çubuğundaki Geri al bütün içe aktarmayı geri alır.',
+  'help.guide.airtrail-import.tip.2':
+    'AirTrail doğruluk kaynağı olarak kalır. TREK geziyi açtığınızda ve arka planda birkaç dakikada bir onun değişikliklerini okur; orada silinen bir uçuş kartını korur, rozeti Senkronize değil olur. TREK’te yapılan düzenlemeler yalnızca Entegrasyonlar altında Değişiklikleri AirTrail’e geri yaz açıkken geri gider.',
+  'help.guide.airtrail-import.tip.3':
+    'Birleştirilmiş bir bağlantının izleyeceği tek bir AirTrail uçuşu yoktur, bu yüzden tek seferlik bir içe aktarmadır: mavi rozeti korur ve rozetin üzerine gelmek bunu söyler. Elle bir durak verdiğiniz senkronize bir uçuşa da aynısı olur.',
 
   // ── Screen: trip-roadtrip ─────────────────────────────────────────────────────────────
   'help.ctx.trip-roadtrip.title': 'Yol gezisi',

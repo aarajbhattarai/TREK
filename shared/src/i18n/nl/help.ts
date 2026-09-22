@@ -464,6 +464,38 @@ const help: TranslationStrings = {
     'Steden worden uit de adrestekst gelezen, niet opgezocht, dus een kort adres als „Osteria Francescana, Italy“ of een dat eindigt op een prefectuur kan een regio opleveren in plaats van een stad.',
   'help.guide.stats.tip.2':
     'Met de hand gemarkeerde landen tellen mee in Landen en de continenten, maar brengen geen reizen, plekken of dagen mee.',
+  // dawarich-countries
+  'help.guide.dawarich-countries.title': 'Landen toevoegen uit je opnames',
+  'help.guide.dawarich-countries.goal':
+    'Laat Dawarich zeggen in welke landen je het afgelopen jaar was, en zet de landen die je bevestigt op de kaart.',
+  'help.guide.dawarich-countries.step.1':
+    'Met de add-on Dawarich verbonden zit er onderaan de kaart, links van de statistieken, een paneel Dawarich met twee tegels. Klik op Landen.',
+  'help.guide.dawarich-countries.step.2':
+    'Het venster gaat open op zijn tabblad Landen. Klik op Naar landen zoeken: TREK leest de landen en steden die je opnames in de laatste 12 maanden beslaan, maand voor maand, dus geef het even. Elk land dat je Atlas nog niet heeft staat in de lijst met zijn vlag, hoeveel steden, en de eerste daarvan bij naam, en begint aangevinkt; klik op een rij om hem weg te laten.',
+  'help.guide.dawarich-countries.step.3':
+    'Bevestig met de knop rechtsonder, die 5 landen toevoegen leest als er vijf rijen zijn aangevinkt. Het venster zegt hoeveel er zijn toegevoegd; sluit het en de kaart heeft zichzelf opnieuw ingelezen.',
+  'help.guide.dawarich-countries.result':
+    'De bevestigde landen dragen een kleur op de kaart en tellen mee in Landen, vastgelegd als afkomstig uit Dawarich. Wat je met de hand markeerde blijft ongemoeid.',
+  'help.guide.dawarich-countries.tip.1':
+    'Landen die de Atlas al als bezocht toont, met de hand, uit een reis of uit een eerdere controle, worden weggelaten, dus je eigen markeringen krijgen nooit een ander label. Een land dat je eerder uit de Atlas haalde komt terug als je het hier bevestigt.',
+  'help.guide.dawarich-countries.tip.2':
+    'Een landnaam die TREK niet kan koppelen staat onder de rijen in plaats van weg te vallen, en Opnieuw controleren vraagt het Dawarich nog eens. De notitie onder de lijst zegt dat de laatste 12 maanden zijn bekeken; dat venster ligt vast.',
+  // dawarich-wishes
+  'help.guide.dawarich-wishes.title': 'Wensen afvinken uit je opnames',
+  'help.guide.dawarich-wishes.goal':
+    'Kom erachter welke plekken op je bucketlist je echt hebt bereikt, en vink ze af op de dag dat het gebeurde.',
+  'help.guide.dawarich-wishes.step.1':
+    'Klik in het paneel Dawarich onderaan de kaart, links van de statistieken, op Wensenlijst.',
+  'help.guide.dawarich-wishes.step.2':
+    'Het venster gaat open op zijn tabblad Wensenlijst. Klik op Wensenlijst controleren: TREK zoekt in je opnames naar elke vermelding die coördinaten heeft. Een wens die je bereikte staat in de lijst met hoe dichtbij je kwam, hoe lang je bleef en de dag, en begint aangevinkt; een die je al afvinkte zegt Al afgevinkt. Onder de lijst telt een notitie de vermeldingen zonder coördinaten, en daar staat ook de regel: Een wens telt als bereikt binnen 250 m en na 20 minuten ter plaatse.',
+  'help.guide.dawarich-wishes.step.3':
+    'Bevestig met de knop rechtsonder, die 2 afvinken leest als er twee rijen zijn aangevinkt. Sluit dan het venster en open het tabblad Bucketlist van het paneel ernaast.',
+  'help.guide.dawarich-wishes.result':
+    'Elke wens draagt een groen vinkje met de datum van het verblijf, niet van vandaag; zijn tooltip zegt Afgevinkt op basis van je Dawarich-opnames, en een klik op de datum maakt het ongedaan.',
+  'help.guide.dawarich-wishes.tip.1':
+    'Voorbijrijden telt niet: de regel vraagt zowel nabijheid als tijd, en van meerdere verblijven die voldoen wint het langste. Een wens zonder coördinaten kan niet worden gecontroleerd, voeg plekken dus toe via het zoeken in Plaats toevoegen in plaats van alleen bij naam.',
+  'help.guide.dawarich-wishes.tip.2':
+    'Eén controle bekijkt tot 50 vermeldingen, eerst de nog niet afgevinkte, en zegt het als er meer waren. Een wens die al was afgevinkt houdt zijn eigen datum.',
 
   // ── Screen: collections ───────────────────────────────────────────────────────────────
   'help.ctx.collections.title': 'Collecties',
@@ -1702,6 +1734,19 @@ const help: TranslationStrings = {
   'help.guide.audit-log.tip.1': 'Tijden worden getoond in de tijdzone van de server, die boven de tabel staat.',
   'help.guide.audit-log.tip.2':
     'Het logboek is alleen-toevoegen; niets hier kan vanuit de app worden bewerkt of verwijderd.',
+  // document-providers
+  'help.guide.document-providers.title': 'Een documentopslag aanbieden',
+  'help.guide.document-providers.goal': 'Bepaal met welke opslagen een reis haar documenten in de pas mag houden.',
+  'help.guide.document-providers.step.1':
+    'De tegel Documenten draagt de opslagen als rijen op zijn plank: Paperless-ngx, Papra, Nextcloud, OpenCloud en Synology Drive. Alle vijf beginnen uitgeschakeld, en de plank is er alleen zolang Documenten zelf aanstaat.',
+  'help.guide.document-providers.step.2':
+    'Zet de schakelaar op de rij Nextcloud om. De melding leest Add-on bijgewerkt, en vanaf nu vinden reiseigenaren Documentsynchronisatie op het tabblad Bestanden van hun reizen, met Nextcloud onder Aanbieder koppelen.',
+  'help.guide.document-providers.result':
+    'De opslag wordt op elke reis van deze TREK aangeboden; er is niets verbonden tot een reiseigenaar dat doet.',
+  'help.guide.document-providers.tip.1':
+    'Hier wordt alleen beslist of een opslag mag worden aangeboden. Het adres en de inloggegevens horen bij een reis en worden door de eigenaar van de reis op haar tabblad Bestanden ingevoerd, nooit in het beheerpaneel.',
+  'help.guide.document-providers.tip.2':
+    'Documenten uitzetten zet elke opslag mee uit, en een opslag kan niet aan zolang Documenten uit staat: de server antwoordt Enable the Documents addon first. Een opslag op je eigen netwerk heeft daarnaast ALLOW_INTERNAL_NETWORK=true op de server nodig.',
 
   // ── Screen: trip ──────────────────────────────────────────────────────────────────────
   'help.ctx.trip.title': 'Reis',
@@ -2162,30 +2207,30 @@ const help: TranslationStrings = {
   'help.ctx.trip-place.bullet.5':
     'De rij onderaan: Toevoegen aan dag of Verwijderen van dag zolang een dag open is, dan In collectie opslaan, Navigatie, Website openen, Bewerken en Verwijderen.',
   'help.ctx.trip-place.bullet.6':
-    'Een plek die TREK aan een kaartaanbieder kon koppelen toont meer: de beoordeling van die aanbieder met een recensie, het telefoonnummer, en een ring om de afbeelding die Openingstijden of Gesloten zegt, met de openingstijden van de week erachter.',
+    'Een plek die uit het zoeken is gekozen draagt wat de TREK-index of OpenStreetMap over hem weten: een groene ring met Openingstijden of een rode met Gesloten om de afbeelding, beoordeeld naar de eigen klok van de plek, het telefoonnummer onder de sterren, Openingstijden verderop met de regel van de dag op de rij en de hele week achter een klik, en zijn website achter Website openen. De beoordeling van Google verschijnt alleen bij een plek die via Google is gevonden, op een TREK met een Google-sleutel.',
   // read-place
   'help.guide.read-place.title': 'Wat de plaatsdetails je over een plek vertellen',
   'help.guide.read-place.goal': 'Lees alles wat de reis over een plek weet, in één venster.',
   'help.guide.read-place.step.1':
     'Klik in de dagenkolom op de stop die je wilt lezen. De plaatsdetails gaan boven de kaart open en de stop blijft gemarkeerd in zijn dag.',
   'help.guide.read-place.step.2':
-    'De kop: de ronde afbeelding, de naam, het adres en de exacte coördinaten. De X rechts sluit de details weer.',
+    'De kop: de ronde afbeelding, de naam, het adres en de exacte coördinaten. Een groene ring met Openingstijden, of een rode met Gesloten, om de afbeelding zegt of de plek op dit moment open is, naar zijn eigen klok, zodra TREK zijn tijden kent. De X rechts sluit de details weer.',
   'help.guide.read-place.step.3':
-    'Daaronder de sterren die elke reiziger de plek gaf, met het gemiddelde en hoeveel er stemden. Nog niet beoordeeld zolang niemand dat deed.',
+    'Daaronder de sterren die elke reiziger de plek gaf, met het gemiddelde en hoeveel er stemden. Nog niet beoordeeld zolang niemand dat deed. Direct daaronder het telefoonnummer waar de plek er een heeft: een klik erop geeft het nummer door aan je telefoon-app.',
   'help.guide.read-place.step.4':
     'Dan de beschrijving en daaronder de notities. Allebei zijn het de tekst uit het formulier van de plek, gerenderd: lijsten, links en vet werken allemaal.',
   'help.guide.read-place.step.5':
     'Deelnemers zegt wie er naar deze stop gaat. Iedereen doet mee tot je iemand eruit haalt.',
   'help.guide.read-place.step.6':
-    'De rij onderaan is wat je hiervandaan kunt doen: de plek van de open dag halen of erop zetten, hem in een lijst opslaan, hem in een kaarten-app openen, hem bewerken of verwijderen.',
+    'Openingstijden, verderop: de rij draagt de tijden van de dag waar je naar kijkt, en een klik erop vouwt de hele week open met die dag in vet. Bestanden staat ernaast.',
   'help.guide.read-place.result':
-    'De details blijven open tot je ze met de X sluit of een andere plek kiest, en de stop waar ze bij horen blijft gemarkeerd in de dagenkolom.',
+    'De details blijven open tot je ze met de X sluit of een andere plek kiest, de tijden van de week blijven opengevouwen, en de stop waar ze bij horen blijft gemarkeerd in de dagenkolom.',
   'help.guide.read-place.tip.1':
     'Vanuit de plekkenkolom gekozen kennen de details de plek maar geen stop, dus tonen ze geen deelnemers en geen boeking. Kies in plaats daarvan de stop in de dag, dan zijn ze er allebei.',
   'help.guide.read-place.tip.2':
     'Dubbelklik op de naam om de plek te hernoemen zonder het formulier te openen. Enter slaat op, Escape laat de wijziging vallen.',
   'help.guide.read-place.tip.3':
-    'Een plek die TREK aan een kaartaanbieder kon koppelen toont ook de beoordeling van die aanbieder, een recensie, het telefoonnummer en de openingstijden.',
+    'Een plek die met de hand is ingetypt toont daar niets van: de details kennen alleen wat het formulier bevat. Open hem met Bewerken, kies hem uit de suggesties onder Plaatsen zoeken… en klik op Bijwerken, en de tijden, het telefoonnummer en de website komen mee. De beoordeling van Google heeft een Google-sleutel nodig.',
   // rate-place
   'help.guide.rate-place.title': 'Een plek beoordelen',
   'help.guide.rate-place.goal': 'Geef een plek je eigen sterren, en zie wat iedereen hem gaf.',
@@ -2352,6 +2397,9 @@ const help: TranslationStrings = {
     'Een track die met hoogtes is opgenomen toont ook zijn hoogste en laagste punt, de meters omhoog en omlaag, en het profiel van de wandeling.',
   'help.guide.place-track.tip.3':
     'Een import geeft elke track die hij binnenhaalt een eigen kleur, zo komen twee wandelingen nooit in dezelfde binnen.',
+  // read-place
+  'help.guide.read-place.step.7':
+    'De rij onderaan is wat je hiervandaan kunt doen: de plek van de open dag halen of erop zetten, hem in een lijst opslaan, hem in een kaarten-app openen, hem bewerken of verwijderen.',
 
   // ── Screen: trip-files ────────────────────────────────────────────────────────────────
   'help.ctx.trip-files.title': 'Bestanden',
@@ -2485,6 +2533,30 @@ const help: TranslationStrings = {
     'Een bestand weggooien en terughalen vraagt het recht Bestanden verwijderen. Een lid zonder dat recht ziet Verwijderen op de rij niet en de knoppen in de prullenbak ook niet.',
   'help.guide.files-trash.tip.3':
     'Een bestand dat in de prullenbak voorgoed is verwijderd, kan niet worden teruggehaald.',
+  // files-sync
+  'help.guide.files-sync.title': 'De documenten in de pas houden met een Nextcloud-map',
+  'help.guide.files-sync.goal':
+    'Koppel de reis aan een map in je eigen documentopslag, zodat wat hier wordt geüpload daar belandt en wat daar wordt opgeborgen hier opduikt.',
+  'help.guide.files-sync.step.1':
+    'Klik op Documentsynchronisatie, naast Prullenbak aan de rechterkant van de werkbalk. Het venster gaat open met de naam van de reis onder zijn titel. Links, onder Aanbieder koppelen, staan de opslagen die een beheerder heeft aangezet, elk met een regel over hoe hij ordent, Ordent in een map voor Nextcloud; rechts leest het Nog niets verbonden.',
+  'help.guide.files-sync.step.2':
+    'Klik op Nextcloud. Een kleiner venster gaat open voor de verbinding, genoemd naar de opslag, met bovenaan de herinnering om een app-wachtwoord te gebruiken in plaats van je accountwachtwoord.',
+  'help.guide.files-sync.step.3':
+    'Vul Adres in, Gebruikersnaam, je Nextcloud-inlognaam en niet je e-mailadres, en App-wachtwoord, dat Nextcloud aanmaakt onder Instellingen, Beveiliging. Basismap is optioneel: het is waar TREK naar reismappen zoekt, /TREK tenzij je anders zegt, hier /Reisen. Zelfondertekend certificaat toestaan onderaan is alleen voor een instantie op je eigen netwerk met zo’n certificaat.',
+  'help.guide.files-sync.step.4':
+    'Klik op Verbinding testen. TREK bereikt de opslag met wat je typte en de voettekst leest Bereikt, aangemeld als gevolgd door de naam van het account, hier admin. Een wachtwoord dat wordt geweigerd of een adres dat niet bereikbaar is staat daar in plaats daarvan, en in beide gevallen wordt er niets opgeslagen.',
+  'help.guide.files-sync.step.5':
+    'Klik op Verbinden. De verbinding wordt bij de reis opgeslagen en TREK vraagt Waar moet deze reis in Nextcloud komen te staan? Alleen wat in die map staat wordt gesynchroniseerd. Een nieuwe maken maakt bij Aanmaken een map onder de basismap, met een naam die uit de titel van de reis is voorgevuld; onder Of gebruik er een die je al hebt staan de mappen die er al zijn. Klik op een ervan, hier Autumn in Japan.',
+  'help.guide.files-sync.step.6':
+    'Het venster is terug: Nextcloud staat links onder Deze reis, en zijn kaart rechts draagt de map, wanneer hij voor het laatst liep en Nu synchroniseren. Een eerste uitvoering start vanzelf; Nu synchroniseren draait er een wanneer je maar wilt. Zodra een uitvoering klaar is, maakt de badge Nog niet gesynchroniseerd naast de naam plaats voor een groene stip, Synchroon als je erop wijst, en de stroombalk telt de documenten die TREK en Nextcloud elk hebben, met de banen Naar de opslag en Uit de opslag ertussen. Sluit het venster met de ×.',
+  'help.guide.files-sync.result':
+    'De twee documenten die al in de map stonden staan bovenaan de lijst, geüpload op jouw naam, en elk document van de reis staat ook in de map. Vanaf nu controleert TREK de map op de achtergrond en volgt de map de lijst.',
+  'help.guide.files-sync.tip.1':
+    'Alleen de eigenaar van de reis of een beheerder van de instantie kan een reis koppelen, omdat het app-wachtwoord dat hele Nextcloud-account bereikt. Elk lid kan Documentsynchronisatie openen, de kaart lezen en op Nu synchroniseren drukken.',
+  'help.guide.files-sync.tip.2':
+    'Een opslag op je eigen netwerk heeft ALLOW_INTERNAL_NETWORK=true op de TREK-server nodig, en zijn adres moet het adres van de machine op het netwerk zijn, nooit localhost. Zonder dat antwoordt Verbinding testen Dat adres is niet toegestaan.',
+  'help.guide.files-sync.tip.3':
+    'Verbinding verbreken op de kaart beëindigt de koppeling en houdt elk document aan beide kanten. Een map die een tweede keer wordt gekoppeld geldt als nieuw, en alles erin komt opnieuw binnen, koppel na een Verbinding verbreken dus een lege map in plaats van de oude.',
 
   // ── Screen: trip-day-detail ───────────────────────────────────────────────────────────
   'help.ctx.trip-day-detail.title': 'Dagdetails',
@@ -2753,6 +2825,38 @@ const help: TranslationStrings = {
     'Boekingsroutes altijd tonen, in dezelfde instellingen, tekent ze vanaf het begin op elke reis waarover je nog niet hebt beslist.',
   'help.guide.map-booking-routes.tip.3':
     'Een boeking heeft twee uiteinden met coördinaten nodig voordat hij getekend kan worden, dus een hotel of een restaurant draagt geen route-icoon.',
+  'help.ctx.trip-map.bullet.8':
+    'Met de add-on Dawarich aan tekent de ronde knop Dawarich onder Hele reis tonen de route die je telefoon echt heeft opgenomen: Opgenomen route tonen legt hem gestreept onder de geplande route, één kleur per dag, en het label van de knop zegt waarom er geen lijn is als die er niet is.',
+  // map-dawarich-trail
+  'help.guide.map-dawarich-trail.title': 'De route tonen die je echt hebt afgelegd',
+  'help.guide.map-dawarich-trail.goal':
+    'Leg de route die Dawarich op je telefoon opnam over de kaart, gestreept naast de route die je plande, en lees de reis dag voor dag zoals hij echt ging.',
+  'help.guide.map-dawarich-trail.step.1':
+    'De ronde knop Dawarich zit rechtsonder op de kaart, onder Hele reis tonen; erover zweven zegt Opgenomen route tonen. Klik erop. TREK vraagt je Dawarich naar de datums van de reis, en er draait een ring om de knop zolang het antwoord onderweg is.',
+  'help.guide.map-dawarich-trail.step.2':
+    'De opgenomen route landt als een gestreepte lijn, één kleur per dag, onder de geplande route getekend zodat het plan leesbaar blijft. De knop leest nu Opgenomen route verbergen. Dagen worden bij plaatselijke middernacht geknipt, en een dag die in de dagenkolom is dichtgeklapt neemt zijn gestreepte lijn samen met zijn stops van de kaart.',
+  'help.guide.map-dawarich-trail.step.3':
+    'Klik ook op Hele reis tonen en elke geplande dag wordt doorgetrokken naast de gestreepte opname getekend. Waar de twee samenlopen ging de dag zoals gepland; waar de gestreepte lijn afdwaalt is waar dat niet zo was.',
+  'help.guide.map-dawarich-trail.result':
+    'Wat je plande en wat je echt deed staan samen op de kaart, gestreept tegenover doorgetrokken, en het kaartje boven de knoppen noemt nog steeds de geplande dagen en hun afstanden.',
+  'help.guide.map-dawarich-trail.tip.1':
+    'Aan of uit wordt per reis onthouden voor deze browsersessie. Zolang de route aanstaat vraagt TREK Dawarich elke twee minuten opnieuw, zo loopt een reis die bezig is bij zonder herladen; de route zelf wordt nooit opgeslagen, dus hij zit niet in de database van TREK, niet in back-ups en is er offline niet.',
+  'help.guide.map-dawarich-trail.tip.2':
+    'Het label van de knop verklaart een lege kaart: De opgenomen route wordt geladen… zolang hij onderweg is, Op deze datums is er niets opgenomen, De opgenomen route kon niet worden geladen, of De opgenomen route heeft een verbinding nodig als TREK offline is.',
+  // map-compass
+  'help.guide.map-compass.title': 'De kaart draaien en het noorden terugvinden',
+  'help.guide.map-compass.goal':
+    'Draai de kaart in de richting waarin je gaat, en zet hem met één klik terug naar het noorden.',
+  'help.guide.map-compass.step.1':
+    'Draai de kaart door met de rechtermuisknop te slepen, of houd Ctrl ingedrukt en sleep met de linkerknop; op een aanraakscherm draai je met twee vingers. Het ronde kompas naast de rij categorie-iconen bovenaan de kaart draait mee: zijn pijl wijst altijd naar het noorden, dus hij helt zover als jij hebt gedraaid.',
+  'help.guide.map-compass.step.2':
+    'Klik op het kompas. Reset north, zoals de knop heet, laat de kaart soepel terugkeren naar het noorden bovenaan en naar een vlak beeld, en de pijl staat weer rechtop.',
+  'help.guide.map-compass.result':
+    'De kaart staat weer met het noorden boven en vlak, en aan de reis is niets veranderd: het kompas beweegt alleen de camera.',
+  'help.guide.map-compass.tip.1':
+    'Het kompas bestaat alleen op de kaarten van MapLibre GL en Mapbox GL; de Leaflet-kaart kan niet worden gedraaid, dus die heeft er geen. Kaartprovider in Instellingen, onder Kaart, bepaalt welke je gebruikt, en Kaart opslaan houdt de keuze vast.',
+  'help.guide.map-compass.tip.2':
+    'De klik haalt ook de kanteling eruit: met de rechtermuisknop omhoog of omlaag slepen kantelt het beeld, en Reset north zet het samen met de draaiing weer vlak. Op Mapbox GL met 3D-gebouwen & terrein aan maakt dat ook het 3D-beeld plat, tot je het weer kantelt.',
 
   // ── Screen: trip-collab ───────────────────────────────────────────────────────────────
   'help.ctx.trip-collab.title': 'Samenwerking',
@@ -3241,15 +3345,15 @@ const help: TranslationStrings = {
   'help.guide.import-booking-file.step.3':
     'Klik op Importeren. Het venster sluit meteen, want het lezen gebeurt op de achtergrond.',
   'help.guide.import-booking-file.step.4':
-    'Een kaart rechtsonder doet verslag van de uitvoering, en die volgt je door de app en door een herlaadbeurt heen. Als hij klaar is biedt hij Importeren aan, wat de controle start: elke boeking die hij vond opent in het gewone formulier, ingevuld en met haar document erbij, zodat jij ze nakijkt en de een na de ander op Toevoegen klikt.',
+    'Een kaart rechtsonder doet verslag van de uitvoering onder de naam van het bestand, en die volgt je door de app en door een herlaadbeurt heen. Bestanden verwerken… wordt een vinkje als het lezen klaar is, en de kaart biedt Importeren aan. Klik erop.',
   'help.guide.import-booking-file.result':
-    'Elke boeking die je bevestigde is een eigen kaart met haar code, haar data en het document waar ze uit kwam; een accommodatie kreeg er ook haar nachten bij, en met Onkosten aan werd een prijs die in de bevestiging stond een uitgave.',
+    'De boeking is een kaart in In behandeling met haar nachten, haar code en de bevestiging onder Bestanden, het verblijf staat op die dagen van het plan, en met Onkosten aan is de prijs een uitgave die eraan hangt.',
   'help.guide.import-booking-file.tip.1':
-    'Importeren vanuit bestand is er alleen als de server bevestigingen kan lezen, en dat vraagt ofwel de ingebouwde uitlezer ofwel de add-on AI-analyse. Die laatste zet de beheerder onder Add-ons om.',
+    'Importeren vanuit bestand is er alleen als de server bevestigingen kan lezen, en dat vraagt ofwel de uitlezer ofwel de add-on AI-analyse. Die laatste zet de beheerder onder Add-ons om.',
   'help.guide.import-booking-file.tip.2':
-    'Als er niets gelezen kon worden zegt de kaart dat en biedt ze Try AI parsing aan, dat dezelfde bestanden rechtstreeks naar het model stuurt.',
+    'Als er niets gelezen kon worden zegt de kaart dat en biedt ze Try AI parsing aan, dat dezelfde bestanden rechtstreeks naar het model stuurt. Een afgeronde verwerking wordt tien minuten bewaard; start de controle binnen dat venster.',
   'help.guide.import-booking-file.tip.3':
-    'Een afgeronde verwerking wordt tien minuten bewaard. Start de controle binnen dat venster.',
+    'De bevestiging wordt alleen bijgevoegd als haar type bij de Toegestane bestandstypen van de beheerinstellingen staat. PDF staat er standaard; een mail, EML, moet eerst worden toegevoegd, anders wordt de boeking zonder opgeslagen.',
   // edit-booking
   'help.guide.edit-booking.title': 'Een boeking wijzigen',
   'help.guide.edit-booking.goal':
@@ -3281,6 +3385,9 @@ const help: TranslationStrings = {
     'Een accommodatieboeking verwijderen haalt ook haar nachten uit het Dagplan en verwijdert de kostenpost die eraan gekoppeld was.',
   'help.guide.delete-booking.tip.2':
     'Documenten die bijgevoegd waren blijven in het tabblad Bestanden van de reis; alleen hun koppeling met de boeking gaat weg.',
+  // import-booking-file
+  'help.guide.import-booking-file.step.5':
+    'Elke boeking die is gevonden opent in Nieuwe reservering, de een na de ander, al ingevuld. Voor een hotel is dat de naam in Titel en, als de reis de plek heeft, onder Accommodatie, zijn Locatie / Adres, Van en Tot op zijn nachten, Inchecken en Uitchecken, de Boekingscode, de bevestiging onder Bestanden en, met Onkosten aan, de prijs als Gekoppelde kostenpost. Kijk het na en klik op Toevoegen.',
 
   // ── Screen: trip-costs ────────────────────────────────────────────────────────────────
   'help.ctx.trip-costs.title': 'Onkosten',
@@ -3620,6 +3727,50 @@ const help: TranslationStrings = {
     'Een bevestigde boeking is een doorgetrokken lijn, een boeking in behandeling een gestippelde. De instelling Routelabels voor boekingen zet de luchthavencode of de stationsnaam in de eindmarkeringen.',
   'help.guide.transport-on-map.tip.3':
     'Alle boekingsroutes tonen is een schone lei, geen laag: het gooit weg wat de losse iconen hadden gezet, dus twee keer drukken laat je met alles aan of alles uit achter.',
+  // import-transport-file
+  'help.guide.import-transport-file.title': 'Een vlucht uit haar e-ticket lezen',
+  'help.guide.import-transport-file.goal':
+    'Laat TREK een vlucht, een trein of een veerboot uit het ticket halen dat de vervoerder stuurde, en kijk het na voor het wordt opgeslagen.',
+  'help.guide.import-transport-file.step.1':
+    'Klik op Importeren vanuit bestand in de werkbalk van het tabblad Transport, naast Vervoer. Boekingsbevestigingen importeren gaat open, hetzelfde venster als het tabblad Boekingen heeft.',
+  'help.guide.import-transport-file.step.2':
+    'Laat het ticket op het vak vallen, of klik erop en kies het: EML, PDF, PKPass, HTML en TXT, tot vijf bestanden van elk 10 MB. De bestanden die je koos staan met naam op het vak.',
+  'help.guide.import-transport-file.step.3':
+    'Klik op Importeren. Het venster sluit meteen; het lezen gebeurt op de achtergrond.',
+  'help.guide.import-transport-file.step.4':
+    'Een kaart rechtsonder doet verslag van de uitvoering onder de naam van het bestand. Bestanden verwerken… wordt een vinkje als het lezen klaar is, en de kaart biedt Importeren aan. Klik erop.',
+  'help.guide.import-transport-file.step.5':
+    'Een vlucht gaat open in Vervoer toevoegen, al ingevuld: Boekingstype op Vlucht, de luchtvaartmaatschappij en het vluchtnummer in Titel, beide luchthavens onder Route met Vertrek en Aankomst, hun tijden en hun tijdzones, Luchtvaartmaatschappij en Vluchtnr., de Boekingscode en het ticket onder Bestanden. Kijk het na en klik op Toevoegen.',
+  'help.guide.import-transport-file.result':
+    'De vlucht is een kaart in In behandeling op het tabblad Transport en een rij op de dag waarop hij vertrekt, met het ticket onder Bestanden, en met beide luchthavens bekend tekent hij zijn boog op de kaart.',
+  'help.guide.import-transport-file.tip.1':
+    'De twee tabbladen delen één import: een bestand dat een vlucht en een hotel bevat opent de vlucht in Vervoer toevoegen en het hotel in Nieuwe reservering, de een na de ander, vanuit welk tabblad je ook begon.',
+  'help.guide.import-transport-file.tip.2':
+    'Luchthavens worden op hun code geplaatst. Een station of een haven die het lezen niet kon vinden staat amberkleurig op de kaart; kies het met de hand onder Route voor je op Toevoegen klikt, anders tekent het transport niets op de kaart.',
+  // airtrail-import
+  'help.guide.airtrail-import.title': 'Vluchten importeren uit AirTrail',
+  'help.guide.airtrail-import.goal':
+    'Haal de vluchten die je al in AirTrail bijhoudt in één keer de reis in, en laat ze vanaf dan AirTrail volgen.',
+  'help.guide.airtrail-import.step.1':
+    'Met de add-on AirTrail aan en je instantie verbonden onder Integraties in Instellingen draagt de werkbalk van het tabblad Transport een knop AirTrail naast Vervoer. Klik erop.',
+  'help.guide.airtrail-import.step.2':
+    'Importeren uit AirTrail noemt de vluchten van je account in twee groepen. Tijdens deze reis bevat de vluchten die binnen de reis gedateerd zijn, al aangevinkt; Andere vluchten bevat de rest, niet aangevinkt. Een vlucht die al in de reis zit is grijs en gemarkeerd als Geïmporteerd.',
+  'help.guide.airtrail-import.step.3':
+    'Elke rij is een vinkvak met de luchtvaartmaatschappij en het vluchtnummer, de twee luchthavens en de datum. Klik op een rij om de vlucht mee te nemen of weg te laten; die onder Andere vluchten komen alleen mee als je ze aanvinkt.',
+  'help.guide.airtrail-import.step.4':
+    'Vluchten die op elkaar aansluiten, elk binnen een dag vertrekkend van de luchthaven waar de vorige landde, staan samen in een kader. Het vinkje eronder, Importeren als één vlucht met een tussenstop in die luchthaven, staat al aan: laat het aan voor één boeking met een tussenstop, of zet het uit om de segmenten als losse vluchten te importeren.',
+  'help.guide.airtrail-import.step.5':
+    'Klik op Importeren. De knop telt de aangevinkte vluchten, en de melding daarna zegt hoeveel er binnenkwamen.',
+  'help.guide.airtrail-import.step.6':
+    'De vluchten zijn kaarten onder Bevestigd, elk met een blauwe badge AirTrail naast zijn status, en rijen op de dagen waarop ze gaan. Een samengevoegde verbinding is één kaart, met zijn route door de tussenstop.',
+  'help.guide.airtrail-import.result':
+    'De vluchten uit AirTrail zijn kaarten op het tabblad Transport en rijen op hun dagen, elk met de badge AirTrail die zegt waar hij vandaan komt.',
+  'help.guide.airtrail-import.tip.1':
+    'Een vlucht die al in de reis zit onder hetzelfde nummer en dezelfde datum wordt overgeslagen, en een melding zegt hoeveel dat er waren. Ongedaan maken in de werkbalk boven de dagen neemt de hele import terug.',
+  'help.guide.airtrail-import.tip.2':
+    'AirTrail blijft de bron van de waarheid. TREK leest zijn wijzigingen als je de reis opent en om de paar minuten op de achtergrond; een vlucht die daar is verwijderd houdt zijn kaart, met de badge omgezet naar Niet gesynchroniseerd. Wijzigingen in TREK gaan alleen terug met Wijzigingen terugschrijven naar AirTrail aan onder Integraties.',
+  'help.guide.airtrail-import.tip.3':
+    'Een samengevoegde verbinding heeft geen enkele AirTrail-vlucht om te volgen, dus het is een eenmalige import: hij houdt de blauwe badge, en over de badge zweven zegt dat. Hetzelfde gebeurt met een gesynchroniseerde vlucht die je met de hand een tussenstop geeft.',
 
   // ── Screen: trip-roadtrip ─────────────────────────────────────────────────────────────
   'help.ctx.trip-roadtrip.title': 'Roadtrip',

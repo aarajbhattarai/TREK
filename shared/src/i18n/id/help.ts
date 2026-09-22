@@ -465,6 +465,38 @@ const help: TranslationStrings = {
     'Kota dibaca dari teks alamat, bukan dicari, jadi alamat pendek seperti “Osteria Francescana, Italy” atau yang berakhir dengan prefektur bisa menghasilkan wilayah, bukan kota.',
   'help.guide.stats.tip.2':
     'Negara yang Anda tandai manual dihitung di Negara dan benua, tetapi tidak membawa perjalanan, tempat, atau hari.',
+  // dawarich-countries
+  'help.guide.dawarich-countries.title': 'Menambahkan negara dari rekaman Anda',
+  'help.guide.dawarich-countries.goal':
+    'Biarkan Dawarich mengatakan negara mana saja yang Anda kunjungi selama setahun terakhir, dan taruh yang Anda konfirmasi di peta.',
+  'help.guide.dawarich-countries.step.1':
+    'Dengan addon Dawarich terhubung, sebuah panel Dawarich duduk di bagian bawah peta, di kiri statistik, dengan dua ubin. Klik “Negara”.',
+  'help.guide.dawarich-countries.step.2':
+    'Dialog terbuka pada tab “Negara”-nya. Klik “Cari negara”: TREK membaca negara dan kota yang dicakup rekaman Anda dalam 12 bulan terakhir, sebulan demi sebulan, jadi beri waktu sejenak. Setiap negara yang belum dimiliki Atlas Anda didaftar dengan benderanya, berapa banyak kota, dan kota pertamanya dengan nama, dan mulai dalam keadaan tercentang; klik sebuah baris untuk mengecualikannya.',
+  'help.guide.dawarich-countries.step.3':
+    'Konfirmasi dengan tombol di kanan bawah, yang berbunyi “Tambah 5 negara” ketika lima baris tercentang. Dialog mengatakan berapa banyak yang ditambahkan; tutup dialog itu dan peta sudah membaca ulang dirinya.',
+  'help.guide.dawarich-countries.result':
+    'Negara yang dikonfirmasi membawa warna di peta dan terhitung dalam “Negara”, tercatat sebagai berasal dari Dawarich. Apa yang Anda tandai dengan tangan tidak tersentuh.',
+  'help.guide.dawarich-countries.tip.1':
+    'Negara yang sudah ditampilkan Atlas sebagai dikunjungi, dengan tangan, dari sebuah perjalanan atau dari pemeriksaan sebelumnya, dikecualikan, sehingga tanda Anda sendiri tidak pernah dilabeli ulang. Negara yang Anda hapus dari Atlas sebelumnya kembali ketika Anda mengonfirmasinya di sini.',
+  'help.guide.dawarich-countries.tip.2':
+    'Nama negara yang tidak dapat TREK cocokkan didaftar di bawah baris-baris itu alih-alih dibuang, dan “Periksa lagi” bertanya kepada Dawarich sekali lagi. Catatan di bawah daftar mengatakan bahwa yang diperiksa adalah 12 bulan terakhir; jendela waktu itu tetap.',
+  // dawarich-wishes
+  'help.guide.dawarich-wishes.title': 'Mencoret keinginan dari rekaman Anda',
+  'help.guide.dawarich-wishes.goal':
+    'Cari tahu tempat mana di daftar impian Anda yang benar-benar sudah Anda capai, dan coret pada hari kejadiannya.',
+  'help.guide.dawarich-wishes.step.1':
+    'Di panel Dawarich di bagian bawah peta, di kiri statistik, klik “Daftar keinginan”.',
+  'help.guide.dawarich-wishes.step.2':
+    'Dialog terbuka pada tab “Daftar keinginan”-nya. Klik “Periksa daftar keinginan”: TREK menelusuri rekaman Anda untuk setiap entri yang punya koordinat. Keinginan yang Anda capai didaftar dengan seberapa dekat Anda sampai, berapa lama Anda tinggal dan harinya, dan mulai dalam keadaan tercentang; yang sudah Anda coret berbunyi “Sudah dicoret”. Di bawah daftar sebuah catatan menghitung entri tanpa koordinat, dan aturannya juga berdiri di sana: “Sebuah keinginan dianggap tercapai dalam radius 250 m dan setelah 20 menit di lokasi.”',
+  'help.guide.dawarich-wishes.step.3':
+    'Konfirmasi dengan tombol di kanan bawah, yang berbunyi “Coret 2” ketika dua baris tercentang. Lalu tutup dialog dan buka tab “Daftar Impian” pada panel di sebelahnya.',
+  'help.guide.dawarich-wishes.result':
+    'Setiap keinginan membawa centang hijau dengan tanggal kunjungan, bukan tanggal hari ini; tooltip-nya berbunyi “Dicoret dari rekaman Dawarich milikmu”, dan klik pada tanggal itu membatalkannya.',
+  'help.guide.dawarich-wishes.tip.1':
+    'Sekadar lewat tidak dihitung: aturannya menuntut kedekatan sekaligus waktu, dan dari beberapa kunjungan yang memenuhi syarat, yang terlama yang menang. Keinginan tanpa koordinat tidak dapat diperiksa, jadi tambahkan tempat lewat pencarian di “Tambah tempat” alih-alih hanya dengan nama.',
+  'help.guide.dawarich-wishes.tip.2':
+    'Satu pemeriksaan melihat sampai 50 entri, yang belum dicoret lebih dulu, dan mengatakannya bila ada lebih banyak. Keinginan yang sudah dicoret sebelumnya mempertahankan tanggalnya sendiri.',
 
   // ── Screen: collections ───────────────────────────────────────────────────────────────
   'help.ctx.collections.title': 'Koleksi',
@@ -1699,6 +1731,20 @@ const help: TranslationStrings = {
     'Jejak yang bisa Anda serahkan kepada siapa pun yang bertanya mengapa sesuatu berubah.',
   'help.guide.audit-log.tip.1': 'Waktu ditampilkan dalam zona waktu server, yang disebutkan di atas tabel.',
   'help.guide.audit-log.tip.2': 'Log hanya bisa ditambah; tidak ada yang bisa disunting atau dihapus dari aplikasi.',
+  // document-providers
+  'help.guide.document-providers.title': 'Menawarkan penyimpanan dokumen',
+  'help.guide.document-providers.goal':
+    'Tentukan penyimpanan mana yang boleh dipakai sebuah perjalanan untuk menjaga dokumennya tetap sejalan.',
+  'help.guide.document-providers.step.1':
+    'Ubin “Dokumen” membawa penyimpanan-penyimpanan itu sebagai baris di raknya: Paperless-ngx, Papra, Nextcloud, OpenCloud dan Synology Drive. Kelimanya mulai dalam keadaan mati, dan rak itu hanya ada selama “Dokumen” sendiri menyala.',
+  'help.guide.document-providers.step.2':
+    'Geser sakelar pada baris Nextcloud. Pesannya berbunyi “Addon diperbarui”, dan sejak itu pemilik perjalanan menemukan “Sinkronisasi dokumen” di tab “File” perjalanan mereka, dengan Nextcloud di bawah “Hubungkan penyedia”.',
+  'help.guide.document-providers.result':
+    'Penyimpanan itu ditawarkan pada setiap perjalanan di TREK ini; tidak ada yang terhubung sampai seorang pemilik perjalanan melakukannya.',
+  'help.guide.document-providers.tip.1':
+    'Yang ditentukan di sini hanyalah apakah sebuah penyimpanan boleh ditawarkan. Alamat dan kredensialnya milik sebuah perjalanan dan dimasukkan di tab “File”-nya oleh pemilik perjalanan itu, tidak pernah di panel admin.',
+  'help.guide.document-providers.tip.2':
+    'Mematikan “Dokumen” mematikan setiap penyimpanan bersamanya, dan sebuah penyimpanan tidak dapat dinyalakan selama “Dokumen” mati: server menjawab “Enable the Documents addon first”. Penyimpanan di jaringan Anda sendiri juga membutuhkan ALLOW_INTERNAL_NETWORK=true di server.',
 
   // ── Screen: trip ──────────────────────────────────────────────────────────────────────
   'help.ctx.trip.title': 'Perjalanan',
@@ -2156,30 +2202,30 @@ const help: TranslationStrings = {
   'help.ctx.trip-place.bullet.5':
     'Baris di bagian bawah: “Tambah ke Hari” atau “Hapus dari Hari” selama sebuah hari terbuka, lalu “Simpan ke Koleksi”, “Navigasi”, “Buka Situs Web”, “Sunting” dan “Hapus”.',
   'help.ctx.trip-place.bullet.6':
-    'Tempat yang TREK cocokkan dengan penyedia peta menampilkan lebih banyak: penilaian penyedia itu beserta sebuah ulasan, nomor telepon, dan cincin “Buka” atau “Tutup” di sekeliling gambar dengan jam buka sepekan di baliknya.',
+    'Tempat yang dipilih dari pencarian membawa apa yang diketahui indeks TREK atau OpenStreetMap tentangnya: cincin hijau “Buka” atau merah “Tutup” di sekeliling gambar, dinilai menurut jam tempat itu sendiri, nomor telepon di bawah bintang, “Jam Buka” lebih ke bawah dengan jam hari itu pada barisnya dan sepekan penuh di balik satu klik, serta situs webnya di balik “Buka Situs Web”. Penilaian Google hanya tampil pada tempat yang ditemukan lewat Google, di TREK dengan kunci Google.',
   // read-place
   'help.guide.read-place.title': 'Apa yang kartu ceritakan tentang sebuah tempat',
   'help.guide.read-place.goal': 'Baca semua yang perjalanan ketahui tentang satu tempat, dalam satu kartu.',
   'help.guide.read-place.step.1':
     'Di kolom hari, klik perhentian yang ingin Anda baca. Kartu terbuka di atas peta dan perhentian itu tetap ditandai pada harinya.',
   'help.guide.read-place.step.2':
-    'Bagian kepala: gambar bulat, nama, alamat dan koordinat persisnya. Tanda X di sebelah kanan menutup kartu lagi.',
+    'Bagian kepala: gambar bulat, nama, alamat dan koordinat persisnya. Cincin hijau dengan “Buka”, atau merah dengan “Tutup”, di sekeliling gambar mengatakan apakah tempat itu sedang buka saat ini, menurut jamnya sendiri, begitu TREK mengetahui jam bukanya. Tanda X di sebelah kanan menutup kartu lagi.',
   'help.guide.read-place.step.3':
-    'Di bawahnya bintang yang diberikan setiap pelancong kepada tempat itu, dengan rata-ratanya dan berapa banyak yang memilih. “Belum dinilai” selama belum ada yang memberi.',
+    'Di bawahnya bintang yang diberikan setiap pelancong kepada tempat itu, dengan rata-ratanya dan berapa banyak yang memilih. “Belum dinilai” selama belum ada yang memberi. Tepat di bawahnya, nomor telepon bila tempat itu memilikinya: klik padanya menyerahkan nomor itu ke aplikasi telepon Anda.',
   'help.guide.read-place.step.4':
     'Lalu deskripsinya dan, di bawahnya, catatannya. Keduanya adalah teks dari formulir tempat, ditampilkan apa adanya: daftar, tautan dan huruf tebal semuanya bekerja.',
   'help.guide.read-place.step.5':
     '“Peserta” menyebut siapa yang pergi ke perhentian ini. Semua orang ikut sampai Anda mengeluarkan seseorang.',
   'help.guide.read-place.step.6':
-    'Baris di bagian bawah adalah apa yang bisa Anda lakukan dari sini: mengeluarkan tempat itu dari hari yang dibuka atau menaruhnya di sana, menyimpannya ke sebuah daftar, membukanya di aplikasi peta, menyuntingnya atau menghapusnya.',
+    '“Jam Buka”, lebih ke bawah: barisnya membawa jam pada hari yang sedang Anda lihat, dan klik padanya membentangkan sepekan penuh dengan hari itu dalam huruf tebal. “File” berdiri di sebelahnya.',
   'help.guide.read-place.result':
-    'Kartu tetap terbuka sampai Anda menutupnya dengan tanda X atau memilih tempat lain, dan perhentian yang memilikinya tetap ditandai di kolom hari.',
+    'Kartu tetap terbuka sampai Anda menutupnya dengan tanda X atau memilih tempat lain, jam sepekan tetap terbentang, dan perhentian yang memilikinya tetap ditandai di kolom hari.',
   'help.guide.read-place.tip.1':
-    'Dipilih dari kolom tempat, kartu mengenal tempatnya tetapi bukan sebuah perhentian, jadi tidak ada peserta dan tidak ada pemesanan. Pilihlah perhentian di dalam harinya, maka keduanya ada.',
+    'Dipilih dari kolom tempat, kartu mengenal tempatnya tetapi bukan sebuah perhentian, jadi tidak ada peserta dan tidak ada pemesanan yang ditampilkan. Pilihlah perhentian di dalam harinya, maka keduanya ada.',
   'help.guide.read-place.tip.2':
     'Klik ganda namanya untuk mengganti nama tempat tanpa membuka formulir. Enter menyimpan, Escape membatalkan perubahan.',
   'help.guide.read-place.tip.3':
-    'Tempat yang bisa TREK cocokkan dengan penyedia peta juga menampilkan penilaian penyedia itu, sebuah ulasan, nomor telepon dan jam bukanya.',
+    'Tempat yang diketik dengan tangan tidak menampilkan semua itu: kartu hanya mengenal apa yang ada di formulirnya. Buka dengan “Sunting”, pilih tempat itu dari saran di bawah “Cari tempat...” dan klik “Perbarui”, maka jam buka, nomor telepon dan situs webnya ikut serta. Penilaian Google membutuhkan kunci Google.',
   // rate-place
   'help.guide.rate-place.title': 'Menilai sebuah tempat',
   'help.guide.rate-place.goal': 'Beri tempat itu bintang Anda sendiri, dan lihat apa yang diberikan orang lain.',
@@ -2349,6 +2395,9 @@ const help: TranslationStrings = {
     'Jalur yang direkam dengan ketinggian juga menampilkan titik tertinggi dan terendahnya, meter naik dan turun, serta profil jalan kakinya.',
   'help.guide.place-track.tip.3':
     'Sebuah impor memberi setiap jalur yang dibawanya warna tersendiri, jadi dua jalan kaki tidak pernah tiba dengan warna yang sama.',
+  // read-place
+  'help.guide.read-place.step.7':
+    'Baris di bagian bawah adalah apa yang bisa Anda lakukan dari sini: mengeluarkan tempat itu dari hari yang dibuka atau menaruhnya di sana, menyimpannya ke sebuah daftar, membukanya di aplikasi peta, menyuntingnya atau menghapusnya.',
 
   // ── Screen: trip-files ────────────────────────────────────────────────────────────────
   'help.ctx.trip-files.title': 'File',
@@ -2481,6 +2530,30 @@ const help: TranslationStrings = {
   'help.guide.files-trash.tip.2':
     'Membuang sebuah file dan mengambilnya kembali memerlukan hak “Hapus file”. Anggota tanpa hak itu tidak melihat “Hapus” pada baris maupun tombol-tombol di dalam sampah.',
   'help.guide.files-trash.tip.3': 'File yang dihapus untuk selamanya di dalam sampah tidak bisa dibawa kembali.',
+  // files-sync
+  'help.guide.files-sync.title': 'Menjaga dokumen tetap sejalan dengan folder Nextcloud',
+  'help.guide.files-sync.goal':
+    'Ikat perjalanan ke sebuah folder di penyimpanan dokumen Anda sendiri, sehingga yang diunggah di sini mendarat di sana dan yang diarsipkan di sana muncul di sini.',
+  'help.guide.files-sync.step.1':
+    'Klik “Sinkronisasi dokumen”, di sebelah “Sampah” di ujung kanan bilah alat. Dialog terbuka dengan nama perjalanan di bawah judulnya. Di kiri, di bawah “Hubungkan penyedia”, berdiri penyimpanan yang telah dinyalakan administrator, masing-masing dengan satu baris tentang cara ia mengarsipkan, “Mengarsipkan di dalam folder” untuk Nextcloud; di kanan berbunyi “Belum ada yang terhubung”.',
+  'help.guide.files-sync.step.2':
+    'Klik Nextcloud. Dialog yang lebih kecil terbuka untuk koneksinya, dinamai menurut penyimpanan itu, dengan pengingat di bagian atas untuk memakai sandi aplikasi alih-alih sandi akun Anda.',
+  'help.guide.files-sync.step.3':
+    'Isi “Alamat”, “Nama pengguna”, yaitu nama login Nextcloud Anda alih-alih alamat email Anda, dan “Sandi aplikasi”, yang dibuat Nextcloud di bawah Pengaturan, Keamanan. “Folder dasar” bersifat opsional: di situlah TREK mencari folder perjalanan, /TREK kecuali Anda menentukan lain, di sini /Reisen. “Terima sertifikat yang ditandatangani sendiri” di bagian bawah hanya untuk instans di jaringan Anda sendiri dengan sertifikat semacam itu.',
+  'help.guide.files-sync.step.4':
+    'Klik “Uji koneksi”. TREK menjangkau penyimpanan itu dengan apa yang Anda ketik dan kakinya berbunyi “Terjangkau, masuk sebagai” diikuti nama akunnya, di sini admin. Sandi yang ditolak atau alamat yang tidak dapat dijangkau disebut di sana sebagai gantinya, dan bagaimanapun tidak ada yang disimpan.',
+  'help.guide.files-sync.step.5':
+    'Klik “Hubungkan”. Koneksi disimpan bersama perjalanan dan TREK bertanya “Di mana perjalanan ini disimpan di Nextcloud?” Hanya yang ada di folder itu yang disinkronkan. “Buat yang baru” membuat folder di bawah folder dasar saat “Buat”, dengan nama yang sudah diisi dari judul perjalanan; di bawah “Atau pakai yang sudah ada” berdiri folder-folder yang sudah ada. Klik salah satunya, di sini Autumn in Japan.',
+  'help.guide.files-sync.step.6':
+    'Dialog kembali: Nextcloud berdiri di bawah “Perjalanan ini” di kiri, dan kartunya di kanan membawa foldernya, kapan terakhir dijalankan dan “Sinkronkan sekarang”. Proses pertama mulai dengan sendirinya; “Sinkronkan sekarang” menjalankan satu kapan pun Anda mau. Begitu satu proses selesai, lencana “Belum disinkronkan” di sebelah nama berganti menjadi titik hijau, “Tersinkron” ketika Anda mengarahkan penunjuk ke atasnya, dan bilah alur menghitung dokumen yang dipegang TREK dan Nextcloud masing-masing, dengan jalur “Keluar ke penyimpanan” dan “Masuk dari penyimpanan” di antaranya. Tutup dialog dengan ×.',
+  'help.guide.files-sync.result':
+    'Dua dokumen yang sudah ada di folder berdiri di puncak daftar, diunggah atas nama Anda, dan setiap dokumen perjalanan juga ada di folder itu. Sejak itu TREK memeriksa folder di latar belakang dan folder mengikuti daftar.',
+  'help.guide.files-sync.tip.1':
+    'Hanya pemilik perjalanan atau administrator instans yang dapat mengikat sebuah perjalanan, karena sandi aplikasi menjangkau seluruh akun Nextcloud itu. Setiap anggota dapat membuka “Sinkronisasi dokumen”, membaca kartunya dan menekan “Sinkronkan sekarang”.',
+  'help.guide.files-sync.tip.2':
+    'Penyimpanan di jaringan Anda sendiri membutuhkan ALLOW_INTERNAL_NETWORK=true di server TREK, dan alamatnya harus alamat mesin itu di jaringan, tidak pernah localhost. Tanpa itu, “Uji koneksi” menjawab “Alamat itu tidak diizinkan.”',
+  'help.guide.files-sync.tip.3':
+    '“Putuskan” di kartu mengakhiri pemasangan dan mempertahankan setiap dokumen di kedua sisi. Folder yang diikat untuk kedua kalinya diperlakukan sebagai baru, dan semua isinya masuk lagi, jadi setelah “Putuskan” ikatlah folder kosong alih-alih yang lama.',
 
   // ── Screen: trip-day-detail ───────────────────────────────────────────────────────────
   'help.ctx.trip-day-detail.title': 'Detail hari',
@@ -2751,6 +2824,38 @@ const help: TranslationStrings = {
     '“Selalu tampilkan rute pemesanan”, di pengaturan yang sama, menggambarnya sejak awal pada setiap perjalanan yang belum Anda putuskan.',
   'help.guide.map-booking-routes.tip.3':
     'Sebuah pemesanan butuh dua ujung berkoordinat sebelum bisa digambar, jadi hotel atau restoran tidak membawa ikon rute.',
+  'help.ctx.trip-map.bullet.8':
+    'Dengan addon Dawarich menyala, tombol Dawarich bundar di bawah “Tampilkan seluruh perjalanan” menggambar rute yang benar-benar direkam ponsel Anda: “Tampilkan rute terekam” meletakkannya putus-putus di bawah rute yang direncanakan, satu warna per hari, dan label tombol itu mengatakan mengapa tidak ada garis ketika memang tidak ada.',
+  // map-dawarich-trail
+  'help.guide.map-dawarich-trail.title': 'Menampilkan rute yang benar-benar Anda tempuh',
+  'help.guide.map-dawarich-trail.goal':
+    'Letakkan rute yang direkam Dawarich di ponsel Anda di atas peta, putus-putus di samping rute yang Anda rencanakan, dan baca perjalanan hari demi hari sebagaimana yang sebenarnya terjadi.',
+  'help.guide.map-dawarich-trail.step.1':
+    'Tombol Dawarich bundar duduk di kanan bawah peta, di bawah “Tampilkan seluruh perjalanan”; mengarahkan penunjuk ke atasnya berbunyi “Tampilkan rute terekam”. Klik tombol itu. TREK meminta tanggal perjalanan kepada Dawarich Anda, dan sebuah cincin berputar di sekeliling tombol selama jawabannya dalam perjalanan.',
+  'help.guide.map-dawarich-trail.step.2':
+    'Rute terekam mendarat sebagai garis putus-putus, satu warna per hari, digambar di bawah rute yang direncanakan agar rencananya tetap terbaca. Tombol itu kini berbunyi “Sembunyikan rute terekam”. Hari dipotong pada tengah malam waktu setempat, dan hari yang dilipat tertutup di kolom hari membawa garis putus-putusnya turun dari peta bersama perhentiannya.',
+  'help.guide.map-dawarich-trail.step.3':
+    'Klik “Tampilkan seluruh perjalanan” juga, maka setiap hari yang direncanakan digambar utuh di samping rekaman yang putus-putus. Di mana keduanya berjalan bersama, hari itu berjalan sesuai rencana; di mana garis putus-putus menyimpang, di situlah tidak.',
+  'help.guide.map-dawarich-trail.result':
+    'Apa yang Anda rencanakan dan apa yang benar-benar Anda lakukan ada di peta bersama-sama, putus-putus berhadapan dengan utuh, dan kartu di atas tombol-tombol masih mendaftar hari-hari yang direncanakan beserta jaraknya.',
+  'help.guide.map-dawarich-trail.tip.1':
+    'Menyala atau mati diingat per perjalanan untuk sesi peramban ini. Selama rute menyala, TREK bertanya lagi kepada Dawarich setiap dua menit, sehingga perjalanan yang sedang berlangsung menyusul tanpa pemuatan ulang; rutenya sendiri tidak pernah disimpan, jadi tidak ada di basis data TREK, tidak di cadangan dan tidak ada saat luring.',
+  'help.guide.map-dawarich-trail.tip.2':
+    'Label tombol menjelaskan peta yang kosong: “Memuat rute terekam…” selama masih dalam perjalanan, “Tidak ada yang terekam pada tanggal ini”, “Rute terekam tidak dapat dimuat”, atau “Rute terekam memerlukan koneksi” ketika TREK luring.',
+  // map-compass
+  'help.guide.map-compass.title': 'Memutar peta dan menemukan utara lagi',
+  'help.guide.map-compass.goal':
+    'Putar peta agar menghadap ke arah tujuan Anda, dan kembalikan ke utara dengan satu klik.',
+  'help.guide.map-compass.step.1':
+    'Putar peta dengan menyeret memakai tombol kanan, atau tahan Ctrl dan seret dengan tombol kiri; di layar sentuh, putar dengan dua jari. Kompas bundar di sebelah baris ikon kategori di bagian atas peta ikut berputar: panahnya selalu menunjuk utara, jadi ia miring sejauh Anda memutar.',
+  'help.guide.map-compass.step.2':
+    'Klik kompas itu. “Reset north”, begitu nama tombolnya, mengembalikan peta perlahan ke utara di atas dan ke tampilan datar, dan panahnya berdiri tegak lagi.',
+  'help.guide.map-compass.result':
+    'Peta kembali dengan utara di atas dan rata, dan tidak ada yang berubah pada perjalanan: kompas hanya menggerakkan kamera.',
+  'help.guide.map-compass.tip.1':
+    'Kompas hanya ada di peta MapLibre GL dan Mapbox GL; peta Leaflet tidak dapat diputar, jadi tidak memilikinya. “Penyedia peta” di “Pengaturan”, di bawah “Peta”, menentukan mana yang Anda pakai, dan “Simpan Peta” menyimpan pilihan itu.',
+  'help.guide.map-compass.tip.2':
+    'Klik itu juga menghilangkan kemiringan: seret dengan tombol kanan ke atas atau ke bawah memiringkan tampilan, dan “Reset north” meratakannya bersama putarannya. Di Mapbox GL dengan “Bangunan 3D & medan” menyala, itu juga meratakan tampilan 3D, sampai Anda memiringkannya lagi.',
 
   // ── Screen: trip-collab ───────────────────────────────────────────────────────────────
   'help.ctx.trip-collab.title': 'Collab',
@@ -3243,15 +3348,15 @@ const help: TranslationStrings = {
   'help.guide.import-booking-file.step.3':
     'Klik “Impor”. Dialog itu langsung tertutup, karena pembacaannya terjadi di latar belakang.',
   'help.guide.import-booking-file.step.4':
-    'Sebuah kartu di kanan bawah melaporkan jalannya proses, dan ia mengikuti Anda melintasi aplikasi dan melewati pemuatan ulang. Ketika selesai ia menawarkan “Impor”, yang memulai peninjauan: setiap pemesanan yang ditemukannya terbuka di formulir biasa, sudah terisi dan dengan dokumennya terlampir, untuk Anda periksa dan “Tambah” satu demi satu.',
+    'Sebuah kartu di kanan bawah melaporkan jalannya proses di bawah nama file, dan ia mengikuti Anda melintasi aplikasi dan melewati pemuatan ulang. “Memproses file…” berubah menjadi centang ketika pembacaan selesai, dan kartu itu menawarkan “Impor”. Klik itu.',
   'help.guide.import-booking-file.result':
-    'Setiap pemesanan yang Anda konfirmasi menjadi kartu tersendiri dengan kodenya, tanggalnya dan dokumen asalnya; sebuah akomodasi juga mendapat malam-malamnya, dan dengan “Biaya” menyala, harga yang ada di konfirmasi itu menjadi sebuah pengeluaran.',
+    'Pemesanan itu menjadi kartu di “Tertunda” dengan malam-malamnya, kodenya dan konfirmasi di bawah “File”, penginapannya duduk pada hari-hari itu di rencana, dan dengan “Biaya” menyala harganya menjadi pengeluaran yang terikat padanya.',
   'help.guide.import-booking-file.tip.1':
-    '“Impor dari file” hanya ada bila server dapat membaca konfirmasi, dan itu menuntut salah satu dari dua hal: pengekstrak di sisi server atau addon “Analisis AI”. Yang terakhir dialihkan administrator di bawah “Addon”.',
+    '“Impor dari file” hanya ada bila server dapat membaca konfirmasi, dan itu menuntut pengekstrak atau addon “Analisis AI”. Yang terakhir dialihkan administrator di bawah “Addon”.',
   'help.guide.import-booking-file.tip.2':
-    'Bila tidak ada yang dapat dibaca, kartu itu mengatakannya dan menawarkan “Try AI parsing”, yang mengirimkan file yang sama langsung ke modelnya.',
+    'Bila tidak ada yang dapat dibaca, kartu itu mengatakannya dan menawarkan “Try AI parsing”, yang mengirimkan file yang sama langsung ke modelnya. Penguraian yang selesai disimpan selama sepuluh menit; mulailah peninjauan di dalam jendela waktu itu.',
   'help.guide.import-booking-file.tip.3':
-    'Penguraian yang selesai disimpan selama sepuluh menit. Mulailah peninjauan di dalam jendela waktu itu.',
+    'Konfirmasi hanya dilampirkan bila jenisnya ada di “Jenis File yang Diizinkan” di pengaturan admin. PDF ada di sana sejak awal; surel, EML, harus ditambahkan lebih dulu, atau pemesanan disimpan tanpanya.',
   // edit-booking
   'help.guide.edit-booking.title': 'Mengubah sebuah pemesanan',
   'help.guide.edit-booking.goal':
@@ -3283,6 +3388,9 @@ const help: TranslationStrings = {
     'Menghapus pemesanan akomodasi juga mengeluarkan malam-malamnya dari “Rencana Hari” dan membuang pengeluaran yang terhubung dengannya.',
   'help.guide.delete-booking.tip.2':
     'Dokumen yang pernah dilampirkan tetap ada di tab “File” perjalanan; hanya hubungannya dengan pemesanan itu yang pergi.',
+  // import-booking-file
+  'help.guide.import-booking-file.step.5':
+    'Setiap pemesanan yang ditemukan terbuka di “Reservasi Baru”, satu demi satu, sudah terisi. Untuk hotel itu berarti nama di “Judul” dan, bila perjalanan memiliki tempatnya, di bawah “Akomodasi”, “Lokasi / Alamat”-nya, “Dari” dan “Sampai” pada malam-malamnya, “Check-in” dan “Check-out”, “Kode Pemesanan”, konfirmasi di bawah “File” dan, dengan “Biaya” menyala, harganya sebagai “Linked expense”. Periksa lalu klik “Tambah”.',
 
   // ── Screen: trip-costs ────────────────────────────────────────────────────────────────
   'help.ctx.trip-costs.title': 'Biaya',
@@ -3624,6 +3732,50 @@ const help: TranslationStrings = {
     'Pemesanan yang “Dikonfirmasi” adalah garis utuh, yang “Tertunda” garis putus-putus. Pengaturan “Label rute pemesanan” mencetak kode bandara atau nama stasiun ke dalam penanda ujung.',
   'help.guide.transport-on-map.tip.3':
     '“Tampilkan semua rute pemesanan” adalah papan bersih, bukan lapisan: ia membuang apa yang telah disetel ikon-ikon tunggal, jadi menekannya dua kali meninggalkan Anda dengan semuanya menyala atau semuanya mati.',
+  // import-transport-file
+  'help.guide.import-transport-file.title': 'Membaca sebuah penerbangan dari e-tiketnya',
+  'help.guide.import-transport-file.goal':
+    'Biarkan TREK menarik sebuah penerbangan, kereta atau feri dari tiket yang dikirim operatornya, dan periksa sebelum disimpan.',
+  'help.guide.import-transport-file.step.1':
+    'Klik “Impor dari file” di bilah alat tab “Transportasi”, di sebelah “Transportasi”. “Impor konfirmasi pemesanan” terbuka, dialog yang sama dengan yang dimiliki tab “Pemesanan”.',
+  'help.guide.import-transport-file.step.2':
+    'Jatuhkan tiketnya ke kotak itu, atau klik kotaknya lalu pilih: EML, PDF, PKPass, HTML dan TXT, sampai lima file berukuran 10 MB masing-masing. File yang Anda pilih disebut namanya di kotak itu.',
+  'help.guide.import-transport-file.step.3':
+    'Klik “Impor”. Dialog itu langsung tertutup; pembacaannya terjadi di latar belakang.',
+  'help.guide.import-transport-file.step.4':
+    'Sebuah kartu di kanan bawah melaporkan jalannya proses di bawah nama file. “Memproses file…” berubah menjadi centang ketika pembacaan selesai, dan kartu itu menawarkan “Impor”. Klik itu.',
+  'help.guide.import-transport-file.step.5':
+    'Sebuah penerbangan terbuka di “Tambah transportasi”, sudah terisi: “Jenis Pemesanan” pada “Penerbangan”, maskapai dan nomor penerbangan di “Judul”, kedua bandara di bawah “Rute” dengan “Keberangkatan” dan “Kedatangan”, waktunya dan zona waktunya, “Maskapai” dan “No. Penerbangan”, “Kode Pemesanan” dan tiketnya di bawah “File”. Periksa lalu klik “Tambah”.',
+  'help.guide.import-transport-file.result':
+    'Penerbangan itu menjadi kartu di “Tertunda” pada tab “Transportasi” dan baris pada hari keberangkatannya, dengan tiket di bawah “File”, dan dengan kedua bandara dikenal ia menggambar lengkungannya di peta.',
+  'help.guide.import-transport-file.tip.1':
+    'Kedua tab berbagi satu impor: file yang memuat sebuah penerbangan dan sebuah hotel membuka penerbangan itu di “Tambah transportasi” dan hotelnya di “Reservasi Baru”, satu demi satu, dari tab mana pun Anda memulai.',
+  'help.guide.import-transport-file.tip.2':
+    'Bandara ditempatkan berdasarkan kodenya. Stasiun atau pelabuhan yang lokasinya tidak dapat ditemukan oleh pembacaan disebut dalam warna kuning ambar di kartu; pilih dengan tangan di bawah “Rute” sebelum Anda mengklik “Tambah”, atau transportasi itu tidak menggambar apa pun di peta.',
+  // airtrail-import
+  'help.guide.airtrail-import.title': 'Mengimpor penerbangan dari AirTrail',
+  'help.guide.airtrail-import.goal':
+    'Bawa penerbangan yang sudah Anda simpan di AirTrail ke dalam perjalanan sekaligus, dan biarkan mereka mengikuti AirTrail sejak saat itu.',
+  'help.guide.airtrail-import.step.1':
+    'Dengan addon AirTrail menyala dan instans Anda terhubung di bawah “Integrasi” di “Pengaturan”, bilah alat tab “Transportasi” membawa tombol “AirTrail” di sebelah “Transportasi”. Klik tombol itu.',
+  'help.guide.airtrail-import.step.2':
+    '“Impor dari AirTrail” mendaftar penerbangan akun Anda dalam dua kelompok. “Selama perjalanan ini” memuat yang bertanggal di dalam perjalanan, sudah tercentang; “Penerbangan lain” memuat sisanya, tidak tercentang. Penerbangan yang sudah ada di perjalanan diredupkan dan ditandai “Diimpor”.',
+  'help.guide.airtrail-import.step.3':
+    'Setiap baris adalah kotak centang dengan maskapai dan nomor penerbangan, kedua bandara dan tanggalnya. Klik sebuah baris untuk mengikutsertakan penerbangan itu atau mengecualikannya; yang di bawah “Penerbangan lain” hanya ikut bila Anda mencentangnya.',
+  'help.guide.airtrail-import.step.4':
+    'Penerbangan yang bersambung, masing-masing berangkat dari bandara tempat yang sebelumnya mendarat dalam satu hari, dibingkai bersama. Centang di bawahnya, “Impor sebagai satu penerbangan dengan transit di” bandara itu, sudah menyala: biarkan menyala untuk satu pemesanan dengan persinggahan, atau matikan untuk mengimpor tiap ruas sebagai penerbangan terpisah.',
+  'help.guide.airtrail-import.step.5':
+    'Klik “Impor”. Tombol itu menghitung penerbangan yang tercentang, dan pesan sesudahnya mengatakan berapa banyak yang masuk.',
+  'help.guide.airtrail-import.step.6':
+    'Penerbangan-penerbangan itu menjadi kartu di bawah “Dikonfirmasi”, masing-masing dengan lencana AirTrail biru di sebelah statusnya, dan baris pada hari-hari mereka beroperasi. Sambungan yang digabung adalah satu kartu, dengan rutenya melewati persinggahan.',
+  'help.guide.airtrail-import.result':
+    'Penerbangan dari AirTrail adalah kartu di tab “Transportasi” dan baris pada harinya, masing-masing mengenakan lencana AirTrail yang mengatakan dari mana asalnya.',
+  'help.guide.airtrail-import.tip.1':
+    'Penerbangan yang sudah ada di perjalanan dengan nomor dan tanggal yang sama dilewati, dan sebuah pesan mengatakan berapa banyak. “Batalkan” di bilah alat di atas hari menarik kembali seluruh impor.',
+  'help.guide.airtrail-import.tip.2':
+    'AirTrail tetap menjadi sumber kebenaran. TREK membaca perubahannya ketika Anda membuka perjalanan dan setiap beberapa menit di latar belakang; penerbangan yang dihapus di sana mempertahankan kartunya, dengan lencana berubah menjadi “Tidak tersinkron”. Suntingan yang dibuat di TREK hanya berjalan kembali dengan “Tulis perubahan kembali ke AirTrail” menyala di bawah “Integrasi”.',
+  'help.guide.airtrail-import.tip.3':
+    'Sambungan yang digabung tidak punya satu penerbangan AirTrail tunggal untuk diikuti, jadi ia adalah impor sekali jalan: ia mempertahankan lencana biru, dan mengarahkan penunjuk ke lencana itu mengatakannya. Hal yang sama terjadi pada penerbangan tersinkron yang Anda beri persinggahan dengan tangan.',
 
   // ── Screen: trip-roadtrip ─────────────────────────────────────────────────────────────
   'help.ctx.trip-roadtrip.title': 'Perjalanan darat',

@@ -466,6 +466,38 @@ const help: TranslationStrings = {
     'Les ciutats es llegeixen del text de l’adreça, no es consulten, així que una adreça curta com «Osteria Francescana, Italy» o una que acaba en una prefectura pot donar una regió en lloc d’una ciutat.',
   'help.guide.stats.tip.2':
     'Els països marcats a mà compten a Països i als continents, però no aporten viatges, llocs ni dies.',
+  // dawarich-countries
+  'help.guide.dawarich-countries.title': 'Afegir països a partir dels teus registres',
+  'help.guide.dawarich-countries.goal':
+    'Deixa que Dawarich digui a quins països has estat durant l’últim any, i posa al mapa els que confirmis.',
+  'help.guide.dawarich-countries.step.1':
+    'Amb l’addon Dawarich connectat, un panell Dawarich és a la part de baix del mapa, a l’esquerra de les estadístiques, amb dos mosaics. Fes clic a Països.',
+  'help.guide.dawarich-countries.step.2':
+    'El diàleg s’obre a la pestanya Països. Fes clic a Busca països: TREK llegeix els països i les ciutats que cobreixen els teus registres dels darrers 12 mesos, mes a mes, així que dona-li un moment. Cada país que el teu Atlas encara no té surt llistat amb la seva bandera, quantes ciutats i la primera d’elles pel nom, i comença marcat; fes clic a una fila per deixar-la fora.',
+  'help.guide.dawarich-countries.step.3':
+    'Confirma amb el botó de baix a la dreta, que diu Afegeix 5 països quan hi ha cinc files marcades. El diàleg diu quants s’han afegit; tanca’l i el mapa ja s’ha tornat a llegir.',
+  'help.guide.dawarich-countries.result':
+    'Els països confirmats porten un color al mapa i compten a Països, registrats com a vinguts de Dawarich. El que has marcat a mà queda intacte.',
+  'help.guide.dawarich-countries.tip.1':
+    'Els països que l’Atlas ja mostra com a visitats, a mà, per un viatge o per una comprovació anterior, queden fora, així que les teves pròpies marques mai no es reetiqueten. Un país que abans havies tret de l’Atlas torna quan el confirmes aquí.',
+  'help.guide.dawarich-countries.tip.2':
+    'Un nom de país que TREK no pot aparellar surt llistat sota les files en lloc de descartar-se, i Tornar a comprovar ho torna a demanar a Dawarich. La nota sota la llista diu que s’han revisat els darrers 12 mesos; aquesta finestra és fixa.',
+  // dawarich-wishes
+  'help.guide.dawarich-wishes.title': 'Marcar desitjos a partir dels teus registres',
+  'help.guide.dawarich-wishes.goal':
+    'Descobreix quins llocs de la teva llista de desitjos has assolit de debò, i marca’ls el dia que va passar.',
+  'help.guide.dawarich-wishes.step.1':
+    'Al panell Dawarich de la part de baix del mapa, a l’esquerra de les estadístiques, fes clic a Llista de desitjos.',
+  'help.guide.dawarich-wishes.step.2':
+    'El diàleg s’obre a la pestanya Llista de desitjos. Fes clic a Comprova la llista de desitjos: TREK repassa els teus registres buscant cada entrada que té coordenades. Un desig que has assolit surt llistat amb com t’hi vas acostar, quant t’hi vas quedar i el dia, i comença marcat; un que ja havies marcat diu Ja marcat. Sota la llista, una nota compta les entrades sense coordenades, i la regla també hi és: Un desig es considera assolit a menys de 250 m i després de 20 minuts al lloc.',
+  'help.guide.dawarich-wishes.step.3':
+    'Confirma amb el botó de baix a la dreta, que diu Marca’n 2 quan hi ha dues files marcades. Després tanca el diàleg i obre la pestanya Llista de desitjos del panell del costat.',
+  'help.guide.dawarich-wishes.result':
+    'Cada desig porta un tic verd amb la data de l’estada, no la d’avui; el seu rètol diu Marcat a partir dels teus enregistraments de Dawarich, i un clic a la data ho desfà.',
+  'help.guide.dawarich-wishes.tip.1':
+    'Passar-hi de llarg no compta: la regla demana proximitat i temps alhora, i de diverses estades que hi encaixen guanya la més llarga. Un desig sense coordenades no es pot comprovar, així que afegeix els llocs amb la cerca d’Afegeix un lloc i no només pel nom.',
+  'help.guide.dawarich-wishes.tip.2':
+    'Una comprovació mira fins a 50 entrades, primer les que encara no estan marcades, i ho diu quan n’hi havia més. Un desig que ja estava marcat conserva la seva pròpia data.',
 
   // ── Screen: collections ───────────────────────────────────────────────────────────────
   'help.ctx.collections.title': 'Col·leccions',
@@ -1701,6 +1733,20 @@ const help: TranslationStrings = {
   'help.guide.audit-log.result': 'Un rastre que pots entregar a qui pregunti per què ha canviat alguna cosa.',
   'help.guide.audit-log.tip.1': 'Les hores es mostren en la zona horària del servidor, indicada a sobre de la taula.',
   'help.guide.audit-log.tip.2': 'El registre és només d’afegir; res d’aquí no es pot editar ni eliminar des de l’app.',
+  // document-providers
+  'help.guide.document-providers.title': 'Oferir un magatzem de documents',
+  'help.guide.document-providers.goal':
+    'Decideix amb quins magatzems un viatge pot mantenir els seus documents al dia.',
+  'help.guide.document-providers.step.1':
+    'El mosaic Documents porta els magatzems com a files al seu prestatge: Paperless-ngx, Papra, Nextcloud, OpenCloud i Synology Drive. Els cinc comencen desactivats, i el prestatge només hi és mentre Documents mateix està activat.',
+  'help.guide.document-providers.step.2':
+    'Gira l’interruptor de la fila Nextcloud. El missatge diu Complement actualitzat, i a partir d’ara els propietaris de viatge troben Sincronització de documents a la pestanya Fitxers dels seus viatges, amb Nextcloud sota Connecta un proveïdor.',
+  'help.guide.document-providers.result':
+    'El magatzem s’ofereix a cada viatge d’aquest TREK; no hi ha res connectat fins que un propietari de viatge ho fa.',
+  'help.guide.document-providers.tip.1':
+    'Aquí només es decideix si un magatzem es pot oferir. L’adreça i les credencials pertanyen a un viatge i les introdueix el propietari del viatge a la seva pestanya Fitxers, mai al panell d’administració.',
+  'help.guide.document-providers.tip.2':
+    'Desactivar Documents desactiva tots els magatzems amb ell, i un magatzem no es pot activar mentre Documents està desactivat: el servidor respon Enable the Documents addon first. Un magatzem a la teva pròpia xarxa també necessita ALLOW_INTERNAL_NETWORK=true al servidor.',
 
   // ── Screen: trip ──────────────────────────────────────────────────────────────────────
   'help.ctx.trip.title': 'Viatge',
@@ -2156,29 +2202,29 @@ const help: TranslationStrings = {
   'help.ctx.trip-place.bullet.5':
     'La fila de baix: Afegeix al dia o Treure del dia mentre hi ha un dia obert, després Desar a la col·lecció, Navegació, Obre el lloc web, Editar i Eliminar.',
   'help.ctx.trip-place.bullet.6':
-    'Un lloc que el TREK ha pogut aparellar amb un proveïdor de mapes mostra més coses: la valoració d’aquest proveïdor amb una ressenya, el telèfon i un anell Obert o Tancat al voltant de la imatge, amb l’horari de la setmana al darrere.',
+    'Un lloc triat de la cerca porta el que l’índex de TREK o OpenStreetMap en saben: un anell verd Obert o vermell Tancat al voltant de la imatge, jutjat pel rellotge del lloc mateix, el telèfon sota les estrelles, Horari d’obertura més avall amb la línia del dia a la fila i tota la setmana darrere d’un clic, i el seu lloc web darrere d’Obre el lloc web. La valoració de Google només surt en un lloc trobat per Google, en un TREK amb una clau de Google.',
   // read-place
   'help.guide.read-place.title': 'Què et diu la fitxa d’un lloc',
   'help.guide.read-place.goal': 'Llegeix tot el que el viatge sap d’un lloc, en una sola fitxa.',
   'help.guide.read-place.step.1':
     'A la columna dels dies, fes clic a la parada que vols llegir. La fitxa s’obre damunt del mapa i la parada queda marcada al seu dia.',
   'help.guide.read-place.step.2':
-    'La capçalera: la imatge rodona, el nom, l’adreça i les coordenades exactes. La X de la dreta torna a tancar la fitxa.',
+    'La capçalera: la imatge rodona, el nom, l’adreça i les coordenades exactes. Un anell verd amb Obert, o un de vermell amb Tancat, al voltant de la imatge diu si el lloc és obert ara mateix, pel seu propi rellotge, un cop TREK en coneix l’horari. La X de la dreta torna a tancar la fitxa.',
   'help.guide.read-place.step.3':
-    'A sota, les estrelles que cada viatger ha donat al lloc, amb la mitjana i quants han votat. Encara sense valoració mentre no ho hagi fet ningú.',
+    'A sota, les estrelles que cada viatger ha donat al lloc, amb la mitjana i quants han votat. Encara sense valoració mentre no ho hagi fet ningú. Just a sota, el telèfon on el lloc en té: un clic hi passa el número a la teva aplicació de telèfon.',
   'help.guide.read-place.step.4':
     'Després la descripció i, a sota, les notes. Totes dues són el text del formulari del lloc, renderitzat: llistes, enllaços i negreta funcionen.',
   'help.guide.read-place.step.5': 'Participants diu qui va a aquesta parada. Hi són tots fins que en treus algú.',
   'help.guide.read-place.step.6':
-    'La fila de baix és el que pots fer des d’aquí: treure el lloc del dia obert o posar-l’hi, desar-lo a una llista, obrir-lo en una aplicació de mapes, editar-lo o eliminar-lo.',
+    'Horari d’obertura, més avall: la fila porta l’horari del dia que estàs mirant, i un clic la desplega amb tota la setmana i aquell dia en negreta. Fitxers hi és al costat.',
   'help.guide.read-place.result':
-    'La fitxa queda oberta fins que la tanques amb la X o tries un altre lloc, i la parada a la qual pertany queda marcada a la columna dels dies.',
+    'La fitxa queda oberta fins que la tanques amb la X o tries un altre lloc, l’horari de la setmana queda desplegat, i la parada a la qual pertany queda marcada a la columna dels dies.',
   'help.guide.read-place.tip.1':
     'Triada des de la columna de llocs, la fitxa coneix el lloc però no cap parada, així que no mostra ni participants ni reserva. Tria la parada dins del dia i hi són tots dos.',
   'help.guide.read-place.tip.2':
     'Fes doble clic al nom per canviar el nom del lloc sense obrir el formulari. Retorn desa, Esc descarta el canvi.',
   'help.guide.read-place.tip.3':
-    'Un lloc que el TREK ha pogut aparellar amb un proveïdor de mapes mostra també la valoració d’aquest proveïdor, una ressenya, el telèfon i l’horari d’obertura.',
+    'Un lloc escrit a mà no mostra res d’això: la fitxa només coneix el que té el seu formulari. Obre’l amb Editar, tria’l entre els suggeriments sota Cerca llocs… i fes clic a Actualitzar, i l’horari, el telèfon i el lloc web hi vénen. La valoració de Google necessita una clau de Google.',
   // rate-place
   'help.guide.rate-place.title': 'Valorar un lloc',
   'help.guide.rate-place.goal': 'Posa les teves estrelles a un lloc, i mira les que hi ha posat tothom.',
@@ -2345,6 +2391,9 @@ const help: TranslationStrings = {
     'Una ruta enregistrada amb altituds mostra també el seu punt més alt i més baix, els metres de pujada i de baixada, i el perfil de la caminada.',
   'help.guide.place-track.tip.3':
     'Una importació dóna a cada ruta que porta un color propi, així dues caminades mai no arriben amb el mateix.',
+  // read-place
+  'help.guide.read-place.step.7':
+    'La fila de baix és el que pots fer des d’aquí: treure el lloc del dia obert o posar-l’hi, desar-lo a una llista, obrir-lo en una aplicació de mapes, editar-lo o eliminar-lo.',
 
   // ── Screen: trip-files ────────────────────────────────────────────────────────────────
   'help.ctx.trip-files.title': 'Fitxers',
@@ -2476,6 +2525,30 @@ const help: TranslationStrings = {
   'help.guide.files-trash.tip.2':
     'Llençar un fitxer i recuperar-lo demana el dret Elimina fitxers. Un membre que no el té no veu ni Eliminar a la fila ni els botons de la paperera.',
   'help.guide.files-trash.tip.3': 'Un fitxer eliminat per sempre a la paperera no es pot recuperar.',
+  // files-sync
+  'help.guide.files-sync.title': 'Mantenir els documents al dia amb una carpeta de Nextcloud',
+  'help.guide.files-sync.goal':
+    'Lliga el viatge a una carpeta del teu propi magatzem de documents, perquè el que es puja aquí arribi allà i el que s’arxiva allà aparegui aquí.',
+  'help.guide.files-sync.step.1':
+    'Fes clic a Sincronització de documents, al costat de Paperera a l’extrem dret de la barra d’eines. El diàleg s’obre amb el nom del viatge sota el títol. A l’esquerra, sota Connecta un proveïdor, hi ha els magatzems que un administrador ha activat, cadascun amb una línia sobre com arxiva, Arxiva en una carpeta per a Nextcloud; a la dreta diu Encara no hi ha res connectat.',
+  'help.guide.files-sync.step.2':
+    'Fes clic a Nextcloud. S’obre un diàleg més petit per a la connexió, amb el nom del magatzem, amb el recordatori a dalt de fer servir una contrasenya d’aplicació en lloc de la del teu compte.',
+  'help.guide.files-sync.step.3':
+    'Omple Adreça, Nom d’usuari, el teu nom d’usuari de Nextcloud i no la teva adreça electrònica, i Contrasenya d’aplicació, que Nextcloud crea sota Configuració, Seguretat. Carpeta base és opcional: és on TREK busca les carpetes dels viatges, /TREK si no dius el contrari, aquí /Reisen. Accepta un certificat autosignat, a baix, només és per a una instància de la teva pròpia xarxa amb un certificat així.',
+  'help.guide.files-sync.step.4':
+    'Fes clic a Prova la connexió. TREK arriba al magatzem amb el que has escrit i el peu diu Contactat, sessió iniciada com a seguit del nom del compte, aquí admin. Una contrasenya rebutjada o una adreça que no es pot abastar hi surt en lloc d’això, i en cap dels dos casos no es desa res.',
+  'help.guide.files-sync.step.5':
+    'Fes clic a Connecta. La connexió es desa amb el viatge i TREK pregunta On ha d’anar aquest viatge dins de Nextcloud? Només el que hi ha en aquesta carpeta se sincronitza. Crea’n un de nou crea una carpeta sota la carpeta base en fer Crea, amb un nom preomplert a partir del títol del viatge; sota O fes servir un que ja tinguis hi ha les carpetes que ja existeixen. Fes clic a una, aquí Autumn in Japan.',
+  'help.guide.files-sync.step.6':
+    'El diàleg torna a ser-hi: Nextcloud és sota Aquest viatge a l’esquerra, i la seva targeta a la dreta porta la carpeta, quan es va executar per última vegada i Sincronitza ara. Una primera execució comença sola; Sincronitza ara en llança una quan vulguis. Un cop una execució ha acabat, la insígnia Encara no s’ha sincronitzat al costat del nom deixa pas a un punt verd, Al dia quan hi apuntes, i la barra de flux compta els documents que TREK i Nextcloud tenen cadascun, amb els carrils Cap al gestor i Des del gestor entremig. Tanca el diàleg amb la ×.',
+  'help.guide.files-sync.result':
+    'Els dos documents que ja eren a la carpeta són a dalt de tot de la llista, pujats a nom teu, i cada document del viatge també és a la carpeta. A partir d’ara TREK revisa la carpeta en segon pla i la carpeta segueix la llista.',
+  'help.guide.files-sync.tip.1':
+    'Només el propietari del viatge o un administrador de la instància pot lligar un viatge, ja que la contrasenya d’aplicació arriba a tot aquell compte de Nextcloud. Tots els membres poden obrir Sincronització de documents, llegir la targeta i prémer Sincronitza ara.',
+  'help.guide.files-sync.tip.2':
+    'Un magatzem a la teva pròpia xarxa necessita ALLOW_INTERNAL_NETWORK=true al servidor de TREK, i la seva adreça ha de ser l’adreça de la màquina a la xarxa, mai localhost. Sense això, Prova la connexió respon Aquesta adreça no està permesa.',
+  'help.guide.files-sync.tip.3':
+    'Desconnecta a la targeta acaba l’aparellament i conserva tots els documents a les dues bandes. Una carpeta lligada per segona vegada es tracta com a nova, i tot el que hi ha torna a entrar, així que després d’un Desconnecta lliga una carpeta buida en lloc de la vella.',
 
   // ── Screen: trip-day-detail ───────────────────────────────────────────────────────────
   'help.ctx.trip-day-detail.title': 'Detalls del dia',
@@ -2740,6 +2813,37 @@ const help: TranslationStrings = {
     'Mostra sempre les rutes de reserva, a la mateixa configuració, les dibuixa des del principi a cada viatge sobre el qual encara no has decidit.',
   'help.guide.map-booking-routes.tip.3':
     'Una reserva necessita dos extrems amb coordenades abans de poder-se dibuixar, així que un hotel o un restaurant no porta icona de ruta.',
+  'help.ctx.trip-map.bullet.8':
+    'Amb l’addon Dawarich activat, el botó rodó Dawarich sota Mostra tot el viatge dibuixa el recorregut que el teu telèfon va enregistrar de debò: Mostra el recorregut enregistrat el posa discontinu sota la ruta planificada, un color per dia, i l’etiqueta del botó diu per què no hi ha línia quan no n’hi ha.',
+  // map-dawarich-trail
+  'help.guide.map-dawarich-trail.title': 'Mostrar el recorregut que has fet de debò',
+  'help.guide.map-dawarich-trail.goal':
+    'Posa sobre el mapa el recorregut que Dawarich va enregistrar al teu telèfon, discontinu al costat del que havies planificat, i llegeix el viatge dia a dia tal com va anar de debò.',
+  'help.guide.map-dawarich-trail.step.1':
+    'El botó rodó Dawarich és a baix a la dreta del mapa, sota Mostra tot el viatge; passar-hi per sobre diu Mostra el recorregut enregistrat. Fes-hi clic. TREK demana al teu Dawarich les dates del viatge, i un anell gira al voltant del botó mentre la resposta és de camí.',
+  'help.guide.map-dawarich-trail.step.2':
+    'El recorregut enregistrat arriba com una línia discontínua, un color per dia, dibuixada sota la ruta planificada perquè el pla es continuï llegint bé. El botó ara diu Amaga el recorregut enregistrat. Els dies es tallen a la mitjanit local, i un dia plegat a la columna dels dies s’emporta la seva línia discontínua fora del mapa juntament amb les seves parades.',
+  'help.guide.map-dawarich-trail.step.3':
+    'Fes clic també a Mostra tot el viatge i cada dia planificat es dibuixa en línia contínua al costat de l’enregistrament discontinu. On les dues van juntes, el dia va anar com estava planificat; on la línia discontínua se’n desvia és on no.',
+  'help.guide.map-dawarich-trail.result':
+    'El que havies planificat i el que vas fer de debò són junts al mapa, discontinu contra continu, i la targeta sobre els botons encara llista els dies planificats i les seves distàncies.',
+  'help.guide.map-dawarich-trail.tip.1':
+    'Activat o desactivat es recorda per viatge durant aquesta sessió del navegador. Mentre el recorregut és activat, TREK torna a preguntar a Dawarich cada dos minuts, així que un viatge en marxa es posa al dia sense recarregar; el recorregut mateix no es desa mai, així que no és a la base de dades de TREK, ni a les còpies de seguretat, ni hi és fora de línia.',
+  'help.guide.map-dawarich-trail.tip.2':
+    'L’etiqueta del botó explica un mapa buit: S’està carregant el recorregut enregistrat… mentre és de camí, No s’ha enregistrat res en aquestes dates, No s’ha pogut carregar el recorregut enregistrat, o El recorregut enregistrat necessita connexió quan TREK és fora de línia.',
+  // map-compass
+  'help.guide.map-compass.title': 'Girar el mapa i tornar a trobar el nord',
+  'help.guide.map-compass.goal': 'Gira el mapa per encarar-lo cap on vas, i torna’l al nord amb un sol clic.',
+  'help.guide.map-compass.step.1':
+    'Gira el mapa arrossegant amb el botó dret, o mantén premuda Ctrl i arrossega amb el botó esquerre; en una pantalla tàctil, gira amb dos dits. La brúixola rodona al costat de la fila d’icones de categoria a dalt del mapa gira amb ell: la seva fletxa sempre apunta al nord, així que s’inclina tant com hagis girat.',
+  'help.guide.map-compass.step.2':
+    'Fes clic a la brúixola. Reset north, que és com es diu el botó, torna el mapa suaument al nord a dalt i a una vista plana, i la fletxa torna a quedar dreta.',
+  'help.guide.map-compass.result':
+    'El mapa torna a tenir el nord a dalt i és pla, i res del viatge no ha canviat: la brúixola només mou la càmera.',
+  'help.guide.map-compass.tip.1':
+    'La brúixola només existeix als mapes MapLibre GL i Mapbox GL; el mapa Leaflet no es pot girar, així que no en té. Proveïdor de mapa a Configuració, sota Mapa, decideix quin fas servir, i Desa el mapa conserva la tria.',
+  'help.guide.map-compass.tip.2':
+    'El clic també treu la inclinació: arrossegar amb el botó dret amunt o avall inclina la vista, i Reset north l’anivella juntament amb el gir. A Mapbox GL amb Edificis 3D i terreny activat, això aplana també la vista 3D, fins que la tornis a inclinar.',
 
   // ── Screen: trip-collab ───────────────────────────────────────────────────────────────
   'help.ctx.trip-collab.title': 'Col·laboració',
@@ -3225,15 +3329,15 @@ const help: TranslationStrings = {
   'help.guide.import-booking-file.step.3':
     'Fes clic a Importar. El diàleg es tanca de seguida, perquè la lectura passa en segon pla.',
   'help.guide.import-booking-file.step.4':
-    'Una targeta a baix a la dreta informa de l’execució, i et segueix per l’aplicació i a través d’una recàrrega. Quan ha acabat ofereix Importar, que engega la revisió: cada reserva que ha trobat s’obre al formulari de sempre, omplerta i amb el seu document adjunt, perquè la comprovis i facis Afegir una darrere l’altra.',
+    'Una targeta a baix a la dreta informa de l’execució sota el nom del fitxer, i et segueix per l’aplicació i a través d’una recàrrega. Analitzant els fitxers… es converteix en un tic quan la lectura ha acabat, i la targeta ofereix Importar. Fes-hi clic.',
   'help.guide.import-booking-file.result':
-    'Cada reserva que has confirmat és una targeta pròpia amb el seu codi, les seves dates i el document d’on va sortir; un allotjament també ha rebut les seves nits, i amb Despeses activat, un preu que era a la confirmació s’ha convertit en una despesa.',
+    'La reserva és una targeta a Pendent amb les seves nits, el seu codi i la confirmació sota Fitxers, l’estada és en aquells dies del pla, i amb Despeses activat el preu és una despesa lligada a ella.',
   'help.guide.import-booking-file.tip.1':
-    'Importa des d’un fitxer només hi és si el servidor sap llegir confirmacions, i això demana o bé l’extractor integrat o bé l’addon Anàlisi amb IA. Aquest l’administrador l’engega a Complements.',
+    'Importa des d’un fitxer només hi és si el servidor sap llegir confirmacions, i això demana o bé l’extractor o bé l’addon Anàlisi amb IA. Aquest l’administrador l’engega a Complements.',
   'help.guide.import-booking-file.tip.2':
-    'Si no s’ha pogut llegir res, la targeta ho diu i ofereix Provar l’anàlisi per IA, que envia els mateixos fitxers directament al model.',
+    'Si no s’ha pogut llegir res, la targeta ho diu i ofereix Provar l’anàlisi per IA, que envia els mateixos fitxers directament al model. Una anàlisi acabada es guarda deu minuts; engega la revisió dins d’aquest marge.',
   'help.guide.import-booking-file.tip.3':
-    'Una anàlisi acabada es guarda deu minuts. Engega la revisió dins d’aquest marge.',
+    'La confirmació només s’adjunta quan el seu tipus és als Tipus de fitxer permesos de la configuració d’administració. PDF hi és d’entrada; un correu, EML, s’ha d’afegir primer, o la reserva es desa sense.',
   // edit-booking
   'help.guide.edit-booking.title': 'Canviar una reserva',
   'help.guide.edit-booking.goal':
@@ -3265,6 +3369,9 @@ const help: TranslationStrings = {
     'Eliminar una reserva d’allotjament també treu les seves nits del Pla per dies i elimina la despesa que hi estava vinculada.',
   'help.guide.delete-booking.tip.2':
     'Els documents que hi havia adjunts es queden a la pestanya Fitxers del viatge; només se’n va el seu vincle amb la reserva.',
+  // import-booking-file
+  'help.guide.import-booking-file.step.5':
+    'Cada reserva trobada s’obre a Reserva nova, l’una darrere l’altra, ja omplerta. Per a un hotel, això és el nom a Títol i, quan el viatge té el lloc, sota Allotjament, la seva Ubicació / adreça, Des del i Fins al a les seves nits, Registre d’entrada i Registre de sortida, el Codi de reserva, la confirmació sota Fitxers i, amb Despeses activat, el preu com a Despesa vinculada. Comprova-ho i fes clic a Afegir.',
 
   // ── Screen: trip-costs ────────────────────────────────────────────────────────────────
   'help.ctx.trip-costs.title': 'Despeses',
@@ -3605,6 +3712,50 @@ const help: TranslationStrings = {
     'Una reserva confirmada és una línia contínua, una de pendent és discontínua. L’opció Etiquetes de rutes de reserves escriu el codi de l’aeroport o el nom de l’estació als marcadors dels extrems.',
   'help.guide.transport-on-map.tip.3':
     'Mostra totes les rutes de reserva és fer taula rasa, no és una capa: descarta el que havien posat les icones individuals, de manera que prémer-ho dues vegades et deixa amb tot encès o tot apagat.',
+  // import-transport-file
+  'help.guide.import-transport-file.title': 'Llegir un vol del seu bitllet electrònic',
+  'help.guide.import-transport-file.goal':
+    'Deixa que TREK tregui un vol, un tren o un ferri del bitllet que ha enviat la companyia, i comprova’l abans que es desi.',
+  'help.guide.import-transport-file.step.1':
+    'Fes clic a Importa des d’un fitxer a la barra d’eines de la pestanya Transports, al costat de Transport manual. S’obre Importa confirmacions de reserva, el mateix diàleg que té la pestanya Reserves.',
+  'help.guide.import-transport-file.step.2':
+    'Deixa anar el bitllet sobre la caixa, o fes-hi clic i tria’l: EML, PDF, PKPass, HTML i TXT, fins a cinc fitxers de 10 MB cadascun. Els fitxers que has triat surten amb el seu nom a la caixa.',
+  'help.guide.import-transport-file.step.3':
+    'Fes clic a Importar. El diàleg es tanca de seguida; la lectura passa en segon pla.',
+  'help.guide.import-transport-file.step.4':
+    'Una targeta a baix a la dreta informa de l’execució sota el nom del fitxer. Analitzant els fitxers… es converteix en un tic quan la lectura ha acabat, i la targeta ofereix Importar. Fes-hi clic.',
+  'help.guide.import-transport-file.step.5':
+    'Un vol s’obre a Afegeix transport, ja omplert: Tipus de reserva a Vol, l’aerolínia i el número de vol a Títol, els dos aeroports sota Ruta amb Sortida i Arribada, les seves hores i les seves zones horàries, Aerolínia i Núm. de vol, el Codi de reserva i el bitllet sota Fitxers. Comprova-ho i fes clic a Afegir.',
+  'help.guide.import-transport-file.result':
+    'El vol és una targeta a Pendent a la pestanya Transports i una fila al dia que surt, amb el bitllet sota Fitxers, i amb els dos aeroports coneguts dibuixa la seva corba al mapa.',
+  'help.guide.import-transport-file.tip.1':
+    'Les dues pestanyes comparteixen una sola importació: un fitxer que conté un vol i un hotel obre el vol a Afegeix transport i l’hotel a Reserva nova, l’un darrere l’altre, sigui quina sigui la pestanya des d’on has començat.',
+  'help.guide.import-transport-file.tip.2':
+    'Els aeroports es col·loquen pel seu codi. Una estació o un port que la lectura no ha pogut localitzar surt en ambre a la targeta; tria’l a mà sota Ruta abans de fer clic a Afegir, o el transport no dibuixa res al mapa.',
+  // airtrail-import
+  'help.guide.airtrail-import.title': 'Importar vols des d’AirTrail',
+  'help.guide.airtrail-import.goal':
+    'Porta al viatge d’un sol cop els vols que ja tens a AirTrail, i deixa que a partir de llavors segueixin AirTrail.',
+  'help.guide.airtrail-import.step.1':
+    'Amb l’addon AirTrail activat i la teva instància connectada sota Integracions a Configuració, la barra d’eines de la pestanya Transports porta un botó AirTrail al costat de Transport manual. Fes-hi clic.',
+  'help.guide.airtrail-import.step.2':
+    'Importar des d’AirTrail llista els vols del teu compte en dos grups. Durant aquest viatge té els datats dins del viatge, ja marcats; Altres vols té la resta, sense marcar. Un vol que ja és al viatge surt en gris i marcat com a Importat.',
+  'help.guide.airtrail-import.step.3':
+    'Cada fila és una casella amb l’aerolínia i el número de vol, els dos aeroports i la data. Fes clic a una fila per incloure el vol o deixar-lo fora; els d’Altres vols només entren quan els marques.',
+  'help.guide.airtrail-import.step.4':
+    'Els vols que enllacen, cadascun sortint de l’aeroport on el d’abans va aterrar en menys d’un dia, s’emmarquen junts. La casella de sota, Importar com un sol vol amb escala a aquell aeroport, ja està activada: deixa-la activada per a una sola reserva amb escala, o desactiva-la per importar els trams com a vols separats.',
+  'help.guide.airtrail-import.step.5':
+    'Fes clic a Importar. El botó compta els vols marcats, i el missatge de després diu quants n’han entrat.',
+  'help.guide.airtrail-import.step.6':
+    'Els vols són targetes sota Confirmada, cadascuna amb una insígnia blava AirTrail al costat del seu estat, i files als dies que operen. Una connexió unida és una sola targeta, amb la seva ruta passant per l’escala.',
+  'help.guide.airtrail-import.result':
+    'Els vols d’AirTrail són targetes a la pestanya Transports i files als seus dies, cadascuna amb la insígnia AirTrail que diu d’on ve.',
+  'help.guide.airtrail-import.tip.1':
+    'Un vol que ja és al viatge amb el mateix número i la mateixa data se salta, i un missatge diu quants n’hi havia. Desfés a la barra d’eines sobre els dies retira tota la importació.',
+  'help.guide.airtrail-import.tip.2':
+    'AirTrail continua sent la font de la veritat. TREK en llegeix els canvis quan obres el viatge i cada pocs minuts en segon pla; un vol eliminat allà conserva la seva targeta, amb la insígnia canviada a No sincronitzat. Els canvis fets a TREK només hi tornen amb Sincronitzar els canvis cap a AirTrail activat sota Integracions.',
+  'help.guide.airtrail-import.tip.3':
+    'Una connexió unida no té cap vol d’AirTrail únic a seguir, així que és una importació d’un sol cop: conserva la insígnia blava, i passar per sobre de la insígnia ho diu. El mateix passa amb un vol sincronitzat al qual dones una escala a mà.',
 
   // ── Screen: trip-roadtrip ─────────────────────────────────────────────────────────────
   'help.ctx.trip-roadtrip.title': 'Viatge per carretera',

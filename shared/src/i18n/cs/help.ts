@@ -439,6 +439,37 @@ const help: TranslationStrings = {
     'Města se čtou z textu adresy, nevyhledávají se, takže krátká adresa jako „Osteria Francescana, Italy“ nebo taková, která končí prefekturou, může dát region místo města.',
   'help.guide.stats.tip.2':
     'Ručně označené země se počítají v Zemích a kontinentech, ale nepřinášejí žádné cesty, místa ani dny.',
+  // dawarich-countries
+  'help.guide.dawarich-countries.title': 'Přidat země z vašich záznamů',
+  'help.guide.dawarich-countries.goal':
+    'Nechte Dawarich říct, ve kterých zemích jste za poslední rok byli, a ty, které potvrdíte, dejte na mapu.',
+  'help.guide.dawarich-countries.step.1':
+    'S připojeným doplňkem Dawarich sedí dole na mapě, vlevo od statistik, panel Dawarich se dvěma dlaždicemi. Klikněte na Země.',
+  'help.guide.dawarich-countries.step.2':
+    'Dialog se otevře na kartě Země. Klikněte na Vyhledat země: TREK čte země a města, která vaše záznamy za posledních 12 měsíců pokrývají, měsíc po měsíci, takže mu dejte chvilku. Každá země, kterou váš Atlas ještě nemá, je vypsaná s vlajkou, počtem měst a prvním z nich jménem, a začíná zaškrtnutá; kliknutím na řádek ji vynecháte.',
+  'help.guide.dawarich-countries.step.3':
+    'Potvrďte tlačítkem vpravo dole, na kterém stojí Přidat země: 5, když je zaškrtnuto pět řádků. Dialog řekne, kolik jich bylo přidáno; zavřete ho a mapa se mezitím znovu načetla.',
+  'help.guide.dawarich-countries.result':
+    'Potvrzené země nesou na mapě barvu a počítají se do Země, zaznamenané jako pocházející z Dawarichu. To, co jste označili ručně, zůstává netknuté.',
+  'help.guide.dawarich-countries.tip.1':
+    'Země, které Atlas už ukazuje jako navštívené, ručně, z cesty nebo z dřívější kontroly, jsou vynechané, takže vaše vlastní značky se nikdy nepřepíší. Země, kterou jste dříve z Atlasu odebrali, se vrátí, když ji tady potvrdíte.',
+  'help.guide.dawarich-countries.tip.2':
+    'Název země, který TREK nedokáže přiřadit, je vypsaný pod řádky, ne zahozený, a Zkontrolovat znovu se zeptá Dawarichu ještě jednou. Poznámka pod seznamem říká Prohledáno bylo posledních 12 měsíců; to okno je pevně dané.',
+  // dawarich-wishes
+  'help.guide.dawarich-wishes.title': 'Odškrtnout přání podle vašich záznamů',
+  'help.guide.dawarich-wishes.goal':
+    'Zjistěte, kterých míst ze svého bucket listu jste opravdu dosáhli, a odškrtněte je ke dni, kdy se to stalo.',
+  'help.guide.dawarich-wishes.step.1': 'V panelu Dawarich dole na mapě, vlevo od statistik, klikněte na Seznam přání.',
+  'help.guide.dawarich-wishes.step.2':
+    'Dialog se otevře na kartě Seznam přání. Klikněte na Zkontrolovat seznam přání: TREK projde vaše záznamy pro každou položku, která má souřadnice. Přání, kterého jste dosáhli, je vypsané s tím, jak blízko jste se dostali, jak dlouho jste zůstali a který den, a začíná zaškrtnuté; u toho, které jste už odškrtli, stojí Již odškrtnuto. Pod seznamem počítá poznámka položky bez souřadnic a stojí tam i pravidlo: Přání se počítá jako splněné do 250 m a po 20 minutách na místě.',
+  'help.guide.dawarich-wishes.step.3':
+    'Potvrďte tlačítkem vpravo dole, na kterém stojí Odškrtnout 2, když jsou zaškrtnuté dva řádky. Pak dialog zavřete a otevřete kartu Bucket List v panelu vedle.',
+  'help.guide.dawarich-wishes.result':
+    'Každé přání nese zelené zaškrtnutí s datem pobytu, ne dneška; jeho popisek říká Odškrtnuto podle vašich záznamů v Dawarichu a kliknutí na datum to vrátí zpět.',
+  'help.guide.dawarich-wishes.tip.1':
+    'Projet kolem se nepočítá: pravidlo potřebuje blízkost i čas, a z několika pobytů, které vyhovují, vyhrává nejdelší. Přání bez souřadnic se zkontrolovat nedá, proto přidávejte místa přes hledání v Přidat místo, ne jen jménem.',
+  'help.guide.dawarich-wishes.tip.2':
+    'Jedna kontrola se podívá až na 50 položek, nejdřív na ty ještě neodškrtnuté, a řekne, když jich bylo víc. Přání, které už bylo odškrtnuté, si nechá své vlastní datum.',
 
   // ── Screen: collections ───────────────────────────────────────────────────────────────
   'help.ctx.collections.title': 'Sbírky',
@@ -1623,6 +1654,19 @@ const help: TranslationStrings = {
   'help.guide.audit-log.result': 'Stopa, kterou můžete předat komukoli, kdo se ptá, proč se něco změnilo.',
   'help.guide.audit-log.tip.1': 'Časy se zobrazují v časovém pásmu serveru, uvedeném nad tabulkou.',
   'help.guide.audit-log.tip.2': 'Protokol je jen pro přidávání; nic tady nelze z aplikace upravit ani smazat.',
+  // document-providers
+  'help.guide.document-providers.title': 'Nabídnout úložiště dokumentů',
+  'help.guide.document-providers.goal': 'Rozhodněte, se kterými úložišti smí cesta své dokumenty synchronizovat.',
+  'help.guide.document-providers.step.1':
+    'Dlaždice Dokumenty nese úložiště jako řádky na své poličce: Paperless-ngx, Papra, Nextcloud, OpenCloud a Synology Drive. Všech pět začíná vypnutých a polička je tam jen tehdy, dokud jsou zapnuté samotné Dokumenty.',
+  'help.guide.document-providers.step.2':
+    'Přepněte přepínač na řádku Nextcloud. Zpráva zní Doplněk byl aktualizován a od té chvíle najdou vlastníci cest v kartě Soubory svých cest Synchronizace dokumentů, s Nextcloud pod Připojit poskytovatele.',
+  'help.guide.document-providers.result':
+    'Úložiště je v nabídce na každé cestě tohoto TREKu; nic není připojené, dokud to neudělá vlastník cesty.',
+  'help.guide.document-providers.tip.1':
+    'Tady se rozhoduje jen o tom, zda se úložiště smí nabízet. Adresa a přihlašovací údaje patří k cestě a zadává je v její kartě Soubory vlastník cesty, nikdy v administraci.',
+  'help.guide.document-providers.tip.2':
+    'Vypnutí Dokumentů vypne s nimi každé úložiště a úložiště nejde zapnout, dokud jsou Dokumenty vypnuté: server odpoví Enable the Documents addon first. Úložiště ve vaší vlastní síti potřebuje na serveru navíc ALLOW_INTERNAL_NETWORK=true.',
 
   // ── Screen: trip ──────────────────────────────────────────────────────────────────────
   'help.ctx.trip.title': 'Cesta',
@@ -2050,30 +2094,30 @@ const help: TranslationStrings = {
   'help.ctx.trip-place.bullet.5':
     'Řádek dole: Přidat ke dni nebo Odebrat ze dne, dokud je otevřený den, pak Uložit do sbírky, Navigace, Otevřít webové stránky, Upravit a Smazat.',
   'help.ctx.trip-place.bullet.6':
-    'Místo, které TREK spároval s mapovým poskytovatelem, ukáže víc: hodnocení toho poskytovatele s recenzí, telefonní číslo a prstenec Otevřeno nebo Zavřeno kolem obrázku s otevírací dobou celého týdne za ním.',
+    'Místo vybrané z hledání nese to, co o něm ví index TREKu nebo OpenStreetMap: zelený prstenec Otevřeno nebo červený Zavřeno kolem obrázku, posouzený podle hodin samotného místa, telefonní číslo pod hvězdami, Otevírací doba níže s hodinami toho dne na řádku a celým týdnem za kliknutím, a jeho web za Otevřít webové stránky. Hodnocení od Googlu se ukáže jen u místa nalezeného přes Google, na TREKu s klíčem Google.',
   // read-place
   'help.guide.read-place.title': 'Co vám karta o místě řekne',
   'help.guide.read-place.goal': 'Přečtěte si vše, co cesta o jednom místě ví, v jediné kartě.',
   'help.guide.read-place.step.1':
     'Klikněte ve sloupci dnů na zastávku, kterou si chcete přečíst. Karta se otevře přes mapu a zastávka zůstane ve svém dni zvýrazněná.',
   'help.guide.read-place.step.2':
-    'Hlavička: kulatý obrázek, název, adresa a přesné souřadnice. X vpravo kartu zase zavře.',
+    'Hlavička: kulatý obrázek, název, adresa a přesné souřadnice. Zelený prstenec s Otevřeno nebo červený se Zavřeno kolem obrázku říká, zda má místo právě teď otevřeno, podle jeho vlastních hodin, jakmile TREK zná jeho otevírací dobu. X vpravo kartu zase zavře.',
   'help.guide.read-place.step.3':
-    'Pod tím hvězdy, které místu dal každý cestující, s průměrem a počtem hlasů. Zatím bez hodnocení, dokud nehlasoval nikdo.',
+    'Pod tím hvězdy, které místu dal každý cestující, s průměrem a počtem hlasů. Zatím bez hodnocení, dokud nehlasoval nikdo. Hned pod tím telefonní číslo tam, kde ho místo má: kliknutím na něj číslo předáte své telefonní aplikaci.',
   'help.guide.read-place.step.4':
     'Pak popis a pod ním poznámky. Obojí je text z formuláře místa, vykreslený: seznamy, odkazy i tučné písmo fungují.',
   'help.guide.read-place.step.5':
     'Účastníci říkají, kdo na tuto zastávku jde. Dokud někoho neodeberete, jsou uvnitř všichni.',
   'help.guide.read-place.step.6':
-    'Řádek dole je to, co odsud můžete udělat: sundat místo z otevřeného dne nebo ho na něj položit, uložit ho do seznamu, otevřít ho v mapové aplikaci, upravit ho nebo smazat.',
+    'Otevírací doba, níže: řádek nese hodiny dne, na který se díváte, a kliknutí na něj rozbalí celý týden s tím dnem tučně. Vedle stojí Soubory.',
   'help.guide.read-place.result':
-    'Karta zůstane otevřená, dokud ji nezavřete křížkem nebo nevyberete jiné místo, a zastávka, ke které patří, zůstane ve sloupci dnů zvýrazněná.',
+    'Karta zůstane otevřená, dokud ji nezavřete křížkem nebo nevyberete jiné místo, hodiny týdne zůstanou rozbalené a zastávka, ke které patří, zůstane ve sloupci dnů zvýrazněná.',
   'help.guide.read-place.tip.1':
     'Vybraná ze sloupce míst zná karta místo, ale ne zastávku, takže neukáže žádné účastníky ani rezervaci. Vyberte raději zastávku uvnitř dne a obojí tam je.',
   'help.guide.read-place.tip.2':
     'Dvojklikem na název místo přejmenujete bez otevírání formuláře. Enter uloží, Escape změnu zahodí.',
   'help.guide.read-place.tip.3':
-    'Místo, které TREK dokázal spárovat s mapovým poskytovatelem, ukáže i hodnocení toho poskytovatele, recenzi, telefonní číslo a otevírací dobu.',
+    'Místo zadané ručně nic z toho neukáže: karta zná jen to, co má jeho formulář. Otevřete ho tlačítkem Upravit, vyberte ho z návrhů pod Hledat místa... a klikněte na Aktualizovat, a otevírací doba, telefonní číslo i web přijdou s ním. Hodnocení od Googlu potřebuje klíč Google.',
   // rate-place
   'help.guide.rate-place.title': 'Ohodnotit místo',
   'help.guide.rate-place.goal': 'Dejte místu vlastní hvězdy a podívejte se, co mu dali ostatní.',
@@ -2234,6 +2278,9 @@ const help: TranslationStrings = {
     'Trasa zaznamenaná s výškami ukáže i svůj nejvyšší a nejnižší bod, metry nahoru a dolů, a profil cesty.',
   'help.guide.place-track.tip.3':
     'Import dá každé trase, kterou přinese, vlastní barvu, takže dvě trasy nikdy nepřijdou ve stejné.',
+  // read-place
+  'help.guide.read-place.step.7':
+    'Řádek dole je to, co odsud můžete udělat: sundat místo z otevřeného dne nebo ho na něj položit, uložit ho do seznamu, otevřít ho v mapové aplikaci, upravit ho nebo smazat.',
 
   // ── Screen: trip-files ────────────────────────────────────────────────────────────────
   'help.ctx.trip-files.title': 'Soubory',
@@ -2364,6 +2411,30 @@ const help: TranslationStrings = {
   'help.guide.files-trash.tip.2':
     'Zahodit soubor a dostat ho zpět vyžaduje právo Smazat soubory. Člen, který ho nemá, nevidí ani Smazat na řádku, ani tlačítka v koši.',
   'help.guide.files-trash.tip.3': 'Soubor natrvalo smazaný v koši se už vrátit nedá.',
+  // files-sync
+  'help.guide.files-sync.title': 'Držet dokumenty v souladu se složkou Nextcloud',
+  'help.guide.files-sync.goal':
+    'Svažte cestu se složkou ve vašem vlastním úložišti dokumentů, aby to, co nahrajete sem, přistálo tam, a co založíte tam, se objevilo tady.',
+  'help.guide.files-sync.step.1':
+    'Klikněte na Synchronizace dokumentů, vedle Koš na pravém konci lišty nástrojů. Dialog se otevře s názvem cesty pod svým titulkem. Vlevo, pod Připojit poskytovatele, stojí úložiště, která správce zapnul, každé s řádkem o tom, jak ukládá, Ukládá do složky u Nextcloud; vpravo stojí Zatím nic nepřipojeno.',
+  'help.guide.files-sync.step.2':
+    'Klikněte na Nextcloud. Otevře se menší dialog pro připojení, pojmenovaný podle úložiště, s upozorněním nahoře, abyste použili heslo aplikace, ne heslo k účtu.',
+  'help.guide.files-sync.step.3':
+    'Vyplňte Adresa, Uživatelské jméno, vaše přihlašovací jméno v Nextcloudu, ne e-mailovou adresu, a Heslo aplikace, které Nextcloud vytvoří pod Nastavení, Zabezpečení. Základní složka je nepovinná: je to místo, kde TREK hledá složky cest, /TREK, pokud neřeknete jinak, tady /Reisen. Přijmout vlastnoručně podepsaný certifikát dole je jen pro instanci ve vaší vlastní síti s takovým certifikátem.',
+  'help.guide.files-sync.step.4':
+    'Klikněte na Otestovat připojení. TREK se s tím, co jste zadali, spojí s úložištěm a v patičce stojí Spojení navázáno, přihlášeno jako a za tím jméno účtu, tady admin. Odmítnuté heslo nebo nedostupná adresa se tam pojmenují místo toho a ani v jednom případě se nic neuloží.',
+  'help.guide.files-sync.step.5':
+    'Klikněte na Připojit. Připojení se uloží s cestou a TREK se zeptá Kam v Nextcloud tuto cestu uložit? Synchronizuje se jen to, co je v té složce. Vytvořit nové založí po kliknutí na Vytvořit složku pod základní složkou, s názvem předvyplněným z titulku cesty; pod Nebo použijte existující stojí složky, které tam už jsou. Klikněte na jednu, tady Autumn in Japan.',
+  'help.guide.files-sync.step.6':
+    'Dialog je zpátky: Nextcloud stojí vlevo pod Tato cesta a jeho karta vpravo nese složku, kdy naposledy běžel, a Synchronizovat teď. První běh se spustí sám; Synchronizovat teď spustí jeden, kdykoli chcete. Jakmile je běh hotový, odznak Zatím nesynchronizováno vedle názvu ustoupí zelené tečce, Aktuální, když na ni najedete, a pruh toku počítá dokumenty, které TREK a Nextcloud každý drží, s drahami Do úložiště a Z úložiště mezi nimi. Zavřete dialog křížkem.',
+  'help.guide.files-sync.result':
+    'Dva dokumenty, které už ve složce byly, stojí nahoře v seznamu, nahrané vaším jménem, a každý dokument cesty je také ve složce. Od té chvíle TREK složku kontroluje na pozadí a složka sleduje seznam.',
+  'help.guide.files-sync.tip.1':
+    'Cestu smí svázat jen její vlastník nebo správce instance, protože heslo aplikace dosáhne na celý ten účet Nextcloud. Každý člen může Synchronizace dokumentů otevřít, kartu si přečíst a stisknout Synchronizovat teď.',
+  'help.guide.files-sync.tip.2':
+    'Úložiště ve vaší vlastní síti potřebuje na serveru TREKu ALLOW_INTERNAL_NETWORK=true a jeho adresa musí být adresa stroje v síti, nikdy localhost. Bez toho Otestovat připojení odpoví Tato adresa není povolena.',
+  'help.guide.files-sync.tip.3':
+    'Odpojit na kartě ukončí párování a nechá každý dokument na obou stranách. Složka svázaná podruhé se bere jako nová a všechno v ní přijde znovu, takže po Odpojit svažte prázdnou složku, ne tu starou.',
 
   // ── Screen: trip-day-detail ───────────────────────────────────────────────────────────
   'help.ctx.trip-day-detail.title': 'Podrobnosti dne',
@@ -2622,6 +2693,37 @@ const help: TranslationStrings = {
     'Vždy zobrazovat trasy rezervací, ve stejném nastavení, je kreslí od začátku na každé cestě, o které jste ještě nerozhodli.',
   'help.guide.map-booking-routes.tip.3':
     'Rezervace potřebuje dva konce se souřadnicemi, než se dá nakreslit, takže hotel nebo restaurace ikonu trasy nenese.',
+  'help.ctx.trip-map.bullet.8':
+    'Se zapnutým doplňkem Dawarich kreslí kulaté tlačítko Dawarich pod Zobrazit celou cestu trasu, kterou váš telefon opravdu zaznamenal: Zobrazit zaznamenanou trasu ji položí čárkovaně pod plánovanou trasu, jednu barvu na den, a popisek tlačítka říká, proč žádná čára není, když žádná není.',
+  // map-dawarich-trail
+  'help.guide.map-dawarich-trail.title': 'Zobrazit trasu, kterou jste opravdu urazili',
+  'help.guide.map-dawarich-trail.goal':
+    'Položte na mapu trasu, kterou Dawarich zaznamenal na vašem telefonu, čárkovaně vedle té, kterou jste naplánovali, a čtěte cestu den po dni tak, jak opravdu proběhla.',
+  'help.guide.map-dawarich-trail.step.1':
+    'Kulaté tlačítko Dawarich sedí vpravo dole na mapě, pod Zobrazit celou cestu; při najetí říká Zobrazit zaznamenanou trasu. Klikněte na něj. TREK se zeptá vašeho Dawarichu na data cesty a kolem tlačítka se točí prstenec, dokud je odpověď na cestě.',
+  'help.guide.map-dawarich-trail.step.2':
+    'Zaznamenaná trasa přistane jako čárkovaná čára, jedna barva na den, nakreslená pod plánovanou trasou, aby plán zůstal čitelný. Na tlačítku teď stojí Skrýt zaznamenanou trasu. Dny se dělí o místní půlnoci a den složený ve sloupci dnů si svou čárkovanou čáru odnese z mapy spolu se svými zastávkami.',
+  'help.guide.map-dawarich-trail.step.3':
+    'Klikněte i na Zobrazit celou cestu a každý plánovaný den se nakreslí plnou čarou vedle čárkovaného záznamu. Kde obě běží spolu, šel den podle plánu; kde čárkovaná čára odbočuje, je místo, kde nešel.',
+  'help.guide.map-dawarich-trail.result':
+    'Co jste naplánovali a co jste opravdu udělali, je na mapě pohromadě, čárkované proti plnému, a karta nad tlačítky pořád vypisuje plánované dny a jejich vzdálenosti.',
+  'help.guide.map-dawarich-trail.tip.1':
+    'Zapnuto nebo vypnuto se pamatuje pro každou cestu po dobu této relace prohlížeče. Dokud je trasa zapnutá, ptá se TREK Dawarichu každé dvě minuty znovu, takže cesta, která právě probíhá, se dotáhne bez znovunačtení; trasa samotná se nikdy neukládá, takže není v databázi TREKu, není v zálohách a není k dispozici offline.',
+  'help.guide.map-dawarich-trail.tip.2':
+    'Popisek tlačítka vysvětlí prázdnou mapu: Načítá se zaznamenaná trasa…, dokud je na cestě, V těchto dnech nebylo nic zaznamenáno, Zaznamenanou trasu se nepodařilo načíst, nebo Zaznamenaná trasa vyžaduje připojení, když je TREK offline.',
+  // map-compass
+  'help.guide.map-compass.title': 'Otočit mapu a znovu najít sever',
+  'help.guide.map-compass.goal': 'Otočte mapu směrem, kterým jdete, a jedním kliknutím ji vraťte k severu.',
+  'help.guide.map-compass.step.1':
+    'Mapu otočíte tažením pravým tlačítkem, nebo podržte Ctrl a táhněte levým tlačítkem; na dotykové obrazovce otáčejte dvěma prsty. Kulatý kompas vedle řady ikon kategorií nahoře na mapě se otáčí s ní: jeho šipka ukazuje vždy na sever, takže se naklání tak daleko, jak jste otočili.',
+  'help.guide.map-compass.step.2':
+    'Klikněte na kompas. Reset north, jak se tlačítko jmenuje, vrátí mapu plynule k severu nahoře a k plochému pohledu a šipka zase stojí rovně.',
+  'help.guide.map-compass.result':
+    'Mapa je zase severem nahoru a rovná a na cestě se nic nezměnilo: kompas hýbe jen kamerou.',
+  'help.guide.map-compass.tip.1':
+    'Kompas existuje jen na mapách MapLibre GL a Mapbox GL; mapa Leaflet se otočit nedá, takže žádný nemá. Poskytovatel mapy v Nastavení, pod Mapa, rozhoduje, kterou používáte, a Uložit nastavení mapy volbu uchová.',
+  'help.guide.map-compass.tip.2':
+    'Kliknutí odstraní i náklon: tažení pravým tlačítkem nahoru nebo dolů pohled naklopí a Reset north ho srovná spolu s otočením. Na Mapbox GL se zapnutými 3D budovy a terén to zploští i 3D pohled, dokud ho znovu nenakloníte.',
 
   // ── Screen: trip-collab ───────────────────────────────────────────────────────────────
   'help.ctx.trip-collab.title': 'Spolupráce',
@@ -3092,14 +3194,15 @@ const help: TranslationStrings = {
   'help.guide.import-booking-file.step.3':
     'Klikněte na Importovat. Dialog se hned zavře, protože čtení běží na pozadí.',
   'help.guide.import-booking-file.step.4':
-    'Karta vpravo dole hlásí průběh a jde s vámi aplikací i přes znovunačtení. Až je hotová, nabídne Importovat, což spustí kontrolu: každá rezervace, kterou našla, se otevře v obyčejném formuláři, vyplněná a se svým dokumentem, abyste ji zkontrolovali a jednu po druhé přidali tlačítkem Přidat.',
+    'Karta vpravo dole hlásí průběh pod názvem souboru a jde s vámi aplikací i přes znovunačtení. Zpracování souborů… se změní v zaškrtnutí, když je čtení hotové, a karta nabídne Importovat. Klikněte na to.',
   'help.guide.import-booking-file.result':
-    'Každá rezervace, kterou jste potvrdili, je karta sama pro sebe se svým kódem, svými daty a dokumentem, ze kterého přišla; ubytování dostalo i své noci, a se zapnutými Náklady se z ceny, která byla v potvrzení, stal výdaj.',
+    'Rezervace je karta v Čeká na potvrzení se svými nocemi, svým kódem a potvrzením pod Soubory, pobyt sedí na těch dnech plánu a se zapnutými Náklady je cena výdaj k ní přivázaný.',
   'help.guide.import-booking-file.tip.1':
     'Importovat ze souboru je tam jen tehdy, když server umí potvrzení číst, což potřebuje buď extraktor, nebo doplněk Analýza pomocí AI. Ten správce přepíná pod Doplňky.',
   'help.guide.import-booking-file.tip.2':
-    'Když se nepodařilo přečíst nic, karta to řekne a nabídne Try AI parsing, což pošle tytéž soubory rovnou modelu.',
-  'help.guide.import-booking-file.tip.3': 'Hotové zpracování se drží deset minut. Kontrolu spusťte uvnitř tohoto okna.',
+    'Když se nepodařilo přečíst nic, karta to řekne a nabídne Try AI parsing, což pošle tytéž soubory rovnou modelu. Hotové zpracování se drží deset minut; kontrolu spusťte uvnitř tohoto okna.',
+  'help.guide.import-booking-file.tip.3':
+    'Potvrzení se přiloží jen tehdy, když je jeho typ v Povolené typy souborů v nastavení administrace. PDF tam je od začátku; mail, EML, se musí nejdřív přidat, jinak se rezervace uloží bez něj.',
   // edit-booking
   'help.guide.edit-booking.title': 'Změnit rezervaci',
   'help.guide.edit-booking.goal':
@@ -3130,6 +3233,9 @@ const help: TranslationStrings = {
     'Smazání rezervace ubytování vezme také jeho noci z denního plánu a odebere výdaj, který k němu byl propojený.',
   'help.guide.delete-booking.tip.2':
     'Dokumenty, které byly přiložené, zůstanou na kartě Soubory dané cesty; jde jen jejich propojení s rezervací.',
+  // import-booking-file
+  'help.guide.import-booking-file.step.5':
+    'Každá rezervace, která byla nalezena, se otevře v Nová rezervace, jedna po druhé, už vyplněná. U hotelu je to název v Název a, když cesta to místo má, pod Ubytování, jeho Místo / Adresa, Od dne a Do dne na jeho nocích, Check-in a Check-out, Rezervační kód, potvrzení pod Soubory a, se zapnutými Náklady, cena jako Linked expense. Zkontrolujte to a klikněte na Přidat.',
 
   // ── Screen: trip-costs ────────────────────────────────────────────────────────────────
   'help.ctx.trip-costs.title': 'Náklady',
@@ -3465,6 +3571,49 @@ const help: TranslationStrings = {
     'Potvrzená rezervace je plná čára, ta čekající na potvrzení čárkovaná. Nastavení Popisky tras rezervací vytiskne do koncových značek kód letiště nebo název stanice.',
   'help.guide.transport-on-map.tip.3':
     'Zobrazit všechny trasy rezervací je čistý štít, nikoli vrstva: zahodí to, co nastavily jednotlivé ikony, takže dvojí stisknutí vám nechá vše zapnuté nebo vše vypnuté.',
+  // import-transport-file
+  'help.guide.import-transport-file.title': 'Přečíst let z jeho e-ticketu',
+  'help.guide.import-transport-file.goal':
+    'Nechte TREK vytáhnout let, vlak nebo trajekt z jízdenky, kterou dopravce poslal, a zkontrolujte ho, než se uloží.',
+  'help.guide.import-transport-file.step.1':
+    'Klikněte na Importovat ze souboru v liště nástrojů karty Doprava, vedle tlačítka Doprava. Otevře se Importovat potvrzení rezervace, stejný dialog, jaký má karta Rezervace.',
+  'help.guide.import-transport-file.step.2':
+    'Pusťte jízdenku na to pole, nebo na ně klikněte a vyberte ji: EML, PDF, PKPass, HTML a TXT, až pět souborů po 10 MB. Soubory, které jste vybrali, jsou na poli vypsané jménem.',
+  'help.guide.import-transport-file.step.3': 'Klikněte na Importovat. Dialog se hned zavře; čtení běží na pozadí.',
+  'help.guide.import-transport-file.step.4':
+    'Karta vpravo dole hlásí průběh pod názvem souboru. Zpracování souborů… se změní v zaškrtnutí, když je čtení hotové, a karta nabídne Importovat. Klikněte na to.',
+  'help.guide.import-transport-file.step.5':
+    'Let se otevře v Přidat dopravu, už vyplněný: Typ rezervace na Let, letecká společnost a číslo letu v Název, obě letiště pod Trasa s Odlet a Přílet, jejich časy a jejich časová pásma, Letecká společnost a Číslo letu, Rezervační kód a jízdenka pod Soubory. Zkontrolujte to a klikněte na Přidat.',
+  'help.guide.import-transport-file.result':
+    'Let je karta v Čeká na potvrzení na kartě Doprava a řádek ve dni, kdy odlétá, s jízdenkou pod Soubory, a se dvěma známými letišti kreslí na mapě svůj oblouk.',
+  'help.guide.import-transport-file.tip.1':
+    'Obě karty sdílejí jeden import: soubor, který drží let i hotel, otevře let v Přidat dopravu a hotel v Nová rezervace, jeden po druhém, ať jste začali z kterékoli karty.',
+  'help.guide.import-transport-file.tip.2':
+    'Letiště se umisťují podle kódu. Nádraží nebo přístav, které čtení nedokázalo najít, je na kartě pojmenované oranžově; vyberte ho ručně pod Trasa, než kliknete na Přidat, jinak doprava na mapě nic nenakreslí.',
+  // airtrail-import
+  'help.guide.airtrail-import.title': 'Importovat lety z AirTrail',
+  'help.guide.airtrail-import.goal':
+    'Přeneste lety, které už vedete v AirTrail, do cesty naráz a nechte je od té chvíle sledovat AirTrail.',
+  'help.guide.airtrail-import.step.1':
+    'Se zapnutým doplňkem AirTrail a vaší instancí připojenou pod Integrace v Nastavení nese lišta nástrojů karty Doprava tlačítko AirTrail vedle tlačítka Doprava. Klikněte na něj.',
+  'help.guide.airtrail-import.step.2':
+    'Import z AirTrail vypíše lety vašeho účtu ve dvou skupinách. Během tohoto výletu drží ty s datem uvnitř cesty, už zaškrtnuté; Ostatní lety drží zbytek, nezaškrtnutý. Let, který už v cestě je, je zašedlý a označený Importováno.',
+  'help.guide.airtrail-import.step.3':
+    'Každý řádek je zaškrtávací políčko s leteckou společností a číslem letu, oběma letišti a datem. Kliknutím na řádek let vezmete, nebo ho vynecháte; ty pod Ostatní lety přijdou jen tehdy, když je zaškrtnete.',
+  'help.guide.airtrail-import.step.4':
+    'Lety, které na sebe navazují, každý odlétá z letiště, na kterém předchozí přistál, do jednoho dne, jsou orámované dohromady. Zaškrtnutí pod nimi, Importovat jako jeden let s přestupem v tom letišti, je už zapnuté: nechte ho zapnuté pro jednu rezervaci s mezipřistáním, nebo ho vypněte a importujte úseky jako samostatné lety.',
+  'help.guide.airtrail-import.step.5':
+    'Klikněte na Importovat. Tlačítko počítá zaškrtnuté lety a zpráva potom řekne, kolik jich přišlo.',
+  'help.guide.airtrail-import.step.6':
+    'Lety jsou karty pod Potvrzeno, každá s modrým odznakem AirTrail vedle svého stavu, a řádky ve dnech, kdy letí. Spojený přestup je jedna karta, s trasou vedoucí přes mezipřistání.',
+  'help.guide.airtrail-import.result':
+    'Lety z AirTrail jsou karty na kartě Doprava a řádky ve svých dnech, každý s odznakem AirTrail, který říká, odkud přišel.',
+  'help.guide.airtrail-import.tip.1':
+    'Let, který v cestě už je pod stejným číslem a datem, se přeskočí a zpráva řekne, kolik jich bylo. Zpět v liště nástrojů nad dny vezme celý import zpátky.',
+  'help.guide.airtrail-import.tip.2':
+    'AirTrail zůstává zdrojem pravdy. TREK čte jeho změny, když cestu otevřete, a každých pár minut na pozadí; let, který tam smažete, si nechá svou kartu, s odznakem změněným na Nesynchronizováno. Úpravy udělané v TREKu putují zpět jen se zapnutým Zapisovat změny zpět do AirTrail pod Integrace.',
+  'help.guide.airtrail-import.tip.3':
+    'Spojený přestup nemá žádný jediný let AirTrail, který by sledoval, takže je to jednorázový import: nechá si modrý odznak a najetí na odznak to řekne. Totéž se stane synchronizovanému letu, kterému ručně dáte mezipřistání.',
 
   // ── Screen: trip-roadtrip ─────────────────────────────────────────────────────────────
   'help.ctx.trip-roadtrip.title': 'Cesta autem',

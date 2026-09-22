@@ -463,6 +463,38 @@ const help: TranslationStrings = {
     'Las ciudades se leen del texto de la dirección, no se consultan, así que una dirección corta como «Osteria Francescana, Italy» o una que termina en una prefectura puede dar una región en vez de una ciudad.',
   'help.guide.stats.tip.2':
     'Los países marcados a mano cuentan en Países y en los continentes, pero no aportan viajes, lugares ni días.',
+  // dawarich-countries
+  'help.guide.dawarich-countries.title': 'Añadir países desde tus grabaciones',
+  'help.guide.dawarich-countries.goal':
+    'Deja que Dawarich diga en qué países estuviste durante el último año, y pon en el mapa los que confirmes.',
+  'help.guide.dawarich-countries.step.1':
+    'Con el addon de Dawarich conectado, un panel de Dawarich está en la parte baja del mapa, a la izquierda de las estadísticas, con dos mosaicos. Haz clic en Países.',
+  'help.guide.dawarich-countries.step.2':
+    'El diálogo se abre en su pestaña Países. Haz clic en Buscar países: TREK lee los países y ciudades que cubren tus grabaciones en los últimos 12 meses, mes a mes, así que dale un momento. Cada país que tu Atlas aún no tiene aparece con su bandera, cuántas ciudades y el nombre de la primera, y empieza marcado; haz clic en una fila para dejarla fuera.',
+  'help.guide.dawarich-countries.step.3':
+    'Confirma con el botón de abajo a la derecha, que dice Añadir 5 países cuando hay cinco filas marcadas. El diálogo dice cuántos se añadieron; ciérralo y el mapa se ha vuelto a leer.',
+  'help.guide.dawarich-countries.result':
+    'Los países confirmados llevan un color en el mapa y cuentan en Países, anotados como procedentes de Dawarich. Lo que marcaste a mano queda intacto.',
+  'help.guide.dawarich-countries.tip.1':
+    'Los países que el Atlas ya muestra como visitados, a mano, desde un viaje o desde una comprobación anterior, se dejan fuera, así que tus propias marcas nunca se reetiquetan. Un país que quitaste antes del Atlas vuelve cuando lo confirmas aquí.',
+  'help.guide.dawarich-countries.tip.2':
+    'Un nombre de país que TREK no puede emparejar se lista bajo las filas en vez de descartarse, y Volver a comprobar pregunta a Dawarich una vez más. La nota bajo la lista dice que Se han revisado los últimos 12 meses; esa ventana es fija.',
+  // dawarich-wishes
+  'help.guide.dawarich-wishes.title': 'Tachar deseos desde tus grabaciones',
+  'help.guide.dawarich-wishes.goal':
+    'Averigua qué lugares de tu lista de deseos has alcanzado de verdad, y táchalos en el día en que ocurrió.',
+  'help.guide.dawarich-wishes.step.1':
+    'En el panel de Dawarich en la parte baja del mapa, a la izquierda de las estadísticas, haz clic en Lista de deseos.',
+  'help.guide.dawarich-wishes.step.2':
+    'El diálogo se abre en su pestaña Lista de deseos. Haz clic en Comprobar la lista de deseos: TREK repasa tus grabaciones buscando cada entrada que tiene coordenadas. Un deseo que alcanzaste aparece con lo cerca que llegaste, cuánto te quedaste y el día, y empieza marcado; uno que ya tachaste dice Ya tachado. Bajo la lista una nota cuenta las entradas sin coordenadas, y la regla también está ahí: Un deseo cuenta como cumplido a menos de 250 m y tras 20 minutos en el lugar.',
+  'help.guide.dawarich-wishes.step.3':
+    'Confirma con el botón de abajo a la derecha, que dice Tachar 2 cuando hay dos filas marcadas. Luego cierra el diálogo y abre la pestaña Lista de deseos del panel de al lado.',
+  'help.guide.dawarich-wishes.result':
+    'Cada deseo lleva una marca verde con la fecha de la estancia, no la de hoy; su tooltip dice Tachado a partir de tus grabaciones de Dawarich, y un clic en la fecha lo deshace.',
+  'help.guide.dawarich-wishes.tip.1':
+    'Pasar de largo no cuenta: la regla necesita cercanía y tiempo a la vez, y de varias estancias que cumplan, gana la más larga. Un deseo sin coordenadas no se puede comprobar, así que añade los lugares a través de la búsqueda en Añadir lugar y no solo por el nombre.',
+  'help.guide.dawarich-wishes.tip.2':
+    'Una comprobación mira hasta 50 entradas, primero las aún no tachadas, y lo dice cuando había más. Un deseo que ya estaba tachado conserva su propia fecha.',
 
   // ── Screen: collections ───────────────────────────────────────────────────────────────
   'help.ctx.collections.title': 'Colecciones',
@@ -1707,6 +1739,19 @@ const help: TranslationStrings = {
   'help.guide.audit-log.tip.1': 'Las horas se muestran en la zona horaria del servidor, indicada encima de la tabla.',
   'help.guide.audit-log.tip.2':
     'El registro es solo de adición; nada de aquí se puede editar ni eliminar desde la app.',
+  // document-providers
+  'help.guide.document-providers.title': 'Ofrecer un almacén de documentos',
+  'help.guide.document-providers.goal': 'Decide con qué almacenes puede un viaje mantener sus documentos al día.',
+  'help.guide.document-providers.step.1':
+    'El mosaico Documentos lleva los almacenes como subfilas: Paperless-ngx, Papra, Nextcloud, OpenCloud y Synology Drive. Los cinco empiezan apagados, y las filas solo están ahí mientras Documentos mismo está activado.',
+  'help.guide.document-providers.step.2':
+    'Cambia el interruptor de la fila Nextcloud. El mensaje dice Complemento actualizado, y desde ahora los propietarios de viaje encuentran Sincronización de documentos en la pestaña Archivos de sus viajes, con Nextcloud bajo Conectar un proveedor.',
+  'help.guide.document-providers.result':
+    'El almacén se ofrece en cada viaje de este TREK; nada queda conectado hasta que un propietario de viaje lo haga.',
+  'help.guide.document-providers.tip.1':
+    'Aquí solo se decide si un almacén puede ofrecerse. La dirección y las credenciales pertenecen a un viaje y las introduce su propietario en la pestaña Archivos del viaje, nunca en el panel de administración.',
+  'help.guide.document-providers.tip.2':
+    'Apagar Documentos apaga con él todos los almacenes, y un almacén no se puede encender mientras Documentos está apagado: el servidor responde Enable the Documents addon first. Un almacén en tu propia red necesita además ALLOW_INTERNAL_NETWORK=true en el servidor.',
 
   // ── Screen: trip ──────────────────────────────────────────────────────────────────────
   'help.ctx.trip.title': 'Viaje',
@@ -2164,29 +2209,29 @@ const help: TranslationStrings = {
   'help.ctx.trip-place.bullet.5':
     'La fila de abajo: Añadir al día o Quitar del día mientras hay un día abierto, luego Guardar en colección, Navegación, Abrir la web, Editar y Eliminar.',
   'help.ctx.trip-place.bullet.6':
-    'Un lugar que TREK ha podido emparejar con un proveedor de mapas muestra más: la valoración de ese proveedor con una reseña, el número de teléfono y un anillo Abierto o Cerrado alrededor de la imagen, con el horario de la semana detrás.',
+    'Un lugar elegido desde la búsqueda lleva lo que el índice de TREK u OpenStreetMap saben de él: un anillo verde Abierto o rojo Cerrado alrededor de la imagen, juzgado por el reloj del propio lugar, el número de teléfono bajo las estrellas, Horario de apertura más abajo con la línea del día en la fila y toda la semana tras un clic, y su web tras Abrir la web. La valoración de Google solo se muestra en un lugar encontrado a través de Google, en un TREK con clave de Google.',
   // read-place
   'help.guide.read-place.title': 'Lo que la ficha te dice de un lugar',
   'help.guide.read-place.goal': 'Lee todo lo que el viaje sabe de un lugar, en una sola ficha.',
   'help.guide.read-place.step.1':
     'En la columna de días, haz clic en la parada que quieres leer. La ficha se abre sobre el mapa y la parada se queda marcada en su día.',
   'help.guide.read-place.step.2':
-    'La cabecera: la imagen redonda, el nombre, la dirección y las coordenadas exactas. La X de la derecha vuelve a cerrar la ficha.',
+    'La cabecera: la imagen redonda, el nombre, la dirección y las coordenadas exactas. Un anillo verde con Abierto, o rojo con Cerrado, alrededor de la imagen dice si el lugar está abierto ahora mismo, según su propio reloj, en cuanto TREK conoce su horario. La X de la derecha vuelve a cerrar la ficha.',
   'help.guide.read-place.step.3':
-    'Debajo, las estrellas que cada viajero le ha dado al lugar, con la media y cuántos han votado. Sin valorar todavía mientras no lo haya hecho nadie.',
+    'Debajo, las estrellas que cada viajero le ha dado al lugar, con la media y cuántos han votado. Sin valorar todavía mientras no lo haya hecho nadie. Justo debajo, el número de teléfono cuando el lugar tiene uno: un clic en él pasa el número a tu aplicación de teléfono.',
   'help.guide.read-place.step.4':
     'Luego la descripción y, bajo ella, las notas. Ambas son el texto del formulario del lugar, renderizado: listas, enlaces y negritas funcionan.',
   'help.guide.read-place.step.5': 'Participantes dice quién va a esta parada. Están todos hasta que saques a alguien.',
   'help.guide.read-place.step.6':
-    'La fila de abajo es lo que puedes hacer desde aquí: quitar el lugar del día abierto o ponerlo en él, guardarlo en una lista, abrirlo en una aplicación de mapas, editarlo o eliminarlo.',
+    'Horario de apertura, más abajo: la fila lleva el horario del día que estás mirando, y un clic en ella despliega toda la semana con ese día en negrita. Archivos está al lado.',
   'help.guide.read-place.result':
-    'La ficha sigue abierta hasta que la cierras con la X o eliges otro lugar, y la parada a la que pertenece se queda marcada en la columna de días.',
+    'La ficha sigue abierta hasta que la cierras con la X o eliges otro lugar, el horario de la semana sigue desplegado, y la parada a la que pertenece se queda marcada en la columna de días.',
   'help.guide.read-place.tip.1':
     'Elegida desde la columna de lugares, la ficha conoce el lugar pero no una parada, así que no muestra ni participantes ni reserva. Elige la parada dentro del día y ahí están los dos.',
   'help.guide.read-place.tip.2':
     'Haz doble clic en el nombre para renombrar el lugar sin abrir el formulario. Intro guarda, Escape descarta el cambio.',
   'help.guide.read-place.tip.3':
-    'Un lugar que TREK ha podido emparejar con un proveedor de mapas muestra también la valoración de ese proveedor, una reseña, el número de teléfono y el horario de apertura.',
+    'Un lugar escrito a mano no muestra nada de eso: la ficha solo conoce lo que guarda su formulario. Ábrelo con Editar, elígelo entre las sugerencias bajo Buscar lugares... y haz clic en Actualizar, y el horario, el número de teléfono y la web vienen con él. La valoración de Google necesita una clave de Google.',
   // rate-place
   'help.guide.rate-place.title': 'Valorar un lugar',
   'help.guide.rate-place.goal': 'Dale a un lugar tus propias estrellas, y mira las que le han dado todos los demás.',
@@ -2354,6 +2399,9 @@ const help: TranslationStrings = {
     'Una ruta grabada con alturas muestra además su punto más alto y más bajo, los metros de subida y de bajada, y el perfil de la caminata.',
   'help.guide.place-track.tip.3':
     'Una importación da a cada ruta que trae un color propio, así que dos caminatas nunca llegan con el mismo.',
+  // read-place
+  'help.guide.read-place.step.7':
+    'La fila de abajo es lo que puedes hacer desde aquí: quitar el lugar del día abierto o ponerlo en él, guardarlo en una lista, abrirlo en una aplicación de mapas, editarlo o eliminarlo.',
 
   // ── Screen: trip-files ────────────────────────────────────────────────────────────────
   'help.ctx.trip-files.title': 'Archivos',
@@ -2487,6 +2535,30 @@ const help: TranslationStrings = {
   'help.guide.files-trash.tip.2':
     'Tirar un archivo y recuperarlo necesita el permiso Eliminar archivos. Un miembro que no lo tiene no ve ni Eliminar en la fila ni los botones de la papelera.',
   'help.guide.files-trash.tip.3': 'Un archivo eliminado para siempre en la papelera no se puede recuperar.',
+  // files-sync
+  'help.guide.files-sync.title': 'Mantener los documentos al día con una carpeta de Nextcloud',
+  'help.guide.files-sync.goal':
+    'Vincula el viaje a una carpeta de tu propio almacén de documentos, para que lo que se sube aquí aterrice allí y lo que se archiva allí aparezca aquí.',
+  'help.guide.files-sync.step.1':
+    'Haz clic en Sincronización de documentos, junto a Papelera en el extremo derecho de la barra de herramientas. El diálogo se abre con el nombre del viaje bajo su título. A la izquierda, bajo Conectar un proveedor, están los almacenes que un administrador ha activado, cada uno con una línea sobre cómo archiva, Archiva en una carpeta para Nextcloud; a la derecha se lee Aún no hay nada conectado.',
+  'help.guide.files-sync.step.2':
+    'Haz clic en Nextcloud. Se abre un diálogo más pequeño para la conexión, con el nombre del almacén, con el recordatorio arriba de usar una contraseña de aplicación en vez de la de tu cuenta.',
+  'help.guide.files-sync.step.3':
+    'Rellena Dirección, Nombre de usuario, tu nombre de inicio de sesión en Nextcloud y no tu correo, y Contraseña de aplicación, que Nextcloud crea en Ajustes, Seguridad. Carpeta base es opcional: es donde TREK busca las carpetas de viaje, /TREK salvo que digas otra cosa, aquí /Reisen. Aceptar un certificado autofirmado, abajo del todo, es solo para una instancia en tu propia red con un certificado así.',
+  'help.guide.files-sync.step.4':
+    'Haz clic en Probar conexión. TREK alcanza el almacén con lo que escribiste y el pie dice Conectado, sesión iniciada como seguido del nombre de la cuenta, aquí admin. Una contraseña rechazada o una dirección inalcanzable se nombra ahí en su lugar, y en ningún caso se guarda nada.',
+  'help.guide.files-sync.step.5':
+    'Haz clic en Conectar. La conexión se guarda con el viaje y TREK pregunta ¿Dónde debe guardarse este viaje en Nextcloud? Solo lo que está en esa carpeta se sincroniza. Crear uno nuevo crea una carpeta bajo la carpeta base con Crear, con un nombre prerrellenado a partir del título del viaje; bajo O usa uno que ya tengas están las carpetas que ya existen. Haz clic en una, aquí Autumn in Japan.',
+  'help.guide.files-sync.step.6':
+    'El diálogo vuelve: Nextcloud está bajo Este viaje a la izquierda, y su tarjeta a la derecha lleva la carpeta, cuándo se ejecutó por última vez y Sincronizar ahora. Una primera ejecución arranca sola; Sincronizar ahora lanza una cuando quieras. Cuando una ejecución termina, la etiqueta Aún sin sincronizar junto al nombre da paso a un punto verde, Al día cuando lo señalas, y la barra de flujo cuenta los documentos que tienen TREK y Nextcloud cada uno, con los carriles Hacia el gestor y Desde el gestor entre ellos. Cierra el diálogo con la ×.',
+  'help.guide.files-sync.result':
+    'Los dos documentos que ya estaban en la carpeta están arriba de la lista, subidos a tu nombre, y cada documento del viaje está también en la carpeta. Desde ahora TREK revisa la carpeta en segundo plano y la carpeta sigue a la lista.',
+  'help.guide.files-sync.tip.1':
+    'Solo el propietario del viaje o un administrador de la instancia puede vincular un viaje, ya que la contraseña de aplicación alcanza toda esa cuenta de Nextcloud. Cualquier miembro puede abrir Sincronización de documentos, leer la tarjeta y pulsar Sincronizar ahora.',
+  'help.guide.files-sync.tip.2':
+    'Un almacén en tu propia red necesita ALLOW_INTERNAL_NETWORK=true en el servidor de TREK, y su dirección tiene que ser la de la máquina en la red, nunca localhost. Sin eso, Probar conexión responde Esa dirección no está permitida.',
+  'help.guide.files-sync.tip.3':
+    'Desconectar en la tarjeta termina el emparejamiento y conserva cada documento en ambos lados. Una carpeta vinculada por segunda vez se trata como nueva, y todo lo que hay en ella entra otra vez, así que después de un Desconectar vincula una carpeta vacía y no la antigua.',
 
   // ── Screen: trip-day-detail ───────────────────────────────────────────────────────────
   'help.ctx.trip-day-detail.title': 'Detalles del día',
@@ -2752,6 +2824,37 @@ const help: TranslationStrings = {
     'Mostrar siempre las rutas de reserva, en los mismos ajustes, las dibuja desde el principio en todos los viajes sobre los que aún no has decidido.',
   'help.guide.map-booking-routes.tip.3':
     'Una reserva necesita dos extremos con coordenadas antes de poder dibujarse, así que un hotel o un restaurante no lleva icono de ruta.',
+  'help.ctx.trip-map.bullet.8':
+    'Con el addon de Dawarich activado, el botón redondo de Dawarich bajo Mostrar todo el viaje dibuja la ruta que tu teléfono grabó de verdad: Mostrar ruta grabada la pone discontinua bajo la ruta planificada, un color por día, y la etiqueta del botón dice por qué no hay línea cuando no la hay.',
+  // map-dawarich-trail
+  'help.guide.map-dawarich-trail.title': 'Mostrar la ruta que recorriste de verdad',
+  'help.guide.map-dawarich-trail.goal':
+    'Pon sobre el mapa la ruta que Dawarich grabó en tu teléfono, discontinua junto a la que planificaste, y lee el viaje día a día tal como fue en realidad.',
+  'help.guide.map-dawarich-trail.step.1':
+    'El botón redondo de Dawarich está abajo a la derecha del mapa, bajo Mostrar todo el viaje; al pasar por encima dice Mostrar ruta grabada. Haz clic en él. TREK le pide a tu Dawarich las fechas del viaje, y un anillo gira alrededor del botón mientras la respuesta está en camino.',
+  'help.guide.map-dawarich-trail.step.2':
+    'La ruta grabada llega como una línea discontinua, un color por día, dibujada bajo la ruta planificada para que el plan siga legible. El botón ahora dice Ocultar ruta grabada. Los días se cortan a medianoche local, y un día plegado en la columna de días quita del mapa su línea discontinua junto con sus paradas.',
+  'help.guide.map-dawarich-trail.step.3':
+    'Haz clic también en Mostrar todo el viaje y cada día planificado se dibuja en línea continua junto a la grabación discontinua. Donde las dos van juntas, el día fue según lo planeado; donde la línea discontinua se desvía es donde no.',
+  'help.guide.map-dawarich-trail.result':
+    'Lo que planificaste y lo que hiciste de verdad están juntos en el mapa, discontinuo frente a continuo, y la tarjeta sobre los botones sigue listando los días planificados y sus distancias.',
+  'help.guide.map-dawarich-trail.tip.1':
+    'Activado o no se recuerda por viaje para esta sesión del navegador. Mientras la ruta está activada, TREK vuelve a preguntar a Dawarich cada dos minutos, así que un viaje en marcha se pone al día sin recargar; la ruta en sí nunca se guarda, así que no está en la base de datos de TREK, ni en las copias de seguridad, ni disponible sin conexión.',
+  'help.guide.map-dawarich-trail.tip.2':
+    'La etiqueta del botón explica un mapa vacío: Cargando la ruta grabada… mientras está en camino, No se grabó nada en estas fechas, No se pudo cargar la ruta grabada, o La ruta grabada necesita conexión cuando TREK está sin conexión.',
+  // map-compass
+  'help.guide.map-compass.title': 'Girar el mapa y volver a encontrar el norte',
+  'help.guide.map-compass.goal': 'Gira el mapa para que mire hacia donde vas, y devuélvelo al norte con un solo clic.',
+  'help.guide.map-compass.step.1':
+    'Gira el mapa arrastrando con el botón derecho, o mantén Ctrl y arrastra con el izquierdo; en una pantalla táctil, gira con dos dedos. La brújula redonda junto a la fila de iconos de categoría en la parte alta del mapa gira con él: su flecha siempre apunta al norte, así que se inclina tanto como hayas girado.',
+  'help.guide.map-compass.step.2':
+    'Haz clic en la brújula. Reset north, que así se llama el botón, lleva el mapa suavemente de vuelta al norte arriba y a una vista plana, y la flecha vuelve a estar recta.',
+  'help.guide.map-compass.result':
+    'El mapa vuelve a estar orientado al norte y plano, y nada del viaje ha cambiado: la brújula solo mueve la cámara.',
+  'help.guide.map-compass.tip.1':
+    'La brújula solo existe en los mapas MapLibre GL y Mapbox GL; el mapa Leaflet no se puede girar, así que no tiene. Proveedor de mapa en Ajustes, bajo Mapa, decide cuál usas, y Guardar mapa conserva la elección.',
+  'help.guide.map-compass.tip.2':
+    'El clic también quita la inclinación: arrastrar arriba o abajo con el botón derecho inclina la vista, y Reset north la nivela junto con el giro. En Mapbox GL con Edificios 3D y terreno activado, eso aplana también la vista 3D, hasta que la vuelvas a inclinar.',
 
   // ── Screen: trip-collab ───────────────────────────────────────────────────────────────
   'help.ctx.trip-collab.title': 'Colaboración',
@@ -3241,15 +3344,15 @@ const help: TranslationStrings = {
   'help.guide.import-booking-file.step.3':
     'Haz clic en Importar. El diálogo se cierra al momento, porque la lectura ocurre en segundo plano.',
   'help.guide.import-booking-file.step.4':
-    'Una tarjeta abajo a la derecha informa de la ejecución, y te sigue por la aplicación y a través de una recarga. Cuando termina ofrece Importar, que inicia la revisión: cada reserva que encontró se abre en el formulario de siempre, rellenada y con su documento adjunto, para que la compruebes y hagas Añadir una tras otra.',
+    'Una tarjeta abajo a la derecha informa de la ejecución bajo el nombre del archivo, y te sigue por la aplicación y a través de una recarga. Analizando archivos… se convierte en una marca cuando la lectura termina, y la tarjeta ofrece Importar. Haz clic ahí.',
   'help.guide.import-booking-file.result':
-    'Cada reserva que confirmaste es una tarjeta propia con su código, sus fechas y el documento del que vino; un alojamiento además recibió sus noches, y con Costes activado, un precio que estaba en la confirmación se convirtió en un gasto.',
+    'La reserva es una tarjeta en Pendiente con sus noches, su código y la confirmación bajo Archivos, la estancia se sitúa en esos días del plan, y con Costes activado el precio es un gasto ligado a ella.',
   'help.guide.import-booking-file.tip.1':
-    'Importar desde archivo solo está ahí si el servidor sabe leer confirmaciones, y eso pide o el extractor integrado o el complemento Análisis con IA. Ese lo conmuta el administrador en Complementos.',
+    'Importar desde archivo solo está ahí si el servidor sabe leer confirmaciones, y eso pide o el extractor o el complemento Análisis con IA. Ese lo conmuta el administrador en Complementos.',
   'help.guide.import-booking-file.tip.2':
-    'Si no se pudo leer nada, la tarjeta lo dice y ofrece Try AI parsing, que manda los mismos archivos directos al modelo.',
+    'Si no se pudo leer nada, la tarjeta lo dice y ofrece Try AI parsing, que manda los mismos archivos directos al modelo. Un análisis terminado se guarda diez minutos; empieza la revisión dentro de ese margen.',
   'help.guide.import-booking-file.tip.3':
-    'Un análisis terminado se guarda diez minutos. Empieza la revisión dentro de ese margen.',
+    'La confirmación solo se adjunta cuando su tipo está en los Tipos de archivo permitidos de los ajustes de administración. PDF está de serie; un correo, EML, hay que añadirlo antes, o la reserva se guarda sin él.',
   // edit-booking
   'help.guide.edit-booking.title': 'Cambiar una reserva',
   'help.guide.edit-booking.goal':
@@ -3281,6 +3384,9 @@ const help: TranslationStrings = {
     'Eliminar una reserva de alojamiento saca también sus noches del Plan por días y quita el gasto que estaba vinculado a ella.',
   'help.guide.delete-booking.tip.2':
     'Los documentos que estaban adjuntos se quedan en la pestaña Archivos del viaje; solo se va su vínculo con la reserva.',
+  // import-booking-file
+  'help.guide.import-booking-file.step.5':
+    'Cada reserva que se encontró se abre en Nueva reserva, una tras otra, ya rellenada. Para un hotel eso es el nombre en Título y, cuando el viaje tiene el lugar, bajo Alojamiento, su Ubicación / dirección, Desde y Hasta en sus noches, Registro de entrada y Registro de salida, el Código de reserva, la confirmación bajo Archivos y, con Costes activado, el precio como Linked expense. Compruébala y haz clic en Añadir.',
 
   // ── Screen: trip-costs ────────────────────────────────────────────────────────────────
   'help.ctx.trip-costs.title': 'Costes',
@@ -3621,6 +3727,50 @@ const help: TranslationStrings = {
     'Una reserva confirmada es una línea continua, una pendiente una discontinua. El ajuste Etiquetas de rutas de reservas escribe el código del aeropuerto o el nombre de la estación en los marcadores de los extremos.',
   'help.guide.transport-on-map.tip.3':
     'Mostrar todas las rutas de reservas es borrón y cuenta nueva, no una capa: descarta lo que habían puesto los iconos sueltos, así que pulsarlo dos veces te deja con todo encendido o todo apagado.',
+  // import-transport-file
+  'help.guide.import-transport-file.title': 'Leer un vuelo de su billete electrónico',
+  'help.guide.import-transport-file.goal':
+    'Deja que TREK saque un vuelo, un tren o un ferry del billete que mandó la compañía, y compruébalo antes de que se guarde.',
+  'help.guide.import-transport-file.step.1':
+    'Haz clic en Importar desde archivo en la barra de herramientas de la pestaña Transportes, junto a Transporte. Se abre Importar confirmaciones de reserva, el mismo diálogo que tiene la pestaña Reservas.',
+  'help.guide.import-transport-file.step.2':
+    'Suelta el billete en la caja, o haz clic en ella y elígelo: EML, PDF, PKPass, HTML y TXT, hasta cinco archivos de 10 MB cada uno. Los archivos que elegiste aparecen con su nombre en la caja.',
+  'help.guide.import-transport-file.step.3':
+    'Haz clic en Importar. El diálogo se cierra al momento; la lectura ocurre en segundo plano.',
+  'help.guide.import-transport-file.step.4':
+    'Una tarjeta abajo a la derecha informa de la ejecución bajo el nombre del archivo. Analizando archivos… se convierte en una marca cuando la lectura termina, y la tarjeta ofrece Importar. Haz clic ahí.',
+  'help.guide.import-transport-file.step.5':
+    'Un vuelo se abre en Añadir transporte, ya rellenado: Tipo de reserva en Vuelo, la aerolínea y el número de vuelo en Título, los dos aeropuertos bajo Ruta con Salida y Llegada, sus horas y sus zonas horarias, Aerolínea y N° de vuelo, el Código de reserva y el billete bajo Archivos. Compruébalo y haz clic en Añadir.',
+  'help.guide.import-transport-file.result':
+    'El vuelo es una tarjeta en Pendiente en la pestaña Transportes y una fila en el día en que sale, con el billete bajo Archivos, y con los dos aeropuertos conocidos dibuja su curva en el mapa.',
+  'help.guide.import-transport-file.tip.1':
+    'Las dos pestañas comparten una sola importación: un archivo con un vuelo y un hotel abre el vuelo en Añadir transporte y el hotel en Nueva reserva, uno tras otro, sea cual sea la pestaña desde la que empezaste.',
+  'help.guide.import-transport-file.tip.2':
+    'Los aeropuertos se colocan por su código. Una estación o un puerto que la lectura no pudo situar aparece en ámbar en la tarjeta; elígelo a mano bajo Ruta antes de hacer clic en Añadir, o el transporte no dibuja nada en el mapa.',
+  // airtrail-import
+  'help.guide.airtrail-import.title': 'Importar vuelos desde AirTrail',
+  'help.guide.airtrail-import.goal':
+    'Trae al viaje de una vez los vuelos que ya llevas en AirTrail, y deja que sigan a AirTrail a partir de ahí.',
+  'help.guide.airtrail-import.step.1':
+    'Con el addon de AirTrail activado y tu instancia conectada bajo Integraciones en Ajustes, la barra de herramientas de la pestaña Transportes lleva un botón AirTrail junto a Transporte. Haz clic en él.',
+  'help.guide.airtrail-import.step.2':
+    'Importar desde AirTrail lista los vuelos de tu cuenta en dos grupos. Durante este viaje tiene los fechados dentro del viaje, ya marcados; Otros vuelos tiene el resto, sin marcar. Un vuelo que ya está en el viaje aparece en gris y marcado como Importado.',
+  'help.guide.airtrail-import.step.3':
+    'Cada fila es una casilla con la aerolínea y el número de vuelo, los dos aeropuertos y la fecha. Haz clic en una fila para meter el vuelo o dejarlo fuera; los de Otros vuelos solo entran cuando los marcas.',
+  'help.guide.airtrail-import.step.4':
+    'Los vuelos que enlazan, cada uno saliendo dentro de un día desde el aeropuerto en que aterrizó el anterior, se enmarcan juntos. La casilla de debajo, Importar como un solo vuelo con escala en ese aeropuerto, ya está marcada: déjala para una sola reserva con escala, o desmárcala para importar los tramos como vuelos separados.',
+  'help.guide.airtrail-import.step.5':
+    'Haz clic en Importar. El botón cuenta los vuelos marcados, y el mensaje de después dice cuántos entraron.',
+  'help.guide.airtrail-import.step.6':
+    'Los vuelos son tarjetas bajo Confirmada, cada una con una insignia azul de AirTrail junto a su estado, y filas en los días en que vuelan. Una conexión unida es una sola tarjeta, con su ruta pasando por la escala.',
+  'help.guide.airtrail-import.result':
+    'Los vuelos de AirTrail son tarjetas en la pestaña Transportes y filas en sus días, cada una con la insignia de AirTrail que dice de dónde vino.',
+  'help.guide.airtrail-import.tip.1':
+    'Un vuelo que ya está en el viaje con el mismo número y la misma fecha se salta, y un mensaje dice cuántos fueron. Deshacer, en la barra de herramientas sobre los días, revierte toda la importación.',
+  'help.guide.airtrail-import.tip.2':
+    'AirTrail sigue siendo la fuente de la verdad. TREK lee sus cambios cuando abres el viaje y cada pocos minutos en segundo plano; un vuelo borrado allí conserva su tarjeta, con la insignia cambiada a No sincronizado. Los cambios hechos en TREK solo vuelven con Escribir cambios de vuelta en AirTrail activado bajo Integraciones.',
+  'help.guide.airtrail-import.tip.3':
+    'Una conexión unida no tiene un único vuelo de AirTrail al que seguir, así que es una importación única: conserva la insignia azul, y pasar por encima de la insignia lo dice. Lo mismo le pasa a un vuelo sincronizado al que das una escala a mano.',
 
   // ── Screen: trip-roadtrip ─────────────────────────────────────────────────────────────
   'help.ctx.trip-roadtrip.title': 'Viaje por carretera',
