@@ -4,6 +4,7 @@ import crypto from 'crypto';
 import { DatabaseService } from '../database/database.service';
 import { InviteTokens } from '../../db/entities/InviteTokens.entity';
 import type { InviteTokensRepository } from '../../db/repositories/InviteTokens.repository';
+import { toRowId } from '../common/row-id';
 
 /**
  * Registration invites: the tokens an admin hands out so someone can create an
@@ -90,9 +91,16 @@ export class RegistrationInvitesService {
     // statement tolerated a non-numeric string bind and simply matched no
     // row, so the 404 below reproduces that same observable outcome without
     // routing an invalid value into the query layer).
-    const numericId = Number(id);
+    //
+    // `toRowId`, not a bare `Number.isInteger(Number(id))` guard: the plain
+    // guard accepted prefixed numeric literals JS understands and SQLite's
+    // INTEGER affinity does not (`'0x10'` → `16`, `'0b100'` → `4`), which is
+    // a genuine parity break, not just stricter validation (Plan 3b Task 3
+    // review, F2) — `toRowId` requires the digits-only shape the legacy
+    // raw-string bind actually matched.
+    const numericId = toRowId(id);
     // RI6 — the 404 check.
-    if (!Number.isInteger(numericId) || (await this.inviteTokens.findIdById(numericId)) === null) {
+    if (numericId === null || (await this.inviteTokens.findIdById(numericId)) === null) {
       return { error: 'Invite not found', status: 404 };
     }
     // RI7.

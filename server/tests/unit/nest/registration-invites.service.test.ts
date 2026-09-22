@@ -74,6 +74,16 @@ describe('Invites', () => {
     const result = await svc.deleteInvite('99999') as any;
     expect(result.status).toBe(404);
   });
+
+  it('ADMIN-SVC-029 — deleteInvite(\'0x10\') is the legacy 404, not a hex-literal delete of invite id 16 (Plan 3b Task 3 review, F2)', async () => {
+    const { user: admin } = createAdmin(testDb);
+    testDb.prepare('INSERT INTO invite_tokens (id, token, max_uses, used_count, expires_at, created_by) VALUES (16, ?, 1, 0, NULL, ?)').run('hex-survivor', admin.id);
+
+    const result = await svc.deleteInvite('0x10');
+
+    expect(result).toEqual({ error: 'Invite not found', status: 404 });
+    expect(testDb.prepare('SELECT id FROM invite_tokens WHERE id = 16').get()).toBeDefined();
+  });
 });
 
 describe('Invites — trip binding', () => {

@@ -18,8 +18,9 @@ import type { WebauthnCredentialsRepository } from '../../db/repositories/Webaut
 import { WebauthnChallenges } from '../../db/entities/WebauthnChallenges.entity';
 import type { WebauthnChallengesRepository } from '../../db/repositories/WebauthnChallenges.repository';
 import { Users } from '../../db/entities/Users.entity';
-import type { UsersRepository } from '../../db/repositories/Users.repository';
+import type { UsersRepository, UserRow } from '../../db/repositories/Users.repository';
 import type { User } from '../../types';
+import { toRowId } from '../common/row-id';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -83,6 +84,38 @@ function sanitizeName(raw: unknown): string | null {
 
 function defaultCredentialName(deviceType: string | undefined): string {
   return deviceType === 'multiDevice' ? 'Passkey (synced)' : 'Passkey';
+}
+
+/**
+ * `UsersRepository.findById` returns the repository's full-row shape
+ * (`UserRow` — every `users` column, `role: string`, several `T | null`
+ * columns); the client-payload helper `stripUserForClient` takes the
+ * narrower `User` contract type (`role: 'admin' | 'user'`, those same
+ * columns `T | undefined`). This is the one place in this file that reads a
+ * user through the repository and hands it to that helper, so the mapping
+ * lives here rather than widening `stripUserForClient`'s parameter for
+ * every other caller (Plan 3b Task 3 review, F5).
+ *
+ * A spread, not a field-by-field reconstruction: the legacy raw-SQL
+ * equivalent (`this.db.get<User>('SELECT * FROM users WHERE id = ?', ...)`,
+ * `daef15be7:passkey.service.ts:417`) handed `stripUserForClient` the
+ * *actual* full row at runtime despite its `User`-typed generic — every
+ * column `SELECT *` returns, not just the ones `User` declares. Narrowing
+ * to an explicit field list here would silently drop columns the legacy
+ * response carried (parity is law); only the columns whose *type* actually
+ * conflicts (`role`'s string vs. the union, and the `T | null` columns
+ * `User` declares as `T | undefined`) are overridden below — every other
+ * column passes through unchanged, exactly as it did before.
+ */
+function toClientUser(row: UserRow): User {
+  return {
+    ...row,
+    role: row.role === 'admin' ? 'admin' : 'user',
+    mfa_enabled: row.mfa_enabled ?? undefined,
+    must_change_password: row.must_change_password ?? undefined,
+    created_at: row.created_at ?? undefined,
+    updated_at: row.updated_at ?? undefined,
+  };
 }
 
 /**
@@ -405,7 +438,7 @@ export class PasskeyService {
     // (device possession + biometric/PIN), so it mints the real session directly
     // — the SAME path as password and OIDC login (no new token shape).
     const token = await this.auth.generateToken(user);
-    const userSafe = stripUserForClient(user as unknown as User) as Record<string, unknown>;
+    const userSafe = stripUserForClient(toClientUser(user)) as Record<string, unknown>;
     return { token, user: { ...userSafe, avatar_url: avatarUrl(user) }, auditUserId: Number(user.id) };
   }
 
@@ -421,8 +454,20 @@ export class PasskeyService {
   async renamePasskey(userId: number, id: string, name: unknown): Promise<{ error?: string; status?: number; success?: boolean }> {
     const cleanName = sanitizeName(name);
     if (!cleanName) return { error: 'Name is required', status: 400 };
+    // Convert, VALIDATE, and answer the legacy not-found before the
+    // repository call (program rule 15): the legacy `UPDATE ... WHERE id = ?
+    // AND user_id = ?` bound `Number(id)` as a plain parameter — a
+    // non-numeric route id produced `NaN`, which SQLite compared against the
+    // INTEGER `id` column and never matched (`NaN` is never `=` to
+    // anything), so `changes === 0` and this returned its ordinary 404. A
+    // typed MikroORM filter has no such leniency: it renders a JS `NaN` as
+    // the bare, unquoted token `NaN`, which SQLite parses as a column
+    // reference and throws — a 500 where the legacy 404'd (Plan 3b Task 3
+    // review, F1).
+    const rowId = toRowId(id);
+    if (rowId === null) return { error: 'Passkey not found', status: 404 };
     // Ownership enforced in SQL (404 on miss, never a 403 that leaks existence).
-    const changes = await this.webauthnCredentials.renameOwned(Number(id), userId, cleanName);
+    const changes = await this.webauthnCredentials.renameOwned(rowId, userId, cleanName);
     if (changes === 0) return { error: 'Passkey not found', status: 404 };
     return { success: true };
   }
@@ -440,16 +485,29 @@ export class PasskeyService {
     if (!passwordHash || !password || !bcrypt.compareSync(password, passwordHash)) {
       return { error: 'Incorrect password', status: 401 };
     }
-    const changes = await this.webauthnCredentials.deleteOwned(Number(id), userId);
+    // Same guard as `renamePasskey` (F1) — placed after the password check
+    // to match the legacy statement order exactly (a wrong password still
+    // answers 401 before a bad id is ever considered).
+    const rowId = toRowId(id);
+    if (rowId === null) return { error: 'Passkey not found', status: 404 };
+    const changes = await this.webauthnCredentials.deleteOwned(rowId, userId);
     if (changes === 0) return { error: 'Passkey not found', status: 404 };
     return { success: true };
   }
 
   /** Admin: clear all of a user's passkeys (e.g. on suspected compromise). */
   async adminResetPasskeys(targetUserId: number): Promise<{ error?: string; status?: number; success?: boolean; deleted?: number; email?: string }> {
-    const target = await this.users.findIdAndEmail(targetUserId);
+    // `AdminService.resetUserPasskeys` converts the route param with a bare
+    // `Number(id)` before calling in — a non-numeric id arrives here as
+    // `NaN`, still typed `number` at the JS level. Same F1 guard: validate
+    // before the repository call and answer the legacy 404 (the raw
+    // `SELECT id, email FROM users WHERE id = ?` bound `Number(id)` too and
+    // simply matched no row).
+    const rowId = toRowId(targetUserId);
+    if (rowId === null) return { error: 'User not found', status: 404 };
+    const target = await this.users.findIdAndEmail(rowId);
     if (!target) return { error: 'User not found', status: 404 };
-    const deleted = await this.webauthnCredentials.deleteAllForUser(targetUserId);
+    const deleted = await this.webauthnCredentials.deleteAllForUser(rowId);
     return { success: true, deleted, email: target.email };
   }
 }

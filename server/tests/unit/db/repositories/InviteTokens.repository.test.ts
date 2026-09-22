@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createSnapshotTestDb } from '../../../helpers/db-mock';
 import { resetTestDb } from '../../../helpers/test-db';
 import { createTestOrm, type TestOrm } from '../../../helpers/test-orm';
@@ -19,6 +19,26 @@ afterAll(async () => { await t.close(); testDb.close(); });
 
 function rawInvite(id: number): unknown {
   return testDb.prepare('SELECT * FROM invite_tokens WHERE id = ?').get(id);
+}
+
+/**
+ * Spies on the ORM connection to capture the raw generated SQL of the one
+ * query `fn` runs, the same idiom `Categories.repository.test.ts`'s
+ * `withQueryCount` uses for a call-count assertion — here for the query
+ * text itself, since `listWithCreatorAndTrip`/`findWithCreatorAndTrip` run
+ * with `mapResults: false` and return driver rows, not a QueryBuilder a
+ * test could inspect directly (Plan 3b Task 3 review, F4).
+ */
+async function captureSql<T>(fn: () => Promise<T>): Promise<{ value: T; sql: string }> {
+  const connection = t.orm.em.getConnection();
+  const spy = vi.spyOn(connection, 'execute');
+  try {
+    const value = await fn();
+    const call = spy.mock.calls.find((c) => typeof c[0] === 'string' && c[0].includes('invite_tokens'));
+    return { value, sql: (call?.[0] as string | undefined) ?? '' };
+  } finally {
+    spy.mockRestore();
+  }
 }
 
 describe('InviteTokensRepository', () => {
@@ -137,6 +157,17 @@ describe('InviteTokensRepository', () => {
 
     it('INVREPO-012: findWithCreatorAndTrip is null for an unknown id', async () => {
       expect(await invites.findWithCreatorAndTrip(999_999)).toBeNull();
+    });
+
+    it('INVREPO-015: the generated SQL joins users with an INNER JOIN and trips with a LEFT JOIN — pins RI1\'s join TYPE (Plan 3b Task 3 review, F4; a `leftJoin` rewrite of the users join must fail this)', async () => {
+      const { user: admin } = createUser(testDb, { username: 'join-type-check' });
+      createInviteToken(testDb, { token: 'join-type-check', created_by: admin.id });
+
+      const { sql } = await captureSql(() => invites.listWithCreatorAndTrip());
+
+      expect(sql).toMatch(/inner join `?users`?/i);
+      expect(sql).toMatch(/left join `?trips`?/i);
+      expect(sql).not.toMatch(/left join `?users`?/i);
     });
   });
 

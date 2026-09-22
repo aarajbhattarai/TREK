@@ -616,13 +616,19 @@ describe('passkeyLoginVerify', () => {
 
   it('PASSKEY-SVC-024: success mints a real session, strips the user and bumps the bookkeeping', async () => {
     const { user } = createUser(testDb);
+    // A `users` column outside the `User` contract type (Plan 3b Task 3
+    // review, F5) — the legacy `stripUserForClient(user)` ran on the FULL
+    // `SELECT *` row at runtime regardless of its `User`-typed generic, so
+    // this must still survive the repository-backed path's `toClientUser`
+    // spread, not be silently dropped by a narrower field-by-field mapping.
+    testDb.prepare("UPDATE users SET display_name = 'Legacy Passthrough' WHERE id = ?").run(user.id);
     const cred = insertCredential(user.id, { credential_id: 'good', counter: 5 });
     seedChallenge('a9', null, 'authentication');
     swMock.verifyAuthenticationResponse.mockResolvedValue({ verified: true, authenticationInfo: { newCounter: 6 } });
 
     const result = await svc.passkeyLoginVerify({ assertionResponse: ceremonyResponse('a9', { id: 'good' }) });
     expect(result.auditUserId).toBe(user.id);
-    expect(result.user).toMatchObject({ id: user.id, email: user.email });
+    expect(result.user).toMatchObject({ id: user.id, email: user.email, display_name: 'Legacy Passthrough' });
     expect(result.user).toHaveProperty('avatar_url');
     expect(result.user).not.toHaveProperty('password_hash');
     // The token is the SAME session shape password login mints ({ id, pv }).
@@ -719,6 +725,13 @@ describe('renamePasskey', () => {
     expect(await svc.renamePasskey(other.id, String(cred.id), 'Steal')).toEqual({ error: 'Passkey not found', status: 404 });
     expect(await svc.renamePasskey(user.id, '999999', 'Ghost')).toEqual({ error: 'Passkey not found', status: 404 });
   });
+
+  it('PASSKEY-SVC-042: 404s (not a 500) on a non-numeric or prefixed-numeric id — Plan 3b Task 3 review, F1', async () => {
+    const { user } = createUser(testDb);
+    expect(await svc.renamePasskey(user.id, 'abc', 'Ghost')).toEqual({ error: 'Passkey not found', status: 404 });
+    expect(await svc.renamePasskey(user.id, '1abc', 'Ghost')).toEqual({ error: 'Passkey not found', status: 404 });
+    expect(await svc.renamePasskey(user.id, '0x10', 'Ghost')).toEqual({ error: 'Passkey not found', status: 404 });
+  });
 });
 
 // ── deletePasskey ─────────────────────────────────────────────────────────────
@@ -742,6 +755,17 @@ describe('deletePasskey', () => {
     expect(await svc.deletePasskey(user.id, String(cred.id), password)).toEqual({ success: true });
     expect(testDb.prepare('SELECT COUNT(*) AS n FROM webauthn_credentials').get()).toEqual({ n: 0 });
   });
+
+  it('PASSKEY-SVC-043: 404s (not a 500) on a non-numeric id once the password check passes — Plan 3b Task 3 review, F1', async () => {
+    const { user, password } = createUser(testDb);
+    expect(await svc.deletePasskey(user.id, 'abc', password)).toEqual({ error: 'Passkey not found', status: 404 });
+    expect(await svc.deletePasskey(user.id, '0x10', password)).toEqual({ error: 'Passkey not found', status: 404 });
+  });
+
+  it('PASSKEY-SVC-044: a wrong password still wins over a non-numeric id — 401, not 404 (legacy statement order)', async () => {
+    const { user, password } = createUser(testDb);
+    expect(await svc.deletePasskey(user.id, 'abc', `${password}x`)).toEqual({ error: 'Incorrect password', status: 401 });
+  });
 });
 
 // ── adminResetPasskeys ────────────────────────────────────────────────────────
@@ -759,5 +783,9 @@ describe('adminResetPasskeys', () => {
     expect(await svc.adminResetPasskeys(user.id)).toEqual({ success: true, deleted: 2, email: user.email });
     expect(await svc.adminResetPasskeys(user.id)).toEqual({ success: true, deleted: 0, email: user.email });
     expect(testDb.prepare('SELECT id FROM webauthn_credentials').all()).toEqual([{ id: kept.id }]);
+  });
+
+  it('PASSKEY-SVC-045: 404s (not a 500) when the caller hands in NaN — AdminService.resetUserPasskeys converts a non-numeric route id with a bare Number(id) before calling in (Plan 3b Task 3 review, F1)', async () => {
+    expect(await svc.adminResetPasskeys(Number('abc'))).toEqual({ error: 'User not found', status: 404 });
   });
 });
