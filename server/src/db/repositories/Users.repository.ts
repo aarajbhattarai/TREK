@@ -859,4 +859,24 @@ export class UsersRepository extends TrekRepository<Users> {
     const row = await this.findOne({ id }, { fields: ['role', 'openweather_api_key'] });
     return row ? { role: row.role, openweather_api_key: row.openweather_api_key ?? null } : null;
   }
+
+  // ---------------------------------------------------------------------
+  // UC11 — account erasure (Plan 3b Task 1 review, "contract gaps" item 2:
+  // named in the plan's Task 1 bullet, deliberately deferred to Task 5 —
+  // the ONE pre-authorised UsersRepository addition this task makes).
+  // ---------------------------------------------------------------------
+
+  /**
+   * `DELETE FROM users WHERE id = ?` — `UserCleanupService.deleteUserCompletely`'s
+   * final statement, the root of its 13-table transaction
+   * (**security-sensitive**: account erasure). Named `deleteById`, not
+   * `remove`/`delete`: `EntityRepository#remove` is a real (persist-marking,
+   * needs-a-`flush()`) method on the base class — shadowing it would change
+   * its signature and behaviour; `deleteById` matches the naming this
+   * program already uses for a native, immediate delete
+   * (`McpTokensRepository.deleteById`).
+   */
+  async deleteById(id: number): Promise<void> {
+    await this.nativeDelete({ id });
+  }
 }

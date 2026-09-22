@@ -119,6 +119,11 @@ import { createTestOrm } from './test-orm';
 import { AppSettings } from '../../src/db/entities/AppSettings.entity';
 import { AuditLog } from '../../src/db/entities/AuditLog.entity';
 import { Users } from '../../src/db/entities/Users.entity';
+import { InviteTokens } from '../../src/db/entities/InviteTokens.entity';
+import { McpTokens } from '../../src/db/entities/McpTokens.entity';
+import { OauthTokens } from '../../src/db/entities/OauthTokens.entity';
+import { WebauthnCredentials } from '../../src/db/entities/WebauthnCredentials.entity';
+import { PasswordResetTokens } from '../../src/db/entities/PasswordResetTokens.entity';
 
 /**
  * Hand-wired counterpart of the boot-time discovery in McpRegistryService,
@@ -134,6 +139,11 @@ export async function createMcpTestRegistry(): Promise<McpRegistry> {
   const mcpOrm = await createTestOrm(dbService.connection);
   const auditLogRepo = mcpOrm.repo(AuditLog);
   const usersRepo = mcpOrm.repo(Users);
+  const inviteTokensRepo = mcpOrm.repo(InviteTokens);
+  const mcpTokensRepoForAuth = mcpOrm.repo(McpTokens);
+  const oauthTokensRepo = mcpOrm.repo(OauthTokens);
+  const webauthnCredentialsRepoForAuth = mcpOrm.repo(WebauthnCredentials);
+  const passwordResetTokensRepo = mcpOrm.repo(PasswordResetTokens);
   const permissionsService = new PermissionsService(await createTestAppSettingsRepo(dbService.connection), await createTestUnitOfWork(dbService.connection));
   // Same argument list as auth.bridge.ts. AtlasService used to sit in third
   // place; when getTravelStats moved onto AtlasService itself the edge was
@@ -145,15 +155,14 @@ export async function createMcpTestRegistry(): Promise<McpRegistry> {
   const exchangeRatesService = new ExchangeRatesService();
   const budgetService = new BudgetService(dbService, permissionsService, exchangeRatesService, realtimeService, await createTestUnitOfWork(dbService.connection));
   const authService = new AuthService(
-    dbService,
     permissionsService,
     new TripMembershipService(dbService),
     new WebauthnConfigService(appSettings),
-    new UserCleanupService(dbService, budgetService, await createTestUnitOfWork(dbService.connection)),
+    new UserCleanupService(dbService, budgetService, await createTestUnitOfWork(dbService.connection), usersRepo),
     new MailerService(dbService),
     new EphemeralTokenService(),
     new AllowedFileTypesService(dbService), await createTestUnitOfWork(dbService.connection),
-    appSettings, usersRepo,
+    appSettings, usersRepo, inviteTokensRepo, mcpTokensRepoForAuth, oauthTokensRepo, webauthnCredentialsRepoForAuth, passwordResetTokensRepo,
   );
   const queryHelpersService = new QueryHelpersService(dbService);
   const daysService = new DaysService(dbService, permissionsService, realtimeService, queryHelpersService, await createTestUnitOfWork(dbService.connection));
@@ -185,7 +194,7 @@ export async function createMcpTestRegistry(): Promise<McpRegistry> {
   );
   // Built after it: a hotel booking writes the stay's day stop through this one.
   const reservationsService = new ReservationsService(dbService, permissionsService, budgetService, realtimeService, notificationsStub(), new ReservationsReadRepository(dbService), accommodationsService, await createTestUnitOfWork(dbService.connection));
-  const membersService = new TripMembersService(dbService, budgetService, new UserCleanupService(dbService, budgetService, await createTestUnitOfWork(dbService.connection)), permissionsService, realtimeService, notificationsStub(), await createTestUnitOfWork(dbService.connection));
+  const membersService = new TripMembersService(dbService, budgetService, new UserCleanupService(dbService, budgetService, await createTestUnitOfWork(dbService.connection), usersRepo), permissionsService, realtimeService, notificationsStub(), await createTestUnitOfWork(dbService.connection));
   const tripsService = new TripsService(
     dbService,
     reservationsService,

@@ -6,6 +6,9 @@ import { Users } from '../../db/entities/Users.entity';
 import { WebauthnCredentials } from '../../db/entities/WebauthnCredentials.entity';
 import { WebauthnChallenges } from '../../db/entities/WebauthnChallenges.entity';
 import { InviteTokens } from '../../db/entities/InviteTokens.entity';
+import { McpTokens } from '../../db/entities/McpTokens.entity';
+import { OauthTokens } from '../../db/entities/OauthTokens.entity';
+import { PasswordResetTokens } from '../../db/entities/PasswordResetTokens.entity';
 import { TokensModule } from '../tokens/tokens.module';
 import { AuthPublicController } from './auth-public.controller';
 import { AuthController } from './auth.controller';
@@ -73,11 +76,14 @@ import { AllowedFileTypesModule } from '../files/allowed-file-types.module';
     // AppSettingsRepository/UsersRepository to instance-api-keys.ts's
     // resolveApiKey/readInstanceApiKey/writeInstanceApiKey now (Plan 3a Task
     // 5). WebauthnCredentials/WebauthnChallenges: PasskeyService (Plan 3b
-    // Task 3). InviteTokens: RegistrationInvitesService (Plan 3b Tasks 0/3)
-    // — everything else either service still reads/writes is raw SQL
-    // through DatabaseService (AuthService's own conversion is a later
-    // task).
-    MikroOrmModule.forFeature([AppSettings, Users, WebauthnCredentials, WebauthnChallenges, InviteTokens])],
+    // Task 3). InviteTokens: RegistrationInvitesService (Plan 3b Tasks 0/3).
+    // McpTokens/OauthTokens: AuthService's cross-domain session-revocation
+    // writes on password change/reset (AU17/AU18/AU45/AU46) — the entities
+    // are owned by TokensModule/OauthModule, but `@InjectRepository`
+    // resolves from THIS module's own `forFeature` graph regardless of who
+    // else also registers it (`tokens.module.ts`'s own docstring explains
+    // why). PasswordResetTokens: AuthService's own table (Plan 3b Task 5).
+    MikroOrmModule.forFeature([AppSettings, Users, WebauthnCredentials, WebauthnChallenges, InviteTokens, McpTokens, OauthTokens, PasswordResetTokens])],
   controllers: [AuthPublicController, AuthController, PasskeyController],
   providers: [AuthService, UserProfileService, RegistrationInvitesService, PasskeyService, UserCleanupService, WebauthnConfigService, AuthMcp],
   exports: [AuthService, RegistrationInvitesService, PasskeyService, UserCleanupService],

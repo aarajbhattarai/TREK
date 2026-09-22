@@ -9,7 +9,6 @@ import { randomBytes, createHash } from 'crypto';
 import type { Request, Response } from 'express';
 import { readEnv } from '../../app-config';
 import { JWT_SECRET, SESSION_DURATION_SECONDS, SESSION_DURATION_REMEMBER_SECONDS } from '../../config';
-import { DatabaseService } from '../database/database.service';
 import { UnitOfWork } from '../database/unit-of-work';
 import { PermissionsService } from '../permissions/permissions.service';
 import { validatePassword } from '../common/passwordPolicy';
@@ -21,6 +20,16 @@ import { AppSettings } from '../../db/entities/AppSettings.entity';
 import type { AppSettingsRepository } from '../../db/repositories/AppSettings.repository';
 import { Users } from '../../db/entities/Users.entity';
 import type { UsersRepository } from '../../db/repositories/Users.repository';
+import { InviteTokens } from '../../db/entities/InviteTokens.entity';
+import type { InviteTokensRepository } from '../../db/repositories/InviteTokens.repository';
+import { McpTokens } from '../../db/entities/McpTokens.entity';
+import type { McpTokensRepository } from '../../db/repositories/McpTokens.repository';
+import { OauthTokens } from '../../db/entities/OauthTokens.entity';
+import type { OauthTokensRepository } from '../../db/repositories/OauthTokens.repository';
+import { WebauthnCredentials } from '../../db/entities/WebauthnCredentials.entity';
+import type { WebauthnCredentialsRepository } from '../../db/repositories/WebauthnCredentials.repository';
+import { PasswordResetTokens } from '../../db/entities/PasswordResetTokens.entity';
+import type { PasswordResetTokensRepository } from '../../db/repositories/PasswordResetTokens.repository';
 // Type-and-guard only: the app-config read reports the provider choice, it does
 // not construct one, so this does not pull the maps domain into auth.
 import { isPlacesProviderChoice } from '../maps/providers/places-provider';
@@ -34,6 +43,7 @@ import { splitManagedKeys } from '../common/managed';
 import { emitUserDeleted } from '../../plugin-user-lifecycle';
 import { verifyJwtAndLoadUser } from './jwt-verify';
 import { User } from '../../types';
+import type { UserRow } from '../../db/repositories/Users.repository';
 import { DEMO_EMAIL_PRIMARY, DEMO_PASS, isDemoEmail } from '../common/demo';
 import { avatarUrl } from '../common/avatarUrl';
 import { TripMembershipService } from '../trip-membership/trip-membership.service';
@@ -114,13 +124,39 @@ export interface ResetPasswordOutcome {
 }
 
 /**
+ * `UsersRepository.findByEmailExact`/`findByEmailCI`/`findById` return the
+ * repository's full-row shape (`UserRow` — every `users` column, `role:
+ * string`, several `T | null` columns); the client-payload helper
+ * `stripUserForClient` takes the narrower `User` contract type (`role:
+ * 'admin' | 'user'`, those same columns `T | undefined`). Same mapping as
+ * `passkey.service.ts`'s own `toClientUser` (Plan 3b Task 3 review, F5) —
+ * kept as a second, file-local copy rather than exported/shared, matching
+ * that precedent's own reasoning (one small mapping, cheaper to duplicate
+ * than to add a cross-file dependency for).
+ */
+function toClientUser(row: UserRow): User {
+  return {
+    ...row,
+    role: row.role === 'admin' ? 'admin' : 'user',
+    mfa_enabled: row.mfa_enabled ?? undefined,
+    must_change_password: row.must_change_password ?? undefined,
+    created_at: row.created_at ?? undefined,
+    updated_at: row.updated_at ?? undefined,
+  };
+}
+
+/**
  * DI-native auth domain service. The SQL moved 1:1 from the legacy
  * src/services/authService.ts (same statements, same `||` falsy-coercion
- * defaults, same post-write re-selects, same error strings); the pure
- * password/backup-code crypto lives in auth.helpers.ts. PermissionsService is
- * injected (it replaced the permissions.bridge import); the JWT cookie
- * set/clear, the reset-email delivery and the remaining legacy helpers keep
- * their plain imports. Non-Nest consumers (legacy MCP registrars, legacy
+ * defaults, same post-write re-selects, same error strings) onto the
+ * repositories built across Plan 3a/3b — every statement below is now a
+ * repository method call instead of a `this.db.*` invocation, same shape,
+ * same order, same transaction scope (`.superpowers/sdd/2026-09-22-orm-phase3b/
+ * task-5-report.md`); the pure password/backup-code crypto stays in
+ * auth.helpers.ts. PermissionsService is injected (it replaced the
+ * permissions.bridge import); the JWT cookie set/clear, the reset-email
+ * delivery and the remaining legacy helpers keep their plain imports.
+ * Non-Nest consumers (legacy MCP registrars, legacy
  * adminService/oidcService/passkeyService) go through auth.bridge.ts.
  *
  * AtlasService is deliberately NOT injected any more: getTravelStats, its only
@@ -130,7 +166,6 @@ export interface ResetPasswordOutcome {
 @Injectable()
 export class AuthService {
   constructor(
-    private readonly db: DatabaseService,
     private readonly permissions: PermissionsService,
     private readonly membership: TripMembershipService,
     private readonly webauthn: WebauthnConfigService,
@@ -141,6 +176,11 @@ export class AuthService {
     private readonly uow: UnitOfWork,
     @InjectRepository(AppSettings) private readonly appSettings: AppSettingsRepository,
     @InjectRepository(Users) private readonly usersRepo: UsersRepository,
+    @InjectRepository(InviteTokens) private readonly inviteTokens: InviteTokensRepository,
+    @InjectRepository(McpTokens) private readonly mcpTokens: McpTokensRepository,
+    @InjectRepository(OauthTokens) private readonly oauthTokens: OauthTokensRepository,
+    @InjectRepository(WebauthnCredentials) private readonly webauthnCredentials: WebauthnCredentialsRepository,
+    @InjectRepository(PasswordResetTokens) private readonly passwordResetTokens: PasswordResetTokensRepository,
   ) {}
 
   // Cookie
@@ -162,24 +202,24 @@ export class AuthService {
     oidc_registration: boolean;
     passkey_login: boolean;
   }> {
-    const get = (key: string) =>
-      this.db.get<{ value: string }>("SELECT value FROM app_settings WHERE key = ?", key)?.value ?? null;
+    const get = (key: string) => this.appSettings.getValue(key);
 
     // Passkey login is independent of the password/OIDC "new keys" probe, so it
     // must be resolved OUTSIDE the branch below — otherwise on a fresh install
     // that never touched the password/OIDC toggles it would silently read false
     // even after an admin enabled it. Default OFF (opt-in).
-    const passkey_login = get('passkey_login') === 'true';
+    const passkey_login = (await get('passkey_login')) === 'true';
 
-    const hasNewKeys = ['password_login', 'password_registration', 'oidc_login', 'oidc_registration']
-      .some(k => get(k) !== null);
+    const hasNewKeys = (
+      await Promise.all(['password_login', 'password_registration', 'oidc_login', 'oidc_registration'].map((k) => get(k)))
+    ).some((v) => v !== null);
 
     if (hasNewKeys) {
       const result = {
-        password_login: get('password_login') !== 'false',
-        password_registration: get('password_registration') !== 'false',
-        oidc_login: get('oidc_login') !== 'false',
-        oidc_registration: get('oidc_registration') !== 'false',
+        password_login: (await get('password_login')) !== 'false',
+        password_registration: (await get('password_registration')) !== 'false',
+        oidc_login: (await get('oidc_login')) !== 'false',
+        oidc_registration: (await get('oidc_registration')) !== 'false',
         passkey_login,
       };
       if (readEnv().oidc.only) {
@@ -190,13 +230,13 @@ export class AuthService {
     }
 
     // Legacy fallback
-    const oidcOnlyEnabled = readEnv().oidc.only || get('oidc_only') === 'true';
+    const oidcOnlyEnabled = readEnv().oidc.only || (await get('oidc_only')) === 'true';
     const oidcConfigured = !!(
-      (readEnv().oidc.issuer || get('oidc_issuer')) &&
-      (readEnv().oidc.clientId || get('oidc_client_id'))
+      (readEnv().oidc.issuer || (await get('oidc_issuer'))) &&
+      (readEnv().oidc.clientId || (await get('oidc_client_id')))
     );
     const oidcOnly = oidcOnlyEnabled && oidcConfigured;
-    const allowReg = (get('allow_registration') ?? 'true') === 'true';
+    const allowReg = ((await get('allow_registration')) ?? 'true') === 'true';
 
     return {
       password_login: !oidcOnly,
@@ -214,7 +254,7 @@ export class AuthService {
   async generateToken(user: { id: number | bigint; password_version?: number }, remember?: boolean) {
     const pv = typeof user.password_version === 'number'
       ? user.password_version
-      : (this.db.get<{ password_version?: number }>('SELECT password_version FROM users WHERE id = ?', user.id)?.password_version ?? 0);
+      : ((await this.usersRepo.getPasswordVersion(Number(user.id))) ?? 0);
     // "Remember me" extends the JWT lifetime to match the persistent cookie maxAge;
     // the cookie service decides session-vs-persistent off the same flag.
     const expiresIn = remember === true ? SESSION_DURATION_REMEMBER_SECONDS : SESSION_DURATION_SECONDS;
@@ -257,13 +297,13 @@ export class AuthService {
     if (cfg.rpID !== 'localhost' || cfg.explicitOrigins) return true;
     const env = readEnv();
     const declaredRpId = (
-      env.webauthn.rpId || this.db.get<{ value: string }>("SELECT value FROM app_settings WHERE key = 'webauthn_rp_id'")?.value
+      env.webauthn.rpId || (await this.appSettings.getValue('webauthn_rp_id'))
     )?.trim();
     return !!(declaredRpId || env.app.appUrl || env.http.allowedOriginsRaw);
   }
 
   async getAppConfig(authenticatedUser: User | undefined | null) {
-    const userCount = this.db.get<{ count: number }>('SELECT COUNT(*) as count FROM users WHERE COALESCE(is_guest, 0) = 0')!.count;
+    const userCount = await this.usersRepo.countNonGuest();
     const isDemo = readEnv().demo.enabled;
     const toggles = await this.resolveAuthToggles();
     // One directory deeper than the legacy src/services location — the extra
@@ -279,36 +319,41 @@ export class AuthService {
     // tell "search is unavailable" from "search runs on OpenStreetMap", and to
     // know whether the provider the admin selected actually has a credential.
     const hasAmapKey = !!(await resolveApiKey(this.appSettings, this.usersRepo, 'amap_api_key', authenticatedUser?.id ?? 0, readEnv().maps.amapApiKey)).key;
-    const placesProviderRow = this.db.get<{ value: string }>("SELECT value FROM app_settings WHERE key = 'places_provider'")?.value;
+
+    // AU5's 14 literal `app_settings` reads collapse into one `getValues` call
+    // (Task 5 brief ruling — the repository already has it, and the map is read
+    // the same way a missing/NULL-valued row was before: absent from the map).
+    const settings = await this.appSettings.getValues([
+      'places_provider', 'oidc_display_name', 'oidc_issuer', 'oidc_client_id', 'require_mfa',
+      'notification_channel', 'notify_trip_reminder', 'smtp_host', 'notification_channels',
+      'places_photos_enabled', 'places_autocomplete_enabled', 'places_details_enabled',
+      'places_enrich_enabled', 'place_shadow_enabled',
+    ]);
+
+    const placesProviderRow = settings.get('places_provider');
     const placesProvider = isPlacesProviderChoice(placesProviderRow) ? placesProviderRow : 'auto';
-    const oidcDisplayName = readEnv().oidc.displayName ||
-      this.db.get<{ value: string }>("SELECT value FROM app_settings WHERE key = 'oidc_display_name'")?.value || null;
+    const oidcDisplayName = readEnv().oidc.displayName || settings.get('oidc_display_name') || null;
     const oidcConfigured = !!(
-      (readEnv().oidc.issuer || this.db.get<{ value: string }>("SELECT value FROM app_settings WHERE key = 'oidc_issuer'")?.value) &&
-      (readEnv().oidc.clientId || this.db.get<{ value: string }>("SELECT value FROM app_settings WHERE key = 'oidc_client_id'")?.value)
+      (readEnv().oidc.issuer || settings.get('oidc_issuer')) &&
+      (readEnv().oidc.clientId || settings.get('oidc_client_id'))
     );
-    const requireMfaRow = this.db.get<{ value: string }>("SELECT value FROM app_settings WHERE key = 'require_mfa'");
-    const notifChannel = this.db.get<{ value: string }>("SELECT value FROM app_settings WHERE key = 'notification_channel'")?.value || 'none';
-    const tripReminderSetting = this.db.get<{ value: string }>("SELECT value FROM app_settings WHERE key = 'notify_trip_reminder'")?.value;
-    const hasSmtpHost = !!(readEnv().smtp.host || this.db.get<{ value: string }>("SELECT value FROM app_settings WHERE key = 'smtp_host'")?.value);
-    const notifChannelsRaw = this.db.get<{ value: string }>("SELECT value FROM app_settings WHERE key = 'notification_channels'")?.value || notifChannel;
+    const requireMfaValue = settings.get('require_mfa');
+    const notifChannel = settings.get('notification_channel') || 'none';
+    const tripReminderSetting = settings.get('notify_trip_reminder');
+    const hasSmtpHost = !!(readEnv().smtp.host || settings.get('smtp_host'));
+    const notifChannelsRaw = settings.get('notification_channels') || notifChannel;
     const activeChannels = notifChannelsRaw === 'none' ? [] : notifChannelsRaw.split(',').map((c: string) => c.trim()).filter(Boolean);
     const hasWebhookEnabled = activeChannels.includes('webhook');
     const tripRemindersEnabled = tripReminderSetting !== 'false';
-    const placesPhotosSetting = this.db.get<{ value: string }>("SELECT value FROM app_settings WHERE key = 'places_photos_enabled'")?.value;
-    const placesPhotosEnabled = placesPhotosSetting !== 'false';
-    const placesAutocompleteSetting = this.db.get<{ value: string }>("SELECT value FROM app_settings WHERE key = 'places_autocomplete_enabled'")?.value;
-    const placesAutocompleteEnabled = placesAutocompleteSetting !== 'false';
-    const placesDetailsSetting = this.db.get<{ value: string }>("SELECT value FROM app_settings WHERE key = 'places_details_enabled'")?.value;
-    const placesDetailsEnabled = placesDetailsSetting !== 'false';
-    const placesEnrichSetting = this.db.get<{ value: string }>("SELECT value FROM app_settings WHERE key = 'places_enrich_enabled'")?.value;
-    const placesEnrichEnabled = placesEnrichSetting !== 'false';
+    const placesPhotosEnabled = settings.get('places_photos_enabled') !== 'false';
+    const placesAutocompleteEnabled = settings.get('places_autocomplete_enabled') !== 'false';
+    const placesDetailsEnabled = settings.get('places_details_enabled') !== 'false';
+    const placesEnrichEnabled = settings.get('places_enrich_enabled') !== 'false';
     // Fail-closed, and deliberately on this unauthenticated endpoint: whether an
     // instance records what its users search for is something a visitor is
     // entitled to know before logging in, not a detail to keep behind the door.
-    const placeShadowSetting = this.db.get<{ value: string }>("SELECT value FROM app_settings WHERE key = 'place_shadow_enabled'")?.value;
-    const placeShadowEnabled = placeShadowSetting === 'true';
-    const setupComplete = userCount > 0 && !this.db.get("SELECT id FROM users WHERE role = 'admin' AND must_change_password = 1 LIMIT 1");
+    const placeShadowEnabled = settings.get('place_shadow_enabled') === 'true';
+    const setupComplete = userCount > 0 && (await this.usersRepo.findAdminNeedingPasswordChange()) === null;
 
     return {
       // Legacy fields (backward compat)
@@ -335,7 +380,7 @@ export class AuthService {
       places_provider: placesProvider,
       oidc_configured: oidcConfigured,
       oidc_display_name: oidcConfigured ? (oidcDisplayName || 'SSO') : undefined,
-      require_mfa: requireMfaRow?.value === 'true',
+      require_mfa: requireMfaValue === 'true',
       // The canonical live-read: same query + DEFAULT_ALLOWED_EXTENSIONS
       // fallback the upload filters use, so the client's picker and the
       // server's acceptance can never drift (the historical inline copy here
@@ -373,19 +418,19 @@ export class AuthService {
     if (!readEnv().demo.enabled) {
       return { error: 'Not found', status: 404 };
     }
-    const user = this.db.get<User>('SELECT * FROM users WHERE email = ?', DEMO_EMAIL_PRIMARY);
+    const user = await this.usersRepo.findByEmailExact(DEMO_EMAIL_PRIMARY);
     if (!user) return { error: 'Demo user not found', status: 500 };
     const token = await this.generateToken(user);
-    const safe = stripUserForClient(user) as Record<string, unknown>;
+    const safe = stripUserForClient(toClientUser(user)) as Record<string, unknown>;
     return { token, user: { ...safe, avatar_url: avatarUrl(user) } };
   }
 
   async validateInviteToken(token: string): Promise<{ error?: string; status?: number; valid?: boolean; max_uses?: number; used_count?: number; expires_at?: string }> {
-    const invite = this.db.get('SELECT * FROM invite_tokens WHERE token = ?', token) as any;
+    const invite = await this.inviteTokens.findByToken(token);
     if (!invite) return { error: 'Invalid invite link', status: 404 };
     if (invite.max_uses > 0 && invite.used_count >= invite.max_uses) return { error: 'Invite link has been fully used', status: 410 };
     if (invite.expires_at && new Date(invite.expires_at) < new Date()) return { error: 'Invite link has expired', status: 410 };
-    return { valid: true, max_uses: invite.max_uses, used_count: invite.used_count, expires_at: invite.expires_at };
+    return { valid: true, max_uses: invite.max_uses, used_count: invite.used_count, expires_at: invite.expires_at ?? undefined };
   }
 
   async registerUser(rawBody: unknown): Promise<{ error?: string; status?: number; token?: string; user?: Record<string, unknown>; auditUserId?: number; auditDetails?: Record<string, unknown> }> {
@@ -394,11 +439,11 @@ export class AuthService {
     const email = typeof body.email === 'string' ? body.email.trim() : '';
     const { password, invite_token } = body;
 
-    const userCount = this.db.get<{ count: number }>('SELECT COUNT(*) as count FROM users WHERE COALESCE(is_guest, 0) = 0')!.count;
+    const userCount = await this.usersRepo.countNonGuest();
 
-    let validInvite: any = null;
+    let validInvite: Awaited<ReturnType<InviteTokensRepository['findByToken']>> = null;
     if (invite_token) {
-      validInvite = this.db.get('SELECT * FROM invite_tokens WHERE token = ?', invite_token);
+      validInvite = await this.inviteTokens.findByToken(invite_token);
       if (!validInvite) return { error: 'Invalid invite link', status: 400 };
       if (validInvite.max_uses > 0 && validInvite.used_count >= validInvite.max_uses) return { error: 'Invite link has been fully used', status: 410 };
       if (validInvite.expires_at && new Date(validInvite.expires_at) < new Date()) return { error: 'Invite link has expired', status: 410 };
@@ -423,8 +468,8 @@ export class AuthService {
     }
 
     // Ignore guests (#1362): their synthetic username/email must never block a real signup.
-    const existingUser = this.db.get('SELECT id FROM users WHERE (LOWER(email) = LOWER(?) OR LOWER(username) = LOWER(?)) AND COALESCE(is_guest, 0) = 0', email, username);
-    if (existingUser) {
+    const existingUserId = await this.usersRepo.findIdByEmailOrUsernameCI(email, username);
+    if (existingUserId !== null) {
       return { error: 'Registration failed. Please try different credentials.', status: 409 };
     }
 
@@ -436,33 +481,29 @@ export class AuthService {
       // One transaction for the whole signup: a mid-sequence throw (invite
       // bookkeeping, trip auto-join) must not leave a half-registered user.
       return await this.uow.transactional(async () => {
-        const result = this.db.run(
-          'INSERT INTO users (username, email, password_hash, role, first_seen_version, login_count) VALUES (?, ?, ?, ?, ?, 0)',
-          username, email, password_hash, role, readEnv().app.appVersion || '0.0.0'
-        );
+        const inserted = await this.usersRepo.insertUser({
+          username, email, password_hash, role, first_seen_version: readEnv().app.appVersion || '0.0.0',
+        });
 
-        const user = { id: result.lastInsertRowid, username, email, role, avatar: null, mfa_enabled: false };
+        const user = { id: inserted.id, username, email, role, avatar: null, mfa_enabled: false };
         const token = await this.generateToken(user);
 
         if (validInvite) {
-          const updated = this.db.get(
-            'UPDATE invite_tokens SET used_count = used_count + 1 WHERE id = ? AND (max_uses = 0 OR used_count < max_uses) RETURNING used_count',
-            validInvite.id
-          );
+          const updated = await this.inviteTokens.incrementUsedCount(validInvite.token);
           if (!updated) {
             console.warn(`[Auth] Invite token ${validInvite.token.slice(0, 8)}... exceeded max_uses due to race condition`);
           }
           // Trip-bound invite (#1402): auto-add the freshly registered user to the
           // trip. Idempotent + owner-safe; no-ops if the bound trip was since deleted.
           if (validInvite.trip_id) {
-            await this.membership.joinTripAsMember(Number(validInvite.trip_id), Number(result.lastInsertRowid), validInvite.created_by ?? null);
+            await this.membership.joinTripAsMember(Number(validInvite.trip_id), Number(inserted.id), validInvite.created_by ?? null);
           }
         }
 
         return {
           token,
           user: { ...user, avatar_url: null },
-          auditUserId: Number(result.lastInsertRowid),
+          auditUserId: Number(inserted.id),
           auditDetails: { username, email, role },
         };
       });
@@ -496,7 +537,7 @@ export class AuthService {
 
     // Guests (#1362) carry a synthetic email but must never authenticate — treat a
     // matched guest row exactly like an unknown email (dummy-hash timing preserved).
-    const user = this.db.get<User>('SELECT * FROM users WHERE LOWER(email) = LOWER(?) AND COALESCE(is_guest, 0) = 0', email);
+    const user = await this.usersRepo.findByEmailCI(email);
 
     // Always run bcrypt — even for unknown/OIDC-only users — so response time
     // does not reveal whether the email exists in the database (CWE-203/208).
@@ -522,8 +563,8 @@ export class AuthService {
       };
     }
 
-    if (user.mfa_enabled === 1 || user.mfa_enabled === true) {
-      const pv = (user as User & { password_version?: number }).password_version ?? 0;
+    if (user.mfa_enabled === 1) {
+      const pv = user.password_version ?? 0;
       const mfa_token = jwt.sign(
         { id: Number(user.id), purpose: 'mfa_login', pv },
         JWT_SECRET,
@@ -532,9 +573,9 @@ export class AuthService {
       return { mfa_required: true, mfa_token };
     }
 
-    this.db.run('UPDATE users SET last_login = CURRENT_TIMESTAMP, login_count = login_count + 1 WHERE id = ?', user.id);
+    await this.usersRepo.touchLastLogin(user.id);
     const token = await this.generateToken(user, remember);
-    const userSafe = stripUserForClient(user) as Record<string, unknown>;
+    const userSafe = stripUserForClient(toClientUser(user)) as Record<string, unknown>;
 
     return {
       token,
@@ -553,13 +594,18 @@ export class AuthService {
   async getCurrentUser(
     userId: number
   ): Promise<(Record<string, unknown> & Pick<User, 'id' | 'username' | 'email' | 'role'> & { avatar_url: string }) | null> {
-    const user = this.db.get<User>(
-      'SELECT id, username, email, role, avatar, oidc_issuer, created_at, mfa_enabled, must_change_password FROM users WHERE id = ?',
-      userId
-    );
+    const user = await this.usersRepo.findMeRow(userId);
     if (!user) return null;
-    const base = stripUserForClient(user as User) as Record<string, unknown>;
-    return { ...base, id: user.id, username: user.username, email: user.email, role: user.role, avatar_url: avatarUrl(user) };
+    // `findMeRow`'s projection (id/username/email/role/avatar/oidc_issuer/
+    // created_at/mfa_enabled/must_change_password) is narrower than `User`
+    // and than `UserRow` — `toClientUser` expects the FULL row, so this one
+    // site keeps the same "trust me" cast the legacy generic-typed
+    // `this.db.get<User>(...)` read effectively was: `stripUserForClient`
+    // only destructures a handful of keys this projection never carried
+    // anyway (password_hash, the API-key columns, mfa_secret), so they're
+    // simply absent, exactly as before.
+    const base = stripUserForClient(user as unknown as User) as Record<string, unknown>;
+    return { ...base, id: user.id, username: user.username, email: user.email, role: user.role === 'admin' ? 'admin' : 'user', avatar_url: avatarUrl(user) };
   }
 
   // -------------------------------------------------------------------------
@@ -587,7 +633,7 @@ export class AuthService {
     const pwCheck = validatePassword(new_password);
     if (!pwCheck.ok) return { error: pwCheck.reason, status: 400 };
 
-    const user = this.db.get<{ password_hash: string; password_version?: number }>('SELECT password_hash, password_version FROM users WHERE id = ?', userId);
+    const user = await this.usersRepo.getPasswordHashAndVersion(userId);
     if (!user || !bcrypt.compareSync(current_password, user.password_hash)) {
       return { error: 'Current password is incorrect', status: 401 };
     }
@@ -596,14 +642,14 @@ export class AuthService {
     const newPv = (user.password_version ?? 0) + 1;
 
     await this.uow.transactional(async () => {
-      this.db.run('UPDATE users SET password_hash = ?, must_change_password = 0, password_version = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', hash, newPv, userId);
+      await this.usersRepo.setPassword(userId, hash, newPv);
       // A password change rotates the user's sessions: bumping password_version
       // invalidates existing JWT cookie sessions, and the separate MCP static
       // token and OAuth bearer-token stores are pruned to match (same set the
       // password-reset path already revokes).
-      this.db.run('DELETE FROM mcp_tokens WHERE user_id = ?', userId);
+      await this.mcpTokens.deleteAllForUser(userId);
       try {
-        this.db.run("UPDATE oauth_tokens SET revoked_at = CURRENT_TIMESTAMP WHERE user_id = ? AND revoked_at IS NULL", userId);
+        await this.oauthTokens.revokeAllForUser(userId);
       } catch { /* oauth_tokens table may not exist in very old installs */ }
     });
 
@@ -622,7 +668,7 @@ export class AuthService {
       return { error: 'Account deletion is disabled in demo mode.', status: 403 };
     }
     if (userRole === 'admin') {
-      const adminCount = this.db.get<{ count: number }>("SELECT COUNT(*) as count FROM users WHERE role = 'admin'")!.count;
+      const adminCount = await this.usersRepo.countAdmins();
       if (adminCount <= 1) {
         return { error: 'Cannot delete the last admin account', status: 400 };
       }
@@ -647,13 +693,13 @@ export class AuthService {
   // -------------------------------------------------------------------------
 
   async getAppSettings(userId: number): Promise<{ error?: string; status?: number; data?: Record<string, string> }> {
-    const user = this.db.get<{ role: string }>('SELECT role FROM users WHERE id = ?', userId);
-    if (user?.role !== 'admin') return { error: 'Admin access required', status: 403 };
+    const role = await this.usersRepo.getRole(userId);
+    if (role !== 'admin') return { error: 'Admin access required', status: 403 };
 
     const result: Record<string, string> = {};
     for (const key of ADMIN_SETTINGS_KEYS) {
-      const row = this.db.get<{ value: string }>("SELECT value FROM app_settings WHERE key = ?", key);
-      if (row) result[key] = (key === 'smtp_pass' || key === 'admin_webhook_url' || key === 'admin_ntfy_token') ? '••••••••' : row.value;
+      const value = await this.appSettings.getValue(key);
+      if (value !== null) result[key] = (key === 'smtp_pass' || key === 'admin_webhook_url' || key === 'admin_ntfy_token') ? '••••••••' : value;
     }
     return { data: result };
   }
@@ -671,15 +717,15 @@ export class AuthService {
     managedKeys?: string[];
   }> {
     const body = rawBody as Record<string, unknown>;
-    const user = this.db.get<{ role: string }>('SELECT role FROM users WHERE id = ?', userId);
-    if (user?.role !== 'admin') return { error: 'Admin access required', status: 403 };
+    const role = await this.usersRepo.getRole(userId);
+    if (role !== 'admin') return { error: 'Admin access required', status: 403 };
 
     const { require_mfa } = body;
     if (require_mfa === true || require_mfa === 'true') {
-      const adminMfa = this.db.get<{ mfa_enabled: number }>('SELECT mfa_enabled FROM users WHERE id = ?', userId);
+      const adminMfa = await this.usersRepo.getMfaEnabled(userId);
       // A user-verified passkey satisfies the MFA policy, so an admin who secured
       // their own account with a passkey may enable it too (not only TOTP).
-      const adminHasPasskey = !!this.db.get('SELECT 1 FROM webauthn_credentials WHERE user_id = ? LIMIT 1', userId);
+      const adminHasPasskey = await this.webauthnCredentials.hasAny(userId);
       if (!(adminMfa?.mfa_enabled === 1) && !adminHasPasskey) {
         return {
           error: 'Secure your own account with two-factor authentication or a passkey before requiring it for all users.',
@@ -692,8 +738,8 @@ export class AuthService {
     if (body.password_login !== undefined || body.oidc_login !== undefined) {
       const current = await this.resolveAuthToggles();
       const oidcConfigured = !!(
-        (readEnv().oidc.issuer || this.db.get<{ value: string }>("SELECT value FROM app_settings WHERE key = 'oidc_issuer'")?.value) &&
-        (readEnv().oidc.clientId || this.db.get<{ value: string }>("SELECT value FROM app_settings WHERE key = 'oidc_client_id'")?.value)
+        (readEnv().oidc.issuer || (await this.appSettings.getValue('oidc_issuer'))) &&
+        (readEnv().oidc.clientId || (await this.appSettings.getValue('oidc_client_id')))
       );
       const nextPasswordLogin = body.password_login !== undefined ? (String(body.password_login) === 'true') : current.password_login;
       const nextOidcLogin = body.oidc_login !== undefined ? (String(body.oidc_login) === 'true') : current.oidc_login;
@@ -725,7 +771,7 @@ export class AuthService {
         if (key === 'admin_webhook_url' && val) val = maybe_encrypt_api_key(val) ?? val;
         if (key === 'admin_ntfy_token' && val === '••••••••') continue;
         if (key === 'admin_ntfy_token' && val) val = maybe_encrypt_api_key(val) ?? val;
-        this.db.run("INSERT OR REPLACE INTO app_settings (key, value) VALUES (?, ?)", key, val);
+        await this.appSettings.setValue(key, val);
       }
     }
 
@@ -759,7 +805,7 @@ export class AuthService {
     if (readEnv().demo.enabled && isDemoEmail(userEmail)) {
       return { error: 'MFA is not available in demo mode.', status: 403 };
     }
-    const row = this.db.get<{ mfa_enabled: number }>('SELECT mfa_enabled FROM users WHERE id = ?', userId);
+    const row = await this.usersRepo.getMfaEnabled(userId);
     if (row?.mfa_enabled) {
       return { error: 'MFA is already enabled', status: 400 };
     }
@@ -792,11 +838,7 @@ export class AuthService {
     const backupCodes = generateBackupCodes();
     const backupHashes = backupCodes.map(hashBackupCodeBcrypt);
     const enc = encryptMfaSecret(pending);
-    this.db.run('UPDATE users SET mfa_enabled = 1, mfa_secret = ?, mfa_backup_codes = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
-      enc,
-      JSON.stringify(backupHashes),
-      userId
-    );
+    await this.usersRepo.enableMfa(userId, enc, JSON.stringify(backupHashes));
     mfaSetupPending.delete(userId);
     return { success: true, mfa_enabled: true, backup_codes: backupCodes };
   }
@@ -810,15 +852,15 @@ export class AuthService {
     if (readEnv().demo.enabled && isDemoEmail(userEmail)) {
       return { error: 'MFA cannot be changed in demo mode.', status: 403 };
     }
-    const policy = this.db.get<{ value: string }>("SELECT value FROM app_settings WHERE key = 'require_mfa'");
-    if (policy?.value === 'true') {
+    const policy = await this.appSettings.getValue('require_mfa');
+    if (policy === 'true') {
       return { error: 'Two-factor authentication cannot be disabled while it is required for all users.', status: 403 };
     }
     const { password, code } = body;
     if (!password || !code) {
       return { error: 'Password and authenticator code are required', status: 400 };
     }
-    const user = this.db.get<User>('SELECT * FROM users WHERE id = ?', userId);
+    const user = await this.usersRepo.findById(userId);
     if (!user?.mfa_enabled || !user.mfa_secret) {
       return { error: 'MFA is not enabled', status: 400 };
     }
@@ -831,9 +873,7 @@ export class AuthService {
     if (!ok) {
       return { error: 'Invalid verification code', status: 401 };
     }
-    this.db.run('UPDATE users SET mfa_enabled = 0, mfa_secret = NULL, mfa_backup_codes = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
-      userId
-    );
+    await this.usersRepo.disableMfa(userId);
     mfaSetupPending.delete(userId);
     return { success: true, mfa_enabled: false };
   }
@@ -857,8 +897,8 @@ export class AuthService {
       if (decoded.purpose !== 'mfa_login') {
         return { error: 'Invalid verification token', status: 401 };
       }
-      const user = this.db.get<User>('SELECT * FROM users WHERE id = ?', decoded.id);
-      if (!user || !(user.mfa_enabled === 1 || user.mfa_enabled === true) || !user.mfa_secret) {
+      const user = await this.usersRepo.findById(decoded.id);
+      if (!user || user.mfa_enabled !== 1 || !user.mfa_secret) {
         return { error: 'Invalid session', status: 401 };
       }
       const secret = decryptMfaSecret(user.mfa_secret);
@@ -876,17 +916,14 @@ export class AuthService {
         // Consume the backup code and record the login atomically — the code
         // must not burn without the login landing (or vice versa).
         await this.uow.transactional(async () => {
-          this.db.run('UPDATE users SET mfa_backup_codes = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
-            JSON.stringify(hashes),
-            user.id
-          );
-          this.db.run('UPDATE users SET last_login = CURRENT_TIMESTAMP, login_count = login_count + 1 WHERE id = ?', user.id);
+          await this.usersRepo.setBackupCodesAndTouch(user.id, JSON.stringify(hashes));
+          await this.usersRepo.touchLastLogin(user.id);
         });
       } else {
-        this.db.run('UPDATE users SET last_login = CURRENT_TIMESTAMP, login_count = login_count + 1 WHERE id = ?', user.id);
+        await this.usersRepo.touchLastLogin(user.id);
       }
       const sessionToken = await this.generateToken(user, remember);
-      const userSafe = stripUserForClient(user) as Record<string, unknown>;
+      const userSafe = stripUserForClient(toClientUser(user)) as Record<string, unknown>;
       return {
         token: sessionToken,
         user: { ...userSafe, avatar_url: avatarUrl(user) },
@@ -935,10 +972,7 @@ export class AuthService {
     }
 
     // A guest (#1362) must never receive a reset link — treat its synthetic email as unknown.
-    const user = this.db.get<{ id: number; email: string; password_hash: string | null; oidc_sub: string | null }>(
-      'SELECT id, email, password_hash, oidc_sub FROM users WHERE email = ? AND COALESCE(is_guest, 0) = 0',
-      email
-    );
+    const user = await this.usersRepo.findForPasswordReset(email);
 
     if (!user) {
       return { tokenForDelivery: null, userId: null, userEmail: null, reason: 'no_user' };
@@ -955,19 +989,13 @@ export class AuthService {
 
     // Invalidate any prior unconsumed tokens for this user so there is
     // always at most one live reset link in flight.
-    this.db.run(
-      "UPDATE password_reset_tokens SET consumed_at = CURRENT_TIMESTAMP WHERE user_id = ? AND consumed_at IS NULL",
-      user.id
-    );
+    await this.passwordResetTokens.consumeAllLiveForUser(user.id);
 
     const raw = randomBytes(PASSWORD_RESET_TOKEN_BYTES).toString('base64url');
     const token_hash = hashResetToken(raw);
     const expires_at = new Date(Date.now() + PASSWORD_RESET_TTL_MS).toISOString();
 
-    this.db.run(
-      'INSERT INTO password_reset_tokens (user_id, token_hash, expires_at, created_ip) VALUES (?, ?, ?, ?)',
-      user.id, token_hash, expires_at, createdIp
-    );
+    await this.passwordResetTokens.insertToken({ user_id: user.id, token_hash, expires_at, created_ip: createdIp });
 
     return { tokenForDelivery: raw, userId: user.id, userEmail: user.email, reason: 'issued' };
   }
@@ -993,10 +1021,7 @@ export class AuthService {
     if (!pwCheck.ok) return { error: pwCheck.reason!, status: 400 };
 
     const tokenHash = hashResetToken(token);
-    const row = this.db.get<{ id: number; user_id: number; expires_at: string; consumed_at: string | null }>(
-      'SELECT id, user_id, expires_at, consumed_at FROM password_reset_tokens WHERE token_hash = ?',
-      tokenHash
-    );
+    const row = await this.passwordResetTokens.findByTokenHash(tokenHash);
 
     if (!row) return { error: 'Invalid or expired reset link', status: 400 };
     if (row.consumed_at) return { error: 'This reset link has already been used', status: 400 };
@@ -1004,15 +1029,12 @@ export class AuthService {
       return { error: 'Reset link has expired. Please request a new one.', status: 400 };
     }
 
-    const user = this.db.get<{ id: number; email: string; mfa_enabled: number | boolean; mfa_secret: string | null; mfa_backup_codes: string | null; password_version: number }>(
-      'SELECT id, email, mfa_enabled, mfa_secret, mfa_backup_codes, password_version FROM users WHERE id = ?',
-      row.user_id
-    );
+    const user = await this.usersRepo.findResetTarget(row.user_id);
 
     if (!user) return { error: 'Invalid or expired reset link', status: 400 };
 
     // MFA gate. If enabled, require a valid TOTP or backup code.
-    const mfaOn = user.mfa_enabled === 1 || user.mfa_enabled === true;
+    const mfaOn = user.mfa_enabled === 1;
     let backupCodeConsumedIndex: number | null = null;
     if (mfaOn) {
       if (!user.mfa_secret) {
@@ -1037,33 +1059,24 @@ export class AuthService {
 
     await this.uow.transactional(async () => {
       // Burn the token first to keep it atomic with the password change.
-      this.db.run('UPDATE password_reset_tokens SET consumed_at = CURRENT_TIMESTAMP WHERE id = ?', row.id);
+      await this.passwordResetTokens.markConsumed(row.id);
       // Also burn every OTHER live token for this user — a fresh login
       // should not leave a second door open.
-      this.db.run(
-        "UPDATE password_reset_tokens SET consumed_at = CURRENT_TIMESTAMP WHERE user_id = ? AND consumed_at IS NULL AND id != ?",
-        user.id, row.id
-      );
-      this.db.run(
-        'UPDATE users SET password_hash = ?, must_change_password = 0, password_version = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
-        newHash, newPv, user.id
-      );
+      await this.passwordResetTokens.consumeAllLiveForUser(user.id, row.id);
+      await this.usersRepo.setPassword(user.id, newHash, newPv);
       // Consume backup code if one was used.
       if (backupCodeConsumedIndex !== null) {
         const hashes = parseBackupCodeHashes(user.mfa_backup_codes);
         hashes.splice(backupCodeConsumedIndex, 1);
-        this.db.run('UPDATE users SET mfa_backup_codes = ? WHERE id = ?', JSON.stringify(hashes), user.id);
+        await this.usersRepo.setBackupCodes(user.id, JSON.stringify(hashes));
       }
       // Revoke every other credential class the user had. The
       // password_version bump alone invalidates JWT cookie sessions, but
       // MCP static tokens and OAuth 2.1 bearer tokens are separate stores
       // that survive the bump unless we prune them here.
-      this.db.run('DELETE FROM mcp_tokens WHERE user_id = ?', user.id);
+      await this.mcpTokens.deleteAllForUser(user.id);
       try {
-        this.db.run(
-          "UPDATE oauth_tokens SET revoked_at = CURRENT_TIMESTAMP WHERE user_id = ? AND revoked_at IS NULL",
-          user.id
-        );
+        await this.oauthTokens.revokeAllForUser(user.id);
       } catch { /* oauth_tokens table may not exist in very old installs */ }
     });
 
@@ -1083,8 +1096,8 @@ export class AuthService {
 
   async isDemoUser(userId: number): Promise<boolean> {
     if (!readEnv().demo.enabled) return false;
-    const user = this.db.get<{ email: string }>('SELECT email FROM users WHERE id = ?', userId);
-    return isDemoEmail(user?.email);
+    const email = await this.usersRepo.getEmail(userId);
+    return isDemoEmail(email ?? undefined);
   }
 
   /**

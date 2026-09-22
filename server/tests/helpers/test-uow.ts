@@ -20,6 +20,10 @@ import { InviteTokens } from '../../src/db/entities/InviteTokens.entity';
 import type { InviteTokensRepository } from '../../src/db/repositories/InviteTokens.repository';
 import { McpTokens } from '../../src/db/entities/McpTokens.entity';
 import type { McpTokensRepository } from '../../src/db/repositories/McpTokens.repository';
+import { OauthTokens } from '../../src/db/entities/OauthTokens.entity';
+import type { OauthTokensRepository } from '../../src/db/repositories/OauthTokens.repository';
+import { PasswordResetTokens } from '../../src/db/entities/PasswordResetTokens.entity';
+import type { PasswordResetTokensRepository } from '../../src/db/repositories/PasswordResetTokens.repository';
 
 const perHandle = new WeakMap<Database.Database, Promise<UnitOfWork>>();
 const appSettingsPerHandle = new WeakMap<Database.Database, Promise<AppSettingsRepository>>();
@@ -239,5 +243,37 @@ export function createTestInviteTokensRepo(db: Database.Database): Promise<Invit
   if (existing !== undefined) return existing;
   const pending = sharedTestOrm(db).then((t) => t.repo(InviteTokens));
   inviteTokensPerHandle.set(db, pending);
+  return pending;
+}
+
+// ---------------------------------------------------------------------------
+// Plan 3b Task 5 (AuthService / UserCleanupService) — appended at the end per
+// the task's own file-ownership rule. Same memoisation-per-handle pattern as
+// every helper above: one ORM per test file's better-sqlite3 handle, shared
+// with whatever `UnitOfWork`/other repository that same file also builds —
+// required per the Task 4 review ("append createTestOauthTokensRepo to
+// test-uow.ts through the existing sharedTestOrm memoisation — a repository
+// from a different ORM instance resolves a different fork and the
+// transaction test lies").
+// ---------------------------------------------------------------------------
+
+const oauthTokensPerHandle = new WeakMap<Database.Database, Promise<OauthTokensRepository>>();
+const passwordResetTokensPerHandle = new WeakMap<Database.Database, Promise<PasswordResetTokensRepository>>();
+
+/** The `OauthTokensRepository` a hand-constructed `AuthService` needs (Plan 3b Task 4's `revokeAllForUser`, consumed by Task 5). */
+export function createTestOauthTokensRepo(db: Database.Database): Promise<OauthTokensRepository> {
+  const existing = oauthTokensPerHandle.get(db);
+  if (existing !== undefined) return existing;
+  const pending = sharedTestOrm(db).then((t) => t.repo(OauthTokens));
+  oauthTokensPerHandle.set(db, pending);
+  return pending;
+}
+
+/** The `PasswordResetTokensRepository` a hand-constructed `AuthService` needs (Plan 3b Task 5, new repository). */
+export function createTestPasswordResetTokensRepo(db: Database.Database): Promise<PasswordResetTokensRepository> {
+  const existing = passwordResetTokensPerHandle.get(db);
+  if (existing !== undefined) return existing;
+  const pending = sharedTestOrm(db).then((t) => t.repo(PasswordResetTokens));
+  passwordResetTokensPerHandle.set(db, pending);
   return pending;
 }

@@ -49,7 +49,7 @@ import { ExchangeRatesService } from '../../../src/nest/budget/exchange-rates.se
 import { RealtimeService } from '../../../src/nest/realtime/realtime.service';
 import { BudgetService } from '../../../src/nest/budget/budget.service';
 import { UserCleanupService } from '../../../src/nest/auth/user-cleanup.service';
-import { createTestUnitOfWork, createTestAppSettingsRepo } from '../../helpers/test-uow';
+import { createTestUnitOfWork, createTestAppSettingsRepo, createTestUsersRepo } from '../../helpers/test-uow';
 
 const dbs = new DatabaseService(testDb);
 
@@ -57,7 +57,7 @@ let budget: BudgetService;
 let svc: UserCleanupService;
 beforeAll(async () => {
   budget = new BudgetService(dbs, new PermissionsService(await createTestAppSettingsRepo(dbs.connection), await createTestUnitOfWork(dbs.connection)), new ExchangeRatesService(), new RealtimeService(), await createTestUnitOfWork(dbs.connection));
-  svc = new UserCleanupService(dbs, budget, await createTestUnitOfWork(dbs.connection));
+  svc = new UserCleanupService(dbs, budget, await createTestUnitOfWork(dbs.connection), await createTestUsersRepo(dbs.connection));
 });
 
 const installPlugin = (id: string, permissions: string[] | null) => {
@@ -152,7 +152,7 @@ describe('erasePluginUserData', () => {
     const slim = new (require('better-sqlite3'))(':memory:');
     slim.exec('CREATE TABLE users (id INTEGER PRIMARY KEY)');
     slim.prepare('INSERT INTO users (id) VALUES (1)').run();
-    const slimSvc = new UserCleanupService(new DatabaseService(slim), budget, await createTestUnitOfWork(slim));
+    const slimSvc = new UserCleanupService(new DatabaseService(slim), budget, await createTestUnitOfWork(slim), await createTestUsersRepo(slim));
 
     await expect(slimSvc.erasePluginUserData(1)).resolves.toBeUndefined();
 
@@ -213,21 +213,20 @@ describe('deleteUserCompletely', () => {
     testDb.prepare('INSERT INTO trip_members (trip_id, user_id, invited_by) VALUES (?, ?, ?)')
       .run(trip.id, owner.id, victim.id);
 
-    // Fail on the final statement only, after the reference cleanup has written.
-    const failing = new DatabaseService(testDb);
-    // `.bind` is load-bearing here and must NOT become an arrow forwarder: it captures
-    // the ORIGINAL run before vi.spyOn replaces the property, whereas `(...a) => failing.run(...a)`
-    // would re-enter the spy and recurse. `run` stays synchronous (recipe R0), so the
-    // `any`-typed alias hides nothing.
-    const realRun = failing.run.bind(failing);
-    vi.spyOn(failing, 'run').mockImplementation((sql: string, ...params: unknown[]) => {
-      if (sql.startsWith('DELETE FROM users')) throw new Error('boom');
-      return realRun(sql, ...params);
-    });
+    // Fail on the final statement only (UC11, `UsersRepository.deleteById`),
+    // after the reference cleanup (UC1-UC10, still raw and unaffected by this
+    // spy) has written. UC11 is a repository call now, not `this.db.run`, so
+    // this spies on the repository method instead of the legacy SQL-text
+    // sniff (`sql.startsWith('DELETE FROM users')`) that check replaced.
+    const usersRepo = await createTestUsersRepo(testDb);
+    const deleteByIdSpy = vi.spyOn(usersRepo, 'deleteById').mockRejectedValue(new Error('boom'));
+    try {
+      await expect(new UserCleanupService(dbs, budget, await createTestUnitOfWork(testDb), usersRepo).deleteUserCompletely(victim.id)).rejects.toThrow('boom');
 
-    await expect(new UserCleanupService(failing, budget, await createTestUnitOfWork(testDb)).deleteUserCompletely(victim.id)).rejects.toThrow('boom');
-
-    expect(testDb.prepare('SELECT id FROM users WHERE id = ?').get(victim.id)).toBeDefined();
-    expect((testDb.prepare('SELECT invited_by FROM trip_members WHERE user_id = ?').get(owner.id) as { invited_by: number | null }).invited_by).toBe(victim.id);
+      expect(testDb.prepare('SELECT id FROM users WHERE id = ?').get(victim.id)).toBeDefined();
+      expect((testDb.prepare('SELECT invited_by FROM trip_members WHERE user_id = ?').get(owner.id) as { invited_by: number | null }).invited_by).toBe(victim.id);
+    } finally {
+      deleteByIdSpy.mockRestore();
+    }
   });
 });
