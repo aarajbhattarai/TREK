@@ -12,7 +12,10 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
-const dbFile = path.join(here, '.tmp', 'e2e.db')
+// The port is in the name, so two runs on two port pairs keep two databases
+// and can render different guide files at the same time.
+const apiPort = process.env.E2E_API_PORT || '3001'
+const dbFile = path.join(here, '.tmp', `e2e-${apiPort}.db`)
 const serverDir = path.join(here, '..', '..', 'server')
 
 for (const f of [dbFile, `${dbFile}-wal`, `${dbFile}-shm`]) {

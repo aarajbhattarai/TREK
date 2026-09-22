@@ -1901,8 +1901,11 @@ const help: TranslationStrings = {
     'A naphoz ugyanazt az űrlapot nyitja meg, mint az Új hely, csak a hely abban a pillanatban a megnyitott napra kerül, ahogy a Hozzáadás gombra kattintasz.',
   'help.guide.place-to-open-day.step.3':
     'Egy már létező hely a sora végén lévő + gombbal vagy jobb gombbal, a + Nap ponttal kerül a megnyitott napra.',
+  'help.guide.place-to-open-day.step.4':
+    'Fordítva is megy, és anélkül, hogy előbb megnyitnál egy napot: húzd ki a hely sorát az oszlopból, és ejtsd rá egy nap kártyájára. Két megálló közé ejtve pontosan oda kerül.',
   'help.guide.place-to-open-day.result': 'A hely a nap alatt szerepel, a végén; húzd fel vagy le oda, ahová tartozik.',
-  'help.guide.place-to-open-day.tip.1': 'Egy sor napra húzása is működik, és rögtön két megálló közé ejtheti a helyet.',
+  'help.guide.place-to-open-day.tip.1':
+    'A megnyitott nap a keresést is irányítja: nyitott nappal a térkép és a közeli keresés onnan indul, amerre az a nap amúgy is jár.',
   'help.guide.place-to-open-day.tip.2': 'A napok fölötti eszköztárban a Visszavonás visszaveszi a hozzárendelést.',
   // filter-places
   'help.guide.filter-places.title': 'Hely megtalálása a listában',

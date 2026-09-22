@@ -1840,10 +1840,12 @@ const help: TranslationStrings = {
     '“Vào ngày” mở đúng biểu mẫu như “Địa điểm mới”, chỉ khác là địa điểm rơi vào ngày đang mở ngay khi bạn nhấp “Thêm”.',
   'help.guide.place-to-open-day.step.3':
     'Một địa điểm đã có sẵn sẽ vào ngày đang mở bằng dấu + ở cuối hàng của nó, hoặc bằng nhấp chuột phải rồi “+ Ngày”.',
+  'help.guide.place-to-open-day.step.4':
+    'Chiều ngược lại cũng được, mà không cần mở ngày trước: kéo hàng của địa điểm ra khỏi cột rồi thả lên thẻ của một ngày. Thả vào giữa hai điểm dừng thì nó nằm đúng chỗ đó.',
   'help.guide.place-to-open-day.result':
     'Địa điểm được liệt kê dưới ngày đó, ở cuối; kéo lên hoặc xuống tới chỗ nó thuộc về.',
   'help.guide.place-to-open-day.tip.1':
-    'Kéo một hàng lên một ngày cũng được, và nó có thể thả địa điểm vào giữa hai điểm dừng ngay lập tức.',
+    'Ngày đang mở cũng dẫn hướng việc tìm kiếm: khi một ngày đang mở, bản đồ và tìm quanh đây bắt đầu từ nơi ngày đó vốn đã đi qua.',
   'help.guide.place-to-open-day.tip.2': '“Hoàn tác” trên thanh công cụ phía trên các ngày lấy lại việc gán đó.',
   // filter-places
   'help.guide.filter-places.title': 'Tìm một địa điểm trong danh sách',

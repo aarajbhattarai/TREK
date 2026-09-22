@@ -2,7 +2,7 @@ import { test as setup, expect } from '@playwright/test'
 import { writeFileSync, mkdirSync } from 'node:fs'
 import path from 'node:path'
 import { seedDemoData } from './seed'
-import { E2E_BASE_URL } from '../../playwright.config'
+import { E2E_BASE_URL, E2E_SEED_FILE } from '../../playwright.config'
 
 /**
  * Populates the throwaway E2E database with the demo trip before any screenshot
@@ -32,7 +32,6 @@ setup('seed the demo trip', async ({ page, playwright }) => {
   expect(result.tripId, 'trip was created').toBeTruthy()
   expect(result.placeIds.length, 'places were created').toBeGreaterThan(0)
 
-  const dir = path.join(process.cwd(), 'e2e', '.tmp')
-  mkdirSync(dir, { recursive: true })
-  writeFileSync(path.join(dir, 'seed.json'), JSON.stringify(result, null, 2))
+  mkdirSync(path.join(process.cwd(), 'e2e', '.tmp'), { recursive: true })
+  writeFileSync(path.join(process.cwd(), E2E_SEED_FILE), JSON.stringify(result, null, 2))
 })

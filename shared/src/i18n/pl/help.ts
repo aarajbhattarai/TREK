@@ -1849,10 +1849,12 @@ const help: TranslationStrings = {
     'Do dnia otwiera ten sam formularz co Nowe miejsce, tylko miejsce ląduje w otwartym dniu w chwili, gdy klikniesz Dodaj.',
   'help.guide.place-to-open-day.step.3':
     'Miejsce, które już istnieje, trafia do otwartego dnia przez + na końcu swojego wiersza albo prawym przyciskiem, + Dzień.',
+  'help.guide.place-to-open-day.step.4':
+    'Odwrotnie też działa, i to bez otwierania dnia: przeciągnij wiersz miejsca poza kolumnę i upuść go na kartę dnia. Upuszczone między dwa przystanki trafia dokładnie tam.',
   'help.guide.place-to-open-day.result':
     'Miejsce jest wypisane pod dniem, na końcu; przeciągnij je w górę lub w dół tam, gdzie pasuje.',
   'help.guide.place-to-open-day.tip.1':
-    'Przeciągnięcie wiersza na dzień działa tak samo i może od razu upuścić miejsce między dwa przystanki.',
+    'Otwarty dzień steruje też wyszukiwaniem: gdy dzień jest otwarty, mapa i wyszukiwanie w pobliżu zaczynają tam, dokąd ten dzień i tak prowadzi.',
   'help.guide.place-to-open-day.tip.2': 'Cofnij na pasku narzędzi nad dniami cofa przypisanie.',
   // filter-places
   'help.guide.filter-places.title': 'Znaleźć miejsce na liście',

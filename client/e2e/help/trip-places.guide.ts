@@ -148,6 +148,24 @@ const SCRIPTS: Record<string, GuideScript> = {
           await settle(p)
         },
       },
+      {
+        // The other way round, and the one most readers try first: the row is
+        // dragged onto a day card. The place is off the day again before the
+        // drag so the picture shows it leaving the column rather than a stop
+        // that is already there.
+        prepare: async p => {
+          await p.getByRole('button', { name: 'Undo' }).click()
+          await expect(row(p, SPARE.name)).toBeVisible({ timeout: 15_000 })
+          await settle(p)
+        },
+        target: p => row(p, SPARE.name),
+        dropTo: p => p.getByRole('button', { name: /^2 .*Day 2 / }).locator('xpath=..'),
+        act: async p => {
+          await row(p, SPARE.name).dragTo(p.getByRole('button', { name: /^2 .*Day 2 / }))
+          await expect(p.locator('.dp-row[role="button"]').filter({ hasText: SPARE.name }).first()).toBeVisible({ timeout: 15_000 })
+          await settle(p)
+        },
+      },
     ],
     cleanup: p => deleteByName(p, SPARE.name),
   },

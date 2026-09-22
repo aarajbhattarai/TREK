@@ -154,8 +154,9 @@ export async function captureGuide(page: Page, script: GuideScript): Promise<voi
         await ringDrag(page, box, to, n)
         await page.screenshot({ path: path.join(dir, `step-${n}.png`), clip: frameFor(union(box, to)) })
       } else {
-        await ring(page, box, n)
-        await page.screenshot({ path: path.join(dir, `step-${n}.png`), clip: frameFor(box) })
+        const frame = frameFor(box)
+        await ring(page, box, n, frame)
+        await page.screenshot({ path: path.join(dir, `step-${n}.png`), clip: frame })
       }
       await unring(page)
     }
@@ -215,13 +216,68 @@ export function frameFor(box: { x: number; y: number; width: number; height: num
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(Math.max(v, lo), hi)
 
-/** Ring the target in the app's accent, dim everything else, number it. */
-async function ring(page: Page, box: { x: number; y: number; width: number; height: number }, n: number): Promise<void> {
+/**
+ * Ring the target, dim everything else, number it.
+ *
+ * The ring is the app's accent, which stands out on nearly every surface the
+ * guides walk over. Over the lightbox and the other near-black overlays it does
+ * not: a dark accent on a dark ground is a ring nobody can see. So the surface
+ * behind the ring is measured, and only when it has too little contrast against
+ * the accent does a white hairline go around the outside of the ring and the
+ * badge. Everywhere else the ring keeps the single line it always had.
+ */
+async function ring(
+  page: Page,
+  box: { x: number; y: number; width: number; height: number },
+  n: number,
+  frame: { x: number; y: number; width: number; height: number },
+): Promise<void> {
   await page.evaluate(
-    ({ box, n }) => {
+    ({ box, n, frame }) => {
       const accent = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#111827'
       const accentText = getComputedStyle(document.documentElement).getPropertyValue('--accent-text').trim() || '#ffffff'
       const pad = 6
+
+      const parse = (value: string): [number, number, number, number] | null => {
+        const text = value.trim()
+        if (text.startsWith('#')) {
+          const hex = text.length < 7 ? text.slice(1, 4).replace(/./g, c => c + c) : text.slice(1, 7)
+          const n = Number.parseInt(hex, 16)
+          return [(n >> 16) & 255, (n >> 8) & 255, n & 255, 1]
+        }
+        const inside = /rgba?\(([^)]+)\)/.exec(text)
+        if (!inside) return null
+        const parts = inside[1]
+          .split(/[\s,/]+/)
+          .filter(Boolean)
+          .map(Number)
+        return [parts[0], parts[1], parts[2], parts.length > 3 ? parts[3] : 1]
+      }
+      const luminance = (colour: [number, number, number, number]): number => {
+        const channel = (v: number) => {
+          const c = v / 255
+          return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4
+        }
+        return 0.2126 * channel(colour[0]) + 0.7152 * channel(colour[1]) + 0.0722 * channel(colour[2])
+      }
+      // What lies just outside the ring, through any transparent layer.
+      const behind = (x: number, y: number): [number, number, number, number] => {
+        let node = document.elementFromPoint(
+          Math.max(1, Math.min(window.innerWidth - 2, x)),
+          Math.max(1, Math.min(window.innerHeight - 2, y)),
+        )
+        while (node) {
+          const colour = parse(getComputedStyle(node).backgroundColor)
+          if (colour && colour[3] > 0.2) return colour
+          node = node.parentElement
+        }
+        return [255, 255, 255, 1]
+      }
+      // The dim layer darkens that surface before the ring is drawn over it.
+      const ground = luminance(behind(box.x - pad - 4, box.y + box.height / 2)) * 0.7
+      const ink = luminance(parse(accent) || [17, 24, 39, 1])
+      const hairline = (Math.max(ground, ink) + 0.05) / (Math.min(ground, ink) + 0.05) < 3
+
       const el = document.createElement('div')
       el.id = 'trek-help-ring'
       Object.assign(el.style, {
@@ -231,15 +287,22 @@ async function ring(page: Page, box: { x: number; y: number; width: number; heig
         width: `${box.width + 2 * pad}px`,
         height: `${box.height + 2 * pad}px`,
         borderRadius: '12px',
-        boxShadow: `0 0 0 3px ${accent}, 0 0 0 100vmax rgba(0,0,0,0.30)`,
+        boxShadow: `0 0 0 3px ${accent}${hairline ? ', 0 0 0 5px rgba(255,255,255,0.92)' : ''}, 0 0 0 100vmax rgba(0,0,0,0.30)`,
         pointerEvents: 'none',
         zIndex: '2147483647',
       })
+      // Outside the corner where that is in shot, and otherwise inside, far
+      // enough in to clear the frame's edge: a row wider than the picture has
+      // no outside left of it, and the ring's own corner is off the picture too.
+      const ringLeft = box.x - pad
+      const ringTop = box.y - pad
+      const left = ringLeft - 14 >= frame.x + 2 ? -14 : Math.max(10, frame.x + 10 - ringLeft)
+      const top = ringTop - 14 >= frame.y + 2 ? -14 : Math.max(10, frame.y + 10 - ringTop)
       const badge = document.createElement('div')
       Object.assign(badge.style, {
         position: 'absolute',
-        left: '-14px',
-        top: '-14px',
+        left: `${left}px`,
+        top: `${top}px`,
         width: '28px',
         height: '28px',
         borderRadius: '999px',
@@ -247,13 +310,15 @@ async function ring(page: Page, box: { x: number; y: number; width: number; heig
         color: accentText,
         font: '700 13px/28px Poppins, system-ui, sans-serif',
         textAlign: 'center',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.25)',
+        boxShadow: hairline
+          ? '0 0 0 2px rgba(255,255,255,0.92), 0 2px 8px rgba(0,0,0,0.25)'
+          : '0 2px 8px rgba(0,0,0,0.25)',
       })
       badge.textContent = String(n)
       el.appendChild(badge)
       document.body.appendChild(el)
     },
-    { box, n },
+    { box, n, frame },
   )
 }
 
@@ -365,5 +430,35 @@ export async function settle(page: Page): Promise<void> {
       .map(img => new Promise(res => { img.onload = img.onerror = res }))
     await Promise.race([Promise.all(pending), new Promise(res => setTimeout(res, 3000))])
   })
+  await showLoadedTiles(page)
   await page.waitForTimeout(450)
+}
+
+/**
+ * Show the raster tiles that have arrived.
+ *
+ * Leaflet fades a tile in over 200 ms and works out how far it has got from
+ * `+new Date()`. The clock is pinned to the picture day (see PICTURE_DAY), so
+ * that difference never grows, the tile keeps the opacity 0 it was created
+ * with, and the map is a grey rectangle in the picture even though every tile
+ * came back with a 200. Nothing else on the page fades from the wall clock, so
+ * this only ever touches tiles that are already loaded.
+ */
+async function showLoadedTiles(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    // A rule, not an inline style: Leaflet re-runs the fade on every frame and
+    // writes the opacity back, so the only thing that holds is a stylesheet
+    // that outranks it. `leaflet-tile-loaded` is Leaflet's own class, put on a
+    // tile the moment its image arrives, so a tile still in flight stays hidden.
+    if (!document.getElementById('trek-help-tiles')) {
+      const style = document.createElement('style')
+      style.id = 'trek-help-tiles'
+      style.textContent = '.leaflet-tile-loaded { opacity: 1 !important; }'
+      document.head.appendChild(style)
+    }
+    for (const tile of document.querySelectorAll('img.leaflet-tile')) {
+      const img = tile as HTMLImageElement
+      if (img.complete && img.naturalWidth > 0) img.classList.add('leaflet-tile-loaded')
+    }
+  })
 }

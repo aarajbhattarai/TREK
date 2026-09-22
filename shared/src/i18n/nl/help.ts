@@ -1899,10 +1899,12 @@ const help: TranslationStrings = {
     'Naar dag opent hetzelfde formulier als Nieuwe plek, alleen komt de plek op de open dag terecht op het moment dat je op Toevoegen klikt.',
   'help.guide.place-to-open-day.step.3':
     'Een plek die al bestaat gaat naar de open dag met de + aan het eind van zijn rij, of met rechts klikken, + Dag.',
+  'help.guide.place-to-open-day.step.4':
+    'Andersom kan ook, en zonder eerst een dag te openen: sleep de rij van de plek uit de kolom en laat hem los op een dagkaart. Laat je hem tussen twee stops los, dan belandt hij precies daar.',
   'help.guide.place-to-open-day.result':
     'De plek staat onder de dag, helemaal onderaan; sleep hem omhoog of omlaag naar waar hij hoort.',
   'help.guide.place-to-open-day.tip.1':
-    'Een rij op een dag slepen werkt net zo goed, en daarbij kun je de plek meteen tussen twee stops laten vallen.',
+    'De geopende dag stuurt ook het zoeken: staat een dag open, dan beginnen de kaart en het zoeken in de buurt daar waar die dag toch al komt.',
   'help.guide.place-to-open-day.tip.2': 'Ongedaan maken in de werkbalk boven de dagen neemt de toewijzing terug.',
   // filter-places
   'help.guide.filter-places.title': 'Een plek in de lijst vinden',

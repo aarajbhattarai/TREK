@@ -1534,8 +1534,11 @@ const help: TranslationStrings = {
   'help.guide.place-to-open-day.step.2':
     '「加入當天」開啟的表單和「新地點」一樣，只是你點選「新增」的那一刻地點就落在開啟的那一天上。',
   'help.guide.place-to-open-day.step.3': '已經存在的地點，用它那一列末尾的 + 或者按右鍵後的「+ 天」放到開啟的那一天。',
+  'help.guide.place-to-open-day.step.4':
+    '反過來也行，而且不用先打開某一天：把地點的那一列拖出清單，放到某天的卡片上。放在兩個停靠點之間，它就正好落在那裡。',
   'help.guide.place-to-open-day.result': '地點列在那一天下面，排在最後；上下拖曳把它放到該在的位置。',
-  'help.guide.place-to-open-day.tip.1': '把一列拖曳到某一天同樣可行，而且可以直接把地點放到兩個停靠點之間。',
+  'help.guide.place-to-open-day.tip.1':
+    '打開的那一天也會影響搜尋：有一天處於打開狀態時，地圖和附近搜尋都從這一天本來要去的地方開始。',
   'help.guide.place-to-open-day.tip.2': '天數上方工具列裡的「撤銷」收回這次指派。',
   // filter-places
   'help.guide.filter-places.title': '在清單裡找到地點',

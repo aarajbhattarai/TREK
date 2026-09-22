@@ -1805,10 +1805,12 @@ const help: TranslationStrings = {
     'Ke dni otevře stejný formulář jako Nové místo, jen místo přistane na otevřeném dni ve chvíli, kdy kliknete na Přidat.',
   'help.guide.place-to-open-day.step.3':
     'Místo, které už existuje, jde na otevřený den přes + na konci svého řádku nebo pravým tlačítkem, + Den.',
+  'help.guide.place-to-open-day.step.4':
+    'Funguje to i obráceně, a bez toho, abys nejdřív otevřel den: přetáhni řádek místa ze sloupce a pusť ho na kartu dne. Když ho pustíš mezi dvě zastávky, přistane přesně tam.',
   'help.guide.place-to-open-day.result':
     'Místo je vypsané pod dnem, na konci; přetažením nahoru nebo dolů ho dáte tam, kam patří.',
   'help.guide.place-to-open-day.tip.1':
-    'Přetažení řádku na den funguje také a může místo rovnou položit mezi dvě zastávky.',
+    'Otevřený den řídí i hledání: když je den otevřený, mapa i hledání v okolí začínají tam, kam ten den stejně vede.',
   'help.guide.place-to-open-day.tip.2': 'Zpět v liště nástrojů nad dny přiřazení vrátí.',
   // filter-places
   'help.guide.filter-places.title': 'Najít místo v seznamu',

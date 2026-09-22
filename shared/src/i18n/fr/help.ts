@@ -1946,10 +1946,12 @@ const help: TranslationStrings = {
     'Au jour ouvre le même formulaire que Nouveau lieu, sauf que le lieu se pose sur le jour ouvert au moment où vous cliquez sur Ajouter.',
   'help.guide.place-to-open-day.step.3':
     'Un lieu qui existe déjà va sur le jour ouvert avec le + au bout de sa ligne, ou par un clic droit, + Jour.',
+  'help.guide.place-to-open-day.step.4':
+    'L’inverse marche aussi, et sans ouvrir de jour au préalable : fais glisser la ligne du lieu hors de la colonne et lâche-la sur une carte de jour. Lâchée entre deux étapes, elle se pose exactement là.',
   'help.guide.place-to-open-day.result':
     'Le lieu est listé sous le jour, à la fin ; glissez-le vers le haut ou vers le bas jusqu’à sa place.',
   'help.guide.place-to-open-day.tip.1':
-    'Glisser une ligne sur un jour marche aussi, et cela peut déposer le lieu entre deux étapes tout de suite.',
+    'Le jour ouvert oriente aussi la recherche : un jour ouvert, la carte et la recherche à proximité partent de là où ce jour passe déjà.',
   'help.guide.place-to-open-day.tip.2': 'Annuler dans la barre d’outils au-dessus des jours reprend l’affectation.',
   // filter-places
   'help.guide.filter-places.title': 'Trouver un lieu dans la liste',

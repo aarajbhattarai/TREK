@@ -1908,10 +1908,12 @@ const help: TranslationStrings = {
     'Zum Tag öffnet dasselbe Formular wie Neuer Ort, nur landet der Ort in dem Moment auf dem geöffneten Tag, in dem du auf Hinzufügen klickst.',
   'help.guide.place-to-open-day.step.3':
     'Ein Ort, den es schon gibt, kommt mit dem + am Ende seiner Zeile auf den geöffneten Tag, oder per Rechtsklick über + Tag.',
+  'help.guide.place-to-open-day.step.4':
+    'Andersherum geht es auch, und ohne vorher einen Tag zu öffnen: Zieh die Zeile des Ortes aus der Spalte und lass sie auf einer Tageskarte los. Zwischen zwei Stopps abgelegt, landet er genau dort.',
   'help.guide.place-to-open-day.result':
     'Der Ort steht unter dem Tag, ganz am Ende; zieh ihn hoch oder runter an seinen Platz.',
   'help.guide.place-to-open-day.tip.1':
-    'Eine Zeile auf einen Tag zu ziehen geht genauso, und dabei lässt sich der Ort gleich zwischen zwei Stopps ablegen.',
+    'Der geöffnete Tag steuert auch die Suche: Ist ein Tag offen, starten die Karte und die Umkreissuche dort, wo dieser Tag ohnehin hinführt.',
   'help.guide.place-to-open-day.tip.2': 'Rückgängig in der Werkzeugleiste über den Tagen nimmt die Zuordnung zurück.',
   // filter-places
   'help.guide.filter-places.title': 'Einen Ort in der Liste finden',

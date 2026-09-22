@@ -1895,10 +1895,12 @@ const help: TranslationStrings = {
     'Al dia obre el mateix formulari que Lloc nou, només que el lloc va a parar al dia obert en el moment que fas clic a Afegir.',
   'help.guide.place-to-open-day.step.3':
     'Un lloc que ja existeix va al dia obert amb el + al final de la seva fila, o amb clic dret, + Dia.',
+  'help.guide.place-to-open-day.step.4':
+    'A l’inrevés també funciona, i sense obrir abans cap dia: arrossega la fila del lloc fora de la columna i deixa-la anar sobre una targeta de dia. Si la deixes entre dues parades, hi va a parar exactament.',
   'help.guide.place-to-open-day.result':
     'El lloc queda llistat sota el dia, al final; arrossega’l amunt o avall fins on toca.',
   'help.guide.place-to-open-day.tip.1':
-    'Arrossegar una fila a un dia funciona igual, i així el lloc es pot deixar de seguida entre dues parades.',
+    'El dia obert també guia la cerca: amb un dia obert, el mapa i la cerca dels voltants parteixen d’on ja va aquell dia.',
   'help.guide.place-to-open-day.tip.2': 'Desfés, a la barra d’eines sobre els dies, retira l’assignació.',
   // filter-places
   'help.guide.filter-places.title': 'Trobar un lloc a la llista',

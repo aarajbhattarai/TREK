@@ -111,7 +111,7 @@ export default function HelpHome({ context }: { context: HelpContext | null }): 
             alt=""
             loading="lazy"
             decoding="async"
-            className="block w-full aspect-video object-cover"
+            className="block w-full aspect-video object-contain"
           />
           <span className="absolute bottom-3 left-3">
             <HelpBadge tone="accent" icon={Camera}>{t(ctxKey(context.id, 'title'))}</HelpBadge>

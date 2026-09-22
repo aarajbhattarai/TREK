@@ -20,6 +20,13 @@ import { defineConfig, devices } from '@playwright/test'
 const WEB_PORT = Number(process.env.E2E_WEB_PORT) || 5173
 const API_PORT = Number(process.env.E2E_API_PORT) || 3001
 export const E2E_BASE_URL = `http://localhost:${WEB_PORT}`
+/**
+ * The session and the seed's ids belong to the database the run boots, which is
+ * named after its API port (e2e/server-launch.mjs). Two runs on two port pairs
+ * therefore share nothing, and the default port keeps the old file names.
+ */
+export const E2E_STATE_FILE = `e2e/.tmp/state-${API_PORT}.json`
+export const E2E_SEED_FILE = `e2e/.tmp/seed-${API_PORT}.json`
 
 // The day the seed and the pictures are relative to (e2e/dates.ts). Fixed here
 // for every project and worker that loads this file, so a run that crosses
@@ -53,7 +60,7 @@ export default defineConfig({
       name: 'app',
       testMatch: /\.spec\.ts/,
       testIgnore: /(\.public\.spec\.ts|auth\.setup\.ts)/,
-      use: { ...devices['Desktop Chrome'], storageState: 'e2e/.tmp/state.json' },
+      use: { ...devices['Desktop Chrome'], storageState: E2E_STATE_FILE },
       dependencies: ['setup'],
     },
     // Documentation screenshots (`npm run shots`). Excluded from the normal e2e
@@ -64,7 +71,7 @@ export default defineConfig({
     {
       name: 'seed',
       testMatch: /seed\.setup\.ts/,
-      use: { ...devices['Desktop Chrome'], storageState: 'e2e/.tmp/state.json' },
+      use: { ...devices['Desktop Chrome'], storageState: E2E_STATE_FILE },
       dependencies: ['setup'],
     },
     {
@@ -72,7 +79,7 @@ export default defineConfig({
       testMatch: /\.shot\.ts/,
       use: {
         ...devices['Desktop Chrome'],
-        storageState: 'e2e/.tmp/state.json',
+        storageState: E2E_STATE_FILE,
         viewport: { width: 1440, height: 900 },
         deviceScaleFactor: 2,
       },
@@ -98,7 +105,7 @@ export default defineConfig({
         // and the Files tab's preview embeds a PDF as <object>, which the
         // shell leaves as a "Download PDF" link. Still headless.
         channel: 'chromium',
-        storageState: 'e2e/.tmp/state.json',
+        storageState: E2E_STATE_FILE,
         viewport: { width: 1920, height: 1080 },
         deviceScaleFactor: 2,
       },

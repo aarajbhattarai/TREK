@@ -1904,10 +1904,12 @@ const help: TranslationStrings = {
     'Al día abre el mismo formulario que Nuevo lugar, solo que el lugar cae en el día abierto en cuanto haces clic en Añadir.',
   'help.guide.place-to-open-day.step.3':
     'Un lugar que ya existe va al día abierto con el + al final de su fila, o con clic derecho, + Día.',
+  'help.guide.place-to-open-day.step.4':
+    'Al revés también funciona, y sin abrir antes ningún día: arrastra la fila del lugar fuera de la columna y suéltala sobre una tarjeta de día. Si la sueltas entre dos paradas, aterriza justo ahí.',
   'help.guide.place-to-open-day.result':
     'El lugar queda listado bajo el día, al final; arrástralo arriba o abajo hasta donde le toca.',
   'help.guide.place-to-open-day.tip.1':
-    'Arrastrar una fila a un día funciona igual, y así el lugar se puede soltar entre dos paradas de una vez.',
+    'El día abierto también guía la búsqueda: con un día abierto, el mapa y la búsqueda cercana parten de donde ya va ese día.',
   'help.guide.place-to-open-day.tip.2': 'Deshacer, en la barra de herramientas sobre los días, revierte la asignación.',
   // filter-places
   'help.guide.filter-places.title': 'Encontrar un lugar en la lista',

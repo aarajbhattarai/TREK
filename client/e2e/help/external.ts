@@ -181,6 +181,15 @@ export const NEXTCLOUD_BASE_PATH = '/Reisen'
 export const NEXTCLOUD_FOLDER = 'Autumn in Japan'
 export const NEXTCLOUD_DOCUMENTS = ['ryokan-invoice.pdf', 'shinkansen-eticket.pdf']
 
+/** What `drawPdf` in fixtures.ts takes; repeated here so this file needs nothing from it. */
+export interface StoreDocument {
+  issuer: string
+  title: string
+  reference: string
+  fields: readonly (readonly [string, string])[]
+  footer: string
+}
+
 function davRoot(): { url: string; auth: string } {
   const url = `${env('HELP_MEDIA_NEXTCLOUD_URL')}/remote.php/dav/files/${env('HELP_MEDIA_NEXTCLOUD_USER')}`
   const auth = 'Basic ' + Buffer.from(`${env('HELP_MEDIA_NEXTCLOUD_USER')}:${env('HELP_MEDIA_NEXTCLOUD_PASSWORD')}`).toString('base64')
@@ -198,7 +207,7 @@ async function dav(method: string, path: string, body?: BodyInit, extra: Record<
  * folder holding two documents and nothing else, however the last run left it.
  * `pdf` draws the documents, so this file stays free of binary fixtures.
  */
-export async function ensureNextcloudFolder(pdf: (title: string, lines: string[]) => Buffer): Promise<void> {
+export async function ensureNextcloudFolder(pdf: (doc: StoreDocument) => Buffer): Promise<void> {
   const folder = `${NEXTCLOUD_BASE_PATH}/${NEXTCLOUD_FOLDER}`
   for (const dir of [NEXTCLOUD_BASE_PATH, folder]) {
     const made = await dav('MKCOL', `${dir}/`)
@@ -214,13 +223,36 @@ export async function ensureNextcloudFolder(pdf: (title: string, lines: string[]
     const gone = await dav('DELETE', `${folder}/${name}`)
     if (![204, 404].includes(gone.status)) throw new Error(`Nextcloud DELETE ${name}: HTTP ${gone.status}`)
   }
-  const documents: Record<string, string[]> = {
-    'ryokan-invoice.pdf': ['Hakone Ginyu, invoice 2026-0918', 'Two nights, two guests, half board', 'JPY 96,000, paid by card'],
-    'shinkansen-eticket.pdf': ['Nozomi 21, Tokyo to Kyoto', 'Car 7, seats 12A and 12B', 'Reserved, non-smoking'],
+  const documents: Record<string, StoreDocument> = {
+    'ryokan-invoice.pdf': {
+      issuer: 'Hakone Ginyu',
+      title: 'Invoice',
+      reference: 'Invoice 2026-0918, confirmation RY-4471',
+      fields: [
+        ['Guests', '2 adults, one room'],
+        ['Nights', 'Two nights, half board'],
+        ['Room and board', 'JPY 84,000'],
+        ['Onsen tax', 'JPY 12,000'],
+        ['Total, paid by card', 'JPY 96,000'],
+      ],
+      footer: 'Paid in full. Thank you for staying with us.',
+    },
+    'shinkansen-eticket.pdf': {
+      issuer: 'JR Central',
+      title: 'Reserved seat ticket',
+      reference: 'Nozomi 21, Tokyo to Kyoto',
+      fields: [
+        ['Date', 'Day 6 of the trip'],
+        ['Departure / arrival', 'Tokyo 08:30, Kyoto 10:45'],
+        ['Car and seats', 'Car 7, seats 12A and 12B'],
+        ['Class', 'Ordinary, reserved, non-smoking'],
+      ],
+      footer: 'Keep the ticket until you leave the station; the gate reads it twice.',
+    },
   }
   for (const name of NEXTCLOUD_DOCUMENTS) {
     if (names.includes(name)) continue
-    const bytes = pdf(name.replace(/\.pdf$/, ''), documents[name])
+    const bytes = pdf(documents[name])
     const body = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer
     const put = await dav('PUT', `${folder}/${name}`, body, { 'Content-Type': 'application/pdf' })
     if (![201, 204].includes(put.status)) throw new Error(`Nextcloud PUT ${name}: HTTP ${put.status} ${await put.text()}`)

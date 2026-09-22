@@ -110,10 +110,13 @@ export default function HelpGuideView({ guide }: { guide: HelpGuide }): React.Re
                       className="trek-help-shot group relative block w-full rounded-xl overflow-hidden border border-edge-secondary bg-surface-tertiary"
                       aria-label={alt}
                     >
-                      <img src={src} alt="" loading="lazy" decoding="async" className="block w-full aspect-[16/10] object-cover" />
-                      <span className="absolute bottom-2 left-2">
-                        <HelpBadge tone="accent" icon={Camera} count={n}>{t('help.center.screenshot')}</HelpBadge>
-                      </span>
+                      {/* No number over the picture: the step it belongs to is
+                          numbered beside it, and the picture carries the ring's
+                          own badge. Contained, not covered: a step whose target
+                          did not fit the 16:10 window was shot wider than this
+                          box, and covering it would crop away the sides the
+                          ring is drawn on. */}
+                      <img src={src} alt="" loading="lazy" decoding="async" className="block w-full aspect-[16/10] object-contain" />
                       <span className="absolute bottom-2 right-2 w-8 h-8 rounded-full bg-inverse text-inverse-text flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-elevated">
                         <Maximize2 className="w-3.5 h-3.5" />
                       </span>
@@ -142,7 +145,7 @@ export default function HelpGuideView({ guide }: { guide: HelpGuide }): React.Re
             onClick={() => openLightbox({ src: helpMedia.result(guide.id), alt: t(guideKey(guide.id, 'result')) })}
             className="trek-help-shot group relative rounded-xl overflow-hidden border border-edge-secondary bg-surface-tertiary"
           >
-            <img src={helpMedia.result(guide.id)} alt="" loading="lazy" decoding="async" className="block w-full aspect-video object-cover" />
+            <img src={helpMedia.result(guide.id)} alt="" loading="lazy" decoding="async" className="block w-full aspect-video object-contain" />
             <span className="absolute bottom-2 left-2">
               <HelpBadge tone="success" icon={CheckCircle2}>{t('help.center.result')}</HelpBadge>
             </span>

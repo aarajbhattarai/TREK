@@ -1804,10 +1804,12 @@ const help: TranslationStrings = {
     'To day opens the same form as New place, only the place lands on the open day the moment you click Add.',
   'help.guide.place-to-open-day.step.3':
     'A place that already exists goes onto the open day with the + at the end of its row, or by right-click, Add to day.',
+  'help.guide.place-to-open-day.step.4':
+    'The other way round works too, and without opening a day first: drag the place’s row out of the column and drop it on a day card. Dropped between two stops it lands exactly there.',
   'help.guide.place-to-open-day.result':
     'The place is listed under the day, at the end; drag it up or down to where it belongs.',
   'help.guide.place-to-open-day.tip.1':
-    'Dragging a row onto a day works as well, and it can drop the place between two stops right away.',
+    'The open day also steers the search: with a day open, the map and the nearby search start from where that day already goes.',
   'help.guide.place-to-open-day.tip.2': 'Undo in the toolbar above the days takes the assignment back.',
   // filter-places
   'help.guide.filter-places.title': 'Find a place in the list',

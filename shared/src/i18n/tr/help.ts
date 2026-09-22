@@ -1857,10 +1857,12 @@ const help: TranslationStrings = {
     'Güne, Yeni yer ile aynı formu açar, yalnızca Ekle düğmesine tıkladığınız anda yer açık güne iner.',
   'help.guide.place-to-open-day.step.3':
     'Zaten var olan bir yer, satırının sonundaki + ile ya da sağ tıklayıp + Gün ile açık güne gider.',
+  'help.guide.place-to-open-day.step.4':
+    'Tersi de olur, üstelik önce bir gün açmanız gerekmez: yerin satırını sütundan dışarı sürükleyip bir gün kartının üzerine bırakın. İki durağın arasına bırakırsanız tam oraya oturur.',
   'help.guide.place-to-open-day.result':
     'Yer günün altında, en sonda listelenir; ait olduğu yere yukarı ya da aşağı sürükleyin.',
   'help.guide.place-to-open-day.tip.1':
-    'Bir satırı bir güne sürüklemek de olur ve yeri hemen iki durak arasına bırakabilir.',
+    'Açık gün aramayı da yönlendirir: bir gün açıkken harita ve yakındakiler araması, o günün zaten uğradığı yerden başlar.',
   'help.guide.place-to-open-day.tip.2': 'Günlerin üstündeki araç çubuğundaki Geri al, atamayı geri alır.',
   // filter-places
   'help.guide.filter-places.title': 'Listede bir yer bulun',

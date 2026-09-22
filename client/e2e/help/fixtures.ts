@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 import { gzipSync } from 'node:zlib'
 import { request as apiRequest, type APIRequestContext, type Page } from '@playwright/test'
-import { E2E_BASE_URL } from '../../playwright.config'
+import { E2E_BASE_URL, E2E_SEED_FILE } from '../../playwright.config'
 import { OUT_DIR, PICTURE_DAY } from './guide'
 import { at, day, emlDate, mailHeaderDate, short } from '../dates'
 
@@ -237,7 +237,7 @@ export async function ensureUsers(api: APIRequestContext, wanted: { username: st
 
 /** The demo trip the screenshot seed creates; its ids are on disk because Playwright projects share no memory. */
 export function seededTrip(): { tripId: number; dayIds: number[]; placeIds: number[]; memberIds: number[] } {
-  return JSON.parse(readFileSync(path.join(process.cwd(), 'e2e', '.tmp', 'seed.json'), 'utf8'))
+  return JSON.parse(readFileSync(path.join(process.cwd(), E2E_SEED_FILE), 'utf8'))
 }
 
 export async function ensureAdminFixtures(api: APIRequestContext): Promise<void> {
@@ -1368,64 +1368,324 @@ export async function ensureCostsFixtures(api: APIRequestContext): Promise<void>
  */
 
 /** One-page PDFs. The body is what the reader would see if they opened the file. */
-const FILE_PDFS = {
+const FILE_PDFS: Record<string, PdfDoc> = {
   'JR-Pass-voucher': {
-    title: 'Japan Rail Pass',
-    lines: ['Exchange order 7714-20', 'Ordinary, 14 days, 2 adults', 'Exchange at Haneda T3 arrivals, JR desk', 'Valid from the day it is exchanged'],
+    issuer: 'Japan Rail Pass',
+    title: 'Exchange order',
+    reference: 'Order 7714-20-JP',
+    fields: [
+      ['Pass', 'Japan Rail Pass, Ordinary'],
+      ['Validity', '14 consecutive days'],
+      ['Travellers', '2 adults'],
+      ['Exchange at', 'Haneda Airport Terminal 3, JR East Travel Service Center'],
+      ['Opening hours', 'Daily 07:30 to 18:30'],
+    ],
+    footer: 'The pass is valid from the day it is exchanged, not from the day of purchase.',
   },
   'LH716-boarding-pass': {
-    title: 'Boarding pass LH716',
-    lines: ['Frankfurt FRA to Tokyo Haneda HND', `${short(-9)}, boarding 12:20, gate A34`, 'Seat 34K, window', 'Booking reference LH-4QK2PZ'],
+    issuer: 'Lufthansa',
+    title: 'Boarding pass',
+    reference: 'Booking LH-4QK2PZ, flight LH716',
+    fields: [
+      ['Passenger', 'BOE / MAURICE MR'],
+      ['From', 'Frankfurt (FRA), Terminal 1'],
+      ['To', 'Tokyo Haneda (HND), Terminal 3'],
+      ['Date', short(-9)],
+      ['Boarding / departure', '12:20 at gate A34, departure 13:05'],
+      ['Seat / class', '34K, window, Economy'],
+    ],
+    footer: 'Be at the gate 20 minutes before departure. Boarding closes 15 minutes before.',
   },
   'old-draft-itinerary': {
+    issuer: 'Autumn in Japan',
     title: 'Itinerary, first draft',
-    lines: ['Day 1 Asakusa and the river', 'Day 2 Shibuya, Meiji Jingu', 'Day 3 free', 'Superseded by the plan in TREK'],
+    reference: 'Superseded by the plan in TREK',
+    fields: [
+      ['Day 1', 'Asakusa, Senso-ji and the river'],
+      ['Day 2', 'Shibuya, Meiji Jingu, Harajuku'],
+      ['Day 3', 'Free, weather permitting'],
+      ['Day 4', 'Shinkansen to Kyoto, Gion in the evening'],
+    ],
+    footer: 'Kept for the notes on day 4; everything else moved into the trip.',
   },
   'hakone-ryokan-confirmation': {
-    title: 'Ryokan booking',
-    lines: ['Two nights, half board', 'Kaiseki served at 18:30', 'Check in from 15:00, check out 11:00', 'Confirmation RY-4471'],
+    issuer: 'Hakone Ginyu',
+    title: 'Reservation confirmed',
+    reference: 'Confirmation RY-4471',
+    fields: [
+      ['Guests', '2 adults, one room'],
+      ['Nights', 'Two nights, half board'],
+      ['Check-in / check-out', 'From 15:00, until 11:00'],
+      ['Dinner', 'Kaiseki served at 18:30 in the room'],
+      ['Total', 'JPY 96,000, paid by card'],
+    ],
+    footer: 'Cancellation is free up to seven days before arrival.',
   },
   'kyoto-bus-pass': {
-    title: 'Kyoto city bus pass',
-    lines: ['One day, all city lines', 'Show the pass when leaving the bus', 'Not valid on the Kyoto Bus express'],
+    issuer: 'Kyoto City Bus',
+    title: 'One day pass',
+    reference: 'Pass 0421-8837',
+    fields: [
+      ['Valid on', 'All city lines inside the flat-fare zone'],
+      ['Valid for', 'One calendar day, first use to last bus'],
+      ['Not valid on', 'Kyoto Bus express services and the airport lines'],
+    ],
+    footer: 'Show the pass to the driver when you leave the bus, printed side up.',
   },
-} as const
+}
 
 /** Pictures, drawn flat so they read at thumbnail size as well as full screen. */
-const FILE_IMAGES = {
+/**
+ * The pictures of the trip. No photograph may live in this repository, so they
+ * are composed instead: three layers per picture, the far one thrown out of
+ * focus, the near one sharp, and grain over the lot. A single flat drawing
+ * reads as a drawing at any size; a depth of field does not.
+ */
+interface PhotoLayer {
+  /** The SVG body of this layer, over the 1600×900 frame. */
+  svg: string
+  /** How far out of focus it is, in pixels. */
+  blur?: number
+}
+
+interface PhotoFixture {
+  ext: 'jpg' | 'png'
+  layers: readonly PhotoLayer[]
+}
+
+/** Dust and film grain, sprinkled from a fixed seed so a re-run draws the same frame. */
+const grain = (seed: number, count = 900): string =>
+  Array.from({ length: count }, (_, i) => {
+    const r = (n: number) => (Math.sin(seed + i * n) + 1) / 2
+    return `<rect x="${(r(12.9898) * 1600).toFixed(0)}" y="${(r(78.233) * 900).toFixed(0)}" width="${(1 + r(9.31) * 2).toFixed(1)}" height="${(1 + r(5.77) * 2).toFixed(1)}" fill="${r(3.3) > 0.5 ? '#ffffff' : '#000000'}" opacity="${(0.02 + r(4.14) * 0.06).toFixed(3)}"/>`
+  }).join('')
+
+/** Somebody with their back to us, which is what fills a market lane. */
+const person = (x: number, ground: number, h: number, tone: string): string =>
+  `<g fill="${tone}"><circle cx="${x}" cy="${(ground - h * 0.87).toFixed(0)}" r="${(h * 0.1).toFixed(0)}"/>` +
+  `<path d="M${(x - h * 0.19).toFixed(0)} ${ground} L${(x - h * 0.15).toFixed(0)} ${(ground - h * 0.52).toFixed(0)} Q${x} ${(ground - h * 0.84).toFixed(0)} ${(x + h * 0.15).toFixed(0)} ${(ground - h * 0.52).toFixed(0)} L${(x + h * 0.19).toFixed(0)} ${ground} Z"/></g>`
+
+/** A pile of produce: a handful of small round things, not one big rectangle. */
+const pile = (x: number, y: number, colour: string, n = 9): string =>
+  Array.from({ length: n }, (_, i) => {
+    const row = Math.floor(i / 4)
+    return `<circle cx="${x + (i % 4) * 17 + row * 8}" cy="${y - row * 12}" r="${9 - row}" fill="${colour}" opacity="${0.95 - row * 0.12}"/>`
+  }).join('')
+
+/** A haze of light: what a lamp or the sun does to the air in front of it. */
+const bloom = (x: number, y: number, r: number, colour: string, opacity = 0.7): string =>
+  `<circle cx="${x}" cy="${y}" r="${r}" fill="${colour}" opacity="${opacity}"/>`
+
+const FILE_IMAGES: Record<string, PhotoFixture> = {
   'nishiki-market': {
+    // What people photograph for later is rarely the market itself; it is the
+    // map with the market pinned on it.
     ext: 'jpg',
-    svg: `<rect width="1600" height="900" fill="#2b1d16"/>
-  <rect y="80" width="1600" height="120" fill="#7a2f2a"/>
-  <rect y="200" width="1600" height="30" fill="#e0b15c"/>
-  ${[0, 1, 2, 3, 4].map(i => `<rect x="${60 + i * 310}" y="300" width="250" height="360" rx="14" fill="#f2e3c4"/><rect x="${60 + i * 310}" y="300" width="250" height="70" rx="14" fill="#c8543f"/>`).join('\n  ')}
-  <rect y="700" width="1600" height="200" fill="#1b120d"/>`,
+    layers: [
+      {
+        svg: `<defs>
+    <filter id="drop" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#1b2430" flood-opacity="0.22"/>
+    </filter>
+  </defs>
+  <rect width="1600" height="900" fill="#f4f1ea"/>
+  ${[0, 1, 2, 3, 4, 5, 6, 7].map(i => [0, 1, 2, 3, 4].map(k => `<rect x="${40 + i * 190}" y="${40 + k * 180}" width="150" height="130" rx="4" fill="#e9e4d8"/>`).join('')).join('\n  ')}
+  <path d="M1360 0 C1400 220 1330 420 1390 620 C1430 760 1380 840 1400 900 L1600 900 L1600 0 Z" fill="#a9cde6"/>
+  <path d="M1360 0 C1400 220 1330 420 1390 620 C1430 760 1380 840 1400 900" stroke="#8fb9d6" stroke-width="4" fill="none"/>
+  <rect x="150" y="560" width="300" height="230" rx="18" fill="#cfe6c0"/>
+  <rect x="980" y="120" width="250" height="190" rx="18" fill="#cfe6c0"/>
+  ${[0, 1, 2, 3, 4].map(k => `<path d="M0 ${20 + k * 180} H1600" stroke="#ded8cb" stroke-width="26"/>`).join('\n  ')}
+  ${[0, 1, 2, 3, 4].map(k => `<path d="M0 ${20 + k * 180} H1600" stroke="#ffffff" stroke-width="18"/>`).join('\n  ')}
+  ${[0, 1, 2, 3, 4, 5, 6, 7].map(i => `<path d="M${20 + i * 190} 0 V900" stroke="#ded8cb" stroke-width="22"/>`).join('\n  ')}
+  ${[0, 1, 2, 3, 4, 5, 6, 7].map(i => `<path d="M${20 + i * 190} 0 V900" stroke="#ffffff" stroke-width="15"/>`).join('\n  ')}
+  <path d="M0 560 H1600" stroke="#e8cf92" stroke-width="34"/>
+  <path d="M0 560 H1600" stroke="#fbe9b6" stroke-width="26"/>
+  <path d="M780 0 V900" stroke="#e8cf92" stroke-width="30"/>
+  <path d="M780 0 V900" stroke="#fbe9b6" stroke-width="22"/>
+  <path d="M0 740 H1330" stroke="#c9c3b4" stroke-width="7"/>
+  <path d="M0 740 H1330" stroke="#ffffff" stroke-width="5" stroke-dasharray="16 16"/>
+  <path d="M120 380 H1240" stroke="#e7e1d4" stroke-width="30"/>
+  <path d="M120 380 H1240" stroke="#ffffff" stroke-width="23"/>
+  <path d="M120 380 H1240" stroke="#f0d6c8" stroke-width="9" stroke-dasharray="2 14" stroke-linecap="round"/>
+  <text x="150" y="372" font-family="Arial, sans-serif" font-size="19" fill="#8b8676">Nishiki-koji Street</text>
+  <text x="820" y="552" font-family="Arial, sans-serif" font-size="21" fill="#8b8676">Shijo-dori</text>
+  <text x="1420" y="300" font-family="Arial, sans-serif" font-size="21" fill="#5b8fb0">Kamo River</text>
+  <text x="196" y="700" font-family="Arial, sans-serif" font-size="20" fill="#6f8b62">Shinsen-en</text>
+  <text x="1018" y="240" font-family="Arial, sans-serif" font-size="20" fill="#6f8b62">Gosho Park</text>
+  <text x="640" y="838" font-family="Arial, sans-serif" font-size="22" fill="#9b968a">NAKAGYO</text>
+  ${[[300, 300], [1080, 470], [560, 690], [1180, 660]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="7" fill="#c9723b"/>`).join('\n  ')}
+  <g filter="url(#drop)">
+    <path d="M700 430 C700 388 734 356 776 356 C818 356 852 388 852 430 C852 482 776 540 776 540 C776 540 700 482 700 430 Z" fill="#d93025"/>
+    <circle cx="776" cy="428" r="24" fill="#ffffff"/>
+  </g>
+  <g filter="url(#drop)">
+    <rect x="606" y="252" width="342" height="86" rx="14" fill="#ffffff"/>
+    <text x="628" y="290" font-family="Arial, sans-serif" font-size="25" font-weight="bold" fill="#1b2430">Nishiki Market</text>
+    <text x="628" y="320" font-family="Arial, sans-serif" font-size="20" fill="#7a7566">4.4 (12,806) · Market</text>
+  </g>
+  <g filter="url(#drop)">
+    <rect x="44" y="40" width="470" height="66" rx="33" fill="#ffffff"/>
+    <circle cx="86" cy="73" r="13" fill="none" stroke="#7a7566" stroke-width="4"/>
+    <path d="M96 83 L108 95" stroke="#7a7566" stroke-width="4" stroke-linecap="round"/>
+    <text x="122" y="82" font-family="Arial, sans-serif" font-size="23" fill="#3c4450">Nishiki Market, Kyoto</text>
+  </g>
+  <g filter="url(#drop)">
+    <rect x="1494" y="40" width="62" height="124" rx="12" fill="#ffffff"/>
+    <path d="M1512 82 H1538 M1525 69 V95" stroke="#3c4450" stroke-width="5" stroke-linecap="round"/>
+    <path d="M1494 102 H1556" stroke="#e6e2d8" stroke-width="2"/>
+    <path d="M1512 132 H1538" stroke="#3c4450" stroke-width="5" stroke-linecap="round"/>
+  </g>
+  <path d="M44 860 V876 H204 V860" stroke="#5b6472" stroke-width="3" fill="none"/>
+  <text x="212" y="878" font-family="Arial, sans-serif" font-size="19" fill="#5b6472">200 m</text>
+  <text x="1556" y="878" text-anchor="end" font-family="Arial, sans-serif" font-size="17" fill="#6d7686">Map data © OpenStreetMap contributors</text>
+  ${grain(6.2, 200)}`,
+      },
+    ],
   },
   'hakone-ryokan': {
+    // The confirmation as it looked in the browser, saved to the trip.
     ext: 'jpg',
-    svg: `<rect width="1600" height="900" fill="#12203a"/>
-  <circle cx="1230" cy="250" r="90" fill="#f4e6c0"/>
-  <path d="M0 620 L340 380 L680 620 Z" fill="#1d3152"/>
-  <path d="M520 660 L980 380 L1440 660 Z" fill="#26405f"/>
-  <rect x="600" y="620" width="520" height="180" fill="#0d1728"/>
-  ${[0, 1, 2, 3].map(i => `<rect x="${640 + i * 120}" y="660" width="70" height="90" fill="#e9b96b"/>`).join('\n  ')}
-  <rect y="800" width="1600" height="100" fill="#08101c"/>`,
+    layers: [
+      {
+        svg: `<defs>
+    <filter id="card" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="3" stdDeviation="8" flood-color="#0f172a" flood-opacity="0.12"/>
+    </filter>
+  </defs>
+  <rect width="1600" height="900" fill="#eef0f3"/>
+  <rect width="1600" height="64" fill="#e3e6ea"/>
+  <circle cx="44" cy="32" r="9" fill="#ed6a5e"/><circle cx="76" cy="32" r="9" fill="#f4bf4f"/><circle cx="108" cy="32" r="9" fill="#61c554"/>
+  <rect x="150" y="14" width="740" height="36" rx="18" fill="#ffffff"/>
+  <path d="M176 32 a7 7 0 0 1 14 0 v6 h-14 z" fill="none" stroke="#7b8494" stroke-width="3"/>
+  <text x="204" y="39" font-family="Arial, sans-serif" font-size="19" fill="#5b6472">hakone-ginyu.jp/reservations/RY-4471</text>
+  <rect y="64" width="1600" height="836" fill="#ffffff"/>
+  <text x="80" y="150" font-family="Georgia, serif" font-size="40" fill="#16202c">Hakone Ginyu</text>
+  <text x="80" y="186" font-family="Arial, sans-serif" font-size="21" fill="#6b7482">Ryokan · Miyanoshita, Hakone-machi, Kanagawa</text>
+  <rect x="1180" y="112" width="200" height="46" rx="23" fill="#e6f4ea"/>
+  <path d="M1206 135 l10 11 l20 -22" stroke="#137333" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="1246" y="143" font-family="Arial, sans-serif" font-size="21" font-weight="bold" fill="#137333">Confirmed</text>
+  <path d="M80 224 H1520" stroke="#e5e8ec" stroke-width="2"/>
+  <text x="80" y="268" font-family="Arial, sans-serif" font-size="18" fill="#8b93a1">CONFIRMATION</text>
+  <text x="80" y="300" font-family="Arial, sans-serif" font-size="27" font-weight="bold" fill="#16202c">RY-4471</text>
+  ${[['Check-in', `${short(-4)}, from 15:00`], ['Check-out', `${short(-2)}, until 11:00`], ['Guests', '2 adults, one room'], ['Room', 'Japanese suite with open-air bath'], ['Meals', 'Kaiseki dinner and breakfast included']].map(([k, v], i) => `<g>
+    <text x="80" y="${376 + i * 82}" font-family="Arial, sans-serif" font-size="18" fill="#8b93a1">${k.toUpperCase()}</text>
+    <text x="80" y="${408 + i * 82}" font-family="Arial, sans-serif" font-size="25" fill="#16202c">${v}</text>
+    <path d="M80 ${430 + i * 82} H880" stroke="#eef0f3" stroke-width="2"/>
+  </g>`).join('\n  ')}
+  <text x="80" y="824" font-family="Arial, sans-serif" font-size="18" fill="#8b93a1">TOTAL, PAID BY CARD</text>
+  <text x="80" y="860" font-family="Arial, sans-serif" font-size="31" font-weight="bold" fill="#16202c">JPY 96,000</text>
+  <g filter="url(#card)">
+    <rect x="960" y="256" width="560" height="380" rx="16" fill="#ffffff"/>
+    <rect x="960" y="256" width="560" height="220" rx="16" fill="#e8eadf"/>
+    <rect x="960" y="400" width="560" height="76" fill="#e8eadf"/>
+    <path d="M960 380 C1080 356 1180 400 1290 372 C1390 348 1460 380 1520 366" stroke="#a9cde6" stroke-width="26" fill="none"/>
+    <rect x="1010" y="300" width="120" height="70" rx="6" fill="#dfe3d4"/>
+    <rect x="1180" y="284" width="150" height="60" rx="6" fill="#dfe3d4"/>
+    <path d="M960 340 H1520" stroke="#ffffff" stroke-width="10"/>
+    <path d="M1120 256 V476" stroke="#ffffff" stroke-width="8"/>
+    <path d="M1216 336 C1216 320 1229 308 1245 308 C1261 308 1274 320 1274 336 C1274 356 1245 378 1245 378 C1245 378 1216 356 1216 336 Z" fill="#d93025"/>
+    <circle cx="1245" cy="335" r="9" fill="#ffffff"/>
+    <text x="992" y="528" font-family="Arial, sans-serif" font-size="18" fill="#8b93a1">ADDRESS</text>
+    <text x="992" y="560" font-family="Arial, sans-serif" font-size="22" fill="#16202c">100-1 Miyanoshita, Hakone-machi</text>
+    <text x="992" y="592" font-family="Arial, sans-serif" font-size="22" fill="#16202c">Ashigarashimo, Kanagawa 250-0404</text>
+  </g>
+  <rect x="960" y="672" width="560" height="188" rx="16" fill="#f5f6f8"/>
+  <text x="992" y="716" font-family="Arial, sans-serif" font-size="20" font-weight="bold" fill="#16202c">Cancellation</text>
+  <text x="992" y="754" font-family="Arial, sans-serif" font-size="20" fill="#5b6472">Free until seven days before arrival.</text>
+  <text x="992" y="788" font-family="Arial, sans-serif" font-size="20" fill="#5b6472">After that, one night is charged.</text>
+  <text x="992" y="828" font-family="Arial, sans-serif" font-size="19" fill="#8b93a1">Questions: +81 460 82 3355</text>
+  ${grain(9.4, 160)}`,
+      },
+    ],
   },
   'jr-pass-map': {
     ext: 'png',
-    svg: `<rect width="1600" height="900" fill="#f7f5ef"/>
-  <path d="M180 700 L520 700 L760 460 L1120 460 L1420 240" stroke="#1f6f3f" stroke-width="18" fill="none" stroke-linecap="round"/>
-  <path d="M180 250 L640 250 L900 500 L1420 500" stroke="#c0392b" stroke-width="18" fill="none" stroke-linecap="round"/>
-  ${[[180, 700], [520, 700], [760, 460], [1120, 460], [1420, 240], [180, 250], [640, 250], [900, 500], [1420, 500]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="16" fill="#ffffff" stroke="#2c3e50" stroke-width="6"/>`).join('\n  ')}`,
+    layers: [
+      {
+        // A printed network map: paper, its fold and the grid under the lines.
+        svg: `<defs>
+    <linearGradient id="paper" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fcfaf4"/><stop offset="0.5" stop-color="#f3f0e6"/><stop offset="1" stop-color="#e9e5d8"/>
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="900" fill="url(#paper)"/>
+  <g opacity="0.45">
+    ${Array.from({ length: 9 }, (_, i) => `<path d="M0 ${100 * i + 50} H1600" stroke="#dbd5c4" stroke-width="1"/>`).join('\n    ')}
+    ${Array.from({ length: 16 }, (_, i) => `<path d="M${100 * i + 50} 0 V900" stroke="#dbd5c4" stroke-width="1"/>`).join('\n    ')}
+  </g>
+  <path d="M800 0 V900" stroke="#cfc9b6" stroke-width="3" opacity="0.5"/>
+  <path d="M0 450 H1600" stroke="#cfc9b6" stroke-width="3" opacity="0.35"/>
+  <path d="M120 760 Q300 760 420 690 L640 560 Q760 490 900 490 L1300 490 Q1400 490 1470 420" stroke="#bcd3c4" stroke-width="32" fill="none" stroke-linecap="round"/>
+  <path d="M120 760 Q300 760 420 690 L640 560 Q760 490 900 490 L1300 490 Q1400 490 1470 420" stroke="#1f6f3f" stroke-width="13" fill="none" stroke-linecap="round"/>
+  <path d="M150 230 L600 230 Q700 230 760 290 L900 430 Q960 490 1060 490 L1460 490" stroke="#e7c8c2" stroke-width="32" fill="none" stroke-linecap="round"/>
+  <path d="M150 230 L600 230 Q700 230 760 290 L900 430 Q960 490 1060 490 L1460 490" stroke="#c0392b" stroke-width="13" fill="none" stroke-linecap="round"/>
+  <path d="M330 862 L980 862" stroke="#c8b78e" stroke-width="9" fill="none" stroke-linecap="round" stroke-dasharray="3 20"/>
+  ${[[120, 760, 'Hakata'], [420, 690, 'Hiroshima'], [640, 560, 'Osaka'], [900, 490, 'Kyoto'], [1300, 490, 'Nagoya'], [1470, 420, 'Tokyo'], [150, 230, 'Kanazawa'], [600, 230, 'Toyama'], [1060, 490, 'Gifu']].map(([x, y, name]) =>
+    `<g><circle cx="${x}" cy="${y}" r="14" fill="#ffffff" stroke="#2c3e50" stroke-width="6"/><text x="${x}" y="${(y as number) - 30}" text-anchor="middle" font-family="Arial, sans-serif" font-size="25" fill="#3d4756">${name}</text></g>`).join('\n  ')}
+  <g>
+    <rect x="70" y="60" width="440" height="126" rx="14" fill="#ffffff" opacity="0.93"/>
+    <text x="100" y="112" font-family="Arial, sans-serif" font-size="33" font-weight="bold" fill="#22303f">Rail pass network</text>
+    <rect x="100" y="134" width="34" height="8" rx="4" fill="#1f6f3f"/><text x="146" y="144" font-family="Arial, sans-serif" font-size="21" fill="#4a5568">Sanyo line</text>
+    <rect x="292" y="134" width="34" height="8" rx="4" fill="#c0392b"/><text x="338" y="144" font-family="Arial, sans-serif" font-size="21" fill="#4a5568">Hokuriku</text>
+  </g>
+  ${grain(5.5, 260)}`,
+      },
+    ],
   },
   arashiyama: {
     ext: 'jpg',
-    svg: `<rect width="1600" height="900" fill="#1c3a1e"/>
-  ${Array.from({ length: 16 }, (_, i) => `<rect x="${30 + i * 100}" y="0" width="${34 + (i % 3) * 8}" height="900" fill="${i % 2 ? '#3f7a34' : '#5c9c42'}"/>`).join('\n  ')}
-  <rect y="760" width="1600" height="140" fill="#2a2013"/>
-  <rect y="760" width="1600" height="16" fill="#6b5433"/>`,
+    layers: [
+      {
+        // The grove behind the path: light coming down through it, nothing in focus.
+        blur: 24,
+        svg: `<defs>
+    <linearGradient id="canopy" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#e8f3c2"/><stop offset="0.3" stop-color="#8cb857"/><stop offset="1" stop-color="#1e3d1d"/>
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="900" fill="url(#canopy)"/>
+  ${bloom(780, 90, 460, '#fbffd8', 0.55)}
+  ${Array.from({ length: 26 }, (_, i) => {
+    const x = -30 + i * 64
+    const tilt = ((i % 5) - 2) * 9
+    return `<path d="M${x} 900 L${x + tilt} 0 L${x + tilt + 26} 0 L${x + 26} 900 Z" fill="${['#33602d', '#487f37', '#5e9d45'][i % 3]}" opacity="0.9"/>`
+  }).join('\n  ')}`,
+      },
+      {
+        // The stems either side of the path, just off the focal plane.
+        blur: 4,
+        svg: `${Array.from({ length: 9 }, (_, i) => {
+          const x = i < 5 ? 20 + i * 120 : 1000 + (i - 5) * 130
+          const w = 42 + (i % 3) * 12
+          const tilt = ((i % 4) - 1.5) * 12
+          return `<g>
+    <path d="M${x} 900 L${x + tilt} -40 L${x + tilt + w} -40 L${x + w} 900 Z" fill="${i % 2 ? '#3f7333' : '#557f38'}"/>
+    ${Array.from({ length: 6 }, (_, k) => `<rect x="${x + tilt * (1 - k / 6) - 2}" y="${90 + k * 150}" width="${w + 4}" height="9" rx="4" fill="#24451f" opacity="0.55"/>`).join('')}
+    <path d="M${x + w - 8} 900 L${x + tilt + w - 8} -40 L${x + tilt + w} -40 L${x + w} 900 Z" fill="#d7e9a8" opacity="0.35"/>
+  </g>`
+        }).join('\n  ')}`,
+      },
+      {
+        // The path itself, in focus, with the fence along it and the dapple of
+        // light that falls between the stems.
+        svg: `<path d="M0 806 Q420 748 820 782 Q1220 816 1600 764 V900 H0 Z" fill="#6a583a"/>
+  <path d="M0 826 Q420 768 820 802 Q1220 836 1600 784 V900 H0 Z" fill="#4c3d27"/>
+  <path d="M0 812 Q420 754 820 788 Q1220 822 1600 770" stroke="#8d7850" stroke-width="5" fill="none" opacity="0.6"/>
+  ${[0, 1, 2, 3, 4, 5, 6, 7].map(i => `<g opacity="0.85">
+    <rect x="${-10 + i * 210}" y="700" width="14" height="120" rx="6" fill="#7a6540"/>
+    <rect x="${-10 + i * 210}" y="726" width="200" height="10" rx="5" fill="#8b7549"/>
+  </g>`).join('\n  ')}
+  ${[0, 1, 2, 3, 4, 5, 6, 7].map(i => `<ellipse cx="${90 + i * 210}" cy="${840 + (i % 3) * 16}" rx="${60 + (i % 3) * 30}" ry="${9 + (i % 2) * 5}" fill="#fdf6c8" opacity="0.05" transform="rotate(${-4 + (i % 3) * 4} ${90 + i * 210} ${840 + (i % 3) * 16})"/>`).join('\n  ')}
+  ${grain(2.4, 420)}
+  <rect width="1600" height="900" fill="url(#vig3)"/>
+  <defs><radialGradient id="vig3" cx="0.5" cy="0.4" r="0.8">
+    <stop offset="0.5" stop-color="#000000" stop-opacity="0"/><stop offset="1" stop-color="#000000" stop-opacity="0.5"/>
+  </radialGradient></defs>
+  ${grain(11.3)}`,
+      },
+    ],
   },
-} as const
+}
 
 /** The two plain-text documents; written out rather than drawn. */
 const FILE_TEXTS = {
@@ -1497,18 +1757,51 @@ const tmpDir = (): string => {
  * Exported for the document-sync guide, which puts two of these into the store
  * (`external.ts`) rather than into the trip.
  */
-export function drawPdf(title: string, lines: readonly string[]): Buffer {
-  const escape = (s: string) => s.replace(/([\\()])/g, '\\$1')
-  const content = [
-    `BT /F1 26 Tf 64 752 Td (${escape(title)}) Tj ET`,
-    ...lines.map((line, i) => `BT /F1 13 Tf 64 ${700 - i * 26} Td (${escape(line)}) Tj ET`),
-  ].join('\n')
+export interface PdfDoc {
+  /** The company or office the paper comes from, printed in the band at the top. */
+  issuer: string
+  /** What the document is, under the issuer. */
+  title: string
+  /** The line under the title: a booking code, an order number. */
+  reference: string
+  /** The body: a label and its value per row, the way a confirmation prints them. */
+  fields: readonly (readonly [string, string])[]
+  /** The small print along the bottom. */
+  footer: string
+}
+
+export function drawPdf(doc: PdfDoc): Buffer {
+  const esc = (v: string) => v.replace(/([\\()])/g, '\\$1')
+  // A4 in points, the origin at the bottom left. The band is drawn first, then
+  // the type over it; everything is Helvetica, which every PDF reader has.
+  const W = 595
+  const ink = '0.07 0.09 0.15'
+  const parts: string[] = [
+    `${ink} rg 0 762 ${W} 80 re f`,
+    `BT /F2 17 Tf 1 1 1 rg 56 806 Td (${esc(doc.issuer.toUpperCase())}) Tj ET`,
+    `BT /F1 10 Tf 0.75 0.78 0.85 rg 56 786 Td (${esc(doc.footer)}) Tj ET`,
+    `BT /F2 21 Tf 0.07 0.09 0.15 rg 56 706 Td (${esc(doc.title)}) Tj ET`,
+    `BT /F1 11 Tf 0.35 0.38 0.45 rg 56 684 Td (${esc(doc.reference)}) Tj ET`,
+    `0.85 0.86 0.9 RG 1 w 56 668 m ${W - 56} 668 l S`,
+  ]
+  doc.fields.forEach(([label, value], i) => {
+    const y = 636 - i * 34
+    parts.push(`BT /F1 9 Tf 0.45 0.48 0.55 rg 56 ${y + 14} Td (${esc(label.toUpperCase())}) Tj ET`)
+    parts.push(`BT /F2 13 Tf 0.07 0.09 0.15 rg 56 ${y} Td (${esc(value)}) Tj ET`)
+    parts.push(`0.92 0.93 0.95 RG 0.6 w 56 ${y - 12} m ${W - 56} ${y - 12} l S`)
+  })
+  const bottom = 636 - doc.fields.length * 34 - 40
+  parts.push(`0.96 0.97 0.98 rg 56 ${bottom - 46} ${W - 112} 58 re f`)
+  parts.push(`BT /F1 10 Tf 0.35 0.38 0.45 rg 72 ${bottom - 12} Td (${esc(doc.footer)}) Tj ET`)
+  parts.push(`BT /F1 9 Tf 0.55 0.58 0.65 rg 72 ${bottom - 30} Td (${esc('This document was issued electronically and needs no signature.')}) Tj ET`)
+  const content = parts.join('\n')
   const objects = [
     '<< /Type /Catalog /Pages 2 0 R >>',
     '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
-    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>',
+    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 5 0 R /F2 6 0 R >> >> /Contents 4 0 R >>',
     `<< /Length ${Buffer.byteLength(content, 'latin1')} >>\nstream\n${content}\nendstream`,
     '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
+    '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>',
   ]
   let pdf = '%PDF-1.4\n'
   const offsets: number[] = []
@@ -1530,19 +1823,23 @@ export function drawPdf(title: string, lines: readonly string[]): Buffer {
  */
 export function filesPdfFixture(id: keyof typeof FILE_PDFS): string {
   const file = path.join(tmpDir(), `${id}.pdf`)
-  const { title, lines } = FILE_PDFS[id]
-  writeFileSync(file, drawPdf(title, lines))
+  writeFileSync(file, drawPdf(FILE_PDFS[id]))
   return file
 }
 
-/** A 1600×900 picture from its SVG, as `coverFixture` does; drawn on first use. */
+/** A 1600×900 picture, its layers blurred to their own degree and laid over each other. */
 export async function filesImageFixture(id: keyof typeof FILE_IMAGES): Promise<string> {
-  const { ext, svg } = FILE_IMAGES[id]
+  const { ext, layers } = FILE_IMAGES[id]
   const file = path.join(tmpDir(), `${id}.${ext}`)
   if (existsSync(file)) return file
-  const document = `<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900">\n  ${svg}\n</svg>`
-  const image = sharp(Buffer.from(document))
-  await (ext === 'png' ? image.png() : image.jpeg({ quality: 86 })).toFile(file)
+  const render = async (layer: PhotoLayer): Promise<Buffer> => {
+    const document = `<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900">\n  ${layer.svg}\n</svg>`
+    const drawn = sharp(Buffer.from(document))
+    return (layer.blur ? drawn.blur(layer.blur) : drawn).png().toBuffer()
+  }
+  const [base, ...rest] = await Promise.all(layers.map(render))
+  const composed = sharp(base).composite(rest.map(input => ({ input })))
+  await (ext === 'png' ? composed.png() : composed.jpeg({ quality: 88 })).toFile(file)
   return file
 }
 

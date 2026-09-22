@@ -18,7 +18,7 @@ export const { context: tripPlacesContext, guides: tripPlacesGuides } = defineSc
   docs: [{ slug: PLACES }, IMPORT],
   guides: [
     ['create-place', 'plus', 'guide', 5, 3, { slug: PLACES, anchor: 'adding-a-place' }, ['place-to-open-day', 'edit-place'], true],
-    ['place-to-open-day', 'calendarCheck', 'quick', 3, 2, { slug: PLACES, anchor: 'the-open-day-steers-the-search' }, ['create-place']],
+    ['place-to-open-day', 'calendarCheck', 'quick', 4, 2, { slug: PLACES, anchor: 'the-open-day-steers-the-search' }, ['create-place', 'place-onto-day']],
     ['filter-places', 'filter', 'quick', 4, 2, { slug: PLACES, anchor: 'searching-for-a-place' }, ['select-places']],
     ['edit-place', 'pencil', 'quick', 3, 2, { slug: PLACES, anchor: 'place-fields' }, ['create-place', 'delete-place']],
     ['delete-place', 'trash', 'quick', 2, 2, { slug: PLACES }, ['edit-place', 'select-places', 'undo-change']],

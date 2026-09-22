@@ -1825,10 +1825,12 @@ const help: TranslationStrings = {
     'Till dagen öppnar samma formulär som Ny plats, bara att platsen hamnar på den öppna dagen i samma stund som du klickar på Lägg till.',
   'help.guide.place-to-open-day.step.3':
     'En plats som redan finns hamnar på den öppna dagen med + i slutet av sin rad, eller via högerklick, + Dag.',
+  'help.guide.place-to-open-day.step.4':
+    'Det går lika bra åt andra hållet, och utan att först öppna en dag: dra platsens rad ut ur kolumnen och släpp den på ett dagskort. Släpper du den mellan två stopp hamnar den precis där.',
   'help.guide.place-to-open-day.result':
     'Platsen listas under dagen, sist; dra den uppåt eller nedåt dit den hör hemma.',
   'help.guide.place-to-open-day.tip.1':
-    'Att dra en rad till en dag fungerar lika bra, och den kan släppa platsen mellan två stopp med en gång.',
+    'Den öppna dagen styr även sökningen: med en dag öppen utgår kartan och sökningen i närheten från dit dagen ändå går.',
   'help.guide.place-to-open-day.tip.2': 'Ångra i verktygsraden ovanför dagarna tar tillbaka tilldelningen.',
   // filter-places
   'help.guide.filter-places.title': 'Hitta en plats i listan',

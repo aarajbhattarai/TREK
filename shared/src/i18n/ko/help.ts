@@ -1728,9 +1728,11 @@ const help: TranslationStrings = {
     '“해당 날짜로”는 “새 장소”와 같은 양식을 열지만, “추가”를 클릭하는 순간 장소가 열린 날짜에 놓입니다.',
   'help.guide.place-to-open-day.step.3':
     '이미 있는 장소는 행 끝의 +로, 또는 오른쪽 클릭 후 “+ 날에 추가”로 열린 날짜에 들어갑니다.',
+  'help.guide.place-to-open-day.step.4':
+    '반대 방향도 됩니다. 게다가 날짜를 먼저 열어 둘 필요도 없습니다. 장소의 행을 열에서 끌어내 날짜 카드 위에 놓으세요. 두 경유지 사이에 놓으면 정확히 그 자리에 들어갑니다.',
   'help.guide.place-to-open-day.result': '장소가 그 날짜 아래 맨 끝에 나열됩니다. 위아래로 끌어 제자리로 옮기세요.',
   'help.guide.place-to-open-day.tip.1':
-    '행을 날짜로 끌어다 놓아도 되고, 그렇게 하면 두 경유지 사이에 바로 떨어뜨릴 수 있습니다.',
+    '열어 둔 날짜는 검색에도 반영됩니다. 날짜가 열려 있으면 지도와 주변 검색이 그날이 이미 향하는 곳에서 시작합니다.',
   'help.guide.place-to-open-day.tip.2': '일자 위의 도구 모음에 있는 “실행 취소”가 이 배정을 되돌립니다.',
   // filter-places
   'help.guide.filter-places.title': '목록에서 장소 찾기',

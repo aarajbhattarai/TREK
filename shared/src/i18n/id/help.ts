@@ -1895,10 +1895,12 @@ const help: TranslationStrings = {
     '“Ke hari” membuka formulir yang sama seperti “Tempat baru”, hanya saja tempat itu mendarat pada hari yang dibuka begitu Anda klik “Tambah”.',
   'help.guide.place-to-open-day.step.3':
     'Tempat yang sudah ada masuk ke hari yang dibuka lewat tanda + di ujung barisnya, atau dengan klik kanan, “+ Hari”.',
+  'help.guide.place-to-open-day.step.4':
+    'Sebaliknya juga bisa, dan tanpa membuka hari lebih dulu: seret baris tempat itu keluar dari kolom lalu jatuhkan ke kartu sebuah hari. Dijatuhkan di antara dua perhentian, ia mendarat tepat di situ.',
   'help.guide.place-to-open-day.result':
     'Tempat itu terdaftar di bawah hari tersebut, di urutan terakhir; seret ke atas atau ke bawah ke posisi yang semestinya.',
   'help.guide.place-to-open-day.tip.1':
-    'Menyeret sebuah baris ke sebuah hari juga bisa, dan itu langsung dapat menjatuhkan tempat di antara dua perhentian.',
+    'Hari yang terbuka juga mengarahkan pencarian: dengan satu hari terbuka, peta dan pencarian di sekitar berangkat dari tempat yang memang dilalui hari itu.',
   'help.guide.place-to-open-day.tip.2': '“Batalkan” di bilah alat di atas hari-hari menarik kembali penugasan itu.',
   // filter-places
   'help.guide.filter-places.title': 'Menemukan tempat dalam daftar',

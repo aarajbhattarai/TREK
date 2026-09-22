@@ -212,6 +212,29 @@ async function glMapIdle(page: Page): Promise<void> {
   )
 }
 
+/**
+ * Wait until the raster basemap has actually painted.
+ *
+ * `toBeVisible()` on a tile is not enough: Leaflet puts the <img> in the DOM
+ * with its position and its size before the byte arrives, so a picture taken on
+ * that signal catches the grey underneath. A tile counts only once the browser
+ * has decoded it, and a screenful needs several of them.
+ */
+async function rasterTilesPainted(page: Page, atLeast = 6): Promise<void> {
+  await page.waitForFunction(
+    min => {
+      const tiles = Array.from(document.querySelectorAll('#trek-map img.leaflet-tile'))
+      const painted = tiles.filter(t => {
+        const img = t as HTMLImageElement
+        return img.complete && img.naturalWidth > 0
+      })
+      return painted.length >= min
+    },
+    atLeast,
+    { timeout: 60_000 },
+  )
+}
+
 async function deleteByName(page: Page, ...names: string[]): Promise<void> {
   const { tripId } = seededTrip()
   const res = await page.request.get(`/api/trips/${tripId}/places`)
@@ -416,15 +439,16 @@ const SCRIPTS: Record<string, GuideScript> = {
         act: async p => {
           await p.getByRole('button', { name: 'Switch to satellite view' }).click()
           await expect(p.getByRole('button', { name: 'Switch to map view' })).toBeVisible()
-          // The imagery is raster tiles from a third party; give them a moment
-          // or the picture catches the grey underneath.
-          await expect(p.locator('#trek-map img.leaflet-tile').first()).toBeVisible({ timeout: 30_000 })
+          // The imagery is raster tiles from a third party, and the switch is
+          // done long before they are on screen.
+          await rasterTilesPainted(p)
           await settle(p)
           await p.waitForTimeout(1500)
         },
       },
-      { target: p => pins(p).nth(pin) },
+      { prepare: p => rasterTilesPainted(p), target: p => pins(p).nth(pin) },
       {
+        prepare: p => rasterTilesPainted(p),
         target: p => p.getByRole('button', { name: 'Switch to map view' }),
         act: async p => {
           await p.getByRole('button', { name: 'Switch to map view' }).click()

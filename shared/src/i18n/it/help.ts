@@ -1879,10 +1879,12 @@ const help: TranslationStrings = {
     'Al giorno apre lo stesso modulo di Nuovo luogo, solo che il luogo finisce sul giorno aperto nel momento in cui clicchi Aggiungi.',
   'help.guide.place-to-open-day.step.3':
     'Un luogo che esiste già va sul giorno aperto con il + in fondo alla sua riga, oppure con clic destro, + Giorno.',
+  'help.guide.place-to-open-day.step.4':
+    'Funziona anche al contrario, e senza aprire prima un giorno: trascina la riga del luogo fuori dalla colonna e lasciala su una scheda di giorno. Lasciata tra due tappe, finisce esattamente lì.',
   'help.guide.place-to-open-day.result':
     'Il luogo è elencato sotto il giorno, in fondo; trascinalo su o giù dove gli spetta.',
   'help.guide.place-to-open-day.tip.1':
-    'Trascinare una riga su un giorno funziona ugualmente, e così il luogo si può lasciare subito tra due tappe.',
+    'Il giorno aperto guida anche la ricerca: con un giorno aperto, la mappa e la ricerca nei dintorni partono da dove quel giorno passa già.',
   'help.guide.place-to-open-day.tip.2': 'Annulla nella barra degli strumenti sopra i giorni ritira l’assegnazione.',
   // filter-places
   'help.guide.filter-places.title': 'Trovare un luogo nella lista',
