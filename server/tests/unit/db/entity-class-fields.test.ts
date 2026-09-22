@@ -19,6 +19,9 @@ import { createTestOrm, type TestOrm } from '../../helpers/test-orm';
  * reintroduces a `NaN` initialiser fails loudly here, not silently at a
  * caller's first `em.create()`.
  */
+/** NOT NULL scalars with neither a column default nor a class-field initialiser (legitimate: the caller must supply them). */
+const KNOWN_UNINITIALISED_NOT_NULL_SCALARS = 423;
+
 describe('entity class fields never carry a NaN initialiser (task-4-review-shape.md, Important 1)', () => {
   it('CLASSFIELD-001: new X() has no own property whose value is NaN, across all 125 entities', () => {
     const failures: string[] = [];
@@ -44,7 +47,7 @@ describe('entity class fields never carry a NaN initialiser (task-4-review-shape
    * suddenly losing its default) shows up in test output without failing
    * the suite on a false positive.
    */
-  it('CLASSFIELD-002 (report-only): NOT NULL scalar properties with no default and no class-field initialiser', async () => {
+  it('CLASSFIELD-002: exactly the known NOT NULL, no-default scalar properties have no class-field initialiser', async () => {
     const testDb = createSnapshotTestDb();
     try {
       const t = await createTestOrm(testDb);
@@ -66,8 +69,11 @@ describe('entity class fields never carry a NaN initialiser (task-4-review-shape
         }
         // Informational only — see the doc comment above. `console.info` (not
         // a `console.log` vitest might buffer away) so it survives a run.
-        console.info(`[CLASSFIELD-002] ${report.length} NOT NULL, no-default scalar propert${report.length === 1 ? 'y' : 'ies'} with no initialiser (expected, not a failure)`);
-        expect(report).toEqual(report); // always true — this test only ever reports, never fails
+        // A ratchet, not a census: the failure mode this file guards (a regeneration
+        // handing every numeric property a bogus default) makes this number DROP;
+        // a new NOT NULL column without a default bumps it by one — update the
+        // constant with the migration that adds the column.
+        expect(report.length, report.join(', ')).toBe(KNOWN_UNINITIALISED_NOT_NULL_SCALARS);
       } finally {
         await t.close();
       }

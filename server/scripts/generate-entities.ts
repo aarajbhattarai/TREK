@@ -1363,6 +1363,17 @@ export function checkEntities(entitiesDir: string, repositoriesDir: string, file
   const onDiskIndex = fs.existsSync(indexPath) ? fs.readFileSync(indexPath, 'utf8') : undefined;
   if (onDiskIndex !== expectedIndex) differingFiles.push('index.ts');
 
+  // The comparison must also run the other way: a hand-added `*.entity.ts`
+  // that the generator does not produce would be folded into index.ts by the
+  // next --write, so it is drift too.
+  const generated = new Set(files.keys());
+  const onDiskEntityFiles = fs.existsSync(entitiesDir)
+    ? fs.readdirSync(entitiesDir).filter((f) => f.endsWith('.entity.ts')).sort()
+    : [];
+  for (const fileName of onDiskEntityFiles) {
+    if (!generated.has(fileName)) differingFiles.push(`${fileName} (not produced by the generator)`);
+  }
+
   const missingRepositories: string[] = [];
   for (const fileName of files.keys()) {
     const className = fileName.replace(/\.entity\.ts$/, '');

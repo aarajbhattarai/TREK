@@ -4,5 +4,5 @@
     "rootDir": ".",
     "noEmit": true
   },
-  "include": ["scripts/generate-entities.ts"]
+  "include": ["scripts/generate-entities.ts", "scripts/migrate-encryption.ts"]
 }

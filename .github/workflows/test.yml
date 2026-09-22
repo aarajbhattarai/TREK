@@ -181,10 +181,10 @@ jobs:
         run: cd server && npm run typecheck:tests
 
       - name: Typecheck entity generator
-        # tsconfig.scripts.json only covers scripts/generate-entities.ts —
-        # gen-plugin-facts.ts/migrate-encryption.ts don't compile under this
-        # config (import.meta needs a newer --module target), so the gate is
-        # named for what it actually covers rather than the whole directory.
+        # tsconfig.scripts.json covers generate-entities.ts and migrate-encryption.ts;
+        # gen-plugin-facts.ts uses import.meta and does not compile under this
+        # config (needs a newer --module target), so the gate is named for what
+        # it actually covers rather than the whole directory.
         run: cd server && npm run typecheck:scripts
 
       - name: Entity files match the generator

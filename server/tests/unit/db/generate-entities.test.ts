@@ -759,6 +759,21 @@ describe('checkEntities', () => {
     }
   });
 
+  it('CHECK-005: a stray entity file the generator does not produce is reported as drift', async () => {
+    const files = new Map([['X.entity.ts', 'content']]);
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'gen-entities-check-'));
+    const repoDir = fs.mkdtempSync(path.join(os.tmpdir(), 'gen-entities-check-repos-'));
+    try {
+      fs.writeFileSync(path.join(dir, 'X.entity.ts'), 'content');
+      fs.writeFileSync(path.join(dir, 'Stray.entity.ts'), 'export class Stray {}');
+      const report = checkEntities(dir, repoDir, files);
+      expect(report.differingFiles).toEqual(['index.ts', 'Stray.entity.ts (not produced by the generator)']);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+      fs.rmSync(repoDir, { recursive: true, force: true });
+    }
+  });
+
   it('CHECK-004: a missing repository file is reported without being created (never writes)', async () => {
     const files = new Map([['X.entity.ts', 'content']]);
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'gen-entities-check-'));
