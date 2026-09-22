@@ -72,7 +72,7 @@ import { PlacePhotoCacheService } from '../../src/nest/place-photos/place-photo-
 import { TrekPhotosRepository } from '../../src/nest/photos/trek-photos.repository';
 import { RuntimeEnvService } from '../../src/nest/app-config/runtime-env.service';
 import { makeStorageFixture } from './storage-fixture';
-import { createTestUnitOfWork, createTestAppSettingsRepo } from './test-uow';
+import { createTestUnitOfWork, createTestAppSettingsRepo, sharedTestOrm } from './test-uow';
 import { createTestOrm } from './test-orm';
 import { AppSettings } from '../../src/db/entities/AppSettings.entity';
 import type { AppSettingsRepository } from '../../src/db/repositories/AppSettings.repository';
@@ -159,14 +159,22 @@ export async function createPluginRpcHostFactory(dbs: DatabaseService): Promise<
 
 /** A PluginRuntimeService constructed the way Nest would: with a real host factory. */
 export async function createPluginRuntime(dbs: DatabaseService, registry?: PluginRegistryService): Promise<PluginRuntimeService> {
-  const orm = await createTestOrm(dbs.connection);
+  const auditOrm = await createTestOrm(dbs.connection);
+  // The SAME shared ORM `createPluginRpcHostFactory` built `permissions` from
+  // (via createTestAppSettingsRepo/createTestUnitOfWork) — not auditOrm above,
+  // which is its own separate MikroORM.init just for AuditService. Passing THIS
+  // one as PluginRuntimeService's last arg is what makes D6's request-context
+  // wrapper (task-2-review.md C3) fork from the em PermissionsService's
+  // repository actually resolves through.
+  const orm = await sharedTestOrm(dbs.connection);
   return new PluginRuntimeService(
     dbs,
-    new AuditService(orm.repo(AuditLog) as AuditLogRepository, orm.repo(Users) as UsersRepository),
+    new AuditService(auditOrm.repo(AuditLog) as AuditLogRepository, auditOrm.repo(Users) as UsersRepository),
     new AddonsService(dbs),
     new PluginUserSettingsService(dbs),
     registry,
     await createPluginRpcHostFactory(dbs),
     await createTestUnitOfWork(dbs.connection),
+    orm.orm,
   );
 }

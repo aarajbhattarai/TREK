@@ -40,7 +40,6 @@ import { createTables } from '../../../src/db/schema';
 import { runMigrations } from '../../../src/db/migrations';
 import { resetTestDb } from '../../helpers/test-db';
 import { createUser, createTrip, createDay, createPlace, createDayAccommodation, createDayAssignment, addTripMember } from '../../helpers/factories';
-import { DatabaseService } from '../../../src/nest/database/database.service';
 import { PermissionsService } from '../../../src/nest/permissions/permissions.service';
 import { RealtimeService } from '../../../src/nest/realtime/realtime.service';
 import { AccommodationsService } from '../../../src/nest/accommodations/accommodations.service';

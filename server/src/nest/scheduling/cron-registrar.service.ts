@@ -1,8 +1,10 @@
-import { Injectable, type OnApplicationShutdown } from '@nestjs/common';
+import { Injectable, Optional, type OnApplicationShutdown } from '@nestjs/common';
 import { SchedulerRegistry } from '@nestjs/schedule';
 import { CronJob } from 'cron';
+import { MikroORM } from '@mikro-orm/core';
 import { readEnv } from '../../app-config';
 import { RuntimeEnvService } from '../app-config/runtime-env.service';
+import { withRequestContext } from '../database/request-context';
 
 /**
  * The one way TREK code schedules a cron. Job providers register here from
@@ -35,6 +37,18 @@ export class CronRegistrarService implements OnApplicationShutdown {
   constructor(
     private readonly registry: SchedulerRegistry,
     private readonly runtimeEnv: RuntimeEnvService,
+    // D6 (task-2-review.md's controller ruling): a cron tick has no HTTP request
+    // behind it, so every job's onTick is wrapped in a request context here — the
+    // ONE place, rather than in each of the 14 `*.job.ts` providers. `@Optional()`
+    // (not just a `?`, which is TS-only and does not tell Nest's DI the provider
+    // may be absent) because SchedulingModule is deliberately NOT @Global (see
+    // this module's own docstring): the e2e suites boot partial graphs — one
+    // domain module + SchedulingModule, no MikroOrmModule.forRoot — so a hard
+    // MikroORM dependency here would fail every one of them at compile(), the
+    // same class of break `@InjectRepository` would cause. Production (buildApp)
+    // always has it; a hand-built test instance that registers a job touching a
+    // repository must pass one, same as the unit test doubles below.
+    @Optional() private readonly orm?: MikroORM,
   ) {}
 
   /** False under NODE_ENV=test — the single gate keeping the suites timer-free. */
@@ -56,7 +70,9 @@ export class CronRegistrarService implements OnApplicationShutdown {
     this.unregister(name);
     if (!this.isEnabled()) return false;
     const timeZone = opts?.timezone === 'none' ? undefined : readEnv().app.tz || 'UTC';
-    const job = CronJob.from({ cronTime: expression, onTick, start: true, timeZone });
+    const orm = this.orm;
+    const wrappedTick = orm ? () => withRequestContext(orm, () => onTick()) : onTick;
+    const job = CronJob.from({ cronTime: expression, onTick: wrappedTick, start: true, timeZone });
     this.registry.addCronJob(name, job);
     this.names.add(name);
     return true;

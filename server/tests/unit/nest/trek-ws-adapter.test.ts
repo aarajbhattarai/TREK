@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterAll } from 'vitest';
 
 /**
  * TrekWsAdapter: the wire protocol and the per-socket flood guard.
@@ -34,6 +34,12 @@ vi.mock('../../../src/app-config', async (importOriginal) => {
 import { TrekWsAdapter } from '../../../src/nest/realtime/trek-ws.adapter';
 import { getServer } from '../../../src/nest/realtime/ws-state';
 import type { Server as HttpServer } from 'node:http';
+import { createSnapshotTestDb } from '../../helpers/db-mock';
+import { createTestOrm } from '../../helpers/test-orm';
+import { Users } from '../../../src/db/entities/Users.entity';
+
+const testDb = createSnapshotTestDb();
+afterAll(() => testDb.close());
 
 type MessageListener = (buffer: Buffer) => void;
 
@@ -109,6 +115,70 @@ describe('TrekWsAdapter wire protocol', () => {
     socket.emit('message', frame('a string'));
     expect(handled).toHaveLength(0);
     expect(socket.sent).toHaveLength(0);
+  });
+});
+
+describe('TrekWsAdapter D6 request context (task-2-review.md C3 ruling)', () => {
+  // Global context disallowed on purpose — the production setting, like
+  // tests/unit/nest/database/request-context.test.ts — so a repository read
+  // with no wrapper around it genuinely throws, the way it would outside any
+  // HTTP request in production. A `@SubscribeMessage` handler has exactly that
+  // shape: dispatched from bindMessageHandlers below, not from an Express
+  // request, so nothing has forked an EntityManager for it unless the ONE
+  // wrapper there (not per-handler) does it.
+  it('WSAD-040: without MikroORM passed to the adapter, a repository read inside a handler throws cannotUseGlobalContext', async () => {
+    const t = await createTestOrm(testDb, { allowGlobalContext: false });
+    try {
+      let caught: unknown;
+      const ad = new TrekWsAdapter({} as HttpServer); // no orm
+      const socket = fakeSocket();
+      let captured: Promise<unknown> | undefined;
+      const capture = (v: unknown) => {
+        captured = v instanceof Promise ? v : Promise.resolve(v);
+        return { subscribe: () => {} } as never;
+      };
+      ad.bindMessageHandlers(
+        socket as never,
+        [{ message: 'join', callback: async () => {
+          try { await t.orm.em.find(Users, {}); } catch (e) { caught = e; }
+        } }] as never,
+        capture,
+      );
+      socket.emit('message', frame({ type: 'join', tripId: 1 }));
+      await captured;
+      expect(caught).toBeInstanceOf(Error);
+      expect(String((caught as Error).message)).toMatch(/global (EntityManager|context)/i);
+    } finally {
+      await t.close();
+    }
+  });
+
+  it('WSAD-041: with MikroORM passed to the adapter, the SAME repository read inside a handler succeeds — the wrapper is load-bearing', async () => {
+    const t = await createTestOrm(testDb, { allowGlobalContext: false });
+    try {
+      let result: unknown;
+      let caught: unknown;
+      const ad = new TrekWsAdapter({} as HttpServer, t.orm);
+      const socket = fakeSocket();
+      let captured: Promise<unknown> | undefined;
+      const capture = (v: unknown) => {
+        captured = v instanceof Promise ? v : Promise.resolve(v);
+        return { subscribe: () => {} } as never;
+      };
+      ad.bindMessageHandlers(
+        socket as never,
+        [{ message: 'join', callback: async () => {
+          try { result = await t.orm.em.find(Users, {}); } catch (e) { caught = e; }
+        } }] as never,
+        capture,
+      );
+      socket.emit('message', frame({ type: 'join', tripId: 1 }));
+      await captured;
+      expect(caught).toBeUndefined();
+      expect(Array.isArray(result)).toBe(true);
+    } finally {
+      await t.close();
+    }
   });
 });
 

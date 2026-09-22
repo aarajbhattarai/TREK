@@ -2,7 +2,6 @@ import { runMigrations } from '../../../src/db/migrations';
 import { createTables } from '../../../src/db/schema';
 import { invalidatePermissionsCache } from '../../../src/nest/permissions/permissions-cache';
 import { PermissionsService } from '../../../src/nest/permissions/permissions.service';
-import { DatabaseService } from '../../../src/nest/database/database.service';
 import { addTripMember, createDay, createTrip, createUser } from '../../helpers/factories';
 import { createMcpHarness, parseToolResult, type McpHarness } from '../../helpers/mcp-harness';
 import { resetTestDb } from '../../helpers/test-db';

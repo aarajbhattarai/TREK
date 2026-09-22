@@ -46,7 +46,6 @@ import { createMcpHarness, parseToolResult, type McpHarness } from '../../helper
 import { ADDON_IDS } from '../../../src/addons';
 import { addTripMember } from '../../helpers/factories';
 import { PermissionsService } from '../../../src/nest/permissions/permissions.service';
-import { DatabaseService } from '../../../src/nest/database/database.service';
 import { DEMO_EMAIL_PRIMARY } from '../../../src/nest/common/demo';
 import { createTestUnitOfWork, createTestAppSettingsRepo } from '../../helpers/test-uow';
 

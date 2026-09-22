@@ -91,7 +91,7 @@ export async function buildApp(): Promise<INestApplication> {
   // boot succeeds, the gateway logs as registered, every test passes, and no
   // browser can connect. Callers take the server from getHttpServer() below.
   boundHttpServer = nodeHttp.createServer(instance);
-  app.useWebSocketAdapter(new TrekWsAdapter(boundHttpServer));
+  app.useWebSocketAdapter(new TrekWsAdapter(boundHttpServer, orm));
   // ConfigModule.forRoot's load factories already ran inside NestFactory.create,
   // so the boot-stable snapshot is resolvable here, BEFORE app.init() — this is
   // the one bridge that lets the pre-init Express layer consume the validated

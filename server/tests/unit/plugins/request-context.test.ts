@@ -1,0 +1,132 @@
+/**
+ * D6 regression (task-2-review.md C3): a plugin's `ctx.*` call arrives over a
+ * child-process `message` event, not an HTTP request, so nothing has forked an
+ * EntityManager for it. `PluginSupervisor.onMessage` (plugin-supervisor.ts:~553)
+ * is the single choke point every plugin RPC dispatch passes through, and it now
+ * wraps `sup.rpcHost.dispatch(...)` in `withRequestContext` there.
+ *
+ * The reviewer's probe, reproduced here through the REAL call chain
+ * (PluginSupervisor.onMessage → PluginGuards.canCreateAs →
+ * PermissionsService.checkPermission → AppSettingsRepository.findByKeyPrefix),
+ * not just `checkPermission` in isolation: with `perm_trip_create` tightened
+ * from its 'everybody' default to 'admin', a role-'user' actor's check must
+ * come back `false`. Before the fix (dispatch outside any context, and
+ * loadPermissions serving defaults on any error) it came back `true` — a
+ * fail-open security regression. After BOTH this round's fixes — the wrapper
+ * here, and `loadPermissions` rethrowing a MikroORM `ValidationError` instead
+ * of degrading (permissions.service.ts) — an unwrapped dispatch fails CLOSED
+ * (a HOST_ERROR envelope), never silently `true`.
+ *
+ * Global context is disallowed on purpose (`{ allowGlobalContext: false }`),
+ * like `tests/unit/nest/database/request-context.test.ts` — the production
+ * setting — NOT the `createTestOrm` default (`true`) that `test-uow.ts`'s
+ * shared helpers use to let ordinary unit tests call a repository with no
+ * request wrapper at all: that default would hide this exact bug.
+ */
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { createSnapshotTestDb } from '../../helpers/db-mock';
+import { createUser } from '../../helpers/factories';
+import { DatabaseService } from '../../../src/nest/database/database.service';
+import { AddonsService } from '../../../src/nest/addons/addons.service';
+import { PermissionsService } from '../../../src/nest/permissions/permissions.service';
+import { PluginGuards } from '../../../src/nest/plugins/host/plugin-guards.service';
+import { PluginSupervisor } from '../../../src/nest/plugins/supervisor/plugin-supervisor';
+import { UnitOfWork } from '../../../src/nest/database/unit-of-work';
+import { RpcRateLimiter, DEFAULT_RPC_LIMIT } from '../../../src/nest/plugins/host/rate-limit';
+import { createTestOrm, type TestOrm } from '../../helpers/test-orm';
+import { AppSettings } from '../../../src/db/entities/AppSettings.entity';
+import type { AppSettingsRepository } from '../../../src/db/repositories/AppSettings.repository';
+import type { PluginRpcHost } from '../../../src/nest/plugins/host/rpc-host';
+import type { RpcRequest, RpcResponse, RpcError } from '../../../src/nest/plugins/protocol/envelope';
+import type { EntityManager } from '@mikro-orm/core';
+
+/** The slice of Supervisor's private `Supervised` shape a 'req' dispatch touches. */
+interface DispatchEntry {
+  rpcHost: Pick<PluginRpcHost, 'dispatch'>;
+  child: { send: (msg: unknown) => void } | null;
+  rpcLimiter: RpcRateLimiter;
+  invocations: Map<string, number | undefined>;
+}
+/** `onMessage` is private; this is the narrowest structural view that reaches it
+ * without an `any` cast. */
+interface SupervisorPrivate {
+  onMessage(sup: DispatchEntry, msg: RpcRequest): Promise<void>;
+}
+
+const testDb = createSnapshotTestDb();
+
+let t: TestOrm;
+let permissions: PermissionsService;
+let guards: PluginGuards;
+let userId: number;
+
+beforeAll(async () => {
+  t = await createTestOrm(testDb, { allowGlobalContext: false });
+  const dbs = new DatabaseService(testDb);
+  permissions = new PermissionsService(t.repo(AppSettings) as AppSettingsRepository, new UnitOfWork(t.em));
+  guards = new PluginGuards(dbs, permissions, new AddonsService(dbs));
+  userId = createUser(testDb, { role: 'user' }).user.id;
+  // An admin has tightened trip_create from its 'everybody' default.
+  testDb.prepare("INSERT OR REPLACE INTO app_settings (key, value) VALUES ('perm_trip_create', 'admin')").run();
+});
+
+afterAll(async () => {
+  await t.close();
+  testDb.close();
+});
+
+/**
+ * Wires one supervisor whose fake rpcHost.dispatch calls straight into
+ * PluginGuards.canCreateAs — the same chain the review traced
+ * (plugin-guards.service.ts:74,84 → PermissionsService.checkPermission) — and
+ * envelope-shapes the result exactly like the real PluginRpcHost.handle()
+ * catch (rpc-host.ts): a thrown error becomes a HOST_ERROR response, never an
+ * unhandled rejection. `resolveOrm` is the exact 4th constructor arg
+ * PluginRuntimeService passes in production (plugin-runtime.service.ts).
+ */
+function makeSupervisor(resolveOrm?: () => { em: EntityManager } | undefined) {
+  const sent: Array<RpcResponse | RpcError> = [];
+  const dispatch: PluginRpcHost['dispatch'] = async (req, actingUserId) => {
+    try {
+      const result = await guards.canCreateAs('trip_create', actingUserId as number);
+      return { k: 'res', id: req.id, ok: true, result };
+    } catch (e) {
+      return { k: 'res', id: req.id, ok: false, error: { code: 'HOST_ERROR', message: e instanceof Error ? e.message : String(e) } };
+    }
+  };
+  const createRpcHost = () => ({ dispatch }) as unknown as PluginRpcHost;
+  const supervisor = new PluginSupervisor(createRpcHost, {}, {}, resolveOrm) as unknown as SupervisorPrivate;
+  const sup: DispatchEntry = {
+    rpcHost: { dispatch },
+    child: { send: (msg) => sent.push(msg as RpcResponse | RpcError) },
+    rpcLimiter: new RpcRateLimiter(DEFAULT_RPC_LIMIT, Date.now()),
+    invocations: new Map([['inv-1', userId]]),
+  };
+  return { supervisor, sup, sent };
+}
+
+describe('PluginSupervisor request context (D6, C3)', () => {
+  it('CTX-PLUGIN-001: unwrapped, the RPC path fails CLOSED on a cold cache — never the old fail-open `true`', async () => {
+    permissions.invalidatePermissionsCache();
+    const { supervisor, sup, sent } = makeSupervisor(); // no resolveOrm — the bug's exact reproduction
+
+    await supervisor.onMessage(sup, { k: 'req', id: 'r1', method: 'trips.create', params: { _inv: 'inv-1' } });
+
+    expect(sent).toHaveLength(1);
+    const res = sent[0];
+    expect(res.ok).toBe(false);
+    if (res.ok === false) expect(res.error.message).toMatch(/global (EntityManager|context)/i);
+  });
+
+  it('CTX-PLUGIN-002: wrapped in withRequestContext, the same dispatch enforces the stored override — a "user" role is refused', async () => {
+    permissions.invalidatePermissionsCache();
+    const { supervisor, sup, sent } = makeSupervisor(() => t.orm);
+
+    await supervisor.onMessage(sup, { k: 'req', id: 'r2', method: 'trips.create', params: { _inv: 'inv-1' } });
+
+    expect(sent).toHaveLength(1);
+    const res = sent[0];
+    expect(res.ok).toBe(true);
+    if (res.ok) expect(res.result).toBe(false); // role 'user' against a stored 'admin' override
+  });
+});

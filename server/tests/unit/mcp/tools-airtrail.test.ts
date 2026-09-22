@@ -48,7 +48,6 @@ import { ADDON_IDS } from '../../../src/addons';
 import { AirtrailClient, AirtrailRequestError, type AirtrailFlightRaw } from '../../../src/nest/integrations/airtrail.client';
 import { AirtrailImportService } from '../../../src/nest/integrations/airtrail-import.service';
 import { PermissionsService } from '../../../src/nest/permissions/permissions.service';
-import { DatabaseService } from '../../../src/nest/database/database.service';
 import { createTestUnitOfWork, createTestAppSettingsRepo } from '../../helpers/test-uow';
 
 // The permissions cache is module-scoped, so a write through any instance is

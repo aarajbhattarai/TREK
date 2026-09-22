@@ -1,5 +1,6 @@
 import { Injectable, type OnApplicationBootstrap, type OnModuleDestroy } from '@nestjs/common';
 import semver from 'semver';
+import { MikroORM } from '@mikro-orm/core';
 import { DatabaseService } from '../database/database.service';
 import { UnitOfWork } from '../database/unit-of-work';
 import { pluginsEnabled } from './kill-switch';
@@ -130,7 +131,9 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
   // plugin's ctx.plugins.call / ctx.events.emit resolve through callPlugin/
   // emitPluginEvent below (which own the dependency-edge authorization). The
   // arrow reads this.hostFactory lazily at spawn time, so the field-initializer
-  // ordering (it runs before the constructor params are assigned) is safe.
+  // ordering (it runs before the constructor params are assigned) is safe. `orm`
+  // (D6, task-2-review.md C3) needs the same laziness — it is read once per RPC
+  // dispatch, well after the constructor has run, not at field-init time.
   private readonly supervisor = new PluginSupervisor((id, granted) => {
     if (!this.hostFactory) throw new Error('PluginRpcHostFactory not provided — tests that activate plugins must pass one');
     return this.hostFactory.create(id, granted, this);
@@ -158,7 +161,7 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
         void this.pruneErrorLog(id).catch(() => { /* retention is best-effort */ });
       } catch { /* DB unavailable — a log line must never crash the host */ }
     },
-  });
+  }, {}, () => this.orm);
 
   // Filesystem watchers for dev-linked plugins (id -> watcher), so a rebuild of the
   // author's source auto-reloads. Empty unless dev-link is used.
@@ -188,6 +191,12 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
     // test instance that exercises a transaction must pass one; setOperatorEgressHosts
     // refuses rather than writing outside a transaction (same shape as hostFactory).
     private readonly uow?: UnitOfWork,
+    // D6 (task-2-review.md C3): the supervisor wraps every plugin RPC dispatch in a
+    // request context built from this. Nest always injects it (MikroOrmCoreModule is
+    // global); a hand-built test instance that dispatches through a real
+    // PermissionsService/repository must pass one or those reads fail closed with
+    // cannotUseGlobalContext instead of running.
+    private readonly orm?: MikroORM,
   ) {}
 
   private get db() {

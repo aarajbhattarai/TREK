@@ -5,7 +5,8 @@ import { RealtimeService } from '../realtime/realtime.service';
 
 /**
  * The impure MCP tool guards that used to live as plain functions in
- * src/mcp/tools/_shared.ts, reaching the db Proxy, permissions.bridge and the
+ * src/mcp/tools/_shared.ts, reaching the db Proxy, a permissions.bridge
+ * instance (no longer exists — see auth.service.ts:116) and the
  * src/websocket stub as module globals. The @McpController domain classes are
  * ordinary Nest providers, so they inject this instead. The pure result
  * helpers (noAccess/permissionDenied/adminRequired and the

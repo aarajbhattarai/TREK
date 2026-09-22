@@ -4,9 +4,11 @@ import type { Server as HttpServer } from 'node:http';
 import type { MessageMappingProperties } from '@nestjs/websockets';
 import { WebSocketServer } from 'ws';
 import type { Observable } from 'rxjs';
+import type { EntityManager } from '@mikro-orm/core';
 import { readEnv } from '../../app-config';
 import { setServer, type TrekWebSocket } from './ws-state';
 import { logError } from '../audit/audit-log.logger';
+import { withRequestContext } from '../database/request-context';
 
 // Per-connection message rate limiting. It lives in the adapter, not in the
 // gateway's handlers, because the original counted EVERY inbound frame before
@@ -98,7 +100,15 @@ export class TrekWsAdapter extends WsAdapter {
    * server lands on the socket this process actually listens on. Given the app,
    * it would reach for Nest's own internal server, which buildApp never uses.
    */
-  constructor(httpServer: HttpServer) {
+  constructor(
+    httpServer: HttpServer,
+    // D6 (task-2-review.md's controller ruling): a WS message handler has no HTTP
+    // request behind it, so every `@SubscribeMessage` dispatch is wrapped here —
+    // ONE wrapper at bindMessageHandlers below, not one per handler. Optional only
+    // for trek-ws-adapter.test.ts, which never reaches a repository; bootstrap.ts
+    // always passes the real MikroORM.
+    private readonly orm?: { em: EntityManager },
+  ) {
     super(httpServer as unknown as INestApplicationContext);
     this.httpServerRef = httpServer;
   }
@@ -203,7 +213,16 @@ export class TrekWsAdapter extends WsAdapter {
 
       // The whole message is the payload: TREK's frames are flat, so `tripId`
       // sits beside `type` rather than under a `data` key.
-      transform(handler.callback(message, socket)).subscribe({
+      //
+      // The context has to wrap the CALL, not just the subscribe(): an async
+      // handler's body runs synchronously up to its first await the instant it is
+      // invoked (before transform()/subscribe() ever run), and RequestContext.create
+      // is AsyncLocalStorage.run — it only covers what executes inside this
+      // synchronous frame, after which the async chain carries it on its own.
+      const result = this.orm
+        ? withRequestContext(this.orm, () => handler.callback(message, socket))
+        : handler.callback(message, socket);
+      transform(result).subscribe({
         next: (response) => {
           if (response !== undefined && socket.readyState === 1) {
             socket.send(JSON.stringify(response));

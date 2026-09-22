@@ -17,6 +17,7 @@
  * hand-rolled DatabaseService/all() stub.
  */
 import { describe, it, expect, vi, beforeAll, beforeEach, afterAll } from 'vitest';
+import { ValidationError } from '@mikro-orm/core';
 
 // ── DB setup ──────────────────────────────────────────────────────────────────
 
@@ -237,6 +238,26 @@ describe('load failures', () => {
     expect(getPermissionsCache()).not.toBe(null);
     spy.mockRestore();
     svc.invalidatePermissionsCache(); // don't leak this test's cache to later tests
+  });
+
+  it('PERM-SVC-025: a MikroORM ValidationError (context misuse) is a programming error and propagates, uncached — it does not get the "log and serve defaults" treatment', async () => {
+    // The concrete case this protects (task-2-review.md C3): checkPermission
+    // reached from a non-HTTP entrypoint outside any request context throws
+    // exactly this on a cold cache. Swallowing it and serving defaults was
+    // fail-open — an admin's tightened flag silently reverted to its looser
+    // default for as long as the misuse persisted. loadPermissions must rethrow
+    // instead of degrading.
+    const spy = vi
+      .spyOn(appSettings, 'findByKeyPrefix')
+      .mockRejectedValueOnce(ValidationError.cannotUseGlobalContext());
+    svc.invalidatePermissionsCache();
+
+    await expect(svc.getPermissionLevel('trip_edit')).rejects.toThrow(ValidationError);
+    expect(logError).not.toHaveBeenCalled();
+    expect(getPermissionsCache()).toBe(null);
+
+    spy.mockRestore();
+    svc.invalidatePermissionsCache();
   });
 
   it('PERM-SVC-023: an all-skipped save writes nothing and leaves the cache untouched', async () => {

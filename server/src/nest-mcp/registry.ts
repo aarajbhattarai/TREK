@@ -283,6 +283,15 @@ export class McpRegistry {
     return this.accessPolicy(access, ctx);
   }
 
+  // D6: this callback is invoked from inside McpTransportController's @Post/@Get/
+  // @Delete handlers (mcp-transport.controller.ts), which are ordinary Nest routes —
+  // `@Public()` only exempts the auth guard, and the raw-body parser exemption in
+  // bootstrap.ts only exempts Express's JSON/urlencoded parsers. Neither opts /mcp out
+  // of `@mikro-orm/nestjs`'s per-request middleware (registerRequestContext, on by
+  // default and not overridden in mikro-orm.config.ts), which forks the EntityManager
+  // before any controller method runs. So a tool handler here already runs inside a
+  // request context; do not wrap it in withRequestContext (task-2-review.md's
+  // non-HTTP caller table confirms this path is already covered).
   private attachTool(
     registrar: LooseRegistrar,
     options: ToolOptions,

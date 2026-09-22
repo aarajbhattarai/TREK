@@ -36,6 +36,9 @@ vi.mock('cron', () => ({
 import { SchedulerRegistry } from '@nestjs/schedule';
 import { CronRegistrarService } from '../../../src/nest/scheduling/cron-registrar.service';
 import type { RuntimeEnvService } from '../../../src/nest/app-config/runtime-env.service';
+import { createSnapshotTestDb } from '../../helpers/db-mock';
+import { createTestOrm, type TestOrm } from '../../helpers/test-orm';
+import { Users } from '../../../src/db/entities/Users.entity';
 
 function makeRegistrar(isTest: boolean) {
   const registry = new SchedulerRegistry();
@@ -149,5 +152,55 @@ describe('CronRegistrarService', () => {
     expect(h.jobs[0].stopped).toBe(true);
     expect(registry.getCronJobs().size).toBe(0);
     expect(registrar.jobCount).toBe(0);
+  });
+
+  describe('D6 request context (task-2-review.md C3 ruling)', () => {
+    // Global context disallowed on purpose — the production setting, like
+    // tests/unit/nest/database/request-context.test.ts — so a repository read
+    // with no wrapper around it genuinely throws, the way it would outside any
+    // HTTP request in production.
+    const testDb = createSnapshotTestDb();
+    let t: TestOrm;
+
+    beforeEach(async () => {
+      t = await createTestOrm(testDb, { allowGlobalContext: false });
+    });
+
+    afterEach(async () => {
+      await t.close();
+    });
+
+    it('CRONREG-010 — without MikroORM injected, a repository read inside onTick throws cannotUseGlobalContext', async () => {
+      const registry = new SchedulerRegistry();
+      const registrar = new CronRegistrarService(registry, { isTest: () => false } as RuntimeEnvService); // no orm arg
+      let caught: unknown;
+      registrar.register('job', '0 2 * * *', async () => {
+        try {
+          await t.orm.em.find(Users, {});
+        } catch (e) {
+          caught = e;
+        }
+      });
+      await h.jobs[0].onTick();
+      expect(caught).toBeInstanceOf(Error);
+      expect(String((caught as Error).message)).toMatch(/global (EntityManager|context)/i);
+    });
+
+    it('CRONREG-011 — with MikroORM injected, the SAME repository read inside onTick succeeds — the wrapper is load-bearing', async () => {
+      const registry = new SchedulerRegistry();
+      const registrar = new CronRegistrarService(registry, { isTest: () => false } as RuntimeEnvService, t.orm);
+      let result: unknown;
+      let caught: unknown;
+      registrar.register('job', '0 2 * * *', async () => {
+        try {
+          result = await t.orm.em.find(Users, {});
+        } catch (e) {
+          caught = e;
+        }
+      });
+      await h.jobs[0].onTick();
+      expect(caught).toBeUndefined();
+      expect(Array.isArray(result)).toBe(true);
+    });
   });
 });

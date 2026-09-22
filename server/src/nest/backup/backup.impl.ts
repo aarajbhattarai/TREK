@@ -507,6 +507,11 @@ export async function restoreFromZip(storage: StorageService, zipPath: string): 
       // still holds the pre-restore state. Any request using a cached
       // permission would decide against the wrong grants until the
       // next restart. Dropping the cache forces a fresh read.
+      // D6: no repository read happens on this path today — invalidation is a
+      // plain function, not a DB call — so no withRequestContext is owed here yet.
+      // The domain phase that gives this restore path a repository read (Plan 3's
+      // admin/backup cluster) must wrap it then; see task-2-review.md's non-HTTP
+      // caller table.
       invalidatePermissionsCache();
     }
 
@@ -573,6 +578,8 @@ export async function restoreFromZip(storage: StorageService, zipPath: string): 
     // stale anyway. Invalidating here too costs nothing and guarantees
     // we never serve cached permissions that don't match the DB state
     // we leave the process in after a failed restore.
+    // D6: same no-repository-read note as the other invalidatePermissionsCache()
+    // call above — nothing to wrap yet.
     try { invalidatePermissionsCache(); } catch { /* best-effort */ }
     throw err;
   }

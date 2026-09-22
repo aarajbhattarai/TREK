@@ -6,6 +6,12 @@ import { DEMO_PASS } from '../nest/common/demo';
 // touches the database happens inside the functions.
 import { saveBaseline, hasBaseline } from './demo-reset';
 
+// D6 (task-2-review.md's controller ruling / non-HTTP caller table): this runs
+// from `runSchemaBootstrap` before `app.init()`, outside any request context, but
+// it is all raw `better-sqlite3` through the `db` param passed in — no
+// InjectRepository/global-EM read — so there is nothing to wrap yet. The domain
+// phase that gives demo seeding a repository read must wrap it in
+// withRequestContext then.
 function seedDemoData(db: Database.Database): { adminId: number; demoId: number } {
   const ADMIN_USER = readEnv().demo.adminUser;
   const ADMIN_EMAIL = readEnv().demo.adminEmailRaw || 'admin@trek.app';

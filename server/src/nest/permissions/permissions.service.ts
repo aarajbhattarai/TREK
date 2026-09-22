@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@mikro-orm/nestjs';
+import { ValidationError } from '@mikro-orm/core';
 import { UnitOfWork } from '../database/unit-of-work';
 import { logError } from '../audit/audit-log.logger';
 import { AppSettings } from '../../db/entities/AppSettings.entity';
@@ -67,12 +68,13 @@ export const PERMISSION_ACTIONS: PermissionAction[] = [
 const ACTIONS_MAP = new Map(PERMISSION_ACTIONS.map(a => [a.key, a]));
 
 // The in-memory cache is deliberately MODULE-scoped, not instance state, and
-// lives in ./permissions-cache: two service instances exist at runtime (the
-// container singleton and the permissions.bridge instance for
-// out-of-container consumers), and the backup restore path — plain functions,
-// no DI — must flush the same cache the request path reads. Both instances
-// wrap the same shared connection, so a single cache is also the correct
-// data shape.
+// lives in ./permissions-cache: the container's PermissionsService singleton
+// is not the only reader — the backup restore path (backup.impl.ts) is plain
+// functions, no DI, and must flush the same cache the request path reads.
+// Both reach the same shared connection, so a single cache is also the
+// correct data shape. (permissions.bridge, once a second out-of-container
+// instance, was replaced by injection — see auth.service.ts:116 — and no
+// longer exists.)
 
 @Injectable()
 export class PermissionsService {
@@ -88,6 +90,10 @@ export class PermissionsService {
     try {
       const rows = await this.appSettings.findByKeyPrefix('perm_');
       for (const row of rows) {
+        // A typing artefact, not a parity change: AppSettingsRow types both
+        // columns nullable, but `key` can never actually be null here (a NULL
+        // key never matches `LIKE 'perm_%'`), and skipping a null `value` is
+        // exactly the legacy `allowedLevels.includes(null) === false` skip.
         if (row.key == null || row.value == null) continue;
         const actionKey = row.key.replace('perm_', '');
         const action = ACTIONS_MAP.get(actionKey);
@@ -100,6 +106,16 @@ export class PermissionsService {
         }
       }
     } catch (e) {
+      // A MikroORM ValidationError here (typically cannotUseGlobalContext) is not
+      // a DB failure — it means this call reached the repository outside any
+      // request context (D6: a non-HTTP entrypoint that isn't wrapped in
+      // withRequestContext, or a bug in one that is). Serving defaults for that
+      // is fail-OPEN: an admin who tightened a flag from its default gets the
+      // looser default back, silently, for as long as the misuse persists
+      // (task-2-review.md C3). A programming error rethrows instead of degrading;
+      // the same rule applies to any later "log and serve defaults" branch this
+      // plan adds (AddonsService's flag reads are Task 4's, not touched here).
+      if (e instanceof ValidationError) throw e;
       // Under the legacy better-sqlite3 path a "no such table" error meant
       // first-boot init racing this read, before the table existed, and was
       // swallowed silently. Under the ORM, migrations run to completion in
@@ -107,6 +123,10 @@ export class PermissionsService {
       // this service — there is no window left where app_settings can be
       // missing — so that message match is dropped and every failure here is
       // now a real, loggable DB error; defaults are still served either way.
+      // One residual window this doesn't cover: backup.impl.ts's restore swaps
+      // the database file under a live process, so a concurrent load can still
+      // see a missing/mid-swap table and will now log here — behaviour
+      // (defaults, uncached) is unchanged, so it is log noise only.
       const msg = e instanceof Error ? e.message : String(e);
       logError(`Permissions load failed: ${msg}`);
       // Serve defaults for THIS call, but do not install them: a half-built

@@ -18,6 +18,11 @@ export class IdempotencyCleanupJob implements OnApplicationBootstrap {
 
   onApplicationBootstrap(): void {
     if (!this.registrar.isEnabled()) return;
+    // D6: `tick()` still reads/writes through raw `DatabaseService.prepare` (see
+    // `purgeExpiredIdempotencyKeys`), but the tick itself already runs inside a
+    // request context — CronRegistrarService.register wraps every job's onTick in
+    // one place, so this needs no wrapper of its own even once it gains a
+    // repository read.
     this.registrar.register('idempotency-cleanup', '0 3 * * *', () => this.tick());
   }
 

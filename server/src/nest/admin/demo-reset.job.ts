@@ -21,6 +21,9 @@ export class DemoResetJob implements OnApplicationBootstrap {
 
   onApplicationBootstrap(): void {
     if (!this.registrar.isEnabled() || !this.runtimeEnv.isDemoMode()) return;
+    // D6: resetDemoUser is all raw better-sqlite3 (see demo-reset.ts) — no
+    // repository read today — but the tick already runs inside a request context
+    // regardless, via CronRegistrarService's one wrapper around every onTick.
     this.registrar.register('demo-reset', '0 * * * *', () => void this.tick(), { timezone: 'none' });
     logInfo('Demo hourly reset scheduled');
   }
