@@ -48,7 +48,7 @@ export const DawarichVisitSuggestionsSchema = defineEntity({
       properties: ['user_id', 'state'],
     },
   ],
-  uniques: [{ properties: ['user_id', 'source_visit_id'] }],
+  uniques: [{ properties: ['user', 'source_visit_id'] }],
   properties: {
     id: p.integer().primary(),
     user: () => p.manyToOne(Users).ref().deleteRule('cascade').hidden(),

@@ -18,7 +18,7 @@ export class TripMembers {
 export const TripMembersSchema = defineEntity({
   class: TripMembers,
   repository: () => TripMembersRepository,
-  uniques: [{ properties: ['trip_id', 'user_id'] }],
+  uniques: [{ properties: ['trip', 'user'] }],
   properties: {
     id: p.integer().primary(),
     trip: () => p.manyToOne(Trips).ref().deleteRule('cascade').hidden().index('idx_trip_members_trip_id'),

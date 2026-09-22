@@ -14,7 +14,7 @@ export class NotificationChannelPreferences {
 export const NotificationChannelPreferencesSchema = defineEntity({
   class: NotificationChannelPreferences,
   repository: () => NotificationChannelPreferencesRepository,
-  uniques: [{ properties: ['user_id', 'event_type', 'channel'] }],
+  uniques: [{ properties: ['user', 'event_type', 'channel'] }],
   properties: {
     user: () => p.manyToOne(Users).primary().ref().deleteRule('cascade').hidden().index('idx_ncp_user'),
     user_id: p.integer().persist(false).index('idx_ncp_user'),

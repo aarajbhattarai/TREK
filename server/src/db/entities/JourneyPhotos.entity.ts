@@ -23,7 +23,7 @@ export class JourneyPhotos {
 export const JourneyPhotosSchema = defineEntity({
   class: JourneyPhotos,
   repository: () => JourneyPhotosRepository,
-  uniques: [{ properties: ['journey_id', 'photo_id'] }],
+  uniques: [{ properties: ['journey', 'photo'] }],
   properties: {
     id: p.integer().primary(),
     journey: () => p.manyToOne(Journeys).ref().deleteRule('cascade').hidden().index('idx_journey_photos_journey'),

@@ -21,7 +21,7 @@ export class PhotoProviderFields {
 export const PhotoProviderFieldsSchema = defineEntity({
   class: PhotoProviderFields,
   repository: () => PhotoProviderFieldsRepository,
-  uniques: [{ properties: ['provider_id', 'field_key'] }],
+  uniques: [{ properties: ['provider', 'field_key'] }],
   properties: {
     id: p.integer().primary(),
     provider: () => p.manyToOne(PhotoProviders).ref().deleteRule('cascade').hidden(),

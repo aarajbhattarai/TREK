@@ -15,7 +15,7 @@ export class HiddenRegions {
 export const HiddenRegionsSchema = defineEntity({
   class: HiddenRegions,
   repository: () => HiddenRegionsRepository,
-  uniques: [{ properties: ['user_id', 'region_code'] }],
+  uniques: [{ properties: ['user', 'region_code'] }],
   properties: {
     id: p.integer().primary(),
     user: () => p.manyToOne(Users).ref().deleteRule('cascade').hidden().index('idx_hidden_regions_user'),

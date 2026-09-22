@@ -13,7 +13,7 @@ export class BudgetCategoryOrder {
 export const BudgetCategoryOrderSchema = defineEntity({
   class: BudgetCategoryOrder,
   repository: () => BudgetCategoryOrderRepository,
-  uniques: [{ properties: ['trip_id', 'category'] }],
+  uniques: [{ properties: ['trip', 'category'] }],
   properties: {
     trip: () => p.manyToOne(Trips).primary().ref().deleteRule('cascade').hidden(),
     trip_id: p.integer().persist(false),

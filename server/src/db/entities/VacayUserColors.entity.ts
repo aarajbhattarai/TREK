@@ -15,7 +15,7 @@ export class VacayUserColors {
 export const VacayUserColorsSchema = defineEntity({
   class: VacayUserColors,
   repository: () => VacayUserColorsRepository,
-  uniques: [{ properties: ['user_id', 'plan_id'] }],
+  uniques: [{ properties: ['user', 'plan'] }],
   properties: {
     id: p.integer().primary(),
     user: () => p.manyToOne(Users).ref().deleteRule('cascade').hidden(),

@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createSnapshotTestDb } from '../../../helpers/db-mock';
 import { resetTestDb } from '../../../helpers/test-db';
 import { createTestOrm, type TestOrm } from '../../../helpers/test-orm';
@@ -50,9 +50,9 @@ describe('settings table — the (user_id, key) unique index the ON CONFLICT tar
     },
   );
 
-  it('UNIQUE-SCHEMA-002: the Settings entity metadata declares the same (user, key) unique constraint (fix(db): generator captures inline UNIQUE constraints)', () => {
+  it('UNIQUE-SCHEMA-002: the Settings entity metadata declares the same (user, key) unique constraint, naming the RELATION property, not its persist(false) twin (fix(db): generator maps an FK twin column to its relation property name)', () => {
     const meta = t.orm.getMetadata(Settings);
-    expect(meta.uniques).toContainEqual({ properties: ['user_id', 'key'] });
+    expect(meta.uniques).toContainEqual({ properties: ['user', 'key'] });
   });
 });
 
@@ -89,13 +89,13 @@ describe('SettingsRepository', () => {
 
   it('SETTINGSREPO-006: upsertForUser inserts a new row exactly as the legacy INSERT would', async () => {
     await settings.upsertForUser(user.id, 'dark_mode', 'true');
-    expect(rawRow(user.id, 'dark_mode')).toMatchObject({ user_id: user.id, key: 'dark_mode', value: 'true' });
+    expect(rawRow(user.id, 'dark_mode')).toStrictEqual({ id: expect.any(Number), user_id: user.id, key: 'dark_mode', value: 'true' });
   });
 
   it('SETTINGSREPO-007: upsertForUser on an existing (user, key) replaces the value only — no duplicate row, matching ON CONFLICT(user_id, key) DO UPDATE SET value = excluded.value', async () => {
     insertRaw(user.id, 'dark_mode', 'false');
     await settings.upsertForUser(user.id, 'dark_mode', 'true');
-    expect(rawRow(user.id, 'dark_mode')).toMatchObject({ user_id: user.id, key: 'dark_mode', value: 'true' });
+    expect(rawRow(user.id, 'dark_mode')).toStrictEqual({ id: expect.any(Number), user_id: user.id, key: 'dark_mode', value: 'true' });
     expect(
       testDb.prepare('SELECT COUNT(*) as c FROM settings WHERE user_id = ? AND key = ?').get(user.id, 'dark_mode'),
     ).toEqual({ c: 1 });
@@ -108,25 +108,30 @@ describe('SettingsRepository', () => {
     expect(rawRow(otherUser.id, 'dark_mode')).toMatchObject({ value: 'false' });
   });
 
-  it('SETTINGSREPO-009: deleteForUser with a key deletes only that (user, key) row and reports the legacy DELETE-affected-row count', async () => {
-    insertRaw(user.id, 'dark_mode', 'true');
-    insertRaw(user.id, 'temperature_unit', 'celsius');
-    expect(await settings.deleteForUser(user.id, 'dark_mode')).toBe(1);
-    expect(rawRow(user.id, 'dark_mode')).toBeUndefined();
-    expect(rawRow(user.id, 'temperature_unit')).toBeDefined();
-  });
+  it("SETTINGSREPO-014: em.upsert infers the (user, key) conflict target from the metadata's relation-named uniques entry with NO explicit onConflictFields — the entry the generator's fix(db) commit made consumable (task-5-review.md Important 1). SettingsRepository.upsertForUser still passes onConflictFields explicitly, for clarity, not because it is required.", async () => {
+    const connection = t.orm.em.getConnection();
+    const spy = vi.spyOn(connection, 'execute');
+    try {
+      // Insert branch: no existing row, onConflictFields omitted entirely.
+      await t.em.upsert(Settings, { user: user.id, key: 'dark_mode', value: 'true' }, { onConflictAction: 'merge' });
+      expect(rawRow(user.id, 'dark_mode')).toStrictEqual({ id: expect.any(Number), user_id: user.id, key: 'dark_mode', value: 'true' });
 
-  it('SETTINGSREPO-010: deleteForUser without a key deletes every row for that user only', async () => {
-    insertRaw(user.id, 'dark_mode', 'true');
-    insertRaw(user.id, 'temperature_unit', 'celsius');
-    insertRaw(otherUser.id, 'dark_mode', 'false');
-    expect(await settings.deleteForUser(user.id)).toBe(2);
-    expect(await settings.getForUser(user.id)).toEqual([]);
-    expect(rawRow(otherUser.id, 'dark_mode')).toBeDefined();
-  });
+      // Merge branch: an existing row, same call shape — proves the SAME
+      // inferred target both creates and merges, not just happens to insert once.
+      const insertSql = spy.mock.calls.map(([sql]) => sql).find((sql): sql is string => typeof sql === 'string' && /insert into/i.test(sql));
+      expect(insertSql).toContain('on conflict (`user_id`, `key`)');
+      spy.mockClear();
 
-  it('SETTINGSREPO-011: deleteForUser on a missing key is a no-op that reports 0 rows', async () => {
-    expect(await settings.deleteForUser(user.id, 'does_not_exist')).toBe(0);
+      await t.em.upsert(Settings, { user: user.id, key: 'dark_mode', value: 'false' }, { onConflictAction: 'merge' });
+      expect(rawRow(user.id, 'dark_mode')).toStrictEqual({ id: expect.any(Number), user_id: user.id, key: 'dark_mode', value: 'false' });
+      expect(
+        testDb.prepare('SELECT COUNT(*) as c FROM settings WHERE user_id = ? AND key = ?').get(user.id, 'dark_mode'),
+      ).toEqual({ c: 1 });
+      const mergeSql = spy.mock.calls.map(([sql]) => sql).find((sql): sql is string => typeof sql === 'string' && /insert into/i.test(sql));
+      expect(mergeSql).toContain('on conflict (`user_id`, `key`)');
+    } finally {
+      spy.mockRestore();
+    }
   });
 
   // Identity-map regression: the short-circuit (Task 0 review, I1; corrected

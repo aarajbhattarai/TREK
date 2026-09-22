@@ -15,7 +15,7 @@ export class JourneyTrips {
 export const JourneyTripsSchema = defineEntity({
   class: JourneyTrips,
   repository: () => JourneyTripsRepository,
-  uniques: [{ properties: ['journey_id', 'trip_id'] }],
+  uniques: [{ properties: ['journey', 'trip'] }],
   properties: {
     journey: () => p.manyToOne(Journeys).primary().ref().hidden().index('idx_journey_trips_journey'),
     journey_id: p.integer().persist(false).index('idx_journey_trips_journey'),

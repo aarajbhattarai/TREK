@@ -416,13 +416,43 @@ describe('RULE8_bindRepositories', () => {
 });
 
 describe('RULE9_addImplicitUniqueConstraints', () => {
-  it('RULE9-001: a table with a matching implicit-unique entry gets a uniques: block referencing the columns as properties', () => {
+  it('RULE9-001: a table with a matching implicit-unique entry gets a uniques: block referencing the columns as properties — a plain (non-FK) column keeps its own name', () => {
     const userId = fixtureProp({ name: 'user_id', primary: false });
     const key = fixtureProp({ name: 'key', primary: false });
-    const meta = fixtureMeta('Settings', 'settings', [userId, key]);
-    const implicitUniques = new Map([['settings', [['user_id', 'key']]]]);
+    const meta = fixtureMeta('X', 'x', [userId, key]);
+    const implicitUniques = new Map([['x', [['user_id', 'key']]]]);
     RULE9_addImplicitUniqueConstraints([meta], implicitUniques);
     expect(meta.uniques).toEqual([{ properties: ['user_id', 'key'] }]);
+  });
+
+  it('RULE9-007: a column that IS a single-column owning relation\'s join column is emitted as the RELATION property name, not the persist(false) twin (Important 1, task-5-review.md — the settings.(user_id, key) real case, post-RULE5-rename property name)', () => {
+    const user = fixtureProp({ name: 'user', kind: ReferenceKind.MANY_TO_ONE, fieldNames: ['user_id'] });
+    const userId = fixtureProp({ name: 'user_id', primary: false, persist: false });
+    const key = fixtureProp({ name: 'key', primary: false });
+    const meta = fixtureMeta('Settings', 'settings', [user, userId, key]);
+    const implicitUniques = new Map([['settings', [['user_id', 'key']]]]);
+    RULE9_addImplicitUniqueConstraints([meta], implicitUniques);
+    expect(meta.uniques).toEqual([{ properties: ['user', 'key'] }]);
+  });
+
+  it('RULE9-008: a multi-column owning relation (fieldNames.length !== 1) is never used for the mapping — the twin column name is kept', () => {
+    const composite = fixtureProp({ name: 'composite', kind: ReferenceKind.MANY_TO_ONE, fieldNames: ['a_id', 'b_id'] });
+    const aId = fixtureProp({ name: 'a_id', primary: false });
+    const key = fixtureProp({ name: 'key', primary: false });
+    const meta = fixtureMeta('X', 'x', [composite, aId, key]);
+    const implicitUniques = new Map([['x', [['a_id', 'key']]]]);
+    RULE9_addImplicitUniqueConstraints([meta], implicitUniques);
+    expect(meta.uniques).toEqual([{ properties: ['a_id', 'key'] }]);
+  });
+
+  it('RULE9-009: an inverse-side relation (mappedBy set, not owning) is never used for the mapping', () => {
+    const inverse = fixtureProp({ name: 'children', kind: ReferenceKind.ONE_TO_MANY, mappedBy: 'x', fieldNames: [] });
+    const xId = fixtureProp({ name: 'x_id', primary: false });
+    const key = fixtureProp({ name: 'key', primary: false });
+    const meta = fixtureMeta('X', 'x', [inverse, xId, key]);
+    const implicitUniques = new Map([['x', [['x_id', 'key']]]]);
+    RULE9_addImplicitUniqueConstraints([meta], implicitUniques);
+    expect(meta.uniques).toEqual([{ properties: ['x_id', 'key'] }]);
   });
 
   it('RULE9-002: a column set identical to the table\'s own primary key is skipped (Addons.id/AppSettings.key noise, real schema)', () => {
@@ -1057,11 +1087,11 @@ describe('generateEntities — validation diff against the five reference entiti
   }, 30_000);
 
   it(
-    'UNIQUE-001: Rule 9 end-to-end against the real schema — settings gets the inline UNIQUE(user_id, key) as uniques:, AppSettings/Addons do NOT get a redundant entry for their own (TEXT) primary key',
+    'UNIQUE-001: Rule 9 end-to-end against the real schema — settings gets the inline UNIQUE(user_id, key) as uniques:, naming the RELATION property (user), not its persist(false) twin (user_id); AppSettings/Addons do NOT get a redundant entry for their own (TEXT) primary key',
     async () => {
       const { files } = await generateEntities();
       const settings = files.get('Settings.entity.ts');
-      expect(settings).toContain("uniques: [{ properties: ['user_id', 'key'] }],");
+      expect(settings).toContain("uniques: [{ properties: ['user', 'key'] }],");
       const appSettings = files.get('AppSettings.entity.ts');
       expect(appSettings).not.toMatch(/uniques:/);
       const addons = files.get('Addons.entity.ts');

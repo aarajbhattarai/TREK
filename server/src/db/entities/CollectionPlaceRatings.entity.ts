@@ -17,7 +17,7 @@ export class CollectionPlaceRatings {
 export const CollectionPlaceRatingsSchema = defineEntity({
   class: CollectionPlaceRatings,
   repository: () => CollectionPlaceRatingsRepository,
-  uniques: [{ properties: ['collection_place_id', 'user_id'] }],
+  uniques: [{ properties: ['collectionPlace', 'user'] }],
   properties: {
     id: p.integer().primary(),
     collectionPlace: () => p.manyToOne(CollectionPlaces).ref().deleteRule('cascade').hidden().index('idx_collection_place_ratings_place'),

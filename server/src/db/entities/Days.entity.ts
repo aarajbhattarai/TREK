@@ -34,7 +34,7 @@ export class Days {
 export const DaysSchema = defineEntity({
   class: Days,
   repository: () => DaysRepository,
-  uniques: [{ properties: ['trip_id', 'day_number'] }],
+  uniques: [{ properties: ['trip', 'day_number'] }],
   properties: {
     id: p.integer().primary(),
     trip: () => p.manyToOne(Trips).ref().deleteRule('cascade').hidden().index('idx_days_trip_id'),

@@ -15,7 +15,7 @@ export class SchoolHolidayRegions {
 export const SchoolHolidayRegionsSchema = defineEntity({
   class: SchoolHolidayRegions,
   repository: () => SchoolHolidayRegionsRepository,
-  uniques: [{ properties: ['country', 'name'] }],
+  uniques: [{ properties: ['countryRef', 'name'] }],
   properties: {
     id: p.integer().primary(),
     country: p.text().persist(false),

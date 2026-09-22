@@ -15,7 +15,7 @@ export class PackingCategoryAssignees {
 export const PackingCategoryAssigneesSchema = defineEntity({
   class: PackingCategoryAssignees,
   repository: () => PackingCategoryAssigneesRepository,
-  uniques: [{ properties: ['trip_id', 'category_name', 'user_id'] }],
+  uniques: [{ properties: ['trip', 'category_name', 'user'] }],
   properties: {
     id: p.integer().primary(),
     trip: () => p.manyToOne(Trips).ref().deleteRule('cascade').hidden(),

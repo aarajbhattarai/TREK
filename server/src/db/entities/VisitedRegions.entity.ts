@@ -16,7 +16,7 @@ export class VisitedRegions {
 export const VisitedRegionsSchema = defineEntity({
   class: VisitedRegions,
   repository: () => VisitedRegionsRepository,
-  uniques: [{ properties: ['user_id', 'region_code'] }],
+  uniques: [{ properties: ['user', 'region_code'] }],
   properties: {
     id: p.integer().primary(),
     user: () => p.manyToOne(Users).ref().deleteRule('cascade').hidden(),

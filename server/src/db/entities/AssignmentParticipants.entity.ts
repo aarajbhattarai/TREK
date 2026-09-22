@@ -14,7 +14,7 @@ export class AssignmentParticipants {
 export const AssignmentParticipantsSchema = defineEntity({
   class: AssignmentParticipants,
   repository: () => AssignmentParticipantsRepository,
-  uniques: [{ properties: ['assignment_id', 'user_id'] }],
+  uniques: [{ properties: ['assignment', 'user'] }],
   properties: {
     id: p.integer().primary(),
     assignment: () => p.manyToOne(DayAssignments).ref().hidden().index('idx_assignment_participants_assignment'),

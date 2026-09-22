@@ -17,7 +17,7 @@ export class CollabMessageReactions {
 export const CollabMessageReactionsSchema = defineEntity({
   class: CollabMessageReactions,
   repository: () => CollabMessageReactionsRepository,
-  uniques: [{ properties: ['message_id', 'user_id', 'emoji'] }],
+  uniques: [{ properties: ['message', 'user', 'emoji'] }],
   properties: {
     id: p.integer().primary(),
     message: () => p.manyToOne(CollabMessages).ref().deleteRule('cascade').hidden().index('idx_collab_reactions_msg'),

@@ -13,7 +13,7 @@ export class VacayCompanyHolidays {
 export const VacayCompanyHolidaysSchema = defineEntity({
   class: VacayCompanyHolidays,
   repository: () => VacayCompanyHolidaysRepository,
-  uniques: [{ properties: ['plan_id', 'date'] }],
+  uniques: [{ properties: ['plan', 'date'] }],
   properties: {
     id: p.integer().primary(),
     plan: () => p.manyToOne(VacayPlans).ref().deleteRule('cascade').hidden(),

@@ -30,9 +30,9 @@ export const FileLinksSchema = defineEntity({
       name: 'idx_file_links_file_budget',
       properties: ['file_id', 'budget_item_id'],
     },
-    { properties: ['file_id', 'place_id'] },
-    { properties: ['file_id', 'assignment_id'] },
-    { properties: ['file_id', 'reservation_id'] },
+    { properties: ['file', 'place'] },
+    { properties: ['file', 'assignment'] },
+    { properties: ['file', 'reservation'] },
   ],
   properties: {
     id: p.integer().primary(),

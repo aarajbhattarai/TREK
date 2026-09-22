@@ -15,7 +15,7 @@ export class BudgetItemPayers {
 export const BudgetItemPayersSchema = defineEntity({
   class: BudgetItemPayers,
   repository: () => BudgetItemPayersRepository,
-  uniques: [{ properties: ['budget_item_id', 'user_id'] }],
+  uniques: [{ properties: ['budgetItem', 'user'] }],
   properties: {
     id: p.integer().primary(),
     budgetItem: () => p.manyToOne(BudgetItems).ref().deleteRule('cascade').hidden().index('idx_budget_item_payers_item'),

@@ -673,11 +673,13 @@ export function RULE8_bindRepositories(metadata: EntityMetadata[]): void {
  * idx_reservations_external`, …) survives that filter and already renders
  * correctly with no help from this rule — only the inline/unnamed spelling is
  * silently dropped. `settings`'s `UNIQUE(user_id, key)` is the ruling's
- * trigger case (the ON CONFLICT target `em.upsert` needs), but the same gap
- * exists on ~40 other tables in the schema (grep `UNIQUE(` across
- * `db/migrations/*.ts`), so this rule is general — every table, not just
- * `settings` — and this task's report says which entities' `uniques:` this
- * adds where none existed in the hand-written baseline before.
+ * trigger case (metadata FIDELITY for the constraint `em.upsert`'s conflict
+ * target is documented against — see below for what that entry does and
+ * does not buy), but the same gap exists on ~40 other tables in the schema
+ * (grep `UNIQUE(` across `db/migrations/*.ts`), so this rule is general —
+ * every table, not just `settings` — and this task's report says which
+ * entities' `uniques:` this adds where none existed in the hand-written
+ * baseline before.
  *
  * `implicitUniques` is precomputed once per generator run and handed in as
  * plain data (table name -> one string[] of column names per implicit unique
@@ -685,16 +687,42 @@ export function RULE8_bindRepositories(metadata: EntityMetadata[]): void {
  * function like every other rule in this file — it never opens a connection
  * itself.
  *
- * Column names double as property names here without a naming-strategy
- * lookup: `SnakeProps.columnNameToProperty` is the identity (D1), and every
- * FK's persisted scalar twin is already named exactly like its column
- * (`trip_id`, `user_id`) — see the composite `uniques:` blocks already
- * hand-written on `Reservations`/`DocumentSyncItems`/`TrekPhotos`/`FileLinks`,
- * which reference the twin, never the relation. A column an implicit index
- * names that has no matching property (naming-strategy mismatch, or a typo in
- * the migration) throws, naming the table/columns/entity, rather than
- * silently emitting a `uniques:` entry the ORM would reject at discovery
- * time.
+ * A column that IS a single-column FK's join column (the `persist(false)`
+ * twin's column, e.g. `settings.user_id`) is emitted as the RELATION
+ * property name (`user`), never the twin (`user_id`) — looked up from
+ * `meta.relations` (already renamed by RULE5 by the time this rule runs, so
+ * this sees the final, post-rename property name) by matching an owning
+ * to-one relation's single `fieldNames[0]` against the column. Every other
+ * column doubles as its own property name with no naming-strategy lookup
+ * (`SnakeProps.columnNameToProperty` is the identity, D1).
+ *
+ * This is a deliberate DIVERGENCE from the pre-existing hand-written/
+ * generated composite `uniques:` blocks elsewhere in the schema
+ * (`Reservations`/`DocumentSyncItems`/`TrekPhotos`/`FileLinks` all reference
+ * the twin — `['file_id', 'budget_item_id']`, never `['file', 'budgetItem']`
+ * — because those are NAMED `CREATE UNIQUE INDEX`es MikroORM's own
+ * introspection already renders, untouched by this rule, and it always uses
+ * column names there). The reason for the divergence: unlike the twin
+ * spelling, the relation-property spelling is actually consumable by
+ * `em.upsert`'s own conflict-target inference — `getWhereCondition` in
+ * `@mikro-orm/core/utils/upsert-utils.js` matches a `uniques` entry's
+ * `properties` against the upsert payload's own keys, which are PROPERTY
+ * names (`data.user`, never `data.user_id`, since nobody passes a
+ * `persist(false)` twin into `em.upsert`'s data). Proven directly:
+ * `Settings.repository.test.ts`'s SETTINGSREPO-014 calls `em.upsert` on
+ * `Settings` with no `onConflictFields` at all and still gets
+ * `on conflict (\`user_id\`, \`key\`)`.
+ *
+ * That said, this rule's job is METADATA FIDELITY — the generated entity
+ * matching what the migrated schema actually constrains — not a functional
+ * dependency any caller has on it: `SettingsRepository.upsertForUser` keeps
+ * its `onConflictFields: ['user', 'key']` explicit regardless (clearer at
+ * the call site than relying on inference from metadata), and every other
+ * `uniques:` entry this rule adds has no `em.upsert` caller at all yet. A
+ * column an implicit index names that has no matching property AND no
+ * matching relation twin (naming-strategy mismatch, or a typo in the
+ * migration) throws, naming the table/columns/entity, rather than silently
+ * emitting a `uniques:` entry the ORM would reject at discovery time.
  *
  * A column set that is exactly the table's own primary key is skipped: a
  * non-`INTEGER` (or composite) PRIMARY KEY gets the identical kind of
@@ -713,17 +741,29 @@ export function RULE9_addImplicitUniqueConstraints(
     const indexes = implicitUniques.get(meta.tableName);
     if (!indexes) continue;
     const primaryKeys = new Set(meta.primaryKeys);
+    // A single-column owning to-one relation's join column, keyed by that
+    // column so a FK twin (`user_id`) resolves to the relation's own
+    // (post-RULE5-rename) property name (`user`) — see the doc comment above
+    // for why this, rather than the twin, is what gets emitted.
+    const relationNameByColumn = new Map<string, string>();
+    for (const prop of meta.relations) {
+      if (!isOwningToOne(prop) || prop.fieldNames.length !== 1) continue;
+      relationNameByColumn.set(prop.fieldNames[0], prop.name);
+    }
     for (const columns of indexes) {
       if (columns.length === primaryKeys.size && columns.every((column) => primaryKeys.has(column))) continue;
-      for (const column of columns) {
+      const properties = columns.map((column) => {
+        const relationName = relationNameByColumn.get(column);
+        if (relationName) return relationName;
         if (!meta.properties[column]) {
           throw new Error(
             `generate-entities: implicit unique index on ${meta.tableName}(${columns.join(', ')}) references ` +
               `column "${column}", which has no matching property on ${meta.className} (naming-strategy mismatch?).`,
           );
         }
-      }
-      meta.uniques.push({ properties: [...columns] });
+        return column;
+      });
+      meta.uniques.push({ properties });
     }
   }
 }
