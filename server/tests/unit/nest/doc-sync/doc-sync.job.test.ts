@@ -82,6 +82,11 @@ function makeJob(over: Partial<Setup> = {}) {
       return setup.registrarEnabled;
     }),
     unregister: vi.fn(),
+    // task-6-fix-brief.md item 7: the boot-time banner read now runs through
+    // CronRegistrarService.runOnBoot instead of directly inline — this
+    // double just runs fn immediately, reproducing the pre-fix behaviour
+    // exactly, so every existing assertion below is unaffected.
+    runOnBoot: vi.fn(async (_name: string, fn: () => void | Promise<void>) => { await fn(); }),
   };
 
   // Both stubs carry the real signatures, so a case can read back which link a
@@ -149,6 +154,12 @@ describe('DocSyncJob bootstrap', () => {
     const { job, addons } = makeJob();
     await job.onApplicationBootstrap();
     expect(addons.isAddonEnabled).not.toHaveBeenCalled();
+  });
+
+  it('the boot-time interval banner goes through CronRegistrarService.runOnBoot (task-6-review-parity.md C1 — the boot-sweep choke point)', async () => {
+    const { job, registrar } = makeJob({ interval: '90' });
+    await job.onApplicationBootstrap();
+    expect(registrar.runOnBoot).toHaveBeenCalledWith('docsync-boot', expect.any(Function));
   });
 });
 

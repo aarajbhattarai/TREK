@@ -11,12 +11,14 @@ import { describe, it, expect, beforeAll, afterAll, afterEach } from 'vitest';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import Database from 'better-sqlite3';
 import { PluginSupervisor, type SupervisorHooks, type SupervisorTuning } from '../../../src/nest/plugins/supervisor/plugin-supervisor';
 import { PluginRpcHost, type HostDeps } from '../../../src/nest/plugins/host/rpc-host';
 import { PluginDataDb } from '../../../src/nest/plugins/host/plugin-data.service';
 import { createTestPluginRegistry } from '../../../src/nest/plugins/host/rpc-kit/testing';
 import { DbRpc } from '../../../src/nest/plugins/host/rpc/db.rpc';
 import type { PluginUserSettingsService } from '../../../src/nest/plugins/plugin-user-settings.service';
+import { createTestOrm, type TestOrm } from '../../helpers/test-orm';
 
 /**
  * DbRpc also carries `settings.get`, which needs the per-user settings store. No
@@ -53,7 +55,12 @@ function makeSupervisor(events: Array<{ topic: string; data: unknown }>, tuning:
     onEvent: (_id, topic, data) => events.push({ topic, data }),
     onLog: (_id, level, msg, meta) => events.push({ topic: '__log', data: { level, msg, meta } }),
   };
-  return new PluginSupervisor(createRpcHost, hooks, tuning);
+  // task-6-fix-brief.md item 1: every real `ctx.*` round-trip below dispatches
+  // through PluginSupervisor.onMessage's 'req' branch over real child-process
+  // IPC, which now THROWS without a resolveOrm thunk rather than dispatching
+  // unwrapped — so this double needs a real (if otherwise unused) ORM, even
+  // though PluginDataDb/DbRpc here are raw better-sqlite3, not MikroORM.
+  return new PluginSupervisor(createRpcHost, hooks, tuning, () => ormHandle.orm);
 }
 
 /**
@@ -66,17 +73,23 @@ function logMeta<T = Record<string, unknown>>(events: Array<{ topic: string; dat
   return (hit && (hit.data as { meta?: unknown }).meta) as T;
 }
 
-beforeAll(() => {
+const ormDb = new Database(':memory:');
+let ormHandle: TestOrm;
+
+beforeAll(async () => {
   codeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'trekplug-code-'));
   dataRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'trekplug-pdata-'));
   process.env.TREK_PLUGINS_DIR = codeRoot;
   process.env.TREK_PLUGINS_DATA_DIR = dataRoot;
+  ormHandle = await createTestOrm(ormDb);
 });
 afterAll(async () => {
   delete process.env.TREK_PLUGINS_DIR;
   delete process.env.TREK_PLUGINS_DATA_DIR;
   fs.rmSync(codeRoot, { recursive: true, force: true });
   fs.rmSync(dataRoot, { recursive: true, force: true });
+  await ormHandle.close();
+  ormDb.close();
 });
 afterEach(async () => {
   await sup?.shutdownAll();

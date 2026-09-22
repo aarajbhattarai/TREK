@@ -33,6 +33,15 @@ import { CategoriesService } from './categories.service';
 export class CategoriesMcp {
   constructor(
     private readonly categories: CategoriesService,
+    // Carve-out (task-6-review-parity.md M3, mirroring addons.service.ts's own
+    // — see that file's docstring): this domain's own reads/writes are all
+    // repository-backed below; `DatabaseService` stays injected purely to
+    // feed `isDemoUser`'s `isDemoUserId(env, db, userId)`, whose
+    // `SELECT email FROM users WHERE id = ?` lives in
+    // `common/demo-write.ts` (nest/auth/nest/users, not this domain's plan).
+    // `UsersRepository.getEmail` already issues that identical statement —
+    // converting `demo-write.ts` to it is a deferred follow-up
+    // (`deferred.md`), not this plan's.
     private readonly db: DatabaseService,
     private readonly env: RuntimeEnvService,
     private readonly guards: McpToolGuardsService,

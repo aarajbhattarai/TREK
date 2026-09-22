@@ -58,6 +58,11 @@ function makeJob(intervalSetting?: string, enabled = true) {
       return enabled;
     }),
     unregister: vi.fn(),
+    // task-6-fix-brief.md item 7: the boot-time interval read now runs
+    // through CronRegistrarService.runOnBoot instead of directly inline —
+    // this double just runs fn immediately, reproducing the pre-fix
+    // behaviour exactly, so every existing assertion below is unaffected.
+    runOnBoot: vi.fn(async (_name: string, fn: () => void | Promise<void>) => { await fn(); }),
   };
   // Shaped like the real `get<T>(sql, ...params)` rather than a bare `vi.fn()`
   // so the stub cannot quietly drift from the signature the job calls; the
@@ -152,6 +157,17 @@ describe('DawarichSyncJob bootstrap', () => {
     expect(db.get).toHaveBeenCalledTimes(1);
     expect(registrar.register).toHaveBeenCalledTimes(1);
     expect(registrar.unregister).not.toHaveBeenCalled();
+  });
+
+  it('DAWARICH-JOB-013: the boot-time interval read goes through CronRegistrarService.runOnBoot (task-6-review-parity.md C1 — the boot-sweep choke point), and registers at the default cadence if it declines to run fn', async () => {
+    const { job, registrar, db } = makeJob('30');
+    registrar.runOnBoot.mockImplementationOnce(async () => { /* simulates no ORM available — fn never runs */ });
+    await job.onApplicationBootstrap();
+    expect(registrar.runOnBoot).toHaveBeenCalledWith('dawarich-sync-boot', expect.any(Function));
+    expect(db.get).not.toHaveBeenCalled();
+    // minutes keeps its 15-default (the interval read never ran) and the job
+    // still registers, rather than never scheduling at all.
+    expect(registrar.register).toHaveBeenCalledWith('dawarich-sync', '*/15 * * * *', expect.any(Function));
   });
 });
 

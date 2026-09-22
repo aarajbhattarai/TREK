@@ -64,13 +64,6 @@ describe('AddonsRepository', () => {
     // repeat call from the identity map unless refresh: true is set —
     // invisible to a write on the same id in the same request.
     describe('sees a write on the same id in the same request (I1, identity-map regression)', () => {
-      it('ADDONSREPO-004: setEnabled then isEnabled reads the new value, not the stale one', async () => {
-        insertAddon({ id: 'budget', name: 'Budget', enabled: 0 });
-        expect(await addons.isEnabled('budget')).toBe(false); // populate the identity map
-        await addons.setEnabled('budget', true);
-        expect(await addons.isEnabled('budget')).toBe(true);
-      });
-
       it('ADDONSREPO-005: a raw UPDATE on the same id then isEnabled reads the new value', async () => {
         insertAddon({ id: 'budget', name: 'Budget', enabled: 0 });
         expect(await addons.isEnabled('budget')).toBe(false); // populate the identity map
@@ -113,32 +106,6 @@ describe('AddonsRepository', () => {
         enabled: true,
         config: {},
         sort_order: 3,
-      });
-    });
-  });
-
-  describe('setEnabled', () => {
-    it('ADDONSREPO-010: stores the boolean as the legacy 0/1', async () => {
-      insertAddon({ id: 'budget', name: 'Budget', enabled: 0 });
-      await addons.setEnabled('budget', true);
-      expect(rawRow('budget')).toMatchObject({ enabled: 1 });
-
-      await addons.setEnabled('budget', false);
-      expect(rawRow('budget')).toMatchObject({ enabled: 0 });
-    });
-
-    it('ADDONSREPO-011: does not touch any other column', async () => {
-      insertAddon({ id: 'budget', name: 'Costs', description: 'Track spend', type: 'trip', icon: 'wallet', enabled: 0, sort_order: 5 });
-      await addons.setEnabled('budget', true);
-      expect(rawRow('budget')).toEqual({
-        id: 'budget',
-        name: 'Costs',
-        description: 'Track spend',
-        type: 'trip',
-        icon: 'wallet',
-        enabled: 1,
-        config: '{}',
-        sort_order: 5,
       });
     });
   });

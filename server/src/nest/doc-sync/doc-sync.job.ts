@@ -52,7 +52,12 @@ export class DocSyncJob implements OnApplicationBootstrap {
 
   async onApplicationBootstrap(): Promise<void> {
     if (!this.registrar.isEnabled()) return;
-    logInfo(`Document sync: polling every ${await this.intervalSeconds()}s`);
+    // Through runOnBoot (task-6-review-parity.md C1: raw SQL today, but the
+    // wrap belongs at the entrypoint so it stays safe if this dependency
+    // graph goes repository-backed later).
+    await this.registrar.runOnBoot('docsync-boot', async () => {
+      logInfo(`Document sync: polling every ${await this.intervalSeconds()}s`);
+    });
     this.registrar.register('docsync', '* * * * *', () => this.tick());
   }
 

@@ -54,6 +54,11 @@ function makeJobs(overrides: { notifications?: NotificationsService } = {}) {
       return true;
     }),
     unregister: vi.fn(),
+    // task-6-fix-brief.md item 7: the boot-time banner block now runs through
+    // CronRegistrarService.runOnBoot instead of directly inline — this
+    // double just runs fn immediately, reproducing the pre-fix behaviour
+    // exactly, so every existing assertion below is unaffected.
+    runOnBoot: vi.fn(async (_name: string, fn: () => void | Promise<void>) => { await fn(); }),
   };
   const send = vi.fn().mockResolvedValue(undefined);
   const svc = new ReminderJobsService(
@@ -103,6 +108,12 @@ describe('ReminderJobsService bootstrap', () => {
     await svc.onApplicationBootstrap();
     expect(registered).toHaveLength(0);
     expect(logMock.logInfo).not.toHaveBeenCalled();
+  });
+
+  it('RJOB-002b — the boot banner block goes through CronRegistrarService.runOnBoot (task-6-review-parity.md C1 — the boot-sweep choke point)', async () => {
+    const { svc, registrar } = makeJobs();
+    await svc.onApplicationBootstrap();
+    expect(registrar.runOnBoot).toHaveBeenCalledWith('reminder-jobs-boot', expect.any(Function));
   });
 
   it('RJOB-003 — logs the enabled banners by default and the disabled ones when toggled off', async () => {

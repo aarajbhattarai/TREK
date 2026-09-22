@@ -26,6 +26,12 @@ function registrarStub(enabled = true) {
     isEnabled: vi.fn(() => enabled),
     register: vi.fn(() => enabled),
     unregister: vi.fn(),
+    // task-6-fix-brief.md item 7: every boot-time one-off sweep now goes
+    // through CronRegistrarService.runOnBoot instead of running inline —
+    // this double just runs fn immediately (synchronously reaching fn's own
+    // first call, exactly the pre-fix `void this.sweep()` shape), so every
+    // existing assertion below is unaffected.
+    runOnBoot: vi.fn(async (_name: string, fn: () => void | Promise<void>) => { await fn(); }),
   };
 }
 

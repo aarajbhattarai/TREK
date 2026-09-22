@@ -27,13 +27,22 @@ export class DawarichSyncJob implements OnApplicationBootstrap {
 
   async onApplicationBootstrap(): Promise<void> {
     if (!this.registrar.isEnabled()) return;
-    const value = this.db.get<{ value: string }>(
-      'SELECT value FROM app_settings WHERE key = ?',
-      'dawarich_poll_interval_minutes',
-    )?.value;
-    const raw = Number.parseInt(value || '15', 10);
-    const minutes = Number.isFinite(raw) && raw >= 5 && raw <= 59 ? raw : 15;
-    logInfo(`Dawarich sync: scheduled every ${minutes}m`);
+    // Through runOnBoot (task-6-review-parity.md C1: raw SQL today, but the
+    // wrap belongs at the entrypoint so it stays safe if this dependency
+    // graph goes repository-backed later). minutes defaults to the same
+    // fallback the interval read itself falls back to, so an absent MikroORM
+    // (logged distinctly by runOnBoot, never silently) still registers the
+    // job at its default cadence rather than not registering at all.
+    let minutes = 15;
+    await this.registrar.runOnBoot('dawarich-sync-boot', async () => {
+      const value = this.db.get<{ value: string }>(
+        'SELECT value FROM app_settings WHERE key = ?',
+        'dawarich_poll_interval_minutes',
+      )?.value;
+      const raw = Number.parseInt(value || '15', 10);
+      minutes = Number.isFinite(raw) && raw >= 5 && raw <= 59 ? raw : 15;
+      logInfo(`Dawarich sync: scheduled every ${minutes}m`);
+    });
     this.registrar.register('dawarich-sync', `*/${minutes} * * * *`, () => this.tick());
   }
 

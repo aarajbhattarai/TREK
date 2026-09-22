@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterAll } from 'vitest';
+import { describe, it, expect, vi, beforeAll, beforeEach, afterAll } from 'vitest';
 
 /**
  * TrekWsAdapter: the wire protocol and the per-socket flood guard.
@@ -35,11 +35,28 @@ import { TrekWsAdapter } from '../../../src/nest/realtime/trek-ws.adapter';
 import { getServer } from '../../../src/nest/realtime/ws-state';
 import type { Server as HttpServer } from 'node:http';
 import { createSnapshotTestDb } from '../../helpers/db-mock';
-import { createTestOrm } from '../../helpers/test-orm';
+import { createTestOrm, type TestOrm } from '../../helpers/test-orm';
 import { Users } from '../../../src/db/entities/Users.entity';
 
 const testDb = createSnapshotTestDb();
-afterAll(() => testDb.close());
+
+// task-6-fix-brief.md item 1: bindMessageHandlers now THROWS without an `orm`
+// rather than dispatching a matched handler unwrapped (no more silent
+// degrade), so every generic-behaviour test below — none of which cares
+// about the D6 request-context property itself, only that a message reaches
+// its handler — needs the shared adapter to carry a real (if otherwise
+// unexercised) ORM. WSAD-040/041 build their OWN local adapter instances
+// specifically to test the with/without-orm property and are unaffected.
+let adapterOrm: TestOrm;
+let adapter: TrekWsAdapter;
+beforeAll(async () => {
+  adapterOrm = await createTestOrm(testDb);
+  adapter = new TrekWsAdapter({} as HttpServer, adapterOrm.orm);
+});
+afterAll(async () => {
+  await adapterOrm.close();
+  testDb.close();
+});
 
 type MessageListener = (buffer: Buffer) => void;
 
@@ -61,7 +78,6 @@ function fakeSocket() {
   };
 }
 
-const adapter = new TrekWsAdapter({} as HttpServer);
 const frame = (o: unknown) => Buffer.from(JSON.stringify(o));
 /** The adapter hands results to Nest's transform; here it is identity. */
 const transform = (v: unknown) => ({ subscribe: (o: { next: (x: unknown) => void }) => o.next(v) }) as never;
@@ -126,31 +142,19 @@ describe('TrekWsAdapter D6 request context (task-2-review.md C3 ruling)', () => 
   // shape: dispatched from bindMessageHandlers below, not from an Express
   // request, so nothing has forked an EntityManager for it unless the ONE
   // wrapper there (not per-handler) does it.
-  it('WSAD-040: without MikroORM passed to the adapter, a repository read inside a handler throws cannotUseGlobalContext', async () => {
-    const t = await createTestOrm(testDb, { allowGlobalContext: false });
-    try {
-      let caught: unknown;
-      const ad = new TrekWsAdapter({} as HttpServer); // no orm
-      const socket = fakeSocket();
-      let captured: Promise<unknown> | undefined;
-      const capture = (v: unknown) => {
-        captured = v instanceof Promise ? v : Promise.resolve(v);
-        return { subscribe: () => {} } as never;
-      };
-      ad.bindMessageHandlers(
-        socket as never,
-        [{ message: 'join', callback: async () => {
-          try { await t.orm.em.find(Users, {}); } catch (e) { caught = e; }
-        } }] as never,
-        capture,
-      );
-      socket.emit('message', frame({ type: 'join', tripId: 1 }));
-      await captured;
-      expect(caught).toBeInstanceOf(Error);
-      expect(String((caught as Error).message)).toMatch(/global (EntityManager|context)/i);
-    } finally {
-      await t.close();
-    }
+  it('WSAD-040: without MikroORM passed to the adapter, dispatch THROWS rather than running the handler unwrapped (task-6-fix-brief.md item 1: fail closed at the choke point, not just downstream)', () => {
+    const ad = new TrekWsAdapter({} as HttpServer); // no orm
+    const socket = fakeSocket();
+    let handlerRan = false;
+    ad.bindMessageHandlers(
+      socket as never,
+      [{ message: 'join', callback: async () => { handlerRan = true; } }] as never,
+      () => ({ subscribe: () => {} }) as never,
+    );
+    expect(() => socket.emit('message', frame({ type: 'join', tripId: 1 }))).toThrow(/no MikroORM available/i);
+    // The wrapper throws BEFORE calling the handler at all — the handler's
+    // own repository read never even ran unwrapped.
+    expect(handlerRan).toBe(false);
   });
 
   it('WSAD-041: with MikroORM passed to the adapter, the SAME repository read inside a handler succeeds — the wrapper is load-bearing', async () => {

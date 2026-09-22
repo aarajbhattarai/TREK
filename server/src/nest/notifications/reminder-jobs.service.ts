@@ -34,26 +34,30 @@ export class ReminderJobsService implements OnApplicationBootstrap {
     if (!this.registrar.isEnabled()) return;
 
     // Boot banners only — the enable gates are read per tick below; these
-    // reflect the state at boot.
-    try {
-      const reminderEnabled = (await this.getSetting('notify_trip_reminder')) !== 'false';
-      const channelsRaw = (await this.getSetting('notification_channels')) || (await this.getSetting('notification_channel')) || 'none';
-      const activeChannels = channelsRaw === 'none' ? [] : channelsRaw.split(',').map(c => c.trim());
-      if (!reminderEnabled) {
-        logInfo('Trip reminders: disabled in settings');
-      } else {
-        const tripCount = this.db.get<{ c: number }>('SELECT COUNT(*) as c FROM trips WHERE reminder_days > 0 AND start_date IS NOT NULL')?.c ?? 0;
-        logInfo(`Trip reminders: enabled via [${activeChannels.join(',')}]${tripCount > 0 ? `, ${tripCount} trip(s) with active reminders` : ''}`);
-      }
+    // reflect the state at boot. Through runOnBoot (task-6-review-parity.md
+    // C1: raw SQL today, but the wrap belongs at the entrypoint so it stays
+    // safe if this dependency graph goes repository-backed later).
+    await this.registrar.runOnBoot('reminder-jobs-boot', async () => {
+      try {
+        const reminderEnabled = (await this.getSetting('notify_trip_reminder')) !== 'false';
+        const channelsRaw = (await this.getSetting('notification_channels')) || (await this.getSetting('notification_channel')) || 'none';
+        const activeChannels = channelsRaw === 'none' ? [] : channelsRaw.split(',').map(c => c.trim());
+        if (!reminderEnabled) {
+          logInfo('Trip reminders: disabled in settings');
+        } else {
+          const tripCount = this.db.get<{ c: number }>('SELECT COUNT(*) as c FROM trips WHERE reminder_days > 0 AND start_date IS NOT NULL')?.c ?? 0;
+          logInfo(`Trip reminders: enabled via [${activeChannels.join(',')}]${tripCount > 0 ? `, ${tripCount} trip(s) with active reminders` : ''}`);
+        }
 
-      if ((await this.getSetting('notify_todo_due')) !== 'false') {
-        logInfo(`Todo due reminders: enabled (lead ${TODO_REMINDER_LEAD_DAYS}d)`);
-      } else {
-        logInfo('Todo due reminders: disabled in settings');
+        if ((await this.getSetting('notify_todo_due')) !== 'false') {
+          logInfo(`Todo due reminders: enabled (lead ${TODO_REMINDER_LEAD_DAYS}d)`);
+        } else {
+          logInfo('Todo due reminders: disabled in settings');
+        }
+      } catch {
+        /* banners are best-effort */
       }
-    } catch {
-      /* banners are best-effort */
-    }
+    });
 
     this.registrar.register('trip-reminders', '0 9 * * *', () => this.tripTick());
     this.registrar.register('todo-reminders', '0 9 * * *', () => this.todoTick());

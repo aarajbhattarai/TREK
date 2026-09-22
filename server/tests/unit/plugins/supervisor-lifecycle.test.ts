@@ -4,14 +4,25 @@
  * an admin depends on: re-activating a plugin that died stays possible, and a
  * crash-restart cycle doesn't leak the dead child's cron tasks.
  */
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeAll, afterAll, afterEach } from 'vitest';
+import Database from 'better-sqlite3';
 import { PluginSupervisor } from '../../../src/nest/plugins/supervisor/plugin-supervisor';
 import { RpcRateLimiter, TokenBucket } from '../../../src/nest/plugins/host/rate-limit';
+import { createTestOrm, type TestOrm } from '../../helpers/test-orm';
+
+// task-6-fix-brief.md item 1: onMessage's 'req' branch now THROWS without a
+// resolveOrm thunk (no more silent unwrapped dispatch), so the one case below
+// that dispatches a real 'req' message ("refuses a throttled call...") needs a
+// real ORM even though nothing it exercises reaches a repository.
+const ormDb = new Database(':memory:');
+let ormHandle: TestOrm;
+beforeAll(async () => { ormHandle = await createTestOrm(ormDb); });
+afterAll(async () => { await ormHandle.close(); ormDb.close(); });
 
 function makeSupervisor() {
   const dispose = vi.fn();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const s = new PluginSupervisor((() => ({ dispose })) as any, {}, {});
+  const s = new PluginSupervisor((() => ({ dispose })) as any, {}, {}, () => ormHandle.orm);
   const spawn = vi.fn();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (s as any).spawn = spawn;

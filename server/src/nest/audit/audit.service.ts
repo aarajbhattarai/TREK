@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@mikro-orm/nestjs';
+import { ValidationError } from '@mikro-orm/core';
 import { AuditLog } from '../../db/entities/AuditLog.entity';
 import type { AuditLogRepository } from '../../db/repositories/AuditLog.repository';
 import { Users } from '../../db/entities/Users.entity';
@@ -80,10 +81,31 @@ export class AuditService {
     try {
       const email = await this.users.getEmail(userId);
       return email || `uid:${userId}`;
-    } catch { return `uid:${userId}`; }
+    } catch (e) {
+      // RULING (task-6-fix-brief.md item 4): an audit write must never block
+      // the request it is auditing, so this stays a swallow — the documented
+      // exception to "fail closed on a MikroORM ValidationError" every other
+      // domain in this plan follows. But a ValidationError here (typically
+      // cannotUseGlobalContext) is a wiring bug, not an ordinary DB failure,
+      // and folding it into the generic `uid:${userId}` fallback with no log
+      // line would hide a future unwrapped entrypoint. Log it distinctly so
+      // it is never confused with (or lost among) an actual missing user.
+      if (e instanceof ValidationError) {
+        logError(`Audit email lookup ran with no request context: ${e.message}`);
+      }
+      return `uid:${userId}`;
+    }
   }
 
-  /** Best-effort; never throws — failures are logged only. */
+  /**
+   * Best-effort; never throws — failures are logged only. RULING
+   * (task-6-fix-brief.md item 4): this is the one documented exception to
+   * "fail closed on a MikroORM ValidationError" — an audit row must never
+   * become a 500 for the mutation it is recording. A ValidationError still
+   * gets a message distinct from every other write failure (below), so an
+   * unwrapped entrypoint stays visible in the log even though it never
+   * throws.
+   */
   async writeAudit(entry: {
     userId: number | null;
     action: string;
@@ -113,7 +135,11 @@ export class AuditService {
         logDebug(oneLine(`AUDIT ${entry.action} userId=${entry.userId} ${detailsJson}`));
       }
     } catch (e) {
-      logError(`Audit write failed: ${e instanceof Error ? e.message : e}`);
+      if (e instanceof ValidationError) {
+        logError(`Audit write ran with no request context (row not written): ${e.message}`);
+      } else {
+        logError(`Audit write failed: ${e instanceof Error ? e.message : e}`);
+      }
     }
   }
 }

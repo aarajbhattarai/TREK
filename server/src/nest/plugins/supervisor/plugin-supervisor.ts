@@ -120,9 +120,13 @@ export class PluginSupervisor {
     // PluginRuntimeService's own `orm` field is not assigned yet when its `supervisor`
     // field initializer runs (constructor params are assigned after field
     // initializers — see that file's comment), so this is read lazily, once per
-    // dispatch. Optional only so the hand-built doubles in
-    // supervisor-lifecycle.test.ts / provider-hook-grant.test.ts /
-    // event-subscriptions.test.ts (none of which reach a repository) don't need one;
+    // dispatch. Optional at the type level only for the hand-built doubles in
+    // provider-hook-grant.test.ts / event-subscriptions.test.ts, neither of
+    // which ever dispatches a `'req'` message through onMessage — a double
+    // that DOES dispatch (supervisor-lifecycle.test.ts's rate-limit case,
+    // tests/integration/plugins/supervisor.test.ts's real child IPC) must
+    // pass one, because onMessage now THROWS when this returns undefined
+    // (task-6-fix-brief.md item 1 — no more silent unwrapped dispatch).
     // PluginRuntimeService always passes the real MikroORM (OrmModule is global).
     private readonly resolveOrm?: () => { em: EntityManager } | undefined,
   ) {
@@ -568,10 +572,22 @@ export class PluginSupervisor {
         // dispatch's own audit write. Without this, PermissionsService.checkPermission
         // ran outside any context, threw on a cold cache, and the catch served
         // defaults — fail-open on a tightened flag (task-2-review.md C3).
+        //
+        // Fail closed (task-6-fix-brief.md item 1, task-6-review-template.md
+        // Important 1 / M-B): an absent `resolveOrm` used to fall through to
+        // an UNWRAPPED dispatch — silent degrade, the exact shape D6 forbids
+        // at a choke point. It only failed closed downstream, and only
+        // because two OTHER switches happened to hold (production's
+        // `allowGlobalContext: false` and `loadPermissions` rethrowing a
+        // MikroORM `ValidationError`) — nothing here said so. Throw instead:
+        // the dispatch never runs without a context, full stop, regardless of
+        // what those other switches do. The three hand-built test doubles
+        // that dispatch through this path now pass a thunk (`sharedTestOrm`).
         const orm = this.resolveOrm?.();
-        const res = orm
-          ? await withRequestContext(orm, () => sup.rpcHost.dispatch(req, actingUserId))
-          : await sup.rpcHost.dispatch(req, actingUserId);
+        if (!orm) {
+          throw new Error('PluginSupervisor: no ORM available to build a request context for this RPC dispatch');
+        }
+        const res = await withRequestContext(orm, () => sup.rpcHost.dispatch(req, actingUserId));
         sup.child?.send(res);
       } finally {
         sup.rpcLimiter.release();

@@ -123,7 +123,12 @@ describe('plugin boot vs registry scan ordering', () => {
         // (if it had one) first. The boot reconcile must therefore not live there.
         {
           provide: PluginRuntimeService,
-          useFactory: () => new PluginRuntimeService(dbs, new AuditService(auditLogRepo, usersRepo), addonsService, userSettings, undefined, hostFactory),
+          // 8th arg (orm): task-6-fix-brief.md item 1 — PluginSupervisor.onMessage
+          // now THROWS on a 'req' dispatch (e.g. this fixture's ctx.db.migrate in
+          // onLoad) when resolveOrm returns undefined, instead of running it
+          // unwrapped, so this hand-built double needs the same real ORM the
+          // repositories above (auditLogRepo/usersRepo) already share.
+          useFactory: () => new PluginRuntimeService(dbs, new AuditService(auditLogRepo, usersRepo), addonsService, userSettings, undefined, hostFactory, undefined, t?.orm),
         },
         {
           provide: 'REGISTRY_SCAN',

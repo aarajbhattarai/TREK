@@ -208,7 +208,9 @@ describe('load failures', () => {
     // before any request/MCP/WS/cron entrypoint can reach this service, so
     // that race no longer exists — the message-specific swallow is dropped
     // and this failure now takes the same "log and serve defaults" path as
-    // every other repository error.
+    // every other repository error. (task-6-review-template.md Minor 4: this
+    // case does not itself assert getPermissionsCache() stays null for the
+    // same branch — PERM-SVC-024 below does.)
     const spy = vi
       .spyOn(appSettings, 'findByKeyPrefix')
       .mockRejectedValueOnce(new Error('no such table: app_settings'));

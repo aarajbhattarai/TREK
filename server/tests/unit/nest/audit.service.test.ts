@@ -19,6 +19,7 @@ vi.mock('../../../src/nest/audit/audit-log.logger', () => ({
 }));
 
 import type { Request } from 'express';
+import { ValidationError } from '@mikro-orm/core';
 import Database from 'better-sqlite3';
 import { createTables } from '../../../src/db/schema';
 import { runMigrations } from '../../../src/db/migrations';
@@ -38,6 +39,7 @@ testDb.exec('PRAGMA busy_timeout = 5000');
 
 let t: TestOrm;
 let auditLogRepo: AuditLogRepository;
+let usersRepo: UsersRepository;
 let svc: AuditService;
 
 beforeAll(async () => {
@@ -45,7 +47,8 @@ beforeAll(async () => {
   runMigrations(testDb);
   t = await createTestOrm(testDb);
   auditLogRepo = t.repo(AuditLog) as AuditLogRepository;
-  svc = new AuditService(auditLogRepo, t.repo(Users) as UsersRepository);
+  usersRepo = t.repo(Users) as UsersRepository;
+  svc = new AuditService(auditLogRepo, usersRepo);
 });
 
 beforeEach(() => {
@@ -183,6 +186,23 @@ describe('writeAudit', () => {
     const spy = vi.spyOn(auditLogRepo, 'insertEntry').mockRejectedValueOnce(new Error('insert failed'));
     await expect(svc.writeAudit({ userId: 1, action: 'user.login' })).resolves.not.toThrow();
     expect(logError).toHaveBeenCalledWith('Audit write failed: insert failed');
+    spy.mockRestore();
+  });
+
+  it('AUDIT-SVC-020: a MikroORM ValidationError from insertEntry still never throws, but is logged with a message distinct from a normal write failure (task-6-fix-brief.md item 4)', async () => {
+    const spy = vi.spyOn(auditLogRepo, 'insertEntry').mockRejectedValueOnce(ValidationError.cannotUseGlobalContext());
+    await expect(svc.writeAudit({ userId: 1, action: 'user.login' })).resolves.not.toThrow();
+    expect(logError).toHaveBeenCalledWith(expect.stringContaining('Audit write ran with no request context'));
+    expect(logError).not.toHaveBeenCalledWith(expect.stringContaining('Audit write failed:'));
+    spy.mockRestore();
+  });
+
+  it('AUDIT-SVC-021: a MikroORM ValidationError from the email lookup still resolves to uid:<id>, but is logged with a distinct message', async () => {
+    seedUser(1, 'a@b.c');
+    const spy = vi.spyOn(usersRepo, 'getEmail').mockRejectedValueOnce(ValidationError.cannotUseGlobalContext());
+    await svc.writeAudit({ userId: 1, action: 'user.login' });
+    expect(logInfo).toHaveBeenCalledWith(expect.stringContaining('uid:1 logged in'));
+    expect(logError).toHaveBeenCalledWith(expect.stringContaining('Audit email lookup ran with no request context'));
     spy.mockRestore();
   });
 

@@ -1,9 +1,13 @@
 /**
  * GET /api/addons e2e — exercises the AddonsController through the real
- * JwtAuthGuard against a temp SQLite db. getPhotoProviderConfig is
- * mocked; the addons/photo_providers/photo_provider_fields/app_settings reads
+ * JwtAuthGuard against a real migrated-and-seeded temp SQLite db
+ * (createSnapshotTestDb(), task-6-fix-brief.md item 5 — this used to hand-roll
+ * four CREATE TABLEs, a second hand-maintained schema copy whose NOT
+ * NULL/defaults/FK/UNIQUE drifted from the real migrations). getPhotoProviderConfig
+ * is mocked; the addons/photo_providers/photo_provider_fields/app_settings reads
  * run against the temp db (the collab/bag-tracking flags are real AddonsService
- * reads since the admin-1 extraction). Asserts the byte-identical body the legacy inline handler produced.
+ * reads since the admin-1 extraction). Asserts the byte-identical body the legacy
+ * inline handler produced.
  */
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import request from 'supertest';
@@ -11,32 +15,23 @@ import cookieParser from 'cookie-parser';
 import type { Server } from 'http';
 import { DatabaseModule } from '../../src/nest/database/database.module';
 import { Test } from '@nestjs/testing';
-import { seedUser, sessionCookie } from './harness';
+import { sessionCookie } from './harness';
 
-const { db } = vi.hoisted(() => {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const Database = require('better-sqlite3');
-  const tmp = new Database(':memory:');
-  tmp.exec('PRAGMA journal_mode = WAL');
-  tmp.exec(`CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT NOT NULL,
-    email TEXT NOT NULL UNIQUE, role TEXT NOT NULL DEFAULT 'user', password_version INTEGER NOT NULL DEFAULT 0);`);
-  // description/config (addons) and description (photo_providers) are absent
-  // from the legacy SELECTs this suite exercises, but the Addons/PhotoProviders
-  // entities declare them as columns (Plan 3a Task 4) — MikroORM's generated
-  // SELECT names every scalar column, so they must exist on this hand-rolled
-  // schema even though no test here reads them off addons/photo_providers rows.
-  tmp.exec(`CREATE TABLE addons (id TEXT PRIMARY KEY, name TEXT, description TEXT, type TEXT, icon TEXT, enabled INTEGER, config TEXT DEFAULT '{}', sort_order INTEGER);`);
-  tmp.exec(`CREATE TABLE photo_providers (id TEXT PRIMARY KEY, name TEXT, description TEXT, icon TEXT, enabled INTEGER, sort_order INTEGER);`);
-  tmp.exec(`CREATE TABLE photo_provider_fields (id INTEGER PRIMARY KEY AUTOINCREMENT, provider_id TEXT, field_key TEXT,
-    label TEXT, input_type TEXT, placeholder TEXT, hint TEXT, required INTEGER, secret INTEGER,
-    settings_key TEXT, payload_key TEXT, sort_order INTEGER);`);
-  tmp.exec(`CREATE TABLE app_settings (key TEXT PRIMARY KEY, value TEXT);`);
-  return { db: tmp };
+vi.mock('../../src/db/database', async () => {
+  const { createSnapshotTestDb, buildDbMock } = await import('../helpers/db-mock');
+  return buildDbMock(createSnapshotTestDb());
 });
 
-vi.mock('../../src/db/database', () => ({
-  db, canAccessTrip: vi.fn(), isOwner: vi.fn(), getPlaceWithTags: vi.fn(), closeDb: () => {}, reinitialize: () => {},
-}));
+import { db } from '../../src/db/database';
+
+// The snapshot ships the real seeded catalogue (production default addons +
+// photo providers) — this suite wants a known, empty set of each so every
+// case controls its own fixture rows exactly like the legacy hand-rolled
+// tables did. Child table first for the FK on photo_provider_fields.
+db.exec('DELETE FROM photo_provider_fields');
+db.exec('DELETE FROM photo_providers');
+db.exec('DELETE FROM addons');
+db.exec('DELETE FROM app_settings');
 
 const { getPhotoProviderConfig } = vi.hoisted(() => ({
   getPhotoProviderConfig: vi.fn(() => ({ url: 'https://immich.example' })),
@@ -62,7 +57,13 @@ describe('GET /api/addons e2e (real auth guard + temp SQLite)', () => {
   }
 
   beforeAll(async () => {
-    seedUser(db as never, { id: 1 });
+    // harness.ts's seedUser() omits password_hash, which the real migrated
+    // schema requires NOT NULL (share.e2e.test.ts hit the same thing) — a
+    // raw insert here instead, matching the SeededUser shape id/role/
+    // password_version=0 that sessionCookie(1) needs.
+    db.prepare(
+      "INSERT INTO users (id, username, email, password_hash, role, password_version) VALUES (1, 'e2e-user', 'e2e@example.test', 'x', 'user', 0)",
+    ).run();
     // bag tracking is opt-in (=== 'true'); collab flags default ON with no rows
     db.prepare("INSERT INTO app_settings (key, value) VALUES ('bag_tracking_enabled', 'true')").run();
     db.prepare("INSERT INTO addons (id, name, type, icon, enabled, sort_order) VALUES ('packing','Packing','trip','Backpack',1,1)").run();

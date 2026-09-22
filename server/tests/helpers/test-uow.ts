@@ -20,15 +20,22 @@ const tagsPerHandle = new WeakMap<Database.Database, Promise<TagsRepository>>();
 const settingsPerHandle = new WeakMap<Database.Database, Promise<SettingsRepository>>();
 const usersPerHandle = new WeakMap<Database.Database, Promise<UsersRepository>>();
 // ONE MikroORM per handle, shared by createTestUnitOfWork and
-// createTestAppSettingsRepo (task-2-review.md I2): each used to call
-// createTestOrm(db) independently, which opened a SECOND MikroORM.init over the
-// same better-sqlite3 handle — two identity maps, two Kysely clients, and
-// (the functional bug) `UnitOfWork.transactional` opening its transaction on
-// ORM A's EntityManager while a repository built from ORM B resolved a
-// DIFFERENT EntityManager, so `TransactionContext` never saw it: a repository
-// write inside `uow.transactional(...)` silently ran outside the transaction.
-// Both functions below now derive from this single `t.em`, so a repository
-// resolved from `t.repo(X)` and a `UnitOfWork` built from `t.em` share the same
+// createTestAppSettingsRepo (task-2-review.md I2; reworded per
+// task-1-2-rereview.md's I-A — the original wording here claimed a
+// functional bug that measurement disproved): each used to call
+// createTestOrm(db) independently, which opened a SECOND MikroORM.init over
+// the same better-sqlite3 handle — two identity maps and two Kysely clients,
+// neither ever closed. That is NOT the same as a repository write silently
+// running outside a transaction: `TransactionContext.getEntityManager(name)`
+// keys on the EntityManager's CONTEXT NAME ('default'), not on which ORM
+// instance created it, so a repository built from ORM B still resolved ORM
+// A's transactional fork correctly even under the old split wiring —
+// transaction resolution worked either way. The reason to share one ORM per
+// handle is simpler: it is the same EntityManager Nest's real DI graph would
+// inject (one MikroORM per app, not one per consumer), and it stops leaking
+// a second identity map and Kysely client per test file. Both functions below
+// now derive from this single `t.em`, so a repository resolved from
+// `t.repo(X)` and a `UnitOfWork` built from `t.em` share the same
 // context-resolving EntityManager, exactly like Nest's real DI graph.
 const ormPerHandle = new WeakMap<Database.Database, Promise<TestOrm>>();
 /**

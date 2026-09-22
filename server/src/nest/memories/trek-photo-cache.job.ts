@@ -18,12 +18,15 @@ export class TrekPhotoCacheJob implements OnApplicationBootstrap {
 
   onApplicationBootstrap(): void {
     if (!this.registrar.isEnabled()) return;
-    // Run once immediately on startup to evict any entries left over from a previous run
-    void (async () => {
+    // Run once immediately on startup to evict any entries left over from a
+    // previous run — through runOnBoot (task-6-review-parity.md C1: raw SQL
+    // today, but the wrap belongs at the entrypoint so it stays safe if this
+    // dependency graph goes repository-backed later).
+    void this.registrar.runOnBoot('trek-photo-cache-boot', async () => {
       try {
         await this.cache.sweepExpired();
       } catch { /* cache dir may not exist yet — harmless */ }
-    })();
+    });
     this.registrar.register('trek-photo-cache', '0 */2 * * *', () => {
       void this.tick();
     }, { timezone: 'none' });

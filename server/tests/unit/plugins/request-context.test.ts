@@ -12,10 +12,16 @@
  * from its 'everybody' default to 'admin', a role-'user' actor's check must
  * come back `false`. Before the fix (dispatch outside any context, and
  * loadPermissions serving defaults on any error) it came back `true` — a
- * fail-open security regression. After BOTH this round's fixes — the wrapper
- * here, and `loadPermissions` rethrowing a MikroORM `ValidationError` instead
- * of degrading (permissions.service.ts) — an unwrapped dispatch fails CLOSED
- * (a HOST_ERROR envelope), never silently `true`.
+ * fail-open security regression. Task 2's round fixed it two switches away
+ * from the choke point — the wrapper here, and `loadPermissions` rethrowing a
+ * MikroORM `ValidationError` instead of degrading (permissions.service.ts) —
+ * so an unwrapped dispatch failed CLOSED (a HOST_ERROR envelope) but only
+ * because BOTH switches held. task-6-fix-brief.md item 1 (task-6-review-
+ * template.md's Important 1 / M-B) moves the fail-closed decision TO the
+ * choke point itself: an absent `resolveOrm` now makes the dispatch THROW
+ * before it ever reaches `rpcHost.dispatch`, so the child gets no response at
+ * all — not even the old HOST_ERROR envelope — and the security property no
+ * longer depends on `loadPermissions`' rethrow holding too.
  *
  * Global context is disallowed on purpose (`{ allowGlobalContext: false }`),
  * like `tests/unit/nest/database/request-context.test.ts` — the production
@@ -106,16 +112,16 @@ function makeSupervisor(resolveOrm?: () => { em: EntityManager } | undefined) {
 }
 
 describe('PluginSupervisor request context (D6, C3)', () => {
-  it('CTX-PLUGIN-001: unwrapped, the RPC path fails CLOSED on a cold cache — never the old fail-open `true`', async () => {
+  it('CTX-PLUGIN-001: without a resolveOrm thunk, the dispatch THROWS rather than running unwrapped (task-6-fix-brief.md item 1: fail closed at the choke point, not just downstream)', async () => {
     permissions.invalidatePermissionsCache();
     const { supervisor, sup, sent } = makeSupervisor(); // no resolveOrm — the bug's exact reproduction
 
-    await supervisor.onMessage(sup, { k: 'req', id: 'r1', method: 'trips.create', params: { _inv: 'inv-1' } });
-
-    expect(sent).toHaveLength(1);
-    const res = sent[0];
-    expect(res.ok).toBe(false);
-    if (res.ok === false) expect(res.error.message).toMatch(/global (EntityManager|context)/i);
+    await expect(
+      supervisor.onMessage(sup, { k: 'req', id: 'r1', method: 'trips.create', params: { _inv: 'inv-1' } }),
+    ).rejects.toThrow(/no ORM available/i);
+    // The dispatch never ran, so the child never got a response at all —
+    // not even the old fail-closed HOST_ERROR envelope.
+    expect(sent).toHaveLength(0);
   });
 
   it('CTX-PLUGIN-002: wrapped in withRequestContext, the same dispatch enforces the stored override — a "user" role is refused', async () => {

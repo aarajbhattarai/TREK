@@ -1,4 +1,4 @@
-import { Injectable, type OnApplicationBootstrap, type OnModuleDestroy } from '@nestjs/common';
+import { Injectable, Optional, type OnApplicationBootstrap, type OnModuleDestroy } from '@nestjs/common';
 import semver from 'semver';
 import { MikroORM } from '@mikro-orm/core';
 import { DatabaseService } from '../database/database.service';
@@ -195,8 +195,17 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
     // request context built from this. Nest always injects it (MikroOrmCoreModule is
     // global); a hand-built test instance that dispatches through a real
     // PermissionsService/repository must pass one or those reads fail closed with
-    // cannotUseGlobalContext instead of running.
-    private readonly orm?: MikroORM,
+    // cannotUseGlobalContext instead of running (task-6-fix-brief.md item 1: the
+    // supervisor now THROWS rather than dispatching unwrapped when it is absent).
+    // `@Optional()` (task-6-review-template.md Minor 3 — harmonised with
+    // `CronRegistrarService`'s own `@Optional()` orm param; a plain `?` is
+    // TS-only and does not tell Nest's DI a provider may be absent): safe
+    // today because nothing constructs this service through a partial
+    // `Test.createTestingModule` graph, only `new PluginRuntimeService(...)`
+    // by hand or the full `buildApp()` — but the first partial harness that
+    // does needs this, the same lesson `CronRegistrarService` already learned
+    // (task-2-fix-report.md's "Concerns").
+    @Optional() private readonly orm?: MikroORM,
   ) {}
 
   private get db() {

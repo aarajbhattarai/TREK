@@ -104,9 +104,11 @@ export class TrekWsAdapter extends WsAdapter {
     httpServer: HttpServer,
     // D6 (task-2-review.md's controller ruling): a WS message handler has no HTTP
     // request behind it, so every `@SubscribeMessage` dispatch is wrapped here —
-    // ONE wrapper at bindMessageHandlers below, not one per handler. Optional only
-    // for trek-ws-adapter.test.ts, which never reaches a repository; bootstrap.ts
-    // always passes the real MikroORM.
+    // ONE wrapper at bindMessageHandlers below, not one per handler. Optional at
+    // the type level only for hand-built test doubles — bootstrap.ts always
+    // passes the real MikroORM, and any double that dispatches a matched
+    // message through bindMessageHandlers (task-6-fix-brief.md item 1) must
+    // pass one too, or the dispatch throws rather than running unwrapped.
     private readonly orm?: { em: EntityManager },
   ) {
     super(httpServer as unknown as INestApplicationContext);
@@ -219,9 +221,16 @@ export class TrekWsAdapter extends WsAdapter {
       // invoked (before transform()/subscribe() ever run), and RequestContext.create
       // is AsyncLocalStorage.run — it only covers what executes inside this
       // synchronous frame, after which the async chain carries it on its own.
-      const result = this.orm
-        ? withRequestContext(this.orm, () => handler.callback(message, socket))
-        : handler.callback(message, socket);
+      //
+      // Fail closed (task-6-fix-brief.md item 1): a missing `orm` used to fall
+      // through to an unwrapped call — silent degrade. `bootstrap.ts` always
+      // passes the real MikroORM, so this only ever throws in a hand-built
+      // test double that dispatches through bindMessageHandlers without one;
+      // that double now passes an ORM from `sharedTestOrm`.
+      if (!this.orm) {
+        throw new Error('TrekWsAdapter: no MikroORM available to build a request context for this message handler');
+      }
+      const result = withRequestContext(this.orm, () => handler.callback(message, socket));
       transform(result).subscribe({
         next: (response) => {
           if (response !== undefined && socket.readyState === 1) {
