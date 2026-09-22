@@ -281,18 +281,6 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
       // the boot RULING (task-6-rereview.md §2) settled for CronRegistrarService.
       // runOnBoot: no ORM means skip loudly and never call activate — never abort
       // app.init() over a partially-wired test graph.
-      // task-6-rereview.md I1: assertActivatable (inside activate) reads
-      // AddonsService.isAddonEnabled — repository-backed — so this boot loop needs
-      // the same request-context wrap every other D6 choke point got, or an
-      // enabled plugin with a non-empty requiredAddons throws cannotUseGlobalContext
-      // here, silently: the .catch below only reconciles PluginDependencyError /
-      // DependencyCycleError, and the outer try/catch around this whole block eats
-      // everything else.
-      // `activate()` itself stays unwrapped (its HTTP callers already run inside a
-      // request); only this boot-time call site needs it. Fail closed the same way
-      // the boot RULING (task-6-rereview.md §2) settled for CronRegistrarService.
-      // runOnBoot: no ORM means skip loudly and never call activate — never abort
-      // app.init() over a partially-wired test graph.
       if (!this.orm) {
         if (order.length) {
           logError(`PluginRuntimeService.onApplicationBootstrap: no MikroORM available — plugin(s) not activated: ${order.join(', ')}`);

@@ -78,4 +78,23 @@ describe('AirportsService boot backfill', () => {
       errSpy.mockRestore();
     }
   });
+
+  it('AIRPORTS-SVC-004 (task-6-rereview2.md M3): a rejecting runOnBoot (the context machinery itself, not the backfill body) resolves onApplicationBootstrap instead of aborting app.init()', async () => {
+    const registrar = {
+      isEnabled: vi.fn(() => true),
+      register: vi.fn(() => true),
+      unregister: vi.fn(),
+      runOnBoot: vi.fn(async () => { throw new Error('RequestContext.create blew up'); }),
+    };
+    const svc = new AirportsService(new DatabaseService(testDb), registrar as unknown as CronRegistrarService);
+    const backfillSpy = vi.spyOn(svc, 'backfillFlightEndpoints');
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      await expect(svc.onApplicationBootstrap()).resolves.toBeUndefined();
+      expect(backfillSpy).not.toHaveBeenCalled();
+      expect(errSpy).toHaveBeenCalledWith('[DB] Flight endpoint backfill failed:', expect.any(Error));
+    } finally {
+      errSpy.mockRestore();
+    }
+  });
 });

@@ -115,21 +115,26 @@ describe('PluginSupervisor request context (D6, C3)', () => {
     permissions.invalidatePermissionsCache();
     const { supervisor, sup, sent } = makeSupervisor(); // no resolveOrm — the bug's exact reproduction
     const canCreateAsSpy = vi.spyOn(guards, 'canCreateAs');
-
-    await expect(
-      supervisor.onMessage(sup, { k: 'req', id: 'r1', method: 'trips.create', params: { _inv: 'inv-1' } }),
-    ).rejects.toThrow(/no ORM available/i);
-    // The dispatch itself never ran — same fail-closed guarantee as before.
-    expect(canCreateAsSpy).not.toHaveBeenCalled();
-    // But unlike the previous wave, the child DOES get a response: a HOST_ERROR
-    // envelope, matching the rate-limiter refusal's shape, so its ctx.* promise
-    // settles instead of hanging forever.
-    expect(sent).toHaveLength(1);
-    const res = sent[0];
-    expect(res.ok).toBe(false);
-    if (res.ok === false) {
-      expect(res.error.code).toBe('HOST_ERROR');
-      expect(res.error.message).toMatch(/no ORM available/i);
+    try {
+      await expect(
+        supervisor.onMessage(sup, { k: 'req', id: 'r1', method: 'trips.create', params: { _inv: 'inv-1' } }),
+      ).rejects.toThrow(/no ORM available/i);
+      // The dispatch itself never ran — same fail-closed guarantee as before.
+      expect(canCreateAsSpy).not.toHaveBeenCalled();
+      // But unlike the previous wave, the child DOES get a response: a HOST_ERROR
+      // envelope, matching the rate-limiter refusal's shape, so its ctx.* promise
+      // settles instead of hanging forever.
+      expect(sent).toHaveLength(1);
+      const res = sent[0];
+      expect(res.ok).toBe(false);
+      if (res.ok === false) {
+        expect(res.error.code).toBe('HOST_ERROR');
+        expect(res.error.message).toMatch(/no ORM available/i);
+      }
+    } finally {
+      // task-6-rereview2.md M5: never restored before — a leak waiting for the
+      // first mockImplementation another test in this file adds to `guards`.
+      canCreateAsSpy.mockRestore();
     }
   });
 

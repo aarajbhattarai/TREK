@@ -1,0 +1,81 @@
+/**
+ * task-6-rereview2.md I-A: `PluginRuntimeService.onApplicationBootstrap`'s
+ * absent-ORM branch (`plugin-runtime.service.ts:~296-300`) was dead
+ * suite-wide — every existing construction of the service that reaches
+ * `onApplicationBootstrap` (boot-registry-order.test.ts, plugin-host.ts) hands
+ * it a real MikroORM. That branch is the half of the boot RULING
+ * (task-6-rereview.md §2) that makes "skip loudly, never abort app.init()"
+ * defensible: dropping the `logError` call, or falling through to `activate`
+ * anyway, would ship green with no test failing. This file pins it directly.
+ */
+import { describe, it, expect, vi, beforeAll, afterAll, beforeEach } from 'vitest';
+
+const logMock = vi.hoisted(() => ({ LOG_LEVEL: 'error', logInfo: vi.fn(), logError: vi.fn(), logWarn: vi.fn(), logDebug: vi.fn() }));
+vi.mock('../../../src/nest/audit/audit-log.logger', () => logMock);
+
+import { PluginRuntimeService } from '../../../src/nest/plugins/plugin-runtime.service';
+import { DatabaseService } from '../../../src/nest/database/database.service';
+import { AuditService } from '../../../src/nest/audit/audit.service';
+import { PluginUserSettingsService } from '../../../src/nest/plugins/plugin-user-settings.service';
+import { createTestAddonsService } from '../../helpers/test-addons';
+import { createSnapshotTestDb } from '../../helpers/db-mock';
+import { createTestOrm, type TestOrm } from '../../helpers/test-orm';
+import { AuditLog } from '../../../src/db/entities/AuditLog.entity';
+import { Users } from '../../../src/db/entities/Users.entity';
+
+const testDb = createSnapshotTestDb();
+let t: TestOrm;
+
+beforeAll(async () => {
+  // Global context disallowed — the production setting — so the WITH-orm
+  // sibling case genuinely proves activation runs through a request context,
+  // the same reasoning airports.service.test.ts and BOOT-REG-002 use.
+  t = await createTestOrm(testDb, { allowGlobalContext: false });
+});
+afterAll(async () => { await t.close(); testDb.close(); });
+beforeEach(() => vi.clearAllMocks());
+
+/** installedDepRows() reads the `plugins` table directly — no discovery needed. */
+function installEnabledPlugin(id: string): void {
+  testDb
+    .prepare(
+      `INSERT INTO plugins (id, name, status, enabled, version, api_version, permissions, granted_permissions, capabilities, config, dependencies)
+       VALUES (?, ?, 'inactive', 1, '1.0.0', 1, '[]', '[]', '{}', '{}', '{}')`,
+    )
+    .run(id, id);
+}
+
+async function buildRuntime(withOrm: boolean): Promise<PluginRuntimeService> {
+  const dbs = new DatabaseService(testDb);
+  const audit = new AuditService(t.repo(AuditLog), t.repo(Users));
+  const addons = await createTestAddonsService(testDb, dbs);
+  const userSettings = new PluginUserSettingsService(dbs);
+  return new PluginRuntimeService(dbs, audit, addons, userSettings, undefined, undefined, undefined, withOrm ? t.orm : undefined);
+}
+
+describe('PluginRuntimeService.onApplicationBootstrap — absent-ORM boot branch (task-6-rereview2.md I-A)', () => {
+  it('RT-BOOT-NOORM-001: without an ORM, boot logs the skip line naming the plugin id and never calls activate', async () => {
+    installEnabledPlugin('rtboot-noorm');
+    const rt = await buildRuntime(false);
+    const activateSpy = vi.spyOn(rt, 'activate');
+
+    await rt.onApplicationBootstrap();
+
+    expect(logMock.logError).toHaveBeenCalledTimes(1);
+    const [message] = logMock.logError.mock.calls[0] as [string];
+    expect(message).toMatch(/PluginRuntimeService\.onApplicationBootstrap: no MikroORM available/);
+    expect(message).toContain('rtboot-noorm');
+    expect(activateSpy).not.toHaveBeenCalled();
+  });
+
+  it('RT-BOOT-NOORM-002: WITH an ORM, the same arrangement activates the plugin — proves case 001 is not vacuous', async () => {
+    installEnabledPlugin('rtboot-withorm');
+    const rt = await buildRuntime(true);
+    const activateSpy = vi.spyOn(rt, 'activate').mockResolvedValue(undefined);
+
+    await rt.onApplicationBootstrap();
+
+    expect(activateSpy).toHaveBeenCalledWith('rtboot-withorm');
+    expect(logMock.logError).not.toHaveBeenCalled();
+  });
+});

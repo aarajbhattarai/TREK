@@ -20,6 +20,17 @@ import { CronRegistrarService } from '../scheduling/cron-registrar.service';
  * `runOnBoot` has no `isEnabled()` gate (unlike `register()`), so — parity
  * with the pre-existing behavior — the backfill still runs in every test
  * harness that boots this service with a MikroORM, exactly as it did before.
+ *
+ * task-6-rereview2.md M3: the pre-change code could never reject —
+ * `onApplicationBootstrap` awaited one `try`/`catch` around the whole thing.
+ * Putting the `try`/`catch` only INSIDE the `runOnBoot` callback left a gap:
+ * `runOnBoot` itself (its `RequestContext.create`/context machinery) has no
+ * catch of its own, so anything it throws before the callback runs would
+ * propagate out of `onApplicationBootstrap` and abort `app.init()` — a total
+ * boot refusal where the old code swallowed everything. The outer
+ * `try`/`catch` below restores that parity while the inner one stays for its
+ * own reason: `backfillFlightEndpoints` failing must not surface as a
+ * `runOnBoot`-level error.
  */
 @Injectable()
 export class AirportsService implements OnApplicationBootstrap {
@@ -29,13 +40,17 @@ export class AirportsService implements OnApplicationBootstrap {
   ) {}
 
   async onApplicationBootstrap(): Promise<void> {
-    await this.registrar.runOnBoot('airports-flight-endpoints-boot', async () => {
-      try {
-        await this.backfillFlightEndpoints();
-      } catch (err) {
-        console.error('[DB] Flight endpoint backfill failed:', err);
-      }
-    });
+    try {
+      await this.registrar.runOnBoot('airports-flight-endpoints-boot', async () => {
+        try {
+          await this.backfillFlightEndpoints();
+        } catch (err) {
+          console.error('[DB] Flight endpoint backfill failed:', err);
+        }
+      });
+    } catch (err) {
+      console.error('[DB] Flight endpoint backfill failed:', err);
+    }
   }
 
   search(query: string): Airport[] {

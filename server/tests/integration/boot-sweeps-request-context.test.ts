@@ -39,6 +39,20 @@
  * `Promise.all(collected)` give that unawaited call a chance to run (and log)
  * before the assertion, so the regression still fails the test even though
  * its promise was never in `collected`.
+ *
+ * task-6-rereview2.md M2: the log-line assertion alone is timing-based, not
+ * structural, and in practice only `journey-thumbs-boot` makes it
+ * load-bearing — the other six sweeps are raw SQL that never reaches the EM,
+ * so a job silently routed back to a bare `void this.sweep()` (bypassing
+ * `runOnBoot` entirely) would fail here only for journey-thumbs; the per-job
+ * unit test is what actually catches the rest. This file drives all seven
+ * jobs' REAL `onApplicationBootstrap`, each of which routes through
+ * `runOnBoot` — but that routing itself was previously unasserted here. The
+ * second expectation below asserts it directly: every one of the seven boot
+ * names was passed to `runOnBoot`, so a job re-routed around the registrar
+ * fails HERE, not only in its own `*-00N` per-job suite. `journey-thumbs-boot`
+ * remains the one sweep whose body reaches a repository, so it is still what
+ * the log-line assertion below is actually exercising.
  */
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import type { INestApplication } from '@nestjs/common';
@@ -81,7 +95,7 @@ describe('Every onApplicationBootstrap boot sweep runs inside a request context'
     testDb.close();
   });
 
-  it('BOOT-SWEEP-001: the seven jobs\' REAL onApplicationBootstrap, driven through the real production-wired CronRegistrarService, never logs cannotUseGlobalContext / "global EntityManager"', async () => {
+  it('BOOT-SWEEP-001: the seven jobs\' REAL onApplicationBootstrap, driven through the real production-wired CronRegistrarService, each routes through runOnBoot (structurally asserted), and journey-thumbs — the one sweep that reaches a repository today — never logs cannotUseGlobalContext / "global EntityManager"', async () => {
     const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     const registrar = app.get(CronRegistrarService);
     const isEnabledSpy = vi.spyOn(registrar, 'isEnabled').mockReturnValue(true);
@@ -119,6 +133,20 @@ describe('Every onApplicationBootstrap boot sweep runs inside a request context'
         .map((args) => args.map(String).join(' '))
         .filter((line) => /cannotUseGlobalContext|global EntityManager/i.test(line));
       expect(suspicious).toEqual([]);
+
+      // task-6-rereview2.md M2: structural, not timing-based — a job routed back
+      // to a bare `void this.sweep()` (bypassing runOnBoot entirely) fails HERE
+      // by name, regardless of whether its sweep body happens to touch a
+      // repository yet.
+      expect(runOnBootSpy.mock.calls.map((c) => c[0]).sort()).toEqual([
+        'airtrail-sync-boot',
+        'dawarich-sync-boot',
+        'docsync-boot',
+        'journey-thumbs-boot',
+        'place-photo-cache-boot',
+        'reminder-jobs-boot',
+        'trek-photo-cache-boot',
+      ]);
     } finally {
       errSpy.mockRestore();
       isEnabledSpy.mockRestore();
