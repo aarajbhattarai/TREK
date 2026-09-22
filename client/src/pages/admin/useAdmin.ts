@@ -109,11 +109,6 @@ export function useAdmin() {
   // reads the switch on the server, so nothing else in the client needs it.
   const [placesGoogleOnly, setPlacesGoogleOnlyState] = useState<boolean>(false)
   useEffect(() => { adminApi.getPlacesGoogleOnly().then(d => setPlacesGoogleOnlyState(d.enabled)).catch(() => {}) }, [])
-  const handleTogglePlacesGoogleOnly = async () => {
-    const next = !placesGoogleOnly
-    setPlacesGoogleOnlyState(next)
-    try { await adminApi.updatePlacesGoogleOnly(next) } catch { setPlacesGoogleOnlyState(!next) }
-  }
 
   // Transit backend (#1699). googleKeySource says where a Google key would come
   // from for this admin — null means picking Google changes nothing, since the
@@ -202,6 +197,9 @@ export function useAdmin() {
   const [showUpdateModal, setShowUpdateModal] = useState<boolean>(false)
 
   const { user: currentUser, updateApiKeys, setAppRequireMfa, setTripRemindersEnabled, setPlacesPhotosEnabled, setPlacesAutocompleteEnabled, setPlacesDetailsEnabled, setPlacesEnrichEnabled, setPlaceShadowEnabled, logout } = useAuthStore()
+  // The store's copy is what the search screens gate the "search Google
+  // instead" line on, so a saved choice lands there the way a saved key does.
+  const setStorePlacesProvider = useAuthStore(s => s.setPlacesProvider)
   const navigate = useNavigate()
   const toast = useToast()
 
@@ -364,12 +362,24 @@ export function useAdmin() {
     }
   }
 
+  const handleTogglePlacesGoogleOnly = async () => {
+    const next = !placesGoogleOnly
+    setPlacesGoogleOnlyState(next)
+    try {
+      await adminApi.updatePlacesGoogleOnly(next)
+    } catch (err: unknown) {
+      setPlacesGoogleOnlyState(!next)
+      toast.error(getApiErrorMessage(err, t('common.error')))
+    }
+  }
+
   const handleSavePlacesProvider = async (value: string) => {
     const previous = placesProvider
     setPlacesProvider(value)
     setSavingPlacesProvider(true)
     try {
       await authApi.updateAppSettings({ places_provider: value })
+      setStorePlacesProvider(value)
       toast.success(t('admin.placesProvider.saved'))
     } catch (err: unknown) {
       setPlacesProvider(previous)

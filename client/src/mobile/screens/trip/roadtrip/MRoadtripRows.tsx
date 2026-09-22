@@ -3,7 +3,7 @@ import type { CSSProperties, ReactNode } from 'react'
 import MDancingTrek from '../../../components/MDancingTrek'
 import MIconBtn from '../../../components/MIconBtn'
 import { formatDurationShort, serviceColor } from '../../../../components/Roadtrip/roadtripModel'
-import { carrierIcon, rideText, terminalLine } from '../../../../components/Roadtrip/carrierRide'
+import { bookingOpens, carrierIcon, rideText, terminalLine } from '../../../../components/Roadtrip/carrierRide'
 import { bookingClock, bookingIcon } from '../../../../components/Roadtrip/stopBookings'
 import { STOP_KIND_BY_KEY } from '../../../../components/Roadtrip/stopKinds'
 import { formatDistance } from '../../../../utils/units'
@@ -252,12 +252,15 @@ export function RtRideRow({ row, chrome, onOpen }: {
 /**
  * The bookings a stop carries, under its row (#2428): the table, the tickets, the tour,
  * each a chip with the booking panel's icon, its name and the clock it starts at. Chips
- * because a booking is a fact about the stop and not a stop of its own. Each opens its
- * booking; without `onOpen` they are plain.
+ * because a booking is a fact about the stop and not a stop of its own. A chip that
+ * opens is a button; one this reader may not open stays a plain chip, the rule the rail
+ * follows too (`bookingOpens`).
  */
-export function RtBookingChips({ bookings, chrome, onOpen }: {
+export function RtBookingChips({ bookings, chrome, canEdit, onOpen }: {
   bookings: Reservation[]
   chrome: RowChrome
+  /** Whether a table's or a ticket's editor opens for this reader; see `bookingOpens`. */
+  canEdit: boolean
   onOpen?: (reservation: Reservation) => void
 }) {
   return (
@@ -275,7 +278,7 @@ export function RtBookingChips({ bookings, chrome, onOpen }: {
             </>
           )
           const cls = 'inline-flex h-[28px] max-w-full items-center gap-[5px] rounded-full border border-[color:var(--m-inbr)] bg-[color:var(--m-inner)] px-[10px]'
-          return onOpen ? (
+          return onOpen && bookingOpens(r, canEdit) ? (
             <button key={r.id} type="button" onClick={() => onOpen(r)} className={`${cls} text-start`}>{body}</button>
           ) : (
             <span key={r.id} className={cls}>{body}</span>

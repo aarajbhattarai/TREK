@@ -198,6 +198,7 @@ const admin: TranslationStrings = {
   'admin.placesGoogleOnly.title': 'البحث عبر Google فقط',
   'admin.placesGoogleOnly.subtitle': 'كل بحث وكل اقتراح يذهب إلى Google Places. عند الإيقاف يجيب فهرس TREK وOpenStreetMap أولًا، ولا يُسأل Google إلا إذا لم يجدا شيئًا.',
   'admin.placesGoogleOnly.missingKey': 'يتطلب مفتاح Google Maps API. من دونه يعمل البحث عبر فهرس TREK وOpenStreetMap مهما كان وضع هذا المفتاح.',
+  'admin.placesGoogleOnly.otherProvider': 'يتطلب Google كمزود للأماكن. عند اختيار Amap أو OpenStreetMap لا يذهب أي بحث إلى Google مهما كان وضع هذا المفتاح.',
   'admin.transitProvider.title': 'مزود النقل العام',
   'admin.transitProvider.subtitle': 'الخدمة التي تجيب على بحث النقل العام.',
   'admin.transitProvider.transitous': 'Transitous (مجاني)',

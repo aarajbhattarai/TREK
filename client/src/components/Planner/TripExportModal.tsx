@@ -6,6 +6,7 @@ import { IcsSubscribeModal } from './IcsSubscribeModal'
 import { useToast } from '../shared/Toast'
 import type { Trip, Day, Place, Category, AssignmentsMap, Reservation, DayNote } from '../../types'
 import { useSettingsStore } from '../../store/settingsStore'
+import { useRoadtripSettings } from '../../hooks/useRoadtripSettings'
 
 /**
  * What a GPX download can carry. Worded by what someone wants on their device
@@ -61,6 +62,9 @@ export function TripExportModal({
   // The PDF is built outside React, so it cannot read this itself (#2066).
   const timeFormat = useSettingsStore(s => s.settings.time_format) || '24h'
   const distanceUnit = useSettingsStore(s => s.settings.distance_unit)
+  // The export gets the store's assignments and applies the day plan's own filter to
+  // them, so it needs the same switch the plan reads.
+  const showServiceStops = useRoadtripSettings(s => s.roadtrip_service_stops_in_days !== false, tripId)
   const fileBase = trip?.title || 'trip'
 
   // Shared tail of every download: Firefox and Safari cancel the download when
@@ -87,7 +91,7 @@ export function TripExportModal({
       // exported. A missing chunk lands in the catch and shows the same error
       // the export already had.
       const { downloadTripPDF } = await import('../PDF/TripPDF')
-      await downloadTripPDF({ trip, days, places, assignments, categories, dayNotes: flatNotes, reservations, t, locale, timeFormat, distanceUnit })
+      await downloadTripPDF({ trip, days, places, assignments, categories, dayNotes: flatNotes, reservations, t, locale, timeFormat, distanceUnit, showServiceStops })
       onClose()
     } catch (e) {
       console.error('PDF error:', e)

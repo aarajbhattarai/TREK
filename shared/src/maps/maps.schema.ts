@@ -30,7 +30,9 @@ export const mapsSearchRequestSchema = z.object({
    * Ask one provider alone for this search. The index and OpenStreetMap answer
    * first by default and Google is only asked when they find nothing; a caller
    * whose results were not the place they meant can send the same query to
-   * Google instead. Ignored on an instance where Google holds no key.
+   * Google instead. Ignored unless Google holds the keyed slot: without a
+   * Google key, or with Amap or OpenStreetMap picked as the places provider,
+   * the index and OpenStreetMap answer as usual.
    */
   provider: z.enum(['google']).optional(),
 });

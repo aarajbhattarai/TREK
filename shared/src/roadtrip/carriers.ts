@@ -169,11 +169,13 @@ export function carrierSeam(booking: CarrierBooking): CarrierSeam | null {
       (e) => typeof e.lat === 'number' && typeof e.lng === 'number' && Number.isFinite(e.lat) && Number.isFinite(e.lng),
     )
     .sort((a, b) => (a.sequence ?? 0) - (b.sequence ?? 0));
-  const from = located.find((e) => e.role === 'from') ?? located[0];
   // A ride needs both ends to say where the drive stops and where it resumes, and takes
-  // the last located stop for its arrival when no endpoint is marked as one. A hire car's
-  // return is only ever the desk marked as such: guessing one would put a stop on the
-  // road nobody booked. The same desk twice is fine for a car, and no seam for a ride.
+  // the first and the last located stop for them when no endpoint is marked. A hire car's
+  // desks are only ever the ones marked as such: guessing one would put a stop on the
+  // road nobody booked, and a return desk read as the pick-up starts the drive where it
+  // ends. The same desk twice is fine for a car, and no seam for a ride.
+  const from =
+    kind === 'ride' ? (located.find((e) => e.role === 'from') ?? located[0]) : located.find((e) => e.role === 'from');
   const to =
     kind === 'ride'
       ? ([...located].reverse().find((e) => e.role === 'to') ?? located[located.length - 1])
@@ -225,16 +227,14 @@ export function carrierSeam(booking: CarrierBooking): CarrierSeam | null {
 }
 
 /**
- * Minutes of the ride as the clocks tell them, across the days the booking spans.
+ * Minutes of a ride as the clocks tell them, across the days it spans.
  *
  * Wall clocks on purpose, not elapsed time: the chain runs on the local clock, and after
  * landing the day goes on in the destination's time. A ride that lands earlier on the
  * clock than it left (westward across the date line) cannot be told from a ride of no
  * length this way and counts as one. Null when either clock is missing.
  */
-export function carrierRideMinutes(seam: CarrierSeam, dayDelta: number): number | null {
-  const dep = parseClock(seam.departure.clock);
-  const arr = parseClock(seam.arrival?.clock);
+function rideMinutes(dep: number | null, arr: number | null, dayDelta: number): number | null {
   if (dep === null || arr === null) return null;
   return Math.max(0, arr + Math.max(0, dayDelta) * 1440 - dep);
 }
@@ -251,11 +251,6 @@ function rolesOf(seam: CarrierSeam): { start: CarrierTerminal['role']; end: Carr
   return seam.kind === 'rental' ? { start: 'pickup', end: 'return' } : { start: 'departure', end: 'arrival' };
 }
 
-/** Whether a stop is a carrier terminal, which is what every writer has to refuse. */
-export function isCarrierStop(stop: Pick<RoadtripStop, 'carrier'> | null | undefined): boolean {
-  return !!stop?.carrier;
-}
-
 function terminalStop(
   seam: CarrierSeam,
   role: CarrierTerminal['role'],
@@ -269,8 +264,10 @@ function terminalStop(
   // The departure terminal is pinned a check-in ahead of the timetable and left at the
   // timetable's minute; the arrival one is pinned at the timetable's minute and left at
   // once. Neither has a stay of its own. A hire car's desks are pinned at the booking's
-  // own clock, and the drive goes on from them without a stay.
-  const time = role === 'departure' && depart !== null ? formatClock(depart - checkIn) : end.clock;
+  // own clock, and the drive goes on from them without a stay. The pin never goes past
+  // midnight: a red-eye inside its allowance would otherwise read as the evening before,
+  // and the chain would file every stop after it on the next day's card.
+  const pinnedAt = role === 'departure' && depart !== null ? Math.max(0, depart - checkIn) : null;
   return {
     carrier: {
       reservationId: seam.reservationId,
@@ -287,9 +284,9 @@ function terminalStop(
     name: end.name,
     lat: end.lat,
     lng: end.lng,
-    time,
+    time: pinnedAt === null ? end.clock : formatClock(pinnedAt),
     leaveAt: role === 'departure' ? end.clock : null,
-    dwellMinutes: role === 'departure' && depart !== null ? checkIn : 0,
+    dwellMinutes: depart !== null && pinnedAt !== null ? depart - pinnedAt : 0,
     checkInTime: null,
     night: false,
     endDay: false,
@@ -458,12 +455,7 @@ export function carrierLegsFor(
   for (let i = 0; i < run.length - 1; i++) {
     const from = run[i]!;
     const to = run[i + 1]!;
-    const dep = parseClock(from.carrier?.at);
-    const arr = parseClock(to.carrier?.at);
-    const minutes =
-      from.carrier && to.carrier && dep !== null && arr !== null
-        ? Math.max(0, arr + Math.max(0, dayDelta(from, to)) * 1440 - dep)
-        : null;
+    const minutes = rideMinutes(parseClock(from.carrier?.at), parseClock(to.carrier?.at), dayDelta(from, to));
     legs[key(from, to)] = carrierLeg(from, to, minutes);
   }
   return legs;

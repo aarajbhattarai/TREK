@@ -302,6 +302,7 @@ describe('Roadtrip MCP registration and search', () => {
           days: [
             {
               dayNumber: 1,
+              stops: [],
               geometry: [
                 [48, 10],
                 [48, 10.1],
@@ -388,7 +389,7 @@ describe('MCP trip preferences authorization', () => {
 describe('corridor filtering', () => {
   const input = { tripId: 10, dayNumber: 1, category: 'charging' as const, widthKm: 5, offset: 0 };
   function tool() {
-    const plan = { failures: [] as unknown[], omittedVisits: [] as number[], calculated: { dayWindowIssue: null as string | null, days: [{ dayNumber: 1, geometry: [[48, 10], [48, 10.1]] }] } };
+    const plan = { failures: [] as unknown[], omittedVisits: [] as number[], calculated: { dayWindowIssue: null as string | null, days: [{ dayNumber: 1, stops: [], geometry: [[48, 10], [48, 10.1]] }] } };
     const maps = { search: vi.fn(async () => ({ pois: [
       { osm_id: 'a', name: 'Fast', lat: 48, lng: 10.03, category: 'charging', charging: { sockets: [{ type: 'type2', kw: 150 }] } },
       { osm_id: 'b', name: 'Slow', lat: 48, lng: 10.07, category: 'charging', charging: { sockets: [{ type: 'type2', kw: 11 }] } },
@@ -420,6 +421,44 @@ describe('corridor filtering', () => {
     expect((await read({ fromKm: 100 })).hits).toHaveLength(0);
     expect((await read({ toKm: 0 })).hits).toHaveLength(0);
     expect((await read({})).failedSources).toEqual(['plugin']);
+  });
+  it('leaves the ride between two terminals out of the search and drops a hit under the flight path (#2428)', async () => {
+    // The day drives to the airport, flies two degrees north and east, and drives on
+    // from the far one: the geometry jumps straight between the terminals, and the
+    // browser hook already cuts that stretch out. The tool tiles the same pieces.
+    const terminal = (role: 'departure' | 'arrival', lat: number, lng: number) => ({
+      carrier: { reservationId: 7, type: 'flight', role, title: 'LH 2020', code: null, at: null },
+      lat,
+      lng,
+    });
+    const plan = {
+      failures: [],
+      omittedVisits: [],
+      calculated: {
+        dayWindowIssue: null,
+        days: [
+          {
+            dayNumber: 1,
+            stops: [{ lat: 48, lng: 10 }, terminal('departure', 48, 10.1), terminal('arrival', 50, 12), { lat: 50, lng: 12.1 }],
+            geometry: [[48, 10], [48, 10.1], [50, 12], [50, 12.1]],
+          },
+        ],
+      },
+    };
+    const underTheFlight = { lat: 49, lng: 11 };
+    type Box = { south: number; north: number; west: number; east: number };
+    const maps = { search: vi.fn(async (_query: { bbox: Box }) => ({ pois: [
+      { osm_id: 'road', name: 'On the road', lat: 48, lng: 10.05, category: 'fuel' },
+      { osm_id: 'field', name: 'Under the flight', ...underTheFlight, category: 'fuel' },
+    ], sources: ['osm'], failedSources: [], truncated: false, clamped: false })) };
+    const mcp = new RoadtripPlanningMcp({ calculate: async () => plan } as never, maps as never, {} as never);
+    const body = JSON.parse((await mcp.corridor({ ...input, category: 'fuel' }, ctx)).content[0].text as string);
+    const asked = maps.search.mock.calls.map(([query]) => query.bbox);
+    expect(asked.length).toBeGreaterThan(0);
+    expect(asked.some((b) => b.south <= underTheFlight.lat && b.north >= underTheFlight.lat && b.west <= underTheFlight.lng && b.east >= underTheFlight.lng)).toBe(false);
+    expect(body.hits.map((h: { poi: { osm_id: string } }) => h.poi.osm_id)).toEqual(['road']);
+    expect(body.totalAreas).toBe(asked.length);
+    expect(body.complete).toBe(true);
   });
 });
 it('reads the saved roadtrip context without routing', async () => {

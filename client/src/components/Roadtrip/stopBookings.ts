@@ -1,6 +1,7 @@
 import { Ticket, type LucideIcon } from 'lucide-react'
 import { isCarrierType, isRentalType } from '@trek/shared/roadtrip'
 import { RES_ICONS } from '../Planner/DayPlanSidebar.constants'
+import { hidesOnMiddleDay } from '../../utils/dayMerge'
 import { splitReservationDateTime } from '../../utils/formatters'
 import type { Reservation } from '../../types'
 import type { RoadtripStop } from '@trek/shared/roadtrip'
@@ -42,9 +43,27 @@ function byClock(a: Reservation, b: Reservation): number {
   return a.id - b.id
 }
 
+/**
+ * Whether a booking is on the day: it starts or ends there, or the day lies between the
+ * two, the way the day plan lists a three-day tour on its middle day as well. A type
+ * that has nothing to say on its middle days (a parked car) is left off them here too.
+ * Without a day order only the first and the last day of a span can be told.
+ */
+function spansDay(r: Reservation, dayId: number, dayOrder?: (dayId: number) => number | null | undefined): boolean {
+  if (r.day_id === dayId || (r.end_day_id != null && r.end_day_id === dayId)) return true
+  if (!dayOrder || r.day_id == null || r.end_day_id == null) return false
+  const here = dayOrder(dayId)
+  const first = dayOrder(r.day_id)
+  const last = dayOrder(r.end_day_id)
+  if (here == null || first == null || last == null) return false
+  return here > Math.min(first, last) && here < Math.max(first, last) && !hidesOnMiddleDay(r, dayId)
+}
+
 export function dayBookings(
   day: { dayId: number; stops: readonly Pick<RoadtripStop, 'assignmentId' | 'placeId' | 'carrier' | 'automaticNight'>[] },
   reservations: readonly Reservation[],
+  /** A day's position in the trip by its id, so a booking spanning days is on the days between too. */
+  dayOrder?: (dayId: number) => number | null | undefined,
 ): DayBookings {
   if (!reservations.length) return EMPTY
   const atStop = new Map<number, Reservation[]>()
@@ -56,7 +75,7 @@ export function dayBookings(
     // automatic night has no assignment anybody pinned to.
     const real = (i: number): boolean => !stops[i]!.carrier && !stops[i]!.automaticNight
     let index = r.assignment_id ? stops.findIndex((s, i) => real(i) && s.assignmentId === r.assignment_id) : -1
-    const onDay = r.day_id === day.dayId || (r.end_day_id != null && r.end_day_id === day.dayId)
+    const onDay = spansDay(r, day.dayId, dayOrder)
     if (index < 0 && onDay && r.place_id) index = stops.findIndex((s, i) => real(i) && s.placeId === r.place_id)
     if (index >= 0) {
       const list = atStop.get(index) ?? []

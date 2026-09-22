@@ -1,4 +1,4 @@
-import { Fragment, useMemo, useRef } from 'react'
+import { Fragment, useCallback, useMemo, useRef } from 'react'
 import { AlertTriangle, MapPin, Navigation } from 'lucide-react'
 import { useMPlanDaySwipe } from '../plan/useMPlanDaySwipe'
 import { showStopOnMap, useMRoadtrip } from './useMRoadtrip'
@@ -18,6 +18,7 @@ import { isRtlLanguage } from '../../../../i18n'
 import type { MTripTabPanelProps } from '../MTripShell'
 import { legReroutable, type StopRow } from '../../../../components/Roadtrip/roadtripRowModel'
 import { dayBookings } from '../../../../components/Roadtrip/stopBookings'
+import { getDayOrder } from '../../../../utils/dayOrder'
 import type { Reservation } from '../../../../types'
 
 /**
@@ -84,22 +85,30 @@ export default function MRoadtripTab({ planner, shell }: MTripTabPanelProps) {
     else shell.openSheet('rtstop', { dayId: row.stop.ownerDayId, assignmentId: row.stop.assignmentId })
   }
 
+  // Where each day stands in the trip, so a booking spanning several days is listed on
+  // the days between its ends as well.
+  const dayOrder = useCallback((dayId: number) => {
+    const stored = planner.days.find(d => d.id === dayId)
+    return stored ? getDayOrder(stored, planner.days) : null
+  }, [planner.days])
   // The bookings under the stage's stops and the ones the stage has for no stop, keyed
   // by the stop's assignment because the rows carry no index. Opened the way the place
   // sheet opens its linked bookings: a transport in its sheet, anything else in its
-  // editor, and only for somebody allowed to.
+  // editor.
   const bookings = useMemo(() => {
-    const byIndex = stage ? dayBookings(stage, planner.reservations) : null
+    const byIndex = stage ? dayBookings(stage, planner.reservations, dayOrder) : null
     const atStop = new Map<number, Reservation[]>()
     if (stage && byIndex) for (const [i, list] of byIndex.atStop) atStop.set(stage.stops[i]!.assignmentId, list)
     return { atStop, loose: byIndex?.loose ?? [] }
-  }, [stage, planner.reservations])
+  }, [stage, planner.reservations, dayOrder])
+  // A chip that may not be opened is not a button in the first place (`bookingOpens`),
+  // so nothing is turned away silently here.
+  const canEditBookings = planner.can('reservation_edit', planner.trip)
   const openBooking = (res: Reservation) => {
     if (planner.TRANSPORT_TYPES.has(res.type)) {
       shell.openSheet('transport', { reservationId: res.id })
       return
     }
-    if (!planner.can('reservation_edit', planner.trip)) return
     planner.setEditingReservation(res)
     planner.setShowReservationModal(true)
   }
@@ -263,7 +272,7 @@ export default function MRoadtripTab({ planner, shell }: MTripTabPanelProps) {
                             })
                           : undefined}
                       />
-                      {chips && <RtBookingChips bookings={chips} chrome={chrome} onOpen={openBooking} />}
+                      {chips && <RtBookingChips bookings={chips} chrome={chrome} canEdit={canEditBookings} onOpen={openBooking} />}
                     </Fragment>
                   )
                 }
@@ -315,7 +324,7 @@ export default function MRoadtripTab({ planner, shell }: MTripTabPanelProps) {
                     <span aria-hidden="true" />
                     <span className="mb-[6px] block font-geist text-[0.65625rem] font-semibold uppercase tracking-[0.08em] text-m-faint">{t('roadtrip.bookings.loose')}</span>
                   </div>
-                  <RtBookingChips bookings={bookings.loose} chrome={chrome} onOpen={openBooking} />
+                  <RtBookingChips bookings={bookings.loose} chrome={chrome} canEdit={canEditBookings} onOpen={openBooking} />
                 </div>
               )}
             </section>

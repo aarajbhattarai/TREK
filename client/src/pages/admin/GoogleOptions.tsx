@@ -4,7 +4,7 @@ import { ChevronRight } from 'lucide-react'
 interface GoogleOptionsProps {
   /** "Google options" — the heading of the fold. */
   title: string
-  /** Right-hand summary while folded, e.g. "3 of 4 on". */
+  /** Right-hand summary while folded, e.g. "4 of 5 on". */
   summary: string
   children: React.ReactNode
 }
@@ -15,7 +15,7 @@ interface GoogleOptionsProps {
  * Only these switches fold away. The key fields above stay visible: a field you
  * have to go looking for is worse than a long page, and the keys are the reason
  * an admin opens this card at all. The switches are the opposite — set once,
- * then never touched, and there are four of them.
+ * then never touched, and there are five of them.
  *
  * A native <details> rather than a state hook: keyboard operable and announced
  * to screen readers without writing any of that, and it survives a re-render

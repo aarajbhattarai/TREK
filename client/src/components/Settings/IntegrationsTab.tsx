@@ -13,6 +13,7 @@ import ApiKeysSection from './ApiKeysSection'
 import { PRESET_SCOPES_DEFAULT, PRESET_SCOPES_READONLY } from '../../api/oauthScopes'
 import ScopeGroupPicker from '../OAuth/ScopeGroupPicker'
 import { useAuthStore } from '../../store/authStore'
+import { getApiErrorMessage } from '../../utils/apiError'
 
 interface OAuthPreset {
   id: string
@@ -266,8 +267,11 @@ function useIntegrations() {
       setOauthNewUris('')
       setOauthNewScopes([])
       setOauthIsMachine(false)
-    } catch {
-      toast.error(t('settings.oauth.toast.createError'))
+    } catch (err) {
+      // The server names the rule that refused the client (a scope, the
+      // ten-client cap, a redirect URI it will not take); swallowing it left
+      // "Failed to register OAuth client" and nothing to act on.
+      toast.error(getApiErrorMessage(err, t('settings.oauth.toast.createError')))
     } finally {
       setOauthCreating(false)
     }

@@ -14,6 +14,7 @@ import { resolvePluginIcon } from '../../components/shared/PluginIcon'
 import { useTranslation, translateApiError } from '../../i18n'
 import { addonsApi, accommodationsApi, authApi, tripsApi, assignmentsApi, healthApi, airtrailApi, mapsApi, placesApi } from '../../api/client'
 import { getDayOrder } from '../../utils/dayOrder'
+import { TRANSPORT_TYPES } from '../../utils/dayMerge'
 import { isOvernightCategory } from '../../components/Roadtrip/stopKinds'
 import { parsedItemToDraft, isTransportItem, isUnplaceableItem, type BookingReviewDraft } from '../../components/Planner/parsedItemToDraft'
 import type { BookingImportPreviewItem } from '@trek/shared'
@@ -215,7 +216,6 @@ export function useTripPlanner() {
     }).catch(() => {})
   }, [])
 
-  const TRANSPORT_TYPES = new Set(['flight', 'train', 'bus', 'car', 'taxi', 'bicycle', 'cruise', 'ferry', 'transit', 'transport_other'])
 
   const tripPagePlugins = allPlugins.filter(p => p.type === 'trip-page')
   const tripPluginIds = tripPagePlugins.map(p => p.id).join(',')
@@ -2095,6 +2095,7 @@ export function useTripPlanner() {
   // place's lone assignment to hydrate & persist its times; with 0 or 2+
   // assignments the time is ambiguous and the modal hides the fields (#1247).
   const openPlaceEditor = useCallback((place: Place, preferredAssignmentId: number | null = null) => {
+    if (!can('place_edit', trip)) return
     if (roadtripActive && (isServiceStopType(place.stop_type) || tripAccommodations.some(stay => stay.place_id === place.id)) && typeof place.lat === 'number' && typeof place.lng === 'number') {
       const visitId = preferredAssignmentId ?? resolvePoolAssignmentId(assignments, place.id)
       const entry = Object.entries(assignments).find(([, visits]) => visits.some(visit => visit.id === visitId))
@@ -2119,7 +2120,7 @@ export function useTripPlanner() {
     setPlaceFormDayId(null)
     setServiceStopForm(false)
     setShowPlaceForm(true)
-  }, [assignments, roadtripActive, tripAccommodations, days, overnightOptions, roadtripRoutes.days])
+  }, [can, trip, assignments, roadtripActive, tripAccommodations, days, overnightOptions, roadtripRoutes.days])
 
   /**
    * How long the drive stands here, for every stop alike.
@@ -2134,8 +2135,9 @@ export function useTripPlanner() {
   }, [])
 
   const handleDeletePlace = useCallback((placeId) => {
+    if (!can('place_edit', trip)) return
     setDeletePlaceId(placeId)
-  }, [])
+  }, [can, trip])
 
   const confirmDeletePlace = useCallback(async () => {
     if (!deletePlaceId) return

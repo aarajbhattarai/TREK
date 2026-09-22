@@ -187,6 +187,7 @@ export function buildPlanner(overrides: Partial<TripPlanner> = {}): TripPlanner 
 
     // resolveVisibleConnectionIds returns an array, and consumers call .includes().
     visibleConnections: [] as number[],
+    roadtripConnections: [] as number[],
     toggleConnection: vi.fn(),
     allConnectionsShown: false,
     toggleAllConnections: vi.fn(),

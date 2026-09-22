@@ -196,9 +196,9 @@ export function PlacesHeader(S: SidebarState) {
       {/* Says out loud what the count above already narrowed to.
           The map has followed the open day on this filter since #2024, and until now
           nothing anywhere said so: the pool read 55, the map drew five, and the honest
-          conclusion was that the map was broken. It sits under the tabs rather than on
-          the map because a chip over the canvas is unreachable on a phone, which is
-          where this was reported from. */}
+          conclusion was that the map was broken. It sits under the filter select
+          rather than on the map because a chip over the canvas is unreachable on a
+          phone, which is where this was reported from. */}
       {dayScoped && (
         <div
           className="border border-edge-faint bg-surface-tertiary text-content-secondary"

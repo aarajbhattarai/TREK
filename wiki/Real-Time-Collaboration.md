@@ -44,9 +44,7 @@ On **desktop** the panel shows Chat as a fixed 380 px column on the left when ot
 
 ### Links
 
-The **Links** panel (a card beside Notes on desktop, a tab on the phone) collects the web addresses a trip runs on: the booking portal, the shared photo album, the restaurant's menu. **Add link** opens a small form with a **Link title** and the address; **Save link** takes only `http(s)` addresses and refuses anything else with an error, leaving the form open to correct it. Each link is a chip with its title, the site's host and the site's own favicon (a plain link glyph when that cannot be loaded), and opens the page in a new tab.
-
-Members with `collab_edit` get three buttons in the chip's tail: **Edit link** changes the title or the address in place, **Pin link** moves the chip to the front (and **Unpin link** back), **Delete link** removes it without asking. Pinned links come first, then the newest. Members without `collab_edit` can open links but see none of the buttons. Adding, editing, pinning and deleting show up for every connected member at once.
+The **Links** tab collects the web addresses a trip runs on: the booking portal, the shared photo album, the restaurant's menu. **Add link** asks for a title and an `http(s)` address; anything else is refused. Each link is a chip with the site's favicon, the title and the host, two to a row where the panel is wide enough and one to a row where it is narrow, as in the Collab tab on the phone; a pinned chip is drawn in the accent tint. The whole chip is the link and opens the address in a new tab. Members with `collab_edit` can **edit** it in place (the pencil, for title and address alike), **pin** it to the top of the list or **delete** it, which asks first because the link goes for every member; the three sit faint in the chip's tail and come forward on hover, and are always shown on touch. Pinned links come first, then the newest. Adding, editing, pinning and deleting show up for every connected member at once.
 
 ## Conflict handling
 

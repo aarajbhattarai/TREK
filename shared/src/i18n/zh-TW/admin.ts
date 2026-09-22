@@ -214,6 +214,7 @@ const admin: TranslationStrings = {
   'admin.placesGoogleOnly.title': '僅使用 Google 搜尋',
   'admin.placesGoogleOnly.subtitle': '所有搜尋和建議都會送到 Google Places。關閉時，TREK 自有索引和 OpenStreetMap 先回答，只有兩者都沒有結果時才詢問 Google。',
   'admin.placesGoogleOnly.missingKey': '需要 Google Maps API 金鑰。沒有金鑰時，無論此開關如何，搜尋都透過 TREK 索引和 OpenStreetMap 進行。',
+  'admin.placesGoogleOnly.otherProvider': '需要將 Google 設為地點提供者。選擇 Amap 或 OpenStreetMap 時，無論此開關如何設定，搜尋都不會送往 Google。',
   'admin.transitProvider.title': '公共運輸資料來源',
   'admin.transitProvider.subtitle': '由哪個服務回應大眾運輸搜尋。',
   'admin.transitProvider.transitous': 'Transitous（免費）',

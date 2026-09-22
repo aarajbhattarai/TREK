@@ -4,6 +4,7 @@ import { RealtimeService } from '../realtime/realtime.service';
 import { DatabaseService, type TripAccess } from '../database/database.service';
 import { PermissionsService } from '../permissions/permissions.service';
 import { QueryHelpersService } from '../query-helpers/query-helpers.service';
+import { carryVias, locatedStopIds, reseatOwnStop } from '../accommodations/night-seat';
 import { formatAssignmentWithPlace } from '../common/rowShape';
 import type { AssignmentRow, Day, DayNote, User } from '../../types';
 
@@ -354,8 +355,8 @@ export class DaysService {
     tripId: string | number,
     prevDateByDayId: Map<number, string | null>,
   ): void {
-    const stays = this.db.all<{ id: number; start_day_id: number; end_day_id: number }>(
-      'SELECT id, start_day_id, end_day_id FROM day_accommodations WHERE trip_id = ?',
+    const stays = this.db.all<{ id: number; start_day_id: number; end_day_id: number; check_in: string | null }>(
+      'SELECT id, start_day_id, end_day_id, check_in FROM day_accommodations WHERE trip_id = ?',
       tripId
     );
     if (stays.length === 0) return;
@@ -368,16 +369,6 @@ export class DaysService {
         ELSE :date || SUBSTR(reservation_time, 11) END
     WHERE accommodation_id = :accId AND type = 'hotel'
   `);
-    // The day stop a booking wrote moves with it, the way its linked booking does.
-    // Left behind it would sit on a day the traveller no longer sleeps there, with
-    // nothing on screen to say why. Re-indexed to the end of the target day, because
-    // its old position belonged to a day it is leaving.
-    const moveStayStop = this.db.prepare(`
-    UPDATE day_assignments
-    SET day_id = :dayId,
-        order_index = COALESCE((SELECT MAX(order_index) FROM day_assignments WHERE day_id = :dayId), -1) + 1
-    WHERE accommodation_id = :accId
-  `);
 
     for (const stay of stays) {
       const oldStartDate = prevDateByDayId.get(stay.start_day_id);
@@ -388,7 +379,7 @@ export class DaysService {
         if (newStart && newEnd && newStart.day_number <= newEnd.day_number
           && (newStart.id !== stay.start_day_id || newEnd.id !== stay.end_day_id)) {
           updateStay.run(newStart.id, newEnd.id, stay.id);
-          moveStayStop.run({ dayId: newStart.id, accId: stay.id });
+          if (newStart.id !== stay.start_day_id) this.carryStayStop(stay, newStart.id);
           stay.start_day_id = newStart.id;
         }
       }
@@ -398,6 +389,31 @@ export class DaysService {
       if (startDayDate) {
         restampLinkedRes.run({ dayId: stay.start_day_id, date: startDayDate, accId: stay.id });
       }
+    }
+  }
+
+  /**
+   * The day stop a booking wrote moves with it, the way its linked booking does.
+   * Left behind it would sit on a day the traveller no longer sleeps there, with
+   * nothing on screen to say why. Seated on its new day by its check-in like a
+   * night booked there (night-seat.ts), with the drawn roads of both days re-pinned
+   * behind the stops they were drawn after. A day that already holds the place under
+   * a stop of the traveller's keeps that one, and the booking rides along with it.
+   */
+  private carryStayStop(stay: { id: number; check_in: string | null }, dayId: number): void {
+    const own = this.db.all<{ id: number; day_id: number; place_id: number; order_index: number }>(
+      'SELECT id, day_id, place_id, order_index FROM day_assignments WHERE accommodation_id = ? AND day_id != ?', stay.id, dayId
+    );
+    for (const stop of own) {
+      const before = [stop.day_id, dayId].map((id): [number, number[]] => [id, locatedStopIds(this.db, id)]);
+      if (this.db.get('SELECT id FROM day_assignments WHERE day_id = ? AND place_id = ?', dayId, stop.place_id)) {
+        this.db.run('DELETE FROM day_assignments WHERE id = ?', stop.id);
+        this.db.run('UPDATE day_assignments SET order_index = order_index - 1 WHERE day_id = ? AND order_index > ?',
+          stop.day_id, stop.order_index);
+      } else {
+        reseatOwnStop(this.db, stop, stop.place_id, dayId, { id: stay.id, check_in: stay.check_in });
+      }
+      for (const [id, previousIds] of before) carryVias(this.db, id, previousIds, locatedStopIds(this.db, id));
     }
   }
 

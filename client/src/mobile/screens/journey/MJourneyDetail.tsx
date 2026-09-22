@@ -7,7 +7,7 @@ import PhotoLightbox from '../../../components/Journey/PhotoLightbox'
 import ContributorInviteDialog from '../../../components/Journey/ContributorInviteDialog'
 import ConfirmDialog from '../../../components/shared/ConfirmDialog'
 import { ProviderPicker } from '../../../components/Journey/JourneyDetailPageProviderPicker'
-import { photoUrl } from '../../../pages/journeyDetail/JourneyDetailPage.helpers'
+import { photoUrl, posterlessVideo } from '../../../pages/journeyDetail/JourneyDetailPage.helpers'
 import { useJourneyDetail } from '../../../pages/journeyDetail/useJourneyDetail'
 import { useJourneyStore } from '../../../store/journeyStore'
 import { useAddonStore } from '../../../store/addonStore'
@@ -388,7 +388,7 @@ export default function MJourneyDetail() {
                   onClick={() => openLightbox(gallery, i)}
                   className="relative aspect-square overflow-hidden rounded-[14px]"
                 >
-                  {photo.media_type === 'video' && !photo.thumbnail_path ? (
+                  {posterlessVideo(photo) ? (
                     <span className="block h-full w-full bg-[color:var(--m-ic)]" />
                   ) : (
                     <img src={photoUrl(photo, 'thumbnail')} alt={photo.caption || ''} loading="lazy" className="h-full w-full object-cover" />

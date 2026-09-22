@@ -18,7 +18,7 @@ import { useTranslation } from '../../i18n'
 import CustomTimePicker from '../shared/CustomTimePicker'
 import { DEFAULT_FORM, isMapUrl, mergeResult, type PlaceFormData, type ResultField } from './PlaceFormModal.helpers'
 import { getApiErrorMessage } from '../../utils/apiError'
-import { offersGoogleRetry, sourceLabelFor } from '../../utils/placeSource'
+import { offersGoogleRetry, selectGoogleHoldsSlot, sourceLabelFor } from '../../utils/placeSource'
 import { useLocationBias } from '../../hooks/useLocationBias'
 import { BookingCostsSection } from './BookingCostsSection'
 import type { BookingExpenseRequest } from './BookingCostsSection.types'
@@ -196,7 +196,8 @@ function usePlaceFormModal(props: PlaceFormModalProps) {
   const placesSessionRef = useRef(new PlacesSession())
   const toast = useToast()
   const { t, language, locale } = useTranslation()
-  const { hasMapsKey, placesEnrichEnabled } = useAuthStore()
+  const { placesEnrichEnabled } = useAuthStore()
+  const googleAnswers = useAuthStore(selectGoogleHoldsSlot)
   const can = useCanDo()
   const timeFormat = useSettingsStore((s) => s.settings.time_format) || '24h'
   const tripObj = useTripStore((s) => s.trip)
@@ -397,12 +398,15 @@ function usePlaceFormModal(props: PlaceFormModalProps) {
   }
 
   const handleMapsSearch = async (provider?: 'google') => {
-    if (!mapsSearch.trim()) return
+    // The retry sends the query the list came from, not the field: the list
+    // stays on screen while the field is edited or cleared, and the line under
+    // it promises the same query.
+    const trimmed = provider ? (searchMetaRef.current?.query ?? '') : mapsSearch.trim()
+    if (!trimmed) return
     setIsSearchingMaps(true)
     try {
       // A pasted Google Maps or Amap link resolves server-side into a place
-      const trimmed = mapsSearch.trim()
-      if (isMapUrl(trimmed)) {
+      if (!provider && isMapUrl(trimmed)) {
         const resolved = await mapsApi.resolveUrl(trimmed)
         if (resolved.lat && resolved.lng) {
           setForm(prev => ({
@@ -419,8 +423,8 @@ function usePlaceFormModal(props: PlaceFormModalProps) {
           return
         }
       }
-      const result = await mapsApi.search(mapsSearch, language, locationBiasPoint, provider)
-      searchMetaRef.current = { query: mapsSearch.trim(), source: result.source || 'unknown' }
+      const result = await mapsApi.search(trimmed, language, locationBiasPoint, provider)
+      searchMetaRef.current = { query: trimmed, source: result.source || 'unknown' }
       setMapsResults(result.places || [])
       setSearchSource(result.source || '')
     } catch (err: unknown) {
@@ -760,7 +764,7 @@ function usePlaceFormModal(props: PlaceFormModalProps) {
     language,
     locale,
     timeFormat,
-    hasMapsKey,
+    googleAnswers,
     placesEnrichEnabled,
     can,
     tripObj,
@@ -838,7 +842,7 @@ export default function PlaceFormModal(props: PlaceFormModalProps) {
     toast,
     t,
     language,
-    hasMapsKey,
+    googleAnswers,
     placesEnrichEnabled,
     can,
     tripObj,
@@ -1005,8 +1009,9 @@ export default function PlaceFormModal(props: PlaceFormModalProps) {
           {/* The index answers first and Google only when it finds nothing, so a
               list with the wrong place on it never reaches Google by itself. One
               quiet line under the list sends the same query there, on an instance
-              that has a key and for a list Google did not already produce. */}
-          {mapsResults.length > 0 && offersGoogleRetry(searchSource, hasMapsKey) && (
+              where Google holds the key slot and for a list Google did not
+              already produce. */}
+          {mapsResults.length > 0 && offersGoogleRetry(searchSource, googleAnswers) && (
             <button
               type="button"
               onClick={() => handleMapsSearch('google')}

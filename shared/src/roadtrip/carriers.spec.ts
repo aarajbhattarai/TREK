@@ -1,5 +1,5 @@
 /**
- * ROADTRIP-CARRIERS-001..019: a booking the traveller rides becomes a seam in the drive,
+ * ROADTRIP-CARRIERS-001..021: a booking the traveller rides becomes a seam in the drive,
  * and a hire car puts its desks on it.
  *
  * The road ends at the terminal the ride leaves from and starts again at the one it
@@ -15,11 +15,9 @@ import {
   carrierLeg,
   carrierLegsFor,
   carrierReservationIds,
-  carrierRideMinutes,
   carrierSeam,
   carriesTheCar,
   isCarrierMode,
-  isCarrierStop,
   isPickupStop,
   seatCarrierStops,
   terminalAssignmentId,
@@ -196,7 +194,6 @@ describe('a hire car', () => {
     )!;
     expect(noDesk.arrival).toBeNull();
     expect(carrierSeam(rental({ endpoints: [] }))).toBeNull();
-    expect(carrierRideMinutes(noDay, 0)).toBeNull();
     const seated = seatCarrierStops(1, [stop({ ownerIndex: 0, time: '10:00' })], [0], [noDay]);
     expect(seated.map((s) => s.carrier?.role ?? s.name)).toEqual(['pickup', 'Stop 0']);
     expect(seatCarrierStops(3, [stop({ ownerIndex: 0 })], [0], [noDay]).map((s) => s.carrier?.role ?? s.name)).toEqual([
@@ -222,7 +219,6 @@ describe('a hire car', () => {
       incomingLegMode: null,
     });
     expect(pickup.assignmentId).toBe(terminalAssignmentId(9, 'pickup'));
-    expect(isCarrierStop(pickup)).toBe(true);
     expect(isPickupStop(pickup)).toBe(true);
     // No ride leaves a pick-up desk: the leg out of it is a road like any other.
     expect(carrierLegsFor([pickup, first[1]!], 'driving', () => 0, roadtripLegKey)).toBeNull();
@@ -283,19 +279,52 @@ describe('a hire car', () => {
     expect(day.driveWarnings.some((w) => w.code === 'range')).toBe(false);
     expect(routes.totalStops).toBe(3);
   });
+
+  it('ROADTRIP-CARRIERS-021: a hire car whose pick-up desk is not located stands nowhere, the return desk alone is no pick-up', () => {
+    // The form and the booking import both drop an endpoint that did not geocode, so a
+    // one-way hire can arrive with its return desk only. Reading that desk as the pick-up
+    // started the drive in the city the car is handed back in.
+    const returnOnly = rental({
+      endpoints: [{ role: 'to', sequence: 1, name: 'Sixt Airport', code: 'HAM', lat: 53.63, lng: 9.99 }],
+    });
+    expect(carrierSeam(returnOnly)).toBeNull();
+    const plannedStopOnly = rental({
+      endpoints: [
+        { role: 'stop', sequence: 1, name: 'Luebeck', code: null, lat: 53.87, lng: 10.69 },
+        { role: 'to', sequence: 2, name: 'Sixt Airport', code: 'HAM', lat: 53.63, lng: 9.99 },
+      ],
+    });
+    expect(carrierSeam(plannedStopOnly)).toBeNull();
+    // A ride still takes the first located stop for its departure when none is marked.
+    const unmarked = flight({
+      endpoints: [
+        { role: 'stop', sequence: 0, name: 'Munich Airport', code: 'MUC', lat: 48.35, lng: 11.78 },
+        { role: 'to', sequence: 1, name: 'Hamburg Airport', code: 'HAM', lat: 53.63, lng: 9.99 },
+      ],
+    });
+    expect(carrierSeam(unmarked)!.departure.code).toBe('MUC');
+  });
 });
 
-describe('carrierRideMinutes', () => {
+describe('the minutes of a ride', () => {
+  const rideOf = (booking: CarrierBooking, dayDelta: number): RoutedLeg => {
+    const seam = carrierSeam(booking)!;
+    const [dep] = seatCarrierStops(seam.departure.dayId, [], [], [seam]) as [RoadtripStop];
+    const arr = seatCarrierStops(seam.arrival!.dayId, [], [], [seam]).find((s) => s.carrier?.role === 'arrival')!;
+    return carrierLegsFor([dep, arr], 'flight', () => dayDelta, roadtripLegKey)![roadtripLegKey(dep, arr)]!;
+  };
+
   it('ROADTRIP-CARRIERS-007: the ride is what the clocks say, across the days the booking spans, and never negative', () => {
-    const same = carrierSeam(flight())!;
-    expect(carrierRideMinutes(same, 0)).toBe(70);
-    const overnight = carrierSeam(flight({ reservation_time: '22:00', reservation_end_time: '07:00', end_day_id: 2 }))!;
-    expect(carrierRideMinutes(overnight, 1)).toBe(540);
+    expect(rideOf(flight(), 0).seg.duration).toBe(70 * 60);
+    const overnight = flight({ reservation_time: '22:00', reservation_end_time: '07:00', end_day_id: 2 });
+    expect(rideOf(overnight, 1).seg.duration).toBe(540 * 60);
     // Westward across the date line the clock lands before it left; the chain cannot
     // run backwards, so the ride counts as none rather than as a day.
-    const dateLine = carrierSeam(flight({ reservation_time: '10:00', reservation_end_time: '06:00' }))!;
-    expect(carrierRideMinutes(dateLine, 0)).toBe(0);
-    expect(carrierRideMinutes(carrierSeam(flight({ reservation_end_time: null }))!, 0)).toBeNull();
+    expect(rideOf(flight({ reservation_time: '10:00', reservation_end_time: '06:00' }), 0).seg.duration).toBe(0);
+    // Without an arrival clock there are no minutes to give, and the leg says so.
+    const unclocked = rideOf(flight({ reservation_end_time: null }), 0);
+    expect(unclocked.seg.duration).toBe(0);
+    expect(unclocked.seg.durationText).toBe('');
   });
 });
 
@@ -339,8 +368,6 @@ describe('seatCarrierStops', () => {
     expect(dep.placeId).toBeLessThan(0);
     expect(dep.ownerIndex).toBe(2);
     expect(arr.ownerIndex).toBe(2);
-    expect(isCarrierStop(dep)).toBe(true);
-    expect(isCarrierStop(day[0])).toBe(false);
   });
 
   it('ROADTRIP-CARRIERS-009: a dragged position decides among untimed stops, and a ride before every timed stop opens the day', () => {
@@ -529,5 +556,65 @@ describe('the ride in the drive', () => {
     expect(chainTwo.stops.map((s) => s.carrier?.role ?? s.name)).toEqual(['arrival', 'Stop 0']);
     expect(chainTwo.schedule.entries[0]).toMatchObject({ arrival: '07:00' });
     expect(chainTwo.stops.some((s) => s.automaticNight)).toBe(false);
+  });
+
+  it('ROADTRIP-CARRIERS-020: a red-eye inside its check-in allowance is pinned at midnight on its own day, and the day stays on one card', () => {
+    // 00:30 less an hour is 23:30, which the clock wraps onto the evening before: the
+    // chain then read the flight as leaving the next day and filed the arrival and every
+    // stop after it on the next card, with a spill mark on a day nothing spilled from.
+    const redEye = carrierSeam(flight({ reservation_time: '00:30', reservation_end_time: '02:30' }))!;
+    const seated = seatCarrierStops(
+      1,
+      [
+        stop({ ownerIndex: 0, time: '09:00', dwellMinutes: 0 }),
+        stop({ ownerIndex: 1, time: '14:00', dwellMinutes: 0 }),
+      ],
+      [0, 1],
+      [redEye],
+    );
+    expect(seated.map((s) => s.carrier?.role ?? s.name)).toEqual(['departure', 'arrival', 'Stop 0', 'Stop 1']);
+    const [dep, arr, first, second] = seated as [RoadtripStop, RoadtripStop, RoadtripStop, RoadtripStop];
+    expect(dep).toMatchObject({ time: '00:00', leaveAt: '00:30', dwellMinutes: 30 });
+    expect(arr.time).toBe('02:30');
+
+    const nextDay = [
+      stop({ ownerIndex: 0, ownerDayId: 2, time: '10:00', dwellMinutes: 0, lat: 53.7 }),
+      stop({ ownerIndex: 1, ownerDayId: 2, time: '12:00', dwellMinutes: 0, lat: 53.9 }),
+    ];
+    const legs: Record<string, RoutedLeg> = {
+      [roadtripLegKey(arr, first)]: road(30),
+      [roadtripLegKey(first, second)]: road(30),
+      [roadtripLegKey(nextDay[0]!, nextDay[1]!)]: road(30),
+      ...carrierLegsFor([dep, arr], 'flight', () => 0, roadtripLegKey)!,
+    };
+    const routes = assembleRoadtrip({
+      plan: [
+        { dayId: 1, dayNumber: 1, date: '2026-06-01', title: null, stops: seated },
+        { dayId: 2, dayNumber: 2, date: '2026-06-02', title: null, stops: nextDay },
+      ],
+      quietDays: [],
+      window: null,
+      distanceUnit: 'metric',
+      allLegs: legs,
+      snapByDay: {},
+      missedByDay: {},
+      loading: false,
+      limits: { legMinutes: null, dayMinutes: null, rangeKm: null },
+      vehicleKind: 'combustion',
+      connectDays: false,
+      boundaries: [],
+      labels: { start: 'go', end: 'stop' },
+    });
+    expect(routes.days.map((d) => d.stops.map((s) => s.carrier?.role ?? s.name))).toEqual([
+      ['departure', 'arrival', 'Stop 0', 'Stop 1'],
+      ['Stop 0', 'Stop 1'],
+    ]);
+    expect(routes.days[0]!.schedule.entries.map((e) => [e.arrival, e.departure])).toEqual([
+      ['00:00', '00:30'],
+      ['02:30', '02:30'],
+      ['09:00', '09:00'],
+      ['14:00', '14:00'],
+    ]);
+    expect(routes.days.some((d) => d.spills?.length)).toBe(false);
   });
 });

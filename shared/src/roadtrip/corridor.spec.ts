@@ -2,13 +2,18 @@ import {
   boxAround,
   corridorTiles,
   distanceToSegmentKm,
+  drivenPieces,
   haversineKm,
+  inRiddenRange,
   pointAtMeters,
   projectOntoRoute,
+  rideGaps,
+  riddenRanges,
   sliceAtMeters,
   simplifyLine,
   type LatLng,
 } from './corridor';
+import type { RoadtripStop } from './planning-types';
 
 import { describe, it, expect } from 'vitest';
 
@@ -281,5 +286,110 @@ describe('sliceAtMeters', () => {
     ];
     const out = sliceAtMeters(doubled, 10_000, 20_000);
     expect(out.every((p) => Number.isFinite(p.lat) && Number.isFinite(p.lng))).toBe(true);
+  });
+});
+
+describe('a ride in the corridor (#2428)', () => {
+  // A drive north along one meridian, a flight on to the next terminal, and a short drive
+  // after it: a degree of latitude is about 111 km, so every figure reads off the line.
+  const ORIGIN: LatLng = { lat: 52, lng: 13 };
+  const DEPARTURE: LatLng = { lat: 53, lng: 13 };
+  const ARRIVAL: LatLng = { lat: 55, lng: 13 };
+  const HOTEL: LatLng = { lat: 55.5, lng: 13 };
+  const spine = [ORIGIN, DEPARTURE, ARRIVAL, HOTEL];
+  const underTheFlight: LatLng = { lat: 54, lng: 13 };
+
+  const terminal = (
+    role: 'departure' | 'arrival' | 'pickup' | 'return',
+    at: LatLng,
+    reservationId = 7,
+  ): Pick<RoadtripStop, 'carrier' | 'lat' | 'lng'> => ({
+    carrier: {
+      reservationId,
+      type: role === 'pickup' || role === 'return' ? 'car' : 'flight',
+      role,
+      title: '',
+      code: null,
+      at: null,
+    },
+    ...at,
+  });
+
+  it('a departure followed by the arrival of its own booking is a gap, at the departure index', () => {
+    const stops = [ORIGIN, terminal('departure', DEPARTURE), terminal('arrival', ARRIVAL), HOTEL];
+    expect(rideGaps(stops)).toEqual([{ index: 1, from: DEPARTURE, to: ARRIVAL }]);
+  });
+
+  it('a lone departure, another booking’s arrival and a hire car’s desks make no gap', () => {
+    // Landing tomorrow, the arrival is on another day; the drive between a return desk
+    // and a pick-up desk IS driven, whatever booking the two belong to.
+    expect(rideGaps([ORIGIN, terminal('departure', DEPARTURE)])).toEqual([]);
+    expect(rideGaps([terminal('departure', DEPARTURE, 7), terminal('arrival', ARRIVAL, 8)])).toEqual([]);
+    expect(rideGaps([terminal('pickup', DEPARTURE), terminal('return', ARRIVAL)])).toEqual([]);
+    expect(rideGaps([])).toEqual([]);
+  });
+
+  it('projects both terminals onto the spine and keeps the stretches in order', () => {
+    const [ride] = riddenRanges(spine, [{ from: DEPARTURE, to: ARRIVAL }]);
+    expect(ride!.fromKm).toBeCloseTo(111, -1);
+    expect(ride!.toKm).toBeCloseTo(333, -1);
+    // Handed in backwards, or twice over, the stretches still read from the start.
+    const two = riddenRanges(spine, [
+      { from: ARRIVAL, to: HOTEL },
+      { from: ARRIVAL, to: DEPARTURE },
+    ]);
+    expect(two.map((r) => Math.round(r.fromKm))).toEqual([111, 334]);
+    // A ride the spine cannot place, or whose ends land on the same point, is no stretch.
+    expect(riddenRanges([ORIGIN], [{ from: DEPARTURE, to: ARRIVAL }])).toEqual([]);
+    expect(riddenRanges(spine, [{ from: DEPARTURE, to: DEPARTURE }])).toEqual([]);
+  });
+
+  it('a hit under the flight is inside the ride, the terminals themselves are not', () => {
+    const ridden = riddenRanges(spine, [{ from: DEPARTURE, to: ARRIVAL }]);
+    const along = (p: LatLng): number => projectOntoRoute(p, spine)!.alongKm;
+    expect(inRiddenRange(ridden, along(underTheFlight))).toBe(true);
+    expect(inRiddenRange(ridden, along(DEPARTURE))).toBe(false);
+    expect(inRiddenRange(ridden, along(ARRIVAL))).toBe(false);
+    expect(inRiddenRange(ridden, along(ORIGIN))).toBe(false);
+    expect(inRiddenRange([], along(underTheFlight))).toBe(false);
+  });
+
+  it('cuts the line into the driven pieces, and no box is asked for under the flight', () => {
+    const ridden = riddenRanges(spine, [{ from: DEPARTURE, to: ARRIVAL }]);
+    const pieces = drivenPieces(spine, ridden);
+    expect(pieces).toHaveLength(2);
+    expect(pieces[0]![0]).toEqual(ORIGIN);
+    expect(pieces[0]![pieces[0]!.length - 1]!.lat).toBeCloseTo(DEPARTURE.lat, 3);
+    expect(pieces[1]![0]!.lat).toBeCloseTo(ARRIVAL.lat, 3);
+    expect(pieces[1]![pieces[1]!.length - 1]).toEqual(HOTEL);
+
+    const covers = (tiles: ReturnType<typeof corridorTiles>, p: LatLng): boolean =>
+      tiles.some((t) => t.south <= p.lat && t.north >= p.lat && t.west <= p.lng && t.east >= p.lng);
+    const tiles = pieces.flatMap((piece) => corridorTiles(piece, 5));
+    expect(covers(tiles, underTheFlight)).toBe(false);
+    expect(covers(tiles, { lat: 52.5, lng: 13 })).toBe(true);
+    // The same line straight through is what the search asked for before.
+    expect(covers(corridorTiles(spine, 5), underTheFlight)).toBe(true);
+  });
+
+  it('without a ride the whole line is the one piece, and a window is a slice of it', () => {
+    expect(drivenPieces(spine, [])).toEqual([spine]);
+    expect(drivenPieces(spine, [])[0]).toBe(spine);
+    const [windowed] = drivenPieces(spine, [], { fromKm: 0, toKm: 50 });
+    expect(windowed![windowed!.length - 1]!.lat).toBeCloseTo(52.45, 1);
+    expect(drivenPieces([ORIGIN], [])).toEqual([]);
+  });
+
+  it('a window and a ride together leave the driven part of the window only', () => {
+    const ridden = riddenRanges(spine, [{ from: DEPARTURE, to: ARRIVAL }]);
+    const pieces = drivenPieces(spine, ridden, { fromKm: 100, toKm: 400 });
+    expect(pieces).toHaveLength(2);
+    expect(pieces[0]![0]!.lat).toBeCloseTo(52.9, 1);
+    expect(pieces[0]![pieces[0]!.length - 1]!.lat).toBeCloseTo(53, 2);
+    expect(pieces[1]![0]!.lat).toBeCloseTo(55, 2);
+    expect(pieces[1]![pieces[1]!.length - 1]).toEqual(HOTEL);
+    // A window that ends before the ride never reaches it; one lying inside it is empty.
+    expect(drivenPieces(spine, ridden, { fromKm: 0, toKm: 50 })).toHaveLength(1);
+    expect(drivenPieces(spine, ridden, { fromKm: 150, toKm: 300 })).toEqual([]);
   });
 });

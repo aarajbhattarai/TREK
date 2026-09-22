@@ -11,6 +11,7 @@ import MChip from '../../components/MChip'
 import { MSetCard, MSetEyebrow, MSetInput, MSetTextarea, MSetButton, MSetHint, MSetRow } from './MSettingsUi'
 import MConfirmSheet from './MConfirmSheet'
 import MSegmented from '../../components/MSegmented'
+import { getApiErrorMessage } from '../../../utils/apiError'
 
 interface OAuthPreset {
   id: string
@@ -188,8 +189,11 @@ export default function MSettingsMcp() {
       setNewUris('')
       setNewScopes([])
       setIsMachine(false)
-    } catch {
-      toast.error(t('settings.oauth.toast.createError'))
+    } catch (err) {
+      // The server names the rule that refused the client (a scope, the
+      // ten-client cap, a redirect URI it will not take); swallowing it left
+      // "Failed to register OAuth client" and nothing to act on.
+      toast.error(getApiErrorMessage(err, t('settings.oauth.toast.createError')))
     } finally {
       setCreating(false)
     }

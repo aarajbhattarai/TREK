@@ -622,6 +622,19 @@ describe('MPlanTimeline', () => {
       expect(mocks.tl.removeAssignment).toHaveBeenCalledWith(MUSEUM)
     })
 
+    it('FE-MOB-PLTL-048: without place_edit a place row keeps remove and reorder but loses its edit circle (#2446)', () => {
+      renderTimeline({}, { can: vi.fn((action: string) => action !== 'place_edit') as TripPlanner['can'] }, { mode: 'edit' })
+
+      // the place row keeps its remove circle and loses the edit one; the
+      // transport and note rows keep theirs, editing those is a day right
+      const row = screen.getByText('Museum').closest('[role="button"]') as HTMLElement
+      expect(within(row).getByLabelText('planner.removeFromDay')).toBeInTheDocument()
+      expect(within(row).queryByLabelText('common.edit')).not.toBeInTheDocument()
+      fireEvent.click(within(row).getByLabelText('planner.removeFromDay'))
+      expect(mocks.tl.removeAssignment).toHaveBeenCalledWith(MUSEUM)
+      expect(mocks.tl.editAssignment).not.toHaveBeenCalled()
+    })
+
     it('FE-MOB-PLTL-037: the transit row opens the journey view from its edit circle', () => {
       renderTimeline({}, {}, { mode: 'edit' })
 

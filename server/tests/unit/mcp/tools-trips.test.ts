@@ -204,6 +204,25 @@ describe('Tool: create_trip', () => {
       expect(testDb.prepare('SELECT COUNT(*) as c FROM trips').get()).toEqual({ c: 0 });
     });
   });
+
+  it('gives a trip without a currency the display currency from the settings, not EUR', async () => {
+    const { user } = createUser(testDb);
+    testDb.prepare("INSERT INTO settings (user_id, key, value) VALUES (?, 'default_currency', ?)").run(user.id, JSON.stringify('USD'));
+    await withHarness(user.id, async (h) => {
+      const fromSettings = parseToolResult(await h.client.callTool({ name: 'create_trip', arguments: { title: 'Road trip' } })) as any;
+      expect(fromSettings.trip.currency).toBe('USD');
+      const explicit = parseToolResult(await h.client.callTool({ name: 'create_trip', arguments: { title: 'Tokyo', currency: 'JPY' } })) as any;
+      expect(explicit.trip.currency).toBe('JPY');
+    });
+  });
+
+  it('falls back to EUR when neither the user nor the admin set a display currency', async () => {
+    const { user } = createUser(testDb);
+    await withHarness(user.id, async (h) => {
+      const data = parseToolResult(await h.client.callTool({ name: 'create_trip', arguments: { title: 'Plain' } })) as any;
+      expect(data.trip.currency).toBe('EUR');
+    });
+  });
 });
 
 // ---------------------------------------------------------------------------

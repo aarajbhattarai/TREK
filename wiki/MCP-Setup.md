@@ -72,7 +72,15 @@ Create a client in TREK using the appropriate preset (Cursor, VS Code, Windsurf,
 
 > On Windows, `npx` may need a full path, for example `C:\PROGRA~1\nodejs\npx.cmd`.
 
-> **Requirement:** `APP_URL` must be set on the server for OAuth discovery to work.
+> **Requirement:** `APP_URL` must be set on the server for OAuth discovery to work, and it must be the public `https://` address. A plain-HTTP `APP_URL` is not a valid OAuth issuer, so TREK falls back to `http://localhost:{PORT}` in the discovery document and every remote client is sent to an address it cannot reach. The boot log says so: `APP_URL: not MCP-safe (requires https:// or http://localhost)`.
+
+TREK answers the discovery documents both at the origin (`/.well-known/oauth-authorization-server`, `/.well-known/openid-configuration`, `/.well-known/oauth-protected-resource`) and under the server address a client is given (`/mcp/.well-known/…`), because clients differ on where they look. Anything else below `/.well-known` answers a JSON 404, never the web app.
+
+### Redirect URI
+
+The redirect URI belongs to **your client, not to TREK**: it is the address the client wants the browser sent back to, so it is never your TREK URL and never `/mcp`. Open WebUI, for example, uses `{your Open WebUI URL}/oauth/clients/{connection id}/callback`, the Claude clients use their own callbacks, and the editors use `http://localhost`. When the client supports dynamic registration, let it register itself and the URI is filled in for you. A mismatch shows up at the consent step as `invalid_request: Unregistered redirect_uri`.
+
+TREK accepts `https://` URIs, plain HTTP only on `localhost` or `127.0.0.1`, and private custom schemes such as `myapp://callback`. A client running on a LAN address over plain HTTP is refused for that reason; put it behind HTTPS.
 
 ### Pre-created OAuth clients
 

@@ -3,7 +3,7 @@ import React from 'react';
 import { render, screen, waitFor, act, fireEvent } from '../../tests/helpers/render';
 import { Routes, Route } from 'react-router';
 import { resetAllStores, seedStore } from '../../tests/helpers/store';
-import { buildUser, buildTrip, buildDay, buildPlace, buildAssignment } from '../../tests/helpers/factories';
+import { buildUser, buildTrip, buildDay, buildPlace, buildAssignment, buildReservation } from '../../tests/helpers/factories';
 import { useAuthStore } from '../store/authStore';
 import { useTripStore } from '../store/tripStore';
 import { usePluginStore } from '../store/pluginStore';
@@ -173,6 +173,34 @@ vi.mock('../components/Trips/TripMembersModal', () => ({
   },
 }));
 
+// The road-trip rail and the booking dialog it brings along (#2428). Both capture their
+// props so a case can drive the rail's handlers and read what the page did with them.
+type RoadtripSidebarStubProps = { onOpenBooking?: (reservationId: number) => void; canEditBookings?: boolean };
+const capturedRoadtripSidebarProps: { current: RoadtripSidebarStubProps } = { current: {} };
+vi.mock('../components/Roadtrip/RoadtripSidebar', () => ({
+  default: (props: RoadtripSidebarStubProps) => {
+    capturedRoadtripSidebarProps.current = props;
+    return React.createElement('div', { 'data-testid': 'roadtrip-sidebar' });
+  },
+}));
+
+type TransportDetailStubProps = { transportDetail?: { id: number } | null };
+const capturedTransportDetailModalProps: { current: TransportDetailStubProps } = { current: {} };
+vi.mock('../components/Planner/DayPlanSidebarTransportDetailModal', () => ({
+  DayPlanSidebarTransportDetailModal: (props: TransportDetailStubProps) => {
+    capturedTransportDetailModalProps.current = props;
+    return null;
+  },
+}));
+
+vi.mock('../components/Roadtrip/RoadtripCorridorPanel', () => ({
+  default: () => React.createElement('div', { 'data-testid': 'roadtrip-corridor-panel' }),
+}));
+
+vi.mock('../components/Roadtrip/RoadtripLimitsCard', () => ({
+  default: () => null,
+}));
+
 // Configurable usePlaceSelection mock — lets tests set a specific selected place
 const mockPlaceSelectionState: { selectedPlaceId: number | null; selectedAssignmentId: number | null } = {
   selectedPlaceId: null,
@@ -253,6 +281,8 @@ beforeEach(() => {
   capturedTripMembersModalProps.current = {};
   capturedFileManagerProps.current = {};
   capturedPlaceInspectorProps.current = {};
+  capturedRoadtripSidebarProps.current = {};
+  capturedTransportDetailModalProps.current = {};
   seedStore(useAuthStore, { isAuthenticated: true, user: buildUser() });
 });
 
@@ -1707,6 +1737,62 @@ describe('TripPlannerPage', () => {
       await act(async () => {
         capturedDayPlanSidebarProps.current.onExpandedDaysChange?.(new Set([day.id]));
       });
+    });
+  });
+
+  describe('FE-PAGE-PLANNER-052: Road trip mode opens a booking the way the day plan does (#2428)', () => {
+    // The rail is mounted only with the addon on and the mode on for this trip; the
+    // road-trip hooks then read their own endpoints, answered empty here.
+    const enterRoadtrip = () => {
+      server.use(
+        http.get('/api/addons', () => HttpResponse.json({ addons: [{ id: 'roadtrip', type: 'roadtrip' }] })),
+        http.get('/api/trips/42/roadtrip/vias', () => HttpResponse.json({ vias: [], tracks: [] })),
+        http.get('/api/trips/42/roadtrip/preferences', () => HttpResponse.json({ tripId: 42, preferences: {} })),
+      );
+      sessionStorage.setItem('trip-roadtrip-42', '1');
+    };
+
+    it('a flight opens the transport detail view the rail brings along, a table opens its editor', async () => {
+      enterRoadtrip();
+      vi.useFakeTimers();
+      seedTripStore({ id: 42 });
+      const flight = buildReservation({ id: 70, trip_id: 42, type: 'flight', title: 'LH 2020' });
+      const table = buildReservation({ id: 11, trip_id: 42, type: 'restaurant', title: 'Tisch Bullerei' });
+      seedStore(useTripStore, { reservations: [flight, table] });
+
+      renderPlannerPage(42);
+
+      act(() => { vi.runAllTimers(); });
+
+      vi.useRealTimers();
+
+      await waitFor(() => {
+        expect(screen.getByTestId('roadtrip-sidebar')).toBeInTheDocument();
+      });
+      expect(screen.queryByTestId('day-plan-sidebar')).not.toBeInTheDocument();
+
+      // Without this the rail cannot tell a chip that opens from one that does not, and
+      // every table and ticket becomes a button that no-ops.
+      expect(capturedRoadtripSidebarProps.current.canEditBookings).toBe(true);
+
+      // A terminal row, a ride pill and a map endpoint all set the booking to show, and
+      // under Days the day panel owns the dialog that shows it. Here it has to be the
+      // rail's own copy, or nothing shows.
+      act(() => { capturedRoadtripSidebarProps.current.onOpenBooking?.(70); });
+      await waitFor(() => {
+        expect(capturedTransportDetailModalProps.current.transportDetail).toMatchObject({ id: 70 });
+      });
+      expect(capturedReservationModalProps.current.isOpen).toBe(false);
+
+      act(() => { capturedRoadtripSidebarProps.current.onOpenBooking?.(11); });
+      await waitFor(() => {
+        expect(capturedReservationModalProps.current.isOpen).toBe(true);
+      });
+      expect(capturedReservationModalProps.current.reservation).toMatchObject({ id: 11 });
+
+      // A booking the trip does not hold opens nothing.
+      act(() => { capturedRoadtripSidebarProps.current.onOpenBooking?.(999); });
+      expect(capturedTransportDetailModalProps.current.transportDetail).toMatchObject({ id: 70 });
     });
   });
 });

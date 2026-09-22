@@ -1306,3 +1306,29 @@ describe('MJourneyEntrySheet external photos', () => {
     expect(onSave.mock.calls[0][0]).toMatchObject({ type: 'entry' });
   });
 });
+
+// FE-MOB-JENTRY-055 to FE-MOB-JENTRY-056: the phone half of the desktop editor's
+// play badge for a clip that came up without a poster (#2341).
+
+describe('MJourneyEntrySheet clips', () => {
+  it('FE-MOB-JENTRY-055: a linked clip without a poster is a play badge, not a request for its thumbnail', () => {
+    const clip = { ...buildPhoto(100), media_type: 'video', provider: 'local', thumbnail_path: null };
+    mountSheet(buildEntry({ id: 5, photos: [clip] }));
+
+    expect(document.querySelector('img[src="/api/photos/100/thumbnail"]')).not.toBeInTheDocument();
+    expect(document.querySelector('.h-16 svg.lucide-play')).toBeInTheDocument();
+  });
+
+  it('FE-MOB-JENTRY-056: the gallery picker draws the same badge, and a clip with a poster its poster', async () => {
+    const user = userEvent.setup();
+    const bare = { ...buildGalleryPhoto(200), media_type: 'video', provider: 'local', thumbnail_path: null };
+    const withPoster = { ...buildGalleryPhoto(201), media_type: 'video', provider: 'local', thumbnail_path: 'journey/poster.jpg' };
+    mountSheet(buildEntry(), { galleryPhotos: [bare, withPoster] });
+
+    await user.click(screen.getByRole('button', { name: 'From Gallery' }));
+
+    expect(document.querySelector('img[src="/api/photos/200/thumbnail"]')).not.toBeInTheDocument();
+    expect(document.querySelector('img[src="/api/photos/201/thumbnail"]')).toBeInTheDocument();
+    expect(document.querySelectorAll('svg.lucide-play')).toHaveLength(1);
+  });
+});

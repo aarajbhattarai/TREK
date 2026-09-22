@@ -11,6 +11,7 @@ import { ReservationsService } from '../reservations/reservations.service';
 import { VacayService } from '../vacay/vacay.service';
 import { UnsplashService } from '../unsplash/unsplash.service';
 import { StorageService } from '../storage/storage.service';
+import { SettingsService } from '../settings/settings.service';
 import { NotFoundError, ValidationError } from '../common/domain-errors';
 
 export const MS_PER_DAY = 86400000;
@@ -134,15 +135,16 @@ export interface GuestMember {
 /**
  * Trip aggregate root, DI-native. Membership, the calendar export and the two
  * read aggregates live in their own domains now; what is left is the write core
- * plus day generation, which is why the constructor is eight parameters instead
- * of fourteen. The SQL moved 1:1 from the legacy
+ * plus day generation, which is why the constructor is far shorter than the
+ * fourteen parameters it started with. The SQL moved 1:1 from the legacy
  * services/tripService.ts: identical statements, the `||` falsy-coercion
  * defaults, the post-write TRIP_SELECT re-selects and the mixed
  * named/positional parameter styles are all preserved byte-for-byte.
  * Post-migration quirk fixes on top of the 1:1 move: the multi-statement
  * deletes (remove, deleteGuest's re-split + user delete) run in
- * db.transaction(), and listMembers' owner row COALESCEs display_name like
- * the member rows. Auth (canAccessTrip), per-field permission checks and
+ * db.transaction(), listMembers' owner row COALESCEs display_name like
+ * the member rows, and create() defaults the currency to the owner's display
+ * currency instead of the legacy EUR literal. Auth (canAccessTrip), per-field permission checks and
  * audit logging stay in the controller (1:1 with the legacy route);
  * trip:updated / trip:deleted broadcasts stay in the controller too — this
  * service emits none.
@@ -159,10 +161,22 @@ export class TripsService {
     private readonly realtime: RealtimeService,
     private readonly unsplash: UnsplashService,
     private readonly storage: StorageService,
+    private readonly settings: SettingsService,
   ) {}
 
   private get db() {
     return this.dbs.connection;
+  }
+
+  /**
+   * The currency a trip gets when the caller names none: the person's display
+   * currency, admin default merged in, else EUR. The trip dialog pre-fills the
+   * same value on the client, so a trip created through MCP or a plugin lands
+   * in the currency the person reads amounts in instead of always in EUR.
+   */
+  private defaultCurrencyFor(userId: number): string {
+    const preferred = this.settings.getUserSettings(userId).default_currency;
+    return typeof preferred === 'string' && preferred.trim() ? preferred.trim() : 'EUR';
   }
 
   canAccessTrip(tripId: string | number, userId: number) {
@@ -328,7 +342,7 @@ export class TripsService {
     const result = this.db.prepare(`
       INSERT INTO trips (user_id, title, description, start_date, end_date, currency, reminder_days)
       VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).run(userId, data.title, data.description || null, data.start_date || null, data.end_date || null, data.currency || 'EUR', rd);
+    `).run(userId, data.title, data.description || null, data.start_date || null, data.end_date || null, data.currency || this.defaultCurrencyFor(userId), rd);
 
     const tripId = result.lastInsertRowid;
     this.generateDays(tripId, data.start_date || null, data.end_date || null, data.day_count);

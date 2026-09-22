@@ -124,7 +124,7 @@ export function PlaceRow({ assignment, fullPlace, linkedReservations, chrome, re
   reorder: ReactNode
   drag?: RowDrag
   onOpen: () => void
-  onEdit: () => void
+  onEdit?: () => void
   onRemove: () => void
 }) {
   const { t } = chrome
@@ -210,9 +210,11 @@ export function PlaceRow({ assignment, fullPlace, linkedReservations, chrome, re
       </div>
       {chrome.editing && (
         <span className="flex flex-none items-center gap-1.5">
-          <ActionCircle label={t('common.edit')} onClick={onEdit}>
-            <Pencil size={14} strokeWidth={2} />
-          </ActionCircle>
+          {onEdit && (
+            <ActionCircle label={t('common.edit')} onClick={onEdit}>
+              <Pencil size={14} strokeWidth={2} />
+            </ActionCircle>
+          )}
           <ActionCircle label={t('planner.removeFromDay')} onClick={onRemove}>
             <X size={14} strokeWidth={2} />
           </ActionCircle>

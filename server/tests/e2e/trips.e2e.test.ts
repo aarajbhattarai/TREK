@@ -101,6 +101,9 @@ const { db } = vi.hoisted(() => {
   // StorageRegistryService (behind StorageModule, now in this module chain) reads
   // this at onModuleInit.
   tmp.exec('CREATE TABLE app_settings (key TEXT PRIMARY KEY, value TEXT);');
+  // A trip created without a currency takes the owner's display currency, read
+  // off the per-user settings rows.
+  tmp.exec('CREATE TABLE settings (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, key TEXT NOT NULL, value TEXT, UNIQUE(user_id, key));');
   return { db: tmp };
 });
 
@@ -160,6 +163,7 @@ describe('Trips e2e (real auth guard + temp SQLite)', () => {
     db.prepare('DELETE FROM trip_members').run();
     db.prepare('DELETE FROM days').run();
     db.prepare('DELETE FROM audit_log').run();
+    db.prepare('DELETE FROM settings').run();
     canAccessTrip.mockReturnValue({ user_id: 1 });
     checkPermission.mockReturnValue(true);
   });
@@ -196,6 +200,16 @@ describe('Trips e2e (real auth guard + temp SQLite)', () => {
     checkPermission.mockReturnValue(false);
     const forbidden = await request(server).post('/api/trips').set('Cookie', sessionCookie(1)).send({ title: 'T' });
     expect(forbidden.status).toBe(403);
+  });
+
+  it('201 create without a currency takes the display currency from the settings', async () => {
+    db.prepare("INSERT INTO settings (user_id, key, value) VALUES (1, 'default_currency', ?)").run(JSON.stringify('USD'));
+    const preferred = await request(server).post('/api/trips').set('Cookie', sessionCookie(1)).send({ title: 'Road trip' });
+    expect(preferred.status).toBe(201);
+    expect(preferred.body.trip).toMatchObject({ title: 'Road trip', currency: 'USD' });
+    const explicit = await request(server).post('/api/trips').set('Cookie', sessionCookie(1)).send({ title: 'Tokyo', currency: 'JPY' });
+    expect(explicit.status).toBe(201);
+    expect(explicit.body.trip).toMatchObject({ title: 'Tokyo', currency: 'JPY' });
   });
 
   it('201 create keeps every day of a trip longer than a year (#2403)', async () => {

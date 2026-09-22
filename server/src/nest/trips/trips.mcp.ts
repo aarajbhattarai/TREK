@@ -88,7 +88,7 @@ export class TripsMcp {
       description: z.string().max(2000).optional().describe('Trip description'),
       start_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().describe('Start date (YYYY-MM-DD)'),
       end_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().describe('End date (YYYY-MM-DD)'),
-      currency: z.string().length(3).optional().describe('Currency code (e.g. EUR, USD)'),
+      currency: z.string().length(3).optional().describe('Currency code (e.g. EUR, USD). Left out, the trip takes the display currency from the settings (see get_display_settings), or EUR when none is set.'),
       day_count: z.number().int().min(1).max(MAX_TRIP_DAYS).optional().describe(
         'How many days a trip without dates gets (default 7). Ignored when start_date and end_date are both set, because the range decides the count.'),
       reminder_days: z.number().int().min(0).max(30).optional().describe(

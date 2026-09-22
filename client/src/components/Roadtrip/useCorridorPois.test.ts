@@ -283,4 +283,20 @@ describe('useCorridorPois', () => {
     expect(plain.current.results.map(r => r.osm_id).sort()).toEqual(['on-the-road', 'under-the-flight'])
     expect(plain.current.progress.total).toBeGreaterThan(result.current.progress.total)
   })
+
+  it('FE-ROADTRIP-CORRIDOR-019: the gaps are a dependency like any other, so a memoised array keeps `search` and a fresh one remakes it', () => {
+    // The caller memoises the array per day; the hook does not key it on its contents
+    // behind the lint rule's back.
+    const gaps = [{ from: LONG[3], to: LONG[8] }]
+    const categories = ['fuel']
+    const { result, rerender } = renderHook(
+      ({ options }: { options: { gaps: typeof gaps } }) => useCorridorPois(LONG, categories, 10, options),
+      { initialProps: { options: { gaps } } },
+    )
+    const search = result.current.search
+    rerender({ options: { gaps } })
+    expect(result.current.search).toBe(search)
+    rerender({ options: { gaps: [...gaps] } })
+    expect(result.current.search).not.toBe(search)
+  })
 })

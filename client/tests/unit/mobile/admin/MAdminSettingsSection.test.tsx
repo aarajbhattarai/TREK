@@ -347,6 +347,35 @@ describe('MAdminSettingsSection', () => {
     expect(admin.setPlacesDetailsEnabledState).toHaveBeenLastCalledWith(true);
   });
 
+  it('FE-MOB-ASET-018b: the Google-only row says what it needs without a key and toggles through the hook', async () => {
+    const user = userEvent.setup();
+    const admin = renderSettings();
+    await user.click(screen.getByRole('button', { name: 'What the key is used for' }));
+
+    expect(screen.getByText(/Needs a Google Maps API key/)).toBeInTheDocument();
+    expect(toggle('Search with Google only')).toHaveAttribute('aria-checked', 'false');
+    await user.click(toggle('Search with Google only'));
+    expect(admin.handleTogglePlacesGoogleOnly).toHaveBeenCalledTimes(1);
+  });
+
+  it('FE-MOB-ASET-018c: with a key the Google-only row explains what it changes, unless another provider holds the slot', async () => {
+    const user = userEvent.setup();
+    const { unmount } = render(<Harness admin={buildAdminHook({ hasMapsKey: true, placesGoogleOnly: true })} />);
+    await user.click(screen.getByRole('button', { name: 'What the key is used for' }));
+    expect(screen.getByText(/Every search and every suggestion goes to Google Places/)).toBeInTheDocument();
+    expect(toggle('Search with Google only')).toHaveAttribute('aria-checked', 'true');
+    unmount();
+
+    // The server ignores the switch under Amap or OpenStreetMap, and the row
+    // must not promise otherwise just because a key is stored.
+    render(<Harness admin={buildAdminHook({ hasMapsKey: true, placesGoogleOnly: true, placesProvider: 'amap' })} />);
+    await user.click(screen.getByRole('button', { name: 'What the key is used for' }));
+    expect(screen.queryByText(/Every search and every suggestion goes to Google Places/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Needs a Google Maps API key/)).not.toBeInTheDocument();
+    const row = toggle('Search with Google only').closest<HTMLElement>('.justify-between')!;
+    expect(row.textContent).toMatch(/provider/i);
+  });
+
   it('FE-MOB-ASET-019: the API-keys card is about keys, and weather needs none', () => {
     // The Open-Meteo panel left this card, as it did on the desktop tab: it takes
     // no key and has nothing to configure, so it had no business in a card about

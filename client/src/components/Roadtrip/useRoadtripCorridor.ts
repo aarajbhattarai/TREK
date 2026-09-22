@@ -3,7 +3,7 @@ import { useCorridorPois, type CorridorPoi, type CorridorSearch } from './useCor
 import type { CorridorBudget } from './corridorSearchModel'
 import { sectionAnchors, insertIndexForAlong } from './roadtripModel'
 import type { SectionAnchor } from './roadtripModel'
-import { projectOntoRoute, type LatLng } from './corridor'
+import { projectOntoRoute, rideGaps, type LatLng } from './corridor'
 import { useVehicleRange } from './useVehicleRange'
 import type { RoadtripDay, RoadtripRoutes } from './useRoadtripRoutes'
 
@@ -121,19 +121,9 @@ export function useRoadtripCorridor(
 
   // The rides on this day: between a departure terminal and its arrival the car is not
   // on the road, so that stretch of the line is not searched (#2428).
-  const gaps = useMemo(() => {
-    if (!day) return []
-    const out: { from: LatLng; to: LatLng }[] = []
-    day.stops.forEach((stop, i) => {
-      const next = day.stops[i + 1]
-      if (stop.carrier?.role === 'departure' && next?.carrier?.reservationId === stop.carrier.reservationId) {
-        out.push({ from: { lat: stop.lat, lng: stop.lng }, to: { lat: next.lat, lng: next.lng } })
-      }
-    })
-    return out
-  }, [day])
+  const rides = useMemo(() => (day ? rideGaps(day.stops) : []), [day])
 
-  const search = useCorridorPois(line, categories, widthKm, useMemo(() => ({ ...options, gaps }), [options, gaps]))
+  const search = useCorridorPois(line, categories, widthKm, useMemo(() => ({ ...options, gaps: rides }), [options, rides]))
 
   /**
    * Whether what the panel looks for has been decided yet.
@@ -207,8 +197,14 @@ export function useRoadtripCorridor(
    * Resolved here rather than stored: `section` names an anchor, and its kilometre figure
    * is looked up fresh, so changing the corridor width does not move the point the list
    * is narrowed around.
+   *
+   * No break is planned in the middle of a ride: the search never covers it, so the leg
+   * between a departure terminal and its arrival is not offered as a section.
    */
-  const anchors = useMemo(() => sectionAnchors(stopsAlongKm), [stopsAlongKm])
+  const anchors = useMemo(
+    () => sectionAnchors(stopsAlongKm).filter(a => a.kind !== 'leg' || !rides.some(r => r.index === a.index)),
+    [stopsAlongKm, rides],
+  )
   const anchorKm = useMemo(() => {
     if (!section || !day || section.dayId !== day.dayId) return null
     return anchors.find(a => a.kind === section.kind && a.index === section.index)?.alongKm ?? null

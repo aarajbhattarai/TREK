@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { localIsoDate } from '../../../utils/localDate'
-import { Camera, Plus, Image, Images, X, MapPin, Locate, Trash2, CheckCircle2, MinusCircle, ChevronUp, ChevronDown, EyeOff } from 'lucide-react'
+import { Camera, Plus, Image, Images, X, MapPin, Locate, Trash2, CheckCircle2, MinusCircle, ChevronUp, ChevronDown, EyeOff, Play } from 'lucide-react'
 import MSheet from '../../components/MSheet'
 import MIconBtn from '../../components/MIconBtn'
 import MToggle from '../../components/MToggle'
@@ -16,7 +16,7 @@ import { getCurrentPositionOnce } from '../../../hooks/useGeolocation'
 import type { ResilientResult, UploadProgress } from '../../../utils/uploadQueue'
 import type { JourneyEntry, JourneyPhoto, GalleryPhoto, JourneyTrip } from '../../../store/journeyStore'
 import { useAddonStore } from '../../../store/addonStore'
-import { photoUrl, geoOnceErrorKey, isValidGeoPoint } from '../../../pages/journeyDetail/JourneyDetailPage.helpers'
+import { photoUrl, posterlessVideo, geoOnceErrorKey, isValidGeoPoint } from '../../../pages/journeyDetail/JourneyDetailPage.helpers'
 import JournalBody from '../../../components/Journey/JournalBody'
 import { ProviderPicker, type ProviderPhotoGroup } from '../../../components/Journey/JourneyDetailPageProviderPicker'
 import { journeyWeatherCategory, MOBILE_MOODS, MOBILE_WEATHERS } from './mobileJourneyMeta'
@@ -32,6 +32,18 @@ interface LocationResult {
 }
 
 type PendingProviderGroup = ProviderPhotoGroup & { provider: string }
+
+// A clip with no poster to show: the tinted tile and play mark the gallery grid
+// gives it, since an <img> asked for its thumbnail draws the broken glyph (#2341).
+function ClipTile() {
+  return (
+    <span className="absolute inset-0 flex items-center justify-center bg-[color:var(--m-ic)]">
+      <span className="flex h-7 w-7 items-center justify-center rounded-full bg-black/55 text-white backdrop-blur">
+        <Play size={12} className="ml-[1px]" fill="currentColor" />
+      </span>
+    </span>
+  )
+}
 
 interface MJourneyEntrySheetProps {
   entry: JourneyEntry
@@ -592,7 +604,11 @@ export default function MJourneyEntrySheet({
                         }
                       }}
                     >
-                      <img src={photoUrl(gp)} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-cover" />
+                      {posterlessVideo(gp) ? (
+                        <ClipTile />
+                      ) : (
+                        <img src={photoUrl(gp)} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-cover" />
+                      )}
                     </button>
                   ))}
                   {availableGalleryPhotos.length === 0 && (
@@ -610,7 +626,11 @@ export default function MJourneyEntrySheet({
           <div className="mt-[10px] flex flex-wrap gap-2">
             {photos.map((p, idx) => (
               <div key={p.id} className="relative h-16 w-16 overflow-hidden rounded-[13px]">
-                <img src={photoUrl(p)} alt="" className="h-full w-full object-cover" />
+                {posterlessVideo(p) ? (
+                  <ClipTile />
+                ) : (
+                  <img src={photoUrl(p)} alt="" className="h-full w-full object-cover" />
+                )}
                 {!readOnly && idx > 0 && photos.length > 1 && (
                   <button
                     type="button"

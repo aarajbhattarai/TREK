@@ -1,5 +1,5 @@
 /**
- * MAPS-AUTO-001..008 — the suggestion list behind the place search box.
+ * MAPS-AUTO-001..013: the suggestion list behind the place search box.
  *
  * This is the path the index was built for. Nominatim's usage policy names
  * autocomplete as unacceptable use in its own words, whatever the rate, and the
@@ -73,18 +73,31 @@ const osmHit = (over: Record<string, unknown> = {}) => ({
 });
 
 /**
- * `enabled` drives the admin kill switch, which is read straight off
- * app_settings; an unset row reads as on, because the switch is fail-open.
+ * `enabled` drives the index switch, an environment variable; `rows` are the
+ * app_settings the instance holds, by key: a Google key, the provider choice,
+ * the Google-only switch. Anything else reads as absent.
  *
  * Keyed on the statement rather than answering everything the same way: the
  * same `get` also resolves the Google key, and a blanket answer would hand
  * `'false'` to the key resolver and send the fallback at Google for real.
  */
-function make(enabled = true) {
+function make(enabled = true, rows: Record<string, string> = {}) {
   trekPlaces.on = enabled;
-  const database = { get: vi.fn(() => undefined) } as unknown as DatabaseService;
+  const database = {
+    get: vi.fn((sql: string, key?: unknown) =>
+      typeof key === 'string' && sql.includes('app_settings') && rows[key] !== undefined ? { value: rows[key] } : undefined,
+    ),
+  } as unknown as DatabaseService;
   return new MapsService(database, {} as PlacePhotoCacheService);
 }
+
+/** Google's autocomplete envelope, which is not the shape its text search answers in. */
+const googleSuggestions = (name: string) => ({
+  ok: true,
+  json: async () => ({
+    suggestions: [{ placePrediction: { placeId: 'g1', structuredFormat: { mainText: { text: name }, secondaryText: { text: 'Chiyoda' } } } }],
+  }),
+});
 
 beforeEach(() => {
   mockSearch.mockReset();
@@ -228,5 +241,44 @@ describe('MapsService.autocompletePlaces', () => {
 
     expect(mockSearch).not.toHaveBeenCalled();
     expect(result.source).not.toBe('trek-places');
+  });
+
+  it('MAPS-AUTO-012: the Google-only switch sends the keystroke to Google and skips the index', async () => {
+    // The admin row promises every search AND every suggestion. The search half
+    // is pinned next door (MAPS-SEARCH-011); this is the other call site.
+    mockSearch.mockResolvedValue([hit()]);
+    const fetchMock = vi.fn().mockResolvedValue(googleSuggestions('Tokyo Station'));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await make(true, { maps_api_key: 'key', places_google_only: 'true' }).autocompletePlaces(1, INPUT);
+
+    expect(mockSearch).not.toHaveBeenCalled();
+    expect(result.source).toBe('google');
+    expect(result.suggestions[0]).toMatchObject({ placeId: 'g1', mainText: 'Tokyo Station' });
+    expect(String(fetchMock.mock.calls[0][0])).toContain('places:autocomplete');
+    vi.unstubAllGlobals();
+  });
+
+  it('MAPS-AUTO-013: the switch changes nothing without a Google key, or when Google does not hold the slot', async () => {
+    mockSearch.mockResolvedValue([hit()]);
+
+    // No key at all: the index answers, as before.
+    const keyless = await make(true, { places_google_only: 'true' }).autocompletePlaces(1, INPUT);
+    expect(mockSearch).toHaveBeenCalledTimes(1);
+    expect(keyless.source).toBe('trek-places');
+
+    // A key, but the admin picked OpenStreetMap: Google holds no slot, so
+    // there is nothing for the switch to hand the keystroke to.
+    mockSearch.mockClear();
+    const osmOnly = await make(true, { maps_api_key: 'key', places_google_only: 'true', places_provider: 'openstreetmap' })
+      .autocompletePlaces(1, INPUT);
+    expect(mockSearch).toHaveBeenCalledTimes(1);
+    expect(osmOnly.source).toBe('trek-places');
+
+    // A key and the switch off: the index still answers first.
+    mockSearch.mockClear();
+    const off = await make(true, { maps_api_key: 'key', places_google_only: 'false' }).autocompletePlaces(1, INPUT);
+    expect(mockSearch).toHaveBeenCalledTimes(1);
+    expect(off.source).toBe('trek-places');
   });
 });

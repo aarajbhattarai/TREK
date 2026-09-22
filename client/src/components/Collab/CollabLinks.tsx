@@ -6,6 +6,7 @@ import { addListener, removeListener } from '../../api/websocket'
 import { useTranslation } from '../../i18n'
 import { useCanDo } from '../../store/permissionsStore'
 import { useTripStore } from '../../store/tripStore'
+import ConfirmDialog from '../shared/ConfirmDialog'
 import EmptyState from '../shared/EmptyState'
 import { useToast } from '../shared/Toast'
 
@@ -111,6 +112,7 @@ export default function CollabLinks({ tripId }: { tripId: number }) {
   const [links, setLinks] = useState<CollabLink[]>([])
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState<CollabLink | null>(null)
+  const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null)
 
   // Both are new objects on every render, so depending on them would reload the
   // list after each keystroke and drop a link that was just added back out of it.
@@ -230,7 +232,9 @@ export default function CollabLinks({ tripId }: { tripId: number }) {
             {links.map(link => (
               <div key={link.id} className={link.pinned ? 'collab-link-chip collab-link-chip--pinned' : 'collab-link-chip'}>
                 <a className="collab-link-chip__main" href={link.url} target="_blank" rel="noreferrer" title={t('collab.links.open')}>
-                  <LinkIcon url={link.url} />
+                  {/* Keyed on the address: the icon remembers a favicon that failed, and
+                      an edit keeps the chip's id, so a corrected address got the glyph. */}
+                  <LinkIcon key={link.url} url={link.url} />
                   <span className="collab-link-chip__text">
                     <span className="collab-link-chip__title">{link.title}</span>
                     <span className="collab-link-chip__host">{hostOf(link.url)}</span>
@@ -244,7 +248,7 @@ export default function CollabLinks({ tripId }: { tripId: number }) {
                     <button type="button" className={link.pinned ? 'collab-link-chip__action collab-link-chip__action--on' : 'collab-link-chip__action'} onClick={() => toggle(link)} aria-label={link.pinned ? t('collab.links.unpin') : t('collab.links.pin')} title={link.pinned ? t('collab.links.unpin') : t('collab.links.pin')}>
                       <Pin size={13} fill={link.pinned ? 'currentColor' : 'none'} aria-hidden="true" />
                     </button>
-                    <button type="button" className="collab-link-chip__action" onClick={() => remove(link.id)} aria-label={t('collab.links.delete')} title={t('collab.links.delete')}>
+                    <button type="button" className="collab-link-chip__action" onClick={() => setPendingDeleteId(link.id)} aria-label={t('collab.links.delete')} title={t('collab.links.delete')}>
                       <Trash2 size={13} aria-hidden="true" />
                     </button>
                   </span>
@@ -258,6 +262,16 @@ export default function CollabLinks({ tripId }: { tripId: number }) {
       {/* Create and edit modals */}
       {showForm && <LinkModal onClose={() => setShowForm(false)} onSave={add} />}
       {editing && <LinkModal key={editing.id} link={editing} onClose={() => setEditing(null)} onSave={data => edit(editing, data)} />}
+
+      {/* The delete is shared: the link goes for every member, and on the phone the
+          button is a thumb's width from pin. Same guard as the notes panel. */}
+      <ConfirmDialog
+        isOpen={pendingDeleteId !== null}
+        onClose={() => setPendingDeleteId(null)}
+        onConfirm={() => (pendingDeleteId !== null ? remove(pendingDeleteId) : undefined)}
+        title={t('collab.links.confirmDeleteTitle')}
+        message={t('collab.links.confirmDeleteBody')}
+      />
     </div>
   )
 }

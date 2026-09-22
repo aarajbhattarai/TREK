@@ -236,8 +236,8 @@ These tools work without an open browser. The external assistant chooses places 
 
 | Tool | Purpose | Scope |
 |---|---|---|
-| `get_roadtrip_context` | Saved days, visits, coordinates, stays, pinned times, vehicle preferences, route profiles, vias, tracks and manual boundaries | `trips:read` |
-| `calculate_roadtrip` | Calculated days, arrivals, departures, automatic pauses, driving warnings and range warnings; optional geometry | `trips:read` |
+| `get_roadtrip_context` | Saved days, visits, coordinates, stays, pinned times, vehicle preferences, route profiles, vias, tracks and manual boundaries, plus a `carriers` block with the flight, train, ferry, cruise and bus bookings that seam the drive and the hire cars whose desks stand on it | `trips:read` |
+| `calculate_roadtrip` | Calculated days, arrivals, departures, automatic pauses, driving warnings and range warnings; optional geometry. A booking's terminals and a hire car's desks come back as stops carrying `carrier` (its role, type and timetable); their `assignmentId` and `placeId` are synthetic negative numbers that belong to no assignment and no place, so never pass them to the assignment or place tools | `trips:read` |
 | `get_roadtrip_settings` | Shared driving preferences for the specified trip | `trips:read` |
 | `update_roadtrip_settings` | Patch shared trip driving preferences, preserving other settings | `trips:write` |
 | `search_roadtrip_corridor` | Fuel, charging, rest areas, campsites, food, sights or hotels along a day | `trips:read` |

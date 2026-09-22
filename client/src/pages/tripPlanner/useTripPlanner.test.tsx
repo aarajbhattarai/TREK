@@ -2092,6 +2092,21 @@ describe('useTripPlanner — misc state', () => {
     expect(result.current.prefillCoords).toBeNull()
   })
 
+  it('FE-TP-HOOK-120: without place_edit rights the place editor and the delete dialog stay shut (#2446)', async () => {
+    seedStore(useAuthStore, { user: buildUser({ id: 2, role: 'user' }) })
+    usePermissionsStore.setState({ permissions: { place_edit: 'admin' } })
+    const place = buildPlace({ id: 1, lat: 1, lng: 2 })
+    seedTrip({ places: [place], assignments: { '7': [buildAssignment({ id: 10, day_id: 7, place })] } })
+
+    const { result } = await renderPlanner()
+    act(() => { result.current.openPlaceEditor(place, 10) })
+    act(() => { result.current.handleDeletePlace(1) })
+
+    expect(result.current.showPlaceForm).toBe(false)
+    expect(result.current.editingPlace).toBeNull()
+    expect(result.current.deletePlaceId).toBeNull()
+  })
+
   it('FE-TP-HOOK-102: a member roster refresh replaces the cached list', async () => {
     seedTrip()
     const { result } = await renderPlanner()

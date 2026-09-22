@@ -1216,11 +1216,11 @@ export const mapsApi = {
    * caller of this one function gets them without knowing they exist. Appended rather
    * than interleaved: the core list is ordered by relevance and has earned that order,
    * and a plugin's row carries its own `source` for a caller that wants to mark it.
-   */
-  /**
+   *
    * `provider: 'google'` sends this one search to Google alone, the "search Google
-   * instead" link under a list the index answered with the wrong place. The
-   * server ignores it on an instance without a Google key.
+   * instead" link under a list the index answered with the wrong place. The server
+   * ignores it unless Google holds the keyed slot: without a Google key, or with
+   * Amap or OpenStreetMap picked as the provider, the index answers as usual.
    */
   search: (query: string, lang?: string, locationBias?: { lat: number; lng: number; radius?: number }, provider?: 'google') =>
     withCachedPlaces(query, (places) => ({ places, source: 'offline-cache' }), async () => {

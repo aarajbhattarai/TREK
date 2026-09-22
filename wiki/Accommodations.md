@@ -45,13 +45,27 @@ The two views show the same night differently, and both are the whole picture:
 
 - **Days** keeps it in the day header, as the badge it has always been. The stop itself is
   hidden there, because the row would be that same hotel a second time.
-- **Road Trip** draws it as a service stop in the driving chain, which is the view that
-  needs to know where the day ends.
+- **Road Trip** draws it as a service stop in the driving chain, anchored on its
+  check-in the way a pinned time anchors any other stop: the day is built to be there
+  by then, and a drive that cannot make it is reported late.
 
 A few details worth knowing:
 
 - Only the check-in day gets a stop, however many nights the stay runs. That is the day
   you travel there; the later nights keep showing as badges in the day header.
+- The stop leads its check-in day. It is seated first, behind only a stop whose own time
+  is at or before the check-in, and the stops that carry no hour follow it. A night
+  without a check-in is seated first too, a new check-in seats the stop afresh, and two
+  nights booked on one day settle by their check-ins. When those match, or neither night
+  has one, the booking made first leads.
+- That also means a night booked for the end of a driving day heads that day when its
+  stops carry no time of their own. To put the hotel back at the end, drag it down the
+  day in the Road Trip rail, where an edit to the booking that leaves the check-in alone
+  will not move it back. A start time at or before the check-in does it as well, as long
+  as it goes on the first stop after the hotel: the day re-sorts by time and the untimed
+  stops behind that one follow it. On the last stop alone it is not enough, because the
+  untimed stops in front of it keep counting as being at the check-in and stay behind
+  the hotel.
 - The place is marked as a **hotel** stop, which is why it carries no number in the Road
   Trip rail and does not count towards the day's stop total. If you had already given the
   place a stop type of your own, that one is kept.
@@ -63,15 +77,17 @@ A few details worth knowing:
   Trip settings also decides whether they appear in the places list.
 
 Nights booked before this existed are given their stop when the server upgrades, so trips
-you already have show their hotels on the drive without anyone re-saving anything.
+you already have show their hotels on the drive without anyone re-saving anything. Trips
+planned before 4.3.1 are seated the same way on upgrade, see
+[Upgrading to 4.3.1](Updating#upgrading-to-431).
 
 ## In the day plan sidebar
 
 Accommodations appear as small colour-coded badges in the day header row of the day plan sidebar:
 
-- **Green badge** — check-in day
-- **Red badge** — check-out day
-- **Neutral badge** — nights in between (ongoing stay)
+- **Green badge**: check-in day
+- **Red badge**: check-out day
+- **Neutral badge**: nights in between (ongoing stay)
 
 Clicking a badge navigates to the linked place. Hotel-type reservations are filtered out of the inline transport card list between places; they do not appear as transport items in the timeline.
 

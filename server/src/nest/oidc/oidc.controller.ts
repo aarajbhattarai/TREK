@@ -167,6 +167,18 @@ export class OidcController {
 
       const result = this.oidc.findOrCreateUser(userInfo, config, pending.inviteToken);
       if ('error' in result) return f('/login?oidc_error=' + result.error);
+      if (result.created) {
+        // An account the callback just made is a registration, the way a password
+        // signup is (auth-public.controller): the same row, plus the way in. Without
+        // it an admin reading user.register for who got an account never sees the
+        // SSO ones, and the log looks complete while it is not.
+        this.audit.writeAudit({
+          userId: result.user.id,
+          action: 'user.register',
+          ip: getClientIp(req),
+          details: { username: result.user.username, email: result.user.email, role: result.user.role, method: 'oidc' },
+        });
+      }
       if (result.roleChange) {
         // The claim mapping changing someone's privileges is a security event, and
         // the row is written here because this is where the client IP is. The claim

@@ -55,6 +55,23 @@ describe('dayBookings (#2428)', () => {
     expect(dayBookings(day, [])).toEqual({ atStop: new Map(), loose: [] })
   })
 
+  it('FE-STOPBOOKINGS-005: a booking spanning several days is on the days between as well, unless its type hides there', () => {
+    // Day ids out of order on purpose: the span is read by the days' position, not by id.
+    const order = (dayId: number) => ({ 5: 0, 1: 1, 3: 2 } as Record<number, number>)[dayId] ?? null
+    const tour = booking({ id: 1, title: 'Three-day tour', type: 'tour', day_id: 5, end_day_id: 3 })
+    const parked = booking({ id: 2, title: 'Parked', type: 'parking', day_id: 5, end_day_id: 3 })
+    const dinner = booking({ id: 3, title: 'Dinner', day_id: 5, end_day_id: 3, place_id: 110 })
+    const { atStop, loose } = dayBookings(day, [tour, parked, dinner], order)
+    expect(loose.map(r => r.title)).toEqual(['Three-day tour'])
+    // On the day between, a booking for a place the day drives to still hangs under it.
+    expect(atStop.get(1)!.map(r => r.title)).toEqual(['Dinner'])
+    // Its first and last day list the parked car as before.
+    expect(dayBookings({ ...day, dayId: 3 }, [parked], order).loose).toHaveLength(1)
+    // Without a day order, or for a day the order does not know, only the two ends count.
+    expect(dayBookings(day, [tour])).toEqual({ atStop: new Map(), loose: [] })
+    expect(dayBookings({ ...day, dayId: 9 }, [tour], order)).toEqual({ atStop: new Map(), loose: [] })
+  })
+
   it('FE-STOPBOOKINGS-004: the chip wears the booking panel\'s icon and the clock the booking starts at', () => {
     expect(bookingIcon('restaurant')).toBe(Utensils)
     expect(bookingIcon('car')).toBe(Car)

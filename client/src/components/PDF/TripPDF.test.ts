@@ -31,6 +31,12 @@ function getIframe(): HTMLIFrameElement | null {
   return document.querySelector('#pdf-preview-overlay iframe')
 }
 
+/** The cover's "Planned" figure. The stat is read off its label, since days and places print the same markup. */
+function plannedStat(html: string): number | null {
+  const match = /<div class="cover-stat-num">(\d+)<\/div>\s*<div class="cover-stat-lbl">pdf\.planned<\/div>/.exec(html)
+  return match ? Number(match[1]) : null
+}
+
 // ── Setup ─────────────────────────────────────────────────────────────────────
 
 beforeEach(() => {
@@ -257,7 +263,7 @@ describe('downloadTripPDF', () => {
     // The desktop toolbar hands the export the store's assignments, hidden stop and
     // all, and that stop heads its check-in day. The day plan hides it and shows the
     // booking as the accommodation block, and the print lists what the plan lists.
-    const hotelPlace = { id: 101, name: 'Hotel Hafen Hamburg', address: 'Seewartenstr. 9', place_time: null } as any
+    const hotelPlace = { id: 101, name: 'Hotel Hafen Hamburg', address: 'Seewartenstr. 9', place_time: null, price: '120' } as any
     const hotelStop = { id: 201, day_id: 10, place_id: 101, order_index: 0, accommodation_id: 30, place: hotelPlace }
     const flight = { ...transportReservation, title: 'Morning flight', reservation_time: '2025-06-01T08:00:00' }
     await downloadTripPDF({
@@ -269,6 +275,33 @@ describe('downloadTripPDF', () => {
     expect(html).not.toContain('Seewartenstr. 9')
     expect(html.indexOf('Morning flight')).toBeLessThan(html.indexOf('Colosseum'))
     expect(html.indexOf('Morning flight')).toBeGreaterThan(-1)
+    // The cover and the day header read the same list: the hidden stop is not a planned
+    // stop and its hotel's price is not part of the day, whichever shell asked.
+    expect(plannedStat(html)).toBe(1)
+    const money = html.replace(/[\u00a0\u202f]/g, ' ')
+    expect(money).toContain('15,00 €')
+    expect(money).not.toContain('135,00 €')
+  })
+
+  it('FE-COMP-TRIPPDF-013g: a service stop the plan keeps to the road trip view is not printed either, and comes back with the switch', async () => {
+    // "Show in Days too" off keeps petrol stations and rest areas out of the day lists.
+    // The print follows the same switch, so the desktop, which hands over the store's
+    // assignments, and the phone print the same day.
+    const pump = { id: 102, name: 'Aral Autohof', address: 'Autobahnkreuz 1', stop_type: 'fuel', place_time: null } as any
+    const pumpStop = { id: 202, day_id: 10, place_id: 102, order_index: 1, place: pump }
+    const assignments = { '10': [assignmentForDay, pumpStop] } as any
+    await downloadTripPDF({ ...richArgs, assignments, showServiceStops: false })
+    const hidden = getIframe()!.srcdoc
+    expect(hidden).not.toContain('Aral Autohof')
+    expect(hidden).toContain('Colosseum')
+    expect(plannedStat(hidden)).toBe(1)
+
+    // On, and by default, the stop prints where the plan lists it.
+    getOverlay()?.remove()
+    await downloadTripPDF({ ...richArgs, assignments })
+    const shown = getIframe()!.srcdoc
+    expect(shown).toContain('Aral Autohof')
+    expect(plannedStat(shown)).toBe(2)
   })
 
   it('FE-COMP-TRIPPDF-013c: a flight that lands the same day shows both times (#1310)', async () => {

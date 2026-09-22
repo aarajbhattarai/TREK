@@ -80,6 +80,31 @@ function routes(over: Partial<RoadtripRoutes> = {}): RoadtripRoutes {
   }
 }
 
+const dry = (over: Partial<DryPoint> = {}): DryPoint & { lat: number; lng: number } => ({
+  legIndex: 0,
+  intoLegKm: 182,
+  drivenMeters: 182000,
+  // The range that was crossed, kept deliberately unlike `intoLegKm`: it is the
+  // traveller's own setting, so a band printing it would read the same figure on
+  // every leg of the day.
+  sinceKm: 600,
+  lat: 52.4,
+  lng: 10.2,
+  ...over,
+})
+
+/** Idle unless a case says which part of the search it is standing in. */
+const search = (over: Partial<RefuelSearch> = {}): RefuelSearch => ({
+  openFor: null,
+  loading: false,
+  outcome: null,
+  results: [],
+  offered: [],
+  ask: vi.fn(),
+  close: vi.fn(),
+  ...over,
+})
+
 describe('RoadtripSidebar', () => {
   /**
    * The value the summary head pairs with this label. The same words also name the chips
@@ -585,11 +610,16 @@ describe('RoadtripSidebar', () => {
     expect(onReorderStop).not.toHaveBeenCalled()
   })
 
-  it('FE-ROADTRIP-SIDEBAR-018: a travel mode with no mark of its own falls back to the car', () => {
-    const ferry = leg({ mode: 'ferry' })
-    const { container } = wrap(<RoadtripSidebar routes={routes({ days: [day({ legs: [ferry] })] })} />)
+  it('FE-ROADTRIP-SIDEBAR-018: a travel mode with no mark of its own falls back to the car, a ride keeps its own', () => {
+    const unknown = wrap(<RoadtripSidebar routes={routes({ days: [day({ legs: [leg({ mode: 'hovercraft' })] })] })} />)
+    expect(unknown.container.querySelector('svg.lucide-car-front')).toBeInTheDocument()
+    unknown.unmount()
 
-    expect(container.querySelector('svg.lucide-car-front')).toBeInTheDocument()
+    // A ferry leg is a booked ride since the carrier seams (#2429), not a drive
+    // whose mode nobody drew an icon for.
+    const ride = wrap(<RoadtripSidebar routes={routes({ days: [day({ legs: [leg({ mode: 'ferry' })] })] })} />)
+    expect(ride.container.querySelector('svg.lucide-sailboat')).toBeInTheDocument()
+    expect(ride.container.querySelector('svg.lucide-car-front')).toBeNull()
   })
 
   it('FE-ROADTRIP-SIDEBAR-017: a late finding without a figure still reports itself', () => {
@@ -706,31 +736,6 @@ describe('RoadtripSidebar', () => {
    * point the tank ran dry. A station offered at the warning is one the car cannot reach.
    */
   describe('the leg the tank runs out on', () => {
-    const dry = (over: Partial<DryPoint> = {}): DryPoint & { lat: number; lng: number } => ({
-      legIndex: 0,
-      intoLegKm: 182,
-      drivenMeters: 182000,
-      // The range that was crossed, kept deliberately unlike `intoLegKm`: it is the
-      // traveller's own setting, so a band printing it would read the same figure on
-      // every leg of the day.
-      sinceKm: 600,
-      lat: 52.4,
-      lng: 10.2,
-      ...over,
-    })
-
-    /** Idle unless a case says which part of the search it is standing in. */
-    const search = (over: Partial<RefuelSearch> = {}): RefuelSearch => ({
-      openFor: null,
-      loading: false,
-      outcome: null,
-      results: [],
-      offered: [],
-      ask: vi.fn(),
-      close: vi.fn(),
-      ...over,
-    })
-
     const pump = (name: string, offRouteKm: number, spareKm: number): RefuelCandidate => ({
       osm_id: `osm-${name}`,
       name,
@@ -1179,6 +1184,54 @@ describe('RoadtripSidebar with a ride (#2428)', () => {
     expect(screen.getAllByLabelText('Open booking')).toHaveLength(1)
     expect(screen.getAllByLabelText('Other ways')).toHaveLength(1)
   })
+
+  /** The card a ride lands on, joined to the card before it by the ride itself. */
+  const landingDay = (arrivingLeg: RouteSegment) => {
+    const arrival = terminal('arrival')
+    return day({
+      dayId: 2,
+      dayNumber: 2,
+      stops: [{ ...arrival, time: '07:00', carrier: { ...arrival.carrier!, at: '07:00' } }, stop({ assignmentId: 2, name: 'Munich' })],
+      legs: [leg()],
+      arrivingLeg,
+      schedule: {
+        entries: [
+          { arrival: '07:00', departure: '07:00', anchored: true, dayOffset: 0 },
+          { arrival: '08:00', departure: '08:00', anchored: false, dayOffset: 0 },
+        ],
+        warnings: [],
+      },
+    })
+  }
+
+  it('FE-ROADTRIP-SIDEBAR-054: the join into the day a ride lands on is the ride, not a car driving no distance', () => {
+    const flown = leg({ mode: 'flight', distance: 0, duration: 9 * 3600, distanceText: '', durationText: '9 h' })
+    wrap(<RoadtripSidebar routes={routes({ days: [landingDay(flown)], totalStops: 1 })} />)
+    expect(screen.getByText('LH 2020 · 9 h')).toBeInTheDocument()
+    expect(screen.queryByText(/0 m in 9 h/)).not.toBeInTheDocument()
+    // Under the booking's own icon, not the car the road out of the airport wears.
+    const band = screen.getByText('LH 2020 · 9 h').parentElement!
+    expect(band.querySelector('svg.lucide-plane')).toBeInTheDocument()
+    expect(band.querySelector('svg.lucide-car-front')).toBeNull()
+  })
+
+  it('FE-ROADTRIP-SIDEBAR-055: a ride without a timetable still names the booking rather than passing for a hop', () => {
+    const untimed = leg({ mode: 'flight', distance: 0, duration: 0, distanceText: '', durationText: '' })
+    wrap(<RoadtripSidebar routes={routes({ days: [landingDay(untimed)], totalStops: 1 })} />)
+    expect(screen.getByText('LH 2020')).toBeInTheDocument()
+  })
+
+  it('FE-ROADTRIP-SIDEBAR-056: the tank starts afresh after a flight, and the road out of the arrival can be the one it runs out on', () => {
+    const { container } = wrap(
+      <RoadtripSidebar routes={routes({ days: [{ ...flightDay(), dryPoints: [dry({ legIndex: 2 })] }], totalStops: 2 })} refuel={search()} />,
+    )
+    // Hamburg, the ride block, Munich: the band hangs under the block, where the road
+    // out of the arrival leaves, and nowhere else.
+    const rows = container.querySelectorAll('li')
+    expect(rows).toHaveLength(3)
+    expect(screen.getAllByText('Tank runs out here')).toHaveLength(1)
+    expect(within(rows[1] as HTMLElement).getByText('Tank runs out here')).toBeInTheDocument()
+  })
 })
 
 describe('RoadtripSidebar with a hire car and the day\'s bookings (#2428)', () => {
@@ -1194,9 +1247,9 @@ describe('RoadtripSidebar with a hire car and the day\'s bookings (#2428)', () =
   const booking = (over: Partial<Reservation>): Reservation =>
     ({ id: 1, trip_id: 1, title: 'Booking', type: 'restaurant', status: 'confirmed', day_id: 1, ...over }) as Reservation
 
-  it('FE-ROADTRIP-SIDEBAR-052: the desks are rows on the road with the booking\'s clock, unnumbered, and the road between them is offered other ways only where it leaves a stored stop', () => {
+  const rentalDay = () => {
     const stops = [desk('pickup'), stop({ assignmentId: 1, name: 'Hamburg' }), stop({ assignmentId: 2, name: 'Lübeck' }), desk('return')]
-    const rental = day({
+    return day({
       stops,
       legs: [leg(), leg(), leg()],
       schedule: {
@@ -1209,8 +1262,11 @@ describe('RoadtripSidebar with a hire car and the day\'s bookings (#2428)', () =
         warnings: [],
       },
     })
+  }
+
+  it('FE-ROADTRIP-SIDEBAR-052: the desks are rows on the road with the booking\'s clock, unnumbered, and the road between them is offered other ways only where it leaves a stored stop', () => {
     const onOpenBooking = vi.fn()
-    wrap(<RoadtripSidebar routes={routes({ days: [rental], totalStops: 2 })} onOpenBooking={onOpenBooking} onAskAlternatives={vi.fn()} />)
+    wrap(<RoadtripSidebar routes={routes({ days: [rentalDay()], totalStops: 2 })} onOpenBooking={onOpenBooking} onAskAlternatives={vi.fn()} />)
     expect(screen.getByText('Pick-up 09:00')).toBeInTheDocument()
     expect(screen.getByText('Return 11:30')).toBeInTheDocument()
     expect(screen.getByText('HAM')).toBeInTheDocument()
@@ -1223,6 +1279,15 @@ describe('RoadtripSidebar with a hire car and the day\'s bookings (#2428)', () =
     expect(screen.getAllByLabelText('Other ways')).toHaveLength(2)
   })
 
+  it('FE-ROADTRIP-SIDEBAR-057: a tank that empties on the road out of the pick-up desk is offered a fill-up under the desk', () => {
+    const { container } = wrap(
+      <RoadtripSidebar routes={routes({ days: [{ ...rentalDay(), dryPoints: [dry({ legIndex: 0 })] }], totalStops: 2 })} refuel={search()} />,
+    )
+    const rows = container.querySelectorAll('li')
+    expect(screen.getAllByText('Tank runs out here')).toHaveLength(1)
+    expect(within(rows[0] as HTMLElement).getByText('Tank runs out here')).toBeInTheDocument()
+  })
+
   it('FE-ROADTRIP-SIDEBAR-053: a table pinned to a stop, or booked at its place on its day, hangs under the stop as a chip that opens it; one for no stop is listed under the day', () => {
     const stops = [stop({ assignmentId: 1, name: 'Hamburg' }), stop({ assignmentId: 2, name: 'Lübeck' })]
     const reservations = [
@@ -1233,7 +1298,7 @@ describe('RoadtripSidebar with a hire car and the day\'s bookings (#2428)', () =
       booking({ id: 15, title: 'Hotel Hafen', type: 'hotel', place_id: 10 }),
     ]
     const onOpenBooking = vi.fn()
-    wrap(<RoadtripSidebar routes={routes({ days: [day({ stops })], totalStops: 2 })} reservations={reservations} onOpenBooking={onOpenBooking} />)
+    wrap(<RoadtripSidebar routes={routes({ days: [day({ stops })], totalStops: 2 })} reservations={reservations} onOpenBooking={onOpenBooking} canEditBookings />)
     expect(screen.getByText('Tisch Bullerei')).toBeInTheDocument()
     expect(screen.getByText('19:30')).toBeInTheDocument()
     expect(screen.getByText('Café Niederegger')).toBeInTheDocument()
@@ -1246,5 +1311,22 @@ describe('RoadtripSidebar with a hire car and the day\'s bookings (#2428)', () =
     expect(onOpenBooking).toHaveBeenCalledWith(11)
     // The chips are the stop's, not stops: the count stays at two.
     expect(screen.getByText('2 stops')).toBeInTheDocument()
+  })
+
+  it('FE-ROADTRIP-SIDEBAR-058: for a reader who may not edit bookings, a table is a plain chip while a taxi still opens its detail view', () => {
+    const stops = [stop({ assignmentId: 1, name: 'Hamburg' }), stop({ assignmentId: 2, name: 'Lübeck' })]
+    const reservations = [
+      booking({ id: 11, title: 'Tisch Bullerei', reservation_time: '2026-10-05T19:30', assignment_id: 1 }),
+      booking({ id: 12, title: 'Taxi zum Hafen', type: 'taxi', reservation_time: '2026-10-05T18:30', assignment_id: 1 }),
+    ]
+    const onOpenBooking = vi.fn()
+    wrap(<RoadtripSidebar routes={routes({ days: [day({ stops })], totalStops: 2 })} reservations={reservations} onOpenBooking={onOpenBooking} />)
+    // The table is there to read, not a button that does nothing; the taxi is a button.
+    expect(screen.getByText('Tisch Bullerei').closest('button')).toBeNull()
+    expect(screen.getByText('Taxi zum Hafen').closest('button')).not.toBeNull()
+    fireEvent.click(screen.getByText('Tisch Bullerei'))
+    expect(onOpenBooking).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByText('Taxi zum Hafen'))
+    expect(onOpenBooking).toHaveBeenCalledWith(12)
   })
 })

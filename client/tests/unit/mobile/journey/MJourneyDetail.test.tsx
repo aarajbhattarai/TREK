@@ -1,4 +1,4 @@
-// FE-MOB-JDET-001 to FE-MOB-JDET-037
+// FE-MOB-JDET-001 to FE-MOB-JDET-039
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor, act } from '../../../helpers/render';
 import MJourneyDetail from '../../../../src/mobile/screens/journey/MJourneyDetail';
@@ -315,6 +315,15 @@ describe('MJourneyDetail', () => {
     setup({ view: 'gallery', current: buildDetail({ gallery }) });
     expect(document.querySelector('img')).not.toBeInTheDocument();
     expect(document.querySelector('.absolute.inset-0.flex.items-center')).toBeInTheDocument();
+  });
+
+  it('FE-MOB-JDET-039: a provider clip shows the poster the provider serves, as the desktop gallery does', () => {
+    // A provider row never records a local thumbnail path, so the check the desktop
+    // shares (posterlessVideo) must be the one used here too (#2341 follow-up).
+    const gallery = [buildGalleryPhoto({ media_type: 'video', provider: 'immich', asset_id: 'a1', thumbnail_path: null })];
+    setup({ view: 'gallery', current: buildDetail({ gallery }) });
+    expect(document.querySelector('img[src="/api/photos/900/thumbnail"]')).toBeInTheDocument();
+    expect(document.querySelector('svg.lucide-play')).toBeInTheDocument();
   });
 
   it('FE-MOB-JDET-014: uploading from the device sends the picked files and reloads', async () => {

@@ -3,8 +3,8 @@
  *
  * A night's stop used to go last on its check-in day unless a stop pinned to a later
  * hour pulled it forward, and the backfill for older bookings appended it as well. The
- * night leads its day now (AccommodationsService.positionForCheckIn), and this step
- * brings the trips planned under the old rule along, drawn roads included.
+ * night leads its day now (night-seat.ts, the rule AccommodationsService applies), and
+ * this step brings the trips planned under the old rule along, drawn roads included.
  *
  * The rules live in reseat-booked-nights.ts and are tested there directly on a fully
  * migrated database: the columns the step reads (assignment_time, accommodation_id)
@@ -187,6 +187,108 @@ describe('booked night reseat', () => {
 
     expect(order(db)).toEqual([earlier, later]);
     expect(reseatBookedNights(db)).toBe(0);
+  });
+
+  it('RESEAT-011: two nights with the same check-in, booked in that order, stay put with their roads', () => {
+    // Each used to count the other as "at or before" its check-in, so the step reported
+    // two moves it never made and the reanchor dropped the road between them.
+    const db = freshDb();
+    const [first, second] = [place(db, 'Adlon'), place(db, 'Mercure')];
+    stop(db, first, 0, null, night(db, first, '15:00'));
+    stop(db, second, 1, null, night(db, second, '15:00'));
+    const between = via(db, 0);
+    const intoTomorrow = via(db, 1);
+
+    expect(reseatBookedNights(db)).toBe(0);
+
+    expect(order(db)).toEqual([first, second]);
+    expect(vias(db)).toEqual([
+      { id: between, after_order_index: 0, sequence: 0 },
+      { id: intoTomorrow, after_order_index: 1, sequence: 0 },
+    ]);
+    expect(reseatBookedNights(db)).toBe(0);
+  });
+
+  it('RESEAT-012: two nights with the same check-in settle by their booking, and only once', () => {
+    const db = freshDb();
+    const [fuel, first, second] = [place(db, 'Aral'), place(db, 'Adlon'), place(db, 'Mercure')];
+    const firstNight = night(db, first, '15:00');
+    const secondNight = night(db, second, '15:00');
+    stop(db, fuel, 0);
+    stop(db, second, 1, null, secondNight);
+    stop(db, first, 2, null, firstNight);
+
+    expect(reseatBookedNights(db)).toBe(2);
+
+    expect(order(db)).toEqual([first, second, fuel]);
+    expect(indexes(db)).toEqual([0, 1, 2]);
+    expect(reseatBookedNights(db)).toBe(0);
+    expect(order(db)).toEqual([first, second, fuel]);
+  });
+
+  it('RESEAT-013: two nights without a check-in settle by their booking too', () => {
+    // Both used to want the front, and every pass swapped them.
+    const db = freshDb();
+    const [first, second] = [place(db, 'Adlon'), place(db, 'Mercure')];
+    const firstNight = night(db, first, null);
+    const secondNight = night(db, second, null);
+    stop(db, second, 0, null, secondNight);
+    stop(db, first, 1, null, firstNight);
+
+    expect(reseatBookedNights(db)).toBe(1);
+
+    expect(order(db)).toEqual([first, second]);
+    expect(reseatBookedNights(db)).toBe(0);
+    expect(order(db)).toEqual([first, second]);
+  });
+
+  it('RESEAT-014: a night without a check-in leads one with a clock', () => {
+    const db = freshDb();
+    const [fuel, clocked, open] = [place(db, 'Aral'), place(db, 'Adlon'), place(db, 'Mercure')];
+    stop(db, fuel, 0);
+    stop(db, clocked, 1, null, night(db, clocked, '15:00'));
+    stop(db, open, 2, null, night(db, open, null));
+
+    reseatBookedNights(db);
+
+    expect(order(db)).toEqual([open, clocked, fuel]);
+    expect(reseatBookedNights(db)).toBe(0);
+    expect(order(db)).toEqual([open, clocked, fuel]);
+  });
+
+  it('RESEAT-015: an hour pinned on a night own stop is not what the other nights read it by', () => {
+    // The stop carries eight, the booking carries three, and a night seats itself by
+    // its check-in. Read the pinned hour off the row instead and the two of them
+    // answer the same question differently: each counts the other as ahead, the step
+    // reports two moves on every run for ever, and the swap in between drops the road.
+    const db = freshDb();
+    const [first, second] = [place(db, 'Adlon'), place(db, 'Mercure')];
+    const firstNight = night(db, first, '15:00');
+    const secondNight = night(db, second, '15:00');
+    stop(db, first, 0, null, firstNight);
+    stop(db, second, 1, '08:00', secondNight);
+    const between = via(db, 0);
+
+    expect(reseatBookedNights(db)).toBe(0);
+
+    expect(order(db)).toEqual([first, second]);
+    expect(vias(db)).toEqual([{ id: between, after_order_index: 0, sequence: 0 }]);
+    expect(reseatBookedNights(db)).toBe(0);
+  });
+
+  it('RESEAT-016: a night without a check-in leads on its booking, whatever hour its place carries', () => {
+    const db = freshDb();
+    const [first, second] = [place(db, 'Adlon', '09:00'), place(db, 'Mercure')];
+    const firstNight = night(db, first, null);
+    const secondNight = night(db, second, null);
+    stop(db, second, 0, null, secondNight);
+    stop(db, first, 1, null, firstNight);
+
+    expect(reseatBookedNights(db)).toBe(1);
+
+    expect(order(db)).toEqual([first, second]);
+    expect(reseatBookedNights(db)).toBe(0);
+    expect(order(db)).toEqual([first, second]);
   });
 
   it('RESEAT-008: runs again without moving anything', () => {

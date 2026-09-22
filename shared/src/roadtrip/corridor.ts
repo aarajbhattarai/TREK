@@ -1,3 +1,5 @@
+import type { RoadtripStop } from './planning-types';
+
 export interface LatLng {
   lat: number;
   lng: number;
@@ -223,4 +225,84 @@ export function boxAround(point: LatLng, radiusKm: number): Bbox {
     north: point.lat + dLat,
     east: point.lng + dLng,
   };
+}
+
+/** A stretch of the spine, in kilometres along it. */
+export interface KmRange {
+  fromKm: number;
+  toKm: number;
+}
+
+/** A ride among a day's stops: the departure terminal, at `index`, and the arrival it jumps to. */
+export interface RideGap {
+  index: number;
+  from: LatLng;
+  to: LatLng;
+}
+
+/**
+ * The rides on a day (#2428): each departure terminal followed by the arrival of the same
+ * booking. The line runs straight from the one to the other there, and the car is not on
+ * it, so a corridor search leaves the stretch out and drops what it finds under it.
+ */
+export function rideGaps(stops: readonly Pick<RoadtripStop, 'carrier' | 'lat' | 'lng'>[]): RideGap[] {
+  const out: RideGap[] = [];
+  stops.forEach((stop, i) => {
+    const next = stops[i + 1];
+    if (stop.carrier?.role === 'departure' && next?.carrier?.reservationId === stop.carrier.reservationId) {
+      out.push({ index: i, from: { lat: stop.lat, lng: stop.lng }, to: { lat: next.lat, lng: next.lng } });
+    }
+  });
+  return out;
+}
+
+/**
+ * The ridden stretches as kilometres along the spine, in order. A ride whose two ends
+ * land on the same point of the spine, or that has no spine to be measured against, is
+ * no stretch. A terminal well off the line still projects onto its nearest point, so a
+ * ride is never dropped for standing away from the road.
+ */
+export function riddenRanges(spine: LatLng[], gaps: readonly { from: LatLng; to: LatLng }[]): KmRange[] {
+  const out: KmRange[] = [];
+  for (const gap of gaps) {
+    const a = projectOntoRoute(gap.from, spine)?.alongKm;
+    const b = projectOntoRoute(gap.to, spine)?.alongKm;
+    if (a === undefined || b === undefined) continue;
+    const range = { fromKm: Math.min(a, b), toKm: Math.max(a, b) };
+    if (range.toKm > range.fromKm) out.push(range);
+  }
+  return out.sort((a, b) => a.fromKm - b.fromKm);
+}
+
+// The terminals themselves stand at the ends of a ride and stay on the road.
+const TERMINAL_SLACK_KM = 0.05;
+
+export function inRiddenRange(ridden: readonly KmRange[], alongKm: number): boolean {
+  return ridden.some((r) => alongKm > r.fromKm + TERMINAL_SLACK_KM && alongKm < r.toKm - TERMINAL_SLACK_KM);
+}
+
+/**
+ * The spine cut into the pieces the car drives: the window, or the whole line, with every
+ * ridden stretch left out. Only the pieces to tile are cut, never the spine itself: every
+ * alongKm is a distance along the spine, and cutting that would renumber every hit and
+ * every stop the moment a window moved.
+ */
+export function drivenPieces(spine: LatLng[], ridden: readonly KmRange[], window?: KmRange | null): LatLng[][] {
+  const start = window?.fromKm ?? 0;
+  const end = window?.toKm ?? Number.POSITIVE_INFINITY;
+  const slice = (fromKm: number, toKm: number): LatLng[] =>
+    sliceAtMeters(spine, fromKm * 1000, Number.isFinite(toKm) ? toKm * 1000 : Number.MAX_SAFE_INTEGER);
+  const pieces: LatLng[][] = [];
+  if (!ridden.length) {
+    pieces.push(window ? slice(start, end) : spine);
+  } else {
+    let cursor = start;
+    for (const range of ridden) {
+      if (range.fromKm >= end) break;
+      if (range.fromKm > cursor) pieces.push(slice(cursor, range.fromKm));
+      cursor = Math.max(cursor, range.toKm);
+    }
+    if (cursor < end) pieces.push(slice(cursor, end));
+  }
+  return pieces.filter((piece) => piece.length > 1);
 }

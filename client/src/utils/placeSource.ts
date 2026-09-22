@@ -33,6 +33,52 @@ const SOURCE_KEYS: Record<string, string> = {
 }
 
 /**
+ * Whether a search can reach Google on this install at all.
+ *
+ * A stored key is not enough. The server walks the Google key chain only while
+ * the admin's provider choice leaves Google the keyed slot, which is `auto` or
+ * `google`; under Amap or OpenStreetMap the key still serves photos and
+ * details, but a search sent to Google is answered by the index as before.
+ * Anything unrecognised reads as `auto`, the way the server reads it.
+ */
+export function googleHoldsSlot(hasMapsKey: boolean, placesProvider: string): boolean {
+  return hasMapsKey && placesProvider !== 'amap' && placesProvider !== 'openstreetmap'
+}
+
+/** The same question asked of the auth store, for `useAuthStore(selectGoogleHoldsSlot)`. */
+export const selectGoogleHoldsSlot = (s: { hasMapsKey: boolean; placesProvider: string }): boolean =>
+  googleHoldsSlot(s.hasMapsKey, s.placesProvider)
+
+/**
+ * Whether a result list can be sent to Google instead.
+ *
+ * The index and OpenStreetMap answer first, and Google is only asked when they
+ * find nothing, so a list that has the wrong place on it never reaches Google
+ * on its own. The link that sends it there is offered when Google holds the
+ * keyed slot (googleHoldsSlot above) and this list did not already come from
+ * Google: a list Google produced, alone or as the empty-case fallback, has
+ * nowhere further to go, and the offline cache is not a search at all.
+ */
+export function offersGoogleRetry(listSource: string, googleAnswers: boolean): boolean {
+  if (!googleAnswers || !listSource) return false
+  return !listSource.split('+').includes('google') && listSource !== 'offline-cache'
+}
+
+/**
+ * The line under the admin's "Search with Google only" switch.
+ *
+ * Two ways the switch can be a promise the search cannot keep, and they ask
+ * different things of the admin: paste a key, or hand the keyed slot back to
+ * Google. The subtitle that says what the switch does is only true of the
+ * third state.
+ */
+export function placesGoogleOnlyHint(hasMapsKey: boolean, placesProvider: string): string {
+  if (!hasMapsKey) return 'admin.placesGoogleOnly.missingKey'
+  if (!googleHoldsSlot(hasMapsKey, placesProvider)) return 'admin.placesGoogleOnly.otherProvider'
+  return 'admin.placesGoogleOnly.subtitle'
+}
+
+/**
  * The label for one row.
  *
  * A place carries its own source when the index that produced it says so, which
@@ -40,21 +86,6 @@ const SOURCE_KEYS: Record<string, string> = {
  * answered the call: Google never marks its places, and a merged list marks only
  * the index side, so an unmarked row in one is OpenStreetMap by elimination.
  */
-/**
- * Whether a result list can be sent to Google instead.
- *
- * The index and OpenStreetMap answer first, and Google is only asked when they
- * find nothing, so a list that has the wrong place on it never reaches Google
- * on its own. The link that sends it there is offered when the instance has a
- * Google key and this list did not already come from Google: a list Google
- * produced, alone or as the empty-case fallback, has nowhere further to go, and
- * the offline cache is not a search at all.
- */
-export function offersGoogleRetry(listSource: string, hasMapsKey: boolean): boolean {
-  if (!hasMapsKey || !listSource) return false
-  return !listSource.split('+').includes('google') && listSource !== 'offline-cache'
-}
-
 export function sourceLabelFor(place: unknown, listSource: string, t: TranslationFn): string | null {
   const own = (place as { source?: unknown } | null)?.source
   const source = typeof own === 'string' && own

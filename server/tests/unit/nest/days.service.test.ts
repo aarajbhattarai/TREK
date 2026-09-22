@@ -604,6 +604,91 @@ describe('resyncAccommodationDays', () => {
     expect(testDb.prepare('SELECT day_id, reservation_time FROM reservations WHERE id = ?').get(res))
       .toMatchObject({ day_id: null, reservation_time: null });
   });
+
+  // The stop a booking wrote goes along when the stay is carried to another day row.
+  const stopsOn = (dayId: number) =>
+    testDb.prepare('SELECT place_id, order_index, accommodation_id FROM day_assignments WHERE day_id = ? ORDER BY order_index').all(dayId) as
+      { place_id: number; order_index: number; accommodation_id: number | null }[];
+  const addVia = (dayId: number, afterOrderIndex: number) =>
+    Number(testDb.prepare('INSERT INTO roadtrip_vias (day_id, after_order_index, sequence, lat, lng) VALUES (?, ?, 0, 48.1, 11.5)')
+      .run(dayId, afterOrderIndex).lastInsertRowid);
+  const viasOn = (dayId: number) =>
+    testDb.prepare('SELECT id, after_order_index FROM roadtrip_vias WHERE day_id = ? ORDER BY id').all(dayId) as
+      { id: number; after_order_index: number }[];
+
+  it('DAY-SVC-055: the carried stop is seated by its check-in on its new day, and both days keep their roads in place', () => {
+    // The trip gained a day at the front: d1 now holds the day before, d2 the stay's
+    // date. The night used to be appended behind d2's unpinned stops, the very order
+    // a night booked today no longer gets, and neither day's roads were re-pinned.
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const d1 = createDay(testDb, trip.id, { date: '2026-05-01' });
+    const d2 = createDay(testDb, trip.id, { date: '2026-05-02' });
+    const [hotel, a, b, c, d] = ['Rostock', 'Aral', 'Hafen', 'Museum', 'Markt'].map(name => createPlace(testDb, trip.id, { name }));
+    const { accommodation } = accommodations.createAccommodation(trip.id, { place_id: hotel.id, start_day_id: d1.id, end_day_id: d1.id, check_in: '10:00' }) as any;
+    createDayAssignment(testDb, d1.id, a.id);
+    createDayAssignment(testDb, d1.id, b.id);
+    createDayAssignment(testDb, d2.id, c.id);
+    createDayAssignment(testDb, d2.id, d.id);
+    expect(stopsOn(d1.id).map(s => s.place_id)).toEqual([hotel.id, a.id, b.id]);
+    const outOfHotel = addVia(d1.id, 0);
+    const outOfA = addVia(d1.id, 1);
+    const outOfC = addVia(d2.id, 0);
+    testDb.prepare('UPDATE days SET date = ? WHERE id = ?').run('2026-04-30', d1.id);
+    testDb.prepare('UPDATE days SET date = ? WHERE id = ?').run('2026-05-01', d2.id);
+
+    svc.resyncAccommodationDays(trip.id, new Map([[d1.id, '2026-05-01'], [d2.id, '2026-05-02']]));
+
+    expect(testDb.prepare('SELECT start_day_id FROM day_accommodations WHERE id = ?').get(accommodation.id)).toMatchObject({ start_day_id: d2.id });
+    expect(stopsOn(d2.id)).toEqual([
+      { place_id: hotel.id, order_index: 0, accommodation_id: accommodation.id },
+      { place_id: c.id, order_index: 1, accommodation_id: null },
+      { place_id: d.id, order_index: 2, accommodation_id: null },
+    ]);
+    expect(stopsOn(d1.id).map(s => [s.place_id, s.order_index])).toEqual([[a.id, 0], [b.id, 1]]);
+    // The hotel's road on d1 had no stop ahead to fall back on and goes; A's follows A
+    // to leg zero. On d2 the road out of C is one number further on, behind C.
+    expect(viasOn(d1.id)).toEqual([{ id: outOfA, after_order_index: 0 }]);
+    expect(viasOn(d1.id).map(v => v.id)).not.toContain(outOfHotel);
+    expect(viasOn(d2.id)).toEqual([{ id: outOfC, after_order_index: 1 }]);
+  });
+
+  it('DAY-SVC-056: a day that already holds the place by hand keeps that stop, and the booking rides along with it', () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const d1 = createDay(testDb, trip.id, { date: '2026-05-01' });
+    const d2 = createDay(testDb, trip.id, { date: '2026-05-02' });
+    const hotel = createPlace(testDb, trip.id, { name: 'Rostock' });
+    const { accommodation } = accommodations.createAccommodation(trip.id, { place_id: hotel.id, start_day_id: d1.id, end_day_id: d1.id }) as any;
+    const own = createDayAssignment(testDb, d2.id, hotel.id);
+    testDb.prepare('UPDATE days SET date = ? WHERE id = ?').run('2026-04-30', d1.id);
+    testDb.prepare('UPDATE days SET date = ? WHERE id = ?').run('2026-05-01', d2.id);
+
+    svc.resyncAccommodationDays(trip.id, new Map([[d1.id, '2026-05-01'], [d2.id, '2026-05-02']]));
+
+    expect(testDb.prepare('SELECT start_day_id FROM day_accommodations WHERE id = ?').get(accommodation.id)).toMatchObject({ start_day_id: d2.id });
+    expect(stopsOn(d1.id)).toEqual([]);
+    expect(stopsOn(d2.id)).toEqual([{ place_id: hotel.id, order_index: own.order_index, accommodation_id: null }]);
+  });
+
+  it('DAY-SVC-057: a stay whose end alone moves leaves its stop where it is', () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const d1 = createDay(testDb, trip.id, { date: '2026-05-01' });
+    const d2 = createDay(testDb, trip.id, { date: '2026-05-02' });
+    const d3 = createDay(testDb, trip.id, { date: '2026-05-03' });
+    const [hotel, a] = ['Rostock', 'Aral'].map(name => createPlace(testDb, trip.id, { name }));
+    const { accommodation } = accommodations.createAccommodation(trip.id, { place_id: hotel.id, start_day_id: d1.id, end_day_id: d2.id, check_in: '10:00' }) as any;
+    createDayAssignment(testDb, d1.id, a.id);
+    testDb.prepare('UPDATE days SET date = ? WHERE id = ?').run('2026-05-03', d2.id);
+    testDb.prepare('UPDATE days SET date = ? WHERE id = ?').run('2026-05-02', d3.id);
+
+    svc.resyncAccommodationDays(trip.id, new Map([[d1.id, '2026-05-01'], [d2.id, '2026-05-02'], [d3.id, '2026-05-03']]));
+
+    expect(testDb.prepare('SELECT start_day_id, end_day_id FROM day_accommodations WHERE id = ?').get(accommodation.id))
+      .toMatchObject({ start_day_id: d1.id, end_day_id: d3.id });
+    expect(stopsOn(d1.id).map(s => [s.place_id, s.order_index])).toEqual([[hotel.id, 0], [a.id, 1]]);
+  });
 });
 
 describe('reorder', () => {

@@ -63,7 +63,7 @@ type EntryVisibility = z.infer<typeof ENTRY_VISIBILITY>;
  * only the half it has, which is what the entry editor does when a place was
  * all good or all bad. The service stores nothing when both come back empty.
  */
-const PROS_CONS = z.object({
+const PROS_CONS = z.strictObject({
   pros: z.array(z.string()).default([]),
   cons: z.array(z.string()).default([]),
 });

@@ -152,7 +152,8 @@ permissions still requires explicit re-consent).
   the home for per-day content like outfit planning, live flight status or logistics),
   or a panel at the foot of a booking card in the **reservation-detail** view
   (`reservation-detail` slot — receives the open `reservationId`, for things like
-  live check-in status or a seat map). Set the slot in `capabilities.widget.slot`.
+  live check-in status or a seat map; shown on the desktop panel and on the phone's
+  transport and booking cards). Set the slot in `capabilities.widget.slot`.
 - **trip-page** — adds a tab **inside every trip planner**, so your UI lives in the
   trip alongside Plan / Transports / Files. The frame is the same sandboxed iframe as
   a `page`, but it receives the current `tripId` in `trek:context` (so you can scope
@@ -248,7 +249,7 @@ parser would ignore one if you added it.
 | `ctx.db` | `query(sql, …args)` / `exec(sql, …args)` / `migrate(id, sql)` / `tx(ops)` against your **own** SQLite file. `tx([{sql, args?}, …])` runs up to 100 statements in one transaction (all commit or all roll back; reads see the batch's own earlier writes) → `{ results: [{changes?}\|{rows?}, …] }`. Your file is capped at **256 MB** (a write past it fails `SQLITE_FULL`, contained to your plugin) and a single result set at **100,000 rows** — page your reads instead of materialising a cartesian product | `db:own` |
 | `ctx.trips` | `getById` / `getPlaces` / `getReservations` / `getDays` / `getAccommodations` / `listMine()` — enumerate every trip the acting user can access (membership-checked). `getDays` includes each day's `assignments` + `notes_items`; `getReservations` includes `endpoints` + `day_positions` | `db:read:trips` |
 | `ctx.trips.update(tripId, fields)` | update trip fields (title/dates/currency/reminder_days/…) | `db:write:trips` |
-| `ctx.trips.create(input)` | create a **new trip owned by the acting user** (importers) — `title` required, plus `description?`/`start_date?`/`end_date?`/`currency?`/`reminder_days?`/`day_count?` | `db:create:trips` (+ `trip_create`) |
+| `ctx.trips.create(input)` | create a **new trip owned by the acting user** (importers) — `title` required, plus `description?`/`start_date?`/`end_date?`/`currency?`/`reminder_days?`/`day_count?`; without `currency` the trip takes the acting user's display currency, then the instance default, then EUR | `db:create:trips` (+ `trip_create`) |
 | `ctx.places` | `create(tripId, fields)` / `update(tripId, placeId, fields)` / `delete(tripId, placeId)` | `db:write:places` |
 | `ctx.days` | `create(tripId, {date?, notes?})` / `update(tripId, dayId, {notes?, title?})` / `delete(tripId, dayId)` | `db:write:days` |
 | `ctx.itinerary` | `assign(tripId, dayId, placeId, notes?)` / `unassign(tripId, assignmentId)` — place↔day | `db:write:itinerary` |

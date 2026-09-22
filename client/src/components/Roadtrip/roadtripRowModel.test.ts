@@ -15,7 +15,7 @@ import {
 import type { ScheduleEntry, ScheduleWarning } from './roadtripModel'
 import type { RoadtripDay, RoadtripStop, RouteSegment } from '@trek/shared/roadtrip'
 
-// FE-RTROW-001 to FE-RTROW-044
+// FE-RTROW-001 to FE-RTROW-055
 
 function stop(name: string, over: Partial<RoadtripStop> = {}): RoadtripStop {
   return {
@@ -603,5 +603,49 @@ describe('roadtripRows with a ride (#2428)', () => {
   it('FE-RTROW-048: a terminal never answers for a place, however its id reads', () => {
     expect(firstStopOfPlace([flightDay()], -7)).toBeNull()
     expect(firstStopOfPlace([flightDay()], 100)?.name).toBe('Bremen')
+  })
+
+  /** Bremen at 09:00, the airport at 12:20 for a 13:20 flight, landing at 14:30, nothing after. */
+  const endsOnRide = () =>
+    day([stop('Bremen'), terminal('Munich Airport', 'departure'), terminal('Hamburg Airport', 'arrival', '14:30')], {
+      legs: [seg(0), ride],
+      schedule: { entries: [entry('09:00'), entry('12:20', { departure: '13:20' }), entry('14:30')], warnings: [] },
+    })
+  /** The flight first, the hotel after it. */
+  const opensOnRide = () =>
+    day([terminal('Munich Airport', 'departure', '06:00'), terminal('Hamburg Airport', 'arrival', '07:10'), stop('Hotel')], {
+      legs: [ride, seg(1)],
+      schedule: { entries: [entry('05:00', { departure: '06:00' }), entry('07:10'), entry('09:00')], warnings: [] },
+    })
+
+  it('FE-RTROW-052: a day that ends on a ride arrives at the arrival terminal, one that opens on a ride starts at the departure', () => {
+    // The head card printed the clock of the stop before the flight as where the day ends,
+    // while the ride block right below it printed the landing.
+    expect(stageClocks(roadtripRows(endsOnRide()))).toEqual({ start: '09:00', arrive: '14:30' })
+    expect(stageClocks(roadtripRows(opensOnRide()))).toEqual({ start: '05:00', arrive: '09:00' })
+  })
+
+  it('FE-RTROW-053: a day that is nothing but a ride still has both clocks', () => {
+    const rideOnly = day([terminal('Munich Airport', 'departure'), terminal('Hamburg Airport', 'arrival', '14:30')], {
+      legs: [ride],
+      schedule: { entries: [entry('12:20', { departure: '13:20' }), entry('14:30')], warnings: [] },
+    })
+    expect(stageClocks(roadtripRows(rideOnly))).toEqual({ start: '12:20', arrive: '14:30' })
+  })
+
+  it('FE-RTROW-054: up next names the departure terminal before its check-in, and the arrival after take-off', () => {
+    // A lone terminal (a ride landing tomorrow) was already a candidate; the terminals
+    // inside a same-day ride were not, so the countdown skipped the airport.
+    expect(upNextStop(endsOnRide(), 10 * 60, true)?.row.stop.name).toBe('Munich Airport')
+    expect(upNextStop(endsOnRide(), 10 * 60, true)?.minutesUntil).toBe(140)
+    expect(upNextStop(endsOnRide(), 13 * 60 + 30, true)?.row.stop.name).toBe('Hamburg Airport')
+    expect(upNextStop(endsOnRide(), 15 * 60 + 1, true)?.minutesUntil).toBe(-31)
+  })
+
+  it('FE-RTROW-055: a stage that ends on a ride ends at its arrival terminal', () => {
+    const end = stageEnd(roadtripRows(endsOnRide()))
+    expect(end?.stop.name).toBe('Hamburg Airport')
+    expect(end?.time).toBe('14:30')
+    expect(stageEnd(roadtripRows(opensOnRide()))?.stop.name).toBe('Hotel')
   })
 })

@@ -8,6 +8,7 @@ import { useSettingsStore } from '../../store/settingsStore';
 import { useAddonStore } from '../../store/addonStore';
 import { usePluginStore } from '../../store/pluginStore';
 import { useSaveToCollectionStore } from '../../store/saveToCollectionStore';
+import { usePermissionsStore } from '../../store/permissionsStore';
 import { http, HttpResponse } from 'msw';
 import { server } from '../../../tests/helpers/msw/server';
 import type { AssignmentsMap } from '../../types';
@@ -1476,6 +1477,25 @@ describe('PlaceInspector', () => {
       />
     );
     expect(screen.getByText('Museum Ticket').closest('[role="button"]')).toHaveAttribute('data-no-press');
+  });
+
+  it('FE-PLANNER-INSPECTOR-102: a member without place_edit gets neither Edit nor Delete nor the inline rename (#2446)', () => {
+    // buildUser() is a plain member and buildTrip({ id: 1 }) belongs to somebody else.
+    usePermissionsStore.setState({ permissions: { place_edit: 'trip_owner' } });
+    const onEdit = vi.fn();
+    const onDelete = vi.fn();
+    const onUpdatePlace = vi.fn();
+    const member = render(<PlaceInspector {...defaultProps} onEdit={onEdit} onDelete={onDelete} onUpdatePlace={onUpdatePlace} />);
+    expect(screen.queryByText('Edit')).not.toBeInTheDocument();
+    expect(screen.queryByText('Delete')).not.toBeInTheDocument();
+    fireEvent.doubleClick(screen.getByText(place.name));
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+    member.unmount();
+    // the same trip owned by this member shows them again
+    seedStore(useTripStore, { trip: buildTrip({ id: 1, user_id: useAuthStore.getState().user!.id }) });
+    render(<PlaceInspector {...defaultProps} onEdit={onEdit} onDelete={onDelete} onUpdatePlace={onUpdatePlace} />);
+    expect(screen.getByText('Edit')).toBeInTheDocument();
+    expect(screen.getByText('Delete')).toBeInTheDocument();
   });
 
 

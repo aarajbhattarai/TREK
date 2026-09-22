@@ -6,7 +6,7 @@ import { SettingsService } from './settings.service';
 import { SettingsMcp } from './settings.mcp';
 import { AppConfigModule } from '../app-config/app-config.module';
 
-/** Exports SettingsService for in-container consumers (admin, share, llm-parse). */
+/** Exports SettingsService for in-container consumers (admin, share, llm-parse, journey, roadtrip, trips). */
 @Module({
   // AuthModule for the admin gate on the defaults routes, and for the
   // AuthService that SettingsMcp's demo gate injects.

@@ -27,7 +27,7 @@ Each sidebar has a drag handle on its inner edge for resizing.
 
 A **Day Detail panel** floats over the map area when you open a specific day, showing the weather forecast, that day's reservations, and the accommodation block. It can be collapsed to a slim header bar without closing it.
 
-Opening a day also narrows the Places sidebar. With a day selected, the **Planned** filter lists and counts only the places on that day's plan, the same set the map draws, and a line under the filter tabs says **Showing the open day only**. Its **X** closes the day again, so list, count and map return to the whole trip. **All** and **Unplanned** stay trip-wide on purpose: a place on some other day is planned, whichever day happens to be open.
+Opening a day also narrows the Places sidebar. With a day selected, the **Planned** filter lists and counts only the places on that day's plan, the same set the map draws, and a line under the places filter (the select that offers **All**, **Unplanned** and **Planned**, plus **Tracks** once the trip has one, each with its count in the menu) says **Showing the open day only**. Its **X** closes the day again, so list, count and map return to the whole trip. **All** and **Unplanned** stay trip-wide on purpose: a place on some other day is planned, whichever day happens to be open.
 
 ## Tabs
 
@@ -136,7 +136,7 @@ The Add as a stop dialog offers trivago and CHECK24 for hotels, or PiNCAMP and P
 
 All Looking for categories, including accommodation, are added as Roadtrip service stops. In Roadtrip mode, Edit in a planned place's details opens the stop dialog with its saved duration and check-in time. Saving updates the existing stop; More details still opens the full place editor. The shared stop-type contract also accepts hotel through MCP.
 
-A booked night uses its check-in as the earliest arrival and the place's STAY as its length. The drive never reads the check-out: it is the latest the room has to be handed back, not the time anybody drives on, so it stays a booking detail under Days. To leave at a set hour, give the visit an End, see [Road-Trip](Road-Trip#leaving-at-a-set-time). Explicit arrival times remain authoritative. Browser planning and MCP use the same scheduling logic.
+A booked night is anchored on its check-in the way a pinned time anchors any other stop, and takes the place's STAY as its length: the day is built to be there by then, and a drive that gets there later is reported late rather than moving the stop. A time pinned on the stop itself wins over the check-in. The drive never reads the check-out: it is the latest the room has to be handed back, not the time anybody drives on, so it stays a booking detail under Days. To leave at a set hour, give the visit an End, see [Road-Trip](Road-Trip#leaving-at-a-set-time). Browser planning and MCP use the same scheduling logic.
 
 The overnight dialog prefills check-in from the calculated arrival when available; existing manual check-in values take priority. Before adding a corridor result, the suggested arrival is estimated along the current routed leg.
 

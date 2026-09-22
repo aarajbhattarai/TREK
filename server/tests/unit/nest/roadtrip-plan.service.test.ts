@@ -8,7 +8,7 @@
 import { db } from '../../../src/db/database';
 import { DatabaseService } from '../../../src/nest/database/database.service';
 import { RoadtripPlanService } from '../../../src/nest/roadtrip/roadtrip-plan.service';
-import { createDay, createDayAssignment, createPlace, createTrip, createUser } from '../../helpers/factories';
+import { createDay, createDayAccommodation, createDayAssignment, createPlace, createTrip, createUser } from '../../helpers/factories';
 import { resetTestDb } from '../../helpers/test-db';
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -114,6 +114,46 @@ describe('a visit end time on the road trip', () => {
 
     expect(calculated.days[0].schedule.entries[1]).toMatchObject({ arrival: '10:00', departure: '10:30' });
     expect(calculated.days[0].stops[1].leaveAt).toBeNull();
+  });
+});
+
+describe('a booked night on the road trip (#2410)', () => {
+  // The night flag comes off the planning SELECT (stay.id), not off a row the tests
+  // hand the service, so a column dropped from the statement would flip every stop
+  // to a night here and nowhere else.
+  it('marks the stop the night is booked at, and a day that is only its night stands among the days', async () => {
+    const { user, trip, plans } = setup();
+    const arrival = createDay(db, trip.id);
+    const hotel = createPlace(db, trip.id, { name: 'Rostock', lat: 54.09, lng: 12.1 });
+    createDayAssignment(db, arrival.id, hotel.id);
+    createDayAccommodation(db, trip.id, hotel.id, arrival.id, arrival.id, { check_in: '15:00' });
+
+    const { context, calculated } = await plans.calculate(trip.id, user.id);
+
+    expect(context.visits.map((v) => [v.name, v.stay_id !== null])).toEqual([
+      ['Hamburg', false],
+      ['Lueneburg', false],
+      ['Celle', false],
+      ['Rostock', true],
+    ]);
+    expect(calculated.quietDays).toEqual([]);
+    expect(calculated.days.map((d) => d.dayId)).toContain(arrival.id);
+    const night = calculated.days.find((d) => d.dayId === arrival.id)!;
+    expect(night.stops.map((s) => [s.name, s.night])).toEqual([['Rostock', true]]);
+    expect(night.legs).toEqual([]);
+    expect(night.schedule.entries[0]).toMatchObject({ arrival: '15:00', anchored: true });
+  });
+
+  it('files a lone stop that is no night under the quiet days', async () => {
+    const { user, trip, plans } = setup();
+    const quiet = createDay(db, trip.id);
+    const museum = createPlace(db, trip.id, { name: 'Museum', lat: 54.09, lng: 12.1 });
+    createDayAssignment(db, quiet.id, museum.id);
+
+    const { calculated } = await plans.calculate(trip.id, user.id);
+
+    expect(calculated.days.map((d) => d.dayId)).not.toContain(quiet.id);
+    expect(calculated.quietDays.map((d) => d.dayId)).toEqual([quiet.id]);
   });
 });
 

@@ -4,6 +4,7 @@ import { RealtimeService } from '../realtime/realtime.service';
 import { DatabaseService, type PlaceWithTags, type TripAccess } from '../database/database.service';
 import { PermissionsService } from '../permissions/permissions.service';
 import { AssignmentsService } from '../assignments/assignments.service';
+import { carryVias, dayStops, locatedStopIds, reseatOwnStop, seatHolds, seatIndex, type Night } from './night-seat';
 import type { User } from '../../types';
 
 type Trip = TripAccess;
@@ -12,9 +13,6 @@ type MirroredAssignment = ReturnType<AssignmentsService['createAssignment']>;
 
 /** One day's drawn roads after a write re-pinned them, as the road trip broadcasts them. */
 type DayVias = { dayId: number; vias: RoadtripVia[] };
-
-/** A via as the re-pinning reads it: where it is pinned and its place on that leg. */
-type PinnedVia = { id: number; after_order_index: number; sequence: number };
 
 /** How a surface sends the mirror's events; see announceMirror. */
 export type MirrorSender = <E extends TrekWsTripEventName>(event: E, payload: TrekWsPayload<E>) => void;
@@ -272,69 +270,6 @@ export class AccommodationsService {
   }
 
   /**
-   * Put the booking's check-in day on the map.
-   *
-   * Only the check-in day gets a stop, even for a fortnight's stay: that is the
-   * day you drive there, and it is exactly what the road-trip side writes for a
-   * night it books itself. The later nights ride on the stay row, which is where
-   * the rail reads check-out from.
-   *
-   * Runs inside the caller's transaction.
-   */
-  /**
-   * Where in the day the booked night belongs.
-   *
-   * First. The hotel is where the day is based: the traveller checks in and the stops
-   * they placed without an hour follow from there. Only a stop with a clock of its
-   * own can stand ahead of it, and only when that clock is at or before the check-in:
-   * a stop pinned to eight with a check-in at ten puts the night second, one pinned
-   * to the afternoon does not. It used to go last unless something pinned later
-   * pulled it forward, and a night booked for ten in the morning sat behind a whole
-   * day of unpinned stops, reached at a quarter past twelve.
-   */
-  private positionForCheckIn(dayId: number, checkIn: string | null | undefined, excludeId?: number): number {
-    if (!checkIn) return 0;
-    // excludeId leaves the row being re-seated out of the chain it is measured
-    // against. Without it a night parked at the end of the day can find itself.
-    // Another booked night on the day counts by its check-in, so two bookings on
-    // one day settle by the clock.
-    const rows = this.db.all<{ order_index: number; at: string | null }>(`
-      SELECT da.order_index, COALESCE(da.assignment_time, p.place_time, other.check_in) AS at
-      FROM day_assignments da JOIN places p ON p.id = da.place_id
-      LEFT JOIN day_accommodations other ON other.id = da.accommodation_id
-      WHERE da.day_id = ? AND da.id != ? ORDER BY da.order_index
-    `, dayId, excludeId ?? -1);
-    let seat = 0;
-    for (const row of rows) if (row.at !== null && row.at <= checkIn) seat = row.order_index + 1;
-    return seat;
-  }
-
-  /**
-   * Whether the night sits somewhere its check-in allows, on an edit that did not
-   * touch the check-in.
-   *
-   * Read off the chain rather than recomputed, because the index a fresh insert would
-   * get is not the index this row already occupies. Two ways to be wrong: something
-   * with a later hour ahead of it, or something with an earlier one behind it. Stops
-   * without an hour are passed over in both directions: the night may have been
-   * dragged past them on purpose, and a change of notes is no reason to undo that.
-   */
-  private seatedByCheckIn(dayId: number, ownId: number, checkIn: string | null | undefined): boolean {
-    if (!checkIn) return true;
-    const rows = this.db.all<{ id: number; at: string | null }>(`
-      SELECT da.id, COALESCE(da.assignment_time, p.place_time, other.check_in) AS at
-      FROM day_assignments da JOIN places p ON p.id = da.place_id
-      LEFT JOIN day_accommodations other ON other.id = da.accommodation_id
-      WHERE da.day_id = ? ORDER BY da.order_index
-    `, dayId);
-    const own = rows.findIndex(row => row.id === ownId);
-    if (own < 0) return true;
-    const laterAhead = rows.slice(0, own).some(row => row.at !== null && row.at > checkIn);
-    const earlierBehind = rows.slice(own + 1).some(row => row.at !== null && row.at <= checkIn);
-    return !laterAhead && !earlierBehind;
-  }
-
-  /**
    * Type the place as lodging, unless the traveller already typed it themselves.
    *
    * 'hotel' is a service stop: it takes no number, stays out of the day's stop
@@ -358,103 +293,27 @@ export class AccommodationsService {
    * coordinates are never routed and so never counted.
    */
   private stopOrders(dayIds: number[]): Map<number, number[]> {
-    return new Map([...new Set(dayIds)].map((dayId): [number, number[]] => [dayId, this.locatedStopIds(dayId)]));
-  }
-
-  private locatedStopIds(dayId: number): number[] {
-    return this.db.all<{ id: number }>(`
-      SELECT da.id FROM day_assignments da JOIN places p ON p.id = da.place_id
-      WHERE da.day_id = ? AND p.lat IS NOT NULL AND p.lng IS NOT NULL
-      ORDER BY da.order_index ASC, da.created_at ASC, da.id ASC
-    `, dayId).map(row => row.id);
+    return new Map([...new Set(dayIds)].map((dayId): [number, number[]] => [dayId, locatedStopIds(this.db, dayId)]));
   }
 
   /**
    * Keep every drawn road behind the stop it was drawn after, now that this write
-   * has seated, moved or taken out a stop on these days.
+   * has seated, moved or taken out a stop on these days (carryVias has the rules).
    *
    * A night seated by its check-in ahead of the afternoon renumbers everything
    * behind it, and a via pinned to position one would otherwise bend the drive
    * into the hotel instead of the leg it was drawn on. Persisted and visible to
-   * everyone, so it is put right where the stop moved, by the rules the planner
-   * applies when a stop is dragged or taken out: a via follows its stop, a stop
-   * that left the day hands its road to the stop before it, and a stop that is
-   * last has no leg to keep a via on.
+   * everyone, so it is put right where the stop moved and reported on the mirror.
    *
    * Runs inside the caller's transaction.
    */
   private reanchorVias(mirror: AccommodationMirror, before: Map<number, number[]>): void {
     for (const [dayId, previousIds] of before) {
-      const nextIds = this.locatedStopIds(dayId);
-      if (previousIds.length === nextIds.length && previousIds.every((id, i) => id === nextIds[i])) continue;
-      const vias = this.db.all<PinnedVia>('SELECT id, after_order_index, sequence FROM roadtrip_vias WHERE day_id = ?', dayId);
-      if (!vias.length) continue;
-
-      // A via behind the day's last stop bends the drive into the next day. It stays
-      // with that stop when the stop is still last, whatever its number is now:
-      // measured as a leg it would be dropped, because a last stop has no leg.
-      const previousLast = previousIds.length - 1;
-      const nextLast = nextIds.length - 1;
-      const lastStayed = previousLast >= 0 && previousIds[previousLast] === nextIds[nextLast];
-      const remove: number[] = [];
-      const moved: { id: number; after_order_index: number }[] = [];
-      for (const via of vias) {
-        const next = lastStayed && via.after_order_index === previousLast
-          ? nextLast
-          : this.legAfter(via.after_order_index, previousIds, nextIds);
-        if (next === null) remove.push(via.id);
-        else if (next !== via.after_order_index) moved.push({ id: via.id, after_order_index: next });
-      }
-      if (!remove.length && !moved.length) continue;
-
-      for (const viaId of remove) this.db.run('DELETE FROM roadtrip_vias WHERE id = ? AND day_id = ?', viaId, dayId);
-      for (const via of moved) this.db.run('UPDATE roadtrip_vias SET after_order_index = ? WHERE id = ? AND day_id = ?', via.after_order_index, via.id, dayId);
-      this.renumberMergedLegs(dayId, vias.filter(via => !remove.includes(via.id)), moved);
+      if (!carryVias(this.db, dayId, previousIds, locatedStopIds(this.db, dayId))) continue;
       this.noteVias(mirror, {
         dayId,
         vias: this.db.all<RoadtripVia>(
           'SELECT id, day_id, after_order_index, sequence, lat, lng, created_at FROM roadtrip_vias WHERE day_id = ? ORDER BY after_order_index, sequence, id', dayId),
-      });
-    }
-  }
-
-  /**
-   * The leg a via pinned behind the n-th stop of the old order is on in the new one.
-   *
-   * A stop this write took off the day hands its road to the stop before it: the
-   * leg it was drawn on merges into the one ahead, the way taking a stop out of the
-   * drive merges them (`RoadtripService.reanchor`). Null when no leg is left for it,
-   * because the stop it follows is the last one now, nothing ahead of it survived,
-   * or it was pinned past the day's end to begin with.
-   */
-  private legAfter(index: number, previousIds: number[], nextIds: number[]): number | null {
-    if (index > previousIds.length - 1) return null;
-    let at = index;
-    while (at >= 0 && !nextIds.includes(previousIds[at])) at -= 1;
-    if (at < 0) return null;
-    const next = nextIds.indexOf(previousIds[at]);
-    return next >= nextIds.length - 1 ? null : next;
-  }
-
-  /**
-   * Two legs that merged carry two sequence series side by side, and everything
-   * that draws the route orders by sequence: the drive would run through the first
-   * leg's point, the second leg's, and back. Renumbered the way
-   * `RoadtripService.reanchor` does it, the earlier leg's points first, then by
-   * their old sequence, then by id. Only a leg that received a via is touched.
-   */
-  private renumberMergedLegs(dayId: number, kept: PinnedVia[], moved: { id: number; after_order_index: number }[]): void {
-    const landed = new Map(moved.map(via => [via.id, via.after_order_index]));
-    const byLeg = new Map<number, PinnedVia[]>();
-    for (const via of kept) {
-      const leg = landed.get(via.id) ?? via.after_order_index;
-      byLeg.set(leg, [...(byLeg.get(leg) ?? []), via]);
-    }
-    for (const onLeg of byLeg.values()) {
-      if (!onLeg.some(via => landed.has(via.id))) continue;
-      onLeg.sort((a, b) => a.after_order_index - b.after_order_index || a.sequence - b.sequence || a.id - b.id);
-      onLeg.forEach((via, index) => {
-        if (via.sequence !== index) this.db.run('UPDATE roadtrip_vias SET sequence = ? WHERE id = ? AND day_id = ?', index, via.id, dayId);
       });
     }
   }
@@ -483,39 +342,25 @@ export class AccommodationsService {
     stop: { id: number; day_id: number; order_index: number },
     placeId: number,
     dayId: number,
-    checkIn?: string | null,
+    night: Night,
   ): MirroredAssignment | null {
     if (this.db.get('SELECT id FROM day_assignments WHERE day_id = ? AND place_id = ? AND id != ?', dayId, placeId, stop.id)) {
       return null;
     }
-
-    // Close the gap the row leaves behind. A no-op when it is not changing days,
-    // because it is put back into that same numbering two statements down.
-    this.db.run(
-      'UPDATE day_assignments SET order_index = order_index - 1 WHERE day_id = ? AND order_index > ?',
-      stop.day_id, stop.order_index,
-    );
-
-    // Park it at the end of the target day first, then seat it by the check-in the
-    // same way a fresh insert would. Two steps, because the index it should get is
-    // read off the chain it is not part of yet.
-    const max = this.db.get<{ max: number | null }>(
-      'SELECT MAX(order_index) AS max FROM day_assignments WHERE day_id = ? AND id != ?', dayId, stop.id)!;
-    const end = (max.max !== null ? max.max : -1) + 1;
-    this.db.run('UPDATE day_assignments SET day_id = ?, place_id = ?, order_index = ? WHERE id = ?', dayId, placeId, end, stop.id);
-
-    const seat = this.positionForCheckIn(dayId, checkIn, stop.id);
-    if (seat < end) {
-      this.db.run(
-        'UPDATE day_assignments SET order_index = order_index + 1 WHERE day_id = ? AND order_index >= ? AND id != ?',
-        dayId, seat, stop.id,
-      );
-      this.db.run('UPDATE day_assignments SET order_index = ? WHERE id = ?', seat, stop.id);
-    }
-
+    reseatOwnStop(this.db, stop, placeId, dayId, night);
     return this.assignments.getAssignmentWithPlace(stop.id);
   }
 
+  /**
+   * Put the booking's check-in day on the map.
+   *
+   * Only the check-in day gets a stop, even for a fortnight's stay: that is the
+   * day you drive there, and it is exactly what the road-trip side writes for a
+   * night it books itself. The later nights ride on the stay row, which is where
+   * the rail reads check-out from.
+   *
+   * Runs inside the caller's transaction.
+   */
   private mirrorStay(accommodationId: number, placeId: number | null, dayId: number, checkIn?: string | null): AccommodationMirror {
     const mirror = noMirror();
     // A stay can outlive its place (place_id is ON DELETE SET NULL) and the booking
@@ -531,8 +376,8 @@ export class AccommodationsService {
     if (this.db.get('SELECT id FROM day_assignments WHERE day_id = ? AND place_id = ?', dayId, placeId)) return mirror;
 
     const before = this.stopOrders([dayId]);
-    // Through AssignmentsService, seated where the check-in says (see
-    // positionForCheckIn), with everything behind it moved up one.
+    // Through AssignmentsService, seated where the check-in says (night-seat.ts),
+    // with everything behind it moved up one.
     //
     // The booking id goes in with the INSERT, not as an UPDATE afterwards: what this
     // returns is the row the answer hands the client, and stamping the id on later
@@ -541,7 +386,7 @@ export class AccommodationsService {
     // time until the next reload.
     mirror.created = this.assignments.createAssignment(dayId, placeId, null, {
       accommodationId,
-      orderIndex: this.positionForCheckIn(dayId, checkIn),
+      orderIndex: seatIndex(this.db, dayId, { id: accommodationId, check_in: checkIn }),
     });
     this.reanchorVias(mirror, before);
     return mirror;
@@ -610,14 +455,17 @@ export class AccommodationsService {
   ): AccommodationMirror {
     const own = this.ownStops(accommodationId);
     if (own.length === 0) return noMirror();
+    const night: Night = { id: accommodationId, check_in: checkIn };
     if (own.length === 1 && own[0].day_id === dayId && own[0].place_id === placeId) {
-      // Same place, same day. A check-in given a new hour seats the night afresh, the
-      // way booking it with that hour would have; any other edit leaves a stop where
-      // it is unless the clocks around it say it is in the wrong place, so a night the
-      // traveller dragged somewhere stays there through a change of notes.
-      const settled = opts.checkInChanged
-        ? this.positionForCheckIn(dayId, checkIn, own[0].id) === own[0].order_index
-        : this.seatedByCheckIn(dayId, own[0].id, checkIn);
+      // Same place, same day. A stop already where a fresh seat would put it stays,
+      // whatever the edit: relocating it would land it in the same place and report
+      // a move that moved nothing. A check-in given a new hour seats the night afresh
+      // otherwise, the way booking it with that hour would have; any other edit
+      // leaves the stop alone unless the clocks around it say it is in the wrong
+      // place, so a night the traveller dragged somewhere stays there through a
+      // change of notes.
+      const settled = seatIndex(this.db, dayId, night, own[0].id) === own[0].order_index
+        || (!opts.checkInChanged && seatHolds(dayStops(this.db, dayId), own[0].id, checkIn));
       if (settled) return noMirror();
     }
 
@@ -629,7 +477,7 @@ export class AccommodationsService {
     // on its id, all of which a DELETE takes with it.
     if (own.length === 1 && placeId) {
       const before = this.stopOrders([own[0].day_id, dayId]);
-      const moved = this.relocateOwnStop(own[0], placeId, dayId, checkIn);
+      const moved = this.relocateOwnStop(own[0], placeId, dayId, night);
       if (moved) {
         mirror.moved = { assignment: moved, oldDayId: own[0].day_id };
         mirror.stamped = this.stampLodging(placeId);

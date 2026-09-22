@@ -10,7 +10,15 @@ import {
   type RoadtripPlanRequest,
   type RoadtripCorridorRequest,
 } from '@trek/shared';
-import { corridorTiles, projectOntoRoute, simplifyLine } from '@trek/shared/roadtrip';
+import {
+  corridorTiles,
+  drivenPieces,
+  inRiddenRange,
+  projectOntoRoute,
+  rideGaps,
+  riddenRanges,
+  simplifyLine,
+} from '@trek/shared/roadtrip';
 import { answeringRefusals } from './roadtrip-mcp.helpers';
 
 import { z } from 'zod';
@@ -84,7 +92,7 @@ export class RoadtripPlanningMcp {
   @Tool({
     name: 'search_roadtrip_corridor',
     description:
-      'Search for fuel, charging, rest areas, campsites, food, sights or accommodation along a calculated roadtrip day, without a browser. Uses the routed road, not a straight line. Returns distance along the route and distance from it. Search rectangles are paged in batches of six; continue with nextOffset until null for full coverage. Optional name, socket family and minimum power filter the matches; missing charging details mean unknown. Does not add stops. Add a chosen place and assign it to the appropriate stored day, preserving any via anchors. Routing failures refuse the corridor search rather than searching an invented line.',
+      'Search for fuel, charging, rest areas, campsites, food, sights or accommodation along a calculated roadtrip day, without a browser. Uses the routed road, not a straight line, and leaves out the ride between the two terminals of a flight, train, ferry, cruise or bus booking: no rectangle is searched under it and nothing found there is a hit. Returns distance along the route and distance from it. Search rectangles are paged in batches of six; continue with nextOffset until null for full coverage. Optional name, socket family and minimum power filter the matches; missing charging details mean unknown. Does not add stops. Add a chosen place and assign it to the appropriate stored day, preserving any via anchors. Routing failures refuse the corridor search rather than searching an invented line.',
     inputSchema: roadtripCorridorRequestSchema.shape,
     annotations: TOOL_ANNOTATIONS_READONLY,
     access: { group: 'trips', mode: 'read' },
@@ -105,7 +113,10 @@ export class RoadtripPlanningMcp {
         day.geometry.map(([lat, lng]) => ({ lat, lng })),
         Math.max(1, input.widthKm / 3),
       );
-      const tiles = corridorTiles(line, input.widthKm);
+      // The line jumps straight from a departure terminal to its arrival, and the car is
+      // not on that stretch: nothing under it is tiled or on the way (#2428).
+      const ridden = riddenRanges(line, rideGaps(day.stops));
+      const tiles = drivenPieces(line, ridden).flatMap((piece) => corridorTiles(piece, input.widthKm));
       const hits = new Map<
         string,
         { poi: Awaited<ReturnType<RoadtripSearchService['search']>>['pois'][number]; alongKm: number; distanceKm: number }
@@ -123,7 +134,8 @@ export class RoadtripPlanningMcp {
           if (found.truncated || found.clamped) truncatedAreas++;
           for (const poi of found.pois) {
             const projection = projectOntoRoute(poi, line);
-            if (!projection || projection.offRouteKm > input.widthKm) continue;
+            if (!projection || projection.offRouteKm > input.widthKm || inRiddenRange(ridden, projection.alongKm))
+              continue;
             if (
               (input.fromKm != null && projection.alongKm < input.fromKm) ||
               (input.toKm != null && projection.alongKm > input.toKm)

@@ -1309,6 +1309,40 @@ describe('the day stop a hotel booking implies', () => {
     expect(stopsOn(days[0].id)).toHaveLength(1);
   });
 
+  it('RESV-STAY-008: a save from the booking form re-seats the night only when its check-in changed', () => {
+    // The form sends the whole stay on every save, check-in included, so this is the
+    // door a title edit on a hotel booking comes through. Its own reading of "the
+    // check-in changed" (the prior row, read before the write) decides whether a night
+    // the traveller dragged is left alone or seated afresh, the way ACC-022g pins it
+    // for the stay route.
+    const { trip, days } = tripWithDays();
+    const [harbour, market, hotel] = ['Hafen', 'Markt', 'Rostock'].map(name => createPlace(testDb, trip.id, { name }));
+    createDayAssignment(testDb, days[0].id, harbour.id);
+    createDayAssignment(testDb, days[0].id, market.id);
+    const stay = (check_in: string) => ({ place_id: hotel.id, start_day_id: days[0].id, end_day_id: days[0].id, check_in });
+    const { reservation } = svc.create(String(trip.id), { title: 'Hotel', type: 'hotel', create_accommodation: stay('15:00') });
+    const order = () => stopsOn(days[0].id).map(s => s.place_id);
+    expect(order()).toEqual([hotel.id, harbour.id, market.id]);
+
+    // Dragged to the end of the day by hand.
+    const own = stopsOn(days[0].id).find(s => s.place_id === hotel.id)!;
+    testDb.prepare('UPDATE day_assignments SET order_index = order_index - 1 WHERE day_id = ? AND order_index > 0').run(days[0].id);
+    testDb.prepare('UPDATE day_assignments SET order_index = 2 WHERE id = ?').run(own.id);
+    expect(order()).toEqual([harbour.id, market.id, hotel.id]);
+
+    vi.clearAllMocks();
+    let current = svc.getReservation(String(reservation.id), String(trip.id))!;
+    svc.update(String(reservation.id), String(trip.id), { title: 'Hotel, late arrival', type: 'hotel', create_accommodation: stay('15:00') } as never, current);
+    expect(order()).toEqual([harbour.id, market.id, hotel.id]);
+    expect(broadcast).not.toHaveBeenCalledWith(String(trip.id), 'assignment:moved', expect.anything());
+
+    current = svc.getReservation(String(reservation.id), String(trip.id))!;
+    svc.update(String(reservation.id), String(trip.id), { type: 'hotel', create_accommodation: stay('10:00') } as never, current);
+    expect(order()).toEqual([hotel.id, harbour.id, market.id]);
+    expect(stopsOn(days[0].id).map(s => s.id)).toContain(own.id);
+    expect(broadcast).toHaveBeenCalledWith(String(trip.id), 'assignment:moved', expect.objectContaining({ assignment: expect.objectContaining({ id: own.id }) }));
+  });
+
   it('RESV-STAY-007: a foreign accommodation_id reaches no stop on the other trip', () => {
     // The trip_id guard on the stay delete is what denies that reach; the stops go
     // by accommodation id alone and would otherwise follow it straight over.

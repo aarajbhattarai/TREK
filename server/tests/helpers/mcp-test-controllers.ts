@@ -186,6 +186,7 @@ export function createMcpTestRegistry(): McpRegistry {
     realtimeService,
     new UnsplashService(dbService, new RuntimeEnvService(), generalStorage),
     generalStorage,
+    new SettingsService(dbService),
   );
   const readModelService = new TripReadModelService(
     dbService, membersService, daysService, accommodationsService, budgetService,

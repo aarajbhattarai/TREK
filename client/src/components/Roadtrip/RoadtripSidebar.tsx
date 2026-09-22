@@ -23,6 +23,7 @@ import StopKindPicker from './StopKindPicker'
 import StopFillPicker from './StopFillPicker'
 import { useVehicleRange } from './useVehicleRange'
 import { MAX_TRIP_DAYS, type RoadtripStopType } from '@trek/shared'
+import { isCarrierMode, type CarrierTerminal } from '@trek/shared/roadtrip'
 import type { QuietDay, RoadtripDay, RoadtripRoutes, RoadtripStop } from './useRoadtripRoutes'
 import type { SpillMark } from './nightSpill'
 import { dayColor } from './dayColors'
@@ -31,7 +32,7 @@ import { FS } from './typeScale'
 import type { RouteSegment } from '../../types'
 import EmptyState from '../shared/EmptyState'
 import AutomaticDayStop from './AutomaticDayStop'
-import { carrierIcon, rideText, terminalLine } from './carrierRide'
+import { bookingOpens, carrierIcon, rideText, terminalLine } from './carrierRide'
 import { bookingClock, bookingIcon, dayBookings } from './stopBookings'
 import type { Reservation } from '../../types'
 import type { StayDraft } from './RoadtripStayModal'
@@ -115,6 +116,12 @@ interface RoadtripSidebarProps {
    * the table or the tickets under a stop. Absent leaves them all as plain text.
    */
   onOpenBooking?: (reservationId: number) => void
+  /**
+   * Whether the reader may open a table's or a ticket's editor. A transport has a detail
+   * view anybody may look at; the other chips have only their editor, and without the
+   * right to it they stay plain rather than being a button that does nothing (#2012).
+   */
+  canEditBookings?: boolean
 }
 
 const MODE_ICON: Record<string, LucideIcon> = {
@@ -683,8 +690,10 @@ function RefuelBand({ dry, refuel, dayId, onAsk, onAccept }: {
   )
 }
 
-function DriveBand({ leg, onAskAlternatives, alternativesOpen }: {
+function DriveBand({ leg, carrier, onAskAlternatives, alternativesOpen }: {
   leg: RouteSegment | undefined
+  /** The booking, when the leg is a ride and not a road: the join into the day it lands on. */
+  carrier?: CarrierTerminal
   /** Asks for other ways of driving this leg. Absent means the route is not editable. */
   onAskAlternatives?: () => void
   alternativesOpen?: boolean
@@ -692,10 +701,14 @@ function DriveBand({ leg, onAskAlternatives, alternativesOpen }: {
   const { t } = useTranslation()
   const distanceUnit = useSettingsStore(s => s.settings.distance_unit)
   const mode = leg?.mode ?? 'driving'
-  const Icon = mode.startsWith('plugin:') ? Zap : MODE_ICON[mode] ?? CarFront
+  // A ride reads as the ride block's pill does: the booking and its minutes under the
+  // booking's icon. Through the road branches it was a car driving no distance for nine
+  // hours, and a ride without a timetable was short enough to pass for a hop.
+  const ride = isCarrierMode(mode)
+  const Icon = ride ? carrierIcon(mode) : mode.startsWith('plugin:') ? Zap : MODE_ICON[mode] ?? CarFront
   // A hop (the hire desk beside the terminal) keeps the line and drops the pill: there is
   // nothing to say about it and no other way to drive it.
-  if (isHop(leg)) {
+  if (!ride && isHop(leg)) {
     return (
       <div className="grid" style={RAIL_GRID}>
         <span className="relative z-[1] flex min-h-[10px] flex-col items-center" aria-hidden>
@@ -711,12 +724,14 @@ function DriveBand({ leg, onAskAlternatives, alternativesOpen }: {
     <>
       <Icon size={12} strokeWidth={1.7} className="shrink-0" aria-hidden />
       <span className="min-w-0 truncate font-medium tabular-nums" style={{ fontSize: FS.meta }}>
-        {leg
-          ? t('roadtrip.leg.driveText', {
-            distance: formatDistance(leg.distance / 1000, distanceUnit),
-            time: formatDurationShort(leg.duration),
-          })
-          : t('roadtrip.leg.pending')}
+        {!leg
+          ? t('roadtrip.leg.pending')
+          : ride
+            ? rideText(carrier, leg)
+            : t('roadtrip.leg.driveText', {
+              distance: formatDistance(leg.distance / 1000, distanceUnit),
+              time: formatDurationShort(leg.duration),
+            })}
       </span>
     </>
   )
@@ -782,27 +797,22 @@ function DriveBand({ leg, onAskAlternatives, alternativesOpen }: {
  * the time the chain wants the traveller there, which for a departure is a check-in ahead
  * of the timetable. The whole row opens the booking.
  */
-function TerminalStop({ stop, entry, late, selected, continues, starts, onOpen }: {
+function TerminalStop({ stop, entry, late, continues, starts, onOpen }: {
   stop: RoadtripStop
   entry: ScheduleEntry | undefined
   late: ScheduleWarning[]
-  selected: boolean
   continues: boolean
   starts?: boolean
   onOpen?: () => void
 }): React.ReactElement {
   const { t } = useTranslation()
-  const is12h = useSettingsStore(s => s.settings.time_format) === '12h'
-  const carrier = stop.carrier!
-  const Icon = carrierIcon(carrier.type)
-  const line = terminalLine(carrier, t, is12h)
+  const Icon = carrierIcon(stop.carrier!.type)
   return (
     <button
       type="button"
       onClick={onOpen}
       disabled={!onOpen}
       aria-label={onOpen ? t('roadtrip.ride.open') : undefined}
-      aria-current={selected ? 'true' : undefined}
       className="group grid w-full rounded-lg text-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent disabled:cursor-default"
       style={RAIL_GRID}
     >
@@ -813,38 +823,17 @@ function TerminalStop({ stop, entry, late, selected, continues, starts, onOpen }
         </span>
         {continues ? <span className="w-[1.5px] flex-1 rounded-sm bg-edge" aria-hidden /> : null}
       </span>
-      <span
-        className={`flex min-w-0 items-start gap-2 rounded-lg px-1.5 pb-1 pt-0.5 transition-colors ${
-          selected ? 'bg-surface-selected' : 'group-hover:bg-surface-hover'
-        }`}
-      >
-        <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-          <span
-            className="flex min-w-0 items-center gap-2 font-semibold leading-6 tracking-[-0.012em] text-content"
-            style={{ fontSize: FS.name }}
-          >
-            <span className="min-w-0 break-words">{stop.name}</span>
-            {carrier.code ? (
-              <span className="shrink-0 font-geist font-medium text-content-faint" style={{ fontSize: FS.meta }}>{carrier.code}</span>
-            ) : null}
-          </span>
-          <span className="flex flex-wrap items-center gap-1">
-            {line ? (
-              <span className="text-content-muted" style={{ fontSize: FS.meta }}>{line}</span>
-            ) : null}
-            {late.map(w => <LateBadge key={w.code} late={w} />)}
-          </span>
-        </span>
-        {entry?.arrival ? <Arrival entry={entry} /> : null}
+      <span className="min-w-0 rounded-lg px-1.5 pb-1 pt-0.5 transition-colors group-hover:bg-surface-hover">
+        <RideEnd stop={stop} entry={entry} late={late} />
       </span>
     </button>
   )
 }
 
 /**
- * One end of a ride inside the ride's block: the terminal's name and code, the
- * timetable's clock under it, and on the right the time the chain has the traveller
- * there. The same three things the lone terminal row shows, without a row of its own.
+ * One end of a ride: the terminal's name and code, the timetable's clock under it, and
+ * on the right the time the chain has the traveller there. Inside the ride's block for
+ * a same-day ride, and the whole of a lone terminal's row.
  */
 function RideEnd({ stop, entry, late }: {
   stop: RoadtripStop
@@ -856,7 +845,7 @@ function RideEnd({ stop, entry, late }: {
   const line = terminalLine(stop.carrier!, t, is12h)
   return (
     <span className="flex min-w-0 items-start gap-2">
-      <span className="flex min-w-0 flex-1 flex-col">
+      <span className="flex min-w-0 flex-1 flex-col gap-0.5">
         <span className="flex min-w-0 items-center gap-2 font-semibold leading-6 tracking-[-0.012em] text-content" style={{ fontSize: FS.name }}>
           <span className="min-w-0 break-words">{stop.name}</span>
           {stop.carrier!.code ? (
@@ -932,9 +921,11 @@ function RideBlock({ departure, arrival, entries, late, seg, continues, starts, 
  * Under the stop's button rather than inside it, because a button cannot hold buttons.
  * The rail keeps its line through the row so the chain reads unbroken.
  */
-function BookingChips({ bookings, continues, onOpen }: {
+function BookingChips({ bookings, continues, canEdit, onOpen }: {
   bookings: Reservation[]
   continues: boolean
+  /** Whether a table's or a ticket's editor opens for this reader; see `bookingOpens`. */
+  canEdit: boolean
   onOpen?: (reservationId: number) => void
 }): React.ReactElement {
   const { t } = useTranslation()
@@ -956,7 +947,7 @@ function BookingChips({ bookings, continues, onOpen }: {
             </>
           )
           const chip = 'inline-flex h-[20px] max-w-full items-center gap-1 rounded-md border border-edge bg-surface-card px-1.5 text-content-secondary'
-          return onOpen ? (
+          return onOpen && bookingOpens(r, canEdit) ? (
             <Tooltip key={r.id} label={t('roadtrip.ride.open')}>
               <button
                 type="button"
@@ -1517,7 +1508,7 @@ function SpillBlock({ spill, children }: {
  * move, a stay edit or a refuel offer still names the day the server knows it by. See
  * `nightSpill.ts`.
  */
-function DaySection({ day, selectedAssignmentId, onSelectStop, onOpenBooking, reservations, onReorderStop, onMoveStopToDay, drag, onAskAlternatives, openAlternatives, onEditStay, onSetStopKind, onSetStopFill, onFollowTrack, viaCount, trackName, refuel, onAskRefuel, onAcceptRefuel, loading, collapsed, onToggle, onFocusPoint }: {
+function DaySection({ day, selectedAssignmentId, onSelectStop, onOpenBooking, canEditBookings, reservations, dayOrder, onReorderStop, onMoveStopToDay, drag, onAskAlternatives, openAlternatives, onEditStay, onSetStopKind, onSetStopFill, onFollowTrack, viaCount, trackName, refuel, onAskRefuel, onAcceptRefuel, loading, collapsed, onToggle, onFocusPoint }: {
   onFocusPoint?: RoadtripSidebarProps['onFocusPoint']
   day: RoadtripDay
   /** Folded down to the header, and off the map with it. */
@@ -1532,7 +1523,10 @@ function DaySection({ day, selectedAssignmentId, onSelectStop, onOpenBooking, re
   onAskAlternatives?: RoadtripSidebarProps['onAskAlternatives']
   openAlternatives?: RoadtripSidebarProps['openAlternatives']
   onOpenBooking?: RoadtripSidebarProps['onOpenBooking']
+  canEditBookings?: boolean
   reservations?: Reservation[]
+  /** A day's place in the trip by its id, so a booking spanning days is seen on the days between. */
+  dayOrder?: (dayId: number) => number | null
   onEditStay?: RoadtripSidebarProps['onEditStay']
   onSetStopKind?: RoadtripSidebarProps['onSetStopKind']
   onSetStopFill?: RoadtripSidebarProps['onSetStopFill']
@@ -1549,7 +1543,7 @@ function DaySection({ day, selectedAssignmentId, onSelectStop, onOpenBooking, re
   // Which disc the picker hangs under, and for which stop. One at a time: two open
   // popovers over the same rail is two answers to one question.
   const [picking, setPicking] = useState<{ anchor: HTMLElement; stop: RoadtripStop } | null>(null)
-  const bookings = useMemo(() => dayBookings(day, reservations ?? []), [day, reservations])
+  const bookings = useMemo(() => dayBookings(day, reservations ?? [], dayOrder), [day, reservations, dayOrder])
   const [filling, setFilling] = useState<{ anchor: HTMLElement; stop: RoadtripStop } | null>(null)
   const { t, language } = useTranslation()
   const distanceUnit = useSettingsStore(s => s.settings.distance_unit)
@@ -1574,16 +1568,36 @@ function DaySection({ day, selectedAssignmentId, onSelectStop, onOpenBooking, re
    */
   const latenessAt = (i: number): ScheduleWarning[] =>
     day.schedule.warnings.filter(w => w.index === i && (w.code === 'late' || w.code === 'missedLeave'))
+  /**
+   * The band for the tank running out on the leg leaving `legIndex`, whichever row owns
+   * that leg: a stop, a night, a terminal. Only once the day has finished routing: the
+   * warnings are republished after every routing task and the early ones are wrong, so
+   * an offer that appears and moves while the trip loads reads as a fault.
+   *
+   * Keyed by the card's day, not the stop's stored one. This is the key the open search
+   * is filed under, and the hook is asked with the same number. A band inside a borrowed
+   * stretch had them differ, so the results arrived, drew on the map, and the band they
+   * belonged to never opened.
+   */
+  const refuelBandsFor = (legIndex: number): React.ReactElement[] | null =>
+    refuel && !loading
+      ? (day.dryPoints ?? []).filter(dry => dry.legIndex === legIndex).map(dry => (
+          <RefuelBand
+            key={`dry-${dry.legIndex}`}
+            dry={dry}
+            dayId={day.dayId}
+            refuel={refuel}
+            onAsk={() => onAskRefuel?.(day.dayId, dry)}
+            onAccept={onAcceptRefuel ? poi => onAcceptRefuel(day.dayId, poi, dry) : undefined}
+          />
+        ))
+      : null
   const renderStopContent = (stop: RoadtripStop, i: number): React.ReactElement | null => {
     if (stop.automaticNight) return (
       <li key={stop.assignmentId}>
         <AutomaticDayStop stop={stop} entry={day.schedule.entries[i]} onFocus={onFocusPoint} />
         {i < last && day.legs[i]?.distance !== 0 ? <DriveBand leg={day.legs[i]} /> : null}
-        {refuel && !loading ? (day.dryPoints ?? []).filter(dry => dry.legIndex === i).map(dry => (
-          <RefuelBand key={`dry-${dry.legIndex}`} dry={dry} dayId={day.dayId} refuel={refuel}
-            onAsk={() => onAskRefuel?.(day.dayId, dry)}
-            onAccept={onAcceptRefuel ? poi => onAcceptRefuel(day.dayId, poi, dry) : undefined} />
-        )) : null}
+        {refuelBandsFor(i)}
         {i < last ? (day.legVias[i] ?? []).map((via, vi) => (
           <RouteViaStop key={`via-${vi}-${via.lat},${via.lng}`} via={via} />
         )) : null}
@@ -1626,15 +1640,20 @@ function DaySection({ day, selectedAssignmentId, onSelectStop, onOpenBooking, re
               stop={stop}
               entry={day.schedule.entries[i]}
               late={lateness}
-              selected={false}
               continues={i < last}
               starts={i === 0}
               onOpen={open}
             />
           )}
           {tail < last && (!after?.automaticNight || day.legs[tail]?.distance !== 0) ? (
-            <DriveBand leg={day.legs[tail]} />
+            /* The row the road leaves from carries the booking whenever that road is a
+               ride itself (a departure terminal seated mid-day), and the band needs it
+               to say more than a bare icon. */
+            <DriveBand leg={day.legs[tail]} carrier={day.stops[tail]?.carrier} />
           ) : null}
+          {/* The tank starts afresh after a flight and full at a pick-up desk, and the
+              first road out of either can be the one that empties it. */}
+          {refuelBandsFor(tail)}
           {tail < last ? (day.legVias[tail] ?? []).map((via, vi) => (
             <RouteViaStop key={`via-${vi}-${via.lat},${via.lng}`} via={via} />
           )) : null}
@@ -1708,7 +1727,7 @@ function DaySection({ day, selectedAssignmentId, onSelectStop, onOpenBooking, re
           />
         )}
         {bookings.atStop.has(i) ? (
-          <BookingChips bookings={bookings.atStop.get(i)!} continues={i < last} onOpen={onOpenBooking} />
+          <BookingChips bookings={bookings.atStop.get(i)!} continues={i < last} canEdit={!!canEditBookings} onOpen={onOpenBooking} />
         ) : null}
         {i < last && (!day.stops[i + 1].automaticNight || day.legs[i]?.distance !== 0) ? (
           <DriveBand
@@ -1717,28 +1736,7 @@ function DaySection({ day, selectedAssignmentId, onSelectStop, onOpenBooking, re
             alternativesOpen={openAlternatives?.dayId === day.dayId && openAlternatives.index === i}
           />
         ) : null}
-        {/* Only on the leg the fuel actually runs out on, and only once the day has
-            finished routing: the warnings are republished after every routing task
-            and the early ones are wrong, so an offer that appears and moves while
-            the trip loads reads as a fault. */}
-        {refuel && !loading
-          ? (day.dryPoints ?? [])
-              .filter(dry => dry.legIndex === i)
-              .map(dry => (
-                <RefuelBand
-                  key={`dry-${dry.legIndex}`}
-                  dry={dry}
-                  // The card's day, not the stop's stored one. This is the key the open
-                  // search is filed under, and the hook is asked with the same number —
-                  // a band inside a borrowed stretch had them differ, so the results
-                  // arrived, drew on the map, and the band they belonged to never opened.
-                  dayId={day.dayId}
-                  refuel={refuel}
-                  onAsk={() => onAskRefuel?.(day.dayId, dry)}
-                  onAccept={onAcceptRefuel ? poi => onAcceptRefuel(day.dayId, poi, dry) : undefined}
-                />
-              ))
-          : null}
+        {refuelBandsFor(i)}
         {/* After the band, because a plugin halt happens on the drive it describes
             rather than before setting off. */}
         {i < last ? (day.legVias[i] ?? []).map((via, vi) => (
@@ -1755,18 +1753,15 @@ function DaySection({ day, selectedAssignmentId, onSelectStop, onOpenBooking, re
    * Built rather than mapped straight through, because a spill is drawn inside a block of
    * its own and a block cannot be opened halfway down a `map`.
    */
-  const renderStop = (stop: RoadtripStop, i: number): React.ReactElement => (
-    <React.Fragment key={stop.assignmentId}>
-      {refuel && !loading ? (day.dryPoints ?? []).filter(dry => dry.legIndex === -i - 1).map(dry => (
-        <li key={`inbound-${i}`}>
-          <RefuelBand dry={dry} dayId={day.dayId} refuel={refuel}
-            onAsk={() => onAskRefuel?.(day.dayId, dry)}
-            onAccept={onAcceptRefuel ? poi => onAcceptRefuel(day.dayId, poi, dry) : undefined} />
-        </li>
-      )) : null}
-      {renderStopContent(stop, i)}
-    </React.Fragment>
-  )
+  const renderStop = (stop: RoadtripStop, i: number): React.ReactElement => {
+    const inbound = refuelBandsFor(-i - 1)
+    return (
+      <React.Fragment key={stop.assignmentId}>
+        {inbound?.length ? <li key={`inbound-${i}`}>{inbound}</li> : null}
+        {renderStopContent(stop, i)}
+      </React.Fragment>
+    )
+  }
   const runs: { spill: SpillMark | null; from: number; to: number }[] = []
   {
     let at = 0
@@ -1909,7 +1904,9 @@ function DaySection({ day, selectedAssignmentId, onSelectStop, onOpenBooking, re
             happens. Without it a morning that starts at 08:11 after a stay that ended at
             08:00 looks like eleven minutes went missing. A day whose first stop crossed
             over instead gets that road under its own block, so this is left out there. */}
-        {day.arrivingLeg ? <DriveBand leg={day.arrivingLeg} /> : null}
+        {/* A day that opens on an arrival terminal is joined by the ride, and the
+            terminal carries the booking the band names. */}
+        {day.arrivingLeg ? <DriveBand leg={day.arrivingLeg} carrier={day.stops[0]?.carrier} /> : null}
         {runs.map(run => (
           run.spill ? (
             <SpillBlock key={`spill-${run.from}`} spill={run.spill}>
@@ -1930,7 +1927,7 @@ function DaySection({ day, selectedAssignmentId, onSelectStop, onOpenBooking, re
               <span aria-hidden />
               <span className={`${STAT_LABEL} px-1.5`} style={{ fontSize: FS.micro }}>{t('roadtrip.bookings.loose')}</span>
             </div>
-            <BookingChips bookings={bookings.loose} continues={false} onOpen={onOpenBooking} />
+            <BookingChips bookings={bookings.loose} continues={false} canEdit={!!canEditBookings} onOpen={onOpenBooking} />
           </li>
         ) : null}
       </ol>
@@ -2033,7 +2030,7 @@ function QuietDaySection({ day, onMoveStopToDay, drag }: {
  * them is a pill just for being a number.
  */
 export default function RoadtripSidebar({
-  routes, selectedAssignmentId, onSelectStop, onOpenBooking, reservations, onReorderStop, onMoveStopToDay, onAskAlternatives, openAlternatives, onEditStay,
+  routes, selectedAssignmentId, onSelectStop, onOpenBooking, canEditBookings, reservations, onReorderStop, onMoveStopToDay, onAskAlternatives, openAlternatives, onEditStay,
   onSetStopKind, onSetStopFill, onFollowTrack, viaCounts, trackNames, refuel, onAskRefuel, onAcceptRefuel,
   collapsedDayIds, onToggleDay, onFocusPoint,
 }: RoadtripSidebarProps): React.ReactElement {
@@ -2043,6 +2040,13 @@ export default function RoadtripSidebar({
   const [from, setFrom] = React.useState<DragState['from']>(null)
   const [dropAt, setDropAt] = React.useState<DragState['dropAt']>(null)
   const drag: DragState = { from, setFrom, dropAt, setDropAt }
+  // Where each day stands in the trip, so a booking that spans several days is listed on
+  // the days between its two ends as well, the way the day plan lists a three-day tour.
+  // Quiet days count: a span can run straight over one.
+  const dayOrder = useMemo(() => {
+    const numbers = new Map([...routes.days, ...routes.quietDays].map(d => [d.dayId, d.dayNumber]))
+    return (dayId: number): number | null => numbers.get(dayId) ?? null
+  }, [routes.days, routes.quietDays])
 
   // Nothing to total up, so nothing pretends to: no "0 km" standing above "No route yet".
   if (routes.days.length === 0) {
@@ -2092,7 +2096,9 @@ export default function RoadtripSidebar({
             onAskAlternatives={onAskAlternatives}
             openAlternatives={openAlternatives}
             onOpenBooking={onOpenBooking}
+            canEditBookings={canEditBookings}
             reservations={reservations}
+            dayOrder={dayOrder}
             onEditStay={onEditStay}
             onSetStopKind={onSetStopKind}
             onSetStopFill={onSetStopFill}

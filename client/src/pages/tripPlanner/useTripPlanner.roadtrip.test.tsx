@@ -1,5 +1,5 @@
 import { roadtripPreferencesRepo } from '../../repo/roadtripPreferencesRepo'
-// FE-TP-ROAD-001 to FE-TP-ROAD-108
+// FE-TP-ROAD-001 to FE-TP-ROAD-112
 import React from 'react'
 import { renderHook, act, waitFor } from '@testing-library/react'
 import { TranslationProvider } from '../../i18n/TranslationContext'
@@ -2420,5 +2420,71 @@ describe('useTripPlanner road trip: a hit handed to the full form', () => {
     await act(async () => { await result.current.handleSavePlace({ name: 'Museum' }) })
 
     expect(actions.assignPlaceToDay).toHaveBeenCalledWith(42, 6, 900, null)
+  })
+})
+
+describe('useTripPlanner road trip: a ride on the drive (#2428)', () => {
+  /**
+   * One card: Hamburg, the airport it flies from, the airport it lands at, Munich. The
+   * ride draws no line of its own, so the card's geometry jumps from one terminal to the
+   * other and a click under the flight path projects onto that jump. The terminals carry
+   * the index of the stop after them, as `seatCarrierStops` seats them: they stand in
+   * for no stored stop of their own.
+   */
+  const terminal = (role: 'departure' | 'arrival') => ({
+    assignmentId: role === 'departure' ? -3000000140 : -3000000141,
+    placeId: -70,
+    ownerIndex: 1,
+    lat: role === 'departure' ? 53.63 : 48.35,
+    lng: role === 'departure' ? 9.99 : 11.78,
+    carrier: { reservationId: 70, type: 'flight', role, title: 'LH 2020', code: role === 'departure' ? 'HAM' : 'MUC', at: null },
+  })
+  const flownDay = () => {
+    seedTrip({ days: [buildDay({ id: 5, day_number: 1 })] })
+    rt.corridor.day = { dayId: 5, dayNumber: 1 }
+    rt.routes.days = [{
+      dayId: 5,
+      dayNumber: 1,
+      stops: [{ assignmentId: 1, placeId: 10, lat: 53.55, lng: 9.99 }, terminal('departure'), terminal('arrival'), { assignmentId: 2, placeId: 20, ownerIndex: 1, lat: 48.13, lng: 11.58 }],
+      geometry: [[53.55, 9.99], [53.63, 9.99], [48.35, 11.78], [48.13, 11.58]],
+    }]
+  }
+
+  it('FE-TP-ROAD-109: a via is filed on the road into the departure terminal, never on the ride or the road out of the arrival', async () => {
+    flownDay()
+    const { result } = await renderRoadtrip()
+
+    await act(async () => { await result.current.addRoadtripVia(53.59, 9.99) })
+    expect(rt.vias.add).toHaveBeenCalledWith(5, 0, 53.59, 9.99)
+
+    rt.vias.add.mockClear()
+    // Under the flight path, and on the road out of the airport it lands at: a via there
+    // would be stored at the next stop's position and bend that stop's road instead.
+    await act(async () => { await result.current.addRoadtripVia(50.99, 10.885) })
+    await act(async () => { await result.current.addRoadtripVia(48.24, 11.68) })
+    expect(rt.vias.add).not.toHaveBeenCalled()
+  })
+
+  it('FE-TP-ROAD-110: a via dragged onto the road out of the arrival moves without an anchor', async () => {
+    flownDay()
+    const { result } = await renderRoadtrip()
+
+    await act(async () => { await result.current.moveRoadtripVia(5, 3, 48.24, 11.68) })
+    expect(rt.vias.move).toHaveBeenCalledWith(5, 3, 48.24, 11.68, undefined)
+  })
+
+  it('FE-TP-ROAD-111: nothing is stopped at on a flight; behind the arrival the road goes on', async () => {
+    flownDay()
+    const { result } = await renderRoadtrip()
+
+    expect(result.current.manualStopTargetFor(50.99, 10.885)).toBeNull()
+    expect(result.current.manualStopTargetFor(48.24, 11.68)).toMatchObject({ dayId: 5 })
+  })
+
+  it('FE-TP-ROAD-112: the ride is drawn on the map as its booking, on top of whatever the reader switched on', async () => {
+    flownDay()
+    const { result } = await renderRoadtrip()
+
+    expect(result.current.roadtripConnections).toContain(70)
   })
 })

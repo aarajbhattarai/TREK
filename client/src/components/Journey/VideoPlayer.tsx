@@ -7,24 +7,30 @@ import 'plyr/dist/plyr.css'
 // host and would fetch a data URL over XHR, which connect-src refuses as well.
 import plyrSprite from 'plyr/dist/plyr.svg?no-inline'
 
+interface Props {
+  src: string
+  poster?: string
+  autoPlay?: boolean
+  style?: React.CSSProperties
+}
+
 /**
  * Video player for gallery/lightbox playback (#823), built on Plyr over a native
  * <video>. Local videos stream with HTTP Range (seeking works out of the box) and
  * the source carries the correct video MIME from the server. The Plyr instance is
  * created once per mounted source and destroyed on unmount, so navigating away in
  * the lightbox stops playback.
+ *
+ * A new source is a new element: Plyr's destroy() puts a clone of the element as
+ * it was at construction back into the document, so rebuilding the player on a
+ * <video> React had already pointed at the next clip left the first clip on
+ * screen under the next one's name.
  */
-export default function VideoPlayer({
-  src,
-  poster,
-  autoPlay = true,
-  style,
-}: {
-  src: string
-  poster?: string
-  autoPlay?: boolean
-  style?: React.CSSProperties
-}): React.ReactElement {
+export default function VideoPlayer(props: Props): React.ReactElement {
+  return <PlyrVideo key={props.src} {...props} />
+}
+
+function PlyrVideo({ src, poster, autoPlay = true, style }: Props): React.ReactElement {
   const videoRef = useRef<HTMLVideoElement>(null)
 
   useEffect(() => {
@@ -48,8 +54,8 @@ export default function VideoPlayer({
       iconUrl: plyrSprite,
       // On teardown Plyr points the element at a blank clip to abort the stream,
       // by default one on cdn.plyr.io, which media-src refuses. An empty source
-      // aborts the stream just the same, and the element is unmounted in the same
-      // tick, so the error it would otherwise report has nowhere to show.
+      // aborts the stream just the same, and the element is out of the document
+      // by then, so the error it would otherwise report has nowhere to show.
       blankVideo: '',
     })
 
@@ -60,7 +66,7 @@ export default function VideoPlayer({
         /* already torn down */
       }
     }
-  }, [src, autoPlay])
+  }, [autoPlay])
 
   return (
     <div

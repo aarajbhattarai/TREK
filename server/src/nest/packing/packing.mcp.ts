@@ -511,7 +511,7 @@ export class PackingMcp {
     description: 'Import multiple packing items at once from a list. Optionally assign each to a bag (by name — created if missing), set its weight, or pre-check it.',
     inputSchema: {
       tripId: z.number().int().positive(),
-      items: z.array(z.object({
+      items: z.array(z.strictObject({
         name: z.string().min(1).max(200),
         category: z.string().optional(),
         quantity: z.number().int().positive().optional(),

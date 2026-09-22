@@ -52,6 +52,10 @@ interface AuthState {
    *  into one "has a search key": which of the two is missing decides what the
    *  admin has to go and do. */
   hasAmapKey: boolean
+  /** The admin's places provider choice, as app-config normalises it: 'auto',
+   *  'google', 'amap' or 'openstreetmap'. Read with hasMapsKey to tell whether
+   *  a search can reach Google at all (utils/placeSource googleHoldsSlot). */
+  placesProvider: string
   serverTimezone: string
   /** Server policy: all users must enable MFA */
   appRequireMfa: boolean
@@ -81,6 +85,7 @@ interface AuthState {
   setAppVersion: (val: string) => void
   setHasMapsKey: (val: boolean) => void
   setHasAmapKey: (val: boolean) => void
+  setPlacesProvider: (val: string) => void
   setServerTimezone: (tz: string) => void
   setAppRequireMfa: (val: boolean) => void
   setTripRemindersEnabled: (val: boolean) => void
@@ -132,6 +137,7 @@ export const useAuthStore = create<AuthState>()(
   appVersion: '',
   hasMapsKey: false,
   hasAmapKey: false,
+  placesProvider: 'auto',
   serverTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
   appRequireMfa: false,
   tripRemindersEnabled: false,
@@ -402,6 +408,7 @@ export const useAuthStore = create<AuthState>()(
   setAppVersion: (val: string) => set({ appVersion: val }),
   setHasMapsKey: (val: boolean) => set({ hasMapsKey: val }),
   setHasAmapKey: (val: boolean) => set({ hasAmapKey: val }),
+  setPlacesProvider: (val: string) => set({ placesProvider: val }),
   setServerTimezone: (tz: string) => set({ serverTimezone: tz }),
   setAppRequireMfa: (val: boolean) => set({ appRequireMfa: val }),
   setTripRemindersEnabled: (val: boolean) => set({ tripRemindersEnabled: val }),

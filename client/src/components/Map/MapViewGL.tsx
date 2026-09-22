@@ -22,6 +22,7 @@ import { visibleRouteReservations } from '../../utils/reservationRoutes'
 import { safeHexColor } from '../../utils/safeColor'
 import { MAPBOX_DEFAULT_STYLE, styleForActiveProvider, basemapLanguage, type GlMapProvider } from './glProviders'
 import LocationButton from './LocationButton'
+import { useIsPhone } from '../../mobile/useIsPhone'
 import { useGeolocation } from '../../hooks/useGeolocation'
 import type { Day, Place, Reservation, RouteVia } from '../../types'
 import type { MapHoverInfo } from './mapHover'
@@ -1159,6 +1160,12 @@ export function MapViewGL({
   const onMapReadyRef = useRef(onMapReady)
   onMapReadyRef.current = onMapReady
   const { position: userPosition, mode: trackingMode, error: trackingError, errorCode: trackingErrorCode, cycleMode: cycleTrackingMode, setMode: setTrackingMode } = useGeolocation()
+  // Desktop browsers only get IP-based geolocation (city-level accuracy), so
+  // the location button would be misleading; the phone, where real GPS lives,
+  // keeps it. Read here with the other hooks rather than beside the button:
+  // the tokenless branch below returns early, and a hook after it runs on some
+  // renders and not others.
+  const isMobile = useIsPhone()
   const onClickRefs = useRef({ marker: onMarkerClick, map: onMapClick, context: onMapContextMenu })
   onClickRefs.current.marker = onMarkerClick
   onClickRefs.current.map = onMapClick
@@ -2382,9 +2389,6 @@ export function MapViewGL({
     )
   }
 
-  // Desktop browsers only get IP-based geolocation (city-level accuracy),
-  // so the button would be misleading. Mobile, where real GPS lives, keeps it.
-  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768
   // When the day-detail panel is open it slides up over the map (bottom: navh+20,
   // height var(--day-panel-h)) and covers the button's band, so lift the button
   // above it; otherwise keep the plain bottom-nav offset. #1348

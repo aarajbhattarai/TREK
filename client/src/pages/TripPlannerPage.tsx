@@ -624,6 +624,7 @@ function TripPlannerPageDesktop(): React.ReactElement | null {
                         if (TRANSPORT_TYPES.has(r.type)) setMapTransportDetail(r)
                         else openLinkedReservation?.(r)
                       }}
+                      canEditBookings={can('reservation_edit', trip)}
                       onReorderStop={can('day_edit', trip) ? reorderRoadtripStop : undefined}
                       onMoveStopToDay={can('day_edit', trip) ? moveRoadtripStopToDay : undefined}
                       onAskAlternatives={can('day_edit', trip) ? askRouteAlternatives : undefined}

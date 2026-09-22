@@ -1,12 +1,13 @@
 import { Bus, Car, Plane, Sailboat, Ship, Train, type LucideIcon } from 'lucide-react'
 import { formatDurationShort } from './roadtripModel'
 import { formatClockTime } from '../../utils/formatters'
+import { TRANSPORT_TYPES } from '../../utils/dayMerge'
 import type { CarrierTerminal, RouteSegment } from '@trek/shared/roadtrip'
-import type { TranslationFn } from '../../types'
+import type { Reservation, TranslationFn } from '../../types'
 
 /**
  * How a ride and its two terminals, and a hire car's two desks, read on the rail and in
- * the phone chain (#2428).
+ * the phone chain (#2428), and which of the bookings under a stop open there.
  *
  * One module for both shells, because the two would otherwise carry the same icon table
  * and the same three sentences each, and the duplication budget does not stretch to that.
@@ -39,9 +40,21 @@ export function terminalLine(carrier: CarrierTerminal, t: TranslationFn, is12h: 
 /**
  * What the ride's pill says: the booking, then how long it takes when the timetable gives
  * both ends. A ride with no minutes is still the booking, and says so without a duration.
+ * A ride leg met without its booking is just the minutes.
  */
-export function rideText(carrier: CarrierTerminal, seg: RouteSegment | undefined): string {
+export function rideText(carrier: Pick<CarrierTerminal, 'title'> | undefined, seg: RouteSegment | undefined): string {
   const seconds = seg && Number.isFinite(seg.duration) ? seg.duration : 0
   const duration = seg?.durationText || (seconds > 0 ? formatDurationShort(seconds) : '')
+  if (!carrier) return duration
   return duration ? `${carrier.title} · ${duration}` : carrier.title
+}
+
+/**
+ * Whether a booking chip opens for this reader. A transport has a detail view anybody
+ * may look at; a table or a ticket has only its editor, the split the planner page makes
+ * when it opens one. Without the right to edit bookings the chip stays a plain chip,
+ * the way the place inspector's booking strip stays inert (#2012).
+ */
+export function bookingOpens(booking: Pick<Reservation, 'type'>, canEditBookings: boolean): boolean {
+  return TRANSPORT_TYPES.has(booking.type) || canEditBookings
 }

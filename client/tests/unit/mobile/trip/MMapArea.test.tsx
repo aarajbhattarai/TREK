@@ -14,7 +14,7 @@ import type { AlternativeOverlay } from '../../../../src/components/Roadtrip/alt
 import type { LegAlternatives } from '../../../../src/components/Roadtrip/useRouteAlternatives'
 import { RT_ALT_BAR_LIFT } from '../../../../src/mobile/screens/trip/roadtrip/useMRtAlternatives'
 
-// FE-MOB-MAPAREA-001 to FE-MOB-MAPAREA-035
+// FE-MOB-MAPAREA-001 to FE-MOB-MAPAREA-037
 //
 // The stage's pins come out of the trip store rather than the planner's map list, so the
 // stage fixtures seed the store and leave `mapPlaces` to stand for what the plan tab shows.
@@ -763,5 +763,38 @@ describe('MMapArea', () => {
 
     expect((mocks.props.places as Place[]).map(p => p.id)).toEqual([11, 20, 21])
     expect(mocks.props.places).not.toBe(planner.roadtripMapPlaces)
+  })
+
+  it('FE-MOB-MAPAREA-037: on the stage a seamed ride draws as its booking, whether or not it was toggled on', () => {
+    // The ride's own leg carries no geometry (carrierLeg), so the booking's arc is the
+    // only thing that joins the two terminals on the map. The planner folds the seamed
+    // bookings into `roadtripConnections`; the stage has to read that list, not the
+    // plan tab's toggles, or the road ends at the departure gate and picks up again at
+    // the arrival with nothing between.
+    const base = stagePlanner(3)
+    const [hamburg] = stageDay().stops
+    const terminal = (role: 'departure' | 'arrival') => ({
+      ...hamburg,
+      assignmentId: role === 'departure' ? -3000000140 : -3000000141,
+      placeId: -70,
+      name: role === 'departure' ? 'Hamburg Airport' : 'Munich Airport',
+      carrier: { reservationId: 70, type: 'flight', role, title: 'LH 2020', code: null, at: null },
+    })
+    const seamed = { ...stageDay(), stops: [hamburg, terminal('departure'), terminal('arrival')] } as unknown as RoadtripDay
+    const planner = {
+      ...base,
+      roadtripRoutes: { ...base.roadtripRoutes, days: [seamed] },
+      visibleConnections: [],
+      roadtripConnections: [70],
+    } as TripPlanner
+    const shell = stageShell()
+    const { rerender } = render(<MMapArea planner={planner} shell={shell} />)
+
+    expect(mocks.props.visibleConnectionIds).toEqual([70])
+
+    // The plan tab keeps the traveller's own toggles, as the desktop does off road trip mode.
+    rerender(<MMapArea planner={planner} shell={{ ...shell, trTab: 'plan' }} />)
+    expect(mocks.props.visibleConnectionIds).toBe(planner.visibleConnections)
+    expect(mocks.props.visibleConnectionIds).toEqual([])
   })
 })

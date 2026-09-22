@@ -194,6 +194,20 @@ async function _writeDayToDb(dayId: number, state: TripStoreState): Promise<void
 
 // ── Zustand event reducer ─────────────────────────────────────────────────────
 
+/**
+ * A day with `incoming` seated where the server put it, the rows around it renumbered
+ * the way the local move reducer renumbers them. A booked night lands at the front of
+ * its day and the rows behind it were moved up one there; appended with that index it
+ * would sit tied with the old first row and be drawn second until the next reload. An
+ * index past the end, or none at all, appends.
+ */
+function seatByOrder(day: Assignment[], incoming: Assignment): Assignment[] {
+  const ordered = day.slice().sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0))
+  const at = Math.max(0, Math.min(incoming.order_index ?? ordered.length, ordered.length))
+  ordered.splice(at, 0, incoming)
+  return ordered.map((a, i) => (a.order_index === i ? a : { ...a, order_index: i }))
+}
+
 type StateApplier = (payload: Record<string, unknown>, state: TripStoreState) => Partial<TripStoreState>
 
 /**
@@ -252,19 +266,8 @@ export const STATE_APPLIERS: Partial<Record<TrekWsTripEventName, StateApplier>> 
     }
 
     // Genuinely new — including a legitimate second assignment of a place
-    // already on this day (no temp version to reconcile). Seated where the server
-    // put it: a booked night lands at the front of its day, and the rows behind it
-    // were moved up one there. Appending it with that index would leave it tied
-    // with the old first row and drawn second until the next reload.
-    const ordered = existing.slice().sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0))
-    const at = Math.max(0, Math.min(incoming.order_index ?? ordered.length, ordered.length))
-    ordered.splice(at, 0, incoming)
-    return {
-      assignments: {
-        ...state.assignments,
-        [dayKey]: ordered.map((a, i) => (a.order_index === i ? a : { ...a, order_index: i })),
-      }
-    }
+    // already on this day (no temp version to reconcile).
+    return { assignments: { ...state.assignments, [dayKey]: seatByOrder(existing, incoming) } }
   },
   'assignment:updated': (payload, state) => {
     const dayKey = String((payload.assignment as Assignment).day_id)
@@ -290,11 +293,14 @@ export const STATE_APPLIERS: Partial<Record<TrekWsTripEventName, StateApplier>> 
     const oldKey = String(payload.oldDayId)
     const newKey = String(payload.newDayId)
     const movedAssignment = payload.assignment as Assignment
+    // The target day is read after the row has left it, so a night re-seated on its
+    // own day (oldKey === newKey) is taken out first and put back where it now sits.
+    const target = (state.assignments[newKey] || []).filter(a => a.id !== movedAssignment.id)
     return {
       assignments: {
         ...state.assignments,
         [oldKey]: (state.assignments[oldKey] || []).filter(a => a.id !== movedAssignment.id),
-        [newKey]: [...(state.assignments[newKey] || []).filter(a => a.id !== movedAssignment.id), movedAssignment],
+        [newKey]: seatByOrder(target, movedAssignment),
       }
     }
   },

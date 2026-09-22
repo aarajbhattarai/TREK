@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useRef } from 'react'
+import { useEffect, useMemo, useState, useRef, type SyntheticEvent } from 'react'
 import { localIsoDate } from '../../utils/localDate'
 import { X, Plus, Image, Minus, Check, MapPin, Locate, Camera, Play } from 'lucide-react'
 import { normalizeImageFiles } from '../../utils/convertHeic'
@@ -20,6 +20,27 @@ import { ProviderPicker, type ProviderPhotoGroup } from './JourneyDetailPageProv
 import { journeyWeatherCategory } from '../../mobile/screens/journey/mobileJourneyMeta'
 
 type PendingProviderGroup = ProviderPhotoGroup & { provider: string }
+
+// A photo whose thumbnail is missing can still be drawn from its original. A
+// clip's original is the video file, which no <img> can show, so a clip gets
+// no fallback (#2341).
+function thumbnailFallback(p: { photo_id: number; media_type?: string | null }) {
+  if (p.media_type === 'video') return undefined
+  return (e: SyntheticEvent<HTMLImageElement>) => {
+    const img = e.currentTarget
+    if (!img.src.includes('/original')) img.src = photoUrl(p, 'original')
+  }
+}
+
+// No poster to show and falling back to /original would hand an <img> the clip
+// itself, so this tile stays a play badge.
+function ClipTile() {
+  return (
+    <div className="absolute inset-0 bg-black flex items-center justify-center text-white">
+      <Play size={18} className="ml-0.5" fill="currentColor" />
+    </div>
+  )
+}
 
 export function EntryEditor({ entry, journeyId, tripDates, galleryPhotos, trips, userId = 0, showVerdict = true, showMood = true, showWeather = true, onClose, onSave, onUploadPhotos, onAddProviderPhotos, onDone }: {
   entry: JourneyEntry
@@ -434,7 +455,11 @@ export function EntryEditor({ entry, journeyId, tripDates, galleryPhotos, trips,
                       className="relative block w-full rounded-xl overflow-hidden border-0 p-0 bg-transparent cursor-pointer hover:ring-2 hover:ring-zinc-900 dark:hover:ring-white hover:ring-offset-1 dark:hover:ring-offset-zinc-900 transition-all"
                       style={{ paddingTop: '100%' }}
                     >
-                      <img src={photoUrl(gp)} alt="" className="absolute inset-0 w-full h-full object-cover" loading="lazy" onError={e => { const img = e.currentTarget; const orig = photoUrl(gp, 'original'); if (!img.src.includes('/original')) img.src = orig }} />
+                      {posterlessVideo(gp) ? (
+                        <ClipTile />
+                      ) : (
+                        <img src={photoUrl(gp)} alt="" className="absolute inset-0 w-full h-full object-cover" loading="lazy" onError={thumbnailFallback(gp)} />
+                      )}
                     </button>
                   ))}
                   {availableGalleryPhotos.length === 0 && (
@@ -528,13 +553,9 @@ export function EntryEditor({ entry, journeyId, tripDates, galleryPhotos, trips,
                   {photos.map((p, idx) => (
                     <div key={p.id} className={`w-20 h-20 rounded-xl overflow-hidden relative group ${idx === 0 && photos.length > 1 ? 'ring-2 ring-zinc-900 dark:ring-white ring-offset-1 dark:ring-offset-zinc-900' : ''}`}>
                       {posterlessVideo(p) ? (
-                        // No poster to show and falling back to /original would hand
-                        // an <img> the clip itself, so this tile stays a play badge.
-                        <div className="w-full h-full bg-black flex items-center justify-center text-white">
-                          <Play size={18} className="ml-0.5" fill="currentColor" />
-                        </div>
+                        <ClipTile />
                       ) : (
-                        <img src={photoUrl(p)} className="w-full h-full object-cover" alt="" onError={e => { const img = e.currentTarget; const orig = photoUrl(p, 'original'); if (!img.src.includes('/original')) img.src = orig }} />
+                        <img src={photoUrl(p)} className="w-full h-full object-cover" alt="" onError={thumbnailFallback(p)} />
                       )}
                       {idx === 0 && photos.length > 1 && (
                         <span className="absolute bottom-0.5 left-0.5 px-1 py-px rounded text-[8px] font-bold bg-zinc-900/70 text-white">{t('journey.editor.photoFirst')}</span>

@@ -247,6 +247,23 @@ describe('Tool: update_place', () => {
     });
   });
 
+  it('refuses a misspelt field instead of silently updating nothing', async () => {
+    // An assistant wrote stopType for stop_type; the call used to come back as a
+    // success with the place untouched, and the road trip never got its fuel stop.
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const place = createPlace(testDb, trip.id, { name: 'Aral Bad Segeberg' });
+    await withHarness(user.id, async (h) => {
+      const refused = await h.client.callTool({ name: 'update_place', arguments: { tripId: trip.id, placeId: place.id, stopType: 'fuel' } });
+      expect(refused.isError).toBe(true);
+      expect((refused.content as Array<{ text: string }>)[0].text).toMatch(/Unrecognized key.*stopType/);
+      expect((testDb.prepare('SELECT stop_type FROM places WHERE id = ?').get(place.id) as { stop_type: string | null }).stop_type).toBeNull();
+      expect(broadcastMock).not.toHaveBeenCalled();
+      const fixed = parseToolResult(await h.client.callTool({ name: 'update_place', arguments: { tripId: trip.id, placeId: place.id, stop_type: 'fuel' } })) as any;
+      expect(fixed.place.stop_type).toBe('fuel');
+    });
+  });
+
   it('sets image_url on an existing place (#37)', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
@@ -559,7 +576,7 @@ describe('Tool: search_place', () => {
     await withHarness(user.id, async (h) => {
       const result = await h.client.callTool({ name: 'search_place', arguments: { query: 'Eiffel Tower' } });
       const data = parseToolResult(result) as any;
-      expect(searchPlacesMock).toHaveBeenCalledWith(user.id, 'Eiffel Tower', undefined, undefined);
+      expect(searchPlacesMock).toHaveBeenCalledWith(user.id, 'Eiffel Tower', undefined, undefined, { googleOnly: false });
       expect(data.places).toHaveLength(1);
       expect(data.places[0].osm_id).toBe('node:12345');
       expect(data.places[0].name).toBe('Eiffel Tower');
@@ -579,7 +596,7 @@ describe('Tool: search_place', () => {
     await withHarness(user.id, async (h) => {
       const result = await h.client.callTool({ name: 'search_place', arguments: { query: 'Eiffel Tower' } });
       const data = parseToolResult(result) as any;
-      expect(searchPlacesMock).toHaveBeenCalledWith(user.id, 'Eiffel Tower', undefined, undefined);
+      expect(searchPlacesMock).toHaveBeenCalledWith(user.id, 'Eiffel Tower', undefined, undefined, { googleOnly: false });
       expect(data.places).toHaveLength(1);
       expect(data.places[0].google_place_id).toBe('ChIJD3uTd9hx5kcR1IQvGfr8dbk');
       expect(data.places[0].name).toBe('Eiffel Tower');
@@ -617,6 +634,7 @@ describe('Tool: search_place', () => {
         'Central Station',
         'ja',
         { lat: 35.6812, lng: 139.7671, radius: 8000 },
+        { googleOnly: false },
       );
     });
   });
@@ -630,7 +648,22 @@ describe('Tool: search_place', () => {
         name: 'search_place',
         arguments: { query: 'Museum of Modern Art', locationBias: { lat: 40.7614, lng: -73.9776 } },
       });
-      expect(searchPlacesMock).toHaveBeenCalledWith(user.id, 'Museum of Modern Art', undefined, { lat: 40.7614, lng: -73.9776 });
+      expect(searchPlacesMock).toHaveBeenCalledWith(user.id, 'Museum of Modern Art', undefined, { lat: 40.7614, lng: -73.9776 }, { googleOnly: false });
+    });
+  });
+
+  it('sends one search to Google alone when asked to, and refuses any other provider', async () => {
+    const { user } = createUser(testDb);
+    searchPlacesMock.mockResolvedValue({ source: 'google', places: [] });
+
+    await withHarness(user.id, async (h) => {
+      await h.client.callTool({ name: 'search_place', arguments: { query: 'Tokyo Station', provider: 'google' } });
+      expect(searchPlacesMock).toHaveBeenCalledWith(user.id, 'Tokyo Station', undefined, undefined, { googleOnly: true });
+
+      searchPlacesMock.mockClear();
+      const refused = await h.client.callTool({ name: 'search_place', arguments: { query: 'Tokyo Station', provider: 'osm' } });
+      expect(refused.isError).toBe(true);
+      expect(searchPlacesMock).not.toHaveBeenCalled();
     });
   });
 

@@ -2,6 +2,8 @@
 
 TREK exposes **tools** (read and write actions) and **resources** (read-only `trek://` URIs). Tools are registered per-session based on OAuth scopes and enabled addons.
 
+Every built-in tool checks its arguments against its published schema before anything runs. An argument the tool does not declare (a misspelt field such as `stopType` for `stop_type`) is refused with `Unrecognized key`, so the AI sees the mistake and can retry rather than reporting a change that never happened. Plugin-contributed tools follow the schema their manifest declares.
+
 For addon-gated tools (Packing, To-Dos, Atlas, Collab, Collections, Vacay, Journey, Dawarich, Document sync, Road trip) and their resources, see [MCP-Addon-Tools](MCP-Addon-Tools).
 
 ## Tools
@@ -31,7 +33,7 @@ Requires `trips:read` or `trips:write` scope.
 | Tool | Description |
 |---|---|
 | `list_trips` | List all trips you own or are a member of. Supports `include_archived` flag. |
-| `create_trip` | Create a trip with title, dates, and currency. Days are auto-generated from the date range. |
+| `create_trip` | Create a trip with title, dates, and currency. Days are auto-generated from the date range. Without a currency the trip takes your display currency (Settings → General, or the admin's User Defaults preset), and EUR when that is left on *Trip currency*; see [Currencies](Currencies). |
 | `update_trip` | Update a trip's title, description, dates, or currency. |
 | `search_cover_images` | Search Unsplash for candidate cover photos and return their URLs, thumbnails and photographer credits. Nothing is saved; pass the chosen photo's URL to `update_trip` as `cover_image`. |
 | `delete_trip` | Delete a trip. Owner only. Requires `trips:delete`. |
@@ -66,7 +68,7 @@ Requires `places:read` or `places:write` scope.
 | `create_category` | Add a category to the instance-wide palette, with name, hex colour and emoji icon. Every trip on the instance sees it, so prefer an existing one from `list_categories`. Admin only; a non-admin gets `Admin access required`. Requires `places:write`. |
 | `update_category` | Rename a category or change its colour or icon. Every place already carrying it follows the change. Admin only. Requires `places:write`. |
 | `delete_category` | Remove a category from the palette. Places keep their data but lose the category, across every trip. Admin only. Requires `places:write`. |
-| `search_place` | Search for a place by name or address, the way the full search in the app does: TREK's own place index and OpenStreetMap together, and Google or Amap only when both are empty. Returns `osm_id` (and `google_place_id` / `google_ftid` when Google answered) for use in `create_place`. Takes an optional `locationBias` to rank results around the trip's destination. |
+| `search_place` | Search for a place by name or address, the way the full search in the app does: TREK's own place index and OpenStreetMap together, and Google or Amap only when both are empty. Returns `osm_id` (and `google_place_id` / `google_ftid` when Google answered) for use in `create_place`. Takes an optional `locationBias` to rank results around the trip's destination, and an optional `provider: 'google'` that sends this one search to Google Places alone, the same as the **Search Google instead** line under a result list in the app; it is ignored unless Google holds the keyed slot: an instance without a Google key, or one whose admin picked Amap or OpenStreetMap as the places provider, answers from the index and OpenStreetMap as usual. With the admin switch **Search with Google only** on (see [Places-and-Search](Places-and-Search#with-a-google-maps-api-key)), every call goes to Google whatever is passed, and the index and OpenStreetMap are never asked, so no result carries an `osm_id`. |
 | `search_places_via_plugins` | Search the place indexes installed plugins provide, alongside `search_place` rather than instead of it. Results have the shape `search_place` returns plus a `rating` and the `pluginId` that found them; only these results can carry a rating. Empty when no plugin offers a search index. Requires `places:read`. |
 
 ### Day Planning

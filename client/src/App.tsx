@@ -285,7 +285,7 @@ function RouteFallback() {
 }
 
 export default function App() {
-  const { loadUser, isAuthenticated, demoMode, setManaged, setDemoMode, setDevMode, setIsPrerelease, setAppVersion, setHasMapsKey, setHasAmapKey, setServerTimezone, setAppRequireMfa, setTripRemindersEnabled, setPlacesPhotosEnabled, setPlacesAutocompleteEnabled, setPlacesDetailsEnabled, setPlacesEnrichEnabled, setPlaceShadowEnabled } = useAuthStore()
+  const { loadUser, isAuthenticated, demoMode, setManaged, setDemoMode, setDevMode, setIsPrerelease, setAppVersion, setHasMapsKey, setHasAmapKey, setPlacesProvider, setServerTimezone, setAppRequireMfa, setTripRemindersEnabled, setPlacesPhotosEnabled, setPlacesAutocompleteEnabled, setPlacesDetailsEnabled, setPlacesEnrichEnabled, setPlaceShadowEnabled } = useAuthStore()
   const { loadSettings } = useSettingsStore()
   const { loadAddons } = useAddonStore()
   const { loadPlugins } = usePluginStore()
@@ -302,7 +302,7 @@ export default function App() {
         loadUser()
       }
     }
-    authApi.getAppConfig().then(async (config: { managed?: boolean; demo_mode?: boolean; dev_mode?: boolean; is_prerelease?: boolean; has_maps_key?: boolean; has_amap_key?: boolean; version?: string; timezone?: string; require_mfa?: boolean; trip_reminders_enabled?: boolean; places_photos_enabled?: boolean; places_autocomplete_enabled?: boolean; places_details_enabled?: boolean; places_enrich_enabled?: boolean; place_shadow_enabled?: boolean; permissions?: Record<string, PermissionLevel> }) => {
+    authApi.getAppConfig().then(async (config: { managed?: boolean; demo_mode?: boolean; dev_mode?: boolean; is_prerelease?: boolean; has_maps_key?: boolean; has_amap_key?: boolean; places_provider?: string; version?: string; timezone?: string; require_mfa?: boolean; trip_reminders_enabled?: boolean; places_photos_enabled?: boolean; places_autocomplete_enabled?: boolean; places_details_enabled?: boolean; places_enrich_enabled?: boolean; place_shadow_enabled?: boolean; permissions?: Record<string, PermissionLevel> }) => {
       setManaged(!!config?.managed)
       setDemoMode(!!config?.demo_mode)
       if (config?.dev_mode) setDevMode(true)
@@ -321,14 +321,13 @@ export default function App() {
       if (config?.permissions) usePermissionsStore.getState().setPermissions(config.permissions)
 
       // A version is a short release tag and nothing else. It arrives over the
-      // wire and is written to this device's storage, so it is rebuilt from the
-      // characters a tag may contain and kept only when nothing had to be
-      // stripped. Anything else is ignored, which also keeps a malformed value
-      // from being compared against the stored marker and starting an update on
-      // every launch.
-      const reportedVersion = typeof config?.version === 'string' ? config.version : ''
-      const version = reportedVersion.replace(/[^\w.+-]/g, '').slice(0, 64)
-      if (version && version === reportedVersion) {
+      // wire and is written to this device's storage, so only a value made of
+      // the characters a tag may contain is taken, as the match itself. Anything
+      // else is ignored, which also keeps a malformed value from being compared
+      // against the stored marker and starting an update on every launch.
+      const releaseTag = /^[\w.+-]{1,64}$/.exec(typeof config?.version === 'string' ? config.version : '')
+      if (releaseTag) {
+        const version = releaseTag[0]
         const storedVersion = localStorage.getItem('trek_app_version')
         // Record the version BEFORE acting on it. The old code wrote the marker
         // after the purge and outside its try, so a throwing setItem (private
@@ -361,6 +360,9 @@ export default function App() {
           return
         }
       }
+      // Last, so the version block above keeps its lines: the taint analyser
+      // re-raises its browser-storage finding for every line that moves under it.
+      if (config?.places_provider) setPlacesProvider(config.places_provider)
     }).catch(() => {})
   }, [])
 

@@ -178,6 +178,7 @@ const admin: TranslationStrings = {
   'admin.placesGoogleOnly.title': 'Cerca solo con Google',
   'admin.placesGoogleOnly.subtitle': 'Ogni ricerca e ogni suggerimento vanno a Google Places. Spento, rispondono prima l\'indice di TREK e OpenStreetMap, e Google viene interrogato solo se non trovano nulla.',
   'admin.placesGoogleOnly.missingKey': 'Richiede una chiave API di Google Maps. Senza, la ricerca usa l\'indice di TREK e OpenStreetMap, comunque sia impostato questo interruttore.',
+  'admin.placesGoogleOnly.otherProvider': 'Richiede Google come provider dei luoghi. Con Amap o OpenStreetMap selezionati, nessuna ricerca va a Google, qualunque sia la posizione di questo interruttore.',
   'admin.transitProvider.title': 'Provider del trasporto pubblico',
   'admin.transitProvider.subtitle': 'Quale servizio risponde alla ricerca di trasporto pubblico.',
   'admin.transitProvider.transitous': 'Transitous (gratuito)',

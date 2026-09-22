@@ -1,15 +1,15 @@
 import { describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen } from '../../../helpers/render'
 import {
-  RtAutoRow, RtDryRow, RtLegRow, RtSpillRow, RtStopRow, type RowChrome,
+  RtAutoRow, RtBookingChips, RtDryRow, RtLegRow, RtRideRow, RtSpillRow, RtStopRow, type RowChrome,
 } from '../../../../src/mobile/screens/trip/roadtrip/MRoadtripRows'
-import type { StopRow } from '../../../../src/components/Roadtrip/roadtripRowModel'
-import type { RouteSegment, ScheduleWarning } from '@trek/shared/roadtrip'
-import type { TranslationFn } from '../../../../src/types'
+import type { RoadtripRow, StopRow } from '../../../../src/components/Roadtrip/roadtripRowModel'
+import type { CarrierTerminal, RouteSegment, ScheduleWarning } from '@trek/shared/roadtrip'
+import type { Reservation, TranslationFn } from '../../../../src/types'
 import type { RefuelSearch } from '../../../../src/components/Roadtrip/useRefuelSearch'
 import type { RefuelCandidate } from '../../../../src/components/Roadtrip/refuelSuggestion'
 
-// FE-MOB-RTROW-001 to FE-MOB-RTROW-049
+// FE-MOB-RTROW-001 to FE-MOB-RTROW-055
 
 // Same echo strategy as tests/helpers/mobileTrip: assertions stay on keys, not copy.
 const t: TranslationFn = (key, params) =>
@@ -236,6 +236,143 @@ describe('RtStopRow', () => {
 
     expect(screen.getByText('roadtrip.warn.overnight')).toBeInTheDocument()
     expect(container.querySelector('.lucide-moon')).not.toBeNull()
+  })
+
+  it('FE-MOB-RTROW-050: a hire desk is a row on the road: the booking\'s clock under it, no number, and a disc nobody can turn into a pump', () => {
+    const onPickKind = vi.fn()
+    const desk = stopRow({
+      number: null,
+      time: '09:00',
+      stop: { ...stopRow().stop, assignmentId: -3000000180, placeId: -90, name: 'Sixt Hauptbahnhof', carrier: carrier('pickup') },
+    })
+    const { container } = render(<RtStopRow row={desk} chrome={chrome} onOpen={vi.fn()} onPickKind={onPickKind} />)
+
+    expect(screen.getByText('Sixt Hauptbahnhof')).toBeInTheDocument()
+    expect(screen.getByText('roadtrip.ride.pickup:09:00')).toBeInTheDocument()
+    expect(screen.queryByText('2')).toBeNull()
+    // The booking's own icon on the disc, and the disc is not a control even for an
+    // editor: nobody turns a rental desk into a petrol station.
+    expect(container.querySelector('.lucide-car')).not.toBeNull()
+    expect(screen.queryByRole('button', { name: 'roadtrip.stop.makeService' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'roadtrip.stop.kind' })).toBeNull()
+    expect(screen.getAllByRole('button')).toHaveLength(1)
+  })
+})
+
+/** One end of a flight, or one desk of a hire car, as the routing round seams it in. */
+function carrier(role: CarrierTerminal['role'], over: Partial<CarrierTerminal> = {}): CarrierTerminal {
+  const car = role === 'pickup' || role === 'return'
+  return {
+    reservationId: car ? 90 : 70,
+    type: car ? 'car' : 'flight',
+    role,
+    title: car ? 'Sixt Hamburg' : 'LH 2020',
+    code: role === 'departure' ? 'HAM' : role === 'arrival' ? 'MUC' : null,
+    at: { departure: '13:20', arrival: '14:30', pickup: '09:00', return: '11:30' }[role],
+    ...over,
+  }
+}
+
+const FLIGHT_SEG = { ...SEG, distance: 0, duration: 4200, distanceText: '', durationText: '1 h 10 min' }
+
+function rideRow(over: Partial<Extract<RoadtripRow, { kind: 'ride' }>> = {}): Extract<RoadtripRow, { kind: 'ride' }> {
+  const end = (role: 'departure' | 'arrival'): StopRow => stopRow({
+    number: null,
+    time: role === 'departure' ? '12:20' : '14:30',
+    pinned: true,
+    stop: {
+      ...stopRow().stop,
+      assignmentId: role === 'departure' ? -3000000140 : -3000000141,
+      placeId: -70,
+      name: role === 'departure' ? 'Hamburg Airport' : 'Munich Airport',
+      carrier: carrier(role),
+    },
+  })
+  return { kind: 'ride', index: 1, carrier: carrier('departure'), seg: FLIGHT_SEG, departure: end('departure'), arrival: end('arrival'), ...over }
+}
+
+describe('RtRideRow', () => {
+  it('FE-MOB-RTROW-051: a ride is one block: the booking and its minutes over both terminals, each with its code, its timetable line and its clock', () => {
+    render(<RtRideRow row={rideRow()} chrome={chrome} />)
+
+    expect(screen.getByText('LH 2020 · 1 h 10 min')).toBeInTheDocument()
+    expect(screen.getByText('Hamburg Airport')).toBeInTheDocument()
+    expect(screen.getByText('HAM')).toBeInTheDocument()
+    expect(screen.getByText('roadtrip.ride.departure:13:20')).toBeInTheDocument()
+    expect(screen.getByText('12:20')).toBeInTheDocument()
+    expect(screen.getByText('Munich Airport')).toBeInTheDocument()
+    expect(screen.getByText('MUC')).toBeInTheDocument()
+    expect(screen.getByText('roadtrip.ride.arrival:14:30')).toBeInTheDocument()
+    expect(screen.getByText('14:30')).toBeInTheDocument()
+    // The terminals take no number: Hamburg is 1 and Munich is 2 either side of them.
+    expect(screen.queryByText('2')).toBeNull()
+  })
+
+  it('FE-MOB-RTROW-052: the block is one tap target that opens the booking, and plain without a handler', () => {
+    const onOpen = vi.fn()
+    const opens = render(<RtRideRow row={rideRow()} chrome={chrome} onOpen={onOpen} />)
+
+    // One control for the whole ride, not one per terminal.
+    expect(screen.getAllByRole('button')).toHaveLength(1)
+    fireEvent.click(screen.getByText('Hamburg Airport'))
+    fireEvent.click(screen.getByText('LH 2020 · 1 h 10 min'))
+    expect(onOpen).toHaveBeenCalledTimes(2)
+    opens.unmount()
+
+    render(<RtRideRow row={rideRow()} chrome={chrome} />)
+    expect(screen.queryByRole('button')).toBeNull()
+    expect(screen.getByText('Munich Airport')).toBeInTheDocument()
+  })
+
+  it('FE-MOB-RTROW-053: a ride the timetable gives no minutes for is still the booking, and its clocks follow the twelve hour setting', () => {
+    render(<RtRideRow row={rideRow({ seg: undefined })} chrome={{ ...chrome, is12h: true }} />)
+
+    expect(screen.getByText('LH 2020')).toBeInTheDocument()
+    expect(screen.queryByText(/LH 2020 ·/)).toBeNull()
+    expect(screen.getByText('roadtrip.ride.departure:1:20 PM')).toBeInTheDocument()
+    expect(screen.getByText('12:20 PM')).toBeInTheDocument()
+    expect(screen.queryByText('13:20')).toBeNull()
+  })
+})
+
+describe('RtBookingChips', () => {
+  const booking = (over: Partial<Reservation> = {}): Reservation =>
+    ({ id: 11, trip_id: 1, title: 'Tisch Bullerei', type: 'restaurant', status: 'confirmed', day_id: 2, reservation_time: '2026-10-05T19:30', ...over }) as Reservation
+
+  it('FE-MOB-RTROW-054: a chip per booking with its name and its clock, each opening its booking, and plain without a handler', () => {
+    const onOpen = vi.fn()
+    const bookings = [booking(), booking({ id: 13, title: 'Elbphilharmonie', type: 'event', reservation_time: null })]
+    const opens = render(<RtBookingChips bookings={bookings} chrome={{ ...chrome, is12h: true }} canEdit onOpen={onOpen} />)
+
+    expect(screen.getByText('Tisch Bullerei')).toBeInTheDocument()
+    // The clock in the reader's own format, and none at all for a booking without one.
+    expect(screen.getByText('7:30 PM')).toBeInTheDocument()
+    expect(screen.queryByText('19:30')).toBeNull()
+    expect(screen.getByText('Elbphilharmonie')).toBeInTheDocument()
+    expect(screen.getAllByRole('button')).toHaveLength(2)
+    fireEvent.click(screen.getByText('Tisch Bullerei'))
+    expect(onOpen).toHaveBeenCalledWith(bookings[0])
+    opens.unmount()
+
+    render(<RtBookingChips bookings={bookings} chrome={chrome} canEdit />)
+    expect(screen.queryByRole('button')).toBeNull()
+    expect(screen.getByText('19:30')).toBeInTheDocument()
+  })
+
+  it('FE-MOB-RTROW-055: a reader who may not edit bookings gets a plain table chip and a transport chip that still opens', () => {
+    const onOpen = vi.fn()
+    const bookings = [booking(), booking({ id: 16, title: 'Taxi to the pier', type: 'taxi', reservation_time: null })]
+    render(<RtBookingChips bookings={bookings} chrome={chrome} canEdit={false} onOpen={onOpen} />)
+
+    // A transport has a detail view anybody may look at; a table has only its editor,
+    // so the chip stays a chip rather than a button that does nothing (#2012).
+    expect(screen.getByText('Tisch Bullerei').closest('button')).toBeNull()
+    fireEvent.click(screen.getByText('Tisch Bullerei'))
+    expect(onOpen).not.toHaveBeenCalled()
+
+    fireEvent.click(screen.getByText('Taxi to the pier'))
+    expect(onOpen).toHaveBeenCalledWith(bookings[1])
+    expect(screen.getAllByRole('button')).toHaveLength(1)
   })
 })
 

@@ -180,6 +180,7 @@ const admin: TranslationStrings = {
   'admin.placesGoogleOnly.title': 'Искать только через Google',
   'admin.placesGoogleOnly.subtitle': 'Каждый поиск и каждая подсказка идут в Google Places. Выключено: сначала отвечают индекс TREK и OpenStreetMap, Google спрашивается, только если они ничего не нашли.',
   'admin.placesGoogleOnly.missingKey': 'Нужен ключ Google Maps API. Без него поиск идёт через индекс TREK и OpenStreetMap независимо от этого переключателя.',
+  'admin.placesGoogleOnly.otherProvider': 'Требуется Google как провайдер мест. Если выбран Amap или OpenStreetMap, ни один поиск не уходит в Google, как бы ни стоял этот переключатель.',
   'admin.transitProvider.title': 'Поставщик общественного транспорта',
   'admin.transitProvider.subtitle': 'Какая служба отвечает на поиск общественного транспорта.',
   'admin.transitProvider.transitous': 'Transitous (бесплатно)',

@@ -1030,6 +1030,26 @@ describe('MapView live location', () => {
     expect(geoMock.cycleMode).toHaveBeenCalled()
   })
 
+  it('FE-COMP-MAPVIEW-064b: turning the phone sideways and back takes the button with it', () => {
+    Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: 420 })
+    geoMock.mode = 'off'
+    render(<MapView />)
+    expect(screen.getByRole('button', { name: 'Show my location' })).toBeInTheDocument()
+
+    // landscape crosses the 768px cut without remounting the map
+    act(() => {
+      Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: 844 })
+      window.dispatchEvent(new Event('resize'))
+    })
+    expect(screen.queryByRole('button', { name: 'Show my location' })).toBeNull()
+
+    act(() => {
+      Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: 420 })
+      window.dispatchEvent(new Event('resize'))
+    })
+    expect(screen.getByRole('button', { name: 'Show my location' })).toBeInTheDocument()
+  })
+
   it('FE-COMP-MAPVIEW-077: the map draws no credit control of its own, on either width', () => {
     const desktop = render(<MapView />)
     // The desktop credit is Leaflet's own, in its own container; this component adds none.

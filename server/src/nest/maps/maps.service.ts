@@ -765,7 +765,7 @@ export class MapsService {
     return this.isSettingDisabled('places_photos_enabled');
   }
 
-  // ── Controller-facing surface (unchanged signatures) ───────────────────────
+  // ── Controller-facing surface ──────────────────────────────────────────────
 
   search(
     userId: number,

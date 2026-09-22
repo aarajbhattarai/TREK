@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Loader2, RotateCcw, Search } from 'lucide-react'
 import { mapsApi } from '../../../../api/client'
 import { useAuthStore } from '../../../../store/authStore'
-import { offersGoogleRetry, sourceLabelFor } from '../../../../utils/placeSource'
+import { offersGoogleRetry, selectGoogleHoldsSlot, sourceLabelFor } from '../../../../utils/placeSource'
 import { recordPlacePick } from '../../../../api/placeShadow'
 import { PlacesSession } from '../../../../utils/placesSession'
 import { isMapUrl } from '../../../../components/Planner/PlaceFormModal.helpers'
@@ -98,7 +98,7 @@ export default function PlPlaceSearch({ planner, locationBias, onPick, onResolvi
   const [acSource, setAcSource] = useState('')
   // What answered the last full search, for the line that offers Google instead.
   const [searchSource, setSearchSource] = useState('')
-  const hasMapsKey = useAuthStore(s => s.hasMapsKey)
+  const googleAnswers = useAuthStore(selectGoogleHoldsSlot)
 
   const setResolving = useCallback(
     (v: boolean) => {
@@ -173,7 +173,9 @@ export default function PlPlaceSearch({ planner, locationBias, onPick, onResolvi
   }
 
   const handleSearch = async (provider?: 'google') => {
-    const trimmed = query.trim()
+    // The retry sends the query the list came from, as the desktop form does:
+    // the list stays on screen while the field is edited or cleared.
+    const trimmed = provider ? (searchMetaRef.current?.query ?? '') : query.trim()
     if (!trimmed) return
     setSuggestions([])
 
@@ -187,7 +189,7 @@ export default function PlPlaceSearch({ planner, locationBias, onPick, onResolvi
 
     setResolving(true)
     try {
-      if (isMapUrl(trimmed)) {
+      if (!provider && isMapUrl(trimmed)) {
         const resolved = await mapsApi.resolveUrl(trimmed)
         if (resolved.lat && resolved.lng) {
           onPick({
@@ -339,8 +341,8 @@ export default function PlPlaceSearch({ planner, locationBias, onPick, onResolvi
       )}
       {/* The same quiet line the desktop form has: the index answers first and
           Google only when it finds nothing, so this is how a list with the wrong
-          place on it reaches Google. */}
-      {results.length > 0 && offersGoogleRetry(searchSource, hasMapsKey) && (
+          place on it reaches Google, where Google holds the key slot. */}
+      {results.length > 0 && offersGoogleRetry(searchSource, googleAnswers) && (
         <button
           type="button"
           onClick={() => handleSearch('google')}

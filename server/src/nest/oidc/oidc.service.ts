@@ -611,7 +611,7 @@ export class OidcService implements OnModuleDestroy {
     userInfo: OidcUserInfo,
     config: OidcConfig,
     inviteToken?: string,
-  ): { user: User; roleChange?: OidcRoleChange } | { error: string } {
+  ): { user: User; roleChange?: OidcRoleChange; created?: true } | { error: string } {
     // Defense-in-depth for direct callers — the controller redirects on a
     // missing email before it ever calls this; the same code flows through its
     // `oidc_error=' + result.error` pass-through if reached here.
@@ -752,7 +752,9 @@ export class OidcService implements OnModuleDestroy {
       // is_guest, created_at, …) instead of a hand-built partial — same shape
       // the existing-user branch returns.
       user = this.db.prepare('SELECT * FROM users WHERE id = ?').get(Number(result.lastInsertRowid)) as User;
-      return { user };
+      // The one branch that makes an account. The caller writes the registration row
+      // off this, so it has to be set here and nowhere else.
+      return { user, created: true };
     } catch (err) {
       if (err === inviteRaceError) {
         console.warn(`[OIDC] Invite token ${inviteToken?.slice(0, 8)}... exhausted — concurrent callback won the last slot`);

@@ -57,8 +57,8 @@ A key does not buy a different search by itself. Google fills the slot that answ
 
 That order means a search the index answered with the wrong place never reaches Google on its own. Two ways to send it there:
 
-- **Per search:** under a result list that did not come from Google, a small line reads **Not the right place? Search Google instead**. It sends the same query to Google Places alone, once, and the results carry the Google mark. The line only appears on an instance with a Google key, on the desktop form and the phone's search sheet alike.
-- **For every search:** the switch **Search with Google only** in the key's block (below) sends every search and every suggestion to Google Places and asks nothing of the TREK API or OpenStreetMap. Off, the order above applies. The switch does nothing without a key, and nothing while Amap or OpenStreetMap is picked as the provider.
+- **Per search:** under a result list that did not come from Google, a small line reads **Not the right place? Search Google instead**. It sends the same query to Google Places alone, once, and the results carry the Google mark. The line only appears where a search can reach Google at all: an instance with a Google key, and with neither Amap nor OpenStreetMap picked as the provider, the same rule the switch below follows. Desktop form and phone search sheet alike. The MCP tool `search_place` does the same with `provider: 'google'`, see [MCP-Tools-and-Resources](MCP-Tools-and-Resources).
+- **For every search:** the switch **Search with Google only** in the key's block (below) sends every search and every suggestion to Google Places and asks nothing of the TREK API or OpenStreetMap, from the app and from `search_place` alike. Off, the order above applies. The switch does nothing without a key, and nothing while Amap or OpenStreetMap is picked as the provider. Switching it on or off is recorded in the [Audit Log](Audit-Log) as `admin.places_google_only`.
 
 The key's block carries five switches under **What the key may be used for**:
 
@@ -68,7 +68,7 @@ The key's block carries five switches under **What the key may be used for**:
 | **Place Autocomplete** | The suggestions while you type. |
 | **Place Details** | The details of a place: hours, rating, website. |
 | **Place Enrichment** | The **Place details** column in the place form, see [below](#place-details-while-searching). |
-| **Search with Google only** | Every search and every suggestion goes to Google Places instead of the TREK API and OpenStreetMap. Off by default; the per-search line above stays available either way. |
+| **Search with Google only** | Every search and every suggestion goes to Google Places instead of the TREK API and OpenStreetMap. Off by default. On, every list already comes from Google, so the per-search line above has nothing to offer and does not appear; off, the line appears under lists the TREK API or OpenStreetMap produced. |
 
 > **Place Autocomplete and Place Details act on every provider**, not only on Google. Switched off, the suggestion dropdown stays empty and details lookups stop for the TREK API and OpenStreetMap too; the full search keeps working. Leave both on unless that is what you want.
 

@@ -1,4 +1,4 @@
-// FE-JRN-EDITOR-001 to FE-JRN-EDITOR-040
+// FE-JRN-EDITOR-001 to FE-JRN-EDITOR-059
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { http, HttpResponse, delay } from 'msw'
@@ -1044,5 +1044,31 @@ describe('EntryEditor', () => {
 
     expect(container.querySelector('img[src="/api/photos/100/thumbnail"]')).toBeInTheDocument()
     expect(container.querySelector('svg.lucide-play')).not.toBeInTheDocument()
+  })
+
+  it('FE-JRN-EDITOR-058: the gallery picker gives a clip without a poster the same play badge (#2341)', async () => {
+    const user = userEvent.setup()
+    const clip = { ...buildGalleryPhoto(200), media_type: 'video', provider: 'local', thumbnail_path: null }
+    const { container } = mountEditor(buildEntry(), { galleryPhotos: [clip] })
+
+    await user.click(screen.getByRole('button', { name: 'From Gallery' }))
+
+    expect(container.querySelector('img[src="/api/photos/200/thumbnail"]')).not.toBeInTheDocument()
+    expect(container.querySelector('svg.lucide-play')).toBeInTheDocument()
+  })
+
+  it('FE-JRN-EDITOR-059: a clip whose poster fails to load is not retried as the clip itself', async () => {
+    // The /original of a video is the video file, which an <img> cannot draw.
+    const user = userEvent.setup()
+    const strip = { ...buildPhoto(100), media_type: 'video', provider: 'local', thumbnail_path: 'journey/a.jpg' }
+    const picker = { ...buildGalleryPhoto(200), media_type: 'video', provider: 'local', thumbnail_path: 'journey/b.jpg' }
+    const { container } = mountEditor(buildEntry({ id: 10, photos: [strip] }), { galleryPhotos: [picker] })
+
+    await user.click(screen.getByRole('button', { name: 'From Gallery' }))
+    for (const id of [100, 200]) {
+      const img = container.querySelector(`img[src="/api/photos/${id}/thumbnail"]`) as HTMLImageElement
+      fireEvent.error(img)
+      expect(img.getAttribute('src')).toBe(`/api/photos/${id}/thumbnail`)
+    }
   })
 })

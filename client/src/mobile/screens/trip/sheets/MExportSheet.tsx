@@ -4,6 +4,7 @@ import MSheet from '../../../components/MSheet'
 import { IcsSubscribeModal } from '../../../../components/Planner/IcsSubscribeModal'
 import { useTripStore } from '../../../../store/tripStore'
 import { useSettingsStore } from '../../../../store/settingsStore'
+import { useRoadtripSettings } from '../../../../hooks/useRoadtripSettings'
 import { useTranslation } from '../../../../i18n'
 import { INNER_CLS, TileHeader } from './MTripSheetUi'
 import type { MTripSheetsProps } from '../MTripShell'
@@ -20,6 +21,9 @@ export default function MExportSheet({ planner, shell }: MTripSheetsProps) {
   // The PDF is built outside React, so it cannot read this itself (#2066).
   const timeFormat = useSettingsStore(s => s.settings.time_format) || '24h'
   const distanceUnit = useSettingsStore(s => s.settings.distance_unit)
+  // Fed the way the desktop dialog feeds it: the store's assignments and the switch,
+  // and the export applies the day plan's filter itself, so both shells print the same.
+  const showServiceStops = useRoadtripSettings(s => s.roadtrip_service_stops_in_days !== false, planner.tripId)
   const open = shell.sheet?.id === 'export'
   const dayNotes = useTripStore(s => s.dayNotes)
   const [subscribeOpen, setSubscribeOpen] = useState(false)
@@ -44,7 +48,7 @@ export default function MExportSheet({ planner, shell }: MTripSheetsProps) {
         trip: planner.trip,
         days: planner.days,
         places: planner.places,
-        assignments: planner.assignments,
+        assignments: planner.storedAssignments,
         categories: planner.categories,
         dayNotes: flatNotes,
         reservations: planner.reservations,
@@ -52,6 +56,7 @@ export default function MExportSheet({ planner, shell }: MTripSheetsProps) {
         locale,
         timeFormat,
         distanceUnit,
+        showServiceStops,
       })
     } catch (e) {
       planner.toast.error(`${t('dayplan.pdfError')}: ${e instanceof Error ? e.message : String(e)}`)

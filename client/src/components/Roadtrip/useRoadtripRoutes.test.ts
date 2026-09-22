@@ -931,6 +931,49 @@ describe('a booking the traveller rides (#2428)', () => {
     expect(result.current.days[1].arrivingLeg).toMatchObject({ mode: 'flight', duration: 9 * 3600, distance: 0 })
   })
 
+  it('FE-ROADTRIP-ROUTES-044: an edited timetable changes the ride minutes without a routing round, and the chain is not late for it', async () => {
+    calculateRouteWithLegs.mockImplementation(async (points: { lat: number; lng: number }[]) => hourly(points))
+    const stops: StopSpec[] = [{ id: 1, at: HAMBURG, time: '09:00', dwell: 0 }, { id: 2, at: BERLIN, dwell: 0 }]
+    const { result, rerender } = renderHook(
+      ({ reservations }) => useRoadtripRoutes(7, [day(1, 1)], map(1, stops), 'driving', {}, [], [], reservations),
+      { initialProps: { reservations: [flight()] } },
+    )
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    expect(result.current.days[0].legs[1]).toMatchObject({ mode: 'flight', duration: 70 * 60 })
+
+    // The same terminals, the same roads: the landing is now forty minutes after take-off.
+    rerender({ reservations: [flight({ reservation_end_time: '14:00' })] })
+    await waitFor(() => expect(result.current.days[0].legs[1]?.duration).toBe(40 * 60))
+    const d = result.current.days[0]
+    expect(d.legs[1]?.durationText).toBe('40 min')
+    expect(d.schedule.entries.map(e => e.arrival)).toEqual(['09:00', '12:20', '14:00', '15:00'])
+    expect(d.schedule.warnings.filter(w => w.code === 'late')).toEqual([])
+    expect(calculateRouteWithLegs).toHaveBeenCalledTimes(2)
+  })
+
+  it('FE-ROADTRIP-ROUTES-045: an overnight ride is the join between its cards, and a moved landing moves it too', async () => {
+    calculateRouteWithLegs.mockImplementation(async (points: { lat: number; lng: number }[]) => hourly(points))
+    act(() => useSettingsStore.setState({ settings: { ...DEFAULT_SETTINGS, roadtrip_connect_days: true } }))
+    const days = [day(1, 1), day(2, 2)]
+    const assignments = {
+      ...map(1, [{ id: 1, at: HAMBURG, time: '18:00', dwell: 0 }]),
+      ...map(2, [{ id: 2, at: BERLIN, dwell: 0 }]),
+    }
+    const overnight = (landing: string) => flight({ reservation_time: '22:00', reservation_end_time: landing, end_day_id: 2 })
+    const { result, rerender } = renderHook(
+      ({ reservations }) => useRoadtripRoutes(7, days, assignments, 'driving', {}, [], [], reservations),
+      { initialProps: { reservations: [overnight('07:00')] } },
+    )
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    expect(result.current.days[1]?.arrivingLeg).toMatchObject({ mode: 'flight', duration: 9 * 3600 })
+    // The ride is derived, not fetched: the router saw the two roads and nothing else.
+    expect(calculateRouteWithLegs).toHaveBeenCalledTimes(2)
+    rerender({ reservations: [overnight('06:30')] })
+    await waitFor(() => expect(result.current.days[1]?.arrivingLeg?.duration).toBe(8.5 * 3600))
+    expect(result.current.days[1].schedule.entries[0].arrival).toBe('06:30')
+    expect(calculateRouteWithLegs).toHaveBeenCalledTimes(2)
+  })
+
   it('FE-ROADTRIP-ROUTES-042: a booking without located terminals, or a taxi, changes nothing', async () => {
     calculateRouteWithLegs.mockImplementation(async (points: { lat: number; lng: number }[]) => hourly(points))
     const stops: StopSpec[] = [{ id: 1, at: HAMBURG }, { id: 2, at: BERLIN }]

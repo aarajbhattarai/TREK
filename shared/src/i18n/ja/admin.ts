@@ -211,6 +211,7 @@ const admin: TranslationStrings = {
   'admin.placesGoogleOnly.title': 'Google だけで検索',
   'admin.placesGoogleOnly.subtitle': 'すべての検索と候補が Google Places に送られます。オフの場合は TREK のインデックスと OpenStreetMap が先に答え、何も見つからないときだけ Google に問い合わせます。',
   'admin.placesGoogleOnly.missingKey': 'Google Maps API キーが必要です。キーがない場合、このスイッチに関係なく検索は TREK のインデックスと OpenStreetMap で行われます。',
+  'admin.placesGoogleOnly.otherProvider': '場所プロバイダーとして Google が必要です。Amap または OpenStreetMap を選択している間は、このスイッチの状態にかかわらず検索は Google に送られません。',
   'admin.transitProvider.title': '公共交通のプロバイダー',
   'admin.transitProvider.subtitle': '公共交通の検索に応答するサービス。',
   'admin.transitProvider.transitous': 'Transitous（無料）',

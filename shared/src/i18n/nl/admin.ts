@@ -179,6 +179,7 @@ const admin: TranslationStrings = {
   'admin.placesGoogleOnly.title': 'Alleen met Google zoeken',
   'admin.placesGoogleOnly.subtitle': 'Elke zoekopdracht en elke suggestie gaat naar Google Places. Uit, antwoorden eerst de TREK-index en OpenStreetMap; Google wordt alleen gevraagd als die niets vinden.',
   'admin.placesGoogleOnly.missingKey': 'Vereist een Google Maps API-sleutel. Zonder sleutel zoekt TREK via de eigen index en OpenStreetMap, wat deze schakelaar ook zegt.',
+  'admin.placesGoogleOnly.otherProvider': 'Vereist Google als plaatsenprovider. Met Amap of OpenStreetMap gekozen gaat geen enkele zoekopdracht naar Google, wat deze schakelaar ook zegt.',
   'admin.transitProvider.title': 'Ov-provider',
   'admin.transitProvider.subtitle': 'Welke dienst het ov-zoeken beantwoordt.',
   'admin.transitProvider.transitous': 'Transitous (gratis)',

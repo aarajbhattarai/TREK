@@ -16,6 +16,7 @@ import { renderTripMapImage } from './tripMapImage'
 import { formatDistance } from '../../utils/units'
 import { fetchExchangeRates } from '../../hooks/useExchangeRates'
 import { getFlightLegs, getTrainLegs } from '../../utils/flightLegs'
+import { isServiceStopType } from '../Roadtrip/roadtripModel'
 
 /**
  * Every day starts a new page by default. On a trip of short days that prints
@@ -199,11 +200,34 @@ interface downloadTripPDFProps {
   timeFormat?: string
   /** 'metric' | 'imperial'. Same reasoning as `timeFormat` — read as a prop, not a hook. */
   distanceUnit?: string
+  /**
+   * The road trip setting "Show in Days too" (`roadtrip_service_stops_in_days`), read as a
+   * prop for the same reason. Off, the day plan keeps petrol stations and rest areas to
+   * the road trip view, and so does the print.
+   */
+  showServiceStops?: boolean
 }
 
-// `assignments` is normalised here once — every read below (and fetchPlacePhotos)
-// relies on it being an object.
-export async function downloadTripPDF({ trip, days, places, assignments = {}, categories, dayNotes, reservations = [], t: _t, locale: _locale, timeFormat: _timeFormat, distanceUnit: _distanceUnit }: downloadTripPDFProps) {
+/**
+ * The stops the day plan lists, out of everything the store holds for the trip.
+ *
+ * The stop a booked night wrote onto its check-in day is out whatever the switch says:
+ * the day already shows that booking as its accommodation block, and the row would be
+ * the same hotel a second time. The service stops go with the setting. One predicate
+ * for the whole document, so the day lists, the route map, the cover's planned count
+ * and every cost total agree with the plan and with each other, whichever shell asked.
+ */
+function planAssignments(assignments: AssignmentsMap, showServiceStops: boolean): AssignmentsMap {
+  return Object.fromEntries(Object.entries(assignments).map(([dayId, list]) => [
+    dayId,
+    (list || []).filter(a => a.accommodation_id == null && (showServiceStops || !isServiceStopType(a.place?.stop_type))),
+  ]))
+}
+
+// `assignments` is normalised here once, to the plan's own list; every read below
+// (and fetchPlacePhotos) relies on it being an object.
+export async function downloadTripPDF({ trip, days, places, assignments: stored = {}, categories, dayNotes, reservations = [], t: _t, locale: _locale, timeFormat: _timeFormat, distanceUnit: _distanceUnit, showServiceStops = true }: downloadTripPDFProps) {
+  const assignments = planAssignments(stored, showServiceStops)
   const breaksPerDay = pageBreakPerDay()
   const loc = _locale || undefined
   const tr = _t || (k => k)
@@ -335,14 +359,11 @@ export async function downloadTripPDF({ trip, days, places, assignments = {}, ca
   }
   // Build day HTML
   const daysHtml = sorted.map((day, di) => {
-    // Without the stop a booked night wrote onto its check-in day: the day plan hides
-    // it (the day already carries the booking as its accommodation block) and the
-    // export lists what the plan lists. The desktop toolbar hands the export the
-    // store's own assignments, filter and all, and the stop sits at the head of its
-    // day, so the hotel printed above a morning flight (#2434).
+    // What the plan lists (planAssignments): the stop a booked night wrote sat at the
+    // head of its day, so the hotel printed above a morning flight (#2434).
     const assigned = (assignments[String(day.id)] || [])
-      .filter((a: any) => a.accommodation_id == null)
-      .sort((a: any, b: any) => (a.order_index ?? 0) - (b.order_index ?? 0))
+      .slice()
+      .sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0))
     const notes = (dayNotes || []).filter(n => n.day_id === day.id).slice()
       .sort((a: any, b: any) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
     const cost = dayCost(assignments, day.id, loc, tripCur, fxRates)

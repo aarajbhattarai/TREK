@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { AlertTriangle, ChevronDown, RefreshCw } from 'lucide-react'
 import { adminApi, authApi } from '../../../api/client'
 import { getApiErrorMessage } from '../../../types'
+import { placesGoogleOnlyHint } from '../../../utils/placeSource'
 import type { TranslationFn } from '../../../types'
 import type { useAdmin } from '../../../pages/admin/useAdmin'
 import MToggle from '../../components/MToggle'
@@ -353,7 +354,7 @@ export default function MAdminSettingsSection({ admin, t }: MAdminSettingsSectio
             />
             <MAdminRow
               title={t('admin.placesGoogleOnly.title')}
-              hint={t(hasMapsKey ? 'admin.placesGoogleOnly.subtitle' : 'admin.placesGoogleOnly.missingKey')}
+              hint={t(placesGoogleOnlyHint(hasMapsKey, placesProvider))}
               trailing={
                 <MToggle
                   checked={placesGoogleOnly}

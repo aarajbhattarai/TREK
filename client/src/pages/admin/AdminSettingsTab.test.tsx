@@ -449,6 +449,16 @@ describe('AdminSettingsTab', () => {
     expect(toggleFor('Search with Google only')).toHaveAttribute('aria-pressed', 'true');
   });
 
+  it('FE-ADMSET-030f: with a key but Amap or OpenStreetMap picked, the Google-only row says the switch is idle', () => {
+    // A key alone does not put Google behind the search; the server ignores the
+    // switch under another provider, and the row must not promise otherwise.
+    renderTab({ placesGoogleOnly: true, hasMapsKey: true, placesProvider: 'openstreetmap' });
+    const hint = toggleFor('Search with Google only').closest<HTMLElement>('.flex.items-center.justify-between')!.querySelectorAll('p')[1];
+    expect(hint.textContent).not.toMatch(/Every search and every suggestion goes to Google Places/);
+    expect(hint.textContent).not.toMatch(/Needs a Google Maps API key/);
+    expect(hint.textContent).toMatch(/provider/i);
+  });
+
   it('FE-ADMSET-031: the API keys card leads with the TREK index and no weather panel', () => {
     renderTab();
 

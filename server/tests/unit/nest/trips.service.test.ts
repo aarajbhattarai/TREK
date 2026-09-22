@@ -88,6 +88,7 @@ import fs from 'fs';
 import path from 'path';
 import { notificationsStub } from '../../helpers/notifications';
 import { EphemeralTokenService } from '../../../src/nest/auth/ephemeral-token.service';
+import { SettingsService } from '../../../src/nest/settings/settings.service';
 
 // Real sibling services over the same in-memory DB — updateTrip's date-shift
 // resyncs and the summary/bundle aggregation run their actual SQL.
@@ -128,6 +129,7 @@ const svc = new TripsService(
   new RealtimeService(),
   undefined as never, // unsplash — not exercised here
   coversFx.storage,
+  new SettingsService(dbs()),
 );
 const membersSvc = new TripMembersService(dbs(), budgetSvc, new UserCleanupService(dbs(), budgetSvc), new PermissionsService(dbs()), new RealtimeService(), notificationsStub());
 const readModelSvc = new TripReadModelService(
@@ -745,6 +747,34 @@ describe('folded trip CRUD', () => {
     expect(getDays(tripId)).toHaveLength(3);
   });
 
+  it('TRIP-SVC-069: create without a currency takes the display currency, admin default included, else EUR', () => {
+    const { user } = createUser(testDb);
+    const setUser = (value: string) =>
+      testDb.prepare("INSERT INTO settings (user_id, key, value) VALUES (?, 'default_currency', ?) ON CONFLICT(user_id, key) DO UPDATE SET value = excluded.value")
+        .run(user.id, JSON.stringify(value));
+    const setAdmin = (value: string) =>
+      testDb.prepare("INSERT INTO app_settings (key, value) VALUES ('default_user_setting_default_currency', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value")
+        .run(JSON.stringify(value));
+    const currencyOf = (data: Parameters<typeof svc.create>[1]) => (svc.create(user.id, data).trip as any).currency;
+
+    expect(currencyOf({ title: 'Nothing set' })).toBe('EUR');
+    // "Trip currency" in the settings stores an empty string, which counts as unset.
+    setUser('');
+    expect(currencyOf({ title: 'Cleared, no admin default' })).toBe('EUR');
+    setUser('   ');
+    expect(currencyOf({ title: 'Blank, no admin default' })).toBe('EUR');
+    setUser('');
+    setAdmin('CHF');
+    expect(currencyOf({ title: 'Admin default' })).toBe('CHF');
+    setUser('USD');
+    expect(currencyOf({ title: 'Own display currency' })).toBe('USD');
+    setUser('');
+    expect(currencyOf({ title: 'Back on the admin default' })).toBe('CHF');
+    // An explicit currency always wins.
+    setUser('USD');
+    expect(currencyOf({ title: 'Explicit', currency: 'JPY' })).toBe('JPY');
+  });
+
   it('TRIP-SVC-064: create refuses a range past MAX_TRIP_DAYS and writes nothing', () => {
     const { user } = createUser(testDb);
     const before = (testDb.prepare('SELECT COUNT(*) AS n FROM trips').get() as { n: number }).n;
@@ -1193,6 +1223,7 @@ describe('quirk fixes', () => {
       new RealtimeService(),
       undefined as never,
       coversFx.storage,
+      new SettingsService(dbs()),
     );
   }
 

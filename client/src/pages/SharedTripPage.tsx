@@ -167,22 +167,33 @@ export default function SharedTripPage() {
   // trip-wide pool has none (it arrives by created_at). The index runs over the full
   // sorted assignment list, like the planner does, so a stop without coordinates still
   // consumes a number and the app and the share link agree on what "3" means.
+  //
+  // The stop a booked night wrote onto its check-in day heads that day since the
+  // reseat, and the planner's numbers leave it out (the day list below does too). So
+  // the numbers and the day line are counted over the traveller's own stops, or the
+  // hotel wore badge 1, every real stop read one higher than in the app, and the line
+  // set off from where the day ends. Its pin stays on the day, unnumbered, the way the
+  // planner keeps the hotel on the map.
   const dayAssignments = selectedDay
     ? [...(assignments[String(selectedDay)] || [])].sort((a: any, b: any) => a.order_index - b.order_index)
     : [];
+  const dayStops = dayAssignments.filter(a => a.accommodation_id == null);
   const dayOrderMap: Record<number, number[]> = {};
-  dayAssignments.forEach((a: any, i: number) => {
+  dayStops.forEach((a, i) => {
     if (!a.place?.id) return;
     (dayOrderMap[a.place.id] ||= []).push(i + 1);
   });
-  const dayPlaces: any[] = [];
-  const seenPlaceIds = new Set<number>();
-  for (const a of dayAssignments as any[]) {
-    const p = a.place;
-    if (!p?.lat || !p?.lng || seenPlaceIds.has(p.id)) continue;
-    seenPlaceIds.add(p.id);
-    dayPlaces.push(p);
-  }
+  // The places these assignments sit on, in their order, each drawn once.
+  const locatedPlaces = (list: typeof dayAssignments) => {
+    const seen = new Set<number>();
+    return list.map(a => a.place).filter(p => {
+      if (!p?.lat || !p?.lng || seen.has(p.id)) return false;
+      seen.add(p.id);
+      return true;
+    });
+  };
+  const dayPlaces = locatedPlaces(dayAssignments);
+  const dayLine = locatedPlaces(dayStops);
   const mapPlaces = selectedDay ? dayPlaces : (places || []).filter((p: any) => p?.lat && p?.lng);
 
   // Open framed on the trip's places instead of on Paris. MapContainer only reads center/zoom
@@ -451,9 +462,9 @@ export default function SharedTripPage() {
                   />
                 )}
                 <FitBoundsToPlaces places={mapPlaces} framedOnMount={framed !== null} />
-                {selectedDay && mapPlaces.length > 1 && (
+                {selectedDay && dayLine.length > 1 && (
                   <Polyline
-                    positions={mapPlaces.map((p: any) => [p.lat, p.lng])}
+                    positions={dayLine.map(p => [p.lat, p.lng])}
                     // Dashed and straight on purpose: it shows the order of the day's stops,
                     // not the roads between them. A real route would mean sending the
                     // itinerary to a third party for every anonymous visitor of a shared

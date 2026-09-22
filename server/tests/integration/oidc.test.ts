@@ -229,8 +229,14 @@ describe('GET /api/auth/oidc/callback', () => {
     expect(res.headers.location).toContain('/login?oidc_code=');
 
     // Verify user was created in DB
-    const newUser = testDb.prepare("SELECT * FROM users WHERE email = 'newuser@example.com'").get();
+    const newUser = testDb.prepare("SELECT * FROM users WHERE email = 'newuser@example.com'").get() as { id: number; username: string; role: string } | undefined;
     expect(newUser).toBeDefined();
+    // Registered, the way the audit log reports a password signup, and then logged in:
+    // an admin reading user.register for who got an account sees the SSO ones too.
+    const rows = testDb.prepare('SELECT action, details FROM audit_log WHERE user_id = ? ORDER BY id').all(newUser!.id) as
+      { action: string; details: string | null }[];
+    expect(rows.map(r => r.action)).toEqual(['user.register', 'user.login']);
+    expect(JSON.parse(rows[0].details || '{}')).toEqual({ username: newUser!.username, email: 'newuser@example.com', role: newUser!.role, method: 'oidc' });
   });
 
   it('OIDC-006: invalid state → redirects with invalid_state error', async () => {

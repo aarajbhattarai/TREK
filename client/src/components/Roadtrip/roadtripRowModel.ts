@@ -256,6 +256,15 @@ export function destinationCount(day: RoadtripDay): number {
 }
 
 /**
+ * The rows with each ride opened up into its two terminals, in place. A ride row holds
+ * them instead of two stop rows of their own, so a reader walking the rows for stops
+ * has to look inside it, or a day that ends on a flight ends at the stop before it.
+ */
+function unfoldRides(rows: readonly RoadtripRow[]): RoadtripRow[] {
+  return rows.flatMap(row => (row.kind === 'ride' ? [row.departure, row.arrival] : [row]))
+}
+
+/**
  * The two clocks a stage is headed with: when it starts, and when you reach its last place.
  *
  * Both are read off the clock the rows print on the right, which is an arrival all the way
@@ -284,7 +293,7 @@ export function destinationCount(day: RoadtripDay): number {
 export function stageClocks(rows: readonly RoadtripRow[]): { start: string | null; arrive: string | null } {
   let start: string | null = null
   let arrive: string | null = null
-  for (const row of rows) {
+  for (const row of unfoldRides(rows)) {
     if (row.kind === 'stop' && row.time) {
       start ??= row.time
       arrive = row.time
@@ -296,7 +305,8 @@ export function stageClocks(rows: readonly RoadtripRow[]): { start: string | nul
 }
 
 /**
- * The stop a stage ends on: the last one the chain draws, a service stop included.
+ * The stop a stage ends on: the last one the chain draws, a service stop or the arrival
+ * terminal of a ride included.
  *
  * The map half names it in its bar and opens it on a tap, so the name, the clock beside it
  * and the sheet the tap brings up all come off this one row and cannot name three different
@@ -308,8 +318,9 @@ export function stageClocks(rows: readonly RoadtripRow[]): { start: string | nul
  * There is nothing for a tap to open then, and the bar says so by not being a button.
  */
 export function stageEnd(rows: readonly RoadtripRow[]): StopRow | null {
-  for (let i = rows.length - 1; i >= 0; i--) {
-    const row = rows[i]
+  const unfolded = unfoldRides(rows)
+  for (let i = unfolded.length - 1; i >= 0; i--) {
+    const row = unfolded[i]
     if (row.kind === 'stop') return row
   }
   return null
@@ -355,7 +366,7 @@ export function upNextStop(
   isToday: boolean,
 ): { row: StopRow; minutesUntil: number } | null {
   if (!day || !isToday) return null
-  const timed = roadtripRows(day)
+  const timed = unfoldRides(roadtripRows(day))
     .filter((r): r is StopRow => r.kind === 'stop' && !r.service)
     .map(row => ({ row, at: clockMinutes(row.time) }))
     .filter((x): x is { row: StopRow; at: number } => x.at != null)

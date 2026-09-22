@@ -221,6 +221,25 @@ describe('OidcController /callback', () => {
     expect(res.redirectedTo).toBe('https://app/login?oidc_code=ac');
   });
 
+  it('OIDC-CB-LOGIN-003: an account the callback creates writes the user.register row a password signup writes, then the login', async () => {
+    const res = makeRes();
+    const reqIp = { query: {}, headers: {}, ip: '203.0.113.9', cookies: { trek_oidc_state: 's' } } as unknown as Request;
+    await ctl(svc({
+      exchangeCodeForToken: vi.fn().mockResolvedValue({ _ok: true, access_token: 'at', id_token: 'it' }),
+      verifyIdToken: vi.fn().mockResolvedValue({ ok: true, claims: { sub: 'u1' } }),
+      getUserInfo: vi.fn().mockResolvedValue({ email: 'a@b.c', sub: 'u1' }),
+      findOrCreateUser: vi.fn().mockReturnValue({ user: { id: 7, username: 'a', email: 'a@b.c', role: 'user' }, created: true }),
+    })).callback('c', 's', undefined, reqIp, res);
+
+    expect(writeAudit).toHaveBeenCalledTimes(2);
+    expect(writeAudit).toHaveBeenNthCalledWith(1, {
+      userId: 7, action: 'user.register', ip: '203.0.113.9',
+      details: { username: 'a', email: 'a@b.c', role: 'user', method: 'oidc' },
+    });
+    expect(writeAudit).toHaveBeenNthCalledWith(2, { userId: 7, action: 'user.login', ip: '203.0.113.9', details: { method: 'oidc' } });
+    expect(res.redirectedTo).toBe('https://app/login?oidc_code=ac');
+  });
+
   it('OIDC-CB-LOGIN-002: a login refused by the user lookup writes no login row', async () => {
     const res = makeRes();
     await ctl(svc({

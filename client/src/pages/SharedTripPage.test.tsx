@@ -16,7 +16,9 @@ vi.mock('react-leaflet', () => ({
   ),
   TileLayer: ({ url }: { url: string }) => <div data-testid="raster-tiles" data-url={url} />,
   Marker: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
-  Polyline: () => <div data-testid="route-line" />,
+  Polyline: ({ positions }: { positions: [number, number][] }) => (
+    <div data-testid="route-line" data-positions={JSON.stringify(positions)} />
+  ),
   Tooltip: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
   useMap: () => ({
     fitBounds: vi.fn(),
@@ -59,6 +61,10 @@ function renderSharedTrip(token: string) {
     { initialEntries: [`/shared/${token}`] },
   );
 }
+
+// Leaflet is mocked, so every marker the last render drew is a recorded divIcon call.
+const divIconMock = () => L.divIcon as unknown as ReturnType<typeof vi.fn>;
+const iconHtml = () => divIconMock().mock.calls.map(c => String(c[0].html));
 
 beforeEach(() => {
   // SharedTripPage does NOT require authentication — do NOT seed auth store
@@ -818,10 +824,7 @@ describe('SharedTripPage', () => {
     const orsay = { id: 202, name: 'Orsay', lat: 48.85, lng: 2.32, category: null };
     const notre = { id: 203, name: 'Notre-Dame', lat: 48.853, lng: 2.35, category: null };
 
-    // Every divIcon call the last render produced, as raw html strings.
-    const iconHtml = () => (L.divIcon as unknown as ReturnType<typeof vi.fn>).mock.calls.map((c: any[]) => String(c[0].html));
-
-    beforeEach(() => (L.divIcon as unknown as ReturnType<typeof vi.fn>).mockClear());
+    beforeEach(() => divIconMock().mockClear());
 
     it('numbers the stops by order_index, not by payload order', async () => {
       await open('order-map-token', payload({
@@ -966,15 +969,15 @@ describe('SharedTripPage', () => {
     // The payload nests the category on a day's assignments but sends it flat on the
     // trip-wide pool, so reading only the nested shape painted every marker indigo.
     it('reads the flat category_color the trip pool sends', async () => {
-      (L.divIcon as unknown as ReturnType<typeof vi.fn>).mockClear();
+      divIconMock().mockClear();
       await open('flatcat-token', payload({
         days: [],
         places: [{ id: 201, name: 'Louvre', lat: 48.86, lng: 2.33, category_color: '#ff8800', category_icon: 'landmark' }],
         assignments: {},
       }));
 
-      await waitFor(() => expect((L.divIcon as unknown as ReturnType<typeof vi.fn>).mock.calls.length).toBeGreaterThan(0));
-      const html = (L.divIcon as unknown as ReturnType<typeof vi.fn>).mock.calls.map((c: any[]) => String(c[0].html));
+      await waitFor(() => expect(iconHtml().length).toBeGreaterThan(0));
+      const html = iconHtml();
       expect(html.some((h: string) => h.includes('#ff8800'))).toBe(true);
       expect(html.some((h: string) => h.includes('#6366f1'))).toBe(false);
     });
@@ -1390,6 +1393,42 @@ describe('SharedTripPage', () => {
       await waitFor(() => expect(screen.getByText('77 Rue de Varenne')).toBeInTheDocument());
       // The booked night is not: it is already on the day as its own chip.
       expect(screen.queryByText('Unter den Linden 77')).toBeNull();
+    });
+
+    it('numbers the map and draws the day line over the traveller\'s stops only, and keeps the hotel as an unnumbered pin', async () => {
+      // Since the reseat the booked night heads its day, so counting it gave the hotel
+      // badge 1, every real stop one more than the app shows, and a line setting off
+      // from where the day ends.
+      divIconMock().mockClear();
+      const hotel = { ...place(602, 'Hotel Adlon', 'Unter den Linden 77'), lat: 52.52, lng: 13.38 };
+      const rodin = { ...place(601, 'Musee Rodin', '77 Rue de Varenne'), lat: 48.86, lng: 2.32 };
+      const orsay = { ...place(603, 'Musee d Orsay', '1 Rue de la Legion d Honneur'), lat: 48.86, lng: 2.33 };
+      await open('stay-map-token', payload({
+        days,
+        assignments: {
+          41: [
+            { id: 402, day_id: 41, order_index: 0, notes: null, accommodation_id: 7, place: hotel },
+            { id: 401, day_id: 41, order_index: 1, notes: null, accommodation_id: null, place: rodin },
+            { id: 403, day_id: 41, order_index: 2, notes: null, accommodation_id: null, place: orsay },
+          ],
+        },
+        accommodations: [{ id: 7, place_id: 602, start_day_id: 41, end_day_id: 41, place_name: 'Hotel Adlon' }],
+      }));
+
+      fireEvent.click(screen.getByRole('button', { name: 'Day 1' }));
+      await waitFor(() => expect(iconHtml().some((h: string) => h.includes('>1<'))).toBe(true));
+
+      // Rodin is 1 and Orsay is 2, as in the planner; nothing wears 3 and the hotel's
+      // pin is still drawn, without a badge.
+      const html = iconHtml();
+      expect(html.filter((h: string) => h.includes('>1<'))).toHaveLength(1);
+      expect(html.filter((h: string) => h.includes('>2<'))).toHaveLength(1);
+      expect(html.some((h: string) => h.includes('>3<'))).toBe(false);
+      expect(html.filter((h: string) => !h.includes('<span'))).toHaveLength(1);
+
+      // The day line joins the two stops and does not start at the hotel.
+      const line = screen.getByTestId('route-line');
+      expect(JSON.parse(line.getAttribute('data-positions') ?? '[]')).toEqual([[48.86, 2.32], [48.86, 2.33]]);
     });
   });
 

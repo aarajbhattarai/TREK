@@ -644,11 +644,11 @@ describe('IntegrationsTab', () => {
     expect(createBtn).toBeDisabled();
   });
 
-  it('FE-COMP-INTEGRATIONS-032: error toast shown when create OAuth client fails', async () => {
+  it('FE-COMP-INTEGRATIONS-032: a refused client registration toasts the reason the server gave', async () => {
     const user = userEvent.setup();
     server.use(
       http.post('/api/oauth/clients', () =>
-        HttpResponse.json({ error: 'server error' }, { status: 500 })
+        HttpResponse.json({ error: 'Redirect URI must use HTTPS, loopback HTTP, or a private custom scheme: http://192.168.1.5/cb' }, { status: 400 })
       )
     );
     enableMcp();
@@ -657,9 +657,24 @@ describe('IntegrationsTab', () => {
     await user.click(screen.getByRole('button', { name: /New Client/i }));
     await screen.findByText('Register OAuth Client');
     await user.type(screen.getByPlaceholderText(/Claude Web, My MCP App/i), 'Fail Client');
+    await user.type(screen.getByPlaceholderText(/https:\/\/your-app/i), 'http://192.168.1.5/cb');
+    await user.click(screen.getByRole('button', { name: /Register Client/i }));
+    expect(await screen.findByText(/Redirect URI must use HTTPS/)).toBeInTheDocument();
+    expect(screen.queryByText('Failed to register OAuth client')).not.toBeInTheDocument();
+  });
+
+  it('FE-COMP-INTEGRATIONS-032b: a failure the server says nothing about keeps the generic text', async () => {
+    const user = userEvent.setup();
+    server.use(http.post('/api/oauth/clients', () => HttpResponse.error()));
+    enableMcp();
+    render(<><ToastContainer /><IntegrationsTab /></>);
+    await screen.findByText('MCP Configuration');
+    await user.click(screen.getByRole('button', { name: /New Client/i }));
+    await screen.findByText('Register OAuth Client');
+    await user.type(screen.getByPlaceholderText(/Claude Web, My MCP App/i), 'Fail Client');
     await user.type(screen.getByPlaceholderText(/https:\/\/your-app/i), 'http://localhost');
     await user.click(screen.getByRole('button', { name: /Register Client/i }));
-    expect(await screen.findByText(/Failed to register/i)).toBeInTheDocument();
+    expect(await screen.findByText('Failed to register OAuth client')).toBeInTheDocument();
   });
 });
 
