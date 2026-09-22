@@ -60,7 +60,7 @@ export class TripReadModelService {
     const { days: rawDays } = await this.days.list(tripId);
     const days = rawDays.map(({ notes_items, ...day }) => ({ ...day, notes: notes_items }));
 
-    const accommodations = this.accommodations.list(tripId);
+    const accommodations = await this.accommodations.list(tripId);
 
     const budgetItems = await this.budget.listBudgetItems(tripId);
     const budget = {
@@ -111,7 +111,7 @@ export class TripReadModelService {
       budgetItems: await this.budget.listBudgetItems(tripId),
       reservations: this.reservations.list(tripId),
       files: await this.files.listFiles(tripId, false),
-      accommodations: this.accommodations.list(tripId),
+      accommodations: await this.accommodations.list(tripId),
       members: [owner, ...(members || [])].filter(Boolean),
     };
   }

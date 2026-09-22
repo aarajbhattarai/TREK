@@ -105,7 +105,7 @@ export async function createPluginRpcHostFactory(dbs: DatabaseService): Promise<
   const collections = new CollectionsService(dbs, permissions, realtime, notificationsStub(), generalStorage, await createTestUnitOfWork(dbs.connection));
   const atlas = new AtlasService(dbs, await createTestUnitOfWork(dbs.connection));
   const dayNotes = new DayNotesService(dbs, permissions, realtime);
-  const assignments = new AssignmentsService(dbs, permissions, realtime, queryHelpers, journey);
+  const assignments = new AssignmentsService(dbs, permissions, realtime, queryHelpers, journey, await createTestUnitOfWork(dbs.connection));
   const membership = new TripMembershipService(dbs);
   const notifications = await makeNotificationsService(dbs, realtime);
   const llmConfig = new LlmConfigResolver(new SettingsService(dbs, await createTestUnitOfWork(dbs.connection)), dbs, addons);

@@ -68,8 +68,8 @@ export class AccommodationsController {
   }
 
   @Get()
-  list(@CurrentUser() user: User, @Param('tripId') tripId: string) {
-    return { accommodations: this.accommodations.list(tripId) };
+  async list(@CurrentUser() user: User, @Param('tripId') tripId: string) {
+    return { accommodations: await this.accommodations.list(tripId) };
   }
 
   @RequirePermission('day_edit')
@@ -85,7 +85,7 @@ export class AccommodationsController {
     if (!place_id || !start_day_id || !end_day_id) {
       throw new HttpException({ error: 'place_id, start_day_id, and end_day_id are required' }, 400);
     }
-    const errors = this.accommodations.validateRefs(tripId, place_id, start_day_id, end_day_id);
+    const errors = await this.accommodations.validateRefs(tripId, place_id, start_day_id, end_day_id);
     if (errors.length > 0) {
       throw new HttpException({ error: errors[0].message }, 404);
     }
@@ -108,12 +108,12 @@ export class AccommodationsController {
     @Headers('x-socket-id') socketId?: string,
   ) {
     const body = rawBody as AccommodationBody;
-    const existing = this.accommodations.get(id, tripId);
+    const existing = await this.accommodations.get(id, tripId);
     if (!existing) {
       throw new HttpException({ error: 'Accommodation not found' }, 404);
     }
     const { place_id, start_day_id, end_day_id, check_in, check_in_end, check_out, confirmation, notes } = body;
-    const errors = this.accommodations.validateRefs(tripId, place_id, start_day_id, end_day_id);
+    const errors = await this.accommodations.validateRefs(tripId, place_id, start_day_id, end_day_id);
     if (errors.length > 0) {
       throw new HttpException({ error: errors[0].message }, 404);
     }
@@ -132,7 +132,7 @@ export class AccommodationsController {
     @Headers('x-socket-id') socketId?: string,
     @Query('keepStop') keepStop?: string,
   ) {
-    if (!this.accommodations.get(id, tripId)) {
+    if (!(await this.accommodations.get(id, tripId))) {
       throw new HttpException({ error: 'Accommodation not found' }, 404);
     }
     // Turning a night back into a pause in road trip mode: the booking goes, the

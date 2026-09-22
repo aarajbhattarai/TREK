@@ -54,7 +54,7 @@ export class AccommodationsRpc {
     const endDayId = Math.trunc(Number(input.end_day_id));
     if (!placeId || !startDayId || !endDayId) throw new BadParams('place_id, start_day_id, and end_day_id are required');
     // Verifies the place and both days belong to this trip.
-    const errors = this.days.validateAccommodationRefs(tripId, placeId, startDayId, endDayId);
+    const errors = await this.days.validateAccommodationRefs(tripId, placeId, startDayId, endDayId);
     if (errors.length > 0) throw new ForbiddenResource(errors[0].message);
     const { accommodation, mirror } = await this.days.createAccommodation(tripId, {
       place_id: placeId,
@@ -81,10 +81,10 @@ export class AccommodationsRpc {
     const parsed = accommodationUpdateRequestSchema.safeParse(params.input);
     if (!parsed.success) throw new BadParams(`invalid accommodation: ${schemaMessage(parsed.error)}`);
     await this.guards.requireTripEdit(tripId, actor, ACCOMMODATION_EDIT_ACTION);
-    const existing = this.days.getAccommodation(accommodationId, tripId);
+    const existing = await this.days.getAccommodation(accommodationId, tripId);
     if (!existing) throw new ForbiddenResource(`no accommodation ${accommodationId} on trip ${tripId}`);
     const input = parsed.data as { place_id?: number; start_day_id?: number; end_day_id?: number; check_in?: string; check_in_end?: string; check_out?: string; confirmation?: string; notes?: string };
-    const errors = this.days.validateAccommodationRefs(tripId, input.place_id, input.start_day_id, input.end_day_id);
+    const errors = await this.days.validateAccommodationRefs(tripId, input.place_id, input.start_day_id, input.end_day_id);
     if (errors.length > 0) throw new ForbiddenResource(errors[0].message);
     const { accommodation, mirror } = await this.days.updateAccommodation(accommodationId, existing, input);
     this.realtime.broadcast(tripId, 'accommodation:updated', { accommodation });
@@ -98,7 +98,7 @@ export class AccommodationsRpc {
     const accommodationId = num(params.accommodationId, 'accommodationId');
     const actor = this.guards.requireActor(ctx, 'accommodation');
     await this.guards.requireTripEdit(tripId, actor, ACCOMMODATION_EDIT_ACTION);
-    if (!this.days.getAccommodation(accommodationId, tripId)) {
+    if (!(await this.days.getAccommodation(accommodationId, tripId))) {
       throw new ForbiddenResource(`no accommodation ${accommodationId} on trip ${tripId}`);
     }
     // Deleting a block can take its partner reservation and budget item with it.

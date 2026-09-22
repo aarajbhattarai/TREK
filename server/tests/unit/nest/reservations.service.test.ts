@@ -1068,11 +1068,11 @@ describe('ReservationsService — referenced ids stay inside the trip', () => {
     try { plant(); } finally { testDb.exec('PRAGMA foreign_keys = ON'); }
   }
 
-  it('RESV-SCOPE-006: an id that resolves to nothing is named too, accommodation_id excepted', () => {
+  it('RESV-SCOPE-006: an id that resolves to nothing is named too, accommodation_id excepted', async () => {
     const { mine } = twoTrips();
     const gone = 999999;
 
-    expect(svc.unresolvedReferences(String(mine.id), {
+    expect(await svc.unresolvedReferences(String(mine.id), {
       title: 'x', type: 'hotel',
       day_id: gone, end_day_id: gone, place_id: gone, assignment_id: gone, accommodation_id: gone,
       create_accommodation: { place_id: gone, start_day_id: gone, end_day_id: gone },
@@ -1082,37 +1082,37 @@ describe('ReservationsService — referenced ids stay inside the trip', () => {
     ]);
   });
 
-  it('RESV-SCOPE-007: ids on the trip pass, and a falsy one is not a reference at all', () => {
+  it('RESV-SCOPE-007: ids on the trip pass, and a falsy one is not a reference at all', async () => {
     const { mine } = twoTrips();
     const place = createPlace(testDb, mine.id);
     const day = testDb.prepare('SELECT id FROM days WHERE trip_id = ? ORDER BY day_number').get(mine.id) as { id: number };
     const assignment = createDayAssignment(testDb, day.id, place.id);
 
-    expect(svc.unresolvedReferences(String(mine.id), {
+    expect(await svc.unresolvedReferences(String(mine.id), {
       title: 'x', type: 'hotel',
       day_id: day.id, end_day_id: day.id, place_id: place.id, assignment_id: assignment.id,
       create_accommodation: { place_id: place.id, start_day_id: day.id, end_day_id: day.id },
     })).toEqual([]);
     // The write paths coerce these to NULL before they reach SQL, so naming
     // them would 400 a body that stores a null today.
-    expect(svc.unresolvedReferences(String(mine.id), { title: 'x', day_id: 0, end_day_id: 0, place_id: 0, assignment_id: 0 })).toEqual([]);
+    expect(await svc.unresolvedReferences(String(mine.id), { title: 'x', day_id: 0, end_day_id: 0, place_id: 0, assignment_id: 0 })).toEqual([]);
     // Only a hotel booking writes the stay row.
-    expect(svc.unresolvedReferences(String(mine.id), {
+    expect(await svc.unresolvedReferences(String(mine.id), {
       title: 'x', type: 'flight', create_accommodation: { place_id: 999999, start_day_id: 999999, end_day_id: 999999 },
     })).toEqual([]);
     // A stay without a place is a state the booking form writes.
-    expect(svc.unresolvedReferences(String(mine.id), {
+    expect(await svc.unresolvedReferences(String(mine.id), {
       title: 'x', type: 'hotel', create_accommodation: { start_day_id: day.id, end_day_id: day.id },
     })).toEqual([]);
   });
 
-  it('RESV-SCOPE-008: an id from another trip is named by both guards, so the older one answers first', () => {
+  it('RESV-SCOPE-008: an id from another trip is named by both guards, so the older one answers first', async () => {
     const { mine, theirs } = twoTrips();
     const foreignPlace = createPlace(testDb, theirs.id);
     const body = { title: 'x', place_id: foreignPlace.id };
 
     expect(svc.referencesOutsideTrip(String(mine.id), body)).toEqual(['place_id']);
-    expect(svc.unresolvedReferences(String(mine.id), body)).toEqual(['place_id']);
+    expect(await svc.unresolvedReferences(String(mine.id), body)).toEqual(['place_id']);
   });
 
   it('RESV-SCOPE-009: an update heals the stored ids whose rows are gone instead of failing on them', async () => {

@@ -96,8 +96,8 @@ afterAll(() => {
   testDb.close();
 });
 
-function freshPlace(tripId: number) {
-  const place = places.create(String(tripId), { name: 'Original' }) as unknown as { id: number; updated_at: string };
+async function freshPlace(tripId: number) {
+  const place = await places.create(String(tripId), { name: 'Original' }) as unknown as { id: number; updated_at: string };
   return place;
 }
 
@@ -105,7 +105,7 @@ describe('PlacesService.update — optimistic concurrency', () => {
   it('updates normally when no If-Match token is sent (back-compat)', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
-    const place = freshPlace(trip.id);
+    const place = await freshPlace(trip.id);
 
     const result = await places.update(String(trip.id), String(place.id), { name: 'Edited' });
     expect(isUpdateConflict(result)).toBe(false);
@@ -115,7 +115,7 @@ describe('PlacesService.update — optimistic concurrency', () => {
   it('updates when the If-Match token matches the current updated_at', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
-    const place = freshPlace(trip.id);
+    const place = await freshPlace(trip.id);
 
     const result = await places.update(String(trip.id), String(place.id), { name: 'Edited' }, place.updated_at);
     expect(isUpdateConflict(result)).toBe(false);
@@ -125,7 +125,7 @@ describe('PlacesService.update — optimistic concurrency', () => {
   it('returns a conflict (with the server row) when the token is stale', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
-    const place = freshPlace(trip.id);
+    const place = await freshPlace(trip.id);
 
     const result = await places.update(String(trip.id), String(place.id), { name: 'Mine' }, '1999-01-01 00:00:00');
     expect(isUpdateConflict(result)).toBe(true);

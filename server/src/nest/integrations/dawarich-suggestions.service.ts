@@ -225,7 +225,7 @@ export class DawarichSuggestionsService {
 
     if (body.dayId !== undefined) {
       await this.requirePermission('day_edit', access.user_id, userId);
-      if (!this.assignments.dayExists(body.dayId, tripId)) {
+      if (!(await this.assignments.dayExists(body.dayId, tripId))) {
         throw new AcceptError('day_not_on_trip', 'Day does not belong to this trip', 400);
       }
     }
@@ -238,7 +238,7 @@ export class DawarichSuggestionsService {
     // worse than none: the stay would come back as unhandled while the place it
     // already produced sat on the trip.
     const { created, placeId, assignment } = await this.uow.transactional(async () => {
-      const place = this.places.create(String(tripId), {
+      const place = await this.places.create(String(tripId), {
         name: body.name?.trim() || row.name,
         lat,
         lng,

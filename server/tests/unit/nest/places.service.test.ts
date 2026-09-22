@@ -197,20 +197,20 @@ describe('list', () => {
 // ── create ────────────────────────────────────────────────────────────────────
 
 describe('create', () => {
-  it('PLACE-SVC-007 — creates a place and returns it with tags array', () => {
+  it('PLACE-SVC-007 — creates a place and returns it with tags array', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
-    const place = svc.create(String(trip.id), { name: 'New Place', lat: 48.8, lng: 2.3 }) as any;
+    const place = await svc.create(String(trip.id), { name: 'New Place', lat: 48.8, lng: 2.3 }) as any;
     expect(place).toBeDefined();
     expect(place.name).toBe('New Place');
     expect(Array.isArray(place.tags)).toBe(true);
   });
 
-  it('PLACE-SVC-008 — creates a place with tags', () => {
+  it('PLACE-SVC-008 — creates a place with tags', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const tag = createTag(testDb, user.id, { name: 'Highlight' }) as any;
-    const place = svc.create(String(trip.id), { name: 'Tagged Place', tags: [tag.id] }) as any;
+    const place = await svc.create(String(trip.id), { name: 'Tagged Place', tags: [tag.id] }) as any;
     expect(place.tags).toHaveLength(1);
     expect(place.tags[0].id).toBe(tag.id);
   });
@@ -218,34 +218,34 @@ describe('create', () => {
   // A tag belongs to a user, not a trip, and the place body is an open record, so
   // an id from someone outside the trip could be attached and then read straight
   // back — the tag projection carries the owner's user_id with it.
-  it('PLACE-SVC-008a — drops a tag owned by someone outside the trip', () => {
+  it('PLACE-SVC-008a — drops a tag owned by someone outside the trip', async () => {
     const { user } = createUser(testDb);
     const { user: outsider } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const mine = createTag(testDb, user.id, { name: 'Mine' }) as any;
     const theirs = createTag(testDb, outsider.id, { name: 'Theirs' }) as any;
 
-    const place = svc.create(String(trip.id), { name: 'Tagged Place', tags: [mine.id, theirs.id] }) as any;
+    const place = await svc.create(String(trip.id), { name: 'Tagged Place', tags: [mine.id, theirs.id] }) as any;
 
     expect(place.tags.map((t: any) => t.id)).toEqual([mine.id]);
   });
 
-  it('PLACE-SVC-008b — keeps a co-traveller tag, so a shared place survives a foreign re-save', () => {
+  it('PLACE-SVC-008b — keeps a co-traveller tag, so a shared place survives a foreign re-save', async () => {
     const { user: owner } = createUser(testDb);
     const { user: member } = createUser(testDb);
     const trip = createTrip(testDb, owner.id);
     addTripMember(testDb, trip.id, member.id);
     const theirTag = createTag(testDb, member.id, { name: 'Theirs' }) as any;
 
-    const place = svc.create(String(trip.id), { name: 'Shared Place', tags: [theirTag.id] }) as any;
+    const place = await svc.create(String(trip.id), { name: 'Shared Place', tags: [theirTag.id] }) as any;
 
     expect(place.tags.map((t: any) => t.id)).toEqual([theirTag.id]);
   });
 
-  it('PLACE-SVC-009 — place is associated with correct trip', () => {
+  it('PLACE-SVC-009 — place is associated with correct trip', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
-    const place = svc.create(String(trip.id), { name: 'My Place' }) as any;
+    const place = await svc.create(String(trip.id), { name: 'My Place' }) as any;
     const row = testDb.prepare('SELECT trip_id FROM places WHERE id = ?').get(place.id) as any;
     expect(row.trip_id).toBe(trip.id);
   });
@@ -254,27 +254,27 @@ describe('create', () => {
 // ── get ───────────────────────────────────────────────────────────────────────
 
 describe('get', () => {
-  it('PLACE-SVC-010 — returns the place when tripId and placeId match', () => {
+  it('PLACE-SVC-010 — returns the place when tripId and placeId match', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const place = createPlace(testDb, trip.id, { name: 'Find Me' }) as any;
-    const found = svc.get(String(trip.id), String(place.id)) as any;
+    const found = await svc.get(String(trip.id), String(place.id)) as any;
     expect(found).toBeDefined();
     expect(found.name).toBe('Find Me');
   });
 
-  it('PLACE-SVC-011 — returns null when place belongs to different trip', () => {
+  it('PLACE-SVC-011 — returns null when place belongs to different trip', async () => {
     const { user } = createUser(testDb);
     const t1 = createTrip(testDb, user.id);
     const t2 = createTrip(testDb, user.id);
     const place = createPlace(testDb, t1.id, { name: 'T1 Place' }) as any;
-    expect(svc.get(String(t2.id), String(place.id))).toBeNull();
+    expect(await svc.get(String(t2.id), String(place.id))).toBeNull();
   });
 
-  it('PLACE-SVC-012 — returns null for non-existent placeId', () => {
+  it('PLACE-SVC-012 — returns null for non-existent placeId', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
-    expect(svc.get(String(trip.id), '99999')).toBeNull();
+    expect(await svc.get(String(trip.id), '99999')).toBeNull();
   });
 });
 
@@ -302,7 +302,7 @@ describe('update', () => {
     const trip = createTrip(testDb, user.id);
     const tag1 = createTag(testDb, user.id, { name: 'Old Tag' }) as any;
     const tag2 = createTag(testDb, user.id, { name: 'New Tag' }) as any;
-    const place = svc.create(String(trip.id), { name: 'Taggable', tags: [tag1.id] }) as any;
+    const place = await svc.create(String(trip.id), { name: 'Taggable', tags: [tag1.id] }) as any;
 
     const updated = await svc.update(String(trip.id), String(place.id), { tags: [tag2.id] }) as any;
     expect(updated.tags).toHaveLength(1);
@@ -313,7 +313,7 @@ describe('update', () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const tag = createTag(testDb, user.id, { name: 'Temp' }) as any;
-    const place = svc.create(String(trip.id), { name: 'Untaggable', tags: [tag.id] }) as any;
+    const place = await svc.create(String(trip.id), { name: 'Untaggable', tags: [tag.id] }) as any;
 
     const updated = await svc.update(String(trip.id), String(place.id), { tags: [] }) as any;
     expect(updated.tags).toHaveLength(0);
@@ -350,10 +350,10 @@ describe('update', () => {
     expect(renamed.route_color).toBe('#059669');
   });
 
-  it('PLACE-SVC-055 — create carries geometry and colour instead of dropping them', () => {
+  it('PLACE-SVC-055 — create carries geometry and colour instead of dropping them', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
-    const created = svc.create(String(trip.id), {
+    const created = await svc.create(String(trip.id), {
       name: 'Restored track',
       route_geometry: '[[48.0,2.0],[49.0,3.0]]',
       route_color: '#7c3aed',
@@ -396,7 +396,7 @@ describe('updateMany', () => {
     expect(updated).toHaveLength(1);
     expect((updated[0] as any).id).toBe(mine.id);
     // The place from the other trip stays untouched.
-    expect((svc.get(String(other.id), String(foreign.id)) as any).notes).toBeNull();
+    expect((await svc.get(String(other.id), String(foreign.id)) as any).notes).toBeNull();
   });
 
   it('PLACE-SVC-041 — returns [] for an empty id list', async () => {
@@ -414,7 +414,7 @@ describe('remove', () => {
     const trip = createTrip(testDb, user.id);
     const place = createPlace(testDb, trip.id, { name: 'To Delete' }) as any;
     expect((await svc.remove(String(trip.id), String(place.id))).deleted).toBe(true);
-    expect(svc.get(String(trip.id), String(place.id))).toBeNull();
+    expect(await svc.get(String(trip.id), String(place.id))).toBeNull();
   });
 
   it('PLACE-SVC-018 — returns false for non-existent place', async () => {
@@ -480,7 +480,7 @@ describe('remove', () => {
     const standalone = Number(testDb.prepare("INSERT INTO budget_items (trip_id, name, total_price) VALUES (?, 'Coffee', 3)").run(trip.id).lastInsertRowid);
 
     // Read the link before the delete — that is what the controller broadcasts.
-    expect(svc.linkedExpenseIds(trip.id, [place.id])).toEqual([linked]);
+    expect(await svc.linkedExpenseIds(trip.id, [place.id])).toEqual([linked]);
     expect((await svc.remove(String(trip.id), String(place.id))).deleted).toBe(true);
 
     const rows = testDb.prepare('SELECT id FROM budget_items ORDER BY id').all() as { id: number }[];
@@ -497,22 +497,22 @@ describe('remove', () => {
       testDb.prepare("INSERT INTO budget_items (trip_id, name, total_price, place_id) VALUES (?, 'x', 1, ?)").run(trip.id, p.id);
     }
 
-    expect(svc.linkedExpenseIds(trip.id, [a.id, b.id])).toHaveLength(2);
+    expect(await svc.linkedExpenseIds(trip.id, [a.id, b.id])).toHaveLength(2);
     await svc.removeMany(String(trip.id), [a.id, b.id]);
 
     const rows = testDb.prepare('SELECT place_id FROM budget_items').all() as { place_id: number }[];
     expect(rows.map(r => r.place_id)).toEqual([keep.id]);
   });
 
-  it('PLACE-SVC-019e — linkedExpenseIds ignores places of another trip and an empty list', () => {
+  it('PLACE-SVC-019e — linkedExpenseIds ignores places of another trip and an empty list', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const other = createTrip(testDb, user.id);
     const place = createPlace(testDb, other.id, { name: 'Elsewhere' }) as any;
     testDb.prepare("INSERT INTO budget_items (trip_id, name, total_price, place_id) VALUES (?, 'x', 1, ?)").run(other.id, place.id);
 
-    expect(svc.linkedExpenseIds(trip.id, [place.id])).toEqual([]);
-    expect(svc.linkedExpenseIds(trip.id, [])).toEqual([]);
+    expect(await svc.linkedExpenseIds(trip.id, [place.id])).toEqual([]);
+    expect(await svc.linkedExpenseIds(trip.id, [])).toEqual([]);
   });
 
   it('PLACE-SVC-019b — reclaims the photo cache for the deleted place', async () => {
@@ -542,7 +542,7 @@ describe('removeMany', () => {
     const { deleted } = await svc.removeMany(String(trip.id), [a.id, b.id, foreign.id, 99999]);
 
     expect(deleted.sort()).toEqual([a.id, b.id].sort());
-    expect(svc.get(String(other.id), String(foreign.id))).not.toBeNull();
+    expect(await svc.get(String(other.id), String(foreign.id))).not.toBeNull();
   });
 
   it('PLACE-SVC-057b — a place delete reports the booking and expense its cancelled night took down', async () => {
@@ -580,27 +580,27 @@ describe('removeMany', () => {
 // ── importGpx ─────────────────────────────────────────────────────────────────
 
 describe('importGpx', () => {
-  it('PLACE-SVC-020 — returns null when buffer has no <gpx> root', () => {
+  it('PLACE-SVC-020 — returns null when buffer has no <gpx> root', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
-    const result = svc.importGpx(String(trip.id), Buffer.from('<not-gpx/>'));
+    const result = await svc.importGpx(String(trip.id), Buffer.from('<not-gpx/>'));
     expect(result).toBeNull();
   });
 
-  it('PLACE-SVC-021 — imports <wpt> waypoints as places', () => {
+  it('PLACE-SVC-021 — imports <wpt> waypoints as places', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const gpx = Buffer.from(`<?xml version="1.0"?><gpx version="1.1">
       <wpt lat="48.8566" lon="2.3522"><name>Paris</name></wpt>
       <wpt lat="51.5074" lon="-0.1278"><name>London</name></wpt>
     </gpx>`);
-    const result = svc.importGpx(String(trip.id), gpx) as any;
+    const result = await svc.importGpx(String(trip.id), gpx) as any;
     expect(result.places).toHaveLength(2);
     expect(result.places[0].name).toBe('Paris');
     expect(result.places[1].name).toBe('London');
   });
 
-  it('PLACE-SVC-022 — imports <rte> as a single polyline-place with routeGeometry', () => {
+  it('PLACE-SVC-022 — imports <rte> as a single polyline-place with routeGeometry', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const gpx = Buffer.from(`<?xml version="1.0"?><gpx version="1.1">
@@ -610,7 +610,7 @@ describe('importGpx', () => {
         <rtept lat="51.5074" lon="-0.1278"><name>End</name></rtept>
       </rte>
     </gpx>`);
-    const result = svc.importGpx(String(trip.id), gpx) as any;
+    const result = await svc.importGpx(String(trip.id), gpx) as any;
     expect(result.places).toHaveLength(1);
     expect(result.places[0].name).toBe('My Route');
     expect(result.places[0].lat).toBe(48.8566);
@@ -620,7 +620,7 @@ describe('importGpx', () => {
     expect(coords).toHaveLength(2);
   });
 
-  it('PLACE-SVC-023 — imports <trk> track as a single place with routeGeometry', () => {
+  it('PLACE-SVC-023 — imports <trk> track as a single place with routeGeometry', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const gpx = Buffer.from(`<?xml version="1.0"?><gpx version="1.1">
@@ -632,7 +632,7 @@ describe('importGpx', () => {
         </trkseg>
       </trk>
     </gpx>`);
-    const result = svc.importGpx(String(trip.id), gpx) as any;
+    const result = await svc.importGpx(String(trip.id), gpx) as any;
     expect(result.places).toHaveLength(1);
     expect(result.places[0].name).toBe('My Track');
     const geometry = JSON.parse(result.places[0].route_geometry);
@@ -640,7 +640,7 @@ describe('importGpx', () => {
     expect(geometry).toHaveLength(2);
   });
 
-  it('PLACE-SVC-024 — <wpt> and <trk> together: waypoints plus track appended', () => {
+  it('PLACE-SVC-024 — <wpt> and <trk> together: waypoints plus track appended', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const gpx = Buffer.from(`<?xml version="1.0"?><gpx version="1.1">
@@ -653,7 +653,7 @@ describe('importGpx', () => {
         </trkseg>
       </trk>
     </gpx>`);
-    const result = svc.importGpx(String(trip.id), gpx) as any;
+    const result = await svc.importGpx(String(trip.id), gpx) as any;
     // 1 wpt + 1 trk
     expect(result.places).toHaveLength(2);
     const trackPlace = result.places.find((p: any) => p.name === 'Track') as any;
@@ -662,15 +662,15 @@ describe('importGpx', () => {
     expect(geometry).toHaveLength(2);
   });
 
-  it('PLACE-SVC-025 — returns null when GPX has no usable elements', () => {
+  it('PLACE-SVC-025 — returns null when GPX has no usable elements', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const gpx = Buffer.from(`<?xml version="1.0"?><gpx version="1.1"></gpx>`);
-    const result = svc.importGpx(String(trip.id), gpx);
+    const result = await svc.importGpx(String(trip.id), gpx);
     expect(result).toBeNull();
   });
 
-  it('PLACE-SVC-037 — multiple unnamed tracks in one file get distinct names instead of collapsing to one', () => {
+  it('PLACE-SVC-037 — multiple unnamed tracks in one file get distinct names instead of collapsing to one', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const gpx = Buffer.from(`<?xml version="1.0"?><gpx version="1.1">
@@ -683,13 +683,13 @@ describe('importGpx', () => {
         <trkpt lat="40.1000" lon="-3.1000"></trkpt>
       </trkseg></trk>
     </gpx>`);
-    const result = svc.importGpx(String(trip.id), gpx) as any;
+    const result = await svc.importGpx(String(trip.id), gpx) as any;
     expect(result.places).toHaveLength(2);
     const names = result.places.map((p: any) => p.name);
     expect(new Set(names).size).toBe(2);
   });
 
-  it('PLACE-SVC-038 — unnamed tracks fall back to the source filename', () => {
+  it('PLACE-SVC-038 — unnamed tracks fall back to the source filename', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const gpx = Buffer.from(`<?xml version="1.0"?><gpx version="1.1">
@@ -698,7 +698,7 @@ describe('importGpx', () => {
         <trkpt lat="48.8570" lon="2.3530"></trkpt>
       </trkseg></trk>
     </gpx>`);
-    const result = svc.importGpx(String(trip.id), gpx, { defaultName: 'morning-hike.gpx' }) as any;
+    const result = await svc.importGpx(String(trip.id), gpx, { defaultName: 'morning-hike.gpx' }) as any;
     expect(result.places).toHaveLength(1);
     expect(result.places[0].name).toBe('morning-hike');
   });
@@ -985,11 +985,11 @@ describe('importGpx deduplication', () => {
     const buf = fs.readFileSync(GPX_FIXTURE);
 
     // First import
-    const first = svc.importGpx(String(trip.id), buf) as any;
+    const first = await svc.importGpx(String(trip.id), buf) as any;
     expect(first.count).toBeGreaterThan(0);
 
     // Second import — all names already present, nothing new created
-    const second = svc.importGpx(String(trip.id), buf) as any;
+    const second = await svc.importGpx(String(trip.id), buf) as any;
     expect(second.count).toBe(0);
     expect(second.skipped).toBe(first.count);
 
@@ -1003,12 +1003,12 @@ describe('importGpx deduplication', () => {
     const trip = createTrip(testDb, user.id);
     const buf = fs.readFileSync(GPX_FIXTURE);
 
-    const first = svc.importGpx(String(trip.id), buf) as any;
+    const first = await svc.importGpx(String(trip.id), buf) as any;
     // Manually add a brand-new place so total > first.count
     createPlace(testDb, trip.id, { name: 'Unique Extra Place', lat: 99, lng: 99 });
 
     // Re-import: the fixture places are skipped, the extra place remains untouched
-    const second = svc.importGpx(String(trip.id), buf) as any;
+    const second = await svc.importGpx(String(trip.id), buf) as any;
     expect(second.count).toBe(0);
 
     const total = ((await svc.list(String(trip.id), {})) as any[]).length;
@@ -1017,21 +1017,21 @@ describe('importGpx deduplication', () => {
 });
 
 describe('importKmlPlaces deduplication', () => {
-  it('PLACE-SVC-035 — skips placemarks already in trip by name', () => {
+  it('PLACE-SVC-035 — skips placemarks already in trip by name', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const buf = fs.readFileSync(KML_FIXTURE);
 
-    const first = svc.importKmlPlaces(String(trip.id), buf);
+    const first = await svc.importKmlPlaces(String(trip.id), buf);
     expect(first.count).toBeGreaterThan(0);
 
-    const second = svc.importKmlPlaces(String(trip.id), buf);
+    const second = await svc.importKmlPlaces(String(trip.id), buf);
     expect(second.count).toBe(0);
     expect(second.summary.skippedCount).toBeGreaterThanOrEqual(first.count);
     expect(second.summary.warnings.some((w: string) => w.includes('skipped'))).toBe(true);
   });
 
-  it('PLACE-SVC-036 — deduplicates within the same file (intra-batch)', () => {
+  it('PLACE-SVC-036 — deduplicates within the same file (intra-batch)', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     // Craft a KML with two placemarks sharing the same name
@@ -1041,7 +1041,7 @@ describe('importKmlPlaces deduplication', () => {
   <Placemark><name>Dupe Place</name><Point><coordinates>2.1,48.1,0</coordinates></Point></Placemark>
 </Document></kml>`);
 
-    const result = svc.importKmlPlaces(String(trip.id), kml);
+    const result = await svc.importKmlPlaces(String(trip.id), kml);
     expect(result.count).toBe(1);
     expect(result.summary.skippedCount).toBe(1);
   });
@@ -1113,31 +1113,31 @@ describe('custom place image reclaim', () => {
   });
 
   // ── Collaborative ratings (#1435) ──────────────────────────────────────────
-  it('PLACE-SVC-050 — rate stores one vote per user, replaces on re-vote, clears with null', () => {
+  it('PLACE-SVC-050 — rate stores one vote per user, replaces on re-vote, clears with null', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const place = createPlace(testDb, trip.id, { name: 'Rated' }) as { id: number };
 
-    svc.rate(String(trip.id), String(place.id), user.id, 5);
+    await svc.rate(String(trip.id), String(place.id), user.id, 5);
     let rows = testDb.prepare('SELECT rating FROM place_ratings WHERE place_id = ? AND user_id = ?').all(place.id, user.id) as { rating: number }[];
     expect(rows).toEqual([{ rating: 5 }]);
 
-    svc.rate(String(trip.id), String(place.id), user.id, 2); // re-vote replaces via the UNIQUE upsert
+    await svc.rate(String(trip.id), String(place.id), user.id, 2); // re-vote replaces via the UNIQUE upsert
     rows = testDb.prepare('SELECT rating FROM place_ratings WHERE place_id = ? AND user_id = ?').all(place.id, user.id) as { rating: number }[];
     expect(rows).toEqual([{ rating: 2 }]);
 
-    svc.rate(String(trip.id), String(place.id), user.id, null); // clear
+    await svc.rate(String(trip.id), String(place.id), user.id, null); // clear
     const count = testDb.prepare('SELECT COUNT(*) AS n FROM place_ratings WHERE place_id = ?').get(place.id) as { n: number };
     expect(count.n).toBe(0);
   });
 
-  it('PLACE-SVC-051 — rate returns null and writes nothing when the place is not in the trip', () => {
+  it('PLACE-SVC-051 — rate returns null and writes nothing when the place is not in the trip', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const otherTrip = createTrip(testDb, user.id);
     const place = createPlace(testDb, otherTrip.id, { name: 'Elsewhere' }) as { id: number };
 
-    expect(svc.rate(String(trip.id), String(place.id), user.id, 4)).toBeNull();
+    expect(await svc.rate(String(trip.id), String(place.id), user.id, 4)).toBeNull();
     const count = testDb.prepare('SELECT COUNT(*) AS n FROM place_ratings WHERE place_id = ?').get(place.id) as { n: number };
     expect(count.n).toBe(0);
   });
@@ -1161,8 +1161,8 @@ const GPX_WITH_TRACKS = `<?xml version="1.0" encoding="UTF-8"?>
   </trkseg></trk>
 </gpx>`;
 
-function importFixture(tripId: number) {
-  return svc.importGpx(String(tripId), Buffer.from(GPX_WITH_TRACKS), {
+async function importFixture(tripId: number) {
+  return await svc.importGpx(String(tripId), Buffer.from(GPX_WITH_TRACKS), {
     importWaypoints: true, importRoutes: true, importTracks: true,
   });
 }
@@ -1173,10 +1173,10 @@ function tracksOf(tripId: number) {
 }
 
 describe('PlacesService — automatic track colours (#776)', () => {
-  it('PLACES-SVC-001 — every imported track gets a colour from the shared palette', () => {
+  it('PLACES-SVC-001 — every imported track gets a colour from the shared palette', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
-    importFixture(trip.id);
+    await importFixture(trip.id);
 
     const tracks = tracksOf(trip.id);
     expect(tracks.length).toBeGreaterThan(0);
@@ -1185,10 +1185,10 @@ describe('PlacesService — automatic track colours (#776)', () => {
     }
   });
 
-  it('PLACES-SVC-002 — the returned places carry the colour, not just the DB rows', () => {
+  it('PLACES-SVC-002 — the returned places carry the colour, not just the DB rows', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
-    const result = importFixture(trip.id) as { places: any[] } | null;
+    const result = await importFixture(trip.id) as { places: any[] } | null;
 
     const returnedTracks = (result?.places ?? []).filter(p => p.route_geometry);
     expect(returnedTracks.length).toBeGreaterThan(0);
@@ -1197,10 +1197,10 @@ describe('PlacesService — automatic track colours (#776)', () => {
     }
   });
 
-  it('PLACES-SVC-003 — plain waypoints keep no colour at all', () => {
+  it('PLACES-SVC-003 — plain waypoints keep no colour at all', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
-    importFixture(trip.id);
+    await importFixture(trip.id);
 
     const waypoints = testDb.prepare(
       'SELECT route_color FROM places WHERE trip_id = ? AND route_geometry IS NULL',
@@ -1210,10 +1210,10 @@ describe('PlacesService — automatic track colours (#776)', () => {
     }
   });
 
-  it('PLACES-SVC-004 — a second import continues the palette instead of repeating it', () => {
+  it('PLACES-SVC-004 — a second import continues the palette instead of repeating it', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
-    importFixture(trip.id);
+    await importFixture(trip.id);
     const first = tracksOf(trip.id).map(t => t.route_color);
 
     // Same fixture again: dedup skips the identical rows, so seed a distinct
@@ -1222,7 +1222,7 @@ describe('PlacesService — automatic track colours (#776)', () => {
       "INSERT INTO places (trip_id, name, lat, lng, route_geometry) VALUES (?, 'Second walk', 1, 1, '[[1,1],[2,2]]')",
     ).run(trip.id);
     const seeded = testDb.prepare('SELECT id FROM places WHERE name = ?').get('Second walk') as { id: number };
-    (svc as any).colorizeImportedTracks(String(trip.id), {
+    await (svc as any).colorizeImportedTracks(String(trip.id), {
       places: [{ id: seeded.id, route_geometry: '[[1,1],[2,2]]', route_color: null }],
     });
 
@@ -1231,7 +1231,7 @@ describe('PlacesService — automatic track colours (#776)', () => {
     expect(first).not.toContain(seededColor);
   });
 
-  it('PLACES-SVC-006 — a colour already in use by hand is not handed out again', () => {
+  it('PLACES-SVC-006 — a colour already in use by hand is not handed out again', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     // Someone recoloured an existing track to the palette's second entry. A
@@ -1240,16 +1240,16 @@ describe('PlacesService — automatic track colours (#776)', () => {
       "INSERT INTO places (trip_id, name, lat, lng, route_geometry, route_color) VALUES (?, 'Old walk', 1, 1, '[[1,1],[2,2]]', ?)",
     ).run(trip.id, TRACK_COLORS[1]);
 
-    importFixture(trip.id);
+    await importFixture(trip.id);
 
     const colors = tracksOf(trip.id).map(t => t.route_color);
     expect(new Set(colors).size).toBe(colors.length);
   });
 
-  it('PLACES-SVC-007 — gaps left by deleted tracks are reused, not skipped past', () => {
+  it('PLACES-SVC-007 — gaps left by deleted tracks are reused, not skipped past', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
-    importFixture(trip.id);
+    await importFixture(trip.id);
     // Drop the first track; its colour becomes free again.
     const first = tracksOf(trip.id)[0];
     testDb.prepare('DELETE FROM places WHERE id = ?').run(first.id);
@@ -1257,7 +1257,7 @@ describe('PlacesService — automatic track colours (#776)', () => {
     const seeded = testDb.prepare(
       "INSERT INTO places (trip_id, name, lat, lng, route_geometry) VALUES (?, 'Later walk', 9, 9, '[[9,9],[8,8]]') RETURNING id",
     ).get(trip.id) as { id: number };
-    (svc as any).colorizeImportedTracks(String(trip.id), {
+    await (svc as any).colorizeImportedTracks(String(trip.id), {
       places: [{ id: seeded.id, route_geometry: '[[9,9],[8,8]]', route_color: null }],
     });
 
@@ -1265,12 +1265,12 @@ describe('PlacesService — automatic track colours (#776)', () => {
     expect(new Set(colors).size).toBe(colors.length);
   });
 
-  it('PLACES-SVC-005 — an import that yields nothing colours nothing', () => {
+  it('PLACES-SVC-005 — an import that yields nothing colours nothing', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
 
-    expect(() => (svc as any).colorizeImportedTracks(String(trip.id), null)).not.toThrow();
-    expect(() => (svc as any).colorizeImportedTracks(String(trip.id), { places: [] })).not.toThrow();
+    await expect((svc as any).colorizeImportedTracks(String(trip.id), null)).resolves.toBeUndefined();
+    await expect((svc as any).colorizeImportedTracks(String(trip.id), { places: [] })).resolves.toBeUndefined();
 
     expect(tracksOf(trip.id)).toEqual([]);
   });
@@ -1394,26 +1394,26 @@ describe('enrichImportedPlaces', () => {
 // replaced by the default.
 
 describe('zero-valued numeric fields', () => {
-  it('PLACE-SVC-065 — create keeps lat/lng of exactly 0 instead of nulling them', () => {
+  it('PLACE-SVC-065 — create keeps lat/lng of exactly 0 instead of nulling them', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
-    const place = svc.create(String(trip.id), { name: 'Null Island', lat: 0, lng: 0 }) as any;
+    const place = await svc.create(String(trip.id), { name: 'Null Island', lat: 0, lng: 0 }) as any;
     expect(place.lat).toBe(0);
     expect(place.lng).toBe(0);
     // A genuinely absent coordinate still lands as NULL.
-    const noCoords = svc.create(String(trip.id), { name: 'Unlocated' }) as any;
+    const noCoords = await svc.create(String(trip.id), { name: 'Unlocated' }) as any;
     expect(noCoords.lat).toBeNull();
     expect(noCoords.lng).toBeNull();
   });
 
-  it('PLACE-SVC-066 — create keeps duration_minutes and price of 0', () => {
+  it('PLACE-SVC-066 — create keeps duration_minutes and price of 0', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
-    const place = svc.create(String(trip.id), { name: 'Drive-by', duration_minutes: 0, price: 0 }) as any;
+    const place = await svc.create(String(trip.id), { name: 'Drive-by', duration_minutes: 0, price: 0 }) as any;
     expect(place.duration_minutes).toBe(0);
     expect(place.price).toBe(0);
     // The 60-minute default still applies when the field is absent.
-    expect((svc.create(String(trip.id), { name: 'Default' }) as any).duration_minutes).toBe(60);
+    expect((await svc.create(String(trip.id), { name: 'Default' }) as any).duration_minutes).toBe(60);
   });
 
   it('PLACE-SVC-067 — update can set duration_minutes to 0', async () => {
@@ -1473,7 +1473,7 @@ describe('list search escaping', () => {
 // ── Trip-scoped id filter for the journey delete hook (#1745) ─────────────────
 
 describe('scopedIds', () => {
-  it('PLACE-SVC-070 — returns only the ids that belong to the trip, preserving input order', () => {
+  it('PLACE-SVC-070 — returns only the ids that belong to the trip, preserving input order', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const other = createTrip(testDb, user.id);
@@ -1481,8 +1481,8 @@ describe('scopedIds', () => {
     const b = createPlace(testDb, trip.id, { name: 'B' }) as any;
     const foreign = createPlace(testDb, other.id, { name: 'Foreign' }) as any;
 
-    expect(svc.scopedIds(String(trip.id), [b.id, foreign.id, a.id, 99999])).toEqual([b.id, a.id]);
-    expect(svc.scopedIds(String(trip.id), [])).toEqual([]);
+    expect(await svc.scopedIds(String(trip.id), [b.id, foreign.id, a.id, 99999])).toEqual([b.id, a.id]);
+    expect(await svc.scopedIds(String(trip.id), [])).toEqual([]);
   });
 });
 
@@ -1702,26 +1702,26 @@ describe('backfillMissingAddresses', () => {
  * that this service interprets it faithfully against real SQL.
  */
 describe('findMatchingPlaceId', () => {
-  it('PLACES-SVC-008 — matches an existing place by name, ignoring case and surrounding space', () => {
+  it('PLACES-SVC-008 — matches an existing place by name, ignoring case and surrounding space', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const place = createPlace(testDb, trip.id, { name: 'Eiffel Tower' });
 
-    expect(svc.findMatchingPlaceId(String(trip.id), { name: '  eiffel tower ' })).toBe(place.id);
+    expect(await svc.findMatchingPlaceId(String(trip.id), { name: '  eiffel tower ' })).toBe(place.id);
   });
 
-  it('PLACES-SVC-009 — matches on a provider id even after the place was renamed (#1550)', () => {
+  it('PLACES-SVC-009 — matches on a provider id even after the place was renamed (#1550)', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const place = createPlace(testDb, trip.id, { name: 'Original Name' });
     testDb.prepare('UPDATE places SET google_place_id = ? WHERE id = ?').run('ChIJ_abc', place.id);
 
     expect(
-      svc.findMatchingPlaceId(String(trip.id), { name: 'Renamed By User', google_place_id: 'ChIJ_abc' }),
+      await svc.findMatchingPlaceId(String(trip.id), { name: 'Renamed By User', google_place_id: 'ChIJ_abc' }),
     ).toBe(place.id);
   });
 
-  it('PLACES-SVC-010 — does NOT match a NAMED candidate to a different place at the same coordinates', () => {
+  it('PLACES-SVC-010 — does NOT match a NAMED candidate to a different place at the same coordinates', async () => {
     // The restaurant and the bar in the same building are two places. This is the
     // rule isPlaceDuplicate has always applied; the SQL copy used to disagree.
     const { user } = createUser(testDb);
@@ -1729,17 +1729,17 @@ describe('findMatchingPlaceId', () => {
     createPlace(testDb, trip.id, { name: 'Ground Floor Diner', lat: 52.52, lng: 13.405 });
 
     expect(
-      svc.findMatchingPlaceId(String(trip.id), { name: 'Rooftop Bar', lat: 52.52, lng: 13.405 }),
+      await svc.findMatchingPlaceId(String(trip.id), { name: 'Rooftop Bar', lat: 52.52, lng: 13.405 }),
     ).toBeNull();
   });
 
-  it('PLACES-SVC-011 — matches an UNNAMED candidate by coordinates within tolerance', () => {
+  it('PLACES-SVC-011 — matches an UNNAMED candidate by coordinates within tolerance', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const place = createPlace(testDb, trip.id, { name: 'Anything', lat: 48.85, lng: 2.35 });
 
     expect(
-      svc.findMatchingPlaceId(String(trip.id), {
+      await svc.findMatchingPlaceId(String(trip.id), {
         name: null,
         lat: 48.85 + COORD_DEDUP_TOLERANCE / 2,
         lng: 2.35,
@@ -1747,25 +1747,25 @@ describe('findMatchingPlaceId', () => {
     ).toBe(place.id);
   });
 
-  it('PLACES-SVC-012 — returns null when nothing recognises the candidate', () => {
+  it('PLACES-SVC-012 — returns null when nothing recognises the candidate', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     createPlace(testDb, trip.id, { name: 'Somewhere Else' });
 
-    expect(svc.findMatchingPlaceId(String(trip.id), { name: 'Unseen Place' })).toBeNull();
-    expect(svc.findMatchingPlaceId(String(trip.id), { name: null, lat: null, lng: null })).toBeNull();
+    expect(await svc.findMatchingPlaceId(String(trip.id), { name: 'Unseen Place' })).toBeNull();
+    expect(await svc.findMatchingPlaceId(String(trip.id), { name: null, lat: null, lng: null })).toBeNull();
   });
 
-  it('PLACES-SVC-013 — never matches a place belonging to another trip', () => {
+  it('PLACES-SVC-013 — never matches a place belonging to another trip', async () => {
     const { user } = createUser(testDb);
     const mine = createTrip(testDb, user.id);
     const theirs = createTrip(testDb, user.id);
     createPlace(testDb, theirs.id, { name: 'Shared Name' });
 
-    expect(svc.findMatchingPlaceId(String(mine.id), { name: 'Shared Name' })).toBeNull();
+    expect(await svc.findMatchingPlaceId(String(mine.id), { name: 'Shared Name' })).toBeNull();
   });
 
-  it('PLACES-SVC-014 — a provider id still wins over a name that points elsewhere', () => {
+  it('PLACES-SVC-014 — a provider id still wins over a name that points elsewhere', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     // The place the user renamed, carrying the id the importer knows it by.
@@ -1775,11 +1775,11 @@ describe('findMatchingPlaceId', () => {
     createPlace(testDb, trip.id, { name: 'Trattoria da Enzo', lat: 41.9, lng: 12.5 });
 
     expect(
-      svc.findMatchingPlaceId(String(trip.id), { name: 'Trattoria da Enzo', google_ftid: '0x1:0x2' }),
+      await svc.findMatchingPlaceId(String(trip.id), { name: 'Trattoria da Enzo', google_ftid: '0x1:0x2' }),
     ).toBe(renamed.id);
   });
 
-  it('PLACES-SVC-015 — the name comparison is ASCII-only, so an accented capital does not match', () => {
+  it('PLACES-SVC-015 — the name comparison is ASCII-only, so an accented capital does not match', async () => {
     // Not a wish, a boundary: `lower(trim(name))` is SQLite's ASCII lowercase,
     // while normalizePlaceName uses JavaScript's Unicode one. isPlaceDuplicate
     // does match this pair in memory. Before the shared strategies, the
@@ -1789,13 +1789,13 @@ describe('findMatchingPlaceId', () => {
     const trip = createTrip(testDb, user.id);
     createPlace(testDb, trip.id, { name: 'CAFÉ CENTRAL', lat: 48.85, lng: 2.35 });
 
-    expect(svc.findMatchingPlaceId(String(trip.id), { name: 'Café Central', lat: 48.85, lng: 2.35 })).toBeNull();
+    expect(await svc.findMatchingPlaceId(String(trip.id), { name: 'Café Central', lat: 48.85, lng: 2.35 })).toBeNull();
     // The all-ASCII spelling of the same shape does match.
     createPlace(testDb, trip.id, { name: 'CAFE CENTRAL', lat: 48.86, lng: 2.36 });
-    expect(svc.findMatchingPlaceId(String(trip.id), { name: 'Cafe Central' })).not.toBeNull();
+    expect(await svc.findMatchingPlaceId(String(trip.id), { name: 'Cafe Central' })).not.toBeNull();
   });
 
-  it('PLACES-SVC-016 — an unnamed candidate can match a NAMED row on coordinates', () => {
+  it('PLACES-SVC-016 — an unnamed candidate can match a NAMED row on coordinates', async () => {
     // The other place the two halves differ: buildDedupSet collects coordinates
     // only for unnamed rows, so isPlaceDuplicate would say no here. This is the
     // answer findMatchingPlaceId wants — a booking with no place name should
@@ -1804,10 +1804,10 @@ describe('findMatchingPlaceId', () => {
     const trip = createTrip(testDb, user.id);
     const hotel = createPlace(testDb, trip.id, { name: 'Hotel Lutetia', lat: 48.851, lng: 2.326 });
 
-    expect(svc.findMatchingPlaceId(String(trip.id), { name: null, lat: 48.851, lng: 2.326 })).toBe(hotel.id);
+    expect(await svc.findMatchingPlaceId(String(trip.id), { name: null, lat: 48.851, lng: 2.326 })).toBe(hotel.id);
   });
 
-  it('PLACES-SVC-017 — the coordinate tolerance is a box roughly 11 m wide, and it closes', () => {
+  it('PLACES-SVC-017 — the coordinate tolerance is a box roughly 11 m wide, and it closes', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const place = createPlace(testDb, trip.id, { name: null, lat: 48.85, lng: 2.35 });
@@ -1818,12 +1818,12 @@ describe('findMatchingPlaceId', () => {
 
     const inside = { name: null, lat: 48.85 + COORD_DEDUP_TOLERANCE * 0.9, lng: 2.35 };
     const outside = { name: null, lat: 48.85 + COORD_DEDUP_TOLERANCE * 1.5, lng: 2.35 };
-    expect(svc.findMatchingPlaceId(String(trip.id), inside)).toBe(place.id);
-    expect(svc.findMatchingPlaceId(String(trip.id), outside)).toBeNull();
+    expect(await svc.findMatchingPlaceId(String(trip.id), inside)).toBe(place.id);
+    expect(await svc.findMatchingPlaceId(String(trip.id), outside)).toBeNull();
     // Exactly one tolerance away is NOT a match: 48.85 + 0.0001 lands on
     // 48.850100000000004 in binary floating point, a hair over the bound. The
     // edge is fuzzy by design of the arithmetic, so nothing should lean on it.
     const edge = { name: null, lat: 48.85 + COORD_DEDUP_TOLERANCE, lng: 2.35 };
-    expect(svc.findMatchingPlaceId(String(trip.id), edge)).toBeNull();
+    expect(await svc.findMatchingPlaceId(String(trip.id), edge)).toBeNull();
   });
 });

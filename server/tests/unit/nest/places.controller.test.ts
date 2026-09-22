@@ -23,14 +23,6 @@ function svc(o: Partial<PlacesService> = {}): PlacesService {
   } as unknown as PlacesService;
 }
 
-function thrown(fn: () => unknown): { status: number; body: unknown } {
-  try { fn(); } catch (err) {
-    expect(err).toBeInstanceOf(HttpException);
-    const e = err as HttpException;
-    return { status: e.getStatus(), body: e.getResponse() };
-  }
-  throw new Error('expected throw');
-}
 async function thrownAsync(fn: () => Promise<unknown>): Promise<{ status: number; body: unknown }> {
   try { await fn(); } catch (err) {
     expect(err).toBeInstanceOf(HttpException);
@@ -151,18 +143,18 @@ describe('PlacesController (parity with the legacy /api/trips/:tripId/places rou
     const makeRes = () => ({ setHeader: vi.fn(), send: vi.fn() });
     const exportQuery = {} as never;
 
-    it('an ASCII filename keeps the exact legacy header', () => {
+    it('an ASCII filename keeps the exact legacy header', async () => {
       const res = makeRes();
       const s = svc({ exportGpx: vi.fn().mockReturnValue({ gpx: '<gpx/>', filename: 'Alpine-week.gpx' }) } as Partial<PlacesService>);
-      new PlacesController(s, new RuntimeEnvService(), storageStub).exportGpx(user, '5', exportQuery, res as never);
+      await new PlacesController(s, new RuntimeEnvService(), storageStub).exportGpx(user, '5', exportQuery, res as never);
       expect(res.setHeader).toHaveBeenCalledWith('Content-Disposition', 'attachment; filename="Alpine-week.gpx"');
       expect(res.send).toHaveBeenCalledWith('<gpx/>');
     });
 
-    it('a non-ASCII filename no longer reaches setHeader raw: ASCII fallback + filename*', () => {
+    it('a non-ASCII filename no longer reaches setHeader raw: ASCII fallback + filename*', async () => {
       const res = makeRes();
       const s = svc({ exportGpx: vi.fn().mockReturnValue({ gpx: '<gpx/>', filename: '沖縄-4泊5日.gpx' }) } as Partial<PlacesService>);
-      new PlacesController(s, new RuntimeEnvService(), storageStub).exportGpx(user, '5', exportQuery, res as never);
+      await new PlacesController(s, new RuntimeEnvService(), storageStub).exportGpx(user, '5', exportQuery, res as never);
       expect(res.setHeader).toHaveBeenCalledWith(
         'Content-Disposition',
         'attachment; filename="__-4_5_.gpx"; filename*=UTF-8\'\'%E6%B2%96%E7%B8%84-4%E6%B3%8A5%E6%97%A5.gpx',
@@ -264,6 +256,26 @@ describe('PlacesController (parity with the legacy /api/trips/:tripId/places rou
       expect(onDeleted.mock.invocationCallOrder[0]).toBeLessThan(removeMany.mock.invocationCallOrder[0]);
     });
 
+    // invocationCallOrder above only proves the hook was CALLED first — a mock
+    // that resolves synchronously can't tell an awaited hook from a detached
+    // (fire-and-forget) one, since both invoke onDeleted() before removeMany() is
+    // invoked either way. A hook stubbed with a real macrotask hop, and a delete
+    // that records when it actually RUNS, catches a regression to detached.
+    it('the journey hook actually finishes before the delete runs, not just gets called first', async () => {
+      const order: string[] = [];
+      const onDeleted = vi.fn(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        order.push('hook');
+      });
+      const removeMany = vi.fn(async () => {
+        order.push('delete');
+        return { deleted: [1], cancelled: { reservationIds: [], budgetItemIds: [] } };
+      });
+      const s = svc({ removeMany, onDeleted, scopedIds: vi.fn().mockReturnValue([1]), broadcast: vi.fn() } as Partial<PlacesService>);
+      await new PlacesController(s, new RuntimeEnvService(), storageStub).bulkDelete(user, '5', { ids: [1] });
+      expect(order).toEqual(['hook', 'delete']);
+    });
+
     // #1298: the link is gone once the place is, so the ids have to be read first.
     it('announces the expenses the deleted places took with them', async () => {
       const removeMany = vi.fn().mockReturnValue({ deleted: [1, 2], cancelled: { reservationIds: [], budgetItemIds: [] } });
@@ -325,10 +337,10 @@ describe('PlacesController (parity with the legacy /api/trips/:tripId/places rou
     });
   });
 
-  it('GET /:id returns the place when found, 404 when missing', () => {
-    expect(thrown(() => new PlacesController(svc({ get: vi.fn().mockReturnValue(undefined) } as Partial<PlacesService>), new RuntimeEnvService(), storageStub).get(user, '5', '9'))).toEqual({ status: 404, body: { error: 'Place not found' } });
+  it('GET /:id returns the place when found, 404 when missing', async () => {
+    expect(await thrownAsync(() => new PlacesController(svc({ get: vi.fn().mockReturnValue(undefined) } as Partial<PlacesService>), new RuntimeEnvService(), storageStub).get(user, '5', '9'))).toEqual({ status: 404, body: { error: 'Place not found' } });
     const s = svc({ get: vi.fn().mockReturnValue({ id: 9 }) } as Partial<PlacesService>);
-    expect(new PlacesController(s, new RuntimeEnvService(), storageStub).get(user, '5', '9')).toEqual({ place: { id: 9 } });
+    expect(await new PlacesController(s, new RuntimeEnvService(), storageStub).get(user, '5', '9')).toEqual({ place: { id: 9 } });
   });
 
   it('PUT /:id 404 when missing, else updates + hooks', async () => {
@@ -444,6 +456,26 @@ describe('PlacesController (parity with the legacy /api/trips/:tripId/places rou
     expect(onDeleted.mock.invocationCallOrder[0]).toBeLessThan(remove.mock.invocationCallOrder[0]);
     const s = svc({ remove: vi.fn().mockReturnValue({ deleted: true, cancelled: { reservationIds: [], budgetItemIds: [] } }), broadcast: vi.fn() } as Partial<PlacesService>);
     expect(await new PlacesController(s, new RuntimeEnvService(), storageStub).remove(user, '5', '9')).toEqual({ success: true });
+  });
+
+  // invocationCallOrder in the case above only proves the hook was CALLED
+  // first — a synchronously-resolving mock can't tell an awaited hook from a
+  // detached (fire-and-forget) one. A hook stubbed with a real macrotask hop,
+  // and a delete that records when it actually RUNS, catches a regression to
+  // detached (the trap this pins: onDeleted must finish before the DELETE).
+  it('DELETE /:id — the journey hook actually finishes before the delete runs, not just gets called first', async () => {
+    const order: string[] = [];
+    const onDeleted = vi.fn(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      order.push('hook');
+    });
+    const remove = vi.fn(async () => {
+      order.push('delete');
+      return { deleted: true, cancelled: { reservationIds: [], budgetItemIds: [] } };
+    });
+    const s = svc({ remove, onDeleted, broadcast: vi.fn() } as Partial<PlacesService>);
+    await new PlacesController(s, new RuntimeEnvService(), storageStub).remove(user, '5', '9');
+    expect(order).toEqual(['hook', 'delete']);
   });
 
   it('DELETE /:id announces the booking and the expense a cancelled night took down', async () => {

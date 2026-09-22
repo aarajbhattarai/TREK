@@ -38,7 +38,7 @@ export class ReservationsRpc {
     const input = parsed.data as Record<string, unknown>;
     this.requireValidEndpoints(input.endpoints);
     await this.guards.requireTripEdit(tripId, actor, RESERVATION_EDIT_ACTION);
-    this.requireOwnReferences(tripId, input);
+    await this.requireOwnReferences(tripId, input);
     const { reservation, accommodationCreated } = await this.reservations.create(String(tripId), input as never);
     if (accommodationCreated) this.realtime.broadcast(tripId, 'accommodation:created', {}, undefined);
     const i = input as { title?: string; type?: string; create_budget_entry?: unknown };
@@ -60,7 +60,7 @@ export class ReservationsRpc {
     await this.guards.requireTripEdit(tripId, actor, RESERVATION_EDIT_ACTION);
     const current = this.reservations.getReservation(String(reservationId), String(tripId));
     if (!current) throw new ForbiddenResource(`no reservation ${reservationId} on trip ${tripId}`);
-    this.requireOwnReferences(tripId, input);
+    await this.requireOwnReferences(tripId, input);
     const { reservation, accommodationChanged } = await this.reservations.update(String(reservationId), String(tripId), input as never, current as never);
     if (accommodationChanged) this.realtime.broadcast(tripId, 'accommodation:updated', {}, undefined);
     const cur = current as { title: string; type?: string };
@@ -109,10 +109,10 @@ export class ReservationsRpc {
    * resolves to nothing is a foreign-key error the plugin reads as a crash (#2355),
    * so it is named here as well, after the ownership check.
    */
-  private requireOwnReferences(tripId: number, input: Record<string, unknown>): void {
+  private async requireOwnReferences(tripId: number, input: Record<string, unknown>): Promise<void> {
     const offenders = this.reservations.referencesOutsideTrip(String(tripId), input as never);
     if (offenders.length > 0) throw new ForbiddenResource(`not part of trip ${tripId}: ${offenders.join(', ')}`);
-    const unknown = this.reservations.unresolvedReferences(String(tripId), input as never);
+    const unknown = await this.reservations.unresolvedReferences(String(tripId), input as never);
     if (unknown.length > 0) throw new BadParams(`unknown reference: ${unknown.join(', ')}`);
   }
 

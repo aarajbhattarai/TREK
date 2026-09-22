@@ -99,7 +99,7 @@ export class PlacesMcp {
     if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
     if (!this.db.canAccessTrip(tripId, ctx.userId)) return noAccess();
     if (!(await this.guards.hasTripPermission('place_edit', tripId, ctx.userId))) return permissionDenied();
-    const place = this.places.create(String(tripId), { name, description, lat, lng, address, category_id, google_place_id, google_ftid, osm_id, amap_poi_id, notes, website, phone, image_url, price, currency, stop_type });
+    const place = await this.places.create(String(tripId), { name, description, lat, lng, address, category_id, google_place_id, google_ftid, osm_id, amap_poi_id, notes, website, phone, image_url, price, currency, stop_type });
     this.guards.safeBroadcast(tripId, 'place:created', { place });
     return ok({ place });
   }
@@ -144,10 +144,10 @@ export class PlacesMcp {
     if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
     if (!this.db.canAccessTrip(tripId, ctx.userId)) return noAccess();
     if (!(await this.guards.hasTripPermission('place_edit', tripId, ctx.userId))) return permissionDenied();
-    if (!this.assignments.dayExists(dayId, tripId)) return { content: [{ type: 'text' as const, text: 'Day not found.' }], isError: true };
+    if (!(await this.assignments.dayExists(dayId, tripId))) return { content: [{ type: 'text' as const, text: 'Day not found.' }], isError: true };
     try {
       const result = await this.uow.transactional(async () => {
-        const place = this.places.create(String(tripId), { name, description, lat, lng, address, category_id, google_place_id, google_ftid, osm_id, amap_poi_id, notes: place_notes, website, phone, image_url, price, currency, stop_type });
+        const place = await this.places.create(String(tripId), { name, description, lat, lng, address, category_id, google_place_id, google_ftid, osm_id, amap_poi_id, notes: place_notes, website, phone, image_url, price, currency, stop_type });
         const assignment = await this.assignments.createAssignment(dayId, place.id, assignment_notes ?? null);
         return { place, assignment };
       });
@@ -231,7 +231,7 @@ export class PlacesMcp {
     if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
     // Rating is a personal vote — any trip member may cast one, place_edit not required.
     if (!this.db.canAccessTrip(tripId, ctx.userId)) return noAccess();
-    const place = this.places.rate(String(tripId), String(placeId), ctx.userId, rating ?? null);
+    const place = await this.places.rate(String(tripId), String(placeId), ctx.userId, rating ?? null);
     if (!place) return { content: [{ type: 'text' as const, text: 'Place not found.' }], isError: true };
     this.guards.safeBroadcast(tripId, 'place:updated', { place });
     return ok({ place });
@@ -254,12 +254,12 @@ export class PlacesMcp {
     // Scope the id to the trip before the hook: onPlaceDeleted keys on the place
     // id alone, so a foreign id would detach that trip's journey entries even
     // though the delete below refuses it.
-    if (!this.places.get(String(tripId), String(placeId))) {
+    if (!(await this.places.get(String(tripId), String(placeId)))) {
       return { content: [{ type: 'text' as const, text: 'Place not found.' }], isError: true };
     }
     try { await this.journey.onPlaceDeleted(placeId); } catch { /* non-fatal */ } // sync journeys before the row is gone
     // The link is gone once the place is, so read it first (#1298).
-    const expenseIds = this.places.linkedExpenseIds(tripId, [placeId]);
+    const expenseIds = await this.places.linkedExpenseIds(tripId, [placeId]);
     const { deleted, cancelled } = await this.places.remove(String(tripId), String(placeId));
     if (!deleted) return { content: [{ type: 'text' as const, text: 'Place not found.' }], isError: true };
     this.guards.safeBroadcast(tripId, 'place:deleted', { placeId });
@@ -378,7 +378,7 @@ export class PlacesMcp {
     if (!(await this.guards.hasTripPermission('place_edit', input.tripId, ctx.userId))) return permissionDenied();
     if (!input.importWaypoints && !input.importRoutes && !input.importTracks) return errorResult('No import types selected.');
     try {
-      const imported = this.places.importGpx(String(input.tripId), Buffer.from(input.gpx, 'utf8'), { importWaypoints: input.importWaypoints, importRoutes: input.importRoutes, importTracks: input.importTracks, defaultName: input.name });
+      const imported = await this.places.importGpx(String(input.tripId), Buffer.from(input.gpx, 'utf8'), { importWaypoints: input.importWaypoints, importRoutes: input.importRoutes, importTracks: input.importTracks, defaultName: input.name });
       if (!imported) return errorResult('No matching places found in GPX.');
       for (const place of imported.places) this.guards.safeBroadcast(input.tripId, 'place:created', { place });
       return ok(imported);
@@ -408,7 +408,7 @@ export class PlacesMcp {
     // A read, like the REST route: seeing the trip is enough, no place_edit.
     if (!this.db.canAccessTrip(tripId, ctx.userId)) return noAccess();
     if (!waypoints && !tracks && !dayRoutes) return errorResult('No export types selected.');
-    const result = this.places.exportGpx(String(tripId), { waypoints, tracks, dayRoutes });
+    const result = await this.places.exportGpx(String(tripId), { waypoints, tracks, dayRoutes });
     if (!result) return errorResult('Nothing to export.');
     return ok({ gpx: result.gpx, filename: result.filename });
   }
@@ -431,12 +431,12 @@ export class PlacesMcp {
     // Trip-scoped, and ahead of the DELETE: journey_entries.source_place_id is
     // ON DELETE SET NULL, so a hook that ran afterwards found nothing left to
     // detach and left the entries as orphans.
-    const scoped = this.places.scopedIds(String(tripId), placeIds);
+    const scoped = await this.places.scopedIds(String(tripId), placeIds);
     for (const id of scoped) {
       try { await this.journey.onPlaceDeleted(id); } catch { /* non-fatal */ }
     }
     // The link is gone once the places are, so read it first (#1298).
-    const expenseIds = this.places.linkedExpenseIds(tripId, scoped);
+    const expenseIds = await this.places.linkedExpenseIds(tripId, scoped);
     const { deleted, cancelled } = await this.places.removeMany(String(tripId), placeIds);
     for (const id of deleted) this.guards.safeBroadcast(tripId, 'place:deleted', { placeId: id });
     // A night booked at this place went with it, and took its partner booking and

@@ -32,9 +32,9 @@ async function thrownAsync(fn: () => Promise<unknown>): Promise<{ status: number
 
 describe('AccommodationsController (parity with the legacy accommodations sub-router)', () => {
 
-  it('GET / lists (no permission gate)', () => {
+  it('GET / lists (no permission gate)', async () => {
     const svc = makeService({ list: vi.fn().mockReturnValue([{ id: 1 }]) } as Partial<AccommodationsService>);
-    expect(new AccommodationsController(svc).list(user, '5')).toEqual({ accommodations: [{ id: 1 }] });
+    expect(await new AccommodationsController(svc).list(user, '5')).toEqual({ accommodations: [{ id: 1 }] });
   });
 
   describe('POST /', () => {

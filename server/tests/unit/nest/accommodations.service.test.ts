@@ -72,48 +72,48 @@ afterAll(() => {
 });
 
 describe('validateAccommodationRefs', () => {
-  it('DAY-SVC-016 — returns no errors when all refs are valid', () => {
+  it('DAY-SVC-016 — returns no errors when all refs are valid', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const day = createDay(testDb, trip.id) as any;
     const place = createPlace(testDb, trip.id, { name: 'Hotel' }) as any;
-    const errors = svc.validateAccommodationRefs(trip.id, place.id, day.id, day.id);
+    const errors = await svc.validateAccommodationRefs(trip.id, place.id, day.id, day.id);
     expect(errors).toHaveLength(0);
   });
 
-  it('DAY-SVC-017 — returns error when place does not exist in trip', () => {
+  it('DAY-SVC-017 — returns error when place does not exist in trip', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const day = createDay(testDb, trip.id) as any;
-    const errors = svc.validateAccommodationRefs(trip.id, 99999, day.id, day.id);
+    const errors = await svc.validateAccommodationRefs(trip.id, 99999, day.id, day.id);
     expect(errors.some((e: any) => e.field === 'place_id')).toBe(true);
   });
 
-  it('DAY-SVC-018 — returns error when start_day_id is invalid', () => {
+  it('DAY-SVC-018 — returns error when start_day_id is invalid', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const day = createDay(testDb, trip.id) as any;
     const place = createPlace(testDb, trip.id, { name: 'Hotel' }) as any;
-    const errors = svc.validateAccommodationRefs(trip.id, place.id, 99999, day.id);
+    const errors = await svc.validateAccommodationRefs(trip.id, place.id, 99999, day.id);
     expect(errors.some((e: any) => e.field === 'start_day_id')).toBe(true);
   });
 
-  it('ACC-003 — reports every bad ref, end_day_id included', () => {
+  it('ACC-003 — reports every bad ref, end_day_id included', async () => {
     // The controller only surfaces errors[0], so an unchecked end_day_id would let a
     // stay point at a day from another trip and never be reported.
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
-    const errors = svc.validateAccommodationRefs(trip.id, 99999, 99998, 99997);
+    const errors = await svc.validateAccommodationRefs(trip.id, 99999, 99998, 99997);
     expect(errors.map((e: any) => e.field)).toEqual(['place_id', 'start_day_id', 'end_day_id']);
   });
 
-  it('ACC-004 — skips the refs the caller left undefined', () => {
+  it('ACC-004 — skips the refs the caller left undefined', async () => {
     // The plugin update path (accommodations.rpc) passes only the fields it changes.
     // If an absent ref were validated, every partial update would 403 "Place not found".
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
-    expect(svc.validateAccommodationRefs(trip.id)).toHaveLength(0);
-    expect(svc.validateAccommodationRefs(trip.id, undefined, undefined, undefined)).toHaveLength(0);
+    expect(await svc.validateAccommodationRefs(trip.id)).toHaveLength(0);
+    expect(await svc.validateAccommodationRefs(trip.id, undefined, undefined, undefined)).toHaveLength(0);
   });
 });
 
@@ -171,21 +171,21 @@ describe('createAccommodation', () => {
 });
 
 describe('getAccommodation', () => {
-  it('DAY-SVC-021 — returns accommodation for valid id and trip', () => {
+  it('DAY-SVC-021 — returns accommodation for valid id and trip', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const day = createDay(testDb, trip.id) as any;
     const place = createPlace(testDb, trip.id, { name: 'Hotel' }) as any;
     const accom = createDayAccommodation(testDb, trip.id, place.id, day.id, day.id) as any;
-    const found = svc.getAccommodation(accom.id, trip.id) as any;
+    const found = await svc.getAccommodation(accom.id, trip.id) as any;
     expect(found).toBeDefined();
     expect(found.id).toBe(accom.id);
   });
 
-  it('DAY-SVC-022 — returns undefined for non-existent accommodation', () => {
+  it('DAY-SVC-022 — returns undefined for non-existent accommodation', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
-    expect(svc.getAccommodation(99999, trip.id)).toBeUndefined();
+    expect(await svc.getAccommodation(99999, trip.id)).toBeUndefined();
   });
 });
 
@@ -199,7 +199,7 @@ describe('updateAccommodation', () => {
       place_id: place.id, start_day_id: day.id, end_day_id: day.id,
     })) as any;
 
-    const existing = svc.getAccommodation(accom.id, trip.id)!;
+    const existing = (await svc.getAccommodation(accom.id, trip.id))!;
     const { accommodation: updated } = (await svc.updateAccommodation(accom.id, existing as any, { check_in: '16:00', check_out: '12:00' })) as any;
     expect(updated).toBeDefined();
 
@@ -221,10 +221,10 @@ describe('updateAccommodation', () => {
       confirmation: 'ABC123',
     })) as any;
 
-    const existing = svc.getAccommodation(accom.id, trip.id)!;
+    const existing = (await svc.getAccommodation(accom.id, trip.id))!;
     await svc.updateAccommodation(accom.id, existing as any, { check_in: '14:00' });
 
-    const row = svc.getAccommodation(accom.id, trip.id) as any;
+    const row = await svc.getAccommodation(accom.id, trip.id) as any;
     expect(row.confirmation).toBe('ABC123');
   });
 
@@ -238,7 +238,7 @@ describe('updateAccommodation', () => {
     // The factory writes the stay row directly, without the partner reservation.
     const accom = createDayAccommodation(testDb, trip.id, place.id, day.id, day.id) as any;
 
-    const existing = svc.getAccommodation(accom.id, trip.id)!;
+    const existing = (await svc.getAccommodation(accom.id, trip.id))!;
     const { accommodation: updated } = (await svc.updateAccommodation(accom.id, existing as any, { check_in: '15:00' })) as any;
 
     expect(updated.check_in).toBe('15:00');
@@ -257,7 +257,7 @@ describe('updateAccommodation', () => {
       place_id: place.id, start_day_id: day.id, end_day_id: day.id, check_in: '15:00',
     })) as any;
 
-    const existing = svc.getAccommodation(accom.id, trip.id)!;
+    const existing = (await svc.getAccommodation(accom.id, trip.id))!;
     await svc.updateAccommodation(accom.id, existing as any, { check_in_end: '20:00', check_out: '11:00' });
 
     const reservation = testDb.prepare('SELECT metadata FROM reservations WHERE accommodation_id = ?').get(accom.id) as any;
@@ -278,7 +278,7 @@ describe('updateAccommodation', () => {
     })) as any;
     testDb.prepare('UPDATE reservations SET confirmation_number = ? WHERE accommodation_id = ?').run('RES-9', accom.id);
 
-    const existing = svc.getAccommodation(accom.id, trip.id)!;
+    const existing = (await svc.getAccommodation(accom.id, trip.id))!;
     await svc.updateAccommodation(accom.id, existing as any, { check_in: '15:00' });
 
     const reservation = testDb.prepare('SELECT confirmation_number FROM reservations WHERE accommodation_id = ?').get(accom.id) as any;
@@ -302,7 +302,7 @@ describe('deleteAccommodation', () => {
     expect(result.linkedReservationId).toBe(reservation.id);
 
     // Accommodation is gone
-    expect(svc.getAccommodation(accom.id, trip.id)).toBeUndefined();
+    expect(await svc.getAccommodation(accom.id, trip.id)).toBeUndefined();
 
     // Reservation is gone
     const deletedRes = testDb.prepare('SELECT id FROM reservations WHERE id = ?').get(reservation.id);
@@ -400,13 +400,13 @@ describe('deleteAccommodation', () => {
 });
 
 describe('listAccommodations', () => {
-  it('DAY-SVC-029 — listAccommodations returns the hydrated stays', () => {
+  it('DAY-SVC-029 — listAccommodations returns the hydrated stays', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const day = createDay(testDb, trip.id);
     const place = createPlace(testDb, trip.id, { name: 'Ryokan' });
     createDayAccommodation(testDb, trip.id, place.id, day.id, day.id);
-    const rows = svc.listAccommodations(trip.id) as { place_name: string }[];
+    const rows = await svc.listAccommodations(trip.id) as { place_name: string }[];
     expect(rows).toHaveLength(1);
     expect(rows[0].place_name).toBe('Ryokan');
   });
@@ -438,26 +438,26 @@ describe('route-facing delegators', () => {
   // on the same SQL, and the short ones get raw route params — strings where the long
   // ones get numbers.
 
-  it('ACC-010 — list() returns what listAccommodations() returns, for a string and a number trip id', () => {
+  it('ACC-010 — list() returns what listAccommodations() returns, for a string and a number trip id', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const day = createDay(testDb, trip.id) as any;
     const place = createPlace(testDb, trip.id, { name: 'Pension Alpen' }) as any;
     createDayAccommodation(testDb, trip.id, place.id, day.id, day.id);
 
-    expect(svc.list(String(trip.id))).toEqual(svc.listAccommodations(trip.id));
-    expect((svc.list(trip.id) as any[])[0].place_name).toBe('Pension Alpen');
+    expect(await svc.list(String(trip.id))).toEqual(await svc.listAccommodations(trip.id));
+    expect((await svc.list(trip.id) as any[])[0].place_name).toBe('Pension Alpen');
   });
 
-  it('ACC-011 — validateRefs() returns the same errors validateAccommodationRefs() does', () => {
+  it('ACC-011 — validateRefs() returns the same errors validateAccommodationRefs() does', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const day = createDay(testDb, trip.id) as any;
     const place = createPlace(testDb, trip.id, { name: 'Hotel' }) as any;
 
-    expect(svc.validateRefs(trip.id, place.id, day.id, day.id)).toHaveLength(0);
+    expect(await svc.validateRefs(trip.id, place.id, day.id, day.id)).toHaveLength(0);
     // The controller 404s with errors[0].message, so the shape matters, not just the count.
-    expect(svc.validateRefs(trip.id, 99999, day.id, day.id)).toEqual([{ field: 'place_id', message: 'Place not found' }]);
+    expect(await svc.validateRefs(trip.id, 99999, day.id, day.id)).toEqual([{ field: 'place_id', message: 'Place not found' }]);
   });
 
   it('ACC-012 — create() writes the stay, get() reads it back trip-scoped', async () => {
@@ -472,9 +472,9 @@ describe('route-facing delegators', () => {
       place_id: place.id, start_day_id: day.id, end_day_id: day.id, confirmation: 'XY-1',
     })) as any;
 
-    expect(svc.get(String(created.id), String(trip.id))).toMatchObject({ id: created.id, confirmation: 'XY-1' });
+    expect(await svc.get(String(created.id), String(trip.id))).toMatchObject({ id: created.id, confirmation: 'XY-1' });
     // Trip-scoped: a stay must not be readable through another trip's URL.
-    expect(svc.get(created.id, otherTrip.id)).toBeUndefined();
+    expect(await svc.get(created.id, otherTrip.id)).toBeUndefined();
   });
 
   it('ACC-013 — update() syncs the partner reservation even when the id is a string', async () => {
@@ -486,7 +486,7 @@ describe('route-facing delegators', () => {
     const place = createPlace(testDb, trip.id, { name: 'Hotel' }) as any;
     const { accommodation: accom } = (await svc.create(trip.id, { place_id: place.id, start_day_id: day.id, end_day_id: day.id })) as any;
 
-    const existing = svc.get(accom.id, trip.id)!;
+    const existing = (await svc.get(accom.id, trip.id))!;
     const { accommodation: updated } = (await svc.update(String(accom.id), existing as any, { check_in: '16:00', notes: 'late arrival' })) as any;
 
     expect(updated).toMatchObject({ check_in: '16:00', notes: 'late arrival' });
@@ -510,33 +510,33 @@ describe('route-facing delegators', () => {
       deletedBudgetItemIds: [],
       mirror: { created: null, moved: null, updated: [], removed: [{ id: expect.any(Number), dayId: day.id }], stamped: null },
     });
-    expect(svc.get(accom.id, trip.id)).toBeUndefined();
+    expect(await svc.get(accom.id, trip.id)).toBeUndefined();
   });
 });
 
 describe('trip access and edit permission', () => {
-  it('ACC-015 — verifyTripAccess resolves the trip from a string id and from a number', () => {
+  it('ACC-015 — verifyTripAccess resolves the trip from a string id and from a number', async () => {
     // The REST path hands over the raw :tripId param, the MCP tools the parsed number.
     // Without the Number() coercion one of the two callers stops finding its trip.
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
 
-    expect(svc.verifyTripAccess(String(trip.id), user.id)).toMatchObject({ id: trip.id, user_id: user.id });
-    expect(svc.verifyTripAccess(trip.id, user.id)).toMatchObject({ id: trip.id, user_id: user.id });
+    expect(await svc.verifyTripAccess(String(trip.id), user.id)).toMatchObject({ id: trip.id, user_id: user.id });
+    expect(await svc.verifyTripAccess(trip.id, user.id)).toMatchObject({ id: trip.id, user_id: user.id });
   });
 
-  it('ACC-016 — verifyTripAccess returns nothing for a user who is neither owner nor member', () => {
+  it('ACC-016 — verifyTripAccess returns nothing for a user who is neither owner nor member', async () => {
     const { user: owner } = createUser(testDb);
     const { user: stranger } = createUser(testDb);
     const trip = createTrip(testDb, owner.id);
 
-    expect(svc.verifyTripAccess(trip.id, stranger.id)).toBeUndefined();
+    expect(await svc.verifyTripAccess(trip.id, stranger.id)).toBeUndefined();
   });
 
   it('ACC-017 — canEdit lets the owner through on the default day_edit level', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
-    const access = svc.verifyTripAccess(trip.id, user.id)!;
+    const access = (await svc.verifyTripAccess(trip.id, user.id))!;
 
     expect(await svc.canEdit(access, user as any)).toBe(true);
   });
@@ -549,7 +549,7 @@ describe('trip access and edit permission', () => {
     const { user: member } = createUser(testDb);
     const trip = createTrip(testDb, owner.id);
     addTripMember(testDb, trip.id, member.id);
-    const access = svc.verifyTripAccess(trip.id, member.id)!;
+    const access = (await svc.verifyTripAccess(trip.id, member.id))!;
 
     expect(await svc.canEdit(access, member as any)).toBe(true);
   });
@@ -563,9 +563,9 @@ describe('trip access and edit permission', () => {
 
     try {
       await permissions.savePermissions({ day_edit: 'trip_owner' });
-      expect(await svc.canEdit(svc.verifyTripAccess(trip.id, member.id)!, member as any)).toBe(false);
+      expect(await svc.canEdit((await svc.verifyTripAccess(trip.id, member.id))!, member as any)).toBe(false);
       // The owner keeps the right, otherwise the setting would lock out the whole trip.
-      expect(await svc.canEdit(svc.verifyTripAccess(trip.id, owner.id)!, owner as any)).toBe(true);
+      expect(await svc.canEdit((await svc.verifyTripAccess(trip.id, owner.id))!, owner as any)).toBe(true);
     } finally {
       // The permission cache is module-scoped and outlives resetTestDb — drop the row and
       // the cache together, or every later case in this file inherits the raised level.
@@ -718,12 +718,12 @@ describe('the day stop a booking implies', () => {
     testDb.prepare('UPDATE day_assignments SET order_index = 2 WHERE id = ?').run(own.id);
     expect(stopsOn(day.id).map(a => a.place_id)).toEqual([harbour.id, market.id, hotel.id]);
 
-    let existing = svc.getAccommodation(accommodation.id, trip.id)!;
+    let existing = (await svc.getAccommodation(accommodation.id, trip.id))!;
     const quiet = (await svc.updateAccommodation(accommodation.id, existing, { notes: 'late arrival' })) as any;
     expect(quiet.mirror.moved).toBeNull();
     expect(stopsOn(day.id).map(a => a.place_id)).toEqual([harbour.id, market.id, hotel.id]);
 
-    existing = svc.getAccommodation(accommodation.id, trip.id)!;
+    existing = (await svc.getAccommodation(accommodation.id, trip.id))!;
     const reseated = (await svc.updateAccommodation(accommodation.id, existing, { check_in: '10:00' })) as any;
     expect(reseated.mirror.moved).toMatchObject({ oldDayId: day.id, assignment: { id: own.id } });
     expect(stopsOn(day.id).map(a => a.place_id)).toEqual([hotel.id, harbour.id, market.id]);
@@ -742,7 +742,7 @@ describe('the day stop a booking implies', () => {
     })) as any;
     expect(stopsOn(day.id).map(a => a.place_id)).toEqual([hotel.id, afternoon.id]);
 
-    const existing = svc.getAccommodation(accommodation.id, trip.id)!;
+    const existing = (await svc.getAccommodation(accommodation.id, trip.id))!;
     await svc.updateAccommodation(accommodation.id, existing, { check_in: '20:00' });
 
     expect(stopsOn(day.id).map(a => a.place_id)).toEqual([afternoon.id, hotel.id]);
@@ -781,7 +781,7 @@ describe('the day stop a booking implies', () => {
     // Behind the harbour only: allowed, and left alone.
     testDb.prepare('UPDATE day_assignments SET order_index = 0 WHERE day_id = ? AND place_id = ?').run(day.id, harbour.id);
     testDb.prepare('UPDATE day_assignments SET order_index = 1 WHERE id = ?').run(own.id);
-    let existing = svc.getAccommodation(accommodation.id, trip.id)!;
+    let existing = (await svc.getAccommodation(accommodation.id, trip.id))!;
     expect(((await svc.updateAccommodation(accommodation.id, existing, { notes: 'late' })) as any).mirror.moved).toBeNull();
     expect(stopsOn(day.id).map(a => a.place_id)).toEqual([harbour.id, hotel.id, museum.id]);
 
@@ -789,7 +789,7 @@ describe('the day stop a booking implies', () => {
     // the front, ahead of the harbour that has no hour of its own.
     testDb.prepare('UPDATE day_assignments SET order_index = 1 WHERE day_id = ? AND place_id = ?').run(day.id, museum.id);
     testDb.prepare('UPDATE day_assignments SET order_index = 2 WHERE id = ?').run(own.id);
-    existing = svc.getAccommodation(accommodation.id, trip.id)!;
+    existing = (await svc.getAccommodation(accommodation.id, trip.id))!;
     expect(((await svc.updateAccommodation(accommodation.id, existing, { notes: 'later' })) as any).mirror.moved).not.toBeNull();
     expect(stopsOn(day.id).map(a => a.place_id)).toEqual([hotel.id, harbour.id, museum.id]);
   });
@@ -877,7 +877,7 @@ describe('the day stop a booking implies', () => {
     const { accommodation } = await book(trip.id, place.id, day1.id, day1.id);
     const before = stopsOn(day1.id)[0];
 
-    const existing = svc.getAccommodation(accommodation.id, trip.id)!;
+    const existing = (await svc.getAccommodation(accommodation.id, trip.id))!;
     const { mirror } = (await svc.updateAccommodation(accommodation.id, existing, { start_day_id: day2.id, end_day_id: day2.id })) as any;
 
     expect(stopsOn(day1.id)).toHaveLength(0);
@@ -900,7 +900,7 @@ describe('the day stop a booking implies', () => {
     testDb.prepare('UPDATE day_assignments SET notes = ?, assignment_time = ?, end_day = 1 WHERE id = ?')
       .run('ask for the quiet side', '15:30', stop.id);
 
-    const existing = svc.getAccommodation(accommodation.id, trip.id)!;
+    const existing = (await svc.getAccommodation(accommodation.id, trip.id))!;
     await svc.updateAccommodation(accommodation.id, existing, { start_day_id: day2.id, end_day_id: day2.id });
 
     const after = testDb.prepare('SELECT * FROM day_assignments WHERE id = ?').get(stop.id) as Record<string, unknown>;
@@ -919,7 +919,7 @@ describe('the day stop a booking implies', () => {
     // re-insert would take these with it without a word.
     testDb.prepare('INSERT INTO assignment_participants (assignment_id, user_id) VALUES (?, ?)').run(stop.id, user.id);
 
-    const existing = svc.getAccommodation(accommodation.id, trip.id)!;
+    const existing = (await svc.getAccommodation(accommodation.id, trip.id))!;
     await svc.updateAccommodation(accommodation.id, existing, { start_day_id: day2.id, end_day_id: day2.id });
 
     const kept = testDb.prepare('SELECT user_id FROM assignment_participants WHERE assignment_id = ?').all(stop.id);
@@ -936,7 +936,7 @@ describe('the day stop a booking implies', () => {
     const own = stopsOn(day1.id)[0];
     const byHand = createDayAssignment(testDb, day2.id, place.id) as { id: number };
 
-    const existing = svc.getAccommodation(accommodation.id, trip.id)!;
+    const existing = (await svc.getAccommodation(accommodation.id, trip.id))!;
     const { mirror } = (await svc.updateAccommodation(accommodation.id, existing, { start_day_id: day2.id, end_day_id: day2.id })) as any;
 
     expect(stopsOn(day1.id)).toHaveLength(0);
@@ -955,7 +955,7 @@ describe('the day stop a booking implies', () => {
     const { accommodation } = await book(trip.id, hotel.id, day1.id, day1.id);
     createDayAssignment(testDb, day1.id, museum.id);
 
-    const existing = svc.getAccommodation(accommodation.id, trip.id)!;
+    const existing = (await svc.getAccommodation(accommodation.id, trip.id))!;
     await svc.updateAccommodation(accommodation.id, existing, { start_day_id: day2.id, end_day_id: day2.id });
 
     expect(stopsOn(day1.id).map((row: { order_index: number }) => row.order_index)).toEqual([0]);
@@ -969,7 +969,7 @@ describe('the day stop a booking implies', () => {
     const { accommodation } = await book(trip.id, place.id, day.id, day.id);
     const before = stopsOn(day.id);
 
-    const existing = svc.getAccommodation(accommodation.id, trip.id)!;
+    const existing = (await svc.getAccommodation(accommodation.id, trip.id))!;
     const { mirror } = (await svc.updateAccommodation(accommodation.id, existing, { check_in: '16:00' })) as any;
 
     expect(stopsOn(day.id)).toEqual(before);
@@ -994,7 +994,7 @@ describe('the day stop a booking implies', () => {
     testDb.prepare('UPDATE day_assignments SET order_index = 1 WHERE id = ?').run(stop.id);
     expect(stopsOn(day.id).map((row: { place_id: number }) => row.place_id)).toEqual([dinner.id, hotel.id]);
 
-    const existing = svc.getAccommodation(accommodation.id, trip.id)!;
+    const existing = (await svc.getAccommodation(accommodation.id, trip.id))!;
     const { mirror } = (await svc.updateAccommodation(accommodation.id, existing, { check_in: '15:00' })) as any;
 
     expect(stopsOn(day.id).map((row: { place_id: number }) => row.place_id)).toEqual([hotel.id, dinner.id]);
@@ -1014,7 +1014,7 @@ describe('the day stop a booking implies', () => {
     createDayAssignment(testDb, day.id, place.id);
     const stay = createDayAccommodation(testDb, trip.id, place.id, day.id, day.id) as any;
 
-    const existing = svc.getAccommodation(stay.id, trip.id)!;
+    const existing = (await svc.getAccommodation(stay.id, trip.id))!;
     await svc.updateAccommodation(stay.id, existing, { start_day_id: second.id, end_day_id: second.id });
 
     expect(stopsOn(second.id)).toEqual([]);
@@ -1219,7 +1219,7 @@ describe('the drawn roads a booking moves', () => {
     const afterB = addVia(day.id, 2);
     const afterC = addVia(day.id, 3);
 
-    const existing = svc.getAccommodation(accommodation.id, trip.id)!;
+    const existing = (await svc.getAccommodation(accommodation.id, trip.id))!;
     const { mirror } = (await svc.updateAccommodation(accommodation.id, existing, { check_in: '20:00' })) as any;
 
     // The night is last now. The road out of it has no leg left and goes; the roads
@@ -1284,7 +1284,7 @@ describe('the drawn roads a booking moves', () => {
     const afterHotel = addVia(day1.id, 1);
     const outOfC = addVia(day2.id, 0);
 
-    const existing = svc.getAccommodation(accommodation.id, trip.id)!;
+    const existing = (await svc.getAccommodation(accommodation.id, trip.id))!;
     const { mirror } = (await svc.updateAccommodation(accommodation.id, existing, { start_day_id: day2.id, end_day_id: day2.id })) as any;
 
     expect(stopsOn(day1.id)).toEqual([a.id, b.id]);
@@ -1322,7 +1322,7 @@ describe('the drawn roads a booking moves', () => {
     const afterB = addVia(day.id, 2);
     addVia(day.id, 3);
 
-    const existing = svc.getAccommodation(accommodation.id, trip.id)!;
+    const existing = (await svc.getAccommodation(accommodation.id, trip.id))!;
     const { mirror } = (await svc.updateAccommodation(accommodation.id, existing, { notes: 'late arrival' })) as any;
 
     expect(stopsOn(day.id)).toEqual([a.id, hotel.id, b.id, c.id]);

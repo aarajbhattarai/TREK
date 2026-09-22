@@ -5,10 +5,16 @@
  * FK, ON DELETE SET NULL) is actually deleted — otherwise the hook either
  * never runs, or races the delete and finds nothing left to annotate.
  *
- * Wires PlacesController → PlacesService → JourneyDomainService for real
- * (no journey mock), through the real buildApp() HTTP surface, so a future
- * change that turns the await back into fire-and-forget shows up here rather
- * than only in a unit test with a stub.
+ * Wires PlacesController → PlacesService → JourneyDomainService for real (no
+ * journey mock), through the real buildApp() HTTP surface, and pins the
+ * end-to-end detach-then-annotate behaviour that path produces. It is NOT by
+ * itself a guard against a revert to fire-and-forget: the hook body today has
+ * no internal await, so it still runs to completion inside the same
+ * synchronous/microtask turn even if the controller stopped awaiting it, and
+ * this test would not notice. It becomes a true regression guard once the
+ * hook body awaits real async DB work of its own — see
+ * tests/unit/nest/places.controller.test.ts for the unit-level ordering test
+ * that stubs a macrotask hop and does catch a detached hook today.
  */
 import { describe, it, expect, vi, beforeAll, beforeEach, afterAll } from 'vitest';
 import request from 'supertest';

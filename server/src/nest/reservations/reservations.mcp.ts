@@ -368,13 +368,13 @@ export class ReservationsMcp {
     // Validate that all referenced IDs belong to this trip
     if (day_id && !(await this.days.getDay(day_id, tripId)))
       return errorResult('day_id does not belong to this trip.');
-    if (place_id && !this.assignments.placeExists(place_id, tripId))
+    if (place_id && !(await this.assignments.placeExists(place_id, tripId)))
       return errorResult('place_id does not belong to this trip.');
     if (start_day_id && !(await this.days.getDay(start_day_id, tripId)))
       return errorResult('start_day_id does not belong to this trip.');
     if (end_day_id && !(await this.days.getDay(end_day_id, tripId)))
       return errorResult('end_day_id does not belong to this trip.');
-    if (assignment_id && !this.assignments.getAssignmentForTrip(assignment_id, tripId))
+    if (assignment_id && !(await this.assignments.getAssignmentForTrip(assignment_id, tripId)))
       return errorResult('assignment_id does not belong to this trip.');
 
     const createAccommodation = (type === 'hotel' && place_id && start_day_id && end_day_id)
@@ -443,9 +443,9 @@ export class ReservationsMcp {
     const existing = this.reservations.getReservation(reservationId, tripId);
     if (!existing) return errorResult('Reservation not found.');
 
-    if (place_id != null && !this.assignments.placeExists(place_id, tripId))
+    if (place_id != null && !(await this.assignments.placeExists(place_id, tripId)))
       return errorResult('place_id does not belong to this trip.');
-    if (assignment_id != null && !this.assignments.getAssignmentForTrip(assignment_id, tripId))
+    if (assignment_id != null && !(await this.assignments.getAssignmentForTrip(assignment_id, tripId)))
       return errorResult('assignment_id does not belong to this trip.');
 
     const { reservation } = await this.reservations.update(reservationId, tripId, {
@@ -577,7 +577,7 @@ export class ReservationsMcp {
     if (!current) return errorResult('Reservation not found.');
     if (current.type !== 'hotel') return errorResult('Reservation is not of type hotel.');
 
-    if (!this.assignments.placeExists(place_id, tripId))
+    if (!(await this.assignments.placeExists(place_id, tripId)))
       return errorResult('place_id does not belong to this trip.');
     if (!(await this.days.getDay(start_day_id, tripId)))
       return errorResult('start_day_id does not belong to this trip.');

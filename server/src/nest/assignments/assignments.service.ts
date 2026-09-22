@@ -8,6 +8,7 @@ import { QueryHelpersService } from '../query-helpers/query-helpers.service';
 import { formatAssignmentWithPlace } from '../common/rowShape';
 import type { AssignmentRow, DayAssignment, User, Participant } from '../../types';
 import { JourneyDomainService } from '../journey/journey-domain.service';
+import { UnitOfWork } from '../database/unit-of-work';
 
 type Trip = TripAccess;
 
@@ -64,9 +65,10 @@ export class AssignmentsService {
     private readonly realtime: RealtimeService,
     private readonly queryHelpers: QueryHelpersService,
     private readonly journey: JourneyDomainService,
+    private readonly uow: UnitOfWork,
   ) {}
 
-  verifyTripAccess(tripId: string | number, userId: number) {
+  async verifyTripAccess(tripId: string | number, userId: number) {
     return this.dbs.canAccessTrip(Number(tripId), userId);
   }
 
@@ -157,11 +159,11 @@ export class AssignmentsService {
     });
   }
 
-  dayExists(dayId: string | number, tripId: string | number) {
+  async dayExists(dayId: string | number, tripId: string | number) {
     return !!this.dbs.get('SELECT id FROM days WHERE id = ? AND trip_id = ?', dayId, tripId);
   }
 
-  placeExists(placeId: unknown, tripId: string | number) {
+  async placeExists(placeId: unknown, tripId: string | number) {
     return !!this.dbs.get('SELECT id FROM places WHERE id = ? AND trip_id = ?', placeId, tripId);
   }
 
@@ -172,8 +174,8 @@ export class AssignmentsService {
    * stop that reaches it without its booking id is one the day list cannot tell
    * from a place the traveller added, so it draws the hotel a second time.
    */
-  createAssignment(dayId: string | number, placeId: unknown, notes?: string | null, opts: { accommodationId?: number; orderIndex?: number } = {}) {
-    const result = this.dbs.transaction(() => {
+  async createAssignment(dayId: string | number, placeId: unknown, notes?: string | null, opts: { accommodationId?: number; orderIndex?: number } = {}) {
+    const result = await this.uow.transactional(async () => {
       const maxOrder = this.dbs.get<{ max: number | null }>('SELECT MAX(order_index) as max FROM day_assignments WHERE day_id = ?', dayId)!;
       const end = (maxOrder.max !== null ? maxOrder.max : -1) + 1;
       // Somewhere in the middle when the caller says so, which means everything from
@@ -190,30 +192,30 @@ export class AssignmentsService {
       );
     });
 
-    return this.getAssignmentWithPlace(result.lastInsertRowid);
+    return await this.getAssignmentWithPlace(result.lastInsertRowid);
   }
 
-  assignmentExistsInDay(id: string | number, dayId: string | number, tripId: string | number) {
+  async assignmentExistsInDay(id: string | number, dayId: string | number, tripId: string | number) {
     return !!this.dbs.get(
       'SELECT da.id FROM day_assignments da JOIN days d ON da.day_id = d.id WHERE da.id = ? AND da.day_id = ? AND d.trip_id = ?',
       id, dayId, tripId
     );
   }
 
-  deleteAssignment(id: string | number): void {
+  async deleteAssignment(id: string | number): Promise<void> {
     this.dbs.run('DELETE FROM day_assignments WHERE id = ?', id);
   }
 
-  reorderAssignments(dayId: string | number, orderedIds: number[]): void {
+  async reorderAssignments(dayId: string | number, orderedIds: number[]): Promise<void> {
     const update = this.dbs.prepare('UPDATE day_assignments SET order_index = ? WHERE id = ? AND day_id = ?');
-    this.dbs.transaction(() => {
+    await this.uow.transactional(async () => {
       orderedIds.forEach((id: number, index: number) => {
         update.run(index, id, dayId);
       });
     });
   }
 
-  getAssignmentForTrip(id: string | number, tripId: string | number) {
+  async getAssignmentForTrip(id: string | number, tripId: string | number) {
     return this.dbs.get<DayAssignment>(`
       SELECT da.* FROM day_assignments da
       JOIN days d ON da.day_id = d.id
@@ -224,7 +226,7 @@ export class AssignmentsService {
   async moveAssignment(id: string | number, newDayId: unknown, orderIndex: number | null | undefined) {
     // The source day comes from the row, not the caller — callers can't lie
     // about (or race on) where the assignment was.
-    const oldDayId = this.dbs.transaction(() => {
+    const oldDayId = await this.uow.transactional(async () => {
       const row = this.dbs.get<{ day_id: number }>('SELECT day_id FROM day_assignments WHERE id = ?', id);
       this.dbs.run('UPDATE day_assignments SET day_id = ?, order_index = ? WHERE id = ?', newDayId, orderIndex ?? 0, id);
       return row?.day_id;
@@ -233,7 +235,7 @@ export class AssignmentsService {
     return { assignment: updated, oldDayId };
   }
 
-  getParticipants(assignmentId: string | number) {
+  async getParticipants(assignmentId: string | number) {
     return this.dbs.all(`
       SELECT ap.user_id, COALESCE(u.display_name, u.username) AS username, u.avatar
       FROM assignment_participants ap
@@ -256,7 +258,7 @@ export class AssignmentsService {
    * same.
    */
   async updateTime(id: string | number, placeTime: unknown, endTime: unknown): Promise<AssignmentTimeUpdate> {
-    const sorted = this.dbs.transaction(() => {
+    const sorted = await this.uow.transactional(async () => {
       const stored = this.dbs.get<{ day_id: number; start: string | null }>(`
         SELECT da.day_id, COALESCE(da.assignment_time, p.place_time, acc.check_in) AS start
         FROM day_assignments da
@@ -278,13 +280,15 @@ export class AssignmentsService {
       // cleared start leaves the day alone too.
       if (!placeTime || !stored) return null;
       if (sortMinutes(String(placeTime)) === sortMinutes(stored.start)) return null;
-      return this.sortDayByTime(stored.day_id);
+      return await this.sortDayByTime(stored.day_id);
     });
+
+    const vias = sorted?.viasMoved ? { dayId: sorted.dayId, vias: await this.listDayVias(sorted.dayId) } : null;
 
     return {
       assignment: await this.getAssignmentWithPlace(Number(id)),
       reordered: sorted ? { dayId: sorted.dayId, orderedIds: sorted.orderedIds } : null,
-      vias: sorted?.viasMoved ? { dayId: sorted.dayId, vias: this.listDayVias(sorted.dayId) } : null,
+      vias,
     };
   }
 
@@ -292,7 +296,7 @@ export class AssignmentsService {
    * Puts one day in time order. Writes nothing when it already is, which is the usual
    * case: most starts are typed in the order the day is planned.
    */
-  private sortDayByTime(dayId: number): { dayId: number; orderedIds: number[]; viasMoved: boolean } | null {
+  private async sortDayByTime(dayId: number): Promise<{ dayId: number; orderedIds: number[]; viasMoved: boolean } | null> {
     // A booked night's hour lives on the booking, not on the stop: nobody types a
     // time into a hotel row, they type a check-in. Left out of this, the night
     // counted as untimed and stayed wherever it had been dropped, so pinning an
@@ -321,7 +325,7 @@ export class AssignmentsService {
       if (row.order_index !== i) update.run(i, row.id);
     });
 
-    return { dayId, orderedIds: sorted.map(row => row.id), viasMoved: this.reanchorVias(dayId, rows, sorted) };
+    return { dayId, orderedIds: sorted.map(row => row.id), viasMoved: await this.reanchorVias(dayId, rows, sorted) };
   }
 
   /**
@@ -334,7 +338,7 @@ export class AssignmentsService {
    * No sequence renumbering, unlike RoadtripService.reanchor: a reorder maps each leg
    * onto a different one, so two legs' vias never end up on the same leg.
    */
-  private reanchorVias(dayId: number, before: DayStopRow[], after: DayStopRow[]): boolean {
+  private async reanchorVias(dayId: number, before: DayStopRow[], after: DayStopRow[]): Promise<boolean> {
     const located = (rows: DayStopRow[]) => rows.filter(row => row.located).map(row => row.id);
     const previousIds = located(before);
     const nextIds = located(after);
@@ -364,7 +368,7 @@ export class AssignmentsService {
    * The day's vias in the shape the road trip routes broadcast them. RoadtripService
    * has this query too, but its module imports this one, so it cannot be injected here.
    */
-  private listDayVias(dayId: number): RoadtripVia[] {
+  private async listDayVias(dayId: number): Promise<RoadtripVia[]> {
     return this.dbs.all<RoadtripVia>(
       `SELECT id, day_id, after_order_index, sequence, lat, lng, created_at
          FROM roadtrip_vias
@@ -374,9 +378,9 @@ export class AssignmentsService {
     );
   }
 
-  setEndDay(id: string | number, endDay: boolean) {
+  async setEndDay(id: string | number, endDay: boolean) {
     this.dbs.run('UPDATE day_assignments SET end_day = ? WHERE id = ?', endDay ? 1 : 0, id);
-    return this.getAssignmentWithPlace(Number(id));
+    return await this.getAssignmentWithPlace(Number(id));
   }
 
   /**
@@ -387,9 +391,9 @@ export class AssignmentsService {
    * journey reconcile: the note affects neither the day order nor the skeleton
    * mirror (same as the transport-mode writes).
    */
-  updateNotes(id: string | number, notes: string | null | undefined) {
+  async updateNotes(id: string | number, notes: string | null | undefined) {
     this.dbs.run('UPDATE day_assignments SET notes = ? WHERE id = ?', notes || null, id);
-    return this.getAssignmentWithPlace(Number(id));
+    return await this.getAssignmentWithPlace(Number(id));
   }
 
   /**
@@ -398,9 +402,9 @@ export class AssignmentsService {
    * sticky by design: changing the whole-day default never touches a leg that
    * carries its own explicit mode.
    */
-  setLegTransportMode(id: string | number, mode: string | null) {
+  async setLegTransportMode(id: string | number, mode: string | null) {
     this.dbs.run('UPDATE day_assignments SET leg_transport_mode = ? WHERE id = ?', mode ?? null, id);
-    return this.getAssignmentWithPlace(Number(id));
+    return await this.getAssignmentWithPlace(Number(id));
   }
 
   /**
@@ -409,9 +413,9 @@ export class AssignmentsService {
    * when the previous timeline element is a place (the column is only read for
    * non-place origins like a booking arrival or a morning hotel departure).
    */
-  setIncomingLegTransportMode(id: string | number, mode: string | null) {
+  async setIncomingLegTransportMode(id: string | number, mode: string | null) {
     this.dbs.run('UPDATE day_assignments SET incoming_leg_transport_mode = ? WHERE id = ?', mode ?? null, id);
-    return this.getAssignmentWithPlace(Number(id));
+    return await this.getAssignmentWithPlace(Number(id));
   }
 
   /**
@@ -421,10 +425,10 @@ export class AssignmentsService {
    * the participants box sends the whole list back on every edit, so rejecting
    * the request would strand a trip whose membership changed underneath it.
    */
-  setParticipants(assignmentId: string | number, userIds: number[], tripId: string | number) {
+  async setParticipants(assignmentId: string | number, userIds: number[], tripId: string | number) {
     const roster = this.dbs.rosterUserIds(tripId);
     const scoped = userIds.filter(id => roster.has(id));
-    this.dbs.transaction(() => {
+    await this.uow.transactional(async () => {
       this.dbs.run('DELETE FROM assignment_participants WHERE assignment_id = ?', assignmentId);
       if (scoped.length > 0) {
         const insert = this.dbs.prepare('INSERT OR IGNORE INTO assignment_participants (assignment_id, user_id) VALUES (?, ?)');

@@ -137,7 +137,7 @@ export class PlacesService {
     private readonly uow: UnitOfWork,
   ) {}
 
-  verifyTripAccess(tripId: string, userId: number) {
+  async verifyTripAccess(tripId: string, userId: number) {
     return this.dbs.canAccessTrip(Number(tripId), userId);
   }
 
@@ -157,7 +157,7 @@ export class PlacesService {
    * arrive from an older client that had no business knowing it existed, and the
    * read-back join hands `tags.user_id` straight to the caller.
    */
-  private tagsOnTrip(tripId: string | number, tagIds: number[]): number[] {
+  private async tagsOnTrip(tripId: string | number, tagIds: number[]): Promise<number[]> {
     const unique = [...new Set(tagIds)];
     if (unique.length === 0) return [];
     const roster = this.dbs.rosterUserIds(tripId);
@@ -240,7 +240,7 @@ export class PlacesService {
   // Create place
   // -------------------------------------------------------------------------
 
-  create(tripId: string, body: PlaceCreateInput) {
+  async create(tripId: string, body: PlaceCreateInput) {
     const {
       name, description, lat, lng, address, category_id, price, currency,
       place_time, end_time,
@@ -278,7 +278,7 @@ export class PlacesService {
 
     if (tags && tags.length > 0) {
       const insertTag = this.dbs.prepare('INSERT OR IGNORE INTO place_tags (place_id, tag_id) VALUES (?, ?)');
-      for (const tagId of this.tagsOnTrip(tripId, tags)) {
+      for (const tagId of await this.tagsOnTrip(tripId, tags)) {
         insertTag.run(placeId, tagId);
       }
     }
@@ -290,7 +290,7 @@ export class PlacesService {
   // Get single place
   // -------------------------------------------------------------------------
 
-  get(tripId: string, placeId: string) {
+  async get(tripId: string, placeId: string) {
     const placeCheck = this.dbs.get('SELECT id FROM places WHERE id = ? AND trip_id = ?', placeId, tripId);
     if (!placeCheck) return null;
     return this.dbs.getPlaceWithTags(placeId);
@@ -306,22 +306,22 @@ export class PlacesService {
     body: PlaceUpdateInput,
     ifMatch?: string,
   ): Promise<PlaceWithTags | UpdateConflict | null> {
-    const { result, reclaim } = this.applyUpdate(tripId, placeId, body, ifMatch);
+    const { result, reclaim } = await this.applyUpdate(tripId, placeId, body, ifMatch);
     if (reclaim !== undefined) await reclaimPlaceImage(this.storage, reclaim);
     return result;
   }
 
   /**
-   * The synchronous DB half of update(). Split out so updateMany() can run it
-   * inside a better-sqlite3 transaction (which cannot await) and settle the
-   * storage reclaims after the transaction commits.
+   * The DB half of update(). Split out so updateMany() can run it inside the
+   * same UnitOfWork transaction and settle the storage reclaims after the
+   * transaction commits.
    */
-  private applyUpdate(
+  private async applyUpdate(
     tripId: string,
     placeId: string,
     body: PlaceUpdateInput,
     ifMatch?: string,
-  ): { result: PlaceWithTags | UpdateConflict | null; reclaim?: string | null } {
+  ): Promise<{ result: PlaceWithTags | UpdateConflict | null; reclaim?: string | null }> {
     const existingPlace = this.dbs.get<Place>('SELECT * FROM places WHERE id = ? AND trip_id = ?', placeId, tripId);
     if (!existingPlace) return { result: null };
 
@@ -405,7 +405,7 @@ export class PlacesService {
       this.dbs.run('DELETE FROM place_tags WHERE place_id = ?', placeId);
       if (tags.length > 0) {
         const insertTag = this.dbs.prepare('INSERT OR IGNORE INTO place_tags (place_id, tag_id) VALUES (?, ?)');
-        for (const tagId of this.tagsOnTrip(tripId, tags)) {
+        for (const tagId of await this.tagsOnTrip(tripId, tags)) {
           insertTag.run(placeId, tagId);
         }
       }
@@ -430,7 +430,7 @@ export class PlacesService {
    * budget:deleted events for the rows remove()/removeMany() are about to take
    * with them. Read it BEFORE deleting — afterwards the link is gone.
    */
-  linkedExpenseIds(tripId: string | number, placeIds: Array<string | number>): number[] {
+  async linkedExpenseIds(tripId: string | number, placeIds: Array<string | number>): Promise<number[]> {
     if (placeIds.length === 0) return [];
     const rows = this.dbs.all<{ id: number }>(
       `SELECT id FROM budget_items WHERE trip_id = ? AND place_id IN (${placeIds.map(() => '?').join(',')})`,
@@ -518,7 +518,7 @@ export class PlacesService {
    * those key on the place id alone, so an id from another trip would detach
    * that trip's journey entries even though the delete itself refuses it.
    */
-  scopedIds(tripId: string, ids: number[]): number[] {
+  async scopedIds(tripId: string, ids: number[]): Promise<number[]> {
     if (ids.length === 0) return [];
     const placeholders = ids.map(() => '?').join(',');
     const rows = this.dbs.all<{ id: number }>(
@@ -542,11 +542,11 @@ export class PlacesService {
     if (ids.length === 0) return [];
     const updated: PlaceWithTags[] = [];
     const reclaims: (string | null)[] = [];
-    this.dbs.transaction(() => {
+    await this.uow.transactional(async () => {
       for (const id of ids) {
         // Bulk update sends no If-Match, so applyUpdate() never returns a
         // conflict here; the guard keeps the types honest.
-        const { result: place, reclaim } = this.applyUpdate(tripId, String(id), body);
+        const { result: place, reclaim } = await this.applyUpdate(tripId, String(id), body);
         if (place && !isUpdateConflict(place)) updated.push(place);
         if (reclaim !== undefined) reclaims.push(reclaim);
       }
@@ -562,7 +562,7 @@ export class PlacesService {
   // -------------------------------------------------------------------------
 
   /** Build a lookup of names/coords for places already in a trip. */
-  private buildDedupSet(tripId: string): DedupSet {
+  private async buildDedupSet(tripId: string): Promise<DedupSet> {
     const rows = this.dbs.all<{
       name: string | null; lat: number | null; lng: number | null;
       google_place_id: string | null; google_ftid: string | null; osm_id: string | null; amap_poi_id: string | null;
@@ -595,8 +595,8 @@ export class PlacesService {
    * `google_ftid` for the bulk importer's backfill, which is a detail of that
    * caller and not part of the question "which place is this?".
    */
-  findMatchingPlaceId(tripId: string, candidate: PlaceMatchCandidate): number | null {
-    return this.findDuplicatePlace(tripId, candidate)?.id ?? null;
+  async findMatchingPlaceId(tripId: string, candidate: PlaceMatchCandidate): Promise<number | null> {
+    return (await this.findDuplicatePlace(tripId, candidate))?.id ?? null;
   }
 
   /**
@@ -623,10 +623,10 @@ export class PlacesService {
    *    `findMatchingPlaceId` wants — a booking with no place name should link to
    *    the hotel that has one — so it is stated rather than removed.
    */
-  private findDuplicatePlace(
+  private async findDuplicatePlace(
     tripId: string,
     place: PlaceMatchCandidate,
-  ): { id: number; google_ftid: string | null } | null {
+  ): Promise<{ id: number; google_ftid: string | null } | null> {
     for (const strategy of placeMatchStrategies(place)) {
       let hit: { id: number; google_ftid: string | null } | undefined;
       if (strategy.by === 'externalId') {
@@ -663,9 +663,9 @@ export class PlacesService {
   // Import GPX
   // -------------------------------------------------------------------------
 
-  importGpx(tripId: string, fileBuffer: Buffer, opts: GpxImportOptions = {}): GpxImportResult | null {
-    const result = this.importGpxRows(tripId, fileBuffer, opts);
-    this.colorizeImportedTracks(tripId, result);
+  async importGpx(tripId: string, fileBuffer: Buffer, opts: GpxImportOptions = {}): Promise<GpxImportResult | null> {
+    const result = await this.importGpxRows(tripId, fileBuffer, opts);
+    await this.colorizeImportedTracks(tripId, result);
     return result;
   }
 
@@ -678,7 +678,7 @@ export class PlacesService {
    * Returns null when the selection yields nothing, so the caller answers 404 rather
    * than handing over a file that imports as nothing on the other end.
    */
-  exportGpx(tripId: string, opts: GpxExportOptions = {}): { gpx: string; filename: string } | null {
+  async exportGpx(tripId: string, opts: GpxExportOptions = {}): Promise<{ gpx: string; filename: string } | null> {
     const trip = this.dbs.get<{ title: string }>('SELECT title FROM trips WHERE id = ?', tripId);
     if (!trip) return null;
 
@@ -717,7 +717,7 @@ export class PlacesService {
     return gpx ? { gpx, filename: gpxFilename(trip.title) } : null;
   }
 
-  private importGpxRows(tripId: string, fileBuffer: Buffer, opts: GpxImportOptions = {}): GpxImportResult | null {
+  private async importGpxRows(tripId: string, fileBuffer: Buffer, opts: GpxImportOptions = {}): Promise<GpxImportResult | null> {
     const { importWaypoints = true, importRoutes = true, importTracks = true, defaultName } = opts;
 
     const parsed = gpxParser.parse(fileBuffer.toString('utf-8'));
@@ -789,14 +789,14 @@ export class PlacesService {
 
     if (waypoints.length === 0) return null;
 
-    const dedup = this.buildDedupSet(tripId);
+    const dedup = await this.buildDedupSet(tripId);
     const insertStmt = this.dbs.prepare(`
     INSERT INTO places (trip_id, name, description, lat, lng, transport_mode, route_geometry)
     VALUES (?, ?, ?, ?, ?, 'walking', ?)
   `);
     const created: PlaceWithTags[] = [];
     let skipped = 0;
-    this.dbs.transaction(() => {
+    await this.uow.transactional(async () => {
       for (const wp of waypoints) {
         if (isPlaceDuplicate({ name: wp.name, lat: wp.lat, lng: wp.lng }, dedup)) {
           skipped++;
@@ -818,7 +818,7 @@ export class PlacesService {
 
   async importMapFile(tripId: string, fileBuffer: Buffer, filename: string, opts: KmlImportOptions = {}): Promise<PlaceImportResult> {
     const result = await this.importMapFileRows(tripId, fileBuffer, filename, opts);
-    this.colorizeImportedTracks(tripId, result);
+    await this.colorizeImportedTracks(tripId, result);
     return result;
   }
 
@@ -834,7 +834,7 @@ export class PlacesService {
     return this.importKmlPlaces(tripId, kmlBuffer, opts);
   }
 
-  importKmlPlaces(tripId: string, fileBuffer: Buffer, opts: KmlImportOptions = {}): PlaceImportResult {
+  async importKmlPlaces(tripId: string, fileBuffer: Buffer, opts: KmlImportOptions = {}): Promise<PlaceImportResult> {
     const { importPoints = true, importPaths = true } = opts;
     const decoded = decodeUtf8WithWarning(fileBuffer);
 
@@ -859,7 +859,7 @@ export class PlacesService {
 
     const categories = this.dbs.all<{ id: number; name: string }>('SELECT id, name FROM categories');
     const categoryLookup = buildCategoryNameLookup(categories);
-    const dedup = this.buildDedupSet(tripId);
+    const dedup = await this.buildDedupSet(tripId);
     const created: PlaceWithTags[] = [];
     let dupCount = 0;
 
@@ -868,7 +868,7 @@ export class PlacesService {
     VALUES (?, ?, ?, ?, ?, ?, 'walking', ?)
   `);
 
-    this.dbs.transaction(() => {
+    await this.uow.transactional(async () => {
       let fallbackIndex = 1;
       for (const node of placemarkNodes) {
         const parsedPlacemark = parsePlacemarkNode(node);
@@ -955,25 +955,24 @@ export class PlacesService {
    * it used to hand the same object back, which read like a transformation and
    * was none.
    */
-  private colorizeImportedTracks(tripId: string, result: { places: ImportedPlace[] } | null): void {
+  private async colorizeImportedTracks(tripId: string, result: { places: ImportedPlace[] } | null): Promise<void> {
     const tracks = result?.places?.filter((p) => p.route_geometry && !p.route_color) ?? [];
     if (tracks.length === 0) return;
 
     // Read and write in one transaction so two concurrent imports cannot both
     // read the same set of free colours.
-    this.dbs.transaction((conn) => {
+    await this.uow.transactional(async () => {
       const taken = new Set(
-        (conn
-          .prepare('SELECT DISTINCT route_color AS c FROM places WHERE trip_id = ? AND route_color IS NOT NULL')
-          .all(tripId) as { c: string }[]).map((r) => r.c),
+        this.dbs.all<{ c: string }>(
+          'SELECT DISTINCT route_color AS c FROM places WHERE trip_id = ? AND route_color IS NOT NULL', tripId,
+        ).map((r) => r.c),
       );
       const free = TRACK_COLORS.filter((c) => !taken.has(c));
-      const stmt = conn.prepare('UPDATE places SET route_color = ? WHERE id = ?');
       tracks.forEach((track, i) => {
         // Free ones first, then wrap through the whole palette — never reuse a
         // free colour twice within the same import.
         const color = i < free.length ? free[i] : TRACK_COLORS[(i - free.length) % TRACK_COLORS.length];
-        stmt.run(color, track.id);
+        this.dbs.run('UPDATE places SET route_color = ? WHERE id = ?', color, track.id);
         track.route_color = color;
       });
     });
@@ -1103,7 +1102,7 @@ export class PlacesService {
       return { error: 'No places with coordinates found in list', status: 400 };
     }
 
-    const { created, skipped } = this.storeGooglePlaces(tripId, places);
+    const { created, skipped } = await this.storeGooglePlaces(tripId, places);
 
     if (created.length) {
       void this.enrichImportedList(tripId, created as EnrichablePlace[], opts);
@@ -1119,11 +1118,11 @@ export class PlacesService {
    * the same rules — a place already on the trip is skipped rather than doubled, and a
    * row that matches but carries no provider id is given the one this import knows.
    */
-  private storeGooglePlaces(
+  private async storeGooglePlaces(
     tripId: string,
     places: { name: string; lat: number; lng: number; notes: string | null; googleFtid: string | null }[],
-  ): { created: PlaceWithTags[]; skipped: number } {
-    const dedup = this.buildDedupSet(tripId);
+  ): Promise<{ created: PlaceWithTags[]; skipped: number }> {
+    const dedup = await this.buildDedupSet(tripId);
     const insertStmt = this.dbs.prepare(`
     INSERT INTO places (trip_id, name, lat, lng, notes, google_ftid, transport_mode)
     VALUES (?, ?, ?, ?, ?, ?, 'walking')
@@ -1131,7 +1130,7 @@ export class PlacesService {
     const updateGoogleFtidStmt = this.dbs.prepare('UPDATE places SET google_ftid = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?');
     const created: PlaceWithTags[] = [];
     let skipped = 0;
-    this.dbs.transaction(() => {
+    await this.uow.transactional(async () => {
       for (const p of places) {
         // One candidate for both halves. Passing the raw parser object to the SQL
         // half used to mean its provider id never arrived — the field is
@@ -1140,7 +1139,7 @@ export class PlacesService {
         // this candidate's ftid on the backfill below.
         const candidate = { name: p.name, lat: p.lat, lng: p.lng, google_ftid: p.googleFtid };
         if (isPlaceDuplicate(candidate, dedup)) {
-          const duplicate = this.findDuplicatePlace(tripId, candidate);
+          const duplicate = await this.findDuplicatePlace(tripId, candidate);
           if (duplicate && !duplicate.google_ftid && p.googleFtid) {
             updateGoogleFtidStmt.run(p.googleFtid, duplicate.id);
           }
@@ -1246,7 +1245,7 @@ export class PlacesService {
       return { error: 'None of the stops in that link could be placed on the map.', status: 400 };
     }
 
-    const { created, skipped } = this.storeGooglePlaces(tripId, places);
+    const { created, skipped } = await this.storeGooglePlaces(tripId, places);
     if (created.length) {
       void this.enrichImportedList(tripId, created as EnrichablePlace[], opts);
     }
@@ -1374,14 +1373,14 @@ export class PlacesService {
       return { error: 'No places with coordinates found in list', status: 400 };
     }
 
-    const dedup = this.buildDedupSet(tripId);
+    const dedup = await this.buildDedupSet(tripId);
     const insertStmt = this.dbs.prepare(`
     INSERT INTO places (trip_id, name, lat, lng, address, notes, transport_mode)
     VALUES (?, ?, ?, ?, ?, ?, 'walking')
   `);
     const created: PlaceWithTags[] = [];
     let skipped = 0;
-    this.dbs.transaction(() => {
+    await this.uow.transactional(async () => {
       for (const p of places) {
         if (isPlaceDuplicate({ name: p.name, lat: p.lat, lng: p.lng }, dedup)) {
           skipped++;
@@ -1579,7 +1578,7 @@ export class PlacesService {
    * a vote must not 409 another member's offline edit. Returns the refreshed
    * place (with the new aggregate) or null when the place isn't in the trip.
    */
-  rate(tripId: string, placeId: string, userId: number, rating: number | null): PlaceWithTags | null {
+  async rate(tripId: string, placeId: string, userId: number, rating: number | null): Promise<PlaceWithTags | null> {
     const place = this.dbs.get('SELECT id FROM places WHERE id = ? AND trip_id = ?', placeId, tripId);
     if (!place) return null;
     if (rating === null) {

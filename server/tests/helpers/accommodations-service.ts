@@ -36,6 +36,7 @@ export async function accommodationsOver(dbs: DatabaseService): Promise<Accommod
     dbs, permissions, realtime,
     new QueryHelpersService(dbs),
     new JourneyDomainService(dbs, realtime, new TrekPhotosRepository(dbs), await createTestUnitOfWork(dbs.connection)),
+    await createTestUnitOfWork(dbs.connection),
   );
   return new AccommodationsService(dbs, permissions, realtime, assignments, await createTestUnitOfWork(dbs.connection));
 }

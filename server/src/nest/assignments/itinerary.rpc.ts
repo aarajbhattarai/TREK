@@ -32,8 +32,8 @@ export class ItineraryRpc {
     const actor = this.guards.requireActor(ctx, 'itinerary');
     const notes = params.notes === undefined || params.notes === null ? null : str(params.notes, 'notes');
     await this.guards.requireTripEdit(tripId, actor, DAY_EDIT_ACTION);
-    if (!this.assignments.dayExists(dayId, tripId)) throw new ForbiddenResource(`no day ${dayId} on trip ${tripId}`);
-    if (!this.assignments.placeExists(placeId, tripId)) throw new ForbiddenResource(`no place ${placeId} on trip ${tripId}`);
+    if (!(await this.assignments.dayExists(dayId, tripId))) throw new ForbiddenResource(`no day ${dayId} on trip ${tripId}`);
+    if (!(await this.assignments.placeExists(placeId, tripId))) throw new ForbiddenResource(`no place ${placeId} on trip ${tripId}`);
     const assignment = await this.assignments.createAssignment(dayId, placeId, notes);
     this.realtime.broadcast(tripId, 'assignment:created', { assignment });
     await this.assignments.reconcile(tripId);
@@ -46,9 +46,9 @@ export class ItineraryRpc {
     const assignmentId = num(params.assignmentId, 'assignmentId');
     const actor = this.guards.requireActor(ctx, 'itinerary');
     await this.guards.requireTripEdit(tripId, actor, DAY_EDIT_ACTION);
-    const existing = this.assignments.getAssignmentForTrip(assignmentId, tripId);
+    const existing = await this.assignments.getAssignmentForTrip(assignmentId, tripId);
     if (!existing) throw new ForbiddenResource(`no assignment ${assignmentId} on trip ${tripId}`);
-    this.assignments.deleteAssignment(assignmentId);
+    await this.assignments.deleteAssignment(assignmentId);
     // The dayId is what the client reducer keys the eviction on. Without it nothing
     // leaves the day, so keep the payload shape identical to the REST/MCP delete.
     this.realtime.broadcast(tripId, 'assignment:deleted', { assignmentId, dayId: existing.day_id });

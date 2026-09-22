@@ -50,17 +50,6 @@ const req = (userId = 7) => ({ user: { id: userId }, apiToken: FULL_GRANT }) as 
 /** A request the guard left no user on — the shape the controller must refuse. */
 const reqWithoutUser = () => ({ apiToken: FULL_GRANT }) as Request;
 
-function thrown(fn: () => unknown): { status: number; body: unknown } {
-  try {
-    fn();
-  } catch (err) {
-    expect(err).toBeInstanceOf(HttpException);
-    const e = err as HttpException;
-    return { status: e.getStatus(), body: e.getResponse() };
-  }
-  throw new Error('expected the handler to throw');
-}
-
 async function thrownAsync(fn: () => Promise<unknown>): Promise<{ status: number; body: unknown }> {
   try {
     await fn();
@@ -74,24 +63,24 @@ async function thrownAsync(fn: () => Promise<unknown>): Promise<{ status: number
 
 describe('PublicApiController', () => {
   describe('GET /api/v1/bucket-list', () => {
-    it('returns the caller’s wishlist and passes the id from the guard, never the query', () => {
+    it('returns the caller’s wishlist and passes the id from the guard, never the query', async () => {
       const listBucketList = vi.fn().mockReturnValue([ITEM]);
-      expect(makeController({ listBucketList }).listBucketList(req(7))).toEqual({ items: [ITEM] });
+      expect(await makeController({ listBucketList }).listBucketList(req(7))).toEqual({ items: [ITEM] });
       expect(listBucketList).toHaveBeenCalledWith(7);
     });
 
-    it('401s when the guard left no user behind', () => {
+    it('401s when the guard left no user behind', async () => {
       const listBucketList = vi.fn();
-      expect(thrown(() => makeController({ listBucketList }).listBucketList(reqWithoutUser()))).toEqual({
+      expect(await thrownAsync(() => makeController({ listBucketList }).listBucketList(reqWithoutUser()))).toEqual({
         status: 401,
         body: { error: 'API token required', code: 'API_TOKEN_REQUIRED' },
       });
       expect(listBucketList).not.toHaveBeenCalled();
     });
 
-    it('counts against the same rate budget as everything else', () => {
+    it('counts against the same rate budget as everything else', async () => {
       const listBucketList = vi.fn();
-      expect(thrown(() => makeController({ listBucketList }, false).listBucketList(req(7))).status).toBe(429);
+      expect((await thrownAsync(() => makeController({ listBucketList }, false).listBucketList(req(7)))).status).toBe(429);
       expect(listBucketList).not.toHaveBeenCalled();
     });
   });
@@ -119,22 +108,22 @@ describe('PublicApiController', () => {
   });
 
   describe('GET /api/v1/trips/:id', () => {
-    it('passes the parsed id and user through, and defaults include to every section', () => {
+    it('passes the parsed id and user through, and defaults include to every section', async () => {
       const getTrip = vi.fn().mockReturnValue(TRIP);
-      const res = makeController({ getTrip }).getTrip(req(7), '12', undefined);
+      const res = await makeController({ getTrip }).getTrip(req(7), '12', undefined);
       expect(res).toEqual(TRIP);
       expect(getTrip).toHaveBeenCalledWith(12, 7, [...PUBLIC_API_INCLUDES], expect.arrayContaining(['days']));
     });
 
-    it('treats an empty include the same as an absent one', () => {
+    it('treats an empty include the same as an absent one', async () => {
       const getTrip = vi.fn().mockReturnValue(TRIP);
-      makeController({ getTrip }).getTrip(req(7), '12', '   ');
+      await makeController({ getTrip }).getTrip(req(7), '12', '   ');
       expect(getTrip).toHaveBeenCalledWith(12, 7, [...PUBLIC_API_INCLUDES], expect.arrayContaining(['days']));
     });
 
-    it('narrows to the requested sections and tolerates spacing', () => {
+    it('narrows to the requested sections and tolerates spacing', async () => {
       const getTrip = vi.fn().mockReturnValue(TRIP);
-      makeController({ getTrip }).getTrip(req(7), '12', 'days, notes');
+      await makeController({ getTrip }).getTrip(req(7), '12', 'days, notes');
       expect(getTrip).toHaveBeenCalledWith(12, 7, ['days', 'notes'], expect.arrayContaining(['days']));
     });
 
@@ -143,9 +132,9 @@ describe('PublicApiController', () => {
      * trip that was never created. Anything else turns the endpoint into a way to
      * count another user's trips.
      */
-    it('404s for a trip the caller may not read, with no hint that it exists', () => {
+    it('404s for a trip the caller may not read, with no hint that it exists', async () => {
       const getTrip = vi.fn().mockReturnValue(null);
-      expect(thrown(() => makeController({ getTrip }).getTrip(req(7), '999', undefined))).toEqual({
+      expect(await thrownAsync(() => makeController({ getTrip }).getTrip(req(7), '999', undefined))).toEqual({
         status: 404,
         body: { error: 'Trip not found' },
       });
@@ -161,9 +150,9 @@ describe('PublicApiController', () => {
       ['whitespace', ' 12 '],
       ['a sql fragment', "1 OR 1=1"],
       ['an id past the safe integer range', '9007199254740993'],
-    ])('400s on %s without touching the service', (_label, raw) => {
+    ])('400s on %s without touching the service', async (_label, raw) => {
       const getTrip = vi.fn();
-      expect(thrown(() => makeController({ getTrip }).getTrip(req(7), raw, undefined)).status).toBe(400);
+      expect((await thrownAsync(() => makeController({ getTrip }).getTrip(req(7), raw, undefined))).status).toBe(400);
       expect(getTrip).not.toHaveBeenCalled();
     });
 
@@ -171,9 +160,9 @@ describe('PublicApiController', () => {
       ['an unknown section', 'days,everything'],
       ['a typo', 'dayz'],
       ['only commas', ',,,'],
-    ])('400s on %s rather than silently dropping it', (_label, include) => {
+    ])('400s on %s rather than silently dropping it', async (_label, include) => {
       const getTrip = vi.fn();
-      const res = thrown(() => makeController({ getTrip }).getTrip(req(7), '12', include));
+      const res = await thrownAsync(() => makeController({ getTrip }).getTrip(req(7), '12', include));
       expect(res.status).toBe(400);
       expect(getTrip).not.toHaveBeenCalled();
     });
@@ -187,9 +176,9 @@ describe('PublicApiController', () => {
       expect(listTrips).not.toHaveBeenCalled();
     });
 
-    it('429s the detail route the same way', () => {
+    it('429s the detail route the same way', async () => {
       const getTrip = vi.fn();
-      expect(thrown(() => makeController({ getTrip }, false).getTrip(req(7), '12', undefined)).status).toBe(429);
+      expect((await thrownAsync(() => makeController({ getTrip }, false).getTrip(req(7), '12', undefined))).status).toBe(429);
       expect(getTrip).not.toHaveBeenCalled();
     });
   });

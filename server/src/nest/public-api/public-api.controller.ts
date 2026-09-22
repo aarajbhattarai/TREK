@@ -66,10 +66,10 @@ export class PublicApiController {
    * this is the one list in TREK it can answer questions about.
    */
   @Get('bucket-list')
-  listBucketList(@Req() req: Request): PublicApiBucketList {
+  async listBucketList(@Req() req: Request): Promise<PublicApiBucketList> {
     this.limit(req);
     requireScope(req, 'bucket-list');
-    return { items: this.api.listBucketList(requireUserId(req)) };
+    return { items: await this.api.listBucketList(requireUserId(req)) };
   }
 
   /**
@@ -80,11 +80,11 @@ export class PublicApiController {
    * endpoint into a way to count someone else's trips.
    */
   @Get('trips/:id')
-  getTrip(
+  async getTrip(
     @Req() req: Request,
     @Param('id') id: string,
     @Query('include') include?: string,
-  ): PublicApiTrip {
+  ): Promise<PublicApiTrip> {
     this.limit(req);
     requireScope(req, 'trips');
     const tripId = parseTripId(id);
@@ -102,7 +102,7 @@ export class PublicApiController {
     // The grant goes in as well as the narrowed include: days are implied by any
     // section that hangs off them, and the implied block must still be measured
     // against what the key may read.
-    const trip = this.api.getTrip(tripId, requireUserId(req), allowed, grantedScopes(req));
+    const trip = await this.api.getTrip(tripId, requireUserId(req), allowed, grantedScopes(req));
     if (!trip) {
       throw new HttpException({ error: 'Trip not found' }, 404);
     }

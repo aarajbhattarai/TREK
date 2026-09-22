@@ -252,7 +252,7 @@ export class BookingImportService {
             }
           }
 
-          const place = this.places.create(tripId, {
+          const place = await this.places.create(tripId, {
             name: _venue.name,
             lat,
             lng,

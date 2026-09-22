@@ -68,7 +68,7 @@ export class ReservationsController {
     @Headers('x-socket-id') socketId?: string,
   ) {
     const body = rawBody as ReservationBody & { title: string };
-    this.rejectForeignReferences(tripId, body);
+    await this.rejectForeignReferences(tripId, body);
     const { reservation, accommodationCreated } = await this.reservations.create(tripId, body as never);
     if (accommodationCreated) {
       this.reservations.broadcast(tripId, 'accommodation:created', {}, socketId);
@@ -108,7 +108,7 @@ export class ReservationsController {
     if (!current) {
       throw new HttpException({ error: 'Reservation not found' }, 404);
     }
-    this.rejectForeignReferences(tripId, body);
+    await this.rejectForeignReferences(tripId, body);
     const { reservation, accommodationChanged } = await this.reservations.update(id, tripId, body as never, current as never);
     if (accommodationChanged) {
       this.reservations.broadcast(tripId, 'accommodation:updated', {}, socketId);
@@ -180,12 +180,12 @@ export class ReservationsController {
    * trip" about an id that is part of nothing would send the caller looking in
    * the wrong place.
    */
-  private rejectForeignReferences(tripId: string, body: ReservationBody): void {
+  private async rejectForeignReferences(tripId: string, body: ReservationBody): Promise<void> {
     const offenders = this.reservations.referencesOutsideTrip(tripId, body as never);
     if (offenders.length > 0) {
       throw new HttpException({ error: `Not part of this trip: ${offenders.join(', ')}` }, 400);
     }
-    const unknown = this.reservations.unresolvedReferences(tripId, body as never);
+    const unknown = await this.reservations.unresolvedReferences(tripId, body as never);
     if (unknown.length > 0) {
       throw new HttpException({ error: `Unknown reference: ${unknown.join(', ')}` }, 400);
     }

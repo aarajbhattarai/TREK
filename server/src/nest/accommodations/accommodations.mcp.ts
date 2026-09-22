@@ -69,9 +69,9 @@ export class AccommodationsMcp {
     ctx: McpContext,
   ) {
     if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
-    if (!this.accommodations.verifyTripAccess(tripId, ctx.userId)) return noAccess();
+    if (!(await this.accommodations.verifyTripAccess(tripId, ctx.userId))) return noAccess();
     if (!(await this.guards.hasTripPermission('day_edit', tripId, ctx.userId))) return permissionDenied();
-    const errors = this.accommodations.validateAccommodationRefs(tripId, place_id, start_day_id, end_day_id);
+    const errors = await this.accommodations.validateAccommodationRefs(tripId, place_id, start_day_id, end_day_id);
     if (errors.length > 0) return { content: [{ type: 'text' as const, text: errors.map(e => e.message).join(', ') }], isError: true };
     const { accommodation, mirror } = await this.accommodations.createAccommodation(tripId, { place_id, start_day_id, end_day_id, check_in, check_in_end, check_out, confirmation, notes });
     this.guards.safeBroadcast(tripId, 'accommodation:created', { accommodation });
@@ -120,13 +120,13 @@ export class AccommodationsMcp {
     ctx: McpContext,
   ) {
     if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
-    if (!this.accommodations.verifyTripAccess(tripId, ctx.userId)) return noAccess();
+    if (!(await this.accommodations.verifyTripAccess(tripId, ctx.userId))) return noAccess();
     if (!(await this.guards.hasTripPermission('day_edit', tripId, ctx.userId))) return permissionDenied();
-    const dayErrors = this.accommodations.validateAccommodationRefs(tripId, undefined, start_day_id, end_day_id);
+    const dayErrors = await this.accommodations.validateAccommodationRefs(tripId, undefined, start_day_id, end_day_id);
     if (dayErrors.length > 0) return { content: [{ type: 'text' as const, text: dayErrors.map(e => e.message).join(', ') }], isError: true };
     try {
       const result = await this.uow.transactional(async () => {
-        const place = this.places.create(String(tripId), { name, description, lat, lng, address, category_id, google_place_id, google_ftid, osm_id, notes: place_notes, website, phone, price, currency });
+        const place = await this.places.create(String(tripId), { name, description, lat, lng, address, category_id, google_place_id, google_ftid, osm_id, notes: place_notes, website, phone, price, currency });
         const { accommodation, mirror } = await this.accommodations.createAccommodation(tripId, { place_id: place.id, start_day_id, end_day_id, check_in, check_in_end, check_out, confirmation, notes: accommodation_notes });
         return { place, accommodation, mirror };
       });
@@ -168,9 +168,9 @@ export class AccommodationsMcp {
     ctx: McpContext,
   ) {
     if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
-    if (!this.accommodations.verifyTripAccess(tripId, ctx.userId)) return noAccess();
+    if (!(await this.accommodations.verifyTripAccess(tripId, ctx.userId))) return noAccess();
     if (!(await this.guards.hasTripPermission('day_edit', tripId, ctx.userId))) return permissionDenied();
-    const existing = this.accommodations.getAccommodation(accommodationId, tripId);
+    const existing = await this.accommodations.getAccommodation(accommodationId, tripId);
     if (!existing) return { content: [{ type: 'text' as const, text: 'Accommodation not found.' }], isError: true };
     const { accommodation, mirror } = await this.accommodations.updateAccommodation(accommodationId, existing, { place_id, start_day_id, end_day_id, check_in, check_in_end, check_out, confirmation, notes });
     this.guards.safeBroadcast(tripId, 'accommodation:updated', { accommodation });
@@ -192,9 +192,9 @@ export class AccommodationsMcp {
   })
   async deleteAccommodation({ tripId, accommodationId }: { tripId: number; accommodationId: number }, ctx: McpContext) {
     if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
-    if (!this.accommodations.verifyTripAccess(tripId, ctx.userId)) return noAccess();
+    if (!(await this.accommodations.verifyTripAccess(tripId, ctx.userId))) return noAccess();
     if (!(await this.guards.hasTripPermission('day_edit', tripId, ctx.userId))) return permissionDenied();
-    if (!this.accommodations.getAccommodation(accommodationId, tripId)) return { content: [{ type: 'text' as const, text: 'Accommodation not found.' }], isError: true };
+    if (!(await this.accommodations.getAccommodation(accommodationId, tripId))) return { content: [{ type: 'text' as const, text: 'Accommodation not found.' }], isError: true };
     // linkedReservationId stays the first one so the tool's answer keeps its shape;
     // linkedReservationIds carries the rest for a block that had more than one booking.
     const { linkedReservationId, linkedReservationIds, mirror } = await this.accommodations.deleteAccommodation(accommodationId);
@@ -212,7 +212,7 @@ export class AccommodationsMcp {
   })
   async tripAccommodationsResource(uri: URL, { tripId }: { tripId: string | string[] }, ctx: McpContext) {
     const id = parseId(tripId);
-    if (id === null || !this.accommodations.verifyTripAccess(id, ctx.userId)) {
+    if (id === null || !(await this.accommodations.verifyTripAccess(id, ctx.userId))) {
       return {
         contents: [{
           uri: uri.href,
@@ -221,7 +221,7 @@ export class AccommodationsMcp {
         }],
       };
     }
-    const accommodations = this.accommodations.listAccommodations(id);
+    const accommodations = await this.accommodations.listAccommodations(id);
     return {
       contents: [{
         uri: uri.href,

@@ -70,6 +70,7 @@ beforeAll(async () => {
   // Real collaborator rather than a stub: reconcile() runs after every mutation
   // and needs the same connection to see the rows these cases write.
   new JourneyDomainService(dbs, realtime, new TrekPhotosRepository(dbs), await createTestUnitOfWork(dbs.connection)),
+  await createTestUnitOfWork(dbs.connection),
 );
 });
 
@@ -107,17 +108,17 @@ function fixture() {
 // ── verifyTripAccess / canEdit ────────────────────────────────────────────────
 
 describe('verifyTripAccess', () => {
-  it('ASG-SVC-001: returns trip for owner', () => {
+  it('ASG-SVC-001: returns trip for owner', async () => {
     const { user, trip } = fixture();
-    const result = svc.verifyTripAccess(trip.id, user.id);
+    const result = await svc.verifyTripAccess(trip.id, user.id);
     expect(result).toBeDefined();
     expect((result as { user_id: number }).user_id).toBe(user.id);
   });
 
-  it('ASG-SVC-002: returns falsy for non-member', () => {
+  it('ASG-SVC-002: returns falsy for non-member', async () => {
     const { trip } = fixture();
     const { user: stranger } = createUser(testDb);
-    expect(svc.verifyTripAccess(trip.id, stranger.id)).toBeFalsy();
+    expect(await svc.verifyTripAccess(trip.id, stranger.id)).toBeFalsy();
   });
 });
 
@@ -134,30 +135,30 @@ describe('canEdit', () => {
 // ── existence checks ──────────────────────────────────────────────────────────
 
 describe('dayExists / placeExists / assignmentExistsInDay', () => {
-  it('ASG-SVC-004: dayExists is trip-scoped', () => {
+  it('ASG-SVC-004: dayExists is trip-scoped', async () => {
     const { trip, day } = fixture();
     const { user: other } = createUser(testDb);
     const otherTrip = createTrip(testDb, other.id);
-    expect(svc.dayExists(day.id, trip.id)).toBe(true);
-    expect(svc.dayExists(day.id, otherTrip.id)).toBe(false);
-    expect(svc.dayExists(9999, trip.id)).toBe(false);
+    expect(await svc.dayExists(day.id, trip.id)).toBe(true);
+    expect(await svc.dayExists(day.id, otherTrip.id)).toBe(false);
+    expect(await svc.dayExists(9999, trip.id)).toBe(false);
   });
 
-  it('ASG-SVC-005: placeExists is trip-scoped', () => {
+  it('ASG-SVC-005: placeExists is trip-scoped', async () => {
     const { trip, place } = fixture();
     const { user: other } = createUser(testDb);
     const otherTrip = createTrip(testDb, other.id);
-    expect(svc.placeExists(place.id, trip.id)).toBe(true);
-    expect(svc.placeExists(place.id, otherTrip.id)).toBe(false);
+    expect(await svc.placeExists(place.id, trip.id)).toBe(true);
+    expect(await svc.placeExists(place.id, otherTrip.id)).toBe(false);
   });
 
-  it('ASG-SVC-006: assignmentExistsInDay requires matching day AND trip', () => {
+  it('ASG-SVC-006: assignmentExistsInDay requires matching day AND trip', async () => {
     const { trip, day, place } = fixture();
     const otherDay = createDay(testDb, trip.id);
     const a = createDayAssignment(testDb, day.id, place.id);
-    expect(svc.assignmentExistsInDay(a.id, day.id, trip.id)).toBe(true);
-    expect(svc.assignmentExistsInDay(a.id, otherDay.id, trip.id)).toBe(false);
-    expect(svc.assignmentExistsInDay(a.id, day.id, trip.id + 1)).toBe(false);
+    expect(await svc.assignmentExistsInDay(a.id, day.id, trip.id)).toBe(true);
+    expect(await svc.assignmentExistsInDay(a.id, otherDay.id, trip.id)).toBe(false);
+    expect(await svc.assignmentExistsInDay(a.id, day.id, trip.id + 1)).toBe(false);
   });
 });
 
@@ -166,10 +167,10 @@ describe('dayExists / placeExists / assignmentExistsInDay', () => {
 describe('createAssignment', () => {
   it('ASG-SVC-007: first assignment gets order_index 0, then MAX+1 appends', async () => {
     const { day, place } = fixture();
-    const first = svc.createAssignment(day.id, place.id, null);
-    const second = svc.createAssignment(day.id, place.id, null);
-    expect((await first!).order_index).toBe(0);
-    expect((await second!).order_index).toBe(1);
+    const first = await svc.createAssignment(day.id, place.id, null);
+    const second = await svc.createAssignment(day.id, place.id, null);
+    expect(first!.order_index).toBe(0);
+    expect(second!.order_index).toBe(1);
   });
 
   it('ASG-SVC-008: empty-string notes coerce to null (`notes || null`)', async () => {
@@ -210,7 +211,7 @@ describe('listDayAssignments', () => {
     testDb.prepare('INSERT INTO place_tags (place_id, tag_id) VALUES (?, ?)').run(place.id, tag.id);
     const a1 = createDayAssignment(testDb, day.id, place.id, { order_index: 1 });
     const a2 = createDayAssignment(testDb, day.id, second.id, { order_index: 0 });
-    svc.setParticipants(a1.id, [user.id], trip.id);
+    await svc.setParticipants(a1.id, [user.id], trip.id);
 
     const list = await svc.listDayAssignments(day.id);
     expect(list.map(a => a.id)).toEqual([a2.id, a1.id]);
@@ -230,21 +231,21 @@ describe('listDayAssignments', () => {
 // ── delete / reorder ──────────────────────────────────────────────────────────
 
 describe('deleteAssignment / reorderAssignments', () => {
-  it('ASG-SVC-012: deleteAssignment removes the row', () => {
+  it('ASG-SVC-012: deleteAssignment removes the row', async () => {
     const { day, place } = fixture();
     const a = createDayAssignment(testDb, day.id, place.id);
-    svc.deleteAssignment(a.id);
+    await svc.deleteAssignment(a.id);
     expect(testDb.prepare('SELECT id FROM day_assignments WHERE id = ?').get(a.id)).toBeUndefined();
   });
 
-  it('ASG-SVC-013: reorderAssignments applies positional order, scoped to the day', () => {
+  it('ASG-SVC-013: reorderAssignments applies positional order, scoped to the day', async () => {
     const { trip, day, place } = fixture();
     const otherDay = createDay(testDb, trip.id);
     const a1 = createDayAssignment(testDb, day.id, place.id, { order_index: 0 });
     const a2 = createDayAssignment(testDb, day.id, place.id, { order_index: 1 });
     const foreign = createDayAssignment(testDb, otherDay.id, place.id, { order_index: 5 });
 
-    svc.reorderAssignments(day.id, [a2.id, a1.id, foreign.id]);
+    await svc.reorderAssignments(day.id, [a2.id, a1.id, foreign.id]);
 
     const order = (id: number) => (testDb.prepare('SELECT order_index FROM day_assignments WHERE id = ?').get(id) as { order_index: number }).order_index;
     expect(order(a2.id)).toBe(0);
@@ -257,11 +258,11 @@ describe('deleteAssignment / reorderAssignments', () => {
 // ── getAssignmentForTrip / moveAssignment ─────────────────────────────────────
 
 describe('getAssignmentForTrip', () => {
-  it('ASG-SVC-014: returns the raw row for the trip, undefined cross-trip', () => {
+  it('ASG-SVC-014: returns the raw row for the trip, undefined cross-trip', async () => {
     const { trip, day, place } = fixture();
     const a = createDayAssignment(testDb, day.id, place.id);
-    expect(svc.getAssignmentForTrip(a.id, trip.id)).toMatchObject({ id: a.id, day_id: day.id });
-    expect(svc.getAssignmentForTrip(a.id, trip.id + 1)).toBeUndefined();
+    expect(await svc.getAssignmentForTrip(a.id, trip.id)).toMatchObject({ id: a.id, day_id: day.id });
+    expect(await svc.getAssignmentForTrip(a.id, trip.id + 1)).toBeUndefined();
   });
 });
 
@@ -288,37 +289,37 @@ describe('moveAssignment', () => {
 // ── participants ──────────────────────────────────────────────────────────────
 
 describe('getParticipants / setParticipants', () => {
-  it('ASG-SVC-017: setParticipants replaces the list and returns the joined rows', () => {
+  it('ASG-SVC-017: setParticipants replaces the list and returns the joined rows', async () => {
     const { user, trip, day, place } = fixture();
     const { user: peer } = createUser(testDb);
     addTripMember(testDb, trip.id, peer.id);
     const a = createDayAssignment(testDb, day.id, place.id);
-    svc.setParticipants(a.id, [user.id], trip.id);
-    const replaced = svc.setParticipants(a.id, [peer.id], trip.id);
+    await svc.setParticipants(a.id, [user.id], trip.id);
+    const replaced = await svc.setParticipants(a.id, [peer.id], trip.id);
     expect(replaced).toEqual([{ user_id: peer.id, username: peer.username, avatar: null }]);
-    expect(svc.getParticipants(a.id)).toEqual(replaced);
+    expect(await svc.getParticipants(a.id)).toEqual(replaced);
   });
 
-  it('ASG-SVC-018: empty array clears all participants', () => {
+  it('ASG-SVC-018: empty array clears all participants', async () => {
     const { user, trip, day, place } = fixture();
     const a = createDayAssignment(testDb, day.id, place.id);
-    svc.setParticipants(a.id, [user.id], trip.id);
-    expect(svc.setParticipants(a.id, [], trip.id)).toEqual([]);
-    expect(svc.getParticipants(a.id)).toEqual([]);
+    await svc.setParticipants(a.id, [user.id], trip.id);
+    expect(await svc.setParticipants(a.id, [], trip.id)).toEqual([]);
+    expect(await svc.getParticipants(a.id)).toEqual([]);
   });
 
-  it('ASG-SVC-019: username COALESCEs display_name over username', () => {
+  it('ASG-SVC-019: username COALESCEs display_name over username', async () => {
     const { user, trip, day, place } = fixture();
     testDb.prepare('UPDATE users SET display_name = ? WHERE id = ?').run('Fancy Name', user.id);
     const a = createDayAssignment(testDb, day.id, place.id);
-    const rows = svc.setParticipants(a.id, [user.id], trip.id);
+    const rows = await svc.setParticipants(a.id, [user.id], trip.id);
     expect(rows).toEqual([{ user_id: user.id, username: 'Fancy Name', avatar: null }]);
   });
 
-  it('ASG-SVC-020: duplicate user ids collapse via INSERT OR IGNORE', () => {
+  it('ASG-SVC-020: duplicate user ids collapse via INSERT OR IGNORE', async () => {
     const { user, trip, day, place } = fixture();
     const a = createDayAssignment(testDb, day.id, place.id);
-    const rows = svc.setParticipants(a.id, [user.id, user.id], trip.id);
+    const rows = await svc.setParticipants(a.id, [user.id, user.id], trip.id);
     expect(rows).toHaveLength(1);
   });
 
@@ -328,22 +329,22 @@ describe('getParticipants / setParticipants', () => {
   // list, and the delete stands. The rollback itself is still covered — the
   // transaction wraps delete and insert together, and ASG-SVC-018 pins that an
   // explicit empty list clears.
-  it('ASG-SVC-028: a list of ids that are not on the trip clears rather than throwing', () => {
+  it('ASG-SVC-028: a list of ids that are not on the trip clears rather than throwing', async () => {
     const { user, trip, day, place } = fixture();
     const a = createDayAssignment(testDb, day.id, place.id);
-    svc.setParticipants(a.id, [user.id], trip.id);
-    expect(() => svc.setParticipants(a.id, [999999], trip.id)).not.toThrow();
-    expect(svc.getParticipants(a.id)).toEqual([]);
+    await svc.setParticipants(a.id, [user.id], trip.id);
+    await expect(svc.setParticipants(a.id, [999999], trip.id)).resolves.toBeDefined();
+    expect(await svc.getParticipants(a.id)).toEqual([]);
   });
 
-  it('ASG-SVC-029: keeps the trip members and drops the stranger in one call', () => {
+  it('ASG-SVC-029: keeps the trip members and drops the stranger in one call', async () => {
     const { user, trip, day, place } = fixture();
     const { user: member } = createUser(testDb);
     const { user: stranger } = createUser(testDb);
     addTripMember(testDb, trip.id, member.id);
     const a = createDayAssignment(testDb, day.id, place.id);
 
-    const rows = svc.setParticipants(a.id, [user.id, stranger.id, member.id], trip.id) as { user_id: number }[];
+    const rows = await svc.setParticipants(a.id, [user.id, stranger.id, member.id], trip.id) as { user_id: number }[];
 
     expect(rows.map(r => r.user_id).sort()).toEqual([user.id, member.id].sort());
     expect(JSON.stringify(rows)).not.toContain(stranger.username);
@@ -429,7 +430,7 @@ describe('updateTime', () => {
     expect(dayOrder(day.id)).toEqual([b, a, c]);
     // Dragged back out of time order on purpose: a sort now would put b first again,
     // with c behind it.
-    svc.reorderAssignments(day.id, [a, b, c]);
+    await svc.reorderAssignments(day.id, [a, b, c]);
 
     const { assignment } = await svc.updateTime(c, null, null); // clear, no re-sort
     expect((await assignment!).assignment_time).toBeNull();
@@ -440,7 +441,7 @@ describe('updateTime', () => {
     const { day, ids: [a, b, c] } = dayOf([['09:00', 0], [null, 1], ['12:00', 2]]);
     await svc.updateTime(b, '06:00', '07:00'); // sorts b first
     expect(dayOrder(day.id)).toEqual([b, a, c]);
-    svc.reorderAssignments(day.id, [a, b, c]);
+    await svc.reorderAssignments(day.id, [a, b, c]);
 
     const { assignment } = await svc.updateTime(c, '', '');
     expect((await assignment!).assignment_time).toBeNull();

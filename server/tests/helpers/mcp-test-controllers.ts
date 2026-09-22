@@ -164,7 +164,7 @@ export async function createMcpTestRegistry(): Promise<McpRegistry> {
   // dependency fails the build — pass them for real regardless of the gate.
   // One instance, four consumers: AssignmentsMcp, ReservationsMcp, PlacesMcp and
   // AccommodationsService, which writes the day stop a booked night implies.
-  const assignmentsService = new AssignmentsService(dbService, permissionsService, realtimeService, queryHelpersService, journeyDomain);
+  const assignmentsService = new AssignmentsService(dbService, permissionsService, realtimeService, queryHelpersService, journeyDomain, await createTestUnitOfWork(dbService.connection));
   const accommodationsService = new AccommodationsService(dbService, permissionsService, realtimeService, assignmentsService, await createTestUnitOfWork(dbService.connection));
   // Built after it: deleting a place cancels the nights booked at it through this one.
   const placesService = new PlacesService(

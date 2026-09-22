@@ -105,7 +105,7 @@ export class AccommodationsService {
 
   /** Owner or member, returning the trip. Takes a number too: the MCP tools pass
    *  the parsed id, the REST path the raw param. */
-  verifyTripAccess(tripId: string | number, userId: number) {
+  async verifyTripAccess(tripId: string | number, userId: number) {
     return this.dbs.canAccessTrip(Number(tripId), userId);
   }
 
@@ -235,7 +235,7 @@ export class AccommodationsService {
   // -------------------------------------------------------------------------
 
 
-  private getAccommodationWithPlace(id: number | bigint) {
+  private async getAccommodationWithPlace(id: number | bigint) {
     return this.db.get(`
     SELECT a.*, p.name as place_name, p.address as place_address, p.image_url as place_image, p.lat as place_lat, p.lng as place_lng
     FROM day_accommodations a
@@ -244,7 +244,7 @@ export class AccommodationsService {
   `, id);
   }
 
-  listAccommodations(tripId: string | number) {
+  async listAccommodations(tripId: string | number) {
     return this.db.all(`
     SELECT a.*, p.name as place_name, p.address as place_address, p.image_url as place_image, p.lat as place_lat, p.lng as place_lng,
            r.title as reservation_title
@@ -256,7 +256,7 @@ export class AccommodationsService {
   `, tripId);
   }
 
-  validateAccommodationRefs(tripId: string | number, placeId?: number, startDayId?: number, endDayId?: number) {
+  async validateAccommodationRefs(tripId: string | number, placeId?: number, startDayId?: number, endDayId?: number) {
     const errors: { field: string; message: string }[] = [];
     if (placeId !== undefined) {
       const place = this.db.get('SELECT id FROM places WHERE id = ? AND trip_id = ?', placeId, tripId);
@@ -294,7 +294,7 @@ export class AccommodationsService {
    * pulled it forward, and a night booked for ten in the morning sat behind a whole
    * day of unpinned stops, reached at a quarter past twelve.
    */
-  private positionForCheckIn(dayId: number, checkIn: string | null | undefined, excludeId?: number): number {
+  private async positionForCheckIn(dayId: number, checkIn: string | null | undefined, excludeId?: number): Promise<number> {
     if (!checkIn) return 0;
     // excludeId leaves the row being re-seated out of the chain it is measured
     // against. Without it a night parked at the end of the day can find itself.
@@ -321,7 +321,7 @@ export class AccommodationsService {
    * without an hour are passed over in both directions: the night may have been
    * dragged past them on purpose, and a change of notes is no reason to undo that.
    */
-  private seatedByCheckIn(dayId: number, ownId: number, checkIn: string | null | undefined): boolean {
+  private async seatedByCheckIn(dayId: number, ownId: number, checkIn: string | null | undefined): Promise<boolean> {
     if (!checkIn) return true;
     const rows = this.db.all<{ id: number; at: string | null }>(`
       SELECT da.id, COALESCE(da.assignment_time, p.place_time, other.check_in) AS at
@@ -345,7 +345,7 @@ export class AccommodationsService {
    * road trip. Only ever filled in when it is empty: a type the traveller picked
    * (a campsite, say) is theirs.
    */
-  private stampLodging(placeId: number): PlaceWithTags | null {
+  private async stampLodging(placeId: number): Promise<PlaceWithTags | null> {
     const place = this.db.get<{ stop_type: string | null }>('SELECT stop_type FROM places WHERE id = ?', placeId);
     if (!place || place.stop_type) return null;
     this.db.run("UPDATE places SET stop_type = 'hotel' WHERE id = ?", placeId);
@@ -359,11 +359,15 @@ export class AccommodationsService {
    * the n-th stop that has coordinates, not behind a row id. Stops without
    * coordinates are never routed and so never counted.
    */
-  private stopOrders(dayIds: number[]): Map<number, number[]> {
-    return new Map([...new Set(dayIds)].map((dayId): [number, number[]] => [dayId, this.locatedStopIds(dayId)]));
+  private async stopOrders(dayIds: number[]): Promise<Map<number, number[]>> {
+    const result = new Map<number, number[]>();
+    for (const dayId of new Set(dayIds)) {
+      result.set(dayId, await this.locatedStopIds(dayId));
+    }
+    return result;
   }
 
-  private locatedStopIds(dayId: number): number[] {
+  private async locatedStopIds(dayId: number): Promise<number[]> {
     return this.db.all<{ id: number }>(`
       SELECT da.id FROM day_assignments da JOIN places p ON p.id = da.place_id
       WHERE da.day_id = ? AND p.lat IS NOT NULL AND p.lng IS NOT NULL
@@ -385,9 +389,9 @@ export class AccommodationsService {
    *
    * Runs inside the caller's transaction.
    */
-  private reanchorVias(mirror: AccommodationMirror, before: Map<number, number[]>): void {
+  private async reanchorVias(mirror: AccommodationMirror, before: Map<number, number[]>): Promise<void> {
     for (const [dayId, previousIds] of before) {
-      const nextIds = this.locatedStopIds(dayId);
+      const nextIds = await this.locatedStopIds(dayId);
       if (previousIds.length === nextIds.length && previousIds.every((id, i) => id === nextIds[i])) continue;
       const vias = this.db.all<PinnedVia>('SELECT id, after_order_index, sequence FROM roadtrip_vias WHERE day_id = ?', dayId);
       if (!vias.length) continue;
@@ -411,7 +415,7 @@ export class AccommodationsService {
 
       for (const viaId of remove) this.db.run('DELETE FROM roadtrip_vias WHERE id = ? AND day_id = ?', viaId, dayId);
       for (const via of moved) this.db.run('UPDATE roadtrip_vias SET after_order_index = ? WHERE id = ? AND day_id = ?', via.after_order_index, via.id, dayId);
-      this.renumberMergedLegs(dayId, vias.filter(via => !remove.includes(via.id)), moved);
+      await this.renumberMergedLegs(dayId, vias.filter(via => !remove.includes(via.id)), moved);
       this.noteVias(mirror, {
         dayId,
         vias: this.db.all<RoadtripVia>(
@@ -445,7 +449,7 @@ export class AccommodationsService {
    * `RoadtripService.reanchor` does it, the earlier leg's points first, then by
    * their old sequence, then by id. Only a leg that received a via is touched.
    */
-  private renumberMergedLegs(dayId: number, kept: PinnedVia[], moved: { id: number; after_order_index: number }[]): void {
+  private async renumberMergedLegs(dayId: number, kept: PinnedVia[], moved: { id: number; after_order_index: number }[]): Promise<void> {
     const landed = new Map(moved.map(via => [via.id, via.after_order_index]));
     const byLeg = new Map<number, PinnedVia[]>();
     for (const via of kept) {
@@ -506,7 +510,7 @@ export class AccommodationsService {
     const end = (max.max !== null ? max.max : -1) + 1;
     this.db.run('UPDATE day_assignments SET day_id = ?, place_id = ?, order_index = ? WHERE id = ?', dayId, placeId, end, stop.id);
 
-    const seat = this.positionForCheckIn(dayId, checkIn, stop.id);
+    const seat = await this.positionForCheckIn(dayId, checkIn, stop.id);
     if (seat < end) {
       this.db.run(
         'UPDATE day_assignments SET order_index = order_index + 1 WHERE day_id = ? AND order_index >= ? AND id != ?',
@@ -524,7 +528,7 @@ export class AccommodationsService {
     // form writes stays that never had one. Nothing to put on the map then.
     if (!placeId) return mirror;
 
-    mirror.stamped = this.stampLodging(placeId);
+    mirror.stamped = await this.stampLodging(placeId);
 
     // The road-trip flow assigns the place to the day and only then books the night.
     // Claiming that row would make cancelling the booking delete a stop the traveller
@@ -532,7 +536,7 @@ export class AccommodationsService {
     // answer for a place already planned for that day by hand.
     if (this.db.get('SELECT id FROM day_assignments WHERE day_id = ? AND place_id = ?', dayId, placeId)) return mirror;
 
-    const before = this.stopOrders([dayId]);
+    const before = await this.stopOrders([dayId]);
     // Through AssignmentsService, seated where the check-in says (see
     // positionForCheckIn), with everything behind it moved up one.
     //
@@ -543,14 +547,14 @@ export class AccommodationsService {
     // time until the next reload.
     mirror.created = await this.assignments.createAssignment(dayId, placeId, null, {
       accommodationId,
-      orderIndex: this.positionForCheckIn(dayId, checkIn),
+      orderIndex: await this.positionForCheckIn(dayId, checkIn),
     });
-    this.reanchorVias(mirror, before);
+    await this.reanchorVias(mirror, before);
     return mirror;
   }
 
   /** The day stops this booking, and only this booking, put on the plan. */
-  private ownStops(accommodationId: number) {
+  private async ownStops(accommodationId: number) {
     return this.db.all<{ id: number; day_id: number; place_id: number; order_index: number }>(
       'SELECT id, day_id, place_id, order_index FROM day_assignments WHERE accommodation_id = ?', accommodationId
     );
@@ -572,8 +576,8 @@ export class AccommodationsService {
    */
   private async releaseStops(accommodationId: number, opts: { keepStop?: boolean }): Promise<AccommodationMirror> {
     const mirror = noMirror();
-    const own = this.ownStops(accommodationId);
-    const before = this.stopOrders(own.map(stop => stop.day_id));
+    const own = await this.ownStops(accommodationId);
+    const before = await this.stopOrders(own.map(stop => stop.day_id));
     for (const stop of own) {
       if (opts.keepStop) {
         this.db.run('UPDATE day_assignments SET accommodation_id = NULL WHERE id = ?', stop.id);
@@ -587,7 +591,7 @@ export class AccommodationsService {
       this.db.run('DELETE FROM day_assignments WHERE id = ?', stop.id);
       mirror.removed.push({ id: stop.id, dayId: stop.day_id });
     }
-    this.reanchorVias(mirror, before);
+    await this.reanchorVias(mirror, before);
     return mirror;
   }
 
@@ -610,7 +614,7 @@ export class AccommodationsService {
     checkIn?: string | null,
     opts: { checkInChanged?: boolean } = {},
   ): Promise<AccommodationMirror> {
-    const own = this.ownStops(accommodationId);
+    const own = await this.ownStops(accommodationId);
     if (own.length === 0) return noMirror();
     if (own.length === 1 && own[0].day_id === dayId && own[0].place_id === placeId) {
       // Same place, same day. A check-in given a new hour seats the night afresh, the
@@ -618,8 +622,8 @@ export class AccommodationsService {
       // it is unless the clocks around it say it is in the wrong place, so a night the
       // traveller dragged somewhere stays there through a change of notes.
       const settled = opts.checkInChanged
-        ? this.positionForCheckIn(dayId, checkIn, own[0].id) === own[0].order_index
-        : this.seatedByCheckIn(dayId, own[0].id, checkIn);
+        ? (await this.positionForCheckIn(dayId, checkIn, own[0].id)) === own[0].order_index
+        : await this.seatedByCheckIn(dayId, own[0].id, checkIn);
       if (settled) return noMirror();
     }
 
@@ -630,22 +634,22 @@ export class AccommodationsService {
     // note, its hour, its end-of-day flag and the road-trip day boundary anchored
     // on its id, all of which a DELETE takes with it.
     if (own.length === 1 && placeId) {
-      const before = this.stopOrders([own[0].day_id, dayId]);
+      const before = await this.stopOrders([own[0].day_id, dayId]);
       const moved = await this.relocateOwnStop(own[0], placeId, dayId, checkIn);
       if (moved) {
         mirror.moved = { assignment: moved, oldDayId: own[0].day_id };
-        mirror.stamped = this.stampLodging(placeId);
-        this.reanchorVias(mirror, before);
+        mirror.stamped = await this.stampLodging(placeId);
+        await this.reanchorVias(mirror, before);
         return mirror;
       }
     }
 
-    const beforeRebuild = this.stopOrders(own.map(stop => stop.day_id));
+    const beforeRebuild = await this.stopOrders(own.map(stop => stop.day_id));
     for (const stop of own) {
       this.db.run('DELETE FROM day_assignments WHERE id = ?', stop.id);
       mirror.removed.push({ id: stop.id, dayId: stop.day_id });
     }
-    this.reanchorVias(mirror, beforeRebuild);
+    await this.reanchorVias(mirror, beforeRebuild);
     const fresh = await this.mirrorStay(accommodationId, placeId, dayId, checkIn);
     mirror.created = fresh.created;
     mirror.stamped = fresh.stamped;
@@ -685,10 +689,10 @@ export class AccommodationsService {
       return { accommodationId: newId, mirror: await this.mirrorStay(Number(newId), place_id ?? null, start_day_id, check_in) };
     });
 
-    return { accommodation: this.getAccommodationWithPlace(written.accommodationId), mirror: written.mirror };
+    return { accommodation: await this.getAccommodationWithPlace(written.accommodationId), mirror: written.mirror };
   }
 
-  getAccommodation(id: string | number, tripId: string | number) {
+  async getAccommodation(id: string | number, tripId: string | number) {
     return this.db.get<DayAccommodation>('SELECT * FROM day_accommodations WHERE id = ? AND trip_id = ?', id, tripId);
   }
 
@@ -731,7 +735,7 @@ export class AccommodationsService {
         JSON.stringify(meta), newConfirmation || null, res.id);
     }
 
-    return { accommodation: this.getAccommodationWithPlace(Number(id)), mirror };
+    return { accommodation: await this.getAccommodationWithPlace(Number(id)), mirror };
   }
 
   /**

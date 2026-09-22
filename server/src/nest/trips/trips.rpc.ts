@@ -83,7 +83,7 @@ export class TripsRpc {
 
   @PluginMethod('trips.getAccommodations', { permission: 'db:read:trips' })
   getAccommodations(params: Record<string, unknown>, ctx: PluginRpcContext): unknown {
-    return this.guards.tripRead(params, ctx, () => this.accommodations.list(num(params.tripId, 'tripId')) as unknown[]);
+    return this.guards.tripRead(params, ctx, async () => (await this.accommodations.list(num(params.tripId, 'tripId'))) as unknown[]);
   }
 
   @PluginMethod('trips.listMine', { permission: 'db:read:trips' })

@@ -65,13 +65,13 @@ export class GoogleRouteService {
       if (!(await this.permissions.checkPermission(action, role, access.user_id, userId, access.user_id !== userId)))
         throw new HttpException({ error: 'Permission denied' }, 403);
     }
-    if (!this.assignments.dayExists(String(input.dayId), String(tripId))) throw new HttpException({ error: 'Day not found' }, 404);
+    if (!(await this.assignments.dayExists(String(input.dayId), String(tripId)))) throw new HttpException({ error: 'Day not found' }, 404);
     // `map` cannot await the now-async assignment write, so the same per-stop
     // sequence runs as an explicit loop inside the transaction.
     const imported = await this.uow.transactional(async () => {
-      const rows: { place: ReturnType<PlacesService['create']>; assignment: Awaited<ReturnType<AssignmentsService['createAssignment']>> }[] = [];
+      const rows: { place: Awaited<ReturnType<PlacesService['create']>>; assignment: Awaited<ReturnType<AssignmentsService['createAssignment']>> }[] = [];
       for (const stop of input.stops) {
-        const place = this.places.create(String(tripId), { ...stop, transport_mode: 'car', duration_minutes: 0 });
+        const place = await this.places.create(String(tripId), { ...stop, transport_mode: 'car', duration_minutes: 0 });
         const assignment = await this.assignments.createAssignment(input.dayId, place.id);
         rows.push({ place, assignment });
       }

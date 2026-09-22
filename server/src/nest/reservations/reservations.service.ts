@@ -587,7 +587,7 @@ export class ReservationsService {
    * that belongs to another trip is named here too — the REST controller asks
    * the older guard first, so that case keeps its own answer.
    */
-  unresolvedReferences(tripId: string | number, data: CreateReservationData | UpdateReservationData): string[] {
+  async unresolvedReferences(tripId: string | number, data: CreateReservationData | UpdateReservationData): Promise<string[]> {
     const offenders: string[] = [];
     const onTrip = (table: 'days' | 'places', id: unknown) =>
       !!this.db.get(`SELECT id FROM ${table} WHERE id = ? AND trip_id = ?`, id, tripId);
@@ -610,7 +610,7 @@ export class ReservationsService {
     // on a write that currently succeeds is not what this guard is for.
     if (data.create_accommodation && data.type === 'hotel') {
       const acc = data.create_accommodation;
-      const errors = this.accommodations.validateAccommodationRefs(
+      const errors = await this.accommodations.validateAccommodationRefs(
         tripId, acc.place_id || undefined, acc.start_day_id || undefined, acc.end_day_id || undefined,
       );
       for (const { field } of errors) offenders.push(`create_accommodation.${field}`);

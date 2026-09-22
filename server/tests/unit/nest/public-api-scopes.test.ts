@@ -282,8 +282,8 @@ describe('PublicApiController — what a narrowed key reaches', () => {
     const getTrip = vi.fn().mockReturnValue(TRIP);
     const ctl = apiController({ listTrips, listBucketList, getTrip });
     expect(await ctl.listTrips(req(ALL))).toEqual({ trips: [TRIP] });
-    expect(ctl.listBucketList(req(ALL))).toEqual({ items: [] });
-    expect(ctl.getTrip(req(ALL), '12', undefined)).toEqual(TRIP);
+    expect(await ctl.listBucketList(req(ALL))).toEqual({ items: [] });
+    expect(await ctl.getTrip(req(ALL), '12', undefined)).toEqual(TRIP);
     expect(getTrip).toHaveBeenCalledWith(12, 7, [...PUBLIC_API_INCLUDES], [...PUBLIC_API_SCOPES]);
   });
 
@@ -292,9 +292,9 @@ describe('PublicApiController — what a narrowed key reaches', () => {
     expect(await apiController({ listTrips }).listTrips(req(limited('trips')))).toEqual({ trips: [TRIP] });
   });
 
-  it('PUBAPI-SCOPE-U022: and is refused the bucket list before the service is ever asked', () => {
+  it('PUBAPI-SCOPE-U022: and is refused the bucket list before the service is ever asked', async () => {
     const listBucketList = vi.fn();
-    const res = thrown(() => apiController({ listBucketList }).listBucketList(req(limited('trips'))));
+    const res = await thrownAsync(() => apiController({ listBucketList }).listBucketList(req(limited('trips'))));
     expect(res.status).toBe(403);
     expect(res.body).toMatchObject({ code: 'API_SCOPE_FORBIDDEN', required_scope: 'bucket-list' });
     // The refusal has to happen before the read, not after it: a 403 carrying
@@ -307,35 +307,35 @@ describe('PublicApiController — what a narrowed key reaches', () => {
     const getTrip = vi.fn();
     const ctl = apiController({ listTrips, getTrip });
     expect((await thrownAsync(() => ctl.listTrips(req(limited('bucket-list'))))).status).toBe(403);
-    expect(thrown(() => ctl.getTrip(req(limited('bucket-list')), '12', undefined)).status).toBe(403);
+    expect((await thrownAsync(() => ctl.getTrip(req(limited('bucket-list')), '12', undefined))).status).toBe(403);
     expect(listTrips).not.toHaveBeenCalled();
     expect(getTrip).not.toHaveBeenCalled();
   });
 
-  it('PUBAPI-SCOPE-U024: a trip asked for without include is narrowed, not refused', () => {
+  it('PUBAPI-SCOPE-U024: a trip asked for without include is narrowed, not refused', async () => {
     const getTrip = vi.fn().mockReturnValue(TRIP);
-    apiController({ getTrip }).getTrip(req(limited('trips', 'days', 'notes')), '12', undefined);
+    await apiController({ getTrip }).getTrip(req(limited('trips', 'days', 'notes')), '12', undefined);
     // `include` absent means "everything"; refusing a key for wanting sections it
     // never named would make a narrow key unable to read a trip at all. The grant
     // rides along so the service can tell an implied day block from a granted one.
     expect(getTrip).toHaveBeenCalledWith(12, 7, ['days', 'notes'], ['trips', 'days', 'notes']);
   });
 
-  it('PUBAPI-SCOPE-U025: a trips-only key gets the summary and nothing that hangs off it', () => {
+  it('PUBAPI-SCOPE-U025: a trips-only key gets the summary and nothing that hangs off it', async () => {
     const getTrip = vi.fn().mockReturnValue(TRIP);
-    apiController({ getTrip }).getTrip(req(limited('trips')), '12', undefined);
+    await apiController({ getTrip }).getTrip(req(limited('trips')), '12', undefined);
     expect(getTrip).toHaveBeenCalledWith(12, 7, [], ['trips']);
   });
 
-  it('PUBAPI-SCOPE-U026: an empty include is treated like an absent one, and narrowed too', () => {
+  it('PUBAPI-SCOPE-U026: an empty include is treated like an absent one, and narrowed too', async () => {
     const getTrip = vi.fn().mockReturnValue(TRIP);
-    apiController({ getTrip }).getTrip(req(limited('trips', 'days')), '12', '   ');
+    await apiController({ getTrip }).getTrip(req(limited('trips', 'days')), '12', '   ');
     expect(getTrip).toHaveBeenCalledWith(12, 7, ['days'], ['trips', 'days']);
   });
 
-  it('PUBAPI-SCOPE-U027: a section named explicitly and not granted is a 403, not a silent drop', () => {
+  it('PUBAPI-SCOPE-U027: a section named explicitly and not granted is a 403, not a silent drop', async () => {
     const getTrip = vi.fn();
-    const res = thrown(() =>
+    const res = await thrownAsync(() =>
       apiController({ getTrip }).getTrip(req(limited('trips', 'days')), '12', 'days,places'),
     );
     expect(res).toEqual({
@@ -349,15 +349,15 @@ describe('PublicApiController — what a narrowed key reaches', () => {
     expect(getTrip).not.toHaveBeenCalled();
   });
 
-  it('PUBAPI-SCOPE-U028: an include the key covers is passed through untouched', () => {
+  it('PUBAPI-SCOPE-U028: an include the key covers is passed through untouched', async () => {
     const getTrip = vi.fn().mockReturnValue(TRIP);
-    apiController({ getTrip }).getTrip(req(limited('trips', 'days', 'notes')), '12', 'days, notes');
+    await apiController({ getTrip }).getTrip(req(limited('trips', 'days', 'notes')), '12', 'days, notes');
     expect(getTrip).toHaveBeenCalledWith(12, 7, ['days', 'notes'], ['trips', 'days', 'notes']);
   });
 
-  it('PUBAPI-SCOPE-U029: a bad id is still a 400 — the scope check does not swallow it', () => {
+  it('PUBAPI-SCOPE-U029: a bad id is still a 400 — the scope check does not swallow it', async () => {
     const getTrip = vi.fn();
-    expect(thrown(() => apiController({ getTrip }).getTrip(req(ALL), 'abc', undefined)).status).toBe(400);
+    expect((await thrownAsync(() => apiController({ getTrip }).getTrip(req(ALL), 'abc', undefined))).status).toBe(400);
     expect(getTrip).not.toHaveBeenCalled();
   });
 });

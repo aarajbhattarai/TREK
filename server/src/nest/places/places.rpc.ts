@@ -60,7 +60,7 @@ export class PlacesRpc {
     this.guards.capStrings(parsed.data as Record<string, unknown>, PLACE_STR_LIMITS);
     capUrls(parsed.data as Record<string, unknown>);
     await this.guards.requireTripEdit(tripId, actor, PLACE_EDIT_ACTION);
-    const place = this.places.create(String(tripId), parsed.data as unknown as PlaceCreateInput);
+    const place = await this.places.create(String(tripId), parsed.data as unknown as PlaceCreateInput);
     this.realtime.broadcast(tripId, 'place:created', { place });
     await this.mirrorJourneys(() => this.journey.onPlaceCreated(tripId, place.id));
     return place;
@@ -95,7 +95,7 @@ export class PlacesRpc {
     // Scope the id to the trip before anything else: onPlaceDeleted keys on the place
     // alone, so an id belonging to a foreign trip would detach THAT trip's journey
     // entries even though the delete below refuses it.
-    if (!this.places.get(String(tripId), String(placeId))) {
+    if (!(await this.places.get(String(tripId), String(placeId)))) {
       throw new ForbiddenResource(`no place ${placeId} on trip ${tripId}`);
     }
     // Ahead of the DELETE, like the REST route and the MCP tool:
@@ -103,7 +103,7 @@ export class PlacesRpc {
     // finds nothing left to detach and the entries linger as orphans.
     await this.mirrorJourneys(() => this.journey.onPlaceDeleted(placeId));
     // The link is gone once the place is, so read it first (#1298).
-    const expenseIds = this.places.linkedExpenseIds(tripId, [placeId]);
+    const expenseIds = await this.places.linkedExpenseIds(tripId, [placeId]);
     // remove is async (it deletes the place's storage object): await it so the
     // refusal check sees the resolved answer, not an always-truthy Promise.
     const { deleted, cancelled } = await this.places.remove(String(tripId), String(placeId));
