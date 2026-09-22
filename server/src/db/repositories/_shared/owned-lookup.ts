@@ -1,25 +1,30 @@
 import type { EntityRepository, FilterQuery, FilterValue, OrderDefinition } from '@mikro-orm/core';
 
 /**
- * Shared lookup shapes for entities scoped to a user, some of which also
- * allow a globally-shared row (a nullable owner column).
+ * Shared lookup shapes for entities scoped to a user.
  *
- * Built for `CategoriesRepository`/`TagsRepository` (Plan 3a Task 3), whose
- * `list`/`getById`/`getByIdAndUser` methods are the same two query shapes
- * over different tables: list-scoped-to-owner and find-one-by-id with an
- * ownership check that is either strict (`tags`, whose `user_id` column is
- * `NOT NULL`) or permissive (`categories`, whose `user_id` is nullable and
- * `NULL` rows are read as globally shared). Task 3 decides, per call site,
- * which shape a given legacy statement actually used — `categories.getById`
- * today has no ownership filter at all (`SELECT * FROM categories WHERE id
- * = ?`), so it stays a plain `findOne({ id })` rather than either helper
- * here; changing that would be a behaviour change, not a refactor.
+ * Built for `TagsRepository` (Plan 3a Task 3): `listByUser`/`findByIdAndUser`
+ * are the same two query shapes every strictly-owned entity needs
+ * (`tags.user_id` is `NOT NULL`) — list-scoped-to-owner and find-one-by-id
+ * with an ownership check. `CategoriesRepository` uses neither: its legacy
+ * `list`/`getById` (`SELECT * FROM categories ORDER BY name ASC` / `SELECT *
+ * FROM categories WHERE id = ?`) have no owner filter at all, despite
+ * `categories.user_id` being nullable — changing that would be a behaviour
+ * change, not a refactor, so it stays plain `find`/`findOne`.
+ *
+ * A third helper, `findOwnedOrGlobal` (id match OR a NULL owner column —
+ * the shape `categories.getById` would need if it were ever scoped), was
+ * built alongside these two and then deleted: Task 0 re-review flagged that
+ * no categories or tags site actually filters "owner or global", so it had
+ * only test coverage and no real caller (R6 — "dead code is worse than a
+ * missing helper"). If a future entity needs that shape, recover it from
+ * git history rather than reintroducing it speculatively.
  *
  * These helpers return live MikroORM entities, not rows — unlike every other
  * repository method in this codebase (D4: "repositories return rows, never a
- * live entity"). They are an internal building block for `CategoriesRepository`
- * /`TagsRepository`, which stay the actual public API and must run the result
- * through `toRow` before it leaves the repository.
+ * live entity"). They are an internal building block for `TagsRepository`,
+ * which stays the actual public API and must run the result through `toRow`
+ * before it leaves the repository.
  *
  * Call-site convention (Task 0 re-review): type arguments are ALWAYS explicit —
  * inference from the repository argument alone resolves `T` to the
@@ -31,7 +36,7 @@ import type { EntityRepository, FilterQuery, FilterValue, OrderDefinition } from
  *
  *   listForOwner<Tags, 'user', 'name'>(tags, 'user', userId, 'name');
  *   findOwnedByUser<Tags, 'user'>(tags, id, 'user', userId);
- *   findOwnedOrGlobal<Categories, 'user'>(categories, id, 'user', userId);
+ *   findOwnedByUser<Tags, 'user'>(tags, id, 'user', userId, { refresh: true });
  *
  * Typing (Task 0 review, I2): `T extends { id: unknown }` and `K extends
  * keyof T` tie `ownerField` to a real property of `T` and `ownerId` to
@@ -65,30 +70,24 @@ export async function listForOwner<T extends { id: unknown }, K extends keyof T,
 /**
  * Find one row by id, strictly scoped to an owner:
  * `SELECT * FROM <table> WHERE id = ? AND <ownerField> = ?`.
+ *
+ * `options.refresh` passes straight through to the underlying `findOne`
+ * (Task 0 review, I1's PK-read ruling: a caller whose read can follow a
+ * raw/native write on the same row within the same request sets it). For an
+ * unrestricted call like this one (no `fields` option), MikroORM already
+ * re-queries and merges fresh data on every call regardless of `refresh` —
+ * its identity-map-skip optimisation, and the staleness it can cause without
+ * `refresh`, only engages together with a `fields` restriction (the case
+ * `AppSettingsRepository.getValue` actually hit). `refresh` is still
+ * threaded through here to match the blanket ruling and to stay correct if a
+ * caller ever adds `fields` on top of it.
  */
 export async function findOwnedByUser<T extends { id: unknown }, K extends keyof T>(
   repo: EntityRepository<T>,
   id: T['id'],
   ownerField: K,
   ownerId: FilterValue<T[K]>,
+  options?: { refresh?: boolean },
 ): Promise<T | null> {
-  return repo.findOne({ id, [ownerField]: ownerId } as FilterQuery<T>);
-}
-
-/**
- * Find one row by id, matching either a row `ownerId` owns or a row with no
- * owner at all (a nullable owner column used for globally-shared rows):
- * `SELECT * FROM <table> WHERE id = ? AND (<ownerField> = ? OR <ownerField>
- * IS NULL)`.
- */
-export async function findOwnedOrGlobal<T extends { id: unknown }, K extends keyof T>(
-  repo: EntityRepository<T>,
-  id: T['id'],
-  ownerField: K,
-  ownerId: FilterValue<T[K]>,
-): Promise<T | null> {
-  return repo.findOne({
-    id,
-    $or: [{ [ownerField]: ownerId }, { [ownerField]: null }],
-  } as unknown as FilterQuery<T>);
+  return repo.findOne({ id, [ownerField]: ownerId } as FilterQuery<T>, options);
 }

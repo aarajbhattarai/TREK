@@ -1,57 +1,47 @@
 /**
  * Unit tests for TagsService — TAG-SVC-001 through TAG-SVC-015.
- * Uses a real in-memory SQLite DB so SQL logic is exercised faithfully.
- * The service is constructed directly (new TagsService(new DatabaseService(db)))
- * — no Nest container needed. (TAG-SVC-016..020 covered the deleted
- * tags.bridge; the plugin RPC host now injects TagsService directly.)
+ * Uses a real in-memory SQLite DB so SQL logic is exercised faithfully. The
+ * service is constructed directly (new TagsService(repo)) over a
+ * TagsRepository resolved from the suite's own ORM (Plan 3a Task 3;
+ * `createTestTagsRepo`/`sharedTestOrm` from tests/helpers/test-uow.ts, same
+ * pattern as audit.service.test.ts) — no Nest container needed.
+ * (TAG-SVC-016..020 covered the deleted tags.bridge; the plugin RPC host now
+ * injects TagsService directly.)
  */
-import { describe, it, expect, vi, beforeAll, beforeEach, afterAll } from 'vitest';
-
-// ── DB setup ──────────────────────────────────────────────────────────────────
-
-const { testDb, dbMock } = vi.hoisted(() => {
-  const Database = require('better-sqlite3');
-  const db = new Database(':memory:');
-  db.exec('PRAGMA journal_mode = WAL');
-  db.exec('PRAGMA foreign_keys = ON');
-  db.exec('PRAGMA busy_timeout = 5000');
-  const mock = {
-    db,
-    closeDb: () => {},
-    reinitialize: () => {},
-    getPlaceWithTags: () => null,
-    canAccessTrip: () => null,
-    isOwner: () => false,
-  };
-  return { testDb: db, dbMock: mock };
-});
-
-vi.mock('../../../src/db/database', () => dbMock);
-vi.mock('../../../src/config', () => ({
-  JWT_SECRET: 'test-secret',
-  ENCRYPTION_KEY: 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6a7b8c9d0e1f2a3b4c5d6a7b8c9d0e1f2',
-  updateJwtSecret: () => {},
-}));
-
+import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
+import Database from 'better-sqlite3';
 import { createTables } from '../../../src/db/schema';
 import { runMigrations } from '../../../src/db/migrations';
 import { resetTestDb } from '../../helpers/test-db';
 import { createUser } from '../../helpers/factories';
-import { DatabaseService } from '../../../src/nest/database/database.service';
+import { createTestTagsRepo, sharedTestOrm } from '../../helpers/test-uow';
+import type { TestOrm } from '../../helpers/test-orm';
 import { TagsService } from '../../../src/nest/tags/tags.service';
 
-const svc = new TagsService(new DatabaseService(testDb));
+// ── DB setup ──────────────────────────────────────────────────────────────────
 
-beforeAll(() => {
+const testDb = new Database(':memory:');
+testDb.exec('PRAGMA journal_mode = WAL');
+testDb.exec('PRAGMA foreign_keys = ON');
+testDb.exec('PRAGMA busy_timeout = 5000');
+
+let t: TestOrm;
+let svc: TagsService;
+
+beforeAll(async () => {
   createTables(testDb);
   runMigrations(testDb);
+  t = await sharedTestOrm(testDb);
+  svc = new TagsService(await createTestTagsRepo(testDb));
 });
 
 beforeEach(() => {
   resetTestDb(testDb);
+  t.clear();
 });
 
-afterAll(() => {
+afterAll(async () => {
+  await t.close();
   testDb.close();
 });
 

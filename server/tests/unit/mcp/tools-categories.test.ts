@@ -50,7 +50,7 @@ import { RuntimeEnvService } from '../../../src/nest/app-config/runtime-env.serv
 import { PermissionsService } from '../../../src/nest/permissions/permissions.service';
 import { RealtimeService } from '../../../src/nest/realtime/realtime.service';
 import { McpToolGuardsService } from '../../../src/nest/mcp-shared/mcp-tool-guards.service';
-import { createTestUnitOfWork, createTestAppSettingsRepo } from '../../helpers/test-uow';
+import { createTestUnitOfWork, createTestAppSettingsRepo, createTestCategoriesRepo } from '../../helpers/test-uow';
 
 beforeAll(() => {
   createTables(testDb);
@@ -83,7 +83,7 @@ const categoriesDb = new DatabaseService(testDb);
 let categoriesMcp: CategoriesMcp;
 beforeAll(async () => {
   categoriesMcp = new CategoriesMcp(
-  new CategoriesService(categoriesDb),
+  new CategoriesService(await createTestCategoriesRepo(categoriesDb.connection)),
   categoriesDb,
   new RuntimeEnvService(),
   new McpToolGuardsService(categoriesDb, new PermissionsService(await createTestAppSettingsRepo(categoriesDb.connection), await createTestUnitOfWork(categoriesDb.connection)), new RealtimeService()),

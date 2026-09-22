@@ -1,22 +1,18 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createSnapshotTestDb } from '../../../../helpers/db-mock';
 import { resetTestDb } from '../../../../helpers/test-db';
 import { createTestOrm, type TestOrm } from '../../../../helpers/test-orm';
-import { createCategory, createTag, createUser } from '../../../../helpers/factories';
-import { Categories } from '../../../../../src/db/entities/Categories.entity';
+import { createTag, createUser } from '../../../../helpers/factories';
 import { Tags } from '../../../../../src/db/entities/Tags.entity';
-import type { CategoriesRepository } from '../../../../../src/db/repositories/Categories.repository';
 import type { TagsRepository } from '../../../../../src/db/repositories/Tags.repository';
-import { findOwnedByUser, findOwnedOrGlobal, listForOwner } from '../../../../../src/db/repositories/_shared/owned-lookup';
+import { findOwnedByUser, listForOwner } from '../../../../../src/db/repositories/_shared/owned-lookup';
 
 const testDb = createSnapshotTestDb();
 let t: TestOrm;
-let categories: CategoriesRepository;
 let tags: TagsRepository;
 
 beforeAll(async () => {
   t = await createTestOrm(testDb);
-  categories = t.repo(Categories) as CategoriesRepository;
   tags = t.repo(Tags) as TagsRepository;
 });
 beforeEach(() => { resetTestDb(testDb); t.clear(); });
@@ -63,33 +59,29 @@ describe('findOwnedByUser', () => {
     const { user: owner } = createUser(testDb);
     expect(await findOwnedByUser<Tags, 'user'>(tags, 999999, 'user', owner.id)).toBeNull();
   });
-});
 
-describe('findOwnedOrGlobal', () => {
-  it('OWNEDLOOKUP-006: finds a row the given user owns — Categories (a permissively-owned entity, user_id nullable)', async () => {
+  // Task 0 review I1's PK-read ruling, extended to this helper (Task 3):
+  // `options.refresh` passes through to `findOne`. For an unrestricted
+  // (full-row) findOne like this one, MikroORM already re-queries and merges
+  // fresh data on every call regardless of `refresh` (proven below: a raw
+  // write on the same row is visible either way) — `refresh`'s
+  // identity-map-skip optimisation (and the staleness it can cause without
+  // it) only engages when `options.fields` is also set, which is why
+  // AppSettingsRepository.getValue (a `fields: ['value']`-scoped findOne)
+  // needed it to fix a real bug and this one does not. It stays on this
+  // helper regardless, matching the Task 0 review's blanket PK-read ruling
+  // and staying correct if a future caller adds a `fields` restriction here.
+  it('OWNEDLOOKUP-006: { refresh: true } sees a raw UPDATE on the same row in the same request, in one query', async () => {
     const { user: owner } = createUser(testDb);
-    const category = createCategory(testDb, { name: 'Mine', user_id: owner.id });
-    const found = await findOwnedOrGlobal<Categories, 'user'>(categories, category.id, 'user', owner.id);
-    expect(found?.id).toBe(category.id);
-  });
-
-  it('OWNEDLOOKUP-007: finds a row with no owner at all (a globally-shared row)', async () => {
-    const { user: someone } = createUser(testDb);
-    const global = createCategory(testDb, { name: 'Global', user_id: null });
-    const found = await findOwnedOrGlobal<Categories, 'user'>(categories, global.id, 'user', someone.id);
-    expect(found?.id).toBe(global.id);
-  });
-
-  it('OWNEDLOOKUP-008: refuses a row owned by somebody else — a non-null owner that is not the caller is not global', async () => {
-    const { user: owner } = createUser(testDb);
-    const { user: stranger } = createUser(testDb);
-    const category = createCategory(testDb, { name: 'Theirs', user_id: owner.id });
-    expect(await findOwnedOrGlobal<Categories, 'user'>(categories, category.id, 'user', stranger.id)).toBeNull();
-  });
-
-  it('OWNEDLOOKUP-009: returns null for an id that does not exist', async () => {
-    const { user: someone } = createUser(testDb);
-    expect(await findOwnedOrGlobal<Categories, 'user'>(categories, 999999, 'user', someone.id)).toBeNull();
+    const tag = createTag(testDb, owner.id, { name: 'Old' });
+    expect((await findOwnedByUser<Tags, 'user'>(tags, tag.id, 'user', owner.id))?.name).toBe('Old'); // populate the identity map
+    testDb.prepare('UPDATE tags SET name = ? WHERE id = ?').run('New', tag.id);
+    const connection = t.orm.em.getConnection();
+    const spy = vi.spyOn(connection, 'execute');
+    const found = await findOwnedByUser<Tags, 'user'>(tags, tag.id, 'user', owner.id, { refresh: true });
+    expect(found?.name).toBe('New');
+    expect(spy.mock.calls.length).toBe(1);
+    spy.mockRestore();
   });
 });
 
@@ -124,12 +116,6 @@ function typeProbes(): void {
   // orderField must be a real property of Tags.
   // @ts-expect-error 'not_a_column' is not a key of Tags
   void listForOwner<Tags, 'user', 'not_a_column'>(tags, 'user', 1, 'not_a_column');
-
-  // Same two shapes for findOwnedOrGlobal.
-  // @ts-expect-error AppSettings has no `id` property
-  void findOwnedOrGlobal<AppSettings, 'value'>(appSettingsRepoForProbe, 1, 'value', 'whatever');
-  // @ts-expect-error ownerId is not a value `Categories['user']` can be filtered by
-  void findOwnedOrGlobal<Categories, 'user'>(categories, 1, 'user', { nonsense: true });
 }
 void typeProbes;
 declare const appSettingsRepoForProbe: import('../../../../../src/db/repositories/AppSettings.repository').AppSettingsRepository;

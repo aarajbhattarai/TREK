@@ -4,9 +4,15 @@ import { UnitOfWork } from '../../src/nest/database/unit-of-work';
 import { createTestOrm, type TestOrm } from './test-orm';
 import { AppSettings } from '../../src/db/entities/AppSettings.entity';
 import type { AppSettingsRepository } from '../../src/db/repositories/AppSettings.repository';
+import { Categories } from '../../src/db/entities/Categories.entity';
+import type { CategoriesRepository } from '../../src/db/repositories/Categories.repository';
+import { Tags } from '../../src/db/entities/Tags.entity';
+import type { TagsRepository } from '../../src/db/repositories/Tags.repository';
 
 const perHandle = new WeakMap<Database.Database, Promise<UnitOfWork>>();
 const appSettingsPerHandle = new WeakMap<Database.Database, Promise<AppSettingsRepository>>();
+const categoriesPerHandle = new WeakMap<Database.Database, Promise<CategoriesRepository>>();
+const tagsPerHandle = new WeakMap<Database.Database, Promise<TagsRepository>>();
 // ONE MikroORM per handle, shared by createTestUnitOfWork and
 // createTestAppSettingsRepo (task-2-review.md I2): each used to call
 // createTestOrm(db) independently, which opened a SECOND MikroORM.init over the
@@ -72,6 +78,33 @@ export function createTestAppSettingsRepo(db: Database.Database): Promise<AppSet
   if (existing !== undefined) return existing;
   const pending = sharedTestOrm(db).then((t) => t.repo(AppSettings) as AppSettingsRepository);
   appSettingsPerHandle.set(db, pending);
+  return pending;
+}
+
+/**
+ * The `CategoriesRepository` a hand-constructed `CategoriesService` needs
+ * (Plan 3a Task 3), bound to the suite's own better-sqlite3 handle and
+ * memoised via the same `sharedTestOrm` the other helpers here use — not a
+ * second `createTestOrm` call (task-2-review.md I2's one-ORM-per-handle
+ * ruling).
+ */
+export function createTestCategoriesRepo(db: Database.Database): Promise<CategoriesRepository> {
+  const existing = categoriesPerHandle.get(db);
+  if (existing !== undefined) return existing;
+  const pending = sharedTestOrm(db).then((t) => t.repo(Categories) as CategoriesRepository);
+  categoriesPerHandle.set(db, pending);
+  return pending;
+}
+
+/**
+ * The `TagsRepository` a hand-constructed `TagsService` needs (Plan 3a Task
+ * 3), same memoisation as `createTestCategoriesRepo`.
+ */
+export function createTestTagsRepo(db: Database.Database): Promise<TagsRepository> {
+  const existing = tagsPerHandle.get(db);
+  if (existing !== undefined) return existing;
+  const pending = sharedTestOrm(db).then((t) => t.repo(Tags) as TagsRepository);
+  tagsPerHandle.set(db, pending);
   return pending;
 }
 
