@@ -68,9 +68,14 @@ const transportSheet = (page: Page) => portalDialog(page, page.getByRole('button
 async function searchLocation(page: Page, box: Locator, query: string, match: RegExp): Promise<void> {
   await box.click()
   await typeInto(page, box, query)
-  const first = suggestions(box).locator('button').first()
-  await expect(first).toBeVisible({ timeout: 25_000 })
-  await first.click()
+  const options = suggestions(box).locator('button')
+  await expect(options.first()).toBeVisible({ timeout: 25_000 })
+  // The suggestion that answers the query, not whatever came back first: this
+  // list is a live geocoder and its top hit for a landmark is as often a shop
+  // down the road, which then travels into the picture as the wrong address.
+  const wanted = options.filter({ hasText: match }).first()
+  await expect(wanted, `no suggestion for "${query}" matching ${match}`).toBeVisible({ timeout: 25_000 })
+  await wanted.click()
   await expect(box).toHaveValue(match, { timeout: 15_000 })
 }
 

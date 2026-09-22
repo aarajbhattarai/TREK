@@ -218,15 +218,17 @@ const SCRIPTS: Record<string, GuideScript> = {
       only(p => dayCard(p, 2).locator('header')),
       only(p => dayCard(p, 2).getByRole('list').first()),
       {
-        target: p => dayCard(p, 1).locator('header'),
+        // Day 2, like the two steps above: the rail leaves out a day with
+        // nothing to drive, and day 1 is one of them.
+        target: p => dayCard(p, 2).locator('header'),
         act: async p => {
-          await dayCard(p, 1).locator('header').click()
-          await expect(dayCard(p, 1).locator('header')).toHaveAttribute('aria-expanded', 'false')
+          await dayCard(p, 2).locator('header').click()
+          await expect(dayCard(p, 2).locator('header')).toHaveAttribute('aria-expanded', 'false')
           await settle(p)
           // Folded is not the state to leave the trip in, and the result picture
           // is of the whole drive rather than of one card shut.
-          await dayCard(p, 1).locator('header').click()
-          await expect(dayCard(p, 1).locator('header')).toHaveAttribute('aria-expanded', 'true')
+          await dayCard(p, 2).locator('header').click()
+          await expect(dayCard(p, 2).locator('header')).toHaveAttribute('aria-expanded', 'true')
           await settle(p)
         },
       },
@@ -395,7 +397,9 @@ const SCRIPTS: Record<string, GuideScript> = {
         // Which day the click landed on is the router's answer, not ours.
         target: p => {
           const day = seededTrip().dayIds.indexOf(viaDayId) + 1
-          return dayCard(p, day > 0 ? day : 1).locator('header')
+          // Fall back to day 2, not day 1: the rail has no card for a day
+          // with nothing to drive.
+          return dayCard(p, day > 0 ? day : 2).locator('header')
         },
       },
       {

@@ -384,9 +384,30 @@ const SCRIPTS: Record<string, GuideScript> = {
       only(p => footer(p).getByRole('button', { name: 'Open Website' })),
     ],
   },
+/**
+ * Take a place out of every collection it sits in.
+ *
+ * Run before the guide as well as after it: the Collections screen's own guides
+ * run earlier in the suite and leave places saved, and a place that is already
+ * in a list offers Saved where this guide's first step looks for Save to
+ * Collection.
+ */
+async function unsaveEverywhere(page: Page, name: string): Promise<void> {
+  const place = await findPlace(page, name)
+  if (!place) return
+  const query = new URLSearchParams({ name: place.name, lat: String(place.lat ?? ''), lng: String(place.lng ?? '') })
+  const res = await page.request.get(`/api/addons/collections/membership?${query.toString()}`)
+  if (!res.ok()) return
+  const body = (await res.json()) as { lists?: { place_id: number }[] }
+  for (const entry of body.lists ?? []) {
+    await page.request.delete(`/api/addons/collections/places/${entry.place_id}`)
+  }
+}
+
   'place-to-collection': {
     guide: guide('place-to-collection'),
     start: async p => {
+      await unsaveEverywhere(p, 'Senso-ji Temple')
       await openTrip(p, { day: null })
       await openPlace(p, 'Senso-ji Temple')
     },
@@ -417,16 +438,7 @@ const SCRIPTS: Record<string, GuideScript> = {
         },
       },
     ],
-    cleanup: async p => {
-      const place = await findPlace(p, 'Senso-ji Temple')
-      if (!place) return
-      const query = new URLSearchParams({ name: place.name, lat: String(place.lat ?? ''), lng: String(place.lng ?? '') })
-      const res = await p.request.get(`/api/addons/collections/membership?${query.toString()}`)
-      const body = (await res.json()) as { lists?: { place_id: number }[] }
-      for (const entry of body.lists ?? []) {
-        await p.request.delete(`/api/addons/collections/places/${entry.place_id}`)
-      }
-    },
+    cleanup: p => unsaveEverywhere(p, 'Senso-ji Temple'),
   },
   'place-track': {
     guide: guide('place-track'),
