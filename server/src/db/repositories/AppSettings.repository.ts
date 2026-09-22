@@ -20,6 +20,9 @@ export class AppSettingsRepository extends EntityRepository<AppSettings> {
    * the same key inside the same request, which is exactly the coexistence
    * case this plan is built on (raw SQL and the ORM sharing one connection
    * while callers convert one at a time). `refresh` keeps this a single
+   * Side effect of `refresh`: an UNFLUSHED in-memory change to the selected
+   * field on that entity is discarded (the entity reverts to the row). No
+   * caller mutates these entities before reading, by design (D4: rows out).
    * query either way; only a stale identity-map hit is avoided.
    */
   async getValue(key: string): Promise<string | null> {

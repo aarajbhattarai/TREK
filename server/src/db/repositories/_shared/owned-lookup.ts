@@ -21,6 +21,18 @@ import type { EntityRepository, FilterQuery, FilterValue, OrderDefinition } from
  * /`TagsRepository`, which stay the actual public API and must run the result
  * through `toRow` before it leaves the repository.
  *
+ * Call-site convention (Task 0 re-review): type arguments are ALWAYS explicit —
+ * inference from the repository argument alone resolves `T` to the
+ * `{ id: unknown }` constraint and fails to compile (TS2345) — and the owner
+ * field is the RELATION property (`'user'`), never the `persist(false)` twin
+ * (`'user_id'`): both compile and emit the same SQL, but only the relation
+ * name survives a column rename and reads as the entity's API. `ownerId` is the
+ * raw FK number. Canonical calls:
+ *
+ *   listForOwner<Tags, 'user', 'name'>(tags, 'user', userId, 'name');
+ *   findOwnedByUser<Tags, 'user'>(tags, id, 'user', userId);
+ *   findOwnedOrGlobal<Categories, 'user'>(categories, id, 'user', userId);
+ *
  * Typing (Task 0 review, I2): `T extends { id: unknown }` and `K extends
  * keyof T` tie `ownerField` to a real property of `T` and `ownerId` to
  * `FilterValue<T[K]>` — the same value shape MikroORM's own `FilterObject`

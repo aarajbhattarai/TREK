@@ -30,7 +30,8 @@ describe('listForOwner', () => {
     createTag(testDb, owner.id, { name: 'Apple' });
     createTag(testDb, other.id, { name: 'Middle' });
 
-    // T/K/OF all inferred: T from `tags`, K from the 'user' literal, OF from 'name'.
+    // Type arguments are always explicit: inference from the `tags` argument alone
+    // resolves T to the `{ id: unknown }` constraint (TS2345), never to the entity.
     const rows = await listForOwner<Tags, 'user', 'name'>(tags, 'user', owner.id, 'name');
     expect(rows.map((r) => r.name)).toEqual(['Apple', 'Zebra']);
     expect(rows.every((r) => r.user_id === owner.id)).toBe(true);

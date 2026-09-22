@@ -101,10 +101,13 @@ export async function createTestOrm(
  * middleware, since D6 needs the per-request EM fork this default provides)
  * changes what `buildApp()` registers. Building this helper from the same
  * `mikroOrmConfig` object production uses means that fix reaches both at
- * once; if it is ever done as a hand-edit instead, this helper's 15 e2e
- * harnesses would silently stop mirroring production and need the same
+ * once; if it is ever done as a hand-edit instead, the e2e harnesses built
+ * on this helper would silently stop mirroring production and need the same
  * `allowGlobalContext`-style re-justification `createTestOrm` above got.
  */
+// The spread also carries production's `extensions` (Migrator, SeedManager),
+// `migrations` and `seeder` settings into the harness; only the driver, the
+// database name, the entity list and discovery noise are overridden.
 export function createTestMikroOrmModule(db: Database.Database): DynamicModule | Promise<DynamicModule> {
   return MikroOrmModule.forRoot({
     ...mikroOrmConfig,

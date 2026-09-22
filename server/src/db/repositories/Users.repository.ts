@@ -22,6 +22,9 @@ export class UsersRepository extends EntityRepository<Users> {
    * from the identity map on a repeat call, which would hide a raw/native
    * `UPDATE users SET email = ...` on the same id inside the same request.
    * `refresh` keeps this a single query and always sees the current row.
+   * Side effect of `refresh`: an UNFLUSHED in-memory change to the selected
+   * field on that entity is discarded (the entity reverts to the row). No
+   * caller mutates these entities before reading, by design (D4: rows out).
    */
   async getEmail(userId: number): Promise<string | null> {
     const row = await this.findOne({ id: userId }, { fields: ['email'], refresh: true });
