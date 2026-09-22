@@ -62,7 +62,7 @@ export class PlacesRpc {
     await this.guards.requireTripEdit(tripId, actor, PLACE_EDIT_ACTION);
     const place = this.places.create(String(tripId), parsed.data as unknown as PlaceCreateInput);
     this.realtime.broadcast(tripId, 'place:created', { place });
-    this.mirrorJourneys(() => this.journey.onPlaceCreated(tripId, place.id));
+    await this.mirrorJourneys(() => this.journey.onPlaceCreated(tripId, place.id));
     return place;
   }
 
@@ -82,7 +82,7 @@ export class PlacesRpc {
     const place = await this.places.update(String(tripId), String(placeId), parsed.data as PlaceUpdateInput);
     if (place === null) throw new ForbiddenResource(`no place ${placeId} on trip ${tripId}`);
     this.realtime.broadcast(tripId, 'place:updated', { place });
-    this.mirrorJourneys(() => this.journey.onPlaceUpdated(placeId));
+    await this.mirrorJourneys(() => this.journey.onPlaceUpdated(placeId));
     return place;
   }
 
@@ -101,7 +101,7 @@ export class PlacesRpc {
     // Ahead of the DELETE, like the REST route and the MCP tool:
     // journey_entries.source_place_id is ON DELETE SET NULL, so afterwards the hook
     // finds nothing left to detach and the entries linger as orphans.
-    this.mirrorJourneys(() => this.journey.onPlaceDeleted(placeId));
+    await this.mirrorJourneys(() => this.journey.onPlaceDeleted(placeId));
     // The link is gone once the place is, so read it first (#1298).
     const expenseIds = this.places.linkedExpenseIds(tripId, [placeId]);
     // remove is async (it deletes the place's storage object): await it so the
@@ -121,14 +121,10 @@ export class PlacesRpc {
 
   /**
    * Journey mirroring never fails a write that already succeeded.
-   *
-   * R1.5: `run` wraps a now-async `this.journey.onPlace*` call; its rejection is
-   * swallowed here (void + catch) rather than left unhandled — same "non-fatal"
-   * contract the synchronous try/catch gave it before the sweep.
    */
-  private mirrorJourneys(run: () => Promise<void>): void {
+  private async mirrorJourneys(run: () => Promise<void>): Promise<void> {
     try {
-      void run().catch(() => { /* non-fatal */ });
+      await run();
     } catch {
       /* non-fatal */
     }

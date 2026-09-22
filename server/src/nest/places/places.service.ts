@@ -1594,10 +1594,19 @@ export class PlacesService {
   }
 
   // Journey hooks — non-fatal, mirroring the route's try/catch wrappers.
-  // R1.5: called fire-and-forget from several sync call sites; onPlace* are now async,
-  // so the rejection is swallowed here (void + catch) rather than left unhandled —
-  // same "non-fatal" contract the try/catch gave it before the sweep.
-  onCreated(tripId: string, placeId: number): void { void this.journey.onPlaceCreated(Number(tripId), placeId).catch(() => { /* non-fatal */ }); }
-  onUpdated(placeId: number): void { void this.journey.onPlaceUpdated(placeId).catch(() => { /* non-fatal */ }); }
-  onDeleted(placeId: number): void { void this.journey.onPlaceDeleted(placeId).catch(() => { /* non-fatal */ }); }
+  async onCreated(tripId: string, placeId: number): Promise<void> {
+    try {
+      await this.journey.onPlaceCreated(Number(tripId), placeId);
+    } catch { /* non-fatal */ }
+  }
+  async onUpdated(placeId: number): Promise<void> {
+    try {
+      await this.journey.onPlaceUpdated(placeId);
+    } catch { /* non-fatal */ }
+  }
+  async onDeleted(placeId: number): Promise<void> {
+    try {
+      await this.journey.onPlaceDeleted(placeId);
+    } catch { /* non-fatal */ }
+  }
 }

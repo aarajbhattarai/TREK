@@ -81,7 +81,7 @@ export class GoogleRouteService {
       this.places.broadcast(String(tripId), 'place:created', { place }, socketId);
       this.assignments.broadcast(String(tripId), 'assignment:created', { assignment }, socketId);
     }
-    this.assignments.reconcile(tripId, socketId);
+    await this.assignments.reconcile(tripId, socketId);
     return { imported: imported.length };
   }
 }

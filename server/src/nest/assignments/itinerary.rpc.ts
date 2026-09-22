@@ -36,7 +36,7 @@ export class ItineraryRpc {
     if (!this.assignments.placeExists(placeId, tripId)) throw new ForbiddenResource(`no place ${placeId} on trip ${tripId}`);
     const assignment = await this.assignments.createAssignment(dayId, placeId, notes);
     this.realtime.broadcast(tripId, 'assignment:created', { assignment });
-    this.assignments.reconcile(tripId);
+    await this.assignments.reconcile(tripId);
     return assignment;
   }
 
@@ -55,7 +55,7 @@ export class ItineraryRpc {
     // Create, delete, move and time re-mirror the linked journey skeletons afterwards,
     // in the controller and the MCP tool alike; reorder, transport and participants do
     // not. Without it an open journey keeps the removed place until the next reload.
-    this.assignments.reconcile(tripId);
+    await this.assignments.reconcile(tripId);
     return { deleted: true };
   }
 }

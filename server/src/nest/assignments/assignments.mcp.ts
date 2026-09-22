@@ -53,7 +53,7 @@ export class AssignmentsMcp {
     if (!this.assignments.placeExists(placeId, tripId)) return errorResult('Place not found.');
     const assignment = await this.assignments.createAssignment(dayId, placeId, notes || null);
     this.guards.safeBroadcast(tripId, 'assignment:created', { assignment });
-    this.assignments.reconcile(tripId);
+    await this.assignments.reconcile(tripId);
     return ok({ assignment });
   }
 
@@ -103,7 +103,7 @@ export class AssignmentsMcp {
       return errorResult('Assignment not found.');
     this.assignments.deleteAssignment(assignmentId);
     this.guards.safeBroadcast(tripId, 'assignment:deleted', { assignmentId, dayId });
-    this.assignments.reconcile(tripId);
+    await this.assignments.reconcile(tripId);
     return ok({ success: true });
   }
 
@@ -139,7 +139,7 @@ export class AssignmentsMcp {
     this.guards.safeBroadcast(tripId, 'assignment:updated', { assignment });
     if (reordered) this.guards.safeBroadcast(tripId, 'assignment:reordered', reordered);
     if (vias) this.guards.safeBroadcast(tripId, 'roadtripVia:changed', vias);
-    this.assignments.reconcile(tripId);
+    await this.assignments.reconcile(tripId);
     return ok({ assignment });
   }
 
@@ -228,7 +228,7 @@ export class AssignmentsMcp {
     // per-day assignment map on newDayId, so omitting it filed the moved assignment
     // under "undefined" on collaborator screens.
     this.guards.safeBroadcast(tripId, 'assignment:moved', { assignment: result.assignment, oldDayId: result.oldDayId, newDayId });
-    this.assignments.reconcile(tripId);
+    await this.assignments.reconcile(tripId);
     return ok({ assignment: result.assignment });
   }
 

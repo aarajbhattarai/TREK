@@ -218,7 +218,7 @@ export class AccommodationsService {
     // anchors it holds against the order it holds, and the two have to land together.
     for (const day of mirror.vias ?? []) send('roadtripVia:changed', day);
 
-    if (mirror.created || mirror.moved || mirror.removed.length > 0) this.assignments.reconcile(tripId, socketId);
+    if (mirror.created || mirror.moved || mirror.removed.length > 0) await this.assignments.reconcile(tripId, socketId);
   }
 
   /** Days whose stop order this write can have changed, each named once. */

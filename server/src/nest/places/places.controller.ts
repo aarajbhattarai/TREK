@@ -158,7 +158,7 @@ export class PlacesController {
     await this.requireEdit(trip, user);
     const place = this.places.create(tripId, body as never);
     this.places.broadcast(tripId, 'place:created', { place }, socketId);
-    this.places.onCreated(tripId, place.id);
+    await this.places.onCreated(tripId, place.id);
     return { place };
   }
 
@@ -318,7 +318,7 @@ export class PlacesController {
     // the DELETE — journey_entries.source_place_id is ON DELETE SET NULL, so
     // afterwards there is nothing left to detach.
     const scoped = this.places.scopedIds(tripId, ids);
-    for (const id of scoped) this.places.onDeleted(id);
+    for (const id of scoped) await this.places.onDeleted(id);
     // Read the linked expenses before the delete — afterwards the link is gone (#1298).
     const expenseIds = this.places.linkedExpenseIds(tripId, scoped);
     const { deleted, cancelled } = await this.places.removeMany(tripId, ids);
@@ -364,7 +364,7 @@ export class PlacesController {
     const updated = await this.places.updateMany(tripId, ids, { category_id: body.category_id as number | null });
     for (const place of updated) {
       this.places.broadcast(tripId, 'place:updated', { place }, socketId);
-      this.places.onUpdated(place.id);
+      await this.places.onUpdated(place.id);
     }
     return { updated: updated.map((p) => p.id), count: updated.length };
   }
@@ -410,7 +410,7 @@ export class PlacesController {
     }
     const place = result;
     this.places.broadcast(tripId, 'place:updated', { place }, socketId);
-    this.places.onUpdated(place.id);
+    await this.places.onUpdated(place.id);
     return { place };
   }
 
@@ -485,7 +485,7 @@ export class PlacesController {
     }
     const place = result;
     this.places.broadcast(tripId, 'place:updated', { place }, socketId);
-    this.places.onUpdated(place.id);
+    await this.places.onUpdated(place.id);
     return { place };
   }
 
@@ -498,7 +498,7 @@ export class PlacesController {
     if (!this.places.get(tripId, id)) {
       throw new HttpException({ error: 'Place not found' }, 404);
     }
-    this.places.onDeleted(Number(id));
+    await this.places.onDeleted(Number(id));
     const expenseIds = this.places.linkedExpenseIds(tripId, [id]);
     const { deleted, cancelled } = await this.places.remove(tripId, id);
     if (!deleted) {

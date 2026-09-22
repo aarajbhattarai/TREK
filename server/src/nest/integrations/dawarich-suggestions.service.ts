@@ -271,7 +271,7 @@ export class DawarichSuggestionsService {
     // a place somebody added to the trip. Skipping them is why an accepted stay
     // used to need a page reload to show up.
     this.places.broadcast(String(tripId), 'place:created', { place: created }, sid);
-    this.places.onCreated(String(tripId), placeId);
+    await this.places.onCreated(String(tripId), placeId);
     if (assignment) {
       this.assignments.broadcast(String(tripId), 'assignment:created', { assignment }, sid);
     }

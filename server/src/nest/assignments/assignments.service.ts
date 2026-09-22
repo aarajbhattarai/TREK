@@ -83,12 +83,10 @@ export class AssignmentsService {
    * suggestions. Called after any assignment mutation (create/delete/move/time) so
    * the journey stays in sync. Non-fatal, like the route's try/catch.
    */
-  reconcile(tripId: string | number, socketId?: string): void {
-    // R1.5: reconcile() is called fire-and-forget from a dozen sync call sites across
-    // this domain; reconcileTripSkeletons is now async, so the rejection is caught here
-    // instead of escaping as an unhandled promise rejection — same "non-fatal" contract
-    // the try/catch gave it before the sweep.
-    void this.journey.reconcileTripSkeletons(Number(tripId), socketId).catch(() => { /* non-fatal */ });
+  async reconcile(tripId: string | number, socketId?: string): Promise<void> {
+    try {
+      await this.journey.reconcileTripSkeletons(Number(tripId), socketId);
+    } catch { /* non-fatal */ }
   }
 
   /**

@@ -72,7 +72,7 @@ export class DayAssignmentsController {
     }
     const assignment = await this.assignments.createAssignment(dayId, body.place_id, body.notes);
     this.assignments.broadcast(tripId, 'assignment:created', { assignment }, socketId);
-    this.assignments.reconcile(tripId, socketId);
+    await this.assignments.reconcile(tripId, socketId);
     return { assignment };
   }
 
@@ -95,7 +95,7 @@ export class DayAssignmentsController {
 
   @RequirePermission('day_edit')
   @Delete(':id')
-  remove(
+  async remove(
     @CurrentUser() user: User,
     @Param('tripId') tripId: string,
     @Param('dayId') dayId: string,
@@ -107,7 +107,7 @@ export class DayAssignmentsController {
     }
     this.assignments.deleteAssignment(id);
     this.assignments.broadcast(tripId, 'assignment:deleted', { assignmentId: Number(id), dayId: Number(dayId) }, socketId);
-    this.assignments.reconcile(tripId, socketId);
+    await this.assignments.reconcile(tripId, socketId);
     return { success: true };
   }
 }
@@ -143,7 +143,7 @@ export class AssignmentOpsController {
     }
     const { assignment, oldDayId } = await this.assignments.moveAssignment(id, body.new_day_id, body.order_index);
     this.assignments.broadcast(tripId, 'assignment:moved', { assignment, oldDayId: Number(oldDayId), newDayId: Number(body.new_day_id) }, socketId);
-    this.assignments.reconcile(tripId, socketId);
+    await this.assignments.reconcile(tripId, socketId);
     return { assignment };
   }
 
@@ -178,7 +178,7 @@ export class AssignmentOpsController {
     // replayed from the offline queue has no reload after it at all.
     if (reordered) this.assignments.broadcast(tripId, 'assignment:reordered', reordered, undefined);
     if (vias) this.assignments.broadcast(tripId, 'roadtripVia:changed', vias, undefined);
-    this.assignments.reconcile(tripId, socketId);
+    await this.assignments.reconcile(tripId, socketId);
     return { assignment };
   }
 
