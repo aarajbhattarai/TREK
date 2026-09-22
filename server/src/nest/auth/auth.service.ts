@@ -425,12 +425,17 @@ export class AuthService {
     return { token, user: { ...safe, avatar_url: avatarUrl(user) } };
   }
 
-  async validateInviteToken(token: string): Promise<{ error?: string; status?: number; valid?: boolean; max_uses?: number; used_count?: number; expires_at?: string }> {
+  async validateInviteToken(token: string): Promise<{ error?: string; status?: number; valid?: boolean; max_uses?: number; used_count?: number; expires_at?: string | null }> {
     const invite = await this.inviteTokens.findByToken(token);
     if (!invite) return { error: 'Invalid invite link', status: 404 };
     if (invite.max_uses > 0 && invite.used_count >= invite.max_uses) return { error: 'Invite link has been fully used', status: 410 };
     if (invite.expires_at && new Date(invite.expires_at) < new Date()) return { error: 'Invite link has expired', status: 410 };
-    return { valid: true, max_uses: invite.max_uses, used_count: invite.used_count, expires_at: invite.expires_at ?? undefined };
+    // Rule 16 (nullable columns stay null on the wire, docs/superpowers/plans/
+    // 2026-09-21-orm-migration-program.md:45; task-5-review-security.md F1 /
+    // task-5-review-template.md T1): pass the repository's `string | null`
+    // through unchanged — `?? undefined` made JSON.stringify drop the key
+    // entirely for a never-expiring invite instead of emitting `null`.
+    return { valid: true, max_uses: invite.max_uses, used_count: invite.used_count, expires_at: invite.expires_at };
   }
 
   async registerUser(rawBody: unknown): Promise<{ error?: string; status?: number; token?: string; user?: Record<string, unknown>; auditUserId?: number; auditDetails?: Record<string, unknown> }> {

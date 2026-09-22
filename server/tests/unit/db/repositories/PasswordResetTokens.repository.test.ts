@@ -150,21 +150,27 @@ describe('PasswordResetTokensRepository', () => {
   // default). This repository has only ONE entity-hydrating read method
   // (`findByTokenHash`) — unlike `McpTokensRepository`/`Users.repository.ts`,
   // which each have two differently-projected NAMED read methods to
-  // combine. PWDRESETREPO-010/011 are the structural + behavioural proof
-  // that the real call shape (`findByTokenHash` then `markConsumed`/
-  // `consumeAllLiveForUser` inside the same `uow.transactional`) is safe.
+  // combine. PWDRESETREPO-010 is the structural proof (no managed entity
+  // left behind); PWDRESETREPO-011 pins the REAL call shape (`findByTokenHash`
+  // then `markConsumed` inside the same `uow.transactional`) as safe under
+  // the shipped default, but — by construction — it CANNOT fail: a single
+  // managed read re-snapshots every field it names, so nothing is dirty at
+  // the closing flush regardless of whether the mechanism exists on this
+  // table. It is not, on its own, proof the B1 stale-write-back mechanism
+  // (`task-1-review.md` B1) is absent here.
   //
-  // An attempted third test forcing `disableIdentityMap: false` on two raw
-  // `find`/`findOne` calls with disjoint field sets (mirroring
-  // `McpTokensRepository`'s `MCPTOKREPO-023` reproduction) was tried here
-  // and did NOT reproduce the stale write-back on this table — the
-  // `nativeUpdate` survived the closing flush both times, the same "safe"
-  // outcome as the class-default path. Per `task-1-rereview.md` F-R5, this
-  // mechanism is sensitive to exactly which methods/entities exercise it;
-  // not reproducing it for a single-read-method repository is an honest
-  // finding (same precedent as Task 2's report: "the implementer could not
-  // reproduce the write-back within nativeUpdate-only shapes"), not a gap
-  // in these two tests' coverage of the real code path.
+  // Task 5's original report tried a THIRD test — two raw `find`/`findOne`
+  // calls with disjoint field sets, `disableIdentityMap: false` — and did
+  // not reproduce it. `task-5-review-template.md` T2 found that attempt used
+  // the ordering `task-4-review.md` F1 already showed is non-load-bearing
+  // (narrower projection first). The mechanism DOES reproduce on this table
+  // once the WIDER projection — the one carrying the written column,
+  // `consumed_at` — runs FIRST: PWDRESETREPO-012 pairs this repository's own
+  // read (projection A, wide) with a narrower **managed** `em.findOne`
+  // (projection B) and is mutation-proved (green here, red once
+  // `findByTokenHash` is forced to `disableIdentityMap: false, refresh:
+  // true` — see the fix report). PWDRESETREPO-013 repeats the shape for
+  // `consumeAllLiveForUser`, the repository's other write method.
   // ---------------------------------------------------------------------
 
   describe('identity-map isolation', () => {
@@ -177,7 +183,7 @@ describe('PasswordResetTokensRepository', () => {
       expect(t.em.getUnitOfWork().getById(PasswordResetTokens, id)).toBeUndefined();
     });
 
-    it('PWDRESETREPO-011: findByTokenHash then markConsumed inside uow.transactional survives the closing flush', async () => {
+    it('PWDRESETREPO-011: findByTokenHash then markConsumed inside uow.transactional survives the closing flush (cannot fail by construction — see PWDRESETREPO-012 for the mutation-proved guard)', async () => {
       const { user } = createUser(testDb);
       const id = seedToken(user.id, hash('survives'));
       const uow = new UnitOfWork(t.em);
@@ -186,6 +192,34 @@ describe('PasswordResetTokensRepository', () => {
         const found = await tokens.findByTokenHash(hash('survives'));
         expect(found?.consumed_at).toBeNull();
         await tokens.markConsumed(id);
+      });
+
+      expect(rawRow(id).consumed_at).not.toBeNull();
+    });
+
+    it('PWDRESETREPO-012: findByTokenHash is the FIRST, wider read (it carries consumed_at); a narrower managed read follows; markConsumed still lands', async () => {
+      const { user } = createUser(testDb);
+      const id = seedToken(user.id, hash('dshape'));
+      const uow = new UnitOfWork(t.em);
+
+      await uow.transactional(async () => {
+        await tokens.findByTokenHash(hash('dshape')); // projection A — WIDE (carries consumed_at)
+        await t.em.findOne(PasswordResetTokens, { id }, { fields: ['id', 'token_hash'], refresh: true, disableIdentityMap: false }); // projection B — NARROW, managed
+        await tokens.markConsumed(id);
+      });
+
+      expect(rawRow(id).consumed_at).not.toBeNull();
+    });
+
+    it('PWDRESETREPO-013: same D-shape guard for consumeAllLiveForUser', async () => {
+      const { user } = createUser(testDb);
+      const id = seedToken(user.id, hash('dshape-consume-all'));
+      const uow = new UnitOfWork(t.em);
+
+      await uow.transactional(async () => {
+        await tokens.findByTokenHash(hash('dshape-consume-all')); // projection A — WIDE (carries consumed_at)
+        await t.em.findOne(PasswordResetTokens, { id }, { fields: ['id', 'token_hash'], refresh: true, disableIdentityMap: false }); // projection B — NARROW, managed
+        await tokens.consumeAllLiveForUser(user.id);
       });
 
       expect(rawRow(id).consumed_at).not.toBeNull();

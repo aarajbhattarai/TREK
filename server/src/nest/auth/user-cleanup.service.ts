@@ -43,21 +43,22 @@ export class UserCleanupService {
    * Best-effort per table so a slimmed-down schema (some tests) can't fail the user
    * deletion itself.
    *
-   * UC1–UC3 (`plugin_user_config`/`plugin_oauth_tokens`/`plugin_oauth_state`/
-   * `plugins`/`plugin_user_erasure_queue`) stay raw `DatabaseService` calls —
-   * every one of these tables is owned by `nest/plugins`, which lands in
-   * Plan 3j, not this plan (Plan 3b Task 5 ruling; inventory §6 "the single
-   * largest 'stays raw' carve-out in Plan 3b"). Only `DELETE FROM users`
-   * below (UC11) is this domain's own and converts.
+   * UC1 (`plugin_user_config`/`plugin_oauth_tokens`/`plugin_oauth_state`),
+   * UC2 (`plugins`) and UC3 (`plugin_user_erasure_queue`) stay raw
+   * `DatabaseService` calls — every one of these tables is owned by
+   * `nest/plugins`, which lands in Plan 3j, not this plan (Plan 3b Task 5
+   * ruling; inventory §6 "the single largest 'stays raw' carve-out in Plan
+   * 3b"). Only `DELETE FROM users` below (UC11) is this domain's own and
+   * converts.
    */
   async erasePluginUserData(userId: number): Promise<void> {
     for (const table of ['plugin_user_config', 'plugin_oauth_tokens', 'plugin_oauth_state']) {
-      try { this.db.run(`DELETE FROM ${table} WHERE user_id = ?`, userId); } catch { /* table absent (slim schema) */ }
+      try { this.db.run(`DELETE FROM ${table} WHERE user_id = ?`, userId); } catch { /* table absent (slim schema) */ } // UC1 — Plan 3j
     }
     try {
-      const rows = this.db.all<{ id: string; permissions: string | null }>('SELECT id, permissions FROM plugins');
+      const rows = this.db.all<{ id: string; permissions: string | null }>('SELECT id, permissions FROM plugins'); // UC2 — Plan 3j
       const installed = new Set(rows.map((r) => r.id));
-      const insert = this.db.prepare('INSERT OR IGNORE INTO plugin_user_erasure_queue (plugin_id, user_id) VALUES (?, ?)');
+      const insert = this.db.prepare('INSERT OR IGNORE INTO plugin_user_erasure_queue (plugin_id, user_id) VALUES (?, ?)'); // UC3 — Plan 3j
       for (const r of rows) {
         let perms: unknown;
         try { perms = JSON.parse(r.permissions ?? '[]'); } catch { perms = []; }

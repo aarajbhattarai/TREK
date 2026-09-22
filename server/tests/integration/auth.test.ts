@@ -195,6 +195,18 @@ describe('Registration', () => {
     expect(res.status).toBe(410);
     expect(res.body.error).toMatch(/fully used/i);
   });
+
+  it('AUTH-013 — GET /api/auth/invite/:token for a never-expiring invite keeps expires_at present and null on the wire (rule 16, task-5-review F1/T1)', async () => {
+    const { user: admin } = createAdmin(testDb);
+    const invite = createInviteToken(testDb, { max_uses: 3, created_by: admin.id });
+    testDb.prepare('UPDATE invite_tokens SET used_count = 1 WHERE id = ?').run(invite.id);
+
+    const res = await request(app).get(`/api/auth/invite/${invite.token}`);
+    expect(res.status).toBe(200);
+    // toEqual cannot see a dropped key (undefined and missing compare equal),
+    // so this asserts on the raw response text, byte for byte.
+    expect(res.text).toBe(JSON.stringify({ valid: true, max_uses: 3, used_count: 1, expires_at: null }));
+  });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────

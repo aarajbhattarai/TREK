@@ -164,6 +164,15 @@ describe('requestPasswordReset — OIDC/SSO accounts', () => {
     expect(result.reason).toBe('issued');
     expect(result.tokenForDelivery).toBeTruthy();
   });
+
+  it('AUTH-DB-PR3: a second request burns the prior live token — exactly one stays live (AU37, F3 task-5-review-security.md)', async () => {
+    const { user } = createUser(testDb);
+    await svc.requestPasswordReset(user.email, null);
+    await svc.requestPasswordReset(user.email, null);
+    const { n } = testDb.prepare('SELECT COUNT(*) AS n FROM password_reset_tokens WHERE user_id = ? AND consumed_at IS NULL')
+      .get(user.id) as { n: number };
+    expect(n).toBe(1);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -511,6 +520,24 @@ describe('changePassword — session invalidation', () => {
     expect(decoded.remember).toBe(true);
     expect(decoded.exp - decoded.iat).toBe(2592000); // remember window survives the change
   });
+
+  it('AUTH-DB-036e: the block is atomic — a failing mcp_tokens prune rolls the whole password change back (F2, task-5-review-security.md, USER-CLEANUP-009 pattern)', async () => {
+    const { user, password } = createUser(testDb);
+    await tokens.createMcpToken(user.id, 'cli');
+    const hashBefore = (testDb.prepare('SELECT password_hash FROM users WHERE id = ?').get(user.id) as { password_hash: string }).password_hash;
+
+    const mcpTokensRepo = await createTestMcpTokensRepo(testDb);
+    const deleteAllForUserSpy = vi.spyOn(mcpTokensRepo, 'deleteAllForUser').mockRejectedValueOnce(new Error('boom'));
+    try {
+      await expect(svc.changePassword(user.id, user.email, { current_password: password, new_password: 'New1234!' })).rejects.toThrow('boom');
+
+      expect(pvOf(user.id)).toBe(0); // password_version unchanged
+      expect((testDb.prepare('SELECT password_hash FROM users WHERE id = ?').get(user.id) as { password_hash: string }).password_hash).toBe(hashBefore); // old hash unchanged
+      expect(mcpCount(user.id)).toBe(1); // the mcp_tokens row survives — the DELETE never committed
+    } finally {
+      deleteAllForUserSpy.mockRestore();
+    }
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -769,6 +796,17 @@ describe('loginUser — credential branches', () => {
     expect(row.last_login).not.toBeNull();
   });
 
+  it('AUTH-DB-062b: forwards the caller\'s remember choice into the minted token (T4, task-5-review-template.md; unit-level pin, not only the e2e)', async () => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const jwt = require('jsonwebtoken');
+    const { user, password } = createUser(testDb);
+    const result = await svc.loginUser({ email: user.email, password, remember_me: true });
+    expect(typeof result.token).toBe('string');
+    const decoded = jwt.decode(result.token!) as { remember?: boolean; iat: number; exp: number };
+    expect(decoded.remember).toBe(true);
+    expect(decoded.exp - decoded.iat).toBe(2592000);
+  });
+
   it('AUTH-DB-063: an MFA-enabled account gets the interstitial mfa_token instead of a session', async () => {
     const { user } = createUser(testDb);
     testDb.prepare("UPDATE users SET mfa_enabled = 1, mfa_secret = 'enc:JBSWY3DPEHPK3PXP' WHERE id = ?").run(user.id);
@@ -907,13 +945,16 @@ describe('MFA success flows', () => {
     const secret = authenticator.generateSecret();
     const codes = ['AAAA-1111', 'BBBB-2222'];
     // hashBackupCode (legacy SHA-256) hashes still verify via matchBackupCode.
-    testDb.prepare('UPDATE users SET mfa_enabled = 1, mfa_secret = ?, mfa_backup_codes = ? WHERE id = ?')
-      .run('enc:' + secret, JSON.stringify(codes.map(hashBackupCode)), user.id);
+    testDb.prepare('UPDATE users SET mfa_enabled = 1, mfa_secret = ?, mfa_backup_codes = ?, updated_at = ? WHERE id = ?')
+      .run('enc:' + secret, JSON.stringify(codes.map(hashBackupCode)), '2000-01-01T00:00:00.000Z', user.id);
     const interstitial = await svc.loginUser({ email: user.email, password });
     const result = await svc.verifyMfaLogin({ mfa_token: interstitial.mfa_token, code: 'AAAA-1111' });
     expect(typeof result.token).toBe('string');
-    const row = testDb.prepare('SELECT mfa_backup_codes FROM users WHERE id = ?').get(user.id) as { mfa_backup_codes: string };
+    const row = testDb.prepare('SELECT mfa_backup_codes, updated_at FROM users WHERE id = ?').get(user.id) as { mfa_backup_codes: string; updated_at: string };
     expect(JSON.parse(row.mfa_backup_codes)).toHaveLength(1); // used code spliced out
+    // AU33 (setBackupCodesAndTouch, F3 task-5-review-security.md): the backup-code
+    // login branch DOES stamp updated_at, unlike resetPassword's AU44 below.
+    expect(row.updated_at).not.toBe('2000-01-01T00:00:00.000Z');
     // the spent code no longer verifies
     const again = await svc.loginUser({ email: user.email, password });
     expect((await svc.verifyMfaLogin({ mfa_token: again.mfa_token, code: 'AAAA-1111' })).status).toBe(401);
@@ -959,11 +1000,50 @@ describe('resetPassword', () => {
     // wrong code → 401
     expect(await svc.resetPassword({ token: issued.tokenForDelivery!, new_password: 'Fresh123!', mfa_code: '000000' }))
       .toEqual({ error: 'Invalid MFA code', status: 401 });
-    // backup code → success + code consumed
-    expect(await svc.resetPassword({ token: issued.tokenForDelivery!, new_password: 'Fresh123!', mfa_code: 'CCCC-3333' }))
-      .toEqual({ success: true, userId: user.id });
+
+    // AU44 vs AU33 (F3, task-5-review-security.md): resetPassword's backup-code
+    // splice must call the untouched setBackupCodes (AU44), never
+    // setBackupCodesAndTouch (AU33, verifyMfaLogin's own branch, AUTH-DB-081) —
+    // the same transaction's own setPassword call (AU43) already stamps
+    // updated_at, so a raw before/after read on the row can't isolate AU44's
+    // no-touch behaviour here (that's USERSREPO-034, at the repository level);
+    // the call site is what's unlocked, so this pins the call site directly.
+    const usersRepo = await createTestUsersRepo(testDb);
+    const setBackupCodesSpy = vi.spyOn(usersRepo, 'setBackupCodes');
+    const setBackupCodesAndTouchSpy = vi.spyOn(usersRepo, 'setBackupCodesAndTouch');
+    try {
+      // backup code → success + code consumed
+      expect(await svc.resetPassword({ token: issued.tokenForDelivery!, new_password: 'Fresh123!', mfa_code: 'CCCC-3333' }))
+        .toEqual({ success: true, userId: user.id });
+      expect(setBackupCodesSpy).toHaveBeenCalledTimes(1);
+      expect(setBackupCodesAndTouchSpy).not.toHaveBeenCalled();
+    } finally {
+      setBackupCodesSpy.mockRestore();
+      setBackupCodesAndTouchSpy.mockRestore();
+    }
+
     const row = testDb.prepare('SELECT mfa_backup_codes FROM users WHERE id = ?').get(user.id) as { mfa_backup_codes: string };
     expect(JSON.parse(row.mfa_backup_codes)).toHaveLength(0);
+  });
+
+  it('AUTH-DB-084b: the block is atomic — a failing mcp_tokens prune rolls the whole reset-password block back (F2, task-5-review-security.md, USER-CLEANUP-009 pattern)', async () => {
+    const { user } = createUser(testDb);
+    const issued = await svc.requestPasswordReset(user.email, null);
+    const hashBefore = (testDb.prepare('SELECT password_hash FROM users WHERE id = ?').get(user.id) as { password_hash: string }).password_hash;
+
+    const mcpTokensRepo = await createTestMcpTokensRepo(testDb);
+    const deleteAllForUserSpy = vi.spyOn(mcpTokensRepo, 'deleteAllForUser').mockRejectedValueOnce(new Error('boom'));
+    try {
+      await expect(svc.resetPassword({ token: issued.tokenForDelivery!, new_password: 'Fresh123!' })).rejects.toThrow('boom');
+
+      const row = testDb.prepare('SELECT password_hash, password_version FROM users WHERE id = ?').get(user.id) as { password_hash: string; password_version: number };
+      expect(row.password_hash).toBe(hashBefore); // old hash unchanged
+      expect(row.password_version).toBe(0);
+      const tokenRow = testDb.prepare('SELECT consumed_at FROM password_reset_tokens WHERE user_id = ?').get(user.id) as { consumed_at: string | null };
+      expect(tokenRow.consumed_at).toBeNull(); // the reset token was never committed as consumed
+    } finally {
+      deleteAllForUserSpy.mockRestore();
+    }
   });
 
   it('AUTH-DB-085: password-login-disabled and per-email throttle short-circuit the request', async () => {
