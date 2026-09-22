@@ -1,26 +1,28 @@
-import { type Ref, defineEntity, p, EntityRepository } from '@mikro-orm/core';
+import { type Opt, type Ref, defineEntity, p } from '@mikro-orm/core';
+import { VisitedRegionsRepository } from '../repositories/VisitedRegions.repository';
+import { DbTimestampType } from '../types';
 import { Users } from './Users.entity';
 
 export class VisitedRegions {
-  id?: number | null;
+  id!: number & Opt;
   user!: Ref<Users>;
-  regionCode!: string;
-  regionName!: string;
-  countryCode!: string;
-  createdAt?: Date | null;
+  user_id!: number;
+  region_code!: string;
+  region_name!: string;
+  country_code!: string;
+  created_at?: string | null;
 }
-
-export class VisitedRegionsRepository extends EntityRepository<VisitedRegions> {}
 
 export const VisitedRegionsSchema = defineEntity({
   class: VisitedRegions,
   repository: () => VisitedRegionsRepository,
   properties: {
-    id: p.integer().primary().autoincrement(),
-    user: () => p.manyToOne(Users).ref().deleteRule('cascade'),
-    regionCode: p.text(),
-    regionName: p.text(),
-    countryCode: p.text().index('idx_visited_regions_country'),
-    createdAt: p.datetime().nullable().onCreate(() => new Date()),
+    id: p.integer().primary(),
+    user: () => p.manyToOne(Users).ref().deleteRule('cascade').hidden(),
+    user_id: p.integer().persist(false),
+    region_code: p.text(),
+    region_name: p.text(),
+    country_code: p.text().index('idx_visited_regions_country'),
+    created_at: p.type(DbTimestampType).nullable().defaultRaw(`CURRENT_TIMESTAMP`),
   },
 });

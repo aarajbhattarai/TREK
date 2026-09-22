@@ -1,29 +1,30 @@
-import { Collection, type Opt, type Ref, defineEntity, p, EntityRepository } from '@mikro-orm/core';
+import { Collection, type Opt, type Ref, defineEntity, p } from '@mikro-orm/core';
+import { TrekPhotosRepository } from '../repositories/TrekPhotos.repository';
+import { DbTimestampType } from '../types';
 import { JourneyPhotos } from './JourneyPhotos.entity';
 import { TripPhotos } from './TripPhotos.entity';
 import { Users } from './Users.entity';
 
 export class TrekPhotos {
-  id?: number | null;
+  id!: number & Opt;
   provider!: string;
-  assetId?: string | null;
+  asset_id?: string | null;
   owner?: Ref<Users> | null;
-  filePath?: string | null;
-  thumbnailPath?: string | null;
+  owner_id?: number | null;
+  file_path?: string | null;
+  thumbnail_path?: string | null;
   width?: number | null;
   height?: number | null;
-  createdAt?: Date | null;
+  created_at?: string | null;
   passphrase?: string | null;
-  mediaType: string & Opt = 'image';
-  durationMs?: number | null;
-  takenAt?: string | null;
-  lat?: unknown | null;
-  lng?: unknown | null;
-  journeyPhotosCollection = new Collection<JourneyPhotos>(this);
-  tripPhotosCollection = new Collection<TripPhotos>(this);
+  media_type: string & Opt = 'image';
+  duration_ms?: number | null;
+  taken_at?: string | null;
+  lat?: number | null;
+  lng?: number | null;
+  journey_photos_collection = new Collection<JourneyPhotos>(this);
+  trip_photos_collection = new Collection<TripPhotos>(this);
 }
-
-export class TrekPhotosRepository extends EntityRepository<TrekPhotos> {}
 
 export const TrekPhotosSchema = defineEntity({
   class: TrekPhotos,
@@ -39,26 +40,27 @@ export const TrekPhotosSchema = defineEntity({
     {
       name: 'idx_trek_photos_provider_asset',
       where: 'asset_id IS NOT NULL',
-      properties: ['provider', 'assetId', 'owner'],
+      properties: ['provider', 'asset_id', 'owner_id'],
     },
   ],
   properties: {
-    id: p.integer().primary().autoincrement(),
+    id: p.integer().primary(),
     provider: p.text(),
-    assetId: p.text().nullable(),
-    owner: () => p.manyToOne(Users).ref().nullable().index('idx_trek_photos_owner'),
-    filePath: p.text().nullable(),
-    thumbnailPath: p.text().nullable(),
+    asset_id: p.text().nullable(),
+    owner: () => p.manyToOne(Users).ref().nullable().hidden().index('idx_trek_photos_owner'),
+    owner_id: p.integer().nullable().persist(false).index('idx_trek_photos_owner'),
+    file_path: p.text().nullable(),
+    thumbnail_path: p.text().nullable(),
     width: p.integer().nullable(),
     height: p.integer().nullable(),
-    createdAt: p.datetime().nullable().onCreate(() => new Date()),
-    passphrase: p.text().nullable(),
-    mediaType: p.text(),
-    durationMs: p.integer().nullable(),
-    takenAt: p.text().nullable(),
+    created_at: p.type(DbTimestampType).nullable().defaultRaw(`CURRENT_TIMESTAMP`),
+    passphrase: p.text().nullable().defaultRaw(`NULL`),
+    media_type: p.text().default('image'),
+    duration_ms: p.integer().nullable(),
+    taken_at: p.text().nullable(),
     lat: p.double().nullable(),
     lng: p.double().nullable(),
-    journeyPhotosCollection: () => p.oneToMany(JourneyPhotos).mappedBy('photo'),
-    tripPhotosCollection: () => p.oneToMany(TripPhotos).mappedBy('photo'),
+    journey_photos_collection: () => p.oneToMany(JourneyPhotos).mappedBy('photo').hidden(),
+    trip_photos_collection: () => p.oneToMany(TripPhotos).mappedBy('photo').hidden(),
   },
 });

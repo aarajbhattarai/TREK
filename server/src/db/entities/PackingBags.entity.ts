@@ -1,36 +1,40 @@
-import { Collection, type Opt, type Ref, defineEntity, p, EntityRepository } from '@mikro-orm/core';
+import { Collection, type Opt, type Ref, defineEntity, p } from '@mikro-orm/core';
+import { PackingBagsRepository } from '../repositories/PackingBags.repository';
+import { DbTimestampType } from '../types';
 import { PackingItems } from './PackingItems.entity';
 import { Trips } from './Trips.entity';
 import { Users } from './Users.entity';
 
 export class PackingBags {
-  id?: number | null;
+  id!: number & Opt;
   trip!: Ref<Trips>;
+  trip_id!: number;
   name!: string;
   color: string & Opt = '#6366f1';
-  weightLimitGrams?: number | null;
-  sortOrder?: number | null = 0;
-  createdAt?: Date | null;
+  weight_limit_grams?: number | null;
+  sort_order?: number | null = 0;
+  created_at?: string | null;
   user?: Ref<Users> | null;
-  packingBagMembers = new Collection<Users>(this);
-  packingItemsCollection = new Collection<PackingItems>(this);
+  user_id?: number | null = NaN;
+  packing_bag_members = new Collection<Users>(this);
+  packing_items_collection = new Collection<PackingItems>(this);
 }
-
-export class PackingBagsRepository extends EntityRepository<PackingBags> {}
 
 export const PackingBagsSchema = defineEntity({
   class: PackingBags,
   repository: () => PackingBagsRepository,
   properties: {
-    id: p.integer().primary().autoincrement(),
-    trip: () => p.manyToOne(Trips).ref().deleteRule('cascade'),
+    id: p.integer().primary(),
+    trip: () => p.manyToOne(Trips).ref().deleteRule('cascade').hidden(),
+    trip_id: p.integer().persist(false),
     name: p.text(),
-    color: p.text(),
-    weightLimitGrams: p.integer().nullable(),
-    sortOrder: p.integer().nullable(),
-    createdAt: p.datetime().nullable().onCreate(() => new Date()),
-    user: () => p.manyToOne(Users).ref().nullable(),
-    packingBagMembers: () => p.manyToMany(Users).pivotTable('packing_bag_members').joinColumn('bag_id').inverseJoinColumn('user_id'),
-    packingItemsCollection: () => p.oneToMany(PackingItems).mappedBy('bag'),
+    color: p.text().default('#6366f1'),
+    weight_limit_grams: p.integer().nullable(),
+    sort_order: p.integer().nullable(),
+    created_at: p.type(DbTimestampType).nullable().defaultRaw(`CURRENT_TIMESTAMP`),
+    user: () => p.manyToOne(Users).ref().nullable().hidden().defaultRaw(`NULL`),
+    user_id: p.integer().nullable().persist(false).defaultRaw(`NULL`),
+    packing_bag_members: () => p.manyToMany(Users).pivotTable('packing_bag_members').joinColumn('bag_id').inverseJoinColumn('user_id').hidden(),
+    packing_items_collection: () => p.oneToMany(PackingItems).mappedBy('bag').hidden(),
   },
 });

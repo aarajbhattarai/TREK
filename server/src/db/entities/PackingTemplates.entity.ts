@@ -1,25 +1,27 @@
-import { Collection, type Ref, defineEntity, p, EntityRepository } from '@mikro-orm/core';
+import { Collection, type Opt, type Ref, defineEntity, p } from '@mikro-orm/core';
+import { PackingTemplatesRepository } from '../repositories/PackingTemplates.repository';
+import { DbTimestampType } from '../types';
 import { PackingTemplateCategories } from './PackingTemplateCategories.entity';
 import { Users } from './Users.entity';
 
 export class PackingTemplates {
-  id?: number | null;
+  id!: number & Opt;
   name!: string;
-  createdBy!: Ref<Users>;
-  createdAt?: Date | null;
-  packingTemplateCategoriesCollection = new Collection<PackingTemplateCategories>(this);
+  created_by!: number;
+  created_at?: string | null;
+  createdByRef!: Ref<Users>;
+  packing_template_categories_collection = new Collection<PackingTemplateCategories>(this);
 }
-
-export class PackingTemplatesRepository extends EntityRepository<PackingTemplates> {}
 
 export const PackingTemplatesSchema = defineEntity({
   class: PackingTemplates,
   repository: () => PackingTemplatesRepository,
   properties: {
-    id: p.integer().primary().autoincrement(),
+    id: p.integer().primary(),
     name: p.text(),
-    createdBy: () => p.manyToOne(Users).ref().name('created_by').deleteRule('cascade'),
-    createdAt: p.datetime().nullable().onCreate(() => new Date()),
-    packingTemplateCategoriesCollection: () => p.oneToMany(PackingTemplateCategories).mappedBy('template'),
+    created_by: p.integer().persist(false),
+    created_at: p.type(DbTimestampType).nullable().defaultRaw(`CURRENT_TIMESTAMP`),
+    createdByRef: () => p.manyToOne(Users).ref().joinColumn('created_by').deleteRule('cascade').hidden(),
+    packing_template_categories_collection: () => p.oneToMany(PackingTemplateCategories).mappedBy('template').hidden(),
   },
 });

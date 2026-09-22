@@ -1,24 +1,23 @@
-import { type Opt, PrimaryKeyProp, defineEntity, p, EntityRepository } from '@mikro-orm/core';
+import { type Opt, PrimaryKeyProp, defineEntity, p } from '@mikro-orm/core';
+import { PlaceDetailsCacheRepository } from '../repositories/PlaceDetailsCache.repository';
 
 export class PlaceDetailsCache {
-  [PrimaryKeyProp]?: ['placeId', 'lang', 'expanded'];
-  placeId!: string;
+  [PrimaryKeyProp]?: ['place_id', 'lang', 'expanded'];
+  place_id!: string;
   lang: string & Opt = '';
   expanded: number & Opt = 0;
-  payloadJson!: string;
-  fetchedAt!: number;
+  payload_json!: string;
+  fetched_at!: number;
 }
-
-export class PlaceDetailsCacheRepository extends EntityRepository<PlaceDetailsCache> {}
 
 export const PlaceDetailsCacheSchema = defineEntity({
   class: PlaceDetailsCache,
   repository: () => PlaceDetailsCacheRepository,
   properties: {
-    placeId: p.text().primary(),
-    lang: p.text().primary(),
-    expanded: p.integer().primary(),
-    payloadJson: p.text(),
-    fetchedAt: p.integer(),
+    place_id: p.text().primary(),
+    lang: p.text().primary().default(''),
+    expanded: p.integer().primary().default(0),
+    payload_json: p.text(),
+    fetched_at: p.integer(),
   },
 });

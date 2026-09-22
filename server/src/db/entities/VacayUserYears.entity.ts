@@ -1,27 +1,30 @@
-import { type Ref, defineEntity, p, EntityRepository } from '@mikro-orm/core';
+import { type Opt, type Ref, defineEntity, p } from '@mikro-orm/core';
+import { VacayUserYearsRepository } from '../repositories/VacayUserYears.repository';
 import { Users } from './Users.entity';
 import { VacayPlans } from './VacayPlans.entity';
 
 export class VacayUserYears {
-  id?: number | null;
+  id!: number & Opt;
   user!: Ref<Users>;
+  user_id!: number;
   plan!: Ref<VacayPlans>;
+  plan_id!: number;
   year!: number;
-  vacationDays?: number | null = 30;
-  carriedOver?: number | null = 0;
+  vacation_days?: number | null = 30;
+  carried_over?: number | null = 0;
 }
-
-export class VacayUserYearsRepository extends EntityRepository<VacayUserYears> {}
 
 export const VacayUserYearsSchema = defineEntity({
   class: VacayUserYears,
   repository: () => VacayUserYearsRepository,
   properties: {
-    id: p.integer().primary().autoincrement(),
-    user: () => p.manyToOne(Users).ref().deleteRule('cascade'),
-    plan: () => p.manyToOne(VacayPlans).ref().deleteRule('cascade'),
+    id: p.integer().primary(),
+    user: () => p.manyToOne(Users).ref().deleteRule('cascade').hidden(),
+    user_id: p.integer().persist(false),
+    plan: () => p.manyToOne(VacayPlans).ref().deleteRule('cascade').hidden(),
+    plan_id: p.integer().persist(false),
     year: p.integer(),
-    vacationDays: p.integer().nullable(),
-    carriedOver: p.integer().nullable(),
+    vacation_days: p.integer().nullable(),
+    carried_over: p.integer().nullable(),
   },
 });

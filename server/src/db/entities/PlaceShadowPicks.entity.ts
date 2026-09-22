@@ -1,39 +1,38 @@
-import { type Opt, defineEntity, p, EntityRepository } from '@mikro-orm/core';
+import { type Opt, defineEntity, p } from '@mikro-orm/core';
+import { PlaceShadowPicksRepository } from '../repositories/PlaceShadowPicks.repository';
 
 export class PlaceShadowPicks {
-  id?: number | null;
-  createdAt!: string & Opt;
+  id!: number & Opt;
+  created_at!: string & Opt;
   query!: string;
   lang?: string | null;
-  biasLat?: unknown | null;
-  biasLng?: unknown | null;
+  bias_lat?: number | null;
+  bias_lng?: number | null;
   source!: string;
-  liveRank!: number;
-  liveCount!: number;
-  pickedName!: string;
-  pickedLat!: unknown;
-  pickedLng!: unknown;
-  pickedPlaceId?: string | null;
+  live_rank!: number;
+  live_count!: number;
+  picked_name!: string;
+  picked_lat!: number;
+  picked_lng!: number;
+  picked_place_id?: string | null;
 }
-
-export class PlaceShadowPicksRepository extends EntityRepository<PlaceShadowPicks> {}
 
 export const PlaceShadowPicksSchema = defineEntity({
   class: PlaceShadowPicks,
   repository: () => PlaceShadowPicksRepository,
   properties: {
-    id: p.integer().primary().autoincrement(),
-    createdAt: p.text().defaultRaw(`(datetime('now'))`).index('idx_place_shadow_created'),
+    id: p.integer().primary(),
+    created_at: p.text().defaultRaw(`(datetime('now'))`).index('idx_place_shadow_created'),
     query: p.text(),
     lang: p.text().nullable(),
-    biasLat: p.double().nullable(),
-    biasLng: p.double().nullable(),
+    bias_lat: p.double().nullable(),
+    bias_lng: p.double().nullable(),
     source: p.text(),
-    liveRank: p.integer(),
-    liveCount: p.integer(),
-    pickedName: p.text(),
-    pickedLat: p.double(),
-    pickedLng: p.double(),
-    pickedPlaceId: p.text().nullable(),
+    live_rank: p.integer(),
+    live_count: p.integer(),
+    picked_name: p.text(),
+    picked_lat: p.double(),
+    picked_lng: p.double(),
+    picked_place_id: p.text().nullable(),
   },
 });

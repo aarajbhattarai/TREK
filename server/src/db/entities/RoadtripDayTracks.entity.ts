@@ -1,27 +1,27 @@
+import { PrimaryKeyProp, type Ref, defineEntity, p } from '@mikro-orm/core';
+import { RoadtripDayTracksRepository } from '../repositories/RoadtripDayTracks.repository';
 import { Days } from './Days.entity';
 import { Places } from './Places.entity';
-import { defineEntity, EntityRepository, p, PrimaryKeyProp, type Ref } from '@mikro-orm/core';
 
 export class RoadtripDayTracks {
   [PrimaryKeyProp]?: 'day';
   day?: Ref<Days> | null;
+  day_id?: number | null;
   place!: Ref<Places>;
-  strayKm?: unknown | null;
-  createdAt?: string | null;
+  place_id!: number;
+  stray_km?: number | null;
+  created_at?: string | null;
 }
-
-export class RoadtripDayTracksRepository extends EntityRepository<RoadtripDayTracks> {}
 
 export const RoadtripDayTracksSchema = defineEntity({
   class: RoadtripDayTracks,
   repository: () => RoadtripDayTracksRepository,
   properties: {
-    day: () => p.oneToOne(Days).primary().ref().nullable(),
-    place: () => p.manyToOne(Places).ref().deleteRule('cascade').index('idx_roadtrip_day_tracks_place'),
-    strayKm: p.double().nullable(),
-    createdAt: p
-      .text()
-      .nullable()
-      .onCreate(() => new Date().toISOString().replace(/\.\d{3}Z$/, 'Z')),
+    day: () => p.oneToOne(Days).primary().ref().nullable().hidden(),
+    day_id: p.integer().nullable().persist(false),
+    place: () => p.manyToOne(Places).ref().deleteRule('cascade').hidden().index('idx_roadtrip_day_tracks_place'),
+    place_id: p.integer().persist(false).index('idx_roadtrip_day_tracks_place'),
+    stray_km: p.double().nullable(),
+    created_at: p.text().nullable().defaultRaw(`CURRENT_TIMESTAMP`),
   },
 });

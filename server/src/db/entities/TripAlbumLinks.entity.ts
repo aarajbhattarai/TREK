@@ -1,38 +1,42 @@
-import { Collection, type Opt, type Ref, defineEntity, p, EntityRepository } from '@mikro-orm/core';
+import { Collection, type Opt, type Ref, defineEntity, p } from '@mikro-orm/core';
+import { TripAlbumLinksRepository } from '../repositories/TripAlbumLinks.repository';
+import { DbTimestampType } from '../types';
 import { TripPhotos } from './TripPhotos.entity';
 import { Trips } from './Trips.entity';
 import { Users } from './Users.entity';
 
 export class TripAlbumLinks {
-  id?: number | null;
+  id!: number & Opt;
   trip!: Ref<Trips>;
+  trip_id!: number;
   user!: Ref<Users>;
+  user_id!: number;
   provider!: string;
-  albumId!: string;
-  albumName: string & Opt = '';
-  syncEnabled: number & Opt = 1;
-  lastSyncedAt?: Date | null;
-  createdAt?: Date | null;
+  album_id!: string;
+  album_name: string & Opt = '';
+  sync_enabled: number & Opt = 1;
+  last_synced_at?: string | null;
+  created_at?: string | null;
   passphrase?: string | null;
-  tripPhotosCollection = new Collection<TripPhotos>(this);
+  trip_photos_collection = new Collection<TripPhotos>(this);
 }
-
-export class TripAlbumLinksRepository extends EntityRepository<TripAlbumLinks> {}
 
 export const TripAlbumLinksSchema = defineEntity({
   class: TripAlbumLinks,
   repository: () => TripAlbumLinksRepository,
   properties: {
-    id: p.integer().primary().autoincrement(),
-    trip: () => p.manyToOne(Trips).ref().deleteRule('cascade').index('idx_trip_album_links_trip'),
-    user: () => p.manyToOne(Users).ref().deleteRule('cascade'),
+    id: p.integer().primary(),
+    trip: () => p.manyToOne(Trips).ref().deleteRule('cascade').hidden().index('idx_trip_album_links_trip'),
+    trip_id: p.integer().persist(false).index('idx_trip_album_links_trip'),
+    user: () => p.manyToOne(Users).ref().deleteRule('cascade').hidden(),
+    user_id: p.integer().persist(false),
     provider: p.text(),
-    albumId: p.text(),
-    albumName: p.text(),
-    syncEnabled: p.integer(),
-    lastSyncedAt: p.datetime().nullable(),
-    createdAt: p.datetime().nullable().onCreate(() => new Date()),
-    passphrase: p.text().nullable(),
-    tripPhotosCollection: () => p.oneToMany(TripPhotos).mappedBy('albumLink'),
+    album_id: p.text(),
+    album_name: p.text().default(''),
+    sync_enabled: p.integer().default(1),
+    last_synced_at: p.type(DbTimestampType).nullable(),
+    created_at: p.type(DbTimestampType).nullable().defaultRaw(`CURRENT_TIMESTAMP`),
+    passphrase: p.text().nullable().defaultRaw(`NULL`),
+    trip_photos_collection: () => p.oneToMany(TripPhotos).mappedBy('albumLink').hidden(),
   },
 });

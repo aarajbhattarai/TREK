@@ -1,22 +1,21 @@
-import { PrimaryKeyProp, defineEntity, p, EntityRepository } from '@mikro-orm/core';
+import { PrimaryKeyProp, defineEntity, p } from '@mikro-orm/core';
+import { GooglePlacePhotoMetaRepository } from '../repositories/GooglePlacePhotoMeta.repository';
 
 export class GooglePlacePhotoMeta {
-  [PrimaryKeyProp]?: 'placeId';
-  placeId?: string | null;
+  [PrimaryKeyProp]?: 'place_id';
+  place_id?: string | null;
   attribution?: string | null;
-  fetchedAt!: number;
-  errorAt?: number | null;
+  fetched_at!: number;
+  error_at?: number | null;
 }
-
-export class GooglePlacePhotoMetaRepository extends EntityRepository<GooglePlacePhotoMeta> {}
 
 export const GooglePlacePhotoMetaSchema = defineEntity({
   class: GooglePlacePhotoMeta,
   repository: () => GooglePlacePhotoMetaRepository,
   properties: {
-    placeId: p.text().primary().nullable(),
+    place_id: p.text().primary().nullable(),
     attribution: p.text().nullable(),
-    fetchedAt: p.integer(),
-    errorAt: p.integer().nullable(),
+    fetched_at: p.integer(),
+    error_at: p.integer().nullable(),
   },
 });

@@ -1,40 +1,44 @@
-import { Collection, type Ref, defineEntity, p, EntityRepository } from '@mikro-orm/core';
+import { Collection, type Opt, type Ref, defineEntity, p } from '@mikro-orm/core';
+import { CollabNotesRepository } from '../repositories/CollabNotes.repository';
+import { DbTimestampType } from '../types';
 import { TripFiles } from './TripFiles.entity';
 import { Trips } from './Trips.entity';
 import { Users } from './Users.entity';
 
 export class CollabNotes {
-  id?: number | null;
+  id!: number & Opt;
   trip!: Ref<Trips>;
+  trip_id!: number;
   user!: Ref<Users>;
+  user_id!: number;
   category?: string | null = 'General';
   title!: string;
   content?: string | null;
   color?: string | null = '#6366f1';
   pinned?: number | null = 0;
-  createdAt?: Date | null;
-  updatedAt?: Date | null;
+  created_at?: string | null;
+  updated_at?: string | null;
   website?: string | null;
-  tripFilesCollection = new Collection<TripFiles>(this);
+  trip_files_collection = new Collection<TripFiles>(this);
 }
-
-export class CollabNotesRepository extends EntityRepository<CollabNotes> {}
 
 export const CollabNotesSchema = defineEntity({
   class: CollabNotes,
   repository: () => CollabNotesRepository,
   properties: {
-    id: p.integer().primary().autoincrement(),
-    trip: () => p.manyToOne(Trips).ref().deleteRule('cascade').index('idx_collab_notes_trip'),
-    user: () => p.manyToOne(Users).ref().deleteRule('cascade'),
+    id: p.integer().primary(),
+    trip: () => p.manyToOne(Trips).ref().deleteRule('cascade').hidden().index('idx_collab_notes_trip'),
+    trip_id: p.integer().persist(false).index('idx_collab_notes_trip'),
+    user: () => p.manyToOne(Users).ref().deleteRule('cascade').hidden(),
+    user_id: p.integer().persist(false),
     category: p.text().nullable(),
     title: p.text(),
     content: p.text().nullable(),
     color: p.text().nullable(),
     pinned: p.integer().nullable(),
-    createdAt: p.datetime().nullable().onCreate(() => new Date()),
-    updatedAt: p.datetime().nullable().onCreate(() => new Date()),
+    created_at: p.type(DbTimestampType).nullable().defaultRaw(`CURRENT_TIMESTAMP`),
+    updated_at: p.type(DbTimestampType).nullable().defaultRaw(`CURRENT_TIMESTAMP`),
     website: p.text().nullable(),
-    tripFilesCollection: () => p.oneToMany(TripFiles).mappedBy('note'),
+    trip_files_collection: () => p.oneToMany(TripFiles).mappedBy('note').hidden(),
   },
 });

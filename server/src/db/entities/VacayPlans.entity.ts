@@ -1,4 +1,6 @@
-import { Collection, type Opt, type Ref, defineEntity, p, EntityRepository } from '@mikro-orm/core';
+import { Collection, type Opt, type Ref, defineEntity, p } from '@mikro-orm/core';
+import { VacayPlansRepository } from '../repositories/VacayPlans.repository';
+import { DbTimestampType } from '../types';
 import { Users } from './Users.entity';
 import { VacayCompanyHolidays } from './VacayCompanyHolidays.entity';
 import { VacayEntries } from './VacayEntries.entity';
@@ -9,49 +11,49 @@ import { VacayUserYears } from './VacayUserYears.entity';
 import { VacayYears } from './VacayYears.entity';
 
 export class VacayPlans {
-  id?: number | null;
+  id!: number & Opt;
   owner!: Ref<Users>;
-  blockWeekends?: number | null = 1;
-  holidaysEnabled?: number | null = 0;
-  holidaysRegion?: string | null = '';
-  schoolHolidaysEnabled?: number | null = 0;
-  companyHolidaysEnabled?: number | null = 1;
-  carryOverEnabled?: number | null = 1;
-  createdAt?: Date | null;
-  weekendDays?: string | null = '0,6';
-  weekStart: number & Opt = 1;
-  vacayCompanyHolidaysCollection = new Collection<VacayCompanyHolidays>(this);
-  vacayEntriesCollection = new Collection<VacayEntries>(this);
-  vacayHolidayCalendarsCollection = new Collection<VacayHolidayCalendars>(this);
-  vacayPlanMembersCollection = new Collection<VacayPlanMembers>(this);
-  vacayUserColorsCollection = new Collection<VacayUserColors>(this);
-  vacayUserYearsCollection = new Collection<VacayUserYears>(this);
-  vacayYearsCollection = new Collection<VacayYears>(this);
+  owner_id!: number;
+  block_weekends?: number | null = 1;
+  holidays_enabled?: number | null = 0;
+  holidays_region?: string | null = '';
+  school_holidays_enabled?: number | null = 0;
+  company_holidays_enabled?: number | null = 1;
+  carry_over_enabled?: number | null = 1;
+  created_at?: string | null;
+  weekend_days?: string | null = '0,6';
+  week_start: number & Opt = 1;
+  vacay_company_holidays_collection = new Collection<VacayCompanyHolidays>(this);
+  vacay_entries_collection = new Collection<VacayEntries>(this);
+  vacay_holiday_calendars_collection = new Collection<VacayHolidayCalendars>(this);
+  vacay_plan_members_collection = new Collection<VacayPlanMembers>(this);
+  vacay_user_colors_collection = new Collection<VacayUserColors>(this);
+  vacay_user_years_collection = new Collection<VacayUserYears>(this);
+  vacay_years_collection = new Collection<VacayYears>(this);
 }
-
-export class VacayPlansRepository extends EntityRepository<VacayPlans> {}
 
 export const VacayPlansSchema = defineEntity({
   class: VacayPlans,
   repository: () => VacayPlansRepository,
   properties: {
-    id: p.integer().primary().autoincrement(),
-    owner: () => p.manyToOne(Users).ref().deleteRule('cascade'),
-    blockWeekends: p.integer().nullable(),
-    holidaysEnabled: p.integer().nullable(),
-    holidaysRegion: p.text().nullable(),
-    schoolHolidaysEnabled: p.integer().nullable(),
-    companyHolidaysEnabled: p.integer().nullable(),
-    carryOverEnabled: p.integer().nullable(),
-    createdAt: p.datetime().nullable().onCreate(() => new Date()),
-    weekendDays: p.text().nullable(),
-    weekStart: p.integer(),
-    vacayCompanyHolidaysCollection: () => p.oneToMany(VacayCompanyHolidays).mappedBy('plan'),
-    vacayEntriesCollection: () => p.oneToMany(VacayEntries).mappedBy('plan'),
-    vacayHolidayCalendarsCollection: () => p.oneToMany(VacayHolidayCalendars).mappedBy('plan'),
-    vacayPlanMembersCollection: () => p.oneToMany(VacayPlanMembers).mappedBy('plan'),
-    vacayUserColorsCollection: () => p.oneToMany(VacayUserColors).mappedBy('plan'),
-    vacayUserYearsCollection: () => p.oneToMany(VacayUserYears).mappedBy('plan'),
-    vacayYearsCollection: () => p.oneToMany(VacayYears).mappedBy('plan'),
+    id: p.integer().primary(),
+    owner: () => p.manyToOne(Users).ref().deleteRule('cascade').hidden(),
+    owner_id: p.integer().persist(false),
+    block_weekends: p.integer().nullable(),
+    holidays_enabled: p.integer().nullable(),
+    holidays_region: p.text().nullable(),
+    school_holidays_enabled: p.integer().nullable(),
+    company_holidays_enabled: p.integer().nullable(),
+    carry_over_enabled: p.integer().nullable(),
+    created_at: p.type(DbTimestampType).nullable().defaultRaw(`CURRENT_TIMESTAMP`),
+    weekend_days: p.text().nullable(),
+    week_start: p.integer().default(1),
+    vacay_company_holidays_collection: () => p.oneToMany(VacayCompanyHolidays).mappedBy('plan').hidden(),
+    vacay_entries_collection: () => p.oneToMany(VacayEntries).mappedBy('plan').hidden(),
+    vacay_holiday_calendars_collection: () => p.oneToMany(VacayHolidayCalendars).mappedBy('plan').hidden(),
+    vacay_plan_members_collection: () => p.oneToMany(VacayPlanMembers).mappedBy('plan').hidden(),
+    vacay_user_colors_collection: () => p.oneToMany(VacayUserColors).mappedBy('plan').hidden(),
+    vacay_user_years_collection: () => p.oneToMany(VacayUserYears).mappedBy('plan').hidden(),
+    vacay_years_collection: () => p.oneToMany(VacayYears).mappedBy('plan').hidden(),
   },
 });

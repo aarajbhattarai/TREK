@@ -1,30 +1,32 @@
-import { Collection, type Ref, defineEntity, p, EntityRepository } from '@mikro-orm/core';
+import { Collection, type Opt, type Ref, defineEntity, p } from '@mikro-orm/core';
+import { TagsRepository } from '../repositories/Tags.repository';
+import { DbTimestampType } from '../types';
 import { CollectionPlaces } from './CollectionPlaces.entity';
 import { Places } from './Places.entity';
 import { Users } from './Users.entity';
 
 export class Tags {
-  id?: number | null;
+  id!: number & Opt;
   user!: Ref<Users>;
+  user_id!: number;
   name!: string;
   color?: string | null = '#10b981';
-  createdAt?: Date | null;
-  collectionPlaceTagsInverse = new Collection<CollectionPlaces>(this);
-  placeTagsInverse = new Collection<Places>(this);
+  created_at?: string | null;
+  collection_place_tags_inverse = new Collection<CollectionPlaces>(this);
+  place_tags_inverse = new Collection<Places>(this);
 }
-
-export class TagsRepository extends EntityRepository<Tags> {}
 
 export const TagsSchema = defineEntity({
   class: Tags,
   repository: () => TagsRepository,
   properties: {
-    id: p.integer().primary().autoincrement(),
-    user: () => p.manyToOne(Users).ref().deleteRule('cascade'),
+    id: p.integer().primary(),
+    user: () => p.manyToOne(Users).ref().deleteRule('cascade').hidden(),
+    user_id: p.integer().persist(false),
     name: p.text(),
     color: p.text().nullable(),
-    createdAt: p.datetime().nullable().onCreate(() => new Date()),
-    collectionPlaceTagsInverse: () => p.manyToMany(CollectionPlaces).mappedBy('collectionPlaceTags'),
-    placeTagsInverse: () => p.manyToMany(Places).mappedBy('placeTags'),
+    created_at: p.type(DbTimestampType).nullable().defaultRaw(`CURRENT_TIMESTAMP`),
+    collection_place_tags_inverse: () => p.manyToMany(CollectionPlaces).mappedBy('collection_place_tags').hidden(),
+    place_tags_inverse: () => p.manyToMany(Places).mappedBy('place_tags').hidden(),
   },
 });

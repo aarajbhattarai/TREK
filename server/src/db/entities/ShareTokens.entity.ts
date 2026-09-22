@@ -1,37 +1,41 @@
-import { type Ref, defineEntity, p, EntityRepository } from '@mikro-orm/core';
+import { type Opt, type Ref, defineEntity, p } from '@mikro-orm/core';
+import { ShareTokensRepository } from '../repositories/ShareTokens.repository';
+import { DbTimestampType } from '../types';
 import { Trips } from './Trips.entity';
 import { Users } from './Users.entity';
 
 export class ShareTokens {
-  id?: number | null;
+  id!: number & Opt;
   trip!: Ref<Trips>;
+  trip_id!: number;
   token!: string;
-  createdBy!: Ref<Users>;
-  shareMap?: number | null = 1;
-  shareBookings?: number | null = 1;
-  sharePacking?: number | null = 0;
-  shareBudget?: number | null = 0;
-  shareCollab?: number | null = 0;
-  createdAt?: Date | null;
-  expiresAt?: string | null;
+  created_by!: number;
+  share_map?: number | null = 1;
+  share_bookings?: number | null = 1;
+  share_packing?: number | null = 0;
+  share_budget?: number | null = 0;
+  share_collab?: number | null = 0;
+  created_at?: string | null;
+  expires_at?: string | null;
+  createdByRef!: Ref<Users>;
 }
-
-export class ShareTokensRepository extends EntityRepository<ShareTokens> {}
 
 export const ShareTokensSchema = defineEntity({
   class: ShareTokens,
   repository: () => ShareTokensRepository,
   properties: {
-    id: p.integer().primary().autoincrement(),
-    trip: () => p.manyToOne(Trips).ref().deleteRule('cascade'),
+    id: p.integer().primary(),
+    trip: () => p.manyToOne(Trips).ref().deleteRule('cascade').hidden(),
+    trip_id: p.integer().persist(false),
     token: p.text().index('idx_share_tokens_token'),
-    createdBy: () => p.manyToOne(Users).ref().name('created_by'),
-    shareMap: p.integer().nullable(),
-    shareBookings: p.integer().nullable(),
-    sharePacking: p.integer().nullable(),
-    shareBudget: p.integer().nullable(),
-    shareCollab: p.integer().nullable(),
-    createdAt: p.datetime().nullable().onCreate(() => new Date()),
-    expiresAt: p.text().nullable(),
+    created_by: p.integer().persist(false),
+    share_map: p.integer().nullable(),
+    share_bookings: p.integer().nullable(),
+    share_packing: p.integer().nullable(),
+    share_budget: p.integer().nullable(),
+    share_collab: p.integer().nullable(),
+    created_at: p.type(DbTimestampType).nullable().defaultRaw(`CURRENT_TIMESTAMP`),
+    expires_at: p.text().nullable(),
+    createdByRef: () => p.manyToOne(Users).ref().joinColumn('created_by').hidden(),
   },
 });

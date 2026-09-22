@@ -1,12 +1,11 @@
-import { defineEntity, p, EntityRepository } from '@mikro-orm/core';
+import { defineEntity, p } from '@mikro-orm/core';
+import { MigrationsRepository } from '../repositories/Migrations.repository';
 
 export class Migrations {
   id!: number;
   timestamp!: bigint;
   name!: string;
 }
-
-export class MigrationsRepository extends EntityRepository<Migrations> {}
 
 export const MigrationsSchema = defineEntity({
   class: Migrations,

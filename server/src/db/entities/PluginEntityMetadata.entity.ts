@@ -1,16 +1,15 @@
-import { type Opt, defineEntity, p, EntityRepository } from '@mikro-orm/core';
+import { type Opt, defineEntity, p } from '@mikro-orm/core';
+import { PluginEntityMetadataRepository } from '../repositories/PluginEntityMetadata.repository';
 
 export class PluginEntityMetadata {
-  id?: number | null;
-  pluginId!: string;
-  entityType!: string;
-  entityId!: number;
+  id!: number & Opt;
+  plugin_id!: string;
+  entity_type!: string;
+  entity_id!: number;
   key!: string;
   value?: string | null;
-  updatedAt!: string & Opt;
+  updated_at!: string & Opt;
 }
-
-export class PluginEntityMetadataRepository extends EntityRepository<PluginEntityMetadata> {}
 
 export const PluginEntityMetadataSchema = defineEntity({
   class: PluginEntityMetadata,
@@ -18,16 +17,16 @@ export const PluginEntityMetadataSchema = defineEntity({
   indexes: [
     {
       name: 'idx_plugin_meta_entity',
-      properties: ['pluginId', 'entityType', 'entityId'],
+      properties: ['plugin_id', 'entity_type', 'entity_id'],
     },
   ],
   properties: {
-    id: p.integer().primary().autoincrement(),
-    pluginId: p.text(),
-    entityType: p.text(),
-    entityId: p.integer(),
+    id: p.integer().primary(),
+    plugin_id: p.text(),
+    entity_type: p.text(),
+    entity_id: p.integer(),
     key: p.text(),
     value: p.text().nullable(),
-    updatedAt: p.text().defaultRaw(`(datetime('now'))`),
+    updated_at: p.text().defaultRaw(`(datetime('now'))`),
   },
 });

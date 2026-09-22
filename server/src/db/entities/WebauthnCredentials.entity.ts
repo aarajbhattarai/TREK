@@ -1,38 +1,40 @@
-import { type Opt, type Ref, defineEntity, p, EntityRepository } from '@mikro-orm/core';
+import { type Opt, type Ref, defineEntity, p } from '@mikro-orm/core';
+import { WebauthnCredentialsRepository } from '../repositories/WebauthnCredentials.repository';
+import { DbTimestampType } from '../types';
 import { Users } from './Users.entity';
 
 export class WebauthnCredentials {
-  id?: number | null;
+  id!: number & Opt;
   user!: Ref<Users>;
-  credentialId!: string;
-  publicKey!: Buffer;
+  user_id!: number;
+  credential_id!: string;
+  public_key!: Buffer;
   counter: number & Opt = 0;
   transports?: string | null;
-  deviceType?: string | null;
-  backedUp: number & Opt = 0;
+  device_type?: string | null;
+  backed_up: number & Opt = 0;
   name?: string | null;
   aaguid?: string | null;
-  createdAt?: Date | null;
-  lastUsedAt?: Date | null;
+  created_at?: string | null;
+  last_used_at?: string | null;
 }
-
-export class WebauthnCredentialsRepository extends EntityRepository<WebauthnCredentials> {}
 
 export const WebauthnCredentialsSchema = defineEntity({
   class: WebauthnCredentials,
   repository: () => WebauthnCredentialsRepository,
   properties: {
-    id: p.integer().primary().autoincrement(),
-    user: () => p.manyToOne(Users).ref().deleteRule('cascade').index('idx_webauthn_credentials_user'),
-    credentialId: p.text(),
-    publicKey: p.blob(),
-    counter: p.integer(),
+    id: p.integer().primary(),
+    user: () => p.manyToOne(Users).ref().deleteRule('cascade').hidden().index('idx_webauthn_credentials_user'),
+    user_id: p.integer().persist(false).index('idx_webauthn_credentials_user'),
+    credential_id: p.text(),
+    public_key: p.blob(),
+    counter: p.integer().default(0),
     transports: p.text().nullable(),
-    deviceType: p.text().nullable(),
-    backedUp: p.integer(),
+    device_type: p.text().nullable(),
+    backed_up: p.integer().default(0),
     name: p.text().nullable(),
     aaguid: p.text().nullable(),
-    createdAt: p.datetime().nullable().onCreate(() => new Date()),
-    lastUsedAt: p.datetime().nullable(),
+    created_at: p.type(DbTimestampType).nullable().defaultRaw(`CURRENT_TIMESTAMP`),
+    last_used_at: p.type(DbTimestampType).nullable(),
   },
 });

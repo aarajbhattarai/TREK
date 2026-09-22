@@ -16,7 +16,7 @@ export const VacayUserSettingsSchema = defineEntity({
   class: VacayUserSettings,
   repository: () => VacayUserSettingsRepository,
   properties: {
-    user: () => p.oneToOne(Users).primary().ref().hidden().nullable(),
+    user: () => p.oneToOne(Users).primary().ref().nullable().hidden(),
     user_id: p.integer().nullable().persist(false),
     year_type: p.text().default('calendar'),
     year_start_month: p.integer().default(1),

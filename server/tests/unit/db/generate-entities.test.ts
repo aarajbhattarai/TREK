@@ -732,23 +732,25 @@ function normalizeForDiff(source: string): string {
 }
 
 /**
- * Not a KNOWN_DIFFS item — a consequence of validating against a reference
- * file that predates Task 3. The five document-sync tables have no entity of
- * their own yet, but `Trips` genuinely has FK relations pointing at two of
- * them (`document_connections.trip_id`, `trip_document_links.trip_id`) in
- * the migrated schema, so `bidirectionalRelations` correctly discovers them
- * regardless of whether the target class exists in `src/db/entities/` today.
- *
  * Dated ratchet (Fix round 1, task-2-review.md I7 — same shape as
  * `entity-schema-parity.test.ts`'s `ENTITIES_STILL_MISSING`, added
- * 2026-09-22): Task 3 adds those five entities and these extra
- * imports/collections on `Trips` become required, correct output.
- * PENDING-ENTITIES-001 below fails the moment any of these five already has
- * an entity file, forcing Task 3 to empty this list (and update
- * VALIDATE-001's tolerance) in the same change — it must not silently keep
- * tolerating output that is now wrong.
+ * 2026-09-22): while the five document-sync tables had no entity of their
+ * own, `Trips` still genuinely had FK relations pointing at two of them
+ * (`document_connections.trip_id`, `trip_document_links.trip_id`) in the
+ * migrated schema, so `bidirectionalRelations` correctly discovered them
+ * regardless of whether the target class existed in `src/db/entities/` yet —
+ * this list told `VALIDATE-001` to tolerate those extra lines against a
+ * `Trips.entity.ts` reference file that predated them.
+ *
+ * Plan 2 Task 3 added `DocumentProviders`/`DocumentProviderFields`/
+ * `DocumentConnections`/`TripDocumentLinks`/`DocumentSyncItems`, so those
+ * lines are now required, correct output on every side of the comparison —
+ * emptied per PENDING-ENTITIES-001's own instruction. Left `[]` rather than
+ * deleted: `stripPendingEntityRelations` is a no-op on an empty list (see its
+ * guard clause below), and the ratchet test keeps proving that fact rather
+ * than being removed along with what it was guarding.
  */
-const PENDING_ENTITIES = ['DocumentProviders', 'DocumentProviderFields', 'DocumentConnections', 'TripDocumentLinks', 'DocumentSyncItems'];
+const PENDING_ENTITIES: string[] = [];
 
 function stripPendingEntityRelations(generatedSource: string): string {
   if (PENDING_ENTITIES.length === 0) return generatedSource;

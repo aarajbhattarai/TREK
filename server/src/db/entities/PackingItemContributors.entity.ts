@@ -1,24 +1,28 @@
-import { type Opt, PrimaryKeyProp, type Ref, defineEntity, p, EntityRepository } from '@mikro-orm/core';
+import { type Opt, PrimaryKeyProp, type Ref, defineEntity, p } from '@mikro-orm/core';
+import { PackingItemContributorsRepository } from '../repositories/PackingItemContributors.repository';
+import { DbTimestampType } from '../types';
 import { PackingItems } from './PackingItems.entity';
 import { Users } from './Users.entity';
 
 export class PackingItemContributors {
   [PrimaryKeyProp]?: ['item', 'user'];
   item!: Ref<PackingItems>;
+  item_id!: number;
   user!: Ref<Users>;
+  user_id!: number;
   status: string & Opt = 'accepted';
-  createdAt?: Date | null;
+  created_at?: string | null;
 }
-
-export class PackingItemContributorsRepository extends EntityRepository<PackingItemContributors> {}
 
 export const PackingItemContributorsSchema = defineEntity({
   class: PackingItemContributors,
   repository: () => PackingItemContributorsRepository,
   properties: {
-    item: () => p.manyToOne(PackingItems).primary().ref(),
-    user: () => p.manyToOne(Users).primary().ref(),
-    status: p.text(),
-    createdAt: p.datetime().nullable().onCreate(() => new Date()),
+    item: () => p.manyToOne(PackingItems).primary().ref().hidden(),
+    item_id: p.integer().persist(false),
+    user: () => p.manyToOne(Users).primary().ref().hidden(),
+    user_id: p.integer().persist(false),
+    status: p.text().default('accepted'),
+    created_at: p.type(DbTimestampType).nullable().defaultRaw(`CURRENT_TIMESTAMP`),
   },
 });

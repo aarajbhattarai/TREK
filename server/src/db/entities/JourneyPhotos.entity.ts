@@ -1,38 +1,41 @@
-import { Collection, type Ref, defineEntity, p, EntityRepository } from '@mikro-orm/core';
+import { Collection, type Opt, type Ref, defineEntity, p } from '@mikro-orm/core';
+import { JourneyPhotosRepository } from '../repositories/JourneyPhotos.repository';
 import { JourneyEntryPhotos } from './JourneyEntryPhotos.entity';
 import { Journeys } from './Journeys.entity';
 import { TrekPhotos } from './TrekPhotos.entity';
 
 export class JourneyPhotos {
-  id?: number | null;
+  id!: number & Opt;
   journey!: Ref<Journeys>;
+  journey_id!: number;
   photo!: Ref<TrekPhotos>;
+  photo_id!: number;
   caption?: string | null;
   shared?: number | null = 0;
-  sortOrder?: number | null = 0;
+  sort_order?: number | null = 0;
   provider?: string | null;
-  assetId?: string | null;
-  ownerId?: number | null;
-  createdAt!: number;
-  journeyEntryPhotosCollection = new Collection<JourneyEntryPhotos>(this);
+  asset_id?: string | null;
+  owner_id?: number | null;
+  created_at!: number;
+  journey_entry_photos_collection = new Collection<JourneyEntryPhotos>(this);
 }
-
-export class JourneyPhotosRepository extends EntityRepository<JourneyPhotos> {}
 
 export const JourneyPhotosSchema = defineEntity({
   class: JourneyPhotos,
   repository: () => JourneyPhotosRepository,
   properties: {
-    id: p.integer().primary().autoincrement(),
-    journey: () => p.manyToOne(Journeys).ref().deleteRule('cascade').index('idx_journey_photos_journey'),
-    photo: () => p.manyToOne(TrekPhotos).ref().deleteRule('cascade'),
+    id: p.integer().primary(),
+    journey: () => p.manyToOne(Journeys).ref().deleteRule('cascade').hidden().index('idx_journey_photos_journey'),
+    journey_id: p.integer().persist(false).index('idx_journey_photos_journey'),
+    photo: () => p.manyToOne(TrekPhotos).ref().deleteRule('cascade').hidden(),
+    photo_id: p.integer().persist(false),
     caption: p.text().nullable(),
     shared: p.integer().nullable(),
-    sortOrder: p.integer().nullable(),
+    sort_order: p.integer().nullable(),
     provider: p.text().nullable(),
-    assetId: p.text().nullable(),
-    ownerId: p.integer().nullable(),
-    createdAt: p.integer(),
-    journeyEntryPhotosCollection: () => p.oneToMany(JourneyEntryPhotos).mappedBy('journeyPhoto'),
+    asset_id: p.text().nullable(),
+    owner_id: p.integer().nullable(),
+    created_at: p.integer(),
+    journey_entry_photos_collection: () => p.oneToMany(JourneyEntryPhotos).mappedBy('journeyPhoto').hidden(),
   },
 });

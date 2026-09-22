@@ -1,20 +1,21 @@
-import { type Ref, defineEntity, p, EntityRepository } from '@mikro-orm/core';
+import { type Opt, type Ref, defineEntity, p } from '@mikro-orm/core';
+import { VacayYearsRepository } from '../repositories/VacayYears.repository';
 import { VacayPlans } from './VacayPlans.entity';
 
 export class VacayYears {
-  id?: number | null;
+  id!: number & Opt;
   plan!: Ref<VacayPlans>;
+  plan_id!: number;
   year!: number;
 }
-
-export class VacayYearsRepository extends EntityRepository<VacayYears> {}
 
 export const VacayYearsSchema = defineEntity({
   class: VacayYears,
   repository: () => VacayYearsRepository,
   properties: {
-    id: p.integer().primary().autoincrement(),
-    plan: () => p.manyToOne(VacayPlans).ref().deleteRule('cascade'),
+    id: p.integer().primary(),
+    plan: () => p.manyToOne(VacayPlans).ref().deleteRule('cascade').hidden(),
+    plan_id: p.integer().persist(false),
     year: p.integer(),
   },
 });

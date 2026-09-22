@@ -1,15 +1,15 @@
-import { type Ref, defineEntity, p, EntityRepository } from '@mikro-orm/core';
+import { type Opt, type Ref, defineEntity, p } from '@mikro-orm/core';
+import { SchoolHolidayPeriodsRepository } from '../repositories/SchoolHolidayPeriods.repository';
 import { SchoolHolidayRegions } from './SchoolHolidayRegions.entity';
 
 export class SchoolHolidayPeriods {
-  id?: number | null;
+  id!: number & Opt;
   region!: Ref<SchoolHolidayRegions>;
+  region_id!: number;
   name!: string;
-  startDate!: string;
-  endDate!: string;
+  start_date!: string;
+  end_date!: string;
 }
-
-export class SchoolHolidayPeriodsRepository extends EntityRepository<SchoolHolidayPeriods> {}
 
 export const SchoolHolidayPeriodsSchema = defineEntity({
   class: SchoolHolidayPeriods,
@@ -21,10 +21,11 @@ export const SchoolHolidayPeriodsSchema = defineEntity({
     },
   ],
   properties: {
-    id: p.integer().primary().autoincrement(),
-    region: () => p.manyToOne(SchoolHolidayRegions).ref().deleteRule('cascade').index('idx_school_holiday_periods_region'),
+    id: p.integer().primary(),
+    region: () => p.manyToOne(SchoolHolidayRegions).ref().deleteRule('cascade').hidden().index('idx_school_holiday_periods_region'),
+    region_id: p.integer().persist(false).index('idx_school_holiday_periods_region'),
     name: p.text(),
-    startDate: p.text(),
-    endDate: p.text(),
+    start_date: p.text(),
+    end_date: p.text(),
   },
 });

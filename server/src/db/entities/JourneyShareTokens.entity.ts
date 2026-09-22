@@ -1,33 +1,37 @@
-import { type Opt, type Ref, defineEntity, p, EntityRepository } from '@mikro-orm/core';
+import { type Opt, type Ref, defineEntity, p } from '@mikro-orm/core';
+import { JourneyShareTokensRepository } from '../repositories/JourneyShareTokens.repository';
+import { DbTimestampType } from '../types';
 import { Journeys } from './Journeys.entity';
 import { Users } from './Users.entity';
 
 export class JourneyShareTokens {
-  id?: number | null;
+  id!: number & Opt;
   journey!: Ref<Journeys>;
+  journey_id!: number;
   token!: string;
-  createdBy!: Ref<Users>;
-  shareTimeline?: number | null = 1;
-  shareGallery?: number | null = 1;
-  shareMap?: number | null = 1;
-  createdAt?: Date | null;
-  newestFirst: number & Opt = 0;
+  created_by!: number;
+  share_timeline?: number | null = 1;
+  share_gallery?: number | null = 1;
+  share_map?: number | null = 1;
+  created_at?: string | null;
+  newest_first: number & Opt = 0;
+  createdByRef!: Ref<Users>;
 }
-
-export class JourneyShareTokensRepository extends EntityRepository<JourneyShareTokens> {}
 
 export const JourneyShareTokensSchema = defineEntity({
   class: JourneyShareTokens,
   repository: () => JourneyShareTokensRepository,
   properties: {
-    id: p.integer().primary().autoincrement(),
-    journey: () => p.oneToOne(Journeys).ref().deleteRule('cascade').unique('idx_journey_share_journey'),
+    id: p.integer().primary(),
+    journey: () => p.oneToOne(Journeys).ref().deleteRule('cascade').hidden().unique('idx_journey_share_journey'),
+    journey_id: p.integer().persist(false).unique('idx_journey_share_journey'),
     token: p.text(),
-    createdBy: () => p.manyToOne(Users).ref().name('created_by'),
-    shareTimeline: p.integer().nullable(),
-    shareGallery: p.integer().nullable(),
-    shareMap: p.integer().nullable(),
-    createdAt: p.datetime().nullable().onCreate(() => new Date()),
-    newestFirst: p.integer(),
+    created_by: p.integer().persist(false),
+    share_timeline: p.integer().nullable(),
+    share_gallery: p.integer().nullable(),
+    share_map: p.integer().nullable(),
+    created_at: p.type(DbTimestampType).nullable().defaultRaw(`CURRENT_TIMESTAMP`),
+    newest_first: p.integer().default(0),
+    createdByRef: () => p.manyToOne(Users).ref().joinColumn('created_by').hidden(),
   },
 });

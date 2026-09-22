@@ -14,8 +14,8 @@ import { CollabLinksSchema } from './CollabLinks.entity';
 import { CollabMessageReactionsSchema } from './CollabMessageReactions.entity';
 import { CollabMessagesSchema } from './CollabMessages.entity';
 import { CollabNotesSchema } from './CollabNotes.entity';
-import { CollabPollsSchema } from './CollabPolls.entity';
 import { CollabPollVotesSchema } from './CollabPollVotes.entity';
+import { CollabPollsSchema } from './CollabPolls.entity';
 import { CollectionLabelsSchema } from './CollectionLabels.entity';
 import { CollectionMembersSchema } from './CollectionMembers.entity';
 import { CollectionPlaceRatingsSchema } from './CollectionPlaceRatings.entity';
@@ -27,6 +27,10 @@ import { DayAccommodationsSchema } from './DayAccommodations.entity';
 import { DayAssignmentsSchema } from './DayAssignments.entity';
 import { DayNotesSchema } from './DayNotes.entity';
 import { DaysSchema } from './Days.entity';
+import { DocumentConnectionsSchema } from './DocumentConnections.entity';
+import { DocumentProviderFieldsSchema } from './DocumentProviderFields.entity';
+import { DocumentProvidersSchema } from './DocumentProviders.entity';
+import { DocumentSyncItemsSchema } from './DocumentSyncItems.entity';
 import { FileLinksSchema } from './FileLinks.entity';
 import { GooglePlacePhotoMetaSchema } from './GooglePlacePhotoMeta.entity';
 import { HiddenCountriesSchema } from './HiddenCountries.entity';
@@ -38,9 +42,9 @@ import { JourneyContributorsSchema } from './JourneyContributors.entity';
 import { JourneyEntriesSchema } from './JourneyEntries.entity';
 import { JourneyEntryPhotosSchema } from './JourneyEntryPhotos.entity';
 import { JourneyPhotosSchema } from './JourneyPhotos.entity';
-import { JourneysSchema } from './Journeys.entity';
 import { JourneyShareTokensSchema } from './JourneyShareTokens.entity';
 import { JourneyTripsSchema } from './JourneyTrips.entity';
+import { JourneysSchema } from './Journeys.entity';
 import { McpTokensSchema } from './McpTokens.entity';
 import { MigrationsSchema } from './Migrations.entity';
 import { NotificationChannelPreferencesSchema } from './NotificationChannelPreferences.entity';
@@ -62,8 +66,8 @@ import { PhotosSchema } from './Photos.entity';
 import { PlaceDetailsCacheSchema } from './PlaceDetailsCache.entity';
 import { PlaceRatingsSchema } from './PlaceRatings.entity';
 import { PlaceRegionsSchema } from './PlaceRegions.entity';
-import { PlacesSchema } from './Places.entity';
 import { PlaceShadowPicksSchema } from './PlaceShadowPicks.entity';
+import { PlacesSchema } from './Places.entity';
 import { PluginActionsSchema } from './PluginActions.entity';
 import { PluginCapabilityAuditSchema } from './PluginCapabilityAudit.entity';
 import { PluginEgressHostsSchema } from './PluginEgressHosts.entity';
@@ -73,14 +77,14 @@ import { PluginMetaMigrationsSchema } from './PluginMetaMigrations.entity';
 import { PluginOauthStateSchema } from './PluginOauthState.entity';
 import { PluginOauthTokensSchema } from './PluginOauthTokens.entity';
 import { PluginScheduledTasksSchema } from './PluginScheduledTasks.entity';
-import { PluginsSchema } from './Plugins.entity';
 import { PluginSettingsFieldsSchema } from './PluginSettingsFields.entity';
 import { PluginUserConfigSchema } from './PluginUserConfig.entity';
 import { PluginUserErasureQueueSchema } from './PluginUserErasureQueue.entity';
+import { PluginsSchema } from './Plugins.entity';
 import { ReservationDayPositionsSchema } from './ReservationDayPositions.entity';
 import { ReservationEndpointsSchema } from './ReservationEndpoints.entity';
-import { ReservationsSchema } from './Reservations.entity';
 import { ReservationTravelersSchema } from './ReservationTravelers.entity';
+import { ReservationsSchema } from './Reservations.entity';
 import { RoadtripDayBoundariesSchema } from './RoadtripDayBoundaries.entity';
 import { RoadtripDayTracksSchema } from './RoadtripDayTracks.entity';
 import { RoadtripPreferencesSchema } from './RoadtripPreferences.entity';
@@ -98,6 +102,7 @@ import { TodoItemsSchema } from './TodoItems.entity';
 import { TrekPhotoCacheMetaSchema } from './TrekPhotoCacheMeta.entity';
 import { TrekPhotosSchema } from './TrekPhotos.entity';
 import { TripAlbumLinksSchema } from './TripAlbumLinks.entity';
+import { TripDocumentLinksSchema } from './TripDocumentLinks.entity';
 import { TripFilesSchema } from './TripFiles.entity';
 import { TripInviteTokensSchema } from './TripInviteTokens.entity';
 import { TripMembersSchema } from './TripMembers.entity';
@@ -120,12 +125,6 @@ import { VisitedRegionsSchema } from './VisitedRegions.entity';
 import { WebauthnChallengesSchema } from './WebauthnChallenges.entity';
 import { WebauthnCredentialsSchema } from './WebauthnCredentials.entity';
 
-/**
- * Every entity the ORM knows, listed explicitly so discovery never depends on a
- * filesystem glob (which fails under Node's ESM resolver in the vitest global
- * setup and would silently drop an entity a build forgot to emit).
- * `tests/unit/db/entities-index.test.ts` refuses a file this list misses.
- */
 export const ALL_ENTITIES: readonly EntitySchema[] = [
   AddonsSchema,
   AppSettingsSchema,
@@ -142,8 +141,8 @@ export const ALL_ENTITIES: readonly EntitySchema[] = [
   CollabMessageReactionsSchema,
   CollabMessagesSchema,
   CollabNotesSchema,
-  CollabPollsSchema,
   CollabPollVotesSchema,
+  CollabPollsSchema,
   CollectionLabelsSchema,
   CollectionMembersSchema,
   CollectionPlaceRatingsSchema,
@@ -155,6 +154,10 @@ export const ALL_ENTITIES: readonly EntitySchema[] = [
   DayAssignmentsSchema,
   DayNotesSchema,
   DaysSchema,
+  DocumentConnectionsSchema,
+  DocumentProviderFieldsSchema,
+  DocumentProvidersSchema,
+  DocumentSyncItemsSchema,
   FileLinksSchema,
   GooglePlacePhotoMetaSchema,
   HiddenCountriesSchema,
@@ -166,9 +169,9 @@ export const ALL_ENTITIES: readonly EntitySchema[] = [
   JourneyEntriesSchema,
   JourneyEntryPhotosSchema,
   JourneyPhotosSchema,
-  JourneysSchema,
   JourneyShareTokensSchema,
   JourneyTripsSchema,
+  JourneysSchema,
   McpTokensSchema,
   MigrationsSchema,
   NotificationChannelPreferencesSchema,
@@ -190,8 +193,8 @@ export const ALL_ENTITIES: readonly EntitySchema[] = [
   PlaceDetailsCacheSchema,
   PlaceRatingsSchema,
   PlaceRegionsSchema,
-  PlacesSchema,
   PlaceShadowPicksSchema,
+  PlacesSchema,
   PluginActionsSchema,
   PluginCapabilityAuditSchema,
   PluginEgressHostsSchema,
@@ -201,14 +204,14 @@ export const ALL_ENTITIES: readonly EntitySchema[] = [
   PluginOauthStateSchema,
   PluginOauthTokensSchema,
   PluginScheduledTasksSchema,
-  PluginsSchema,
   PluginSettingsFieldsSchema,
   PluginUserConfigSchema,
   PluginUserErasureQueueSchema,
+  PluginsSchema,
   ReservationDayPositionsSchema,
   ReservationEndpointsSchema,
-  ReservationsSchema,
   ReservationTravelersSchema,
+  ReservationsSchema,
   RoadtripDayBoundariesSchema,
   RoadtripDayTracksSchema,
   RoadtripPreferencesSchema,
@@ -226,6 +229,7 @@ export const ALL_ENTITIES: readonly EntitySchema[] = [
   TrekPhotoCacheMetaSchema,
   TrekPhotosSchema,
   TripAlbumLinksSchema,
+  TripDocumentLinksSchema,
   TripFilesSchema,
   TripInviteTokensSchema,
   TripMembersSchema,

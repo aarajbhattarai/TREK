@@ -1,21 +1,24 @@
-import { type Ref, defineEntity, p, EntityRepository } from '@mikro-orm/core';
+import { type Opt, type Ref, defineEntity, p } from '@mikro-orm/core';
+import { AssignmentParticipantsRepository } from '../repositories/AssignmentParticipants.repository';
 import { DayAssignments } from './DayAssignments.entity';
 import { Users } from './Users.entity';
 
 export class AssignmentParticipants {
-  id?: number | null;
+  id!: number & Opt;
   assignment!: Ref<DayAssignments>;
+  assignment_id!: number;
   user!: Ref<Users>;
+  user_id!: number;
 }
-
-export class AssignmentParticipantsRepository extends EntityRepository<AssignmentParticipants> {}
 
 export const AssignmentParticipantsSchema = defineEntity({
   class: AssignmentParticipants,
   repository: () => AssignmentParticipantsRepository,
   properties: {
-    id: p.integer().primary().autoincrement(),
-    assignment: () => p.manyToOne(DayAssignments).ref().index('idx_assignment_participants_assignment'),
-    user: () => p.manyToOne(Users).ref(),
+    id: p.integer().primary(),
+    assignment: () => p.manyToOne(DayAssignments).ref().hidden().index('idx_assignment_participants_assignment'),
+    assignment_id: p.integer().persist(false).index('idx_assignment_participants_assignment'),
+    user: () => p.manyToOne(Users).ref().hidden(),
+    user_id: p.integer().persist(false),
   },
 });

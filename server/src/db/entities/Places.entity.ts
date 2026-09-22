@@ -1,4 +1,6 @@
-import { Collection, type Ref, defineEntity, p, EntityRepository } from '@mikro-orm/core';
+import { Collection, type Opt, type Ref, defineEntity, p } from '@mikro-orm/core';
+import { PlacesRepository } from '../repositories/Places.repository';
+import { DbTimestampType } from '../types';
 import { BudgetItems } from './BudgetItems.entity';
 import { Categories } from './Categories.entity';
 import { DawarichVisitSuggestions } from './DawarichVisitSuggestions.entity';
@@ -16,103 +18,105 @@ import { TripFiles } from './TripFiles.entity';
 import { Trips } from './Trips.entity';
 
 export class Places {
-  id?: number | null;
+  id!: number & Opt;
   trip!: Ref<Trips>;
+  trip_id!: number;
   name!: string;
   description?: string | null;
-  lat?: unknown | null;
-  lng?: unknown | null;
+  lat?: number | null;
+  lng?: number | null;
   address?: string | null;
   category?: Ref<Categories> | null;
-  price?: unknown | null;
+  category_id?: number | null;
+  price?: number | null;
   currency?: string | null;
-  reservationStatus?: string | null = 'none';
-  reservationNotes?: string | null;
-  reservationDatetime?: string | null;
-  placeTime?: string | null;
-  endTime?: string | null;
-  durationMinutes?: number | null = 60;
+  reservation_status?: string | null = 'none';
+  reservation_notes?: string | null;
+  reservation_datetime?: string | null;
+  place_time?: string | null;
+  end_time?: string | null;
+  duration_minutes?: number | null = 60;
   notes?: string | null;
-  imageUrl?: string | null;
-  googlePlaceId?: string | null;
-  googleFtid?: string | null;
+  image_url?: string | null;
+  google_place_id?: string | null;
+  google_ftid?: string | null;
   website?: string | null;
   phone?: string | null;
-  transportMode?: string | null = 'walking';
-  createdAt?: Date | null;
-  updatedAt?: Date | null;
-  osmId?: string | null;
-  routeGeometry?: string | null;
-  routeColor?: string | null;
-  stopType?: string | null;
-  fillPercent?: number | null;
-  amapPoiId?: string | null;
+  transport_mode?: string | null = 'walking';
+  created_at?: string | null;
+  updated_at?: string | null;
+  osm_id?: string | null;
+  route_geometry?: string | null;
+  route_color?: string | null;
+  stop_type?: string | null;
+  fill_percent?: number | null;
+  amap_poi_id?: string | null;
   source?: string | null;
-  placeTags = new Collection<Tags>(this);
-  budgetItemsCollection = new Collection<BudgetItems>(this);
-  dawarichVisitSuggestionsCollection = new Collection<DawarichVisitSuggestions>(this);
-  dayAccommodationsCollection = new Collection<DayAccommodations>(this);
-  dayAssignmentsCollection = new Collection<DayAssignments>(this);
-  fileLinksCollection = new Collection<FileLinks>(this);
-  journeyEntriesCollection = new Collection<JourneyEntries>(this);
-  photosCollection = new Collection<Photos>(this);
-  placeRatingsCollection = new Collection<PlaceRatings>(this);
-  placeRegions: Ref<PlaceRegions> | null = null;
-  reservationsCollection = new Collection<Reservations>(this);
-  roadtripDayTracksCollection = new Collection<RoadtripDayTracks>(this);
-  tripFilesCollection = new Collection<TripFiles>(this);
+  place_tags = new Collection<Tags>(this);
+  budget_items_collection = new Collection<BudgetItems>(this);
+  dawarich_visit_suggestions_collection = new Collection<DawarichVisitSuggestions>(this);
+  day_accommodations_collection = new Collection<DayAccommodations>(this);
+  day_assignments_collection = new Collection<DayAssignments>(this);
+  file_links_collection = new Collection<FileLinks>(this);
+  journey_entries_collection = new Collection<JourneyEntries>(this);
+  photos_collection = new Collection<Photos>(this);
+  place_ratings_collection = new Collection<PlaceRatings>(this);
+  place_regions: Ref<PlaceRegions> | null = null;
+  reservations_collection = new Collection<Reservations>(this);
+  roadtrip_day_tracks_collection = new Collection<RoadtripDayTracks>(this);
+  trip_files_collection = new Collection<TripFiles>(this);
 }
-
-export class PlacesRepository extends EntityRepository<Places> {}
 
 export const PlacesSchema = defineEntity({
   class: Places,
   repository: () => PlacesRepository,
   properties: {
-    id: p.integer().primary().autoincrement(),
-    trip: () => p.manyToOne(Trips).ref().deleteRule('cascade').index('idx_places_trip_id'),
+    id: p.integer().primary(),
+    trip: () => p.manyToOne(Trips).ref().deleteRule('cascade').hidden().index('idx_places_trip_id'),
+    trip_id: p.integer().persist(false).index('idx_places_trip_id'),
     name: p.text(),
     description: p.text().nullable(),
     lat: p.double().nullable(),
     lng: p.double().nullable(),
     address: p.text().nullable(),
-    category: () => p.manyToOne(Categories).ref().nullable().index('idx_places_category_id'),
+    category: () => p.manyToOne(Categories).ref().nullable().hidden().index('idx_places_category_id'),
+    category_id: p.integer().nullable().persist(false).index('idx_places_category_id'),
     price: p.double().nullable(),
     currency: p.text().nullable(),
-    reservationStatus: p.text().nullable(),
-    reservationNotes: p.text().nullable(),
-    reservationDatetime: p.text().nullable(),
-    placeTime: p.text().nullable(),
-    endTime: p.text().nullable(),
-    durationMinutes: p.integer().nullable(),
+    reservation_status: p.text().nullable(),
+    reservation_notes: p.text().nullable(),
+    reservation_datetime: p.text().nullable(),
+    place_time: p.text().nullable(),
+    end_time: p.text().nullable(),
+    duration_minutes: p.integer().nullable(),
     notes: p.text().nullable(),
-    imageUrl: p.text().nullable(),
-    googlePlaceId: p.text().nullable(),
-    googleFtid: p.text().nullable(),
+    image_url: p.text().nullable(),
+    google_place_id: p.text().nullable(),
+    google_ftid: p.text().nullable(),
     website: p.text().nullable(),
     phone: p.text().nullable(),
-    transportMode: p.text().nullable(),
-    createdAt: p.datetime().nullable().onCreate(() => new Date()),
-    updatedAt: p.datetime().nullable().onCreate(() => new Date()),
-    osmId: p.text().nullable(),
-    routeGeometry: p.text().nullable(),
-    routeColor: p.text().nullable(),
-    stopType: p.text().nullable(),
-    fillPercent: p.integer().nullable(),
-    amapPoiId: p.text().nullable(),
+    transport_mode: p.text().nullable(),
+    created_at: p.type(DbTimestampType).nullable().defaultRaw(`CURRENT_TIMESTAMP`),
+    updated_at: p.type(DbTimestampType).nullable().defaultRaw(`CURRENT_TIMESTAMP`),
+    osm_id: p.text().nullable(),
+    route_geometry: p.text().nullable(),
+    route_color: p.text().nullable(),
+    stop_type: p.text().nullable(),
+    fill_percent: p.integer().nullable(),
+    amap_poi_id: p.text().nullable(),
     source: p.text().nullable(),
-    placeTags: () => p.manyToMany(Tags).pivotTable('place_tags').joinColumn('place_id').inverseJoinColumn('tag_id'),
-    budgetItemsCollection: () => p.oneToMany(BudgetItems).mappedBy('place'),
-    dawarichVisitSuggestionsCollection: () => p.oneToMany(DawarichVisitSuggestions).mappedBy('acceptedPlace'),
-    dayAccommodationsCollection: () => p.oneToMany(DayAccommodations).mappedBy('place'),
-    dayAssignmentsCollection: () => p.oneToMany(DayAssignments).mappedBy('place'),
-    fileLinksCollection: () => p.oneToMany(FileLinks).mappedBy('place'),
-    journeyEntriesCollection: () => p.oneToMany(JourneyEntries).mappedBy('sourcePlace'),
-    photosCollection: () => p.oneToMany(Photos).mappedBy('place'),
-    placeRatingsCollection: () => p.oneToMany(PlaceRatings).mappedBy('place'),
-    placeRegions: () => p.oneToOne(PlaceRegions).ref().mappedBy('place'),
-    reservationsCollection: () => p.oneToMany(Reservations).mappedBy('place'),
-    roadtripDayTracksCollection: () => p.oneToMany(RoadtripDayTracks).mappedBy('place'),
-    tripFilesCollection: () => p.oneToMany(TripFiles).mappedBy('place'),
+    place_tags: () => p.manyToMany(Tags).pivotTable('place_tags').joinColumn('place_id').inverseJoinColumn('tag_id').hidden(),
+    budget_items_collection: () => p.oneToMany(BudgetItems).mappedBy('place').hidden(),
+    dawarich_visit_suggestions_collection: () => p.oneToMany(DawarichVisitSuggestions).mappedBy('acceptedPlace').hidden(),
+    day_accommodations_collection: () => p.oneToMany(DayAccommodations).mappedBy('place').hidden(),
+    day_assignments_collection: () => p.oneToMany(DayAssignments).mappedBy('place').hidden(),
+    file_links_collection: () => p.oneToMany(FileLinks).mappedBy('place').hidden(),
+    journey_entries_collection: () => p.oneToMany(JourneyEntries).mappedBy('sourcePlace').hidden(),
+    photos_collection: () => p.oneToMany(Photos).mappedBy('place').hidden(),
+    place_ratings_collection: () => p.oneToMany(PlaceRatings).mappedBy('place').hidden(),
+    place_regions: () => p.oneToOne(PlaceRegions).ref().mappedBy('place').hidden(),
+    reservations_collection: () => p.oneToMany(Reservations).mappedBy('place').hidden(),
+    roadtrip_day_tracks_collection: () => p.oneToMany(RoadtripDayTracks).mappedBy('place').hidden(),
+    trip_files_collection: () => p.oneToMany(TripFiles).mappedBy('place').hidden(),
   },
 });

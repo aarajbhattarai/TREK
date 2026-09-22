@@ -1,70 +1,84 @@
+import { type Opt, type Ref, defineEntity, p } from '@mikro-orm/core';
+import { DawarichVisitSuggestionsRepository } from '../repositories/DawarichVisitSuggestions.repository';
 import { BucketList } from './BucketList.entity';
 import { Places } from './Places.entity';
 import { Trips } from './Trips.entity';
 import { Users } from './Users.entity';
-import { defineEntity, EntityRepository, type Opt, p, type Ref } from '@mikro-orm/core';
 
 export class DawarichVisitSuggestions {
-  id?: number | null;
+  id!: number & Opt;
   user!: Ref<Users>;
-  sourceVisitId!: string;
+  user_id!: number;
+  source_visit_id!: string;
   trip?: Ref<Trips> | null;
+  trip_id?: number | null;
   name!: string;
-  lat?: unknown | null;
-  lng?: unknown | null;
-  startedAt!: string;
-  endedAt!: string;
-  durationMinutes: number & Opt = 0;
-  localDate!: string;
-  sourceStatus: string & Opt = 'suggested';
-  confidence?: unknown | null;
-  confidenceBand?: string | null;
-  countryCode?: string | null;
+  lat?: number | null;
+  lng?: number | null;
+  started_at!: string;
+  ended_at!: string;
+  duration_minutes: number & Opt = 0;
+  local_date!: string;
+  source_status: string & Opt = 'suggested';
+  confidence?: number | null;
+  confidence_band?: string | null;
+  country_code?: string | null;
   state: string & Opt = 'new';
   target?: string | null;
   acceptedPlace?: Ref<Places> | null;
-  acceptedJournalEntryId?: number | null;
+  accepted_place_id?: number | null;
+  accepted_journal_entry_id?: number | null;
   acceptedBucketListItem?: Ref<BucketList> | null;
+  accepted_bucket_list_item_id?: number | null;
   matchedBucketListItem?: Ref<BucketList> | null;
-  sourceHash!: string;
-  acceptedHash?: string | null;
-  sourceMissingAt?: string | null;
-  firstSeenAt!: string & Opt;
-  lastSeenAt!: string & Opt;
+  matched_bucket_list_item_id?: number | null;
+  source_hash!: string;
+  accepted_hash?: string | null;
+  source_missing_at?: string | null;
+  first_seen_at!: string & Opt;
+  last_seen_at!: string & Opt;
 }
-
-export class DawarichVisitSuggestionsRepository extends EntityRepository<DawarichVisitSuggestions> {}
 
 export const DawarichVisitSuggestionsSchema = defineEntity({
   class: DawarichVisitSuggestions,
   repository: () => DawarichVisitSuggestionsRepository,
-  indexes: [{ name: 'idx_dawarich_suggestions_user_state', properties: ['user', 'state'] }],
+  indexes: [
+    {
+      name: 'idx_dawarich_suggestions_user_state',
+      properties: ['user_id', 'state'],
+    },
+  ],
   properties: {
-    id: p.integer().primary().autoincrement(),
-    user: () => p.manyToOne(Users).ref().deleteRule('cascade'),
-    sourceVisitId: p.text(),
-    trip: () => p.manyToOne(Trips).ref().nullable().index('idx_dawarich_suggestions_trip'),
+    id: p.integer().primary(),
+    user: () => p.manyToOne(Users).ref().deleteRule('cascade').hidden(),
+    user_id: p.integer().persist(false),
+    source_visit_id: p.text(),
+    trip: () => p.manyToOne(Trips).ref().nullable().hidden().index('idx_dawarich_suggestions_trip'),
+    trip_id: p.integer().nullable().persist(false).index('idx_dawarich_suggestions_trip'),
     name: p.text(),
     lat: p.double().nullable(),
     lng: p.double().nullable(),
-    startedAt: p.text(),
-    endedAt: p.text(),
-    durationMinutes: p.integer(),
-    localDate: p.text(),
-    sourceStatus: p.text(),
+    started_at: p.text(),
+    ended_at: p.text(),
+    duration_minutes: p.integer().default(0),
+    local_date: p.text(),
+    source_status: p.text().default('suggested'),
     confidence: p.double().nullable(),
-    confidenceBand: p.text().nullable(),
-    countryCode: p.text().nullable(),
-    state: p.text(),
+    confidence_band: p.text().nullable(),
+    country_code: p.text().nullable(),
+    state: p.text().default('new'),
     target: p.text().nullable(),
-    acceptedPlace: () => p.manyToOne(Places).ref().nullable(),
-    acceptedJournalEntryId: p.integer().nullable(),
-    acceptedBucketListItem: () => p.manyToOne(BucketList).ref().nullable(),
-    matchedBucketListItem: () => p.manyToOne(BucketList).ref().nullable(),
-    sourceHash: p.text(),
-    acceptedHash: p.text().nullable(),
-    sourceMissingAt: p.text().nullable(),
-    firstSeenAt: p.text().onCreate(() => new Date().toISOString().replace(/\.\d{3}Z$/, 'Z')),
-    lastSeenAt: p.text().onCreate(() => new Date().toISOString().replace(/\.\d{3}Z$/, 'Z')),
+    acceptedPlace: () => p.manyToOne(Places).ref().nullable().hidden(),
+    accepted_place_id: p.integer().nullable().persist(false),
+    accepted_journal_entry_id: p.integer().nullable(),
+    acceptedBucketListItem: () => p.manyToOne(BucketList).ref().nullable().hidden(),
+    accepted_bucket_list_item_id: p.integer().nullable().persist(false),
+    matchedBucketListItem: () => p.manyToOne(BucketList).ref().nullable().hidden(),
+    matched_bucket_list_item_id: p.integer().nullable().persist(false),
+    source_hash: p.text(),
+    accepted_hash: p.text().nullable(),
+    source_missing_at: p.text().nullable(),
+    first_seen_at: p.text().defaultRaw(`CURRENT_TIMESTAMP`),
+    last_seen_at: p.text().defaultRaw(`CURRENT_TIMESTAMP`),
   },
 });

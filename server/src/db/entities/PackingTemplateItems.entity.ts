@@ -1,22 +1,23 @@
-import { type Opt, type Ref, defineEntity, p, EntityRepository } from '@mikro-orm/core';
+import { type Opt, type Ref, defineEntity, p } from '@mikro-orm/core';
+import { PackingTemplateItemsRepository } from '../repositories/PackingTemplateItems.repository';
 import { PackingTemplateCategories } from './PackingTemplateCategories.entity';
 
 export class PackingTemplateItems {
-  id?: number | null;
+  id!: number & Opt;
   category!: Ref<PackingTemplateCategories>;
+  category_id!: number;
   name!: string;
-  sortOrder: number & Opt = 0;
+  sort_order: number & Opt = 0;
 }
-
-export class PackingTemplateItemsRepository extends EntityRepository<PackingTemplateItems> {}
 
 export const PackingTemplateItemsSchema = defineEntity({
   class: PackingTemplateItems,
   repository: () => PackingTemplateItemsRepository,
   properties: {
-    id: p.integer().primary().autoincrement(),
-    category: () => p.manyToOne(PackingTemplateCategories).ref().deleteRule('cascade'),
+    id: p.integer().primary(),
+    category: () => p.manyToOne(PackingTemplateCategories).ref().deleteRule('cascade').hidden(),
+    category_id: p.integer().persist(false),
     name: p.text(),
-    sortOrder: p.integer(),
+    sort_order: p.integer().default(0),
   },
 });

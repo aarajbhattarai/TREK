@@ -1,17 +1,16 @@
-import { defineEntity, p, EntityRepository } from '@mikro-orm/core';
+import { type Opt, defineEntity, p } from '@mikro-orm/core';
+import { SchemaVersionRepository } from '../repositories/SchemaVersion.repository';
 
 export class SchemaVersion {
-  id?: number | null;
+  id!: number & Opt;
   version!: number;
 }
-
-export class SchemaVersionRepository extends EntityRepository<SchemaVersion> {}
 
 export const SchemaVersionSchema = defineEntity({
   class: SchemaVersion,
   repository: () => SchemaVersionRepository,
   properties: {
-    id: p.integer().primary().autoincrement(),
+    id: p.integer().primary(),
     version: p.integer(),
   },
 });

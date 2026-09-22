@@ -34,20 +34,16 @@ afterAll(async () => {
 });
 
 /**
- * Document-sync tables that have no entity yet — Plan 2 Task 3 adds them
- * (`@mikro-orm/entity-generator` off the migrated schema, per the plan). The
- * "every db table has an entity" assertion below reports these as expected
- * missing instead of failing on them, but ALSO fails the moment one of them
- * gains a real entity while staying listed here — so Task 3 has to empty
- * this array, not just stop tripping the check.
+ * Tables with no entity yet. Plan 2 Task 0 named the 5 document-sync tables
+ * here; Task 3 added their entities (`DocumentProviders`,
+ * `DocumentProviderFields`, `DocumentConnections`, `TripDocumentLinks`,
+ * `DocumentSyncItems`), so the set is empty. PARITY-007's "every db table
+ * has an entity" assertion reports anything listed here as expected missing
+ * instead of failing on it; PARITY-008 fails the moment a listed table
+ * actually gains an entity, so a future author has to empty this set again
+ * rather than silently leaving a stale entry behind.
  */
-const ENTITIES_STILL_MISSING = [
-  'document_providers',
-  'document_provider_fields',
-  'document_connections',
-  'trip_document_links',
-  'document_sync_items',
-];
+const ENTITIES_STILL_MISSING: string[] = [];
 
 interface DbColumn {
   cid: number;
@@ -223,20 +219,21 @@ describe('entity ↔ migrated-schema parity', () => {
   });
 
   /**
-   * Column defaults are report-only, not a gate: 82 timestamp columns stamp
-   * their default with an `onCreate(() => new Date())` hook rather than
-   * `.defaultRaw('CURRENT_TIMESTAMP')` (Plan 2's D2 removes `onCreate` in
-   * favour of `DbTimestampType` + `defaultRaw`, but that is Task 2/3's job,
-   * not this gate's), so the entity side reports no default at all for
-   * those columns today — confirmed by running this comparison during
-   * development: 93 of 994 compared columns "mismatch", and every single one
-   * is either that onCreate-vs-CURRENT_TIMESTAMP gap or a quoting spelling
-   * difference (`'0'` vs `false`, `NULL` vs absent) that carries no schema
-   * information. Turning this into a hard assertion today would make the
-   * gate red for reasons Task 0 was never asked to fix. Kept here, skipped,
-   * so Task 2/3 has a starting point once `onCreate` is gone.
+   * Column defaults, now a real gate: Task 2/3's generator rewrite removed
+   * every `onCreate(() => new Date())` hook in favour of `DbTimestampType` +
+   * `defaultRaw('CURRENT_TIMESTAMP')` (Plan 2's D2), which is what unblocked
+   * this test — Task 0 left it `it.skip`'d and report-only with 93 of 994
+   * columns "mismatching," all of them that same onCreate-vs-CURRENT_TIMESTAMP
+   * gap or a quoting spelling difference carrying no schema information.
+   * `normaliseDefault` below folds those spellings together (quote style, a
+   * wrapping paren SQLite adds around a non-literal `DEFAULT (expr)` that
+   * `PRAGMA table_info` sometimes strips and the generator's own
+   * `prop.defaultRaw` sometimes doesn't, `datetime('now')`/`CURRENT_TIMESTAMP`,
+   * and `p.boolean()`'s literal `true`/`false` class-field default against
+   * SQLite's `0`/`1` — the only boolean column in the schema today,
+   * `addons.enabled`). Only real schema drift survives that.
    */
-  it.skip('PARITY-005 (report-only, deferred to Task 2/3): column defaults agree after normalisation', () => {
+  it('PARITY-005: column defaults agree after normalisation', () => {
     const failures: string[] = [];
     for (const meta of tableBackedMetas()) {
       const table = meta.tableName;
@@ -308,23 +305,30 @@ describe('entity ↔ migrated-schema parity', () => {
   /**
    * FK targets/deleteRule and index names, against `PRAGMA foreign_key_list`
    * and `PRAGMA index_list` — the plan's second, allow-listed check
-   * (Task 0, Step 3). Run during development: deleteRule disagrees on 11 of
-   * 180 owning relations (`trip_members.invited_by` entity=set null vs
-   * db=no action, `roadtrip_day_tracks.day_id` entity=set null vs db=cascade,
+   * (Task 0, Step 3). Task 0 found deleteRule disagreeing on 11 of 180
+   * owning relations; Task 3's rewrite fixed one of those eleven as a side
+   * effect (`school_holiday_regions.country` now has a real, explicit
+   * `joinColumn`, so it reports a genuine FK row) and re-ran this check
+   * against the other 124 rewritten/added entities, composite-PK relations
+   * included (`packing_item_contributors`, `vacay_user_settings`,
+   * `document_connections`, `trip_document_links` — their `.entity.ts`
+   * source never spells `.deleteRule(...)` on those relations, but MikroORM
+   * discovery still resolves the correct rule at runtime, confirmed by
+   * running this check, so they are not drift): the count is now exactly 10,
+   * unchanged in substance from Task 0's list minus the one now-fixed row
+   * (`trip_members.invited_by` entity=set null vs db=no action,
+   * `roadtrip_day_tracks.day_id` entity=set null vs db=cascade,
    * `reservation_travelers.reservation_id`/`.user_id` and
    * `assignment_participants.assignment_id`/`.user_id` entity=no action vs
    * db=cascade, `oauth_tokens.parent_token_id` entity=set null vs db=no
    * action, `journey_contributors.user_id` entity=cascade vs db=no action,
    * `budget_settlements.created_by_user_id`/`budget_items.paid_by_user_id`
-   * entity=set null vs db=no action, and `school_holiday_regions.country`
-   * itself, which this task's fix makes an explicit `joinColumn` but which
-   * still reports no FK row — SQLite only lists a foreign key for a column
-   * the migration declared with a `REFERENCES` clause, and this one predates
-   * that). None of these are in Task 0's scope (exactly 4 named drifts); an
-   * allow-list would need 11 one-line entries for drift this task was not
-   * asked to fix, and index-name parity looked clean on inspection but was
-   * not exhaustively checked. Left skipped, with the findings above, for
-   * Plan 4 to turn into either fixes or a real allow-list.
+   * entity=set null vs db=no action). None of these are in Task 0's or
+   * Task 3's scope; an allow-list would need 10 one-line entries for drift
+   * neither task was asked to fix, and index-name parity looked clean on
+   * inspection but was not exhaustively checked. Left skipped, with the
+   * findings above, for Plan 4 to turn into either fixes or a real
+   * allow-list.
    */
   it.skip('PARITY-009 (report-only, deferred to Plan 4): FK deleteRule and index names agree', () => {
     const failures: string[] = [];
@@ -355,15 +359,76 @@ describe('entity ↔ migrated-schema parity', () => {
     }
     expect(failures).toEqual([]);
   });
+
+  /**
+   * D1's own rule (the naming strategy derives the same column from a
+   * camelCase or a snake_case property, so a column-level check can never
+   * see the difference): every persisted scalar property's name must equal
+   * its single column name. Relations are exempt by kind (an owning
+   * relation legitimately renames itself away from its column, e.g.
+   * `SchoolHolidayRegions.countryRef` + `.joinColumn('country')` — Task 2's
+   * rule 5); their FK twin scalars are `kind === SCALAR` and stay covered
+   * here. The same test asserts every single-column integer primary key is
+   * `autoincrement` in the discovered metadata — Task 2's Rule 3 doesn't
+   * spell `.autoincrement()` in the builder chain for every case (relying on
+   * `MetadataDiscovery#initAutoincrement`'s own `??= true` default for an
+   * integer PK with no explicit value), so nothing until now pinned that the
+   * default actually fires. Composite and text primary keys are untouched by
+   * design (Task 0/1) and excluded here by construction (more than one
+   * primary prop, or a non-integer type).
+   */
+  it('PARITY-010: persisted scalar property names equal their single column name; integer id PKs are autoincrement', () => {
+    const failures: string[] = [];
+    for (const meta of tableBackedMetas()) {
+      for (const prop of meta.props) {
+        const isRelation = prop.kind !== undefined && prop.kind !== ReferenceKind.SCALAR;
+        if (isRelation) continue;
+        if (prop.persist === false && prop.fieldNames.length === 0) continue; // an embeddable/virtual scalar with no column at all
+        if (prop.fieldNames.length !== 1 || prop.name !== prop.fieldNames[0]) {
+          failures.push(
+            `${meta.className}.${prop.name}: property name does not equal its single column name (fieldNames=${JSON.stringify(prop.fieldNames)})`,
+          );
+        }
+      }
+      // A genuinely single-column primary key only — a composite PK (e.g.
+      // RoadtripDayBoundaries' PRIMARY KEY (trip_id, day_number)) can have an
+      // all-integer shape without ever being SQLite's single-column
+      // `INTEGER PRIMARY KEY` rowid alias, so it must never autoincrement;
+      // `getPrimaryProps()` must report exactly one prop, unfiltered, before
+      // this check applies at all.
+      const primaryProps = meta.getPrimaryProps();
+      if (primaryProps.length === 1) {
+        const pk = primaryProps[0];
+        const isIntegerScalarPk =
+          (pk.kind === undefined || pk.kind === ReferenceKind.SCALAR) && normaliseColumnType(pk.columnTypes[0] ?? '') === 'integer';
+        if (isIntegerScalarPk && pk.autoincrement !== true) {
+          failures.push(`${meta.className}.${pk.name}: integer primary key is not autoincrement`);
+        }
+      }
+    }
+    expect(failures).toEqual([]);
+  });
 });
 
-/** Strips SQL string-literal quoting and folds SQLite's `CURRENT_TIMESTAMP`/`datetime('now')` spellings together. Used only by the skipped, report-only PARITY-005. */
+/**
+ * Strips SQL string-literal quoting and a single wrapping paren pair (SQLite
+ * requires `DEFAULT (expr)` for a non-literal expression in the migration's
+ * own DDL; `PRAGMA table_info` and the generator's introspected
+ * `prop.defaultRaw` don't always agree on keeping that outer pair), folds
+ * SQLite's `CURRENT_TIMESTAMP`/`datetime('now')` spellings together, and
+ * folds a `p.boolean()` property's literal `true`/`false` default onto
+ * SQLite's `1`/`0` (SQLite has no boolean storage class — see
+ * `BOOLEAN_COLUMNS` in `scripts/generate-entities.ts`). Used by PARITY-005.
+ */
 function normaliseDefault(value: string | null): string | null {
   if (value == null) return null;
   let s = value.trim();
+  if (s.startsWith('(') && s.endsWith(')')) s = s.slice(1, -1).trim();
   if (s.startsWith("'") && s.endsWith("'")) s = s.slice(1, -1);
   s = s.toLowerCase();
   if (s === "datetime('now')" || s === 'current_timestamp') s = '__now__';
+  if (s === 'true') s = '1';
+  if (s === 'false') s = '0';
   return s;
 }
 

@@ -1,4 +1,4 @@
-import { Collection, type Ref, defineEntity, p } from '@mikro-orm/core';
+import { Collection, type Opt, type Ref, defineEntity, p } from '@mikro-orm/core';
 import { DaysRepository } from '../repositories/Days.repository';
 import { DayAccommodations } from './DayAccommodations.entity';
 import { DayAssignments } from './DayAssignments.entity';
@@ -11,7 +11,7 @@ import { RoadtripVias } from './RoadtripVias.entity';
 import { Trips } from './Trips.entity';
 
 export class Days {
-  id?: number | null;
+  id!: number & Opt;
   trip!: Ref<Trips>;
   trip_id!: number;
   day_number!: number;
@@ -35,23 +35,23 @@ export const DaysSchema = defineEntity({
   class: Days,
   repository: () => DaysRepository,
   properties: {
-    id: p.integer().primary().autoincrement(),
-    trip: () => p.manyToOne(Trips).ref().hidden().deleteRule('cascade').index('idx_days_trip_id'),
-    trip_id: p.integer().persist(false),
+    id: p.integer().primary(),
+    trip: () => p.manyToOne(Trips).ref().deleteRule('cascade').hidden().index('idx_days_trip_id'),
+    trip_id: p.integer().persist(false).index('idx_days_trip_id'),
     day_number: p.integer(),
     date: p.text().nullable(),
     notes: p.text().nullable(),
     title: p.text().nullable(),
     default_transport_mode: p.text().nullable(),
-    day_accommodations_collection: () => p.oneToMany(DayAccommodations).hidden().mappedBy('startDay'),
-    day_accommodations_collection1: () => p.oneToMany(DayAccommodations).hidden().mappedBy('endDay'),
-    day_assignments_collection: () => p.oneToMany(DayAssignments).hidden().mappedBy('day'),
-    day_notes_collection: () => p.oneToMany(DayNotes).hidden().mappedBy('day'),
-    photos_collection: () => p.oneToMany(Photos).hidden().mappedBy('day'),
-    reservation_day_positions_collection: () => p.oneToMany(ReservationDayPositions).hidden().mappedBy('day'),
-    reservations_collection: () => p.oneToMany(Reservations).hidden().mappedBy('day'),
-    reservations_collection1: () => p.oneToMany(Reservations).hidden().mappedBy('endDay'),
-    roadtrip_day_tracks: () => p.oneToOne(RoadtripDayTracks).ref().hidden().mappedBy('day'),
-    roadtrip_vias_collection: () => p.oneToMany(RoadtripVias).hidden().mappedBy('day'),
+    day_accommodations_collection: () => p.oneToMany(DayAccommodations).mappedBy('startDay').hidden(),
+    day_accommodations_collection1: () => p.oneToMany(DayAccommodations).mappedBy('endDay').hidden(),
+    day_assignments_collection: () => p.oneToMany(DayAssignments).mappedBy('day').hidden(),
+    day_notes_collection: () => p.oneToMany(DayNotes).mappedBy('day').hidden(),
+    photos_collection: () => p.oneToMany(Photos).mappedBy('day').hidden(),
+    reservation_day_positions_collection: () => p.oneToMany(ReservationDayPositions).mappedBy('day').hidden(),
+    reservations_collection: () => p.oneToMany(Reservations).mappedBy('day').hidden(),
+    reservations_collection1: () => p.oneToMany(Reservations).mappedBy('endDay').hidden(),
+    roadtrip_day_tracks: () => p.oneToOne(RoadtripDayTracks).ref().mappedBy('day').hidden(),
+    roadtrip_vias_collection: () => p.oneToMany(RoadtripVias).mappedBy('day').hidden(),
   },
 });

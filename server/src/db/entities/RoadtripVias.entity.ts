@@ -1,17 +1,17 @@
+import { type Opt, type Ref, defineEntity, p } from '@mikro-orm/core';
+import { RoadtripViasRepository } from '../repositories/RoadtripVias.repository';
 import { Days } from './Days.entity';
-import { defineEntity, EntityRepository, type Opt, p, type Ref } from '@mikro-orm/core';
 
 export class RoadtripVias {
-  id?: number | null;
+  id!: number & Opt;
   day!: Ref<Days>;
-  afterOrderIndex!: number;
+  day_id!: number;
+  after_order_index!: number;
   sequence: number & Opt = 0;
-  lat!: unknown;
-  lng!: unknown;
-  createdAt?: string | null;
+  lat!: number;
+  lng!: number;
+  created_at?: string | null;
 }
-
-export class RoadtripViasRepository extends EntityRepository<RoadtripVias> {}
 
 export const RoadtripViasSchema = defineEntity({
   class: RoadtripVias,
@@ -19,19 +19,17 @@ export const RoadtripViasSchema = defineEntity({
   indexes: [
     {
       name: 'idx_roadtrip_vias_day',
-      properties: ['day', 'afterOrderIndex', 'sequence'],
+      properties: ['day_id', 'after_order_index', 'sequence'],
     },
   ],
   properties: {
-    id: p.integer().primary().autoincrement(),
-    day: () => p.manyToOne(Days).ref().deleteRule('cascade'),
-    afterOrderIndex: p.integer(),
-    sequence: p.integer(),
+    id: p.integer().primary(),
+    day: () => p.manyToOne(Days).ref().deleteRule('cascade').hidden(),
+    day_id: p.integer().persist(false),
+    after_order_index: p.integer(),
+    sequence: p.integer().default(0),
     lat: p.double(),
     lng: p.double(),
-    createdAt: p
-      .text()
-      .nullable()
-      .onCreate(() => new Date().toISOString().replace(/\.\d{3}Z$/, 'Z')),
+    created_at: p.text().nullable().defaultRaw(`CURRENT_TIMESTAMP`),
   },
 });

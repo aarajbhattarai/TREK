@@ -1,4 +1,6 @@
-import { type Opt, defineEntity, p, EntityRepository } from '@mikro-orm/core';
+import { type Opt, defineEntity, p } from '@mikro-orm/core';
+import { PluginsRepository } from '../repositories/Plugins.repository';
+import { DbTimestampType } from '../types';
 
 export class Plugins {
   id?: string | null;
@@ -7,34 +9,32 @@ export class Plugins {
   type: string & Opt = 'integration';
   icon?: string | null = 'Blocks';
   version?: string | null;
-  apiVersion?: number | null = 1;
-  minTrekVersion?: string | null;
+  api_version?: number | null = 1;
+  min_trek_version?: string | null;
   permissions?: string | null = '[]';
-  grantedPermissions?: string | null = '[]';
+  granted_permissions?: string | null = '[]';
   status: string & Opt = 'inactive';
   config?: string | null = '{}';
-  sourceRepo?: string | null;
-  sourceCommit?: string | null;
+  source_repo?: string | null;
+  source_commit?: string | null;
   sha256?: string | null;
-  crashCount: number & Opt = 0;
-  lastError?: string | null;
-  reviewedAt?: string | null;
-  sortOrder: number & Opt = 0;
-  installedAt?: Date | null;
-  updatedAt?: Date | null;
+  crash_count: number & Opt = 0;
+  last_error?: string | null;
+  reviewed_at?: string | null;
+  sort_order: number & Opt = 0;
+  installed_at?: string | null;
+  updated_at?: string | null;
   enabled: number & Opt = 0;
   capabilities: string & Opt = '{}';
-  authorPubkey?: string | null;
+  author_pubkey?: string | null;
   dependencies: string & Opt = '{}';
-  operatorEgress: number & Opt = 0;
-  updateBlockCode?: string | null;
-  updateBlockDetail?: string | null;
-  updateBlockVersion?: string | null;
-  trekRange?: string | null;
-  updateHold: number & Opt = 0;
+  operator_egress: number & Opt = 0;
+  update_block_code?: string | null;
+  update_block_detail?: string | null;
+  update_block_version?: string | null;
+  trek_range?: string | null;
+  update_hold: number & Opt = 0;
 }
-
-export class PluginsRepository extends EntityRepository<Plugins> {}
 
 export const PluginsSchema = defineEntity({
   class: Plugins,
@@ -43,33 +43,33 @@ export const PluginsSchema = defineEntity({
     id: p.text().primary().nullable(),
     name: p.text(),
     description: p.text().nullable(),
-    type: p.text(),
+    type: p.text().default('integration'),
     icon: p.text().nullable(),
     version: p.text().nullable(),
-    apiVersion: p.integer().nullable(),
-    minTrekVersion: p.text().nullable(),
+    api_version: p.integer().nullable(),
+    min_trek_version: p.text().nullable(),
     permissions: p.text().nullable(),
-    grantedPermissions: p.text().nullable(),
-    status: p.text(),
+    granted_permissions: p.text().nullable(),
+    status: p.text().default('inactive'),
     config: p.text().nullable(),
-    sourceRepo: p.text().nullable(),
-    sourceCommit: p.text().nullable(),
+    source_repo: p.text().nullable(),
+    source_commit: p.text().nullable(),
     sha256: p.text().nullable(),
-    crashCount: p.integer(),
-    lastError: p.text().nullable(),
-    reviewedAt: p.text().nullable(),
-    sortOrder: p.integer(),
-    installedAt: p.datetime().nullable().onCreate(() => new Date()),
-    updatedAt: p.datetime().nullable().onCreate(() => new Date()),
-    enabled: p.integer(),
-    capabilities: p.text(),
-    authorPubkey: p.text().nullable(),
-    dependencies: p.text(),
-    operatorEgress: p.integer(),
-    updateBlockCode: p.text().nullable(),
-    updateBlockDetail: p.text().nullable(),
-    updateBlockVersion: p.text().nullable(),
-    trekRange: p.text().nullable(),
-    updateHold: p.integer(),
+    crash_count: p.integer().default(0),
+    last_error: p.text().nullable(),
+    reviewed_at: p.text().nullable(),
+    sort_order: p.integer().default(0),
+    installed_at: p.type(DbTimestampType).nullable().defaultRaw(`CURRENT_TIMESTAMP`),
+    updated_at: p.type(DbTimestampType).nullable().defaultRaw(`CURRENT_TIMESTAMP`),
+    enabled: p.integer().default(0),
+    capabilities: p.text().default('{}'),
+    author_pubkey: p.text().nullable(),
+    dependencies: p.text().default('{}'),
+    operator_egress: p.integer().default(0),
+    update_block_code: p.text().nullable(),
+    update_block_detail: p.text().nullable(),
+    update_block_version: p.text().nullable(),
+    trek_range: p.text().nullable(),
+    update_hold: p.integer().default(0),
   },
 });

@@ -1,37 +1,39 @@
-import { type Opt, PrimaryKeyProp, type Ref, defineEntity, p, EntityRepository } from '@mikro-orm/core';
+import { type Opt, PrimaryKeyProp, type Ref, defineEntity, p } from '@mikro-orm/core';
+import { DawarichConnectionsRepository } from '../repositories/DawarichConnections.repository';
+import { DbTimestampType } from '../types';
 import { Users } from './Users.entity';
 
 export class DawarichConnections {
   [PrimaryKeyProp]?: 'user';
   user?: Ref<Users> | null;
+  user_id?: number | null;
   url?: string | null;
-  apiKey?: string | null;
-  allowInsecureTls: number & Opt = 0;
-  syncEnabled: number & Opt = 1;
-  lastSyncAt?: string | null;
-  lastSyncState: string & Opt = 'never';
-  lastSyncError?: string | null;
+  api_key?: string | null;
+  allow_insecure_tls: number & Opt = 0;
+  sync_enabled: number & Opt = 1;
+  last_sync_at?: string | null;
+  last_sync_state: string & Opt = 'never';
+  last_sync_error?: string | null;
   capabilities?: string | null;
-  createdAt?: Date | null;
-  updatedAt?: Date | null;
+  created_at?: string | null;
+  updated_at?: string | null;
 }
-
-export class DawarichConnectionsRepository extends EntityRepository<DawarichConnections> {}
 
 export const DawarichConnectionsSchema = defineEntity({
   class: DawarichConnections,
   repository: () => DawarichConnectionsRepository,
   properties: {
-    user: () => p.oneToOne(Users).primary().ref().nullable(),
+    user: () => p.oneToOne(Users).primary().ref().nullable().hidden(),
+    user_id: p.integer().nullable().persist(false),
     url: p.text().nullable(),
-    apiKey: p.text().nullable(),
-    allowInsecureTls: p.integer(),
-    syncEnabled: p.integer(),
-    lastSyncAt: p.text().nullable(),
-    lastSyncState: p.text(),
-    lastSyncError: p.text().nullable(),
+    api_key: p.text().nullable(),
+    allow_insecure_tls: p.integer().default(0),
+    sync_enabled: p.integer().default(1),
+    last_sync_at: p.text().nullable(),
+    last_sync_state: p.text().default('never'),
+    last_sync_error: p.text().nullable(),
     capabilities: p.text().nullable(),
-    createdAt: p.datetime().nullable().onCreate(() => new Date()),
-    updatedAt: p.datetime().nullable().onCreate(() => new Date()),
+    created_at: p.type(DbTimestampType).nullable().defaultRaw(`CURRENT_TIMESTAMP`),
+    updated_at: p.type(DbTimestampType).nullable().defaultRaw(`CURRENT_TIMESTAMP`),
   },
 });

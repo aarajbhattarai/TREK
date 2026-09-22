@@ -1,26 +1,28 @@
-import { type Ref, defineEntity, p, EntityRepository } from '@mikro-orm/core';
+import { type Opt, type Ref, defineEntity, p } from '@mikro-orm/core';
+import { WebauthnChallengesRepository } from '../repositories/WebauthnChallenges.repository';
+import { DbTimestampType } from '../types';
 import { Users } from './Users.entity';
 
 export class WebauthnChallenges {
-  id?: number | null;
+  id!: number & Opt;
   challenge!: string;
   user?: Ref<Users> | null;
+  user_id?: number | null;
   type!: string;
-  expiresAt!: number;
-  createdAt?: Date | null;
+  expires_at!: number;
+  created_at?: string | null;
 }
-
-export class WebauthnChallengesRepository extends EntityRepository<WebauthnChallenges> {}
 
 export const WebauthnChallengesSchema = defineEntity({
   class: WebauthnChallenges,
   repository: () => WebauthnChallengesRepository,
   properties: {
-    id: p.integer().primary().autoincrement(),
+    id: p.integer().primary(),
     challenge: p.text(),
-    user: () => p.manyToOne(Users).ref().deleteRule('cascade').nullable(),
+    user: () => p.manyToOne(Users).ref().deleteRule('cascade').nullable().hidden(),
+    user_id: p.integer().nullable().persist(false),
     type: p.text(),
-    expiresAt: p.integer().index('idx_webauthn_challenges_expires'),
-    createdAt: p.datetime().nullable().onCreate(() => new Date()),
+    expires_at: p.integer().index('idx_webauthn_challenges_expires'),
+    created_at: p.type(DbTimestampType).nullable().defaultRaw(`CURRENT_TIMESTAMP`),
   },
 });

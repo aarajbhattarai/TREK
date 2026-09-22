@@ -1,29 +1,31 @@
-import { type Ref, defineEntity, p, EntityRepository } from '@mikro-orm/core';
+import { type Opt, type Ref, defineEntity, p } from '@mikro-orm/core';
+import { NotificationsRepository } from '../repositories/Notifications.repository';
+import { DbTimestampType } from '../types';
 import { Users } from './Users.entity';
 
 export class Notifications {
-  id?: number | null;
+  id!: number & Opt;
   type!: string;
   scope!: string;
   target!: number;
   sender?: Ref<Users> | null;
+  sender_id?: number | null;
   recipient!: Ref<Users>;
-  titleKey!: string;
-  titleParams?: string | null = '{}';
-  textKey!: string;
-  textParams?: string | null = '{}';
-  positiveTextKey?: string | null;
-  negativeTextKey?: string | null;
-  positiveCallback?: string | null;
-  negativeCallback?: string | null;
+  recipient_id!: number;
+  title_key!: string;
+  title_params?: string | null = '{}';
+  text_key!: string;
+  text_params?: string | null = '{}';
+  positive_text_key?: string | null;
+  negative_text_key?: string | null;
+  positive_callback?: string | null;
+  negative_callback?: string | null;
   response?: string | null;
-  navigateTextKey?: string | null;
-  navigateTarget?: string | null;
-  isRead?: number | null = 0;
-  createdAt?: Date | null;
+  navigate_text_key?: string | null;
+  navigate_target?: string | null;
+  is_read?: number | null = 0;
+  created_at?: string | null;
 }
-
-export class NotificationsRepository extends EntityRepository<Notifications> {}
 
 export const NotificationsSchema = defineEntity({
   class: Notifications,
@@ -32,32 +34,34 @@ export const NotificationsSchema = defineEntity({
     { name: 'idx_notifications_target_scope', properties: ['target', 'scope'] },
     {
       name: 'idx_notifications_recipient_created',
-      properties: ['recipient', 'createdAt'],
+      properties: ['recipient_id', 'created_at'],
     },
     {
       name: 'idx_notifications_recipient',
-      properties: ['recipient', 'isRead', 'createdAt'],
+      properties: ['recipient_id', 'is_read', 'created_at'],
     },
   ],
   properties: {
-    id: p.integer().primary().autoincrement(),
+    id: p.integer().primary(),
     type: p.text(),
     scope: p.text(),
     target: p.integer(),
-    sender: () => p.manyToOne(Users).ref().nullable(),
-    recipient: () => p.manyToOne(Users).ref().deleteRule('cascade'),
-    titleKey: p.text(),
-    titleParams: p.text().nullable(),
-    textKey: p.text(),
-    textParams: p.text().nullable(),
-    positiveTextKey: p.text().nullable(),
-    negativeTextKey: p.text().nullable(),
-    positiveCallback: p.text().nullable(),
-    negativeCallback: p.text().nullable(),
+    sender: () => p.manyToOne(Users).ref().nullable().hidden(),
+    sender_id: p.integer().nullable().persist(false),
+    recipient: () => p.manyToOne(Users).ref().deleteRule('cascade').hidden(),
+    recipient_id: p.integer().persist(false),
+    title_key: p.text(),
+    title_params: p.text().nullable(),
+    text_key: p.text(),
+    text_params: p.text().nullable(),
+    positive_text_key: p.text().nullable(),
+    negative_text_key: p.text().nullable(),
+    positive_callback: p.text().nullable(),
+    negative_callback: p.text().nullable(),
     response: p.text().nullable(),
-    navigateTextKey: p.text().nullable(),
-    navigateTarget: p.text().nullable(),
-    isRead: p.integer().nullable(),
-    createdAt: p.datetime().nullable().onCreate(() => new Date()),
+    navigate_text_key: p.text().nullable(),
+    navigate_target: p.text().nullable(),
+    is_read: p.integer().nullable(),
+    created_at: p.type(DbTimestampType).nullable().defaultRaw(`CURRENT_TIMESTAMP`),
   },
 });

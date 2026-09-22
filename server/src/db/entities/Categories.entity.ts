@@ -1,32 +1,34 @@
-import { Collection, type Ref, defineEntity, p, EntityRepository } from '@mikro-orm/core';
+import { Collection, type Opt, type Ref, defineEntity, p } from '@mikro-orm/core';
+import { CategoriesRepository } from '../repositories/Categories.repository';
+import { DbTimestampType } from '../types';
 import { CollectionPlaces } from './CollectionPlaces.entity';
 import { Places } from './Places.entity';
 import { Users } from './Users.entity';
 
 export class Categories {
-  id?: number | null;
+  id!: number & Opt;
   name!: string;
   color?: string | null = '#6366f1';
   icon?: string | null = '📍';
   user?: Ref<Users> | null;
-  createdAt?: Date | null;
-  collectionPlacesCollection = new Collection<CollectionPlaces>(this);
-  placesCollection = new Collection<Places>(this);
+  user_id?: number | null;
+  created_at?: string | null;
+  collection_places_collection = new Collection<CollectionPlaces>(this);
+  places_collection = new Collection<Places>(this);
 }
-
-export class CategoriesRepository extends EntityRepository<Categories> {}
 
 export const CategoriesSchema = defineEntity({
   class: Categories,
   repository: () => CategoriesRepository,
   properties: {
-    id: p.integer().primary().autoincrement(),
+    id: p.integer().primary(),
     name: p.text(),
     color: p.text().nullable(),
     icon: p.text().nullable(),
-    user: () => p.manyToOne(Users).ref().nullable(),
-    createdAt: p.datetime().nullable().onCreate(() => new Date()),
-    collectionPlacesCollection: () => p.oneToMany(CollectionPlaces).mappedBy('category'),
-    placesCollection: () => p.oneToMany(Places).mappedBy('category'),
+    user: () => p.manyToOne(Users).ref().nullable().hidden(),
+    user_id: p.integer().nullable().persist(false),
+    created_at: p.type(DbTimestampType).nullable().defaultRaw(`CURRENT_TIMESTAMP`),
+    collection_places_collection: () => p.oneToMany(CollectionPlaces).mappedBy('category').hidden(),
+    places_collection: () => p.oneToMany(Places).mappedBy('category').hidden(),
   },
 });

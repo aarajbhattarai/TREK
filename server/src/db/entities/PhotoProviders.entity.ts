@@ -1,4 +1,5 @@
-import { Collection, defineEntity, p, EntityRepository } from '@mikro-orm/core';
+import { Collection, defineEntity, p } from '@mikro-orm/core';
+import { PhotoProvidersRepository } from '../repositories/PhotoProviders.repository';
 import { PhotoProviderFields } from './PhotoProviderFields.entity';
 
 export class PhotoProviders {
@@ -7,11 +8,9 @@ export class PhotoProviders {
   description?: string | null;
   icon?: string | null = 'Image';
   enabled?: number | null = 0;
-  sortOrder?: number | null = 0;
-  photoProviderFieldsCollection = new Collection<PhotoProviderFields>(this);
+  sort_order?: number | null = 0;
+  photo_provider_fields_collection = new Collection<PhotoProviderFields>(this);
 }
-
-export class PhotoProvidersRepository extends EntityRepository<PhotoProviders> {}
 
 export const PhotoProvidersSchema = defineEntity({
   class: PhotoProviders,
@@ -22,7 +21,7 @@ export const PhotoProvidersSchema = defineEntity({
     description: p.text().nullable(),
     icon: p.text().nullable(),
     enabled: p.integer().nullable(),
-    sortOrder: p.integer().nullable(),
-    photoProviderFieldsCollection: () => p.oneToMany(PhotoProviderFields).mappedBy('provider'),
+    sort_order: p.integer().nullable(),
+    photo_provider_fields_collection: () => p.oneToMany(PhotoProviderFields).mappedBy('provider').hidden(),
   },
 });

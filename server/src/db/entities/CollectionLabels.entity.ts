@@ -1,29 +1,31 @@
-import { Collection, type Ref, defineEntity, p, EntityRepository } from '@mikro-orm/core';
+import { Collection, type Opt, type Ref, defineEntity, p } from '@mikro-orm/core';
+import { CollectionLabelsRepository } from '../repositories/CollectionLabels.repository';
+import { DbTimestampType } from '../types';
 import { CollectionPlaces } from './CollectionPlaces.entity';
 import { Collections } from './Collections.entity';
 
 export class CollectionLabels {
-  id?: number | null;
+  id!: number & Opt;
   collection!: Ref<Collections>;
+  collection_id!: number;
   name!: string;
   color?: string | null = '#6366f1';
-  sortOrder?: number | null = 0;
-  createdAt?: Date | null;
-  collectionPlaceLabelsInverse = new Collection<CollectionPlaces>(this);
+  sort_order?: number | null = 0;
+  created_at?: string | null;
+  collection_place_labels_inverse = new Collection<CollectionPlaces>(this);
 }
-
-export class CollectionLabelsRepository extends EntityRepository<CollectionLabels> {}
 
 export const CollectionLabelsSchema = defineEntity({
   class: CollectionLabels,
   repository: () => CollectionLabelsRepository,
   properties: {
-    id: p.integer().primary().autoincrement(),
-    collection: () => p.manyToOne(Collections).ref().deleteRule('cascade').index('idx_collection_labels_collection'),
+    id: p.integer().primary(),
+    collection: () => p.manyToOne(Collections).ref().deleteRule('cascade').hidden().index('idx_collection_labels_collection'),
+    collection_id: p.integer().persist(false).index('idx_collection_labels_collection'),
     name: p.text(),
     color: p.text().nullable(),
-    sortOrder: p.integer().nullable(),
-    createdAt: p.datetime().nullable().onCreate(() => new Date()),
-    collectionPlaceLabelsInverse: () => p.manyToMany(CollectionPlaces).mappedBy('collectionPlaceLabels'),
+    sort_order: p.integer().nullable(),
+    created_at: p.type(DbTimestampType).nullable().defaultRaw(`CURRENT_TIMESTAMP`),
+    collection_place_labels_inverse: () => p.manyToMany(CollectionPlaces).mappedBy('collection_place_labels').hidden(),
   },
 });

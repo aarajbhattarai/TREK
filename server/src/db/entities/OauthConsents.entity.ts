@@ -1,25 +1,29 @@
-import { type Opt, type Ref, defineEntity, p, EntityRepository } from '@mikro-orm/core';
+import { type Opt, type Ref, defineEntity, p } from '@mikro-orm/core';
+import { OauthConsentsRepository } from '../repositories/OauthConsents.repository';
+import { DbTimestampType } from '../types';
 import { OauthClients } from './OauthClients.entity';
 import { Users } from './Users.entity';
 
 export class OauthConsents {
-  id?: number | null;
+  id!: number & Opt;
   client!: Ref<OauthClients>;
+  client_id!: string;
   user!: Ref<Users>;
+  user_id!: number;
   scopes: string & Opt = '[]';
-  updatedAt?: Date | null;
+  updated_at?: string | null;
 }
-
-export class OauthConsentsRepository extends EntityRepository<OauthConsents> {}
 
 export const OauthConsentsSchema = defineEntity({
   class: OauthConsents,
   repository: () => OauthConsentsRepository,
   properties: {
-    id: p.integer().primary().autoincrement(),
-    client: () => p.manyToOne(OauthClients).ref().name('client_id').deleteRule('cascade'),
-    user: () => p.manyToOne(Users).ref().deleteRule('cascade'),
-    scopes: p.text(),
-    updatedAt: p.datetime().nullable().onCreate(() => new Date()),
+    id: p.integer().primary(),
+    client: () => p.manyToOne(OauthClients).ref().name('client_id').deleteRule('cascade').hidden(),
+    client_id: p.text().persist(false),
+    user: () => p.manyToOne(Users).ref().deleteRule('cascade').hidden(),
+    user_id: p.integer().persist(false),
+    scopes: p.text().default('[]'),
+    updated_at: p.type(DbTimestampType).nullable().defaultRaw(`CURRENT_TIMESTAMP`),
   },
 });

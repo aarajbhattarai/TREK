@@ -1,24 +1,23 @@
-import { PrimaryKeyProp, defineEntity, p, EntityRepository } from '@mikro-orm/core';
+import { PrimaryKeyProp, defineEntity, p } from '@mikro-orm/core';
+import { PluginOauthStateRepository } from '../repositories/PluginOauthState.repository';
 
 export class PluginOauthState {
   [PrimaryKeyProp]?: 'state';
   state?: string | null;
-  pluginId!: string;
-  userId!: number;
+  plugin_id!: string;
+  user_id!: number;
   verifier!: string;
-  createdAt!: number;
+  created_at!: number;
 }
-
-export class PluginOauthStateRepository extends EntityRepository<PluginOauthState> {}
 
 export const PluginOauthStateSchema = defineEntity({
   class: PluginOauthState,
   repository: () => PluginOauthStateRepository,
   properties: {
     state: p.text().primary().nullable(),
-    pluginId: p.text(),
-    userId: p.integer(),
+    plugin_id: p.text(),
+    user_id: p.integer(),
     verifier: p.text(),
-    createdAt: p.integer(),
+    created_at: p.integer(),
   },
 });

@@ -1,28 +1,30 @@
-import { type Ref, defineEntity, p, EntityRepository } from '@mikro-orm/core';
+import { type Opt, type Ref, defineEntity, p } from '@mikro-orm/core';
+import { PasswordResetTokensRepository } from '../repositories/PasswordResetTokens.repository';
+import { DbTimestampType } from '../types';
 import { Users } from './Users.entity';
 
 export class PasswordResetTokens {
-  id?: number | null;
+  id!: number & Opt;
   user!: Ref<Users>;
-  tokenHash!: string;
-  expiresAt!: Date;
-  consumedAt?: Date | null;
-  createdAt?: Date | null;
-  createdIp?: string | null;
+  user_id!: number;
+  token_hash!: string;
+  expires_at!: string;
+  consumed_at?: string | null;
+  created_at?: string | null;
+  created_ip?: string | null;
 }
-
-export class PasswordResetTokensRepository extends EntityRepository<PasswordResetTokens> {}
 
 export const PasswordResetTokensSchema = defineEntity({
   class: PasswordResetTokens,
   repository: () => PasswordResetTokensRepository,
   properties: {
-    id: p.integer().primary().autoincrement(),
-    user: () => p.manyToOne(Users).ref().deleteRule('cascade').index('idx_prt_user'),
-    tokenHash: p.text().index('idx_prt_hash'),
-    expiresAt: p.datetime(),
-    consumedAt: p.datetime().nullable(),
-    createdAt: p.datetime().nullable().onCreate(() => new Date()),
-    createdIp: p.text().nullable(),
+    id: p.integer().primary(),
+    user: () => p.manyToOne(Users).ref().deleteRule('cascade').hidden().index('idx_prt_user'),
+    user_id: p.integer().persist(false).index('idx_prt_user'),
+    token_hash: p.text().index('idx_prt_hash'),
+    expires_at: p.type(DbTimestampType),
+    consumed_at: p.type(DbTimestampType).nullable(),
+    created_at: p.type(DbTimestampType).nullable().defaultRaw(`CURRENT_TIMESTAMP`),
+    created_ip: p.text().nullable(),
   },
 });

@@ -1,29 +1,30 @@
-import { type Opt, PrimaryKeyProp, type Ref, defineEntity, p, EntityRepository } from '@mikro-orm/core';
+import { type Opt, PrimaryKeyProp, type Ref, defineEntity, p } from '@mikro-orm/core';
+import { IdempotencyKeysRepository } from '../repositories/IdempotencyKeys.repository';
 import { Users } from './Users.entity';
 
 export class IdempotencyKeys {
   [PrimaryKeyProp]?: ['key', 'user', 'method', 'path'];
   key!: string;
   user!: Ref<Users>;
+  user_id!: number;
   method!: string;
   path!: string;
-  statusCode!: number;
-  responseBody!: string;
-  createdAt: number & Opt = NaN;
+  status_code!: number;
+  response_body!: string;
+  created_at: number & Opt = NaN;
 }
-
-export class IdempotencyKeysRepository extends EntityRepository<IdempotencyKeys> {}
 
 export const IdempotencyKeysSchema = defineEntity({
   class: IdempotencyKeys,
   repository: () => IdempotencyKeysRepository,
   properties: {
     key: p.text().primary(),
-    user: () => p.manyToOne(Users).primary().ref().deleteRule('cascade'),
+    user: () => p.manyToOne(Users).primary().ref().deleteRule('cascade').hidden(),
+    user_id: p.integer().persist(false),
     method: p.text().primary(),
     path: p.text().primary(),
-    statusCode: p.integer(),
-    responseBody: p.text(),
-    createdAt: p.integer().defaultRaw(`(strftime('%s','now'))`).index('idx_idempotency_keys_created'),
+    status_code: p.integer(),
+    response_body: p.text(),
+    created_at: p.integer().defaultRaw(`(strftime('%s','now'))`).index('idx_idempotency_keys_created'),
   },
 });

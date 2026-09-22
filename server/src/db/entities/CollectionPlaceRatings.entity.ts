@@ -1,25 +1,29 @@
-import { type Ref, defineEntity, p, EntityRepository } from '@mikro-orm/core';
+import { type Opt, type Ref, defineEntity, p } from '@mikro-orm/core';
+import { CollectionPlaceRatingsRepository } from '../repositories/CollectionPlaceRatings.repository';
+import { DbTimestampType } from '../types';
 import { CollectionPlaces } from './CollectionPlaces.entity';
 import { Users } from './Users.entity';
 
 export class CollectionPlaceRatings {
-  id?: number | null;
+  id!: number & Opt;
   collectionPlace!: Ref<CollectionPlaces>;
+  collection_place_id!: number;
   user!: Ref<Users>;
+  user_id!: number;
   rating!: number;
-  createdAt?: Date | null;
+  created_at?: string | null;
 }
-
-export class CollectionPlaceRatingsRepository extends EntityRepository<CollectionPlaceRatings> {}
 
 export const CollectionPlaceRatingsSchema = defineEntity({
   class: CollectionPlaceRatings,
   repository: () => CollectionPlaceRatingsRepository,
   properties: {
-    id: p.integer().primary().autoincrement(),
-    collectionPlace: () => p.manyToOne(CollectionPlaces).ref().deleteRule('cascade').index('idx_collection_place_ratings_place'),
-    user: () => p.manyToOne(Users).ref().deleteRule('cascade'),
+    id: p.integer().primary(),
+    collectionPlace: () => p.manyToOne(CollectionPlaces).ref().deleteRule('cascade').hidden().index('idx_collection_place_ratings_place'),
+    collection_place_id: p.integer().persist(false).index('idx_collection_place_ratings_place'),
+    user: () => p.manyToOne(Users).ref().deleteRule('cascade').hidden(),
+    user_id: p.integer().persist(false),
     rating: p.integer(),
-    createdAt: p.datetime().nullable().onCreate(() => new Date()),
+    created_at: p.type(DbTimestampType).nullable().defaultRaw(`CURRENT_TIMESTAMP`),
   },
 });

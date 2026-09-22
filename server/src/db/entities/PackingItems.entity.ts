@@ -1,49 +1,55 @@
-import { Collection, type Opt, type Ref, defineEntity, p, EntityRepository } from '@mikro-orm/core';
+import { Collection, type Opt, type Ref, defineEntity, p } from '@mikro-orm/core';
+import { PackingItemsRepository } from '../repositories/PackingItems.repository';
+import { DbTimestampType } from '../types';
 import { PackingBags } from './PackingBags.entity';
 import { PackingItemContributors } from './PackingItemContributors.entity';
 import { Trips } from './Trips.entity';
 import { Users } from './Users.entity';
 
 export class PackingItems {
-  id?: number | null;
+  id!: number & Opt;
   trip!: Ref<Trips>;
+  trip_id!: number;
   name!: string;
   checked?: number | null = 0;
   category?: string | null;
-  sortOrder?: number | null = 0;
-  createdAt?: Date | null;
-  weightGrams?: number | null;
+  sort_order?: number | null = 0;
+  created_at?: string | null;
+  weight_grams?: number | null;
   bag?: Ref<PackingBags> | null;
+  bag_id?: number | null;
   quantity: number & Opt = 1;
-  updatedAt?: Date | null;
-  isPrivate: number & Opt = 0;
+  updated_at?: string | null;
+  is_private: number & Opt = 0;
   owner?: Ref<Users> | null;
-  packingItemContributors = new Collection<Users>(this);
-  packingItemRecipients = new Collection<Users>(this);
-  packingItemContributorsCollection = new Collection<PackingItemContributors>(this);
+  owner_id?: number | null;
+  packing_item_contributors = new Collection<Users>(this);
+  packing_item_recipients = new Collection<Users>(this);
+  packing_item_contributors_collection = new Collection<PackingItemContributors>(this);
 }
-
-export class PackingItemsRepository extends EntityRepository<PackingItems> {}
 
 export const PackingItemsSchema = defineEntity({
   class: PackingItems,
   repository: () => PackingItemsRepository,
   properties: {
-    id: p.integer().primary().autoincrement(),
-    trip: () => p.manyToOne(Trips).ref().deleteRule('cascade').index('idx_packing_items_trip_id'),
+    id: p.integer().primary(),
+    trip: () => p.manyToOne(Trips).ref().deleteRule('cascade').hidden().index('idx_packing_items_trip_id'),
+    trip_id: p.integer().persist(false).index('idx_packing_items_trip_id'),
     name: p.text(),
     checked: p.integer().nullable(),
     category: p.text().nullable(),
-    sortOrder: p.integer().nullable(),
-    createdAt: p.datetime().nullable().onCreate(() => new Date()),
-    weightGrams: p.integer().nullable(),
-    bag: () => p.manyToOne(PackingBags).ref().nullable(),
-    quantity: p.integer(),
-    updatedAt: p.datetime().nullable(),
-    isPrivate: p.integer(),
-    owner: () => p.manyToOne(Users).ref().nullable(),
-    packingItemContributors: () => p.manyToMany(Users).pivotTable('packing_item_contributors').pivotEntity(() => PackingItemContributors).joinColumn('item_id').inverseJoinColumn('user_id'),
-    packingItemRecipients: () => p.manyToMany(Users).pivotTable('packing_item_recipients').joinColumn('item_id').inverseJoinColumn('user_id'),
-    packingItemContributorsCollection: () => p.oneToMany(PackingItemContributors).mappedBy('item'),
+    sort_order: p.integer().nullable(),
+    created_at: p.type(DbTimestampType).nullable().defaultRaw(`CURRENT_TIMESTAMP`),
+    weight_grams: p.integer().nullable(),
+    bag: () => p.manyToOne(PackingBags).ref().nullable().hidden(),
+    bag_id: p.integer().nullable().persist(false),
+    quantity: p.integer().default(1),
+    updated_at: p.type(DbTimestampType).nullable(),
+    is_private: p.integer().default(0),
+    owner: () => p.manyToOne(Users).ref().nullable().hidden(),
+    owner_id: p.integer().nullable().persist(false),
+    packing_item_contributors: () => p.manyToMany(Users).pivotTable('packing_item_contributors').pivotEntity(() => PackingItemContributors).joinColumn('item_id').inverseJoinColumn('user_id').hidden(),
+    packing_item_recipients: () => p.manyToMany(Users).pivotTable('packing_item_recipients').joinColumn('item_id').inverseJoinColumn('user_id').hidden(),
+    packing_item_contributors_collection: () => p.oneToMany(PackingItemContributors).mappedBy('item').hidden(),
   },
 });

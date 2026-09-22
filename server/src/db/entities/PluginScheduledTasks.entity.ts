@@ -1,27 +1,26 @@
-import { type Opt, defineEntity, p, EntityRepository } from '@mikro-orm/core';
+import { type Opt, defineEntity, p } from '@mikro-orm/core';
+import { PluginScheduledTasksRepository } from '../repositories/PluginScheduledTasks.repository';
 
 export class PluginScheduledTasks {
-  id?: number | null;
-  pluginId!: string;
+  id!: number & Opt;
+  plugin_id!: string;
   name!: string;
-  dueAt!: number;
+  due_at!: number;
   payload: string & Opt = 'null';
-  everyMs?: number | null;
-  createdAt!: string & Opt;
+  every_ms?: number | null;
+  created_at!: string & Opt;
 }
-
-export class PluginScheduledTasksRepository extends EntityRepository<PluginScheduledTasks> {}
 
 export const PluginScheduledTasksSchema = defineEntity({
   class: PluginScheduledTasks,
   repository: () => PluginScheduledTasksRepository,
   properties: {
-    id: p.integer().primary().autoincrement(),
-    pluginId: p.text(),
+    id: p.integer().primary(),
+    plugin_id: p.text(),
     name: p.text(),
-    dueAt: p.integer().index('idx_plugin_sched_due'),
-    payload: p.text(),
-    everyMs: p.integer().nullable(),
-    createdAt: p.text().defaultRaw(`(datetime('now'))`),
+    due_at: p.integer().index('idx_plugin_sched_due'),
+    payload: p.text().default('null'),
+    every_ms: p.integer().nullable(),
+    created_at: p.text().defaultRaw(`(datetime('now'))`),
   },
 });

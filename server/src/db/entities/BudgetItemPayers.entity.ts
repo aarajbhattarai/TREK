@@ -1,23 +1,26 @@
+import { type Opt, type Ref, defineEntity, p } from '@mikro-orm/core';
+import { BudgetItemPayersRepository } from '../repositories/BudgetItemPayers.repository';
 import { BudgetItems } from './BudgetItems.entity';
 import { Users } from './Users.entity';
-import { type Ref, defineEntity, p, Opt, EntityRepository } from '@mikro-orm/core';
 
 export class BudgetItemPayers {
-  id?: number | null;
+  id!: number & Opt;
   budgetItem!: Ref<BudgetItems>;
+  budget_item_id!: number;
   user!: Ref<Users>;
-  amount: number & Opt = 0;
+  user_id!: number;
+  amount!: number & Opt;
 }
-
-export class BudgetItemPayersRepository extends EntityRepository<BudgetItemPayers> {}
 
 export const BudgetItemPayersSchema = defineEntity({
   class: BudgetItemPayers,
   repository: () => BudgetItemPayersRepository,
   properties: {
-    id: p.integer().primary().autoincrement(),
-    budgetItem: () => p.manyToOne(BudgetItems).ref().deleteRule('cascade').index('idx_budget_item_payers_item'),
-    user: () => p.manyToOne(Users).ref().deleteRule('cascade'),
-    amount: p.double().default(0),
+    id: p.integer().primary(),
+    budgetItem: () => p.manyToOne(BudgetItems).ref().deleteRule('cascade').hidden().index('idx_budget_item_payers_item'),
+    budget_item_id: p.integer().persist(false).index('idx_budget_item_payers_item'),
+    user: () => p.manyToOne(Users).ref().deleteRule('cascade').hidden(),
+    user_id: p.integer().persist(false),
+    amount: p.double().defaultRaw(`0`),
   },
 });

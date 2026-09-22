@@ -1,4 +1,5 @@
-import { type Opt, defineEntity, p, EntityRepository } from '@mikro-orm/core';
+import { type Opt, defineEntity, p } from '@mikro-orm/core';
+import { AddonsRepository } from '../repositories/Addons.repository';
 
 export interface AddonConfig {
   [key: string]: unknown;
@@ -9,25 +10,23 @@ export class Addons {
   name!: string;
   description?: string | null;
   type: string & Opt = 'global';
-  icon: string & Opt = 'Puzzle';
-  enabled: boolean & Opt | null = false;
-  config: AddonConfig & Opt | null = {};
-  sortOrder?: number | null = 0;
+  icon?: string | null = 'Puzzle';
+  enabled?: boolean | null = false;
+  config?: AddonConfig | null;
+  sort_order?: number | null = 0;
 }
-
-export class AddonsRepository extends EntityRepository<Addons>{}
 
 export const AddonsSchema = defineEntity({
   class: Addons,
   repository: () => AddonsRepository,
   properties: {
-    id: p.text().primary(),
+    id: p.text().primary().nullable(),
     name: p.text(),
     description: p.text().nullable(),
-    type: p.text(),
+    type: p.text().default('global'),
     icon: p.text().nullable(),
-    enabled: p.boolean().nullable().default(false),
-    config: p.json<AddonConfig>().nullable(),
-    sortOrder: p.integer().nullable(),
+    enabled: p.boolean().nullable(),
+    config: p.json<AddonConfig>().nullable().default('{}'),
+    sort_order: p.integer().nullable(),
   },
 });

@@ -1,23 +1,24 @@
-import { type Opt, PrimaryKeyProp, type Ref, defineEntity, p, EntityRepository } from '@mikro-orm/core';
+import { type Opt, PrimaryKeyProp, type Ref, defineEntity, p } from '@mikro-orm/core';
+import { NotificationChannelPreferencesRepository } from '../repositories/NotificationChannelPreferences.repository';
 import { Users } from './Users.entity';
 
 export class NotificationChannelPreferences {
-  [PrimaryKeyProp]?: ['user', 'eventType', 'channel'];
+  [PrimaryKeyProp]?: ['user', 'event_type', 'channel'];
   user!: Ref<Users>;
-  eventType!: string;
+  user_id!: number;
+  event_type!: string;
   channel!: string;
   enabled: number & Opt = 1;
 }
-
-export class NotificationChannelPreferencesRepository extends EntityRepository<NotificationChannelPreferences> {}
 
 export const NotificationChannelPreferencesSchema = defineEntity({
   class: NotificationChannelPreferences,
   repository: () => NotificationChannelPreferencesRepository,
   properties: {
-    user: () => p.manyToOne(Users).primary().ref().deleteRule('cascade').index('idx_ncp_user'),
-    eventType: p.text().primary(),
+    user: () => p.manyToOne(Users).primary().ref().deleteRule('cascade').hidden().index('idx_ncp_user'),
+    user_id: p.integer().persist(false).index('idx_ncp_user'),
+    event_type: p.text().primary(),
     channel: p.text().primary(),
-    enabled: p.integer(),
+    enabled: p.integer().default(1),
   },
 });

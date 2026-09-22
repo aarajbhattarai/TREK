@@ -1,14 +1,13 @@
-import { Collection, PrimaryKeyProp, defineEntity, p, EntityRepository } from '@mikro-orm/core';
+import { Collection, PrimaryKeyProp, defineEntity, p } from '@mikro-orm/core';
+import { SchoolHolidayCountriesRepository } from '../repositories/SchoolHolidayCountries.repository';
 import { SchoolHolidayRegions } from './SchoolHolidayRegions.entity';
 
 export class SchoolHolidayCountries {
   [PrimaryKeyProp]?: 'code';
   code?: string | null;
   name!: string;
-  schoolHolidayRegionsCollection = new Collection<SchoolHolidayRegions>(this);
+  school_holiday_regions_collection = new Collection<SchoolHolidayRegions>(this);
 }
-
-export class SchoolHolidayCountriesRepository extends EntityRepository<SchoolHolidayCountries> {}
 
 export const SchoolHolidayCountriesSchema = defineEntity({
   class: SchoolHolidayCountries,
@@ -16,6 +15,6 @@ export const SchoolHolidayCountriesSchema = defineEntity({
   properties: {
     code: p.text().primary().nullable(),
     name: p.text(),
-    schoolHolidayRegionsCollection: () => p.oneToMany(SchoolHolidayRegions).mappedBy('country'),
+    school_holiday_regions_collection: () => p.oneToMany(SchoolHolidayRegions).mappedBy('countryRef').hidden(),
   },
 });

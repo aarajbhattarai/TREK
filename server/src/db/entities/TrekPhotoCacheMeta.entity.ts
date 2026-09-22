@@ -1,20 +1,19 @@
-import { type Opt, PrimaryKeyProp, defineEntity, p, EntityRepository } from '@mikro-orm/core';
+import { type Opt, PrimaryKeyProp, defineEntity, p } from '@mikro-orm/core';
+import { TrekPhotoCacheMetaRepository } from '../repositories/TrekPhotoCacheMeta.repository';
 
 export class TrekPhotoCacheMeta {
-  [PrimaryKeyProp]?: 'cacheKey';
-  cacheKey?: string | null;
-  contentType: string & Opt = 'image/jpeg';
-  fetchedAt!: number;
+  [PrimaryKeyProp]?: 'cache_key';
+  cache_key?: string | null;
+  content_type: string & Opt = 'image/jpeg';
+  fetched_at!: number;
 }
-
-export class TrekPhotoCacheMetaRepository extends EntityRepository<TrekPhotoCacheMeta> {}
 
 export const TrekPhotoCacheMetaSchema = defineEntity({
   class: TrekPhotoCacheMeta,
   repository: () => TrekPhotoCacheMetaRepository,
   properties: {
-    cacheKey: p.text().primary().nullable(),
-    contentType: p.text(),
-    fetchedAt: p.integer().index('idx_trek_photo_cache_meta_fetched_at'),
+    cache_key: p.text().primary().nullable(),
+    content_type: p.text().default('image/jpeg'),
+    fetched_at: p.integer().index('idx_trek_photo_cache_meta_fetched_at'),
   },
 });

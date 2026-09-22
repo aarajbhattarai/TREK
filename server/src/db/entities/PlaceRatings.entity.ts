@@ -1,25 +1,29 @@
-import { type Ref, defineEntity, p, EntityRepository } from '@mikro-orm/core';
+import { type Opt, type Ref, defineEntity, p } from '@mikro-orm/core';
+import { PlaceRatingsRepository } from '../repositories/PlaceRatings.repository';
+import { DbTimestampType } from '../types';
 import { Places } from './Places.entity';
 import { Users } from './Users.entity';
 
 export class PlaceRatings {
-  id?: number | null;
+  id!: number & Opt;
   place!: Ref<Places>;
+  place_id!: number;
   user!: Ref<Users>;
+  user_id!: number;
   rating!: number;
-  createdAt?: Date | null;
+  created_at?: string | null;
 }
-
-export class PlaceRatingsRepository extends EntityRepository<PlaceRatings> {}
 
 export const PlaceRatingsSchema = defineEntity({
   class: PlaceRatings,
   repository: () => PlaceRatingsRepository,
   properties: {
-    id: p.integer().primary().autoincrement(),
-    place: () => p.manyToOne(Places).ref().deleteRule('cascade').index('idx_place_ratings_place'),
-    user: () => p.manyToOne(Users).ref().deleteRule('cascade'),
+    id: p.integer().primary(),
+    place: () => p.manyToOne(Places).ref().deleteRule('cascade').hidden().index('idx_place_ratings_place'),
+    place_id: p.integer().persist(false).index('idx_place_ratings_place'),
+    user: () => p.manyToOne(Users).ref().deleteRule('cascade').hidden(),
+    user_id: p.integer().persist(false),
     rating: p.integer(),
-    createdAt: p.datetime().nullable().onCreate(() => new Date()),
+    created_at: p.type(DbTimestampType).nullable().defaultRaw(`CURRENT_TIMESTAMP`),
   },
 });

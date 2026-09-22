@@ -1,18 +1,17 @@
-import { type Opt, PrimaryKeyProp, defineEntity, p, EntityRepository } from '@mikro-orm/core';
+import { type Opt, PrimaryKeyProp, defineEntity, p } from '@mikro-orm/core';
+import { RouteUsageDailyRepository } from '../repositories/RouteUsageDaily.repository';
 
 export class RouteUsageDaily {
-  [PrimaryKeyProp]?: ['day', 'profile', 'surface', 'selfHosted'];
+  [PrimaryKeyProp]?: ['day', 'profile', 'surface', 'self_hosted'];
   day!: string;
   profile!: string;
   surface!: string;
-  selfHosted!: number;
+  self_hosted!: number;
   requests: number & Opt = 0;
   waypoints: number & Opt = 0;
-  km!: number;
+  km!: number & Opt;
   failed: number & Opt = 0;
 }
-
-export class RouteUsageDailyRepository extends EntityRepository<RouteUsageDaily> {}
 
 export const RouteUsageDailySchema = defineEntity({
   class: RouteUsageDaily,
@@ -21,10 +20,10 @@ export const RouteUsageDailySchema = defineEntity({
     day: p.text().primary().index('idx_route_usage_day'),
     profile: p.text().primary(),
     surface: p.text().primary(),
-    selfHosted: p.integer().primary(),
-    requests: p.integer(),
-    waypoints: p.integer(),
-    km: p.double().default(0),
-    failed: p.integer(),
+    self_hosted: p.integer().primary(),
+    requests: p.integer().default(0),
+    waypoints: p.integer().default(0),
+    km: p.double().defaultRaw(`0`),
+    failed: p.integer().default(0),
   },
 });

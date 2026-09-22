@@ -1,35 +1,43 @@
-import { type Opt, type Ref, defineEntity, p, EntityRepository } from '@mikro-orm/core';
+import { type Opt, type Ref, defineEntity, p } from '@mikro-orm/core';
+import { BudgetSettlementsRepository } from '../repositories/BudgetSettlements.repository';
+import { DbTimestampType } from '../types';
 import { Trips } from './Trips.entity';
 import { Users } from './Users.entity';
 
 export class BudgetSettlements {
-  id?: number | null;
+  id!: number & Opt;
   trip!: Ref<Trips>;
+  trip_id!: number;
   fromUser!: Ref<Users>;
+  from_user_id!: number;
   toUser!: Ref<Users>;
-  amount!: number;
-  createdAt?: Date | null;
+  to_user_id!: number;
+  amount!: number & Opt;
+  created_at?: string | null;
   createdByUser?: Ref<Users> | null;
+  created_by_user_id?: number | null;
   currency?: string | null;
-  exchangeRate!: number;
-  settledAt?: string | null;
+  exchange_rate!: number & Opt;
+  settled_at?: string | null;
 }
-
-export class BudgetSettlementsRepository extends EntityRepository<BudgetSettlements> {}
 
 export const BudgetSettlementsSchema = defineEntity({
   class: BudgetSettlements,
   repository: () => BudgetSettlementsRepository,
   properties: {
-    id: p.integer().primary().autoincrement(),
-    trip: () => p.manyToOne(Trips).ref().deleteRule('cascade').index('idx_budget_settlements_trip'),
-    fromUser: () => p.manyToOne(Users).ref().deleteRule('cascade'),
-    toUser: () => p.manyToOne(Users).ref().deleteRule('cascade'),
-    amount: p.double().default(0),
-    createdAt: p.datetime().nullable().onCreate(() => new Date()),
-    createdByUser: () => p.manyToOne(Users).ref().nullable(),
+    id: p.integer().primary(),
+    trip: () => p.manyToOne(Trips).ref().deleteRule('cascade').hidden().index('idx_budget_settlements_trip'),
+    trip_id: p.integer().persist(false).index('idx_budget_settlements_trip'),
+    fromUser: () => p.manyToOne(Users).ref().deleteRule('cascade').hidden(),
+    from_user_id: p.integer().persist(false),
+    toUser: () => p.manyToOne(Users).ref().deleteRule('cascade').hidden(),
+    to_user_id: p.integer().persist(false),
+    amount: p.double().defaultRaw(`0`),
+    created_at: p.type(DbTimestampType).nullable().defaultRaw(`CURRENT_TIMESTAMP`),
+    createdByUser: () => p.manyToOne(Users).ref().nullable().hidden(),
+    created_by_user_id: p.integer().nullable().persist(false),
     currency: p.text().nullable(),
-    exchangeRate: p.double().default(1),
-    settledAt: p.text().nullable(),
+    exchange_rate: p.double().defaultRaw(`1`),
+    settled_at: p.text().nullable(),
   },
 });

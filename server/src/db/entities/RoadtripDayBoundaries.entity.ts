@@ -1,33 +1,19 @@
+import { PrimaryKeyProp, type Ref, defineEntity, p } from '@mikro-orm/core';
+import { RoadtripDayBoundariesRepository } from '../repositories/RoadtripDayBoundaries.repository';
 import { DayAssignments } from './DayAssignments.entity';
 import { Trips } from './Trips.entity';
-import { PrimaryKeyProp, type Ref, defineEntity, p, EntityRepository } from '@mikro-orm/core';
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 export class RoadtripDayBoundaries {
-  [PrimaryKeyProp]?: ['trip', 'dayNumber'];
+  [PrimaryKeyProp]?: ['trip', 'day_number'];
   trip!: Ref<Trips>;
-  dayNumber!: number;
+  trip_id!: number;
+  day_number!: number;
   fromAssignment!: Ref<DayAssignments>;
+  from_assignment_id!: number;
   toAssignment?: Ref<DayAssignments> | null;
-  fraction!: number; // was `unknown`
+  to_assignment_id?: number | null;
+  fraction!: number;
 }
-
-export class RoadtripDayBoundariesRepository extends EntityRepository<RoadtripDayBoundaries> {}
 
 export const RoadtripDayBoundariesSchema = defineEntity({
   class: RoadtripDayBoundaries,
@@ -35,18 +21,21 @@ export const RoadtripDayBoundariesSchema = defineEntity({
   checks: [
     {
       name: 'roadtrip_day_boundaries_fraction_check',
-      expression: 'fraction BETWEEN 0 AND 1',
+      expression: 'fraction BETWEEN 0 AND 1),        PRIMARY KEY (trip_id, day_number',
     },
     {
       name: 'roadtrip_day_boundaries_day_number_check',
-      expression: 'day_number BETWEEN 1 AND 366',
+      expression: 'day_number >= 1',
     },
   ],
   properties: {
-    trip: () => p.manyToOne(Trips).primary().ref().deleteRule('cascade'),
-    dayNumber: p.integer().primary(),
-    fromAssignment: () => p.manyToOne(DayAssignments).ref().deleteRule('cascade'),
-    toAssignment: () => p.manyToOne(DayAssignments).ref().deleteRule('cascade').nullable(),
+    trip: () => p.manyToOne(Trips).primary().ref().deleteRule('cascade').hidden(),
+    trip_id: p.integer().persist(false),
+    day_number: p.integer().primary(),
+    fromAssignment: () => p.manyToOne(DayAssignments).ref().deleteRule('cascade').hidden(),
+    from_assignment_id: p.integer().persist(false),
+    toAssignment: () => p.manyToOne(DayAssignments).ref().deleteRule('cascade').nullable().hidden(),
+    to_assignment_id: p.integer().nullable().persist(false),
     fraction: p.double(),
   },
 });
