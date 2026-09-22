@@ -153,6 +153,16 @@ describe('MCP token service', () => {
     expect(await svc.deleteMcpToken(user.id, tokenId)).toEqual({ error: 'Token not found', status: 404 });
     expect(testDb.prepare('SELECT id FROM mcp_tokens WHERE id = ?').get(tokenId)).toBeDefined();
   });
+
+  it('TOKEN-017: deleteMcpToken 404s (not 500) on a non-numeric id — Plan 3b Task 2 review, F1', async () => {
+    const { user } = createUser(testDb);
+    expect(await svc.deleteMcpToken(user.id, 'abc')).toEqual({ error: 'Token not found', status: 404 });
+  });
+
+  it('TOKEN-018: deleteMcpToken 404s on a hex-shaped id — Number("0x10") is 16, a safe integer a bare Number() conversion would accept, but SQLite affinity never would (Plan 3b Task 2 review, F1)', async () => {
+    const { user } = createUser(testDb);
+    expect(await svc.deleteMcpToken(user.id, '0x10')).toEqual({ error: 'Token not found', status: 404 });
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -267,10 +277,15 @@ describe('MCP token service (admin view)', () => {
     await svc.createMcpToken(user.id, 'a');
     await svc.createMcpToken(other.id, 'b');
 
-    const all = await svc.listAllMcpTokens() as unknown as Record<string, unknown>[];
+    // `listAllMcpTokens` returns the repository's own typed
+    // `McpTokenWithUsernameRow[]` now (Plan 3b Task 2) — no cast needed
+    // (Task 2 review, F7: the earlier `as unknown as Record<string,
+    // unknown>[]` was a double cast kept only to compile against the old
+    // `unknown` return type).
+    const all = await svc.listAllMcpTokens();
     expect(all).toHaveLength(2);
     expect(all.every(t => typeof t.username === 'string')).toBe(true);
-    expect(all.some(t => t.token_hash !== undefined)).toBe(false);
+    expect(all.every(t => !('token_hash' in t))).toBe(true);
   });
 
   it('TOKEN-004: adminDeleteMcpToken removes any user token and revokes that user', async () => {
@@ -285,6 +300,16 @@ describe('MCP token service (admin view)', () => {
 
   it('TOKEN-005: adminDeleteMcpToken 404s on an unknown id without revoking anyone', async () => {
     expect(await svc.adminDeleteMcpToken('99999')).toEqual({ error: 'Token not found', status: 404 });
+    expect(revokeUserSessions).not.toHaveBeenCalled();
+  });
+
+  it('TOKEN-019: adminDeleteMcpToken 404s (not 500) on a non-numeric id, without revoking anyone — Plan 3b Task 2 review, F1', async () => {
+    expect(await svc.adminDeleteMcpToken('abc')).toEqual({ error: 'Token not found', status: 404 });
+    expect(revokeUserSessions).not.toHaveBeenCalled();
+  });
+
+  it('TOKEN-020: adminDeleteMcpToken 404s on a hex-shaped id (Plan 3b Task 2 review, F1)', async () => {
+    expect(await svc.adminDeleteMcpToken('0x10')).toEqual({ error: 'Token not found', status: 404 });
     expect(revokeUserSessions).not.toHaveBeenCalled();
   });
 });

@@ -177,4 +177,23 @@ describe('Tags', () => {
     const res = await request(app).get('/api/tags');
     expect(res.status).toBe(401);
   });
+
+  it('TAG-011: PUT /api/tags/abc - non-numeric id returns the legacy 404, not a 500 (Plan 3b Task 2 fix round, item 1b)', async () => {
+    const { user } = createUser(testDb);
+    const res = await request(app)
+      .put('/api/tags/abc')
+      .set('Cookie', authCookie(user.id))
+      .send({ name: 'Ghost' });
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({ error: 'Tag not found' });
+  });
+
+  it('TAG-012: DELETE /api/tags/abc - non-numeric id returns the legacy 404, not a 500 (Plan 3b Task 2 fix round, item 1b)', async () => {
+    const { user } = createUser(testDb);
+    const res = await request(app)
+      .delete('/api/tags/abc')
+      .set('Cookie', authCookie(user.id));
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({ error: 'Tag not found' });
+  });
 });

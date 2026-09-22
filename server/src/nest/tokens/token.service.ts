@@ -11,6 +11,7 @@ import type { McpTokensRepository, McpTokenBasicRow } from '../../db/repositorie
 import { Users } from '../../db/entities/Users.entity';
 import type { UsersRepository } from '../../db/repositories/Users.repository';
 import { EphemeralTokenService } from '../auth/ephemeral-token.service';
+import { toRowId } from '../common/row-id';
 // Import from sessionManager directly, NOT the ../../mcp barrel: the barrel pulls
 // the whole tools fan-out (and via the domain bridges, the Nest services) into
 // every consumer of this module — a nest→mcp→nest module cycle.
@@ -133,10 +134,11 @@ export class TokenService {
     });
 
     // A separate re-select, matching the legacy INSERT-then-SELECT shape
-    // exactly (TK3 then TK4) rather than reusing `inserted`'s full row —
-    // `findBasic` also serves TK9's admin lookup, so its `user_id` field is
-    // dropped here: TK4's response never carried it, and leaking it would be
-    // a new field on the client-facing token payload, not a refactor.
+    // exactly (TK3 then TK4 — two statements, `insertToken` returns only
+    // the generated id and never re-queries the row itself) — `findBasic`
+    // also serves TK9's admin lookup, so its `user_id` field is dropped
+    // here: TK4's response never carried it, and leaking it would be a new
+    // field on the client-facing token payload, not a refactor.
     const basic = (await this.tokens.findBasic(inserted.id)) as McpTokenBasicRow;
     const { user_id: _userId, ...token } = basic;
 
@@ -160,7 +162,14 @@ export class TokenService {
    * missing from a screen they never opened.
    */
   private async deleteToken(userId: number, tokenId: string, kind: TokenKind): Promise<{ error?: string; status?: number; success?: boolean }> {
-    const id = Number(tokenId);
+    // Convert, VALIDATE, and answer the legacy not-found before any
+    // repository call (program rule 15): the legacy statement bound
+    // `tokenId` straight into `WHERE id = ?` and let SQLite's affinity rules
+    // miss on a non-numeric string; a typed repository filter has no such
+    // leniency, so a bare `Number()` turned a 404 into a 500 (Plan 3b Task 2
+    // review, F1).
+    const id = toRowId(tokenId);
+    if (id === null) return { error: 'Token not found', status: 404 };
     const token = await this.tokens.findOwnedByKind(id, userId, kind);
     if (!token) return { error: 'Token not found', status: 404 };
     await this.tokens.deleteById(id);
@@ -197,7 +206,7 @@ export class TokenService {
   // Admin view
   //
   // The same table, seen across all users. Moved here from AdminService, which
-  // only owned a second copy of the delete purely because the admin route lived
+  // owned a second copy of the delete purely because the admin route lived
   // there. Note the two are genuinely different queries, not duplicates: the
   // user-facing ones scope every statement by user_id, these deliberately do
   // not, and the admin delete revokes sessions unconditionally where the
@@ -209,7 +218,10 @@ export class TokenService {
   }
 
   async adminDeleteMcpToken(id: string) {
-    const numericId = Number(id);
+    // Same guard as `deleteToken` above — convert, VALIDATE, answer the
+    // legacy 404 before any repository call (F1).
+    const numericId = toRowId(id);
+    if (numericId === null) return { error: 'Token not found', status: 404 };
     const token = await this.tokens.findBasic(numericId);
     if (!token) return { error: 'Token not found', status: 404 };
     await this.tokens.deleteById(numericId);
@@ -260,8 +272,8 @@ export class TokenService {
     if (row) {
       await this.tokens.touchLastUsedByHash(hash);
       // `role` is `users.role TEXT`, narrower at runtime than the repository's
-      // row type states — same trust boundary the legacy `this.db.get<User>()`
-      // generic asserted without a runtime check.
+      // row type states — same trust boundary the pre-ORM raw-SQL lookup's
+      // generic type parameter asserted without a runtime check.
       return row as User;
     }
     return null;

@@ -3,6 +3,7 @@ import { InjectRepository } from '@mikro-orm/nestjs';
 import type { Tag } from '@trek/shared';
 import { Tags } from '../../db/entities/Tags.entity';
 import type { TagsRepository } from '../../db/repositories/Tags.repository';
+import { toRowId } from '../common/row-id';
 
 /**
  * Tags domain service — owns the tag business rules (moved off
@@ -27,7 +28,17 @@ export class TagsService {
   }
 
   async getByIdAndUser(id: string | number, userId: number): Promise<Tag | undefined> {
-    const tag = await this.tags.findByIdAndUser(Number(id), userId);
+    // Convert, VALIDATE, and answer the legacy not-found before any
+    // repository call (program rule 15): the legacy raw-SQL statement bound
+    // `id` straight into `WHERE id = ? AND user_id = ?` and let SQLite's
+    // affinity rules miss on a non-numeric string, returning `undefined`; a
+    // typed repository filter has no such leniency — a bare `Number()`
+    // renders `NaN` as an unquoted column reference and 500s (Plan 3b Task 2
+    // review, F1's class of bug, same fix applied here per the fix round's
+    // item 1b).
+    const rowId = toRowId(id);
+    if (rowId === null) return undefined;
+    const tag = await this.tags.findByIdAndUser(rowId, userId);
     return (tag as unknown as Tag | null) ?? undefined;
   }
 
@@ -49,14 +60,27 @@ export class TagsService {
     const changes: { name?: string; color?: string } = {};
     if (name) changes.name = name;
     if (color) changes.color = color;
-    // `patch` returns `null` for a non-existent id (Task 3 review, Minor 2);
-    // the legacy re-select returned `undefined` for the same case, and every
-    // caller pre-checks with a 404 first, so `?? undefined` restores that
-    // exact parity for the race-condition path the pre-check doesn't cover.
-    return ((await this.tags.patch(Number(id), changes)) ?? undefined) as unknown as Tag;
+    // Every caller pre-checks with `getByIdAndUser` (a 404 for both a
+    // missing/foreign row and a non-numeric id) first, so this path only
+    // runs for an id already known valid — but a non-numeric id here still
+    // must not reach the repository as `NaN` (F1's class of bug): the
+    // legacy `UPDATE ... WHERE id = ?` bound the raw string, matched
+    // nothing via SQLite's affinity rules, and the re-select likewise
+    // returned `undefined`. `toRowId` reproduces that exact no-op for the
+    // race-condition path the pre-check doesn't cover, and `patch` returns
+    // `null` for a non-existent numeric id (Task 3 review, Minor 2) — both
+    // fold into the same `?? undefined` parity the legacy re-select had.
+    const rowId = toRowId(id);
+    if (rowId === null) return undefined as unknown as Tag;
+    return ((await this.tags.patch(rowId, changes)) ?? undefined) as unknown as Tag;
   }
 
   async remove(id: string | number): Promise<void> {
-    await this.tags.remove(Number(id));
+    // Same guard: a non-numeric id must no-op (matching the legacy `DELETE
+    // ... WHERE id = ?` binding a string that never matched any row) rather
+    // than reach the repository as `NaN`.
+    const rowId = toRowId(id);
+    if (rowId === null) return;
+    await this.tags.remove(rowId);
   }
 }

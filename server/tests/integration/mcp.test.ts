@@ -37,16 +37,16 @@ import { setPluginMcpToolSource } from '../../src/plugin-mcp-tools';
 import type { McpDynamicTool } from '../../src/nest-mcp';
 import { getMcpSafeUrl } from '../../src/app-config';
 import { OauthService } from '../../src/nest/oauth/oauth.service';
-import { DatabaseService } from '../../src/nest/database/database.service';
 import { createTestAddonsService } from '../helpers/test-addons';
 import { AuditService } from '../../src/nest/audit/audit.service';
 import { createTestOrm, type TestOrm } from '../helpers/test-orm';
 import { AuditLog } from '../../src/db/entities/AuditLog.entity';
 import { Users } from '../../src/db/entities/Users.entity';
-import { TokenService } from '../../src/nest/tokens/token.service';
+import { OauthClients } from '../../src/db/entities/OauthClients.entity';
+import { OauthTokens } from '../../src/db/entities/OauthTokens.entity';
+import { OauthConsents } from '../../src/db/entities/OauthConsents.entity';
 import { MikroORM } from '@mikro-orm/core';
 
-const oauthDbs = new DatabaseService(testDb);
 let oauthSvc: OauthService;
 
 /** Mint a trekoa_ access token for the user via a fresh OAuth client. */
@@ -76,7 +76,7 @@ beforeAll(async () => {
   nestApp = await buildApp();
   app = nestApp.getHttpAdapter().getInstance();
   t = await createTestOrm(testDb);
-  oauthSvc = new OauthService(oauthDbs, await createTestAddonsService(testDb, oauthDbs), new AuditService(t.repo(AuditLog), t.repo(Users)));
+  oauthSvc = new OauthService(t.repo(OauthClients), t.repo(OauthTokens), t.repo(OauthConsents), await createTestAddonsService(testDb), new AuditService(t.repo(AuditLog), t.repo(Users)));
 });
 
 beforeEach(() => {
@@ -769,10 +769,15 @@ describe('MCP rate limiting', () => {
  * (`MikroOrmModule.forRoot`'s default `registerRequestContext`, registered
  * via `NestModule.configure()`/`forRoutes(ALL)`) applies to it exactly like
  * every other route, BEFORE any guard runs. Verified here rather than
- * assumed: `TokenService.verifyMcpToken` (TK13 in the inventory) is not yet
- * repository-backed (Task 2), so this forces a genuine repository read at
- * the exact point that method will occupy once converted, through the same
- * DI-provided `TokenService` singleton the real `/mcp` route calls.
+ * assumed: `TokenService.verifyMcpToken` (TK13 in the inventory) is now
+ * repository-backed (`McpTokensRepository.findUserByHashAndKind` +
+ * `touchLastUsedByHash`, Plan 3b Task 2) — MCP-CTX-002 drives a real `trek_`
+ * bearer token through the genuine DI-provided `TokenService` singleton the
+ * `/mcp` route calls (no mock of `verifyMcpToken` itself, per the Task 2
+ * review's F5: a spy on the very method under test does not exercise the
+ * repository path it exists to guard) and asserts the repository's write
+ * (`last_used_at`) actually moved, which is only possible if the read ran
+ * inside the forked context.
  */
 describe('MCP bearer-token verification runs inside the HTTP request context (Plan 3b Task 0, D6)', () => {
   it('MCP-CTX-001: outside of any request, the SAME ORM refuses a query (allowGlobalContext: false is genuinely enforced, not just permissively configured)', async () => {
@@ -780,32 +785,26 @@ describe('MCP bearer-token verification runs inside the HTTP request context (Pl
     await expect(orm.em.getRepository(Users).findOne({ id: 1 })).rejects.toThrow(/context/i);
   });
 
-  it('MCP-CTX-002: a repository read forced inside verifyMcpToken (the trek_ bearer-token branch) succeeds — the /mcp route already forks a request context before the auth step runs', async () => {
+  it('MCP-CTX-002: a repository read inside verifyMcpToken (the trek_ bearer-token branch) succeeds — the /mcp route already forks a request context before the auth step runs', async () => {
     testDb.prepare("UPDATE addons SET enabled = 1 WHERE id = 'mcp'").run();
     const { user } = createUser(testDb);
-    const orm = nestApp.get(MikroORM);
-    const tokenService = nestApp.get(TokenService);
-    let found: unknown;
-    let caught: unknown;
-    const spy = vi.spyOn(tokenService, 'verifyMcpToken').mockImplementation(async () => {
-      try {
-        found = await orm.em.getRepository(Users).findOne({ id: user.id });
-      } catch (e) {
-        caught = e;
-      }
-      return found ? { id: user.id, username: user.username, email: user.email, role: user.role } : null;
-    });
-    try {
-      const res = await request(app)
-        .post('/mcp')
-        .set('Authorization', 'Bearer trek_forces_a_repository_read')
-        .set('Accept', 'application/json, text/event-stream')
-        .send({ jsonrpc: '2.0', method: 'initialize', id: 1, params: { protocolVersion: '2024-11-05', capabilities: {}, clientInfo: { name: 'test', version: '1' } } });
-      expect(caught).toBeUndefined();
-      expect(found).toBeTruthy();
-      expect(res.status).toBe(200);
-    } finally {
-      spy.mockRestore();
-    }
+    const { rawToken, id: tokenId } = createMcpToken(testDb, user.id);
+    const before = (testDb.prepare('SELECT last_used_at FROM mcp_tokens WHERE id = ?').get(tokenId) as { last_used_at: string | null }).last_used_at;
+    expect(before).toBeNull();
+
+    const res = await request(app)
+      .post('/mcp')
+      .set('Authorization', `Bearer ${rawToken}`)
+      .set('Accept', 'application/json, text/event-stream')
+      .send({ jsonrpc: '2.0', method: 'initialize', id: 1, params: { protocolVersion: '2024-11-05', capabilities: {}, clientInfo: { name: 'test', version: '1' } } });
+    expect(res.status).toBe(200);
+
+    // The real `TokenService.verifyMcpToken` ran `McpTokensRepository`'s
+    // `findUserByHashAndKind` (TK13) then `touchLastUsedByHash` (TK14) —
+    // `last_used_at` moving is only possible if both reached the DB, which
+    // MCP-CTX-001 proves the ORM refuses outside a forked request context.
+    const after = (testDb.prepare('SELECT last_used_at FROM mcp_tokens WHERE id = ?').get(tokenId) as { last_used_at: string | null }).last_used_at;
+    expect(after).not.toBeNull();
+    expect(after).not.toBe(before);
   });
 });

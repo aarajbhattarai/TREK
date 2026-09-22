@@ -890,4 +890,22 @@ describe('MCP token management', () => {
     const res = await request(app).get('/api/auth/mcp-tokens');
     expect(res.status).toBe(401);
   });
+
+  it('AUTH-040 — DELETE /auth/mcp-tokens/abc (non-numeric id) returns the legacy 404, not a 500 (Plan 3b Task 2 review, F1)', async () => {
+    const { user } = createUser(testDb);
+    const res = await request(app)
+      .delete('/api/auth/mcp-tokens/abc')
+      .set('Cookie', authCookie(user.id));
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({ error: 'Token not found' });
+  });
+
+  it('AUTH-041 — DELETE /auth/api-tokens/abc (non-numeric id) returns the legacy 404, not a 500 (Plan 3b Task 2 review, F1)', async () => {
+    const { user } = createUser(testDb);
+    const res = await request(app)
+      .delete('/api/auth/api-tokens/abc')
+      .set('Cookie', authCookie(user.id));
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({ error: 'Token not found' });
+  });
 });

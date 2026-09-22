@@ -1,5 +1,5 @@
 import { McpTokens } from '../entities/McpTokens.entity';
-import { toRow, type AssertRowKeys } from './_shared/rows';
+import type { AssertRowKeys } from './_shared/rows';
 import { columnRef, currentTimestamp } from '../dialect/sql-functions';
 import { EntityRepository } from '@mikro-orm/sql';
 
@@ -169,12 +169,21 @@ export class McpTokensRepository extends EntityRepository<McpTokens> {
    * transaction (a later task's caller), a `flush()` here would commit
    * whatever else that transaction was still assembling. `em.insert()` fires
    * one native INSERT with no side effects on the context/identity map,
-   * matching `AuditLogRepository.insertEntry`'s precedent. Followed by a
-   * `disableIdentityMap: true` re-select (D4's create rule, this
-   * repository's isolated-read shape) rather than `em.refresh`, which needs
-   * a managed entity `em.insert` never produces.
+   * matching `AuditLogRepository.insertEntry`'s precedent.
+   *
+   * Returns only the generated `id` (`EntityManager#insert`'s own return
+   * type, `Primary<McpTokens>` — a bare `number` for this entity's PK,
+   * confirmed against the installed 7.2.1 typings), not a re-selected row
+   * (Plan 3b Task 2 review, F4): an earlier version re-queried the full row
+   * here via a `disableIdentityMap: true` `findOne` and discarded it, which
+   * made `TokenService.createToken`'s own follow-up `findBasic` call a
+   * *third* statement for what the legacy code did in two (INSERT, then one
+   * re-select) — and the discarded middle read was the only place on the
+   * mint path that loaded `token_hash` into memory for nothing. `findBasic`
+   * (TK4) stays the one post-insert read; this method fires the INSERT and
+   * nothing else.
    */
-  async insertToken(row: NewMcpTokenRow): Promise<McpTokenRow> {
+  async insertToken(row: NewMcpTokenRow): Promise<{ id: number }> {
     const id = await this.getEntityManager().insert(McpTokens, {
       user: row.user_id,
       name: row.name,
@@ -184,23 +193,30 @@ export class McpTokensRepository extends EntityRepository<McpTokens> {
       scope_mode: row.scope_mode,
       api_scopes: row.api_scopes,
     });
-    const inserted = await this.findOne({ id }, { disableIdentityMap: true });
-    if (!inserted) {
-      throw new Error(`McpTokensRepository.insertToken: row ${String(id)} not found immediately after insert`);
-    }
-    return toRow(inserted) as McpTokenRow;
+    return { id };
   }
 
   /**
    * `SELECT id, name, token_prefix, created_at, last_used_at FROM
    *  mcp_tokens WHERE id = ?` (TK4, `createToken`'s re-select) and
    * `SELECT id, user_id FROM mcp_tokens WHERE id = ?` (TK9,
-   * `adminDeleteMcpToken`'s 404 check) — ONE method: TK9's two columns
-   * (`id`, `user_id`) are a subset of TK4's five, and both statements are a
-   * plain by-id lookup with no other filter, so a single narrower-than-`*`
-   * projection covering the union of both column sets serves both call
-   * sites without a second near-identical statement (same economy as
-   * `deleteById` below covering TK6/TK10). PK-only `findOne` ->
+   * `adminDeleteMcpToken`'s 404 check) — ONE method, but NOT the same
+   * byte-identical-statement merge `deleteById` below does for TK6/TK10 (a
+   * real D4 deviation, corrected here per the Plan 3b Task 2 review, F3):
+   * TK4 and TK9 select two genuinely different column sets (`id, name,
+   * token_prefix, created_at, last_used_at` vs. `id, user_id`), and this
+   * method returns their UNION — a superset projection that answers both
+   * call shapes rather than one of them plus an extra column nobody asked
+   * for. That is safe here because the client-visible payload is unchanged
+   * (`createToken` destructures `user_id` back out before responding, and
+   * `adminDeleteMcpToken` reads only `user_id`) and both call sites are
+   * plain by-id lookups with no other filter — two near-identical
+   * `findOne`s here is exactly the Sonar-duplication shape the plan warns
+   * about. This precedent does NOT transfer automatically to two methods
+   * whose difference is an order of magnitude larger (e.g. `SELECT *` vs. a
+   * narrow named set) — evaluate the actual column-set delta each time,
+   * don't cite this merge to justify collapsing a bigger gap. PK-only
+   * `findOne` ->
    * `disableIdentityMap: true`, NOT `refresh: true` (controller ruling on
    * Task 1's review, superseding Plan 3a's "PK-only `findOne` -> `refresh:
    * true`" ruling everywhere in this repository): `refresh` still re-queries

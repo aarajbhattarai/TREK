@@ -161,4 +161,23 @@ describe('Categories', () => {
     const res = await request(app).get('/api/categories');
     expect(res.status).toBe(401);
   });
+
+  it('CAT-011: PUT /api/categories/abc - non-numeric id returns the legacy 404, not a 500 (Plan 3b Task 2 fix round, item 1b)', async () => {
+    const { user: admin } = createAdmin(testDb);
+    const res = await request(app)
+      .put('/api/categories/abc')
+      .set('Cookie', authCookie(admin.id))
+      .send({ name: 'Ghost' });
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({ error: 'Category not found' });
+  });
+
+  it('CAT-012: DELETE /api/categories/abc - non-numeric id returns the legacy 404, not a 500 (Plan 3b Task 2 fix round, item 1b)', async () => {
+    const { user: admin } = createAdmin(testDb);
+    const res = await request(app)
+      .delete('/api/categories/abc')
+      .set('Cookie', authCookie(admin.id));
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({ error: 'Category not found' });
+  });
 });

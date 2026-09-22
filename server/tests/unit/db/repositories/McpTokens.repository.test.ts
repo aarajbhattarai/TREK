@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createHash } from 'crypto';
 import { createSnapshotTestDb } from '../../../helpers/db-mock';
 import { resetTestDb } from '../../../helpers/test-db';
@@ -66,9 +66,9 @@ describe('McpTokensRepository', () => {
   });
 
   describe('insertToken', () => {
-    it('MCPTOKREPO-004: inserts and returns exactly the row a legacy re-select would return', async () => {
+    it('MCPTOKREPO-004: inserts the row a legacy re-select would return, and returns only the generated id (Plan 3b Task 2 review, F4)', async () => {
       const { user } = createUser(testDb);
-      const row = await tokens.insertToken({
+      const inserted = await tokens.insertToken({
         user_id: user.id,
         name: 'My Token',
         token_hash: 'hash-value',
@@ -77,7 +77,12 @@ describe('McpTokensRepository', () => {
         scope_mode: 'all',
         api_scopes: null,
       });
-      expect(row).toStrictEqual(rawToken(row.id));
+      // Only `{ id }` comes back — no full-row re-select is folded into
+      // insertToken itself, so it cannot leak `token_hash` (or anything
+      // else) to a caller that only asked to mint a row. `findBasic` (TK4)
+      // stays the one place a caller reads the row back.
+      expect(Object.keys(inserted)).toEqual(['id']);
+      const row = rawToken(inserted.id) as Record<string, unknown>;
       expect(row.user_id).toBe(user.id);
       expect(row.name).toBe('My Token');
       expect(row.token_hash).toBe('hash-value');
@@ -90,7 +95,7 @@ describe('McpTokensRepository', () => {
 
     it('MCPTOKREPO-005: api_scopes is written when narrowed', async () => {
       const { user } = createUser(testDb);
-      const row = await tokens.insertToken({
+      const inserted = await tokens.insertToken({
         user_id: user.id,
         name: 'Narrowed',
         token_hash: 'hash-2',
@@ -99,8 +104,45 @@ describe('McpTokensRepository', () => {
         scope_mode: 'limited',
         api_scopes: '["stats","trips"]',
       });
+      const row = rawToken(inserted.id) as { scope_mode: string; api_scopes: string };
       expect(row.scope_mode).toBe('limited');
       expect(row.api_scopes).toBe('["stats","trips"]');
+    });
+
+    it('MCPTOKREPO-024: the mint path (insertToken + findBasic) issues exactly two statements and never selects token_hash (Plan 3b Task 2 review, F4)', async () => {
+      const { user } = createUser(testDb);
+      const statements: string[] = [];
+      const original = testDb.prepare.bind(testDb);
+      const spy = vi.spyOn(testDb, 'prepare').mockImplementation((sql: string) => {
+        statements.push(sql);
+        return original(sql);
+      });
+
+      let insertedId: number;
+      try {
+        const inserted = await tokens.insertToken({
+          user_id: user.id,
+          name: 'Statement Count',
+          token_hash: 'hash-count',
+          token_prefix: 'trek_countpr',
+          kind: 'mcp',
+          scope_mode: 'all',
+          api_scopes: null,
+        });
+        insertedId = inserted.id;
+        await tokens.findBasic(insertedId);
+      } finally {
+        spy.mockRestore();
+      }
+
+      expect(statements).toHaveLength(2);
+      expect(statements[0].toLowerCase()).toContain('insert into');
+      expect(statements[1].toLowerCase()).toContain('select');
+      // The INSERT necessarily names `token_hash` as a column to write; the
+      // point is that no SELECT on the mint path reads it back into memory —
+      // the discarded middle re-select an earlier version issued did.
+      const selects = statements.filter((sql) => sql.trim().toLowerCase().startsWith('select'));
+      for (const sql of selects) expect(sql.toLowerCase()).not.toContain('token_hash');
     });
   });
 
@@ -247,6 +289,35 @@ describe('McpTokensRepository', () => {
     it('MCPTOKREPO-018: an unknown hash is null', async () => {
       expect(await tokens.findUserByHashAndKind('nope', 'api')).toBeNull();
     });
+
+    it('MCPTOKREPO-025: kind is genuinely inside the generated WHERE clause, not a post-filter on the result (Plan 3b Task 2 review, F6)', async () => {
+      const { user } = createUser(testDb);
+      createMcpToken(testDb, user.id, { kind: 'mcp', rawToken: 'trek_sql_shape' });
+      const hash = createHash('sha256').update('trek_sql_shape').digest('hex');
+
+      const statements: string[] = [];
+      const original = testDb.prepare.bind(testDb);
+      const spy = vi.spyOn(testDb, 'prepare').mockImplementation((sql: string) => {
+        statements.push(sql);
+        return original(sql);
+      });
+      try {
+        await tokens.findUserByHashAndKind(hash, 'mcp');
+      } finally {
+        spy.mockRestore();
+      }
+
+      expect(statements).toHaveLength(1);
+      const select = statements[0].toLowerCase();
+      const whereIndex = select.indexOf('where');
+      expect(whereIndex).toBeGreaterThan(-1);
+      // `kind` must appear on the SQL side of the WHERE keyword — a
+      // post-filter shape (select every column, compare `kind` in JS) would
+      // still pass every behavioural test in this describe block (M1 in the
+      // review's mutation table: 56/56 green with kind moved to a JS
+      // check), so the SQL text itself is the only thing that can catch it.
+      expect(select.slice(whereIndex)).toContain('kind');
+    });
   });
 
   describe('touchLastUsedByHash', () => {
@@ -300,26 +371,34 @@ describe('McpTokensRepository', () => {
   // ---------------------------------------------------------------------
   describe('identity-map isolation (disableIdentityMap regression)', () => {
     /**
-     * The precise, mutation-proven form of the proof: `disableIdentityMap:
-     * true` means the returned entity is never merged into
-     * `EntityManager.getUnitOfWork()`'s tracked set at all — checked
+     * `disableIdentityMap: true` means the returned entity is never merged
+     * into `EntityManager.getUnitOfWork()`'s tracked set at all — checked
      * directly via `getById`, which is the same lookup MikroORM's own
-     * `flush()` consults to decide what to write. This is deliberately NOT
-     * a black-box "does a stale value get written back" behavioural test:
-     * hand-mutation-testing this repository (reverting `findBasic` to
-     * `refresh: true` and `findOwnedByKind`/`listByUserAndKind` to no
-     * `disableIdentityMap`, five different projection-pairing/nativeUpdate/
-     * flush orderings tried by hand) never reproduced a stale write-back on
-     * the installed MikroORM 7.2.1 + `better-sqlite3` combination — flush()'s
-     * dirty-checking finds nothing to write for an entity nothing ever
-     * mutated via `assign()`/direct property set, which is exactly the
-     * shape this repository's methods have (`nativeUpdate` only, never
-     * `assign()+flush()`, unlike `UsersRepository.patchProfile`'s callers).
-     * `getById` is the one assertion that DOES fail on the un-fixed code
-     * (verified: reverting `findBasic` to `refresh: true` flips `tracked1`
-     * below from `false` to `true`) — the tracking itself is the hazard the
-     * ruling targets, whether or not this particular table's call shapes
-     * manage to turn it into an observable stale write today.
+     * `flush()` consults to decide what to write.
+     *
+     * CORRECTION (Plan 3b Task 2 review, F2): an earlier version of this
+     * docstring claimed the stale write-back this ruling guards against
+     * could not be reproduced as an observable black-box failure on this
+     * repository's own call shapes, and settled for this structural
+     * `getById` assertion alone. That claim was wrong — it IS reproducible.
+     * `MCPTOKREPO-023` below is the request-shaped reproduction: read
+     * projection A (`listByUserAndKind`, which selects `scope_mode`), read
+     * projection B (`findBasic`, which does not), then a `nativeUpdate` on
+     * `scope_mode` inside `uow.transactional`. On the fixed code (every read
+     * `disableIdentityMap: true`) the `nativeUpdate` survives the block's
+     * closing flush. Reverting `listByUserAndKind` to a bare `find` (no
+     * `disableIdentityMap`) and `findBasic` to `refresh: true` instead
+     * reproduces the exact hazard the ruling describes: both reads merge
+     * into the same managed entity, the `nativeUpdate` bypasses it, and the
+     * closing `flush()` writes the merged entity's stale `scope_mode: 'all'`
+     * back over the intended `'limited'` — `update mcp_tokens set
+     * scope_mode='all', api_scopes=null where id=?` observed immediately
+     * after `update mcp_tokens set scope_mode='limited' where id=?` in the
+     * query log, reverting the very write the test just made. `getById`
+     * (this test, `MCPTOKREPO-021`) stays as the structural companion: it is
+     * the assertion that fails first and pinpoints which method regressed,
+     * while `MCPTOKREPO-023` pins the actual end-to-end behaviour the
+     * ruling exists to protect.
      */
     it('MCPTOKREPO-021: every entity-hydrating read leaves nothing behind in the shared identity map', async () => {
       const { user } = createUser(testDb);
@@ -384,6 +463,46 @@ describe('McpTokensRepository', () => {
 
       expect((rawToken(untouched.id) as { name: string }).name).toBe('do-not-flush-me');
       expect(testDb.prepare('SELECT id FROM mcp_tokens WHERE token_hash = ?').get('insert-no-side-effect-hash')).toBeDefined();
+    });
+
+    /**
+     * The request-shaped reproduction (Plan 3b Task 2 review, F2, shape D):
+     * projection A (`listByUserAndKind`, which selects `scope_mode`),
+     * projection B (`findBasic`, which does not), then a `nativeUpdate` on
+     * `scope_mode` — the column only projection A touched — inside
+     * `uow.transactional`. On the fixed code (every read
+     * `disableIdentityMap: true`) neither read is ever merged into the
+     * shared identity map, so the transaction's closing `flush()` has
+     * nothing stale to write and the `nativeUpdate` survives untouched.
+     *
+     * Mutation-proven by hand (not committed as a variant, per the brief —
+     * see the fix report for the transcript): reverting
+     * `listByUserAndKind`'s `find` to drop `disableIdentityMap` and
+     * `findBasic`'s `findOne` from `disableIdentityMap: true` to
+     * `refresh: true` makes this test fail — the row comes back
+     * `scope_mode: 'all'`, and the captured query log shows `update
+     * mcp_tokens set scope_mode='all', api_scopes=null where id=?` executed
+     * immediately AFTER `update mcp_tokens set scope_mode='limited' where
+     * id=?`, i.e. the transaction's closing flush silently reverting the
+     * intended write.
+     */
+    it('MCPTOKREPO-023: projection A then projection B then a nativeUpdate on an A-only column, inside uow.transactional — the nativeUpdate survives the closing flush', async () => {
+      const { user } = createUser(testDb);
+      const created = createMcpToken(testDb, user.id, { name: 'stays-original', scope_mode: 'all' });
+      const uow = new UnitOfWork(t.em);
+
+      await uow.transactional(async () => {
+        // Projection A: selects `scope_mode` among its columns.
+        await tokens.listByUserAndKind(user.id, 'mcp');
+        // Projection B: a disjoint column set that does NOT select `scope_mode`.
+        await tokens.findBasic(created.id);
+        // A native write on the column only projection A touched.
+        await t.em.nativeUpdate(McpTokens, { id: created.id }, { scope_mode: 'limited' });
+      });
+
+      const row = rawToken(created.id) as { scope_mode: string; name: string };
+      expect(row.scope_mode).toBe('limited');
+      expect(row.name).toBe('stays-original');
     });
   });
 });

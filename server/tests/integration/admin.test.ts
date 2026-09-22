@@ -778,6 +778,16 @@ describe('MCP token management', () => {
       .set('Cookie', authCookie(admin.id));
     expect(res.status).toBe(404);
   });
+
+  it('ADMIN-025 — DELETE /admin/mcp-tokens/abc (non-numeric id) returns the legacy 404, not a 500 (Plan 3b Task 2 review, F1)', async () => {
+    const { user: admin } = createAdmin(testDb);
+
+    const res = await request(app)
+      .delete('/api/admin/mcp-tokens/abc')
+      .set('Cookie', authCookie(admin.id));
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({ error: 'Token not found' });
+  });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
