@@ -1,25 +1,26 @@
-import { type Opt, PrimaryKeyProp, type Ref, defineEntity, p, EntityRepository } from '@mikro-orm/core';
+import { type Opt, PrimaryKeyProp, type Ref, defineEntity, p } from '@mikro-orm/core';
+import { VacayUserSettingsRepository } from '../repositories/VacayUserSettings.repository';
 import { Users } from './Users.entity';
 
 export class VacayUserSettings {
   [PrimaryKeyProp]?: 'user';
   user?: Ref<Users> | null;
-  yearType: string & Opt = 'calendar';
-  yearStartMonth: number & Opt = 1;
-  yearStartDay: number & Opt = 1;
-  hireDate?: string | null;
+  user_id!: number;
+  year_type: string & Opt = 'calendar';
+  year_start_month: number & Opt = 1;
+  year_start_day: number & Opt = 1;
+  hire_date?: string | null;
 }
-
-export class VacayUserSettingsRepository extends EntityRepository<VacayUserSettings> {}
 
 export const VacayUserSettingsSchema = defineEntity({
   class: VacayUserSettings,
   repository: () => VacayUserSettingsRepository,
   properties: {
-    user: () => p.oneToOne(Users).primary().ref().nullable(),
-    yearType: p.text(),
-    yearStartMonth: p.integer(),
-    yearStartDay: p.integer(),
-    hireDate: p.text().nullable(),
+    user: () => p.oneToOne(Users).primary().ref().hidden().nullable(),
+    user_id: p.integer().persist(false),
+    year_type: p.text().default('calendar'),
+    year_start_month: p.integer().default(1),
+    year_start_day: p.integer().default(1),
+    hire_date: p.text().nullable(),
   },
 });
