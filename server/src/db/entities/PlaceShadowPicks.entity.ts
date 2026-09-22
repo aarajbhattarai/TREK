@@ -1,7 +1,8 @@
-import { type Opt, defineEntity, p } from '@mikro-orm/core';
+import { EntityRepositoryType, type Opt, defineEntity, p } from '@mikro-orm/core';
 import { PlaceShadowPicksRepository } from '../repositories/PlaceShadowPicks.repository';
 
 export class PlaceShadowPicks {
+  [EntityRepositoryType]?: PlaceShadowPicksRepository;
   id!: number & Opt;
   created_at!: string & Opt;
   query!: string;

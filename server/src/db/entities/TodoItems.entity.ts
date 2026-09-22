@@ -1,10 +1,11 @@
-import { type Opt, type Ref, defineEntity, p } from '@mikro-orm/core';
+import { EntityRepositoryType, type Opt, type Ref, defineEntity, p } from '@mikro-orm/core';
 import { TodoItemsRepository } from '../repositories/TodoItems.repository';
 import { DbTimestampType } from '../types';
 import { Trips } from './Trips.entity';
 import { Users } from './Users.entity';
 
 export class TodoItems {
+  [EntityRepositoryType]?: TodoItemsRepository;
   id!: number & Opt;
   trip!: Ref<Trips>;
   trip_id!: number;

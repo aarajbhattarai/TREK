@@ -3,15 +3,10 @@ import { AddonsService } from '../../src/nest/addons/addons.service';
 import { DatabaseService } from '../../src/nest/database/database.service';
 import { sharedTestOrm } from './test-uow';
 import { Addons } from '../../src/db/entities/Addons.entity';
-import type { AddonsRepository } from '../../src/db/repositories/Addons.repository';
 import { PhotoProviders } from '../../src/db/entities/PhotoProviders.entity';
-import type { PhotoProvidersRepository } from '../../src/db/repositories/PhotoProviders.repository';
 import { PhotoProviderFields } from '../../src/db/entities/PhotoProviderFields.entity';
-import type { PhotoProviderFieldsRepository } from '../../src/db/repositories/PhotoProviderFields.repository';
 import { AppSettings } from '../../src/db/entities/AppSettings.entity';
-import type { AppSettingsRepository } from '../../src/db/repositories/AppSettings.repository';
 import { Users } from '../../src/db/entities/Users.entity';
-import type { UsersRepository } from '../../src/db/repositories/Users.repository';
 
 /**
  * AddonsService's constructor grew from one `DatabaseService` to four
@@ -45,11 +40,11 @@ import type { UsersRepository } from '../../src/db/repositories/Users.repository
 export async function createTestAddonsService(db: Database.Database, dbs: DatabaseService = new DatabaseService(db)): Promise<AddonsService> {
   const t = await sharedTestOrm(db);
   return new AddonsService(
-    t.repo(Addons) as AddonsRepository,
-    t.repo(PhotoProviders) as PhotoProvidersRepository,
-    t.repo(PhotoProviderFields) as PhotoProviderFieldsRepository,
-    t.repo(AppSettings) as AppSettingsRepository,
-    t.repo(Users) as UsersRepository,
+    t.repo(Addons),
+    t.repo(PhotoProviders),
+    t.repo(PhotoProviderFields),
+    t.repo(AppSettings),
+    t.repo(Users),
     dbs,
   );
 }

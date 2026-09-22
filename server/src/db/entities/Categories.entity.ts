@@ -1,4 +1,4 @@
-import { Collection, type Opt, type Ref, defineEntity, p } from '@mikro-orm/core';
+import { Collection, EntityRepositoryType, type Opt, type Ref, defineEntity, p } from '@mikro-orm/core';
 import { CategoriesRepository } from '../repositories/Categories.repository';
 import { DbTimestampType } from '../types';
 import { CollectionPlaces } from './CollectionPlaces.entity';
@@ -6,6 +6,7 @@ import { Places } from './Places.entity';
 import { Users } from './Users.entity';
 
 export class Categories {
+  [EntityRepositoryType]?: CategoriesRepository;
   id!: number & Opt;
   name!: string;
   color?: string | null = '#6366f1';

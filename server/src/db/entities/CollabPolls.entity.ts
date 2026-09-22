@@ -1,4 +1,4 @@
-import { Collection, type Opt, type Ref, defineEntity, p } from '@mikro-orm/core';
+import { Collection, EntityRepositoryType, type Opt, type Ref, defineEntity, p } from '@mikro-orm/core';
 import { CollabPollsRepository } from '../repositories/CollabPolls.repository';
 import { DbTimestampType } from '../types';
 import { CollabPollVotes } from './CollabPollVotes.entity';
@@ -6,6 +6,7 @@ import { Trips } from './Trips.entity';
 import { Users } from './Users.entity';
 
 export class CollabPolls {
+  [EntityRepositoryType]?: CollabPollsRepository;
   id!: number & Opt;
   trip!: Ref<Trips>;
   trip_id!: number;

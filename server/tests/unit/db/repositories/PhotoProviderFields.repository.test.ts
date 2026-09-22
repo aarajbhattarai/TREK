@@ -11,7 +11,7 @@ let fields: PhotoProviderFieldsRepository;
 
 beforeAll(async () => {
   t = await createTestOrm(testDb);
-  fields = t.repo(PhotoProviderFields) as PhotoProviderFieldsRepository;
+  fields = t.repo(PhotoProviderFields);
 });
 beforeEach(() => {
   resetTestDb(testDb);

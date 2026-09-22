@@ -1,7 +1,8 @@
-import { type Opt, defineEntity, p } from '@mikro-orm/core';
+import { EntityRepositoryType, type Opt, defineEntity, p } from '@mikro-orm/core';
 import { PluginCapabilityAuditRepository } from '../repositories/PluginCapabilityAudit.repository';
 
 export class PluginCapabilityAudit {
+  [EntityRepositoryType]?: PluginCapabilityAuditRepository;
   id!: number & Opt;
   plugin_id!: string;
   acting_user_id?: number | null;

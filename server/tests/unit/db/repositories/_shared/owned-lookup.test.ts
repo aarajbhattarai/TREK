@@ -13,7 +13,7 @@ let tags: TagsRepository;
 
 beforeAll(async () => {
   t = await createTestOrm(testDb);
-  tags = t.repo(Tags) as TagsRepository;
+  tags = t.repo(Tags);
 });
 beforeEach(() => { resetTestDb(testDb); t.clear(); });
 afterAll(async () => { await t.close(); testDb.close(); });

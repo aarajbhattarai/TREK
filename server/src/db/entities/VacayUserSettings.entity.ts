@@ -1,8 +1,9 @@
-import { type Opt, PrimaryKeyProp, type Ref, defineEntity, p } from '@mikro-orm/core';
+import { EntityRepositoryType, type Opt, PrimaryKeyProp, type Ref, defineEntity, p } from '@mikro-orm/core';
 import { VacayUserSettingsRepository } from '../repositories/VacayUserSettings.repository';
 import { Users } from './Users.entity';
 
 export class VacayUserSettings {
+  [EntityRepositoryType]?: VacayUserSettingsRepository;
   [PrimaryKeyProp]?: 'user';
   user?: Ref<Users> | null;
   user_id?: number | null;

@@ -46,9 +46,7 @@ import { createTestAddonsService } from '../helpers/test-addons';
 import { AuditService } from '../../src/nest/audit/audit.service';
 import { createTestOrm, type TestOrm } from '../helpers/test-orm';
 import { AuditLog } from '../../src/db/entities/AuditLog.entity';
-import type { AuditLogRepository } from '../../src/db/repositories/AuditLog.repository';
 import { Users } from '../../src/db/entities/Users.entity';
-import type { UsersRepository } from '../../src/db/repositories/Users.repository';
 
 // The consent controller writes pending codes through the container instance;
 // the SDK-mounted authorize path reads them back. The map is module-scoped in
@@ -87,7 +85,7 @@ beforeAll(async () => {
     nestApp = await buildApp();
     app = nestApp.getHttpAdapter().getInstance();
     t = await createTestOrm(testDb);
-    containerSideOauth = new OauthService(oauthDbs, await createTestAddonsService(testDb, oauthDbs), new AuditService(t.repo(AuditLog) as AuditLogRepository, t.repo(Users) as UsersRepository));
+    containerSideOauth = new OauthService(oauthDbs, await createTestAddonsService(testDb, oauthDbs), new AuditService(t.repo(AuditLog), t.repo(Users)));
 });
 
 beforeEach(() => {

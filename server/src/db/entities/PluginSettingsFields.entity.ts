@@ -1,7 +1,8 @@
-import { type Opt, defineEntity, p } from '@mikro-orm/core';
+import { EntityRepositoryType, type Opt, defineEntity, p } from '@mikro-orm/core';
 import { PluginSettingsFieldsRepository } from '../repositories/PluginSettingsFields.repository';
 
 export class PluginSettingsFields {
+  [EntityRepositoryType]?: PluginSettingsFieldsRepository;
   id!: number & Opt;
   plugin_id!: string;
   field_key!: string;

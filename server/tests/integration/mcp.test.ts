@@ -42,9 +42,7 @@ import { createTestAddonsService } from '../helpers/test-addons';
 import { AuditService } from '../../src/nest/audit/audit.service';
 import { createTestOrm, type TestOrm } from '../helpers/test-orm';
 import { AuditLog } from '../../src/db/entities/AuditLog.entity';
-import type { AuditLogRepository } from '../../src/db/repositories/AuditLog.repository';
 import { Users } from '../../src/db/entities/Users.entity';
-import type { UsersRepository } from '../../src/db/repositories/Users.repository';
 
 const oauthDbs = new DatabaseService(testDb);
 let oauthSvc: OauthService;
@@ -76,7 +74,7 @@ beforeAll(async () => {
   nestApp = await buildApp();
   app = nestApp.getHttpAdapter().getInstance();
   t = await createTestOrm(testDb);
-  oauthSvc = new OauthService(oauthDbs, await createTestAddonsService(testDb, oauthDbs), new AuditService(t.repo(AuditLog) as AuditLogRepository, t.repo(Users) as UsersRepository));
+  oauthSvc = new OauthService(oauthDbs, await createTestAddonsService(testDb, oauthDbs), new AuditService(t.repo(AuditLog), t.repo(Users)));
 });
 
 beforeEach(() => {

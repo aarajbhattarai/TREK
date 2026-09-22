@@ -1,4 +1,4 @@
-import { type Opt, type Ref, defineEntity, p } from '@mikro-orm/core';
+import { EntityRepositoryType, type Opt, type Ref, defineEntity, p } from '@mikro-orm/core';
 import { DayAccommodationsRepository } from '../repositories/DayAccommodations.repository';
 import { DbTimestampType } from '../types';
 import { Days } from './Days.entity';
@@ -6,6 +6,7 @@ import { Places } from './Places.entity';
 import { Trips } from './Trips.entity';
 
 export class DayAccommodations {
+  [EntityRepositoryType]?: DayAccommodationsRepository;
   id!: number & Opt;
   trip!: Ref<Trips>;
   trip_id!: number;

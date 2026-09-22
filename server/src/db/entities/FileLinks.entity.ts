@@ -1,4 +1,4 @@
-import { type Opt, type Ref, defineEntity, p } from '@mikro-orm/core';
+import { EntityRepositoryType, type Opt, type Ref, defineEntity, p } from '@mikro-orm/core';
 import { FileLinksRepository } from '../repositories/FileLinks.repository';
 import { DbTimestampType } from '../types';
 import { BudgetItems } from './BudgetItems.entity';
@@ -8,6 +8,7 @@ import { Reservations } from './Reservations.entity';
 import { TripFiles } from './TripFiles.entity';
 
 export class FileLinks {
+  [EntityRepositoryType]?: FileLinksRepository;
   id!: number & Opt;
   file!: Ref<TripFiles>;
   file_id!: number;

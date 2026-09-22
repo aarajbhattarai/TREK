@@ -1,10 +1,11 @@
-import { type Opt, type Ref, defineEntity, p } from '@mikro-orm/core';
+import { EntityRepositoryType, type Opt, type Ref, defineEntity, p } from '@mikro-orm/core';
 import { InviteTokensRepository } from '../repositories/InviteTokens.repository';
 import { DbTimestampType } from '../types';
 import { Trips } from './Trips.entity';
 import { Users } from './Users.entity';
 
 export class InviteTokens {
+  [EntityRepositoryType]?: InviteTokensRepository;
   id!: number & Opt;
   token!: string;
   max_uses: number & Opt = 1;

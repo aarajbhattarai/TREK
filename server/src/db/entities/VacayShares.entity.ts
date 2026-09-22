@@ -1,9 +1,10 @@
-import { type Opt, type Ref, defineEntity, p } from '@mikro-orm/core';
+import { EntityRepositoryType, type Opt, type Ref, defineEntity, p } from '@mikro-orm/core';
 import { VacaySharesRepository } from '../repositories/VacayShares.repository';
 import { DbTimestampType } from '../types';
 import { Users } from './Users.entity';
 
 export class VacayShares {
+  [EntityRepositoryType]?: VacaySharesRepository;
   id!: number & Opt;
   owner!: Ref<Users>;
   owner_id!: number;

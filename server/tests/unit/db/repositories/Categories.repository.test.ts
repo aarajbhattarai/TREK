@@ -12,7 +12,7 @@ let categories: CategoriesRepository;
 
 beforeAll(async () => {
   t = await createTestOrm(testDb);
-  categories = t.repo(Categories) as CategoriesRepository;
+  categories = t.repo(Categories);
 });
 // `categories` is a KEEP_TABLES table (tests/helpers/test-db.ts): resetTestDb
 // never clears it and re-seeds the ten defaults by name, so rows created by

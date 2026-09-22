@@ -1,7 +1,8 @@
-import { type Opt, defineEntity, p } from '@mikro-orm/core';
+import { EntityRepositoryType, type Opt, defineEntity, p } from '@mikro-orm/core';
 import { PluginScheduledTasksRepository } from '../repositories/PluginScheduledTasks.repository';
 
 export class PluginScheduledTasks {
+  [EntityRepositoryType]?: PluginScheduledTasksRepository;
   id!: number & Opt;
   plugin_id!: string;
   name!: string;

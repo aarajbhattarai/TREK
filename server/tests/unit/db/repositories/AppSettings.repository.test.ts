@@ -11,7 +11,7 @@ let appSettings: AppSettingsRepository;
 
 beforeAll(async () => {
   t = await createTestOrm(testDb);
-  appSettings = t.repo(AppSettings) as AppSettingsRepository;
+  appSettings = t.repo(AppSettings);
 });
 beforeEach(() => { resetTestDb(testDb); t.clear(); });
 afterAll(async () => { await t.close(); testDb.close(); });

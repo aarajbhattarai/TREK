@@ -1,10 +1,11 @@
-import { Collection, type Opt, type Ref, defineEntity, p } from '@mikro-orm/core';
+import { Collection, EntityRepositoryType, type Opt, type Ref, defineEntity, p } from '@mikro-orm/core';
 import { OauthTokensRepository } from '../repositories/OauthTokens.repository';
 import { DbTimestampType } from '../types';
 import { OauthClients } from './OauthClients.entity';
 import { Users } from './Users.entity';
 
 export class OauthTokens {
+  [EntityRepositoryType]?: OauthTokensRepository;
   id!: number & Opt;
   client!: Ref<OauthClients>;
   client_id!: string;

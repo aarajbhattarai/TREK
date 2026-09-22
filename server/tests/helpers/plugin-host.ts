@@ -74,11 +74,8 @@ import { RuntimeEnvService } from '../../src/nest/app-config/runtime-env.service
 import { makeStorageFixture } from './storage-fixture';
 import { createTestUnitOfWork, createTestAppSettingsRepo, createTestCategoriesRepo, createTestTagsRepo, createTestSettingsRepo, sharedTestOrm } from './test-uow';
 import { AppSettings } from '../../src/db/entities/AppSettings.entity';
-import type { AppSettingsRepository } from '../../src/db/repositories/AppSettings.repository';
 import { AuditLog } from '../../src/db/entities/AuditLog.entity';
-import type { AuditLogRepository } from '../../src/db/repositories/AuditLog.repository';
 import { Users } from '../../src/db/entities/Users.entity';
-import type { UsersRepository } from '../../src/db/repositories/Users.repository';
 
 /**
  * Hand-wired counterpart of the PluginsModule DI graph for no-Nest tests
@@ -92,8 +89,8 @@ import type { UsersRepository } from '../../src/db/repositories/Users.repository
  */
 export async function createPluginRpcHostFactory(dbs: DatabaseService): Promise<PluginRpcHostFactory> {
   const generalStorage = makeStorageFixture('').storage;
-  const appSettings = (await sharedTestOrm(dbs.connection)).repo(AppSettings) as AppSettingsRepository;
-  const usersRepo = (await sharedTestOrm(dbs.connection)).repo(Users) as UsersRepository;
+  const appSettings = (await sharedTestOrm(dbs.connection)).repo(AppSettings);
+  const usersRepo = (await sharedTestOrm(dbs.connection)).repo(Users);
   const permissions = new PermissionsService(await createTestAppSettingsRepo(dbs.connection), await createTestUnitOfWork(dbs.connection));
   const exchangeRates = new ExchangeRatesService();
   const realtime = new RealtimeService();
@@ -168,7 +165,7 @@ export async function createPluginRuntime(dbs: DatabaseService, registry?: Plugi
   const orm = await sharedTestOrm(dbs.connection);
   return new PluginRuntimeService(
     dbs,
-    new AuditService(orm.repo(AuditLog) as AuditLogRepository, orm.repo(Users) as UsersRepository),
+    new AuditService(orm.repo(AuditLog), orm.repo(Users)),
     await createTestAddonsService(dbs.connection, dbs),
     new PluginUserSettingsService(dbs),
     registry,

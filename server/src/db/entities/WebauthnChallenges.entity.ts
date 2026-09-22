@@ -1,9 +1,10 @@
-import { type Opt, type Ref, defineEntity, p } from '@mikro-orm/core';
+import { EntityRepositoryType, type Opt, type Ref, defineEntity, p } from '@mikro-orm/core';
 import { WebauthnChallengesRepository } from '../repositories/WebauthnChallenges.repository';
 import { DbTimestampType } from '../types';
 import { Users } from './Users.entity';
 
 export class WebauthnChallenges {
+  [EntityRepositoryType]?: WebauthnChallengesRepository;
   id!: number & Opt;
   challenge!: string;
   user?: Ref<Users> | null;

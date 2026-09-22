@@ -12,7 +12,7 @@ let days: DaysRepository;
 
 beforeAll(async () => {
   t = await createTestOrm(testDb);
-  days = t.repo(Days) as DaysRepository;
+  days = t.repo(Days);
 });
 beforeEach(() => { resetTestDb(testDb); t.clear(); });
 afterAll(async () => { await t.close(); testDb.close(); });

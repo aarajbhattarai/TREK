@@ -1,7 +1,8 @@
-import { type Opt, PrimaryKeyProp, defineEntity, p } from '@mikro-orm/core';
+import { EntityRepositoryType, type Opt, PrimaryKeyProp, defineEntity, p } from '@mikro-orm/core';
 import { PluginUserConfigRepository } from '../repositories/PluginUserConfig.repository';
 
 export class PluginUserConfig {
+  [EntityRepositoryType]?: PluginUserConfigRepository;
   [PrimaryKeyProp]?: ['plugin_id', 'user_id'];
   plugin_id!: string;
   user_id!: number;

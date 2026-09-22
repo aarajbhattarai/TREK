@@ -12,7 +12,7 @@ let trips: TripsRepository;
 
 beforeAll(async () => {
   t = await createTestOrm(testDb);
-  trips = t.repo(Trips) as TripsRepository;
+  trips = t.repo(Trips);
 });
 beforeEach(() => { resetTestDb(testDb); t.clear(); });
 afterAll(async () => { await t.close(); testDb.close(); });

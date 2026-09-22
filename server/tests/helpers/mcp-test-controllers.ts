@@ -117,11 +117,8 @@ import { AddonsMcp } from '../../src/nest/addons/addons.mcp';
 import { createTestUnitOfWork, createTestAppSettingsRepo, createTestCategoriesRepo, createTestTagsRepo, createTestSettingsRepo } from './test-uow';
 import { createTestOrm } from './test-orm';
 import { AppSettings } from '../../src/db/entities/AppSettings.entity';
-import type { AppSettingsRepository } from '../../src/db/repositories/AppSettings.repository';
 import { AuditLog } from '../../src/db/entities/AuditLog.entity';
-import type { AuditLogRepository } from '../../src/db/repositories/AuditLog.repository';
 import { Users } from '../../src/db/entities/Users.entity';
-import type { UsersRepository } from '../../src/db/repositories/Users.repository';
 
 /**
  * Hand-wired counterpart of the boot-time discovery in McpRegistryService,
@@ -133,10 +130,10 @@ import type { UsersRepository } from '../../src/db/repositories/Users.repository
 export async function createMcpTestRegistry(): Promise<McpRegistry> {
   const dbService = new DatabaseService(db);
   const generalStorage = makeStorageFixture('').storage;
-  const appSettings = (await createTestOrm(dbService.connection)).repo(AppSettings) as AppSettingsRepository;
+  const appSettings = (await createTestOrm(dbService.connection)).repo(AppSettings);
   const mcpOrm = await createTestOrm(dbService.connection);
-  const auditLogRepo = mcpOrm.repo(AuditLog) as AuditLogRepository;
-  const usersRepo = mcpOrm.repo(Users) as UsersRepository;
+  const auditLogRepo = mcpOrm.repo(AuditLog);
+  const usersRepo = mcpOrm.repo(Users);
   const permissionsService = new PermissionsService(await createTestAppSettingsRepo(dbService.connection), await createTestUnitOfWork(dbService.connection));
   // Same argument list as auth.bridge.ts. AtlasService used to sit in third
   // place; when getTravelStats moved onto AtlasService itself the edge was

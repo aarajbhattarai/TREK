@@ -11,7 +11,7 @@ let addons: AddonsRepository;
 
 beforeAll(async () => {
   t = await createTestOrm(testDb);
-  addons = t.repo(Addons) as AddonsRepository;
+  addons = t.repo(Addons);
 });
 beforeEach(() => {
   resetTestDb(testDb);

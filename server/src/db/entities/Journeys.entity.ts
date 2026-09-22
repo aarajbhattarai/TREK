@@ -1,4 +1,4 @@
-import { Collection, type Opt, type Ref, defineEntity, p } from '@mikro-orm/core';
+import { Collection, EntityRepositoryType, type Opt, type Ref, defineEntity, p } from '@mikro-orm/core';
 import { JourneysRepository } from '../repositories/Journeys.repository';
 import { JourneyBooks } from './JourneyBooks.entity';
 import { JourneyContributors } from './JourneyContributors.entity';
@@ -9,6 +9,7 @@ import { JourneyTrips } from './JourneyTrips.entity';
 import { Users } from './Users.entity';
 
 export class Journeys {
+  [EntityRepositoryType]?: JourneysRepository;
   id!: number & Opt;
   user!: Ref<Users>;
   user_id!: number;

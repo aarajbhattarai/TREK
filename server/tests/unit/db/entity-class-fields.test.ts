@@ -1,4 +1,4 @@
-import { ReferenceKind } from '@mikro-orm/core';
+import { EntityRepositoryType, ReferenceKind } from '@mikro-orm/core';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { ALL_ENTITIES } from '../../../src/db/entities';
 import { BudgetItems } from '../../../src/db/entities/BudgetItems.entity';
@@ -74,6 +74,44 @@ describe('entity class fields never carry a NaN initialiser (task-4-review-shape
         // a new NOT NULL column without a default bumps it by one — update the
         // constant with the migration that adds the column.
         expect(report.length, report.join(', ')).toBe(KNOWN_UNINITIALISED_NOT_NULL_SCALARS);
+      } finally {
+        await t.close();
+      }
+    } finally {
+      testDb.close();
+    }
+  });
+});
+
+/**
+ * Plan 3b pre-task (`scripts/generate-entities.ts`'s `RULE10_repositoryTypeMarker`
+ * / `injectRepositoryTypeMarker`): `[EntityRepositoryType]?: XRepository;` is
+ * a type-only class member, never routed through `meta.addProperty` — this
+ * pins that it stays that way, so CLASSFIELD-002's census above (and its
+ * pinned count, 423) can never silently start counting it.
+ */
+describe('[EntityRepositoryType] marker is excluded from the class-field census (RULE10)', () => {
+  it('CLASSFIELD-003: every entity has an own [EntityRepositoryType] symbol property that is never a real metadata property and never leaks as a string key', async () => {
+    const testDb = createSnapshotTestDb();
+    try {
+      const t = await createTestOrm(testDb);
+      try {
+        const failures: string[] = [];
+        for (const schema of ALL_ENTITIES) {
+          const meta = t.orm.getMetadata().get(schema.class);
+          const Ctor = schema.class as new () => Record<string, unknown>;
+          const instance = new Ctor();
+          if (!Object.getOwnPropertySymbols(instance).includes(EntityRepositoryType)) {
+            failures.push(`${meta.className}: missing an own [EntityRepositoryType] symbol property`);
+          }
+          if (Object.keys(instance).includes('EntityRepositoryType')) {
+            failures.push(`${meta.className}: [EntityRepositoryType] leaked as a string-keyed own property`);
+          }
+          if (meta.props.some((prop) => prop.name === 'EntityRepositoryType')) {
+            failures.push(`${meta.className}: [EntityRepositoryType] was registered as a real metadata property`);
+          }
+        }
+        expect(failures).toEqual([]);
       } finally {
         await t.close();
       }

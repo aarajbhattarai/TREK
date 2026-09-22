@@ -55,13 +55,9 @@ import { AuditService } from '../../../src/nest/audit/audit.service';
 import { createTestAddonsService } from '../../helpers/test-addons';
 import { AddonsService } from '../../../src/nest/addons/addons.service';
 import { Addons } from '../../../src/db/entities/Addons.entity';
-import type { AddonsRepository } from '../../../src/db/repositories/Addons.repository';
 import { PhotoProviders } from '../../../src/db/entities/PhotoProviders.entity';
-import type { PhotoProvidersRepository } from '../../../src/db/repositories/PhotoProviders.repository';
 import { PhotoProviderFields } from '../../../src/db/entities/PhotoProviderFields.entity';
-import type { PhotoProviderFieldsRepository } from '../../../src/db/repositories/PhotoProviderFields.repository';
 import { AppSettings } from '../../../src/db/entities/AppSettings.entity';
-import type { AppSettingsRepository } from '../../../src/db/repositories/AppSettings.repository';
 import { PluginRuntimeService } from '../../../src/nest/plugins/plugin-runtime.service';
 import { PluginUserSettingsService } from '../../../src/nest/plugins/plugin-user-settings.service';
 import { PluginRpcHostFactory } from '../../../src/nest/plugins/host/plugin-rpc-host.factory';
@@ -70,9 +66,7 @@ import type { PluginRpcRegistryService } from '../../../src/nest/plugins/host/rp
 import { DbRpc } from '../../../src/nest/plugins/host/rpc/db.rpc';
 import { createTestOrm, type TestOrm } from '../../helpers/test-orm';
 import { AuditLog } from '../../../src/db/entities/AuditLog.entity';
-import type { AuditLogRepository } from '../../../src/db/repositories/AuditLog.repository';
 import { Users } from '../../../src/db/entities/Users.entity';
-import type { UsersRepository } from '../../../src/db/repositories/Users.repository';
 
 let codeRoot: string;
 let dataRoot: string;
@@ -121,8 +115,8 @@ describe('plugin boot vs registry scan ordering', () => {
     const registry = new PluginRpcRegistry();
     const hostFactory = new PluginRpcHostFactory(dbs, registry as unknown as PluginRpcRegistryService);
     t = await createTestOrm(dbConn);
-    const auditLogRepo = t.repo(AuditLog) as AuditLogRepository;
-    const usersRepo = t.repo(Users) as UsersRepository;
+    const auditLogRepo = t.repo(AuditLog);
+    const usersRepo = t.repo(Users);
     const addonsService = await createTestAddonsService(dbConn, dbs);
 
     mod = await Test.createTestingModule({
@@ -211,15 +205,15 @@ describe('plugin boot vs registry scan ordering', () => {
       // Built directly on t2 (not createTestAddonsService's sharedTestOrm) so
       // its repositories share t2's allowGlobalContext: false ORM.
       const addonsService2 = new AddonsService(
-        t2.repo(Addons) as AddonsRepository,
-        t2.repo(PhotoProviders) as PhotoProvidersRepository,
-        t2.repo(PhotoProviderFields) as PhotoProviderFieldsRepository,
-        t2.repo(AppSettings) as AppSettingsRepository,
-        t2.repo(Users) as UsersRepository,
+        t2.repo(Addons),
+        t2.repo(PhotoProviders),
+        t2.repo(PhotoProviderFields),
+        t2.repo(AppSettings),
+        t2.repo(Users),
         dbs2,
       );
-      const auditLogRepo2 = t2.repo(AuditLog) as AuditLogRepository;
-      const usersRepo2 = t2.repo(Users) as UsersRepository;
+      const auditLogRepo2 = t2.repo(AuditLog);
+      const usersRepo2 = t2.repo(Users);
 
       mod2 = await Test.createTestingModule({
         providers: [

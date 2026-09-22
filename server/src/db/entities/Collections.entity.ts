@@ -1,4 +1,4 @@
-import { Collection, type Opt, type Ref, defineEntity, p } from '@mikro-orm/core';
+import { Collection, EntityRepositoryType, type Opt, type Ref, defineEntity, p } from '@mikro-orm/core';
 import { CollectionsRepository } from '../repositories/Collections.repository';
 import { DbTimestampType } from '../types';
 import { CollectionLabels } from './CollectionLabels.entity';
@@ -7,6 +7,7 @@ import { CollectionPlaces } from './CollectionPlaces.entity';
 import { Users } from './Users.entity';
 
 export class Collections {
+  [EntityRepositoryType]?: CollectionsRepository;
   id!: number & Opt;
   owner!: Ref<Users>;
   owner_id!: number;

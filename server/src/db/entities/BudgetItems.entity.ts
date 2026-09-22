@@ -1,4 +1,4 @@
-import { Collection, type Opt, type Ref, defineEntity, p } from '@mikro-orm/core';
+import { Collection, EntityRepositoryType, type Opt, type Ref, defineEntity, p } from '@mikro-orm/core';
 import { BudgetItemsRepository } from '../repositories/BudgetItems.repository';
 import { DbTimestampType } from '../types';
 import { BudgetItemMembers } from './BudgetItemMembers.entity';
@@ -10,6 +10,7 @@ import { Trips } from './Trips.entity';
 import { Users } from './Users.entity';
 
 export class BudgetItems {
+  [EntityRepositoryType]?: BudgetItemsRepository;
   id!: number & Opt;
   trip!: Ref<Trips>;
   trip_id!: number;

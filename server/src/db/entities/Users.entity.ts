@@ -1,4 +1,4 @@
-import { Collection, type Opt, type Ref, defineEntity, p } from '@mikro-orm/core';
+import { Collection, EntityRepositoryType, type Opt, type Ref, defineEntity, p } from '@mikro-orm/core';
 import { UsersRepository } from '../repositories/Users.repository';
 import { DbTimestampType } from '../types';
 import { AssignmentParticipants } from './AssignmentParticipants.entity';
@@ -72,6 +72,7 @@ import { WebauthnChallenges } from './WebauthnChallenges.entity';
 import { WebauthnCredentials } from './WebauthnCredentials.entity';
 
 export class Users {
+  [EntityRepositoryType]?: UsersRepository;
   id!: number & Opt;
   username!: string;
   email!: string;

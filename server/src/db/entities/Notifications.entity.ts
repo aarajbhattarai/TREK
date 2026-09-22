@@ -1,9 +1,10 @@
-import { type Opt, type Ref, defineEntity, p } from '@mikro-orm/core';
+import { EntityRepositoryType, type Opt, type Ref, defineEntity, p } from '@mikro-orm/core';
 import { NotificationsRepository } from '../repositories/Notifications.repository';
 import { DbTimestampType } from '../types';
 import { Users } from './Users.entity';
 
 export class Notifications {
+  [EntityRepositoryType]?: NotificationsRepository;
   id!: number & Opt;
   type!: string;
   scope!: string;

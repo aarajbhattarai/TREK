@@ -1,4 +1,4 @@
-import { Collection, type Opt, type Ref, defineEntity, p } from '@mikro-orm/core';
+import { Collection, EntityRepositoryType, type Opt, type Ref, defineEntity, p } from '@mikro-orm/core';
 import { TrekPhotosRepository } from '../repositories/TrekPhotos.repository';
 import { DbTimestampType } from '../types';
 import { JourneyPhotos } from './JourneyPhotos.entity';
@@ -6,6 +6,7 @@ import { TripPhotos } from './TripPhotos.entity';
 import { Users } from './Users.entity';
 
 export class TrekPhotos {
+  [EntityRepositoryType]?: TrekPhotosRepository;
   id!: number & Opt;
   provider!: string;
   asset_id?: string | null;

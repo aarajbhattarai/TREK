@@ -13,7 +13,7 @@ let notes: DayNotesRepository;
 
 beforeAll(async () => {
   t = await createTestOrm(testDb);
-  notes = t.repo(DayNotes) as DayNotesRepository;
+  notes = t.repo(DayNotes);
 });
 beforeEach(() => { resetTestDb(testDb); t.clear(); });
 afterAll(async () => { await t.close(); testDb.close(); });

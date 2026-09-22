@@ -20,7 +20,6 @@ import type { ThumbnailService } from '../../../../src/nest/memories/thumbnail.s
 import { createSnapshotTestDb } from '../../../helpers/db-mock';
 import { createTestOrm, type TestOrm } from '../../../helpers/test-orm';
 import { Addons } from '../../../../src/db/entities/Addons.entity';
-import type { AddonsRepository } from '../../../../src/db/repositories/Addons.repository';
 
 const testDb = createSnapshotTestDb();
 let t: TestOrm;
@@ -40,7 +39,7 @@ beforeEach(() => vi.clearAllMocks());
  * actually exercises the request-context property the real chain depends on.
  */
 function makeThumbnails(): Pick<ThumbnailService, 'sweepOrphanThumbs'> {
-  const addonsRepo = t.repo(Addons) as AddonsRepository;
+  const addonsRepo = t.repo(Addons);
   return {
     sweepOrphanThumbs: async () => {
       await addonsRepo.isEnabled('journey');

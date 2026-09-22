@@ -151,11 +151,11 @@ function rawAppSetting(key: string): { key: string; value: string | null } | und
 
 beforeAll(async () => {
   t = await createTestOrm(testDb);
-  addonsRepo = t.repo(Addons) as AddonsRepository;
-  photoProvidersRepo = t.repo(PhotoProviders) as PhotoProvidersRepository;
-  photoProviderFieldsRepo = t.repo(PhotoProviderFields) as PhotoProviderFieldsRepository;
-  appSettingsRepo = t.repo(AppSettings) as AppSettingsRepository;
-  usersRepo = t.repo(Users) as UsersRepository;
+  addonsRepo = t.repo(Addons);
+  photoProvidersRepo = t.repo(PhotoProviders);
+  photoProviderFieldsRepo = t.repo(PhotoProviderFields);
+  appSettingsRepo = t.repo(AppSettings);
+  usersRepo = t.repo(Users);
 });
 
 beforeEach(() => {

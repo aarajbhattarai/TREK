@@ -24,7 +24,7 @@ let days: DaysRepository;
 beforeAll(async () => {
   t = await createTestOrm(testDb);
   uow = new UnitOfWork(t.em);
-  days = t.repo(Days) as DaysRepository;
+  days = t.repo(Days);
 });
 beforeEach(() => { resetTestDb(testDb); t.clear(); });
 afterAll(async () => { await t.close(); testDb.close(); });
@@ -87,7 +87,7 @@ describe('UnitOfWork.transactional', () => {
     // A separate fork = a separate acquirer of the connection. It waits on the
     // ConnectionMutex instead of deadlocking because nothing inside the
     // transaction waits on it: the writer's own timer resolves regardless.
-    const reader = t.orm.em.fork().getRepository(Days) as DaysRepository;
+    const reader = t.orm.em.fork().getRepository(Days);
     const seen = await reader.listByTrip(trip.id);
     await tx;
     expect(seen).toHaveLength(1);

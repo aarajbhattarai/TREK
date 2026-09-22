@@ -1,7 +1,8 @@
-import { type Opt, PrimaryKeyProp, defineEntity, p } from '@mikro-orm/core';
+import { EntityRepositoryType, type Opt, PrimaryKeyProp, defineEntity, p } from '@mikro-orm/core';
 import { TrekPhotoCacheMetaRepository } from '../repositories/TrekPhotoCacheMeta.repository';
 
 export class TrekPhotoCacheMeta {
+  [EntityRepositoryType]?: TrekPhotoCacheMetaRepository;
   [PrimaryKeyProp]?: 'cache_key';
   cache_key?: string | null;
   content_type: string & Opt = 'image/jpeg';

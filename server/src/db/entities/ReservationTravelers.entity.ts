@@ -1,9 +1,10 @@
-import { type Opt, type Ref, defineEntity, p } from '@mikro-orm/core';
+import { EntityRepositoryType, type Opt, type Ref, defineEntity, p } from '@mikro-orm/core';
 import { ReservationTravelersRepository } from '../repositories/ReservationTravelers.repository';
 import { Reservations } from './Reservations.entity';
 import { Users } from './Users.entity';
 
 export class ReservationTravelers {
+  [EntityRepositoryType]?: ReservationTravelersRepository;
   id!: number & Opt;
   reservation!: Ref<Reservations>;
   reservation_id!: number;

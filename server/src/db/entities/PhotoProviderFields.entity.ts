@@ -1,8 +1,9 @@
-import { type Opt, type Ref, defineEntity, p } from '@mikro-orm/core';
+import { EntityRepositoryType, type Opt, type Ref, defineEntity, p } from '@mikro-orm/core';
 import { PhotoProviderFieldsRepository } from '../repositories/PhotoProviderFields.repository';
 import { PhotoProviders } from './PhotoProviders.entity';
 
 export class PhotoProviderFields {
+  [EntityRepositoryType]?: PhotoProviderFieldsRepository;
   id!: number & Opt;
   provider!: Ref<PhotoProviders>;
   provider_id!: string;

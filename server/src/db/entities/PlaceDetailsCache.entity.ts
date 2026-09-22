@@ -1,7 +1,8 @@
-import { type Opt, PrimaryKeyProp, defineEntity, p } from '@mikro-orm/core';
+import { EntityRepositoryType, type Opt, PrimaryKeyProp, defineEntity, p } from '@mikro-orm/core';
 import { PlaceDetailsCacheRepository } from '../repositories/PlaceDetailsCache.repository';
 
 export class PlaceDetailsCache {
+  [EntityRepositoryType]?: PlaceDetailsCacheRepository;
   [PrimaryKeyProp]?: ['place_id', 'lang', 'expanded'];
   place_id!: string;
   lang: string & Opt = '';

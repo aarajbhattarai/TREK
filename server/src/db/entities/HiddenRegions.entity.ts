@@ -1,9 +1,10 @@
-import { type Opt, type Ref, defineEntity, p } from '@mikro-orm/core';
+import { EntityRepositoryType, type Opt, type Ref, defineEntity, p } from '@mikro-orm/core';
 import { HiddenRegionsRepository } from '../repositories/HiddenRegions.repository';
 import { DbTimestampType } from '../types';
 import { Users } from './Users.entity';
 
 export class HiddenRegions {
+  [EntityRepositoryType]?: HiddenRegionsRepository;
   id!: number & Opt;
   user!: Ref<Users>;
   user_id!: number;

@@ -1,10 +1,11 @@
-import { type Opt, PrimaryKeyProp, type Ref, defineEntity, p } from '@mikro-orm/core';
+import { EntityRepositoryType, type Opt, PrimaryKeyProp, type Ref, defineEntity, p } from '@mikro-orm/core';
 import { PackingItemContributorsRepository } from '../repositories/PackingItemContributors.repository';
 import { DbTimestampType } from '../types';
 import { PackingItems } from './PackingItems.entity';
 import { Users } from './Users.entity';
 
 export class PackingItemContributors {
+  [EntityRepositoryType]?: PackingItemContributorsRepository;
   [PrimaryKeyProp]?: ['item', 'user'];
   item!: Ref<PackingItems>;
   item_id!: number;

@@ -1,9 +1,10 @@
-import { type Opt, type Ref, defineEntity, p } from '@mikro-orm/core';
+import { EntityRepositoryType, type Opt, type Ref, defineEntity, p } from '@mikro-orm/core';
 import { AssignmentParticipantsRepository } from '../repositories/AssignmentParticipants.repository';
 import { DayAssignments } from './DayAssignments.entity';
 import { Users } from './Users.entity';
 
 export class AssignmentParticipants {
+  [EntityRepositoryType]?: AssignmentParticipantsRepository;
   id!: number & Opt;
   assignment!: Ref<DayAssignments>;
   assignment_id!: number;

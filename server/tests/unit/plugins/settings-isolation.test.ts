@@ -30,9 +30,7 @@ import { PluginUserSettingsService } from '../../../src/nest/plugins/plugin-user
 import { parseManifest, ManifestError } from '../../../src/nest/plugins/install/manifest';
 import { createTestOrm, type TestOrm } from '../../helpers/test-orm';
 import { AuditLog } from '../../../src/db/entities/AuditLog.entity';
-import type { AuditLogRepository } from '../../../src/db/repositories/AuditLog.repository';
 import { Users } from '../../../src/db/entities/Users.entity';
-import type { UsersRepository } from '../../../src/db/repositories/Users.repository';
 /** The host-side settings reads, over the same connection the test seeded. */
 const userSettings = () => new PluginUserSettingsService(new DatabaseService(dbConn));
 
@@ -139,7 +137,7 @@ describe('a plugin channel label is bounded by the host', () => {
     t = await createTestOrm(dbConn);
     const rt = new PluginRuntimeService(
       new DatabaseService(dbConn),
-      new AuditService(t.repo(AuditLog) as AuditLogRepository, t.repo(Users) as UsersRepository),
+      new AuditService(t.repo(AuditLog), t.repo(Users)),
       await createTestAddonsService(dbConn),
       userSettings(),
     );

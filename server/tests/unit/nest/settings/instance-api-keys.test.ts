@@ -34,8 +34,8 @@ let users: UsersRepository;
 
 beforeAll(async () => {
   t = await createTestOrm(testDb);
-  appSettings = t.repo(AppSettings) as AppSettingsRepository;
-  users = t.repo(Users) as UsersRepository;
+  appSettings = t.repo(AppSettings);
+  users = t.repo(Users);
 });
 
 beforeEach(() => {

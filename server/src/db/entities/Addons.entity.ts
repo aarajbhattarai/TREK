@@ -1,4 +1,4 @@
-import { type Opt, defineEntity, p } from '@mikro-orm/core';
+import { EntityRepositoryType, type Opt, defineEntity, p } from '@mikro-orm/core';
 import { AddonsRepository } from '../repositories/Addons.repository';
 
 export interface AddonConfig {
@@ -6,6 +6,7 @@ export interface AddonConfig {
 }
 
 export class Addons {
+  [EntityRepositoryType]?: AddonsRepository;
   id?: string | null;
   name!: string;
   description?: string | null;

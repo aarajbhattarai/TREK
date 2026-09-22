@@ -14,7 +14,7 @@ let otherUser: TestUser;
 
 beforeAll(async () => {
   t = await createTestOrm(testDb);
-  settings = t.repo(Settings) as SettingsRepository;
+  settings = t.repo(Settings);
 });
 beforeEach(() => {
   resetTestDb(testDb);

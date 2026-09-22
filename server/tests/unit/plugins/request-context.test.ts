@@ -41,7 +41,6 @@ import { UnitOfWork } from '../../../src/nest/database/unit-of-work';
 import { RpcRateLimiter, DEFAULT_RPC_LIMIT } from '../../../src/nest/plugins/host/rate-limit';
 import { createTestOrm, type TestOrm } from '../../helpers/test-orm';
 import { AppSettings } from '../../../src/db/entities/AppSettings.entity';
-import type { AppSettingsRepository } from '../../../src/db/repositories/AppSettings.repository';
 import type { PluginRpcHost } from '../../../src/nest/plugins/host/rpc-host';
 import type { RpcRequest, RpcResponse, RpcError } from '../../../src/nest/plugins/protocol/envelope';
 import type { EntityManager } from '@mikro-orm/core';
@@ -69,7 +68,7 @@ let userId: number;
 beforeAll(async () => {
   t = await createTestOrm(testDb, { allowGlobalContext: false });
   const dbs = new DatabaseService(testDb);
-  permissions = new PermissionsService(t.repo(AppSettings) as AppSettingsRepository, new UnitOfWork(t.em));
+  permissions = new PermissionsService(t.repo(AppSettings), new UnitOfWork(t.em));
   guards = new PluginGuards(dbs, permissions, await createTestAddonsService(testDb, dbs));
   userId = createUser(testDb, { role: 'user' }).user.id;
   // An admin has tightened trip_create from its 'everybody' default.

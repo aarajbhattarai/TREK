@@ -1,9 +1,10 @@
-import { type Opt, type Ref, defineEntity, p } from '@mikro-orm/core';
+import { EntityRepositoryType, type Opt, type Ref, defineEntity, p } from '@mikro-orm/core';
 import { AuditLogRepository } from '../repositories/AuditLog.repository';
 import { DbTimestampType } from '../types';
 import { Users } from './Users.entity';
 
 export class AuditLog {
+  [EntityRepositoryType]?: AuditLogRepository;
   id!: number & Opt;
   created_at?: string | null;
   user?: Ref<Users> | null;

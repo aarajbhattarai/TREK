@@ -1,9 +1,10 @@
-import { Collection, type Opt, type Ref, defineEntity, p } from '@mikro-orm/core';
+import { Collection, EntityRepositoryType, type Opt, type Ref, defineEntity, p } from '@mikro-orm/core';
 import { PackingTemplateCategoriesRepository } from '../repositories/PackingTemplateCategories.repository';
 import { PackingTemplateItems } from './PackingTemplateItems.entity';
 import { PackingTemplates } from './PackingTemplates.entity';
 
 export class PackingTemplateCategories {
+  [EntityRepositoryType]?: PackingTemplateCategoriesRepository;
   id!: number & Opt;
   template!: Ref<PackingTemplates>;
   template_id!: number;

@@ -107,8 +107,8 @@ beforeAll(async () => {
   createTables(testDb);
   runMigrations(testDb);
   t = await createTestOrm(testDb);
-  auditLogRepo = t.repo(AuditLog) as AuditLogRepository;
-  usersRepo = t.repo(Users) as UsersRepository;
+  auditLogRepo = t.repo(AuditLog);
+  usersRepo = t.repo(Users);
   svc = new OauthService(dbs, addonsStub, new AuditService(auditLogRepo, usersRepo));
 });
 

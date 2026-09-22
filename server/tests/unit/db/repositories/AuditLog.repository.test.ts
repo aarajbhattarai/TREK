@@ -14,7 +14,7 @@ let auditLog: AuditLogRepository;
 
 beforeAll(async () => {
   t = await createTestOrm(testDb);
-  auditLog = t.repo(AuditLog) as AuditLogRepository;
+  auditLog = t.repo(AuditLog);
 });
 beforeEach(() => { resetTestDb(testDb); t.clear(); });
 afterAll(async () => { await t.close(); testDb.close(); });

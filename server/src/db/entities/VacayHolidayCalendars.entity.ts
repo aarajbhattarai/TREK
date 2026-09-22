@@ -1,8 +1,9 @@
-import { type Opt, type Ref, defineEntity, p } from '@mikro-orm/core';
+import { EntityRepositoryType, type Opt, type Ref, defineEntity, p } from '@mikro-orm/core';
 import { VacayHolidayCalendarsRepository } from '../repositories/VacayHolidayCalendars.repository';
 import { VacayPlans } from './VacayPlans.entity';
 
 export class VacayHolidayCalendars {
+  [EntityRepositoryType]?: VacayHolidayCalendarsRepository;
   id!: number & Opt;
   plan!: Ref<VacayPlans>;
   plan_id!: number;

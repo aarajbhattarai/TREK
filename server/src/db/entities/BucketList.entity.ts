@@ -1,10 +1,11 @@
-import { Collection, type Opt, type Ref, defineEntity, p } from '@mikro-orm/core';
+import { Collection, EntityRepositoryType, type Opt, type Ref, defineEntity, p } from '@mikro-orm/core';
 import { BucketListRepository } from '../repositories/BucketList.repository';
 import { DbTimestampType } from '../types';
 import { DawarichVisitSuggestions } from './DawarichVisitSuggestions.entity';
 import { Users } from './Users.entity';
 
 export class BucketList {
+  [EntityRepositoryType]?: BucketListRepository;
   id!: number & Opt;
   user!: Ref<Users>;
   user_id!: number;

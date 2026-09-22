@@ -768,6 +768,61 @@ export function RULE9_addImplicitUniqueConstraints(
   }
 }
 
+/** A repository-type marker to inject into one entity class — Rule 10. */
+export interface RepositoryTypeMarkerFixup {
+  className: string;
+  repositoryClassName: string;
+}
+
+/**
+ * Rule 10 (metadata level: which class needs a marker and what to name it;
+ * text level: the actual insertion, see `injectRepositoryTypeMarker` below —
+ * this split, and why it cannot be a pure metadata rule, mirrors Rule 5's
+ * `.joinColumn()` injection): every entity class gets
+ * `[EntityRepositoryType]?: XRepository;` as its FIRST member, so
+ * `em.getRepository(X)` — and `t.repo(X)` in `tests/helpers/test-orm.ts`,
+ * whose `repo<T>` already returns `GetRepository<T, EntityRepository<T>>` —
+ * resolves to the entity's own repository type instead of the generic
+ * `SqlEntityRepository<X>` fallback. `GetRepository<Entity, Fallback>`
+ * (`@mikro-orm/core`'s `typings.d.ts`, installed version 7.2.1) reads
+ * exactly this symbol-keyed member off the entity type
+ * (`Entity[typeof EntityRepositoryType]`) — confirmed against the installed
+ * typings, not assumed.
+ *
+ * `@mikro-orm/entity-generator`'s OWN renderer already knows how to emit this
+ * marker, but only for the decorator-based `@Entity()` shape
+ * (`SourceFile.js#generate()`, guarded by `if (this.meta.repositoryClass)`).
+ * Our `defineEntity` output goes through a different method entirely —
+ * `EntitySchemaSourceFile.generateClassDefinition()` (shared by
+ * `DefineEntitySourceFile`, read directly out of
+ * `node_modules/@mikro-orm/entity-generator/EntitySchemaSourceFile.js`) —
+ * which only ever consults `PrimaryKeyProp`/`EagerProps`/`Config` for the
+ * class head, never `repositoryClass`. No `GenerateOptions` flag changes
+ * that, so — exactly like Rule 5's join column — the metadata alone cannot
+ * carry this into the rendered class body; only a text pass can.
+ *
+ * The metadata half below does not mutate anything: `meta.repositoryClass`
+ * is already set for every entity by Rule 8 (which always runs first, see
+ * `applyRules`) — this is purely a collector, so the text pass has
+ * (className, repositoryClassName) pairs to work from without re-deriving
+ * the "<ClassName>Repository" naming convention a second time.
+ *
+ * The marker is a type-only declaration (`?:`, never assigned a value) — NOT
+ * a real entity property. It must never go through `meta.addProperty`:
+ * MikroORM would then treat it as a genuine, unmapped column.
+ * `tests/unit/db/entity-class-fields.test.ts` (CLASSFIELD-003) pins that this
+ * stays true — the marker never shows up in `meta.props` and is never
+ * counted by CLASSFIELD-002's class-field census.
+ */
+export function RULE10_repositoryTypeMarker(metadata: EntityMetadata[]): RepositoryTypeMarkerFixup[] {
+  const fixups: RepositoryTypeMarkerFixup[] = [];
+  for (const meta of metadata) {
+    if (!meta.repositoryClass) continue; // Rule 8 always sets this — defensive only, never observed empty
+    fixups.push({ className: meta.className, repositoryClassName: meta.repositoryClass });
+  }
+  return fixups;
+}
+
 /** A scalar property whose literal default the renderer's own heuristic drops or mis-renders — see below. */
 export interface DefaultFixup {
   className: string;
@@ -842,6 +897,8 @@ export interface RuleFixups {
   jsonColumns: JsonColumnFixup[];
   /** Rule 1's + Rule 1b's + Rule 2's retyped scalars together — all three need the same `.columnType()` strip (see `stripRedundantColumnType`). */
   retypedScalars: RetypedScalarFixup[];
+  /** Rule 10's repository-type markers — one per entity class. */
+  repositoryMarkers: RepositoryTypeMarkerFixup[];
 }
 
 /**
@@ -874,7 +931,15 @@ export function applyRules(
   RULE8_bindRepositories(metadata);
   RULE9_addImplicitUniqueConstraints(metadata, implicitUniques);
   const defaults = RULE_normalizeLiteralDefaults(metadata);
-  return { joinColumns, defaults, timestamps, jsonColumns, retypedScalars: [...retypedByRule1, ...timestamps, ...jsonColumns] };
+  const repositoryMarkers = RULE10_repositoryTypeMarker(metadata);
+  return {
+    joinColumns,
+    defaults,
+    timestamps,
+    jsonColumns,
+    retypedScalars: [...retypedByRule1, ...timestamps, ...jsonColumns],
+    repositoryMarkers,
+  };
 }
 
 /**
@@ -1303,6 +1368,82 @@ export function stripHiddenTypeAnnotation(source: string): string {
   return removeUnusedCoreImportIfUnused(strippedClassBody + rest, 'Hidden');
 }
 
+/**
+ * Case-sensitive alpha sort key for a `@mikro-orm/core` named-import entry —
+ * matches `@mikro-orm/entity-generator`'s own `generateImports()` (sorts the
+ * raw identifiers, THEN prepends `type ` to whichever ones need it), read
+ * directly out of `SourceFile.js`. Ignoring any existing `type ` prefix for
+ * ordering purposes is what keeps this idempotent against the generator's
+ * own output — re-running `--write` after this pass must never reorder what
+ * the generator already got right.
+ */
+function coreImportSortKey(entry: string): string {
+  return entry.replace(/^type /, '');
+}
+
+/**
+ * Adds `identifier` (a VALUE import — never `type`-prefixed; see callers) to
+ * the file's `@mikro-orm/core` named import line, re-sorting the whole list
+ * with `coreImportSortKey` so the result is byte-identical to what
+ * `@mikro-orm/entity-generator` would have rendered had it known about this
+ * identifier itself. A no-op if the identifier is already present (every
+ * generated file has exactly one `@mikro-orm/core` import line — `defineEntity`
+ * and `p` are unconditional — so "no import line at all" is a renderer-shape
+ * change, not a legitimate input, and throws rather than silently doing
+ * nothing.
+ */
+function addNamedCoreImport(source: string, identifier: string): string {
+  const importLineRe = /^import \{ ([^}]*) \} from '@mikro-orm\/core';$/m;
+  const match = importLineRe.exec(source);
+  if (!match) {
+    throw new Error(`generate-entities: addNamedCoreImport could not find the "@mikro-orm/core" import line to add "${identifier}" to.`);
+  }
+  const entries = match[1].split(',').map((e) => e.trim());
+  if (entries.some((e) => coreImportSortKey(e) === identifier)) return source; // already present
+  entries.push(identifier);
+  entries.sort((a, b) => {
+    const ka = coreImportSortKey(a);
+    const kb = coreImportSortKey(b);
+    return ka < kb ? -1 : ka > kb ? 1 : 0;
+  });
+  const newLine = `import { ${entries.join(', ')} } from '@mikro-orm/core';`;
+  return source.slice(0, match.index) + newLine + source.slice(match.index + match[0].length);
+}
+
+/**
+ * The text half of Rule 10: inserts `[EntityRepositoryType]?: XRepository;`
+ * as the class's FIRST member — before an existing `[PrimaryKeyProp]`/
+ * `[EagerProps]` marker, if either is present (`generateClassDefinition()`
+ * only ever emits those two, plus `[Config]` for a custom base entity this
+ * codebase does not use) — and adds `EntityRepositoryType` to the
+ * `@mikro-orm/core` named import line.
+ *
+ * `EntityRepositoryType` is a real runtime `unique symbol` const, not an
+ * erased type (`POSSIBLE_TYPE_IMPORTS` in the installed entity-generator's
+ * `CoreImportsHelper.js` does not list it), so this is a VALUE import, never
+ * `import type` — the same way the generator's own decorator-mode renderer
+ * imports it, and the same way every existing `[PrimaryKeyProp]` marker in
+ * this tree already imports `PrimaryKeyProp` as a value (see e.g.
+ * `AppSettings.entity.ts`).
+ */
+export function injectRepositoryTypeMarker(source: string, fixups: readonly RepositoryTypeMarkerFixup[]): string {
+  let result = source;
+  for (const { className, repositoryClassName } of fixups) {
+    const classOpenRe = new RegExp(`^(export class ${escapeRegExp(className)} \\{)$`, 'm');
+    const match = classOpenRe.exec(result);
+    if (!match) {
+      throw new Error(
+        `generate-entities: injectRepositoryTypeMarker could not find "export class ${className} {" to insert the marker after.`,
+      );
+    }
+    const insertAt = match.index + match[0].length;
+    const marker = `\n  [EntityRepositoryType]?: ${repositoryClassName};`;
+    result = result.slice(0, insertAt) + marker + result.slice(insertAt);
+    result = addNamedCoreImport(result, 'EntityRepositoryType');
+  }
+  return result;
+}
+
 /** Every text pass, applied in order. */
 export function applyTextPasses(source: string, fixups: RuleFixups): string {
   let result = injectJoinColumns(source, fixups.joinColumns);
@@ -1314,6 +1455,7 @@ export function applyTextPasses(source: string, fixups: RuleFixups): string {
   result = injectJsonInterfaces(result, fixups.jsonColumns);
   result = removeUnusedCoreImportIfUnused(result, 'IType');
   result = stripHiddenTypeAnnotation(result);
+  result = injectRepositoryTypeMarker(result, fixups.repositoryMarkers);
   return result;
 }
 
@@ -1401,7 +1543,14 @@ export async function generateEntities(): Promise<GenerateResult> {
     });
     try {
       const generator = orm.config.getExtension<EntityGenerator>('@mikro-orm/entity-generator');
-      let fixups: RuleFixups = { joinColumns: [], defaults: [], timestamps: [], jsonColumns: [], retypedScalars: [] };
+      let fixups: RuleFixups = {
+        joinColumns: [],
+        defaults: [],
+        timestamps: [],
+        jsonColumns: [],
+        retypedScalars: [],
+        repositoryMarkers: [],
+      };
       const rawFiles = await generator.generate({
         entityDefinition: 'defineEntity',
         scalarPropertiesForRelations: 'always',
@@ -1435,6 +1584,7 @@ export async function generateEntities(): Promise<GenerateResult> {
           timestamps: fixups.timestamps.filter((f) => f.className === className),
           jsonColumns: fixups.jsonColumns.filter((f) => f.className === className),
           retypedScalars: fixups.retypedScalars.filter((f) => f.className === className),
+          repositoryMarkers: fixups.repositoryMarkers.filter((f) => f.className === className),
         };
         files.set(`${className}.entity.ts`, applyTextPasses(raw, relevantFixups));
       }

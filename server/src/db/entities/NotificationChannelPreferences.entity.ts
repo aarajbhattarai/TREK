@@ -1,8 +1,9 @@
-import { type Opt, PrimaryKeyProp, type Ref, defineEntity, p } from '@mikro-orm/core';
+import { EntityRepositoryType, type Opt, PrimaryKeyProp, type Ref, defineEntity, p } from '@mikro-orm/core';
 import { NotificationChannelPreferencesRepository } from '../repositories/NotificationChannelPreferences.repository';
 import { Users } from './Users.entity';
 
 export class NotificationChannelPreferences {
+  [EntityRepositoryType]?: NotificationChannelPreferencesRepository;
   [PrimaryKeyProp]?: ['user', 'event_type', 'channel'];
   user!: Ref<Users>;
   user_id!: number;

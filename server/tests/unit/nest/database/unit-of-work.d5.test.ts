@@ -5,7 +5,6 @@ import { resetTestDb } from '../../../helpers/test-db';
 import { createTestOrm, type TestOrm } from '../../../helpers/test-orm';
 import { createUser } from '../../../helpers/factories';
 import { Users } from '../../../../src/db/entities/Users.entity';
-import type { UsersRepository } from '../../../../src/db/repositories/Users.repository';
 import { UnitOfWork } from '../../../../src/nest/database/unit-of-work';
 
 /**
@@ -41,10 +40,10 @@ describe('UnitOfWork transaction resolution (D5)', () => {
     let forkMatches: boolean | undefined;
 
     await uow.transactional(async () => {
-      const repo = t.repo(Users) as UsersRepository;
+      const repo = t.repo(Users);
       globalMatches = repo.getEntityManager().getContext() === TransactionContext.getEntityManager();
 
-      const forkedRepo = t.orm.em.fork().getRepository(Users) as UsersRepository;
+      const forkedRepo = t.orm.em.fork().getRepository(Users);
       forkMatches = forkedRepo.getEntityManager().getContext() === TransactionContext.getEntityManager();
     });
 

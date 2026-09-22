@@ -89,7 +89,7 @@ export function createTestUnitOfWork(db: Database.Database): Promise<UnitOfWork>
 export function createTestAppSettingsRepo(db: Database.Database): Promise<AppSettingsRepository> {
   const existing = appSettingsPerHandle.get(db);
   if (existing !== undefined) return existing;
-  const pending = sharedTestOrm(db).then((t) => t.repo(AppSettings) as AppSettingsRepository);
+  const pending = sharedTestOrm(db).then((t) => t.repo(AppSettings));
   appSettingsPerHandle.set(db, pending);
   return pending;
 }
@@ -104,7 +104,7 @@ export function createTestAppSettingsRepo(db: Database.Database): Promise<AppSet
 export function createTestCategoriesRepo(db: Database.Database): Promise<CategoriesRepository> {
   const existing = categoriesPerHandle.get(db);
   if (existing !== undefined) return existing;
-  const pending = sharedTestOrm(db).then((t) => t.repo(Categories) as CategoriesRepository);
+  const pending = sharedTestOrm(db).then((t) => t.repo(Categories));
   categoriesPerHandle.set(db, pending);
   return pending;
 }
@@ -116,7 +116,7 @@ export function createTestCategoriesRepo(db: Database.Database): Promise<Categor
 export function createTestTagsRepo(db: Database.Database): Promise<TagsRepository> {
   const existing = tagsPerHandle.get(db);
   if (existing !== undefined) return existing;
-  const pending = sharedTestOrm(db).then((t) => t.repo(Tags) as TagsRepository);
+  const pending = sharedTestOrm(db).then((t) => t.repo(Tags));
   tagsPerHandle.set(db, pending);
   return pending;
 }
@@ -129,7 +129,7 @@ export function createTestTagsRepo(db: Database.Database): Promise<TagsRepositor
 export function createTestSettingsRepo(db: Database.Database): Promise<SettingsRepository> {
   const existing = settingsPerHandle.get(db);
   if (existing !== undefined) return existing;
-  const pending = sharedTestOrm(db).then((t) => t.repo(Settings) as SettingsRepository);
+  const pending = sharedTestOrm(db).then((t) => t.repo(Settings));
   settingsPerHandle.set(db, pending);
   return pending;
 }
@@ -146,7 +146,7 @@ export function createTestSettingsRepo(db: Database.Database): Promise<SettingsR
 export function createTestUsersRepo(db: Database.Database): Promise<UsersRepository> {
   const existing = usersPerHandle.get(db);
   if (existing !== undefined) return existing;
-  const pending = sharedTestOrm(db).then((t) => t.repo(Users) as UsersRepository);
+  const pending = sharedTestOrm(db).then((t) => t.repo(Users));
   usersPerHandle.set(db, pending);
   return pending;
 }

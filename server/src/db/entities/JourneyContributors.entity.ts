@@ -1,9 +1,10 @@
-import { type Opt, PrimaryKeyProp, type Ref, defineEntity, p } from '@mikro-orm/core';
+import { EntityRepositoryType, type Opt, PrimaryKeyProp, type Ref, defineEntity, p } from '@mikro-orm/core';
 import { JourneyContributorsRepository } from '../repositories/JourneyContributors.repository';
 import { Journeys } from './Journeys.entity';
 import { Users } from './Users.entity';
 
 export class JourneyContributors {
+  [EntityRepositoryType]?: JourneyContributorsRepository;
   [PrimaryKeyProp]?: ['journey', 'user'];
   journey!: Ref<Journeys>;
   journey_id!: number;

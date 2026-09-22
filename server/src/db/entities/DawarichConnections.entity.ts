@@ -1,9 +1,10 @@
-import { type Opt, PrimaryKeyProp, type Ref, defineEntity, p } from '@mikro-orm/core';
+import { EntityRepositoryType, type Opt, PrimaryKeyProp, type Ref, defineEntity, p } from '@mikro-orm/core';
 import { DawarichConnectionsRepository } from '../repositories/DawarichConnections.repository';
 import { DbTimestampType } from '../types';
 import { Users } from './Users.entity';
 
 export class DawarichConnections {
+  [EntityRepositoryType]?: DawarichConnectionsRepository;
   [PrimaryKeyProp]?: 'user';
   user?: Ref<Users> | null;
   user_id?: number | null;

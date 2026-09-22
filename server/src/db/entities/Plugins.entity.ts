@@ -1,8 +1,9 @@
-import { type Opt, defineEntity, p } from '@mikro-orm/core';
+import { EntityRepositoryType, type Opt, defineEntity, p } from '@mikro-orm/core';
 import { PluginsRepository } from '../repositories/Plugins.repository';
 import { DbTimestampType } from '../types';
 
 export class Plugins {
+  [EntityRepositoryType]?: PluginsRepository;
   id?: string | null;
   name!: string;
   description?: string | null;

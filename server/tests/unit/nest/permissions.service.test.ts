@@ -69,7 +69,7 @@ beforeAll(() => {
 
 beforeAll(async () => {
   t = await createTestOrm(testDb);
-  appSettings = t.repo(AppSettings) as AppSettingsRepository;
+  appSettings = t.repo(AppSettings);
   svc = new PermissionsService(appSettings, await createTestUnitOfWork(testDb));
 });
 

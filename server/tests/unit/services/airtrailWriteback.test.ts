@@ -14,9 +14,7 @@ import { DatabaseService } from '../../../src/nest/database/database.service';
 import { AuditService } from '../../../src/nest/database/../audit/audit.service';
 import { createTestOrm, type TestOrm } from '../../helpers/test-orm';
 import { AuditLog } from '../../../src/db/entities/AuditLog.entity';
-import type { AuditLogRepository } from '../../../src/db/repositories/AuditLog.repository';
 import { Users } from '../../../src/db/entities/Users.entity';
-import type { UsersRepository } from '../../../src/db/repositories/Users.repository';
 
 // The free functions became methods with the airtrail fold; same SQL, same
 // behaviour, one instance over the same db handle.
@@ -30,7 +28,7 @@ beforeAll(async () => {
   t = await createTestOrm(db);
   svc = new AirtrailService(
     new DatabaseService(db),
-    new AuditService(t.repo(AuditLog) as AuditLogRepository, t.repo(Users) as UsersRepository),
+    new AuditService(t.repo(AuditLog), t.repo(Users)),
     new AirtrailClient(),
   );
   getConnectionSettings = (...args) => svc.getConnectionSettings(...args);

@@ -1,7 +1,8 @@
-import { type Opt, PrimaryKeyProp, defineEntity, p } from '@mikro-orm/core';
+import { EntityRepositoryType, type Opt, PrimaryKeyProp, defineEntity, p } from '@mikro-orm/core';
 import { RouteUsageDailyRepository } from '../repositories/RouteUsageDaily.repository';
 
 export class RouteUsageDaily {
+  [EntityRepositoryType]?: RouteUsageDailyRepository;
   [PrimaryKeyProp]?: ['day', 'profile', 'surface', 'self_hosted'];
   day!: string;
   profile!: string;

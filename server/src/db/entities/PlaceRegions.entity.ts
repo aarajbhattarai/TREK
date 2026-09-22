@@ -1,8 +1,9 @@
-import { PrimaryKeyProp, type Ref, defineEntity, p } from '@mikro-orm/core';
+import { EntityRepositoryType, PrimaryKeyProp, type Ref, defineEntity, p } from '@mikro-orm/core';
 import { PlaceRegionsRepository } from '../repositories/PlaceRegions.repository';
 import { Places } from './Places.entity';
 
 export class PlaceRegions {
+  [EntityRepositoryType]?: PlaceRegionsRepository;
   [PrimaryKeyProp]?: 'place';
   place?: Ref<Places> | null;
   place_id?: number | null;

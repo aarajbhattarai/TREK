@@ -1,14 +1,19 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { EntityMetadata, ReferenceKind, type EntityProperty } from '@mikro-orm/core';
-import { describe, expect, it } from 'vitest';
+import { EntityMetadata, type EntityRepository, ReferenceKind, type EntityProperty } from '@mikro-orm/core';
+import { describe, expect, expectTypeOf, it } from 'vitest';
+import { Users } from '../../../src/db/entities/Users.entity';
+import { UsersRepository } from '../../../src/db/repositories/Users.repository';
+import { createSnapshotTestDb } from '../../helpers/db-mock';
+import { createTestOrm } from '../../helpers/test-orm';
 import {
   assertFilesGenerated,
   BOOLEAN_COLUMNS,
   JoinColumnFixup,
   JsonColumnFixup,
   KNOWN_DIFFS,
+  RepositoryTypeMarkerFixup,
   RULE1_fixUnknownScalarTypes,
   RULE1b_markJsonColumns,
   RULE1c_markBooleanColumns,
@@ -21,6 +26,7 @@ import {
   RULE7_dropNoActionRules,
   RULE8_bindRepositories,
   RULE9_addImplicitUniqueConstraints,
+  RULE10_repositoryTypeMarker,
   RULE_normalizeLiteralDefaults,
   applyTextPasses,
   checkEntities,
@@ -32,6 +38,7 @@ import {
   injectJsonInterfaces,
   injectJsonTypeParams,
   injectMissingDefaults,
+  injectRepositoryTypeMarker,
   regenerateEntitiesIndex,
   stripHiddenTypeAnnotation,
   stripRedundantColumnType,
@@ -415,6 +422,21 @@ describe('RULE8_bindRepositories', () => {
   });
 });
 
+describe('RULE10_repositoryTypeMarker', () => {
+  it('RULE10-001: collects a fixup naming meta.repositoryClass (already set by Rule 8) for every entity', () => {
+    const meta = fixtureMeta('Days', 'days', []);
+    RULE8_bindRepositories([meta]);
+    const fixups = RULE10_repositoryTypeMarker([meta]);
+    expect(fixups).toEqual<RepositoryTypeMarkerFixup[]>([{ className: 'Days', repositoryClassName: 'DaysRepository' }]);
+  });
+
+  it('RULE10-002: an entity with no repositoryClass set (Rule 8 never ran) is skipped, not fabricated', () => {
+    const meta = fixtureMeta('Days', 'days', []);
+    const fixups = RULE10_repositoryTypeMarker([meta]);
+    expect(fixups).toEqual([]);
+  });
+});
+
 describe('RULE9_addImplicitUniqueConstraints', () => {
   it('RULE9-001: a table with a matching implicit-unique entry gets a uniques: block referencing the columns as properties — a plain (non-FK) column keeps its own name', () => {
     const userId = fixtureProp({ name: 'user_id', primary: false });
@@ -746,6 +768,44 @@ describe('stripHiddenTypeAnnotation', () => {
   });
 });
 
+describe('injectRepositoryTypeMarker', () => {
+  it('TEXT-REPOMARKER-001: inserts the marker as the FIRST class member and adds a value import', () => {
+    const source = "import { defineEntity, p } from '@mikro-orm/core';\n\nexport class X {\n  id!: number;\n}\n";
+    const out = injectRepositoryTypeMarker(source, [{ className: 'X', repositoryClassName: 'XRepository' }]);
+    expect(out).toContain('export class X {\n  [EntityRepositoryType]?: XRepository;\n  id!: number;\n');
+    expect(out).toContain("import { EntityRepositoryType, defineEntity, p } from '@mikro-orm/core';");
+  });
+
+  it('TEXT-REPOMARKER-002: lands before an existing [PrimaryKeyProp] marker, not after it', () => {
+    const source =
+      "import { PrimaryKeyProp, defineEntity, p } from '@mikro-orm/core';\n\n" +
+      "export class AppSettings {\n  [PrimaryKeyProp]?: 'key';\n  key?: string | null;\n}\n";
+    const out = injectRepositoryTypeMarker(source, [{ className: 'AppSettings', repositoryClassName: 'AppSettingsRepository' }]);
+    const markerIndex = out.indexOf('[EntityRepositoryType]');
+    const pkIndex = out.indexOf('[PrimaryKeyProp]');
+    expect(markerIndex).toBeGreaterThan(-1);
+    expect(markerIndex).toBeLessThan(pkIndex);
+  });
+
+  it('TEXT-REPOMARKER-003: re-sorts the import line the same way the generator itself would (case-sensitive, type prefix ignored for ordering)', () => {
+    const source = "import { Collection, type Opt, type Ref, defineEntity, p } from '@mikro-orm/core';\n\nexport class Users {\n  id!: number;\n}\n";
+    const out = injectRepositoryTypeMarker(source, [{ className: 'Users', repositoryClassName: 'UsersRepository' }]);
+    expect(out).toContain("import { Collection, EntityRepositoryType, type Opt, type Ref, defineEntity, p } from '@mikro-orm/core';");
+  });
+
+  it('TEXT-REPOMARKER-004: throws, naming the class, if "export class X {" cannot be found (renderer shape changed)', () => {
+    const source = "import { defineEntity, p } from '@mikro-orm/core';\n\nexport class Y {\n  id!: number;\n}\n";
+    expect(() => injectRepositoryTypeMarker(source, [{ className: 'X', repositoryClassName: 'XRepository' }])).toThrow(
+      /could not find "export class X \{"/,
+    );
+  });
+
+  it('TEXT-REPOMARKER-005: an empty fixups list is a no-op', () => {
+    const source = "import { defineEntity, p } from '@mikro-orm/core';\n\nexport class X {\n  id!: number;\n}\n";
+    expect(injectRepositoryTypeMarker(source, [])).toBe(source);
+  });
+});
+
 describe('applyTextPasses', () => {
   it('TEXT-ALL-001: composes every pass without one undoing another', () => {
     const source =
@@ -760,9 +820,11 @@ describe('applyTextPasses', () => {
       timestamps: [],
       jsonColumns: [],
       retypedScalars: [],
+      repositoryMarkers: [{ className: 'X', repositoryClassName: 'XRepository' }],
     });
     expect(out).toContain(".joinColumn('country')");
     expect(out).not.toContain('& Hidden');
+    expect(out).toContain('export class X {\n  [EntityRepositoryType]?: XRepository;\n  countryRef!: Ref<Y>;\n');
   });
 });
 
@@ -1099,6 +1161,49 @@ describe('generateEntities — validation diff against the five reference entiti
     },
     30_000,
   );
+});
+
+/**
+ * Plan 3b pre-task: Rule 10 end-to-end against the real schema, plus the
+ * type-level probe the brief asks for — `em.getRepository(Users)` (and
+ * `t.repo(Users)` from `tests/helpers/test-orm.ts`, whose `repo<T>` already
+ * returns `GetRepository<T, EntityRepository<T>>`) must resolve to
+ * `UsersRepository`, not the generic `SqlEntityRepository<Users>` fallback.
+ * `expectTypeOf(...).toEqualTypeOf<...>()` is checked by `tsc` (`typecheck:tests`
+ * is the actual gate; `expect-type`'s runtime is an intentional no-op) — the
+ * `toBeInstanceOf` assertion below is the runtime half of the same proof.
+ */
+describe('generateEntities — repository type marker (Plan 3b pre-task, RULE10)', () => {
+  it('REPOMARKER-E2E-001: Users.entity.ts declares [EntityRepositoryType] as its first class member, importing it as a value', async () => {
+    const { files } = await generateEntities();
+    const users = files.get('Users.entity.ts');
+    expect(users).toBeDefined();
+    expect(users).toMatch(/export class Users \{\n {2}\[EntityRepositoryType\]\?: UsersRepository;\n/);
+    expect(users).toMatch(/^import \{ Collection, EntityRepositoryType, type Opt, type Ref, defineEntity, p \} from '@mikro-orm\/core';$/m);
+  }, 30_000);
+
+  it('REPOMARKER-E2E-002: em.getRepository(Users) / t.repo(Users) resolve to UsersRepository — no cast needed, real instance at runtime', async () => {
+    const testDb = createSnapshotTestDb();
+    try {
+      const t = await createTestOrm(testDb);
+      try {
+        // Type-level: this assignment only compiles (under typecheck:tests) once
+        // GetRepository<Users, EntityRepository<Users>> resolves to UsersRepository
+        // via the [EntityRepositoryType] marker — the generic EntityRepository<Users>
+        // fallback would not be assignable to UsersRepository.
+        const repo: UsersRepository = t.em.getRepository(Users);
+        expectTypeOf(repo).toEqualTypeOf<UsersRepository>();
+        expectTypeOf(t.repo(Users)).toEqualTypeOf<UsersRepository>();
+        expectTypeOf(t.repo(Users)).not.toEqualTypeOf<EntityRepository<Users>>();
+        // Runtime: the repository instance really is a UsersRepository.
+        expect(t.repo(Users)).toBeInstanceOf(UsersRepository);
+      } finally {
+        await t.close();
+      }
+    } finally {
+      testDb.close();
+    }
+  });
 });
 
 describe('PENDING_ENTITIES ratchet (I7)', () => {
