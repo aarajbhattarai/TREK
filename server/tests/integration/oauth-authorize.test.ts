@@ -41,18 +41,19 @@ import { buildApp } from '../../src/bootstrap';
 import { resetTestDb, resetRateLimits } from '../helpers/test-db';
 import { createUser } from '../helpers/factories';
 import { OauthService } from '../../src/nest/oauth/oauth.service';
-import { DatabaseService } from '../../src/nest/database/database.service';
 import { createTestAddonsService } from '../helpers/test-addons';
 import { AuditService } from '../../src/nest/audit/audit.service';
 import { createTestOrm, type TestOrm } from '../helpers/test-orm';
 import { AuditLog } from '../../src/db/entities/AuditLog.entity';
 import { Users } from '../../src/db/entities/Users.entity';
+import { OauthClients } from '../../src/db/entities/OauthClients.entity';
+import { OauthTokens } from '../../src/db/entities/OauthTokens.entity';
+import { OauthConsents } from '../../src/db/entities/OauthConsents.entity';
 
 // The consent controller writes pending codes through the container instance;
 // the SDK-mounted authorize path reads them back. The map is module-scoped in
 // oauth.pending-codes.ts, so a hand-built service instance shares it — the
 // same single-instance property the full auth-code loop below proves end-to-end.
-const oauthDbs = new DatabaseService(testDb);
 let containerSideOauth: OauthService;
 
 let nestApp: INestApplication;
@@ -85,7 +86,7 @@ beforeAll(async () => {
     nestApp = await buildApp();
     app = nestApp.getHttpAdapter().getInstance();
     t = await createTestOrm(testDb);
-    containerSideOauth = new OauthService(oauthDbs, await createTestAddonsService(testDb, oauthDbs), new AuditService(t.repo(AuditLog), t.repo(Users)));
+    containerSideOauth = new OauthService(t.repo(OauthClients), t.repo(OauthTokens), t.repo(OauthConsents), await createTestAddonsService(testDb), new AuditService(t.repo(AuditLog), t.repo(Users)));
 });
 
 beforeEach(() => {

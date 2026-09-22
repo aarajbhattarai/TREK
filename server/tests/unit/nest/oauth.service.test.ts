@@ -59,7 +59,6 @@ function makePkce() {
 }
 
 import { OauthService } from '../../../src/nest/oauth/oauth.service';
-import { DatabaseService } from '../../../src/nest/database/database.service';
 import { AuditService } from '../../../src/nest/audit/audit.service';
 import type { AddonsService } from '../../../src/nest/addons/addons.service';
 import { getMcpSafeUrl } from '../../../src/app-config';
@@ -70,14 +69,22 @@ import { AuditLog } from '../../../src/db/entities/AuditLog.entity';
 import type { AuditLogRepository } from '../../../src/db/repositories/AuditLog.repository';
 import { Users } from '../../../src/db/entities/Users.entity';
 import type { UsersRepository } from '../../../src/db/repositories/Users.repository';
+import { OauthClients } from '../../../src/db/entities/OauthClients.entity';
+import type { OauthClientsRepository } from '../../../src/db/repositories/OauthClients.repository';
+import { OauthTokens } from '../../../src/db/entities/OauthTokens.entity';
+import type { OauthTokensRepository } from '../../../src/db/repositories/OauthTokens.repository';
+import { OauthConsents } from '../../../src/db/entities/OauthConsents.entity';
+import type { OauthConsentsRepository } from '../../../src/db/repositories/OauthConsents.repository';
 
-const dbs = new DatabaseService(testDb);
 // Stubbed rather than real: every case drives the MCP gate through this one
 // flag, exactly as the addons.bridge mock did before the fold.
 const addonsStub = { isAddonEnabled } as unknown as AddonsService;
 let svc: OauthService;
 let auditLogRepo: AuditLogRepository;
 let usersRepo: UsersRepository;
+let clientsRepo: OauthClientsRepository;
+let tokensRepo: OauthTokensRepository;
+let consentsRepo: OauthConsentsRepository;
 let t: TestOrm;
 
 // Legacy free-function names delegating to the service, so the moved cases below
@@ -109,7 +116,10 @@ beforeAll(async () => {
   t = await createTestOrm(testDb);
   auditLogRepo = t.repo(AuditLog);
   usersRepo = t.repo(Users);
-  svc = new OauthService(dbs, addonsStub, new AuditService(auditLogRepo, usersRepo));
+  clientsRepo = t.repo(OauthClients);
+  tokensRepo = t.repo(OauthTokens);
+  consentsRepo = t.repo(OauthConsents);
+  svc = new OauthService(clientsRepo, tokensRepo, consentsRepo, addonsStub, new AuditService(auditLogRepo, usersRepo));
 });
 
 beforeEach(() => {
@@ -1298,7 +1308,7 @@ describe('module-scoped OAuth state', () => {
       codeChallengeMethod: 'S256',
     })!;
 
-    const secondInstance = new OauthService(dbs, addonsStub, new AuditService(auditLogRepo, usersRepo));
+    const secondInstance = new OauthService(clientsRepo, tokensRepo, consentsRepo, addonsStub, new AuditService(auditLogRepo, usersRepo));
     expect(secondInstance.consumeAuthCode(code)?.userId).toBe(42);
   });
 });

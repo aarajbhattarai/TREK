@@ -1,6 +1,7 @@
 import { RateLimitModule } from '../common/rate-limit.module';
 import { Module } from '@nestjs/common';
 import type { MiddlewareConsumer, NestModule } from '@nestjs/common';
+import { MikroOrmModule } from '@mikro-orm/nestjs';
 import { authorizationHandler } from '@modelcontextprotocol/sdk/server/auth/handlers/authorize';
 import { clientRegistrationHandler } from '@modelcontextprotocol/sdk/server/auth/handlers/register';
 import { OauthPublicController } from './oauth-public.controller';
@@ -11,6 +12,10 @@ import { AuditModule } from '../audit/audit.module';
 import { AddonsModule } from '../addons/addons.module';
 import { AddonsService } from '../addons/addons.service';
 import { createMcpAddonGate } from '../addons/mcp-addon-gate';
+import { OauthClients } from '../../db/entities/OauthClients.entity';
+import { OauthTokens } from '../../db/entities/OauthTokens.entity';
+import { OauthConsents } from '../../db/entities/OauthConsents.entity';
+import { Users } from '../../db/entities/Users.entity';
 
 /**
  * OAuth 2.1 server (MCP). Public token/userinfo/revoke endpoints + the SPA's
@@ -35,9 +40,19 @@ import { createMcpAddonGate } from '../addons/mcp-addon-gate';
  *
  * Exports OauthService for AdminController (admin OAuth-session panel) and the
  * MCP transport's token verification.
+ *
+ * `MikroOrmModule.forFeature([OauthClients, OauthTokens, OauthConsents,
+ * Users])` (Plan 3b Task 4 deliverable): `Users` is registered for cross-
+ * module availability (inventory §6 — `OauthTokensRepository` needs to be
+ * importable from `AuthModule` too, Task 5's `revokeAllForUser`, the same
+ * shape `McpTokensRepository`/`InviteTokensRepository` already use across
+ * `nest/tokens`/`nest/auth`/`nest/oidc`) even though `OauthService` itself
+ * never injects `UsersRepository` directly — OA16/OA31 read `users` columns
+ * THROUGH `OauthTokensRepository`'s own join methods, not a separate
+ * `Users` call (Task 1's ruling: "do not add users methods" for this join).
  */
 @Module({
-  imports: [RateLimitModule, AuditModule, AddonsModule],
+  imports: [RateLimitModule, AuditModule, AddonsModule, MikroOrmModule.forFeature([OauthClients, OauthTokens, OauthConsents, Users])],
   controllers: [OauthPublicController, OauthApiController],
   providers: [OauthService, TrekClientsStore, TrekOAuthProvider],
   exports: [OauthService],

@@ -1,5 +1,6 @@
 import { raw, type Platform, type RawQueryFragment } from '@mikro-orm/core';
 import { SqlitePlatform } from '@mikro-orm/sql';
+import { sql, type Expression } from 'kysely';
 
 /**
  * The only place a repository may spell a database function.
@@ -97,5 +98,28 @@ export function columnIncrementedBy(platform: Platform, ref: string, amount: num
  */
 export function lower(platform: Platform, ref: string): RawQueryFragment & symbol {
   if (platform instanceof SqlitePlatform) return raw(`LOWER(${column(ref)})`);
+  return unsupported(platform);
+}
+
+/**
+ * `CURRENT_TIMESTAMP`, for a query built through `em.getKysely()` — the
+ * escape hatch for a recursive CTE (`OauthTokensRepository.collectChainIds`)
+ * or a join the QueryBuilder's relation metadata cannot express correctly
+ * (`OauthTokensRepository.listActiveByUser`/`listAllActiveWithClientAndUser`
+ * — `oauth_tokens.client_id` references `oauth_clients.client_id`, not its
+ * primary key, and the generated entity's `client` relation has no
+ * `referencedColumnNames` override, so a QueryBuilder `.innerJoin('ot.client',
+ * …)` silently joins on the wrong column; see those methods' docstrings).
+ * Kysely has its own expression system, entirely separate from MikroORM's
+ * `raw()` — `currentTimestamp` above returns a value this file's OTHER
+ * consumers (the QueryBuilder, `nativeUpdate`) accept, but a Kysely query
+ * cannot use a `RawQueryFragment` as an operand. This is the one place a
+ * repository may reach for the Kysely spelling of the same literal, kept
+ * here rather than in a repository file so `no-restricted-syntax`'s ban on
+ * spelling raw SQL directly in `src/db/repositories/**` still holds — this
+ * file is exempt from that rule by design (it IS the one approved place).
+ */
+export function currentTimestampKysely(platform: Platform): Expression<string> {
+  if (platform instanceof SqlitePlatform) return sql<string>`CURRENT_TIMESTAMP`;
   return unsupported(platform);
 }

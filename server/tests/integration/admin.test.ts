@@ -813,6 +813,16 @@ describe('OAuth sessions', () => {
       .set('Cookie', authCookie(admin.id));
     expect(res.status).toBe(404);
   });
+
+  it('ADMIN-026B — DELETE /admin/oauth-sessions/abc (non-numeric id) returns the legacy 404, not a 500 (Plan 3b Task 4 controller addendum, per Task 2 review F1)', async () => {
+    const { user: admin } = createAdmin(testDb);
+
+    const res = await request(app)
+      .delete('/api/admin/oauth-sessions/abc')
+      .set('Cookie', authCookie(admin.id));
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({ error: 'Session not found' });
+  });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────

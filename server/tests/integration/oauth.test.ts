@@ -38,19 +38,20 @@ import { createUser } from '../helpers/factories';
 import { authCookie } from '../helpers/auth';
 import { ALL_SCOPES } from '../../src/mcp/scopes';
 import { OauthService } from '../../src/nest/oauth/oauth.service';
-import { DatabaseService } from '../../src/nest/database/database.service';
 import { createTestAddonsService } from '../helpers/test-addons';
 import { AuditService } from '../../src/nest/audit/audit.service';
 import { createTestOrm, type TestOrm } from '../helpers/test-orm';
 import { AuditLog } from '../../src/db/entities/AuditLog.entity';
 import { Users } from '../../src/db/entities/Users.entity';
+import { OauthClients } from '../../src/db/entities/OauthClients.entity';
+import { OauthTokens } from '../../src/db/entities/OauthTokens.entity';
+import { OauthConsents } from '../../src/db/entities/OauthConsents.entity';
 
 // In production the consent controller writes pending codes through the
 // container instance and the SDK routes read them back through the same
 // injected singleton. These tests write codes the way the consent controller
 // does: through a service instance. The pending-code map is module-scoped in
 // oauth.pending-codes.ts, so the routes under test see every code written here.
-const oauthDbs = new DatabaseService(testDb);
 let containerSideOauth: OauthService;
 // Arrow wrappers rather than `.bind`: with `strictBindCallApply: false` a bound
 // alias is typed `any`, which hides a missing `await` on the now-async methods.
@@ -83,7 +84,7 @@ beforeAll(async () => {
     nestApp = await buildApp();
     app = nestApp.getHttpAdapter().getInstance();
     t = await createTestOrm(testDb);
-    containerSideOauth = new OauthService(oauthDbs, await createTestAddonsService(testDb, oauthDbs), new AuditService(t.repo(AuditLog), t.repo(Users)));
+    containerSideOauth = new OauthService(t.repo(OauthClients), t.repo(OauthTokens), t.repo(OauthConsents), await createTestAddonsService(testDb), new AuditService(t.repo(AuditLog), t.repo(Users)));
 });
 
 beforeEach(() => {
@@ -1134,6 +1135,15 @@ describe('Sessions — /api/oauth/sessions', () => {
             .delete('/api/oauth/sessions/99999')
             .set('Cookie', authCookie(user.id));
         expect(res.status).toBe(404);
+    });
+
+    it('OAUTH-043B — DELETE /sessions/abc (non-numeric id) returns the legacy 404, not a 500 (Plan 3b Task 4 controller addendum, per Task 2 review F1)', async () => {
+        const { user } = createUser(testDb);
+        const res = await request(app)
+            .delete('/api/oauth/sessions/abc')
+            .set('Cookie', authCookie(user.id));
+        expect(res.status).toBe(404);
+        expect(res.body).toEqual({ error: 'Session not found' });
     });
 
     it('OAUTH-044 — DELETE /sessions/:id returns 403 when addon disabled', async () => {
