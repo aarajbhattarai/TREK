@@ -60,7 +60,7 @@ import { AdminService } from '../../../src/nest/admin/admin.service';
 import { makeNotificationsService, makeNotificationPreferencesService } from '../../helpers/notifications';
 import { EphemeralTokenService } from '../../../src/nest/auth/ephemeral-token.service';
 import { AllowedFileTypesService } from '../../../src/nest/files/allowed-file-types.service';
-import { createTestUnitOfWork } from '../../helpers/test-uow';
+import { createTestUnitOfWork, createTestAppSettingsRepo } from '../../helpers/test-uow';
 
 const dbs = new DatabaseService(testDb);
 const realtime = new RealtimeService();
@@ -77,7 +77,7 @@ let userCleanup: UserCleanupService;
 let auth: AuthService;
 let svc: AdminService;
 beforeAll(async () => {
-  permissions = new PermissionsService(dbs, await createTestUnitOfWork(dbs.connection));
+  permissions = new PermissionsService(await createTestAppSettingsRepo(dbs.connection), await createTestUnitOfWork(dbs.connection));
   userCleanup = new UserCleanupService(dbs, new BudgetService(dbs, permissions, new ExchangeRatesService(), realtime, await createTestUnitOfWork(dbs.connection)), await createTestUnitOfWork(dbs.connection));
   auth = new AuthService(dbs, permissions, new TripMembershipService(dbs), webauthn, userCleanup, new MailerService(dbs), new EphemeralTokenService(), new AllowedFileTypesService(dbs), await createTestUnitOfWork(dbs.connection));
   svc = new AdminService(

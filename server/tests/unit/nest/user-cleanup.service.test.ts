@@ -49,14 +49,14 @@ import { ExchangeRatesService } from '../../../src/nest/budget/exchange-rates.se
 import { RealtimeService } from '../../../src/nest/realtime/realtime.service';
 import { BudgetService } from '../../../src/nest/budget/budget.service';
 import { UserCleanupService } from '../../../src/nest/auth/user-cleanup.service';
-import { createTestUnitOfWork } from '../../helpers/test-uow';
+import { createTestUnitOfWork, createTestAppSettingsRepo } from '../../helpers/test-uow';
 
 const dbs = new DatabaseService(testDb);
 
 let budget: BudgetService;
 let svc: UserCleanupService;
 beforeAll(async () => {
-  budget = new BudgetService(dbs, new PermissionsService(dbs, await createTestUnitOfWork(dbs.connection)), new ExchangeRatesService(), new RealtimeService(), await createTestUnitOfWork(dbs.connection));
+  budget = new BudgetService(dbs, new PermissionsService(await createTestAppSettingsRepo(dbs.connection), await createTestUnitOfWork(dbs.connection)), new ExchangeRatesService(), new RealtimeService(), await createTestUnitOfWork(dbs.connection));
   svc = new UserCleanupService(dbs, budget, await createTestUnitOfWork(dbs.connection));
 });
 

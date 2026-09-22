@@ -47,7 +47,7 @@ import { PermissionsService } from '../../../src/nest/permissions/permissions.se
 import { RealtimeService } from '../../../src/nest/realtime/realtime.service';
 import type { TripAccess } from '../../../src/nest/database/database.service';
 import type { User } from '../../../src/types';
-import { createTestUnitOfWork } from '../../helpers/test-uow';
+import { createTestUnitOfWork, createTestAppSettingsRepo } from '../../helpers/test-uow';
 
 beforeAll(() => {
   createTables(testDb);
@@ -357,7 +357,7 @@ describe('Settlement tools', () => {
 
     const dbService = new DatabaseService(testDb);
     const controller = new BudgetController(
-      new BudgetService(dbService, new PermissionsService(dbService, await createTestUnitOfWork(dbService.connection)), new ExchangeRatesService(), new RealtimeService(), await createTestUnitOfWork(dbService.connection)),
+      new BudgetService(dbService, new PermissionsService(await createTestAppSettingsRepo(dbService.connection), await createTestUnitOfWork(dbService.connection)), new ExchangeRatesService(), new RealtimeService(), await createTestUnitOfWork(dbService.connection)),
     );
     const rest = await controller.settlement(
       { id: user.id } as User,

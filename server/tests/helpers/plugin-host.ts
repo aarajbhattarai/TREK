@@ -72,10 +72,14 @@ import { PlacePhotoCacheService } from '../../src/nest/place-photos/place-photo-
 import { TrekPhotosRepository } from '../../src/nest/photos/trek-photos.repository';
 import { RuntimeEnvService } from '../../src/nest/app-config/runtime-env.service';
 import { makeStorageFixture } from './storage-fixture';
-import { createTestUnitOfWork } from './test-uow';
+import { createTestUnitOfWork, createTestAppSettingsRepo } from './test-uow';
 import { createTestOrm } from './test-orm';
 import { AppSettings } from '../../src/db/entities/AppSettings.entity';
 import type { AppSettingsRepository } from '../../src/db/repositories/AppSettings.repository';
+import { AuditLog } from '../../src/db/entities/AuditLog.entity';
+import type { AuditLogRepository } from '../../src/db/repositories/AuditLog.repository';
+import { Users } from '../../src/db/entities/Users.entity';
+import type { UsersRepository } from '../../src/db/repositories/Users.repository';
 
 /**
  * Hand-wired counterpart of the PluginsModule DI graph for no-Nest tests
@@ -90,7 +94,7 @@ import type { AppSettingsRepository } from '../../src/db/repositories/AppSetting
 export async function createPluginRpcHostFactory(dbs: DatabaseService): Promise<PluginRpcHostFactory> {
   const generalStorage = makeStorageFixture('').storage;
   const appSettings = (await createTestOrm(dbs.connection)).repo(AppSettings) as AppSettingsRepository;
-  const permissions = new PermissionsService(dbs, await createTestUnitOfWork(dbs.connection));
+  const permissions = new PermissionsService(await createTestAppSettingsRepo(dbs.connection), await createTestUnitOfWork(dbs.connection));
   const exchangeRates = new ExchangeRatesService();
   const realtime = new RealtimeService();
   const budget = new BudgetService(dbs, permissions, exchangeRates, realtime, await createTestUnitOfWork(dbs.connection));
@@ -155,9 +159,10 @@ export async function createPluginRpcHostFactory(dbs: DatabaseService): Promise<
 
 /** A PluginRuntimeService constructed the way Nest would: with a real host factory. */
 export async function createPluginRuntime(dbs: DatabaseService, registry?: PluginRegistryService): Promise<PluginRuntimeService> {
+  const orm = await createTestOrm(dbs.connection);
   return new PluginRuntimeService(
     dbs,
-    new AuditService(dbs),
+    new AuditService(orm.repo(AuditLog) as AuditLogRepository, orm.repo(Users) as UsersRepository),
     new AddonsService(dbs),
     new PluginUserSettingsService(dbs),
     registry,

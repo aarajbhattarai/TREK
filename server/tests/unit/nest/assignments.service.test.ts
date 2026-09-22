@@ -55,7 +55,7 @@ import { RealtimeService } from '../../../src/nest/realtime/realtime.service';
 import { QueryHelpersService } from '../../../src/nest/query-helpers/query-helpers.service';
 import { JourneyDomainService } from '../../../src/nest/journey/journey-domain.service';
 import { TrekPhotosRepository } from '../../../src/nest/photos/trek-photos.repository';
-import { createTestUnitOfWork } from '../../helpers/test-uow';
+import { createTestUnitOfWork, createTestAppSettingsRepo } from '../../helpers/test-uow';
 
 const dbs = new DatabaseService(testDb);
 const realtime = new RealtimeService();
@@ -63,7 +63,7 @@ let svc: AssignmentsService;
 beforeAll(async () => {
   svc = new AssignmentsService(
   dbs,
-  new PermissionsService(dbs, await createTestUnitOfWork(dbs.connection)),
+  new PermissionsService(await createTestAppSettingsRepo(dbs.connection), await createTestUnitOfWork(dbs.connection)),
   realtime,
   new QueryHelpersService(dbs),
   // Real collaborator rather than a stub: reconcile() runs after every mutation

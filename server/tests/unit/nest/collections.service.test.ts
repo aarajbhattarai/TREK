@@ -55,12 +55,12 @@ import { CollectionsService } from '../../../src/nest/collections/collections.se
 import { PlacePhotoCacheService } from '../../../src/nest/place-photos/place-photo-cache.service';
 import { makeStorageFixture } from '../../helpers/storage-fixture';
 import { notificationsStub } from '../../helpers/notifications';
-import { createTestUnitOfWork } from '../../helpers/test-uow';
+import { createTestUnitOfWork, createTestAppSettingsRepo } from '../../helpers/test-uow';
 
 const storageFx = makeStorageFixture('');
 let svc: CollectionsService;
 beforeAll(async () => {
-  svc = new CollectionsService(new DatabaseService(testDb), new PermissionsService(new DatabaseService(testDb), await createTestUnitOfWork(testDb)), new RealtimeService(), notificationsStub(notifSend), storageFx.storage, await createTestUnitOfWork(testDb));
+  svc = new CollectionsService(new DatabaseService(testDb), new PermissionsService(await createTestAppSettingsRepo(testDb), await createTestUnitOfWork(testDb)), new RealtimeService(), notificationsStub(notifSend), storageFx.storage, await createTestUnitOfWork(testDb));
 });
 // The real cache: these cases assert what removeIfUnreferenced actually does
 // about collection_places (#1081), so a stub would assert nothing.

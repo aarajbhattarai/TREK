@@ -49,7 +49,7 @@ import { AccommodationsModule } from '../../../src/nest/accommodations/accommoda
 import { AccommodationsDomainModule } from '../../../src/nest/accommodations/accommodations-domain.module';
 import { AccommodationsController } from '../../../src/nest/accommodations/accommodations.controller';
 import { expectRegisteredProvider, expectRegisteredController } from '../../helpers/module-providers';
-import { createTestUnitOfWork } from '../../helpers/test-uow';
+import { createTestUnitOfWork, createTestAppSettingsRepo } from '../../helpers/test-uow';
 
 // Named `svc` so the moved cases read exactly as they did on DaysService.
 let svc: Awaited<ReturnType<typeof makeAccommodationsService>>;
@@ -558,7 +558,7 @@ describe('trip access and edit permission', () => {
     const { user: member } = createUser(testDb);
     const trip = createTrip(testDb, owner.id);
     addTripMember(testDb, trip.id, member.id);
-    const permissions = new PermissionsService(new DatabaseService(testDb), await createTestUnitOfWork(testDb));
+    const permissions = new PermissionsService(await createTestAppSettingsRepo(testDb), await createTestUnitOfWork(testDb));
 
     try {
       await permissions.savePermissions({ day_edit: 'trip_owner' });

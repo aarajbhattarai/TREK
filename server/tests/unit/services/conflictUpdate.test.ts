@@ -54,7 +54,7 @@ import { TrekPhotosRepository } from '../../../src/nest/photos/trek-photos.repos
 import { RuntimeEnvService } from '../../../src/nest/app-config/runtime-env.service';
 import { notificationsStub } from '../../helpers/notifications';
 import { makeStorageFixture } from '../../helpers/storage-fixture';
-import { createTestUnitOfWork } from '../../helpers/test-uow';
+import { createTestUnitOfWork, createTestAppSettingsRepo } from '../../helpers/test-uow';
 
 const dbs = new DatabaseService(testDb);
 const realtime = new RealtimeService();
@@ -67,10 +67,10 @@ const photoCache = new PlacePhotoCacheService(dbs, makeStorageFixture('photos/go
 let packing: PackingService;
 let places: PlacesService;
 beforeAll(async () => {
-  packing = new PackingService(dbs, new PermissionsService(dbs, await createTestUnitOfWork(dbs.connection)), realtime, notificationsStub(), await createTestUnitOfWork(dbs.connection));
+  packing = new PackingService(dbs, new PermissionsService(await createTestAppSettingsRepo(dbs.connection), await createTestUnitOfWork(dbs.connection)), realtime, notificationsStub(), await createTestUnitOfWork(dbs.connection));
   places = new PlacesService(
   dbs,
-  new PermissionsService(dbs, await createTestUnitOfWork(dbs.connection)),
+  new PermissionsService(await createTestAppSettingsRepo(dbs.connection), await createTestUnitOfWork(dbs.connection)),
   realtime,
   new MapsService(dbs, photoCache),
   new QueryHelpersService(dbs),

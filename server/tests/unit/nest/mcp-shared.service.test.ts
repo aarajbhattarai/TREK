@@ -25,12 +25,12 @@ import { McpSharedModule } from '../../../src/nest/mcp-shared/mcp-shared.module'
 import { DatabaseService } from '../../../src/nest/database/database.service';
 import { PermissionsService } from '../../../src/nest/permissions/permissions.service';
 import { RealtimeService } from '../../../src/nest/realtime/realtime.service';
-import { createTestUnitOfWork } from '../../helpers/test-uow';
+import { createTestUnitOfWork, createTestAppSettingsRepo } from '../../helpers/test-uow';
 
 const dbs = new DatabaseService(testDb);
 let svc: McpToolGuardsService;
 beforeAll(async () => {
-  svc = new McpToolGuardsService(dbs, new PermissionsService(dbs, await createTestUnitOfWork(dbs.connection)), new RealtimeService());
+  svc = new McpToolGuardsService(dbs, new PermissionsService(await createTestAppSettingsRepo(dbs.connection), await createTestUnitOfWork(dbs.connection)), new RealtimeService());
 });
 
 function createTrip(ownerId: number): number {

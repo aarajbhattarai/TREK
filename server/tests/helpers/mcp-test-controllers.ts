@@ -114,10 +114,14 @@ import { AirtrailImportService } from '../../src/nest/integrations/airtrail-impo
 import { ReservationImportMcp } from '../../src/nest/reservation-import/reservation-import.mcp';
 import { HelpMcp } from '../../src/nest/help/help.mcp';
 import { AddonsMcp } from '../../src/nest/addons/addons.mcp';
-import { createTestUnitOfWork } from './test-uow';
+import { createTestUnitOfWork, createTestAppSettingsRepo } from './test-uow';
 import { createTestOrm } from './test-orm';
 import { AppSettings } from '../../src/db/entities/AppSettings.entity';
 import type { AppSettingsRepository } from '../../src/db/repositories/AppSettings.repository';
+import { AuditLog } from '../../src/db/entities/AuditLog.entity';
+import type { AuditLogRepository } from '../../src/db/repositories/AuditLog.repository';
+import { Users } from '../../src/db/entities/Users.entity';
+import type { UsersRepository } from '../../src/db/repositories/Users.repository';
 
 /**
  * Hand-wired counterpart of the boot-time discovery in McpRegistryService,
@@ -130,7 +134,10 @@ export async function createMcpTestRegistry(): Promise<McpRegistry> {
   const dbService = new DatabaseService(db);
   const generalStorage = makeStorageFixture('').storage;
   const appSettings = (await createTestOrm(dbService.connection)).repo(AppSettings) as AppSettingsRepository;
-  const permissionsService = new PermissionsService(dbService, await createTestUnitOfWork(dbService.connection));
+  const mcpOrm = await createTestOrm(dbService.connection);
+  const auditLogRepo = mcpOrm.repo(AuditLog) as AuditLogRepository;
+  const usersRepo = mcpOrm.repo(Users) as UsersRepository;
+  const permissionsService = new PermissionsService(await createTestAppSettingsRepo(dbService.connection), await createTestUnitOfWork(dbService.connection));
   // Same argument list as auth.bridge.ts. AtlasService used to sit in third
   // place; when getTravelStats moved onto AtlasService itself the edge was
   // dropped and four collaborators took its place, but this call site kept the
@@ -209,7 +216,7 @@ export async function createMcpTestRegistry(): Promise<McpRegistry> {
   // (which asks them when and where it was taken). Built for real rather than
   // stubbed: an empty provider registry would make the backfill answer "unknown
   // provider" for every id and hide a wiring mistake behind a caught error.
-  const immichService = new ImmichService(dbService, new AuditService(dbService), new MemoriesAccessService(dbService), generalStorage);
+  const immichService = new ImmichService(dbService, new AuditService(auditLogRepo, usersRepo), new MemoriesAccessService(dbService), generalStorage);
   const synologyService = new SynologyService(dbService, new MemoriesAccessService(dbService), notificationsStub());
   const trekPhotos = new TrekPhotosRepository(dbService);
   const captureBackfill = new PhotoCaptureBackfillService(new PhotoResolverService(trekPhotos, new ThumbnailService(addonsService, generalStorage, dbService), new TrekPhotoCacheService(dbService, generalStorage), new PhotoProviderRegistry([new ImmichPhotoProvider(immichService), new SynologyPhotoProvider(synologyService)]), generalStorage), trekPhotos, generalStorage);
@@ -238,7 +245,7 @@ export async function createMcpTestRegistry(): Promise<McpRegistry> {
       new TripPromptsMcp(tripsService, readModelService, packingService, addonsService),
       new ShareMcp(new ShareService(dbService, new SettingsService(dbService, await createTestUnitOfWork(dbService.connection), appSettings), permissionsService, queryHelpersService, placePhotoCache, await createTestUnitOfWork(dbService.connection)), authService, guards),
       new FeedsMcp(new FeedsService(dbService, calendarService), dbService, new RuntimeEnvService(), guards),
-      new TripInviteMcp(new TripInviteService(dbService, permissionsService, new TripMembershipService(dbService), await createTestUnitOfWork(dbService.connection)), dbService, new RuntimeEnvService(), guards, new AuditService(dbService)),
+      new TripInviteMcp(new TripInviteService(dbService, permissionsService, new TripMembershipService(dbService), await createTestUnitOfWork(dbService.connection)), dbService, new RuntimeEnvService(), guards, new AuditService(auditLogRepo, usersRepo)),
       new MapsMcp(mapsService),
       new PlacesMcp(placesService, mapsService, dbService, authService, journeyDomain, assignmentsService, guards, await createTestUnitOfWork(dbService.connection)),
       new CollectionsMcp(new CollectionsService(dbService, permissionsService, realtimeService, notificationsStub(), generalStorage, await createTestUnitOfWork(dbService.connection)), dbService, authService, addonsService),
@@ -247,8 +254,8 @@ export async function createMcpTestRegistry(): Promise<McpRegistry> {
       new JourneyMcp(journeyDomain, new JourneyShareService(dbService, journeyDomain, new SettingsService(dbService, await createTestUnitOfWork(dbService.connection), appSettings)), addonsService, authService, captureBackfill),
       new MemoriesMcp(immichService, synologyService, dbService, addonsService),
       new NotificationsMcp(await makeNotificationsService(dbService, realtimeService), authService),
-      new AirtrailMcp(new AirtrailService(dbService, new AuditService(dbService), new AirtrailClient()), addonsService),
-      new ReservationImportMcp(new AirtrailImportService(dbService, realtimeService, reservationsService, new AirtrailClient(), new AirtrailService(dbService, new AuditService(dbService), new AirtrailClient())), dbService, authService, guards, addonsService),
+      new AirtrailMcp(new AirtrailService(dbService, new AuditService(auditLogRepo, usersRepo), new AirtrailClient()), addonsService),
+      new ReservationImportMcp(new AirtrailImportService(dbService, realtimeService, reservationsService, new AirtrailClient(), new AirtrailService(dbService, new AuditService(auditLogRepo, usersRepo), new AirtrailClient())), dbService, authService, guards, addonsService),
       new SettingsMcp(new SettingsService(dbService, await createTestUnitOfWork(dbService.connection), appSettings), authService),
       new HelpMcp(), new AddonsMcp(addonsService),
       new TripWarningsMcp(new PluginHooks({ providersOf: () => [], invokeHook: async () => [] } as unknown as PluginRuntimeService), dbService),

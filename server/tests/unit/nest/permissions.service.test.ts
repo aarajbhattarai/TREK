@@ -1,6 +1,6 @@
 /**
  * Unit tests for the DI-native PermissionsService — PERM-SVC-001 through
- * PERM-SVC-023 (001–013 moved 1:1 from the legacy
+ * PERM-SVC-024 (001–013 moved 1:1 from the legacy
  * tests/unit/services/permissions.test.ts, which had no case IDs — the IDs are
  * introduced with the move; 014–016 pin the cache semantics the real DB now
  * makes testable; 017–020 pin the permissions.bridge delegation and the
@@ -8,6 +8,13 @@
  * pin the quirk-fix pass: load-time level validation, the narrowed load-error
  * swallow, and the no-op-save early return). Uses a real in-memory SQLite DB
  * so the app_settings SQL is exercised faithfully.
+ *
+ * Repository conversion (ORM Phase 3a, Task 2): PermissionsService no longer
+ * holds a DatabaseService — it is built from AppSettingsRepository +
+ * UnitOfWork, the same `t.repo(AppSettings)` pattern SettingsService's own
+ * unit test established. 022/024 (the two load-failure cases) now drive the
+ * failure through `vi.spyOn(appSettings, 'findByKeyPrefix')` instead of a
+ * hand-rolled DatabaseService/all() stub.
  */
 import { describe, it, expect, vi, beforeAll, beforeEach, afterAll } from 'vitest';
 
@@ -37,35 +44,43 @@ vi.mock('../../../src/nest/audit/audit-log.logger', () => ({
   logWarn: vi.fn(),
 }));
 
-import Database from 'better-sqlite3';
 import { createTables } from '../../../src/db/schema';
 import { runMigrations } from '../../../src/db/migrations';
 import { logError } from '../../../src/nest/audit/audit-log.logger';
-import { DatabaseService } from '../../../src/nest/database/database.service';
 import { PermissionsService, PERMISSION_ACTIONS } from '../../../src/nest/permissions/permissions.service';
 import {
   getPermissionsCache,
   invalidatePermissionsCache as invalidateSharedCache,
 } from '../../../src/nest/permissions/permissions-cache';
 import { createTestUnitOfWork } from '../../helpers/test-uow';
+import { createTestOrm, type TestOrm } from '../../helpers/test-orm';
+import { AppSettings } from '../../../src/db/entities/AppSettings.entity';
+import type { AppSettingsRepository } from '../../../src/db/repositories/AppSettings.repository';
 
 let svc: PermissionsService;
-beforeAll(async () => {
-  svc = new PermissionsService(new DatabaseService(testDb), await createTestUnitOfWork(testDb));
-});
+let t: TestOrm;
+let appSettings: AppSettingsRepository;
 
 beforeAll(() => {
   createTables(testDb);
   runMigrations(testDb);
 });
 
+beforeAll(async () => {
+  t = await createTestOrm(testDb);
+  appSettings = t.repo(AppSettings) as AppSettingsRepository;
+  svc = new PermissionsService(appSettings, await createTestUnitOfWork(testDb));
+});
+
 beforeEach(() => {
   vi.clearAllMocks();
   testDb.prepare("DELETE FROM app_settings WHERE key LIKE 'perm_%'").run();
+  t.clear();
   svc.invalidatePermissionsCache();
 });
 
-afterAll(() => {
+afterAll(async () => {
+  await t.close();
   testDb.close();
 });
 
@@ -185,36 +200,43 @@ describe('corrupt stored levels', () => {
 });
 
 describe('load failures', () => {
-  it('PERM-SVC-022: a missing app_settings table stays silent and serves defaults; other DB failures are logged', async () => {
-    const bareDb = new Database(':memory:');
-    const bareSvc = new PermissionsService(new DatabaseService(bareDb), await createTestUnitOfWork(bareDb));
-    bareSvc.invalidatePermissionsCache();
-    expect(await bareSvc.getPermissionLevel('trip_edit')).toBe('trip_owner');
-    expect(logError).not.toHaveBeenCalled();
-    // An unexpected failure (closed connection) must leave a trace.
-    bareDb.close();
-    bareSvc.invalidatePermissionsCache();
-    expect(await bareSvc.getPermissionLevel('trip_edit')).toBe('trip_owner');
-    expect(logError).toHaveBeenCalledWith(expect.stringMatching(/^Permissions load failed: /));
-    svc.invalidatePermissionsCache(); // don't leak the bare-DB cache to later tests
+  it('PERM-SVC-022: a "no such table" read failure is no longer swallowed — migrations guarantee the table exists, so it is logged like any other failure, and defaults are still served', async () => {
+    // Under the legacy better-sqlite3 path this exact message meant first-boot
+    // init racing the read, before app_settings existed, and was swallowed
+    // silently. Under the ORM, buildApp() runs migrations to completion
+    // before any request/MCP/WS/cron entrypoint can reach this service, so
+    // that race no longer exists — the message-specific swallow is dropped
+    // and this failure now takes the same "log and serve defaults" path as
+    // every other repository error.
+    const spy = vi
+      .spyOn(appSettings, 'findByKeyPrefix')
+      .mockRejectedValueOnce(new Error('no such table: app_settings'));
+    svc.invalidatePermissionsCache();
+    expect(await svc.getPermissionLevel('trip_edit')).toBe('trip_owner');
+    expect(logError).toHaveBeenCalledWith('Permissions load failed: no such table: app_settings');
+    spy.mockRestore();
+    svc.invalidatePermissionsCache(); // don't leak the failed-read (uncached) state
   });
 
   it('PERM-SVC-024: a failed read serves defaults without installing them, and a later read populates the cache', async () => {
-    const failing = { all: vi.fn((): { key: string; value: string }[] => { throw new Error('database connection is closed'); }) };
-    // The stub never opens a transaction, so the suite's own UnitOfWork is the
-    // honest thing to hand it.
-    const flakySvc = new PermissionsService(failing as unknown as DatabaseService, await createTestUnitOfWork(testDb));
-    flakySvc.invalidatePermissionsCache();
+    const spy = vi
+      .spyOn(appSettings, 'findByKeyPrefix')
+      .mockRejectedValueOnce(new Error('database connection is closed'));
+    svc.invalidatePermissionsCache();
 
-    expect(await flakySvc.getPermissionLevel('trip_edit')).toBe('trip_owner');
+    expect(await svc.getPermissionLevel('trip_edit')).toBe('trip_owner');
+    expect(logError).toHaveBeenCalledWith('Permissions load failed: database connection is closed');
     // Nothing installed: an admin's stricter stored level would otherwise stay
     // invisible until somebody invalidated by hand.
     expect(getPermissionsCache()).toBe(null);
 
-    failing.all.mockReturnValue([{ key: 'perm_trip_edit', value: 'trip_member' }]);
-    expect(await flakySvc.getPermissionLevel('trip_edit')).toBe('trip_member');
+    // The mock is exhausted after the one queued rejection — the next call
+    // falls through to the real (now-working) repository read.
+    testDb.prepare('INSERT OR REPLACE INTO app_settings (key, value) VALUES (?, ?)').run('perm_trip_edit', 'trip_member');
+    expect(await svc.getPermissionLevel('trip_edit')).toBe('trip_member');
     expect(getPermissionsCache()).not.toBe(null);
-    svc.invalidatePermissionsCache(); // don't leak the stub cache to later tests
+    spy.mockRestore();
+    svc.invalidatePermissionsCache(); // don't leak this test's cache to later tests
   });
 
   it('PERM-SVC-023: an all-skipped save writes nothing and leaves the cache untouched', async () => {
@@ -264,8 +286,16 @@ describe('stored overrides + cache', () => {
 
 // ── module-scoped cache across instances ──────────────────────────────────────
 
-describe('module-scoped permissions cache', async () => {
-  const secondInstance = new PermissionsService(new DatabaseService(testDb), await createTestUnitOfWork(testDb));
+describe('module-scoped permissions cache', () => {
+  let secondInstance: PermissionsService;
+
+  // A nested beforeAll, not a top-level await in the describe callback (the
+  // legacy file's shape): `appSettings` comes from the file-level beforeAll
+  // above, which vitest guarantees has already run by the time any nested
+  // beforeAll here executes, but would still be undefined during collection.
+  beforeAll(async () => {
+    secondInstance = new PermissionsService(appSettings, await createTestUnitOfWork(testDb));
+  });
 
   it('PERM-SVC-017: checkPermission agrees across independently built instances', async () => {
     expect(await secondInstance.checkPermission('trip_create', 'user', null, 42, false)).toBe(true);

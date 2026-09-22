@@ -54,7 +54,7 @@ import type { PlacePhotoCacheService } from '../../../src/nest/place-photos/plac
 import { JourneyDomainService } from '../../../src/nest/journey/journey-domain.service';
 import { TrekPhotosRepository } from '../../../src/nest/photos/trek-photos.repository';
 import { makeStorageFixture } from '../../helpers/storage-fixture';
-import { createTestUnitOfWork } from '../../helpers/test-uow';
+import { createTestUnitOfWork, createTestAppSettingsRepo } from '../../helpers/test-uow';
 
 const dbs = new DatabaseService(testDb);
 const photoCacheStub = { removeIfUnreferenced: vi.fn() } as unknown as PlacePhotoCacheService;
@@ -69,7 +69,7 @@ const hit = (name: string, lat: number, lng: number) => ({
 async function svc(searchNominatim: MapsService['searchNominatim']): Promise<PlacesService> {
   return new PlacesService(
     dbs,
-    new PermissionsService(dbs, await createTestUnitOfWork(dbs.connection)),
+    new PermissionsService(await createTestAppSettingsRepo(dbs.connection), await createTestUnitOfWork(dbs.connection)),
     new RealtimeService(),
     // The address backfill runs fire-and-forget after every import, so the stub answers
     // it too — otherwise every passing test prints a rejected promise.

@@ -45,7 +45,7 @@ vi.mock('../../../src/config', () => ({
 import { ReservationsService } from '../../../src/nest/reservations/reservations.service';
 import type { TransitPlace } from '../../../src/nest/transit/transit.helpers';
 import { TransitService } from '../../../src/nest/transit/transit.service';
-import { createTestUnitOfWork } from '../../helpers/test-uow';
+import { createTestUnitOfWork, createTestAppSettingsRepo } from '../../helpers/test-uow';
 
 // savePermissions is no longer bridged; write through a service instance — the
 // permissions cache is module-scoped, so the MCP _shared checkPermission path
@@ -54,7 +54,7 @@ import { createTestUnitOfWork } from '../../helpers/test-uow';
 let permissionsService: PermissionsService;
 let savePermissions: typeof permissionsService.savePermissions;
 beforeAll(async () => {
-  permissionsService = new PermissionsService(new DatabaseService(testDb), await createTestUnitOfWork(testDb));
+  permissionsService = new PermissionsService(await createTestAppSettingsRepo(testDb), await createTestUnitOfWork(testDb));
   savePermissions = permissionsService.savePermissions.bind(permissionsService);
 });
 

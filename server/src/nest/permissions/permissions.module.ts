@@ -1,15 +1,20 @@
 import { Module } from '@nestjs/common';
+import { MikroOrmModule } from '@mikro-orm/nestjs';
 import { PermissionsService } from './permissions.service';
 import { TripAccessGuard } from './trip-access.guard';
 import { TripOwnerGuard } from './trip-owner.guard';
+import { AppSettings } from '../../db/entities/AppSettings.entity';
 
 /** Cross-cutting permissions domain (Wave 2). No controller/MCP surface of its
  *  own — the admin HTTP surface stays with AdminModule. Exports
  *  PermissionsService for the 17 in-container consumers and TripAccessGuard/TripOwnerGuard
  *  for every trip-scoped controller; deliberately NOT @Global so e2e TestingModules
  *  resolve it transitively through each consumer's explicit import. Registered in
- *  AppModule. */
+ *  AppModule. MikroOrmModule.forFeature registers AppSettingsRepository for
+ *  PermissionsService's @InjectRepository — the two guards keep DatabaseService's
+ *  canAccessTrip (Plan 3c), unaffected by this. */
 @Module({
+  imports: [MikroOrmModule.forFeature([AppSettings])],
   providers: [PermissionsService, TripAccessGuard, TripOwnerGuard],
   exports: [PermissionsService, TripAccessGuard, TripOwnerGuard],
 })

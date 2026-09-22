@@ -23,7 +23,7 @@ import type { AirtrailClient } from '../../../src/nest/integrations/airtrail.cli
 import type { AirtrailService } from '../../../src/nest/integrations/airtrail.service';
 import { notificationsStub } from '../../helpers/notifications';
 import { accommodationsOver } from '../../helpers/accommodations-service';
-import { createTestUnitOfWork } from '../../helpers/test-uow';
+import { createTestUnitOfWork, createTestAppSettingsRepo } from '../../helpers/test-uow';
 
 // The client and the per-user credentials are the only stubs; the reservation
 // writes go through the real service against the real test DB, as before. They
@@ -33,7 +33,7 @@ const broadcast = vi.fn();
 
 async function makeImportService(): Promise<AirtrailImportService> {
   const dbs = () => new DatabaseService(db);
-  const permissions = new PermissionsService(dbs(), await createTestUnitOfWork(dbs().connection));
+  const permissions = new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection));
   const realtime = { broadcast } as unknown as RealtimeService;
   return new AirtrailImportService(
     dbs(),

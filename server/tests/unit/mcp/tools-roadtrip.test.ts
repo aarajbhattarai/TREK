@@ -48,13 +48,13 @@ import { addTripMember } from '../../helpers/factories';
 import { PermissionsService } from '../../../src/nest/permissions/permissions.service';
 import { DatabaseService } from '../../../src/nest/database/database.service';
 import { DEMO_EMAIL_PRIMARY } from '../../../src/nest/common/demo';
-import { createTestUnitOfWork } from '../../helpers/test-uow';
+import { createTestUnitOfWork, createTestAppSettingsRepo } from '../../helpers/test-uow';
 
 // The permissions cache is module-scoped, so a write through any instance is
 // what the tool's own check reads back.
 let savePermissions: PermissionsService['savePermissions'];
 beforeAll(async () => {
-  const permissionsService = new PermissionsService(new DatabaseService(testDb), await createTestUnitOfWork(testDb));
+  const permissionsService = new PermissionsService(await createTestAppSettingsRepo(testDb), await createTestUnitOfWork(testDb));
   savePermissions = permissionsService.savePermissions.bind(permissionsService);
 });
 

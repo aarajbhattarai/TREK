@@ -47,6 +47,7 @@ import { ExchangeRatesService } from '../../src/nest/budget/exchange-rates.servi
 import { TrekExceptionFilter } from '../../src/nest/common/trek-exception.filter';
 import { ZodValidationPipe } from '../../src/nest/common/zod-validation.pipe';
 import { TestUnitOfWorkModule } from '../helpers/test-uow';
+import { createTestMikroOrmModule } from '../helpers/test-orm';
 
 describe('Budget e2e (real auth guard + temp SQLite, real budget SQL)', () => {
   let server: Server;
@@ -54,7 +55,7 @@ describe('Budget e2e (real auth guard + temp SQLite, real budget SQL)', () => {
   let tripId: number;
 
   async function build() {
-    const moduleRef = await Test.createTestingModule({ imports: [await TestUnitOfWorkModule.forRoot(db), DatabaseModule, RealtimeModule, BudgetModule] })
+    const moduleRef = await Test.createTestingModule({ imports: [await TestUnitOfWorkModule.forRoot(db), await createTestMikroOrmModule(db), DatabaseModule, RealtimeModule, BudgetModule] })
       // The settlement read awaits live FX rates; the trip here is all-EUR, so a
       // null result is the identity — and the test never touches the network.
       .overrideProvider(ExchangeRatesService)

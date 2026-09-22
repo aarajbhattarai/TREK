@@ -72,7 +72,7 @@ import { CollabService } from '../../../src/nest/collab/collab.service';
 import { VacayService } from '../../../src/nest/vacay/vacay.service';
 import { QueryHelpersService } from '../../../src/nest/query-helpers/query-helpers.service';
 import { notificationsStub } from '../../helpers/notifications';
-import { createTestUnitOfWork } from '../../helpers/test-uow';
+import { createTestUnitOfWork, createTestAppSettingsRepo } from '../../helpers/test-uow';
 
 
 
@@ -90,7 +90,7 @@ let deleteGuest: typeof membersSvc.deleteGuest;
 beforeAll(async () => {
   budget = new BudgetService(
   new DatabaseService(testDb),
-  new PermissionsService(new DatabaseService(testDb), await createTestUnitOfWork(testDb)),
+  new PermissionsService(await createTestAppSettingsRepo(testDb), await createTestUnitOfWork(testDb)),
   new ExchangeRatesService(),
   new RealtimeService(),
   await createTestUnitOfWork(testDb),
@@ -99,7 +99,7 @@ beforeAll(async () => {
   dbs(),
   budget,
   new UserCleanupService(dbs(), budget, await createTestUnitOfWork(testDb)),
-  new PermissionsService(dbs(), await createTestUnitOfWork(dbs().connection)),
+  new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)),
   new RealtimeService(),
   notificationsStub(),
   await createTestUnitOfWork(testDb),

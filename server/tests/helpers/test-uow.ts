@@ -2,8 +2,11 @@ import { Module, type DynamicModule } from '@nestjs/common';
 import type Database from 'better-sqlite3';
 import { UnitOfWork } from '../../src/nest/database/unit-of-work';
 import { createTestOrm } from './test-orm';
+import { AppSettings } from '../../src/db/entities/AppSettings.entity';
+import type { AppSettingsRepository } from '../../src/db/repositories/AppSettings.repository';
 
 const perHandle = new WeakMap<Database.Database, Promise<UnitOfWork>>();
+const appSettingsPerHandle = new WeakMap<Database.Database, Promise<AppSettingsRepository>>();
 
 /**
  * The `UnitOfWork` a hand-constructed service needs, bound to the suite's own
@@ -21,6 +24,23 @@ export function createTestUnitOfWork(db: Database.Database): Promise<UnitOfWork>
   if (existing !== undefined) return existing;
   const pending = createTestOrm(db).then((t) => new UnitOfWork(t.em));
   perHandle.set(db, pending);
+  return pending;
+}
+
+/**
+ * The `AppSettingsRepository` a hand-constructed service needs (`PermissionsService`,
+ * mirroring `SettingsService`'s own `t.repo(AppSettings)` in its unit test), bound to
+ * the suite's own better-sqlite3 handle the same way `createTestUnitOfWork` is.
+ *
+ * Memoised per handle for the same reason: many suites build several services (and
+ * `PermissionsService` specifically, being 20+ domains' guard dependency) off the
+ * same test DB, and each would otherwise open its own `MikroORM.init`.
+ */
+export function createTestAppSettingsRepo(db: Database.Database): Promise<AppSettingsRepository> {
+  const existing = appSettingsPerHandle.get(db);
+  if (existing !== undefined) return existing;
+  const pending = createTestOrm(db).then((t) => t.repo(AppSettings) as AppSettingsRepository);
+  appSettingsPerHandle.set(db, pending);
   return pending;
 }
 

@@ -49,7 +49,7 @@ import { AirtrailClient, AirtrailRequestError, type AirtrailFlightRaw } from '..
 import { AirtrailImportService } from '../../../src/nest/integrations/airtrail-import.service';
 import { PermissionsService } from '../../../src/nest/permissions/permissions.service';
 import { DatabaseService } from '../../../src/nest/database/database.service';
-import { createTestUnitOfWork } from '../../helpers/test-uow';
+import { createTestUnitOfWork, createTestAppSettingsRepo } from '../../helpers/test-uow';
 
 // The permissions cache is module-scoped, so a write through any instance is
 // what the tool's own checkPermission call reads back.
@@ -57,7 +57,7 @@ import { createTestUnitOfWork } from '../../helpers/test-uow';
 let permissionsService: PermissionsService;
 let savePermissions: typeof permissionsService.savePermissions;
 beforeAll(async () => {
-  permissionsService = new PermissionsService(new DatabaseService(testDb), await createTestUnitOfWork(testDb));
+  permissionsService = new PermissionsService(await createTestAppSettingsRepo(testDb), await createTestUnitOfWork(testDb));
   savePermissions = permissionsService.savePermissions.bind(permissionsService);
 });
 

@@ -7,7 +7,7 @@ import { PermissionsService } from '../../src/nest/permissions/permissions.servi
 import { QueryHelpersService } from '../../src/nest/query-helpers/query-helpers.service';
 import { RealtimeService } from '../../src/nest/realtime/realtime.service';
 import { TrekPhotosRepository } from '../../src/nest/photos/trek-photos.repository';
-import { createTestUnitOfWork } from './test-uow';
+import { createTestUnitOfWork, createTestAppSettingsRepo } from './test-uow';
 
 /**
  * AccommodationsService over a test connection.
@@ -29,7 +29,7 @@ export async function makeAccommodationsService(conn: Database): Promise<Accommo
  * that service by hand needs one to hand it.
  */
 export async function accommodationsOver(dbs: DatabaseService): Promise<AccommodationsService> {
-  const permissions = new PermissionsService(dbs, await createTestUnitOfWork(dbs.connection));
+  const permissions = new PermissionsService(await createTestAppSettingsRepo(dbs.connection), await createTestUnitOfWork(dbs.connection));
   const realtime = new RealtimeService();
   const assignments = new AssignmentsService(
     dbs, permissions, realtime,

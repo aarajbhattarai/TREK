@@ -87,7 +87,7 @@ import type { TodoService } from '../../../src/nest/todo/todo.service';
 import type { CollabService } from '../../../src/nest/collab/collab.service';
 import { AddonsService } from '../../../src/nest/addons/addons.service';
 import { notificationsStub } from '../../helpers/notifications';
-import { createTestUnitOfWork } from '../../helpers/test-uow';
+import { createTestUnitOfWork, createTestAppSettingsRepo } from '../../helpers/test-uow';
 
 // The trip-summary prompt moved to the DI-discovered TripsMcp — its cases below
 // exercise it through a hand-built registry over a stub TripsService whose
@@ -120,7 +120,7 @@ let packingMcp: PackingMcp;
 let budgetMcp: BudgetMcp;
 let tripPromptsMcp: TripPromptsMcp;
 beforeAll(async () => {
-  promptGuards = new McpToolGuardsService(new DatabaseService(testDb), new PermissionsService(new DatabaseService(testDb), await createTestUnitOfWork(testDb)), new RealtimeService());
+  promptGuards = new McpToolGuardsService(new DatabaseService(testDb), new PermissionsService(await createTestAppSettingsRepo(testDb), await createTestUnitOfWork(testDb)), new RealtimeService());
   tripsMcp = new TripsMcp(
   tripsStub,
   { listItems: () => [] } as unknown as TodoService,
@@ -132,10 +132,10 @@ beforeAll(async () => {
   addonsStub,
   promptGuards,
 );
-  promptPackingService = new PackingService(promptDbs(), new PermissionsService(promptDbs(), await createTestUnitOfWork(promptDbs().connection)), new RealtimeService(), notificationsStub(), await createTestUnitOfWork(promptDbs().connection));
+  promptPackingService = new PackingService(promptDbs(), new PermissionsService(await createTestAppSettingsRepo(promptDbs().connection), await createTestUnitOfWork(promptDbs().connection)), new RealtimeService(), notificationsStub(), await createTestUnitOfWork(promptDbs().connection));
   packingMcp = new PackingMcp(promptPackingService, authStub, addonsStub, promptGuards);
   budgetMcp = new BudgetMcp(
-  new BudgetService(promptDbs(), new PermissionsService(promptDbs(), await createTestUnitOfWork(promptDbs().connection)), new ExchangeRatesService(), new RealtimeService(), await createTestUnitOfWork(promptDbs().connection)),
+  new BudgetService(promptDbs(), new PermissionsService(await createTestAppSettingsRepo(promptDbs().connection), await createTestUnitOfWork(promptDbs().connection)), new ExchangeRatesService(), new RealtimeService(), await createTestUnitOfWork(promptDbs().connection)),
   new ExchangeRatesService(),
   promptDbs(),
   new RuntimeEnvService(),

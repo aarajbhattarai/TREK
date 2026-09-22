@@ -1,7 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import { DatabaseService } from '../database/database.service';
+import { InjectRepository } from '@mikro-orm/nestjs';
 import { UnitOfWork } from '../database/unit-of-work';
 import { logError } from '../audit/audit-log.logger';
+import { AppSettings } from '../../db/entities/AppSettings.entity';
+import type { AppSettingsRepository } from '../../db/repositories/AppSettings.repository';
 import {
   getPermissionsCache,
   setPermissionsCache,
@@ -75,7 +77,7 @@ const ACTIONS_MAP = new Map(PERMISSION_ACTIONS.map(a => [a.key, a]));
 @Injectable()
 export class PermissionsService {
   constructor(
-    private readonly dbs: DatabaseService,
+    @InjectRepository(AppSettings) private readonly appSettings: AppSettingsRepository,
     private readonly uow: UnitOfWork,
   ) {}
 
@@ -84,10 +86,9 @@ export class PermissionsService {
     if (cached) return cached;
     const cache = new Map<string, PermissionLevel>();
     try {
-      const rows = this.dbs.all<{ key: string; value: string }>(
-        "SELECT key, value FROM app_settings WHERE key LIKE 'perm_%'"
-      );
+      const rows = await this.appSettings.findByKeyPrefix('perm_');
       for (const row of rows) {
+        if (row.key == null || row.value == null) continue;
         const actionKey = row.key.replace('perm_', '');
         const action = ACTIONS_MAP.get(actionKey);
         // Only cache values the action actually allows: a corrupt/empty stored
@@ -99,10 +100,15 @@ export class PermissionsService {
         }
       }
     } catch (e) {
-      // Missing table is expected during first-boot init; anything else is a
-      // real DB failure that must not stay invisible (we still serve defaults).
+      // Under the legacy better-sqlite3 path a "no such table" error meant
+      // first-boot init racing this read, before the table existed, and was
+      // swallowed silently. Under the ORM, migrations run to completion in
+      // buildApp() before any request (or MCP/WS/cron entrypoint) can reach
+      // this service — there is no window left where app_settings can be
+      // missing — so that message match is dropped and every failure here is
+      // now a real, loggable DB error; defaults are still served either way.
       const msg = e instanceof Error ? e.message : String(e);
-      if (!msg.includes('no such table')) logError(`Permissions load failed: ${msg}`);
+      logError(`Permissions load failed: ${msg}`);
       // Serve defaults for THIS call, but do not install them: a half-built
       // cache would freeze every later reader on the defaults until somebody
       // invalidates by hand, which is how a stricter admin setting silently
@@ -147,10 +153,9 @@ export class PermissionsService {
     }
     // Nothing valid to write → no prepare, no transaction, no cache flush.
     if (valid.length === 0) return { skipped };
-    const upsert = this.dbs.prepare('INSERT OR REPLACE INTO app_settings (key, value) VALUES (?, ?)');
     await this.uow.transactional(async () => {
       for (const [actionKey, level] of valid) {
-        upsert.run(`perm_${actionKey}`, level);
+        await this.appSettings.setValue(`perm_${actionKey}`, level);
       }
     });
     this.invalidatePermissionsCache();
