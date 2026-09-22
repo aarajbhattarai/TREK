@@ -128,15 +128,13 @@ export function createTestSettingsRepo(db: Database.Database): Promise<SettingsR
 }
 
 /**
- * The `UsersRepository` `instance-api-keys.ts`'s repository-backed functions
- * resolve through the active MikroORM request context rather than a
- * constructor argument (Plan 3a Task 5 — see the file's own docstring for
- * why: its callers span ~6 domains outside this plan, still passing
- * `DatabaseService`, and none of them are touched by this conversion). A
- * hand-built test that exercises those functions still needs a real
- * `UsersRepository` bound to the same ORM its `withRequestContext`-style
- * wrapper forks from — this is that repository, same memoisation as the
- * others in this file.
+ * The `UsersRepository` a hand-constructed service passes into
+ * `instance-api-keys.ts`'s `resolveApiKey` (and the other functions there
+ * that take one) — an explicit parameter, not resolved off an ambient
+ * MikroORM request context (Plan 3a Task 5; an earlier version of that file
+ * tried the request-context approach and broke 185 unit tests across 12
+ * files that build a service with no request context around it — see that
+ * file's own docstring). Same memoisation as the others in this file.
  */
 export function createTestUsersRepo(db: Database.Database): Promise<UsersRepository> {
   const existing = usersPerHandle.get(db);

@@ -46,12 +46,21 @@ export class SettingsRepository extends EntityRepository<Settings> {
    * `persist(false)` scalar twin (`user_id`) — same rule as every other
    * `create`/`upsert` call in this migration (D4's defaults rule): the
    * relation is the one column MikroORM actually writes, the twin is filled
-   * by a subsequent read. `onConflictFields: ['user', 'key']` matches
-   * `Settings`'s own `uniques: [{ properties: ['user_id', 'key'] }]`
-   * (`Settings.entity.ts`, generated off the schema's inline
-   * `UNIQUE(user_id, key)` by the `fix(db)` commit that precedes this one) —
-   * `Settings.repository.test.ts` asserts both the schema-level unique index
-   * and the entity metadata before this method relies on either.
+   * by a subsequent read. `Settings`'s own `uniques: [{ properties: ['user',
+   * 'key'] }]` (`Settings.entity.ts`, generated off the schema's inline
+   * `UNIQUE(user_id, key)` by the `fix(db)` commit that precedes this one)
+   * names that same relation field — `Settings.repository.test.ts` asserts
+   * both the schema-level unique index and the entity metadata.
+   *
+   * `onConflictFields` is passed explicitly here for CLARITY at the call
+   * site, not because `em.upsert` needs it to find the conflict target: the
+   * `uniques` entry above is fidelity to the schema first, but as a
+   * consequence it is also consumable — `em.upsert` infers the same
+   * `(user, key)` target from it alone when `onConflictFields` is omitted
+   * (`getWhereCondition` in `@mikro-orm/core/utils/upsert-utils.js` matches a
+   * `uniques` entry's `properties` against the payload's own property-named
+   * keys). `SETTINGSREPO-014` proves that inference directly, independent of
+   * this method's explicit option.
    *
    * Only `value` is ever updated on conflict, matching the legacy statement's
    * `DO UPDATE SET value = excluded.value` exactly (no other column, no
@@ -59,22 +68,5 @@ export class SettingsRepository extends EntityRepository<Settings> {
    */
   async upsertForUser(userId: number, key: string, value: string): Promise<void> {
     await this.upsert({ user: userId, key, value }, { onConflictFields: ['user', 'key'], onConflictAction: 'merge' });
-  }
-
-  /**
-   * `DELETE FROM settings WHERE user_id = ?` (`key` omitted) or
-   * `DELETE FROM settings WHERE user_id = ? AND key = ?` (`key` given).
-   *
-   * No site in `nest/settings` itself calls this today (the inventory's 10
-   * sites have no `DELETE FROM settings` — the one existing call,
-   * `plugin-runtime.service.ts`'s per-plugin `key LIKE 'plugin:<id>:%'`
-   * sweep, is `nest/plugins`' own conversion, out of this task's scope).
-   * Declared for the same reason `AppSettingsRepository.deleteValue` is: the
-   * repository's surface should be symmetric, and a future caller (a
-   * user-cleanup/account-deletion flow, say) gets a real method instead of
-   * reaching for raw SQL. Exercised by its own repository test only.
-   */
-  async deleteForUser(userId: number, key?: string): Promise<number> {
-    return this.nativeDelete(key === undefined ? { user: userId } : { user: userId, key });
   }
 }

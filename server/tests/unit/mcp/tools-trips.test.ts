@@ -470,23 +470,6 @@ describe('Tool: search_cover_images', () => {
     })));
   }
 
-  // UnsplashService.getUnsplashKey resolves through instance-api-keys.ts's
-  // resolveApiKey (Plan 3a Task 5), which now reads AppSettingsRepository/
-  // UsersRepository off the active MikroORM request context when the caller
-  // has no repository of its own to pass — this in-memory MCP harness
-  // (mcp-test-controllers.ts) builds every controller by hand with no HTTP
-  // request around it, so there is no such context here (unlike buildApp()'s
-  // real e2e/production path, or a DI-injected repository test like
-  // AppSettingsRepository's own, both of which are covered elsewhere).
-  // These two tests are about the SEARCH RESULT handling (parsing Unsplash's
-  // response into photos / an error), not the key-resolution precedence
-  // (env > instance > user row), which unsplash.service.test.ts's own
-  // getUnsplashKey suite already covers directly — so an operator env key
-  // here short-circuits resolveApiKey before it ever needs that context,
-  // without losing any coverage this describe block is actually for.
-  beforeEach(() => { process.env.UNSPLASH_ACCESS_KEY = 'operator-test-key'; });
-  afterEach(() => { delete process.env.UNSPLASH_ACCESS_KEY; });
-
   it('returns the photo candidates for a query', async () => {
     const { user } = createUser(testDb);
     stubUnsplash({
