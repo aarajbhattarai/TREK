@@ -180,6 +180,9 @@ jobs:
         # catches it.
         run: cd server && npm run typecheck:tests
 
+      - name: Typecheck scripts
+        run: cd server && npm run typecheck:scripts
+
       - name: Lint
         run: cd server && npm run lint:check
 

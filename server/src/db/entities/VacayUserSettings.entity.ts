@@ -5,7 +5,7 @@ import { Users } from './Users.entity';
 export class VacayUserSettings {
   [PrimaryKeyProp]?: 'user';
   user?: Ref<Users> | null;
-  user_id!: number;
+  user_id?: number | null;
   year_type: string & Opt = 'calendar';
   year_start_month: number & Opt = 1;
   year_start_day: number & Opt = 1;
@@ -17,7 +17,7 @@ export const VacayUserSettingsSchema = defineEntity({
   repository: () => VacayUserSettingsRepository,
   properties: {
     user: () => p.oneToOne(Users).primary().ref().hidden().nullable(),
-    user_id: p.integer().persist(false),
+    user_id: p.integer().nullable().persist(false),
     year_type: p.text().default('calendar'),
     year_start_month: p.integer().default(1),
     year_start_day: p.integer().default(1),

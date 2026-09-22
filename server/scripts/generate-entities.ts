@@ -113,7 +113,18 @@ export const KNOWN_DIFFS = `
    rendering "id!: number & Opt;" instead (and the resulting "type Opt" import).
    Purely a TypeScript-side annotation; it does not change runtime behaviour,
    hydration, or the metadata the schema parity test compares. Confirmed by
-   generating the real schema, not assumed.
+   generating the real schema, not assumed. It is also safe at the database
+   level despite the metadata's builder chain having no explicit
+   ".autoincrement()" call for this property: MikroORM's own
+   MetadataDiscovery#initAutoincrement (node_modules/@mikro-orm/core/metadata/MetadataDiscovery.js)
+   defaults "autoincrement ??= true" for any single numeric PK at discovery
+   time, so the ORM treats the generated and hand-written metadata
+   identically once loaded — confirmed by generating the real schema and
+   inserting through the written entity (Days.repository.test.ts's insert
+   passes). Task 3 should have its own parity test (a PARITY-010 or sibling)
+   asserting "autoincrement === true" in the *discovered* metadata for every
+   integer PK, so this inference is pinned rather than assumed going
+   forward.
 3. Method-call order within a builder chain (e.g. ".deleteRule('cascade').hidden().index(...)"
    vs the hand-written files' ".hidden().deleteRule('cascade').index(...)").
    The renderer assembles each property's options in its OWN fixed sequence
@@ -138,19 +149,15 @@ export const KNOWN_DIFFS = `
    generator's own (occasionally "defaultRaw" instead of "default", or
    entirely absent) rendering produces for a nullable column. This is exactly
    Task 0's skipped PARITY-005 (column defaults) territory, not this task's.
-6. The twin scalar of a hidden PRIMARY relation may carry ".nullable()"
-   reflecting genuine PK-column nullability from introspection (SQLite
-   reports "notnull=0" for a non-AUTOINCREMENT primary key, same as the text
-   PKs inputs.md already documents as parity-correct). "VacayUserSettings.user_id"
-   is the one instance among the five reference entities: the hand-written
-   file declares it "user_id!: number" (non-nullable) as an editorial choice
-   ("since the PK column can never actually be null once a row exists", per
-   task-1-report.md) rather than a schema requirement — PARITY-004 explicitly
-   excludes PK columns from its nullability check, so this is a judgment
-   call Task 3 may revisit per entity, not a drift this wrapper should paper
-   over with a guess.
-7. Trailing blank line / whitespace at end of file, if any — a generator
+6. Trailing blank line / whitespace at end of file, if any — a generator
    formatting convention, immaterial to the parsed module.
+
+Fix round 1 (task-2-fix-brief.md) resolved the former #6 (the
+VacayUserSettings.user_id PK-twin nullability judgment call) by taking the
+generator's answer as correct and updating the hand-written file to match
+(see .superpowers/sdd/2026-09-22-orm-phase2-entity-rewrite/task-2-review.md,
+"#6 — generator or hand-written file?") — it is no longer a diff at all, so
+it is no longer listed here.
 `.trim();
 
 // ---------------------------------------------------------------------------
@@ -158,14 +165,37 @@ export const KNOWN_DIFFS = `
 // never tell the generator "this TEXT column is JSON-shaped"; that's always a
 // judgement call an entity author made (today: exactly one column in the
 // whole schema, `addons.config`, declared `p.json<AddonConfig>()`, grepped
-// from src/db/entities). Decision (see task-2-report.md's "JSON-interface
-// decision"): the wrapper marks known JSON columns from this table and always
-// emits `p.json<unknown>()` — safe, no `any`, no per-column interface
-// guessing. A hand-maintained interface (like `AddonConfig`) is not
-// reconstructable from the schema; carrying one forward is Task 3's job when
-// it reviews that specific entity's diff, not this generic wrapper's.
+// from src/db/entities). `JSON_COLUMNS` maps `table.column` -> the TypeScript
+// type name to render (`p.json<AddonConfig>()`, never a bare `p.json()` or
+// `p.json<unknown>()` — Fix round 1, task-2-review.md C3: a stale
+// `runtimeType` left the class field as `IType<string, any>`, a new `any` in
+// generated output). Every value here needs a matching declaration in
+// `JSON_INTERFACES` below — `injectJsonInterfaces` throws otherwise.
 // ---------------------------------------------------------------------------
-export const JSON_COLUMNS: ReadonlySet<string> = new Set(['addons.config']);
+export const JSON_COLUMNS: ReadonlyMap<string, string> = new Map([['addons.config', 'AddonConfig']]);
+
+/**
+ * The interface declaration text `injectJsonInterfaces` inserts into a
+ * generated file for every `JSON_COLUMNS` type name it references. Not
+ * reconstructable from the schema (SQLite has no notion of a JSON column's
+ * shape) — this is a maintained list, the same shape as `JSON_COLUMNS`
+ * itself. `AddonConfig`'s shape is carried forward from the current
+ * hand-written `Addons.entity.ts`.
+ */
+const JSON_INTERFACES: Readonly<Record<string, string>> = {
+  AddonConfig: 'export interface AddonConfig {\n  [key: string]: unknown;\n}\n',
+};
+
+// ---------------------------------------------------------------------------
+// Boolean columns — same problem as JSON, the opposite direction: SQLite has
+// no BOOLEAN storage class either (every "boolean" column is really
+// INTEGER-affinity), so a plain `p.boolean()` column re-introspects as
+// `p.integer()` and the class field silently degrades `boolean` -> `number`
+// (Fix round 1, task-2-review.md I4). One column in the whole schema today
+// (`addons.enabled`, grepped from src/db/entities — the only `p.boolean()` in
+// the tree) — a maintained allow-list, same shape as `JSON_COLUMNS`.
+// ---------------------------------------------------------------------------
+export const BOOLEAN_COLUMNS: ReadonlySet<string> = new Set(['addons.enabled']);
 
 // ---------------------------------------------------------------------------
 // Rule 1 (metadata level): scalar type mapping.
@@ -223,15 +253,72 @@ export function RULE1_fixUnknownScalarTypes(metadata: EntityMetadata[]): Retyped
   return fixups;
 }
 
-/** Rule 1b (metadata level): mark known JSON columns so they render `p.json()` (see JSON_COLUMNS above). */
-export function RULE1b_markJsonColumns(metadata: EntityMetadata[]): void {
+/**
+ * A JSON column this run marked — like `RetypedScalarFixup` (it needs the
+ * same `.columnType()` strip and is folded into `retypedScalars`) plus the
+ * TypeScript type name to render.
+ */
+export interface JsonColumnFixup extends RetypedScalarFixup {
+  typeName: string;
+}
+
+/**
+ * Rule 1b (metadata level): mark known JSON columns so they render
+ * `p.json()` (see JSON_COLUMNS above). `prop.runtimeType` must move with
+ * `prop.type` here for the same reason Rule 1's doc comment gives — left at
+ * its introspected value (`'string'`, since SQLite stores JSON as TEXT), the
+ * mismatch against `JsonType`'s own always-`'any'` runtime type would still
+ * make `SourceFile.js#breakdownOfIType` treat the property as ambiguous and
+ * wrap the class field in `IType<..., any>`. `fixJsonClassFieldTypes` (a text
+ * pass, see below) closes what setting `runtimeType` here does not: MikroORM
+ * has no metadata escape from `IType<T, any>` for a JSON-typed property at
+ * all (`JsonType#runtimeType` is a hardcoded getter, not derived from the
+ * property) — confirmed by generating the real schema and reading
+ * `JsonType.js`, not assumed.
+ */
+export function RULE1b_markJsonColumns(metadata: EntityMetadata[]): JsonColumnFixup[] {
+  const fixups: JsonColumnFixup[] = [];
   for (const meta of metadata) {
     for (const prop of Object.values(meta.properties)) {
       if (prop.kind !== undefined && prop.kind !== ReferenceKind.SCALAR) continue;
-      if (!JSON_COLUMNS.has(`${meta.tableName}.${prop.fieldNames[0]}`)) continue;
+      const typeName = JSON_COLUMNS.get(`${meta.tableName}.${prop.fieldNames[0]}`);
+      if (!typeName) continue;
       prop.type = 'json';
+      prop.runtimeType = typeName;
+      fixups.push({ className: meta.className, propName: prop.name, typeName });
     }
   }
+  return fixups;
+}
+
+/** Rule 1c (metadata level): mark known boolean columns so they render `p.boolean()` (see BOOLEAN_COLUMNS above). */
+export function RULE1c_markBooleanColumns(metadata: EntityMetadata[]): RetypedScalarFixup[] {
+  const fixups: RetypedScalarFixup[] = [];
+  for (const meta of metadata) {
+    for (const prop of Object.values(meta.properties)) {
+      if (prop.kind !== undefined && prop.kind !== ReferenceKind.SCALAR) continue;
+      if (!BOOLEAN_COLUMNS.has(`${meta.tableName}.${prop.fieldNames[0]}`)) continue;
+      prop.type = 'boolean';
+      // `runtimeType` must move with `type` here too, for the same reason
+      // Rule 1's doc comment gives: left at its introspected value
+      // (`'number'`, SQLite has no BOOLEAN storage class), the mismatch
+      // against `BooleanType`'s own runtime type ('boolean') would make
+      // `breakdownOfIType` treat the property as ambiguous and wrap the
+      // class field in `IType<number, boolean>` — confirmed by generating
+      // the real schema before this fix, not assumed.
+      prop.runtimeType = 'boolean';
+      // The introspected DB default is always the raw SQLite value (`0`/`1`,
+      // a number, since SQLite has no boolean storage class either) —
+      // coerce it to a real boolean so a `p.boolean()` column's `.default()`
+      // renders `.default(false)`, not the now ill-typed `.default(0)`.
+      if (typeof prop.default === 'number') prop.default = prop.default !== 0;
+      if (typeof prop.defaultRaw === 'string' && /^-?\d+$/.test(prop.defaultRaw)) {
+        prop.defaultRaw = prop.defaultRaw !== '0' ? 'true' : 'false';
+      }
+      fixups.push({ className: meta.className, propName: prop.name });
+    }
+  }
+  return fixups;
 }
 
 // ---------------------------------------------------------------------------
@@ -329,6 +416,31 @@ export interface JoinColumnFixup {
 }
 
 /**
+ * Renames don't just need `properties[newName] = prop` (what `addProperty`
+ * does) — `EntityGenerator`'s `DefineEntitySourceFile` renders the
+ * `properties: {...}` object by iterating `Object.entries(meta.properties)`
+ * directly (not the sorted `meta.props`/`propertyOrder` MikroORM otherwise
+ * uses), so `removeProperty` + `addProperty`'s delete-then-reinsert always
+ * moves a renamed property to the END of the file (Fix round 1,
+ * task-2-review.md M7). This rebuilds the dict's key order to match
+ * `originalOrder` (captured before any renames), substituting each renamed
+ * key for its old one — same prop objects, just re-keyed and reordered in
+ * place, so `propertyOrder`/`props`/`relations` (already correct from
+ * `addProperty`'s own `sync()`) are untouched.
+ */
+function restorePropertyOrder(meta: EntityMetadata, originalOrder: readonly string[], renameMap: ReadonlyMap<string, string>): void {
+  const keyOrder = originalOrder.map((oldName) => renameMap.get(oldName) ?? oldName);
+  const values = keyOrder.map((key) => meta.properties[key]);
+  for (const key of keyOrder) delete meta.properties[key];
+  keyOrder.forEach((key, i) => {
+    meta.properties[key] = values[i];
+  });
+}
+
+/** Stock `UnderscoreNamingStrategy` behaviour (our `SnakeProps` override never touches it) — used by RULE5 to verify a rename's round trip (see I2 below). No state, safe to share. */
+const namingStrategy = new SnakeProps();
+
+/**
  * Rule 5 (metadata level for the rename; text level for the join column — see
  * task-2-report.md "rule 5"): owning relation property name = camelCase of
  * (column minus a trailing `_id`). A "collision class" column (no `_id`
@@ -340,6 +452,20 @@ export interface JoinColumnFixup {
  * `injectJoinColumns` to turn into an explicit `.joinColumn(<column>)` in the
  * generated text afterwards.
  *
+ * A multi-column FK (`prop.fieldNames.length !== 1`) throws rather than
+ * silently keeping the raw snake_case name (Fix round 1, task-2-review.md
+ * I1 — the schema has zero of these today; the plan's D1 camelCase-relations
+ * rule has no shape for one, and nothing else would catch the drift, since
+ * `fieldNames` themselves stay correct).
+ *
+ * For a NORMAL (non-collision-class) rename, this also verifies the round
+ * trip: `namingStrategy.joinKeyColumnName(newName, referencedColumn)` must
+ * reproduce the real `column`, or the renderer's implicit FK-column inference
+ * (nothing pins it explicitly for this case) would silently point at the
+ * wrong column the moment a future migration's naming breaks the assumption
+ * (Fix round 1, task-2-review.md I2). A mismatch gets the exact same
+ * `JoinColumnFixup` treatment as a collision class — no separate code path.
+ *
  * Every inverse `mappedBy` across the whole metadata array that pointed at
  * the OLD owning name is fixed up to the new one in the same pass (mappedBy
  * is a plain string on the inverse side; nothing else references an owning
@@ -350,10 +476,17 @@ export function RULE5_renameOwningRelations(metadata: EntityMetadata[]): JoinCol
   const renames = new Map<EntityMetadata, Map<string, string>>(); // meta -> oldName -> newName
 
   for (const meta of metadata) {
+    const originalOrder = Object.keys(meta.properties);
     const renameMap = new Map<string, string>();
     for (const prop of [...meta.relations]) {
       if (!isOwningToOne(prop)) continue;
-      if (prop.fieldNames.length !== 1) continue; // composite FK — out of scope, left untouched (see report)
+      if (prop.fieldNames.length !== 1) {
+        throw new Error(
+          `generate-entities: ${meta.className}.${prop.name} is a multi-column FK ` +
+            `(${prop.fieldNames.join(', ')}) — RULE5 only knows how to rename a single-column owning ` +
+            'relation. Add explicit handling for this relation before regenerating this entity.',
+        );
+      }
       const column = prop.fieldNames[0];
       const isCollisionClass = !column.endsWith('_id');
       const stripped = isCollisionClass ? column : column.slice(0, -'_id'.length);
@@ -372,9 +505,18 @@ export function RULE5_renameOwningRelations(metadata: EntityMetadata[]): JoinCol
       renameMap.set(oldName, newName);
       if (isCollisionClass) {
         fixups.push({ className: meta.className, propName: newName, column });
+      } else {
+        const referencedColumn = prop.referencedColumnNames?.[0];
+        const derivedColumn = namingStrategy.joinKeyColumnName(newName, referencedColumn);
+        if (derivedColumn !== column) {
+          fixups.push({ className: meta.className, propName: newName, column });
+        }
       }
     }
-    if (renameMap.size > 0) renames.set(meta, renameMap);
+    if (renameMap.size > 0) {
+      renames.set(meta, renameMap);
+      restorePropertyOrder(meta, originalOrder, renameMap);
+    }
   }
 
   // Fix up every inverse `mappedBy` that pointed at a renamed owning property.
@@ -405,6 +547,8 @@ export function RULE5_renameOwningRelations(metadata: EntityMetadata[]): JoinCol
  */
 export function RULE6_renameInverseCollections(metadata: EntityMetadata[]): void {
   for (const meta of metadata) {
+    const originalOrder = Object.keys(meta.properties);
+    const renameMap = new Map<string, string>();
     for (const prop of [...meta.relations]) {
       if (!isInverseSide(prop)) continue;
       const newName = toSnakeCase(prop.name);
@@ -419,7 +563,10 @@ export function RULE6_renameInverseCollections(metadata: EntityMetadata[]): void
       meta.removeProperty(oldName, false);
       prop.name = newName;
       meta.addProperty(prop);
+      renameMap.set(oldName, newName);
     }
+    // Same rendering-order fix as RULE5 (see `restorePropertyOrder`'s doc comment) — M7.
+    if (renameMap.size > 0) restorePropertyOrder(meta, originalOrder, renameMap);
   }
 }
 
@@ -526,14 +673,23 @@ export interface RuleFixups {
   joinColumns: JoinColumnFixup[];
   defaults: DefaultFixup[];
   timestamps: TimestampFixup[];
-  /** Rule 1's + Rule 2's retyped scalars together — both need the same `.columnType()` strip (see `stripRedundantColumnType`). */
+  jsonColumns: JsonColumnFixup[];
+  /** Rule 1's + Rule 1b's + Rule 2's retyped scalars together — all three need the same `.columnType()` strip (see `stripRedundantColumnType`). */
   retypedScalars: RetypedScalarFixup[];
 }
 
 /** Every rule above, composed into the single hook MikroORM calls. Order matters (see comments). */
 export function applyRules(metadata: EntityMetadata[], _platform: Platform): RuleFixups {
   const retypedByRule1 = RULE1_fixUnknownScalarTypes(metadata);
-  RULE1b_markJsonColumns(metadata);
+  const jsonColumns = RULE1b_markJsonColumns(metadata);
+  // Unlike Rule 1's/Rule 1b's retypes, a boolean column's own declaration
+  // matches its raw INTEGER column type cleanly on SQLite (BooleanType's
+  // getColumnType() returns the same spelling needsExplicitColumnType()
+  // compares against) — confirmed by generating the real schema: no stray
+  // `.columnType()` appears, so RULE1c's fixups do NOT belong in
+  // `retypedScalars` (stripRedundantColumnType's "found no .columnType() to
+  // strip" throw catches this immediately if that ever stops being true).
+  RULE1c_markBooleanColumns(metadata);
   const timestamps = RULE2_datetimeToDbTimestampType(metadata);
   RULE3_integerPkAutoincrement(metadata);
   RULE4_hideAllRelations(metadata);
@@ -542,7 +698,7 @@ export function applyRules(metadata: EntityMetadata[], _platform: Platform): Rul
   RULE7_dropNoActionRules(metadata);
   RULE8_bindRepositories(metadata);
   const defaults = RULE_normalizeLiteralDefaults(metadata);
-  return { joinColumns, defaults, timestamps, retypedScalars: [...retypedByRule1, ...timestamps] };
+  return { joinColumns, defaults, timestamps, jsonColumns, retypedScalars: [...retypedByRule1, ...timestamps, ...jsonColumns] };
 }
 
 // ---------------------------------------------------------------------------
@@ -579,15 +735,25 @@ function escapeRegExp(value: string): string {
  * has no `!`/`?`/parens between the name and the colon, same as the metadata
  * line `sort_order: p.integer(),` — anchoring on `propName:.*` alone matches
  * whichever comes first in the file, which is always the class field).
+ *
+ * The leading padding is `[ \t]*`, not `\s*` — `\s` matches a newline too, so
+ * on a property preceded by a blank line (common: one blank line separates
+ * the class body from the `properties: {...}` block, or separates unrelated
+ * groups within it) `\s*^` could swallow that blank line into the captured
+ * "line", handing every caller a string with a leading `\n` embedded in it.
+ * `appendCallBeforeTrailingComma`'s own `^…$` anchors (Fix round 1, I3) are
+ * not `/m`-flagged and silently fail to match a string shaped like that —
+ * caught by `TEXT-DEFAULTS-001`, which has exactly that blank line between
+ * the class field and the metadata line.
  */
 function findPropertyBuilderLine(source: string, propName: string): RegExpExecArray | null {
-  const lineRe = new RegExp(`^(\\s*${escapeRegExp(propName)}: (?:\\(\\) => )?p\\..*)$`, 'm');
+  const lineRe = new RegExp(`^([ \\t]*${escapeRegExp(propName)}: (?:\\(\\) => )?p\\..*)$`, 'm');
   return lineRe.exec(source);
 }
 
-/** The class-field declaration line for a scalar property — the mirror image of `findPropertyBuilderLine`. */
+/** The class-field declaration line for a scalar property — the mirror image of `findPropertyBuilderLine` (same `[ \t]*` reasoning). */
 function findClassFieldLine(source: string, propName: string): RegExpExecArray | null {
-  const lineRe = new RegExp(`^(\\s*${escapeRegExp(propName)}[?!]?: (?!\\(\\) => p\\.|p\\.).*)$`, 'm');
+  const lineRe = new RegExp(`^([ \\t]*${escapeRegExp(propName)}[?!]?: (?!\\(\\) => p\\.|p\\.).*)$`, 'm');
   return lineRe.exec(source);
 }
 
@@ -609,12 +775,18 @@ function findClassFieldLine(source: string, propName: string): RegExpExecArray |
  */
 export function fixDbTimestampClassFieldTypes(source: string, fixups: readonly TimestampFixup[]): string {
   let result = source;
-  for (const { propName } of fixups) {
+  for (const { className, propName } of fixups) {
     const match = findClassFieldLine(result, propName);
-    if (!match) continue;
+    if (!match) {
+      throw new Error(`generate-entities: fixDbTimestampClassFieldTypes could not find the class field line for "${className}.${propName}".`);
+    }
     const line = match[1];
     const newLine = line.replace(/\bDate\b/g, 'string');
-    if (newLine === line) continue;
+    if (newLine === line) {
+      throw new Error(
+        `generate-entities: fixDbTimestampClassFieldTypes found the class field for "${className}.${propName}" but it had no "Date" to rewrite — check the renderer shape.`,
+      );
+    }
     result = result.slice(0, match.index) + newLine + result.slice(match.index + line.length);
   }
   return result;
@@ -638,15 +810,37 @@ export function fixDbTimestampClassFieldTypes(source: string, fixups: readonly T
  */
 export function stripRedundantColumnType(source: string, fixups: readonly RetypedScalarFixup[]): string {
   let result = source;
-  for (const { propName } of fixups) {
+  for (const { className, propName } of fixups) {
     const match = findPropertyBuilderLine(result, propName);
-    if (!match) continue;
+    if (!match) {
+      throw new Error(`generate-entities: stripRedundantColumnType could not find the property line for "${className}.${propName}".`);
+    }
     const line = match[1];
     const newLine = line.replace(/\.columnType\('[^']*'\)/, '');
-    if (newLine === line) continue;
+    if (newLine === line) {
+      throw new Error(
+        `generate-entities: stripRedundantColumnType found the property line for "${className}.${propName}" but it had no .columnType() to strip — check the renderer shape.`,
+      );
+    }
     result = result.slice(0, match.index) + newLine + result.slice(match.index + line.length);
   }
   return result;
+}
+
+/**
+ * Inserts `injected` right before a builder line's trailing comma, tolerating
+ * a trailing line comment after it (`.ref(), // pins country`) — the plain
+ * `line.replace(/,\s*$/, …)` this replaced only matched a comma at the very
+ * end of the line, so a trailing comment made the append silently do nothing
+ * (Fix round 1, task-2-review.md I3, adversarial fixture A6). Greedy `.*`
+ * anchors on the LAST comma on the line (the statement terminator), not the
+ * first one a string-literal default might contain earlier in the chain.
+ * Returns `undefined` if the line has no trailing comma to anchor on at all.
+ */
+function appendCallBeforeTrailingComma(line: string, injected: string): string | undefined {
+  const match = /^(.*)(,)(\s*(?:\/\/.*)?)$/.exec(line);
+  if (!match) return undefined;
+  return `${match[1]}${injected}${match[2]}${match[3]}`;
 }
 
 /**
@@ -655,23 +849,36 @@ export function stripRedundantColumnType(source: string, fixups: readonly Retype
  * `.joinColumn('<column>')` that actually pins the FK column — or appends
  * `.joinColumn(...)` if the renderer decided no override was needed at all
  * (belt and braces; not observed in practice, but the rule must not silently
- * do nothing if the renderer's heuristic ever changes).
+ * do nothing if the renderer's heuristic ever changes). Every branch either
+ * makes an edit or throws (Fix round 1, task-2-review.md I3) — a fixup was
+ * recorded specifically because this relation's FK column pin is not
+ * otherwise correct, so a no-op here would ship a wrong/missing FK silently.
  */
 export function injectJoinColumns(source: string, fixups: readonly JoinColumnFixup[]): string {
   let result = source;
-  for (const { propName, column } of fixups) {
+  for (const { className, propName, column } of fixups) {
     const quotedColumn = `'${column}'`;
     const match = findPropertyBuilderLine(result, propName);
-    if (!match) continue; // property not in this file
+    if (!match) {
+      throw new Error(
+        `generate-entities: injectJoinColumns could not find the property line for "${className}.${propName}" — the recorded joinColumn fixup produced no edit.`,
+      );
+    }
     const line = match[1];
     const nameCallRe = new RegExp(`\\.name\\(${escapeRegExp(quotedColumn)}\\)`);
     let newLine: string;
     if (nameCallRe.test(line)) {
       newLine = line.replace(nameCallRe, `.joinColumn(${quotedColumn})`);
     } else if (line.includes('.joinColumn(')) {
-      newLine = line; // already explicit
+      newLine = line; // already explicit — legitimately nothing to do, not a no-op bug
     } else {
-      newLine = line.replace(/,\s*$/, `.joinColumn(${quotedColumn}),`);
+      const appended = appendCallBeforeTrailingComma(line, `.joinColumn(${quotedColumn})`);
+      if (appended === undefined) {
+        throw new Error(
+          `generate-entities: injectJoinColumns found the property line for "${className}.${propName}" but could not append .joinColumn(${quotedColumn}) to it — check the renderer shape.`,
+        );
+      }
+      newLine = appended;
     }
     result = result.slice(0, match.index) + newLine + result.slice(match.index + line.length);
   }
@@ -685,24 +892,144 @@ export function injectJoinColumns(source: string, fixups: readonly JoinColumnFix
  */
 export function injectMissingDefaults(source: string, fixups: readonly DefaultFixup[]): string {
   let result = source;
-  for (const { propName, literal } of fixups) {
+  for (const { className, propName, literal } of fixups) {
     const match = findPropertyBuilderLine(result, propName);
-    if (!match) continue; // property not in this file
+    if (!match) {
+      throw new Error(`generate-entities: injectMissingDefaults could not find the property line for "${className}.${propName}".`);
+    }
     const line = match[1];
-    if (line.includes('.default(') || line.includes('.defaultRaw(')) continue; // already renders one
-    const newLine = line.replace(/,\s*$/, `.default(${literal}),`);
-    result = result.slice(0, match.index) + newLine + result.slice(match.index + line.length);
+    if (line.includes('.default(') || line.includes('.defaultRaw(')) continue; // already renders one — legitimately nothing to do
+    const appended = appendCallBeforeTrailingComma(line, `.default(${literal})`);
+    if (appended === undefined) {
+      throw new Error(
+        `generate-entities: injectMissingDefaults found the property line for "${className}.${propName}" but could not append .default(${literal}) to it — check the renderer shape.`,
+      );
+    }
+    result = result.slice(0, match.index) + appended + result.slice(match.index + line.length);
   }
   return result;
 }
 
 /**
  * `p.json()` has no metadata-level channel for a TypeScript generic type
- * parameter (see the JSON-interface decision above this file's rules) — this
- * inserts `<unknown>` after every bare `p.json(` call.
+ * parameter (see `JSON_COLUMNS`/`JSON_INTERFACES` above) — this inserts the
+ * recorded type name after each known JSON column's bare `p.json(` call, on
+ * exactly that property's line (Fix round 1, task-2-review.md M4/I3: the
+ * previous blanket `source.replace(/\bp\.json\(\)/g, …)` also rewrote a
+ * `p.json()` mentioned inside a comment — adversarial fixture A2). Already
+ * being generic (`p.json<Something>()`) is a legitimate no-op, not a bug;
+ * anything else finding no bare call throws.
  */
-export function injectJsonTypeParams(source: string): string {
-  return source.replace(/\bp\.json\(\)/g, 'p.json<unknown>()');
+export function injectJsonTypeParams(source: string, fixups: readonly JsonColumnFixup[]): string {
+  let result = source;
+  for (const { className, propName, typeName } of fixups) {
+    const match = findPropertyBuilderLine(result, propName);
+    if (!match) {
+      throw new Error(`generate-entities: injectJsonTypeParams could not find the property line for "${className}.${propName}".`);
+    }
+    const line = match[1];
+    if (/p\.json<[^>]*>\(/.test(line)) continue; // already explicitly typed
+    const newLine = line.replace(/\bp\.json\(\)/, `p.json<${typeName}>()`);
+    if (newLine === line) {
+      throw new Error(
+        `generate-entities: injectJsonTypeParams found the property line for "${className}.${propName}" but it had no bare p.json() call to type — check the renderer shape.`,
+      );
+    }
+    result = result.slice(0, match.index) + newLine + result.slice(match.index + line.length);
+  }
+  return result;
+}
+
+/**
+ * `JsonType#runtimeType` (`@mikro-orm/core/types/JsonType.js`) is a hardcoded
+ * getter that always returns `'any'`, never consulting the property at all —
+ * so even with `prop.runtimeType` correctly set to the interface name (Rule
+ * 1b), `SourceFile.js#breakdownOfIType` still sees `prop.runtimeType
+ * ('AddonConfig') !== rawType ('any')` and wraps the class field in
+ * `IType<AddonConfig, any>` (confirmed by generating the real schema and
+ * reading the rendered field, not assumed — there is no metadata option that
+ * changes this). `any` in generated output is not acceptable (Fix round 1,
+ * task-2-review.md C3), so this text pass simplifies the class field's
+ * `IType<TypeName, any>` down to the plain `TypeName`, the same shape a
+ * hand-written entity uses. A field already rendering the plain type name is
+ * a legitimate no-op; anything else finding neither shape throws.
+ */
+export function fixJsonClassFieldTypes(source: string, fixups: readonly JsonColumnFixup[]): string {
+  let result = source;
+  for (const { className, propName, typeName } of fixups) {
+    const match = findClassFieldLine(result, propName);
+    if (!match) {
+      throw new Error(`generate-entities: fixJsonClassFieldTypes could not find the class field line for "${className}.${propName}".`);
+    }
+    const line = match[1];
+    const iTypeRe = new RegExp(`IType<${escapeRegExp(typeName)}(?:\\s*,\\s*any)?>`);
+    const newLine = line.replace(iTypeRe, typeName);
+    if (newLine === line) {
+      if (line.includes(typeName) && !line.includes('any')) continue; // already the plain type — nothing to fix
+      throw new Error(
+        `generate-entities: fixJsonClassFieldTypes found the class field for "${className}.${propName}" but no IType<${typeName}, any> to simplify — check the renderer shape.`,
+      );
+    }
+    result = result.slice(0, match.index) + newLine + result.slice(match.index + line.length);
+  }
+  return result;
+}
+
+/**
+ * Inserts the `JSON_INTERFACES` declaration for every distinct type name this
+ * file's JSON columns reference, right before `export class <Name>` — the
+ * same position a hand-written file like the current `Addons.entity.ts` uses.
+ * Throws if `JSON_COLUMNS` ever references a type name with no matching
+ * `JSON_INTERFACES` entry (a maintenance gap, never a schema fact to guess
+ * at) or if the file has no `export class` line to anchor on.
+ *
+ * Also strips the bogus self-import the renderer adds for the type name:
+ * `breakdownOfIType`'s import-collection step (`SourceFile.js`) treats any
+ * non-primitive `prop.runtimeType` as if it names a sibling entity class and
+ * adds it to `entityImports` — `onImport` has no "this identifier needs no
+ * import, it is declared right here" signal, so the generator's default
+ * resolution guesses `import { AddonConfig } from './AddonConfig.entity';`,
+ * a file that does not exist. Confirmed by generating the real schema, not
+ * assumed.
+ */
+export function injectJsonInterfaces(source: string, fixups: readonly JsonColumnFixup[]): string {
+  if (fixups.length === 0) return source;
+  const typeNames = [...new Set(fixups.map((f) => f.typeName))];
+  const blocks: string[] = [];
+  let result = source;
+  for (const typeName of typeNames) {
+    const decl = JSON_INTERFACES[typeName];
+    if (!decl) {
+      throw new Error(`generate-entities: JSON_COLUMNS references type "${typeName}" but JSON_INTERFACES has no declaration for it.`);
+    }
+    blocks.push(decl);
+    const escaped = escapeRegExp(typeName);
+    const bogusImportRe = new RegExp(`^import \\{ ${escaped} \\} from '\\./${escaped}\\.entity';\\n`, 'm');
+    result = result.replace(bogusImportRe, '');
+  }
+  const classRe = /^export class \w+ /m;
+  const match = classRe.exec(result);
+  if (!match) {
+    throw new Error('generate-entities: injectJsonInterfaces could not find "export class" to insert the interface declaration before.');
+  }
+  return result.slice(0, match.index) + blocks.join('\n') + '\n' + result.slice(match.index);
+}
+
+/**
+ * Removes `identifier` from the `@mikro-orm/core` named import line if
+ * nothing after that line still references it as a bare word — shared by
+ * `stripHiddenTypeAnnotation` (`Hidden`) and `fixJsonClassFieldTypes`'s
+ * caller (`IType`), both of which can make an import genuinely unused.
+ */
+function removeUnusedCoreImportIfUnused(source: string, identifier: string): string {
+  const importLineRe = /^import \{[^}]*\} from '@mikro-orm\/core';$/m;
+  const coreImportLine = importLineRe.exec(source)?.[0];
+  if (!coreImportLine) return source;
+  const bodyAfterImports = source.slice(source.indexOf(coreImportLine) + coreImportLine.length);
+  if (new RegExp(`\\b${escapeRegExp(identifier)}\\b`).test(bodyAfterImports)) return source; // still used elsewhere
+  const escaped = escapeRegExp(identifier);
+  const cleaned = coreImportLine.replace(new RegExp(`type ${escaped}, `), '').replace(new RegExp(`, type ${escaped}\\b`), '');
+  return source.replace(coreImportLine, cleaned);
 }
 
 /**
@@ -721,27 +1048,40 @@ export function injectJsonTypeParams(source: string): string {
  * annotation in the first place *because* of `& Hidden` (the same ternary);
  * once the marker is gone the whole annotation is dropped too, reverting to
  * plain `field = new Collection<T>(this);` — Phase 0's actual style.
+ *
+ * Scoped to the CLASS BODY only — everything from the start of the file up
+ * to (not including) `export const <Name>Schema = defineEntity(` — never the
+ * `properties: {...}` block that follows it. Fix round 1 (task-2-review.md
+ * M3/I3): the previous whole-file `/ & Hidden/g` also matched a string
+ * literal default containing that exact text (adversarial fixture A1,
+ * `note: p.text().default('a & Hidden b')`), corrupting the default's value;
+ * that text only ever appears in the schema block, which this scoping never
+ * touches. The `Collection<T>` pattern is also anchored to a single line
+ * (`[^=\n]*`, not `[^=]*`) so it cannot span two adjacent field declarations
+ * where the first has no initialiser (fixture A3) — unreachable against
+ * today's renderer (every hidden `Collection` field DOES get an initialiser,
+ * see rule 4's doc comment), but no longer exploitable either way.
  */
 export function stripHiddenTypeAnnotation(source: string): string {
-  let result = source
+  const boundaryRe = /^export const \w+Schema = defineEntity\(/m;
+  const boundaryMatch = boundaryRe.exec(source);
+  const splitIndex = boundaryMatch ? boundaryMatch.index : source.length;
+  const classBody = source.slice(0, splitIndex);
+  const rest = source.slice(splitIndex);
+
+  const strippedClassBody = classBody
     // Collection<T> & Hidden = new Collection<T>(this); -> = new Collection<T>(this);
-    .replace(/: Collection<[^=]*> & Hidden = /g, ' = ')
+    .replace(/: Collection<[^=\n]*> & Hidden = /g, ' = ')
     // (Ref<X> | null) & Hidden -> Ref<X> | null  (parenthesised nullable ref)
-    .replace(/\(([^()]*)\) & Hidden/g, '$1')
-    // trip!: Ref<Trips> & Hidden; -> trip!: Ref<Trips>;  (everything else)
-    .replace(/ & Hidden/g, '');
-  // Drop the now-possibly-unused `type Hidden` import from the @mikro-orm/core line.
-  const importLineRe = /^import \{[^}]*\} from '@mikro-orm\/core';$/m;
-  const coreImportLine = importLineRe.exec(result)?.[0];
-  if (coreImportLine) {
-    const bodyAfterImports = result.slice(result.indexOf(coreImportLine) + coreImportLine.length);
-    const stillUsed = /\bHidden\b/.test(bodyAfterImports);
-    if (!stillUsed) {
-      const cleaned = coreImportLine.replace(/type Hidden, /, '').replace(/, type Hidden/, '');
-      result = result.replace(coreImportLine, cleaned);
-    }
+    .replace(/\(([^()\n]*)\) & Hidden/g, '$1')
+    // trip!: Ref<Trips> & Hidden; -> trip!: Ref<Trips>;  (everything else, one class-field line at a time)
+    .replace(/^(\s*\S[^\n]*?) & Hidden/gm, '$1');
+
+  if (/&\s*Hidden\b/.test(strippedClassBody)) {
+    throw new Error('generate-entities: stripHiddenTypeAnnotation left an "& Hidden" marker unstripped in the class body — check the renderer shape.');
   }
-  return result;
+
+  return removeUnusedCoreImportIfUnused(strippedClassBody + rest, 'Hidden');
 }
 
 /** Every text pass, applied in order. */
@@ -750,7 +1090,10 @@ export function applyTextPasses(source: string, fixups: RuleFixups): string {
   result = injectMissingDefaults(result, fixups.defaults);
   result = fixDbTimestampClassFieldTypes(result, fixups.timestamps);
   result = stripRedundantColumnType(result, fixups.retypedScalars);
-  result = injectJsonTypeParams(result);
+  result = injectJsonTypeParams(result, fixups.jsonColumns);
+  result = fixJsonClassFieldTypes(result, fixups.jsonColumns);
+  result = injectJsonInterfaces(result, fixups.jsonColumns);
+  result = removeUnusedCoreImportIfUnused(result, 'IType');
   result = stripHiddenTypeAnnotation(result);
   return result;
 }
@@ -777,7 +1120,14 @@ async function migrateTempDb(dbPath: string): Promise<void> {
     discovery: { warnWhenNoEntities: false },
     dbName: dbPath,
     extensions: [Migrator],
-    migrations: { path: 'dist/db/migrations', pathTs: 'src/db/migrations', snapshot: false },
+    // Anchored to SERVER_ROOT (__dirname-based), not process.cwd() — Fix
+    // round 1, task-2-review.md I5: run from the repo root instead of
+    // server/, the old relative paths silently resolved to nothing and
+    // `generator.generate()` produced zero files with exit 0. `assertFilesGenerated`
+    // below is the second half of the fix: even if some future refactor
+    // reintroduces a cwd-relative path, a zero-file run throws instead of
+    // looking like a quiet success.
+    migrations: { path: path.join(SERVER_ROOT, 'dist/db/migrations'), pathTs: path.join(SERVER_ROOT, 'src/db/migrations'), snapshot: false },
   });
   try {
     const migrator = orm.config.getExtension<Migrator>('@mikro-orm/migrator');
@@ -794,6 +1144,23 @@ async function migrateTempDb(dbPath: string): Promise<void> {
 export interface GenerateResult {
   /** `X.entity.ts` -> final, post-text-pass file content. */
   files: Map<string, string>;
+}
+
+/**
+ * Throws if `files` is empty — a zero-entity run is never a legitimate
+ * result of this wrapper (the migrated schema always has tables), only a
+ * silent path-resolution failure (Fix round 1, task-2-review.md I5:
+ * `node --import tsx server/scripts/generate-entities.ts --out …` run from
+ * the repo root instead of `server/` printed `dumped 0 files`, exit 0,
+ * before the migrations path was anchored to `SERVER_ROOT`). Exported so it
+ * can be pinned by a fixture test independent of a real schema/cwd.
+ */
+export function assertFilesGenerated(files: ReadonlyMap<string, string>): void {
+  if (files.size === 0) {
+    throw new Error(
+      'generate-entities: generated zero entity files — check the migrations path/cwd (should be anchored to SERVER_ROOT) and that the schema actually has tables.',
+    );
+  }
 }
 
 /**
@@ -815,7 +1182,7 @@ export async function generateEntities(): Promise<GenerateResult> {
     });
     try {
       const generator = orm.config.getExtension<EntityGenerator>('@mikro-orm/entity-generator');
-      let fixups: RuleFixups = { joinColumns: [], defaults: [], timestamps: [], retypedScalars: [] };
+      let fixups: RuleFixups = { joinColumns: [], defaults: [], timestamps: [], jsonColumns: [], retypedScalars: [] };
       const rawFiles = await generator.generate({
         entityDefinition: 'defineEntity',
         scalarPropertiesForRelations: 'always',
@@ -840,10 +1207,12 @@ export async function generateEntities(): Promise<GenerateResult> {
           joinColumns: fixups.joinColumns.filter((f) => f.className === className),
           defaults: fixups.defaults.filter((f) => f.className === className),
           timestamps: fixups.timestamps.filter((f) => f.className === className),
+          jsonColumns: fixups.jsonColumns.filter((f) => f.className === className),
           retypedScalars: fixups.retypedScalars.filter((f) => f.className === className),
         };
         files.set(`${className}.entity.ts`, applyTextPasses(raw, relevantFixups));
       }
+      assertFilesGenerated(files);
       return { files };
     } finally {
       await orm.close(true);

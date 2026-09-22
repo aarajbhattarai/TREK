@@ -4,10 +4,14 @@ import path from 'node:path';
 import { EntityMetadata, ReferenceKind, type EntityProperty } from '@mikro-orm/core';
 import { describe, expect, it } from 'vitest';
 import {
+  assertFilesGenerated,
+  BOOLEAN_COLUMNS,
   JoinColumnFixup,
+  JsonColumnFixup,
   KNOWN_DIFFS,
   RULE1_fixUnknownScalarTypes,
   RULE1b_markJsonColumns,
+  RULE1c_markBooleanColumns,
   RULE2_datetimeToDbTimestampType,
   RULE3_integerPkAutoincrement,
   RULE4_hideAllRelations,
@@ -18,8 +22,10 @@ import {
   RULE_normalizeLiteralDefaults,
   applyTextPasses,
   fixDbTimestampClassFieldTypes,
+  fixJsonClassFieldTypes,
   generateEntities,
   injectJoinColumns,
+  injectJsonInterfaces,
   injectJsonTypeParams,
   injectMissingDefaults,
   regenerateEntitiesIndex,
@@ -113,18 +119,53 @@ describe('RULE1_fixUnknownScalarTypes', () => {
 });
 
 describe('RULE1b_markJsonColumns', () => {
-  it('RULE1B-001: marks a known JSON column type=json', () => {
-    const p = fixtureProp({ name: 'config', type: 'unknown', fieldNames: ['config'] });
+  it('RULE1B-001: marks a known JSON column type=json, runtimeType=<interface name>, records a fixup', () => {
+    const p = fixtureProp({ name: 'config', type: 'unknown', runtimeType: 'string', fieldNames: ['config'] });
     const meta = fixtureMeta('Addons', 'addons', [p]);
-    RULE1b_markJsonColumns([meta]);
+    const fixups = RULE1b_markJsonColumns([meta]);
     expect(p.type).toBe('json');
+    expect(p.runtimeType).toBe('AddonConfig');
+    expect(fixups).toEqual<JsonColumnFixup[]>([{ className: 'Addons', propName: 'config', typeName: 'AddonConfig' }]);
   });
 
   it('RULE1B-002: leaves an unknown table.column pair alone', () => {
     const p = fixtureProp({ name: 'notes', type: 'text', fieldNames: ['notes'] });
     const meta = fixtureMeta('Days', 'days', [p]);
-    RULE1b_markJsonColumns([meta]);
+    const fixups = RULE1b_markJsonColumns([meta]);
     expect(p.type).toBe('text');
+    expect(fixups).toEqual([]);
+  });
+});
+
+describe('RULE1c_markBooleanColumns', () => {
+  it('RULE1C-001: marks a known boolean column type=boolean, runtimeType=boolean, coerces a falsy numeric default (I4)', () => {
+    const p = fixtureProp({ name: 'enabled', type: 'integer', runtimeType: 'number', fieldNames: ['enabled'], nullable: true, default: 0, defaultRaw: '0' });
+    const meta = fixtureMeta('Addons', 'addons', [p]);
+    const fixups = RULE1c_markBooleanColumns([meta]);
+    expect(p.type).toBe('boolean');
+    expect(p.runtimeType).toBe('boolean');
+    expect(p.default).toBe(false);
+    expect(p.defaultRaw).toBe('false');
+    expect(fixups).toEqual([{ className: 'Addons', propName: 'enabled' }]);
+  });
+
+  it('RULE1C-002: coerces a truthy numeric default to true', () => {
+    const p = fixtureProp({ name: 'enabled', type: 'integer', fieldNames: ['enabled'], default: 1, defaultRaw: '1' });
+    const meta = fixtureMeta('Addons', 'addons', [p]);
+    RULE1c_markBooleanColumns([meta]);
+    expect(p.default).toBe(true);
+    expect(p.defaultRaw).toBe('true');
+  });
+
+  it('RULE1C-003: leaves an unknown table.column pair alone', () => {
+    const p = fixtureProp({ name: 'is_active', type: 'integer', fieldNames: ['is_active'] });
+    const meta = fixtureMeta('Days', 'days', [p]);
+    RULE1c_markBooleanColumns([meta]);
+    expect(p.type).toBe('integer');
+  });
+
+  it('BOOLEAN_COLUMNS-001: contains addons.enabled, grepped from the current hand-written entities', () => {
+    expect(BOOLEAN_COLUMNS.has('addons.enabled')).toBe(true);
   });
 });
 
@@ -233,6 +274,34 @@ describe('RULE5_renameOwningRelations', () => {
     expect(rel.name).toBe('client');
     expect(fixups).toEqual([]);
   });
+
+  it('RULE5-006: a multi-column FK throws, naming the entity and property (I1)', () => {
+    const rel = fixtureProp({ name: 'weird', kind: ReferenceKind.MANY_TO_ONE, fieldNames: ['a_id', 'b_id'], type: 'Y' });
+    const meta = fixtureMeta('X', 'x', [rel]);
+    expect(() => RULE5_renameOwningRelations([meta])).toThrow(/X\.weird is a multi-column FK/);
+  });
+
+  it('RULE5-007: a rename whose column the naming strategy cannot re-derive gets an explicit joinColumn fixup (I2)', () => {
+    // "v2_config_id" -> stripped "v2_config" -> camelCase "v2Config" -> the
+    // library's own reverse (UnderscoreNamingStrategy#underscore) only
+    // inserts an underscore between a LOWERCASE letter and an uppercase one
+    // — the digit before "Config" blocks that, so it comes back "v2config",
+    // not "v2_config". A genuine, schema-plausible round-trip failure.
+    const rel = fixtureProp({ name: 'v2_config', kind: ReferenceKind.MANY_TO_ONE, fieldNames: ['v2_config_id'], type: 'Configs' });
+    const meta = fixtureMeta('X', 'x', [rel]);
+    const fixups = RULE5_renameOwningRelations([meta]);
+    expect(rel.name).toBe('v2Config');
+    expect(fixups).toEqual<JoinColumnFixup[]>([{ className: 'X', propName: 'v2Config', column: 'v2_config_id' }]);
+  });
+
+  it('RULE5-008: a renamed relation keeps its original position among the entity\'s properties (M7)', () => {
+    const before = fixtureProp({ name: 'before', kind: ReferenceKind.SCALAR });
+    const rel = fixtureProp({ name: 'start_day', kind: ReferenceKind.MANY_TO_ONE, fieldNames: ['start_day_id'], type: 'Days' });
+    const after = fixtureProp({ name: 'after', kind: ReferenceKind.SCALAR });
+    const meta = fixtureMeta('DayAccommodations', 'day_accommodations', [before, rel, after]);
+    RULE5_renameOwningRelations([meta]);
+    expect(Object.keys(meta.properties)).toEqual(['before', 'startDay', 'after']);
+  });
 });
 
 describe('RULE6_renameInverseCollections', () => {
@@ -258,6 +327,15 @@ describe('RULE6_renameInverseCollections', () => {
     RULE6_renameInverseCollections([meta]);
     expect(inv1to1.name).toBe('roadtrip_day_tracks');
     expect(owning.name).toBe('trip');
+  });
+
+  it('RULE6-004: a renamed inverse collection keeps its original position among the entity\'s properties (M7)', () => {
+    const before = fixtureProp({ name: 'before', kind: ReferenceKind.SCALAR });
+    const inv = fixtureProp({ name: 'dayNotesCollection', kind: ReferenceKind.ONE_TO_MANY, mappedBy: 'day' });
+    const after = fixtureProp({ name: 'after', kind: ReferenceKind.SCALAR });
+    const meta = fixtureMeta('Days', 'days', [before, inv, after]);
+    RULE6_renameInverseCollections([meta]);
+    expect(Object.keys(meta.properties)).toEqual(['before', 'day_notes_collection', 'after']);
   });
 });
 
@@ -328,6 +406,16 @@ describe('injectJoinColumns', () => {
     const out = injectJoinColumns(source, [{ className: 'X', propName: 'countryRef', column: 'country' }]);
     expect(out).toContain(".joinColumn('country')");
   });
+
+  it('TEXT-JOINCOL-A6: appends before the trailing comma even with a line comment after it (adversarial fixture A6, I3)', () => {
+    const source = '    countryRef: () => p.manyToOne(Y).ref(), // pins country\n';
+    const out = injectJoinColumns(source, [{ className: 'X', propName: 'countryRef', column: 'country' }]);
+    expect(out).toBe("    countryRef: () => p.manyToOne(Y).ref().joinColumn('country'), // pins country\n");
+  });
+
+  it('TEXT-JOINCOL-003: throws if the property line is not found (I3)', () => {
+    expect(() => injectJoinColumns('', [{ className: 'X', propName: 'countryRef', column: 'country' }])).toThrow(/could not find/);
+  });
 });
 
 describe('injectMissingDefaults', () => {
@@ -343,6 +431,10 @@ describe('injectMissingDefaults', () => {
     const out = injectMissingDefaults(source, [{ className: 'X', propName: 'year_type', literal: "'calendar'" }]);
     expect(out).toBe(source);
   });
+
+  it('TEXT-DEFAULTS-003: throws if the property line is not found (I3)', () => {
+    expect(() => injectMissingDefaults('', [{ className: 'X', propName: 'sort_order', literal: '0' }])).toThrow(/could not find/);
+  });
 });
 
 describe('fixDbTimestampClassFieldTypes', () => {
@@ -352,6 +444,15 @@ describe('fixDbTimestampClassFieldTypes', () => {
     expect(out).toContain('created_at?: string | null;');
     expect(out).toContain('p.type(DbTimestampType).nullable()'); // metadata line untouched
   });
+
+  it('TEXT-TS-002: throws if the class field line is not found (I3)', () => {
+    expect(() => fixDbTimestampClassFieldTypes('', [{ className: 'X', propName: 'created_at' }])).toThrow(/could not find/);
+  });
+
+  it('TEXT-TS-003: throws if the class field has no "Date" to rewrite (I3)', () => {
+    const source = '  created_at?: string | null;\n';
+    expect(() => fixDbTimestampClassFieldTypes(source, [{ className: 'X', propName: 'created_at' }])).toThrow(/no "Date" to rewrite/);
+  });
 });
 
 describe('stripRedundantColumnType', () => {
@@ -360,15 +461,86 @@ describe('stripRedundantColumnType', () => {
     const out = stripRedundantColumnType(source, [{ className: 'X', propName: 'sort_order' }]);
     expect(out).toBe('    sort_order: p.double().nullable(),\n');
   });
+
+  it('TEXT-COLTYPE-002: throws if the property line is not found (I3)', () => {
+    expect(() => stripRedundantColumnType('', [{ className: 'X', propName: 'sort_order' }])).toThrow(/could not find/);
+  });
+
+  it('TEXT-COLTYPE-003: throws if there is no .columnType() to strip (I3)', () => {
+    const source = '    sort_order: p.double().nullable(),\n';
+    expect(() => stripRedundantColumnType(source, [{ className: 'X', propName: 'sort_order' }])).toThrow(/no \.columnType\(\) to strip/);
+  });
 });
 
 describe('injectJsonTypeParams', () => {
-  it('TEXT-JSON-001: inserts <unknown> into a bare p.json() call', () => {
-    expect(injectJsonTypeParams('config: p.json().nullable(),')).toBe('config: p.json<unknown>().nullable(),');
+  it('TEXT-JSON-001: types a known JSON column\'s bare p.json() call', () => {
+    const out = injectJsonTypeParams('    config: p.json().nullable(),\n', [{ className: 'Addons', propName: 'config', typeName: 'AddonConfig' }]);
+    expect(out).toBe('    config: p.json<AddonConfig>().nullable(),\n');
   });
 
-  it('TEXT-JSON-002: leaves an already-typed p.json<T>() alone', () => {
-    expect(injectJsonTypeParams('config: p.json<AddonConfig>().nullable(),')).toBe('config: p.json<AddonConfig>().nullable(),');
+  it('TEXT-JSON-002: leaves an already-typed p.json<T>() alone (legitimate no-op)', () => {
+    const source = '    config: p.json<AddonConfig>().nullable(),\n';
+    const out = injectJsonTypeParams(source, [{ className: 'Addons', propName: 'config', typeName: 'AddonConfig' }]);
+    expect(out).toBe(source);
+  });
+
+  it('TEXT-JSON-003: throws if the property line is not found (I3)', () => {
+    expect(() => injectJsonTypeParams('', [{ className: 'Addons', propName: 'config', typeName: 'AddonConfig' }])).toThrow(/could not find/);
+  });
+
+  it('TEXT-JSON-A2: a p.json() mention inside a comment is never touched (adversarial fixture A2, M4)', () => {
+    const source = '  // see also p.json() elsewhere\n    config: p.json().nullable(),\n';
+    const out = injectJsonTypeParams(source, [{ className: 'Addons', propName: 'config', typeName: 'AddonConfig' }]);
+    expect(out).toContain('// see also p.json() elsewhere');
+    expect(out).toContain('config: p.json<AddonConfig>().nullable(),');
+  });
+});
+
+describe('fixJsonClassFieldTypes', () => {
+  it('TEXT-JSONFIELD-001: simplifies IType<TypeName, any> to the plain type name (C3)', () => {
+    const source = '  config?: IType<AddonConfig, any> | null;\n';
+    const out = fixJsonClassFieldTypes(source, [{ className: 'Addons', propName: 'config', typeName: 'AddonConfig' }]);
+    expect(out).toBe('  config?: AddonConfig | null;\n');
+  });
+
+  it('TEXT-JSONFIELD-002: leaves an already-plain field alone (legitimate no-op)', () => {
+    const source = '  config?: AddonConfig | null;\n';
+    const out = fixJsonClassFieldTypes(source, [{ className: 'Addons', propName: 'config', typeName: 'AddonConfig' }]);
+    expect(out).toBe(source);
+  });
+
+  it('TEXT-JSONFIELD-003: throws if the class field line is not found (I3)', () => {
+    expect(() => fixJsonClassFieldTypes('', [{ className: 'Addons', propName: 'config', typeName: 'AddonConfig' }])).toThrow(/could not find/);
+  });
+});
+
+describe('injectJsonInterfaces', () => {
+  it('TEXT-JSONIFACE-001: inserts the interface declaration before "export class" and strips the bogus self-import', () => {
+    const source =
+      "import { AddonConfig } from './AddonConfig.entity';\n" +
+      "import { defineEntity, p } from '@mikro-orm/core';\n\n" +
+      'export class Addons {\n  config?: AddonConfig | null;\n}\n';
+    const out = injectJsonInterfaces(source, [{ className: 'Addons', propName: 'config', typeName: 'AddonConfig' }]);
+    expect(out).not.toContain("from './AddonConfig.entity'");
+    expect(out).toContain('export interface AddonConfig {');
+    expect(out.indexOf('export interface AddonConfig')).toBeLessThan(out.indexOf('export class Addons'));
+  });
+
+  it('TEXT-JSONIFACE-002: no fixups is a no-op', () => {
+    const source = 'export class X {}\n';
+    expect(injectJsonInterfaces(source, [])).toBe(source);
+  });
+
+  it('TEXT-JSONIFACE-003: throws for a type name with no JSON_INTERFACES declaration', () => {
+    expect(() => injectJsonInterfaces('export class X {}\n', [{ className: 'X', propName: 'p', typeName: 'NoSuchType' }])).toThrow(
+      /no declaration/,
+    );
+  });
+
+  it('TEXT-JSONIFACE-004: throws when there is no "export class" to anchor on', () => {
+    expect(() =>
+      injectJsonInterfaces('const x = 1;\n', [{ className: 'Addons', propName: 'config', typeName: 'AddonConfig' }]),
+    ).toThrow(/could not find/);
   });
 });
 
@@ -401,6 +573,31 @@ describe('stripHiddenTypeAnnotation', () => {
     // ...and since neither field needs it any more, the import is dropped too (consistent behaviour).
     expect(out).not.toContain('type Hidden');
   });
+
+  it('TEXT-HIDDEN-A1: never touches "& Hidden" inside a string literal default (adversarial fixture A1, M3/I3)', () => {
+    const source =
+      "import { defineEntity, p } from '@mikro-orm/core';\n\n" +
+      "export class X {\n  note?: string | null;\n}\n\n" +
+      "export const XSchema = defineEntity({\n  properties: {\n" +
+      "    note: p.text().default('a & Hidden b'),\n" +
+      '  },\n});\n';
+    const out = stripHiddenTypeAnnotation(source);
+    expect(out).toContain("p.text().default('a & Hidden b')");
+  });
+
+  it('TEXT-HIDDEN-A3: two adjacent Collection fields never collapse, even when the first has no initialiser (adversarial fixture A3, M3/I3)', () => {
+    const source =
+      '  first_collection: Collection<A> & Hidden;\n' + '  second_collection: Collection<B> & Hidden = new Collection<B>(this);\n';
+    const out = stripHiddenTypeAnnotation(source);
+    expect(out).toContain('first_collection: Collection<A>;');
+    expect(out).toContain('second_collection = new Collection<B>(this);');
+    expect(out.split('\n').length).toBe(source.split('\n').length); // no property lines merged
+  });
+
+  it('TEXT-HIDDEN-005: throws if a Hidden marker survives every strip pattern (renderer shape changed, I3)', () => {
+    const source = 'export class X {\n  weird: Foo&Hidden;\n}\n';
+    expect(() => stripHiddenTypeAnnotation(source)).toThrow(/left an "& Hidden" marker unstripped/);
+  });
 });
 
 describe('applyTextPasses', () => {
@@ -415,6 +612,7 @@ describe('applyTextPasses', () => {
       joinColumns: [{ className: 'X', propName: 'countryRef', column: 'country' }],
       defaults: [],
       timestamps: [],
+      jsonColumns: [],
       retypedScalars: [],
     });
     expect(out).toContain(".joinColumn('country')");
@@ -439,77 +637,122 @@ describe('regenerateEntitiesIndex', () => {
   });
 });
 
+describe('assertFilesGenerated', () => {
+  it('GUARD-001: throws when zero files were generated (I5)', () => {
+    expect(() => assertFilesGenerated(new Map())).toThrow(/zero entity files/);
+  });
+
+  it('GUARD-002: does not throw when files exist', () => {
+    expect(() => assertFilesGenerated(new Map([['X.entity.ts', '']]))).not.toThrow();
+  });
+});
+
 /**
  * The point of this task (see task-2-brief.md): run the wrapper into a
  * scratch dir off the REAL migrated schema and diff its output for the five
  * hand-written reference entities. `normalizeForDiff` collapses exactly the
- * seven documented, harmless differences `KNOWN_DIFFS` (in
- * `scripts/generate-entities.ts`) describes — one regex per numbered item,
- * cross-referenced by comment — so what remains is a byte-for-byte
- * comparison. Anything past that is a rule bug, not a normalisation to add.
+ * documented, harmless differences `KNOWN_DIFFS` (in `scripts/generate-entities.ts`)
+ * describes — one regex/pass per numbered item, cross-referenced by comment
+ * — so what remains is a byte-for-byte comparison. Anything past that is a
+ * rule bug, not a normalisation to add.
+ *
+ * Fix round 1 (task-2-review.md C1/C2/M6) tightened three of these passes
+ * that were broad enough to mask a real invariant loss — `canonicalizeChainedCallOrder`
+ * and the index/default regexes below carry a comment explaining exactly
+ * what mutation they now catch; VALIDATE-003/004 pin the two proven by the
+ * review's mutation testing (MUT-A/MUT-B).
+ *
+ * KNOWN_DIFFS #3 (call order) is not only a `.hidden()` thing: a plain
+ * scalar's own `.index(...)` also lands in a different slot in the chain
+ * than the hand-written files use (`Trips.created_at`:
+ * `.nullable().defaultRaw(...).index(...)` generated vs
+ * `.nullable().index(...).defaultRaw(...)` hand-written — found by this
+ * fix round when C2 stopped stripping every `.index()` wholesale). Both
+ * `.hidden()` and `.index('...')` are moved to a canonical position
+ * (`.index(...)` first, `.hidden()` last, right before the trailing comma)
+ * on BOTH sides — moved, never invented or dropped, so an absent one on
+ * either side still shows up as a real difference (MUT-A/MUT-B below).
  */
+function canonicalizeChainedCallOrder(source: string): string {
+  return source.replace(/^(.*),$/gm, (line: string, body: string) => {
+    const indexMatch = /\.index\('[^']*'\)/.exec(body);
+    const hasHidden = body.includes('.hidden()');
+    if (!indexMatch && !hasHidden) return line;
+    let stripped = body;
+    if (indexMatch) stripped = stripped.replace(indexMatch[0], '');
+    stripped = stripped.split('.hidden()').join('');
+    const suffix = (indexMatch ? indexMatch[0] : '') + (hasHidden ? '.hidden()' : '');
+    return `${stripped}${suffix},`;
+  });
+}
+
 function normalizeForDiff(source: string): string {
-  return (
-    source
-      // KNOWN_DIFFS #1: index duplicated on the twin — drop every .index() call.
-      .replace(/\.index\('[^']*'\)/g, '')
-      // KNOWN_DIFFS #2: the autoincrement PK's class field + the metadata's
-      // (sometimes implicit) autoincrement call, and the "type Opt" import
-      // that field's "& Opt" annotation drags in (every OTHER "& Opt" usage
-      // in these five files is on a field the reference already renders
-      // identically, so stripping the import token, not the annotations
-      // themselves, is what makes the two sides comparable).
-      .replace(/^(\s*)id\?: number \| null;$/m, '$1id: <PK>;')
-      .replace(/^(\s*)id!: number & Opt;$/m, '$1id: <PK>;')
-      .replace(/^(\s*)id: p\.integer\(\)\.primary\(\)(?:\.autoincrement\(\))?,$/m, '$1id: p.integer().primary(),')
-      .replace(/type Opt, /, '')
-      .replace(/, type Opt/, '')
-      // KNOWN_DIFFS #3: chained-call order — .hidden() can land anywhere in
-      // the chain; normalise by removing it (Rule 4's own fixture test above
-      // already proves every relation gets it).
-      .replace(/\.hidden\(\)/g, '')
-      // KNOWN_DIFFS #4: defaultRaw's quoting style (template literal vs single-quoted string).
-      .replace(/defaultRaw\(`([^`]*)`\)/g, "defaultRaw('$1')")
-      // KNOWN_DIFFS #5: a nullable column's inconsistently-restated DB default —
-      // Phase 0's own files disagree with themselves (DayNotes.sort_order has
-      // one, DayNotes.icon does not); strip any default/defaultRaw specifically
-      // from those two known, isolated properties on both sides.
-      .replace(/(icon|sort_order): p\.(?:text|double)\(\)\.nullable\(\)(?:\.default\([^)]*\)|\.defaultRaw\('[^']*'\))?/g, '$1: p.<type>().nullable()')
-      // KNOWN_DIFFS #6: PK-twin nullability judgment call (VacayUserSettings.user_id).
-      .replace(/^(\s*)user_id\?: number \| null;$/m, '$1user_id: <PK-twin>;')
-      .replace(/^(\s*)user_id!: number;$/m, '$1user_id: <PK-twin>;')
-      .replace(/^(\s*)user_id: p\.integer\(\)(?:\.nullable\(\))?\.persist\(false\),$/m, '$1user_id: p.integer().persist(false),')
-      .replace(
-        /^(\s*)user: \(\) => p\.oneToOne\(Users\)\.primary\(\)\.ref\(\)(?:\.nullable\(\))?,$/m,
-        '$1user: () => p.oneToOne(Users).primary().ref().nullable(),',
-      )
-      // KNOWN_DIFFS #7: trailing whitespace.
-      .trimEnd()
-  );
+  const step1 = source
+    // KNOWN_DIFFS #1: index duplicated on the persist(false) twin — strip it
+    // ONLY from the twin line, never the relation's own `.index(...)` (Fix
+    // round 1, task-2-review.md C2: the old `.replace(/\.index\('[^']*'\)/g, '')`
+    // erased every named index from BOTH sides, so a rule that dropped the
+    // relation's own index would go unnoticed — proven by MUT-A below).
+    .replace(/(\.persist\(false\))\.index\('[^']*'\)/g, '$1')
+    // KNOWN_DIFFS #2: the autoincrement PK's class field + the metadata's
+    // (sometimes implicit) autoincrement call, and the "type Opt" import
+    // that field's "& Opt" annotation drags in (every OTHER "& Opt" usage
+    // in these five files is on a field the reference already renders
+    // identically, so stripping the import token, not the annotations
+    // themselves, is what makes the two sides comparable).
+    .replace(/^(\s*)id\?: number \| null;$/m, '$1id: <PK>;')
+    .replace(/^(\s*)id!: number & Opt;$/m, '$1id: <PK>;')
+    .replace(/^(\s*)id: p\.integer\(\)\.primary\(\)(?:\.autoincrement\(\))?,$/m, '$1id: p.integer().primary(),')
+    .replace(/type Opt, /, '')
+    .replace(/, type Opt/, '')
+    // KNOWN_DIFFS #4: defaultRaw's quoting style (template literal vs single-quoted string).
+    .replace(/defaultRaw\(`([^`]*)`\)/g, "defaultRaw('$1')")
+    // KNOWN_DIFFS #5: a nullable column's inconsistently-restated DB default —
+    // Phase 0's own files disagree with themselves (DayNotes.sort_order has
+    // one, DayNotes.icon does not). Normalise ONLY whether a default is
+    // restated at all — the captured TYPE token and the default's VALUE are
+    // both kept verbatim (Fix round 1, task-2-review.md M6: the old regex
+    // discarded both into a literal "<type>" placeholder, so a rule that
+    // rewrote the default's VALUE was invisible too — proven by MUT-D below).
+    .replace(
+      /(icon|sort_order): p\.(text|double)\(\)\.nullable\(\)(?:\.default\((-?\d+(?:\.\d+)?|'[^']*')\)|\.defaultRaw\('(-?\d+(?:\.\d+)?|[^']*)'\))?/g,
+      (_full: string, prop: string, type: string, defaultVal: string | undefined, defaultRawVal: string | undefined) => {
+        const canonical = defaultVal !== undefined ? defaultVal.replace(/^'|'$/g, '') : defaultRawVal;
+        const suffix = canonical !== undefined ? `.default(${canonical})` : '';
+        return `${prop}: p.${type}().nullable()${suffix}`;
+      },
+    );
+  // KNOWN_DIFFS #3: chained-call order — `.hidden()` can land anywhere in
+  // the chain; canonicalise its POSITION (move it to just before the
+  // trailing comma on both sides) rather than stripping it outright (Fix
+  // round 1, task-2-review.md C1: the old `.replace(/\.hidden\(\)/g, '')`
+  // made this test blind to a relation that lost `.hidden()` altogether —
+  // proven by MUT-B below). KNOWN_DIFFS #6: trailing whitespace.
+  return canonicalizeChainedCallOrder(step1).trimEnd();
 }
 
 /**
  * Not a KNOWN_DIFFS item — a consequence of validating against a reference
- * file that predates Task 3. The five document-sync tables
- * (`ENTITIES_STILL_MISSING` in `entity-schema-parity.test.ts`) have no
- * entity of their own yet, but `Trips` genuinely has FK relations pointing
- * at two of them (`document_connections.trip_id`, `trip_document_links.trip_id`)
- * in the migrated schema, so `bidirectionalRelations` correctly discovers
- * them regardless of whether the target class exists in `src/db/entities/`
- * today. Task 3 adds those five entities and these extra imports/collections
- * on `Trips` become real, required output — stripping them here is scoped
- * to exactly the five document-sync class names, not a general escape hatch.
+ * file that predates Task 3. The five document-sync tables have no entity of
+ * their own yet, but `Trips` genuinely has FK relations pointing at two of
+ * them (`document_connections.trip_id`, `trip_document_links.trip_id`) in
+ * the migrated schema, so `bidirectionalRelations` correctly discovers them
+ * regardless of whether the target class exists in `src/db/entities/` today.
+ *
+ * Dated ratchet (Fix round 1, task-2-review.md I7 — same shape as
+ * `entity-schema-parity.test.ts`'s `ENTITIES_STILL_MISSING`, added
+ * 2026-09-22): Task 3 adds those five entities and these extra
+ * imports/collections on `Trips` become required, correct output.
+ * PENDING-ENTITIES-001 below fails the moment any of these five already has
+ * an entity file, forcing Task 3 to empty this list (and update
+ * VALIDATE-001's tolerance) in the same change — it must not silently keep
+ * tolerating output that is now wrong.
  */
-const DOCUMENT_SYNC_CLASS_NAMES = [
-  'DocumentProviders',
-  'DocumentProviderFields',
-  'DocumentConnections',
-  'TripDocumentLinks',
-  'DocumentSyncItems',
-];
+const PENDING_ENTITIES = ['DocumentProviders', 'DocumentProviderFields', 'DocumentConnections', 'TripDocumentLinks', 'DocumentSyncItems'];
 
-function stripUnreleasedDocumentSyncRelations(generatedSource: string): string {
-  const names = DOCUMENT_SYNC_CLASS_NAMES.join('|');
+function stripPendingEntityRelations(generatedSource: string): string {
+  if (PENDING_ENTITIES.length === 0) return generatedSource;
+  const names = PENDING_ENTITIES.join('|');
   return generatedSource
     .split('\n')
     .filter((line) => !new RegExp(`\\b(${names})\\b`).test(line))
@@ -526,7 +769,7 @@ describe('generateEntities — validation diff against the five reference entiti
         const generated = files.get(`${name}.entity.ts`);
         expect(generated, `generator produced no ${name}.entity.ts`).toBeDefined();
         const reference = fs.readFileSync(path.join(ENTITIES_DIR, `${name}.entity.ts`), 'utf8');
-        const generatedForDiff = stripUnreleasedDocumentSyncRelations(generated ?? '');
+        const generatedForDiff = stripPendingEntityRelations(generated ?? '');
         expect(normalizeForDiff(generatedForDiff), `${name}.entity.ts differs beyond KNOWN_DIFFS`).toBe(normalizeForDiff(reference));
       }
     },
@@ -536,4 +779,90 @@ describe('generateEntities — validation diff against the five reference entiti
   it('VALIDATE-002: KNOWN_DIFFS is present and non-empty documentation', () => {
     expect(KNOWN_DIFFS.length).toBeGreaterThan(0);
   });
+
+  it(
+    'VALIDATE-003: normalizeForDiff does not mask a relation that lost its own .index() (MUT-A, C2)',
+    async () => {
+      const { files } = await generateEntities();
+      const generated = files.get('Days.entity.ts');
+      expect(generated).toBeDefined();
+      const reference = fs.readFileSync(path.join(ENTITIES_DIR, 'Days.entity.ts'), 'utf8');
+      // MUT-A: simulate a rule bug that drops the named index specifically
+      // from the OWNING RELATION line — not its persist(false) twin, whose
+      // duplicate index KNOWN_DIFFS #1 legitimately normalises away.
+      const mutated = (generated ?? '').replace(
+        "trip: () => p.manyToOne(Trips).ref().deleteRule('cascade').hidden().index('idx_days_trip_id'),",
+        "trip: () => p.manyToOne(Trips).ref().deleteRule('cascade').hidden(),",
+      );
+      expect(mutated, 'the mutation string was not found in the real generated output — update it to match the renderer').not.toBe(generated);
+      expect(normalizeForDiff(stripPendingEntityRelations(mutated))).not.toBe(normalizeForDiff(reference));
+    },
+    30_000,
+  );
+
+  it(
+    'VALIDATE-004: normalizeForDiff does not mask a ONE_TO_MANY relation that lost .hidden() (MUT-B, C1)',
+    async () => {
+      const { files } = await generateEntities();
+      const generated = files.get('Days.entity.ts');
+      expect(generated).toBeDefined();
+      const reference = fs.readFileSync(path.join(ENTITIES_DIR, 'Days.entity.ts'), 'utf8');
+      // MUT-B: simulate RULE4 skipping a ONE_TO_MANY relation.
+      const mutated = (generated ?? '').replace(
+        "day_accommodations_collection: () => p.oneToMany(DayAccommodations).mappedBy('startDay').hidden(),",
+        "day_accommodations_collection: () => p.oneToMany(DayAccommodations).mappedBy('startDay'),",
+      );
+      expect(mutated, 'the mutation string was not found in the real generated output — update it to match the renderer').not.toBe(generated);
+      expect(normalizeForDiff(stripPendingEntityRelations(mutated))).not.toBe(normalizeForDiff(reference));
+    },
+    30_000,
+  );
+
+  it('NORMALIZE-005: normalizeForDiff does not mask a rewritten default VALUE on icon/sort_order (MUT-D, M6)', () => {
+    const reference = "    sort_order: p.double().nullable().default(0),\n    icon: p.text().nullable(),\n";
+    const generatedHonest = "    sort_order: p.double().nullable().defaultRaw(`0`),\n    icon: p.text().nullable(),\n";
+    const generatedMutated = "    sort_order: p.double().nullable().defaultRaw(`999`),\n    icon: p.text().nullable(),\n";
+    // The honest generated text (same value, different rendering method) matches.
+    expect(normalizeForDiff(generatedHonest)).toBe(normalizeForDiff(reference));
+    // MUT-D: rewriting the value must NOT be swallowed by the normalisation.
+    expect(normalizeForDiff(generatedMutated)).not.toBe(normalizeForDiff(reference));
+  });
+
+  it('NO-ANY-001: the generated output never contains `any` (C3)', async () => {
+    const { files } = await generateEntities();
+    const offenders: string[] = [];
+    for (const [name, content] of files) {
+      if (/: any\b|<any>|, any>/.test(content)) offenders.push(name);
+    }
+    expect(offenders).toEqual([]);
+  }, 30_000);
+});
+
+describe('PENDING_ENTITIES ratchet (I7)', () => {
+  it("PENDING-ENTITIES-001: stays accurate — none of them may already have an entity file", () => {
+    const failures: string[] = [];
+    for (const className of PENDING_ENTITIES) {
+      if (fs.existsSync(path.join(ENTITIES_DIR, `${className}.entity.ts`))) {
+        failures.push(`${className}: has an entity file now — remove it from PENDING_ENTITIES and update VALIDATE-001's tolerance`);
+      }
+    }
+    expect(failures).toEqual([]);
+  });
+});
+
+describe('generateEntities — migrations path is anchored to SERVER_ROOT, not cwd (I5)', () => {
+  it(
+    'MIGPATH-001: generation still finds migrations when run from the repo root instead of server/',
+    async () => {
+      const originalCwd = process.cwd();
+      process.chdir(path.join(__dirname, '../../../..')); // server/tests/unit/db -> repo root
+      try {
+        const { files } = await generateEntities();
+        expect(files.size).toBeGreaterThan(0);
+      } finally {
+        process.chdir(originalCwd);
+      }
+    },
+    30_000,
+  );
 });
