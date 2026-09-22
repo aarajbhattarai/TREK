@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { InjectRepository } from '@mikro-orm/nestjs';
 import bcrypt from 'bcryptjs';
 import {
   generateRegistrationOptions,
@@ -11,8 +12,13 @@ import { WebauthnConfigService, originWithinRpScope, type WebauthnConfig } from 
 import { avatarUrl } from '../common/avatarUrl';
 import { stripUserForClient } from './auth.helpers';
 import { AuthService } from './auth.service';
-import { DatabaseService } from '../database/database.service';
 import { UnitOfWork } from '../database/unit-of-work';
+import { WebauthnCredentials } from '../../db/entities/WebauthnCredentials.entity';
+import type { WebauthnCredentialsRepository } from '../../db/repositories/WebauthnCredentials.repository';
+import { WebauthnChallenges } from '../../db/entities/WebauthnChallenges.entity';
+import type { WebauthnChallengesRepository } from '../../db/repositories/WebauthnChallenges.repository';
+import { Users } from '../../db/entities/Users.entity';
+import type { UsersRepository } from '../../db/repositories/Users.repository';
 import type { User } from '../../types';
 
 // ---------------------------------------------------------------------------
@@ -37,21 +43,6 @@ const AUTH_FAILED = { error: 'Authentication failed', status: 401 } as const;
 // the register transaction to keep the duplicate 409 distinct from the generic
 // insert-failure 400 without string-matching SQLite errors.
 const DUPLICATE_CREDENTIAL = new Error('duplicate credential');
-
-interface CredentialRow {
-  id: number;
-  user_id: number;
-  credential_id: string;
-  public_key: Buffer;
-  counter: number;
-  transports: string | null;
-  device_type: string | null;
-  backed_up: number;
-  name: string | null;
-  aaguid: string | null;
-  created_at: string;
-  last_used_at: string | null;
-}
 
 function clientDataFromResponse(resp: unknown): { challenge?: unknown; origin?: unknown } | null {
   try {
@@ -105,10 +96,12 @@ export class PasskeyService {
   private readonly logger = new Logger(PasskeyService.name);
 
   constructor(
-    private readonly db: DatabaseService,
     private readonly auth: AuthService,
     private readonly webauthn: WebauthnConfigService,
     private readonly uow: UnitOfWork,
+    @InjectRepository(WebauthnCredentials) private readonly webauthnCredentials: WebauthnCredentialsRepository,
+    @InjectRepository(WebauthnChallenges) private readonly webauthnChallenges: WebauthnChallengesRepository,
+    @InjectRepository(Users) private readonly users: UsersRepository,
   ) {}
 
   // -------------------------------------------------------------------------
@@ -116,14 +109,11 @@ export class PasskeyService {
   // -------------------------------------------------------------------------
 
   private async purgeExpiredChallenges(now: number): Promise<void> {
-    this.db.run('DELETE FROM webauthn_challenges WHERE expires_at < ?', now);
+    await this.webauthnChallenges.purgeExpired(now);
   }
 
   private async storeChallenge(challenge: string, userId: number | null, type: 'registration' | 'authentication', now: number): Promise<void> {
-    this.db.run(
-      'INSERT INTO webauthn_challenges (challenge, user_id, type, expires_at) VALUES (?, ?, ?, ?)',
-      challenge, userId, type, now + CHALLENGE_TTL_MS,
-    );
+    await this.webauthnChallenges.insertChallenge({ challenge, user_id: userId, type, expires_at: now + CHALLENGE_TTL_MS });
   }
 
   /**
@@ -133,11 +123,7 @@ export class PasskeyService {
    * twice (the replay window a SELECT→await→DELETE ordering would open).
    */
   private async claimChallenge(challenge: string, type: 'registration' | 'authentication', now: number): Promise<{ user_id: number | null } | null> {
-    const row = this.db.get<{ user_id: number | null }>(
-      'DELETE FROM webauthn_challenges WHERE challenge = ? AND type = ? AND expires_at > ? RETURNING user_id',
-      challenge, type, now,
-    );
-    return row ?? null;
+    return this.webauthnChallenges.claimChallenge(challenge, type, now);
   }
 
   // -------------------------------------------------------------------------
@@ -209,7 +195,7 @@ export class PasskeyService {
     if (!cfg) return { ...NOT_CONFIGURED };
     if (this.originCannotVerify(cfg, requestOrigin)) return { ...NOT_CONFIGURED };
 
-    const user = this.db.get<User>('SELECT * FROM users WHERE id = ?', userId);
+    const user = await this.users.findById(userId);
     if (!user) return { error: 'User not found', status: 404 };
 
     // Re-authentication: a hijacked session must not be able to silently plant an
@@ -219,9 +205,7 @@ export class PasskeyService {
       return { error: 'Incorrect password', status: 401 };
     }
 
-    const existing = this.db.all<{ credential_id: string; transports: string | null }>(
-      'SELECT credential_id, transports FROM webauthn_credentials WHERE user_id = ?', userId,
-    );
+    const existing = await this.webauthnCredentials.listExcludeCredentials(userId);
 
     const now = Date.now();
     await this.purgeExpiredChallenges(now);
@@ -294,23 +278,20 @@ export class PasskeyService {
     // between them; the sentinel keeps the legacy 409-vs-400 split intact.
     try {
       await this.uow.transactional(async () => {
-        if (this.db.get('SELECT id FROM webauthn_credentials WHERE credential_id = ?', credential.id)) {
+        if (await this.webauthnCredentials.existsByCredentialId(credential.id)) {
           throw DUPLICATE_CREDENTIAL;
         }
-        this.db.run(
-          `INSERT INTO webauthn_credentials
-             (user_id, credential_id, public_key, counter, transports, device_type, backed_up, name, aaguid, last_used_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)`,
-          userId,
-          credential.id,
-          Buffer.from(credential.publicKey),
-          credential.counter ?? 0,
-          credential.transports ? JSON.stringify(credential.transports) : null,
-          credentialDeviceType ?? null,
-          credentialBackedUp ? 1 : 0,
+        await this.webauthnCredentials.insertCredential({
+          user_id: userId,
+          credential_id: credential.id,
+          public_key: Buffer.from(credential.publicKey),
+          counter: credential.counter ?? 0,
+          transports: credential.transports ? JSON.stringify(credential.transports) : null,
+          device_type: credentialDeviceType ?? null,
+          backed_up: credentialBackedUp ? 1 : 0,
           name,
-          aaguid ?? null,
-        );
+          aaguid: aaguid ?? null,
+        });
       });
     } catch (err) {
       if (err === DUPLICATE_CREDENTIAL) {
@@ -319,10 +300,7 @@ export class PasskeyService {
       return { error: 'Could not register this passkey.', status: 400 };
     }
 
-    const created = this.db.get<{ backed_up: number } & Record<string, unknown>>(
-      'SELECT id, name, device_type, backed_up, created_at, last_used_at FROM webauthn_credentials WHERE credential_id = ?',
-      credential.id,
-    ) as { backed_up: number } & Record<string, unknown>;
+    const created = (await this.webauthnCredentials.findCreatedCredential(credential.id))!;
     return { success: true, credential: { ...created, backed_up: created.backed_up === 1 } };
   }
 
@@ -377,7 +355,7 @@ export class PasskeyService {
     const credId = (resp as { id?: unknown; rawId?: unknown }).id ?? (resp as { rawId?: unknown }).rawId;
     if (typeof credId !== 'string') return { ...AUTH_FAILED };
 
-    const cred = this.db.get<CredentialRow>('SELECT * FROM webauthn_credentials WHERE credential_id = ?', credId);
+    const cred = await this.webauthnCredentials.findByCredentialId(credId);
     if (!cred) return { ...AUTH_FAILED };
 
     const expectedOrigin = this.expectedOrigins(cfg, resp);
@@ -414,20 +392,20 @@ export class PasskeyService {
       return { ...AUTH_FAILED, auditUserId: cred.user_id, auditAction: 'user.passkey_clone_suspected' };
     }
 
-    const user = this.db.get<User>('SELECT * FROM users WHERE id = ?', cred.user_id);
+    const user = await this.users.findById(cred.user_id);
     if (!user) return { ...AUTH_FAILED };
 
     // Persist the new counter + last-used and bump login bookkeeping atomically.
     await this.uow.transactional(async () => {
-      this.db.run('UPDATE webauthn_credentials SET counter = ?, last_used_at = CURRENT_TIMESTAMP WHERE id = ?', newCounter, cred.id);
-      this.db.run('UPDATE users SET last_login = CURRENT_TIMESTAMP, login_count = login_count + 1 WHERE id = ?', user.id);
+      await this.webauthnCredentials.updateCounterAndLastUsed(cred.id, newCounter);
+      await this.users.touchLastLogin(user.id);
     });
 
     // A user-verified passkey is phishing-resistant and inherently two-factor
     // (device possession + biometric/PIN), so it mints the real session directly
     // — the SAME path as password and OIDC login (no new token shape).
     const token = await this.auth.generateToken(user);
-    const userSafe = stripUserForClient(user) as Record<string, unknown>;
+    const userSafe = stripUserForClient(user as unknown as User) as Record<string, unknown>;
     return { token, user: { ...userSafe, avatar_url: avatarUrl(user) }, auditUserId: Number(user.id) };
   }
 
@@ -436,10 +414,7 @@ export class PasskeyService {
   // -------------------------------------------------------------------------
 
   async listPasskeys(userId: number): Promise<Array<Record<string, unknown>>> {
-    const rows = this.db.all<{ backed_up: number } & Record<string, unknown>>(
-      'SELECT id, name, device_type, backed_up, created_at, last_used_at FROM webauthn_credentials WHERE user_id = ? ORDER BY created_at DESC',
-      userId,
-    );
+    const rows = await this.webauthnCredentials.listForPanel(userId);
     return rows.map((r) => ({ ...r, backed_up: r.backed_up === 1 }));
   }
 
@@ -447,8 +422,8 @@ export class PasskeyService {
     const cleanName = sanitizeName(name);
     if (!cleanName) return { error: 'Name is required', status: 400 };
     // Ownership enforced in SQL (404 on miss, never a 403 that leaks existence).
-    const result = this.db.run('UPDATE webauthn_credentials SET name = ? WHERE id = ? AND user_id = ?', cleanName, Number(id), userId);
-    if (result.changes === 0) return { error: 'Passkey not found', status: 404 };
+    const changes = await this.webauthnCredentials.renameOwned(Number(id), userId, cleanName);
+    if (changes === 0) return { error: 'Passkey not found', status: 404 };
     return { success: true };
   }
 
@@ -461,20 +436,20 @@ export class PasskeyService {
     // strip the victim's passkeys). Deleting is always allowed because every
     // account keeps a usable password as recovery fallback — losing all passkeys
     // can never lock anyone out.
-    const user = this.db.get<{ password_hash: string }>('SELECT password_hash FROM users WHERE id = ?', userId);
-    if (!user || !user.password_hash || !password || !bcrypt.compareSync(password, user.password_hash)) {
+    const passwordHash = await this.users.getPasswordHash(userId);
+    if (!passwordHash || !password || !bcrypt.compareSync(password, passwordHash)) {
       return { error: 'Incorrect password', status: 401 };
     }
-    const result = this.db.run('DELETE FROM webauthn_credentials WHERE id = ? AND user_id = ?', Number(id), userId);
-    if (result.changes === 0) return { error: 'Passkey not found', status: 404 };
+    const changes = await this.webauthnCredentials.deleteOwned(Number(id), userId);
+    if (changes === 0) return { error: 'Passkey not found', status: 404 };
     return { success: true };
   }
 
   /** Admin: clear all of a user's passkeys (e.g. on suspected compromise). */
   async adminResetPasskeys(targetUserId: number): Promise<{ error?: string; status?: number; success?: boolean; deleted?: number; email?: string }> {
-    const target = this.db.get<{ id: number; email: string }>('SELECT id, email FROM users WHERE id = ?', targetUserId);
+    const target = await this.users.findIdAndEmail(targetUserId);
     if (!target) return { error: 'User not found', status: 404 };
-    const result = this.db.run('DELETE FROM webauthn_credentials WHERE user_id = ?', targetUserId);
-    return { success: true, deleted: result.changes, email: target.email };
+    const deleted = await this.webauthnCredentials.deleteAllForUser(targetUserId);
+    return { success: true, deleted, email: target.email };
   }
 }

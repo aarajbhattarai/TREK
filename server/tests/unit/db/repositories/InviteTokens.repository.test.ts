@@ -109,4 +109,53 @@ describe('InviteTokensRepository', () => {
       expect((rawInvite(created.id) as { used_count: number }).used_count).toBe(1);
     });
   });
+
+  // RI1/RI5 — the admin invite list's joined projection.
+  describe('listWithCreatorAndTrip / findWithCreatorAndTrip', () => {
+    it('INVREPO-010: projects the creator\'s username and a bound trip\'s title, newest first', async () => {
+      const { user: admin } = createUser(testDb, { username: 'inviter-1' });
+      const trip = createTrip(testDb, admin.id, { title: 'Bound Trip' });
+      const older = createInviteToken(testDb, { token: 'older', created_by: admin.id });
+      testDb.prepare('UPDATE invite_tokens SET created_at = ? WHERE id = ?').run('2026-01-01 00:00:00', older.id);
+      const newer = createInviteToken(testDb, { token: 'newer', created_by: admin.id });
+      testDb.prepare('UPDATE invite_tokens SET created_at = ?, trip_id = ? WHERE id = ?').run('2026-02-01 00:00:00', trip.id, newer.id);
+
+      const rows = await invites.listWithCreatorAndTrip();
+
+      expect(rows.map((r) => r.token)).toEqual(['newer', 'older']); // ORDER BY created_at DESC
+      expect(rows[0]).toMatchObject({ token: 'newer', created_by_name: 'inviter-1', trip_title: 'Bound Trip', trip_id: trip.id });
+      expect(rows[1]).toMatchObject({ token: 'older', created_by_name: 'inviter-1', trip_title: null, trip_id: null });
+    });
+
+    it('INVREPO-011: findWithCreatorAndTrip filters the same projection to one id', async () => {
+      const { user: admin } = createUser(testDb, { username: 'inviter-2' });
+      const invite = createInviteToken(testDb, { token: 'single', created_by: admin.id });
+
+      const row = await invites.findWithCreatorAndTrip(invite.id);
+      expect(row).toMatchObject({ id: invite.id, token: 'single', created_by_name: 'inviter-2', trip_title: null });
+    });
+
+    it('INVREPO-012: findWithCreatorAndTrip is null for an unknown id', async () => {
+      expect(await invites.findWithCreatorAndTrip(999_999)).toBeNull();
+    });
+  });
+
+  // RI6/RI7 — deleteInvite's 404 check and the delete itself.
+  describe('findIdById / deleteById', () => {
+    it('INVREPO-013: findIdById returns the id for a known row, null otherwise', async () => {
+      const invite = createInviteToken(testDb, { token: 'exists' });
+      expect(await invites.findIdById(invite.id)).toBe(invite.id);
+      expect(await invites.findIdById(999_999)).toBeNull();
+    });
+
+    it('INVREPO-014: deleteById removes exactly that row', async () => {
+      const keep = createInviteToken(testDb, { token: 'keep' });
+      const gone = createInviteToken(testDb, { token: 'gone' });
+
+      await invites.deleteById(gone.id);
+
+      expect(rawInvite(gone.id)).toBeUndefined();
+      expect(rawInvite(keep.id)).toBeDefined();
+    });
+  });
 });

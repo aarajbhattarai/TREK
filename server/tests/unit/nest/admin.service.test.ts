@@ -82,7 +82,7 @@ import { __clearVersionCacheForTests } from '../../../src/nest/admin/admin.helpe
 import { makeNotificationsService, makeNotificationPreferencesService } from '../../helpers/notifications';
 import { EphemeralTokenService } from '../../../src/nest/auth/ephemeral-token.service';
 import { AllowedFileTypesService } from '../../../src/nest/files/allowed-file-types.service';
-import { createTestUnitOfWork, createTestAppSettingsRepo, createTestUsersRepo } from '../../helpers/test-uow';
+import { createTestUnitOfWork, createTestAppSettingsRepo, createTestUsersRepo, createTestWebauthnCredentialsRepo, createTestWebauthnChallengesRepo } from '../../helpers/test-uow';
 
 const dbs = new DatabaseService(testDb);
 const realtime = new RealtimeService();
@@ -106,7 +106,7 @@ beforeAll(async () => {
   svc = new AdminService(
   dbs,
   await createTestAddonsService(testDb, dbs),
-  new PasskeyService(dbs, auth, webauthn, await createTestUnitOfWork(dbs.connection)),
+  new PasskeyService(auth, webauthn, await createTestUnitOfWork(dbs.connection), await createTestWebauthnCredentialsRepo(dbs.connection), await createTestWebauthnChallengesRepo(dbs.connection), await createTestUsersRepo(dbs.connection)),
   auth,
   permissions,
   await makeNotificationsService(dbs, realtime),

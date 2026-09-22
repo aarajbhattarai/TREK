@@ -1,6 +1,9 @@
 import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@mikro-orm/nestjs';
 import crypto from 'crypto';
 import { DatabaseService } from '../database/database.service';
+import { InviteTokens } from '../../db/entities/InviteTokens.entity';
+import type { InviteTokensRepository } from '../../db/repositories/InviteTokens.repository';
 
 /**
  * Registration invites: the tokens an admin hands out so someone can create an
@@ -16,22 +19,32 @@ import { DatabaseService } from '../database/database.service';
  * because the management routes are under /api/admin. Those routes keep their
  * paths and their guards; AdminController now injects this instead of carrying
  * another domain's SQL.
+ *
+ * Plan 3b Task 3: `invite_tokens` reads/writes go through
+ * `InviteTokensRepository` (RI1, RI4–RI7). RI2/RI3 (`trips`) stay on
+ * `DatabaseService` — `trips` is `nest/trips`' table, not this domain's, and
+ * Plan 3c is the one that builds a `TripsRepository`; building a shim one
+ * here would be exactly the "manual synchronization" this migration exists
+ * to remove (same carve-out shape as Plan 3a's `addons.service.ts`
+ * `listTripsForInvite`/`createInvite`'s trip-binding validation, documented
+ * at the inventory's §6).
  */
 @Injectable()
 export class RegistrationInvitesService {
-  constructor(private readonly db: DatabaseService) {}
+  constructor(
+    private readonly db: DatabaseService,
+    @InjectRepository(InviteTokens) private readonly inviteTokens: InviteTokensRepository,
+  ) {}
 
+  /** RI1 — `InviteTokensRepository.listWithCreatorAndTrip()`'s joined projection. */
   async listInvites() {
-    return this.db.all(`
-    SELECT i.*, u.username as created_by_name, t.title as trip_title
-    FROM invite_tokens i
-    JOIN users u ON i.created_by = u.id
-    LEFT JOIN trips t ON i.trip_id = t.id
-    ORDER BY i.created_at DESC
-  `);
+    return this.inviteTokens.listWithCreatorAndTrip();
   }
 
-  /** Trips an admin can bind an invite to — id + title only, for the picker (#1402). */
+  /**
+   * Trips an admin can bind an invite to — id + title only, for the picker
+   * (#1402). RI2 — stays raw on `DatabaseService` (see the class docstring).
+   */
   async listTripsForInvite() {
     return this.db.all('SELECT id, title FROM trips ORDER BY title COLLATE NOCASE ASC');
   }
@@ -49,6 +62,7 @@ export class RegistrationInvitesService {
 
     // Optional trip binding: only persist a trip that actually exists, so a stale
     // or forged id can never bind (and never auto-adds anyone on registration).
+    // RI3 — stays raw on `DatabaseService` (see the class docstring).
     let tripId: number | null = null;
     if (data.trip_id != null && String(data.trip_id).trim() !== '') {
       const parsed = Number.parseInt(String(data.trip_id));
@@ -60,27 +74,29 @@ export class RegistrationInvitesService {
       tripId = parsed;
     }
 
-    const ins = this.db.run(
-      'INSERT INTO invite_tokens (token, max_uses, expires_at, created_by, trip_id) VALUES (?, ?, ?, ?, ?)',
-      token, uses, expiresAt, createdBy, tripId,
-    );
+    // RI4: the write. RI5: the same joined re-select RI1 projects, filtered
+    // to the new row — `insertInvite`'s column set already matches this
+    // INSERT exactly (Task 0).
+    const created = await this.inviteTokens.insertInvite({ token, max_uses: uses, expires_at: expiresAt, created_by: createdBy, trip_id: tripId });
+    const invite = await this.inviteTokens.findWithCreatorAndTrip(created.id);
 
-    const inviteId = Number(ins.lastInsertRowid);
-    const invite = this.db.get(`
-    SELECT i.*, u.username as created_by_name, t.title as trip_title
-    FROM invite_tokens i
-    JOIN users u ON i.created_by = u.id
-    LEFT JOIN trips t ON i.trip_id = t.id
-    WHERE i.id = ?
-  `, inviteId);
-
-    return { invite, inviteId, uses, expiresInDays: data.expires_in_days ?? null, tripId };
+    return { invite, inviteId: created.id, uses, expiresInDays: data.expires_in_days ?? null, tripId };
   }
 
   async deleteInvite(id: string) {
-    const invite = this.db.get('SELECT id FROM invite_tokens WHERE id = ?', id);
-    if (!invite) return { error: 'Invite not found', status: 404 };
-    this.db.run('DELETE FROM invite_tokens WHERE id = ?', id);
+    // A non-numeric id can never match an `invite_tokens.id` row — resolved
+    // here rather than handed to the repository as `NaN` (SQLite's driver
+    // has no representation for it as a bind parameter; the legacy raw
+    // statement tolerated a non-numeric string bind and simply matched no
+    // row, so the 404 below reproduces that same observable outcome without
+    // routing an invalid value into the query layer).
+    const numericId = Number(id);
+    // RI6 — the 404 check.
+    if (!Number.isInteger(numericId) || (await this.inviteTokens.findIdById(numericId)) === null) {
+      return { error: 'Invite not found', status: 404 };
+    }
+    // RI7.
+    await this.inviteTokens.deleteById(numericId);
     return {};
   }
 }

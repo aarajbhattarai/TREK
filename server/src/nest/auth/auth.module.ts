@@ -3,6 +3,9 @@ import { Module } from '@nestjs/common';
 import { MikroOrmModule } from '@mikro-orm/nestjs';
 import { AppSettings } from '../../db/entities/AppSettings.entity';
 import { Users } from '../../db/entities/Users.entity';
+import { WebauthnCredentials } from '../../db/entities/WebauthnCredentials.entity';
+import { WebauthnChallenges } from '../../db/entities/WebauthnChallenges.entity';
+import { InviteTokens } from '../../db/entities/InviteTokens.entity';
 import { TokensModule } from '../tokens/tokens.module';
 import { AuthPublicController } from './auth-public.controller';
 import { AuthController } from './auth.controller';
@@ -69,9 +72,12 @@ import { AllowedFileTypesModule } from '../files/allowed-file-types.module';
     // AppSettings/Users: AuthService/UserProfileService each pass their own
     // AppSettingsRepository/UsersRepository to instance-api-keys.ts's
     // resolveApiKey/readInstanceApiKey/writeInstanceApiKey now (Plan 3a Task
-    // 5) — everything else either service still reads/writes is raw SQL
-    // through DatabaseService (auth's own conversion is a later plan).
-    MikroOrmModule.forFeature([AppSettings, Users])],
+    // 5). WebauthnCredentials/WebauthnChallenges: PasskeyService (Plan 3b
+    // Task 3). InviteTokens: RegistrationInvitesService (Plan 3b Tasks 0/3)
+    // — everything else either service still reads/writes is raw SQL
+    // through DatabaseService (AuthService's own conversion is a later
+    // task).
+    MikroOrmModule.forFeature([AppSettings, Users, WebauthnCredentials, WebauthnChallenges, InviteTokens])],
   controllers: [AuthPublicController, AuthController, PasskeyController],
   providers: [AuthService, UserProfileService, RegistrationInvitesService, PasskeyService, UserCleanupService, WebauthnConfigService, AuthMcp],
   exports: [AuthService, RegistrationInvitesService, PasskeyService, UserCleanupService],

@@ -39,8 +39,16 @@ const { db } = vi.hoisted(() => {
   tmp.exec('CREATE TABLE trips (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT, user_id INTEGER);');
   tmp.exec('CREATE TABLE places (id INTEGER PRIMARY KEY AUTOINCREMENT, trip_id INTEGER);');
   tmp.exec('CREATE TABLE trip_files (id INTEGER PRIMARY KEY AUTOINCREMENT, trip_id INTEGER, message_id INTEGER);');
+  // `used_count`, not `uses`: this hand-rolled fixture had drifted from the
+  // real migrated `invite_tokens` schema (`Migration20200101003500_create_invite_tokens`)
+  // — the legacy raw-SQL `RegistrationInvitesService` never named the column
+  // explicitly (its INSERT relied on the table's own DEFAULT, its re-select
+  // used `i.*`), so the drift stayed invisible. `InviteTokensRepository
+  // .insertInvite` (Plan 3b) writes through entity metadata, which does
+  // name every column explicitly — surfacing the drift as `no such column:
+  // used_count`. Fixed at the source (the fixture), not worked around.
   tmp.exec(`CREATE TABLE invite_tokens (id INTEGER PRIMARY KEY AUTOINCREMENT, token TEXT NOT NULL,
-    max_uses INTEGER, uses INTEGER DEFAULT 0, expires_at TEXT, created_by INTEGER NOT NULL,
+    max_uses INTEGER, used_count INTEGER DEFAULT 0, expires_at TEXT, created_by INTEGER NOT NULL,
     trip_id INTEGER, created_at DATETIME DEFAULT CURRENT_TIMESTAMP);`);
   tmp.exec(`CREATE TABLE packing_templates (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL,
     created_by INTEGER NOT NULL, created_at DATETIME DEFAULT CURRENT_TIMESTAMP);`);
