@@ -42,13 +42,23 @@ export function createMcpMetadataMiddleware(
   // helper and its rejection is handed to next() — the same error path a
   // synchronous throw took before (recipe R1.5).
   return (req, res, next) => {
-    void withRequestContext(orm, async () => {
-      if (req.path.startsWith('/.well-known/') && !(await addons.isAddonEnabled(ADDON_IDS.MCP))) {
-        res.status(404).end();
-        return;
-      }
+    if (!req.path.startsWith('/.well-known/')) {
       meta.getMetaRouter()(req, res, next);
-    }).catch(next);
+      return;
+    }
+    // Only the addon read needs an ORM request context: this middleware sits
+    // before Nest's per-request EntityManager fork (a pathless pre-init
+    // app.use), and wrapping the router delegation too would fork an unused
+    // EntityManager for every request the server answers.
+    void withRequestContext(orm, () => addons.isAddonEnabled(ADDON_IDS.MCP))
+      .then((enabled) => {
+        if (!enabled) {
+          res.status(404).end();
+          return;
+        }
+        meta.getMetaRouter()(req, res, next);
+      })
+      .catch(next);
   };
 }
 

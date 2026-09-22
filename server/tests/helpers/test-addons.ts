@@ -29,21 +29,6 @@ import type { AppSettingsRepository } from '../../src/db/repositories/AppSetting
  * Nest's real DI graph (task-2-review.md I2's fix, carried forward for this
  * domain).
  */
-export async function createTestAddonsRepo(db: Database.Database): Promise<AddonsRepository> {
-  const t = await sharedTestOrm(db);
-  return t.repo(Addons) as AddonsRepository;
-}
-
-export async function createTestPhotoProvidersRepo(db: Database.Database): Promise<PhotoProvidersRepository> {
-  const t = await sharedTestOrm(db);
-  return t.repo(PhotoProviders) as PhotoProvidersRepository;
-}
-
-export async function createTestPhotoProviderFieldsRepo(db: Database.Database): Promise<PhotoProviderFieldsRepository> {
-  const t = await sharedTestOrm(db);
-  return t.repo(PhotoProviderFields) as PhotoProviderFieldsRepository;
-}
-
 /**
  * The full `AddonsService` a hand-constructed test collaborator needs, bound
  * to the suite's own better-sqlite3 handle.
