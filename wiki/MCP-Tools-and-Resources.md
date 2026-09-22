@@ -31,7 +31,7 @@ Requires `trips:read` or `trips:write` scope.
 | Tool | Description |
 |---|---|
 | `list_trips` | List all trips you own or are a member of. Supports `include_archived` flag. |
-| `create_trip` | Create a trip with title, dates, and currency. Days are auto-generated from the date range. |
+| `create_trip` | Create a trip with title, dates, and currency. Days are auto-generated from the date range. Without a currency the trip takes your display currency (Settings → General, or the admin's User Defaults preset), and EUR when that is left on *Trip currency*; see [Currencies](Currencies). |
 | `update_trip` | Update a trip's title, description, dates, or currency. |
 | `search_cover_images` | Search Unsplash for candidate cover photos and return their URLs, thumbnails and photographer credits. Nothing is saved; pass the chosen photo's URL to `update_trip` as `cover_image`. |
 | `delete_trip` | Delete a trip. Owner only. Requires `trips:delete`. |
