@@ -50,7 +50,9 @@ export function createMcpMetadataMiddleware(
     // before Nest's per-request EntityManager fork (a pathless pre-init
     // app.use), and wrapping the router delegation too would fork an unused
     // EntityManager for every request the server answers.
-    void withRequestContext(orm, () => addons.isAddonEnabled(ADDON_IDS.MCP))
+    // Promise.resolve: the helper returns whatever the callback returns, and a
+    // test double may answer the addon read synchronously.
+    void Promise.resolve(withRequestContext(orm, () => addons.isAddonEnabled(ADDON_IDS.MCP)))
       .then((enabled) => {
         if (!enabled) {
           res.status(404).end();
