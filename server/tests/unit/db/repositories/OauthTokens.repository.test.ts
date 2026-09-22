@@ -165,6 +165,10 @@ describe('OauthTokensRepository', () => {
       expect(await tokens.findParent(childId)).toEqual({ id: childId, parent_token_id: rootId });
       expect(await tokens.findParent(rootId)).toEqual({ id: rootId, parent_token_id: null });
     });
+
+    it('OAUTHTOKREPO-007b: an unknown id is null', async () => {
+      expect(await tokens.findParent(999999)).toBeNull();
+    });
   });
 
   describe('collectChainIds (OA18) — recursive CTE, proven against the legacy raw statement', () => {
@@ -366,6 +370,15 @@ describe('OauthTokensRepository', () => {
       expect(rows.map((r) => r.client_name)).toEqual(['Client B', 'Client A']);
       expect(rows[0].scopes).toBeDefined();
     });
+
+    it('OAUTHTOKREPO-022c: created_at NULL comes back null, not undefined (coverage: rule 16)', async () => {
+      const { user } = createUser(testDb);
+      seedClient(user.id, 'proto-22null');
+      const id = seedToken({ clientId: 'proto-22null', userId: user.id });
+      testDb.prepare('UPDATE oauth_tokens SET created_at = NULL WHERE id = ?').run(id);
+      const rows = await tokens.listActiveByUser(user.id);
+      expect(rows[0].created_at).toBeNull();
+    });
   });
 
   describe('findOwnedById (OA27)', () => {
@@ -397,6 +410,15 @@ describe('OauthTokensRepository', () => {
       const rows = await tokens.listAllActiveWithClientAndUser();
       expect(rows).toHaveLength(1);
       expect(rows[0]).toMatchObject({ client_name: 'Client A', username: 'admin-panel-a', user_id: a.id });
+    });
+
+    it('OAUTHTOKREPO-025b: created_at NULL comes back null, not undefined (coverage: rule 16)', async () => {
+      const { user } = createUser(testDb, { username: 'admin-panel-null' });
+      seedClient(user.id, 'proto-25null', 'Client Null');
+      const id = seedToken({ clientId: 'proto-25null', userId: user.id });
+      testDb.prepare('UPDATE oauth_tokens SET created_at = NULL WHERE id = ?').run(id);
+      const rows = await tokens.listAllActiveWithClientAndUser();
+      expect(rows.find((r) => r.id === id)?.created_at).toBeNull();
     });
   });
 

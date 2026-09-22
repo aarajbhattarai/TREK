@@ -58,4 +58,8 @@ describe('toRowId', () => {
   it('ROWID-011: rejects a number one past MAX_SAFE_INTEGER (2**53)', () => {
     expect(toRowId(2 ** 53)).toBeNull();
   });
+
+  it('ROWID-012: rejects a digits-only STRING one past MAX_SAFE_INTEGER (coverage: the string branch\'s own safe-integer check)', () => {
+    expect(toRowId('9007199254740993')).toBeNull();
+  });
 });

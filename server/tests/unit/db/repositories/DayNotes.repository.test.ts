@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createSnapshotTestDb } from '../../../helpers/db-mock';
 import { resetTestDb } from '../../../helpers/test-db';
 import { createTestOrm, type TestOrm } from '../../../helpers/test-orm';
@@ -47,5 +47,15 @@ describe('DayNotesRepository timestamps', () => {
     const row = await notes.createNote({ day_id: day.id, trip_id: trip.id, text: 'Lunch', time: null, icon: '📝', sort_order: 0, color: null });
     const d = testDb.prepare('SELECT date(created_at) AS d FROM day_notes WHERE id = ?').get(row.id) as { d: string };
     expect(d.d).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+
+  it('NOTEREPO-004: throws when the read-back after insert finds no row (coverage: the guard branch)', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const day = createDay(testDb, trip.id);
+    const spy = vi.spyOn(notes, 'findOne').mockResolvedValueOnce(null);
+    await expect(notes.createNote({ day_id: day.id, trip_id: trip.id, text: 'Ghost', time: null, icon: null, sort_order: 0, color: null }))
+      .rejects.toThrow('createNote: read-back after insert found no row');
+    spy.mockRestore();
   });
 });

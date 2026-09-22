@@ -652,7 +652,10 @@ export class OidcService implements OnModuleDestroy {
     let user = await this.usersRepo.findByOidcIdentity(sub, config.issuer);
     if (!user) {
       // Never link/log-in to a guest (#1362) via its synthetic email.
-      user = await this.usersRepo.findByEmailCI(email);
+      // `email` is already JS-lowered above (O4 shape) — findByEmailLoweredBind
+      // mirrors the legacy `LOWER(email) = ?` statement exactly; do not use
+      // findByEmailCI here, it is AU12's `LOWER(email) = LOWER(?)` shape.
+      user = await this.usersRepo.findByEmailLoweredBind(email);
     }
 
     if (user) {

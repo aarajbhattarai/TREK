@@ -258,6 +258,52 @@ describe('Registration — whitespace normalization', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Registration / login — non-ASCII case folding (program rule 18, Plan 3b
+// Task 7 review H1: register('JOSÉ@x.com') then login with the exact stored
+// spelling used to 401, and a duplicate registration used to 500 instead of
+// 409, because the repository lowered the column with SQLite's ASCII-only
+// LOWER() and the bound value with JS's full-Unicode toLowerCase().
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('Registration / login — non-ASCII case folding (H1)', () => {
+  it('AUTH-NONASCII-1 — register a non-ASCII email, then log in with the exact stored spelling: 201, then 200', async () => {
+    const register = await request(app).post('/api/auth/register').send({
+      username: 'joseuser',
+      email: 'JOSÉ@x.com',
+      password: 'Str0ng!Pass',
+    });
+    expect(register.status).toBe(201);
+
+    const login = await request(app).post('/api/auth/login').send({ email: 'JOSÉ@x.com', password: 'Str0ng!Pass' });
+    expect(login.status).toBe(200);
+    expect(login.body.user.email).toBe('JOSÉ@x.com');
+  });
+
+  it('AUTH-NONASCII-2 — registering the same non-ASCII email again returns 409, not 500', async () => {
+    const first = await request(app).post('/api/auth/register').send({
+      username: 'joseuser2',
+      email: 'JOSÉ2@x.com',
+      password: 'Str0ng!Pass',
+    });
+    expect(first.status).toBe(201);
+
+    const second = await request(app).post('/api/auth/register').send({
+      username: 'differentname',
+      email: 'JOSÉ2@x.com',
+      password: 'Str0ng!Pass',
+    });
+    expect(second.status).toBe(409);
+    expect(second.body.error).toBeDefined();
+  });
+
+  it('AUTH-NONASCII-3 — an ASCII-only account is unaffected (control)', async () => {
+    const { user, password } = createUser(testDb, { email: 'ROOT@example.com' });
+    const login = await request(app).post('/api/auth/login').send({ email: user.email, password });
+    expect(login.status).toBe(200);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Session / Me
 // ─────────────────────────────────────────────────────────────────────────────
 

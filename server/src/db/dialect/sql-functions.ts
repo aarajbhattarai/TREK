@@ -77,16 +77,26 @@ export function columnIncrementedBy(platform: Platform, ref: string, amount: num
 
 /**
  * A case-insensitive column reference, for use as a filter's object key:
- * `{ [lower(platform, 'email')]: value.toLowerCase() }` produces
- * `WHERE LOWER(email) = ?`. This is the parity-preserving equivalent of the
- * legacy `LOWER(col) = LOWER(?)` sites (`AuthService`/`OidcService`/
- * `UserProfileService`'s username/email CI lookups): the caller lowercases
- * the bound value itself (every one of this migration's call sites already
- * does, via `String.prototype.toLowerCase`), so the comparison is between
- * two already-lowercased values either way — SQLite's `LOWER()` is ASCII-only
- * exactly like `toLowerCase()` is for the identifier characters these
- * columns hold (usernames/emails), so the two spellings agree on every
- * input this codebase stores.
+ * `{ [lower(platform, 'email')]: <value-side> }` produces
+ * `WHERE LOWER(email) = <value-side>`.
+ *
+ * **SQLite's `LOWER()` is ASCII-only; JavaScript's `String.prototype
+ * .toLowerCase()` is full-Unicode.** They do NOT agree on every input this
+ * codebase stores — a locally-registered e-mail can carry any non-whitespace
+ * character (`EMAIL_REGEX`), including non-ASCII letters (program rule 18;
+ * Plan 3b Task 7 review, H1: `JOSÉ@x.com` proved a live login lockout). Two
+ * value-side shapes are legitimate, and they are NOT interchangeable:
+ *
+ * - `LOWER(col) = LOWER(?)` — pair with `lowerParam()` below, binding the
+ *   RAW value. Both sides are folded by the SAME engine (SQLite's), so they
+ *   agree on every input. This is the shape for every legacy
+ *   `LOWER(col) = LOWER(?)` statement (AU9, AU12, UP5, UP6, O12).
+ * - `LOWER(col) = ?` — pair with a value the CALLER has already lowered in
+ *   JS (`value.toLowerCase()`) as a plain string, matching a legacy
+ *   `LOWER(col) = ?` statement exactly (only O4 today —
+ *   `OidcService.findOrCreateUser` JS-lowers the email once upfront and the
+ *   legacy statement it replaced never re-lowered it in SQL). Do not use
+ *   this shape for a value the caller has not already lowered.
  *
  * Typed `RawQueryFragment & symbol` (not the bare `RawQueryFragment` the
  * other helpers in this file return): TypeScript only accepts a
@@ -97,6 +107,23 @@ export function columnIncrementedBy(platform: Platform, ref: string, amount: num
  */
 export function lower(platform: Platform, ref: string): RawQueryFragment & symbol {
   if (platform instanceof SqlitePlatform) return raw(`LOWER(${column(ref)})`);
+  return unsupported(platform);
+}
+
+/**
+ * The value-side twin of `lower()`: `LOWER(?)` bound with the RAW,
+ * untransformed value, for the right-hand side of a `lower(platform, col)`
+ * filter key. Together they render `LOWER(<column>) = LOWER(?)`,
+ * byte-for-byte a legacy `LOWER(col) = LOWER(?)` statement, because SQLite
+ * folds BOTH sides with the same (ASCII-only) engine — proven directly
+ * against `better-sqlite3`: `SELECT LOWER(?)` on `'JOSÉ@x.com'` yields
+ * `'josÉ@x.com'` (only the ASCII letters fold; the `É` is untouched), the
+ * same transform SQLite would apply to a stored column. Do NOT pre-lower
+ * the value in JS before calling this (program rule 18) — that reintroduces
+ * the mixed-engine bug this helper exists to close.
+ */
+export function lowerParam(platform: Platform, value: string): RawQueryFragment {
+  if (platform instanceof SqlitePlatform) return raw('LOWER(?)', [value]);
   return unsupported(platform);
 }
 

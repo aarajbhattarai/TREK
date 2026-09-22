@@ -135,6 +135,15 @@ export class OauthClientsRepository extends TrekRepository<OauthClients> {
     );
     return rows.map((row) => ({
       id: row.id as string,
+      // `row.user?.id`'s `?? null` fallback is unreachable THROUGH THIS
+      // METHOD specifically: the query already filters `{ user: userId }`
+      // on a concrete, non-null `userId`, so every returned row's `user`
+      // relation is populated by construction — `findPublicById` below is
+      // the id-scoped sibling that genuinely reads an anonymous (NULL
+      // `user_id`) client and exercises this same shape's null branch.
+      // Kept for type-shape symmetry with that sibling, not dead by
+      // mistake (the `countNonGuest`/`COALESCE(is_guest, 0)` precedent
+      // above is the same kind of defensive-but-unreachable fallback).
       user_id: row.user?.id ?? null,
       name: row.name,
       client_id: row.client_id,

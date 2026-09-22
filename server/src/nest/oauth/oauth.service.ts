@@ -548,6 +548,12 @@ export class OauthService {
     sessionId: number,
     ip?: string | null,
   ): Promise<{ error?: string; status?: number; success?: boolean }> {
+    // `sessionId` is already a `number` here — `oauth-api.controller.ts`'s
+    // `DELETE /api/oauth/sessions/:id` calls `Number(id)` before this method
+    // (byte-identical to the legacy route), so `toRowId` only guards against
+    // `NaN`/a non-safe-integer, never narrows a string shape (Task 7 review,
+    // B-I2/A-M2's "pre-coerced Number() seam" — see `row-id.ts`'s own
+    // docstring). This is full parity, not the accepted-narrowing shape.
     const id = toRowId(sessionId);
     if (id === null) return { error: 'Session not found', status: 404 };
 

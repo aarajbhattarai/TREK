@@ -5,7 +5,7 @@ import { resetTestDb } from '../../../helpers/test-db';
 import { createTestOrm, type TestOrm } from '../../../helpers/test-orm';
 import { createUser } from '../../../helpers/factories';
 import { Users } from '../../../../src/db/entities/Users.entity';
-import { columnIncrementedBy, columnRef, currentTimestamp, dateAdd, dateOf, lower } from '../../../../src/db/dialect/sql-functions';
+import { columnIncrementedBy, columnRef, currentTimestamp, dateAdd, dateOf, lower, lowerParam } from '../../../../src/db/dialect/sql-functions';
 
 const testDb = createSnapshotTestDb();
 let t: TestOrm;
@@ -74,6 +74,7 @@ describe('sql-functions (sqlite)', () => {
     expect(() => columnRef(foreign, 'u.max_uses')).toThrow(/no implementation for platform FakePlatform/);
     expect(() => columnIncrementedBy(foreign, 'u.used_count', 1)).toThrow(/no implementation for platform FakePlatform/);
     expect(() => lower(foreign, 'u.email')).toThrow(/no implementation for platform FakePlatform/);
+    expect(() => lowerParam(foreign, 'x')).toThrow(/no implementation for platform FakePlatform/);
   });
 
   // Plan 3b Task 1: UsersRepository's CI (case-insensitive) lookups
@@ -173,5 +174,49 @@ describe('sql-functions (sqlite)', () => {
     t.clear();
     const stored = testDb.prepare('SELECT created_at FROM users WHERE id = ?').get(user.id) as { created_at: string };
     expect(stored.created_at).toMatch(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/);
+  });
+
+  // Program rule 18 / Plan 3b Task 7 review H1: SQLite's LOWER() is
+  // ASCII-only; JavaScript's toLowerCase() is full-Unicode. lowerParam()
+  // binds the RAW value so SQLite folds both sides of the comparison with
+  // the same engine, matching a legacy `LOWER(col) = LOWER(?)` statement.
+  it('SQLF-014: SQLite LOWER() is ASCII-only, unlike JS toLowerCase() — verified directly', () => {
+    const cases: Array<[string, string]> = [
+      ['JOSÉ@x.com', 'josÉ@x.com'],
+      ['ÄNNA@x.com', 'Änna@x.com'],
+      ['ΣIGMA@x.com', 'Σigma@x.com'],
+      ['İSTANBUL@x.com', 'İstanbul@x.com'],
+      ['ASCII@x.com', 'ascii@x.com'],
+    ];
+    for (const [input, sqliteLowered] of cases) {
+      const row = testDb.prepare('SELECT LOWER(?) as l').get(input) as { l: string };
+      expect(row.l).toBe(sqliteLowered);
+      // Every non-ASCII case proves the two engines disagree.
+      if (input !== 'ASCII@x.com') {
+        expect(row.l).not.toBe(input.toLowerCase());
+      }
+    }
+  });
+
+  it('SQLF-015: lowerParam pairs with lower() to fold BOTH sides in SQLite, matching a non-ASCII stored spelling that toLowerCase() would miss', async () => {
+    const { user } = createUser(testDb, { email: 'JOSÉ@x.com' });
+    const platform = t.em.getPlatform();
+
+    // The exact stored spelling matches (SQLite's LOWER() is a no-op on both
+    // sides for this input, so this is really an equality check — the real
+    // proof is the next assertion).
+    const exact = await t.em.findOne(Users, { [lower(platform, 'email')]: lowerParam(platform, 'JOSÉ@x.com') });
+    expect(exact?.id).toBe(user.id);
+
+    // A JS-lowered value-side bind (the bug: mixing engines) must NOT match
+    // — this is the mutation-proof: reverting `lowerParam(platform, email)`
+    // to a plain `email.toLowerCase()` bind makes this assertion fail
+    // because SQLite's LOWER(column) still reads 'josÉ@x.com', which does
+    // not equal the JS-lowered bind 'josé@x.com'.
+    const jsLowered = await t.em.findOne(Users, { [lower(platform, 'email')]: 'josé@x.com' });
+    expect(jsLowered).toBeNull();
+
+    const none = await t.em.findOne(Users, { [lower(platform, 'email')]: lowerParam(platform, 'nobody@example.com') });
+    expect(none).toBeNull();
   });
 });

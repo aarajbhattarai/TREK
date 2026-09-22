@@ -161,6 +161,19 @@ describe('UsersRepository', () => {
       testDb.prepare('UPDATE users SET is_guest = 1 WHERE id = ?').run(user.id);
       expect(await users.findIdByEmailOrUsernameCI('guest1@example.com', 'guest1')).toBeNull();
     });
+
+    // Program rule 18 / Plan 3b Task 7 review H1: SQLite's LOWER() is
+    // ASCII-only; JS's toLowerCase() is full-Unicode. Mutation-proved by
+    // reverting the repository's `lowerParam(platform, email)` bind back to
+    // a plain `email.toLowerCase()` — this then fails, because the column
+    // stays folded by SQLite's LOWER() ('josÉ@x.com') while the JS-lowered
+    // bind is 'josé@x.com'.
+    it('USERSREPO-014b: matches the exact stored non-ASCII spelling; a JS-lowered spelling does not match', async () => {
+      const { user } = createUser(testDb, { email: 'JOSÉ@x.com', username: 'plainname' });
+      expect(await users.findIdByEmailOrUsernameCI('JOSÉ@x.com', 'no-match')).toBe(user.id);
+      expect(await users.findIdByEmailOrUsernameCI('JOSÉ@X.COM', 'no-match')).toBe(user.id);
+      expect(await users.findIdByEmailOrUsernameCI('josé@x.com', 'no-match')).toBeNull();
+    });
   });
 
   describe('insertUser (AU10/O14)', () => {
@@ -234,9 +247,21 @@ describe('UsersRepository', () => {
 
       t.em.clear(); // discard the still-pending unflushed entity before the next test
     });
+
+    it('USERSREPO-057D: throws when the read-back after insert finds no row (coverage: the guard branch)', async () => {
+      const spy = vi.spyOn(users, 'findById').mockResolvedValueOnce(null);
+      await expect(users.insertUser({
+        username: 'ghostuser',
+        email: 'ghost@example.com',
+        password_hash: 'hashed',
+        role: 'user',
+        first_seen_version: '1.2.3',
+      })).rejects.toThrow('insertUser: read-back after insert found no row');
+      spy.mockRestore();
+    });
   });
 
-  describe('findByEmailCI (AU12/O4)', () => {
+  describe('findByEmailCI (AU12) — AuthService.loginUser', () => {
     it('USERSREPO-018: matches case-insensitively, excludes guests, returns the full row', async () => {
       const { user } = createUser(testDb, { email: 'Case.Test@Example.com' });
       const row = await users.findByEmailCI('case.test@example.com');
@@ -249,6 +274,48 @@ describe('UsersRepository', () => {
       const { user } = createUser(testDb, { email: 'guest2@example.com' });
       testDb.prepare('UPDATE users SET is_guest = 1 WHERE id = ?').run(user.id);
       expect(await users.findByEmailCI('guest2@example.com')).toBeNull();
+    });
+
+    // Program rule 18 / Plan 3b Task 7 review H1. Mutation-proved by
+    // reverting the repository's `lowerParam(platform, email)` bind back to
+    // `email.toLowerCase()` — then USERSREPO-018b's second assertion fails
+    // (401 lockout reproduced at the repository level: the exact stored
+    // spelling stops matching).
+    it('USERSREPO-018b: matches the exact stored non-ASCII spelling; a JS-lowered spelling does not match', async () => {
+      const { user } = createUser(testDb, { email: 'JOSÉ@x.com' });
+      const exact = await users.findByEmailCI('JOSÉ@x.com');
+      expect(exact?.id).toBe(user.id);
+      const asciiRecase = await users.findByEmailCI('JOSÉ@X.COM');
+      expect(asciiRecase?.id).toBe(user.id);
+      expect(await users.findByEmailCI('josé@x.com')).toBeNull();
+    });
+  });
+
+  describe('findByEmailLoweredBind (O4) — OidcService.findOrCreateUser, caller already JS-lowers', () => {
+    it('USERSREPO-018c: matches an already-lowered bind against a mixed-case stored email, excludes guests', async () => {
+      const { user } = createUser(testDb, { email: 'Case.Test@Example.com' });
+      const row = await users.findByEmailLoweredBind('case.test@example.com');
+      expect(row?.id).toBe(user.id);
+      expect(await users.findByEmailLoweredBind('nope@example.com')).toBeNull();
+    });
+
+    it('USERSREPO-018d: a guest with a matching email is not returned', async () => {
+      const { user } = createUser(testDb, { email: 'guest2b@example.com' });
+      testDb.prepare('UPDATE users SET is_guest = 1 WHERE id = ?').run(user.id);
+      expect(await users.findByEmailLoweredBind('guest2b@example.com')).toBeNull();
+    });
+
+    // O4's own legacy shape: `LOWER(email) = ?` — SQLite only lowers the
+    // COLUMN; the caller's already-lowered bind is compared as-is. A stored
+    // non-ASCII email folds to 'josÉ@x.com' under SQLite's ASCII-only
+    // LOWER(); a JS-lowered bind of the exact same spelling is
+    // 'josé@x.com' — genuinely different strings, so THIS method correctly
+    // does not match it. That is O4's real (pre-existing, unchanged)
+    // behaviour, not a regression — findByEmailCI above is the method
+    // OidcService's non-JS-lowered callers must use instead.
+    it('USERSREPO-018e: a JS-lowered bind against a non-ASCII stored email does not match (this is O4 parity, not a bug)', async () => {
+      createUser(testDb, { email: 'JOSÉ@x.com' });
+      expect(await users.findByEmailLoweredBind('josé@x.com')).toBeNull();
     });
   });
 
@@ -300,12 +367,27 @@ describe('UsersRepository', () => {
     expect(await users.findMeRow(999999)).toBeNull();
   });
 
+  it('USERSREPO-022b: findMeRow — every nullable column comes back null, not undefined, when NULL in the row (coverage: rule 16)', async () => {
+    const { user } = createUser(testDb);
+    testDb.prepare('UPDATE users SET avatar = NULL, oidc_issuer = NULL, created_at = NULL, mfa_enabled = NULL, must_change_password = NULL WHERE id = ?').run(user.id);
+    const row = await users.findMeRow(user.id);
+    expect(row?.avatar).toBeNull();
+    expect(row?.oidc_issuer).toBeNull();
+    expect(row?.created_at).toBeNull();
+    expect(row?.mfa_enabled).toBeNull();
+    expect(row?.must_change_password).toBeNull();
+  });
+
   it('USERSREPO-023: getPasswordHashAndVersion (AU15) reads both columns together', async () => {
     const { user, password: _password } = createUser(testDb);
     testDb.prepare('UPDATE users SET password_version = 2 WHERE id = ?').run(user.id);
     const row = await users.getPasswordHashAndVersion(user.id);
     expect(row?.password_hash).toBe(user.password_hash);
     expect(row?.password_version).toBe(2);
+  });
+
+  it('USERSREPO-023b: getPasswordHashAndVersion returns null for a missing user', async () => {
+    expect(await users.getPasswordHashAndVersion(999999)).toBeNull();
   });
 
   it('USERSREPO-024: setPassword (AU16/AU43) writes hash+version, clears must_change_password, stamps updated_at', async () => {
@@ -344,6 +426,12 @@ describe('UsersRepository', () => {
 
     it('USERSREPO-028: returns null (not a row with a null field) when the user does not exist', async () => {
       expect(await users.getMfaEnabled(999999)).toBeNull();
+    });
+
+    it('USERSREPO-028b: mfa_enabled NULL on the row comes back null on the wrapper (coverage: rule 16)', async () => {
+      const { user } = createUser(testDb);
+      testDb.prepare('UPDATE users SET mfa_enabled = NULL WHERE id = ?').run(user.id);
+      expect(await users.getMfaEnabled(user.id)).toEqual({ mfa_enabled: null });
     });
   });
 
@@ -425,6 +513,13 @@ describe('UsersRepository', () => {
       testDb.prepare('UPDATE users SET is_guest = 1 WHERE id = ?').run(user.id);
       expect(await users.findForPasswordReset('guest3@example.com')).toBeNull();
     });
+
+    it('USERSREPO-036b: oidc_sub NULL on the row comes back null, not undefined (coverage: rule 16)', async () => {
+      const { user } = createUser(testDb, { email: 'reset-null@example.com' });
+      testDb.prepare('UPDATE users SET oidc_sub = NULL WHERE id = ?').run(user.id);
+      const row = await users.findForPasswordReset('reset-null@example.com');
+      expect(row?.oidc_sub).toBeNull();
+    });
   });
 
   it('USERSREPO-037: findResetTarget (AU40) reads the reset-branch projection', async () => {
@@ -432,6 +527,19 @@ describe('UsersRepository', () => {
     testDb.prepare('UPDATE users SET mfa_enabled = 1, mfa_secret = ?, mfa_backup_codes = ?, password_version = 4 WHERE id = ?').run('s', 'c', user.id);
     const row = await users.findResetTarget(user.id);
     expect(row).toEqual({ id: user.id, email: user.email, mfa_enabled: 1, mfa_secret: 's', mfa_backup_codes: 'c', password_version: 4 });
+  });
+
+  it('USERSREPO-037b: findResetTarget — mfa_enabled/mfa_secret/mfa_backup_codes NULL come back null, not undefined (coverage: rule 16)', async () => {
+    const { user } = createUser(testDb);
+    testDb.prepare('UPDATE users SET mfa_enabled = NULL, mfa_secret = NULL, mfa_backup_codes = NULL WHERE id = ?').run(user.id);
+    const row = await users.findResetTarget(user.id);
+    expect(row?.mfa_enabled).toBeNull();
+    expect(row?.mfa_secret).toBeNull();
+    expect(row?.mfa_backup_codes).toBeNull();
+  });
+
+  it('USERSREPO-037c: findResetTarget returns null for a missing user', async () => {
+    expect(await users.findResetTarget(999999)).toBeNull();
   });
 
   it('USERSREPO-038: getPasswordHash (PK15) reads password_hash', async () => {
@@ -500,6 +608,22 @@ describe('UsersRepository', () => {
       testDb.prepare('UPDATE users SET is_guest = 1 WHERE id = ?').run(user.id);
       expect(await users.findIdByUsernameCIAny('anyname')).toBe(user.id); // a guest still matches here
     });
+
+    // Program rule 18 / Plan 3b Task 7 review H1. Mutation-proved by
+    // reverting each method's `lowerParam(platform, username)` bind back to
+    // `username.toLowerCase()` — the exact-spelling assertion then fails.
+    it('USERSREPO-044b: findIdByUsernameCI matches the exact stored non-ASCII spelling; a JS-lowered spelling does not match', async () => {
+      const { user: a } = createUser(testDb, { username: 'ÄNNA' });
+      const { user: b } = createUser(testDb, { username: 'other2' });
+      expect(await users.findIdByUsernameCI('ÄNNA', b.id)).toBe(a.id);
+      expect(await users.findIdByUsernameCI('änna', b.id)).toBeNull();
+    });
+
+    it('USERSREPO-045b: findIdByUsernameCIAny matches the exact stored non-ASCII spelling; a JS-lowered spelling does not match', async () => {
+      const { user } = createUser(testDb, { username: 'ÄNNA2' });
+      expect(await users.findIdByUsernameCIAny('ÄNNA2')).toBe(user.id);
+      expect(await users.findIdByUsernameCIAny('änna2')).toBeNull();
+    });
   });
 
   it('USERSREPO-046: getApiKeyColumns (UP1) reads role + the four key columns', async () => {
@@ -507,6 +631,13 @@ describe('UsersRepository', () => {
     testDb.prepare('UPDATE users SET maps_api_key = ?, openweather_api_key = ?, unsplash_api_key = ?, amap_api_key = ? WHERE id = ?')
       .run('m', 'o', 'u', 'a', user.id);
     expect(await users.getApiKeyColumns(user.id)).toEqual({ role: 'admin', maps_api_key: 'm', openweather_api_key: 'o', unsplash_api_key: 'u', amap_api_key: 'a' });
+  });
+
+  it('USERSREPO-046b: getApiKeyColumns returns null for a missing user; NULL columns come back null (coverage: rule 16)', async () => {
+    expect(await users.getApiKeyColumns(999999)).toBeNull();
+    const { user } = createUser(testDb);
+    // maps_api_key/openweather_api_key/unsplash_api_key/amap_api_key are NULL by default on a fresh user.
+    expect(await users.getApiKeyColumns(user.id)).toEqual({ role: 'user', maps_api_key: null, openweather_api_key: null, unsplash_api_key: null, amap_api_key: null });
   });
 
   it('USERSREPO-047: updateMapsKey (UP2) writes maps_api_key + updated_at', async () => {
@@ -532,11 +663,31 @@ describe('UsersRepository', () => {
     expect(row).toMatchObject({ id: user.id, username: user.username, email: user.email, role: 'user', maps_api_key: 'm', mfa_enabled: 1 });
   });
 
+  it('USERSREPO-049b: findProfileWithKeys returns null for a missing user; every nullable column comes back null (coverage: rule 16)', async () => {
+    expect(await users.findProfileWithKeys(999999)).toBeNull();
+    const { user } = createUser(testDb);
+    testDb.prepare('UPDATE users SET mfa_enabled = NULL WHERE id = ?').run(user.id);
+    const row = await users.findProfileWithKeys(user.id);
+    expect(row).toMatchObject({
+      maps_api_key: null, openweather_api_key: null, unsplash_api_key: null, amap_api_key: null, avatar: null, mfa_enabled: null,
+    });
+  });
+
   it('USERSREPO-050: findIdByEmailCI (UP6) matches case-insensitively, excludes self and guests', async () => {
     const { user: a } = createUser(testDb, { email: 'Dup@Example.com' });
     const { user: b } = createUser(testDb, { email: 'other@example.com' });
     expect(await users.findIdByEmailCI('dup@example.com', b.id)).toBe(a.id);
     expect(await users.findIdByEmailCI('dup@example.com', a.id)).toBeNull();
+  });
+
+  // Program rule 18 / Plan 3b Task 7 review H1 (UP6 profile-rename collision
+  // case). Mutation-proved by reverting `lowerParam(platform, email)` back
+  // to `email.toLowerCase()` — the exact-spelling assertion then fails.
+  it('USERSREPO-050b: findIdByEmailCI matches the exact stored non-ASCII spelling; a JS-lowered spelling does not match', async () => {
+    const { user: a } = createUser(testDb, { email: 'JOSÉ2@x.com' });
+    const { user: b } = createUser(testDb, { email: 'other2@example.com' });
+    expect(await users.findIdByEmailCI('JOSÉ2@x.com', b.id)).toBe(a.id);
+    expect(await users.findIdByEmailCI('josé2@x.com', b.id)).toBeNull();
   });
 
   it('USERSREPO-051: patchProfile (UP7) writes only the given bounded columns + updated_at, in one statement', async () => {
@@ -578,6 +729,12 @@ describe('UsersRepository', () => {
     expect(await users.findProfileBasic(user.id)).toEqual({ id: user.id, username: user.username, email: user.email, role: 'user', avatar: 'a.png' });
   });
 
+  it('USERSREPO-054b: findProfileBasic returns null for a missing user; NULL avatar comes back null (coverage: rule 16)', async () => {
+    expect(await users.findProfileBasic(999999)).toBeNull();
+    const { user } = createUser(testDb);
+    expect((await users.findProfileBasic(user.id))?.avatar).toBeNull();
+  });
+
   describe('listOthersNonGuest (UP14)', () => {
     it('USERSREPO-055: excludes the given id and every guest, ordered by username', async () => {
       const { user: me } = createUser(testDb, { username: 'me' });
@@ -594,5 +751,17 @@ describe('UsersRepository', () => {
     const { user } = createAdmin(testDb);
     testDb.prepare('UPDATE users SET openweather_api_key = ? WHERE id = ?').run('w', user.id);
     expect(await users.getRoleAndWeatherKey(user.id)).toEqual({ role: 'admin', openweather_api_key: 'w' });
+  });
+
+  it('USERSREPO-056b: getRoleAndWeatherKey returns null for a missing user; NULL key comes back null (coverage: rule 16)', async () => {
+    expect(await users.getRoleAndWeatherKey(999999)).toBeNull();
+    const { user } = createUser(testDb);
+    expect(await users.getRoleAndWeatherKey(user.id)).toEqual({ role: 'user', openweather_api_key: null });
+  });
+
+  it('USERSREPO-058: deleteById (UC11) deletes the row', async () => {
+    const { user } = createUser(testDb);
+    await users.deleteById(user.id);
+    expect(testDb.prepare('SELECT id FROM users WHERE id = ?').get(user.id)).toBeUndefined();
   });
 });

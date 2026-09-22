@@ -52,6 +52,14 @@ describe('McpTokensRepository', () => {
       const { user } = createUser(testDb);
       expect(await tokens.listByUserAndKind(user.id, 'api')).toEqual([]);
     });
+
+    it('MCPTOKREPO-002b: created_at NULL comes back null, not undefined (coverage: rule 16)', async () => {
+      const { user } = createUser(testDb);
+      const token = createMcpToken(testDb, user.id, { name: 'null-created', kind: 'mcp' });
+      testDb.prepare('UPDATE mcp_tokens SET created_at = NULL WHERE id = ?').run(token.id);
+      const [row] = await tokens.listByUserAndKind(user.id, 'mcp');
+      expect(row.created_at).toBeNull();
+    });
   });
 
   describe('countByUserAndKind', () => {
@@ -165,6 +173,14 @@ describe('McpTokensRepository', () => {
       expect(await tokens.findBasic(999999)).toBeNull();
     });
 
+    it('MCPTOKREPO-007c: created_at NULL comes back null, not undefined (coverage: rule 16)', async () => {
+      const { user } = createUser(testDb);
+      const created = createMcpToken(testDb, user.id, { name: 'null-created-basic' });
+      testDb.prepare('UPDATE mcp_tokens SET created_at = NULL WHERE id = ?').run(created.id);
+      const row = await tokens.findBasic(created.id);
+      expect(row?.created_at).toBeNull();
+    });
+
     it('MCPTOKREPO-007b: identity-map regression — sees a raw UPDATE on the same id in the same request', async () => {
       const { user } = createUser(testDb);
       const created = createMcpToken(testDb, user.id, { name: 'before' });
@@ -233,6 +249,14 @@ describe('McpTokensRepository', () => {
       createMcpToken(testDb, user.id);
       const rows = await tokens.listAllWithUsername();
       expect(rows.every((r) => !('token_hash' in r))).toBe(true);
+    });
+
+    it('MCPTOKREPO-012c: created_at NULL comes back null, not undefined (coverage: rule 16)', async () => {
+      const { user } = createUser(testDb, { username: 'null-created-user' });
+      const created = createMcpToken(testDb, user.id, { name: 'null-created-list' });
+      testDb.prepare('UPDATE mcp_tokens SET created_at = NULL WHERE id = ?').run(created.id);
+      const rows = await tokens.listAllWithUsername();
+      expect(rows.find((r) => r.id === created.id)?.created_at).toBeNull();
     });
   });
 

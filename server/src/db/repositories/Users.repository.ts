@@ -1,6 +1,6 @@
 import { Users } from '../entities/Users.entity';
 import { toRow, type AssertRowKeys } from './_shared/rows';
-import { columnIncrementedBy, currentTimestamp, lower } from '../dialect/sql-functions';
+import { columnIncrementedBy, currentTimestamp, lower, lowerParam } from '../dialect/sql-functions';
 import { TrekRepository } from './_shared/trek-repository';
 
 /**
@@ -278,12 +278,21 @@ export class UsersRepository extends TrekRepository<Users> {
   /**
    * `SELECT id FROM users WHERE (LOWER(email) = LOWER(?) OR LOWER(username) = LOWER(?))
    *  AND COALESCE(is_guest, 0) = 0`
+   *
+   * Both operands of each comparison are folded by SQLite's own `LOWER()`
+   * (`lowerParam` binds the RAW value) — never a JS-lowered bind. SQLite's
+   * `LOWER()` is ASCII-only; `String.prototype.toLowerCase()` is
+   * full-Unicode, and mixing them locks out any non-ASCII cased identifier
+   * (program rule 18; Plan 3b Task 7 review, H1).
    */
   async findIdByEmailOrUsernameCI(email: string, username: string): Promise<number | null> {
     const platform = this.getEntityManager().getPlatform();
     const row = await this.findOne(
       {
-        $or: [{ [lower(platform, 'email')]: email.toLowerCase() }, { [lower(platform, 'username')]: username.toLowerCase() }],
+        $or: [
+          { [lower(platform, 'email')]: lowerParam(platform, email) },
+          { [lower(platform, 'username')]: lowerParam(platform, username) },
+        ],
         is_guest: 0,
       },
       { fields: ['id'] },
@@ -342,10 +351,39 @@ export class UsersRepository extends TrekRepository<Users> {
   // AU12 / O4 — email lookup (login + OIDC email-fallback)
   // ---------------------------------------------------------------------
 
-  /** `SELECT * FROM users WHERE LOWER(email) = LOWER(?) AND COALESCE(is_guest, 0) = 0` */
+  /**
+   * `SELECT * FROM users WHERE LOWER(email) = LOWER(?) AND COALESCE(is_guest, 0) = 0`
+   * — AU9's sibling for AU12 (`AuthService.loginUser`, `auth.service.ts`).
+   *
+   * Both sides folded by SQLite's own `LOWER()` (`lowerParam` binds the
+   * RAW, untransformed email) — the legacy statement lowered BOTH operands
+   * in SQL, so a JS-lowered bind here would disagree with the column on
+   * every non-ASCII cased character (program rule 18; Plan 3b Task 7
+   * review, H1: a `JOSÉ@x.com` account could register but never log back
+   * in). Distinct from `findByEmailLoweredBind` below, which mirrors O4's
+   * different legacy statement — do not collapse the two back into one
+   * method (D4).
+   */
   async findByEmailCI(email: string): Promise<UserRow | null> {
     const platform = this.getEntityManager().getPlatform();
-    const user = await this.findOne({ [lower(platform, 'email')]: email.toLowerCase(), is_guest: 0 });
+    const user = await this.findOne({ [lower(platform, 'email')]: lowerParam(platform, email), is_guest: 0 });
+    return user ? (toRow(user) as UserRow) : null;
+  }
+
+  /**
+   * `SELECT * FROM users WHERE LOWER(email) = ? AND COALESCE(is_guest, 0) = 0`
+   * — O4 (`OidcService.findOrCreateUser`, `oidc.service.ts:655`), whose only
+   * caller JS-lowers the email itself (`oidc.service.ts:620`,
+   * `userInfo.email.trim().toLowerCase()`) before calling this method,
+   * exactly mirroring the legacy statement's `LOWER(email) = ?` (SQL
+   * `LOWER()` on the column, a bind the CALLER already lowered — not a
+   * second SQL `LOWER()` on the value side). Do not point a caller that has
+   * NOT already lowered its value at this method — use `findByEmailCI`
+   * above instead.
+   */
+  async findByEmailLoweredBind(alreadyLoweredEmail: string): Promise<UserRow | null> {
+    const platform = this.getEntityManager().getPlatform();
+    const user = await this.findOne({ [lower(platform, 'email')]: alreadyLoweredEmail, is_guest: 0 });
     return user ? (toRow(user) as UserRow) : null;
   }
 
@@ -595,7 +633,16 @@ export class UsersRepository extends TrekRepository<Users> {
   // PK15 — re-auth before passkey deletion
   // ---------------------------------------------------------------------
 
-  /** `SELECT password_hash FROM users WHERE id = ?` */
+  /**
+   * `SELECT password_hash FROM users WHERE id = ?`
+   *
+   * The `?? null` fallback's own "row present but `password_hash` itself
+   * null" branch is unreachable: `password_hash TEXT NOT NULL` in the
+   * baseline schema (never relaxed by a later migration) — the same
+   * defensive-but-unreachable shape as `countNonGuest`'s `COALESCE(is_guest,
+   * 0)` above. The `?.`/`??` combination still earns its keep for the
+   * "row missing" case (`?.` alone would leave `undefined`, not `null`).
+   */
   async getPasswordHash(id: number): Promise<string | null> {
     const row = await this.findOne({ id }, { fields: ['password_hash'] });
     return row?.password_hash ?? null;
@@ -665,11 +712,14 @@ export class UsersRepository extends TrekRepository<Users> {
    * `SELECT id FROM users WHERE LOWER(username) = LOWER(?) AND id != ?
    *  AND COALESCE(is_guest, 0) = 0` (UP5, `updateSettings`'s own-username
    * collision check).
+   *
+   * Both sides folded by SQLite's own `LOWER()` (`lowerParam` binds the RAW
+   * value) — program rule 18.
    */
   async findIdByUsernameCI(username: string, excludeId: number): Promise<number | null> {
     const platform = this.getEntityManager().getPlatform();
     const row = await this.findOne(
-      { [lower(platform, 'username')]: username.toLowerCase(), id: { $ne: excludeId }, is_guest: 0 },
+      { [lower(platform, 'username')]: lowerParam(platform, username), id: { $ne: excludeId }, is_guest: 0 },
       { fields: ['id'] },
     );
     return row?.id ?? null;
@@ -681,11 +731,17 @@ export class UsersRepository extends TrekRepository<Users> {
    * a genuinely different WHERE than UP5's, so a separate method per D4
    * rather than an optional parameter that would silently change UP5's
    * shape.
+   *
+   * Both sides folded by SQLite's own `LOWER()` (`lowerParam` binds the RAW
+   * value) — program rule 18. The only caller sanitises the username to
+   * `[a-zA-Z0-9_.-]` before calling (`oidc.service.ts`), so this cannot
+   * diverge in practice today; fixed anyway so the guarantee lives in the
+   * method, not the caller.
    */
   async findIdByUsernameCIAny(username: string): Promise<number | null> {
     const platform = this.getEntityManager().getPlatform();
     const row = await this.findOne(
-      { [lower(platform, 'username')]: username.toLowerCase() },
+      { [lower(platform, 'username')]: lowerParam(platform, username) },
       { fields: ['id'] },
     );
     return row?.id ?? null;
@@ -771,11 +827,16 @@ export class UsersRepository extends TrekRepository<Users> {
   // UP6 — email collision check
   // ---------------------------------------------------------------------
 
-  /** `SELECT id FROM users WHERE LOWER(email) = LOWER(?) AND id != ? AND COALESCE(is_guest, 0) = 0` */
+  /**
+   * `SELECT id FROM users WHERE LOWER(email) = LOWER(?) AND id != ? AND COALESCE(is_guest, 0) = 0`
+   *
+   * Both sides folded by SQLite's own `LOWER()` (`lowerParam` binds the RAW
+   * value) — program rule 18.
+   */
   async findIdByEmailCI(email: string, excludeId: number): Promise<number | null> {
     const platform = this.getEntityManager().getPlatform();
     const row = await this.findOne(
-      { [lower(platform, 'email')]: email.toLowerCase(), id: { $ne: excludeId }, is_guest: 0 },
+      { [lower(platform, 'email')]: lowerParam(platform, email), id: { $ne: excludeId }, is_guest: 0 },
       { fields: ['id'] },
     );
     return row?.id ?? null;
@@ -870,11 +931,15 @@ export class UsersRepository extends TrekRepository<Users> {
    * `DELETE FROM users WHERE id = ?` — `UserCleanupService.deleteUserCompletely`'s
    * final statement, the root of its 13-table transaction
    * (**security-sensitive**: account erasure). Named `deleteById`, not
-   * `remove`/`delete`: `EntityRepository#remove` is a real (persist-marking,
-   * needs-a-`flush()`) method on the base class — shadowing it would change
-   * its signature and behaviour; `deleteById` matches the naming this
-   * program already uses for a native, immediate delete
-   * (`McpTokensRepository.deleteById`).
+   * `remove`/`delete`: `remove` is `EntityManager`'s (persist-marking,
+   * needs-a-`flush()`), not `EntityRepository`'s — MikroORM 7.2.1's
+   * `EntityRepository` has no `remove` method at all (Task 7 review, L1;
+   * verified against the installed `.d.ts`, not assumed — that is why
+   * `OauthClientsRepository.remove`/`TagsRepository.remove`/
+   * `CategoriesRepository.remove` compile as their own, unrelated methods).
+   * `deleteById` is chosen for naming consistency with this program's other
+   * native, immediate deletes (`McpTokensRepository.deleteById`), not to
+   * avoid a compiler conflict that does not exist.
    */
   async deleteById(id: number): Promise<void> {
     await this.nativeDelete({ id });

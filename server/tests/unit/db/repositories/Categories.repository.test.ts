@@ -121,6 +121,14 @@ describe('CategoriesRepository', () => {
       expect(row.color).toBe('literal-color');
       expect(row.icon).toBe('literal-icon');
     });
+
+    it('CATREPO-010b: throws when the read-back after insert finds no row (coverage: the guard branch)', async () => {
+      const { user } = createUser(testDb);
+      const spy = vi.spyOn(categories, 'findById').mockResolvedValueOnce(null);
+      await expect(categories.createCategory({ name: 'Ghost', color: '#000000', icon: '👻', user_id: user.id }))
+        .rejects.toThrow('createCategory: read-back after insert found no row');
+      spy.mockRestore();
+    });
   });
 
   describe('patch', () => {
@@ -150,6 +158,10 @@ describe('CategoriesRepository', () => {
 
     it('CATREPO-014: returns null for a non-existent id', async () => {
       expect(await categories.patch(99999999, { name: 'Nope' })).toBeNull();
+    });
+
+    it('CATREPO-014b: an empty changes object against a non-existent id returns null via the existence-check branch (coverage)', async () => {
+      expect(await categories.patch(99999999, {})).toBeNull();
     });
 
     // Task 3 review, Important 1, consequence (a) — and Minor 1: the

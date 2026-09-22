@@ -6,6 +6,7 @@ import { createUser } from '../../../helpers/factories';
 import { WebauthnCredentials } from '../../../../src/db/entities/WebauthnCredentials.entity';
 import type { WebauthnCredentialsRepository } from '../../../../src/db/repositories/WebauthnCredentials.repository';
 import { UnitOfWork } from '../../../../src/nest/database/unit-of-work';
+import { withRequestContext } from '../../../../src/nest/database/request-context';
 
 const testDb = createSnapshotTestDb();
 let t: TestOrm;
@@ -154,6 +155,15 @@ describe('WebauthnCredentialsRepository', () => {
       expect(row).not.toHaveProperty('public_key');
     });
 
+    it('WEBAUTHN-CRED-REPO-006b: name/created_at NULL come back null, not undefined (coverage: rule 16)', async () => {
+      const { user } = createUser(testDb);
+      const cred = insertCredential(user.id, { name: null });
+      testDb.prepare('UPDATE webauthn_credentials SET created_at = NULL WHERE id = ?').run(cred.id);
+      const row = await creds.findCreatedCredential(cred.credential_id as string);
+      expect(row?.name).toBeNull();
+      expect(row?.created_at).toBeNull();
+    });
+
     it('WEBAUTHN-CRED-REPO-007: findCreatedCredential is null for an unknown credential_id', async () => {
       expect(await creds.findCreatedCredential('no-such-cred')).toBeNull();
     });
@@ -243,24 +253,40 @@ describe('WebauthnCredentialsRepository', () => {
   });
 
   describe('identity-map isolation (coordinator ruling — stale-write-back bug class)', () => {
+    // Task 7 review, M1: the D-shape needs the nativeUpdate's target column
+    // (`counter`) in the FIRST, WIDER projection and absent from the
+    // SECOND, narrower one — a stale write-back only reverts a column the
+    // second read's snapshot doesn't already carry fresh. The original
+    // ordering here (narrow existsByCredentialId first, wide
+    // findByCredentialId second) had it backwards: findByCredentialId's own
+    // re-snapshot of `counter` left that column clean, so the mutation this
+    // test exists to catch (reverting `disableIdentityMap: true` back to
+    // `refresh: true` in the base class's three read overrides) passed
+    // anyway. `findByCredentialId` (wide, carries `counter`) now goes FIRST
+    // and `existsByCredentialId` (narrow, `fields: ['id']`, no `counter`)
+    // second — mutation-proven load-bearing in the fix report. Also now
+    // wrapped in `withRequestContext` (the reads previously ran at
+    // describe-body top level, outside any request context).
     it('WEBAUTHN-CRED-REPO-017: a nativeUpdate inside uow.transactional is not discarded by a stale entity read earlier under a different projection', async () => {
       const { user } = createUser(testDb);
       const cred = insertCredential(user.id, { counter: 1 });
       const uow = new UnitOfWork(t.em);
 
-      // Projection A — narrow existence probe (PK6's shape: existsByCredentialId).
-      await creds.existsByCredentialId(cred.credential_id as string);
-      // Projection B — full row, same request context (PK9's shape: findByCredentialId).
-      const before = await creds.findByCredentialId(cred.credential_id as string);
-      expect(before!.counter).toBe(1);
+      await withRequestContext(t.orm, async () => {
+        // Projection A — wide, full row, carries `counter` (PK9's shape: findByCredentialId).
+        const before = await creds.findByCredentialId(cred.credential_id as string);
+        expect(before!.counter).toBe(1);
+        // Projection B — narrow existence probe, no `counter` (PK6's shape: existsByCredentialId).
+        await creds.existsByCredentialId(cred.credential_id as string);
 
-      // The write these two reads sit alongside in the same request — PK11's
-      // shape: a nativeUpdate on a row this request already read twice under
-      // different projections, inside uow.transactional (whose closing flush
-      // is exactly where the coordinator's ruling says a stale identity-mapped
-      // entity would silently overwrite this write).
-      await uow.transactional(async () => {
-        await creds.updateCounterAndLastUsed(cred.id, 99);
+        // The write these two reads sit alongside in the same request — PK11's
+        // shape: a nativeUpdate on a row this request already read twice under
+        // different projections, inside uow.transactional (whose closing flush
+        // is exactly where the coordinator's ruling says a stale identity-mapped
+        // entity would silently overwrite this write).
+        await uow.transactional(async () => {
+          await creds.updateCounterAndLastUsed(cred.id, 99);
+        });
       });
 
       // Read again through a THIRD projection after the transaction commits

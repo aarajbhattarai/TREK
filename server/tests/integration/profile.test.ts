@@ -100,6 +100,34 @@ describe('PUT /api/auth/me/settings (F3)', () => {
     expect(row.username).toBe('after-name');
     expect(row.email).toBe('after@example.test');
   });
+
+  // Program rule 18 / Plan 3b Task 7 review H1 — UP6's own-rename collision
+  // check (findIdByEmailCI) must fold both sides of a non-ASCII identifier
+  // with the same engine. (UP5's username collision check, findIdByUsernameCI,
+  // is exercised at the repository level — USERSREPO-044b — since the
+  // username field itself is ASCII-only by the service's own validation
+  // regex, `^[a-zA-Z0-9_.-]+$`, so a non-ASCII collision can never reach
+  // this route.)
+  it('PROFILE-016b — renaming to a non-ASCII email that collides with ANOTHER user still 409s; renaming to one\'s own exact non-ASCII spelling succeeds', async () => {
+    createUser(testDb, { email: 'JOSÉ-OTHER@x.com' });
+    const { user } = createUser(testDb, { email: 'plain-self@example.test' });
+
+    // Differs from the stored spelling only in ASCII-letter case (the accented
+    // 'É' is kept as-is — SQLite's LOWER() never touches it): SQLite's own
+    // LOWER() folds both to the same string, so this must still collide.
+    const collideEmail = await request(app)
+      .put('/api/auth/me/settings')
+      .set('Cookie', authCookie(user.id))
+      .send({ email: 'JOSÉ-OTHER@X.COM' });
+    expect(collideEmail.status).toBe(409);
+
+    // Renaming self to a non-ASCII spelling that collides with nobody else succeeds.
+    const ownRename = await request(app)
+      .put('/api/auth/me/settings')
+      .set('Cookie', authCookie(user.id))
+      .send({ email: 'JOSÉ-SELF@x.com' });
+    expect(ownRename.status).toBe(200);
+  });
 });
 
 describe('Avatar', () => {

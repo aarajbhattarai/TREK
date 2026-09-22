@@ -161,6 +161,16 @@ describe('update', () => {
     expect(updated.name).toBe('NewName');
     expect(updated.color).toBe('#dddddd');
   });
+
+  // Coverage: B-H1 Class C (Plan 3b Task 7 review). The route's own getById
+  // pre-check 404s a non-numeric id before update()/remove() are ever
+  // reached in production — this calls the service method directly,
+  // bypassing that pre-check, to exercise the toRowId guard's own no-op
+  // branch (the race-condition path the pre-check doesn't cover).
+  it('CAT-SVC-013b — update with a non-numeric id no-ops (toRowId guard, called directly)', async () => {
+    const updated = await svc.update('abc', 'ShouldNotApply', '#000000', '🚫');
+    expect(updated).toBeUndefined();
+  });
 });
 
 // ── remove ────────────────────────────────────────────────────────────────────
@@ -175,5 +185,13 @@ describe('remove', () => {
 
   it('CAT-SVC-015 — deleting a non-existent category does not throw', async () => {
     await expect(svc.remove(99999)).resolves.not.toThrow();
+  });
+
+  // Coverage: B-H1 Class C, see CAT-SVC-013b's comment.
+  it('CAT-SVC-015b — remove with a non-numeric id no-ops (toRowId guard, called directly)', async () => {
+    const { user } = createUser(testDb);
+    const cat = await svc.create(user.id, 'Untouched');
+    await expect(svc.remove('abc')).resolves.not.toThrow();
+    expect(await svc.getById(cat.id)).toBeDefined();
   });
 });

@@ -1737,10 +1737,17 @@ export function writeRepositoriesIfMissing(repositoriesDir: string, files: Reado
     const className = fileName.replace(/\.entity\.ts$/, '');
     const repoFile = path.join(repositoriesDir, `${className}.repository.ts`);
     if (fs.existsSync(repoFile)) continue;
+    // `TrekRepository`, never the raw `EntityRepository` (program RULING,
+    // Plan 3b Task 1 — every repository validates the request context and
+    // defaults reads to `disableIdentityMap: true`; Task 7 review H2): a
+    // scaffold on the bare base class silently opts the next table out of
+    // both guarantees, with nothing to catch it. See
+    // `_shared/trek-repository.ts` and the `instanceof TrekRepository`
+    // ratchet in `tests/unit/db/entities-index.test.ts`.
     const content =
       `import type { ${className} } from '../entities/${className}.entity';\n` +
-      `import { EntityRepository } from '@mikro-orm/sql';\n\n` +
-      `export class ${className}Repository extends EntityRepository<${className}> {}\n`;
+      `import { TrekRepository } from './_shared/trek-repository';\n\n` +
+      `export class ${className}Repository extends TrekRepository<${className}> {}\n`;
     fs.writeFileSync(repoFile, content);
     created.push(repoFile);
   }

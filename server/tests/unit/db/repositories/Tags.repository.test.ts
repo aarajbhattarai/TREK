@@ -92,10 +92,15 @@ describe('TagsRepository', () => {
       expect(entity?.user.isInitialized()).toBe(false);
     });
 
-    // Plan 3b Task 1 fix round (task-1-review.md B1): findByIdAndUser
-    // carries `disableIdentityMap: true` (via the shared findOwnedByUser
-    // helper) — always re-queries and merges fresh data, in one query, and
-    // never lands in the request's identity map.
+    // Task 7 review, B-L3: this pins "one query, fresh value" — it does NOT
+    // isolate the `disableIdentityMap: true` ruling from a plain `refresh:
+    // true` re-query, and it should not claim to. `findByIdAndUser`'s
+    // filter is `(id, user_id)`, not the bare PK (`owned-lookup.ts`'s
+    // `findOwnedByUser`), so it is not PK-only and always re-queries either
+    // way — the real D-shape (identity-map write-back) proof lives on
+    // `WEBAUTHN-CRED-REPO-017`/`OAUTHCLIENTREPO-016`/`INVREPO-017`, which
+    // mutation-prove `disableIdentityMap: true` specifically. Same honesty
+    // `SETTINGSREPO-012`'s comment already carries for the same reason.
     it('TAGREPO-009: a raw UPDATE on the same row then findByIdAndUser reads the new value, in one query', async () => {
       const { user } = createUser(testDb);
       const created = createTag(testDb, user.id, { name: 'Stale', color: '#111111' });
@@ -122,6 +127,14 @@ describe('TagsRepository', () => {
       const { user } = createUser(testDb);
       const row = await tags.createTag({ user_id: user.id, name: 'NoDefault', color: 'literal-color' });
       expect(row.color).toBe('literal-color');
+    });
+
+    it('TAGREPO-011b: throws when the read-back after insert finds no row (coverage: the guard branch)', async () => {
+      const { user } = createUser(testDb);
+      const spy = vi.spyOn(tags, 'findOne').mockResolvedValueOnce(null);
+      await expect(tags.createTag({ user_id: user.id, name: 'Ghost', color: '#000000' }))
+        .rejects.toThrow('createTag: read-back after insert found no row');
+      spy.mockRestore();
     });
   });
 
@@ -152,6 +165,26 @@ describe('TagsRepository', () => {
 
     it('TAGREPO-015: returns null for a non-existent id', async () => {
       expect(await tags.patch(99999999, { name: 'Nope' })).toBeNull();
+    });
+
+    it('TAGREPO-015b: an empty changes object leaves every column untouched (coverage: the existence-check branch)', async () => {
+      const { user } = createUser(testDb);
+      const created = createTag(testDb, user.id, { name: 'Unchanged', color: '#eeeeee' });
+      const before = rawTag(created.id);
+      const updated = await tags.patch(created.id, {});
+      expect(updated).toStrictEqual(before);
+    });
+
+    it('TAGREPO-015c: an empty changes object against a non-existent id returns null via the existence-check branch (coverage)', async () => {
+      expect(await tags.patch(99999999, {})).toBeNull();
+    });
+
+    it('TAGREPO-015d: the row vanishing between the update and the final re-read returns null (race-condition guard, coverage)', async () => {
+      const { user } = createUser(testDb);
+      const created = createTag(testDb, user.id, { name: 'RaceTarget' });
+      const spy = vi.spyOn(tags, 'findOne').mockResolvedValueOnce(null);
+      expect(await tags.patch(created.id, { name: 'ShouldNotMatter' })).toBeNull();
+      spy.mockRestore();
     });
 
     // Task 3 review, Important 1, consequence (a) — and Minor 1: the

@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createSnapshotTestDb } from '../../../helpers/db-mock';
 import { resetTestDb } from '../../../helpers/test-db';
 import { createTestOrm, type TestOrm } from '../../../helpers/test-orm';
@@ -75,5 +75,14 @@ describe('DaysRepository', () => {
     expect(row).toStrictEqual(rawDay(row.id));
     expect(row.notes).toBeNull();
     expect(row.trip_id).toBe(trip.id);
+  });
+
+  it('DAYREPO-006b: throws when the read-back after insert finds no row (coverage: the guard branch)', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const spy = vi.spyOn(days, 'findOne').mockResolvedValueOnce(null);
+    await expect(days.createDay({ trip_id: trip.id, day_number: 1, date: null, notes: null }))
+      .rejects.toThrow('createDay: read-back after insert found no row');
+    spy.mockRestore();
   });
 });

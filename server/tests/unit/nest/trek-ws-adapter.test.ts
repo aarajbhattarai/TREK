@@ -313,6 +313,46 @@ describe('TrekWsAdapter D6 request context on connect (Plan 3b Task 0)', () => {
       await t.close();
     }
   });
+
+  // Task 7 review, A-L2 (T1-F7b, open since Task 1): handleConnection is
+  // async and the 'connection' listener is not — a rejection inside the
+  // wrapped callback used to be an unhandled rejection with no trace.
+  it('WSAD-054: a rejecting connection callback is caught and logged through the adapter\'s error path, not an unhandled rejection', async () => {
+    const t = await createTestOrm(testDb, { allowGlobalContext: false });
+    try {
+      logError.mockClear();
+      const ad = new TrekWsAdapter({} as HttpServer, t.orm);
+      const socket = fakeSocket();
+      ad.bindClientConnect(connectServer(socket, { url: '/ws?token=abc' }) as never, async () => {
+        throw new Error('handleConnection blew up');
+      });
+      // The listener itself must not throw synchronously (the rejection
+      // surfaces asynchronously, through .catch(), not as a thrown error).
+      await new Promise((resolve) => setImmediate(resolve));
+      expect(logError).toHaveBeenCalledWith(expect.stringContaining('handleConnection blew up'));
+    } finally {
+      await t.close();
+    }
+  });
+
+  // Coverage: the `err instanceof Error ? … : String(err)` fallback branch,
+  // never exercised by WSAD-054's real Error throw.
+  it('WSAD-054b: a connection callback rejecting with a non-Error value is still caught and logged (String(err) fallback)', async () => {
+    const t = await createTestOrm(testDb, { allowGlobalContext: false });
+    try {
+      logError.mockClear();
+      const ad = new TrekWsAdapter({} as HttpServer, t.orm);
+      const socket = fakeSocket();
+      ad.bindClientConnect(connectServer(socket, { url: '/ws?token=abc' }) as never, async () => {
+        // Deliberately a non-Error throw, to prove the String(err) fallback.
+        throw 'not-an-error-value';
+      });
+      await new Promise((resolve) => setImmediate(resolve));
+      expect(logError).toHaveBeenCalledWith(expect.stringContaining('not-an-error-value'));
+    } finally {
+      await t.close();
+    }
+  });
 });
 
 /**
@@ -357,6 +397,43 @@ describe('TrekWsAdapter D6 request context on disconnect (Task 0 review addendum
       await captured;
       expect(caught).toBeUndefined();
       expect(Array.isArray(result)).toBe(true);
+    } finally {
+      await t.close();
+    }
+  });
+
+  // Task 7 review, A-L2 (T1-F7b) — the disconnect twin of WSAD-054.
+  it('WSAD-055: a rejecting disconnect callback is caught and logged through the adapter\'s error path, not an unhandled rejection', async () => {
+    const t = await createTestOrm(testDb, { allowGlobalContext: false });
+    try {
+      logError.mockClear();
+      const ad = new TrekWsAdapter({} as HttpServer, t.orm);
+      const socket = fakeSocket();
+      ad.bindClientDisconnect(socket as never, async () => {
+        throw new Error('handleDisconnect blew up');
+      });
+      socket.emit('close', Buffer.from(''));
+      await new Promise((resolve) => setImmediate(resolve));
+      expect(logError).toHaveBeenCalledWith(expect.stringContaining('handleDisconnect blew up'));
+    } finally {
+      await t.close();
+    }
+  });
+
+  // Coverage: the disconnect twin of WSAD-054b's String(err) fallback branch.
+  it('WSAD-055b: a disconnect callback rejecting with a non-Error value is still caught and logged (String(err) fallback)', async () => {
+    const t = await createTestOrm(testDb, { allowGlobalContext: false });
+    try {
+      logError.mockClear();
+      const ad = new TrekWsAdapter({} as HttpServer, t.orm);
+      const socket = fakeSocket();
+      ad.bindClientDisconnect(socket as never, async () => {
+        // Deliberately a non-Error throw, to prove the String(err) fallback.
+        throw 'not-an-error-value-disconnect';
+      });
+      socket.emit('close', Buffer.from(''));
+      await new Promise((resolve) => setImmediate(resolve));
+      expect(logError).toHaveBeenCalledWith(expect.stringContaining('not-an-error-value-disconnect'));
     } finally {
       await t.close();
     }

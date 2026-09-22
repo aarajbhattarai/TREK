@@ -45,6 +45,7 @@ import {
   regenerateEntitiesIndex,
   stripHiddenTypeAnnotation,
   stripRedundantColumnType,
+  writeRepositoriesIfMissing,
   type DefaultFixup,
 } from '../../../scripts/generate-entities';
 
@@ -1043,6 +1044,25 @@ describe('checkEntities', () => {
       expect(fs.existsSync(path.join(repoDir, 'X.repository.ts'))).toBe(false); // never writes
     } finally {
       fs.rmSync(dir, { recursive: true, force: true });
+      fs.rmSync(repoDir, { recursive: true, force: true });
+    }
+  });
+
+  // Plan 3b Task 7 review, H2: the generator's scaffold for a NEW repository
+  // must extend TrekRepository, never the bare EntityRepository — the base
+  // class is what wires validateRequestContext() and the
+  // disableIdentityMap:true read default; a repository scaffolded on the
+  // raw base silently opts out of both, with nothing else to catch it.
+  it('SCAFFOLD-001: writeRepositoriesIfMissing scaffolds a NEW repository on TrekRepository, not the bare EntityRepository', () => {
+    const repoDir = fs.mkdtempSync(path.join(os.tmpdir(), 'gen-entities-scaffold-'));
+    try {
+      const created = writeRepositoriesIfMissing(repoDir, new Map([['Widget.entity.ts', 'content']]));
+      expect(created).toEqual([path.join(repoDir, 'Widget.repository.ts')]);
+      const content = fs.readFileSync(path.join(repoDir, 'Widget.repository.ts'), 'utf-8');
+      expect(content).toContain("import { TrekRepository } from './_shared/trek-repository';");
+      expect(content).toContain('export class WidgetRepository extends TrekRepository<Widget> {}');
+      expect(content).not.toContain('EntityRepository');
+    } finally {
       fs.rmSync(repoDir, { recursive: true, force: true });
     }
   });

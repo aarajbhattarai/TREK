@@ -784,6 +784,12 @@ describe('findOrCreateUser', () => {
   it('OIDC-SVC-090: identity linking (O5) leaves the rest of the users row byte-identical', async () => {
     const { user } = createUser(testDb, { email: 'linkrow@example.com', username: 'linkrowuser' });
     testDb.prepare('UPDATE users SET oidc_sub = NULL, oidc_issuer = NULL WHERE id = ?').run(user.id);
+    // Task 6 review L1 / Task 7 review, Task 6 L1: pin updated_at to a fixed
+    // past value before the snapshot so a future `linkOidcIdentity` that
+    // starts stamping updated_at (a CURRENT_TIMESTAMP drift) makes this test
+    // fail loudly, instead of the before/after snapshot racing the mutation
+    // inside the same second and passing by accident.
+    testDb.prepare("UPDATE users SET updated_at = '2020-01-01 00:00:00' WHERE id = ?").run(user.id);
     const before = testDb.prepare('SELECT * FROM users WHERE id = ?').get(user.id) as Record<string, unknown>;
 
     await svc.findOrCreateUser(
@@ -799,6 +805,8 @@ describe('findOrCreateUser', () => {
     const { user } = createUser(testDb, { email: 'switchrow@example.com', username: 'switchrowuser' });
     testDb.prepare('UPDATE users SET oidc_sub = ?, oidc_issuer = ? WHERE id = ?')
       .run('sub-old-row', 'https://old-idp.example.com', user.id);
+    // Task 6 review L1 / Task 7 review, Task 6 L1: see OIDC-SVC-090's comment.
+    testDb.prepare("UPDATE users SET updated_at = '2020-01-01 00:00:00' WHERE id = ?").run(user.id);
     const before = testDb.prepare('SELECT * FROM users WHERE id = ?').get(user.id) as Record<string, unknown>;
 
     await svc.findOrCreateUser(

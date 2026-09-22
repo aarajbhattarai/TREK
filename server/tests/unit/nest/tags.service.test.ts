@@ -148,6 +148,16 @@ describe('update', () => {
     expect(updated.name).toBe('NewName');
     expect(updated.color).toBe('#dddddd');
   });
+
+  // Coverage: B-H1 Class C (Plan 3b Task 7 review). The route's own
+  // getByIdAndUser pre-check 404s a non-numeric id before update()/remove()
+  // are ever reached in production — these call the service methods
+  // directly, bypassing that pre-check, to exercise the toRowId guard's own
+  // no-op branch (the race-condition path the pre-check doesn't cover).
+  it('TAG-SVC-012b — update with a non-numeric id no-ops (toRowId guard, called directly)', async () => {
+    const updated = await svc.update('abc', 'ShouldNotApply', '#000000');
+    expect(updated).toBeUndefined();
+  });
 });
 
 // ── remove ────────────────────────────────────────────────────────────────────
@@ -172,5 +182,13 @@ describe('remove', () => {
     const remaining = await svc.list(user.id);
     expect(remaining).toHaveLength(1);
     expect(remaining[0].id).toBe(t1.id);
+  });
+
+  // Coverage: B-H1 Class C (Plan 3b Task 7 review), see TAG-SVC-012b's comment.
+  it('TAG-SVC-015b — remove with a non-numeric id no-ops (toRowId guard, called directly)', async () => {
+    const { user } = createUser(testDb);
+    const tag = await svc.create(user.id, 'Untouched');
+    await expect(svc.remove('abc')).resolves.not.toThrow();
+    expect(await svc.getByIdAndUser(tag.id, user.id)).toBeDefined();
   });
 });

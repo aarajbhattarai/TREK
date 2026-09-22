@@ -94,6 +94,14 @@ describe('TrekRepository — every overridden path fails closed outside a reques
     await expect(users.findAll()).rejects.toThrow(GLOBAL_CONTEXT_ERROR);
   });
 
+  // Task 7 review, B-L5: mutating `validateRequestContext()` to a no-op
+  // fails 11 of the other 12 fail-closed cases in this describe block — this
+  // one still passes, because MikroORM's own `count()` path throws
+  // `cannotUseGlobalContext` downstream regardless (it reaches the EM's
+  // validating context on its own). The override here is defensive-
+  // redundant for `count` specifically: this test proves end-to-end
+  // behaviour, not that the override itself is load-bearing for this one
+  // method — every other case in this file IS proof the override matters.
   it('TREKREPO-004: count rejects', async () => {
     await expect(users.count({})).rejects.toThrow(GLOBAL_CONTEXT_ERROR);
   });
@@ -132,6 +140,42 @@ describe('TrekRepository — every overridden path fails closed outside a reques
 
   it('TREKREPO-012: getEntityManager() itself rejects', () => {
     expect(() => users.getEntityManager()).toThrow(GLOBAL_CONTEXT_ERROR);
+  });
+
+  // Task 7 review, M4: the seven previously-unoverridden base-class methods
+  // (findOneOrFail/findAndCount/findByCursor/countBy/stream/insertMany/
+  // upsertMany) — none used anywhere in this program today, but the first
+  // one used would silently lose both guarantees with nothing to notice.
+  it('TREKREPO-016: findOneOrFail rejects', async () => {
+    await expect(users.findOneOrFail({ id: 1 })).rejects.toThrow(GLOBAL_CONTEXT_ERROR);
+  });
+
+  it('TREKREPO-017: findAndCount rejects', async () => {
+    await expect(users.findAndCount({})).rejects.toThrow(GLOBAL_CONTEXT_ERROR);
+  });
+
+  it('TREKREPO-018: findByCursor rejects', async () => {
+    await expect(users.findByCursor({ first: 1, orderBy: { id: 'asc' } })).rejects.toThrow(GLOBAL_CONTEXT_ERROR);
+  });
+
+  it('TREKREPO-019: countBy rejects', async () => {
+    await expect(users.countBy('role')).rejects.toThrow(GLOBAL_CONTEXT_ERROR);
+  });
+
+  it('TREKREPO-020: stream rejects', () => {
+    expect(() => users.stream()).toThrow(GLOBAL_CONTEXT_ERROR);
+  });
+
+  it('TREKREPO-021: insertMany rejects', async () => {
+    await expect(
+      users.insertMany([{ username: 'outside-context-many', email: 'outside-many@example.test', password_hash: 'h', role: 'user', first_seen_version: '1.0' }]),
+    ).rejects.toThrow(GLOBAL_CONTEXT_ERROR);
+  });
+
+  it('TREKREPO-022: upsertMany rejects', async () => {
+    await expect(
+      users.upsertMany([{ id: 1, username: 'outside-context-upsert-many' }], { onConflictFields: ['id'], onConflictAction: 'merge' }),
+    ).rejects.toThrow(GLOBAL_CONTEXT_ERROR);
   });
 });
 
@@ -184,6 +228,51 @@ describe('TrekRepository — every overridden path succeeds inside withRequestCo
 
     const row = testDb.prepare('SELECT username FROM users WHERE id = ?').get(user.id) as { username: string };
     expect(row.username).toBe('inside-upserted'); // the upsert's merge is the last write and must stick
+  });
+
+  // Task 7 review, M4 — the same seven methods, inside a request context.
+  it('TREKREPO-023: findOneOrFail/findAndCount/findByCursor/countBy/stream/insertMany/upsertMany all succeed', async () => {
+    const { user } = createUser(testDb, { username: 'm4-before', email: 'm4-before@example.test' });
+
+    await withRequestContext(t.orm, async () => {
+      await expect(users.findOneOrFail({ id: user.id })).resolves.not.toBeNull();
+
+      const [rows, count] = await users.findAndCount({ id: user.id });
+      expect(rows).toHaveLength(1);
+      expect(count).toBe(1);
+
+      const cursor = await users.findByCursor({ first: 1, orderBy: { id: 'asc' } });
+      expect(cursor.items.length).toBeGreaterThan(0);
+
+      const counts = await users.countBy('role');
+      expect(counts['user']).toBeGreaterThan(0);
+
+      const streamed: number[] = [];
+      for await (const row of users.stream({ where: { id: user.id } })) {
+        streamed.push(row.id);
+      }
+      expect(streamed).toEqual([user.id]);
+
+      // SQLite (via better-sqlite3) does not return one primary key per row
+      // for a batch insert — only that it does not throw inside a request
+      // context is what this test proves; the row count is verified below
+      // from the raw table, outside the context.
+      await users.insertMany([
+        { username: 'm4-many-1', email: 'm4-many-1@example.test', password_hash: 'h', role: 'user', first_seen_version: '1.0' },
+        { username: 'm4-many-2', email: 'm4-many-2@example.test', password_hash: 'h', role: 'user', first_seen_version: '1.0' },
+      ]);
+
+      const upserted = await users.upsertMany(
+        [{ id: user.id, username: 'm4-upserted', email: user.email, password_hash: 'h', role: 'user', first_seen_version: '1.0' }],
+        { onConflictFields: ['id'], onConflictAction: 'merge' },
+      );
+      expect(upserted).toHaveLength(1);
+    });
+
+    const row = testDb.prepare('SELECT username FROM users WHERE id = ?').get(user.id) as { username: string };
+    expect(row.username).toBe('m4-upserted');
+    const manyRows = testDb.prepare("SELECT username FROM users WHERE username LIKE 'm4-many-%'").all() as { username: string }[];
+    expect(manyRows).toHaveLength(2);
   });
 });
 

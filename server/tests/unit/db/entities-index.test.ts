@@ -5,6 +5,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { ALL_ENTITIES } from '../../../src/db/entities';
 import { createSnapshotTestDb } from '../../helpers/db-mock';
 import { createTestOrm, type TestOrm } from '../../helpers/test-orm';
+import { TrekRepository } from '../../../src/db/repositories/_shared/trek-repository';
 
 const ENTITIES_DIR = path.join(__dirname, '../../../src/db/entities');
 const REPOSITORIES_DIR = path.join(__dirname, '../../../src/db/repositories');
@@ -80,8 +81,28 @@ describe('ALL_ENTITIES', () => {
         if (!(repo instanceof (RepoClass as abstract new (...args: never[]) => unknown))) {
           failures.push(`${className}: em.getRepository() did not return a ${className}Repository instance`);
         }
+        // Task 7 review, H2 carry-list item 1: the `extends EntityRepository`
+        // ratchet made self-enforcing — every bound repository must also be
+        // a TrekRepository (validateRequestContext + the disableIdentityMap
+        // read default), not just an instance of its own named class.
+        if (!(repo instanceof TrekRepository)) {
+          failures.push(`${className}: em.getRepository() did not return a TrekRepository instance`);
+        }
       }
       expect(failures).toEqual([]);
+    });
+
+    // Task 7 review, H2: a source-scan companion to the instanceof check
+    // above — belt and suspenders against a repository that extends
+    // TrekRepository indirectly (or not through this loop's import path).
+    it('SCAN-001: exactly one repository file extends EntityRepository directly — the base class itself', () => {
+      const files = fs.readdirSync(REPOSITORIES_DIR).filter((f) => f.endsWith('.repository.ts'));
+      const hits: string[] = [];
+      for (const file of files) {
+        const content = fs.readFileSync(path.join(REPOSITORIES_DIR, file), 'utf-8');
+        if (/\bextends\s+EntityRepository\b/.test(content)) hits.push(file);
+      }
+      expect(hits).toEqual([]); // the base class lives in _shared/, not matched by *.repository.ts
     });
   });
 });

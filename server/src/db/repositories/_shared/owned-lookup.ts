@@ -1,4 +1,5 @@
-import type { EntityRepository, FilterQuery, FilterValue, OrderDefinition } from '@mikro-orm/core';
+import type { FilterQuery, FilterValue, OrderDefinition } from '@mikro-orm/core';
+import type { TrekRepository } from './trek-repository';
 
 /**
  * Shared lookup shapes for entities scoped to a user.
@@ -20,6 +21,16 @@ import type { EntityRepository, FilterQuery, FilterValue, OrderDefinition } from
  * missing helper"). If a future entity needs that shape, recover it from
  * git history rather than reintroducing it speculatively.
  *
+ * Typed `repo: TrekRepository<T>` (Task 7 review, A-L3/B-L4 — was the core
+ * `EntityRepository<T>` until this task, the last two places in the
+ * repository tree still restating `disableIdentityMap: true` per call
+ * because the type couldn't see `TrekRepository`'s own validation and read
+ * default): at runtime the argument was always a `TrekRepository` (every
+ * concrete repository extends it), so the guard always fired — this closed
+ * a typing gap, not a safety gap. The two per-call `disableIdentityMap:
+ * true` literals below are gone now that the base class's `find`/`findOne`
+ * overrides supply the same default.
+ *
  * These helpers return live MikroORM entities, not rows — unlike every other
  * repository method in this codebase (D4: "repositories return rows, never a
  * live entity"). They are an internal building block for `TagsRepository`,
@@ -37,8 +48,9 @@ import type { EntityRepository, FilterQuery, FilterValue, OrderDefinition } from
  *   listForOwner<Tags, 'user', 'name'>(tags, 'user', userId, 'name');
  *   findOwnedByUser<Tags, 'user'>(tags, id, 'user', userId);
  *
- * Both helpers pass `disableIdentityMap: true` (Plan 3b Task 1 fix round,
- * supersedes Plan 3a's I1 "`refresh: true` on every PK-only `findOne`" — see
+ * Both helpers get `disableIdentityMap: true` from `TrekRepository`'s own
+ * `find`/`findOne` default now (Plan 3b Task 1 fix round, supersedes Plan
+ * 3a's I1 "`refresh: true` on every PK-only `findOne`" — see
  * `Users.repository.ts`'s class-level docstring and
  * `.superpowers/sdd/2026-09-22-orm-phase3b/task-1-review.md` B1): both are
  * "rows out" reads whose entity is converted via `toRow` and discarded, never
@@ -63,14 +75,13 @@ import type { EntityRepository, FilterQuery, FilterValue, OrderDefinition } from
  * `SELECT * FROM <table> WHERE <ownerField> = ? ORDER BY <orderField> ASC`.
  */
 export async function listForOwner<T extends { id: unknown }, K extends keyof T, OF extends keyof T>(
-  repo: EntityRepository<T>,
+  repo: TrekRepository<T>,
   ownerField: K,
   ownerId: FilterValue<T[K]>,
   orderField: OF,
 ): Promise<T[]> {
   return repo.find({ [ownerField]: ownerId } as FilterQuery<T>, {
     orderBy: { [orderField]: 'asc' } as OrderDefinition<T>,
-    disableIdentityMap: true,
   });
 }
 
@@ -83,10 +94,10 @@ export async function listForOwner<T extends { id: unknown }, K extends keyof T,
  * `assign`+`flush`.
  */
 export async function findOwnedByUser<T extends { id: unknown }, K extends keyof T>(
-  repo: EntityRepository<T>,
+  repo: TrekRepository<T>,
   id: T['id'],
   ownerField: K,
   ownerId: FilterValue<T[K]>,
 ): Promise<T | null> {
-  return repo.findOne({ id, [ownerField]: ownerId } as FilterQuery<T>, { disableIdentityMap: true });
+  return repo.findOne({ id, [ownerField]: ownerId } as FilterQuery<T>);
 }

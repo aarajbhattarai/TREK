@@ -189,7 +189,16 @@ export class TrekWsAdapter extends WsAdapter {
       // The request rides along: the handshake reads the ws token off its query
       // string, so dropping it here would leave handleConnection with nothing
       // to authenticate.
-      withRequestContext(this.orm, () => callback(socket, request));
+      //
+      // `handleConnection` is async and this listener is not — a rejection
+      // inside it (or inside `withRequestContext` itself) would otherwise be
+      // an unhandled rejection (T1-F7b; `applyPlatformUploads`'s `.catch(next)`
+      // in `platform.routes.ts` is the sibling pattern for the pre-init HTTP
+      // path). Logged through the adapter's own error path, not thrown —
+      // there is no request/response here to propagate a failure to.
+      Promise.resolve(withRequestContext(this.orm, () => callback(socket, request))).catch((err: unknown) =>
+        logError(`ws connection handler error: ${err instanceof Error ? err.message : String(err)}`),
+      );
     });
   }
 
@@ -209,7 +218,12 @@ export class TrekWsAdapter extends WsAdapter {
       if (!this.orm) {
         throw new Error('TrekWsAdapter: no MikroORM available to build a request context for this disconnect');
       }
-      withRequestContext(this.orm, () => callback(...args));
+      // Same T1-F7b shape as bindClientConnect above — handleDisconnect is
+      // async and this listener is not, so an unhandled rejection here would
+      // otherwise be silent.
+      Promise.resolve(withRequestContext(this.orm, () => callback(...args))).catch((err: unknown) =>
+        logError(`ws disconnect handler error: ${err instanceof Error ? err.message : String(err)}`),
+      );
     });
   }
 

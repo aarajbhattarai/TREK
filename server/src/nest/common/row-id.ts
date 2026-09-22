@@ -62,6 +62,25 @@
  * not "parity with the legacy". Check which kind of seam a route's legacy
  * handler was (`git show <base>:<file>` on the actual statement, not the
  * route) before writing that test.
+ *
+ * **A THIRD shape narrows nothing at all: a PRE-COERCED `Number()` seam**
+ * (Task 7 review, M2/A-M2). The two `Number()`-seam routes above still hand
+ * `toRowId` the RAW STRING — the legacy code's own `Number(id)` conversion
+ * moved to a repository-facing call site, so `toRowId` sees what the legacy
+ * `Number()` used to see and narrows exactly as described. But on some
+ * routes the legacy's `Number(id)` conversion itself survives UPSTREAM of
+ * `toRowId`, and `toRowId` receives an already-coerced `number`, not the
+ * original string — `oauth-api.controller.ts::revokeSession`'s `DELETE
+ * /api/oauth/sessions/:id` is that shape on both the legacy and the
+ * converted tree: `Number(id)` runs first, `toRowId(Number(id))` only
+ * checks `Number.isSafeInteger`, and the legacy statement never matched a
+ * non-safe-integer either — so `'0x10'`, `'1e1'`, `'16.0'` and `' 16'` all
+ * reach the SAME row on both trees (verified live, Task 7 review security
+ * report). There is no narrowing to name here, and no regression test
+ * should claim one for this shape — record it as "the pre-coerced
+ * `Number()` seam: full parity" and move on, the same way `passkey.service
+ * .ts::adminResetPasskeys` (`:502-507`) already documents its own copy of
+ * this exact shape.
  */
 export function toRowId(value: unknown): number | null {
   if (typeof value === 'number') {

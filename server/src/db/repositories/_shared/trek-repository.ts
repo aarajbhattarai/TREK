@@ -1,11 +1,17 @@
 import {
   EntityRepository,
+  type CountByOptions,
   type CountOptions,
+  type Cursor,
   type DeleteOptions,
+  type Dictionary,
   type EntityData,
+  type EntityKey,
   type FilterQuery,
   type FindAllOptions,
+  type FindByCursorOptions,
   type FindOneOptions,
+  type FindOneOrFailOptions,
   type FindOptions,
   type GetKyselyOptions,
   type Loaded,
@@ -14,7 +20,9 @@ import {
   type QueryBuilder,
   type RequiredEntityData,
   type SqlEntityManager,
+  type StreamOptions,
   type UpdateOptions,
+  type UpsertManyOptions,
   type UpsertOptions,
   type WithUsingOptions,
 } from '@mikro-orm/sql';
@@ -155,6 +163,76 @@ export abstract class TrekRepository<Entity extends object> extends EntityReposi
   override async count<Hint extends string = never>(where?: FilterQuery<Entity>, options?: CountOptions<Entity, Hint>): Promise<number> {
     this.validateRequestContext();
     return super.count(where, options);
+  }
+
+  /**
+   * Task 7 review, M4: `TrekRepository` left seven DB-reaching base-class
+   * methods unoverridden (none used anywhere in this program today —
+   * `grep -rnE "\.(countBy|findAndCount|findByCursor|findOneOrFail|
+   * insertMany|upsertMany|stream)\(" src/db/repositories/` was 0 hits — but
+   * the FIRST one used would silently lose both guarantees: no
+   * `validateRequestContext()`, and — for the read-shaped ones — no
+   * `disableIdentityMap: true` default). Same shape as `findOne`/`find`/
+   * `findAll` above: `Using` dropped for the same override-compatibility
+   * reason documented on `findOne`.
+   */
+  override async findOneOrFail<Hint extends string = never, Fields extends string = never, Excludes extends string = never>(
+    where: FilterQuery<Entity>,
+    options?: FindOneOrFailOptions<Entity, Hint, Fields, Excludes>,
+  ): Promise<Loaded<Entity, Hint, Fields, Excludes>> {
+    this.validateRequestContext();
+    const disableIdentityMap = options?.disableIdentityMap ?? true;
+    return super.findOneOrFail(where, { ...options, disableIdentityMap });
+  }
+
+  override async findAndCount<Hint extends string = never, Fields extends string = never, Excludes extends string = never>(
+    where: FilterQuery<Entity>,
+    options?: FindOptions<Entity, Hint, Fields, Excludes>,
+  ): Promise<[Loaded<Entity, Hint, Fields, Excludes>[], number]> {
+    this.validateRequestContext();
+    const disableIdentityMap = options?.disableIdentityMap ?? true;
+    return super.findAndCount(where, { ...options, disableIdentityMap });
+  }
+
+  override async findByCursor<
+    Hint extends string = never,
+    Fields extends string = never,
+    Excludes extends string = never,
+    IncludeCount extends boolean = true,
+    Using extends string = never,
+  >(
+    options: WithUsingOptions<FindByCursorOptions<Entity, Hint, Fields, Excludes, IncludeCount>, Entity, Using>,
+  ): Promise<Cursor<Entity, Hint, Fields, Excludes, IncludeCount>> {
+    this.validateRequestContext();
+    const disableIdentityMap = options?.disableIdentityMap ?? true;
+    return super.findByCursor({ ...options, disableIdentityMap });
+  }
+
+  /** Grouping counts don't hydrate an entity — no identity map to isolate — so this only needs the fail-closed guard, matching `count` above. */
+  override async countBy(groupBy: EntityKey<Entity> | readonly EntityKey<Entity>[], options?: CountByOptions<Entity>): Promise<Dictionary<number>> {
+    this.validateRequestContext();
+    return super.countBy(groupBy, options);
+  }
+
+  override stream<Hint extends string = never, Fields extends string = never, Excludes extends string = never, Using extends string = never>(
+    options?: WithUsingOptions<StreamOptions<Entity, Hint, Fields, Excludes>, Entity, Using>,
+  ): AsyncIterableIterator<Loaded<Entity, Hint, Fields, Excludes>> {
+    this.validateRequestContext();
+    const disableIdentityMap = options?.disableIdentityMap ?? true;
+    return super.stream({ ...options, disableIdentityMap });
+  }
+
+  override async insertMany(data: Entity[] | RequiredEntityData<Entity>[], options?: NativeInsertUpdateOptions<Entity>): Promise<Primary<Entity>[]> {
+    this.validateRequestContext();
+    return super.insertMany(data, options);
+  }
+
+  override async upsertMany<Fields extends string = never>(
+    entitiesOrData?: EntityData<Entity>[] | Entity[],
+    options?: UpsertManyOptions<Entity, Fields>,
+  ): Promise<Entity[]> {
+    this.validateRequestContext();
+    return super.upsertMany(entitiesOrData, options);
   }
 
   override async nativeUpdate(where: FilterQuery<Entity>, data: EntityData<Entity>, options?: UpdateOptions<Entity>): Promise<number> {

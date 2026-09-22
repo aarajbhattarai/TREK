@@ -5,6 +5,8 @@ import { createTestOrm, type TestOrm } from '../../../helpers/test-orm';
 import { createInviteToken, createTrip, createUser } from '../../../helpers/factories';
 import { InviteTokens } from '../../../../src/db/entities/InviteTokens.entity';
 import type { InviteTokensRepository } from '../../../../src/db/repositories/InviteTokens.repository';
+import { UnitOfWork } from '../../../../src/nest/database/unit-of-work';
+import { withRequestContext } from '../../../../src/nest/database/request-context';
 
 const testDb = createSnapshotTestDb();
 let t: TestOrm;
@@ -198,6 +200,42 @@ describe('InviteTokensRepository', () => {
 
       expect(rawInvite(gone.id)).toBeUndefined();
       expect(rawInvite(keep.id)).toBeDefined();
+    });
+  });
+
+  // Task 7 review, M2: InviteTokensRepository had no D-shape identity-map
+  // test at all, although `findByToken`/`insertInvite`'s own docstrings
+  // both cite the disableIdentityMap-not-refresh ruling. The shape: wide
+  // findByToken (carries used_count) first, narrow findIdById (`fields:
+  // ['id']`, no used_count) second, then a nativeUpdate-equivalent write
+  // (incrementUsedCount, via the QueryBuilder) inside uow.transactional —
+  // this repository is a Plan-3b-created one on a public, unauthenticated
+  // route (GET /api/auth/invite/:token) that also runs inside
+  // registerUser's transaction.
+  describe('identity-map isolation (D-shape, program RULING)', () => {
+    it('INVREPO-017: incrementUsedCount inside uow.transactional is not discarded by a stale entity read earlier under a different projection', async () => {
+      const { user: admin } = createUser(testDb, { username: 'invrepo-017-admin' });
+      const invite = createInviteToken(testDb, { token: 'invrepo-017', max_uses: 5, created_by: admin.id });
+      const uow = new UnitOfWork(t.em);
+
+      await withRequestContext(t.orm, async () => {
+        // Projection A — wide, full row, carries used_count.
+        const before = await invites.findByToken('invrepo-017');
+        expect(before!.used_count).toBe(0);
+        // Projection B — narrow, `fields: ['id']`, no used_count.
+        await invites.findIdById(invite.id);
+
+        await uow.transactional(async () => {
+          await invites.incrementUsedCount('invrepo-017');
+        });
+      });
+
+      // A column only the wide read carried (`max_uses`) must be unchanged,
+      // and the write itself must have stuck.
+      const after = await invites.findByToken('invrepo-017');
+      expect(after!.used_count).toBe(1);
+      expect(after!.max_uses).toBe(5);
+      expect((rawInvite(invite.id) as { used_count: number }).used_count).toBe(1);
     });
   });
 });

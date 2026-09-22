@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createSnapshotTestDb } from '../../../helpers/db-mock';
 import { resetTestDb } from '../../../helpers/test-db';
 import { createTestOrm, type TestOrm } from '../../../helpers/test-orm';
@@ -65,6 +65,14 @@ describe('OauthClientsRepository', () => {
       const { user } = createUser(testDb);
       expect(await clients.listByUser(user.id)).toEqual([]);
     });
+
+    it('OAUTHCLIENTREPO-002b: created_at NULL comes back null, not undefined (coverage: rule 16)', async () => {
+      const { user } = createUser(testDb);
+      const { id } = seedClient({ userId: user.id, name: 'null-created' });
+      testDb.prepare('UPDATE oauth_clients SET created_at = NULL WHERE id = ?').run(id);
+      const rows = await clients.listByUser(user.id);
+      expect(rows[0].created_at).toBeNull();
+    });
   });
 
   describe('countByUser / countAnonymous (OA2/OA3)', () => {
@@ -117,6 +125,17 @@ describe('OauthClientsRepository', () => {
       expect(raw.client_secret_hash).toBe('secrethash');
     });
 
+    it('OAUTHCLIENTREPO-005b: findPublicById is null for an unknown id', async () => {
+      expect(await clients.findPublicById('nope')).toBeNull();
+    });
+
+    it('OAUTHCLIENTREPO-005c: findPublicById — created_at NULL comes back null, not undefined (coverage: rule 16)', async () => {
+      const { id } = seedClient({ name: 'null-created-public' });
+      testDb.prepare('UPDATE oauth_clients SET created_at = NULL WHERE id = ?').run(id);
+      const row = await clients.findPublicById(id);
+      expect(row?.created_at).toBeNull();
+    });
+
     it('OAUTHCLIENTREPO-006: insertClient writes a NULL user_id for anonymous DCR clients', async () => {
       const row = await clients.insertClient({
         id: 'client-row-2',
@@ -131,6 +150,23 @@ describe('OauthClientsRepository', () => {
         allows_client_credentials: 0,
       });
       expect(row.user_id).toBeNull();
+    });
+
+    it('OAUTHCLIENTREPO-006b: throws when the read-back after insert finds no row (coverage: the guard branch)', async () => {
+      const spy = vi.spyOn(clients, 'findPublicById').mockResolvedValueOnce(null);
+      await expect(clients.insertClient({
+        id: 'client-row-ghost',
+        user_id: null,
+        name: 'Ghost Client',
+        client_id: 'proto-ghost',
+        client_secret_hash: 'x',
+        redirect_uris: '[]',
+        allowed_scopes: '[]',
+        is_public: 1,
+        created_via: 'dcr',
+        allows_client_credentials: 0,
+      })).rejects.toThrow('OauthClientsRepository.insertClient: row client-row-ghost not found immediately after insert');
+      spy.mockRestore();
     });
   });
 
@@ -192,6 +228,10 @@ describe('OauthClientsRepository', () => {
       const { clientId } = seedClient({ secretHash: 'auth-secret', isPublic: 0 });
       const row = await clients.findAuthRow(clientId);
       expect(row).toEqual({ client_id: clientId, client_secret_hash: 'auth-secret', is_public: 0 });
+    });
+
+    it('OAUTHCLIENTREPO-013b: null for unknown client_id', async () => {
+      expect(await clients.findAuthRow('nope')).toBeNull();
     });
   });
 

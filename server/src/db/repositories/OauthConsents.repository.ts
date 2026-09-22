@@ -93,6 +93,15 @@ export class OauthConsentsRepository extends TrekRepository<OauthConsents> {
    * Promise<Entity>`); shadowing it would either fail to compile or silently
    * hide the base method, the same collision `Users.repository.ts::insertUser`
    * avoided with `create`.
+   *
+   * One more divergence from the legacy statement (Task 7 review, B-I1),
+   * unobservable and strictly better: the legacy `INSERT OR REPLACE`
+   * deletes-then-inserts, so a re-consent always assigned a NEW surrogate
+   * `id`; `em.upsert` with `onConflictAction: 'merge'` keeps the existing
+   * one. `oauth_consents` has only `id`/`client_id`/`user_id`/`scopes`/
+   * `updated_at` and nothing reads `id`, so this is unobservable — and it
+   * avoids the FK churn a delete+insert would otherwise cause if anything
+   * ever did reference this row's surrogate key.
    */
   async upsertGrant(clientId: string, userId: number, scopes: string): Promise<void> {
     const platform = this.getEntityManager().getPlatform();
