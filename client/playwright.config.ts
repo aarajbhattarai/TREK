@@ -77,7 +77,11 @@ export default defineConfig({
     {
       name: 'help-media',
       testMatch: /\.guide\.ts/,
-      timeout: 150_000,
+      // Four minutes. A guide is a whole task, and a few of them wait on the
+      // network more than once: the nearby-places one runs two POI searches
+      // against a public index and opens the place form on top of them, which
+      // does not fit in the two and a half minutes this used to allow.
+      timeout: 240_000,
       use: {
         ...devices['Desktop Chrome'],
         storageState: 'e2e/.tmp/state.json',

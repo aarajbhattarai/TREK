@@ -334,6 +334,10 @@ const SCRIPTS: Record<string, GuideScript> = {
         // The header's button group, not the whole header bar: the bar runs the
         // full width of the frame, so ringing it rings mostly empty space.
         target: p => lightbox(p).getByRole('button', { name: 'Open in new tab' }).locator('xpath=..'),
+        // The group's own centre falls between its buttons, where the picture
+        // underneath takes the pointer, so hovering it never lands. The pointer
+        // goes on a button instead; the ring is still round the group.
+        hover: p => lightbox(p).getByRole('button', { name: 'Open in new tab' }).hover(),
         act: async p => {
           await p.keyboard.press('Escape')
           await expect(lightbox(p)).toHaveCount(0, { timeout: 20_000 })

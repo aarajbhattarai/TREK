@@ -422,10 +422,12 @@ const SCRIPTS: Record<string, GuideScript> = {
       },
       only(dialog),
       {
-        target: p => modal(p).getByRole('button', { name: LIST }),
+        // Exact: the Collections guides leave a list behind whose name opens
+        // with this one's.
+        target: p => modal(p).getByRole('button', { name: LIST, exact: true }),
         act: async p => {
-          await modal(p).getByRole('button', { name: LIST }).click()
-          await expect(modal(p).getByRole('button', { name: LIST })).toHaveClass(/border-accent/, { timeout: 20_000 })
+          await modal(p).getByRole('button', { name: LIST, exact: true }).click()
+          await expect(modal(p).getByRole('button', { name: LIST, exact: true })).toHaveClass(/border-accent/, { timeout: 20_000 })
           await settle(p)
         },
       },
