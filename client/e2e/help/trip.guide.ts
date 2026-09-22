@@ -1,7 +1,7 @@
 import { test, expect, type Page, type Locator } from '@playwright/test'
 import { captureGuide, captureHero, beat, typeInto, settle, VIEWPORT, type GuideScript } from './guide'
 import { ensureUsers, seededTrip, ADMIN_USERS } from './fixtures'
-import { openTrip, modal } from './trip-shared'
+import { openTrip, openTripOnDay, modal } from './trip-shared'
 import { tripContext, tripGuides } from '../../src/help/contexts/trip'
 import type { HelpGuide } from '../../src/help/types'
 
@@ -184,11 +184,15 @@ const SCRIPTS: Record<string, GuideScript> = {
         data: { name: 'Tsukiji Outer Market', lat: 35.6654, lng: 139.7707, address: '4 Chome Tsukiji, Chuo City, Tokyo' },
       })
       if (!created.ok()) throw new Error(`could not create the spare place: ${created.status()} ${await created.text()}`)
-      await openTrip(p)
-      // A change to undo: the spare place onto day 1 (selected by openTrip) from the places column.
+      // A change to undo: the spare place onto day 1, from the places column.
+      // The day has to stay open for that: the + at the end of a row belongs to
+      // the open day, and closing the day's details panel closes the day with it.
+      await openTripOnDay(p, 1)
       const row = p.getByRole('option', { name: /^Tsukiji Outer Market/ })
       await row.hover()
-      await row.locator('button').last().click()
+      const add = row.locator('button').last()
+      await expect(add, 'the + that puts a place on the open day').toBeVisible({ timeout: 15_000 })
+      await add.click()
       await expect(p.getByRole('button', { name: 'Undo' })).toBeEnabled({ timeout: 15_000 })
       await settle(p)
     },
