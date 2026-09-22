@@ -173,13 +173,31 @@ import { db } from '../../../src/db/database';
 import { DatabaseService } from '../../../src/nest/database/database.service';
 import { MapsService, withPhotoFetchSlot, readWikiIdentity } from '../../../src/nest/maps/maps.service';
 import type { PlacePhotoCacheService } from '../../../src/nest/place-photos/place-photo-cache.service';
+import type { AppSettingsRepository } from '../../../src/db/repositories/AppSettings.repository';
+import type { UsersRepository } from '../../../src/db/repositories/Users.repository';
 // Type-only, so the module stays mocked: this import is erased at runtime.
 import type { SsrfResult } from '../../../src/utils/ssrfGuard';
+
+// resolveMapsKey/resolveAmapKey (maps.service.ts) now read AppSettingsRepository/
+// UsersRepository directly (Plan 3a Task 5) instead of raw SQL through the
+// mocked db module above — these two stubs wire the SAME mockInstanceGet/
+// mockDbGet seams the rest of this file already controls into the new
+// repository methods, so every existing mockInstanceGet/mockDbGet call below
+// keeps its meaning unchanged.
+const appSettingsStub = {
+  getValue: async (key: string) => (mockInstanceGet(key) as { value: string | null } | undefined)?.value ?? null,
+} as unknown as AppSettingsRepository;
+const usersStub = {
+  getApiKeyColumn: async (userId: number, name: 'maps_api_key' | 'amap_api_key') => {
+    const row = mockDbGet(userId) as { maps_api_key?: string | null; amap_api_key?: string | null } | undefined;
+    return row?.[name] ?? null;
+  },
+} as unknown as UsersRepository;
 
 // The service under test, constructed over the mocked db stub — DatabaseService
 // routes get/run through the stubbed prepare(), so mockDbGet/mockDbRun keep
 // flowing exactly as they did for the legacy module.
-const svc = new MapsService(new DatabaseService(db as never), photoCacheStub);
+const svc = new MapsService(new DatabaseService(db as never), photoCacheStub, appSettingsStub, usersStub);
 
 /**
  * Switch the TREK Places index off for one case.
@@ -506,12 +524,14 @@ describe('resolveMapsKey', () => {
 
   it("MAPS-017c: never reads another user's row — the admin fallback is gone (#1939)", async () => {
     await svc.resolveMapsKey(1);
-    // Two statements, both scoped: the instance row and this caller's own row.
-    // The old chain ended in "WHERE role = 'admin' ... LIMIT 1", which handed a
-    // stranger's credential to every non-admin.
-    expect(preparedSql).toHaveLength(2);
-    expect(preparedSql.join(' ')).not.toContain("role = 'admin'");
-    expect(preparedSql.some((sql) => sql.includes('WHERE id = ?'))).toBe(true);
+    // Two reads, both scoped: the instance row and this caller's own row. The
+    // old chain ended in "WHERE role = 'admin' ... LIMIT 1", which handed a
+    // stranger's credential to every non-admin — UsersRepository.getApiKeyColumn
+    // (instance-api-keys.ts's resolveApiKey, Plan 3a Task 5) is scoped to
+    // exactly the userId given, never a role-based lookup.
+    expect(mockInstanceGet).toHaveBeenCalledTimes(1);
+    expect(mockDbGet).toHaveBeenCalledTimes(1);
+    expect(mockDbGet).toHaveBeenCalledWith(1);
   });
 });
 
@@ -2659,7 +2679,7 @@ function makeSettingsDb(row?: { value: string }) {
 }
 
 function settingsSvc(row?: { value: string }) {
-  return new MapsService(makeSettingsDb(row).db, photoCacheStub);
+  return new MapsService(makeSettingsDb(row).db, photoCacheStub, appSettingsStub, usersStub);
 }
 
 describe('kill-switch settings reads', () => {
@@ -2683,7 +2703,7 @@ describe('kill-switch settings reads', () => {
 
   it('queries the matching app_settings key', async () => {
     const { db: settingsDb, get } = makeSettingsDb({ value: 'true' });
-    const s = new MapsService(settingsDb, photoCacheStub);
+    const s = new MapsService(settingsDb, photoCacheStub, appSettingsStub, usersStub);
     await s.autocompleteDisabled();
     expect(get).toHaveBeenCalledWith(expect.stringContaining('app_settings'), 'places_autocomplete_enabled');
     await s.detailsDisabled();
@@ -3381,7 +3401,7 @@ describe('readWikiIdentity', () => {
 describe('brandLogo', () => {
   // A fresh service per case: the logo cache lives on the instance, and a hit from
   // one case would answer the next one's question before its fetch stub ran.
-  const service = (): MapsService => new MapsService(new DatabaseService(db as never), photoCacheStub);
+  const service = (): MapsService => new MapsService(new DatabaseService(db as never), photoCacheStub, appSettingsStub, usersStub);
 
   const claimResponse = (file: string | null) => ({
     ok: true,

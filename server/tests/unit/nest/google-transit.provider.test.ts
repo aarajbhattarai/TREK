@@ -17,6 +17,8 @@ import { GoogleTransitProvider, clearGoogleTransitCache } from '../../../src/nes
 import { decodePolyline, encodePolyline } from '../../../src/nest/transit/transit.helpers';
 import { TransitService } from '../../../src/nest/transit/transit.service';
 import type { DatabaseService } from '../../../src/nest/database/database.service';
+import type { AppSettingsRepository } from '../../../src/db/repositories/AppSettings.repository';
+import type { UsersRepository } from '../../../src/db/repositories/Users.repository';
 
 vi.mock('../../../src/app-config', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../../src/app-config')>();
@@ -41,7 +43,26 @@ function stubDb(settings: Record<string, string | undefined>): DatabaseService {
   } as unknown as DatabaseService;
 }
 
-const googleDb = () => stubDb({ transit_provider: 'google', maps_api_key: 'test-key' });
+const GOOGLE_SETTINGS = { transit_provider: 'google', maps_api_key: 'test-key' };
+
+/**
+ * resolveKey (google-transit.provider.ts) now reads AppSettingsRepository/
+ * UsersRepository directly (instance-api-keys.ts's resolveApiKey, Plan 3a
+ * Task 5) instead of a raw `this.database.get(...)` call through the stub
+ * above. `stubDb`'s settings object already carries exactly the instance-tier
+ * value every test here configures, so `appSettingsStub.getValue` wraps it
+ * directly; the per-user fallback tier was never exercised by this file even
+ * before this conversion (the old stub's `.get` matched on the bound
+ * parameter, and none of these cases seed a per-user row), so it always
+ * answers null.
+ */
+function makeProvider(settings: Record<string, string | undefined>): GoogleTransitProvider {
+  const appSettingsStub = {
+    getValue: async (key: string) => settings[key] ?? null,
+  } as unknown as AppSettingsRepository;
+  const usersStub = { getApiKeyColumn: async () => null } as unknown as UsersRepository;
+  return new GoogleTransitProvider(stubDb(settings), appSettingsStub, usersStub);
+}
 
 beforeEach(() => {
   vi.stubGlobal('fetch', fetchMock);
@@ -163,33 +184,33 @@ function subwayRoute(): FixtureRoutes {
 
 describe('activation', () => {
   it('GTRANSIT-001: stays off while the instance is on Transitous, even with a key', async () => {
-    const provider = new GoogleTransitProvider(stubDb({ maps_api_key: 'test-key' }));
+    const provider = makeProvider({ maps_api_key: 'test-key' });
     expect(await provider.isActive(1)).toBe(false);
   });
 
   it('GTRANSIT-002: stays off when Google is selected but no key resolves', async () => {
-    const provider = new GoogleTransitProvider(stubDb({ transit_provider: 'google' }));
+    const provider = makeProvider({ transit_provider: 'google' });
     expect(await provider.isActive(1)).toBe(false);
   });
 
   it('GTRANSIT-003: is on only with both the setting and a key', async () => {
-    expect(await new GoogleTransitProvider(googleDb()).isActive(1)).toBe(true);
+    expect(await makeProvider(GOOGLE_SETTINGS).isActive(1)).toBe(true);
   });
 
   it('GTRANSIT-004: an unknown provider value falls back to Transitous', async () => {
-    const provider = new GoogleTransitProvider(stubDb({ transit_provider: 'someday-maps', maps_api_key: 'test-key' }));
+    const provider = makeProvider({ transit_provider: 'someday-maps', maps_api_key: 'test-key' });
     expect(await provider.isActive(1)).toBe(false);
   });
 
   it('GTRANSIT-005: TransitService routes to Google only when it is active', async () => {
     fetchMock.mockResolvedValue(okJson(subwayRoute()));
-    const service = new TransitService(new GoogleTransitProvider(googleDb()));
+    const service = new TransitService(makeProvider(GOOGLE_SETTINGS));
     await service.plan({ from: FROM, to: TO });
     expect(fetchMock.mock.calls[0][0]).toBe('https://routes.googleapis.com/directions/v2:computeRoutes');
   });
 
   it('GTRANSIT-006: TransitService still validates the request before dispatching', async () => {
-    const service = new TransitService(new GoogleTransitProvider(googleDb()));
+    const service = new TransitService(makeProvider(GOOGLE_SETTINGS));
     await expect(service.plan({ from: 'nowhere', to: TO })).rejects.toThrow('from must be "lat,lng"');
     await expect(service.plan({ from: FROM, to: TO, modes: 'ROCKET' })).rejects.toThrow('unsupported transit mode');
     expect(fetchMock).not.toHaveBeenCalled();
@@ -199,7 +220,7 @@ describe('activation', () => {
 describe('plan mapping', () => {
   it('GTRANSIT-007: maps a walk/subway/walk route and derives the journey clock', async () => {
     fetchMock.mockResolvedValue(okJson(subwayRoute()));
-    const { itineraries } = await new GoogleTransitProvider(googleDb()).plan({ from: FROM, to: TO }, 'en', 1);
+    const { itineraries } = await makeProvider(GOOGLE_SETTINGS).plan({ from: FROM, to: TO }, 'en', 1);
 
     expect(itineraries).toHaveLength(1);
     const it0 = itineraries[0];
@@ -236,7 +257,7 @@ describe('plan mapping', () => {
     fetchMock.mockResolvedValue(
       okJson({ routes: [{ legs: [{ steps: [{ travelMode: 'WALK', staticDuration: '900s' }] }] }] }),
     );
-    const { itineraries } = await new GoogleTransitProvider(googleDb()).plan({ from: FROM, to: TO }, 'en', 1);
+    const { itineraries } = await makeProvider(GOOGLE_SETTINGS).plan({ from: FROM, to: TO }, 'en', 1);
     expect(itineraries).toEqual([]);
   });
 
@@ -247,7 +268,7 @@ describe('plan mapping', () => {
       if (details) details.transitLine.vehicle.type = type;
       return route;
     };
-    const provider = new GoogleTransitProvider(googleDb());
+    const provider = makeProvider(GOOGLE_SETTINGS);
     for (const [google, trek] of [
       ['HEAVY_RAIL', 'RAIL'],
       ['HIGH_SPEED_TRAIN', 'HIGHSPEED_RAIL'],
@@ -268,7 +289,7 @@ describe('plan mapping', () => {
 describe('request shape', () => {
   it('GTRANSIT-010: asks for transit, alternatives and the caller language', async () => {
     fetchMock.mockResolvedValue(okJson(subwayRoute()));
-    await new GoogleTransitProvider(googleDb()).plan({ from: FROM, to: TO, time: '2026-09-10T09:00:00Z' }, 'ja', 1);
+    await makeProvider(GOOGLE_SETTINGS).plan({ from: FROM, to: TO, time: '2026-09-10T09:00:00Z' }, 'ja', 1);
 
     const body = lastBody();
     expect(body.travelMode).toBe('TRANSIT');
@@ -282,7 +303,7 @@ describe('request shape', () => {
 
   it('GTRANSIT-011: arriveBy anchors the time at the destination', async () => {
     fetchMock.mockResolvedValue(okJson(subwayRoute()));
-    await new GoogleTransitProvider(googleDb()).plan(
+    await makeProvider(GOOGLE_SETTINGS).plan(
       { from: FROM, to: TO, time: '2026-09-10T09:00:00Z', arriveBy: true }, 'en', 1,
     );
     expect(lastBody().arrivalTime).toBe('2026-09-10T09:00:00.000Z');
@@ -291,7 +312,7 @@ describe('request shape', () => {
 
   it('GTRANSIT-012: the field mask stays inside the tier the itinerary needs', async () => {
     fetchMock.mockResolvedValue(okJson(subwayRoute()));
-    await new GoogleTransitProvider(googleDb()).plan({ from: FROM, to: TO }, 'en', 1);
+    await makeProvider(GOOGLE_SETTINGS).plan({ from: FROM, to: TO }, 'en', 1);
 
     const mask = lastHeaders()['X-Goog-FieldMask'];
     expect(mask).toContain('routes.legs.steps.transitDetails.stopDetails');
@@ -303,7 +324,7 @@ describe('request shape', () => {
 
   it('GTRANSIT-013: sends the expressible modes and holds the rest on the response', async () => {
     fetchMock.mockResolvedValue(okJson(subwayRoute()));
-    const provider = new GoogleTransitProvider(googleDb());
+    const provider = makeProvider(GOOGLE_SETTINGS);
 
     const subwayOnly = await provider.plan({ from: FROM, to: TO, modes: 'SUBWAY' }, 'en', 1);
     expect(lastBody().transitPreferences).toEqual({ allowedTravelModes: ['SUBWAY'] });
@@ -323,7 +344,7 @@ describe('request shape', () => {
     twoTransfers.routes[0].legs[0].steps.splice(2, 0, JSON.parse(JSON.stringify(rail)));
     fetchMock.mockResolvedValue(okJson(twoTransfers));
 
-    const provider = new GoogleTransitProvider(googleDb());
+    const provider = makeProvider(GOOGLE_SETTINGS);
     const capped = await provider.plan({ from: FROM, to: TO, maxTransfers: 0 }, 'en', 1);
     expect(capped.itineraries).toEqual([]);
     // A low cap also nudges Google itself, so the one billed call is likelier
@@ -337,7 +358,7 @@ describe('request shape', () => {
 
   it('GTRANSIT-015: an identical plan is answered from cache, unbilled', async () => {
     fetchMock.mockResolvedValue(okJson(subwayRoute()));
-    const provider = new GoogleTransitProvider(googleDb());
+    const provider = makeProvider(GOOGLE_SETTINGS);
     await provider.plan({ from: FROM, to: TO }, 'en', 1);
     await provider.plan({ from: FROM, to: TO }, 'en', 1);
     expect(fetchMock).toHaveBeenCalledTimes(1);
@@ -350,7 +371,7 @@ describe('request shape', () => {
       headers: { get: () => null },
       json: async () => ({ error: { message: 'Routes API has not been used in project 1' } }),
     });
-    await expect(new GoogleTransitProvider(googleDb()).plan({ from: FROM, to: TO }, 'en', 1)).rejects.toThrow(
+    await expect(makeProvider(GOOGLE_SETTINGS).plan({ from: FROM, to: TO }, 'en', 1)).rejects.toThrow(
       'Routes API has not been used in project 1',
     );
   });
@@ -358,7 +379,7 @@ describe('request shape', () => {
   it('GTRANSIT-017: upstream rate limiting stays a 429', async () => {
     fetchMock.mockResolvedValue({ ok: false, status: 429, headers: { get: () => null }, json: async () => ({}) });
     await expect(
-      new GoogleTransitProvider(googleDb()).plan({ from: FROM, to: TO }, 'en', 1),
+      makeProvider(GOOGLE_SETTINGS).plan({ from: FROM, to: TO }, 'en', 1),
     ).rejects.toMatchObject({ status: 429 });
   });
 });
@@ -383,7 +404,7 @@ describe('rail mode filter', () => {
   const TRAIN_CHIP = 'HIGHSPEED_RAIL,LONG_DISTANCE,NIGHT_RAIL,REGIONAL_RAIL,SUBURBAN';
 
   it('GTRANSIT-039: the train filter keeps the trains Google labels HEAVY_RAIL', async () => {
-    const provider = new GoogleTransitProvider(googleDb());
+    const provider = makeProvider(GOOGLE_SETTINGS);
     for (const vehicle of ['HEAVY_RAIL', 'RAIL', 'COMMUTER_TRAIN', 'HIGH_SPEED_TRAIN']) {
       clearGoogleTransitCache();
       fetchMock.mockResolvedValue(okJson(withVehicle(vehicle)));
@@ -395,7 +416,7 @@ describe('rail mode filter', () => {
   });
 
   it('GTRANSIT-040: the RAIL umbrella keeps the fine-grained rail legs, and neither side leaks a subway', async () => {
-    const provider = new GoogleTransitProvider(googleDb());
+    const provider = makeProvider(GOOGLE_SETTINGS);
     // An MCP caller may name the umbrella; Google still answers by vehicle.
     for (const vehicle of ['COMMUTER_TRAIN', 'HIGH_SPEED_TRAIN', 'HEAVY_RAIL']) {
       clearGoogleTransitCache();
@@ -415,7 +436,7 @@ describe('rail mode filter', () => {
 
   it('GTRANSIT-041: a bus-only filter still refuses a train', async () => {
     fetchMock.mockResolvedValue(okJson(withVehicle('HEAVY_RAIL')));
-    const provider = new GoogleTransitProvider(googleDb());
+    const provider = makeProvider(GOOGLE_SETTINGS);
     const { itineraries } = await provider.plan({ from: FROM, to: TO, modes: 'BUS,COACH' }, 'en', 1);
     expect(itineraries).toEqual([]);
   });
@@ -442,7 +463,7 @@ describe('geocode', () => {
 
   it('GTRANSIT-018: maps places, marking stations STOP and everything else PLACE', async () => {
     fetchMock.mockResolvedValue(okJson(places));
-    const { results } = await new GoogleTransitProvider(googleDb()).geocode('Nakanoshima', 'en', undefined, 1);
+    const { results } = await makeProvider(GOOGLE_SETTINGS).geocode('Nakanoshima', 'en', undefined, 1);
 
     expect(results).toEqual([
       { name: 'Nakanoshima Station', lat: 34.6939, lng: 135.4915, type: 'STOP', area: '2 Chome Nakanoshima, Kita Ward, Osaka' },
@@ -452,7 +473,7 @@ describe('geocode', () => {
 
   it('GTRANSIT-019: biases on `near` and asks only for the cheap Text Search fields', async () => {
     fetchMock.mockResolvedValue(okJson(places));
-    await new GoogleTransitProvider(googleDb()).geocode('Temmabashi', 'ja', '34.6875,135.5155', 1);
+    await makeProvider(GOOGLE_SETTINGS).geocode('Temmabashi', 'ja', '34.6875,135.5155', 1);
 
     const body = lastBody();
     expect(body.languageCode).toBe('ja');
@@ -467,14 +488,14 @@ describe('geocode', () => {
 
   it('GTRANSIT-020: repeat lookups of the same station are answered from cache', async () => {
     fetchMock.mockResolvedValue(okJson(places));
-    const service = new TransitService(new GoogleTransitProvider(googleDb()));
+    const service = new TransitService(makeProvider(GOOGLE_SETTINGS));
     await service.geocode('Kyobashi', 'en', undefined, 1);
     await service.geocode('Kyobashi', 'en', undefined, 1);
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   it('GTRANSIT-021: a short query never reaches Google', async () => {
-    const service = new TransitService(new GoogleTransitProvider(googleDb()));
+    const service = new TransitService(makeProvider(GOOGLE_SETTINGS));
     // The provider is still named: the answer comes from the length guard, not
     // from a backend that declined.
     expect(await service.geocode('a', 'en', undefined, 1)).toEqual({ results: [], provider: 'google' });
@@ -484,7 +505,7 @@ describe('geocode', () => {
 
 describe('guards', () => {
   it('GTRANSIT-022: refuses rather than calling Google when no key resolves', async () => {
-    const provider = new GoogleTransitProvider(stubDb({ transit_provider: 'google' }));
+    const provider = makeProvider({ transit_provider: 'google' });
     await expect(provider.plan({ from: FROM, to: TO }, 'en', 1)).rejects.toThrow('no Google API key configured');
     await expect(provider.geocode('Namba', 'en', undefined, 1)).rejects.toThrow('no Google API key configured');
     expect(fetchMock).not.toHaveBeenCalled();
@@ -493,14 +514,14 @@ describe('guards', () => {
   it('GTRANSIT-023: an oversized response is refused before it is parsed', async () => {
     const json = vi.fn();
     fetchMock.mockResolvedValue({ ok: true, status: 200, headers: { get: () => '9000000' }, json });
-    await expect(new GoogleTransitProvider(googleDb()).plan({ from: FROM, to: TO }, 'en', 1)).rejects.toThrow(
+    await expect(makeProvider(GOOGLE_SETTINGS).plan({ from: FROM, to: TO }, 'en', 1)).rejects.toThrow(
       'response too large',
     );
     expect(json).not.toHaveBeenCalled();
   });
 
   it('GTRANSIT-024: a route with no steps, and one whose transit leg has no clock, are both dropped', async () => {
-    const provider = new GoogleTransitProvider(googleDb());
+    const provider = makeProvider(GOOGLE_SETTINGS);
 
     fetchMock.mockResolvedValue(okJson({ routes: [{ legs: [{ steps: [] }] }] }));
     expect((await provider.plan({ from: FROM, to: TO }, 'en', 1)).itineraries).toEqual([]);
@@ -522,7 +543,7 @@ describe('guards', () => {
     }
     fetchMock.mockResolvedValue(okJson(unnamed));
 
-    const { itineraries } = await new GoogleTransitProvider(googleDb()).plan({ from: FROM, to: TO }, 'en', 1);
+    const { itineraries } = await makeProvider(GOOGLE_SETTINGS).plan({ from: FROM, to: TO }, 'en', 1);
     // Every name is non-empty — transitStopSchema rejects a blank one, which
     // would drop the itinerary at the MCP boundary.
     for (const leg of itineraries[0].legs) {
@@ -538,7 +559,7 @@ describe('guards', () => {
     noDuration.routes[0].legs[0].steps[2].staticDuration = 'not-a-duration';
     fetchMock.mockResolvedValue(okJson(noDuration));
 
-    const { itineraries } = await new GoogleTransitProvider(googleDb()).plan({ from: FROM, to: TO }, 'en', 1);
+    const { itineraries } = await makeProvider(GOOGLE_SETTINGS).plan({ from: FROM, to: TO }, 'en', 1);
     expect(itineraries[0].legs[0].duration).toBe(0);
     expect(itineraries[0].legs[2].duration).toBe(0);
     expect(itineraries[0].walkSeconds).toBe(0);
@@ -547,7 +568,7 @@ describe('guards', () => {
   it('GTRANSIT-027: a cache entry past its TTL is re-fetched, not served stale', async () => {
     const now = vi.spyOn(Date, 'now').mockReturnValue(1_000_000);
     fetchMock.mockResolvedValue(okJson(subwayRoute()));
-    const provider = new GoogleTransitProvider(googleDb());
+    const provider = makeProvider(GOOGLE_SETTINGS);
 
     await provider.plan({ from: FROM, to: TO }, 'en', 1);
     now.mockReturnValue(1_000_000 + 6 * 60 * 1000);
@@ -558,7 +579,7 @@ describe('guards', () => {
 
   it('GTRANSIT-028: the cache evicts rather than growing without bound', async () => {
     fetchMock.mockResolvedValue(okJson({ places: [] }));
-    const provider = new GoogleTransitProvider(googleDb());
+    const provider = makeProvider(GOOGLE_SETTINGS);
     for (let i = 0; i < 220; i++) await provider.geocode(`station-${i}`, 'en', undefined, 1);
     expect(fetchMock).toHaveBeenCalledTimes(220);
 
@@ -606,7 +627,7 @@ describe('walk coalescing', () => {
 
   it('GTRANSIT-029: a walk split across navigation steps becomes one leg', async () => {
     fetchMock.mockResolvedValue(okJson(routeWithSlicedWalks()));
-    const { itineraries } = await new GoogleTransitProvider(googleDb()).plan({ from: FROM, to: TO }, 'en', 1);
+    const { itineraries } = await makeProvider(GOOGLE_SETTINGS).plan({ from: FROM, to: TO }, 'en', 1);
 
     const legs = itineraries[0].legs;
     expect(legs.map((l) => l.mode)).toEqual(['WALK', 'SUBWAY', 'WALK']);
@@ -620,7 +641,7 @@ describe('walk coalescing', () => {
 
   it('GTRANSIT-030: the merged walk keeps the endpoints of the whole run', async () => {
     fetchMock.mockResolvedValue(okJson(routeWithSlicedWalks()));
-    const { itineraries } = await new GoogleTransitProvider(googleDb()).plan({ from: FROM, to: TO }, 'en', 1);
+    const { itineraries } = await makeProvider(GOOGLE_SETTINGS).plan({ from: FROM, to: TO }, 'en', 1);
 
     const [opening, , closing] = itineraries[0].legs;
     expect(opening.from.name).toBe('START');
@@ -634,7 +655,7 @@ describe('walk coalescing', () => {
 
   it('GTRANSIT-031: the merged walk draws the whole path, with no doubled seam', async () => {
     fetchMock.mockResolvedValue(okJson(routeWithSlicedWalks()));
-    const { itineraries } = await new GoogleTransitProvider(googleDb()).plan({ from: FROM, to: TO }, 'en', 1);
+    const { itineraries } = await makeProvider(GOOGLE_SETTINGS).plan({ from: FROM, to: TO }, 'en', 1);
 
     const points = decodePolyline(itineraries[0].legs[0].geometry ?? '', 5);
     // Three two-point steps sharing their seams — four points, not six.
@@ -648,7 +669,7 @@ describe('walk coalescing', () => {
     delete partial.routes[0].legs[0].steps[1].polyline;
     fetchMock.mockResolvedValue(okJson(partial));
 
-    const { itineraries } = await new GoogleTransitProvider(googleDb()).plan({ from: FROM, to: TO }, 'en', 1);
+    const { itineraries } = await makeProvider(GOOGLE_SETTINGS).plan({ from: FROM, to: TO }, 'en', 1);
     expect(decodePolyline(itineraries[0].legs[0].geometry ?? '', 5).length).toBeGreaterThan(0);
     expect(itineraries[0].legs[0].duration).toBe(180);
   });
@@ -661,7 +682,7 @@ describe('walk coalescing', () => {
     many.routes[0].legs[0].steps = [...crumbs, rail, ...crumbs];
     fetchMock.mockResolvedValue(okJson(many));
 
-    const { itineraries } = await new GoogleTransitProvider(googleDb()).plan({ from: FROM, to: TO }, 'en', 1);
+    const { itineraries } = await makeProvider(GOOGLE_SETTINGS).plan({ from: FROM, to: TO }, 'en', 1);
     expect(itineraries[0].legs).toHaveLength(3);
   });
 });
@@ -674,7 +695,7 @@ describe('walk coalescing', () => {
 describe('provider reporting', () => {
   it('GTRANSIT-036: names Google when Google answered', async () => {
     fetchMock.mockResolvedValue(okJson(subwayRoute()));
-    const service = new TransitService(new GoogleTransitProvider(googleDb()));
+    const service = new TransitService(makeProvider(GOOGLE_SETTINGS));
     const planned = await service.plan({ from: FROM, to: TO }, 'en', 1);
     expect(planned.provider).toBe('google');
 
@@ -686,7 +707,7 @@ describe('provider reporting', () => {
     fetchMock.mockResolvedValue(okJson({ itineraries: [] }));
     // Google selected, but no key resolves — the request goes to Transitous and
     // says so, instead of leaving an empty result to be blamed on Google.
-    const service = new TransitService(new GoogleTransitProvider(stubDb({ transit_provider: 'google' })));
+    const service = new TransitService(makeProvider({ transit_provider: 'google' }));
     const planned = await service.plan({ from: '48.8583,2.3470', to: '48.8809,2.3553' }, 'en', 1);
     expect(planned.provider).toBe('transitous');
     expect(planned.itineraries).toEqual([]);
@@ -695,7 +716,7 @@ describe('provider reporting', () => {
 
   it('GTRANSIT-038: a cached answer still names its backend', async () => {
     fetchMock.mockResolvedValue(okJson({ itineraries: [] }));
-    const service = new TransitService(new GoogleTransitProvider(stubDb({})));
+    const service = new TransitService(makeProvider({}));
     const first = await service.plan({ from: '48.1,2.1', to: '48.2,2.2' }, 'en', 1);
     const second = await service.plan({ from: '48.1,2.1', to: '48.2,2.2' }, 'en', 1);
     expect(fetchMock).toHaveBeenCalledTimes(1);

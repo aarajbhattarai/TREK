@@ -15,6 +15,8 @@ import { PhotoProviderFields } from '../../db/entities/PhotoProviderFields.entit
 import type { PhotoProviderFieldsRepository, PhotoProviderFieldRow } from '../../db/repositories/PhotoProviderFields.repository';
 import { AppSettings } from '../../db/entities/AppSettings.entity';
 import type { AppSettingsRepository } from '../../db/repositories/AppSettings.repository';
+import { Users } from '../../db/entities/Users.entity';
+import type { UsersRepository } from '../../db/repositories/Users.repository';
 
 /**
  * Thin wrapper around the enabled-addons + photo-provider read that the legacy
@@ -30,15 +32,17 @@ import type { AppSettingsRepository } from '../../db/repositories/AppSettings.re
  * per-call repository calls so admin toggles stay immediately visible.
  *
  * `DatabaseService` stays injected (Plan 3a Task 4) purely as a passthrough
- * for two cross-domain functions this service still calls: `transit-provider.ts`'s
- * readTransitProvider/writeTransitProvider (nest/transit, not one of this
- * plan's six domains) and `instance-api-keys.ts`'s resolveApiKey (nest/settings,
- * Task 5's own conversion). Neither reads/writes through `this.db` in THIS
- * file — every `app_settings`/`addons`/`photo_providers`/`photo_provider_fields`
+ * for `transit-provider.ts`'s readTransitProvider/writeTransitProvider
+ * (nest/transit, not one of this plan's six domains — its own conversion is
+ * a later phase). It does not read/write through `this.db` in THIS file —
+ * every `app_settings`/`addons`/`photo_providers`/`photo_provider_fields`
  * site this service itself used to touch is repository-backed below — so this
  * is the same kind of carve-out `permissions`' two guard delegations are: `grep
  * DatabaseService src/nest/addons` still finds this constructor parameter and
- * its import, not a raw query.
+ * its import, not a raw query. `instance-api-keys.ts`'s resolveApiKey
+ * (nest/settings, Task 5) no longer needs it: `googleKeySource` below passes
+ * this service's own already-injected `AppSettingsRepository` plus a
+ * `UsersRepository` Task 5 added here for exactly that.
  */
 @Injectable()
 export class AddonsService {
@@ -47,6 +51,7 @@ export class AddonsService {
     @InjectRepository(PhotoProviders) private readonly photoProviders: PhotoProvidersRepository,
     @InjectRepository(PhotoProviderFields) private readonly photoProviderFields: PhotoProviderFieldsRepository,
     @InjectRepository(AppSettings) private readonly appSettings: AppSettingsRepository,
+    @InjectRepository(Users) private readonly users: UsersRepository,
     private readonly dbs: DatabaseService,
   ) {}
 
@@ -249,7 +254,7 @@ export class AddonsService {
    * — the #1939 shape, one layer up.
    */
   private async googleKeySource(userId: number): Promise<ApiKeySource | null> {
-    return (await resolveApiKey(this.dbs, 'maps_api_key', userId, readEnv().maps.placesApiKey)).source;
+    return (await resolveApiKey(this.appSettings, this.users, 'maps_api_key', userId, readEnv().maps.placesApiKey)).source;
   }
 
   async getTransitProvider(userId = 0) {

@@ -78,7 +78,16 @@ import { QueryHelpersService } from '../../../src/nest/query-helpers/query-helpe
 import { JourneyDomainService } from '../../../src/nest/journey/journey-domain.service';
 import { TrekPhotosRepository } from '../../../src/nest/photos/trek-photos.repository';
 import { makeStorageFixture } from '../../helpers/storage-fixture';
-import { createTestUnitOfWork, createTestAppSettingsRepo } from '../../helpers/test-uow';
+import { createTestUnitOfWork, createTestAppSettingsRepo, createTestUsersRepo } from '../../helpers/test-uow';
+import type { AppSettingsRepository } from '../../../src/db/repositories/AppSettings.repository';
+import type { UsersRepository } from '../../../src/db/repositories/Users.repository';
+
+// The default `maps` MapsService below never has its key-resolving methods
+// exercised by this file's own cases (a real caller passes its own `maps`
+// when it needs that) — these are stand-ins only so the constructor call
+// typechecks and never throws if a future case does reach them.
+const noAppSettings = { getValue: async () => null } as unknown as AppSettingsRepository;
+const noUsers = { getApiKeyColumn: async () => null } as unknown as UsersRepository;
 
 const GPX_FIXTURE = path.join(__dirname, '../../fixtures/test.gpx');
 const KML_FIXTURE = path.join(__dirname, '../../fixtures/test.kml');
@@ -96,14 +105,16 @@ const dbs = new DatabaseService(testDb);
  */
 const placesStorageFx = makeStorageFixture('');
 
-async function makePlacesService(maps: MapsService = new MapsService(dbs, photoCacheStub)): Promise<PlacesService> {
+async function makePlacesService(
+  maps: MapsService = new MapsService(dbs, photoCacheStub, noAppSettings, noUsers),
+): Promise<PlacesService> {
   return new PlacesService(
     dbs,
     new PermissionsService(await createTestAppSettingsRepo(dbs.connection), await createTestUnitOfWork(dbs.connection)),
     new RealtimeService(),
     maps,
     new QueryHelpersService(dbs),
-    new UnsplashService(dbs, new RuntimeEnvService(), placesStorageFx.storage),
+    new UnsplashService(await createTestAppSettingsRepo(dbs.connection), await createTestUsersRepo(dbs.connection), new RuntimeEnvService(), placesStorageFx.storage),
     photoCacheStub,
     new JourneyDomainService(dbs, new RealtimeService(), new TrekPhotosRepository(dbs), await createTestUnitOfWork(dbs.connection)),
     placesStorageFx.storage,

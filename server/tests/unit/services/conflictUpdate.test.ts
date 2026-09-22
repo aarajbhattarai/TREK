@@ -54,7 +54,7 @@ import { TrekPhotosRepository } from '../../../src/nest/photos/trek-photos.repos
 import { RuntimeEnvService } from '../../../src/nest/app-config/runtime-env.service';
 import { notificationsStub } from '../../helpers/notifications';
 import { makeStorageFixture } from '../../helpers/storage-fixture';
-import { createTestUnitOfWork, createTestAppSettingsRepo } from '../../helpers/test-uow';
+import { createTestUnitOfWork, createTestAppSettingsRepo, createTestUsersRepo } from '../../helpers/test-uow';
 
 const dbs = new DatabaseService(testDb);
 const realtime = new RealtimeService();
@@ -72,9 +72,9 @@ beforeAll(async () => {
   dbs,
   new PermissionsService(await createTestAppSettingsRepo(dbs.connection), await createTestUnitOfWork(dbs.connection)),
   realtime,
-  new MapsService(dbs, photoCache),
+  new MapsService(dbs, photoCache, await createTestAppSettingsRepo(dbs.connection), await createTestUsersRepo(dbs.connection)),
   new QueryHelpersService(dbs),
-  new UnsplashService(dbs, runtimeEnv, makeStorageFixture('').storage),
+  new UnsplashService(await createTestAppSettingsRepo(dbs.connection), await createTestUsersRepo(dbs.connection), runtimeEnv, makeStorageFixture('').storage),
   photoCache,
   new JourneyDomainService(dbs, realtime, new TrekPhotosRepository(dbs), await createTestUnitOfWork(dbs.connection)),
   makeStorageFixture('').storage,

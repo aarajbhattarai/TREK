@@ -72,6 +72,24 @@ import {
 } from '../../../src/nest/maps/providers/amap.provider';
 import { isGooglePlaceId } from '../../../src/nest/maps/maps.helpers';
 import type { PlacePhotoCacheService } from '../../../src/nest/place-photos/place-photo-cache.service';
+import type { AppSettingsRepository } from '../../../src/db/repositories/AppSettings.repository';
+import type { UsersRepository } from '../../../src/db/repositories/Users.repository';
+
+// resolveMapsKey/resolveAmapKey (maps.service.ts) now read AppSettingsRepository/
+// UsersRepository directly (Plan 3a Task 5's instance-api-keys.ts conversion)
+// instead of raw SQL through the mocked db module above — these two stubs wire
+// the SAME mockInstanceGet/mockDbGet seams the rest of this file already
+// controls into the new repository methods, so every existing keys()/
+// mockInstanceGet/mockProviderGet call below keeps its meaning unchanged.
+const appSettingsStub = {
+  getValue: async (key: string) => (mockInstanceGet(key) as { value: string | null } | undefined)?.value ?? null,
+} as unknown as AppSettingsRepository;
+const usersStub = {
+  getApiKeyColumn: async (userId: number, name: 'maps_api_key' | 'amap_api_key') => {
+    const row = mockDbGet(userId) as { maps_api_key: string | null; amap_api_key: string | null } | undefined;
+    return row?.[name] ?? null;
+  },
+} as unknown as UsersRepository;
 
 const photoCacheStub = {
   get: vi.fn(() => null),
@@ -83,7 +101,7 @@ const photoCacheStub = {
   serveKey: vi.fn(() => null),
 } as unknown as PlacePhotoCacheService;
 
-const svc = new MapsService(new DatabaseService(db as never), photoCacheStub);
+const svc = new MapsService(new DatabaseService(db as never), photoCacheStub, appSettingsStub, usersStub);
 
 /** A provider over a fixed key, which is all these cases need. */
 function provider(): AmapPlacesProvider {

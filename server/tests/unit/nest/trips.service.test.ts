@@ -88,7 +88,7 @@ import fs from 'fs';
 import path from 'path';
 import { notificationsStub } from '../../helpers/notifications';
 import { EphemeralTokenService } from '../../../src/nest/auth/ephemeral-token.service';
-import { createTestUnitOfWork, createTestAppSettingsRepo } from '../../helpers/test-uow';
+import { createTestUnitOfWork, createTestAppSettingsRepo, createTestUsersRepo } from '../../helpers/test-uow';
 
 // Real sibling services over the same in-memory DB — updateTrip's date-shift
 // resyncs and the summary/bundle aggregation run their actual SQL.
@@ -128,9 +128,9 @@ beforeAll(async () => {
   dbs(),
   new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)),
   new RealtimeService(),
-  new MapsService(dbs(), photoCache),
+  new MapsService(dbs(), photoCache, await createTestAppSettingsRepo(dbs().connection), await createTestUsersRepo(dbs().connection)),
   new QueryHelpersService(dbs()),
-  new UnsplashService(dbs(), new RuntimeEnvService(), coversFx.storage),
+  new UnsplashService(await createTestAppSettingsRepo(dbs().connection), await createTestUsersRepo(dbs().connection), new RuntimeEnvService(), coversFx.storage),
   photoCache,
   new JourneyDomainService(dbs(), new RealtimeService(), new TrekPhotosRepository(dbs()), await createTestUnitOfWork(dbs().connection)),
   makeStorageFixture('').storage,

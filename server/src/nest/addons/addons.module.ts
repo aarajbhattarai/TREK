@@ -8,6 +8,7 @@ import { Addons } from '../../db/entities/Addons.entity';
 import { PhotoProviders } from '../../db/entities/PhotoProviders.entity';
 import { PhotoProviderFields } from '../../db/entities/PhotoProviderFields.entity';
 import { AppSettings } from '../../db/entities/AppSettings.entity';
+import { Users } from '../../db/entities/Users.entity';
 
 /**
  * GET /api/addons — enabled add-ons + photo providers (was an inline handler in
@@ -27,10 +28,13 @@ import { AppSettings } from '../../db/entities/AppSettings.entity';
  * MikroOrmModule.forFeature registers AddonsRepository/PhotoProvidersRepository/
  * PhotoProviderFieldsRepository/AppSettingsRepository for AddonsService's
  * @InjectRepository constructor (Plan 3a Task 4) — the forFeature +
- * @InjectRepository wiring pattern Task 0 set up on SettingsModule.
+ * @InjectRepository wiring pattern Task 0 set up on SettingsModule. `Users` was
+ * added by Task 5: `googleKeySource` passes `UsersRepository` explicitly to
+ * `instance-api-keys.ts`'s resolveApiKey now, instead of that file resolving
+ * one off the ambient request context.
  */
 @Module({
-  imports: [MikroOrmModule.forFeature([Addons, PhotoProviders, PhotoProviderFields, AppSettings])],
+  imports: [MikroOrmModule.forFeature([Addons, PhotoProviders, PhotoProviderFields, AppSettings, Users])],
   controllers: [AddonsController],
   providers: [AddonsService, AddonGuard, AddonsMcp],
   exports: [AddonsService, AddonGuard],

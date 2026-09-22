@@ -41,24 +41,27 @@ import { JourneyDomainService } from '../../../src/nest/journey/journey-domain.s
 import { JourneyShareService } from '../../../src/nest/journey/journey-share.service';
 import { SettingsService } from '../../../src/nest/settings/settings.service';
 import { db as dbConn } from '../../../src/db/database';
-import { createTestUnitOfWork } from '../../helpers/test-uow';
-import { createTestOrm, type TestOrm } from '../../helpers/test-orm';
-import { AppSettings } from '../../../src/db/entities/AppSettings.entity';
-import type { AppSettingsRepository } from '../../../src/db/repositories/AppSettings.repository';
+import { sharedTestOrm, createTestUnitOfWork, createTestAppSettingsRepo, createTestSettingsRepo } from '../../helpers/test-uow';
+import type { TestOrm } from '../../helpers/test-orm';
 
 const dbs = new DatabaseService(dbConn);
 let svc: JourneyShareService;
 let t: TestOrm;
 
+// `t`, `uow` and the settings repositories all derive from the SAME
+// `sharedTestOrm(testDb)` (task-2-review.md I2) — see settings.service.test.ts's
+// own comment on this pattern for why a second, independent `createTestOrm`
+// call here would be unsafe once `SettingsService`'s writes go through
+// `uow.transactional(...)`.
 beforeAll(async () => {
   createTables(testDb);
   runMigrations(testDb);
   const uow = await createTestUnitOfWork(testDb);
-  t = await createTestOrm(testDb);
+  t = await sharedTestOrm(testDb);
   svc = new JourneyShareService(
     dbs,
     new JourneyDomainService(dbs, new RealtimeService(), new TrekPhotosRepository(dbs), uow),
-    new SettingsService(dbs, uow, t.repo(AppSettings) as AppSettingsRepository),
+    new SettingsService(uow, await createTestAppSettingsRepo(testDb), await createTestSettingsRepo(testDb)),
   );
 });
 

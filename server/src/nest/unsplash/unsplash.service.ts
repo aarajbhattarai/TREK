@@ -1,10 +1,14 @@
 import { Readable } from 'node:stream';
 import { v4 as uuidv4 } from 'uuid';
 import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@mikro-orm/nestjs';
 import { safeFetch } from '../../utils/ssrfGuard';
 import { exceedsDeclaredLength, readCapped } from '../../utils/cappedFetch';
 import { resolveApiKey } from '../settings/instance-api-keys';
-import { DatabaseService } from '../database/database.service';
+import { AppSettings } from '../../db/entities/AppSettings.entity';
+import type { AppSettingsRepository } from '../../db/repositories/AppSettings.repository';
+import { Users } from '../../db/entities/Users.entity';
+import type { UsersRepository } from '../../db/repositories/Users.repository';
 import { RuntimeEnvService } from '../app-config/runtime-env.service';
 import { StorageService } from '../storage/storage.service';
 
@@ -46,13 +50,15 @@ const COVER_EXT_BY_TYPE: Record<string, string> = {
  * Unsplash search and cover download.
  *
  * Its own module rather than a method on trips or places: both call it, and the
- * key resolution reads the env AND the database, so it needs the injected
- * connection either way.
+ * key resolution reads the env and (via instance-api-keys.ts's resolveApiKey,
+ * Plan 3a Task 5) AppSettingsRepository/UsersRepository, so it needs those
+ * injected either way.
  */
 @Injectable()
 export class UnsplashService {
   constructor(
-    private readonly db: DatabaseService,
+    @InjectRepository(AppSettings) private readonly appSettings: AppSettingsRepository,
+    @InjectRepository(Users) private readonly usersRepo: UsersRepository,
     private readonly env: RuntimeEnvService,
     private readonly storage: StorageService,
   ) {}
@@ -67,7 +73,9 @@ export class UnsplashService {
  * which case the search falls back to the unauthenticated endpoint.
  */
   async getUnsplashKey(userId: number): Promise<string | null> {
-    return (await resolveApiKey(this.db, 'unsplash_api_key', userId, this.env.env().integrations.unsplashAccessKey)).key;
+    return (
+      await resolveApiKey(this.appSettings, this.usersRepo, 'unsplash_api_key', userId, this.env.env().integrations.unsplashAccessKey)
+    ).key;
   }
 
   async searchUnsplashPhotos(query: string, perPage = 9, accessKey?: string | null) {

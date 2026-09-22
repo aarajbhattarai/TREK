@@ -1,5 +1,8 @@
 import { RateLimitModule } from '../common/rate-limit.module';
 import { Module } from '@nestjs/common';
+import { MikroOrmModule } from '@mikro-orm/nestjs';
+import { AppSettings } from '../../db/entities/AppSettings.entity';
+import { Users } from '../../db/entities/Users.entity';
 import { TokensModule } from '../tokens/tokens.module';
 import { AuthPublicController } from './auth-public.controller';
 import { AuthController } from './auth.controller';
@@ -62,7 +65,13 @@ import { AllowedFileTypesModule } from '../files/allowed-file-types.module';
     }),
     StorageModule,
     AllowedFileTypesModule,
-    EphemeralTokenModule, RateLimitModule, AuditModule, PermissionsModule, TripMembershipModule, MailerModule, AppConfigModule, TokensModule, BudgetModule],
+    EphemeralTokenModule, RateLimitModule, AuditModule, PermissionsModule, TripMembershipModule, MailerModule, AppConfigModule, TokensModule, BudgetModule,
+    // AppSettings/Users: AuthService/UserProfileService each pass their own
+    // AppSettingsRepository/UsersRepository to instance-api-keys.ts's
+    // resolveApiKey/readInstanceApiKey/writeInstanceApiKey now (Plan 3a Task
+    // 5) — everything else either service still reads/writes is raw SQL
+    // through DatabaseService (auth's own conversion is a later plan).
+    MikroOrmModule.forFeature([AppSettings, Users])],
   controllers: [AuthPublicController, AuthController, PasskeyController],
   providers: [AuthService, UserProfileService, RegistrationInvitesService, PasskeyService, UserCleanupService, WebauthnConfigService, AuthMcp],
   exports: [AuthService, RegistrationInvitesService, PasskeyService, UserCleanupService],

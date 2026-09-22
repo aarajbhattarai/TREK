@@ -54,7 +54,7 @@ import type { PlacePhotoCacheService } from '../../../src/nest/place-photos/plac
 import { JourneyDomainService } from '../../../src/nest/journey/journey-domain.service';
 import { TrekPhotosRepository } from '../../../src/nest/photos/trek-photos.repository';
 import { makeStorageFixture } from '../../helpers/storage-fixture';
-import { createTestUnitOfWork, createTestAppSettingsRepo } from '../../helpers/test-uow';
+import { createTestUnitOfWork, createTestAppSettingsRepo, createTestUsersRepo } from '../../helpers/test-uow';
 
 const dbs = new DatabaseService(testDb);
 const photoCacheStub = { removeIfUnreferenced: vi.fn() } as unknown as PlacePhotoCacheService;
@@ -87,7 +87,7 @@ async function svc(searchNominatim: MapsService['searchNominatim']): Promise<Pla
       reverseGeocode: vi.fn(async () => null),
     } as unknown as MapsService,
     new QueryHelpersService(dbs),
-    new UnsplashService(dbs, new RuntimeEnvService(), storageFx.storage),
+    new UnsplashService(await createTestAppSettingsRepo(dbs.connection), await createTestUsersRepo(dbs.connection), new RuntimeEnvService(), storageFx.storage),
     photoCacheStub,
     new JourneyDomainService(dbs, new RealtimeService(), new TrekPhotosRepository(dbs), await createTestUnitOfWork(dbs.connection)),
     storageFx.storage,

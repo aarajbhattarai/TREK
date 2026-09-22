@@ -60,21 +60,22 @@ import { ShareService, publicReservationMetadata } from '../../../src/nest/share
 import { SettingsService } from '../../../src/nest/settings/settings.service';
 import { QueryHelpersService } from '../../../src/nest/query-helpers/query-helpers.service';
 import type { User } from '../../../src/types';
-import { createTestUnitOfWork } from '../../helpers/test-uow';
-import { createTestOrm, type TestOrm } from '../../helpers/test-orm';
-import { AppSettings } from '../../../src/db/entities/AppSettings.entity';
-import type { AppSettingsRepository } from '../../../src/db/repositories/AppSettings.repository';
+import { sharedTestOrm, createTestUnitOfWork, createTestAppSettingsRepo, createTestSettingsRepo } from '../../helpers/test-uow';
+import type { TestOrm } from '../../helpers/test-orm';
 
 let svc: ShareService;
 let t: TestOrm;
 
+// `t`, `uow` and the settings repositories all derive from the SAME
+// `sharedTestOrm(testDb)` (task-2-review.md I2) — see settings.service.test.ts's
+// own comment on this pattern.
 beforeAll(async () => {
   createTables(testDb);
   runMigrations(testDb);
-  t = await createTestOrm(testDb);
+  t = await sharedTestOrm(testDb);
   svc = new ShareService(
     new DatabaseService(testDb),
-    new SettingsService(new DatabaseService(testDb), await createTestUnitOfWork(testDb), t.repo(AppSettings) as AppSettingsRepository),
+    new SettingsService(await createTestUnitOfWork(testDb), await createTestAppSettingsRepo(testDb), await createTestSettingsRepo(testDb)),
     permissionsStub,
     new QueryHelpersService(new DatabaseService(testDb)),
     photoCacheStub,

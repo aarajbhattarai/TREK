@@ -45,24 +45,27 @@ import { createTables } from '../../../src/db/schema';
 import { runMigrations } from '../../../src/db/migrations';
 import { resetTestDb } from '../../helpers/test-db';
 import { createUser } from '../../helpers/factories';
-import { createTestOrm, type TestOrm } from '../../helpers/test-orm';
-import { DatabaseService } from '../../../src/nest/database/database.service';
+import type { TestOrm } from '../../helpers/test-orm';
 import { SettingsService } from '../../../src/nest/settings/settings.service';
-import { createTestUnitOfWork } from '../../helpers/test-uow';
-import { AppSettings } from '../../../src/db/entities/AppSettings.entity';
-import type { AppSettingsRepository } from '../../../src/db/repositories/AppSettings.repository';
+import { sharedTestOrm, createTestUnitOfWork, createTestAppSettingsRepo, createTestSettingsRepo } from '../../helpers/test-uow';
 
 let svc: SettingsService;
 let t: TestOrm;
 
+// `t`, `uow` and the two repositories all derive from the SAME `sharedTestOrm(testDb)`
+// (task-2-review.md I2): a second, independent `createTestOrm(testDb)` here would give
+// `svc`'s repositories a different Kysely client than the one `uow.transactional(...)`
+// opens its transaction on — a repository write inside setAdminUserDefaults/
+// bulkUpsertSettings's transaction would then run outside it (or contend on a second
+// mutex over the same connection), exactly the trap the shared-ORM helpers exist to avoid.
 beforeAll(async () => {
   createTables(testDb);
   runMigrations(testDb);
-  t = await createTestOrm(testDb);
+  t = await sharedTestOrm(testDb);
   svc = new SettingsService(
-    new DatabaseService(testDb),
     await createTestUnitOfWork(testDb),
-    t.repo(AppSettings) as AppSettingsRepository,
+    await createTestAppSettingsRepo(testDb),
+    await createTestSettingsRepo(testDb),
   );
 });
 
@@ -338,18 +341,25 @@ describe('bulkUpsertSettings', () => {
     expect((await svc.getUserSettings(b.id) as any).shared_key).toBe('from-b');
   });
 
+  // Was a `vi.spyOn(testDb, 'prepare').mockImplementationOnce(...)` targeting
+  // the legacy raw `INSERT INTO settings ...` statement. Now that
+  // bulkUpsertSettings writes through SettingsRepository.upsertForUser
+  // (em.upsert, via Kysely), the FIRST `.prepare()` call inside
+  // `uow.transactional(...)` is Kysely's own internal machinery, not the
+  // application statement — intercepting it corrupted the connection's
+  // transaction/mutex state for the rest of the file (every test after this
+  // one timed out). Per the inventory's own note for this test
+  // ("narrow enough to become a mockRejectedValueOnce on the specific
+  // repository method under test"), this now mocks the repository method
+  // itself — no raw connection involved, so no risk of corrupting the shared
+  // Kysely client's state for later tests.
   it('SET-SVC-019 — rolls back and re-throws when DB write fails mid-transaction', async () => {
     const { user } = createUser(testDb);
-    const origPrepare = testDb.prepare.bind(testDb);
-    let intercepted = false;
-    vi.spyOn(testDb, 'prepare').mockImplementationOnce((sql: string) => {
-      const stmt = origPrepare(sql);
-      intercepted = true;
-      return { run: () => { throw new Error('forced DB error'); } } as any;
-    });
+    const settingsRepo = await createTestSettingsRepo(testDb);
+    const spy = vi.spyOn(settingsRepo, 'upsertForUser').mockRejectedValueOnce(new Error('forced DB error'));
     await expect(svc.bulkUpsertSettings(user.id, { k: 'v' })).rejects.toThrow('forced DB error');
-    expect(intercepted).toBe(true);
-    vi.restoreAllMocks();
+    expect(spy).toHaveBeenCalled();
+    spy.mockRestore();
   });
 });
 

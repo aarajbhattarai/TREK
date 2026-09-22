@@ -16,6 +16,11 @@ import { validatePassword } from '../common/passwordPolicy';
 import { encryptMfaSecret, decryptMfaSecret } from '../common/crypto/mfaCrypto';
 import { decrypt_api_key, maybe_encrypt_api_key, encrypt_api_key } from '../common/crypto/apiKeyCrypto';
 import { resolveApiKey } from '../settings/instance-api-keys';
+import { InjectRepository } from '@mikro-orm/nestjs';
+import { AppSettings } from '../../db/entities/AppSettings.entity';
+import type { AppSettingsRepository } from '../../db/repositories/AppSettings.repository';
+import { Users } from '../../db/entities/Users.entity';
+import type { UsersRepository } from '../../db/repositories/Users.repository';
 // Type-and-guard only: the app-config read reports the provider choice, it does
 // not construct one, so this does not pull the maps domain into auth.
 import { isPlacesProviderChoice } from '../maps/providers/places-provider';
@@ -134,6 +139,8 @@ export class AuthService {
     private readonly tokens: EphemeralTokenService,
     private readonly allowedFileTypes: AllowedFileTypesService,
     private readonly uow: UnitOfWork,
+    @InjectRepository(AppSettings) private readonly appSettings: AppSettingsRepository,
+    @InjectRepository(Users) private readonly usersRepo: UsersRepository,
   ) {}
 
   // Cookie
@@ -267,11 +274,11 @@ export class AuthService {
     // nor hide them from a member who does have one (#1939). Unauthenticated the
     // question is only about the instance, which is the first two steps of the
     // chain; id 0 matches no row.
-    const hasGoogleKey = !!(await resolveApiKey(this.db, 'maps_api_key', authenticatedUser?.id ?? 0, readEnv().maps.placesApiKey)).key;
+    const hasGoogleKey = !!(await resolveApiKey(this.appSettings, this.usersRepo, 'maps_api_key', authenticatedUser?.id ?? 0, readEnv().maps.placesApiKey)).key;
     // The same question for Amap, asked the same way. The client needs both to
     // tell "search is unavailable" from "search runs on OpenStreetMap", and to
     // know whether the provider the admin selected actually has a credential.
-    const hasAmapKey = !!(await resolveApiKey(this.db, 'amap_api_key', authenticatedUser?.id ?? 0, readEnv().maps.amapApiKey)).key;
+    const hasAmapKey = !!(await resolveApiKey(this.appSettings, this.usersRepo, 'amap_api_key', authenticatedUser?.id ?? 0, readEnv().maps.amapApiKey)).key;
     const placesProviderRow = this.db.get<{ value: string }>("SELECT value FROM app_settings WHERE key = 'places_provider'")?.value;
     const placesProvider = isPlacesProviderChoice(placesProviderRow) ? placesProviderRow : 'auto';
     const oidcDisplayName = readEnv().oidc.displayName ||

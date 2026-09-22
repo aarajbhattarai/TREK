@@ -78,7 +78,7 @@ import { RuntimeEnvService } from '../../../src/nest/app-config/runtime-env.serv
 import { makeStorageFixture } from '../../helpers/storage-fixture';
 import { JourneyDomainService } from '../../../src/nest/journey/journey-domain.service';
 import { TrekPhotosRepository } from '../../../src/nest/photos/trek-photos.repository';
-import { createTestUnitOfWork, createTestAppSettingsRepo } from '../../helpers/test-uow';
+import { createTestUnitOfWork, createTestAppSettingsRepo, createTestUsersRepo } from '../../helpers/test-uow';
 
 // Real sibling services over the same in-memory DB — the aggregation runs the
 // actual SQL of every domain it fans out to, so a shape change downstream shows
@@ -103,8 +103,8 @@ beforeAll(async () => {
   daysSvc = new DaysService(dbs(), new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)), new RealtimeService(), new QueryHelpersService(dbs()), await createTestUnitOfWork(dbs().connection));
   placesSvc = new PlacesService(
   dbs(), new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)), new RealtimeService(),
-  new MapsService(dbs(), photoCache), new QueryHelpersService(dbs()),
-  new UnsplashService(dbs(), new RuntimeEnvService(), makeStorageFixture('').storage), photoCache,
+  new MapsService(dbs(), photoCache, await createTestAppSettingsRepo(dbs().connection), await createTestUsersRepo(dbs().connection)), new QueryHelpersService(dbs()),
+  new UnsplashService(await createTestAppSettingsRepo(dbs().connection), await createTestUsersRepo(dbs().connection), new RuntimeEnvService(), makeStorageFixture('').storage), photoCache,
   new JourneyDomainService(dbs(), new RealtimeService(), new TrekPhotosRepository(dbs()), await createTestUnitOfWork(dbs().connection)),
   makeStorageFixture('').storage,
   await accommodationsOver(dbs()), await createTestUnitOfWork(dbs().connection),

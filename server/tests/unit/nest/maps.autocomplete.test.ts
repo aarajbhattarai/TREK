@@ -26,6 +26,14 @@ vi.mock('../../../src/config', () => ({ JWT_SECRET: 'test-secret', ENCRYPTION_KE
 import { MapsService } from '../../../src/nest/maps/maps.service';
 import type { DatabaseService } from '../../../src/nest/database/database.service';
 import type { PlacePhotoCacheService } from '../../../src/nest/place-photos/place-photo-cache.service';
+import type { AppSettingsRepository } from '../../../src/db/repositories/AppSettings.repository';
+import type { UsersRepository } from '../../../src/db/repositories/Users.repository';
+
+// keyedProvider/resolveMapsKey (maps.service.ts) go through instance-api-keys.ts
+// on every call now — none of these cases configure a key, so the stubs just
+// answer "unset" the way the old `database.get(() => undefined)` fake already did.
+const noAppSettings = { getValue: async () => null } as unknown as AppSettingsRepository;
+const noUsers = { getApiKeyColumn: async () => null } as unknown as UsersRepository;
 
 // The index switch is an environment variable now, not an admin row: it decides
 // whether a search leaves the instance at all, so it is pinned by the operator
@@ -83,7 +91,7 @@ const osmHit = (over: Record<string, unknown> = {}) => ({
 function make(enabled = true) {
   trekPlaces.on = enabled;
   const database = { get: vi.fn(() => undefined) } as unknown as DatabaseService;
-  return new MapsService(database, {} as PlacePhotoCacheService);
+  return new MapsService(database, {} as PlacePhotoCacheService, noAppSettings, noUsers);
 }
 
 beforeEach(() => {

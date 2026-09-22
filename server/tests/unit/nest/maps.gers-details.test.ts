@@ -20,6 +20,14 @@ vi.mock('../../../src/config', () => ({ JWT_SECRET: 'test-secret', ENCRYPTION_KE
 import { MapsService } from '../../../src/nest/maps/maps.service';
 import type { DatabaseService } from '../../../src/nest/database/database.service';
 import type { PlacePhotoCacheService } from '../../../src/nest/place-photos/place-photo-cache.service';
+import type { AppSettingsRepository } from '../../../src/db/repositories/AppSettings.repository';
+import type { UsersRepository } from '../../../src/db/repositories/Users.repository';
+
+// keyedProvider/resolveMapsKey (maps.service.ts) go through instance-api-keys.ts
+// on every call now — none of these cases configure a key, so the stubs just
+// answer "unset" the way the fake database.get(() => undefined) already did.
+const noAppSettings = { getValue: async () => null } as unknown as AppSettingsRepository;
+const noUsers = { getApiKeyColumn: async () => null } as unknown as UsersRepository;
 
 const PLACE = {
   gers: 'abc-123',
@@ -38,7 +46,7 @@ const PLACE = {
 
 function make(osmTags: Record<string, string> | null) {
   const database = { get: vi.fn(() => undefined) } as unknown as DatabaseService;
-  const svc = new MapsService(database, {} as PlacePhotoCacheService);
+  const svc = new MapsService(database, {} as PlacePhotoCacheService, noAppSettings, noUsers);
   vi.spyOn(svc, 'resolveOsmIdentity').mockResolvedValue(
     osmTags ? { tags: osmTags, osmUrl: 'https://www.openstreetmap.org/node/1', matchedName: "L'Osteria" } : null,
   );
@@ -104,7 +112,7 @@ describe('MapsService.getPlaceDetails for a gers: id', () => {
     // through would turn a working answer into an error for the one user whose
     // details request happened to land while Overpass was unreachable.
     const database = { get: vi.fn(() => undefined) } as unknown as DatabaseService;
-    const svc = new MapsService(database, {} as PlacePhotoCacheService);
+    const svc = new MapsService(database, {} as PlacePhotoCacheService, noAppSettings, noUsers);
     vi.spyOn(svc, 'resolveOsmIdentity').mockRejectedValue(new Error('overpass down'));
     mockById.mockResolvedValue({ ...PLACE, hours: { osm: 'Mo-Su 12:00-22:00' } });
 

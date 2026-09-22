@@ -13,6 +13,11 @@ import { readEnv, getAppUrl } from '../../app-config';
 import { safeFetchFollow, SsrfBlockedError } from '../../utils/ssrfGuard';
 import { discardBody, exceedsDeclaredLength, readCapped, readCappedText } from '../../utils/cappedFetch';
 import { resolveApiKey, type ApiKeySource } from '../settings/instance-api-keys';
+import { InjectRepository } from '@mikro-orm/nestjs';
+import { AppSettings } from '../../db/entities/AppSettings.entity';
+import type { AppSettingsRepository } from '../../db/repositories/AppSettings.repository';
+import { Users } from '../../db/entities/Users.entity';
+import type { UsersRepository } from '../../db/repositories/Users.repository';
 import { isPlacesProviderChoice, type PlacesProviderChoice } from './providers/places-provider';
 import {
   AMAP_SHORT_HOSTS,
@@ -690,6 +695,8 @@ export class MapsService {
   constructor(
     private readonly database: DatabaseService,
     private readonly photoCache: PlacePhotoCacheService,
+    @InjectRepository(AppSettings) private readonly appSettings: AppSettingsRepository,
+    @InjectRepository(Users) private readonly usersRepo: UsersRepository,
   ) {}
 
   /** Brand id → logo bytes, or null for "asked, has none". Insertion-ordered, so the
@@ -1002,7 +1009,7 @@ export class MapsService {
    * is returned so a provider error can say which of the three was used.
    */
   async resolveMapsKey(userId: number): Promise<{ key: string | null; source: ApiKeySource | null }> {
-    return resolveApiKey(this.database, 'maps_api_key', userId, readEnv().maps.placesApiKey);
+    return resolveApiKey(this.appSettings, this.usersRepo, 'maps_api_key', userId, readEnv().maps.placesApiKey);
   }
 
   async getMapsKey(userId: number): Promise<string | null> {
@@ -1011,7 +1018,7 @@ export class MapsService {
 
   /** The Amap credential, resolved through the identical three-step chain. */
   async resolveAmapKey(userId: number): Promise<{ key: string | null; source: ApiKeySource | null }> {
-    return resolveApiKey(this.database, 'amap_api_key', userId, readEnv().maps.amapApiKey);
+    return resolveApiKey(this.appSettings, this.usersRepo, 'amap_api_key', userId, readEnv().maps.amapApiKey);
   }
 
   // ── Keyed provider selection ───────────────────────────────────────────────

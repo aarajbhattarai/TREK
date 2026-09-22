@@ -84,7 +84,7 @@ import { MailerService } from '../../../src/nest/notifications/mailer/mailer.ser
 import { EphemeralTokenService } from '../../../src/nest/auth/ephemeral-token.service';
 import { AllowedFileTypesService } from '../../../src/nest/files/allowed-file-types.service';
 import { DEFAULT_ALLOWED_EXTENSIONS } from '../../../src/nest/files/files.constants';
-import { createTestUnitOfWork, createTestAppSettingsRepo } from '../../helpers/test-uow';
+import { createTestUnitOfWork, createTestAppSettingsRepo, createTestUsersRepo } from '../../helpers/test-uow';
 
 // MailerService is injected since the notifications fold — a stub instead of a
 // module mock. sendPasswordResetEmail is the only thing auth reaches for.
@@ -109,6 +109,7 @@ beforeAll(async () => {
   mailerStub,
   new EphemeralTokenService(),
   new AllowedFileTypesService(new DatabaseService(testDb)), await createTestUnitOfWork(testDb),
+  await createTestAppSettingsRepo(testDb), await createTestUsersRepo(testDb),
 );
 });
 

@@ -3,40 +3,36 @@ import fs from 'fs';
 import path from 'path';
 
 // safeFetch is mocked so saveUnsplashCover never hits the network.
-// db is mocked so getUnsplashKey resolves from a controllable stub, and
 // decrypt_api_key is a passthrough so stored values compare as plaintext.
-// The instance-wide row (#1939) is read before the user's own, so it gets its
-// own seam rather than eating the mockDbGet stub of every case below.
-const { safeFetch, mockDbGet, mockInstanceGet } = vi.hoisted(() => ({
+// getUnsplashKey resolves through resolveApiKey (instance-api-keys.ts, Plan 3a
+// Task 5), which now reads AppSettingsRepository.getValue (the instance-wide
+// row, #1939's precedence winner) and UsersRepository.getApiKeyColumn (the
+// caller's own row, the last resort) — mockGetValue/mockGetApiKeyColumn stand
+// in for those two repository methods, each its own seam so a test can pin
+// exactly which one was (or was not) reached.
+const { safeFetch, mockGetValue, mockGetApiKeyColumn } = vi.hoisted(() => ({
   safeFetch: vi.fn(),
-  mockDbGet: vi.fn((..._args: unknown[]) => undefined as unknown),
-  mockInstanceGet: vi.fn((..._args: unknown[]) => undefined as unknown),
+  mockGetValue: vi.fn((..._args: unknown[]) => Promise.resolve(undefined as string | null | undefined)),
+  mockGetApiKeyColumn: vi.fn((..._args: unknown[]) => Promise.resolve(undefined as string | null | undefined)),
 }));
 vi.mock('../../../../src/utils/ssrfGuard', () => ({ safeFetch }));
-vi.mock('../../../../src/db/database', () => ({
-  db: {
-    prepare: (sql: string) => ({
-      get: (...args: unknown[]) => (sql.includes('app_settings') ? mockInstanceGet(...args) : mockDbGet(...args)),
-      all: vi.fn(() => []),
-      run: vi.fn(),
-    }),
-  },
-}));
 vi.mock('../../../../src/nest/common/crypto/apiKeyCrypto', () => ({
   decrypt_api_key: (v: string | null) => v,
   // Unused by the read path here, but instance-api-keys imports it.
   maybe_encrypt_api_key: (v: string | null) => v,
 }));
 
+import type { AppSettingsRepository } from '../../../../src/db/repositories/AppSettings.repository';
+import type { UsersRepository } from '../../../../src/db/repositories/Users.repository';
 import { UnsplashService } from '../../../../src/nest/unsplash/unsplash.service';
-import { DatabaseService } from '../../../../src/nest/database/database.service';
 import { RuntimeEnvService } from '../../../../src/nest/app-config/runtime-env.service';
-import { db } from '../../../../src/db/database';
 import { makeStorageFixture } from '../../../helpers/storage-fixture';
 
-// Same four entry points, now methods. The db mock above still feeds them.
+// Same four entry points, now methods. Stub repositories feed getUnsplashKey.
 const coverFx = makeStorageFixture('covers/');
-const svc = new UnsplashService(new DatabaseService(db), new RuntimeEnvService(), coverFx.storage);
+const appSettingsStub = { getValue: mockGetValue } as unknown as AppSettingsRepository;
+const usersStub = { getApiKeyColumn: mockGetApiKeyColumn } as unknown as UsersRepository;
+const svc = new UnsplashService(appSettingsStub, usersStub, new RuntimeEnvService(), coverFx.storage);
 const searchUnsplashPhotos = svc.searchUnsplashPhotos.bind(svc);
 const getUnsplashKey = svc.getUnsplashKey.bind(svc);
 const saveUnsplashCover = svc.saveUnsplashCover.bind(svc);
@@ -47,8 +43,8 @@ const ORIGINAL_UNSPLASH_ENV = process.env.UNSPLASH_ACCESS_KEY;
 afterEach(() => {
   vi.clearAllMocks();
   vi.unstubAllGlobals();
-  mockDbGet.mockReturnValue(undefined);
-  mockInstanceGet.mockReturnValue(undefined);
+  mockGetValue.mockResolvedValue(undefined);
+  mockGetApiKeyColumn.mockResolvedValue(undefined);
   if (ORIGINAL_UNSPLASH_ENV === undefined) delete process.env.UNSPLASH_ACCESS_KEY;
   else process.env.UNSPLASH_ACCESS_KEY = ORIGINAL_UNSPLASH_ENV;
 });
@@ -161,38 +157,41 @@ describe('unsplashService.searchUnsplashPhotos', () => {
 describe('unsplashService.getUnsplashKey', () => {
   it('UNSPLASH-012: prefers the UNSPLASH_ACCESS_KEY env var over any stored key', async () => {
     process.env.UNSPLASH_ACCESS_KEY = 'env-key';
-    mockDbGet.mockReturnValue({ unsplash_api_key: 'user-key' });
+    mockGetApiKeyColumn.mockResolvedValue('user-key');
     expect(await getUnsplashKey(1)).toBe('env-key');
-    expect(mockDbGet).not.toHaveBeenCalled();
+    expect(mockGetValue).not.toHaveBeenCalled();
+    expect(mockGetApiKeyColumn).not.toHaveBeenCalled();
   });
 
   it('UNSPLASH-013: returns the user key when set and no env var', async () => {
     delete process.env.UNSPLASH_ACCESS_KEY;
-    mockDbGet.mockReturnValueOnce({ unsplash_api_key: 'user-key' });
+    mockGetApiKeyColumn.mockResolvedValueOnce('user-key');
     expect(await getUnsplashKey(1)).toBe('user-key');
   });
 
   it('UNSPLASH-014: the instance-wide key wins over the user own key (#1939)', async () => {
     delete process.env.UNSPLASH_ACCESS_KEY;
-    mockInstanceGet.mockReturnValue({ value: 'instance-key' });
-    mockDbGet.mockReturnValue({ unsplash_api_key: 'user-key' });
+    mockGetValue.mockResolvedValue('instance-key');
+    mockGetApiKeyColumn.mockResolvedValue('user-key');
     expect(await getUnsplashKey(1)).toBe('instance-key');
-    expect(mockDbGet).not.toHaveBeenCalled(); // the own row is not even read
+    expect(mockGetApiKeyColumn).not.toHaveBeenCalled(); // the own row is not even read
   });
 
   it('UNSPLASH-015: returns null when neither env, instance, nor the user has a key', async () => {
     delete process.env.UNSPLASH_ACCESS_KEY;
-    mockDbGet.mockReturnValue(undefined);
+    mockGetValue.mockResolvedValue(undefined);
+    mockGetApiKeyColumn.mockResolvedValue(undefined);
     expect(await getUnsplashKey(1)).toBeNull();
   });
 
   it("UNSPLASH-015b: never reads another user's key — the admin fallback is gone (#1939)", async () => {
     delete process.env.UNSPLASH_ACCESS_KEY;
-    mockDbGet.mockReturnValue(undefined);
+    mockGetValue.mockResolvedValue(undefined);
+    mockGetApiKeyColumn.mockResolvedValue(undefined);
     expect(await getUnsplashKey(1)).toBeNull();
     // Both reads are scoped: the instance row and this caller's own row.
-    expect(mockDbGet).toHaveBeenCalledTimes(1);
-    expect(mockDbGet).toHaveBeenCalledWith(1);
+    expect(mockGetApiKeyColumn).toHaveBeenCalledTimes(1);
+    expect(mockGetApiKeyColumn).toHaveBeenCalledWith(1, 'unsplash_api_key');
   });
 });
 

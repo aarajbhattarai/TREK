@@ -43,7 +43,7 @@ import path from 'node:path';
 import { UserProfileService } from '../../../src/nest/auth/user-profile.service';
 import { makeStorageFixture } from '../../helpers/storage-fixture';
 import { DatabaseService } from '../../../src/nest/database/database.service';
-import { createTestUnitOfWork } from '../../helpers/test-uow';
+import { createTestUnitOfWork, createTestAppSettingsRepo, createTestUsersRepo } from '../../helpers/test-uow';
 import { SEARCH_TEXT_FIELD_MASK } from '../../../src/nest/maps/maps.helpers';
 
 const avatarsFx = makeStorageFixture('avatars/');
@@ -56,6 +56,8 @@ beforeAll(async () => {
     new DatabaseService(testDb),
     avatarsFx.storage,
     await createTestUnitOfWork(testDb),
+    await createTestAppSettingsRepo(testDb),
+    await createTestUsersRepo(testDb),
   );
 });
 

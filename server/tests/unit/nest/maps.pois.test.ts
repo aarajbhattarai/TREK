@@ -28,6 +28,14 @@ vi.mock('../../../src/config', () => ({ JWT_SECRET: 'test-secret', ENCRYPTION_KE
 import { MapsService } from '../../../src/nest/maps/maps.service';
 import type { DatabaseService } from '../../../src/nest/database/database.service';
 import type { PlacePhotoCacheService } from '../../../src/nest/place-photos/place-photo-cache.service';
+import type { AppSettingsRepository } from '../../../src/db/repositories/AppSettings.repository';
+import type { UsersRepository } from '../../../src/db/repositories/Users.repository';
+
+// keyedProvider/resolveMapsKey (maps.service.ts) go through instance-api-keys.ts
+// on every call now — none of these cases configure a key, so the stubs just
+// answer "unset" the way the fake database.get(() => undefined) already did.
+const noAppSettings = { getValue: async () => null } as unknown as AppSettingsRepository;
+const noUsers = { getApiKeyColumn: async () => null } as unknown as UsersRepository;
 
 // 0.1 degrees a side, centred on the equator: cos(lat) is 1 there, so the radius
 // the service derives is exactly half the box's diagonal and the numbers below
@@ -109,7 +117,7 @@ function make(enabled = true) {
   if (enabled) delete process.env.TREK_PLACES_ENABLED;
   else process.env.TREK_PLACES_ENABLED = 'false';
   const database = { get: vi.fn(() => undefined) } as unknown as DatabaseService;
-  return new MapsService(database, {} as PlacePhotoCacheService);
+  return new MapsService(database, {} as PlacePhotoCacheService, noAppSettings, noUsers);
 }
 
 // Overpass is the one network call this file must never make; stubbing it is

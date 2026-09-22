@@ -9,8 +9,7 @@ import { EntityRepository } from '@mikro-orm/sql';
  * name outside this union fails `tsc` rather than reaching a query.
  *
  * This repository is the union's source of truth; `instance-api-keys.ts`
- * will import it rather than keeping its own copy (Task 5 wires that import
- * — it still declares the identical union itself today).
+ * imports it rather than keeping its own copy (Task 5).
  */
 export type InstanceApiKeyName = 'maps_api_key' | 'unsplash_api_key' | 'amap_api_key';
 

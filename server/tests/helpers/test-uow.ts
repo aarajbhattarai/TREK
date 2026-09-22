@@ -8,11 +8,17 @@ import { Categories } from '../../src/db/entities/Categories.entity';
 import type { CategoriesRepository } from '../../src/db/repositories/Categories.repository';
 import { Tags } from '../../src/db/entities/Tags.entity';
 import type { TagsRepository } from '../../src/db/repositories/Tags.repository';
+import { Settings } from '../../src/db/entities/Settings.entity';
+import type { SettingsRepository } from '../../src/db/repositories/Settings.repository';
+import { Users } from '../../src/db/entities/Users.entity';
+import type { UsersRepository } from '../../src/db/repositories/Users.repository';
 
 const perHandle = new WeakMap<Database.Database, Promise<UnitOfWork>>();
 const appSettingsPerHandle = new WeakMap<Database.Database, Promise<AppSettingsRepository>>();
 const categoriesPerHandle = new WeakMap<Database.Database, Promise<CategoriesRepository>>();
 const tagsPerHandle = new WeakMap<Database.Database, Promise<TagsRepository>>();
+const settingsPerHandle = new WeakMap<Database.Database, Promise<SettingsRepository>>();
+const usersPerHandle = new WeakMap<Database.Database, Promise<UsersRepository>>();
 // ONE MikroORM per handle, shared by createTestUnitOfWork and
 // createTestAppSettingsRepo (task-2-review.md I2): each used to call
 // createTestOrm(db) independently, which opened a SECOND MikroORM.init over the
@@ -105,6 +111,38 @@ export function createTestTagsRepo(db: Database.Database): Promise<TagsRepositor
   if (existing !== undefined) return existing;
   const pending = sharedTestOrm(db).then((t) => t.repo(Tags) as TagsRepository);
   tagsPerHandle.set(db, pending);
+  return pending;
+}
+
+/**
+ * The `SettingsRepository` a hand-constructed `SettingsService` needs (Plan
+ * 3a Task 5 — the per-user `settings` table repository), same memoisation as
+ * `createTestAppSettingsRepo`/`createTestCategoriesRepo`.
+ */
+export function createTestSettingsRepo(db: Database.Database): Promise<SettingsRepository> {
+  const existing = settingsPerHandle.get(db);
+  if (existing !== undefined) return existing;
+  const pending = sharedTestOrm(db).then((t) => t.repo(Settings) as SettingsRepository);
+  settingsPerHandle.set(db, pending);
+  return pending;
+}
+
+/**
+ * The `UsersRepository` `instance-api-keys.ts`'s repository-backed functions
+ * resolve through the active MikroORM request context rather than a
+ * constructor argument (Plan 3a Task 5 — see the file's own docstring for
+ * why: its callers span ~6 domains outside this plan, still passing
+ * `DatabaseService`, and none of them are touched by this conversion). A
+ * hand-built test that exercises those functions still needs a real
+ * `UsersRepository` bound to the same ORM its `withRequestContext`-style
+ * wrapper forks from — this is that repository, same memoisation as the
+ * others in this file.
+ */
+export function createTestUsersRepo(db: Database.Database): Promise<UsersRepository> {
+  const existing = usersPerHandle.get(db);
+  if (existing !== undefined) return existing;
+  const pending = sharedTestOrm(db).then((t) => t.repo(Users) as UsersRepository);
+  usersPerHandle.set(db, pending);
   return pending;
 }
 

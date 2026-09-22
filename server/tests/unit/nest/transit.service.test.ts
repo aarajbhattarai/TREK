@@ -13,6 +13,8 @@ import { deriveTransitStats, type TransitLeg } from '../../../src/nest/transit/t
 import { GoogleTransitProvider } from '../../../src/nest/transit/google-transit.provider';
 import { TransitService } from '../../../src/nest/transit/transit.service';
 import type { DatabaseService } from '../../../src/nest/database/database.service';
+import type { AppSettingsRepository } from '../../../src/db/repositories/AppSettings.repository';
+import type { UsersRepository } from '../../../src/db/repositories/Users.repository';
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
@@ -26,7 +28,9 @@ const fetchMock = vi.fn();
 // No `transit_provider` row means Transitous, so every case below keeps
 // exercising the MOTIS path — the Google branch has its own suite.
 const db = { get: () => undefined, run: () => undefined } as unknown as DatabaseService;
-const svc = new TransitService(new GoogleTransitProvider(db));
+const noAppSettings = { getValue: async () => null } as unknown as AppSettingsRepository;
+const noUsers = { getApiKeyColumn: async () => null } as unknown as UsersRepository;
+const svc = new TransitService(new GoogleTransitProvider(db, noAppSettings, noUsers));
 
 beforeEach(() => {
   vi.stubGlobal('fetch', fetchMock);

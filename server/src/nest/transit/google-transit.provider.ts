@@ -1,8 +1,13 @@
 import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@mikro-orm/nestjs';
 import { readEnv } from '../../app-config';
 import { DatabaseService } from '../database/database.service';
 import { toApiLang } from '../maps/maps.helpers';
 import { resolveApiKey, type ApiKeySource } from '../settings/instance-api-keys';
+import { AppSettings } from '../../db/entities/AppSettings.entity';
+import type { AppSettingsRepository } from '../../db/repositories/AppSettings.repository';
+import { Users } from '../../db/entities/Users.entity';
+import type { UsersRepository } from '../../db/repositories/Users.repository';
 import { readTransitProvider } from './transit-provider';
 import {
   decodePolyline,
@@ -234,10 +239,14 @@ function stopFrom(stop: GoogleStop | undefined, fallback: GoogleLatLng | undefin
 
 @Injectable()
 export class GoogleTransitProvider {
-  constructor(private readonly database: DatabaseService) {}
+  constructor(
+    private readonly database: DatabaseService,
+    @InjectRepository(AppSettings) private readonly appSettings: AppSettingsRepository,
+    @InjectRepository(Users) private readonly usersRepo: UsersRepository,
+  ) {}
 
   private async resolveKey(userId: number): Promise<{ key: string | null; source: ApiKeySource | null }> {
-    return resolveApiKey(this.database, 'maps_api_key', userId, readEnv().maps.placesApiKey);
+    return resolveApiKey(this.appSettings, this.usersRepo, 'maps_api_key', userId, readEnv().maps.placesApiKey);
   }
 
   /**

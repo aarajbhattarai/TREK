@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@mikro-orm/nestjs';
 import { readEnv, getAppUrl } from '../../app-config';
 import { DatabaseService } from '../database/database.service';
 import { UnitOfWork } from '../database/unit-of-work';
@@ -16,6 +17,10 @@ import {
 } from '../settings/instance-api-keys';
 import { SEARCH_TEXT_FIELD_MASK } from '../maps/maps.helpers';
 import { User } from '../../types';
+import { AppSettings } from '../../db/entities/AppSettings.entity';
+import type { AppSettingsRepository } from '../../db/repositories/AppSettings.repository';
+import { Users } from '../../db/entities/Users.entity';
+import type { UsersRepository } from '../../db/repositories/Users.repository';
 
 /**
  * The account a user administers about themselves: display settings, avatar,
@@ -28,8 +33,12 @@ import { User } from '../../types';
  * moved verbatim — same SQL, same validation order, same masking, same error
  * strings and status codes.
  *
- * DatabaseService is the only injected dependency, which is what made this the
- * second-cheapest cut after tokens.
+ * DatabaseService was the only injected dependency at first, which is what
+ * made this the second-cheapest cut after tokens; `AppSettingsRepository`/
+ * `UsersRepository` (Plan 3a Task 5) were added later purely so the three
+ * `instance-api-keys.ts` calls below pass their own repository rather than
+ * that file resolving one itself — every other read/write here is still
+ * `DatabaseService`'s raw SQL (auth is outside Plan 3a).
  */
 @Injectable()
 export class UserProfileService {
@@ -37,6 +46,8 @@ export class UserProfileService {
     private readonly db: DatabaseService,
     private readonly storage: StorageService,
     private readonly uow: UnitOfWork,
+    @InjectRepository(AppSettings) private readonly appSettings: AppSettingsRepository,
+    @InjectRepository(Users) private readonly usersRepo: UsersRepository,
   ) {}
 
   /**
@@ -74,7 +85,7 @@ export class UserProfileService {
     isAdmin: boolean,
   ): Promise<string> {
     if (isAdmin && (INSTANCE_API_KEY_NAMES as readonly string[]).includes(name)) {
-      const instance = await readInstanceApiKey(this.db, name as InstanceApiKeyName);
+      const instance = await readInstanceApiKey(this.appSettings, name as InstanceApiKeyName);
       if (instance !== null) return instance;
     }
     return decrypt_api_key(current?.[name]) ?? '';
@@ -119,7 +130,7 @@ export class UserProfileService {
   private async mirrorInstanceKeys(body: Record<string, unknown>, isAdmin: boolean): Promise<void> {
     if (!isAdmin) return;
     for (const name of INSTANCE_API_KEY_NAMES) {
-      if (body[name] !== undefined) await writeInstanceApiKey(this.db, name, body[name]);
+      if (body[name] !== undefined) await writeInstanceApiKey(this.appSettings, name, body[name]);
     }
   }
 
@@ -279,10 +290,10 @@ export class UserProfileService {
     // instance value exists — on that install it is what the resolver picks too.
     return {
       settings: {
-        maps_api_key: (await readInstanceApiKey(this.db, 'maps_api_key')) ?? decrypt_api_key(user.maps_api_key),
+        maps_api_key: (await readInstanceApiKey(this.appSettings, 'maps_api_key')) ?? decrypt_api_key(user.maps_api_key),
         openweather_api_key: decrypt_api_key(user.openweather_api_key),
-        unsplash_api_key: (await readInstanceApiKey(this.db, 'unsplash_api_key')) ?? decrypt_api_key(user.unsplash_api_key),
-        amap_api_key: (await readInstanceApiKey(this.db, 'amap_api_key')) ?? decrypt_api_key(user.amap_api_key),
+        unsplash_api_key: (await readInstanceApiKey(this.appSettings, 'unsplash_api_key')) ?? decrypt_api_key(user.unsplash_api_key),
+        amap_api_key: (await readInstanceApiKey(this.appSettings, 'amap_api_key')) ?? decrypt_api_key(user.amap_api_key),
       },
     };
   }
@@ -356,7 +367,7 @@ export class UserProfileService {
     // The key a search would actually use, not the one in this admin's column:
     // testing a value nothing resolves to is how "the panel says the key is
     // fine" and "every search 403s" coexisted (#1939).
-    const { key: maps_api_key } = await resolveApiKey(this.db, 'maps_api_key', userId, readEnv().maps.placesApiKey);
+    const { key: maps_api_key } = await resolveApiKey(this.appSettings, this.usersRepo, 'maps_api_key', userId, readEnv().maps.placesApiKey);
     if (maps_api_key) {
       try {
         // Same Referer as maps.service googleFetch — without it, keys with an
