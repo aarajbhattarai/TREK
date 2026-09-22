@@ -152,7 +152,8 @@ permissions still requires explicit re-consent).
   the home for per-day content like outfit planning, live flight status or logistics),
   or a panel at the foot of a booking card in the **reservation-detail** view
   (`reservation-detail` slot — receives the open `reservationId`, for things like
-  live check-in status or a seat map). Set the slot in `capabilities.widget.slot`.
+  live check-in status or a seat map; shown on the desktop panel and on the phone's
+  transport and booking cards). Set the slot in `capabilities.widget.slot`.
 - **trip-page** — adds a tab **inside every trip planner**, so your UI lives in the
   trip alongside Plan / Transports / Files. The frame is the same sandboxed iframe as
   a `page`, but it receives the current `tripId` in `trek:context` (so you can scope
