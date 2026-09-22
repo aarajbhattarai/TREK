@@ -73,14 +73,15 @@ export async function listForOwner<T extends { id: unknown }, K extends keyof T,
  *
  * `options.refresh` passes straight through to the underlying `findOne`
  * (Task 0 review, I1's PK-read ruling: a caller whose read can follow a
- * raw/native write on the same row within the same request sets it). For an
- * unrestricted call like this one (no `fields` option), MikroORM already
- * re-queries and merges fresh data on every call regardless of `refresh` —
- * its identity-map-skip optimisation, and the staleness it can cause without
- * `refresh`, only engages together with a `fields` restriction (the case
- * `AppSettingsRepository.getValue` actually hit). `refresh` is still
- * threaded through here to match the blanket ruling and to stay correct if a
- * caller ever adds `fields` on top of it.
+ * raw/native write on the same row within the same request sets it). This
+ * filter is `{ id, [ownerField]: ownerId }` — not PK-only — so MikroORM's
+ * identity-map short-circuit never engages here: that short-circuit fires
+ * only when the filter is exactly the primary key (Task 3 review, Important
+ * 2's correction — `fields` has nothing to do with it, unlike what an
+ * earlier version of this docstring claimed). `refresh` is a harmless
+ * no-op on every call this helper serves today; it stays threaded through
+ * to match the blanket ruling and to stay correct if a future caller
+ * narrows the filter to PK-only.
  */
 export async function findOwnedByUser<T extends { id: unknown }, K extends keyof T>(
   repo: EntityRepository<T>,

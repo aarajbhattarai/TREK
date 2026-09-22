@@ -61,16 +61,18 @@ describe('findOwnedByUser', () => {
   });
 
   // Task 0 review I1's PK-read ruling, extended to this helper (Task 3):
-  // `options.refresh` passes through to `findOne`. For an unrestricted
-  // (full-row) findOne like this one, MikroORM already re-queries and merges
-  // fresh data on every call regardless of `refresh` (proven below: a raw
-  // write on the same row is visible either way) — `refresh`'s
-  // identity-map-skip optimisation (and the staleness it can cause without
-  // it) only engages when `options.fields` is also set, which is why
-  // AppSettingsRepository.getValue (a `fields: ['value']`-scoped findOne)
-  // needed it to fix a real bug and this one does not. It stays on this
-  // helper regardless, matching the Task 0 review's blanket PK-read ruling
-  // and staying correct if a future caller adds a `fields` restriction here.
+  // `options.refresh` passes through to `findOne`. This helper's filter is
+  // `{ id, [ownerField]: ownerId }`, not PK-only, so it always re-queries
+  // and merges fresh data regardless of `refresh` (proven below: a raw
+  // write on the same row is visible either way) — the identity-map
+  // short-circuit (and the staleness it can cause without `refresh`) fires
+  // only when the filter is exactly the primary key, which is what
+  // AppSettingsRepository.getValue's PK-only `findOne` hit and this
+  // multi-condition filter never does (Task 3 review, Important 2's
+  // correction — `fields` has nothing to do with it). `refresh` stays on
+  // this helper regardless, matching the Task 0 review's blanket PK-read
+  // ruling and staying correct if a future caller narrows the filter to
+  // PK-only.
   it('OWNEDLOOKUP-006: { refresh: true } sees a raw UPDATE on the same row in the same request, in one query', async () => {
     const { user: owner } = createUser(testDb);
     const tag = createTag(testDb, owner.id, { name: 'Old' });

@@ -51,7 +51,11 @@ export class CategoriesService {
     if (name) changes.name = name;
     if (color) changes.color = color;
     if (icon) changes.icon = icon;
-    return (await this.categories.patch(Number(id), changes)) as unknown as Category;
+    // `patch` returns `null` for a non-existent id (Task 3 review, Minor 2);
+    // the legacy re-select returned `undefined` for the same case, and every
+    // caller pre-checks with a 404 first, so `?? undefined` restores that
+    // exact parity for the race-condition path the pre-check doesn't cover.
+    return ((await this.categories.patch(Number(id), changes)) ?? undefined) as unknown as Category;
   }
 
   async remove(id: string | number): Promise<void> {

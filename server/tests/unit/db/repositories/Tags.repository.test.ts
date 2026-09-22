@@ -94,10 +94,12 @@ describe('TagsRepository', () => {
 
     // I1 (Task 0 review): findByIdAndUser carries `{ refresh: true }` (via
     // the shared findOwnedByUser helper), the ruling every Plan 3 PK read
-    // follows. This unrestricted (no `fields` option) findOne always
-    // re-queries and merges fresh data regardless of `refresh` — see
-    // TagsRepository's docstring — so this proves the (still correct)
-    // outcome in one query rather than a refresh-vs-no-refresh contrast.
+    // follows. This call's filter is `{ id, user }`, not PK-only, so it
+    // always re-queries and merges fresh data regardless of `refresh` (Task
+    // 3 review, Important 2's correction: the identity-map short-circuit
+    // fires only for an exactly-PK filter, not for a `fields` restriction)
+    // — this proves the (still correct) outcome in one query rather than a
+    // refresh-vs-no-refresh contrast.
     it('TAGREPO-009: a raw UPDATE on the same row then findByIdAndUser reads the new value, in one query', async () => {
       const { user } = createUser(testDb);
       const created = createTag(testDb, user.id, { name: 'Stale', color: '#111111' });
@@ -154,6 +156,50 @@ describe('TagsRepository', () => {
 
     it('TAGREPO-015: returns null for a non-existent id', async () => {
       expect(await tags.patch(99999999, { name: 'Nope' })).toBeNull();
+    });
+
+    // Task 3 review, Important 1, consequence (a) — and Minor 1: the
+    // identity map is populated through `listByUser()` here, not
+    // `findByIdAndUser`, so this doubles as the "list → raw UPDATE →
+    // patch" case the review asked for. Without `refresh: true` in
+    // `patch`'s lookup, `name` would still read the pre-UPDATE 'OLD'
+    // (verified: fails without the fix).
+    it('TAGREPO-019: an untouched column reflects a raw UPDATE made after the identity map was populated by listByUser()', async () => {
+      const { user } = createUser(testDb);
+      const created = createTag(testDb, user.id, { name: 'OLD', color: '#aaaaaa' });
+      await tags.listByUser(user.id); // populate the identity map with name: 'OLD'
+      testDb.prepare('UPDATE tags SET name = ? WHERE id = ?').run('NEW', created.id);
+      const updated = await tags.patch(created.id, { color: '#bbbbbb' });
+      expect(updated?.name).toBe('NEW');
+    });
+
+    // Task 3 review, Important 1, consequence (b): without `refresh: true`,
+    // MikroORM diffs the patch against the stale in-memory snapshot; when
+    // the concurrent raw write and the patch happen to agree on the value,
+    // no changeset is produced and the UPDATE is silently dropped even
+    // though the method reports success. The raw-row assertion is what
+    // catches it — `updated?.color` alone would still read '#111111'
+    // either way (verified: fails without the fix).
+    it('TAGREPO-020: a patch matching a concurrent raw write is not silently dropped', async () => {
+      const { user } = createUser(testDb);
+      const created = createTag(testDb, user.id, { name: 'RaceColor', color: '#111111' });
+      await tags.findByIdAndUser(created.id, user.id); // populate the identity map with '#111111'
+      testDb.prepare('UPDATE tags SET color = ? WHERE id = ?').run('#333333', created.id);
+      const updated = await tags.patch(created.id, { color: '#111111' });
+      expect(updated?.color).toBe('#111111');
+      expect(rawTag(created.id)).toMatchObject({ color: '#111111' });
+    });
+
+    // Task 3 review, Important 1, consequence (c): `remove` uses
+    // `nativeDelete`, which does not clear the identity map, so a stale
+    // patch afterwards could fabricate a row for an id that no longer
+    // exists instead of returning `null` (verified: fails without the fix).
+    it('TAGREPO-021: patch after remove in the same request returns null, not a fabricated row', async () => {
+      const { user } = createUser(testDb);
+      const created = createTag(testDb, user.id, { name: 'RaceDelete', color: '#444444' });
+      await tags.findByIdAndUser(created.id, user.id); // populate the identity map
+      await tags.remove(created.id);
+      expect(await tags.patch(created.id, { color: '#555555' })).toBeNull();
     });
   });
 

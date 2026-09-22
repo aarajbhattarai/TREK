@@ -49,7 +49,11 @@ export class TagsService {
     const changes: { name?: string; color?: string } = {};
     if (name) changes.name = name;
     if (color) changes.color = color;
-    return (await this.tags.patch(Number(id), changes)) as unknown as Tag;
+    // `patch` returns `null` for a non-existent id (Task 3 review, Minor 2);
+    // the legacy re-select returned `undefined` for the same case, and every
+    // caller pre-checks with a 404 first, so `?? undefined` restores that
+    // exact parity for the race-condition path the pre-check doesn't cover.
+    return ((await this.tags.patch(Number(id), changes)) ?? undefined) as unknown as Tag;
   }
 
   async remove(id: string | number): Promise<void> {

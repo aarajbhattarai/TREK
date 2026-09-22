@@ -33,16 +33,17 @@ export class TagsRepository extends EntityRepository<Tags> {
    * directly).
    *
    * `refresh: true` (Task 0 review, I1 — the ruling every Plan 3 repository
-   * follows for a PK-scoped read). For this unrestricted (no `fields`
-   * option) findOne, MikroORM already re-queries and merges fresh data on
-   * every call regardless of `refresh` — its identity-map-skip optimisation
-   * only engages together with a `fields` restriction (the case
-   * `AppSettingsRepository.getValue` actually needed it for). `refresh`
-   * stays on this read to match the blanket ruling and to stay correct if a
-   * future caller adds `fields` here. `findOwnedByUser`'s optional `options`
-   * parameter (added here, not duplicated — Task 0's helper had no reads
-   * that needed it yet) passes straight through to the underlying
-   * `findOne`.
+   * follows for a PK-scoped read). This call's filter is `{ id, user }`,
+   * not PK-only, so MikroORM's identity-map short-circuit — which fires
+   * only when the filter is exactly the primary key, not (as an earlier
+   * version of this docstring said) when a `fields` restriction is present
+   * (Task 3 review, Important 2's correction) — never engages here anyway:
+   * this call already re-queries and merges fresh data on every call
+   * regardless of `refresh`. `refresh` stays threaded through to match the
+   * blanket ruling and to stay correct if a future caller narrows the
+   * filter to PK-only. `findOwnedByUser`'s optional `options` parameter
+   * (added here, not duplicated — Task 0's helper had no reads that needed
+   * it yet) passes straight through to the underlying `findOne`.
    */
   async findByIdAndUser(id: number, userId: number): Promise<TagRow | null> {
     const tag = await findOwnedByUser<Tags, 'user'>(this, id, 'user', userId, { refresh: true });
@@ -84,12 +85,22 @@ export class TagsRepository extends EntityRepository<Tags> {
    * coalesce-away-empty-string behaviour. Returns `null` when no row matches
    * `id`, mirroring the legacy re-select's `undefined`.
    *
+   * The lookup `findOne({ id }, { refresh: true })` is PK-only, so without
+   * `refresh: true` MikroORM would answer it from the identity map instead
+   * of the DB (Task 3 review, Important 1) — same three consequences as
+   * `CategoriesRepository.patch`: a stale untouched column, a patch that
+   * diffs against a stale value and silently drops the UPDATE, or (since
+   * `remove()` is a `nativeDelete` that does not clear the identity map) a
+   * fabricated row for an id already deleted earlier in the request instead
+   * of `null`. `refresh: true` forces a real re-query every time.
+   *
    * No re-`findOne`/`refresh` after `flush`, same reasoning as
-   * `CategoriesRepository.patch`: `assign` already mutated the managed
-   * entity in place, and no column here is DB-computed on UPDATE.
+   * `CategoriesRepository.patch`: `assign` already mutated the managed (and
+   * now guaranteed-fresh) entity in place, and no column here is
+   * DB-computed on UPDATE.
    */
   async patch(id: number, changes: { name?: string; color?: string }): Promise<TagRow | null> {
-    const tag = await this.findOne({ id });
+    const tag = await this.findOne({ id }, { refresh: true });
     if (!tag) return null;
     this.assign(tag, changes);
     await this.getEntityManager().flush();

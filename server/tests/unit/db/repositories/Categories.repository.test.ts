@@ -89,10 +89,11 @@ describe('CategoriesRepository', () => {
     });
 
     // I1 (Task 0 review): findById carries `refresh: true`, the ruling every
-    // Plan 3 PK read follows. This unrestricted (no `fields` option) findOne
-    // always re-queries and merges fresh data regardless of `refresh` — see
-    // CategoriesRepository's docstring — so this proves the (still correct)
-    // outcome in one query rather than a refresh-vs-no-refresh contrast.
+    // Plan 3 PK read follows — and it is load-bearing here (Task 3 review,
+    // Important 2's correction): `{ id }` is exactly the primary key, so
+    // without `refresh` this would be served from the identity map with
+    // zero queries and the stale pre-UPDATE color. `queries === 1` proves
+    // the real re-query happens.
     it('CATREPO-008: a raw UPDATE on the same row then findById reads the new value, in one query', async () => {
       const created = createCategory(testDb, { name: 'RepoStale', color: '#111111' });
       expect((await categories.findById(created.id))?.color).toBe('#111111'); // populate the identity map
@@ -150,6 +151,46 @@ describe('CategoriesRepository', () => {
 
     it('CATREPO-014: returns null for a non-existent id', async () => {
       expect(await categories.patch(99999999, { name: 'Nope' })).toBeNull();
+    });
+
+    // Task 3 review, Important 1, consequence (a) — and Minor 1: the
+    // identity map is populated through `list()` here, not `findById`, so
+    // this doubles as the "list → raw UPDATE → patch" case the review
+    // asked for. Without `refresh: true` in `patch`'s lookup, `icon` would
+    // still read the pre-UPDATE 'OLD' (verified: fails without the fix).
+    it('CATREPO-018: an untouched column reflects a raw UPDATE made after the identity map was populated by list()', async () => {
+      const created = createCategory(testDb, { name: 'RepoRaceIcon', color: '#aaaaaa', icon: 'OLD' });
+      await categories.list(); // populate the identity map with icon: 'OLD'
+      testDb.prepare('UPDATE categories SET icon = ? WHERE id = ?').run('NEW', created.id);
+      const updated = await categories.patch(created.id, { color: '#bbbbbb' });
+      expect(updated?.icon).toBe('NEW');
+    });
+
+    // Task 3 review, Important 1, consequence (b): without `refresh: true`,
+    // MikroORM diffs the patch against the stale in-memory snapshot; when
+    // the concurrent raw write and the patch happen to agree on the value,
+    // no changeset is produced and the UPDATE is silently dropped even
+    // though the method reports success. The raw-row assertion is what
+    // catches it — `updated?.color` alone would still read '#111111'
+    // either way (verified: fails without the fix).
+    it('CATREPO-019: a patch matching a concurrent raw write is not silently dropped', async () => {
+      const created = createCategory(testDb, { name: 'RepoRaceColor', color: '#111111' });
+      await categories.findById(created.id); // populate the identity map with '#111111'
+      testDb.prepare('UPDATE categories SET color = ? WHERE id = ?').run('#333333', created.id);
+      const updated = await categories.patch(created.id, { color: '#111111' });
+      expect(updated?.color).toBe('#111111');
+      expect(rawCategory(created.id)).toMatchObject({ color: '#111111' });
+    });
+
+    // Task 3 review, Important 1, consequence (c): `remove` uses
+    // `nativeDelete`, which does not clear the identity map, so a stale
+    // patch afterwards could fabricate a row for an id that no longer
+    // exists instead of returning `null` (verified: fails without the fix).
+    it('CATREPO-020: patch after remove in the same request returns null, not a fabricated row', async () => {
+      const created = createCategory(testDb, { name: 'RepoRaceDelete', color: '#444444' });
+      await categories.findById(created.id); // populate the identity map
+      await categories.remove(created.id);
+      expect(await categories.patch(created.id, { color: '#555555' })).toBeNull();
     });
   });
 
