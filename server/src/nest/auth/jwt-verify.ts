@@ -1,8 +1,8 @@
 import type { Request } from 'express';
 import jwt from 'jsonwebtoken';
-import { db } from '../../db/database';
 import { JWT_SECRET } from '../../config';
 import type { User } from '../../types';
+import type { UsersRepository } from '../../db/repositories/Users.repository';
 
 /**
  * The canonical JWT session check. Every auth surface goes through here — the
@@ -15,6 +15,16 @@ import type { User } from '../../types';
  * would have no way to inject one. Note JWT_SECRET is deliberately a live
  * binding from src/config, not an app-config value: the admin panel rotates it
  * at runtime and `export let` is what makes a rotation take effect in-process.
+ *
+ * `verifyJwtAndLoadUser` stays a free function (Plan 3b Task 1 RULING) and
+ * gains an explicit `users: UsersRepository` parameter — DI over a
+ * module-level accessor (CLAUDE.md "DI over global mutable module state").
+ * This file imports neither the ORM nor `RequestContext`: every caller
+ * resolves its own `UsersRepository` (through Nest DI, or — for the one
+ * pre-init caller, `platform.routes.ts::servePhoto` — `orm.em.getRepository(Users)`
+ * resolved INSIDE `applyPlatformUploads`'s `withRequestContext` wrapper,
+ * `orm` threaded in from `bootstrap.ts`) and passes it in. The legacy `db`
+ * proxy import is gone.
  */
 export function extractToken(req: Request): string | null {
   // Prefer httpOnly cookie; fall back to Authorization: Bearer (MCP, API clients)
@@ -54,16 +64,14 @@ export function decodeSessionClaims(token: string | undefined): SessionClaims | 
   return decoded as SessionClaims;
 }
 
-export async function verifyJwtAndLoadUser(token: string): Promise<User | null> {
+export async function verifyJwtAndLoadUser(token: string, users: UsersRepository): Promise<User | null> {
   try {
     const decoded = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] }) as { id: number; pv?: number; purpose?: string };
     // Purpose-scoped tokens (e.g. the short-lived mfa_login token) share this
     // secret but are not full session tokens — only their dedicated endpoint
     // may accept them, so reject any token carrying a purpose claim here.
     if (decoded.purpose) return null;
-    const row = db.prepare(
-      'SELECT id, username, email, role, password_version FROM users WHERE id = ?'
-    ).get(decoded.id) as (User & { password_version?: number }) | undefined;
+    const row = await users.findByIdWithPasswordVersion(decoded.id);
     if (!row) return null;
     // Session invalidation: any token whose embedded password_version
     // predates the user's current one is rejected. Tokens issued before

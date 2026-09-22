@@ -118,7 +118,7 @@ beforeAll(async () => {
   new DatabaseService(testDb),
   new PermissionsService(await createTestAppSettingsRepo(testDb), await createTestUnitOfWork(testDb)),
   new TripMembershipService(new DatabaseService(testDb)),
-  new WebauthnConfigService(new DatabaseService(testDb)),
+  new WebauthnConfigService(await createTestAppSettingsRepo(testDb)),
   new UserCleanupService(new DatabaseService(testDb), new BudgetService(new DatabaseService(testDb), new PermissionsService(await createTestAppSettingsRepo(testDb), await createTestUnitOfWork(testDb)), new ExchangeRatesService(), new RealtimeService(), await createTestUnitOfWork(testDb)), await createTestUnitOfWork(testDb)),
   mailerStub,
   new EphemeralTokenService(),

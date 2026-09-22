@@ -316,6 +316,54 @@ describe('TrekWsAdapter D6 request context on connect (Plan 3b Task 0)', () => {
 });
 
 /**
+ * D6 request context on the DISCONNECT dispatch (Task 0 review addendum,
+ * LOW item 2) — the same property WSAD-050/051 pin for the connect dispatch,
+ * now for `bindClientDisconnect` (`OnGatewayDisconnect` /
+ * `RealtimeGateway.handleDisconnect`). The base `WsAdapter.bindClientDisconnect`
+ * is a bare `client.on('close', callback)` with no context of any kind.
+ */
+describe('TrekWsAdapter D6 request context on disconnect (Task 0 review addendum)', () => {
+  it('WSAD-052: without MikroORM passed to the adapter, the disconnect dispatch THROWS rather than running handleDisconnect unwrapped', () => {
+    const ad = new TrekWsAdapter({} as HttpServer); // no orm
+    const socket = fakeSocket();
+    let handlerRan = false;
+    ad.bindClientDisconnect(socket as never, () => {
+      handlerRan = true;
+    });
+    expect(() => socket.emit('close', Buffer.from(''))).toThrow(/no MikroORM available/i);
+    // Same fail-closed shape as WSAD-050: the wrapper throws BEFORE the
+    // disconnect callback ever runs.
+    expect(handlerRan).toBe(false);
+  });
+
+  it('WSAD-053: with MikroORM passed to the adapter, a repository read inside the disconnect callback succeeds — the wrapper is load-bearing', async () => {
+    const t = await createTestOrm(testDb, { allowGlobalContext: false });
+    try {
+      let result: unknown;
+      let caught: unknown;
+      const ad = new TrekWsAdapter({} as HttpServer, t.orm);
+      const socket = fakeSocket();
+      let captured: Promise<unknown> | undefined;
+      ad.bindClientDisconnect(socket as never, () => {
+        captured = (async () => {
+          try {
+            result = await t.orm.em.find(Users, {});
+          } catch (e) {
+            caught = e;
+          }
+        })();
+      });
+      socket.emit('close', Buffer.from(''));
+      await captured;
+      expect(caught).toBeUndefined();
+      expect(Array.isArray(result)).toBe(true);
+    } finally {
+      await t.close();
+    }
+  });
+});
+
+/**
  * The pointer exemption (#1973).
  *
  * Studio's pointers move about ten times a second per editor, three times what

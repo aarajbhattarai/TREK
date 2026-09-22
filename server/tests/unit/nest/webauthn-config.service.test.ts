@@ -22,22 +22,19 @@ vi.mock('../../../src/app-config', async (importOriginal) => {
 });
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { DatabaseService } from '../../../src/nest/database/database.service';
+import type { AppSettingsRepository } from '../../../src/db/repositories/AppSettings.repository';
 import { WebauthnConfigService, originWithinRpScope } from '../../../src/nest/auth/webauthn-config.service';
 
-// Injected instead of vi.mocking src/db/database: the service reads exactly one
-// row shape (app_settings.value), so a stub connection keeps the suite free of
-// a schema and states the only DB contact the resolver has.
-const conn = {
-  prepare: (_sql: string) => ({
-    get: (key: string) => {
-      const v = settingsStore.get(key);
-      return v === undefined ? undefined : { value: v };
-    },
-  }),
-} as unknown as ConstructorParameters<typeof DatabaseService>[0];
+// Injected instead of vi.mocking src/db/database (Plan 3b Task 1: the service
+// now takes an AppSettingsRepository, not DatabaseService): the service reads
+// exactly one method (`getValue`), so a fake repository over the same real
+// Map keeps the suite free of a schema and states the only contact the
+// resolver has, unchanged from the DatabaseService-stub version.
+const appSettings = {
+  getValue: async (key: string) => settingsStore.get(key) ?? null,
+} as unknown as AppSettingsRepository;
 
-const svc = new WebauthnConfigService(new DatabaseService(conn));
+const svc = new WebauthnConfigService(appSettings);
 
 beforeEach(() => {
   settingsStore.clear();

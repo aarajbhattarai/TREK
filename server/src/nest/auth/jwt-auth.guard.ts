@@ -1,5 +1,7 @@
 import { CanActivate, ExecutionContext, HttpException, Injectable } from '@nestjs/common';
+import { EntityManager } from '@mikro-orm/core';
 import type { Request } from 'express';
+import { Users } from '../../db/entities/Users.entity';
 import { extractToken, verifyJwtAndLoadUser } from './jwt-verify';
 
 /**
@@ -9,16 +11,37 @@ import { extractToken, verifyJwtAndLoadUser } from './jwt-verify';
  * and the loaded user are IDENTICAL to the Express middleware. No new tokens.
  *
  * Error bodies match the legacy 401 shape exactly so the client is unaffected.
+ *
+ * Injects `EntityManager`, not `@InjectRepository(Users)` (Plan 3b Task 1
+ * RULING on `verifyJwtAndLoadUser`'s callers): this guard is applied via
+ * `@UseGuards(JwtAuthGuard)` on ~70 controllers across nearly every domain
+ * module in the app, and Nest resolves a class-referenced guard's
+ * constructor dependencies from the HOST CONTROLLER'S OWN module graph, not
+ * from a single "the guard's module" — `@InjectRepository(Users)` would need
+ * `MikroOrmModule.forFeature([Users])` added to every one of those ~70
+ * modules (and to every partial e2e-testing-module harness that composes a
+ * guarded controller without the full app), which is the exact blast radius
+ * D5 exists to avoid. `EntityManager`/`MikroORM`, by contrast, come from
+ * `MikroOrmModule.forRoot`'s core module, which IS `@Global()` — already
+ * required wherever a JWT-guarded route is exercised for a real user (the
+ * ORM owns `users` everywhere else too) — so no module needs new wiring.
+ * `this.em.getRepository(Users)` inside `canActivate` is the same
+ * `orm.em.getRepository(Users)`-inside-the-request pattern
+ * `platform.routes.ts::servePhoto` uses (Task 0); `this.em` here is already
+ * the request-scoped fork, since `canActivate` only ever runs inside a real
+ * HTTP request Nest's `@mikro-orm/nestjs` middleware has already wrapped.
  */
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
+  constructor(private readonly em: EntityManager) {}
+
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const req = context.switchToHttp().getRequest<Request>();
     const token = extractToken(req);
     if (!token) {
       throw new HttpException({ error: 'Access token required', code: 'AUTH_REQUIRED' }, 401);
     }
-    const user = await verifyJwtAndLoadUser(token);
+    const user = await verifyJwtAndLoadUser(token, this.em.getRepository(Users));
     if (!user) {
       throw new HttpException({ error: 'Invalid or expired token', code: 'AUTH_REQUIRED' }, 401);
     }

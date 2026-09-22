@@ -89,6 +89,15 @@ function withinBurst(socket: TrekWebSocket): boolean {
  *   `error` event on the socket; unhandled, Node rethrows it and the process
  *   dies. That is #1576, and it only reproduces against a hostile client, so
  *   nothing in CI would catch its removal.
+ *
+ * All three per-connection lifecycle hooks the base adapter offers —
+ * `bindClientConnect` (`OnGatewayConnection`), `bindMessageHandlers`
+ * (`@SubscribeMessage`) and `bindClientDisconnect` (`OnGatewayDisconnect`) —
+ * are overridden here to run their callback inside `withRequestContext`
+ * (D6): none of the three has an HTTP request behind it, so none gets a
+ * forked EntityManager unless this adapter forks one itself. `create`
+ * above and `close` below are the only other overrides, and neither
+ * dispatches into gateway/handler code, so neither needs the wrap.
  */
 export class TrekWsAdapter extends WsAdapter {
   private readonly httpServerRef: HttpServer;
@@ -181,6 +190,26 @@ export class TrekWsAdapter extends WsAdapter {
       // string, so dropping it here would leave handleConnection with nothing
       // to authenticate.
       withRequestContext(this.orm, () => callback(socket, request));
+    });
+  }
+
+  /**
+   * Dispatches Nest's `OnGatewayDisconnect` hook (`RealtimeGateway.handleDisconnect`)
+   * the same way `bindClientConnect` above dispatches `OnGatewayConnection` —
+   * the base `WsAdapter.bindClientDisconnect` just does `client.on(CLOSE_EVENT,
+   * callback)` with no context of any kind. `handleDisconnect` reads no
+   * repository today (Task 0 review addendum, LOW item 2), but it is a
+   * lifecycle hook with no HTTP request behind it exactly like the connect and
+   * message hooks are, so it gets the same wrap NOW rather than becoming the
+   * next "the adapter is done" surprise the moment a future change makes it
+   * read one. Same fail-closed shape as the other two: throw before calling.
+   */
+  bindClientDisconnect(client: TrekWebSocket, callback: (...args: unknown[]) => void): void {
+    client.on('close', (...args: unknown[]) => {
+      if (!this.orm) {
+        throw new Error('TrekWsAdapter: no MikroORM available to build a request context for this disconnect');
+      }
+      withRequestContext(this.orm, () => callback(...args));
     });
   }
 

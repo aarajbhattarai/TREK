@@ -13,8 +13,17 @@ const { pluginsEnabledMock, extractTokenMock, verifyMock } = vi.hoisted(() => ({
 vi.mock('../../../src/nest/plugins/kill-switch', () => ({ pluginsEnabled: pluginsEnabledMock }));
 vi.mock('../../../src/nest/auth/jwt-verify', () => ({ extractToken: extractTokenMock, verifyJwtAndLoadUser: verifyMock }));
 
+import type { EntityManager } from '@mikro-orm/core';
 import { PluginsProxyController } from '../../../src/nest/plugins/plugins-proxy.controller';
 import type { PluginRuntimeService } from '../../../src/nest/plugins/plugin-runtime.service';
+
+// EntityManager injection (Plan 3b Task 1 RULING) — verifyJwtAndLoadUser is
+// fully mocked above, so `em.getRepository` never needs to return anything
+// meaningful; it just has to not throw when the controller calls it.
+const emStub = { getRepository: () => ({}) } as unknown as EntityManager;
+function ctrl(runtime: PluginRuntimeService): PluginsProxyController {
+  return new PluginsProxyController(runtime, emStub);
+}
 
 function fakeRes() {
   const res = {
@@ -52,33 +61,33 @@ describe('PluginsProxyController', () => {
   it('404 when the runtime is disabled', async () => {
     pluginsEnabledMock.mockReturnValue(false);
     const res = fakeRes();
-    await new PluginsProxyController(makeRuntime()).proxy('p', fakeReq('GET', '/status'), res as never);
+    await ctrl(makeRuntime()).proxy('p', fakeReq('GET', '/status'), res as never);
     expect(res.statusCode).toBe(404);
   });
 
   it('404 when the plugin is not active', async () => {
     const res = fakeRes();
-    await new PluginsProxyController(makeRuntime({ isActive: vi.fn(() => false) } as never)).proxy('p', fakeReq('GET', '/status'), res as never);
+    await ctrl(makeRuntime({ isActive: vi.fn(() => false) } as never)).proxy('p', fakeReq('GET', '/status'), res as never);
     expect(res.statusCode).toBe(404);
   });
 
   it('404 when no declared route matches', async () => {
     const res = fakeRes();
-    await new PluginsProxyController(makeRuntime()).proxy('p', fakeReq('GET', '/nope'), res as never);
+    await ctrl(makeRuntime()).proxy('p', fakeReq('GET', '/nope'), res as never);
     expect(res.statusCode).toBe(404);
   });
 
   it('401 on an auth route without a valid session', async () => {
     verifyMock.mockReturnValue(null as never);
     const res = fakeRes();
-    await new PluginsProxyController(makeRuntime()).proxy('p', fakeReq('GET', '/status'), res as never);
+    await ctrl(makeRuntime()).proxy('p', fakeReq('GET', '/status'), res as never);
     expect(res.statusCode).toBe(401);
   });
 
   it('forwards an authenticated request and returns the child response', async () => {
     const runtime = makeRuntime();
     const res = fakeRes();
-    await new PluginsProxyController(runtime).proxy('p', fakeReq('GET', '/status'), res as never);
+    await ctrl(runtime).proxy('p', fakeReq('GET', '/status'), res as never);
     expect(res.statusCode).toBe(200);
     expect(res.headers['content-type']).toBe('application/json');
     expect(res.body).toBe('{"ok":true}');
@@ -96,7 +105,7 @@ describe('PluginsProxyController', () => {
     verifyMock.mockReturnValue({ id: 7, username: 'root', role: 'admin' } as never);
     const runtime = makeRuntime();
     const res = fakeRes();
-    await new PluginsProxyController(runtime).proxy('p', fakeReq('GET', '/status'), res as never);
+    await ctrl(runtime).proxy('p', fakeReq('GET', '/status'), res as never);
     expect(runtime.invoke).toHaveBeenCalledWith('p', 'invoke.route', expect.objectContaining({
       req: expect.objectContaining({ user: { id: 7, username: 'root', isAdmin: true } }),
     }), 7);
@@ -105,7 +114,7 @@ describe('PluginsProxyController', () => {
   it('a public (auth:false) route skips the session check', async () => {
     const runtime = makeRuntime({ routesOf: vi.fn(() => [{ i: 1, method: 'POST', path: '/webhook', auth: false }]) } as never);
     const res = fakeRes();
-    await new PluginsProxyController(runtime).proxy('p', fakeReq('POST', '/webhook'), res as never);
+    await ctrl(runtime).proxy('p', fakeReq('POST', '/webhook'), res as never);
     expect(res.statusCode).toBe(200);
     expect(extractTokenMock).not.toHaveBeenCalled();
     // a public route has no session user → no bound acting user (undefined)
@@ -117,7 +126,7 @@ describe('PluginsProxyController', () => {
   it('forwards the raw request bytes to a webhook (auth:false) route, but withholds them from an authenticated route', async () => {
     // Webhook route → the plugin gets the raw payload so it can verify an HMAC.
     const wh = makeRuntime({ routesOf: vi.fn(() => [{ i: 1, method: 'POST', path: '/webhook', auth: false }]) } as never);
-    await new PluginsProxyController(wh).proxy('p', fakeReq('POST', '/webhook', { rawBody: Buffer.from('{"a":1}') }), fakeRes() as never);
+    await ctrl(wh).proxy('p', fakeReq('POST', '/webhook', { rawBody: Buffer.from('{"a":1}') }), fakeRes() as never);
     // forwarded as base64 so a non-UTF-8 signed body survives
     expect(wh.invoke).toHaveBeenCalledWith('p', 'invoke.route', expect.objectContaining({
       req: expect.objectContaining({ rawBodyBase64: Buffer.from('{"a":1}').toString('base64') }),
@@ -125,7 +134,7 @@ describe('PluginsProxyController', () => {
 
     // Authenticated route → raw bytes are never handed to the plugin.
     const auth = makeRuntime();
-    await new PluginsProxyController(auth).proxy('p', fakeReq('GET', '/status', { rawBody: Buffer.from('secret') }), fakeRes() as never);
+    await ctrl(auth).proxy('p', fakeReq('GET', '/status', { rawBody: Buffer.from('secret') }), fakeRes() as never);
     const fwd = (auth.invoke as unknown as { mock: { calls: unknown[][] } }).mock.calls[0][2] as { req: { rawBodyBase64?: unknown } };
     expect(fwd.req.rawBodyBase64).toBeUndefined();
   });
@@ -141,7 +150,7 @@ describe('PluginsProxyController', () => {
       authorization: 'Bearer leak',               // must be dropped
       'x-socket-id': 'sock-1',                    // must be dropped
     };
-    await new PluginsProxyController(runtime).proxy('p', fakeReq('POST', '/webhook', { headers }), res as never);
+    await ctrl(runtime).proxy('p', fakeReq('POST', '/webhook', { headers }), res as never);
     const forwarded = (runtime.invoke as unknown as { mock: { calls: unknown[][] } }).mock.calls[0][2] as { req: { headers: Record<string, string> } };
     expect(forwarded.req.headers).toEqual({ 'content-type': 'application/json', 'stripe-signature': 't=1,v1=abc', 'x-hub-signature-256': 'sha256=deadbeef' });
     expect(forwarded.req.headers.cookie).toBeUndefined();
@@ -152,7 +161,7 @@ describe('PluginsProxyController', () => {
   it('an authenticated route gets NO inbound headers (even safe ones)', async () => {
     const runtime = makeRuntime(); // /status, auth:true
     const res = fakeRes();
-    await new PluginsProxyController(runtime).proxy('p', fakeReq('GET', '/status', { headers: { 'content-type': 'application/json', 'stripe-signature': 'x' } }), res as never);
+    await ctrl(runtime).proxy('p', fakeReq('GET', '/status', { headers: { 'content-type': 'application/json', 'stripe-signature': 'x' } }), res as never);
     const forwarded = (runtime.invoke as unknown as { mock: { calls: unknown[][] } }).mock.calls[0][2] as { req: { headers: Record<string, string> } };
     expect(forwarded.req.headers).toEqual({});
   });
@@ -162,7 +171,7 @@ describe('PluginsProxyController', () => {
       invoke: vi.fn(async () => ({ status: 200, headers: { 'content-type': 'text/plain', 'set-cookie': 'evil=1' }, body: 'ok' })),
     } as never);
     const res = fakeRes();
-    await new PluginsProxyController(runtime).proxy('p', fakeReq('GET', '/status'), res as never);
+    await ctrl(runtime).proxy('p', fakeReq('GET', '/status'), res as never);
     expect(res.headers['content-type']).toBe('text/plain');
     expect(res.headers['set-cookie']).toBeUndefined(); // a plugin cannot set cookies
   });
@@ -170,7 +179,7 @@ describe('PluginsProxyController', () => {
   it('502 when the plugin invoke throws', async () => {
     const runtime = makeRuntime({ invoke: vi.fn(async () => { throw new Error('down'); }) } as never);
     const res = fakeRes();
-    await new PluginsProxyController(runtime).proxy('p', fakeReq('GET', '/status'), res as never);
+    await ctrl(runtime).proxy('p', fakeReq('GET', '/status'), res as never);
     expect(res.statusCode).toBe(502);
   });
 
@@ -179,7 +188,7 @@ describe('PluginsProxyController', () => {
       invoke: vi.fn(async () => ({ status: 302, headers: { location: '/trips/5?tab=plan' } })),
     } as never);
     const res = fakeRes();
-    await new PluginsProxyController(runtime).proxy('p', fakeReq('GET', '/status'), res as never);
+    await ctrl(runtime).proxy('p', fakeReq('GET', '/status'), res as never);
     expect(res.statusCode).toBe(302);
     // normalised to path+query, still same-origin
     expect(res.headers['Location']).toBe('/trips/5?tab=plan');
@@ -200,7 +209,7 @@ describe('PluginsProxyController', () => {
       invoke: vi.fn(async () => ({ status: 302, headers: { location: loc } })),
     } as never);
     const res = fakeRes();
-    await new PluginsProxyController(runtime).proxy('p', fakeReq('GET', '/status'), res as never);
+    await ctrl(runtime).proxy('p', fakeReq('GET', '/status'), res as never);
     expect(res.statusCode).toBe(502);
     expect(res.body).toMatchObject({ detail: 'unsafe redirect target' });
     expect(res.headers['Location']).toBeUndefined();
@@ -211,7 +220,7 @@ describe('PluginsProxyController', () => {
       invoke: vi.fn(async () => ({ status: 301, headers: {} })),
     } as never);
     const res = fakeRes();
-    await new PluginsProxyController(runtime).proxy('p', fakeReq('GET', '/status'), res as never);
+    await ctrl(runtime).proxy('p', fakeReq('GET', '/status'), res as never);
     expect(res.statusCode).toBe(502);
   });
 });

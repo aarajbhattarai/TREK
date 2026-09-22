@@ -22,15 +22,15 @@ function rawInvite(id: number): unknown {
 }
 
 describe('InviteTokensRepository', () => {
-  describe('findValid', () => {
-    it('INVREPO-001: a row read through findValid is the SELECT * row, key for key', async () => {
+  describe('findByToken', () => {
+    it('INVREPO-001: a row read through findByToken is the SELECT * row, key for key', async () => {
       const created = createInviteToken(testDb, { token: 'find-me' });
-      const row = await invites.findValid('find-me');
+      const row = await invites.findByToken('find-me');
       expect(row).toStrictEqual(rawInvite(created.id));
     });
 
     it('INVREPO-002: an unknown token is null', async () => {
-      expect(await invites.findValid('does-not-exist')).toBeNull();
+      expect(await invites.findByToken('does-not-exist')).toBeNull();
     });
   });
 

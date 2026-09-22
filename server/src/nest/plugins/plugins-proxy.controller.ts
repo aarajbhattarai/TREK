@@ -1,9 +1,11 @@
 import { All, Controller, Param, Req, Res } from '@nestjs/common';
+import { EntityManager } from '@mikro-orm/core';
 import type { Request, Response } from 'express';
 import { extractToken, verifyJwtAndLoadUser } from '../auth/jwt-verify';
 import { pluginsEnabled } from './kill-switch';
 import { PluginRuntimeService } from './plugin-runtime.service';
 import { Public } from '../auth/public.decorator';
+import { Users } from '../../db/entities/Users.entity';
 
 /**
  * Proxies a plugin's own HTTP routes at /api/plugins/:id/* (#plugins, M2).
@@ -74,7 +76,12 @@ function toRelativeLocation(loc: unknown): string | null {
 @Public('auth is data-driven per plugin route (route.auth in the manifest), asserted in the handler')
 @Controller('api/plugins/:pluginId')
 export class PluginsProxyController {
-  constructor(private readonly runtime: PluginRuntimeService) {}
+  // EntityManager, not @InjectRepository(Users) — same reasoning as
+  // JwtAuthGuard (Plan 3b Task 1 RULING on verifyJwtAndLoadUser's callers).
+  constructor(
+    private readonly runtime: PluginRuntimeService,
+    private readonly em: EntityManager,
+  ) {}
 
   @All('*path')
   async proxy(@Param('pluginId') pluginId: string, @Req() req: Request, @Res() res: Response): Promise<void> {
@@ -95,7 +102,7 @@ export class PluginsProxyController {
     let user: { id: number; username: string; role?: 'admin' | 'user' } | null = null;
     if (route.auth) {
       const token = extractToken(req);
-      const loaded = token ? await verifyJwtAndLoadUser(token) : null;
+      const loaded = token ? await verifyJwtAndLoadUser(token, this.em.getRepository(Users)) : null;
       if (!loaded) {
         res.status(401).json({ error: 'Access token required', code: 'AUTH_REQUIRED' });
         return;

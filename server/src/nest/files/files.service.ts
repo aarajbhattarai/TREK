@@ -8,6 +8,8 @@ import { PermissionsService } from '../permissions/permissions.service';
 import { avatarUrl } from '../common/avatarUrl';
 import { EphemeralTokenService } from '../auth/ephemeral-token.service';
 import { verifyJwtAndLoadUser } from '../auth/jwt-verify';
+import { EntityManager } from '@mikro-orm/core';
+import { Users } from '../../db/entities/Users.entity';
 import type { User, TripFile } from '../../types';
 import { DatabaseService, type TripAccess } from '../database/database.service';
 import { DEFAULT_ALLOWED_EXTENSIONS } from './files.constants';
@@ -79,6 +81,11 @@ export class FilesService {
     private readonly realtime: RealtimeService,
     private readonly tokens: EphemeralTokenService,
     private readonly storage: StorageService,
+    // EntityManager, not @InjectRepository(Users) — same reasoning as
+    // JwtAuthGuard (Plan 3b Task 1 RULING on verifyJwtAndLoadUser's callers):
+    // kept uniform with the guards rather than adding a one-off
+    // MikroOrmModule.forFeature([Users]) to FilesModule for this single call.
+    private readonly em: EntityManager,
   ) {}
 
   async verifyTripAccess(tripId: string | number, userId: number) {
@@ -110,7 +117,7 @@ export class FilesService {
       // Use the shared helper so the password_version gate applies here too;
       // previously this bypassed the check and stolen download tokens stayed
       // valid across a password reset.
-      const user = await verifyJwtAndLoadUser(jwtToken);
+      const user = await verifyJwtAndLoadUser(jwtToken, this.em.getRepository(Users));
       if (!user) return { error: 'Invalid or expired token', status: 401 };
       return { userId: user.id };
     }

@@ -1,7 +1,9 @@
 import { CanActivate, ExecutionContext, HttpException, Injectable } from '@nestjs/common';
 import { GUARDS_METADATA } from '@nestjs/common/constants';
 import { Reflector } from '@nestjs/core';
+import { EntityManager } from '@mikro-orm/core';
 import type { Request } from 'express';
+import { Users } from '../../db/entities/Users.entity';
 import { extractToken, verifyJwtAndLoadUser } from './jwt-verify';
 import { IS_PUBLIC, OPTIONAL_AUTH } from './public.decorator';
 
@@ -28,7 +30,14 @@ import { IS_PUBLIC, OPTIONAL_AUTH } from './public.decorator';
  */
 @Injectable()
 export class GlobalAuthGuard implements CanActivate {
-  constructor(private readonly reflector: Reflector) {}
+  // EntityManager injection, not @InjectRepository(Users) — same reasoning
+  // as JwtAuthGuard (Plan 3b Task 1 RULING): kept uniform with the other
+  // three verifyJwtAndLoadUser callers even though this guard, registered
+  // only as AppModule's own APP_GUARD, would have tolerated either.
+  constructor(
+    private readonly reflector: Reflector,
+    private readonly em: EntityManager,
+  ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const handler = context.getHandler();
@@ -40,7 +49,7 @@ export class GlobalAuthGuard implements CanActivate {
 
     if (this.reflector.getAllAndOverride(OPTIONAL_AUTH, [handler, controller])) {
       const token = extractToken(req);
-      (req as { user: unknown }).user = (token ? await verifyJwtAndLoadUser(token) : null) || null;
+      (req as { user: unknown }).user = (token ? await verifyJwtAndLoadUser(token, this.em.getRepository(Users)) : null) || null;
       return true;
     }
 
@@ -57,7 +66,7 @@ export class GlobalAuthGuard implements CanActivate {
     ];
     if (declared.length > 0) {
       const declaredToken = extractToken(req);
-      (req as { user: unknown }).user = (declaredToken ? await verifyJwtAndLoadUser(declaredToken) : null) || null;
+      (req as { user: unknown }).user = (declaredToken ? await verifyJwtAndLoadUser(declaredToken, this.em.getRepository(Users)) : null) || null;
       return true;
     }
 
@@ -65,7 +74,7 @@ export class GlobalAuthGuard implements CanActivate {
     if (!token) {
       throw new HttpException({ error: 'Access token required', code: 'AUTH_REQUIRED' }, 401);
     }
-    const user = await verifyJwtAndLoadUser(token);
+    const user = await verifyJwtAndLoadUser(token, this.em.getRepository(Users));
     if (!user) {
       throw new HttpException({ error: 'Invalid or expired token', code: 'AUTH_REQUIRED' }, 401);
     }

@@ -1,11 +1,17 @@
 import { CanActivate, ExecutionContext, HttpException, Injectable, SetMetadata } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import { InjectRepository } from '@mikro-orm/nestjs';
 import type { Request } from 'express';
-import { DatabaseService } from '../database/database.service';
 import { RuntimeEnvService } from '../app-config/runtime-env.service';
 import { DEMO_EMAILS } from '../common/demo';
 import { IS_PUBLIC } from './public.decorator';
 import type { User } from '../../types';
+import { AppSettings } from '../../db/entities/AppSettings.entity';
+import type { AppSettingsRepository } from '../../db/repositories/AppSettings.repository';
+import { Users } from '../../db/entities/Users.entity';
+import type { UsersRepository } from '../../db/repositories/Users.repository';
+import { WebauthnCredentials } from '../../db/entities/WebauthnCredentials.entity';
+import type { WebauthnCredentialsRepository } from '../../db/repositories/WebauthnCredentials.repository';
 
 /** Metadata key `@MfaExempt()` writes. */
 export const MFA_EXEMPT = 'trek:mfa-exempt';
@@ -44,7 +50,9 @@ type MfaRequest = Request & { user?: User };
 @Injectable()
 export class MfaPolicyGuard implements CanActivate {
   constructor(
-    private readonly db: DatabaseService,
+    @InjectRepository(AppSettings) private readonly appSettings: AppSettingsRepository,
+    @InjectRepository(Users) private readonly users: UsersRepository,
+    @InjectRepository(WebauthnCredentials) private readonly webauthnCredentials: WebauthnCredentialsRepository,
     private readonly env: RuntimeEnvService,
     private readonly reflector: Reflector,
   ) {}
@@ -60,24 +68,19 @@ export class MfaPolicyGuard implements CanActivate {
     // No session: whoever answers next decides, exactly as before.
     if (!user) return true;
 
-    const requireRow = this.db.get<{ value: string }>(
-      "SELECT value FROM app_settings WHERE key = 'require_mfa'",
-    );
-    if (requireRow?.value !== 'true') return true;
+    const requireMfa = await this.appSettings.getValue('require_mfa');
+    if (requireMfa !== 'true') return true;
 
     if (this.env.isDemoMode() && user.email && DEMO_EMAILS.has(user.email)) return true;
 
-    const row = this.db.get<{ mfa_enabled: number | boolean }>(
-      'SELECT mfa_enabled FROM users WHERE id = ?',
-      user.id,
-    );
+    const row = await this.users.getMfaEnabled(user.id);
     if (!row) return true;
 
     // A user-verified passkey is phishing-resistant and inherently two-factor, so
     // owning at least one satisfies require_mfa exactly like TOTP does.
     // (All stored passkeys were registered with userVerification required.)
-    const mfaOk = row.mfa_enabled === 1 || row.mfa_enabled === true;
-    const passkeyOk = !!this.db.get('SELECT 1 FROM webauthn_credentials WHERE user_id = ? LIMIT 1', user.id);
+    const mfaOk = row.mfa_enabled === 1;
+    const passkeyOk = await this.webauthnCredentials.hasAny(user.id);
     if (mfaOk || passkeyOk) return true;
 
     if (this.reflector.getAllAndOverride(MFA_EXEMPT, [handler, controller])) return true;

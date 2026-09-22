@@ -87,7 +87,7 @@ import { createTestUnitOfWork, createTestAppSettingsRepo, createTestUsersRepo } 
 const dbs = new DatabaseService(testDb);
 const realtime = new RealtimeService();
 
-const webauthn = new WebauthnConfigService(dbs);
+let webauthn: WebauthnConfigService;
 
 // Positional and previously wrong: an AtlasService sat in the membership slot
 // and the mailer was missing entirely, so `auth` was built with its last four
@@ -99,6 +99,7 @@ let userCleanup: UserCleanupService;
 let auth: AuthService;
 let svc: AdminService;
 beforeAll(async () => {
+  webauthn = new WebauthnConfigService(await createTestAppSettingsRepo(dbs.connection));
   permissions = new PermissionsService(await createTestAppSettingsRepo(dbs.connection), await createTestUnitOfWork(dbs.connection));
   userCleanup = new UserCleanupService(dbs, new BudgetService(dbs, permissions, new ExchangeRatesService(), realtime, await createTestUnitOfWork(dbs.connection)), await createTestUnitOfWork(dbs.connection));
   auth = new AuthService(dbs, permissions, new TripMembershipService(dbs), webauthn, userCleanup, new MailerService(dbs), new EphemeralTokenService(), new AllowedFileTypesService(dbs), await createTestUnitOfWork(dbs.connection), await createTestAppSettingsRepo(dbs.connection), await createTestUsersRepo(dbs.connection));

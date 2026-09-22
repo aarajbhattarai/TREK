@@ -7,6 +7,7 @@ vi.mock('../../../src/nest/common/cookie', () => ({ setAuthCookie: vi.fn() }));
 vi.mock('../../../src/nest/audit/client-ip', () => ({ getClientIp: vi.fn(() => '1.2.3.4') }));
 vi.mock('../../../src/nest/audit/audit-log.logger', () => ({ LOG_LEVEL: 'error', logInfo: vi.fn(), logDebug: vi.fn(), logError: vi.fn(), logWarn: vi.fn() }));
 
+import type { EntityManager } from '@mikro-orm/core';
 import { JwtAuthGuard } from '../../../src/nest/auth/jwt-auth.guard';
 import { CookieAuthGuard } from '../../../src/nest/auth/cookie-auth.guard';
 import { OptionalJwtGuard } from '../../../src/nest/auth/optional-jwt.guard';
@@ -41,6 +42,13 @@ import type { User } from '../../../src/types';
 
 const user = { id: 1, username: 'u', role: 'user', email: 'u@example.test' } as User;
 
+// JwtAuthGuard/CookieAuthGuard/OptionalJwtGuard now inject EntityManager
+// (Plan 3b Task 1 RULING) rather than reading the legacy `db` proxy through
+// the mocked jwt-verify.ts — verifyJwtAndLoadUser itself is fully mocked
+// above, so `em.getRepository` never needs to return anything meaningful;
+// it just has to not throw when the guard calls it.
+const emStub = { getRepository: () => ({}) } as unknown as EntityManager;
+
 function context(req: unknown) {
   return { switchToHttp: () => ({ getRequest: () => req }) } as never;
 }
@@ -64,7 +72,7 @@ async function thrownAsync(fn: () => Promise<unknown>): Promise<{ status: number
 beforeEach(() => vi.clearAllMocks());
 
 describe('JwtAuthGuard', () => {
-  const guard = new JwtAuthGuard();
+  const guard = new JwtAuthGuard(emStub);
 
   it('rejects with the legacy 401 { error, code } when no token is present', async () => {
     vi.mocked(extractToken).mockReturnValue(null);
@@ -93,7 +101,7 @@ describe('JwtAuthGuard', () => {
 });
 
 describe('CookieAuthGuard', () => {
-  const guard = new CookieAuthGuard();
+  const guard = new CookieAuthGuard(emStub);
 
   it('401s when the trek_session cookie is missing', async () => {
     expect(await thrownAsync(() => guard.canActivate(context({ cookies: {} })))).toEqual({
@@ -124,7 +132,7 @@ describe('CookieAuthGuard', () => {
 });
 
 describe('OptionalJwtGuard', () => {
-  const guard = new OptionalJwtGuard();
+  const guard = new OptionalJwtGuard(emStub);
 
   it('always allows; sets req.user to null when no token', async () => {
     const req: Record<string, unknown> = { headers: {} };

@@ -8,6 +8,8 @@ import { db } from '../../db/database';
 import { withRequestContext } from '../database/request-context';
 import { StorageService } from '../storage/storage.service';
 import { StorageInvalidKeyError, StorageNotFoundError, type StorageCategory } from '../storage/storage.types';
+import { Users } from '../../db/entities/Users.entity';
+import type { UsersRepository } from '../../db/repositories/Users.repository';
 
 // Platform / transport routes extracted verbatim from createApp() (app.ts) so they can be
 // mounted on either the legacy Express app or the NestJS Express instance (strangler A6/A8).
@@ -72,7 +74,7 @@ export function storageStaticHandler(storage: StorageService, category: StorageC
   };
 }
 
-async function servePhoto(storage: StorageService, req: Request, res: Response): Promise<void> {
+async function servePhoto(storage: StorageService, req: Request, res: Response, users: UsersRepository): Promise<void> {
   const safeName = path.basename(req.params.filename);
   // Parity: after basename(), the old resolve()+startsWith guard could only
   // fire when the remaining segment was '..' — keep that exact 403.
@@ -104,7 +106,7 @@ async function servePhoto(storage: StorageService, req: Request, res: Response):
   }
 
   // JWT session path (with pv check).
-  const user = await verifyJwtAndLoadUser(rawToken);
+  const user = await verifyJwtAndLoadUser(rawToken, users);
   if (user) return sendPhoto();
 
   // Share-token path: require the token to cover the exact trip the
@@ -132,14 +134,19 @@ async function servePhoto(storage: StorageService, req: Request, res: Response):
  * mounted here, on the raw Express instance, BEFORE `app.init()` — every
  * `/uploads/photos/*` request runs this handler entirely outside Nest's
  * per-request EntityManager fork, forever, not just during a boot window.
- * `verifyJwtAndLoadUser` (`jwt-verify.ts`) reads `users` through the legacy
- * `db` proxy today, so nothing here needs the ORM yet — but the inventory's
- * proposed conversion (`UsersRepository.findByIdWithPasswordVersion`, Task 1)
- * would throw `cannotUseGlobalContext` on every photo request the instant it
- * lands, because nothing forks a context for this pre-init route. Wrapping
- * the handler in `withRequestContext` NOW, before any repository call exists
- * on this path, means Task 1 converts `jwt-verify.ts` without touching this
- * file again and without a single broken photo request in between.
+ * `verifyJwtAndLoadUser` (`jwt-verify.ts`, JV1) now reads `users` through
+ * `UsersRepository` (Plan 3b Task 1) rather than the legacy `db` proxy — the
+ * exact case Task 0's wrap was built for. `orm.em.getRepository(Users)` is
+ * resolved inside the arrow passed to `withRequestContext` below: `orm.em`
+ * is the global, context-resolving EntityManager, and MikroORM's repository
+ * object holds a reference to that same proxy rather than a snapshot, so a
+ * query issued through it later resolves whatever `AsyncLocalStorage`
+ * context is active AT QUERY TIME — not at the moment `getRepository()` was
+ * called. What actually gates this is `withRequestContext` wrapping the
+ * whole `servePhoto(...)` call (query included): removing the wrapper
+ * entirely reproduces Task 0's `ValidationError: Using global EntityManager
+ * instance...` (verified directly — mutation-proof in `task-1-report.md`),
+ * exactly the failure `PHOTOCTX-002`/`SEAM-002` guard against.
  *
  * Optional at the type level only, the same shape `TrekWsAdapter` uses for
  * its own D6 wrapper (`src/nest/realtime/trek-ws.adapter.ts`): `bootstrap.ts`
@@ -184,7 +191,7 @@ export function applyPlatformUploads(app: express.Application, storage: StorageS
       next(new Error('applyPlatformUploads: no MikroORM available to build a request context for /uploads/photos/*'));
       return;
     }
-    return withRequestContext(orm, () => servePhoto(storage, req, res)).catch(next);
+    return withRequestContext(orm, () => servePhoto(storage, req, res, orm.em.getRepository(Users))).catch(next);
   });
 
   // Block direct access to /uploads/files

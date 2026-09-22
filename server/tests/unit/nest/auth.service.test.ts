@@ -104,7 +104,7 @@ beforeAll(async () => {
   new DatabaseService(testDb),
   new PermissionsService(await createTestAppSettingsRepo(testDb), await createTestUnitOfWork(testDb)),
   membershipStub,
-  new WebauthnConfigService(new DatabaseService(testDb)),
+  new WebauthnConfigService(await createTestAppSettingsRepo(testDb)),
   new UserCleanupService(new DatabaseService(testDb), new BudgetService(new DatabaseService(testDb), new PermissionsService(await createTestAppSettingsRepo(testDb), await createTestUnitOfWork(testDb)), new ExchangeRatesService(), new RealtimeService(), await createTestUnitOfWork(testDb)), await createTestUnitOfWork(testDb)),
   mailerStub,
   new EphemeralTokenService(),
@@ -482,11 +482,11 @@ describe('changePassword — session invalidation', () => {
     const { user, password } = createUser(testDb);
     const stolen = await svc.generateToken({ id: user.id }); // pv=0 at mint time
 
-    expect(await verifyJwtAndLoadUser(stolen)).not.toBeNull();
+    expect(await verifyJwtAndLoadUser(stolen, await createTestUsersRepo(testDb))).not.toBeNull();
 
     await svc.changePassword(user.id, user.email, { current_password: password, new_password: 'New1234!' });
 
-    expect(await verifyJwtAndLoadUser(stolen)).toBeNull(); // invalidated by the pv bump
+    expect(await verifyJwtAndLoadUser(stolen, await createTestUsersRepo(testDb))).toBeNull(); // invalidated by the pv bump
   });
 
   it('AUTH-DB-036d: preserves the remember choice in the re-issued session (#1927)', async () => {

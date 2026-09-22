@@ -5,7 +5,7 @@ import { resetTestDb } from '../../../helpers/test-db';
 import { createTestOrm, type TestOrm } from '../../../helpers/test-orm';
 import { createUser } from '../../../helpers/factories';
 import { Users } from '../../../../src/db/entities/Users.entity';
-import { columnIncrementedBy, columnRef, currentTimestamp, dateAdd, dateOf } from '../../../../src/db/dialect/sql-functions';
+import { columnIncrementedBy, columnRef, currentTimestamp, dateAdd, dateOf, lower } from '../../../../src/db/dialect/sql-functions';
 
 const testDb = createSnapshotTestDb();
 let t: TestOrm;
@@ -73,6 +73,32 @@ describe('sql-functions (sqlite)', () => {
     expect(() => currentTimestamp(foreign)).toThrow(/no implementation for platform FakePlatform/);
     expect(() => columnRef(foreign, 'u.max_uses')).toThrow(/no implementation for platform FakePlatform/);
     expect(() => columnIncrementedBy(foreign, 'u.used_count', 1)).toThrow(/no implementation for platform FakePlatform/);
+    expect(() => lower(foreign, 'u.email')).toThrow(/no implementation for platform FakePlatform/);
+  });
+
+  // Plan 3b Task 1: UsersRepository's CI (case-insensitive) lookups
+  // (findByEmailCI, findIdByUsernameCI, ...) need `LOWER(col) = ?` as a
+  // `find`/`findOne` filter KEY, not just inside a QueryBuilder `.where()` —
+  // proving it works through `em.find`/`findOne` (the API the repository
+  // actually calls) rather than only through `createQueryBuilder`.
+  it('SQLF-012: lower is usable as a find() filter key, matching case-insensitively', async () => {
+    const { user } = createUser(testDb, { email: 'Mixed.Case@Example.com' });
+    const rows = await t.em.find(Users, { [lower(t.em.getPlatform(), 'email')]: 'mixed.case@example.com' });
+    expect(rows.map((r) => r.id)).toEqual([user.id]);
+
+    // A differently-cased query value that still lowercases to the same
+    // string finds the same row; one that does not, finds nothing.
+    const none = await t.em.find(Users, { [lower(t.em.getPlatform(), 'email')]: 'nobody@example.com' });
+    expect(none).toEqual([]);
+  });
+
+  it('SQLF-013: lower composes with other filter keys in one findOne call', async () => {
+    const { user } = createUser(testDb, { username: 'MixedCaseName' });
+    const row = await t.em.findOne(Users, {
+      [lower(t.em.getPlatform(), 'username')]: 'mixedcasename',
+      id: { $ne: -1 },
+    });
+    expect(row?.id).toBe(user.id);
   });
 
   // Plan 3b Task 0: InviteTokensRepository.incrementUsedCount needs a

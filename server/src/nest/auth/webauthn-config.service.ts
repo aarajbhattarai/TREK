@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@mikro-orm/nestjs';
 import { getAppUrl, readEnv } from '../../app-config';
-import { DatabaseService } from '../database/database.service';
+import { AppSettings } from '../../db/entities/AppSettings.entity';
+import type { AppSettingsRepository } from '../../db/repositories/AppSettings.repository';
 
 function hostOf(url: string): string | null {
   try {
@@ -68,10 +70,11 @@ export interface WebauthnConfig {
  */
 @Injectable()
 export class WebauthnConfigService {
-  constructor(private readonly db: DatabaseService) {}
+  constructor(@InjectRepository(AppSettings) private readonly appSettings: AppSettingsRepository) {}
 
+  /** `SELECT value FROM app_settings WHERE key = ?` (WC1), through `AppSettingsRepository.getValue` (Plan 3a). */
   private async setting(key: string): Promise<string | null> {
-    const raw = this.db.get<{ value: string }>('SELECT value FROM app_settings WHERE key = ?', key)?.value;
+    const raw = (await this.appSettings.getValue(key)) ?? undefined;
     const trimmed = raw?.trim();
     return trimmed ? trimmed : null;
   }

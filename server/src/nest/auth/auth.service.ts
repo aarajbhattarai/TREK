@@ -1097,6 +1097,6 @@ export class AuthService {
    * route) should go through.
    */
   async verifyJwtToken(token: string): Promise<User | null> {
-    return verifyJwtAndLoadUser(token);
+    return verifyJwtAndLoadUser(token, this.usersRepo);
   }
 }

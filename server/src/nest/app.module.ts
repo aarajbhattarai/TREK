@@ -1,5 +1,8 @@
 import { trekMcpAccessPolicy, trekMcpValidateAccess } from '../mcp/nest-mcp-policy';
 import mikroOrmConfig from '../mikro-orm.config';
+import { AppSettings } from '../db/entities/AppSettings.entity';
+import { Users } from '../db/entities/Users.entity';
+import { WebauthnCredentials } from '../db/entities/WebauthnCredentials.entity';
 import { McpModule } from '../nest-mcp';
 import { AccommodationsModule } from './accommodations/accommodations.module';
 import { AddonsModule } from './addons/addons.module';
@@ -155,6 +158,13 @@ import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
     // Not part of DatabaseModule: the e2e suites that compose `DatabaseModule`
     // without the ORM would fail on an EntityManager-dependent provider there.
     OrmModule,
+    // MfaPolicyGuard (Plan 3b Task 1) is registered directly below as this
+    // module's own APP_GUARD, never per-controller — so it is the one place
+    // that needs `forFeature` for its three repositories; `Users` is not
+    // otherwise global (JwtAuthGuard and friends inject `EntityManager`
+    // instead precisely to avoid needing this everywhere — see their own
+    // docstrings).
+    MikroOrmModule.forFeature([AppSettings, Users, WebauthnCredentials]),
   ],
   providers: [
     // Default-deny: a route is authenticated unless it carries @Public() or

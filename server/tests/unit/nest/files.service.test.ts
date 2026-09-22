@@ -74,10 +74,15 @@ import {
 import type { TripFile, User } from '../../../src/types';
 import { RealtimeService } from '../../../src/nest/realtime/realtime.service';
 import { EphemeralTokenService } from '../../../src/nest/auth/ephemeral-token.service';
+import type { EntityManager } from '@mikro-orm/core';
 
 const storageDelete = vi.fn();
 const storageStub = { delete: storageDelete } as unknown as import('../../../src/nest/storage/storage.service').StorageService;
-const svc = new FilesService(new DatabaseService(testDb), permissionsStub, new RealtimeService(), new EphemeralTokenService(), storageStub);
+// EntityManager stub (Plan 3b Task 1 RULING): verifyJwtAndLoadUser is
+// fully mocked above, so `em.getRepository` never needs to return
+// anything meaningful; it just has to not throw when the service calls it.
+const emStub = { getRepository: () => ({}) } as unknown as EntityManager;
+const svc = new FilesService(new DatabaseService(testDb), permissionsStub, new RealtimeService(), new EphemeralTokenService(), storageStub, emStub);
 
 beforeAll(() => {
   createTables(testDb);
@@ -555,13 +560,13 @@ describe('authenticateDownload', () => {
     verifyJwtAndLoadUser.mockReturnValue({ id: 42 });
     const result = await svc.authenticateDownload(req({ cookie: 'cookie-jwt', bearer: 'bearer-jwt' }));
     expect(result).toEqual({ userId: 42 });
-    expect(verifyJwtAndLoadUser).toHaveBeenCalledWith('cookie-jwt');
+    expect(verifyJwtAndLoadUser).toHaveBeenCalledWith('cookie-jwt', expect.anything());
   });
 
   it('FILE-SVC-033: a bearer token is used when no cookie is present; invalid JWTs 401', async () => {
     verifyJwtAndLoadUser.mockReturnValue({ id: 7 });
     expect(await svc.authenticateDownload(req({ bearer: 'bearer-jwt' }))).toEqual({ userId: 7 });
-    expect(verifyJwtAndLoadUser).toHaveBeenCalledWith('bearer-jwt');
+    expect(verifyJwtAndLoadUser).toHaveBeenCalledWith('bearer-jwt', expect.anything());
 
     verifyJwtAndLoadUser.mockReturnValue(null);
     expect(await svc.authenticateDownload(req({ bearer: 'stale' }))).toEqual({ error: 'Invalid or expired token', status: 401 });

@@ -37,12 +37,20 @@ export class InviteTokensRepository extends EntityRepository<InviteTokens> {
   /**
    * `SELECT * FROM invite_tokens WHERE token = ?`
    *
+   * Named `findByToken`, not `findValid` (Task 0 review addendum, LOW item
+   * 1): the statement has no validity filter of its own — no `expires_at`,
+   * no `used_count < max_uses` in the WHERE — it is a plain lookup by the
+   * unique `token` column, and validity (expiry, capacity) is checked in the
+   * caller's JS afterward, identically for `AuthService.registerUser` (AU8)
+   * and `OidcService.findOrCreateUser` (O11). A name promising "valid" would
+   * describe a filter this statement doesn't have.
+   *
    * Not a primary-key filter — `token` is a unique column, not `id` — so this
    * always re-queries; no `{ refresh: true }` needed (Task 3a review's
    * precision ruling: the identity-map short-circuit only fires for a
    * PK-only filter).
    */
-  async findValid(token: string): Promise<InviteTokenRow | null> {
+  async findByToken(token: string): Promise<InviteTokenRow | null> {
     const invite = await this.findOne({ token });
     return invite ? (toRow(invite) as InviteTokenRow) : null;
   }

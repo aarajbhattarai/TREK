@@ -79,6 +79,10 @@ import { GlobalAuthGuard } from '../../src/nest/auth/global-auth.guard';
 import { MfaPolicyGuard } from '../../src/nest/auth/mfa-policy.guard';
 import { TestUnitOfWorkModule } from '../helpers/test-uow';
 import { createTestMikroOrmModule } from '../helpers/test-orm';
+import { MikroOrmModule } from '@mikro-orm/nestjs';
+import { AppSettings } from '../../src/db/entities/AppSettings.entity';
+import { Users } from '../../src/db/entities/Users.entity';
+import { WebauthnCredentials } from '../../src/db/entities/WebauthnCredentials.entity';
 
 const BASE = 'https://trek.example.test';
 
@@ -94,7 +98,19 @@ describe('Calendar-feed e2e (real auth guard + temp SQLite)', () => {
     // on the feed controller passed here while production 401'd every calendar
     // client).
     const moduleRef = await Test.createTestingModule({
-      imports: [await TestUnitOfWorkModule.forRoot(db), await createTestMikroOrmModule(db), AppConfigModule, DatabaseModule, RealtimeModule, FeedsModule],
+      imports: [
+        await TestUnitOfWorkModule.forRoot(db),
+        await createTestMikroOrmModule(db),
+        // MfaPolicyGuard (Plan 3b Task 1) needs these three repositories —
+        // mirrors app.module.ts's own forFeature, added there for the same
+        // reason (MfaPolicyGuard is provided only as an APP_GUARD, never
+        // per-controller, so this is the one place that needs it).
+        MikroOrmModule.forFeature([AppSettings, Users, WebauthnCredentials]),
+        AppConfigModule,
+        DatabaseModule,
+        RealtimeModule,
+        FeedsModule,
+      ],
       providers: [
         { provide: APP_GUARD, useClass: GlobalAuthGuard },
         { provide: APP_GUARD, useClass: MfaPolicyGuard },

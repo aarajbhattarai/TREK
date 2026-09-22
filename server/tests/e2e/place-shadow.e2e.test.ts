@@ -41,6 +41,7 @@ vi.mock('../../src/db/database', () => ({
 import { PlaceShadowModule } from '../../src/nest/place-shadow/place-shadow.module';
 import { TrekExceptionFilter } from '../../src/nest/common/trek-exception.filter';
 import { TestUnitOfWorkModule } from '../helpers/test-uow';
+import { createTestMikroOrmModule } from '../helpers/test-orm';
 
 const PICK = {
   query: 'kaffee bar am dobi',
@@ -66,8 +67,13 @@ describe('/api/place-shadow e2e (real guards + temp SQLite)', () => {
   let app: Awaited<ReturnType<typeof build>>;
 
   async function build() {
+    // JwtAuthGuard (Plan 3b Task 1) injects EntityManager — needs
+    // MikroOrmModule.forRoot in the graph, same as every other e2e harness
+    // guarding a route with it; this suite's minimal hand-rolled `users`
+    // table already carries the five columns
+    // `findByIdWithPasswordVersion` selects.
     const moduleRef = await Test.createTestingModule({
-      imports: [await TestUnitOfWorkModule.forRoot(db), DatabaseModule, PlaceShadowModule],
+      imports: [await TestUnitOfWorkModule.forRoot(db), await createTestMikroOrmModule(db), DatabaseModule, PlaceShadowModule],
       providers: [{ provide: APP_PIPE, useClass: ZodValidationPipe }],
     }).compile();
     const nest = moduleRef.createNestApplication();

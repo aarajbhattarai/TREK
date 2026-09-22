@@ -148,7 +148,7 @@ export async function createMcpTestRegistry(): Promise<McpRegistry> {
     dbService,
     permissionsService,
     new TripMembershipService(dbService),
-    new WebauthnConfigService(dbService),
+    new WebauthnConfigService(appSettings),
     new UserCleanupService(dbService, budgetService, await createTestUnitOfWork(dbService.connection)),
     new MailerService(dbService),
     new EphemeralTokenService(),
@@ -201,7 +201,7 @@ export async function createMcpTestRegistry(): Promise<McpRegistry> {
   const readModelService = new TripReadModelService(
     dbService, membersService, daysService, accommodationsService, budgetService,
     packingService, reservationsService, collabService, placesService, todoService,
-    new FilesService(dbService, permissionsService, realtimeService, new EphemeralTokenService(), generalStorage),
+    new FilesService(dbService, permissionsService, realtimeService, new EphemeralTokenService(), generalStorage, mcpOrm.em),
   );
   const calendarService = new CalendarService(dbService, reservationsService);
   // The nine addon-gated surfaces read their toggle off an injected service now
@@ -233,7 +233,7 @@ export async function createMcpTestRegistry(): Promise<McpRegistry> {
       new DayNotesMcp(new DayNotesService(dbService, permissionsService, realtimeService), authService, guards),
       new DaysMcp(daysService, authService, guards),
       new RoadtripMcp(new RoadtripService(dbService, realtimeService, await createTestUnitOfWork(dbService.connection)), dbService, guards, authService, addonsService),
-      new FilesMcp(new FilesService(dbService, permissionsService, realtimeService, new EphemeralTokenService(), generalStorage), authService, guards),
+      new FilesMcp(new FilesService(dbService, permissionsService, realtimeService, new EphemeralTokenService(), generalStorage, mcpOrm.em), authService, guards),
       new AccommodationsMcp(accommodationsService, dbService, placesService, authService, guards, await createTestUnitOfWork(dbService.connection)),
       new AssignmentsMcp(assignmentsService, daysService, authService, guards),
       new CollabMcp(collabService, authService, addonsService, guards),

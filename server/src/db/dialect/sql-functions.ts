@@ -74,3 +74,28 @@ export function columnIncrementedBy(platform: Platform, ref: string, amount: num
   }
   return unsupported(platform);
 }
+
+/**
+ * A case-insensitive column reference, for use as a filter's object key:
+ * `{ [lower(platform, 'email')]: value.toLowerCase() }` produces
+ * `WHERE LOWER(email) = ?`. This is the parity-preserving equivalent of the
+ * legacy `LOWER(col) = LOWER(?)` sites (`AuthService`/`OidcService`/
+ * `UserProfileService`'s username/email CI lookups): the caller lowercases
+ * the bound value itself (every one of this migration's call sites already
+ * does, via `String.prototype.toLowerCase`), so the comparison is between
+ * two already-lowercased values either way — SQLite's `LOWER()` is ASCII-only
+ * exactly like `toLowerCase()` is for the identifier characters these
+ * columns hold (usernames/emails), so the two spellings agree on every
+ * input this codebase stores.
+ *
+ * Typed `RawQueryFragment & symbol` (not the bare `RawQueryFragment` the
+ * other helpers in this file return): TypeScript only accepts a
+ * `string | number | symbol` as a computed property name, and a raw
+ * fragment is only usable as an object key because `raw()`'s default
+ * generic already brands it with a `[Symbol.toPrimitive]`. The other
+ * helpers here are only ever used as VALUES, where that brand isn't needed.
+ */
+export function lower(platform: Platform, ref: string): RawQueryFragment & symbol {
+  if (platform instanceof SqlitePlatform) return raw(`LOWER(${column(ref)})`);
+  return unsupported(platform);
+}
