@@ -1,4 +1,4 @@
-import { RequestContext, type MikroORM } from '@mikro-orm/core';
+import { RequestContext, type EntityManager } from '@mikro-orm/core';
 
 /**
  * A request-scoped EntityManager for work that no HTTP request wraps.
@@ -11,6 +11,7 @@ import { RequestContext, type MikroORM } from '@mikro-orm/core';
  * call. It is deliberately a function and not a decorator so a call site can
  * pass the ORM it was given rather than reach for a global.
  */
-export function withRequestContext<T>(orm: MikroORM, fn: () => T): T {
+/** Accepts anything carrying the ORM's global EntityManager (MikroORM itself, or a narrower handle); `app.get(MikroORM)`'s readonly-entities generic would otherwise not assign to `MikroORM`. */
+export function withRequestContext<T>(orm: { em: EntityManager }, fn: () => T): T {
   return RequestContext.create(orm.em, fn);
 }

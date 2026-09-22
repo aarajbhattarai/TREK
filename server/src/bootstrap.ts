@@ -13,6 +13,7 @@ import { TrekWsAdapter } from './nest/realtime/trek-ws.adapter';
 import { SettingsService } from './nest/settings/settings.service';
 import { StorageService } from './nest/storage/storage.service';
 import { MikroORM } from '@mikro-orm/core';
+import { withRequestContext } from './nest/database/request-context';
 import type { INestApplication } from '@nestjs/common';
 import type { ConfigType } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
@@ -101,7 +102,10 @@ export async function buildApp(): Promise<INestApplication> {
   // engines go through the same door — the second one answers the avoidance questions
   // the first cannot, and is blocked just as silently when the policy leaves it out.
   const settings = app.get(SettingsService, { strict: false });
-  const defaults = await settings?.getAdminUserDefaults();
+  // Boot runs outside any HTTP request, so there is no per-request EntityManager
+  // yet and `allowGlobalContext` is off in production: every repository-backed
+  // read at boot goes through D6's explicit context (see request-context.ts).
+  const defaults = await withRequestContext(orm, () => settings?.getAdminUserDefaults());
   const asUrl = (value: unknown) => (typeof value === 'string' ? value : null);
   applyGlobalMiddleware(instance, {
     http,
