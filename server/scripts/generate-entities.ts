@@ -612,7 +612,8 @@ export interface DefaultFixup {
 }
 
 /** A raw SQL default that is a plain literal (number or single-quoted string) rather than an expression like `CURRENT_TIMESTAMP`. */
-const PLAIN_LITERAL_DEFAULT_RE = /^-?\d+(\.\d+)?$|^'.*'$/;
+// Numbers, quoted strings and the booleans RULE1c coerces a NOT NULL boolean default into.
+const PLAIN_LITERAL_DEFAULT_RE = /^-?\d+(\.\d+)?$|^'.*'$|^(?:true|false)$/;
 
 /**
  * Rule (metadata level for detection + clearing `defaultRaw`; text level for
@@ -1006,6 +1007,11 @@ export function injectJsonInterfaces(source: string, fixups: readonly JsonColumn
     const escaped = escapeRegExp(typeName);
     const bogusImportRe = new RegExp(`^import \\{ ${escaped} \\} from '\\./${escaped}\\.entity';\\n`, 'm');
     result = result.replace(bogusImportRe, '');
+    // The generator resolves an unknown type name to a sibling entity import;
+    // nothing else may still import the interface from a file that never exists.
+    if (new RegExp(`from '\\./${escaped}\\.entity'`).test(result)) {
+      throw new Error(`generate-entities: injectJsonInterfaces left an import of "${typeName}" from a nonexistent ./${typeName}.entity file.`);
+    }
   }
   const classRe = /^export class \w+ /m;
   const match = classRe.exec(result);

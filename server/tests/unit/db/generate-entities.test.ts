@@ -855,6 +855,7 @@ describe('generateEntities — migrations path is anchored to SERVER_ROOT, not c
     'MIGPATH-001: generation still finds migrations when run from the repo root instead of server/',
     async () => {
       const originalCwd = process.cwd();
+      // process.chdir() is only safe because vitest.config.ts uses pool: 'forks' (a worker thread cannot chdir).
       process.chdir(path.join(__dirname, '../../../..')); // server/tests/unit/db -> repo root
       try {
         const { files } = await generateEntities();
