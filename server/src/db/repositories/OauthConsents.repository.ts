@@ -1,6 +1,27 @@
 import { OauthConsents } from '../entities/OauthConsents.entity';
 import { currentTimestamp } from '../dialect/sql-functions';
-import { EntityRepository } from '@mikro-orm/sql';
+import { type AssertRowKeys } from './_shared/rows';
+import { TrekRepository } from './_shared/trek-repository';
+
+/**
+ * No method in this repository returns a full `oauth_consents` row (unlike
+ * `OauthClients`/`OauthTokens` in the same domain) — this interface exists
+ * only so `AssertRowKeys` below still pins that every scalar column of the
+ * entity is accounted for SOMEWHERE, the same `OauthTokenScalarColumns`
+ * shape `OauthTokens.repository.ts` uses (Plan 3b interlude B, task-4-review
+ * F4: this repository had no such pin at all — a column added to or removed
+ * from `oauth_consents` by a future migration+regeneration would not fail
+ * `tsc`).
+ */
+interface OauthConsentRow {
+  id: number;
+  client_id: string;
+  user_id: number;
+  scopes: string;
+  updated_at: string | null;
+}
+
+const _oauthConsentRowKeys: AssertRowKeys<OauthConsentRow, OauthConsents> = true;
 
 /**
  * Per-(client, user) OAuth consent grants, Plan 3b Task 4, inventory §3
@@ -13,7 +34,7 @@ import { EntityRepository } from '@mikro-orm/sql';
  * never narrow stored consent) stays in the SERVICE — this repository
  * writes exactly the scopes JSON it is given.
  */
-export class OauthConsentsRepository extends EntityRepository<OauthConsents> {
+export class OauthConsentsRepository extends TrekRepository<OauthConsents> {
   // ---------------------------------------------------------------------
   // OA11 — consent-sufficiency read
   // ---------------------------------------------------------------------
@@ -33,7 +54,7 @@ export class OauthConsentsRepository extends EntityRepository<OauthConsents> {
   async findScopes(clientId: string, userId: number): Promise<{ scopes: string } | null> {
     const row = await this.findOne(
       { client: clientId, user: userId },
-      { fields: ['scopes'], disableIdentityMap: true },
+      { fields: ['scopes'] },
     );
     return row ? { scopes: row.scopes } : null;
   }
@@ -75,8 +96,7 @@ export class OauthConsentsRepository extends EntityRepository<OauthConsents> {
    */
   async upsertGrant(clientId: string, userId: number, scopes: string): Promise<void> {
     const platform = this.getEntityManager().getPlatform();
-    await this.getEntityManager().upsert(
-      OauthConsents,
+    await this.upsert(
       { client: clientId, user: userId, scopes, updated_at: currentTimestamp(platform) },
       { onConflictFields: ['client', 'user'], onConflictAction: 'merge' },
     );

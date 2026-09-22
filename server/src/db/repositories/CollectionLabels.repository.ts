@@ -1,4 +1,4 @@
 import type { CollectionLabels } from '../entities/CollectionLabels.entity';
-import { EntityRepository } from '@mikro-orm/sql';
+import { TrekRepository } from './_shared/trek-repository';
 
-export class CollectionLabelsRepository extends EntityRepository<CollectionLabels> {}
+export class CollectionLabelsRepository extends TrekRepository<CollectionLabels> {}

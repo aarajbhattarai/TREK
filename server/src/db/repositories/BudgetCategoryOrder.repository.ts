@@ -1,4 +1,4 @@
 import type { BudgetCategoryOrder } from '../entities/BudgetCategoryOrder.entity';
-import { EntityRepository } from '@mikro-orm/sql';
+import { TrekRepository } from './_shared/trek-repository';
 
-export class BudgetCategoryOrderRepository extends EntityRepository<BudgetCategoryOrder> {}
+export class BudgetCategoryOrderRepository extends TrekRepository<BudgetCategoryOrder> {}

@@ -1,4 +1,4 @@
 import type { PluginMetaMigrations } from '../entities/PluginMetaMigrations.entity';
-import { EntityRepository } from '@mikro-orm/sql';
+import { TrekRepository } from './_shared/trek-repository';
 
-export class PluginMetaMigrationsRepository extends EntityRepository<PluginMetaMigrations> {}
+export class PluginMetaMigrationsRepository extends TrekRepository<PluginMetaMigrations> {}

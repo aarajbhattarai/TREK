@@ -1,4 +1,4 @@
 import type { Reservations } from '../entities/Reservations.entity';
-import { EntityRepository } from '@mikro-orm/sql';
+import { TrekRepository } from './_shared/trek-repository';
 
-export class ReservationsRepository extends EntityRepository<Reservations> {}
+export class ReservationsRepository extends TrekRepository<Reservations> {}

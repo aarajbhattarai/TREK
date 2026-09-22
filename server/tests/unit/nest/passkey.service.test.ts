@@ -726,10 +726,19 @@ describe('renamePasskey', () => {
     expect(await svc.renamePasskey(user.id, '999999', 'Ghost')).toEqual({ error: 'Passkey not found', status: 404 });
   });
 
-  it('PASSKEY-SVC-042: 404s (not a 500) on a non-numeric or prefixed-numeric id — Plan 3b Task 3 review, F1', async () => {
+  it('PASSKEY-SVC-042: 404s (not a 500) on a non-numeric id — Plan 3b Task 3 review, F1', async () => {
     const { user } = createUser(testDb);
     expect(await svc.renamePasskey(user.id, 'abc', 'Ghost')).toEqual({ error: 'Passkey not found', status: 404 });
     expect(await svc.renamePasskey(user.id, '1abc', 'Ghost')).toEqual({ error: 'Passkey not found', status: 404 });
+  });
+
+  // task-3-rereview.md R1: the legacy `renamePasskey` bound `Number(id)`
+  // (unlike the invite route's raw-string bind), so `Number('0x10') === 16`
+  // — the legacy statement would have ACTED on credential 16, not 404'd.
+  // This pins the deliberate `toRowId` narrowing the fix round chose
+  // (accepted deviation, not parity), not "the legacy 404".
+  it('PASSKEY-SVC-042B: refuses a prefixed-numeric id (0x10) via the toRowId narrowing', async () => {
+    const { user } = createUser(testDb);
     expect(await svc.renamePasskey(user.id, '0x10', 'Ghost')).toEqual({ error: 'Passkey not found', status: 404 });
   });
 });
@@ -759,6 +768,13 @@ describe('deletePasskey', () => {
   it('PASSKEY-SVC-043: 404s (not a 500) on a non-numeric id once the password check passes — Plan 3b Task 3 review, F1', async () => {
     const { user, password } = createUser(testDb);
     expect(await svc.deletePasskey(user.id, 'abc', password)).toEqual({ error: 'Passkey not found', status: 404 });
+  });
+
+  // task-3-rereview.md R1: same distinction as PASSKEY-SVC-042B —
+  // `deletePasskey`'s legacy bind was `Number(id)`, so `'0x10'` would have
+  // acted on credential 16, not 404'd. This pins the `toRowId` narrowing.
+  it('PASSKEY-SVC-043B: refuses a prefixed-numeric id (0x10) via the toRowId narrowing, once the password check passes', async () => {
+    const { user, password } = createUser(testDb);
     expect(await svc.deletePasskey(user.id, '0x10', password)).toEqual({ error: 'Passkey not found', status: 404 });
   });
 

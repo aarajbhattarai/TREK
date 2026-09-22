@@ -1,7 +1,7 @@
 import { McpTokens } from '../entities/McpTokens.entity';
 import type { AssertRowKeys } from './_shared/rows';
 import { columnRef, currentTimestamp } from '../dialect/sql-functions';
-import { EntityRepository } from '@mikro-orm/sql';
+import { TrekRepository } from './_shared/trek-repository';
 
 /**
  * A full `mcp_tokens` row (`SELECT * FROM mcp_tokens WHERE ...`), as the API
@@ -100,7 +100,7 @@ export interface McpTokenUserRow {
  * on every read here. `deleteAllForUser` exists for Task 5's `AuthService`
  * (AU17/AU45 — session revocation on password change), not consumed here.
  */
-export class McpTokensRepository extends EntityRepository<McpTokens> {
+export class McpTokensRepository extends TrekRepository<McpTokens> {
   /**
    * `SELECT id, name, token_prefix, created_at, last_used_at, scope_mode,
    *  api_scopes FROM mcp_tokens WHERE user_id = ? AND kind = ?
@@ -111,7 +111,9 @@ export class McpTokensRepository extends EntityRepository<McpTokens> {
    * into a grant — both stay in the service, unchanged.
    *
    * `disableIdentityMap: true` (controller ruling on Task 1's review,
-   * applied to every entity-hydrating read in this repository): a `find`/
+   * applied to every entity-hydrating read in this repository, by the base
+   * class's default since Plan 3b interlude B — `_shared/trek-repository.ts`):
+   * a `find`/
    * `findOne` with a `fields` projection merges a PARTIAL snapshot of this
    * row into the request's shared identity map. If the same row is later
    * loaded elsewhere in the request with a *different* projection, MikroORM
@@ -131,7 +133,6 @@ export class McpTokensRepository extends EntityRepository<McpTokens> {
       {
         fields: ['id', 'name', 'token_prefix', 'created_at', 'last_used_at', 'scope_mode', 'api_scopes'],
         orderBy: { created_at: 'desc' },
-        disableIdentityMap: true,
       },
     );
     return rows.map((row) => ({
@@ -184,7 +185,7 @@ export class McpTokensRepository extends EntityRepository<McpTokens> {
    * nothing else.
    */
   async insertToken(row: NewMcpTokenRow): Promise<{ id: number }> {
-    const id = await this.getEntityManager().insert(McpTokens, {
+    const id = await this.insert({
       user: row.user_id,
       name: row.name,
       token_hash: row.token_hash,
@@ -242,7 +243,7 @@ export class McpTokensRepository extends EntityRepository<McpTokens> {
   async findBasic(id: number): Promise<McpTokenBasicRow | null> {
     const row = await this.findOne(
       { id },
-      { fields: ['id', 'user', 'name', 'token_prefix', 'created_at', 'last_used_at'], disableIdentityMap: true },
+      { fields: ['id', 'user', 'name', 'token_prefix', 'created_at', 'last_used_at'] },
     );
     return row
       ? {
@@ -268,7 +269,7 @@ export class McpTokensRepository extends EntityRepository<McpTokens> {
    * is the hazard, not specifically a PK-only filter).
    */
   async findOwnedByKind(id: number, userId: number, kind: string): Promise<McpTokenIdRow | null> {
-    const row = await this.findOne({ id, user: userId, kind }, { fields: ['id'], disableIdentityMap: true });
+    const row = await this.findOne({ id, user: userId, kind }, { fields: ['id'] });
     return row ? { id: row.id } : null;
   }
 

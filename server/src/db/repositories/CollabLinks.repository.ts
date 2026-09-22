@@ -1,4 +1,4 @@
 import type { CollabLinks } from '../entities/CollabLinks.entity';
-import { EntityRepository } from '@mikro-orm/sql';
+import { TrekRepository } from './_shared/trek-repository';
 
-export class CollabLinksRepository extends EntityRepository<CollabLinks> {}
+export class CollabLinksRepository extends TrekRepository<CollabLinks> {}

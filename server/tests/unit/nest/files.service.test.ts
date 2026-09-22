@@ -75,13 +75,20 @@ import type { TripFile, User } from '../../../src/types';
 import { RealtimeService } from '../../../src/nest/realtime/realtime.service';
 import { EphemeralTokenService } from '../../../src/nest/auth/ephemeral-token.service';
 import type { EntityManager } from '@mikro-orm/core';
+import { Users } from '../../../src/db/entities/Users.entity';
 
 const storageDelete = vi.fn();
 const storageStub = { delete: storageDelete } as unknown as import('../../../src/nest/storage/storage.service').StorageService;
 // EntityManager stub (Plan 3b Task 1 RULING): verifyJwtAndLoadUser is
 // fully mocked above, so `em.getRepository` never needs to return
 // anything meaningful; it just has to not throw when the service calls it.
-const emStub = { getRepository: () => ({}) } as unknown as EntityManager;
+// `getRepository` is a spy, not a plain arrow (task-1-rereview.md F-R4): a
+// fixed `() => ({})` pinned only the RETURN value, not which entity class
+// `files.service.ts` asks for — the assertion below would hold even if the
+// production code asked for `Trips`. The spy lets FILE-SVC-032/033 pin
+// `Users` specifically.
+const getRepository = vi.fn(() => ({}));
+const emStub = { getRepository } as unknown as EntityManager;
 const svc = new FilesService(new DatabaseService(testDb), permissionsStub, new RealtimeService(), new EphemeralTokenService(), storageStub, emStub);
 
 beforeAll(() => {
@@ -564,13 +571,18 @@ describe('authenticateDownload', () => {
     // always returns a fresh `{}` (task-1-review.md F6) — deep-equal, not a
     // reference match, so this pins WHICH repository (an empty object, this
     // suite's stand-in for UsersRepository), not merely "a repository".
+    // `getRepository` itself is a spy (task-1-rereview.md F-R4), so this ALSO
+    // pins which entity class was asked for: the deep-equal alone would still
+    // hold if the production code called `em.getRepository(Trips)`.
     expect(verifyJwtAndLoadUser).toHaveBeenCalledWith('cookie-jwt', {});
+    expect(getRepository).toHaveBeenCalledWith(Users);
   });
 
   it('FILE-SVC-033: a bearer token is used when no cookie is present; invalid JWTs 401', async () => {
     verifyJwtAndLoadUser.mockReturnValue({ id: 7 });
     expect(await svc.authenticateDownload(req({ bearer: 'bearer-jwt' }))).toEqual({ userId: 7 });
     expect(verifyJwtAndLoadUser).toHaveBeenCalledWith('bearer-jwt', {}); // see FILE-SVC-032's comment
+    expect(getRepository).toHaveBeenCalledWith(Users);
 
     verifyJwtAndLoadUser.mockReturnValue(null);
     expect(await svc.authenticateDownload(req({ bearer: 'stale' }))).toEqual({ error: 'Invalid or expired token', status: 401 });

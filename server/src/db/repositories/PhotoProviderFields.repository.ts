@@ -1,6 +1,6 @@
 import type { PhotoProviderFields } from '../entities/PhotoProviderFields.entity';
 import { toRow, type AssertRowKeys } from './_shared/rows';
-import { EntityRepository } from '@mikro-orm/sql';
+import { TrekRepository } from './_shared/trek-repository';
 
 /** A `photo_provider_fields` row as the API emits it. */
 export interface PhotoProviderFieldRow {
@@ -20,7 +20,7 @@ export interface PhotoProviderFieldRow {
 
 const _photoProviderFieldRowKeys: AssertRowKeys<PhotoProviderFieldRow, PhotoProviderFields> = true;
 
-export class PhotoProviderFieldsRepository extends EntityRepository<PhotoProviderFields> {
+export class PhotoProviderFieldsRepository extends TrekRepository<PhotoProviderFields> {
   /**
    * `SELECT provider_id, field_key, label, input_type, placeholder, hint,
    * required, secret, settings_key, payload_key, sort_order FROM
@@ -29,11 +29,12 @@ export class PhotoProviderFieldsRepository extends EntityRepository<PhotoProvide
    * precedent): reading it back after `find()` needs no extra populate, only
    * a `create()`/twin write would.
    *
-   * `disableIdentityMap: true` (Plan 3b Task 1 fix round) — a "rows out"
+   * `disableIdentityMap: true`, applied by the base class's default (Plan 3b
+   * interlude B — `_shared/trek-repository.ts`) — a "rows out"
    * read, converted via `toRow` and discarded.
    */
   async listAllOrdered(): Promise<PhotoProviderFieldRow[]> {
-    const rows = await this.find({}, { orderBy: { sort_order: 'asc', id: 'asc' }, disableIdentityMap: true });
+    const rows = await this.find({}, { orderBy: { sort_order: 'asc', id: 'asc' } });
     return rows.map((row) => toRow(row) as PhotoProviderFieldRow);
   }
 }

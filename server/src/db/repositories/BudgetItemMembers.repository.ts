@@ -1,4 +1,4 @@
 import type { BudgetItemMembers } from '../entities/BudgetItemMembers.entity';
-import { EntityRepository } from '@mikro-orm/sql';
+import { TrekRepository } from './_shared/trek-repository';
 
-export class BudgetItemMembersRepository extends EntityRepository<BudgetItemMembers> {}
+export class BudgetItemMembersRepository extends TrekRepository<BudgetItemMembers> {}

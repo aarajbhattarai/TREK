@@ -147,38 +147,6 @@ export function redirectUriMatches(allowed: string, requested: string): boolean 
 }
 
 // ---------------------------------------------------------------------------
-// DB row types
-// ---------------------------------------------------------------------------
-
-export interface OAuthClientRow {
-  id: string;
-  user_id: number;
-  name: string;
-  client_id: string;
-  client_secret_hash: string;
-  redirect_uris: string;   // JSON array
-  allowed_scopes: string;  // JSON array
-  created_at: string;
-  is_public: number;       // 0 | 1 (SQLite boolean)
-  created_via: string;     // 'settings_ui' | 'browser-registration'
-  allows_client_credentials: number; // 0 | 1
-}
-
-export interface OAuthTokenRow {
-  id: number;
-  client_id: string;
-  user_id: number;
-  access_token_hash: string;
-  refresh_token_hash: string;
-  scopes: string;           // JSON array
-  audience: string | null;
-  access_token_expires_at: string;
-  refresh_token_expires_at: string;
-  revoked_at: string | null;
-  parent_token_id: number | null;
-}
-
-// ---------------------------------------------------------------------------
 // Token helpers
 // ---------------------------------------------------------------------------
 

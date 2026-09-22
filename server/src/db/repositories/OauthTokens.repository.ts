@@ -1,7 +1,7 @@
 import { OauthTokens } from '../entities/OauthTokens.entity';
 import { type AssertRowKeys } from './_shared/rows';
 import { columnRef, currentTimestamp } from '../dialect/sql-functions';
-import { EntityRepository } from '@mikro-orm/sql';
+import { TrekRepository } from './_shared/trek-repository';
 
 /**
  * The Kysely-side table shape `em.getKysely()` needs for `collectChainIds`'s
@@ -137,7 +137,8 @@ const _oauthTokenScalarProbe: AssertRowKeys<OauthTokenScalarColumns, OauthTokens
  * OA8/OA13/OA14/OA16-OA20/OA22-OA28/OA31-OA33 — the busiest table in this
  * domain. Every row-out read passes `disableIdentityMap: true` (program
  * RULING, Task 1 review B1 — see `Users.repository.ts`'s class-level
- * docstring). No method here hashes, compares or generates a token —
+ * docstring; applied by the base class's default since Plan 3b interlude B,
+ * `_shared/trek-repository.ts`). No method here hashes, compares or generates a token —
  * `OauthService` does (`hashToken`/`generateAccessToken`/…), this
  * repository only ever sees an already-computed hash string.
  *
@@ -161,7 +162,7 @@ const _oauthTokenScalarProbe: AssertRowKeys<OauthTokenScalarColumns, OauthTokens
  * OAUTHTOKREPO-030) — and `listActiveByUser`/`listAllActiveWithClientAndUser`
  * below use the QueryBuilder like every other join in this file.
  */
-export class OauthTokensRepository extends EntityRepository<OauthTokens> {
+export class OauthTokensRepository extends TrekRepository<OauthTokens> {
   // ---------------------------------------------------------------------
   // OA13 / OA14 — token issuance
   // ---------------------------------------------------------------------
@@ -185,7 +186,7 @@ export class OauthTokensRepository extends EntityRepository<OauthTokens> {
    * ::insertToken` avoid.
    */
   async insertToken(row: NewOauthTokenRow): Promise<void> {
-    await this.getEntityManager().insert(OauthTokens, {
+    await this.insert({
       client: row.client_id,
       user: row.user_id,
       access_token_hash: row.access_token_hash,
@@ -297,7 +298,7 @@ export class OauthTokensRepository extends EntityRepository<OauthTokens> {
    * the mirror directly leaves it `undefined`.
    */
   async findParent(id: number): Promise<OauthTokenParentRow | null> {
-    const row = await this.findOne({ id }, { fields: ['id', 'parentToken'], disableIdentityMap: true });
+    const row = await this.findOne({ id }, { fields: ['id', 'parentToken'] });
     return row ? { id: row.id, parent_token_id: row.parentToken?.id ?? null } : null;
   }
 
@@ -328,10 +329,13 @@ export class OauthTokensRepository extends EntityRepository<OauthTokens> {
    * on a 4-level chain plus a sibling branch that must NOT be collected
    * (`OAUTHTOKREPO` CTE test) — see the task report for the exact generated
    * SQL and both result sets side by side.
+   *
+   * `this.kysely()` (`_shared/trek-repository.ts`, Plan 3b interlude B), not
+   * `this.getEntityManager().getKysely()` directly — see
+   * `WebauthnChallengesRepository.claimChallenge`'s docstring for why.
    */
   async collectChainIds(rootId: number): Promise<number[]> {
-    const rows = await this.getEntityManager()
-      .getKysely<OauthTokensKyselyDB>()
+    const rows = await this.kysely<OauthTokensKyselyDB>()
       .withRecursive('chain', (db) =>
         db.selectFrom('oauth_tokens')
           .select('id')
@@ -383,7 +387,7 @@ export class OauthTokensRepository extends EntityRepository<OauthTokens> {
    * plain equality filter is unaffected by this file's class-level finding.
    */
   async findSuccessorAlive(parentId: number): Promise<{ id: number } | null> {
-    const row = await this.findOne({ parentToken: parentId, revoked_at: null }, { fields: ['id'], disableIdentityMap: true });
+    const row = await this.findOne({ parentToken: parentId, revoked_at: null }, { fields: ['id'] });
     return row ? { id: row.id } : null;
   }
 
@@ -407,7 +411,7 @@ export class OauthTokensRepository extends EntityRepository<OauthTokens> {
   async findByRefreshTokenHash(hash: string): Promise<OauthTokenRefreshRow | null> {
     const row = await this.findOne(
       { refresh_token_hash: hash },
-      { fields: ['id', 'client', 'user', 'scopes', 'audience', 'refresh_token_expires_at', 'revoked_at', 'parentToken'], disableIdentityMap: true },
+      { fields: ['id', 'client', 'user', 'scopes', 'audience', 'refresh_token_expires_at', 'revoked_at', 'parentToken'] },
     );
     return row
       ? {
@@ -459,7 +463,7 @@ export class OauthTokensRepository extends EntityRepository<OauthTokens> {
   async findByAccessOrRefreshHashAndClient(hash: string, clientId: string): Promise<OauthTokenUserIdRow | null> {
     const row = await this.findOne(
       { $or: [{ access_token_hash: hash }, { refresh_token_hash: hash }], client: clientId },
-      { fields: ['user'], disableIdentityMap: true },
+      { fields: ['user'] },
     );
     return row ? { user_id: row.user.id } : null;
   }
@@ -542,7 +546,7 @@ export class OauthTokensRepository extends EntityRepository<OauthTokens> {
 
   /** `SELECT id, client_id FROM oauth_tokens WHERE id = ? AND user_id = ?` — 404-never-403, ownership scoped in the WHERE. */
   async findOwnedById(id: number, userId: number): Promise<OauthTokenOwnedRow | null> {
-    const row = await this.findOne({ id, user: userId }, { fields: ['id', 'client'], disableIdentityMap: true });
+    const row = await this.findOne({ id, user: userId }, { fields: ['id', 'client'] });
     return row ? { id: row.id, client_id: row.client.id } : null;
   }
 
@@ -611,7 +615,7 @@ export class OauthTokensRepository extends EntityRepository<OauthTokens> {
 
   /** `SELECT id, user_id, client_id FROM oauth_tokens WHERE id = ?` — unscoped (admin), distinct from `findOwnedById` (OA27). */
   async findById(id: number): Promise<OauthTokenAdminRow | null> {
-    const row = await this.findOne({ id }, { fields: ['id', 'user', 'client'], disableIdentityMap: true });
+    const row = await this.findOne({ id }, { fields: ['id', 'user', 'client'] });
     return row ? { id: row.id, user_id: row.user.id, client_id: row.client.id } : null;
   }
 }

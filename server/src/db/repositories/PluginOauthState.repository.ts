@@ -1,4 +1,4 @@
 import type { PluginOauthState } from '../entities/PluginOauthState.entity';
-import { EntityRepository } from '@mikro-orm/sql';
+import { TrekRepository } from './_shared/trek-repository';
 
-export class PluginOauthStateRepository extends EntityRepository<PluginOauthState> {}
+export class PluginOauthStateRepository extends TrekRepository<PluginOauthState> {}

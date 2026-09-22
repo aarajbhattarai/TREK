@@ -1,4 +1,4 @@
 import type { PluginActions } from '../entities/PluginActions.entity';
-import { EntityRepository } from '@mikro-orm/sql';
+import { TrekRepository } from './_shared/trek-repository';
 
-export class PluginActionsRepository extends EntityRepository<PluginActions> {}
+export class PluginActionsRepository extends TrekRepository<PluginActions> {}

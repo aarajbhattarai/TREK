@@ -1,4 +1,4 @@
 import type { PluginSettingsFields } from '../entities/PluginSettingsFields.entity';
-import { EntityRepository } from '@mikro-orm/sql';
+import { TrekRepository } from './_shared/trek-repository';
 
-export class PluginSettingsFieldsRepository extends EntityRepository<PluginSettingsFields> {}
+export class PluginSettingsFieldsRepository extends TrekRepository<PluginSettingsFields> {}

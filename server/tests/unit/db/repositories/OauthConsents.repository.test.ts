@@ -85,22 +85,33 @@ describe('OauthConsentsRepository', () => {
     });
   });
 
-  describe('identity-map isolation (program RULING, D-shape)', () => {
-    it('OAUTHCONSENTREPO-007: findScopes leaves no managed entity behind — a raw write to the same row on the same transaction connection survives the transaction\'s closing flush', async () => {
+  // task-4-review.md F2: this is NOT a B1/D-shape regression test — that
+  // shape needs TWO managed reads with different field sets on the same
+  // row (task-1-rereview.md M-A/M-B), and `OauthConsentsRepository` has
+  // exactly one read method, so the D-shape is not constructible here at
+  // all. Mutating `findScopes`'s `disableIdentityMap: true` to `refresh:
+  // true` leaves this case green either way — it was never testing the
+  // mechanism its old name/comment claimed. What it DOES pin, genuinely:
+  // a single `findScopes` read leaves nothing dirty (the entity's snapshot
+  // and current data are identical, so the change-set computer finds no
+  // diff), and a raw write to the same row on the transaction's own
+  // connection, made afterward, is never fought by the closing flush.
+  describe('findScopes does not dirty the entity it reads', () => {
+    it('OAUTHCONSENTREPO-007: findScopes then a raw write on the same transaction connection — the raw write survives the transaction\'s closing flush', async () => {
       const { user } = createUser(testDb);
       seedClient(user.id, 'proto-7');
       testDb.prepare(`INSERT INTO oauth_consents (client_id, user_id, scopes) VALUES (?, ?, ?)`).run('proto-7', user.id, '["a"]');
 
       await withRequestContext(t.orm, async () => {
         await uow.transactional(async () => {
-          // Projection: the only read shape this repository has.
+          // The only read shape this repository has — a single projection,
+          // so no second, differently-projected read of the same row can
+          // ever be lingering in the identity map for this one to collide
+          // with.
           await consents.findScopes('proto-7', user.id);
           // A write bypassing the ORM entirely, on the SAME single SQLite
           // connection the open transaction holds (D3/D6) — the shape any
-          // nativeUpdate write from elsewhere in the same request takes. If
-          // findScopes had left a managed entity in the identity map (the
-          // B1 mechanism), the transaction's closing flush would try to
-          // write the READ snapshot back over this change.
+          // nativeUpdate write from elsewhere in the same request takes.
           testDb.prepare('UPDATE oauth_consents SET scopes = ? WHERE client_id = ? AND user_id = ?').run('["a","b"]', 'proto-7', user.id);
         });
       });

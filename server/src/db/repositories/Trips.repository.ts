@@ -1,5 +1,5 @@
 import type { Trips } from '../entities/Trips.entity';
-import { EntityRepository } from '@mikro-orm/sql';
+import { TrekRepository } from './_shared/trek-repository';
 
 /** What a trip-scoped request learns about the trip once access is verified. */
 export interface TripAccess {
@@ -8,7 +8,7 @@ export interface TripAccess {
   currency: string | null;
 }
 
-export class TripsRepository extends EntityRepository<Trips> {
+export class TripsRepository extends TrekRepository<Trips> {
   /**
    * The trip if the user owns it or is a member of it, else undefined.
    *

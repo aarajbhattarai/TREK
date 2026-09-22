@@ -1,4 +1,4 @@
 import type { CollabPolls } from '../entities/CollabPolls.entity';
-import { EntityRepository } from '@mikro-orm/sql';
+import { TrekRepository } from './_shared/trek-repository';
 
-export class CollabPollsRepository extends EntityRepository<CollabPolls> {}
+export class CollabPollsRepository extends TrekRepository<CollabPolls> {}

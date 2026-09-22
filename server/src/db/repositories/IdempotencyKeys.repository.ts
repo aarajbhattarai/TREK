@@ -1,4 +1,4 @@
 import type { IdempotencyKeys } from '../entities/IdempotencyKeys.entity';
-import { EntityRepository } from '@mikro-orm/sql';
+import { TrekRepository } from './_shared/trek-repository';
 
-export class IdempotencyKeysRepository extends EntityRepository<IdempotencyKeys> {}
+export class IdempotencyKeysRepository extends TrekRepository<IdempotencyKeys> {}

@@ -1,4 +1,4 @@
 import type { PluginEntityMetadata } from '../entities/PluginEntityMetadata.entity';
-import { EntityRepository } from '@mikro-orm/sql';
+import { TrekRepository } from './_shared/trek-repository';
 
-export class PluginEntityMetadataRepository extends EntityRepository<PluginEntityMetadata> {}
+export class PluginEntityMetadataRepository extends TrekRepository<PluginEntityMetadata> {}

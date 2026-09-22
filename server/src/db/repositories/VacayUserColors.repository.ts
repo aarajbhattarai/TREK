@@ -1,4 +1,4 @@
 import type { VacayUserColors } from '../entities/VacayUserColors.entity';
-import { EntityRepository } from '@mikro-orm/sql';
+import { TrekRepository } from './_shared/trek-repository';
 
-export class VacayUserColorsRepository extends EntityRepository<VacayUserColors> {}
+export class VacayUserColorsRepository extends TrekRepository<VacayUserColors> {}

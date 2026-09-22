@@ -1,4 +1,4 @@
 import type { PluginCapabilityAudit } from '../entities/PluginCapabilityAudit.entity';
-import { EntityRepository } from '@mikro-orm/sql';
+import { TrekRepository } from './_shared/trek-repository';
 
-export class PluginCapabilityAuditRepository extends EntityRepository<PluginCapabilityAudit> {}
+export class PluginCapabilityAuditRepository extends TrekRepository<PluginCapabilityAudit> {}

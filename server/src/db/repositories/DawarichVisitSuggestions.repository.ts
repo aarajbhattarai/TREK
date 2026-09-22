@@ -1,4 +1,4 @@
 import type { DawarichVisitSuggestions } from '../entities/DawarichVisitSuggestions.entity';
-import { EntityRepository } from '@mikro-orm/sql';
+import { TrekRepository } from './_shared/trek-repository';
 
-export class DawarichVisitSuggestionsRepository extends EntityRepository<DawarichVisitSuggestions> {}
+export class DawarichVisitSuggestionsRepository extends TrekRepository<DawarichVisitSuggestions> {}

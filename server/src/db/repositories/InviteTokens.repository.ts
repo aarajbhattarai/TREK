@@ -1,7 +1,7 @@
 import type { InviteTokens } from '../entities/InviteTokens.entity';
 import { toRow, type AssertRowKeys } from './_shared/rows';
 import { columnIncrementedBy, columnRef } from '../dialect/sql-functions';
-import { EntityRepository } from '@mikro-orm/sql';
+import { TrekRepository } from './_shared/trek-repository';
 
 /** An `invite_tokens` row as the API emits it. */
 export interface InviteTokenRow {
@@ -44,7 +44,7 @@ export interface NewInviteTokenRow {
  * ruling. Task 0 builds the three methods every later task needs in common;
  * Task 3 extends this with the admin list/create/delete surface (RI1/RI5-RI7).
  */
-export class InviteTokensRepository extends EntityRepository<InviteTokens> {
+export class InviteTokensRepository extends TrekRepository<InviteTokens> {
   /**
    * `SELECT * FROM invite_tokens WHERE token = ?`
    *
@@ -66,7 +66,7 @@ export class InviteTokensRepository extends EntityRepository<InviteTokens> {
    * isolated, unmanaged read can never be part of that flush.
    */
   async findByToken(token: string): Promise<InviteTokenRow | null> {
-    const invite = await this.findOne({ token }, { disableIdentityMap: true });
+    const invite = await this.findOne({ token });
     return invite ? (toRow(invite) as InviteTokenRow) : null;
   }
 
@@ -95,7 +95,7 @@ export class InviteTokensRepository extends EntityRepository<InviteTokens> {
       createdByRef: row.created_by,
       trip: row.trip_id ?? null,
     });
-    const invite = await this.findOne({ id }, { disableIdentityMap: true });
+    const invite = await this.findOne({ id });
     return toRow(invite!) as InviteTokenRow;
   }
 
@@ -198,7 +198,7 @@ export class InviteTokensRepository extends EntityRepository<InviteTokens> {
    * unrelated repositories side by side, not a compiler conflict).
    */
   async findIdById(id: number): Promise<number | null> {
-    const row = await this.findOne({ id }, { fields: ['id'], disableIdentityMap: true });
+    const row = await this.findOne({ id }, { fields: ['id'] });
     return row ? row.id : null;
   }
 

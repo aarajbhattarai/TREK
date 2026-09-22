@@ -1,4 +1,4 @@
 import type { PackingTemplates } from '../entities/PackingTemplates.entity';
-import { EntityRepository } from '@mikro-orm/sql';
+import { TrekRepository } from './_shared/trek-repository';
 
-export class PackingTemplatesRepository extends EntityRepository<PackingTemplates> {}
+export class PackingTemplatesRepository extends TrekRepository<PackingTemplates> {}

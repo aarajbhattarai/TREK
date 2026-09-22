@@ -1,4 +1,4 @@
 import type { PlaceShadowPicks } from '../entities/PlaceShadowPicks.entity';
-import { EntityRepository } from '@mikro-orm/sql';
+import { TrekRepository } from './_shared/trek-repository';
 
-export class PlaceShadowPicksRepository extends EntityRepository<PlaceShadowPicks> {}
+export class PlaceShadowPicksRepository extends TrekRepository<PlaceShadowPicks> {}

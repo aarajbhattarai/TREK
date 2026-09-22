@@ -1,4 +1,4 @@
 import type { FileLinks } from '../entities/FileLinks.entity';
-import { EntityRepository } from '@mikro-orm/sql';
+import { TrekRepository } from './_shared/trek-repository';
 
-export class FileLinksRepository extends EntityRepository<FileLinks> {}
+export class FileLinksRepository extends TrekRepository<FileLinks> {}

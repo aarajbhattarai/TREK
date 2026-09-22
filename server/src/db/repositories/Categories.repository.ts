@@ -1,6 +1,6 @@
 import type { Categories } from '../entities/Categories.entity';
 import { toRow, type AssertRowKeys } from './_shared/rows';
-import { EntityRepository } from '@mikro-orm/sql';
+import { TrekRepository } from './_shared/trek-repository';
 
 /** A `categories` row as the API emits it. */
 export interface CategoryRow {
@@ -14,10 +14,10 @@ export interface CategoryRow {
 
 const _categoryRowKeys: AssertRowKeys<CategoryRow, Categories> = true;
 
-export class CategoriesRepository extends EntityRepository<Categories> {
+export class CategoriesRepository extends TrekRepository<Categories> {
   /** `SELECT * FROM categories ORDER BY name ASC` */
   async list(): Promise<CategoryRow[]> {
-    const categories = await this.find({}, { orderBy: { name: 'asc' }, disableIdentityMap: true });
+    const categories = await this.find({}, { orderBy: { name: 'asc' } });
     return categories.map((category) => toRow(category) as CategoryRow);
   }
 
@@ -30,9 +30,10 @@ export class CategoriesRepository extends EntityRepository<Categories> {
    * global") and was deleted rather than kept as dead code (Task 0
    * re-review, R6; see `_shared/owned-lookup.ts`'s docstring).
    *
-   * `disableIdentityMap: true` (Plan 3b Task 1 fix round, supersedes Plan
-   * 3a's I1 "`refresh: true` on every PK-only `findOne`" — see
-   * `Users.repository.ts`'s class-level docstring and
+   * `disableIdentityMap: true` by the base class's default (`_shared/
+   * trek-repository.ts`, Plan 3b interlude B — supersedes the per-call
+   * option this repository used to pass itself, which superseded Plan 3a's
+   * I1 "`refresh: true` on every PK-only `findOne`"; see
    * `.superpowers/sdd/2026-09-22-orm-phase3b/task-1-review.md` B1): this is
    * a "rows out" read, converted via `toRow` and discarded — the entity is
    * loaded in a throwaway forked context and never lands in the request's
@@ -41,7 +42,7 @@ export class CategoriesRepository extends EntityRepository<Categories> {
    * dirty.
    */
   async findById(id: number): Promise<CategoryRow | null> {
-    const category = await this.findOne({ id }, { disableIdentityMap: true });
+    const category = await this.findOne({ id });
     return category ? (toRow(category) as CategoryRow) : null;
   }
 
@@ -51,74 +52,69 @@ export class CategoriesRepository extends EntityRepository<Categories> {
    * The `#6366f1`/`📍` defaulting stays in `CategoriesService` (D4's defaults
    * rule) — this writes exactly what it is given.
    *
-   * Named `createCategory`, not `create`: `EntityRepository#create` is a
-   * synchronous, non-persisting factory with an incompatible signature —
-   * shadowing it would fail to compile, the same collision Task 1 hit
-   * naming a method `insert`.
-   *
-   * Followed by `em.refresh` before `toRow` (D4's create rule): the insert's
-   * `RETURNING` clause already carries the generated `id` and the
-   * `defaultRaw` `created_at`, but calling `refresh` documents the
-   * one-extra-SELECT parity with the legacy statement pair (INSERT, then a
-   * re-select by id) rather than leaning on driver-specific RETURNING
-   * behaviour.
+   * `this.insert` (Plan 3b interlude B, finishing F2's sweep — Task 1
+   * fix round's re-review flagged this method as a leftover whole-request-
+   * UnitOfWork `flush()`), never `create()` + `persist().flush()`:
+   * `flush()` commits the *whole* unit of work of the request's
+   * `EntityManager`, not just this row. `insert` fires a single native
+   * INSERT with no side effects on the context/identity map, followed by a
+   * read-back (`findById`, `disableIdentityMap: true` by the base class's
+   * default): the returned row carries the generated `id` and the
+   * `defaultRaw` `created_at` the same way a legacy INSERT-then-reselect
+   * pair did.
    */
   async createCategory(input: { name: string; color: string; icon: string; user_id: number }): Promise<CategoryRow> {
-    const category = this.create({
+    const id = await this.insert({
       name: input.name,
       color: input.color,
       icon: input.icon,
       user: input.user_id,
     });
-    await this.getEntityManager().persist(category).flush();
-    await this.getEntityManager().refresh(category);
-    return toRow(category) as CategoryRow;
+    const inserted = await this.findById(id);
+    if (!inserted) {
+      throw new Error('createCategory: read-back after insert found no row');
+    }
+    return inserted;
   }
 
   /**
    * `UPDATE categories SET name = COALESCE(?, name), color = COALESCE(?,
-   * color), icon = COALESCE(?, icon) WHERE id = ?`, re-selected. `assign`
-   * only touches the keys present on `changes` — the entity-API equivalent
-   * of `COALESCE` against a bind parameter — so the caller must omit a field
-   * entirely (not pass it as `undefined`) to leave it untouched, which is
-   * how `CategoriesService` reproduces the legacy `|| null`
-   * coalesce-away-empty-string behaviour. Returns `null` when no row matches
-   * `id`, mirroring the legacy re-select's `undefined`.
+   * color), icon = COALESCE(?, icon) WHERE id = ?`, re-selected.
+   * `nativeUpdate` only writes the keys present on `changes` — the
+   * entity-API equivalent of `COALESCE` against a bind parameter — so the
+   * caller must omit a field entirely (not pass it as `undefined`) to leave
+   * it untouched, which is how `CategoriesService` reproduces the legacy
+   * `|| null` coalesce-away-empty-string behaviour. Returns `null` when no
+   * row matches `id`, mirroring the legacy re-select's `undefined`.
    *
-   * The lookup `findOne({ id }, { refresh: true })` is PK-only, so without
-   * `refresh: true` MikroORM would answer it from the identity map instead
-   * of the DB (Task 3 review, Important 1): a category loaded earlier in
-   * this request (list/findById/an earlier patch) would stay pinned to that
-   * stale snapshot, so (a) an untouched column could read stale even though
-   * the DB has since changed underneath it, (b) `assign` could diff a patch
-   * against a stale value that happens to match the new one and emit no
-   * UPDATE at all — reporting success while silently dropping the write —
-   * and (c) a `remove()` earlier in the same request (a `nativeDelete`,
-   * which does not clear the identity map) would let `patch` fabricate a
-   * row for an id that no longer exists instead of returning `null`.
-   * `refresh: true` forces a real re-query every time, closing all three.
-   *
-   * No re-`findOne`/`refresh` after `flush`: `assign` already mutated the
-   * managed (and now guaranteed-fresh) entity in place, and no column here
-   * is DB-computed on UPDATE (unlike `created_at` on insert), so the
-   * in-memory entity already holds exactly what was written.
-   *
-   * **Excluded from the Plan 3b Task 1 fix round's `disableIdentityMap: true`
-   * ruling, deliberately** — see `TagsRepository.patch`'s docstring for the
-   * full reasoning: this is not a "rows out" read, the entity must stay
-   * MANAGED for `assign`+`flush`, and `disableIdentityMap: true` would
-   * silently stop the write from persisting (a detached entity is outside
-   * `flush()`'s unit of work). `refresh: true` stays for the identity-map
-   * freshness reason above; there is no B1-shaped staleness risk because
-   * this is the only read of this row left un-`disableIdentityMap`-ed in the
-   * repository.
+   * **Converted from `findOne({ refresh: true })` + `assign` + `flush()`
+   * to `nativeUpdate` + a typed partial (Plan 3b interlude B, per
+   * `task-1-rereview.md`'s ruling on this method: "convert them, don't
+   * complete the sweep on the read").** `nativeUpdate` writes the given
+   * columns directly, with no ORM change-set diff against an in-memory
+   * snapshot — that removes the whole class of staleness the old
+   * `refresh: true` lookup existed to guard against (Task 3 review,
+   * Important 1: an untouched column reading stale, a patch silently
+   * dropped because it happened to match a stale in-memory value, and a
+   * patch after `remove()` fabricating a row), not just the one B1 shape
+   * the rest of the program's `disableIdentityMap: true` ruling closes. When
+   * `changes` is non-empty, `nativeUpdate`'s own affected-row count IS the
+   * existence check (0 ⇒ `null`, no separate read); when `changes` is empty
+   * (nothing to write), a plain existence read (`disableIdentityMap: true`
+   * by the base class's default, like every other read in this repository
+   * now) stands in for it. Either way the return value is a fresh
+   * `findById` — a genuine rows-out read, not the entity `assign` just
+   * mutated in place.
    */
   async patch(id: number, changes: { name?: string; color?: string; icon?: string }): Promise<CategoryRow | null> {
-    const category = await this.findOne({ id }, { refresh: true });
-    if (!category) return null;
-    this.assign(category, changes);
-    await this.getEntityManager().flush();
-    return toRow(category) as CategoryRow;
+    if (Object.keys(changes).length > 0) {
+      const affected = await this.nativeUpdate({ id }, changes);
+      if (affected === 0) return null;
+    } else {
+      const existing = await this.findOne({ id }, { fields: ['id'] });
+      if (!existing) return null;
+    }
+    return this.findById(id);
   }
 
   /** `DELETE FROM categories WHERE id = ?`. Returns the affected row count. */

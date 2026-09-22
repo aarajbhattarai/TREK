@@ -1,4 +1,4 @@
 import type { TodoCategoryAssignees } from '../entities/TodoCategoryAssignees.entity';
-import { EntityRepository } from '@mikro-orm/sql';
+import { TrekRepository } from './_shared/trek-repository';
 
-export class TodoCategoryAssigneesRepository extends EntityRepository<TodoCategoryAssignees> {}
+export class TodoCategoryAssigneesRepository extends TrekRepository<TodoCategoryAssignees> {}

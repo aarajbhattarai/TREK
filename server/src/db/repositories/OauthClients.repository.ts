@@ -1,6 +1,6 @@
 import { OauthClients } from '../entities/OauthClients.entity';
 import { toRow, type AssertRowKeys } from './_shared/rows';
-import { EntityRepository } from '@mikro-orm/sql';
+import { TrekRepository } from './_shared/trek-repository';
 
 /**
  * A full `oauth_clients` row (`SELECT * FROM oauth_clients WHERE ...`), as
@@ -99,14 +99,16 @@ export interface OauthClientAuthRow {
  * OAuth 2.1 client registrations (self-service + DCR + machine clients),
  * Plan 3b Task 4, inventory §3 OA1-OA10/OA15/OA21/OA29/OA30. Every row-out
  * read passes `disableIdentityMap: true` (program RULING, Task 1 review B1
- * — see `Users.repository.ts`'s class-level docstring): a partial-field
+ * — see `Users.repository.ts`'s class-level docstring; applied by the base
+ * class's default since Plan 3b interlude B, `_shared/trek-repository.ts`):
+ * a partial-field
  * `find`/`findOne` merged into the request's identity map can go stale and
  * get flushed back over an unrelated `nativeUpdate` in the same transaction;
  * a `disableIdentityMap: true` read is always isolated and discarded.
  * `client_secret_hash` is never hashed or compared here — that stays in
  * `OauthService` (`hashToken`/`timingSafeEqualHex`).
  */
-export class OauthClientsRepository extends EntityRepository<OauthClients> {
+export class OauthClientsRepository extends TrekRepository<OauthClients> {
   // ---------------------------------------------------------------------
   // OA1 — self-service client list
   // ---------------------------------------------------------------------
@@ -129,7 +131,6 @@ export class OauthClientsRepository extends EntityRepository<OauthClients> {
       {
         fields: ['id', 'user', 'name', 'client_id', 'redirect_uris', 'allowed_scopes', 'created_at', 'is_public', 'created_via', 'allows_client_credentials'],
         orderBy: { created_at: 'desc' },
-        disableIdentityMap: true,
       },
     );
     return rows.map((row) => ({
@@ -179,7 +180,7 @@ export class OauthClientsRepository extends EntityRepository<OauthClients> {
    * does too, never relying on a DB-generated default.
    */
   async insertClient(row: NewOauthClientRow): Promise<OauthClientPublicRow> {
-    await this.getEntityManager().insert(OauthClients, {
+    await this.insert({
       id: row.id,
       user: row.user_id,
       name: row.name,
@@ -204,7 +205,6 @@ export class OauthClientsRepository extends EntityRepository<OauthClients> {
       { id },
       {
         fields: ['id', 'user', 'name', 'client_id', 'redirect_uris', 'allowed_scopes', 'created_at', 'is_public', 'created_via', 'allows_client_credentials'],
-        disableIdentityMap: true,
       },
     );
     return row
@@ -240,7 +240,7 @@ export class OauthClientsRepository extends EntityRepository<OauthClients> {
   async findOwned(id: string, userId: number): Promise<OauthClientOwnedRow | null> {
     const row = await this.findOne(
       { id, user: userId },
-      { fields: ['id', 'client_id', 'is_public'], disableIdentityMap: true },
+      { fields: ['id', 'client_id', 'is_public'] },
     );
     return row ? { id: row.id as string, client_id: row.client_id, is_public: row.is_public } : null;
   }
@@ -276,7 +276,7 @@ export class OauthClientsRepository extends EntityRepository<OauthClients> {
   async findSdkProjection(clientId: string): Promise<OauthClientSdkRow | null> {
     const row = await this.findOne(
       { client_id: clientId },
-      { fields: ['client_id', 'name', 'redirect_uris', 'allowed_scopes', 'is_public', 'created_via'], disableIdentityMap: true },
+      { fields: ['client_id', 'name', 'redirect_uris', 'allowed_scopes', 'is_public', 'created_via'] },
     );
     return row
       ? { client_id: row.client_id, name: row.name, redirect_uris: row.redirect_uris, allowed_scopes: row.allowed_scopes, is_public: row.is_public, created_via: row.created_via }
@@ -298,7 +298,7 @@ export class OauthClientsRepository extends EntityRepository<OauthClients> {
   async findAuthRow(clientId: string): Promise<OauthClientAuthRow | null> {
     const row = await this.findOne(
       { client_id: clientId },
-      { fields: ['client_id', 'client_secret_hash', 'is_public'], disableIdentityMap: true },
+      { fields: ['client_id', 'client_secret_hash', 'is_public'] },
     );
     return row ? { client_id: row.client_id, client_secret_hash: row.client_secret_hash, is_public: row.is_public } : null;
   }
@@ -316,7 +316,7 @@ export class OauthClientsRepository extends EntityRepository<OauthClients> {
    * projections).
    */
   async findByClientIdFull(clientId: string): Promise<OauthClientRow | null> {
-    const row = await this.findOne({ client_id: clientId }, { disableIdentityMap: true });
+    const row = await this.findOne({ client_id: clientId });
     return row ? (toRow(row) as OauthClientRow) : null;
   }
 }

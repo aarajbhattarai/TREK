@@ -1,4 +1,4 @@
 import type { JourneyShareTokens } from '../entities/JourneyShareTokens.entity';
-import { EntityRepository } from '@mikro-orm/sql';
+import { TrekRepository } from './_shared/trek-repository';
 
-export class JourneyShareTokensRepository extends EntityRepository<JourneyShareTokens> {}
+export class JourneyShareTokensRepository extends TrekRepository<JourneyShareTokens> {}

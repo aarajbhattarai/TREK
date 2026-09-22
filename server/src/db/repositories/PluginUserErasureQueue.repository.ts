@@ -1,4 +1,4 @@
 import type { PluginUserErasureQueue } from '../entities/PluginUserErasureQueue.entity';
-import { EntityRepository } from '@mikro-orm/sql';
+import { TrekRepository } from './_shared/trek-repository';
 
-export class PluginUserErasureQueueRepository extends EntityRepository<PluginUserErasureQueue> {}
+export class PluginUserErasureQueueRepository extends TrekRepository<PluginUserErasureQueue> {}

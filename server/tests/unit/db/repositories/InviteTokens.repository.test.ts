@@ -169,6 +169,17 @@ describe('InviteTokensRepository', () => {
       expect(sql).toMatch(/left join `?trips`?/i);
       expect(sql).not.toMatch(/left join `?users`?/i);
     });
+
+    it('INVREPO-016: findWithCreatorAndTrip\'s generated SQL joins users with an INNER JOIN and trips with a LEFT JOIN — pins RI5\'s join TYPE (task-3-rereview.md R2; a `leftJoin` rewrite of the users join must fail this)', async () => {
+      const { user: admin } = createUser(testDb, { username: 'join-type-check-single' });
+      const invite = createInviteToken(testDb, { token: 'join-type-check-single', created_by: admin.id });
+
+      const { sql } = await captureSql(() => invites.findWithCreatorAndTrip(invite.id));
+
+      expect(sql).toMatch(/inner join `?users`?/i);
+      expect(sql).toMatch(/left join `?trips`?/i);
+      expect(sql).not.toMatch(/left join `?users`?/i);
+    });
   });
 
   // RI6/RI7 — deleteInvite's 404 check and the delete itself.

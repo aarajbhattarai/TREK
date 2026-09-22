@@ -1,4 +1,4 @@
 import type { VacayEntries } from '../entities/VacayEntries.entity';
-import { EntityRepository } from '@mikro-orm/sql';
+import { TrekRepository } from './_shared/trek-repository';
 
-export class VacayEntriesRepository extends EntityRepository<VacayEntries> {}
+export class VacayEntriesRepository extends TrekRepository<VacayEntries> {}

@@ -1,4 +1,4 @@
 import type { TripDocumentLinks } from '../entities/TripDocumentLinks.entity';
-import { EntityRepository } from '@mikro-orm/sql';
+import { TrekRepository } from './_shared/trek-repository';
 
-export class TripDocumentLinksRepository extends EntityRepository<TripDocumentLinks> {}
+export class TripDocumentLinksRepository extends TrekRepository<TripDocumentLinks> {}

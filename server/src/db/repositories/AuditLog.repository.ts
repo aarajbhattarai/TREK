@@ -1,6 +1,6 @@
 import { AuditLog } from '../entities/AuditLog.entity';
 import { type AssertRowKeys } from './_shared/rows';
-import { EntityRepository } from '@mikro-orm/sql';
+import { TrekRepository } from './_shared/trek-repository';
 
 /**
  * An `audit_log` row as the API emits it (Plan 3i's `admin.service.ts`
@@ -27,7 +27,7 @@ export type NewAuditLogRow = Omit<AuditLogRow, 'id' | 'created_at'>;
 // join to `Users` for `username`/`email`) and `count(): Promise<number>`.
 // Not implemented here — see plan3a-sql-inventory.md §1.
 
-export class AuditLogRepository extends EntityRepository<AuditLog> {
+export class AuditLogRepository extends TrekRepository<AuditLog> {
   /**
    * The column set of the legacy INSERT:
    * `INSERT INTO audit_log (user_id, action, resource, details, ip)
@@ -57,7 +57,7 @@ export class AuditLogRepository extends EntityRepository<AuditLog> {
    * inserts `createDay`/`createNote` rather than `create`.
    */
   async insertEntry(entry: NewAuditLogRow): Promise<void> {
-    await this.getEntityManager().insert(AuditLog, {
+    await this.insert({
       user: entry.user_id,
       action: entry.action,
       resource: entry.resource,

@@ -1,6 +1,6 @@
 import type { AppSettings } from '../entities/AppSettings.entity';
 import { toRow, type AssertRowKeys } from './_shared/rows';
-import { EntityRepository } from '@mikro-orm/sql';
+import { TrekRepository } from './_shared/trek-repository';
 
 /** An `app_settings` row as the API emits it. */
 export interface AppSettingsRow {
@@ -10,12 +10,13 @@ export interface AppSettingsRow {
 
 const _appSettingsRowKeys: AssertRowKeys<AppSettingsRow, AppSettings> = true;
 
-export class AppSettingsRepository extends EntityRepository<AppSettings> {
+export class AppSettingsRepository extends TrekRepository<AppSettings> {
   /**
    * `SELECT value FROM app_settings WHERE key = ?`
    *
-   * `disableIdentityMap: true` (Plan 3b Task 1 fix round, supersedes Plan
-   * 3a's I1 "`refresh: true` on every PK-only `findOne`" — see
+   * `disableIdentityMap: true`, applied by the base class's default (Plan 3b
+   * interlude B — `_shared/trek-repository.ts`; supersedes Plan 3a's I1
+   * "`refresh: true` on every PK-only `findOne`" — see
    * `Users.repository.ts`'s class-level docstring for the full mechanism and
    * `.superpowers/sdd/2026-09-22-orm-phase3b/task-1-review.md` B1): the read
    * is answered from a throwaway forked context that is cleared afterwards,
@@ -24,7 +25,7 @@ export class AppSettingsRepository extends EntityRepository<AppSettings> {
    * identity map to become a stale pending change at a later `flush()`.
    */
   async getValue(key: string): Promise<string | null> {
-    const row = await this.findOne({ key }, { fields: ['value'], disableIdentityMap: true });
+    const row = await this.findOne({ key }, { fields: ['value'] });
     return row?.value ?? null;
   }
 
@@ -35,7 +36,7 @@ export class AppSettingsRepository extends EntityRepository<AppSettings> {
    * value" from "no row" (both read as absent).
    */
   async getValues(keys: string[]): Promise<Map<string, string>> {
-    const rows = await this.find({ key: { $in: keys } }, { disableIdentityMap: true });
+    const rows = await this.find({ key: { $in: keys } });
     const values = new Map<string, string>();
     for (const row of rows) {
       if (row.key != null && row.value != null) values.set(row.key, row.value);
@@ -80,7 +81,7 @@ export class AppSettingsRepository extends EntityRepository<AppSettings> {
    * a prefix that itself contains `%`/`_`.
    */
   async findByKeyPrefix(prefix: string): Promise<AppSettingsRow[]> {
-    const rows = await this.find({ key: { $like: `${prefix}%` } }, { disableIdentityMap: true });
+    const rows = await this.find({ key: { $like: `${prefix}%` } });
     return rows.map((row) => toRow(row) as AppSettingsRow);
   }
 

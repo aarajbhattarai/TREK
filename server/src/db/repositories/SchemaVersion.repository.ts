@@ -1,4 +1,4 @@
 import type { SchemaVersion } from '../entities/SchemaVersion.entity';
-import { EntityRepository } from '@mikro-orm/sql';
+import { TrekRepository } from './_shared/trek-repository';
 
-export class SchemaVersionRepository extends EntityRepository<SchemaVersion> {}
+export class SchemaVersionRepository extends TrekRepository<SchemaVersion> {}

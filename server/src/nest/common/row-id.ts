@@ -38,6 +38,30 @@
  * deviation, not a bug — never widen the regex to `/^(0|[1-9]\d*)$/` or any
  * other shape that would reject `'007'`, and never widen it to accept the
  * divergent shapes above either.
+ *
+ * **The "accepted narrowing" is a different SIZE depending on what the
+ * legacy seam bound (task-3-rereview.md R1).** Not every legacy raw-SQL
+ * call site bound the route string straight into `WHERE id = ?` and leaned
+ * on SQLite's affinity as described above (an "affinity seam" —
+ * `registration-invites.service.ts::deleteInvite` is one, and so are the
+ * categories/tags/token routes Task 2 converted): some called `Number(id)`
+ * FIRST, in application code, before the query ever ran (a "`Number()`
+ * seam" — `passkey.service.ts::renamePasskey`/`deletePasskey`,
+ * `AdminService.resetUserPasskeys`). On an affinity seam, `toRowId` removes
+ * only the genuine false-accepts described above (whitespace, decimal
+ * point, exponent, leading `+`). On a `Number()` seam it removes a WIDER
+ * set: `Number('0x10')`, `Number('1e1')`, `Number('16.0')` and `Number('
+ * 16')` all coerce to a real integer in JavaScript (unlike SQLite's
+ * affinity, which never converts a hex literal), so on that kind of seam
+ * `toRowId` additionally refuses every hex and exponent form that used to
+ * hit a REAL row, not just malformed ones. Both are the same deliberate,
+ * accepted deviation — `toRowId` is right for both — but a regression test
+ * that asserts "`'0x10'` gets the legacy 404" is only true on an affinity
+ * seam; on a `Number()` seam the legacy statement acted on the row `toRowId`
+ * now refuses, so the honest claim is "the deliberate `toRowId` narrowing",
+ * not "parity with the legacy". Check which kind of seam a route's legacy
+ * handler was (`git show <base>:<file>` on the actual statement, not the
+ * route) before writing that test.
  */
 export function toRowId(value: unknown): number | null {
   if (typeof value === 'number') {

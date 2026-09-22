@@ -87,8 +87,21 @@ describe('Passkey management — non-numeric id parity (Plan 3b Task 3 review, F
     expect(res.body).toEqual({ error: 'Passkey not found' });
   });
 
-  it('PASSKEY-INT-003 — PATCH /auth/passkey/credentials/0x10 (hex-literal id) returns the legacy 404, not a 500', async () => {
+  // task-3-rereview.md R1: on the passkey credential routes the LEGACY bound
+  // `Number(id)` (unlike the invite route's raw-string bind PASSKEY-INT-003's
+  // sibling cases guard against), so `Number('0x10') === 16` and the legacy
+  // statement would have ACTED ON credential 16, not answered a 404 — this
+  // case pins the deliberate `toRowId` narrowing the fix round chose
+  // (accepted deviation), not "the legacy 404". Credential 16 is seeded so
+  // the case is load-bearing: dropping the `toRowId` guard makes
+  // `renamePasskey` fall back to `Number(id)`, which would rename credential
+  // 16 instead of 404ing — verified by hand, recorded in the task report.
+  it('PASSKEY-INT-003 — PATCH /auth/passkey/credentials/0x10 (hex-literal id) is refused by the toRowId narrowing, even though credential 16 exists', async () => {
     const { user } = createUser(testDb);
+    testDb.prepare(
+      `INSERT INTO webauthn_credentials (id, user_id, credential_id, public_key, name)
+       VALUES (16, ?, 'cred-16', X'00', 'Original16')`,
+    ).run(user.id);
 
     const res = await request(app)
       .patch('/api/auth/passkey/credentials/0x10')
@@ -97,6 +110,8 @@ describe('Passkey management — non-numeric id parity (Plan 3b Task 3 review, F
 
     expect(res.status).toBe(404);
     expect(res.body).toEqual({ error: 'Passkey not found' });
+    const row = testDb.prepare('SELECT name FROM webauthn_credentials WHERE id = 16').get() as { name: string };
+    expect(row.name).toBe('Original16'); // untouched — not renamed to 'Ghost'
   });
 
   it('PASSKEY-INT-004 — DELETE /auth/passkey/credentials/abc (non-numeric id, correct password) returns the legacy 404, not a 500', async () => {

@@ -1,4 +1,4 @@
 import type { SchoolHolidayCountries } from '../entities/SchoolHolidayCountries.entity';
-import { EntityRepository } from '@mikro-orm/sql';
+import { TrekRepository } from './_shared/trek-repository';
 
-export class SchoolHolidayCountriesRepository extends EntityRepository<SchoolHolidayCountries> {}
+export class SchoolHolidayCountriesRepository extends TrekRepository<SchoolHolidayCountries> {}

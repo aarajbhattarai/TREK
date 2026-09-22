@@ -1,4 +1,4 @@
 import type { PluginErrorLog } from '../entities/PluginErrorLog.entity';
-import { EntityRepository } from '@mikro-orm/sql';
+import { TrekRepository } from './_shared/trek-repository';
 
-export class PluginErrorLogRepository extends EntityRepository<PluginErrorLog> {}
+export class PluginErrorLogRepository extends TrekRepository<PluginErrorLog> {}

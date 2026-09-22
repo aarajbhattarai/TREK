@@ -1,4 +1,4 @@
 import type { PluginEgressHosts } from '../entities/PluginEgressHosts.entity';
-import { EntityRepository } from '@mikro-orm/sql';
+import { TrekRepository } from './_shared/trek-repository';
 
-export class PluginEgressHostsRepository extends EntityRepository<PluginEgressHosts> {}
+export class PluginEgressHostsRepository extends TrekRepository<PluginEgressHosts> {}

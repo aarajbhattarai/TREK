@@ -1,6 +1,6 @@
 import type { DayNotes } from '../entities/DayNotes.entity';
 import { toRow, type AssertRowKeys } from './_shared/rows';
-import { EntityRepository } from '@mikro-orm/sql';
+import { TrekRepository } from './_shared/trek-repository';
 
 export interface DayNoteRow {
   id: number;
@@ -16,7 +16,7 @@ export interface DayNoteRow {
 
 const _dayNoteRowKeys: AssertRowKeys<DayNoteRow, DayNotes> = true;
 
-export class DayNotesRepository extends EntityRepository<DayNotes> {
+export class DayNotesRepository extends TrekRepository<DayNotes> {
   /**
    * The column set of the legacy INSERT:
    * `INSERT INTO day_notes (day_id, trip_id, text, time, icon, sort_order, color)`.
@@ -29,9 +29,14 @@ export class DayNotesRepository extends EntityRepository<DayNotes> {
    * `created_at` is not in the column set: it is left to the column's
    * `DEFAULT CURRENT_TIMESTAMP`. It alone would not need the re-read either —
    * a `defaultRaw` column the insert does not name is in its `returning`
-   * clause, so it is already the stored text by the time `flush()` resolves.
-   * The re-read is there for the columns that are not: one this insert never
-   * names would otherwise be `undefined` on the entity and missing from the row.
+   * clause. The re-read is there for the columns that are not: one this
+   * insert never names would otherwise be `undefined` on the entity and
+   * missing from the row.
+   *
+   * `this.insert` (Plan 3b interlude B, finishing F2's sweep), never
+   * `create()` + `persist().flush()`: `flush()` commits the *whole* unit of
+   * work of the request's `EntityManager`, not just this row. The read-back
+   * uses `disableIdentityMap: true` by the base class's default.
    */
   async createNote(input: {
     day_id: number;
@@ -42,7 +47,7 @@ export class DayNotesRepository extends EntityRepository<DayNotes> {
     sort_order: number | null;
     color: string | null;
   }): Promise<DayNoteRow> {
-    const note = this.create({
+    const id = await this.insert({
       day: input.day_id,
       trip: input.trip_id,
       text: input.text,
@@ -51,8 +56,10 @@ export class DayNotesRepository extends EntityRepository<DayNotes> {
       sort_order: input.sort_order,
       color: input.color,
     });
-    await this.getEntityManager().persist(note).flush();
-    await this.getEntityManager().refresh(note);
-    return toRow(note) as DayNoteRow;
+    const inserted = await this.findOne({ id });
+    if (!inserted) {
+      throw new Error('createNote: read-back after insert found no row');
+    }
+    return toRow(inserted) as DayNoteRow;
   }
 }

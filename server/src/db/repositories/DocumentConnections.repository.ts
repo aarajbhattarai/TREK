@@ -1,4 +1,4 @@
 import type { DocumentConnections } from '../entities/DocumentConnections.entity';
-import { EntityRepository } from '@mikro-orm/sql';
+import { TrekRepository } from './_shared/trek-repository';
 
-export class DocumentConnectionsRepository extends EntityRepository<DocumentConnections> {}
+export class DocumentConnectionsRepository extends TrekRepository<DocumentConnections> {}

@@ -1,4 +1,4 @@
 import type { NotificationChannelPreferences } from '../entities/NotificationChannelPreferences.entity';
-import { EntityRepository } from '@mikro-orm/sql';
+import { TrekRepository } from './_shared/trek-repository';
 
-export class NotificationChannelPreferencesRepository extends EntityRepository<NotificationChannelPreferences> {}
+export class NotificationChannelPreferencesRepository extends TrekRepository<NotificationChannelPreferences> {}

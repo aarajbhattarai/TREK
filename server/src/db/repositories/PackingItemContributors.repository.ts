@@ -1,4 +1,4 @@
 import type { PackingItemContributors } from '../entities/PackingItemContributors.entity';
-import { EntityRepository } from '@mikro-orm/sql';
+import { TrekRepository } from './_shared/trek-repository';
 
-export class PackingItemContributorsRepository extends EntityRepository<PackingItemContributors> {}
+export class PackingItemContributorsRepository extends TrekRepository<PackingItemContributors> {}

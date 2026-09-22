@@ -1,4 +1,4 @@
 import type { GooglePlacePhotoMeta } from '../entities/GooglePlacePhotoMeta.entity';
-import { EntityRepository } from '@mikro-orm/sql';
+import { TrekRepository } from './_shared/trek-repository';
 
-export class GooglePlacePhotoMetaRepository extends EntityRepository<GooglePlacePhotoMeta> {}
+export class GooglePlacePhotoMetaRepository extends TrekRepository<GooglePlacePhotoMeta> {}

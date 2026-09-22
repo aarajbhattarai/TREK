@@ -1,6 +1,6 @@
 import type { Settings } from '../entities/Settings.entity';
 import { toRow, type AssertRowKeys } from './_shared/rows';
-import { EntityRepository } from '@mikro-orm/sql';
+import { TrekRepository } from './_shared/trek-repository';
 
 /** A `settings` row (the per-user key/value table) as the API emits it. */
 export interface SettingRow {
@@ -12,23 +12,25 @@ export interface SettingRow {
 
 const _settingRowKeys: AssertRowKeys<SettingRow, Settings> = true;
 
-export class SettingsRepository extends EntityRepository<Settings> {
+export class SettingsRepository extends TrekRepository<Settings> {
   /**
    * `SELECT key, value FROM settings WHERE user_id = ?`
    *
-   * `disableIdentityMap: true` (Plan 3b Task 1 fix round) — a "rows out"
+   * `disableIdentityMap: true`, applied by the base class's default (Plan 3b
+   * interlude B — `_shared/trek-repository.ts`) — a "rows out"
    * read, converted via `toRow` and discarded.
    */
   async getForUser(userId: number): Promise<SettingRow[]> {
-    const rows = await this.find({ user: userId }, { disableIdentityMap: true });
+    const rows = await this.find({ user: userId });
     return rows.map((row) => toRow(row) as SettingRow);
   }
 
   /**
    * `SELECT value FROM settings WHERE user_id = ? AND key = ?`
    *
-   * `disableIdentityMap: true` (Plan 3b Task 1 fix round, supersedes Plan
-   * 3a's I1 — see `Users.repository.ts`'s class-level docstring and
+   * `disableIdentityMap: true`, applied by the base class's default (Plan 3b
+   * interlude B — supersedes Plan 3a's I1 — see `Users.repository.ts`'s
+   * class-level docstring and
    * `.superpowers/sdd/2026-09-22-orm-phase3b/task-1-review.md` B1): this
    * filter is `(user, key)` — `Settings`'s PK is the surrogate `id`, not
    * this composite — so it was never PK-only and always re-queried even
@@ -39,7 +41,7 @@ export class SettingsRepository extends EntityRepository<Settings> {
    * sees it) rather than assume it.
    */
   async getOne(userId: number, key: string): Promise<SettingRow | null> {
-    const row = await this.findOne({ user: userId, key }, { disableIdentityMap: true });
+    const row = await this.findOne({ user: userId, key });
     return row ? (toRow(row) as SettingRow) : null;
   }
 

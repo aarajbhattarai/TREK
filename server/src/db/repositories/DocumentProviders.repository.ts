@@ -1,4 +1,4 @@
 import type { DocumentProviders } from '../entities/DocumentProviders.entity';
-import { EntityRepository } from '@mikro-orm/sql';
+import { TrekRepository } from './_shared/trek-repository';
 
-export class DocumentProvidersRepository extends EntityRepository<DocumentProviders> {}
+export class DocumentProvidersRepository extends TrekRepository<DocumentProviders> {}

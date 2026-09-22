@@ -1,4 +1,4 @@
 import type { Notifications } from '../entities/Notifications.entity';
-import { EntityRepository } from '@mikro-orm/sql';
+import { TrekRepository } from './_shared/trek-repository';
 
-export class NotificationsRepository extends EntityRepository<Notifications> {}
+export class NotificationsRepository extends TrekRepository<Notifications> {}

@@ -1,4 +1,4 @@
 import type { CollabMessageReactions } from '../entities/CollabMessageReactions.entity';
-import { EntityRepository } from '@mikro-orm/sql';
+import { TrekRepository } from './_shared/trek-repository';
 
-export class CollabMessageReactionsRepository extends EntityRepository<CollabMessageReactions> {}
+export class CollabMessageReactionsRepository extends TrekRepository<CollabMessageReactions> {}

@@ -1,4 +1,4 @@
 import type { PlaceDetailsCache } from '../entities/PlaceDetailsCache.entity';
-import { EntityRepository } from '@mikro-orm/sql';
+import { TrekRepository } from './_shared/trek-repository';
 
-export class PlaceDetailsCacheRepository extends EntityRepository<PlaceDetailsCache> {}
+export class PlaceDetailsCacheRepository extends TrekRepository<PlaceDetailsCache> {}

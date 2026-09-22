@@ -210,15 +210,26 @@ describe('OauthClientsRepository', () => {
   });
 
   describe('identity-map write-back regression (program RULING, D-shape)', () => {
-    it('OAUTHCLIENTREPO-016: listByUser then findAuthRow then updateSecretHash inside uow.transactional — the write survives', async () => {
+    // task-4-review.md F1: the D-shape needs the `nativeUpdate`'s target
+    // column in the FIRST, WIDER projection and absent from the SECOND,
+    // narrower one — a stale write-back only reverts a column the second
+    // read's snapshot doesn't already carry fresh. The original ordering
+    // here (`listByUser`, narrow, then `findAuthRow`, wide) had it backwards:
+    // `findAuthRow`'s own re-snapshot of `client_secret_hash` left that
+    // column clean, so the mutation this test exists to catch (reverting
+    // `disableIdentityMap: true` back to `refresh: true`) passed anyway.
+    // `findAuthRow` (wide, carries `client_secret_hash`) now goes FIRST and
+    // `findOwned` (narrow, no `client_secret_hash`) second — mutation-proven
+    // load-bearing in the task report.
+    it('OAUTHCLIENTREPO-016: findAuthRow then findOwned then updateSecretHash inside uow.transactional — the write survives', async () => {
       const { user } = createUser(testDb);
       const { id, clientId } = seedClient({ userId: user.id, secretHash: 'original', name: 'kept-name' });
 
       await withRequestContext(t.orm, async () => {
-        // Projection A
-        await clients.listByUser(user.id);
-        // Projection B — a different field set on the same row
+        // Projection A — wide, carries client_secret_hash.
         await clients.findAuthRow(clientId);
+        // Projection B — narrow, a different (smaller) field set on the same row.
+        await clients.findOwned(id, user.id);
         // The intended write, inside the request's own transaction.
         await uow.transactional(async () => {
           await clients.updateSecretHash(id, 'rotated');

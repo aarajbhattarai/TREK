@@ -1,4 +1,4 @@
 import type { HiddenRegions } from '../entities/HiddenRegions.entity';
-import { EntityRepository } from '@mikro-orm/sql';
+import { TrekRepository } from './_shared/trek-repository';
 
-export class HiddenRegionsRepository extends EntityRepository<HiddenRegions> {}
+export class HiddenRegionsRepository extends TrekRepository<HiddenRegions> {}

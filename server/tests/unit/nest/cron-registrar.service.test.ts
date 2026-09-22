@@ -207,6 +207,31 @@ describe('CronRegistrarService', () => {
       expect(caught).toBeUndefined();
       expect(Array.isArray(result)).toBe(true);
     });
+
+    // Plan 3b interlude B mutation proof (b): the SAME wrapper, but through a
+    // real TrekRepository-backed call rather than a bare `em.find` — proving
+    // the wrapper is load-bearing for the base class's write paths too
+    // (`count`/`nativeUpdate`/`nativeDelete`/`insert`/`upsert`), which never
+    // validated their own context before this class existed
+    // (task-1-review.md F7 INFO) and so would NOT have failed this way on
+    // the pre-interlude-B tree.
+    it('CRONREG-011B — with MikroORM injected, a TrekRepository-backed count() inside onTick succeeds; dropping the wrapper (mutation, not committed) makes it throw cannotUseGlobalContext', async () => {
+      const registry = new SchedulerRegistry();
+      const registrar = new CronRegistrarService(registry, { isTest: () => false } as RuntimeEnvService, t.orm);
+      const users = t.repo(Users);
+      let result: unknown;
+      let caught: unknown;
+      registrar.register('job', '0 2 * * *', async () => {
+        try {
+          result = await users.count({});
+        } catch (e) {
+          caught = e;
+        }
+      });
+      await h.jobs[0].onTick();
+      expect(caught).toBeUndefined();
+      expect(typeof result).toBe('number');
+    });
   });
 
   describe('runOnBoot (task-6-fix-brief.md item 7 — the boot-sweep choke point)', () => {

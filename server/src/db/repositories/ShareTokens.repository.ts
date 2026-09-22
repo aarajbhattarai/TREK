@@ -1,4 +1,4 @@
 import type { ShareTokens } from '../entities/ShareTokens.entity';
-import { EntityRepository } from '@mikro-orm/sql';
+import { TrekRepository } from './_shared/trek-repository';
 
-export class ShareTokensRepository extends EntityRepository<ShareTokens> {}
+export class ShareTokensRepository extends TrekRepository<ShareTokens> {}

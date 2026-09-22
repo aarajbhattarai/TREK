@@ -1,6 +1,6 @@
 import type { Days } from '../entities/Days.entity';
 import { toRow, type AssertRowKeys } from './_shared/rows';
-import { EntityRepository } from '@mikro-orm/sql';
+import { TrekRepository } from './_shared/trek-repository';
 
 /** A `days` row as the API emits it. */
 export interface DayRow {
@@ -15,7 +15,7 @@ export interface DayRow {
 
 const _dayRowKeys: AssertRowKeys<DayRow, Days> = true;
 
-export class DaysRepository extends EntityRepository<Days> {
+export class DaysRepository extends TrekRepository<Days> {
   /** `SELECT * FROM days WHERE trip_id = ? ORDER BY day_number ASC` */
   async listByTrip(trip_id: number): Promise<DayRow[]> {
     const days = await this.find({ trip: trip_id }, { orderBy: { day_number: 'asc' } });
@@ -54,12 +54,17 @@ export class DaysRepository extends EntityRepository<Days> {
    * written verbatim, because a default or a coercion belongs to the service
    * that owns the rule, not to the statement that stores it.
    *
-   * The insert is followed by the legacy re-select, so the caller gets the
-   * stored row rather than what it asked to store. That re-select is not
-   * optional: the insert's `returning` clause carries only the generated and
+   * `this.insert` (Plan 3b interlude B, finishing F2's sweep — Task 1 fix
+   * round's re-review flagged this method as a leftover whole-request-
+   * UnitOfWork `flush()`), never `create()` + `persist().flush()`: `flush()`
+   * commits the *whole* unit of work of the request's `EntityManager`, not
+   * just this row. The insert is followed by a read-back
+   * (`disableIdentityMap: true` by the base class's default), so the caller
+   * gets the stored row rather than what it asked to store — not optional:
+   * the insert's `returning` clause carries only the generated and
    * `defaultRaw` columns, so a column this insert never names (`title`,
-   * `default_transport_mode`) would still be `undefined` on the entity and
-   * would simply be missing from the row.
+   * `default_transport_mode`) would otherwise simply be missing from the
+   * row.
    */
   async createDay(input: {
     trip_id: number;
@@ -67,14 +72,16 @@ export class DaysRepository extends EntityRepository<Days> {
     date: string | null;
     notes: string | null;
   }): Promise<DayRow> {
-    const day = this.create({
+    const id = await this.insert({
       trip: input.trip_id,
       day_number: input.day_number,
       date: input.date,
       notes: input.notes,
     });
-    await this.getEntityManager().persist(day).flush();
-    await this.getEntityManager().refresh(day);
-    return toRow(day) as DayRow;
+    const inserted = await this.findOne({ id });
+    if (!inserted) {
+      throw new Error('createDay: read-back after insert found no row');
+    }
+    return toRow(inserted) as DayRow;
   }
 }

@@ -1,4 +1,4 @@
 import type { PasswordResetTokens } from '../entities/PasswordResetTokens.entity';
-import { EntityRepository } from '@mikro-orm/sql';
+import { TrekRepository } from './_shared/trek-repository';
 
-export class PasswordResetTokensRepository extends EntityRepository<PasswordResetTokens> {}
+export class PasswordResetTokensRepository extends TrekRepository<PasswordResetTokens> {}

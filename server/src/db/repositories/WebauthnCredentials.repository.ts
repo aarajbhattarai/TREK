@@ -1,7 +1,7 @@
 import type { WebauthnCredentials } from '../entities/WebauthnCredentials.entity';
 import { toRow, type AssertRowKeys } from './_shared/rows';
 import { currentTimestamp } from '../dialect/sql-functions';
-import { EntityRepository } from '@mikro-orm/sql';
+import { TrekRepository } from './_shared/trek-repository';
 
 /**
  * A full `webauthn_credentials` row (`SELECT * ...`), as PK9 (`passkeyLoginVerify`)
@@ -78,7 +78,7 @@ function toPanelRow(row: { id: number; name?: string | null; device_type?: strin
  * `uow.transactional`). `hasAny` is untouched — nothing here changes its
  * name or shape.
  */
-export class WebauthnCredentialsRepository extends EntityRepository<WebauthnCredentials> {
+export class WebauthnCredentialsRepository extends TrekRepository<WebauthnCredentials> {
   /**
    * `SELECT 1 FROM webauthn_credentials WHERE user_id = ? LIMIT 1` (MP3/AU24
    * — identical statement, two callers). `findOne` with a narrow `fields`
@@ -87,7 +87,9 @@ export class WebauthnCredentialsRepository extends EntityRepository<WebauthnCred
    * closer match to "does one exist" than `count() > 0`, which would still
    * scan/aggregate every matching row.
    *
-   * `disableIdentityMap: true` (every row-out read in this file): this
+   * `disableIdentityMap: true` (every row-out read in this file, applied by
+   * the base class's default since Plan 3b interlude B —
+   * `_shared/trek-repository.ts`): this
    * method's caller (`mfa-policy.guard.ts`, `AuthService.updateAppSettings`)
    * can run in the same request as other `webauthn_credentials`/`users`
    * reads and writes; a `findOne` that joins the identity map (even for a
@@ -103,7 +105,7 @@ export class WebauthnCredentialsRepository extends EntityRepository<WebauthnCred
    * into the request's identity map, so it can never be flushed.
    */
   async hasAny(userId: number): Promise<boolean> {
-    const row = await this.findOne({ user: userId }, { fields: ['id'], disableIdentityMap: true });
+    const row = await this.findOne({ user: userId }, { fields: ['id'] });
     return row !== null;
   }
 
@@ -113,7 +115,7 @@ export class WebauthnCredentialsRepository extends EntityRepository<WebauthnCred
 
   /** `SELECT credential_id, transports FROM webauthn_credentials WHERE user_id = ?` */
   async listExcludeCredentials(userId: number): Promise<CredentialTransportsRow[]> {
-    const rows = await this.find({ user: userId }, { fields: ['credential_id', 'transports'], disableIdentityMap: true });
+    const rows = await this.find({ user: userId }, { fields: ['credential_id', 'transports'] });
     return rows.map((row) => ({ credential_id: row.credential_id, transports: row.transports ?? null }));
   }
 
@@ -131,7 +133,7 @@ export class WebauthnCredentialsRepository extends EntityRepository<WebauthnCred
    * the identity map matters even more here.
    */
   async existsByCredentialId(credentialId: string): Promise<boolean> {
-    const row = await this.findOne({ credential_id: credentialId }, { fields: ['id'], disableIdentityMap: true });
+    const row = await this.findOne({ credential_id: credentialId }, { fields: ['id'] });
     return row !== null;
   }
 
@@ -180,7 +182,7 @@ export class WebauthnCredentialsRepository extends EntityRepository<WebauthnCred
    * caller trims down).
    */
   async findCreatedCredential(credentialId: string): Promise<PasskeyPanelRow | null> {
-    const row = await this.findOne({ credential_id: credentialId }, { fields: [...PANEL_FIELDS], disableIdentityMap: true });
+    const row = await this.findOne({ credential_id: credentialId }, { fields: [...PANEL_FIELDS] });
     return row ? toPanelRow(row) : null;
   }
 
@@ -199,7 +201,7 @@ export class WebauthnCredentialsRepository extends EntityRepository<WebauthnCred
    * row moments later, in the same request.
    */
   async findByCredentialId(credentialId: string): Promise<WebauthnCredentialRow | null> {
-    const credential = await this.findOne({ credential_id: credentialId }, { disableIdentityMap: true });
+    const credential = await this.findOne({ credential_id: credentialId });
     return credential ? (toRow(credential) as WebauthnCredentialRow) : null;
   }
 
@@ -222,7 +224,7 @@ export class WebauthnCredentialsRepository extends EntityRepository<WebauthnCred
    *  FROM webauthn_credentials WHERE user_id = ? ORDER BY created_at DESC`
    */
   async listForPanel(userId: number): Promise<PasskeyPanelRow[]> {
-    const rows = await this.find({ user: userId }, { fields: [...PANEL_FIELDS], orderBy: { created_at: 'desc' }, disableIdentityMap: true });
+    const rows = await this.find({ user: userId }, { fields: [...PANEL_FIELDS], orderBy: { created_at: 'desc' } });
     return rows.map((row) => toPanelRow(row));
   }
 

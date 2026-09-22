@@ -1,4 +1,4 @@
 import type { DocumentSyncItems } from '../entities/DocumentSyncItems.entity';
-import { EntityRepository } from '@mikro-orm/sql';
+import { TrekRepository } from './_shared/trek-repository';
 
-export class DocumentSyncItemsRepository extends EntityRepository<DocumentSyncItems> {}
+export class DocumentSyncItemsRepository extends TrekRepository<DocumentSyncItems> {}

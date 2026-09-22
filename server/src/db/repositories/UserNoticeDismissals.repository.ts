@@ -1,4 +1,4 @@
 import type { UserNoticeDismissals } from '../entities/UserNoticeDismissals.entity';
-import { EntityRepository } from '@mikro-orm/sql';
+import { TrekRepository } from './_shared/trek-repository';
 
-export class UserNoticeDismissalsRepository extends EntityRepository<UserNoticeDismissals> {}
+export class UserNoticeDismissalsRepository extends TrekRepository<UserNoticeDismissals> {}

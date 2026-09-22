@@ -1,4 +1,4 @@
 import type { BucketList } from '../entities/BucketList.entity';
-import { EntityRepository } from '@mikro-orm/sql';
+import { TrekRepository } from './_shared/trek-repository';
 
-export class BucketListRepository extends EntityRepository<BucketList> {}
+export class BucketListRepository extends TrekRepository<BucketList> {}

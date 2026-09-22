@@ -35,7 +35,7 @@ import { extractToken, verifyJwtAndLoadUser } from './jwt-verify';
  * `@mikro-orm/nestjs`'s provider factory injects `orm.em`, the ORM's single
  * GLOBAL, context-resolving `EntityManager`, the same object every request
  * shares. It resolves to the request's transactional fork at QUERY TIME:
- * `EntityRepository.getRepository` builds the repository holding a
+ * `EntityManager.getRepository` builds the repository holding a
  * reference to `this.em` with no `getContext()` call, and
  * `EntityRepository.findOne` calls `this.getEntityManager().findOne(...)`,
  * which resolves the live `AsyncLocalStorage`/`TransactionContext` inside

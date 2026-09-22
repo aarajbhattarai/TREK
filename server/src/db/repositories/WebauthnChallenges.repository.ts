@@ -1,5 +1,5 @@
 import type { WebauthnChallenges } from '../entities/WebauthnChallenges.entity';
-import { EntityRepository } from '@mikro-orm/sql';
+import { TrekRepository } from './_shared/trek-repository';
 
 /** `PasskeyService.storeChallenge` (PK2). */
 export interface NewChallengeRow {
@@ -25,7 +25,7 @@ interface WebauthnChallengesKyselyDB {
 }
 
 /** The single-use, TTL'd WebAuthn ceremony challenge store — PK1–PK3. */
-export class WebauthnChallengesRepository extends EntityRepository<WebauthnChallenges> {
+export class WebauthnChallengesRepository extends TrekRepository<WebauthnChallenges> {
   /**
    * `DELETE FROM webauthn_challenges WHERE expires_at < ?` — best-effort
    * sweep run before minting a new challenge (no cron for this table; see
@@ -83,10 +83,15 @@ export class WebauthnChallengesRepository extends EntityRepository<WebauthnChall
    *
    * `.returning(['user_id'])` only (not `.selectAll()`/`returningAll()`),
    * matching the legacy statement's own narrower `RETURNING user_id`.
+   *
+   * `this.kysely()` (`_shared/trek-repository.ts`, Plan 3b interlude B), not
+   * `this.getEntityManager().getKysely()` directly: `em.getKysely()`
+   * resolves its `EntityManager` with `getContext(false)`, the same
+   * validation gap the base class closes for every other repository path —
+   * the base's `kysely()` helper validates first, then delegates.
    */
   async claimChallenge(challenge: string, type: 'registration' | 'authentication', now: number): Promise<{ user_id: number | null } | null> {
-    const row = await this.getEntityManager()
-      .getKysely<WebauthnChallengesKyselyDB>()
+    const row = await this.kysely<WebauthnChallengesKyselyDB>()
       .deleteFrom('webauthn_challenges')
       .where('challenge', '=', challenge)
       .where('type', '=', type)
