@@ -12,6 +12,7 @@ import {
   RULE1_fixUnknownScalarTypes,
   RULE1b_markJsonColumns,
   RULE1c_markBooleanColumns,
+  RULE1d_fixNaNNumericDefaults,
   RULE2_datetimeToDbTimestampType,
   RULE3_integerPkAutoincrement,
   RULE4_hideAllRelations,
@@ -21,6 +22,8 @@ import {
   RULE8_bindRepositories,
   RULE_normalizeLiteralDefaults,
   applyTextPasses,
+  checkEntities,
+  dumpEntities,
   fixDbTimestampClassFieldTypes,
   fixJsonClassFieldTypes,
   generateEntities,
@@ -35,6 +38,7 @@ import {
 } from '../../../scripts/generate-entities';
 
 const ENTITIES_DIR = path.join(__dirname, '../../../src/db/entities');
+const REPOSITORIES_DIR = path.join(__dirname, '../../../src/db/repositories');
 
 /**
  * A minimal, correctly-typed `EntityProperty` fixture. Every rule under test
@@ -166,6 +170,56 @@ describe('RULE1c_markBooleanColumns', () => {
 
   it('BOOLEAN_COLUMNS-001: contains addons.enabled, grepped from the current hand-written entities', () => {
     expect(BOOLEAN_COLUMNS.has('addons.enabled')).toBe(true);
+  });
+});
+
+describe('RULE1d_fixNaNNumericDefaults', () => {
+  /**
+   * `task-4-review-shape.md` Important finding 1: `@mikro-orm/sql`'s own
+   * introspection computes `prop.default` for a numeric column as
+   * `+prop.defaultRaw`, which is `NaN` whenever `defaultRaw` is the literal
+   * text `'NULL'` (a nullable column with an explicit `DEFAULT NULL`) or a
+   * non-literal SQL expression (`(strftime('%s','now'))`) — the exact repro
+   * the reviewer ran against the real schema (`BudgetItems.persons`/`.days`,
+   * `IdempotencyKeys.created_at`, `BudgetItems.place_id`/`.reservation_id`,
+   * `PackingBags.user_id`).
+   */
+  it("RULE1D-001: defaultRaw 'NULL' with a NaN default clears the initialiser (never renders = null)", () => {
+    const p = fixtureProp({ name: 'persons', type: 'integer', nullable: true, defaultRaw: 'NULL', default: NaN });
+    const meta = fixtureMeta('BudgetItems', 'budget_items', [p]);
+    RULE1d_fixNaNNumericDefaults([meta]);
+    expect(p.default).toBeUndefined();
+    expect(p.defaultRaw).toBe('NULL'); // untouched — the schema's .defaultRaw('NULL') is correct and stays
+  });
+
+  it('RULE1D-002: a non-literal expression default with a NaN default clears the initialiser', () => {
+    const p = fixtureProp({ name: 'created_at', type: 'integer', nullable: false, defaultRaw: "(strftime('%s','now'))", default: NaN });
+    const meta = fixtureMeta('IdempotencyKeys', 'idempotency_keys', [p]);
+    RULE1d_fixNaNNumericDefaults([meta]);
+    expect(p.default).toBeUndefined();
+    expect(p.defaultRaw).toBe("(strftime('%s','now'))"); // untouched
+  });
+
+  it("RULE1D-003: a genuine finite numeric literal default ('0') is left completely untouched", () => {
+    const p = fixtureProp({ name: 'sort_order', type: 'integer', nullable: false, defaultRaw: '0', default: 0 });
+    const meta = fixtureMeta('X', 'x', [p]);
+    RULE1d_fixNaNNumericDefaults([meta]);
+    expect(p.default).toBe(0);
+    expect(p.defaultRaw).toBe('0');
+  });
+
+  it('RULE1D-004: a property whose default is not NaN (e.g. a text column default(raw) NULL, default null) is untouched', () => {
+    const p = fixtureProp({ name: 'note', type: 'text', nullable: true, defaultRaw: 'NULL', default: null });
+    const meta = fixtureMeta('X', 'x', [p]);
+    RULE1d_fixNaNNumericDefaults([meta]);
+    expect(p.default).toBeNull();
+  });
+
+  it('RULE1D-005: a property with no defaultRaw at all is untouched', () => {
+    const p = fixtureProp({ name: 'title', type: 'text' });
+    const meta = fixtureMeta('X', 'x', [p]);
+    RULE1d_fixNaNNumericDefaults([meta]);
+    expect(p.default).toBeUndefined();
   });
 });
 
@@ -637,6 +691,92 @@ describe('regenerateEntitiesIndex', () => {
   });
 });
 
+/**
+ * `--check` (task-4-review-gates.md, I1): closes the gap the gate reviewer
+ * proved — losing `.hidden()` on a relation (or any other rule regression)
+ * passes every other suite for 347 of 396 relation lines. These tests exercise
+ * the real generated `files` (from `generateEntities()`) against a SCRATCH
+ * COPY of the committed `src/db/entities/` — never the real directory itself,
+ * so a failing assertion here can never leave the working tree dirty.
+ */
+describe('checkEntities', () => {
+  it(
+    'CHECK-001: a hand-mutated entity in the scratch copy is reported by name, exit-worthy',
+    async () => {
+      const { files } = await generateEntities();
+      const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'gen-entities-check-'));
+      try {
+        fs.cpSync(ENTITIES_DIR, dir, { recursive: true });
+        // Same shape as VALIDATE-004's mutation (MUT-B): drop a ONE_TO_MANY relation's .hidden().
+        const daysPath = path.join(dir, 'Days.entity.ts');
+        const original = fs.readFileSync(daysPath, 'utf8');
+        const mutated = original.replace(
+          "day_accommodations_collection: () => p.oneToMany(DayAccommodations).mappedBy('startDay').hidden(),",
+          "day_accommodations_collection: () => p.oneToMany(DayAccommodations).mappedBy('startDay'),",
+        );
+        expect(mutated, 'the mutation string was not found in the committed file — update it to match the current shape').not.toBe(
+          original,
+        );
+        fs.writeFileSync(daysPath, mutated);
+
+        const report = checkEntities(dir, REPOSITORIES_DIR, files);
+        expect(report.differingFiles).toEqual(['Days.entity.ts']);
+        expect(report.missingRepositories).toEqual([]);
+      } finally {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    },
+    30_000,
+  );
+
+  it(
+    'CHECK-002: an untouched copy of the committed tree reports no differences and no missing repositories',
+    async () => {
+      const { files } = await generateEntities();
+      const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'gen-entities-check-'));
+      try {
+        fs.cpSync(ENTITIES_DIR, dir, { recursive: true });
+        const report = checkEntities(dir, REPOSITORIES_DIR, files);
+        expect(report.differingFiles).toEqual([]);
+        expect(report.missingRepositories).toEqual([]);
+      } finally {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    },
+    30_000,
+  );
+
+  it('CHECK-003: a missing entity file is reported', async () => {
+    const files = new Map([['X.entity.ts', 'content']]);
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'gen-entities-check-'));
+    const repoDir = fs.mkdtempSync(path.join(os.tmpdir(), 'gen-entities-check-repos-'));
+    try {
+      const report = checkEntities(dir, repoDir, files);
+      expect(report.differingFiles).toEqual(['X.entity.ts', 'index.ts']);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+      fs.rmSync(repoDir, { recursive: true, force: true });
+    }
+  });
+
+  it('CHECK-004: a missing repository file is reported without being created (never writes)', async () => {
+    const files = new Map([['X.entity.ts', 'content']]);
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'gen-entities-check-'));
+    const repoDir = fs.mkdtempSync(path.join(os.tmpdir(), 'gen-entities-check-repos-'));
+    try {
+      dumpEntities(dir, files);
+      fs.writeFileSync(path.join(dir, 'index.ts'), regenerateEntitiesIndex(dir));
+      const report = checkEntities(dir, repoDir, files);
+      expect(report.differingFiles).toEqual([]);
+      expect(report.missingRepositories).toEqual([path.join(repoDir, 'X.repository.ts')]);
+      expect(fs.existsSync(path.join(repoDir, 'X.repository.ts'))).toBe(false); // never writes
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+      fs.rmSync(repoDir, { recursive: true, force: true });
+    }
+  });
+});
+
 describe('assertFilesGenerated', () => {
   it('GUARD-001: throws when zero files were generated (I5)', () => {
     expect(() => assertFilesGenerated(new Map())).toThrow(/zero entity files/);
@@ -850,6 +990,28 @@ describe('PENDING_ENTITIES ratchet (I7)', () => {
     }
     expect(failures).toEqual([]);
   });
+
+  /**
+   * M2 (task-4-review-gates.md): the mirror arm ENTITIES_STILL_MISSING has
+   * (PARITY-008) and this list did not — a listed class name that names
+   * nothing the generator actually produces is a stale entry, not a real
+   * pending tolerance, and `stripPendingEntityRelations` would silently no-op
+   * on it forever. Every name in `PENDING_ENTITIES` must appear somewhere in
+   * `generateEntities()`'s own output (as a relation type reference in
+   * another entity's file, the normal way a class with no entity of its own
+   * yet still shows up — see the class doc comment above).
+   */
+  it("PENDING-ENTITIES-002: stays accurate — every one of them must appear in generateEntities()'s output (M2)", async () => {
+    const { files } = await generateEntities();
+    const allGeneratedSource = [...files.values()].join('\n');
+    const failures: string[] = [];
+    for (const className of PENDING_ENTITIES) {
+      if (!new RegExp(`\\b${className}\\b`).test(allGeneratedSource)) {
+        failures.push(`${className}: listed in PENDING_ENTITIES but does not appear anywhere in generateEntities()'s output`);
+      }
+    }
+    expect(failures).toEqual([]);
+  }, 30_000);
 });
 
 describe('generateEntities — migrations path is anchored to SERVER_ROOT, not cwd (I5)', () => {

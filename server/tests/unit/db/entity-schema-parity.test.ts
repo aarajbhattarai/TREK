@@ -419,16 +419,28 @@ describe('entity ↔ migrated-schema parity', () => {
  * folds a `p.boolean()` property's literal `true`/`false` default onto
  * SQLite's `1`/`0` (SQLite has no boolean storage class — see
  * `BOOLEAN_COLUMNS` in `scripts/generate-entities.ts`). Used by PARITY-005.
+ *
+ * M1 (task-4-review-gates.md): only the SQL keywords/functions above are
+ * folded case-insensitively — a quoted string literal's PAYLOAD is data, not
+ * a keyword, and is compared verbatim, case included. A blanket
+ * `s.toLowerCase()` on the whole string (the previous shape) silently
+ * equated `'#10b981'` and `'#10B981'`, proved by the gate reviewer's mutation
+ * (d2): flipping `Tags.color`'s class-field default's case left every test
+ * green. The entity side and the db side aren't even symmetric about
+ * quoting to begin with (`prop.default` arrives as a bare JS string, e.g.
+ * `#10b981`; `column.dflt_value` arrives SQL-quoted, `'#10b981'`) — quotes
+ * are stripped from whichever side has them, then BOTH sides are compared
+ * verbatim, never lowercased, unless they match a known keyword.
  */
 function normaliseDefault(value: string | null): string | null {
   if (value == null) return null;
   let s = value.trim();
   if (s.startsWith('(') && s.endsWith(')')) s = s.slice(1, -1).trim();
-  if (s.startsWith("'") && s.endsWith("'")) s = s.slice(1, -1);
-  s = s.toLowerCase();
-  if (s === "datetime('now')" || s === 'current_timestamp') s = '__now__';
-  if (s === 'true') s = '1';
-  if (s === 'false') s = '0';
+  if (s.startsWith("'") && s.endsWith("'")) s = s.slice(1, -1); // SQL quoting stripped; payload kept verbatim below
+  const lower = s.toLowerCase();
+  if (lower === "datetime('now')" || lower === 'current_timestamp') return '__now__';
+  if (lower === 'true') return '1';
+  if (lower === 'false') return '0';
   return s;
 }
 
@@ -450,6 +462,39 @@ describe('normaliseColumnType', () => {
     expect(normaliseColumnType('real')).toBe('real');
     expect(normaliseColumnType('datetime')).toBe('datetime');
     expect(normaliseColumnType('bigint')).toBe('bigint');
+  });
+});
+
+describe('normaliseDefault', () => {
+  it('DEFAULT-NORM-001: a case-only difference in a quoted string literal payload is a real mismatch (M1)', () => {
+    expect(normaliseDefault("'#10b981'")).not.toBe(normaliseDefault("'#10B981'"));
+  });
+
+  it('DEFAULT-NORM-002: an identical quoted string literal payload matches, case preserved', () => {
+    expect(normaliseDefault("'#10b981'")).toBe(normaliseDefault("'#10b981'"));
+    expect(normaliseDefault("'#10b981'")).toBe('#10b981');
+  });
+
+  it('DEFAULT-NORM-003: an unquoted default (as PARITY-005 passes the entity side, String(prop.default)) compares verbatim too', () => {
+    expect(normaliseDefault('#10B981')).toBe('#10B981');
+    expect(normaliseDefault('#10B981')).not.toBe(normaliseDefault("'#10b981'"));
+  });
+
+  it('DEFAULT-NORM-004: SQL keyword/function spellings still fold case-insensitively', () => {
+    expect(normaliseDefault('CURRENT_TIMESTAMP')).toBe('__now__');
+    expect(normaliseDefault('current_timestamp')).toBe('__now__');
+    expect(normaliseDefault("datetime('now')")).toBe('__now__');
+    expect(normaliseDefault("DATETIME('NOW')")).toBe('__now__');
+    expect(normaliseDefault('TRUE')).toBe('1');
+    expect(normaliseDefault('FALSE')).toBe('0');
+  });
+
+  it('DEFAULT-NORM-005: a wrapping paren pair around a non-literal expression is stripped once', () => {
+    expect(normaliseDefault("(strftime('%s','now'))")).toBe("strftime('%s','now')");
+  });
+
+  it('DEFAULT-NORM-006: null passes through as null', () => {
+    expect(normaliseDefault(null)).toBeNull();
   });
 });
 

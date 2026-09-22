@@ -16,8 +16,8 @@ export class BudgetItems {
   category: string & Opt = 'Other';
   name!: string;
   total_price!: number & Opt;
-  persons?: number | null = NaN;
-  days?: number | null = NaN;
+  persons?: number | null;
+  days?: number | null;
   note?: string | null;
   sort_order?: number | null = 0;
   created_at?: string | null;
@@ -25,12 +25,12 @@ export class BudgetItems {
   paid_by_user_id?: number | null;
   expense_date?: string | null;
   reservation?: Ref<Reservations> | null;
-  reservation_id?: number | null = NaN;
+  reservation_id?: number | null;
   currency?: string | null;
   exchange_rate!: number & Opt;
   ticket_json?: string | null;
   place?: Ref<Places> | null;
-  place_id?: number | null = NaN;
+  place_id?: number | null;
   budget_item_members_collection = new Collection<BudgetItemMembers>(this);
   budget_item_payers_collection = new Collection<BudgetItemPayers>(this);
   file_links_collection = new Collection<FileLinks>(this);

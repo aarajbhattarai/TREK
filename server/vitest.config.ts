@@ -172,7 +172,7 @@ export default defineConfig({
         // src/demo/** is deliberately absent: it measures 0%, and a floor of
         // zero asserts nothing. It needs tests before it needs a threshold.
         'src/app-config/**/*.ts': { statements: 99, branches: 95, functions: 99, lines: 99 },
-        'src/db/**/*.ts': { statements: 73, branches: 38, functions: 59, lines: 80 },
+        'src/db/**/*.ts': { statements: 84, branches: 42, functions: 95, lines: 87 },
         'src/db/dialect/**/*.ts': { statements: 99, branches: 99, functions: 99, lines: 99 },
         'src/db/repositories/**/*.ts': { statements: 99, branches: 99, functions: 99, lines: 99 },
         'src/db/types/**/*.ts': { statements: 93, branches: 99, functions: 99, lines: 93 },

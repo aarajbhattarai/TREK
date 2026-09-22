@@ -321,6 +321,58 @@ export function RULE1c_markBooleanColumns(metadata: EntityMetadata[]): RetypedSc
   return fixups;
 }
 
+/**
+ * Rule 1d (metadata level): a numeric scalar's class-field initialiser must
+ * never render `NaN`.
+ *
+ * `@mikro-orm/sql`'s own introspection (`DatabaseTable.js#getPropertyDeclaration`
+ * -> `getPropertyDefaultValue`) computes a NUMERIC column's `prop.default` as
+ * `+defaultValue` — a plain unary-plus coercion of the raw SQLite default
+ * text — whenever that text doesn't equal the literal, lowercase string
+ * `'null'`. SQLite reports the DDL's exact casing back through
+ * `PRAGMA table_info` (`'NULL'`, not `'null'`, for `DEFAULT NULL`), and
+ * `SchemaHelper#normalizeDefaultValue`'s own `'null'` check
+ * (`DatabaseTable.js` line ~869) is the same case-sensitive comparison — so
+ * neither the `DEFAULT NULL` case NOR a non-literal expression default
+ * (`DEFAULT (strftime('%s','now'))`) is ever recognised as "no usable
+ * numeric value", and `+'NULL'` / `+"(strftime('%s','now'))"` both evaluate
+ * to `NaN`. That `NaN` becomes `prop.default`, which
+ * `SourceFile.js#getPropertyDefinition` then treats as a genuine, usable
+ * default (`NaN` is neither `undefined` nor `null`) and renders `= NaN` as
+ * the class-field initialiser — confirmed by generating the real schema
+ * (`BudgetItems.persons`/`.days`, `IdempotencyKeys.created_at`,
+ * `BudgetItems.place_id`/`.reservation_id`, `PackingBags.user_id`) and by
+ * reading `node_modules/@mikro-orm/sql/schema/DatabaseTable.js`, not
+ * assumed. `prop.defaultRaw` itself is unaffected — it is threaded straight
+ * through to `.defaultRaw(...)` in the rendered schema and is correct there;
+ * only the class-field initialiser is wrong, and it is wrong specifically
+ * because the upstream library's `NaN` looks like "a real number" to the
+ * renderer's own `useDefault` check.
+ *
+ * Clearing `prop.default` back to `undefined` (never `null` — `null` would
+ * make the renderer's `hasUsableNullDefault` branch fire and print `= null`,
+ * which is still an initialiser this rule must not emit) makes the
+ * renderer's `useDefault` check naturally false, so NO initialiser is
+ * emitted at all: the class field falls back to nullability alone —
+ * `?: number | null` for a nullable column, `!: number` for a NOT NULL one
+ * (matching every other scalar's fallback shape in this generator).
+ *
+ * A `defaultRaw` that IS a finite numeric literal (`'0'`, `'1'`) is left
+ * completely alone: `Number(raw)` is correct there, `prop.default` already
+ * holds the right value, and nothing needs fixing.
+ */
+export function RULE1d_fixNaNNumericDefaults(metadata: EntityMetadata[]): void {
+  for (const meta of metadata) {
+    for (const prop of Object.values(meta.properties)) {
+      if (prop.kind !== undefined && prop.kind !== ReferenceKind.SCALAR) continue;
+      if (typeof prop.defaultRaw !== 'string') continue;
+      if (Number.isFinite(Number(prop.defaultRaw))) continue; // a genuine numeric literal — untouched
+      if (typeof prop.default !== 'number' || !Number.isNaN(prop.default)) continue; // nothing broken here
+      prop.default = undefined;
+    }
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Rule 2 (metadata level): p.datetime() -> p.type(DbTimestampType).
 //
@@ -691,6 +743,7 @@ export function applyRules(metadata: EntityMetadata[], _platform: Platform): Rul
   // `retypedScalars` (stripRedundantColumnType's "found no .columnType() to
   // strip" throw catches this immediately if that ever stops being true).
   RULE1c_markBooleanColumns(metadata);
+  RULE1d_fixNaNNumericDefaults(metadata);
   const timestamps = RULE2_datetimeToDbTimestampType(metadata);
   RULE3_integerPkAutoincrement(metadata);
   RULE4_hideAllRelations(metadata);
@@ -1258,19 +1311,66 @@ export function writeRepositoriesIfMissing(repositoriesDir: string, files: Reado
   return created;
 }
 
-/** Regenerates `src/db/entities/index.ts` from the directory, sorted, exporting `ALL_ENTITIES`. */
-export function regenerateEntitiesIndex(entitiesDir: string): string {
-  const files = fs
-    .readdirSync(entitiesDir)
-    .filter((f) => f.endsWith('.entity.ts'))
-    .sort();
-  const classNames = files.map((f) => f.replace(/\.entity\.ts$/, ''));
+/** Builds `src/db/entities/index.ts`'s source for a given, already-sorted class-name list. */
+export function buildEntitiesIndexSource(classNames: readonly string[]): string {
   const imports = classNames.map((name) => `import { ${name}Schema } from './${name}.entity';`).join('\n');
   const exportList = classNames.map((name) => `  ${name}Schema,`).join('\n');
   return (
     `import type { EntitySchema } from '@mikro-orm/core';\n${imports}\n\n` +
     `export const ALL_ENTITIES: readonly EntitySchema[] = [\n${exportList}\n];\n`
   );
+}
+
+/** Regenerates `src/db/entities/index.ts` from the directory, sorted, exporting `ALL_ENTITIES`. */
+export function regenerateEntitiesIndex(entitiesDir: string): string {
+  const classNames = fs
+    .readdirSync(entitiesDir)
+    .filter((f) => f.endsWith('.entity.ts'))
+    .sort()
+    .map((f) => f.replace(/\.entity\.ts$/, ''));
+  return buildEntitiesIndexSource(classNames);
+}
+
+/** What `--check` found: every generated file (entity + `index.ts`) that differs from — or is missing from — disk, and every repository `--write` would create. Read-only; never touches disk. */
+export interface CheckReport {
+  /** `X.entity.ts` (or `'index.ts'`) for every generated file whose on-disk content differs, byte-for-byte, from what the generator produces now. */
+  differingFiles: string[];
+  /** `src/db/repositories/<X>.repository.ts` for every entity with no repository file yet — `--write` would create these. */
+  missingRepositories: string[];
+}
+
+/**
+ * The read-only half of `--check` (I1 in `task-4-review-gates.md`): compares
+ * `files` (already generated in memory by `generateEntities()`) plus the
+ * `index.ts` they imply against `entitiesDir`, and reports which
+ * `repositoriesDir/<X>.repository.ts` files `writeRepositoriesIfMissing`
+ * would create. Never reads `regenerateEntitiesIndex`'s directory-listing
+ * variant — the *expected* index is built straight from `files`' own key
+ * set, not from whatever happens to already be on disk, so a stray or
+ * missing entity file cannot mask itself out of the index comparison.
+ */
+export function checkEntities(entitiesDir: string, repositoriesDir: string, files: ReadonlyMap<string, string>): CheckReport {
+  const differingFiles: string[] = [];
+  for (const [fileName, content] of files) {
+    const onDiskPath = path.join(entitiesDir, fileName);
+    const onDisk = fs.existsSync(onDiskPath) ? fs.readFileSync(onDiskPath, 'utf8') : undefined;
+    if (onDisk !== content) differingFiles.push(fileName);
+  }
+
+  const classNames = [...files.keys()].map((f) => f.replace(/\.entity\.ts$/, '')).sort();
+  const expectedIndex = buildEntitiesIndexSource(classNames);
+  const indexPath = path.join(entitiesDir, 'index.ts');
+  const onDiskIndex = fs.existsSync(indexPath) ? fs.readFileSync(indexPath, 'utf8') : undefined;
+  if (onDiskIndex !== expectedIndex) differingFiles.push('index.ts');
+
+  const missingRepositories: string[] = [];
+  for (const fileName of files.keys()) {
+    const className = fileName.replace(/\.entity\.ts$/, '');
+    const repoFile = path.join(repositoriesDir, `${className}.repository.ts`);
+    if (!fs.existsSync(repoFile)) missingRepositories.push(repoFile);
+  }
+
+  return { differingFiles, missingRepositories };
 }
 
 // ---------------------------------------------------------------------------
@@ -1280,10 +1380,27 @@ export function regenerateEntitiesIndex(entitiesDir: string): string {
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
   const write = args.includes('--write');
+  const check = args.includes('--check');
   const outIndex = args.indexOf('--out');
   const outDir = outIndex >= 0 ? args[outIndex + 1] : undefined;
 
   const { files } = await generateEntities();
+
+  if (check) {
+    const { differingFiles, missingRepositories } = checkEntities(ENTITIES_DIR, REPOSITORIES_DIR, files);
+    for (const fileName of differingFiles) {
+      console.error(`[generate-entities] DRIFT: src/db/entities/${fileName} does not match the generator.`);
+    }
+    for (const repoFile of missingRepositories) {
+      console.error(`[generate-entities] MISSING: ${path.relative(SERVER_ROOT, repoFile)} would be created by --write.`);
+    }
+    if (differingFiles.length > 0 || missingRepositories.length > 0) {
+      console.error('[generate-entities] --check failed. Run: node --import tsx scripts/generate-entities.ts --write');
+      process.exit(1);
+    }
+    console.log('[generate-entities] --check: entity files match the generator');
+    return;
+  }
 
   if (write) {
     dumpEntities(ENTITIES_DIR, files);

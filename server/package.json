@@ -15,6 +15,7 @@
     "gen:plugin-facts": "node --import tsx scripts/gen-plugin-facts.ts",
     "check:plugin-facts": "node --import tsx scripts/gen-plugin-facts.ts --check",
     "gen:entities": "node --import tsx scripts/generate-entities.ts",
+    "check:entities": "node --import tsx scripts/generate-entities.ts --check",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.ts\" \"test/**/*.ts\"",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",

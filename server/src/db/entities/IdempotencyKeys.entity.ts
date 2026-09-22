@@ -11,7 +11,7 @@ export class IdempotencyKeys {
   path!: string;
   status_code!: number;
   response_body!: string;
-  created_at: number & Opt = NaN;
+  created_at!: number & Opt;
 }
 
 export const IdempotencyKeysSchema = defineEntity({

@@ -15,7 +15,7 @@ export class PackingBags {
   sort_order?: number | null = 0;
   created_at?: string | null;
   user?: Ref<Users> | null;
-  user_id?: number | null = NaN;
+  user_id?: number | null;
   packing_bag_members = new Collection<Users>(this);
   packing_items_collection = new Collection<PackingItems>(this);
 }
