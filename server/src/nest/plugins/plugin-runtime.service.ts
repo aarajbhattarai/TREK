@@ -3,6 +3,8 @@ import semver from 'semver';
 import { MikroORM } from '@mikro-orm/core';
 import { DatabaseService } from '../database/database.service';
 import { UnitOfWork } from '../database/unit-of-work';
+import { withRequestContext } from '../database/request-context';
+import { logError } from '../audit/audit-log.logger';
 import { pluginsEnabled } from './kill-switch';
 import { setPluginEventSink } from '../../plugin-event-sink';
 import { setUserDeletedSink } from '../../plugin-user-lifecycle';
@@ -186,11 +188,14 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
     private readonly userSettings: PluginUserSettingsService,
     private readonly registry?: PluginRegistryService,
     private readonly hostFactory?: PluginRpcHostFactory,
-    // LAST, and optional only because TypeScript forbids a required parameter after
-    // an optional one — Nest always injects it (OrmModule is global). A hand-built
+    // Optional only because TypeScript forbids a required parameter after an
+    // optional one — Nest always injects it (OrmModule is global). A hand-built
     // test instance that exercises a transaction must pass one; setOperatorEgressHosts
     // refuses rather than writing outside a transaction (same shape as hostFactory).
-    private readonly uow?: UnitOfWork,
+    // `@Optional()` (task-6-rereview.md M2 — harmonised with the `orm?` param two
+    // lines below, which got one in the previous fix wave for exactly this reason;
+    // a plain `?` is TS-only and does not tell Nest's DI a provider may be absent).
+    @Optional() private readonly uow?: UnitOfWork,
     // D6 (task-2-review.md C3): the supervisor wraps every plugin RPC dispatch in a
     // request context built from this. Nest always injects it (MikroOrmCoreModule is
     // global); a hand-built test instance that dispatches through a real
@@ -264,15 +269,45 @@ export class PluginRuntimeService implements OnApplicationBootstrap, OnModuleDes
         // own gate still refuses to spawn, so nothing boots into a broken state.
         order = enabledIds;
       }
-      for (const id of order) {
-        this.activate(id).catch((e) => {
-          // A plugin whose required addon is off (or a dependency is missing) at boot
-          // must not stay marked enabled — reconcile the row so the UI reflects reality.
-          if (e instanceof PluginDependencyError || e instanceof DependencyCycleError) {
-            this.deactivate(id).catch(() => {});
-          }
-          /* other failures: status is persisted as error by the supervisor hook */
-        });
+      // task-6-rereview.md I1: assertActivatable (inside activate) reads
+      // AddonsService.isAddonEnabled — repository-backed — so this boot loop needs
+      // the same request-context wrap every other D6 choke point got, or an
+      // enabled plugin with a non-empty requiredAddons throws cannotUseGlobalContext
+      // here, silently: the .catch below only reconciles PluginDependencyError /
+      // DependencyCycleError, and the outer try/catch around this whole block eats
+      // everything else.
+      // `activate()` itself stays unwrapped (its HTTP callers already run inside a
+      // request); only this boot-time call site needs it. Fail closed the same way
+      // the boot RULING (task-6-rereview.md §2) settled for CronRegistrarService.
+      // runOnBoot: no ORM means skip loudly and never call activate — never abort
+      // app.init() over a partially-wired test graph.
+      // task-6-rereview.md I1: assertActivatable (inside activate) reads
+      // AddonsService.isAddonEnabled — repository-backed — so this boot loop needs
+      // the same request-context wrap every other D6 choke point got, or an
+      // enabled plugin with a non-empty requiredAddons throws cannotUseGlobalContext
+      // here, silently: the .catch below only reconciles PluginDependencyError /
+      // DependencyCycleError, and the outer try/catch around this whole block eats
+      // everything else.
+      // `activate()` itself stays unwrapped (its HTTP callers already run inside a
+      // request); only this boot-time call site needs it. Fail closed the same way
+      // the boot RULING (task-6-rereview.md §2) settled for CronRegistrarService.
+      // runOnBoot: no ORM means skip loudly and never call activate — never abort
+      // app.init() over a partially-wired test graph.
+      if (!this.orm) {
+        if (order.length) {
+          logError(`PluginRuntimeService.onApplicationBootstrap: no MikroORM available — plugin(s) not activated: ${order.join(', ')}`);
+        }
+      } else {
+        for (const id of order) {
+          withRequestContext(this.orm, () => this.activate(id)).catch((e) => {
+            // A plugin whose required addon is off (or a dependency is missing) at boot
+            // must not stay marked enabled — reconcile the row so the UI reflects reality.
+            if (e instanceof PluginDependencyError || e instanceof DependencyCycleError) {
+              this.deactivate(id).catch(() => {});
+            }
+            /* other failures: status is persisted as error by the supervisor hook */
+          });
+        }
       }
     } catch {
       /* discovery/boot must never block app init */

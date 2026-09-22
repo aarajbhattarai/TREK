@@ -28,10 +28,18 @@ vi.mock('../../src/websocket', () => ({ broadcast: vi.fn(), broadcastToUser: vi.
 // registrar inert so a bootstrap test never schedules real jobs or runs boot
 // sweeps against the real uploads/data dirs. The gate itself is covered by
 // tests/integration/scheduler-gate.test.ts.
+//
+// runOnBoot (task-6-rereview.md M1): AirportsService's boot backfill has no
+// isEnabled() gate of its own (unlike the seven job providers above, which
+// all check isEnabled() before ever reaching runOnBoot, so they never call
+// this mock's method at all) — it calls runOnBoot() unconditionally, so this
+// double needs one too. A no-op, not a pass-through: "the registrar inert"
+// above means no boot sweep runs in this harness, full stop.
 vi.mock('../../src/nest/scheduling/cron-registrar.service', () => ({
   CronRegistrarService: class {
     isEnabled() { return false; }
     register() { return false; }
+    async runOnBoot() { /* inert — see comment above */ }
     unregister() {}
     get jobCount() { return 0; }
     onApplicationShutdown() {}

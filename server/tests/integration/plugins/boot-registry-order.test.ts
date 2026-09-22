@@ -53,6 +53,15 @@ import { db as dbConn } from '../../../src/db/database';
 import { DatabaseService } from '../../../src/nest/database/database.service';
 import { AuditService } from '../../../src/nest/audit/audit.service';
 import { createTestAddonsService } from '../../helpers/test-addons';
+import { AddonsService } from '../../../src/nest/addons/addons.service';
+import { Addons } from '../../../src/db/entities/Addons.entity';
+import type { AddonsRepository } from '../../../src/db/repositories/Addons.repository';
+import { PhotoProviders } from '../../../src/db/entities/PhotoProviders.entity';
+import type { PhotoProvidersRepository } from '../../../src/db/repositories/PhotoProviders.repository';
+import { PhotoProviderFields } from '../../../src/db/entities/PhotoProviderFields.entity';
+import type { PhotoProviderFieldsRepository } from '../../../src/db/repositories/PhotoProviderFields.repository';
+import { AppSettings } from '../../../src/db/entities/AppSettings.entity';
+import type { AppSettingsRepository } from '../../../src/db/repositories/AppSettings.repository';
 import { PluginRuntimeService } from '../../../src/nest/plugins/plugin-runtime.service';
 import { PluginUserSettingsService } from '../../../src/nest/plugins/plugin-user-settings.service';
 import { PluginRpcHostFactory } from '../../../src/nest/plugins/host/plugin-rpc-host.factory';
@@ -154,5 +163,95 @@ describe('plugin boot vs registry scan ordering', () => {
     expect(row.last_error).toBeNull();
     expect(row.status).toBe('active');
     expect(runtime.isActive('migrator')).toBe(true);
+  });
+
+  /**
+   * task-6-rereview.md I1: `onApplicationBootstrap`'s boot-activation loop
+   * (`this.activate(id)` for every enabled plugin) reaches `assertActivatable`
+   * → `disabledRequiredAddons` → `AddonsService.isAddonEnabled` —
+   * repository-backed — with no request context wrapped around it. An
+   * installed+enabled plugin declaring a non-empty `requiredAddons` for an
+   * addon that IS enabled used to throw `cannotUseGlobalContext` here,
+   * silently (double-swallowed: `activate(id).catch(...)` only reconciles
+   * `PluginDependencyError`/`DependencyCycleError`, and the outer try/catch
+   * around the whole discovery/boot block eats everything else) — the plugin
+   * never left `'inactive'` and no log line named the failure at all.
+   */
+  it('BOOT-REG-002 an installed+enabled plugin declaring requiredAddons for an ENABLED addon activates cleanly at boot — the addon check runs inside a request context', async () => {
+    const dir = path.join(codeRoot, 'addongated', 'server');
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, 'index.js'), `module.exports = { async onLoad(ctx) {} };`);
+    testDb.prepare("INSERT INTO addons (id, enabled) VALUES ('needsaddon_addon', 1)").run();
+    testDb
+      .prepare(
+        "INSERT INTO plugins (id, status, enabled, permissions, granted_permissions, config, dependencies) VALUES ('addongated','inactive',1,'[]','[]','{}', ?)",
+      )
+      .run(JSON.stringify({ requiredAddons: ['needsaddon_addon'] }));
+
+    // Self-contained ORM/collaborators — independent of test 1's `t`, which is
+    // assigned inside ITS `it` body rather than a shared beforeAll. Global
+    // context is disallowed on purpose here (unlike test 1's `t`, and unlike
+    // createTestAddonsService's sharedTestOrm, both of which default to
+    // allowGlobalContext: true — the test-only convenience that would let
+    // AddonsService.isAddonEnabled succeed with NO request context and hide
+    // exactly the bug this test exists to catch): this is what makes the
+    // addon check below genuinely depend on the withRequestContext wrap
+    // rather than passing either way.
+    const t2 = await createTestOrm(dbConn, { allowGlobalContext: false });
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    let mod2: TestingModule | undefined;
+    try {
+      const dbs2 = new DatabaseService(dbConn);
+      const userSettings2 = new PluginUserSettingsService(dbs2);
+      const registry2 = new PluginRpcRegistry();
+      // Registry already scanned — this test is about the addon check, not the
+      // registry-ordering bug BOOT-REG-001 pins.
+      registry2.register(new DbRpc(userSettings2));
+      const hostFactory2 = new PluginRpcHostFactory(dbs2, registry2 as unknown as PluginRpcRegistryService);
+      // Built directly on t2 (not createTestAddonsService's sharedTestOrm) so
+      // its repositories share t2's allowGlobalContext: false ORM.
+      const addonsService2 = new AddonsService(
+        t2.repo(Addons) as AddonsRepository,
+        t2.repo(PhotoProviders) as PhotoProvidersRepository,
+        t2.repo(PhotoProviderFields) as PhotoProviderFieldsRepository,
+        t2.repo(AppSettings) as AppSettingsRepository,
+        t2.repo(Users) as UsersRepository,
+        dbs2,
+      );
+      const auditLogRepo2 = t2.repo(AuditLog) as AuditLogRepository;
+      const usersRepo2 = t2.repo(Users) as UsersRepository;
+
+      mod2 = await Test.createTestingModule({
+        providers: [
+          {
+            provide: PluginRuntimeService,
+            useFactory: () =>
+              new PluginRuntimeService(dbs2, new AuditService(auditLogRepo2, usersRepo2), addonsService2, userSettings2, undefined, hostFactory2, undefined, t2.orm),
+          },
+        ],
+      }).compile();
+      await mod2.init();
+
+      const runtime2 = mod2.get(PluginRuntimeService);
+      let row = { status: 'starting', last_error: null as string | null };
+      for (let i = 0; i < 100; i++) {
+        row = testDb.prepare("SELECT status, last_error FROM plugins WHERE id='addongated'").get() as typeof row;
+        if (row.status === 'active' || row.status === 'error') break;
+        await new Promise((r) => setTimeout(r, 50));
+      }
+
+      expect(row.last_error).toBeNull();
+      expect(row.status).toBe('active');
+      expect(runtime2.isActive('addongated')).toBe(true);
+
+      const suspicious = errSpy.mock.calls
+        .map((args) => args.map(String).join(' '))
+        .filter((line) => /cannotUseGlobalContext|global EntityManager/i.test(line));
+      expect(suspicious).toEqual([]);
+    } finally {
+      errSpy.mockRestore();
+      await mod2?.close();
+      await t2.close();
+    }
   });
 });

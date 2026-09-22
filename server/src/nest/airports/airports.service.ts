@@ -2,6 +2,7 @@ import { Injectable, OnApplicationBootstrap } from '@nestjs/common';
 import type { Airport } from '@trek/shared';
 import { searchAirports, findByIata, load } from './airports.data';
 import { DatabaseService } from '../database/database.service';
+import { CronRegistrarService } from '../scheduling/cron-registrar.service';
 
 /**
  * The in-container face of the airport dataset, plus the flight-endpoint
@@ -11,17 +12,30 @@ import { DatabaseService } from '../database/database.service';
  * require() back into services/ — a cycle that only held because `db` happened
  * to be initialised by then. It runs on application bootstrap now: it repairs
  * rows, nothing boots on it, and the container is fully built by that point.
+ *
+ * task-6-rereview.md M1: raw SQL only today, but this is the same boot-sweep
+ * shape C1 found repository-backed elsewhere, so it goes through the one
+ * choke point (`CronRegistrarService.runOnBoot`) every other one-off boot
+ * sweep uses now, rather than running outside a request context directly.
+ * `runOnBoot` has no `isEnabled()` gate (unlike `register()`), so — parity
+ * with the pre-existing behavior — the backfill still runs in every test
+ * harness that boots this service with a MikroORM, exactly as it did before.
  */
 @Injectable()
 export class AirportsService implements OnApplicationBootstrap {
-  constructor(private readonly db: DatabaseService) {}
+  constructor(
+    private readonly db: DatabaseService,
+    private readonly registrar: CronRegistrarService,
+  ) {}
 
   async onApplicationBootstrap(): Promise<void> {
-    try {
-      await this.backfillFlightEndpoints();
-    } catch (err) {
-      console.error('[DB] Flight endpoint backfill failed:', err);
-    }
+    await this.registrar.runOnBoot('airports-flight-endpoints-boot', async () => {
+      try {
+        await this.backfillFlightEndpoints();
+      } catch (err) {
+        console.error('[DB] Flight endpoint backfill failed:', err);
+      }
+    });
   }
 
   search(query: string): Airport[] {

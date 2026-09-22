@@ -29,7 +29,7 @@
  * shared helpers use to let ordinary unit tests call a repository with no
  * request wrapper at all: that default would hide this exact bug.
  */
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import { createSnapshotTestDb } from '../../helpers/db-mock';
 import { createUser } from '../../helpers/factories';
 import { DatabaseService } from '../../../src/nest/database/database.service';
@@ -112,16 +112,26 @@ function makeSupervisor(resolveOrm?: () => { em: EntityManager } | undefined) {
 }
 
 describe('PluginSupervisor request context (D6, C3)', () => {
-  it('CTX-PLUGIN-001: without a resolveOrm thunk, the dispatch THROWS rather than running unwrapped (task-6-fix-brief.md item 1: fail closed at the choke point, not just downstream)', async () => {
+  it('CTX-PLUGIN-001: without a resolveOrm thunk, the dispatch THROWS (host-side visibility) but the child still gets answered first (task-6-rereview.md §5 RULING: an unanswered \'req\' hangs the plugin forever — plugin-host-entry.ts\'s pending map has no timeout)', async () => {
     permissions.invalidatePermissionsCache();
     const { supervisor, sup, sent } = makeSupervisor(); // no resolveOrm — the bug's exact reproduction
+    const canCreateAsSpy = vi.spyOn(guards, 'canCreateAs');
 
     await expect(
       supervisor.onMessage(sup, { k: 'req', id: 'r1', method: 'trips.create', params: { _inv: 'inv-1' } }),
     ).rejects.toThrow(/no ORM available/i);
-    // The dispatch never ran, so the child never got a response at all —
-    // not even the old fail-closed HOST_ERROR envelope.
-    expect(sent).toHaveLength(0);
+    // The dispatch itself never ran — same fail-closed guarantee as before.
+    expect(canCreateAsSpy).not.toHaveBeenCalled();
+    // But unlike the previous wave, the child DOES get a response: a HOST_ERROR
+    // envelope, matching the rate-limiter refusal's shape, so its ctx.* promise
+    // settles instead of hanging forever.
+    expect(sent).toHaveLength(1);
+    const res = sent[0];
+    expect(res.ok).toBe(false);
+    if (res.ok === false) {
+      expect(res.error.code).toBe('HOST_ERROR');
+      expect(res.error.message).toMatch(/no ORM available/i);
+    }
   });
 
   it('CTX-PLUGIN-002: wrapped in withRequestContext, the same dispatch enforces the stored override — a "user" role is refused', async () => {

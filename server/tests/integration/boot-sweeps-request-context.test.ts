@@ -1,6 +1,7 @@
 /**
  * Boot-sweep request-context regression guard (task-6-review-parity.md
- * Critical C1; task-6-fix-brief.md item 7).
+ * Critical C1; task-6-fix-brief.md item 7; rewritten per task-6-rereview.md
+ * I2).
  *
  * `journey-thumbs.job.ts`'s `onApplicationBootstrap` used to call
  * `void this.sweep()` directly, bypassing `CronRegistrarService`'s
@@ -13,17 +14,31 @@
  * sweep across the seven job providers listed in the parity review now
  * routes through `CronRegistrarService.runOnBoot` instead.
  *
- * Under `NODE_ENV=test`, `CronRegistrarService.isEnabled()` is false
- * (SCHED-GATE), so `onApplicationBootstrap` never fires these sweeps
- * automatically in this suite — deliberately, so tests stay timer- and
- * network-free. This test instead triggers each job's real boot-sweep
- * entrypoint directly through the SAME, production-wired
- * `CronRegistrarService.runOnBoot` (its `orm` is `app.get(MikroORM)` —
- * pinned by orm-request-context-seams.test.ts), which is exactly what
- * `onApplicationBootstrap` itself would call in production. It then asserts
- * the captured log contains zero `cannotUseGlobalContext` / "global
- * EntityManager" lines — the regression guard the smoke boot would
- * otherwise be the only thing catching.
+ * I2's finding: the first version of this file never actually invoked any
+ * job's `onApplicationBootstrap` — it hand-called
+ * `registrar.runOnBoot('journey-thumbs-boot', () => job.sweep())` for each
+ * job, re-implementing the very routing under test. Reverting
+ * `journey-thumbs.job.ts`'s boot call back to the bare `void this.sweep()` —
+ * C1 verbatim — left that version green, because the mutation only changes
+ * what `onApplicationBootstrap` does, and nothing here ever called it.
+ *
+ * This version drives the seven jobs for real: `CronRegistrarService`'s
+ * `isEnabled()` (false under `NODE_ENV=test`, `SCHED-GATE`) is forced true so
+ * each job's own `onApplicationBootstrap` doesn't return before reaching its
+ * boot sweep, `register()` is stubbed to a no-op so no timer is armed (its
+ * production behaviour is CRONREG's own suite, not this file's job), and
+ * `runOnBoot` is wrapped with a spy that calls straight through to the real,
+ * production-wired implementation (`orm` is `app.get(MikroORM)` — pinned by
+ * orm-request-context-seams.test.ts) while collecting every promise it
+ * returns. Three of the seven jobs (`JourneyThumbsJob`, `PlacePhotoCacheJob`,
+ * `TrekPhotoCacheJob`) call `runOnBoot` fire-and-forget
+ * (`void this.registrar.runOnBoot(...)`) rather than awaiting it, so a
+ * mutation that routes one of them back to a bare `void this.sweep()` — i.e.
+ * bypassing `runOnBoot` (and this spy) altogether — produces a promise this
+ * file never captures either; the extra macrotask ticks after
+ * `Promise.all(collected)` give that unawaited call a chance to run (and log)
+ * before the assertion, so the regression still fails the test even though
+ * its promise was never in `collected`.
  */
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import type { INestApplication } from '@nestjs/common';
@@ -66,21 +81,39 @@ describe('Every onApplicationBootstrap boot sweep runs inside a request context'
     testDb.close();
   });
 
-  it('BOOT-SWEEP-001: the seven boot-sweep entrypoints, invoked through the real production-wired CronRegistrarService.runOnBoot, never log cannotUseGlobalContext / "global EntityManager"', async () => {
+  it('BOOT-SWEEP-001: the seven jobs\' REAL onApplicationBootstrap, driven through the real production-wired CronRegistrarService, never logs cannotUseGlobalContext / "global EntityManager"', async () => {
     const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const registrar = app.get(CronRegistrarService);
+    const isEnabledSpy = vi.spyOn(registrar, 'isEnabled').mockReturnValue(true);
+    // No-op: this file is about what a fired boot sweep does, not about
+    // arming a real cron timer on a shared registry (CRONREG's own suite
+    // covers register() itself).
+    const registerSpy = vi.spyOn(registrar, 'register').mockImplementation(() => true);
+    const originalRunOnBoot = registrar.runOnBoot.bind(registrar);
+    const collected: Promise<void>[] = [];
+    const runOnBootSpy = vi.spyOn(registrar, 'runOnBoot').mockImplementation((name, fn) => {
+      const p = originalRunOnBoot(name, fn);
+      collected.push(p);
+      return p;
+    });
     try {
-      const registrar = app.get(CronRegistrarService);
+      // Real onApplicationBootstrap calls, not hand-called runOnBoot — the whole
+      // point of I2's fix. Three are fire-and-forget (void return type); four are
+      // awaited because the job's own onApplicationBootstrap awaits runOnBoot.
+      app.get(JourneyThumbsJob).onApplicationBootstrap();
+      app.get(PlacePhotoCacheJob).onApplicationBootstrap();
+      app.get(TrekPhotoCacheJob).onApplicationBootstrap();
+      await app.get(ReminderJobsService).onApplicationBootstrap();
+      await app.get(DocSyncJob).onApplicationBootstrap();
+      await app.get(AirtrailSyncJob).onApplicationBootstrap();
+      await app.get(DawarichSyncJob).onApplicationBootstrap();
 
-      await registrar.runOnBoot('journey-thumbs-boot', () => app.get(JourneyThumbsJob).sweep());
-      await registrar.runOnBoot('place-photo-cache-boot', () => app.get(PlacePhotoCacheJob).sweep());
-      await registrar.runOnBoot('trek-photo-cache-boot', () => app.get(TrekPhotoCacheJob).tick());
-      await registrar.runOnBoot('reminder-jobs-boot', async () => {
-        await app.get(ReminderJobsService).tripTick();
-        await app.get(ReminderJobsService).todoTick();
-      });
-      await registrar.runOnBoot('docsync-boot', () => app.get(DocSyncJob).tick());
-      await registrar.runOnBoot('airtrail-sync-boot', () => app.get(AirtrailSyncJob).tick());
-      await registrar.runOnBoot('dawarich-sync-boot', () => app.get(DawarichSyncJob).tick());
+      await Promise.all(collected);
+      // Settle any pending microtasks/macrotasks a fire-and-forget boot call left
+      // behind (see the file docstring: this is what still catches a job routed
+      // back to a bare `void this.sweep()`, whose promise never lands in `collected`).
+      await new Promise((resolve) => setImmediate(resolve));
+      await new Promise((resolve) => setImmediate(resolve));
 
       const suspicious = errSpy.mock.calls
         .map((args) => args.map(String).join(' '))
@@ -88,6 +121,9 @@ describe('Every onApplicationBootstrap boot sweep runs inside a request context'
       expect(suspicious).toEqual([]);
     } finally {
       errSpy.mockRestore();
+      isEnabledSpy.mockRestore();
+      registerSpy.mockRestore();
+      runOnBootSpy.mockRestore();
     }
   });
 });

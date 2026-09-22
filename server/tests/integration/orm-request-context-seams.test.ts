@@ -9,10 +9,25 @@
  * happens to pass no ORM — they'd pass either way. This is the one test that
  * pins production wiring itself: that `buildApp()` actually populates
  * `CronRegistrarService`'s and `PluginRuntimeService`'s `@Optional()` ORM
- * params and `PluginSupervisor`'s `resolveOrm` thunk with the SAME MikroORM
- * instance `app.get(MikroORM)` resolves — so a future refactor that quietly
- * drops one of those three constructor arguments fails here, not silently in
- * production.
+ * params, `PluginSupervisor`'s `resolveOrm` thunk AND `TrekWsAdapter`'s `orm`
+ * constructor argument with the SAME MikroORM instance `app.get(MikroORM)`
+ * resolves — so a future refactor that quietly drops one of those FOUR
+ * constructor arguments fails here, not silently in production.
+ *
+ * task-6-rereview.md I3: the fourth seam (`TrekWsAdapter`) had no ratchet at
+ * all — `bootstrap.ts`'s `new TrekWsAdapter(boundHttpServer, orm)` could lose
+ * its second argument and only WSAD-040 (which builds its own adapter, not
+ * production's) would still pass, while every real WS frame would start
+ * throwing synchronously inside a `ws` `'message'` listener — an
+ * uncaughtException with no host-side net, i.e. process death, not one failed
+ * request. `TrekWsAdapter`'s `orm` is a plain constructor param on a class
+ * `bootstrap.ts` builds with `new` (never through Nest DI), so it is reached
+ * the same way this file already reaches `PluginSupervisor.resolveOrm()` —
+ * through the concrete object the app graph is actually holding, here
+ * `NestApplication`'s own `private readonly config: ApplicationConfig`
+ * (`app.useWebSocketAdapter` calls `this.config.setIoAdapter(adapter)`; see
+ * `@nestjs/core`'s `nest-application.js`/`.d.ts` — the field is `config`, NOT
+ * `applicationConfig`, despite the class's own name).
  */
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import type { INestApplication } from '@nestjs/common';
@@ -50,7 +65,7 @@ describe('ORM request-context seams populated in production', () => {
     testDb.close();
   });
 
-  it('SEAM-001: CronRegistrarService, PluginRuntimeService and PluginSupervisor.resolveOrm() all resolve the SAME MikroORM app.get(MikroORM) does', () => {
+  it('SEAM-001: CronRegistrarService, PluginRuntimeService, PluginSupervisor.resolveOrm() and TrekWsAdapter all resolve the SAME MikroORM app.get(MikroORM) does', () => {
     const orm = app.get(MikroORM);
 
     const cronRegistrar = app.get(CronRegistrarService) as unknown as { orm?: MikroORM };
@@ -62,5 +77,9 @@ describe('ORM request-context seams populated in production', () => {
     };
     expect(runtime.orm).toBe(orm);
     expect(runtime.supervisor.resolveOrm?.()).toBe(orm);
+
+    // task-6-rereview.md I3 — the fourth seam, with no ratchet before this test.
+    const wsAdapter = (app as unknown as { config: { getIoAdapter(): { orm?: MikroORM } } }).config.getIoAdapter();
+    expect(wsAdapter.orm).toBe(orm);
   });
 });

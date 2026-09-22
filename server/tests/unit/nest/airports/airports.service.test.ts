@@ -1,0 +1,81 @@
+/**
+ * AirportsService boot backfill (task-6-rereview.md M1 — the exact C1 shape
+ * task-6-review-parity.md found elsewhere: `onApplicationBootstrap` used to
+ * `await this.backfillFlightEndpoints()` directly, outside any request
+ * context. Raw SQL only today (harmless now), but the wrap belongs at the
+ * entrypoint — the same reasoning `place-photo-cache.job.ts`/
+ * `trek-photo-cache.job.ts` already carry for their own raw-SQL sweeps — so
+ * it stays safe if this dependency graph goes repository-backed later, and so
+ * every one-off boot sweep in the tree goes through the one choke point).
+ */
+import { describe, it, expect, vi, beforeAll, afterAll, beforeEach } from 'vitest';
+import { SchedulerRegistry } from '@nestjs/schedule';
+
+const logMock = vi.hoisted(() => ({ LOG_LEVEL: 'error', logInfo: vi.fn(), logError: vi.fn(), logWarn: vi.fn(), logDebug: vi.fn() }));
+vi.mock('../../../../src/nest/audit/audit-log.logger', () => logMock);
+
+import { AirportsService } from '../../../../src/nest/airports/airports.service';
+import { DatabaseService } from '../../../../src/nest/database/database.service';
+import { CronRegistrarService } from '../../../../src/nest/scheduling/cron-registrar.service';
+import type { RuntimeEnvService } from '../../../../src/nest/app-config/runtime-env.service';
+import { createSnapshotTestDb } from '../../../helpers/db-mock';
+import { createTestOrm, type TestOrm } from '../../../helpers/test-orm';
+
+const testDb = createSnapshotTestDb();
+let t: TestOrm;
+
+beforeAll(async () => {
+  // Global context disallowed — the production setting — so this genuinely
+  // proves the boot backfill runs (or doesn't) inside a request context,
+  // rather than happening to work because the test default allows it.
+  t = await createTestOrm(testDb, { allowGlobalContext: false });
+});
+afterAll(async () => { await t.close(); testDb.close(); });
+beforeEach(() => vi.clearAllMocks());
+
+describe('AirportsService boot backfill', () => {
+  it('AIRPORTS-SVC-001: onApplicationBootstrap delegates the boot-time backfill through CronRegistrarService.runOnBoot, not a direct await', async () => {
+    const registered: Array<[string, () => void | Promise<void>]> = [];
+    const registrar = {
+      isEnabled: vi.fn(() => true),
+      register: vi.fn(() => true),
+      unregister: vi.fn(),
+      runOnBoot: vi.fn(async (name: string, fn: () => void | Promise<void>) => { registered.push([name, fn]); await fn(); }),
+    };
+    const svc = new AirportsService(new DatabaseService(testDb), registrar as unknown as CronRegistrarService);
+    const backfillSpy = vi.spyOn(svc, 'backfillFlightEndpoints').mockResolvedValue(undefined);
+    await svc.onApplicationBootstrap();
+    expect(registrar.runOnBoot).toHaveBeenCalledWith('airports-flight-endpoints-boot', expect.any(Function));
+    expect(backfillSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('AIRPORTS-SVC-002: with MikroORM wired into the registrar, the boot-time backfill actually runs — no cannotUseGlobalContext, nothing swallowed', async () => {
+    const registrar = new CronRegistrarService(new SchedulerRegistry(), { isTest: () => false } as RuntimeEnvService, t.orm);
+    const svc = new AirportsService(new DatabaseService(testDb), registrar);
+    const backfillSpy = vi.spyOn(svc, 'backfillFlightEndpoints');
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      await svc.onApplicationBootstrap();
+      expect(backfillSpy).toHaveBeenCalledTimes(1);
+      expect(errSpy).not.toHaveBeenCalled();
+      expect(logMock.logError).not.toHaveBeenCalled();
+    } finally {
+      errSpy.mockRestore();
+    }
+  });
+
+  it('AIRPORTS-SVC-003: without MikroORM, the boot-time backfill never runs at all — logged with runOnBoot\'s own distinct message, never swallowed into "[DB] Flight endpoint backfill failed"', async () => {
+    const registrar = new CronRegistrarService(new SchedulerRegistry(), { isTest: () => false } as RuntimeEnvService); // no orm
+    const svc = new AirportsService(new DatabaseService(testDb), registrar);
+    const backfillSpy = vi.spyOn(svc, 'backfillFlightEndpoints');
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      await svc.onApplicationBootstrap();
+      expect(backfillSpy).not.toHaveBeenCalled();
+      expect(logMock.logError).toHaveBeenCalledWith(expect.stringMatching(/runOnBoot: no MikroORM available.*airports-flight-endpoints-boot/));
+      expect(errSpy).not.toHaveBeenCalled();
+    } finally {
+      errSpy.mockRestore();
+    }
+  });
+});

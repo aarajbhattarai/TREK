@@ -585,6 +585,16 @@ export class PluginSupervisor {
         // that dispatch through this path now pass a thunk (`sharedTestOrm`).
         const orm = this.resolveOrm?.();
         if (!orm) {
+          // task-6-rereview.md §5 RULING: the child's `pending` map
+          // (plugin-host-entry.ts) has no timeout, so leaving this 'req'
+          // unanswered hangs the plugin's ctx.* promise forever — and
+          // handleChildMessage above downgrades the throw below to one
+          // plugin-scoped log line, never surfacing it as a host-wiring
+          // failure. Answer the child first, same shape as the rate-limiter
+          // refusal a few lines up, THEN throw for host-side visibility. The
+          // dispatch still never runs either way — this only changes whether
+          // the caller ever hears back.
+          sup.child?.send({ k: 'res', id: req.id, ok: false, error: { code: 'HOST_ERROR', message: 'no ORM available to build a request context' } } satisfies RpcError);
           throw new Error('PluginSupervisor: no ORM available to build a request context for this RPC dispatch');
         }
         const res = await withRequestContext(orm, () => sup.rpcHost.dispatch(req, actingUserId));
