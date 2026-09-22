@@ -93,6 +93,7 @@ import { resetTestDb } from '../../helpers/test-db';
 import { createUser } from '../../helpers/factories';
 import { DatabaseService } from '../../../src/nest/database/database.service';
 import { DawarichService } from '../../../src/nest/integrations/dawarich.service';
+import { createTestUnitOfWork } from '../../helpers/test-uow';
 import {
   DawarichError,
   type DawarichClient,
@@ -114,11 +115,7 @@ const client = {
 };
 
 const dbs = new DatabaseService(testDb);
-const svc = new DawarichService(
-  dbs,
-  audit as unknown as AuditService,
-  client as unknown as DawarichClient,
-);
+let svc: DawarichService;
 
 // ── Fixtures ─────────────────────────────────────────────────────────────────
 
@@ -255,9 +252,15 @@ const countryCodeAbsentCases: Array<[string, Partial<DawarichVisitRaw>]> = [
   ['a place with a null code', { place: { latitude: 1, longitude: 2, id: 3, country_code: null } }],
 ];
 
-beforeAll(() => {
+beforeAll(async () => {
   createTables(testDb);
   runMigrations(testDb);
+  svc = new DawarichService(
+    dbs,
+    audit as unknown as AuditService,
+    client as unknown as DawarichClient,
+    await createTestUnitOfWork(dbs.connection),
+  );
 });
 
 beforeEach(() => {
@@ -277,30 +280,30 @@ afterAll(() => {
 // ---------------------------------------------------------------------------
 
 describe('DawarichService getCredentials', () => {
-  it('DAWARICH-SVC-001: a user who never connected has no credentials', () => {
-    expect(svc.getCredentials(USER)).toBeNull();
+  it('DAWARICH-SVC-001: a user who never connected has no credentials', async () => {
+    expect(await svc.getCredentials(USER)).toBeNull();
   });
 
-  it('DAWARICH-SVC-002: a row without an address is not a connection', () => {
+  it('DAWARICH-SVC-002: a row without an address is not a connection', async () => {
     connect(USER, { url: null });
-    expect(svc.getCredentials(USER)).toBeNull();
+    expect(await svc.getCredentials(USER)).toBeNull();
   });
 
-  it('DAWARICH-SVC-003: a row without a key is not a connection', () => {
+  it('DAWARICH-SVC-003: a row without a key is not a connection', async () => {
     connect(USER, { apiKey: null });
-    expect(svc.getCredentials(USER)).toBeNull();
+    expect(await svc.getCredentials(USER)).toBeNull();
   });
 
-  it('DAWARICH-SVC-004: a key that cannot be decrypted reads as "not connected" rather than travelling upstream as garbage', () => {
+  it('DAWARICH-SVC-004: a key that cannot be decrypted reads as "not connected" rather than travelling upstream as garbage', async () => {
     // What a rotated ENCRYPTION_KEY or a half-restored backup leaves behind:
     // the envelope is intact, the ciphertext is not ours.
     connect(USER, { apiKey: 'enc:v1:bm90LWEtcmVhbC1ibG9i' });
-    expect(svc.getCredentials(USER)).toBeNull();
+    expect(await svc.getCredentials(USER)).toBeNull();
   });
 
-  it('DAWARICH-SVC-005: a legacy plaintext key still works, with the TLS flag off', () => {
+  it('DAWARICH-SVC-005: a legacy plaintext key still works, with the TLS flag off', async () => {
     connect(USER, { apiKey: 'plain-legacy-key', allowInsecureTls: 0 });
-    expect(svc.getCredentials(USER)).toEqual({
+    expect(await svc.getCredentials(USER)).toEqual({
       baseUrl: HOST,
       apiKey: 'plain-legacy-key',
       allowInsecureTls: false,
@@ -309,7 +312,7 @@ describe('DawarichService getCredentials', () => {
 
   it('DAWARICH-SVC-006: the self-signed-certificate flag is carried into the credentials as a boolean', async () => {
     await svc.saveSettings(USER, HOST, 'typed-secret', true, true, IP);
-    expect(svc.getCredentials(USER)).toEqual({
+    expect(await svc.getCredentials(USER)).toEqual({
       baseUrl: HOST,
       apiKey: 'typed-secret',
       allowInsecureTls: true,
@@ -322,32 +325,32 @@ describe('DawarichService getCredentials', () => {
 // ---------------------------------------------------------------------------
 
 describe('DawarichService isConnected', () => {
-  it('DAWARICH-SVC-010: both halves present means connected', () => {
+  it('DAWARICH-SVC-010: both halves present means connected', async () => {
     connect(USER);
-    expect(svc.isConnected(USER)).toBe(true);
+    expect(await svc.isConnected(USER)).toBe(true);
   });
 
-  it('DAWARICH-SVC-011: an address without a key is not connected', () => {
+  it('DAWARICH-SVC-011: an address without a key is not connected', async () => {
     connect(USER, { apiKey: null });
-    expect(svc.isConnected(USER)).toBe(false);
+    expect(await svc.isConnected(USER)).toBe(false);
   });
 
-  it('DAWARICH-SVC-012: no row at all is not connected', () => {
-    expect(svc.isConnected(USER)).toBe(false);
+  it('DAWARICH-SVC-012: no row at all is not connected', async () => {
+    expect(await svc.isConnected(USER)).toBe(false);
   });
 
-  it('DAWARICH-SVC-013: an undecryptable key still counts as connected here, because this asks about the row and not about the secret', () => {
+  it('DAWARICH-SVC-013: an undecryptable key still counts as connected here, because this asks about the row and not about the secret', async () => {
     // Deliberate difference from getCredentials: the settings card has to keep
     // showing a connection the user can repair, and only the outbound path
     // cares that the ciphertext is unusable.
     connect(USER, { apiKey: 'enc:v1:bm90LWEtcmVhbC1ibG9i' });
-    expect(svc.isConnected(USER)).toBe(true);
-    expect(svc.getCredentials(USER)).toBeNull();
+    expect(await svc.isConnected(USER)).toBe(true);
+    expect(await svc.getCredentials(USER)).toBeNull();
   });
 });
 
 describe('DawarichService listSyncableUserIds', () => {
-  it('DAWARICH-SVC-020: only rows with background sync on, an address and a key', () => {
+  it('DAWARICH-SVC-020: only rows with background sync on, an address and a key', async () => {
     const syncable = USER;
     const pollOff = createUser(testDb).user.id;
     const noUrl = createUser(testDb).user.id;
@@ -363,14 +366,14 @@ describe('DawarichService listSyncableUserIds', () => {
     connect(blankUrl, { url: '' });
     connect(noKey, { apiKey: null });
 
-    expect(svc.listSyncableUserIds()).toEqual([syncable]);
+    expect(await svc.listSyncableUserIds()).toEqual([syncable]);
   });
 
-  it('DAWARICH-SVC-021: no connections at all is an empty list, not a throw', () => {
-    expect(svc.listSyncableUserIds()).toEqual([]);
+  it('DAWARICH-SVC-021: no connections at all is an empty list, not a throw', async () => {
+    expect(await svc.listSyncableUserIds()).toEqual([]);
   });
 
-  it('DAWARICH-SVC-022: every qualifying user comes back, not only the first row the cursor lands on', () => {
+  it('DAWARICH-SVC-022: every qualifying user comes back, not only the first row the cursor lands on', async () => {
     // The cron fans out over this list. A query that answered with one id would
     // leave everyone but the earliest registration silently unsynced, and the
     // settings card would still say the poll was on for all of them.
@@ -380,7 +383,7 @@ describe('DawarichService listSyncableUserIds', () => {
     connect(second);
     connect(pollOff, { syncEnabled: 0 });
 
-    const ids = svc.listSyncableUserIds();
+    const ids = await svc.listSyncableUserIds();
 
     // No ORDER BY upstream, so the set is the contract and the order is not.
     expect(new Set(ids)).toEqual(new Set([USER, second]));
@@ -393,8 +396,8 @@ describe('DawarichService listSyncableUserIds', () => {
 // ---------------------------------------------------------------------------
 
 describe('DawarichService getConnection', () => {
-  it('DAWARICH-SVC-030: a user who never opened the card gets empty fields and the poll defaulted ON', () => {
-    expect(svc.getConnection(USER)).toEqual({
+  it('DAWARICH-SVC-030: a user who never opened the card gets empty fields and the poll defaulted ON', async () => {
+    expect(await svc.getConnection(USER)).toEqual({
       url: '',
       apiKeyMasked: '',
       allowInsecureTls: false,
@@ -407,7 +410,7 @@ describe('DawarichService getConnection', () => {
     });
   });
 
-  it('DAWARICH-SVC-031: a stored connection is reported with a mask where the key is, never the key', () => {
+  it('DAWARICH-SVC-031: a stored connection is reported with a mask where the key is, never the key', async () => {
     connect(USER, {
       apiKey: 'stored-key',
       allowInsecureTls: 1,
@@ -417,7 +420,7 @@ describe('DawarichService getConnection', () => {
       lastSyncError: 'rate_limited',
     });
 
-    const out = svc.getConnection(USER);
+    const out = await svc.getConnection(USER);
 
     expect(out).toEqual({
       url: HOST,
@@ -433,52 +436,52 @@ describe('DawarichService getConnection', () => {
     expect(JSON.stringify(out)).not.toContain('stored-key');
   });
 
-  it('DAWARICH-SVC-032: an address without a key reports the address and no mask', () => {
+  it('DAWARICH-SVC-032: an address without a key reports the address and no mask', async () => {
     connect(USER, { apiKey: null });
-    expect(svc.getConnection(USER)).toMatchObject({ url: HOST, apiKeyMasked: '', connected: false });
+    expect(await svc.getConnection(USER)).toMatchObject({ url: HOST, apiKeyMasked: '', connected: false });
   });
 
-  it('DAWARICH-SVC-033: a null address reads as an empty string, so the form binds to a value', () => {
+  it('DAWARICH-SVC-033: a null address reads as an empty string, so the form binds to a value', async () => {
     connect(USER, { url: null, apiKey: null });
-    expect(svc.getConnection(USER)).toMatchObject({ url: '', connected: false, syncEnabled: true });
+    expect(await svc.getConnection(USER)).toMatchObject({ url: '', connected: false, syncEnabled: true });
   });
 
-  it.each(['ok', 'partial', 'failed'])('DAWARICH-SVC-034: the known sync state %s passes through', (state) => {
+  it.each(['ok', 'partial', 'failed'])('DAWARICH-SVC-034: the known sync state %s passes through', async (state) => {
     connect(USER, { lastSyncState: state });
-    expect(svc.getConnection(USER).lastSyncState).toBe(state);
+    expect((await svc.getConnection(USER)).lastSyncState).toBe(state);
   });
 
   it.each(['syncing', 'OK', 'success', ''])(
     'DAWARICH-SVC-035: the unrecognised sync state %j reads as "never" rather than reaching a client that has no branch for it',
-    (state) => {
+    async (state) => {
       connect(USER, { lastSyncState: state });
-      expect(svc.getConnection(USER).lastSyncState).toBe('never');
+      expect((await svc.getConnection(USER)).lastSyncState).toBe('never');
     },
   );
 
   it.each(['{not json', '', 'undefined'])(
     'DAWARICH-SVC-036: the malformed capabilities blob %j reads as "not probed yet", never as a crash on the settings page',
-    (raw) => {
+    async (raw) => {
       connect(USER, { capabilities: raw });
-      expect(svc.getConnection(USER).capabilities).toBeNull();
+      expect((await svc.getConnection(USER)).capabilities).toBeNull();
     },
   );
 
   it.each(['null', '42', '"visits"', 'true'])(
     'DAWARICH-SVC-037: the JSON scalar %s is not a capabilities object and reads as not probed',
-    (raw) => {
+    async (raw) => {
       connect(USER, { capabilities: raw });
-      expect(svc.getConnection(USER).capabilities).toBeNull();
+      expect((await svc.getConnection(USER)).capabilities).toBeNull();
     },
   );
 
-  it('DAWARICH-SVC-038: a blob written by an older build keeps only the fields it has, with every unknown flag off', () => {
+  it('DAWARICH-SVC-038: a blob written by an older build keeps only the fields it has, with every unknown flag off', async () => {
     // The column survives an upgrade, so the shape is whatever was current when
     // the last probe ran. Missing flags are off and a missing probe timestamp
     // is the epoch, which reads as "long ago" everywhere it is compared.
     connect(USER, { capabilities: JSON.stringify({ visits: true, serverVersion: 17, extra: 'ignored' }) });
 
-    expect(svc.getConnection(USER).capabilities).toEqual({
+    expect((await svc.getConnection(USER)).capabilities).toEqual({
       visits: true,
       tracks: false,
       points: false,
@@ -491,25 +494,25 @@ describe('DawarichService getConnection', () => {
     });
   });
 
-  it('DAWARICH-SVC-039: a complete blob round-trips unchanged', () => {
+  it('DAWARICH-SVC-039: a complete blob round-trips unchanged', async () => {
     connect(USER, { capabilities: JSON.stringify(FULL_CAPS) });
-    expect(svc.getConnection(USER).capabilities).toEqual(FULL_CAPS);
+    expect((await svc.getConnection(USER)).capabilities).toEqual(FULL_CAPS);
   });
 });
 
 describe('DawarichService getCapabilities', () => {
-  it('DAWARICH-SVC-040: null when there is no connection', () => {
-    expect(svc.getCapabilities(USER)).toBeNull();
+  it('DAWARICH-SVC-040: null when there is no connection', async () => {
+    expect(await svc.getCapabilities(USER)).toBeNull();
   });
 
-  it('DAWARICH-SVC-041: null when the connection has never been probed', () => {
+  it('DAWARICH-SVC-041: null when the connection has never been probed', async () => {
     connect(USER);
-    expect(svc.getCapabilities(USER)).toBeNull();
+    expect(await svc.getCapabilities(USER)).toBeNull();
   });
 
-  it('DAWARICH-SVC-042: the stored probe otherwise', () => {
+  it('DAWARICH-SVC-042: the stored probe otherwise', async () => {
     connect(USER, { capabilities: JSON.stringify(FULL_CAPS) });
-    expect(svc.getCapabilities(USER)).toEqual(FULL_CAPS);
+    expect(await svc.getCapabilities(USER)).toEqual(FULL_CAPS);
   });
 });
 
@@ -529,7 +532,7 @@ describe('DawarichService saveSettings', () => {
     expect(stored?.api_key).toMatch(/^enc:v1:/);
     expect(stored?.api_key).not.toContain('super-secret');
     // The round trip is the point: encrypted at rest, usable on the way out.
-    expect(svc.getCredentials(USER)?.apiKey).toBe('super-secret');
+    expect((await svc.getCredentials(USER))?.apiKey).toBe('super-secret');
   });
 
   it('DAWARICH-SVC-051: turning the background poll off is persisted, and the card reports it', async () => {
@@ -537,8 +540,8 @@ describe('DawarichService saveSettings', () => {
 
     expect(row()?.sync_enabled).toBe(0);
     expect(row()?.allow_insecure_tls).toBe(0);
-    expect(svc.getConnection(USER).syncEnabled).toBe(false);
-    expect(svc.listSyncableUserIds()).toEqual([]);
+    expect((await svc.getConnection(USER)).syncEnabled).toBe(false);
+    expect(await svc.listSyncableUserIds()).toEqual([]);
   });
 
   it('DAWARICH-SVC-052: a blank key field keeps the stored key, because the field is never prefilled', async () => {
@@ -560,7 +563,7 @@ describe('DawarichService saveSettings', () => {
       await svc.saveSettings(USER, HOST, typed, false, true, IP);
 
       expect(row()?.api_key).toBe(encrypted);
-      expect(svc.getCredentials(USER)?.apiKey).toBe('first-key');
+      expect((await svc.getCredentials(USER))?.apiKey).toBe('first-key');
     },
   );
 
@@ -568,7 +571,7 @@ describe('DawarichService saveSettings', () => {
     await svc.saveSettings(USER, HOST, 'first-key', false, true, IP);
     await svc.saveSettings(USER, HOST, 'second-key', false, true, IP);
 
-    expect(svc.getCredentials(USER)?.apiKey).toBe('second-key');
+    expect((await svc.getCredentials(USER))?.apiKey).toBe('second-key');
   });
 
   it('DAWARICH-SVC-055: moving to a different host without retyping the key drops the key and every artefact of the old instance', async () => {
@@ -617,7 +620,7 @@ describe('DawarichService saveSettings', () => {
 
     await svc.saveSettings(USER, 'https://new.example', 'minted-for-new', false, true, IP);
 
-    expect(svc.getCredentials(USER)).toEqual({
+    expect(await svc.getCredentials(USER)).toEqual({
       baseUrl: 'https://new.example',
       apiKey: 'minted-for-new',
       allowInsecureTls: false,
@@ -815,7 +818,7 @@ describe('DawarichService saveSettings', () => {
 
     await svc.saveSettings(USER, 'https://new.example', 'minted-for-new', false, true, IP);
 
-    expect(svc.getCredentials(USER)?.apiKey).toBe('minted-for-new');
+    expect((await svc.getCredentials(USER))?.apiKey).toBe('minted-for-new');
     const stored = row();
     expect(stored?.url).toBe('https://new.example');
     expect(stored?.capabilities).toBeNull();
@@ -834,7 +837,7 @@ describe('DawarichService saveSettings', () => {
 
     await svc.saveSettings(USER, 'https://d.example/', 'rotated-key', false, true, IP);
 
-    expect(svc.getCredentials(USER)?.apiKey).toBe('rotated-key');
+    expect((await svc.getCredentials(USER))?.apiKey).toBe('rotated-key');
     expect(row()?.capabilities).toBe(JSON.stringify(FULL_CAPS));
     expect(row()?.last_sync_state).toBe('ok');
   });
@@ -851,7 +854,7 @@ describe('DawarichService disconnect', () => {
     await svc.disconnect(USER, '198.51.100.7');
 
     expect(row()).toBeUndefined();
-    expect(svc.getConnection(USER).connected).toBe(false);
+    expect((await svc.getConnection(USER)).connected).toBe(false);
     expect(audit.writeAudit).toHaveBeenCalledWith({
       userId: USER,
       action: 'dawarich.disconnected',
@@ -921,7 +924,7 @@ describe('DawarichService testConnection', () => {
     const out = await svc.testConnection(USER, HOST, undefined, false);
 
     expect(out.connected).toBe(true);
-    expect(svc.getCapabilities(USER)).toEqual(out.capabilities);
+    expect(await svc.getCapabilities(USER)).toEqual(out.capabilities);
   });
 
   it('DAWARICH-SVC-095: a test run against a different address than the stored one must not overwrite what is on file', async () => {
@@ -929,7 +932,7 @@ describe('DawarichService testConnection', () => {
 
     await svc.testConnection(USER, 'https://someone-elses.example', 'their-key', false);
 
-    expect(svc.getCapabilities(USER)).toEqual(FULL_CAPS);
+    expect(await svc.getCapabilities(USER)).toEqual(FULL_CAPS);
   });
 
   it('DAWARICH-SVC-096: a test from a form with nothing stored yet writes no capabilities row', async () => {
@@ -1012,7 +1015,7 @@ describe('DawarichService testConnection', () => {
 
     await svc.testConnection(USER, HOST, undefined, false);
 
-    expect(svc.getCapabilities(USER)).toEqual(FULL_CAPS);
+    expect(await svc.getCapabilities(USER)).toEqual(FULL_CAPS);
   });
 
   it('DAWARICH-SVC-104: a stored key that no longer decrypts is never dialled with, so the form hears "not connected" instead of a ciphertext going upstream as a bearer token', async () => {
@@ -1185,60 +1188,60 @@ describe('DawarichService probeCapabilities', () => {
 // ---------------------------------------------------------------------------
 
 describe('DawarichService storeCapabilities', () => {
-  it('DAWARICH-SVC-130: writes the probe where getCapabilities reads it', () => {
+  it('DAWARICH-SVC-130: writes the probe where getCapabilities reads it', async () => {
     connect(USER);
 
-    svc.storeCapabilities(USER, FULL_CAPS);
+    await svc.storeCapabilities(USER, FULL_CAPS);
 
-    expect(svc.getCapabilities(USER)).toEqual(FULL_CAPS);
+    expect(await svc.getCapabilities(USER)).toEqual(FULL_CAPS);
     expect(JSON.parse(row()?.capabilities ?? 'null')).toEqual(FULL_CAPS);
   });
 
-  it('DAWARICH-SVC-131: storing against a user with no connection changes nothing instead of creating a row without a credential', () => {
-    svc.storeCapabilities(USER, FULL_CAPS);
+  it('DAWARICH-SVC-131: storing against a user with no connection changes nothing instead of creating a row without a credential', async () => {
+    await svc.storeCapabilities(USER, FULL_CAPS);
     expect(row()).toBeUndefined();
   });
 
-  it('DAWARICH-SVC-132: only the named user is touched', () => {
+  it('DAWARICH-SVC-132: only the named user is touched', async () => {
     const other = createUser(testDb).user.id;
     connect(USER);
     connect(other);
 
-    svc.storeCapabilities(USER, FULL_CAPS);
+    await svc.storeCapabilities(USER, FULL_CAPS);
 
     expect(row(other)?.capabilities).toBeNull();
   });
 });
 
 describe('DawarichService recordSyncResult', () => {
-  it('DAWARICH-SVC-140: a failure is stored with its reason and a timestamp the card can show', () => {
+  it('DAWARICH-SVC-140: a failure is stored with its reason and a timestamp the card can show', async () => {
     connect(USER);
     const before = Date.now();
 
-    svc.recordSyncResult(USER, 'failed', 'unreachable');
+    await svc.recordSyncResult(USER, 'failed', 'unreachable');
 
-    const out = svc.getConnection(USER);
+    const out = await svc.getConnection(USER);
     expect(out.lastSyncState).toBe('failed');
     expect(out.lastSyncError).toBe('unreachable');
     expect(Date.parse(out.lastSyncAt ?? '')).toBeGreaterThanOrEqual(before - 1000);
   });
 
-  it('DAWARICH-SVC-141: a later success clears the error rather than leaving the old one on screen', () => {
+  it('DAWARICH-SVC-141: a later success clears the error rather than leaving the old one on screen', async () => {
     connect(USER, { lastSyncState: 'failed', lastSyncError: 'unreachable' });
 
-    svc.recordSyncResult(USER, 'ok', null);
+    await svc.recordSyncResult(USER, 'ok', null);
 
-    expect(svc.getConnection(USER)).toMatchObject({ lastSyncState: 'ok', lastSyncError: null });
+    expect(await svc.getConnection(USER)).toMatchObject({ lastSyncState: 'ok', lastSyncError: null });
   });
 
-  it('DAWARICH-SVC-142: a partial run is its own state, distinct from both ok and failed', () => {
+  it('DAWARICH-SVC-142: a partial run is its own state, distinct from both ok and failed', async () => {
     connect(USER);
-    svc.recordSyncResult(USER, 'partial', 'too_large');
-    expect(svc.getConnection(USER).lastSyncState).toBe('partial');
+    await svc.recordSyncResult(USER, 'partial', 'too_large');
+    expect((await svc.getConnection(USER)).lastSyncState).toBe('partial');
   });
 
-  it('DAWARICH-SVC-143: recording against a user with no connection changes nothing', () => {
-    svc.recordSyncResult(USER, 'ok', null);
+  it('DAWARICH-SVC-143: recording against a user with no connection changes nothing', async () => {
+    await svc.recordSyncResult(USER, 'ok', null);
     expect(row()).toBeUndefined();
   });
 });

@@ -362,7 +362,7 @@ export class ReservationsMcp {
     ctx: McpContext,
   ) {
     if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
-    if (!this.reservations.verifyTripAccess(tripId, ctx.userId)) return noAccess();
+    if (!(await this.reservations.verifyTripAccess(tripId, ctx.userId))) return noAccess();
     if (!(await this.guards.hasTripPermission('reservation_edit', tripId, ctx.userId))) return permissionDenied();
 
     // Validate that all referenced IDs belong to this trip
@@ -438,9 +438,9 @@ export class ReservationsMcp {
     ctx: McpContext,
   ) {
     if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
-    if (!this.reservations.verifyTripAccess(tripId, ctx.userId)) return noAccess();
+    if (!(await this.reservations.verifyTripAccess(tripId, ctx.userId))) return noAccess();
     if (!(await this.guards.hasTripPermission('reservation_edit', tripId, ctx.userId))) return permissionDenied();
-    const existing = this.reservations.getReservation(reservationId, tripId);
+    const existing = await this.reservations.getReservation(reservationId, tripId);
     if (!existing) return errorResult('Reservation not found.');
 
     if (place_id != null && !(await this.assignments.placeExists(place_id, tripId)))
@@ -469,7 +469,7 @@ export class ReservationsMcp {
   })
   async deleteReservation({ tripId, reservationId }: { tripId: number; reservationId: number }, ctx: McpContext) {
     if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
-    if (!this.reservations.verifyTripAccess(tripId, ctx.userId)) return noAccess();
+    if (!(await this.reservations.verifyTripAccess(tripId, ctx.userId))) return noAccess();
     if (!(await this.guards.hasTripPermission('reservation_edit', tripId, ctx.userId))) return permissionDenied();
     const { deleted, accommodationDeleted } = await this.reservations.remove(reservationId, tripId);
     if (!deleted) return errorResult('Reservation not found.');
@@ -496,12 +496,12 @@ export class ReservationsMcp {
     ctx: McpContext,
   ) {
     if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
-    if (!this.reservations.verifyTripAccess(tripId, ctx.userId)) return noAccess();
+    if (!(await this.reservations.verifyTripAccess(tripId, ctx.userId))) return noAccess();
     if (!(await this.guards.hasTripPermission('reservation_edit', tripId, ctx.userId))) return permissionDenied();
 
     // The service filters the ids against the trip roster on its own, so an
     // off-trip id cannot be attached; a missing booking is the only failure.
-    const result = this.reservations.setTravelers(String(reservationId), String(tripId), user_ids);
+    const result = await this.reservations.setTravelers(String(reservationId), String(tripId), user_ids);
     if (!result) return errorResult('Reservation not found.');
 
     this.guards.safeBroadcast(tripId, 'reservation:travelers-updated', { reservationId, travelers: result.travelers });
@@ -534,7 +534,7 @@ export class ReservationsMcp {
     ctx: McpContext,
   ) {
     if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
-    if (!this.reservations.verifyTripAccess(tripId, ctx.userId)) return noAccess();
+    if (!(await this.reservations.verifyTripAccess(tripId, ctx.userId))) return noAccess();
     if (!(await this.guards.hasTripPermission('reservation_edit', tripId, ctx.userId))) return permissionDenied();
 
     // The service scopes the write to the trip on its own, so a foreign id is
@@ -543,7 +543,7 @@ export class ReservationsMcp {
     if (dayId && !(await this.days.getDay(dayId, tripId)))
       return errorResult('dayId does not belong to this trip.');
 
-    this.reservations.updatePositions(tripId, positions, dayId);
+    await this.reservations.updatePositions(tripId, positions, dayId);
     this.guards.safeBroadcast(tripId, 'reservation:positions', { positions, dayId });
     return ok({ success: true });
   }
@@ -571,9 +571,9 @@ export class ReservationsMcp {
     ctx: McpContext,
   ) {
     if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
-    if (!this.reservations.verifyTripAccess(tripId, ctx.userId)) return noAccess();
+    if (!(await this.reservations.verifyTripAccess(tripId, ctx.userId))) return noAccess();
     if (!(await this.guards.hasTripPermission('reservation_edit', tripId, ctx.userId))) return permissionDenied();
-    const current = this.reservations.getReservation(reservationId, tripId);
+    const current = await this.reservations.getReservation(reservationId, tripId);
     if (!current) return errorResult('Reservation not found.');
     if (current.type !== 'hotel') return errorResult('Reservation is not of type hotel.');
 
@@ -617,7 +617,7 @@ export class ReservationsMcp {
     access: { group: 'reservations', mode: 'read' },
   })
   async listUpcomingReservations({ limit }: { limit?: number }, ctx: McpContext) {
-    return ok({ reservations: this.reservations.listUpcoming(ctx.userId, limit) });
+    return ok({ reservations: await this.reservations.listUpcoming(ctx.userId, limit) });
   }
 
   @ResourceTemplate({
@@ -629,7 +629,7 @@ export class ReservationsMcp {
   })
   async tripReservationsResource(uri: URL, { tripId }: { tripId: string | string[] }, ctx: McpContext) {
     const id = parseId(tripId);
-    if (id === null || !this.reservations.verifyTripAccess(id, ctx.userId)) {
+    if (id === null || !(await this.reservations.verifyTripAccess(id, ctx.userId))) {
       return {
         contents: [{
           uri: uri.href,
@@ -638,7 +638,7 @@ export class ReservationsMcp {
         }],
       };
     }
-    const reservations = this.reservations.list(id);
+    const reservations = await this.reservations.list(id);
     return {
       contents: [{
         uri: uri.href,
@@ -695,7 +695,7 @@ export class ReservationsMcp {
     ctx: McpContext,
   ) {
     if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
-    if (!this.reservations.verifyTripAccess(tripId, ctx.userId)) return noAccess();
+    if (!(await this.reservations.verifyTripAccess(tripId, ctx.userId))) return noAccess();
     if (!(await this.guards.hasTripPermission('reservation_edit', tripId, ctx.userId))) return permissionDenied();
 
     if (metadata && 'legs' in metadata) return errorResult(LEGS_IN_METADATA_ERROR);
@@ -803,12 +803,12 @@ export class ReservationsMcp {
     ctx: McpContext,
   ) {
     if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
-    if (!this.reservations.verifyTripAccess(tripId, ctx.userId)) return noAccess();
+    if (!(await this.reservations.verifyTripAccess(tripId, ctx.userId))) return noAccess();
     if (!(await this.guards.hasTripPermission('reservation_edit', tripId, ctx.userId))) return permissionDenied();
 
     if (metadata && 'legs' in metadata) return errorResult(LEGS_IN_METADATA_ERROR);
 
-    const existing = this.reservations.getReservation(reservationId, tripId);
+    const existing = await this.reservations.getReservation(reservationId, tripId);
     if (!existing) return errorResult('Transport not found.');
 
     const resolvedType = type ?? existing.type;
@@ -841,7 +841,7 @@ export class ReservationsMcp {
         type: resolvedType,
         // Endpoints the caller did not replace stay the geometry the legs run
         // over, so read them back (the row carries them) instead of guessing.
-        endpoints: resolvedEndpoints ?? (this.reservations.getReservationWithJoins(reservationId)?.endpoints ?? []).map(e => ({
+        endpoints: resolvedEndpoints ?? ((await this.reservations.getReservationWithJoins(reservationId))?.endpoints ?? []).map(e => ({
           role: e.role, sequence: e.sequence, name: e.name, code: e.code,
           lat: e.lat, lng: e.lng, timezone: e.timezone,
           local_time: e.local_time, local_date: e.local_date,
@@ -899,7 +899,7 @@ export class ReservationsMcp {
   })
   async deleteTransport({ tripId, reservationId }: { tripId: number; reservationId: number }, ctx: McpContext) {
     if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
-    if (!this.reservations.verifyTripAccess(tripId, ctx.userId)) return noAccess();
+    if (!(await this.reservations.verifyTripAccess(tripId, ctx.userId))) return noAccess();
     if (!(await this.guards.hasTripPermission('reservation_edit', tripId, ctx.userId))) return permissionDenied();
     const { deleted } = await this.reservations.remove(reservationId, tripId);
     if (!deleted) return errorResult('Transport not found.');

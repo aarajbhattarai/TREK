@@ -144,7 +144,7 @@ export class CalendarService {
    * because a user-supplied SUMMARY can legitimately contain the literal
    * "END:VEVENT". Handing out the parts removes the need to reassemble them.
    */
-  buildTripCalendar(tripId: string | number): TripCalendar {
+  async buildTripCalendar(tripId: string | number): Promise<TripCalendar> {
     const trip = this.db.prepare('SELECT * FROM trips WHERE id = ?').get(tripId) as any;
     if (!trip) throw new NotFoundError('Trip not found');
 
@@ -316,7 +316,7 @@ export class CalendarService {
 
     // Transport/flight reservations carry no top-level reservation_time; their
     // times live per endpoint (local_date + local_time) in reservation_endpoints.
-    const endpointsMap = this.reservations.loadEndpointsByTrip(tripId);
+    const endpointsMap = await this.reservations.loadEndpointsByTrip(tripId);
     const isDate = (s: string | null | undefined) => !!s && /^\d{4}-\d{2}-\d{2}$/.test(s);
     const isTime = (s: string | null | undefined) => !!s && /^\d{2}:\d{2}/.test(s);
 
@@ -746,8 +746,8 @@ export class CalendarService {
   }
 
   /** One trip's calendar as a finished, foldable VCALENDAR document. */
-  exportICS(tripId: string | number): { ics: string; filename: string } {
-    const cal = this.buildTripCalendar(tripId);
+  async exportICS(tripId: string | number): Promise<{ ics: string; filename: string }> {
+    const cal = await this.buildTripCalendar(tripId);
     const ics =
       CALENDAR_HEADER +
       `X-WR-CALNAME:${cal.calName}\r\n` +

@@ -79,7 +79,7 @@ export class TripReadModelService {
       checked: (packingItems as { checked: number }[]).filter(i => i.checked).length,
     };
 
-    const reservations = this.reservations.list(tripId);
+    const reservations = await this.reservations.list(tripId);
     const collab_notes = await this.collab.listNotes(tripId);
 
     return {
@@ -109,7 +109,7 @@ export class TripReadModelService {
       packingItems: await this.packing.listItems(tripId, viewerId),
       todoItems: await this.todo.listItems(tripId),
       budgetItems: await this.budget.listBudgetItems(tripId),
-      reservations: this.reservations.list(tripId),
+      reservations: await this.reservations.list(tripId),
       files: await this.files.listFiles(tripId, false),
       accommodations: await this.accommodations.list(tripId),
       members: [owner, ...(members || [])].filter(Boolean),

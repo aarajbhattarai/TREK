@@ -122,7 +122,7 @@ export class AirtrailImportService {
     socketId: string | undefined,
     connections: string[][] = [],
   ): Promise<AirtrailImportResult> {
-    const creds = this.airtrail.getAirtrailCredentials(userId);
+    const creds = await this.airtrail.getAirtrailCredentials(userId);
     if (!creds) throw new AirtrailRequestError('AirTrail is not connected', 400);
 
     const wanted = new Set(flightIds.map(String));

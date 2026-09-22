@@ -55,8 +55,8 @@ export class ReservationsController {
 
 
   @Get()
-  list(@CurrentUser() user: User, @Param('tripId') tripId: string) {
-    return { reservations: this.reservations.list(tripId) };
+  async list(@CurrentUser() user: User, @Param('tripId') tripId: string) {
+    return { reservations: await this.reservations.list(tripId) };
   }
 
   @RequirePermission('reservation_edit')
@@ -75,13 +75,13 @@ export class ReservationsController {
     }
     await this.reservations.syncBudgetOnCreate(tripId, reservation.id, body.title, body.type, body.create_budget_entry, socketId);
     this.reservations.broadcast(tripId, 'reservation:created', { reservation }, socketId);
-    this.reservations.notifyBookingChange(tripId, user.id, body.title, body.type ?? '');
+    await this.reservations.notifyBookingChange(tripId, user.id, body.title, body.type ?? '');
     return { reservation };
   }
 
   @RequirePermission('reservation_edit')
   @Put('positions')
-  updatePositions(
+  async updatePositions(
     @CurrentUser() user: User,
     @Param('tripId') tripId: string,
     @Body() body: ReservationPositionsDto,
@@ -89,7 +89,7 @@ export class ReservationsController {
   ) {
     // The legacy signature declares day_plan_position required, but the wire
     // contract tolerates absent values (bind NULL) — see the shared schema.
-    this.reservations.updatePositions(tripId, body.positions as { id: number; day_plan_position: number }[], body.day_id);
+    await this.reservations.updatePositions(tripId, body.positions as { id: number; day_plan_position: number }[], body.day_id);
     this.reservations.broadcast(tripId, 'reservation:positions', { positions: body.positions, day_id: body.day_id }, socketId);
     return { success: true };
   }
@@ -104,7 +104,7 @@ export class ReservationsController {
     @Headers('x-socket-id') socketId?: string,
   ) {
     const body = rawBody as ReservationBody;
-    const current = this.reservations.getReservation(id, tripId);
+    const current = await this.reservations.getReservation(id, tripId);
     if (!current) {
       throw new HttpException({ error: 'Reservation not found' }, 404);
     }
@@ -121,20 +121,20 @@ export class ReservationsController {
     if ((reservation as any)?.external_source === 'airtrail' && (reservation as any)?.sync_enabled) {
       void this.airtrailLink.pushReservationToAirtrail(Number((reservation as any).id), Number(tripId)).catch(() => {});
     }
-    this.reservations.notifyBookingChange(tripId, user.id, body.title || cur.title, body.type || cur.type || '');
+    await this.reservations.notifyBookingChange(tripId, user.id, body.title || cur.title, body.type || cur.type || '');
     return { reservation };
   }
 
   @RequirePermission('reservation_edit')
   @Put(':id/travelers')
-  updateTravelers(
+  async updateTravelers(
     @CurrentUser() user: User,
     @Param('tripId') tripId: string,
     @Param('id') id: string,
     @Body() body: ReservationTravelersDto,
     @Headers('x-socket-id') socketId?: string,
   ) {
-    const result = this.reservations.setTravelers(id, tripId, body.user_ids);
+    const result = await this.reservations.setTravelers(id, tripId, body.user_ids);
     if (!result) {
       throw new HttpException({ error: 'Reservation not found' }, 404);
     }
@@ -161,7 +161,7 @@ export class ReservationsController {
       this.reservations.broadcast(tripId, 'budget:deleted', { itemId: deletedBudgetItemId }, socketId);
     }
     this.reservations.broadcast(tripId, 'reservation:deleted', { reservationId: Number(id) }, socketId);
-    this.reservations.notifyBookingChange(tripId, user.id, deleted.title, deleted.type || '');
+    await this.reservations.notifyBookingChange(tripId, user.id, deleted.title, deleted.type || '');
     return { success: true };
   }
 
@@ -181,7 +181,7 @@ export class ReservationsController {
    * the wrong place.
    */
   private async rejectForeignReferences(tripId: string, body: ReservationBody): Promise<void> {
-    const offenders = this.reservations.referencesOutsideTrip(tripId, body as never);
+    const offenders = await this.reservations.referencesOutsideTrip(tripId, body as never);
     if (offenders.length > 0) {
       throw new HttpException({ error: `Not part of this trip: ${offenders.join(', ')}` }, 400);
     }

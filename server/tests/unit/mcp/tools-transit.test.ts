@@ -68,7 +68,7 @@ const geocodeMock = vi.spyOn(TransitService.prototype, 'geocode');
 const planMock = vi.spyOn(TransitService.prototype, 'plan');
 const notifyBookingChangeMock = vi
   .spyOn(ReservationsService.prototype, 'notifyBookingChange')
-  .mockImplementation(() => {});
+  .mockImplementation(async () => {});
 
 const from = { name: 'Namba', lat: 34.667, lng: 135.501 };
 const to = { name: 'Umeda', lat: 34.702, lng: 135.496 };
@@ -137,7 +137,7 @@ beforeEach(() => {
   planMock.mockReset();
   broadcastMock.mockReset();
   // mockReset would fall back to the real notification write — keep it stubbed.
-  notifyBookingChangeMock.mockReset().mockImplementation(() => {});
+  notifyBookingChangeMock.mockReset().mockImplementation(async () => {});
   delete process.env.DEMO_MODE;
   invalidatePermissionsCache();
 });

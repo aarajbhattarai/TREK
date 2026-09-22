@@ -47,6 +47,7 @@ import { createUser, createTrip } from '../../helpers/factories';
 import { DatabaseService } from '../../../src/nest/database/database.service';
 import { AddonsService } from '../../../src/nest/addons/addons.service';
 import { DawarichSyncService } from '../../../src/nest/integrations/dawarich-sync.service';
+import { createTestUnitOfWork } from '../../helpers/test-uow';
 import { DawarichError } from '../../../src/nest/integrations/dawarich.client';
 import type { DawarichClient, DawarichCreds, DawarichVisitRaw } from '../../../src/nest/integrations/dawarich.client';
 import type { DawarichService } from '../../../src/nest/integrations/dawarich.service';
@@ -112,7 +113,7 @@ const dawarich = {
 // (repo convention for DI-native service unit tests).
 const dbs = new DatabaseService(testDb);
 const addons = new AddonsService(dbs);
-const svc = new DawarichSyncService(dbs, addons, client, dawarich);
+let svc: DawarichSyncService;
 
 // ── Fixtures ─────────────────────────────────────────────────────────────────
 
@@ -222,9 +223,10 @@ function withVisits(...visits: DawarichVisitRaw[]): void {
   listVisits.mockResolvedValue({ visits, truncated: false, version: '1.14.4' });
 }
 
-beforeAll(() => {
+beforeAll(async () => {
   createTables(testDb);
   runMigrations(testDb);
+  svc = new DawarichSyncService(dbs, addons, client, dawarich, await createTestUnitOfWork(dbs.connection));
 });
 
 beforeEach(() => {

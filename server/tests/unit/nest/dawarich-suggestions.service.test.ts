@@ -316,21 +316,21 @@ afterAll(() => {
 // ── list / getOne ────────────────────────────────────────────────────────────
 
 describe('DawarichSuggestionsService — the review list', () => {
-  it("DAWARICH-SUG-001: list() is scoped in SQL — a stranger's suggestion never appears", () => {
+  it("DAWARICH-SUG-001: list() is scoped in SQL — a stranger's suggestion never appears", async () => {
     const { user: mine } = createUser(testDb);
     const { user: stranger } = createUser(testDb);
     const mineId = seedSuggestion({ userId: mine.id, name: 'Volksgarten' });
     const strangerId = seedSuggestion({ userId: stranger.id, name: 'Their Kitchen' });
 
-    const list = svc.list(mine.id, {});
+    const list = await svc.list(mine.id, {});
 
     expect(list.suggestions.map((s) => s.id)).toEqual([mineId]);
     expect(list.suggestions.map((s) => s.name)).not.toContain('Their Kitchen');
     // Asserted in both directions, so an id that happens to line up cannot carry it.
-    expect(svc.list(stranger.id, {}).suggestions.map((s) => s.id)).toEqual([strangerId]);
+    expect((await svc.list(stranger.id, {})).suggestions.map((s) => s.id)).toEqual([strangerId]);
   });
 
-  it('DAWARICH-SUG-002: list() narrows by trip and by state, both still inside the user scope', () => {
+  it('DAWARICH-SUG-002: list() narrows by trip and by state, both still inside the user scope', async () => {
     const { user } = createUser(testDb);
     const { user: stranger } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
@@ -342,24 +342,23 @@ describe('DawarichSuggestionsService — the review list', () => {
     seedSuggestion({ userId: user.id, tripId: otherTrip.id });
     seedSuggestion({ userId: stranger.id, tripId: strangerTrip.id });
 
-    const byTrip = svc
-      .list(user.id, { tripId: trip.id })
+    const byTrip = (await svc.list(user.id, { tripId: trip.id }))
       .suggestions.map((s) => s.id)
       .sort((a, b) => a - b);
     expect(byTrip).toEqual([onTrip, dismissed].sort((a, b) => a - b));
 
-    expect(svc.list(user.id, { tripId: trip.id, state: 'dismissed' }).suggestions.map((s) => s.id)).toEqual([
+    expect((await svc.list(user.id, { tripId: trip.id, state: 'dismissed' })).suggestions.map((s) => s.id)).toEqual([
       dismissed,
     ]);
     // Another user's trip id is not a way in: the user clause still applies.
-    expect(svc.list(user.id, { tripId: strangerTrip.id }).suggestions).toEqual([]);
+    expect((await svc.list(user.id, { tripId: strangerTrip.id })).suggestions).toEqual([]);
   });
 
-  it('DAWARICH-SUG-003: list() carries the connection state so a panel needs no second request', () => {
+  it('DAWARICH-SUG-003: list() carries the connection state so a panel needs no second request', async () => {
     const { user } = createUser(testDb);
     seedSuggestion({ userId: user.id });
 
-    const list = svc.list(user.id, {});
+    const list = await svc.list(user.id, {});
 
     expect(dawarichStub.getConnection).toHaveBeenCalledWith(user.id);
     expect(list.connected).toBe(true);
@@ -368,13 +367,13 @@ describe('DawarichSuggestionsService — the review list', () => {
     expect(list.lastSyncError).toBeNull();
   });
 
-  it('DAWARICH-SUG-004: getOne() answers null for a suggestion that belongs to somebody else', () => {
+  it('DAWARICH-SUG-004: getOne() answers null for a suggestion that belongs to somebody else', async () => {
     const { user } = createUser(testDb);
     const { user: stranger } = createUser(testDb);
     const theirs = seedSuggestion({ userId: stranger.id, name: 'Their Kitchen' });
 
-    expect(svc.getOne(user.id, theirs)).toBeNull();
-    expect(svc.getOne(stranger.id, theirs)?.name).toBe('Their Kitchen');
+    expect(await svc.getOne(user.id, theirs)).toBeNull();
+    expect((await svc.getOne(stranger.id, theirs))?.name).toBe('Their Kitchen');
   });
 
   it('DAWARICH-SUG-059: the flags the panel warns with are read off the row, never acted on', async () => {
@@ -396,7 +395,7 @@ describe('DawarichSuggestionsService — the review list', () => {
       )
       .run(id);
 
-    const wire = svc.getOne(user.id, id)!;
+    const wire = (await svc.getOne(user.id, id))!;
     expect(wire.sourceStatus).toBe('confirmed');
     expect(wire.sourceChanged).toBe(true);
     expect(wire.sourceMissing).toBe(true);
@@ -798,29 +797,29 @@ describe('DawarichSuggestionsService — what an acceptance closes off', () => {
     const id = seedSuggestion({ userId: user.id });
     await svc.accept(user.id, id, { target: 'bucket_list', bucketListItemId: wish });
 
-    const back = svc.setState(user.id, id, 'new');
+    const back = await svc.setState(user.id, id, 'new');
 
     expect(back?.state).toBe('accepted');
     expect(rowOf(id).state).toBe('accepted');
     // Dismissing it is refused the same way — the tick it produced is its own thing now.
-    expect(svc.setState(user.id, id, 'dismissed')?.state).toBe('accepted');
+    expect((await svc.setState(user.id, id, 'dismissed'))?.state).toBe('accepted');
     expect(rowOf(id).target).toBe('bucket_list');
   });
 
-  it('DAWARICH-SUG-020: a suggestion still in review dismisses and restores', () => {
+  it('DAWARICH-SUG-020: a suggestion still in review dismisses and restores', async () => {
     const { user } = createUser(testDb);
     const id = seedSuggestion({ userId: user.id });
 
-    expect(svc.setState(user.id, id, 'dismissed')?.state).toBe('dismissed');
-    expect(svc.setState(user.id, id, 'new')?.state).toBe('new');
+    expect((await svc.setState(user.id, id, 'dismissed'))?.state).toBe('dismissed');
+    expect((await svc.setState(user.id, id, 'new'))?.state).toBe('new');
   });
 
-  it("DAWARICH-SUG-021: setState on a stranger's suggestion answers null and writes nothing", () => {
+  it("DAWARICH-SUG-021: setState on a stranger's suggestion answers null and writes nothing", async () => {
     const { user } = createUser(testDb);
     const { user: stranger } = createUser(testDb);
     const theirs = seedSuggestion({ userId: stranger.id });
 
-    expect(svc.setState(user.id, theirs, 'dismissed')).toBeNull();
+    expect(await svc.setState(user.id, theirs, 'dismissed')).toBeNull();
     expect(rowOf(theirs).state).toBe('new');
   });
 });
@@ -828,7 +827,7 @@ describe('DawarichSuggestionsService — what an acceptance closes off', () => {
 // ── bucket-list confirmation ─────────────────────────────────────────────────
 
 describe('DawarichSuggestionsService — confirming a scan', () => {
-  it('DAWARICH-SUG-022: confirmBucketVisits only touches wishes that were not ticked yet', () => {
+  it('DAWARICH-SUG-022: confirmBucketVisits only touches wishes that were not ticked yet', async () => {
     const { user } = createUser(testDb);
     const open = seedBucketItem(user.id, { name: 'Hallstatt' });
     const alreadyTicked = seedBucketItem(user.id, {
@@ -837,7 +836,7 @@ describe('DawarichSuggestionsService — confirming a scan', () => {
       visitedSource: 'manual',
     });
 
-    const updated = svc.confirmBucketVisits(user.id, [open, alreadyTicked], '2026-09-05T10:00:00Z');
+    const updated = await svc.confirmBucketVisits(user.id, [open, alreadyTicked], '2026-09-05T10:00:00Z');
 
     expect(updated).toBe(1);
     expect(bucketOf(open).visited_at).toBe('2026-09-05T10:00:00Z');
@@ -847,20 +846,20 @@ describe('DawarichSuggestionsService — confirming a scan', () => {
     expect(bucketOf(alreadyTicked).visited_source).toBe('manual');
   });
 
-  it("DAWARICH-SUG-023: confirmBucketVisits ignores ids that are not the caller's", () => {
+  it("DAWARICH-SUG-023: confirmBucketVisits ignores ids that are not the caller's", async () => {
     const { user } = createUser(testDb);
     const { user: stranger } = createUser(testDb);
     const mine = seedBucketItem(user.id);
     const theirs = seedBucketItem(stranger.id);
 
-    const updated = svc.confirmBucketVisits(user.id, [mine, theirs]);
+    const updated = await svc.confirmBucketVisits(user.id, [mine, theirs]);
 
     expect(updated).toBe(1);
     expect(bucketOf(theirs).visited_at).toBeNull();
     expect(bucketOf(mine).visited_at).not.toBeNull();
   });
 
-  it('DAWARICH-SUG-056: a confirmed wish is dated from the stay that matched it, not from today', () => {
+  it('DAWARICH-SUG-056: a confirmed wish is dated from the stay that matched it, not from today', async () => {
     // A wish somebody reached in 2023, ticked off with today's date, is a wrong
     // entry in a list people keep for years. The clock is only the answer when
     // nothing else knows better.
@@ -868,24 +867,24 @@ describe('DawarichSuggestionsService — confirming a scan', () => {
     const wish = seedBucketItem(user.id, { name: 'Hallstatt' });
     seedSuggestion({ userId: user.id, matchedBucketListItemId: wish, startedAt: '2023-07-14T08:20:00Z' });
 
-    const updated = svc.confirmBucketVisits(user.id, [wish]);
+    const updated = await svc.confirmBucketVisits(user.id, [wish]);
 
     expect(updated).toBe(1);
     expect(bucketOf(wish).visited_at).toBe('2023-07-14T08:20:00Z');
     expect(bucketOf(wish).visited_source).toBe('dawarich');
   });
 
-  it('DAWARICH-SUG-024: clearBucketVisit clears the source with the date, and only for the owner', () => {
+  it('DAWARICH-SUG-024: clearBucketVisit clears the source with the date, and only for the owner', async () => {
     const { user } = createUser(testDb);
     const { user: stranger } = createUser(testDb);
     const mine = seedBucketItem(user.id, { visitedAt: '2026-09-05T10:00:00Z', visitedSource: 'dawarich' });
     const theirs = seedBucketItem(stranger.id, { visitedAt: '2026-09-05T10:00:00Z', visitedSource: 'dawarich' });
 
-    expect(svc.clearBucketVisit(user.id, mine)).toBe(true);
+    expect(await svc.clearBucketVisit(user.id, mine)).toBe(true);
     expect(bucketOf(mine).visited_at).toBeNull();
     expect(bucketOf(mine).visited_source).toBeNull();
 
-    expect(svc.clearBucketVisit(user.id, theirs)).toBe(false);
+    expect(await svc.clearBucketVisit(user.id, theirs)).toBe(false);
     expect(bucketOf(theirs).visited_at).toBe('2026-09-05T10:00:00Z');
   });
 });
@@ -1405,7 +1404,7 @@ describe('DawarichSuggestionsService — the Atlas hand-off', () => {
 
     testDb.prepare('DELETE FROM places WHERE id = ?').run(result.createdPlaceId);
 
-    const listed = svc.list(user.id, {}).suggestions.find((s) => s.id === id)!;
+    const listed = (await svc.list(user.id, {})).suggestions.find((s) => s.id === id)!;
     expect(listed.state).toBe('new');
     expect(listed.target).toBeNull();
     expect(listed.acceptedPlaceId).toBeNull();
@@ -1419,7 +1418,7 @@ describe('DawarichSuggestionsService — the Atlas hand-off', () => {
     const id = seedSuggestion({ userId: user.id, tripId: trip.id });
     await svc.accept(user.id, id, { target: 'place', tripId: trip.id });
 
-    const listed = svc.list(user.id, {}).suggestions.find((s) => s.id === id)!;
+    const listed = (await svc.list(user.id, {})).suggestions.find((s) => s.id === id)!;
     expect(listed.state).toBe('accepted');
     expect(listed.acceptedPlaceId).not.toBeNull();
   });
@@ -1444,11 +1443,11 @@ describe('DawarichSuggestionsService — the Atlas hand-off', () => {
     journeyStub.createEntry.mockReturnValue({ id: entryId });
 
     await svc.accept(user.id, id, { target: 'journal', journalId: journeyId });
-    expect(svc.list(user.id, {}).suggestions.find((s) => s.id === id)!.state).toBe('accepted');
+    expect((await svc.list(user.id, {})).suggestions.find((s) => s.id === id)!.state).toBe('accepted');
 
     testDb.prepare('DELETE FROM journey_entries WHERE id = ?').run(entryId);
 
-    expect(svc.list(user.id, {}).suggestions.find((s) => s.id === id)!.state).toBe('new');
+    expect((await svc.list(user.id, {})).suggestions.find((s) => s.id === id)!.state).toBe('new');
   });
 
   it('DAWARICH-SUG-037: reopening is scoped to the caller — another user\'s orphan stays put', async () => {
@@ -1459,7 +1458,7 @@ describe('DawarichSuggestionsService — the Atlas hand-off', () => {
     const result = await svc.accept(theirs.id, id, { target: 'place', tripId: trip.id });
     testDb.prepare('DELETE FROM places WHERE id = ?').run(result.createdPlaceId);
 
-    svc.list(mine.id, {});
+    await svc.list(mine.id, {});
 
     expect(rowOf(id).state).toBe('accepted');
   });

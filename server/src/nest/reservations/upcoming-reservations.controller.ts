@@ -18,7 +18,7 @@ export class UpcomingReservationsController {
   constructor(private readonly reservations: ReservationsService) {}
 
   @Get('upcoming')
-  upcoming(@CurrentUser() user: User) {
-    return { reservations: this.reservations.listUpcoming(user.id) };
+  async upcoming(@CurrentUser() user: User) {
+    return { reservations: await this.reservations.listUpcoming(user.id) };
   }
 }

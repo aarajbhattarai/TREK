@@ -22,7 +22,7 @@ export function toTraveler(r: { user_id: number; username: string; avatar: strin
 export class ReservationsReadRepository {
   constructor(private readonly db: DatabaseService) {}
 
-  getReservationWithJoins(id: string | number): ReservationRow | undefined {
+  async getReservationWithJoins(id: string | number): Promise<ReservationRow | undefined> {
     const row = this.db.get<ReservationRow>(`
     SELECT r.*, d.day_number, p.name as place_name, r.assignment_id,
       ap.place_id as accommodation_place_id, acc_p.name as accommodation_name,
@@ -35,22 +35,22 @@ export class ReservationsReadRepository {
     WHERE r.id = ?
   `, id);
     if (!row) return undefined;
-    row.endpoints = this.loadEndpoints(row.id);
-    row.travelers = this.loadTravelers(row.id);
+    row.endpoints = await this.loadEndpoints(row.id);
+    row.travelers = await this.loadTravelers(row.id);
     // accommodation_id is a TEXT column; the integer FK reads back as a numeric
     // string (e.g. "14.0"). Normalize to an int so clients can parse it.
     row.accommodation_id = row.accommodation_id == null ? null : Math.trunc(Number(row.accommodation_id));
     return row;
   }
 
-  loadEndpoints(reservationId: number): ReservationEndpoint[] {
+  async loadEndpoints(reservationId: number): Promise<ReservationEndpoint[]> {
     return this.db.all<ReservationEndpoint>(
       'SELECT * FROM reservation_endpoints WHERE reservation_id = ? ORDER BY sequence',
       reservationId
     );
   }
 
-  loadTravelers(reservationId: number | string): ReservationTraveler[] {
+  async loadTravelers(reservationId: number | string): Promise<ReservationTraveler[]> {
     const rows = this.db.all<ReservationTraveler>(`
     SELECT rt.user_id, COALESCE(u.display_name, u.username) AS username, u.avatar, u.is_guest
     FROM reservation_travelers rt

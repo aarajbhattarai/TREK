@@ -8,10 +8,17 @@ import { RoadtripPreferencesMcp } from '../../../src/nest/roadtrip/roadtrip-pref
 import { RoadtripPreferencesService } from '../../../src/nest/roadtrip/roadtrip-preferences.service';
 import { RoadtripMcp } from '../../../src/nest/roadtrip/roadtrip.mcp';
 import { roadtripPreferencesUpdateSchema } from '@trek/shared';
+import type { UnitOfWork } from '../../../src/nest/database/unit-of-work';
 
 import { describe, it, expect, vi } from 'vitest';
 
 const ctx = { userId: 5 } as McpContext;
+/**
+ * There is no database behind this suite — every statement is served by the
+ * fakes below — so the UnitOfWork is a pass-through: it runs the callback as
+ * MikroORM would, with no transaction to open on.
+ */
+const uowStub = { transactional: <T>(fn: () => Promise<T>) => fn() } as unknown as UnitOfWork;
 function setup() {
   const settings: Record<string, unknown> = {
     roadtrip_day_start: '08:00',
@@ -35,7 +42,7 @@ function setup() {
     ),
     transaction: (fn: () => unknown) => fn(),
   };
-  const preferences = new RoadtripPreferencesService(preferenceDb as never, realtime as never);
+  const preferences = new RoadtripPreferencesService(preferenceDb as never, realtime as never, uowStub);
   const days = [{ id: 1, day_number: 1, title: null, date: '2026-09-11', default_transport_mode: 'driving' }];
   const visits = [1, 2, 3].map((id) => ({
     id,
@@ -92,22 +99,22 @@ function setup() {
 }
 
 describe('roadtrip preferences', () => {
-  it('reads only public driving preferences and never endpoint URLs or credentials', () => {
+  it('reads only public driving preferences and never endpoint URLs or credentials', async () => {
     const s = setup();
-    expect(s.preferences.read(10)).toMatchObject({ roadtrip_range_km: 100 });
-    expect(JSON.stringify(s.preferences.read(10))).not.toMatch(/secret|private.example|routing_base_url/);
+    expect(await s.preferences.read(10)).toMatchObject({ roadtrip_range_km: 100 });
+    expect(JSON.stringify(await s.preferences.read(10))).not.toMatch(/secret|private.example|routing_base_url/);
   });
-  it('validates the complete window before an atomic write and broadcasts to every member of its trip', () => {
+  it('validates the complete window before an atomic write and broadcasts to every member of its trip', async () => {
     const s = setup();
-    expect(() => s.preferences.update(10, { roadtrip_day_end: '06:00', roadtrip_range_km: 200 })).toThrow();
+    await expect(s.preferences.update(10, { roadtrip_day_end: '06:00', roadtrip_range_km: 200 })).rejects.toThrow();
     expect(s.preferenceDb.run).not.toHaveBeenCalled();
-    s.preferences.update(10, { roadtrip_day_start: '06:00', roadtrip_day_end: '09:00' });
+    await s.preferences.update(10, { roadtrip_day_start: '06:00', roadtrip_day_end: '09:00' });
     // The fourth argument is the socket that saved, so the tab that made the
     // change is left out of its own echo. Undefined here: no header was sent.
     expect(s.realtime.broadcast).toHaveBeenCalledWith('10', 'roadtripPreferences:changed', {
-      preferences: s.preferences.read(10),
+      preferences: await s.preferences.read(10),
     }, undefined);
-    expect(s.preferences.read(10).roadtrip_range_km).toBe(100);
+    expect((await s.preferences.read(10)).roadtrip_range_km).toBe(100);
   });
   it.each([
     { llm_api_key: 'x' },
@@ -121,8 +128,8 @@ describe('roadtrip preferences', () => {
   });
   it('allows clearing daily times and limits and refuses demo writes', async () => {
     const s = setup();
-    s.preferences.update(10, { roadtrip_day_start: '', roadtrip_range_km: 0 });
-    expect(s.preferences.read(10).roadtrip_day_start).toBe('');
+    await s.preferences.update(10, { roadtrip_day_start: '', roadtrip_range_km: 0 });
+    expect((await s.preferences.read(10)).roadtrip_day_start).toBe('');
     const mcp = new RoadtripPreferencesMcp(
       s.preferences,
       { isDemoUser: () => true } as never,
@@ -147,7 +154,7 @@ describe('roadtrip preferences', () => {
     );
     const res = await mcp.update({ tripId: 10, settings: { roadtrip_day_end: '06:00' } }, ctx);
     expect([res.isError, res.content[0].text]).toEqual([true, 'Day end must be later than day start.']);
-    expect(s.preferences.read(10).roadtrip_day_end).toBe('10:00');
+    expect((await s.preferences.read(10)).roadtrip_day_end).toBe('10:00');
   });
 });
 
@@ -166,7 +173,7 @@ describe('browser-independent roadtrip calculation', () => {
   it('previews settings without saving them', async () => {
     const s = setup();
     await s.plans.calculate(10, 5, { roadtrip_day_end: '20:00' });
-    expect(s.preferences.read(10).roadtrip_day_end).toBe('10:00');
+    expect((await s.preferences.read(10)).roadtrip_day_end).toBe('10:00');
     expect(s.preferenceDb.run).not.toHaveBeenCalled();
   });
   it('checks trip access before reading or routing', async () => {

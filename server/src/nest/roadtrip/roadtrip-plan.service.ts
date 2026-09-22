@@ -88,11 +88,11 @@ export class RoadtripPlanService {
     return {
       days,
       visits,
-      settings: this.preferences.read(tripId),
+      settings: await this.preferences.read(tripId),
       profiles: await this.router.profiles(),
-      vias: this.roadtrip.listForTrip(tripId),
-      tracks: this.roadtrip.tracksForTrip(tripId),
-      boundaries: this.boundaries.list(tripId),
+      vias: await this.roadtrip.listForTrip(tripId),
+      tracks: await this.roadtrip.tracksForTrip(tripId),
+      boundaries: await this.boundaries.list(tripId),
     };
   }
 

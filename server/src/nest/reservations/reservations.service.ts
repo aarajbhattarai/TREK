@@ -155,7 +155,7 @@ export class ReservationsService {
     private readonly uow: UnitOfWork,
   ) {}
 
-  verifyTripAccess(tripId: string | number, userId: number) {
+  async verifyTripAccess(tripId: string | number, userId: number) {
     return this.db.canAccessTrip(tripId, userId);
   }
 
@@ -185,7 +185,7 @@ export class ReservationsService {
   }
 
   /** Fire-and-forget booking-change notification, mirroring the legacy dynamic import. */
-  notifyBookingChange(tripId: string | number, actorId: number, booking: string, type: string): void {
+  async notifyBookingChange(tripId: string | number, actorId: number, booking: string, type: string): Promise<void> {
     // Injected, not a lazy import of the old notifications bridge. The laziness bought
     // nothing the module graph does not already give — NotificationsModule
     // reaches nothing in this direction — and it hid the edge while handing the
@@ -212,7 +212,7 @@ export class ReservationsService {
     }
   }
 
-  loadEndpointsByTrip(tripId: string | number): Map<number, ReservationEndpoint[]> {
+  async loadEndpointsByTrip(tripId: string | number): Promise<Map<number, ReservationEndpoint[]>> {
     const rows = this.db.all<ReservationEndpoint>(`
     SELECT e.* FROM reservation_endpoints e
     JOIN reservations r ON e.reservation_id = r.id
@@ -229,7 +229,7 @@ export class ReservationsService {
   }
 
   /** Users assignable on a trip: its members (guests included) plus the owner. */
-  private assignableUserIds(tripId: string | number): Set<number> {
+  private async assignableUserIds(tripId: string | number): Promise<Set<number>> {
     const members = this.db.all<{ user_id: number }>('SELECT user_id FROM trip_members WHERE trip_id = ?', tripId);
     const ids = new Set(members.map(m => m.user_id));
     const owner = this.db.get<{ user_id: number }>('SELECT user_id FROM trips WHERE id = ?', tripId);
@@ -237,7 +237,7 @@ export class ReservationsService {
     return ids;
   }
 
-  loadTravelersByTrip(tripId: string | number): Map<number, ReservationTraveler[]> {
+  async loadTravelersByTrip(tripId: string | number): Promise<Map<number, ReservationTraveler[]>> {
     const rows = this.db.all<ReservationTraveler & { reservation_id: number }>(`
     SELECT rt.reservation_id, rt.user_id, COALESCE(u.display_name, u.username) AS username, u.avatar, u.is_guest
     FROM reservation_travelers rt
@@ -255,7 +255,7 @@ export class ReservationsService {
     return map;
   }
 
-  loadTravelers(reservationId: number | string): ReservationTraveler[] {
+  async loadTravelers(reservationId: number | string): Promise<ReservationTraveler[]> {
     return this.reads.loadTravelers(reservationId);
   }
 
@@ -264,10 +264,10 @@ export class ReservationsService {
    * accepted — ids that aren't on the trip are silently dropped so a stale client
    * can't leak a cross-trip user. #1517.
    */
-  setReservationTravelers(reservationId: number | string, tripId: string | number, userIds: number[]): void {
-    const allowed = this.assignableUserIds(tripId);
+  async setReservationTravelers(reservationId: number | string, tripId: string | number, userIds: number[]): Promise<void> {
+    const allowed = await this.assignableUserIds(tripId);
     const ids = [...new Set(userIds)].filter(uid => allowed.has(uid));
-    this.db.transaction(() => {
+    await this.uow.transactional(async () => {
       this.db.run('DELETE FROM reservation_travelers WHERE reservation_id = ?', reservationId);
       if (ids.length > 0) {
         const insert = this.db.prepare('INSERT OR IGNORE INTO reservation_travelers (reservation_id, user_id) VALUES (?, ?)');
@@ -277,10 +277,10 @@ export class ReservationsService {
   }
 
   /** Assign trip members / named guests to a reservation (#1517). Null when off-trip. */
-  setTravelers(id: string, tripId: string, userIds: number[]) {
-    if (!this.getReservation(id, tripId)) return null;
-    this.setReservationTravelers(id, tripId, userIds);
-    return { travelers: this.loadTravelers(id), reservation: this.getReservationWithJoins(Number(id)) };
+  async setTravelers(id: string, tripId: string, userIds: number[]) {
+    if (!(await this.getReservation(id, tripId))) return null;
+    await this.setReservationTravelers(id, tripId, userIds);
+    return { travelers: await this.loadTravelers(id), reservation: await this.getReservationWithJoins(Number(id)) };
   }
 
   // Resolve the day row whose date matches the date portion of an ISO-ish
@@ -288,11 +288,11 @@ export class ReservationsService {
   // `reservation_time` / `reservation_end_time` so non-transport bookings
   // (tours, restaurants, events, ...) end up on the right day in the UI,
   // which now filters by day_id instead of reservation_time.
-  private resolveDayIdFromTime(
+  private async resolveDayIdFromTime(
     tripId: string | number,
     time: string | null | undefined,
     clampToNearest = true,
-  ): number | null {
+  ): Promise<number | null> {
     if (!time) return null;
     const datePart = time.slice(0, 10);
     if (!/^\d{4}-\d{2}-\d{2}$/.test(datePart)) return null;
@@ -318,7 +318,7 @@ export class ReservationsService {
   // the new range is left untouched. Hotels linked to a day_accommodation are excluded here —
   // resyncAccommodationDays re-anchors the accommodation span and its linked reservation;
   // unlinked dated hotels (e.g. imported ones) re-anchor like any other booking.
-  resyncReservationDays(tripId: string | number): void {
+  async resyncReservationDays(tripId: string | number): Promise<void> {
     const rows = this.db.all<{
       id: number; reservation_time: string | null; reservation_end_time: string | null;
       day_id: number | null; end_day_id: number | null;
@@ -329,12 +329,12 @@ export class ReservationsService {
       tripId
     );
     const update = this.db.prepare('UPDATE reservations SET day_id = ?, end_day_id = ? WHERE id = ?');
-    this.db.transaction(() => {
+    await this.uow.transactional(async () => {
       for (const r of rows) {
-        const newDayId = this.resolveDayIdFromTime(tripId, r.reservation_time, false);
+        const newDayId = await this.resolveDayIdFromTime(tripId, r.reservation_time, false);
         if (newDayId == null) continue;
         const newEndDayId = r.reservation_end_time
-          ? (this.resolveDayIdFromTime(tripId, r.reservation_end_time, false) ?? r.end_day_id)
+          ? ((await this.resolveDayIdFromTime(tripId, r.reservation_end_time, false)) ?? r.end_day_id)
           : r.end_day_id;
         if (newDayId !== r.day_id || newEndDayId !== r.end_day_id) {
           update.run(newDayId, newEndDayId, r.id);
@@ -343,7 +343,7 @@ export class ReservationsService {
     });
   }
 
-  private saveEndpoints(reservationId: number, endpoints: EndpointInput[]): void {
+  private async saveEndpoints(reservationId: number, endpoints: EndpointInput[]): Promise<void> {
     // Run the transaction through DatabaseService (which re-derives the
     // statement from the injected connection on each call). The bridge
     // instance is built over the reinitialize-proof `db` Proxy, so a
@@ -351,7 +351,7 @@ export class ReservationsService {
     // connection can't leave this holding a dead handle — the legacy module
     // bound its transaction lazily per call for the same reason ("The
     // database connection is not open").
-    this.db.transaction(() => {
+    await this.uow.transactional(async () => {
       this.db.run('DELETE FROM reservation_endpoints WHERE reservation_id = ?', reservationId);
       const insert = this.db.prepare(`
       INSERT INTO reservation_endpoints (reservation_id, role, sequence, name, code, lat, lng, timezone, local_time, local_date)
@@ -369,7 +369,7 @@ export class ReservationsService {
     });
   }
 
-  list(tripId: string | number) {
+  async list(tripId: string | number) {
     const reservations = this.db.all<ReservationRow>(`
     SELECT r.*, d.day_number, p.name as place_name, r.assignment_id,
       ap.place_id as accommodation_place_id, acc_p.name as accommodation_name,
@@ -396,8 +396,8 @@ export class ReservationsService {
       posMap.get(dp.reservation_id)![dp.day_id] = dp.position;
     }
 
-    const endpointsMap = this.loadEndpointsByTrip(tripId);
-    const travelersMap = this.loadTravelersByTrip(tripId);
+    const endpointsMap = await this.loadEndpointsByTrip(tripId);
+    const travelersMap = await this.loadTravelersByTrip(tripId);
 
     for (const r of reservations) {
       r.day_positions = posMap.get(r.id) || null;
@@ -432,7 +432,7 @@ export class ReservationsService {
    * old date. Both halves of the report come from reading a hotel's date off
    * fields hotels do not use.
    */
-  listUpcoming(userId: number, limit = 6) {
+  async listUpcoming(userId: number, limit = 6) {
     const today = new Date().toISOString().slice(0, 10);
     const now = new Date().toISOString();
 
@@ -512,7 +512,7 @@ export class ReservationsService {
     return reservations;
   }
 
-  getReservationWithJoins(id: string | number) {
+  async getReservationWithJoins(id: string | number) {
     return this.reads.getReservationWithJoins(id);
   }
 
@@ -527,7 +527,7 @@ export class ReservationsService {
    *
    * Returns the offending field names, empty when the body is clean.
    */
-  referencesOutsideTrip(tripId: string | number, data: CreateReservationData | UpdateReservationData): string[] {
+  async referencesOutsideTrip(tripId: string | number, data: CreateReservationData | UpdateReservationData): Promise<string[]> {
     const offenders: string[] = [];
     // An id that resolves to nothing is not an offender. accommodation_id in
     // particular carries no foreign key, so shortening a trip's date range
@@ -621,7 +621,7 @@ export class ReservationsService {
 
   /** Is there still a row behind this id? Existence only — which trip it sits
    *  on is the guards' question, and they answer it before the write. */
-  private referenceExists(table: 'days' | 'places' | 'day_assignments', id: unknown): boolean {
+  private async referenceExists(table: 'days' | 'places' | 'day_assignments', id: unknown): Promise<boolean> {
     return !!this.db.get(`SELECT id FROM ${table} WHERE id = ?`, id);
   }
 
@@ -635,8 +635,8 @@ export class ReservationsService {
    * (#2355), and an update rebinds whatever the row already held, so a guard
    * on the body alone never reaches it.
    */
-  private resolvedOrNull(table: 'days' | 'places' | 'day_assignments', id: number | null): number | null {
-    return id != null && this.referenceExists(table, id) ? id : null;
+  private async resolvedOrNull(table: 'days' | 'places' | 'day_assignments', id: number | null): Promise<number | null> {
+    return id != null && (await this.referenceExists(table, id)) ? id : null;
   }
 
   /**
@@ -655,11 +655,11 @@ export class ReservationsService {
    * unplaceable class would collapse to (#2355). Its message survives, so the
    * importer that logs and moves on still names the field.
    */
-  private requireResolvableStay(acc: CreateAccommodation): void {
+  private async requireResolvableStay(acc: CreateAccommodation): Promise<void> {
     const missing: string[] = [];
-    if (acc.place_id && !this.referenceExists('places', acc.place_id)) missing.push('place_id');
-    if (!this.referenceExists('days', acc.start_day_id)) missing.push('start_day_id');
-    if (!this.referenceExists('days', acc.end_day_id)) missing.push('end_day_id');
+    if (acc.place_id && !(await this.referenceExists('places', acc.place_id))) missing.push('place_id');
+    if (!(await this.referenceExists('days', acc.start_day_id))) missing.push('start_day_id');
+    if (!(await this.referenceExists('days', acc.end_day_id))) missing.push('end_day_id');
     if (missing.length > 0) {
       throw new BadRequestException(`Unknown reference: ${missing.map((field) => `create_accommodation.${field}`).join(', ')}`);
     }
@@ -694,7 +694,7 @@ export class ReservationsService {
     if (type === 'hotel' && !resolvedAccommodationId && create_accommodation) {
       const { place_id: accPlaceId, start_day_id, end_day_id, check_in, check_out, confirmation: accConf } = create_accommodation;
       if (start_day_id && end_day_id) {
-        this.requireResolvableStay(create_accommodation);
+        await this.requireResolvableStay(create_accommodation);
         const accResult = this.db.run(
           'INSERT INTO day_accommodations (trip_id, place_id, start_day_id, end_day_id, check_in, check_out, confirmation) VALUES (?, ?, ?, ?, ?, ?, ?)',
           tripId, accPlaceId || null, start_day_id, end_day_id, check_in || null, check_out || null, accConf || confirmation_number || null
@@ -715,17 +715,17 @@ export class ReservationsService {
     const resolvedType = type || 'other';
     let resolvedDayId: number | null = day_id ?? null;
     if (resolvedDayId == null && resolvedType !== 'hotel' && reservation_time) {
-      resolvedDayId = this.resolveDayIdFromTime(tripId, reservation_time);
+      resolvedDayId = await this.resolveDayIdFromTime(tripId, reservation_time);
     }
     let resolvedEndDayId: number | null = end_day_id ?? null;
     if (resolvedEndDayId == null && resolvedType !== 'hotel' && reservation_end_time) {
-      resolvedEndDayId = this.resolveDayIdFromTime(tripId, reservation_end_time);
+      resolvedEndDayId = await this.resolveDayIdFromTime(tripId, reservation_end_time);
     }
 
-    resolvedDayId = this.resolvedOrNull('days', resolvedDayId);
-    resolvedEndDayId = this.resolvedOrNull('days', resolvedEndDayId);
-    const resolvedPlaceId = this.resolvedOrNull('places', place_id || null);
-    const resolvedAssignmentId = this.resolvedOrNull('day_assignments', assignment_id || null);
+    resolvedDayId = await this.resolvedOrNull('days', resolvedDayId);
+    resolvedEndDayId = await this.resolvedOrNull('days', resolvedEndDayId);
+    const resolvedPlaceId = await this.resolvedOrNull('places', place_id || null);
+    const resolvedAssignmentId = await this.resolvedOrNull('day_assignments', assignment_id || null);
 
     const result = this.db.run(`
     INSERT INTO reservations (trip_id, day_id, end_day_id, place_id, assignment_id, title, reservation_time, reservation_end_time, location, confirmation_number, notes, url, status, type, accommodation_id, metadata, needs_review)
@@ -751,7 +751,7 @@ export class ReservationsService {
     );
 
     if (endpoints && endpoints.length > 0) {
-      this.saveEndpoints(Number(result.lastInsertRowid), endpoints);
+      await this.saveEndpoints(Number(result.lastInsertRowid), endpoints);
     }
 
     // Sync check-in/out to accommodation if linked. Keyed off the RESOLVED id
@@ -775,11 +775,11 @@ export class ReservationsService {
     }
 
     // The row was just inserted, so the re-select can't miss (legacy typed this any).
-    const reservation = this.getReservationWithJoins(Number(result.lastInsertRowid))!;
+    const reservation = (await this.getReservationWithJoins(Number(result.lastInsertRowid)))!;
     return { reservation, accommodationCreated, stayMirror };
   }
 
-  updatePositions(tripId: string | number, positions: { id: number; day_plan_position?: number }[], dayId?: number | string | null) {
+  async updatePositions(tripId: string | number, positions: { id: number; day_plan_position?: number }[], dayId?: number | string | null): Promise<void> {
     if (dayId) {
       // Per-day positions for multi-day reservations, scoped the way the legacy
       // branch below already scopes its update. The table carries no trip_id and
@@ -795,7 +795,7 @@ export class ReservationsService {
           JOIN days d ON d.trip_id = r.trip_id
          WHERE r.id = ? AND d.id = ? AND r.trip_id = ?
       `);
-      this.db.transaction(() => {
+      await this.uow.transactional(async () => {
         for (const item of positions) {
           // position is NOT NULL while the wire contract leaves the value optional.
           stmt.run(item.day_plan_position ?? 0, item.id, dayId, tripId);
@@ -804,7 +804,7 @@ export class ReservationsService {
     } else {
       // Legacy: update global position
       const stmt = this.db.prepare('UPDATE reservations SET day_plan_position = ? WHERE id = ? AND trip_id = ?');
-      this.db.transaction(() => {
+      await this.uow.transactional(async () => {
         for (const item of positions) {
           stmt.run(item.day_plan_position, item.id, tripId);
         }
@@ -812,7 +812,7 @@ export class ReservationsService {
     }
   }
 
-  getReservation(id: string | number, tripId: string | number) {
+  async getReservation(id: string | number, tripId: string | number) {
     return this.db.get<Reservation>('SELECT * FROM reservations WHERE id = ? AND trip_id = ?', id, tripId);
   }
 
@@ -846,7 +846,7 @@ export class ReservationsService {
     if (type === 'hotel' && create_accommodation) {
       const { place_id: accPlaceId, start_day_id, end_day_id, check_in, check_out, confirmation: accConf } = create_accommodation;
       if (start_day_id && end_day_id) {
-        this.requireResolvableStay(create_accommodation);
+        await this.requireResolvableStay(create_accommodation);
         if (resolvedAccId) {
           const prior = this.db.get<{ check_in: string | null }>('SELECT check_in FROM day_accommodations WHERE id = ?', resolvedAccId);
           this.db.run(
@@ -897,7 +897,7 @@ export class ReservationsService {
       // No day set but we have a date — pin it to the matching day so the booking
       // still shows in the Plan (covers bookings saved without a selected day, and
       // the case where an earlier edit cleared day_id).
-      nextDayId = this.resolveDayIdFromTime(tripId, nextReservationTime);
+      nextDayId = await this.resolveDayIdFromTime(tripId, nextReservationTime);
     } else if (day_id === undefined) {
       // Field absent and nothing to derive from — keep whatever it had.
       nextDayId = current.day_id ?? null;
@@ -909,15 +909,15 @@ export class ReservationsService {
     if (end_day_id !== undefined) {
       nextEndDayId = end_day_id ?? null;
     } else if (reservation_end_time !== undefined && resolvedType !== 'hotel') {
-      nextEndDayId = this.resolveDayIdFromTime(tripId, nextReservationEndTime);
+      nextEndDayId = await this.resolveDayIdFromTime(tripId, nextReservationEndTime);
     } else {
       nextEndDayId = current.end_day_id ?? null;
     }
 
-    nextDayId = this.resolvedOrNull('days', nextDayId);
-    nextEndDayId = this.resolvedOrNull('days', nextEndDayId);
-    const nextPlaceId = this.resolvedOrNull('places', place_id !== undefined ? (place_id || null) : (current.place_id ?? null));
-    const nextAssignmentId = this.resolvedOrNull('day_assignments', assignment_id !== undefined ? (assignment_id || null) : (current.assignment_id ?? null));
+    nextDayId = await this.resolvedOrNull('days', nextDayId);
+    nextEndDayId = await this.resolvedOrNull('days', nextEndDayId);
+    const nextPlaceId = await this.resolvedOrNull('places', place_id !== undefined ? (place_id || null) : (current.place_id ?? null));
+    const nextAssignmentId = await this.resolvedOrNull('day_assignments', assignment_id !== undefined ? (assignment_id || null) : (current.assignment_id ?? null));
 
     this.db.run(`
     UPDATE reservations SET
@@ -959,7 +959,7 @@ export class ReservationsService {
     );
 
     if (endpoints !== undefined) {
-      this.saveEndpoints(Number(id), endpoints);
+      await this.saveEndpoints(Number(id), endpoints);
     }
 
     // Sync check-in/out to accommodation if linked
@@ -983,7 +983,7 @@ export class ReservationsService {
 
     // The caller passed the pre-checked `current` row, so the re-select can't
     // miss (legacy typed this any).
-    const reservation = this.getReservationWithJoins(id)!;
+    const reservation = (await this.getReservationWithJoins(id))!;
     return { reservation, accommodationChanged, stayMirror };
   }
 

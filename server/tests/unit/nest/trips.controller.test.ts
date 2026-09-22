@@ -394,31 +394,31 @@ describe('TripsController (parity with the legacy /api/trips route)', async () =
 
   describe('GET /:id/export.ics', () => {
     function makeRes() { return { setHeader: vi.fn(), send: vi.fn() } as never; }
-    it('404 without access, else sends the calendar with headers', () => {
-      expect(thrown(() => tc(svc({ canAccessTrip: vi.fn().mockReturnValue(undefined) })).exportIcs(user, '9', makeRes()))).toEqual({ status: 404, body: { error: 'Trip not found' } });
+    it('404 without access, else sends the calendar with headers', async () => {
+      expect(await thrownAsync(() => tc(svc({ canAccessTrip: vi.fn().mockReturnValue(undefined) })).exportIcs(user, '9', makeRes()))).toEqual({ status: 404, body: { error: 'Trip not found' } });
       const res = { setHeader: vi.fn(), send: vi.fn() };
       const cal = { exportICS: vi.fn().mockReturnValue({ ics: 'BEGIN:VCALENDAR', filename: 'trip.ics' }) };
-      tc(svc(), cal).exportIcs(user, '9', res as never);
+      await tc(svc(), cal).exportIcs(user, '9', res as never);
       expect(res.setHeader).toHaveBeenCalledWith('Content-Type', 'text/calendar; charset=utf-8');
       expect(res.setHeader).toHaveBeenCalledWith('Content-Disposition', 'attachment; filename="trip.ics"');
       expect(res.send).toHaveBeenCalledWith('BEGIN:VCALENDAR');
     });
 
-    it('folds a non-ASCII filename into an ASCII header with filename* instead of crashing setHeader (#2165)', () => {
+    it('folds a non-ASCII filename into an ASCII header with filename* instead of crashing setHeader (#2165)', async () => {
       const res = { setHeader: vi.fn(), send: vi.fn() };
       const cal = { exportICS: vi.fn().mockReturnValue({ ics: 'BEGIN:VCALENDAR', filename: '沖縄.ics' }) };
-      tc(svc(), cal).exportIcs(user, '9', res as never);
+      await tc(svc(), cal).exportIcs(user, '9', res as never);
       expect(res.setHeader).toHaveBeenCalledWith(
         'Content-Disposition',
         'attachment; filename="download.ics"; filename*=UTF-8\'\'%E6%B2%96%E7%B8%84.ics',
       );
     });
 
-    it('maps a NotFoundError from the export to 404 and re-throws others', () => {
+    it('maps a NotFoundError from the export to 404 and re-throws others', async () => {
       const nf = { exportICS: vi.fn().mockImplementation(() => { throw new NotFoundError('gone'); }) };
-      expect(thrown(() => tc(svc(), nf).exportIcs(user, '9', makeRes()))).toEqual({ status: 404, body: { error: 'gone' } });
+      expect(await thrownAsync(() => tc(svc(), nf).exportIcs(user, '9', makeRes()))).toEqual({ status: 404, body: { error: 'gone' } });
       const other = { exportICS: vi.fn().mockImplementation(() => { throw new Error('boom'); }) };
-      expect(() => tc(svc(), other).exportIcs(user, '9', makeRes())).toThrow('boom');
+      await expect(tc(svc(), other).exportIcs(user, '9', makeRes())).rejects.toThrow('boom');
     });
   });
 

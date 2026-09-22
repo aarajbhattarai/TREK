@@ -43,7 +43,7 @@ export class RoadtripPreferencesMcp {
   })
   async read({ tripId }: { tripId: number }, ctx: McpContext) {
     if (!this.db.canAccessTrip(tripId, ctx.userId)) return noAccess();
-    return ok({ tripId, settings: this.preferences.read(tripId), scope: 'trip' });
+    return ok({ tripId, settings: await this.preferences.read(tripId), scope: 'trip' });
   }
 
   @Tool({
@@ -60,6 +60,6 @@ export class RoadtripPreferencesMcp {
     if (!this.db.canAccessTrip(tripId, ctx.userId)) return noAccess();
     if (!(await this.guards.hasTripPermission('day_edit', tripId, ctx.userId))) return permissionDenied();
     // A day window that ends before it starts is refused by the service, with the reason.
-    return answeringRefusals(() => ok({ tripId, settings: this.preferences.update(tripId, settings), scope: 'trip' }));
+    return answeringRefusals(async () => ok({ tripId, settings: await this.preferences.update(tripId, settings), scope: 'trip' }));
   }
 }

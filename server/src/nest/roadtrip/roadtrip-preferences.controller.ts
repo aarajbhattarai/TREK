@@ -18,13 +18,13 @@ export class RoadtripPreferencesController {
   constructor(private readonly preferences: RoadtripPreferencesService) {}
 
   @Get()
-  read(@Param('tripId') tripId: string) {
-    return { tripId: Number(tripId), preferences: this.preferences.read(Number(tripId)) };
+  async read(@Param('tripId') tripId: string) {
+    return { tripId: Number(tripId), preferences: await this.preferences.read(Number(tripId)) };
   }
 
   @Put()
   @RequirePermission('day_edit')
-  update(@Param('tripId') tripId: string, @Body() patch: PreferencesDto, @Headers('x-socket-id') socketId?: string) {
-    return { tripId: Number(tripId), preferences: this.preferences.update(Number(tripId), patch, socketId) };
+  async update(@Param('tripId') tripId: string, @Body() patch: PreferencesDto, @Headers('x-socket-id') socketId?: string) {
+    return { tripId: Number(tripId), preferences: await this.preferences.update(Number(tripId), patch, socketId) };
   }
 }

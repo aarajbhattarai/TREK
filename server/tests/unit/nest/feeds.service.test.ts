@@ -118,13 +118,13 @@ function seedUserWithToken(token: string, overrides: Partial<{ username: string 
 // ── Trip feed token ───────────────────────────────────────────────────────────
 
 describe('trip feed token lifecycle', () => {
-  it('FEED-SVC-001: reports no URL while the trip has no token', () => {
+  it('FEED-SVC-001: reports no URL while the trip has no token', async () => {
     const { user, tripId } = seedTrip();
 
     expect(svc.getTripToken(tripId, user.id, BASE)).toEqual({ feed_url: null });
   });
 
-  it('FEED-SVC-002: reports the absolute feed URL once a token exists', () => {
+  it('FEED-SVC-002: reports the absolute feed URL once a token exists', async () => {
     const { user, tripId } = seedTrip('tok-trip');
 
     expect(svc.getTripToken(tripId, user.id, BASE)).toEqual({
@@ -132,7 +132,7 @@ describe('trip feed token lifecycle', () => {
     });
   });
 
-  it('FEED-SVC-003: a trailing slash on the base is stripped, never doubled into //api', () => {
+  it('FEED-SVC-003: a trailing slash on the base is stripped, never doubled into //api', async () => {
     // APP_URL is user-supplied config; pasted with a trailing slash it would
     // otherwise produce https://host//api/feed/... which some clients reject.
     const { user, tripId } = seedTrip('tok-trip');
@@ -142,7 +142,7 @@ describe('trip feed token lifecycle', () => {
     );
   });
 
-  it('FEED-SVC-004: a user without access gets null, not the token of a foreign trip', () => {
+  it('FEED-SVC-004: a user without access gets null, not the token of a foreign trip', async () => {
     // The token is the credential for the public feed, so leaking it through the
     // authenticated GET would hand a stranger the whole trip.
     const { tripId } = seedTrip('tok-trip');
@@ -154,7 +154,7 @@ describe('trip feed token lifecycle', () => {
   // Membership is what the service checks, and that stays true: whether the
   // caller may manage the credential at all is decided one layer up, by
   // TripAccessGuard + @RequirePermission('share_manage') on the controller.
-  it('FEED-SVC-005: a trip shared with the user as a member resolves too', () => {
+  it('FEED-SVC-005: a trip shared with the user as a member resolves too', async () => {
     const { trip, tripId } = seedTrip('tok-trip');
     const { user: member } = createUser(testDb);
     addTripMember(testDb, trip.id, member.id);
@@ -164,7 +164,7 @@ describe('trip feed token lifecycle', () => {
     );
   });
 
-  it('FEED-SVC-006: generate mints a token once and stays idempotent', () => {
+  it('FEED-SVC-006: generate mints a token once and stays idempotent', async () => {
     // Enabling twice must not invalidate a URL the user already handed to their
     // calendar client — that is what rotate is for.
     const { user, tripId } = seedTrip();
@@ -176,7 +176,7 @@ describe('trip feed token lifecycle', () => {
     expect(second.feed_url).toBe(first.feed_url);
   });
 
-  it('FEED-SVC-007: rotate issues a fresh token and the previous URL stops resolving', () => {
+  it('FEED-SVC-007: rotate issues a fresh token and the previous URL stops resolving', async () => {
     const { user, tripId } = seedTrip();
     const before = svc.generateTripToken(tripId, user.id, BASE).feed_url;
     const oldToken = before.match(/trip\/([0-9a-f-]+)\.ics$/)![1];
@@ -184,10 +184,10 @@ describe('trip feed token lifecycle', () => {
     const after = svc.rotateTripToken(tripId, user.id, BASE).feed_url;
 
     expect(after).not.toBe(before);
-    expect(svc.buildTripIcs(oldToken)).toBeNull();
+    expect(await svc.buildTripIcs(oldToken)).toBeNull();
   });
 
-  it('FEED-SVC-008: disable clears the column so the public URL dies', () => {
+  it('FEED-SVC-008: disable clears the column so the public URL dies', async () => {
     const { user, tripId } = seedTrip();
     const url = svc.generateTripToken(tripId, user.id, BASE).feed_url;
     const token = url.match(/trip\/([0-9a-f-]+)\.ics$/)![1];
@@ -195,10 +195,10 @@ describe('trip feed token lifecycle', () => {
     svc.disableTripToken(tripId, user.id);
 
     expect(svc.getTripToken(tripId, user.id, BASE)).toEqual({ feed_url: null });
-    expect(svc.buildTripIcs(token)).toBeNull();
+    expect(await svc.buildTripIcs(token)).toBeNull();
   });
 
-  it('FEED-SVC-008b: the writes refuse a trip the acting user cannot reach', () => {
+  it('FEED-SVC-008b: the writes refuse a trip the acting user cannot reach', async () => {
     // The route guard is what enforces share_manage; this is the second lock, so
     // a caller reaching the service another way cannot mint or clear a token on
     // a trip id it merely guessed.
@@ -211,14 +211,14 @@ describe('trip feed token lifecycle', () => {
     expect(svc.getTripToken(tripId, user.id, BASE).feed_url).toBe(mine);
 
     svc.disableTripToken(tripId, outsider.id);
-    expect(svc.buildTripIcs(myToken)).not.toBeNull();
+    expect(await svc.buildTripIcs(myToken)).not.toBeNull();
   });
 });
 
 // ── User (all-trips) feed token ───────────────────────────────────────────────
 
 describe('user feed token lifecycle', () => {
-  it('FEED-SVC-009: reports null before and the absolute URL after generation', () => {
+  it('FEED-SVC-009: reports null before and the absolute URL after generation', async () => {
     const { user } = createUser(testDb);
 
     expect(svc.getUserToken(user.id, BASE)).toEqual({ feed_url: null });
@@ -229,7 +229,7 @@ describe('user feed token lifecycle', () => {
     expect(svc.getUserToken(user.id, BASE).feed_url).toBe(generated);
   });
 
-  it('FEED-SVC-010: generate is idempotent — the existing URL is returned unchanged', () => {
+  it('FEED-SVC-010: generate is idempotent — the existing URL is returned unchanged', async () => {
     const { user } = createUser(testDb);
 
     const first = svc.generateUserToken(user.id, BASE);
@@ -238,7 +238,7 @@ describe('user feed token lifecycle', () => {
     expect(second.feed_url).toBe(first.feed_url);
   });
 
-  it('FEED-SVC-011: rotate issues a fresh token and the previous URL stops resolving', () => {
+  it('FEED-SVC-011: rotate issues a fresh token and the previous URL stops resolving', async () => {
     const { user } = createUser(testDb);
     const before = svc.generateUserToken(user.id, BASE).feed_url;
     const oldToken = before.match(/user\/([0-9a-f-]+)\.ics$/)![1];
@@ -246,10 +246,10 @@ describe('user feed token lifecycle', () => {
     const after = svc.rotateUserToken(user.id, BASE).feed_url;
 
     expect(after).not.toBe(before);
-    expect(svc.buildUserIcs(oldToken)).toBeNull();
+    expect(await svc.buildUserIcs(oldToken)).toBeNull();
   });
 
-  it('FEED-SVC-012: disable clears the column so the public URL dies', () => {
+  it('FEED-SVC-012: disable clears the column so the public URL dies', async () => {
     const { user } = createUser(testDb);
     const url = svc.generateUserToken(user.id, BASE).feed_url;
     const token = url.match(/user\/([0-9a-f-]+)\.ics$/)![1];
@@ -257,21 +257,21 @@ describe('user feed token lifecycle', () => {
     svc.disableUserToken(user.id);
 
     expect(svc.getUserToken(user.id, BASE)).toEqual({ feed_url: null });
-    expect(svc.buildUserIcs(token)).toBeNull();
+    expect(await svc.buildUserIcs(token)).toBeNull();
   });
 });
 
 // ── buildTripIcs ──────────────────────────────────────────────────────────────
 
 describe('buildTripIcs', () => {
-  it('FEED-SVC-013: an unknown token yields null without asking the calendar', () => {
+  it('FEED-SVC-013: an unknown token yields null without asking the calendar', async () => {
     seedTrip('tok-trip');
 
-    expect(svc.buildTripIcs('00000000-0000-0000-0000-000000000000')).toBeNull();
+    expect(await svc.buildTripIcs('00000000-0000-0000-0000-000000000000')).toBeNull();
     expect(buildTripCalendar).not.toHaveBeenCalled();
   });
 
-  it('FEED-SVC-014: a calendar that throws yields null instead of propagating', () => {
+  it('FEED-SVC-014: a calendar that throws yields null instead of propagating', async () => {
     // The public feed is unauthenticated: a trip the calendar cannot render (a row
     // deleted mid-request, unparseable data) has to come back as a 404, not a 500
     // that a subscribing client retries hourly forever.
@@ -280,10 +280,10 @@ describe('buildTripIcs', () => {
       throw new Error('calendar exploded');
     });
 
-    expect(svc.buildTripIcs('tok-trip')).toBeNull();
+    expect(await svc.buildTripIcs('tok-trip')).toBeNull();
   });
 
-  it('FEED-SVC-015: the refresh hints sit in the preamble, ahead of X-WR-CALNAME and every component', () => {
+  it('FEED-SVC-015: the refresh hints sit in the preamble, ahead of X-WR-CALNAME and every component', async () => {
     // REFRESH-INTERVAL/X-PUBLISHED-TTL are calendar properties: RFC 5545 puts them
     // before the first component, and clients that scan only the preamble stop
     // re-fetching if they slip behind a VTIMEZONE. The document is concatenated from
@@ -297,7 +297,7 @@ describe('buildTripIcs', () => {
       }),
     );
 
-    const result = svc.buildTripIcs('tok-trip');
+    const result = await svc.buildTripIcs('tok-trip');
 
     expect(result).not.toBeNull();
     expect(result!.filename).toBe('golden-trip.ics');
@@ -314,14 +314,14 @@ describe('buildTripIcs', () => {
 // ── buildUserIcs ──────────────────────────────────────────────────────────────
 
 describe('buildUserIcs', () => {
-  it('FEED-SVC-016: an unknown token yields null without asking the calendar', () => {
+  it('FEED-SVC-016: an unknown token yields null without asking the calendar', async () => {
     seedUserWithToken('tok-user');
 
-    expect(svc.buildUserIcs('00000000-0000-0000-0000-000000000000')).toBeNull();
+    expect(await svc.buildUserIcs('00000000-0000-0000-0000-000000000000')).toBeNull();
     expect(buildTripCalendar).not.toHaveBeenCalled();
   });
 
-  it('FEED-SVC-017: a trip whose calendar throws is skipped, the rest are still emitted', () => {
+  it('FEED-SVC-017: a trip whose calendar throws is skipped, the rest are still emitted', async () => {
     // One unrenderable trip must not take the whole all-trips subscription down —
     // the user would silently lose every calendar entry because of a single bad row.
     const user = seedUserWithToken('tok-user');
@@ -333,7 +333,7 @@ describe('buildUserIcs', () => {
       return calendarParts({ events: [vevent(`Trip${id}`)] });
     });
 
-    const result = svc.buildUserIcs('tok-user');
+    const result = await svc.buildUserIcs('tok-user');
 
     expect(buildTripCalendar).toHaveBeenCalledTimes(3);
     expect(result!.ics).toContain(`SUMMARY:Trip${good.id}\r\n`);
@@ -342,7 +342,7 @@ describe('buildUserIcs', () => {
     expect(result!.ics.endsWith('END:VCALENDAR\r\n')).toBe(true);
   });
 
-  it('FEED-SVC-018: a TZID shared by two trips is defined exactly once, ahead of every VEVENT', () => {
+  it('FEED-SVC-018: a TZID shared by two trips is defined exactly once, ahead of every VEVENT', async () => {
     // Two VTIMEZONE blocks with the same TZID make the document invalid and clients
     // drop the events referencing it; a block emitted after the VEVENT that uses it
     // does not resolve either (#1453). First definition wins.
@@ -358,7 +358,7 @@ describe('buildUserIcs', () => {
       events: [vevent(`Trip${id}`)],
     }));
 
-    const { ics } = svc.buildUserIcs('tok-user')!;
+    const { ics } = (await svc.buildUserIcs('tok-user'))!;
 
     expect(ics.split('BEGIN:VTIMEZONE').length - 1).toBe(1);
     expect(ics).toContain('TZNAME:Asia/Tokyo\r\n');
@@ -366,7 +366,7 @@ describe('buildUserIcs', () => {
     expect(ics.indexOf('BEGIN:VTIMEZONE')).toBeLessThan(ics.indexOf('BEGIN:VEVENT'));
   });
 
-  it('FEED-SVC-019: the header is never folded, the body always is', () => {
+  it('FEED-SVC-019: the header is never folded, the body always is', async () => {
     // Folding is applied to the body only, on purpose: a long display name would
     // otherwise wrap X-WR-CALNAME across two physical lines, which several clients
     // render as a truncated calendar title. The body still has to fold — RFC 5545
@@ -377,7 +377,7 @@ describe('buildUserIcs', () => {
     const longSummary = 'A'.repeat(120);
     buildTripCalendar.mockImplementation(() => calendarParts({ events: [vevent(longSummary)] }));
 
-    const { ics, calName } = svc.buildUserIcs('tok-user')!;
+    const { ics, calName } = (await svc.buildUserIcs('tok-user'))!;
 
     expect(calName).toBe(`${username} – All Trips`);
     const preamble = ics.slice(0, ics.indexOf('BEGIN:VEVENT'));
@@ -388,14 +388,14 @@ describe('buildUserIcs', () => {
     expect(ics.replace(/\r\n /g, '')).toContain(`SUMMARY:${longSummary}\r\n`);
   });
 
-  it('FEED-SVC-020: the display name is escaped for the header but returned raw', () => {
+  it('FEED-SVC-020: the display name is escaped for the header but returned raw', async () => {
     // An unescaped ; or , ends the property value early, so the calendar shows up
     // under a truncated name. The returned calName feeds the HTTP layer, not ICS,
     // and must stay verbatim.
     const user = seedUserWithToken('tok-user', { username: 'Alice; Bob, Co\\Ltd' });
     createTrip(testDb, user.id, { start_date: '2026-01-01' });
 
-    const { ics, calName } = svc.buildUserIcs('tok-user')!;
+    const { ics, calName } = (await svc.buildUserIcs('tok-user'))!;
 
     expect(calName).toBe('Alice; Bob, Co\\Ltd – All Trips');
     expect(ics).toContain('X-WR-CALNAME:Alice\\; Bob\\, Co\\\\Ltd – All Trips\r\n');
@@ -403,7 +403,7 @@ describe('buildUserIcs', () => {
 });
 
 describe('FeedsService wiring', () => {
-  it('FEED-SVC-021: the module registers the service and all three controllers', () => {
+  it('FEED-SVC-021: the module registers the service and all three controllers', async () => {
     expectRegisteredProvider(FeedsModule, FeedsService);
     expectRegisteredController(FeedsModule, FeedsPublicController);
     expectRegisteredController(FeedsModule, TripFeedTokenController);

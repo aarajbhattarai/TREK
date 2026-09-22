@@ -224,7 +224,7 @@ export async function createMcpTestRegistry(): Promise<McpRegistry> {
       new ReservationsMcp(reservationsService, daysService, budgetService, authService, assignmentsService, guards),
       new DayNotesMcp(new DayNotesService(dbService, permissionsService, realtimeService), authService, guards),
       new DaysMcp(daysService, authService, guards),
-      new RoadtripMcp(new RoadtripService(dbService, realtimeService), dbService, guards, authService, addonsService),
+      new RoadtripMcp(new RoadtripService(dbService, realtimeService, await createTestUnitOfWork(dbService.connection)), dbService, guards, authService, addonsService),
       new FilesMcp(new FilesService(dbService, permissionsService, realtimeService, new EphemeralTokenService(), generalStorage), authService, guards),
       new AccommodationsMcp(accommodationsService, dbService, placesService, authService, guards, await createTestUnitOfWork(dbService.connection)),
       new AssignmentsMcp(assignmentsService, daysService, authService, guards),

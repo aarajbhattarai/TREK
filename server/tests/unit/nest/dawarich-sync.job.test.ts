@@ -80,23 +80,23 @@ function makeJob(intervalSetting?: string, enabled = true) {
 beforeEach(() => vi.clearAllMocks());
 
 describe('DawarichSyncJob bootstrap', () => {
-  it('DAWARICH-JOB-001: registers */N under the job name the scheduler reports, and logs the banner', () => {
+  it('DAWARICH-JOB-001: registers */N under the job name the scheduler reports, and logs the banner', async () => {
     const { job, registrar } = makeJob('30');
-    job.onApplicationBootstrap();
+    await job.onApplicationBootstrap();
     expect(registrar.register).toHaveBeenCalledWith('dawarich-sync', '*/30 * * * *', expect.any(Function));
     expect(logMock.logInfo).toHaveBeenCalledWith('Dawarich sync: scheduled every 30m');
   });
 
-  it('DAWARICH-JOB-002: reads its own setting key, not the AirTrail one', () => {
+  it('DAWARICH-JOB-002: reads its own setting key, not the AirTrail one', async () => {
     // Both jobs run the identical statement against app_settings; a copy-paste
     // that kept 'airtrail_poll_interval_minutes' would silently inherit the
     // other integration's cadence and nothing anywhere would fail.
     const { job, db } = makeJob('20');
-    job.onApplicationBootstrap();
+    await job.onApplicationBootstrap();
     expect(db.get).toHaveBeenCalledWith('SELECT value FROM app_settings WHERE key = ?', SETTING_KEY);
   });
 
-  it('DAWARICH-JOB-003: clamps the interval to 5-59 minutes and falls back to 15 on anything else', () => {
+  it('DAWARICH-JOB-003: clamps the interval to 5-59 minutes and falls back to 15 on anything else', async () => {
     for (const [setting, minutes] of [
       [undefined, 15], // no row at all
       ['', 15], // row present but blank
@@ -109,24 +109,24 @@ describe('DawarichSyncJob bootstrap', () => {
     ] as const) {
       vi.clearAllMocks();
       const { job, registrar } = makeJob(setting);
-      job.onApplicationBootstrap();
+      await job.onApplicationBootstrap();
       expect(registrar.register).toHaveBeenCalledWith('dawarich-sync', `*/${minutes} * * * *`, expect.any(Function));
       expect(logMock.logInfo).toHaveBeenCalledWith(`Dawarich sync: scheduled every ${minutes}m`);
     }
   });
 
-  it('DAWARICH-JOB-004: takes the leading integer of a sloppy value rather than refusing it', () => {
+  it('DAWARICH-JOB-004: takes the leading integer of a sloppy value rather than refusing it', async () => {
     // parseInt is lenient and the clamp is what makes that safe: '20 minutes'
     // out of a hand-edited setting is still a usable 20, and everything the
     // clamp dislikes has already gone to the default in the case above.
     const { job, registrar } = makeJob('20 minutes');
-    job.onApplicationBootstrap();
+    await job.onApplicationBootstrap();
     expect(registrar.register).toHaveBeenCalledWith('dawarich-sync', '*/20 * * * *', expect.any(Function));
   });
 
-  it('DAWARICH-JOB-005: the test gate stops the job before it registers, logs or even touches the database', () => {
+  it('DAWARICH-JOB-005: the test gate stops the job before it registers, logs or even touches the database', async () => {
     const { job, registrar, db } = makeJob('15', false);
-    job.onApplicationBootstrap();
+    await job.onApplicationBootstrap();
     expect(registrar.register).not.toHaveBeenCalled();
     expect(db.get).not.toHaveBeenCalled();
     expect(logMock.logInfo).not.toHaveBeenCalled();
@@ -134,7 +134,7 @@ describe('DawarichSyncJob bootstrap', () => {
 
   it('DAWARICH-JOB-006: the callback handed to the registrar is the tick, so a fired cron reaches runSync', async () => {
     const { job, sync, takeTick } = makeJob('15');
-    job.onApplicationBootstrap();
+    await job.onApplicationBootstrap();
     const onTick = takeTick();
     expect(onTick).toBeTypeOf('function');
     await onTick?.();
@@ -147,7 +147,7 @@ describe('DawarichSyncJob bootstrap', () => {
     // Unregistering is the registrar's own business inside register(); the job
     // calling it would leave a window where no cron exists at all.
     const { job, db, registrar, takeTick } = makeJob('15');
-    job.onApplicationBootstrap();
+    await job.onApplicationBootstrap();
     await takeTick()?.();
     expect(db.get).toHaveBeenCalledTimes(1);
     expect(registrar.register).toHaveBeenCalledTimes(1);

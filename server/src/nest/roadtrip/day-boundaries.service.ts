@@ -6,13 +6,13 @@ import { DatabaseService } from '../database/database.service';
 export class DayBoundariesService {
   constructor(private readonly db: DatabaseService) {}
 
-  list(tripId: string | number): RoadtripDayBoundary[] {
+  async list(tripId: string | number): Promise<RoadtripDayBoundary[]> {
     return this.db.all<RoadtripDayBoundary>(
       'SELECT day_number, from_assignment_id, to_assignment_id, fraction FROM roadtrip_day_boundaries WHERE trip_id = ? ORDER BY day_number', tripId,
     );
   }
 
-  save(tripId: string | number, boundary: RoadtripDayBoundary): RoadtripDayBoundary[] {
+  async save(tripId: string | number, boundary: RoadtripDayBoundary): Promise<RoadtripDayBoundary[]> {
     const belongs = (id: number) => this.db.get(
       'SELECT a.id FROM day_assignments a JOIN days d ON d.id = a.day_id WHERE a.id = ? AND d.trip_id = ?', id, tripId,
     );
@@ -26,7 +26,7 @@ export class DayBoundariesService {
     return this.list(tripId);
   }
 
-  remove(tripId: string | number, dayNumber: number): RoadtripDayBoundary[] {
+  async remove(tripId: string | number, dayNumber: number): Promise<RoadtripDayBoundary[]> {
     this.db.run('DELETE FROM roadtrip_day_boundaries WHERE trip_id = ? AND day_number = ?', tripId, dayNumber);
     return this.list(tripId);
   }

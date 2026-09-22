@@ -25,7 +25,7 @@ export class DawarichSyncJob implements OnApplicationBootstrap {
     private readonly registrar: CronRegistrarService,
   ) {}
 
-  onApplicationBootstrap(): void {
+  async onApplicationBootstrap(): Promise<void> {
     if (!this.registrar.isEnabled()) return;
     const value = this.db.get<{ value: string }>(
       'SELECT value FROM app_settings WHERE key = ?',

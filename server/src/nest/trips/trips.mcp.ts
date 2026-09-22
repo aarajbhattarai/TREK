@@ -533,7 +533,7 @@ export class TripsMcp {
   async exportTripIcs({ tripId }: { tripId: number }, ctx: McpContext) {
     if (!this.trips.canAccessTrip(tripId, ctx.userId)) return noAccess();
     try {
-      const { ics, filename } = this.calendar.exportICS(tripId);
+      const { ics, filename } = await this.calendar.exportICS(tripId);
       return ok({ ics, filename });
     } catch {
       return { content: [{ type: 'text' as const, text: 'Trip not found.' }], isError: true };

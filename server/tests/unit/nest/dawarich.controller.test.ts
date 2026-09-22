@@ -109,10 +109,10 @@ describe('DawarichController wiring', () => {
 // ---------------------------------------------------------------------------
 
 describe('DawarichController connection routes', () => {
-  it('DAWARICH-CTRL-010: GET settings hands back what the service says, for the calling user only', () => {
+  it('DAWARICH-CTRL-010: GET settings hands back what the service says, for the calling user only', async () => {
     const connection = { url: 'https://d.example', connected: true };
     const getConnection = vi.fn().mockReturnValue(connection);
-    expect(makeController({ dawarich: { getConnection } }).getSettings(user)).toBe(connection);
+    expect(await makeController({ dawarich: { getConnection } }).getSettings(user)).toBe(connection);
     expect(getConnection).toHaveBeenCalledWith(7);
   });
 
@@ -200,21 +200,21 @@ describe('DawarichController connection routes', () => {
 // ---------------------------------------------------------------------------
 
 describe('DawarichController GET /suggestions filters', () => {
-  it('DAWARICH-CTRL-020: no filters means both are undefined', () => {
+  it('DAWARICH-CTRL-020: no filters means both are undefined', async () => {
     const list = vi.fn().mockReturnValue({ suggestions: [] });
-    makeController({ suggestions: { list } }).listSuggestions(user);
+    await makeController({ suggestions: { list } }).listSuggestions(user);
     expect(list).toHaveBeenCalledWith(7, { tripId: undefined, state: undefined });
   });
 
-  it('DAWARICH-CTRL-021: an empty query value reads as "no filter", not as a filter on nothing', () => {
+  it('DAWARICH-CTRL-021: an empty query value reads as "no filter", not as a filter on nothing', async () => {
     const list = vi.fn().mockReturnValue({ suggestions: [] });
-    makeController({ suggestions: { list } }).listSuggestions(user, '', '');
+    await makeController({ suggestions: { list } }).listSuggestions(user, '', '');
     expect(list).toHaveBeenCalledWith(7, { tripId: undefined, state: undefined });
   });
 
-  it('DAWARICH-CTRL-022: a numeric tripId arrives as a number', () => {
+  it('DAWARICH-CTRL-022: a numeric tripId arrives as a number', async () => {
     const list = vi.fn().mockReturnValue({ suggestions: [] });
-    makeController({ suggestions: { list } }).listSuggestions(user, '42', 'new');
+    await makeController({ suggestions: { list } }).listSuggestions(user, '42', 'new');
     expect(list).toHaveBeenCalledWith(7, { tripId: 42, state: 'new' });
   });
 
@@ -226,9 +226,9 @@ describe('DawarichController GET /suggestions filters', () => {
     });
   });
 
-  it.each(['new', 'accepted', 'dismissed'])('DAWARICH-CTRL-024: %s is a known state and passes through', (state) => {
+  it.each(['new', 'accepted', 'dismissed'])('DAWARICH-CTRL-024: %s is a known state and passes through', async (state) => {
     const list = vi.fn().mockReturnValue({ suggestions: [] });
-    makeController({ suggestions: { list } }).listSuggestions(user, undefined, state);
+    await makeController({ suggestions: { list } }).listSuggestions(user, undefined, state);
     expect(list).toHaveBeenCalledWith(7, { tripId: undefined, state });
   });
 
@@ -269,10 +269,10 @@ describe('DawarichController parseId', () => {
     });
   });
 
-  it('DAWARICH-CTRL-032: a plain positive integer is accepted, leading zeroes included', () => {
+  it('DAWARICH-CTRL-032: a plain positive integer is accepted, leading zeroes included', async () => {
     const setState = vi.fn().mockReturnValue({ id: 12 });
     const c = makeController({ suggestions: { setState } });
-    expect(c.setSuggestionState(user, '012', { state: 'new' })).toEqual({ id: 12 });
+    expect(await c.setSuggestionState(user, '012', { state: 'new' })).toEqual({ id: 12 });
     expect(setState).toHaveBeenCalledWith(7, 12, 'new');
   });
 
@@ -297,10 +297,10 @@ describe('DawarichController parseId', () => {
 // ---------------------------------------------------------------------------
 
 describe('DawarichController suggestion routes', () => {
-  it('DAWARICH-CTRL-040: PUT state returns the updated suggestion', () => {
+  it('DAWARICH-CTRL-040: PUT state returns the updated suggestion', async () => {
     const updated = { id: 3, state: 'dismissed' };
     const setState = vi.fn().mockReturnValue(updated);
-    expect(makeController({ suggestions: { setState } }).setSuggestionState(user, '3', { state: 'dismissed' })).toBe(updated);
+    expect(await makeController({ suggestions: { setState } }).setSuggestionState(user, '3', { state: 'dismissed' })).toBe(updated);
     expect(setState).toHaveBeenCalledWith(7, 3, 'dismissed');
   });
 
@@ -329,9 +329,9 @@ describe('DawarichController suggestion routes', () => {
     expect(accept.mock.calls[0][3]).toBeUndefined();
   });
 
-  it('DAWARICH-CTRL-045: POST bucket-list/confirm wraps the count', () => {
+  it('DAWARICH-CTRL-045: POST bucket-list/confirm wraps the count', async () => {
     const confirmBucketVisits = vi.fn().mockReturnValue(3);
-    expect(makeController({ suggestions: { confirmBucketVisits } })
+    expect(await makeController({ suggestions: { confirmBucketVisits } })
       .confirmBucketVisits(user, { itemIds: [1, 2, 3], visitedAt: '2026-05-01' })).toEqual({ updated: 3 });
     expect(confirmBucketVisits).toHaveBeenCalledWith(7, [1, 2, 3], '2026-05-01');
   });
@@ -342,12 +342,12 @@ describe('DawarichController suggestion routes', () => {
       expect(r).toEqual({ status: 404, body: { error: 'Bucket-list entry not found' } }));
   });
 
-  it('DAWARICH-CTRL-076: DELETE bucket-list/:itemId/visit answers 200 { success: true } when a tick was cleared', () => {
+  it('DAWARICH-CTRL-076: DELETE bucket-list/:itemId/visit answers 200 { success: true } when a tick was cleared', async () => {
     // The counterpart to 046: the service reports whether a row changed, and
     // only the "nothing changed" answer is a 404. A cleared tick must not come
     // back as one, or undoing a wish would look like it failed.
     const clearBucketVisit = vi.fn().mockReturnValue(true);
-    expect(makeController({ suggestions: { clearBucketVisit } }).clearBucketVisit(user, '4')).toEqual({
+    expect(await makeController({ suggestions: { clearBucketVisit } }).clearBucketVisit(user, '4')).toEqual({
       success: true,
     });
     expect(clearBucketVisit).toHaveBeenCalledWith(7, 4);

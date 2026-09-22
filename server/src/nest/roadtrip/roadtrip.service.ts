@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import type { RoadtripDayTrack, RoadtripVia, TrekWsPayload, TrekWsTripEventName } from '@trek/shared';
 import { DatabaseService } from '../database/database.service';
 import { RealtimeService } from '../realtime/realtime.service';
+import { UnitOfWork } from '../database/unit-of-work';
 
 /**
  * Via points: the places a day's drive is made to pass through without stopping.
@@ -16,6 +17,7 @@ export class RoadtripService {
   constructor(
     private readonly db: DatabaseService,
     private readonly realtime: RealtimeService,
+    private readonly uow: UnitOfWork,
   ) {}
 
   /**
@@ -34,7 +36,7 @@ export class RoadtripService {
   }
 
   /** The day exists and belongs to this trip. 404 material, checked before every write. */
-  dayExists(dayId: string | number, tripId: string | number): boolean {
+  async dayExists(dayId: string | number, tripId: string | number): Promise<boolean> {
     return !!this.db.get<{ id: number }>(
       'SELECT id FROM days WHERE id = ? AND trip_id = ?',
       dayId,
@@ -42,7 +44,7 @@ export class RoadtripService {
     );
   }
 
-  listForDay(dayId: string | number): RoadtripVia[] {
+  async listForDay(dayId: string | number): Promise<RoadtripVia[]> {
     return this.db.all<RoadtripVia>(
       `SELECT id, day_id, after_order_index, sequence, lat, lng, created_at
          FROM roadtrip_vias
@@ -53,7 +55,7 @@ export class RoadtripService {
   }
 
   /** Every via of a trip, so the client can route all days without one request per day. */
-  listForTrip(tripId: string | number): RoadtripVia[] {
+  async listForTrip(tripId: string | number): Promise<RoadtripVia[]> {
     return this.db.all<RoadtripVia>(
       `SELECT v.id, v.day_id, v.after_order_index, v.sequence, v.lat, v.lng, v.created_at
          FROM roadtrip_vias v
@@ -64,7 +66,7 @@ export class RoadtripService {
     );
   }
 
-  create(dayId: string | number, input: { after_order_index: number; lat: number; lng: number; sequence?: number }): RoadtripVia {
+  async create(dayId: string | number, input: { after_order_index: number; lat: number; lng: number; sequence?: number }): Promise<RoadtripVia> {
     // Appended after whatever already follows that stop, unless the caller says where.
     const sequence = input.sequence ?? (
       this.db.get<{ next: number }>(
@@ -81,7 +83,7 @@ export class RoadtripService {
       input.lat,
       input.lng,
     );
-    return this.byId(Number(result.lastInsertRowid))!;
+    return (await this.byId(Number(result.lastInsertRowid)))!;
   }
 
   /**
@@ -94,15 +96,15 @@ export class RoadtripService {
    * `replace_legs` clears by leg rather than by day, so vias the traveller placed by hand
    * on other legs survive a track being laid on this one.
    */
-  createMany(
+  async createMany(
     dayId: string | number,
     input: {
       vias: { after_order_index: number; lat: number; lng: number }[];
       replace_legs?: number[];
       track?: { place_id: number; stray_km?: number | null } | null;
     },
-  ): RoadtripVia[] {
-    return this.db.transaction(() => {
+  ): Promise<RoadtripVia[]> {
+    return this.uow.transactional(async () => {
       // Inside the same transaction as the chain it describes. A day that says it follows
       // a road whose vias never landed is worse than a day that says nothing.
       if (input.track === null) {
@@ -152,7 +154,7 @@ export class RoadtripService {
    * Read with the vias in one go: both are wanted on every load of road-trip mode, and a
    * second route for a handful of rows would be a second round trip for nothing.
    */
-  tracksForTrip(tripId: string | number): RoadtripDayTrack[] {
+  async tracksForTrip(tripId: string | number): Promise<RoadtripDayTrack[]> {
     return this.db.all<RoadtripDayTrack>(
       `SELECT t.day_id, t.place_id, t.stray_km
          FROM roadtrip_day_tracks t
@@ -164,7 +166,7 @@ export class RoadtripService {
   }
 
   /** Whether a place is on this trip, and is a track rather than an ordinary place. */
-  trackExists(placeId: number, tripId: string | number): boolean {
+  async trackExists(placeId: number, tripId: string | number): Promise<boolean> {
     return !!this.db.get<{ id: number }>(
       "SELECT id FROM places WHERE id = ? AND trip_id = ? AND route_geometry IS NOT NULL AND route_geometry != ''",
       placeId,
@@ -173,13 +175,13 @@ export class RoadtripService {
   }
 
   /** Moving a via is the whole edit; where it sits in the chain does not change. */
-  move(
+  async move(
     id: string | number,
     dayId: string | number,
     lat: number,
     lng: number,
     afterOrderIndex?: number,
-  ): RoadtripVia | null {
+  ): Promise<RoadtripVia | null> {
     const existing = this.db.get<{ id: number }>(
       'SELECT id FROM roadtrip_vias WHERE id = ? AND day_id = ?',
       id,
@@ -216,11 +218,11 @@ export class RoadtripService {
    * the day, and a via somebody else deleted in the meantime is not a failure of the
    * re-anchoring; failing the batch over it would leave the rest of the day mis-pinned.
    */
-  reanchor(
+  async reanchor(
     dayId: string | number,
     input: { vias: { id: number; after_order_index: number }[]; remove?: number[] },
-  ): RoadtripVia[] {
-    return this.db.transaction(() => {
+  ): Promise<RoadtripVia[]> {
+    return this.uow.transactional(async () => {
       // Read before writing: the OLD anchor is what says which of two merged
       // legs came first, and after the updates that information is gone.
       const before = new Map(
@@ -286,12 +288,12 @@ export class RoadtripService {
     });
   }
 
-  remove(id: string | number, dayId: string | number): boolean {
+  async remove(id: string | number, dayId: string | number): Promise<boolean> {
     const result = this.db.run('DELETE FROM roadtrip_vias WHERE id = ? AND day_id = ?', id, dayId);
     return result.changes > 0;
   }
 
-  private byId(id: number): RoadtripVia | null {
+  private async byId(id: number): Promise<RoadtripVia | null> {
     return this.db.get<RoadtripVia>(
       'SELECT id, day_id, after_order_index, sequence, lat, lng, created_at FROM roadtrip_vias WHERE id = ?',
       id,

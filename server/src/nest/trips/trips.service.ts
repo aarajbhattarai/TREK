@@ -440,7 +440,7 @@ export class TripsService {
           // Default: generateDays re-dates day rows positionally; re-anchor dated bookings to
           // the day matching their absolute reservation_time, and accommodations (+ their
           // linked hotel reservations) to the days now holding their pre-change dates (#1288).
-          this.reservations.resyncReservationDays(tripId);
+          await this.reservations.resyncReservationDays(tripId);
           await this.days.resyncAccommodationDays(tripId, prevDateByDayId);
         }
       });

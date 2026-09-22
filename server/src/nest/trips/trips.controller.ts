@@ -272,12 +272,12 @@ export class TripsController {
   }
 
   @Get(':id/export.ics')
-  exportIcs(@CurrentUser() user: User, @Param('id') id: string, @Res() res: Response) {
+  async exportIcs(@CurrentUser() user: User, @Param('id') id: string, @Res() res: Response) {
     if (!this.trips.canAccessTrip(id, user.id)) {
       throw new HttpException({ error: 'Trip not found' }, 404);
     }
     try {
-      const { ics, filename } = this.calendar.exportICS(id);
+      const { ics, filename } = await this.calendar.exportICS(id);
       res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
       res.setHeader('Content-Disposition', contentDisposition(filename, 'attachment'));
       res.send(ics);

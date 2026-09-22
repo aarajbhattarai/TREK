@@ -64,8 +64,8 @@ export class DawarichSuggestionsService {
    * someone's location history, and a forgotten filter over a wider read is how
    * that leaks.
    */
-  list(userId: number, filter: { tripId?: number; state?: string }): DawarichSuggestionList {
-    this.reopenOrphaned(userId);
+  async list(userId: number, filter: { tripId?: number; state?: string }): Promise<DawarichSuggestionList> {
+    await this.reopenOrphaned(userId);
 
     const clauses = ['s.user_id = ?'];
     const params: unknown[] = [userId];
@@ -88,7 +88,7 @@ export class DawarichSuggestionsService {
       ...params,
     );
 
-    const connection = this.dawarich.getConnection(userId);
+    const connection = await this.dawarich.getConnection(userId);
     return {
       suggestions: rows.map(toWire),
       connected: connection.connected,
@@ -115,7 +115,7 @@ export class DawarichSuggestionsService {
    * at read time, which would make the list say "back in review" while `accept`
    * still refused the row as already accepted.
    */
-  private reopenOrphaned(userId: number): void {
+  private async reopenOrphaned(userId: number): Promise<void> {
     this.db.run(
       `UPDATE dawarich_visit_suggestions
           SET state = 'new', target = NULL, accepted_hash = NULL,
@@ -136,7 +136,7 @@ export class DawarichSuggestionsService {
     );
   }
 
-  getOne(userId: number, id: number): DawarichSuggestion | null {
+  async getOne(userId: number, id: number): Promise<DawarichSuggestion | null> {
     const row = this.db.get<SuggestionJoinRow>(
       `SELECT s.*, t.title AS trip_title, b.name AS matched_bucket_name
          FROM dawarich_visit_suggestions s
@@ -157,7 +157,7 @@ export class DawarichSuggestionsService {
    * not offered — the place or entry it produced is a separate thing now, and
    * "undo" would have to guess whether to delete it.
    */
-  setState(userId: number, id: number, state: 'new' | 'dismissed'): DawarichSuggestion | null {
+  async setState(userId: number, id: number, state: 'new' | 'dismissed'): Promise<DawarichSuggestion | null> {
     const row = this.db.get<{ id: number; state: string }>(
       'SELECT id, state FROM dawarich_visit_suggestions WHERE id = ? AND user_id = ?',
       id,
@@ -256,7 +256,7 @@ export class DawarichSuggestionsService {
       this.db.run("UPDATE places SET source = 'dawarich' WHERE id = ?", id);
 
       const day = body.dayId !== undefined ? await this.assignments.createAssignment(body.dayId, id, null) : undefined;
-      this.markAccepted(row.id, 'place', { placeId: id });
+      await this.markAccepted(row.id, 'place', { placeId: id });
       // Re-read, so what goes out on the wire carries the source: everyone else
       // on the trip should see the Dawarich mark on it too, not only the person
       // who accepted it.
@@ -277,7 +277,7 @@ export class DawarichSuggestionsService {
     }
 
     return {
-      suggestion: this.getOne(userId, row.id)!,
+      suggestion: (await this.getOne(userId, row.id))!,
       createdPlaceId: placeId,
       createdJournalEntryId: null,
       bucketListItemId: null,
@@ -331,11 +331,11 @@ export class DawarichSuggestionsService {
         sid,
       );
       if (!created) throw new AcceptError('journal_forbidden', 'Journey not found', 404);
-      this.markAccepted(row.id, 'journal', { journalEntryId: created.id });
+      await this.markAccepted(row.id, 'journal', { journalEntryId: created.id });
       return created;
     });
     return {
-      suggestion: this.getOne(userId, row.id)!,
+      suggestion: (await this.getOne(userId, row.id))!,
       createdPlaceId: null,
       createdJournalEntryId: entry.id,
       bucketListItemId: null,
@@ -343,7 +343,7 @@ export class DawarichSuggestionsService {
   }
 
   /** A stay ticks off a wish. The wish must be the caller's own. */
-  private acceptAsBucketTick(userId: number, row: SuggestionRow, body: DawarichAccept): DawarichAcceptResult {
+  private async acceptAsBucketTick(userId: number, row: SuggestionRow, body: DawarichAccept): Promise<DawarichAcceptResult> {
     const itemId = body.bucketListItemId ?? row.matched_bucket_list_item_id;
     if (!itemId) {
       throw new AcceptError('bucket_required', 'A bucket-list entry is required', 400);
@@ -355,18 +355,18 @@ export class DawarichSuggestionsService {
     );
     if (!item) throw new AcceptError('not_found', 'Bucket-list entry not found', 404);
 
-    this.db.transaction(() => {
+    await this.uow.transactional(async () => {
       this.db.run(
         "UPDATE bucket_list SET visited_at = ?, visited_source = 'dawarich' WHERE id = ? AND user_id = ?",
         row.started_at,
         itemId,
         userId,
       );
-      this.markAccepted(row.id, 'bucket_list', { bucketItemId: itemId });
+      await this.markAccepted(row.id, 'bucket_list', { bucketItemId: itemId });
     });
 
     return {
-      suggestion: this.getOne(userId, row.id)!,
+      suggestion: (await this.getOne(userId, row.id))!,
       createdPlaceId: null,
       createdJournalEntryId: null,
       bucketListItemId: itemId,
@@ -400,11 +400,11 @@ export class DawarichSuggestionsService {
    * answerable at all: without it there is nothing to compare the current hash
    * against, and the flag would either never fire or fire forever.
    */
-  private markAccepted(
+  private async markAccepted(
     id: number,
     target: 'place' | 'journal' | 'bucket_list',
     ids: { placeId?: number; journalEntryId?: number; bucketItemId?: number },
-  ): void {
+  ): Promise<void> {
     this.db.run(
       `UPDATE dawarich_visit_suggestions
           SET state = 'accepted', target = ?, accepted_place_id = ?,
@@ -435,7 +435,7 @@ export class DawarichSuggestionsService {
    * eighty wishes must not be told their other thirty had no match.
    */
   async scanBucketList(userId: number): Promise<DawarichBucketScan> {
-    const creds = this.dawarich.getCredentials(userId);
+    const creds = await this.dawarich.getCredentials(userId);
     if (!creds) throw new AcceptError('not_connected', 'Dawarich is not connected', 400);
 
     const items = this.db.all<BucketRow>(
@@ -515,17 +515,17 @@ export class DawarichSuggestionsService {
   }
 
   /** Tick off wishes the user confirmed after reading a scan. */
-  confirmBucketVisits(userId: number, itemIds: number[], visitedAt?: string): number {
+  async confirmBucketVisits(userId: number, itemIds: number[], visitedAt?: string): Promise<number> {
     const now = new Date().toISOString();
     let updated = 0;
-    this.db.transaction(() => {
+    await this.uow.transactional(async () => {
       for (const itemId of itemIds) {
         // The date is the one the wish was actually reached on. A wish somebody
         // got to in 2023 ticked off with today's date is a wrong entry in a list
         // people keep for years, so "now" is only the answer when nothing else
         // knows better: the caller's own value first, then the stay this wish
         // was matched to, then the clock.
-        const stamp = visitedAt ?? this.matchedStayStart(userId, itemId) ?? now;
+        const stamp = visitedAt ?? (await this.matchedStayStart(userId, itemId)) ?? now;
         const result = this.db.run(
           "UPDATE bucket_list SET visited_at = ?, visited_source = 'dawarich' WHERE id = ? AND user_id = ? AND visited_at IS NULL",
           stamp,
@@ -539,7 +539,7 @@ export class DawarichSuggestionsService {
   }
 
   /** When the stay that claimed this wish began, if one did. */
-  private matchedStayStart(userId: number, itemId: number): string | null {
+  private async matchedStayStart(userId: number, itemId: number): Promise<string | null> {
     const row = this.db.get<{ started_at: string }>(
       `SELECT started_at FROM dawarich_visit_suggestions
         WHERE user_id = ? AND matched_bucket_list_item_id = ?
@@ -551,7 +551,7 @@ export class DawarichSuggestionsService {
   }
 
   /** Undo a tick. Clears the source with it, so the entry reads as untouched again. */
-  clearBucketVisit(userId: number, itemId: number): boolean {
+  async clearBucketVisit(userId: number, itemId: number): Promise<boolean> {
     const result = this.db.run(
       'UPDATE bucket_list SET visited_at = NULL, visited_source = NULL WHERE id = ? AND user_id = ?',
       itemId,
@@ -577,7 +577,7 @@ export class DawarichSuggestionsService {
    * country the user went to, and silently losing it would be the worse bug.
    */
   async atlasSuggestions(userId: number, from: Date, to: Date): Promise<DawarichAtlasSuggestions> {
-    const creds = this.dawarich.getCredentials(userId);
+    const creds = await this.dawarich.getCredentials(userId);
     if (!creds) throw new AcceptError('not_connected', 'Dawarich is not connected', 400);
 
     const countries = await this.client.listVisitedCities(creds, from, to);

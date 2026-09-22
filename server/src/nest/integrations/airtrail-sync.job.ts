@@ -19,7 +19,7 @@ export class AirtrailSyncJob implements OnApplicationBootstrap {
     private readonly registrar: CronRegistrarService,
   ) {}
 
-  onApplicationBootstrap(): void {
+  async onApplicationBootstrap(): Promise<void> {
     if (!this.registrar.isEnabled()) return;
     const value = this.db.get<{ value: string }>('SELECT value FROM app_settings WHERE key = ?', 'airtrail_poll_interval_minutes')?.value;
     const raw = Number.parseInt(value || '5', 10);

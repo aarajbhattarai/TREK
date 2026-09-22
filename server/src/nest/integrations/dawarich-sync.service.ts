@@ -8,6 +8,7 @@ import {
 } from '@trek/shared';
 import { ADDON_IDS } from '../../addons';
 import { DatabaseService } from '../database/database.service';
+import { UnitOfWork } from '../database/unit-of-work';
 import { AddonsService } from '../addons/addons.service';
 import { logError, logInfo } from '../audit/audit-log.logger';
 import { getCountryFromCoords } from '../atlas/atlas-geo';
@@ -70,6 +71,7 @@ export class DawarichSyncService {
     private readonly addons: AddonsService,
     private readonly client: DawarichClient,
     private readonly dawarich: DawarichService,
+    private readonly uow: UnitOfWork,
   ) {}
 
   /** The addon gate, evaluated per tick so an admin toggle lands without a restart. */
@@ -83,7 +85,7 @@ export class DawarichSyncService {
     if (this.running) return;
     this.running = true;
     try {
-      const userIds = this.dawarich.listSyncableUserIds();
+      const userIds = await this.dawarich.listSyncableUserIds();
       for (const userId of userIds) {
         try {
           await this.syncUser(userId);
@@ -133,21 +135,21 @@ export class DawarichSyncService {
   /** The body of a sync, with the guard above already held. */
   private async syncUserOnce(userId: number): Promise<DawarichSyncOutcome> {
     if (!(await this.syncGloballyEnabled())) {
-      this.dawarich.recordSyncResult(userId, 'failed', 'addon_disabled');
+      await this.dawarich.recordSyncResult(userId, 'failed', 'addon_disabled');
       return { state: 'failed', created: 0, updated: 0, missing: 0 };
     }
 
-    const creds = this.dawarich.getCredentials(userId);
+    const creds = await this.dawarich.getCredentials(userId);
     if (!creds) {
-      this.dawarich.recordSyncResult(userId, 'failed', 'not_connected');
+      await this.dawarich.recordSyncResult(userId, 'failed', 'not_connected');
       return { state: 'failed', created: 0, updated: 0, missing: 0 };
     }
 
-    const trips = this.listTripsToSync(userId);
+    const trips = await this.listTripsToSync(userId);
     if (trips.length === 0) {
       // Nothing to ask about is a successful sync, not a failure — otherwise a
       // user with no dated trips sees a permanent red badge for doing nothing wrong.
-      this.dawarich.recordSyncResult(userId, 'ok', null);
+      await this.dawarich.recordSyncResult(userId, 'ok', null);
       return { state: 'ok', created: 0, updated: 0, missing: 0 };
     }
 
@@ -181,14 +183,14 @@ export class DawarichSyncService {
 
     const state: DawarichSyncState =
       failures === 0 ? 'ok' : failures === trips.length ? 'failed' : 'partial';
-    this.dawarich.recordSyncResult(userId, state, state === 'ok' ? null : lastError);
+    await this.dawarich.recordSyncResult(userId, state, state === 'ok' ? null : lastError);
 
     // The probe is cheap next to the windows just fetched, and re-running it is
     // how a Dawarich upgrade that finally ships `updated_at` starts being used
     // without anyone reconnecting.
     if (state !== 'failed') {
       try {
-        this.dawarich.storeCapabilities(userId, await this.dawarich.probeCapabilities(creds));
+        await this.dawarich.storeCapabilities(userId, await this.dawarich.probeCapabilities(creds));
       } catch {
         // Capabilities are an optimisation; a failed probe is not a failed sync.
       }
@@ -209,7 +211,7 @@ export class DawarichSyncService {
    * generous rather than tight, because someone who connects Dawarich for the
    * first time wants their last holiday filled in, not just today's.
    */
-  private listTripsToSync(userId: number): TripRow[] {
+  private async listTripsToSync(userId: number): Promise<TripRow[]> {
     return this.db.all<TripRow>(
       `SELECT DISTINCT t.id, t.start_date, t.end_date
          FROM trips t
@@ -301,7 +303,7 @@ export class DawarichSyncService {
           new Date().toISOString(),
         );
         created++;
-        this.matchBucketList(userId, visit.sourceVisitId, visit.lat, visit.lng, visit.durationMinutes);
+        await this.matchBucketList(userId, visit.sourceVisitId, visit.lat, visit.lng, visit.durationMinutes);
         continue;
       }
 
@@ -336,7 +338,7 @@ export class DawarichSyncService {
           existing.id,
         );
         if (changed) updated++;
-        this.matchBucketList(userId, visit.sourceVisitId, visit.lat, visit.lng, visit.durationMinutes);
+        await this.matchBucketList(userId, visit.sourceVisitId, visit.lat, visit.lng, visit.durationMinutes);
         continue;
       }
 
@@ -355,7 +357,7 @@ export class DawarichSyncService {
       if (changed) updated++;
     }
 
-    const missing = this.flagMissing(userId, tripId, from, to, seenIds);
+    const missing = await this.flagMissing(userId, tripId, from, to, seenIds);
     return { created, updated, missing };
   }
 
@@ -368,13 +370,13 @@ export class DawarichSyncService {
    * say "this is gone in Dawarich" next to an entry they wrote. Deleting that
    * would delete their work.
    */
-  private flagMissing(
+  private async flagMissing(
     userId: number,
     tripId: number,
     from: Date,
     to: Date,
     seenIds: Set<string>,
-  ): number {
+  ): Promise<number> {
     // Bounded on `local_date`, not on `started_at`. Dawarich renders a visit's
     // start as local wall-clock plus an offset (`2026-09-01T14:23:00+02:00`)
     // while the window is UTC (`…Z`), and comparing those two shapes as strings
@@ -398,7 +400,7 @@ export class DawarichSyncService {
     if (gone.length === 0) return 0;
 
     const stamp = new Date().toISOString();
-    this.db.transaction(() => {
+    await this.uow.transactional(async () => {
       for (const row of gone) {
         if (row.state === 'new') {
           this.db.run('DELETE FROM dawarich_visit_suggestions WHERE id = ?', row.id);
@@ -423,13 +425,13 @@ export class DawarichSyncService {
    * from going past it. The link is only a hint; ticking the wish off still
    * needs the user.
    */
-  private matchBucketList(
+  private async matchBucketList(
     userId: number,
     sourceVisitId: string,
     lat: number | null,
     lng: number | null,
     durationMinutes: number,
-  ): void {
+  ): Promise<void> {
     if (lat === null || lng === null) return;
     if (durationMinutes < DAWARICH_BUCKET_MATCH_MIN_MINUTES) return;
 
@@ -456,7 +458,7 @@ export class DawarichSyncService {
     }
     if (!best) return;
 
-    this.claimWish(userId, sourceVisitId, best, lat, lng, durationMinutes);
+    await this.claimWish(userId, sourceVisitId, best, lat, lng, durationMinutes);
   }
 
   /**
@@ -473,14 +475,14 @@ export class DawarichSyncService {
    * Every previous claim on the same wish is cleared, so re-running a sync after
    * the recordings change cannot leave two stays holding it.
    */
-  private claimWish(
+  private async claimWish(
     userId: number,
     sourceVisitId: string,
     wish: { id: number; lat: number; lng: number; distance: number },
     lat: number,
     lng: number,
     durationMinutes: number,
-  ): void {
+  ): Promise<void> {
     const holders = this.db.all<{
       id: number;
       source_visit_id: string;
@@ -505,7 +507,7 @@ export class DawarichSyncService {
       if (holderWins) return;
     }
 
-    this.db.transaction(() => {
+    await this.uow.transactional(async () => {
       this.db.run(
         'UPDATE dawarich_visit_suggestions SET matched_bucket_list_item_id = NULL WHERE user_id = ? AND matched_bucket_list_item_id = ?',
         userId,

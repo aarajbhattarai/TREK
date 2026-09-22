@@ -8,6 +8,7 @@ import {
 } from '@trek/shared';
 import { DatabaseService } from '../database/database.service';
 import { AuditService } from '../audit/audit.service';
+import { UnitOfWork } from '../database/unit-of-work';
 import { maybe_encrypt_api_key, decrypt_api_key } from '../common/crypto/apiKeyCrypto';
 import { checkSsrf } from '../../utils/ssrfGuard';
 import { DawarichClient, DawarichError, type DawarichCreds } from './dawarich.client';
@@ -33,9 +34,10 @@ export class DawarichService {
     private readonly db: DatabaseService,
     private readonly audit: AuditService,
     private readonly client: DawarichClient,
+    private readonly uow: UnitOfWork,
   ) {}
 
-  private readRow(userId: number): ConnRow | undefined {
+  private async readRow(userId: number): Promise<ConnRow | undefined> {
     return this.db.get<ConnRow>(
       `SELECT user_id, url, api_key, allow_insecure_tls, sync_enabled,
               last_sync_at, last_sync_state, last_sync_error, capabilities
@@ -45,8 +47,8 @@ export class DawarichService {
   }
 
   /** Decrypted credentials for an outbound call, or null when nothing is connected. */
-  getCredentials(userId: number): DawarichCreds | null {
-    const row = this.readRow(userId);
+  async getCredentials(userId: number): Promise<DawarichCreds | null> {
+    const row = await this.readRow(userId);
     if (!row?.url || !row?.api_key) return null;
     const apiKey = decrypt_api_key(row.api_key);
     if (!apiKey) return null;
@@ -54,13 +56,13 @@ export class DawarichService {
   }
 
   /** True when the user has both an address and a key on file. */
-  isConnected(userId: number): boolean {
-    const row = this.readRow(userId);
+  async isConnected(userId: number): Promise<boolean> {
+    const row = await this.readRow(userId);
     return !!(row?.url && row?.api_key);
   }
 
   /** Every user whose connection is usable and whose background sync is on. */
-  listSyncableUserIds(): number[] {
+  async listSyncableUserIds(): Promise<number[]> {
     const rows = this.db.all<{ user_id: number }>(
       `SELECT user_id FROM dawarich_connections
         WHERE sync_enabled = 1 AND url IS NOT NULL AND url <> '' AND api_key IS NOT NULL`,
@@ -69,8 +71,8 @@ export class DawarichService {
   }
 
   /** The connection as the settings card shows it. The key is a mask, always. */
-  getConnection(userId: number): DawarichConnection {
-    const row = this.readRow(userId);
+  async getConnection(userId: number): Promise<DawarichConnection> {
+    const row = await this.readRow(userId);
     return {
       url: row?.url || '',
       apiKeyMasked: row?.api_key ? DAWARICH_KEY_MASK : '',
@@ -86,8 +88,8 @@ export class DawarichService {
     };
   }
 
-  getCapabilities(userId: number): DawarichCapabilities | null {
-    return parseCapabilities(this.readRow(userId)?.capabilities);
+  async getCapabilities(userId: number): Promise<DawarichCapabilities | null> {
+    return parseCapabilities((await this.readRow(userId))?.capabilities);
   }
 
   /**
@@ -145,7 +147,7 @@ export class DawarichService {
     // All three writes or none: a row that took the new address but not the new
     // key would point a credential minted for one instance at another one, and
     // the next sync would send it there.
-    this.db.transaction(() => {
+    await this.uow.transactional(async () => {
       this.db.run(
         `INSERT INTO dawarich_connections (user_id, url, allow_insecure_tls, sync_enabled, updated_at)
               VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
@@ -236,7 +238,7 @@ export class DawarichService {
     allowInsecureTls: boolean,
   ): Promise<DawarichStatus> {
     const typedKey = (apiKey || '').trim();
-    const stored = this.getCredentials(userId);
+    const stored = await this.getCredentials(userId);
     const baseUrl = (url || '').trim() || stored?.baseUrl || '';
     const typed = typedKey && typedKey !== DAWARICH_KEY_MASK ? typedKey : '';
 
@@ -258,7 +260,7 @@ export class DawarichService {
       const capabilities = await this.probeCapabilities(creds);
       // Only persist against a connection that is actually stored — a test run
       // from a half-filled form must not overwrite what is on file.
-      if (stored && baseUrl === stored.baseUrl) this.storeCapabilities(userId, capabilities);
+      if (stored && baseUrl === stored.baseUrl) await this.storeCapabilities(userId, capabilities);
       return {
         connected: true,
         visitCount: capabilities.visits ? await this.countRecentVisits(creds) : 0,
@@ -335,7 +337,7 @@ export class DawarichService {
     }
   }
 
-  storeCapabilities(userId: number, capabilities: DawarichCapabilities): void {
+  async storeCapabilities(userId: number, capabilities: DawarichCapabilities): Promise<void> {
     this.db.run(
       'UPDATE dawarich_connections SET capabilities = ?, updated_at = CURRENT_TIMESTAMP WHERE user_id = ?',
       JSON.stringify(capabilities),
@@ -343,7 +345,7 @@ export class DawarichService {
     );
   }
 
-  recordSyncResult(userId: number, state: DawarichSyncState, error: string | null): void {
+  async recordSyncResult(userId: number, state: DawarichSyncState, error: string | null): Promise<void> {
     this.db.run(
       `UPDATE dawarich_connections
           SET last_sync_at = ?, last_sync_state = ?, last_sync_error = ?, updated_at = CURRENT_TIMESTAMP

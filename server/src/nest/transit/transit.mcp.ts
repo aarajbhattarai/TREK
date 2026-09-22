@@ -249,7 +249,7 @@ export class TransitMcp {
       needs_review: false,
     });
     this.guards.safeBroadcast(tripId, 'reservation:created', { reservation });
-    this.reservations.notifyBookingChange(tripId, ctx.userId, reservation.title, reservation.type || '');
+    await this.reservations.notifyBookingChange(tripId, ctx.userId, reservation.title, reservation.type || '');
     return ok({ reservation });
   }
 }

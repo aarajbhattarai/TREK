@@ -32,7 +32,7 @@ export class DayBoundariesMcp {
   })
   async list({ tripId }: { tripId: number }, ctx: McpContext) {
     if (!this.db.canAccessTrip(tripId, ctx.userId)) return noAccess();
-    return ok({ boundaries: this.boundaries.list(tripId) });
+    return ok({ boundaries: await this.boundaries.list(tripId) });
   }
 
   @Tool({
@@ -46,10 +46,10 @@ export class DayBoundariesMcp {
     if (!this.db.canAccessTrip(tripId, ctx.userId)) return noAccess();
     if (!(await this.guards.hasTripPermission('day_edit', tripId, ctx.userId))) return permissionDenied();
     // A stop from another trip is refused by the service, with the reason.
-    return answeringRefusals(() => {
+    return answeringRefusals(async () => {
       const boundaries = boundary
-        ? this.boundaries.save(tripId, { ...boundary, day_number: dayNumber })
-        : this.boundaries.remove(tripId, dayNumber);
+        ? await this.boundaries.save(tripId, { ...boundary, day_number: dayNumber })
+        : await this.boundaries.remove(tripId, dayNumber);
       this.realtime.broadcast(String(tripId), 'roadtripBoundary:changed', { boundaries });
       return ok({ boundaries });
     });

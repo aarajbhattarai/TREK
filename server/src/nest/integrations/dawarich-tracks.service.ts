@@ -91,7 +91,7 @@ export class DawarichTracksService {
     toIso: string,
     offsetMinutes = offsetMinutesOf(fromIso),
   ): Promise<DawarichTrack> {
-    const creds = this.dawarich.getCredentials(userId);
+    const creds = await this.dawarich.getCredentials(userId);
     if (!creds) return emptyTrack();
 
     const from = new Date(fromIso);
@@ -129,7 +129,7 @@ export class DawarichTracksService {
     to: Date,
     offsetMinutes: number,
   ): Promise<DawarichTrack> {
-    const capabilities = this.dawarich.getCapabilities(userId);
+    const capabilities = await this.dawarich.getCapabilities(userId);
 
     if (capabilities?.tracks !== false) {
       try {

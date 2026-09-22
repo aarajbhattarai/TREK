@@ -36,9 +36,9 @@ async function thrown(fn: () => unknown): Promise<{ status: number; body: unknow
 
 describe('ReservationsController (parity with the legacy /api/trips/:tripId/reservations route)', () => {
 
-  it('GET / returns reservations', () => {
+  it('GET / returns reservations', async () => {
     const svc = makeService({ list: vi.fn().mockReturnValue([{ id: 1 }]) } as Partial<ReservationsService>);
-    expect(new ReservationsController(svc, airtrailLink).list(user, '5')).toEqual({ reservations: [{ id: 1 }] });
+    expect(await new ReservationsController(svc, airtrailLink).list(user, '5')).toEqual({ reservations: [{ id: 1 }] });
   });
 
   describe('POST /', () => {
@@ -99,11 +99,11 @@ describe('ReservationsController (parity with the legacy /api/trips/:tripId/rese
     // The 'positions must be an array' 400 moved to the global
     // ZodValidationPipe (ReservationPositionsDto).
 
-    it('updates positions and broadcasts', () => {
+    it('updates positions and broadcasts', async () => {
       const updatePositions = vi.fn(); const broadcast = vi.fn();
       const svc = makeService({ updatePositions, broadcast } as Partial<ReservationsService>);
       const positions = [{ id: 1, day_plan_position: 0 }];
-      expect(new ReservationsController(svc, airtrailLink).updatePositions(user, '5', { positions, day_id: 3 }, 'sock')).toEqual({ success: true });
+      expect(await new ReservationsController(svc, airtrailLink).updatePositions(user, '5', { positions, day_id: 3 }, 'sock')).toEqual({ success: true });
       expect(updatePositions).toHaveBeenCalledWith('5', positions, 3);
       expect(broadcast).toHaveBeenCalledWith('5', 'reservation:positions', { positions, day_id: 3 }, 'sock');
     });
@@ -162,13 +162,13 @@ describe('ReservationsController (parity with the legacy /api/trips/:tripId/rese
       expect(await thrown(() => new ReservationsController(svc, airtrailLink).updateTravelers(user, '5', '9', { user_ids: [1] }))).toEqual({ status: 404, body: { error: 'Reservation not found' } });
     });
 
-    it('assigns travelers, broadcasts, and returns { travelers, reservation }', () => {
+    it('assigns travelers, broadcasts, and returns { travelers, reservation }', async () => {
       const travelers = [{ user_id: 2, username: 'Sam', avatar: null, is_guest: 0 }];
       const reservation = { id: 9, travelers };
       const setTravelers = vi.fn().mockReturnValue({ travelers, reservation });
       const broadcast = vi.fn();
       const svc = makeService({ setTravelers, broadcast } as Partial<ReservationsService>);
-      expect(new ReservationsController(svc, airtrailLink).updateTravelers(user, '5', '9', { user_ids: [2] }, 'sock')).toEqual({ travelers, reservation });
+      expect(await new ReservationsController(svc, airtrailLink).updateTravelers(user, '5', '9', { user_ids: [2] }, 'sock')).toEqual({ travelers, reservation });
       expect(setTravelers).toHaveBeenCalledWith('9', '5', [2]);
       expect(broadcast).toHaveBeenCalledWith('5', 'reservation:travelers-updated', { reservationId: 9, travelers }, 'sock');
     });

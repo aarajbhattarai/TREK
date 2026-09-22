@@ -182,7 +182,7 @@ describe('ReservationsService (DI-native, real SQL)', () => {
     it('RESV-SVC-007: an empty-string title silently keeps the old value (COALESCE + `|| null`)', async () => {
       const { trip } = ownerTrip();
       const res = createReservation(testDb, trip.id, { title: 'Old title' });
-      const current = svc.getReservation(String(res.id), String(trip.id))!;
+      const current = (await svc.getReservation(String(res.id), String(trip.id)))!;
       const { reservation } = await svc.update(String(res.id), String(trip.id), { title: '', notes: 'updated' }, current);
       expect(reservation.title).toBe('Old title');
       expect(reservation.notes).toBe('updated');
@@ -192,7 +192,7 @@ describe('ReservationsService (DI-native, real SQL)', () => {
       const { trip } = ownerTrip();
       const res = createReservation(testDb, trip.id, { title: 'X', type: 'tour' });
       testDb.prepare('UPDATE reservations SET reservation_time = ? WHERE id = ?').run('2030-05-01T10:00:00', res.id);
-      const current = svc.getReservation(String(res.id), String(trip.id))!;
+      const current = (await svc.getReservation(String(res.id), String(trip.id)))!;
       const { reservation } = await svc.update(String(res.id), String(trip.id), { type: 'hotel' }, current);
       expect(reservation.reservation_time).toBeNull();
       expect(reservation.reservation_end_time).toBeNull();
@@ -202,7 +202,7 @@ describe('ReservationsService (DI-native, real SQL)', () => {
       const { trip } = ownerTrip();
       const res = createReservation(testDb, trip.id, { title: 'Hotel', type: 'hotel' });
       testDb.prepare('UPDATE reservations SET accommodation_id = ? WHERE id = ?').run('999', res.id);
-      const current = svc.getReservation(String(res.id), String(trip.id))!;
+      const current = (await svc.getReservation(String(res.id), String(trip.id)))!;
       const { reservation } = await svc.update(String(res.id), String(trip.id), { notes: 'n' }, current);
       expect(reservation.accommodation_id).toBeNull();
     });
@@ -214,7 +214,7 @@ describe('ReservationsService (DI-native, real SQL)', () => {
       testDb.prepare('UPDATE budget_items SET reservation_id = ? WHERE id = ?').run(res.id, item.id);
       testDb.prepare('UPDATE reservations SET metadata = ? WHERE id = ?')
         .run(JSON.stringify({ airline: 'CZ', seat: '72K', price: '2040', priceCurrency: 'CNY' }), res.id);
-      const current = svc.getReservation(String(res.id), String(trip.id))!;
+      const current = (await svc.getReservation(String(res.id), String(trip.id)))!;
       // What the booking form sends back: rebuilt from its fields, price not among them.
       const { reservation } = await svc.update(String(res.id), String(trip.id), { metadata: { airline: 'CZ', seat: '12A' } }, current);
       expect(JSON.parse(reservation.metadata as string)).toEqual({ airline: 'CZ', seat: '12A', price: '2040', priceCurrency: 'CNY' });
@@ -227,13 +227,13 @@ describe('ReservationsService (DI-native, real SQL)', () => {
       testDb.prepare('UPDATE budget_items SET reservation_id = ? WHERE id = ?').run(res.id, item.id);
       testDb.prepare('UPDATE reservations SET metadata = ? WHERE id = ?').run(JSON.stringify({ price: '100' }), res.id);
 
-      let current = svc.getReservation(String(res.id), String(trip.id))!;
+      let current = (await svc.getReservation(String(res.id), String(trip.id)))!;
       let { reservation } = await svc.update(String(res.id), String(trip.id), { metadata: { price: '150' } }, current);
       expect(JSON.parse(reservation.metadata as string)).toEqual({ price: '150' });
 
       // Naming the key with a null is how a caller removes the price on purpose;
       // it must not be read as "the form did not mention it".
-      current = svc.getReservation(String(res.id), String(trip.id))!;
+      current = (await svc.getReservation(String(res.id), String(trip.id)))!;
       ({ reservation } = await svc.update(String(res.id), String(trip.id), { metadata: { price: null, seat: '1A' } }, current));
       expect(JSON.parse(reservation.metadata as string)).toEqual({ price: null, seat: '1A' });
     });
@@ -247,7 +247,7 @@ describe('ReservationsService (DI-native, real SQL)', () => {
       const res = createReservation(testDb, trip.id, { title: 'Imported', type: 'flight' });
       testDb.prepare('UPDATE reservations SET metadata = ? WHERE id = ?')
         .run(JSON.stringify({ price: '999', priceCurrency: 'EUR' }), res.id);
-      const current = svc.getReservation(String(res.id), String(trip.id))!;
+      const current = (await svc.getReservation(String(res.id), String(trip.id)))!;
 
       const { reservation } = await svc.update(String(res.id), String(trip.id), { metadata: { seat: '1A' } }, current);
       expect(JSON.parse(reservation.metadata as string)).toEqual({ seat: '1A', price: '999', priceCurrency: 'EUR' });
@@ -259,7 +259,7 @@ describe('ReservationsService (DI-native, real SQL)', () => {
       const item = createBudgetItem(testDb, trip.id, { name: 'Flight', total_price: 50 });
       testDb.prepare('UPDATE budget_items SET reservation_id = ? WHERE id = ?').run(res.id, item.id);
       testDb.prepare('UPDATE reservations SET metadata = ? WHERE id = ?').run(JSON.stringify({ price: '50' }), res.id);
-      const current = svc.getReservation(String(res.id), String(trip.id))!;
+      const current = (await svc.getReservation(String(res.id), String(trip.id)))!;
       const { reservation } = await svc.update(String(res.id), String(trip.id), { metadata: null }, current);
       expect(reservation.metadata).toBeNull();
     });
@@ -268,10 +268,10 @@ describe('ReservationsService (DI-native, real SQL)', () => {
       const { trip } = ownerTrip();
       const res = createReservation(testDb, trip.id, { title: 'Bus' });
       testDb.prepare('INSERT INTO reservation_endpoints (reservation_id, role, sequence, name, lat, lng) VALUES (?, ?, 0, ?, 1, 2)').run(res.id, 'from', 'A');
-      let current = svc.getReservation(String(res.id), String(trip.id))!;
+      let current = (await svc.getReservation(String(res.id), String(trip.id)))!;
       await svc.update(String(res.id), String(trip.id), { notes: 'no endpoints field' }, current);
       expect(testDb.prepare('SELECT COUNT(*) as c FROM reservation_endpoints WHERE reservation_id = ?').get(res.id)).toEqual({ c: 1 });
-      current = svc.getReservation(String(res.id), String(trip.id))!;
+      current = (await svc.getReservation(String(res.id), String(trip.id)))!;
       await svc.update(String(res.id), String(trip.id), { endpoints: [] }, current);
       expect(testDb.prepare('SELECT COUNT(*) as c FROM reservation_endpoints WHERE reservation_id = ?').get(res.id)).toEqual({ c: 0 });
     });
@@ -304,28 +304,28 @@ describe('ReservationsService (DI-native, real SQL)', () => {
   });
 
   describe('updatePositions', () => {
-    it('RESV-SVC-013: without dayId updates the global day_plan_position (legacy branch)', () => {
+    it('RESV-SVC-013: without dayId updates the global day_plan_position (legacy branch)', async () => {
       const { trip } = ownerTrip();
       const r1 = createReservation(testDb, trip.id, { title: 'A' });
       const r2 = createReservation(testDb, trip.id, { title: 'B' });
-      svc.updatePositions(String(trip.id), [{ id: r2.id, day_plan_position: 0 }, { id: r1.id, day_plan_position: 1 }]);
+      await svc.updatePositions(String(trip.id), [{ id: r2.id, day_plan_position: 0 }, { id: r1.id, day_plan_position: 1 }]);
       expect(testDb.prepare('SELECT day_plan_position FROM reservations WHERE id = ?').get(r2.id)).toEqual({ day_plan_position: 0 });
       expect(testDb.prepare('SELECT day_plan_position FROM reservations WHERE id = ?').get(r1.id)).toEqual({ day_plan_position: 1 });
     });
 
-    it('RESV-SVC-014: with dayId upserts per-day positions into reservation_day_positions', () => {
+    it('RESV-SVC-014: with dayId upserts per-day positions into reservation_day_positions', async () => {
       const { trip } = ownerTrip();
       const day = createDay(testDb, trip.id, { date: '2030-05-01' });
       const r1 = createReservation(testDb, trip.id, { title: 'A' });
-      svc.updatePositions(String(trip.id), [{ id: r1.id, day_plan_position: 3 }], day.id);
-      svc.updatePositions(String(trip.id), [{ id: r1.id, day_plan_position: 5 }], day.id); // OR REPLACE
+      await svc.updatePositions(String(trip.id), [{ id: r1.id, day_plan_position: 3 }], day.id);
+      await svc.updatePositions(String(trip.id), [{ id: r1.id, day_plan_position: 5 }], day.id); // OR REPLACE
       expect(testDb.prepare('SELECT position FROM reservation_day_positions WHERE reservation_id = ? AND day_id = ?').get(r1.id, day.id)).toEqual({ position: 5 });
       expect(testDb.prepare('SELECT day_plan_position FROM reservations WHERE id = ?').get(r1.id)).toEqual({ day_plan_position: null });
     });
   });
 
   describe('list / getReservationWithJoins', () => {
-    it('RESV-SVC-015: attaches day_positions, endpoints, travelers and normalizes the TEXT accommodation_id', () => {
+    it('RESV-SVC-015: attaches day_positions, endpoints, travelers and normalizes the TEXT accommodation_id', async () => {
       const { user, trip } = ownerTrip({ start_date: '2030-05-01', end_date: '2030-05-02' });
       const place = createPlace(testDb, trip.id);
       const days = testDb.prepare('SELECT id FROM days WHERE trip_id = ? ORDER BY day_number').all(trip.id) as { id: number }[];
@@ -334,26 +334,26 @@ describe('ReservationsService (DI-native, real SQL)', () => {
       // The TEXT column quirk: the FK reads back as a numeric string like "14.0".
       testDb.prepare('UPDATE reservations SET accommodation_id = ? WHERE id = ?').run(`${acc.id}.0`, res.id);
       testDb.prepare('INSERT INTO reservation_day_positions (reservation_id, day_id, position) VALUES (?, ?, ?)').run(res.id, days[0].id, 2);
-      svc.setReservationTravelers(res.id, trip.id, [user.id]);
+      await svc.setReservationTravelers(res.id, trip.id, [user.id]);
 
-      const [row] = svc.list(String(trip.id));
+      const [row] = (await svc.list(String(trip.id)));
       expect(row.accommodation_id).toBe(acc.id);
       expect(row.accommodation_name).toBe(place.name);
       expect(row.day_positions).toEqual({ [days[0].id]: 2 });
       expect(row.travelers).toHaveLength(1);
 
-      const single = svc.getReservationWithJoins(res.id)!;
+      const single = (await svc.getReservationWithJoins(res.id))!;
       expect(single.accommodation_id).toBe(acc.id);
       expect(single.travelers).toHaveLength(1);
     });
 
-    it('RESV-SVC-016: getReservationWithJoins returns undefined for a missing id', () => {
-      expect(svc.getReservationWithJoins(999)).toBeUndefined();
+    it('RESV-SVC-016: getReservationWithJoins returns undefined for a missing id', async () => {
+      expect((await svc.getReservationWithJoins(999))).toBeUndefined();
     });
   });
 
   describe('listUpcoming', () => {
-    it('RESV-SVC-017: returns future reservations across owned + member trips, skipping cancelled', () => {
+    it('RESV-SVC-017: returns future reservations across owned + member trips, skipping cancelled', async () => {
       const { user, trip } = ownerTrip();
       const future = createReservation(testDb, trip.id, { title: 'Future' });
       testDb.prepare('UPDATE reservations SET reservation_time = ? WHERE id = ?').run('2999-01-01T10:00:00', future.id);
@@ -362,40 +362,40 @@ describe('ReservationsService (DI-native, real SQL)', () => {
       const cancelled = createReservation(testDb, trip.id, { title: 'Cancelled' });
       testDb.prepare("UPDATE reservations SET reservation_time = ?, status = 'cancelled' WHERE id = ?").run('2999-01-02T10:00:00', cancelled.id);
 
-      const rows = svc.listUpcoming(user.id) as { title: string }[];
+      const rows = (await svc.listUpcoming(user.id)) as { title: string }[];
       expect(rows.map(r => r.title)).toEqual(['Future']);
     });
 
     // #1934 — a stay covers a range, so it would hold a widget slot for its
     // whole span. Both ways a hotel can be dated are kept out.
-    it('RESV-SVC-017b: leaves out a hotel dated through its own reservation_time', () => {
+    it('RESV-SVC-017b: leaves out a hotel dated through its own reservation_time', async () => {
       const { user, trip } = ownerTrip();
       const hotel = createReservation(testDb, trip.id, { title: 'Hotel', type: 'hotel' });
       testDb.prepare('UPDATE reservations SET reservation_time = ? WHERE id = ?').run('2999-01-01T10:00:00', hotel.id);
       const flight = createReservation(testDb, trip.id, { title: 'Flight' });
       testDb.prepare('UPDATE reservations SET reservation_time = ? WHERE id = ?').run('2999-01-02T10:00:00', flight.id);
 
-      const rows = svc.listUpcoming(user.id) as { title: string }[];
+      const rows = (await svc.listUpcoming(user.id)) as { title: string }[];
       expect(rows.map(r => r.title)).toEqual(['Flight']);
     });
 
-    it('RESV-SVC-017c: leaves out a hotel dated through its day', () => {
+    it('RESV-SVC-017c: leaves out a hotel dated through its day', async () => {
       const { user, trip } = ownerTrip();
       const day = createDay(testDb, trip.id, { date: '2999-06-01' });
       createReservation(testDb, trip.id, { title: 'Hotel', type: 'hotel', day_id: day.id });
 
-      const rows = svc.listUpcoming(user.id) as { title: string }[];
+      const rows = (await svc.listUpcoming(user.id)) as { title: string }[];
       expect(rows.map(r => r.title)).toEqual([]);
     });
 
     // The type column defaults to 'other' but nothing stops a NULL, and a
     // NULL-unsafe `type != 'hotel'` would silently drop those rows.
-    it('RESV-SVC-017d: a reservation with no type at all still shows', () => {
+    it('RESV-SVC-017d: a reservation with no type at all still shows', async () => {
       const { user, trip } = ownerTrip();
       const res = createReservation(testDb, trip.id, { title: 'Untyped' });
       testDb.prepare('UPDATE reservations SET type = NULL, reservation_time = ? WHERE id = ?').run('2999-01-01T10:00:00', res.id);
 
-      const rows = svc.listUpcoming(user.id) as { title: string }[];
+      const rows = (await svc.listUpcoming(user.id)) as { title: string }[];
       expect(rows.map(r => r.title)).toEqual(['Untyped']);
     });
 
@@ -403,7 +403,7 @@ describe('ReservationsService (DI-native, real SQL)', () => {
     // day-anchored rows hold a bare 'HH:MM'. Compared as strings against an ISO
     // timestamp, ':' sorts above '2', so a bare time was an arbitrary filter:
     // everything from 20:00 on passed and everything before it vanished (#1934).
-    it('RESV-SVC-017e: a bare clock time falls back to its day instead of being read as a date', () => {
+    it('RESV-SVC-017e: a bare clock time falls back to its day instead of being read as a date', async () => {
       const { user, trip } = ownerTrip();
       const day = createDay(testDb, trip.id, { date: '2999-06-01' });
       const morning = createReservation(testDb, trip.id, { title: 'Ferry', day_id: day.id });
@@ -411,11 +411,11 @@ describe('ReservationsService (DI-native, real SQL)', () => {
       const evening = createReservation(testDb, trip.id, { title: 'Show', day_id: day.id });
       testDb.prepare('UPDATE reservations SET reservation_time = ? WHERE id = ?').run('20:00', evening.id);
 
-      const rows = svc.listUpcoming(user.id) as { title: string }[];
+      const rows = (await svc.listUpcoming(user.id)) as { title: string }[];
       expect(rows.map(r => r.title)).toEqual(['Ferry', 'Show']);
     });
 
-    it('RESV-SVC-017f: orders by the day and the clock, not by the raw column', () => {
+    it('RESV-SVC-017f: orders by the day and the clock, not by the raw column', async () => {
       const { user, trip } = ownerTrip();
       const early = createDay(testDb, trip.id, { date: '2999-06-01' });
       const late = createDay(testDb, trip.id, { date: '2999-06-02' });
@@ -428,27 +428,27 @@ describe('ReservationsService (DI-native, real SQL)', () => {
       const dayOnly = createReservation(testDb, trip.id, { title: 'No time', day_id: late.id });
       testDb.prepare('UPDATE reservations SET reservation_time = NULL WHERE id = ?').run(dayOnly.id);
 
-      const rows = svc.listUpcoming(user.id) as { title: string }[];
+      const rows = (await svc.listUpcoming(user.id)) as { title: string }[];
       expect(rows.map(r => r.title)).toEqual(['Bare morning', 'Bare evening', 'No time', 'Dated day two']);
     });
 
     // The stay stays out, but arriving and leaving are moments, and they are the
     // two the traveller needs reminding of.
-    it('RESV-SVC-017g: a stay contributes a check-in and a check-out named after its place', () => {
+    it('RESV-SVC-017g: a stay contributes a check-in and a check-out named after its place', async () => {
       const { user, trip } = ownerTrip();
       const start = createDay(testDb, trip.id, { date: '2999-06-01' });
       const end = createDay(testDb, trip.id, { date: '2999-06-05' });
       const place = createPlace(testDb, trip.id, { name: 'The Plaza' });
       createDayAccommodation(testDb, trip.id, place.id, start.id, end.id, { check_in: '15:00', check_out: '11:00' });
 
-      const rows = svc.listUpcoming(user.id) as { title: string; type: string; day_date: string }[];
+      const rows = (await svc.listUpcoming(user.id)) as { title: string; type: string; day_date: string }[];
       expect(rows).toEqual([
         expect.objectContaining({ title: 'The Plaza', type: 'checkin', day_date: '2999-06-01' }),
         expect.objectContaining({ title: 'The Plaza', type: 'checkout', day_date: '2999-06-05' }),
       ]);
     });
 
-    it('RESV-SVC-017h: the two moments sort among the bookings rather than after them', () => {
+    it('RESV-SVC-017h: the two moments sort among the bookings rather than after them', async () => {
       const { user, trip } = ownerTrip();
       const start = createDay(testDb, trip.id, { date: '2999-06-01' });
       const end = createDay(testDb, trip.id, { date: '2999-06-03' });
@@ -459,21 +459,21 @@ describe('ReservationsService (DI-native, real SQL)', () => {
       const museum = createReservation(testDb, trip.id, { title: 'Museum' });
       testDb.prepare('UPDATE reservations SET reservation_time = ? WHERE id = ?').run('2999-06-02T09:00', museum.id);
 
-      const rows = svc.listUpcoming(user.id) as { title: string }[];
+      const rows = (await svc.listUpcoming(user.id)) as { title: string }[];
       expect(rows.map(r => r.title)).toEqual(['Hostel', 'Dinner', 'Museum', 'Hostel']);
     });
 
-    it('RESV-SVC-017i: a stay that is already over contributes nothing', () => {
+    it('RESV-SVC-017i: a stay that is already over contributes nothing', async () => {
       const { user, trip } = ownerTrip();
       const start = createDay(testDb, trip.id, { date: '2000-06-01' });
       const end = createDay(testDb, trip.id, { date: '2000-06-05' });
       const place = createPlace(testDb, trip.id, { name: 'Old Inn' });
       createDayAccommodation(testDb, trip.id, place.id, start.id, end.id, { check_in: '15:00', check_out: '11:00' });
 
-      expect(svc.listUpcoming(user.id)).toEqual([]);
+      expect((await svc.listUpcoming(user.id))).toEqual([]);
     });
 
-    it('RESV-SVC-017j: a nameless stay falls back to its linked booking', () => {
+    it('RESV-SVC-017j: a nameless stay falls back to its linked booking', async () => {
       const { user, trip } = ownerTrip();
       const start = createDay(testDb, trip.id, { date: '2999-06-01' });
       const end = createDay(testDb, trip.id, { date: '2999-06-02' });
@@ -483,13 +483,13 @@ describe('ReservationsService (DI-native, real SQL)', () => {
       const booking = createReservation(testDb, trip.id, { title: 'Hotel Ibis', type: 'hotel' });
       testDb.prepare('UPDATE reservations SET accommodation_id = ? WHERE id = ?').run(String(acc.lastInsertRowid), booking.id);
 
-      const rows = svc.listUpcoming(user.id) as { title: string; type: string }[];
+      const rows = (await svc.listUpcoming(user.id)) as { title: string; type: string }[];
       expect(rows.map(r => r.type + ':' + r.title)).toEqual(['checkin:Hotel Ibis', 'checkout:Hotel Ibis']);
     });
   });
 
   describe('resyncReservationDays', () => {
-    it('RESV-SVC-018: re-anchors a dated booking to the day matching its time; out-of-range stays untouched', () => {
+    it('RESV-SVC-018: re-anchors a dated booking to the day matching its time; out-of-range stays untouched', async () => {
       const { trip } = ownerTrip({ start_date: '2030-05-01', end_date: '2030-05-03' });
       const days = testDb.prepare('SELECT id, date FROM days WHERE trip_id = ? ORDER BY day_number').all(trip.id) as { id: number; date: string }[];
       const res = createReservation(testDb, trip.id, { title: 'Tour', type: 'tour', day_id: days[0].id });
@@ -497,22 +497,22 @@ describe('ReservationsService (DI-native, real SQL)', () => {
       const outside = createReservation(testDb, trip.id, { title: 'Outside', type: 'tour', day_id: days[0].id });
       testDb.prepare('UPDATE reservations SET reservation_time = ? WHERE id = ?').run('2031-01-01T09:00:00', outside.id);
 
-      svc.resyncReservationDays(String(trip.id));
+      await svc.resyncReservationDays(String(trip.id));
       expect(testDb.prepare('SELECT day_id FROM reservations WHERE id = ?').get(res.id)).toEqual({ day_id: days[2].id });
       expect(testDb.prepare('SELECT day_id FROM reservations WHERE id = ?').get(outside.id)).toEqual({ day_id: days[0].id });
     });
   });
 
   describe('setTravelers (controller-facing composition)', () => {
-    it('returns null when the reservation is not on the trip (off-trip guard)', () => {
+    it('returns null when the reservation is not on the trip (off-trip guard)', async () => {
       const { trip } = ownerTrip();
-      expect(svc.setTravelers('999', String(trip.id), [2])).toBeNull();
+      expect((await svc.setTravelers('999', String(trip.id), [2]))).toBeNull();
     });
 
-    it('assigns travelers and returns the refreshed travelers + reservation', () => {
+    it('assigns travelers and returns the refreshed travelers + reservation', async () => {
       const { user, trip } = ownerTrip();
       const res = createReservation(testDb, trip.id);
-      const result = svc.setTravelers(String(res.id), String(trip.id), [user.id])!;
+      const result = (await svc.setTravelers(String(res.id), String(trip.id), [user.id]))!;
       expect(result.travelers).toHaveLength(1);
       expect(result.travelers[0]).toMatchObject({ user_id: user.id });
       expect(result.reservation).toMatchObject({ id: res.id });
@@ -595,7 +595,7 @@ describe('ReservationsService (DI-native, real SQL)', () => {
   describe('notifyBookingChange', () => {
     it('sends the booking_change notification with the legacy payload (fire-and-forget)', async () => {
       const { user, trip } = ownerTrip();
-      expect(() => svc.notifyBookingChange(String(trip.id), user.id, 'Hotel', 'lodging')).not.toThrow();
+      await expect(svc.notifyBookingChange(String(trip.id), user.id, 'Hotel', 'lodging')).resolves.not.toThrow();
       await vi.waitFor(() => expect(notif.send).toHaveBeenCalled());
       expect(notif.send).toHaveBeenCalledWith({
         event: 'booking_change',
@@ -608,7 +608,7 @@ describe('ReservationsService (DI-native, real SQL)', () => {
 
     it('is a silent no-op when the actor does not exist', async () => {
       const { trip } = ownerTrip();
-      svc.notifyBookingChange(String(trip.id), 999, 'Hotel', '');
+      await svc.notifyBookingChange(String(trip.id), 999, 'Hotel', '');
       await new Promise(r => setTimeout(r, 10));
       expect(notif.send).not.toHaveBeenCalled();
     });
@@ -624,21 +624,21 @@ describe('setReservationTravelers / loadTravelers (#1517)', () => {
     return user;
   }
 
-  it('RES-TRAV-001: assigns trip members and returns them via loadTravelers', () => {
+  it('RES-TRAV-001: assigns trip members and returns them via loadTravelers', async () => {
     const { user: owner } = createUser(testDb);
     const { user: member } = createUser(testDb);
     const trip = createTrip(testDb, owner.id);
     addTripMember(testDb, trip.id, member.id);
     const res = createReservation(testDb, trip.id);
 
-    svc.setReservationTravelers(res.id, trip.id, [member.id]);
+    await svc.setReservationTravelers(res.id, trip.id, [member.id]);
 
-    const travelers = svc.loadTravelers(res.id);
+    const travelers = (await svc.loadTravelers(res.id));
     expect(travelers).toHaveLength(1);
     expect(travelers[0]).toMatchObject({ user_id: member.id, username: member.username, is_guest: 0 });
   });
 
-  it('RES-TRAV-002: silently drops a user id that is not on the trip (cross-trip guard)', () => {
+  it('RES-TRAV-002: silently drops a user id that is not on the trip (cross-trip guard)', async () => {
     const { user: owner } = createUser(testDb);
     const { user: member } = createUser(testDb);
     const trip = createTrip(testDb, owner.id);
@@ -650,27 +650,27 @@ describe('setReservationTravelers / loadTravelers (#1517)', () => {
     const otherTrip = createTrip(testDb, outsider.id);
     addTripMember(testDb, otherTrip.id, outsider.id);
 
-    svc.setReservationTravelers(res.id, trip.id, [member.id, outsider.id]);
+    await svc.setReservationTravelers(res.id, trip.id, [member.id, outsider.id]);
 
-    const ids = svc.loadTravelers(res.id).map(t => t.user_id);
+    const ids = (await svc.loadTravelers(res.id)).map(t => t.user_id);
     expect(ids).toEqual([member.id]);
     expect(ids).not.toContain(outsider.id);
   });
 
-  it('RES-TRAV-003: assigns a named guest (users.is_guest = 1) joined via trip_members', () => {
+  it('RES-TRAV-003: assigns a named guest (users.is_guest = 1) joined via trip_members', async () => {
     const { user: owner } = createUser(testDb);
     const trip = createTrip(testDb, owner.id);
     const guest = addGuest(trip.id, 'Grandma');
     const res = createReservation(testDb, trip.id);
 
-    svc.setReservationTravelers(res.id, trip.id, [guest.id]);
+    await svc.setReservationTravelers(res.id, trip.id, [guest.id]);
 
-    const travelers = svc.loadTravelers(res.id);
+    const travelers = (await svc.loadTravelers(res.id));
     expect(travelers).toHaveLength(1);
     expect(travelers[0]).toMatchObject({ user_id: guest.id, username: 'Grandma', is_guest: 1 });
   });
 
-  it('RES-TRAV-004: re-setting replaces the previous set', () => {
+  it('RES-TRAV-004: re-setting replaces the previous set', async () => {
     const { user: owner } = createUser(testDb);
     const { user: a } = createUser(testDb);
     const { user: b } = createUser(testDb);
@@ -679,20 +679,20 @@ describe('setReservationTravelers / loadTravelers (#1517)', () => {
     addTripMember(testDb, trip.id, b.id);
     const res = createReservation(testDb, trip.id);
 
-    svc.setReservationTravelers(res.id, trip.id, [a.id]);
-    expect(svc.loadTravelers(res.id).map(t => t.user_id)).toEqual([a.id]);
+    await svc.setReservationTravelers(res.id, trip.id, [a.id]);
+    expect((await svc.loadTravelers(res.id)).map(t => t.user_id)).toEqual([a.id]);
 
-    svc.setReservationTravelers(res.id, trip.id, [b.id]);
-    const ids = svc.loadTravelers(res.id).map(t => t.user_id);
+    await svc.setReservationTravelers(res.id, trip.id, [b.id]);
+    const ids = (await svc.loadTravelers(res.id)).map(t => t.user_id);
     expect(ids).toEqual([b.id]);
     expect(ids).not.toContain(a.id);
 
     // Clearing removes everyone.
-    svc.setReservationTravelers(res.id, trip.id, []);
-    expect(svc.loadTravelers(res.id)).toHaveLength(0);
+    await svc.setReservationTravelers(res.id, trip.id, []);
+    expect((await svc.loadTravelers(res.id))).toHaveLength(0);
   });
 
-  it('RES-TRAV-005: list attaches travelers[] per reservation', () => {
+  it('RES-TRAV-005: list attaches travelers[] per reservation', async () => {
     const { user: owner } = createUser(testDb);
     const { user: member } = createUser(testDb);
     const trip = createTrip(testDb, owner.id);
@@ -700,9 +700,9 @@ describe('setReservationTravelers / loadTravelers (#1517)', () => {
     const withTravelers = createReservation(testDb, trip.id, { title: 'Flight' });
     const withoutTravelers = createReservation(testDb, trip.id, { title: 'Hotel' });
 
-    svc.setReservationTravelers(withTravelers.id, trip.id, [member.id]);
+    await await svc.setReservationTravelers(withTravelers.id, trip.id, [member.id]);
 
-    const list = svc.list(trip.id);
+    const list = await (await svc.list(trip.id));
     const assigned = list.find(r => r.id === withTravelers.id)!;
     const empty = list.find(r => r.id === withoutTravelers.id)!;
 
@@ -713,26 +713,26 @@ describe('setReservationTravelers / loadTravelers (#1517)', () => {
 });
 
 describe('ReservationsService — the surface the deleted bridge exposed', () => {
-  it('RESV-BRIDGE-001: listReservations delegates to ReservationsService.list', () => {
+  it('RESV-BRIDGE-001: listReservations delegates to ReservationsService.list', async () => {
     const { trip } = ownerTrip();
     createReservation(testDb, trip.id, { title: 'A' });
-    expect(bridge.listReservations(trip.id).map(r => r.title)).toEqual(['A']);
+    expect((await bridge.listReservations(trip.id)).map(r => r.title)).toEqual(['A']);
   });
 
-  it('RESV-BRIDGE-002: loadEndpointsByTrip groups endpoints per reservation', () => {
+  it('RESV-BRIDGE-002: loadEndpointsByTrip groups endpoints per reservation', async () => {
     const { trip } = ownerTrip();
     const res = createReservation(testDb, trip.id);
     testDb.prepare('INSERT INTO reservation_endpoints (reservation_id, role, sequence, name, lat, lng) VALUES (?, ?, 0, ?, 1, 2)').run(res.id, 'from', 'A');
-    const map = bridge.loadEndpointsByTrip(trip.id);
+    const map = await bridge.loadEndpointsByTrip(trip.id);
     expect(map.get(res.id)).toHaveLength(1);
   });
 
-  it('RESV-BRIDGE-003: resyncReservationDays re-anchors through the bridge', () => {
+  it('RESV-BRIDGE-003: resyncReservationDays re-anchors through the bridge', async () => {
     const { trip } = ownerTrip({ start_date: '2030-05-01', end_date: '2030-05-02' });
     const days = testDb.prepare('SELECT id FROM days WHERE trip_id = ? ORDER BY day_number').all(trip.id) as { id: number }[];
     const res = createReservation(testDb, trip.id, { title: 'T', type: 'tour', day_id: days[0].id });
     testDb.prepare('UPDATE reservations SET reservation_time = ? WHERE id = ?').run('2030-05-02T09:00:00', res.id);
-    bridge.resyncReservationDays(trip.id);
+    await bridge.resyncReservationDays(trip.id);
     expect(testDb.prepare('SELECT day_id FROM reservations WHERE id = ?').get(res.id)).toEqual({ day_id: days[1].id });
   });
 
@@ -742,23 +742,23 @@ describe('ReservationsService — the surface the deleted bridge exposed', () =>
     expect(reservation).toMatchObject({ title: 'Bridge', type: 'other' });
   });
 
-  it('RESV-BRIDGE-005: getReservation is trip-scoped', () => {
+  it('RESV-BRIDGE-005: getReservation is trip-scoped', async () => {
     const { trip } = ownerTrip();
     const res = createReservation(testDb, trip.id);
-    expect(bridge.getReservation(res.id, trip.id)).toMatchObject({ id: res.id });
-    expect(bridge.getReservation(res.id, trip.id + 1)).toBeUndefined();
+    expect(await bridge.getReservation(res.id, trip.id)).toMatchObject({ id: res.id });
+    expect(await bridge.getReservation(res.id, trip.id + 1)).toBeUndefined();
   });
 
-  it('RESV-BRIDGE-006: getReservationWithJoins attaches endpoints + travelers', () => {
+  it('RESV-BRIDGE-006: getReservationWithJoins attaches endpoints + travelers', async () => {
     const { trip } = ownerTrip();
     const res = createReservation(testDb, trip.id);
-    expect(bridge.getReservationWithJoins(res.id)).toMatchObject({ id: res.id, endpoints: [], travelers: [] });
+    expect(await bridge.getReservationWithJoins(res.id)).toMatchObject({ id: res.id, endpoints: [], travelers: [] });
   });
 
   it('RESV-BRIDGE-007: updateReservation updates through the bridge', async () => {
     const { trip } = ownerTrip();
     const res = createReservation(testDb, trip.id, { title: 'Old' });
-    const current = bridge.getReservation(res.id, trip.id)!;
+    const current = (await bridge.getReservation(res.id, trip.id))!;
     const { reservation } = await bridge.updateReservation(res.id, trip.id, { title: 'New' }, current);
     expect(reservation.title).toBe('New');
   });
@@ -768,12 +768,12 @@ describe('ReservationsService — the surface the deleted bridge exposed', () =>
     const res = createReservation(testDb, trip.id);
     const { deleted } = await bridge.deleteReservation(res.id, trip.id);
     expect(deleted).toMatchObject({ id: res.id });
-    expect(bridge.getReservation(res.id, trip.id)).toBeUndefined();
+    expect(await bridge.getReservation(res.id, trip.id)).toBeUndefined();
   });
 
   it('RESV-BRIDGE-009: notifyBookingChange fires the notification through the bridge', async () => {
     const { user, trip } = ownerTrip();
-    bridge.notifyBookingChange(trip.id, user.id, 'Bridge booking', 'other');
+    await bridge.notifyBookingChange(trip.id, user.id, 'Bridge booking', 'other');
     await vi.waitFor(() => expect(notif.send).toHaveBeenCalled());
   });
 });
@@ -807,7 +807,7 @@ describe('ReservationsService — legacy branch parity (coverage of the folded c
     const acc = createDayAccommodation(testDb, trip.id, place.id, days[0].id, days[1].id);
     const res = createReservation(testDb, trip.id, { title: 'Hotel', type: 'hotel' });
     testDb.prepare('UPDATE reservations SET accommodation_id = ? WHERE id = ?').run(String(acc.id), res.id);
-    const current = svc.getReservation(String(res.id), String(trip.id))!;
+    const current = (await svc.getReservation(String(res.id), String(trip.id)))!;
     const { accommodationChanged } = await svc.update(String(res.id), String(trip.id), {
       type: 'hotel',
       create_accommodation: { place_id: place2.id, start_day_id: days[1].id, end_day_id: days[2].id, check_in: '14:00' },
@@ -823,7 +823,7 @@ describe('ReservationsService — legacy branch parity (coverage of the folded c
     const place = createPlace(testDb, trip.id);
     const days = testDb.prepare('SELECT id FROM days WHERE trip_id = ? ORDER BY day_number').all(trip.id) as { id: number }[];
     const res = createReservation(testDb, trip.id, { title: 'Hotel', type: 'hotel' });
-    const current = svc.getReservation(String(res.id), String(trip.id))!;
+    const current = (await svc.getReservation(String(res.id), String(trip.id)))!;
     const { reservation, accommodationChanged } = await svc.update(String(res.id), String(trip.id), {
       type: 'hotel',
       create_accommodation: { place_id: place.id, start_day_id: days[0].id, end_day_id: days[1].id },
@@ -838,7 +838,7 @@ describe('ReservationsService — legacy branch parity (coverage of the folded c
     const place = createPlace(testDb, trip.id);
     const res = createReservation(testDb, trip.id, { title: 'T', type: 'tour' });
     testDb.prepare("UPDATE reservations SET location = 'Loc', notes = 'N', url = 'U', confirmation_number = 'C' WHERE id = ?").run(res.id);
-    let current = svc.getReservation(String(res.id), String(trip.id))!;
+    let current = (await svc.getReservation(String(res.id), String(trip.id)))!;
     let { reservation } = await svc.update(String(res.id), String(trip.id), {
       location: 'NewLoc', notes: '', url: 'https://x', confirmation_number: 'NEW',
       status: 'confirmed', needs_review: true, metadata: { a: 1 }, place_id: place.id,
@@ -847,7 +847,7 @@ describe('ReservationsService — legacy branch parity (coverage of the folded c
       location: 'NewLoc', notes: null, url: 'https://x', confirmation_number: 'NEW',
       status: 'confirmed', needs_review: 1, metadata: JSON.stringify({ a: 1 }), place_id: place.id,
     });
-    current = svc.getReservation(String(res.id), String(trip.id))!;
+    current = (await svc.getReservation(String(res.id), String(trip.id)))!;
     ({ reservation } = await svc.update(String(res.id), String(trip.id), { title: 'T2' }, current));
     expect(reservation).toMatchObject({ title: 'T2', location: 'NewLoc', url: 'https://x', place_id: place.id });
   });
@@ -856,14 +856,14 @@ describe('ReservationsService — legacy branch parity (coverage of the folded c
     const { trip } = ownerTrip({ start_date: '2030-05-01', end_date: '2030-05-03' });
     const days = testDb.prepare('SELECT id FROM days WHERE trip_id = ? ORDER BY day_number').all(trip.id) as { id: number }[];
     const res = createReservation(testDb, trip.id, { title: 'T', type: 'tour' });
-    let current = svc.getReservation(String(res.id), String(trip.id))!;
+    let current = (await svc.getReservation(String(res.id), String(trip.id)))!;
     let { reservation } = await svc.update(String(res.id), String(trip.id), { day_id: days[1].id, end_day_id: days[2].id }, current);
     expect(reservation).toMatchObject({ day_id: days[1].id, end_day_id: days[2].id });
-    current = svc.getReservation(String(res.id), String(trip.id))!;
+    current = (await svc.getReservation(String(res.id), String(trip.id)))!;
     ({ reservation } = await svc.update(String(res.id), String(trip.id), { end_day_id: null, reservation_end_time: '2030-05-02T18:00:00' }, current));
     // explicit end_day_id null wins over the end-time derivation
     expect(reservation.end_day_id).toBeNull();
-    current = svc.getReservation(String(res.id), String(trip.id))!;
+    current = (await svc.getReservation(String(res.id), String(trip.id)))!;
     ({ reservation } = await svc.update(String(res.id), String(trip.id), { reservation_end_time: '2030-05-02T18:00:00' }, current));
     // no explicit end day + an end time -> derived
     expect(reservation.end_day_id).toBe(days[1].id);
@@ -877,49 +877,49 @@ describe('ReservationsService — legacy branch parity (coverage of the folded c
     const res = createReservation(testDb, trip.id, { title: 'Hotel', type: 'hotel' });
     testDb.prepare("UPDATE reservations SET accommodation_id = ?, metadata = ?, confirmation_number = 'KEEP' WHERE id = ?")
       .run(String(acc.id), JSON.stringify({ check_in_time: '16:00' }), res.id);
-    const current = svc.getReservation(String(res.id), String(trip.id))!;
+    const current = (await svc.getReservation(String(res.id), String(trip.id)))!;
     await svc.update(String(res.id), String(trip.id), { notes: 'touch' }, current);
     const row = testDb.prepare('SELECT check_in, confirmation FROM day_accommodations WHERE id = ?').get(acc.id);
     expect(row).toEqual({ check_in: '16:00', confirmation: 'KEEP' });
   });
 
-  it('RESV-SVC-026: resync derives the end day too, keeping the stored one when the end time is out of range', () => {
+  it('RESV-SVC-026: resync derives the end day too, keeping the stored one when the end time is out of range', async () => {
     const { trip } = ownerTrip({ start_date: '2030-05-01', end_date: '2030-05-03' });
     const days = testDb.prepare('SELECT id FROM days WHERE trip_id = ? ORDER BY day_number').all(trip.id) as { id: number }[];
     const res = createReservation(testDb, trip.id, { title: 'T', type: 'tour', day_id: days[0].id });
     testDb.prepare('UPDATE reservations SET reservation_time = ?, reservation_end_time = ?, end_day_id = ? WHERE id = ?')
       .run('2030-05-02T09:00:00', '2031-01-01T09:00:00', days[0].id, res.id);
-    svc.resyncReservationDays(String(trip.id));
+    await svc.resyncReservationDays(String(trip.id));
     // start re-anchored to day 2; out-of-range end time keeps the stored end day
     expect(testDb.prepare('SELECT day_id, end_day_id FROM reservations WHERE id = ?').get(res.id))
       .toEqual({ day_id: days[1].id, end_day_id: days[0].id });
     // A booking already on the right day is left untouched (no-change skip).
-    svc.resyncReservationDays(String(trip.id));
+    await svc.resyncReservationDays(String(trip.id));
     expect(testDb.prepare('SELECT day_id FROM reservations WHERE id = ?').get(res.id)).toEqual({ day_id: days[1].id });
   });
 
-  it('RESV-SVC-027: listUpcoming includes a timeless reservation whose day is in the future', () => {
+  it('RESV-SVC-027: listUpcoming includes a timeless reservation whose day is in the future', async () => {
     const { user, trip } = ownerTrip();
     const day = createDay(testDb, trip.id, { date: '2999-06-01' });
     createReservation(testDb, trip.id, { title: 'Timeless', day_id: day.id });
-    const rows = svc.listUpcoming(user.id) as { title: string }[];
+    const rows = (await svc.listUpcoming(user.id)) as { title: string }[];
     expect(rows.map(r => r.title)).toContain('Timeless');
   });
 
-  it('RESV-SVC-028: list merges multiple per-day positions for one reservation', () => {
+  it('RESV-SVC-028: list merges multiple per-day positions for one reservation', async () => {
     const { trip } = ownerTrip();
     const d1 = createDay(testDb, trip.id, { date: '2030-05-01' });
     const d2 = createDay(testDb, trip.id, { date: '2030-05-02' });
     const res = createReservation(testDb, trip.id);
     testDb.prepare('INSERT INTO reservation_day_positions (reservation_id, day_id, position) VALUES (?, ?, ?)').run(res.id, d1.id, 0);
     testDb.prepare('INSERT INTO reservation_day_positions (reservation_id, day_id, position) VALUES (?, ?, ?)').run(res.id, d2.id, 3);
-    const [row] = svc.list(String(trip.id));
+    const [row] = (await svc.list(String(trip.id)));
     expect(row.day_positions).toEqual({ [d1.id]: 0, [d2.id]: 3 });
   });
 
   it('RESV-SVC-029: notifyBookingChange falls back to "Untitled" and type "booking"', async () => {
     const { user } = createUser(testDb);
-    svc.notifyBookingChange('424242', user.id, 'B', '');
+    await svc.notifyBookingChange('424242', user.id, 'B', '');
     await vi.waitFor(() => expect(notif.send).toHaveBeenCalled());
     expect(notif.send).toHaveBeenCalledWith(expect.objectContaining({
       params: expect.objectContaining({ trip: 'Untitled', type: 'booking' }),
@@ -942,7 +942,7 @@ describe('ReservationsService — legacy branch parity (coverage of the folded c
     expect(budget.deleteBudgetItem).not.toHaveBeenCalled();
   });
 
-  it('RESV-SVC-031: list returns staged bookings, the staging inbox has to see its own rows', () => {
+  it('RESV-SVC-031: list returns staged bookings, the staging inbox has to see its own rows', async () => {
     const { trip } = ownerTrip();
     createReservation(testDb, trip.id, { title: 'Live One' });
     const staged = createReservation(testDb, trip.id, { title: 'Parked One' });
@@ -951,7 +951,7 @@ describe('ReservationsService — legacy branch parity (coverage of the folded c
     // The visibility predicate belongs to the anonymous exports (ICS feed,
     // shared trip) and must never be pulled into the authenticated list, or
     // nobody can confirm what the ingest parked.
-    expect(svc.list(String(trip.id)).map((r: any) => r.title).sort()).toEqual(['Live One', 'Parked One']);
+    expect((await svc.list(String(trip.id))).map((r: any) => r.title).sort()).toEqual(['Live One', 'Parked One']);
   });
 });
 
@@ -974,7 +974,7 @@ describe('ReservationsService — quirk fixes (post-fold)', () => {
   it('RESV-FIX-002: update is atomic — a failing endpoint save rolls back the field update', async () => {
     const { trip } = ownerTrip();
     const res = createReservation(testDb, trip.id, { title: 'Old' });
-    const current = svc.getReservation(String(res.id), String(trip.id))!;
+    const current = (await svc.getReservation(String(res.id), String(trip.id)))!;
     const badEndpoints = [{ role: 'from', name: 'A', code: null, lat: 1, lng: 2, timezone: null, local_time: null, local_date: null, sequence: {} }];
     await expect(svc.update(String(res.id), String(trip.id), { title: 'New', endpoints: badEndpoints } as never, current)).rejects.toThrow();
     expect(testDb.prepare('SELECT title FROM reservations WHERE id = ?').get(res.id)).toEqual({ title: 'Old' });
@@ -991,13 +991,13 @@ describe('ReservationsService — referenced ids stay inside the trip', () => {
     return { mine, theirs };
   }
 
-  it('RESV-SCOPE-001: names every foreign id in the body', () => {
+  it('RESV-SCOPE-001: names every foreign id in the body', async () => {
     const { mine, theirs } = twoTrips();
     const foreignPlace = createPlace(testDb, theirs.id);
     const foreignDay = testDb.prepare('SELECT id FROM days WHERE trip_id = ? ORDER BY day_number').get(theirs.id) as { id: number };
     const foreignAcc = createDayAccommodation(testDb, theirs.id, foreignPlace.id, foreignDay.id, foreignDay.id);
 
-    expect(svc.referencesOutsideTrip(String(mine.id), {
+    expect(await svc.referencesOutsideTrip(String(mine.id), {
       title: 'x', day_id: foreignDay.id, place_id: foreignPlace.id, accommodation_id: foreignAcc.id,
     })).toEqual(['day_id', 'place_id', 'accommodation_id']);
   });
@@ -1013,21 +1013,21 @@ describe('ReservationsService — referenced ids stay inside the trip', () => {
     // takes the accommodation with it, and the reservation keeps the id.
     testDb.prepare('DELETE FROM day_accommodations WHERE id = ?').run(acc.id);
 
-    expect(svc.referencesOutsideTrip(String(mine.id), { title: 'x', accommodation_id: acc.id })).toEqual([]);
+    expect((await svc.referencesOutsideTrip(String(mine.id), { title: 'x', accommodation_id: acc.id }))).toEqual([]);
 
-    const current = svc.getReservation(String(res.id), String(mine.id))!;
+    const current = (await svc.getReservation(String(res.id), String(mine.id)))!;
     await svc.update(String(res.id), String(mine.id), { accommodation_id: acc.id, title: 'Hotel renamed' } as never, current);
     expect(testDb.prepare('SELECT title, accommodation_id FROM reservations WHERE id = ?').get(res.id))
       .toEqual({ title: 'Hotel renamed', accommodation_id: null });
   });
 
-  it('RESV-SCOPE-002: passes a body whose ids all live in the trip', () => {
+  it('RESV-SCOPE-002: passes a body whose ids all live in the trip', async () => {
     const { mine } = twoTrips();
     const place = createPlace(testDb, mine.id);
     const day = testDb.prepare('SELECT id FROM days WHERE trip_id = ? ORDER BY day_number').get(mine.id) as { id: number };
 
-    expect(svc.referencesOutsideTrip(String(mine.id), { title: 'x', day_id: day.id, place_id: place.id })).toEqual([]);
-    expect(svc.referencesOutsideTrip(String(mine.id), { title: 'x' })).toEqual([]);
+    expect((await svc.referencesOutsideTrip(String(mine.id), { title: 'x', day_id: day.id, place_id: place.id }))).toEqual([]);
+    expect((await svc.referencesOutsideTrip(String(mine.id), { title: 'x' }))).toEqual([]);
   });
 
   it('RESV-SCOPE-003: a stored foreign accommodation_id is not deleted with the reservation', async () => {
@@ -1051,7 +1051,7 @@ describe('ReservationsService — referenced ids stay inside the trip', () => {
     const foreignDay = testDb.prepare('SELECT id FROM days WHERE trip_id = ? ORDER BY day_number').get(theirs.id) as { id: number };
     const foreignAcc = createDayAccommodation(testDb, theirs.id, foreignPlace.id, foreignDay.id, foreignDay.id, { check_in: '14:00' });
     const res = createReservation(testDb, mine.id, { title: 'Hotel', type: 'hotel' });
-    const current = svc.getReservation(String(res.id), String(mine.id))!;
+    const current = (await svc.getReservation(String(res.id), String(mine.id)))!;
 
     await svc.update(String(res.id), String(mine.id), {
       accommodation_id: foreignAcc.id, metadata: { check_in_time: '23:00' },
@@ -1111,7 +1111,7 @@ describe('ReservationsService — referenced ids stay inside the trip', () => {
     const foreignPlace = createPlace(testDb, theirs.id);
     const body = { title: 'x', place_id: foreignPlace.id };
 
-    expect(svc.referencesOutsideTrip(String(mine.id), body)).toEqual(['place_id']);
+    expect((await svc.referencesOutsideTrip(String(mine.id), body))).toEqual(['place_id']);
     expect(await svc.unresolvedReferences(String(mine.id), body)).toEqual(['place_id']);
   });
 
@@ -1122,7 +1122,7 @@ describe('ReservationsService — referenced ids stay inside the trip', () => {
       testDb.prepare('UPDATE reservations SET day_id = ?, end_day_id = ?, place_id = ?, assignment_id = ? WHERE id = ?')
         .run(999999, 999998, 999997, 999996, res.id);
     });
-    const current = svc.getReservation(String(res.id), String(mine.id))!;
+    const current = (await svc.getReservation(String(res.id), String(mine.id)))!;
 
     // The body names none of them, so the statement rebinds what the row holds.
     await svc.update(String(res.id), String(mine.id), { title: 'Dinner, later' }, current);
@@ -1139,7 +1139,7 @@ describe('ReservationsService — referenced ids stay inside the trip', () => {
     expect(testDb.prepare('SELECT day_id, end_day_id, place_id, assignment_id FROM reservations WHERE id = ?').get(reservation.id))
       .toEqual({ day_id: null, end_day_id: null, place_id: null, assignment_id: null });
 
-    const current = svc.getReservation(String(reservation.id), String(mine.id))!;
+    const current = (await svc.getReservation(String(reservation.id), String(mine.id)))!;
     await svc.update(String(reservation.id), String(mine.id), { place_id: 999997 }, current);
     expect(testDb.prepare('SELECT place_id FROM reservations WHERE id = ?').get(reservation.id)).toEqual({ place_id: null });
   });
@@ -1161,7 +1161,7 @@ describe('ReservationsService — referenced ids stay inside the trip', () => {
     const acc = createDayAccommodation(testDb, mine.id, place.id, days[0].id, days[1].id);
     const res = createReservation(testDb, mine.id, { title: 'Hotel', type: 'hotel' });
     testDb.prepare('UPDATE reservations SET accommodation_id = ? WHERE id = ?').run(acc.id, res.id);
-    const current = svc.getReservation(String(res.id), String(mine.id))!;
+    const current = (await svc.getReservation(String(res.id), String(mine.id)))!;
 
     await expect(svc.update(String(res.id), String(mine.id), {
       type: 'hotel', create_accommodation: { place_id: place.id, start_day_id: days[0].id, end_day_id: 999999 },
@@ -1251,7 +1251,7 @@ describe('the day stop a hotel booking implies', () => {
       title: 'Hotel', type: 'hotel',
       create_accommodation: { place_id: place.id, start_day_id: days[0].id, end_day_id: days[0].id },
     });
-    const current = svc.getReservation(String(reservation.id), String(trip.id))!;
+    const current = (await svc.getReservation(String(reservation.id), String(trip.id)))!;
 
     await svc.update(String(reservation.id), String(trip.id), {
       type: 'hotel',
@@ -1270,7 +1270,7 @@ describe('the day stop a hotel booking implies', () => {
     const { trip, days } = tripWithDays();
     const place = createPlace(testDb, trip.id, { name: 'Hotel Adlon' });
     const { reservation } = await svc.create(String(trip.id), { title: 'Hotel', type: 'hotel' });
-    const current = svc.getReservation(String(reservation.id), String(trip.id))!;
+    const current = (await svc.getReservation(String(reservation.id), String(trip.id)))!;
 
     await svc.update(String(reservation.id), String(trip.id), {
       type: 'hotel',

@@ -18,22 +18,22 @@ export class DayBoundariesController {
   constructor(private readonly boundaries: DayBoundariesService, private readonly realtime: RealtimeService) {}
 
   @Get()
-  list(@Param('tripId') tripId: string) {
-    return { boundaries: this.boundaries.list(tripId) };
+  async list(@Param('tripId') tripId: string) {
+    return { boundaries: await this.boundaries.list(tripId) };
   }
 
   @Put()
   @RequirePermission('day_edit')
-  save(@Param('tripId') tripId: string, @Body() body: DayBoundaryDto, @Headers('x-socket-id') socketId?: string) {
-    const boundaries = this.boundaries.save(tripId, body);
+  async save(@Param('tripId') tripId: string, @Body() body: DayBoundaryDto, @Headers('x-socket-id') socketId?: string) {
+    const boundaries = await this.boundaries.save(tripId, body);
     this.realtime.broadcast(tripId, 'roadtripBoundary:changed', { boundaries }, socketId);
     return { boundaries };
   }
 
   @Delete(':dayNumber')
   @RequirePermission('day_edit')
-  remove(@Param('tripId') tripId: string, @Param('dayNumber', ParseIntPipe) dayNumber: number, @Headers('x-socket-id') socketId?: string) {
-    const boundaries = this.boundaries.remove(tripId, dayNumber);
+  async remove(@Param('tripId') tripId: string, @Param('dayNumber', ParseIntPipe) dayNumber: number, @Headers('x-socket-id') socketId?: string) {
+    const boundaries = await this.boundaries.remove(tripId, dayNumber);
     this.realtime.broadcast(tripId, 'roadtripBoundary:changed', { boundaries }, socketId);
     return { boundaries };
   }

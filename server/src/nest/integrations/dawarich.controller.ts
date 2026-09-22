@@ -148,12 +148,12 @@ export class DawarichController {
 
   @Put('suggestions/:id/state')
   @HttpCode(200)
-  setSuggestionState(
+  async setSuggestionState(
     @CurrentUser() user: User,
     @Param('id') id: string,
     @Body() body: DawarichSuggestionStateDto,
   ) {
-    const updated = this.suggestions.setState(user.id, parseId(id), body.state);
+    const updated = await this.suggestions.setState(user.id, parseId(id), body.state);
     if (!updated) throw new HttpException({ error: 'Suggestion not found' }, 404);
     return updated;
   }
@@ -169,14 +169,14 @@ export class DawarichController {
 
   @Post('bucket-list/confirm')
   @HttpCode(200)
-  confirmBucketVisits(@CurrentUser() user: User, @Body() body: DawarichBucketConfirmDto) {
-    return { updated: this.suggestions.confirmBucketVisits(user.id, body.itemIds, body.visitedAt) };
+  async confirmBucketVisits(@CurrentUser() user: User, @Body() body: DawarichBucketConfirmDto) {
+    return { updated: await this.suggestions.confirmBucketVisits(user.id, body.itemIds, body.visitedAt) };
   }
 
   @Delete('bucket-list/:itemId/visit')
   @HttpCode(200)
-  clearBucketVisit(@CurrentUser() user: User, @Param('itemId') itemId: string) {
-    const cleared = this.suggestions.clearBucketVisit(user.id, parseId(itemId));
+  async clearBucketVisit(@CurrentUser() user: User, @Param('itemId') itemId: string) {
+    const cleared = await this.suggestions.clearBucketVisit(user.id, parseId(itemId));
     if (!cleared) throw new HttpException({ error: 'Bucket-list entry not found' }, 404);
     return { success: true };
   }

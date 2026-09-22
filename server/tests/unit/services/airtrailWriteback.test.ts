@@ -20,29 +20,29 @@ const svc = new AirtrailService(
   new AuditService(new DatabaseService(db)),
   new AirtrailClient(),
 );
-const getConnectionSettings = svc.getConnectionSettings.bind(svc);
-const isAirtrailWriteEnabled = svc.isAirtrailWriteEnabled.bind(svc);
-const saveSettings = svc.saveSettings.bind(svc);
+const getConnectionSettings = (...args: Parameters<AirtrailService['getConnectionSettings']>) => svc.getConnectionSettings(...args);
+const isAirtrailWriteEnabled = (...args: Parameters<AirtrailService['isAirtrailWriteEnabled']>) => svc.isAirtrailWriteEnabled(...args);
+const saveSettings = (...args: Parameters<AirtrailService['saveSettings']>) => svc.saveSettings(...args);
 
 describe('airtrail writeback opt-in persistence (#1240)', () => {
-  it('defaults the writeback opt-in to off for a new user', () => {
+  it('defaults the writeback opt-in to off for a new user', async () => {
     const { user } = createUser(db);
-    expect(isAirtrailWriteEnabled(user.id)).toBe(false);
-    expect(getConnectionSettings(user.id).writeEnabled).toBe(false);
+    expect(await isAirtrailWriteEnabled(user.id)).toBe(false);
+    expect((await getConnectionSettings(user.id)).writeEnabled).toBe(false);
   });
 
   it('persists the opt-in and lets it be toggled back off without dropping the key', async () => {
     const { user } = createUser(db);
 
     await saveSettings(user.id, 'https://at.example.com', 'secret-key', false, true, null);
-    expect(isAirtrailWriteEnabled(user.id)).toBe(true);
-    const on = getConnectionSettings(user.id);
+    expect(await isAirtrailWriteEnabled(user.id)).toBe(true);
+    const on = await getConnectionSettings(user.id);
     expect(on.writeEnabled).toBe(true);
     expect(on.connected).toBe(true); // key stored
 
     // No key supplied keeps the stored key; only the opt-in flips back off.
     await saveSettings(user.id, 'https://at.example.com', undefined, false, false, null);
-    expect(isAirtrailWriteEnabled(user.id)).toBe(false);
-    expect(getConnectionSettings(user.id).connected).toBe(true);
+    expect(await isAirtrailWriteEnabled(user.id)).toBe(false);
+    expect((await getConnectionSettings(user.id)).connected).toBe(true);
   });
 });

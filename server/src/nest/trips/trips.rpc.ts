@@ -67,7 +67,7 @@ export class TripsRpc {
 
   @PluginMethod('trips.getReservations', { permission: 'db:read:trips' })
   getReservations(params: Record<string, unknown>, ctx: PluginRpcContext): unknown {
-    return this.guards.tripRead(params, ctx, () => this.reservations.list(String(num(params.tripId, 'tripId'))));
+    return this.guards.tripRead(params, ctx, async () => this.reservations.list(String(num(params.tripId, 'tripId'))));
   }
 
   @PluginMethod('trips.getDays', { permission: 'db:read:trips' })
@@ -95,12 +95,13 @@ export class TripsRpc {
   }
 
   @PluginMethod('reservations.listMine', { permission: 'db:read:trips' })
-  listMyReservations(_params: Record<string, unknown>, ctx: PluginRpcContext): unknown {
+  async listMyReservations(_params: Record<string, unknown>, ctx: PluginRpcContext): Promise<unknown> {
     if (ctx.actingUserId === undefined) {
       throw new ForbiddenResource('reservation reads require an authenticated user context');
     }
     const trips = this.trips.list(ctx.actingUserId, null) as Array<{ id: number }>;
-    return trips.flatMap((t) => this.reservations.list(String(t.id)));
+    const perTrip = await Promise.all(trips.map((t) => this.reservations.list(String(t.id))));
+    return perTrip.flat();
   }
 
   @PluginMethod('trips.members', { permission: 'db:read:trips' })

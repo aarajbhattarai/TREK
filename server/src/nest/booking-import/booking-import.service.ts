@@ -35,7 +35,7 @@ export class BookingImportService {
     return this.dbs.connection;
   }
 
-  private resolveDayId(tripId: string, iso: string | null | undefined): number | null {
+  private async resolveDayId(tripId: string, iso: string | null | undefined): Promise<number | null> {
     if (!iso) return null;
     const date = iso.slice(0, 10);
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
@@ -284,8 +284,8 @@ export class BookingImportService {
         // the accommodation row is actually inserted (createReservation gates on them).
         let createAccommodation: { place_id?: number; start_day_id?: number; end_day_id?: number; check_in?: string; check_out?: string; confirmation?: string } | undefined;
         if (item.type === 'hotel' && _accommodation) {
-          const startDayId = this.resolveDayId(tripId, _accommodation.check_in);
-          const endDayId   = this.resolveDayId(tripId, _accommodation.check_out);
+          const startDayId = await this.resolveDayId(tripId, _accommodation.check_in);
+          const endDayId   = await this.resolveDayId(tripId, _accommodation.check_out);
           createAccommodation = {
             place_id: placeId,
             start_day_id: startDayId ?? undefined,

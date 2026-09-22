@@ -44,7 +44,7 @@ export class ReservationsRpc {
     const i = input as { title?: string; type?: string; create_budget_entry?: unknown };
     await this.reservations.syncBudgetOnCreate(String(tripId), reservation.id, i.title ?? '', i.type, i.create_budget_entry as never, undefined);
     this.realtime.broadcast(tripId, 'reservation:created', { reservation }, undefined);
-    this.notifyBooking(actor, tripId, i.title ?? '', i.type ?? '');
+    await this.notifyBooking(actor, tripId, i.title ?? '', i.type ?? '');
     return reservation;
   }
 
@@ -58,7 +58,7 @@ export class ReservationsRpc {
     const input = parsed.data as Record<string, unknown>;
     this.requireValidEndpoints(input.endpoints);
     await this.guards.requireTripEdit(tripId, actor, RESERVATION_EDIT_ACTION);
-    const current = this.reservations.getReservation(String(reservationId), String(tripId));
+    const current = await this.reservations.getReservation(String(reservationId), String(tripId));
     if (!current) throw new ForbiddenResource(`no reservation ${reservationId} on trip ${tripId}`);
     await this.requireOwnReferences(tripId, input);
     const { reservation, accommodationChanged } = await this.reservations.update(String(reservationId), String(tripId), input as never, current as never);
@@ -67,7 +67,7 @@ export class ReservationsRpc {
     const i = input as { title?: string; type?: string; create_budget_entry?: unknown };
     await this.reservations.syncBudgetOnUpdate(String(tripId), String(reservationId), i.title ?? '', i.type, cur.title, cur.type, i.create_budget_entry as never, undefined);
     this.realtime.broadcast(tripId, 'reservation:updated', { reservation }, undefined);
-    this.notifyBooking(actor, tripId, i.title || cur.title, i.type || cur.type || '');
+    await this.notifyBooking(actor, tripId, i.title || cur.title, i.type || cur.type || '');
     return reservation;
   }
 
@@ -82,7 +82,7 @@ export class ReservationsRpc {
     if (accommodationDeleted) this.realtime.broadcast(tripId, 'accommodation:deleted', { accommodationId: deleted.accommodation_id }, undefined);
     if (deletedBudgetItemId) this.realtime.broadcast(tripId, 'budget:deleted', { itemId: deletedBudgetItemId }, undefined);
     this.realtime.broadcast(tripId, 'reservation:deleted', { reservationId }, undefined);
-    this.notifyBooking(actor, tripId, deleted.title, deleted.type || '');
+    await this.notifyBooking(actor, tripId, deleted.title, deleted.type || '');
     return { deleted: true };
   }
 
@@ -110,14 +110,14 @@ export class ReservationsRpc {
    * so it is named here as well, after the ownership check.
    */
   private async requireOwnReferences(tripId: number, input: Record<string, unknown>): Promise<void> {
-    const offenders = this.reservations.referencesOutsideTrip(String(tripId), input as never);
+    const offenders = await this.reservations.referencesOutsideTrip(String(tripId), input as never);
     if (offenders.length > 0) throw new ForbiddenResource(`not part of trip ${tripId}: ${offenders.join(', ')}`);
     const unknown = await this.reservations.unresolvedReferences(String(tripId), input as never);
     if (unknown.length > 0) throw new BadParams(`unknown reference: ${unknown.join(', ')}`);
   }
 
   /** Fire-and-forget, exactly as the REST controller sends it, so it never blocks the write. */
-  private notifyBooking(actingUserId: number, tripId: number, booking: string, type: string): void {
-    this.reservations.notifyBookingChange(tripId, actingUserId, booking, type);
+  private async notifyBooking(actingUserId: number, tripId: number, booking: string, type: string): Promise<void> {
+    await this.reservations.notifyBookingChange(tripId, actingUserId, booking, type);
   }
 }

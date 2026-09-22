@@ -70,11 +70,11 @@ export class DawarichMcp {
     access: { group: 'journey', mode: 'read' },
     when: dawarichAddonOn,
   })
-  listSuggestions(
+  async listSuggestions(
     { tripId, state, limit }: { tripId?: number; state?: 'new' | 'accepted' | 'dismissed'; limit?: number },
     ctx: McpContext,
   ) {
-    const all = this.suggestions.list(ctx.userId, { tripId, state });
+    const all = await this.suggestions.list(ctx.userId, { tripId, state });
     const cap = limit ?? DEFAULT_LIMIT;
     const page = all.suggestions.slice(0, cap);
     return ok({
@@ -178,7 +178,7 @@ export class DawarichMcp {
     ctx: McpContext,
   ) {
     if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
-    const updated = this.suggestions.setState(ctx.userId, suggestionId, state ?? 'dismissed');
+    const updated = await this.suggestions.setState(ctx.userId, suggestionId, state ?? 'dismissed');
     if (!updated) return errorResult('Suggestion not found');
     return ok({ suggestion: updated });
   }
@@ -229,9 +229,9 @@ export class DawarichMcp {
   }
 
   /** The MCP echo of the controller's error shaping: a refusal, not an exception. */
-  private run<T>(action: () => T) {
+  private async run<T>(action: () => Promise<T>) {
     try {
-      return ok(action() as object);
+      return ok((await action()) as object);
     } catch (err) {
       if (err instanceof AcceptError) return errorResult(err.message);
       throw err;

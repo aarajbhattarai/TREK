@@ -228,7 +228,7 @@ describe('DawarichMcp surface', () => {
     });
     const mcp = makeMcp({ suggestions: { list: listFn }, tracks: { forTrip }, auth: { isDemoUser } });
 
-    payload(mcp.listSuggestions({}, ctx));
+    payload(await mcp.listSuggestions({}, ctx));
     payload(await mcp.tripTrack({ tripId: 5 }, ctx));
     expect(isDemoUser).not.toHaveBeenCalled();
   });
@@ -354,12 +354,12 @@ describe('DawarichMcp input schemas', () => {
 // ---------------------------------------------------------------------------
 
 describe('DawarichMcp list_dawarich_suggestions', () => {
-  it('DAWARICH-MCP-030: the filters reach the service for the calling user, and the sync provenance rides back', () => {
+  it('DAWARICH-MCP-030: the filters reach the service for the calling user, and the sync provenance rides back', async () => {
     // A disconnected instance with a failed poll is the interesting case: the
     // stays are still there, and without the provenance an assistant would
     // present a stale backlog as if it were current.
     const listFn = vi.fn().mockReturnValue(list(2, { connected: false, lastSyncState: 'failed', lastSyncAt: null }));
-    const out = payload(makeMcp({ suggestions: { list: listFn } }).listSuggestions({ tripId: 3, state: 'new' }, ctx));
+    const out = payload(await makeMcp({ suggestions: { list: listFn } }).listSuggestions({ tripId: 3, state: 'new' }, ctx));
 
     expect(listFn).toHaveBeenCalledWith(7, { tripId: 3, state: 'new' });
     expect(out).toMatchObject({
@@ -371,53 +371,53 @@ describe('DawarichMcp list_dawarich_suggestions', () => {
     });
   });
 
-  it('DAWARICH-MCP-031: no arguments means no filters, undefined rather than a filter on nothing', () => {
+  it('DAWARICH-MCP-031: no arguments means no filters, undefined rather than a filter on nothing', async () => {
     const listFn = vi.fn().mockReturnValue(list(0));
-    payload(makeMcp({ suggestions: { list: listFn } }).listSuggestions({}, ctx));
+    payload(await makeMcp({ suggestions: { list: listFn } }).listSuggestions({}, ctx));
     expect(listFn).toHaveBeenCalledWith(7, { tripId: undefined, state: undefined });
   });
 
-  it('DAWARICH-MCP-032: a backlog longer than the default page is cut to 50 and says so, because an assistant must not pay for a year of stays', () => {
-    const out = payload(makeMcp({ suggestions: { list: vi.fn().mockReturnValue(list(60)) } }).listSuggestions({}, ctx));
+  it('DAWARICH-MCP-032: a backlog longer than the default page is cut to 50 and says so, because an assistant must not pay for a year of stays', async () => {
+    const out = payload(await makeMcp({ suggestions: { list: vi.fn().mockReturnValue(list(60)) } }).listSuggestions({}, ctx));
 
     expect((out.suggestions as unknown[]).length).toBe(50);
     expect(out.total).toBe(60);
     expect(out.truncated).toBe(true);
   });
 
-  it('DAWARICH-MCP-033: a list that fits is not flagged truncated, so a caller can tell "all of it" from "the first page"', () => {
-    const out = payload(makeMcp({ suggestions: { list: vi.fn().mockReturnValue(list(50)) } }).listSuggestions({}, ctx));
+  it('DAWARICH-MCP-033: a list that fits is not flagged truncated, so a caller can tell "all of it" from "the first page"', async () => {
+    const out = payload(await makeMcp({ suggestions: { list: vi.fn().mockReturnValue(list(50)) } }).listSuggestions({}, ctx));
 
     expect((out.suggestions as unknown[]).length).toBe(50);
     expect(out.total).toBe(50);
     expect(out.truncated).toBe(false);
   });
 
-  it('DAWARICH-MCP-034: an explicit limit wins over the default in both directions', () => {
+  it('DAWARICH-MCP-034: an explicit limit wins over the default in both directions', async () => {
     const mcp = makeMcp({ suggestions: { list: vi.fn().mockReturnValue(list(60)) } });
 
-    const small = payload(mcp.listSuggestions({ limit: 3 }, ctx));
+    const small = payload(await mcp.listSuggestions({ limit: 3 }, ctx));
     expect((small.suggestions as unknown[]).length).toBe(3);
     expect(small.truncated).toBe(true);
 
-    const large = payload(mcp.listSuggestions({ limit: 200 }, ctx));
+    const large = payload(await mcp.listSuggestions({ limit: 200 }, ctx));
     expect((large.suggestions as unknown[]).length).toBe(60);
     expect(large.truncated).toBe(false);
   });
 
-  it('DAWARICH-MCP-035: the stays go out as the service shaped them, because the tool pages and does not reshape', () => {
-    const out = payload(makeMcp({ suggestions: { list: vi.fn().mockReturnValue(list(2)) } }).listSuggestions({ limit: 1 }, ctx));
+  it('DAWARICH-MCP-035: the stays go out as the service shaped them, because the tool pages and does not reshape', async () => {
+    const out = payload(await makeMcp({ suggestions: { list: vi.fn().mockReturnValue(list(2)) } }).listSuggestions({ limit: 1 }, ctx));
     expect(out.suggestions).toEqual([{ id: 1, name: 'Stay 1' }]);
   });
 
-  it('DAWARICH-MCP-036: the reason the last poll failed is the one field the tool drops', () => {
+  it('DAWARICH-MCP-036: the reason the last poll failed is the one field the tool drops', async () => {
     // lastSyncError is on DawarichSuggestionList and the REST list carries it;
     // this tool does not. Pinned so the omission stays a decision rather than an
     // oversight: an assistant can say the sync failed but not why, which is a
     // defensible privacy line (the string can name the host) and, at the same
     // time, a real gap in what it is able to explain to the person asking.
     const listFn = vi.fn().mockReturnValue(list(1, { lastSyncState: 'failed', lastSyncError: 'unauthorized' }));
-    const out = payload(makeMcp({ suggestions: { list: listFn } }).listSuggestions({}, ctx));
+    const out = payload(await makeMcp({ suggestions: { list: listFn } }).listSuggestions({}, ctx));
 
     expect(out).not.toHaveProperty('lastSyncError');
     expect(out.lastSyncState).toBe('failed');

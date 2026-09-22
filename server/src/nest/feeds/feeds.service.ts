@@ -108,13 +108,13 @@ export class FeedsService {
 
   // ── ICS generation ───────────────────────────────────────────────────────
 
-  buildTripIcs(token: string): { ics: string; filename: string } | null {
+  async buildTripIcs(token: string): Promise<{ ics: string; filename: string } | null> {
     const row = this.db.prepare('SELECT id FROM trips WHERE feed_token = ?').get(token) as
       | { id: number }
       | undefined;
     if (!row) return null;
     try {
-      const cal = this.calendar.buildTripCalendar(row.id);
+      const cal = await this.calendar.buildTripCalendar(row.id);
       // Same document as the one-time download, plus the subscription refresh
       // hints so clients re-fetch hourly. Assembled from the calendar's parts
       // rather than string-surgeried into the finished text.
@@ -132,7 +132,7 @@ export class FeedsService {
     }
   }
 
-  buildUserIcs(token: string): { ics: string; calName: string } | null {
+  async buildUserIcs(token: string): Promise<{ ics: string; calName: string } | null> {
     const user = this.db.prepare('SELECT id, username FROM users WHERE feed_token = ?').get(token) as
       | { id: number; username: string }
       | undefined;
@@ -168,7 +168,7 @@ export class FeedsService {
     let events = '';
     for (const { id } of trips) {
       try {
-        const cal = this.calendar.buildTripCalendar(id);
+        const cal = await this.calendar.buildTripCalendar(id);
         for (const [tzid, block] of cal.timezones) {
           if (!zones.has(tzid)) zones.set(tzid, block);
         }

@@ -1,5 +1,6 @@
 import { DatabaseService } from '../database/database.service';
 import { RealtimeService } from '../realtime/realtime.service';
+import { UnitOfWork } from '../database/unit-of-work';
 import { HttpException, Injectable } from '@nestjs/common';
 import {
   ROADTRIP_PREFERENCE_KEYS,
@@ -13,9 +14,10 @@ export class RoadtripPreferencesService {
   constructor(
     private readonly db: DatabaseService,
     private readonly realtime: RealtimeService,
+    private readonly uow: UnitOfWork,
   ) {}
 
-  read(tripId: number): RoadtripPreferences {
+  async read(tripId: number): Promise<RoadtripPreferences> {
     const settings: Record<string, unknown> = {};
     for (const row of this.db.all<{ key: string; value: string }>(
       'SELECT key, value FROM roadtrip_preferences WHERE trip_id = ?',
@@ -35,10 +37,10 @@ export class RoadtripPreferencesService {
     return roadtripPreferencesSchema.parse(preferences);
   }
 
-  update(tripId: number, patch: RoadtripPreferences, socketId?: string): RoadtripPreferences {
+  async update(tripId: number, patch: RoadtripPreferences, socketId?: string): Promise<RoadtripPreferences> {
     const validated = roadtripPreferencesUpdateSchema.parse(patch);
-    const saved = this.db.transaction(() => {
-      const next = { ...this.read(tripId), ...validated };
+    const saved = await this.uow.transactional(async () => {
+      const next = { ...(await this.read(tripId)), ...validated };
       if (next.roadtrip_day_start && next.roadtrip_day_end && next.roadtrip_day_end <= next.roadtrip_day_start) {
         throw new HttpException({ error: 'Day end must be later than day start.' }, 400);
       }

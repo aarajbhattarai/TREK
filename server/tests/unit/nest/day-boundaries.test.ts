@@ -34,32 +34,32 @@ function setup() {
 }
 const boundary = { day_number: 1, from_assignment_id: 11, to_assignment_id: 12, fraction: 0.4 };
 
-it('replaces one day only, persists place snapping and cascades deleted visits', () => {
+it('replaces one day only, persists place snapping and cascades deleted visits', async () => {
   const { service, raw } = setup();
-  service.save(10, boundary);
-  service.save(10, { ...boundary, day_number: 2, fraction: 0.8 });
-  expect(service.save(10, { ...boundary, to_assignment_id: null })).toEqual([
+  await service.save(10, boundary);
+  await service.save(10, { ...boundary, day_number: 2, fraction: 0.8 });
+  expect(await service.save(10, { ...boundary, to_assignment_id: null })).toEqual([
     { ...boundary, to_assignment_id: null, fraction: 1 }, { ...boundary, day_number: 2, fraction: 0.8 },
   ]);
-  expect(service.list(20)).toEqual([]);
-  service.remove(20, 1);
-  expect(service.list(10)).toHaveLength(2);
+  expect(await service.list(20)).toEqual([]);
+  await service.remove(20, 1);
+  expect(await service.list(10)).toHaveLength(2);
   raw.prepare('DELETE FROM day_assignments WHERE id = 12').run();
-  expect(service.list(10)).toEqual([{ ...boundary, to_assignment_id: null, fraction: 1 }]);
+  expect(await service.list(10)).toEqual([{ ...boundary, to_assignment_id: null, fraction: 1 }]);
 });
 
-it('rejects either endpoint from a different trip without writing', () => {
+it('rejects either endpoint from a different trip without writing', async () => {
   const { service } = setup();
-  expect(() => service.save(10, { ...boundary, from_assignment_id: 21 })).toThrow(HttpException);
-  expect(() => service.save(10, { ...boundary, to_assignment_id: 21 })).toThrow(HttpException);
-  expect(service.list(10)).toEqual([]);
+  await expect(service.save(10, { ...boundary, from_assignment_id: 21 })).rejects.toThrow(HttpException);
+  await expect(service.save(10, { ...boundary, to_assignment_id: 21 })).rejects.toThrow(HttpException);
+  expect(await service.list(10)).toEqual([]);
 });
 
-it('REST changes broadcast the complete state and exclude the saving socket', () => {
+it('REST changes broadcast the complete state and exclude the saving socket', async () => {
   const { controller, realtime } = setup();
-  controller.save('10', boundary, 'self');
+  await controller.save('10', boundary, 'self');
   expect(realtime.broadcast).toHaveBeenCalledWith('10', 'roadtripBoundary:changed', { boundaries: [boundary] }, 'self');
-  expect(controller.remove('10', 1)).toEqual({ boundaries: [] });
+  expect(await controller.remove('10', 1)).toEqual({ boundaries: [] });
 });
 
 it('MCP checks demo, trip access and edit permission before saving', async () => {
@@ -73,10 +73,10 @@ it('MCP checks demo, trip access and edit permission before saving', async () =>
   s.db.canAccessTrip.mockReturnValue(true);
   s.guards.hasTripPermission.mockReturnValue(false);
   await s.mcp.save(request, ctx);
-  expect(s.service.list(10)).toEqual([]);
+  expect(await s.service.list(10)).toEqual([]);
   s.guards.hasTripPermission.mockReturnValue(true);
   await s.mcp.save(request, ctx);
-  expect(s.service.list(10)).toEqual([boundary]);
+  expect(await s.service.list(10)).toEqual([boundary]);
   await s.mcp.save({ ...request, boundary: null }, ctx);
-  expect(s.service.list(10)).toEqual([]);
+  expect(await s.service.list(10)).toEqual([]);
 });

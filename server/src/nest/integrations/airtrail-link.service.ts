@@ -40,18 +40,18 @@ export class AirtrailLinkService {
     return row?.value !== 'false';
   }
 
-  broadcastUpdated(tripId: number, reservationId: number): void {
+  async broadcastUpdated(tripId: number, reservationId: number): Promise<void> {
     try {
-      const reservation = this.reads.getReservationWithJoins(reservationId);
+      const reservation = await this.reads.getReservationWithJoins(reservationId);
       if (reservation) this.realtime.broadcast(String(tripId), 'reservation:updated', { reservation } as never, undefined);
     } catch {
       /* broadcast failure is non-fatal */
     }
   }
 
-  detach(tripId: number, reservationId: number): void {
+  async detach(tripId: number, reservationId: number): Promise<void> {
     this.db.run('UPDATE reservations SET sync_enabled = 0 WHERE id = ?', reservationId);
-    this.broadcastUpdated(tripId, reservationId);
+    await this.broadcastUpdated(tripId, reservationId);
   }
 
   /**
@@ -61,7 +61,7 @@ export class AirtrailLinkService {
    * side: a pull flattens the layover chain back to from→to, a push rewrites the
    * AirTrail flight to span the whole route (#1535).
    */
-  hasLocalMultiLegShape(reservationId: number, metadataJson: string | null | undefined): boolean {
+  async hasLocalMultiLegShape(reservationId: number, metadataJson: string | null | undefined): Promise<boolean> {
     try {
       const meta = metadataJson ? JSON.parse(metadataJson) : {};
       if (Array.isArray(meta?.legs) && meta.legs.length > 1) return true;
@@ -96,21 +96,21 @@ export class AirtrailLinkService {
     // 1:1 mapping to the AirTrail flight: pushing would rewrite that flight to the
     // full span, and the next pull would flatten the layover again. Detach — the
     // merge is a deliberate local restructuring, like a joined import (#1535).
-    const reservation = this.reads.getReservationWithJoins(row.id);
+    const reservation = await this.reads.getReservationWithJoins(row.id);
     if (!reservation) return;
-    if (this.hasLocalMultiLegShape(row.id, (reservation as { metadata?: string | null }).metadata)) {
-      this.detach(tripId, row.id);
+    if (await this.hasLocalMultiLegShape(row.id, (reservation as { metadata?: string | null }).metadata)) {
+      await this.detach(tripId, row.id);
       return;
     }
 
     // AirTrail is read-only by default (#1240). Only push when the flight's owner has
     // explicitly opted in. A no-op skip (not a detach): the link stays active so the
     // inbound, AirTrail-wins pull keeps the reservation up to date.
-    if (!row.external_owner_user_id || !this.airtrail.isAirtrailWriteEnabled(row.external_owner_user_id)) return;
+    if (!row.external_owner_user_id || !(await this.airtrail.isAirtrailWriteEnabled(row.external_owner_user_id))) return;
 
-    const creds: AirtrailCreds | null = this.airtrail.getAirtrailCredentials(row.external_owner_user_id);
+    const creds: AirtrailCreds | null = await this.airtrail.getAirtrailCredentials(row.external_owner_user_id);
     if (!creds) {
-      this.detach(tripId, row.id); // owner disconnected — cannot push, so stop syncing
+      await this.detach(tripId, row.id); // owner disconnected — cannot push, so stop syncing
       return;
     }
 
@@ -118,12 +118,12 @@ export class AirtrailLinkService {
     try {
       existing = await this.client.getFlight(creds, Number(row.external_id));
     } catch (err) {
-      if (err instanceof AirtrailAuthError) this.detach(tripId, row.id);
+      if (err instanceof AirtrailAuthError) await this.detach(tripId, row.id);
       else logError(`AirTrail push: get failed for reservation ${row.id}: ${err instanceof Error ? err.message : err}`);
       return;
     }
     if (!existing) {
-      this.detach(tripId, row.id); // gone in AirTrail → treat like a remote delete
+      await this.detach(tripId, row.id); // gone in AirTrail → treat like a remote delete
       return;
     }
 

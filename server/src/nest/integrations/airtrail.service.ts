@@ -38,7 +38,7 @@ export class AirtrailService {
     private readonly client: AirtrailClient,
   ) {}
 
-  private readRow(userId: number): UserConnRow | undefined {
+  private async readRow(userId: number): Promise<UserConnRow | undefined> {
     return this.db.get<UserConnRow>(
       'SELECT airtrail_url, airtrail_api_key, airtrail_allow_insecure_tls, airtrail_write_enabled FROM users WHERE id = ?',
       userId,
@@ -46,7 +46,7 @@ export class AirtrailService {
   }
 
   /** Has this user opted in to TREK writing their flight edits back to AirTrail? (#1240) */
-  isAirtrailWriteEnabled(userId: number): boolean {
+  async isAirtrailWriteEnabled(userId: number): Promise<boolean> {
     const row = this.db.get<{ airtrail_write_enabled?: number | null }>(
       'SELECT airtrail_write_enabled FROM users WHERE id = ?',
       userId,
@@ -55,8 +55,8 @@ export class AirtrailService {
   }
 
   /** Decrypted creds for outbound calls, or null when the user has no connection. */
-  getAirtrailCredentials(userId: number): AirtrailCreds | null {
-    const row = this.readRow(userId);
+  async getAirtrailCredentials(userId: number): Promise<AirtrailCreds | null> {
+    const row = await this.readRow(userId);
     if (!row?.airtrail_url || !row?.airtrail_api_key) return null;
     const apiKey = decrypt_api_key(row.airtrail_api_key);
     if (!apiKey) return null;
@@ -68,8 +68,8 @@ export class AirtrailService {
   }
 
   /** Settings as shown in the UI — the key is never echoed, only masked. */
-  getConnectionSettings(userId: number) {
-    const row = this.readRow(userId);
+  async getConnectionSettings(userId: number) {
+    const row = await this.readRow(userId);
     return {
       url: row?.airtrail_url || '',
       apiKeyMasked: row?.airtrail_api_key ? KEY_MASK : '',
@@ -148,7 +148,7 @@ export class AirtrailService {
   async getConnectionStatus(
     userId: number,
   ): Promise<{ connected: boolean; flightCount?: number; error?: string }> {
-    const creds = this.getAirtrailCredentials(userId);
+    const creds = await this.getAirtrailCredentials(userId);
     if (!creds) return { connected: false, error: 'Not configured' };
     return this.probe(creds);
   }
@@ -173,7 +173,7 @@ export class AirtrailService {
     const trimmedUrl = (url || '').trim();
     const provided = (apiKey || '').trim();
 
-    const stored = this.getAirtrailCredentials(userId);
+    const stored = await this.getAirtrailCredentials(userId);
     const effectiveUrl = trimmedUrl || stored?.baseUrl;
     const typedKey = provided && provided !== KEY_MASK ? provided : '';
 
@@ -199,7 +199,7 @@ export class AirtrailService {
 
   /** The user's AirTrail flights, normalized for the import picker. */
   async getFlightsForPicker(userId: number): Promise<AirtrailFlight[]> {
-    const creds = this.getAirtrailCredentials(userId);
+    const creds = await this.getAirtrailCredentials(userId);
     if (!creds) throw new AirtrailRequestError('AirTrail is not connected', 400);
     const raw = await this.client.listFlights(creds);
     return raw.map(normalizeFlight);

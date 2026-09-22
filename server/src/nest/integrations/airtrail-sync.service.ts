@@ -52,7 +52,7 @@ export class AirtrailSyncService {
    * flights are never auto-added to a trip. Returns how many rows changed.
    */
   private async syncOwner(uid: number): Promise<number> {
-    const creds = this.airtrail.getAirtrailCredentials(uid);
+    const creds = await this.airtrail.getAirtrailCredentials(uid);
     if (!creds) return 0; // owner disconnected — leave their linked rows as-is
 
     let flights: AirtrailFlightRaw[];
@@ -73,7 +73,7 @@ export class AirtrailSyncService {
     for (const row of linked) {
       const flight = byId.get(String(row.external_id));
       if (!flight) {
-        this.link.detach(row.trip_id, row.id); // deleted in AirTrail → keep row, stop syncing
+        await this.link.detach(row.trip_id, row.id); // deleted in AirTrail → keep row, stop syncing
         changed++;
         continue;
       }
@@ -81,12 +81,12 @@ export class AirtrailSyncService {
       const hash = canonicalHash(flight);
       if (hash === row.external_hash) continue;
 
-      const current = this.reservations.getReservation(row.id, row.trip_id);
+      const current = await this.reservations.getReservation(row.id, row.trip_id);
       if (!current) continue;
-      if (this.link.hasLocalMultiLegShape(row.id, (current as any).metadata)) {
+      if (await this.link.hasLocalMultiLegShape(row.id, (current as any).metadata)) {
         // The user connected this flight into a multi-leg booking; applying the
         // remote single-flight shape would flatten it. Stop syncing instead.
-        this.link.detach(row.trip_id, row.id);
+        await this.link.detach(row.trip_id, row.id);
         changed++;
         continue;
       }
@@ -98,7 +98,7 @@ export class AirtrailSyncService {
           new Date().toISOString(),
           row.id,
         );
-        this.link.broadcastUpdated(row.trip_id, row.id);
+        await this.link.broadcastUpdated(row.trip_id, row.id);
         changed++;
       } catch (err) {
         logError(`AirTrail sync: failed to update reservation ${row.id}: ${err instanceof Error ? err.message : err}`);
