@@ -11,13 +11,28 @@ export interface AppSettingsRow {
 const _appSettingsRowKeys: AssertRowKeys<AppSettingsRow, AppSettings> = true;
 
 export class AppSettingsRepository extends EntityRepository<AppSettings> {
-  /** `SELECT value FROM app_settings WHERE key = ?` */
+  /**
+   * `SELECT value FROM app_settings WHERE key = ?`
+   *
+   * `refresh: true` (Task 0 review, I1): this is a primary-key lookup, so
+   * without it MikroORM answers a repeat call from the identity map rather
+   * than re-querying — invisible to a raw/native write or `deleteValue` on
+   * the same key inside the same request, which is exactly the coexistence
+   * case this plan is built on (raw SQL and the ORM sharing one connection
+   * while callers convert one at a time). `refresh` keeps this a single
+   * query either way; only a stale identity-map hit is avoided.
+   */
   async getValue(key: string): Promise<string | null> {
-    const row = await this.findOne({ key }, { fields: ['value'] });
+    const row = await this.findOne({ key }, { fields: ['value'], refresh: true });
     return row?.value ?? null;
   }
 
-  /** `SELECT key, value FROM app_settings WHERE key IN (?, ?, ...)` */
+  /**
+   * `SELECT key, value FROM app_settings WHERE key IN (?, ?, ...)` — a
+   * NULL-valued row is silently dropped from the returned Map, matching the
+   * legacy callers, which never distinguished "row present with a NULL
+   * value" from "no row" (both read as absent).
+   */
   async getValues(keys: string[]): Promise<Map<string, string>> {
     const rows = await this.find({ key: { $in: keys } });
     const values = new Map<string, string>();
@@ -38,6 +53,15 @@ export class AppSettingsRepository extends EntityRepository<AppSettings> {
    * with no other column whose reset by REPLACE could be observable, both
    * spellings are exactly `em.upsert`'s job, with the sole unique field
    * (`key`, the primary key) as the conflict target.
+   *
+   * The one difference from `INSERT OR REPLACE` — verified, unobservable
+   * here — is the row's implicit SQLite rowid: REPLACE deletes and
+   * reinserts (rowid moves), `em.upsert`'s `ON CONFLICT ... DO UPDATE`
+   * keeps the original row (rowid stays). `app_settings` has no `INTEGER
+   * PRIMARY KEY`, no `AUTOINCREMENT`, no trigger and no foreign key
+   * referencing it, so nothing here reads the rowid — but the next table
+   * converted off `INSERT OR REPLACE` that does have one of those needs its
+   * own check, not an assumption from this comment.
    */
   async setValue(key: string, value: string): Promise<void> {
     await this.upsert({ key, value }, { onConflictFields: ['key'], onConflictAction: 'merge' });

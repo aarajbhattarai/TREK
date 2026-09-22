@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createSnapshotTestDb } from '../../../helpers/db-mock';
 import { resetTestDb } from '../../../helpers/test-db';
 import { createTestOrm, type TestOrm } from '../../../helpers/test-orm';
@@ -24,6 +24,24 @@ function insertRaw(key: string, value: string | null): void {
   testDb.prepare('INSERT INTO app_settings (key, value) VALUES (?, ?)').run(key, value);
 }
 
+/**
+ * Runs `fn` while counting queries MikroORM actually issues over the shared
+ * connection, so a regression test can assert "one query, with this value"
+ * rather than only the value — the identity-map bug I1 fixed (Task 0 review)
+ * returned the *right* value from a stale cache with *zero* queries, which a
+ * value-only assertion would never catch.
+ */
+async function withQueryCount<T>(fn: () => Promise<T>): Promise<{ value: T; queries: number }> {
+  const connection = t.orm.em.getConnection();
+  const spy = vi.spyOn(connection, 'execute');
+  try {
+    const value = await fn();
+    return { value, queries: spy.mock.calls.length };
+  } finally {
+    spy.mockRestore();
+  }
+}
+
 describe('AppSettingsRepository', () => {
   it('APPSETREPO-001: getValue reads the stored value', async () => {
     insertRaw('bag_tracking_enabled', 'true');
@@ -39,6 +57,39 @@ describe('AppSettingsRepository', () => {
     insertRaw('collab_notes_enabled', 'true');
     const values = await appSettings.getValues(['collab_chat_enabled', 'collab_notes_enabled', 'collab_links_enabled']);
     expect(values).toEqual(new Map([['collab_chat_enabled', 'false'], ['collab_notes_enabled', 'true']]));
+  });
+
+  it('APPSETREPO-012 (M1): getValues also drops a key whose row exists but whose value is NULL, matching the "row present with a NULL value" case as absent, same as a missing row', async () => {
+    insertRaw('collab_chat_enabled', 'false');
+    insertRaw('collab_links_enabled', null); // present row, NULL value — legacy treated this as absent too
+    const values = await appSettings.getValues(['collab_chat_enabled', 'collab_links_enabled', 'collab_notes_enabled']);
+    expect(values).toEqual(new Map([['collab_chat_enabled', 'false']]));
+    expect(values.has('collab_links_enabled')).toBe(false);
+  });
+
+  // I1 (Task 0 review): getValue is a primary-key findOne, which MikroORM
+  // answers from the identity map on a repeat call unless `refresh: true` is
+  // set — invisible to a raw write or delete on the same key inside the same
+  // request. These reproduce the review's two failing probes and pin the
+  // fix at one query each.
+  describe('getValue sees a raw write/delete on the same key in the same request (I1, identity-map regression)', () => {
+    it('APPSETREPO-013: deleteValue then getValue reads null, not the deleted row, in one query', async () => {
+      insertRaw('bag_tracking_enabled', 'v');
+      expect(await appSettings.getValue('bag_tracking_enabled')).toBe('v'); // populate the identity map
+      await appSettings.deleteValue('bag_tracking_enabled');
+      const { value, queries } = await withQueryCount(() => appSettings.getValue('bag_tracking_enabled'));
+      expect(value).toBeNull();
+      expect(queries).toBe(1);
+    });
+
+    it('APPSETREPO-014: a raw UPDATE on the same key then getValue reads the new value, in one query', async () => {
+      insertRaw('bag_tracking_enabled', 'old');
+      expect(await appSettings.getValue('bag_tracking_enabled')).toBe('old'); // populate the identity map
+      testDb.prepare('UPDATE app_settings SET value = ? WHERE key = ?').run('new', 'bag_tracking_enabled');
+      const { value, queries } = await withQueryCount(() => appSettings.getValue('bag_tracking_enabled'));
+      expect(value).toBe('new');
+      expect(queries).toBe(1);
+    });
   });
 
   it('APPSETREPO-004: setValue inserts a new row exactly as INSERT OR REPLACE would', async () => {

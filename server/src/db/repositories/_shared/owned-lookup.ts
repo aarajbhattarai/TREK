@@ -1,4 +1,4 @@
-import type { EntityRepository, FilterQuery, OrderDefinition } from '@mikro-orm/core';
+import type { EntityRepository, FilterQuery, FilterValue, OrderDefinition } from '@mikro-orm/core';
 
 /**
  * Shared lookup shapes for entities scoped to a user, some of which also
@@ -15,23 +15,35 @@ import type { EntityRepository, FilterQuery, OrderDefinition } from '@mikro-orm/
  * = ?`), so it stays a plain `findOne({ id })` rather than either helper
  * here; changing that would be a behaviour change, not a refactor.
  *
- * `ownerField`/`orderField` are taken as parameters (`keyof T`) rather than
- * hard-coded so one helper serves every entity shaped this way; the `as
- * FilterQuery<T>`/`as Record<string, 'asc'>` casts are the one place that
- * type is asserted rather than inferred; the entity's own properties still
- * decide, at the call site, which literal `ownerField`/`orderField` values
- * are legal (`keyof T`).
+ * These helpers return live MikroORM entities, not rows — unlike every other
+ * repository method in this codebase (D4: "repositories return rows, never a
+ * live entity"). They are an internal building block for `CategoriesRepository`
+ * /`TagsRepository`, which stay the actual public API and must run the result
+ * through `toRow` before it leaves the repository.
+ *
+ * Typing (Task 0 review, I2): `T extends { id: unknown }` and `K extends
+ * keyof T` tie `ownerField` to a real property of `T` and `ownerId` to
+ * `FilterValue<T[K]>` — the same value shape MikroORM's own `FilterObject`
+ * accepts for that property (`T[K]` directly is too strict for a relation
+ * property: `Tags['user']` is `Ref<Users>`, but every call site here filters
+ * it with the raw foreign-key id, which `FilterValue` allows and a bare
+ * `T[K]` would not). `id`/`ownerId` are no longer `unknown` — a call for an
+ * entity without an `id` column, or with an `ownerId` of the wrong shape, now
+ * fails `tsc` instead of only failing at runtime; the `as FilterQuery<T>`/
+ * `as OrderDefinition<T>` casts are the one place the shape is still
+ * asserted rather than inferred, exactly at the computed-property-key
+ * boundary TypeScript cannot check on its own.
  */
 
 /**
  * List every row owned by `ownerId`, ordered by `orderField` ascending:
  * `SELECT * FROM <table> WHERE <ownerField> = ? ORDER BY <orderField> ASC`.
  */
-export async function listForOwner<T extends object>(
+export async function listForOwner<T extends { id: unknown }, K extends keyof T, OF extends keyof T>(
   repo: EntityRepository<T>,
-  ownerField: keyof T,
-  ownerId: unknown,
-  orderField: keyof T,
+  ownerField: K,
+  ownerId: FilterValue<T[K]>,
+  orderField: OF,
 ): Promise<T[]> {
   return repo.find({ [ownerField]: ownerId } as FilterQuery<T>, {
     orderBy: { [orderField]: 'asc' } as OrderDefinition<T>,
@@ -42,11 +54,11 @@ export async function listForOwner<T extends object>(
  * Find one row by id, strictly scoped to an owner:
  * `SELECT * FROM <table> WHERE id = ? AND <ownerField> = ?`.
  */
-export async function findOwnedByUser<T extends object>(
+export async function findOwnedByUser<T extends { id: unknown }, K extends keyof T>(
   repo: EntityRepository<T>,
-  id: unknown,
-  ownerField: keyof T,
-  ownerId: unknown,
+  id: T['id'],
+  ownerField: K,
+  ownerId: FilterValue<T[K]>,
 ): Promise<T | null> {
   return repo.findOne({ id, [ownerField]: ownerId } as FilterQuery<T>);
 }
@@ -57,11 +69,11 @@ export async function findOwnedByUser<T extends object>(
  * `SELECT * FROM <table> WHERE id = ? AND (<ownerField> = ? OR <ownerField>
  * IS NULL)`.
  */
-export async function findOwnedOrGlobal<T extends object>(
+export async function findOwnedOrGlobal<T extends { id: unknown }, K extends keyof T>(
   repo: EntityRepository<T>,
-  id: unknown,
-  ownerField: keyof T,
-  ownerId: unknown,
+  id: T['id'],
+  ownerField: K,
+  ownerId: FilterValue<T[K]>,
 ): Promise<T | null> {
   return repo.findOne({
     id,

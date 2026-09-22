@@ -169,7 +169,13 @@ export class SettingsService {
       if (ENCRYPTED_SETTING_KEYS.has(settingKey)) {
         defaults[settingKey] = row.value ? (decrypt_api_key(row.value) ?? '') : '';
       } else {
-        defaults[settingKey] = parseValue(row.value ?? '');
+        // Parity with the legacy `parseValue(row.value)` call this replaced:
+        // `JSON.parse(null)` coerces its argument to the string "null" and
+        // returns the JS value `null`, so a NULL-valued row parsed to `null`.
+        // `row.value ?? ''` would instead call `parseValue('')`, which throws
+        // inside JSON.parse and falls back to the empty string — a silent
+        // divergence for a case parseValue never actually threw on before.
+        defaults[settingKey] = row.value === null ? null : parseValue(row.value);
       }
     }
     return defaults;

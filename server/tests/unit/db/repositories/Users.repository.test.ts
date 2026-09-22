@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createSnapshotTestDb } from '../../../helpers/db-mock';
 import { resetTestDb } from '../../../helpers/test-db';
 import { createTestOrm, type TestOrm } from '../../../helpers/test-orm';
@@ -16,6 +16,22 @@ beforeAll(async () => {
 });
 beforeEach(() => { resetTestDb(testDb); t.clear(); });
 afterAll(async () => { await t.close(); testDb.close(); });
+
+/**
+ * Runs `fn` while counting queries MikroORM actually issues over the shared
+ * connection — see `AppSettings.repository.test.ts` for why a value-only
+ * assertion can't catch the identity-map bug I1 fixed (Task 0 review).
+ */
+async function withQueryCount<T>(fn: () => Promise<T>): Promise<{ value: T; queries: number }> {
+  const connection = t.orm.em.getConnection();
+  const spy = vi.spyOn(connection, 'execute');
+  try {
+    const value = await fn();
+    return { value, queries: spy.mock.calls.length };
+  } finally {
+    spy.mockRestore();
+  }
+}
 
 describe('UsersRepository', () => {
   it('USERSREPO-001: getEmail reads the stored email, matching SELECT email FROM users WHERE id = ?', async () => {
@@ -52,5 +68,30 @@ describe('UsersRepository', () => {
     const { user } = createUser(testDb);
     expect(await users.getApiKeyColumn(user.id, 'maps_api_key')).toBeNull();
     expect(await users.getApiKeyColumn(999999, 'maps_api_key')).toBeNull();
+  });
+
+  // I1 (Task 0 review): getEmail/getApiKeyColumn are primary-key findOne
+  // calls, which MikroORM answers from the identity map on a repeat call
+  // unless `refresh: true` is set — invisible to a raw UPDATE on the same
+  // user id inside the same request. Pins the fix at one query each.
+  describe('getEmail/getApiKeyColumn see a raw UPDATE on the same user in the same request (I1, identity-map regression)', () => {
+    it('USERSREPO-007: a raw UPDATE users SET email then getEmail reads the new email, in one query', async () => {
+      const { user } = createUser(testDb, { email: 'old@example.com' });
+      expect(await users.getEmail(user.id)).toBe('old@example.com'); // populate the identity map
+      testDb.prepare('UPDATE users SET email = ? WHERE id = ?').run('new@example.com', user.id);
+      const { value, queries } = await withQueryCount(() => users.getEmail(user.id));
+      expect(value).toBe('new@example.com');
+      expect(queries).toBe(1);
+    });
+
+    it('USERSREPO-008: a raw UPDATE users SET maps_api_key then getApiKeyColumn reads the new value, in one query', async () => {
+      const { user } = createUser(testDb);
+      testDb.prepare('UPDATE users SET maps_api_key = ? WHERE id = ?').run('old-key', user.id);
+      expect(await users.getApiKeyColumn(user.id, 'maps_api_key')).toBe('old-key'); // populate the identity map
+      testDb.prepare('UPDATE users SET maps_api_key = ? WHERE id = ?').run('new-key', user.id);
+      const { value, queries } = await withQueryCount(() => users.getApiKeyColumn(user.id, 'maps_api_key'));
+      expect(value).toBe('new-key');
+      expect(queries).toBe(1);
+    });
   });
 });
