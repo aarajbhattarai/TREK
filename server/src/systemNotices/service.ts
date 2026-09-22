@@ -62,7 +62,7 @@ export async function getActiveNoticesFor(
   // `evaluate` runs inside a .filter(), which cannot await, so the addon flags
   // the registry is able to ask about are resolved up front and handed to it as
   // a lookup. The ids come from the notices themselves, so every question the
-  // conditions can ask has an answer here and the fallback is unreachable.
+  // conditions can ask has an answer here.
   const addonFlags = new Map<string, boolean>();
   for (const condition of SYSTEM_NOTICES.flatMap(n => n.conditions)) {
     if (condition.kind === 'addonEnabled' && !addonFlags.has(condition.addonId)) {

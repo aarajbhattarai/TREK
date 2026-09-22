@@ -58,8 +58,8 @@ export function filesUploadFileFilter(allowedTypes: AllowedFileTypesService): Op
     // detached async function that always answers through `cb` — multer holds
     // the file stream until it does (make-middleware.js says as much). A
     // rejection refuses the file, so the filter still fails closed. Only the
-    // await is wrapped in try/catch, so a throw from cb() itself is never
-    // re-routed into a second cb() call.
+    // await is wrapped in try/catch; a throw from cb() itself lands in the
+    // trailing .catch, which logs it and answers multer one final time.
     (async () => {
       let allowed: string[];
       try {
@@ -73,7 +73,14 @@ export function filesUploadFileFilter(allowedTypes: AllowedFileTypesService): Op
       reject();
     })().catch((err: unknown) => {
       logError(`files upload fileFilter: ${err instanceof Error ? err.message : String(err)}`);
-      cb(err instanceof Error ? err : new Error(String(err)));
+      // cb() itself is the only thing that can reach here (every await is
+      // inside the try above); answer once more so multer never hangs, but a
+      // second throw from cb() means multer already answered — swallow it.
+      try {
+        cb(err instanceof Error ? err : new Error(String(err)));
+      } catch {
+        /* multer already answered */
+      }
     });
   };
 }

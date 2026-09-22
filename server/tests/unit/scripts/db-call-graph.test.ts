@@ -32,10 +32,26 @@ interface UnawaitedReport {
   unawaitedCallCount: number;
 }
 
+interface SyncDbMethod {
+  file: string;
+  class: string;
+  method: string;
+  line: number;
+  direct: boolean;
+}
+
+interface TransactionSite {
+  file: string;
+  class: string;
+  method: string;
+  line: number;
+  receiver: string;
+}
+
 interface SyncTxReport {
-  syncDbMethods: unknown[];
+  syncDbMethods: SyncDbMethod[];
   syncDbMethodCount: number;
-  transactionSites: unknown[];
+  transactionSites: TransactionSite[];
   transactionSiteCount: number;
 }
 
@@ -87,14 +103,18 @@ describe('db-call-graph.mjs', () => {
     expect(byMethod.good3).toBeUndefined();
   });
 
-  it('CALLGRAPH-002: --sync --tx finds nothing in the fixture tree (it touches no database) and exits 0', () => {
+  it('CALLGRAPH-002: --sync --tx reports exactly the sync-db fixture (two sync DB methods, one raw transaction) and exits 1', () => {
     const { status, report } = run(['--root', 'scripts/__fixtures__', '--sync', '--tx', '--json']);
     const { syncDbMethods, syncDbMethodCount, transactionSites, transactionSiteCount } = report as SyncTxReport;
 
-    expect(status).toBe(0);
-    expect(syncDbMethodCount).toBe(0);
-    expect(syncDbMethods).toEqual([]);
-    expect(transactionSiteCount).toBe(0);
-    expect(transactionSites).toEqual([]);
+    // Non-empty lists exit 1 — that is what makes the CI step fail on a regression.
+    expect(status).toBe(1);
+    expect(syncDbMethodCount).toBe(2);
+    expect(syncDbMethods.map((m) => `${m.class}.${m.method}`).sort()).toEqual(['SyncSample.readSync', 'SyncSample.writeInTx']);
+    expect(syncDbMethods.every((m) => m.file.endsWith('sync-db-sample.ts') && m.direct)).toBe(true);
+    expect(transactionSiteCount).toBe(1);
+    expect(transactionSites).toEqual([expect.objectContaining({ class: 'SyncSample', method: 'writeInTx', receiver: 'this.db' })]);
+    // The unawaited fixture beside it stays clean under both flags.
+    expect(syncDbMethods.some((m) => m.class === 'Sample')).toBe(false);
   });
 });
