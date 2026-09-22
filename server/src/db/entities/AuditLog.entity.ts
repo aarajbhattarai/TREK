@@ -3,7 +3,7 @@ import { defineEntity, p, type Ref, EntityRepository } from '@mikro-orm/core';
 
 export class AuditLog {
   id?: number | null;
-  createdAt: Date;
+  createdAt?: Date | null;
   user?: Ref<Users> | null;
   action!: string;
   resource?: string | null;
@@ -20,6 +20,7 @@ export const AuditLogSchema = defineEntity({
     id: p.integer().primary().autoincrement(),
     createdAt: p
       .datetime()
+      .nullable()
       .onCreate(() => new Date())
       .index('idx_audit_log_created'),
     user: () => p.manyToOne(Users).ref().nullable(),

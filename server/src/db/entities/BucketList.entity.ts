@@ -31,7 +31,7 @@ export const BucketListSchema = defineEntity({
     lng: p.double().nullable(),
     countryCode: p.text().nullable(),
     notes: p.text().nullable(),
-    createdAt: p.datetime().onCreate(() => new Date()),
+    createdAt: p.datetime().nullable().onCreate(() => new Date()),
     targetDate: p.text().nullable(),
     visitedAt: p.text().nullable(),
     visitedSource: p.text().nullable(),

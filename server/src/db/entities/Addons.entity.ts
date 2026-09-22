@@ -10,7 +10,7 @@ export class Addons {
   description?: string | null;
   type: string & Opt = 'global';
   icon: string & Opt = 'Puzzle';
-  enabled?: boolean & Opt = false;
+  enabled: boolean & Opt | null = false;
   config: AddonConfig & Opt | null = {};
   sortOrder?: number | null = 0;
 }
@@ -26,7 +26,7 @@ export const AddonsSchema = defineEntity({
     description: p.text().nullable(),
     type: p.text(),
     icon: p.text().nullable(),
-    enabled: p.boolean().default(false),
+    enabled: p.boolean().nullable().default(false),
     config: p.json<AddonConfig>().nullable(),
     sortOrder: p.integer().nullable(),
   },

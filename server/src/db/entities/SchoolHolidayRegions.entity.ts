@@ -17,7 +17,7 @@ export const SchoolHolidayRegionsSchema = defineEntity({
   repository: () => SchoolHolidayRegionsRepository,
   properties: {
     id: p.integer().primary().autoincrement(),
-    country: () => p.manyToOne(SchoolHolidayCountries).ref().name('country'),
+    country: () => p.manyToOne(SchoolHolidayCountries).ref().joinColumn('country'),
     name: p.text().collation('NOCASE'),
     revision: p.integer(),
     schoolHolidayPeriodsCollection: () => p.oneToMany(SchoolHolidayPeriods).mappedBy('region'),
