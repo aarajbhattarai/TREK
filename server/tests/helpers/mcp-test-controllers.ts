@@ -114,7 +114,7 @@ import { AirtrailImportService } from '../../src/nest/integrations/airtrail-impo
 import { ReservationImportMcp } from '../../src/nest/reservation-import/reservation-import.mcp';
 import { HelpMcp } from '../../src/nest/help/help.mcp';
 import { AddonsMcp } from '../../src/nest/addons/addons.mcp';
-import { createTestUnitOfWork, createTestAppSettingsRepo, createTestCategoriesRepo, createTestTagsRepo } from './test-uow';
+import { createTestUnitOfWork, createTestAppSettingsRepo, createTestCategoriesRepo, createTestTagsRepo, createTestSettingsRepo } from './test-uow';
 import { createTestOrm } from './test-orm';
 import { AppSettings } from '../../src/db/entities/AppSettings.entity';
 import type { AppSettingsRepository } from '../../src/db/repositories/AppSettings.repository';
@@ -156,6 +156,7 @@ export async function createMcpTestRegistry(): Promise<McpRegistry> {
     new MailerService(dbService),
     new EphemeralTokenService(),
     new AllowedFileTypesService(dbService), await createTestUnitOfWork(dbService.connection),
+    appSettings, usersRepo,
   );
   const queryHelpersService = new QueryHelpersService(dbService);
   const daysService = new DaysService(dbService, permissionsService, realtimeService, queryHelpersService, await createTestUnitOfWork(dbService.connection));
@@ -165,7 +166,7 @@ export async function createMcpTestRegistry(): Promise<McpRegistry> {
   // Exactly one instance, shared by maps, places and share: its stampede guard
   // and its on-disk set only work if all three readers see the same maps.
   const placePhotoCache = new PlacePhotoCacheService(dbService, makeStorageFixture('photos/google/').storage);
-  const mapsService = new MapsService(dbService, placePhotoCache);
+  const mapsService = new MapsService(dbService, placePhotoCache, appSettings, usersRepo);
   const journeyDomain = new JourneyDomainService(dbService, realtimeService, new TrekPhotosRepository(dbService), await createTestUnitOfWork(dbService.connection));
   // The last three were previously omitted, which left them `undefined` at
   // runtime — silently fine while nothing called them, a TypeError the moment
@@ -179,7 +180,7 @@ export async function createMcpTestRegistry(): Promise<McpRegistry> {
   // Built after it: deleting a place cancels the nights booked at it through this one.
   const placesService = new PlacesService(
     dbService, permissionsService, realtimeService, mapsService, queryHelpersService,
-    new UnsplashService(dbService, new RuntimeEnvService(), generalStorage),
+    new UnsplashService(appSettings, usersRepo, new RuntimeEnvService(), generalStorage),
     placePhotoCache,
     journeyDomain,
     generalStorage,
@@ -196,7 +197,7 @@ export async function createMcpTestRegistry(): Promise<McpRegistry> {
     budgetService,
     new VacayService(dbService, realtimeService, notificationsStub(), await createTestUnitOfWork(dbService.connection)),
     realtimeService,
-    new UnsplashService(dbService, new RuntimeEnvService(), generalStorage),
+    new UnsplashService(appSettings, usersRepo, new RuntimeEnvService(), generalStorage),
     generalStorage,
     await createTestUnitOfWork(dbService.connection),
   );
@@ -243,20 +244,20 @@ export async function createMcpTestRegistry(): Promise<McpRegistry> {
       new SchoolHolidaysMcp(new SchoolHolidaysService(dbService, await createTestUnitOfWork(dbService.connection)), guards),
       new TripsMcp(tripsService, todoService, collabService, authService, calendarService, membersService, readModelService, addonsService, guards),
       new TripPromptsMcp(tripsService, readModelService, packingService, addonsService),
-      new ShareMcp(new ShareService(dbService, new SettingsService(dbService, await createTestUnitOfWork(dbService.connection), appSettings), permissionsService, queryHelpersService, placePhotoCache, await createTestUnitOfWork(dbService.connection)), authService, guards),
+      new ShareMcp(new ShareService(dbService, new SettingsService(await createTestUnitOfWork(dbService.connection), appSettings, await createTestSettingsRepo(dbService.connection)), permissionsService, queryHelpersService, placePhotoCache, await createTestUnitOfWork(dbService.connection)), authService, guards),
       new FeedsMcp(new FeedsService(dbService, calendarService), dbService, new RuntimeEnvService(), guards),
       new TripInviteMcp(new TripInviteService(dbService, permissionsService, new TripMembershipService(dbService), await createTestUnitOfWork(dbService.connection)), dbService, new RuntimeEnvService(), guards, new AuditService(auditLogRepo, usersRepo)),
       new MapsMcp(mapsService),
       new PlacesMcp(placesService, mapsService, dbService, authService, journeyDomain, assignmentsService, guards, await createTestUnitOfWork(dbService.connection)),
       new CollectionsMcp(new CollectionsService(dbService, permissionsService, realtimeService, notificationsStub(), generalStorage, await createTestUnitOfWork(dbService.connection)), dbService, authService, addonsService),
-      new TransitMcp(new TransitService(new GoogleTransitProvider(dbService)), daysService, reservationsService, dbService, authService, guards),
+      new TransitMcp(new TransitService(new GoogleTransitProvider(dbService, appSettings, usersRepo)), daysService, reservationsService, dbService, authService, guards),
       new AtlasMcp(new AtlasService(dbService, await createTestUnitOfWork(dbService.connection)), addonsService, authService),
-      new JourneyMcp(journeyDomain, new JourneyShareService(dbService, journeyDomain, new SettingsService(dbService, await createTestUnitOfWork(dbService.connection), appSettings)), addonsService, authService, captureBackfill),
+      new JourneyMcp(journeyDomain, new JourneyShareService(dbService, journeyDomain, new SettingsService(await createTestUnitOfWork(dbService.connection), appSettings, await createTestSettingsRepo(dbService.connection))), addonsService, authService, captureBackfill),
       new MemoriesMcp(immichService, synologyService, dbService, addonsService),
       new NotificationsMcp(await makeNotificationsService(dbService, realtimeService), authService),
       new AirtrailMcp(new AirtrailService(dbService, new AuditService(auditLogRepo, usersRepo), new AirtrailClient()), addonsService),
       new ReservationImportMcp(new AirtrailImportService(dbService, realtimeService, reservationsService, new AirtrailClient(), new AirtrailService(dbService, new AuditService(auditLogRepo, usersRepo), new AirtrailClient())), dbService, authService, guards, addonsService),
-      new SettingsMcp(new SettingsService(dbService, await createTestUnitOfWork(dbService.connection), appSettings), authService),
+      new SettingsMcp(new SettingsService(await createTestUnitOfWork(dbService.connection), appSettings, await createTestSettingsRepo(dbService.connection)), authService),
       new HelpMcp(), new AddonsMcp(addonsService),
       new TripWarningsMcp(new PluginHooks({ providersOf: () => [], invokeHook: async () => [] } as unknown as PluginRuntimeService), dbService),
       new PluginSearchMcp(new PluginHooks({ providersOf: () => [], invokeHook: async () => [] } as unknown as PluginRuntimeService)),

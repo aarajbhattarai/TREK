@@ -72,8 +72,7 @@ import { PlacePhotoCacheService } from '../../src/nest/place-photos/place-photo-
 import { TrekPhotosRepository } from '../../src/nest/photos/trek-photos.repository';
 import { RuntimeEnvService } from '../../src/nest/app-config/runtime-env.service';
 import { makeStorageFixture } from './storage-fixture';
-import { createTestUnitOfWork, createTestAppSettingsRepo, createTestCategoriesRepo, createTestTagsRepo, sharedTestOrm } from './test-uow';
-import { createTestOrm } from './test-orm';
+import { createTestUnitOfWork, createTestAppSettingsRepo, createTestCategoriesRepo, createTestTagsRepo, createTestSettingsRepo, sharedTestOrm } from './test-uow';
 import { AppSettings } from '../../src/db/entities/AppSettings.entity';
 import type { AppSettingsRepository } from '../../src/db/repositories/AppSettings.repository';
 import { AuditLog } from '../../src/db/entities/AuditLog.entity';
@@ -93,7 +92,8 @@ import type { UsersRepository } from '../../src/db/repositories/Users.repository
  */
 export async function createPluginRpcHostFactory(dbs: DatabaseService): Promise<PluginRpcHostFactory> {
   const generalStorage = makeStorageFixture('').storage;
-  const appSettings = (await createTestOrm(dbs.connection)).repo(AppSettings) as AppSettingsRepository;
+  const appSettings = (await sharedTestOrm(dbs.connection)).repo(AppSettings) as AppSettingsRepository;
+  const usersRepo = (await sharedTestOrm(dbs.connection)).repo(Users) as UsersRepository;
   const permissions = new PermissionsService(await createTestAppSettingsRepo(dbs.connection), await createTestUnitOfWork(dbs.connection));
   const exchangeRates = new ExchangeRatesService();
   const realtime = new RealtimeService();
@@ -107,7 +107,7 @@ export async function createPluginRpcHostFactory(dbs: DatabaseService): Promise<
   const vacay = new VacayService(dbs, realtime, notificationsStub(), await createTestUnitOfWork(dbs.connection));
   const days = new DaysService(dbs, permissions, realtime, queryHelpers, await createTestUnitOfWork(dbs.connection));
   const photoCache = new PlacePhotoCacheService(dbs, makeStorageFixture('photos/google/').storage);
-  const unsplash = new UnsplashService(dbs, new RuntimeEnvService(), generalStorage);
+  const unsplash = new UnsplashService(appSettings, usersRepo, new RuntimeEnvService(), generalStorage);
   const journey = new JourneyDomainService(dbs, realtime, new TrekPhotosRepository(dbs), await createTestUnitOfWork(dbs.connection));
   const collections = new CollectionsService(dbs, permissions, realtime, notificationsStub(), generalStorage, await createTestUnitOfWork(dbs.connection));
   const atlas = new AtlasService(dbs, await createTestUnitOfWork(dbs.connection));
@@ -115,11 +115,11 @@ export async function createPluginRpcHostFactory(dbs: DatabaseService): Promise<
   const assignments = new AssignmentsService(dbs, permissions, realtime, queryHelpers, journey, await createTestUnitOfWork(dbs.connection));
   const membership = new TripMembershipService(dbs);
   const notifications = await makeNotificationsService(dbs, realtime);
-  const llmConfig = new LlmConfigResolver(new SettingsService(dbs, await createTestUnitOfWork(dbs.connection), appSettings), dbs, addons);
+  const llmConfig = new LlmConfigResolver(new SettingsService(await createTestUnitOfWork(dbs.connection), appSettings, await createTestSettingsRepo(dbs.connection)), dbs, addons);
   const oauth = new PluginOAuthService(dbs);
   const accommodations = new AccommodationsService(dbs, permissions, realtime, assignments, await createTestUnitOfWork(dbs.connection));
   // After it: deleting a place cancels the nights booked at it through this one.
-  const places = new PlacesService(dbs, permissions, realtime, new MapsService(dbs, photoCache), queryHelpers, unsplash, photoCache, journey, generalStorage, accommodations, await createTestUnitOfWork(dbs.connection));
+  const places = new PlacesService(dbs, permissions, realtime, new MapsService(dbs, photoCache, appSettings, usersRepo), queryHelpers, unsplash, photoCache, journey, generalStorage, accommodations, await createTestUnitOfWork(dbs.connection));
   // After accommodations: a hotel booking writes the stay's day stop through it.
   const reservations = new ReservationsService(dbs, permissions, budget, realtime, notificationsStub(), new ReservationsReadRepository(dbs), accommodations, await createTestUnitOfWork(dbs.connection));
   const trips = new TripsService(dbs, reservations, days, permissions, budget, vacay, realtime, unsplash, generalStorage, await createTestUnitOfWork(dbs.connection));
@@ -159,17 +159,16 @@ export async function createPluginRpcHostFactory(dbs: DatabaseService): Promise<
 
 /** A PluginRuntimeService constructed the way Nest would: with a real host factory. */
 export async function createPluginRuntime(dbs: DatabaseService, registry?: PluginRegistryService): Promise<PluginRuntimeService> {
-  const auditOrm = await createTestOrm(dbs.connection);
-  // The SAME shared ORM `createPluginRpcHostFactory` built `permissions` from
-  // (via createTestAppSettingsRepo/createTestUnitOfWork) — not auditOrm above,
-  // which is its own separate MikroORM.init just for AuditService. Passing THIS
-  // one as PluginRuntimeService's last arg is what makes D6's request-context
-  // wrapper (task-2-review.md C3) fork from the em PermissionsService's
-  // repository actually resolves through.
+  // The SAME shared ORM `createPluginRpcHostFactory` builds `permissions` from
+  // (via createTestAppSettingsRepo/createTestUnitOfWork) — one MikroORM.init
+  // per handle (task-1-2-rereview.md M-A), not a second one just for
+  // AuditService. Passing this ORM as PluginRuntimeService's last arg is what
+  // makes D6's request-context wrapper (task-2-review.md C3) fork from the em
+  // PermissionsService's repository actually resolves through.
   const orm = await sharedTestOrm(dbs.connection);
   return new PluginRuntimeService(
     dbs,
-    new AuditService(auditOrm.repo(AuditLog) as AuditLogRepository, auditOrm.repo(Users) as UsersRepository),
+    new AuditService(orm.repo(AuditLog) as AuditLogRepository, orm.repo(Users) as UsersRepository),
     await createTestAddonsService(dbs.connection, dbs),
     new PluginUserSettingsService(dbs),
     registry,

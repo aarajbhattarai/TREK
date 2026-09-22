@@ -37,6 +37,8 @@ import { PhotoProviderFields } from '../../../src/db/entities/PhotoProviderField
 import type { PhotoProviderFieldsRepository } from '../../../src/db/repositories/PhotoProviderFields.repository';
 import { AppSettings } from '../../../src/db/entities/AppSettings.entity';
 import type { AppSettingsRepository } from '../../../src/db/repositories/AppSettings.repository';
+import { Users } from '../../../src/db/entities/Users.entity';
+import type { UsersRepository } from '../../../src/db/repositories/Users.repository';
 
 const { getPhotoProviderConfig } = vi.hoisted(() => ({ getPhotoProviderConfig: vi.fn(() => ({})) }));
 vi.mock('../../../src/nest/memories/memories.helpers', () => ({ getPhotoProviderConfig }));
@@ -47,6 +49,7 @@ let addonsRepo: AddonsRepository;
 let photoProvidersRepo: PhotoProvidersRepository;
 let photoProviderFieldsRepo: PhotoProviderFieldsRepository;
 let appSettingsRepo: AppSettingsRepository;
+let usersRepo: UsersRepository;
 let svc: AddonsService;
 
 type ListAddon = Awaited<ReturnType<AddonsService['list']>>['addons'][number];
@@ -152,6 +155,7 @@ beforeAll(async () => {
   photoProvidersRepo = t.repo(PhotoProviders) as PhotoProvidersRepository;
   photoProviderFieldsRepo = t.repo(PhotoProviderFields) as PhotoProviderFieldsRepository;
   appSettingsRepo = t.repo(AppSettings) as AppSettingsRepository;
+  usersRepo = t.repo(Users) as UsersRepository;
 });
 
 beforeEach(() => {
@@ -165,7 +169,7 @@ beforeEach(() => {
   t.clear();
   getPhotoProviderConfig.mockReset();
   getPhotoProviderConfig.mockReturnValue({});
-  svc = new AddonsService(addonsRepo, photoProvidersRepo, photoProviderFieldsRepo, appSettingsRepo, new DatabaseService(testDb));
+  svc = new AddonsService(addonsRepo, photoProvidersRepo, photoProviderFieldsRepo, appSettingsRepo, usersRepo, new DatabaseService(testDb));
 });
 
 afterEach(() => {

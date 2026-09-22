@@ -10,6 +10,8 @@ import { PhotoProviderFields } from '../../src/db/entities/PhotoProviderFields.e
 import type { PhotoProviderFieldsRepository } from '../../src/db/repositories/PhotoProviderFields.repository';
 import { AppSettings } from '../../src/db/entities/AppSettings.entity';
 import type { AppSettingsRepository } from '../../src/db/repositories/AppSettings.repository';
+import { Users } from '../../src/db/entities/Users.entity';
+import type { UsersRepository } from '../../src/db/repositories/Users.repository';
 
 /**
  * AddonsService's constructor grew from one `DatabaseService` to four
@@ -47,6 +49,7 @@ export async function createTestAddonsService(db: Database.Database, dbs: Databa
     t.repo(PhotoProviders) as PhotoProvidersRepository,
     t.repo(PhotoProviderFields) as PhotoProviderFieldsRepository,
     t.repo(AppSettings) as AppSettingsRepository,
+    t.repo(Users) as UsersRepository,
     dbs,
   );
 }
