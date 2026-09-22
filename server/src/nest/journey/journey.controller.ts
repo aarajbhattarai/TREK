@@ -192,8 +192,8 @@ export class JourneyController {
 
   // ── Static prefix routes (before /:id) ──────────────────────────────────
   @Get()
-  list(@CurrentUser() user: User) {
-    return { journeys: this.journey.listJourneys(user.id) };
+  async list(@CurrentUser() user: User) {
+    return { journeys: await this.journey.listJourneys(user.id) };
   }
 
   @Post()
@@ -211,19 +211,19 @@ export class JourneyController {
   }
 
   @Get('suggestions')
-  suggestions(@CurrentUser() user: User) {
-    return { trips: this.journey.getSuggestions(user.id) };
+  async suggestions(@CurrentUser() user: User) {
+    return { trips: await this.journey.getSuggestions(user.id) };
   }
 
   @Get('available-trips')
-  availableTrips(@CurrentUser() user: User) {
-    return { trips: this.journey.listUserTrips(user.id) };
+  async availableTrips(@CurrentUser() user: User) {
+    return { trips: await this.journey.listUserTrips(user.id) };
   }
 
   // ── Entries (prefix /entries — before /:id) ─────────────────────────────
   @Patch('entries/:entryId')
-  updateEntry(@CurrentUser() user: User, @Param('entryId') entryId: string, @Body() body: JourneyEntryUpdateDto, @Headers('x-socket-id') socketId?: string) {
-    const result = this.journey.updateEntry(Number(entryId), user.id, body, socketId);
+  async updateEntry(@CurrentUser() user: User, @Param('entryId') entryId: string, @Body() body: JourneyEntryUpdateDto, @Headers('x-socket-id') socketId?: string) {
+    const result = await this.journey.updateEntry(Number(entryId), user.id, body, socketId);
     if (!result) {
       throw new HttpException({ error: 'Entry not found' }, 404);
     }
@@ -231,8 +231,8 @@ export class JourneyController {
   }
 
   @Delete('entries/:entryId')
-  deleteEntry(@CurrentUser() user: User, @Param('entryId') entryId: string, @Headers('x-socket-id') socketId?: string) {
-    if (!this.journey.deleteEntry(Number(entryId), user.id, socketId)) {
+  async deleteEntry(@CurrentUser() user: User, @Param('entryId') entryId: string, @Headers('x-socket-id') socketId?: string) {
+    if (!(await this.journey.deleteEntry(Number(entryId), user.id, socketId))) {
       throw new HttpException({ error: 'Entry not found' }, 404);
     }
     return { success: true };
@@ -258,7 +258,7 @@ export class JourneyController {
         continue;
       }
       // Mirror to Immich only when the user explicitly opted in (#730).
-      if (this.journey.immichAutoUploadEnabled(user.id)) {
+      if (await this.journey.immichAutoUploadEnabled(user.id)) {
         try {
           const immichId = await this.journey.uploadToImmich(user.id, relativePath, file.originalname);
           if (immichId) {
@@ -357,12 +357,12 @@ export class JourneyController {
   }
 
   @Post('entries/:entryId/link-photo')
-  linkPhoto(@CurrentUser() user: User, @Param('entryId') entryId: string, @Body() body: JourneyLinkPhotoDto) {
+  async linkPhoto(@CurrentUser() user: User, @Param('entryId') entryId: string, @Body() body: JourneyLinkPhotoDto) {
     const journeyPhotoId = body.journey_photo_id ?? body.photo_id;
     if (!journeyPhotoId) {
       throw new HttpException({ error: 'journey_photo_id required' }, 400);
     }
-    const result = this.journey.linkPhotoToEntry(Number(entryId), Number(journeyPhotoId), user.id);
+    const result = await this.journey.linkPhotoToEntry(Number(entryId), Number(journeyPhotoId), user.id);
     if (!result) {
       throw new HttpException({ error: 'Not allowed' }, 403);
     }
@@ -371,15 +371,15 @@ export class JourneyController {
 
   @Delete('entries/:entryId/photos/:journeyPhotoId')
   @HttpCode(204)
-  unlinkPhoto(@CurrentUser() user: User, @Param('entryId') entryId: string, @Param('journeyPhotoId') journeyPhotoId: string): void {
-    if (!this.journey.unlinkPhotoFromEntry(Number(entryId), Number(journeyPhotoId), user.id)) {
+  async unlinkPhoto(@CurrentUser() user: User, @Param('entryId') entryId: string, @Param('journeyPhotoId') journeyPhotoId: string): Promise<void> {
+    if (!(await this.journey.unlinkPhotoFromEntry(Number(entryId), Number(journeyPhotoId), user.id))) {
       throw new HttpException({ error: 'Not found or not allowed' }, 404);
     }
   }
 
   @Patch('photos/:photoId')
-  updatePhoto(@CurrentUser() user: User, @Param('photoId') photoId: string, @Body() body: JourneyPhotoUpdateDto) {
-    const result = this.journey.updatePhoto(Number(photoId), user.id, body);
+  async updatePhoto(@CurrentUser() user: User, @Param('photoId') photoId: string, @Body() body: JourneyPhotoUpdateDto) {
+    const result = await this.journey.updatePhoto(Number(photoId), user.id, body);
     if (!result) {
       throw new HttpException({ error: 'Photo not found' }, 404);
     }
@@ -527,8 +527,8 @@ export class JourneyController {
 
   // ── Journeys /:id ───────────────────────────────────────────────────────
   @Get(':id')
-  get(@CurrentUser() user: User, @Param('id') id: string) {
-    const data = this.journey.getJourneyFull(Number(id), user.id);
+  async get(@CurrentUser() user: User, @Param('id') id: string) {
+    const data = await this.journey.getJourneyFull(Number(id), user.id);
     if (!data) {
       throw new HttpException({ error: 'Journey not found' }, 404);
     }
@@ -536,8 +536,8 @@ export class JourneyController {
   }
 
   @Patch(':id')
-  update(@CurrentUser() user: User, @Param('id') id: string, @Body() body: JourneyUpdateDto) {
-    const result = this.journey.updateJourney(Number(id), user.id, body);
+  async update(@CurrentUser() user: User, @Param('id') id: string, @Body() body: JourneyUpdateDto) {
+    const result = await this.journey.updateJourney(Number(id), user.id, body);
     if (!result) {
       throw new HttpException({ error: 'Journey not found' }, 404);
     }
@@ -552,7 +552,7 @@ export class JourneyController {
       throw new HttpException({ error: 'No file uploaded' }, 400);
     }
     await this.commitJourneyUploads([file]);
-    const result = this.journey.updateJourney(Number(id), user.id, { cover_image: `journey/${file.filename}` });
+    const result = await this.journey.updateJourney(Number(id), user.id, { cover_image: `journey/${file.filename}` });
     if (!result) {
       await this.discardJourneyUploads([file]);
       throw new HttpException({ error: 'Journey not found' }, 404);
@@ -561,8 +561,8 @@ export class JourneyController {
   }
 
   @Delete(':id')
-  remove(@CurrentUser() user: User, @Param('id') id: string) {
-    if (!this.journey.deleteJourney(Number(id), user.id)) {
+  async remove(@CurrentUser() user: User, @Param('id') id: string) {
+    if (!(await this.journey.deleteJourney(Number(id), user.id))) {
       throw new HttpException({ error: 'Journey not found' }, 404);
     }
     return { success: true };
@@ -571,19 +571,19 @@ export class JourneyController {
   // ── Journey trips ───────────────────────────────────────────────────────
   @Post(':id/trips')
   @HttpCode(200) // Express answers with res.json (200).
-  addTrip(@CurrentUser() user: User, @Param('id') id: string, @Body() body: JourneyAddTripDto) {
+  async addTrip(@CurrentUser() user: User, @Param('id') id: string, @Body() body: JourneyAddTripDto) {
     if (!body.trip_id) {
       throw new HttpException({ error: 'trip_id required' }, 400);
     }
-    if (!this.journey.addTripToJourney(Number(id), Number(body.trip_id), user.id)) {
+    if (!(await this.journey.addTripToJourney(Number(id), Number(body.trip_id), user.id))) {
       throw new HttpException({ error: 'Not allowed' }, 403);
     }
     return { success: true };
   }
 
   @Delete(':id/trips/:tripId')
-  removeTrip(@CurrentUser() user: User, @Param('id') id: string, @Param('tripId') tripId: string) {
-    if (!this.journey.removeTripFromJourney(Number(id), Number(tripId), user.id)) {
+  async removeTrip(@CurrentUser() user: User, @Param('id') id: string, @Param('tripId') tripId: string) {
+    if (!(await this.journey.removeTripFromJourney(Number(id), Number(tripId), user.id))) {
       throw new HttpException({ error: 'Not allowed' }, 403);
     }
     return { success: true };
@@ -591,8 +591,8 @@ export class JourneyController {
 
   // ── Entries under journey ───────────────────────────────────────────────
   @Get(':id/entries')
-  listEntries(@CurrentUser() user: User, @Param('id') id: string) {
-    const entries = this.journey.listEntries(Number(id), user.id);
+  async listEntries(@CurrentUser() user: User, @Param('id') id: string) {
+    const entries = await this.journey.listEntries(Number(id), user.id);
     if (!entries) {
       throw new HttpException({ error: 'Journey not found' }, 404);
     }
@@ -605,8 +605,8 @@ export class JourneyController {
    * planner is all it takes for it to show up here.
    */
   @Get(':id/tracks')
-  listTracks(@CurrentUser() user: User, @Param('id') id: string) {
-    const tracks = this.journey.journeyTracks(Number(id), user.id);
+  async listTracks(@CurrentUser() user: User, @Param('id') id: string) {
+    const tracks = await this.journey.journeyTracks(Number(id), user.id);
     if (!tracks) {
       throw new HttpException({ error: 'Journey not found' }, 404);
     }
@@ -623,8 +623,8 @@ export class JourneyController {
    * designing and never while printing.
    */
   @Get(':id/stats')
-  stats(@CurrentUser() user: User, @Param('id') id: string) {
-    const stats = this.journey.journeyStats(Number(id), user.id);
+  async stats(@CurrentUser() user: User, @Param('id') id: string) {
+    const stats = await this.journey.journeyStats(Number(id), user.id);
     if (!stats) {
       throw new HttpException({ error: 'Journey not found' }, 404);
     }
@@ -640,9 +640,9 @@ export class JourneyController {
    */
 
   @Get(':id/book')
-  getBook(@CurrentUser() user: User, @Param('id') id: string) {
-    const book = this.books.getBook(Number(id), user.id);
-    if (book === null && !this.books.canOpen(Number(id), user.id)) {
+  async getBook(@CurrentUser() user: User, @Param('id') id: string) {
+    const book = await this.books.getBook(Number(id), user.id);
+    if (book === null && !(await this.books.canOpen(Number(id), user.id))) {
       throw new HttpException({ error: 'Journey not found' }, 404);
     }
     // A journey with no book yet is not an error: Studio opens, lays one out
@@ -653,19 +653,19 @@ export class JourneyController {
 
   @Put(':id/book')
   @HttpCode(200)
-  saveBook(
+  async saveBook(
     @CurrentUser() user: User,
     @Param('id') id: string,
     @Body() body: BookSaveDto,
     @Headers('x-socket-id') socketId?: string,
   ) {
-    const result = this.books.saveBook(Number(id), user.id, {
+    const result = await this.books.saveBook(Number(id), user.id, {
       title: body.title ?? '',
       document: body.document,
       baseVersion: body.baseVersion,
     });
     if (result === null) {
-      throw this.bookRefusal(Number(id), user.id);
+      throw await this.bookRefusal(Number(id), user.id);
     }
     if ('conflict' in result) {
       /*
@@ -681,16 +681,16 @@ export class JourneyController {
         409,
       );
     }
-    this.books.broadcastSaved(Number(id), user.id, result.record, socketId);
+    await this.books.broadcastSaved(Number(id), user.id, result.record, socketId);
     return result.record;
   }
 
   @Delete(':id/book')
   @HttpCode(204)
-  deleteBook(@CurrentUser() user: User, @Param('id') id: string) {
-    const removed = this.books.deleteBook(Number(id), user.id);
+  async deleteBook(@CurrentUser() user: User, @Param('id') id: string) {
+    const removed = await this.books.deleteBook(Number(id), user.id);
     if (removed === null) {
-      throw this.bookRefusal(Number(id), user.id);
+      throw await this.bookRefusal(Number(id), user.id);
     }
   }
 
@@ -702,18 +702,18 @@ export class JourneyController {
    * not exist. Someone who cannot see the journey at all still gets the 404 —
    * the status is not an existence oracle for them.
    */
-  private bookRefusal(journeyId: number, userId: number): HttpException {
-    return this.books.canOpen(journeyId, userId)
+  private async bookRefusal(journeyId: number, userId: number): Promise<HttpException> {
+    return (await this.books.canOpen(journeyId, userId))
       ? new HttpException({ error: 'Not allowed' }, 403)
       : new HttpException({ error: 'Journey not found' }, 404);
   }
 
   @Post(':id/entries')
-  createEntry(@CurrentUser() user: User, @Param('id') id: string, @Body() body: JourneyEntryCreateDto, @Headers('x-socket-id') socketId?: string) {
+  async createEntry(@CurrentUser() user: User, @Param('id') id: string, @Body() body: JourneyEntryCreateDto, @Headers('x-socket-id') socketId?: string) {
     if (!body.entry_date) {
       throw new HttpException({ error: 'entry_date is required' }, 400);
     }
-    const entry = this.journey.createEntry(Number(id), user.id, body, socketId);
+    const entry = await this.journey.createEntry(Number(id), user.id, body, socketId);
     if (!entry) {
       throw new HttpException({ error: 'Journey not found' }, 404);
     }
@@ -721,12 +721,12 @@ export class JourneyController {
   }
 
   @Put(':id/entries/reorder')
-  reorderEntries(@CurrentUser() user: User, @Param('id') id: string, @Body() body: JourneyReorderEntriesDto, @Headers('x-socket-id') socketId?: string) {
+  async reorderEntries(@CurrentUser() user: User, @Param('id') id: string, @Body() body: JourneyReorderEntriesDto, @Headers('x-socket-id') socketId?: string) {
     const orderedIds = body.orderedIds;
     if (!Array.isArray(orderedIds) || !orderedIds.every((v) => Number.isFinite(Number(v)))) {
       throw new HttpException({ error: 'orderedIds must be an array of numbers' }, 400);
     }
-    if (!this.journey.reorderEntries(Number(id), user.id, orderedIds.map(Number), socketId)) {
+    if (!(await this.journey.reorderEntries(Number(id), user.id, orderedIds.map(Number), socketId))) {
       throw new HttpException({ error: 'Not allowed' }, 403);
     }
     return { success: true };
@@ -734,27 +734,27 @@ export class JourneyController {
 
   // ── Contributors ────────────────────────────────────────────────────────
   @Post(':id/contributors')
-  addContributor(@CurrentUser() user: User, @Param('id') id: string, @Body() body: JourneyContributorAddDto) {
+  async addContributor(@CurrentUser() user: User, @Param('id') id: string, @Body() body: JourneyContributorAddDto) {
     if (!body.user_id) {
       throw new HttpException({ error: 'user_id required' }, 400);
     }
-    if (!this.journey.addContributor(Number(id), user.id, Number(body.user_id), (body.role as 'editor' | 'viewer') || 'viewer')) {
+    if (!(await this.journey.addContributor(Number(id), user.id, Number(body.user_id), (body.role as 'editor' | 'viewer') || 'viewer'))) {
       throw new HttpException({ error: 'Not allowed' }, 403);
     }
     return { success: true };
   }
 
   @Patch(':id/contributors/:userId')
-  updateContributor(@CurrentUser() user: User, @Param('id') id: string, @Param('userId') userId: string, @Body() body: JourneyContributorUpdateDto) {
-    if (!this.journey.updateContributorRole(Number(id), user.id, Number(userId), body.role as 'editor' | 'viewer')) {
+  async updateContributor(@CurrentUser() user: User, @Param('id') id: string, @Param('userId') userId: string, @Body() body: JourneyContributorUpdateDto) {
+    if (!(await this.journey.updateContributorRole(Number(id), user.id, Number(userId), body.role as 'editor' | 'viewer'))) {
       throw new HttpException({ error: 'Not allowed' }, 403);
     }
     return { success: true };
   }
 
   @Delete(':id/contributors/:userId')
-  removeContributor(@CurrentUser() user: User, @Param('id') id: string, @Param('userId') userId: string) {
-    if (!this.journey.removeContributor(Number(id), user.id, Number(userId))) {
+  async removeContributor(@CurrentUser() user: User, @Param('id') id: string, @Param('userId') userId: string) {
+    if (!(await this.journey.removeContributor(Number(id), user.id, Number(userId)))) {
       throw new HttpException({ error: 'Not allowed' }, 403);
     }
     return { success: true };
@@ -763,8 +763,8 @@ export class JourneyController {
   // ── Suggestions ─────────────────────────────────────────────────────────
   @Post(':id/suggestions/restore')
   @HttpCode(200)
-  restoreSuggestions(@CurrentUser() user: User, @Param('id') id: string) {
-    const result = this.journey.restoreDismissedSuggestions(Number(id), user.id);
+  async restoreSuggestions(@CurrentUser() user: User, @Param('id') id: string) {
+    const result = await this.journey.restoreDismissedSuggestions(Number(id), user.id);
     if (!result) {
       throw new HttpException({ error: 'Not allowed' }, 403);
     }
@@ -773,8 +773,8 @@ export class JourneyController {
 
   // ── User Preferences ────────────────────────────────────────────────────
   @Patch(':id/preferences')
-  preferences(@CurrentUser() user: User, @Param('id') id: string, @Body() body: JourneyPreferencesDto) {
-    const result = this.journey.updateJourneyPreferences(Number(id), user.id, body);
+  async preferences(@CurrentUser() user: User, @Param('id') id: string, @Body() body: JourneyPreferencesDto) {
+    const result = await this.journey.updateJourneyPreferences(Number(id), user.id, body);
     if (!result) {
       throw new HttpException({ error: 'Not allowed' }, 403);
     }
@@ -783,12 +783,12 @@ export class JourneyController {
 
   // ── Share Link ──────────────────────────────────────────────────────────
   @Get(':id/share-link')
-  getShareLink(@CurrentUser() user: User, @Param('id') id: string) {
+  async getShareLink(@CurrentUser() user: User, @Param('id') id: string) {
     // Reading the token is owner-only. It refuses like its siblings rather than
     // answering with a null link: "not published" and "not yours to see" are
     // different answers, and a client told the first one offers a create button
     // that the POST below then refuses.
-    const result = this.journey.getJourneyShareLink(Number(id), user.id);
+    const result = await this.journey.getJourneyShareLink(Number(id), user.id);
     if (!result.allowed) {
       throw new HttpException({ error: 'Not allowed' }, 403);
     }
@@ -797,8 +797,8 @@ export class JourneyController {
 
   @Post(':id/share-link')
   @HttpCode(200) // Express answers with res.json (200).
-  setShareLink(@CurrentUser() user: User, @Param('id') id: string, @Body() body: JourneyShareLinkDto) {
-    const result = this.journey.createOrUpdateJourneyShareLink(Number(id), user.id, {
+  async setShareLink(@CurrentUser() user: User, @Param('id') id: string, @Body() body: JourneyShareLinkDto) {
+    const result = await this.journey.createOrUpdateJourneyShareLink(Number(id), user.id, {
       share_timeline: body.share_timeline as boolean | undefined,
       share_gallery: body.share_gallery as boolean | undefined,
       share_map: body.share_map as boolean | undefined,
@@ -811,8 +811,8 @@ export class JourneyController {
   }
 
   @Delete(':id/share-link')
-  deleteShareLink(@CurrentUser() user: User, @Param('id') id: string) {
-    if (!this.journey.deleteJourneyShareLink(Number(id), user.id)) {
+  async deleteShareLink(@CurrentUser() user: User, @Param('id') id: string) {
+    if (!(await this.journey.deleteJourneyShareLink(Number(id), user.id))) {
       throw new HttpException({ error: 'Not allowed' }, 403);
     }
     return { success: true };

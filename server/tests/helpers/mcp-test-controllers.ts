@@ -156,7 +156,7 @@ export async function createMcpTestRegistry(): Promise<McpRegistry> {
   // and its on-disk set only work if all three readers see the same maps.
   const placePhotoCache = new PlacePhotoCacheService(dbService, makeStorageFixture('photos/google/').storage);
   const mapsService = new MapsService(dbService, placePhotoCache);
-  const journeyDomain = new JourneyDomainService(dbService, realtimeService, new TrekPhotosRepository(dbService));
+  const journeyDomain = new JourneyDomainService(dbService, realtimeService, new TrekPhotosRepository(dbService), await createTestUnitOfWork(dbService.connection));
   // The last three were previously omitted, which left them `undefined` at
   // runtime — silently fine while nothing called them, a TypeError the moment
   // the journey skeleton hooks landed on the place write paths. tsconfig.tests.json

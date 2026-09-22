@@ -63,7 +63,7 @@ export class JournalRpc {
     await this.requireJourneyAddon();
     // listEntries self-gates via canAccessJourney and returns null when the user
     // cannot see it.
-    const entries = this.journey.listEntries(journeyId, userId);
+    const entries = await this.journey.listEntries(journeyId, userId);
     if (entries === null) throw new ForbiddenResource(`no access to journey ${journeyId}`);
     return entries;
   }
@@ -75,7 +75,7 @@ export class JournalRpc {
     if (typeof input.entry_date !== 'string' || input.entry_date === '') throw new BadParams('entry_date is required');
     const journeyId = num(params.journeyId, 'journeyId');
     await this.requireJourneyAddon();
-    const entry = this.journey.createEntry(journeyId, userId, input as never);
+    const entry = await this.journey.createEntry(journeyId, userId, input as never);
     if (!entry) throw new ForbiddenResource(`no editable journey ${journeyId} for this user`);
     return entry;
   }
@@ -85,7 +85,7 @@ export class JournalRpc {
     const userId = this.requireJournalUser(ctx, 'writes');
     const entryId = num(params.entryId, 'entryId');
     await this.requireJourneyAddon();
-    const entry = this.journey.updateEntry(entryId, userId, asPayload(params.input) as never);
+    const entry = await this.journey.updateEntry(entryId, userId, asPayload(params.input) as never);
     if (!entry) throw new ForbiddenResource(`no editable journal entry ${entryId} for this user`);
     return entry;
   }
@@ -95,7 +95,7 @@ export class JournalRpc {
     const userId = this.requireJournalUser(ctx, 'writes');
     const entryId = num(params.entryId, 'entryId');
     await this.requireJourneyAddon();
-    if (!this.journey.deleteEntry(entryId, userId)) {
+    if (!(await this.journey.deleteEntry(entryId, userId))) {
       throw new ForbiddenResource(`no editable journal entry ${entryId} for this user`);
     }
     return { deleted: true };
@@ -192,7 +192,7 @@ export class JournalRpc {
     const userId = this.requireJournalUser(ctx, 'writes');
     const journeyId = num(params.journeyId, 'journeyId');
     await this.requireJourneyAddon();
-    if (!this.journey.deleteJourney(journeyId, userId)) {
+    if (!(await this.journey.deleteJourney(journeyId, userId))) {
       throw new ForbiddenResource(`no deletable journal ${journeyId} for this user`);
     }
     return { deleted: true };

@@ -126,7 +126,7 @@ afterAll(() => {
 // ── Delegating helpers (what the controller calls around the mutations) ───────
 
 describe('TripMembersService delegation', () => {
-  it('MEMBERS-SVC-001: canAccessTrip forwards the db helper — owner and member get the access row, a stranger gets nothing', () => {
+  it('MEMBERS-SVC-001: canAccessTrip forwards the db helper — owner and member get the access row, a stranger gets nothing', async () => {
     const { user: owner } = createUser(testDb);
     const { user: member } = createUser(testDb);
     const { user: stranger } = createUser(testDb);
@@ -136,9 +136,9 @@ describe('TripMembersService delegation', () => {
     // Every member route answers 404 on a falsy result and reads access.user_id as
     // the trip owner, so a delegation that stopped forwarding would lock the whole
     // roster out rather than fail loudly.
-    expect(roster.canAccessTrip(String(trip.id), owner.id)).toMatchObject({ user_id: owner.id });
-    expect(roster.canAccessTrip(trip.id, member.id)).toMatchObject({ user_id: owner.id });
-    expect(roster.canAccessTrip(trip.id, stranger.id)).toBeUndefined();
+    expect(await roster.canAccessTrip(String(trip.id), owner.id)).toMatchObject({ user_id: owner.id });
+    expect(await roster.canAccessTrip(trip.id, member.id)).toMatchObject({ user_id: owner.id });
+    expect(await roster.canAccessTrip(trip.id, stranger.id)).toBeUndefined();
   });
 
   it('MEMBERS-SVC-002: can() resolves member_manage at its trip_owner default and lets admins through', async () => {
@@ -152,7 +152,7 @@ describe('TripMembersService delegation', () => {
     expect(await roster.can('member_manage', 'admin', owner.id, member.id, true)).toBe(true);
   });
 
-  it('MEMBERS-SVC-003: broadcast forwards the socket id so the originating client is not echoed', () => {
+  it('MEMBERS-SVC-003: broadcast forwards the socket id so the originating client is not echoed', async () => {
     roster.broadcast('9', 'trip:updated', { trip: { id: 9 } } as never, 'sock-1');
     expect(broadcast).toHaveBeenCalledWith('9', 'trip:updated', { trip: { id: 9 } }, 'sock-1');
 
@@ -162,7 +162,7 @@ describe('TripMembersService delegation', () => {
     expect(broadcast).toHaveBeenLastCalledWith('9', 'trip:updated', { trip: { id: 9 } }, undefined);
   });
 
-  it('MEMBERS-SVC-004: getTripForViewer re-reads the trip in list shape, with is_owner per viewer', () => {
+  it('MEMBERS-SVC-004: getTripForViewer re-reads the trip in list shape, with is_owner per viewer', async () => {
     const { user: owner } = createUser(testDb);
     const { user: member } = createUser(testDb);
     const trip = createTrip(testDb, owner.id, { title: 'Handover' });
@@ -171,11 +171,11 @@ describe('TripMembersService delegation', () => {
     // The handover broadcast hands the raw :id route param straight in, so the
     // named-parameter query has to keep matching a string id against the INTEGER
     // column — and the payload the clients re-read must carry their own is_owner.
-    const asOwner = roster.getTripForViewer(String(trip.id), owner.id) as Record<string, unknown>;
+    const asOwner = await roster.getTripForViewer(String(trip.id), owner.id) as Record<string, unknown>;
     expect(asOwner).toMatchObject({ id: trip.id, title: 'Handover', is_owner: 1, owner_username: owner.username, shared_count: 1 });
-    const asMember = roster.getTripForViewer(trip.id, member.id) as Record<string, unknown>;
+    const asMember = await roster.getTripForViewer(trip.id, member.id) as Record<string, unknown>;
     expect(asMember.is_owner).toBe(0);
-    expect(roster.getTripForViewer(999999, owner.id)).toBeUndefined();
+    expect(await roster.getTripForViewer(999999, owner.id)).toBeUndefined();
   });
 
   it('MEMBERS-SVC-005: notifyInvite sends a user-scoped trip_invite carrying the actor, invitee and trip', async () => {
@@ -217,44 +217,44 @@ describe('addMember fallbacks', () => {
     // membership is inserted — losing that row must not cost the invitee their
     // access or throw on an undefined title.
     const broken = await rosterWithMissingRow('SELECT title FROM trips WHERE id = ?');
-    const result = broken.addMember(trip.id, invitee.email, owner.id, owner.id);
+    const result = await broken.addMember(trip.id, invitee.email, owner.id, owner.id);
     expect(result.tripTitle).toBe('Untitled');
     expect(testDb.prepare('SELECT id FROM trip_members WHERE trip_id = ? AND user_id = ?').get(trip.id, invitee.id)).toBeDefined();
   });
 
-  it('MEMBERS-SVC-008: addMember resolves a padded identifier and matches on username as well as email', () => {
+  it('MEMBERS-SVC-008: addMember resolves a padded identifier and matches on username as well as email', async () => {
     const { user: owner } = createUser(testDb);
     const { user: invitee } = createUser(testDb);
     const trip = createTrip(testDb, owner.id);
 
     // Pasted invites arrive with surrounding whitespace; without the trim the
     // lookup misses and the box answers 'User not found' for a real account.
-    expect(roster.addMember(trip.id, `  ${invitee.username}  `, owner.id, owner.id).member.id).toBe(invitee.id);
+    expect((await roster.addMember(trip.id, `  ${invitee.username}  `, owner.id, owner.id)).member.id).toBe(invitee.id);
   });
 });
 
 // ── transferOwnership guard rails (#973) ─────────────────────────────────────
 
 describe('transferOwnership guard rails', () => {
-  it('MEMBERS-SVC-009: rejects a trip that no longer exists, before any other check', () => {
+  it('MEMBERS-SVC-009: rejects a trip that no longer exists, before any other check', async () => {
     const { user: owner } = createUser(testDb);
 
     // NotFoundError, not ValidationError: the controller maps the two to 404 and
     // 400. Passing the owner as the new owner too proves the trip lookup runs
     // first — otherwise this would surface as 'You already own this trip'.
-    expect(() => roster.transferOwnership(999999, owner.id, owner.id)).toThrow(NotFoundError);
-    expect(() => roster.transferOwnership(999999, owner.id, owner.id)).toThrow('Trip not found');
+    await expect(roster.transferOwnership(999999, owner.id, owner.id)).rejects.toThrow(NotFoundError);
+    await expect(roster.transferOwnership(999999, owner.id, owner.id)).rejects.toThrow('Trip not found');
   });
 
-  it('MEMBERS-SVC-010: rejects an id with no user row before it checks membership', () => {
+  it('MEMBERS-SVC-010: rejects an id with no user row before it checks membership', async () => {
     const { user: owner } = createUser(testDb);
     const trip = createTrip(testDb, owner.id);
 
     // A stale id from the client must read as a 404 'User not found' rather than
     // the 400 the non-member branch below it would produce, and the trip must keep
     // its owner either way.
-    expect(() => roster.transferOwnership(trip.id, 999999, owner.id)).toThrow(NotFoundError);
-    expect(() => roster.transferOwnership(trip.id, 999999, owner.id)).toThrow('User not found');
+    await expect(roster.transferOwnership(trip.id, 999999, owner.id)).rejects.toThrow(NotFoundError);
+    await expect(roster.transferOwnership(trip.id, 999999, owner.id)).rejects.toThrow('User not found');
     expect((testDb.prepare('SELECT user_id FROM trips WHERE id = ?').get(trip.id) as { user_id: number }).user_id).toBe(owner.id);
   });
 
@@ -268,7 +268,7 @@ describe('transferOwnership guard rails', () => {
     // handover halfway, which would leave the owner pointer and the member rows
     // disagreeing about who owns the trip.
     const broken = await rosterWithMissingRow('SELECT email FROM users WHERE id = ?');
-    const result = broken.transferOwnership(trip.id, member.id, owner.id);
+    const result = await broken.transferOwnership(trip.id, member.id, owner.id);
     expect(result.fromEmail).toBe('');
     expect(result.toEmail).toBe(member.email);
     expect((testDb.prepare('SELECT user_id FROM trips WHERE id = ?').get(trip.id) as { user_id: number }).user_id).toBe(member.id);
@@ -278,13 +278,13 @@ describe('transferOwnership guard rails', () => {
 // ── Guest name validation (#1362) ────────────────────────────────────────────
 
 describe('guest name validation', () => {
-  it('MEMBERS-SVC-012: createGuest rejects an absent, blank or over-long name and writes nothing', () => {
+  it('MEMBERS-SVC-012: createGuest rejects an absent, blank or over-long name and writes nothing', async () => {
     const { user: owner } = createUser(testDb);
     const trip = createTrip(testDb, owner.id);
 
-    expect(() => roster.createGuest(trip.id, undefined as never, owner.id)).toThrow(ValidationError);
-    expect(() => roster.createGuest(trip.id, '   ', owner.id)).toThrow('Guest name is required');
-    expect(() => roster.createGuest(trip.id, 'x'.repeat(51), owner.id)).toThrow('Guest name must be 50 characters or fewer');
+    await expect(roster.createGuest(trip.id, undefined as never, owner.id)).rejects.toThrow(ValidationError);
+    await expect(roster.createGuest(trip.id, '   ', owner.id)).rejects.toThrow('Guest name is required');
+    await expect(roster.createGuest(trip.id, 'x'.repeat(51), owner.id)).rejects.toThrow('Guest name must be 50 characters or fewer');
 
     // The guards run ahead of the transaction, so a rejected name can never leave
     // a credential-less users row behind with no trip to belong to.
@@ -292,25 +292,25 @@ describe('guest name validation', () => {
 
     // 50 is the accepted boundary the DTO shares — off by one here and the API
     // starts refusing names the client believes are valid.
-    expect(roster.createGuest(trip.id, 'x'.repeat(50), owner.id).member.username).toHaveLength(50);
+    expect((await roster.createGuest(trip.id, 'x'.repeat(50), owner.id)).member.username).toHaveLength(50);
   });
 
-  it('MEMBERS-SVC-013: renameGuest rejects an absent, blank or over-long name — before the trip-scope check', () => {
+  it('MEMBERS-SVC-013: renameGuest rejects an absent, blank or over-long name — before the trip-scope check', async () => {
     const { user: owner } = createUser(testDb);
     const trip = createTrip(testDb, owner.id);
-    const { member: guest } = roster.createGuest(trip.id, 'Ida', owner.id);
+    const { member: guest } = await roster.createGuest(trip.id, 'Ida', owner.id);
 
-    expect(() => roster.renameGuest(trip.id, guest.id, undefined as never)).toThrow(ValidationError);
-    expect(() => roster.renameGuest(trip.id, guest.id, '  ')).toThrow('Guest name is required');
-    expect(() => roster.renameGuest(trip.id, guest.id, 'x'.repeat(51))).toThrow('Guest name must be 50 characters or fewer');
+    await expect(roster.renameGuest(trip.id, guest.id, undefined as never)).rejects.toThrow(ValidationError);
+    await expect(roster.renameGuest(trip.id, guest.id, '  ')).rejects.toThrow('Guest name is required');
+    await expect(roster.renameGuest(trip.id, guest.id, 'x'.repeat(51))).rejects.toThrow('Guest name must be 50 characters or fewer');
 
     // Order matters for the status code: an unusable name throws (400) even for an
     // id that is not a guest of this trip, where the scope check returns false (404).
-    expect(() => roster.renameGuest(trip.id, owner.id, '')).toThrow('Guest name is required');
+    await expect(roster.renameGuest(trip.id, owner.id, '')).rejects.toThrow('Guest name is required');
     expect((testDb.prepare('SELECT display_name FROM users WHERE id = ?').get(guest.id) as { display_name: string }).display_name).toBe('Ida');
 
     // A padded name is stored trimmed, so the roster does not render the spaces.
-    expect(roster.renameGuest(trip.id, guest.id, '  Ida M.  ')).toBe(true);
+    expect(await roster.renameGuest(trip.id, guest.id, '  Ida M.  ')).toBe(true);
     expect((testDb.prepare('SELECT display_name FROM users WHERE id = ?').get(guest.id) as { display_name: string }).display_name).toBe('Ida M.');
   });
 
@@ -319,7 +319,7 @@ describe('guest name validation', () => {
     const { user: other } = createUser(testDb);
     const trip = createTrip(testDb, owner.id);
     const otherTrip = createTrip(testDb, other.id);
-    const { member: guest } = roster.createGuest(trip.id, 'Jo', owner.id);
+    const { member: guest } = await roster.createGuest(trip.id, 'Jo', owner.id);
 
     // The route only proves ownership of the trip in the URL, so this check is the
     // only thing between it and a foreign guest's users row — and the delete
@@ -332,7 +332,7 @@ describe('guest name validation', () => {
 // ── listMembers shaping ──────────────────────────────────────────────────────
 
 describe('listMembers shaping', () => {
-  it('MEMBERS-SVC-015: avatar_url follows the storage form and the inviter is named, not just its id', () => {
+  it('MEMBERS-SVC-015: avatar_url follows the storage form and the inviter is named, not just its id', async () => {
     const { user: owner } = createUser(testDb);
     const { user: uploaded } = createUser(testDb);
     const { user: sso } = createUser(testDb);
@@ -345,7 +345,7 @@ describe('listMembers shaping', () => {
     testDb.prepare('INSERT INTO trip_members (trip_id, user_id, invited_by) VALUES (?, ?, ?)').run(trip.id, sso.id, owner.id);
     addTripMember(testDb, trip.id, bare.id);
 
-    const { owner: ownerRow, members } = roster.listMembers(trip.id, owner.id);
+    const { owner: ownerRow, members } = await roster.listMembers(trip.id, owner.id);
     // added_at has second resolution, so rows created in one test are tied — index
     // by id rather than asserting the ORDER BY.
     const byId = new Map(members.map(m => [m.id, m]));

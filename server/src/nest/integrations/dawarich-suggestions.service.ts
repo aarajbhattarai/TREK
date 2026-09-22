@@ -291,18 +291,18 @@ export class DawarichSuggestionsService {
    * arrival time fills the entry's time — the two fields a person would
    * otherwise copy off the suggestion by hand.
    */
-  private acceptAsJournalEntry(
+  private async acceptAsJournalEntry(
     userId: number,
     row: SuggestionRow,
     body: DawarichAccept,
     sid?: string,
-  ): DawarichAcceptResult {
+  ): Promise<DawarichAcceptResult> {
     if (body.journalId === undefined) {
       throw new AcceptError('journal_required', 'A journey is required to create an entry', 400);
     }
     // canEdit is the journey domain's own answer, and createEntry asks it again.
     // Asking here too is what turns "silently did nothing" into a 403.
-    if (!this.journey.canEdit(body.journalId, userId)) {
+    if (!(await this.journey.canEdit(body.journalId, userId))) {
       throw new AcceptError('journal_forbidden', 'Journey not found', 404);
     }
 
@@ -314,8 +314,8 @@ export class DawarichSuggestionsService {
     // that one notification can still outrun a rollback. Moving it out means
     // changing that domain's contract, which this integration has no business
     // doing; the write itself is what had to stop being two.
-    const entry = this.db.transaction(() => {
-      const created = this.journey.createEntry(
+    const entry = await this.uow.transactional(async () => {
+      const created = await this.journey.createEntry(
         body.journalId,
         userId,
         {

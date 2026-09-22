@@ -187,7 +187,7 @@ export class TripsRpc {
     // Ownership transfer is a separate, deliberate action.
     const trip = this.db.prepare('SELECT user_id FROM trips WHERE id = ?').get(tripId) as { user_id: number } | undefined;
     if (trip && trip.user_id === targetUserId) throw new ForbiddenResource('cannot remove the trip owner');
-    this.roster.removeMember(tripId, targetUserId);
+    await this.roster.removeMember(tripId, targetUserId);
     return { removed: true };
   }
 }

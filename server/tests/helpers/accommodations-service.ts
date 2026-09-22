@@ -35,7 +35,7 @@ export async function accommodationsOver(dbs: DatabaseService): Promise<Accommod
   const assignments = new AssignmentsService(
     dbs, permissions, realtime,
     new QueryHelpersService(dbs),
-    new JourneyDomainService(dbs, realtime, new TrekPhotosRepository(dbs)),
+    new JourneyDomainService(dbs, realtime, new TrekPhotosRepository(dbs), await createTestUnitOfWork(dbs.connection)),
   );
   return new AccommodationsService(dbs, permissions, realtime, assignments, await createTestUnitOfWork(dbs.connection));
 }

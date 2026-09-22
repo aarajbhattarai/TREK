@@ -74,7 +74,7 @@ export class TripMembersService {
     return this.dbs.connection;
   }
 
-  canAccessTrip(tripId: string | number, userId: number) {
+  async canAccessTrip(tripId: string | number, userId: number) {
     return this.dbs.canAccessTrip(tripId, userId) as { user_id: number } | null | undefined;
   }
 
@@ -88,7 +88,7 @@ export class TripMembersService {
 
   /** The trip in list shape, for the re-read a handover broadcasts. Same query the
    *  trip routes use, imported rather than copied so the two cannot drift. */
-  getTripForViewer(tripId: string | number, userId: number) {
+  async getTripForViewer(tripId: string | number, userId: number) {
     return this.db.prepare(`${TRIP_SELECT} WHERE t.id = :tripId`).get({ userId, tripId });
   }
 
@@ -109,7 +109,7 @@ export class TripMembersService {
 
   // ── Members ───────────────────────────────────────────────────────────────
 
-  listMembers(tripId: string | number, tripOwnerId: number) {
+  async listMembers(tripId: string | number, tripOwnerId: number) {
     // u.is_guest rides along (#1362) so guests stay assignable everywhere a member is,
     // while the UI can badge them and suppress owner-only actions. The owner is never a guest.
     const members = this.db.prepare(`
@@ -134,7 +134,7 @@ export class TripMembersService {
     };
   }
 
-  addMember(tripId: string | number, identifier: string, tripOwnerId: number, invitedByUserId: number): AddMemberResult {
+  async addMember(tripId: string | number, identifier: string, tripOwnerId: number, invitedByUserId: number): Promise<AddMemberResult> {
     if (!identifier) throw new ValidationError('Email or username required');
 
     // Guests (#1362) are not invitable accounts — exclude them so a trip-scoped guest
@@ -162,7 +162,7 @@ export class TripMembersService {
     };
   }
 
-  removeMember(tripId: string | number, targetUserId: number): void {
+  async removeMember(tripId: string | number, targetUserId: number): Promise<void> {
     this.db.prepare('DELETE FROM trip_members WHERE trip_id = ? AND user_id = ?').run(tripId, targetUserId);
   }
 
@@ -172,11 +172,11 @@ export class TripMembersService {
    * becomes a regular member, so nobody loses access. Runs in a transaction so the
    * owner pointer and the membership rows never diverge.
    */
-  transferOwnership(
+  async transferOwnership(
     tripId: string | number,
     newOwnerId: number,
     currentOwnerId: number,
-  ): TransferOwnershipResult {
+  ): Promise<TransferOwnershipResult> {
     const trip = this.db.prepare('SELECT id, title, user_id FROM trips WHERE id = ?').get(tripId) as { id: number; title: string; user_id: number } | undefined;
     if (!trip) throw new NotFoundError('Trip not found');
     if (trip.user_id !== currentOwnerId) throw new ValidationError('Only the owner can transfer ownership');
@@ -192,14 +192,13 @@ export class TripMembersService {
 
     const fromEmail = (this.db.prepare('SELECT email FROM users WHERE id = ?').get(currentOwnerId) as { email: string } | undefined)?.email || '';
 
-    const run = this.db.transaction(() => {
+    await this.uow.transactional(async () => {
       this.db.prepare('UPDATE trips SET user_id = ? WHERE id = ?').run(newOwnerId, tripId);
       // The new owner is no longer a plain member…
       this.db.prepare('DELETE FROM trip_members WHERE trip_id = ? AND user_id = ?').run(tripId, newOwnerId);
       // …and the former owner keeps access as a member.
       this.db.prepare('INSERT OR IGNORE INTO trip_members (trip_id, user_id, invited_by) VALUES (?, ?, ?)').run(tripId, currentOwnerId, newOwnerId);
     });
-    run();
 
     return { tripTitle: trip.title, fromEmail, toEmail: newOwner.email };
   }
@@ -208,7 +207,7 @@ export class TripMembersService {
 
   /** username is UNIQUE across all users — keep the typed name but disambiguate guests
    *  that happen to share it (e.g. two "Anna"s) with a numeric suffix. */
-  createGuest(tripId: string | number, name: string, invitedByUserId: number): { member: GuestMember } {
+  async createGuest(tripId: string | number, name: string, invitedByUserId: number): Promise<{ member: GuestMember }> {
     const display = (name || '').trim();
     if (!display) throw new ValidationError('Guest name is required');
     if (display.length > 50) throw new ValidationError('Guest name must be 50 characters or fewer');
@@ -219,31 +218,30 @@ export class TripMembersService {
     const email = `guest-${randomUUID()}@guests.invalid`;
     const username = `guest-${randomUUID()}`;
 
-    const create = this.db.transaction(() => {
+    const guestId = await this.uow.transactional(async () => {
       const res = this.db.prepare(
         "INSERT INTO users (username, email, password_hash, role, is_guest, display_name) VALUES (?, ?, '', 'user', 1, ?)"
       ).run(username, email, display);
-      const guestId = Number(res.lastInsertRowid);
-      this.db.prepare('INSERT INTO trip_members (trip_id, user_id, invited_by) VALUES (?, ?, ?)').run(tripId, guestId, invitedByUserId);
-      return guestId;
+      const newGuestId = Number(res.lastInsertRowid);
+      this.db.prepare('INSERT INTO trip_members (trip_id, user_id, invited_by) VALUES (?, ?, ?)').run(tripId, newGuestId, invitedByUserId);
+      return newGuestId;
     });
-    const guestId = create();
 
     return { member: { id: guestId, username: display, email, role: 'member', is_guest: true, avatar_url: null } };
   }
 
   /** Confirms a user id is a guest of THIS trip, so guest mutations stay trip-scoped. */
-  private guestOfTrip(tripId: string | number, guestUserId: number): boolean {
+  private async guestOfTrip(tripId: string | number, guestUserId: number): Promise<boolean> {
     return !!this.db.prepare(
       'SELECT u.id FROM users u JOIN trip_members m ON m.user_id = u.id WHERE u.id = ? AND m.trip_id = ? AND u.is_guest = 1'
     ).get(guestUserId, tripId);
   }
 
-  renameGuest(tripId: string | number, guestUserId: number, name: string): boolean {
+  async renameGuest(tripId: string | number, guestUserId: number, name: string): Promise<boolean> {
     const display = (name || '').trim();
     if (!display) throw new ValidationError('Guest name is required');
     if (display.length > 50) throw new ValidationError('Guest name must be 50 characters or fewer');
-    if (!this.guestOfTrip(tripId, guestUserId)) return false;
+    if (!(await this.guestOfTrip(tripId, guestUserId))) return false;
 
     // Rename only the display name — no global-uniqueness dedup, so a rename to a name
     // another trip's guest already uses no longer produces "Name 2" (#1446).
@@ -252,7 +250,7 @@ export class TripMembersService {
   }
 
   async deleteGuest(tripId: string | number, guestUserId: number): Promise<boolean> {
-    if (!this.guestOfTrip(tripId, guestUserId)) return false;
+    if (!(await this.guestOfTrip(tripId, guestUserId))) return false;
     // A guest is still a user id a plugin may hold data for, so erase that too — the
     // host-side per-user tables + a durable own-db erasure per granted plugin — exactly
     // like a full account deletion (otherwise a deleted guest's plugin data lingers).

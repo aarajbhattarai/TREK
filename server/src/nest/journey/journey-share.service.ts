@@ -39,14 +39,14 @@ export class JourneyShareService {
     private readonly settings: SettingsService,
   ) {}
 
-  createOrUpdateJourneyShareLink(
+  async createOrUpdateJourneyShareLink(
     journeyId: number,
     createdBy: number,
     permissions: JourneySharePermissions
-  ): { token: string; created: boolean } | null {
+  ): Promise<{ token: string; created: boolean } | null> {
     // Public sharing is an owner-only action — editors/viewers must not be
     // able to publish the journey or change which screens are shared.
-    if (!this.journey.isOwner(journeyId, createdBy)) return null;
+    if (!(await this.journey.isOwner(journeyId, createdBy))) return null;
 
     const existing = this.db.prepare('SELECT token, share_timeline, share_gallery, share_map, newest_first FROM journey_share_tokens WHERE journey_id = ?')
       .get(journeyId) as { token: string; share_timeline: number; share_gallery: number; share_map: number; newest_first: number } | undefined;
@@ -87,15 +87,15 @@ export class JourneyShareService {
    * unpublished puts a "create link" button in front of somebody it will then
    * refuse. Both the REST route and the MCP tool read the link through here.
    */
-  readJourneyShareLink(
+  async readJourneyShareLink(
     journeyId: number,
     userId: number,
-  ): { allowed: false } | { allowed: true; link: JourneyShareTokenInfo | null } {
-    if (!this.journey.isOwner(journeyId, userId)) return { allowed: false };
-    return { allowed: true, link: this.getJourneyShareLink(journeyId) };
+  ): Promise<{ allowed: false } | { allowed: true; link: JourneyShareTokenInfo | null }> {
+    if (!(await this.journey.isOwner(journeyId, userId))) return { allowed: false };
+    return { allowed: true, link: await this.getJourneyShareLink(journeyId) };
   }
 
-  getJourneyShareLink(journeyId: number): JourneyShareTokenInfo | null {
+  async getJourneyShareLink(journeyId: number): Promise<JourneyShareTokenInfo | null> {
     const row = this.db.prepare('SELECT * FROM journey_share_tokens WHERE journey_id = ?').get(journeyId) as any;
     if (!row) return null;
     return {
@@ -108,13 +108,13 @@ export class JourneyShareService {
     };
   }
 
-  deleteJourneyShareLink(journeyId: number, userId: number): boolean {
-    if (!this.journey.isOwner(journeyId, userId)) return false;
+  async deleteJourneyShareLink(journeyId: number, userId: number): Promise<boolean> {
+    if (!(await this.journey.isOwner(journeyId, userId))) return false;
     this.db.prepare('DELETE FROM journey_share_tokens WHERE journey_id = ?').run(journeyId);
     return true;
   }
 
-  validateShareTokenForPhoto(token: string, photoId: number): { journeyId: number; ownerId: number } | null {
+  async validateShareTokenForPhoto(token: string, photoId: number): Promise<{ journeyId: number; ownerId: number } | null> {
     const row = this.db.prepare('SELECT journey_id, share_gallery FROM journey_share_tokens WHERE token = ?').get(token) as any;
     if (!row) return null;
     // Photos only ever surface (inline or in the gallery) when share_gallery is on,
@@ -133,7 +133,7 @@ export class JourneyShareService {
     return journey ? { journeyId: row.journey_id, ownerId: photo.owner_id || journey.user_id } : null;
   }
 
-  validateShareTokenForAsset(token: string, assetId: string): { ownerId: number } | null {
+  async validateShareTokenForAsset(token: string, assetId: string): Promise<{ ownerId: number } | null> {
     const row = this.db.prepare('SELECT journey_id, share_gallery FROM journey_share_tokens WHERE token = ?').get(token) as any;
     if (!row) return null;
     // Same as the unified photo proxy: no asset bytes leave the host unless the

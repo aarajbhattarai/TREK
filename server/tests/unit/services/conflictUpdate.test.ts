@@ -77,7 +77,7 @@ beforeAll(async () => {
   new QueryHelpersService(dbs),
   new UnsplashService(dbs, runtimeEnv, makeStorageFixture('').storage),
   photoCache,
-  new JourneyDomainService(dbs, realtime, new TrekPhotosRepository(dbs)),
+  new JourneyDomainService(dbs, realtime, new TrekPhotosRepository(dbs), await createTestUnitOfWork(dbs.connection)),
   makeStorageFixture('').storage,
   await accommodationsOver(dbs), await createTestUnitOfWork(dbs.connection),
 );

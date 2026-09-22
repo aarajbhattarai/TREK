@@ -74,7 +74,7 @@ describe('OIDC e2e (real cookie service)', () => {
     server = app.getHttpServer();
     vi.spyOn(app.get(AuthService), 'resolveAuthToggles').mockImplementation(() => toggles as never);
     const oidc = app.get(OidcService);
-    vi.spyOn(oidc, 'getOidcConfig').mockReturnValue({ issuer: 'https://idp', clientId: 'c', clientSecret: 's', displayName: 'SSO', discoveryUrl: null });
+    vi.spyOn(oidc, 'getOidcConfig').mockResolvedValue({ issuer: 'https://idp', clientId: 'c', clientSecret: 's', displayName: 'SSO', discoveryUrl: null });
     vi.spyOn(oidc, 'discover').mockResolvedValue({ authorization_endpoint: 'https://idp/auth', userinfo_endpoint: 'https://idp/ui', issuer: 'https://idp' } as never);
     vi.spyOn(oidc, 'createState').mockReturnValue({ state: 'st', codeChallenge: 'cc' });
     consumeAuthCode = vi.spyOn(oidc, 'consumeAuthCode').mockReturnValue({ token: 'jwt.value' });

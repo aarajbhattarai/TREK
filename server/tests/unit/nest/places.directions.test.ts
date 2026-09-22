@@ -90,7 +90,7 @@ async function svc(searchNominatim: MapsService['searchNominatim']): Promise<Pla
     new QueryHelpersService(dbs),
     new UnsplashService(dbs, new RuntimeEnvService(), storageFx.storage),
     photoCacheStub,
-    new JourneyDomainService(dbs, new RealtimeService(), new TrekPhotosRepository(dbs)),
+    new JourneyDomainService(dbs, new RealtimeService(), new TrekPhotosRepository(dbs), await createTestUnitOfWork(dbs.connection)),
     storageFx.storage,
     await accommodationsOver(dbs), await createTestUnitOfWork(dbs.connection),
   );

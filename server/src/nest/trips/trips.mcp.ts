@@ -335,7 +335,7 @@ export class TripsMcp {
     if (!this.trips.canAccessTrip(tripId, ctx.userId)) return noAccess();
     const ownerRow = this.trips.getOwner(tripId);
     if (!ownerRow) return noAccess();
-    const { owner, members } = this.members.listMembers(tripId, ownerRow.user_id);
+    const { owner, members } = await this.members.listMembers(tripId, ownerRow.user_id);
     return ok({ owner, members });
   }
 
@@ -359,7 +359,7 @@ export class TripsMcp {
     // that setting (and the admin bypass inside checkPermission) where this did not.
     if (!(await this.guards.hasTripPermission('member_manage', tripId, ctx.userId))) return permissionDenied();
     try {
-      const result = this.members.addMember(tripId, identifier, ownerRow.user_id, ctx.userId);
+      const result = await this.members.addMember(tripId, identifier, ownerRow.user_id, ctx.userId);
       this.guards.safeBroadcast(tripId, 'member:added', { member: result.member });
       return ok({ member: result.member });
     } catch (err) {
@@ -385,7 +385,7 @@ export class TripsMcp {
     // requirement: the same self-removal bypass DELETE /api/trips/:id/members/:userId has.
     if (memberId !== ctx.userId && !(await this.guards.hasTripPermission('member_manage', tripId, ctx.userId)))
       return permissionDenied();
-    this.members.removeMember(tripId, memberId);
+    await this.members.removeMember(tripId, memberId);
     this.guards.safeBroadcast(tripId, 'member:removed', { userId: memberId });
     return ok({ success: true });
   }
@@ -408,7 +408,7 @@ export class TripsMcp {
     // owner calling this would get a success that changed nothing. Say so instead.
     if (ownerRow.user_id === ctx.userId)
       return errorResult('You own this trip, so you cannot leave it. Hand it to another member first, or delete it.');
-    this.members.removeMember(tripId, ctx.userId);
+    await this.members.removeMember(tripId, ctx.userId);
     this.guards.safeBroadcast(tripId, 'member:removed', { userId: ctx.userId });
     return ok({ success: true });
   }
@@ -441,7 +441,7 @@ export class TripsMcp {
       return { content: [{ type: 'text' as const, text: 'Only the trip owner can manage guests.' }], isError: true };
     try {
       // No notifyInvite: a guest has no inbox.
-      const { member } = this.members.createGuest(tripId, name, ctx.userId);
+      const { member } = await this.members.createGuest(tripId, name, ctx.userId);
       this.guards.safeBroadcast(tripId, 'member:added', { member });
       return ok({ member });
     } catch (err) {
@@ -468,7 +468,7 @@ export class TripsMcp {
     if (!ownerRow || ownerRow.user_id !== ctx.userId)
       return { content: [{ type: 'text' as const, text: 'Only the trip owner can manage guests.' }], isError: true };
     try {
-      if (!this.members.renameGuest(tripId, guestId, name))
+      if (!(await this.members.renameGuest(tripId, guestId, name)))
         return { content: [{ type: 'text' as const, text: 'Guest not found.' }], isError: true };
     } catch (err) {
       const msg = err instanceof ValidationError ? err.message : 'Failed to rename guest.';
@@ -580,7 +580,7 @@ export class TripsMcp {
     if (id === null || !this.trips.canAccessTrip(id, ctx.userId)) return accessDenied(uri.href);
     const ownerRow = this.trips.getOwner(id);
     if (!ownerRow) return accessDenied(uri.href);
-    const { owner, members } = this.members.listMembers(id, ownerRow.user_id);
+    const { owner, members } = await this.members.listMembers(id, ownerRow.user_id);
     return jsonContent(uri.href, { owner, members });
   }
 

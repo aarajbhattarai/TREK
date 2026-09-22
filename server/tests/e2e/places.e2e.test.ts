@@ -96,7 +96,11 @@ describe('Places e2e (real auth guard + temp SQLite)', () => {
   async function build() {
     const moduleRef = await Test.createTestingModule({ imports: [await TestUnitOfWorkModule.forRoot(db), DatabaseModule, RealtimeModule, PlacesModule] })
       .overrideProvider(JourneyDomainService)
-      .useValue({ onPlaceCreated: vi.fn(), onPlaceUpdated: vi.fn(), onPlaceDeleted: vi.fn() })
+      .useValue({
+        onPlaceCreated: vi.fn().mockResolvedValue(undefined),
+        onPlaceUpdated: vi.fn().mockResolvedValue(undefined),
+        onPlaceDeleted: vi.fn().mockResolvedValue(undefined),
+      })
       .compile();
     const nest = moduleRef.createNestApplication();
     nest.use(cookieParser());

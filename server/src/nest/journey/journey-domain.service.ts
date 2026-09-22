@@ -4,6 +4,7 @@ import type { Journey, JourneyEntry, JourneyPhoto, JourneyContributor } from '..
 import { decodeEntryRow, type JourneyEntryWire } from './journey-entry-row';
 import { GALLERY_CHRONOLOGICAL_ORDER } from './journey-gallery-order';
 import { DatabaseService } from '../database/database.service';
+import { UnitOfWork } from '../database/unit-of-work';
 import { RealtimeService } from '../realtime/realtime.service';
 import type { JourneyStats, JourneyTrack, TrekWsUserEventName } from '@trek/shared';
 import { TrekPhotosRepository } from '../photos/trek-photos.repository';
@@ -94,6 +95,7 @@ export class JourneyDomainService {
     private readonly db: DatabaseService,
     private readonly realtime: RealtimeService,
     private readonly photos: TrekPhotosRepository,
+    private readonly uow: UnitOfWork,
   ) {}
 
   private ts(): number {
@@ -109,7 +111,7 @@ export class JourneyDomainService {
    * journey is one question with one answer, and a second copy of this walk
    * over contributors and owner would be a second answer waiting to disagree.
    */
-  broadcastJourneyEvent(
+  async broadcastJourneyEvent(
     journeyId: number,
     // Typed against the shared WS registry rather than left as `string`: the
     // legacy broadcastToUser took anything, so a typo'd event name shipped as a
@@ -117,7 +119,7 @@ export class JourneyDomainService {
     event: TrekWsUserEventName,
     data: Record<string, unknown>,
     excludeSocketId?: string | number,
-  ) {
+  ): Promise<void> {
     const contributors = this.db.prepare('SELECT user_id FROM journey_contributors WHERE journey_id = ?').all(journeyId) as {
       user_id: number;
     }[];
@@ -135,7 +137,7 @@ export class JourneyDomainService {
 
   // ── Access control ───────────────────────────────────────────────────────
 
-  canAccessJourney(journeyId: number, userId: number): Journey | null {
+  async canAccessJourney(journeyId: number, userId: number): Promise<Journey | null> {
     const own = this.db.prepare('SELECT * FROM journeys WHERE id = ? AND user_id = ?').get(journeyId, userId) as
       | Journey
       | undefined;
@@ -147,12 +149,12 @@ export class JourneyDomainService {
     return null;
   }
 
-  isOwner(journeyId: number, userId: number): boolean {
+  async isOwner(journeyId: number, userId: number): Promise<boolean> {
     return !!this.db.prepare('SELECT 1 FROM journeys WHERE id = ? AND user_id = ?').get(journeyId, userId);
   }
 
-  canEdit(journeyId: number, userId: number): boolean {
-    if (this.isOwner(journeyId, userId)) return true;
+  async canEdit(journeyId: number, userId: number): Promise<boolean> {
+    if (await this.isOwner(journeyId, userId)) return true;
     const c = this.db
       .prepare('SELECT role FROM journey_contributors WHERE journey_id = ? AND user_id = ?')
       .get(journeyId, userId) as { role: string } | undefined;
@@ -161,7 +163,7 @@ export class JourneyDomainService {
 
   // ── Journey CRUD ─────────────────────────────────────────────────────────
 
-  listJourneys(userId: number) {
+  async listJourneys(userId: number) {
     return this.db
       .prepare(
         `
@@ -186,14 +188,14 @@ export class JourneyDomainService {
     })[];
   }
 
-  createJourney(
+  async createJourney(
     userId: number,
     data: {
       title: string;
       subtitle?: string;
       trip_ids?: number[];
     },
-  ): Journey {
+  ): Promise<Journey> {
     const now = this.ts();
     const res = this.db
       .prepare(
@@ -221,7 +223,7 @@ export class JourneyDomainService {
       // trip_ids[0] would otherwise leak an arbitrary trip's cover image cross-tenant.
       let coverTripId: number | undefined;
       for (const tripId of data.trip_ids) {
-        if (this.addTripToJourney(journeyId, tripId, userId) && coverTripId === undefined) coverTripId = tripId;
+        if ((await this.addTripToJourney(journeyId, tripId, userId)) && coverTripId === undefined) coverTripId = tripId;
       }
 
       if (coverTripId !== undefined) {
@@ -239,8 +241,8 @@ export class JourneyDomainService {
     return this.db.prepare('SELECT * FROM journeys WHERE id = ?').get(journeyId) as Journey;
   }
 
-  getJourneyFull(journeyId: number, userId: number) {
-    const journey = this.canAccessJourney(journeyId, userId);
+  async getJourneyFull(journeyId: number, userId: number) {
+    const journey = await this.canAccessJourney(journeyId, userId);
     if (!journey) return null;
 
     const entries = this.db
@@ -342,7 +344,7 @@ export class JourneyDomainService {
     };
   }
 
-  updateJourney(
+  async updateJourney(
     journeyId: number,
     userId: number,
     data: Partial<{
@@ -356,10 +358,10 @@ export class JourneyDomainService {
       show_mood: boolean | number;
       show_weather: boolean | number;
     }>,
-  ): Journey | null {
+  ): Promise<Journey | null> {
     // Journey-level settings (title, cover, status) are owner-only — editors
     // may only edit entries and photos, not reshape the journey itself.
-    if (!this.isOwner(journeyId, userId)) return null;
+    if (!(await this.isOwner(journeyId, userId))) return null;
 
     const ALLOWED_STATUSES = ['draft', 'active', 'completed', 'archived'];
     const allowed = [
@@ -394,8 +396,8 @@ export class JourneyDomainService {
     return this.db.prepare('SELECT * FROM journeys WHERE id = ?').get(journeyId) as Journey;
   }
 
-  updateJourneyPreferences(journeyId: number, userId: number, data: { hide_skeletons?: boolean }) {
-    if (!this.canAccessJourney(journeyId, userId)) return null;
+  async updateJourneyPreferences(journeyId: number, userId: number, data: { hide_skeletons?: boolean }) {
+    if (!(await this.canAccessJourney(journeyId, userId))) return null;
     if (data.hide_skeletons !== undefined) {
       this.db.prepare('UPDATE journey_contributors SET hide_skeletons = ? WHERE journey_id = ? AND user_id = ?').run(
         data.hide_skeletons ? 1 : 0,
@@ -417,24 +419,24 @@ export class JourneyDomainService {
    * things you have already said you did not want is not a screen worth
    * building. The count comes back so the caller can say what happened.
    */
-  restoreDismissedSuggestions(journeyId: number, userId: number): { restored: number } | null {
-    if (!this.canEdit(journeyId, userId)) return null;
+  async restoreDismissedSuggestions(journeyId: number, userId: number): Promise<{ restored: number } | null> {
+    if (!(await this.canEdit(journeyId, userId))) return null;
     const res = this.db
       .prepare('UPDATE journey_entries SET dismissed = 0 WHERE journey_id = ? AND dismissed = 1')
       .run(journeyId);
-    if (res.changes > 0) this.broadcastJourneyEvent(journeyId, 'journey:entry:updated', { restored: res.changes });
+    if (res.changes > 0) await this.broadcastJourneyEvent(journeyId, 'journey:entry:updated', { restored: res.changes });
     return { restored: res.changes };
   }
 
-  deleteJourney(journeyId: number, userId: number): boolean {
-    if (!this.isOwner(journeyId, userId)) return false;
+  async deleteJourney(journeyId: number, userId: number): Promise<boolean> {
+    if (!(await this.isOwner(journeyId, userId))) return false;
     this.db.prepare('DELETE FROM journeys WHERE id = ?').run(journeyId);
     return true;
   }
 
   // ── Trip management ──────────────────────────────────────────────────────
 
-  addTripToJourney(journeyId: number, tripId: number, userId: number): boolean {
+  async addTripToJourney(journeyId: number, tripId: number, userId: number): Promise<boolean> {
     // Only attach a trip the caller can actually access — otherwise a journey
     // owner could pull an arbitrary trip's places + photos into their journey
     // (cross-tenant leak). Mirrors the trip-access gate every other trip-scoped
@@ -443,7 +445,7 @@ export class JourneyDomainService {
     // And a journey the caller can actually reach. Without this, any logged-in user
     // could link a trip of theirs into a stranger's journey and seed entries and
     // photos there — the MCP tool has always checked this, the REST route never did.
-    if (!this.canAccessJourney(journeyId, userId)) return false;
+    if (!(await this.canAccessJourney(journeyId, userId))) return false;
     const now = this.ts();
     try {
       this.db.prepare('INSERT OR IGNORE INTO journey_trips (journey_id, trip_id, added_at) VALUES (?, ?, ?)').run(
@@ -456,19 +458,19 @@ export class JourneyDomainService {
     }
 
     // sync skeleton entries for all places in this trip
-    this.syncTripPlaces(journeyId, tripId, userId);
+    await this.syncTripPlaces(journeyId, tripId, userId);
     // Trip photos are deliberately NOT pulled in any more (#1614). Photos live in
     // journeys now: the trip-photo surface lost its UI in 3.1.0, nothing writes to
     // it on an install newer than that, and copying rows between the two was what
     // let a photo one member had chosen not to share reach a journey at all. The
     // table and its (unreferenced) routes stay for one more release rather than
     // being dropped in an append-only migration.
-    this.broadcastJourneyEvent(journeyId, 'journey:trip:synced', { tripId });
+    await this.broadcastJourneyEvent(journeyId, 'journey:trip:synced', { tripId });
     return true;
   }
 
-  removeTripFromJourney(journeyId: number, tripId: number, userId: number): boolean {
-    if (!this.isOwner(journeyId, userId)) return false;
+  async removeTripFromJourney(journeyId: number, tripId: number, userId: number): Promise<boolean> {
+    if (!(await this.isOwner(journeyId, userId))) return false;
 
     // remove skeleton entries that haven't been filled in
     this.db.prepare(
@@ -492,7 +494,7 @@ export class JourneyDomainService {
 
   // ── Sync engine ──────────────────────────────────────────────────────────
 
-  syncTripPlaces(journeyId: number, tripId: number, authorId: number) {
+  async syncTripPlaces(journeyId: number, tripId: number, authorId: number) {
     const places = this.db
       .prepare(
         `
@@ -531,7 +533,7 @@ export class JourneyDomainService {
       const nextOrder = (dateMaxOrder.get(entryDate) ?? -1) + 1;
       dateMaxOrder.set(entryDate, nextOrder);
 
-      this.insertSkeletonEntry({
+      await this.insertSkeletonEntry({
         journeyId,
         tripId,
         placeId: place.id,
@@ -550,7 +552,7 @@ export class JourneyDomainService {
   }
 
   // called when a trip place is created
-  onPlaceCreated(tripId: number, placeId: number) {
+  async onPlaceCreated(tripId: number, placeId: number) {
     const links = this.db.prepare('SELECT journey_id FROM journey_trips WHERE trip_id = ?').all(tripId) as {
       journey_id: number;
     }[];
@@ -589,7 +591,7 @@ export class JourneyDomainService {
           .get(link.journey_id, entryDate) as { m: number | null };
         const nextOrder = (maxOrder?.m ?? -1) + 1;
 
-        this.insertSkeletonEntry({
+        await this.insertSkeletonEntry({
           journeyId: link.journey_id,
           tripId,
           placeId,
@@ -609,7 +611,7 @@ export class JourneyDomainService {
   }
 
   // called when a trip place is updated
-  onPlaceUpdated(placeId: number) {
+  async onPlaceUpdated(placeId: number) {
     const entries = this.db.prepare('SELECT * FROM journey_entries WHERE source_place_id = ?').all(placeId) as JourneyEntry[];
     if (!entries.length) return;
 
@@ -673,7 +675,7 @@ export class JourneyDomainService {
   }
 
   // called when a trip place is deleted
-  onPlaceDeleted(placeId: number) {
+  async onPlaceDeleted(placeId: number) {
     const entries = this.db.prepare('SELECT * FROM journey_entries WHERE source_place_id = ?').all(placeId) as JourneyEntry[];
 
     for (const entry of entries) {
@@ -711,7 +713,7 @@ export class JourneyDomainService {
     }
   }
 
-  private insertSkeletonEntry(p: {
+  private async insertSkeletonEntry(p: {
     journeyId: number;
     tripId: number;
     placeId: number;
@@ -757,7 +759,7 @@ export class JourneyDomainService {
   // only detached + annotated, mirroring onPlaceDeleted. Idempotent: a second call with
   // no underlying change is a no-op (no writes, no broadcast). Called from every
   // assignment mutation path.
-  reconcileTripSkeletons(tripId: number, sid?: string | number) {
+  async reconcileTripSkeletons(tripId: number, sid?: string | number) {
     const links = this.db.prepare('SELECT journey_id FROM journey_trips WHERE trip_id = ?').all(tripId) as {
       journey_id: number;
     }[];
@@ -857,7 +859,7 @@ export class JourneyDomainService {
         if (!found) {
           const nextOrder = (dateMaxOrder.get(entryDate) ?? -1) + 1;
           dateMaxOrder.set(entryDate, nextOrder);
-          this.insertSkeletonEntry({
+          await this.insertSkeletonEntry({
             journeyId: journey_id,
             tripId,
             placeId: place.id,
@@ -926,7 +928,7 @@ export class JourneyDomainService {
         changed = true;
       }
 
-      if (changed) this.broadcastJourneyEvent(journey_id, 'journey:trip:synced', { tripId }, sid);
+      if (changed) await this.broadcastJourneyEvent(journey_id, 'journey:trip:synced', { tripId }, sid);
     }
   }
 
@@ -941,8 +943,8 @@ export class JourneyDomainService {
    * Only places that actually carry geometry are returned, so a journey whose trips
    * have no tracks answers with an empty list rather than a wall of null points.
    */
-  journeyTracks(journeyId: number, userId: number): JourneyTrack[] | null {
-    if (!this.canAccessJourney(journeyId, userId)) return null;
+  async journeyTracks(journeyId: number, userId: number): Promise<JourneyTrack[] | null> {
+    if (!(await this.canAccessJourney(journeyId, userId))) return null;
 
     const rows = this.db.prepare(`
       SELECT DISTINCT p.id AS place_id, p.trip_id, p.name, p.route_color, p.route_geometry
@@ -1025,8 +1027,8 @@ export class JourneyDomainService {
    * (discussion #2064). It is still named, under `excluded`, because the only
    * way to switch a stop back on is to be able to see it.
    */
-  journeyStats(journeyId: number, userId: number): JourneyStats | null {
-    if (!this.canAccessJourney(journeyId, userId)) return null;
+  async journeyStats(journeyId: number, userId: number): Promise<JourneyStats | null> {
+    if (!(await this.canAccessJourney(journeyId, userId))) return null;
 
     const entryRows = this.db.prepare(`
       SELECT id, title, location_name, location_lat, location_lng, entry_date, source_trip_id,
@@ -1245,8 +1247,8 @@ export class JourneyDomainService {
     });
   }
 
-  listEntries(journeyId: number, userId: number) {
-    if (!this.canAccessJourney(journeyId, userId)) return null;
+  async listEntries(journeyId: number, userId: number) {
+    if (!(await this.canAccessJourney(journeyId, userId))) return null;
 
     const entries = this.db
       .prepare('SELECT * FROM journey_entries WHERE journey_id = ? AND dismissed = 0 ORDER BY entry_date ASC, sort_order ASC, id ASC')
@@ -1273,7 +1275,7 @@ export class JourneyDomainService {
     }));
   }
 
-  createEntry(
+  async createEntry(
     journeyId: number,
     userId: number,
     data: {
@@ -1293,8 +1295,8 @@ export class JourneyDomainService {
       sort_order?: number;
     },
     sid?: string,
-  ): JourneyEntryWire | null {
-    if (!this.canEdit(journeyId, userId)) return null;
+  ): Promise<JourneyEntryWire | null> {
+    if (!(await this.canEdit(journeyId, userId))) return null;
 
     const now = this.ts();
     const maxOrder = this.db
@@ -1340,11 +1342,11 @@ export class JourneyDomainService {
         .prepare('SELECT * FROM journey_entries WHERE id = ?')
         .get(Number(res.lastInsertRowid)) as JourneyEntry,
     );
-    this.broadcastJourneyEvent(journeyId, 'journey:entry:created', { entry: created }, sid);
+    await this.broadcastJourneyEvent(journeyId, 'journey:entry:created', { entry: created }, sid);
     return created;
   }
 
-  updateEntry(
+  async updateEntry(
     entryId: number,
     userId: number,
     data: Partial<{
@@ -1366,10 +1368,10 @@ export class JourneyDomainService {
       dismissed: boolean;
     }>,
     sid?: string,
-  ): JourneyEntryWire | null {
+  ): Promise<JourneyEntryWire | null> {
     const entry = this.db.prepare('SELECT * FROM journey_entries WHERE id = ?').get(entryId) as JourneyEntry | undefined;
     if (!entry) return null;
-    if (!this.canEdit(entry.journey_id, userId)) return null;
+    if (!(await this.canEdit(entry.journey_id, userId))) return null;
 
     const fields: string[] = [];
     const values: unknown[] = [];
@@ -1445,15 +1447,15 @@ export class JourneyDomainService {
     const updated = decodeEntryRow(
       this.db.prepare('SELECT * FROM journey_entries WHERE id = ?').get(entryId) as JourneyEntry,
     );
-    this.broadcastJourneyEvent(entry.journey_id, 'journey:entry:updated', { entry: updated }, sid);
+    await this.broadcastJourneyEvent(entry.journey_id, 'journey:entry:updated', { entry: updated }, sid);
     return updated;
   }
 
   // Reorder entries (typically within a single day). Caller passes the new
   // desired order of ids; each entry's sort_order is set to its index in the
   // array. Only entries owned by this journey are accepted.
-  reorderEntries(journeyId: number, userId: number, orderedIds: number[], sid?: string): boolean {
-    if (!this.canEdit(journeyId, userId)) return false;
+  async reorderEntries(journeyId: number, userId: number, orderedIds: number[], sid?: string): Promise<boolean> {
+    if (!(await this.canEdit(journeyId, userId))) return false;
     if (!orderedIds.length) return true;
 
     const placeholders = orderedIds.map(() => '?').join(',');
@@ -1464,20 +1466,19 @@ export class JourneyDomainService {
 
     const now = this.ts();
     const update = this.db.prepare('UPDATE journey_entries SET sort_order = ?, updated_at = ? WHERE id = ?');
-    const tx = this.db.connection.transaction(() => {
+    await this.uow.transactional(async () => {
       orderedIds.forEach((id, index) => update.run(index, now, id));
       this.db.prepare('UPDATE journeys SET updated_at = ? WHERE id = ?').run(now, journeyId);
     });
-    tx();
 
-    this.broadcastJourneyEvent(journeyId, 'journey:entries:reordered', { orderedIds }, sid);
+    await this.broadcastJourneyEvent(journeyId, 'journey:entries:reordered', { orderedIds }, sid);
     return true;
   }
 
-  deleteEntry(entryId: number, userId: number, sid?: string): boolean {
+  async deleteEntry(entryId: number, userId: number, sid?: string): Promise<boolean> {
     const entry = this.db.prepare('SELECT * FROM journey_entries WHERE id = ?').get(entryId) as JourneyEntry | undefined;
     if (!entry) return false;
-    if (!this.canEdit(entry.journey_id, userId)) return false;
+    if (!(await this.canEdit(entry.journey_id, userId))) return false;
 
     if (entry.source_trip_id && entry.source_place_id && entry.type !== 'skeleton') {
       // Revert filled entry back to skeleton instead of deleting
@@ -1489,10 +1490,10 @@ export class JourneyDomainService {
         WHERE id = ?
       `,
       ).run(this.ts(), entryId);
-      this.broadcastJourneyEvent(entry.journey_id, 'journey:entry:updated', { entryId }, sid);
+      await this.broadcastJourneyEvent(entry.journey_id, 'journey:entry:updated', { entryId }, sid);
     } else {
       this.db.prepare('DELETE FROM journey_entries WHERE id = ?').run(entryId);
-      this.broadcastJourneyEvent(entry.journey_id, 'journey:entry:deleted', { entryId }, sid);
+      await this.broadcastJourneyEvent(entry.journey_id, 'journey:entry:deleted', { entryId }, sid);
     }
 
     return true;
@@ -1503,13 +1504,13 @@ export class JourneyDomainService {
   // Promote a skeleton suggestion to a concrete entry. Called whenever the user
   // adds content (photo upload, provider photo, gallery link) — a suggestion
   // with photos is no longer just a suggestion.
-  private promoteSkeletonIfNeeded(entry: JourneyEntry): void {
+  private async promoteSkeletonIfNeeded(entry: JourneyEntry): Promise<void> {
     if (entry.type !== 'skeleton') return;
     this.db.prepare('UPDATE journey_entries SET type = ?, updated_at = ? WHERE id = ?').run('entry', this.ts(), entry.id);
   }
 
   // Ensure a trek_photo_id is in the journey gallery; return its gallery row id.
-  private ensureInGallery(journeyId: number, trekPhotoId: number, caption?: string, shared?: number): number {
+  private async ensureInGallery(journeyId: number, trekPhotoId: number, caption?: string, shared?: number): Promise<number> {
     const now = this.ts();
     const maxOrderRow = this.db
       .prepare('SELECT MAX(sort_order) as m FROM journey_photos WHERE journey_id = ?')
@@ -1527,7 +1528,7 @@ export class JourneyDomainService {
   }
 
   // Link a gallery photo to an entry (idempotent). Returns the junction JP_SELECT row.
-  private linkGalleryPhotoToEntry(galleryId: number, entryId: number): JourneyPhoto | null {
+  private async linkGalleryPhotoToEntry(galleryId: number, entryId: number): Promise<JourneyPhoto | null> {
     const now = this.ts();
     const maxOrderRow = this.db
       .prepare('SELECT MAX(sort_order) as m FROM journey_entry_photos WHERE entry_id = ?')
@@ -1562,7 +1563,7 @@ export class JourneyDomainService {
   ): Promise<JourneyPhoto | null> {
     const entry = this.db.prepare('SELECT * FROM journey_entries WHERE id = ?').get(entryId) as JourneyEntry | undefined;
     if (!entry) return null;
-    if (!this.canEdit(entry.journey_id, userId)) return null;
+    if (!(await this.canEdit(entry.journey_id, userId))) return null;
 
     const trekPhotoId = await this.photos.getOrCreateLocal(
       filePath,
@@ -1572,9 +1573,9 @@ export class JourneyDomainService {
       media?.mediaType || 'image',
       media?.durationMs ?? null,
     );
-    const galleryId = this.db.connection.transaction(() => this.ensureInGallery(entry.journey_id, trekPhotoId, caption))();
-    const result = this.linkGalleryPhotoToEntry(galleryId, entryId);
-    this.promoteSkeletonIfNeeded(entry);
+    const galleryId = await this.uow.transactional(async () => await this.ensureInGallery(entry.journey_id, trekPhotoId, caption));
+    const result = await this.linkGalleryPhotoToEntry(galleryId, entryId);
+    await this.promoteSkeletonIfNeeded(entry);
     return result;
   }
 
@@ -1589,7 +1590,7 @@ export class JourneyDomainService {
   ): Promise<JourneyPhoto | null> {
     const entry = this.db.prepare('SELECT * FROM journey_entries WHERE id = ?').get(entryId) as JourneyEntry | undefined;
     if (!entry) return null;
-    if (!this.canEdit(entry.journey_id, userId)) return null;
+    if (!(await this.canEdit(entry.journey_id, userId))) return null;
 
     const trekPhotoId = await this.photos.getOrCreate(provider, assetId, userId, passphrase, mediaType);
 
@@ -1605,17 +1606,17 @@ export class JourneyDomainService {
       .get(entryId, trekPhotoId);
     if (alreadyLinked) return null;
 
-    const galleryId = this.db.connection.transaction(() => this.ensureInGallery(entry.journey_id, trekPhotoId, caption))();
-    const result = this.linkGalleryPhotoToEntry(galleryId, entryId);
-    this.promoteSkeletonIfNeeded(entry);
+    const galleryId = await this.uow.transactional(async () => await this.ensureInGallery(entry.journey_id, trekPhotoId, caption));
+    const result = await this.linkGalleryPhotoToEntry(galleryId, entryId);
+    await this.promoteSkeletonIfNeeded(entry);
     return result;
   }
 
   // Link a gallery photo (by its journey_photos.id) to an entry — idempotent.
-  linkPhotoToEntry(entryId: number, journeyPhotoId: number, userId: number): JourneyPhoto | null {
+  async linkPhotoToEntry(entryId: number, journeyPhotoId: number, userId: number): Promise<JourneyPhoto | null> {
     const entry = this.db.prepare('SELECT * FROM journey_entries WHERE id = ?').get(entryId) as JourneyEntry | undefined;
     if (!entry) return null;
-    if (!this.canEdit(entry.journey_id, userId)) return null;
+    if (!(await this.canEdit(entry.journey_id, userId))) return null;
 
     // Verify the gallery photo belongs to this journey
     const galleryRow = this.db.prepare('SELECT id, journey_id FROM journey_photos WHERE id = ?').get(journeyPhotoId) as
@@ -1623,8 +1624,8 @@ export class JourneyDomainService {
       | undefined;
     if (!galleryRow || galleryRow.journey_id !== entry.journey_id) return null;
 
-    const result = this.linkGalleryPhotoToEntry(galleryRow.id, entryId);
-    this.promoteSkeletonIfNeeded(entry);
+    const result = await this.linkGalleryPhotoToEntry(galleryRow.id, entryId);
+    await this.promoteSkeletonIfNeeded(entry);
     return result;
   }
 
@@ -1634,7 +1635,7 @@ export class JourneyDomainService {
     userId: number,
     filePaths: { path: string; thumbnail?: string; mediaType?: string; durationMs?: number | null }[],
   ): Promise<JourneyPhoto[]> {
-    if (!this.canEdit(journeyId, userId)) return [];
+    if (!(await this.canEdit(journeyId, userId))) return [];
     const results: any[] = [];
     const now = this.ts();
     const maxOrderRow = this.db
@@ -1668,17 +1669,17 @@ export class JourneyDomainService {
     passphrase?: string,
     mediaType: string = 'image',
   ): Promise<any | null> {
-    if (!this.canEdit(journeyId, userId)) return null;
+    if (!(await this.canEdit(journeyId, userId))) return null;
     const trekPhotoId = await this.photos.getOrCreate(provider, assetId, userId, passphrase, mediaType);
-    const galleryId = this.db.connection.transaction(() => this.ensureInGallery(journeyId, trekPhotoId, caption))();
+    const galleryId = await this.uow.transactional(async () => await this.ensureInGallery(journeyId, trekPhotoId, caption));
     return this.db.prepare(`SELECT ${GALLERY_SELECT} FROM ${GALLERY_JOIN} WHERE gp.id = ?`).get(galleryId) ?? null;
   }
 
   // Unlink a photo from a specific entry; gallery row is preserved.
-  unlinkPhotoFromEntry(entryId: number, journeyPhotoId: number, userId: number): boolean {
+  async unlinkPhotoFromEntry(entryId: number, journeyPhotoId: number, userId: number): Promise<boolean> {
     const entry = this.db.prepare('SELECT * FROM journey_entries WHERE id = ?').get(entryId) as JourneyEntry | undefined;
     if (!entry) return false;
-    if (!this.canEdit(entry.journey_id, userId)) return false;
+    if (!(await this.canEdit(entry.journey_id, userId))) return false;
 
     const result = this.db
       .prepare('DELETE FROM journey_entry_photos WHERE entry_id = ? AND journey_photo_id = ?')
@@ -1695,7 +1696,7 @@ export class JourneyDomainService {
       | { id: number; journey_id: number; photo_id: number }
       | undefined;
     if (!row) return null;
-    if (!this.canEdit(row.journey_id, userId)) return null;
+    if (!(await this.canEdit(row.journey_id, userId))) return null;
 
     const trekRow = this.db.prepare('SELECT file_path, thumbnail_path, provider FROM trek_photos WHERE id = ?').get(row.photo_id) as
       | { file_path?: string; thumbnail_path?: string; provider?: string }
@@ -1724,17 +1725,17 @@ export class JourneyDomainService {
     );
   }
 
-  updatePhoto(
+  async updatePhoto(
     photoId: number,
     userId: number,
     data: { caption?: string; sort_order?: number },
-  ): JourneyPhoto | null {
+  ): Promise<JourneyPhoto | null> {
     // photoId = journey_photos.id (gallery row)
     const row = this.db.prepare('SELECT id, journey_id FROM journey_photos WHERE id = ?').get(photoId) as
       | { id: number; journey_id: number }
       | undefined;
     if (!row) return null;
-    if (!this.canEdit(row.journey_id, userId)) return null;
+    if (!(await this.canEdit(row.journey_id, userId))) return null;
 
     // caption lives on the gallery row; sort_order lives on the junction table
     // (JP_SELECT reads jep.sort_order, so updating journey_photos.sort_order
@@ -1760,7 +1761,7 @@ export class JourneyDomainService {
       | { id: number; journey_id: number; photo_id: number }
       | undefined;
     if (!row) return null;
-    if (!this.canEdit(row.journey_id, userId)) return null;
+    if (!(await this.canEdit(row.journey_id, userId))) return null;
 
     const trekRow = this.db.prepare('SELECT file_path, thumbnail_path, provider FROM trek_photos WHERE id = ?').get(row.photo_id) as
       | { file_path?: string; thumbnail_path?: string; provider?: string }
@@ -1774,43 +1775,43 @@ export class JourneyDomainService {
 
   // ── Contributors ─────────────────────────────────────────────────────────
 
-  addContributor(
+  async addContributor(
     journeyId: number,
     userId: number,
     targetUserId: number,
     role: 'editor' | 'viewer',
-  ): boolean {
-    if (!this.isOwner(journeyId, userId)) return false;
+  ): Promise<boolean> {
+    if (!(await this.isOwner(journeyId, userId))) return false;
     if (targetUserId === userId) return false;
     try {
       this.db.prepare(
         'INSERT OR REPLACE INTO journey_contributors (journey_id, user_id, role, added_at) VALUES (?, ?, ?, ?)',
       ).run(journeyId, targetUserId, role, this.ts());
-      this.broadcastJourneyEvent(journeyId, 'journey:contributor:changed', { targetUserId, role });
+      await this.broadcastJourneyEvent(journeyId, 'journey:contributor:changed', { targetUserId, role });
       return true;
     } catch {
       return false;
     }
   }
 
-  updateContributorRole(
+  async updateContributorRole(
     journeyId: number,
     userId: number,
     targetUserId: number,
     role: 'editor' | 'viewer',
-  ): boolean {
-    if (!this.isOwner(journeyId, userId)) return false;
+  ): Promise<boolean> {
+    if (!(await this.isOwner(journeyId, userId))) return false;
     this.db.prepare('UPDATE journey_contributors SET role = ? WHERE journey_id = ? AND user_id = ?').run(
       role,
       journeyId,
       targetUserId,
     );
-    this.broadcastJourneyEvent(journeyId, 'journey:contributor:changed', { targetUserId, role });
+    await this.broadcastJourneyEvent(journeyId, 'journey:contributor:changed', { targetUserId, role });
     return true;
   }
 
-  removeContributor(journeyId: number, userId: number, targetUserId: number): boolean {
-    if (!this.isOwner(journeyId, userId)) return false;
+  async removeContributor(journeyId: number, userId: number, targetUserId: number): Promise<boolean> {
+    if (!(await this.isOwner(journeyId, userId))) return false;
     this.db.prepare("DELETE FROM journey_contributors WHERE journey_id = ? AND user_id = ? AND role != 'owner'").run(
       journeyId,
       targetUserId,
@@ -1820,7 +1821,7 @@ export class JourneyDomainService {
 
   // ── Suggestions ──────────────────────────────────────────────────────────
 
-  getSuggestions(userId: number) {
+  async getSuggestions(userId: number) {
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
     return this.db
       .prepare(
@@ -1842,7 +1843,7 @@ export class JourneyDomainService {
 
   // ── User trips (for trip picker) ─────────────────────────────────────────
 
-  listUserTrips(userId: number) {
+  async listUserTrips(userId: number) {
     return this.db
       .prepare(
         `

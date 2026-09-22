@@ -278,16 +278,16 @@ describe('createAuthCode / consumeAuthCode', () => {
 // ── generateToken ─────────────────────────────────────────────────────────────
 
 describe('generateToken', () => {
-  it('OIDC-SVC-057: remember=true signs with the SESSION_DURATION_REMEMBER lifetime', () => {
+  it('OIDC-SVC-057: remember=true signs with the SESSION_DURATION_REMEMBER lifetime', async () => {
     const { user } = createUser(testDb, { email: 'remember@example.com' });
-    const token = svc.generateToken({ id: user.id }, true);
+    const token = await svc.generateToken({ id: user.id }, true);
     const decoded = jwtLib.decode(token) as { iat: number; exp: number };
     expect(decoded.exp - decoded.iat).toBe(2592000);
   });
 
-  it('OIDC-SVC-058: remember=false or absent signs with the default SESSION_DURATION lifetime', () => {
+  it('OIDC-SVC-058: remember=false or absent signs with the default SESSION_DURATION lifetime', async () => {
     const { user } = createUser(testDb, { email: 'default@example.com' });
-    for (const token of [svc.generateToken({ id: user.id }, false), svc.generateToken({ id: user.id })]) {
+    for (const token of [await svc.generateToken({ id: user.id }, false), await svc.generateToken({ id: user.id })]) {
       const decoded = jwtLib.decode(token) as { iat: number; exp: number };
       expect(decoded.exp - decoded.iat).toBe(86400);
     }
@@ -1212,8 +1212,8 @@ describe('wrapper methods', () => {
 // The SSO configuration read/write moved here from AdminService, which held the SQL
 // for a domain that already had a module. Same cases, same service, new owner.
 describe('OIDC settings', () => {
-  it('ADMIN-SVC-047 — getOidcSettings returns default empty values when no OIDC configured', () => {
-    const result = svc.getOidcSettings() as any;
+  it('ADMIN-SVC-047 — getOidcSettings returns default empty values when no OIDC configured', async () => {
+    const result = await svc.getOidcSettings() as any;
     expect(result.issuer).toBe('');
     expect(result.client_id).toBe('');
     expect(result.oidc_only).toBe(false);
@@ -1224,14 +1224,14 @@ describe('OIDC settings', () => {
 
   it('ADMIN-SVC-048 — updateOidcSettings persists issuer and client_id, then getOidcSettings returns them', async () => {
     await svc.updateOidcSettings({ issuer: 'https://auth.example.com', client_id: 'my-client' });
-    const result = svc.getOidcSettings() as any;
+    const result = await svc.getOidcSettings() as any;
     expect(result.issuer).toBe('https://auth.example.com');
     expect(result.client_id).toBe('my-client');
   });
 
   it('ADMIN-SVC-049 — updateOidcSettings does not write oidc_only (replaced by granular toggles)', async () => {
     await svc.updateOidcSettings({ issuer: 'https://auth.example.com', client_id: 'my-client' });
-    const result = svc.getOidcSettings() as any;
+    const result = await svc.getOidcSettings() as any;
     // oidc_only is no longer managed by updateOidcSettings; use password_login/oidc_login toggles
     expect(result.oidc_only).toBe(false);
   });
@@ -1239,7 +1239,7 @@ describe('OIDC settings', () => {
   it('ADMIN-SVC-075 — updateOidcSettings applies all five writes atomically', async () => {
     const result = await svc.updateOidcSettings({ issuer: 'https://idp', client_id: 'cid', display_name: 'IdP' }) as any;
     expect(result.success).toBe(true);
-    const settings = svc.getOidcSettings();
+    const settings = await svc.getOidcSettings();
     expect(settings).toMatchObject({ issuer: 'https://idp', client_id: 'cid', display_name: 'IdP' });
   });
 });
@@ -1264,13 +1264,13 @@ describe('OIDC settings — the lockout guard', () => {
   it('OIDC-SETTINGS-052 an omitted client_secret keeps the stored one, an empty string clears it', async () => {
     const toggles = vi.spyOn(auth, 'resolveAuthToggles').mockResolvedValue({ password_login: true } as never);
     await svc.updateOidcSettings({ issuer: 'https://idp', client_id: 'c', client_secret: 'shh' });
-    expect(svc.getOidcSettings().client_secret_set).toBe(true);
+    expect((await svc.getOidcSettings()).client_secret_set).toBe(true);
     // Omitted: the write skips the column entirely rather than blanking it, which is
     // what lets the admin panel save the form without re-typing the secret.
     await svc.updateOidcSettings({ issuer: 'https://idp', client_id: 'c' });
-    expect(svc.getOidcSettings().client_secret_set).toBe(true);
+    expect((await svc.getOidcSettings()).client_secret_set).toBe(true);
     await svc.updateOidcSettings({ issuer: 'https://idp', client_id: 'c', client_secret: '' });
-    expect(svc.getOidcSettings().client_secret_set).toBe(false);
+    expect((await svc.getOidcSettings()).client_secret_set).toBe(false);
     toggles.mockRestore();
   });
 });

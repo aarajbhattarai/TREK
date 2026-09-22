@@ -106,7 +106,7 @@ async function makePlacesService(maps: MapsService = new MapsService(dbs, photoC
     new QueryHelpersService(dbs),
     new UnsplashService(dbs, new RuntimeEnvService(), placesStorageFx.storage),
     photoCacheStub,
-    new JourneyDomainService(dbs, new RealtimeService(), new TrekPhotosRepository(dbs)),
+    new JourneyDomainService(dbs, new RealtimeService(), new TrekPhotosRepository(dbs), await createTestUnitOfWork(dbs.connection)),
     placesStorageFx.storage,
     await accommodationsOver(dbs), await createTestUnitOfWork(dbs.connection),
   );

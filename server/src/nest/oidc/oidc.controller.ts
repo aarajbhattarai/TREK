@@ -45,7 +45,7 @@ export class OidcController {
       res.status(403).json({ error: 'SSO login is disabled.' });
       return;
     }
-    const config = this.oidc.getOidcConfig();
+    const config = await this.oidc.getOidcConfig();
     if (!config) {
       res.status(400).json({ error: 'OIDC not configured' });
       return;
@@ -120,7 +120,7 @@ export class OidcController {
     const pending = this.oidc.consumeState(state);
     if (!pending) return f('/login?oidc_error=invalid_state');
 
-    const config = this.oidc.getOidcConfig();
+    const config = await this.oidc.getOidcConfig();
     if (!config) return f('/login?oidc_error=not_configured');
     if (config.issuer && !config.issuer.startsWith('https://') && readEnv().app.isProduction) {
       return f('/login?oidc_error=issuer_not_https');
@@ -181,11 +181,11 @@ export class OidcController {
         });
       }
 
-      this.oidc.touchLastLogin(result.user.id);
+      await this.oidc.touchLastLogin(result.user.id);
       // Pass the flag through untouched: `undefined` must reach the token as
       // "absent", not `false`, or the sliding renewal would later downgrade the
       // default persistent cookie to a browser-session one (remember-me, #1927).
-      const jwtToken = this.oidc.generateToken(result.user, pending.remember);
+      const jwtToken = await this.oidc.generateToken(result.user, pending.remember);
       const { code: authCode, binding } = this.oidc.createAuthCode(jwtToken, pending.remember);
       // Bind the code to THIS browser, the way the state cookie binds the callback.
       // The code rides home in a URL, so it is readable from history, from a

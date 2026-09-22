@@ -101,7 +101,7 @@ export async function createPluginRpcHostFactory(dbs: DatabaseService): Promise<
   const days = new DaysService(dbs, permissions, realtime, queryHelpers, await createTestUnitOfWork(dbs.connection));
   const photoCache = new PlacePhotoCacheService(dbs, makeStorageFixture('photos/google/').storage);
   const unsplash = new UnsplashService(dbs, new RuntimeEnvService(), generalStorage);
-  const journey = new JourneyDomainService(dbs, realtime, new TrekPhotosRepository(dbs));
+  const journey = new JourneyDomainService(dbs, realtime, new TrekPhotosRepository(dbs), await createTestUnitOfWork(dbs.connection));
   const collections = new CollectionsService(dbs, permissions, realtime, notificationsStub(), generalStorage, await createTestUnitOfWork(dbs.connection));
   const atlas = new AtlasService(dbs, await createTestUnitOfWork(dbs.connection));
   const dayNotes = new DayNotesService(dbs, permissions, realtime);

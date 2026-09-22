@@ -66,9 +66,10 @@ import { RealtimeService } from '../../../src/nest/realtime/realtime.service';
 import { TrekPhotosRepository } from '../../../src/nest/photos/trek-photos.repository';
 import { JourneyDomainService } from '../../../src/nest/journey/journey-domain.service';
 import { db as dbConn } from '../../../src/db/database';
+import { createTestUnitOfWork } from '../../helpers/test-uow';
 
 const dbs = new DatabaseService(dbConn);
-const svc = new JourneyDomainService(dbs, new RealtimeService(), new TrekPhotosRepository(dbs));
+let svc: JourneyDomainService;
 
 /** The factory has no coordinate fields, and a route is made of coordinates. */
 function placeEntry(
@@ -85,9 +86,10 @@ function placeEntry(
   return entry;
 }
 
-beforeAll(() => {
+beforeAll(async () => {
   createTables(testDb);
   runMigrations(testDb);
+  svc = new JourneyDomainService(dbs, new RealtimeService(), new TrekPhotosRepository(dbs), await createTestUnitOfWork(testDb));
 });
 
 beforeEach(() => {
@@ -100,24 +102,24 @@ afterAll(() => {
 });
 
 describe('journeyStats access', () => {
-  it('is null for a journey the user cannot see', () => {
+  it('is null for a journey the user cannot see', async () => {
     const { user: owner } = createUser(testDb);
     const { user: stranger } = createUser(testDb);
     const journey = createJourney(testDb, owner.id);
 
-    expect(svc.journeyStats(journey.id, stranger.id)).toBeNull();
+    expect(await svc.journeyStats(journey.id, stranger.id)).toBeNull();
   });
 
-  it('is null for a journey that does not exist', () => {
+  it('is null for a journey that does not exist', async () => {
     const { user } = createUser(testDb);
-    expect(svc.journeyStats(999_999, user.id)).toBeNull();
+    expect(await svc.journeyStats(999_999, user.id)).toBeNull();
   });
 
-  it('answers for the owner', () => {
+  it('answers for the owner', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
 
-    const stats = svc.journeyStats(journey.id, user.id);
+    const stats = await svc.journeyStats(journey.id, user.id);
 
     expect(stats).not.toBeNull();
     expect(stats!.journeyId).toBe(journey.id);
@@ -125,13 +127,13 @@ describe('journeyStats access', () => {
 });
 
 describe('journeyStats route', () => {
-  it('builds the route from the entries when they carry coordinates', () => {
+  it('builds the route from the entries when they carry coordinates', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
     placeEntry(journey.id, user.id, 64.14, -21.94, { title: 'Reykjavík', entry_date: '2026-06-02' });
     placeEntry(journey.id, user.id, 65.68, -18.12, { title: 'Akureyri', entry_date: '2026-06-06' });
 
-    const stats = svc.journeyStats(journey.id, user.id)!;
+    const stats = (await svc.journeyStats(journey.id, user.id))!;
 
     expect(stats.points.map(p => p.label)).toEqual(['Reykjavík', 'Akureyri']);
     expect(stats.distance).toBeGreaterThan(240_000);
@@ -139,24 +141,24 @@ describe('journeyStats route', () => {
     expect(stats.steps).toBe(2);
   });
 
-  it('orders the route by entry date, not by insertion', () => {
+  it('orders the route by entry date, not by insertion', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
     placeEntry(journey.id, user.id, 65.68, -18.12, { title: 'second', entry_date: '2026-06-06' });
     placeEntry(journey.id, user.id, 64.14, -21.94, { title: 'first', entry_date: '2026-06-02' });
 
-    const stats = svc.journeyStats(journey.id, user.id)!;
+    const stats = (await svc.journeyStats(journey.id, user.id))!;
 
     expect(stats.points.map(p => p.label)).toEqual(['first', 'second']);
   });
 
-  it('skips entries without coordinates but still counts them as steps', () => {
+  it('skips entries without coordinates but still counts them as steps', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
     placeEntry(journey.id, user.id, 64.14, -21.94, { entry_date: '2026-06-02' });
     createJourneyEntry(testDb, journey.id, user.id, { title: 'no place', entry_date: '2026-06-03' });
 
-    const stats = svc.journeyStats(journey.id, user.id)!;
+    const stats = (await svc.journeyStats(journey.id, user.id))!;
 
     expect(stats.points).toHaveLength(1);
     expect(stats.steps).toBe(2);
@@ -166,7 +168,7 @@ describe('journeyStats route', () => {
    * The fallback that makes the feature work at all for the common case: a
    * journey built by adding trips, before anyone has written a word.
    */
-  it('falls back to the trip places when no entry has coordinates', () => {
+  it('falls back to the trip places when no entry has coordinates', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
     const trip = createTrip(testDb, user.id);
@@ -179,13 +181,13 @@ describe('journeyStats route', () => {
     createDayAssignment(testDb, day2.id, b.id);
     createDayAssignment(testDb, day1.id, a.id);
 
-    const stats = svc.journeyStats(journey.id, user.id)!;
+    const stats = (await svc.journeyStats(journey.id, user.id))!;
 
     expect(stats.points.map(p => p.label)).toEqual(['Hallgrímskirkja', 'Goðafoss']);
     expect(stats.days).toBe(3);
   });
 
-  it('prefers the entries over the trip places rather than mixing them', () => {
+  it('prefers the entries over the trip places rather than mixing them', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
     const trip = createTrip(testDb, user.id);
@@ -193,7 +195,7 @@ describe('journeyStats route', () => {
     createPlace(testDb, trip.id, { name: 'a place', lat: 48.85, lng: 2.35 });
     placeEntry(journey.id, user.id, 64.14, -21.94, { title: 'an entry', entry_date: '2026-06-02' });
 
-    const stats = svc.journeyStats(journey.id, user.id)!;
+    const stats = (await svc.journeyStats(journey.id, user.id))!;
 
     expect(stats.points.map(p => p.label)).toEqual(['an entry']);
   });
@@ -204,7 +206,7 @@ describe('journeyStats route', () => {
    * journey two extra legs of zero length — harmless — plus two extra stops in
    * the middle of the route, which is not.
    */
-  it('visits a place assigned to several days only once', () => {
+  it('visits a place assigned to several days only once', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
     const trip = createTrip(testDb, user.id);
@@ -215,13 +217,13 @@ describe('journeyStats route', () => {
       createDayAssignment(testDb, createDay(testDb, trip.id, { date }).id, hotel.id);
     }
 
-    const stats = svc.journeyStats(journey.id, user.id)!;
+    const stats = (await svc.journeyStats(journey.id, user.id))!;
 
     expect(stats.points.filter(p => p.label === 'Hotel')).toHaveLength(1);
     expect(stats.places).toBe(1);
   });
 
-  it('puts unscheduled places after the scheduled ones', () => {
+  it('puts unscheduled places after the scheduled ones', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
     const trip = createTrip(testDb, user.id);
@@ -232,12 +234,12 @@ describe('journeyStats route', () => {
     createDayAssignment(testDb, createDay(testDb, trip.id, { date: '2026-06-02' }).id, planned.id);
     expect(loose.id).toBeGreaterThan(0);
 
-    const stats = svc.journeyStats(journey.id, user.id)!;
+    const stats = (await svc.journeyStats(journey.id, user.id))!;
 
     expect(stats.points.map(p => p.label)).toEqual(['scheduled', 'unscheduled']);
   });
 
-  it('counts places across every trip on the journey', () => {
+  it('counts places across every trip on the journey', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
     const one = createTrip(testDb, user.id);
@@ -248,18 +250,18 @@ describe('journeyStats route', () => {
     createPlace(testDb, two.id, { lat: 52.52, lng: 13.4 });
     createPlace(testDb, two.id, { lat: 50.11, lng: 8.68 });
 
-    expect(svc.journeyStats(journey.id, user.id)!.places).toBe(3);
+    expect((await svc.journeyStats(journey.id, user.id))!.places).toBe(3);
   });
 });
 
 describe('journeyStats countries', () => {
-  it('resolves each stop to a country and names it', () => {
+  it('resolves each stop to a country and names it', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
     placeEntry(journey.id, user.id, 64.14, -21.94, { entry_date: '2026-06-02' });
     placeEntry(journey.id, user.id, 52.52, 13.4, { entry_date: '2026-06-20' });
 
-    const stats = svc.journeyStats(journey.id, user.id)!;
+    const stats = (await svc.journeyStats(journey.id, user.id))!;
 
     expect(stats.countries.map(c => c.code)).toEqual(['IS', 'DE']);
     expect(stats.countries[0].name).toBe('Iceland');
@@ -271,7 +273,7 @@ describe('journeyStats countries', () => {
    * of repeating a point-in-polygon test is the difference between a query and
    * a boundary index.
    */
-  it('prefers the place_regions cache over recomputing a place country', () => {
+  it('prefers the place_regions cache over recomputing a place country', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
     const trip = createTrip(testDb, user.id);
@@ -281,7 +283,7 @@ describe('journeyStats countries', () => {
       .prepare('INSERT INTO place_regions (place_id, country_code, region_code, region_name) VALUES (?, ?, ?, ?)')
       .run(place.id, 'fr', 'FR-75', 'Paris');
 
-    const stats = svc.journeyStats(journey.id, user.id)!;
+    const stats = (await svc.journeyStats(journey.id, user.id))!;
 
     // The cached answer wins even though the coordinates say Iceland, and the
     // expensive lookup is never reached for that place.
@@ -289,12 +291,12 @@ describe('journeyStats countries', () => {
     expect(countryCalls).toHaveLength(0);
   });
 
-  it('leaves a stop with no country out of the list rather than inventing one', () => {
+  it('leaves a stop with no country out of the list rather than inventing one', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
     placeEntry(journey.id, user.id, -33.86, 151.2, { entry_date: '2026-06-02' });
 
-    const stats = svc.journeyStats(journey.id, user.id)!;
+    const stats = (await svc.journeyStats(journey.id, user.id))!;
 
     expect(stats.countries).toEqual([]);
     expect(stats.points).toHaveLength(1);
@@ -303,7 +305,7 @@ describe('journeyStats countries', () => {
 });
 
 describe('journeyStats totals', () => {
-  it('counts the gallery photographs', () => {
+  it('counts the gallery photographs', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
     const photo = testDb
@@ -313,28 +315,28 @@ describe('journeyStats totals', () => {
       .prepare('INSERT INTO journey_photos (journey_id, photo_id, sort_order, created_at) VALUES (?, ?, 0, ?)')
       .run(journey.id, photo.lastInsertRowid, Date.now());
 
-    expect(svc.journeyStats(journey.id, user.id)!.photos).toBe(1);
+    expect((await svc.journeyStats(journey.id, user.id))!.photos).toBe(1);
   });
 
-  it('falls back to the trip dates when the entries carry none', () => {
+  it('falls back to the trip dates when the entries carry none', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
     const trip = createTrip(testDb, user.id, { start_date: '2026-06-01', end_date: '2026-06-10' });
     linkTripToJourney(testDb, journey.id, trip.id);
     createPlace(testDb, trip.id, { lat: 64.14, lng: -21.94 });
 
-    const stats = svc.journeyStats(journey.id, user.id)!;
+    const stats = (await svc.journeyStats(journey.id, user.id))!;
 
     expect(stats.start).toBe('2026-06-01');
     expect(stats.end).toBe('2026-06-10');
     expect(stats.days).toBe(10);
   });
 
-  it('is all zeroes for an empty journey rather than failing', () => {
+  it('is all zeroes for an empty journey rather than failing', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
 
-    const stats = svc.journeyStats(journey.id, user.id)!;
+    const stats = (await svc.journeyStats(journey.id, user.id))!;
 
     expect(stats.distance).toBe(0);
     expect(stats.days).toBe(0);
@@ -345,7 +347,7 @@ describe('journeyStats totals', () => {
     expect(stats.points).toEqual([]);
   });
 
-  it('answers for a contributor, not only the owner', () => {
+  it('answers for a contributor, not only the owner', async () => {
     const { user: owner } = createUser(testDb);
     const { user: helper } = createUser(testDb);
     const journey = createJourney(testDb, owner.id);
@@ -353,7 +355,7 @@ describe('journeyStats totals', () => {
       .prepare('INSERT INTO journey_contributors (journey_id, user_id, role, added_at) VALUES (?, ?, ?, ?)')
       .run(journey.id, helper.id, 'editor', Date.now());
 
-    expect(svc.journeyStats(journey.id, helper.id)).not.toBeNull();
+    expect(await svc.journeyStats(journey.id, helper.id)).not.toBeNull();
   });
 });
 
@@ -364,14 +366,14 @@ describe('journeyStats totals', () => {
  * switched back on.
  */
 describe('journeyStats excluded stops', () => {
-  it('leaves a switched-off entry out of the route, the distance and the countries', () => {
+  it('leaves a switched-off entry out of the route, the distance and the countries', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
     placeEntry(journey.id, user.id, 52.52, 13.4, { title: 'Berlin, the airport', entry_date: '2026-06-01', stats_excluded: 1 });
     placeEntry(journey.id, user.id, 64.14, -21.94, { title: 'Reykjavík', entry_date: '2026-06-02' });
     placeEntry(journey.id, user.id, 65.68, -18.12, { title: 'Akureyri', entry_date: '2026-06-06' });
 
-    const stats = svc.journeyStats(journey.id, user.id)!;
+    const stats = (await svc.journeyStats(journey.id, user.id))!;
 
     expect(stats.points.map(p => p.label)).toEqual(['Reykjavík', 'Akureyri']);
     // Reykjavík to Akureyri and nothing else; the leg in from Berlin is gone.
@@ -381,49 +383,49 @@ describe('journeyStats excluded stops', () => {
     expect(stats.days).toBe(5);
   });
 
-  it('names the switched-off stop under excluded so it can be switched back on', () => {
+  it('names the switched-off stop under excluded so it can be switched back on', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
     const airport = placeEntry(journey.id, user.id, 63.98, -22.62, { title: 'Keflavík', entry_date: '2026-06-01', stats_excluded: 1 });
     placeEntry(journey.id, user.id, 64.14, -21.94, { title: 'Reykjavík', entry_date: '2026-06-02' });
 
-    const stats = svc.journeyStats(journey.id, user.id)!;
+    const stats = (await svc.journeyStats(journey.id, user.id))!;
 
     expect(stats.excluded).toEqual([{ entryId: airport.id, label: 'Keflavík', date: '2026-06-01' }]);
   });
 
-  it('does not count a switched-off entry as a step', () => {
+  it('does not count a switched-off entry as a step', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
     placeEntry(journey.id, user.id, 63.98, -22.62, { entry_date: '2026-06-01', stats_excluded: 1 });
     placeEntry(journey.id, user.id, 64.14, -21.94, { entry_date: '2026-06-02' });
 
-    expect(svc.journeyStats(journey.id, user.id)!.steps).toBe(1);
+    expect((await svc.journeyStats(journey.id, user.id))!.steps).toBe(1);
   });
 
   /* An entry without a place was never a stop, so there is nothing to offer back. */
-  it('lists nothing under excluded for a switched-off entry without coordinates', () => {
+  it('lists nothing under excluded for a switched-off entry without coordinates', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
     createJourneyEntry(testDb, journey.id, user.id, { title: 'a thought', entry_date: '2026-06-03', stats_excluded: 1 });
     placeEntry(journey.id, user.id, 64.14, -21.94, { entry_date: '2026-06-02' });
 
-    const stats = svc.journeyStats(journey.id, user.id)!;
+    const stats = (await svc.journeyStats(journey.id, user.id))!;
 
     expect(stats.excluded).toEqual([]);
     expect(stats.steps).toBe(1);
   });
 
-  it('carries the entry on every stop read from the entries', () => {
+  it('carries the entry on every stop read from the entries', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
     const a = placeEntry(journey.id, user.id, 64.14, -21.94, { entry_date: '2026-06-02' });
     const b = placeEntry(journey.id, user.id, 65.68, -18.12, { entry_date: '2026-06-06' });
 
-    expect(svc.journeyStats(journey.id, user.id)!.points.map(p => p.entryId)).toEqual([a.id, b.id]);
+    expect((await svc.journeyStats(journey.id, user.id))!.points.map(p => p.entryId)).toEqual([a.id, b.id]);
   });
 
-  it('drops the place behind a switched-off skeleton from the place count', () => {
+  it('drops the place behind a switched-off skeleton from the place count', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
     const trip = createTrip(testDb, user.id);
@@ -432,12 +434,12 @@ describe('journeyStats excluded stops', () => {
     const town = createPlace(testDb, trip.id, { name: 'Vík', lat: 63.42, lng: -19.01 });
     createDayAssignment(testDb, createDay(testDb, trip.id, { date: '2026-06-01' }).id, airport.id);
     createDayAssignment(testDb, createDay(testDb, trip.id, { date: '2026-06-02' }).id, town.id);
-    svc.syncTripPlaces(journey.id, trip.id, user.id);
+    await svc.syncTripPlaces(journey.id, trip.id, user.id);
     testDb
       .prepare('UPDATE journey_entries SET stats_excluded = 1 WHERE journey_id = ? AND source_place_id = ?')
       .run(journey.id, airport.id);
 
-    const stats = svc.journeyStats(journey.id, user.id)!;
+    const stats = (await svc.journeyStats(journey.id, user.id))!;
 
     // The town's skeleton still draws the route, so this is the entries path.
     expect(stats.points.map(p => p.label)).toEqual(['Vík']);
@@ -450,7 +452,7 @@ describe('journeyStats excluded stops', () => {
    * from a trip place; switching it off and then drawing the place it came
    * from would put the same stop straight back on the map by its other name.
    */
-  it('leaves the place behind a switched-off skeleton out of the fallback route', () => {
+  it('leaves the place behind a switched-off skeleton out of the fallback route', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
     const trip = createTrip(testDb, user.id);
@@ -460,7 +462,7 @@ describe('journeyStats excluded stops', () => {
     // Only the airport is on a day, so only the airport gets a skeleton; the
     // town stays a bare trip place that the fallback is there to draw.
     createDayAssignment(testDb, createDay(testDb, trip.id, { date: '2026-06-01' }).id, airport.id);
-    svc.syncTripPlaces(journey.id, trip.id, user.id);
+    await svc.syncTripPlaces(journey.id, trip.id, user.id);
     // Switched off, and its point cleared by hand afterwards, which is what
     // sends the journey down the fallback while the skeleton still names the
     // place it came from.
@@ -472,7 +474,7 @@ describe('journeyStats excluded stops', () => {
       `)
       .run(journey.id, airport.id);
 
-    const stats = svc.journeyStats(journey.id, user.id)!;
+    const stats = (await svc.journeyStats(journey.id, user.id))!;
 
     expect(stats.points.map(p => p.label)).toEqual(['Vík']);
     expect(stats.points[0].entryId).toBeNull();
@@ -484,7 +486,7 @@ describe('journeyStats excluded stops', () => {
    * The pair of cases that decide which source a journey reads from, now that
    * a stop can be taken out of one of them.
    */
-  it('draws no route at all when every stop of the journal is switched off', () => {
+  it('draws no route at all when every stop of the journal is switched off', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
     const trip = createTrip(testDb, user.id);
@@ -492,14 +494,14 @@ describe('journeyStats excluded stops', () => {
     createPlace(testDb, trip.id, { name: 'a trip place', lat: 48.85, lng: 2.35 });
     placeEntry(journey.id, user.id, 52.52, 13.4, { title: 'Berlin, the airport', entry_date: '2026-06-01', stats_excluded: 1 });
 
-    const stats = svc.journeyStats(journey.id, user.id)!;
+    const stats = (await svc.journeyStats(journey.id, user.id))!;
 
     expect(stats.points).toEqual([]);
     expect(stats.distance).toBe(0);
     expect(stats.excluded.map(s => s.label)).toEqual(['Berlin, the airport']);
   });
 
-  it('still falls back to the trip places for a journal that never had a point', () => {
+  it('still falls back to the trip places for a journal that never had a point', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
     const trip = createTrip(testDb, user.id);
@@ -507,7 +509,7 @@ describe('journeyStats excluded stops', () => {
     createPlace(testDb, trip.id, { name: 'a trip place', lat: 48.85, lng: 2.35 });
     createJourneyEntry(testDb, journey.id, user.id, { title: 'written, not placed', stats_excluded: 1 });
 
-    const stats = svc.journeyStats(journey.id, user.id)!;
+    const stats = (await svc.journeyStats(journey.id, user.id))!;
 
     expect(stats.points.map(p => p.label)).toEqual(['a trip place']);
   });

@@ -306,7 +306,7 @@ export class OidcService implements OnModuleDestroy {
   // OIDC configuration (env + DB)
   // -------------------------------------------------------------------------
 
-  getOidcConfig(): OidcConfig | null {
+  async getOidcConfig(): Promise<OidcConfig | null> {
     const get = (key: string) =>
       (this.db.prepare("SELECT value FROM app_settings WHERE key = ?").get(key) as { value: string } | undefined)?.value || null;
 
@@ -445,7 +445,7 @@ export class OidcService implements OnModuleDestroy {
     return base + path;
   }
 
-  generateToken(user: { id: number }, remember?: boolean): string {
+  async generateToken(user: { id: number }, remember?: boolean): Promise<string> {
     // Embed the current password_version so an OIDC-issued session is invalidated
     // by a password change/reset exactly like a password-login session (the auth
     // middleware compares this `pv` against users.password_version).
@@ -768,7 +768,7 @@ export class OidcService implements OnModuleDestroy {
   // Update last_login timestamp
   // -------------------------------------------------------------------------
 
-  touchLastLogin(userId: number): void {
+  async touchLastLogin(userId: number): Promise<void> {
     this.db.prepare('UPDATE users SET last_login = CURRENT_TIMESTAMP, login_count = login_count + 1 WHERE id = ?').run(userId);
   }
 
@@ -778,7 +778,7 @@ export class OidcService implements OnModuleDestroy {
   // settings write: removing the SSO config while password login is off would lock
   // every user out of the instance.
 
-  getOidcSettings() {
+  async getOidcSettings() {
     const get = (key: string) =>
       this.db.get<{ value: string }>('SELECT value FROM app_settings WHERE key = ?', key)?.value || '';
     const secret = decrypt_api_key(get('oidc_client_secret'));
@@ -811,7 +811,7 @@ export class OidcService implements OnModuleDestroy {
       this.db.run('INSERT OR REPLACE INTO app_settings (key, value) VALUES (?, ?)', key, val || '');
     // All five writes are one SSO config — a partial apply would leave the
     // instance with an issuer but no client id (or vice versa).
-    this.db.transaction(() => {
+    await this.uow.transactional(async () => {
       set('oidc_issuer', data.issuer ?? '');
       set('oidc_client_id', data.client_id ?? '');
       if (data.client_secret !== undefined) set('oidc_client_secret', maybe_encrypt_api_key(data.client_secret) ?? '');

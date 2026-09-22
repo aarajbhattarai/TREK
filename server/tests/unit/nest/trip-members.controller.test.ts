@@ -53,7 +53,7 @@ describe('members', () => {
   it('GET 404 without access, else owner+members+current_user_id', async () => {
     expect(await thrown(() => tc(svc({ canAccessTrip: vi.fn().mockReturnValue(undefined) })).members(user, '9'))).toEqual({ status: 404, body: { error: 'Trip not found' } });
     const s = svc({ listMembers: vi.fn().mockReturnValue({ owner: { id: 1 }, members: [] }) } as Partial<TripMembersService>);
-    expect(tc(s).members(user, '9')).toEqual({ owner: { id: 1 }, members: [], current_user_id: 1 });
+    expect(await tc(s).members(user, '9')).toEqual({ owner: { id: 1 }, members: [], current_user_id: 1 });
   });
 
   it('POST 403 without member_manage, else adds + notifies', async () => {
@@ -134,7 +134,7 @@ describe('guests (#1362)', () => {
     expect(await thrown(() => tc(wsGuest).createGuest(user, '9', { name: '  ' }))).toEqual({ status: 400, body: { error: 'Guest name is required' } });
     const createGuest = vi.fn().mockReturnValue({ member: { id: 7, username: 'Anna', is_guest: true } });
     const s = svc({ createGuest } as Partial<TripMembersService>);
-    expect(tc(s).createGuest(user, '9', { name: 'Anna' })).toEqual({ member: { id: 7, username: 'Anna', is_guest: true } });
+    expect(await tc(s).createGuest(user, '9', { name: 'Anna' })).toEqual({ member: { id: 7, username: 'Anna', is_guest: true } });
     expect(createGuest).toHaveBeenCalledWith('9', 'Anna', user.id);
   });
 
@@ -142,7 +142,7 @@ describe('guests (#1362)', () => {
     const miss = svc({ renameGuest: vi.fn().mockReturnValue(false) } as Partial<TripMembersService>);
     expect(await thrown(() => tc(miss).renameGuest(user, '9', '7', { name: 'Bob' }))).toEqual({ status: 404, body: { error: 'Guest not found' } });
     const ok = svc({ renameGuest: vi.fn().mockReturnValue(true) } as Partial<TripMembersService>);
-    expect(tc(ok).renameGuest(user, '9', '7', { name: 'Bob' })).toEqual({ success: true });
+    expect(await tc(ok).renameGuest(user, '9', '7', { name: 'Bob' })).toEqual({ success: true });
   });
 
   it('delete: 404 when the guest is missing, else success', async () => {

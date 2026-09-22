@@ -69,7 +69,7 @@ beforeAll(async () => {
   new QueryHelpersService(dbs),
   // Real collaborator rather than a stub: reconcile() runs after every mutation
   // and needs the same connection to see the rows these cases write.
-  new JourneyDomainService(dbs, realtime, new TrekPhotosRepository(dbs)),
+  new JourneyDomainService(dbs, realtime, new TrekPhotosRepository(dbs), await createTestUnitOfWork(dbs.connection)),
 );
 });
 

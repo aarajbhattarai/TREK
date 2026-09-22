@@ -63,7 +63,7 @@ vi.mock('../../src/db/database', () => ({
 const { broadcast } = vi.hoisted(() => ({ broadcast: vi.fn() }));
 vi.mock('../../src/websocket', () => ({ broadcast }));
 
-const { reconcileTripSkeletons } = vi.hoisted(() => ({ reconcileTripSkeletons: vi.fn() }));
+const { reconcileTripSkeletons } = vi.hoisted(() => ({ reconcileTripSkeletons: vi.fn().mockResolvedValue(undefined) }));
 import { JourneyDomainService } from '../../src/nest/journey/journey-domain.service';
 
 import { PermissionsService } from '../../src/nest/permissions/permissions.service';

@@ -192,7 +192,7 @@ export class RealtimeGateway
     if (!user || !message?.journeyId) return undefined;
 
     const journeyId = Number(message.journeyId);
-    if (!Number.isFinite(journeyId) || !this.journeys.canAccessJourney(journeyId, user.id)) {
+    if (!Number.isFinite(journeyId) || !(await this.journeys.canAccessJourney(journeyId, user.id))) {
       return { type: 'error', message: 'Access denied' };
     }
 

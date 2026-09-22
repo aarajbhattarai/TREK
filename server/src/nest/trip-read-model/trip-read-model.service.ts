@@ -55,7 +55,7 @@ export class TripReadModelService {
 
     const ownerRow = this.getOwner(tripId);
     if (!ownerRow) return null;
-    const { owner, members } = this.members.listMembers(tripId, ownerRow.user_id);
+    const { owner, members } = await this.members.listMembers(tripId, ownerRow.user_id);
 
     const { days: rawDays } = await this.days.list(tripId);
     const days = rawDays.map(({ notes_items, ...day }) => ({ ...day, notes: notes_items }));
@@ -99,7 +99,7 @@ export class TripReadModelService {
   /** Aggregates every trip sub-collection for offline caching (legacy /:id/bundle). */
   async bundle(tripId: string, trip: { user_id: number }, viewerId: number) {
     const { days } = await this.days.list(tripId);
-    const { owner, members } = this.members.listMembers(tripId, trip.user_id);
+    const { owner, members } = await this.members.listMembers(tripId, trip.user_id);
     return {
       trip,
       days,

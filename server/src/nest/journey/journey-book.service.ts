@@ -34,8 +34,8 @@ export class JourneyBookService {
   ) {}
 
   /** Null when the journey does not exist or the user cannot reach it. */
-  private canAccess(journeyId: number, userId: number): boolean {
-    return !!this.journey.canAccessJourney(journeyId, userId);
+  private async canAccess(journeyId: number, userId: number): Promise<boolean> {
+    return !!(await this.journey.canAccessJourney(journeyId, userId));
   }
 
   /**
@@ -43,7 +43,7 @@ export class JourneyBookService {
    * same owner-or-editor check the entry and photo writes take. canAccess also
    * covers role 'viewer', who may read the book but must not overwrite it.
    */
-  private canWrite(journeyId: number, userId: number): boolean {
+  private async canWrite(journeyId: number, userId: number): Promise<boolean> {
     return this.journey.canEdit(journeyId, userId);
   }
 
@@ -53,7 +53,7 @@ export class JourneyBookService {
    * Public so the controller can tell "no book yet" from "no journey" without
    * running a query built for something else.
    */
-  canOpen(journeyId: number, userId: number): boolean {
+  async canOpen(journeyId: number, userId: number): Promise<boolean> {
     return this.canAccess(journeyId, userId);
   }
 
@@ -72,8 +72,8 @@ export class JourneyBookService {
     };
   }
 
-  listBooks(journeyId: number, userId: number): BookSummary[] | null {
-    if (!this.canAccess(journeyId, userId)) return null;
+  async listBooks(journeyId: number, userId: number): Promise<BookSummary[] | null> {
+    if (!(await this.canAccess(journeyId, userId))) return null;
     const rows = this.db
       .prepare(`
         SELECT id, journey_id, title, version, updated_at, updated_by
@@ -99,8 +99,8 @@ export class JourneyBookService {
    * the same trip is an obvious thing to want and adding a column later is
    * harder than not needing to.
    */
-  getBook(journeyId: number, userId: number): BookRecord | null {
-    if (!this.canAccess(journeyId, userId)) return null;
+  async getBook(journeyId: number, userId: number): Promise<BookRecord | null> {
+    if (!(await this.canAccess(journeyId, userId))) return null;
     const row = this.db
       .prepare(`
         SELECT id, journey_id, title, document, version, updated_at, updated_by
@@ -120,12 +120,12 @@ export class JourneyBookService {
    * moved. Throwing would be the obvious shape and the wrong one: a conflict is
    * an ordinary outcome of two people working, not an exception.
    */
-  saveBook(
+  async saveBook(
     journeyId: number,
     userId: number,
     input: { title: string; document: unknown; baseVersion?: number },
-  ): { record: BookRecord } | { conflict: BookRecord } | null {
-    if (!this.canWrite(journeyId, userId)) return null;
+  ): Promise<{ record: BookRecord } | { conflict: BookRecord } | null> {
+    if (!(await this.canWrite(journeyId, userId))) return null;
 
     const document = JSON.stringify(normalizeBookDocument(input.document));
     const existing = this.db
@@ -139,7 +139,7 @@ export class JourneyBookService {
           VALUES (?, ?, ?, 1, ?, ?, CURRENT_TIMESTAMP)
         `)
         .run(journeyId, input.title, document, userId, userId);
-      return { record: this.byId(Number(result.lastInsertRowid))! };
+      return { record: (await this.byId(Number(result.lastInsertRowid)))! };
     }
 
     /*
@@ -164,13 +164,13 @@ export class JourneyBookService {
       .run(input.title, document, userId, existing.id, base);
 
     if (result.changes === 0) {
-      return { conflict: this.byId(existing.id)! };
+      return { conflict: (await this.byId(existing.id))! };
     }
-    return { record: this.byId(existing.id)! };
+    return { record: (await this.byId(existing.id))! };
   }
 
-  deleteBook(journeyId: number, userId: number): boolean | null {
-    if (!this.canWrite(journeyId, userId)) return null;
+  async deleteBook(journeyId: number, userId: number): Promise<boolean | null> {
+    if (!(await this.canWrite(journeyId, userId))) return null;
     const result = this.db
       .prepare('DELETE FROM journey_books WHERE journey_id = ?')
       .run(journeyId);
@@ -188,8 +188,8 @@ export class JourneyBookService {
    * The saver is excluded by socket id, the same way every other TREK mutation
    * does it, so the client that just saved does not process its own change.
    */
-  broadcastSaved(journeyId: number, userId: number, record: BookRecord, socketId?: string) {
-    this.journey.broadcastJourneyEvent(
+  async broadcastSaved(journeyId: number, userId: number, record: BookRecord, socketId?: string) {
+    await this.journey.broadcastJourneyEvent(
       journeyId,
       'journey:book:saved',
       { version: record.version, savedBy: userId },
@@ -197,7 +197,7 @@ export class JourneyBookService {
     );
   }
 
-  private byId(id: number): BookRecord | null {
+  private async byId(id: number): Promise<BookRecord | null> {
     const row = this.db
       .prepare(`
         SELECT id, journey_id, title, document, version, updated_at, updated_by

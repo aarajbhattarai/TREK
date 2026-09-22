@@ -43,7 +43,7 @@ export class JourneyPublicController {
 
   @Get(':token/photos/:photoId/:kind')
   async photo(@Param('token') token: string, @Param('photoId') photoId: string, @Param('kind') kind: string, @Res() res: Response): Promise<void> {
-    const valid = this.journey.validateShareTokenForPhoto(token, Number(photoId));
+    const valid = await this.journey.validateShareTokenForPhoto(token, Number(photoId));
     if (!valid) {
       throw new HttpException({ error: 'Not found' }, 404);
     }
@@ -58,7 +58,7 @@ export class JourneyPublicController {
     @Param('kind') kind: string,
     @Res() res: Response,
   ): Promise<void> {
-    const valid = this.journey.validateShareTokenForAsset(token, assetId);
+    const valid = await this.journey.validateShareTokenForAsset(token, assetId);
     if (!valid) {
       throw new HttpException({ error: 'Not found' }, 404);
     }

@@ -318,13 +318,13 @@ export class PlaceEnrichmentService {
    * would mean backfilling a row for every existing install just to keep them
    * working, and there is nothing here that warrants a migration.
    */
-  enrichDisabled(): boolean {
+  async enrichDisabled(): Promise<boolean> {
     const row = this.database.get<{ value: string }>('SELECT value FROM app_settings WHERE key = ?', 'places_enrich_enabled');
     return row?.value === 'false';
   }
 
   async enrich(userId: number, req: MapsPlaceEnrichmentRequest): Promise<MapsPlaceEnrichmentResult> {
-    if (this.enrichDisabled()) return { photos: [], description: null, facts: [], disabled: true };
+    if (await this.enrichDisabled()) return { photos: [], description: null, facts: [], disabled: true };
 
     const placeId = req.placeId?.trim() || `coords:${req.lat}:${req.lng}`;
     const lang = req.lang;
@@ -378,7 +378,7 @@ export class PlaceEnrichmentService {
     // A summary or a link the lookup here fetched itself is the map's and keeps.
     const fromCaller = req.details != null
       && (description?.source === 'osm' || ownFacts.some((fact) => fact.url != null));
-    if (!fromCaller) this.writeCache(placeId, lang, result);
+    if (!fromCaller) await this.writeCache(placeId, lang, result);
     return result;
   }
 
@@ -842,7 +842,7 @@ export class PlaceEnrichmentService {
     }
   }
 
-  private writeCache(placeId: string, lang: string | undefined, value: CachedEnrichment): void {
+  private async writeCache(placeId: string, lang: string | undefined, value: CachedEnrichment): Promise<void> {
     try {
       this.database.run(
         'INSERT OR REPLACE INTO place_details_cache (place_id, lang, expanded, payload_json, fetched_at) VALUES (?, ?, ?, ?, ?)',

@@ -85,7 +85,7 @@ export class JournalEntryRowsController {
 
     // The entry's journey must be one the caller can access — same gate as a read.
     const row = this.dbs.connection.prepare('SELECT journey_id FROM journey_entries WHERE id = ?').get(entryId) as { journey_id: number } | undefined;
-    if (!row || !this.journey.canAccessJourney(row.journey_id, userId)) return { providers: [] };
+    if (!row || !(await this.journey.canAccessJourney(row.journey_id, userId))) return { providers: [] };
 
     const ids = this.hooks.providersOf('journalEntryProvider');
     const results = await Promise.all(

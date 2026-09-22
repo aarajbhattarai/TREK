@@ -87,7 +87,7 @@ export class JourneyService {
   deleteJourneyShareLink(id: number, userId: number) { return this.share.deleteJourneyShareLink(id, userId); }
 
   // Immich mirror (only when the user opted in via integration settings)
-  immichAutoUploadEnabled(userId: number): boolean {
+  async immichAutoUploadEnabled(userId: number): Promise<boolean> {
     const prefs = this.db.prepare('SELECT immich_auto_upload FROM users WHERE id = ?').get(userId) as { immich_auto_upload?: number } | undefined;
     return !!prefs?.immich_auto_upload;
   }

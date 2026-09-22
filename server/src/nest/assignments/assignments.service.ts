@@ -84,7 +84,11 @@ export class AssignmentsService {
    * the journey stays in sync. Non-fatal, like the route's try/catch.
    */
   reconcile(tripId: string | number, socketId?: string): void {
-    try { this.journey.reconcileTripSkeletons(Number(tripId), socketId); } catch { /* non-fatal */ }
+    // R1.5: reconcile() is called fire-and-forget from a dozen sync call sites across
+    // this domain; reconcileTripSkeletons is now async, so the rejection is caught here
+    // instead of escaping as an unhandled promise rejection — same "non-fatal" contract
+    // the try/catch gave it before the sweep.
+    void this.journey.reconcileTripSkeletons(Number(tripId), socketId).catch(() => { /* non-fatal */ });
   }
 
   /**

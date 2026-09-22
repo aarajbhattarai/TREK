@@ -133,7 +133,7 @@ beforeAll(async () => {
   new QueryHelpersService(dbs()),
   new UnsplashService(dbs(), new RuntimeEnvService(), coversFx.storage),
   photoCache,
-  new JourneyDomainService(dbs(), new RealtimeService(), new TrekPhotosRepository(dbs())),
+  new JourneyDomainService(dbs(), new RealtimeService(), new TrekPhotosRepository(dbs()), await createTestUnitOfWork(dbs().connection)),
   makeStorageFixture('').storage,
   await accommodationsOver(dbs()), await createTestUnitOfWork(dbs().connection),
 );
@@ -589,13 +589,13 @@ describe('resyncAccommodationDays (#1288)', () => {
 });
 
 describe('transferOwnership (#973)', () => {
-  it('TRIP-SVC-020: hands the trip to a member and demotes the former owner to a member', () => {
+  it('TRIP-SVC-020: hands the trip to a member and demotes the former owner to a member', async () => {
     const { user: owner } = createUser(testDb);
     const { user: member } = createUser(testDb);
     const trip = createTrip(testDb, owner.id);
     addTripMember(testDb, trip.id, member.id);
 
-    const result = membersSvc.transferOwnership(trip.id, member.id, owner.id);
+    const result = await membersSvc.transferOwnership(trip.id, member.id, owner.id);
     expect(result.toEmail).toBe(member.email);
 
     const updated = testDb.prepare('SELECT user_id FROM trips WHERE id = ?').get(trip.id) as { user_id: number };
@@ -607,35 +607,35 @@ describe('transferOwnership (#973)', () => {
     expect(memberIds).not.toContain(member.id);
   });
 
-  it('TRIP-SVC-021: rejects a transfer from a non-owner', () => {
+  it('TRIP-SVC-021: rejects a transfer from a non-owner', async () => {
     const { user: owner } = createUser(testDb);
     const { user: member } = createUser(testDb);
     const trip = createTrip(testDb, owner.id);
     addTripMember(testDb, trip.id, member.id);
     // member (not the owner) attempts the transfer
-    expect(() => membersSvc.transferOwnership(trip.id, member.id, member.id)).toThrow();
+    await expect(membersSvc.transferOwnership(trip.id, member.id, member.id)).rejects.toThrow();
   });
 
-  it('TRIP-SVC-022: rejects a transfer to someone who is not a member', () => {
+  it('TRIP-SVC-022: rejects a transfer to someone who is not a member', async () => {
     const { user: owner } = createUser(testDb);
     const { user: stranger } = createUser(testDb);
     const trip = createTrip(testDb, owner.id);
-    expect(() => membersSvc.transferOwnership(trip.id, stranger.id, owner.id)).toThrow('New owner must be a trip member');
+    await expect(membersSvc.transferOwnership(trip.id, stranger.id, owner.id)).rejects.toThrow('New owner must be a trip member');
   });
 
-  it('TRIP-SVC-023: rejects transferring to yourself', () => {
+  it('TRIP-SVC-023: rejects transferring to yourself', async () => {
     const { user: owner } = createUser(testDb);
     const trip = createTrip(testDb, owner.id);
-    expect(() => membersSvc.transferOwnership(trip.id, owner.id, owner.id)).toThrow('You already own this trip');
+    await expect(membersSvc.transferOwnership(trip.id, owner.id, owner.id)).rejects.toThrow('You already own this trip');
   });
 });
 
 describe('guest members (#1362)', () => {
-  it('TRIP-SVC-030: createGuest adds a credential-less user joined into the trip', () => {
+  it('TRIP-SVC-030: createGuest adds a credential-less user joined into the trip', async () => {
     const { user: owner } = createUser(testDb);
     const trip = createTrip(testDb, owner.id);
 
-    const { member } = membersSvc.createGuest(trip.id, '  Anna  ', owner.id);
+    const { member } = await membersSvc.createGuest(trip.id, '  Anna  ', owner.id);
     expect(member.username).toBe('Anna');
     expect(member.is_guest).toBe(true);
 
@@ -650,17 +650,17 @@ describe('guest members (#1362)', () => {
     expect(m).toBeTruthy();
 
     // Surfaces in listMembers with is_guest=true and the typed display name.
-    const { members } = membersSvc.listMembers(trip.id, owner.id) as any;
+    const { members } = await membersSvc.listMembers(trip.id, owner.id) as any;
     const guest = members.find((x: any) => x.id === member.id);
     expect(guest.username).toBe('Anna');
     expect(guest.is_guest).toBe(true);
   });
 
-  it('TRIP-SVC-031: the same guest name is allowed, not suffixed (#1446)', () => {
+  it('TRIP-SVC-031: the same guest name is allowed, not suffixed (#1446)', async () => {
     const { user: owner } = createUser(testDb);
     const trip = createTrip(testDb, owner.id);
-    const a = membersSvc.createGuest(trip.id, 'Sam', owner.id);
-    const b = membersSvc.createGuest(trip.id, 'Sam', owner.id);
+    const a = await membersSvc.createGuest(trip.id, 'Sam', owner.id);
+    const b = await membersSvc.createGuest(trip.id, 'Sam', owner.id);
     // both keep the plain display name; only the internal (uuid) username differs
     expect(a.member.username).toBe('Sam');
     expect(b.member.username).toBe('Sam');
@@ -669,26 +669,26 @@ describe('guest members (#1362)', () => {
     expect(usernames[0].username).not.toBe(usernames[1].username);
   });
 
-  it('TRIP-SVC-032: renameGuest updates the display name (trip-scoped, guest-only)', () => {
+  it('TRIP-SVC-032: renameGuest updates the display name (trip-scoped, guest-only)', async () => {
     const { user: owner } = createUser(testDb);
     const { user: other } = createUser(testDb);
     const otherTrip = createTrip(testDb, other.id);
     const trip = createTrip(testDb, owner.id);
-    const { member } = membersSvc.createGuest(trip.id, 'Bob', owner.id);
+    const { member } = await membersSvc.createGuest(trip.id, 'Bob', owner.id);
 
-    expect(membersSvc.renameGuest(trip.id, member.id, 'Robert')).toBe(true);
+    expect(await membersSvc.renameGuest(trip.id, member.id, 'Robert')).toBe(true);
     expect((testDb.prepare('SELECT display_name FROM users WHERE id = ?').get(member.id) as any).display_name).toBe('Robert');
 
     // A real user cannot be renamed through the guest path…
-    expect(membersSvc.renameGuest(trip.id, owner.id, 'Hacked')).toBe(false);
+    expect(await membersSvc.renameGuest(trip.id, owner.id, 'Hacked')).toBe(false);
     // …and a guest cannot be renamed from a different trip.
-    expect(membersSvc.renameGuest(otherTrip.id, member.id, 'Nope')).toBe(false);
+    expect(await membersSvc.renameGuest(otherTrip.id, member.id, 'Nope')).toBe(false);
   });
 
   it('TRIP-SVC-033: deleteGuest removes the user (cascading membership), guest-only + trip-scoped', async () => {
     const { user: owner } = createUser(testDb);
     const trip = createTrip(testDb, owner.id);
-    const { member } = membersSvc.createGuest(trip.id, 'Carol', owner.id);
+    const { member } = await membersSvc.createGuest(trip.id, 'Carol', owner.id);
 
     // Real members are not deletable via the guest path.
     expect(await membersSvc.deleteGuest(trip.id, owner.id)).toBe(false);
@@ -698,15 +698,15 @@ describe('guest members (#1362)', () => {
     expect(testDb.prepare('SELECT id FROM trip_members WHERE user_id = ?').get(member.id)).toBeUndefined();
   });
 
-  it('TRIP-SVC-034: a guest is never invitable (addMember) nor a transfer target', () => {
+  it('TRIP-SVC-034: a guest is never invitable (addMember) nor a transfer target', async () => {
     const { user: owner } = createUser(testDb);
     const trip = createTrip(testDb, owner.id);
-    const { member } = membersSvc.createGuest(trip.id, 'Dora', owner.id);
+    const { member } = await membersSvc.createGuest(trip.id, 'Dora', owner.id);
 
     // The synthetic username/email must not resolve through the invite box.
-    expect(() => membersSvc.addMember(trip.id, 'Dora', owner.id, owner.id)).toThrow('User not found');
+    await expect(membersSvc.addMember(trip.id, 'Dora', owner.id, owner.id)).rejects.toThrow('User not found');
     // Ownership can never be handed to a guest.
-    expect(() => membersSvc.transferOwnership(trip.id, member.id, owner.id)).toThrow('Cannot transfer ownership to a guest');
+    await expect(membersSvc.transferOwnership(trip.id, member.id, owner.id)).rejects.toThrow('Cannot transfer ownership to a guest');
   });
 });
 
@@ -1113,22 +1113,22 @@ describe('folded quirk branches', () => {
     expect(getDays(trip.id)).toHaveLength(7);
   });
 
-  it('TRIP-SVC-049: addMember inserts the membership and reports the trip title; removeMember deletes it', () => {
+  it('TRIP-SVC-049: addMember inserts the membership and reports the trip title; removeMember deletes it', async () => {
     const { user: owner } = createUser(testDb);
     const { user: invitee } = createUser(testDb);
     const trip = createTrip(testDb, owner.id, { title: 'Joinable' });
 
-    const result = membersSvc.addMember(trip.id, invitee.email, owner.id, owner.id);
+    const result = await membersSvc.addMember(trip.id, invitee.email, owner.id, owner.id);
     expect(result.member.id).toBe(invitee.id);
     expect(result.tripTitle).toBe('Joinable');
     expect(result.targetUserId).toBe(invitee.id);
 
     // Duplicate + owner + missing identifier reject with the byte-identical errors.
-    expect(() => membersSvc.addMember(trip.id, invitee.email, owner.id, owner.id)).toThrow('User already has access');
-    expect(() => membersSvc.addMember(trip.id, owner.email, owner.id, owner.id)).toThrow('Trip owner is already a member');
-    expect(() => membersSvc.addMember(trip.id, '', owner.id, owner.id)).toThrow('Email or username required');
+    await expect(membersSvc.addMember(trip.id, invitee.email, owner.id, owner.id)).rejects.toThrow('User already has access');
+    await expect(membersSvc.addMember(trip.id, owner.email, owner.id, owner.id)).rejects.toThrow('Trip owner is already a member');
+    await expect(membersSvc.addMember(trip.id, '', owner.id, owner.id)).rejects.toThrow('Email or username required');
 
-    membersSvc.removeMember(trip.id, invitee.id);
+    await membersSvc.removeMember(trip.id, invitee.id);
     expect(testDb.prepare('SELECT id FROM trip_members WHERE trip_id = ? AND user_id = ?').get(trip.id, invitee.id)).toBeUndefined();
   });
 
@@ -1248,7 +1248,7 @@ describe('quirk fixes', () => {
   it('TRIP-SVC-052: deleteGuest is atomic — a failed user DELETE rolls the budget re-split back', async () => {
     const { user: owner } = createUser(testDb);
     const trip = createTrip(testDb, owner.id);
-    const { member: guest } = membersSvc.createGuest(trip.id, 'Gia', owner.id);
+    const { member: guest } = await membersSvc.createGuest(trip.id, 'Gia', owner.id);
     const item = await budgetSvc.createBudgetItem(trip.id, { name: 'Dinner', total_price: 80, member_ids: [owner.id, guest.id] });
 
     const broken = await failingMembers('DELETE FROM users WHERE id = ? AND is_guest = 1');
@@ -1260,11 +1260,11 @@ describe('quirk fixes', () => {
     expect(row.persons).toBe(2);
   });
 
-  it('TRIP-SVC-053: listMembers prefers the owner display_name over the raw username (quirk fix)', () => {
+  it('TRIP-SVC-053: listMembers prefers the owner display_name over the raw username (quirk fix)', async () => {
     const { user: owner } = createUser(testDb, { username: 'owner-handle' });
     testDb.prepare('UPDATE users SET display_name = ? WHERE id = ?').run('Olive Displayed', owner.id);
     const trip = createTrip(testDb, owner.id);
-    const { owner: row } = membersSvc.listMembers(trip.id, owner.id);
+    const { owner: row } = await membersSvc.listMembers(trip.id, owner.id);
     expect(row.username).toBe('Olive Displayed');
   });
 });

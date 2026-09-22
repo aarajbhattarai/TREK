@@ -119,10 +119,16 @@ export class PlacesRpc {
     return { deleted: true };
   }
 
-  /** Journey mirroring never fails a write that already succeeded. */
-  private mirrorJourneys(run: () => void): void {
+  /**
+   * Journey mirroring never fails a write that already succeeded.
+   *
+   * R1.5: `run` wraps a now-async `this.journey.onPlace*` call; its rejection is
+   * swallowed here (void + catch) rather than left unhandled — same "non-fatal"
+   * contract the synchronous try/catch gave it before the sweep.
+   */
+  private mirrorJourneys(run: () => Promise<void>): void {
     try {
-      run();
+      void run().catch(() => { /* non-fatal */ });
     } catch {
       /* non-fatal */
     }

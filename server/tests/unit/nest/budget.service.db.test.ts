@@ -141,7 +141,7 @@ describe('deleting a member re-splits their expenses (#1553)', () => {
   it('BUDGET-SVC-DB-010: re-derives the persons divisor when a guest in the split is deleted', async () => {
     const { user: owner } = createUser(testDb);
     const trip = createTrip(testDb, owner.id);
-    const guests = ['G1', 'G2', 'G3'].map(n => createGuest(trip.id, n, owner.id).member);
+    const guests = await Promise.all(['G1', 'G2', 'G3'].map(async n => (await createGuest(trip.id, n, owner.id)).member));
     const item = await budget.createBudgetItem(trip.id, {
       name: 'Dinner', total_price: 400,
       member_ids: [owner.id, ...guests.map(g => g.id)],
@@ -160,7 +160,7 @@ describe('deleting a member re-splits their expenses (#1553)', () => {
   it('BUDGET-SVC-DB-011: leaves a manually entered persons count alone', async () => {
     const { user: owner } = createUser(testDb);
     const trip = createTrip(testDb, owner.id);
-    const guest = createGuest(trip.id, 'G1', owner.id).member;
+    const guest = (await createGuest(trip.id, 'G1', owner.id)).member;
     // No member rows — `persons` is just a number someone typed.
     const item = await budget.createBudgetItem(trip.id, { name: 'Rental', total_price: 300, persons: 6 });
 
@@ -172,7 +172,7 @@ describe('deleting a member re-splits their expenses (#1553)', () => {
   it('BUDGET-SVC-DB-012: drops the last member to a null divisor rather than zero', async () => {
     const { user: owner } = createUser(testDb);
     const trip = createTrip(testDb, owner.id);
-    const guest = createGuest(trip.id, 'G1', owner.id).member;
+    const guest = (await createGuest(trip.id, 'G1', owner.id)).member;
     const item = await budget.createBudgetItem(trip.id, { name: 'Taxi', total_price: 50, member_ids: [guest.id] });
 
     await deleteGuest(trip.id, guest.id);
@@ -184,7 +184,7 @@ describe('deleting a member re-splits their expenses (#1553)', () => {
   it('BUDGET-SVC-DB-013: saves a split from a stale client instead of failing on the users FK', async () => {
     const { user: owner } = createUser(testDb);
     const trip = createTrip(testDb, owner.id);
-    const guest = createGuest(trip.id, 'G1', owner.id).member;
+    const guest = (await createGuest(trip.id, 'G1', owner.id)).member;
     const item = await budget.createBudgetItem(trip.id, { name: 'Dinner', total_price: 200, member_ids: [owner.id, guest.id] });
 
     await deleteGuest(trip.id, guest.id);
@@ -199,7 +199,7 @@ describe('deleting a member re-splits their expenses (#1553)', () => {
   it('BUDGET-SVC-DB-014: ignores a deleted member arriving through updateMembers', async () => {
     const { user: owner } = createUser(testDb);
     const trip = createTrip(testDb, owner.id);
-    const guest = createGuest(trip.id, 'G1', owner.id).member;
+    const guest = (await createGuest(trip.id, 'G1', owner.id)).member;
     const item = await budget.createBudgetItem(trip.id, { name: 'Drinks', total_price: 60, member_ids: [owner.id, guest.id] });
 
     await deleteGuest(trip.id, guest.id);

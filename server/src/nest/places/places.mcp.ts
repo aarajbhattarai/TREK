@@ -153,7 +153,7 @@ export class PlacesMcp {
       });
       this.guards.safeBroadcast(tripId, 'place:created', { place: result.place });
       this.guards.safeBroadcast(tripId, 'assignment:created', { assignment: result.assignment });
-      try { this.journey.reconcileTripSkeletons(tripId); } catch { /* non-fatal */ }
+      try { await this.journey.reconcileTripSkeletons(tripId); } catch { /* non-fatal */ }
       return ok(result);
     } catch {
       return { content: [{ type: 'text' as const, text: 'Failed to create place and assignment.' }], isError: true };
@@ -257,7 +257,7 @@ export class PlacesMcp {
     if (!this.places.get(String(tripId), String(placeId))) {
       return { content: [{ type: 'text' as const, text: 'Place not found.' }], isError: true };
     }
-    try { this.journey.onPlaceDeleted(placeId); } catch { /* non-fatal */ } // sync journeys before the row is gone
+    try { await this.journey.onPlaceDeleted(placeId); } catch { /* non-fatal */ } // sync journeys before the row is gone
     // The link is gone once the place is, so read it first (#1298).
     const expenseIds = this.places.linkedExpenseIds(tripId, [placeId]);
     const { deleted, cancelled } = await this.places.remove(String(tripId), String(placeId));
@@ -433,7 +433,7 @@ export class PlacesMcp {
     // detach and left the entries as orphans.
     const scoped = this.places.scopedIds(String(tripId), placeIds);
     for (const id of scoped) {
-      try { this.journey.onPlaceDeleted(id); } catch { /* non-fatal */ }
+      try { await this.journey.onPlaceDeleted(id); } catch { /* non-fatal */ }
     }
     // The link is gone once the places are, so read it first (#1298).
     const expenseIds = this.places.linkedExpenseIds(tripId, scoped);

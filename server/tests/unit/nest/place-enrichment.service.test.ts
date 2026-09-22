@@ -145,17 +145,17 @@ beforeEach(() => {
 // ── Kill switch ──────────────────────────────────────────────────────────────
 
 describe('enrichDisabled', () => {
-  it('ENRICH-001: is off only when the setting is literally "false"', () => {
+  it('ENRICH-001: is off only when the setting is literally "false"', async () => {
     const svc = make(mapsStub(), cacheStub());
 
     mockDbGet.mockReturnValue(undefined);
-    expect(svc.enrichDisabled()).toBe(false); // never configured — fail open
+    expect(await svc.enrichDisabled()).toBe(false); // never configured — fail open
 
     mockDbGet.mockReturnValue({ value: 'true' });
-    expect(svc.enrichDisabled()).toBe(false);
+    expect(await svc.enrichDisabled()).toBe(false);
 
     mockDbGet.mockReturnValue({ value: 'false' });
-    expect(svc.enrichDisabled()).toBe(true);
+    expect(await svc.enrichDisabled()).toBe(true);
   });
 
   it('ENRICH-002: answers the disabled envelope without touching a provider', async () => {

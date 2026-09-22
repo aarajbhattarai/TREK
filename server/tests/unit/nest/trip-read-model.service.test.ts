@@ -106,7 +106,7 @@ beforeAll(async () => {
   dbs(), new PermissionsService(dbs(), await createTestUnitOfWork(dbs().connection)), new RealtimeService(),
   new MapsService(dbs(), photoCache), new QueryHelpersService(dbs()),
   new UnsplashService(dbs(), new RuntimeEnvService(), makeStorageFixture('').storage), photoCache,
-  new JourneyDomainService(dbs(), new RealtimeService(), new TrekPhotosRepository(dbs())),
+  new JourneyDomainService(dbs(), new RealtimeService(), new TrekPhotosRepository(dbs()), await createTestUnitOfWork(dbs().connection)),
   makeStorageFixture('').storage,
   await accommodationsOver(dbs()), await createTestUnitOfWork(dbs().connection),
 );
