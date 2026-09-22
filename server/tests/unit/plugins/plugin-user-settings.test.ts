@@ -17,7 +17,7 @@ const { getDb } = vi.hoisted(() => ({ getDb: { current: null as unknown } }));
 vi.mock('../../../src/db/database', () => ({ get db() { return getDb.current; } }));
 import { db as dbConn } from '../../../src/db/database';
 import { DatabaseService } from '../../../src/nest/database/database.service';
-import { AddonsService } from '../../../src/nest/addons/addons.service';
+import { createTestAddonsService } from '../../helpers/test-addons';
 
 import Database from 'better-sqlite3';
 import { PluginsService } from '../../../src/nest/plugins/plugins.service';
@@ -43,10 +43,10 @@ describe('per-user plugin settings', () => {
   let svc: PluginsService;
   // AddonsService only feeds PluginsService.list(), which no case here calls, but it is a
   // real collaborator on the same connection rather than a stand-in.
-  beforeEach(() => {
+  beforeEach(async () => {
     getDb.current = freshDb();
     const dbs = new DatabaseService(dbConn);
-    svc = new PluginsService(dbs, new AddonsService(dbs));
+    svc = new PluginsService(dbs, await createTestAddonsService(getDb.current as Database.Database, dbs));
   });
 
   it('lists only the user-scope fields, in order', async () => {
@@ -95,10 +95,10 @@ describe('manifest defaults reach the runtime reads', () => {
   // through ctx.settings.get() / the channel dispatch's readAll — otherwise a plugin
   // that ships a sensible default serves nobody until every user opens the form.
   let svc: PluginsService;
-  beforeEach(() => {
+  beforeEach(async () => {
     getDb.current = freshDb();
     const dbs = new DatabaseService(dbConn);
-    svc = new PluginsService(dbs, new AddonsService(dbs));
+    svc = new PluginsService(dbs, await createTestAddonsService(getDb.current as Database.Database, dbs));
     const ins = (getDb.current as import('better-sqlite3').Database).prepare(
       'INSERT INTO plugin_settings_fields (plugin_id, field_key, input_type, required, secret, scope, sort_order, default_value) VALUES (?,?,?,?,?,?,?,?)',
     );
@@ -138,10 +138,10 @@ describe('hasRequired applies the same "filled" rule as the save gate', () => {
   // it disagreed with assertRequiredFilled() a save the form accepted could still leave
   // the user "not configured" (or the reverse).
   let svc: PluginsService;
-  beforeEach(() => {
+  beforeEach(async () => {
     getDb.current = freshDb();
     const dbs = new DatabaseService(dbConn);
-    svc = new PluginsService(dbs, new AddonsService(dbs));
+    svc = new PluginsService(dbs, await createTestAddonsService(getDb.current as Database.Database, dbs));
     (getDb.current as import('better-sqlite3').Database)
       .prepare('INSERT INTO plugin_settings_fields (plugin_id, field_key, input_type, required, secret, scope, sort_order) VALUES (?,?,?,?,?,?,?)')
       .run('p', 'consent', 'checkbox', 1, 0, 'user', 9);

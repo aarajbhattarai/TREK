@@ -30,7 +30,7 @@ import { PluginRuntimeService } from '../../../src/nest/plugins/plugin-runtime.s
 import { createPluginRuntime } from '../../helpers/plugin-host';
 import { parseManifest, ManifestError } from '../../../src/nest/plugins/install/manifest';
 import { makeHostAllow } from '../../../src/nest/plugins/runtime/egress-policy';
-import { AddonsService } from '../../../src/nest/addons/addons.service';
+import { createTestAddonsService } from '../../helpers/test-addons';
 
 function install(id: string, operatorEgress: boolean, perms: string[] = ['http:outbound:gotify.net']) {
   testDb.prepare(
@@ -174,7 +174,7 @@ describe('the admin list surfaces operator egress (so the chip can be shown)', (
     // one over the same DB. These fixtures declare no dependencies, so it is never consulted.
     const listPlugins = async () => {
       const dbs = new DatabaseService(dbConn);
-      return (await new PluginsService(dbs, new AddonsService(dbs)).list()).plugins;
+      return (await new PluginsService(dbs, await createTestAddonsService(testDb, dbs)).list()).plugins;
     };
 
     const before = await listPlugins();

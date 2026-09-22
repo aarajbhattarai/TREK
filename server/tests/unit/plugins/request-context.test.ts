@@ -27,7 +27,7 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createSnapshotTestDb } from '../../helpers/db-mock';
 import { createUser } from '../../helpers/factories';
 import { DatabaseService } from '../../../src/nest/database/database.service';
-import { AddonsService } from '../../../src/nest/addons/addons.service';
+import { createTestAddonsService } from '../../helpers/test-addons';
 import { PermissionsService } from '../../../src/nest/permissions/permissions.service';
 import { PluginGuards } from '../../../src/nest/plugins/host/plugin-guards.service';
 import { PluginSupervisor } from '../../../src/nest/plugins/supervisor/plugin-supervisor';
@@ -64,7 +64,7 @@ beforeAll(async () => {
   t = await createTestOrm(testDb, { allowGlobalContext: false });
   const dbs = new DatabaseService(testDb);
   permissions = new PermissionsService(t.repo(AppSettings) as AppSettingsRepository, new UnitOfWork(t.em));
-  guards = new PluginGuards(dbs, permissions, new AddonsService(dbs));
+  guards = new PluginGuards(dbs, permissions, await createTestAddonsService(testDb, dbs));
   userId = createUser(testDb, { role: 'user' }).user.id;
   // An admin has tightened trip_create from its 'everybody' default.
   testDb.prepare("INSERT OR REPLACE INTO app_settings (key, value) VALUES ('perm_trip_create', 'admin')").run();

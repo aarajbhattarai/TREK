@@ -59,8 +59,7 @@ import { runMigrations } from '../../../src/db/migrations';
 import { resetTestDb, setAddonEnabled } from '../../helpers/test-db';
 import { createUser } from '../../helpers/factories';
 import { createMcpHarness, parseToolResult, type McpHarness } from '../../helpers/mcp-harness';
-import { AddonsService } from '../../../src/nest/addons/addons.service';
-import { DatabaseService } from '../../../src/nest/database/database.service';
+import { createTestAddonsService } from '../../helpers/test-addons';
 import { ADDON_IDS } from '../../../src/addons';
 
 const SECTIONS = [
@@ -360,7 +359,7 @@ describe('Tool: list_addons', () => {
     // Written through the same service the admin panel writes through rather
     // than through a hand-rolled app_settings row, so the tool is checked
     // against the real writer and not against a restatement of it.
-    const addonsService = new AddonsService(new DatabaseService(testDb));
+    const addonsService = await createTestAddonsService(testDb);
     const { user } = createUser(testDb);
     await withHarness(user.id, async (h) => {
       await addonsService.updateCollabFeatures({ polls: false });

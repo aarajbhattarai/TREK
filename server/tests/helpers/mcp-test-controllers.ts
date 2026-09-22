@@ -81,7 +81,7 @@ import { TripPromptsMcp } from '../../src/nest/trips/trip-prompts.mcp';
 import { PlacePhotoCacheService } from '../../src/nest/place-photos/place-photo-cache.service';
 import { RuntimeEnvService } from '../../src/nest/app-config/runtime-env.service';
 import { makeNotificationsService, makeNotificationPreferencesService } from './notifications';
-import { AddonsService } from '../../src/nest/addons/addons.service';
+import { createTestAddonsService } from './test-addons';
 import { RoadtripMcp } from '../../src/nest/roadtrip/roadtrip.mcp';
 import { RoadtripService } from '../../src/nest/roadtrip/roadtrip.service';
 import { notificationsStub } from './notifications';
@@ -114,7 +114,7 @@ import { AirtrailImportService } from '../../src/nest/integrations/airtrail-impo
 import { ReservationImportMcp } from '../../src/nest/reservation-import/reservation-import.mcp';
 import { HelpMcp } from '../../src/nest/help/help.mcp';
 import { AddonsMcp } from '../../src/nest/addons/addons.mcp';
-import { createTestUnitOfWork, createTestAppSettingsRepo } from './test-uow';
+import { createTestUnitOfWork, createTestAppSettingsRepo, createTestCategoriesRepo, createTestTagsRepo } from './test-uow';
 import { createTestOrm } from './test-orm';
 import { AppSettings } from '../../src/db/entities/AppSettings.entity';
 import type { AppSettingsRepository } from '../../src/db/repositories/AppSettings.repository';
@@ -210,7 +210,7 @@ export async function createMcpTestRegistry(): Promise<McpRegistry> {
   // rather than off addons.bridge's own instance, so the harness has to supply
   // one — against the same test DB, which is what makes the `when:` gates
   // answer truthfully here instead of against the process-wide singleton.
-  const addonsService = new AddonsService(dbService);
+  const addonsService = await createTestAddonsService(dbService.connection, dbService);
   // The two photo providers, shared by MemoriesMcp (which browses them) and by
   // the capture backfill JourneyMcp schedules after a provider photo is attached
   // (which asks them when and where it was taken). Built for real rather than
@@ -222,8 +222,8 @@ export async function createMcpTestRegistry(): Promise<McpRegistry> {
   const captureBackfill = new PhotoCaptureBackfillService(new PhotoResolverService(trekPhotos, new ThumbnailService(addonsService, generalStorage, dbService), new TrekPhotoCacheService(dbService, generalStorage), new PhotoProviderRegistry([new ImmichPhotoProvider(immichService), new SynologyPhotoProvider(synologyService)]), generalStorage), trekPhotos, generalStorage);
   return createTestRegistry(
     [
-      new TagsMcp(new TagsService(dbService), authService),
-      new CategoriesMcp(new CategoriesService(dbService), dbService, new RuntimeEnvService(), guards),
+      new TagsMcp(new TagsService(await createTestTagsRepo(dbService.connection)), authService),
+      new CategoriesMcp(new CategoriesService(await createTestCategoriesRepo(dbService.connection)), dbService, new RuntimeEnvService(), guards),
       // The weather and airport tools left the legacy mapsWeather registrar.
       new WeatherMcp(new WeatherService()),
       new AirportsMcp(),

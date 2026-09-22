@@ -1,16 +1,24 @@
 import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@mikro-orm/nestjs';
 import { ADDON_IDS } from '../../addons';
 import { DatabaseService } from '../database/database.service';
-import type { Addon } from '../../types';
 import { getPhotoProviderConfig } from '../memories/memories.helpers';
 import { readTransitProvider, writeTransitProvider } from '../transit/transit-provider';
 import { resolveApiKey, type ApiKeySource } from '../settings/instance-api-keys';
 import { readEnv } from '../../app-config';
 import type { TransitProvider } from '@trek/shared';
+import { Addons } from '../../db/entities/Addons.entity';
+import type { AddonsRepository } from '../../db/repositories/Addons.repository';
+import { PhotoProviders } from '../../db/entities/PhotoProviders.entity';
+import type { PhotoProvidersRepository, PhotoProviderRow } from '../../db/repositories/PhotoProviders.repository';
+import { PhotoProviderFields } from '../../db/entities/PhotoProviderFields.entity';
+import type { PhotoProviderFieldsRepository, PhotoProviderFieldRow } from '../../db/repositories/PhotoProviderFields.repository';
+import { AppSettings } from '../../db/entities/AppSettings.entity';
+import type { AppSettingsRepository } from '../../db/repositories/AppSettings.repository';
 
 /**
  * Thin wrapper around the enabled-addons + photo-provider read that the legacy
- * inline `GET /api/addons` handler performed (server/src/app.ts). The SQL,
+ * inline `GET /api/addons` handler performed (server/src/app.ts). The
  * ordering, boolean coercions and the merged photo-provider entries are
  * reproduced 1:1 so the body is byte-identical for the client.
  *
@@ -19,54 +27,77 @@ import type { TransitProvider } from '@trek/shared';
  * bag-tracking and collab-features flags. The boolean polarities differ on
  * purpose — bag tracking is opt-in (`=== 'true'`, default OFF), the collab
  * sub-features are opt-out (`!== 'false'`, default ON). Reads are uncached
- * per-call queries so admin toggles stay immediately visible.
+ * per-call repository calls so admin toggles stay immediately visible.
+ *
+ * `DatabaseService` stays injected (Plan 3a Task 4) purely as a passthrough
+ * for two cross-domain functions this service still calls: `transit-provider.ts`'s
+ * readTransitProvider/writeTransitProvider (nest/transit, not one of this
+ * plan's six domains) and `instance-api-keys.ts`'s resolveApiKey (nest/settings,
+ * Task 5's own conversion). Neither reads/writes through `this.db` in THIS
+ * file — every `app_settings`/`addons`/`photo_providers`/`photo_provider_fields`
+ * site this service itself used to touch is repository-backed below — so this
+ * is the same kind of carve-out `permissions`' two guard delegations are: `grep
+ * DatabaseService src/nest/addons` still finds this constructor parameter and
+ * its import, not a raw query.
  */
 @Injectable()
 export class AddonsService {
-  constructor(private readonly dbs: DatabaseService) {}
-
-  private get db() {
-    return this.dbs.connection;
-  }
+  constructor(
+    @InjectRepository(Addons) private readonly addons: AddonsRepository,
+    @InjectRepository(PhotoProviders) private readonly photoProviders: PhotoProvidersRepository,
+    @InjectRepository(PhotoProviderFields) private readonly photoProviderFields: PhotoProviderFieldsRepository,
+    @InjectRepository(AppSettings) private readonly appSettings: AppSettingsRepository,
+    private readonly dbs: DatabaseService,
+  ) {}
 
   async isAddonEnabled(addonId: string): Promise<boolean> {
-    const addon = this.db.prepare('SELECT enabled FROM addons WHERE id = ?').get(addonId) as
-      | { enabled: number }
-      | undefined;
-    return !!addon?.enabled;
+    return this.addons.isEnabled(addonId);
   }
 
   async getBagTracking() {
-    const row = this.db.prepare("SELECT value FROM app_settings WHERE key = 'bag_tracking_enabled'").get() as
-      | { value: string }
-      | undefined;
-    return { enabled: row?.value === 'true' };
+    const value = await this.appSettings.getValue('bag_tracking_enabled');
+    return { enabled: value === 'true' };
   }
 
   async updateBagTracking(enabled: boolean) {
-    this.db.prepare("INSERT OR REPLACE INTO app_settings (key, value) VALUES ('bag_tracking_enabled', ?)").run(
-      enabled ? 'true' : 'false',
-    );
+    await this.appSettings.setValue('bag_tracking_enabled', enabled ? 'true' : 'false');
     return { enabled: !!enabled };
   }
 
+  /**
+   * `AppSettingsRepository.getValues` drops a key from the returned `Map`
+   * both when no row exists AND when the row's `value` is `NULL` (Task 0
+   * concern #4) — this method's polarity (`!== 'false'`, fail-open) makes
+   * that safe: a dropped key reads `map.get(key) === undefined`, and
+   * `undefined !== 'false'` is `true`, the exact same outcome the legacy
+   * `Record<string,string>` produced for a `NULL` value (`null !== 'false'`
+   * is also `true`). Confirmed, not assumed — see the repository test
+   * ADDONSREPO/APPSETREPO parity note and this service's own test file.
+   */
   async getCollabFeatures() {
-    const rows = this.db
-      .prepare(
-        "SELECT key, value FROM app_settings WHERE key IN ('collab_chat_enabled', 'collab_notes_enabled', 'collab_links_enabled', 'collab_polls_enabled', 'collab_whatsnext_enabled')",
-      )
-      .all() as { key: string; value: string }[];
-    const map: Record<string, string> = {};
-    for (const r of rows) map[r.key] = r.value;
+    const map = await this.appSettings.getValues([
+      'collab_chat_enabled',
+      'collab_notes_enabled',
+      'collab_links_enabled',
+      'collab_polls_enabled',
+      'collab_whatsnext_enabled',
+    ]);
     return {
-      chat: map['collab_chat_enabled'] !== 'false',
-      notes: map['collab_notes_enabled'] !== 'false',
-      links: map['collab_links_enabled'] !== 'false',
-      polls: map['collab_polls_enabled'] !== 'false',
-      whatsnext: map['collab_whatsnext_enabled'] !== 'false',
+      chat: map.get('collab_chat_enabled') !== 'false',
+      notes: map.get('collab_notes_enabled') !== 'false',
+      links: map.get('collab_links_enabled') !== 'false',
+      polls: map.get('collab_polls_enabled') !== 'false',
+      whatsnext: map.get('collab_whatsnext_enabled') !== 'false',
     };
   }
 
+  /**
+   * Ruling (plan §"Do not fix legacy behaviour"): the legacy handler wrote up
+   * to 5 `app_settings` rows one at a time, with no transaction around them —
+   * this stays exactly that way. `AppSettingsRepository.setValue` imposes no
+   * transaction of its own (Task 0 concern #5), so the loop below is still 0
+   * to 5 independent, individually-committed upserts.
+   */
   async updateCollabFeatures(features: { chat?: boolean; notes?: boolean; links?: boolean; polls?: boolean; whatsnext?: boolean }) {
     const mapping: Record<string, string> = {
       chat: 'collab_chat_enabled',
@@ -76,9 +107,9 @@ export class AddonsService {
       whatsnext: 'collab_whatsnext_enabled',
     };
     const before = await this.getCollabFeatures();
-    const stmt = this.db.prepare('INSERT OR REPLACE INTO app_settings (key, value) VALUES (?, ?)');
     for (const [feat, key] of Object.entries(mapping)) {
-      if (features[feat] !== undefined) stmt.run(key, features[feat] ? 'true' : 'false');
+      const value = features[feat as keyof typeof features];
+      if (value !== undefined) await this.appSettings.setValue(key, value ? 'true' : 'false');
     }
     const after = await this.getCollabFeatures();
     // Collab flags gate MCP tool/resource registration, so callers must know
@@ -89,46 +120,19 @@ export class AddonsService {
   }
 
   async list() {
-    const addons = this.db
-      .prepare('SELECT id, name, type, icon, enabled FROM addons WHERE enabled = 1 ORDER BY sort_order')
-      .all() as Pick<Addon, 'id' | 'name' | 'type' | 'icon' | 'enabled'>[];
+    const addonRows = await this.addons.listEnabled();
     // Photo providers surface only inside journeys, so with the journey addon
     // off they are unavailable no matter what their own rows say. Deriving that
     // here (instead of a migration) also covers installs that still hold an
     // enabled provider under a disabled journey from before updateAddon
     // cascaded the disable.
-    const providers = !(await this.isAddonEnabled(ADDON_IDS.JOURNEY))
+    const providerRows: PhotoProviderRow[] = !(await this.isAddonEnabled(ADDON_IDS.JOURNEY))
       ? []
-      : (this.db
-          .prepare(
-            `SELECT id, name, icon, enabled, sort_order
-             FROM photo_providers
-             WHERE enabled = 1
-             ORDER BY sort_order, id`,
-          )
-          .all() as Array<{ id: string; name: string; icon: string; enabled: number; sort_order: number }>);
-    const fields = this.db
-      .prepare(
-        `SELECT provider_id, field_key, label, input_type, placeholder, hint, required, secret, settings_key, payload_key, sort_order
-         FROM photo_provider_fields
-         ORDER BY sort_order, id`,
-      )
-      .all() as Array<{
-      provider_id: string;
-      field_key: string;
-      label: string;
-      input_type: string;
-      placeholder?: string | null;
-      hint?: string | null;
-      required: number;
-      secret: number;
-      settings_key?: string | null;
-      payload_key?: string | null;
-      sort_order: number;
-    }>;
+      : await this.photoProviders.listEnabled();
+    const fieldRows: PhotoProviderFieldRow[] = await this.photoProviderFields.listAllOrdered();
 
-    const fieldsByProvider = new Map<string, typeof fields>();
-    for (const field of fields) {
+    const fieldsByProvider = new Map<string, PhotoProviderFieldRow[]>();
+    for (const field of fieldRows) {
       const arr = fieldsByProvider.get(field.provider_id) || [];
       arr.push(field);
       fieldsByProvider.set(field.provider_id, arr);
@@ -138,15 +142,19 @@ export class AddonsService {
       collabFeatures: await this.getCollabFeatures(),
       bagTracking: (await this.getBagTracking()).enabled,
       addons: [
-        ...addons.map((a) => ({ ...a, enabled: !!a.enabled })),
-        ...providers.map((p) => ({
+        // The repository row carries every scalar column (description, config,
+        // sort_order included); the legacy statement selected only these five,
+        // so the client-facing shape is picked explicitly here rather than
+        // spread from the row.
+        ...addonRows.map((a) => ({ id: a.id, name: a.name, type: a.type, icon: a.icon, enabled: !!a.enabled })),
+        ...providerRows.map((p) => ({
           id: p.id,
           name: p.name,
           type: 'photo_provider',
           icon: p.icon,
           enabled: !!p.enabled,
-          config: getPhotoProviderConfig(p.id),
-          fields: (fieldsByProvider.get(p.id) || []).map((f) => ({
+          config: getPhotoProviderConfig(p.id ?? ''),
+          fields: (fieldsByProvider.get(p.id ?? '') || []).map((f) => ({
             key: f.field_key,
             label: f.label,
             input_type: f.input_type,
@@ -172,12 +180,12 @@ export class AddonsService {
   // loses a feature on upgrade.
 
   private async readFlag(key: string) {
-    const row = this.db.prepare('SELECT value FROM app_settings WHERE key = ?').get(key) as { value: string } | undefined;
-    return { enabled: row?.value === 'true' };
+    const value = await this.appSettings.getValue(key);
+    return { enabled: value === 'true' };
   }
 
   private async writeFlag(key: string, enabled: boolean) {
-    this.db.prepare('INSERT OR REPLACE INTO app_settings (key, value) VALUES (?, ?)').run(key, enabled ? 'true' : 'false');
+    await this.appSettings.setValue(key, enabled ? 'true' : 'false');
     return { enabled: !!enabled };
   }
 
@@ -212,10 +220,8 @@ export class AddonsService {
    * "off" while the feature runs, which is worse than either default.
    */
   async getPlacesEnrich() {
-    const row = this.db.prepare("SELECT value FROM app_settings WHERE key = 'places_enrich_enabled'").get() as
-      | { value: string }
-      | undefined;
-    return { enabled: row?.value !== 'false' };
+    const value = await this.appSettings.getValue('places_enrich_enabled');
+    return { enabled: value !== 'false' };
   }
 
   async updatePlacesEnrich(enabled: boolean) { return this.writeFlag('places_enrich_enabled', enabled); }
@@ -224,7 +230,10 @@ export class AddonsService {
   // Not a flag: two named backends, so it stores the name rather than a
   // boolean. The read/write pair lives in transit/transit-provider.ts because
   // TransitService reads the same row on every request — one key, one reader,
-  // one writer.
+  // one writer. Neither that module nor instance-api-keys.ts (below) is one of
+  // this plan's six domains, so they stay on DatabaseService until their own
+  // conversion (transit is outside Plan 3a entirely; instance-api-keys.ts is
+  // Task 5's).
 
   /**
    * Where the Google key would come from for this caller, or null if nowhere.

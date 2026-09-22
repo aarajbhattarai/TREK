@@ -43,7 +43,7 @@ import { runMigrations } from '../../../src/db/migrations';
 import { resetTestDb, setAddonEnabled } from '../../helpers/test-db';
 import { createUser, createTrip } from '../../helpers/factories';
 import { ADDON_IDS } from '../../../src/addons';
-import { AddonsService } from '../../../src/nest/addons/addons.service';
+import { createTestAddonsService } from '../../helpers/test-addons';
 import { UnifiedMemoriesService } from '../../../src/nest/memories/unified-memories.service';
 import { MemoriesAccessService } from '../../../src/nest/memories/memories-access.service';
 import { TrekPhotosRepository } from '../../../src/nest/photos/trek-photos.repository';
@@ -81,7 +81,7 @@ beforeAll(async () => {
     {} as SynologyService,
     new MemoriesAccessService(dbs),
     notificationsStub(),
-    new AddonsService(dbs),
+    await createTestAddonsService(testDb, dbs),
     await createTestUnitOfWork(testDb),
   );
 });

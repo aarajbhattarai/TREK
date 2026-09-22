@@ -30,7 +30,8 @@ import { PluginsController } from '../../../src/nest/plugins/plugins.controller'
 import { PluginConsentRequired, type PluginRuntimeService } from '../../../src/nest/plugins/plugin-runtime.service';
 import type { PluginRegistryService } from '../../../src/nest/plugins/registry/registry.service';
 import type { RuntimeEnvService } from '../../../src/nest/app-config/runtime-env.service';
-import { AddonsService } from '../../../src/nest/addons/addons.service';
+import type { AddonsService } from '../../../src/nest/addons/addons.service';
+import { createTestAddonsService } from '../../helpers/test-addons';
 import { createPluginRuntime } from '../../helpers/plugin-host';
 import { discoverPlugins } from '../../../src/nest/plugins/install/discovery';
 
@@ -52,10 +53,8 @@ function declareField(pluginId: string, key: string, scope: 'instance' | 'user',
     .run(pluginId, key, key, opts.required ? 1 : 0, opts.secret ? 1 : 0, scope, opts.options ?? null, opts.sortOrder ?? 0);
 }
 
-const svc = () => {
-  const dbs = new DatabaseService(dbConn);
-  return new PluginsService(dbs, new AddonsService(dbs));
-};
+let addonsService: AddonsService;
+const svc = () => new PluginsService(new DatabaseService(dbConn), addonsService);
 
 /**
  * Installs a real plugin through the manifest -> discovery pipeline (not a direct
@@ -74,9 +73,10 @@ async function installFixturePlugin(opts: { settings: Array<Record<string, unkno
   await discoverPlugins(testDb);
 }
 
-beforeAll(() => {
+beforeAll(async () => {
   createTables(testDb);
   runMigrations(testDb);
+  addonsService = await createTestAddonsService(testDb, new DatabaseService(dbConn));
 });
 beforeEach(() => {
   testDb.prepare('DELETE FROM plugins').run();

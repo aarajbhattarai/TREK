@@ -34,6 +34,7 @@ import { SystemNoticesModule } from '../../src/nest/system-notices/system-notice
 import { DatabaseModule } from '../../src/nest/database/database.module';
 import { TrekExceptionFilter } from '../../src/nest/common/trek-exception.filter';
 import { TestUnitOfWorkModule } from '../helpers/test-uow';
+import { createTestMikroOrmModule } from '../helpers/test-orm';
 
 const notice = {
   id: 'welcome', display: 'modal', severity: 'info',
@@ -47,8 +48,10 @@ describe('System-notices e2e (real auth guard + temp SQLite)', () => {
   async function build() {
     // DatabaseModule is @Global in the real app; a partial graph has to
     // provide it for SystemNoticesModule's AddonsModule import (the
-    // addons.e2e precedent).
-    const moduleRef = await Test.createTestingModule({ imports: [await TestUnitOfWorkModule.forRoot(db), DatabaseModule, SystemNoticesModule] }).compile();
+    // addons.e2e precedent). createTestMikroOrmModule for the same import's
+    // MikroOrmModule.forFeature (Plan 3a Task 4) — no case here calls an
+    // AddonsService method, so the minimal `users`-only schema above is enough.
+    const moduleRef = await Test.createTestingModule({ imports: [await TestUnitOfWorkModule.forRoot(db), await createTestMikroOrmModule(db), DatabaseModule, SystemNoticesModule] }).compile();
     const nest = moduleRef.createNestApplication();
     nest.use(cookieParser());
     nest.useGlobalFilters(new TrekExceptionFilter());

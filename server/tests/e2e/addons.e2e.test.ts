@@ -20,8 +20,13 @@ const { db } = vi.hoisted(() => {
   tmp.exec('PRAGMA journal_mode = WAL');
   tmp.exec(`CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT NOT NULL,
     email TEXT NOT NULL UNIQUE, role TEXT NOT NULL DEFAULT 'user', password_version INTEGER NOT NULL DEFAULT 0);`);
-  tmp.exec(`CREATE TABLE addons (id TEXT PRIMARY KEY, name TEXT, type TEXT, icon TEXT, enabled INTEGER, sort_order INTEGER);`);
-  tmp.exec(`CREATE TABLE photo_providers (id TEXT PRIMARY KEY, name TEXT, icon TEXT, enabled INTEGER, sort_order INTEGER);`);
+  // description/config (addons) and description (photo_providers) are absent
+  // from the legacy SELECTs this suite exercises, but the Addons/PhotoProviders
+  // entities declare them as columns (Plan 3a Task 4) — MikroORM's generated
+  // SELECT names every scalar column, so they must exist on this hand-rolled
+  // schema even though no test here reads them off addons/photo_providers rows.
+  tmp.exec(`CREATE TABLE addons (id TEXT PRIMARY KEY, name TEXT, description TEXT, type TEXT, icon TEXT, enabled INTEGER, config TEXT DEFAULT '{}', sort_order INTEGER);`);
+  tmp.exec(`CREATE TABLE photo_providers (id TEXT PRIMARY KEY, name TEXT, description TEXT, icon TEXT, enabled INTEGER, sort_order INTEGER);`);
   tmp.exec(`CREATE TABLE photo_provider_fields (id INTEGER PRIMARY KEY AUTOINCREMENT, provider_id TEXT, field_key TEXT,
     label TEXT, input_type TEXT, placeholder TEXT, hint TEXT, required INTEGER, secret INTEGER,
     settings_key TEXT, payload_key TEXT, sort_order INTEGER);`);
@@ -41,13 +46,14 @@ vi.mock('../../src/nest/memories/memories.helpers', () => ({ getPhotoProviderCon
 import { AddonsModule } from '../../src/nest/addons/addons.module';
 import { TrekExceptionFilter } from '../../src/nest/common/trek-exception.filter';
 import { TestUnitOfWorkModule } from '../helpers/test-uow';
+import { createTestMikroOrmModule } from '../helpers/test-orm';
 
 describe('GET /api/addons e2e (real auth guard + temp SQLite)', () => {
   let server: Server;
   let app: Awaited<ReturnType<typeof build>>;
 
   async function build() {
-    const moduleRef = await Test.createTestingModule({ imports: [await TestUnitOfWorkModule.forRoot(db), DatabaseModule, AddonsModule] }).compile();
+    const moduleRef = await Test.createTestingModule({ imports: [await TestUnitOfWorkModule.forRoot(db), await createTestMikroOrmModule(db), DatabaseModule, AddonsModule] }).compile();
     const nest = moduleRef.createNestApplication();
     nest.use(cookieParser());
     nest.useGlobalFilters(new TrekExceptionFilter());

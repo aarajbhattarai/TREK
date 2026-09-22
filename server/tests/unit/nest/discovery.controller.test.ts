@@ -28,6 +28,7 @@ import { DiscoveryController } from '../../../src/nest/platform/discovery.contro
 import { PlatformModule } from '../../../src/nest/platform/platform.module';
 import { ALL_SCOPES } from '../../../src/mcp/scopes';
 import type { AddonsService } from '../../../src/nest/addons/addons.service';
+import type { MikroORM } from '@mikro-orm/core';
 
 function makeRes() {
   const res = {
@@ -45,6 +46,19 @@ function makeRes() {
 
 function addons(enabled: boolean) {
   return { isAddonEnabled: vi.fn(() => enabled) } as unknown as AddonsService;
+}
+
+/**
+ * createMcpMetadataMiddleware wraps the addon check in withRequestContext
+ * (Plan 3a Task 4: this pathless pre-init mount runs before
+ * @mikro-orm/nestjs's per-request EM fork, so once isAddonEnabled became
+ * repository-backed it needed its own context). The mocked AddonsService
+ * above never touches the ORM, so this fake only needs to satisfy
+ * RequestContext.create's em.fork()/em.name contract.
+ */
+function fakeOrm(): MikroORM {
+  const em = { name: 'default', fork: () => ({ name: 'default' }) };
+  return { em } as unknown as MikroORM;
 }
 
 beforeEach(() => {
@@ -105,7 +119,7 @@ async function flushMicrotasks(): Promise<void> {
 
 describe('createMcpMetadataMiddleware', () => {
   it('DISC-010: 404s a /.well-known path with an empty body when MCP is disabled', async () => {
-    const mw = createMcpMetadataMiddleware(new DiscoveryMetadataService(), addons(false));
+    const mw = createMcpMetadataMiddleware(new DiscoveryMetadataService(), addons(false), fakeOrm());
     const res = makeRes();
     const next = vi.fn();
     mw({ path: '/.well-known/oauth-authorization-server' } as never, res as never, next);
@@ -117,7 +131,7 @@ describe('createMcpMetadataMiddleware', () => {
   });
 
   it('DISC-011: delegates a /.well-known path to the SDK router when MCP is enabled', async () => {
-    const mw = createMcpMetadataMiddleware(new DiscoveryMetadataService(), addons(true));
+    const mw = createMcpMetadataMiddleware(new DiscoveryMetadataService(), addons(true), fakeOrm());
     const next = vi.fn();
     mw({ path: '/.well-known/oauth-authorization-server' } as never, makeRes() as never, next);
     await flushMicrotasks();
@@ -126,16 +140,16 @@ describe('createMcpMetadataMiddleware', () => {
 
   it('DISC-012: delegates non-well-known paths without consulting the addon gate', () => {
     const gate = addons(false);
-    const mw = createMcpMetadataMiddleware(new DiscoveryMetadataService(), gate);
+    const mw = createMcpMetadataMiddleware(new DiscoveryMetadataService(), gate, fakeOrm());
     mw({ path: '/api/trips' } as never, makeRes() as never, vi.fn());
     expect(gate.isAddonEnabled).not.toHaveBeenCalled();
     expect(h.metaRouter).toHaveBeenCalled();
   });
 
-  it('DISC-013: the factory provider wires the token to the factory with its two deps', () => {
+  it('DISC-013: the factory provider wires the token to the factory with its three deps (MikroORM added — Plan 3a Task 4)', () => {
     expect(mcpMetadataMiddlewareProvider.provide).toBe(MCP_METADATA_MIDDLEWARE);
     expect(mcpMetadataMiddlewareProvider.useFactory).toBe(createMcpMetadataMiddleware);
-    expect(mcpMetadataMiddlewareProvider.inject.length).toBe(2);
+    expect(mcpMetadataMiddlewareProvider.inject.length).toBe(3);
   });
 });
 

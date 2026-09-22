@@ -35,7 +35,7 @@ import { AtlasService } from '../../src/nest/atlas/atlas.service';
 import { MapsService } from '../../src/nest/maps/maps.service';
 import { PermissionsService } from '../../src/nest/permissions/permissions.service';
 import { AuditService } from '../../src/nest/audit/audit.service';
-import { AddonsService } from '../../src/nest/addons/addons.service';
+import { createTestAddonsService } from './test-addons';
 import { RealtimeService } from '../../src/nest/realtime/realtime.service';
 import { QueryHelpersService } from '../../src/nest/query-helpers/query-helpers.service';
 import { TripMembershipService } from '../../src/nest/trip-membership/trip-membership.service';
@@ -72,7 +72,7 @@ import { PlacePhotoCacheService } from '../../src/nest/place-photos/place-photo-
 import { TrekPhotosRepository } from '../../src/nest/photos/trek-photos.repository';
 import { RuntimeEnvService } from '../../src/nest/app-config/runtime-env.service';
 import { makeStorageFixture } from './storage-fixture';
-import { createTestUnitOfWork, createTestAppSettingsRepo, sharedTestOrm } from './test-uow';
+import { createTestUnitOfWork, createTestAppSettingsRepo, createTestCategoriesRepo, createTestTagsRepo, sharedTestOrm } from './test-uow';
 import { createTestOrm } from './test-orm';
 import { AppSettings } from '../../src/db/entities/AppSettings.entity';
 import type { AppSettingsRepository } from '../../src/db/repositories/AppSettings.repository';
@@ -98,7 +98,7 @@ export async function createPluginRpcHostFactory(dbs: DatabaseService): Promise<
   const exchangeRates = new ExchangeRatesService();
   const realtime = new RealtimeService();
   const budget = new BudgetService(dbs, permissions, exchangeRates, realtime, await createTestUnitOfWork(dbs.connection));
-  const addons = new AddonsService(dbs);
+  const addons = await createTestAddonsService(dbs.connection, dbs);
   const queryHelpers = new QueryHelpersService(dbs);
   const todos = new TodoService(dbs, permissions, realtime, await createTestUnitOfWork(dbs.connection));
   const packing = new PackingService(dbs, permissions, realtime, notificationsStub(), await createTestUnitOfWork(dbs.connection));
@@ -127,8 +127,8 @@ export async function createPluginRpcHostFactory(dbs: DatabaseService): Promise<
   const guards = new PluginGuards(dbs, permissions, addons);
 
   const registry = createTestPluginRegistry([
-    new TagsRpc(new TagsService(dbs)),
-    new CategoriesRpc(new CategoriesService(dbs)),
+    new TagsRpc(new TagsService(await createTestTagsRepo(dbs.connection))),
+    new CategoriesRpc(new CategoriesService(await createTestCategoriesRepo(dbs.connection))),
     new WeatherRpc(new WeatherService()),
     new ExchangeRatesRpc(exchangeRates),
     new TodoRpc(todos, realtime, guards),
@@ -170,7 +170,7 @@ export async function createPluginRuntime(dbs: DatabaseService, registry?: Plugi
   return new PluginRuntimeService(
     dbs,
     new AuditService(auditOrm.repo(AuditLog) as AuditLogRepository, auditOrm.repo(Users) as UsersRepository),
-    new AddonsService(dbs),
+    await createTestAddonsService(dbs.connection, dbs),
     new PluginUserSettingsService(dbs),
     registry,
     await createPluginRpcHostFactory(dbs),

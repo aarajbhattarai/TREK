@@ -38,7 +38,7 @@ import type { McpDynamicTool } from '../../src/nest-mcp';
 import { getMcpSafeUrl } from '../../src/app-config';
 import { OauthService } from '../../src/nest/oauth/oauth.service';
 import { DatabaseService } from '../../src/nest/database/database.service';
-import { AddonsService } from '../../src/nest/addons/addons.service';
+import { createTestAddonsService } from '../helpers/test-addons';
 import { AuditService } from '../../src/nest/audit/audit.service';
 import { createTestOrm, type TestOrm } from '../helpers/test-orm';
 import { AuditLog } from '../../src/db/entities/AuditLog.entity';
@@ -76,7 +76,7 @@ beforeAll(async () => {
   nestApp = await buildApp();
   app = nestApp.getHttpAdapter().getInstance();
   t = await createTestOrm(testDb);
-  oauthSvc = new OauthService(oauthDbs, new AddonsService(oauthDbs), new AuditService(t.repo(AuditLog) as AuditLogRepository, t.repo(Users) as UsersRepository));
+  oauthSvc = new OauthService(oauthDbs, await createTestAddonsService(testDb, oauthDbs), new AuditService(t.repo(AuditLog) as AuditLogRepository, t.repo(Users) as UsersRepository));
 });
 
 beforeEach(() => {

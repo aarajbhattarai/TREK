@@ -52,7 +52,7 @@ vi.mock('../../../src/websocket', () => ({ broadcast: vi.fn(), broadcastToUser: 
 import { db as dbConn } from '../../../src/db/database';
 import { DatabaseService } from '../../../src/nest/database/database.service';
 import { AuditService } from '../../../src/nest/audit/audit.service';
-import { AddonsService } from '../../../src/nest/addons/addons.service';
+import { createTestAddonsService } from '../../helpers/test-addons';
 import { PluginRuntimeService } from '../../../src/nest/plugins/plugin-runtime.service';
 import { PluginUserSettingsService } from '../../../src/nest/plugins/plugin-user-settings.service';
 import { PluginRpcHostFactory } from '../../../src/nest/plugins/host/plugin-rpc-host.factory';
@@ -114,6 +114,7 @@ describe('plugin boot vs registry scan ordering', () => {
     t = await createTestOrm(dbConn);
     const auditLogRepo = t.repo(AuditLog) as AuditLogRepository;
     const usersRepo = t.repo(Users) as UsersRepository;
+    const addonsService = await createTestAddonsService(dbConn, dbs);
 
     mod = await Test.createTestingModule({
       providers: [
@@ -122,7 +123,7 @@ describe('plugin boot vs registry scan ordering', () => {
         // (if it had one) first. The boot reconcile must therefore not live there.
         {
           provide: PluginRuntimeService,
-          useFactory: () => new PluginRuntimeService(dbs, new AuditService(auditLogRepo, usersRepo), new AddonsService(dbs), userSettings, undefined, hostFactory),
+          useFactory: () => new PluginRuntimeService(dbs, new AuditService(auditLogRepo, usersRepo), addonsService, userSettings, undefined, hostFactory),
         },
         {
           provide: 'REGISTRY_SCAN',

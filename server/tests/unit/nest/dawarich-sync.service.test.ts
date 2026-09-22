@@ -45,7 +45,8 @@ import { runMigrations } from '../../../src/db/migrations';
 import { resetTestDb, setAddonEnabled } from '../../helpers/test-db';
 import { createUser, createTrip } from '../../helpers/factories';
 import { DatabaseService } from '../../../src/nest/database/database.service';
-import { AddonsService } from '../../../src/nest/addons/addons.service';
+import type { AddonsService } from '../../../src/nest/addons/addons.service';
+import { createTestAddonsService } from '../../helpers/test-addons';
 import { DawarichSyncService } from '../../../src/nest/integrations/dawarich-sync.service';
 import { createTestUnitOfWork } from '../../helpers/test-uow';
 import { DawarichError } from '../../../src/nest/integrations/dawarich.client';
@@ -112,7 +113,7 @@ const dawarich = {
 // Direct construction over the shared test connection — no TestingModule
 // (repo convention for DI-native service unit tests).
 const dbs = new DatabaseService(testDb);
-const addons = new AddonsService(dbs);
+let addons: AddonsService;
 let svc: DawarichSyncService;
 
 // ── Fixtures ─────────────────────────────────────────────────────────────────
@@ -226,6 +227,7 @@ function withVisits(...visits: DawarichVisitRaw[]): void {
 beforeAll(async () => {
   createTables(testDb);
   runMigrations(testDb);
+  addons = await createTestAddonsService(testDb, dbs);
   svc = new DawarichSyncService(dbs, addons, client, dawarich, await createTestUnitOfWork(dbs.connection));
 });
 

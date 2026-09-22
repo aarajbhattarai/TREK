@@ -60,7 +60,7 @@ import { resetTestDb } from '../../helpers/test-db';
 import { createUser, createUserWithMfa, createAdmin, createInviteToken } from '../../helpers/factories';
 import { DatabaseService } from '../../../src/nest/database/database.service';
 import { RealtimeService } from '../../../src/nest/realtime/realtime.service';
-import { AddonsService } from '../../../src/nest/addons/addons.service';
+import { createTestAddonsService } from '../../helpers/test-addons';
 import { SettingsService } from '../../../src/nest/settings/settings.service';
 import { AtlasService } from '../../../src/nest/atlas/atlas.service';
 import { TripMembershipService } from '../../../src/nest/trip-membership/trip-membership.service';
@@ -104,7 +104,7 @@ beforeAll(async () => {
   auth = new AuthService(dbs, permissions, new TripMembershipService(dbs), webauthn, userCleanup, new MailerService(dbs), new EphemeralTokenService(), new AllowedFileTypesService(dbs), await createTestUnitOfWork(dbs.connection));
   svc = new AdminService(
   dbs,
-  new AddonsService(dbs),
+  await createTestAddonsService(testDb, dbs),
   new PasskeyService(dbs, auth, webauthn, await createTestUnitOfWork(dbs.connection)),
   auth,
   permissions,

@@ -1,7 +1,9 @@
 import type { RequestHandler } from 'express';
+import { MikroORM } from '@mikro-orm/core';
 import { DiscoveryMetadataService } from './discovery-metadata.service';
 import { AddonsService } from '../addons/addons.service';
 import { ADDON_IDS } from '../../addons';
+import { withRequestContext } from '../database/request-context';
 
 /**
  * The SDK discovery router plus its addon gate: 404 (empty body) on every
@@ -16,29 +18,42 @@ import { ADDON_IDS } from '../../addons';
  * from the container by token (the httpConfig.KEY precedent). A factory
  * provider rather than a NestMiddleware class because nothing consumer-mounts
  * it: the deliverable is the bare Express RequestHandler itself.
+ *
+ * D6 boot rule (Plan 3a Task 4): a pathless pre-init `app.use` runs on the raw
+ * Express instance, before `@mikro-orm/nestjs`'s per-request EntityManager
+ * fork middleware — unlike `createMcpAddonGate`'s OTHER mount in
+ * `oauth.module.ts`, which goes through a normal `MiddlewareConsumer.forRoutes()`
+ * and so is already inside that fork. Once `AddonsService.isAddonEnabled`
+ * became repository-backed, a request here threw MikroORM's
+ * `cannotUseGlobalContext` (proven: every `/.well-known/*` integration test
+ * failed with a 500 until this wrap). `withRequestContext` is this file's own
+ * choke point — every request through this middleware, gated or not, gets a
+ * context the same way the boot-time `getAdminUserDefaults()` read in
+ * `bootstrap.ts` already does.
  */
 export const MCP_METADATA_MIDDLEWARE = Symbol('MCP_METADATA_MIDDLEWARE');
 
 export function createMcpMetadataMiddleware(
   meta: DiscoveryMetadataService,
   addons: AddonsService,
+  orm: MikroORM,
 ): RequestHandler {
   // Express cannot await a middleware, so the now-async addon check runs in a
   // helper and its rejection is handed to next() — the same error path a
   // synchronous throw took before (recipe R1.5).
   return (req, res, next) => {
-    void (async () => {
+    void withRequestContext(orm, async () => {
       if (req.path.startsWith('/.well-known/') && !(await addons.isAddonEnabled(ADDON_IDS.MCP))) {
         res.status(404).end();
         return;
       }
       meta.getMetaRouter()(req, res, next);
-    })().catch(next);
+    }).catch(next);
   };
 }
 
 export const mcpMetadataMiddlewareProvider = {
   provide: MCP_METADATA_MIDDLEWARE,
   useFactory: createMcpMetadataMiddleware,
-  inject: [DiscoveryMetadataService, AddonsService],
+  inject: [DiscoveryMetadataService, AddonsService, MikroORM],
 };
