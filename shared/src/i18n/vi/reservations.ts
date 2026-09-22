@@ -11,7 +11,6 @@ const reservations: TranslationStrings = {
   'reservations.confirmed': 'Đã xác nhận',
   'reservations.pending': 'Chưa giải quyết',
   'reservations.summary': '{confirmed} đã xác nhận, {pending} đang chờ xử lý',
-  'reservations.fromPlan': 'Từ kế hoạch',
   'reservations.showFiles': 'Hiển thị tệp',
   'reservations.editTitle': 'Chỉnh sửa đặt chỗ',
   'reservations.status': 'Trạng thái',

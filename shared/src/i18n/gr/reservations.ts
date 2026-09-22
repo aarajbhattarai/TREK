@@ -11,7 +11,6 @@ const reservations: TranslationStrings = {
   'reservations.confirmed': 'Επιβεβαιωμένο',
   'reservations.pending': 'Εκκρεμές',
   'reservations.summary': '{confirmed} επιβεβαιωμένες, {pending} εκκρεμείς',
-  'reservations.fromPlan': 'Από το Πλάνο',
   'reservations.showFiles': 'Εμφάνιση Αρχείων',
   'reservations.editTitle': 'Επεξεργασία Κράτησης',
   'reservations.status': 'Κατάσταση',

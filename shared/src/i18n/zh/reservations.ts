@@ -10,7 +10,6 @@ const reservations: TranslationStrings = {
   'reservations.confirmed': '已确认',
   'reservations.pending': '待确认',
   'reservations.summary': '{confirmed} 已确认，{pending} 待确认',
-  'reservations.fromPlan': '来自计划',
   'reservations.showFiles': '查看文件',
   'reservations.editTitle': '编辑预订',
   'reservations.status': '状态',

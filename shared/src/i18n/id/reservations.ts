@@ -11,7 +11,6 @@ const reservations: TranslationStrings = {
   'reservations.confirmed': 'Dikonfirmasi',
   'reservations.pending': 'Tertunda',
   'reservations.summary': '{confirmed} dikonfirmasi, {pending} tertunda',
-  'reservations.fromPlan': 'Dari Rencana',
   'reservations.showFiles': 'Tampilkan File',
   'reservations.editTitle': 'Edit Reservasi',
   'reservations.status': 'Status',

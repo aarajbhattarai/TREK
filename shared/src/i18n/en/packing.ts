@@ -26,9 +26,6 @@ const packing: TranslationStrings = {
   'packing.progress': '{packed} of {total} packed ({percent}%)',
   'packing.clearChecked': 'Remove {count} checked',
   'packing.clearCheckedShort': 'Remove {count}',
-  'packing.suggestions': 'Suggestions',
-  'packing.suggestionsTitle': 'Add Suggestions',
-  'packing.allSuggested': 'All suggestions added',
   'packing.allPacked': 'All packed!',
   'packing.addPlaceholder': 'Add new item...',
   'packing.categoryPlaceholder': 'List...',
@@ -36,7 +33,6 @@ const packing: TranslationStrings = {
   'packing.filterOpen': 'Open',
   'packing.filterDone': 'Done',
   'packing.emptyTitle': 'Packing list is empty',
-  'packing.emptyHint': 'Add items or use the suggestions',
   'packing.emptyFiltered': 'No items match this filter',
   'packing.menuRename': 'Rename',
   'packing.menuCheckAll': 'Check All',
@@ -85,128 +81,6 @@ const packing: TranslationStrings = {
   'packing.toast.deleteError': 'Failed to delete',
   'packing.toast.renameError': 'Failed to rename',
   'packing.toast.addError': 'Failed to add',
-  'packing.suggestions.items': [
-    {
-      name: 'Passport',
-      category: 'Documents',
-    },
-    {
-      name: 'ID Card',
-      category: 'Documents',
-    },
-    {
-      name: 'Travel Insurance',
-      category: 'Documents',
-    },
-    {
-      name: 'Flight Tickets',
-      category: 'Documents',
-    },
-    {
-      name: 'Credit Card',
-      category: 'Finances',
-    },
-    {
-      name: 'Cash',
-      category: 'Finances',
-    },
-    {
-      name: 'Visa',
-      category: 'Documents',
-    },
-    {
-      name: 'T-Shirts',
-      category: 'Clothing',
-    },
-    {
-      name: 'Pants',
-      category: 'Clothing',
-    },
-    {
-      name: 'Underwear',
-      category: 'Clothing',
-    },
-    {
-      name: 'Socks',
-      category: 'Clothing',
-    },
-    {
-      name: 'Jacket',
-      category: 'Clothing',
-    },
-    {
-      name: 'Sleepwear',
-      category: 'Clothing',
-    },
-    {
-      name: 'Swimwear',
-      category: 'Clothing',
-    },
-    {
-      name: 'Rain Jacket',
-      category: 'Clothing',
-    },
-    {
-      name: 'Comfortable Shoes',
-      category: 'Clothing',
-    },
-    {
-      name: 'Toothbrush',
-      category: 'Toiletries',
-    },
-    {
-      name: 'Toothpaste',
-      category: 'Toiletries',
-    },
-    {
-      name: 'Shampoo',
-      category: 'Toiletries',
-    },
-    {
-      name: 'Deodorant',
-      category: 'Toiletries',
-    },
-    {
-      name: 'Sunscreen',
-      category: 'Toiletries',
-    },
-    {
-      name: 'Razor',
-      category: 'Toiletries',
-    },
-    {
-      name: 'Charger',
-      category: 'Electronics',
-    },
-    {
-      name: 'Power Bank',
-      category: 'Electronics',
-    },
-    {
-      name: 'Headphones',
-      category: 'Electronics',
-    },
-    {
-      name: 'Travel Adapter',
-      category: 'Electronics',
-    },
-    {
-      name: 'Camera',
-      category: 'Electronics',
-    },
-    {
-      name: 'Pain Medication',
-      category: 'Health',
-    },
-    {
-      name: 'Band-Aids',
-      category: 'Health',
-    },
-    {
-      name: 'Disinfectant',
-      category: 'Health',
-    },
-  ],
   'packing.bagLimit': 'Weight limit',
   'packing.setBagLimit': 'Set limit',
 };

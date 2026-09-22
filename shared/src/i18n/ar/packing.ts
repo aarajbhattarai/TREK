@@ -15,8 +15,9 @@ const packing: TranslationStrings = {
   'packing.import': 'استيراد',
   'packing.importTitle': 'استيراد قائمة التعبئة',
   'packing.importHint':
-    'عنصر واحد لكل سطر. يمكن إضافة الفئة والكمية مفصولة بفاصلة أو فاصلة منقوطة أو علامة تبويب: الاسم، الفئة، الكمية',
-  'packing.importPlaceholder': 'فرشاة أسنان\nواقي شمس، نظافة\nقمصان، ملابس، 5\nجواز سفر، مستندات',
+    'عنصر واحد لكل سطر. الصيغة: الفئة, الاسم, الوزن بالغرام (اختياري), الحقيبة (اختياري), checked/unchecked (اختياري)',
+  'packing.importPlaceholder':
+    'نظافة, فرشاة أسنان\nملابس, قمصان, 200\nمستندات, جواز سفر, , حقيبة يد\nإلكترونيات, شاحن, 50, حقيبة سفر, checked',
   'packing.importCsv': 'تحميل CSV/TXT',
   'packing.importAction': 'استيراد {count}',
   'packing.importSuccess': 'تم استيراد {count} عنصر',
@@ -25,9 +26,6 @@ const packing: TranslationStrings = {
   'packing.progress': '{packed} من {total} جُهّز ({percent}%)',
   'packing.clearChecked': 'إزالة {count} محدد',
   'packing.clearCheckedShort': 'إزالة {count}',
-  'packing.suggestions': 'اقتراحات',
-  'packing.suggestionsTitle': 'إضافة اقتراحات',
-  'packing.allSuggested': 'تمت إضافة جميع الاقتراحات',
   'packing.allPacked': 'تم تجهيز الكل!',
   'packing.addPlaceholder': 'إضافة عنصر جديد...',
   'packing.categoryPlaceholder': 'قائمة...',
@@ -35,7 +33,6 @@ const packing: TranslationStrings = {
   'packing.filterOpen': 'مفتوح',
   'packing.filterDone': 'تم',
   'packing.emptyTitle': 'قائمة التجهيز فارغة',
-  'packing.emptyHint': 'أضف عناصر أو استخدم الاقتراحات',
   'packing.emptyFiltered': 'لا توجد عناصر مطابقة لهذا الفلتر',
   'packing.menuRename': 'إعادة تسمية',
   'packing.menuCheckAll': 'تحديد الكل',
@@ -67,128 +64,6 @@ const packing: TranslationStrings = {
   'packing.toast.deleteError': 'فشل الحذف',
   'packing.toast.renameError': 'فشلت إعادة التسمية',
   'packing.toast.addError': 'فشلت الإضافة',
-  'packing.suggestions.items': [
-    {
-      name: 'جواز السفر',
-      category: 'المستندات',
-    },
-    {
-      name: 'بطاقة الهوية',
-      category: 'المستندات',
-    },
-    {
-      name: 'تأمين السفر',
-      category: 'المستندات',
-    },
-    {
-      name: 'تذاكر الطيران',
-      category: 'المستندات',
-    },
-    {
-      name: 'بطاقة ائتمان',
-      category: 'المالية',
-    },
-    {
-      name: 'نقد',
-      category: 'المالية',
-    },
-    {
-      name: 'تأشيرة',
-      category: 'المستندات',
-    },
-    {
-      name: 'قمصان',
-      category: 'الملابس',
-    },
-    {
-      name: 'بنطلونات',
-      category: 'الملابس',
-    },
-    {
-      name: 'ملابس داخلية',
-      category: 'الملابس',
-    },
-    {
-      name: 'جوارب',
-      category: 'الملابس',
-    },
-    {
-      name: 'جاكيت',
-      category: 'الملابس',
-    },
-    {
-      name: 'ملابس نوم',
-      category: 'الملابس',
-    },
-    {
-      name: 'ملابس سباحة',
-      category: 'الملابس',
-    },
-    {
-      name: 'معطف مطر',
-      category: 'الملابس',
-    },
-    {
-      name: 'أحذية مريحة',
-      category: 'الملابس',
-    },
-    {
-      name: 'فرشاة أسنان',
-      category: 'أدوات العناية',
-    },
-    {
-      name: 'معجون أسنان',
-      category: 'أدوات العناية',
-    },
-    {
-      name: 'شامبو',
-      category: 'أدوات العناية',
-    },
-    {
-      name: 'مزيل عرق',
-      category: 'أدوات العناية',
-    },
-    {
-      name: 'واقي شمس',
-      category: 'أدوات العناية',
-    },
-    {
-      name: 'شفرة حلاقة',
-      category: 'أدوات العناية',
-    },
-    {
-      name: 'شاحن',
-      category: 'الإلكترونيات',
-    },
-    {
-      name: 'بطارية محمولة',
-      category: 'الإلكترونيات',
-    },
-    {
-      name: 'سماعات',
-      category: 'الإلكترونيات',
-    },
-    {
-      name: 'محول سفر',
-      category: 'الإلكترونيات',
-    },
-    {
-      name: 'كاميرا',
-      category: 'الإلكترونيات',
-    },
-    {
-      name: 'مسكنات ألم',
-      category: 'الصحة',
-    },
-    {
-      name: 'لاصقات جروح',
-      category: 'الصحة',
-    },
-    {
-      name: 'مطهر',
-      category: 'الصحة',
-    },
-  ],
   'packing.makePrivate': 'جعله خاصًا',
   'packing.makePublic': 'مشاركة',
   'packing.privateHint': 'خاص — مرئي لك فقط',

@@ -10,7 +10,6 @@ const reservations: TranslationStrings = {
   'reservations.confirmed': 'Confirmada',
   'reservations.pending': 'Pendente',
   'reservations.summary': '{confirmed} confirmada(s), {pending} pendente(s)',
-  'reservations.fromPlan': 'Do plano',
   'reservations.showFiles': 'Mostrar arquivos',
   'reservations.editTitle': 'Editar reserva',
   'reservations.status': 'Status',

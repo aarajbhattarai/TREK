@@ -25,9 +25,6 @@ const packing: TranslationStrings = {
   'packing.progress': '{total}개 중 {packed}개 완료 ({percent}%)',
   'packing.clearChecked': '체크된 {count}개 제거',
   'packing.clearCheckedShort': '{count}개 제거',
-  'packing.suggestions': '제안',
-  'packing.suggestionsTitle': '제안 추가',
-  'packing.allSuggested': '모든 제안이 추가되었습니다',
   'packing.allPacked': '모두 완료!',
   'packing.addPlaceholder': '새 항목 추가...',
   'packing.categoryPlaceholder': '목록...',
@@ -35,7 +32,6 @@ const packing: TranslationStrings = {
   'packing.filterOpen': '미완료',
   'packing.filterDone': '완료',
   'packing.emptyTitle': '짐 목록이 비어 있습니다',
-  'packing.emptyHint': '항목을 추가하거나 제안을 사용하세요',
   'packing.emptyFiltered': '이 필터와 일치하는 항목이 없습니다',
   'packing.menuRename': '이름 변경',
   'packing.menuCheckAll': '전체 체크',
@@ -67,128 +63,6 @@ const packing: TranslationStrings = {
   'packing.toast.deleteError': '삭제 실패',
   'packing.toast.renameError': '이름 변경 실패',
   'packing.toast.addError': '추가 실패',
-  'packing.suggestions.items': [
-    {
-      name: '여권',
-      category: '서류',
-    },
-    {
-      name: '신분증',
-      category: '서류',
-    },
-    {
-      name: '여행자 보험',
-      category: '서류',
-    },
-    {
-      name: '항공권',
-      category: '서류',
-    },
-    {
-      name: '신용카드',
-      category: '금융',
-    },
-    {
-      name: '현금',
-      category: '금융',
-    },
-    {
-      name: '비자',
-      category: '서류',
-    },
-    {
-      name: '티셔츠',
-      category: '의류',
-    },
-    {
-      name: '바지',
-      category: '의류',
-    },
-    {
-      name: '속옷',
-      category: '의류',
-    },
-    {
-      name: '양말',
-      category: '의류',
-    },
-    {
-      name: '재킷',
-      category: '의류',
-    },
-    {
-      name: '잠옷',
-      category: '의류',
-    },
-    {
-      name: '수영복',
-      category: '의류',
-    },
-    {
-      name: '우비',
-      category: '의류',
-    },
-    {
-      name: '편한 신발',
-      category: '의류',
-    },
-    {
-      name: '칫솔',
-      category: '세면도구',
-    },
-    {
-      name: '치약',
-      category: '세면도구',
-    },
-    {
-      name: '샴푸',
-      category: '세면도구',
-    },
-    {
-      name: '데오도란트',
-      category: '세면도구',
-    },
-    {
-      name: '자외선 차단제',
-      category: '세면도구',
-    },
-    {
-      name: '면도기',
-      category: '세면도구',
-    },
-    {
-      name: '충전기',
-      category: '전자기기',
-    },
-    {
-      name: '보조 배터리',
-      category: '전자기기',
-    },
-    {
-      name: '헤드폰',
-      category: '전자기기',
-    },
-    {
-      name: '여행용 어댑터',
-      category: '전자기기',
-    },
-    {
-      name: '카메라',
-      category: '전자기기',
-    },
-    {
-      name: '진통제',
-      category: '건강',
-    },
-    {
-      name: '반창고',
-      category: '건강',
-    },
-    {
-      name: '소독제',
-      category: '건강',
-    },
-  ],
   'packing.makePrivate': '비공개로 설정',
   'packing.makePublic': '공유',
   'packing.privateHint': '비공개 — 나만 볼 수 있음',

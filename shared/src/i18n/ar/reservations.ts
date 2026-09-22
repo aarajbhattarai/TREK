@@ -10,7 +10,6 @@ const reservations: TranslationStrings = {
   'reservations.confirmed': 'مؤكد',
   'reservations.pending': 'قيد الانتظار',
   'reservations.summary': '{confirmed} مؤكدة، {pending} قيد الانتظار',
-  'reservations.fromPlan': 'من الخطة',
   'reservations.showFiles': 'عرض الملفات',
   'reservations.editTitle': 'تعديل الحجز',
   'reservations.status': 'الحالة',

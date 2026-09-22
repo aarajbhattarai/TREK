@@ -10,7 +10,6 @@ const reservations: TranslationStrings = {
   'reservations.confirmed': '확정됨',
   'reservations.pending': '대기 중',
   'reservations.summary': '{confirmed}개 확정, {pending}개 대기 중',
-  'reservations.fromPlan': '계획에서',
   'reservations.showFiles': '파일 보기',
   'reservations.editTitle': '예약 편집',
   'reservations.status': '상태',

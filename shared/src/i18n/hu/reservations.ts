@@ -11,7 +11,6 @@ const reservations: TranslationStrings = {
   'reservations.confirmed': 'Megerősítve',
   'reservations.pending': 'Függőben',
   'reservations.summary': '{confirmed} megerősítve, {pending} függőben',
-  'reservations.fromPlan': 'Tervből',
   'reservations.showFiles': 'Fájlok megjelenítése',
   'reservations.editTitle': 'Foglalás szerkesztése',
   'reservations.status': 'Állapot',

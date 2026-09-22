@@ -10,7 +10,6 @@ const reservations: TranslationStrings = {
   'reservations.confirmed': 'Підтверджено',
   'reservations.pending': 'Очікування',
   'reservations.summary': '{confirmed} підтвр., {pending} очікувань',
-  'reservations.fromPlan': 'З плану',
   'reservations.showFiles': 'Показати файли',
   'reservations.editTitle': 'Редагувати бронювання',
   'reservations.status': 'Статус',

@@ -10,7 +10,6 @@ const reservations: TranslationStrings = {
   'reservations.confirmed': '確定',
   'reservations.pending': '保留',
   'reservations.summary': '確定 {confirmed}件、保留 {pending}件',
-  'reservations.fromPlan': '計画から',
   'reservations.showFiles': 'ファイルを表示',
   'reservations.editTitle': '予約を編集',
   'reservations.status': 'ステータス',

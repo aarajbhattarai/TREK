@@ -11,7 +11,6 @@ const reservations: TranslationStrings = {
   'reservations.confirmed': 'Bevestigd',
   'reservations.pending': 'In behandeling',
   'reservations.summary': '{confirmed} bevestigd, {pending} in behandeling',
-  'reservations.fromPlan': 'Vanuit plan',
   'reservations.showFiles': 'Bestanden tonen',
   'reservations.editTitle': 'Reservering bewerken',
   'reservations.status': 'Status',

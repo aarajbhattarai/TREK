@@ -11,7 +11,6 @@ const reservations: TranslationStrings = {
   'reservations.confirmed': 'Confirmée',
   'reservations.pending': 'En attente',
   'reservations.summary': '{confirmed} confirmées, {pending} en attente',
-  'reservations.fromPlan': 'Du plan',
   'reservations.showFiles': 'Afficher les fichiers',
   'reservations.editTitle': 'Modifier la réservation',
   'reservations.status': 'Statut',

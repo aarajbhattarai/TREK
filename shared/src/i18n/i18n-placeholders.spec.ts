@@ -69,9 +69,6 @@ describe('i18n placeholder parity', () => {
     const violations: string[] = [];
 
     for (const [enKey, enValue] of Object.entries(en)) {
-      // A few catalog entries are structured data, not strings
-      // (e.g. packing.suggestions.items) — placeholders only apply to strings.
-      if (typeof enValue !== 'string') continue;
       const placeholders = enValue.match(PLACEHOLDER_RE);
       if (!placeholders) continue;
 
