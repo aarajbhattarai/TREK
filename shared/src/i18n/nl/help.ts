@@ -3619,6 +3619,206 @@ const help: TranslationStrings = {
     'Een bevestigde boeking is een doorgetrokken lijn, een boeking in behandeling een gestippelde. De instelling Routelabels voor boekingen zet de luchthavencode of de stationsnaam in de eindmarkeringen.',
   'help.guide.transport-on-map.tip.3':
     'Alle boekingsroutes tonen is een schone lei, geen laag: het gooit weg wat de losse iconen hadden gezet, dus twee keer drukken laat je met alles aan of alles uit achter.',
+
+  // ── Screen: trip-roadtrip ─────────────────────────────────────────────────────────────
+  'help.ctx.trip-roadtrip.title': 'Roadtrip',
+  'help.ctx.trip-roadtrip.summary':
+    'Het plan gelezen als één rit: dezelfde dagen en dezelfde plekken, aaneengeregen tot stops met het rijden ertussen, in een lijst langs de linkerkolom en op de kaart. Het zegt hoe ver en hoe lang, waar de tank leeg is, en wat er langs de weg ligt.',
+  'help.ctx.trip-roadtrip.bullet.1':
+    'Dagen en Roadtrip boven aan de linkerkolom wisselen tussen het dagplan en de rit. Er wordt niets gekopieerd en niets gewijzigd: Dagen geeft het plan precies terug zoals het was.',
+  'help.ctx.trip-roadtrip.bullet.2':
+    'De kop van de lijst telt de reis op: Afstand, Rijtijd en Stops. Daaronder komt één kaartje per dag, met de eigen kilometers van de dag, voor hoeveel stops hij is, waar hij overheen gaat, en een badge Track.',
+  'help.ctx.trip-roadtrip.bullet.3':
+    'Een genummerde stop is een plek waarvoor de dag bestaat. Een stop onderweg, tanken, laden, een rustplaats, draagt het pictogram van zijn soort in plaats van een nummer en telt niet mee. Klik op een nummer om te wijzigen wat het is, en op de badge Duur om te zeggen hoe lang hij duurt.',
+  'help.ctx.trip-roadtrip.bullet.4':
+    'Tussen twee stops geeft een ritbalk het traject als afstand en tijd. Klik erop voor Routes voor dit traject, of klik op de getekende route op de kaart om het traject via een tussenpunt om te buigen.',
+  'help.ctx.trip-roadtrip.bullet.5':
+    'De rechterkolom wordt Langs de route: kies een dag, wat je zoekt en hoe breed de corridor is, en dan Zoeken. Toevoegen zet een resultaat op de rit op het punt waar je er echt langskomt.',
+  'help.ctx.trip-roadtrip.bullet.6':
+    'De Rij-instellingen eronder houden de grenzen, de auto en zijn bereik, de dagelijkse reistijden, wat vermeden moet worden en hoe de lijn wordt getekend. Ze horen bij de reis, dus iedereen plant met dezelfde auto.',
+  // roadtrip-mode
+  'help.guide.roadtrip-mode.title': 'De reis als één rit lezen',
+  'help.guide.roadtrip-mode.goal': 'Zet het plan over naar de roadtripmodus en lees wat de lijst je vertelt.',
+  'help.guide.roadtrip-mode.step.1':
+    'Klik op Roadtrip in de schakelaar Dagen en Roadtrip boven aan de linkerkolom. Het dagplan wordt vervangen door de rit, en de kaart tekent elke dag waarvoor een route is berekend.',
+  'help.guide.roadtrip-mode.step.2': 'De kop van de lijst telt de hele reis op: Afstand, Rijtijd en Stops.',
+  'help.guide.roadtrip-mode.step.3':
+    'Daaronder komt één kaartje per dag. De koptekst draagt het nummer en de datum van de dag, het rijden als afstand en tijd, en voor hoeveel stops de dag is.',
+  'help.guide.roadtrip-mode.step.4':
+    'In het kaartje is de dag een ketting: een genummerde stop per plek, een ritbalk tussen elk paar, en de aankomsttijd aan de rechterrand.',
+  'help.guide.roadtrip-mode.step.5':
+    'Klik op de koptekst van een dag om hem in te klappen. Een ingeklapte dag verdwijnt ook van de kaart; klik nog eens op de koptekst om hem terug te halen.',
+  'help.guide.roadtrip-mode.result':
+    'De linkerkolom is de rit en de kaart toont elke dag ervan. Dagen schakelt meteen terug naar het plan, ongewijzigd.',
+  'help.guide.roadtrip-mode.tip.1':
+    'De keuze wordt per reis onthouden zolang het browsertabblad open staat, dus na een herlaad kom je weer in de rit terecht.',
+  'help.guide.roadtrip-mode.tip.2':
+    'De schakelaar bestaat pas als een beheerder de add-on Roadtrip heeft aangezet, onder Add-ons in Beheer.',
+  'help.guide.roadtrip-mode.tip.3':
+    'Op een telefoon is er geen schakelaar: de add-on voegt een eigen tabblad Roadtrip toe naast Plan.',
+  // roadtrip-stops
+  'help.guide.roadtrip-stops.title': 'Stops onderweg, en hoe lang je blijft',
+  'help.guide.roadtrip-stops.goal': 'Maak van een plek op de rit een stop onderweg, en zeg hoe lang elke stop duurt.',
+  'help.guide.roadtrip-stops.step.1':
+    'Klik op het nummer voor een stop in de lijst. Het label is Maak er een stop onderweg van, en het opent Soort stop.',
+  'help.guide.roadtrip-stops.step.2':
+    'Kies een soort: Accommodatie, Tanken, Laden, Rustplaats, Camping, Eten of Bezienswaardig. Het nummer wordt het pictogram van die soort en de stops eronder worden hernummerd.',
+  'help.guide.roadtrip-stops.step.3':
+    'Een stop onderweg is geen bestemming, dus de koptekst van de dag telt één stop minder.',
+  'help.guide.roadtrip-stops.step.4':
+    'Klik nog eens op het pictogram, Soort stop wijzigen, en kies Weer een bestemming om de stop zijn nummer terug te geven.',
+  'help.guide.roadtrip-stops.step.5': 'Elke stop draagt een badge Duur. Klik erop om Tijd bij deze stop te openen.',
+  'help.guide.roadtrip-stops.step.6':
+    'Stel de lengte in met de schuif, met de knoppen min en plus of met een van de voorkeuzes, kijk wat Aankomst en Vertrek doen, en klik dan op Opslaan.',
+  'help.guide.roadtrip-stops.result':
+    'De stop draagt het pictogram van zijn soort in plaats van een nummer, en elke aankomst na een verblijf is meegeschoven.',
+  'help.guide.roadtrip-stops.tip.1':
+    'Een verblijf hoort bij de plek, niet bij één bezoek: op een plek die op twee dagen gepland staat, sta je op beide even lang.',
+  'help.guide.roadtrip-stops.tip.2':
+    'Stops onderweg verschijnen ook onder Dagen. Ook in Dagen tonen, onder Servicestops in de Rij-instellingen, houdt ze alleen in Roadtrip.',
+  'help.guide.roadtrip-stops.tip.3': 'Geen verblijf, in hetzelfde venster, haalt die tijd er weer af.',
+  // roadtrip-corridor
+  'help.guide.roadtrip-corridor.title': 'Tanken, eten en een bed vinden langs de route',
+  'help.guide.roadtrip-corridor.goal': 'Doorzoek de weg die je echt rijdt, en zet wat je vindt op het juiste traject.',
+  'help.guide.roadtrip-corridor.step.1':
+    'Kies de dag boven in Langs de route. Alleen dagen met een berekende route worden aangeboden.',
+  'help.guide.roadtrip-corridor.step.2':
+    'Vink onder Gezocht wordt aan wat je nodig hebt. Tanken, Laden, Rustplaats, Camping, Accommodatie, Eten en Bezienswaardig zijn te combineren.',
+  'help.guide.roadtrip-corridor.step.3':
+    'Kies onder Binnen hoe ver er aan weerszijden van de weg gezocht wordt, 2 km, 5 km of 10 km, en klik dan op Zoeken.',
+  'help.guide.roadtrip-corridor.step.4':
+    'De treffers komen per soort gegroepeerd terug, in de volgorde waarin je ze passeert, elk met hoe ver in de dag hij ligt en hoe ver hij van de route af ligt.',
+  'help.guide.roadtrip-corridor.step.5':
+    'Toevoegen op een treffer opent Als stop toevoegen. Daar staat op welke dag en op welke positie de stop terechtkomt, het vraagt om de soort en de tijd bij de stop, en Toevoegen zet hem op de rit.',
+  'help.guide.roadtrip-corridor.result':
+    'De treffers staan in de volgorde waarin je ze passeert en zijn op de kaart getekend, en de toegevoegde zit op de rit op het punt waar je er echt langskomt.',
+  'help.guide.roadtrip-corridor.tip.1':
+    'Er wordt pas gezocht als je op Zoeken drukt: één ronde zijn veel verzoeken aan een gedeelde dienst.',
+  'help.guide.roadtrip-corridor.tip.2':
+    'Filteren op naam versmalt wat er terugkwam zonder opnieuw te vragen, en Resultaten wissen leegt de lijst en haar spelden. Klik op een treffer om hem op de kaart in beeld te halen.',
+  'help.guide.roadtrip-corridor.tip.3':
+    'Een treffer kun je ook van de kaart op de getekende route slepen, zo kies je zelf het traject waar dezelfde weg twee keer gereden wordt. Handmatig toevoegen, naast Zoeken, zoekt in plaats daarvan een plek op naam op.',
+  // roadtrip-via
+  'help.guide.roadtrip-via.title': 'Een traject via een tussenpunt ombuigen',
+  'help.guide.roadtrip-via.goal':
+    'Stuur een traject over de weg die je echt wilt, zonder er een stop aan toe te voegen.',
+  'help.guide.roadtrip-via.step.1':
+    'Haal het gewenste traject in beeld: klik op een stop in de lijst en sluit dan het kaartje dat over de kaart opengaat.',
+  'help.guide.roadtrip-via.step.2':
+    'Klik op de getekende route. Er wordt een tussenpunt op het aangeklikte traject gezet, en het traject wordt er opnieuw langs berekend.',
+  'help.guide.roadtrip-via.step.3':
+    'De lijst volgt: de koptekst van de dag draagt de nieuwe afstand en rijtijd, en elke aankomst na het tussenpunt schuift mee.',
+  'help.guide.roadtrip-via.step.4':
+    'Ga met de muis over de greep en hij zegt wat hij kan: Sleep om de route te hervormen, rechtsklik om te verwijderen. Sleep hem ergens anders heen en het traject wordt via de nieuwe plek opnieuw getekend.',
+  'help.guide.roadtrip-via.step.5':
+    'Rechtsklik op de greep om hem weg te halen. Het traject rijdt weer de directe weg.',
+  'help.guide.roadtrip-via.result':
+    'Het traject volgt de weg die je hebt gekozen, en de afstand, de rijtijd en de aankomsten van de dag worden er opnieuw voor uitgerekend.',
+  'help.guide.roadtrip-via.tip.1':
+    'Een tussenpunt is geen stop: het heeft geen nummer, geen verblijf en geen aankomsttijd, en het telt niet mee bij de stops van de dag.',
+  'help.guide.roadtrip-via.tip.2':
+    'De grepen worden vanaf zoomniveau 9 getekend, dus een kaart die op de hele reis is ingepast toont de lijn zonder ze.',
+  'help.guide.roadtrip-via.tip.3':
+    'Een klik verder dan twee kilometer van elk getekend traject wordt genegeerd, en een klik op een vlucht, een trein of een veerboot ook.',
+  // roadtrip-alternatives
+  'help.guide.roadtrip-alternatives.title': 'Een andere manier om een traject te rijden proberen',
+  'help.guide.roadtrip-alternatives.goal': 'Kijk wat de router nog meer voor één stuk aanbiedt, en neem het.',
+  'help.guide.roadtrip-alternatives.step.1':
+    'Klik op een ritbalk in de lijst, de rij tussen twee stops die het traject als afstand en tijd geeft. Het label is Andere routes.',
+  'help.guide.roadtrip-alternatives.step.2':
+    'Routes voor dit traject gaat over de kaart open, één regel per weg, elk in een eigen kleur op de kaart getekend.',
+  'help.guide.roadtrip-alternatives.step.3':
+    'Ga met de muis over een regel om die weg te laten oplichten. Huidig en Snelste zeggen welke welke is, en de andere zeggen hoeveel sneller of langzamer ze zijn.',
+  'help.guide.roadtrip-alternatives.step.4':
+    'Klik op een regel om zo te rijden, of op Sluiten om de weg te houden waarop je zit.',
+  'help.guide.roadtrip-alternatives.result':
+    'Het traject rijdt de weg die je hebt gekozen, en de afstand in de lijst en de aankomsten erna veranderen mee.',
+  'help.guide.roadtrip-alternatives.tip.1':
+    'Een andere weg kiezen zet een tussenpunt op het traject en vervangt de tussenpunten die het al had; de eigen weg van de router kiezen haalt ze er weer af.',
+  'help.guide.roadtrip-alternatives.tip.2':
+    'Zonder snelweg, Zonder tol en Zonder veerboot komen van een tweede motor met een eigen snelheidsmodel, dus hun tijden zijn niet met de andere te vergelijken.',
+  // roadtrip-limits
+  'help.guide.roadtrip-limits.title': 'De auto en de rijgrenzen instellen',
+  'help.guide.roadtrip-limits.goal': 'Vertel TREK wat je rijdt en hoe ver je achter elkaar wilt rijden.',
+  'help.guide.roadtrip-limits.step.1':
+    'Rij-instellingen staat onder het zoeken in de rechterkolom. De badges zeggen wat er is ingesteld; klik erop om het te openen.',
+  'help.guide.roadtrip-limits.step.2':
+    'Onder Rijden zijn Langste rit achtereen en Rijden per dag in minuten. Een leeg veld betekent uit, en er wordt niets gemarkeerd.',
+  'help.guide.roadtrip-limits.step.3':
+    'Zeg onder Voertuig wat je rijdt. Benzine tankt alleen bij tankstops bij, Elektrisch alleen bij laadstops, Beide bij allebei.',
+  'help.guide.roadtrip-limits.step.4':
+    'Typ Bereik per tank, of Actieradius per lading, zelf in. Uit de autogegevens berekenen eronder neemt Tankinhoud en Verbruik, of Accu en Verbruik, en rekent het uit.',
+  'help.guide.roadtrip-limits.step.5':
+    'Vermijden waar het kan is een voorkeur, geen verbod: een dag zonder weg eromheen gebruikt die weg toch, en zegt dat in zijn koptekst.',
+  'help.guide.roadtrip-limits.step.6':
+    'Sluit het venster. Het kaartje zegt wat er is ingesteld, en de lijst markeert elk traject en elke dag die eroverheen gaat.',
+  'help.guide.roadtrip-limits.result':
+    'De badges op het kaartje zeggen wat er is ingesteld, en elk traject en elke dag boven een grens draagt een badge in de lijst.',
+  'help.guide.roadtrip-limits.tip.1':
+    'De instellingen horen bij de reis, dus iedereen erin plant met dezelfde auto en dezelfde grenzen.',
+  'help.guide.roadtrip-limits.tip.2':
+    'Vullen tot zegt hoe vol een stop tankt, want niemand laadt onderweg tot 100 %. Een tank- of laadstop kan dat voor zichzelf overschrijven.',
+  'help.guide.roadtrip-limits.tip.3':
+    'Routelijn bepaalt hoe de rit getekend wordt: Dagen verbinden berekent de nacht tussen twee dagen, en Een kleur per dag geeft elke dag zijn eigen kleur.',
+  // roadtrip-day-window
+  'help.guide.roadtrip-day-window.title': 'De rijdag een begin en een einde geven',
+  'help.guide.roadtrip-day-window.goal':
+    'Stop met rijden op een uur dat je zelf kiest, en zeg waar de dag moet eindigen.',
+  'help.guide.roadtrip-day-window.step.1': 'Open Rij-instellingen in de rechterkolom en zoek Dagelijkse reistijden.',
+  'help.guide.roadtrip-day-window.step.2':
+    'Stel een Begin van de dag in. Op zichzelf doet het niets: beide tijden zijn nodig, zoals de notitie eronder zegt.',
+  'help.guide.roadtrip-day-window.step.3':
+    'Stel een Einde van de dag in. De rit stopt nu op dat uur en draagt de rest over naar de volgende ochtend, als een regel Einde van de dag en een regel Reis hervatten in de lijst.',
+  'help.guide.roadtrip-day-window.step.4':
+    'Kies onder Dag afsluiten de optie Onderweg om op de eindtijd op de weg te pauzeren, of Bij de laatste plek om te stoppen voordat de volgende rit die tijd zou overschrijden.',
+  'help.guide.roadtrip-day-window.step.5':
+    'Sluit het venster. Het kaartje Rij-instellingen draagt de twee tijden als badge.',
+  'help.guide.roadtrip-day-window.result':
+    'De rit wordt in reisdagen geknipt van de lengte die je hebt ingesteld, en wat niet past gaat verder op berekende dagen na de laatste. Je dagen en hun plekken worden niet gewijzigd.',
+  'help.guide.roadtrip-day-window.tip.1':
+    'Een van beide tijden leegmaken zet het geheel weer uit. Tijden die je zelf op een stop hebt vastgezet gaan altijd voor.',
+  'help.guide.roadtrip-day-window.tip.2':
+    'Met dagelijkse reistijden ingesteld zijn de dagen altijd verbonden: de rit van de laatste stop van een dag naar de eerste van de volgende wordt berekend en meegeteld.',
+  'help.guide.roadtrip-day-window.tip.3':
+    'Elk dageinde is ook een markering op de kaart, een maan met het dagnummer. Sleep hem langs de route, of naar een plek, om de dag ergens anders te laten eindigen; rechtsklik erop om het automatische einde terug te zetten, en Automatische dageinden herstellen in dit venster maakt alles ongedaan.',
+  // roadtrip-refuel
+  'help.guide.roadtrip-refuel.title': 'Tanken voordat de tank leeg is',
+  'help.guide.roadtrip-refuel.goal':
+    'Vind op het stuk dat de auto nog haalt een plek om te tanken, en zet die op de rit.',
+  'help.guide.roadtrip-refuel.step.1':
+    'Met een bereik ingesteld tekent de lijst een balk dwars over het traject waar het opraakt: Hier is de tank leeg, en eronder hoe ver in het traject dat is.',
+  'help.guide.roadtrip-refuel.step.2':
+    'Het lampje op de balk is de knop. Tankstation zoeken kijkt langs de weg die je al gereden hebt, met Zoeken langs de route… zolang het bezig is.',
+  'help.guide.roadtrip-refuel.step.3':
+    'Er komen tot drie stations terug, elk met hoe ver het van de route af ligt en hoeveel bereik het zou overlaten.',
+  'help.guide.roadtrip-refuel.step.4':
+    'De plus op een aanbod voegt het toe als tankstop. Als stop toevoegen gaat open met de soort en de tijd al ingevuld, en Toevoegen zet het op het traject op het punt waar je er echt langskomt.',
+  'help.guide.roadtrip-refuel.result':
+    'De stop staat op het juiste traject met een eigen pictogram, het bereik telt vanaf daar opnieuw, en de balk is weg.',
+  'help.guide.roadtrip-refuel.tip.1':
+    'Het bereik telt vanaf de laatste tank- of laadstop, over dagen heen. Wat je rijdt bepaalt welke stops meetellen: Benzine alleen tanken, Elektrisch alleen laden.',
+  'help.guide.roadtrip-refuel.tip.2':
+    'De zoekopdracht kijkt naar de weg voor het droge punt, houdt een reserve aan en telt de omweg dubbel, dus alles wat ze aanbiedt is echt haalbaar.',
+  'help.guide.roadtrip-refuel.tip.3':
+    'Een leeg antwoord is geen doodlopende weg: het lampje wordt Opnieuw, want het plaatsenzoeken is een gedeelde dienst die weleens een time-out geeft.',
+  // roadtrip-track
+  'help.guide.roadtrip-track.title': 'Een dag een geïmporteerde track laten volgen',
+  'help.guide.roadtrip-track.goal':
+    'Zet de rit van een dag op een mooie route die je als GPX- of KML-track hebt geïmporteerd.',
+  'help.guide.roadtrip-track.step.1':
+    'Klik op de badge Track in de koptekst van een dag. Het venster gaat open op die dag.',
+  'help.guide.roadtrip-track.step.2':
+    'Kies een track. Elke track zegt hoe lang hij is en hoe ver hij van deze dag af ligt, de dichtstbijzijnde eerst.',
+  'help.guide.roadtrip-track.step.3':
+    'Klik op Deze track volgen. TREK zet tussenpunten waar de rit het verst van de track afdwaalt, en berekent opnieuw, ronde na ronde.',
+  'help.guide.roadtrip-track.step.4':
+    'Het zegt hoeveel tussenpunten het heeft geplaatst en hoe dicht de rit nu blijft. De knop ernaast haalt die tussenpunten er weer af en geeft de dag terug aan de router; het venster sluiten behoudt de track.',
+  'help.guide.roadtrip-track.result':
+    'De rit van de dag volgt de track in plaats van de weg die de router koos, en de badge Track zegt welke track hij volgt.',
+  'help.guide.roadtrip-track.tip.1':
+    'Importeer het bestand onder Dagen met Bestand importeren, met Tracks (met routegeometrie) of Paden (LineStrings) aangevinkt. Zolang er geen track in de reis zit, heeft de badge niets te bieden.',
+  'help.guide.roadtrip-track.tip.2':
+    'Een track volgen vervangt de tussenpunten die de trajecten van de dag al hadden, vorm een traject dus met de hand na de track, niet ervoor.',
 };
 
 export default help;

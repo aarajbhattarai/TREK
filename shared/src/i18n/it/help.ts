@@ -3600,6 +3600,208 @@ const help: TranslationStrings = {
     'Una prenotazione confermata è una linea continua, una in attesa è tratteggiata. L’impostazione Etichette percorsi prenotati scrive il codice dell’aeroporto o il nome della stazione negli indicatori alle estremità.',
   'help.guide.transport-on-map.tip.3':
     'Mostra tutti i percorsi prenotati è una tabula rasa, non un livello: scarta ciò che avevano impostato le singole icone, quindi premerlo due volte ti lascia con tutto acceso o tutto spento.',
+
+  // ── Screen: trip-roadtrip ─────────────────────────────────────────────────────────────
+  'help.ctx.trip-roadtrip.title': 'Viaggio su strada',
+  'help.ctx.trip-roadtrip.summary':
+    'Il programma letto come un solo tragitto in auto: gli stessi giorni e gli stessi luoghi, incatenati in soste con la guida in mezzo, in un elenco lungo la colonna di sinistra e sulla mappa. Dice quanto è lontano e quanto dura, dove finisce il serbatoio e cosa c’è lungo la strada.',
+  'help.ctx.trip-roadtrip.bullet.1':
+    'Giorni e Viaggio su strada in cima alla colonna di sinistra passano dal programma dei giorni al tragitto in auto. Niente viene copiato e niente viene cambiato: Giorni restituisce il programma esattamente com’era.',
+  'help.ctx.trip-roadtrip.bullet.2':
+    'La testa dell’elenco somma il viaggio: Distanza, Tempo di guida e Soste. Sotto arriva un riquadro per giorno, con i chilometri propri del giorno, per quante soste è fatto, quello che sfora, e un distintivo Traccia.',
+  'help.ctx.trip-roadtrip.bullet.3':
+    'Una sosta numerata è un luogo per cui il giorno esiste. Una sosta lungo il percorso, carburante, ricarica, un’area di sosta, porta l’icona del suo tipo al posto di un numero e non viene contata. Clicca un numero per cambiare cos’è, e il distintivo Sosta per dire quanto dura.',
+  'help.ctx.trip-roadtrip.bullet.4':
+    'Tra due soste una fascia di guida dà la tratta come distanza e tempo. Cliccala per Percorsi per questa tratta, oppure clicca il percorso disegnato sulla mappa per piegare la tratta attraverso un punto di passaggio.',
+  'help.ctx.trip-roadtrip.bullet.5':
+    'La colonna di destra diventa Lungo il percorso: scegli un giorno, cosa cercare e quanto è largo il corridoio, poi Cerca. Aggiungi mette un risultato nel tragitto nel punto in cui viene davvero passato.',
+  'help.ctx.trip-roadtrip.bullet.6':
+    'Le Impostazioni di guida sotto tengono i limiti, l’auto e la sua autonomia, gli orari giornalieri, cosa evitare e come viene disegnata la linea. Appartengono al viaggio, quindi tutti pianificano con la stessa auto.',
+  // roadtrip-mode
+  'help.guide.roadtrip-mode.title': 'Leggere il viaggio come un solo tragitto in auto',
+  'help.guide.roadtrip-mode.goal': 'Porta il programma in modalità viaggio su strada e leggi cosa ti dice l’elenco.',
+  'help.guide.roadtrip-mode.step.1':
+    'Clicca Viaggio su strada nel selettore Giorni e Viaggio su strada in cima alla colonna di sinistra. Il programma dei giorni viene sostituito dal tragitto in auto, e la mappa disegna ogni giorno per cui il percorso è stato calcolato.',
+  'help.guide.roadtrip-mode.step.2': 'La testa dell’elenco somma tutto il viaggio: Distanza, Tempo di guida e Soste.',
+  'help.guide.roadtrip-mode.step.3':
+    'Sotto arriva un riquadro per giorno. La sua intestazione porta numero e data del giorno, la guida come distanza e tempo, e per quante soste è fatto il giorno.',
+  'help.guide.roadtrip-mode.step.4':
+    'Dentro il riquadro il giorno è una catena: una sosta numerata per luogo, una fascia di guida tra ogni coppia, e l’orario di arrivo sul bordo destro.',
+  'help.guide.roadtrip-mode.step.5':
+    'Clicca l’intestazione di un giorno per ripiegarlo. Un giorno ripiegato sparisce anche dalla mappa; clicca di nuovo l’intestazione per riportarlo.',
+  'help.guide.roadtrip-mode.result':
+    'La colonna di sinistra è il tragitto in auto e la mappa ne mostra ogni giorno. Giorni torna dritto al programma, immutato.',
+  'help.guide.roadtrip-mode.tip.1':
+    'La scelta viene ricordata per viaggio finché la scheda del browser resta aperta, quindi un ricaricamento torna sul tragitto in auto.',
+  'help.guide.roadtrip-mode.tip.2':
+    'Il selettore esiste solo una volta che un amministratore ha acceso il modulo Viaggio su strada, sotto Moduli nell’Amministrazione.',
+  'help.guide.roadtrip-mode.tip.3':
+    'Sul telefono non c’è selettore: il modulo aggiunge una scheda Viaggio su strada tutta sua accanto a Programma.',
+  // roadtrip-stops
+  'help.guide.roadtrip-stops.title': 'Le soste lungo il percorso, e quanto ti fermi',
+  'help.guide.roadtrip-stops.goal':
+    'Trasforma un luogo del tragitto in una sosta lungo il percorso, e indica quanto dura ogni sosta.',
+  'help.guide.roadtrip-stops.step.1':
+    'Clicca il numero davanti a una sosta nell’elenco. La sua etichetta è Trasforma in sosta lungo il percorso, e apre Tipo di sosta.',
+  'help.guide.roadtrip-stops.step.2':
+    'Scegli un tipo: Alloggi, Carburante, Ricarica, Area di sosta, Campeggio, Ristoro o Da vedere. Il numero diventa l’icona di quel tipo e le soste sotto vengono rinumerate.',
+  'help.guide.roadtrip-stops.step.3':
+    'Una sosta lungo il percorso non è una destinazione, quindi l’intestazione del giorno conta una sosta in meno.',
+  'help.guide.roadtrip-stops.step.4':
+    'Clicca di nuovo l’icona, Cambia il tipo di sosta, e scegli Torna a essere una destinazione per ridare il suo numero alla sosta.',
+  'help.guide.roadtrip-stops.step.5': 'Ogni sosta porta un distintivo Sosta. Cliccalo per aprire Tempo alla sosta.',
+  'help.guide.roadtrip-stops.step.6':
+    'Imposta la durata con il cursore, con i pulsanti meno e più o con uno dei valori pronti, guarda cosa fanno Arrivo e Partenza, poi clicca Salva.',
+  'help.guide.roadtrip-stops.result':
+    'La sosta porta l’icona del suo tipo al posto di un numero, e ogni arrivo dopo una permanenza si è spostato con lei.',
+  'help.guide.roadtrip-stops.tip.1':
+    'Una permanenza appartiene al luogo, non a una visita: in un luogo pianificato in due giorni ci si ferma lo stesso tempo in entrambi.',
+  'help.guide.roadtrip-stops.tip.2':
+    'Le soste lungo il percorso compaiono anche sotto Giorni. Mostra anche in Giorni, sotto Soste di servizio nelle Impostazioni di guida, le tiene solo nel Viaggio su strada.',
+  'help.guide.roadtrip-stops.tip.3': 'Nessuna sosta, nella stessa finestra, toglie di nuovo quel tempo.',
+  // roadtrip-corridor
+  'help.guide.roadtrip-corridor.title': 'Trovare carburante, cibo e un letto lungo il percorso',
+  'help.guide.roadtrip-corridor.goal':
+    'Cerca sulla strada che percorri davvero, e metti quel che trovi sulla tratta giusta.',
+  'help.guide.roadtrip-corridor.step.1':
+    'Scegli il giorno in cima a Lungo il percorso. Vengono offerti solo i giorni con il percorso calcolato.',
+  'help.guide.roadtrip-corridor.step.2':
+    'Sotto Sto cercando, spunta ciò che ti serve. Carburante, Ricarica, Area di sosta, Campeggio, Alloggi, Ristoro e Da vedere si possono combinare.',
+  'help.guide.roadtrip-corridor.step.3':
+    'Sotto Entro, scegli quanto cercare ai due lati della strada, 2 km, 5 km o 10 km, poi clicca Cerca.',
+  'help.guide.roadtrip-corridor.step.4':
+    'I risultati tornano raggruppati per tipo, nell’ordine in cui li passi, ognuno con il punto del giorno in cui si trova e quanto è fuori percorso.',
+  'help.guide.roadtrip-corridor.step.5':
+    'Aggiungi su un risultato apre Aggiungi come sosta. Dice su quale giorno e in quale posizione finisce la sosta, chiede il tipo e il tempo alla sosta, e Aggiungi la mette nel tragitto.',
+  'help.guide.roadtrip-corridor.result':
+    'I risultati sono elencati nell’ordine in cui li passi e disegnati sulla mappa, e quello che hai aggiunto sta nel tragitto nel punto in cui viene davvero passato.',
+  'help.guide.roadtrip-corridor.tip.1':
+    'Non si cerca niente finché non premi Cerca: una sola esecuzione sono molte richieste a un servizio condiviso.',
+  'help.guide.roadtrip-corridor.tip.2':
+    'Filtra per nome restringe quello che è tornato senza chiedere di nuovo, e Svuota risultati svuota l’elenco e i suoi segnaposti. Clicca un risultato per portarlo in vista sulla mappa.',
+  'help.guide.roadtrip-corridor.tip.3':
+    'Un risultato si può anche trascinare dalla mappa sul percorso disegnato, ed è così che scegli tu la tratta dove la stessa strada viene percorsa due volte. Aggiungi a mano, accanto a Cerca, cerca invece un luogo per nome.',
+  // roadtrip-via
+  'help.guide.roadtrip-via.title': 'Piegare una tratta attraverso un punto di passaggio',
+  'help.guide.roadtrip-via.goal': 'Manda una tratta sulla strada che vuoi davvero, senza aggiungerle una sosta.',
+  'help.guide.roadtrip-via.step.1':
+    'Porta in vista la tratta che ti interessa: clicca una sosta nell’elenco, poi chiudi il riquadro che si apre sopra la mappa.',
+  'help.guide.roadtrip-via.step.2':
+    'Clicca il percorso disegnato. Un punto di passaggio viene posato sulla tratta che hai cliccato, e la tratta viene ricalcolata passando per lui.',
+  'help.guide.roadtrip-via.step.3':
+    'L’elenco segue: l’intestazione del giorno porta la nuova distanza e il nuovo tempo di guida, e ogni arrivo dopo il punto di passaggio si sposta con lui.',
+  'help.guide.roadtrip-via.step.4':
+    'Passa sopra la maniglia e dice cosa sa fare: Trascina per rimodellare il percorso, clic destro per rimuovere. Trascinala altrove e la tratta viene ridisegnata per il nuovo punto.',
+  'help.guide.roadtrip-via.step.5':
+    'Fai clic destro sulla maniglia per toglierla. La tratta torna a fare la strada diretta.',
+  'help.guide.roadtrip-via.result':
+    'La tratta segue la strada che hai scelto, e distanza, tempo di guida e arrivi del giorno vengono ricalcolati per lei.',
+  'help.guide.roadtrip-via.tip.1':
+    'Un punto di passaggio non è una sosta: non ha numero, né permanenza, né orario di arrivo, e non conta tra le soste del giorno.',
+  'help.guide.roadtrip-via.tip.2':
+    'Le maniglie vengono disegnate dal livello di zoom 9, quindi una mappa adattata a tutto il viaggio mostra la linea senza di esse.',
+  'help.guide.roadtrip-via.tip.3':
+    'Un clic a più di due chilometri da qualsiasi tratta disegnata viene ignorato, e così un clic su un volo, un treno o un traghetto.',
+  // roadtrip-alternatives
+  'help.guide.roadtrip-alternatives.title': 'Provare un altro modo di percorrere una tratta',
+  'help.guide.roadtrip-alternatives.goal': 'Guarda cos’altro offre il router per un tratto, e prendilo.',
+  'help.guide.roadtrip-alternatives.step.1':
+    'Clicca una fascia di guida nell’elenco, la riga tra due soste che dà la tratta come distanza e tempo. La sua etichetta è Altri percorsi.',
+  'help.guide.roadtrip-alternatives.step.2':
+    'Percorsi per questa tratta si apre sopra la mappa, una voce per strada, ognuna disegnata sulla mappa con il suo colore.',
+  'help.guide.roadtrip-alternatives.step.3':
+    'Passa sopra una voce per accendere quella strada. Attuale e La più veloce dicono qual è quale, e le altre dicono quanto sono più veloci o più lente.',
+  'help.guide.roadtrip-alternatives.step.4':
+    'Clicca una voce per fare quella strada, oppure Chiudi per tenere quella su cui sei.',
+  'help.guide.roadtrip-alternatives.result':
+    'La tratta fa la strada che hai scelto, e la distanza nell’elenco e gli arrivi successivi cambiano con lei.',
+  'help.guide.roadtrip-alternatives.tip.1':
+    'Scegliere un’altra strada posa un punto di passaggio sulla tratta e sostituisce quelli che aveva già; scegliere la strada propria del router li toglie di nuovo.',
+  'help.guide.roadtrip-alternatives.tip.2':
+    'Senza autostrada, Senza pedaggi e Senza traghetto vengono da un secondo motore con un suo modello di velocità, quindi i loro tempi non sono confrontabili con gli altri.',
+  // roadtrip-limits
+  'help.guide.roadtrip-limits.title': 'Impostare l’auto e i limiti di guida',
+  'help.guide.roadtrip-limits.goal': 'Indica a TREK cosa guidi e quanto sei disposto a guidare di fila.',
+  'help.guide.roadtrip-limits.step.1':
+    'Impostazioni di guida sta sotto la ricerca nella colonna di destra. I suoi distintivi dicono cosa è impostato; cliccala per aprirla.',
+  'help.guide.roadtrip-limits.step.2':
+    'Sotto Guida, Tratto più lungo di fila e Guida al giorno sono in minuti. Un campo vuoto vale off, e non viene segnalato niente.',
+  'help.guide.roadtrip-limits.step.3':
+    'Sotto Veicolo, indica cosa guidi. Benzina fa il pieno solo alle soste carburante, Elettrico solo a quelle di ricarica, Entrambi a tutte e due.',
+  'help.guide.roadtrip-limits.step.4':
+    'Scrivi tu stesso Autonomia con un pieno, oppure Autonomia per ricarica. Calcola dai dati dell’auto sotto prende Serbatoio e Consumo, o Batteria e Consumo, e fa il conto.',
+  'help.guide.roadtrip-limits.step.5':
+    'Evita se possibile è una preferenza, non un divieto: un giorno senza alternative usa comunque quella strada, e lo dice nella sua intestazione.',
+  'help.guide.roadtrip-limits.step.6':
+    'Chiudi la finestra. Il riquadro dice cosa è impostato, e l’elenco segna ogni tratta e ogni giorno che sfora.',
+  'help.guide.roadtrip-limits.result':
+    'I distintivi del riquadro dicono cosa è impostato, e ogni tratta e ogni giorno oltre un limite porta un distintivo nell’elenco.',
+  'help.guide.roadtrip-limits.tip.1':
+    'Le impostazioni appartengono al viaggio, quindi tutti quelli che ci sono pianificano con la stessa auto e gli stessi limiti.',
+  'help.guide.roadtrip-limits.tip.2':
+    'Riempi fino a dice quanto riempie una sosta, perché nessuno carica al 100 % per strada. Una sosta carburante o di ricarica può scavalcarlo per sé.',
+  'help.guide.roadtrip-limits.tip.3':
+    'Linea del percorso decide come viene disegnato il tragitto: Collega i giorni calcola la notte tra due giorni, e Un colore per giorno dà a ogni giorno il suo.',
+  // roadtrip-day-window
+  'help.guide.roadtrip-day-window.title': 'Dare un inizio e una fine alla giornata di guida',
+  'help.guide.roadtrip-day-window.goal':
+    'Smetti di guidare a un’ora che scegli tu, e indica dove deve finire la giornata.',
+  'help.guide.roadtrip-day-window.step.1':
+    'Apri Impostazioni di guida nella colonna di destra e trova Orari giornalieri.',
+  'help.guide.roadtrip-day-window.step.2':
+    'Imposta un Inizio giornata. Da solo non fa niente: servono entrambi gli orari, come dice la nota sotto.',
+  'help.guide.roadtrip-day-window.step.3':
+    'Imposta una Fine giornata. Il tragitto ora si ferma a quell’ora e porta il resto al mattino dopo, come una riga Fine giornata e una riga Riprendi il viaggio nell’elenco.',
+  'help.guide.roadtrip-day-window.step.4':
+    'Sotto Fine giornata, scegli Lungo il percorso per fermarti sulla strada all’ora di fine, oppure Nell’ultimo luogo per fermarti prima che il tragitto successivo la superi.',
+  'help.guide.roadtrip-day-window.step.5':
+    'Chiudi la finestra. Il riquadro Impostazioni di guida porta i due orari come distintivo.',
+  'help.guide.roadtrip-day-window.result':
+    'Il tragitto viene tagliato in giornate di strada della lunghezza che hai impostato, e quel che non entra continua su giorni calcolati dopo l’ultimo. I tuoi giorni e i loro luoghi non vengono cambiati.',
+  'help.guide.roadtrip-day-window.tip.1':
+    'Svuotare uno dei due orari spegne di nuovo tutto. Gli orari che hai fissato tu su una sosta hanno sempre la precedenza.',
+  'help.guide.roadtrip-day-window.tip.2':
+    'Con gli orari giornalieri impostati i giorni sono sempre collegati: il tragitto dall’ultima sosta di un giorno alla prima del giorno dopo viene calcolato e contato.',
+  'help.guide.roadtrip-day-window.tip.3':
+    'Ogni fine giornata è anche un segno sulla mappa, una luna con il numero del giorno. Trascinala lungo il percorso, o su un luogo, per far finire la giornata altrove; fai clic destro per rimettere la fine automatica, e Ripristina le fini giornata automatiche in questa finestra annulla tutto.',
+  // roadtrip-refuel
+  'help.guide.roadtrip-refuel.title': 'Fare rifornimento prima che il serbatoio si esaurisca',
+  'help.guide.roadtrip-refuel.goal':
+    'Trova dove fare rifornimento sul tratto che l’auto riesce ancora a raggiungere, e mettilo nel tragitto.',
+  'help.guide.roadtrip-refuel.step.1':
+    'Con un’autonomia impostata, l’elenco disegna una fascia attraverso la tratta nel punto in cui finisce: Qui il serbatoio si esaurisce, e sotto quanto dentro la tratta cade quel punto.',
+  'help.guide.roadtrip-refuel.step.2':
+    'La lampadina sulla fascia è il pulsante. Cerca carburante guarda lungo la strada che hai già percorso, con Ricerca lungo il percorso… mentre lo fa.',
+  'help.guide.roadtrip-refuel.step.3':
+    'Tornano fino a tre stazioni, ognuna con quanto è fuori percorso e quanta autonomia lascerebbe di riserva.',
+  'help.guide.roadtrip-refuel.step.4':
+    'Il più su un’offerta la aggiunge come sosta carburante. Aggiungi come sosta si apre con tipo e tempo già compilati, e Aggiungi la mette sulla tratta nel punto in cui viene davvero passata.',
+  'help.guide.roadtrip-refuel.result':
+    'La sosta è sulla tratta giusta con la sua icona, l’autonomia riparte da lei, e la fascia è sparita.',
+  'help.guide.roadtrip-refuel.tip.1':
+    'L’autonomia conta dall’ultima sosta carburante o di ricarica, anche tra giorni diversi. Cosa guidi decide quali soste contano: Benzina solo il carburante, Elettrico solo la ricarica.',
+  'help.guide.roadtrip-refuel.tip.2':
+    'La ricerca guarda la strada prima del punto a secco, tiene una riserva e conta la deviazione due volte, quindi tutto quello che offre è davvero raggiungibile.',
+  'help.guide.roadtrip-refuel.tip.3':
+    'Una risposta vuota non è un vicolo cieco: la lampadina diventa Riprova, perché la ricerca dei luoghi è un servizio condiviso che ogni tanto va in timeout.',
+  // roadtrip-track
+  'help.guide.roadtrip-track.title': 'Far seguire a un giorno una traccia importata',
+  'help.guide.roadtrip-track.goal':
+    'Metti il tragitto di un giorno su una strada panoramica che hai importato come traccia GPX o KML.',
+  'help.guide.roadtrip-track.step.1':
+    'Clicca il distintivo Traccia nell’intestazione di un giorno. La finestra si apre su quel giorno.',
+  'help.guide.roadtrip-track.step.2':
+    'Scegli una traccia. Ognuna dice quanto è lunga e quanto dista da questo giorno, la più vicina per prima.',
+  'help.guide.roadtrip-track.step.3':
+    'Clicca Segui questa traccia. TREK posa punti di passaggio dove il tragitto si allontana di più dalla traccia, e ricalcola, giro dopo giro.',
+  'help.guide.roadtrip-track.step.4':
+    'Dice quanti punti di passaggio ha posato e quanto vicino resta ora il tragitto. Il pulsante accanto toglie di nuovo quei punti di passaggio e ridà il giorno al router; chiudere la finestra tiene la traccia.',
+  'help.guide.roadtrip-track.result':
+    'Il tragitto del giorno segue la traccia invece della strada scelta dal router, e il distintivo Traccia dice quale traccia sta seguendo.',
+  'help.guide.roadtrip-track.tip.1':
+    'Importa il file sotto Giorni con Importa file, con le sue Tracce (con geometria percorso) o Percorsi (LineStrings) spuntati. Finché nel viaggio non c’è una traccia, il distintivo non ha niente da offrire.',
+  'help.guide.roadtrip-track.tip.2':
+    'Seguire una traccia sostituisce i punti di passaggio che le tratte del giorno avevano già, quindi modella una tratta a mano dopo la traccia, non prima.',
 };
 
 export default help;

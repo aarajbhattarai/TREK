@@ -3543,6 +3543,207 @@ const help: TranslationStrings = {
     'Uma reserva confirmada é uma linha cheia, uma pendente é tracejada. O ajuste Rótulos das rotas de reservas escreve o código do aeroporto ou o nome da estação nos marcadores das pontas.',
   'help.guide.transport-on-map.tip.3':
     'Mostrar todas as rotas de reservas é começar do zero, não é uma camada: descarta o que os ícones avulsos tinham definido, então apertar duas vezes deixa você com tudo ligado ou tudo desligado.',
+
+  // ── Screen: trip-roadtrip ─────────────────────────────────────────────────────────────
+  'help.ctx.trip-roadtrip.title': 'Viagem de carro',
+  'help.ctx.trip-roadtrip.summary':
+    'O plano lido como um único trajeto: os mesmos dias e os mesmos lugares, encadeados em paradas com a direção entre elas, numa lista ao longo da coluna esquerda e no mapa. Ele diz quanto falta e quanto demora, onde o tanque acaba, e o que existe à beira da estrada.',
+  'help.ctx.trip-roadtrip.bullet.1':
+    'Dias e Viagem de carro no topo da coluna esquerda alternam entre o plano dos dias e o trajeto. Nada é copiado e nada é alterado: Dias devolve o plano exatamente como estava.',
+  'help.ctx.trip-roadtrip.bullet.2':
+    'A cabeça da lista soma a viagem: Distância, Tempo de direção e Paradas. Abaixo vem um cartão por dia, com os quilômetros do próprio dia, para quantas paradas ele existe, o que ele ultrapassa, e um selo Trilha.',
+  'help.ctx.trip-roadtrip.bullet.3':
+    'Uma parada numerada é um lugar para o qual o dia existe. Uma parada no caminho, combustível, carregamento, uma área de descanso, usa o ícone do seu tipo em vez de um número e não é contada. Clique num número para mudar o que ele é, e no selo Parada para dizer quanto tempo leva.',
+  'help.ctx.trip-roadtrip.bullet.4':
+    'Entre duas paradas, uma faixa de condução dá o trecho em distância e tempo. Clique nela para Rotas para este trecho, ou clique na rota desenhada no mapa para dobrar o trecho por um ponto de passagem.',
+  'help.ctx.trip-roadtrip.bullet.5':
+    'A coluna direita vira Ao longo da rota: escolha um dia, o que procurar e a largura do corredor, e então Buscar. Adicionar põe um resultado no trajeto no ponto em que ele é realmente passado.',
+  'help.ctx.trip-roadtrip.bullet.6':
+    'As Configurações de direção abaixo guardam os limites, o carro e sua autonomia, os horários diários, o que evitar e como a linha é desenhada. Elas pertencem à viagem, então todo mundo planeja com o mesmo carro.',
+  // roadtrip-mode
+  'help.guide.roadtrip-mode.title': 'Ler a viagem como um único trajeto',
+  'help.guide.roadtrip-mode.goal': 'Passe o plano para o modo viagem de carro e leia o que a lista conta.',
+  'help.guide.roadtrip-mode.step.1':
+    'Clique em Viagem de carro no seletor Dias e Viagem de carro no topo da coluna esquerda. O plano dos dias é substituído pelo trajeto, e o mapa desenha cada dia com rota calculada.',
+  'help.guide.roadtrip-mode.step.2': 'A cabeça da lista soma a viagem inteira: Distância, Tempo de direção e Paradas.',
+  'help.guide.roadtrip-mode.step.3':
+    'Abaixo vem um cartão por dia. O cabeçalho traz o número e a data do dia, a direção em distância e tempo, e para quantas paradas o dia existe.',
+  'help.guide.roadtrip-mode.step.4':
+    'Dentro do cartão o dia é uma corrente: uma parada numerada por lugar, uma faixa de condução entre cada par, e o horário de chegada na borda direita.',
+  'help.guide.roadtrip-mode.step.5':
+    'Clique no cabeçalho de um dia para recolhê-lo. Um dia recolhido também sai do mapa; clique no cabeçalho de novo para trazê-lo de volta.',
+  'help.guide.roadtrip-mode.result':
+    'A coluna esquerda é o trajeto e o mapa mostra cada dia dele. Dias volta direto ao plano, sem mudanças.',
+  'help.guide.roadtrip-mode.tip.1':
+    'A escolha é lembrada por viagem enquanto a aba do navegador estiver aberta, então um recarregamento volta ao trajeto.',
+  'help.guide.roadtrip-mode.tip.2':
+    'O seletor só existe depois que um administrador liga o complemento Viagem de carro, em Complementos na Administração.',
+  'help.guide.roadtrip-mode.tip.3':
+    'No celular não há seletor: o complemento acrescenta uma aba Viagem de carro própria ao lado de Plano.',
+  // roadtrip-stops
+  'help.guide.roadtrip-stops.title': 'Paradas no caminho, e quanto tempo você fica',
+  'help.guide.roadtrip-stops.goal':
+    'Transforme um lugar do trajeto numa parada no caminho, e diga quanto tempo leva cada parada.',
+  'help.guide.roadtrip-stops.step.1':
+    'Clique no número na frente de uma parada na lista. O rótulo dele é Tornar uma parada no caminho, e ele abre Tipo de parada.',
+  'help.guide.roadtrip-stops.step.2':
+    'Escolha um tipo: Hospedagem, Combustível, Carregamento, Área de descanso, Camping, Comida ou Pontos turísticos. O número vira o ícone desse tipo e as paradas abaixo são renumeradas.',
+  'help.guide.roadtrip-stops.step.3':
+    'Uma parada no caminho não é um destino, então o cabeçalho do dia conta uma parada a menos.',
+  'help.guide.roadtrip-stops.step.4':
+    'Clique no ícone de novo, Alterar o tipo de parada, e escolha Voltar a ser um destino para devolver o número à parada.',
+  'help.guide.roadtrip-stops.step.5': 'Cada parada traz um selo Parada. Clique nele para abrir Tempo nesta parada.',
+  'help.guide.roadtrip-stops.step.6':
+    'Defina a duração com o controle deslizante, com os botões menos e mais ou com um dos valores prontos, veja o que Chegada e Partida fazem, e então clique em Salvar.',
+  'help.guide.roadtrip-stops.result':
+    'A parada usa o ícone do seu tipo em vez de um número, e toda chegada depois de uma permanência se moveu junto.',
+  'help.guide.roadtrip-stops.tip.1':
+    'Uma permanência pertence ao lugar, não a uma visita: um lugar planejado em dois dias tem o mesmo tempo nos dois.',
+  'help.guide.roadtrip-stops.tip.2':
+    'Paradas no caminho também aparecem em Dias. Mostrar também em Dias, dentro de Paradas de serviço nas Configurações de direção, as mantém só na Viagem de carro.',
+  'help.guide.roadtrip-stops.tip.3': 'Sem permanencia, na mesma janela, tira esse tempo de novo.',
+  // roadtrip-corridor
+  'help.guide.roadtrip-corridor.title': 'Achar combustível, comida e cama ao longo da rota',
+  'help.guide.roadtrip-corridor.goal':
+    'Busque na estrada que você realmente dirige, e ponha o que encontrar no trecho certo.',
+  'help.guide.roadtrip-corridor.step.1':
+    'Escolha o dia no topo de Ao longo da rota. Só os dias com rota calculada são oferecidos.',
+  'help.guide.roadtrip-corridor.step.2':
+    'Em Procurando por, marque o que você precisa. Combustível, Carregamento, Área de descanso, Camping, Hospedagem, Comida e Pontos turísticos podem ser combinados.',
+  'help.guide.roadtrip-corridor.step.3':
+    'Em Num raio de, escolha a que distância procurar dos dois lados da estrada, 2 km, 5 km ou 10 km, e então clique em Buscar.',
+  'help.guide.roadtrip-corridor.step.4':
+    'Os resultados voltam agrupados por tipo, na ordem em que você passa por eles, cada um com o ponto do dia em que fica e a que distância está da rota.',
+  'help.guide.roadtrip-corridor.step.5':
+    'Adicionar num resultado abre Adicionar como parada. Ali está em que dia e em que posição a parada cai, pede o tipo e o tempo na parada, e Adicionar a põe no trajeto.',
+  'help.guide.roadtrip-corridor.result':
+    'Os resultados são listados na ordem em que você passa por eles e desenhados no mapa, e o que você adicionou fica no trajeto no ponto em que ele é realmente passado.',
+  'help.guide.roadtrip-corridor.tip.1':
+    'Nada é buscado até você apertar Buscar: uma execução são muitas requisições a um serviço compartilhado.',
+  'help.guide.roadtrip-corridor.tip.2':
+    'Filtrar por nome estreita o que voltou sem perguntar de novo, e Limpar resultados esvazia a lista e seus alfinetes. Clique num resultado para trazê-lo à vista no mapa.',
+  'help.guide.roadtrip-corridor.tip.3':
+    'Um resultado também pode ser arrastado do mapa até a rota desenhada, que é como você mesmo escolhe o trecho onde a mesma estrada é percorrida duas vezes. Adicionar manualmente, ao lado de Buscar, procura em vez disso um lugar pelo nome.',
+  // roadtrip-via
+  'help.guide.roadtrip-via.title': 'Dobrar um trecho por um ponto de passagem',
+  'help.guide.roadtrip-via.goal':
+    'Mande um trecho pela estrada que você realmente quer, sem acrescentar uma parada a ele.',
+  'help.guide.roadtrip-via.step.1':
+    'Traga à vista o trecho que você quer: clique numa parada da lista e feche o cartão que abre sobre o mapa.',
+  'help.guide.roadtrip-via.step.2':
+    'Clique na rota desenhada. Um ponto de passagem é largado no trecho em que você clicou, e o trecho é recalculado passando por ele.',
+  'help.guide.roadtrip-via.step.3':
+    'A lista acompanha: o cabeçalho do dia traz a nova distância e o novo tempo de direção, e toda chegada depois do ponto de passagem se move junto.',
+  'help.guide.roadtrip-via.step.4':
+    'Passe o mouse sobre a alça e ela diz o que sabe fazer: Arraste para remodelar a rota, clique com o botão direito para remover. Arraste-a para outro lugar e o trecho é redesenhado pelo ponto novo.',
+  'help.guide.roadtrip-via.step.5':
+    'Clique com o botão direito na alça para tirá-la. O trecho volta a seguir o caminho direto.',
+  'help.guide.roadtrip-via.result':
+    'O trecho segue a estrada que você escolheu, e a distância, o tempo de direção e as chegadas do dia são recalculados para ela.',
+  'help.guide.roadtrip-via.tip.1':
+    'Um ponto de passagem não é uma parada: não tem número, nem permanência, nem horário de chegada, e não conta entre as paradas do dia.',
+  'help.guide.roadtrip-via.tip.2':
+    'As alças são desenhadas a partir do nível de zoom 9, então um mapa ajustado à viagem inteira mostra a linha sem elas.',
+  'help.guide.roadtrip-via.tip.3':
+    'Um clique a mais de dois quilômetros de qualquer trecho desenhado é ignorado, e um clique num voo, num trem ou numa barca também.',
+  // roadtrip-alternatives
+  'help.guide.roadtrip-alternatives.title': 'Testar outro jeito de dirigir um trecho',
+  'help.guide.roadtrip-alternatives.goal': 'Veja o que mais o roteador oferece para um pedaço, e pegue.',
+  'help.guide.roadtrip-alternatives.step.1':
+    'Clique numa faixa de condução da lista, a linha entre duas paradas que dá o trecho em distância e tempo. O rótulo dela é Outras rotas.',
+  'help.guide.roadtrip-alternatives.step.2':
+    'Rotas para este trecho abre sobre o mapa, uma entrada por estrada, cada uma desenhada no mapa na sua própria cor.',
+  'help.guide.roadtrip-alternatives.step.3':
+    'Passe o mouse sobre uma entrada para acender aquela estrada. Atual e Mais rápida dizem qual é qual, e as outras dizem quanto são mais rápidas ou mais lentas.',
+  'help.guide.roadtrip-alternatives.step.4':
+    'Clique numa entrada para ir por ali, ou em Fechar para ficar com a estrada em que você está.',
+  'help.guide.roadtrip-alternatives.result':
+    'O trecho segue a estrada que você escolheu, e a distância na lista e as chegadas seguintes mudam junto.',
+  'help.guide.roadtrip-alternatives.tip.1':
+    'Escolher outra estrada põe um ponto de passagem no trecho e substitui os que ele já tinha; escolher a estrada do próprio roteador tira todos de novo.',
+  'help.guide.roadtrip-alternatives.tip.2':
+    'Sem rodovia, Sem pedagio e Sem balsa vêm de um segundo motor com seu próprio modelo de velocidade, então os tempos deles não são comparáveis com os outros.',
+  // roadtrip-limits
+  'help.guide.roadtrip-limits.title': 'Definir o carro e os limites de direção',
+  'help.guide.roadtrip-limits.goal': 'Diga ao TREK o que você dirige e quanto está disposto a dirigir de uma vez.',
+  'help.guide.roadtrip-limits.step.1':
+    'Configurações de direção fica abaixo da busca na coluna direita. Os selos dizem o que está definido; clique para abrir.',
+  'help.guide.roadtrip-limits.step.2':
+    'Em Condução, Trecho mais longo seguido e Condução por dia são em minutos. Um campo vazio significa desligado, e nada é sinalizado.',
+  'help.guide.roadtrip-limits.step.3':
+    'Em Veículo, diga o que você dirige. Combustível só reabastece em paradas de combustível, Elétrico só nas de carregamento, Ambos nas duas.',
+  'help.guide.roadtrip-limits.step.4':
+    'Digite Autonomia por tanque, ou Autonomia por carga, você mesmo. Calcular pelos dados do carro abaixo pega Tanque e Consumo, ou Bateria e Consumo, e faz a conta.',
+  'help.guide.roadtrip-limits.step.5':
+    'Evitar quando possível é uma preferência, não uma proibição: um dia sem jeito de desviar usa a estrada mesmo assim, e diz isso no cabeçalho.',
+  'help.guide.roadtrip-limits.step.6':
+    'Feche a janela. O cartão diz o que está definido, e a lista marca cada trecho e cada dia que passa do limite.',
+  'help.guide.roadtrip-limits.result':
+    'Os selos do cartão dizem o que está definido, e cada trecho e cada dia acima de um limite traz um selo na lista.',
+  'help.guide.roadtrip-limits.tip.1':
+    'As configurações pertencem à viagem, então todo mundo nela planeja com o mesmo carro e os mesmos limites.',
+  'help.guide.roadtrip-limits.tip.2':
+    'Abastecer até diz o quanto uma parada abastece, porque ninguém carrega até 100 % na estrada. Uma parada de combustível ou de carregamento pode sobrescrever isso para si.',
+  'help.guide.roadtrip-limits.tip.3':
+    'Linha da rota decide como o trajeto é desenhado: Conectar os dias calcula a noite entre dois dias, e Uma cor por dia dá a cada dia a sua.',
+  // roadtrip-day-window
+  'help.guide.roadtrip-day-window.title': 'Dar um começo e um fim ao dia de direção',
+  'help.guide.roadtrip-day-window.goal': 'Pare de dirigir na hora que você escolher, e diga onde o dia deve terminar.',
+  'help.guide.roadtrip-day-window.step.1':
+    'Abra Configurações de direção na coluna direita e encontre Horários diários.',
+  'help.guide.roadtrip-day-window.step.2':
+    'Defina um Início do dia. Sozinho ele não faz nada: as duas horas são necessárias, como diz a nota abaixo delas.',
+  'help.guide.roadtrip-day-window.step.3':
+    'Defina um Fim do dia. O trajeto agora para nessa hora e leva o resto para a manhã seguinte, como uma linha Fim do dia e uma linha Continuar viagem na lista.',
+  'help.guide.roadtrip-day-window.step.4':
+    'Em Encerrar o dia, escolha No trajeto para pausar na estrada na hora final, ou No último local para parar antes que o próximo trecho passe dela.',
+  'help.guide.roadtrip-day-window.step.5':
+    'Feche a janela. O cartão Configurações de direção traz os dois horários como selo.',
+  'help.guide.roadtrip-day-window.result':
+    'O trajeto é cortado em dias de viagem do tamanho que você definiu, e o que não cabe continua em dias calculados depois do último. Seus dias e os lugares deles não são alterados.',
+  'help.guide.roadtrip-day-window.tip.1':
+    'Limpar qualquer uma das duas horas desliga tudo de novo. Horários que você mesmo fixou numa parada sempre têm prioridade.',
+  'help.guide.roadtrip-day-window.tip.2':
+    'Com horários diários definidos os dias ficam sempre conectados: o trajeto da última parada de um dia até a primeira do dia seguinte é calculado e contado.',
+  'help.guide.roadtrip-day-window.tip.3':
+    'Cada fim de dia também é um marcador no mapa, uma lua com o número do dia. Arraste-o pela rota, ou até um lugar, para terminar o dia em outro ponto; clique com o botão direito para devolver o fim automático, e Restaurar fins de dia automáticos nesta janela desfaz tudo.',
+  // roadtrip-refuel
+  'help.guide.roadtrip-refuel.title': 'Abastecer antes que o tanque acabe',
+  'help.guide.roadtrip-refuel.goal':
+    'Encontre onde abastecer no trecho que o carro ainda alcança, e ponha isso no trajeto.',
+  'help.guide.roadtrip-refuel.step.1':
+    'Com uma autonomia definida, a lista desenha uma faixa atravessando o trecho onde ela acaba: Aqui o tanque acaba, e embaixo a que distância dentro do trecho isso cai.',
+  'help.guide.roadtrip-refuel.step.2':
+    'A lâmpada na faixa é o botão. Buscar combustível olha ao longo da estrada que você já dirigiu, com Procurando ao longo da rota… enquanto faz isso.',
+  'help.guide.roadtrip-refuel.step.3':
+    'Voltam até três postos, cada um com a que distância está da rota e quanta autonomia deixaria de sobra.',
+  'help.guide.roadtrip-refuel.step.4':
+    'O mais numa oferta a acrescenta como parada de abastecimento. Adicionar como parada abre com o tipo e o tempo já preenchidos, e Adicionar a põe no trecho no ponto em que ela é realmente passada.',
+  'help.guide.roadtrip-refuel.result':
+    'A parada fica no trecho certo com o ícone dela, a autonomia conta de novo a partir dela, e a faixa sumiu.',
+  'help.guide.roadtrip-refuel.tip.1':
+    'A autonomia conta a partir da última parada de combustível ou de carregamento, atravessando dias. O que você dirige decide quais paradas contam: Combustível só combustível, Elétrico só carregamento.',
+  'help.guide.roadtrip-refuel.tip.2':
+    'A busca olha a estrada antes do ponto seco, guarda uma reserva e conta o desvio duas vezes, então tudo que ela oferece é mesmo alcançável.',
+  'help.guide.roadtrip-refuel.tip.3':
+    'Uma resposta vazia não é um beco sem saída: a lâmpada vira Tentar de novo, porque a busca de lugares é um serviço compartilhado que às vezes expira.',
+  // roadtrip-track
+  'help.guide.roadtrip-track.title': 'Fazer um dia seguir uma trilha importada',
+  'help.guide.roadtrip-track.goal':
+    'Ponha o trajeto de um dia numa estrada bonita que você importou como trilha GPX ou KML.',
+  'help.guide.roadtrip-track.step.1': 'Clique no selo Trilha no cabeçalho de um dia. A janela abre nesse dia.',
+  'help.guide.roadtrip-track.step.2':
+    'Escolha uma trilha. Cada uma diz o comprimento dela e a que distância fica deste dia, a mais próxima primeiro.',
+  'help.guide.roadtrip-track.step.3':
+    'Clique em Seguir esta trilha. O TREK larga pontos de passagem onde o trajeto mais se afasta da trilha, e recalcula, rodada após rodada.',
+  'help.guide.roadtrip-track.step.4':
+    'Ele diz quantos pontos de passagem colocou e quão perto o trajeto fica agora. O botão ao lado tira esses pontos de passagem de novo e devolve o dia ao roteador; fechar a janela mantém a trilha.',
+  'help.guide.roadtrip-track.result':
+    'O trajeto do dia segue a trilha em vez da estrada que o roteador escolheu, e o selo Trilha diz qual trilha ele está seguindo.',
+  'help.guide.roadtrip-track.tip.1':
+    'Importe o arquivo em Dias com Importar arquivo, com Trilhas (com geometria de percurso) ou Caminhos (LineStrings) marcados. Enquanto não houver uma trilha na viagem, o selo não tem nada a oferecer.',
+  'help.guide.roadtrip-track.tip.2':
+    'Seguir uma trilha substitui os pontos de passagem que os trechos do dia já tinham, então molde um trecho à mão depois da trilha, não antes.',
 };
 
 export default help;

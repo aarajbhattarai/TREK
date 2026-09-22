@@ -3619,6 +3619,210 @@ const help: TranslationStrings = {
     'A megerősített foglalás folytonos vonal, a függőben lévő szaggatott. Az Útvonal-címkék a foglalásokhoz beállítás a reptérkódot vagy az állomásnevet írja a végjelölőkbe.',
   'help.guide.transport-on-map.tip.3':
     'Az Összes foglalási útvonal megjelenítése tiszta lap, nem réteg: eldobja, amit az egyes ikonok beállítottak, így kétszer megnyomva vagy minden be, vagy minden ki lesz kapcsolva.',
+
+  // ── Screen: trip-roadtrip ─────────────────────────────────────────────────────────────
+  'help.ctx.trip-roadtrip.title': 'Autós út',
+  'help.ctx.trip-roadtrip.summary':
+    'A terv egyetlen vezetésként olvasva: ugyanazok a napok és ugyanazok a helyek, megállókká fűzve a köztük lévő vezetéssel, a bal oszlopban egy sávban és a térképen. Megmondja, milyen messze és mennyi ideig, hol fogy ki a tank, és mi van az út mentén.',
+  'help.ctx.trip-roadtrip.bullet.1':
+    'A bal oszlop tetején a Napok és az Autós út vált a napterv és a vezetés között. Semmi nem másolódik és semmi nem változik: a Napok pontosan úgy adja vissza a tervet, ahogy volt.',
+  'help.ctx.trip-roadtrip.bullet.2':
+    'A sáv feje összegzi az utazást: Távolság, Vezetési idő és Megállók. Alatta naponta egy kártya jön, a nap saját kilométereivel, azzal, hány megállóért van, amit túllép, és egy Nyomvonal jelvénnyel.',
+  'help.ctx.trip-roadtrip.bullet.3':
+    'A számozott megálló olyan hely, amiért a nap van. Az útközbeni megálló, üzemanyag, töltés, pihenőhely, szám helyett a saját fajtájának ikonját viseli, és nem számít bele. Kattints a számra, hogy megváltoztasd, melyik ez, és az Idő jelvényre, hogy megmondd, mennyi ideig tart.',
+  'help.ctx.trip-roadtrip.bullet.4':
+    'Két megálló között egy vezetési sáv adja a szakaszt távolságként és időként. Kattints rá az Útvonalak ehhez a szakaszhoz megnyitásához, vagy kattints a térképen a kirajzolt útvonalra, hogy a szakaszt egy köztes ponton át hajlítsd.',
+  'help.ctx.trip-roadtrip.bullet.5':
+    'A jobb oszlopból Az útvonal mentén lesz: válassz napot, azt, hogy mit keresel, és hogy milyen széles a sáv, aztán Keresés. A Hozzáadás a találatot oda teszi a vezetésre, ahol valóban elhaladsz mellette.',
+  'help.ctx.trip-roadtrip.bullet.6':
+    'Az alatta lévő Vezetési beállítások tartja a korlátokat, az autót és a hatótávját, a napi utazási időszakot, azt, mit kerüljön, és hogy hogyan rajzolódik a vonal. Az utazáshoz tartoznak, így mindenki ugyanazzal az autóval tervez.',
+  // roadtrip-mode
+  'help.guide.roadtrip-mode.title': 'Olvasd az utazást egyetlen vezetésként',
+  'help.guide.roadtrip-mode.goal': 'Kapcsold át a tervet autós út módba, és olvasd el, mit mond a sáv.',
+  'help.guide.roadtrip-mode.step.1':
+    'Kattints az Autós út elemre a bal oszlop tetején lévő Napok és Autós út kapcsolóban. A naptervet felváltja a vezetés, és a térkép kirajzolja minden napot, amelynek van útvonala.',
+  'help.guide.roadtrip-mode.step.2': 'A sáv feje összegzi az egész utazást: Távolság, Vezetési idő és Megállók.',
+  'help.guide.roadtrip-mode.step.3':
+    'Alatta naponta egy kártya jön. A fejléce hordozza a nap számát és dátumát, a vezetést távolságként és időként, és azt, hány megállóért van a nap.',
+  'help.guide.roadtrip-mode.step.4':
+    'A kártyán belül a nap egy lánc: helyenként egy számozott megálló, minden pár között egy vezetési sáv, és a jobb szélen az érkezési idő.',
+  'help.guide.roadtrip-mode.step.5':
+    'Kattints egy nap fejlécére, hogy összecsukd. Az összecsukott nap a térképről is lekerül; kattints újra a fejlécre, hogy visszahozd.',
+  'help.guide.roadtrip-mode.result':
+    'A bal oszlop a vezetés, és a térkép annak minden napját mutatja. A Napok egyenesen visszakapcsol a tervre, változatlanul.',
+  'help.guide.roadtrip-mode.tip.1':
+    'A választás utazásonként megmarad, amíg a böngészőfül nyitva van, így egy újratöltés a vezetéshez tér vissza.',
+  'help.guide.roadtrip-mode.tip.2':
+    'A kapcsoló csak akkor létezik, ha egy adminisztrátor bekapcsolta az Autós út bővítményt, az Adminisztráció Bővítmények lapján.',
+  'help.guide.roadtrip-mode.tip.3': 'Telefonon nincs kapcsoló: a bővítmény saját Autós út fület tesz a Terv mellé.',
+  // roadtrip-stops
+  'help.guide.roadtrip-stops.title': 'Útközbeni megállók, és hogy meddig maradsz',
+  'help.guide.roadtrip-stops.goal':
+    'Változtass egy helyet a vezetésen útközbeni megállóvá, és mondd meg, mennyi ideig tart minden megálló.',
+  'help.guide.roadtrip-stops.step.1':
+    'Kattints a sávban a megálló előtti számra. A címkéje Legyen útközbeni megálló, és megnyitja a Megálló típusa ablakot.',
+  'help.guide.roadtrip-stops.step.2':
+    'Válassz típust: Szállás, Üzemanyag, Töltés, Pihenőhely, Kemping, Étkezés vagy Látnivalók. A számból annak a fajtának az ikonja lesz, az alatta lévő megállók pedig új számot kapnak.',
+  'help.guide.roadtrip-stops.step.3':
+    'Az útközbeni megálló nem úti cél, így a nap fejléce eggyel kevesebb megállót számol.',
+  'help.guide.roadtrip-stops.step.4':
+    'Kattints újra az ikonra, Megálló típusának módosítása, és válaszd a Vissza úti céllá lehetőséget, hogy a megálló visszakapja a számát.',
+  'help.guide.roadtrip-stops.step.5':
+    'Minden megálló visel egy Idő jelvényt. Kattints rá, hogy megnyisd az Idő ezen a megállón ablakot.',
+  'help.guide.roadtrip-stops.step.6':
+    'Állítsd be a hosszt a csúszkával, a mínusz és a plusz gombbal vagy az egyik kész értékkel, nézd meg, mit csinál az Erkezes és az Indulas, aztán kattints a Mentés gombra.',
+  'help.guide.roadtrip-stops.result':
+    'A megálló szám helyett a saját fajtájának ikonját viseli, és minden érkezés, ami a tartózkodás után jön, elmozdult vele.',
+  'help.guide.roadtrip-stops.tip.1':
+    'A tartózkodás a helyhez tartozik, nem egy látogatáshoz: egy két napra tervezett helynél mindkét napon ugyanannyi ideig állsz.',
+  'help.guide.roadtrip-stops.tip.2':
+    'Az útközbeni megállók a Napok nézetben is látszanak. A Megjelenítés a Napok nézetben is, a Vezetési beállítások Szervizmegállók része alatt, csak az Autós útban tartja őket.',
+  'help.guide.roadtrip-stops.tip.3': 'A Nincs tartozkodas, ugyanabban az ablakban, megint elveszi ezt az időt.',
+  // roadtrip-corridor
+  'help.guide.roadtrip-corridor.title': 'Üzemanyagot, ételt és szállást találni az útvonal mentén',
+  'help.guide.roadtrip-corridor.goal':
+    'Keresd végig azt az utat, amin valóban mész, és tedd a találatot a megfelelő szakaszra.',
+  'help.guide.roadtrip-corridor.step.1':
+    'Válaszd ki a napot Az útvonal mentén tetején. Csak azok a napok kerülnek felkínálásra, amelyeknek van útvonala.',
+  'help.guide.roadtrip-corridor.step.2':
+    'Az Amit keresel alatt pipáld ki, amire szükséged van. Az Üzemanyag, a Töltés, a Pihenőhely, a Kemping, a Szállás, az Étkezés és a Látnivalók kombinálhatók.',
+  'help.guide.roadtrip-corridor.step.3':
+    'Az Ezen belül alatt válaszd ki, milyen messzire nézzen az út két oldalán, 2 km, 5 km vagy 10 km, aztán kattints a Keresés gombra.',
+  'help.guide.roadtrip-corridor.step.4':
+    'A találatok fajta szerint csoportosítva jönnek vissza, abban a sorrendben, ahogy elhaladsz mellettük, mindegyik azzal, milyen messze fekszik a napon belül és milyen messze van az útvonaltól.',
+  'help.guide.roadtrip-corridor.step.5':
+    'Egy találaton a Hozzáadás megnyitja a Hozzáadás megállóként ablakot. Megmondja, melyik napra és hányadik helyre kerül a megálló, rákérdez a típusra és a megállón töltött időre, a Hozzáadás pedig ráteszi a vezetésre.',
+  'help.guide.roadtrip-corridor.result':
+    'A találatok abban a sorrendben vannak felsorolva, ahogy elhaladsz mellettük, és ki vannak rajzolva a térképen, a hozzáadott pedig ott ül a vezetésen, ahol valóban elhaladsz mellette.',
+  'help.guide.roadtrip-corridor.tip.1':
+    'Semmi nem keresődik, amíg meg nem nyomod a Keresés gombot: egy futás sok kérés egy közös szolgáltatás felé.',
+  'help.guide.roadtrip-corridor.tip.2':
+    'A Szűrés név szerint újabb kérdezés nélkül szűkíti azt, ami visszajött, a Találatok törlése pedig kiüríti a listát és a tűit. Kattints egy találatra, hogy a térképen a látómezőbe kerüljön.',
+  'help.guide.roadtrip-corridor.tip.3':
+    'Egy találat a térképről a kirajzolt útvonalra is húzható, így választod ki magad a szakaszt ott, ahol ugyanazon az úton kétszer mész végig. A Keresés melletti Hozzáadás kézzel ehelyett név szerint keres meg egy helyet.',
+  // roadtrip-via
+  'help.guide.roadtrip-via.title': 'Szakasz hajlítása köztes ponton át',
+  'help.guide.roadtrip-via.goal':
+    'Küldd a szakaszt azon az úton, amelyiket valóban akarod, anélkül hogy megállót tennél rá.',
+  'help.guide.roadtrip-via.step.1':
+    'Hozd látómezőbe a kívánt szakaszt: kattints egy megállóra a sávban, aztán zárd be a kártyát, ami a térkép fölött nyílik.',
+  'help.guide.roadtrip-via.step.2':
+    'Kattints a kirajzolt útvonalra. Arra a szakaszra, amelyikre kattintottál, egy köztes pont kerül, és a szakasz újratervezve halad át rajta.',
+  'help.guide.roadtrip-via.step.3':
+    'A sáv követi: a nap fejléce az új távolságot és vezetési időt hordozza, és a köztes pont utáni minden érkezés elmozdul vele.',
+  'help.guide.roadtrip-via.step.4':
+    'Vidd az egeret a fogantyú fölé, és megmondja, mit tud: Húzza az útvonal átalakításához, jobb gombbal eltávolítható. Húzd máshová, és a szakasz az új pont felé rajzolódik újra.',
+  'help.guide.roadtrip-via.step.5':
+    'Kattints jobb gombbal a fogantyúra, hogy elvedd. A szakasz megint a közvetlen úton megy.',
+  'help.guide.roadtrip-via.result':
+    'A szakasz azt az utat követi, amit választottál, a nap távolsága, vezetési ideje és érkezései pedig újraszámolódnak rá.',
+  'help.guide.roadtrip-via.tip.1':
+    'A köztes pont nem megálló: nincs száma, tartózkodása és érkezési ideje, és nem számít bele a nap megállóiba.',
+  'help.guide.roadtrip-via.tip.2':
+    'A fogantyúk a 9. nagyítási szinttől rajzolódnak, így az egész utazáshoz igazított térkép nélkülük mutatja a vonalat.',
+  'help.guide.roadtrip-via.tip.3':
+    'A bármely kirajzolt szakasztól két kilométernél távolabbi kattintás figyelmen kívül marad, és így jár egy repülőre, vonatra vagy kompra való kattintás is.',
+  // roadtrip-alternatives
+  'help.guide.roadtrip-alternatives.title': 'Próbálj ki másik utat egy szakaszon',
+  'help.guide.roadtrip-alternatives.goal': 'Nézd meg, mit kínál még az útvonaltervező egy szakaszra, és vedd el.',
+  'help.guide.roadtrip-alternatives.step.1':
+    'Kattints egy vezetési sávra a sávban, arra a sorra két megálló között, amelyik a szakaszt távolságként és időként adja. A címkéje Más útvonalak.',
+  'help.guide.roadtrip-alternatives.step.2':
+    'Az Útvonalak ehhez a szakaszhoz a térkép fölött nyílik meg, utanként egy bejegyzéssel, mindegyik saját színnel kirajzolva a térképen.',
+  'help.guide.roadtrip-alternatives.step.3':
+    'Vidd az egeret egy bejegyzés fölé, hogy kigyúljon az az út. A Jelenlegi és a Leggyorsabb megmondja, melyik melyik, a többi pedig azt mondja meg, mennyivel gyorsabbak vagy lassabbak.',
+  'help.guide.roadtrip-alternatives.step.4':
+    'Kattints egy bejegyzésre, hogy arra menj, vagy a Bezárás gombra, hogy maradj azon az úton, amin vagy.',
+  'help.guide.roadtrip-alternatives.result':
+    'A szakasz azon az úton megy, amit választottál, a sáv távolsága és az utána jövő érkezések pedig vele változnak.',
+  'help.guide.roadtrip-alternatives.tip.1':
+    'Másik út választása köztes pontot tesz a szakaszra, és lecseréli azt, ami már volt rajta; az útvonaltervező saját útjának választása megint elveszi őket.',
+  'help.guide.roadtrip-alternatives.tip.2':
+    'Az Autopalya nelkul, a Dijmentes és a Komp nélkül egy második motorból jön, saját sebességmodellel, így az idejük nem hasonlítható össze a többiekével.',
+  // roadtrip-limits
+  'help.guide.roadtrip-limits.title': 'Állítsd be az autót és a vezetési korlátokat',
+  'help.guide.roadtrip-limits.goal':
+    'Mondd el a TREK-nek, mivel utazol, és milyen messzire vagy hajlandó egyhuzamban vezetni.',
+  'help.guide.roadtrip-limits.step.1':
+    'A Vezetési beállítások a jobb oszlopban a keresés alatt ül. A jelvényei megmondják, mi van beállítva; kattints rá a megnyitásához.',
+  'help.guide.roadtrip-limits.step.2':
+    'A Vezetés alatt a Leghosszabb egyhuzamban vezetés és a Vezetés naponta percben értendő. Az üres mező azt jelenti, ki, és semmi nincs megjelölve.',
+  'help.guide.roadtrip-limits.step.3':
+    'A Jármű alatt mondd meg, mivel utazol. Az Üzemanyag csak üzemanyagos megállóknál tankol, az Elektromos csak töltőknél, a Mindkettő mindkettőnél.',
+  'help.guide.roadtrip-limits.step.4':
+    'A Hatótáv egy tankkal vagy a Hatótáv egy töltéssel értéket magad írd be. Az alatta lévő Számold ki az autó adataiból a Tank mérete és a Fogyasztás, vagy az Akkumulátor és a Fogyasztás értékét veszi, és elvégzi a számítást.',
+  'help.guide.roadtrip-limits.step.5':
+    'A Kerülés, ha lehet kívánság, nem tiltás: az a nap, amelyiknek nincs kerülőútja, mégis használja az utat, és ezt megmondja a fejlécében.',
+  'help.guide.roadtrip-limits.step.6':
+    'Zárd be az ablakot. A kártya megmondja, mi van beállítva, a sáv pedig megjelöl minden szakaszt és minden napot, ami ezt túllépi.',
+  'help.guide.roadtrip-limits.result':
+    'A kártya jelvényei megmondják, mi van beállítva, és minden korláton túli szakasz és nap jelvényt visel a sávban.',
+  'help.guide.roadtrip-limits.tip.1':
+    'A beállítások az utazáshoz tartoznak, így mindenki ugyanazzal az autóval és ugyanazokkal a korlátokkal tervez.',
+  'help.guide.roadtrip-limits.tip.2':
+    'A Feltöltés eddig megmondja, mennyire tölt fel egy megálló, mert úton senki nem tölt 100 %-ig. Egy üzemanyagos vagy töltős megálló ezt magára nézve felülírhatja.',
+  'help.guide.roadtrip-limits.tip.3':
+    'Az Útvonalvonal dönti el, hogyan rajzolódik a vezetés: a Napok összekötése megtervezi a két nap közötti éjszakát, a Naponta egy szín pedig minden napnak sajátot ad.',
+  // roadtrip-day-window
+  'help.guide.roadtrip-day-window.title': 'Adj a vezetési napnak kezdetet és véget',
+  'help.guide.roadtrip-day-window.goal':
+    'Hagyd abba a vezetést az általad választott órában, és mondd meg, hol érjen véget a nap.',
+  'help.guide.roadtrip-day-window.step.1':
+    'Nyisd meg a Vezetési beállítások ablakot a jobb oszlopban, és keresd meg a Napi utazási időszak részt.',
+  'help.guide.roadtrip-day-window.step.2':
+    'Állíts be egy Nap kezdete értéket. Önmagában semmit nem csinál: mindkét időpont kell, ahogy az alattuk lévő megjegyzés mondja.',
+  'help.guide.roadtrip-day-window.step.3':
+    'Állíts be egy Nap vége értéket. A vezetés mostantól abban az órában megáll, és a maradékot átviszi a következő reggelre, a sávban egy Nap vége és egy Utazás folytatása sorként.',
+  'help.guide.roadtrip-day-window.step.4':
+    'A Nap lezárása alatt válaszd Az útvonalon lehetőséget, hogy a befejezési időben az úton álljon meg, vagy Az utolsó helyen lehetőséget, hogy előbb álljon meg, mint hogy a következő vezetés elhaladna mellette.',
+  'help.guide.roadtrip-day-window.step.5':
+    'Zárd be az ablakot. A Vezetési beállítások kártya jelvényként hordozza a két időpontot.',
+  'help.guide.roadtrip-day-window.result':
+    'A vezetés az általad beállított hosszúságú utazási napokra vágódik, és ami nem fér bele, az utolsó után jövő számolt napokon folytatódik. A napjaid és a helyeik nem változnak.',
+  'help.guide.roadtrip-day-window.tip.1':
+    'Bármelyik időpont törlése az egészet megint kikapcsolja. Az általad egy megállóra rögzített időpontok mindig elsőbbséget élveznek.',
+  'help.guide.roadtrip-day-window.tip.2':
+    'Beállított napi utazási időszakkal a napok mindig össze vannak kötve: az egyik nap utolsó megállójától a következő nap elsőjéig tartó vezetés megtervezésre és beszámításra kerül.',
+  'help.guide.roadtrip-day-window.tip.3':
+    'Minden napvég a térképen is jelölő, egy hold a nap számával. Húzd az útvonal mentén vagy egy helyre, hogy a nap máshol érjen véget; kattints rá jobb gombbal, hogy visszakerüljön az automatikus vég, az Automatikus napvégek visszaállítása pedig ebben az ablakban az egészet visszavonja.',
+  // roadtrip-refuel
+  'help.guide.roadtrip-refuel.title': 'Tankolj, mielőtt kifogy a tank',
+  'help.guide.roadtrip-refuel.goal':
+    'Keress helyet a tankolásra azon a szakaszon, ameddig az autó még elér, és tedd rá a vezetésre.',
+  'help.guide.roadtrip-refuel.step.1':
+    'Beállított hatótávval a sáv sávot rajzol a szakaszon oda, ahol kifogy: Itt fogy ki a tank, alatta pedig az, milyen messze van ez a szakaszon belül.',
+  'help.guide.roadtrip-refuel.step.2':
+    'A sávon lévő lámpa a gomb. Az Üzemanyag keresése a már megtett út mentén néz, és közben Keresés az útvonal mentén… látszik.',
+  'help.guide.roadtrip-refuel.step.3':
+    'Legfeljebb három állomás jön vissza, mindegyik azzal, milyen messze van az útvonaltól és mennyi hatótávot hagyna meg.',
+  'help.guide.roadtrip-refuel.step.4':
+    'Egy ajánlaton a plusz tankolási megállóként adja hozzá. A Hozzáadás megállóként már kitöltött típussal és idővel nyílik meg, a Hozzáadás pedig oda teszi a szakaszra, ahol valóban elhaladsz mellette.',
+  'help.guide.roadtrip-refuel.result':
+    'A megálló a megfelelő szakaszon van a saját ikonjával, a hatótáv tőle számolódik újra, a sáv pedig eltűnt.',
+  'help.guide.roadtrip-refuel.tip.1':
+    'A hatótáv az utolsó üzemanyagos vagy töltős megállótól számol, a napokon át. Az dönti el, mely megállók számítanak, hogy mivel utazol: az Üzemanyag csak az üzemanyagosak, az Elektromos csak a töltősek.',
+  'help.guide.roadtrip-refuel.tip.2':
+    'A keresés a kifogyási pont előtti utat nézi, tartalékot hagy, és kétszer számolja a kerülőt, így minden, amit kínál, valóban elérhető.',
+  'help.guide.roadtrip-refuel.tip.3':
+    'Az üres válasz nem zsákutca: a lámpából Újra lesz, mert a helykeresés közös szolgáltatás, ami néha túllépi az időt.',
+  // roadtrip-track
+  'help.guide.roadtrip-track.title': 'Kövessen egy nap importált nyomvonalat',
+  'help.guide.roadtrip-track.goal':
+    'Tedd egy nap vezetését arra a látványos útvonalra, amit GPX vagy KML nyomvonalként importáltál.',
+  'help.guide.roadtrip-track.step.1':
+    'Kattints a Nyomvonal jelvényre egy nap fejlécében. Az ablak azon a napon nyílik meg.',
+  'help.guide.roadtrip-track.step.2':
+    'Válassz nyomvonalat. Mindegyik megmondja, milyen hosszú és milyen messze fekszik ettől a naptól, a legközelebbi elöl.',
+  'help.guide.roadtrip-track.step.3':
+    'Kattints a Kövesse ezt a nyomvonalat gombra. A TREK köztes pontokat ejt oda, ahol a vezetés a legjobban eltér a nyomvonaltól, és kör kör után újratervez.',
+  'help.guide.roadtrip-track.step.4':
+    'Megmondja, hány köztes pontot helyezett el, és mennyire közel marad most a vezetés. A mellette lévő gomb megint elveszi ezeket a köztes pontokat, és visszaadja a napot az útvonaltervezőnek; az ablak bezárása megtartja a nyomvonalat.',
+  'help.guide.roadtrip-track.result':
+    'A nap vezetése a nyomvonalat követi az útvonaltervező által választott út helyett, és a Nyomvonal jelvény megmondja, melyik nyomvonalat követi.',
+  'help.guide.roadtrip-track.tip.1':
+    'A fájlt a Napok alatt a Fájl importálása paranccsal importáld, kipipált nyomvonalaival vagy útvonalaival. Amíg nincs nyomvonal az utazásban, a jelvénynek nincs mit kínálnia.',
+  'help.guide.roadtrip-track.tip.2':
+    'A nyomvonal követése lecseréli azokat a köztes pontokat, amik a nap szakaszain már voltak, ezért egy szakaszt kézzel a nyomvonal után formázz, ne előtte.',
 };
 
 export default help;

@@ -3332,6 +3332,193 @@ const help: TranslationStrings = {
     '“확정됨”인 예약은 실선, “대기 중”인 예약은 점선입니다. “예약 경로 레이블” 설정은 공항 코드나 역 이름을 끝 표식 안에 새깁니다.',
   'help.guide.transport-on-map.tip.3':
     '“모든 예약 경로 표시”는 층이 아니라 백지에서 다시 시작하는 것입니다. 개별 아이콘이 정해 둔 것을 버리므로, 두 번 누르면 전부 켜짐이거나 전부 꺼짐으로 남습니다.',
+
+  // ── Screen: trip-roadtrip ─────────────────────────────────────────────────────────────
+  'help.ctx.trip-roadtrip.title': '로드트립',
+  'help.ctx.trip-roadtrip.summary':
+    '계획을 하나의 주행으로 읽는 곳입니다. 같은 날짜와 같은 장소가 그 사이의 주행과 함께 경유지로 이어져, 왼쪽 열을 따라 내려가는 주행 목록과 지도에 놓입니다. 얼마나 멀고 얼마나 오래 걸리는지, 연료가 어디서 떨어지는지, 길가에 무엇이 있는지를 알려 줍니다.',
+  'help.ctx.trip-roadtrip.bullet.1':
+    '왼쪽 열 맨 위의 “일자별”과 “로드트립”이 일별 계획과 주행 사이를 전환합니다. 아무것도 복사되지 않고 아무것도 바뀌지 않습니다. “일자별”은 계획을 있던 그대로 되돌려 줍니다.',
+  'help.ctx.trip-roadtrip.bullet.2':
+    '주행 목록의 머리는 여행 전체를 합산합니다. “거리”, “운전 시간”, “경유지”입니다. 그 아래에는 하루에 카드 하나씩 놓이고, 그 날의 거리, 몇 곳을 위한 날인지, 무엇을 넘겼는지, 그리고 “트랙” 배지가 들어 있습니다.',
+  'help.ctx.trip-roadtrip.bullet.3':
+    '번호가 붙은 경유지는 그 날이 향하는 장소입니다. 주유, 충전, 휴게소 같은 중간 정차는 번호 대신 그 종류의 아이콘을 달고 수에 들어가지 않습니다. 번호를 클릭하면 어떤 것인지 바꾸고, “체류” 배지를 클릭하면 얼마나 걸리는지 정합니다.',
+  'help.ctx.trip-roadtrip.bullet.4':
+    '두 경유지 사이에서 주행 띠가 그 구간을 거리와 시간으로 보여 줍니다. 클릭하면 “이 구간을 가는 방법”이 열리고, 지도에 그려진 경로를 클릭하면 경유 지점을 거쳐 구간을 휘게 할 수 있습니다.',
+  'help.ctx.trip-roadtrip.bullet.5':
+    '오른쪽 열은 “경로 주변”이 됩니다. 날짜와 찾을 항목과 반경을 고른 다음 “검색”을 누릅니다. “추가”는 실제로 지나가는 지점에 결과를 주행 위에 놓습니다.',
+  'help.ctx.trip-roadtrip.bullet.6':
+    '그 아래의 “주행 설정”에는 한도, 차와 주행거리, 일일 이동 시간, 피할 것, 선을 그리는 방식이 들어 있습니다. 이것들은 여행에 속하므로 모두가 같은 차로 계획합니다.',
+  // roadtrip-mode
+  'help.guide.roadtrip-mode.title': '여행을 하나의 주행으로 읽기',
+  'help.guide.roadtrip-mode.goal': '계획을 로드트립 모드로 바꾸고 주행 목록이 말해 주는 것을 읽습니다.',
+  'help.guide.roadtrip-mode.step.1':
+    '왼쪽 열 맨 위의 “일자별”과 “로드트립” 전환에서 “로드트립”을 클릭합니다. 일별 계획이 주행으로 바뀌고, 지도는 경로가 나온 모든 날을 그립니다.',
+  'help.guide.roadtrip-mode.step.2': '주행 목록의 머리는 여행 전체를 합산합니다. “거리”, “운전 시간”, “경유지”입니다.',
+  'help.guide.roadtrip-mode.step.3':
+    '그 아래에는 하루에 카드 하나씩 놓입니다. 머리글에는 그 날의 번호와 날짜, 거리와 시간으로 나타낸 주행, 그리고 그 날이 몇 곳을 위한 날인지가 들어 있습니다.',
+  'help.guide.roadtrip-mode.step.4':
+    '카드 안에서 하루는 하나의 사슬입니다. 장소마다 번호가 붙은 경유지, 그 사이마다 주행 띠, 그리고 오른쪽 끝에 도착 시간입니다.',
+  'help.guide.roadtrip-mode.step.5':
+    '날짜의 머리글을 클릭하면 접힙니다. 접힌 날은 지도에서도 사라집니다. 머리글을 다시 클릭하면 돌아옵니다.',
+  'help.guide.roadtrip-mode.result':
+    '왼쪽 열은 주행이고 지도는 그 모든 날을 보여 줍니다. “일자별”은 곧바로 계획으로 되돌리며, 계획은 그대로입니다.',
+  'help.guide.roadtrip-mode.tip.1':
+    '이 선택은 브라우저 탭이 열려 있는 동안 여행마다 기억되므로, 새로 고쳐도 주행으로 돌아옵니다.',
+  'help.guide.roadtrip-mode.tip.2':
+    '이 전환은 관리자가 “관리자”의 “애드온”에서 “로드트립” 애드온을 켠 뒤에야 생깁니다.',
+  'help.guide.roadtrip-mode.tip.3': '휴대폰에는 전환이 없습니다. 애드온이 “계획” 옆에 자체 “로드트립” 탭을 더합니다.',
+  // roadtrip-stops
+  'help.guide.roadtrip-stops.title': '중간 정차, 그리고 얼마나 머무는지',
+  'help.guide.roadtrip-stops.goal': '주행 위의 장소를 중간 정차로 바꾸고, 정차마다 얼마나 걸리는지 정합니다.',
+  'help.guide.roadtrip-stops.step.1':
+    '주행 목록에서 경유지 앞의 번호를 클릭합니다. 이름은 “경유 정차로 변경”이고, “경유지 종류”가 열립니다.',
+  'help.guide.roadtrip-stops.step.2':
+    '종류를 고릅니다. “숙소”, “주유”, “충전”, “휴게소”, “캠핑장”, “식사”, “볼거리”입니다. 번호가 그 종류의 아이콘으로 바뀌고 아래의 경유지는 번호가 다시 매겨집니다.',
+  'help.guide.roadtrip-stops.step.3': '중간 정차는 목적지가 아니므로 그 날의 머리글은 한 곳 적게 셉니다.',
+  'help.guide.roadtrip-stops.step.4':
+    '아이콘을 다시 클릭해 “정차 유형 변경”을 열고 “다시 목적지로”를 고르면 번호가 돌아옵니다.',
+  'help.guide.roadtrip-stops.step.5':
+    '모든 경유지에는 “체류” 배지가 있습니다. 클릭하면 “이 경유지 체류 시간”이 열립니다.',
+  'help.guide.roadtrip-stops.step.6':
+    '길이는 슬라이더로, 빼기와 더하기 버튼으로, 또는 미리 준비된 값 중 하나로 정하고, “도착”과 “출발”이 어떻게 바뀌는지 보고 “저장”을 클릭합니다.',
+  'help.guide.roadtrip-stops.result':
+    '경유지는 번호 대신 그 종류의 아이콘을 달고, 체류 뒤의 모든 도착 시간이 함께 움직였습니다.',
+  'help.guide.roadtrip-stops.tip.1':
+    '체류는 한 번의 방문이 아니라 장소에 속합니다. 이틀에 계획된 장소는 두 날 모두 같은 시간만큼 머뭅니다.',
+  'help.guide.roadtrip-stops.tip.2':
+    '중간 정차는 “일자별”에도 나옵니다. “주행 설정”의 “편의시설 경유지”에 있는 “일별 보기에도 표시”를 끄면 “로드트립”에만 남습니다.',
+  'help.guide.roadtrip-stops.tip.3': '같은 대화상자의 “체류 없음”이 그 시간을 다시 없앱니다.',
+  // roadtrip-corridor
+  'help.guide.roadtrip-corridor.title': '경로를 따라 주유소, 음식, 잠자리 찾기',
+  'help.guide.roadtrip-corridor.goal': '실제로 달리는 길을 검색하고, 찾은 것을 알맞은 구간에 놓습니다.',
+  'help.guide.roadtrip-corridor.step.1': '“경로 주변” 맨 위에서 날짜를 고릅니다. 경로가 나온 날만 제시됩니다.',
+  'help.guide.roadtrip-corridor.step.2':
+    '“찾는 항목”에서 필요한 것을 체크합니다. “주유”, “충전”, “휴게소”, “캠핑장”, “숙소”, “식사”, “볼거리”를 함께 고를 수 있습니다.',
+  'help.guide.roadtrip-corridor.step.3':
+    '“반경”에서 길 양옆으로 얼마나 멀리 찾을지 2 km, 5 km, 10 km 중에 고르고 “검색”을 클릭합니다.',
+  'help.guide.roadtrip-corridor.step.4':
+    '결과는 종류별로 묶여 지나가는 순서대로 돌아오고, 각각 그 날의 어디쯤에 있는지와 경로에서 얼마나 떨어져 있는지가 붙습니다.',
+  'help.guide.roadtrip-corridor.step.5':
+    '결과의 “추가”는 “경유지로 추가”를 엽니다. 어느 날 몇 번째 자리에 들어가는지 알려 주고, 종류와 정차 시간을 묻고, “추가”가 주행에 올립니다.',
+  'help.guide.roadtrip-corridor.result':
+    '결과는 지나가는 순서대로 나열되어 지도에 그려지고, 추가한 것은 실제로 지나가는 지점에서 주행 위에 놓입니다.',
+  'help.guide.roadtrip-corridor.tip.1':
+    '“검색”을 누르기 전에는 아무것도 검색되지 않습니다. 한 번의 실행이 공유 서비스에 보내는 여러 요청이기 때문입니다.',
+  'help.guide.roadtrip-corridor.tip.2':
+    '“이름으로 필터”는 돌아온 결과를 다시 묻지 않고 좁히고, “결과 지우기”는 목록과 그 핀을 비웁니다. 결과를 클릭하면 지도에서 보입니다.',
+  'help.guide.roadtrip-corridor.tip.3':
+    '결과를 지도에서 그려진 경로 위로 끌어다 놓을 수도 있습니다. 같은 길을 두 번 달리는 곳에서 구간을 직접 고르는 방법입니다. “검색” 옆의 “직접 추가”는 대신 이름으로 장소를 찾습니다.',
+  // roadtrip-via
+  'help.guide.roadtrip-via.title': '경유 지점으로 구간 휘기',
+  'help.guide.roadtrip-via.goal': '정차를 더하지 않고, 구간을 정말로 원하는 길로 보냅니다.',
+  'help.guide.roadtrip-via.step.1':
+    '원하는 구간을 화면에 띄웁니다. 주행 목록에서 경유지를 클릭한 다음, 지도 위에 열린 카드를 닫습니다.',
+  'help.guide.roadtrip-via.step.2':
+    '그려진 경로를 클릭합니다. 클릭한 구간에 경유 지점이 놓이고, 그 구간은 그곳을 거쳐 다시 경로가 계산됩니다.',
+  'help.guide.roadtrip-via.step.3':
+    '주행 목록이 따라옵니다. 그 날의 머리글에는 새 거리와 운전 시간이 들어가고, 경유 지점 뒤의 모든 도착 시간이 함께 움직입니다.',
+  'help.guide.roadtrip-via.step.4':
+    '손잡이에 커서를 올리면 무엇을 할 수 있는지 알려 줍니다. “끌어서 경로를 바꾸고, 오른쪽 클릭으로 삭제”입니다. 다른 곳으로 끌면 구간은 새 지점을 거쳐 다시 그려집니다.',
+  'help.guide.roadtrip-via.step.5': '손잡이를 오른쪽 클릭하면 없어집니다. 구간은 다시 곧장 가는 길을 달립니다.',
+  'help.guide.roadtrip-via.result': '구간은 고른 길을 따르고, 그 날의 거리와 운전 시간과 도착 시간이 다시 계산됩니다.',
+  'help.guide.roadtrip-via.tip.1':
+    '경유 지점은 들르는 곳이 아닙니다. 번호도 체류도 도착 시간도 없고, 그 날의 “경유지” 수에도 들어가지 않습니다.',
+  'help.guide.roadtrip-via.tip.2': '손잡이는 확대 수준 9부터 그려지므로, 여행 전체에 맞춘 지도에서는 선만 보입니다.',
+  'help.guide.roadtrip-via.tip.3':
+    '그려진 어느 구간에서도 2킬로미터보다 멀리 떨어진 클릭은 무시되고, 항공편이나 기차나 여객선 위의 클릭도 마찬가지입니다.',
+  // roadtrip-alternatives
+  'help.guide.roadtrip-alternatives.title': '구간을 다르게 달려 보기',
+  'help.guide.roadtrip-alternatives.goal': '한 구간에 대해 경로 엔진이 또 무엇을 제시하는지 보고 그것을 고릅니다.',
+  'help.guide.roadtrip-alternatives.step.1':
+    '주행 목록에서 주행 띠를 클릭합니다. 두 경유지 사이에서 구간을 거리와 시간으로 보여 주는 줄입니다. 이름은 “다른 경로”입니다.',
+  'help.guide.roadtrip-alternatives.step.2':
+    '“이 구간을 가는 방법”이 지도 위에 열립니다. 길마다 항목이 하나씩이고, 각각 지도에 자기 색으로 그려집니다.',
+  'help.guide.roadtrip-alternatives.step.3':
+    '항목에 커서를 올리면 그 길이 밝아집니다. “현재”와 “가장 빠름”이 어느 것이 어느 것인지 알려 주고, 나머지는 얼마나 더 빠르거나 더 걸리는지 알려 줍니다.',
+  'help.guide.roadtrip-alternatives.step.4': '항목을 클릭하면 그 길로 달리고, “닫기”를 누르면 지금 길을 그대로 둡니다.',
+  'help.guide.roadtrip-alternatives.result':
+    '구간은 고른 길을 달리고, 주행 목록의 거리와 그 뒤의 도착 시간도 함께 바뀝니다.',
+  'help.guide.roadtrip-alternatives.tip.1':
+    '다른 길을 고르면 구간에 경유 지점이 놓이고 이미 있던 것은 대체됩니다. 경로 엔진 자신의 길을 고르면 그것들은 다시 없어집니다.',
+  'help.guide.roadtrip-alternatives.tip.2':
+    '“고속도로 제외”, “통행료 없음”, “페리 없음”은 자체 속도 모델을 가진 두 번째 엔진에서 나오므로, 그 시간은 나머지와 비교할 수 없습니다.',
+  // roadtrip-limits
+  'help.guide.roadtrip-limits.title': '차와 운전 한도 설정하기',
+  'help.guide.roadtrip-limits.goal': '무엇으로 이동하는지, 한 번에 얼마나 오래 운전할 생각인지 TREK에 알려 줍니다.',
+  'help.guide.roadtrip-limits.step.1':
+    '“주행 설정”은 오른쪽 열의 검색 아래에 있습니다. 배지가 무엇이 설정되었는지 알려 주고, 클릭하면 열립니다.',
+  'help.guide.roadtrip-limits.step.2':
+    '“운전” 아래의 “연속 운전 최대”와 “하루 운전”은 분 단위입니다. 빈칸은 “끔”을 뜻하고, 아무것도 표시되지 않습니다.',
+  'help.guide.roadtrip-limits.step.3':
+    '“차량” 아래에서 무엇으로 이동하는지 정합니다. “연료”는 주유 정차에서만, “전기”는 충전 정차에서만, “둘 다”는 양쪽에서 채웁니다.',
+  'help.guide.roadtrip-limits.step.4':
+    '“1회 주유 주행거리”나 “한 번 충전 주행거리”는 직접 입력합니다. 그 아래의 “차량 데이터로 계산하기”는 “연료탱크”와 “소비량”, 또는 “배터리 용량”과 “소비량”을 받아 계산해 줍니다.',
+  'help.guide.roadtrip-limits.step.5':
+    '“가능하면 피하기”는 금지가 아니라 선호입니다. 우회로가 없는 날은 그래도 그 길을 쓰고, 머리글에서 그렇게 알려 줍니다.',
+  'help.guide.roadtrip-limits.step.6':
+    '대화상자를 닫습니다. 카드가 무엇이 설정되었는지 알려 주고, 주행 목록은 한도를 넘는 모든 구간과 모든 날에 표시를 남깁니다.',
+  'help.guide.roadtrip-limits.result':
+    '카드의 배지가 무엇이 설정되었는지 알려 주고, 한도를 넘은 구간과 날은 모두 주행 목록에서 배지를 답니다.',
+  'help.guide.roadtrip-limits.tip.1': '설정은 여행에 속하므로, 참여한 모두가 같은 차와 같은 한도로 계획합니다.',
+  'help.guide.roadtrip-limits.tip.2':
+    '“충전 목표”는 정차에서 얼마나 채우는지 정합니다. 길 위에서 100 %까지 충전하는 사람은 없기 때문입니다. 주유나 충전 정차는 자기만 따로 정할 수 있습니다.',
+  'help.guide.roadtrip-limits.tip.3':
+    '“경로 선”은 주행을 어떻게 그릴지 정합니다. “날짜 잇기”는 두 날 사이의 밤을 경로로 잇고, “날짜별 색상”은 날마다 고유한 색을 줍니다.',
+  // roadtrip-day-window
+  'help.guide.roadtrip-day-window.title': '운전하는 하루에 시작과 끝 주기',
+  'help.guide.roadtrip-day-window.goal': '직접 고른 시각에 운전을 멈추고, 하루가 어디서 끝나야 할지 정합니다.',
+  'help.guide.roadtrip-day-window.step.1': '오른쪽 열에서 “주행 설정”을 열고 “일일 이동 시간”을 찾습니다.',
+  'help.guide.roadtrip-day-window.step.2':
+    '“하루 시작 시간”을 정합니다. 그것만으로는 아무 일도 없습니다. 아래 안내가 말하듯 두 시간이 모두 필요합니다.',
+  'help.guide.roadtrip-day-window.step.3':
+    '“하루 종료 시간”을 정합니다. 이제 주행은 그 시각에 멈추고 나머지를 다음 날 아침으로 넘기며, 주행 목록에 “하루 일정 종료” 줄과 “여행 계속” 줄이 생깁니다.',
+  'help.guide.roadtrip-day-window.step.4':
+    '“하루 종료 지점”에서, 종료 시각에 길 위에서 멈추는 “경로 중간”이나, 다음 주행이 그곳을 지나치기 전에 멈추는 “마지막 장소”를 고릅니다.',
+  'help.guide.roadtrip-day-window.step.5': '대화상자를 닫습니다. “주행 설정” 카드가 두 시각을 배지로 답니다.',
+  'help.guide.roadtrip-day-window.result':
+    '주행은 정한 길이의 이동일로 잘리고, 들어가지 않는 것은 마지막 날 뒤의 계산된 날로 이어집니다. 내 날짜와 그 장소는 바뀌지 않습니다.',
+  'help.guide.roadtrip-day-window.tip.1':
+    '둘 중 한 시각을 비우면 전체가 다시 꺼집니다. 직접 경유지에 고정해 둔 시간은 언제나 우선합니다.',
+  'help.guide.roadtrip-day-window.tip.2':
+    '일일 이동 시간을 정하면 날은 언제나 이어집니다. 어떤 날의 마지막 경유지에서 다음 날 첫 경유지까지의 주행도 경로가 계산되고 수에 들어갑니다.',
+  'help.guide.roadtrip-day-window.tip.3':
+    '하루의 끝은 지도 위의 표시이기도 합니다. 날짜 번호가 붙은 달입니다. 경로를 따라, 또는 어떤 장소 위로 끌면 하루를 다른 곳에서 끝낼 수 있고, 오른쪽 클릭하면 자동 종료가 돌아오며, 이 대화상자의 “자동 하루 종료 복원”은 전부 되돌립니다.',
+  // roadtrip-refuel
+  'help.guide.roadtrip-refuel.title': '연료가 떨어지기 전에 채우기',
+  'help.guide.roadtrip-refuel.goal': '차가 아직 갈 수 있는 구간에서 연료를 채울 곳을 찾아 주행에 올립니다.',
+  'help.guide.roadtrip-refuel.step.1':
+    '주행거리를 정해 두면, 주행 목록은 연료가 떨어지는 구간에 띠를 그립니다. “여기서 연료 소진”, 그리고 그 아래에 구간의 어디쯤인지가 나옵니다.',
+  'help.guide.roadtrip-refuel.step.2':
+    '띠 위의 등이 버튼입니다. “주유소 찾기”는 이미 달려 온 길을 따라 찾고, 찾는 동안에는 “경로를 따라 찾는 중…”이 나옵니다.',
+  'help.guide.roadtrip-refuel.step.3':
+    '최대 세 곳이 돌아오고, 각각 경로에서 얼마나 떨어져 있는지와 얼마만큼의 주행거리가 남을지가 붙습니다.',
+  'help.guide.roadtrip-refuel.step.4':
+    '제안의 더하기가 그것을 주유 정차로 더합니다. “경유지로 추가”가 종류와 시간이 이미 채워진 채 열리고, “추가”가 실제로 지나가는 지점에서 구간에 올립니다.',
+  'help.guide.roadtrip-refuel.result':
+    '그 정차는 알맞은 구간에 자기 아이콘으로 놓이고, 주행거리는 거기서부터 다시 세며, 띠는 사라집니다.',
+  'help.guide.roadtrip-refuel.tip.1':
+    '주행거리는 마지막 주유나 충전 정차에서부터 날을 넘겨 셉니다. 무엇으로 이동하는지가 어떤 정차를 세는지 정합니다. “연료”는 주유만, “전기”는 충전만입니다.',
+  'help.guide.roadtrip-refuel.tip.2':
+    '검색은 연료가 떨어지는 지점 앞의 길을 보고, 여유분을 남기고, 우회 거리를 두 번 세므로, 내놓는 것은 모두 실제로 닿을 수 있습니다.',
+  'help.guide.roadtrip-refuel.tip.3':
+    '빈 답이 막다른 길은 아닙니다. 등이 “다시 시도”로 바뀝니다. 장소 검색은 공유 서비스라 시간이 초과되기도 하기 때문입니다.',
+  // roadtrip-track
+  'help.guide.roadtrip-track.title': '하루를 가져온 트랙에 맞추기',
+  'help.guide.roadtrip-track.goal': 'GPX나 KML 트랙으로 가져온 경치 좋은 길 위에 하루의 주행을 올립니다.',
+  'help.guide.roadtrip-track.step.1': '날짜 머리글의 “트랙” 배지를 클릭합니다. 대화상자가 그 날로 열립니다.',
+  'help.guide.roadtrip-track.step.2':
+    '트랙을 고릅니다. 각각 길이가 얼마인지, 이 날에서 얼마나 떨어져 있는지 알려 주며 가까운 것부터 나옵니다.',
+  'help.guide.roadtrip-track.step.3':
+    '“이 트랙 따라가기”를 클릭합니다. TREK은 주행이 트랙에서 가장 멀어지는 곳에 경유 지점을 놓고, 회차를 거듭하며 경로를 다시 계산합니다.',
+  'help.guide.roadtrip-track.step.4':
+    '경유 지점을 몇 개 놓았는지, 주행이 이제 얼마나 가깝게 붙는지 알려 줍니다. 그 옆의 버튼은 그 경유 지점들을 다시 없애고 그 날을 경로 엔진에 돌려주며, 대화상자를 닫으면 트랙이 유지됩니다.',
+  'help.guide.roadtrip-track.result':
+    '그 날의 주행은 경로 엔진이 고른 길 대신 트랙을 따르고, “트랙” 배지가 어떤 트랙을 따르는지 알려 줍니다.',
+  'help.guide.roadtrip-track.tip.1':
+    '파일은 “일자별”에서 “파일 가져오기”로 들여오고, “트랙 (경로 형상 포함)”이나 “경로 (LineStrings)”를 체크합니다. 여행에 트랙이 들어오기 전까지 배지는 내놓을 것이 없습니다.',
+  'help.guide.roadtrip-track.tip.2':
+    '트랙을 따르면 그 날 구간들이 이미 가지고 있던 경유 지점이 대체되므로, 구간을 손으로 다듬는 일은 트랙 앞이 아니라 뒤에 하세요.',
 };
 
 export default help;

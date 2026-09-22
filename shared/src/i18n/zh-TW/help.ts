@@ -2944,6 +2944,177 @@ const help: TranslationStrings = {
     '「已確認」的預訂是實線，「待確認」的是虛線。「預訂路線標籤」這個設定會把機場代碼或車站名稱印進端點標記裡。',
   'help.guide.transport-on-map.tip.3':
     '「顯示所有預訂路線」是重新來過，而不是疊一層：它會丟掉單個圖示設過的狀態，所以按兩次之後，留給你的不是全開就是全關。',
+
+  // ── Screen: trip-roadtrip ─────────────────────────────────────────────────────────────
+  'help.ctx.trip-roadtrip.title': '公路旅行',
+  'help.ctx.trip-roadtrip.summary':
+    '把計劃當作一次駕駛來讀：同樣的日期、同樣的地點，串成一個個停靠點，中間是行駛的路段，落在左欄的行程條裡和地圖上。它會說明有多遠、要多久、油在哪裡耗盡，以及路上有什麼。',
+  'help.ctx.trip-roadtrip.bullet.1':
+    '左欄頂部的「依日」和「公路旅行」在每日計劃和駕駛之間切換。什麼都不會被複製，什麼都不會被改動：「依日」原封不動地把計劃還給你。',
+  'help.ctx.trip-roadtrip.bullet.2':
+    '行程條的頂部彙總整趟旅行：「距離」「駕駛時間」和「停靠點」。它下面每天一張卡片，帶著當天自己的公里數、這一天是為幾個停靠點而設、超出了什麼，以及一個「軌跡」標記。',
+  'help.ctx.trip-roadtrip.bullet.3':
+    '帶編號的停靠點是這一天要去的地點。途中停靠，比如加油、充電、休息站，戴的是它那一類的圖示而不是編號，也不計入數量。點選編號可以改變它是哪一種，點選「停留」標記可以說明它要花多久。',
+  'help.ctx.trip-roadtrip.bullet.4':
+    '兩個停靠點之間，駕駛條把這一段顯示為距離和時間。點選它開啟「這一段的走法」，或者點選地圖上畫出的路線，用一個途經點把這一段拗過去。',
+  'help.ctx.trip-roadtrip.bullet.5':
+    '右欄變成「沿線」：選一天、選要找什麼、選走廊有多寬，然後點「搜尋」。「新增」會把結果放到駕駛上真正經過它的那一點。',
+  'help.ctx.trip-roadtrip.bullet.6':
+    '它下面的「駕駛設定」裝著各項上限、車和它的續航、每日出行時間、要避開什麼以及線條怎麼畫。它們屬於這趟旅行，所以每個人都用同一輛車來計劃。',
+  // roadtrip-mode
+  'help.guide.roadtrip-mode.title': '把旅行當成一次駕駛來讀',
+  'help.guide.roadtrip-mode.goal': '把計劃切換到公路旅行模式，讀懂行程條告訴你的內容。',
+  'help.guide.roadtrip-mode.step.1':
+    '在左欄頂部的「依日」和「公路旅行」切換裡點選「公路旅行」。每日計劃被駕駛取代，地圖會畫出每一個已經算出路線的日子。',
+  'help.guide.roadtrip-mode.step.2': '行程條的頂部彙總整趟旅行：「距離」「駕駛時間」和「停靠點」。',
+  'help.guide.roadtrip-mode.step.3':
+    '它下面每天一張卡片。卡片標題帶著這一天的編號和日期、以距離和時間表示的駕駛，以及這一天是為幾個停靠點而設。',
+  'help.guide.roadtrip-mode.step.4':
+    '卡片裡面，一天是一條鏈：每個地點一個帶編號的停靠點，每兩個之間一個駕駛條，右端是抵達時間。',
+  'help.guide.roadtrip-mode.step.5':
+    '點選某一天的標題把它摺疊起來。摺疊的一天也會從地圖上消失；再次點選標題就能讓它回來。',
+  'help.guide.roadtrip-mode.result': '左欄就是駕駛，地圖顯示它的每一天。「依日」直接切回計劃，計劃沒有變化。',
+  'help.guide.roadtrip-mode.tip.1': '只要瀏覽器分頁還開著，這個選擇就按旅行記住，所以重新載入還會回到駕駛。',
+  'help.guide.roadtrip-mode.tip.2':
+    '只有管理員在「管理後臺」的「擴充套件」裡開啟了「公路旅行」擴充套件之後，這個切換才存在。',
+  'help.guide.roadtrip-mode.tip.3': '手機上沒有切換：擴充套件會在「計劃」旁邊加一個自己的「公路旅行」分頁。',
+  // roadtrip-stops
+  'help.guide.roadtrip-stops.title': '途中的停靠，以及停留多久',
+  'help.guide.roadtrip-stops.goal': '把駕駛途中的一個地點變成途中停靠，並說明每個停靠要花多久。',
+  'help.guide.roadtrip-stops.step.1':
+    '點選行程條裡某個停靠點前面的編號。它的標籤是「設為途中停靠」，點開後是「停靠類型」。',
+  'help.guide.roadtrip-stops.step.2':
+    '選一個類型：「住宿」「加油」「充電」「休息站」「露營地」「餐飲」或「景點」。編號變成那一類的圖示，它下面的停靠點重新編號。',
+  'help.guide.roadtrip-stops.step.3': '途中停靠不是目的地，所以這一天的標題少算一個停靠點。',
+  'help.guide.roadtrip-stops.step.4': '再次點選圖示，進入「變更停靠類型」，選擇「恢復為目的地」，編號就回來了。',
+  'help.guide.roadtrip-stops.step.5': '每個停靠點都帶著「停留」標記。點選它開啟「在此停留時間」。',
+  'help.guide.roadtrip-stops.step.6':
+    '用滑桿、用減號和加號按鈕，或者用其中一個預設值來設定時長，看看「抵達」和「出發」怎麼變，然後點「儲存」。',
+  'help.guide.roadtrip-stops.result':
+    '這個停靠點戴上了它那一類的圖示而不是編號，停留之後的每一個抵達時間都跟著移動了。',
+  'help.guide.roadtrip-stops.tip.1': '停留屬於地點，而不屬於某一次到訪：安排在兩天裡的同一個地點，兩天都停留同樣久。',
+  'help.guide.roadtrip-stops.tip.2':
+    '途中停靠在「依日」下面也會顯示。把「駕駛設定」中「服務停靠點」裡的「也顯示於每日行程」關掉，它們就只留在「公路旅行」裡。',
+  'help.guide.roadtrip-stops.tip.3': '同一個對話方塊裡的「不停留」會再次去掉這段時間。',
+  // roadtrip-corridor
+  'help.guide.roadtrip-corridor.title': '沿線找加油站、餐飲和住處',
+  'help.guide.roadtrip-corridor.goal': '在你真正開過的路上搜尋，把找到的放在正確的路段上。',
+  'help.guide.roadtrip-corridor.step.1': '在「沿線」頂部選一天。只提供已經算出路線的日子。',
+  'help.guide.roadtrip-corridor.step.2':
+    '在「尋找」下面勾選你需要的。「加油」「充電」「休息站」「露營地」「住宿」「餐飲」和「景點」可以組合。',
+  'help.guide.roadtrip-corridor.step.3': '在「範圍內」裡選擇在道路兩側找多遠，2 km、5 km 或 10 km，然後點「搜尋」。',
+  'help.guide.roadtrip-corridor.step.4':
+    '結果按類型分組返回，順序就是你經過它們的順序，每一條都帶著它在這一天的哪個位置，以及離路線有多遠。',
+  'help.guide.roadtrip-corridor.step.5':
+    '結果上的「新增」會開啟「新增為停靠點」。它會說明這個停靠點落在哪一天、第幾個位置，詢問類型和停靠時間，「新增」把它放到駕駛上。',
+  'help.guide.roadtrip-corridor.result':
+    '結果按你經過的順序列出並畫在地圖上，你新增的那一個就坐落在駕駛上真正經過它的那一點。',
+  'help.guide.roadtrip-corridor.tip.1':
+    '在你按下「搜尋」之前什麼都不會被搜尋：跑一次就是對一個共享服務發出的許多請求。',
+  'help.guide.roadtrip-corridor.tip.2':
+    '「依名稱篩選」不再發起請求就把返回的結果縮小，「清除結果」清空清單和它的標記點。點選一條結果可以讓它在地圖上顯示出來。',
+  'help.guide.roadtrip-corridor.tip.3':
+    '結果也可以從地圖拖到畫出的路線上，同一條路被開過兩次時，你就是這樣自己挑路段的。「搜尋」旁邊的「手動新增」則按名稱查詢一個地點。',
+  // roadtrip-via
+  'help.guide.roadtrip-via.title': '用途經點把一段路拗彎',
+  'help.guide.roadtrip-via.goal': '讓一段路走你真正想要的那條道，而不用給它加一個停靠點。',
+  'help.guide.roadtrip-via.step.1':
+    '先讓你想要的那一段進入視野：在行程條裡點選一個停靠點，然後關掉在地圖上開啟的卡片。',
+  'help.guide.roadtrip-via.step.2': '點選畫出的路線。一個途經點落在你點選的那一段上，這一段會經由它重新算一次路線。',
+  'help.guide.roadtrip-via.step.3':
+    '行程條隨之改變：這一天的標題帶上新的距離和駕駛時間，途經點之後的每一個抵達時間都跟著移動。',
+  'help.guide.roadtrip-via.step.4':
+    '把滑鼠停在把手上，它會說明自己能做什麼：「拖曳可改變路線，右鍵刪除」。把它拖到別處，這一段就經由新位置重新畫出。',
+  'help.guide.roadtrip-via.step.5': '按右鍵點選把手可以把它去掉。這一段又走最直接的路。',
+  'help.guide.roadtrip-via.result': '這一段走你選的路，這一天的距離、駕駛時間和抵達時間都會為它重新算過。',
+  'help.guide.roadtrip-via.tip.1': '途經點不是停靠點：它沒有編號、沒有停留、沒有抵達時間，也不計入這一天的停靠點。',
+  'help.guide.roadtrip-via.tip.2': '把手從縮放級別 9 開始才畫出來，所以一張適配整趟旅行的地圖只會顯示線條而沒有把手。',
+  'help.guide.roadtrip-via.tip.3': '距離任何已畫路段超過兩公里的點選會被忽略，點在航班、火車或渡輪上的點選也一樣。',
+  // roadtrip-alternatives
+  'help.guide.roadtrip-alternatives.title': '換一條路來開這一段',
+  'help.guide.roadtrip-alternatives.goal': '看看路線引擎對某一段還給出什麼，然後採用它。',
+  'help.guide.roadtrip-alternatives.step.1':
+    '點選行程條裡的一條駕駛條，就是兩個停靠點之間那一列、把這一段顯示為距離和時間的那一列。它的標籤是「其他路線」。',
+  'help.guide.roadtrip-alternatives.step.2':
+    '「這一段的走法」在地圖上方開啟，每條路一項，每一項都以自己的顏色畫在地圖上。',
+  'help.guide.roadtrip-alternatives.step.3':
+    '把滑鼠停在某一項上會點亮那條路。「目前」和「最快」說明哪個是哪個，其他項則說明自己快多少或慢多少。',
+  'help.guide.roadtrip-alternatives.step.4': '點選一項就走那條路，點「關閉」就保持你正在走的路。',
+  'help.guide.roadtrip-alternatives.result': '這一段走你選的路，行程條上的距離和它之後的抵達時間也隨之改變。',
+  'help.guide.roadtrip-alternatives.tip.1':
+    '選另一條路會在這一段上放一個途經點，並替換掉它原有的途經點；選擇路線引擎自己的那條路又會把它們去掉。',
+  'help.guide.roadtrip-alternatives.tip.2':
+    '「不走高速」「免收費」和「不搭渡輪」來自第二個引擎，它有自己的速度模型，所以它們的用時不能和其他項相比。',
+  // roadtrip-limits
+  'help.guide.roadtrip-limits.title': '設定車輛和駕駛上限',
+  'help.guide.roadtrip-limits.goal': '告訴 TREK 你開什麼車，以及你願意一口氣開多久。',
+  'help.guide.roadtrip-limits.step.1': '「駕駛設定」位於右欄搜尋的下方。它的標記說明已經設了什麼；點選它即可開啟。',
+  'help.guide.roadtrip-limits.step.2':
+    '在「駕駛」下面，「單次最長駕駛」和「每天駕駛」以分鐘計。空著的欄位意味著「關閉」，也就不會標出任何東西。',
+  'help.guide.roadtrip-limits.step.3':
+    '在「車輛」下面，說明你開什麼車。「燃油」只在加油停靠點補給，「電動」只在充電停靠點補給，「兩者」在兩種停靠點都補給。',
+  'help.guide.roadtrip-limits.step.4':
+    '「單箱續航」或「每次充電續航」由你自己填。它下面的「依車輛資料推算」會取「油箱容量」和「能耗」，或者「電池容量」和「能耗」，替你算出來。',
+  'help.guide.roadtrip-limits.step.5':
+    '「盡量避開」是一種偏好，不是禁令：沒有繞行辦法的一天照樣會走那條路，並在標題裡說明這一點。',
+  'help.guide.roadtrip-limits.step.6': '關閉對話方塊。卡片會說明已經設了什麼，行程條會標出每一個超出上限的路段和日子。',
+  'help.guide.roadtrip-limits.result':
+    '卡片上的標記說明已經設了什麼，每一個超出上限的路段和日子都在行程條裡帶著一個標記。',
+  'help.guide.roadtrip-limits.tip.1': '這些設定屬於這趟旅行，所以同行的每個人都用同一輛車、同樣的上限來計劃。',
+  'help.guide.roadtrip-limits.tip.2':
+    '「加到」說明一個停靠點加到多滿，因為路上沒有人會充到 100 %。加油或充電停靠點可以為自己單獨覆蓋它。',
+  'help.guide.roadtrip-limits.tip.3':
+    '「路線線條」決定駕駛怎麼畫：「連接各天」會把兩天之間的那一夜也算出路線，「每天一種顏色」則給每一天自己的顏色。',
+  // roadtrip-day-window
+  'help.guide.roadtrip-day-window.title': '給駕駛的一天定個開始和結束',
+  'help.guide.roadtrip-day-window.goal': '在你選定的時刻停止駕駛，並說明這一天應該在哪裡結束。',
+  'help.guide.roadtrip-day-window.step.1': '開啟右欄的「駕駛設定」，找到「每日出行時間」。',
+  'help.guide.roadtrip-day-window.step.2':
+    '設一個「一天開始時間」。光有它什麼都不會發生：正如它們下面的說明所講，兩個時間都要有。',
+  'help.guide.roadtrip-day-window.step.3':
+    '設一個「一天結束時間」。駕駛現在會在那個時刻停下，把剩下的帶到第二天早上，在行程條裡表現為一列「當天行程結束」和一列「繼續行程」。',
+  'help.guide.roadtrip-day-window.step.4':
+    '在「一天的結束地點」裡，選「路線途中」表示在結束時間停在路上，或者選「最後一個地點」表示在下一段駕駛會越過它之前就停下。',
+  'help.guide.roadtrip-day-window.step.5': '關閉對話方塊。「駕駛設定」卡片把這兩個時間當作標記帶著。',
+  'help.guide.roadtrip-day-window.result':
+    '駕駛被切成你設定長度的出行日，裝不下的部分會接在最後一天之後的推算日上繼續。你的日期和它們的地點不會改變。',
+  'help.guide.roadtrip-day-window.tip.1': '清空任何一個時間又會把整件事關掉。你自己釘在某個停靠點上的時間始終優先。',
+  'help.guide.roadtrip-day-window.tip.2':
+    '設了每日出行時間之後，各天總是相連的：從某一天最後一個停靠點到第二天第一個停靠點的駕駛也會算出路線並計入。',
+  'help.guide.roadtrip-day-window.tip.3':
+    '每一個當天終點在地圖上也是一個標記，一個帶著日期編號的月亮。沿路線拖動它，或者把它拖到某個地點上，就能讓這一天在別處結束；按右鍵點選它可以恢復自動的終點，而這個對話方塊裡的「恢復自動每日終點」會把全部撤銷。',
+  // roadtrip-refuel
+  'help.guide.roadtrip-refuel.title': '在油耗盡之前加滿',
+  'help.guide.roadtrip-refuel.goal': '在車還能到達的那一段上找個加油的地方，並把它放到駕駛上。',
+  'help.guide.roadtrip-refuel.step.1':
+    '設了續航之後，行程條會在油耗盡的那一段上畫一條帶子：「此處將耗盡油量」，下面是它在這一段裡走了多遠。',
+  'help.guide.roadtrip-refuel.step.2':
+    '帶子上的那盞燈就是按鈕。「尋找加油站」會沿著你已經開過的路去找，找的時候顯示「正在沿路線尋找…」。',
+  'help.guide.roadtrip-refuel.step.3': '最多返回三個加油站，每一個都帶著它離路線有多遠，以及還會剩下多少續航。',
+  'help.guide.roadtrip-refuel.step.4':
+    '某個候選上的加號會把它新增為加油停靠點。「新增為停靠點」開啟時類型和時間已經填好，「新增」把它放到這一段上真正經過它的那一點。',
+  'help.guide.roadtrip-refuel.result': '這個停靠點帶著自己的圖示落在正確的路段上，續航從它開始重新計算，帶子也不見了。',
+  'help.guide.roadtrip-refuel.tip.1':
+    '續航從上一個加油或充電停靠點開始計算，跨越日期。你開什麼車決定哪些停靠點算數：「燃油」只算加油，「電動」只算充電。',
+  'help.guide.roadtrip-refuel.tip.2':
+    '搜尋只看耗盡點之前的路，留出一份餘量，並且把繞行距離算兩遍，所以它給出的每一個都真的到得了。',
+  'help.guide.roadtrip-refuel.tip.3':
+    '空的結果不是死路：那盞燈會變成「重試」，因為地點搜尋是一個共享服務，確實會逾時。',
+  // roadtrip-track
+  'help.guide.roadtrip-track.title': '讓某一天沿著匯入的軌跡走',
+  'help.guide.roadtrip-track.goal': '把某一天的駕駛放到你以 GPX 或 KML 軌跡匯入的風景路線上。',
+  'help.guide.roadtrip-track.step.1': '點選某一天標題裡的「軌跡」標記。對話方塊就在那一天上開啟。',
+  'help.guide.roadtrip-track.step.2': '選一條軌跡。每一條都會說明它有多長、離這一天有多遠，最近的排在最前面。',
+  'help.guide.roadtrip-track.step.3':
+    '點選「沿此軌跡行駛」。TREK 會在駕駛偏離軌跡最遠的地方放下途經點，然後一輪又一輪地重新算路線。',
+  'help.guide.roadtrip-track.step.4':
+    '它會說明放了多少個途經點，以及駕駛現在貼得有多近。旁邊的按鈕會再把那些途經點去掉，把這一天交回給路線引擎；關閉對話方塊則保留軌跡。',
+  'help.guide.roadtrip-track.result':
+    '這一天的駕駛沿著軌跡走，而不是路線引擎挑的那條路，「軌跡」標記會說明它正在沿著哪條軌跡。',
+  'help.guide.roadtrip-track.tip.1':
+    '在「依日」下面用「匯入檔案」匯入這個檔案，並勾上「軌跡（含路徑幾何）」或「路徑（LineStrings）」。在旅行裡有軌跡之前，這個標記沒有什麼可提供的。',
+  'help.guide.roadtrip-track.tip.2':
+    '沿著軌跡走會替換這一天各路段原有的途經點，所以要手動調整某一段，請在軌跡之後做，而不是之前。',
 };
 
 export default help;

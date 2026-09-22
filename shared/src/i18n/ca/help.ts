@@ -3606,6 +3606,205 @@ const help: TranslationStrings = {
     'Una reserva confirmada és una línia contínua, una de pendent és discontínua. L’opció Etiquetes de rutes de reserves escriu el codi de l’aeroport o el nom de l’estació als marcadors dels extrems.',
   'help.guide.transport-on-map.tip.3':
     'Mostra totes les rutes de reserva és fer taula rasa, no és una capa: descarta el que havien posat les icones individuals, de manera que prémer-ho dues vegades et deixa amb tot encès o tot apagat.',
+
+  // ── Screen: trip-roadtrip ─────────────────────────────────────────────────────────────
+  'help.ctx.trip-roadtrip.title': 'Viatge per carretera',
+  'help.ctx.trip-roadtrip.summary':
+    'El pla llegit com un sol trajecte: els mateixos dies i els mateixos llocs, encadenats en parades amb la conducció entremig, en una llista al llarg de la columna esquerra i al mapa. Diu quant hi ha i quant dura, on s’esgota el dipòsit, i què hi ha vora la carretera.',
+  'help.ctx.trip-roadtrip.bullet.1':
+    'Dies i Viatge per carretera, a dalt de la columna esquerra, canvien entre el pla dels dies i el trajecte. No es copia res i no es canvia res: Dies torna el pla exactament tal com era.',
+  'help.ctx.trip-roadtrip.bullet.2':
+    'El cap de la llista suma el viatge: Distància, Temps de conducció i Parades. A sota ve una targeta per dia, amb els quilòmetres propis del dia, per a quantes parades és, allò que supera, i una etiqueta Traça.',
+  'help.ctx.trip-roadtrip.bullet.3':
+    'Una parada numerada és un lloc per al qual existeix el dia. Una parada del camí, combustible, càrrega, una àrea de descans, porta la icona del seu tipus en lloc d’un número i no es compta. Fes clic en un número per canviar què és, i a l’etiqueta Parada per dir quant dura.',
+  'help.ctx.trip-roadtrip.bullet.4':
+    'Entre dues parades, una banda de conducció dona el tram en distància i temps. Fes-hi clic per a Rutes per a aquest tram, o fes clic a la ruta dibuixada al mapa per doblegar el tram per un punt de pas.',
+  'help.ctx.trip-roadtrip.bullet.5':
+    'La columna dreta passa a ser Al llarg de la ruta: tria un dia, què vols buscar i quina amplada té el corredor, i després Cerca. Afegeix posa un resultat al trajecte al punt pel qual es passa de debò.',
+  'help.ctx.trip-roadtrip.bullet.6':
+    'Les Preferències de conducció de sota guarden els límits, el cotxe i la seva autonomia, els horaris diaris, què s’ha d’evitar i com es dibuixa la línia. Pertanyen al viatge, així que tothom planifica amb el mateix cotxe.',
+  // roadtrip-mode
+  'help.guide.roadtrip-mode.title': 'Llegir el viatge com un sol trajecte',
+  'help.guide.roadtrip-mode.goal': 'Passa el pla al mode viatge per carretera i llegeix què t’explica la llista.',
+  'help.guide.roadtrip-mode.step.1':
+    'Fes clic a Viatge per carretera al selector Dies i Viatge per carretera, a dalt de la columna esquerra. El pla dels dies queda substituït pel trajecte, i el mapa dibuixa cada dia que té ruta calculada.',
+  'help.guide.roadtrip-mode.step.2': 'El cap de la llista suma tot el viatge: Distància, Temps de conducció i Parades.',
+  'help.guide.roadtrip-mode.step.3':
+    'A sota ve una targeta per dia. La seva capçalera porta el número i la data del dia, la conducció en distància i temps, i per a quantes parades és el dia.',
+  'help.guide.roadtrip-mode.step.4':
+    'Dins la targeta el dia és una cadena: una parada numerada per lloc, una banda de conducció entre cada parell, i l’hora d’arribada a la vora dreta.',
+  'help.guide.roadtrip-mode.step.5':
+    'Fes clic a la capçalera d’un dia per plegar-lo. Un dia plegat també desapareix del mapa; torna a fer clic a la capçalera per recuperar-lo.',
+  'help.guide.roadtrip-mode.result':
+    'La columna esquerra és el trajecte i el mapa en mostra cada dia. Dies torna directament al pla, sense canvis.',
+  'help.guide.roadtrip-mode.tip.1':
+    'La tria es recorda per viatge mentre la pestanya del navegador segueixi oberta, així que una recàrrega torna al trajecte.',
+  'help.guide.roadtrip-mode.tip.2':
+    'El selector només existeix un cop un administrador ha activat el complement Viatge per carretera, a Complements dins d’Administració.',
+  'help.guide.roadtrip-mode.tip.3':
+    'Al mòbil no hi ha selector: el complement afegeix una pestanya Viatge per carretera pròpia al costat de Planificació.',
+  // roadtrip-stops
+  'help.guide.roadtrip-stops.title': 'Les parades del camí, i quanta estona t’hi quedes',
+  'help.guide.roadtrip-stops.goal':
+    'Converteix un lloc del trajecte en una parada del camí, i digues quant dura cada parada.',
+  'help.guide.roadtrip-stops.step.1':
+    'Fes clic al número que hi ha davant d’una parada a la llista. La seva etiqueta és Converteix en parada del camí, i obre Tipus de parada.',
+  'help.guide.roadtrip-stops.step.2':
+    'Tria un tipus: Allotjament, Combustible, Càrrega, Àrea de descans, Càmping, Menjar o Llocs d’interès. El número es converteix en la icona d’aquell tipus i les parades de sota es renumeren.',
+  'help.guide.roadtrip-stops.step.3':
+    'Una parada del camí no és una destinació, així que la capçalera del dia compta una parada menys.',
+  'help.guide.roadtrip-stops.step.4':
+    'Torna a fer clic a la icona, Canvia el tipus de parada, i tria Torna a ser una destinació per retornar el número a la parada.',
+  'help.guide.roadtrip-stops.step.5':
+    'Cada parada porta una etiqueta Parada. Fes-hi clic per obrir Temps en aquesta parada.',
+  'help.guide.roadtrip-stops.step.6':
+    'Fixa la durada amb el control lliscant, amb els botons menys i més o amb un dels valors predefinits, mira què fan Arribada i Sortida, i després fes clic a Desar.',
+  'help.guide.roadtrip-stops.result':
+    'La parada porta la icona del seu tipus en lloc d’un número, i cada arribada posterior a una estada s’ha desplaçat amb ella.',
+  'help.guide.roadtrip-stops.tip.1':
+    'Una estada pertany al lloc, no a una visita: en un lloc planificat en dos dies s’hi és la mateixa estona tots dos dies.',
+  'help.guide.roadtrip-stops.tip.2':
+    'Les parades del camí també surten a Dies. Mostra també a Dies, dins de Parades de servei a les Preferències de conducció, les manté només al Viatge per carretera.',
+  'help.guide.roadtrip-stops.tip.3': 'Sense estada, al mateix diàleg, torna a treure aquest temps.',
+  // roadtrip-corridor
+  'help.guide.roadtrip-corridor.title': 'Trobar combustible, menjar i llit al llarg de la ruta',
+  'help.guide.roadtrip-corridor.goal':
+    'Cerca a la carretera que condueixes de debò, i posa el que trobis al tram correcte.',
+  'help.guide.roadtrip-corridor.step.1':
+    'Tria el dia a dalt de Al llarg de la ruta. Només s’ofereixen els dies amb ruta calculada.',
+  'help.guide.roadtrip-corridor.step.2':
+    'A Es busca, marca el que et cal. Combustible, Càrrega, Àrea de descans, Càmping, Allotjament, Menjar i Llocs d’interès es poden combinar.',
+  'help.guide.roadtrip-corridor.step.3':
+    'A En un radi de, tria fins on mirar a banda i banda de la carretera, 2 km, 5 km o 10 km, i després fes clic a Cerca.',
+  'help.guide.roadtrip-corridor.step.4':
+    'Els resultats tornen agrupats per tipus, en l’ordre en què els passes, cadascun amb el punt del dia on es troba i a quina distància queda de la ruta.',
+  'help.guide.roadtrip-corridor.step.5':
+    'Afegeix en un resultat obre Afegeix com a parada. Diu en quin dia i en quina posició cau la parada, demana el tipus i el temps a la parada, i Afegeix la posa al trajecte.',
+  'help.guide.roadtrip-corridor.result':
+    'Els resultats es llisten en l’ordre en què els passes i es dibuixen al mapa, i el que has afegit queda al trajecte al punt pel qual es passa de debò.',
+  'help.guide.roadtrip-corridor.tip.1':
+    'No es busca res fins que prems Cerca: una execució són moltes peticions a un servei compartit.',
+  'help.guide.roadtrip-corridor.tip.2':
+    'Filtra per nom estreny el que ha tornat sense tornar a preguntar, i Esborra resultats buida la llista i les seves xinxetes. Fes clic en un resultat per portar-lo a la vista al mapa.',
+  'help.guide.roadtrip-corridor.tip.3':
+    'Un resultat també es pot arrossegar del mapa fins a la ruta dibuixada, que és com tries tu mateix el tram on la mateixa carretera es fa dues vegades. Afegeix manualment, al costat de Cerca, busca en canvi un lloc pel nom.',
+  // roadtrip-via
+  'help.guide.roadtrip-via.title': 'Doblegar un tram per un punt de pas',
+  'help.guide.roadtrip-via.goal': 'Envia un tram per la carretera que vols de debò, sense afegir-hi una parada.',
+  'help.guide.roadtrip-via.step.1':
+    'Porta a la vista el tram que vols: fes clic en una parada de la llista i tanca després la targeta que s’obre sobre el mapa.',
+  'help.guide.roadtrip-via.step.2':
+    'Fes clic a la ruta dibuixada. Es deixa un punt de pas al tram on has fet clic, i el tram es torna a calcular passant per ell.',
+  'help.guide.roadtrip-via.step.3':
+    'La llista ho segueix: la capçalera del dia porta la nova distància i el nou temps de conducció, i cada arribada posterior al punt de pas es desplaça amb ell.',
+  'help.guide.roadtrip-via.step.4':
+    'Passa el ratolí per sobre de la nansa i diu què sap fer: Arrossega per remodelar la ruta, clic dret per eliminar. Arrossega-la a un altre lloc i el tram es torna a dibuixar pel punt nou.',
+  'help.guide.roadtrip-via.step.5': 'Fes clic dret a la nansa per treure-la. El tram torna a fer el camí directe.',
+  'help.guide.roadtrip-via.result':
+    'El tram segueix la carretera que has triat, i la distància, el temps de conducció i les arribades del dia es tornen a calcular per a ella.',
+  'help.guide.roadtrip-via.tip.1':
+    'Un punt de pas no és una parada: no té número, ni estada, ni hora d’arribada, i no compta entre les parades del dia.',
+  'help.guide.roadtrip-via.tip.2':
+    'Les nanses es dibuixen a partir del nivell de zoom 9, així que un mapa ajustat a tot el viatge mostra la línia sense elles.',
+  'help.guide.roadtrip-via.tip.3':
+    'Un clic a més de dos quilòmetres de qualsevol tram dibuixat s’ignora, i un clic sobre un vol, un tren o un ferri també.',
+  // roadtrip-alternatives
+  'help.guide.roadtrip-alternatives.title': 'Provar una altra manera de fer un tram',
+  'help.guide.roadtrip-alternatives.goal': 'Mira què més ofereix l’encaminador per a un tros, i agafa-ho.',
+  'help.guide.roadtrip-alternatives.step.1':
+    'Fes clic en una banda de conducció de la llista, la fila entre dues parades que dona el tram en distància i temps. La seva etiqueta és Altres rutes.',
+  'help.guide.roadtrip-alternatives.step.2':
+    'Rutes per a aquest tram s’obre sobre el mapa, una entrada per carretera, cadascuna dibuixada al mapa amb el seu color.',
+  'help.guide.roadtrip-alternatives.step.3':
+    'Passa el ratolí per una entrada per encendre aquella carretera. Actual i La més ràpida diuen quina és quina, i les altres diuen quant són més ràpides o més lentes.',
+  'help.guide.roadtrip-alternatives.step.4':
+    'Fes clic en una entrada per anar per allà, o a Tancar per quedar-te amb la carretera on ets.',
+  'help.guide.roadtrip-alternatives.result':
+    'El tram va per la carretera que has triat, i la distància de la llista i les arribades posteriors canvien amb ella.',
+  'help.guide.roadtrip-alternatives.tip.1':
+    'Triar una altra carretera posa un punt de pas al tram i substitueix els que ja hi havia; triar la carretera pròpia de l’encaminador els torna a treure.',
+  'help.guide.roadtrip-alternatives.tip.2':
+    'Sense autopista, Sense peatges i Sense ferri venen d’un segon motor amb el seu propi model de velocitat, així que els seus temps no són comparables amb els altres.',
+  // roadtrip-limits
+  'help.guide.roadtrip-limits.title': 'Fixar el cotxe i els límits de conducció',
+  'help.guide.roadtrip-limits.goal': 'Digues a TREK què condueixes i fins on estàs disposat a conduir d’una tirada.',
+  'help.guide.roadtrip-limits.step.1':
+    'Preferències de conducció és a sota de la cerca, a la columna dreta. Les seves etiquetes diuen què hi ha fixat; fes-hi clic per obrir-ho.',
+  'help.guide.roadtrip-limits.step.2':
+    'A Conducció, Trajecte més llarg seguit i Conducció per dia van en minuts. Un camp buit vol dir desactivat, i no es marca res.',
+  'help.guide.roadtrip-limits.step.3':
+    'A Vehicle, digues què condueixes. Benzina només reposta a les parades de combustible, Elèctric només a les de càrrega, Tots dos a totes dues.',
+  'help.guide.roadtrip-limits.step.4':
+    'Escriu tu mateix Autonomia per dipòsit, o Autonomia per càrrega. Calcula-ho a partir del cotxe, a sota, agafa Dipòsit i Consum, o Bateria i Consum, i fa el compte.',
+  'help.guide.roadtrip-limits.step.5':
+    'Evita quan sigui possible és una preferència, no una prohibició: un dia sense manera de voltar-ho fa servir igualment la carretera, i ho diu a la seva capçalera.',
+  'help.guide.roadtrip-limits.step.6':
+    'Tanca el diàleg. La targeta diu què hi ha fixat, i la llista marca cada tram i cada dia que se’n passa.',
+  'help.guide.roadtrip-limits.result':
+    'Les etiquetes de la targeta diuen què hi ha fixat, i cada tram i cada dia per sobre d’un límit porta una etiqueta a la llista.',
+  'help.guide.roadtrip-limits.tip.1':
+    'Les preferències pertanyen al viatge, així que tothom qui hi és planifica amb el mateix cotxe i els mateixos límits.',
+  'help.guide.roadtrip-limits.tip.2':
+    'Omple fins a diu fins on omple una parada, perquè ningú carrega al 100 % a la carretera. Una parada de combustible o de càrrega ho pot sobreescriure per a ella mateixa.',
+  'help.guide.roadtrip-limits.tip.3':
+    'Línia de la ruta decideix com es dibuixa el trajecte: Connecta els dies calcula la nit entre dos dies, i Un color per dia dona a cada dia el seu.',
+  // roadtrip-day-window
+  'help.guide.roadtrip-day-window.title': 'Donar un començament i un final al dia de conducció',
+  'help.guide.roadtrip-day-window.goal': 'Deixa de conduir a l’hora que triïs, i digues on ha d’acabar el dia.',
+  'help.guide.roadtrip-day-window.step.1': 'Obre Preferències de conducció a la columna dreta i troba Horaris diaris.',
+  'help.guide.roadtrip-day-window.step.2':
+    'Posa un Inici del dia. Sol no fa res: calen totes dues hores, tal com diu la nota de sota.',
+  'help.guide.roadtrip-day-window.step.3':
+    'Posa un Final del dia. El trajecte ara s’atura a aquella hora i passa la resta al matí següent, com una fila Final del dia i una fila Continuar el viatge a la llista.',
+  'help.guide.roadtrip-day-window.step.4':
+    'A Final del dia, tria Durant el trajecte per fer pausa a la carretera a l’hora de final, o A l’últim lloc per aturar-te abans que el trajecte següent la superi.',
+  'help.guide.roadtrip-day-window.step.5':
+    'Tanca el diàleg. La targeta Preferències de conducció porta les dues hores com a etiqueta.',
+  'help.guide.roadtrip-day-window.result':
+    'El trajecte es talla en dies de viatge de la llargada que has fixat, i el que no hi cap continua en dies calculats després de l’últim. Els teus dies i els seus llocs no es canvien.',
+  'help.guide.roadtrip-day-window.tip.1':
+    'Buidar qualsevol de les dues hores ho torna a desactivar tot. Les hores que has fixat tu mateix en una parada sempre tenen prioritat.',
+  'help.guide.roadtrip-day-window.tip.2':
+    'Amb els horaris diaris fixats els dies sempre estan connectats: el trajecte de l’última parada d’un dia fins a la primera del següent es calcula i es compta.',
+  'help.guide.roadtrip-day-window.tip.3':
+    'Cada final de dia també és un marcador al mapa, una lluna amb el número del dia. Arrossega’l per la ruta, o fins a un lloc, per acabar el dia en un altre punt; fes-hi clic dret per tornar a posar el final automàtic, i Restaura els finals de dia automàtics en aquest diàleg ho desfà tot.',
+  // roadtrip-refuel
+  'help.guide.roadtrip-refuel.title': 'Omplir el dipòsit abans que s’esgoti',
+  'help.guide.roadtrip-refuel.goal': 'Troba on repostar al tram on el cotxe encara arriba, i posa-ho al trajecte.',
+  'help.guide.roadtrip-refuel.step.1':
+    'Amb una autonomia fixada, la llista dibuixa una banda travessant el tram allà on s’acaba: Aquí s’esgota el dipòsit, i a sota a quina distància dins del tram cau.',
+  'help.guide.roadtrip-refuel.step.2':
+    'El llum de la banda és el botó. Cerca combustible mira al llarg de la carretera que ja has fet, amb Cercant al llarg de la ruta… mentre ho fa.',
+  'help.guide.roadtrip-refuel.step.3':
+    'Tornen fins a tres estacions, cadascuna amb a quina distància queda de la ruta i quanta autonomia deixaria de marge.',
+  'help.guide.roadtrip-refuel.step.4':
+    'El més d’una oferta l’afegeix com a parada de combustible. Afegeix com a parada s’obre amb el tipus i el temps ja omplerts, i Afegeix la posa al tram al punt pel qual es passa de debò.',
+  'help.guide.roadtrip-refuel.result':
+    'La parada és al tram correcte amb la seva icona, l’autonomia torna a comptar des d’ella, i la banda ha desaparegut.',
+  'help.guide.roadtrip-refuel.tip.1':
+    'L’autonomia compta des de l’última parada de combustible o de càrrega, d’un dia a l’altre. Què condueixes decideix quines parades compten: Benzina només el combustible, Elèctric només la càrrega.',
+  'help.guide.roadtrip-refuel.tip.2':
+    'La cerca mira la carretera anterior al punt sec, guarda una reserva i compta el desviament dues vegades, així que a tot el que ofereix s’hi arriba de debò.',
+  'help.guide.roadtrip-refuel.tip.3':
+    'Una resposta buida no és un carreró sense sortida: el llum passa a Torna-ho a provar, perquè la cerca de llocs és un servei compartit que de tant en tant expira.',
+  // roadtrip-track
+  'help.guide.roadtrip-track.title': 'Fer que un dia segueixi una traça importada',
+  'help.guide.roadtrip-track.goal':
+    'Posa el trajecte d’un dia sobre una carretera bonica que has importat com a traça GPX o KML.',
+  'help.guide.roadtrip-track.step.1':
+    'Fes clic a l’etiqueta Traça a la capçalera d’un dia. El diàleg s’obre en aquell dia.',
+  'help.guide.roadtrip-track.step.2':
+    'Tria una traça. Cadascuna diu quant fa i a quina distància queda d’aquest dia, la més propera primer.',
+  'help.guide.roadtrip-track.step.3':
+    'Fes clic a Segueix aquesta traça. TREK deixa punts de pas allà on el trajecte s’allunya més de la traça, i torna a calcular, ronda rere ronda.',
+  'help.guide.roadtrip-track.step.4':
+    'Diu quants punts de pas ha col·locat i a quina distància es manté ara el trajecte. El botó del costat torna a treure aquests punts de pas i retorna el dia a l’encaminador; tancar el diàleg manté la traça.',
+  'help.guide.roadtrip-track.result':
+    'El trajecte del dia segueix la traça en lloc de la carretera que va triar l’encaminador, i l’etiqueta Traça diu quina traça està seguint.',
+  'help.guide.roadtrip-track.tip.1':
+    'Importa el fitxer a Dies amb Importa un fitxer, amb Tracks (amb geometria de ruta) o Rutes (LineStrings) marcats. Mentre no hi hagi cap traça al viatge, l’etiqueta no té res a oferir.',
+  'help.guide.roadtrip-track.tip.2':
+    'Seguir una traça substitueix els punts de pas que els trams del dia ja tenien, així que dona forma a un tram a mà després de la traça, no abans.',
 };
 
 export default help;

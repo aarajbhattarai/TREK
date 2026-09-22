@@ -3529,6 +3529,204 @@ const help: TranslationStrings = {
     'Một đặt chỗ “Đã xác nhận” là đường liền, một đặt chỗ “Chưa giải quyết” là đường đứt nét. Cài đặt “Nhãn lộ trình đặt chỗ” in mã sân bay hoặc tên nhà ga vào các dấu đầu tuyến.',
   'help.guide.transport-on-map.tip.3':
     '“Hiển thị tất cả lộ trình đặt chỗ” là một tờ giấy trắng, không phải một lớp phủ: nó bỏ đi những gì các biểu tượng riêng lẻ đã đặt, nên bấm hai lần sẽ để bạn lại với tất cả đang bật hoặc tất cả đang tắt.',
+
+  // ── Screen: trip-roadtrip ─────────────────────────────────────────────────────────────
+  'help.ctx.trip-roadtrip.title': 'Chuyến đi đường bộ',
+  'help.ctx.trip-roadtrip.summary':
+    'Kế hoạch được đọc như một chuyến lái xe duy nhất: vẫn những ngày ấy và những địa điểm ấy, được nối thành các điểm dừng với quãng lái xe ở giữa, trên dải hành trình chạy dọc cột bên trái và trên bản đồ. Nó cho biết bao xa và bao lâu, chỗ nào hết nhiên liệu, và dọc đường có những gì.',
+  'help.ctx.trip-roadtrip.bullet.1':
+    '“Ngày” và “Chuyến đi đường bộ” ở đầu cột bên trái chuyển qua lại giữa kế hoạch theo ngày và chuyến lái xe. Không có gì được sao chép và không có gì bị đổi: “Ngày” trả lại kế hoạch đúng như cũ.',
+  'help.ctx.trip-roadtrip.bullet.2':
+    'Đầu dải hành trình cộng cả chuyến đi: “Quãng đường”, “Thời gian lái xe” và “Điểm dừng”. Bên dưới là mỗi ngày một thẻ, kèm quãng đường của riêng ngày đó, ngày đó dành cho mấy điểm dừng, nó vượt những gì, và huy hiệu “Tuyến”.',
+  'help.ctx.trip-roadtrip.bullet.3':
+    'Điểm dừng có số là một địa điểm mà ngày đó hướng tới. Một điểm dừng dọc đường, như xăng dầu, sạc điện hay trạm dừng nghỉ, mang biểu tượng loại của nó thay cho số và không được tính. Nhấp vào một con số để đổi loại, và nhấp huy hiệu “Dừng” để nói nó mất bao lâu.',
+  'help.ctx.trip-roadtrip.bullet.4':
+    'Giữa hai điểm dừng, dải lái xe cho biết chặng đó dài bao nhiêu và mất bao lâu. Nhấp vào đó để mở “Các lộ trình cho chặng này”, hoặc nhấp vào lộ trình vẽ trên bản đồ để bẻ chặng qua một điểm trung gian.',
+  'help.ctx.trip-roadtrip.bullet.5':
+    'Cột bên phải trở thành “Dọc theo lộ trình”: chọn một ngày, chọn thứ cần tìm và bề rộng hành lang, rồi nhấn “Tìm kiếm”. “Thêm” đặt kết quả lên hành trình ngay tại điểm thực sự đi qua nó.',
+  'help.ctx.trip-roadtrip.bullet.6':
+    '“Cài đặt lái xe” bên dưới chứa các giới hạn, chiếc xe và quãng đường của nó, giờ di chuyển hằng ngày, những gì cần tránh và cách vẽ đường tuyến. Chúng thuộc về chuyến đi, nên mọi người cùng lên kế hoạch với một chiếc xe.',
+  // roadtrip-mode
+  'help.guide.roadtrip-mode.title': 'Đọc chuyến đi như một chuyến lái xe',
+  'help.guide.roadtrip-mode.goal':
+    'Chuyển kế hoạch sang chế độ chuyến đi đường bộ và đọc những gì dải hành trình cho biết.',
+  'help.guide.roadtrip-mode.step.1':
+    'Nhấp “Chuyến đi đường bộ” trên nút chuyển “Ngày” và “Chuyến đi đường bộ” ở đầu cột bên trái. Kế hoạch theo ngày được thay bằng chuyến lái xe, và bản đồ vẽ mọi ngày đã có lộ trình.',
+  'help.guide.roadtrip-mode.step.2':
+    'Đầu dải hành trình cộng cả chuyến đi: “Quãng đường”, “Thời gian lái xe” và “Điểm dừng”.',
+  'help.guide.roadtrip-mode.step.3':
+    'Bên dưới là mỗi ngày một thẻ. Phần đầu thẻ mang số thứ tự và ngày tháng, quãng lái xe theo quãng đường và thời gian, và ngày đó dành cho mấy điểm dừng.',
+  'help.guide.roadtrip-mode.step.4':
+    'Trong thẻ, một ngày là một chuỗi: mỗi địa điểm một điểm dừng có số, giữa mỗi cặp là một dải lái xe, và giờ đến ở mép phải.',
+  'help.guide.roadtrip-mode.step.5':
+    'Nhấp vào phần đầu của một ngày để thu gọn nó. Ngày đã thu gọn cũng biến khỏi bản đồ; nhấp lại vào phần đầu để đưa nó trở lại.',
+  'help.guide.roadtrip-mode.result':
+    'Cột bên trái là chuyến lái xe và bản đồ hiện mọi ngày của nó. “Ngày” đưa thẳng về kế hoạch, không thay đổi gì.',
+  'help.guide.roadtrip-mode.tip.1':
+    'Lựa chọn này được nhớ cho từng chuyến đi chừng nào thẻ trình duyệt còn mở, nên tải lại trang vẫn quay về chuyến lái xe.',
+  'help.guide.roadtrip-mode.tip.2':
+    'Nút chuyển chỉ có sau khi quản trị viên bật tiện ích “Chuyến đi đường bộ” trong “Tiện ích bổ sung” ở “Sự quản lý”.',
+  'help.guide.roadtrip-mode.tip.3':
+    'Trên điện thoại không có nút chuyển: tiện ích thêm một thẻ “Chuyến đi đường bộ” riêng bên cạnh “Kế hoạch”.',
+  // roadtrip-stops
+  'help.guide.roadtrip-stops.title': 'Điểm dừng dọc đường, và bạn dừng bao lâu',
+  'help.guide.roadtrip-stops.goal':
+    'Biến một địa điểm trên hành trình thành điểm dừng dọc đường, và nói mỗi điểm dừng mất bao lâu.',
+  'help.guide.roadtrip-stops.step.1':
+    'Nhấp vào con số phía trước một điểm dừng trên dải hành trình. Nhãn của nó là “Biến thành điểm dừng dọc đường”, và nó mở “Loại điểm dừng”.',
+  'help.guide.roadtrip-stops.step.2':
+    'Chọn một loại: “Chỗ ở”, “Xăng dầu”, “Sạc điện”, “Trạm dừng nghỉ”, “Khu cắm trại”, “Đồ ăn” hoặc “Điểm tham quan”. Con số biến thành biểu tượng của loại đó và các điểm dừng bên dưới được đánh số lại.',
+  'help.guide.roadtrip-stops.step.3':
+    'Điểm dừng dọc đường không phải điểm đến, nên phần đầu của ngày đếm ít đi một điểm dừng.',
+  'help.guide.roadtrip-stops.step.4':
+    'Nhấp lại vào biểu tượng, “Đổi loại điểm dừng”, rồi chọn “Trở lại là điểm đến” để trả lại con số cho điểm dừng.',
+  'help.guide.roadtrip-stops.step.5':
+    'Mọi điểm dừng đều mang huy hiệu “Dừng”. Nhấp vào đó để mở “Thời gian tại điểm dừng”.',
+  'help.guide.roadtrip-stops.step.6':
+    'Đặt độ dài bằng thanh trượt, bằng nút trừ và nút cộng, hoặc bằng một trong các mức có sẵn, xem “Den noi” và “Roi di” thay đổi ra sao, rồi nhấp “Lưu”.',
+  'help.guide.roadtrip-stops.result':
+    'Điểm dừng mang biểu tượng loại của nó thay cho số, và mọi giờ đến sau một lần dừng đều đã xê dịch theo.',
+  'help.guide.roadtrip-stops.tip.1':
+    'Thời gian dừng thuộc về địa điểm chứ không thuộc về một lần ghé: một địa điểm được xếp vào hai ngày thì cả hai ngày đều dừng lại bấy nhiêu lâu.',
+  'help.guide.roadtrip-stops.tip.2':
+    'Điểm dừng dọc đường cũng hiện trong “Ngày”. Tắt “Hiển thị cả trong Ngày”, nằm dưới “Điểm dừng dịch vụ” trong “Cài đặt lái xe”, thì chúng chỉ còn trong “Chuyến đi đường bộ”.',
+  'help.guide.roadtrip-stops.tip.3': '“Khong dung lai”, trong cùng hộp thoại đó, lại bỏ khoảng thời gian ấy đi.',
+  // roadtrip-corridor
+  'help.guide.roadtrip-corridor.title': 'Tìm xăng, đồ ăn và chỗ ngủ dọc theo lộ trình',
+  'help.guide.roadtrip-corridor.goal': 'Tìm trên con đường bạn thực sự chạy qua, và đặt thứ tìm được vào đúng chặng.',
+  'help.guide.roadtrip-corridor.step.1':
+    'Chọn ngày ở đầu “Dọc theo lộ trình”. Chỉ những ngày đã có lộ trình mới được đưa ra.',
+  'help.guide.roadtrip-corridor.step.2':
+    'Dưới “Đang tìm”, tích thứ bạn cần. “Xăng dầu”, “Sạc điện”, “Trạm dừng nghỉ”, “Khu cắm trại”, “Chỗ ở”, “Đồ ăn” và “Điểm tham quan” có thể kết hợp.',
+  'help.guide.roadtrip-corridor.step.3':
+    'Dưới “Trong vòng”, chọn tìm xa bao nhiêu về mỗi bên đường, 2 km, 5 km hay 10 km, rồi nhấp “Tìm kiếm”.',
+  'help.guide.roadtrip-corridor.step.4':
+    'Kết quả trở về được nhóm theo loại, theo thứ tự bạn đi qua, mỗi kết quả kèm theo nó nằm ở đoạn nào của ngày và cách lộ trình bao xa.',
+  'help.guide.roadtrip-corridor.step.5':
+    '“Thêm” trên một kết quả mở “Thêm làm điểm dừng”. Nó cho biết điểm dừng rơi vào ngày nào và vị trí thứ mấy, hỏi loại và thời gian tại điểm dừng, rồi “Thêm” đặt nó lên hành trình.',
+  'help.guide.roadtrip-corridor.result':
+    'Các kết quả được liệt kê theo thứ tự bạn đi qua và được vẽ trên bản đồ, còn cái bạn đã thêm nằm trên hành trình ngay tại điểm thực sự đi qua nó.',
+  'help.guide.roadtrip-corridor.tip.1':
+    'Không có gì được tìm cho tới khi bạn nhấn “Tìm kiếm”: một lượt chạy là rất nhiều yêu cầu gửi tới một dịch vụ dùng chung.',
+  'help.guide.roadtrip-corridor.tip.2':
+    '“Lọc theo tên” thu hẹp những gì đã trở về mà không hỏi lại, còn “Xóa kết quả” dọn sạch danh sách và các ghim của nó. Nhấp một kết quả để đưa nó vào khung nhìn trên bản đồ.',
+  'help.guide.roadtrip-corridor.tip.3':
+    'Một kết quả cũng có thể được kéo từ bản đồ lên lộ trình đã vẽ, đó là cách bạn tự chọn chặng ở nơi cùng một con đường được chạy qua hai lần. “Thêm thủ công”, bên cạnh “Tìm kiếm”, thì tra một địa điểm theo tên.',
+  // roadtrip-via
+  'help.guide.roadtrip-via.title': 'Bẻ một chặng qua điểm trung gian',
+  'help.guide.roadtrip-via.goal':
+    'Đưa một chặng đi theo con đường bạn thực sự muốn, mà không thêm điểm dừng nào vào đó.',
+  'help.guide.roadtrip-via.step.1':
+    'Đưa chặng bạn muốn vào khung nhìn: nhấp một điểm dừng trên dải hành trình, rồi đóng thẻ mở ra trên bản đồ.',
+  'help.guide.roadtrip-via.step.2':
+    'Nhấp vào lộ trình đã vẽ. Một điểm trung gian được thả xuống chặng bạn vừa nhấp, và chặng đó được định tuyến lại qua nó.',
+  'help.guide.roadtrip-via.step.3':
+    'Dải hành trình đi theo: phần đầu của ngày mang quãng đường và thời gian lái xe mới, và mọi giờ đến sau điểm trung gian đều dịch theo.',
+  'help.guide.roadtrip-via.step.4':
+    'Rê chuột lên tay nắm và nó nói nó làm được gì: “Kéo để định hình lại lộ trình, chuột phải để xóa”. Kéo nó sang chỗ khác thì chặng được vẽ lại qua chỗ mới.',
+  'help.guide.roadtrip-via.step.5': 'Nhấp chuột phải lên tay nắm để bỏ nó đi. Chặng lại chạy đường thẳng nhất.',
+  'help.guide.roadtrip-via.result':
+    'Chặng đi theo con đường bạn đã chọn, và quãng đường, thời gian lái xe cùng các giờ đến của ngày được tính lại cho nó.',
+  'help.guide.roadtrip-via.tip.1':
+    'Điểm trung gian không phải điểm dừng: nó không có số, không có thời gian dừng và không có giờ đến, và không được tính vào số điểm dừng của ngày.',
+  'help.guide.roadtrip-via.tip.2':
+    'Các tay nắm chỉ được vẽ từ mức thu phóng 9 trở lên, nên bản đồ vừa khít cả chuyến đi chỉ hiện đường tuyến mà không có chúng.',
+  'help.guide.roadtrip-via.tip.3':
+    'Cú nhấp cách mọi chặng đã vẽ hơn hai ki lô mét sẽ bị bỏ qua, và cú nhấp lên một chuyến bay, một chuyến tàu hỏa hay một chuyến phà cũng vậy.',
+  // roadtrip-alternatives
+  'help.guide.roadtrip-alternatives.title': 'Thử một cách khác để chạy một chặng',
+  'help.guide.roadtrip-alternatives.goal': 'Xem bộ định tuyến còn đưa ra gì cho một đoạn, rồi chọn lấy.',
+  'help.guide.roadtrip-alternatives.step.1':
+    'Nhấp một dải lái xe trên dải hành trình, là hàng giữa hai điểm dừng cho biết chặng đó dài bao nhiêu và mất bao lâu. Nhãn của nó là “Lộ trình khác”.',
+  'help.guide.roadtrip-alternatives.step.2':
+    '“Các lộ trình cho chặng này” mở ra trên bản đồ, mỗi con đường một mục, mỗi mục được vẽ trên bản đồ bằng màu riêng.',
+  'help.guide.roadtrip-alternatives.step.3':
+    'Rê chuột lên một mục để làm sáng con đường đó. “Hiện tại” và “Nhanh nhất” cho biết mục nào là mục nào, còn các mục khác cho biết chúng nhanh hơn hay chậm hơn bao nhiêu.',
+  'help.guide.roadtrip-alternatives.step.4': 'Nhấp một mục để chạy đường đó, hoặc “Đóng” để giữ con đường đang đi.',
+  'help.guide.roadtrip-alternatives.result':
+    'Chặng chạy con đường bạn đã chọn, và quãng đường trên dải hành trình cùng các giờ đến sau đó cũng đổi theo.',
+  'help.guide.roadtrip-alternatives.tip.1':
+    'Chọn một con đường khác sẽ đặt một điểm trung gian lên chặng và thay thế những điểm đã có; chọn chính con đường của bộ định tuyến thì chúng lại bị bỏ đi.',
+  'help.guide.roadtrip-alternatives.tip.2':
+    '“Khong di cao toc”, “Khong thu phi” và “Không phà” đến từ một bộ máy thứ hai với mô hình tốc độ riêng, nên thời gian của chúng không so sánh được với những mục còn lại.',
+  // roadtrip-limits
+  'help.guide.roadtrip-limits.title': 'Đặt chiếc xe và các giới hạn lái xe',
+  'help.guide.roadtrip-limits.goal': 'Cho TREK biết bạn lái xe gì và bạn sẵn lòng lái bao lâu trong một lần.',
+  'help.guide.roadtrip-limits.step.1':
+    '“Cài đặt lái xe” nằm dưới ô tìm kiếm ở cột bên phải. Các huy hiệu của nó cho biết những gì đã đặt; nhấp vào để mở.',
+  'help.guide.roadtrip-limits.step.2':
+    'Dưới “Lái xe”, “Chặng lái dài nhất” và “Lái xe mỗi ngày” tính bằng phút. Ô trống nghĩa là “tắt”, và không có gì bị đánh dấu.',
+  'help.guide.roadtrip-limits.step.3':
+    'Dưới “Phương tiện”, hãy nói bạn lái xe gì. “Xăng” chỉ tiếp nhiên liệu ở điểm dừng xăng dầu, “Điện” chỉ ở điểm dừng sạc, “Cả hai” thì ở cả hai.',
+  'help.guide.roadtrip-limits.step.4':
+    'Tự gõ “Quãng đường mỗi bình”, hoặc “Quãng đường mỗi lần sạc”. “Tính từ thông số xe” bên dưới lấy “Dung tích bình” và “Mức tiêu thụ”, hoặc “Pin” và “Mức tiêu thụ”, rồi tính hộ bạn.',
+  'help.guide.roadtrip-limits.step.5':
+    '“Tránh nếu có thể” là một ưu tiên, không phải lệnh cấm: ngày nào không có đường vòng thì vẫn đi qua con đường đó, và nói vậy ngay ở phần đầu của ngày.',
+  'help.guide.roadtrip-limits.step.6':
+    'Đóng hộp thoại. Thẻ cho biết những gì đã đặt, và dải hành trình đánh dấu mọi chặng và mọi ngày vượt quá giới hạn.',
+  'help.guide.roadtrip-limits.result':
+    'Các huy hiệu trên thẻ cho biết những gì đã đặt, và mọi chặng và ngày vượt giới hạn đều mang một huy hiệu trên dải hành trình.',
+  'help.guide.roadtrip-limits.tip.1':
+    'Các cài đặt thuộc về chuyến đi, nên mọi người trong chuyến đều lên kế hoạch với cùng một chiếc xe và cùng những giới hạn.',
+  'help.guide.roadtrip-limits.tip.2':
+    '“Đổ đến” cho biết một điểm dừng đổ đầy tới đâu, vì trên đường không ai sạc đến 100 %. Một điểm dừng xăng dầu hoặc sạc điện có thể tự đặt khác cho riêng nó.',
+  'help.guide.roadtrip-limits.tip.3':
+    '“Đường tuyến” quyết định cách vẽ hành trình: “Nối các ngày” định tuyến cả đoạn đêm giữa hai ngày, còn “Mỗi ngày một màu” cho mỗi ngày một màu riêng.',
+  // roadtrip-day-window
+  'help.guide.roadtrip-day-window.title': 'Cho ngày lái xe một giờ bắt đầu và một giờ kết thúc',
+  'help.guide.roadtrip-day-window.goal': 'Dừng lái vào giờ bạn chọn, và nói ngày nên kết thúc ở đâu.',
+  'help.guide.roadtrip-day-window.step.1': 'Mở “Cài đặt lái xe” ở cột bên phải và tìm “Giờ di chuyển hằng ngày”.',
+  'help.guide.roadtrip-day-window.step.2':
+    'Đặt “Giờ bắt đầu ngày”. Một mình nó không làm gì cả: cần cả hai giờ, như ghi chú bên dưới đã nói.',
+  'help.guide.roadtrip-day-window.step.3':
+    'Đặt “Giờ kết thúc ngày”. Hành trình giờ dừng ở giờ đó và mang phần còn lại sang sáng hôm sau, dưới dạng một hàng “Kết thúc ngày” và một hàng “Tiếp tục hành trình” trên dải hành trình.',
+  'help.guide.roadtrip-day-window.step.4':
+    'Dưới “Kết thúc ngày”, chọn “Trên tuyến đường” để tạm dừng trên đường vào giờ kết thúc, hoặc “Tại địa điểm cuối” để dừng trước khi chặng lái tiếp theo đi quá nó.',
+  'help.guide.roadtrip-day-window.step.5': 'Đóng hộp thoại. Thẻ “Cài đặt lái xe” mang hai giờ đó như một huy hiệu.',
+  'help.guide.roadtrip-day-window.result':
+    'Hành trình được cắt thành những ngày đi đường dài đúng như bạn đặt, và phần không vừa sẽ tiếp tục trên các ngày được tính thêm sau ngày cuối. Các ngày của bạn và địa điểm trong đó không bị đổi.',
+  'help.guide.roadtrip-day-window.tip.1':
+    'Xóa một trong hai giờ sẽ tắt toàn bộ. Những giờ bạn tự ghim trên một điểm dừng luôn được ưu tiên.',
+  'help.guide.roadtrip-day-window.tip.2':
+    'Khi đã đặt giờ di chuyển hằng ngày, các ngày luôn được nối: quãng lái từ điểm dừng cuối của một ngày tới điểm dừng đầu của ngày kế cũng được định tuyến và tính vào.',
+  'help.guide.roadtrip-day-window.tip.3':
+    'Mỗi điểm kết thúc ngày cũng là một dấu trên bản đồ, một mặt trăng kèm số ngày. Kéo nó dọc lộ trình, hoặc lên một địa điểm, để kết thúc ngày ở chỗ khác; nhấp chuột phải để trả lại điểm kết thúc tự động, còn “Khôi phục kết thúc ngày tự động” trong hộp thoại này hoàn tác tất cả.',
+  // roadtrip-refuel
+  'help.guide.roadtrip-refuel.title': 'Đổ nhiên liệu trước khi hết bình',
+  'help.guide.roadtrip-refuel.goal': 'Tìm chỗ tiếp nhiên liệu trên đoạn xe còn tới được, và đặt nó lên hành trình.',
+  'help.guide.roadtrip-refuel.step.1':
+    'Khi đã đặt quãng đường, dải hành trình vẽ một dải ngang chặng ở chỗ hết nhiên liệu: “Hết xăng ở đây”, và bên dưới là chỗ đó nằm sâu bao nhiêu trong chặng.',
+  'help.guide.roadtrip-refuel.step.2':
+    'Ngọn đèn trên dải đó chính là nút bấm. “Tìm trạm xăng” tìm dọc con đường bạn đã chạy qua, và hiện “Đang tìm dọc tuyến đường…” trong khi tìm.',
+  'help.guide.roadtrip-refuel.step.3':
+    'Tối đa ba trạm trở về, mỗi trạm kèm theo nó cách lộ trình bao xa và sẽ còn dư bao nhiêu quãng đường.',
+  'help.guide.roadtrip-refuel.step.4':
+    'Dấu cộng trên một đề xuất sẽ thêm nó làm điểm đổ xăng. “Thêm làm điểm dừng” mở ra với loại và thời gian đã điền sẵn, và “Thêm” đặt nó lên chặng ngay tại điểm thực sự đi qua.',
+  'help.guide.roadtrip-refuel.result':
+    'Điểm dừng nằm trên đúng chặng với biểu tượng riêng, quãng đường được tính lại từ đó, và dải kia biến mất.',
+  'help.guide.roadtrip-refuel.tip.1':
+    'Quãng đường được tính từ điểm dừng xăng dầu hoặc sạc điện gần nhất, xuyên qua các ngày. Bạn lái xe gì sẽ quyết định điểm dừng nào được tính: “Xăng” chỉ tính xăng dầu, “Điện” chỉ tính sạc điện.',
+  'help.guide.roadtrip-refuel.tip.2':
+    'Việc tìm kiếm nhìn vào con đường trước điểm cạn nhiên liệu, chừa lại một phần dự trữ và tính quãng đi vòng hai lần, nên mọi thứ nó đưa ra đều thực sự tới được.',
+  'help.guide.roadtrip-refuel.tip.3':
+    'Một câu trả lời rỗng không phải ngõ cụt: ngọn đèn đổi thành “Thử lại”, vì tìm kiếm địa điểm là một dịch vụ dùng chung và đôi khi hết thời gian chờ.',
+  // roadtrip-track
+  'help.guide.roadtrip-track.title': 'Cho một ngày đi theo tuyến đã nhập',
+  'help.guide.roadtrip-track.goal':
+    'Đặt hành trình của một ngày lên một cung đường đẹp mà bạn đã nhập vào dưới dạng tuyến GPX hoặc KML.',
+  'help.guide.roadtrip-track.step.1': 'Nhấp huy hiệu “Tuyến” ở phần đầu của một ngày. Hộp thoại mở ra ở ngày đó.',
+  'help.guide.roadtrip-track.step.2':
+    'Chọn một tuyến. Mỗi tuyến cho biết nó dài bao nhiêu và cách ngày này bao xa, gần nhất đứng trước.',
+  'help.guide.roadtrip-track.step.3':
+    'Nhấp “Đi theo tuyến này”. TREK thả các điểm trung gian ở nơi hành trình lệch xa tuyến nhất, rồi định tuyến lại, vòng này qua vòng khác.',
+  'help.guide.roadtrip-track.step.4':
+    'Nó cho biết đã đặt bao nhiêu điểm trung gian và giờ hành trình bám tuyến sát đến đâu. Nút bên cạnh sẽ bỏ lại những điểm trung gian đó và trả ngày về cho bộ định tuyến; đóng hộp thoại thì giữ nguyên tuyến.',
+  'help.guide.roadtrip-track.result':
+    'Hành trình của ngày đi theo tuyến thay vì con đường bộ định tuyến đã chọn, và huy hiệu “Tuyến” cho biết nó đang đi theo tuyến nào.',
+  'help.guide.roadtrip-track.tip.1':
+    'Nhập tệp trong “Ngày” bằng “Nhập tập tin”, có tích “Đường đi (có hình dạng đường dẫn)” hoặc “Đường dẫn (LineStrings)”. Chừng nào chuyến đi chưa có tuyến nào thì huy hiệu chẳng có gì để đưa ra.',
+  'help.guide.roadtrip-track.tip.2':
+    'Đi theo một tuyến sẽ thay thế các điểm trung gian mà các chặng của ngày đã có, nên hãy nắn một chặng bằng tay sau khi theo tuyến, đừng làm trước.',
 };
 
 export default help;

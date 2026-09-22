@@ -3502,6 +3502,201 @@ const help: TranslationStrings = {
     'En bekräftad bokning är en heldragen linje, en väntande en streckad. Inställningen Etiketter för bokningsrutter skriver ut flygplatskoden eller stationsnamnet i ändmarkörerna.',
   'help.guide.transport-on-map.tip.3':
     'Visa alla bokningsvägar är ett blankt blad, inte ett lager: den kastar det som de enskilda ikonerna hade satt, så att trycka två gånger lämnar dig med allt på eller allt av.',
+
+  // ── Screen: trip-roadtrip ─────────────────────────────────────────────────────────────
+  'help.ctx.trip-roadtrip.title': 'Bilresa',
+  'help.ctx.trip-roadtrip.summary':
+    'Planen läst som en enda körning: samma dagar och samma platser, kedjade till stopp med körningen mellan dem, i en skena längs vänsterkolumnen och på kartan. Den säger hur långt och hur länge, var tanken tar slut och vad som finns längs vägen.',
+  'help.ctx.trip-roadtrip.bullet.1':
+    'Dagar och Bilresa högst upp i vänsterkolumnen växlar mellan dagsplanen och körningen. Inget kopieras och inget ändras: Dagar ger tillbaka planen precis som den var.',
+  'help.ctx.trip-roadtrip.bullet.2':
+    'Skenans huvud summerar resan: Sträcka, Körtid och Stopp. Under det kommer ett kort per dag, med dagens egna kilometer, hur många stopp den är till för, vad den går över och en Spår-bricka.',
+  'help.ctx.trip-roadtrip.bullet.3':
+    'Ett numrerat stopp är en plats dagen är till för. Ett stopp på vägen, bensin, laddning, en rastplats, bär sin sorts ikon i stället för ett nummer och räknas inte. Klicka på ett nummer för att byta vilket det är, och på Stopp-brickan för att säga hur lång tid det tar.',
+  'help.ctx.trip-roadtrip.bullet.4':
+    'Mellan två stopp ger ett körband sträckan som avstånd och tid. Klicka på det för Vägar för den här sträckan, eller klicka på den ritade rutten på kartan för att böja sträckan genom en mellanpunkt.',
+  'help.ctx.trip-roadtrip.bullet.5':
+    'Högerkolumnen blir Längs rutten: välj en dag, vad du letar efter och hur bred korridoren är, och sedan Sök. Lägg till sätter en träff på körningen där den verkligen passeras.',
+  'help.ctx.trip-roadtrip.bullet.6':
+    'Körinställningar under den håller gränserna, bilen och dess räckvidd, de dagliga restiderna, vad som ska undvikas och hur linjen ritas. De hör till resan, så alla planerar med samma bil.',
+  // roadtrip-mode
+  'help.guide.roadtrip-mode.title': 'Läs resan som en enda körning',
+  'help.guide.roadtrip-mode.goal': 'Växla över planen till bilreseläget och läs vad skenan berättar.',
+  'help.guide.roadtrip-mode.step.1':
+    'Klicka på Bilresa i växeln Dagar och Bilresa högst upp i vänsterkolumnen. Dagsplanen ersätts av körningen, och kartan ritar varje dag som har fått en rutt.',
+  'help.guide.roadtrip-mode.step.2': 'Skenans huvud summerar hela resan: Sträcka, Körtid och Stopp.',
+  'help.guide.roadtrip-mode.step.3':
+    'Under det kommer ett kort per dag. Dess rubrik bär dagens nummer och datum, körningen som avstånd och tid, och hur många stopp dagen är till för.',
+  'help.guide.roadtrip-mode.step.4':
+    'Inne i kortet är dagen en kedja: ett numrerat stopp per plats, ett körband mellan varje par och ankomsttiden vid högerkanten.',
+  'help.guide.roadtrip-mode.step.5':
+    'Klicka på en dags rubrik för att fälla ihop den. En ihopfälld dag försvinner också från kartan; klicka på rubriken igen för att ta tillbaka den.',
+  'help.guide.roadtrip-mode.result':
+    'Vänsterkolumnen är körningen och kartan visar varje dag av den. Dagar växlar rakt tillbaka till planen, oförändrad.',
+  'help.guide.roadtrip-mode.tip.1':
+    'Valet kommer ihåg per resa så länge webbläsarfliken är öppen, så en omladdning kommer tillbaka till körningen.',
+  'help.guide.roadtrip-mode.tip.2':
+    'Växeln finns först när en administratör har slagit på tillägget Bilresa, under Tillägg i Administration.',
+  'help.guide.roadtrip-mode.tip.3':
+    'På en telefon finns ingen växel: tillägget lägger till en egen Bilresa-flik bredvid Plan.',
+  // roadtrip-stops
+  'help.guide.roadtrip-stops.title': 'Stopp på vägen, och hur länge du stannar',
+  'help.guide.roadtrip-stops.goal':
+    'Gör en plats på körningen till ett stopp på vägen, och säg hur lång tid varje stopp tar.',
+  'help.guide.roadtrip-stops.step.1':
+    'Klicka på numret framför ett stopp i skenan. Dess etikett är Gör det till ett stopp på vägen, och den öppnar Typ av stopp.',
+  'help.guide.roadtrip-stops.step.2':
+    'Välj en typ: Boende, Bensin, Laddning, Rastplats, Campingplats, Mat eller Sevärt. Numret blir den typens ikon och stoppen under det numreras om.',
+  'help.guide.roadtrip-stops.step.3': 'Ett stopp på vägen är inget resmål, så dagens rubrik räknar ett stopp mindre.',
+  'help.guide.roadtrip-stops.step.4':
+    'Klicka på ikonen igen, Byt typ av stopp, och välj Tillbaka till ett resmål för att ge stoppet dess nummer tillbaka.',
+  'help.guide.roadtrip-stops.step.5': 'Varje stopp bär en Stopp-bricka. Klicka på den för att öppna Tid på stoppet.',
+  'help.guide.roadtrip-stops.step.6':
+    'Ställ in längden med reglaget, med minus- och plusknapparna eller med en av de färdiga tiderna, se vad Ankomst och Avfard gör, och klicka sedan på Spara.',
+  'help.guide.roadtrip-stops.result':
+    'Stoppet bär sin sorts ikon i stället för ett nummer, och varje ankomst efter en vistelse har flyttat med den.',
+  'help.guide.roadtrip-stops.tip.1':
+    'En vistelse hör till platsen, inte till ett besök: en plats som är planerad på två dagar står man lika länge vid båda dagarna.',
+  'help.guide.roadtrip-stops.tip.2':
+    'Stopp på vägen syns även under Dagar. Visa även i Dagar, under Servicestopp i Körinställningar, håller dem bara i Bilresa.',
+  'help.guide.roadtrip-stops.tip.3': 'Ingen vistelse, i samma dialog, tar bort tiden igen.',
+  // roadtrip-corridor
+  'help.guide.roadtrip-corridor.title': 'Hitta bensin, mat och en säng längs rutten',
+  'help.guide.roadtrip-corridor.goal': 'Sök av vägen du verkligen kör, och sätt det du hittar på rätt sträcka.',
+  'help.guide.roadtrip-corridor.step.1':
+    'Välj dagen högst upp i Längs rutten. Bara dagar som har fått en rutt erbjuds.',
+  'help.guide.roadtrip-corridor.step.2':
+    'Under Söker efter, bocka för det du behöver. Bensin, Laddning, Rastplats, Campingplats, Boende, Mat och Sevärt kan kombineras.',
+  'help.guide.roadtrip-corridor.step.3':
+    'Under Inom väljer du hur långt på var sida om vägen du vill leta, 2 km, 5 km eller 10 km, och klickar sedan på Sök.',
+  'help.guide.roadtrip-corridor.step.4':
+    'Träffarna kommer tillbaka grupperade efter sort, i den ordning du passerar dem, var och en med hur långt in på dagen den ligger och hur långt från rutten den är.',
+  'help.guide.roadtrip-corridor.step.5':
+    'Lägg till på en träff öppnar Lägg till som stopp. Den säger vilken dag och vilken position stoppet hamnar på, frågar efter sorten och tiden på stoppet, och Lägg till sätter det på körningen.',
+  'help.guide.roadtrip-corridor.result':
+    'Träffarna listas i den ordning du passerar dem och ritas på kartan, och den du lade till sitter på körningen där den verkligen passeras.',
+  'help.guide.roadtrip-corridor.tip.1':
+    'Inget söks av förrän du trycker på Sök: en körning är många förfrågningar mot en delad tjänst.',
+  'help.guide.roadtrip-corridor.tip.2':
+    'Filtrera på namn smalnar av det som kom tillbaka utan att fråga igen, och Rensa träffar tömmer listan och dess nålar. Klicka på en träff för att få in den i bild på kartan.',
+  'help.guide.roadtrip-corridor.tip.3':
+    'En träff kan också dras från kartan till den ritade rutten, vilket är så du själv väljer sträckan där samma väg körs två gånger. Lägg till manuellt, bredvid Sök, slår i stället upp en plats på namn.',
+  // roadtrip-via
+  'help.guide.roadtrip-via.title': 'Böj en sträcka genom en mellanpunkt',
+  'help.guide.roadtrip-via.goal': 'Skicka en sträcka längs vägen du faktiskt vill ha, utan att lägga ett stopp på den.',
+  'help.guide.roadtrip-via.step.1':
+    'Få in sträckan du vill ha i bild: klicka på ett stopp i skenan och stäng sedan kortet som öppnas över kartan.',
+  'help.guide.roadtrip-via.step.2':
+    'Klicka på den ritade rutten. En mellanpunkt släpps på sträckan du klickade på, och sträckan ruttas om genom den.',
+  'help.guide.roadtrip-via.step.3':
+    'Skenan följer med: dagens rubrik bär den nya sträckan och körtiden, och varje ankomst efter mellanpunkten flyttar med den.',
+  'help.guide.roadtrip-via.step.4':
+    'Håll muspekaren över handtaget så säger det vad det kan: Dra för att forma om rutten, högerklicka för att ta bort. Dra det någon annanstans så ritas sträckan om genom det nya stället.',
+  'help.guide.roadtrip-via.step.5': 'Högerklicka handtaget för att ta bort det. Sträckan kör den direkta vägen igen.',
+  'help.guide.roadtrip-via.result':
+    'Sträckan följer vägen du valde, och dagens avstånd, körtid och ankomster räknas ut på nytt för den.',
+  'help.guide.roadtrip-via.tip.1':
+    'En mellanpunkt är inget stopp: den har inget nummer, ingen vistelse och ingen ankomsttid, och den räknas inte i dagens stopp.',
+  'help.guide.roadtrip-via.tip.2':
+    'Handtagen ritas från zoomnivå 9, så en karta som är anpassad till hela resan visar linjen utan dem.',
+  'help.guide.roadtrip-via.tip.3':
+    'Ett klick längre än två kilometer från varje ritad sträcka ignoreras, och det gör också ett klick på ett flyg, ett tåg eller en färja.',
+  // roadtrip-alternatives
+  'help.guide.roadtrip-alternatives.title': 'Prova ett annat sätt att köra en sträcka',
+  'help.guide.roadtrip-alternatives.goal': 'Se vad mer ruttberäknaren erbjuder för ett avsnitt, och ta det.',
+  'help.guide.roadtrip-alternatives.step.1':
+    'Klicka på ett körband i skenan, raden mellan två stopp som ger sträckan som avstånd och tid. Dess etikett är Andra vägar.',
+  'help.guide.roadtrip-alternatives.step.2':
+    'Vägar för den här sträckan öppnas över kartan, en post per väg, var och en ritad på kartan i sin egen färg.',
+  'help.guide.roadtrip-alternatives.step.3':
+    'Håll muspekaren över en post för att tända den vägen. Nuvarande och Snabbast säger vilken som är vilken, och de andra säger hur mycket snabbare eller långsammare de är.',
+  'help.guide.roadtrip-alternatives.step.4':
+    'Klicka på en post för att köra den vägen, eller Stäng för att behålla vägen du är på.',
+  'help.guide.roadtrip-alternatives.result':
+    'Sträckan kör vägen du valde, och skenans avstånd och ankomsterna efter den ändras med den.',
+  'help.guide.roadtrip-alternatives.tip.1':
+    'Att välja en annan väg lägger en mellanpunkt på sträckan och ersätter de den redan hade; att välja ruttberäknarens egen väg tar bort dem igen.',
+  'help.guide.roadtrip-alternatives.tip.2':
+    'Utan motorvag, Utan vagavgifter och Utan färja kommer från en andra motor med sin egen hastighetsmodell, så deras tider går inte att jämföra med de andras.',
+  // roadtrip-limits
+  'help.guide.roadtrip-limits.title': 'Ställ in bilen och körgränserna',
+  'help.guide.roadtrip-limits.goal': 'Berätta för TREK vad du kör och hur långt du är villig att köra i ett sträck.',
+  'help.guide.roadtrip-limits.step.1':
+    'Körinställningar sitter under sökningen i högerkolumnen. Dess brickor säger vad som är satt; klicka för att öppna.',
+  'help.guide.roadtrip-limits.step.2':
+    'Under Körning är Längsta körning i sträck och Körning per dag minuter. Ett tomt fält betyder av, och inget flaggas.',
+  'help.guide.roadtrip-limits.step.3':
+    'Under Fordon säger du vad du kör. Bensin fyller bara på vid bensinstopp, El bara vid laddstopp, Båda vid båda.',
+  'help.guide.roadtrip-limits.step.4':
+    'Skriv in Räckvidd per tank, eller Räckvidd per laddning, själv. Räkna fram ur bilens data under den tar Tankvolym och Förbrukning, eller Batteri och Förbrukning, och gör uträkningen.',
+  'help.guide.roadtrip-limits.step.5':
+    'Undvik om det går är en önskan, inte ett förbud: en dag utan väg runt använder ändå vägen, och säger det i sin rubrik.',
+  'help.guide.roadtrip-limits.step.6':
+    'Stäng dialogen. Kortet säger vad som är satt, och skenan märker ut varje sträcka och varje dag som går över det.',
+  'help.guide.roadtrip-limits.result':
+    'Kortets brickor säger vad som är satt, och varje sträcka och dag över en gräns bär en bricka i skenan.',
+  'help.guide.roadtrip-limits.tip.1':
+    'Inställningarna hör till resan, så alla på den planerar med samma bil och samma gränser.',
+  'help.guide.roadtrip-limits.tip.2':
+    'Fyll till säger hur mycket ett stopp fyller, eftersom ingen laddar till 100 % på vägen. Ett bensin- eller laddstopp kan skriva över det för sig själv.',
+  'help.guide.roadtrip-limits.tip.3':
+    'Ruttlinje avgör hur körningen ritas: Koppla ihop dagarna ruttar natten mellan två dagar, och En färg per dag ger varje dag sin egen.',
+  // roadtrip-day-window
+  'help.guide.roadtrip-day-window.title': 'Ge körningsdagen en början och ett slut',
+  'help.guide.roadtrip-day-window.goal': 'Sluta köra vid en timme du väljer, och säg var dagen ska ta slut.',
+  'help.guide.roadtrip-day-window.step.1': 'Öppna Körinställningar i högerkolumnen och leta upp Dagliga restider.',
+  'help.guide.roadtrip-day-window.step.2':
+    'Ställ in Dagens start. Ensam gör den ingenting: båda tiderna behövs, som noteringen under dem säger.',
+  'help.guide.roadtrip-day-window.step.3':
+    'Ställ in Dagens slut. Körningen stannar nu vid den timmen och tar med resten till nästa morgon, som en Dagens slut-rad och en Fortsätt resan-rad i skenan.',
+  'help.guide.roadtrip-day-window.step.4':
+    'Under Avsluta dagen väljer du Längs rutten för att pausa på vägen vid sluttiden, eller Vid sista platsen för att stanna innan nästa körning skulle passera den.',
+  'help.guide.roadtrip-day-window.step.5': 'Stäng dialogen. Kortet Körinställningar bär de två tiderna som en bricka.',
+  'help.guide.roadtrip-day-window.result':
+    'Körningen delas upp i resdagar av den längd du satt, och det som inte får plats fortsätter på beräknade dagar efter den sista. Dina dagar och deras platser ändras inte.',
+  'help.guide.roadtrip-day-window.tip.1':
+    'Att tömma endera tiden stänger av hela saken igen. Tider du själv har nålat fast på ett stopp går alltid före.',
+  'help.guide.roadtrip-day-window.tip.2':
+    'Med dagliga restider satta är dagarna alltid ihopkopplade: körningen från en dags sista stopp till nästa dags första ruttas och räknas.',
+  'help.guide.roadtrip-day-window.tip.3':
+    'Varje dagsslut är också en markör på kartan, en måne med dagens nummer. Dra den längs rutten, eller till en plats, för att avsluta dagen någon annanstans; högerklicka den för att lägga tillbaka det automatiska slutet, och Återställ automatiska dagsslut i den här dialogen ångrar alltihop.',
+  // roadtrip-refuel
+  'help.guide.roadtrip-refuel.title': 'Tanka innan tanken tar slut',
+  'help.guide.roadtrip-refuel.goal':
+    'Hitta någonstans att tanka på den sträcka bilen fortfarande når, och sätt det på körningen.',
+  'help.guide.roadtrip-refuel.step.1':
+    'Med en räckvidd satt ritar skenan ett band tvärs över sträckan där den tar slut: Här tar tanken slut, och under det hur långt in på sträckan det är.',
+  'help.guide.roadtrip-refuel.step.2':
+    'Lampan på bandet är knappen. Hitta bränsle letar längs vägen du redan har kört, och visar Söker längs rutten… medan den gör det.',
+  'help.guide.roadtrip-refuel.step.3':
+    'Upp till tre stationer kommer tillbaka, var och en med hur långt från rutten den är och hur mycket räckvidd den skulle lämna kvar.',
+  'help.guide.roadtrip-refuel.step.4':
+    'Plusset på ett förslag lägger till det som ett bensinstopp. Lägg till som stopp öppnas med sorten och tiden redan ifyllda, och Lägg till sätter det på sträckan där den verkligen passeras.',
+  'help.guide.roadtrip-refuel.result':
+    'Stoppet ligger på rätt sträcka med sin egen ikon, räckvidden räknas om från det, och bandet är borta.',
+  'help.guide.roadtrip-refuel.tip.1':
+    'Räckvidden räknas från det senaste bensin- eller laddstoppet, tvärs över dagarna. Vad du kör avgör vilka stopp som räknas: Bensin bara bensin, El bara laddning.',
+  'help.guide.roadtrip-refuel.tip.2':
+    'Sökningen tittar på vägen före den torra punkten, håller en reserv och räknar omvägen dubbelt, så allt den erbjuder går verkligen att nå.',
+  'help.guide.roadtrip-refuel.tip.3':
+    'Ett tomt svar är ingen återvändsgränd: lampan blir Försök igen, eftersom platssökningen är en delad tjänst som faktiskt kan ta för lång tid.',
+  // roadtrip-track
+  'help.guide.roadtrip-track.title': 'Låt en dag följa ett importerat spår',
+  'help.guide.roadtrip-track.goal':
+    'Lägg en dags körning på en vacker väg du har importerat som ett GPX- eller KML-spår.',
+  'help.guide.roadtrip-track.step.1': 'Klicka på Spår-brickan i en dags rubrik. Dialogen öppnas på den dagen.',
+  'help.guide.roadtrip-track.step.2':
+    'Välj ett spår. Varje spår säger hur långt det är och hur långt det ligger från den här dagen, närmast först.',
+  'help.guide.roadtrip-track.step.3':
+    'Klicka på Följ det här spåret. TREK släpper mellanpunkter där körningen viker av mest från spåret, och ruttar om, runda efter runda.',
+  'help.guide.roadtrip-track.step.4':
+    'Den säger hur många mellanpunkter den satte och hur nära körningen nu håller sig. Knappen bredvid tar bort de mellanpunkterna igen och ger tillbaka dagen till ruttberäknaren; att stänga dialogen behåller spåret.',
+  'help.guide.roadtrip-track.result':
+    'Dagens körning följer spåret i stället för vägen ruttberäknaren valde, och Spår-brickan säger vilket spår den följer.',
+  'help.guide.roadtrip-track.tip.1':
+    'Importera filen under Dagar med Importera fil, med dess spår eller stigar förbockade. Tills ett spår finns i resan har brickan inget att erbjuda.',
+  'help.guide.roadtrip-track.tip.2':
+    'Att följa ett spår ersätter de mellanpunkter dagens sträckor redan hade, så forma en sträcka för hand efter spåret, inte före.',
 };
 
 export default help;

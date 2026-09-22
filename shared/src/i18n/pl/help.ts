@@ -3539,6 +3539,205 @@ const help: TranslationStrings = {
     'Potwierdzona rezerwacja to linia ciągła, oczekująca przerywana. Ustawienie Etykiety tras rezerwacji wypisuje kod lotniska albo nazwę stacji w znacznikach końcowych.',
   'help.guide.transport-on-map.tip.3':
     'Pokaż wszystkie trasy rezerwacji to czysta karta, nie warstwa: odrzuca to, co ustawiły pojedyncze ikony, więc dwukrotne naciśnięcie zostawia Cię ze wszystkim włączonym albo wszystkim wyłączonym.',
+
+  // ── Screen: trip-roadtrip ─────────────────────────────────────────────────────────────
+  'help.ctx.trip-roadtrip.title': 'Podróż samochodowa',
+  'help.ctx.trip-roadtrip.summary':
+    'Plan czytany jako jedna jazda: te same dni i te same miejsca, złożone w przystanki z jazdą pomiędzy nimi, na szynie w lewej kolumnie i na mapie. Mówi, jak daleko i jak długo, gdzie kończy się paliwo i co jest przy drodze.',
+  'help.ctx.trip-roadtrip.bullet.1':
+    'Dni i Podróż samochodowa u góry lewej kolumny przełączają między planem dni a jazdą. Nic nie jest kopiowane i nic się nie zmienia: Dni oddają plan dokładnie taki, jaki był.',
+  'help.ctx.trip-roadtrip.bullet.2':
+    'Głowa szyny sumuje całą podróż: Dystans, Czas jazdy i Przystanki. Pod nią idzie jedna karta na dzień, z własnymi kilometrami dnia, z tym, na ile przystanków jest, co przekracza, i z plakietką Ślad.',
+  'help.ctx.trip-roadtrip.bullet.3':
+    'Numerowany przystanek to miejsce, dla którego dzień jest. Postój po drodze, paliwo, ładowanie, miejsce odpoczynku, nosi zamiast numeru ikonę swojego rodzaju i nie jest liczony. Kliknij numer, aby zmienić, czym jest, i plakietkę Postój, aby powiedzieć, ile trwa.',
+  'help.ctx.trip-roadtrip.bullet.4':
+    'Między dwoma przystankami pasek jazdy podaje odcinek jako dystans i czas. Kliknij go, aby otworzyć Trasy tego odcinka, albo kliknij narysowaną trasę na mapie, aby wygiąć odcinek przez punkt pośredni.',
+  'help.ctx.trip-roadtrip.bullet.5':
+    'Prawa kolumna staje się Wzdłuż trasy: wybierz dzień, czego szukać i jak szeroki jest korytarz, a potem Szukaj. Dodaj kładzie znalezisko na jeździe w miejscu, którym naprawdę przejeżdżasz.',
+  'help.ctx.trip-roadtrip.bullet.6':
+    'Ustawienia jazdy pod tym trzymają limity, auto i jego zasięg, dzienne godziny podróży, czego omijać i jak rysowana jest linia. Należą do podróży, więc wszyscy planują tym samym autem.',
+  // roadtrip-mode
+  'help.guide.roadtrip-mode.title': 'Przeczytać podróż jako jedną jazdę',
+  'help.guide.roadtrip-mode.goal': 'Przełącz plan w tryb podróży samochodowej i przeczytaj, co mówi szyna.',
+  'help.guide.roadtrip-mode.step.1':
+    'Kliknij Podróż samochodowa w przełączniku Dni i Podróż samochodowa u góry lewej kolumny. Plan dni zastępuje jazda, a mapa rysuje każdy dzień, który ma trasę.',
+  'help.guide.roadtrip-mode.step.2': 'Głowa szyny sumuje całą podróż: Dystans, Czas jazdy i Przystanki.',
+  'help.guide.roadtrip-mode.step.3':
+    'Pod nią idzie jedna karta na dzień. Jej nagłówek niesie numer i datę dnia, jazdę jako dystans i czas oraz to, na ile przystanków dzień jest.',
+  'help.guide.roadtrip-mode.step.4':
+    'Wewnątrz karty dzień jest łańcuchem: numerowany przystanek na każde miejsce, pasek jazdy między każdą parą i godzina przyjazdu przy prawej krawędzi.',
+  'help.guide.roadtrip-mode.step.5':
+    'Kliknij nagłówek dnia, aby go zwinąć. Zwinięty dzień znika też z mapy; kliknij nagłówek ponownie, aby go przywrócić.',
+  'help.guide.roadtrip-mode.result':
+    'Lewa kolumna jest jazdą, a mapa pokazuje każdy jej dzień. Dni przełączają prosto z powrotem na plan, niezmieniony.',
+  'help.guide.roadtrip-mode.tip.1':
+    'Wybór jest pamiętany dla każdej podróży, dopóki karta przeglądarki jest otwarta, więc po odświeżeniu wracasz do jazdy.',
+  'help.guide.roadtrip-mode.tip.2':
+    'Przełącznik istnieje dopiero wtedy, gdy administrator włączy dodatek Podróż samochodowa, w Dodatki w Administracji.',
+  'help.guide.roadtrip-mode.tip.3':
+    'Na telefonie nie ma przełącznika: dodatek dokłada własną zakładkę Podróż samochodowa obok Plan.',
+  // roadtrip-stops
+  'help.guide.roadtrip-stops.title': 'Postoje po drodze i jak długo stoisz',
+  'help.guide.roadtrip-stops.goal':
+    'Zamień miejsce na jeździe w postój po drodze i powiedz, ile trwa każdy przystanek.',
+  'help.guide.roadtrip-stops.step.1':
+    'Kliknij numer przed przystankiem na szynie. Jego etykieta brzmi Zamień w postój po drodze i otwiera Rodzaj przystanku.',
+  'help.guide.roadtrip-stops.step.2':
+    'Wybierz rodzaj: Noclegi, Paliwo, Ładowanie, Miejsce odpoczynku, Kemping, Jedzenie albo Atrakcje. Numer zmienia się w ikonę tego rodzaju, a przystanki poniżej dostają nowe numery.',
+  'help.guide.roadtrip-stops.step.3':
+    'Postój po drodze nie jest celem, więc nagłówek dnia liczy o jeden przystanek mniej.',
+  'help.guide.roadtrip-stops.step.4':
+    'Kliknij ikonę ponownie, Zmień rodzaj postoju, i wybierz Z powrotem cel podróży, aby przystanek odzyskał swój numer.',
+  'help.guide.roadtrip-stops.step.5':
+    'Każdy przystanek nosi plakietkę Postój. Kliknij ją, aby otworzyć Czas na tym przystanku.',
+  'help.guide.roadtrip-stops.step.6':
+    'Ustaw długość suwakiem, przyciskami minus i plus albo jedną z gotowych wartości, popatrz, co robią Przyjazd i Odjazd, i kliknij Zapisz.',
+  'help.guide.roadtrip-stops.result':
+    'Przystanek nosi zamiast numeru ikonę swojego rodzaju, a każdy przyjazd po postoju przesunął się razem z nim.',
+  'help.guide.roadtrip-stops.tip.1':
+    'Postój należy do miejsca, nie do jednej wizyty: w miejscu zaplanowanym na dwa dni stoi się tyle samo w oba dni.',
+  'help.guide.roadtrip-stops.tip.2':
+    'Postoje po drodze pokazują się też w Dniach. Pokaż także w Dniach, w Postoje serwisowe w Ustawieniach jazdy, zostawia je tylko w Podróży samochodowej.',
+  'help.guide.roadtrip-stops.tip.3': 'Bez postoju, w tym samym oknie, odbiera ten czas z powrotem.',
+  // roadtrip-corridor
+  'help.guide.roadtrip-corridor.title': 'Znaleźć paliwo, jedzenie i nocleg wzdłuż trasy',
+  'help.guide.roadtrip-corridor.goal':
+    'Przeszukaj drogę, którą naprawdę jedziesz, i połóż znalezisko na właściwym odcinku.',
+  'help.guide.roadtrip-corridor.step.1': 'Wybierz dzień u góry Wzdłuż trasy. Oferowane są tylko dni, które mają trasę.',
+  'help.guide.roadtrip-corridor.step.2':
+    'W Szukam zaznacz, czego potrzebujesz. Paliwo, Ładowanie, Miejsce odpoczynku, Kemping, Noclegi, Jedzenie i Atrakcje można łączyć.',
+  'help.guide.roadtrip-corridor.step.3':
+    'W sekcji W promieniu wybierz, jak daleko po obu stronach drogi szukać, 2 km, 5 km albo 10 km, a potem kliknij Szukaj.',
+  'help.guide.roadtrip-corridor.step.4':
+    'Znaleziska wracają pogrupowane według rodzaju, w kolejności, w jakiej je mijasz, każde z tym, jak daleko w dniu leży i jak daleko jest od trasy.',
+  'help.guide.roadtrip-corridor.step.5':
+    'Dodaj przy znalezisku otwiera Dodaj jako przystanek. Mówi, na który dzień i na którą pozycję przystanek trafia, pyta o rodzaj i o czas na przystanku, a Dodaj kładzie go na jeździe.',
+  'help.guide.roadtrip-corridor.result':
+    'Znaleziska są wypisane w kolejności, w jakiej je mijasz, i narysowane na mapie, a to dodane siedzi na jeździe w miejscu, którym naprawdę przejeżdżasz.',
+  'help.guide.roadtrip-corridor.tip.1':
+    'Nic nie jest szukane, dopóki nie naciśniesz Szukaj: jeden przebieg to wiele zapytań do wspólnej usługi.',
+  'help.guide.roadtrip-corridor.tip.2':
+    'Filtruj wedug nazwy zawęża to, co wróciło, bez ponownego pytania, a Wyczyść wyniki opróżnia listę i jej pinezki. Kliknij znalezisko, aby zobaczyć je na mapie.',
+  'help.guide.roadtrip-corridor.tip.3':
+    'Znalezisko można też przeciągnąć z mapy na narysowaną trasę, czym sam wybierasz odcinek tam, gdzie ta sama droga jest przejechana dwa razy. Dodaj ręcznie, obok Szukaj, zamiast tego wyszukuje miejsce po nazwie.',
+  // roadtrip-via
+  'help.guide.roadtrip-via.title': 'Wygiąć odcinek przez punkt pośredni',
+  'help.guide.roadtrip-via.goal': 'Poprowadź odcinek drogą, którą naprawdę chcesz, bez dokładania do niego przystanku.',
+  'help.guide.roadtrip-via.step.1':
+    'Sprowadź na ekran odcinek, o który chodzi: kliknij przystanek na szynie, a potem zamknij kartę, która otwiera się nad mapą.',
+  'help.guide.roadtrip-via.step.2':
+    'Kliknij narysowaną trasę. Na odcinku, który kliknąłeś, ląduje punkt pośredni, a odcinek jest wyznaczany na nowo przez niego.',
+  'help.guide.roadtrip-via.step.3':
+    'Szyna idzie za tym: nagłówek dnia niesie nowy dystans i czas jazdy, a każdy przyjazd po punkcie pośrednim przesuwa się razem z nim.',
+  'help.guide.roadtrip-via.step.4':
+    'Najedź na uchwyt, a powie, co potrafi: Przeciągnij, aby zmienić trasę, kliknij prawym, aby usunąć. Przeciągnij go gdzie indziej, a odcinek jest rysowany na nowo przez nowe miejsce.',
+  'help.guide.roadtrip-via.step.5': 'Kliknij uchwyt prawym przyciskiem, aby go zabrać. Odcinek znów jedzie prosto.',
+  'help.guide.roadtrip-via.result':
+    'Odcinek idzie drogą, którą wybrałeś, a dystans dnia, czas jazdy i przyjazdy są dla niego liczone od nowa.',
+  'help.guide.roadtrip-via.tip.1':
+    'Punkt pośredni nie jest przystankiem: nie ma numeru, postoju ani godziny przyjazdu i nie liczy się do przystanków dnia.',
+  'help.guide.roadtrip-via.tip.2':
+    'Uchwyty są rysowane od poziomu przybliżenia 9, więc mapa dopasowana do całej podróży pokazuje linię bez nich.',
+  'help.guide.roadtrip-via.tip.3':
+    'Kliknięcie dalej niż dwa kilometry od jakiegokolwiek narysowanego odcinka jest pomijane, tak samo jak kliknięcie w lot, pociąg albo prom.',
+  // roadtrip-alternatives
+  'help.guide.roadtrip-alternatives.title': 'Spróbować innej drogi na jednym odcinku',
+  'help.guide.roadtrip-alternatives.goal': 'Zobacz, co jeszcze planer oferuje na jeden odcinek, i weź to.',
+  'help.guide.roadtrip-alternatives.step.1':
+    'Kliknij pasek jazdy na szynie, wiersz między dwoma przystankami, który podaje odcinek jako dystans i czas. Jego etykieta brzmi Inne trasy.',
+  'help.guide.roadtrip-alternatives.step.2':
+    'Trasy tego odcinka otwierają się nad mapą, po jednej pozycji na drogę, każda narysowana na mapie własnym kolorem.',
+  'help.guide.roadtrip-alternatives.step.3':
+    'Najedź na pozycję, aby podświetlić tę drogę. Obecna i Najszybsza mówią, która jest która, a pozostałe mówią, o ile są szybsze lub wolniejsze.',
+  'help.guide.roadtrip-alternatives.step.4':
+    'Kliknij pozycję, aby pojechać tamtędy, albo Zamknij, aby zostać przy drodze, którą jedziesz.',
+  'help.guide.roadtrip-alternatives.result':
+    'Odcinek jedzie drogą, którą wybrałeś, a dystans na szynie i przyjazdy po nim zmieniają się razem z nią.',
+  'help.guide.roadtrip-alternatives.tip.1':
+    'Wybór innej drogi kładzie na odcinku punkt pośredni i zastępuje te, które już miał; wybór własnej drogi planera zabiera je z powrotem.',
+  'help.guide.roadtrip-alternatives.tip.2':
+    'Bez autostrady, Bez oplat i Bez promu pochodzą z drugiego silnika z własnym modelem prędkości, więc ich czasy nie są porównywalne z pozostałymi.',
+  // roadtrip-limits
+  'help.guide.roadtrip-limits.title': 'Ustawić auto i limity jazdy',
+  'help.guide.roadtrip-limits.goal': 'Powiedz TREK-owi, czym jeździsz i jak daleko chcesz jechać za jednym razem.',
+  'help.guide.roadtrip-limits.step.1':
+    'Ustawienia jazdy siedzą pod wyszukiwaniem w prawej kolumnie. Ich plakietki mówią, co jest ustawione; kliknij, aby otworzyć.',
+  'help.guide.roadtrip-limits.step.2':
+    'W Jazda Najdłuższa jazda bez przerwy i Jazda dziennie są w minutach. Puste pole znaczy wył. i nic nie jest oznaczane.',
+  'help.guide.roadtrip-limits.step.3':
+    'W Pojazd powiedz, czym jeździsz. Paliwo tankuje tylko na postojach paliwowych, Elektryk tylko na ładowaniu, Oba na obu.',
+  'help.guide.roadtrip-limits.step.4':
+    'Zasięg na jednym baku, albo Zasięg na ładowaniu, wpisz sam. Policz z danych auta pod spodem bierze Pojemność baku i Zużycie, albo Akumulator i Zużycie, i robi to wyliczenie.',
+  'help.guide.roadtrip-limits.step.5':
+    'Omijaj, jeśli się da jest preferencją, nie zakazem: dzień, który nie ma objazdu, i tak korzysta z drogi, i mówi o tym w swoim nagłówku.',
+  'help.guide.roadtrip-limits.step.6':
+    'Zamknij okno. Karta mówi, co jest ustawione, a szyna oznacza każdy odcinek i każdy dzień, który to przekracza.',
+  'help.guide.roadtrip-limits.result':
+    'Plakietki karty mówią, co jest ustawione, a każdy odcinek i dzień ponad limitem nosi na szynie plakietkę.',
+  'help.guide.roadtrip-limits.tip.1':
+    'Ustawienia należą do podróży, więc wszyscy w niej planują tym samym autem i tymi samymi limitami.',
+  'help.guide.roadtrip-limits.tip.2':
+    'Tankuj do mówi, do ile tankuje przystanek, bo nikt w drodze nie ładuje do 100 %. Postój paliwowy albo ładowania może to dla siebie nadpisać.',
+  'help.guide.roadtrip-limits.tip.3':
+    'Linia trasy decyduje, jak rysowana jest jazda: Połącz dni wyznacza noc między dwoma dniami, a Kolor na dzień daje każdemu dniu własny.',
+  // roadtrip-day-window
+  'help.guide.roadtrip-day-window.title': 'Dać dniowi jazdy początek i koniec',
+  'help.guide.roadtrip-day-window.goal':
+    'Przestań jechać o godzinie, którą wybierzesz, i powiedz, gdzie dzień ma się skończyć.',
+  'help.guide.roadtrip-day-window.step.1':
+    'Otwórz Ustawienia jazdy w prawej kolumnie i znajdź Dzienne godziny podróży.',
+  'help.guide.roadtrip-day-window.step.2':
+    'Ustaw Początek dnia. Sam z siebie nic nie robi: potrzebne są obie godziny, jak mówi notka pod nimi.',
+  'help.guide.roadtrip-day-window.step.3':
+    'Ustaw Koniec dnia. Jazda zatrzymuje się teraz o tej godzinie i przenosi resztę na następny ranek, jako wiersz Koniec dnia i wiersz Kontynuuj podróż na szynie.',
+  'help.guide.roadtrip-day-window.step.4':
+    'W Koniec dnia wybierz Na trasie, aby zatrzymać się na drodze o godzinie zakończenia, albo W ostatnim miejscu, aby stanąć, zanim następna jazda by je minęła.',
+  'help.guide.roadtrip-day-window.step.5': 'Zamknij okno. Karta Ustawienia jazdy niesie obie godziny jako plakietkę.',
+  'help.guide.roadtrip-day-window.result':
+    'Jazda jest cięta na dni podróży o długości, którą ustawisz, a co się nie mieści, idzie dalej na wyliczonych dniach po tym ostatnim. Twoje dni i ich miejsca nie zmieniają się.',
+  'help.guide.roadtrip-day-window.tip.1':
+    'Wyczyszczenie którejkolwiek z godzin wyłącza całość z powrotem. Godziny, które sam przypiąłeś na przystanku, zawsze mają pierwszeństwo.',
+  'help.guide.roadtrip-day-window.tip.2':
+    'Z ustawionymi dziennymi godzinami podróży dni są zawsze połączone: jazda z ostatniego przystanku jednego dnia do pierwszego przystanku następnego jest wyznaczana i liczona.',
+  'help.guide.roadtrip-day-window.tip.3':
+    'Każdy koniec dnia jest też znacznikiem na mapie, księżycem z numerem dnia. Przeciągnij go wzdłuż trasy albo na miejsce, aby zakończyć dzień gdzie indziej; kliknij go prawym przyciskiem, aby wrócić do automatycznego końca, a Przywróć automatyczne końce dni w tym oknie cofa wszystko.',
+  // roadtrip-refuel
+  'help.guide.roadtrip-refuel.title': 'Zatankować, zanim skończy się paliwo',
+  'help.guide.roadtrip-refuel.goal':
+    'Znajdź, gdzie zatankować na odcinku, na który auto jeszcze dojedzie, i połóż to na jeździe.',
+  'help.guide.roadtrip-refuel.step.1':
+    'Przy ustawionym zasięgu szyna rysuje na odcinku pasek tam, gdzie paliwo się kończy: Tu kończy się paliwo, a pod nim, jak daleko w odcinku to jest.',
+  'help.guide.roadtrip-refuel.step.2':
+    'Lampka na pasku jest przyciskiem. Znajdź paliwo szuka wzdłuż drogi, którą już przejechałeś, a w tym czasie świeci Szukam wzdłuż trasy…',
+  'help.guide.roadtrip-refuel.step.3':
+    'Wracają najwyżej trzy stacje, każda z tym, jak daleko jest od trasy i ile zasięgu by zostało.',
+  'help.guide.roadtrip-refuel.step.4':
+    'Plus przy ofercie dodaje ją jako postój paliwowy. Dodaj jako przystanek otwiera się z wpisanym już rodzajem i czasem, a Dodaj kładzie ją na odcinku w miejscu, którym naprawdę przejeżdżasz.',
+  'help.guide.roadtrip-refuel.result':
+    'Przystanek jest na właściwym odcinku z własną ikoną, zasięg liczy się od niego na nowo, a paska już nie ma.',
+  'help.guide.roadtrip-refuel.tip.1':
+    'Zasięg liczy się od ostatniego postoju paliwowego albo ładowania, przez wszystkie dni. To, czym jeździsz, decyduje, które postoje się liczą: Paliwo tylko paliwowe, Elektryk tylko ładowania.',
+  'help.guide.roadtrip-refuel.tip.2':
+    'Wyszukiwanie patrzy na drogę przed punktem, w którym paliwo się kończy, trzyma rezerwę i liczy objazd podwójnie, więc wszystko, co oferuje, jest naprawdę osiągalne.',
+  'help.guide.roadtrip-refuel.tip.3':
+    'Pusta odpowiedź to nie ślepy zaułek: lampka zmienia się w Ponów, bo wyszukiwanie miejsc to wspólna usługa, która czasem nie zdąży odpowiedzieć.',
+  // roadtrip-track
+  'help.guide.roadtrip-track.title': 'Sprawić, by dzień podążał za zaimportowanym śladem',
+  'help.guide.roadtrip-track.goal':
+    'Połóż jazdę dnia na widokowej trasie, którą zaimportowałeś jako ślad GPX albo KML.',
+  'help.guide.roadtrip-track.step.1': 'Kliknij plakietkę Ślad w nagłówku dnia. Okno otwiera się na tym dniu.',
+  'help.guide.roadtrip-track.step.2':
+    'Wybierz ślad. Każdy mówi, jak długi jest i jak daleko leży od tego dnia, najbliższe pierwsze.',
+  'help.guide.roadtrip-track.step.3':
+    'Kliknij Podążaj za tym śladem. TREK rozrzuca punkty pośrednie tam, gdzie jazda najbardziej odbiega od śladu, i wyznacza trasę na nowo, runda po rundzie.',
+  'help.guide.roadtrip-track.step.4':
+    'Mówi, ile punktów pośrednich ustawił i jak blisko jazda teraz się trzyma. Przycisk obok zabiera te punkty pośrednie z powrotem i oddaje dzień planerowi; zamknięcie okna zachowuje ślad.',
+  'help.guide.roadtrip-track.result':
+    'Jazda dnia podąża za śladem zamiast za drogą, którą wybrał planer, a plakietka Ślad mówi, za którym śladem idzie.',
+  'help.guide.roadtrip-track.tip.1':
+    'Plik zaimportuj w Dniach przez Importuj plik, z zaznaczonymi jego trasami albo ścieżkami. Dopóki w podróży nie ma śladu, plakietka nie ma czego zaoferować.',
+  'help.guide.roadtrip-track.tip.2':
+    'Podążanie za śladem zastępuje punkty pośrednie, które odcinki dnia już miały, więc kształtuj odcinek ręcznie po śladzie, a nie przed nim.',
 };
 
 export default help;

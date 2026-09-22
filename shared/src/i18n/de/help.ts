@@ -3640,6 +3640,210 @@ const help: TranslationStrings = {
     'Eine bestätigte Buchung ist eine durchgezogene Linie, eine ausstehende eine gestrichelte. Die Einstellung Orts-Labels auf Buchungsrouten schreibt den Flughafencode oder den Bahnhofsnamen in die Endmarker.',
   'help.guide.transport-on-map.tip.3':
     'Alle Buchungsrouten anzeigen macht reinen Tisch, es ist keine Ebene: es verwirft, was die einzelnen Symbole gesetzt hatten, zweimal drücken lässt dich also mit allem an oder allem aus zurück.',
+
+  // ── Screen: trip-roadtrip ─────────────────────────────────────────────────────────────
+  'help.ctx.trip-roadtrip.title': 'Roadtrip',
+  'help.ctx.trip-roadtrip.summary':
+    'Der Plan als eine einzige Fahrt gelesen: dieselben Tage und dieselben Orte, zu Stopps verkettet, mit der Fahrt dazwischen, in einer Leiste in der linken Spalte und auf der Karte. Sie sagt, wie weit und wie lange, wo der Tank leer ist und was an der Straße liegt.',
+  'help.ctx.trip-roadtrip.bullet.1':
+    'Tage und Roadtrip oben in der linken Spalte wechseln zwischen dem Tagesplan und der Fahrt. Nichts wird kopiert und nichts verändert: Tage gibt den Plan genau so zurück, wie er war.',
+  'help.ctx.trip-roadtrip.bullet.2':
+    'Der Kopf der Leiste summiert die Reise: Strecke, Fahrzeit und Stopps. Darunter kommt eine Kachel je Tag, mit den eigenen Kilometern des Tages, für wie viele Stopps er da ist, was er überschreitet, und dem Abzeichen Spur.',
+  'help.ctx.trip-roadtrip.bullet.3':
+    'Ein nummerierter Stopp ist ein Ort, für den der Tag da ist. Ein Halt unterwegs, Tanken, Laden, ein Rastplatz, trägt statt einer Nummer das Symbol seiner Art und zählt nicht mit. Klick eine Nummer an, um zu ändern, was sie ist, und das Abzeichen Dauer, um zu sagen, wie lange er dauert.',
+  'help.ctx.trip-roadtrip.bullet.4':
+    'Zwischen zwei Stopps gibt ein Fahrband die Etappe als Strecke und Zeit an. Klick es für Wege für diese Etappe an, oder klick die gezeichnete Route auf der Karte an, um die Etappe über einen Zwischenpunkt zu biegen.',
+  'help.ctx.trip-roadtrip.bullet.5':
+    'Die rechte Spalte wird zu Entlang der Route: wähl einen Tag, was gesucht wird und wie breit der Korridor ist, dann Suchen. Übernehmen setzt einen Treffer an der Stelle in die Fahrt, an der er wirklich passiert wird.',
+  'help.ctx.trip-roadtrip.bullet.6':
+    'Die Fahreinstellungen darunter halten die Grenzen, das Fahrzeug und seine Reichweite, die täglichen Reisezeiten, was gemieden wird und wie die Linie gezeichnet wird. Sie gehören zur Reise, also plant jeder mit demselben Fahrzeug.',
+  // roadtrip-mode
+  'help.guide.roadtrip-mode.title': 'Die Reise als eine Fahrt lesen',
+  'help.guide.roadtrip-mode.goal': 'Schalt den Plan in den Roadtrip-Modus und lies, was die Leiste dir sagt.',
+  'help.guide.roadtrip-mode.step.1':
+    'Klick Roadtrip im Schalter Tage und Roadtrip oben in der linken Spalte an. Der Tagesplan wird durch die Fahrt ersetzt, und die Karte zeichnet jeden Tag, der geroutet ist.',
+  'help.guide.roadtrip-mode.step.2': 'Der Kopf der Leiste summiert die ganze Reise: Strecke, Fahrzeit und Stopps.',
+  'help.guide.roadtrip-mode.step.3':
+    'Darunter kommt eine Kachel je Tag. Ihre Kopfzeile trägt Nummer und Datum des Tages, die Fahrt als Strecke und Zeit, und für wie viele Stopps der Tag da ist.',
+  'help.guide.roadtrip-mode.step.4':
+    'In der Kachel ist der Tag eine Kette: ein nummerierter Stopp je Ort, ein Fahrband zwischen je zweien, und die Ankunftszeit am rechten Rand.',
+  'help.guide.roadtrip-mode.step.5':
+    'Klick die Kopfzeile eines Tages an, um ihn einzuklappen. Ein eingeklappter Tag verschwindet auch von der Karte; klick die Kopfzeile noch einmal an, um ihn zurückzuholen.',
+  'help.guide.roadtrip-mode.result':
+    'Die linke Spalte ist die Fahrt, und die Karte zeigt jeden ihrer Tage. Tage schaltet direkt zurück zum Plan, unverändert.',
+  'help.guide.roadtrip-mode.tip.1':
+    'Die Wahl wird je Reise gemerkt, solange der Browser-Tab offen ist, ein Neuladen kommt also wieder in der Fahrt an.',
+  'help.guide.roadtrip-mode.tip.2':
+    'Den Schalter gibt es erst, wenn ein Admin das Addon Roadtrip eingeschaltet hat, unter Addons in der Administration.',
+  'help.guide.roadtrip-mode.tip.3':
+    'Auf dem Handy gibt es keinen Schalter: das Addon setzt einen eigenen Reiter Roadtrip neben Karte.',
+  // roadtrip-stops
+  'help.guide.roadtrip-stops.title': 'Halte unterwegs, und wie lange du bleibst',
+  'help.guide.roadtrip-stops.goal':
+    'Mach aus einem Ort auf der Fahrt einen Halt unterwegs und sag, wie lange jeder Stopp dauert.',
+  'help.guide.roadtrip-stops.step.1':
+    'Klick die Nummer vor einem Stopp in der Leiste an. Ihre Beschriftung ist Zum Halt unterwegs machen, und sie öffnet Art des Stopps.',
+  'help.guide.roadtrip-stops.step.2':
+    'Wähl eine Art: Unterkünfte, Tanken, Laden, Rastplatz, Campingplatz, Essen oder Sehenswertes. Die Nummer wird zum Symbol dieser Art, und die Stopps darunter werden neu nummeriert.',
+  'help.guide.roadtrip-stops.step.3':
+    'Ein Halt unterwegs ist kein Ziel, also zählt die Kopfzeile des Tages einen Stopp weniger.',
+  'help.guide.roadtrip-stops.step.4':
+    'Klick das Symbol noch einmal an, Art des Halts ändern, und wähl Wieder zum Ziel machen, um dem Stopp seine Nummer zurückzugeben.',
+  'help.guide.roadtrip-stops.step.5':
+    'Jeder Stopp trägt ein Abzeichen Dauer. Klick es an, um Aufenthalt an diesem Stopp zu öffnen.',
+  'help.guide.roadtrip-stops.step.6':
+    'Stell die Länge mit dem Schieber ein, mit den Knöpfen minus und plus oder mit einer der Voreinstellungen, sieh zu, was Ankunft und Abfahrt tun, und klick dann Speichern.',
+  'help.guide.roadtrip-stops.result':
+    'Der Stopp trägt statt einer Nummer das Symbol seiner Art, und jede Ankunft nach einem Aufenthalt ist mitgewandert.',
+  'help.guide.roadtrip-stops.tip.1':
+    'Ein Aufenthalt gehört zum Ort, nicht zu einem Besuch: an einem Ort, der an zwei Tagen geplant ist, steht man an beiden gleich lang.',
+  'help.guide.roadtrip-stops.tip.2':
+    'Halte unterwegs erscheinen auch unter Tage. Auch in Days anzeigen, unter Service Stops in den Fahreinstellungen, hält sie nur im Roadtrip.',
+  'help.guide.roadtrip-stops.tip.3': 'Kein Aufenthalt, im selben Dialog, nimmt die Zeit wieder weg.',
+  // roadtrip-corridor
+  'help.guide.roadtrip-corridor.title': 'Tanken, Essen und ein Bett entlang der Route finden',
+  'help.guide.roadtrip-corridor.goal':
+    'Durchsuch die Straße, die du wirklich fährst, und setz auf die richtige Etappe, was du findest.',
+  'help.guide.roadtrip-corridor.step.1':
+    'Wähl oben in Entlang der Route den Tag. Angeboten werden nur Tage, die geroutet sind.',
+  'help.guide.roadtrip-corridor.step.2':
+    'Hak unter Gesucht wird an, was du brauchst. Tanken, Laden, Rastplatz, Campingplatz, Unterkünfte, Essen und Sehenswertes lassen sich kombinieren.',
+  'help.guide.roadtrip-corridor.step.3':
+    'Wähl unter Im Umkreis, wie weit beidseits der Straße gesucht wird, 2 km, 5 km oder 10 km, und klick dann Suchen.',
+  'help.guide.roadtrip-corridor.step.4':
+    'Die Treffer kommen nach Art gruppiert zurück, in der Reihenfolge, in der du sie passierst, jeder mit dem Punkt im Tag, an dem er liegt, und dem Abstand zur Route.',
+  'help.guide.roadtrip-corridor.step.5':
+    'Übernehmen an einem Treffer öffnet Als Stopp hinzufügen. Dort steht, auf welchem Tag und an welcher Position der Stopp landet, es fragt nach der Art und nach dem Aufenthalt, und Übernehmen setzt ihn in die Fahrt.',
+  'help.guide.roadtrip-corridor.result':
+    'Die Treffer stehen in der Reihenfolge, in der du sie passierst, und sind auf der Karte gezeichnet, und der übernommene sitzt in der Fahrt an der Stelle, an der er wirklich passiert wird.',
+  'help.guide.roadtrip-corridor.tip.1':
+    'Gesucht wird erst, wenn du Suchen drückst: ein Lauf sind viele Anfragen an einen geteilten Dienst.',
+  'help.guide.roadtrip-corridor.tip.2':
+    'Nach Name filtern engt ein, was zurückkam, ohne neu zu fragen, und Ergebnisse löschen leert die Liste und ihre Nadeln. Klick einen Treffer an, um ihn auf der Karte in den Blick zu holen.',
+  'help.guide.roadtrip-corridor.tip.3':
+    'Ein Treffer lässt sich auch von der Karte auf die gezeichnete Route ziehen, so wählst du die Etappe selbst, wo dieselbe Straße zweimal gefahren wird. Selbst hinzufügen, neben Suchen, sucht stattdessen einen Ort über den Namen.',
+  // roadtrip-via
+  'help.guide.roadtrip-via.title': 'Eine Etappe über einen Zwischenpunkt biegen',
+  'help.guide.roadtrip-via.goal':
+    'Schick eine Etappe über die Straße, die du wirklich willst, ohne ihr einen Stopp hinzuzufügen.',
+  'help.guide.roadtrip-via.step.1':
+    'Hol die gewünschte Etappe in den Blick: klick einen Stopp in der Leiste an und schließ dann die Kachel, die sich über der Karte öffnet.',
+  'help.guide.roadtrip-via.step.2':
+    'Klick die gezeichnete Route an. Auf der angeklickten Etappe wird ein Zwischenpunkt gesetzt, und die Etappe wird neu über ihn geroutet.',
+  'help.guide.roadtrip-via.step.3':
+    'Die Leiste zieht nach: die Kopfzeile des Tages trägt die neue Strecke und Fahrzeit, und jede Ankunft nach dem Zwischenpunkt wandert mit.',
+  'help.guide.roadtrip-via.step.4':
+    'Fahr über den Griff, und er sagt, was er kann: Ziehen formt die Route um, Rechtsklick entfernt. Zieh ihn woandershin, und die Etappe wird über die neue Stelle neu gezeichnet.',
+  'help.guide.roadtrip-via.step.5':
+    'Klick mit rechts auf den Griff, um ihn wegzunehmen. Die Etappe fährt wieder den direkten Weg.',
+  'help.guide.roadtrip-via.result':
+    'Die Etappe folgt der Straße, die du gewählt hast, und Strecke, Fahrzeit und Ankünfte des Tages werden dafür neu gerechnet.',
+  'help.guide.roadtrip-via.tip.1':
+    'Ein Zwischenpunkt ist kein Stopp: er hat keine Nummer, keinen Aufenthalt und keine Ankunftszeit, und er zählt nicht zu den Stopps des Tages.',
+  'help.guide.roadtrip-via.tip.2':
+    'Die Griffe werden ab Zoomstufe 9 gezeichnet, eine auf die ganze Reise eingepasste Karte zeigt die Linie also ohne sie.',
+  'help.guide.roadtrip-via.tip.3':
+    'Ein Klick weiter als zwei Kilometer von jeder gezeichneten Etappe wird ignoriert, und ein Klick auf einen Flug, einen Zug oder eine Fähre ebenso.',
+  // roadtrip-alternatives
+  'help.guide.roadtrip-alternatives.title': 'Einen anderen Weg für eine Etappe ausprobieren',
+  'help.guide.roadtrip-alternatives.goal': 'Sieh, was der Router sonst noch für ein Stück anbietet, und nimm es.',
+  'help.guide.roadtrip-alternatives.step.1':
+    'Klick ein Fahrband in der Leiste an, die Zeile zwischen zwei Stopps, die die Etappe als Strecke und Zeit angibt. Ihre Beschriftung ist Andere Wege.',
+  'help.guide.roadtrip-alternatives.step.2':
+    'Wege für diese Etappe öffnet sich über der Karte, ein Eintrag je Straße, jede in ihrer eigenen Farbe auf der Karte gezeichnet.',
+  'help.guide.roadtrip-alternatives.step.3':
+    'Fahr über einen Eintrag, um diese Straße aufleuchten zu lassen. Aktuell und Schnellste sagen, welche welche ist, und die übrigen sagen, wie viel kürzer oder länger sie brauchen.',
+  'help.guide.roadtrip-alternatives.step.4':
+    'Klick einen Eintrag an, um so zu fahren, oder Schließen, um bei der Straße zu bleiben, auf der du bist.',
+  'help.guide.roadtrip-alternatives.result':
+    'Die Etappe fährt die Straße, die du gewählt hast, und die Strecke in der Leiste und die Ankünfte danach ändern sich mit.',
+  'help.guide.roadtrip-alternatives.tip.1':
+    'Eine andere Straße zu wählen setzt einen Zwischenpunkt auf die Etappe und ersetzt alle, die sie schon hatte; die eigene Straße des Routers zu wählen nimmt sie wieder weg.',
+  'help.guide.roadtrip-alternatives.tip.2':
+    'Ohne Autobahn, Ohne Maut und Ohne Fähre kommen von einem zweiten Router mit eigenem Geschwindigkeitsmodell, ihre Zeiten sind also nicht mit den anderen vergleichbar.',
+  // roadtrip-limits
+  'help.guide.roadtrip-limits.title': 'Das Fahrzeug und die Fahrgrenzen setzen',
+  'help.guide.roadtrip-limits.goal': 'Sag TREK, womit du fährst und wie weit du am Stück fahren willst.',
+  'help.guide.roadtrip-limits.step.1':
+    'Die Fahreinstellungen sitzen unter der Suche in der rechten Spalte. Ihre Abzeichen sagen, was gesetzt ist; klick sie an, um sie zu öffnen.',
+  'help.guide.roadtrip-limits.step.2':
+    'Unter Fahren sind Längste Fahrt am Stück und Fahrzeit pro Tag Minuten. Ein leeres Feld heißt aus, und nichts wird markiert.',
+  'help.guide.roadtrip-limits.step.3':
+    'Sag unter Fahrzeug, womit du fährst. Sprit füllt nur an Tankstopps nach, Strom nur an Ladestopps, Beides an beiden.',
+  'help.guide.roadtrip-limits.step.4':
+    'Tipp Reichweite pro Tankfüllung, oder Reichweite pro Ladung, selbst ein. Aus den Fahrzeugdaten rechnen darunter nimmt Tankinhalt und Verbrauch, oder Akkukapazität und Verbrauch, und rechnet es aus.',
+  'help.guide.roadtrip-limits.step.5':
+    'Möglichst meiden ist ein Wunsch, kein Verbot: ein Tag ohne Weg drumherum nutzt die Straße trotzdem und sagt das in seiner Kopfzeile.',
+  'help.guide.roadtrip-limits.step.6':
+    'Schließ den Dialog. Die Kachel sagt, was gesetzt ist, und die Leiste markiert jede Etappe und jeden Tag, der darüber geht.',
+  'help.guide.roadtrip-limits.result':
+    'Die Abzeichen der Kachel sagen, was gesetzt ist, und jede Etappe und jeder Tag über einer Grenze trägt ein Abzeichen in der Leiste.',
+  'help.guide.roadtrip-limits.tip.1':
+    'Die Einstellungen gehören zur Reise, also plant jeder auf ihr mit demselben Fahrzeug und denselben Grenzen.',
+  'help.guide.roadtrip-limits.tip.2':
+    'Tanken bis sagt, wie voll ein Stopp tankt, denn unterwegs lädt niemand auf 100 %. Ein Tank- oder Ladestopp kann das für sich überschreiben.',
+  'help.guide.roadtrip-limits.tip.3':
+    'Die Routenlinie entscheidet, wie die Fahrt gezeichnet wird: Tage verbinden routet die Nacht zwischen zwei Tagen, und Farbe je Tag gibt jedem Tag seine eigene.',
+  // roadtrip-day-window
+  'help.guide.roadtrip-day-window.title': 'Dem Fahrtag einen Anfang und ein Ende geben',
+  'help.guide.roadtrip-day-window.goal':
+    'Hör zu einer Uhrzeit auf zu fahren, die du wählst, und sag, wo der Tag enden soll.',
+  'help.guide.roadtrip-day-window.step.1':
+    'Öffne die Fahreinstellungen in der rechten Spalte und such den Abschnitt Tägliche Reisezeiten.',
+  'help.guide.roadtrip-day-window.step.2':
+    'Setz einen Tagesbeginn. Allein tut er nichts: es braucht beide Zeiten, wie der Hinweis darunter sagt.',
+  'help.guide.roadtrip-day-window.step.3':
+    'Setz ein Tagesende. Die Fahrt hält nun zu dieser Uhrzeit und trägt den Rest auf den nächsten Morgen, als Zeile Tagesende und Zeile Weiterfahrt in der Leiste.',
+  'help.guide.roadtrip-day-window.step.4':
+    'Wähl unter Tagesende planen die Option Auf der Strecke, um zur Endzeit auf der Straße zu pausieren, oder Am letzten Ort, um zu halten, bevor die nächste Fahrt sie überschreiten würde.',
+  'help.guide.roadtrip-day-window.step.5':
+    'Schließ den Dialog. Die Kachel Fahreinstellungen trägt die beiden Zeiten als Abzeichen.',
+  'help.guide.roadtrip-day-window.result':
+    'Die Fahrt wird in Reisetage der Länge zerschnitten, die du gesetzt hast, und was nicht hineinpasst, läuft auf gerechneten Tagen nach dem letzten weiter. Deine Tage und ihre Orte werden nicht verändert.',
+  'help.guide.roadtrip-day-window.tip.1':
+    'Eine der beiden Zeiten zu leeren schaltet das Ganze wieder aus. Zeiten, die du selbst an einem Stopp gesetzt hast, gehen immer vor.',
+  'help.guide.roadtrip-day-window.tip.2':
+    'Mit gesetzten täglichen Reisezeiten sind die Tage immer verbunden: die Fahrt vom letzten Stopp eines Tages zum ersten des nächsten wird geroutet und mitgezählt.',
+  'help.guide.roadtrip-day-window.tip.3':
+    'Jedes Tagesende ist auch eine Markierung auf der Karte, ein Mond mit der Tagesnummer. Zieh ihn entlang der Route oder auf einen Ort, um den Tag woanders enden zu lassen; ein Rechtsklick stellt das automatische Ende wieder her, und Automatische Tagesenden wiederherstellen in diesem Dialog setzt alles zurück.',
+  // roadtrip-refuel
+  'help.guide.roadtrip-refuel.title': 'Tanken, bevor der Tank leer ist',
+  'help.guide.roadtrip-refuel.goal':
+    'Finde auf dem Stück, das das Fahrzeug noch erreicht, eine Stelle zum Tanken und setz sie in die Fahrt.',
+  'help.guide.roadtrip-refuel.step.1':
+    'Ist eine Reichweite gesetzt, zeichnet die Leiste ein Band quer über die Etappe, wo sie ausgeht: Hier ist der Tank leer, und darunter, wie weit in der Etappe das ist.',
+  'help.guide.roadtrip-refuel.step.2':
+    'Die Lampe auf dem Band ist der Knopf. Tankstelle suchen sucht entlang der Straße, die du schon gefahren bist, und zeigt dabei Suche entlang der Strecke…',
+  'help.guide.roadtrip-refuel.step.3':
+    'Bis zu drei Stationen kommen zurück, jede mit ihrem Abstand zur Route und damit, wie viel Reichweite sie übrig ließe.',
+  'help.guide.roadtrip-refuel.step.4':
+    'Das Plus an einem Angebot übernimmt es als Tankstopp. Als Stopp hinzufügen öffnet sich mit Art und Aufenthalt schon ausgefüllt, und Übernehmen setzt es an der Stelle auf die Etappe, an der es wirklich passiert wird.',
+  'help.guide.roadtrip-refuel.result':
+    'Der Stopp sitzt mit eigenem Symbol auf der richtigen Etappe, die Reichweite zählt ab ihm neu, und das Band ist weg.',
+  'help.guide.roadtrip-refuel.tip.1':
+    'Die Reichweite zählt ab dem letzten Tank- oder Ladestopp, über Tage hinweg. Womit du fährst entscheidet, welche Stopps zählen: Sprit nur Tanken, Strom nur Laden.',
+  'help.guide.roadtrip-refuel.tip.2':
+    'Die Suche schaut auf die Straße vor dem trockenen Punkt, hält eine Reserve zurück und zählt den Umweg doppelt, alles was sie anbietet ist also wirklich erreichbar.',
+  'help.guide.roadtrip-refuel.tip.3':
+    'Eine leere Antwort ist keine Sackgasse: die Lampe wird zu Nochmal, denn die Ortssuche ist ein geteilter Dienst, der durchaus in eine Zeitüberschreitung läuft.',
+  // roadtrip-track
+  'help.guide.roadtrip-track.title': 'Einen Tag einer importierten Spur folgen lassen',
+  'help.guide.roadtrip-track.goal':
+    'Leg die Fahrt eines Tages auf eine schöne Strecke, die du als GPX- oder KML-Spur importiert hast.',
+  'help.guide.roadtrip-track.step.1':
+    'Klick das Abzeichen Spur in der Kopfzeile eines Tages an. Der Dialog öffnet sich auf diesem Tag.',
+  'help.guide.roadtrip-track.step.2':
+    'Wähl eine Spur. Jede sagt, wie lang sie ist und wie weit sie von diesem Tag entfernt liegt, die nächste zuerst.',
+  'help.guide.roadtrip-track.step.3':
+    'Klick Dieser Spur folgen an. TREK setzt Zwischenpunkte dort, wo die Fahrt am weitesten von der Spur abweicht, und routet neu, Runde um Runde.',
+  'help.guide.roadtrip-track.step.4':
+    'Es sagt, wie viele Zwischenpunkte es gesetzt hat und wie nah die Fahrt nun bleibt. Der Knopf daneben entfernt diese Zwischenpunkte wieder und gibt den Tag dem Router zurück; den Dialog zu schließen behält die Spur.',
+  'help.guide.roadtrip-track.result':
+    'Die Fahrt des Tages folgt der Spur statt der Straße, die der Router gewählt hat, und das Abzeichen Spur sagt, welcher Spur sie folgt.',
+  'help.guide.roadtrip-track.tip.1':
+    'Importier die Datei unter Tage mit Dateimport, und hak dabei Tracks (mit Streckenverlauf) oder Pfade (LineStrings) an. Solange keine Spur in der Reise ist, hat das Abzeichen nichts anzubieten.',
+  'help.guide.roadtrip-track.tip.2':
+    'Einer Spur zu folgen ersetzt die Zwischenpunkte, die die Etappen des Tages schon hatten, form eine Etappe also nach der Spur von Hand, nicht davor.',
 };
 
 export default help;

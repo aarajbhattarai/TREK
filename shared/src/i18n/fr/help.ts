@@ -3678,6 +3678,210 @@ const help: TranslationStrings = {
     'Une réservation confirmée est une ligne pleine, une réservation en attente une ligne pointillée. Le réglage Étiquettes des itinéraires inscrit le code de l’aéroport ou le nom de la gare dans les marqueurs d’extrémité.',
   'help.guide.transport-on-map.tip.3':
     'Afficher tous les itinéraires fait table rase, ce n’est pas une couche : il jette ce que les icônes individuelles avaient réglé, appuyer deux fois vous laisse donc avec tout activé ou tout désactivé.',
+
+  // ── Screen: trip-roadtrip ─────────────────────────────────────────────────────────────
+  'help.ctx.trip-roadtrip.title': 'Road trip',
+  'help.ctx.trip-roadtrip.summary':
+    'Le plan lu comme un seul trajet : les mêmes jours et les mêmes lieux, enchaînés en arrêts avec la conduite entre eux, dans une liste le long de la colonne de gauche et sur la carte. Il dit la distance et la durée, où le réservoir se vide, et ce qui se trouve au bord de la route.',
+  'help.ctx.trip-roadtrip.bullet.1':
+    'Jours et Road trip en haut de la colonne de gauche basculent entre le plan des jours et le trajet. Rien n’est copié et rien n’est modifié : Jours redonne le plan exactement tel qu’il était.',
+  'help.ctx.trip-roadtrip.bullet.2':
+    'La tête de la liste totalise le voyage : Distance, Temps de conduite et Étapes. En dessous vient une fiche par jour, avec les kilomètres propres au jour, le nombre d’arrêts pour lesquels il existe, ce qu’il dépasse, et un badge Trace.',
+  'help.ctx.trip-roadtrip.bullet.3':
+    'Un arrêt numéroté est un lieu pour lequel le jour existe. Un arrêt en chemin, carburant, recharge, une aire de repos, porte l’icône de son type au lieu d’un numéro et n’est pas compté. Cliquez sur un numéro pour changer ce qu’il est, et sur le badge Durée pour dire combien de temps il prend.',
+  'help.ctx.trip-roadtrip.bullet.4':
+    'Entre deux arrêts, une bande de conduite donne l’étape en distance et en temps. Cliquez dessus pour Itinéraires pour cette étape, ou cliquez sur l’itinéraire tracé sur la carte pour courber l’étape par un point de passage.',
+  'help.ctx.trip-roadtrip.bullet.5':
+    'La colonne de droite devient Le long de l’itinéraire : choisissez un jour, ce que vous cherchez et la largeur du couloir, puis Rechercher. Ajouter pose un résultat sur le trajet à l’endroit où il est réellement passé.',
+  'help.ctx.trip-roadtrip.bullet.6':
+    'Les Réglages de conduite en dessous tiennent les limites, la voiture et son autonomie, les horaires quotidiens, ce qu’il faut éviter et la façon dont la ligne est tracée. Ils appartiennent au voyage, donc tout le monde planifie avec la même voiture.',
+  // roadtrip-mode
+  'help.guide.roadtrip-mode.title': 'Lire le voyage comme un seul trajet',
+  'help.guide.roadtrip-mode.goal': 'Basculez le plan en mode road trip et lisez ce que la liste vous dit.',
+  'help.guide.roadtrip-mode.step.1':
+    'Cliquez sur Road trip dans le sélecteur Jours et Road trip en haut de la colonne de gauche. Le plan des jours est remplacé par le trajet, et la carte trace chaque jour dont l’itinéraire est calculé.',
+  'help.guide.roadtrip-mode.step.2':
+    'La tête de la liste totalise tout le voyage : Distance, Temps de conduite et Étapes.',
+  'help.guide.roadtrip-mode.step.3':
+    'En dessous vient une fiche par jour. Son en-tête porte le numéro et la date du jour, la conduite en distance et en temps, et le nombre d’arrêts pour lesquels le jour existe.',
+  'help.guide.roadtrip-mode.step.4':
+    'Dans la fiche, le jour est une chaîne : un arrêt numéroté par lieu, une bande de conduite entre chaque paire, et l’heure d’arrivée au bord droit.',
+  'help.guide.roadtrip-mode.step.5':
+    'Cliquez sur l’en-tête d’un jour pour le replier. Un jour replié disparaît aussi de la carte ; cliquez de nouveau sur l’en-tête pour le ramener.',
+  'help.guide.roadtrip-mode.result':
+    'La colonne de gauche est le trajet et la carte en montre chaque jour. Jours revient directement au plan, inchangé.',
+  'help.guide.roadtrip-mode.tip.1':
+    'Le choix est retenu par voyage tant que l’onglet du navigateur reste ouvert, un rechargement revient donc sur le trajet.',
+  'help.guide.roadtrip-mode.tip.2':
+    'Le sélecteur n’existe qu’une fois qu’un administrateur a activé l’extension Road trip, sous Extensions dans l’Administration.',
+  'help.guide.roadtrip-mode.tip.3':
+    'Sur téléphone il n’y a pas de sélecteur : l’extension ajoute son propre onglet Road trip à côté de Plan.',
+  // roadtrip-stops
+  'help.guide.roadtrip-stops.title': 'Les arrêts en chemin, et combien de temps vous restez',
+  'help.guide.roadtrip-stops.goal':
+    'Transformez un lieu du trajet en arrêt en chemin, et dites combien de temps prend chaque arrêt.',
+  'help.guide.roadtrip-stops.step.1':
+    'Cliquez sur le numéro devant un arrêt dans la liste. Son libellé est En faire un arrêt en chemin, et il ouvre Type d’arrêt.',
+  'help.guide.roadtrip-stops.step.2':
+    'Choisissez un type : Hébergement, Carburant, Recharge, Aire de repos, Camping, Restauration ou À voir. Le numéro devient l’icône de ce type et les arrêts en dessous sont renumérotés.',
+  'help.guide.roadtrip-stops.step.3':
+    'Un arrêt en chemin n’est pas une destination, l’en-tête du jour compte donc un arrêt de moins.',
+  'help.guide.roadtrip-stops.step.4':
+    'Cliquez de nouveau sur l’icône, Changer le type d’arrêt, et choisissez Redevenir une destination pour rendre son numéro à l’arrêt.',
+  'help.guide.roadtrip-stops.step.5': 'Chaque arrêt porte un badge Durée. Cliquez dessus pour ouvrir Temps sur place.',
+  'help.guide.roadtrip-stops.step.6':
+    'Réglez la durée avec le curseur, avec les boutons moins et plus ou avec l’un des préréglages, regardez ce que font Arrivee et Depart, puis cliquez sur Enregistrer.',
+  'help.guide.roadtrip-stops.result':
+    'L’arrêt porte l’icône de son type au lieu d’un numéro, et chaque arrivée après une durée a bougé avec elle.',
+  'help.guide.roadtrip-stops.tip.1':
+    'Une durée appartient au lieu, pas à une visite : un lieu planifié sur deux jours reçoit le même temps sur les deux.',
+  'help.guide.roadtrip-stops.tip.2':
+    'Les arrêts en chemin apparaissent aussi sous Jours. Afficher aussi dans Jours, sous Arrêts de service dans les Réglages de conduite, les garde uniquement dans Road trip.',
+  'help.guide.roadtrip-stops.tip.3': 'Aucune duree, dans la même boîte de dialogue, retire de nouveau ce temps.',
+  // roadtrip-corridor
+  'help.guide.roadtrip-corridor.title': 'Trouver du carburant, à manger et un lit le long de l’itinéraire',
+  'help.guide.roadtrip-corridor.goal':
+    'Cherchez sur la route que vous roulez vraiment, et posez ce que vous trouvez sur la bonne étape.',
+  'help.guide.roadtrip-corridor.step.1':
+    'Choisissez le jour en haut de Le long de l’itinéraire. Seuls les jours dont l’itinéraire est calculé sont proposés.',
+  'help.guide.roadtrip-corridor.step.2':
+    'Sous Recherche de, cochez ce qu’il vous faut. Carburant, Recharge, Aire de repos, Camping, Hébergement, Restauration et À voir se combinent.',
+  'help.guide.roadtrip-corridor.step.3':
+    'Sous Dans un rayon de, choisissez jusqu’où chercher de part et d’autre de la route, 2 km, 5 km ou 10 km, puis cliquez sur Rechercher.',
+  'help.guide.roadtrip-corridor.step.4':
+    'Les résultats reviennent groupés par type, dans l’ordre où vous les passez, chacun avec sa position le long du jour et sa distance hors itinéraire.',
+  'help.guide.roadtrip-corridor.step.5':
+    'Ajouter sur un résultat ouvre Ajouter comme arrêt. La boîte dit sur quel jour et à quelle position l’arrêt se pose, demande le type et le temps sur place, et Ajouter le met sur le trajet.',
+  'help.guide.roadtrip-corridor.result':
+    'Les résultats sont listés dans l’ordre où vous les passez et tracés sur la carte, et celui que vous avez ajouté se pose sur le trajet à l’endroit où il est réellement passé.',
+  'help.guide.roadtrip-corridor.tip.1':
+    'Rien n’est cherché tant que vous n’appuyez pas sur Rechercher : une exécution représente de nombreuses requêtes vers un service partagé.',
+  'help.guide.roadtrip-corridor.tip.2':
+    'Filtrer par nom restreint ce qui est revenu sans redemander, et Effacer les résultats vide la liste et ses repères. Cliquez sur un résultat pour l’amener dans le champ de la carte.',
+  'help.guide.roadtrip-corridor.tip.3':
+    'Un résultat peut aussi être glissé de la carte sur l’itinéraire tracé, c’est ainsi que vous choisissez vous-même l’étape là où la même route est parcourue deux fois. Ajouter manuellement, à côté de Rechercher, cherche plutôt un lieu par son nom.',
+  // roadtrip-via
+  'help.guide.roadtrip-via.title': 'Courber une étape par un point de passage',
+  'help.guide.roadtrip-via.goal': 'Envoyez une étape sur la route que vous voulez vraiment, sans y ajouter d’arrêt.',
+  'help.guide.roadtrip-via.step.1':
+    'Amenez l’étape voulue dans le champ de vision : cliquez sur un arrêt dans la liste, puis fermez la fiche qui s’ouvre par-dessus la carte.',
+  'help.guide.roadtrip-via.step.2':
+    'Cliquez sur l’itinéraire tracé. Un point de passage est posé sur l’étape cliquée, et l’étape est recalculée en passant par lui.',
+  'help.guide.roadtrip-via.step.3':
+    'La liste suit : l’en-tête du jour porte la nouvelle distance et le nouveau temps de conduite, et chaque arrivée après le point de passage bouge avec lui.',
+  'help.guide.roadtrip-via.step.4':
+    'Survolez la poignée et elle dit ce qu’elle sait faire : Faites glisser pour remodeler l’itinéraire, clic droit pour supprimer. Glissez-la ailleurs et l’étape est retracée par le nouvel endroit.',
+  'help.guide.roadtrip-via.step.5':
+    'Faites un clic droit sur la poignée pour l’enlever. L’étape reprend le chemin direct.',
+  'help.guide.roadtrip-via.result':
+    'L’étape suit la route que vous avez choisie, et la distance, le temps de conduite et les arrivées du jour sont recalculés pour elle.',
+  'help.guide.roadtrip-via.tip.1':
+    'Un point de passage n’est pas un arrêt : il n’a ni numéro, ni durée, ni heure d’arrivée, et il n’est pas compté dans les arrêts du jour.',
+  'help.guide.roadtrip-via.tip.2':
+    'Les poignées sont tracées à partir du niveau de zoom 9, une carte ajustée à tout le voyage montre donc la ligne sans elles.',
+  'help.guide.roadtrip-via.tip.3':
+    'Un clic à plus de deux kilomètres de toute étape tracée est ignoré, et un clic sur un vol, un train ou un ferry l’est aussi.',
+  // roadtrip-alternatives
+  'help.guide.roadtrip-alternatives.title': 'Essayer un autre itinéraire pour une étape',
+  'help.guide.roadtrip-alternatives.goal': 'Voyez ce que le calculateur propose d’autre pour un tronçon, et prenez-le.',
+  'help.guide.roadtrip-alternatives.step.1':
+    'Cliquez sur une bande de conduite dans la liste, la ligne entre deux arrêts qui donne l’étape en distance et en temps. Son libellé est Autres itinéraires.',
+  'help.guide.roadtrip-alternatives.step.2':
+    'Itinéraires pour cette étape s’ouvre par-dessus la carte, une entrée par route, chacune tracée sur la carte dans sa propre couleur.',
+  'help.guide.roadtrip-alternatives.step.3':
+    'Survolez une entrée pour allumer cette route. Actuel et La plus rapide disent laquelle est laquelle, et les autres disent de combien elles sont plus rapides ou plus lentes.',
+  'help.guide.roadtrip-alternatives.step.4':
+    'Cliquez sur une entrée pour rouler par là, ou sur Fermer pour garder la route où vous êtes.',
+  'help.guide.roadtrip-alternatives.result':
+    'L’étape emprunte la route que vous avez choisie, et la distance dans la liste ainsi que les arrivées suivantes changent avec elle.',
+  'help.guide.roadtrip-alternatives.tip.1':
+    'Choisir une autre route pose un point de passage sur l’étape et remplace ceux qu’elle avait déjà ; choisir la route propre du calculateur les retire de nouveau.',
+  'help.guide.roadtrip-alternatives.tip.2':
+    'Sans autoroute, Sans peage et Sans ferry viennent d’un second moteur avec son propre modèle de vitesse, leurs temps ne sont donc pas comparables aux autres.',
+  // roadtrip-limits
+  'help.guide.roadtrip-limits.title': 'Régler la voiture et les limites de conduite',
+  'help.guide.roadtrip-limits.goal':
+    'Dites à TREK ce que vous conduisez et jusqu’où vous acceptez de rouler d’une traite.',
+  'help.guide.roadtrip-limits.step.1':
+    'Réglages de conduite se trouve sous la recherche dans la colonne de droite. Ses badges disent ce qui est réglé ; cliquez dessus pour ouvrir.',
+  'help.guide.roadtrip-limits.step.2':
+    'Sous Conduite, Plus long trajet d’affilée et Conduite par jour sont en minutes. Un champ vide vaut désactivé, et rien n’est signalé.',
+  'help.guide.roadtrip-limits.step.3':
+    'Sous Véhicule, dites ce que vous conduisez. Carburant ne refait le plein qu’aux arrêts carburant, Électrique seulement aux arrêts de recharge, Les deux aux deux.',
+  'help.guide.roadtrip-limits.step.4':
+    'Tapez vous-même Autonomie par plein, ou Autonomie par charge. Calculer d’après la voiture en dessous prend Réservoir et Consommation, ou Batterie et Consommation, et fait le calcul.',
+  'help.guide.roadtrip-limits.step.5':
+    'Éviter si possible est une préférence, pas une interdiction : un jour sans contournement emprunte quand même la route, et le dit dans son en-tête.',
+  'help.guide.roadtrip-limits.step.6':
+    'Fermez la boîte de dialogue. La fiche dit ce qui est réglé, et la liste marque chaque étape et chaque jour qui dépasse.',
+  'help.guide.roadtrip-limits.result':
+    'Les badges de la fiche disent ce qui est réglé, et chaque étape et chaque jour au-delà d’une limite porte un badge dans la liste.',
+  'help.guide.roadtrip-limits.tip.1':
+    'Les réglages appartiennent au voyage, donc tout le monde y planifie avec la même voiture et les mêmes limites.',
+  'help.guide.roadtrip-limits.tip.2':
+    'Remplir jusqu’à dit jusqu’où un arrêt remplit, parce que personne ne recharge à 100 % sur la route. Un arrêt carburant ou de recharge peut le remplacer pour lui-même.',
+  'help.guide.roadtrip-limits.tip.3':
+    'Ligne de l’itinéraire décide comment le trajet est tracé : Relier les jours calcule la nuit entre deux jours, et Une couleur par jour donne à chaque jour la sienne.',
+  // roadtrip-day-window
+  'help.guide.roadtrip-day-window.title': 'Donner un début et une fin à la journée de conduite',
+  'help.guide.roadtrip-day-window.goal':
+    'Arrêtez de rouler à l’heure que vous choisissez, et dites où la journée doit se terminer.',
+  'help.guide.roadtrip-day-window.step.1':
+    'Ouvrez Réglages de conduite dans la colonne de droite et trouvez Horaires quotidiens.',
+  'help.guide.roadtrip-day-window.step.2':
+    'Réglez un Début de journée. Seul, il ne fait rien : les deux heures sont nécessaires, comme le dit la note en dessous.',
+  'help.guide.roadtrip-day-window.step.3':
+    'Réglez une Fin de journée. Le trajet s’arrête désormais à cette heure et reporte le reste au lendemain matin, sous la forme d’une ligne Fin de journée et d’une ligne Reprendre le trajet dans la liste.',
+  'help.guide.roadtrip-day-window.step.4':
+    'Sous Fin de journée, choisissez Sur le trajet pour faire une pause sur la route à l’heure de fin, ou Au dernier lieu pour vous arrêter avant que le trajet suivant ne la dépasse.',
+  'help.guide.roadtrip-day-window.step.5':
+    'Fermez la boîte de dialogue. La fiche Réglages de conduite porte les deux heures en badge.',
+  'help.guide.roadtrip-day-window.result':
+    'Le trajet est découpé en journées de route de la longueur que vous avez fixée, et ce qui ne rentre pas continue sur des jours calculés après le dernier. Vos jours et leurs lieux ne sont pas modifiés.',
+  'help.guide.roadtrip-day-window.tip.1':
+    'Effacer l’une des deux heures désactive de nouveau l’ensemble. Les heures que vous avez fixées vous-même sur un arrêt sont toujours prioritaires.',
+  'help.guide.roadtrip-day-window.tip.2':
+    'Avec des horaires quotidiens réglés, les jours sont toujours reliés : le trajet du dernier arrêt d’un jour au premier du suivant est calculé et compté.',
+  'help.guide.roadtrip-day-window.tip.3':
+    'Chaque fin de journée est aussi un repère sur la carte, une lune avec le numéro du jour. Glissez-la le long de l’itinéraire, ou sur un lieu, pour terminer la journée ailleurs ; faites un clic droit dessus pour remettre la fin automatique, et Rétablir les fins de journée automatiques dans cette boîte de dialogue annule le tout.',
+  // roadtrip-refuel
+  'help.guide.roadtrip-refuel.title': 'Faire le plein avant que le réservoir ne se vide',
+  'help.guide.roadtrip-refuel.goal':
+    'Trouvez où refaire le plein sur la portion que la voiture peut encore atteindre, et posez-le sur le trajet.',
+  'help.guide.roadtrip-refuel.step.1':
+    'Avec une autonomie réglée, la liste trace une bande en travers de l’étape à l’endroit où elle s’épuise : Réservoir vide ici, et en dessous à quelle distance dans l’étape cela tombe.',
+  'help.guide.roadtrip-refuel.step.2':
+    'La lampe sur la bande est le bouton. Chercher du carburant regarde le long de la route déjà parcourue, avec Recherche le long du trajet… pendant ce temps.',
+  'help.guide.roadtrip-refuel.step.3':
+    'Jusqu’à trois stations reviennent, chacune avec sa distance hors itinéraire et l’autonomie qu’elle laisserait en réserve.',
+  'help.guide.roadtrip-refuel.step.4':
+    'Le plus sur une proposition l’ajoute comme arrêt carburant. Ajouter comme arrêt s’ouvre avec le type et le temps déjà remplis, et Ajouter le pose sur l’étape à l’endroit où il est réellement passé.',
+  'help.guide.roadtrip-refuel.result':
+    'L’arrêt est sur la bonne étape avec sa propre icône, l’autonomie repart de lui, et la bande a disparu.',
+  'help.guide.roadtrip-refuel.tip.1':
+    'L’autonomie compte depuis le dernier arrêt carburant ou de recharge, d’un jour à l’autre. Ce que vous conduisez décide des arrêts qui comptent : Carburant seulement le carburant, Électrique seulement la recharge.',
+  'help.guide.roadtrip-refuel.tip.2':
+    'La recherche regarde la route avant le point de panne, garde une réserve et compte le détour deux fois, tout ce qu’elle propose est donc réellement atteignable.',
+  'help.guide.roadtrip-refuel.tip.3':
+    'Une réponse vide n’est pas une impasse : la lampe devient Réessayer, parce que la recherche de lieux est un service partagé qui expire parfois.',
+  // roadtrip-track
+  'help.guide.roadtrip-track.title': 'Faire suivre à un jour une trace importée',
+  'help.guide.roadtrip-track.goal':
+    'Posez le trajet d’un jour sur une route panoramique que vous avez importée comme trace GPX ou KML.',
+  'help.guide.roadtrip-track.step.1':
+    'Cliquez sur le badge Trace dans l’en-tête d’un jour. La boîte de dialogue s’ouvre sur ce jour.',
+  'help.guide.roadtrip-track.step.2':
+    'Choisissez une trace. Chacune dit sa longueur et sa distance à ce jour, la plus proche en premier.',
+  'help.guide.roadtrip-track.step.3':
+    'Cliquez sur Suivre cette trace. TREK pose des points de passage là où le trajet s’écarte le plus de la trace, et recalcule, tour après tour.',
+  'help.guide.roadtrip-track.step.4':
+    'Il dit combien de points de passage il a posés et à quelle distance le trajet reste désormais. Le bouton à côté retire ces points de passage et rend le jour au calculateur ; fermer la boîte de dialogue garde la trace.',
+  'help.guide.roadtrip-track.result':
+    'Le trajet du jour suit la trace au lieu de la route choisie par le calculateur, et le badge Trace dit quelle trace il suit.',
+  'help.guide.roadtrip-track.tip.1':
+    'Importez le fichier sous Jours avec Importer un fichier, en cochant Traces (avec géométrie) ou Chemins (LineStrings). Tant qu’aucune trace n’est dans le voyage, le badge n’a rien à proposer.',
+  'help.guide.roadtrip-track.tip.2':
+    'Suivre une trace remplace les points de passage que les étapes du jour avaient déjà, façonnez donc une étape à la main après la trace, pas avant.',
 };
 
 export default help;

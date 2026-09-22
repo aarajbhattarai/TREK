@@ -3549,6 +3549,204 @@ const help: TranslationStrings = {
     'Onaylanmış bir rezervasyon düz bir çizgidir, askıdaki bir rezervasyon kesik çizgidir. Rezervasyon rota etiketleri ayarı uç işaretçilerine havaalanı kodunu ya da istasyon adını yazar.',
   'help.guide.transport-on-map.tip.3':
     'Tüm rezervasyon rotalarını göster bir katman değil, temiz bir sayfadır: tek tek simgelerin ayarladığını atar, bu yüzden iki kez basmak sizi ya her şey açık ya da her şey kapalı bırakır.',
+
+  // ── Screen: trip-roadtrip ─────────────────────────────────────────────────────────────
+  'help.ctx.trip-roadtrip.title': 'Yol gezisi',
+  'help.ctx.trip-roadtrip.summary':
+    'Plan tek bir sürüş olarak okunur: aynı günler ve aynı yerler, aralarındaki sürüşle birlikte duraklara dizilmiş, sol sütunda bir şerit halinde ve haritada. Ne kadar uzak ve ne kadar uzun sürdüğünü, deponun nerede bittiğini ve yol boyunca ne olduğunu söyler.',
+  'help.ctx.trip-roadtrip.bullet.1':
+    'Sol sütunun üstündeki Günler ve Yol gezisi, gün planı ile sürüş arasında geçiş yapar. Hiçbir şey kopyalanmaz ve hiçbir şey değişmez: Günler planı tam olduğu gibi geri verir.',
+  'help.ctx.trip-roadtrip.bullet.2':
+    'Şeridin başı geziyi toplar: Mesafe, Sürüş süresi ve Duraklar. Altında her gün için bir kart gelir; günün kendi kilometresi, kaç durak için olduğu, neyi aştığı ve bir İz rozeti ile.',
+  'help.ctx.trip-roadtrip.bullet.3':
+    'Numaralı bir durak, günün var olduğu bir yerdir. Yol üzerindeki bir mola, yakıt, şarj, bir dinlenme alanı, numara yerine kendi türünün simgesini taşır ve sayılmaz. Hangisi olduğunu değiştirmek için numaraya, ne kadar sürdüğünü söylemek için Süre rozetine tıklayın.',
+  'help.ctx.trip-roadtrip.bullet.4':
+    'İki durak arasında bir sürüş bandı, etabı mesafe ve süre olarak verir. Bu etap için yollar için üzerine tıklayın ya da etabı bir ara noktadan büküp geçirmek için haritada çizili rotaya tıklayın.',
+  'help.ctx.trip-roadtrip.bullet.5':
+    'Sağ sütun Rota boyunca olur: bir gün seçin, ne arayacağınızı ve koridorun ne kadar geniş olduğunu belirleyin, sonra Ara. Ekle, bir sonucu sürüşün gerçekten geçildiği noktasına koyar.',
+  'help.ctx.trip-roadtrip.bullet.6':
+    'Altındaki Sürüş ayarları sınırları, aracı ve menzilini, günlük yolculuk saatlerini, nelerden kaçınılacağını ve çizginin nasıl çizileceğini tutar. Geziye aittirler, bu yüzden herkes aynı araçla plan yapar.',
+  // roadtrip-mode
+  'help.guide.roadtrip-mode.title': 'Geziyi tek bir sürüş olarak okuyun',
+  'help.guide.roadtrip-mode.goal': 'Planı yol gezisi kipine geçirin ve şeridin size ne söylediğini okuyun.',
+  'help.guide.roadtrip-mode.step.1':
+    'Sol sütunun üstündeki Günler ve Yol gezisi anahtarında Yol gezisi seçeneğine tıklayın. Gün planının yerini sürüş alır ve harita rotası hesaplanmış her günü çizer.',
+  'help.guide.roadtrip-mode.step.2': 'Şeridin başı tüm geziyi toplar: Mesafe, Sürüş süresi ve Duraklar.',
+  'help.guide.roadtrip-mode.step.3':
+    'Altında her gün için bir kart gelir. Başlığı günün numarasını ve tarihini, sürüşü mesafe ve süre olarak ve günün kaç durak için olduğunu taşır.',
+  'help.guide.roadtrip-mode.step.4':
+    'Kartın içinde gün bir zincirdir: her yer için numaralı bir durak, her çift arasında bir sürüş bandı ve sağ kenarda varış saati.',
+  'help.guide.roadtrip-mode.step.5':
+    'Bir günü katlamak için başlığına tıklayın. Katlanmış bir gün haritadan da kalkar; geri getirmek için başlığa yeniden tıklayın.',
+  'help.guide.roadtrip-mode.result':
+    'Sol sütun sürüştür ve harita onun her gününü gösterir. Günler doğrudan plana geri döner, değişmeden.',
+  'help.guide.roadtrip-mode.tip.1':
+    'Seçim, tarayıcı sekmesi açık kaldığı sürece her gezi için hatırlanır, yani sayfa yenilendiğinde sürüşe geri dönersiniz.',
+  'help.guide.roadtrip-mode.tip.2':
+    'Anahtar ancak bir yönetici Yönetim içindeki Eklentiler altından Yol gezisi eklentisini açtığında var olur.',
+  'help.guide.roadtrip-mode.tip.3': 'Telefonda anahtar yoktur: eklenti Planı yanına kendi Yol gezisi sekmesini ekler.',
+  // roadtrip-stops
+  'help.guide.roadtrip-stops.title': 'Yol üzerindeki molalar ve ne kadar kaldığınız',
+  'help.guide.roadtrip-stops.goal':
+    'Sürüş üzerindeki bir yeri yol üzerinde bir molaya dönüştürün ve her molanın ne kadar sürdüğünü söyleyin.',
+  'help.guide.roadtrip-stops.step.1':
+    'Şeritte bir durağın önündeki numaraya tıklayın. Etiketi Yol üzerinde molaya dönüştür şeklindedir ve Mola türü penceresini açar.',
+  'help.guide.roadtrip-stops.step.2':
+    'Bir tür seçin: Konaklama, Yakıt, Şarj, Dinlenme alanı, Kamp alanı, Yemek ya da Görülecek yerler. Numara o türün simgesine döner ve altındaki duraklar yeniden numaralanır.',
+  'help.guide.roadtrip-stops.step.3':
+    'Yol üzerindeki bir mola varış noktası değildir, bu yüzden günün başlığı bir durak eksik sayar.',
+  'help.guide.roadtrip-stops.step.4':
+    'Durağa numarasını geri vermek için simgeye yeniden tıklayın, Mola türünü değiştir, ve Yeniden varış noktası yap seçeneğini seçin.',
+  'help.guide.roadtrip-stops.step.5':
+    'Her durak bir Süre rozeti taşır. Bu duraktaki süre penceresini açmak için ona tıklayın.',
+  'help.guide.roadtrip-stops.step.6':
+    'Uzunluğu kaydırıcıyla, eksi ve artı düğmeleriyle ya da hazır sürelerden biriyle ayarlayın, Varis ile Kalkis ne yapıyor bakın, sonra Kaydet düğmesine tıklayın.',
+  'help.guide.roadtrip-stops.result':
+    'Durak numara yerine kendi türünün simgesini taşır ve bir moladan sonraki her varış onunla birlikte kaymıştır.',
+  'help.guide.roadtrip-stops.tip.1':
+    'Mola süresi bir ziyarete değil yere aittir: iki güne planlanmış bir yerde her iki gün de aynı süre durulur.',
+  'help.guide.roadtrip-stops.tip.2':
+    'Yol üzerindeki molalar Günler içinde de görünür. Sürüş ayarlarındaki Hizmet durakları altında yer alan Günler içinde de göster, onları yalnızca Yol gezisinde tutar.',
+  'help.guide.roadtrip-stops.tip.3': 'Aynı penceredeki Mola yok, bu süreyi yeniden kaldırır.',
+  // roadtrip-corridor
+  'help.guide.roadtrip-corridor.title': 'Rota boyunca yakıt, yemek ve yatacak yer bulun',
+  'help.guide.roadtrip-corridor.goal': 'Gerçekten sürdüğünüz yolu arayın ve bulduğunuzu doğru etaba koyun.',
+  'help.guide.roadtrip-corridor.step.1':
+    'Rota boyunca bölümünün üstünden günü seçin. Yalnızca rotası hesaplanmış günler sunulur.',
+  'help.guide.roadtrip-corridor.step.2':
+    'Aranan altında neye ihtiyacınız olduğunu işaretleyin. Yakıt, Şarj, Dinlenme alanı, Kamp alanı, Konaklama, Yemek ve Görülecek yerler birlikte seçilebilir.',
+  'help.guide.roadtrip-corridor.step.3':
+    'Mesafe altında yolun iki yanında ne kadar uzağa bakılacağını seçin, 2 km, 5 km ya da 10 km, sonra Ara düğmesine tıklayın.',
+  'help.guide.roadtrip-corridor.step.4':
+    'Sonuçlar türlerine göre gruplanmış olarak, geçtiğiniz sırayla döner; her biri gün içinde ne kadar ileride olduğunu ve rotadan ne kadar uzakta durduğunu taşır.',
+  'help.guide.roadtrip-corridor.step.5':
+    'Bir sonuçtaki Ekle, Mola olarak ekle penceresini açar. Molanın hangi güne ve hangi sıraya düştüğünü söyler, türü ve duraktaki süreyi sorar, Ekle ise onu sürüşe koyar.',
+  'help.guide.roadtrip-corridor.result':
+    'Sonuçlar geçtiğiniz sırayla listelenir ve haritada çizilir, eklediğiniz ise sürüşün gerçekten geçildiği noktasında oturur.',
+  'help.guide.roadtrip-corridor.tip.1':
+    'Ara düğmesine basmadan hiçbir şey aranmaz: tek bir çalıştırma, paylaşılan bir hizmete yapılan birçok istektir.',
+  'help.guide.roadtrip-corridor.tip.2':
+    'Ada göre süz, yeniden sormadan gelenleri daraltır; Sonuçları temizle ise listeyi ve iğnelerini boşaltır. Bir sonuca tıklayarak onu haritada görüş alanına getirirsiniz.',
+  'help.guide.roadtrip-corridor.tip.3':
+    'Bir sonuç haritadan çizili rotanın üzerine de sürüklenebilir; aynı yoldan iki kez geçildiğinde etabı böyle kendiniz seçersiniz. Ara düğmesinin yanındaki Elle ekle ise bir yeri adıyla arar.',
+  // roadtrip-via
+  'help.guide.roadtrip-via.title': 'Bir etabı ara noktadan büküp geçirin',
+  'help.guide.roadtrip-via.goal': 'Bir etaba durak eklemeden onu gerçekten istediğiniz yoldan gönderin.',
+  'help.guide.roadtrip-via.step.1':
+    'İstediğiniz etabı görüş alanına getirin: şeritte bir durağa tıklayın, sonra haritanın üzerinde açılan kartı kapatın.',
+  'help.guide.roadtrip-via.step.2':
+    'Çizili rotaya tıklayın. Tıkladığınız etaba bir ara nokta bırakılır ve etap onun üzerinden yeniden hesaplanır.',
+  'help.guide.roadtrip-via.step.3':
+    'Şerit bunu izler: günün başlığı yeni mesafeyi ve sürüş süresini taşır, ara noktadan sonraki her varış onunla birlikte kayar.',
+  'help.guide.roadtrip-via.step.4':
+    'Tutamacın üzerine gelin, ne yapabileceğini söyler: Rotayı yeniden şekillendirmek için sürükleyin, kaldırmak için sağ tıklayın. Onu başka bir yere sürükleyin, etap yeni noktadan yeniden çizilir.',
+  'help.guide.roadtrip-via.step.5': 'Tutamacı kaldırmak için sağ tıklayın. Etap yeniden doğrudan gider.',
+  'help.guide.roadtrip-via.result':
+    'Etap seçtiğiniz yolu izler, günün mesafesi, sürüş süresi ve varışları onun için yeniden hesaplanır.',
+  'help.guide.roadtrip-via.tip.1':
+    'Bir ara nokta durak değildir: numarası, mola süresi ve varış saati yoktur ve günün duraklarına sayılmaz.',
+  'help.guide.roadtrip-via.tip.2':
+    'Tutamaçlar 9. yakınlaştırma düzeyinden itibaren çizilir, bu yüzden tüm geziye göre ayarlanmış bir harita çizgiyi onlarsız gösterir.',
+  'help.guide.roadtrip-via.tip.3':
+    'Çizili herhangi bir etaptan iki kilometreden uzağa yapılan tıklama yok sayılır, bir uçuşa, trene ya da feribota yapılan tıklama da öyle.',
+  // roadtrip-alternatives
+  'help.guide.roadtrip-alternatives.title': 'Bir etabı sürmenin başka bir yolunu deneyin',
+  'help.guide.roadtrip-alternatives.goal': 'Rota motorunun tek bir bölüm için başka ne sunduğunu görün ve onu alın.',
+  'help.guide.roadtrip-alternatives.step.1':
+    'Şeritte bir sürüş bandına, iki durak arasındaki etabı mesafe ve süre olarak veren satıra tıklayın. Etiketi Başka yollar şeklindedir.',
+  'help.guide.roadtrip-alternatives.step.2':
+    'Bu etap için yollar haritanın üzerinde açılır, her yol için bir kayıt, her biri haritada kendi renginde çizili.',
+  'help.guide.roadtrip-alternatives.step.3':
+    'O yolu yakmak için bir kaydın üzerine gelin. Mevcut ve En hızlı hangisinin hangisi olduğunu söyler, diğerleri ise ne kadar daha hızlı ya da daha yavaş olduklarını söyler.',
+  'help.guide.roadtrip-alternatives.step.4':
+    'O yoldan gitmek için bir kayda tıklayın ya da bulunduğunuz yolda kalmak için Kapat düğmesine.',
+  'help.guide.roadtrip-alternatives.result':
+    'Etap seçtiğiniz yoldan gider, şeridin mesafesi ve ondan sonraki varışlar onunla birlikte değişir.',
+  'help.guide.roadtrip-alternatives.tip.1':
+    'Başka bir yol seçmek etaba bir ara nokta koyar ve zaten olanların yerini alır; rota motorunun kendi yolunu seçmek onları yeniden kaldırır.',
+  'help.guide.roadtrip-alternatives.tip.2':
+    'Otoyolsuz, Ucretsiz ve Feribotsuz, kendi hız modeli olan ikinci bir motordan gelir, bu yüzden süreleri diğerleriyle karşılaştırılabilir değildir.',
+  // roadtrip-limits
+  'help.guide.roadtrip-limits.title': 'Aracı ve sürüş sınırlarını ayarlayın',
+  'help.guide.roadtrip-limits.goal':
+    'TREK uygulamasına ne kullandığınızı ve bir seferde ne kadar sürmeye razı olduğunuzu söyleyin.',
+  'help.guide.roadtrip-limits.step.1':
+    'Sürüş ayarları, sağ sütunda aramanın altında durur. Rozetleri neyin ayarlı olduğunu söyler; açmak için tıklayın.',
+  'help.guide.roadtrip-limits.step.2':
+    'Sürüş altında Aralıksız en uzun sürüş ve Günlük sürüş dakika cinsindendir. Boş bir alan kapalı demektir ve hiçbir şey işaretlenmez.',
+  'help.guide.roadtrip-limits.step.3':
+    'Araç altında ne kullandığınızı söyleyin. Benzin yalnızca yakıt duraklarında, Elektrik yalnızca şarj duraklarında, İkisi de her ikisinde doldurur.',
+  'help.guide.roadtrip-limits.step.4':
+    'Bir depoyla menzil ya da Şarj başına menzil değerini kendiniz yazın. Altındaki Araç verilerinden hesapla, Depo hacmi ile Tüketim değerlerini ya da Batarya ile Tüketim değerlerini alır ve hesabı yapar.',
+  'help.guide.roadtrip-limits.step.5':
+    'Mümkünse kaçın bir tercihtir, yasak değil: etrafından dolaşacak yolu olmayan bir gün yine de o yolu kullanır ve bunu başlığında söyler.',
+  'help.guide.roadtrip-limits.step.6':
+    'Pencereyi kapatın. Kart neyin ayarlı olduğunu söyler, şerit ise bunu aşan her etabı ve her günü işaretler.',
+  'help.guide.roadtrip-limits.result':
+    'Kartın rozetleri neyin ayarlı olduğunu söyler ve bir sınırı aşan her etap ile her gün şeritte bir rozet taşır.',
+  'help.guide.roadtrip-limits.tip.1':
+    'Ayarlar geziye aittir, bu yüzden gezideki herkes aynı araç ve aynı sınırlarla plan yapar.',
+  'help.guide.roadtrip-limits.tip.2':
+    'Şu kadar doldur, bir durağın ne kadar doldurduğunu söyler, çünkü kimse yolda %100 şarj etmez. Bir yakıt ya da şarj durağı bunu kendisi için geçersiz kılabilir.',
+  'help.guide.roadtrip-limits.tip.3':
+    'Rota çizgisi sürüşün nasıl çizileceğine karar verir: Günleri birleştir iki gün arasındaki geceyi rotalar, Her güne bir renk ise her güne kendi rengini verir.',
+  // roadtrip-day-window
+  'help.guide.roadtrip-day-window.title': 'Sürüş gününe bir başlangıç ve bir bitiş verin',
+  'help.guide.roadtrip-day-window.goal':
+    'Seçtiğiniz saatte sürmeyi bırakın ve günün nerede bitmesi gerektiğini söyleyin.',
+  'help.guide.roadtrip-day-window.step.1':
+    'Sağ sütunda Sürüş ayarları penceresini açın ve Günlük yolculuk saatleri bölümünü bulun.',
+  'help.guide.roadtrip-day-window.step.2':
+    'Bir Gün başlangıcı ayarlayın. Tek başına hiçbir şey yapmaz: altlarındaki notun söylediği gibi iki saat de gerekir.',
+  'help.guide.roadtrip-day-window.step.3':
+    'Bir Gün bitişi ayarlayın. Sürüş artık o saatte durur ve kalanı ertesi sabaha taşır; şeritte bir Gün sonu satırı ve bir Yolculuğa devam et satırı olarak.',
+  'help.guide.roadtrip-day-window.step.4':
+    'Günü bitir altında, bitiş saatinde yolda duraklamak için Rota üzerinde seçeneğini, sıradaki sürüşün onu geçeceği ana kadar beklemeden durmak için Son yerde seçeneğini seçin.',
+  'help.guide.roadtrip-day-window.step.5': 'Pencereyi kapatın. Sürüş ayarları kartı iki saati bir rozet olarak taşır.',
+  'help.guide.roadtrip-day-window.result':
+    'Sürüş, belirlediğiniz uzunlukta yolculuk günlerine bölünür ve sığmayan kısım sonuncudan sonraki hesaplanmış günlerde devam eder. Günleriniz ve onların yerleri değişmez.',
+  'help.guide.roadtrip-day-window.tip.1':
+    'İki saatten birini temizlemek her şeyi yeniden kapatır. Bir durakta kendiniz sabitlediğiniz saatler her zaman önceliklidir.',
+  'help.guide.roadtrip-day-window.tip.2':
+    'Günlük yolculuk saatleri ayarlıyken günler her zaman bağlıdır: bir günün son durağından ertesi günün ilkine olan sürüş rotalanır ve sayılır.',
+  'help.guide.roadtrip-day-window.tip.3':
+    'Her gün sonu haritada da bir işaretçidir, gün numarasını taşıyan bir ay. Günü başka bir yerde bitirmek için onu rota boyunca ya da bir yerin üzerine sürükleyin; otomatik bitişi geri koymak için sağ tıklayın, bu penceredeki Otomatik gün sonlarını geri yükle ise hepsini geri alır.',
+  // roadtrip-refuel
+  'help.guide.roadtrip-refuel.title': 'Depo bitmeden yakıt alın',
+  'help.guide.roadtrip-refuel.goal': 'Aracın hâlâ ulaşabildiği bölümde yakıt alacak bir yer bulun ve onu sürüşe koyun.',
+  'help.guide.roadtrip-refuel.step.1':
+    'Bir menzil ayarlıyken şerit, etabın bittiği yere bir bant çizer: Depo burada bitiyor, altında da bunun etabın ne kadar içinde olduğu.',
+  'help.guide.roadtrip-refuel.step.2':
+    'Banttaki lamba düğmedir. Yakıt bul, zaten sürdüğünüz yol boyunca bakar ve bunu yaparken Rota boyunca aranıyor… der.',
+  'help.guide.roadtrip-refuel.step.3':
+    'En fazla üç istasyon döner; her biri rotadan ne kadar uzakta olduğunu ve geriye ne kadar menzil bırakacağını taşır.',
+  'help.guide.roadtrip-refuel.step.4':
+    'Bir tekliftaki artı onu yakıt molası olarak ekler. Mola olarak ekle, türü ve süresi çoktan doldurulmuş olarak açılır, Ekle ise onu etabın gerçekten geçildiği noktasına koyar.',
+  'help.guide.roadtrip-refuel.result':
+    'Durak kendi simgesiyle doğru etapta durur, menzil ondan itibaren yeniden sayılır ve bant kaybolur.',
+  'help.guide.roadtrip-refuel.tip.1':
+    'Menzil, günler boyunca son yakıt ya da şarj durağından itibaren sayılır. Ne kullandığınız hangi durakların sayıldığına karar verir: Benzin yalnızca yakıt, Elektrik yalnızca şarj.',
+  'help.guide.roadtrip-refuel.tip.2':
+    'Arama, kuru noktadan önceki yola bakar, bir yedek bırakır ve sapmayı iki kez sayar, böylece sunduğu her şeye gerçekten ulaşılabilir.',
+  'help.guide.roadtrip-refuel.tip.3':
+    'Boş bir yanıt çıkmaz sokak değildir: lamba Yeniden dene olur, çünkü yer araması zaman aşımına uğrayabilen paylaşılan bir hizmettir.',
+  // roadtrip-track
+  'help.guide.roadtrip-track.title': 'Bir günü içe aktarılmış bir ize uydurun',
+  'help.guide.roadtrip-track.goal':
+    'Bir günün sürüşünü, GPX ya da KML izi olarak içe aktardığınız manzaralı bir rotanın üzerine koyun.',
+  'help.guide.roadtrip-track.step.1': 'Bir günün başlığındaki İz rozetine tıklayın. Pencere o günde açılır.',
+  'help.guide.roadtrip-track.step.2':
+    'Bir iz seçin. Her biri ne kadar uzun olduğunu ve bu günden ne kadar uzakta durduğunu söyler, en yakın olan önce.',
+  'help.guide.roadtrip-track.step.3':
+    'Bu izi takip et düğmesine tıklayın. TREK, sürüşün izden en çok saptığı yerlere ara noktalar bırakır ve tur tur yeniden rotalar.',
+  'help.guide.roadtrip-track.step.4':
+    'Kaç ara nokta yerleştirdiğini ve sürüşün artık ne kadar yakın kaldığını söyler. Yanındaki düğme o ara noktaları yeniden kaldırır ve günü rota motoruna geri verir; pencereyi kapatmak izi korur.',
+  'help.guide.roadtrip-track.result':
+    'Günün sürüşü, rota motorunun seçtiği yol yerine izi takip eder ve İz rozeti hangi izi takip ettiğini söyler.',
+  'help.guide.roadtrip-track.tip.1':
+    'Dosyayı Günler altında Dosyayı içe aktar ile, izleri ya da yolları işaretlenmiş olarak içe aktarın. Gezide bir iz olana kadar rozetin sunacağı bir şey yoktur.',
+  'help.guide.roadtrip-track.tip.2':
+    'Bir izi takip etmek, günün etaplarının zaten sahip olduğu ara noktaların yerini alır, bu yüzden bir etabı elle izden sonra şekillendirin, önce değil.',
 };
 
 export default help;

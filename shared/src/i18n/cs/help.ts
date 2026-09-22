@@ -3462,6 +3462,200 @@ const help: TranslationStrings = {
     'Potvrzená rezervace je plná čára, ta čekající na potvrzení čárkovaná. Nastavení Popisky tras rezervací vytiskne do koncových značek kód letiště nebo název stanice.',
   'help.guide.transport-on-map.tip.3':
     'Zobrazit všechny trasy rezervací je čistý štít, nikoli vrstva: zahodí to, co nastavily jednotlivé ikony, takže dvojí stisknutí vám nechá vše zapnuté nebo vše vypnuté.',
+
+  // ── Screen: trip-roadtrip ─────────────────────────────────────────────────────────────
+  'help.ctx.trip-roadtrip.title': 'Cesta autem',
+  'help.ctx.trip-roadtrip.summary':
+    'Plán čtený jako jedna jízda: stejné dny a stejná místa, spojená do zastávek s jízdou mezi nimi, v pásu v levém sloupci a na mapě. Říká, jak daleko a jak dlouho, kde dojde palivo a co je u cesty.',
+  'help.ctx.trip-roadtrip.bullet.1':
+    'Dny a Cesta autem nahoře v levém sloupci přepínají mezi plánem dnů a jízdou. Nic se nekopíruje a nic se nemění: Dny vrátí plán přesně takový, jaký byl.',
+  'help.ctx.trip-roadtrip.bullet.2':
+    'Hlava pásu sčítá celou cestu: Vzdálenost, Doba jízdy a Zastávky. Pod ní je jedna karta na den, s kilometry toho dne, s tím, pro kolik zastávek je, co překračuje, a s odznakem Stopa.',
+  'help.ctx.trip-roadtrip.bullet.3':
+    'Číslovaná zastávka je místo, pro které den je. Zastávka po cestě, palivo, nabíjení, odpočívadlo, nese místo čísla ikonu svého druhu a nepočítá se. Kliknutím na číslo změníte, čím je, a kliknutím na odznak Pobyt řeknete, jak dlouho trvá.',
+  'help.ctx.trip-roadtrip.bullet.4':
+    'Mezi dvěma zastávkami udává pruh jízdy úsek jako vzdálenost a čas. Kliknutím na něj otevřete Trasy tohoto úseku, nebo klikněte na vykreslenou trasu na mapě a ohněte úsek přes průjezdní bod.',
+  'help.ctx.trip-roadtrip.bullet.5':
+    'Pravý sloupec se změní na Podél trasy: vyberte den, co hledat a jak široký je koridor, a pak Hledat. Přidat položí nález na jízdu v místě, kudy se opravdu jede.',
+  'help.ctx.trip-roadtrip.bullet.6':
+    'Nastavení jízdy pod ním drží limity, auto a jeho dojezd, denní časy cestování, čemu se vyhnout a jak se kreslí čára. Patří k cestě, takže všichni plánují se stejným autem.',
+  // roadtrip-mode
+  'help.guide.roadtrip-mode.title': 'Přečíst cestu jako jednu jízdu',
+  'help.guide.roadtrip-mode.goal': 'Přepněte plán do režimu cesty autem a přečtěte si, co vám pás říká.',
+  'help.guide.roadtrip-mode.step.1':
+    'Klikněte na Cesta autem v přepínači Dny a Cesta autem nahoře v levém sloupci. Plán dnů vystřídá jízda a mapa vykreslí každý den, který má trasu.',
+  'help.guide.roadtrip-mode.step.2': 'Hlava pásu sčítá celou cestu: Vzdálenost, Doba jízdy a Zastávky.',
+  'help.guide.roadtrip-mode.step.3':
+    'Pod ní je jedna karta na den. Její záhlaví nese číslo a datum dne, jízdu jako vzdálenost a čas, a pro kolik zastávek den je.',
+  'help.guide.roadtrip-mode.step.4':
+    'Uvnitř karty je den řetězem: číslovaná zastávka na každé místo, pruh jízdy mezi každou dvojicí a čas příjezdu u pravého okraje.',
+  'help.guide.roadtrip-mode.step.5':
+    'Kliknutím na záhlaví dne den sbalíte. Sbalený den zmizí i z mapy; dalším kliknutím na záhlaví ho vrátíte.',
+  'help.guide.roadtrip-mode.result':
+    'Levý sloupec je jízda a mapa ukazuje každý její den. Dny přepnou rovnou zpět na plán, nezměněný.',
+  'help.guide.roadtrip-mode.tip.1':
+    'Volba se pamatuje pro každou cestu, dokud je karta prohlížeče otevřená, takže po načtení se vrátíte k jízdě.',
+  'help.guide.roadtrip-mode.tip.2':
+    'Přepínač existuje, až když správce zapne doplněk Cesta autem, pod Doplňky v Administraci.',
+  'help.guide.roadtrip-mode.tip.3':
+    'Na telefonu žádný přepínač není: doplněk přidá vlastní záložku Cesta autem vedle Plán.',
+  // roadtrip-stops
+  'help.guide.roadtrip-stops.title': 'Zastávky po cestě a jak dlouho stojíte',
+  'help.guide.roadtrip-stops.goal':
+    'Změňte místo na jízdě na zastávku po cestě a řekněte, jak dlouho každá zastávka trvá.',
+  'help.guide.roadtrip-stops.step.1':
+    'Klikněte v pásu na číslo před zastávkou. Jeho popisek je Změnit na zastávku po cestě a otevře Druh zastávky.',
+  'help.guide.roadtrip-stops.step.2':
+    'Vyberte druh: Ubytování, Palivo, Nabíjení, Odpočívadlo, Kemp, Jídlo nebo Zajímavosti. Z čísla se stane ikona toho druhu a zastávky pod ním se přečíslují.',
+  'help.guide.roadtrip-stops.step.3': 'Zastávka po cestě není cíl, takže záhlaví dne počítá o jednu zastávku méně.',
+  'help.guide.roadtrip-stops.step.4':
+    'Klikněte na ikonu znovu, Změnit typ zastávky, a zvolte Zpět na cíl cesty, aby zastávka dostala číslo zpátky.',
+  'help.guide.roadtrip-stops.step.5':
+    'Každá zastávka nese odznak Pobyt. Kliknutím na něj otevřete Čas na této zastávce.',
+  'help.guide.roadtrip-stops.step.6':
+    'Nastavte délku posuvníkem, tlačítky minus a plus nebo jednou z přednastavených hodnot, sledujte, co dělají Prijezd a Odjezd, a klikněte na Uložit.',
+  'help.guide.roadtrip-stops.result':
+    'Zastávka nese místo čísla ikonu svého druhu a každý příjezd po pobytu se s ním posunul.',
+  'help.guide.roadtrip-stops.tip.1':
+    'Pobyt patří k místu, ne k jedné návštěvě: u místa naplánovaného na dva dny se stojí stejně dlouho oba dny.',
+  'help.guide.roadtrip-stops.tip.2':
+    'Zastávky po cestě se ukazují i ve Dnech. Zobrazit také ve Dnech, pod Servisní zastávky v Nastavení jízdy, je nechá jen v Cestě autem.',
+  'help.guide.roadtrip-stops.tip.3': 'Bez zastavky, ve stejném dialogu, čas zase odebere.',
+  // roadtrip-corridor
+  'help.guide.roadtrip-corridor.title': 'Najít palivo, jídlo a nocleh podél trasy',
+  'help.guide.roadtrip-corridor.goal': 'Prohledejte silnici, po které opravdu jedete, a položte nález na správný úsek.',
+  'help.guide.roadtrip-corridor.step.1': 'Vyberte den nahoře v Podél trasy. Nabízejí se jen dny, které mají trasu.',
+  'help.guide.roadtrip-corridor.step.2':
+    'Pod Hledá se zaškrtněte, co potřebujete. Palivo, Nabíjení, Odpočívadlo, Kemp, Ubytování, Jídlo a Zajímavosti lze kombinovat.',
+  'help.guide.roadtrip-corridor.step.3':
+    'Pod Do zvolte, jak daleko po obou stranách silnice hledat, 2 km, 5 km nebo 10 km, a pak klikněte na Hledat.',
+  'help.guide.roadtrip-corridor.step.4':
+    'Nálezy se vrátí seskupené podle druhu, v pořadí, v jakém je míjíte, každý s tím, jak daleko v dni leží a jak daleko je od trasy.',
+  'help.guide.roadtrip-corridor.step.5':
+    'Přidat u nálezu otevře Přidat jako zastávku. Říká, na který den a na kterou pozici zastávka padne, ptá se na druh a na čas na zastávce, a Přidat ji položí na jízdu.',
+  'help.guide.roadtrip-corridor.result':
+    'Nálezy jsou vypsané v pořadí, v jakém je míjíte, a vykreslené na mapě, a ten přidaný sedí na jízdě v místě, kudy se opravdu jede.',
+  'help.guide.roadtrip-corridor.tip.1':
+    'Nic se nehledá, dokud nestisknete Hledat: jeden běh je mnoho požadavků na sdílenou službu.',
+  'help.guide.roadtrip-corridor.tip.2':
+    'Filtrovat podle názvu zúží, co se vrátilo, bez dalšího dotazu, a Vymazat výsledky vyprázdní seznam i jeho špendlíky. Kliknutím na nález ho dostanete do zorného pole na mapě.',
+  'help.guide.roadtrip-corridor.tip.3':
+    'Nález lze také přetáhnout z mapy na vykreslenou trasu, čímž si sami vyberete úsek tam, kde se po stejné silnici jede dvakrát. Přidat ručně, vedle Hledat, místo toho vyhledá místo podle názvu.',
+  // roadtrip-via
+  'help.guide.roadtrip-via.title': 'Ohnout úsek přes průjezdní bod',
+  'help.guide.roadtrip-via.goal': 'Pošlete úsek po silnici, kterou opravdu chcete, aniž byste k němu přidali zastávku.',
+  'help.guide.roadtrip-via.step.1':
+    'Dostaňte do zorného pole úsek, o který jde: klikněte v pásu na zastávku a pak zavřete kartu, která se otevře nad mapou.',
+  'help.guide.roadtrip-via.step.2':
+    'Klikněte na vykreslenou trasu. Na úsek, na který jste klikli, se položí průjezdní bod a úsek se přes něj naplánuje znovu.',
+  'help.guide.roadtrip-via.step.3':
+    'Pás jde za tím: záhlaví dne nese novou vzdálenost a dobu jízdy a každý příjezd po průjezdním bodu se s ním posune.',
+  'help.guide.roadtrip-via.step.4':
+    'Najeďte na úchyt a on řekne, co umí: Tažením změníte trasu, pravým tlačítkem odeberete. Přetáhněte ho jinam a úsek se překreslí přes nové místo.',
+  'help.guide.roadtrip-via.step.5': 'Pravým tlačítkem na úchyt ho odeberete. Úsek zase jede přímou cestou.',
+  'help.guide.roadtrip-via.result':
+    'Úsek jde po silnici, kterou jste zvolili, a vzdálenost dne, doba jízdy i příjezdy se pro něj spočítají znovu.',
+  'help.guide.roadtrip-via.tip.1':
+    'Průjezdní bod není zastávka: nemá číslo, pobyt ani čas příjezdu a nepočítá se do zastávek dne.',
+  'help.guide.roadtrip-via.tip.2':
+    'Úchyty se kreslí od úrovně přiblížení 9, takže mapa přizpůsobená celé cestě ukazuje čáru bez nich.',
+  'help.guide.roadtrip-via.tip.3':
+    'Kliknutí dál než dva kilometry od jakéhokoli vykresleného úseku se ignoruje, stejně jako kliknutí na let, vlak nebo trajekt.',
+  // roadtrip-alternatives
+  'help.guide.roadtrip-alternatives.title': 'Zkusit jiný způsob, jak jet úsek',
+  'help.guide.roadtrip-alternatives.goal': 'Podívejte se, co dalšího plánovač pro jeden úsek nabízí, a vezměte to.',
+  'help.guide.roadtrip-alternatives.step.1':
+    'Klikněte v pásu na pruh jízdy, řádek mezi dvěma zastávkami, který udává úsek jako vzdálenost a čas. Jeho popisek je Jiné trasy.',
+  'help.guide.roadtrip-alternatives.step.2':
+    'Nad mapou se otevřou Trasy tohoto úseku, jedna položka na silnici, každá vykreslená na mapě ve vlastní barvě.',
+  'help.guide.roadtrip-alternatives.step.3':
+    'Najetím na položku tu silnici rozsvítíte. Aktuální a Nejrychlejší říkají, která je která, a ostatní říkají, o kolik jsou rychlejší nebo pomalejší.',
+  'help.guide.roadtrip-alternatives.step.4':
+    'Kliknutím na položku pojedete tudy, nebo Zavřít ponechá silnici, na které jste.',
+  'help.guide.roadtrip-alternatives.result':
+    'Úsek jede po silnici, kterou jste zvolili, a vzdálenost v pásu i příjezdy po něm se s ní mění.',
+  'help.guide.roadtrip-alternatives.tip.1':
+    'Volba jiné silnice položí na úsek průjezdní bod a nahradí všechny, které už měl; volba vlastní silnice plánovače je zase odebere.',
+  'help.guide.roadtrip-alternatives.tip.2':
+    'Bez dalnice, Bez mytneho a Bez trajektu pocházejí z druhého motoru s vlastním modelem rychlosti, takže jejich časy nejsou srovnatelné s ostatními.',
+  // roadtrip-limits
+  'help.guide.roadtrip-limits.title': 'Nastavit auto a limity jízdy',
+  'help.guide.roadtrip-limits.goal': 'Řekněte TREKu, čím jezdíte a jak daleko jste ochotni jet v kuse.',
+  'help.guide.roadtrip-limits.step.1':
+    'Nastavení jízdy sedí pod hledáním v pravém sloupci. Jeho odznaky říkají, co je nastaveno; kliknutím ho otevřete.',
+  'help.guide.roadtrip-limits.step.2':
+    'Pod Jízda jsou Nejdelší jízda v kuse a Jízda za den v minutách. Prázdné pole znamená vypnuto a nic se neoznačuje.',
+  'help.guide.roadtrip-limits.step.3':
+    'Pod Vozidlo řekněte, čím jezdíte. Palivo dotankuje jen u zastávek s palivem, Elektro jen u nabíjecích, Obojí u obou.',
+  'help.guide.roadtrip-limits.step.4':
+    'Dojezd na jednu nádrž, nebo Dojezd na nabití, napište sami. Spočítat z údajů auta pod tím vezme Objem nádrže a Spotřebu, nebo Baterii a Spotřebu, a spočítá to.',
+  'help.guide.roadtrip-limits.step.5':
+    'Vyhnout se, pokud to jde je preference, ne zákaz: den, který nemá kudy jinudy, silnici přesto použije a řekne to ve svém záhlaví.',
+  'help.guide.roadtrip-limits.step.6':
+    'Zavřete dialog. Karta říká, co je nastaveno, a pás označí každý úsek i každý den, který to překračuje.',
+  'help.guide.roadtrip-limits.result':
+    'Odznaky karty říkají, co je nastaveno, a každý úsek i den nad limitem nese v pásu odznak.',
+  'help.guide.roadtrip-limits.tip.1':
+    'Nastavení patří k cestě, takže všichni na ní plánují se stejným autem a stejnými limity.',
+  'help.guide.roadtrip-limits.tip.2':
+    'Natankovat na říká, na kolik se zastávka natankuje, protože na cestě nikdo nenabíjí na 100 %. Zastávka s palivem nebo nabíjením to pro sebe může přebít.',
+  'help.guide.roadtrip-limits.tip.3':
+    'Čára trasy rozhoduje, jak se jízda kreslí: Propojit dny naplánuje noc mezi dvěma dny a Barva na den dá každému dni vlastní.',
+  // roadtrip-day-window
+  'help.guide.roadtrip-day-window.title': 'Dát jízdnímu dni začátek a konec',
+  'help.guide.roadtrip-day-window.goal': 'Přestaňte jezdit v hodinu, kterou zvolíte, a řekněte, kde má den skončit.',
+  'help.guide.roadtrip-day-window.step.1': 'Otevřete Nastavení jízdy v pravém sloupci a najděte Denní časy cestování.',
+  'help.guide.roadtrip-day-window.step.2':
+    'Nastavte Začátek dne. Samo o sobě to nedělá nic: potřeba jsou oba časy, jak říká poznámka pod nimi.',
+  'help.guide.roadtrip-day-window.step.3':
+    'Nastavte Konec dne. Jízda se teď v tu hodinu zastaví a zbytek přenese na další ráno, jako řádek Konec dne a řádek Pokračovat v cestě v pásu.',
+  'help.guide.roadtrip-day-window.step.4':
+    'Pod Ukončení dne zvolte Na trase, aby se pauza udělala na silnici v čase konce, nebo Na posledním místě, aby se zastavilo dřív, než by ho další jízda minula.',
+  'help.guide.roadtrip-day-window.step.5': 'Zavřete dialog. Karta Nastavení jízdy nese oba časy jako odznak.',
+  'help.guide.roadtrip-day-window.result':
+    'Jízda se rozřeže na cestovní dny té délky, kterou nastavíte, a co se nevejde, pokračuje na vypočtených dnech po tom posledním. Vaše dny a jejich místa se nemění.',
+  'help.guide.roadtrip-day-window.tip.1':
+    'Vymazání kteréhokoli z časů celou věc zase vypne. Časy, které jste na zastávce sami připnuli, mají vždy přednost.',
+  'help.guide.roadtrip-day-window.tip.2':
+    'S nastavenými denními časy cestování jsou dny vždy propojené: jízda z poslední zastávky jednoho dne k první zastávce dalšího se naplánuje a počítá.',
+  'help.guide.roadtrip-day-window.tip.3':
+    'Každý konec dne je i značka na mapě, měsíc s číslem dne. Přetáhněte ho po trase nebo na místo, aby den skončil jinde; pravým tlačítkem na něj vrátíte automatický konec a Obnovit automatické konce dnů v tomto dialogu vrátí všechny.',
+  // roadtrip-refuel
+  'help.guide.roadtrip-refuel.title': 'Natankovat dřív, než dojde palivo',
+  'help.guide.roadtrip-refuel.goal': 'Najděte, kde natankovat na úseku, kam auto ještě dojede, a položte to na jízdu.',
+  'help.guide.roadtrip-refuel.step.1':
+    'S nastaveným dojezdem nakreslí pás přes úsek pruh tam, kde dojde: Tady dojde palivo, a pod ním, jak daleko v úseku to je.',
+  'help.guide.roadtrip-refuel.step.2':
+    'Lampa na pruhu je tlačítko. Najít palivo hledá podél silnice, kterou už máte za sebou, a mezitím svítí Hledám podél trasy…',
+  'help.guide.roadtrip-refuel.step.3':
+    'Vrátí se až tři stanice, každá s tím, jak daleko je od trasy a kolik dojezdu by zbylo.',
+  'help.guide.roadtrip-refuel.step.4':
+    'Plus u nabídky ji přidá jako zastávku s palivem. Přidat jako zastávku se otevře s vyplněným druhem i časem, a Přidat ji položí na úsek v místě, kudy se opravdu jede.',
+  'help.guide.roadtrip-refuel.result':
+    'Zastávka je na správném úseku s vlastní ikonou, dojezd se od ní počítá znovu a pruh je pryč.',
+  'help.guide.roadtrip-refuel.tip.1':
+    'Dojezd se počítá od poslední zastávky s palivem nebo nabíjením, napříč dny. To, čím jezdíte, rozhoduje, které zastávky se počítají: Palivo jen ty s palivem, Elektro jen nabíjecí.',
+  'help.guide.roadtrip-refuel.tip.2':
+    'Hledání se dívá na silnici před bodem, kde dojde, drží rezervu a zajížďku počítá dvakrát, takže všechno, co nabídne, je opravdu dosažitelné.',
+  'help.guide.roadtrip-refuel.tip.3':
+    'Prázdná odpověď není slepá ulička: z lampy se stane Zkusit znovu, protože hledání míst je sdílená služba, která občas neodpoví včas.',
+  // roadtrip-track
+  'help.guide.roadtrip-track.title': 'Nechat den sledovat importovanou stopu',
+  'help.guide.roadtrip-track.goal':
+    'Položte jízdu dne na vyhlídkovou trasu, kterou jste importovali jako stopu GPX nebo KML.',
+  'help.guide.roadtrip-track.step.1': 'Klikněte na odznak Stopa v záhlaví dne. Dialog se otevře na tom dni.',
+  'help.guide.roadtrip-track.step.2':
+    'Vyberte stopu. Každá říká, jak je dlouhá a jak daleko leží od tohoto dne, nejbližší první.',
+  'help.guide.roadtrip-track.step.3':
+    'Klikněte na Sledovat tuto stopu. TREK položí průjezdní body tam, kde se jízda od stopy nejvíc odchyluje, a naplánuje znovu, kolo za kolem.',
+  'help.guide.roadtrip-track.step.4':
+    'Řekne, kolik průjezdních bodů položil a jak blízko se jízda teď drží. Tlačítko vedle toho tyto průjezdní body zase odebere a vrátí den plánovači; zavřením dialogu stopa zůstane.',
+  'help.guide.roadtrip-track.result':
+    'Jízda dne sleduje stopu místo silnice, kterou vybral plánovač, a odznak Stopa říká, kterou stopu sleduje.',
+  'help.guide.roadtrip-track.tip.1':
+    'Soubor importujte pod Dny přes Importovat soubor, se zaškrtnutými stopami nebo trasami. Dokud v cestě žádná stopa není, odznak nemá co nabídnout.',
+  'help.guide.roadtrip-track.tip.2':
+    'Sledování stopy nahradí průjezdní body, které úseky dne už měly, takže úsek tvarujte ručně až po stopě, ne před ní.',
 };
 
 export default help;

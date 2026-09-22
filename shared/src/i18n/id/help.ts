@@ -3623,6 +3623,212 @@ const help: TranslationStrings = {
     'Pemesanan yang “Dikonfirmasi” adalah garis utuh, yang “Tertunda” garis putus-putus. Pengaturan “Label rute pemesanan” mencetak kode bandara atau nama stasiun ke dalam penanda ujung.',
   'help.guide.transport-on-map.tip.3':
     '“Tampilkan semua rute pemesanan” adalah papan bersih, bukan lapisan: ia membuang apa yang telah disetel ikon-ikon tunggal, jadi menekannya dua kali meninggalkan Anda dengan semuanya menyala atau semuanya mati.',
+
+  // ── Screen: trip-roadtrip ─────────────────────────────────────────────────────────────
+  'help.ctx.trip-roadtrip.title': 'Perjalanan darat',
+  'help.ctx.trip-roadtrip.summary':
+    'Rencana dibaca sebagai satu kali berkendara: hari yang sama dan tempat yang sama, dirangkai menjadi perhentian dengan jarak berkendara di antaranya, pada bilah perjalanan di kolom kiri dan di peta. Ia menyebutkan seberapa jauh dan seberapa lama, di mana bahan bakar habis, dan apa saja yang ada di sepanjang jalan.',
+  'help.ctx.trip-roadtrip.bullet.1':
+    '“Hari” dan “Perjalanan darat” di atas kolom kiri beralih antara rencana harian dan perjalanan berkendara. Tidak ada yang disalin dan tidak ada yang diubah: “Hari” mengembalikan rencana persis seperti semula.',
+  'help.ctx.trip-roadtrip.bullet.2':
+    'Kepala bilah perjalanan menjumlahkan seluruh perjalanan: “Jarak”, “Waktu berkendara” dan “Perhentian”. Di bawahnya ada satu kartu per hari, dengan kilometer hari itu sendiri, untuk berapa perhentian hari itu, apa saja yang dilampauinya, dan lencana “Jalur”.',
+  'help.ctx.trip-roadtrip.bullet.3':
+    'Perhentian bernomor adalah tempat yang menjadi tujuan hari itu. Perhentian di jalan, bahan bakar, pengisian daya, tempat istirahat, memakai ikon jenisnya alih-alih nomor dan tidak ikut dihitung. Klik sebuah nomor untuk mengubah jenisnya, dan lencana “Singgah” untuk menyatakan berapa lama.',
+  'help.ctx.trip-roadtrip.bullet.4':
+    'Di antara dua perhentian, bilah berkendara memberikan ruas itu sebagai jarak dan waktu. Klik untuk membuka “Rute untuk ruas ini”, atau klik rute yang tergambar di peta untuk membelokkan ruas melalui sebuah titik lintas.',
+  'help.ctx.trip-roadtrip.bullet.5':
+    'Kolom kanan menjadi “Sepanjang rute”: pilih sebuah hari, apa yang dicari dan seberapa lebar koridornya, lalu “Cari”. “Tambah” menaruh hasil pada perjalanan di titik tempat ia benar-benar dilewati.',
+  'help.ctx.trip-roadtrip.bullet.6':
+    '“Pengaturan berkendara” di bawahnya memuat batasan, mobil dan jarak jangkaunya, waktu perjalanan harian, apa yang dihindari, dan bagaimana garisnya digambar. Semuanya milik perjalanan, jadi semua orang merencanakan dengan mobil yang sama.',
+  // roadtrip-mode
+  'help.guide.roadtrip-mode.title': 'Membaca perjalanan sebagai satu kali berkendara',
+  'help.guide.roadtrip-mode.goal':
+    'Alihkan rencana ke mode perjalanan darat dan baca apa yang dikatakan bilah perjalanan.',
+  'help.guide.roadtrip-mode.step.1':
+    'Klik “Perjalanan darat” pada sakelar “Hari” dan “Perjalanan darat” di atas kolom kiri. Rencana harian digantikan perjalanan berkendara, dan peta menggambar setiap hari yang sudah punya rute.',
+  'help.guide.roadtrip-mode.step.2':
+    'Kepala bilah perjalanan menjumlahkan seluruh perjalanan: “Jarak”, “Waktu berkendara” dan “Perhentian”.',
+  'help.guide.roadtrip-mode.step.3':
+    'Di bawahnya ada satu kartu per hari. Kepalanya memuat nomor dan tanggal hari itu, berkendara sebagai jarak dan waktu, serta untuk berapa perhentian hari itu.',
+  'help.guide.roadtrip-mode.step.4':
+    'Di dalam kartu, hari itu adalah sebuah rantai: satu perhentian bernomor per tempat, satu bilah berkendara di antara tiap pasangan, dan waktu tiba di tepi kanan.',
+  'help.guide.roadtrip-mode.step.5':
+    'Klik kepala sebuah hari untuk melipatnya. Hari yang terlipat juga hilang dari peta; klik kepalanya lagi untuk memunculkannya kembali.',
+  'help.guide.roadtrip-mode.result':
+    'Kolom kiri adalah perjalanan berkendara dan peta menampilkan setiap harinya. “Hari” langsung mengembalikan rencana, tanpa perubahan.',
+  'help.guide.roadtrip-mode.tip.1':
+    'Pilihan itu diingat per perjalanan selama tab peramban terbuka, jadi memuat ulang akan kembali ke perjalanan berkendara.',
+  'help.guide.roadtrip-mode.tip.2':
+    'Sakelar itu baru ada setelah admin menyalakan addon “Perjalanan darat”, di bawah “Addon” pada “Administrasi”.',
+  'help.guide.roadtrip-mode.tip.3':
+    'Di ponsel tidak ada sakelar: addon itu menambahkan tab “Perjalanan darat” sendiri di samping “Rencana”.',
+  // roadtrip-stops
+  'help.guide.roadtrip-stops.title': 'Perhentian di jalan, dan berapa lama Anda singgah',
+  'help.guide.roadtrip-stops.goal':
+    'Ubah sebuah tempat pada perjalanan menjadi perhentian di jalan, dan tentukan berapa lama tiap perhentian berlangsung.',
+  'help.guide.roadtrip-stops.step.1':
+    'Klik nomor di depan sebuah perhentian pada bilah perjalanan. Labelnya “Jadikan perhentian di jalan”, dan ia membuka “Jenis perhentian”.',
+  'help.guide.roadtrip-stops.step.2':
+    'Pilih jenisnya: “Penginapan”, “Bahan bakar”, “Pengisian daya”, “Tempat istirahat”, “Perkemahan”, “Makanan” atau “Objek wisata”. Nomornya berubah menjadi ikon jenis itu dan perhentian di bawahnya dinomori ulang.',
+  'help.guide.roadtrip-stops.step.3':
+    'Perhentian di jalan bukan tujuan, jadi kepala hari itu menghitung satu perhentian lebih sedikit.',
+  'help.guide.roadtrip-stops.step.4':
+    'Klik ikonnya lagi, “Ubah jenis perhentian”, lalu pilih “Kembali jadi tujuan” untuk mengembalikan nomor perhentian itu.',
+  'help.guide.roadtrip-stops.step.5':
+    'Setiap perhentian membawa lencana “Singgah”. Klik untuk membuka “Waktu di perhentian ini”.',
+  'help.guide.roadtrip-stops.step.6':
+    'Atur lamanya dengan penggeser, dengan tombol minus dan plus, atau dengan salah satu nilai siap pakai, perhatikan apa yang terjadi pada “Tiba” dan “Berangkat”, lalu klik “Simpan”.',
+  'help.guide.roadtrip-stops.result':
+    'Perhentian itu memakai ikon jenisnya alih-alih nomor, dan setiap waktu tiba setelah sebuah singgah ikut bergeser.',
+  'help.guide.roadtrip-stops.tip.1':
+    'Lama singgah melekat pada tempat, bukan pada satu kunjungan: tempat yang direncanakan pada dua hari disinggahi sama lamanya pada keduanya.',
+  'help.guide.roadtrip-stops.tip.2':
+    'Perhentian di jalan juga tampil di “Hari”. “Tampilkan juga di Hari”, di bawah “Perhentian layanan” pada “Pengaturan berkendara”, kalau dimatikan membuat perhentian itu hanya ada di “Perjalanan darat”.',
+  'help.guide.roadtrip-stops.tip.3': '“Tanpa singgah”, pada dialog yang sama, menghapus waktunya lagi.',
+  // roadtrip-corridor
+  'help.guide.roadtrip-corridor.title': 'Temukan bahan bakar, makanan dan tempat menginap di sepanjang rute',
+  'help.guide.roadtrip-corridor.goal':
+    'Cari di jalan yang benar-benar Anda lewati, dan taruh temuan itu pada ruas yang tepat.',
+  'help.guide.roadtrip-corridor.step.1':
+    'Pilih harinya di bagian atas “Sepanjang rute”. Hanya hari yang sudah punya rute yang ditawarkan.',
+  'help.guide.roadtrip-corridor.step.2':
+    'Di bawah “Mencari”, centang apa yang Anda butuhkan. “Bahan bakar”, “Pengisian daya”, “Tempat istirahat”, “Perkemahan”, “Penginapan”, “Makanan” dan “Objek wisata” bisa digabungkan.',
+  'help.guide.roadtrip-corridor.step.3':
+    'Di bawah “Dalam”, pilih seberapa jauh ke kiri dan kanan jalan yang dicari, 2 km, 5 km atau 10 km, lalu klik “Cari”.',
+  'help.guide.roadtrip-corridor.step.4':
+    'Hasilnya kembali dikelompokkan menurut jenis, dalam urutan Anda melewatinya, masing-masing dengan seberapa jauh letaknya di sepanjang hari itu dan seberapa jauh dari rute.',
+  'help.guide.roadtrip-corridor.step.5':
+    '“Tambah” pada sebuah hasil membuka “Tambahkan sebagai perhentian”. Ia menyebutkan hari mana dan posisi keberapa perhentian itu jatuh, menanyakan jenis dan waktu di perhentian, dan “Tambah” menaruhnya pada perjalanan.',
+  'help.guide.roadtrip-corridor.result':
+    'Hasil didaftar dalam urutan Anda melewatinya dan digambar di peta, dan yang Anda tambahkan duduk pada perjalanan di titik tempat ia benar-benar dilewati.',
+  'help.guide.roadtrip-corridor.tip.1':
+    'Tidak ada yang dicari sampai Anda menekan “Cari”: satu kali jalan berarti banyak permintaan ke sebuah layanan bersama.',
+  'help.guide.roadtrip-corridor.tip.2':
+    '“Saring menurut nama” mempersempit apa yang sudah kembali tanpa bertanya lagi, dan “Hapus hasil” mengosongkan daftar beserta pinnya. Klik sebuah hasil untuk membawanya ke tampilan peta.',
+  'help.guide.roadtrip-corridor.tip.3':
+    'Sebuah hasil juga bisa diseret dari peta ke rute yang tergambar, dan begitulah Anda sendiri memilih ruasnya di tempat jalan yang sama dilewati dua kali. “Tambah manual”, di samping “Cari”, mencari tempat berdasarkan nama.',
+  // roadtrip-via
+  'help.guide.roadtrip-via.title': 'Membelokkan ruas melalui titik lintas',
+  'help.guide.roadtrip-via.goal':
+    'Arahkan sebuah ruas ke jalan yang benar-benar Anda inginkan, tanpa menambahkan perhentian padanya.',
+  'help.guide.roadtrip-via.step.1':
+    'Bawa ruas yang Anda inginkan ke tampilan: klik sebuah perhentian pada bilah perjalanan, lalu tutup kartu yang terbuka di atas peta.',
+  'help.guide.roadtrip-via.step.2':
+    'Klik rute yang tergambar. Sebuah titik lintas dijatuhkan pada ruas yang Anda klik, dan ruas itu dirutekan ulang melewatinya.',
+  'help.guide.roadtrip-via.step.3':
+    'Bilah perjalanan mengikuti: kepala hari itu memuat jarak dan waktu berkendara yang baru, dan setiap waktu tiba setelah titik lintas ikut bergeser.',
+  'help.guide.roadtrip-via.step.4':
+    'Arahkan kursor ke pegangannya dan ia menyebutkan apa yang bisa dilakukan: “Seret untuk mengubah rute, klik kanan untuk menghapus”. Seret ke tempat lain dan ruas itu digambar ulang melalui titik baru.',
+  'help.guide.roadtrip-via.step.5':
+    'Klik kanan pegangannya untuk menghapusnya. Ruas itu kembali menempuh jalan langsung.',
+  'help.guide.roadtrip-via.result':
+    'Ruas itu mengikuti jalan yang Anda pilih, dan jarak, waktu berkendara serta waktu tiba hari itu dihitung ulang untuknya.',
+  'help.guide.roadtrip-via.tip.1':
+    'Titik lintas bukan perhentian: ia tidak punya nomor, tidak punya lama singgah dan tidak punya waktu tiba, serta tidak dihitung dalam perhentian hari itu.',
+  'help.guide.roadtrip-via.tip.2':
+    'Pegangannya digambar mulai dari tingkat zum 9, jadi peta yang dipaskan ke seluruh perjalanan menampilkan garisnya tanpa pegangan.',
+  'help.guide.roadtrip-via.tip.3':
+    'Klik yang berjarak lebih dari dua kilometer dari setiap ruas yang tergambar diabaikan, begitu pula klik pada penerbangan, kereta atau feri.',
+  // roadtrip-alternatives
+  'help.guide.roadtrip-alternatives.title': 'Mencoba cara lain menempuh sebuah ruas',
+  'help.guide.roadtrip-alternatives.goal': 'Lihat apa lagi yang ditawarkan mesin rute untuk satu penggal, lalu ambil.',
+  'help.guide.roadtrip-alternatives.step.1':
+    'Klik sebuah bilah berkendara pada bilah perjalanan, baris di antara dua perhentian yang memberikan ruas sebagai jarak dan waktu. Labelnya “Rute lain”.',
+  'help.guide.roadtrip-alternatives.step.2':
+    '“Rute untuk ruas ini” terbuka di atas peta, satu entri per jalan, masing-masing tergambar di peta dengan warnanya sendiri.',
+  'help.guide.roadtrip-alternatives.step.3':
+    'Arahkan kursor ke sebuah entri untuk menyalakan jalan itu. “Saat ini” dan “Tercepat” menyebut mana yang mana, dan yang lain menyebut berapa lebih cepat atau lebih lambatnya.',
+  'help.guide.roadtrip-alternatives.step.4':
+    'Klik sebuah entri untuk menempuh jalan itu, atau “Tutup” untuk tetap di jalan yang sekarang.',
+  'help.guide.roadtrip-alternatives.result':
+    'Ruas itu menempuh jalan yang Anda pilih, dan jarak pada bilah perjalanan serta waktu tiba sesudahnya ikut berubah.',
+  'help.guide.roadtrip-alternatives.tip.1':
+    'Memilih jalan lain menaruh sebuah titik lintas pada ruas itu dan menggantikan titik lintas yang sudah ada; memilih jalan mesin rute sendiri menghapusnya lagi.',
+  'help.guide.roadtrip-alternatives.tip.2':
+    '“Tanpa jalan tol cepat”, “Tanpa tol” dan “Tanpa feri” berasal dari mesin kedua dengan model kecepatannya sendiri, jadi waktunya tidak sebanding dengan yang lain.',
+  // roadtrip-limits
+  'help.guide.roadtrip-limits.title': 'Mengatur mobil dan batasan berkendara',
+  'help.guide.roadtrip-limits.goal':
+    'Beri tahu TREK Anda mengemudi apa dan seberapa jauh Anda bersedia mengemudi sekali jalan.',
+  'help.guide.roadtrip-limits.step.1':
+    '“Pengaturan berkendara” berada di bawah pencarian pada kolom kanan. Lencananya menyebutkan apa yang sudah diatur; klik untuk membukanya.',
+  'help.guide.roadtrip-limits.step.2':
+    'Di bawah “Mengemudi”, “Perjalanan terlama sekali jalan” dan “Mengemudi per hari” dalam menit. Kolom kosong berarti “mati”, dan tidak ada yang ditandai.',
+  'help.guide.roadtrip-limits.step.3':
+    'Di bawah “Kendaraan”, sebutkan Anda mengemudi apa. “Bensin” mengisi hanya di perhentian bahan bakar, “Listrik” hanya di perhentian pengisian daya, “Keduanya” di kedua-duanya.',
+  'help.guide.roadtrip-limits.step.4':
+    'Ketik sendiri “Jarak per tangki”, atau “Jarak per pengisian”. “Hitung dari data mobil” di bawahnya mengambil “Kapasitas tangki” dan “Konsumsi”, atau “Baterai” dan “Konsumsi”, lalu menghitungnya.',
+  'help.guide.roadtrip-limits.step.5':
+    '“Hindari bila bisa” adalah preferensi, bukan larangan: hari yang tidak punya jalan memutar tetap memakai jalan itu, dan mengatakannya di kepalanya.',
+  'help.guide.roadtrip-limits.step.6':
+    'Tutup dialognya. Kartu itu menyebutkan apa yang sudah diatur, dan bilah perjalanan menandai setiap ruas dan setiap hari yang melampauinya.',
+  'help.guide.roadtrip-limits.result':
+    'Lencana kartu itu menyebutkan apa yang sudah diatur, dan setiap ruas dan hari yang melewati batas membawa lencana pada bilah perjalanan.',
+  'help.guide.roadtrip-limits.tip.1':
+    'Pengaturan itu milik perjalanan, jadi semua orang di dalamnya merencanakan dengan mobil dan batasan yang sama.',
+  'help.guide.roadtrip-limits.tip.2':
+    '“Isi sampai” menyatakan seberapa penuh sebuah perhentian mengisi, karena tidak ada yang mengisi sampai 100 % di jalan. Perhentian bahan bakar atau pengisian daya bisa menimpanya untuk dirinya sendiri.',
+  'help.guide.roadtrip-limits.tip.3':
+    '“Garis rute” menentukan bagaimana perjalanan digambar: “Hubungkan hari” merutekan malam di antara dua hari, dan “Satu warna per hari” memberi tiap hari warnanya sendiri.',
+  // roadtrip-day-window
+  'help.guide.roadtrip-day-window.title': 'Memberi hari berkendara awal dan akhir',
+  'help.guide.roadtrip-day-window.goal':
+    'Berhentilah mengemudi pada jam yang Anda pilih, dan tentukan di mana hari itu harus berakhir.',
+  'help.guide.roadtrip-day-window.step.1':
+    'Buka “Pengaturan berkendara” di kolom kanan dan cari “Waktu perjalanan harian”.',
+  'help.guide.roadtrip-day-window.step.2':
+    'Tetapkan “Awal hari”. Sendirian ia tidak melakukan apa-apa: kedua waktu dibutuhkan, seperti kata catatan di bawahnya.',
+  'help.guide.roadtrip-day-window.step.3':
+    'Tetapkan “Akhir hari”. Perjalanan kini berhenti pada jam itu dan membawa sisanya ke pagi berikutnya, sebagai baris “Akhir hari” dan baris “Lanjutkan perjalanan” pada bilah perjalanan.',
+  'help.guide.roadtrip-day-window.step.4':
+    'Di bawah “Akhir hari”, pilih “Di sepanjang rute” untuk berhenti di jalan pada waktu akhir, atau “Di tempat terakhir” untuk berhenti sebelum perjalanan berikutnya melewatinya.',
+  'help.guide.roadtrip-day-window.step.5':
+    'Tutup dialognya. Kartu “Pengaturan berkendara” membawa kedua waktu itu sebagai lencana.',
+  'help.guide.roadtrip-day-window.result':
+    'Perjalanan dipotong menjadi hari-hari perjalanan sepanjang yang Anda tetapkan, dan apa yang tidak muat berlanjut pada hari-hari hasil perhitungan setelah hari terakhir. Hari Anda dan tempat-tempatnya tidak berubah.',
+  'help.guide.roadtrip-day-window.tip.1':
+    'Mengosongkan salah satu waktu mematikan semuanya lagi. Waktu yang Anda sematkan sendiri pada sebuah perhentian selalu diutamakan.',
+  'help.guide.roadtrip-day-window.tip.2':
+    'Dengan waktu perjalanan harian yang ditetapkan, hari selalu terhubung: perjalanan dari perhentian terakhir suatu hari ke perhentian pertama hari berikutnya dirutekan dan dihitung.',
+  'help.guide.roadtrip-day-window.tip.3':
+    'Setiap akhir hari juga menjadi penanda di peta, sebuah bulan dengan nomor harinya. Seret di sepanjang rute, atau ke sebuah tempat, agar hari berakhir di tempat lain; klik kanan untuk mengembalikan akhir otomatis, dan “Pulihkan akhir hari otomatis” pada dialog ini membatalkan semuanya.',
+  // roadtrip-refuel
+  'help.guide.roadtrip-refuel.title': 'Mengisi bahan bakar sebelum tangki habis',
+  'help.guide.roadtrip-refuel.goal':
+    'Temukan tempat mengisi bahan bakar pada penggal yang masih bisa dicapai mobil, lalu taruh pada perjalanan.',
+  'help.guide.roadtrip-refuel.step.1':
+    'Dengan jarak jangkau yang ditetapkan, bilah perjalanan menggambar sebuah bilah melintang pada ruas tempat bahan bakar habis: “Tangki habis di sini”, dan di bawahnya seberapa jauh itu di dalam ruas.',
+  'help.guide.roadtrip-refuel.step.2':
+    'Lampu pada bilah itu adalah tombolnya. “Cari bahan bakar” menelusuri jalan yang sudah Anda lewati, dan “Mencari di sepanjang rute…” selama ia bekerja.',
+  'help.guide.roadtrip-refuel.step.3':
+    'Paling banyak tiga stasiun kembali, masing-masing dengan seberapa jauh dari rute dan berapa sisa jarak jangkau yang akan tertinggal.',
+  'help.guide.roadtrip-refuel.step.4':
+    'Tanda plus pada sebuah tawaran menambahkannya sebagai perhentian bahan bakar. “Tambahkan sebagai perhentian” terbuka dengan jenis dan waktunya sudah terisi, dan “Tambah” menaruhnya pada ruas di titik tempat ia benar-benar dilewati.',
+  'help.guide.roadtrip-refuel.result':
+    'Perhentian itu ada pada ruas yang tepat dengan ikonnya sendiri, jarak jangkau dihitung lagi mulai dari situ, dan bilahnya hilang.',
+  'help.guide.roadtrip-refuel.tip.1':
+    'Jarak jangkau dihitung dari perhentian bahan bakar atau pengisian daya terakhir, lintas hari. Anda mengemudi apa menentukan perhentian mana yang dihitung: “Bensin” hanya bahan bakar, “Listrik” hanya pengisian daya.',
+  'help.guide.roadtrip-refuel.tip.2':
+    'Pencarian melihat jalan sebelum titik kehabisan, menyisakan cadangan dan menghitung jalan memutar dua kali, jadi semua yang ditawarkannya benar-benar terjangkau.',
+  'help.guide.roadtrip-refuel.tip.3':
+    'Jawaban kosong bukan jalan buntu: lampunya berubah menjadi “Coba lagi”, karena pencarian tempat adalah layanan bersama yang memang bisa kehabisan waktu.',
+  // roadtrip-track
+  'help.guide.roadtrip-track.title': 'Membuat sebuah hari mengikuti jalur yang diimpor',
+  'help.guide.roadtrip-track.goal':
+    'Taruh perjalanan sebuah hari pada rute indah yang Anda impor sebagai jalur GPX atau KML.',
+  'help.guide.roadtrip-track.step.1': 'Klik lencana “Jalur” pada kepala sebuah hari. Dialognya terbuka pada hari itu.',
+  'help.guide.roadtrip-track.step.2':
+    'Pilih sebuah jalur. Masing-masing menyebutkan panjangnya dan seberapa jauh letaknya dari hari ini, yang terdekat lebih dulu.',
+  'help.guide.roadtrip-track.step.3':
+    'Klik “Ikuti jalur ini”. TREK menjatuhkan titik lintas di tempat perjalanan paling menyimpang dari jalur, lalu merutekan lagi, putaran demi putaran.',
+  'help.guide.roadtrip-track.step.4':
+    'Ia menyebutkan berapa titik lintas yang ditempatkan dan seberapa dekat perjalanan sekarang bertahan. Tombol di sampingnya membuang titik lintas itu lagi dan mengembalikan hari itu kepada mesin rute; menutup dialog mempertahankan jalurnya.',
+  'help.guide.roadtrip-track.result':
+    'Perjalanan hari itu mengikuti jalur alih-alih jalan yang dipilih mesin rute, dan lencana “Jalur” menyebutkan jalur mana yang diikuti.',
+  'help.guide.roadtrip-track.tip.1':
+    'Impor berkasnya di bawah “Hari” dengan “Impor file”, dengan “Trek (dengan geometri jalur)” atau “Jalur (LineStrings)” dicentang. Sampai ada jalur di perjalanan ini, lencana itu tidak punya apa-apa untuk ditawarkan.',
+  'help.guide.roadtrip-track.tip.2':
+    'Mengikuti jalur menggantikan titik lintas yang sudah dimiliki ruas-ruas hari itu, jadi bentuklah sebuah ruas dengan tangan setelah jalur, bukan sebelumnya.',
 };
 
 export default help;
