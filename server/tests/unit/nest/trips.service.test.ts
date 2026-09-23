@@ -1332,14 +1332,22 @@ describe('copy — whole-trip parity (Task 8)', () => {
     testDb.prepare('INSERT INTO roadtrip_day_boundaries (trip_id, day_number, from_assignment_id, to_assignment_id, fraction) VALUES (?, 1, ?, NULL, 0.5)').run(trip.id, assignment.id);
 
     const accomId = Number(testDb.prepare(
-      "INSERT INTO day_accommodations (trip_id, place_id, start_day_id, end_day_id, check_in, check_out) VALUES (?, ?, ?, ?, '15:00', '11:00')",
+      "INSERT INTO day_accommodations (trip_id, place_id, start_day_id, end_day_id, check_in, check_in_end, check_out, confirmation, notes) VALUES (?, ?, ?, ?, '15:00', '15:30', '11:00', 'CONF-1', 'Late checkout ok')",
     ).run(trip.id, stop.id, days[0].id, days[1].id).lastInsertRowid);
     testDb.prepare('UPDATE day_assignments SET accommodation_id = ? WHERE id = ?').run(accomId, assignment.id);
 
     const resId = Number(testDb.prepare(`
-      INSERT INTO reservations (trip_id, day_id, end_day_id, place_id, assignment_id, accommodation_id, title, status, type)
-      VALUES (?, ?, ?, ?, ?, ?, 'Stay', 'confirmed', 'hotel')
+      INSERT INTO reservations (trip_id, day_id, end_day_id, place_id, assignment_id, accommodation_id, title, reservation_time, reservation_end_time,
+        location, confirmation_number, notes, url, status, type, metadata, day_plan_position, needs_review, ingest_state,
+        external_source, external_id, sync_enabled)
+      VALUES (?, ?, ?, ?, ?, ?, 'Stay', '15:00', '11:00', 'Front desk', 'CONF-99', 'Bring ID', 'https://example.com/booking',
+        'confirmed', 'hotel', '{"note":"seed"}', 1.5, 1, 'live', 'airtrail', 'ext-123', 0)
     `).run(trip.id, days[0].id, days[1].id, stop.id, assignment.id, accomId).lastInsertRowid);
+    // Confirms the seed itself reproduces the legacy "14.0" TEXT shape
+    // (this is the SOURCE row's own accommodation_id, written the same way
+    // the pre-migration `copy` bound it — a plain number through
+    // better-sqlite3 into the TEXT column).
+    expect((testDb.prepare('SELECT accommodation_id FROM reservations WHERE id = ?').get(resId) as { accommodation_id: string }).accommodation_id).toBe(`${accomId}.0`);
 
     const itemId = Number(testDb.prepare(
       "INSERT INTO budget_items (trip_id, category, name, total_price, reservation_id, currency) VALUES (?, 'Accommodation', 'Hotel', 300, ?, 'EUR')",
@@ -1421,23 +1429,55 @@ describe('copy — whole-trip parity (Task 8)', () => {
     };
     expect(newBoundary).toEqual({ day_number: 1, from_assignment_id: newAssignment.id, to_assignment_id: null, fraction: 0.5 });
 
-    // day_accommodations, and the assignment's accommodation_id stamped at the NEW accommodation
-    const newAccom = testDb.prepare('SELECT id, place_id, start_day_id, end_day_id, check_in, check_out FROM day_accommodations WHERE trip_id = ?').get(newTripId) as {
-      id: number; place_id: number | null; start_day_id: number; end_day_id: number; check_in: string | null; check_out: string | null;
+    // day_accommodations (TP55/TP56, byte-diffed against the source — full
+    // key set modulo id/trip_id/place_id/start_day_id/end_day_id/created_at,
+    // every one of which is either a remapped FK or excluded on principle),
+    // and the assignment's accommodation_id stamped at the NEW accommodation
+    const newAccom = testDb.prepare('SELECT * FROM day_accommodations WHERE trip_id = ?').get(newTripId) as {
+      id: number; place_id: number | null; start_day_id: number; end_day_id: number;
+      check_in: string | null; check_in_end: string | null; check_out: string | null; confirmation: string | null; notes: string | null;
     };
-    expect(newAccom).toMatchObject({ place_id: newStop.id, start_day_id: newDays[0].id, end_day_id: newDays[1].id, check_in: '15:00', check_out: '11:00' });
+    const sourceAccom = testDb.prepare('SELECT check_in, check_in_end, check_out, confirmation, notes FROM day_accommodations WHERE id = ?').get(accomId) as {
+      check_in: string | null; check_in_end: string | null; check_out: string | null; confirmation: string | null; notes: string | null;
+    };
+    expect({ check_in: newAccom.check_in, check_in_end: newAccom.check_in_end, check_out: newAccom.check_out, confirmation: newAccom.confirmation, notes: newAccom.notes }).toEqual(sourceAccom);
+    expect({ place_id: newAccom.place_id, start_day_id: newAccom.start_day_id, end_day_id: newAccom.end_day_id }).toEqual({ place_id: newStop.id, start_day_id: newDays[0].id, end_day_id: newDays[1].id });
     expect(newAssignmentFull.accommodation_id).toBe(newAccom.id);
 
-    // reservations
+    // reservations (TP58/TP59), byte-diffed against the source — full key
+    // set modulo id/trip_id/day_id/end_day_id/place_id/assignment_id/
+    // created_at (remapped FKs) and the external_*/sync_enabled columns
+    // (deliberately NOT copied, asserted below).
     const newRes = testDb.prepare('SELECT * FROM reservations WHERE trip_id = ?').get(newTripId) as {
       id: number; day_id: number | null; end_day_id: number | null; place_id: number | null; assignment_id: number | null;
-      title: string; status: string | null; type: string | null; ingest_state: string; accommodation_id: string | null;
+      title: string; reservation_time: string | null; reservation_end_time: string | null; location: string | null;
+      confirmation_number: string | null; notes: string | null; url: string | null; status: string | null; type: string | null;
+      metadata: string | null; day_plan_position: number | null; needs_review: number; ingest_state: string; accommodation_id: string | null;
+      external_source: string | null; external_id: string | null; sync_enabled: number | null;
     };
-    expect(newRes).toMatchObject({
-      day_id: newDays[0].id, end_day_id: newDays[1].id, place_id: newStop.id, assignment_id: newAssignment.id,
-      title: 'Stay', status: 'confirmed', type: 'hotel', ingest_state: 'live',
+    expect({
+      title: newRes.title, reservation_time: newRes.reservation_time, reservation_end_time: newRes.reservation_end_time,
+      location: newRes.location, confirmation_number: newRes.confirmation_number, notes: newRes.notes, url: newRes.url,
+      status: newRes.status, type: newRes.type, metadata: newRes.metadata, day_plan_position: newRes.day_plan_position,
+      needs_review: newRes.needs_review, ingest_state: newRes.ingest_state,
+    }).toEqual({
+      title: 'Stay', reservation_time: '15:00', reservation_end_time: '11:00', location: 'Front desk',
+      confirmation_number: 'CONF-99', notes: 'Bring ID', url: 'https://example.com/booking', status: 'confirmed',
+      type: 'hotel', metadata: '{"note":"seed"}', day_plan_position: 1.5, needs_review: 1, ingest_state: 'live',
     });
-    expect(Number(newRes.accommodation_id)).toBe(newAccom.id);
+    expect({ day_id: newRes.day_id, end_day_id: newRes.end_day_id, place_id: newRes.place_id, assignment_id: newRes.assignment_id }).toEqual({
+      day_id: newDays[0].id, end_day_id: newDays[1].id, place_id: newStop.id, assignment_id: newAssignment.id,
+    });
+    // The TRAP proof: the copy's accommodation_id is the LEGACY raw-bound
+    // TEXT shape (`'<id>.0'`), not the `em.insert()`-inlined `'<id>'` shape
+    // rule 22 would otherwise produce.
+    expect(newRes.accommodation_id).toBe(`${newAccom.id}.0`);
+    // external_* / sync_enabled are deliberately NOT copied — the duplicate
+    // must not inherit the source's external sync identity (the source has
+    // both set, above).
+    expect(newRes.external_source).toBeNull();
+    expect(newRes.external_id).toBeNull();
+    expect(newRes.sync_enabled).toBe(1); // the column's own DB DEFAULT, never the source's `0`
 
     // budget_items / members / payers / category order
     const newItem = testDb.prepare('SELECT * FROM budget_items WHERE trip_id = ?').get(newTripId) as {

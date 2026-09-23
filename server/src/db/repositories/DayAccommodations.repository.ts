@@ -418,4 +418,24 @@ export class DayAccommodationsRepository extends TrekRepository<DayAccommodation
       .where({ trip: trip_id, place: place_id })
       .execute<{ id: number }[]>('all', false);
   }
+
+  // ---------------------------------------------------------------------------
+  // Plan 3d Task 6 (`trips.service.ts::copy`) — additive, appended after
+  // Task 3's own methods above, per this task's file-ownership rule.
+  // ---------------------------------------------------------------------------
+
+  /**
+   * TP55 (`trips.service.ts::copy`'s day_accommodations read) — `SELECT *
+   * FROM day_accommodations WHERE trip_id = ?`, no `ORDER BY` (matching the
+   * legacy statement exactly — each row is independently remapped and
+   * inserted, so read order doesn't affect the copy). {@link
+   * DayAccommodationRow} is already this table's full-column shape (AC34's
+   * own `findInTrip` projection), reused here rather than declared again.
+   */
+  async listAllForTrip(trip_id: number): Promise<DayAccommodationRow[]> {
+    return await this.qb('a')
+      .select(['a.*'])
+      .where({ trip: trip_id })
+      .execute<DayAccommodationRow[]>('all', false);
+  }
 }

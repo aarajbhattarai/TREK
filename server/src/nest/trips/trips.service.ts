@@ -10,6 +10,12 @@ import { DayAssignments } from '../../db/entities/DayAssignments.entity';
 import { AssignmentParticipants } from '../../db/entities/AssignmentParticipants.entity';
 import { Tags } from '../../db/entities/Tags.entity';
 import { DayNotes } from '../../db/entities/DayNotes.entity';
+import { RoadtripVias } from '../../db/entities/RoadtripVias.entity';
+import { RoadtripDayTracks } from '../../db/entities/RoadtripDayTracks.entity';
+import { RoadtripPreferences } from '../../db/entities/RoadtripPreferences.entity';
+import { RoadtripDayBoundaries } from '../../db/entities/RoadtripDayBoundaries.entity';
+import { DayAccommodations } from '../../db/entities/DayAccommodations.entity';
+import { ReservationEndpoints } from '../../db/entities/ReservationEndpoints.entity';
 import { MAX_TRIP_DAYS, tripSpanDays, type ActiveTrip, type TrekWsPayload, type TrekWsTripEventName } from '@trek/shared';
 import { RealtimeService } from '../realtime/realtime.service';
 import { PermissionsService } from '../permissions/permissions.service';
@@ -50,6 +56,27 @@ function assertTripSpan(startDate: string, endDate: string) {
 export function withoutFeedToken<T>(row: T): T {
   if (row && typeof row === 'object') delete (row as Record<string, unknown>).feed_token;
   return row;
+}
+
+/**
+ * `copy`'s (TP59) `reservations.accommodation_id` write. Mirrors
+ * `AccommodationsService`'s own `legacyBoundIntegerText` (Plan 3d Task 3,
+ * `accommodations.service.ts` — unexported there, so not importable across
+ * this task's file-ownership boundary; reproduced here instead, same
+ * one-line shape): a plain JS number bound as a `?` parameter through
+ * better-sqlite3 is stored as SQLite REAL regardless of integer-ness, and
+ * SQLite's "numeric value inserted into a TEXT column becomes text" rule
+ * then renders `14` as `'14.0'`, not the plain integer text `'14'` a
+ * SQL-literal-inlined `em.insert()` (rule 22) would produce. The legacy raw
+ * `copy` statement bound the new stay's id (a plain number from `accomMap`)
+ * the same way — reproduced explicitly here since the write now goes
+ * through a typed insert (`ReservationEndpointsRepository
+ * .insertReservationCopy`) instead of a raw bound parameter; passing an
+ * already-formatted STRING sidesteps the shape question entirely (SQLite
+ * applies no numeric conversion to a value that already has TEXT affinity).
+ */
+function legacyAccommodationIdText(id: number): string {
+  return `${id}.0`;
 }
 
 interface CreateTripData {
@@ -204,6 +231,39 @@ export class TripsService {
 
   private get dayNotesRepo() {
     return this.em.getRepository(DayNotes);
+  }
+
+  // Plan 3d Task 6 (`copy`'s 11 survivors — roadtrip vias/tracks/preferences/
+  // boundaries, day_accommodations, reservations): same `this.em
+  // .getRepository(...)` pattern as the Task 8 getters above, not a new
+  // constructor parameter.
+  private get roadtripViasRepo() {
+    return this.em.getRepository(RoadtripVias);
+  }
+
+  private get roadtripDayTracksRepo() {
+    return this.em.getRepository(RoadtripDayTracks);
+  }
+
+  private get roadtripPreferencesRepo() {
+    return this.em.getRepository(RoadtripPreferences);
+  }
+
+  private get roadtripDayBoundariesRepo() {
+    return this.em.getRepository(RoadtripDayBoundaries);
+  }
+
+  private get dayAccommodationsRepo() {
+    return this.em.getRepository(DayAccommodations);
+  }
+
+  // `ReservationEndpointsRepository`, not `ReservationsRepository`: Task 4
+  // owns `Reservations.repository.ts` for this tree window, so TP58/TP59
+  // (the reservations read/insert) live on a repository this task owns
+  // instead — see `ReservationEndpoints.repository.ts`'s own docstring on
+  // `listAllForTrip`/`insertReservationCopy`.
+  private get reservationEndpointsRepo() {
+    return this.em.getRepository(ReservationEndpoints);
   }
 
   async canAccessTrip(tripId: string | number, userId: number) {
@@ -660,30 +720,27 @@ export class TripsService {
       // trip that looks complete and quietly drives somewhere else — visible
       // only once somebody starts editing the copy, with nothing to recover
       // from. Both tables are keyed by day, so they ride on `dayMap`.
-      const oldVias = this.db.prepare(`
-        SELECT v.* FROM roadtrip_vias v JOIN days d ON d.id = v.day_id WHERE d.trip_id = ?
-      `).all(sourceTripId) as any[]; // TP42 — Plan 3d
-      const insertVia = this.db.prepare(
-        'INSERT INTO roadtrip_vias (day_id, after_order_index, sequence, lat, lng) VALUES (?, ?, ?, ?, ?)',
-      );
+      const oldVias = await this.roadtripViasRepo.listForTrip(Number(sourceTripId)); // TP42
       for (const v of oldVias) {
         const newDayId = dayMap.get(v.day_id);
-        if (newDayId) insertVia.run(newDayId, v.after_order_index, v.sequence, v.lat, v.lng); // TP43 — Plan 3d
+        if (newDayId) {
+          await this.roadtripViasRepo.insertVia({ day_id: newDayId, after_order_index: v.after_order_index, sequence: v.sequence, lat: v.lat, lng: v.lng }); // TP43
+        }
       }
 
-      const oldTracks = this.db.prepare(`
-        SELECT t.* FROM roadtrip_day_tracks t JOIN days d ON d.id = t.day_id WHERE d.trip_id = ?
-      `).all(sourceTripId) as any[]; // TP44 — Plan 3d
-      const insertTrack = this.db.prepare(
-        'INSERT INTO roadtrip_day_tracks (day_id, place_id, stray_km) VALUES (?, ?, ?)',
-      );
+      const oldTracks = await this.roadtripDayTracksRepo.listForTrip(Number(sourceTripId)); // TP44
       for (const t of oldTracks) {
         const newDayId = dayMap.get(t.day_id);
         // The track is a place of the trip, so it has been copied too — but skip
         // the row rather than point it at the original, the way the assignment
         // and accommodation loops below skip an id they cannot map.
         const newPlaceId = placeMap.get(t.place_id);
-        if (newDayId && newPlaceId) insertTrack.run(newDayId, newPlaceId, t.stray_km); // TP45 — Plan 3d
+        // `upsertTrack`'s ON CONFLICT branch never fires on this call path:
+        // `newDayId` is a day that was just inserted into the brand-new trip
+        // above, so no `roadtrip_day_tracks` row can already exist for it —
+        // a plain INSERT (the legacy statement) and this upsert produce the
+        // identical single row.
+        if (newDayId && newPlaceId) await this.roadtripDayTracksRepo.upsertTrack(newDayId, newPlaceId, t.stray_km); // TP45
       }
 
       const oldTags = await this.tagsRepo.listPlaceTagsForTrip(sourceTripId); // TP46
@@ -708,15 +765,21 @@ export class TripsService {
         }
       }
 
-      this.db.prepare('INSERT INTO roadtrip_preferences (trip_id, key, value) SELECT ?, key, value FROM roadtrip_preferences WHERE trip_id = ?').run(newTripId, sourceTripId); // TP50 — Plan 3d
-      const oldBoundaries = this.db.prepare('SELECT * FROM roadtrip_day_boundaries WHERE trip_id = ?').all(sourceTripId) as {
-        day_number: number; from_assignment_id: number; to_assignment_id: number | null; fraction: number;
-      }[]; // TP51 — Plan 3d
-      const insertBoundary = this.db.prepare('INSERT INTO roadtrip_day_boundaries (trip_id, day_number, from_assignment_id, to_assignment_id, fraction) VALUES (?, ?, ?, ?, ?)');
+      const oldPreferences = await this.roadtripPreferencesRepo.listForTrip(Number(sourceTripId)); // TP50
+      for (const pref of oldPreferences) {
+        await this.roadtripPreferencesRepo.upsertValue(newTripId, pref.key, pref.value); // TP50
+      }
+
+      const oldBoundaries = await this.roadtripDayBoundariesRepo.listForTrip(Number(sourceTripId)); // TP51
       for (const boundary of oldBoundaries) {
         const from = assignmentMap.get(boundary.from_assignment_id);
         const to = boundary.to_assignment_id === null ? null : assignmentMap.get(boundary.to_assignment_id);
-        if (from && to !== undefined) insertBoundary.run(newTripId, boundary.day_number, from, to, boundary.fraction); // TP52 — Plan 3d
+        // `upsertBoundary`'s ON CONFLICT branch never fires here either — the
+        // new trip's `roadtrip_day_boundaries` starts empty, same reasoning
+        // as the via/track upserts above.
+        if (from && to !== undefined) {
+          await this.roadtripDayBoundariesRepo.upsertBoundary(newTripId, { day_number: boundary.day_number, from_assignment_id: from, to_assignment_id: to, fraction: boundary.fraction }); // TP52
+        }
       }
 
       const oldParticipants = await this.assignmentParticipantsRepo.listForTrip(sourceTripId); // TP53
@@ -725,19 +788,18 @@ export class TripsService {
         if (newAssignmentId) await this.assignmentParticipantsRepo.insertIgnore(newAssignmentId, [ap.user_id]); // TP54
       }
 
-      const oldAccom = this.db.prepare('SELECT * FROM day_accommodations WHERE trip_id = ?').all(sourceTripId) as any[]; // TP55 — Plan 3d
-      const accomMap = new Map<number, number | bigint>();
-      const insertAccom = this.db.prepare(`
-        INSERT INTO day_accommodations (trip_id, place_id, start_day_id, end_day_id, check_in, check_in_end, check_out, confirmation, notes)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `);
+      const oldAccom = await this.dayAccommodationsRepo.listAllForTrip(Number(sourceTripId)); // TP55
+      const accomMap = new Map<number, number>();
       for (const a of oldAccom) {
-        const newPlaceId = placeMap.get(a.place_id);
+        const newPlaceId = a.place_id != null ? placeMap.get(a.place_id) : undefined;
         const newStartDay = dayMap.get(a.start_day_id);
         const newEndDay = dayMap.get(a.end_day_id);
         if (newPlaceId && newStartDay && newEndDay) {
-          const r = insertAccom.run(newTripId, newPlaceId, newStartDay, newEndDay, a.check_in, a.check_in_end, a.check_out, a.confirmation, a.notes); // TP56 — Plan 3d
-          accomMap.set(a.id, r.lastInsertRowid);
+          const newAccomId = await this.dayAccommodationsRepo.insertStay({ // TP56
+            trip_id: newTripId, place_id: newPlaceId, start_day_id: newStartDay, end_day_id: newEndDay,
+            check_in: a.check_in, check_in_end: a.check_in_end, check_out: a.check_out, confirmation: a.confirmation, notes: a.notes,
+          });
+          accomMap.set(a.id, newAccomId);
         }
       }
 
@@ -749,36 +811,37 @@ export class TripsService {
         if (!a.accommodation_id) continue;
         const newAssignmentId = assignmentMap.get(a.id);
         const newAccomId = accomMap.get(a.accommodation_id);
-        if (newAssignmentId && newAccomId) await this.dayAssignmentsRepo.setAccommodation(newAssignmentId, Number(newAccomId)); // TP57
+        if (newAssignmentId && newAccomId) await this.dayAssignmentsRepo.setAccommodation(newAssignmentId, newAccomId); // TP57
       }
 
-      const oldReservations = this.db.prepare('SELECT * FROM reservations WHERE trip_id = ?').all(sourceTripId) as any[]; // TP58 — Plan 3d
+      const oldReservations = await this.reservationEndpointsRepo.listAllForTrip(Number(sourceTripId)); // TP58
       // The external_* / sync_enabled columns are deliberately not copied: the
       // duplicate must not inherit the source's external sync identity.
-      const reservationMap = new Map<number, number | bigint>();
-      const insertReservation = this.db.prepare(`
-        INSERT INTO reservations (trip_id, day_id, end_day_id, place_id, assignment_id, accommodation_id, title, reservation_time, reservation_end_time,
-          location, confirmation_number, notes, url, status, type, metadata, day_plan_position, needs_review, ingest_state)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `);
+      const reservationMap = new Map<number, number>();
       for (const r of oldReservations) {
-        const rr = insertReservation.run(newTripId,
-          r.day_id ? (dayMap.get(r.day_id) ?? null) : null,
+        // accommodation_id is a TEXT column, so the SOURCE value reads back
+        // as a string — coerce before the number-keyed map lookup or the
+        // link silently nulls.
+        const newAccomId = r.accommodation_id != null ? (accomMap.get(Number(r.accommodation_id)) ?? null) : null;
+        const newReservationId = await this.reservationEndpointsRepo.insertReservationCopy({
+          trip_id: newTripId,
+          day_id: r.day_id ? (dayMap.get(r.day_id) ?? null) : null,
           // end_day_id is a day reference too (multi-day transport) — remap it like
           // day_id, otherwise the duplicated trip loses the reservation's end-day link.
-          r.end_day_id ? (dayMap.get(r.end_day_id) ?? null) : null,
-          r.place_id ? (placeMap.get(r.place_id) ?? null) : null,
-          r.assignment_id ? (assignmentMap.get(r.assignment_id) ?? null) : null,
-          // accommodation_id is a TEXT column, so it reads back as a string —
-          // coerce before the number-keyed map lookup or the link silently nulls.
-          r.accommodation_id != null ? (accomMap.get(Number(r.accommodation_id)) ?? null) : null,
-          r.title, r.reservation_time, r.reservation_end_time,
-          r.location, r.confirmation_number, r.notes, r.url, r.status, r.type,
+          end_day_id: r.end_day_id ? (dayMap.get(r.end_day_id) ?? null) : null,
+          place_id: r.place_id ? (placeMap.get(r.place_id) ?? null) : null,
+          assignment_id: r.assignment_id ? (assignmentMap.get(r.assignment_id) ?? null) : null,
+          // the NEW value is re-formatted to the legacy raw-bound `'<id>.0'`
+          // TEXT shape on the way back out — see `legacyAccommodationIdText`.
+          accommodation_id: newAccomId != null ? legacyAccommodationIdText(newAccomId) : null,
+          title: r.title, reservation_time: r.reservation_time, reservation_end_time: r.reservation_end_time,
+          location: r.location, confirmation_number: r.confirmation_number, notes: r.notes, url: r.url, status: r.status, type: r.type,
           // ingest_state travels with the copy: a staged booking must not turn
           // 'live' just because the trip was duplicated, or it lands in the
           // duplicate's public feed.
-          r.metadata, r.day_plan_position, r.needs_review ?? 0, r.ingest_state ?? 'live'); // TP59 — Plan 3d
-        reservationMap.set(r.id, rr.lastInsertRowid);
+          metadata: r.metadata, day_plan_position: r.day_plan_position, needs_review: r.needs_review ?? 0, ingest_state: r.ingest_state ?? 'live',
+        }); // TP59
+        reservationMap.set(r.id, newReservationId);
       }
 
       const oldBudget = this.db.prepare('SELECT * FROM budget_items WHERE trip_id = ?').all(sourceTripId) as any[]; // TP60 — Plan 3e
