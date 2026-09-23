@@ -1,7 +1,13 @@
 import { Injectable } from '@nestjs/common';
-import { DatabaseService } from '../database/database.service';
+import { InjectRepository } from '@mikro-orm/nestjs';
 import { avatarUrl } from '../common/avatarUrl';
 import type { ReservationRow, ReservationEndpoint, ReservationTraveler } from './reservations.service';
+import { Reservations } from '../../db/entities/Reservations.entity';
+import type { ReservationsRepository } from '../../db/repositories/Reservations.repository';
+import { ReservationEndpoints } from '../../db/entities/ReservationEndpoints.entity';
+import type { ReservationEndpointsRepository } from '../../db/repositories/ReservationEndpoints.repository';
+import { ReservationTravelers } from '../../db/entities/ReservationTravelers.entity';
+import type { ReservationTravelersRepository } from '../../db/repositories/ReservationTravelers.repository';
 
 /** The one traveler projection every reservation read shares (avatar_url included). */
 export function toTraveler(r: { user_id: number; username: string; avatar: string | null; is_guest?: number | null }): ReservationTraveler {
@@ -19,56 +25,47 @@ export function toTraveler(r: { user_id: number; username: string; avatar: strin
  * delegates, so there is exactly one copy of each query.
  *
  * Renamed from `ReservationsReadRepository` (Plan 3d Task 0, R11 — inventory
- * §18.3): this is a plain Nest `@Injectable` over `DatabaseService.prepare`,
- * not a MikroORM repository extending `TrekRepository`, so it must not carry
- * the `Repository` suffix — that name is reserved for the ORM layer's "one
- * repository per entity" convention (D4). Its three statements (RR1-RR3)
- * still convert to `ReservationsRepository`/`ReservationEndpointsRepository`/
- * `ReservationTravelersRepository` methods in a later Plan 3d task (per §18.3
- * option (a), which then deletes this class and turns
- * `ReservationsReadModule` into a plain `MikroOrmModule.forFeature([...])`
- * leaf, the `TripMembershipModule` precedent) — Task 0 converts no SQL site,
- * so only the rename happens here, with zero behaviour change.
+ * §18.3): this is a plain Nest `@Injectable`, not a MikroORM repository
+ * extending `TrekRepository`, so it must not carry the `Repository` suffix —
+ * that name is reserved for the ORM layer's "one repository per entity"
+ * convention (D4). Its three statements (RR1-RR3) now delegate to
+ * `ReservationsRepository.findWithJoins`/`ReservationEndpointsRepository
+ * .listForReservation`/`ReservationTravelersRepository.listForReservation`
+ * (Plan 3d Task 2, §18.3 option (b) — the class stays a thin facade rather
+ * than being deleted: `AirtrailCoreModule`/its own test suites reach it by
+ * this exact public shape, and Task 0's rename already committed to keeping
+ * it). Zero behaviour change beyond the SQL leaving this file.
  */
 @Injectable()
 export class ReservationsReadService {
-  constructor(private readonly db: DatabaseService) {}
+  constructor(
+    @InjectRepository(Reservations) private readonly reservationsRepo: ReservationsRepository,
+    @InjectRepository(ReservationEndpoints) private readonly endpointsRepo: ReservationEndpointsRepository,
+    @InjectRepository(ReservationTravelers) private readonly travelersRepo: ReservationTravelersRepository,
+  ) {}
 
   async getReservationWithJoins(id: string | number): Promise<ReservationRow | undefined> {
-    const row = this.db.get<ReservationRow>(`
-    SELECT r.*, d.day_number, p.name as place_name, r.assignment_id,
-      ap.place_id as accommodation_place_id, acc_p.name as accommodation_name,
-      ap.start_day_id as accommodation_start_day_id, ap.end_day_id as accommodation_end_day_id
-    FROM reservations r
-    LEFT JOIN days d ON r.day_id = d.id
-    LEFT JOIN places p ON r.place_id = p.id
-    LEFT JOIN day_accommodations ap ON r.accommodation_id = ap.id
-    LEFT JOIN places acc_p ON ap.place_id = acc_p.id
-    WHERE r.id = ?
-  `, id);
+    // RR1
+    const row = await this.reservationsRepo.findWithJoins(id);
     if (!row) return undefined;
-    row.endpoints = await this.loadEndpoints(row.id);
-    row.travelers = await this.loadTravelers(row.id);
+    const result: ReservationRow = { ...row };
+    result.endpoints = await this.loadEndpoints(row.id);
+    result.travelers = await this.loadTravelers(row.id);
     // accommodation_id is a TEXT column; the integer FK reads back as a numeric
     // string (e.g. "14.0"). Normalize to an int so clients can parse it.
-    row.accommodation_id = row.accommodation_id == null ? null : Math.trunc(Number(row.accommodation_id));
-    return row;
+    result.accommodation_id = row.accommodation_id == null ? null : Math.trunc(Number(row.accommodation_id));
+    return result;
   }
 
   async loadEndpoints(reservationId: number): Promise<ReservationEndpoint[]> {
-    return this.db.all<ReservationEndpoint>(
-      'SELECT * FROM reservation_endpoints WHERE reservation_id = ? ORDER BY sequence',
-      reservationId
-    );
+    // RR2 — no ORDER BY difference: `ReservationEndpointsRepository
+    // .listForReservation` already orders by `sequence` (RR2's own shape).
+    return (await this.endpointsRepo.listForReservation(reservationId)) as ReservationEndpoint[];
   }
 
   async loadTravelers(reservationId: number | string): Promise<ReservationTraveler[]> {
-    const rows = this.db.all<ReservationTraveler>(`
-    SELECT rt.user_id, COALESCE(u.display_name, u.username) AS username, u.avatar, u.is_guest
-    FROM reservation_travelers rt
-    JOIN users u ON rt.user_id = u.id
-    WHERE rt.reservation_id = ?
-  `, reservationId);
+    // RR3 — no ORDER BY (unlike RS6), matching the legacy statement's own row order.
+    const rows = await this.travelersRepo.listForReservation(Number(reservationId));
     return rows.map(r => toTraveler(r));
   }
 }

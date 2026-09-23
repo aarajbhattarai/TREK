@@ -79,6 +79,10 @@ import {
   createTestGooglePlacePhotoMetaRepo, createTestPlacesRepo, createTestRoadtripViasRepo,
   createTestReservationsRepo,
   createTestReservationEndpointsRepo,
+  createTestReservationTravelersRepo,
+  createTestReservationDayPositionsRepo,
+  createTestDayAccommodationsRepo,
+  createTestUsersRepo,
 } from './test-uow';
 import { AppSettings } from '../../src/db/entities/AppSettings.entity';
 import { AuditLog } from '../../src/db/entities/AuditLog.entity';
@@ -154,7 +158,7 @@ export async function createPluginRpcHostFactory(dbs: DatabaseService): Promise<
   await createTestTripsRepo(dbs.connection),
   );
   // After accommodations: a hotel booking writes the stay's day stop through it.
-  const reservations = new ReservationsService(dbs, permissions, budget, realtime, notificationsStub(), new ReservationsReadService(dbs), accommodations, await createTestUnitOfWork(dbs.connection));
+  const reservations = new ReservationsService(dbs, permissions, budget, realtime, notificationsStub(), new ReservationsReadService(await createTestReservationsRepo(dbs.connection), await createTestReservationEndpointsRepo(dbs.connection), await createTestReservationTravelersRepo(dbs.connection)), accommodations, await createTestUnitOfWork(dbs.connection), await createTestReservationsRepo(dbs.connection), await createTestReservationEndpointsRepo(dbs.connection), await createTestReservationTravelersRepo(dbs.connection), await createTestReservationDayPositionsRepo(dbs.connection), await createTestDayAccommodationsRepo(dbs.connection), await createTestDaysRepo(dbs.connection), await createTestPlacesRepo(dbs.connection), await createTestDayAssignmentsRepo(dbs.connection), await createTestTripMembersRepo(dbs.connection), await createTestUsersRepo(dbs.connection), await createTestTripsRepo(dbs.connection));
   const trips = new TripsService(dbs, reservations, days, permissions, budget, vacay, realtime, unsplash, generalStorage, await createTestUnitOfWork(dbs.connection), (await sharedTestOrm(dbs.connection)).em);
   const members = new TripMembersService(dbs, budget, new UserCleanupService(dbs, budget, await createTestUnitOfWork(dbs.connection), usersRepo), permissions, realtime, notificationsStub(), await createTestUnitOfWork(dbs.connection), await createTestTripsRepo(dbs.connection), await createTestTripMembersRepo(dbs.connection), usersRepo);
   const guards = new PluginGuards(dbs, permissions, addons);

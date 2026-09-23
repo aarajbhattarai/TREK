@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { Platform } from '@mikro-orm/core';
+import { expressionBuilder } from 'kysely';
 import { createSnapshotTestDb } from '../../../helpers/db-mock';
 import { resetTestDb } from '../../../helpers/test-db';
 import { createTestOrm, type TestOrm } from '../../../helpers/test-orm';
@@ -9,11 +10,13 @@ import {
   absDifference,
   caseWhenEquals,
   castInteger,
+  castIntegerKysely,
   coalesce,
   coalesceParam,
   columnIncrementedBy,
   columnRef,
   concat,
+  concatKysely,
   countAll,
   countAllRef,
   currentTimestamp,
@@ -27,9 +30,21 @@ import {
   minOf,
   nowMinusDays,
   startsWithIsoDate,
+  startsWithIsoDateKysely,
   substring,
+  substringKysely,
   trim,
 } from '../../../../src/db/dialect/sql-functions';
+
+/** The `users` columns the Kysely-expression tests below read/write, narrowed the same way every other Kysely-typed repository method in this program declares its own `TDB`. */
+interface UsersKyselyDB {
+  users: {
+    id: number;
+    username: string;
+    display_name: string | null;
+    created_at: string | null;
+  };
+}
 
 const testDb = createSnapshotTestDb();
 let t: TestOrm;
@@ -507,6 +522,8 @@ describe('sql-functions (sqlite)', () => {
       ['2026-09-21 13:05:09', true],
       ['not-a-date', false],
       ['2026-1-1', false], // not zero-padded — the legacy pattern is exactly 4-2-2 digit classes, not a wildcard shorthand
+      ['abcd-ef-gh', false], // Task 0 review L1 — the wider '????-??-??*' shorthand WOULD match this (a `?` matches any char); the digit-class pattern must not
+      ['yyyy-mm-dd', false], // Task 0 review L1 — same reason, letters where the pattern requires digits
       ['', false],
       [null, false],
     ];
@@ -685,5 +702,183 @@ describe('sql-functions (sqlite)', () => {
     class FakePlatform extends Platform {}
     const foreign = new FakePlatform();
     expect(() => dayDistance(foreign, 'u.date', '2026-01-01')).toThrow(/no implementation for platform FakePlatform/);
+  });
+
+  // Plan 3d Task 0 review (H1/L1): the five helpers above return a MikroORM
+  // RawQueryFragment, which stringifies to a literal `?` token and throws at
+  // execution when handed into a Kysely statement — verified directly below
+  // (the whole reason these Kysely-native twins exist). Task 2 absorbed this
+  // finding; DY23 (`ReservationsRepository.restampLinkedReservation`) is the
+  // first consumer.
+
+  it('SQLF-048: a MikroORM RawQueryFragment cannot be coerced to a plain string outside the MikroORM QueryBuilder that produced it — the H1 finding, proven directly ([Symbol.toPrimitive]("string") returns an internal Symbol key the QueryBuilder recognises to re-substitute the real SQL text; nothing else, Kysely included, understands that key, which is why the Kysely-native twins below exist instead of reusing this fragment)', () => {
+    const platform = t.em.getPlatform();
+    const fragment = startsWithIsoDate(platform, 'username');
+    expect(typeof fragment[Symbol.toPrimitive]('string')).toBe('symbol');
+    expect(() => `${fragment}`).toThrow(TypeError);
+  });
+
+  it('SQLF-049: startsWithIsoDateKysely matches the same shapes as startsWithIsoDate (dates, non-dates, letters-in-place-of-digits, empty, NULL)', async () => {
+    const platform = t.em.getPlatform();
+    const cases: Array<[string | null, boolean]> = [
+      ['2026-09-21', true],
+      ['2026-09-21T13:05:09Z', true],
+      ['not-a-date', false],
+      ['2026-1-1', false],
+      ['abcd-ef-gh', false],
+      ['yyyy-mm-dd', false],
+      ['', false],
+      [null, false],
+    ];
+    for (const [value, expected] of cases) {
+      const { user } = createUser(testDb);
+      testDb.prepare('UPDATE users SET display_name = ? WHERE id = ?').run(value, user.id);
+
+      const row = await t.em.getKysely<UsersKyselyDB>()
+        .selectFrom('users')
+        .select((eb) => [startsWithIsoDateKysely(platform, eb, 'display_name').as('matched')])
+        .where('id', '=', user.id)
+        .executeTakeFirstOrThrow();
+      expect(Boolean(row.matched)).toBe(expected);
+
+      const raw = testDb
+        .prepare(`SELECT (display_name GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]*') as matched FROM users WHERE id = ?`)
+        .get(user.id) as { matched: number | null };
+      expect(Boolean(raw.matched)).toBe(expected);
+    }
+  });
+
+  it('SQLF-050: an unknown platform fails closed for startsWithIsoDateKysely', () => {
+    class FakePlatform extends Platform {}
+    const foreign = new FakePlatform();
+    const eb = expressionBuilder<UsersKyselyDB, 'users'>();
+    expect(() => startsWithIsoDateKysely(foreign, eb, 'username')).toThrow(/no implementation for platform FakePlatform/);
+  });
+
+  it('SQLF-051: substringKysely(ref, start) — the two-arg form — matches substr(col, N)', async () => {
+    const { user } = createUser(testDb, { username: 'kysely-iso-ts' });
+    testDb.prepare('UPDATE users SET display_name = ? WHERE id = ?').run('2026-09-21T13:05:09Z', user.id);
+    const platform = t.em.getPlatform();
+
+    const row = await t.em.getKysely<UsersKyselyDB>()
+      .selectFrom('users')
+      .select((eb) => [substringKysely(platform, eb, 'display_name', 12).as('n')])
+      .where('id', '=', user.id)
+      .executeTakeFirstOrThrow();
+    expect(row.n).toBe('13:05:09Z');
+
+    const expected = testDb.prepare('SELECT substr(display_name, 12) as n FROM users WHERE id = ?').get(user.id) as { n: string };
+    expect(row.n).toBe(expected.n);
+  });
+
+  it('SQLF-052: substringKysely(ref, start, length) — the three-arg form — matches substr(col, N, L)', async () => {
+    const { user } = createUser(testDb, { username: 'kysely-iso-ts-2' });
+    testDb.prepare('UPDATE users SET display_name = ? WHERE id = ?').run('2026-09-21T13:05:09Z', user.id);
+    const platform = t.em.getPlatform();
+
+    const row = await t.em.getKysely<UsersKyselyDB>()
+      .selectFrom('users')
+      .select((eb) => [substringKysely(platform, eb, 'display_name', 1, 10).as('n')])
+      .where('id', '=', user.id)
+      .executeTakeFirstOrThrow();
+    expect(row.n).toBe('2026-09-21');
+
+    const expected = testDb.prepare('SELECT substr(display_name, 1, 10) as n FROM users WHERE id = ?').get(user.id) as { n: string };
+    expect(row.n).toBe(expected.n);
+  });
+
+  it('SQLF-053: substringKysely rejects a non-positive start or a negative length', () => {
+    const platform = t.em.getPlatform();
+    const eb = expressionBuilder<UsersKyselyDB, 'users'>();
+    expect(() => substringKysely(platform, eb, 'username', 0)).toThrow(/1-based integer start/);
+    expect(() => substringKysely(platform, eb, 'username', 1.5)).toThrow(/1-based integer start/);
+    expect(() => substringKysely(platform, eb, 'username', 1, -1)).toThrow(/non-negative integer length/);
+    expect(() => substringKysely(platform, eb, 'username', 1, 1.5)).toThrow(/non-negative integer length/);
+  });
+
+  it('SQLF-054: concatKysely renders <col> || <bound-literal> || substringKysely(...), composing a nested Kysely expression (the shape concat() cannot do)', async () => {
+    const { user } = createUser(testDb, { username: 'concat-me' });
+    testDb.prepare('UPDATE users SET display_name = ? WHERE id = ?').run('2026-09-21T13:05', user.id);
+    const platform = t.em.getPlatform();
+
+    const row = await t.em.getKysely<UsersKyselyDB>()
+      .selectFrom('users')
+      .select((eb) => [
+        concatKysely(platform, eb, { column: 'username' }, { value: '@' }, { expression: substringKysely(platform, eb, 'display_name', 12) }).as('n'),
+      ])
+      .where('id', '=', user.id)
+      .executeTakeFirstOrThrow();
+    expect(row.n).toBe('concat-me@13:05');
+
+    const expected = testDb
+      .prepare("SELECT username || ? || substr(display_name, 12) as n FROM users WHERE id = ?")
+      .get('@', user.id) as { n: string };
+    expect(row.n).toBe(expected.n);
+  });
+
+  it('SQLF-055: concatKysely rejects fewer than two parts', () => {
+    const platform = t.em.getPlatform();
+    const eb = expressionBuilder<UsersKyselyDB, 'users'>();
+    expect(() => concatKysely(platform, eb, { column: 'username' })).toThrow(/at least two parts/);
+    expect(() => concatKysely(platform, eb)).toThrow(/at least two parts/);
+  });
+
+  it('SQLF-056: an unknown platform fails closed for concatKysely and substringKysely', () => {
+    class FakePlatform extends Platform {}
+    const foreign = new FakePlatform();
+    const eb = expressionBuilder<UsersKyselyDB, 'users'>();
+    expect(() => concatKysely(foreign, eb, { column: 'username' }, { value: 'x' })).toThrow(/no implementation for platform FakePlatform/);
+    expect(() => substringKysely(foreign, eb, 'username', 1)).toThrow(/no implementation for platform FakePlatform/);
+  });
+
+  it('SQLF-057: castIntegerKysely matches both "14" and "14.0" TEXT rows against a bound INTEGER value (the accommodation_id shape, §18.1)', async () => {
+    const platform = t.em.getPlatform();
+    const { user: exact } = createUser(testDb);
+    testDb.prepare('UPDATE users SET display_name = ? WHERE id = ?').run('14', exact.id);
+    const { user: dotZero } = createUser(testDb);
+    testDb.prepare('UPDATE users SET display_name = ? WHERE id = ?').run('14.0', dotZero.id);
+    const { user: other } = createUser(testDb);
+    testDb.prepare('UPDATE users SET display_name = ? WHERE id = ?').run('15', other.id);
+
+    const rows = await t.em.getKysely<UsersKyselyDB>()
+      .selectFrom('users')
+      .select('id')
+      .where('id', 'in', [exact.id, dotZero.id, other.id])
+      .where((eb) => eb(castIntegerKysely(platform, eb, 'display_name'), '=', 14))
+      .orderBy('id', 'asc')
+      .execute();
+    expect(rows.map((r) => r.id)).toEqual([exact.id, dotZero.id]);
+
+    const expected = testDb
+      .prepare('SELECT id FROM users WHERE id IN (?, ?, ?) AND CAST(display_name AS INTEGER) = ? ORDER BY id ASC')
+      .all(exact.id, dotZero.id, other.id, 14);
+    expect(rows).toEqual(expected);
+  });
+
+  it('SQLF-058: an unknown platform fails closed for castIntegerKysely', () => {
+    class FakePlatform extends Platform {}
+    const foreign = new FakePlatform();
+    const eb = expressionBuilder<UsersKyselyDB, 'users'>();
+    expect(() => castIntegerKysely(foreign, eb, 'display_name')).toThrow(/no implementation for platform FakePlatform/);
+  });
+
+  it('SQLF-059: DY23\'s exact shape compiles to the expected SQL text (compiled {sql, parameters} capture)', () => {
+    const platform = t.em.getPlatform();
+    const compiled = t.em.getKysely<UsersKyselyDB>()
+      .updateTable('users')
+      .set((eb) => ({
+        username: eb
+          .case()
+          .when('username', 'is', null)
+          .then(eb.val('2026-09-21'))
+          .else(concatKysely(platform, eb, { value: '2026-09-21' }, { expression: substringKysely(platform, eb, 'created_at', 11) }))
+          .end(),
+      }))
+      .where('id', '=', 1)
+      .compile();
+    expect(compiled.sql).toBe(
+      'update "users" set "username" = case when "username" is null then ? else ? || substr("created_at", ?) end where "id" = ?',
+    );
+    expect(compiled.parameters).toEqual(['2026-09-21', '2026-09-21', 11, 1]);
   });
 });

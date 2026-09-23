@@ -17,6 +17,10 @@ import { DayNotes } from '../../db/entities/DayNotes.entity';
 import type { DayNotesRepository } from '../../db/repositories/DayNotes.repository';
 import { Trips } from '../../db/entities/Trips.entity';
 import type { TripsRepository } from '../../db/repositories/Trips.repository';
+import { Reservations } from '../../db/entities/Reservations.entity';
+import type { ReservationsRepository } from '../../db/repositories/Reservations.repository';
+import { ReservationEndpoints } from '../../db/entities/ReservationEndpoints.entity';
+import type { ReservationEndpointsRepository } from '../../db/repositories/ReservationEndpoints.repository';
 
 type Trip = TripAccess;
 
@@ -114,6 +118,12 @@ export class DaysService {
     @InjectRepository(DayAssignments) private readonly dayAssignmentsRepo: DayAssignmentsRepository,
     @InjectRepository(DayNotes) private readonly dayNotesRepo: DayNotesRepository,
     @InjectRepository(Trips) private readonly tripsRepo: TripsRepository,
+    // Plan 3d Task 2 (DY14–DY18, DY23): `restampReservationDates`/
+    // `resyncAccommodationDays`'s `reservations`/`reservation_endpoints`
+    // statements convert onto these two — the only new constructor params
+    // this task adds (`day_accommodations` stays raw here, Task 3's own).
+    @InjectRepository(Reservations) private readonly reservationsRepo: ReservationsRepository,
+    @InjectRepository(ReservationEndpoints) private readonly reservationEndpointsRepo: ReservationEndpointsRepository,
   ) {}
 
   async verifyTripAccess(tripId: string | number, userId: number) {
@@ -336,9 +346,11 @@ export class DaysService {
    * date (time-of-day preserved). Transport endpoints (flight legs) shift by the
    * same per-booking day delta so multi-leg timing stays internally consistent.
    *
-   * DY14–DY18 — Plan 3d (`reservations`/`reservation_endpoints`): stays raw on
-   * `DatabaseService` inside the caller's `uow.transactional` block, per the
-   * Plan 3b `UserCleanupService` precedent for cross-domain writes.
+   * DY14–DY18 — Plan 3d Task 2: converted onto `ReservationsRepository
+   * .listForRestamp`/`setReservationTime`/`setReservationEndTime` and
+   * `ReservationEndpointsRepository.listIdAndDate`/`setLocalDate`, inside the
+   * caller's `uow.transactional` block (unchanged — repository methods never
+   * open their own transaction, program brief item 7).
    *
    * `tripId: number` (Task 9 fix wave, H2): every caller now passes the ONE
    * `toRowId`-parsed value its own entry point already computed, never the
@@ -353,34 +365,22 @@ export class DaysService {
     newDateById: Map<number, string | null>,
   ): Promise<void> {
     // DY14 — Plan 3d
-    const reservations = this.db.all<{
-      id: number; day_id: number | null; end_day_id: number | null;
-      reservation_time: string | null; reservation_end_time: string | null;
-    }>(
-      'SELECT id, day_id, end_day_id, reservation_time, reservation_end_time FROM reservations WHERE trip_id = ?',
-      tripId
-    );
-
-    // DY15 — Plan 3d
-    const setTime = this.db.prepare('UPDATE reservations SET reservation_time = ? WHERE id = ?');
-    // DY16 — Plan 3d
-    const setEndTime = this.db.prepare('UPDATE reservations SET reservation_end_time = ? WHERE id = ?');
-    // DY17 — Plan 3d
-    const endpoints = this.db.prepare('SELECT id, local_date FROM reservation_endpoints WHERE reservation_id = ?');
-    // DY18 — Plan 3d
-    const setEndpointDate = this.db.prepare('UPDATE reservation_endpoints SET local_date = ? WHERE id = ?');
+    const reservations = await this.reservationsRepo.listForRestamp(tripId);
 
     for (const r of reservations) {
       if (r.day_id != null && r.reservation_time) {
         const oldDate = oldDateById.get(r.day_id);
         const newDate = newDateById.get(r.day_id);
         if (oldDate && newDate && oldDate !== newDate) {
-          setTime.run(withDatePart(r.reservation_time, newDate), r.id);
+          // DY15 — Plan 3d
+          await this.reservationsRepo.setReservationTime(r.id, withDatePart(r.reservation_time, newDate));
           // Shift each transport leg's local_date by the same number of days.
           const delta = dayDelta(oldDate, newDate);
           if (delta !== 0) {
-            for (const ep of endpoints.all(r.id) as { id: number; local_date: string | null }[]) {
-              if (ep.local_date) setEndpointDate.run(addDays(ep.local_date, delta), ep.id);
+            // DY17 — Plan 3d
+            for (const ep of await this.reservationEndpointsRepo.listIdAndDate(r.id)) {
+              // DY18 — Plan 3d
+              if (ep.local_date) await this.reservationEndpointsRepo.setLocalDate(ep.id, addDays(ep.local_date, delta));
             }
           }
         }
@@ -389,7 +389,8 @@ export class DaysService {
         const oldDate = oldDateById.get(r.end_day_id);
         const newDate = newDateById.get(r.end_day_id);
         if (oldDate && newDate && oldDate !== newDate) {
-          setEndTime.run(withDatePart(r.reservation_end_time, newDate), r.id);
+          // DY16 — Plan 3d
+          await this.reservationsRepo.setReservationEndTime(r.id, withDatePart(r.reservation_end_time, newDate));
         }
       }
     }
@@ -408,6 +409,10 @@ export class DaysService {
    * docstring for why binding the raw route string here was the live bug.
    */
   private async assertNoInvertedAccommodation(tripId: number): Promise<void> {
+    // DY19 — Plan 3d (marker normalised to the `// <SITE> — Plan 3d` shape
+    // every other survivor in this file uses, per the Task 0 review carry
+    // item — this task does not own `day_accommodations`, so the statement
+    // itself is untouched)
     const spans = this.db.all<{ id: number; start_no: number; end_no: number }>(`
     SELECT a.id, s.day_number AS start_no, e.day_number AS end_no
     FROM day_accommodations a
@@ -432,13 +437,14 @@ export class DaysService {
    * whole trip still shifts everything together. The linked hotel reservation follows
    * its accommodation's start day in both branches.
    *
-   * DY20/DY22/DY23 — Plan 3d (`day_accommodations`/`reservations`) stay raw;
+   * DY20/DY22 — Plan 3d (`day_accommodations`) stay raw, Task 3's own table;
    * DY21 (`DaysRepository.findByTripAndDate`) and DY25
    * (`DaysRepository.findById`) convert — both root on `days`, which this
    * plan owns. DY24 (the `day_assignments` stop that follows its booking)
    * converts via `DayAssignmentsRepository.reanchorToDay`, a Kysely
    * statement proven to join this method's ambient transaction by rollback
-   * (see the task report).
+   * (see the task report). DY23 (`reservations`) converts onto
+   * `ReservationsRepository.restampLinkedReservation` — Plan 3d Task 2.
    *
    * `tripId: number` (Task 9 fix wave, H2): callers now pass their own
    * `toRowId`-parsed value; DY20's raw bind uses it too (previously the raw
@@ -458,13 +464,6 @@ export class DaysService {
 
     // DY22 — Plan 3d
     const updateStay = this.db.prepare('UPDATE day_accommodations SET start_day_id = ?, end_day_id = ? WHERE id = ?');
-    // DY23 — Plan 3d
-    const restampLinkedRes = this.db.prepare(`
-    UPDATE reservations SET day_id = :dayId,
-      reservation_time = CASE WHEN reservation_time IS NULL THEN :date
-        ELSE :date || SUBSTR(reservation_time, 11) END
-    WHERE accommodation_id = :accId AND type = 'hotel'
-  `);
 
     for (const stay of stays) {
       const oldStartDate = prevDateByDayId.get(stay.start_day_id);
@@ -489,7 +488,8 @@ export class DaysService {
       // DY25
       const startDay = await this.daysRepo.findById(stay.start_day_id);
       if (startDay?.date) {
-        restampLinkedRes.run({ dayId: stay.start_day_id, date: startDay.date, accId: stay.id });
+        // DY23 — Plan 3d
+        await this.reservationsRepo.restampLinkedReservation(stay.id, stay.start_day_id, startDay.date);
       }
     }
   }

@@ -218,7 +218,14 @@ export interface Reservation {
   notes?: string | null;
   status: string;
   type: string;
-  accommodation_id?: number | null;
+  /**
+   * TEXT at the DB, not INTEGER (Plan 3d inventory §18.1 — no FK, some rows
+   * read back as `"14.0"`): every reader normalises it, so this stays a
+   * string here rather than the `DayAssignment.accommodation_id` field
+   * above's genuine INTEGER shape. Do not "fix" this to `number` — that
+   * field is a different column on a different table.
+   */
+  accommodation_id?: string | null;
   metadata?: string | null;
   needs_review?: number;
   endpoints?: ReservationEndpoint[];

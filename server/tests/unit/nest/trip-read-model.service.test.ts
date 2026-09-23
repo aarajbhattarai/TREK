@@ -84,6 +84,11 @@ import {
   createTestDaysRepo, createTestDayAssignmentsRepo, createTestDayNotesRepo, createTestTripsRepo,
   createTestTripMembersRepo, createTestTagsRepo, createTestPlaceRatingsRepo, createTestAssignmentParticipantsRepo,
   createTestGooglePlacePhotoMetaRepo, createTestPlacesRepo, createTestCategoriesRepo,
+  createTestReservationsRepo,
+  createTestReservationEndpointsRepo,
+  createTestReservationTravelersRepo,
+  createTestReservationDayPositionsRepo,
+  createTestDayAccommodationsRepo,
 } from '../../helpers/test-uow';
 
 // Real sibling services over the same in-memory DB — the aggregation runs the
@@ -123,6 +128,8 @@ beforeAll(async () => {
     await createTestDayAssignmentsRepo(dbs().connection),
     await createTestDayNotesRepo(dbs().connection),
     await createTestTripsRepo(dbs().connection),
+    await createTestReservationsRepo(dbs().connection),
+    await createTestReservationEndpointsRepo(dbs().connection),
   );
   placesSvc = new PlacesService(
   dbs(), new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)), new RealtimeService(),
@@ -146,7 +153,7 @@ const buildReadModel = async (tripsRepo: TripsRepository, roster: TripMembersSer
   new TripReadModelService(
     tripsRepo, roster, daysSvc, accommodationsSvc, budgetSvc,
     new PackingService(dbs(), new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)), new RealtimeService(), notificationsStub(), await createTestUnitOfWork(dbs().connection)),
-    new ReservationsService(dbs(), new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)), budgetSvc, new RealtimeService(), notificationsStub(), new ReservationsReadService(dbs()), await accommodationsOver(dbs()), await createTestUnitOfWork(dbs().connection)),
+    new ReservationsService(dbs(), new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)), budgetSvc, new RealtimeService(), notificationsStub(), new ReservationsReadService(await createTestReservationsRepo(dbs().connection), await createTestReservationEndpointsRepo(dbs().connection), await createTestReservationTravelersRepo(dbs().connection)), await accommodationsOver(dbs()), await createTestUnitOfWork(dbs().connection), await createTestReservationsRepo(dbs().connection), await createTestReservationEndpointsRepo(dbs().connection), await createTestReservationTravelersRepo(dbs().connection), await createTestReservationDayPositionsRepo(dbs().connection), await createTestDayAccommodationsRepo(dbs().connection), await createTestDaysRepo(dbs().connection), await createTestPlacesRepo(dbs().connection), await createTestDayAssignmentsRepo(dbs().connection), await createTestTripMembersRepo(dbs().connection), await createTestUsersRepo(dbs().connection), await createTestTripsRepo(dbs().connection)),
     new CollabService(dbs(), new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)), new RealtimeService(), notificationsStub(), makeStorageFixture('').storage, new RateLimitService(), await createTestUnitOfWork(dbs().connection)),
     placesSvc,
     new TodoService(dbs(), new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)), new RealtimeService(), await createTestUnitOfWork(dbs().connection)),

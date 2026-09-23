@@ -75,12 +75,12 @@ const bridge = {
 import { RealtimeService } from '../../../src/nest/realtime/realtime.service';
 import { notificationsStub } from '../../helpers/notifications';
 import { makeAccommodationsService } from '../../helpers/accommodations-service';
-import { createTestUnitOfWork, createTestDatabaseService } from '../../helpers/test-uow';
+import { createTestUnitOfWork, createTestDatabaseService, createTestReservationsRepo, createTestReservationEndpointsRepo, createTestReservationTravelersRepo, createTestReservationDayPositionsRepo, createTestDayAccommodationsRepo, createTestDaysRepo, createTestPlacesRepo, createTestDayAssignmentsRepo, createTestTripMembersRepo, createTestUsersRepo, createTestTripsRepo } from '../../helpers/test-uow';
 
 let svc: ReservationsService;
 beforeAll(async () => {
   const dbs = await createTestDatabaseService(testDb);
-  svc = new ReservationsService(dbs, permissionsStub, budget as unknown as BudgetService, new RealtimeService(), notificationsStub(notif.send), new ReservationsReadService(dbs), await makeAccommodationsService(testDb), await createTestUnitOfWork(testDb));
+  svc = new ReservationsService(dbs, permissionsStub, budget as unknown as BudgetService, new RealtimeService(), notificationsStub(notif.send), new ReservationsReadService(await createTestReservationsRepo(testDb), await createTestReservationEndpointsRepo(testDb), await createTestReservationTravelersRepo(testDb)), await makeAccommodationsService(testDb), await createTestUnitOfWork(testDb), await createTestReservationsRepo(testDb), await createTestReservationEndpointsRepo(testDb), await createTestReservationTravelersRepo(testDb), await createTestReservationDayPositionsRepo(testDb), await createTestDayAccommodationsRepo(testDb), await createTestDaysRepo(testDb), await createTestPlacesRepo(testDb), await createTestDayAssignmentsRepo(testDb), await createTestTripMembersRepo(testDb), await createTestUsersRepo(testDb), await createTestTripsRepo(testDb));
 });
 
 beforeAll(() => { createTables(testDb); runMigrations(testDb); });
@@ -959,8 +959,15 @@ describe('ReservationsService — quirk fixes (post-fold)', () => {
     const { trip } = ownerTrip({ start_date: '2030-05-01', end_date: '2030-05-02' });
     const place = createPlace(testDb, trip.id);
     const days = testDb.prepare('SELECT id FROM days WHERE trip_id = ? ORDER BY day_number').all(trip.id) as { id: number }[];
-    // sequence is an unbindable object -> the endpoint INSERT throws mid-write.
-    const badEndpoints = [{ role: 'from', name: 'A', code: null, lat: 1, lng: 2, timezone: null, local_time: null, local_date: null, sequence: {} }];
+    // Plan 3d Task 2 (§15a): `sequence: {}` (an unbindable object) no longer
+    // throws once RS17 goes through `em.insert()` — MikroORM serialises it
+    // instead of handing it to a raw bind. A repository-level spy
+    // reproduces the same "the write mid-transaction fails" shape the fault
+    // injection existed to prove, still inside the SAME `uow.transactional`
+    // this test's rollback assertion depends on.
+    const endpointsRepo = await createTestReservationEndpointsRepo(testDb);
+    const spy = vi.spyOn(endpointsRepo, 'insertEndpoint').mockRejectedValueOnce(new Error('boom'));
+    const badEndpoints = [{ role: 'from', name: 'A', code: null, lat: 1, lng: 2, timezone: null, local_time: null, local_date: null }];
     await expect(svc.create(String(trip.id), {
       title: 'Hotel', type: 'hotel',
       create_accommodation: { place_id: place.id, start_day_id: days[0].id, end_day_id: days[1].id },
@@ -968,15 +975,19 @@ describe('ReservationsService — quirk fixes (post-fold)', () => {
     } as never)).rejects.toThrow();
     expect(testDb.prepare('SELECT COUNT(*) as c FROM reservations WHERE trip_id = ?').get(trip.id)).toEqual({ c: 0 });
     expect(testDb.prepare('SELECT COUNT(*) as c FROM day_accommodations WHERE trip_id = ?').get(trip.id)).toEqual({ c: 0 });
+    spy.mockRestore();
   });
 
   it('RESV-FIX-002: update is atomic — a failing endpoint save rolls back the field update', async () => {
     const { trip } = ownerTrip();
     const res = createReservation(testDb, trip.id, { title: 'Old' });
     const current = (await svc.getReservation(String(res.id), String(trip.id)))!;
-    const badEndpoints = [{ role: 'from', name: 'A', code: null, lat: 1, lng: 2, timezone: null, local_time: null, local_date: null, sequence: {} }];
+    const endpointsRepo = await createTestReservationEndpointsRepo(testDb);
+    const spy = vi.spyOn(endpointsRepo, 'insertEndpoint').mockRejectedValueOnce(new Error('boom'));
+    const badEndpoints = [{ role: 'from', name: 'A', code: null, lat: 1, lng: 2, timezone: null, local_time: null, local_date: null }];
     await expect(svc.update(String(res.id), String(trip.id), { title: 'New', endpoints: badEndpoints } as never, current)).rejects.toThrow();
     expect(testDb.prepare('SELECT title FROM reservations WHERE id = ?').get(res.id)).toEqual({ title: 'Old' });
+    spy.mockRestore();
   });
 });
 

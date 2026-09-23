@@ -1,5 +1,6 @@
 import { raw, type Platform, type RawQueryFragment } from '@mikro-orm/core';
 import { SqlitePlatform } from '@mikro-orm/sql';
+import type { Expression, ExpressionBuilder, ExpressionWrapper, ReferenceExpression, SqlBool, StringReference } from 'kysely';
 
 /**
  * The only place a repository may spell a database function.
@@ -497,6 +498,134 @@ export function castInteger(platform: Platform, ref: string): RawQueryFragment &
  */
 export function dayDistance(platform: Platform, ref: string, isoDate: string): RawQueryFragment & symbol {
   if (platform instanceof SqlitePlatform) return raw(`ABS(JULIANDAY(${column(ref)}) - JULIANDAY(?))`, [isoDate]);
+  return unsupported(platform);
+}
+
+// ---------------------------------------------------------------------------
+// Plan 3d Task 0 review (H1/L1) — the five helpers above return a MikroORM
+// `RawQueryFragment`. Handed into a Kysely statement, a `RawQueryFragment`
+// stringifies through its own `[Symbol.toPrimitive]('string')` coercion into
+// the literal text `?` (its parameter-placeholder marker, meant for the
+// MikroORM QueryBuilder's OWN parameter interpolation, not Kysely's) — Kysely
+// binds it as an actual `?` value parameter and the statement fails at
+// execution (verified directly, not assumed: `db.selectFrom(...).where(...,
+// startsWithIsoDate(platform, 'col'))` throws `SqliteError: near "?": syntax
+// error` the first time it runs). Task 2 absorbed this finding (its report,
+// H1/L1) — these are genuinely separate functions, not a wrapper over the
+// ones above, because a Kysely `Expression` and a MikroORM `RawQueryFragment`
+// are different types with no conversion between them. Each takes the
+// caller's own `ExpressionBuilder<DB, TB>` (the same "no consumer-facing
+// generic DB" shape `_shared/reservation-visibility.ts`'s `publicStayExists`
+// documents is the only one that survives `tsc` for a shared Kysely helper —
+// unlike that one, these ARE fully generic over `<DB, TB>`, because they only
+// ever call `eb.fn`/`eb.cast`/`eb(...)`, none of which hit the QueryBuilder
+// method-chaining inference limit that forced `publicStayExists` to fix its
+// shape). Platform-dispatched and fail-closed like every helper above; each
+// has an SQLF-0xx test pinning its compiled `{sql, parameters}` AND a
+// raw-statement equivalence on seeded rows (`tests/unit/db/dialect/sql-functions.test.ts`).
+// ---------------------------------------------------------------------------
+
+/**
+ * The Kysely-expression twin of {@link startsWithIsoDate}: `<ref> GLOB
+ * '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]*'`, spelled through SQLite's
+ * function form (`glob(X, Y)` is exactly `Y GLOB X` — the inventory's own
+ * §19 finding, since Kysely's `ComparisonOperator` union has no `GLOB`
+ * entry). Returns a boolean `Expression<SqlBool>`, usable in a `.where()`
+ * or inside a `CASE WHEN` condition. Same digit-class pattern as the
+ * MikroORM version — NOT the wider `'????-??-??*'` shorthand (a `?` in
+ * SQLite GLOB matches any character, letters included).
+ */
+export function startsWithIsoDateKysely<DB, TB extends keyof DB>(
+  platform: Platform,
+  eb: ExpressionBuilder<DB, TB>,
+  ref: ReferenceExpression<DB, TB>,
+): ExpressionWrapper<DB, TB, SqlBool> {
+  if (platform instanceof SqlitePlatform) {
+    return eb.fn<SqlBool>('glob', [eb.val('[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]*'), ref]);
+  }
+  return unsupported(platform);
+}
+
+/**
+ * The Kysely-expression twin of {@link substring}: `substr(<ref>,
+ * <start>[, <length>])`, 1-based on both ends. `start`/`length` are
+ * validated integers, the same guard `substring()` above applies, and bound
+ * as genuine parameters here (`eb.val`) rather than spelled into the SQL
+ * text — Kysely's `fn()` takes `ReferenceExpression`s, not a raw text
+ * fragment, so there is no equivalent "spell a constant into the SQL"
+ * shape to match; a bound integer literal renders identically.
+ */
+export function substringKysely<DB, TB extends keyof DB>(
+  platform: Platform,
+  eb: ExpressionBuilder<DB, TB>,
+  ref: ReferenceExpression<DB, TB>,
+  start: number,
+  length?: number,
+): ExpressionWrapper<DB, TB, string> {
+  if (!Number.isInteger(start) || start < 1) {
+    throw new Error(`sql-functions: substringKysely needs a 1-based integer start, got ${start}`);
+  }
+  if (length !== undefined && (!Number.isInteger(length) || length < 0)) {
+    throw new Error(`sql-functions: substringKysely needs a non-negative integer length, got ${length}`);
+  }
+  if (platform instanceof SqlitePlatform) {
+    const args: ReferenceExpression<DB, TB>[] = length === undefined
+      ? [ref, eb.val(start)]
+      : [ref, eb.val(start), eb.val(length)];
+    return eb.fn<string>('substr', args);
+  }
+  return unsupported(platform);
+}
+
+/** A part of a `concatKysely()` expression — a column reference, a bound value, or a nested Kysely `Expression<string>` (composes freely, unlike `concat()`'s MikroORM `RawQueryFragment` form). */
+export type KyselyConcatPart<DB, TB extends keyof DB> =
+  | { column: StringReference<DB, TB> }
+  | { value: string }
+  | { expression: Expression<string> };
+
+/**
+ * The Kysely-expression twin of {@link concat}: `<part> || <part> || …`,
+ * SQLite's/Postgres's string concatenation operator, built through the
+ * expression builder's own binary-operator call (`eb(lhs, '||', rhs)`) so
+ * it composes with {@link substringKysely}/{@link castIntegerKysely} —
+ * exactly the composition `concat()`'s MikroORM form cannot do (its
+ * docstring explains why).
+ */
+export function concatKysely<DB, TB extends keyof DB>(
+  platform: Platform,
+  eb: ExpressionBuilder<DB, TB>,
+  ...parts: readonly KyselyConcatPart<DB, TB>[]
+): ExpressionWrapper<DB, TB, string> {
+  if (parts.length < 2) {
+    throw new Error(`sql-functions: concatKysely needs at least two parts, got ${parts.length}`);
+  }
+  if (!(platform instanceof SqlitePlatform)) return unsupported(platform);
+  const operand = (part: KyselyConcatPart<DB, TB>): Expression<string> =>
+    'column' in part ? eb.ref(part.column).$castTo<string>() : 'value' in part ? eb.val(part.value) : part.expression;
+  let acc: Expression<string> = operand(parts[0]!);
+  for (const part of parts.slice(1)) {
+    acc = eb(acc, '||', operand(part));
+  }
+  // The loop above always runs at least once (the `parts.length < 2` guard
+  // above throws otherwise), so `acc` is always the result of the `eb(...)`
+  // binary-operator call — a real `ExpressionWrapper`, not the bare
+  // `Expression` interface `operand()`'s own return type declares.
+  return acc as ExpressionWrapper<DB, TB, string>;
+}
+
+/**
+ * The Kysely-expression twin of {@link castInteger}: `CAST(<ref> AS
+ * INTEGER)`, for `reservations.accommodation_id` (TEXT) compared against an
+ * INTEGER column inside a Kysely statement (RS20/RV2's join shape — a
+ * correlated `EXISTS`/scalar-subquery context the MikroORM QueryBuilder
+ * cannot express, per the inventory's own T6 ruling).
+ */
+export function castIntegerKysely<DB, TB extends keyof DB>(
+  platform: Platform,
+  eb: ExpressionBuilder<DB, TB>,
+  ref: ReferenceExpression<DB, TB>,
+): ExpressionWrapper<DB, TB, number> {
+  if (platform instanceof SqlitePlatform) return eb.cast<number>(ref, 'integer');
   return unsupported(platform);
 }
 

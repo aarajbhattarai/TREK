@@ -121,6 +121,10 @@ import {
   createTestGooglePlacePhotoMetaRepo, createTestPlacesRepo, createTestRoadtripViasRepo, createTestRoadtripDayTracksRepo,
   createTestReservationsRepo,
   createTestReservationEndpointsRepo,
+  createTestReservationTravelersRepo,
+  createTestReservationDayPositionsRepo,
+  createTestDayAccommodationsRepo,
+  createTestUsersRepo,
 } from './test-uow';
 import { createTestOrm } from './test-orm';
 import { AppSettings } from '../../src/db/entities/AppSettings.entity';
@@ -232,7 +236,7 @@ export async function createMcpTestRegistry(): Promise<McpRegistry> {
   await createTestTripsRepo(dbService.connection),
   );
   // Built after it: a hotel booking writes the stay's day stop through this one.
-  const reservationsService = new ReservationsService(dbService, permissionsService, budgetService, realtimeService, notificationsStub(), new ReservationsReadService(dbService), accommodationsService, await createTestUnitOfWork(dbService.connection));
+  const reservationsService = new ReservationsService(dbService, permissionsService, budgetService, realtimeService, notificationsStub(), new ReservationsReadService(await createTestReservationsRepo(dbService.connection), await createTestReservationEndpointsRepo(dbService.connection), await createTestReservationTravelersRepo(dbService.connection)), accommodationsService, await createTestUnitOfWork(dbService.connection), await createTestReservationsRepo(dbService.connection), await createTestReservationEndpointsRepo(dbService.connection), await createTestReservationTravelersRepo(dbService.connection), await createTestReservationDayPositionsRepo(dbService.connection), await createTestDayAccommodationsRepo(dbService.connection), await createTestDaysRepo(dbService.connection), await createTestPlacesRepo(dbService.connection), await createTestDayAssignmentsRepo(dbService.connection), await createTestTripMembersRepo(dbService.connection), await createTestUsersRepo(dbService.connection), await createTestTripsRepo(dbService.connection));
   const membersService = new TripMembersService(dbService, budgetService, new UserCleanupService(dbService, budgetService, await createTestUnitOfWork(dbService.connection), usersRepo), permissionsService, realtimeService, notificationsStub(), await createTestUnitOfWork(dbService.connection), await createTestTripsRepo(dbService.connection), await createTestTripMembersRepo(dbService.connection), usersRepo);
   const tripsService = new TripsService(
     dbService,

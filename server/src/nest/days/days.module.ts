@@ -15,6 +15,8 @@ import { Days } from '../../db/entities/Days.entity';
 import { DayAssignments } from '../../db/entities/DayAssignments.entity';
 import { DayNotes } from '../../db/entities/DayNotes.entity';
 import { Trips } from '../../db/entities/Trips.entity';
+import { Reservations } from '../../db/entities/Reservations.entity';
+import { ReservationEndpoints } from '../../db/entities/ReservationEndpoints.entity';
 
 /**
  * Days (S6 — Phase 2 trip sub-domain), mounted at /api/trips/:tripId/days.
@@ -25,12 +27,15 @@ import { Trips } from '../../db/entities/Trips.entity';
  * Day notes used to live here too, with their own full file set; they are their
  * own domain now (day-notes/).
  *
- * `MikroOrmModule.forFeature([Days, DayAssignments, DayNotes, Trips])`
- * registers `DaysRepository`/`DayAssignmentsRepository`/`DayNotesRepository`/
- * `TripsRepository` for `DaysService`'s `@InjectRepository` constructor
- * params (Plan 3c Task 2) — the same forFeature + `@InjectRepository`
- * wiring every converted domain copies (`trip-membership.module.ts`'s
- * precedent for pulling in a repository this module doesn't otherwise own).
+ * `MikroOrmModule.forFeature([Days, DayAssignments, DayNotes, Trips,
+ * Reservations, ReservationEndpoints])` registers `DaysRepository`/
+ * `DayAssignmentsRepository`/`DayNotesRepository`/`TripsRepository`/
+ * `ReservationsRepository`/`ReservationEndpointsRepository` for
+ * `DaysService`'s `@InjectRepository` constructor params (Plan 3c Task 2;
+ * the last two added by Plan 3d Task 2 for DY14–DY18/DY23) — the same
+ * forFeature + `@InjectRepository` wiring every converted domain copies
+ * (`trip-membership.module.ts`'s precedent for pulling in a repository this
+ * module doesn't otherwise own).
  */
 @Module({
   imports: [
@@ -41,7 +46,7 @@ import { Trips } from '../../db/entities/Trips.entity';
     AuthModule,
     RealtimeModule,
     PluginGuardsModule,
-    MikroOrmModule.forFeature([Days, DayAssignments, DayNotes, Trips]),
+    MikroOrmModule.forFeature([Days, DayAssignments, DayNotes, Trips, Reservations, ReservationEndpoints]),
   ],
   controllers: [DaysController],
   providers: [DaysService, DaysMcp, DaysRpc],
