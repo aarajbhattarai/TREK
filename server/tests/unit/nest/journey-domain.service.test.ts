@@ -2,7 +2,7 @@
  * Unit tests for JourneyDomainService (JOURNEY-SVC-001 through JOURNEY-SVC-038).
  * Uses a real in-memory SQLite DB so SQL logic is exercised faithfully.
  */
-import { describe, it, expect, vi, beforeAll, beforeEach, afterAll } from 'vitest';
+import { describe, it, expect, vi, beforeAll, beforeEach, afterEach, afterAll } from 'vitest';
 
 // -- DB setup -----------------------------------------------------------------
 
@@ -55,9 +55,10 @@ import { TrekPhotos } from '../../../src/db/entities/TrekPhotos.entity';
 import { TripPhotos } from '../../../src/db/entities/TripPhotos.entity';
 import { JourneyDomainService } from '../../../src/nest/journey/journey-domain.service';
 import { db as dbConn } from '../../../src/db/database';
-import { createTestUnitOfWork, sharedTestOrm, createTestTripsRepo } from '../../helpers/test-uow';
+import { createTestUnitOfWork, sharedTestOrm, createTestTripsRepo, createTestPlacesRepo } from '../../helpers/test-uow';
 import {
   createTestJourneysRepo, createTestJourneyContributorsRepo, createTestJourneyTripsRepo, createTestJourneyEntriesRepo,
+  createTestJourneyPhotosRepo, createTestJourneyEntryPhotosRepo,
 } from '../../helpers/journey-repos';
 
 let dbs: DatabaseService;
@@ -70,6 +71,12 @@ let contributorsRepoDirect: Awaited<ReturnType<typeof createTestJourneyContribut
 let journeyTripsRepoDirect: Awaited<ReturnType<typeof createTestJourneyTripsRepo>>;
 let entriesRepoDirect: Awaited<ReturnType<typeof createTestJourneyEntriesRepo>>;
 let tripsRepoDirect: Awaited<ReturnType<typeof createTestTripsRepo>>;
+// Plan 3g Task 2's own additions — the two repositories Task 1 left as
+// empty stubs, plus `PlacesRepository` (JG44's `findRaw`), held here for
+// the same reason as the five above.
+let photosRepoDirect: Awaited<ReturnType<typeof createTestJourneyPhotosRepo>>;
+let entryPhotosRepoDirect: Awaited<ReturnType<typeof createTestJourneyEntryPhotosRepo>>;
+let placesRepoDirect: Awaited<ReturnType<typeof createTestPlacesRepo>>;
 
 // Plan 3g Task 1 (Part A, R9's construction/wrapping pattern): the SAME
 // direct-construction shape every converted service in this program uses for
@@ -95,9 +102,17 @@ beforeAll(async () => {
   journeyTripsRepoDirect = await createTestJourneyTripsRepo(testDb);
   entriesRepoDirect = await createTestJourneyEntriesRepo(testDb);
   tripsRepoDirect = await createTestTripsRepo(testDb);
+  photosRepoDirect = await createTestJourneyPhotosRepo(testDb);
+  entryPhotosRepoDirect = await createTestJourneyEntryPhotosRepo(testDb);
+  placesRepoDirect = await createTestPlacesRepo(testDb);
   svc = new JourneyDomainService(
     dbs, new RealtimeService(), new TrekPhotoRegistrationService(t.repo(TrekPhotos), t.repo(TripPhotos), dbs), await createTestUnitOfWork(testDb),
     journeysRepoDirect, contributorsRepoDirect, journeyTripsRepoDirect, entriesRepoDirect, tripsRepoDirect,
+    // Plan 3g Task 2's own append to this SAME construction call — the two
+    // repositories this task builds, plus `PlacesRepository` (JG44) — per
+    // R9, Task 2 only appends to what Task 1's construction already
+    // established, never re-touches the wrapping mechanism itself.
+    photosRepoDirect, entryPhotosRepoDirect, placesRepoDirect,
   );
 });
 
@@ -3068,5 +3083,107 @@ describe('Plan 3g Task 1 — reconcileTripSkeletons: all three branches in one c
     // Control: keepPlace's already-synced skeleton is untouched — the fixture
     // doesn't over-fire a branch that shouldn't apply to it.
     expect(entries.some((e) => e.source_place_id === keepPlace.id)).toBe(true);
+  });
+});
+
+// Plan 3g Task 2 — the four `uow.transactional` blocks (JG-TX1..4) and
+// JG112's mutation proof. Appended per R9 (Task 1 owns the construction/
+// wrapping pattern above; this only adds new coverage).
+describe('Plan 3g Task 2 — transaction rollback proofs (JG-TX1..4)', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('JG-TX1 (addPhoto): a failure after ensureInGallery\'s insert rolls the insert back — no orphan journey_photos row', async () => {
+    const { user } = createUser(testDb);
+    const journey = await svc.createJourney(user.id, { title: 'J' });
+    const entry = await svc.createEntry(journey.id, user.id, { entry_date: '2026-01-01' });
+
+    vi.spyOn(photosRepoDirect, 'findIdByJourneyAndPhoto').mockRejectedValueOnce(new Error('boom'));
+
+    await expect(svc.addPhoto(entry!.id, user.id, 'journey/tx1.jpg')).rejects.toThrow('boom');
+
+    const rows = testDb.prepare('SELECT * FROM journey_photos WHERE journey_id = ?').all(journey.id);
+    expect(rows).toHaveLength(0);
+  });
+
+  it('JG-TX2 (addProviderPhoto): a failure after ensureInGallery\'s insert rolls the insert back — no orphan journey_photos row', async () => {
+    const { user } = createUser(testDb);
+    const journey = await svc.createJourney(user.id, { title: 'J' });
+    const entry = await svc.createEntry(journey.id, user.id, { entry_date: '2026-01-01' });
+
+    vi.spyOn(photosRepoDirect, 'findIdByJourneyAndPhoto').mockRejectedValueOnce(new Error('boom'));
+
+    await expect(svc.addProviderPhoto(entry!.id, user.id, 'immich', 'asset-tx2')).rejects.toThrow('boom');
+
+    const rows = testDb.prepare('SELECT * FROM journey_photos WHERE journey_id = ?').all(journey.id);
+    expect(rows).toHaveLength(0);
+  });
+
+  it('JG-TX3 (addProviderPhotoToGallery): a failure after ensureInGallery\'s insert rolls the insert back — no orphan journey_photos row', async () => {
+    const { user } = createUser(testDb);
+    const journey = await svc.createJourney(user.id, { title: 'J' });
+
+    vi.spyOn(photosRepoDirect, 'findIdByJourneyAndPhoto').mockRejectedValueOnce(new Error('boom'));
+
+    await expect(svc.addProviderPhotoToGallery(journey.id, user.id, 'immich', 'asset-tx3')).rejects.toThrow('boom');
+
+    const rows = testDb.prepare('SELECT * FROM journey_photos WHERE journey_id = ?').all(journey.id);
+    expect(rows).toHaveLength(0);
+  });
+
+  it('JG-TX4 (reorderEntries): a failure touching the journey after the sort_order loop rolls EVERY sort_order write back, not just the last one', async () => {
+    const { user } = createUser(testDb);
+    const journey = await svc.createJourney(user.id, { title: 'J' });
+    const e1 = createJourneyEntry(testDb, journey.id, user.id, { entry_date: '2026-01-01' });
+    const e2 = createJourneyEntry(testDb, journey.id, user.id, { entry_date: '2026-01-01' });
+    const e3 = createJourneyEntry(testDb, journey.id, user.id, { entry_date: '2026-01-01' });
+    testDb.prepare('UPDATE journey_entries SET sort_order = 0 WHERE id IN (?, ?, ?)').run(e1.id, e2.id, e3.id);
+
+    vi.spyOn(journeysRepoDirect, 'updateFields').mockRejectedValueOnce(new Error('boom'));
+
+    await expect(svc.reorderEntries(journey.id, user.id, [e3.id, e1.id, e2.id])).rejects.toThrow('boom');
+
+    // None of the three sort_order writes the loop made before the journey
+    // touch failed should have survived the rollback — every entry is still
+    // at its pre-call sort_order (0), not just the last one in the loop.
+    const rows = testDb.prepare('SELECT id, sort_order FROM journey_entries WHERE journey_id = ? ORDER BY id').all(journey.id) as {
+      id: number;
+      sort_order: number;
+    }[];
+    for (const r of rows) expect(r.sort_order).toBe(0);
+  });
+});
+
+describe('Plan 3g Task 2 — JG112 mutation proof (sort_order table targeting)', () => {
+  it('updatePhoto\'s sort_order write lands on journey_entry_photos (entry-scoped), never journey_photos (the gallery row\'s own, unrelated sort_order)', async () => {
+    const { user } = createUser(testDb);
+    const journey = await svc.createJourney(user.id, { title: 'J' });
+    const entry = await svc.createEntry(journey.id, user.id, { entry_date: '2026-01-01' });
+    const [photo] = await svc.uploadGalleryPhotos(journey.id, user.id, [{ path: 'journey/jg112.jpg' }]);
+    await svc.linkPhotoToEntry(entry!.id, photo.id, user.id);
+
+    const galleryBefore = (
+      testDb.prepare('SELECT sort_order FROM journey_photos WHERE id = ?').get(photo.id) as { sort_order: number }
+    ).sort_order;
+
+    const updated = await svc.updatePhoto(photo.id, user.id, { sort_order: 7 });
+
+    // The junction row (this entry's own view of the photo's position) moved.
+    const junctionRow = testDb
+      .prepare('SELECT sort_order FROM journey_entry_photos WHERE journey_photo_id = ?')
+      .get(photo.id) as { sort_order: number };
+    expect(junctionRow.sort_order).toBe(7);
+    expect(updated!.sort_order).toBe(7);
+
+    // A copy-paste bug swapping JG111/JG112's target tables would leave the
+    // junction row untouched and instead bump `journey_photos.sort_order`
+    // (the gallery's OWN, unrelated ordering column, same name, different
+    // table) to 7 — asserting it is STILL the pre-call value is what a
+    // table-swap regression would fail.
+    const galleryAfter = (
+      testDb.prepare('SELECT sort_order FROM journey_photos WHERE id = ?').get(photo.id) as { sort_order: number }
+    ).sort_order;
+    expect(galleryAfter).toBe(galleryBefore);
   });
 });

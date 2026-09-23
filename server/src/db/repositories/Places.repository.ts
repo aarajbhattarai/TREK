@@ -235,6 +235,21 @@ export class PlacesRepository extends TrekRepository<Places> {
   }
 
   /**
+   * Plan 3g Task 2 (JG44) — `journey-domain.service.ts#onPlaceUpdated`'s
+   * `SELECT * FROM places WHERE id = ?`, unscoped (no `trip_id` — the sync
+   * engine already resolved the place from its own `journey_entries.source_place_id`
+   * column, so the id alone is trusted here the same way `TripsRepository
+   * .findRaw` trusts a bare trip id). ONE append to this file for JG44 per
+   * the 3g plan's task split — every other method here belongs to Plan 3c.
+   */
+  async findRaw(id: number): Promise<PlaceRow | undefined> {
+    return this.qb('p')
+      .select(['p.*'])
+      .where('p.id = ?', [id])
+      .execute<PlaceRow | undefined>('get', false);
+  }
+
+  /**
    * PL17/PL20 — `SELECT google_place_id, image_url FROM places WHERE id = ?
    * AND trip_id = ?`, the reclaim-candidate projection `remove`/`removeMany`
    * read BEFORE their delete transaction. `id: number`, same H1 fix: both

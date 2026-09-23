@@ -8,6 +8,10 @@ import { JourneyTrips } from '../../src/db/entities/JourneyTrips.entity';
 import type { JourneyTripsRepository } from '../../src/db/repositories/JourneyTrips.repository';
 import { JourneyEntries } from '../../src/db/entities/JourneyEntries.entity';
 import type { JourneyEntriesRepository } from '../../src/db/repositories/JourneyEntries.repository';
+import { JourneyPhotos } from '../../src/db/entities/JourneyPhotos.entity';
+import type { JourneyPhotosRepository } from '../../src/db/repositories/JourneyPhotos.repository';
+import { JourneyEntryPhotos } from '../../src/db/entities/JourneyEntryPhotos.entity';
+import type { JourneyEntryPhotosRepository } from '../../src/db/repositories/JourneyEntryPhotos.repository';
 
 /**
  * Plan 3g Task 1 (`JourneyDomainService` Part A) test-only repository
@@ -41,4 +45,18 @@ export function createTestJourneyTripsRepo(db: Database.Database): Promise<Journ
 
 export function createTestJourneyEntriesRepo(db: Database.Database): Promise<JourneyEntriesRepository> {
   return sharedTestOrm(db).then((t) => t.repo(JourneyEntries));
+}
+
+/**
+ * Plan 3g Task 2 (`JourneyDomainService` Part B) additions — the two
+ * repositories Task 1 left as empty stubs for this task to populate
+ * (`JourneyPhotos.repository.ts`/`JourneyEntryPhotos.repository.ts`), same
+ * `sharedTestOrm` binding as the four factories above.
+ */
+export function createTestJourneyPhotosRepo(db: Database.Database): Promise<JourneyPhotosRepository> {
+  return sharedTestOrm(db).then((t) => t.repo(JourneyPhotos));
+}
+
+export function createTestJourneyEntryPhotosRepo(db: Database.Database): Promise<JourneyEntryPhotosRepository> {
+  return sharedTestOrm(db).then((t) => t.repo(JourneyEntryPhotos));
 }

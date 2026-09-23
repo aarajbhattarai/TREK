@@ -1,4 +1,285 @@
+import type { Platform } from '@mikro-orm/core';
+import type { ExpressionBuilder } from 'kysely';
+import type { GalleryPhoto } from '../../types';
 import type { JourneyPhotos } from '../entities/JourneyPhotos.entity';
+import { concatKysely, unixEpochToIsoKysely } from '../dialect/sql-functions';
+import { type AssertRowKeys } from './_shared/rows';
 import { TrekRepository } from './_shared/trek-repository';
 
-export class JourneyPhotosRepository extends TrekRepository<JourneyPhotos> {}
+/** `SELECT * FROM journey_photos WHERE id = ?`'s row (JG105) — every scalar column of the entity. */
+export interface JourneyPhotoFullRow {
+  id: number;
+  journey_id: number;
+  photo_id: number;
+  caption: string | null;
+  shared: number | null;
+  sort_order: number | null;
+  provider: string | null;
+  asset_id: string | null;
+  owner_id: number | null;
+  created_at: number;
+}
+
+const _journeyPhotoFullRowKeys: AssertRowKeys<JourneyPhotoFullRow, JourneyPhotos> = true;
+
+/** The narrow `journey_photos`/`trek_photos`/`journey_entry_photos`/`journey_entries` shape the gallery reads (JG19/JG101/JG102, `galleryChronologicalOrderExpr`) need. */
+interface GalleryKyselyDB {
+  journey_photos: {
+    id: number;
+    journey_id: number;
+    photo_id: number;
+    caption: string | null;
+    shared: number | null;
+    sort_order: number | null;
+    created_at: number;
+  };
+  trek_photos: {
+    id: number;
+    provider: string;
+    asset_id: string | null;
+    owner_id: number | null;
+    file_path: string | null;
+    thumbnail_path: string | null;
+    width: number | null;
+    height: number | null;
+    media_type: string | null;
+    duration_ms: number | null;
+    taken_at: string | null;
+    lat: number | null;
+    lng: number | null;
+  };
+  journey_entry_photos: { entry_id: number; journey_photo_id: number };
+  journey_entries: { id: number; entry_date: string; entry_time: string | null };
+}
+
+/** `GALLERY_SELECT`'s exact column list (`journey-domain.service.ts`'s module const), aliased `gp`/`tp` — shared by every gallery-shaped read below. */
+const GALLERY_COLUMNS = [
+  'gp.id', 'gp.journey_id', 'gp.photo_id', 'gp.caption', 'gp.shared', 'gp.sort_order', 'gp.created_at',
+  'tp.provider', 'tp.asset_id', 'tp.owner_id', 'tp.file_path', 'tp.thumbnail_path', 'tp.width', 'tp.height',
+  'tp.media_type', 'tp.duration_ms', 'tp.taken_at', 'tp.lat', 'tp.lng',
+] as const;
+
+/**
+ * `GALLERY_CHRONOLOGICAL_ORDER` (R1), the Kysely rebuild Task 0 proved
+ * row-order-identical to the legacy SQL text against a seeded gallery
+ * (SQLF-070, `sql-functions.test.ts`) — pasted verbatim from Task 0's report
+ * (renaming its `GalleryOrderTestDB` to this file's own `GalleryKyselyDB`,
+ * a structural superset that still satisfies the fixed `gp`/`tp` alias
+ * contract). NOT exported: Task 0 deliberately did not add a shared,
+ * exported builder ("re-verify it typechecks against your own repository's
+ * DB interface" — a naive `ExpressionBuilder<DB, 'journey_photos' |
+ * 'trek_photos'>` signature compiles under vitest's SWC transform but fails
+ * `tsc`, the exact trap this fixed-alias intersection typing avoids). Task
+ * 3 builds its own copy for JS15 (`getPublicJourney`'s gallery read) in
+ * `JourneyShareTokens.repository.ts`, tailored to THAT file's own DB
+ * interface, not a second caller of this one.
+ */
+function galleryChronologicalOrderExpr(
+  platform: Platform,
+  eb: ExpressionBuilder<GalleryKyselyDB & { gp: GalleryKyselyDB['journey_photos']; tp: GalleryKyselyDB['trek_photos'] }, 'gp' | 'tp'>,
+) {
+  return eb.fn.coalesce(
+    eb.fn<string | null>('nullif', [eb.ref('tp.taken_at'), eb.val('')]),
+    eb
+      .selectFrom('journey_entry_photos as jep')
+      .innerJoin('journey_entries as je', 'je.id', 'jep.entry_id')
+      .select((eb2) =>
+        eb2.fn
+          .min<string | null>(
+            concatKysely(
+              platform,
+              eb2,
+              { column: 'je.entry_date' },
+              { value: 'T' },
+              { expression: eb2.fn.coalesce(eb2.fn<string | null>('nullif', [eb2.ref('je.entry_time'), eb2.val('')]), eb2.val('00:00')) },
+            ),
+          )
+          .as('min_dt'),
+      )
+      .whereRef('jep.journey_photo_id', '=', 'gp.id'),
+    unixEpochToIsoKysely(platform, eb, 'gp.created_at'),
+  );
+}
+
+/**
+ * `journey_photos` — the gallery table (Plan 3g Task 2, Part B). A plain
+ * single-column `id` PK with a `uniques: [{ properties: ['journey', 'photo'] }]`
+ * constraint — R3's composite-PK upsert ruling does NOT apply here (that
+ * ruling covers `JourneyTrips`/`JourneyEntryPhotos`/`JourneyContributors`
+ * only, all genuine composite PKs; this table's `INSERT OR IGNORE` conflict
+ * target is a UNIQUE index instead, the same `onConflictFields` shape
+ * `TripMembers.repository.ts`'s own `UNIQUE(trip_id, user_id)` precedent
+ * uses over a plain `id` PK).
+ */
+export class JourneyPhotosRepository extends TrekRepository<JourneyPhotos> {
+  /** JG68 — `journeyStats`'s photo count: `SELECT COUNT(*) AS n FROM journey_photos WHERE journey_id = ?`. */
+  async countForJourney(journeyId: number): Promise<number> {
+    return await this.count({ journey: journeyId });
+  }
+
+  /** JG88/JG99 — `ensureInGallery`'s and `uploadGalleryPhotos`'s next-sort-order probe: `SELECT MAX(sort_order) as m FROM journey_photos WHERE journey_id = ?`, one statement text. */
+  async maxSortOrder(journeyId: number): Promise<number | null> {
+    const row = await this.kysely<GalleryKyselyDB>()
+      .selectFrom('journey_photos')
+      .select((eb) => eb.fn.max<number | null>('sort_order').as('m'))
+      .where('journey_id', '=', journeyId)
+      .executeTakeFirst();
+    return row?.m ?? null;
+  }
+
+  /**
+   * JG89/JG100 — the two `INSERT OR IGNORE INTO journey_photos` column-set
+   * variants (`ensureInGallery`'s 6-column form with `caption`,
+   * `uploadGalleryPhotos`'s 5-column form without it — caller passes
+   * `caption: null` for that one) collapse into ONE method: `INSERT OR
+   * IGNORE` never touches an existing row (unlike `INSERT OR REPLACE`'s
+   * delete+reinsert), so there is no R3 reset-column trap here the way
+   * `JourneyContributorsRepository.upsertContributor` has for
+   * `hide_skeletons` — checked against this table's own DDL, confirmed no
+   * such risk (Task 1's report, deviation 5).
+   */
+  async insertIgnore(data: {
+    journey_id: number;
+    photo_id: number;
+    caption: string | null;
+    shared: number;
+    sort_order: number;
+    created_at: number;
+  }): Promise<void> {
+    await this.upsert(
+      {
+        journey: data.journey_id,
+        photo: data.photo_id,
+        caption: data.caption,
+        shared: data.shared,
+        sort_order: data.sort_order,
+        created_at: data.created_at,
+      },
+      { onConflictFields: ['journey', 'photo'], onConflictAction: 'ignore' },
+    );
+  }
+
+  /** JG90 — `ensureInGallery`'s post-insert id resolution: `SELECT id FROM journey_photos WHERE journey_id = ? AND photo_id = ?`. */
+  async findIdByJourneyAndPhoto(journeyId: number, photoId: number): Promise<number | undefined> {
+    const row = await this.qb('gp')
+      .select(['gp.id'])
+      .where({ journey: journeyId, photo: photoId })
+      .execute<{ id: number } | undefined>('get', false);
+    return row?.id;
+  }
+
+  /**
+   * JG98/JG110 — `linkPhotoToEntry`'s and `updatePhoto`'s scope-check read:
+   * `SELECT id, journey_id FROM journey_photos WHERE id = ?`, one statement
+   * text. Selects the RELATION property (`gp.journey`), not the
+   * `persist(false)` shadow column name (`gp.journey_id`) directly — the
+   * QueryBuilder only resolves a shadow FK column through its owning
+   * relation property (§7's own trap: "read through the relation, not the
+   * shadow column"); selecting the shadow name itself either throws ("No
+   * fields selected") or silently drops the key from the row, both caught
+   * live by this file's own test run.
+   */
+  async findScopeById(id: number): Promise<{ id: number; journey_id: number } | undefined> {
+    return await this.qb('gp')
+      .select(['gp.id', 'gp.journey'])
+      .where({ id })
+      .execute<{ id: number; journey_id: number } | undefined>('get', false);
+  }
+
+  /** JG114 — `deletePhoto`'s wider scope-check read: `SELECT id, journey_id, photo_id FROM journey_photos WHERE id = ?` — a DIFFERENT column set from {@link findScopeById} (JG98/JG110), not a dup. Same relation-property-not-shadow-column rule as {@link findScopeById}. */
+  async findScopeWithPhotoId(id: number): Promise<{ id: number; journey_id: number; photo_id: number } | undefined> {
+    return await this.qb('gp')
+      .select(['gp.id', 'gp.journey', 'gp.photo'])
+      .where({ id })
+      .execute<{ id: number; journey_id: number; photo_id: number } | undefined>('get', false);
+  }
+
+  /** JG105 — `deleteGalleryPhoto`'s pre-delete read: `SELECT * FROM journey_photos WHERE id = ?`. */
+  async findFull(id: number): Promise<JourneyPhotoFullRow | undefined> {
+    return await this.qb('gp')
+      .select(['gp.*'])
+      .where({ id })
+      .execute<JourneyPhotoFullRow | undefined>('get', false);
+  }
+
+  /** JG108 — `setPhotoProvider`'s `trek_photos.id` resolution: `SELECT photo_id FROM journey_photos WHERE id = ?`. Relation property (`gp.photo`), not the shadow column — see {@link findScopeById}'s docstring. */
+  async findPhotoIdById(id: number): Promise<number | undefined> {
+    const row = await this.qb('gp')
+      .select(['gp.photo'])
+      .where({ id })
+      .execute<{ photo_id: number } | undefined>('get', false);
+    return row?.photo_id;
+  }
+
+  /**
+   * JG109 — `setPhotoProvider`'s denormalized-cache write. §7: `provider`/
+   * `asset_id`/`owner_id` are a DELIBERATE cache of the same columns on
+   * `trek_photos` ("also denorm on gallery row for fast reads"), preserved
+   * exactly — never "fixed" into reading through the `photo` relation.
+   */
+  async updateProvider(id: number, provider: string, assetId: string, ownerId: number): Promise<void> {
+    await this.nativeUpdate({ id }, { provider, asset_id: assetId, owner_id: ownerId });
+  }
+
+  /** JG111 — `updatePhoto`'s caption write: `UPDATE journey_photos SET caption = ? WHERE id = ?`. */
+  async updateCaption(id: number, caption: string): Promise<void> {
+    await this.nativeUpdate({ id }, { caption });
+  }
+
+  /**
+   * JG107/JG116 — `deleteGalleryPhoto`'s and `deletePhoto`'s hard delete,
+   * one statement text (`deletePhoto`'s own comment: "backwards-compat name
+   * used by old route"). Cascades `journey_entry_photos` via the entity's
+   * `deleteRule('cascade')`.
+   */
+  async deleteById(id: number): Promise<void> {
+    await this.nativeDelete({ id });
+  }
+
+  /** JG101 — `uploadGalleryPhotos`'s post-insert gallery-shaped read: `SELECT {GALLERY_SELECT} FROM {GALLERY_JOIN} WHERE gp.journey_id = ? AND gp.photo_id = ?`. */
+  async galleryReadByJourneyAndPhoto(journeyId: number, photoId: number): Promise<GalleryPhoto | undefined> {
+    const row = await this.kysely<GalleryKyselyDB>()
+      .selectFrom('journey_photos as gp')
+      .innerJoin('trek_photos as tp', 'tp.id', 'gp.photo_id')
+      .select(GALLERY_COLUMNS)
+      .where('gp.journey_id', '=', journeyId)
+      .where('gp.photo_id', '=', photoId)
+      .executeTakeFirst();
+    return row as GalleryPhoto | undefined;
+  }
+
+  /** JG102 — `addProviderPhotoToGallery`'s post-insert gallery-shaped read by gallery row id: `SELECT {GALLERY_SELECT} FROM {GALLERY_JOIN} WHERE gp.id = ?`. */
+  async galleryReadOne(id: number): Promise<GalleryPhoto | undefined> {
+    const row = await this.kysely<GalleryKyselyDB>()
+      .selectFrom('journey_photos as gp')
+      .innerJoin('trek_photos as tp', 'tp.id', 'gp.photo_id')
+      .select(GALLERY_COLUMNS)
+      .where('gp.id', '=', id)
+      .executeTakeFirst();
+    return row as GalleryPhoto | undefined;
+  }
+
+  /**
+   * JG19 — `getJourneyFull`'s gallery read, folding in `GALLERY_CHRONOLOGICAL_ORDER`
+   * (R1). Task 1's report left this raw for this task to finish (its own
+   * named file set did not include this repository); this is the FIRST real
+   * consumer of Task 0's Kysely rebuild in the codebase. Unbounded (no
+   * `LIMIT`/`OFFSET` — Task 0 confirmed neither consuming site paginates),
+   * so the RS20 pagination rule does not independently force this ruling —
+   * R1 holds anyway (a full-table-read-then-sort-in-JS is exactly what RS20
+   * exists to prevent in general).
+   */
+  async galleryRead(journeyId: number): Promise<GalleryPhoto[]> {
+    const platform = this.getEntityManager().getPlatform();
+    const rows = await this.kysely<GalleryKyselyDB>()
+      .selectFrom('journey_photos as gp')
+      .innerJoin('trek_photos as tp', 'tp.id', 'gp.photo_id')
+      .select(GALLERY_COLUMNS)
+      .where('gp.journey_id', '=', journeyId)
+      .orderBy((eb) => galleryChronologicalOrderExpr(platform, eb), 'asc')
+      .orderBy('gp.sort_order', 'asc')
+      .orderBy('gp.id', 'asc')
+      .execute();
+    return rows as GalleryPhoto[];
+  }
+}

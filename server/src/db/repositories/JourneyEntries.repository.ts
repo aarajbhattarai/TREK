@@ -42,6 +42,71 @@ interface JourneyEntryPhotosExistsKyselyDB {
   journey_entry_photos: { entry_id: number };
 }
 
+/** JG64's narrow `journeyStats` projection — NOT the same text as JG14/JG71 (a wider `SELECT *`); a distinct, narrower column list read directly off the current source, not the inventory's (stale) "same text as JG14" annotation. */
+export interface StatsEntryRow {
+  id: number;
+  title: string | null;
+  location_name: string | null;
+  location_lat: number | null;
+  location_lng: number | null;
+  entry_date: string | null;
+  source_trip_id: number | null;
+  source_place_id: number | null;
+  stats_excluded: number;
+}
+
+/** JG65's per-trip stats row (`journeyStats`). */
+export interface StatsTripRow {
+  id: number;
+  title: string | null;
+  start: string | null;
+  end: string | null;
+}
+
+/** JG66's per-place stats row (`journeyStats`), one row per place at its earliest day. */
+export interface StatsPlaceRow {
+  id: number;
+  name: string | null;
+  lat: number | null;
+  lng: number | null;
+  tripId: number | null;
+  day: string | null;
+  ord: number | null;
+}
+
+/** JG120/JG121's trip-picker row (`getSuggestions`/`listUserTrips`), the place-count-annotated trip summary. */
+export interface TripPickerRow {
+  id: number;
+  title: string;
+  start_date: string | null;
+  end_date: string | null;
+  cover_image: string | null;
+  place_count: number;
+}
+
+/** The narrow `journey_entries`/`journey_trips`/`trips`/`places`/`day_assignments`/`days` shape `journeyStats`'s cross-domain reads (JG65-67) need. */
+interface StatsKyselyDB {
+  journey_trips: { journey_id: number; trip_id: number };
+  trips: { id: number; title: string | null; start_date: string | null; end_date: string | null };
+  places: { id: number; trip_id: number; name: string | null; lat: number | null; lng: number | null };
+  day_assignments: { id: number; place_id: number; day_id: number; order_index: number | null };
+  days: { id: number; date: string | null };
+}
+
+/** JG70's chunked cached-country probe (`journeyStats`, `place_regions` — atlas-owned, 3f-DONE, read-only here). */
+interface PlaceRegionsKyselyDB {
+  place_regions: { place_id: number; country_code: string | null };
+}
+
+/** The narrow `trips`/`trip_members`/`places`/`day_assignments`/`journey_trips` shape JG120/JG121's trip-picker reads need. */
+interface TripPickerKyselyDB {
+  trips: { id: number; title: string; start_date: string | null; end_date: string | null; cover_image: string | null; user_id: number };
+  trip_members: { trip_id: number; user_id: number };
+  places: { id: number; trip_id: number };
+  day_assignments: { id: number; place_id: number };
+  journey_trips: { trip_id: number };
+}
+
 /**
  * `journey_entries` — first cut (Plan 3g Task 1, R9's Part A): every
  * insert/find/update/delete the sync engine (`syncTripPlaces`/
@@ -233,6 +298,288 @@ export class JourneyEntriesRepository extends TrekRepository<JourneyEntries> {
       .where('entry_id', '=', entryId)
       .executeTakeFirst();
     return !!row;
+  }
+
+  // ── Plan 3g Task 2 (Part B) — appended-only below this line. Every method
+  // above this belongs to Task 1 (Part A) and is untouched by this task. ──
+
+  /**
+   * JG64 — `journeyStats`'s own entries read. Read directly off the current
+   * source rather than the inventory's "same text as JG14" annotation,
+   * which is stale at HEAD: the actual statement is a NARROWER, distinct
+   * column list (`id, title, location_name, location_lat, location_lng,
+   * entry_date, source_trip_id, source_place_id, stats_excluded`), not
+   * `SELECT *`. `stats_excluded` stays a plain column projection — filtered
+   * in the SERVICE, never the WHERE clause (plan3g-inputs.md correction #3:
+   * the caller needs the excluded rows too, for the response's `excluded`
+   * field).
+   */
+  async listStatsRows(journeyId: number): Promise<StatsEntryRow[]> {
+    return await this.qb('je')
+      .select(['je.id', 'je.title', 'je.location_name', 'je.location_lat', 'je.location_lng', 'je.entry_date', 'je.sourceTrip', 'je.sourcePlace', 'je.stats_excluded'])
+      .where({ journey: journeyId, dismissed: 0 })
+      .orderBy({ entry_date: 'asc', sort_order: 'asc', id: 'asc' })
+      .execute<StatsEntryRow[]>('all', false);
+  }
+
+  /**
+   * JG65 — `journeyStats`'s per-trip read, undated trips sorted last (the
+   * `start_date IS NULL` ordering trick, recomputed as its own ORDER BY
+   * expression rather than referencing the SELECT list's own alias — Kysely
+   * has no typed "order by select alias" form, and recomputing the same
+   * `t.start_date`/`t.id` references is equivalent SQL). Housed on this
+   * repository (not `JourneyTripsRepository`, Task 1's own file, outside
+   * this task's named file set) the same way `JourneyTripsRepository`
+   * itself reaches `places`/`day_assignments`/`days` for the sync engine —
+   * a repository may query any table over `this.kysely()`.
+   */
+  async listStatsTrips(journeyId: number): Promise<StatsTripRow[]> {
+    const rows = await this.kysely<StatsKyselyDB>()
+      .selectFrom('journey_trips as jt')
+      .innerJoin('trips as t', 't.id', 'jt.trip_id')
+      .select(['t.id', 't.title', 't.start_date as start', 't.end_date as end'])
+      .where('jt.journey_id', '=', journeyId)
+      .orderBy((eb) => eb('t.start_date', 'is', null), 'asc')
+      .orderBy('t.start_date', 'asc')
+      .orderBy('t.id', 'asc')
+      .execute();
+    return rows as StatsTripRow[];
+  }
+
+  /**
+   * JG66 — `journeyStats`'s per-place read: one row per place at its
+   * earliest day (`GROUP BY p.id`, aggregated so a hotel spanning several
+   * nights' assignments counts once, not once per night).
+   */
+  async listStatsPlaces(journeyId: number): Promise<StatsPlaceRow[]> {
+    const rows = await this.kysely<StatsKyselyDB>()
+      .selectFrom('journey_trips as jt')
+      .innerJoin('places as p', 'p.trip_id', 'jt.trip_id')
+      .leftJoin('day_assignments as da', 'da.place_id', 'p.id')
+      .leftJoin('days as d', 'd.id', 'da.day_id')
+      .select((eb) => ['p.id', 'p.name', 'p.lat', 'p.lng', 'p.trip_id as tripId', eb.fn.min<string | null>('d.date').as('day'), eb.fn.min<number | null>('da.order_index').as('ord')])
+      .where('jt.journey_id', '=', journeyId)
+      .groupBy('p.id')
+      .orderBy((eb) => eb(eb.fn.min<string | null>('d.date'), 'is', null), 'asc')
+      .orderBy((eb) => eb.fn.min('d.date'), 'asc')
+      .orderBy((eb) => eb.fn.min('da.order_index'), 'asc')
+      .orderBy('p.id', 'asc')
+      .execute();
+    return rows as StatsPlaceRow[];
+  }
+
+  /** JG67 — `journeyStats`'s place count: `SELECT COUNT(*) AS n FROM journey_trips jt JOIN places p ON p.trip_id=jt.trip_id WHERE jt.journey_id=?`. */
+  async countStatsPlaces(journeyId: number): Promise<number> {
+    const row = await this.kysely<StatsKyselyDB>()
+      .selectFrom('journey_trips as jt')
+      .innerJoin('places as p', 'p.trip_id', 'jt.trip_id')
+      .select((eb) => eb.fn.countAll<number>().as('n'))
+      .where('jt.journey_id', '=', journeyId)
+      .executeTakeFirst();
+    return row?.n ?? 0;
+  }
+
+  /**
+   * JG70 — `journeyStats`'s cached-country probe, chunked in groups of 400
+   * (SQLite's bound-variable-count limit is why it's chunked at all — do
+   * not collapse into one unchunked `IN`). Returns every matching row
+   * unfiltered (including a null/empty `country_code`) — the `if
+   * (r.country_code)` filter and the `.toUpperCase()` call both stay in the
+   * SERVICE, matching the legacy code's own JS-side handling.
+   */
+  async listCachedCountriesForPlaceIds(placeIds: number[]): Promise<{ place_id: number; country_code: string | null }[]> {
+    const out: { place_id: number; country_code: string | null }[] = [];
+    for (let i = 0; i < placeIds.length; i += 400) {
+      const chunk = placeIds.slice(i, i + 400);
+      if (!chunk.length) continue;
+      const rows = await this.kysely<PlaceRegionsKyselyDB>()
+        .selectFrom('place_regions')
+        .select(['place_id', 'country_code'])
+        .where('place_id', 'in', chunk)
+        .execute();
+      out.push(...rows);
+    }
+    return out;
+  }
+
+  /** JG76/JG77/JG80/JG84/JG94/JG95/JG97/JG103 — `SELECT * FROM journey_entries WHERE id = ?`, the widest dup group in this file. */
+  async findById(id: number): Promise<JourneyEntry | null> {
+    const row = await this.qb('je').select(['je.*']).where({ id }).execute<JourneyEntry | undefined>('get', false);
+    return row ?? null;
+  }
+
+  /** JG75 — `createEntry`'s INSERT (19 columns). `country_code` is resolved by the SERVICE's `countryFor` before this call, matching {@link insertSkeleton}'s own contract. */
+  async insertEntry(data: {
+    journey_id: number;
+    author_id: number;
+    type: string;
+    title: string | null;
+    story: string | null;
+    entry_date: string;
+    entry_time: string | null;
+    location_name: string | null;
+    location_lat: number | null;
+    location_lng: number | null;
+    country_code: string | null;
+    mood: string | null;
+    weather: string | null;
+    tags: string | null;
+    pros_cons: string | null;
+    visibility: string;
+    sort_order: number;
+    created_at: number;
+    updated_at: number;
+  }): Promise<number> {
+    return await this.insert({
+      journey: data.journey_id,
+      author: data.author_id,
+      type: data.type,
+      title: data.title,
+      story: data.story,
+      entry_date: data.entry_date,
+      entry_time: data.entry_time,
+      location_name: data.location_name,
+      location_lat: data.location_lat,
+      location_lng: data.location_lng,
+      country_code: data.country_code,
+      mood: data.mood,
+      weather: data.weather,
+      tags: data.tags,
+      pros_cons: data.pros_cons,
+      visibility: data.visibility,
+      sort_order: data.sort_order,
+      created_at: data.created_at,
+      updated_at: data.updated_at,
+    });
+  }
+
+  /**
+   * JG78 — `updateEntry`'s dynamic UPDATE (R6, `presenceSet`). The SERVICE
+   * resolves every field to its final bound value first (`tags`/`pros_cons`
+   * JSON-encoded, `stats_excluded`/`dismissed` boolean-coerced to 0/1,
+   * `country_code` recomputed whenever either `location_lat`/`location_lng`
+   * is present in the patch, the skeleton→entry promotion) — this writes
+   * exactly the patch it is handed, same contract every other
+   * `presenceSet`-fed repository method in this program follows.
+   */
+  async updateFields(
+    id: number,
+    patch: Partial<{
+      type: string;
+      title: string | null;
+      story: string | null;
+      entry_date: string;
+      entry_time: string | null;
+      location_name: string | null;
+      location_lat: number | null;
+      location_lng: number | null;
+      mood: string | null;
+      weather: string | null;
+      tags: string | null;
+      pros_cons: string | null;
+      visibility: string;
+      sort_order: number;
+      stats_excluded: number;
+      dismissed: number;
+      country_code: string | null;
+      updated_at: number;
+    }>,
+  ): Promise<void> {
+    await this.nativeUpdate({ id }, patch);
+  }
+
+  /** JG81 — `reorderEntries`'s ownership-verification read: `SELECT id FROM journey_entries WHERE id IN (${placeholders}) AND journey_id = ?`. */
+  async listIdsIn(journeyId: number, ids: number[]): Promise<number[]> {
+    const rows = await this.qb('je')
+      .select(['je.id'])
+      .where({ id: { $in: ids }, journey: journeyId })
+      .execute<{ id: number }[]>('all', false);
+    return rows.map((r) => r.id);
+  }
+
+  /**
+   * JG82 — `reorderEntries`'s per-id sort_order write, called in a loop
+   * inside the SERVICE's own `uow.transactional` block (the legacy
+   * statement prepared once and reused across the loop; this program's
+   * repository layer has no direct "one prepared statement, many binds"
+   * equivalent, so a `nativeUpdate` call per id is the accepted substitute
+   * per the task brief — still one write per id, still inside the SAME
+   * transaction, still in the caller's own `orderedIds` array order).
+   */
+  async updateSortOrder(id: number, sortOrder: number, updatedAt: number): Promise<void> {
+    await this.nativeUpdate({ id }, { sort_order: sortOrder, updated_at: updatedAt });
+  }
+
+  /** JG85 — `deleteEntry`'s revert-to-skeleton write (a filled, trip-sourced entry is "deleted" by reverting it, not removed — {@link deleteById} (JG50/61/86) is the true hard delete, for entries with no trip origin). */
+  async revertToSkeleton(id: number, updatedAt: number): Promise<void> {
+    await this.nativeUpdate({ id }, { type: 'skeleton', story: null, mood: null, weather: null, pros_cons: null, visibility: 'private', updated_at: updatedAt });
+  }
+
+  /** JG87 — `promoteSkeletonIfNeeded`'s write: `UPDATE journey_entries SET type = ?, updated_at = ? WHERE id = ?`, called only when the entry is still a skeleton (the SERVICE's own `if (entry.type !== 'skeleton') return;` guard, unchanged). */
+  async markAsEntry(id: number, updatedAt: number): Promise<void> {
+    await this.nativeUpdate({ id }, { type: 'entry', updated_at: updatedAt });
+  }
+
+  /**
+   * JG120 — `getSuggestions`'s trip-picker read: recently-ended trips not
+   * yet linked to any journey. `date('now')` is resolved in the SERVICE via
+   * `todayUtc()` (`@trek/shared`) and bound as a plain parameter, the SAME
+   * pattern Plan 3f's atlas conversion already established for a bare
+   * `date('now')` comparison (`Trips.repository.ts#lastStartedTrip`'s own
+   * docstring) — no new dialect helper. Housed here for the same
+   * cross-domain-reach-via-`this.kysely()` reason as {@link listStatsTrips}
+   * above (`TripsRepository`/`JourneyTripsRepository` are both outside this
+   * task's named file set).
+   */
+  async listSuggestedTrips(userId: number, since: string, today: string): Promise<TripPickerRow[]> {
+    const rows = await this.kysely<TripPickerKyselyDB>()
+      .selectFrom('trips as t')
+      .leftJoin('trip_members as tm', (join) => join.onRef('tm.trip_id', '=', 't.id').on('tm.user_id', '=', userId))
+      .select((eb) => [
+        't.id',
+        't.title',
+        't.start_date',
+        't.end_date',
+        't.cover_image',
+        eb
+          .selectFrom('places as p')
+          .innerJoin('day_assignments as da', 'da.place_id', 'p.id')
+          .select((eb2) => eb2.fn.countAll<number>().as('c'))
+          .whereRef('p.trip_id', '=', 't.id')
+          .as('place_count'),
+      ])
+      .where((eb) => eb.or([eb('t.user_id', '=', userId), eb('tm.user_id', '=', userId)]))
+      .where('t.end_date', 'is not', null)
+      .where('t.end_date', '>=', since)
+      .where('t.end_date', '<=', today)
+      .where((eb) => eb('t.id', 'not in', eb.selectFrom('journey_trips').select('trip_id')))
+      .orderBy('t.end_date', 'desc')
+      .execute();
+    return rows as TripPickerRow[];
+  }
+
+  /** JG121 — `listUserTrips`'s trip-picker source list: every trip the caller owns or is a member of, place-count-annotated, no date filter (unlike JG120). */
+  async listUserTripsPicker(userId: number): Promise<TripPickerRow[]> {
+    const rows = await this.kysely<TripPickerKyselyDB>()
+      .selectFrom('trips as t')
+      .leftJoin('trip_members as tm', (join) => join.onRef('tm.trip_id', '=', 't.id').on('tm.user_id', '=', userId))
+      .select((eb) => [
+        't.id',
+        't.title',
+        't.start_date',
+        't.end_date',
+        't.cover_image',
+        eb
+          .selectFrom('places as p')
+          .innerJoin('day_assignments as da', 'da.place_id', 'p.id')
+          .select((eb2) => eb2.fn.countAll<number>().as('c'))
+          .whereRef('p.trip_id', '=', 't.id')
+          .as('place_count'),
+      ])
+      .where((eb) => eb.or([eb('t.user_id', '=', userId), eb('tm.user_id', '=', userId)]))
+      .orderBy('t.start_date', 'desc')
+      .execute();
+    return rows as TripPickerRow[];
   }
 
   /** JG63 — `journeyTracks`: every place with route geometry belonging to a trip this journey's entries reference. */

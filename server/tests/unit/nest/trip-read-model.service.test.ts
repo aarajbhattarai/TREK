@@ -106,6 +106,7 @@ import {
 import { createTestTodoItemsRepo, createTestTodoCategoryAssigneesRepo } from '../../helpers/todo-repos';
 import {
   createTestJourneysRepo, createTestJourneyContributorsRepo, createTestJourneyTripsRepo, createTestJourneyEntriesRepo,
+  createTestJourneyPhotosRepo, createTestJourneyEntryPhotosRepo,
 } from '../../helpers/journey-repos';
 
 // Real sibling services over the same in-memory DB — the aggregation runs the
@@ -157,6 +158,8 @@ beforeAll(async () => {
     dbs(), new RealtimeService(), new TrekPhotoRegistrationService((await sharedTestOrm(testDb)).repo(TrekPhotos), (await sharedTestOrm(testDb)).repo(TripPhotos), dbs()), await createTestUnitOfWork(dbs().connection),
     await createTestJourneysRepo(dbs().connection), await createTestJourneyContributorsRepo(dbs().connection),
     await createTestJourneyTripsRepo(dbs().connection), await createTestJourneyEntriesRepo(dbs().connection), await createTestTripsRepo(dbs().connection),
+    // Plan 3g Task 2 constructor-ripple: JourneyPhotosRepository/JourneyEntryPhotosRepository/PlacesRepository.
+    await createTestJourneyPhotosRepo(dbs().connection), await createTestJourneyEntryPhotosRepo(dbs().connection), await createTestPlacesRepo(dbs().connection),
   ),
   makeStorageFixture('').storage,
   await accommodationsOver(dbs()), await createTestUnitOfWork(dbs().connection),

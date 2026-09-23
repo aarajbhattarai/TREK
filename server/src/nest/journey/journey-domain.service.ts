@@ -1,13 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@mikro-orm/nestjs';
 import { avatarUrl } from '../common/avatarUrl';
-import type { Journey, JourneyEntry, JourneyPhoto, JourneyContributor } from '../../types';
+import type { GalleryPhoto, Journey, JourneyEntry, JourneyPhoto, JourneyContributor } from '../../types';
 import { decodeEntryRow, type JourneyEntryWire } from './journey-entry-row';
-import { GALLERY_CHRONOLOGICAL_ORDER } from './journey-gallery-order';
 import { DatabaseService } from '../database/database.service';
 import { UnitOfWork } from '../database/unit-of-work';
 import { RealtimeService } from '../realtime/realtime.service';
 import type { JourneyStats, JourneyTrack, TrekWsUserEventName } from '@trek/shared';
+import { todayUtc } from '@trek/shared';
 import { TrekPhotoRegistrationService } from '../photos/trek-photos.repository';
 import { getCountryFromCoords } from '../atlas/atlas-geo';
 import { computeJourneyStats, type StatsInputPoint } from './journey-stats';
@@ -19,8 +19,14 @@ import { JourneyTrips } from '../../db/entities/JourneyTrips.entity';
 import type { JourneyTripsRepository } from '../../db/repositories/JourneyTrips.repository';
 import { JourneyEntries } from '../../db/entities/JourneyEntries.entity';
 import type { JourneyEntriesRepository } from '../../db/repositories/JourneyEntries.repository';
+import { JourneyPhotos } from '../../db/entities/JourneyPhotos.entity';
+import type { JourneyPhotosRepository } from '../../db/repositories/JourneyPhotos.repository';
+import { JourneyEntryPhotos } from '../../db/entities/JourneyEntryPhotos.entity';
+import type { JourneyEntryPhotosRepository } from '../../db/repositories/JourneyEntryPhotos.repository';
 import { Trips } from '../../db/entities/Trips.entity';
 import type { TripsRepository } from '../../db/repositories/Trips.repository';
+import { Places } from '../../db/entities/Places.entity';
+import type { PlacesRepository } from '../../db/repositories/Places.repository';
 import { presenceSet } from '../../db/repositories/_shared/presence-set';
 
 /**
@@ -76,23 +82,17 @@ function countryNamesFor(points: { country: string | null }[]): Record<string, s
 // Per-journey gallery view: journey_photos → trek_photos (no entry context).
 // Per-entry photo view: join journey_entry_photos → journey_photos (gallery) → trek_photos.
 // id = gp.id (gallery photo id) — used by clients for linkPhoto/updatePhoto/unlink/delete.
-const JP_SELECT = `
-  gp.id, jep.entry_id, gp.photo_id, gp.caption, jep.sort_order, gp.shared, gp.created_at,
-  tp.provider, tp.asset_id, tp.owner_id, tp.file_path, tp.thumbnail_path, tp.width, tp.height,
-  tp.media_type, tp.duration_ms, tp.taken_at, tp.lat, tp.lng
-`;
-
-const JP_JOIN = `journey_entry_photos jep
-  JOIN journey_photos gp ON gp.id  = jep.journey_photo_id
-  JOIN trek_photos    tp ON tp.id  = gp.photo_id`;
-
-const GALLERY_SELECT = `
-  gp.id, gp.journey_id, gp.photo_id, gp.caption, gp.shared, gp.sort_order, gp.created_at,
-  tp.provider, tp.asset_id, tp.owner_id, tp.file_path, tp.thumbnail_path, tp.width, tp.height,
-  tp.media_type, tp.duration_ms, tp.taken_at, tp.lat, tp.lng
-`;
-
-const GALLERY_JOIN = 'journey_photos gp JOIN trek_photos tp ON tp.id = gp.photo_id';
+//
+// Plan 3g Task 2: the module-level `JP_SELECT`/`JP_JOIN`/`GALLERY_SELECT`/
+// `GALLERY_JOIN` raw-SQL-text consts these two comment paragraphs used to
+// document are GONE — every site that folded them into a `this.db.prepare(...)`
+// call now reads through `JourneyPhotosRepository`/`JourneyEntryPhotosRepository`
+// instead (JG15/19/72/88-102/108-116, `journey-share.service.ts`'s own
+// GALLERY_CHRONOLOGICAL_ORDER import for JS15 is unaffected — that constant
+// lives in `journey-gallery-order.ts`, a separate file this task does not
+// touch). The two comment paragraphs above are kept for the column-shape
+// documentation; the repositories' own docstrings are the source of truth
+// for the exact column lists now.
 
 /**
  * The journey (travel journal) domain: journeys, their trips, entries, the
@@ -108,10 +108,8 @@ export class JourneyDomainService {
     private readonly realtime: RealtimeService,
     private readonly photos: TrekPhotoRegistrationService,
     private readonly uow: UnitOfWork,
-    // Plan 3g Task 1 (Part A) — `db` above stays: Part B's methods (stats,
-    // entries CRUD, the photos surface, contributors CRUD, suggestions —
-    // Task 2's own) are UNTOUCHED by this task and still issue raw
-    // `this.db.prepare(...)` calls. These five are additive.
+    // Plan 3g Task 1 (Part A) — access control, journey/trip CRUD, the
+    // trip-sync engine.
     @InjectRepository(Journeys) private readonly journeysRepo: JourneysRepository,
     @InjectRepository(JourneyContributors) private readonly contributorsRepo: JourneyContributorsRepository,
     @InjectRepository(JourneyTrips) private readonly journeyTripsRepo: JourneyTripsRepository,
@@ -122,6 +120,23 @@ export class JourneyDomainService {
     // merely equivalent to it). Also reused by `getJourneyFull`'s per-entry
     // `source_trip_name` lookup (JG16, via the already-existing `getTitle`).
     @InjectRepository(Trips) private readonly tripsRepo: TripsRepository,
+    // Plan 3g Task 2 (Part B) — the full photos surface (JG19/JG87-116),
+    // finishing the two sites Task 1 left raw (JG15/JG19) because their
+    // owning repositories did not exist yet. A genuine new constructor
+    // parameter pair beyond what Task 1's own constructor-ripple fix
+    // anticipated — flagged in task-2-report.md per the brief's own
+    // contingency instruction, with the companion edits to
+    // `journey-domain.module.ts`'s `forFeature` array and the two shared
+    // test-wiring helpers (`plugin-host.ts`/`mcp-test-controllers.ts`,
+    // both confirmed clean via `git status` before editing, per the
+    // brief's "constructor-ripple rule" allowance) made in this same
+    // change.
+    @InjectRepository(JourneyPhotos) private readonly photosRepo: JourneyPhotosRepository,
+    @InjectRepository(JourneyEntryPhotos) private readonly entryPhotosRepo: JourneyEntryPhotosRepository,
+    // JG44 — `onPlaceUpdated`'s bare `SELECT * FROM places WHERE id = ?`,
+    // finished via `PlacesRepository.findRaw` (this task's ONE append to
+    // `Places.repository.ts`, per the task brief — nobody else holds it).
+    @InjectRepository(Places) private readonly placesRepo: PlacesRepository,
   ) {}
 
   private ts(): number {
@@ -238,14 +253,10 @@ export class JourneyDomainService {
     const entries = await this.entriesRepo.listForJourney(journeyId);
 
     // JG15 — the per-entry photo join (journey_entry_photos/journey_photos/
-    // trek_photos, the JP_SELECT/JP_JOIN composite). Stays raw: its owning
-    // repository (JourneyEntryPhotosRepository) is Task 2's build, outside
-    // this task's named file set — flagged in task-1-report.md for Task 2.
-    const photos = this.db
-      .prepare(
-        `SELECT ${JP_SELECT} FROM ${JP_JOIN} WHERE jep.entry_id IN (SELECT id FROM journey_entries WHERE journey_id = ?) ORDER BY jep.sort_order ASC`,
-      )
-      .all(journeyId) as JourneyPhoto[];
+    // trek_photos, the JP_SELECT/JP_JOIN composite). Task 1 left this raw
+    // (its owning repository, JourneyEntryPhotosRepository, did not exist
+    // in Task 1's named file set) — finished here, Task 2's own build.
+    const photos = await this.entryPhotosRepo.listForJourney(journeyId);
 
     // group photos by entry
     const photosByEntry: Record<number, JourneyPhoto[]> = {};
@@ -254,15 +265,11 @@ export class JourneyDomainService {
     }
 
     // JG19 — the gallery read, folding in the dialect-hard
-    // GALLERY_CHRONOLOGICAL_ORDER constant. Stays raw for the same reason as
-    // JG15 above (its owning repository, JourneyPhotosRepository, is Task
-    // 2's build) — Task 0's Kysely rebuild of this ORDER BY is therefore not
-    // consumed here; flagged in task-1-report.md for Task 2.
-    const gallery = this.db
-      .prepare(
-        `SELECT ${GALLERY_SELECT} FROM ${GALLERY_JOIN} WHERE gp.journey_id = ? ${GALLERY_CHRONOLOGICAL_ORDER}`,
-      )
-      .all(journeyId);
+    // GALLERY_CHRONOLOGICAL_ORDER constant (R1). Task 1 left this raw for
+    // the same reason as JG15 above — finished here, the FIRST real
+    // consumer of Task 0's Kysely rebuild (`JourneyPhotosRepository
+    // .galleryRead`).
+    const gallery = await this.photosRepo.galleryRead(journeyId);
 
     const enrichedEntries = await Promise.all(
       entries.map(async (e) => ({
@@ -287,7 +294,7 @@ export class JourneyDomainService {
 
     // stats
     const entryCount = entries.filter((e) => e.type === 'entry').length;
-    const photoCount = (gallery as any[]).length;
+    const photoCount = gallery.length;
     const places = [...new Set(entries.map((e) => e.location_name).filter(Boolean))];
 
     // JG20
@@ -543,11 +550,10 @@ export class JourneyDomainService {
     const entries = await this.entriesRepo.listBySourcePlace(placeId);
     if (!entries.length) return;
 
-    // JG44 — `SELECT * FROM places WHERE id = ?`. Stays raw: `Places.repository.ts`
-    // is a 3c file outside this task's named file set, and no already-public
-    // method there covers this exact "one place by id, every column" shape —
-    // flagged in task-1-report.md.
-    const place = this.db.prepare('SELECT * FROM places WHERE id = ?').get(placeId) as any;
+    // JG44 — `SELECT * FROM places WHERE id = ?`. Task 1 left this raw
+    // (`Places.repository.ts` was outside its named file set); this task's
+    // ONE append to that file (`PlacesRepository.findRaw`) finishes it.
+    const place = await this.placesRepo.findRaw(placeId);
     if (!place) return;
 
     // Every day this place stands on, so each entry can follow its own rather
@@ -912,17 +918,10 @@ export class JourneyDomainService {
   async journeyStats(journeyId: number, userId: number): Promise<JourneyStats | null> {
     if (!(await this.canAccessJourney(journeyId, userId))) return null;
 
-    const entryRows = this.db.prepare(`
-      SELECT id, title, location_name, location_lat, location_lng, entry_date, source_trip_id,
-             source_place_id, stats_excluded
-        FROM journey_entries
-       WHERE journey_id = ? AND dismissed = 0
-       ORDER BY entry_date ASC, sort_order ASC, id ASC
-    `).all(journeyId) as {
-      id: number; title: string | null; location_name: string | null;
-      location_lat: number | null; location_lng: number | null; entry_date: string | null;
-      source_trip_id: number | null; source_place_id: number | null; stats_excluded: number;
-    }[];
+    // JG64 — a narrow projection, read directly off HEAD rather than the
+    // inventory's stale "same text as JG14" annotation (see
+    // `JourneyEntriesRepository.listStatsRows`'s own docstring).
+    const entryRows = await this.entriesRepo.listStatsRows(journeyId);
 
     /*
      * The trips themselves, named and dated.
@@ -932,12 +931,7 @@ export class JourneyDomainService {
      * no order to read. Undated trips sort last rather than first, where an
      * empty string would otherwise put them.
      */
-    const tripRows = this.db.prepare(`
-      SELECT t.id, t.title, t.start_date AS start, t.end_date AS end
-        FROM journey_trips jt JOIN trips t ON t.id = jt.trip_id
-       WHERE jt.journey_id = ?
-       ORDER BY t.start_date IS NULL, t.start_date ASC, t.id ASC
-    `).all(journeyId) as { id: number; title: string | null; start: string | null; end: string | null }[];
+    const tripRows = await this.entriesRepo.listStatsTrips(journeyId);
 
     const tripDates = tripRows.map(t => ({ start: t.start, end: t.end }));
 
@@ -946,31 +940,11 @@ export class JourneyDomainService {
     // is one place, three assignments), so the join is aggregated back down to
     // one row per place at its earliest day — otherwise the route would visit
     // the hotel three times and the distance would count those legs.
-    const placeRows = this.db.prepare(`
-      SELECT p.id, p.name, p.lat, p.lng, p.trip_id AS tripId,
-             MIN(d.date) AS day,
-             MIN(da.order_index) AS ord
-        FROM journey_trips jt
-        JOIN places p ON p.trip_id = jt.trip_id
-        LEFT JOIN day_assignments da ON da.place_id = p.id
-        LEFT JOIN days d ON d.id = da.day_id
-       WHERE jt.journey_id = ?
-       GROUP BY p.id
-       ORDER BY day IS NULL, day ASC, ord ASC, p.id ASC
-    `).all(journeyId) as {
-      id: number; name: string | null; lat: number | null; lng: number | null; tripId: number | null;
-      day: string | null; ord: number | null;
-    }[];
+    const placeRows = await this.entriesRepo.listStatsPlaces(journeyId);
 
-    const placeCount = this.db.prepare(`
-      SELECT COUNT(*) AS n FROM journey_trips jt
-        JOIN places p ON p.trip_id = jt.trip_id
-       WHERE jt.journey_id = ?
-    `).get(journeyId) as { n: number };
+    const placeCountN = await this.entriesRepo.countStatsPlaces(journeyId);
 
-    const photoCount = this.db
-      .prepare('SELECT COUNT(*) AS n FROM journey_photos WHERE journey_id = ?')
-      .get(journeyId) as { n: number };
+    const photoCountN = await this.photosRepo.countForJourney(journeyId);
 
     /*
      * ── A photograph per stop, for a map that marks them with pictures ───
@@ -979,15 +953,7 @@ export class JourneyDomainService {
      * attached to that entry, earliest first, videos excluded because a video
      * poster inside a four-millimetre circle is not a photograph.
      */
-    const entryPhotoRows = this.db.prepare(`
-      SELECT jep.entry_id AS entryId, gp.photo_id AS photoId
-        FROM journey_entry_photos jep
-        JOIN journey_photos gp ON gp.id = jep.journey_photo_id
-        JOIN trek_photos tp ON tp.id = gp.photo_id
-       WHERE gp.journey_id = ?
-         AND (tp.media_type IS NULL OR tp.media_type = 'image')
-       ORDER BY jep.entry_id ASC, jep.sort_order ASC, gp.sort_order ASC, gp.id ASC
-    `).all(journeyId) as { entryId: number; photoId: number }[];
+    const entryPhotoRows = await this.entryPhotosRepo.listFirstPhotoPerEntry(journeyId);
 
     const photoByEntry = new Map<number, number>();
     for (const r of entryPhotoRows) if (!photoByEntry.has(r.entryId)) photoByEntry.set(r.entryId, r.photoId);
@@ -1008,16 +974,12 @@ export class JourneyDomainService {
      */
 
     // The cached country per place, for whichever of them Atlas has seen.
+    // JG70 — chunked in groups of 400 inside the repository method (SQLite's
+    // bound-variable-count limit is why it's chunked at all).
     const cachedCountry = new Map<number, string>();
     const placeIds = placeRows.map(p => p.id);
-    for (let i = 0; i < placeIds.length; i += 400) {
-      const chunk = placeIds.slice(i, i + 400);
-      if (!chunk.length) continue;
-      const rows = this.db
-        .prepare(`SELECT place_id, country_code FROM place_regions WHERE place_id IN (${chunk.map(() => '?').join(',')})`)
-        .all(...chunk) as { place_id: number; country_code: string }[];
-      for (const r of rows) if (r.country_code) cachedCountry.set(r.place_id, r.country_code.toUpperCase());
-    }
+    const cachedCountryRows = await this.entriesRepo.listCachedCountriesForPlaceIds(placeIds);
+    for (const r of cachedCountryRows) if (r.country_code) cachedCountry.set(r.place_id, r.country_code.toUpperCase());
 
     const countryAt = (lat: number, lng: number, placeId?: number): string | null => {
       if (placeId != null) {
@@ -1112,10 +1074,10 @@ export class JourneyDomainService {
       journeyId,
       points,
       entries: counting.length,
-      photos: photoCount?.n ?? 0,
+      photos: photoCountN,
       // A place whose skeleton was switched off is not a place the journey
       // went to, whichever route drew it.
-      places: (placeCount?.n ?? 0) - placeRows.filter(p => excludedPlaceIds.has(p.id)).length,
+      places: placeCountN - placeRows.filter(p => excludedPlaceIds.has(p.id)).length,
       tripDates,
       countryNames: countryNamesFor(points),
       trips: tripRows.map(t => ({
@@ -1132,29 +1094,25 @@ export class JourneyDomainService {
   async listEntries(journeyId: number, userId: number) {
     if (!(await this.canAccessJourney(journeyId, userId))) return null;
 
-    const entries = this.db
-      .prepare('SELECT * FROM journey_entries WHERE journey_id = ? AND dismissed = 0 ORDER BY entry_date ASC, sort_order ASC, id ASC')
-      .all(journeyId) as JourneyEntry[];
+    // JG71 — same text as JG14, reused via `listForJourney`.
+    const entries = await this.entriesRepo.listForJourney(journeyId);
 
-    const photos = this.db
-      .prepare(
-        `SELECT ${JP_SELECT} FROM ${JP_JOIN} WHERE jep.entry_id IN (SELECT id FROM journey_entries WHERE journey_id = ?) ORDER BY jep.sort_order ASC`,
-      )
-      .all(journeyId) as JourneyPhoto[];
+    // JG72 — same JP_SELECT/JP_JOIN composite as JG15 (`getJourneyFull`).
+    const photos = await this.entryPhotosRepo.listForJourney(journeyId);
 
     const photosByEntry: Record<number, JourneyPhoto[]> = {};
     for (const p of photos) {
       (photosByEntry[p.entry_id] ||= []).push(p);
     }
 
-    return entries.map((e) => ({
-      ...decodeEntryRow(e),
-      photos: photosByEntry[e.id] || [],
-      source_trip_name: e.source_trip_id
-        ? (this.db.prepare('SELECT title FROM trips WHERE id = ?').get(e.source_trip_id) as { title: string } | undefined)
-            ?.title || null
-        : null,
-    }));
+    // JG73 — same N+1-by-design shape as JG16, reusing `TripsRepository.getTitle`.
+    return await Promise.all(
+      entries.map(async (e) => ({
+        ...decodeEntryRow(e),
+        photos: photosByEntry[e.id] || [],
+        source_trip_name: e.source_trip_id ? await this.tripsRepo.getTitle(e.source_trip_id) : null,
+      })),
+    );
   }
 
   async createEntry(
@@ -1181,49 +1139,37 @@ export class JourneyDomainService {
     if (!(await this.canEdit(journeyId, userId))) return null;
 
     const now = this.ts();
-    const maxOrder = this.db
-      .prepare('SELECT MAX(sort_order) as m FROM journey_entries WHERE journey_id = ? AND entry_date = ?')
-      .get(journeyId, data.entry_date) as { m: number | null };
+    // JG74 — same text as JG42 (`maxSortOrderForDate`).
+    const maxOrder = await this.entriesRepo.maxSortOrderForDate(journeyId, data.entry_date);
 
     const prosConsJson =
       data.pros_cons && (data.pros_cons.pros.length || data.pros_cons.cons.length)
         ? JSON.stringify(data.pros_cons)
         : null;
 
-    const res = this.db
-      .prepare(
-        `
-      INSERT INTO journey_entries (journey_id, author_id, type, title, story, entry_date, entry_time, location_name, location_lat, location_lng, country_code, mood, weather, tags, pros_cons, visibility, sort_order, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `,
-      )
-      .run(
-        journeyId,
-        userId,
-        data.type || 'entry',
-        data.title || null,
-        data.story || null,
-        data.entry_date,
-        data.entry_time || null,
-        data.location_name || null,
-        data.location_lat ?? null,
-        data.location_lng ?? null,
-        this.countryFor(data.location_lat, data.location_lng),
-        data.mood || null,
-        data.weather || null,
-        data.tags?.length ? JSON.stringify(data.tags) : null,
-        prosConsJson,
-        data.visibility || 'private',
-        (maxOrder?.m ?? -1) + 1,
-        now,
-        now,
-      );
+    const insertedId = await this.entriesRepo.insertEntry({
+      journey_id: journeyId,
+      author_id: userId,
+      type: data.type || 'entry',
+      title: data.title || null,
+      story: data.story || null,
+      entry_date: data.entry_date,
+      entry_time: data.entry_time || null,
+      location_name: data.location_name || null,
+      location_lat: data.location_lat ?? null,
+      location_lng: data.location_lng ?? null,
+      country_code: this.countryFor(data.location_lat, data.location_lng),
+      mood: data.mood || null,
+      weather: data.weather || null,
+      tags: data.tags?.length ? JSON.stringify(data.tags) : null,
+      pros_cons: prosConsJson,
+      visibility: data.visibility || 'private',
+      sort_order: (maxOrder ?? -1) + 1,
+      created_at: now,
+      updated_at: now,
+    });
 
-    const created = decodeEntryRow(
-      this.db
-        .prepare('SELECT * FROM journey_entries WHERE id = ?')
-        .get(Number(res.lastInsertRowid)) as JourneyEntry,
-    );
+    const created = decodeEntryRow((await this.entriesRepo.findById(insertedId)) as JourneyEntry);
     await this.broadcastJourneyEvent(journeyId, 'journey:entry:created', { entry: created }, sid);
     return created;
   }
@@ -1251,84 +1197,97 @@ export class JourneyDomainService {
     }>,
     sid?: string,
   ): Promise<JourneyEntryWire | null> {
-    const entry = this.db.prepare('SELECT * FROM journey_entries WHERE id = ?').get(entryId) as JourneyEntry | undefined;
+    // JG77 — same text as JG76.
+    const entry = await this.entriesRepo.findById(entryId);
     if (!entry) return null;
     if (!(await this.canEdit(entry.journey_id, userId))) return null;
 
-    const fields: string[] = [];
-    const values: unknown[] = [];
+    // JG78 — R6's `presenceSet` conversion, the SECOND consumer of this
+    // pattern (JG24's `updateJourney`, Task 1's, is the first — same shape,
+    // not re-derived). The SERVICE resolves every field to its final bound
+    // value first: `tags`/`pros_cons` JSON-encoded, `stats_excluded`/
+    // `dismissed` boolean-coerced to 0/1 (better-sqlite3 refuses a JS
+    // boolean bind), `country_code` recomputed whenever EITHER half of the
+    // lat/lng pair is present in the patch — including when explicitly
+    // `null`, which means "take this entry off the map" and must clear the
+    // country rather than fall back to the old one, hence `!== undefined`,
+    // never `??` — before handing any of it to the repository.
+    //
+    // The skeleton→entry promotion preserves a real legacy nuance: the
+    // original dynamic-SET-list pushed a SECOND `type = ?` binding when a
+    // story was added to a skeleton, even when the caller's own `data.type`
+    // had already pushed one — SQLite's `SET col = a, col = b` keeps the
+    // LAST assignment, so the promotion always won over an explicit
+    // `data.type` whenever both applied. `presenceSet` takes one value per
+    // key, so that "last one wins" resolution happens here instead, in the
+    // same effective order the legacy statement's own field list built it.
+    const promoteToEntry = entry.type === 'skeleton' && !!data.story && data.story.trim().length > 0;
+    const patch = presenceSet<{
+      type: string;
+      title: string | null;
+      story: string | null;
+      entry_date: string;
+      entry_time: string | null;
+      location_name: string | null;
+      location_lat: number | null;
+      location_lng: number | null;
+      mood: string | null;
+      weather: string | null;
+      tags: string | null;
+      pros_cons: string | null;
+      visibility: string;
+      sort_order: number;
+      stats_excluded: number;
+      dismissed: number;
+      country_code: string | null;
+      updated_at: number;
+    }>({
+      type: [data.type !== undefined || promoteToEntry, promoteToEntry ? 'entry' : (data.type as string)],
+      title: [data.title !== undefined, data.title as string],
+      story: [data.story !== undefined, data.story as string],
+      entry_date: [data.entry_date !== undefined, data.entry_date as string],
+      entry_time: [data.entry_time !== undefined, data.entry_time as string],
+      location_name: [data.location_name !== undefined, data.location_name as string],
+      location_lat: [data.location_lat !== undefined, data.location_lat as number | null],
+      location_lng: [data.location_lng !== undefined, data.location_lng as number | null],
+      mood: [data.mood !== undefined, data.mood as string],
+      weather: [data.weather !== undefined, data.weather as string],
+      // `Array.isArray(val) ? JSON.stringify(val) : val` (legacy) — a caller
+      // sending `tags: null`/`pros_cons: null` explicitly (to CLEAR the
+      // field, not touch it) must write SQL NULL, not the JSON string
+      // `"null"` (`JSON.stringify(null)`) — caught live by
+      // `tools-journey.test.ts`'s own "clears a field on null" case.
+      tags: [data.tags !== undefined, Array.isArray(data.tags) ? JSON.stringify(data.tags) : null],
+      pros_cons: [data.pros_cons !== undefined, data.pros_cons && typeof data.pros_cons === 'object' ? JSON.stringify(data.pros_cons) : null],
+      visibility: [data.visibility !== undefined, data.visibility as string],
+      sort_order: [data.sort_order !== undefined, data.sort_order as number],
+      stats_excluded: [data.stats_excluded !== undefined, data.stats_excluded ? 1 : 0],
+      dismissed: [data.dismissed !== undefined, data.dismissed ? 1 : 0],
+      country_code: [
+        data.location_lat !== undefined || data.location_lng !== undefined,
+        this.countryFor(
+          data.location_lat !== undefined ? data.location_lat : entry.location_lat,
+          data.location_lng !== undefined ? data.location_lng : entry.location_lng,
+        ),
+      ],
+      updated_at: [true, this.ts()],
+    });
 
-    // Allow-list the columns a client may set: keys come from the request body
-    // and are interpolated as SQL column names, so restrict them to the known
-    // entry fields. Keep this in sync with the data type above.
-    const allowed = new Set([
-      'type',
-      'title',
-      'story',
-      'entry_date',
-      'entry_time',
-      'location_name',
-      'location_lat',
-      'location_lng',
-      'mood',
-      'weather',
-      'tags',
-      'pros_cons',
-      'visibility',
-      'sort_order',
-      'stats_excluded',
-      'dismissed',
-    ]);
+    // The legacy no-op check (`fields.length === 0`) fires exactly when NO
+    // allow-listed key of `data` carries a defined value — the country
+    // recompute and the type-promotion push are both themselves gated on
+    // keys already in that same set (`location_lat`/`location_lng`/`story`),
+    // so "any key of `data` is defined" is the identical condition.
+    const anyFieldProvided = Object.values(data).some((v) => v !== undefined);
+    if (!anyFieldProvided) return decodeEntryRow(entry);
 
-    for (const [key, val] of Object.entries(data)) {
-      if (val === undefined) continue;
-      if (!allowed.has(key)) continue;
-      if (key === 'tags') {
-        fields.push('tags = ?');
-        values.push(Array.isArray(val) ? JSON.stringify(val) : val);
-      } else if (key === 'pros_cons') {
-        fields.push('pros_cons = ?');
-        values.push(val && typeof val === 'object' ? JSON.stringify(val) : val);
-      } else if (key === 'stats_excluded' || key === 'dismissed') {
-        // INTEGER columns, and better-sqlite3 refuses to bind a boolean.
-        fields.push(`${key} = ?`);
-        values.push(val ? 1 : 0);
-      } else {
-        fields.push(`${key} = ?`);
-        values.push(val);
-      }
-    }
-
-    // The pin moved, so the flag has to follow it. Either half of the pair may be
-    // the one being changed, so the other is read off the stored row — and the
-    // test is `!== undefined`, not `??`: a null here means "take this entry off the
-    // map", which has to clear the country rather than fall back to the old one.
-    if (data.location_lat !== undefined || data.location_lng !== undefined) {
-      const lat = data.location_lat !== undefined ? data.location_lat : entry.location_lat;
-      const lng = data.location_lng !== undefined ? data.location_lng : entry.location_lng;
-      fields.push('country_code = ?');
-      values.push(this.countryFor(lat, lng));
-    }
-
-    // if adding story to a skeleton, promote to entry
-    if (entry.type === 'skeleton' && data.story && data.story.trim()) {
-      fields.push('type = ?');
-      values.push('entry');
-    }
-
-    if (fields.length === 0) return decodeEntryRow(entry);
-
-    fields.push('updated_at = ?');
-    values.push(this.ts());
-    values.push(entryId);
-    this.db.prepare(`UPDATE journey_entries SET ${fields.join(', ')} WHERE id = ?`).run(...values);
+    await this.entriesRepo.updateFields(entryId, patch);
 
     // touch the journey
-    this.db.prepare('UPDATE journeys SET updated_at = ? WHERE id = ?').run(this.ts(), entry.journey_id);
+    await this.journeysRepo.updateFields(entry.journey_id, { updated_at: this.ts() });
 
-    const updated = decodeEntryRow(
-      this.db.prepare('SELECT * FROM journey_entries WHERE id = ?').get(entryId) as JourneyEntry,
-    );
+    // JG80 — same text as JG76.
+    const updated = decodeEntryRow((await this.entriesRepo.findById(entryId)) as JourneyEntry);
     await this.broadcastJourneyEvent(entry.journey_id, 'journey:entry:updated', { entry: updated }, sid);
     return updated;
   }
@@ -1340,17 +1299,24 @@ export class JourneyDomainService {
     if (!(await this.canEdit(journeyId, userId))) return false;
     if (!orderedIds.length) return true;
 
-    const placeholders = orderedIds.map(() => '?').join(',');
-    const rows = this.db
-      .prepare(`SELECT id FROM journey_entries WHERE id IN (${placeholders}) AND journey_id = ?`)
-      .all(...orderedIds, journeyId) as { id: number }[];
-    if (rows.length !== orderedIds.length) return false;
+    // JG81 — ownership verification.
+    const matchedIds = await this.entriesRepo.listIdsIn(journeyId, orderedIds);
+    if (matchedIds.length !== orderedIds.length) return false;
 
     const now = this.ts();
-    const update = this.db.prepare('UPDATE journey_entries SET sort_order = ?, updated_at = ? WHERE id = ?');
+    // JG82/JG83 (the fourth `uow.transactional` block) — the legacy
+    // statement prepared ONCE and reused across the loop; the repository
+    // layer has no direct "one prepared statement, many binds" equivalent,
+    // so this issues one `nativeUpdate` per id instead (a judgment call per
+    // the task brief) — still one write per id, still inside the SAME
+    // transaction, still walked in the caller's own `orderedIds` array
+    // order (which has no OBSERVABLE effect on the final row state, only on
+    // the write order/SQL trace).
     await this.uow.transactional(async () => {
-      orderedIds.forEach((id, index) => update.run(index, now, id));
-      this.db.prepare('UPDATE journeys SET updated_at = ? WHERE id = ?').run(now, journeyId);
+      for (const [index, id] of orderedIds.entries()) {
+        await this.entriesRepo.updateSortOrder(id, index, now);
+      }
+      await this.journeysRepo.updateFields(journeyId, { updated_at: now });
     });
 
     await this.broadcastJourneyEvent(journeyId, 'journey:entries:reordered', { orderedIds }, sid);
@@ -1358,23 +1324,18 @@ export class JourneyDomainService {
   }
 
   async deleteEntry(entryId: number, userId: number, sid?: string): Promise<boolean> {
-    const entry = this.db.prepare('SELECT * FROM journey_entries WHERE id = ?').get(entryId) as JourneyEntry | undefined;
+    // JG84 — same text as JG76.
+    const entry = await this.entriesRepo.findById(entryId);
     if (!entry) return false;
     if (!(await this.canEdit(entry.journey_id, userId))) return false;
 
     if (entry.source_trip_id && entry.source_place_id && entry.type !== 'skeleton') {
-      // Revert filled entry back to skeleton instead of deleting
-      this.db.prepare(
-        `
-        UPDATE journey_entries
-        SET type = 'skeleton', story = NULL, mood = NULL, weather = NULL, pros_cons = NULL,
-            visibility = 'private', updated_at = ?
-        WHERE id = ?
-      `,
-      ).run(this.ts(), entryId);
+      // JG85 — revert filled entry back to skeleton instead of deleting.
+      await this.entriesRepo.revertToSkeleton(entryId, this.ts());
       await this.broadcastJourneyEvent(entry.journey_id, 'journey:entry:updated', { entryId }, sid);
     } else {
-      this.db.prepare('DELETE FROM journey_entries WHERE id = ?').run(entryId);
+      // JG86 — same text as JG50/JG61, the true hard delete.
+      await this.entriesRepo.deleteById(entryId);
       await this.broadcastJourneyEvent(entry.journey_id, 'journey:entry:deleted', { entryId }, sid);
     }
 
@@ -1388,42 +1349,41 @@ export class JourneyDomainService {
   // with photos is no longer just a suggestion.
   private async promoteSkeletonIfNeeded(entry: JourneyEntry): Promise<void> {
     if (entry.type !== 'skeleton') return;
-    this.db.prepare('UPDATE journey_entries SET type = ?, updated_at = ? WHERE id = ?').run('entry', this.ts(), entry.id);
+    // JG87
+    await this.entriesRepo.markAsEntry(entry.id, this.ts());
   }
 
   // Ensure a trek_photo_id is in the journey gallery; return its gallery row id.
   private async ensureInGallery(journeyId: number, trekPhotoId: number, caption?: string, shared?: number): Promise<number> {
     const now = this.ts();
-    const maxOrderRow = this.db
-      .prepare('SELECT MAX(sort_order) as m FROM journey_photos WHERE journey_id = ?')
-      .get(journeyId) as { m: number | null };
-    this.db.prepare(
-      `
-      INSERT OR IGNORE INTO journey_photos (journey_id, photo_id, caption, shared, sort_order, created_at)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `,
-    ).run(journeyId, trekPhotoId, caption || null, shared ?? 0, (maxOrderRow?.m ?? -1) + 1, now);
-    const row = this.db
-      .prepare('SELECT id FROM journey_photos WHERE journey_id = ? AND photo_id = ?')
-      .get(journeyId, trekPhotoId) as { id: number };
-    return row.id;
+    // JG88 — same text as JG99.
+    const maxOrder = await this.photosRepo.maxSortOrder(journeyId);
+    // JG89
+    await this.photosRepo.insertIgnore({
+      journey_id: journeyId,
+      photo_id: trekPhotoId,
+      caption: caption || null,
+      shared: shared ?? 0,
+      sort_order: (maxOrder ?? -1) + 1,
+      created_at: now,
+    });
+    // JG90
+    const id = await this.photosRepo.findIdByJourneyAndPhoto(journeyId, trekPhotoId);
+    return id as number;
   }
 
   // Link a gallery photo to an entry (idempotent). Returns the junction JP_SELECT row.
   private async linkGalleryPhotoToEntry(galleryId: number, entryId: number): Promise<JourneyPhoto | null> {
     const now = this.ts();
-    const maxOrderRow = this.db
-      .prepare('SELECT MAX(sort_order) as m FROM journey_entry_photos WHERE entry_id = ?')
-      .get(entryId) as { m: number | null };
-    this.db.prepare(
-      `
-      INSERT OR IGNORE INTO journey_entry_photos (entry_id, journey_photo_id, sort_order, created_at)
-      VALUES (?, ?, ?, ?)
-    `,
-    ).run(entryId, galleryId, (maxOrderRow?.m ?? -1) + 1, now);
-    return this.db
-      .prepare(`SELECT ${JP_SELECT} FROM ${JP_JOIN} WHERE jep.entry_id = ? AND jep.journey_photo_id = ?`)
-      .get(entryId, galleryId) as JourneyPhoto | null;
+    // JG91
+    const maxOrder = await this.entryPhotosRepo.maxSortOrderForEntry(entryId);
+    // JG92 — R3's composite-PK upsert, checked against Task 1's
+    // `JourneyTripsRepository.insertIgnore` reference (the IGNORE-shaped
+    // one — `JourneyContributorsRepository.upsertContributor` is R3's OTHER
+    // reference, but it is MERGE-shaped, for JG117; see `task-2-report.md`).
+    await this.entryPhotosRepo.insertIgnore(entryId, galleryId, (maxOrder ?? -1) + 1, now);
+    // JG93
+    return (await this.entryPhotosRepo.findLink(entryId, galleryId)) ?? null;
   }
 
   /**
@@ -1443,7 +1403,8 @@ export class JourneyDomainService {
     caption?: string,
     media?: { mediaType?: string; durationMs?: number | null },
   ): Promise<JourneyPhoto | null> {
-    const entry = this.db.prepare('SELECT * FROM journey_entries WHERE id = ?').get(entryId) as JourneyEntry | undefined;
+    // JG94 — same text as JG76.
+    const entry = await this.entriesRepo.findById(entryId);
     if (!entry) return null;
     if (!(await this.canEdit(entry.journey_id, userId))) return null;
 
@@ -1455,6 +1416,10 @@ export class JourneyDomainService {
       media?.mediaType || 'image',
       media?.durationMs ?? null,
     );
+    // JG-TX1 — wraps ONLY the gallery-ensure step; `linkGalleryPhotoToEntry`
+    // and `promoteSkeletonIfNeeded` run OUTSIDE the transaction, exactly as
+    // the legacy code shipped it (the boundary looks inconsistent but
+    // parity is law — not widened here, same for JG-TX2/JG-TX3 below).
     const galleryId = await this.uow.transactional(async () => await this.ensureInGallery(entry.journey_id, trekPhotoId, caption));
     const result = await this.linkGalleryPhotoToEntry(galleryId, entryId);
     await this.promoteSkeletonIfNeeded(entry);
@@ -1470,24 +1435,18 @@ export class JourneyDomainService {
     passphrase?: string,
     mediaType: string = 'image',
   ): Promise<JourneyPhoto | null> {
-    const entry = this.db.prepare('SELECT * FROM journey_entries WHERE id = ?').get(entryId) as JourneyEntry | undefined;
+    // JG95 — same text as JG76.
+    const entry = await this.entriesRepo.findById(entryId);
     if (!entry) return null;
     if (!(await this.canEdit(entry.journey_id, userId))) return null;
 
     const trekPhotoId = await this.photos.getOrCreate(provider, assetId, userId, passphrase, mediaType);
 
-    // skip if this photo is already linked to this entry
-    const alreadyLinked = this.db
-      .prepare(
-        `
-      SELECT 1 FROM journey_entry_photos jep
-      JOIN journey_photos gp ON gp.id = jep.journey_photo_id
-      WHERE jep.entry_id = ? AND gp.photo_id = ?
-    `,
-      )
-      .get(entryId, trekPhotoId);
+    // JG96 — skip if this photo is already linked to this entry.
+    const alreadyLinked = await this.entryPhotosRepo.existsLink(entryId, trekPhotoId);
     if (alreadyLinked) return null;
 
+    // JG-TX2
     const galleryId = await this.uow.transactional(async () => await this.ensureInGallery(entry.journey_id, trekPhotoId, caption));
     const result = await this.linkGalleryPhotoToEntry(galleryId, entryId);
     await this.promoteSkeletonIfNeeded(entry);
@@ -1496,14 +1455,13 @@ export class JourneyDomainService {
 
   // Link a gallery photo (by its journey_photos.id) to an entry — idempotent.
   async linkPhotoToEntry(entryId: number, journeyPhotoId: number, userId: number): Promise<JourneyPhoto | null> {
-    const entry = this.db.prepare('SELECT * FROM journey_entries WHERE id = ?').get(entryId) as JourneyEntry | undefined;
+    // JG97 — same text as JG76.
+    const entry = await this.entriesRepo.findById(entryId);
     if (!entry) return null;
     if (!(await this.canEdit(entry.journey_id, userId))) return null;
 
-    // Verify the gallery photo belongs to this journey
-    const galleryRow = this.db.prepare('SELECT id, journey_id FROM journey_photos WHERE id = ?').get(journeyPhotoId) as
-      | { id: number; journey_id: number }
-      | undefined;
+    // JG98 — verify the gallery photo belongs to this journey.
+    const galleryRow = await this.photosRepo.findScopeById(journeyPhotoId);
     if (!galleryRow || galleryRow.journey_id !== entry.journey_id) return null;
 
     const result = await this.linkGalleryPhotoToEntry(galleryRow.id, entryId);
@@ -1516,26 +1474,30 @@ export class JourneyDomainService {
     journeyId: number,
     userId: number,
     filePaths: { path: string; thumbnail?: string; mediaType?: string; durationMs?: number | null }[],
-  ): Promise<JourneyPhoto[]> {
+  ): Promise<GalleryPhoto[]> {
     if (!(await this.canEdit(journeyId, userId))) return [];
-    const results: any[] = [];
+    const results: GalleryPhoto[] = [];
     const now = this.ts();
-    const maxOrderRow = this.db
-      .prepare('SELECT MAX(sort_order) as m FROM journey_photos WHERE journey_id = ?')
-      .get(journeyId) as { m: number | null };
-    let nextOrder = (maxOrderRow?.m ?? -1) + 1;
+    // JG99 — same text as JG88.
+    const maxOrder = await this.photosRepo.maxSortOrder(journeyId);
+    let nextOrder = (maxOrder ?? -1) + 1;
 
     for (const f of filePaths) {
       const trekPhotoId = await this.photos.getOrCreateLocal(f.path, f.thumbnail, null, null, f.mediaType || 'image', f.durationMs ?? null);
-      this.db.prepare(
-        `
-        INSERT OR IGNORE INTO journey_photos (journey_id, photo_id, shared, sort_order, created_at)
-        VALUES (?, ?, 0, ?, ?)
-      `,
-      ).run(journeyId, trekPhotoId, nextOrder++, now);
-      const row = this.db
-        .prepare(`SELECT ${GALLERY_SELECT} FROM ${GALLERY_JOIN} WHERE gp.journey_id = ? AND gp.photo_id = ?`)
-        .get(journeyId, trekPhotoId);
+      // JG100 — the 5-column `INSERT OR IGNORE` variant (no `caption`),
+      // distinct text from JG89 but the SAME repository method (`INSERT OR
+      // IGNORE` never touches an existing row, so passing `caption: null`
+      // here is equivalent).
+      await this.photosRepo.insertIgnore({
+        journey_id: journeyId,
+        photo_id: trekPhotoId,
+        caption: null,
+        shared: 0,
+        sort_order: nextOrder++,
+        created_at: now,
+      });
+      // JG101
+      const row = await this.photosRepo.galleryReadByJourneyAndPhoto(journeyId, trekPhotoId);
       if (row) results.push(row);
     }
     return results;
@@ -1550,23 +1512,25 @@ export class JourneyDomainService {
     caption?: string,
     passphrase?: string,
     mediaType: string = 'image',
-  ): Promise<any | null> {
+  ): Promise<GalleryPhoto | null> {
     if (!(await this.canEdit(journeyId, userId))) return null;
     const trekPhotoId = await this.photos.getOrCreate(provider, assetId, userId, passphrase, mediaType);
+    // JG-TX3
     const galleryId = await this.uow.transactional(async () => await this.ensureInGallery(journeyId, trekPhotoId, caption));
-    return this.db.prepare(`SELECT ${GALLERY_SELECT} FROM ${GALLERY_JOIN} WHERE gp.id = ?`).get(galleryId) ?? null;
+    // JG102
+    return (await this.photosRepo.galleryReadOne(galleryId)) ?? null;
   }
 
   // Unlink a photo from a specific entry; gallery row is preserved.
   async unlinkPhotoFromEntry(entryId: number, journeyPhotoId: number, userId: number): Promise<boolean> {
-    const entry = this.db.prepare('SELECT * FROM journey_entries WHERE id = ?').get(entryId) as JourneyEntry | undefined;
+    // JG103 — same text as JG76.
+    const entry = await this.entriesRepo.findById(entryId);
     if (!entry) return false;
     if (!(await this.canEdit(entry.journey_id, userId))) return false;
 
-    const result = this.db
-      .prepare('DELETE FROM journey_entry_photos WHERE entry_id = ? AND journey_photo_id = ?')
-      .run(entryId, journeyPhotoId);
-    return result.changes > 0;
+    // JG104
+    const changed = await this.entryPhotosRepo.deleteLink(entryId, journeyPhotoId);
+    return changed > 0;
   }
 
   // Hard-delete a gallery photo (removes from all entries and the gallery).
@@ -1574,37 +1538,32 @@ export class JourneyDomainService {
     journeyPhotoId: number,
     userId: number,
   ): Promise<{ photo_id: number; file_path?: string | null; thumbnail_path?: string | null } | null> {
-    const row = this.db.prepare('SELECT * FROM journey_photos WHERE id = ?').get(journeyPhotoId) as
-      | { id: number; journey_id: number; photo_id: number }
-      | undefined;
+    // JG105
+    const row = await this.photosRepo.findFull(journeyPhotoId);
     if (!row) return null;
     if (!(await this.canEdit(row.journey_id, userId))) return null;
 
-    const trekRow = this.db.prepare('SELECT file_path, thumbnail_path, provider FROM trek_photos WHERE id = ?').get(row.photo_id) as
-      | { file_path?: string; thumbnail_path?: string; provider?: string }
-      | undefined;
+    // JG106 — reuses `TrekPhotoRegistrationService.resolve` (PH6, already
+    // 3e-converted), the full `trek_photos` row this method only reads three
+    // columns off.
+    const trekRow = await this.photos.resolve(row.photo_id);
 
-    // cascade on journey_entry_photos.journey_photo_id handles junction cleanup
-    this.db.prepare('DELETE FROM journey_photos WHERE id = ?').run(journeyPhotoId);
+    // JG107 — cascade on journey_entry_photos.journey_photo_id handles junction cleanup.
+    await this.photosRepo.deleteById(journeyPhotoId);
     await this.photos.deleteIfOrphan(row.photo_id);
 
     return { photo_id: row.photo_id, file_path: trekRow?.file_path ?? null, thumbnail_path: trekRow?.thumbnail_path ?? null };
   }
 
   async setPhotoProvider(photoId: number, provider: string, assetId: string, ownerId: number) {
-    // photoId = journey_photos.id (gallery row); look up the trek_photo_id
-    const jp = this.db.prepare('SELECT photo_id FROM journey_photos WHERE id = ?').get(photoId) as
-      | { photo_id: number }
-      | undefined;
-    if (!jp) return;
-    await this.photos.setProvider(jp.photo_id, provider, assetId, ownerId);
-    // also denorm on gallery row for fast reads
-    this.db.prepare('UPDATE journey_photos SET provider = ?, asset_id = ?, owner_id = ? WHERE id = ?').run(
-      provider,
-      assetId,
-      ownerId,
-      photoId,
-    );
+    // photoId = journey_photos.id (gallery row); look up the trek_photo_id.
+    // JG108
+    const trekPhotoId = await this.photosRepo.findPhotoIdById(photoId);
+    if (trekPhotoId === undefined) return;
+    await this.photos.setProvider(trekPhotoId, provider, assetId, ownerId);
+    // JG109 — also denorm on gallery row for fast reads. §7: a DELIBERATE
+    // cache of `trek_photos`'s own columns, preserved exactly.
+    await this.photosRepo.updateProvider(photoId, provider, assetId, ownerId);
   }
 
   async updatePhoto(
@@ -1613,25 +1572,27 @@ export class JourneyDomainService {
     data: { caption?: string; sort_order?: number },
   ): Promise<JourneyPhoto | null> {
     // photoId = journey_photos.id (gallery row)
-    const row = this.db.prepare('SELECT id, journey_id FROM journey_photos WHERE id = ?').get(photoId) as
-      | { id: number; journey_id: number }
-      | undefined;
+    // JG110 — same text as JG98.
+    const row = await this.photosRepo.findScopeById(photoId);
     if (!row) return null;
     if (!(await this.canEdit(row.journey_id, userId))) return null;
 
-    // caption lives on the gallery row; sort_order lives on the junction table
-    // (JP_SELECT reads jep.sort_order, so updating journey_photos.sort_order
-    // would not be reflected in the returned row).
+    // JG111/JG112 — caption lives on the gallery row (`journey_photos`);
+    // sort_order lives on the JUNCTION table (`journey_entry_photos`, NOT
+    // `journey_photos` — the JP_SELECT the caller reads back projects
+    // `jep.sort_order`, so writing `journey_photos.sort_order` would never
+    // be reflected in the returned row). Two DIFFERENT tables for two
+    // DIFFERENT columns both named-ish "sort order" — the file's own doc
+    // comment calls this out explicitly, and it gets its own mutation-proof
+    // test (`journey-domain.service.test.ts`).
     if (data.caption !== undefined) {
-      this.db.prepare('UPDATE journey_photos SET caption = ? WHERE id = ?').run(data.caption, photoId);
+      await this.photosRepo.updateCaption(photoId, data.caption);
     }
     if (data.sort_order !== undefined) {
-      this.db.prepare('UPDATE journey_entry_photos SET sort_order = ? WHERE journey_photo_id = ?').run(
-        data.sort_order,
-        photoId,
-      );
+      await this.entryPhotosRepo.updateSortOrder(photoId, data.sort_order);
     }
-    return this.db.prepare(`SELECT ${JP_SELECT} FROM ${JP_JOIN} WHERE gp.id = ? LIMIT 1`).get(photoId) as JourneyPhoto | null;
+    // JG113
+    return (await this.entryPhotosRepo.findOneByGalleryId(photoId)) ?? null;
   }
 
   // deletePhoto: hard-delete (backwards compat name used by old route).
@@ -1639,17 +1600,16 @@ export class JourneyDomainService {
     photoId: number,
     userId: number,
   ): Promise<{ id: number; photo_id: number; file_path?: string | null; thumbnail_path?: string | null; journey_id: number } | null> {
-    const row = this.db.prepare('SELECT id, journey_id, photo_id FROM journey_photos WHERE id = ?').get(photoId) as
-      | { id: number; journey_id: number; photo_id: number }
-      | undefined;
+    // JG114
+    const row = await this.photosRepo.findScopeWithPhotoId(photoId);
     if (!row) return null;
     if (!(await this.canEdit(row.journey_id, userId))) return null;
 
-    const trekRow = this.db.prepare('SELECT file_path, thumbnail_path, provider FROM trek_photos WHERE id = ?').get(row.photo_id) as
-      | { file_path?: string; thumbnail_path?: string; provider?: string }
-      | undefined;
+    // JG115 — reuses `TrekPhotoRegistrationService.resolve`, same as JG106.
+    const trekRow = await this.photos.resolve(row.photo_id);
 
-    this.db.prepare('DELETE FROM journey_photos WHERE id = ?').run(photoId);
+    // JG116 — same text as JG107.
+    await this.photosRepo.deleteById(photoId);
     await this.photos.deleteIfOrphan(row.photo_id);
 
     return { id: row.id, photo_id: row.photo_id, file_path: trekRow?.file_path ?? null, thumbnail_path: trekRow?.thumbnail_path ?? null, journey_id: row.journey_id };
@@ -1666,9 +1626,10 @@ export class JourneyDomainService {
     if (!(await this.isOwner(journeyId, userId))) return false;
     if (targetUserId === userId) return false;
     try {
-      this.db.prepare(
-        'INSERT OR REPLACE INTO journey_contributors (journey_id, user_id, role, added_at) VALUES (?, ?, ?, ?)',
-      ).run(journeyId, targetUserId, role, this.ts());
+      // JG117 — R3's composite-PK upsert, Task 1's own pinned reference
+      // (`JourneyContributorsRepository.upsertContributor`) — this task's
+      // first real caller of it.
+      await this.contributorsRepo.upsertContributor(journeyId, targetUserId, role, this.ts());
       await this.broadcastJourneyEvent(journeyId, 'journey:contributor:changed', { targetUserId, role });
       return true;
     } catch {
@@ -1683,21 +1644,21 @@ export class JourneyDomainService {
     role: 'editor' | 'viewer',
   ): Promise<boolean> {
     if (!(await this.isOwner(journeyId, userId))) return false;
-    this.db.prepare('UPDATE journey_contributors SET role = ? WHERE journey_id = ? AND user_id = ?').run(
-      role,
-      journeyId,
-      targetUserId,
-    );
+    // JG118 — Task 1's `updateRole`. R5's pre-existing gap is preserved, not
+    // fixed: nothing here (or in SQL) stops a caller from writing `role =
+    // 'owner'` through this path — only the TypeScript parameter type
+    // discourages it, and that boundary is bypassable from a raw HTTP body.
+    await this.contributorsRepo.updateRole(journeyId, targetUserId, role);
     await this.broadcastJourneyEvent(journeyId, 'journey:contributor:changed', { targetUserId, role });
     return true;
   }
 
   async removeContributor(journeyId: number, userId: number, targetUserId: number): Promise<boolean> {
     if (!(await this.isOwner(journeyId, userId))) return false;
-    this.db.prepare("DELETE FROM journey_contributors WHERE journey_id = ? AND user_id = ? AND role != 'owner'").run(
-      journeyId,
-      targetUserId,
-    );
+    // JG119 — R5: the owner-protection guard stays INSIDE the repository's
+    // own statement (`deleteNonOwner`'s `role != 'owner'` condition, Task
+    // 1's build), never split into a find-then-conditional-delete.
+    await this.contributorsRepo.deleteNonOwner(journeyId, targetUserId);
     return true;
   }
 
@@ -1705,38 +1666,18 @@ export class JourneyDomainService {
 
   async getSuggestions(userId: number) {
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-    return this.db
-      .prepare(
-        `
-      SELECT t.id, t.title, t.start_date, t.end_date, t.cover_image,
-        (SELECT COUNT(*) FROM places p INNER JOIN day_assignments da ON da.place_id = p.id WHERE p.trip_id = t.id) as place_count
-      FROM trips t
-      LEFT JOIN trip_members tm ON t.id = tm.trip_id AND tm.user_id = ?
-      WHERE (t.user_id = ? OR tm.user_id = ?)
-        AND t.end_date IS NOT NULL
-        AND t.end_date >= ?
-        AND t.end_date <= date('now')
-        AND t.id NOT IN (SELECT trip_id FROM journey_trips)
-      ORDER BY t.end_date DESC
-    `,
-      )
-      .all(userId, userId, userId, thirtyDaysAgo);
+    // JG120 — `date('now')` resolved in JS via `todayUtc()` (`@trek/shared`)
+    // and bound as a plain parameter, the same pattern Plan 3f's atlas
+    // conversion established for a bare `date('now')` comparison
+    // (`Trips.repository.ts#lastStartedTrip`'s own docstring) — no new
+    // dialect helper.
+    return await this.entriesRepo.listSuggestedTrips(userId, thirtyDaysAgo, todayUtc());
   }
 
   // ── User trips (for trip picker) ─────────────────────────────────────────
 
   async listUserTrips(userId: number) {
-    return this.db
-      .prepare(
-        `
-      SELECT t.id, t.title, t.start_date, t.end_date, t.cover_image,
-        (SELECT COUNT(*) FROM places p INNER JOIN day_assignments da ON da.place_id = p.id WHERE p.trip_id = t.id) as place_count
-      FROM trips t
-      LEFT JOIN trip_members tm ON t.id = tm.trip_id AND tm.user_id = ?
-      WHERE t.user_id = ? OR tm.user_id = ?
-      ORDER BY t.start_date DESC
-    `,
-      )
-      .all(userId, userId, userId);
+    // JG121
+    return await this.entriesRepo.listUserTripsPicker(userId);
   }
 }

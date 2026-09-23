@@ -18,6 +18,7 @@ import {
 import { createTestBudgetItemsRepo } from './files-repos';
 import {
   createTestJourneysRepo, createTestJourneyContributorsRepo, createTestJourneyTripsRepo, createTestJourneyEntriesRepo,
+  createTestJourneyPhotosRepo, createTestJourneyEntryPhotosRepo,
 } from './journey-repos';
 
 /**
@@ -55,6 +56,8 @@ export async function accommodationsOver(dbs: DatabaseService): Promise<Accommod
       dbs, realtime, new TrekPhotoRegistrationService(t.repo(TrekPhotos), t.repo(TripPhotos), dbs), await createTestUnitOfWork(dbs.connection),
       await createTestJourneysRepo(dbs.connection), await createTestJourneyContributorsRepo(dbs.connection),
       await createTestJourneyTripsRepo(dbs.connection), await createTestJourneyEntriesRepo(dbs.connection), await createTestTripsRepo(dbs.connection),
+      // Plan 3g Task 2 constructor-ripple: JourneyPhotosRepository/JourneyEntryPhotosRepository/PlacesRepository.
+      await createTestJourneyPhotosRepo(dbs.connection), await createTestJourneyEntryPhotosRepo(dbs.connection), await createTestPlacesRepo(dbs.connection),
     ),
     await createTestUnitOfWork(dbs.connection),
     await createTestDayAssignmentsRepo(dbs.connection),

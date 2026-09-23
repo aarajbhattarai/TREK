@@ -60,6 +60,7 @@ import { createTestUnitOfWork, createTestAppSettingsRepo, createTestUsersRepo, c
 import { createTestBudgetItemsRepo } from '../../helpers/files-repos';
 import {
   createTestJourneysRepo, createTestJourneyContributorsRepo, createTestJourneyTripsRepo, createTestJourneyEntriesRepo,
+  createTestJourneyPhotosRepo, createTestJourneyEntryPhotosRepo,
 } from '../../helpers/journey-repos';
 
 const dbs = new DatabaseService(testDb);
@@ -99,6 +100,8 @@ async function svc(searchNominatim: MapsService['searchNominatim']): Promise<Pla
       dbs, new RealtimeService(), new TrekPhotoRegistrationService((await sharedTestOrm(dbs.connection)).repo(TrekPhotos), (await sharedTestOrm(dbs.connection)).repo(TripPhotos), dbs), await createTestUnitOfWork(dbs.connection),
       await createTestJourneysRepo(dbs.connection), await createTestJourneyContributorsRepo(dbs.connection),
       await createTestJourneyTripsRepo(dbs.connection), await createTestJourneyEntriesRepo(dbs.connection), await createTestTripsRepo(dbs.connection),
+      // Plan 3g Task 2 constructor-ripple: JourneyPhotosRepository/JourneyEntryPhotosRepository/PlacesRepository.
+      await createTestJourneyPhotosRepo(dbs.connection), await createTestJourneyEntryPhotosRepo(dbs.connection), await createTestPlacesRepo(dbs.connection),
     ),
     storageFx.storage,
     await accommodationsOver(dbs), await createTestUnitOfWork(dbs.connection),

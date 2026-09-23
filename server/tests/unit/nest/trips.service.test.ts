@@ -121,6 +121,7 @@ import {
 import { createTestVacayHolidayCalendarsRepo, createTestSchoolHolidayRegionsRepo } from '../../helpers/school-holidays-repos';
 import {
   createTestJourneysRepo, createTestJourneyContributorsRepo, createTestJourneyTripsRepo, createTestJourneyEntriesRepo,
+  createTestJourneyPhotosRepo, createTestJourneyEntryPhotosRepo,
 } from '../../helpers/journey-repos';
 
 // Real sibling services over the same in-memory DB — updateTrip's date-shift
@@ -200,6 +201,8 @@ beforeAll(async () => {
     dbs(), new RealtimeService(), new TrekPhotoRegistrationService(dbsEm!.getRepository(TrekPhotos), dbsEm!.getRepository(TripPhotos), dbs()), await createTestUnitOfWork(dbs().connection),
     await createTestJourneysRepo(dbs().connection), await createTestJourneyContributorsRepo(dbs().connection),
     await createTestJourneyTripsRepo(dbs().connection), await createTestJourneyEntriesRepo(dbs().connection), await createTestTripsRepo(dbs().connection),
+    // Plan 3g Task 2 constructor-ripple: JourneyPhotosRepository/JourneyEntryPhotosRepository/PlacesRepository.
+    await createTestJourneyPhotosRepo(dbs().connection), await createTestJourneyEntryPhotosRepo(dbs().connection), await createTestPlacesRepo(dbs().connection),
   ),
   makeStorageFixture('').storage,
   await accommodationsOver(dbs()), await createTestUnitOfWork(dbs().connection),
