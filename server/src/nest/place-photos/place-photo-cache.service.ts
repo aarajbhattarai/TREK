@@ -84,6 +84,16 @@ export class PlacePhotoCacheService {
     return `/api/maps/place-photo/${encodeURIComponent(placeId)}/bytes`;
   }
 
+  /**
+   * Non-transactional check-then-act, unchanged (Plan 3c inventory §18.4,
+   * program rule 11): PP1 (`this.meta.findLive`) → `await storage.exists(...)`
+   * → PP2 (`this.meta.deleteByPlaceId`) has a real `await` in the window, so
+   * two concurrent calls for the same never-checked placeId can both read the
+   * row, both find the storage object missing, and both delete — the second
+   * delete is a harmless 0-row no-op (`deleteByPlaceId` on an already-gone
+   * row does not throw), and both callers correctly resolve `null`. Pinned by
+   * a concurrency test, not fixed.
+   */
   async get(placeId: string): Promise<CachedPhoto | null> {
     const row = await this.meta.findLive(placeId);
 

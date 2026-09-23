@@ -38,7 +38,6 @@ const { canAccessTrip } = vi.hoisted(() => ({ canAccessTrip: vi.fn() }));
 vi.mock('../../src/db/database', () => ({
   db,
   canAccessTrip,
-  isOwner: vi.fn(() => true),
   getPlaceWithTags: vi.fn(),
   closeDb: () => {},
   reinitialize: () => {},

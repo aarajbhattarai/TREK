@@ -290,7 +290,7 @@ describe('TripsController (parity with the legacy /api/trips route)', async () =
     });
 
     it('404s for someone with no access, so the 403 is not an existence oracle', async () => {
-      const s = svc({ getOwner: vi.fn().mockReturnValue({ user_id: 2 }), canAccessTrip: vi.fn().mockResolvedValue(null), remove: vi.fn() } as Partial<TripsService>);
+      const s = svc({ getOwner: vi.fn().mockResolvedValue({ user_id: 2 }), canAccessTrip: vi.fn().mockResolvedValue(null), remove: vi.fn() } as Partial<TripsService>);
       expect(await thrownAsync(() => tc(s).remove(user, '9', req))).toEqual({ status: 404, body: { error: 'Trip not found' } });
       expect(s.remove).not.toHaveBeenCalled();
     });
@@ -298,7 +298,7 @@ describe('TripsController (parity with the legacy /api/trips route)', async () =
     it('still lets an admin delete a trip they are not a member of', async () => {
       const admin = { id: 1, role: 'admin', email: 'a@example.test' } as User;
       const remove = vi.fn().mockReturnValue({ tripId: 9, title: 'T', isAdminDelete: true, ownerEmail: 'owner@x.y' });
-      const s = svc({ getOwner: vi.fn().mockReturnValue({ user_id: 2 }), canAccessTrip: vi.fn().mockResolvedValue(null), remove, broadcast: vi.fn() } as Partial<TripsService>);
+      const s = svc({ getOwner: vi.fn().mockResolvedValue({ user_id: 2 }), canAccessTrip: vi.fn().mockResolvedValue(null), remove, broadcast: vi.fn() } as Partial<TripsService>);
       expect(await tc(s).remove(admin, '9', req)).toEqual({ success: true });
       expect(remove).toHaveBeenCalledWith('9', 1, 'admin');
     });

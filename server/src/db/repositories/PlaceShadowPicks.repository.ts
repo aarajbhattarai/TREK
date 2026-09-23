@@ -1,5 +1,5 @@
 import type { PlaceShadowPicks } from '../entities/PlaceShadowPicks.entity';
-import { countAll, maxOf, minOf, nowMinusDays } from '../dialect/sql-functions';
+import { countAll, countAllRef, maxOf, minOf, nowMinusDays } from '../dialect/sql-functions';
 import { toRow, type AssertRowKeys } from './_shared/rows';
 import { TrekRepository } from './_shared/trek-repository';
 
@@ -81,21 +81,27 @@ export class PlaceShadowPicksRepository extends TrekRepository<PlaceShadowPicks>
 
   /**
    * `SELECT source, COUNT(*) AS count FROM place_shadow_picks GROUP BY source
-   *  ORDER BY count DESC` (PS5). The `ORDER BY` is applied in JS, not SQL:
-   * MikroORM's QueryBuilder cannot order by an ad-hoc raw-fragment alias
-   * (`countAll`'s `RawQueryFragment` return type carries no alias literal for
-   * `ExtractRawAliases` to pick up, so `.orderBy({ count: 'desc' })` throws
-   * "not existing property" at runtime, verified directly) — `Array.prototype
-   * .sort` is stable (ES2019+), so this produces the identical final row
-   * order the legacy `ORDER BY count DESC` did.
+   *  ORDER BY count DESC` (PS5). The `ORDER BY` is applied in SQL, by the
+   * EXPRESSION, not the alias: MikroORM's QueryBuilder cannot order by an
+   * ad-hoc raw-fragment alias (`countAll`'s `RawQueryFragment` return type
+   * carries no alias literal for `ExtractRawAliases` to pick up, so
+   * `.orderBy({ count: 'desc' })` throws "not existing property" at runtime,
+   * verified directly) — `.orderBy({ [countAllRef(platform)]: 'desc' })`
+   * orders by `COUNT(*)` itself, which SQLite accepts and which reproduces
+   * the legacy statement's tie order exactly. A JS
+   * `Array.prototype.sort((a, b) => b.count - a.count)` does NOT reproduce
+   * it: SQLite's own sorter is not stable, so on a tie the legacy `ORDER BY
+   * count DESC` emits ties in DESCENDING source order, while `GROUP BY
+   * source` hands rows to JS in ASCENDING source order and a stable sort
+   * leaves ties ascending — verified directly (Task 1 fix review M1).
    */
   async countBySource(): Promise<{ source: string; count: number }[]> {
     const platform = this.getEntityManager().getPlatform();
-    const rows = await this.qb('p')
+    return this.qb('p')
       .select(['p.source', countAll(platform, 'count')])
       .groupBy('p.source')
+      .orderBy({ [countAllRef(platform)]: 'desc' })
       .execute<{ source: string; count: number }[]>('all', false);
-    return [...rows].sort((a, b) => b.count - a.count);
   }
 
   /** `SELECT live_rank, COUNT(*) AS count FROM place_shadow_picks GROUP BY live_rank` (PS6) — no ORDER BY, matching the legacy statement; the caller buckets the rows itself. */

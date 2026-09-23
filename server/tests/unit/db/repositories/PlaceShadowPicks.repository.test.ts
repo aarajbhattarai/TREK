@@ -94,6 +94,32 @@ describe('PlaceShadowPicksRepository.totals / countBySource / countByLiveRank', 
     ]);
   });
 
+  // Task 1 fix review M1: `GROUP BY source` hands rows to JS in ASCENDING
+  // source order (SQLite's GROUP BY temp b-tree); a stable JS
+  // `Array.prototype.sort((a, b) => b.count - a.count)` therefore leaves ties
+  // ascending by source, but SQLite's own (non-stable) `ORDER BY count DESC`
+  // sorter emits ties in DESCENDING source order on the same data — two
+  // different final row orders. `countBySource` orders in SQL, by the
+  // `COUNT(*)` expression, so it reproduces the legacy statement's tie order
+  // exactly instead of merely matching it on the (untied) case above.
+  it('PSPICKREPO-006b: countBySource orders ties the same way the legacy ORDER BY count DESC statement does', async () => {
+    for (const source of ['zeta', 'zeta', 'alpha', 'alpha', 'omega', 'omega', 'mid', 'beta']) {
+      await picks.insertPick(row({ source }));
+    }
+    const rows = await picks.countBySource();
+    const legacy = testDb
+      .prepare('SELECT source, COUNT(*) AS count FROM place_shadow_picks GROUP BY source ORDER BY count DESC')
+      .all();
+    expect(rows).toEqual(legacy);
+    expect(rows).toEqual([
+      { source: 'zeta', count: 2 },
+      { source: 'omega', count: 2 },
+      { source: 'alpha', count: 2 },
+      { source: 'mid', count: 1 },
+      { source: 'beta', count: 1 },
+    ]);
+  });
+
   it('PSPICKREPO-007: countByLiveRank groups with no ORDER BY (caller buckets)', async () => {
     await picks.insertPick(row({ live_rank: 0 }));
     await picks.insertPick(row({ live_rank: 0 }));
@@ -136,12 +162,19 @@ describe('PlaceShadowPicksRepository.deleteAll / purgeOlderThan', () => {
 // D-shape (Task 1 brief item): `page`/`totals`/`countBySource`/`countByLiveRank`
 // all go through `find`/`qb().execute()`, neither of which hydrates a
 // long-lived entity here — proven anyway for `page` (the one `find()`-based
-// read), the honest "not required, proven regardless" shape.
+// read), the honest "not required, proven regardless" shape: `page()` itself
+// always passes the base's own `disableIdentityMap: true` default (it never
+// opts in), so a stale cached entity can't leak into it regardless of what
+// the setup read below does.
 describe('PlaceShadowPicksRepository — D-shape', () => {
   it('PSPICKREPO-011: a row inserted after an unrelated identity-map read is visible in the FIRST wider projection (page)', async () => {
-    await t.repo(PlaceShadowPicks).find({}); // populate the identity map with an unrelated (empty) read
+    await picks.insertPick(row({ query: 'seed' }));
+    // rule 20: the FIRST, wider setup read passes `disableIdentityMap: false`
+    // explicitly and carries the column the later write targets (`query`) —
+    // `find({})` with the base default merged in populates nothing.
+    await t.repo(PlaceShadowPicks).find({}, { disableIdentityMap: false });
     await picks.insertPick(row({ query: 'fresh' }));
     const page = await picks.page(0, 10);
-    expect(page.map((r) => r.query)).toEqual(['fresh']);
+    expect(page.map((r) => r.query)).toEqual(['seed', 'fresh']);
   });
 });

@@ -13,6 +13,7 @@ import {
   columnIncrementedBy,
   columnRef,
   countAll,
+  countAllRef,
   currentTimestamp,
   dateAdd,
   dateOf,
@@ -361,9 +362,12 @@ describe('sql-functions (sqlite)', () => {
   // "Trying to query by not existing property" at runtime, since `raw()`'s
   // alias carries no literal type for `ExtractRawAliases` to register). The
   // repository callers that need "ORDER BY <aliased count> DESC"
-  // (`PlaceShadowPicksRepository.countBySource`) sort the fetched rows in JS
-  // instead — `Array.prototype.sort` is stable (ES2019+), so the resulting
-  // order matches a real `ORDER BY count DESC` byte for byte.
+  // (`PlaceShadowPicksRepository.countBySource`) order by the `COUNT(*)`
+  // EXPRESSION instead, via `countAllRef` below (SQLF-032) — NOT a JS
+  // `Array.prototype.sort` of the fetched rows: that would be stable and
+  // therefore leave ties in `GROUP BY`'s own (ascending-by-key) row order,
+  // which is not the same order SQLite's own, non-stable `ORDER BY count
+  // DESC` sorter produces on a tie (Task 1 fix review M1).
   it('SQLF-024: countAll composes with GROUP BY, matching a hand-written GROUP BY statement', async () => {
     createUser(testDb, { role: 'admin' });
     createUser(testDb, { role: 'admin' });
@@ -454,5 +458,35 @@ describe('sql-functions (sqlite)', () => {
     class FakePlatform extends Platform {}
     const foreign = new FakePlatform();
     expect(() => caseWhenEquals(foreign, 'u.id', 1, 'owner', 'member')).toThrow(/no implementation for platform FakePlatform/);
+  });
+
+  // Task 1 fix review M1 (`PlaceShadowPicksRepository.countBySource`, PS5):
+  // `countAll()`'s alias cannot be ordered by (`.orderBy({ count: 'desc' })`
+  // throws "not existing property" — verified in SQLF-024's comment above);
+  // `countAllRef` orders by the `COUNT(*)` EXPRESSION instead, which SQLite
+  // accepts. The full tie-order proof (against the legacy `ORDER BY count
+  // DESC` statement, on data with tied counts) lives in
+  // `PlaceShadowPicksRepository.countBySource`'s own test (PSPICKREPO-006b) —
+  // this pins the fragment's shape and composition with GROUP BY.
+  it('SQLF-032: countAllRef renders COUNT(*) as an ORDER BY expression, matching a hand-written GROUP BY … ORDER BY statement', async () => {
+    createUser(testDb, { role: 'admin' });
+    createUser(testDb, { role: 'admin' });
+    createUser(testDb, { role: 'user' });
+    const platform = t.em.getPlatform();
+
+    const rows = await t.em.createQueryBuilder(Users, 'u')
+      .select(['u.role', countAll(platform, 'count')])
+      .groupBy('u.role')
+      .orderBy({ [countAllRef(platform)]: 'desc' })
+      .execute('all', false);
+
+    const expected = testDb.prepare('SELECT role, COUNT(*) as count FROM users GROUP BY role ORDER BY COUNT(*) DESC').all();
+    expect(rows).toEqual(expected);
+  });
+
+  it('SQLF-033: an unknown platform fails closed for countAllRef', () => {
+    class FakePlatform extends Platform {}
+    const foreign = new FakePlatform();
+    expect(() => countAllRef(foreign)).toThrow(/no implementation for platform FakePlatform/);
   });
 });

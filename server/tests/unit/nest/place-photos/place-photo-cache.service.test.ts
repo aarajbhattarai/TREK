@@ -78,6 +78,24 @@ let t: TestOrm;
 let metaRepo: GooglePlacePhotoMetaRepository;
 let placesRepo: PlacesRepository;
 
+// Task 1 fix review L3: this is the one suite in this commit that opts out of
+// the request-context ratchet (`allowGlobalContext: true`, disabling
+// `TrekRepository.validateRequestContext()` for the whole file). Justified,
+// not converted: `PlacePhotoCacheService` is constructed directly below
+// (`new PlacePhotoCacheService(...)`), never through Nest DI or an HTTP
+// request, and every one of its ~20 cases would otherwise need its own
+// `withRequestContext(t.orm, ...)` wrapper around a repository call it makes
+// several layers deep inside the service (`get`/`put`/`sweepOrphans`/…) — a
+// mechanical, high-diff, low-value change to a file this task does not
+// otherwise own. The production ratchet (a service booted outside a request
+// context throws) is covered elsewhere, by the seams tests
+// (`cron-registrar.service.test.ts`, `tests/unit/nest/database/
+// request-context.test.ts`) and by `PlacePhotoCacheJob`'s own suite
+// (`place-photo-cache.job.test.ts`), which DOES use `allowGlobalContext:
+// false` + `CronRegistrarService.runOnBoot`'s `withRequestContext` wrapper
+// for the one real entrypoint that reaches this service outside a request.
+// Recorded so Tasks 4–8 do not copy this suite's `allowGlobalContext: true`
+// into a suite that boots a real app.
 beforeAll(async () => {
   t = await createTestOrm(testDb, { allowGlobalContext: true });
   metaRepo = t.repo(GooglePlacePhotoMeta);
@@ -174,6 +192,36 @@ describe.each([
         photoUrl: `/api/maps/place-photo/${encodeURIComponent('hit-place')}/bytes`,
         attribution: 'Carol',
       });
+    });
+
+    // Task 1 fix review M3 (Plan 3c inventory §18.4, program rule 11):
+    // PP1 (`this.meta.findLive`) → `await storage.exists(...)` → PP2
+    // (`this.meta.deleteByPlaceId`) is a non-transactional check-then-act with
+    // a real `await` in the window — flagged, not fixed. This pins today's
+    // outcome on a genuine race: two concurrent `get()` calls for a
+    // never-checked placeId whose storage object is missing.
+    it('PPC-017 (§18.4 concurrency): two concurrent gets on a row whose storage object is missing both resolve null; the loser\'s delete is a harmless no-op', async () => {
+      testDb
+        .prepare('INSERT INTO google_place_photo_meta (place_id, attribution, fetched_at) VALUES (?, ?, ?)')
+        .run('race-place', 'Dana', Date.now());
+      const deleteSpy = vi.spyOn(metaRepo, 'deleteByPlaceId');
+
+      try {
+        const [a, b] = await Promise.all([cache.get('race-place'), cache.get('race-place')]);
+
+        // Both requests read the row, both find the storage object missing
+        // (neither had it in `knownOnDisk` yet), so both resolve null and
+        // both call deleteByPlaceId — the second is a 0-row DELETE, which
+        // GPPMREPO-008 already proves does not throw.
+        expect(a).toBeNull();
+        expect(b).toBeNull();
+        expect(deleteSpy).toHaveBeenCalledTimes(2);
+        expect(deleteSpy).toHaveBeenCalledWith('race-place');
+        // Exactly one row existed to begin with — gone either way, not double-deleted into an error.
+        expect(testDb.prepare('SELECT 1 FROM google_place_photo_meta WHERE place_id = ?').get('race-place')).toBeUndefined();
+      } finally {
+        deleteSpy.mockRestore();
+      }
     });
   });
 

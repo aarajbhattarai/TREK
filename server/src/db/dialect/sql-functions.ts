@@ -289,3 +289,27 @@ export function caseWhenEquals(platform: Platform, ref: string, value: number, w
   return unsupported(platform);
 }
 
+// ---------------------------------------------------------------------------
+// Plan 3c Task 1 fix round (review M1) — `PlaceShadowPicksRepository
+// .countBySource` (PS5): `.orderBy()` on `countAll()`'s aliased column throws
+// ("Trying to query by not existing property" — `raw()`'s alias carries no
+// literal type for `ExtractRawAliases` to register), and sorting the fetched
+// rows in JS is NOT equivalent to the legacy `ORDER BY count DESC`: SQLite's
+// own sorter is not stable, so on a tie it orders descending by GROUP BY key,
+// while `Array.prototype.sort` (stable) leaves ties in the rows' incoming
+// (ascending) order — verified directly (five sources, two tied pairs).
+// ---------------------------------------------------------------------------
+
+/**
+ * `COUNT(*)` as an ORDER BY EXPRESSION (not an alias — `.orderBy()` cannot
+ * order by `countAll()`'s aliased column; ordering by the expression itself
+ * works and reproduces the legacy `ORDER BY count DESC` tie order exactly).
+ * Typed `RawQueryFragment & symbol`, the same brand `lower()`/`lowerTrim()`
+ * carry, so it is usable as an `.orderBy()` object key:
+ * `.orderBy({ [countAllRef(platform)]: 'desc' })`.
+ */
+export function countAllRef(platform: Platform): RawQueryFragment & symbol {
+  if (platform instanceof SqlitePlatform) return raw('COUNT(*)');
+  return unsupported(platform);
+}
+

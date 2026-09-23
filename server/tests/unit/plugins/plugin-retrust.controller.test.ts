@@ -13,7 +13,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { HttpException, type ArgumentsHost } from '@nestjs/common';
 
-vi.mock('../../../src/db/database', () => ({ db: {}, canAccessTrip: () => undefined }));
+vi.mock('../../../src/db/database', () => ({ db: {}, canAccessTrip: async () => undefined }));
 
 import { PluginsController } from '../../../src/nest/plugins/plugins.controller';
 import { PluginRuntimeService } from '../../../src/nest/plugins/plugin-runtime.service';
