@@ -275,6 +275,20 @@ export class PlacesService {
       transport_mode, route_geometry, route_color, stop_type, fill_percent, tags = [],
     } = body;
 
+    // Rule 21 (H1): one trip-id notion, parsed once, used by every write
+    // below — including PL5's `tagsOnTrip` roster read. Every other gate in
+    // this class answers the legacy not-found when the trip id doesn't parse
+    // canonically; create() has no existence gate to answer instead — the
+    // legacy raw bind (base 94c6efbbc) stored the non-canonical spelling
+    // straight into the `trip_id` column and let the FK constraint fail
+    // closed (verified live: a hex trip id 500s on create, where every other
+    // route 404s). `toRowId` rejects the same non-canonical spellings that
+    // never reach a real row; `?? -1` substitutes a trip id that can never
+    // exist (ids are autoincrement from 1), so the FK constraint fails the
+    // same way — without widening `insertPlace`'s typed `trip_id: number`
+    // column to accept the raw string.
+    const tid = toRowId(tripId) ?? -1;
+
     // PL4 — the 25-column INSERT. lat/lng/price/duration_minutes/fill_percent
     // use an explicit undefined check, not `||`: 0 is a legitimate value for
     // all five (Null Island, a free entry, a drive-by stop, an empty tank)
@@ -286,7 +300,7 @@ export class PlacesService {
     // figure — ten minutes for fuel, twenty for a rest area — so the kinds that would
     // be misread as an hour never take the default in the first place.
     const placeId = await this.placesRepo.insertPlace({
-      trip_id: Number(tripId),
+      trip_id: tid,
       name,
       description: description || null,
       lat: lat ?? null,
@@ -315,7 +329,7 @@ export class PlacesService {
 
     // PL5 — `INSERT OR IGNORE INTO place_tags (place_id, tag_id) VALUES (?, ?)`.
     if (tags && tags.length > 0) {
-      await this.tagsRepo.insertIgnore(placeId, await this.tagsOnTrip(tripId, tags));
+      await this.tagsRepo.insertIgnore(placeId, await this.tagsOnTrip(tid, tags));
     }
 
     // PL6 — `findWithTagsAndRatings` replaces the `getPlaceWithTags` delegation.
@@ -334,7 +348,15 @@ export class PlacesService {
     // exist.
     const id = toRowId(placeId);
     if (id === null) return null;
-    if (!(await this.placesRepo.existsInTrip(id, Number(tripId)))) return null;
+    // Rule 21 (H1): the trip id gets the SAME `toRowId` treatment, parsed
+    // once here and used for the existence read — `Number(tripId)` used to
+    // disagree with this method's own place-id gate above (`0xb` = 11 is a
+    // real trip's row id), which let a hex trip id find a place that
+    // belongs to a DIFFERENT trip than the one in the route. A non-canonical
+    // trip id answers the same legacy not-found the place-id gate does.
+    const tid = toRowId(tripId);
+    if (tid === null) return null;
+    if (!(await this.placesRepo.existsInTrip(id, tid))) return null;
     // PL8 — `findWithTagsAndRatings` replaces the `getPlaceWithTags` delegation.
     return await this.placesRepo.findWithTagsAndRatings(id);
   }
@@ -374,7 +396,17 @@ export class PlacesService {
     // that returns `null`.
     const id = toRowId(placeId);
     if (id === null) return { result: null };
-    const existingPlace = await this.placesRepo.findInTrip(id, Number(tripId));
+    // Rule 21 (H1): the trip id gets the same `toRowId` treatment, parsed
+    // once here and reused for every later call in this method, including
+    // PL12/PL13's `tagsOnTrip` roster read — `Number(tripId)` used to
+    // disagree with those raw survivors (and with this method's own
+    // place-id gate above), so a hex trip id could pass this existence read
+    // against the wrong trip's place and then wipe its tags via a roster
+    // read against a roster that never matched (H1, live: tags silently
+    // dropped to `[]`).
+    const tid = toRowId(tripId);
+    if (tid === null) return { result: null };
+    const existingPlace = await this.placesRepo.findInTrip(id, tid);
     if (!existingPlace) return { result: null };
 
     // Optimistic concurrency (#1135): when the caller sent the version it based its
@@ -443,7 +475,7 @@ export class PlacesService {
       await this.tagsRepo.deleteForPlace(id);
       if (tags.length > 0) {
         // PL13 — `INSERT OR IGNORE INTO place_tags (place_id, tag_id) VALUES (?, ?)`.
-        await this.tagsRepo.insertIgnore(id, await this.tagsOnTrip(tripId, tags));
+        await this.tagsRepo.insertIgnore(id, await this.tagsOnTrip(tid, tags));
       }
     }
 
@@ -469,10 +501,17 @@ export class PlacesService {
    */
   async linkedExpenseIds(tripId: string | number, placeIds: Array<string | number>): Promise<number[]> {
     if (placeIds.length === 0) return [];
+    // Rule 21 (H1): `toRowId` first — a non-canonical trip id never
+    // affinity-matches a real `budget_items.trip_id`, so this is the same
+    // "no rows" answer the raw legacy bind gave it; called independently of
+    // `remove()`/`removeMany()` (the controller reads it before either), so
+    // it cannot rely on a sibling method's gate having already run.
+    const tid = toRowId(tripId);
+    if (tid === null) return [];
     // PL15 — `budget_items` is Plan 3e's table; stays raw.
     const rows = this.dbs.all<{ id: number }>(
       `SELECT id FROM budget_items WHERE trip_id = ? AND place_id IN (${placeIds.map(() => '?').join(',')})`,
-      tripId, ...placeIds,
+      tid, ...placeIds,
     );
     return rows.map(r => r.id);
   }
@@ -513,16 +552,26 @@ export class PlacesService {
     // (`deleteById`) must use the SAME id this gate's existence read used.
     const id = toRowId(placeId);
     if (id === null) return { deleted: false, cancelled };
+    // Rule 21 (H1): the trip id gets the same `toRowId` treatment, parsed
+    // once here and reused for the gate AND every raw survivor below
+    // (`cancelStaysAt`'s PL16, the PL18 `budget_items` DELETE) —
+    // `Number(tripId)` used to disagree with those raw binds, so a hex trip
+    // id could pass this gate against a real trip's place while the raw
+    // deletes below matched nothing, leaving the place deleted but its
+    // linked expense and stay orphaned (H1, live: verified with a linked
+    // expense and a stay, both survived with `place_id: null`).
+    const tid = toRowId(tripId);
+    if (tid === null) return { deleted: false, cancelled };
     // PL17 — the reclaim-candidate projection, read before the delete.
-    const place = await this.placesRepo.reclaimInputs(id, Number(tripId));
+    const place = await this.placesRepo.reclaimInputs(id, tid);
     if (!place) return { deleted: false, cancelled };
     // The linked expense goes with the place, the same way a booking takes its
     // expense with it (#1298). One transaction, so a place can never survive
     // half-detached from its money.
     await this.uow.transactional(async () => {
-      await this.cancelStaysAt(tripId, id, cancelled);
+      await this.cancelStaysAt(tid, id, cancelled);
       // PL18 — `budget_items` is Plan 3e's table; stays raw.
-      this.dbs.run('DELETE FROM budget_items WHERE trip_id = ? AND place_id = ?', tripId, id);
+      this.dbs.run('DELETE FROM budget_items WHERE trip_id = ? AND place_id = ?', tid, id);
       // PL19 — `DELETE FROM places WHERE id = ?`.
       await this.placesRepo.deleteById(id);
     });
@@ -534,6 +583,14 @@ export class PlacesService {
   async removeMany(tripId: string, ids: number[]): Promise<{ deleted: number[]; cancelled: CancelledStays }> {
     const cancelled = noCancelledStays();
     if (ids.length === 0) return { deleted: [], cancelled };
+    // Rule 21 (H1): the trip id gets the same `toRowId` treatment as
+    // `remove()`'s, parsed once and reused for every id in the loop below —
+    // a non-canonical trip id never matches a real place's row (the PL20
+    // gate would answer "not found" for every id anyway), so this returns
+    // early with nothing deleted, the same shape the legacy raw bind
+    // produced when the trip id didn't affinity-match any row.
+    const tid = toRowId(tripId);
+    if (tid === null) return { deleted: [], cancelled };
     const deleted: number[] = [];
     const reclaimable: { google_place_id: string | null; image_url: string | null }[] = [];
     await this.uow.transactional(async () => {
@@ -542,11 +599,11 @@ export class PlacesService {
         // (same statement as PL17). `id` is already a genuine `number`
         // here (a body-validated array, not a route string) — no `toRowId`
         // gate needed, the H1 class of bug is a route-string problem.
-        const row = await this.placesRepo.reclaimInputs(id, Number(tripId));
+        const row = await this.placesRepo.reclaimInputs(id, tid);
         if (!row) continue;
-        await this.cancelStaysAt(tripId, id, cancelled);
+        await this.cancelStaysAt(tid, id, cancelled);
         // PL22 — `budget_items` is Plan 3e's table; stays raw.
-        this.dbs.run('DELETE FROM budget_items WHERE trip_id = ? AND place_id = ?', tripId, id);
+        this.dbs.run('DELETE FROM budget_items WHERE trip_id = ? AND place_id = ?', tid, id);
         // PL21 — `DELETE FROM places WHERE id = ?`.
         await this.placesRepo.deleteById(id);
         deleted.push(id);
@@ -607,12 +664,11 @@ export class PlacesService {
 
   /** Build a lookup of names/coords for places already in a trip. */
   private async buildDedupSet(tripId: string): Promise<DedupSet> {
-    const rows = this.dbs.all<{
-      name: string | null; lat: number | null; lng: number | null;
-      google_place_id: string | null; google_ftid: string | null; osm_id: string | null; amap_poi_id: string | null;
-    }>(
-      'SELECT name, lat, lng, google_place_id, google_ftid, osm_id, amap_poi_id FROM places WHERE trip_id = ?', tripId,
-    );
+    // PL24 — `PlacesRepository.listDedupInputs` replaces the raw statement
+    // (Task 5 review L6 ruling). The JS dedup semantics below (name
+    // lowercase+trim, coordinates only for unnamed rows, provider ids for
+    // every row) are unchanged — only the read moved.
+    const rows = await this.placesRepo.listDedupInputs(tripId);
     const names = new Set<string>();
     const coords: Array<{ lat: number; lng: number }> = [];
     // Provider ids are collected for every place, named or not: they are what lets a
@@ -712,14 +768,19 @@ export class PlacesService {
    * than handing over a file that imports as nothing on the other end.
    */
   async exportGpx(tripId: string, opts: GpxExportOptions = {}): Promise<{ gpx: string; filename: string } | null> {
-    // PL28 — `SELECT title FROM trips WHERE id = ?`. `trips` is outside this
-    // task's owned repositories (Plan 3c Task 7's domain) and
-    // `Trips.repository.ts` has a live concurrent editor in this tree this
-    // session (Task 6, adding its own byte-identical `getTitle` for a
-    // different caller) — stays raw here rather than risk a duplicate-method
-    // collision; once Task 6 lands, this call can reuse its `getTitle`.
-    const trip = this.dbs.get<{ title: string }>('SELECT title FROM trips WHERE id = ?', tripId);
-    if (!trip) return null;
+    // PL28 — `SELECT title FROM trips WHERE id = ?`, via
+    // `DatabaseService.getTripTitle` (Task 4 review L3: this comment
+    // previously said the repoint was blocked on `Trips.repository.ts`
+    // landing `getTitle`, which it did at `94c6efbbc` — Task 4's own parent
+    // commit — so the block was stale from the moment this task started).
+    // `getTripTitle` is a narrow `DatabaseService` helper, the same shape as
+    // `canAccessTrip`/`isOwner`/`rosterUserIds`: `trips` stays outside this
+    // domain's owned repositories, and a full `TripsRepository`
+    // `@InjectRepository` constructor param on `PlacesService` would ripple
+    // through every `new PlacesService(...)` test-helper call site for one
+    // read. The legacy `if (!trip) return null` maps onto `title === null`.
+    const title = await this.dbs.getTripTitle(tripId);
+    if (title === null) return null;
 
     // PL29 — the waypoint projection.
     const places = await this.placesRepo.listForGpx(tripId) as GpxExportPlace[];
@@ -738,8 +799,8 @@ export class PlacesService {
       day.points.push({ name: stop.name, lat: stop.lat, lng: stop.lng });
     }
 
-    const gpx = buildGpx({ tripTitle: trip.title, places, days: [...days.values()] }, opts);
-    return gpx ? { gpx, filename: gpxFilename(trip.title) } : null;
+    const gpx = buildGpx({ tripTitle: title, places, days: [...days.values()] }, opts);
+    return gpx ? { gpx, filename: gpxFilename(title) } : null;
   }
 
   private async importGpxRows(tripId: string, fileBuffer: Buffer, opts: GpxImportOptions = {}): Promise<GpxImportResult | null> {
@@ -814,6 +875,14 @@ export class PlacesService {
 
     if (waypoints.length === 0) return null;
 
+    // Task 5 review L5 (rule 21): parsed once here, reused for the one write
+    // below. `buildDedupSet` keeps the raw-bind seam (L6 ruling, PL24) —
+    // this does not touch it. A non-canonical trip id (this route has no
+    // existence gate to answer "not found" instead, matching `create`'s own
+    // H1 fix) substitutes a trip id that can never exist, so `insertPlace`
+    // fails its FK constraint the same way the legacy raw bind did (base:
+    // 500 on a hex trip id, live-verified in the Task 5 review).
+    const tid = toRowId(tripId) ?? -1;
     const dedup = await this.buildDedupSet(tripId);
     const created: PlaceWithTags[] = [];
     let skipped = 0;
@@ -833,7 +902,7 @@ export class PlacesService {
           continue;
         }
         const placeId = await this.placesRepo.insertPlace({
-          trip_id: Number(tripId),
+          trip_id: tid,
           name: wp.name,
           description: wp.description,
           lat: wp.lat,
@@ -916,6 +985,8 @@ export class PlacesService {
     // PL33 — `CategoriesRepository.listIdName` (Plan 3a's repository).
     const categories = await this.categoriesRepo.listIdName();
     const categoryLookup = buildCategoryNameLookup(categories);
+    // Task 5 review L5 (rule 21) — same fix and reasoning as `importGpxRows`.
+    const tid = toRowId(tripId) ?? -1;
     const dedup = await this.buildDedupSet(tripId);
     const created: PlaceWithTags[] = [];
     let dupCount = 0;
@@ -964,7 +1035,7 @@ export class PlacesService {
         // value. Re-selected via `findWithTagsAndRatings` INSIDE the same
         // transaction.
         const placeId = await this.placesRepo.insertPlace({
-          trip_id: Number(tripId),
+          trip_id: tid,
           name,
           description: parsedPlacemark.description,
           lat: parsedPlacemark.lat,
@@ -1194,6 +1265,8 @@ export class PlacesService {
     tripId: string,
     places: { name: string; lat: number; lng: number; notes: string | null; googleFtid: string | null }[],
   ): Promise<{ created: PlaceWithTags[]; skipped: number }> {
+    // Task 5 review L5 (rule 21) — same fix and reasoning as `importGpxRows`.
+    const tid = toRowId(tripId) ?? -1;
     const dedup = await this.buildDedupSet(tripId);
     const created: PlaceWithTags[] = [];
     let skipped = 0;
@@ -1221,7 +1294,7 @@ export class PlacesService {
         // Re-selected via `findWithTagsAndRatings` INSIDE the same
         // transaction.
         const placeId = await this.placesRepo.insertPlace({
-          trip_id: Number(tripId),
+          trip_id: tid,
           name: p.name,
           description: null,
           lat: p.lat,
@@ -1473,6 +1546,8 @@ export class PlacesService {
       return { error: 'No places with coordinates found in list', status: 400 };
     }
 
+    // Task 5 review L5 (rule 21) — same fix and reasoning as `importGpxRows`.
+    const tid = toRowId(tripId) ?? -1;
     const dedup = await this.buildDedupSet(tripId);
     const created: PlaceWithTags[] = [];
     let skipped = 0;
@@ -1487,7 +1562,7 @@ export class PlacesService {
           continue;
         }
         const placeId = await this.placesRepo.insertPlace({
-          trip_id: Number(tripId),
+          trip_id: tid,
           name: p.name,
           description: null,
           lat: p.lat,
@@ -1551,6 +1626,19 @@ export class PlacesService {
     if (place.google_place_id) return;
     if (typeof place.lat !== 'number' || typeof place.lng !== 'number') return;
 
+    // Task 5 review L5 (rule 21): parsed once, reused by both `fillIfEmpty`
+    // calls below. A non-canonical trip id (never a real client spelling —
+    // this whole path only ever runs right after this service's own import,
+    // which now also parses `tripId` once) substitutes a trip id that can
+    // never exist, so `fillIfEmpty`'s `WHERE id = ? AND trip_id = ?` matches
+    // no row — a silent no-op, matching this method's own "never throws"
+    // contract, not a 500 the caller (a detached background task) could not
+    // observe anyway. Deliberately NOT applied to `this.realtime.broadcast`
+    // below: every broadcast call in this domain, controller included, keys
+    // the room by the raw route string, and changing this one call's room
+    // shape alone would desync it from what the client actually joined.
+    const tid = toRowId(tripId) ?? -1;
+
     // Asked for a Google identity rather than for the best answer: the whole
     // point here is the `google_place_id` that `pickEnrichmentMatch` selects on,
     // and the TREK index and OpenStreetMap have none to give. Without this the
@@ -1573,7 +1661,7 @@ export class PlacesService {
     // PL43 — `fillIfEmpty`, COALESCE-per-column so enrichment only fills
     // empty columns — never overwrites data the import already captured
     // (e.g. Naver's address) or anything the user edited.
-    await this.placesRepo.fillIfEmpty(place.id, Number(tripId), {
+    await this.placesRepo.fillIfEmpty(place.id, tid, {
       google_place_id: gpid,
       google_ftid: gftid,
       address: trimOrNull(match.address),
@@ -1588,7 +1676,7 @@ export class PlacesService {
       const photo = await this.maps.getPlacePhoto(userId, gpid, place.lat, place.lng, place.name);
       if (photo?.photoUrl) {
         // PL44 — `fillIfEmpty`, the `image_url`-only shape.
-        await this.placesRepo.fillIfEmpty(place.id, Number(tripId), { image_url: photo.photoUrl });
+        await this.placesRepo.fillIfEmpty(place.id, tid, { image_url: photo.photoUrl });
       }
     } catch {
       /* no photo — leave image_url as-is */
@@ -1655,6 +1743,8 @@ export class PlacesService {
         console.warn(`[Places] address backfill skipped for trip ${tripId}: ${pending.length} places exceeds the ${ADDRESS_BACKFILL_MAX_PLACES} cap`);
         return;
       }
+      // Task 5 review L5 (rule 21) — same fix and reasoning as `enrichOne`.
+      const tid = toRowId(tripId) ?? -1;
       // Serial on purpose: the background lane throttles to roughly one request a
       // second anyway, so concurrency would only build a queue.
       for (const place of pending) {
@@ -1665,7 +1755,7 @@ export class PlacesService {
           });
           if (!address) continue;
           // PL46 — `fillIfEmpty`, the `address`-only shape.
-          await this.placesRepo.fillIfEmpty(place.id, Number(tripId), { address });
+          await this.placesRepo.fillIfEmpty(place.id, tid, { address });
           // PL47 — same broadcast shape as PL45: `socketId: undefined`, no
           // exclusion.
           const updated = await this.placesRepo.findWithTagsAndRatings(place.id);
@@ -1688,8 +1778,14 @@ export class PlacesService {
     // as every other place-id route in this service.
     const id = toRowId(placeId);
     if (id === null) return { error: 'Place not found', status: 404 };
+    // Rule 21 (H1): the trip id gets the same `toRowId` treatment as the
+    // place id above, parsed once and used for the one downstream read —
+    // `Number(tripId)` used to disagree with it and let a hex trip id read
+    // a different trip's place.
+    const tid = toRowId(tripId);
+    if (tid === null) return { error: 'Place not found', status: 404 };
     // PL48 — same statement as PL9 (`applyUpdate`'s pre-image read).
-    const place = await this.placesRepo.findInTrip(id, Number(tripId));
+    const place = await this.placesRepo.findInTrip(id, tid);
     if (!place) return { error: 'Place not found', status: 404 };
 
     return this.unsplash.searchUnsplashPhotos(place.name + (place.address ? ' ' + place.address : ''), 5, await this.unsplash.getUnsplashKey(userId));
@@ -1712,8 +1808,14 @@ export class PlacesService {
     // rating against an id `place_ratings`'s own FK never actually named.
     const id = toRowId(placeId);
     if (id === null) return null;
+    // Rule 21 (H1): the trip id gets the same `toRowId` treatment as the
+    // place id above, parsed once and used for the existence gate below —
+    // `Number(tripId)` used to disagree with it and let a hex trip id rate
+    // a different trip's place.
+    const tid = toRowId(tripId);
+    if (tid === null) return null;
     // PL49 — the existence gate.
-    if (!(await this.placesRepo.existsInTrip(id, Number(tripId)))) return null;
+    if (!(await this.placesRepo.existsInTrip(id, tid))) return null;
     if (rating === null) {
       // PL50 — `DELETE FROM place_ratings WHERE place_id = ? AND user_id = ?`.
       await this.placeRatingsRepo.deleteRating(id, userId);

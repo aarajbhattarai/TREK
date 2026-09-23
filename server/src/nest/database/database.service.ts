@@ -94,6 +94,21 @@ export class DatabaseService {
   }
 
   /**
+   * PL28 (`PlacesService.exportGpx`'s trip-title read, L3/task-4-review.md):
+   * `SELECT title FROM trips WHERE id = ?`, via `TripsRepository.getTitle`.
+   * The same narrow-helper shape as `canAccessTrip`/`isOwner`/`rosterUserIds`
+   * above — a caller outside the trips domain that needs one trip column
+   * without taking on a full `TripsRepository` DI dependency (`PlacesModule`
+   * would need its own `@InjectRepository(Trips)` constructor param, which
+   * ripples through every `new PlacesService(...)` test-helper call site;
+   * this stays a one-line method here instead, matching the precedent the
+   * three siblings above already set).
+   */
+  async getTripTitle(tripId: number | string): Promise<string | null> {
+    return await this.entityManager().getRepository(Trips).getTitle(tripId);
+  }
+
+  /**
    * The user ids a trip may refer to: its members plus the owner. Guests count —
    * a guest is a credential-less users row joined into trip_members, and #1362
    * makes it assignable everywhere a real member is.

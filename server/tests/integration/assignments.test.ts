@@ -415,3 +415,27 @@ describe('Assignment participants', () => {
     expect(update.body.assignment.place.end_time).toBe('16:00');
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// H1 (task-4-review.md, the trip-id half fixed here) — `dayExists`/
+// `placeExists` gate on `toRowId(tripId)` now, not `Number(tripId)`: a
+// hex-spelled trip id whose `Number()` value is a real, accessible trip must
+// answer the legacy "Day not found", not reach that trip's real day/place
+// (rule 21).
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('H1 — trip id parsed once at the gate (rule 21)', () => {
+  it('POST create-assignment by the hex-spelled trip id 404s "Day not found" (legacy: 404, not 201)', async () => {
+    const { user } = createUser(testDb);
+    const { trip, day, place } = setupAssignmentFixtures(user.id);
+    const hexTripId = '0x' + trip.id.toString(16);
+
+    const res = await request(app)
+      .post(`/api/trips/${hexTripId}/days/${day.id}/assignments`)
+      .set('Cookie', authCookie(user.id))
+      .send({ place_id: place.id });
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({ error: 'Day not found' });
+    expect(testDb.prepare('SELECT COUNT(*) AS n FROM day_assignments WHERE day_id = ?').get(day.id)).toEqual({ n: 0 });
+  });
+});

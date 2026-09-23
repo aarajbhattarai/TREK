@@ -393,6 +393,17 @@ describe('PlacesRepository.findDuplicateByExternalId / findDuplicateByName / fin
     expect(hit?.id).toBe(first.id);
   });
 
+  // Task 4 review L2: only osm_id/google_ftid were exercised — a mutation
+  // dropping `amap_poi_id` from the `$or` survived every suite until this.
+  it('PLACEREPO-022b (PL25, L2): matches on amap_poi_id alone (no osm_id/google_ftid/google_place_id set)', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const place = createPlace(testDb, trip.id, { name: 'Amap-only' });
+    testDb.prepare('UPDATE places SET amap_poi_id = ? WHERE id = ?').run('B0FFH00X01', place.id);
+    const hit = await places.findDuplicateByExternalId(String(trip.id), 'B0FFH00X01');
+    expect(hit?.id).toBe(place.id);
+  });
+
   it('PLACEREPO-023 (PL26, rule 18 exception): lower(trim(name)) matches ASCII-folded names; a non-ASCII cased letter does NOT match — the documented legacy divergence, pinned not fixed', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
@@ -420,6 +431,19 @@ describe('PlacesRepository.findDuplicateByExternalId / findDuplicateByName / fin
     const hit = await places.findDuplicateByCoords(String(trip.id), 48.8566 + 0.00005, 2.3522 - 0.00005, 0.0001);
     expect(hit?.id).toBe(place.id);
     const miss = await places.findDuplicateByCoords(String(trip.id), 48.9, 2.5, 0.0001);
+    expect(miss).toBeUndefined();
+  });
+
+  // Task 4 review L2: PLACEREPO-024's miss case differed on both lat AND
+  // lng, so `lng` alone was never proven — a mutation widening the lng
+  // tolerance (or dropping the lng check entirely) survived every suite
+  // until this.
+  it('PLACEREPO-024b (PL27, L2): a candidate within lat tolerance but OUTSIDE lng tolerance is a miss', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    createPlace(testDb, trip.id, { lat: 48.8566, lng: 2.3522 });
+    // lat matches exactly; lng is 0.01 off — 100x the tolerance below.
+    const miss = await places.findDuplicateByCoords(String(trip.id), 48.8566, 2.3622, 0.0001);
     expect(miss).toBeUndefined();
   });
 });
@@ -452,6 +476,41 @@ describe('PlacesRepository.listForGpx (PL29) and existsByImageUrl (PI1)', () => 
     testDb.prepare('UPDATE places SET image_url = ? WHERE id = ?').run('/uploads/places/shared.jpg', place.id);
     expect(await places.existsByImageUrl('/uploads/places/shared.jpg')).toBe(true);
     expect(await places.existsByImageUrl('/uploads/places/nope.jpg')).toBe(false);
+  });
+});
+
+/**
+ * PL24 (Task 5 review L6 ruling): `listDedupInputs` carries only the
+ * legacy projection — `PlacesService.buildDedupSet`'s JS folding (name
+ * lowercase+trim, coordinates only for unnamed rows, provider ids for every
+ * row) is untested here on purpose; it belongs to, and is already covered
+ * by, the service-level dedup tests.
+ */
+describe('PlacesRepository.listDedupInputs (PL24)', () => {
+  it('PLACEREPO-048: projects exactly the seven dedup columns, scoped to the trip', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const other = createTrip(testDb, user.id);
+    testDb.prepare(
+      `INSERT INTO places (trip_id, name, lat, lng, google_place_id, google_ftid, osm_id, amap_poi_id)
+       VALUES (?, 'Louvre', 48.86, 2.34, 'gp1', 'ft1', 'osm1', 'amap1')`,
+    ).run(trip.id);
+    testDb.prepare(
+      `INSERT INTO places (trip_id, name, lat, lng) VALUES (?, '', 1.1, 2.2)`,
+    ).run(trip.id);
+    createPlace(testDb, other.id, { name: 'Not this trip' });
+
+    const rows = await places.listDedupInputs(String(trip.id));
+    expect(rows).toEqual([
+      { name: 'Louvre', lat: 48.86, lng: 2.34, google_place_id: 'gp1', google_ftid: 'ft1', osm_id: 'osm1', amap_poi_id: 'amap1' },
+      { name: '', lat: 1.1, lng: 2.2, google_place_id: null, google_ftid: null, osm_id: null, amap_poi_id: null },
+    ]);
+  });
+
+  it('PLACEREPO-049: an empty trip returns an empty array', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    expect(await places.listDedupInputs(String(trip.id))).toEqual([]);
   });
 });
 

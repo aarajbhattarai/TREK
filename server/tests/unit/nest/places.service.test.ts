@@ -81,6 +81,22 @@ import { makeStorageFixture } from '../../helpers/storage-fixture';
 import { createTestUnitOfWork, createTestAppSettingsRepo, createTestUsersRepo, createTestTagsRepo, createTestPlaceRatingsRepo, createTestAssignmentParticipantsRepo, createTestPlacesRepo, createTestTripMembersRepo, createTestDayAssignmentsRepo, createTestCategoriesRepo, sharedTestOrm } from '../../helpers/test-uow';
 import type { AppSettingsRepository } from '../../../src/db/repositories/AppSettings.repository';
 import type { UsersRepository } from '../../../src/db/repositories/Users.repository';
+import { isUpdateConflict, type UpdateConflict } from '../../../src/nest/common/conflictResult';
+
+/**
+ * Narrows `PlacesService.update`'s `PlaceWithTags | UpdateConflict | null`
+ * union to the successful-write case, for tests that only ever exercise the
+ * happy path and previously reached for `as any` to read a field off the
+ * result (L4/L1 — no new `any`).
+ */
+function asUpdatedPlace(
+  result: Awaited<ReturnType<PlacesService['update']>>,
+): Exclude<Awaited<ReturnType<PlacesService['update']>>, null | UpdateConflict> {
+  if (result === null || isUpdateConflict(result)) {
+    throw new Error('expected a successful update, got null or a conflict');
+  }
+  return result;
+}
 
 // The default `maps` MapsService below never has its key-resolving methods
 // exercised by this file's own cases (a real caller passes its own `maps`
@@ -412,6 +428,96 @@ describe('update', () => {
     expect(created.route_geometry).toBe('[[48.0,2.0],[49.0,3.0]]');
     expect(created.route_color).toBe('#7c3aed');
   });
+
+  // ── PL11's three COALESCE columns (Task 4 review M2) ─────────────────────────
+  //
+  // `name`/`currency`/`transport_mode` bind `x || null` and fold with
+  // `?? existingPlace.x` — a falsy input (undefined, null OR '') keeps the old
+  // value, exactly like SQL's `COALESCE(?, col)` with a null bind. Only a
+  // truthy string writes. This is the opposite polarity of route_color/
+  // stop_type/fill_percent just above (an explicit null clears those). The
+  // review's mutation table: M3 (`name: name ?? existing`, so `''` would
+  // write instead of keeping) and M4/M4b (`transport_mode`/`currency` treated
+  // as `!== undefined ? x : existing`, so `null` would clear instead of
+  // keeping) all SURVIVED every test in this file before these three.
+
+  it('PLACE-SVC-013c (PL11, M3) — an empty-string name keeps the old name, it does not clear it', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const place = createPlace(testDb, trip.id, { name: 'Original' });
+    const updated = asUpdatedPlace(await svc.update(String(trip.id), String(place.id), { name: '' }));
+    expect(updated.name).toBe('Original');
+  });
+
+  it('PLACE-SVC-013d (PL11, M3) — an explicit null name keeps the old name', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const place = createPlace(testDb, trip.id, { name: 'Original' });
+    const updated = asUpdatedPlace(await svc.update(String(trip.id), String(place.id), { name: null as unknown as string }));
+    expect(updated.name).toBe('Original');
+  });
+
+  it('PLACE-SVC-013e (PL11) — a truthy name still overwrites (the COALESCE bind is not a one-way lock)', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const place = createPlace(testDb, trip.id, { name: 'Original' });
+    const updated = asUpdatedPlace(await svc.update(String(trip.id), String(place.id), { name: 'Renamed' }));
+    expect(updated.name).toBe('Renamed');
+  });
+
+  it('PLACE-SVC-013f (PL11, M4b) — an explicit null currency keeps the old currency, it does not clear it', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const place = createPlace(testDb, trip.id, { name: 'Priced' });
+    await svc.update(String(trip.id), String(place.id), { currency: 'EUR' });
+    const updated = asUpdatedPlace(await svc.update(String(trip.id), String(place.id), { currency: null }));
+    expect(updated.currency).toBe('EUR');
+  });
+
+  it('PLACE-SVC-013g (PL11, M4b) — an empty-string currency keeps the old currency', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const place = createPlace(testDb, trip.id, { name: 'Priced' });
+    await svc.update(String(trip.id), String(place.id), { currency: 'EUR' });
+    const updated = asUpdatedPlace(await svc.update(String(trip.id), String(place.id), { currency: '' }));
+    expect(updated.currency).toBe('EUR');
+  });
+
+  it('PLACE-SVC-013h (PL11) — a truthy currency still overwrites', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const place = createPlace(testDb, trip.id, { name: 'Priced' });
+    await svc.update(String(trip.id), String(place.id), { currency: 'EUR' });
+    const updated = asUpdatedPlace(await svc.update(String(trip.id), String(place.id), { currency: 'USD' }));
+    expect(updated.currency).toBe('USD');
+  });
+
+  it('PLACE-SVC-013i (PL11, M4) — an explicit null transport_mode keeps the old mode, it does not clear it', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const place = createPlace(testDb, trip.id, { name: 'Moving' });
+    await svc.update(String(trip.id), String(place.id), { transport_mode: 'driving' });
+    const updated = asUpdatedPlace(await svc.update(String(trip.id), String(place.id), { transport_mode: null }));
+    expect(updated.transport_mode).toBe('driving');
+  });
+
+  it('PLACE-SVC-013j (PL11, M4) — an empty-string transport_mode keeps the old mode', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const place = createPlace(testDb, trip.id, { name: 'Moving' });
+    await svc.update(String(trip.id), String(place.id), { transport_mode: 'driving' });
+    const updated = asUpdatedPlace(await svc.update(String(trip.id), String(place.id), { transport_mode: '' }));
+    expect(updated.transport_mode).toBe('driving');
+  });
+
+  it('PLACE-SVC-013k (PL11) — a truthy transport_mode still overwrites', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const place = createPlace(testDb, trip.id, { name: 'Moving' });
+    await svc.update(String(trip.id), String(place.id), { transport_mode: 'driving' });
+    const updated = asUpdatedPlace(await svc.update(String(trip.id), String(place.id), { transport_mode: 'cycling' }));
+    expect(updated.transport_mode).toBe('cycling');
+  });
 });
 
 // ── updateMany ────────────────────────────────────────────────────────────────
@@ -660,6 +766,50 @@ describe('importGpx', () => {
     expect(result.places[1].name).toBe('London');
   });
 
+  // Task 5 review M2: the four importers' hand-written 25-field `insertPlace`
+  // partials had no test at the service level — only repository-level tests
+  // that already seed `duration_minutes: 60`/`transport_mode: 'walking'` in
+  // their own fixture, so they test `insertPlace` in general, not what THIS
+  // service actually passes it. Mutants that survived every suite until this
+  // test: GPX `transport_mode → 'driving'`, `duration_minutes: 30`.
+  it('PLACE-SVC-021b (M2) — the full stored row matches the legacy 7-column GPX shape, every other column null', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const gpx = Buffer.from(`<?xml version="1.0"?><gpx version="1.1">
+      <wpt lat="48.8566" lon="2.3522"><name>Paris</name></wpt>
+    </gpx>`);
+    const result = await svc.importGpx(String(trip.id), gpx) as { places: { id: number }[] };
+    const row = testDb.prepare('SELECT * FROM places WHERE id = ?').get(result.places[0].id) as Record<string, unknown>;
+    expect(row).toMatchObject({
+      trip_id: trip.id, name: 'Paris', description: null, lat: 48.8566, lng: 2.3522,
+      address: null, category_id: null, price: null, currency: null, place_time: null, end_time: null,
+      duration_minutes: 60, notes: null, image_url: null, google_place_id: null, google_ftid: null,
+      osm_id: null, amap_poi_id: null, website: null, phone: null, transport_mode: 'walking',
+      route_geometry: null, route_color: null, stop_type: null, fill_percent: null,
+    });
+  });
+
+  it('PLACE-SVC-021c (L2) — an import is atomic: a failure partway through the loop leaves nothing stored', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const placesRepo = await createTestPlacesRepo(dbs.connection);
+    const realInsertPlace = placesRepo.insertPlace.bind(placesRepo);
+    let calls = 0;
+    const insertSpy = vi.spyOn(placesRepo, 'insertPlace').mockImplementation(async (input) => {
+      calls++;
+      if (calls === 2) throw new Error('boom');
+      return realInsertPlace(input);
+    });
+    const gpx = Buffer.from(`<?xml version="1.0"?><gpx version="1.1">
+      <wpt lat="48.8566" lon="2.3522"><name>Paris</name></wpt>
+      <wpt lat="51.5074" lon="-0.1278"><name>London</name></wpt>
+    </gpx>`);
+    await expect(svc.importGpx(String(trip.id), gpx)).rejects.toThrow('boom');
+    const count = testDb.prepare('SELECT COUNT(*) AS n FROM places WHERE trip_id = ?').get(trip.id) as { n: number };
+    expect(count.n).toBe(0);
+    insertSpy.mockRestore();
+  });
+
   it('PLACE-SVC-022 — imports <rte> as a single polyline-place with routeGeometry', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
@@ -819,6 +969,53 @@ describe('importGoogleList', () => {
     expect(result.places).toHaveLength(2);
     expect(result.places[0].name).toBe('Paris');
     expect(result.places[1].name).toBe('London');
+  });
+
+  // Task 5 review M2/L2. Mutants that survived every suite until these
+  // tests: Google `notes → null`, `duration_minutes: 30`, an insert loop
+  // outside `uow.transactional`.
+  it('PLACE-SVC-028f (M2) — the full stored row matches the legacy 7-column Google shape, notes included, every other column null', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const listPayload = [
+      [null, null, null, null, 'My Test List', null, null, null, [
+        [null, [null, null, null, null, null, [null, null, 51.5074, -0.1278]], 'London', 'Great city'],
+      ]],
+    ];
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, text: async () => 'prefix\n' + JSON.stringify(listPayload) }));
+    const result = await svc.importGoogleList(String(trip.id), 'https://www.google.com/maps/placelists/list/ABC123DEF456') as { places: { id: number }[] };
+    const row = testDb.prepare('SELECT * FROM places WHERE id = ?').get(result.places[0].id) as Record<string, unknown>;
+    expect(row).toMatchObject({
+      trip_id: trip.id, name: 'London', description: null, lat: 51.5074, lng: -0.1278,
+      address: null, category_id: null, price: null, currency: null, place_time: null, end_time: null,
+      duration_minutes: 60, notes: 'Great city', image_url: null, google_place_id: null,
+      osm_id: null, amap_poi_id: null, website: null, phone: null, transport_mode: 'walking',
+      route_geometry: null, route_color: null, stop_type: null, fill_percent: null,
+    });
+  });
+
+  it('PLACE-SVC-028g (L2) — a failure partway through the Google-list loop leaves nothing stored', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const listPayload = [
+      [null, null, null, null, 'My Test List', null, null, null, [
+        [null, [null, null, null, null, null, [null, null, 48.8566, 2.3522]], 'Paris', null],
+        [null, [null, null, null, null, null, [null, null, 51.5074, -0.1278]], 'London', 'Great city'],
+      ]],
+    ];
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, text: async () => 'prefix\n' + JSON.stringify(listPayload) }));
+    const placesRepo = await createTestPlacesRepo(dbs.connection);
+    const realInsertPlace = placesRepo.insertPlace.bind(placesRepo);
+    let calls = 0;
+    const insertSpy = vi.spyOn(placesRepo, 'insertPlace').mockImplementation(async (input) => {
+      calls++;
+      if (calls === 2) throw new Error('boom');
+      return realInsertPlace(input);
+    });
+    await expect(svc.importGoogleList(String(trip.id), 'https://www.google.com/maps/placelists/list/ABC123DEF456')).rejects.toThrow('boom');
+    const count = testDb.prepare('SELECT COUNT(*) AS n FROM places WHERE trip_id = ?').get(trip.id) as { n: number };
+    expect(count.n).toBe(0);
+    insertSpy.mockRestore();
   });
 
   it('PLACE-SVC-028b — stores a Google Maps ftid separately from google_place_id', async () => {
@@ -997,9 +1194,12 @@ describe('searchImage', () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const place = createPlace(testDb, trip.id);
-    const result = await svc.searchImage(String(trip.id), `${place.id} `, user.id) as any;
-    expect(result.error).toBeDefined();
-    expect(result.status).toBe(404);
+    const result: Awaited<ReturnType<PlacesService['searchImage']>> = await svc.searchImage(String(trip.id), `${place.id} `, user.id);
+    expect('error' in result).toBe(true);
+    if ('error' in result) {
+      expect(result.error).toBeDefined();
+      expect(result.status).toBe(404);
+    }
   });
 
   it('PLACE-SVC-031 — searches Unsplash without a stored API key', async () => {
@@ -1116,6 +1316,51 @@ describe('importKmlPlaces deduplication', () => {
   });
 });
 
+// Task 5 review M2/L2 — the same full-stored-row/atomicity gap for KML.
+// Mutants that survived every suite until these tests: KML `route_geometry
+// → null`, `duration_minutes: 30`, the GPX loop's `uow.transactional`
+// removal class repeated here for KML's own loop.
+describe('importKmlPlaces — full stored row and atomicity (M2/L2)', () => {
+  it('PLACE-SVC-036b (M2) — a LineString placemark stores route_geometry, duration_minutes: 60 and transport_mode: walking', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const kml = Buffer.from(`<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2"><Document>
+  <Placemark><name>Ridge Path</name><LineString><coordinates>2.0,48.0,0 2.1,48.1,0</coordinates></LineString></Placemark>
+</Document></kml>`);
+    const result = await svc.importKmlPlaces(String(trip.id), kml);
+    expect(result.count).toBe(1);
+    const row = testDb.prepare('SELECT * FROM places WHERE trip_id = ? AND name = ?').get(trip.id, 'Ridge Path') as Record<string, unknown>;
+    expect(row.route_geometry).toBeTruthy();
+    expect(JSON.parse(row.route_geometry as string)).toHaveLength(2);
+    expect(row.duration_minutes).toBe(60);
+    expect(row.transport_mode).toBe('walking');
+    expect(row.category_id).toBeNull();
+  });
+
+  it('PLACE-SVC-036c (L2) — a failure partway through the KML loop leaves nothing stored', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const placesRepo = await createTestPlacesRepo(dbs.connection);
+    const realInsertPlace = placesRepo.insertPlace.bind(placesRepo);
+    let calls = 0;
+    const insertSpy = vi.spyOn(placesRepo, 'insertPlace').mockImplementation(async (input) => {
+      calls++;
+      if (calls === 2) throw new Error('boom');
+      return realInsertPlace(input);
+    });
+    const kml = Buffer.from(`<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2"><Document>
+  <Placemark><name>A</name><Point><coordinates>2.0,48.0,0</coordinates></Point></Placemark>
+  <Placemark><name>B</name><Point><coordinates>2.1,48.1,0</coordinates></Point></Placemark>
+</Document></kml>`);
+    await expect(svc.importKmlPlaces(String(trip.id), kml)).rejects.toThrow('boom');
+    const count = testDb.prepare('SELECT COUNT(*) AS n FROM places WHERE trip_id = ?').get(trip.id) as { n: number };
+    expect(count.n).toBe(0);
+    insertSpy.mockRestore();
+  });
+});
+
 // ── Custom place image reclaim (#1136) ──────────────────────────────────────────
 
 describe('custom place image reclaim', () => {
@@ -1228,6 +1473,12 @@ describe('custom place image reclaim', () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const place = createPlace(testDb, trip.id, { name: 'Silent Vote' }) as { id: number };
+    // Task 4 review M2: a freshly-created row's `updated_at` can share the
+    // same one-second `datetime('now')` bucket as a bump this test means to
+    // catch, so `before === after` proved nothing either way (M1 — `upsertRating`
+    // also bumping `places.updated_at` — survived this test as written). Seed a
+    // visibly stale timestamp first so any bump is unmistakably a different value.
+    testDb.prepare("UPDATE places SET updated_at = datetime('now', '-1 hour') WHERE id = ?").run(place.id);
     const before = (testDb.prepare('SELECT updated_at FROM places WHERE id = ?').get(place.id) as { updated_at: string | null }).updated_at;
 
     await svc.rate(String(trip.id), String(place.id), user.id, 5);
@@ -1371,6 +1622,43 @@ describe('PlacesService — automatic track colours (#776)', () => {
 
     expect(tracksOf(trip.id)).toEqual([]);
   });
+
+  // Task 5 review M1: `PLACEREPO-039` proves the driver's single-connection
+  // serialisation for `t.em.transactional`, not that `colorizeImportedTracks`
+  // actually wraps its read+write in one transaction — removing
+  // `this.uow.transactional` from the service survived every suite until
+  // this test. Numbered 018 (not the review's suggested 008) to avoid
+  // colliding with the pre-existing PLACES-SVC-008 in the
+  // `findMatchingPlaceId` describe block below.
+  it('PLACES-SVC-018 (M1) — two concurrent colourings of the same trip never share a colour', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const ids = [1, 2].map((n) => (testDb.prepare(
+      "INSERT INTO places (trip_id, name, lat, lng, route_geometry) VALUES (?, ?, 1, 1, '[[1,1],[2,2]]') RETURNING id",
+    ).get(trip.id, 'cc' + n) as { id: number }).id);
+    await Promise.all(ids.map((id) => (svc as unknown as { colorizeImportedTracks: (tripId: string, result: { places: { id: number; route_geometry: string; route_color: string | null }[] }) => Promise<void> }).colorizeImportedTracks(String(trip.id), {
+      places: [{ id, route_geometry: '[[1,1],[2,2]]', route_color: null }],
+    })));
+    expect(new Set(tracksOf(trip.id).map(t => t.route_color)).size).toBe(2);
+  });
+
+  // Task 5 review L1: the palette-wrap arm (`TRACK_COLORS[(i - free.length) %
+  // len]`) had no test — a mutation collapsing every wrapped index to
+  // `TRACK_COLORS[0]` survived every suite until this test.
+  it('PLACES-SVC-019 (L1) — more tracks than free colours wrap from the palette start', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const places = Array.from({ length: TRACK_COLORS.length + 2 }, (_, i) => ({
+      id: (testDb.prepare(
+        "INSERT INTO places (trip_id, name, lat, lng, route_geometry) VALUES (?, ?, 1, 1, '[[1,1],[2,2]]') RETURNING id",
+      ).get(trip.id, 'w' + i) as { id: number }).id,
+      route_geometry: '[[1,1],[2,2]]',
+      route_color: null as string | null,
+    }));
+    await (svc as unknown as { colorizeImportedTracks: (tripId: string, result: { places: typeof places }) => Promise<void> }).colorizeImportedTracks(String(trip.id), { places });
+    const stored = tracksOf(trip.id).map(t => t.route_color);
+    expect(stored).toEqual([...TRACK_COLORS, TRACK_COLORS[0], TRACK_COLORS[1]]);
+  });
 });
 
 // ── Import enrichment (#886) ──────────────────────────────────────────────────
@@ -1424,7 +1712,7 @@ describe('enrichImportedPlaces', () => {
   it('PLACE-SVC-060b (PL45) — broadcasts place:updated with socketId: undefined, no exclusion (the importer\'s own client gets the late update)', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
-    const place = createPlace(testDb, trip.id, { name: 'Bar', lat: 48.85, lng: 2.35 }) as any;
+    const place = createPlace(testDb, trip.id, { name: 'Bar', lat: 48.85, lng: 2.35 });
     const broadcastSpy = vi.spyOn(RealtimeService.prototype, 'broadcast');
 
     const svcWithMaps = await enrichSvc({
@@ -1439,7 +1727,10 @@ describe('enrichImportedPlaces', () => {
     const [tripArg, event, payload, socketId] = broadcastSpy.mock.calls[0];
     expect(tripArg).toBe(String(trip.id));
     expect(event).toBe('place:updated');
-    expect((payload as { place: { id: number } }).place.id).toBe(place.id);
+    // Task 5 review L7: the payload carries the just-written value, not a
+    // stale pre-enrichment snapshot (the qb read bypasses the identity map).
+    expect((payload as { place: { id: number; google_place_id: string | null } }).place.id).toBe(place.id);
+    expect((payload as { place: { google_place_id: string | null } }).place.google_place_id).toBe('ChIJ1');
     expect(socketId).toBeUndefined();
     broadcastSpy.mockRestore();
   });
@@ -1714,6 +2005,57 @@ describe('importNaverList provider payload', () => {
     expect(result.places).toHaveLength(1);
     expect(result.places[0].name).toBe('Gyeongbokgung');
   });
+
+  // Task 5 review M2/L2. Mutants that survived every suite until these
+  // tests: `duration_minutes: 30` (all four importers), an insert loop
+  // outside `uow.transactional`.
+  it('PLACE-SVC-077b (M2) — the full stored row matches the legacy 7-column Naver shape, address+notes included, every other column null', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      text: async () => JSON.stringify({
+        folder: { name: 'Seoul', bookmarkCount: 1 },
+        bookmarkList: [{ name: 'Gyeongbokgung', px: 126.977, py: 37.5796, memo: 'A palace', address: 'Sejongno' }],
+      }),
+    }));
+    const result = await svc.importNaverList(String(trip.id), FOLDER_URL) as { places: { id: number }[] };
+    const row = testDb.prepare('SELECT * FROM places WHERE id = ?').get(result.places[0].id) as Record<string, unknown>;
+    expect(row).toMatchObject({
+      trip_id: trip.id, name: 'Gyeongbokgung', description: null, lat: 37.5796, lng: 126.977,
+      address: 'Sejongno', category_id: null, price: null, currency: null, place_time: null, end_time: null,
+      duration_minutes: 60, notes: 'A palace', image_url: null, google_place_id: null, google_ftid: null,
+      osm_id: null, amap_poi_id: null, website: null, phone: null, transport_mode: 'walking',
+      route_geometry: null, route_color: null, stop_type: null, fill_percent: null,
+    });
+  });
+
+  it('PLACE-SVC-077c (L2) — a failure partway through the Naver-list loop leaves nothing stored', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      text: async () => JSON.stringify({
+        folder: { name: 'Seoul', bookmarkCount: 2 },
+        bookmarkList: [
+          { name: 'Gyeongbokgung', px: 126.977, py: 37.5796, memo: null, address: 'Sejongno' },
+          { name: 'Namsan Tower', px: 126.988, py: 37.5512, memo: null, address: 'Yongsan' },
+        ],
+      }),
+    }));
+    const placesRepo = await createTestPlacesRepo(dbs.connection);
+    const realInsertPlace = placesRepo.insertPlace.bind(placesRepo);
+    let calls = 0;
+    const insertSpy = vi.spyOn(placesRepo, 'insertPlace').mockImplementation(async (input) => {
+      calls++;
+      if (calls === 2) throw new Error('boom');
+      return realInsertPlace(input);
+    });
+    await expect(svc.importNaverList(String(trip.id), FOLDER_URL)).rejects.toThrow('boom');
+    const count = testDb.prepare('SELECT COUNT(*) AS n FROM places WHERE trip_id = ?').get(trip.id) as { n: number };
+    expect(count.n).toBe(0);
+    insertSpy.mockRestore();
+  });
 });
 
 // ── Free address backfill for list imports (#1954) ───────────────────────────
@@ -1745,7 +2087,7 @@ describe('backfillMissingAddresses', () => {
   it('PLACE-SVC-078b (PL47) — broadcasts place:updated with socketId: undefined, no exclusion', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
-    const place = createPlace(testDb, trip.id, { name: 'Bar', lat: 48.85, lng: 2.35 }) as any;
+    const place = createPlace(testDb, trip.id, { name: 'Bar', lat: 48.85, lng: 2.35 });
     const broadcastSpy = vi.spyOn(RealtimeService.prototype, 'broadcast');
 
     const reverseGeocode = vi.fn(async () => ({ name: null, address: '1 Rue de Rivoli, Paris' }));
@@ -1757,7 +2099,10 @@ describe('backfillMissingAddresses', () => {
     const [tripArg, event, payload, socketId] = broadcastSpy.mock.calls[0];
     expect(tripArg).toBe(String(trip.id));
     expect(event).toBe('place:updated');
-    expect((payload as { place: { id: number } }).place.id).toBe(place.id);
+    // Task 5 review L7: the payload carries the just-filled address, not a
+    // stale pre-backfill snapshot (the qb read bypasses the identity map).
+    expect((payload as { place: { id: number; address: string | null } }).place.id).toBe(place.id);
+    expect((payload as { place: { address: string | null } }).place.address).toBe('1 Rue de Rivoli, Paris');
     expect(socketId).toBeUndefined();
     broadcastSpy.mockRestore();
   });

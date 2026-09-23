@@ -1,6 +1,8 @@
 import { getRawConnection } from './database';
 import type { Configuration } from '@mikro-orm/core';
+import type { SqlitePlatform } from '@mikro-orm/sql';
 import { SqliteConnection, SqliteDriver } from '@mikro-orm/sqlite';
+import { NulSafeSqlitePlatform } from './nul-safe-sqlite-platform';
 
 import type Database from 'better-sqlite3';
 import { SqliteDialect, SqliteDriver as KyselySqliteDriver, type Dialect, type SqliteDialectConfig } from 'kysely';
@@ -61,6 +63,14 @@ export function createBoundSqliteDriver(getHandle: () => Database.Database): typ
       // and SqliteDriver's constructor hardcodes the class, so there is no
       // supported hook for supplying it.
       (this as unknown as { connection: SqliteConnection }).connection = new BoundSqliteConnection(config);
+      // Program rule 22 (NulSafeSqlitePlatform's own docstring): `SqliteDriver`'s
+      // constructor hardcodes `new SqlitePlatform()` too, with no config hook to
+      // supply a different one. `DatabaseDriver.platform` is a plain, reassignable
+      // field — `DatabaseDriver.setMetadata()` (called once, during
+      // `MikroORM.init()`, always after this constructor returns) is what actually
+      // propagates it to the connection via `connection.setPlatform(this.platform)`,
+      // so replacing it here, synchronously, is in time for every later read.
+      (this as unknown as { platform: SqlitePlatform }).platform = new NulSafeSqlitePlatform();
     }
   };
 }

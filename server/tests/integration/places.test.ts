@@ -35,6 +35,7 @@ import { createUser, createAdmin, createTrip, createPlace, addTripMember } from 
 import { authCookie } from '../helpers/auth';
 import { PlacesService } from '../../src/nest/places/places.service';
 import { invalidatePermissionsCache } from '../../src/nest/permissions/permissions-cache';
+import { broadcast } from '../../src/websocket';
 
 let nestApp: INestApplication;
 let app: Application;
@@ -1047,5 +1048,179 @@ describe('Custom place image upload', () => {
       .set('Cookie', authCookie(user.id))
       .attach('image', FIXTURE_PDF);
     expect(res.status).toBe(400);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// H1 (task-4-review.md) — the trip id is parsed ONCE, at the gate, and that
+// value is what every later call uses (rule 21). A hex-spelled trip id whose
+// `Number()` value is a REAL, accessible trip must answer the same not-found
+// every place/day/assignment id already does — not reach the real trip
+// through a `Number(tripId)` gate while a raw-bound write behind it (or vice
+// versa) misses.
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('H1 — trip id parsed once at the gate (rule 21)', () => {
+  it('GET by the trip\'s hex-spelled id 404s — it does not read the real trip\'s place', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const place = createPlace(testDb, trip.id, { name: 'Spot' });
+    const hexTripId = '0x' + trip.id.toString(16);
+
+    const res = await request(app)
+      .get(`/api/trips/${hexTripId}/places/${place.id}`)
+      .set('Cookie', authCookie(user.id));
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({ error: 'Place not found' });
+  });
+
+  it('PUT with tags by the hex-spelled trip id 404s and leaves the tags untouched (H1 live: they used to be wiped)', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const tagResult = testDb.prepare('INSERT INTO tags (name, user_id) VALUES (?, ?)').run('Original', user.id);
+    const tagId = tagResult.lastInsertRowid as number;
+    const createRes = await request(app)
+      .post(`/api/trips/${trip.id}/places`)
+      .set('Cookie', authCookie(user.id))
+      .send({ name: 'Taggable', tags: [tagId] });
+    expect(createRes.status).toBe(201);
+    const placeId = createRes.body.place.id;
+    const hexTripId = '0x' + trip.id.toString(16);
+
+    const res = await request(app)
+      .put(`/api/trips/${hexTripId}/places/${placeId}`)
+      .set('Cookie', authCookie(user.id))
+      .send({ name: 'Renamed', tags: [] });
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({ error: 'Place not found' });
+
+    const after = await request(app)
+      .get(`/api/trips/${trip.id}/places/${placeId}`)
+      .set('Cookie', authCookie(user.id));
+    expect(after.body.place.name).toBe('Taggable');
+    expect((after.body.place.tags as { id: number }[]).some((t) => t.id === tagId)).toBe(true);
+  });
+
+  it('PUT :id/rating by the hex-spelled trip id 404s', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const place = createPlace(testDb, trip.id, { name: 'Rated' });
+    const hexTripId = '0x' + trip.id.toString(16);
+
+    const res = await request(app)
+      .put(`/api/trips/${hexTripId}/places/${place.id}/rating`)
+      .set('Cookie', authCookie(user.id))
+      .send({ rating: 4 });
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({ error: 'Place not found' });
+    expect(testDb.prepare('SELECT COUNT(*) AS n FROM place_ratings WHERE place_id = ?').get(place.id)).toEqual({ n: 0 });
+  });
+
+  it('POST create by the hex-spelled trip id mirrors the legacy 500 (base 94c6efbbc: FK violation on the raw-bound trip id) — every OTHER route 404s, this is the one documented exception', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const hexTripId = '0x' + trip.id.toString(16);
+
+    const res = await request(app)
+      .post(`/api/trips/${hexTripId}/places`)
+      .set('Cookie', authCookie(user.id))
+      .send({ name: 'Should not land' });
+    expect(res.status).toBe(500);
+    expect(res.body).toEqual({ error: 'Internal server error' });
+    expect(testDb.prepare('SELECT COUNT(*) AS n FROM places WHERE trip_id = ?').get(trip.id)).toEqual({ n: 0 });
+  });
+
+  it('DELETE :id by the hex-spelled trip id 404s, deletes nothing and broadcasts nothing, even with a linked expense (#1298)', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const place = createPlace(testDb, trip.id, { name: 'Louvre' });
+    testDb.prepare("INSERT INTO budget_items (trip_id, name, total_price, place_id) VALUES (?, 'Tickets', 34, ?)").run(trip.id, place.id);
+    const hexTripId = '0x' + trip.id.toString(16);
+    vi.mocked(broadcast).mockClear();
+
+    const res = await request(app)
+      .delete(`/api/trips/${hexTripId}/places/${place.id}`)
+      .set('Cookie', authCookie(user.id));
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({ error: 'Place not found' });
+    expect(testDb.prepare('SELECT id FROM places WHERE id = ?').get(place.id)).toBeTruthy();
+    expect(testDb.prepare('SELECT id FROM budget_items WHERE place_id = ?').get(place.id)).toBeTruthy();
+    expect(broadcast).not.toHaveBeenCalled();
+  });
+
+  it('POST bulk-delete by the hex-spelled trip id deletes nothing (scopedIds already binds the trip id raw, so this was never divergent — kept as a regression alongside the single-delete case)', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const place = createPlace(testDb, trip.id, { name: 'Louvre' });
+    testDb.prepare("INSERT INTO budget_items (trip_id, name, total_price, place_id) VALUES (?, 'Tickets', 34, ?)").run(trip.id, place.id);
+    const hexTripId = '0x' + trip.id.toString(16);
+    vi.mocked(broadcast).mockClear();
+
+    const res = await request(app)
+      .post(`/api/trips/${hexTripId}/places/bulk-delete`)
+      .set('Cookie', authCookie(user.id))
+      .send({ ids: [place.id] });
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ deleted: [], count: 0 });
+    expect(testDb.prepare('SELECT id FROM places WHERE id = ?').get(place.id)).toBeTruthy();
+    expect(broadcast).not.toHaveBeenCalled();
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// M1 / program rule 22 (task-4-review.md) — a NUL byte in a user string no
+// longer 500s: the platform override restores the legacy raw-bind's
+// byte-for-byte round-trip (base 94c6efbbc: 200/201; before this fix, every
+// ORM-converted statement 500'd on NUL).
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('M1 — NUL-safe value quoting on the SQLite platform (rule 22)', () => {
+  it('GET ?search=%00 is 200, not 500 (status parity — SQLite\'s LIKE pattern matcher itself iterates its RHS as NUL-terminated, an independent SQLite limitation this platform fix does not touch, so a NUL search matches everything on BOTH trees, not nothing)', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    createPlace(testDb, trip.id, { name: 'Spot' });
+
+    // A raw, pre-encoded `%00` in the URL — the review's exact literal
+    // request shape (`GET /api/trips/:id/places?search=%00`). `.query({...})`
+    // goes through superagent's own `qs` encoder, which is not guaranteed to
+    // round-trip a NUL character the same way; the literal query string is
+    // what Express/the route actually receives in production.
+    const res = await request(app)
+      .get(`/api/trips/${trip.id}/places?search=%00`)
+      .set('Cookie', authCookie(user.id));
+    expect(res.status).toBe(200);
+  });
+
+  it('POST create with a NUL in the name is 201 and the name round-trips byte-for-byte', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const name = 'nul\u0000name';
+
+    const res = await request(app)
+      .post(`/api/trips/${trip.id}/places`)
+      .set('Cookie', authCookie(user.id))
+      .send({ name });
+    expect(res.status).toBe(201);
+    expect(res.body.place.name).toBe(name);
+
+    const stored = testDb.prepare('SELECT name FROM places WHERE id = ?').get(res.body.place.id) as { name: string };
+    expect(stored.name).toBe(name);
+  });
+
+  it('fuzzes every 0x01-0x1F control character in a created place name: none 500 and every one round-trips', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+
+    // 0x00 is covered by its own dedicated test above; this sweeps the rest
+    // of the control-character range the review's fuzz asked for.
+    for (let code = 0x01; code <= 0x1f; code++) {
+      const name = `ctrl${String.fromCharCode(code)}char`;
+      const res = await request(app)
+        .post(`/api/trips/${trip.id}/places`)
+        .set('Cookie', authCookie(user.id))
+        .send({ name });
+      expect(res.status).toBe(201);
+      expect(res.body.place.name).toBe(name);
+    }
   });
 });

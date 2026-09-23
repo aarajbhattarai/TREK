@@ -185,17 +185,32 @@ export class AssignmentsService {
    * `toRowId(dayId)!` — a non-canonical id (`"3 "`, `"3.0"`) must answer
    * "not found" HERE, not pass `DaysRepository.existsInTrip`'s own raw-bind
    * affinity match and then hit `toRowId(dayId)!` downstream returning
-   * `null` (the live regression: a `day_id: null` INSERT, 500). `tripId`
-   * keeps the trip-scoping seam every gate in this cluster uses (D4's T5,
-   * `TripsRepository.findAccessible`'s precedent) — trip access is already
-   * verified upstream of every route this class serves, so `Number(tripId)`
-   * is the correct, unchanged shape (`DaysService.getDay`'s own precedent
-   * keeps its `tripId` unconverted too).
+   * `null` (the live regression: a `day_id: null` INSERT, 500).
+   *
+   * **`tripId` is `toRowId`'d here too (Task 4 review H1, the trip-id half,
+   * fixed in the same fix round).** This docstring previously claimed
+   * `Number(tripId)` was "the correct, unchanged shape", citing
+   * `DaysService.getDay` as a precedent that "keeps its `tripId`
+   * unconverted too" — both halves of that claim were wrong: the legacy
+   * raw-SQL base (`94c6efbbc`) bound `tripId` RAW here (it was never
+   * `Number(tripId)` to begin with, so nothing was "unchanged"), and
+   * `DaysService.getDay` keeps the raw string, it does not convert it
+   * either — there was no precedent for `Number()` at all. `Number('0xb')`
+   * is `11`, a real trip's row id, so a hex trip id passed this gate
+   * against a REAL trip while `createAssignment`'s place lookup and the
+   * actual INSERT ran scoped to the trip in the route string — live:
+   * `POST /api/trips/0xb/days/:d/assignments` was the legacy's 404 "Day not
+   * found" and is now fixed back to that 404, not the 201 the `Number()`
+   * gate produced. `toRowId` rejects the same non-canonical trip-id
+   * spellings the place/day/assignment ids already reject, so a hex trip id
+   * answers "not found" here instead of reaching a real trip's row.
    */
   async dayExists(dayId: string | number, tripId: string | number) {
     const id = toRowId(dayId);
     if (id === null) return false;
-    return await this.daysRepo.existsInTrip(id, Number(tripId));
+    const tid = toRowId(tripId);
+    if (tid === null) return false;
+    return await this.daysRepo.existsInTrip(id, tid);
   }
 
   /**
@@ -205,12 +220,15 @@ export class AssignmentsService {
    * narrowed its `id` parameter to `number` for this exact reason
    * (`Places.repository.ts`'s own docstring) — Plan 3c Task 1 originally
    * landed the method, Task 4 repointed this call site and applied the H1
-   * fix in the same change.
+   * fix in the same change. `tripId` is `toRowId`'d here too, for the same
+   * trip-id-half-of-H1 reason `dayExists` above now documents.
    */
   async placeExists(placeId: unknown, tripId: string | number) {
     const id = toRowId(placeId);
     if (id === null) return false;
-    return await this.placesRepo.existsInTrip(id, Number(tripId));
+    const tid = toRowId(tripId);
+    if (tid === null) return false;
+    return await this.placesRepo.existsInTrip(id, tid);
   }
 
   /**
