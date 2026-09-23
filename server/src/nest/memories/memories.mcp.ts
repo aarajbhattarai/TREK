@@ -3,11 +3,13 @@ import {
   errorResult, ok, type McpContext,
 } from '../../nest-mcp';
 import { z } from 'zod';
+import { InjectRepository } from '@mikro-orm/nestjs';
 import { ADDON_IDS } from '../../addons';
 import { AddonsService } from '../addons/addons.service';
-import { DatabaseService } from '../database/database.service';
 import { ImmichService } from './immich.service';
 import { SynologyService } from './synology.service';
+import { PhotoProviders } from '../../db/entities/PhotoProviders.entity';
+import type { PhotoProvidersRepository } from '../../db/repositories/PhotoProviders.repository';
 
 /**
  * The photo backends TREK can talk to, named rather than taken as a free
@@ -65,8 +67,8 @@ export class MemoriesMcp {
   constructor(
     private readonly immich: ImmichService,
     private readonly synology: SynologyService,
-    private readonly db: DatabaseService,
     private readonly addons: AddonsService,
+    @InjectRepository(PhotoProviders) private readonly photoProviders: PhotoProvidersRepository,
   ) {}
 
   /**
@@ -75,7 +77,7 @@ export class MemoriesMcp {
    */
   async enabledProviderIds(): Promise<string[]> {
     if (!(await this.addons.isAddonEnabled(ADDON_IDS.JOURNEY))) return [];
-    return this.db.all<{ id: string }>('SELECT id FROM photo_providers WHERE enabled = 1').map((row) => row.id);
+    return await this.photoProviders.listEnabledIds();
   }
 
   /**
@@ -85,7 +87,7 @@ export class MemoriesMcp {
    * themselves never checked it, so this only ever narrows what REST allows.
    */
   private async providerRefusal(provider: ProviderId) {
-    const row = this.db.get<{ enabled: number }>('SELECT enabled FROM photo_providers WHERE id = ?', provider);
+    const row = await this.photoProviders.findEnabled(provider);
     if (!row) return errorResult(`Provider: "${provider}" is not supported`);
     if (row.enabled !== 1 || !(await this.addons.isAddonEnabled(ADDON_IDS.JOURNEY)))
       return errorResult(`Provider: "${provider}" is not enabled, contact server administrator`);

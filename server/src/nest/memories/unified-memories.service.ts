@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@mikro-orm/nestjs';
 import { ADDON_IDS } from '../../addons';
-import { broadcast } from '../../websocket';
 import { encrypt_api_key } from '../common/crypto/apiKeyCrypto';
 import { AddonsService } from '../addons/addons.service';
 import { DatabaseService } from '../database/database.service';
@@ -18,6 +18,17 @@ import {
 } from './memories.helpers';
 import { NotificationsService } from '../notifications/notifications.service';
 import { UnitOfWork } from '../database/unit-of-work';
+import { RealtimeService } from '../realtime/realtime.service';
+import { PhotoProviders } from '../../db/entities/PhotoProviders.entity';
+import type { PhotoProvidersRepository } from '../../db/repositories/PhotoProviders.repository';
+import { TripPhotos } from '../../db/entities/TripPhotos.entity';
+import type { TripPhotosRepository } from '../../db/repositories/TripPhotos.repository';
+import { TripAlbumLinks } from '../../db/entities/TripAlbumLinks.entity';
+import type { TripAlbumLinksRepository } from '../../db/repositories/TripAlbumLinks.repository';
+import { Users } from '../../db/entities/Users.entity';
+import type { UsersRepository } from '../../db/repositories/Users.repository';
+import { Trips } from '../../db/entities/Trips.entity';
+import type { TripsRepository } from '../../db/repositories/Trips.repository';
 
 /**
  * The provider-agnostic trip photo surface: which photos a trip shows, which
@@ -36,6 +47,12 @@ export class UnifiedMemoriesService {
     private readonly notifications: NotificationsService,
     private readonly addons: AddonsService,
     private readonly uow: UnitOfWork,
+    private readonly realtime: RealtimeService,
+    @InjectRepository(PhotoProviders) private readonly photoProviders: PhotoProvidersRepository,
+    @InjectRepository(TripPhotos) private readonly tripPhotos: TripPhotosRepository,
+    @InjectRepository(TripAlbumLinks) private readonly tripAlbumLinks: TripAlbumLinksRepository,
+    @InjectRepository(Users) private readonly users: UsersRepository,
+    @InjectRepository(Trips) private readonly trips: TripsRepository,
   ) {}
 
   private async _providers(): Promise<Array<{id: string; enabled: boolean}>> {
@@ -43,7 +60,7 @@ export class UnifiedMemoriesService {
     // surface lives inside journeys. Covers rows left enabled from before
     // updateAddon cascaded the journey disable.
     const journeyOn = await this.addons.isAddonEnabled(ADDON_IDS.JOURNEY);
-    const rows = this.db.prepare('SELECT id, enabled FROM photo_providers').all() as Array<{id: string; enabled: number}>;
+    const rows = await this.photoProviders.listAll();
     return rows.map(r => ({ id: r.id, enabled: journeyOn && r.enabled === 1 }));
   }
 
@@ -76,17 +93,7 @@ export class UnifiedMemoriesService {
         return fail('No photo providers enabled', 400);
       }
 
-      const photos = this.db.prepare(`
-        SELECT tp.photo_id, tkp.asset_id, tkp.provider, tp.user_id, tp.shared, tp.added_at,
-               u.username, u.avatar
-        FROM trip_photos tp
-        JOIN trek_photos tkp ON tkp.id = tp.photo_id
-        JOIN users u ON tp.user_id = u.id
-        WHERE tp.trip_id = ?
-          AND (tp.user_id = ? OR tp.shared = 1)
-          AND tkp.provider IN (${enabledProviders.map(() => '?').join(',')})
-        ORDER BY tp.added_at ASC
-      `).all(tripId, userId, ...enabledProviders);
+      const photos = await this.tripPhotos.listForTrip(tripId, userId, enabledProviders);
 
       return success(photos);
     } catch (error) {
@@ -108,23 +115,7 @@ export class UnifiedMemoriesService {
       }
 
     try {
-      const links = this.db.prepare(`
-        SELECT tal.id,
-               tal.trip_id,
-               tal.user_id,
-               tal.provider,
-               tal.album_id,
-               tal.album_name,
-               tal.sync_enabled,
-               tal.last_synced_at,
-               tal.created_at,
-               u.username
-        FROM trip_album_links tal
-        JOIN users u ON tal.user_id = u.id
-        WHERE tal.trip_id = ?
-          AND tal.provider IN (${enabledProviders.map(() => '?').join(',')})
-        ORDER BY tal.created_at ASC
-      `).all(tripId, ...enabledProviders);
+      const links = await this.tripAlbumLinks.listForTrip(tripId, enabledProviders);
 
       return success(links);
     } catch (error) {
@@ -142,10 +133,14 @@ export class UnifiedMemoriesService {
     }
     try {
       const photoId = await this.photos.getOrCreate(provider, assetId, userId, passphrase);
-      const result = this.db.prepare(
-        'INSERT OR IGNORE INTO trip_photos (trip_id, user_id, photo_id, shared, album_link_id) VALUES (?, ?, ?, ?, ?)'
-      ).run(tripId, userId, photoId, shared ? 1 : 0, albumLinkId || null);
-      return success(result.changes > 0);
+      const added = await this.tripPhotos.insertIgnore({
+        trip_id: tripId,
+        user_id: userId,
+        photo_id: photoId,
+        shared: shared ? 1 : 0,
+        album_link_id: albumLinkId || null,
+      });
+      return success(added);
     }
     catch (error) {
       return mapDbError(error, 'Failed to add photo to trip');
@@ -189,7 +184,7 @@ export class UnifiedMemoriesService {
     }
 
     await this._notifySharedTripPhotos(tripId, userId, added);
-    broadcast(tripId, 'memories:updated', { userId }, sid);
+    this.realtime.broadcast(tripId, 'memories:updated', { userId }, sid);
     return success({ added, shared });
   }
 
@@ -207,16 +202,10 @@ export class UnifiedMemoriesService {
     }
 
     try {
-      this.db.prepare(`
-        UPDATE trip_photos
-        SET shared = ?
-        WHERE trip_id = ?
-          AND user_id = ?
-          AND photo_id = ?
-      `).run(shared ? 1 : 0, tripId, userId, photoId);
+      await this.tripPhotos.setShared(tripId, userId, photoId, shared ? 1 : 0);
 
       await this._notifySharedTripPhotos(tripId, userId, 1);
-      broadcast(tripId, 'memories:updated', { userId }, sid);
+      this.realtime.broadcast(tripId, 'memories:updated', { userId }, sid);
       return success(true);
     } catch (error) {
       return mapDbError(error, 'Failed to update photo sharing');
@@ -235,15 +224,10 @@ export class UnifiedMemoriesService {
     }
 
     try {
-      this.db.prepare(`
-        DELETE FROM trip_photos
-        WHERE trip_id = ?
-          AND user_id = ?
-          AND photo_id = ?
-      `).run(tripId, userId, photoId);
+      await this.tripPhotos.deleteForUserPhoto(tripId, userId, photoId);
 
       await this.photos.deleteIfOrphan(photoId);
-      broadcast(tripId, 'memories:updated', { userId }, sid);
+      this.realtime.broadcast(tripId, 'memories:updated', { userId }, sid);
 
       return success(true);
     } catch (error) {
@@ -279,11 +263,16 @@ export class UnifiedMemoriesService {
 
     try {
       const encryptedPassphrase = passphrase ? encrypt_api_key(passphrase) : null;
-      const result = this.db.prepare(
-        'INSERT OR IGNORE INTO trip_album_links (trip_id, user_id, provider, album_id, album_name, passphrase) VALUES (?, ?, ?, ?, ?, ?)'
-      ).run(tripId, userId, provider, albumId, albumName, encryptedPassphrase);
+      const added = await this.tripAlbumLinks.insertIgnore({
+        trip_id: tripId,
+        user_id: userId,
+        provider,
+        album_id: albumId,
+        album_name: albumName,
+        passphrase: encryptedPassphrase,
+      });
 
-      if (result.changes === 0) {
+      if (!added) {
         return fail('Album already linked', 409);
       }
 
@@ -300,17 +289,14 @@ export class UnifiedMemoriesService {
     }
 
     try {
-      const linkedPhotos = this.db.prepare('SELECT photo_id FROM trip_photos WHERE trip_id = ? AND album_link_id = ?')
-        .all(tripId, linkId) as Array<{ photo_id: number }>;
+      const linkedPhotoIds = await this.tripPhotos.listPhotoIdsForAlbumLink(tripId, linkId);
 
       await this.uow.transactional(async () => {
-        this.db.prepare('DELETE FROM trip_photos WHERE trip_id = ? AND album_link_id = ?')
-          .run(tripId, linkId);
-        this.db.prepare('DELETE FROM trip_album_links WHERE id = ? AND trip_id = ? AND user_id = ?')
-          .run(linkId, tripId, userId);
+        await this.tripPhotos.deleteForAlbumLink(tripId, linkId);
+        await this.tripAlbumLinks.deleteScoped(linkId, tripId, userId);
       });
 
-      for (const { photo_id } of linkedPhotos) {
+      for (const photo_id of linkedPhotoIds) {
         await this.photos.deleteIfOrphan(photo_id);
       }
 
@@ -332,12 +318,11 @@ export class UnifiedMemoriesService {
     if (added <= 0) return success(undefined);
 
     try {
-      const actorRow = this.db.prepare('SELECT username, email FROM users WHERE id = ?').get(actorUserId) as { username: string | null, email: string | null };
+      const actorRow = await this.users.findUsernameEmail(actorUserId);
 
-      const tripInfo = this.db.prepare('SELECT title FROM trips WHERE id = ?').get(tripId) as { title: string } | undefined;
+      const tripTitle = await this.trips.getTitle(tripId);
 
-    
-      this.notifications.send({ event: 'photos_shared', actorId: actorUserId, scope: 'trip', targetId: Number(tripId), params: { trip: tripInfo?.title || 'Untitled', actor: actorRow?.email || 'Unknown', count: String(added), tripId: String(tripId) } }).catch(() => {});
+      this.notifications.send({ event: 'photos_shared', actorId: actorUserId, scope: 'trip', targetId: Number(tripId), params: { trip: tripTitle || 'Untitled', actor: actorRow?.email || 'Unknown', count: String(added), tripId: String(tripId) } }).catch(() => {});
       return success(undefined);
     } catch {
       return fail('Failed to send notifications', 500);

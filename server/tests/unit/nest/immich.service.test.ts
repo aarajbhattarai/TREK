@@ -25,11 +25,14 @@ vi.mock('../../../src/config', () => ({
   updateJwtSecret: () => {},
 }));
 
-const { decryptMock } = vi.hoisted(() => ({ decryptMock: vi.fn((v: string) => v) }));
+const { decryptMock, maybeEncryptMock } = vi.hoisted(() => ({
+  decryptMock: vi.fn((v: string) => v),
+  maybeEncryptMock: vi.fn((v: string) => v),
+}));
 vi.mock('../../../src/nest/common/crypto/apiKeyCrypto', () => ({
   decrypt_api_key: decryptMock,
   encrypt_api_key: (v: string) => v,
-  maybe_encrypt_api_key: (v: string) => v,
+  maybe_encrypt_api_key: maybeEncryptMock,
 }));
 
 const { safeFetch, checkSsrf } = vi.hoisted(() => ({ safeFetch: vi.fn(), checkSsrf: vi.fn() }));
@@ -42,19 +45,18 @@ vi.mock('../../../src/utils/ssrfGuard', () => ({
 
 import { createTables } from '../../../src/db/schema';
 import { runMigrations } from '../../../src/db/migrations';
-import { DatabaseService } from '../../../src/nest/database/database.service';
 import { ImmichService } from '../../../src/nest/memories/immich.service';
 import type { AuditService } from '../../../src/nest/audit/audit.service';
 import type { MemoriesAccessService } from '../../../src/nest/memories/memories-access.service';
 import fs from 'node:fs';
 import path from 'node:path';
 import { makeStorageFixture } from '../../helpers/storage-fixture';
+import { createTestUsersRepo } from '../../helpers/test-uow';
 
 const audit = { writeAudit: vi.fn() };
 const access = { getAlbumIdFromLink: vi.fn() };
-const dbs = new DatabaseService(testDb);
 const journeyFx = makeStorageFixture('journey/');
-const svc = new ImmichService(dbs, audit as unknown as AuditService, access as unknown as MemoriesAccessService, journeyFx.storage);
+let svc: ImmichService;
 
 const USER = 1;
 
@@ -75,14 +77,17 @@ function upstream(opts: { ok?: boolean; status?: number; json?: unknown; url?: s
   };
 }
 
-beforeAll(() => {
+beforeAll(async () => {
   createTables(testDb);
   runMigrations(testDb);
+  const users = await createTestUsersRepo(testDb);
+  svc = new ImmichService(audit as unknown as AuditService, access as unknown as MemoriesAccessService, journeyFx.storage, users);
 });
 
 beforeEach(() => {
   vi.clearAllMocks();
   decryptMock.mockImplementation((v: string) => v);
+  maybeEncryptMock.mockImplementation((v: string) => v);
   checkSsrf.mockResolvedValue({ allowed: true, isPrivate: false, resolvedIp: '1.2.3.4' });
   testDb.prepare('DELETE FROM users').run();
   seedUser(USER, 'https://immich.test', 'key-1');
@@ -174,6 +179,26 @@ describe('saveImmichSettings', () => {
     expect(result).toEqual({ success: true });
     expect(checkSsrf).not.toHaveBeenCalled();
     expect(await svc.getImmichCredentials(USER)).toBeNull();
+  });
+
+  // R6 — the encrypt call still runs; this file mocks `maybe_encrypt_api_key`
+  // as identity everywhere else (so cases above can assert on the plaintext
+  // round-trip), so this one case swaps in the REAL crypto for the duration
+  // of a single call and reads the raw column back — proving
+  // `UsersRepository.setImmichSettings` never bypasses the service's encrypt
+  // step. `beforeEach` restores the identity stub for every other case.
+  it('IMMICH-051 (R6): the stored immich_api_key is the encrypted envelope, never the plaintext', async () => {
+    const real = await vi.importActual<typeof import('../../../src/nest/common/crypto/apiKeyCrypto')>(
+      '../../../src/nest/common/crypto/apiKeyCrypto',
+    );
+    maybeEncryptMock.mockImplementation(real.maybe_encrypt_api_key);
+
+    const plaintext = 'synthetic-test-immich-key-001';
+    await svc.saveImmichSettings(USER, 'https://immich.test', plaintext, null);
+
+    const row = testDb.prepare('SELECT immich_api_key FROM users WHERE id = ?').get(USER) as { immich_api_key: string };
+    expect(row.immich_api_key).not.toBe(plaintext);
+    expect(row.immich_api_key.startsWith('enc:v1:')).toBe(true);
   });
 });
 

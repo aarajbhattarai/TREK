@@ -68,6 +68,7 @@ import { TripPhotos } from '../../src/db/entities/TripPhotos.entity';
 import { TripAlbumLinks } from '../../src/db/entities/TripAlbumLinks.entity';
 import { Trips } from '../../src/db/entities/Trips.entity';
 import { TrekPhotoCacheMeta } from '../../src/db/entities/TrekPhotoCacheMeta.entity';
+import { PhotoProviders } from '../../src/db/entities/PhotoProviders.entity';
 import { UnsplashService } from '../../src/nest/unsplash/unsplash.service';
 import { UserCleanupService } from '../../src/nest/auth/user-cleanup.service';
 import { WebauthnConfigService } from '../../src/nest/auth/webauthn-config.service';
@@ -132,6 +133,7 @@ import {
   createTestUsersRepo,
 } from './test-uow';
 import { createTestOrm } from './test-orm';
+import { createTestTripFilesRepo, createTestFileLinksRepo, createTestBudgetItemsRepo } from './files-repos';
 import { AppSettings } from '../../src/db/entities/AppSettings.entity';
 import { AuditLog } from '../../src/db/entities/AuditLog.entity';
 import { Users } from '../../src/db/entities/Users.entity';
@@ -182,7 +184,7 @@ export async function createMcpTestRegistry(): Promise<McpRegistry> {
     new UserCleanupService(dbService, budgetService, await createTestUnitOfWork(dbService.connection), usersRepo),
     new MailerService(dbService),
     new EphemeralTokenService(),
-    new AllowedFileTypesService(dbService), await createTestUnitOfWork(dbService.connection),
+    new AllowedFileTypesService(appSettings), await createTestUnitOfWork(dbService.connection),
     appSettings, usersRepo, inviteTokensRepo, mcpTokensRepoForAuth, oauthTokensRepo, webauthnCredentialsRepoForAuth, passwordResetTokensRepo,
   );
   const queryHelpersService = new QueryHelpersService(await createTestTagsRepo(dbService.connection), await createTestPlaceRatingsRepo(dbService.connection), await createTestAssignmentParticipantsRepo(dbService.connection));
@@ -265,10 +267,24 @@ export async function createMcpTestRegistry(): Promise<McpRegistry> {
     await createTestUnitOfWork(dbService.connection),
     mcpOrm.em,
   );
+  // Plan 3e Task 1 (files): FilesService now also takes uow + the repositories
+  // its R2 transactions and R12 cross-object trip-scoping guard need. Built
+  // once and shared by both consumers below (readModelService, FilesMcp)
+  // rather than reconstructed twice with the same seven-repository tail.
+  const filesService = new FilesService(
+    dbService, permissionsService, realtimeService, new EphemeralTokenService(), generalStorage, mcpOrm.em,
+    await createTestUnitOfWork(dbService.connection),
+    await createTestTripFilesRepo(dbService.connection),
+    await createTestFileLinksRepo(dbService.connection),
+    await createTestReservationsRepo(dbService.connection),
+    await createTestPlacesRepo(dbService.connection),
+    await createTestDayAssignmentsRepo(dbService.connection),
+    await createTestBudgetItemsRepo(dbService.connection),
+  );
   const readModelService = new TripReadModelService(
     await createTestTripsRepo(dbService.connection), membersService, daysService, accommodationsService, budgetService,
     packingService, reservationsService, collabService, placesService, todoService,
-    new FilesService(dbService, permissionsService, realtimeService, new EphemeralTokenService(), generalStorage, mcpOrm.em),
+    filesService,
   );
   const calendarService = new CalendarService(
     reservationsService,
@@ -286,8 +302,8 @@ export async function createMcpTestRegistry(): Promise<McpRegistry> {
   // stubbed: an empty provider registry would make the backfill answer "unknown
   // provider" for every id and hide a wiring mistake behind a caught error.
   const memoriesAccess = new MemoriesAccessService(dbService, mcpOrm.repo(TripPhotos), mcpOrm.repo(TrekPhotos), mcpOrm.repo(TripAlbumLinks), mcpOrm.repo(Trips));
-  const immichService = new ImmichService(dbService, new AuditService(auditLogRepo, usersRepo), memoriesAccess, generalStorage);
-  const synologyService = new SynologyService(dbService, memoriesAccess, notificationsStub());
+  const immichService = new ImmichService(new AuditService(auditLogRepo, usersRepo), memoriesAccess, generalStorage, usersRepo);
+  const synologyService = new SynologyService(memoriesAccess, notificationsStub(), usersRepo);
   const trekPhotos = new TrekPhotoRegistrationService(mcpOrm.repo(TrekPhotos), mcpOrm.repo(TripPhotos), dbService);
   const captureBackfill = new PhotoCaptureBackfillService(new PhotoResolverService(trekPhotos, new ThumbnailService(addonsService, generalStorage, mcpOrm.repo(TrekPhotos)), new TrekPhotoCacheService(mcpOrm.repo(TrekPhotoCacheMeta), generalStorage), new PhotoProviderRegistry([new ImmichPhotoProvider(immichService), new SynologyPhotoProvider(synologyService)]), generalStorage), trekPhotos, generalStorage);
   return createTestRegistry(
@@ -318,7 +334,7 @@ export async function createMcpTestRegistry(): Promise<McpRegistry> {
         authService,
         addonsService,
       ),
-      new FilesMcp(new FilesService(dbService, permissionsService, realtimeService, new EphemeralTokenService(), generalStorage, mcpOrm.em), authService, guards),
+      new FilesMcp(filesService, authService, guards),
       new AccommodationsMcp(accommodationsService, placesService, authService, guards, await createTestUnitOfWork(dbService.connection)),
       new AssignmentsMcp(assignmentsService, daysService, authService, guards),
       new CollabMcp(collabService, authService, addonsService, guards),
@@ -335,7 +351,7 @@ export async function createMcpTestRegistry(): Promise<McpRegistry> {
       new TransitMcp(new TransitService(new GoogleTransitProvider(dbService, appSettings, usersRepo)), daysService, reservationsService, dbService, authService, guards),
       new AtlasMcp(new AtlasService(dbService, await createTestUnitOfWork(dbService.connection)), addonsService, authService),
       new JourneyMcp(journeyDomain, new JourneyShareService(dbService, journeyDomain, new SettingsService(await createTestUnitOfWork(dbService.connection), appSettings, await createTestSettingsRepo(dbService.connection))), addonsService, authService, captureBackfill),
-      new MemoriesMcp(immichService, synologyService, dbService, addonsService),
+      new MemoriesMcp(immichService, synologyService, addonsService, mcpOrm.repo(PhotoProviders)),
       new NotificationsMcp(await makeNotificationsService(dbService, realtimeService), authService),
       new AirtrailMcp(new AirtrailService(dbService, new AuditService(auditLogRepo, usersRepo), new AirtrailClient()), addonsService),
       new ReservationImportMcp(new AirtrailImportService(dbService, realtimeService, reservationsService, new AirtrailClient(), new AirtrailService(dbService, new AuditService(auditLogRepo, usersRepo), new AirtrailClient())), dbService, authService, guards, addonsService),

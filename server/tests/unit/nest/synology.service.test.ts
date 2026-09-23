@@ -27,11 +27,14 @@ vi.mock('../../../src/config', () => ({
   updateJwtSecret: () => {},
 }));
 
-const { decryptMock } = vi.hoisted(() => ({ decryptMock: vi.fn((v: string) => v) }));
+const { decryptMock, maybeEncryptMock } = vi.hoisted(() => ({
+  decryptMock: vi.fn((v: string) => v),
+  maybeEncryptMock: vi.fn((v: string) => v),
+}));
 vi.mock('../../../src/nest/common/crypto/apiKeyCrypto', () => ({
   decrypt_api_key: decryptMock,
   encrypt_api_key: (v: string) => v,
-  maybe_encrypt_api_key: (v: string) => v,
+  maybe_encrypt_api_key: maybeEncryptMock,
 }));
 
 const { safeFetch, checkSsrf, SsrfBlockedError } = vi.hoisted(() => {
@@ -46,13 +49,13 @@ vi.mock('../../../src/utils/ssrfGuard', () => ({
 
 import { createTables } from '../../../src/db/schema';
 import { runMigrations } from '../../../src/db/migrations';
-import { DatabaseService } from '../../../src/nest/database/database.service';
 import { SynologyService } from '../../../src/nest/memories/synology.service';
 import type { MemoriesAccessService } from '../../../src/nest/memories/memories-access.service';
 import { notificationsStub } from '../../helpers/notifications';
+import { createTestUsersRepo } from '../../helpers/test-uow';
 
 const access = { getAlbumLinkForSync: vi.fn(), updateSyncTimeForAlbumLink: vi.fn() };
-const svc = new SynologyService(new DatabaseService(testDb), access as unknown as MemoriesAccessService, notificationsStub());
+let svc: SynologyService;
 
 const USER = 1;
 
@@ -76,14 +79,17 @@ function httpError(status: number) {
   return { ok: false, status, headers: { get: () => null }, json: async () => ({}), arrayBuffer: async () => Buffer.from('x') };
 }
 
-beforeAll(() => {
+beforeAll(async () => {
   createTables(testDb);
   runMigrations(testDb);
+  const users = await createTestUsersRepo(testDb);
+  svc = new SynologyService(access as unknown as MemoriesAccessService, notificationsStub(), users);
 });
 
 beforeEach(() => {
   vi.clearAllMocks();
   decryptMock.mockImplementation((v: string) => v);
+  maybeEncryptMock.mockImplementation((v: string) => v);
   checkSsrf.mockResolvedValue({ allowed: true, isPrivate: false, resolvedIp: '1.2.3.4' });
   testDb.prepare('DELETE FROM users').run();
   seedUser(USER);
@@ -222,6 +228,27 @@ describe('updateSynologySettings', () => {
     const row = testDb.prepare('SELECT synology_password, synology_url FROM users WHERE id = ?').get(USER) as { synology_password: string; synology_url: string };
     expect(row.synology_password).toBe('pw');
     expect(row.synology_url).toBe('https://nas2.test');
+  });
+
+  // R6 — this file mocks `maybe_encrypt_api_key` as identity elsewhere (so
+  // the cases above can assert on the plaintext round-trip); this one case
+  // swaps in the REAL crypto for the duration of a single call and reads the
+  // raw column back — proving `UsersRepository.setSynologySettings` never
+  // bypasses the service's encrypt step. `beforeEach` restores the identity
+  // stub for every other case.
+  it('SYNO-U032 (R6): the stored synology_password is the encrypted envelope, never the plaintext', async () => {
+    safeFetch.mockResolvedValue(api({ sid: 's' }));
+    const real = await vi.importActual<typeof import('../../../src/nest/common/crypto/apiKeyCrypto')>(
+      '../../../src/nest/common/crypto/apiKeyCrypto',
+    );
+    maybeEncryptMock.mockImplementation(real.maybe_encrypt_api_key);
+
+    const plaintext = 'synthetic-test-synology-pw-001';
+    await svc.updateSynologySettings(USER, 'https://nas3.test', 'ada', plaintext);
+
+    const row = testDb.prepare('SELECT synology_password FROM users WHERE id = ?').get(USER) as { synology_password: string };
+    expect(row.synology_password).not.toBe(plaintext);
+    expect(row.synology_password.startsWith('enc:v1:')).toBe(true);
   });
 });
 

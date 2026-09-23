@@ -1,9 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { Response } from 'express';
+import { InjectRepository } from '@mikro-orm/nestjs';
 import { decrypt_api_key, encrypt_api_key, maybe_encrypt_api_key } from '../common/crypto/apiKeyCrypto';
 import { safeFetch, SsrfBlockedError, checkSsrf } from '../../utils/ssrfGuard';
-import { DatabaseService } from '../database/database.service';
 import { MemoriesAccessService } from './memories-access.service';
+import { Users } from '../../db/entities/Users.entity';
+import type { UsersRepository, SynologyUserColumn } from '../../db/repositories/Users.repository';
 import {
   dayStartEpochSeconds,
   fail,
@@ -129,22 +131,17 @@ interface SynologyPhotoItem {
 @Injectable()
 export class SynologyService {
   constructor(
-    private readonly db: DatabaseService,
     private readonly access: MemoriesAccessService,
     private readonly notifications: NotificationsService,
+    @InjectRepository(Users) private readonly users: UsersRepository,
   ) {}
 
-  private async _readSynologyUser(userId: number, columns: string[]): Promise<ServiceResult<SynologyUserRecord>> {
+  private async _readSynologyUser(userId: number, columns: SynologyUserColumn[]): Promise<ServiceResult<SynologyUserRecord>> {
       try {
-          const row = this.db.prepare(`SELECT synology_url, synology_username, synology_password, synology_sid, synology_did, synology_skip_ssl FROM users WHERE id = ?`).get(userId) as SynologyUserRecord | undefined;
+          const filtered = await this.users.getSynologyFields(userId, columns);
 
-          if (!row) {
+          if (!filtered) {
               return fail('User not found', 404);
-          }
-
-          const filtered: SynologyUserRecord = {};
-          for (const column of columns) {
-              filtered[column] = row[column];
           }
 
           return success(filtered);
@@ -306,11 +303,11 @@ export class SynologyService {
 
 
   private async _clearSynologySID(userId: number): Promise<void> {
-      this.db.prepare('UPDATE users SET synology_sid = NULL WHERE id = ?').run(userId);
+      await this.users.clearSynologySID(userId);
   }
 
   private async _clearSynologySession(userId: number): Promise<void> {
-      this.db.prepare('UPDATE users SET synology_sid = NULL, synology_did = NULL WHERE id = ?').run(userId);
+      await this.users.clearSynologySession(userId);
   }
 
   private _splitPackedSynologyId(rawId: string): { id: string; cacheKey: string; assetId: string } | null {
@@ -349,7 +346,7 @@ export class SynologyService {
           return resp as ServiceResult<string>;
       }
 
-      this.db.prepare('UPDATE users SET synology_sid = ? WHERE id = ?').run(encrypt_api_key(resp.data.sid), userId);
+      await this.users.setSynologySid(userId, encrypt_api_key(resp.data.sid));
       return success(resp.data.sid);
   }
 
@@ -403,12 +400,12 @@ export class SynologyService {
       }
 
       try {
-          this.db.prepare('UPDATE users SET synology_url = ?, synology_username = ?, synology_password = ?, synology_skip_ssl = ? WHERE id = ?').run(
+          await this.users.setSynologySettings(
+              userId,
               synologyUrl,
               synologyUsername,
               synologyPassword ? maybe_encrypt_api_key(synologyPassword) : existingEncryptedPassword,
               synologySkipSsl ? 1 : 0,
-              userId,
           );
       } catch {
           return fail('Failed to update Synology settings', 500);
@@ -422,8 +419,8 @@ export class SynologyService {
       if ('error' in sid) return success({ connected: false, error: sid.error.message });
       if (!sid.data) return success({ connected: false, error: 'Not connected to Synology' });
       try {
-          const user = this.db.prepare('SELECT synology_username FROM users WHERE id = ?').get(userId) as { synology_username?: string } | undefined;
-          return success({ connected: true, user: { name: user?.synology_username || 'unknown user' } });
+          const synologyUsername = await this.users.getSynologyUsername(userId);
+          return success({ connected: true, user: { name: synologyUsername || 'unknown user' } });
       } catch (err: unknown) {
           return success({ connected: true, user: { name: 'unknown user' } });
       }
@@ -443,9 +440,9 @@ export class SynologyService {
 
       // Persist the session so the OTP code is not required again on save.
       // The did (device token) allows future re-logins without OTP.
-      this.db.prepare('UPDATE users SET synology_sid = ? WHERE id = ?').run(encrypt_api_key(resp.data.sid), userId);
+      await this.users.setSynologySid(userId, encrypt_api_key(resp.data.sid));
       if (resp.data.did) {
-          this.db.prepare('UPDATE users SET synology_did = ? WHERE id = ?').run(encrypt_api_key(resp.data.did), userId);
+          await this.users.setSynologyDid(userId, encrypt_api_key(resp.data.did));
       }
 
       return success({ connected: true, user: { name: synologyUsername } });

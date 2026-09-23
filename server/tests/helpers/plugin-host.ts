@@ -89,6 +89,7 @@ import {
 import { AppSettings } from '../../src/db/entities/AppSettings.entity';
 import { AuditLog } from '../../src/db/entities/AuditLog.entity';
 import { Users } from '../../src/db/entities/Users.entity';
+import { createTestTripFilesRepo, createTestFileLinksRepo, createTestBudgetItemsRepo } from './files-repos';
 
 /**
  * Hand-wired counterpart of the PluginsModule DI graph for no-Nest tests
@@ -112,7 +113,18 @@ export async function createPluginRpcHostFactory(dbs: DatabaseService): Promise<
   const queryHelpers = new QueryHelpersService(await createTestTagsRepo(dbs.connection), await createTestPlaceRatingsRepo(dbs.connection), await createTestAssignmentParticipantsRepo(dbs.connection));
   const todos = new TodoService(dbs, permissions, realtime, await createTestUnitOfWork(dbs.connection));
   const packing = new PackingService(dbs, permissions, realtime, notificationsStub(), await createTestUnitOfWork(dbs.connection));
-  const files = new FilesService(dbs, permissions, realtime, new EphemeralTokenService(), generalStorage, (await sharedTestOrm(dbs.connection)).em);
+  // Plan 3e Task 1 (files): FilesService now also takes uow + the repositories
+  // its R2 transactions and R12 cross-object trip-scoping guard need.
+  const files = new FilesService(
+    dbs, permissions, realtime, new EphemeralTokenService(), generalStorage, (await sharedTestOrm(dbs.connection)).em,
+    await createTestUnitOfWork(dbs.connection),
+    await createTestTripFilesRepo(dbs.connection),
+    await createTestFileLinksRepo(dbs.connection),
+    await createTestReservationsRepo(dbs.connection),
+    await createTestPlacesRepo(dbs.connection),
+    await createTestDayAssignmentsRepo(dbs.connection),
+    await createTestBudgetItemsRepo(dbs.connection),
+  );
   const collab = new CollabService(dbs, permissions, realtime, notificationsStub(), generalStorage, new RateLimitService(), await createTestUnitOfWork(dbs.connection));
   const vacay = new VacayService(dbs, realtime, notificationsStub(), await createTestUnitOfWork(dbs.connection));
   const days = new DaysService(
@@ -182,7 +194,7 @@ export async function createPluginRpcHostFactory(dbs: DatabaseService): Promise<
     new TodoRpc(todos, realtime, guards),
     new DayNotesRpc(dayNotes, realtime, guards),
     new PackingRpc(packing, realtime, guards),
-    new FilesRpc(files, realtime, dbs, guards, generalStorage),
+    new FilesRpc(files, realtime, usersRepo, guards, generalStorage),
     new PlacesRpc(places, journey, realtime, guards),
     new DaysRpc(days, realtime, guards),
     new AccommodationsRpc(accommodations, realtime, guards),

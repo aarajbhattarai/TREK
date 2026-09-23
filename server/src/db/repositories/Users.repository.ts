@@ -1114,4 +1114,142 @@ export class UsersRepository extends TrekRepository<Users> {
     const row = await this.findOne({ feed_token: token }, { fields: ['id', 'username'] });
     return row ? { id: row.id, username: row.username } : undefined;
   }
+
+  // ---------------------------------------------------------------------
+  // Plan 3e Task 7 (memories' provider half) — additive: the Immich/Synology
+  // encrypted-credential statements (IM1-5/SY1-8, inventory §7d, R6). Every
+  // value stays exactly what the SERVICE (`ImmichService`/`SynologyService`)
+  // hands this repository — encrypted, plaintext or null, at the same point
+  // in the pipeline the raw SQL saw it. This repository never calls
+  // `encrypt_api_key`/`decrypt_api_key`/`maybe_encrypt_api_key` itself.
+  // ---------------------------------------------------------------------
+
+  /** IM1 (`ImmichService.getImmichCredentials`) — `SELECT immich_url, immich_api_key FROM users WHERE id = ?`. */
+  async getImmichCredentials(id: number): Promise<{ immich_url: string | null; immich_api_key: string | null } | null> {
+    const row = await this.findOne({ id }, { fields: ['immich_url', 'immich_api_key'] });
+    return row ? { immich_url: row.immich_url ?? null, immich_api_key: row.immich_api_key ?? null } : null;
+  }
+
+  /** IM2 (`ImmichService.getConnectionSettings`'s prefs read) — `SELECT immich_auto_upload FROM users WHERE id = ?`. */
+  async getImmichAutoUpload(id: number): Promise<number | null> {
+    const row = await this.findOne({ id }, { fields: ['immich_auto_upload'] });
+    return row?.immich_auto_upload ?? null;
+  }
+
+  /** IM3 (`ImmichService.setImmichAutoUpload`) — `UPDATE users SET immich_auto_upload = ? WHERE id = ?`. */
+  async setImmichAutoUpload(id: number, enabled: number): Promise<void> {
+    await this.nativeUpdate({ id }, { immich_auto_upload: enabled });
+  }
+
+  /**
+   * IM4/IM5 (`ImmichService.saveImmichSettings`'s two branches) — `UPDATE
+   * users SET immich_url = ?, immich_api_key = ? WHERE id = ?`, byte-identical
+   * statement at both legacy sites (the URL branch's trimmed value, the else
+   * branch's `null`) — one method, per R6.
+   */
+  async setImmichSettings(id: number, immich_url: string | null, immich_api_key: string | null): Promise<void> {
+    await this.nativeUpdate({ id }, { immich_url, immich_api_key });
+  }
+
+  /**
+   * SY1 (`SynologyService._readSynologyUser`) — `SELECT synology_url,
+   * synology_username, synology_password, synology_sid, synology_did,
+   * synology_skip_ssl FROM users WHERE id = ?`, column-filtered in JS by the
+   * legacy code. This method selects only the requested columns (MikroORM's
+   * typed `fields`) rather than all six and filtering after — the RESULT is
+   * identical (only the requested keys populated, matching the legacy
+   * `filtered` object exactly; an unrequested key is `undefined`, same as
+   * the legacy object never having had it set). `null` means no such user
+   * row (SY1's "User not found" branch).
+   *
+   * Explicit per-column `if` guards, not a generic `Pick<UserRow, K>` +
+   * indexed-assignment loop: MikroORM's `fields` option types against
+   * `AutoPath<Users, K, ...>`, which does not resolve for a free type
+   * parameter `K` the way it does for the concrete literal union used here
+   * (the same reason `getApiKeyColumn` above stays non-generic); an
+   * indexed-assignment loop over a union key has the identical problem on
+   * the write side. Six `if`s reads worse but needs neither a generic nor a
+   * cast.
+   */
+  async getSynologyFields(id: number, columns: SynologyUserColumn[]): Promise<SynologyFieldsRow | null> {
+    const row = await this.findOne({ id }, { fields: columns });
+    if (!row) return null;
+    const result: SynologyFieldsRow = {};
+    if (columns.includes('synology_url')) result.synology_url = row.synology_url ?? null;
+    if (columns.includes('synology_username')) result.synology_username = row.synology_username ?? null;
+    if (columns.includes('synology_password')) result.synology_password = row.synology_password ?? null;
+    if (columns.includes('synology_sid')) result.synology_sid = row.synology_sid ?? null;
+    if (columns.includes('synology_did')) result.synology_did = row.synology_did ?? null;
+    if (columns.includes('synology_skip_ssl')) result.synology_skip_ssl = row.synology_skip_ssl;
+    return result;
+  }
+
+  /** SY2 (`SynologyService._clearSynologySID`) — `UPDATE users SET synology_sid = NULL WHERE id = ?`. */
+  async clearSynologySID(id: number): Promise<void> {
+    await this.nativeUpdate({ id }, { synology_sid: null });
+  }
+
+  /** SY3 (`SynologyService._clearSynologySession`) — `UPDATE users SET synology_sid = NULL, synology_did = NULL WHERE id = ?`. */
+  async clearSynologySession(id: number): Promise<void> {
+    await this.nativeUpdate({ id }, { synology_sid: null, synology_did: null });
+  }
+
+  /**
+   * SY4/SY7 (`SynologyService._getSynologySession`'s session-refresh write,
+   * `testSynologyConnection`'s sid persist) — byte-identical `UPDATE users
+   * SET synology_sid = ? WHERE id = ?` at both legacy sites, one method (D4).
+   */
+  async setSynologySid(id: number, synology_sid: string): Promise<void> {
+    await this.nativeUpdate({ id }, { synology_sid });
+  }
+
+  /** SY5 (`SynologyService.updateSynologySettings`) — `UPDATE users SET synology_url = ?, synology_username = ?, synology_password = ?, synology_skip_ssl = ? WHERE id = ?`. */
+  async setSynologySettings(id: number, synology_url: string, synology_username: string, synology_password: string | null, synology_skip_ssl: number): Promise<void> {
+    await this.nativeUpdate({ id }, { synology_url, synology_username, synology_password, synology_skip_ssl });
+  }
+
+  /** SY6 (`SynologyService.getSynologyStatus`) — `SELECT synology_username FROM users WHERE id = ?`. */
+  async getSynologyUsername(id: number): Promise<string | null> {
+    const row = await this.findOne({ id }, { fields: ['synology_username'] });
+    return row?.synology_username ?? null;
+  }
+
+  /** SY8 (`SynologyService.testSynologyConnection`'s did persist) — `UPDATE users SET synology_did = ? WHERE id = ?`. */
+  async setSynologyDid(id: number, synology_did: string): Promise<void> {
+    await this.nativeUpdate({ id }, { synology_did });
+  }
+
+  // ---------------------------------------------------------------------
+  // UM11 — UnifiedMemoriesService._notifySharedTripPhotos
+  // ---------------------------------------------------------------------
+
+  /** UM11 — `SELECT username, email FROM users WHERE id = ?`, the shared-photos notification's actor lookup. */
+  async findUsernameEmail(id: number): Promise<{ username: string; email: string } | undefined> {
+    const row = await this.findOne({ id }, { fields: ['username', 'email'] });
+    return row ? { username: row.username, email: row.email } : undefined;
+  }
+}
+
+/**
+ * The six Synology credential/session columns `_readSynologyUser` reads
+ * selectively — a closed union, not a dynamic column string, matching
+ * `InstanceApiKeyName`'s reasoning above.
+ */
+export type SynologyUserColumn = 'synology_url' | 'synology_username' | 'synology_password' | 'synology_sid' | 'synology_did' | 'synology_skip_ssl';
+
+/**
+ * {@link UsersRepository.getSynologyFields}'s return shape — structurally
+ * identical to `synology.service.ts`'s own `SynologyUserRecord` (every field
+ * optional, so an unrequested column is simply absent), deliberately
+ * defined here rather than imported from the service: a repository does not
+ * depend on a domain service's types, and the two stay structurally
+ * assignable without either side casting.
+ */
+export interface SynologyFieldsRow {
+  synology_url?: string | null;
+  synology_username?: string | null;
+  synology_password?: string | null;
+  synology_sid?: string | null;
+  synology_did?: string | null;
+  synology_skip_ssl?: number | null;
 }

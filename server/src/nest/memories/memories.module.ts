@@ -31,6 +31,8 @@ import { TrekPhotos } from '../../db/entities/TrekPhotos.entity';
 import { TripAlbumLinks } from '../../db/entities/TripAlbumLinks.entity';
 import { Trips } from '../../db/entities/Trips.entity';
 import { TrekPhotoCacheMeta } from '../../db/entities/TrekPhotoCacheMeta.entity';
+import { PhotoProviders } from '../../db/entities/PhotoProviders.entity';
+import { Users } from '../../db/entities/Users.entity';
 
 /**
  * Memories (photo-providers) domain — mounted at /api/integrations/memories.
@@ -57,12 +59,16 @@ import { TrekPhotoCacheMeta } from '../../db/entities/TrekPhotoCacheMeta.entity'
  * (owned elsewhere, reached the same way every cross-domain module in this
  * program reaches another domain's entity) for `MemoriesAccessService`'s
  * `@InjectRepository` constructor params, and `TrekPhotoCacheMetaRepository`
- * for `TrekPhotoCacheService`'s (Plan 3e Task 6).
+ * for `TrekPhotoCacheService`'s (Plan 3e Task 6). `PhotoProviders` (owned by
+ * this module) and `Users` (owned elsewhere, reached the same way `Trips`
+ * is above) are added for `UnifiedMemoriesService`/`ImmichService`/
+ * `SynologyService`/`MemoriesMcp`'s `@InjectRepository` constructor params
+ * (Plan 3e Task 7).
  */
 @Module({
   imports: [
     NotificationsModule, AddonsModule, AuditModule, TrekPhotosModule, RealtimeModule, SchedulingModule, StorageModule,
-    MikroOrmModule.forFeature([TripPhotos, TrekPhotos, TripAlbumLinks, Trips, TrekPhotoCacheMeta]),
+    MikroOrmModule.forFeature([TripPhotos, TrekPhotos, TripAlbumLinks, Trips, TrekPhotoCacheMeta, PhotoProviders, Users]),
   ],
   controllers: [UnifiedMemoriesController, ImmichMemoriesController, SynologyMemoriesController],
   providers: [

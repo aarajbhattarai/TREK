@@ -1,14 +1,16 @@
 import { Injectable } from '@nestjs/common';
 import type { Response } from 'express';
+import { InjectRepository } from '@mikro-orm/nestjs';
 import { maybe_encrypt_api_key, decrypt_api_key } from '../common/crypto/apiKeyCrypto';
 import { checkSsrf, safeFetch } from '../../utils/ssrfGuard';
 import { AuditService } from '../audit/audit.service';
 import { StorageService } from '../storage/storage.service';
 import fsPromises from 'node:fs/promises';
 import path from 'node:path';
-import { DatabaseService } from '../database/database.service';
 import { MemoriesAccessService } from './memories-access.service';
 import { fail, handleServiceResult, isWithinLocalDayRange, pipeAsset, shiftCalendarDay, sortAssetsByTakenAtDesc, type Selection } from './memories.helpers';
+import { Users } from '../../db/entities/Users.entity';
+import type { UsersRepository } from '../../db/repositories/Users.repository';
 
 const ALBUM_PAGE_SIZE = 1000;
 const ALBUM_MAX_PAGES = 20;
@@ -34,18 +36,18 @@ const SEARCH_MAX_RAW_PAGES = 20;
 @Injectable()
 export class ImmichService {
   constructor(
-    private readonly db: DatabaseService,
     private readonly audit: AuditService,
     private readonly access: MemoriesAccessService,
     private readonly storage: StorageService,
+    @InjectRepository(Users) private readonly users: UsersRepository,
   ) {}
 
   async getImmichCredentials(userId: number) {
-    const user = this.db.prepare('SELECT immich_url, immich_api_key FROM users WHERE id = ?').get(userId) as any;
+    const user = await this.users.getImmichCredentials(userId);
     if (!user?.immich_url || !user?.immich_api_key) return null;
     const apiKey = decrypt_api_key(user.immich_api_key);
     if (!apiKey) return null;
-    return { immich_url: user.immich_url as string, immich_api_key: apiKey };
+    return { immich_url: user.immich_url, immich_api_key: apiKey };
   }
 
   /** Validate that an asset ID is a safe UUID-like string (no path traversal). */
@@ -73,16 +75,16 @@ export class ImmichService {
 
   async getConnectionSettings(userId: number) {
     const creds = await this.getImmichCredentials(userId);
-    const prefs = this.db.prepare('SELECT immich_auto_upload FROM users WHERE id = ?').get(userId) as { immich_auto_upload?: number } | undefined;
+    const autoUpload = await this.users.getImmichAutoUpload(userId);
     return {
       immich_url: creds?.immich_url || '',
       connected: !!(creds?.immich_url && creds?.immich_api_key),
-      auto_upload: !!(prefs?.immich_auto_upload),
+      auto_upload: !!autoUpload,
     };
   }
 
   async setImmichAutoUpload(userId: number, enabled: boolean): Promise<void> {
-    this.db.prepare('UPDATE users SET immich_auto_upload = ? WHERE id = ?').run(enabled ? 1 : 0, userId);
+    await this.users.setImmichAutoUpload(userId, enabled ? 1 : 0);
   }
 
   async saveImmichSettings(
@@ -99,11 +101,7 @@ export class ImmichService {
       if (!ssrf.allowed) {
         return { success: false, error: `Invalid Immich URL: ${ssrf.error}` };
       }
-      this.db.prepare('UPDATE users SET immich_url = ?, immich_api_key = ? WHERE id = ?').run(
-        immichUrl.trim(),
-        maybe_encrypt_api_key(immichApiKey),
-        userId
-      );
+      await this.users.setImmichSettings(userId, immichUrl.trim(), maybe_encrypt_api_key(immichApiKey));
       if (ssrf.isPrivate) {
         await this.audit.writeAudit({
           userId,
@@ -117,11 +115,7 @@ export class ImmichService {
         };
       }
     } else {
-      this.db.prepare('UPDATE users SET immich_url = ?, immich_api_key = ? WHERE id = ?').run(
-        null,
-        maybe_encrypt_api_key(immichApiKey),
-        userId
-      );
+      await this.users.setImmichSettings(userId, null, maybe_encrypt_api_key(immichApiKey));
     }
     return { success: true };
   }

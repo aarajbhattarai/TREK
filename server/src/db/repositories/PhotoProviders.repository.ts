@@ -30,4 +30,29 @@ export class PhotoProvidersRepository extends TrekRepository<PhotoProviders> {
     const rows = await this.find({ enabled: 1 }, { orderBy: { sort_order: 'asc', id: 'asc' } });
     return rows.map((row) => toRow(row) as PhotoProviderRow);
   }
+
+  /**
+   * UM1 (`UnifiedMemoriesService._providers`) — `SELECT id, enabled FROM
+   * photo_providers` (`.all()`, no WHERE, no ORDER BY): every provider row,
+   * enabled or not — the caller does its own journey-addon-gated filtering
+   * in JS afterward. Distinct from {@link listEnabled} above, which is a
+   * different legacy statement (WHERE-filtered, ordered) for a different
+   * caller (the admin listing); do not collapse the two (D4).
+   */
+  async listAll(): Promise<Array<{ id: string; enabled: number }>> {
+    const rows = await this.find({}, { fields: ['id', 'enabled'] });
+    return rows.map((row) => ({ id: row.id ?? '', enabled: row.enabled ?? 0 }));
+  }
+
+  /** MMC1 (`MemoriesMcp.enabledProviderIds`) — `SELECT id FROM photo_providers WHERE enabled = 1`, no ORDER BY (unlike {@link listEnabled}'s admin-listing statement). */
+  async listEnabledIds(): Promise<string[]> {
+    const rows = await this.find({ enabled: 1 }, { fields: ['id'] });
+    return rows.map((row) => row.id).filter((id): id is string => id != null);
+  }
+
+  /** MMC2 (`MemoriesMcp.providerRefusal`) — `SELECT enabled FROM photo_providers WHERE id = ?`. */
+  async findEnabled(id: string): Promise<{ enabled: number | null } | null> {
+    const row = await this.findOne({ id }, { fields: ['enabled'] });
+    return row ? { enabled: row.enabled ?? null } : null;
+  }
 }
