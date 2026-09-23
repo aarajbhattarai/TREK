@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@mikro-orm/nestjs';
 import type { TrekWsPayload, TrekWsTripEventName } from '@trek/shared';
 import { RealtimeService } from '../realtime/realtime.service';
 import { PermissionsService } from '../permissions/permissions.service';
@@ -8,6 +9,22 @@ import type { User } from '../../types';
 import { DatabaseService, type TripAccess } from '../database/database.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { UnitOfWork } from '../database/unit-of-work';
+import { PackingItems } from '../../db/entities/PackingItems.entity';
+import type { PackingItemsRepository, PackingItemRow } from '../../db/repositories/PackingItems.repository';
+import { PackingItemContributors } from '../../db/entities/PackingItemContributors.entity';
+import type { PackingItemContributorsRepository } from '../../db/repositories/PackingItemContributors.repository';
+import { PackingBags } from '../../db/entities/PackingBags.entity';
+import type { PackingBagsRepository, PackingBagMemberForTripRow } from '../../db/repositories/PackingBags.repository';
+import { PackingCategoryAssignees } from '../../db/entities/PackingCategoryAssignees.entity';
+import type { PackingCategoryAssigneesRepository } from '../../db/repositories/PackingCategoryAssignees.repository';
+import { PackingTemplates } from '../../db/entities/PackingTemplates.entity';
+import type { PackingTemplatesRepository } from '../../db/repositories/PackingTemplates.repository';
+import { PackingTemplateCategories } from '../../db/entities/PackingTemplateCategories.entity';
+import type { PackingTemplateCategoriesRepository } from '../../db/repositories/PackingTemplateCategories.repository';
+import { PackingTemplateItems } from '../../db/entities/PackingTemplateItems.entity';
+import type { PackingTemplateItemsRepository } from '../../db/repositories/PackingTemplateItems.repository';
+import { Trips } from '../../db/entities/Trips.entity';
+import type { TripsRepository } from '../../db/repositories/Trips.repository';
 
 /** Privacy fields stamped on a packing item (#858). */
 type PrivacyFields = { is_private?: number; owner_id?: number | null };
@@ -44,15 +61,23 @@ interface ImportItem {
 const BAG_COLORS = ['#6366f1', '#ec4899', '#f97316', '#10b981', '#06b6d4', '#8b5cf6', '#ef4444', '#f59e0b', '#3b82f6', '#84cc16', '#d946ef', '#14b8a6', '#f43f5e', '#a855f7', '#eab308', '#64748b'];
 
 /**
- * Packing domain service — owns the packing SQL (moved from the legacy
- * services/packingService.ts: the bodyKeys sentinel protocol on the updates,
- * the #858 three-tier sharing model and the post-write re-selects). Trip
- * access, the 'packing_edit' permission and the WebSocket broadcast keep their
- * legacy call paths. Post-migration fixes over the legacy code: a single
- * 'Other' category default, bodyKeys-gated weight_limit_grams (explicit null
+ * Packing domain service — owns the packing business logic (the bodyKeys
+ * sentinel protocol on the updates, the #858 three-tier sharing model and
+ * the post-write re-selects); the SQL itself lives in the nine `Packing*`
+ * repositories (Plan 3e Task 3) this class is built on. Trip access, the
+ * 'packing_edit' permission and the WebSocket broadcast keep their legacy
+ * call paths. Post-migration fixes over the legacy code: a single 'Other'
+ * category default, bodyKeys-gated weight_limit_grams (explicit null
  * clears it), and transactions around every multi-statement write. The
  * remaining non-Nest consumer went with the legacy MCP prompts registrar, and
  * packing.bridge.ts was deleted with it.
+ *
+ * **The per-actor visibility guard (#858, `PackingItemsRepository
+ * .findVisibleInTrip`) is this domain's entire security model** — Task 0's
+ * shared `packingVisibleToActorExpr` predicate
+ * (`_shared/packing-visibility.ts`), consumed here rather than re-derived
+ * (R1). `PackingService.getItemInTrip` no longer exists on this class: every
+ * call site below calls the repository method directly.
  */
 @Injectable()
 export class PackingService {
@@ -62,6 +87,14 @@ export class PackingService {
     private readonly realtime: RealtimeService,
     private readonly notifications: NotificationsService,
     private readonly uow: UnitOfWork,
+    @InjectRepository(PackingItems) private readonly itemsRepo: PackingItemsRepository,
+    @InjectRepository(PackingItemContributors) private readonly contributorsRepo: PackingItemContributorsRepository,
+    @InjectRepository(PackingBags) private readonly bagsRepo: PackingBagsRepository,
+    @InjectRepository(PackingCategoryAssignees) private readonly categoryAssigneesRepo: PackingCategoryAssigneesRepository,
+    @InjectRepository(PackingTemplates) private readonly templatesRepo: PackingTemplatesRepository,
+    @InjectRepository(PackingTemplateCategories) private readonly templateCategoriesRepo: PackingTemplateCategoriesRepository,
+    @InjectRepository(PackingTemplateItems) private readonly templateItemsRepo: PackingTemplateItemsRepository,
+    @InjectRepository(Trips) private readonly tripsRepo: TripsRepository,
   ) {}
 
   async verifyTripAccess(tripId: string | number, userId: number) {
@@ -173,27 +206,19 @@ export class PackingService {
   private async enrichItems(items: any[]): Promise<any[]> {
     if (items.length === 0) return items;
     const ids = items.map(i => i.id);
-    const placeholders = ids.map(() => '?').join(',');
+    const ownerIds = [...new Set(items.map(i => i.owner_id).filter((id): id is number => id != null))];
 
-    const owners = this.db.all<{ id: number; username: string }>(`SELECT id, username FROM users WHERE id IN (SELECT owner_id FROM packing_items WHERE id IN (${placeholders}))`, ...ids);
+    const owners = await this.itemsRepo.listOwnersForIds(ownerIds);
     const ownerName = new Map(owners.map(o => [o.id, o.username]));
 
-    const recipientRows = this.db.all<{ item_id: number; user_id: number; username: string }>(`
-    SELECT r.item_id, r.user_id, COALESCE(u.display_name, u.username) AS username
-    FROM packing_item_recipients r JOIN users u ON u.id = r.user_id
-    WHERE r.item_id IN (${placeholders})
-  `, ...ids);
+    const recipientRows = await this.itemsRepo.listRecipientsForItems(ids);
     const recipientsByItem = new Map<number, { user_id: number; username: string }[]>();
     for (const r of recipientRows) {
       if (!recipientsByItem.has(r.item_id)) recipientsByItem.set(r.item_id, []);
       recipientsByItem.get(r.item_id)!.push({ user_id: r.user_id, username: r.username });
     }
 
-    const contributorRows = this.db.all<{ item_id: number; user_id: number; status: string; username: string }>(`
-    SELECT c.item_id, c.user_id, c.status, COALESCE(u.display_name, u.username) AS username
-    FROM packing_item_contributors c JOIN users u ON u.id = c.user_id
-    WHERE c.item_id IN (${placeholders})
-  `, ...ids);
+    const contributorRows = await this.contributorsRepo.listForItems(ids);
     const contributorsByItem = new Map<number, { user_id: number; username: string; status: string }[]>();
     for (const c of contributorRows) {
       if (!contributorsByItem.has(c.item_id)) contributorsByItem.set(c.item_id, []);
@@ -215,29 +240,14 @@ export class PackingService {
     // returned — every current caller (trip summary, offline bundle, prompts,
     // resources, plugin host) passes the viewer; omit it only for genuinely
     // viewer-less internal reads.
-    let rows: any[];
-    if (userId == null) {
-      rows = this.db.all(
-        'SELECT * FROM packing_items WHERE trip_id = ? ORDER BY sort_order ASC, created_at ASC',
-        tripId
-      );
-    } else {
-      rows = this.db.all(`
-      SELECT * FROM packing_items
-      WHERE trip_id = ?
-        AND (is_private = 0
-             OR owner_id = ?
-             OR EXISTS (SELECT 1 FROM packing_item_recipients r WHERE r.item_id = packing_items.id AND r.user_id = ?))
-      ORDER BY sort_order ASC, created_at ASC
-    `, tripId, userId, userId);
-    }
+    const rows: PackingItemRow[] = userId == null ? await this.itemsRepo.listForTrip(tripId) : await this.itemsRepo.listVisibleToActor(tripId, userId);
     return await this.enrichItems(rows);
   }
 
   /** Reads an item's current privacy fields (#858) before an update, so the
    *  controller can detect a public↔private transition and route the broadcast. */
   async getItemPrivacy(tripId: string | number, id: string | number): Promise<PrivacyFields | undefined> {
-    return this.db.get<PrivacyFields>('SELECT is_private, owner_id FROM packing_items WHERE id = ? AND trip_id = ?', id, tripId);
+    return await this.itemsRepo.getPrivacy(id, tripId);
   }
 
   /** Maps the three-tier visibility (#858) onto the stored is_private flag. */
@@ -252,27 +262,34 @@ export class PackingService {
     ownerId?: number,
   ) {
     if (data.bag_id != null && !(await this.bagInTrip(tripId, data.bag_id))) return { invalidBag: true } as const;
-    const maxOrder = this.db.get<{ max: number | null }>('SELECT MAX(sort_order) as max FROM packing_items WHERE trip_id = ?', tripId)!;
-    const sortOrder = (maxOrder.max !== null ? maxOrder.max : -1) + 1;
+    const maxOrder = await this.itemsRepo.maxSortOrder(tripId);
+    const sortOrder = (maxOrder !== null ? maxOrder : -1) + 1;
     const qty = Math.max(1, Math.min(999, Number(data.quantity) || 1));
     const isPrivate = this.visibilityToPrivate(data.visibility, data.is_private);
 
     const itemId = await this.uow.transactional(async () => {
-      const result = this.db.run(
-        'INSERT INTO packing_items (trip_id, name, checked, category, sort_order, quantity, weight_grams, bag_id, is_private, owner_id, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)',
-        tripId, data.name, data.checked ? 1 : 0, data.category || 'Other', sortOrder, qty, data.weight_grams ?? null, data.bag_id ?? null, isPrivate, ownerId ?? null
-      );
-      const id = Number(result.lastInsertRowid);
+      const id = await this.itemsRepo.insertItem({
+        trip_id: tripId,
+        name: data.name,
+        checked: data.checked ? 1 : 0,
+        category: data.category || 'Other',
+        sort_order: sortOrder,
+        quantity: qty,
+        weight_grams: data.weight_grams ?? null,
+        bag_id: data.bag_id ?? null,
+        is_private: isPrivate,
+        owner_id: ownerId ?? null,
+      });
       // "Shared with specific people" — record the recipients it covers.
       if (data.visibility === 'shared' && Array.isArray(data.recipient_ids)) {
-        const ins = this.db.prepare('INSERT OR IGNORE INTO packing_item_recipients (item_id, user_id) VALUES (?, ?)');
         const roster = await this.tripRosterIds(tripId);
-        for (const uid of data.recipient_ids) if (uid !== ownerId && roster.has(uid)) ins.run(id, uid);
+        const recipients = data.recipient_ids.filter(uid => uid !== ownerId && roster.has(uid));
+        await this.itemsRepo.insertRecipientsIgnore(id, recipients);
       }
       return id;
     });
 
-    return (await this.enrichItems([this.db.get('SELECT * FROM packing_items WHERE id = ?', itemId)]))[0];
+    return (await this.enrichItems([await this.itemsRepo.findById(itemId)]))[0];
   }
 
   async updateItem(
@@ -285,13 +302,13 @@ export class PackingService {
   ): Promise<unknown | UpdateConflict | null> {
     // Was a trip-scoped lookup, which let any member with packing_edit write to
     // another member's restricted item (and read it back off the response).
-    const item = await this.getItemInTrip(tripId, id, actingUserId);
+    const item = await this.itemsRepo.findVisibleInTrip(id, tripId, actingUserId);
     if (!item) return null;
 
     // Optimistic concurrency (#1135): reject a stale offline overwrite. Absent
     // token => unconditional update (back-compat with older clients).
     if (ifMatch !== undefined && item.updated_at != null && String(item.updated_at) !== ifMatch) {
-      return { conflict: true, server: this.db.get('SELECT * FROM packing_items WHERE id = ?', id) };
+      return { conflict: true, server: await this.itemsRepo.findById(id) };
     }
 
     // A non-null bag about to be bound must belong to this trip (#2154) — the
@@ -304,70 +321,21 @@ export class PackingService {
     // the visibility filter still has someone to match (#858).
     const claimOwner = bodyKeys.includes('is_private') && !!data.is_private && item.owner_id == null && actingUserId != null;
 
-    this.db.run(`
-    UPDATE packing_items SET
-      name = COALESCE(?, name),
-      checked = CASE WHEN ? IS NOT NULL THEN ? ELSE checked END,
-      category = COALESCE(?, category),
-      weight_grams = CASE WHEN ? THEN ? ELSE weight_grams END,
-      bag_id = CASE WHEN ? THEN ? ELSE bag_id END,
-      quantity = CASE WHEN ? THEN ? ELSE quantity END,
-      is_private = CASE WHEN ? THEN ? ELSE is_private END,
-      owner_id = CASE WHEN ? THEN ? ELSE owner_id END,
-      updated_at = CURRENT_TIMESTAMP
-    WHERE id = ?
-  `,
-      data.name || null,
-      data.checked !== undefined ? 1 : null,
-      data.checked ? 1 : 0,
-      data.category || null,
-      bodyKeys.includes('weight_grams') ? 1 : 0,
-      data.weight_grams ?? null,
-      bodyKeys.includes('bag_id') ? 1 : 0,
-      data.bag_id ?? null,
-      bodyKeys.includes('quantity') ? 1 : 0,
-      Math.max(1, Math.min(999, Number(data.quantity) || 1)),
-      bodyKeys.includes('is_private') ? 1 : 0,
-      data.is_private ? 1 : 0,
-      claimOwner ? 1 : 0,
-      actingUserId ?? null,
-      id
-    );
+    await this.itemsRepo.update(id, {
+      name: [!!data.name, data.name || null],
+      checked: [data.checked !== undefined, data.checked ? 1 : 0],
+      category: [!!data.category, data.category || null],
+      weight_grams: [bodyKeys.includes('weight_grams'), data.weight_grams ?? null],
+      bag_id: [bodyKeys.includes('bag_id'), data.bag_id ?? null],
+      quantity: [bodyKeys.includes('quantity'), Math.max(1, Math.min(999, Number(data.quantity) || 1))],
+      is_private: [bodyKeys.includes('is_private'), data.is_private ? 1 : 0],
+      owner_id: [claimOwner, actingUserId ?? null],
+    });
 
-    return (await this.enrichItems([this.db.get('SELECT * FROM packing_items WHERE id = ?', id)]))[0];
+    return (await this.enrichItems([await this.itemsRepo.findById(id)]))[0];
   }
 
   // ── Three-tier sharing (#858): recipients, contributors, clone ───────────────
-
-  /**
-   * The one visibility rule (#858), as a SQL fragment: Common belongs to the whole
-   * trip, a restricted item belongs to its owner and to the people it was shared
-   * with. Binds the actor id twice.
-   */
-  private static readonly VISIBLE_TO_ACTOR = `(
-    is_private = 0
-    OR owner_id = ?
-    OR EXISTS (SELECT 1 FROM packing_item_recipients r WHERE r.item_id = packing_items.id AND r.user_id = ?)
-  )`;
-
-  /**
-   * Loads an item scoped to its trip AND to what the actor may see.
-   *
-   * Trip membership used to be the whole check here, so any member holding
-   * packing_edit could reach another member's Personal or Shared item by id
-   * through update, delete, clone or the contributor routes. It resolves through
-   * the visibility rule now, and an item the actor may not see comes back
-   * undefined — deliberately indistinguishable from one that does not exist, so
-   * these routes cannot be used to probe for ids. A missing actor denies too,
-   * rather than falling through unfiltered.
-   */
-  private async getItemInTrip(tripId: string | number, id: string | number, actorId: number | undefined) {
-    if (actorId == null) return undefined;
-    return this.db.get<{ id: number; owner_id: number | null; is_private: number; name: string; category: string | null; quantity: number; weight_grams: number | null; bag_id: number | null; updated_at?: string | null }>(
-      `SELECT * FROM packing_items WHERE id = ? AND trip_id = ? AND ${PackingService.VISIBLE_TO_ACTOR}`,
-      id, tripId, actorId, actorId,
-    );
-  }
 
   /**
    * Re-set who a "shared with specific people" item covers, and its visibility tier.
@@ -380,47 +348,50 @@ export class PackingService {
     visibility: PackingVisibility,
     recipientIds: number[],
   ) {
-    const item = await this.getItemInTrip(tripId, id, actingUserId);
+    const item = await this.itemsRepo.findVisibleInTrip(id, tripId, actingUserId);
     if (!item) return null;
     // The owner controls sharing; an unowned legacy item is claimed by the actor.
     if (item.owner_id != null && item.owner_id !== actingUserId) return { forbidden: true as const };
 
     await this.uow.transactional(async () => {
-      this.db.run('UPDATE packing_items SET is_private = ?, owner_id = COALESCE(owner_id, ?), updated_at = CURRENT_TIMESTAMP WHERE id = ?',
-        this.visibilityToPrivate(visibility), actingUserId, id);
-      this.db.run('DELETE FROM packing_item_recipients WHERE item_id = ?', id);
+      // COALESCE(owner_id, ?) at the SQL level kept the existing owner if one was
+      // set; passing the claim only when the pre-image had none reproduces that
+      // exactly (nothing else touches owner_id inside this same transaction).
+      const claimOwnerId = item.owner_id == null ? actingUserId : undefined;
+      await this.itemsRepo.updateSharing(id, this.visibilityToPrivate(visibility), claimOwnerId);
+      await this.itemsRepo.deleteRecipientsForItem(Number(id));
       if (visibility === 'shared') {
-        const ins = this.db.prepare('INSERT OR IGNORE INTO packing_item_recipients (item_id, user_id) VALUES (?, ?)');
         const owner = item.owner_id ?? actingUserId;
         const roster = await this.tripRosterIds(tripId);
-        for (const uid of recipientIds) if (uid !== owner && roster.has(uid)) ins.run(id, uid);
+        const recipients = recipientIds.filter(uid => uid !== owner && roster.has(uid));
+        await this.itemsRepo.insertRecipientsIgnore(Number(id), recipients);
       }
       // Leaving the Common tier drops any co-contributors (they only apply to Common).
-      if (visibility !== 'common') this.db.run('DELETE FROM packing_item_contributors WHERE item_id = ?', id);
+      if (visibility !== 'common') await this.contributorsRepo.deleteForItem(Number(id));
     });
-    return (await this.enrichItems([this.db.get('SELECT * FROM packing_items WHERE id = ?', id)]))[0];
+    return (await this.enrichItems([await this.itemsRepo.findById(id)]))[0];
   }
 
   /** "I can bring that too" — adds the user as a co-contributor on a Common item. */
   async addContributor(tripId: string | number, id: string | number, userId: number) {
-    const item = await this.getItemInTrip(tripId, id, userId);
+    const item = await this.itemsRepo.findVisibleInTrip(id, tripId, userId);
     if (!item || item.is_private !== 0) return null; // co-contribution is a Common-list concept
     if (item.owner_id === userId) return null; // the bringer is already covering it
-    this.db.run("INSERT OR IGNORE INTO packing_item_contributors (item_id, user_id, status) VALUES (?, ?, 'accepted')", id, userId);
-    return (await this.enrichItems([this.db.get('SELECT * FROM packing_items WHERE id = ?', id)]))[0];
+    await this.contributorsRepo.insertIgnore(Number(id), userId);
+    return (await this.enrichItems([await this.itemsRepo.findById(id)]))[0];
   }
 
   async removeContributor(tripId: string | number, id: string | number, userId: number) {
-    const item = await this.getItemInTrip(tripId, id, userId);
+    const item = await this.itemsRepo.findVisibleInTrip(id, tripId, userId);
     if (!item) return null;
-    this.db.run('DELETE FROM packing_item_contributors WHERE item_id = ? AND user_id = ?', id, userId);
-    return (await this.enrichItems([this.db.get('SELECT * FROM packing_items WHERE id = ?', id)]))[0];
+    await this.contributorsRepo.deleteOne(Number(id), userId);
+    return (await this.enrichItems([await this.itemsRepo.findById(id)]))[0];
   }
 
   /** True when the bag exists AND belongs to the trip — the referenced-id rule
    *  the FK cannot enforce (it only checks existence). */
   private async bagInTrip(tripId: string | number, bagId: number): Promise<boolean> {
-    return !!this.db.get('SELECT id FROM packing_bags WHERE id = ? AND trip_id = ?', bagId, tripId);
+    return !!(await this.bagsRepo.findInTrip(bagId, tripId));
   }
 
   /**
@@ -430,12 +401,12 @@ export class PackingService {
    */
   private async bagForCloner(tripId: string | number, bagId: number | null, userId: number): Promise<number | null> {
     if (bagId == null) return null;
-    const bag = this.db.get<{ user_id: number | null }>('SELECT user_id FROM packing_bags WHERE id = ? AND trip_id = ?', bagId, tripId);
+    const bag = await this.bagsRepo.findInTrip(bagId, tripId);
     if (!bag) return null;
     if (bag.user_id === userId) return bagId;
-    const members = this.db.all<{ user_id: number }>('SELECT user_id FROM packing_bag_members WHERE bag_id = ?', bagId);
-    if (bag.user_id == null && members.length === 0) return bagId; // shared bag, nobody's in particular
-    return members.some(m => m.user_id === userId) ? bagId : null;
+    const memberIds = await this.bagsRepo.listMemberIdsForBag(bagId);
+    if (bag.user_id == null && memberIds.length === 0) return bagId; // shared bag, nobody's in particular
+    return memberIds.some(uid => uid === userId) ? bagId : null;
   }
 
   /**
@@ -444,7 +415,7 @@ export class PackingService {
    * every traveller was the whole complaint in #207.
    */
   async cloneItem(tripId: string | number, id: string | number, userId: number) {
-    const item = await this.getItemInTrip(tripId, id, userId);
+    const item = await this.itemsRepo.findVisibleInTrip(id, tripId, userId);
     if (!item) return null;
     return await this.createItem(tripId, {
       name: item.name,
@@ -461,20 +432,19 @@ export class PackingService {
     // delete broadcast at the owner when the item was private (#858).
     // Scoped to what the actor may see: trip membership alone used to be enough
     // to delete another member's restricted item.
-    const item = await this.getItemInTrip(tripId, id, actingUserId);
+    const item = await this.itemsRepo.findVisibleInTrip(id, tripId, actingUserId);
     if (!item) return null;
 
-    this.db.run('DELETE FROM packing_items WHERE id = ?', id);
+    await this.itemsRepo.delete(id);
     return item;
   }
 
   // ── Bulk Import ────────────────────────────────────────────────────────────
 
   async bulkImport(tripId: string | number, items: ImportItem[], ownerId?: number) {
-    const maxOrder = this.db.get<{ max: number | null }>('SELECT MAX(sort_order) as max FROM packing_items WHERE trip_id = ?', tripId)!;
-    let sortOrder = (maxOrder.max !== null ? maxOrder.max : -1) + 1;
+    const maxOrder = await this.itemsRepo.maxSortOrder(tripId);
+    let sortOrder = (maxOrder !== null ? maxOrder : -1) + 1;
 
-    const stmt = this.db.prepare('INSERT INTO packing_items (trip_id, name, checked, category, weight_grams, bag_id, sort_order, quantity, is_private, owner_id, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)');
     const created: any[] = [];
 
     await this.uow.transactional(async () => {
@@ -484,22 +454,32 @@ export class PackingService {
         const weight = item.weight_grams ? Number.parseInt(String(item.weight_grams)) || null : null;
 
         // Resolve bag by name if provided
-        let bagId = null;
+        let bagId: number | null = null;
         if (item.bag?.trim()) {
           const bagName = item.bag.trim();
-          const existing = this.db.get<{ id: number }>('SELECT id FROM packing_bags WHERE trip_id = ? AND name = ?', tripId, bagName);
+          const existing = await this.bagsRepo.byNameInTrip(tripId, bagName);
           if (existing) {
             bagId = existing.id;
           } else {
-            const bagCount = this.db.get<{ c: number }>('SELECT COUNT(*) as c FROM packing_bags WHERE trip_id = ?', tripId)!.c;
-            const newBag = this.db.run('INSERT INTO packing_bags (trip_id, name, color) VALUES (?, ?, ?)', tripId, bagName, BAG_COLORS[bagCount % BAG_COLORS.length]);
-            bagId = newBag.lastInsertRowid;
+            const bagCount = await this.bagsRepo.countForTrip(tripId);
+            bagId = await this.bagsRepo.insertMinimal(tripId, bagName, BAG_COLORS[bagCount % BAG_COLORS.length]);
           }
         }
 
         const qty = Math.max(1, Math.min(999, Number(item.quantity) || 1));
-        const result = stmt.run(tripId, item.name.trim(), checked, item.category?.trim() || 'Other', weight, bagId, sortOrder++, qty, item.is_private ? 1 : 0, ownerId ?? null);
-        created.push(this.db.get('SELECT * FROM packing_items WHERE id = ?', result.lastInsertRowid));
+        const newId = await this.itemsRepo.insertItem({
+          trip_id: tripId,
+          name: item.name.trim(),
+          checked,
+          category: item.category?.trim() || 'Other',
+          sort_order: sortOrder++,
+          quantity: qty,
+          weight_grams: weight,
+          bag_id: bagId,
+          is_private: item.is_private ? 1 : 0,
+          owner_id: ownerId ?? null,
+        });
+        created.push(await this.itemsRepo.findById(newId));
       }
     });
 
@@ -521,18 +501,15 @@ export class PackingService {
    * So the sum is computed here, over EVERY row, and only integers cross the
    * wire. A member learns that a bag is heavier than the items they can see —
    * never a name, category, quantity or owner. That is a deliberate, bounded
-   * disclosure and the point of the issue.
+   * disclosure and the point of the issue. `PackingItemsRepository.bagWeightTotals`
+   * is a genuinely separate, unfiltered aggregate — never built on the
+   * visibility-filtered reads (§17 surprise 10).
    *
    * Keyed by bag id, with the unassigned pile under `null` — the same shape the
    * "no bag" row on every packing surface needs.
    */
   private async bagWeightTotals(tripId: string | number): Promise<Map<number | null, number>> {
-    const rows = this.db.all<{ bag_id: number | null; total: number | null }>(`
-      SELECT bag_id, SUM(COALESCE(weight_grams, 0) * COALESCE(quantity, 1)) AS total
-        FROM packing_items
-       WHERE trip_id = ?
-       GROUP BY bag_id
-    `, tripId);
+    const rows = await this.itemsRepo.bagWeightTotals(tripId);
     return new Map(rows.map(r => [r.bag_id, r.total ?? 0]));
   }
 
@@ -559,15 +536,9 @@ export class PackingService {
   }
 
   private async decorateBags(tripId: string | number, totals: Map<number | null, number>) {
-    const bags = this.db.all<any>('SELECT * FROM packing_bags WHERE trip_id = ? ORDER BY sort_order, id', tripId);
-    const members = this.db.all<{ bag_id: number; user_id: number; username: string; avatar: string | null }>(`
-    SELECT bm.bag_id, bm.user_id, COALESCE(u.display_name, u.username) AS username, u.avatar
-    FROM packing_bag_members bm
-    JOIN users u ON bm.user_id = u.id
-    JOIN packing_bags b ON bm.bag_id = b.id
-    WHERE b.trip_id = ?
-  `, tripId);
-    const membersByBag = new Map<number, typeof members>();
+    const bags = await this.bagsRepo.listForTrip(tripId);
+    const members = await this.bagsRepo.listMembersForTrip(tripId);
+    const membersByBag = new Map<number, PackingBagMemberForTripRow[]>();
     for (const m of members) {
       if (!membersByBag.has(m.bag_id)) membersByBag.set(m.bag_id, []);
       membersByBag.get(m.bag_id)!.push(m);
@@ -590,29 +561,29 @@ export class PackingService {
   }
 
   async setBagMembers(tripId: string | number, bagId: string | number, userIds: number[]) {
-    const bag = this.db.get('SELECT * FROM packing_bags WHERE id = ? AND trip_id = ?', bagId, tripId);
+    const bag = await this.bagsRepo.findInTrip(bagId, tripId);
     if (!bag) return null;
     await this.uow.transactional(async () => {
-      this.db.run('DELETE FROM packing_bag_members WHERE bag_id = ?', bagId);
-      const ins = this.db.prepare('INSERT OR IGNORE INTO packing_bag_members (bag_id, user_id) VALUES (?, ?)');
+      await this.bagsRepo.deleteMembersForBag(Number(bagId));
       // Only real trip members may be bag members — never write an arbitrary account id.
       const roster = await this.tripRosterIds(tripId);
-      for (const uid of userIds) if (roster.has(uid)) ins.run(bagId, uid);
+      const members = userIds.filter(uid => roster.has(uid));
+      await this.bagsRepo.insertMembersIgnore(Number(bagId), members);
     });
-    const rows = this.db.all<{ user_id: number; username: string; avatar: string | null }>(`
-    SELECT bm.user_id, COALESCE(u.display_name, u.username) AS username, u.avatar
-    FROM packing_bag_members bm JOIN users u ON bm.user_id = u.id
-    WHERE bm.bag_id = ?
-  `, bagId);
+    const rows = await this.bagsRepo.listMembersWithUserForBag(Number(bagId));
     return rows.map(m => ({ ...m, avatar: avatarUrl(m) }));
   }
 
   async createBag(tripId: string | number, data: { name: string; color?: string; weight_limit_grams?: number | null }) {
-    const maxOrder = this.db.get<{ max: number | null }>('SELECT MAX(sort_order) as max FROM packing_bags WHERE trip_id = ?', tripId)!;
-    const result = this.db.run('INSERT INTO packing_bags (trip_id, name, color, sort_order, weight_limit_grams) VALUES (?, ?, ?, ?, ?)',
-      tripId, data.name.trim(), data.color || '#6366f1', (maxOrder.max ?? -1) + 1, data.weight_limit_grams ?? null
-    );
-    return this.db.get('SELECT * FROM packing_bags WHERE id = ?', result.lastInsertRowid);
+    const maxOrder = await this.bagsRepo.maxSortOrder(tripId);
+    const newId = await this.bagsRepo.insertBag({
+      trip_id: tripId,
+      name: data.name.trim(),
+      color: data.color || '#6366f1',
+      sort_order: (maxOrder ?? -1) + 1,
+      weight_limit_grams: data.weight_limit_grams ?? null,
+    });
+    return await this.bagsRepo.findById(newId);
   }
 
   async updateBag(
@@ -621,35 +592,27 @@ export class PackingService {
     data: { name?: string; color?: string; weight_limit_grams?: number | null; user_id?: number | null },
     bodyKeys?: string[]
   ) {
-    const bag = this.db.get('SELECT * FROM packing_bags WHERE id = ? AND trip_id = ?', bagId, tripId);
+    const bag = await this.bagsRepo.findInTrip(bagId, tripId);
     if (!bag) return null;
 
     // A bag may only be assigned to a real trip member; an off-roster id becomes unassigned.
     const assignUser = data.user_id != null && (await this.tripRosterIds(tripId)).has(data.user_id) ? data.user_id : null;
     // weight_limit_grams follows the bodyKeys presence protocol like user_id:
     // an omitted key leaves the limit unchanged, an explicit null clears it.
-    this.db.run(`UPDATE packing_bags SET
-    name = COALESCE(?, name),
-    color = COALESCE(?, color),
-    weight_limit_grams = CASE WHEN ? THEN ? ELSE weight_limit_grams END,
-    user_id = CASE WHEN ? THEN ? ELSE user_id END
-    WHERE id = ?`,
-      data.name?.trim() || null,
-      data.color || null,
-      bodyKeys?.includes('weight_limit_grams') ? 1 : 0,
-      data.weight_limit_grams ?? null,
-      bodyKeys?.includes('user_id') ? 1 : 0,
-      assignUser,
-      bagId
-    );
-    return this.db.get('SELECT b.*, COALESCE(u.display_name, u.username) as assigned_username FROM packing_bags b LEFT JOIN users u ON b.user_id = u.id WHERE b.id = ?', bagId);
+    await this.bagsRepo.update(bagId, {
+      name: [!!data.name?.trim(), data.name?.trim() || null],
+      color: [!!data.color, data.color || null],
+      weight_limit_grams: [!!bodyKeys?.includes('weight_limit_grams'), data.weight_limit_grams ?? null],
+      user_id: [!!bodyKeys?.includes('user_id'), assignUser],
+    });
+    return await this.bagsRepo.findWithAssignee(bagId);
   }
 
   async deleteBag(tripId: string | number, bagId: string | number): Promise<boolean> {
-    const bag = this.db.get('SELECT * FROM packing_bags WHERE id = ? AND trip_id = ?', bagId, tripId);
+    const bag = await this.bagsRepo.findInTrip(bagId, tripId);
     if (!bag) return false;
 
-    this.db.run('DELETE FROM packing_bags WHERE id = ?', bagId);
+    await this.bagsRepo.delete(bagId);
     return true;
   }
 
@@ -661,12 +624,7 @@ export class PackingService {
    * under /api/admin/packing-templates.
    */
   async listTemplates() {
-    return this.db.all<{ id: number; name: string; item_count: number }>(`
-    SELECT pt.id, pt.name,
-      (SELECT COUNT(*) FROM packing_template_items ti JOIN packing_template_categories tc ON ti.category_id = tc.id WHERE tc.template_id = pt.id) as item_count
-    FROM packing_templates pt
-    ORDER BY pt.created_at DESC
-  `);
+    return await this.templatesRepo.listWithItemCount();
   }
 
   // ── Apply Template ─────────────────────────────────────────────────────────
@@ -677,28 +635,22 @@ export class PackingService {
     visibility: 'common' | 'personal' = 'common',
     ownerId?: number,
   ) {
-    const templateItems = this.db.all<{ name: string; category: string }>(`
-    SELECT ti.name, tc.name as category
-    FROM packing_template_items ti
-    JOIN packing_template_categories tc ON ti.category_id = tc.id
-    WHERE tc.template_id = ?
-    ORDER BY tc.sort_order, ti.sort_order
-  `, templateId);
+    const templateItems = await this.templateItemsRepo.listForApply(templateId);
 
     if (templateItems.length === 0) return null;
 
-    const maxOrder = this.db.get<{ max: number | null }>('SELECT MAX(sort_order) as max FROM packing_items WHERE trip_id = ?', tripId)!;
-    let sortOrder = (maxOrder.max !== null ? maxOrder.max : -1) + 1;
+    const maxOrder = await this.itemsRepo.maxSortOrder(tripId);
+    let sortOrder = (maxOrder !== null ? maxOrder : -1) + 1;
     const isPrivate = ownerId != null ? this.visibilityToPrivate(visibility) : 0;
     const owner = isPrivate ? ownerId! : null;
 
-    const insert = this.db.prepare('INSERT INTO packing_items (trip_id, name, checked, category, sort_order, is_private, owner_id, updated_at) VALUES (?, ?, 0, ?, ?, ?, ?, CURRENT_TIMESTAMP)');
     const added: any[] = [];
     await this.uow.transactional(async () => {
       for (const ti of templateItems) {
-        const result = insert.run(tripId, ti.name, ti.category, sortOrder++, isPrivate, owner);
-        const item = this.db.get('SELECT * FROM packing_items WHERE id = ?', result.lastInsertRowid);
-        added.push(item);
+        const newId = await this.itemsRepo.insertFromTemplate({
+          trip_id: tripId, name: ti.name, category: ti.category, sort_order: sortOrder++, is_private: isPrivate, owner_id: owner,
+        });
+        added.push(await this.itemsRepo.findById(newId));
       }
     });
 
@@ -711,30 +663,26 @@ export class PackingService {
     // A template is a durable, shareable artifact, so it may only capture what is
     // the actor's to publish: the Common list plus their own items. It used to
     // take every row in the trip, restricted ones included.
-    const items = this.db.all<{ name: string; category: string }>(
-      'SELECT name, category FROM packing_items WHERE trip_id = ? AND (is_private = 0 OR owner_id = ?) ORDER BY sort_order ASC',
-      tripId, userId,
-    );
+    const items = await this.itemsRepo.listExportable(tripId, userId);
 
     if (items.length === 0) return null;
 
     const categories = [...new Set(items.map(i => i.category || 'Other'))];
 
     const templateId = await this.uow.transactional(async () => {
-      const result = this.db.run('INSERT INTO packing_templates (name, created_by) VALUES (?, ?)', templateName, userId);
-      const id = result.lastInsertRowid;
+      const id = await this.templatesRepo.insertTemplate(templateName, userId);
 
-      const catIdMap = new Map<string, number | bigint>();
+      const catIdMap = new Map<string, number>();
       for (let i = 0; i < categories.length; i++) {
-        const catResult = this.db.run('INSERT INTO packing_template_categories (template_id, name, sort_order) VALUES (?, ?, ?)', id, categories[i], i);
-        catIdMap.set(categories[i], catResult.lastInsertRowid);
+        const catId = await this.templateCategoriesRepo.insertCategory(id, categories[i], i);
+        catIdMap.set(categories[i], catId);
       }
 
       const itemsByCategory = new Map<string, number>();
       for (const item of items) {
         const catId = catIdMap.get(item.category || 'Other')!;
         const order = itemsByCategory.get(item.category || 'Other') || 0;
-        this.db.run('INSERT INTO packing_template_items (category_id, name, sort_order) VALUES (?, ?, ?)', catId, item.name, order);
+        await this.templateItemsRepo.insertTemplateItem(catId, item.name, order);
         itemsByCategory.set(item.category || 'Other', order + 1);
       }
       return id;
@@ -746,12 +694,7 @@ export class PackingService {
   // ── Category Assignees ─────────────────────────────────────────────────────
 
   async getCategoryAssignees(tripId: string | number) {
-    const rows = this.db.all<{ category_name: string; user_id: number; username: string; avatar: string | null }>(`
-    SELECT pca.category_name, pca.user_id, COALESCE(u.display_name, u.username) AS username, u.avatar
-    FROM packing_category_assignees pca
-    JOIN users u ON pca.user_id = u.id
-    WHERE pca.trip_id = ?
-  `, tripId);
+    const rows = await this.categoryAssigneesRepo.listForTrip(tripId);
 
     // Group by category
     const assignees: Record<string, { user_id: number; username: string; avatar: string | null }[]> = {};
@@ -765,33 +708,27 @@ export class PackingService {
 
   async updateCategoryAssignees(tripId: string | number, categoryName: string, userIds: number[] | undefined) {
     await this.uow.transactional(async () => {
-      this.db.run('DELETE FROM packing_category_assignees WHERE trip_id = ? AND category_name = ?', tripId, categoryName);
+      await this.categoryAssigneesRepo.deleteForCategory(tripId, categoryName);
 
       if (Array.isArray(userIds) && userIds.length > 0) {
-        const insert = this.db.prepare('INSERT OR IGNORE INTO packing_category_assignees (trip_id, category_name, user_id) VALUES (?, ?, ?)');
         // Same rule as setBagMembers: only people on this trip may be assigned.
         const roster = await this.tripRosterIds(tripId);
-        for (const uid of userIds) if (roster.has(uid)) insert.run(tripId, categoryName, uid);
+        const scoped = userIds.filter(uid => roster.has(uid));
+        await this.categoryAssigneesRepo.insertIgnore(tripId, categoryName, scoped);
       }
     });
 
-    const updated = this.db.all<{ user_id: number; username: string; avatar: string | null }>(`
-    SELECT pca.user_id, COALESCE(u.display_name, u.username) AS username, u.avatar
-    FROM packing_category_assignees pca
-    JOIN users u ON pca.user_id = u.id
-    WHERE pca.trip_id = ? AND pca.category_name = ?
-  `, tripId, categoryName);
+    const updated = await this.categoryAssigneesRepo.listForCategory(tripId, categoryName);
     return updated.map(m => ({ ...m, avatar: avatarUrl(m) }));
   }
 
   // ── Reorder ────────────────────────────────────────────────────────────────
 
   async reorderItems(tripId: string | number, orderedIds: number[]): Promise<void> {
-    const update = this.db.prepare('UPDATE packing_items SET sort_order = ? WHERE id = ? AND trip_id = ?');
     await this.uow.transactional(async () => {
-      orderedIds.forEach((id, index) => {
-        update.run(index, id, tripId);
-      });
+      for (const [index, id] of orderedIds.entries()) {
+        await this.itemsRepo.setSortOrder(id, tripId, index);
+      }
     });
   }
 
@@ -811,56 +748,36 @@ export class PackingService {
   // path param entirely; since the 2026-08 quirk fix they scope through
   // packing_template_categories like the sibling category routes do.
 
-  /** An item looked up through its category, so :templateId actually scopes it. */
-  private async scopedTemplateItem(templateId: string, itemId: string) {
-    return this.db.get(`
-    SELECT ti.* FROM packing_template_items ti
-    JOIN packing_template_categories tc ON ti.category_id = tc.id
-    WHERE ti.id = ? AND tc.template_id = ?
-  `, itemId, templateId);
-  }
-
   async listPackingTemplates() {
-    return this.db.all(`
-    SELECT pt.*, u.username as created_by_name,
-      (SELECT COUNT(*) FROM packing_template_items ti JOIN packing_template_categories tc ON ti.category_id = tc.id WHERE tc.template_id = pt.id) as item_count,
-      (SELECT COUNT(*) FROM packing_template_categories WHERE template_id = pt.id) as category_count
-    FROM packing_templates pt
-    JOIN users u ON pt.created_by = u.id
-    ORDER BY pt.created_at DESC
-  `);
+    return await this.templatesRepo.listAdmin();
   }
 
   async getPackingTemplate(id: string) {
-    const template = this.db.get('SELECT * FROM packing_templates WHERE id = ?', id);
+    const template = await this.templatesRepo.findById(id);
     if (!template) return { error: 'Template not found', status: 404 };
-    const categories = this.db.all('SELECT * FROM packing_template_categories WHERE template_id = ? ORDER BY sort_order, id', id);
-    const items = this.db.all(`
-    SELECT ti.* FROM packing_template_items ti
-    JOIN packing_template_categories tc ON ti.category_id = tc.id
-    WHERE tc.template_id = ? ORDER BY ti.sort_order, ti.id
-  `, id);
+    const categories = await this.templateCategoriesRepo.listForTemplate(id);
+    const items = await this.templateItemsRepo.listForTemplate(id);
     return { template, categories, items };
   }
 
   async createPackingTemplate(name: string, createdBy: number) {
     if (!name?.trim()) return { error: 'Name is required', status: 400 };
-    const result = this.db.run('INSERT INTO packing_templates (name, created_by) VALUES (?, ?)', name.trim(), createdBy);
-    const template = this.db.get('SELECT * FROM packing_templates WHERE id = ?', result.lastInsertRowid);
+    const newId = await this.templatesRepo.insertTemplate(name.trim(), createdBy);
+    const template = await this.templatesRepo.findById(newId);
     return { template };
   }
 
   async updatePackingTemplate(id: string, data: { name?: string }) {
-    const template = this.db.get('SELECT * FROM packing_templates WHERE id = ?', id);
+    const template = await this.templatesRepo.findById(id);
     if (!template) return { error: 'Template not found', status: 404 };
-    if (data.name?.trim()) this.db.run('UPDATE packing_templates SET name = ? WHERE id = ?', data.name.trim(), id);
-    return { template: this.db.get('SELECT * FROM packing_templates WHERE id = ?', id) };
+    if (data.name?.trim()) await this.templatesRepo.updateName(id, data.name.trim());
+    return { template: await this.templatesRepo.findById(id) };
   }
 
   async deletePackingTemplate(id: string) {
-    const template = this.db.get<{ name?: string }>('SELECT * FROM packing_templates WHERE id = ?', id);
+    const template = await this.templatesRepo.findById(id);
     if (!template) return { error: 'Template not found', status: 404 };
-    this.db.run('DELETE FROM packing_templates WHERE id = ?', id);
+    await this.templatesRepo.delete(id);
     return { name: template.name };
   }
 
@@ -868,25 +785,25 @@ export class PackingService {
 
   async createTemplateCategory(templateId: string, name: string) {
     if (!name?.trim()) return { error: 'Category name is required', status: 400 };
-    const template = this.db.get('SELECT * FROM packing_templates WHERE id = ?', templateId);
+    const template = await this.templatesRepo.findById(templateId);
     if (!template) return { error: 'Template not found', status: 404 };
-    const maxOrder = this.db.get<{ max: number | null }>('SELECT MAX(sort_order) as max FROM packing_template_categories WHERE template_id = ?', templateId)!;
-    const result = this.db.run('INSERT INTO packing_template_categories (template_id, name, sort_order) VALUES (?, ?, ?)', templateId, name.trim(), (maxOrder.max ?? -1) + 1);
-    return { category: this.db.get('SELECT * FROM packing_template_categories WHERE id = ?', result.lastInsertRowid) };
+    const maxOrder = await this.templateCategoriesRepo.maxSortOrder(templateId);
+    const newId = await this.templateCategoriesRepo.insertCategory(templateId, name.trim(), (maxOrder ?? -1) + 1);
+    return { category: await this.templateCategoriesRepo.findById(newId) };
   }
 
   async updateTemplateCategory(templateId: string, catId: string, data: { name?: string }) {
-    const cat = this.db.get('SELECT * FROM packing_template_categories WHERE id = ? AND template_id = ?', catId, templateId);
+    const cat = await this.templateCategoriesRepo.findInTemplate(catId, templateId);
     if (!cat) return { error: 'Category not found', status: 404 };
     if (data.name?.trim())
-      this.db.run('UPDATE packing_template_categories SET name = ? WHERE id = ?', data.name.trim(), catId);
-    return { category: this.db.get('SELECT * FROM packing_template_categories WHERE id = ?', catId) };
+      await this.templateCategoriesRepo.updateName(catId, data.name.trim());
+    return { category: await this.templateCategoriesRepo.findById(catId) };
   }
 
   async deleteTemplateCategory(templateId: string, catId: string) {
-    const cat = this.db.get('SELECT * FROM packing_template_categories WHERE id = ? AND template_id = ?', catId, templateId);
+    const cat = await this.templateCategoriesRepo.findInTemplate(catId, templateId);
     if (!cat) return { error: 'Category not found', status: 404 };
-    this.db.run('DELETE FROM packing_template_categories WHERE id = ?', catId);
+    await this.templateCategoriesRepo.delete(catId);
     return {};
   }
 
@@ -894,25 +811,25 @@ export class PackingService {
 
   async createTemplateItem(templateId: string, catId: string, name: string) {
     if (!name?.trim()) return { error: 'Item name is required', status: 400 };
-    const cat = this.db.get('SELECT * FROM packing_template_categories WHERE id = ? AND template_id = ?', catId, templateId);
+    const cat = await this.templateCategoriesRepo.findInTemplate(catId, templateId);
     if (!cat) return { error: 'Category not found', status: 404 };
-    const maxOrder = this.db.get<{ max: number | null }>('SELECT MAX(sort_order) as max FROM packing_template_items WHERE category_id = ?', catId)!;
-    const result = this.db.run('INSERT INTO packing_template_items (category_id, name, sort_order) VALUES (?, ?, ?)', catId, name.trim(), (maxOrder.max ?? -1) + 1);
-    return { item: this.db.get('SELECT * FROM packing_template_items WHERE id = ?', result.lastInsertRowid) };
+    const maxOrder = await this.templateItemsRepo.maxSortOrder(catId);
+    const newId = await this.templateItemsRepo.insertTemplateItem(catId, name.trim(), (maxOrder ?? -1) + 1);
+    return { item: await this.templateItemsRepo.findById(newId) };
   }
 
   async updateTemplateItem(templateId: string, itemId: string, data: { name?: string }) {
-    const item = await this.scopedTemplateItem(templateId, itemId);
+    const item = await this.templateItemsRepo.findScoped(itemId, templateId);
     if (!item) return { error: 'Item not found', status: 404 };
     if (data.name?.trim())
-      this.db.run('UPDATE packing_template_items SET name = ? WHERE id = ?', data.name.trim(), itemId);
-    return { item: this.db.get('SELECT * FROM packing_template_items WHERE id = ?', itemId) };
+      await this.templateItemsRepo.updateName(itemId, data.name.trim());
+    return { item: await this.templateItemsRepo.findById(itemId) };
   }
 
   async deleteTemplateItem(templateId: string, itemId: string) {
-    const item = await this.scopedTemplateItem(templateId, itemId);
+    const item = await this.templateItemsRepo.findScoped(itemId, templateId);
     if (!item) return { error: 'Item not found', status: 404 };
-    this.db.run('DELETE FROM packing_template_items WHERE id = ?', itemId);
+    await this.templateItemsRepo.delete(itemId);
     return {};
   }
 
@@ -923,13 +840,13 @@ export class PackingService {
     // nothing the module graph does not already give — NotificationsModule
     // reaches nothing in this direction — and it hid the edge while handing the
     // send a second NotificationsService built outside the container.
-    const tripInfo = this.db.get<{ title: string }>('SELECT title FROM trips WHERE id = ?', tripId);
+    const tripTitle = await this.tripsRepo.getTitle(tripId);
     this.notifications.send({
       event: 'packing_tagged',
       actorId: actor.id,
       scope: 'trip',
       targetId: Number(tripId),
-      params: { trip: tripInfo?.title || 'Untitled', actor: actor.email, category, tripId: String(tripId) },
+      params: { trip: tripTitle || 'Untitled', actor: actor.email, category, tripId: String(tripId) },
     }).catch(() => {});
   }
 }

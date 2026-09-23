@@ -67,7 +67,16 @@ import { PackingService, isInvalidBagRef } from '../../../src/nest/packing/packi
 const bridgeListItems = (tripId: string | number, viewerId?: number) => svc.listItems(tripId, viewerId);
 import { RealtimeService } from '../../../src/nest/realtime/realtime.service';
 import { notificationsStub } from '../../helpers/notifications';
-import { createTestUnitOfWork, createTestDatabaseService } from '../../helpers/test-uow';
+import { createTestUnitOfWork, createTestDatabaseService, createTestTripsRepo } from '../../helpers/test-uow';
+import {
+  createTestPackingItemsRepo,
+  createTestPackingItemContributorsRepo,
+  createTestPackingBagsRepo,
+  createTestPackingCategoryAssigneesRepo,
+  createTestPackingTemplatesRepo,
+  createTestPackingTemplateCategoriesRepo,
+  createTestPackingTemplateItemsRepo,
+} from '../../helpers/packing-repos';
 
 let svc: PackingService;
 
@@ -76,7 +85,21 @@ let svc: PackingService;
 beforeAll(async () => {
   createTables(testDb);
   runMigrations(testDb);
-  svc = new PackingService(await createTestDatabaseService(testDb), permissionsStub, new RealtimeService(), notificationsStub(send), await createTestUnitOfWork(testDb));
+  svc = new PackingService(
+    await createTestDatabaseService(testDb),
+    permissionsStub,
+    new RealtimeService(),
+    notificationsStub(send),
+    await createTestUnitOfWork(testDb),
+    await createTestPackingItemsRepo(testDb),
+    await createTestPackingItemContributorsRepo(testDb),
+    await createTestPackingBagsRepo(testDb),
+    await createTestPackingCategoryAssigneesRepo(testDb),
+    await createTestPackingTemplatesRepo(testDb),
+    await createTestPackingTemplateCategoriesRepo(testDb),
+    await createTestPackingTemplateItemsRepo(testDb),
+    await createTestTripsRepo(testDb),
+  );
 });
 
 beforeEach(() => {

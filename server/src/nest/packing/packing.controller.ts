@@ -173,7 +173,10 @@ export class PackingController {
       throw new HttpException({ error: 'Item not found' }, 404);
     }
     // Scope the delete to the people who could see it (owner + recipients, #858).
-    this.packing.emitToViewers(tripId, 'packing:deleted', { itemId: Number(id) }, deleted as PackingItemRow, socketId);
+    // `deleted` is already a concretely-typed `PackingItemRow` (Plan 3e Task 3's
+    // `PackingItemsRepository`, via `PackingService.deleteItem`'s return type) —
+    // no cast needed, unlike `updated` above (that one's inferred as `unknown`).
+    this.packing.emitToViewers(tripId, 'packing:deleted', { itemId: Number(id) }, deleted, socketId);
     this.packing.broadcastBagTotals(tripId);
     return { success: true };
   }

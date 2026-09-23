@@ -72,6 +72,15 @@ import {
   sharedTestOrm,
 } from '../../helpers/test-uow';
 import { createTestBudgetItemsRepo } from '../../helpers/files-repos';
+import {
+  createTestPackingItemsRepo,
+  createTestPackingItemContributorsRepo,
+  createTestPackingBagsRepo,
+  createTestPackingCategoryAssigneesRepo,
+  createTestPackingTemplatesRepo,
+  createTestPackingTemplateCategoriesRepo,
+  createTestPackingTemplateItemsRepo,
+} from '../../helpers/packing-repos';
 
 const dbs = new DatabaseService(testDb);
 const realtime = new RealtimeService();
@@ -101,7 +110,21 @@ beforeAll(async () => {
   vi.spyOn(dbs, 'isOwner').mockImplementation((...a) => real.isOwner(...a));
   vi.spyOn(dbs, 'rosterUserIds').mockImplementation((...a) => real.rosterUserIds(...a));
   vi.spyOn(dbs, 'getPlaceWithTags').mockImplementation((...a) => real.getPlaceWithTags(...a));
-  packing = new PackingService(dbs, new PermissionsService(await createTestAppSettingsRepo(dbs.connection), await createTestUnitOfWork(dbs.connection)), realtime, notificationsStub(), await createTestUnitOfWork(dbs.connection));
+  packing = new PackingService(
+    dbs,
+    new PermissionsService(await createTestAppSettingsRepo(dbs.connection), await createTestUnitOfWork(dbs.connection)),
+    realtime,
+    notificationsStub(),
+    await createTestUnitOfWork(dbs.connection),
+    await createTestPackingItemsRepo(dbs.connection),
+    await createTestPackingItemContributorsRepo(dbs.connection),
+    await createTestPackingBagsRepo(dbs.connection),
+    await createTestPackingCategoryAssigneesRepo(dbs.connection),
+    await createTestPackingTemplatesRepo(dbs.connection),
+    await createTestPackingTemplateCategoriesRepo(dbs.connection),
+    await createTestPackingTemplateItemsRepo(dbs.connection),
+    await createTestTripsRepo(dbs.connection),
+  );
   places = new PlacesService(
   dbs,
   new PermissionsService(await createTestAppSettingsRepo(dbs.connection), await createTestUnitOfWork(dbs.connection)),

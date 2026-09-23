@@ -20,6 +20,9 @@ import { BudgetItems } from '../../db/entities/BudgetItems.entity';
 import { BudgetItemMembers } from '../../db/entities/BudgetItemMembers.entity';
 import { BudgetItemPayers } from '../../db/entities/BudgetItemPayers.entity';
 import { BudgetCategoryOrder } from '../../db/entities/BudgetCategoryOrder.entity';
+import { PackingBags } from '../../db/entities/PackingBags.entity';
+import { PackingItems } from '../../db/entities/PackingItems.entity';
+import { TodoItems } from '../../db/entities/TodoItems.entity';
 import { MAX_TRIP_DAYS, tripSpanDays, type ActiveTrip, type TrekWsPayload, type TrekWsTripEventName } from '@trek/shared';
 import { RealtimeService } from '../realtime/realtime.service';
 import { PermissionsService } from '../permissions/permissions.service';
@@ -269,6 +272,24 @@ export class TripsService {
 
   private get budgetCategoryOrderRepo() {
     return this.em.getRepository(BudgetCategoryOrder);
+  }
+
+  // Plan 3e Task 3 (packing) — TP66-69 only (the packing-family rows of
+  // `copy`'s 14 survivors). Same `this.em.getRepository(...)` pattern as
+  // every getter above.
+  private get packingBagsRepo() {
+    return this.em.getRepository(PackingBags);
+  }
+
+  private get packingItemsRepo() {
+    return this.em.getRepository(PackingItems);
+  }
+
+  // Plan 3e Task 4 (todo) — TP72-73 only (the todo-family rows of `copy`'s
+  // 14 survivors). Same `this.em.getRepository(...)` pattern as every
+  // getter above.
+  private get todoItemsRepo() {
+    return this.em.getRepository(TodoItems);
   }
 
   async canAccessTrip(tripId: string | number, userId: number) {
@@ -880,15 +901,15 @@ export class TripsService {
         if (newItemId) await this.budgetItemPayersRepo.insertIgnore({ budget_item_id: newItemId, user_id: bp.user_id, amount: bp.amount ?? 0 });
       }
 
-      const oldBags = this.db.prepare('SELECT * FROM packing_bags WHERE trip_id = ?').all(sourceTripId) as any[]; // TP66 — Plan 3e
-      const bagMap = new Map<number, number | bigint>();
-      const insertBag = this.db.prepare(`
-        INSERT INTO packing_bags (trip_id, name, color, weight_limit_grams, sort_order)
-        VALUES (?, ?, ?, ?, ?)
-      `);
+      // TP66 — Plan 3e Task 3, converted.
+      const oldBags = await this.packingBagsRepo.listAllForTrip(sourceTripId);
+      const bagMap = new Map<number, number>();
       for (const bag of oldBags) {
-        const r = insertBag.run(newTripId, bag.name, bag.color, bag.weight_limit_grams, bag.sort_order); // TP67 — Plan 3e
-        bagMap.set(bag.id, r.lastInsertRowid);
+        // TP67 — Plan 3e Task 3, converted (`insertBag`, PK42's own column set).
+        const newBagId = await this.packingBagsRepo.insertBag({
+          trip_id: newTripId, name: bag.name, color: bag.color, sort_order: bag.sort_order, weight_limit_grams: bag.weight_limit_grams,
+        });
+        bagMap.set(bag.id, newBagId);
       }
 
       // Only what the copier may carry over: the Common list plus their own items.
@@ -897,18 +918,16 @@ export class TripsService {
       // Shared item reappeared in the copy as a Common item visible to everyone.
       // A restricted item stays restricted, and it stays owned by the copier —
       // recipient rows are not carried over, and the copy has its own roster.
-      const oldPacking = this.db.prepare(
-        'SELECT * FROM packing_items WHERE trip_id = ? AND (is_private = 0 OR owner_id = ?)'
-      ).all(sourceTripId, newOwnerId) as any[]; // TP68 — Plan 3e (security-sensitive: the privacy filter)
-      const insertPacking = this.db.prepare(`
-        INSERT INTO packing_items (trip_id, name, checked, category, sort_order, weight_grams, bag_id, is_private, owner_id, updated_at)
-        VALUES (?, ?, 0, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-      `);
+      // TP68 — Plan 3e Task 3, converted (security-sensitive: the privacy filter).
+      const oldPacking = await this.packingItemsRepo.listOwnListForCopy(sourceTripId, newOwnerId);
       for (const p of oldPacking) {
         const isPrivate = p.is_private ? 1 : 0;
-        insertPacking.run(newTripId, p.name, p.category, p.sort_order, p.weight_grams,
-          p.bag_id ? (bagMap.get(p.bag_id) ?? null) : null,
-          isPrivate, isPrivate ? newOwnerId : null); // TP69 — Plan 3e
+        // TP69 — Plan 3e Task 3, converted.
+        await this.packingItemsRepo.insertCopy({
+          trip_id: newTripId, name: p.name, category: p.category, sort_order: p.sort_order, weight_grams: p.weight_grams,
+          bag_id: p.bag_id ? (bagMap.get(p.bag_id) ?? null) : null,
+          is_private: isPrivate, owner_id: isPrivate ? newOwnerId : null,
+        });
       }
 
       const oldNotes = await this.dayNotesRepo.listByTrip(sourceTripId); // TP70
@@ -921,13 +940,14 @@ export class TripsService {
         }
       }
 
-      const oldTodos = this.db.prepare('SELECT * FROM todo_items WHERE trip_id = ?').all(sourceTripId) as any[]; // TP72 — Plan 3e
-      const insertTodo = this.db.prepare(`
-        INSERT INTO todo_items (trip_id, name, checked, category, sort_order, due_date, description, assigned_user_id, priority)
-        VALUES (?, ?, 0, ?, ?, ?, ?, NULL, ?)
-      `);
+      // TP72 — Plan 3e Task 4, converted.
+      const oldTodos = await this.todoItemsRepo.listAllForTrip(sourceTripId);
       for (const t of oldTodos) {
-        insertTodo.run(newTripId, t.name, t.category, t.sort_order, t.due_date, t.description, t.priority); // TP73 — Plan 3e
+        // TP73 — Plan 3e Task 4, converted (`assigned_user_id` deliberately not carried over).
+        await this.todoItemsRepo.insertCopy({
+          trip_id: newTripId, name: t.name, category: t.category, sort_order: t.sort_order,
+          due_date: t.due_date, description: t.description, priority: t.priority,
+        });
       }
 
       // TP74 — Plan 3e Task 2, converted.

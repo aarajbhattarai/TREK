@@ -107,6 +107,12 @@ import {
   createTestCollabMessageReactionsRepo, createTestCollabNotesRepo, createTestCollabPollsRepo,
   createTestCollabPollVotesRepo, createTestCollabLinksRepo, createTestCollabMessagesRepo,
 } from '../../helpers/collab-repos';
+import {
+  createTestPackingItemsRepo, createTestPackingItemContributorsRepo, createTestPackingBagsRepo,
+  createTestPackingCategoryAssigneesRepo, createTestPackingTemplatesRepo, createTestPackingTemplateCategoriesRepo,
+  createTestPackingTemplateItemsRepo,
+} from '../../helpers/packing-repos';
+import { createTestTodoItemsRepo, createTestTodoCategoryAssigneesRepo } from '../../helpers/todo-repos';
 
 // Real sibling services over the same in-memory DB — updateTrip's date-shift
 // resyncs and the summary/bundle aggregation run their actual SQL.
@@ -209,7 +215,12 @@ beforeAll(async () => {
   membersSvc = new TripMembersService(dbs(), budgetSvc, new UserCleanupService(dbs(), budgetSvc, await createTestUnitOfWork(dbs().connection), await createTestUsersRepo(dbs().connection), await createTestBudgetItemsRepo(dbs().connection)), new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)), new RealtimeService(), notificationsStub(), await createTestUnitOfWork(dbs().connection), await createTestTripsRepo(dbs().connection), await createTestTripMembersRepo(dbs().connection), await createTestUsersRepo(dbs().connection));
   readModelSvc = new TripReadModelService(
   await createTestTripsRepo(dbs().connection), membersSvc, daysSvc, accommodationsSvc, budgetSvc,
-  new PackingService(dbs(), new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)), new RealtimeService(), notificationsStub(), await createTestUnitOfWork(dbs().connection)),
+  new PackingService(
+  dbs(), new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)), new RealtimeService(), notificationsStub(), await createTestUnitOfWork(dbs().connection),
+  await createTestPackingItemsRepo(dbs().connection), await createTestPackingItemContributorsRepo(dbs().connection), await createTestPackingBagsRepo(dbs().connection),
+  await createTestPackingCategoryAssigneesRepo(dbs().connection), await createTestPackingTemplatesRepo(dbs().connection), await createTestPackingTemplateCategoriesRepo(dbs().connection),
+  await createTestPackingTemplateItemsRepo(dbs().connection), await createTestTripsRepo(dbs().connection),
+  ),
   new ReservationsService(dbs(), new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)), budgetSvc, new RealtimeService(), notificationsStub(), new ReservationsReadService(await createTestReservationsRepo(dbs().connection), await createTestReservationEndpointsRepo(dbs().connection), await createTestReservationTravelersRepo(dbs().connection)), accommodationsSvc, await createTestUnitOfWork(dbs().connection), await createTestReservationsRepo(dbs().connection), await createTestReservationEndpointsRepo(dbs().connection), await createTestReservationTravelersRepo(dbs().connection), await createTestReservationDayPositionsRepo(dbs().connection), await createTestDayAccommodationsRepo(dbs().connection), await createTestDaysRepo(dbs().connection), await createTestPlacesRepo(dbs().connection), await createTestDayAssignmentsRepo(dbs().connection), await createTestTripMembersRepo(dbs().connection), await createTestUsersRepo(dbs().connection), await createTestTripsRepo(dbs().connection), await createTestBudgetItemsRepo(dbs().connection)),
   new CollabService(
     dbs(), new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)), new RealtimeService(), notificationsStub(), coversFx.storage, new RateLimitService(), await createTestUnitOfWork(dbs().connection),
@@ -218,7 +229,10 @@ beforeAll(async () => {
     await createTestTripsRepo(dbs().connection),
   ),
   placesSvc,
-  new TodoService(dbs(), new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)), new RealtimeService(), await createTestUnitOfWork(dbs().connection)),
+  new TodoService(
+  dbs(), new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)), new RealtimeService(), await createTestUnitOfWork(dbs().connection),
+  await createTestTodoItemsRepo(dbs().connection), await createTestTodoCategoryAssigneesRepo(dbs().connection),
+  ),
   new FilesService(
     dbs(),
     new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)),

@@ -139,6 +139,12 @@ import {
   createTestCollabMessageReactionsRepo, createTestCollabNotesRepo, createTestCollabPollsRepo,
   createTestCollabPollVotesRepo, createTestCollabLinksRepo, createTestCollabMessagesRepo,
 } from './collab-repos';
+import {
+  createTestPackingItemsRepo, createTestPackingItemContributorsRepo, createTestPackingBagsRepo,
+  createTestPackingCategoryAssigneesRepo, createTestPackingTemplatesRepo, createTestPackingTemplateCategoriesRepo,
+  createTestPackingTemplateItemsRepo,
+} from './packing-repos';
+import { createTestTodoItemsRepo, createTestTodoCategoryAssigneesRepo } from './todo-repos';
 import { AppSettings } from '../../src/db/entities/AppSettings.entity';
 import { AuditLog } from '../../src/db/entities/AuditLog.entity';
 import { Users } from '../../src/db/entities/Users.entity';
@@ -207,8 +213,13 @@ export async function createMcpTestRegistry(): Promise<McpRegistry> {
     await createTestReservationEndpointsRepo(dbService.connection),
     await createTestDayAccommodationsRepo(dbService.connection),
   );
-  const todoService = new TodoService(dbService, permissionsService, realtimeService, await createTestUnitOfWork(dbService.connection));
-  const packingService = new PackingService(dbService, permissionsService, realtimeService, notificationsStub(), await createTestUnitOfWork(dbService.connection));
+  const todoService = new TodoService(dbService, permissionsService, realtimeService, await createTestUnitOfWork(dbService.connection), await createTestTodoItemsRepo(dbService.connection), await createTestTodoCategoryAssigneesRepo(dbService.connection));
+  const packingService = new PackingService(
+    dbService, permissionsService, realtimeService, notificationsStub(), await createTestUnitOfWork(dbService.connection),
+    await createTestPackingItemsRepo(dbService.connection), await createTestPackingItemContributorsRepo(dbService.connection), await createTestPackingBagsRepo(dbService.connection),
+    await createTestPackingCategoryAssigneesRepo(dbService.connection), await createTestPackingTemplatesRepo(dbService.connection), await createTestPackingTemplateCategoriesRepo(dbService.connection),
+    await createTestPackingTemplateItemsRepo(dbService.connection), await createTestTripsRepo(dbService.connection),
+  );
   const collabService = new CollabService(
     dbService, permissionsService, realtimeService, notificationsStub(), generalStorage, new RateLimitService(), await createTestUnitOfWork(dbService.connection),
     await createTestCollabMessageReactionsRepo(dbService.connection), await createTestCollabNotesRepo(dbService.connection), await createTestCollabPollsRepo(dbService.connection),

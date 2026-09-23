@@ -89,6 +89,15 @@ import { AddonsService } from '../../../src/nest/addons/addons.service';
 import { notificationsStub } from '../../helpers/notifications';
 import { createTestUnitOfWork, createTestAppSettingsRepo, createTestTripsRepo, createTestTripMembersRepo, sharedTestOrm, createTestPlacesRepo } from '../../helpers/test-uow';
 import { budgetRepoArgs } from '../../helpers/budget-repos';
+import {
+  createTestPackingItemsRepo,
+  createTestPackingItemContributorsRepo,
+  createTestPackingBagsRepo,
+  createTestPackingCategoryAssigneesRepo,
+  createTestPackingTemplatesRepo,
+  createTestPackingTemplateCategoriesRepo,
+  createTestPackingTemplateItemsRepo,
+} from '../../helpers/packing-repos';
 import type { EntityManager } from '@mikro-orm/core';
 
 // The trip-summary prompt moved to the DI-discovered TripsMcp — its cases below
@@ -142,7 +151,21 @@ beforeAll(async () => {
   addonsStub,
   promptGuards,
 );
-  promptPackingService = new PackingService(promptDbs(), new PermissionsService(await createTestAppSettingsRepo(promptDbs().connection), await createTestUnitOfWork(promptDbs().connection)), new RealtimeService(), notificationsStub(), await createTestUnitOfWork(promptDbs().connection));
+  promptPackingService = new PackingService(
+    promptDbs(),
+    new PermissionsService(await createTestAppSettingsRepo(promptDbs().connection), await createTestUnitOfWork(promptDbs().connection)),
+    new RealtimeService(),
+    notificationsStub(),
+    await createTestUnitOfWork(promptDbs().connection),
+    await createTestPackingItemsRepo(promptDbs().connection),
+    await createTestPackingItemContributorsRepo(promptDbs().connection),
+    await createTestPackingBagsRepo(promptDbs().connection),
+    await createTestPackingCategoryAssigneesRepo(promptDbs().connection),
+    await createTestPackingTemplatesRepo(promptDbs().connection),
+    await createTestPackingTemplateCategoriesRepo(promptDbs().connection),
+    await createTestPackingTemplateItemsRepo(promptDbs().connection),
+    await createTestTripsRepo(promptDbs().connection),
+  );
   packingMcp = new PackingMcp(promptPackingService, authStub, addonsStub, promptGuards);
   budgetMcp = new BudgetMcp(
   new BudgetService(promptDbs(), new PermissionsService(await createTestAppSettingsRepo(promptDbs().connection), await createTestUnitOfWork(promptDbs().connection)), new ExchangeRatesService(), new RealtimeService(), await createTestUnitOfWork(promptDbs().connection), ...(await budgetRepoArgs(promptDbs().connection))),

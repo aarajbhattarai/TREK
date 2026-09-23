@@ -95,6 +95,12 @@ import {
   createTestCollabMessageReactionsRepo, createTestCollabNotesRepo, createTestCollabPollsRepo,
   createTestCollabPollVotesRepo, createTestCollabLinksRepo, createTestCollabMessagesRepo,
 } from './collab-repos';
+import {
+  createTestPackingItemsRepo, createTestPackingItemContributorsRepo, createTestPackingBagsRepo,
+  createTestPackingCategoryAssigneesRepo, createTestPackingTemplatesRepo, createTestPackingTemplateCategoriesRepo,
+  createTestPackingTemplateItemsRepo,
+} from './packing-repos';
+import { createTestTodoItemsRepo, createTestTodoCategoryAssigneesRepo } from './todo-repos';
 
 /**
  * Hand-wired counterpart of the PluginsModule DI graph for no-Nest tests
@@ -116,8 +122,13 @@ export async function createPluginRpcHostFactory(dbs: DatabaseService): Promise<
   const budget = new BudgetService(dbs, permissions, exchangeRates, realtime, await createTestUnitOfWork(dbs.connection), ...(await budgetRepoArgs(dbs.connection)));
   const addons = await createTestAddonsService(dbs.connection, dbs);
   const queryHelpers = new QueryHelpersService(await createTestTagsRepo(dbs.connection), await createTestPlaceRatingsRepo(dbs.connection), await createTestAssignmentParticipantsRepo(dbs.connection));
-  const todos = new TodoService(dbs, permissions, realtime, await createTestUnitOfWork(dbs.connection));
-  const packing = new PackingService(dbs, permissions, realtime, notificationsStub(), await createTestUnitOfWork(dbs.connection));
+  const todos = new TodoService(dbs, permissions, realtime, await createTestUnitOfWork(dbs.connection), await createTestTodoItemsRepo(dbs.connection), await createTestTodoCategoryAssigneesRepo(dbs.connection));
+  const packing = new PackingService(
+    dbs, permissions, realtime, notificationsStub(), await createTestUnitOfWork(dbs.connection),
+    await createTestPackingItemsRepo(dbs.connection), await createTestPackingItemContributorsRepo(dbs.connection), await createTestPackingBagsRepo(dbs.connection),
+    await createTestPackingCategoryAssigneesRepo(dbs.connection), await createTestPackingTemplatesRepo(dbs.connection), await createTestPackingTemplateCategoriesRepo(dbs.connection),
+    await createTestPackingTemplateItemsRepo(dbs.connection), await createTestTripsRepo(dbs.connection),
+  );
   // Plan 3e Task 1 (files): FilesService now also takes uow + the repositories
   // its R2 transactions and R12 cross-object trip-scoping guard need.
   const files = new FilesService(
