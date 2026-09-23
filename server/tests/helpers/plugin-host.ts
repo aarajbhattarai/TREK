@@ -113,6 +113,7 @@ import {
 } from './atlas-repos';
 import {
   createTestJourneysRepo, createTestJourneyContributorsRepo, createTestJourneyTripsRepo, createTestJourneyEntriesRepo,
+  createTestJourneyPhotosRepo, createTestJourneyEntryPhotosRepo,
 } from './journey-repos';
 
 /**
@@ -192,6 +193,13 @@ export async function createPluginRpcHostFactory(dbs: DatabaseService): Promise<
     await createTestJourneysRepo(dbs.connection), await createTestJourneyContributorsRepo(dbs.connection),
     await createTestJourneyTripsRepo(dbs.connection), await createTestJourneyEntriesRepo(dbs.connection),
     await createTestTripsRepo(dbs.connection),
+    // Plan 3g Task 2 — a genuine follow-up constructor-ripple (git status
+    // confirmed this file clean before editing, per the task brief's own
+    // allowance): `JourneyPhotosRepository`/`JourneyEntryPhotosRepository`
+    // (the photos surface, JG19/JG87-116) + `PlacesRepository` (JG44's
+    // `findRaw`, already imported above for `PlacePhotoCacheService`).
+    await createTestJourneyPhotosRepo(dbs.connection), await createTestJourneyEntryPhotosRepo(dbs.connection),
+    await createTestPlacesRepo(dbs.connection),
   );
   const collections = new CollectionsService(dbs, permissions, realtime, notificationsStub(), generalStorage, await createTestUnitOfWork(dbs.connection));
   const atlas = new AtlasService(
@@ -264,7 +272,9 @@ export async function createPluginRpcHostFactory(dbs: DatabaseService): Promise<
     new VacayRpc(vacay, guards),
     // The photo half needs storage plus the allowed-types setting and the EXIF
     // backfill; none of the tests on this harness write bytes, so they are stubs.
-    new JournalRpc(journey, guards, generalStorage, { get: () => '*' } as never, { schedule: () => {} } as never, dbs),
+    // Plan 3g Task 3 — the constructor-ripple fix: `JournalRpc`'s demo-mode
+    // gate (JR1) now injects `UsersRepository.getEmail`, not `DatabaseService`.
+    new JournalRpc(journey, guards, generalStorage, { get: () => '*' } as never, { schedule: () => {} } as never, usersRepo),
     new CollectionsRpc(collections, guards),
     new DbRpc(new PluginUserSettingsService(dbs)),
     new MetaRpc(dbs, guards),

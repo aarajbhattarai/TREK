@@ -43,11 +43,15 @@ import { JourneyDomainService } from '../../../src/nest/journey/journey-domain.s
 import { JourneyShareService } from '../../../src/nest/journey/journey-share.service';
 import { SettingsService } from '../../../src/nest/settings/settings.service';
 import { db as dbConn } from '../../../src/db/database';
-import { sharedTestOrm, createTestUnitOfWork, createTestAppSettingsRepo, createTestSettingsRepo, createTestTripsRepo } from '../../helpers/test-uow';
+import { sharedTestOrm, createTestUnitOfWork, createTestAppSettingsRepo, createTestSettingsRepo, createTestTripsRepo, createTestPlacesRepo } from '../../helpers/test-uow';
 import type { TestOrm } from '../../helpers/test-orm';
 import {
   createTestJourneysRepo, createTestJourneyContributorsRepo, createTestJourneyTripsRepo, createTestJourneyEntriesRepo,
+  createTestJourneyPhotosRepo, createTestJourneyEntryPhotosRepo,
 } from '../../helpers/journey-repos';
+import { createTestJourneyShareTokensRepo } from '../../helpers/journey-share-repos';
+import type { JourneyPublicGalleryRow, JourneyShareTokensRepository } from '../../../src/db/repositories/JourneyShareTokens.repository';
+import { GALLERY_CHRONOLOGICAL_ORDER } from '../../../src/nest/journey/journey-gallery-order';
 
 const dbs = new DatabaseService(dbConn);
 let svc: JourneyShareService;
@@ -63,14 +67,20 @@ beforeAll(async () => {
   runMigrations(testDb);
   const uow = await createTestUnitOfWork(testDb);
   t = await sharedTestOrm(testDb);
+  const journeysRepo = await createTestJourneysRepo(testDb);
   svc = new JourneyShareService(
-    dbs,
     new JourneyDomainService(
       dbs, new RealtimeService(), new TrekPhotoRegistrationService(t.repo(TrekPhotos), t.repo(TripPhotos), dbs), uow,
-      await createTestJourneysRepo(testDb), await createTestJourneyContributorsRepo(testDb),
+      journeysRepo, await createTestJourneyContributorsRepo(testDb),
       await createTestJourneyTripsRepo(testDb), await createTestJourneyEntriesRepo(testDb), await createTestTripsRepo(testDb),
+      // Plan 3g Task 2 constructor-ripple: JourneyPhotosRepository/JourneyEntryPhotosRepository/PlacesRepository.
+      await createTestJourneyPhotosRepo(testDb), await createTestJourneyEntryPhotosRepo(testDb), await createTestPlacesRepo(testDb),
     ),
     new SettingsService(uow, await createTestAppSettingsRepo(testDb), await createTestSettingsRepo(testDb)),
+    // Plan 3g Task 3: JourneyShareTokensRepository (JS1-JS15) + the
+    // already-built JourneysRepository (JS8/JS12), same instance the domain
+    // service above uses.
+    await createTestJourneyShareTokensRepo(testDb), journeysRepo,
   );
 });
 
@@ -627,7 +637,7 @@ describe('getPublicJourney', () => {
     });
 
     const result = (await svc.getPublicJourney(token))!;
-    const gallery = result.gallery as Record<string, unknown>[];
+    const gallery = result.gallery as JourneyPublicGalleryRow[];
     expect(gallery).toHaveLength(1);
     expect(gallery[0].lat).toBeNull();
     expect(gallery[0].lng).toBeNull();
@@ -653,7 +663,7 @@ describe('getPublicJourney', () => {
       share_timeline: true, share_gallery: true, share_map: true,
     });
 
-    const gallery = (await svc.getPublicJourney(token))!.gallery as Record<string, unknown>[];
+    const gallery = (await svc.getPublicJourney(token))!.gallery as JourneyPublicGalleryRow[];
     expect(gallery[0].lat).toBe(48.8584);
     expect(gallery[0].lng).toBe(2.2945);
   });
@@ -695,7 +705,7 @@ describe('getPublicJourney', () => {
       share_timeline: true, share_gallery: true, share_map: true,
     });
 
-    const gallery = (await svc.getPublicJourney(token))!.gallery as Record<string, unknown>[];
+    const gallery = (await svc.getPublicJourney(token))!.gallery as JourneyPublicGalleryRow[];
     expect(gallery.map(p => p.file_path)).toEqual(['/photos/day1.jpg', '/photos/day2.jpg']);
   });
 
@@ -711,3 +721,253 @@ describe('getPublicJourney', () => {
     expect((await svc.getPublicJourney(token))!.cartoApiKey).toBe('owner-key');
   });
 });
+
+// -- Parity: JourneyShareTokensRepository reads vs. the legacy raw statement --
+
+describe('parity — JourneyShareTokensRepository reads match the legacy statement run raw', () => {
+  let shareTokensRepo: JourneyShareTokensRepository;
+
+  beforeAll(async () => {
+    shareTokensRepo = await createTestJourneyShareTokensRepo(testDb);
+  });
+
+  it('JOURNEY-SHARE-P01: findFlagsByJourneyId (JS1) matches the legacy 5-column read', async () => {
+    const { user } = createUser(testDb);
+    const journey = createJourney(testDb, user.id);
+    await svc.createOrUpdateJourneyShareLink(journey.id, user.id, {
+      share_timeline: false, share_gallery: true, share_map: false, newest_first: true,
+    });
+
+    const legacy = testDb
+      .prepare('SELECT token, share_timeline, share_gallery, share_map, newest_first FROM journey_share_tokens WHERE journey_id = ?')
+      .get(journey.id);
+
+    expect(await shareTokensRepo.findFlagsByJourneyId(journey.id)).toEqual(legacy);
+  });
+
+  it('JOURNEY-SHARE-P02: findByJourneyId (JS4) and findByToken (JS11) match the legacy `SELECT *` reads', async () => {
+    const { user } = createUser(testDb);
+    const journey = createJourney(testDb, user.id);
+    const { token } = await svc.createOrUpdateJourneyShareLink(journey.id, user.id, {
+      share_timeline: true, share_gallery: false, share_map: true, newest_first: false,
+    });
+
+    const legacyByJourney = testDb.prepare('SELECT * FROM journey_share_tokens WHERE journey_id = ?').get(journey.id);
+    const legacyByToken = testDb.prepare('SELECT * FROM journey_share_tokens WHERE token = ?').get(token);
+
+    expect(await shareTokensRepo.findByJourneyId(journey.id)).toEqual(legacyByJourney);
+    expect(await shareTokensRepo.findByToken(token)).toEqual(legacyByToken);
+  });
+
+  it('JOURNEY-SHARE-P03: findAccessByToken (JS6/JS9) matches the legacy narrow projection', async () => {
+    const { user } = createUser(testDb);
+    const journey = createJourney(testDb, user.id);
+    const { token } = await svc.createOrUpdateJourneyShareLink(journey.id, user.id, { share_gallery: false });
+
+    const legacy = testDb.prepare('SELECT journey_id, share_gallery FROM journey_share_tokens WHERE token = ?').get(token);
+
+    expect(await shareTokensRepo.findAccessByToken(token)).toEqual(legacy);
+  });
+
+  it('JOURNEY-SHARE-P04: listPublicEntries (JS13) matches the legacy statement for entries with and without GPS', async () => {
+    const { user } = createUser(testDb);
+    const journey = createJourney(testDb, user.id);
+    createJourneyEntry(testDb, journey.id, user.id, { type: 'entry', entry_date: '2026-01-01', location_name: 'No GPS' });
+    const withGps = createJourneyEntry(testDb, journey.id, user.id, { type: 'entry', entry_date: '2026-01-02', location_name: 'Has GPS' });
+    testDb.prepare('UPDATE journey_entries SET location_lat = ?, location_lng = ? WHERE id = ?').run(48.85, 2.35, withGps.id);
+    // A skeleton and a dismissed entry — both must be excluded, same as the legacy WHERE.
+    createJourneyEntry(testDb, journey.id, user.id, { type: 'skeleton', entry_date: '2026-01-03' });
+    const dismissed = createJourneyEntry(testDb, journey.id, user.id, { type: 'entry', entry_date: '2026-01-04' });
+    testDb.prepare('UPDATE journey_entries SET dismissed = 1 WHERE id = ?').run(dismissed.id);
+
+    const legacy = testDb
+      .prepare(`
+        SELECT je.* FROM journey_entries je
+        WHERE je.journey_id = ? AND je.type != 'skeleton' AND je.dismissed = 0
+        ORDER BY je.entry_date, je.sort_order
+      `)
+      .all(journey.id);
+
+    expect(await shareTokensRepo.listPublicEntries(journey.id)).toEqual(legacy);
+  });
+
+  it('JOURNEY-SHARE-P05: listEntryPhotosForPublicJourney (JS14) matches the legacy JP_SELECT-shaped statement', async () => {
+    const { user } = createUser(testDb);
+    const journey = createJourney(testDb, user.id);
+    const entry = createJourneyEntry(testDb, journey.id, user.id, { type: 'entry', entry_date: '2026-01-01' });
+    insertJourneyPhoto(entry.id, { ownerId: user.id });
+
+    const legacy = testDb
+      .prepare(`
+        SELECT gp.id, jep.entry_id, gp.photo_id, gp.caption, jep.sort_order, gp.shared, gp.created_at,
+               tkp.provider, tkp.asset_id, tkp.owner_id, tkp.file_path, tkp.thumbnail_path, tkp.width, tkp.height,
+               tkp.media_type, tkp.duration_ms, tkp.taken_at, tkp.lat, tkp.lng
+        FROM journey_entry_photos jep
+        JOIN journey_photos gp ON gp.id = jep.journey_photo_id
+        JOIN trek_photos tkp ON tkp.id = gp.photo_id
+        WHERE gp.journey_id = ?
+        ORDER BY jep.sort_order
+      `)
+      .all(journey.id);
+
+    expect(await shareTokensRepo.listEntryPhotosForPublicJourney(journey.id)).toEqual(legacy);
+  });
+
+  it('JOURNEY-SHARE-P06: listGalleryForPublicJourney (JS15, GALLERY_CHRONOLOGICAL_ORDER) matches the legacy statement — a photo linked to an entry AND an unattached gallery photo', async () => {
+    const { user } = createUser(testDb);
+    const journey = createJourney(testDb, user.id);
+    const entry = createJourneyEntry(testDb, journey.id, user.id, { type: 'entry', entry_date: '2026-01-01' });
+    insertJourneyPhoto(entry.id, { ownerId: user.id, filePath: '/photos/linked.jpg' }); // linked to an entry
+    // An unattached gallery photo — uploaded straight to the gallery, no journey_entry_photos row.
+    const unattachedTrekId = testDb
+      .prepare('INSERT INTO trek_photos (provider, asset_id, owner_id, file_path, created_at) VALUES (?, ?, ?, ?, ?)')
+      .run('local', null, user.id, '/photos/unattached.jpg', Date.now()).lastInsertRowid as number;
+    testDb
+      .prepare('INSERT INTO journey_photos (journey_id, photo_id, sort_order, created_at) VALUES (?, ?, ?, ?)')
+      .run(journey.id, unattachedTrekId, 1, Date.now());
+
+    const legacy = testDb
+      .prepare(`
+        SELECT gp.id, gp.journey_id, gp.photo_id, gp.caption, gp.shared, gp.sort_order, gp.created_at,
+               tp.provider, tp.asset_id, tp.owner_id, tp.file_path, tp.thumbnail_path, tp.width, tp.height,
+               tp.media_type, tp.duration_ms, tp.taken_at, tp.lat, tp.lng
+        FROM journey_photos gp
+        JOIN trek_photos tp ON tp.id = gp.photo_id
+        WHERE gp.journey_id = ?
+        ${GALLERY_CHRONOLOGICAL_ORDER}
+      `)
+      .all(journey.id);
+
+    expect(await shareTokensRepo.listGalleryForPublicJourney(journey.id)).toEqual(legacy);
+    expect(legacy).toHaveLength(2);
+  });
+
+  it('JOURNEY-SHARE-P07: every true/false combination of the three share flags (+ newest_first) round-trips through the converted read exactly', async () => {
+    const { user } = createUser(testDb);
+    for (const share_timeline of [true, false]) {
+      for (const share_gallery of [true, false]) {
+        for (const share_map of [true, false]) {
+          for (const newest_first of [true, false]) {
+            const journey = createJourney(testDb, user.id);
+            await svc.createOrUpdateJourneyShareLink(journey.id, user.id, { share_timeline, share_gallery, share_map, newest_first });
+            const link = await svc.getJourneyShareLink(journey.id);
+            expect(link).toEqual({
+              token: link!.token,
+              created_at: link!.created_at,
+              share_timeline, share_gallery, share_map, newest_first,
+            });
+          }
+        }
+      }
+    }
+  });
+});
+
+// -- R4: the six anonymous share-token statements — exact-match only ---------
+
+describe('R4 — JS6/JS9/JS11 are exact-match token lookups (revoked / wrong-case / NUL)', () => {
+  it('JOURNEY-SHARE-R01: validateShareTokenForPhoto 404s (null) for a revoked token', async () => {
+    const { user } = createUser(testDb);
+    const journey = createJourney(testDb, user.id);
+    const entry = createJourneyEntry(testDb, journey.id, user.id, { type: 'entry', entry_date: '2026-01-01' });
+    const photoId = insertJourneyPhoto(entry.id, { ownerId: user.id });
+    const { token } = await svc.createOrUpdateJourneyShareLink(journey.id, user.id, {});
+    await svc.deleteJourneyShareLink(journey.id, user.id);
+
+    expect(await svc.validateShareTokenForPhoto(token, photoId)).toBeNull();
+  });
+
+  it('JOURNEY-SHARE-R02: validateShareTokenForAsset 404s (null) for a revoked token', async () => {
+    const { user } = createUser(testDb);
+    const journey = createJourney(testDb, user.id);
+    const entry = createJourneyEntry(testDb, journey.id, user.id, { type: 'entry', entry_date: '2026-01-01' });
+    insertJourneyPhoto(entry.id, { assetId: 'revoked-asset', ownerId: user.id });
+    const { token } = await svc.createOrUpdateJourneyShareLink(journey.id, user.id, {});
+    await svc.deleteJourneyShareLink(journey.id, user.id);
+
+    expect(await svc.validateShareTokenForAsset(token, 'revoked-asset')).toBeNull();
+  });
+
+  it('JOURNEY-SHARE-R03: getPublicJourney 404s (null) for a revoked token, not a stale cached response', async () => {
+    const { user } = createUser(testDb);
+    const journey = createJourney(testDb, user.id);
+    const { token } = await svc.createOrUpdateJourneyShareLink(journey.id, user.id, {});
+    expect(await svc.getPublicJourney(token)).not.toBeNull();
+
+    await svc.deleteJourneyShareLink(journey.id, user.id);
+
+    expect(await svc.getPublicJourney(token)).toBeNull();
+  });
+
+  it('JOURNEY-SHARE-R04: validateShareTokenForPhoto does not match a differently-cased token', async () => {
+    const { user } = createUser(testDb);
+    const journey = createJourney(testDb, user.id);
+    const entry = createJourneyEntry(testDb, journey.id, user.id, { type: 'entry', entry_date: '2026-01-01' });
+    const photoId = insertJourneyPhoto(entry.id, { ownerId: user.id });
+    const { token } = await svc.createOrUpdateJourneyShareLink(journey.id, user.id, {});
+    const wrongCase = flipCase(token);
+
+    expect(await svc.validateShareTokenForPhoto(wrongCase, photoId)).toBeNull();
+    // Mutation proof (loosen → red): a COLLATE NOCASE lookup on the SAME row
+    // WOULD wrongly match — proving the null above depends on the real
+    // exact-match WHERE, not a coincidence of the fixture.
+    expect(testDb.prepare('SELECT 1 FROM journey_share_tokens WHERE token = ? COLLATE NOCASE').get(wrongCase)).toBeTruthy();
+  });
+
+  it('JOURNEY-SHARE-R05: validateShareTokenForAsset does not match a differently-cased token', async () => {
+    const { user } = createUser(testDb);
+    const journey = createJourney(testDb, user.id);
+    const entry = createJourneyEntry(testDb, journey.id, user.id, { type: 'entry', entry_date: '2026-01-01' });
+    insertJourneyPhoto(entry.id, { assetId: 'case-asset', ownerId: user.id });
+    const { token } = await svc.createOrUpdateJourneyShareLink(journey.id, user.id, {});
+    const wrongCase = flipCase(token);
+
+    expect(await svc.validateShareTokenForAsset(wrongCase, 'case-asset')).toBeNull();
+    expect(testDb.prepare('SELECT 1 FROM journey_share_tokens WHERE token = ? COLLATE NOCASE').get(wrongCase)).toBeTruthy();
+  });
+
+  it('JOURNEY-SHARE-R06: getPublicJourney does not match a differently-cased token', async () => {
+    const { user } = createUser(testDb);
+    const journey = createJourney(testDb, user.id);
+    const { token } = await svc.createOrUpdateJourneyShareLink(journey.id, user.id, {});
+    const wrongCase = flipCase(token);
+
+    expect(await svc.getPublicJourney(wrongCase)).toBeNull();
+    expect(testDb.prepare('SELECT 1 FROM journey_share_tokens WHERE token = ? COLLATE NOCASE').get(wrongCase)).toBeTruthy();
+  });
+
+  it('JOURNEY-SHARE-R07: validateShareTokenForPhoto does not match a token with an embedded NUL byte', async () => {
+    const { user } = createUser(testDb);
+    const journey = createJourney(testDb, user.id);
+    const entry = createJourneyEntry(testDb, journey.id, user.id, { type: 'entry', entry_date: '2026-01-01' });
+    const photoId = insertJourneyPhoto(entry.id, { ownerId: user.id });
+    const { token } = await svc.createOrUpdateJourneyShareLink(journey.id, user.id, {});
+
+    expect(await svc.validateShareTokenForPhoto(`${token}\0trailing`, photoId)).toBeNull();
+    expect(await svc.validateShareTokenForPhoto(`${token.slice(0, 5)}\0${token.slice(5)}`, photoId)).toBeNull();
+  });
+
+  it('JOURNEY-SHARE-R08: validateShareTokenForAsset does not match a token with an embedded NUL byte', async () => {
+    const { user } = createUser(testDb);
+    const journey = createJourney(testDb, user.id);
+    const entry = createJourneyEntry(testDb, journey.id, user.id, { type: 'entry', entry_date: '2026-01-01' });
+    insertJourneyPhoto(entry.id, { assetId: 'nul-asset', ownerId: user.id });
+    const { token } = await svc.createOrUpdateJourneyShareLink(journey.id, user.id, {});
+
+    expect(await svc.validateShareTokenForAsset(`${token}\0trailing`, 'nul-asset')).toBeNull();
+  });
+
+  it('JOURNEY-SHARE-R09: getPublicJourney does not match a token with an embedded NUL byte', async () => {
+    const { user } = createUser(testDb);
+    const journey = createJourney(testDb, user.id);
+    const { token } = await svc.createOrUpdateJourneyShareLink(journey.id, user.id, {});
+
+    expect(await svc.getPublicJourney(`${token}\0trailing`)).toBeNull();
+  });
+});
+
+/** A token with at least one letter flipped in case — base64url alphabet, near-certain to differ. */
+function flipCase(token: string): string {
+  const upper = token.toUpperCase();
+  return upper !== token ? upper : token.toLowerCase();
+}

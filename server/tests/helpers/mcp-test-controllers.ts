@@ -160,7 +160,9 @@ import {
 } from './atlas-repos';
 import {
   createTestJourneysRepo, createTestJourneyContributorsRepo, createTestJourneyTripsRepo, createTestJourneyEntriesRepo,
+  createTestJourneyPhotosRepo, createTestJourneyEntryPhotosRepo,
 } from './journey-repos';
+import { createTestJourneyShareTokensRepo } from './journey-share-repos';
 import { AppSettings } from '../../src/db/entities/AppSettings.entity';
 import { AuditLog } from '../../src/db/entities/AuditLog.entity';
 import { Users } from '../../src/db/entities/Users.entity';
@@ -255,6 +257,13 @@ export async function createMcpTestRegistry(): Promise<McpRegistry> {
     await createTestJourneysRepo(dbService.connection), await createTestJourneyContributorsRepo(dbService.connection),
     await createTestJourneyTripsRepo(dbService.connection), await createTestJourneyEntriesRepo(dbService.connection),
     await createTestTripsRepo(dbService.connection),
+    // Plan 3g Task 2 — a genuine follow-up constructor-ripple (git status
+    // confirmed this file clean before editing, per the task brief's own
+    // allowance): `JourneyPhotosRepository`/`JourneyEntryPhotosRepository`
+    // (the photos surface, JG19/JG87-116) + `PlacesRepository` (JG44's
+    // `findRaw`, already imported below for other MCP controllers).
+    await createTestJourneyPhotosRepo(dbService.connection), await createTestJourneyEntryPhotosRepo(dbService.connection),
+    await createTestPlacesRepo(dbService.connection),
   );
   // The last three were previously omitted, which left them `undefined` at
   // runtime — silently fine while nothing called them, a TypeError the moment
@@ -429,7 +438,13 @@ export async function createMcpTestRegistry(): Promise<McpRegistry> {
         await createTestTripsRepo(dbService.connection), await createTestPlacesRepo(dbService.connection),
         await createTestReservationEndpointsRepo(dbService.connection), await createTestUnitOfWork(dbService.connection),
       ), addonsService, authService),
-      new JourneyMcp(journeyDomain, new JourneyShareService(dbService, journeyDomain, new SettingsService(await createTestUnitOfWork(dbService.connection), appSettings, await createTestSettingsRepo(dbService.connection))), addonsService, authService, captureBackfill),
+      new JourneyMcp(journeyDomain, new JourneyShareService(
+        journeyDomain,
+        new SettingsService(await createTestUnitOfWork(dbService.connection), appSettings, await createTestSettingsRepo(dbService.connection)),
+        // Plan 3g Task 3 — the constructor-ripple fix: `JourneyShareTokensRepository`
+        // (JS1-JS15) + the already-shared `JourneysRepository` (JS8/JS12).
+        await createTestJourneyShareTokensRepo(dbService.connection), await createTestJourneysRepo(dbService.connection),
+      ), addonsService, authService, captureBackfill),
       new MemoriesMcp(immichService, synologyService, addonsService, mcpOrm.repo(PhotoProviders)),
       new NotificationsMcp(await makeNotificationsService(dbService, realtimeService), authService),
       new AirtrailMcp(new AirtrailService(dbService, new AuditService(auditLogRepo, usersRepo), new AirtrailClient()), addonsService),

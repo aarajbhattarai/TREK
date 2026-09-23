@@ -44,7 +44,9 @@ function build(overrides: {
     { put, delete: del } as never,
     { get: () => overrides.allowed ?? '*' } as never,
     { schedule } as never,
-    { prepare: () => ({ get: () => ({ email: overrides.email ?? 'user@example.test' }) }) } as never,
+    // Plan 3g Task 3: JR1's demo-mode gate reads through `UsersRepository
+    // .getEmail`, not `DatabaseService.prepare`.
+    { getEmail: async () => overrides.email ?? 'user@example.test' } as never,
   );
   return { rpc, put, del, schedule, addPhoto };
 }

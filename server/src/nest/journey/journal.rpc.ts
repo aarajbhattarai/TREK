@@ -2,6 +2,7 @@ import pathMod from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { Readable } from 'node:stream';
 import { journalPluginPhotoInputSchema } from '@trek/shared';
+import { InjectRepository } from '@mikro-orm/nestjs';
 import { PluginController, PluginMethod } from '../plugins/host/rpc-kit/decorators';
 import { PluginGuards } from '../plugins/host/plugin-guards.service';
 import { BadParams, ForbiddenResource } from '../plugins/host/rpc-errors';
@@ -12,8 +13,9 @@ import { readEnv } from '../../app-config';
 import { isDemoEmail } from '../common/demo';
 import { AllowedFileTypesService } from '../files/allowed-file-types.service';
 import { PhotoCaptureBackfillService } from '../memories/photo-capture-backfill.service';
-import { DatabaseService } from '../database/database.service';
 import { StorageService } from '../storage/storage.service';
+import { Users } from '../../db/entities/Users.entity';
+import type { UsersRepository } from '../../db/repositories/Users.repository';
 import { JourneyDomainService } from './journey-domain.service';
 
 /** 10MB decoded, the same cap the file surface applies to plugin uploads. */
@@ -46,7 +48,7 @@ export class JournalRpc {
     private readonly storage: StorageService,
     private readonly allowedTypes: AllowedFileTypesService,
     private readonly captureBackfill: PhotoCaptureBackfillService,
-    private readonly db: DatabaseService,
+    @InjectRepository(Users) private readonly usersRepo: UsersRepository,
   ) {}
 
   @PluginMethod('journal.listMine', { permission: 'db:read:journal' })
@@ -145,9 +147,11 @@ export class JournalRpc {
 
     // Mirrors the REST upload guard: a demo user must not write bytes to the
     // shared demo instance, not even through a plugin's db:write:journal.
+    // JR1 — reuses `UsersRepository.getEmail` (already built by another
+    // domain's demo-mode-check conversion), not a near-duplicate.
     if (readEnv().demo.enabled) {
-      const uploader = this.db.prepare('SELECT email FROM users WHERE id = ?').get(userId) as { email?: string } | undefined;
-      if (isDemoEmail(uploader?.email)) throw new ForbiddenResource('Uploads are disabled in demo mode.');
+      const uploaderEmail = await this.usersRepo.getEmail(userId);
+      if (isDemoEmail(uploaderEmail)) throw new ForbiddenResource('Uploads are disabled in demo mode.');
     }
 
     // basename first: a name is a name, never a path.

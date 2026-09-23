@@ -47,10 +47,12 @@ import { TripPhotos } from '../../../src/db/entities/TripPhotos.entity';
 import { JourneyDomainService } from '../../../src/nest/journey/journey-domain.service';
 import { JourneyBookService } from '../../../src/nest/journey/journey-book.service';
 import { db as dbConn } from '../../../src/db/database';
-import { createTestUnitOfWork, sharedTestOrm, createTestTripsRepo } from '../../helpers/test-uow';
+import { createTestUnitOfWork, sharedTestOrm, createTestTripsRepo, createTestPlacesRepo } from '../../helpers/test-uow';
 import {
   createTestJourneysRepo, createTestJourneyContributorsRepo, createTestJourneyTripsRepo, createTestJourneyEntriesRepo,
+  createTestJourneyPhotosRepo, createTestJourneyEntryPhotosRepo,
 } from '../../helpers/journey-repos';
+import { createTestJourneyBooksRepo } from '../../helpers/journey-share-repos';
 
 const dbs = new DatabaseService(dbConn);
 let domain: JourneyDomainService;
@@ -75,8 +77,11 @@ beforeAll(async () => {
     dbs, new RealtimeService(), new TrekPhotoRegistrationService(t.repo(TrekPhotos), t.repo(TripPhotos), dbs), uow,
     await createTestJourneysRepo(testDb), await createTestJourneyContributorsRepo(testDb),
     await createTestJourneyTripsRepo(testDb), await createTestJourneyEntriesRepo(testDb), await createTestTripsRepo(testDb),
+    // Plan 3g Task 2 constructor-ripple: JourneyPhotosRepository/JourneyEntryPhotosRepository/PlacesRepository.
+    await createTestJourneyPhotosRepo(testDb), await createTestJourneyEntryPhotosRepo(testDb), await createTestPlacesRepo(testDb),
   );
-  books = new JourneyBookService(dbs, domain);
+  // Plan 3g Task 3: JourneyBooksRepository (JB1-JB7), not `dbs` any more.
+  books = new JourneyBookService(domain, await createTestJourneyBooksRepo(testDb));
 });
 
 beforeEach(() => {
@@ -304,6 +309,47 @@ describe('concurrency', () => {
     });
     expect(stale && 'conflict' in stale).toBe(true);
     expect((await books.getBook(other.id, user.id))!.version).toBe(1);
+  });
+
+  // JB5 (R2) — the brief's exact named tests: the one statement in the whole
+  // plan whose control-flow contract ("convert the statement" AND "preserve
+  // the exact branching") is the same instruction.
+  it('journey-book-svc: concurrent save with a stale baseVersion returns {conflict}, does not throw', async () => {
+    const { user, journey } = await seed();
+    await books.saveBook(journey.id, user.id, { title: 'T', document: doc('two'), baseVersion: 1 });
+
+    const stale = await books.saveBook(journey.id, user.id, { title: 'T', document: doc('three'), baseVersion: 1 });
+
+    expect(stale).not.toBeNull();
+    expect(stale && 'conflict' in stale).toBe(true);
+  });
+
+  it('journey-book-svc: the conflict payload is the freshly re-read record, not the stale one the caller sent', async () => {
+    const { user, journey } = await seed();
+    await books.saveBook(journey.id, user.id, { title: 'Theirs', document: doc('two'), baseVersion: 1 });
+
+    const stale = await books.saveBook(journey.id, user.id, { title: 'Mine', document: doc('three'), baseVersion: 1 });
+
+    expect(stale && 'conflict' in stale && stale.conflict.title).toBe('Theirs');
+    expect(stale && 'conflict' in stale && stale.conflict.document.title).toBe('two');
+    expect(stale && 'conflict' in stale && stale.conflict.version).toBe(2);
+  });
+
+  it('journey-book-svc: mutation proof — an UPDATE without the WHERE version guard would silently clobber a concurrent save', async () => {
+    const { user, journey } = await seed();
+    await books.saveBook(journey.id, user.id, { title: 'T', document: doc('two'), baseVersion: 1 });
+    // The real, version-guarded save correctly refuses the stale write:
+    const stale = await books.saveBook(journey.id, user.id, { title: 'T', document: doc('three'), baseVersion: 1 });
+    expect(stale && 'conflict' in stale).toBe(true);
+
+    // The same statement with the `AND version = ?` guard stripped — proving
+    // that guard, not something else, is what makes the refusal above real.
+    const row = testDb.prepare('SELECT id FROM journey_books WHERE journey_id = ?').get(journey.id) as { id: number };
+    testDb
+      .prepare('UPDATE journey_books SET title = ?, document = ?, version = version + 1 WHERE id = ?')
+      .run('Clobbered', JSON.stringify(doc('clobbered')), row.id);
+    const afterMutation = testDb.prepare('SELECT title FROM journey_books WHERE id = ?').get(row.id) as { title: string };
+    expect(afterMutation.title).toBe('Clobbered');
   });
 });
 

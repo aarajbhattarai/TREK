@@ -1,8 +1,10 @@
 import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@mikro-orm/nestjs';
 import type { BookRecord, BookSummary } from '@trek/shared';
 import { normalizeBookDocument } from '@trek/shared';
-import { DatabaseService } from '../database/database.service';
 import { JourneyDomainService } from './journey-domain.service';
+import { JourneyBooks } from '../../db/entities/JourneyBooks.entity';
+import type { JourneyBookRow, JourneyBooksRepository } from '../../db/repositories/JourneyBooks.repository';
 
 /**
  * Storing TREK Studio books.
@@ -29,8 +31,8 @@ import { JourneyDomainService } from './journey-domain.service';
 @Injectable()
 export class JourneyBookService {
   constructor(
-    private readonly db: DatabaseService,
     private readonly journey: JourneyDomainService,
+    @InjectRepository(JourneyBooks) private readonly booksRepo: JourneyBooksRepository,
   ) {}
 
   /** Null when the journey does not exist or the user cannot reach it. */
@@ -57,7 +59,7 @@ export class JourneyBookService {
     return this.canAccess(journeyId, userId);
   }
 
-  private toRecord(row: BookRow): BookRecord {
+  private toRecord(row: JourneyBookRow): BookRecord {
     return {
       id: row.id,
       journeyId: row.journey_id,
@@ -74,14 +76,8 @@ export class JourneyBookService {
 
   async listBooks(journeyId: number, userId: number): Promise<BookSummary[] | null> {
     if (!(await this.canAccess(journeyId, userId))) return null;
-    const rows = this.db
-      .prepare(`
-        SELECT id, journey_id, title, version, updated_at, updated_by
-          FROM journey_books
-         WHERE journey_id = ?
-         ORDER BY updated_at DESC, id DESC
-      `)
-      .all(journeyId) as Omit<BookRow, 'document'>[];
+    // JB1.
+    const rows = await this.booksRepo.listForJourney(journeyId);
     return rows.map(r => ({
       id: r.id,
       journeyId: r.journey_id,
@@ -101,15 +97,8 @@ export class JourneyBookService {
    */
   async getBook(journeyId: number, userId: number): Promise<BookRecord | null> {
     if (!(await this.canAccess(journeyId, userId))) return null;
-    const row = this.db
-      .prepare(`
-        SELECT id, journey_id, title, document, version, updated_at, updated_by
-          FROM journey_books
-         WHERE journey_id = ?
-         ORDER BY id ASC
-         LIMIT 1
-      `)
-      .get(journeyId) as BookRow | undefined;
+    // JB2.
+    const row = await this.booksRepo.findFirstForJourney(journeyId);
     return row ? this.toRecord(row) : null;
   }
 
@@ -128,18 +117,13 @@ export class JourneyBookService {
     if (!(await this.canWrite(journeyId, userId))) return null;
 
     const document = JSON.stringify(normalizeBookDocument(input.document));
-    const existing = this.db
-      .prepare('SELECT id, version FROM journey_books WHERE journey_id = ? ORDER BY id ASC LIMIT 1')
-      .get(journeyId) as { id: number; version: number } | undefined;
+    // JB3.
+    const existing = await this.booksRepo.findFirstForJourney(journeyId);
 
     if (!existing) {
-      const result = this.db
-        .prepare(`
-          INSERT INTO journey_books (journey_id, title, document, version, created_by, updated_by, updated_at)
-          VALUES (?, ?, ?, 1, ?, ?, CURRENT_TIMESTAMP)
-        `)
-        .run(journeyId, input.title, document, userId, userId);
-      return { record: (await this.byId(Number(result.lastInsertRowid)))! };
+      // JB4.
+      const id = await this.booksRepo.insertBook(journeyId, input.title, document, userId);
+      return { record: (await this.byId(id))! };
     }
 
     /*
@@ -154,16 +138,14 @@ export class JourneyBookService {
      * arrive.
      */
     const base = input.baseVersion ?? existing.version;
-    const result = this.db
-      .prepare(`
-        UPDATE journey_books
-           SET title = ?, document = ?, version = version + 1,
-               updated_by = ?, updated_at = CURRENT_TIMESTAMP
-         WHERE id = ? AND version = ?
-      `)
-      .run(input.title, document, userId, existing.id, base);
+    // JB5 (R2) — one conditional UPDATE, returning the affected-row count.
+    const changes = await this.booksRepo.casUpdate(existing.id, base, {
+      title: input.title,
+      document,
+      updatedBy: userId,
+    });
 
-    if (result.changes === 0) {
+    if (changes === 0) {
       return { conflict: (await this.byId(existing.id))! };
     }
     return { record: (await this.byId(existing.id))! };
@@ -171,10 +153,9 @@ export class JourneyBookService {
 
   async deleteBook(journeyId: number, userId: number): Promise<boolean | null> {
     if (!(await this.canWrite(journeyId, userId))) return null;
-    const result = this.db
-      .prepare('DELETE FROM journey_books WHERE journey_id = ?')
-      .run(journeyId);
-    return result.changes > 0;
+    // JB6.
+    const changes = await this.booksRepo.deleteByJourneyId(journeyId);
+    return changes > 0;
   }
 
   /**
@@ -197,25 +178,11 @@ export class JourneyBookService {
     );
   }
 
+  /** JB7. */
   private async byId(id: number): Promise<BookRecord | null> {
-    const row = this.db
-      .prepare(`
-        SELECT id, journey_id, title, document, version, updated_at, updated_by
-          FROM journey_books WHERE id = ?
-      `)
-      .get(id) as BookRow | undefined;
+    const row = await this.booksRepo.findById(id);
     return row ? this.toRecord(row) : null;
   }
-}
-
-interface BookRow {
-  id: number;
-  journey_id: number;
-  title: string;
-  document: string;
-  version: number;
-  updated_at: string | null;
-  updated_by: number | null;
 }
 
 /** JSON that will not parse is an empty document, never an exception. */
