@@ -54,11 +54,13 @@ import { AssignmentsService } from '../../../src/nest/assignments/assignments.se
 import { RealtimeService } from '../../../src/nest/realtime/realtime.service';
 import { QueryHelpersService } from '../../../src/nest/query-helpers/query-helpers.service';
 import { JourneyDomainService } from '../../../src/nest/journey/journey-domain.service';
-import { TrekPhotosRepository } from '../../../src/nest/photos/trek-photos.repository';
+import { TrekPhotoRegistrationService } from '../../../src/nest/photos/trek-photos.repository';
+import { TrekPhotos } from '../../../src/db/entities/TrekPhotos.entity';
+import { TripPhotos } from '../../../src/db/entities/TripPhotos.entity';
 import {
   createTestUnitOfWork, createTestAppSettingsRepo, createTestTagsRepo, createTestPlaceRatingsRepo,
   createTestAssignmentParticipantsRepo, createTestDayAssignmentsRepo, createTestDaysRepo, createTestPlacesRepo,
-  createTestTripMembersRepo, createTestDatabaseService, createTestRoadtripViasRepo,
+  createTestTripMembersRepo, createTestDatabaseService, createTestRoadtripViasRepo, sharedTestOrm,
 } from '../../helpers/test-uow';
 
 let svc: AssignmentsService;
@@ -77,7 +79,7 @@ beforeAll(async () => {
     new QueryHelpersService(await createTestTagsRepo(dbs.connection), await createTestPlaceRatingsRepo(dbs.connection), await createTestAssignmentParticipantsRepo(dbs.connection)),
     // Real collaborator rather than a stub: reconcile() runs after every mutation
     // and needs the same connection to see the rows these cases write.
-    new JourneyDomainService(dbs, realtime, new TrekPhotosRepository(dbs), await createTestUnitOfWork(dbs.connection)),
+    new JourneyDomainService(dbs, realtime, new TrekPhotoRegistrationService((await sharedTestOrm(dbs.connection)).repo(TrekPhotos), (await sharedTestOrm(dbs.connection)).repo(TripPhotos), dbs), await createTestUnitOfWork(dbs.connection)),
     await createTestUnitOfWork(dbs.connection),
     await createTestDayAssignmentsRepo(dbs.connection),
     await createTestAssignmentParticipantsRepo(dbs.connection),

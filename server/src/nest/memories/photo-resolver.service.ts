@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Response } from 'express';
 import type { TrekPhoto } from '../../types';
 import { decrypt_api_key } from '../common/crypto/apiKeyCrypto';
-import { TrekPhotosRepository } from '../photos/trek-photos.repository';
+import { TrekPhotoRegistrationService } from '../photos/trek-photos.repository';
 import { ThumbnailService } from './thumbnail.service';
 import { TrekPhotoCacheService } from './trek-photo-cache.service';
 import { fail, success, type AssetInfo, type ServiceResult } from './memories.helpers';
@@ -23,7 +23,7 @@ import { StorageService } from '../storage/storage.service';
 @Injectable()
 export class PhotoResolverService {
   constructor(
-    private readonly photos: TrekPhotosRepository,
+    private readonly photos: TrekPhotoRegistrationService,
     private readonly thumbnails: ThumbnailService,
     private readonly cache: TrekPhotoCacheService,
     private readonly providers: PhotoProviderRegistry,

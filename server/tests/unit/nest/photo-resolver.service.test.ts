@@ -34,7 +34,10 @@ vi.mock('../../../src/nest/common/crypto/apiKeyCrypto', () => ({
 import { createTables } from '../../../src/db/schema';
 import { runMigrations } from '../../../src/db/migrations';
 import { DatabaseService } from '../../../src/nest/database/database.service';
-import { TrekPhotosRepository } from '../../../src/nest/photos/trek-photos.repository';
+import { TrekPhotoRegistrationService } from '../../../src/nest/photos/trek-photos.repository';
+import { TrekPhotos } from '../../../src/db/entities/TrekPhotos.entity';
+import { TripPhotos } from '../../../src/db/entities/TripPhotos.entity';
+import { createTestOrm, type TestOrm } from '../../helpers/test-orm';
 import { PhotoResolverService } from '../../../src/nest/memories/photo-resolver.service';
 import type { ImmichService } from '../../../src/nest/memories/immich.service';
 import type { SynologyService } from '../../../src/nest/memories/synology.service';
@@ -68,7 +71,6 @@ const cache = {
 const storage = { exists: vi.fn(), sendToResponse: vi.fn() };
 
 const dbs = new DatabaseService(testDb);
-const repo = new TrekPhotosRepository(dbs);
 // Real adapters over the stubbed services, and a real registry: the cases below
 // keep asserting on immich.streamImmichAsset/synology.streamSynologyAsset, so
 // they now also pin the adapters' argument mapping — which is where the two
@@ -78,13 +80,8 @@ const providers = new PhotoProviderRegistry([
   new ImmichPhotoProvider(immich as unknown as ImmichService),
   new SynologyPhotoProvider(synology as unknown as SynologyService),
 ]);
-const svc = new PhotoResolverService(
-  repo,
-  thumbnails as unknown as ThumbnailService,
-  cache as unknown as TrekPhotoCacheService,
-  providers,
-  storage as unknown as import('../../../src/nest/storage/storage.service').StorageService,
-);
+let t: TestOrm;
+let svc: PhotoResolverService;
 
 function makeRes() {
   return { status: vi.fn().mockReturnThis(), json: vi.fn(), set: vi.fn(), sendFile: vi.fn(), end: vi.fn() };
@@ -99,9 +96,18 @@ function insertPhoto(cols: Record<string, unknown>): number {
   return Number(res.lastInsertRowid);
 }
 
-beforeAll(() => {
+beforeAll(async () => {
   createTables(testDb);
   runMigrations(testDb);
+  t = await createTestOrm(testDb);
+  const repo = new TrekPhotoRegistrationService(t.repo(TrekPhotos), t.repo(TripPhotos), dbs);
+  svc = new PhotoResolverService(
+    repo,
+    thumbnails as unknown as ThumbnailService,
+    cache as unknown as TrekPhotoCacheService,
+    providers,
+    storage as unknown as import('../../../src/nest/storage/storage.service').StorageService,
+  );
 });
 
 beforeEach(() => {
@@ -119,7 +125,10 @@ beforeEach(() => {
   storage.sendToResponse.mockResolvedValue(undefined);
 });
 
-afterAll(() => testDb.close());
+afterAll(async () => {
+  await t.close();
+  testDb.close();
+});
 
 describe('streamPhoto — dispatch', () => {
   it('RESOLVE-001: 404s a photo id that does not exist', async () => {

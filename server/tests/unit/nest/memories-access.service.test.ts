@@ -61,9 +61,18 @@ import { mapDbError, pipeAsset, type ServiceResult } from '../../../src/nest/mem
 import { MemoriesAccessService } from '../../../src/nest/memories/memories-access.service';
 import { DatabaseService } from '../../../src/nest/database/database.service';
 import { Trips } from '../../../src/db/entities/Trips.entity';
+import { TripPhotos } from '../../../src/db/entities/TripPhotos.entity';
+import { TrekPhotos } from '../../../src/db/entities/TrekPhotos.entity';
+import { TripAlbumLinks } from '../../../src/db/entities/TripAlbumLinks.entity';
 import { sharedTestOrm } from '../../helpers/test-uow';
 
-const access = new MemoriesAccessService(new DatabaseService(testDb));
+// Plan 3c Task 0b / Plan 3e Task 6: `access` used to be constructed at module
+// load, before any `beforeAll` could resolve a real `EntityManager` — it now
+// also needs `TripPhotosRepository`/`TrekPhotosRepository`/
+// `TripAlbumLinksRepository`/`TripsRepository` (the ORM ones), which the
+// same `sharedTestOrm(testDb)` this file already used for the
+// `canAccessTrip` patch hands out. Built inside the async `beforeAll` below.
+let access: MemoriesAccessService;
 // A typed forwarder, not a `.bind` alias: a bound alias is typed `any`, which
 // hides a missing `await` from tsc and from all three lint rules.
 const getAlbumIdFromLink = (...a: Parameters<MemoriesAccessService['getAlbumIdFromLink']>) => access.getAlbumIdFromLink(...a);
@@ -72,15 +81,15 @@ import { SsrfBlockedError } from '../../../src/utils/ssrfGuard';
 beforeAll(async () => {
   createTables(testDb);
   runMigrations(testDb);
-  // Plan 3c Task 0b: `access` (and `DatabaseService.prototype.canAccessTrip`
-  // it holds a reference to) is constructed at module load, before any
-  // `beforeAll` can resolve a real `EntityManager` — patched onto the
-  // PROTOTYPE instead, which the already-constructed instance's method
-  // lookup still resolves through (`canAccessTrip` is not an own property).
-  const em = (await sharedTestOrm(testDb)).em;
+  const t = await sharedTestOrm(testDb);
+  const dbs = new DatabaseService(testDb, t.em);
+  // `DatabaseService.prototype.canAccessTrip` is patched on the PROTOTYPE
+  // (not just this instance) so every OTHER hand-built `DatabaseService` in
+  // this file's helpers resolves through the same real predicate.
   vi.spyOn(DatabaseService.prototype, 'canAccessTrip').mockImplementation(async (tripId, userId) =>
-    em.getRepository(Trips).findAccessible(tripId, userId),
+    t.em.getRepository(Trips).findAccessible(tripId, userId),
   );
+  access = new MemoriesAccessService(dbs, t.repo(TripPhotos), t.repo(TrekPhotos), t.repo(TripAlbumLinks), t.repo(Trips));
 });
 
 beforeEach(() => {
@@ -474,5 +483,132 @@ describe('canAccessTrekPhoto', () => {
     ).run().lastInsertRowid);
 
     expect(await access.canAccessTrekPhoto(user.id, photoId)).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// MA5 — canAccessTrekPhoto's trip-membership predicate, rewritten (R4) onto
+// TripsRepository.findAccessible instead of a hand-translated second copy of
+// the legacy `EXISTS(...trip_members...UNION ALL...trips...)` text. This
+// parity suite proves the rewrite answers identically to the legacy text on
+// the same rows across owner/member/stranger, and is mutation-proof-worthy
+// per the plan's rule: MEMACCESS-MA5-003 is the one the report's mutation
+// proof (temporarily breaking the `findAccessible` call) must turn red.
+// ---------------------------------------------------------------------------
+
+/** The MA5 statement, run raw for comparison — never converted, kept only as the oracle. */
+function legacyMA5(photoId: number, userId: number): boolean {
+  return !!testDb.prepare(`
+    SELECT 1 FROM trip_photos tp WHERE tp.photo_id = ? AND tp.shared = 1
+      AND EXISTS (
+        SELECT 1 FROM trip_members tm WHERE tm.trip_id = tp.trip_id AND tm.user_id = ?
+        UNION ALL
+        SELECT 1 FROM trips t WHERE t.id = tp.trip_id AND t.user_id = ?
+      )
+    LIMIT 1
+  `).get(photoId, userId, userId);
+}
+
+describe('canAccessTrekPhoto — MA5 parity (TripsRepository.findAccessible rewrite vs. the legacy EXISTS/UNION ALL text)', () => {
+  it('MEMACCESS-MA5-001: the trip owner (not the photo owner, no trip_members row) matches the legacy predicate — both true', async () => {
+    const { user: photoOwner } = createUser(testDb);
+    const { user: tripOwner } = createUser(testDb, { username: 'trip-owner' });
+    const trip = createTrip(testDb, tripOwner.id);
+    const photoId = shareInTrip(trip.id, photoOwner.id, 'ma5-owner-asset');
+
+    expect(await access.canAccessTrekPhoto(tripOwner.id, photoId)).toBe(legacyMA5(photoId, tripOwner.id));
+    expect(await access.canAccessTrekPhoto(tripOwner.id, photoId)).toBe(true);
+  });
+
+  it('MEMACCESS-MA5-002: a trip member (a trip_members row, not the trip owner) matches the legacy predicate — both true', async () => {
+    const { user: photoOwner } = createUser(testDb);
+    const { user: tripOwner } = createUser(testDb, { username: 'trip-owner-2' });
+    const { user: member } = createUser(testDb, { username: 'member-2' });
+    const trip = createTrip(testDb, tripOwner.id);
+    testDb.prepare('INSERT INTO trip_members (trip_id, user_id) VALUES (?, ?)').run(trip.id, member.id);
+    const photoId = shareInTrip(trip.id, photoOwner.id, 'ma5-member-asset');
+
+    expect(await access.canAccessTrekPhoto(member.id, photoId)).toBe(legacyMA5(photoId, member.id));
+    expect(await access.canAccessTrekPhoto(member.id, photoId)).toBe(true);
+  });
+
+  it('MEMACCESS-MA5-003: a stranger (neither owner nor member) matches the legacy predicate — both false. Mutation proof: breaking the findAccessible call (e.g. hard-coding it to return undefined) turns this red.', async () => {
+    const { user: photoOwner } = createUser(testDb);
+    const { user: tripOwner } = createUser(testDb, { username: 'trip-owner-3' });
+    const { user: stranger } = createUser(testDb, { username: 'stranger-3' });
+    const trip = createTrip(testDb, tripOwner.id);
+    const photoId = shareInTrip(trip.id, photoOwner.id, 'ma5-stranger-asset');
+
+    expect(await access.canAccessTrekPhoto(stranger.id, photoId)).toBe(legacyMA5(photoId, stranger.id));
+    expect(await access.canAccessTrekPhoto(stranger.id, photoId)).toBe(false);
+  });
+
+  it('MEMACCESS-MA5-004: an unshared trip_photos row (shared=0) matches the legacy predicate — both false even for the trip owner', async () => {
+    const { user: photoOwner } = createUser(testDb);
+    const { user: tripOwner } = createUser(testDb, { username: 'trip-owner-4' });
+    const trip = createTrip(testDb, tripOwner.id);
+    const photoId = shareInTrip(trip.id, photoOwner.id, 'ma5-unshared-asset', 'immich', 0);
+
+    expect(await access.canAccessTrekPhoto(tripOwner.id, photoId)).toBe(legacyMA5(photoId, tripOwner.id));
+    expect(await access.canAccessTrekPhoto(tripOwner.id, photoId)).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Album link syncing — MA7/MA8 (getAlbumIdFromLink/getAlbumLinkForSync, one
+// shared `findScoped` repository method) and MA9 (updateSyncTimeForAlbumLink).
+// ---------------------------------------------------------------------------
+
+describe('getAlbumLinkForSync (MA8)', () => {
+  it('MEMACCESS-MA8-001: returns the album id and decrypted passphrase when the link exists', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const ins = testDb.prepare(
+      'INSERT INTO trip_album_links (trip_id, user_id, provider, album_id, album_name, passphrase) VALUES (?, ?, ?, ?, ?, ?)'
+    ).run(trip.id, user.id, 'immich', 'album-sync-1', 'Sync Album', null);
+
+    const result = await access.getAlbumLinkForSync(String(trip.id), String(ins.lastInsertRowid), user.id);
+    expect(result.success).toBe(true);
+    expect((result as { data: { albumId: string } }).data.albumId).toBe('album-sync-1');
+  });
+
+  it('MEMACCESS-MA8-002: is USER-scoped — a different user on the same trip gets "not found", not another user\'s link', async () => {
+    const { user: owner } = createUser(testDb);
+    const { user: other } = createUser(testDb, { username: 'other-link-user' });
+    const trip = createTrip(testDb, owner.id);
+    testDb.prepare('INSERT INTO trip_members (trip_id, user_id) VALUES (?, ?)').run(trip.id, other.id);
+    const ins = testDb.prepare(
+      'INSERT INTO trip_album_links (trip_id, user_id, provider, album_id, album_name) VALUES (?, ?, ?, ?, ?)'
+    ).run(trip.id, owner.id, 'immich', 'album-scoped', 'Scoped');
+
+    const result = await access.getAlbumLinkForSync(String(trip.id), String(ins.lastInsertRowid), other.id);
+    expect(result.success).toBe(false);
+  });
+
+  it('MEMACCESS-MA8-003: a non-canonical link id (rule 15) answers the same "not found" as a genuinely missing link', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+
+    const result = await access.getAlbumLinkForSync(String(trip.id), '1.0', user.id);
+    expect(result.success).toBe(false);
+  });
+});
+
+describe('updateSyncTimeForAlbumLink (MA9)', () => {
+  it('MEMACCESS-MA9-001: stamps last_synced_at on the given link', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const ins = testDb.prepare(
+      'INSERT INTO trip_album_links (trip_id, user_id, provider, album_id, album_name) VALUES (?, ?, ?, ?, ?)'
+    ).run(trip.id, user.id, 'immich', 'album-touch', 'Touch');
+
+    await access.updateSyncTimeForAlbumLink(String(ins.lastInsertRowid));
+
+    const row = testDb.prepare('SELECT last_synced_at FROM trip_album_links WHERE id = ?').get(ins.lastInsertRowid) as { last_synced_at: string | null };
+    expect(row.last_synced_at).not.toBeNull();
+  });
+
+  it('MEMACCESS-MA9-002: a non-canonical id is a silent no-op, matching a legacy UPDATE that matched zero rows', async () => {
+    await expect(access.updateSyncTimeForAlbumLink('not-a-number')).resolves.toBeUndefined();
   });
 });

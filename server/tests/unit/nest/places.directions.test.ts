@@ -52,7 +52,9 @@ import { UnsplashService } from '../../../src/nest/unsplash/unsplash.service';
 import { RuntimeEnvService } from '../../../src/nest/app-config/runtime-env.service';
 import type { PlacePhotoCacheService } from '../../../src/nest/place-photos/place-photo-cache.service';
 import { JourneyDomainService } from '../../../src/nest/journey/journey-domain.service';
-import { TrekPhotosRepository } from '../../../src/nest/photos/trek-photos.repository';
+import { TrekPhotoRegistrationService } from '../../../src/nest/photos/trek-photos.repository';
+import { TrekPhotos } from '../../../src/db/entities/TrekPhotos.entity';
+import { TripPhotos } from '../../../src/db/entities/TripPhotos.entity';
 import { makeStorageFixture } from '../../helpers/storage-fixture';
 import { createTestUnitOfWork, createTestAppSettingsRepo, createTestUsersRepo, createTestTagsRepo, createTestPlaceRatingsRepo, createTestAssignmentParticipantsRepo, createTestPlacesRepo, createTestTripMembersRepo, createTestDayAssignmentsRepo, createTestCategoriesRepo, createTestTripsRepo, sharedTestOrm } from '../../helpers/test-uow';
 
@@ -89,7 +91,7 @@ async function svc(searchNominatim: MapsService['searchNominatim']): Promise<Pla
     new QueryHelpersService(await createTestTagsRepo(dbs.connection), await createTestPlaceRatingsRepo(dbs.connection), await createTestAssignmentParticipantsRepo(dbs.connection)),
     new UnsplashService(await createTestAppSettingsRepo(dbs.connection), await createTestUsersRepo(dbs.connection), new RuntimeEnvService(), storageFx.storage),
     photoCacheStub,
-    new JourneyDomainService(dbs, new RealtimeService(), new TrekPhotosRepository(dbs), await createTestUnitOfWork(dbs.connection)),
+    new JourneyDomainService(dbs, new RealtimeService(), new TrekPhotoRegistrationService((await sharedTestOrm(dbs.connection)).repo(TrekPhotos), (await sharedTestOrm(dbs.connection)).repo(TripPhotos), dbs), await createTestUnitOfWork(dbs.connection)),
     storageFx.storage,
     await accommodationsOver(dbs), await createTestUnitOfWork(dbs.connection),
     await createTestPlacesRepo(dbs.connection),

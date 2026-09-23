@@ -75,7 +75,9 @@ import { PlacesService } from '../../../src/nest/places/places.service';
 import { MapsService } from '../../../src/nest/maps/maps.service';
 import { QueryHelpersService } from '../../../src/nest/query-helpers/query-helpers.service';
 import { JourneyDomainService } from '../../../src/nest/journey/journey-domain.service';
-import { TrekPhotosRepository } from '../../../src/nest/photos/trek-photos.repository';
+import { TrekPhotoRegistrationService } from '../../../src/nest/photos/trek-photos.repository';
+import { TrekPhotos } from '../../../src/db/entities/TrekPhotos.entity';
+import { TripPhotos } from '../../../src/db/entities/TripPhotos.entity';
 import { makeStorageFixture } from '../../helpers/storage-fixture';
 import { createTestUnitOfWork, createTestAppSettingsRepo, createTestUsersRepo, createTestTagsRepo, createTestPlaceRatingsRepo, createTestAssignmentParticipantsRepo, createTestPlacesRepo, createTestTripMembersRepo, createTestDayAssignmentsRepo, createTestCategoriesRepo, createTestTripsRepo, sharedTestOrm } from '../../helpers/test-uow';
 import type { AppSettingsRepository } from '../../../src/db/repositories/AppSettings.repository';
@@ -131,7 +133,7 @@ async function makePlacesService(
     new QueryHelpersService(await createTestTagsRepo(dbs.connection), await createTestPlaceRatingsRepo(dbs.connection), await createTestAssignmentParticipantsRepo(dbs.connection)),
     new UnsplashService(await createTestAppSettingsRepo(dbs.connection), await createTestUsersRepo(dbs.connection), new RuntimeEnvService(), placesStorageFx.storage),
     photoCacheStub,
-    new JourneyDomainService(dbs, new RealtimeService(), new TrekPhotosRepository(dbs), await createTestUnitOfWork(dbs.connection)),
+    new JourneyDomainService(dbs, new RealtimeService(), new TrekPhotoRegistrationService((await sharedTestOrm(dbs.connection)).repo(TrekPhotos), (await sharedTestOrm(dbs.connection)).repo(TripPhotos), dbs), await createTestUnitOfWork(dbs.connection)),
     placesStorageFx.storage,
     await accommodationsOver(dbs), await createTestUnitOfWork(dbs.connection),
     await createTestPlacesRepo(dbs.connection),

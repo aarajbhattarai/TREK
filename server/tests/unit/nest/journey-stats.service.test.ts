@@ -63,10 +63,12 @@ import {
 } from '../../helpers/factories';
 import { DatabaseService } from '../../../src/nest/database/database.service';
 import { RealtimeService } from '../../../src/nest/realtime/realtime.service';
-import { TrekPhotosRepository } from '../../../src/nest/photos/trek-photos.repository';
+import { TrekPhotoRegistrationService } from '../../../src/nest/photos/trek-photos.repository';
+import { TrekPhotos } from '../../../src/db/entities/TrekPhotos.entity';
+import { TripPhotos } from '../../../src/db/entities/TripPhotos.entity';
 import { JourneyDomainService } from '../../../src/nest/journey/journey-domain.service';
 import { db as dbConn } from '../../../src/db/database';
-import { createTestUnitOfWork } from '../../helpers/test-uow';
+import { createTestUnitOfWork, sharedTestOrm } from '../../helpers/test-uow';
 
 const dbs = new DatabaseService(dbConn);
 let svc: JourneyDomainService;
@@ -89,7 +91,8 @@ function placeEntry(
 beforeAll(async () => {
   createTables(testDb);
   runMigrations(testDb);
-  svc = new JourneyDomainService(dbs, new RealtimeService(), new TrekPhotosRepository(dbs), await createTestUnitOfWork(testDb));
+  const t = await sharedTestOrm(testDb);
+  svc = new JourneyDomainService(dbs, new RealtimeService(), new TrekPhotoRegistrationService(t.repo(TrekPhotos), t.repo(TripPhotos), dbs), await createTestUnitOfWork(testDb));
 });
 
 beforeEach(() => {

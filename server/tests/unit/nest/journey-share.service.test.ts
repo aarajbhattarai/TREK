@@ -36,7 +36,9 @@ import { resetTestDb } from '../../helpers/test-db';
 import { createUser, createJourney, createJourneyEntry, addJourneyContributor } from '../../helpers/factories';
 import { DatabaseService } from '../../../src/nest/database/database.service';
 import { RealtimeService } from '../../../src/nest/realtime/realtime.service';
-import { TrekPhotosRepository } from '../../../src/nest/photos/trek-photos.repository';
+import { TrekPhotoRegistrationService } from '../../../src/nest/photos/trek-photos.repository';
+import { TrekPhotos } from '../../../src/db/entities/TrekPhotos.entity';
+import { TripPhotos } from '../../../src/db/entities/TripPhotos.entity';
 import { JourneyDomainService } from '../../../src/nest/journey/journey-domain.service';
 import { JourneyShareService } from '../../../src/nest/journey/journey-share.service';
 import { SettingsService } from '../../../src/nest/settings/settings.service';
@@ -60,7 +62,7 @@ beforeAll(async () => {
   t = await sharedTestOrm(testDb);
   svc = new JourneyShareService(
     dbs,
-    new JourneyDomainService(dbs, new RealtimeService(), new TrekPhotosRepository(dbs), uow),
+    new JourneyDomainService(dbs, new RealtimeService(), new TrekPhotoRegistrationService(t.repo(TrekPhotos), t.repo(TripPhotos), dbs), uow),
     new SettingsService(uow, await createTestAppSettingsRepo(testDb), await createTestSettingsRepo(testDb)),
   );
 });

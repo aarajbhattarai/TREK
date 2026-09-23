@@ -80,7 +80,9 @@ import { MapsService } from '../../../src/nest/maps/maps.service';
 import { UnsplashService } from '../../../src/nest/unsplash/unsplash.service';
 import { PlacePhotoCacheService } from '../../../src/nest/place-photos/place-photo-cache.service';
 import { JourneyDomainService } from '../../../src/nest/journey/journey-domain.service';
-import { TrekPhotosRepository } from '../../../src/nest/photos/trek-photos.repository';
+import { TrekPhotoRegistrationService } from '../../../src/nest/photos/trek-photos.repository';
+import { TrekPhotos } from '../../../src/db/entities/TrekPhotos.entity';
+import { TripPhotos } from '../../../src/db/entities/TripPhotos.entity';
 import { RuntimeEnvService } from '../../../src/nest/app-config/runtime-env.service';
 import { makeStorageFixture } from '../../helpers/storage-fixture';
 import { QueryHelpersService } from '../../../src/nest/query-helpers/query-helpers.service';
@@ -173,7 +175,7 @@ beforeAll(async () => {
   new QueryHelpersService(await createTestTagsRepo(dbs().connection), await createTestPlaceRatingsRepo(dbs().connection), await createTestAssignmentParticipantsRepo(dbs().connection)),
   new UnsplashService(await createTestAppSettingsRepo(dbs().connection), await createTestUsersRepo(dbs().connection), new RuntimeEnvService(), coversFx.storage),
   photoCache,
-  new JourneyDomainService(dbs(), new RealtimeService(), new TrekPhotosRepository(dbs()), await createTestUnitOfWork(dbs().connection)),
+  new JourneyDomainService(dbs(), new RealtimeService(), new TrekPhotoRegistrationService(dbsEm!.getRepository(TrekPhotos), dbsEm!.getRepository(TripPhotos), dbs()), await createTestUnitOfWork(dbs().connection)),
   makeStorageFixture('').storage,
   await accommodationsOver(dbs()), await createTestUnitOfWork(dbs().connection),
   await createTestPlacesRepo(dbs().connection),

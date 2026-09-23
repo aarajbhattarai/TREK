@@ -77,7 +77,9 @@ import { PlacePhotoCacheService } from '../../../src/nest/place-photos/place-pho
 import { RuntimeEnvService } from '../../../src/nest/app-config/runtime-env.service';
 import { makeStorageFixture } from '../../helpers/storage-fixture';
 import { JourneyDomainService } from '../../../src/nest/journey/journey-domain.service';
-import { TrekPhotosRepository } from '../../../src/nest/photos/trek-photos.repository';
+import { TrekPhotoRegistrationService } from '../../../src/nest/photos/trek-photos.repository';
+import { TrekPhotos } from '../../../src/db/entities/TrekPhotos.entity';
+import { TripPhotos } from '../../../src/db/entities/TripPhotos.entity';
 import type { TripsRepository } from '../../../src/db/repositories/Trips.repository';
 import {
   createTestUnitOfWork, createTestAppSettingsRepo, createTestUsersRepo, sharedTestOrm,
@@ -136,7 +138,7 @@ beforeAll(async () => {
   dbs(), new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)), new RealtimeService(),
   new MapsService(dbs(), photoCache, await createTestAppSettingsRepo(dbs().connection), await createTestUsersRepo(dbs().connection)), new QueryHelpersService(await createTestTagsRepo(dbs().connection), await createTestPlaceRatingsRepo(dbs().connection), await createTestAssignmentParticipantsRepo(dbs().connection)),
   new UnsplashService(await createTestAppSettingsRepo(dbs().connection), await createTestUsersRepo(dbs().connection), new RuntimeEnvService(), makeStorageFixture('').storage), photoCache,
-  new JourneyDomainService(dbs(), new RealtimeService(), new TrekPhotosRepository(dbs()), await createTestUnitOfWork(dbs().connection)),
+  new JourneyDomainService(dbs(), new RealtimeService(), new TrekPhotoRegistrationService((await sharedTestOrm(testDb)).repo(TrekPhotos), (await sharedTestOrm(testDb)).repo(TripPhotos), dbs()), await createTestUnitOfWork(dbs().connection)),
   makeStorageFixture('').storage,
   await accommodationsOver(dbs()), await createTestUnitOfWork(dbs().connection),
   await createTestPlacesRepo(dbs().connection),

@@ -6,7 +6,9 @@ import { JourneyDomainService } from '../../src/nest/journey/journey-domain.serv
 import { PermissionsService } from '../../src/nest/permissions/permissions.service';
 import { QueryHelpersService } from '../../src/nest/query-helpers/query-helpers.service';
 import { RealtimeService } from '../../src/nest/realtime/realtime.service';
-import { TrekPhotosRepository } from '../../src/nest/photos/trek-photos.repository';
+import { TrekPhotoRegistrationService } from '../../src/nest/photos/trek-photos.repository';
+import { TrekPhotos } from '../../src/db/entities/TrekPhotos.entity';
+import { TripPhotos } from '../../src/db/entities/TripPhotos.entity';
 import {
   createTestUnitOfWork, createTestAppSettingsRepo, createTestTagsRepo, createTestPlaceRatingsRepo,
   createTestAssignmentParticipantsRepo, createTestDayAssignmentsRepo, createTestDaysRepo, createTestPlacesRepo,
@@ -41,10 +43,11 @@ export async function makeAccommodationsService(conn: Database): Promise<Accommo
 export async function accommodationsOver(dbs: DatabaseService): Promise<AccommodationsService> {
   const permissions = new PermissionsService(await createTestAppSettingsRepo(dbs.connection), await createTestUnitOfWork(dbs.connection));
   const realtime = new RealtimeService();
+  const t = await sharedTestOrm(dbs.connection);
   const assignments = new AssignmentsService(
     dbs, permissions, realtime,
     new QueryHelpersService(await createTestTagsRepo(dbs.connection), await createTestPlaceRatingsRepo(dbs.connection), await createTestAssignmentParticipantsRepo(dbs.connection)),
-    new JourneyDomainService(dbs, realtime, new TrekPhotosRepository(dbs), await createTestUnitOfWork(dbs.connection)),
+    new JourneyDomainService(dbs, realtime, new TrekPhotoRegistrationService(t.repo(TrekPhotos), t.repo(TripPhotos), dbs), await createTestUnitOfWork(dbs.connection)),
     await createTestUnitOfWork(dbs.connection),
     await createTestDayAssignmentsRepo(dbs.connection),
     await createTestAssignmentParticipantsRepo(dbs.connection),

@@ -4,7 +4,7 @@ import { broadcast } from '../../websocket';
 import { encrypt_api_key } from '../common/crypto/apiKeyCrypto';
 import { AddonsService } from '../addons/addons.service';
 import { DatabaseService } from '../database/database.service';
-import { TrekPhotosRepository } from '../photos/trek-photos.repository';
+import { TrekPhotoRegistrationService } from '../photos/trek-photos.repository';
 import { ImmichService } from './immich.service';
 import { SynologyService } from './synology.service';
 import { MemoriesAccessService } from './memories-access.service';
@@ -29,7 +29,7 @@ import { UnitOfWork } from '../database/unit-of-work';
 export class UnifiedMemoriesService {
   constructor(
     private readonly db: DatabaseService,
-    private readonly photos: TrekPhotosRepository,
+    private readonly photos: TrekPhotoRegistrationService,
     private readonly immich: ImmichService,
     private readonly synology: SynologyService,
     private readonly access: MemoriesAccessService,

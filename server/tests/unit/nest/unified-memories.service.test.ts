@@ -46,7 +46,11 @@ import { ADDON_IDS } from '../../../src/addons';
 import { createTestAddonsService } from '../../helpers/test-addons';
 import { UnifiedMemoriesService } from '../../../src/nest/memories/unified-memories.service';
 import { MemoriesAccessService } from '../../../src/nest/memories/memories-access.service';
-import { TrekPhotosRepository } from '../../../src/nest/photos/trek-photos.repository';
+import { TrekPhotoRegistrationService } from '../../../src/nest/photos/trek-photos.repository';
+import { TrekPhotos } from '../../../src/db/entities/TrekPhotos.entity';
+import { TripPhotos } from '../../../src/db/entities/TripPhotos.entity';
+import { TripAlbumLinks } from '../../../src/db/entities/TripAlbumLinks.entity';
+import { Trips } from '../../../src/db/entities/Trips.entity';
 import { DatabaseService } from '../../../src/nest/database/database.service';
 import type { ImmichService } from '../../../src/nest/memories/immich.service';
 import type { SynologyService } from '../../../src/nest/memories/synology.service';
@@ -79,14 +83,15 @@ beforeAll(async () => {
   // only one of the four primitives this suite's code paths reach) is spied
   // directly on this instance, routed to a real `DatabaseService` built
   // with one.
-  const real = new DatabaseService(testDb, (await sharedTestOrm(testDb)).em);
+  const t = await sharedTestOrm(testDb);
+  const real = new DatabaseService(testDb, t.em);
   vi.spyOn(dbs, 'canAccessTrip').mockImplementation((...a) => real.canAccessTrip(...a));
   svc = new UnifiedMemoriesService(
     dbs,
-    new TrekPhotosRepository(dbs),
+    new TrekPhotoRegistrationService(t.repo(TrekPhotos), t.repo(TripPhotos), dbs),
     {} as ImmichService,
     {} as SynologyService,
-    new MemoriesAccessService(dbs),
+    new MemoriesAccessService(dbs, t.repo(TripPhotos), t.repo(TrekPhotos), t.repo(TripAlbumLinks), t.repo(Trips)),
     notificationsStub(),
     await createTestAddonsService(testDb, dbs),
     await createTestUnitOfWork(testDb),

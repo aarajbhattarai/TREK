@@ -7,7 +7,7 @@ import { DatabaseService } from '../database/database.service';
 import { UnitOfWork } from '../database/unit-of-work';
 import { RealtimeService } from '../realtime/realtime.service';
 import type { JourneyStats, JourneyTrack, TrekWsUserEventName } from '@trek/shared';
-import { TrekPhotosRepository } from '../photos/trek-photos.repository';
+import { TrekPhotoRegistrationService } from '../photos/trek-photos.repository';
 import { getCountryFromCoords } from '../atlas/atlas-geo';
 import { computeJourneyStats, type StatsInputPoint } from './journey-stats';
 
@@ -94,7 +94,7 @@ export class JourneyDomainService {
   constructor(
     private readonly db: DatabaseService,
     private readonly realtime: RealtimeService,
-    private readonly photos: TrekPhotosRepository,
+    private readonly photos: TrekPhotoRegistrationService,
     private readonly uow: UnitOfWork,
   ) {}
 

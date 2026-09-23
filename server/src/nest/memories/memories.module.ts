@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { MikroOrmModule } from '@mikro-orm/nestjs';
 import { MemoriesService } from './memories.service';
 import { MemoriesAccessService } from './memories-access.service';
 import { ImmichService } from './immich.service';
@@ -25,6 +26,11 @@ import { ImmichPhotoProvider } from './providers/immich.provider';
 import { SynologyPhotoProvider } from './providers/synology.provider';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { StorageModule } from '../storage/storage.module';
+import { TripPhotos } from '../../db/entities/TripPhotos.entity';
+import { TrekPhotos } from '../../db/entities/TrekPhotos.entity';
+import { TripAlbumLinks } from '../../db/entities/TripAlbumLinks.entity';
+import { Trips } from '../../db/entities/Trips.entity';
+import { TrekPhotoCacheMeta } from '../../db/entities/TrekPhotoCacheMeta.entity';
 
 /**
  * Memories (photo-providers) domain — mounted at /api/integrations/memories.
@@ -45,9 +51,19 @@ import { StorageModule } from '../storage/storage.module';
  * (#584): adding a photo backend means adding an adapter to this one list, not
  * finding every `switch (photo.provider)`. Registered here rather than in the
  * adapters themselves so the set is readable in one place.
+ *
+ * `MikroOrmModule.forFeature` registers `TripPhotosRepository`/
+ * `TrekPhotosRepository`/`TripAlbumLinksRepository`/`TripsRepository`
+ * (owned elsewhere, reached the same way every cross-domain module in this
+ * program reaches another domain's entity) for `MemoriesAccessService`'s
+ * `@InjectRepository` constructor params, and `TrekPhotoCacheMetaRepository`
+ * for `TrekPhotoCacheService`'s (Plan 3e Task 6).
  */
 @Module({
-  imports: [NotificationsModule, AddonsModule, AuditModule, TrekPhotosModule, RealtimeModule, SchedulingModule, StorageModule],
+  imports: [
+    NotificationsModule, AddonsModule, AuditModule, TrekPhotosModule, RealtimeModule, SchedulingModule, StorageModule,
+    MikroOrmModule.forFeature([TripPhotos, TrekPhotos, TripAlbumLinks, Trips, TrekPhotoCacheMeta]),
+  ],
   controllers: [UnifiedMemoriesController, ImmichMemoriesController, SynologyMemoriesController],
   providers: [
     MemoriesService,

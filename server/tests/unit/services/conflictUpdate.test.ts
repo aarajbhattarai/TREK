@@ -50,7 +50,9 @@ import { QueryHelpersService } from '../../../src/nest/query-helpers/query-helpe
 import { UnsplashService } from '../../../src/nest/unsplash/unsplash.service';
 import { PlacePhotoCacheService } from '../../../src/nest/place-photos/place-photo-cache.service';
 import { JourneyDomainService } from '../../../src/nest/journey/journey-domain.service';
-import { TrekPhotosRepository } from '../../../src/nest/photos/trek-photos.repository';
+import { TrekPhotoRegistrationService } from '../../../src/nest/photos/trek-photos.repository';
+import { TrekPhotos } from '../../../src/db/entities/TrekPhotos.entity';
+import { TripPhotos } from '../../../src/db/entities/TripPhotos.entity';
 import { RuntimeEnvService } from '../../../src/nest/app-config/runtime-env.service';
 import { notificationsStub } from '../../helpers/notifications';
 import { makeStorageFixture } from '../../helpers/storage-fixture';
@@ -92,7 +94,8 @@ beforeAll(async () => {
   // `beforeAll` can resolve a real `EntityManager` — the four
   // repository-backed methods are spied directly on this instance instead,
   // routed to a real `DatabaseService` built with one.
-  const real = new DatabaseService(testDb, (await sharedTestOrm(testDb)).em);
+  const t = await sharedTestOrm(testDb);
+  const real = new DatabaseService(testDb, t.em);
   vi.spyOn(dbs, 'canAccessTrip').mockImplementation((...a) => real.canAccessTrip(...a));
   vi.spyOn(dbs, 'isOwner').mockImplementation((...a) => real.isOwner(...a));
   vi.spyOn(dbs, 'rosterUserIds').mockImplementation((...a) => real.rosterUserIds(...a));
@@ -106,7 +109,7 @@ beforeAll(async () => {
   new QueryHelpersService(await createTestTagsRepo(dbs.connection), await createTestPlaceRatingsRepo(dbs.connection), await createTestAssignmentParticipantsRepo(dbs.connection)),
   new UnsplashService(await createTestAppSettingsRepo(dbs.connection), await createTestUsersRepo(dbs.connection), runtimeEnv, makeStorageFixture('').storage),
   photoCache,
-  new JourneyDomainService(dbs, realtime, new TrekPhotosRepository(dbs), await createTestUnitOfWork(dbs.connection)),
+  new JourneyDomainService(dbs, realtime, new TrekPhotoRegistrationService(t.repo(TrekPhotos), t.repo(TripPhotos), dbs), await createTestUnitOfWork(dbs.connection)),
   makeStorageFixture('').storage,
   await accommodationsOver(dbs), await createTestUnitOfWork(dbs.connection),
   await createTestPlacesRepo(dbs.connection),

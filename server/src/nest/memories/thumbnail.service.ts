@@ -2,10 +2,12 @@ import { Jimp } from 'jimp'
 import path from 'node:path'
 import crypto from 'node:crypto'
 import { Injectable } from '@nestjs/common'
+import { InjectRepository } from '@mikro-orm/nestjs'
 import { ADDON_IDS } from '../../addons'
 import { AddonsService } from '../addons/addons.service'
-import { DatabaseService } from '../database/database.service'
 import { StorageService } from '../storage/storage.service'
+import { TrekPhotos } from '../../db/entities/TrekPhotos.entity'
+import type { TrekPhotosRepository } from '../../db/repositories/TrekPhotos.repository'
 
 const THUMB_MAX = 800
 const THUMB_QUALITY = 80
@@ -31,7 +33,7 @@ export class ThumbnailService {
   constructor(
     private readonly addons: AddonsService,
     private readonly storage: StorageService,
-    private readonly db: DatabaseService,
+    @InjectRepository(TrekPhotos) private readonly trekPhotos: TrekPhotosRepository,
   ) {}
 
   async ensureLocalThumbnail(
@@ -91,15 +93,13 @@ export class ThumbnailService {
     if (!(await this.addons.isAddonEnabled(ADDON_IDS.JOURNEY))) return 0
 
     const live = new Set<string>()
-    for (const row of this.db.all<{ file_path: string }>(
-      "SELECT file_path FROM trek_photos WHERE file_path LIKE 'journey/%'",
-    )) {
-      live.add(journeyThumbName(row.file_path))
+    // TH1
+    for (const filePath of await this.trekPhotos.listByFilePathPrefix('journey/')) {
+      live.add(journeyThumbName(filePath))
     }
-    for (const row of this.db.all<{ thumbnail_path: string }>(
-      "SELECT thumbnail_path FROM trek_photos WHERE thumbnail_path LIKE 'journey/thumbs/%'",
-    )) {
-      live.add(row.thumbnail_path.slice('journey/'.length))
+    // TH2
+    for (const thumbnailPath of await this.trekPhotos.listByThumbnailPathPrefix('journey/thumbs/')) {
+      live.add(thumbnailPath.slice('journey/'.length))
     }
 
     let removed = 0

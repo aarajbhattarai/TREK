@@ -62,7 +62,12 @@ import { QueryHelpersService } from '../../src/nest/query-helpers/query-helpers.
 import { JourneyMcp } from '../../src/nest/journey/journey.mcp';
 import { JourneyDomainService } from '../../src/nest/journey/journey-domain.service';
 import { JourneyShareService } from '../../src/nest/journey/journey-share.service';
-import { TrekPhotosRepository } from '../../src/nest/photos/trek-photos.repository';
+import { TrekPhotoRegistrationService } from '../../src/nest/photos/trek-photos.repository';
+import { TrekPhotos } from '../../src/db/entities/TrekPhotos.entity';
+import { TripPhotos } from '../../src/db/entities/TripPhotos.entity';
+import { TripAlbumLinks } from '../../src/db/entities/TripAlbumLinks.entity';
+import { Trips } from '../../src/db/entities/Trips.entity';
+import { TrekPhotoCacheMeta } from '../../src/db/entities/TrekPhotoCacheMeta.entity';
 import { UnsplashService } from '../../src/nest/unsplash/unsplash.service';
 import { UserCleanupService } from '../../src/nest/auth/user-cleanup.service';
 import { WebauthnConfigService } from '../../src/nest/auth/webauthn-config.service';
@@ -202,7 +207,7 @@ export async function createMcpTestRegistry(): Promise<McpRegistry> {
   // and its on-disk set only work if all three readers see the same maps.
   const placePhotoCache = new PlacePhotoCacheService(dbService, makeStorageFixture('photos/google/').storage, await createTestGooglePlacePhotoMetaRepo(dbService.connection), await createTestPlacesRepo(dbService.connection));
   const mapsService = new MapsService(dbService, placePhotoCache, appSettings, usersRepo);
-  const journeyDomain = new JourneyDomainService(dbService, realtimeService, new TrekPhotosRepository(dbService), await createTestUnitOfWork(dbService.connection));
+  const journeyDomain = new JourneyDomainService(dbService, realtimeService, new TrekPhotoRegistrationService(mcpOrm.repo(TrekPhotos), mcpOrm.repo(TripPhotos), dbService), await createTestUnitOfWork(dbService.connection));
   // The last three were previously omitted, which left them `undefined` at
   // runtime — silently fine while nothing called them, a TypeError the moment
   // the journey skeleton hooks landed on the place write paths. tsconfig.tests.json
@@ -280,10 +285,11 @@ export async function createMcpTestRegistry(): Promise<McpRegistry> {
   // (which asks them when and where it was taken). Built for real rather than
   // stubbed: an empty provider registry would make the backfill answer "unknown
   // provider" for every id and hide a wiring mistake behind a caught error.
-  const immichService = new ImmichService(dbService, new AuditService(auditLogRepo, usersRepo), new MemoriesAccessService(dbService), generalStorage);
-  const synologyService = new SynologyService(dbService, new MemoriesAccessService(dbService), notificationsStub());
-  const trekPhotos = new TrekPhotosRepository(dbService);
-  const captureBackfill = new PhotoCaptureBackfillService(new PhotoResolverService(trekPhotos, new ThumbnailService(addonsService, generalStorage, dbService), new TrekPhotoCacheService(dbService, generalStorage), new PhotoProviderRegistry([new ImmichPhotoProvider(immichService), new SynologyPhotoProvider(synologyService)]), generalStorage), trekPhotos, generalStorage);
+  const memoriesAccess = new MemoriesAccessService(dbService, mcpOrm.repo(TripPhotos), mcpOrm.repo(TrekPhotos), mcpOrm.repo(TripAlbumLinks), mcpOrm.repo(Trips));
+  const immichService = new ImmichService(dbService, new AuditService(auditLogRepo, usersRepo), memoriesAccess, generalStorage);
+  const synologyService = new SynologyService(dbService, memoriesAccess, notificationsStub());
+  const trekPhotos = new TrekPhotoRegistrationService(mcpOrm.repo(TrekPhotos), mcpOrm.repo(TripPhotos), dbService);
+  const captureBackfill = new PhotoCaptureBackfillService(new PhotoResolverService(trekPhotos, new ThumbnailService(addonsService, generalStorage, mcpOrm.repo(TrekPhotos)), new TrekPhotoCacheService(mcpOrm.repo(TrekPhotoCacheMeta), generalStorage), new PhotoProviderRegistry([new ImmichPhotoProvider(immichService), new SynologyPhotoProvider(synologyService)]), generalStorage), trekPhotos, generalStorage);
   return createTestRegistry(
     [
       new TagsMcp(new TagsService(await createTestTagsRepo(dbService.connection)), authService),

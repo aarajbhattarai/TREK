@@ -69,7 +69,9 @@ import { EphemeralTokenService } from '../../src/nest/auth/ephemeral-token.servi
 import { UserCleanupService } from '../../src/nest/auth/user-cleanup.service';
 import { UnsplashService } from '../../src/nest/unsplash/unsplash.service';
 import { PlacePhotoCacheService } from '../../src/nest/place-photos/place-photo-cache.service';
-import { TrekPhotosRepository } from '../../src/nest/photos/trek-photos.repository';
+import { TrekPhotoRegistrationService } from '../../src/nest/photos/trek-photos.repository';
+import { TrekPhotos } from '../../src/db/entities/TrekPhotos.entity';
+import { TripPhotos } from '../../src/db/entities/TripPhotos.entity';
 import { RuntimeEnvService } from '../../src/nest/app-config/runtime-env.service';
 import { makeStorageFixture } from './storage-fixture';
 import {
@@ -129,7 +131,7 @@ export async function createPluginRpcHostFactory(dbs: DatabaseService): Promise<
   );
   const photoCache = new PlacePhotoCacheService(dbs, makeStorageFixture('photos/google/').storage, await createTestGooglePlacePhotoMetaRepo(dbs.connection), await createTestPlacesRepo(dbs.connection));
   const unsplash = new UnsplashService(appSettings, usersRepo, new RuntimeEnvService(), generalStorage);
-  const journey = new JourneyDomainService(dbs, realtime, new TrekPhotosRepository(dbs), await createTestUnitOfWork(dbs.connection));
+  const journey = new JourneyDomainService(dbs, realtime, new TrekPhotoRegistrationService((await sharedTestOrm(dbs.connection)).repo(TrekPhotos), (await sharedTestOrm(dbs.connection)).repo(TripPhotos), dbs), await createTestUnitOfWork(dbs.connection));
   const collections = new CollectionsService(dbs, permissions, realtime, notificationsStub(), generalStorage, await createTestUnitOfWork(dbs.connection));
   const atlas = new AtlasService(dbs, await createTestUnitOfWork(dbs.connection));
   const dayNotes = new DayNotesService(dbs, permissions, realtime);

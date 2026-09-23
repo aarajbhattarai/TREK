@@ -13,28 +13,19 @@
  */
 import { describe, it, expect, vi, beforeAll, beforeEach, afterAll } from 'vitest';
 
-const { testDb, dbMock } = vi.hoisted(() => {
-  const Database = require('better-sqlite3');
-  const db = new Database(':memory:');
-  db.exec('PRAGMA journal_mode = WAL');
-  return {
-    testDb: db,
-    dbMock: { db, closeDb: () => {}, reinitialize: () => {}, canAccessTrip: () => null, isOwner: () => false, getPlaceWithTags: () => null },
-  };
-});
-vi.mock('../../../src/db/database', () => dbMock);
-
 import fs from 'node:fs';
 import path from 'node:path';
-import { createTables } from '../../../src/db/schema';
-import { runMigrations } from '../../../src/db/migrations';
-import { DatabaseService } from '../../../src/nest/database/database.service';
+import { createSnapshotTestDb } from '../../helpers/db-mock';
+import { createTestOrm, type TestOrm } from '../../helpers/test-orm';
+import { TrekPhotoCacheMeta } from '../../../src/db/entities/TrekPhotoCacheMeta.entity';
 import { TrekPhotoCacheService, CACHE_TTL } from '../../../src/nest/memories/trek-photo-cache.service';
 import { StorageNotFoundError } from '../../../src/nest/storage/storage.types';
 import { makeStorageFixture } from '../../helpers/storage-fixture';
 
 const fx = makeStorageFixture('photos/trek/');
-const svc = new TrekPhotoCacheService(new DatabaseService(testDb), fx.storage);
+const testDb = createSnapshotTestDb();
+let t: TestOrm;
+let svc: TrekPhotoCacheService;
 const CACHE_DIR = path.join(fx.root, 'photos/trek');
 const binPath = (key: string) => path.join(CACHE_DIR, `${key}.bin`);
 let counter = 0;
@@ -44,16 +35,17 @@ function freshKey(label: string): string {
   return svc.cacheKey('test', `${label}-${counter++}`, 'thumbnail', 1);
 }
 
-beforeAll(() => {
-  createTables(testDb);
-  runMigrations(testDb);
+beforeAll(async () => {
+  t = await createTestOrm(testDb);
+  svc = new TrekPhotoCacheService(t.repo(TrekPhotoCacheMeta), fx.storage);
 });
 
 beforeEach(() => {
   testDb.prepare('DELETE FROM trek_photo_cache_meta').run();
 });
 
-afterAll(() => {
+afterAll(async () => {
+  await t.close();
   testDb.close();
   fx.cleanup();
 });
@@ -169,7 +161,7 @@ describe('the stampede guard', () => {
     // Load-bearing: a per-instance map would hand any second instance a private
     // guard and the dedup would be silently gone. The sweep cron injects the
     // container singleton now, but the invariant stays pinned.
-    const other = new TrekPhotoCacheService(new DatabaseService(testDb), fx.storage);
+    const other = new TrekPhotoCacheService(t.repo(TrekPhotoCacheMeta), fx.storage);
     const promise = Promise.resolve<Buffer | null>(null);
     svc.setInFlight('shared-key', promise);
     expect(other.getInFlight('shared-key')).toBe(promise);

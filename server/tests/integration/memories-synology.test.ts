@@ -1170,15 +1170,27 @@ describe('Synology SSRF blocked error handling', () => {
 
 // ── Passphrase persistence fixes ─────────────────────────────────────────────
 
-import { TrekPhotosRepository } from '../../src/nest/photos/trek-photos.repository';
-import { DatabaseService } from '../../src/nest/database/database.service';
-import { db as trekDb } from '../../src/db/database';
+import { MikroORM } from '@mikro-orm/core';
+import { withRequestContext } from '../../src/nest/database/request-context';
+import { TrekPhotoRegistrationService } from '../../src/nest/photos/trek-photos.repository';
 
 // Was photos.bridge, which existed for consumers outside the container and had
-// none left. The repository is what it delegated to.
-const trekPhotos = new TrekPhotosRepository(new DatabaseService(trekDb));
-const getOrCreateTrekPhoto = (...a: Parameters<TrekPhotosRepository['getOrCreate']>) => trekPhotos.getOrCreate(...a);
-const deleteTrekPhotoIfOrphan = (id: number) => trekPhotos.deleteIfOrphan(id);
+// none left. The repository is what it delegated to. Resolved off the real,
+// DI-wired container (`nestApp`, built in the file's own `beforeAll` above)
+// rather than hand-constructed — `TrekPhotoRegistrationService` now takes ORM
+// repositories, not a bare `DatabaseService` (Plan 3e Task 6). These helpers
+// call it directly, with no HTTP request around them (unlike the real
+// `syncSynologyAlbum` call chain this pins, which always runs inside one) —
+// `withRequestContext` supplies the same per-call EntityManager fork a real
+// request's `MikroOrmMiddleware` would.
+let trekPhotos: TrekPhotoRegistrationService;
+let orm: MikroORM;
+beforeAll(() => {
+  trekPhotos = nestApp.get(TrekPhotoRegistrationService);
+  orm = nestApp.get(MikroORM);
+});
+const getOrCreateTrekPhoto = (...a: Parameters<TrekPhotoRegistrationService['getOrCreate']>) => withRequestContext(orm, () => trekPhotos.getOrCreate(...a));
+const deleteTrekPhotoIfOrphan = (id: number) => withRequestContext(orm, () => trekPhotos.deleteIfOrphan(id));
 import { decrypt_api_key } from '../../src/nest/common/crypto/apiKeyCrypto';
 
 describe('trek_photos passphrase healing (SYNO-090)', () => {

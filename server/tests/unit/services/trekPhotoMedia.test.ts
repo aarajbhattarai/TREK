@@ -23,27 +23,34 @@ vi.mock('../../../src/config', () => ({
 import { createTables } from '../../../src/db/schema';
 import { runMigrations } from '../../../src/db/migrations';
 import { createUser } from '../../helpers/factories';
-import { TrekPhotosRepository } from '../../../src/nest/photos/trek-photos.repository';
+import { TrekPhotoRegistrationService } from '../../../src/nest/photos/trek-photos.repository';
+import { TrekPhotos } from '../../../src/db/entities/TrekPhotos.entity';
+import { TripPhotos } from '../../../src/db/entities/TripPhotos.entity';
 import { DatabaseService } from '../../../src/nest/database/database.service';
 import { db as trekDb } from '../../../src/db/database';
+import { createTestOrm, type TestOrm } from '../../helpers/test-orm';
 
 // Was photos.bridge, deleted with the other three that had no consumer outside
 // the container. These call the repository directly now.
-const trekPhotos = new TrekPhotosRepository(new DatabaseService(trekDb));
-const getOrCreateTrekPhoto = (...a: Parameters<TrekPhotosRepository['getOrCreate']>) => trekPhotos.getOrCreate(...a);
-const getOrCreateLocalTrekPhoto = (...a: Parameters<TrekPhotosRepository['getOrCreateLocal']>) => trekPhotos.getOrCreateLocal(...a);
+let t: TestOrm;
+let trekPhotos: TrekPhotoRegistrationService;
+const getOrCreateTrekPhoto = (...a: Parameters<TrekPhotoRegistrationService['getOrCreate']>) => trekPhotos.getOrCreate(...a);
+const getOrCreateLocalTrekPhoto = (...a: Parameters<TrekPhotoRegistrationService['getOrCreateLocal']>) => trekPhotos.getOrCreateLocal(...a);
 const resolveTrekPhoto = (id: number) => trekPhotos.resolve(id);
 
-beforeAll(() => {
+beforeAll(async () => {
   createTables(testDb);
   runMigrations(testDb);
+  t = await createTestOrm(testDb);
+  trekPhotos = new TrekPhotoRegistrationService(t.repo(TrekPhotos), t.repo(TripPhotos), new DatabaseService(trekDb, t.em));
 });
 
 beforeEach(() => {
   testDb.prepare('DELETE FROM trek_photos').run();
 });
 
-afterAll(() => {
+afterAll(async () => {
+  await t.close();
   testDb.close();
 });
 
