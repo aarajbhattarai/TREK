@@ -121,6 +121,15 @@ describe('airtrail-sync cron tick runs inside a request context', () => {
       }
       return originalGetReservation(id, tripId);
     });
+    // Item 10 (Plan 3d Task 7 review): the tick's own request-context proof
+    // stopped at `getReservation` — `syncOwner` only calls `update` AFTER
+    // that read, when the incoming flight's hash actually differs from the
+    // stored `external_hash` (it does here, 'stale-hash' vs anything real),
+    // so a context regression that only showed up on the WRITE half of this
+    // same tick was invisible to this test. `update` is real here (not
+    // re-mocked), so this also proves it runs to completion without itself
+    // throwing `cannotUseGlobalContext`.
+    const updateSpy = vi.spyOn(reservations, 'update');
 
     const isEnabledSpy = vi.spyOn(registrar, 'isEnabled').mockReturnValue(true);
     const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -141,6 +150,7 @@ describe('airtrail-sync cron tick runs inside a request context', () => {
       expect(caught).toBeUndefined();
       expect(repoRead).toBeTruthy();
       expect(getReservationSpy).toHaveBeenCalled();
+      expect(updateSpy).toHaveBeenCalled();
 
       const suspicious = errSpy.mock.calls
         .map((args) => args.map(String).join(' '))
@@ -151,6 +161,7 @@ describe('airtrail-sync cron tick runs inside a request context', () => {
       isEnabledSpy.mockRestore();
       errSpy.mockRestore();
       getReservationSpy.mockRestore();
+      updateSpy.mockRestore();
       flightsSpy.mockRestore();
       credsSpy.mockRestore();
       syncEnabledSpy.mockRestore();

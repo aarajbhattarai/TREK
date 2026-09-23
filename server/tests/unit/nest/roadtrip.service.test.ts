@@ -281,6 +281,28 @@ describe('RoadtripService', () => {
     expect(await service.trackExists(999999, f.tripA.id)).toBe(false);
   });
 
+  // L1 (Plan 3d Task 7 whole-plan review): `listForDay`/`listForTrip`/
+  // `tracksForTrip`/`trackExists` used to bind `Number(id)` directly — a
+  // hex-spelled id coerces to a real row under `Number()`, where the legacy
+  // raw-bind statement's affinity never converts a hex string, so it always
+  // matched nothing. `toRowId` now answers that legacy empty/false shape.
+  it('L1: a hex-spelled day/trip id answers the legacy empty shape on every read path, not the real trip\'s rows', async () => {
+    await service.create(f.dayA1.id, { after_order_index: 0, lat: 53, lng: 10 });
+    await service.createMany(f.dayA1.id, { vias: [], track: { place_id: f.track.id, stray_km: null } });
+
+    const hexDayId = '0x' + f.dayA1.id.toString(16);
+    const hexTripId = '0x' + f.tripA.id.toString(16);
+
+    expect(await service.listForDay(hexDayId)).toEqual([]);
+    expect(await service.listForTrip(hexTripId)).toEqual([]);
+    expect(await service.tracksForTrip(hexTripId)).toEqual([]);
+    expect(await service.trackExists(f.track.id, hexTripId)).toBe(false);
+
+    // Sanity: the canonical id still sees the real rows.
+    expect(await service.listForDay(f.dayA1.id)).toHaveLength(1);
+    expect(await service.tracksForTrip(f.tripA.id)).toHaveLength(1);
+  });
+
   it('ROADTRIP-SVC-007b: removing one reports whether there was anything to remove', async () => {
     const via = await service.create(f.dayA1.id, { after_order_index: 0, lat: 53, lng: 10 });
 
@@ -302,5 +324,26 @@ describe('RoadtripService', () => {
         .rejects.toMatchObject({ response: { error: 'Day not found' }, status: 404 });
     }
     expect(await service.tracksForTrip(f.tripA.id)).toEqual([]);
+  });
+
+  // R7 (Plan 3d Task 7 whole-plan review, item 12 — flag + pin, not fix, the
+  // MEMBERS-SVC-018 shape): `create`'s `nextSequence` (MAX(sequence)+1) READ
+  // and its `insertVia` WRITE are two separate statements with no lock
+  // between them. Measured under real concurrency (`Promise.allSettled`, no
+  // mocks): both calls succeed — there is no UNIQUE constraint to lose a
+  // race on, unlike `trip_members` — but both land on the SAME `sequence`
+  // (`0`), a genuine duplicate the un-serialized read-then-write leaves
+  // behind. Today's actual outcome, pinned; not a fix.
+  it('R7: two concurrent creates on the same leg both succeed but can land on the SAME sequence (unserialized nextSequence read)', async () => {
+    const results = await Promise.allSettled([
+      service.create(f.dayA1.id, { after_order_index: 0, lat: 1, lng: 1 }),
+      service.create(f.dayA1.id, { after_order_index: 0, lat: 2, lng: 2 }),
+    ]);
+    expect(results.every((r) => r.status === 'fulfilled')).toBe(true);
+    const rows = await service.listForDay(f.dayA1.id);
+    expect(rows).toHaveLength(2);
+    // Both landed on the same leg, at the same sequence — the duplicate R7 flags.
+    expect(rows.map((r) => r.after_order_index)).toEqual([0, 0]);
+    expect(rows.map((r) => r.sequence)).toEqual([0, 0]);
   });
 });

@@ -345,4 +345,66 @@ describe('reservation-visibility parity (RV2: publicStayExists vs publicStaySql)
     expect(typed.map((r) => r.id)).toEqual([unlinked.id, liveLinked.id]);
     expect(typed).toEqual(legacy);
   });
+
+  // M1 (Plan 3d Task 0 review, folded into Task 7's fix wave): the harness
+  // above never made the CAST load-bearing — dropping `eb2.cast(…,
+  // 'integer')` from `publicStayExists` stayed green on all of RESVIS-004..
+  // 009, RESVIS-008 ("14.0") included, because a column-to-column compare
+  // already gets SQLite's own NUMERIC-affinity coercion for a
+  // WHOLLY-numeric TEXT value ('14 ', '14.0', ' 14' all equal 14 without
+  // any CAST — measured). Only a PREFIX-numeric value tells the two
+  // predicates apart: `CAST('14abc' AS INTEGER) = 14` is true, but the bare
+  // affinity compare `'14abc' = 14` is false, since '14abc' is not a
+  // well-formed number and keeps its TEXT affinity.
+  it('RESVIS-013 (mutation-sensitive): a staged-only booking with accommodation_id = "<id>abc" still resolves the link — the stay is hidden (only the CAST recognises a prefix-numeric TEXT value)', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id, { start_date: '2026-09-01', end_date: '2026-09-05' });
+    const place = createPlace(testDb, trip.id);
+    const days = testDb.prepare('SELECT id FROM days WHERE trip_id = ? ORDER BY day_number ASC').all(trip.id) as { id: number }[];
+    const stay = createDayAccommodation(testDb, trip.id, place.id, days[0].id, days[1].id);
+    const booking = createReservation(testDb, trip.id, { title: 'Staged prefix-numeric link', type: 'hotel' });
+    testDb.prepare("UPDATE reservations SET accommodation_id = ?, ingest_state = 'staged' WHERE id = ?").run(`${stay.id}abc`, booking.id);
+
+    const typed = await t.em.getKysely<StayVisibilityTestDB>()
+      .selectFrom('day_accommodations as a')
+      .select('a.id')
+      .where('a.trip_id', '=', trip.id)
+      .where((eb) => publicStayExists(eb))
+      .execute();
+    const legacy = testDb
+      .prepare(`SELECT id FROM day_accommodations a WHERE a.trip_id = ? AND ${publicStaySql('a')}`)
+      .all(trip.id) as { id: number }[];
+
+    // The only link is staged, so the stay must be hidden — the SAME answer
+    // RESVIS-006 gives for a plain-integer-spelled staged link. Dropping the
+    // CAST makes the typed predicate miss the link entirely (a bare
+    // '14abc' = 14 compare is false) and fall into the NOT-EXISTS branch,
+    // wrongly reading the stay as public — this assertion goes red then,
+    // while `typed` still equals `legacy` under the untouched code.
+    expect(typed).toEqual([]);
+    expect(typed).toEqual(legacy);
+  });
+
+  it('RESVIS-014: a staged-only booking with accommodation_id = "<id> " (trailing space) still resolves the link — the stay is hidden (both forms agree; SQLite\'s own affinity already coerces a wholly-numeric padded value)', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id, { start_date: '2026-09-01', end_date: '2026-09-05' });
+    const place = createPlace(testDb, trip.id);
+    const days = testDb.prepare('SELECT id FROM days WHERE trip_id = ? ORDER BY day_number ASC').all(trip.id) as { id: number }[];
+    const stay = createDayAccommodation(testDb, trip.id, place.id, days[0].id, days[1].id);
+    const booking = createReservation(testDb, trip.id, { title: 'Staged padded link', type: 'hotel' });
+    testDb.prepare("UPDATE reservations SET accommodation_id = ?, ingest_state = 'staged' WHERE id = ?").run(`${stay.id} `, booking.id);
+
+    const typed = await t.em.getKysely<StayVisibilityTestDB>()
+      .selectFrom('day_accommodations as a')
+      .select('a.id')
+      .where('a.trip_id', '=', trip.id)
+      .where((eb) => publicStayExists(eb))
+      .execute();
+    const legacy = testDb
+      .prepare(`SELECT id FROM day_accommodations a WHERE a.trip_id = ? AND ${publicStaySql('a')}`)
+      .all(trip.id) as { id: number }[];
+
+    expect(typed).toEqual([]);
+    expect(typed).toEqual(legacy);
+  });
 });

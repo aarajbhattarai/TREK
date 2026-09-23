@@ -12,7 +12,7 @@ import { BudgetService } from '../budget/budget.service';
 import { typeToCostCategory } from '@trek/shared';
 import { NotificationsService } from '../notifications/notifications.service';
 import { AccommodationsService, noStayMirror, type AccommodationMirror } from '../accommodations/accommodations.service';
-import { toRowId } from '../common/row-id';
+import { toRowId, legacyBoundIntegerText } from '../common/row-id';
 import { Reservations } from '../../db/entities/Reservations.entity';
 import type { ReservationsRepository } from '../../db/repositories/Reservations.repository';
 import { ReservationEndpoints as ReservationEndpointsEntity } from '../../db/entities/ReservationEndpoints.entity';
@@ -733,10 +733,13 @@ export class ReservationsService {
     const resolvedAssignmentId = await this.resolvedOrNull('day_assignments', assignment_id || null);
 
     // RS28. `accommodation_id` bound as the TEXT column's string form (R2 —
-    // the legacy statement bound a plain JS number and let better-sqlite3's
-    // driver / SQLite's own TEXT-affinity conversion at write time store it
-    // as text; `String(n)` on a normal integer id renders the identical
-    // bytes, so this is byte-parity, not a behaviour change).
+    // the legacy statement bound a plain JS number, which better-sqlite3
+    // binds as SQLite REAL, so the TEXT column stores the `'<id>.0'` shape,
+    // not the plain integer text `String(n)` renders — H1, Plan 3d Task 7
+    // review: this used to be `String(n)`, which stored a DIFFERENT shape
+    // than the legacy and silently broke `restampLinkedReservation`/DY23's
+    // REAL-bound compare. `legacyBoundIntegerText` reproduces the legacy
+    // bytes exactly.
     const insertedId = await this.reservationsRepo.insertReservation({
       trip_id: this.rowIdNum(tripId),
       day_id: resolvedDayId,
@@ -752,7 +755,7 @@ export class ReservationsService {
       url: url || null,
       status: status || 'pending',
       type: resolvedType,
-      accommodation_id: resolvedAccommodationId == null ? null : String(resolvedAccommodationId),
+      accommodation_id: resolvedAccommodationId == null ? null : legacyBoundIntegerText(resolvedAccommodationId),
       metadata: metadata ? JSON.stringify(metadata) : null,
       needs_review: needs_review ? 1 : 0,
     });
@@ -793,8 +796,16 @@ export class ReservationsService {
       // agree on it. Doing that in the statement rather than as a pre-check also
       // makes a stale id a quiet no-op instead of a foreign-key error surfacing
       // as a 500.
-      const dayIdNum = this.rowIdNum(dayId);
+      //
+      // M4, Plan 3d Task 7 review: `dayId` parsed with `toRowId` (rule 21),
+      // not `rowIdNum` — `rowIdNum`'s `Number(...)` fallback let a
+      // hex/exponent `dayId` (`0x1`, `1e1`) coerce to a real day and reach
+      // the join, where the legacy raw-bind statement's affinity never
+      // converts a hex string and so matched no row. A miss here is the same
+      // quiet no-op the join already gives a stale id — no write happens.
+      const dayIdNum = toRowId(dayId);
       const tripIdNum = this.rowIdNum(tripId);
+      if (dayIdNum === null) return;
       await this.uow.transactional(async () => {
         for (const item of positions) {
           // RS31/RS32. position is NOT NULL while the wire contract leaves the value optional.
@@ -858,16 +869,32 @@ export class ReservationsService {
     // `resolvedAccId` deliberately keeps BOTH shapes alive, exactly as the
     // legacy code's own type lie did at runtime (`Reservation
     // .accommodation_id` claimed `number` while the raw row underneath was
-    // always the TEXT column's string): when the payload names
-    // `accommodation_id` it is a genuine `number` (`UpdateReservationData`'s
-    // declared type); when it falls back to `current.accommodation_id` it is
-    // the UNCONVERTED string this reservation already stored (R2 — a
+    // always the TEXT column's string; `UpdateReservationData.accommodation_id`
+    // carries the same lie for the INCOMING payload — the wire schema is
+    // `z.union([z.number(), z.string()])`, so a string reaches here despite
+    // the declared `number` type): when the payload names `accommodation_id`
+    // it is USER INPUT and goes through `toRowId` (L2, Plan 3d Task 7
+    // review — `Number('0x1')` used to coerce a hex-spelled link and pass
+    // the existence check below where the legacy raw-bind statement's own
+    // affinity never would; `toRowId` returns `null` for any non-canonical
+    // shape, including a `'1.0'`/`' 1'` string — an ACCEPTED rule-15
+    // narrowing here, since a payload value is untrusted input, unlike the
+    // fallback below); when it falls back to `current.accommodation_id` it
+    // is the UNCONVERTED string this reservation already stored (R2 — a
     // `"14.0"`-shaped value must round-trip byte-identical through a no-op
-    // update, which a `Number()`/`String()` round-trip would truncate to
-    // `"14"`). `accIdForRead(...)` below is the READ-only numeric form every
-    // repository call needs; the final write still binds `resolvedAccId`
-    // itself (via `String(...)`, a no-op on an already-string value).
-    let resolvedAccId: number | string | null = accommodation_id !== undefined ? (accommodation_id || null) : (current.accommodation_id ?? null);
+    // update, which running it through `toRowId` — or a `Number()`/
+    // `String()` round-trip — would break: `toRowId('14.0')` is `null`,
+    // which would silently drop the link on every edit that doesn't touch
+    // `accommodation_id`; OUR OWN previously-written data is not the input
+    // L2 is about). `accIdForRead(...)` below is the READ-only numeric form
+    // every repository call needs; the final write formats a genuine
+    // `number` through `legacyBoundIntegerText` (H1, Plan 3d Task 7 review —
+    // a bare `String(...)` stored `'<id>'`, not the legacy's REAL-bound
+    // `'<id>.0'`) and passes an already-string value through unchanged, a
+    // no-op.
+    let resolvedAccId: number | string | null = accommodation_id !== undefined
+      ? (accommodation_id == null ? null : toRowId(accommodation_id))
+      : (current.accommodation_id ?? null);
     const accIdForRead = (v: number | string | null): number | null => (v == null ? null : Number(v));
     if (resolvedAccId) {
       // Scoped to the trip on purpose: an id belonging to someone else's trip
@@ -987,7 +1014,7 @@ export class ReservationsService {
       assignment_id: nextAssignmentId,
       status: status || current.status,
       type: type || current.type,
-      accommodation_id: resolvedAccId == null ? null : String(resolvedAccId),
+      accommodation_id: resolvedAccId == null ? null : (typeof resolvedAccId === 'number' ? legacyBoundIntegerText(resolvedAccId) : resolvedAccId),
       metadata: nextMetadata !== undefined ? (nextMetadata ? JSON.stringify(nextMetadata) : null) : (current.metadata ?? null),
       needs_review: needs_review === undefined ? (current.needs_review ?? 0) : (needs_review ? 1 : 0),
     });
@@ -1023,8 +1050,16 @@ export class ReservationsService {
   /** The accommodation + budget-item + reservation deletes are one logical
    *  cascade — all-or-nothing. */
   async remove(id: string | number, tripId: string | number): Promise<{ deleted: { id: number; title: string; type: string | null; accommodation_id: string | null } | undefined; accommodationDeleted: boolean; deletedBudgetItemId: number | null }> {
-    const idNum = this.rowIdNum(id);
-    const tripIdNum = this.rowIdNum(tripId);
+    // M4, Plan 3d Task 7 review: parsed ONCE here with `toRowId` (rule 21),
+    // not `rowIdNum` — `rowIdNum`'s `Number(...)` fallback let a hex/exponent
+    // id (`0x1`, `1e1`) reach `findHeaderInTrip` and delete a real row where
+    // the legacy raw-bind statement 404'd. A miss here answers exactly the
+    // `findHeaderInTrip`-miss shape below, without touching the DB.
+    const idNum = toRowId(id);
+    const tripIdNum = toRowId(tripId);
+    if (idNum === null || tripIdNum === null) {
+      return { deleted: undefined, accommodationDeleted: false, deletedBudgetItemId: null };
+    }
     const removed = await this.uow.transactional(async () => {
       // RS45
       const reservation = await this.reservationsRepo.findHeaderInTrip(idNum, tripIdNum);

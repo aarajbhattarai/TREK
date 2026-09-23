@@ -6,7 +6,7 @@ import { DatabaseService, type PlaceWithTags, type TripAccess } from '../databas
 import { UnitOfWork } from '../database/unit-of-work';
 import { PermissionsService } from '../permissions/permissions.service';
 import { AssignmentsService } from '../assignments/assignments.service';
-import { toRowId } from '../common/row-id';
+import { toRowId, legacyBoundIntegerText } from '../common/row-id';
 import { DayAccommodations } from '../../db/entities/DayAccommodations.entity';
 import type { DayAccommodationsRepository, DayAccommodationRow } from '../../db/repositories/DayAccommodations.repository';
 import { DayAssignments } from '../../db/entities/DayAssignments.entity';
@@ -55,31 +55,6 @@ export interface AccommodationMirror {
  *  stay row themselves and have to answer with a mirror either way. */
 export const noStayMirror = (): AccommodationMirror => ({ created: null, moved: null, updated: [], removed: [], stamped: null });
 
-/**
- * AC33's `accommodation_id` value, in the exact TEXT shape the TRUE legacy
- * (pre-ORM) statement stored (Task 3 finding, verified empirically against
- * the live `better-sqlite3` driver, not assumed): the legacy `INSERT INTO
- * reservations (…, accommodation_id, …) VALUES (…, ?, …)` bound the new
- * stay's id — a plain JS `number` from `result.lastInsertRowid` — as a
- * `?` parameter, and `better-sqlite3` binds every plain JS number as SQLite
- * REAL regardless of integer-ness (confirmed via `typeof(?)`); SQLite's own
- * "numeric data inserted into a TEXT column is converted to text first"
- * rule then renders a REAL's decimal form, `14` → `'14.0'`, not the plain
- * integer text `'14'`. `accommodations.service.test.ts`'s DAY-SVC-020/023/
- * 025 etc. read this column back with their OWN plain-number-bound raw SQL
- * (`testDb.prepare('… WHERE accommodation_id = ?').get(accom.id)`, matching
- * the same REAL-binding path), so this write must reproduce that exact
- * shape for those UNCHANGED "proof" tests to keep passing — `String(id)`
- * (`'14'`, what `MikroORM.em.insert()` would store for either a number or a
- * string, since it inlines the value as a SQL-text literal, rule 22, a
- * DIFFERENT shape) does not. `ReservationsRepository`'s own reads of this
- * column (`listIdMetadataByStay`/`listIdsByStay`) go through
- * `castIntegerKysely` instead, which matches this shape AND `'14'` alike —
- * see that file's docstring.
- */
-function legacyBoundIntegerText(id: number): string {
-  return `${id}.0`;
-}
 const noMirror = noStayMirror;
 
 export interface DayAccommodation {

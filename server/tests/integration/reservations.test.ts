@@ -25,7 +25,7 @@ vi.mock('../../src/websocket', () => ({ broadcast: vi.fn(), broadcastToUser: vi.
 import { db as testDb } from '../../src/db/database';
 import { buildApp } from '../../src/bootstrap';
 import { resetTestDb, resetRateLimits } from '../helpers/test-db';
-import { createUser, createTrip, createDay, createPlace, createReservation, addTripMember } from '../helpers/factories';
+import { createUser, createTrip, createDay, createPlace, createReservation, createDayAssignment, addTripMember } from '../helpers/factories';
 import { authCookie } from '../helpers/auth';
 
 let nestApp: INestApplication;
@@ -265,6 +265,145 @@ describe('Update reservation', () => {
     expect(accom.check_out).toBe('11:00');
     expect(accom.confirmation).toBe('HTL-XYZ-999');
   });
+
+  // L2 (Plan 3d Task 7 whole-plan review): a hex-spelled `accommodation_id`
+  // in the PUT body used to coerce via `Number('0x1')` and pass the
+  // existence check, storing the raw hex string as the link — where the
+  // legacy raw-bind existence check's own affinity never converts a hex
+  // string, so it always stored NULL instead.
+  it('L2 — PUT with a hex-spelled accommodation_id stores NULL, matching the legacy affinity miss', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const day = createDay(testDb, trip.id);
+    const place = createPlace(testDb, trip.id, { name: 'Hotel' });
+    const { accommodation: accom } = (
+      await request(app)
+        .post(`/api/trips/${trip.id}/accommodations`)
+        .set('Cookie', authCookie(user.id))
+        .send({ place_id: place.id, start_day_id: day.id, end_day_id: day.id })
+    ).body as { accommodation: { id: number } };
+    const resv = createReservation(testDb, trip.id, { title: 'Flight', type: 'flight' });
+
+    const hexAccId = '0x' + accom.id.toString(16);
+    const res = await request(app)
+      .put(`/api/trips/${trip.id}/reservations/${resv.id}`)
+      .set('Cookie', authCookie(user.id))
+      .send({ accommodation_id: hexAccId });
+    expect(res.status).toBe(200);
+
+    const row = testDb.prepare('SELECT accommodation_id FROM reservations WHERE id = ?').get(resv.id) as { accommodation_id: string | null };
+    expect(row.accommodation_id).toBeNull();
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// H1 (Plan 3d Task 7 whole-plan review, live regression) — RS28's
+// `accommodation_id` write must store the same TEXT shape the legacy
+// raw-bind statement did (`'<id>.0'`, a REAL-bound number, never `'<id>'`),
+// because `DaysService.resyncAccommodationDays`'s DY23 restamp
+// (`ReservationsRepository.restampLinkedReservation`) still compares
+// against that REAL-bound shape (parity, not a fix — see its own
+// docstring). A `String(n)` write silently orphans the linked reservation:
+// the trip's dates change, the day plan moves, and the booking is left
+// behind with no error anywhere.
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('H1 — a booking on a stay is restamped when the trip\'s dates change (DY23)', () => {
+  it('the accommodation_id RS28 stores is the legacy REAL-bound TEXT shape, and a later date change restamps the linked booking', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id, { start_date: '2026-12-01', end_date: '2026-12-03' });
+    const day1 = testDb.prepare('SELECT id FROM days WHERE trip_id = ? AND date = ?').get(trip.id, '2026-12-01') as { id: number };
+    const day2 = testDb.prepare('SELECT id FROM days WHERE trip_id = ? AND date = ?').get(trip.id, '2026-12-02') as { id: number };
+    const place = createPlace(testDb, trip.id, { name: 'Lighthouse Inn' });
+
+    const createRes = await request(app)
+      .post(`/api/trips/${trip.id}/reservations`)
+      .set('Cookie', authCookie(user.id))
+      .send({
+        title: 'Lighthouse Inn Stay',
+        type: 'hotel',
+        day_id: day1.id,
+        reservation_time: '2026-12-01T10:00',
+        create_accommodation: { place_id: place.id, start_day_id: day1.id, end_day_id: day2.id },
+      });
+    expect(createRes.status).toBe(201);
+    const resvId = createRes.body.reservation.id;
+
+    // Stored-shape assert: the legacy REAL-bound TEXT shape (`'<id>.0'`), not
+    // the SQL-literal-inlined shape (`'<id>'`) `String(n)` used to store.
+    const stored = testDb.prepare('SELECT accommodation_id FROM reservations WHERE id = ?').get(resvId) as { accommodation_id: string };
+    expect(stored.accommodation_id).toMatch(/^\d+\.0$/);
+
+    // Move the whole trip a day later (default date_shift_mode, i.e. NOT
+    // 'shift_all'): days re-date positionally in place, the accommodation
+    // stays glued to its (now re-dated) day rows (#1288), and its linked
+    // reservation must follow — DY23's restamp.
+    const updateRes = await request(app)
+      .put(`/api/trips/${trip.id}`)
+      .set('Cookie', authCookie(user.id))
+      .send({ start_date: '2026-12-02', end_date: '2026-12-04' });
+    expect(updateRes.status).toBe(200);
+
+    const resvAfter = testDb.prepare('SELECT day_id, reservation_time FROM reservations WHERE id = ?').get(resvId) as
+      { day_id: number; reservation_time: string | null };
+    expect(resvAfter.day_id).toBe(day1.id);
+    // Restamped onto day1's NEW date — red without the fix, where DY23's
+    // REAL-bound compare misses a `String(n)`-shaped accommodation_id and
+    // this stays '2026-12-01T10:00'.
+    expect(resvAfter.reservation_time).toBe('2026-12-02T10:00');
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// L3 (Plan 3d Task 7 whole-plan review): RS22 (`referencesOutsideTrip`'s
+// `assignment_id` cross-trip check, `reservations.service.ts:540-541` +
+// `Reservations.repository.ts::getAssignmentTripId`) had zero hits in the
+// whole suite (lcov × diff). Pinned here through the real REST route.
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('RS22 — assignment_id foreign-reference check on POST /reservations', () => {
+  it('RS22-own: an assignment_id belonging to the SAME trip is accepted (201)', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const day = createDay(testDb, trip.id);
+    const place = createPlace(testDb, trip.id);
+    const assignment = createDayAssignment(testDb, day.id, place.id);
+
+    const res = await request(app)
+      .post(`/api/trips/${trip.id}/reservations`)
+      .set('Cookie', authCookie(user.id))
+      .send({ title: 'Dinner', type: 'restaurant', assignment_id: assignment.id });
+    expect(res.status).toBe(201);
+    expect(res.body.reservation.assignment_id).toBe(assignment.id);
+  });
+
+  it('RS22-foreign: an assignment_id belonging to a DIFFERENT trip is refused (400 "Not part of this trip: assignment_id")', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const otherTrip = createTrip(testDb, user.id);
+    const otherDay = createDay(testDb, otherTrip.id);
+    const otherPlace = createPlace(testDb, otherTrip.id);
+    const foreignAssignment = createDayAssignment(testDb, otherDay.id, otherPlace.id);
+
+    const res = await request(app)
+      .post(`/api/trips/${trip.id}/reservations`)
+      .set('Cookie', authCookie(user.id))
+      .send({ title: 'Dinner', type: 'restaurant', assignment_id: foreignAssignment.id });
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({ error: 'Not part of this trip: assignment_id' });
+  });
+
+  it('RS22-missing: an assignment_id that resolves to nothing is refused (400 "Unknown reference: assignment_id")', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+
+    const res = await request(app)
+      .post(`/api/trips/${trip.id}/reservations`)
+      .set('Cookie', authCookie(user.id))
+      .send({ title: 'Dinner', type: 'restaurant', assignment_id: 999999 });
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({ error: 'Unknown reference: assignment_id' });
+  });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -298,6 +437,25 @@ describe('Delete reservation', () => {
       .set('Cookie', authCookie(user.id));
     expect(res.status).toBe(404);
   });
+
+  // M4 (Plan 3d Task 7 review): `remove`'s id parsed with `toRowId`, not the
+  // `Number()`-fallback `rowIdNum` — a hex-spelled id used to coerce to a
+  // real row and delete it, where the legacy raw-bind statement's affinity
+  // never converts a hex string and so 404'd. Rule 21.
+  it('M4 — DELETE …/reservations/0x<id> answers the legacy 404 and deletes nothing', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const resv = createReservation(testDb, trip.id, { title: 'Flight', type: 'flight' });
+    const hexId = '0x' + resv.id.toString(16);
+
+    const res = await request(app)
+      .delete(`/api/trips/${trip.id}/reservations/${hexId}`)
+      .set('Cookie', authCookie(user.id));
+    expect(res.status).toBe(404);
+
+    const row = testDb.prepare('SELECT id FROM reservations WHERE id = ?').get(resv.id);
+    expect(row).toBeDefined();
+  });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -317,6 +475,31 @@ describe('Batch update positions', () => {
       .send({ positions: [{ id: r2.id, position: 0 }, { id: r1.id, position: 1 }] });
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
+  });
+
+  // M4 (Plan 3d Task 7 review): `updatePositions`' `dayId` parsed with
+  // `toRowId`, not the `Number()`-fallback `rowIdNum` — a hex-spelled
+  // `day_id` used to coerce to a real day and reach the per-day upsert,
+  // where the legacy raw-bind statement's affinity never converts a hex
+  // string, so the join matched no row (a quiet no-op, not a write). Rule 21.
+  it('M4 — PUT /positions with a hex-spelled day_id is the legacy quiet no-op (no day-scoped row written)', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const day = createDay(testDb, trip.id, { date: '2026-01-01' });
+    const resv = createReservation(testDb, trip.id, { title: 'First', type: 'flight' });
+    const hexDayId = '0x' + day.id.toString(16);
+
+    const res = await request(app)
+      .put(`/api/trips/${trip.id}/reservations/positions`)
+      .set('Cookie', authCookie(user.id))
+      .send({ positions: [{ id: resv.id, day_plan_position: 0 }], day_id: hexDayId });
+    // Same success shape the legacy statement's own no-op miss returns —
+    // this is not a validation error, it silently writes nothing.
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+
+    const row = testDb.prepare('SELECT * FROM reservation_day_positions WHERE reservation_id = ?').get(resv.id);
+    expect(row).toBeUndefined();
   });
 });
 

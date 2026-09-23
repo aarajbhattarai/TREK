@@ -92,3 +92,29 @@ export function toRowId(value: unknown): number | null {
   }
   return null;
 }
+
+/**
+ * The TEXT shape the legacy raw-SQL layer actually stored for an
+ * `accommodation_id` value bound as a plain JS number (Plan 3d Task 3/7
+ * finding, verified empirically against the live `better-sqlite3` driver,
+ * not assumed): `better-sqlite3` binds every plain JS `number` as SQLite
+ * REAL regardless of integer-ness (confirmed via `typeof(?)`), and SQLite's
+ * own "numeric value inserted into a TEXT column becomes text" rule then
+ * renders a REAL's decimal form — `14` → `'14.0'`, never the plain integer
+ * text `'14'`. `String(id)` (what a SQL-literal-inlined `em.insert()`,
+ * rule 22, would produce for a bound `number`) renders `'14'` instead — a
+ * DIFFERENT stored shape from the legacy's — and a reader that still
+ * compares against the REAL-bound form (`restampLinkedReservation`/DY23
+ * binds the id as a number through Kysely, which is REAL again) silently
+ * misses every row written that way.
+ *
+ * Use this wherever a `number` id is written into the `accommodation_id`
+ * TEXT column so the stored bytes match what the legacy statement would
+ * have stored for the same input — never `String(id)` for that column.
+ * `ReservationsRepository`'s reads of this column that must match BOTH the
+ * legacy shape and a `String(id)` shape go through `castIntegerKysely`
+ * instead (see that file's docstring); this helper is for WRITES only.
+ */
+export function legacyBoundIntegerText(id: number): string {
+  return `${id}.0`;
+}

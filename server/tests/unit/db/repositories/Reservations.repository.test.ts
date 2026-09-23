@@ -384,3 +384,124 @@ describe('ReservationsRepository — RS20 (listUpcomingForUser)', () => {
     expect(baseline.some((r) => r.title === 'Hotel Ibis')).toBe(true);
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// M3 (Plan 3d Task 7 whole-plan review): AC37/AC40 reverted to the legacy
+// REAL-bound compare (parity is law — the widening had no reason to exist
+// once H1 makes every write in this cluster store the legacy `'<id>.0'`
+// shape). Pinned against the SAME five-shape matrix the review measured.
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('ReservationsRepository — AC37/AC40 (listIdMetadataByStay/listIdsByStay), M3', () => {
+  it('AC37/AC40 match the legacy REAL-bound compare — only the "<id>.0" TEXT shape resolves, not the bare integer, a trailing/leading space or a prefix-numeric value', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id, { start_date: '2026-09-01', end_date: '2026-09-05' });
+    const place = createPlace(testDb, trip.id);
+    const days = testDb.prepare('SELECT id FROM days WHERE trip_id = ? ORDER BY day_number ASC').all(trip.id) as { id: number }[];
+    const stay = createDayAccommodation(testDb, trip.id, place.id, days[0].id, days[1].id);
+
+    // `shapes[1]` ('<id>.0') is the ONLY one the legacy `Number(id)` bind —
+    // and this repository's own reverted compare — ever matched.
+    const shapes = [
+      `${stay.id}`,
+      `${stay.id}.0`,
+      `${stay.id} `,
+      `${stay.id}abc`,
+      ` ${stay.id}`,
+    ];
+    const ids = shapes.map((shape, i) => {
+      const r = createReservation(testDb, trip.id, { title: `Link ${i}`, type: 'hotel' });
+      testDb.prepare('UPDATE reservations SET accommodation_id = ? WHERE id = ?').run(shape, r.id);
+      return r.id;
+    });
+
+    const typedMeta = await reservationsRepo.listIdMetadataByStay(stay.id);
+    const legacyMeta = testDb.prepare('SELECT id, metadata FROM reservations WHERE accommodation_id = ?').all(stay.id) as { id: number; metadata: string | null }[];
+    expect(typedMeta).toEqual(legacyMeta);
+    expect(typedMeta.map((r) => r.id)).toEqual([ids[1]]);
+
+    const typedIds = await reservationsRepo.listIdsByStay(stay.id);
+    const legacyIds = testDb.prepare('SELECT id FROM reservations WHERE accommodation_id = ?').all(stay.id) as { id: number }[];
+    expect(typedIds).toEqual(legacyIds);
+    expect(typedIds.map((r) => r.id)).toEqual([ids[1]]);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Plan 3d Task 7 whole-plan review, item 9 ("missing parity tests"): Task 2's
+// own `ReservationsRepository` reads (`listForTrip`, `findWithJoins`,
+// `findInTrip`, `listResyncCandidates`, `listForRestamp`) had no
+// repository-level parity test — they rested on the reservations.service
+// REAL-LEGACY suite only. ONE seeded world, one `toEqual(<legacy raw>)`
+// test per method.
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('ReservationsRepository — Task 2 reads (listForTrip / findWithJoins / findInTrip / listResyncCandidates / listForRestamp)', () => {
+  const legacyJoinedSql = `
+    SELECT r.*, d.day_number as day_number, p.name as place_name, ap.place_id as accommodation_place_id,
+      acc_p.name as accommodation_name, ap.start_day_id as accommodation_start_day_id, ap.end_day_id as accommodation_end_day_id
+    FROM reservations r
+    LEFT JOIN days d ON d.id = r.day_id
+    LEFT JOIN places p ON p.id = r.place_id
+    LEFT JOIN day_accommodations ap ON ap.id = r.accommodation_id
+    LEFT JOIN places acc_p ON acc_p.id = ap.place_id`;
+
+  const seed = () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id, { start_date: '2026-09-01', end_date: '2026-09-05' });
+    const place = createPlace(testDb, trip.id, { name: 'Museum' });
+    const days = testDb.prepare('SELECT id FROM days WHERE trip_id = ? ORDER BY day_number ASC').all(trip.id) as { id: number }[];
+    const hotelPlace = createPlace(testDb, trip.id, { name: 'Grand Hotel' });
+    const stay = createDayAccommodation(testDb, trip.id, hotelPlace.id, days[0].id, days[1].id);
+
+    // A dated, non-hotel booking — a restamp/resync candidate.
+    const dinner = createReservation(testDb, trip.id, { title: 'Dinner', type: 'restaurant', day_id: days[0].id });
+    testDb.prepare("UPDATE reservations SET reservation_time = ? WHERE id = ?").run('2026-09-01T19:00', dinner.id);
+
+    // A hotel booking linked to the stay above — the joined projection's place/accommodation columns.
+    const hotel = createReservation(testDb, trip.id, { title: 'Grand Hotel Stay', type: 'hotel', day_id: days[0].id });
+    testDb.prepare('UPDATE reservations SET accommodation_id = ?, place_id = ? WHERE id = ?').run(`${stay.id}.0`, place.id, hotel.id);
+
+    return { trip, days, place, hotelPlace, stay, dinner, hotel };
+  };
+
+  it('RS18 listForTrip — matches the legacy joined statement, ordered by reservation_time then created_at', async () => {
+    const { trip } = seed();
+    const legacy = testDb.prepare(`${legacyJoinedSql} WHERE r.trip_id = ? ORDER BY r.reservation_time ASC, r.created_at ASC`).all(trip.id);
+    const typed = await reservationsRepo.listForTrip(trip.id);
+    expect(typed).toEqual(legacy);
+  });
+
+  it('RR1 findWithJoins — matches the legacy joined statement for one row, place/accommodation columns populated', async () => {
+    const { hotel, stay, hotelPlace } = seed();
+    const legacy = testDb.prepare(`${legacyJoinedSql} WHERE r.id = ?`).get(hotel.id);
+    const typed = await reservationsRepo.findWithJoins(hotel.id);
+    expect(typed).toEqual(legacy);
+    expect(typed).toMatchObject({ accommodation_place_id: hotelPlace.id, accommodation_name: hotelPlace.name, accommodation_start_day_id: stay.start_day_id });
+  });
+
+  it('RS35 findInTrip — matches the legacy statement, scoped by trip', async () => {
+    const { trip, dinner } = seed();
+    const legacy = testDb.prepare('SELECT * FROM reservations WHERE id = ? AND trip_id = ?').get(dinner.id, trip.id);
+    expect(await reservationsRepo.findInTrip(dinner.id, trip.id)).toEqual(legacy);
+    expect(await reservationsRepo.findInTrip(999999, trip.id)).toBeUndefined();
+  });
+
+  it('RS12 listResyncCandidates — matches the legacy statement (dated, non-hotel-or-unlinked)', async () => {
+    const { trip, dinner } = seed();
+    const legacy = testDb.prepare(`
+      SELECT id, reservation_time, reservation_end_time, day_id, end_day_id FROM reservations
+      WHERE trip_id = ? AND (type != 'hotel' OR accommodation_id IS NULL) AND reservation_time IS NOT NULL`).all(trip.id);
+    const typed = await reservationsRepo.listResyncCandidates(trip.id);
+    expect(typed).toEqual(legacy);
+    expect(typed.map((r) => r.id)).toEqual([dinner.id]);
+  });
+
+  it('DY14 listForRestamp — matches the legacy statement, every reservation of the trip regardless of type', async () => {
+    const { trip, dinner, hotel } = seed();
+    const legacy = testDb.prepare('SELECT id, day_id, end_day_id, reservation_time, reservation_end_time FROM reservations WHERE trip_id = ?').all(trip.id);
+    const typed = await reservationsRepo.listForRestamp(trip.id);
+    expect(typed).toEqual(legacy);
+    expect(typed.map((r) => r.id).sort((a, b) => a - b)).toEqual([dinner.id, hotel.id].sort((a, b) => a - b));
+  });
+});

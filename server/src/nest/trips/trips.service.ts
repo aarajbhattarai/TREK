@@ -15,7 +15,7 @@ import { RoadtripDayTracks } from '../../db/entities/RoadtripDayTracks.entity';
 import { RoadtripPreferences } from '../../db/entities/RoadtripPreferences.entity';
 import { RoadtripDayBoundaries } from '../../db/entities/RoadtripDayBoundaries.entity';
 import { DayAccommodations } from '../../db/entities/DayAccommodations.entity';
-import { ReservationEndpoints } from '../../db/entities/ReservationEndpoints.entity';
+import { Reservations } from '../../db/entities/Reservations.entity';
 import { MAX_TRIP_DAYS, tripSpanDays, type ActiveTrip, type TrekWsPayload, type TrekWsTripEventName } from '@trek/shared';
 import { RealtimeService } from '../realtime/realtime.service';
 import { PermissionsService } from '../permissions/permissions.service';
@@ -28,6 +28,7 @@ import { UnsplashService } from '../unsplash/unsplash.service';
 import { StorageService } from '../storage/storage.service';
 import { NotFoundError, ValidationError } from '../common/domain-errors';
 import { UnitOfWork } from '../database/unit-of-work';
+import { legacyBoundIntegerText } from '../common/row-id';
 
 export const MS_PER_DAY = 86400000;
 
@@ -58,26 +59,6 @@ export function withoutFeedToken<T>(row: T): T {
   return row;
 }
 
-/**
- * `copy`'s (TP59) `reservations.accommodation_id` write. Mirrors
- * `AccommodationsService`'s own `legacyBoundIntegerText` (Plan 3d Task 3,
- * `accommodations.service.ts` — unexported there, so not importable across
- * this task's file-ownership boundary; reproduced here instead, same
- * one-line shape): a plain JS number bound as a `?` parameter through
- * better-sqlite3 is stored as SQLite REAL regardless of integer-ness, and
- * SQLite's "numeric value inserted into a TEXT column becomes text" rule
- * then renders `14` as `'14.0'`, not the plain integer text `'14'` a
- * SQL-literal-inlined `em.insert()` (rule 22) would produce. The legacy raw
- * `copy` statement bound the new stay's id (a plain number from `accomMap`)
- * the same way — reproduced explicitly here since the write now goes
- * through a typed insert (`ReservationEndpointsRepository
- * .insertReservationCopy`) instead of a raw bound parameter; passing an
- * already-formatted STRING sidesteps the shape question entirely (SQLite
- * applies no numeric conversion to a value that already has TEXT affinity).
- */
-function legacyAccommodationIdText(id: number): string {
-  return `${id}.0`;
-}
 
 interface CreateTripData {
   title: string;
@@ -257,13 +238,14 @@ export class TripsService {
     return this.em.getRepository(DayAccommodations);
   }
 
-  // `ReservationEndpointsRepository`, not `ReservationsRepository`: Task 4
-  // owns `Reservations.repository.ts` for this tree window, so TP58/TP59
-  // (the reservations read/insert) live on a repository this task owns
-  // instead — see `ReservationEndpoints.repository.ts`'s own docstring on
-  // `listAllForTrip`/`insertReservationCopy`.
-  private get reservationEndpointsRepo() {
-    return this.em.getRepository(ReservationEndpoints);
+  // Plan 3d Task 7 whole-plan review (item 8/D4): TP58/TP59 (the
+  // reservations copy read/insert) moved onto `ReservationsRepository` —
+  // the table they read/write — out of `ReservationEndpointsRepository`,
+  // where they used to live only because Task 4 owned this file for the
+  // Task 6 tree window. Same `this.em.getRepository(...)` pattern as every
+  // other getter above.
+  private get reservationsRepo() {
+    return this.em.getRepository(Reservations);
   }
 
   async canAccessTrip(tripId: string | number, userId: number) {
@@ -814,7 +796,7 @@ export class TripsService {
         if (newAssignmentId && newAccomId) await this.dayAssignmentsRepo.setAccommodation(newAssignmentId, newAccomId); // TP57
       }
 
-      const oldReservations = await this.reservationEndpointsRepo.listAllForTrip(Number(sourceTripId)); // TP58
+      const oldReservations = await this.reservationsRepo.listAllForTrip(Number(sourceTripId)); // TP58
       // The external_* / sync_enabled columns are deliberately not copied: the
       // duplicate must not inherit the source's external sync identity.
       const reservationMap = new Map<number, number>();
@@ -823,7 +805,7 @@ export class TripsService {
         // as a string — coerce before the number-keyed map lookup or the
         // link silently nulls.
         const newAccomId = r.accommodation_id != null ? (accomMap.get(Number(r.accommodation_id)) ?? null) : null;
-        const newReservationId = await this.reservationEndpointsRepo.insertReservationCopy({
+        const newReservationId = await this.reservationsRepo.insertReservationCopy({
           trip_id: newTripId,
           day_id: r.day_id ? (dayMap.get(r.day_id) ?? null) : null,
           // end_day_id is a day reference too (multi-day transport) — remap it like
@@ -832,8 +814,8 @@ export class TripsService {
           place_id: r.place_id ? (placeMap.get(r.place_id) ?? null) : null,
           assignment_id: r.assignment_id ? (assignmentMap.get(r.assignment_id) ?? null) : null,
           // the NEW value is re-formatted to the legacy raw-bound `'<id>.0'`
-          // TEXT shape on the way back out — see `legacyAccommodationIdText`.
-          accommodation_id: newAccomId != null ? legacyAccommodationIdText(newAccomId) : null,
+          // TEXT shape on the way back out — see `legacyBoundIntegerText`.
+          accommodation_id: newAccomId != null ? legacyBoundIntegerText(newAccomId) : null,
           title: r.title, reservation_time: r.reservation_time, reservation_end_time: r.reservation_end_time,
           location: r.location, confirmation_number: r.confirmation_number, notes: r.notes, url: r.url, status: r.status, type: r.type,
           // ingest_state travels with the copy: a staged booking must not turn

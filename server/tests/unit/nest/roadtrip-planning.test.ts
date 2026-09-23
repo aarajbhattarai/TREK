@@ -373,6 +373,70 @@ describe('Roadtrip MCP registration and search', () => {
   });
 });
 
+// Item 11 (Plan 3d Task 7 whole-plan review, L5): `updateVia` above is the
+// only tool in this class with its OWN non-member case — the mutation
+// coverage reaches every tool (they all gate on the same `findAccessible`
+// call), but only one had a dedicated test. One per tool, as
+// `tools-days-accommodations` already does.
+describe('RoadtripMcp — non-member refusal, one case per tool (Plan 3d Task 7 review, item 11)', () => {
+  function build(findAccessible: boolean) {
+    const service = {
+      dayExists: vi.fn(async () => true),
+      listForDay: vi.fn(async () => []),
+      listForTrip: vi.fn(async () => []),
+      tracksForTrip: vi.fn(async () => []),
+      trackExists: vi.fn(async () => true),
+      create: vi.fn(async () => ({ id: 1 })),
+      createMany: vi.fn(async () => []),
+      reanchor: vi.fn(async () => []),
+      remove: vi.fn(async () => true),
+      move: vi.fn(async () => ({ id: 1 })),
+      broadcast: vi.fn(),
+    };
+    const tripsRepo = { findAccessible: vi.fn(async () => findAccessible) };
+    const guards = { hasTripPermission: vi.fn(async () => true) };
+    const auth = { isDemoUser: vi.fn(async () => false) };
+    const mcp = new RoadtripMcp(service as never, tripsRepo as never, guards as never, auth as never, {} as never);
+    return { mcp, service, tripsRepo };
+  }
+
+  it('list_route_vias refuses a non-member trip (the legacy "not found or access denied" shape)', async () => {
+    const { mcp, service } = build(false);
+    const res = await mcp.listVias({ tripId: 10 }, ctx);
+    expect(res.isError).toBe(true);
+    expect(JSON.stringify(res)).toContain('access denied');
+    expect(service.listForTrip).not.toHaveBeenCalled();
+  });
+
+  it('add_route_via refuses a non-member trip', async () => {
+    const { mcp, service } = build(false);
+    const res = await mcp.addVia({ tripId: 10, dayId: 1, after_order_index: 0, lat: 48, lng: 10 }, ctx);
+    expect(res.isError).toBe(true);
+    expect(service.create).not.toHaveBeenCalled();
+  });
+
+  it('add_route_vias refuses a non-member trip', async () => {
+    const { mcp, service } = build(false);
+    const res = await mcp.addVias({ tripId: 10, dayId: 1, vias: [] }, ctx);
+    expect(res.isError).toBe(true);
+    expect(service.createMany).not.toHaveBeenCalled();
+  });
+
+  it('reanchor_route_vias refuses a non-member trip', async () => {
+    const { mcp, service } = build(false);
+    const res = await mcp.reanchorVias({ tripId: 10, dayId: 1, vias: [] }, ctx);
+    expect(res.isError).toBe(true);
+    expect(service.reanchor).not.toHaveBeenCalled();
+  });
+
+  it('remove_route_via refuses a non-member trip', async () => {
+    const { mcp, service } = build(false);
+    const res = await mcp.removeVia({ tripId: 10, dayId: 1, viaId: 4 }, ctx);
+    expect(res.isError).toBe(true);
+    expect(service.remove).not.toHaveBeenCalled();
+  });
+});
+
 describe('MCP trip preferences authorization', () => {
   it('reads shared preferences and refuses inaccessible trips', async () => {
     const s = setup();
@@ -381,6 +445,18 @@ describe('MCP trip preferences authorization', () => {
     s.tripsRepo.findAccessible.mockResolvedValue(false);
     expect((await tool.read({ tripId: 10 }, ctx)).isError).toBe(true);
     expect((await tool.update({ tripId: 10, settings: {} }, ctx)).isError).toBe(true);
+  });
+
+  // Item 11 (Plan 3d Task 7 whole-plan review, L5): `update_roadtrip_settings`
+  // gets its OWN non-member case — the test above already asserts it as a
+  // second assertion piggybacked on the `read` test, but not in isolation.
+  it('update_roadtrip_settings refuses a non-member trip on its own, without a prior read call', async () => {
+    const s = setup();
+    s.tripsRepo.findAccessible.mockResolvedValue(false);
+    const tool = new RoadtripPreferencesMcp(s.preferences, { isDemoUser: () => false } as never, {} as never, s.tripsRepo as never, { hasTripPermission: () => true } as never);
+    const res = await tool.update({ tripId: 10, settings: { roadtrip_range_km: 50 } }, ctx);
+    expect(res.isError).toBe(true);
+    expect(JSON.stringify(res)).toContain('access denied');
   });
   it('rejects demos and readers, but permits a trip editor', async () => {
     const s = setup();

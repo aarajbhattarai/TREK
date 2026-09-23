@@ -124,35 +124,42 @@ interface ReservationRestampKyselyDB {
 /**
  * Kysely typing for AC37/AC40 (`listIdMetadataByStay`/`listIdsByStay`).
  *
- * A bound-parameter `WHERE accommodation_id = ?` on this TEXT column is NOT
- * the same comparison the legacy statement's own `Number(id)` bind produced
- * (Task 3 finding, verified empirically against the live driver, not
- * assumed from the inventory's §18.1 wording): `better-sqlite3` binds every
- * plain JS number as SQLite REAL, integer-valued or not (`typeof(?)` on a
- * bound `14` reads back `'real'`) — including through MikroORM's Kysely
- * dialect — and SQLite's TEXT-affinity conversion of a REAL for a
- * comparison renders its decimal form (`14` → `'14.0'`), not the plain
- * integer text `'14'`. A row this repository itself writes through
- * `em.insert()`/`nativeUpdate()` stores the OTHER shape (`'14'`, no `.0` —
- * MikroORM inlines the value as a literal in the generated SQL, rule 22,
- * which SQLite's parser treats as a genuine INTEGER token, not a
- * REAL-bound parameter) — so a plain `WHERE accommodation_id = ?` bound
- * with a number would consistently MISS every row this cluster's own
- * `em.insert()` calls write, not just the documented `"14.0"` edge case.
- * {@link castIntegerKysely} (SQLF-057, `sql-functions.test.ts`) sidesteps
- * the whole shape question: `CAST(accommodation_id AS INTEGER) = ?` matches
- * `'14'` AND `'14.0'` alike (SQLite compares the CAST result against the
- * bound REAL/INTEGER numerically, not as text), which is what "every
- * linked booking" (AC37/AC40's own contract — more than one reservation,
- * written by different call sites with different shapes, can point at one
- * stay) actually needs, and is R2's own "tested with both `'14'` and
- * `'14.0'` rows" requirement satisfied structurally rather than by picking
- * a side.
+ * **Revert to the REAL-bound compare (Plan 3d Task 7 whole-plan review, M3;
+ * corrects this docstring's earlier claim).** A bound-parameter `WHERE
+ * accommodation_id = ?` with a plain JS `number` is EXACTLY the comparison
+ * the legacy statement's own `Number(id)` bind produced: `better-sqlite3`
+ * binds every plain JS number as SQLite REAL, integer-valued or not
+ * (`typeof(?)` on a bound `14` reads back `'real'`) — including through
+ * MikroORM's Kysely dialect — and SQLite's TEXT-affinity conversion of a
+ * REAL for a comparison renders its decimal form (`14` → `'14.0'`), so a
+ * bound `WHERE accommodation_id = ?` matches `'14.0'` ONLY, same as the
+ * legacy statement — never `'14'`. The earlier version of this docstring
+ * claimed the opposite (that `em.insert()`/`nativeUpdate()` calls in this
+ * cluster store the bare `'14'` shape and a REAL-bound compare would
+ * therefore miss them): that was true only because RS28/RS41
+ * (`reservations.service.ts`, outside this repository) used to write
+ * `String(n)` instead of the legacy's REAL-bound shape (H1, the same
+ * review). H1 fixes every write in this cluster to store `'<id>.0'`
+ * (`legacyBoundIntegerText`), so the widening below has no remaining
+ * reason to exist, and parity is law once it doesn't: `CAST(accommodation_id
+ * AS INTEGER) = ?` (via {@link castIntegerKysely}) matches `'14'`, `'14.0'`,
+ * `'14 '` and `'14abc'` alike — a WIDER row set than the legacy's own
+ * `'14.0'`-only compare (measured, task-7-review.md M3) — which is an
+ * unpinned parity break, not a fix, on a read the legacy also bound
+ * `Number(id)` for. `castIntegerKysely` stays in use elsewhere in this file
+ * (RS20/RV2's correlated subqueries) where the legacy statement's OWN
+ * comparison used a `CAST`, not a bound number — this interface's two
+ * consumers are not that case.
  */
 interface ReservationsByAccommodationKyselyDB {
   reservations: {
     id: number;
-    accommodation_id: string | null;
+    // `string | number | null`, not just `string` (R2's ruling, the same
+    // widening {@link ReservationRestampKyselyDB} documents for DY23): the
+    // column is TEXT, but the bind below is a plain `number`, matching the
+    // legacy's own `Number(id)` bind — the interface only needs to
+    // type-check that bind, not describe the column's storage type.
+    accommodation_id: string | number | null;
     metadata: string | null;
   };
 }
@@ -924,16 +931,16 @@ export class ReservationsRepository extends TrekRepository<Reservations> {
    * AC37 (`AccommodationsService.updateAccommodation`) — `SELECT id,
    * metadata FROM reservations WHERE accommodation_id = ?`, every linked
    * booking (no unique constraint on the column — more than one booking can
-   * point at the same stay, and different write paths can leave it in
-   * either TEXT shape). `castIntegerKysely` (see
-   * {@link ReservationsByAccommodationKyselyDB}'s docstring for why).
+   * point at the same stay). Bound as a plain `number`, matching the
+   * legacy's own `Number(id)` bind byte-for-byte — see
+   * {@link ReservationsByAccommodationKyselyDB}'s docstring (M3, reverted
+   * from the `castIntegerKysely` widening).
    */
   async listIdMetadataByStay(accommodation_id: number): Promise<{ id: number; metadata: string | null }[]> {
-    const platform = this.getEntityManager().getPlatform();
     const rows = await this.kysely<ReservationsByAccommodationKyselyDB>()
       .selectFrom('reservations')
       .select(['id', 'metadata'])
-      .where((eb) => eb(castIntegerKysely(platform, eb, 'accommodation_id'), '=', accommodation_id))
+      .where('accommodation_id', '=', accommodation_id)
       .execute();
     return rows as { id: number; metadata: string | null }[];
   }
@@ -960,16 +967,108 @@ export class ReservationsRepository extends TrekRepository<Reservations> {
   /**
    * AC40 (`AccommodationsService.deleteAccommodation`) — `SELECT id FROM
    * reservations WHERE accommodation_id = ?`, ALL linked bookings. Same
-   * `castIntegerKysely` reasoning as {@link listIdMetadataByStay}.
+   * REAL-bound compare as {@link listIdMetadataByStay} (M3).
    */
   async listIdsByStay(accommodation_id: number): Promise<{ id: number }[]> {
-    const platform = this.getEntityManager().getPlatform();
     const rows = await this.kysely<ReservationsByAccommodationKyselyDB>()
       .selectFrom('reservations')
       .select(['id'])
-      .where((eb) => eb(castIntegerKysely(platform, eb, 'accommodation_id'), '=', accommodation_id))
+      .where('accommodation_id', '=', accommodation_id)
       .execute();
     return rows as { id: number }[];
+  }
+
+  // ---------------------------------------------------------------------------
+  // Plan 3d Task 6 (`trips.service.ts::copy`) — moved here from
+  // `ReservationEndpoints.repository.ts` in the Task 7 whole-plan review's
+  // fix wave (item 8/D4, "one repository per table"): Task 4 owned this file
+  // for the Task 6 tree window, so TP58/TP59 (the reservations copy
+  // read/write) landed on `ReservationEndpointsRepository` instead at the
+  // time — a pure move now that the window is closed, same statements,
+  // same parity proof (`Reservations.repository.test.ts`). Endpoints/
+  // travelers/day-positions are never copied with a reservation (R7,
+  // `copy` never copied them — kept as-is on their own repositories).
+  // ---------------------------------------------------------------------------
+
+  /**
+   * TP58 (`trips.service.ts::copy`'s reservations read) — `SELECT * FROM
+   * reservations WHERE trip_id = ?`, no `ORDER BY` (matching the legacy
+   * statement; the copy loop's own id-remap doesn't depend on read order).
+   * `ReservationAllColumnsRow` (RS35's own `SELECT *` shape) rather than a
+   * second, differently-named copy of the same fields.
+   */
+  async listAllForTrip(trip_id: number): Promise<ReservationAllColumnsRow[]> {
+    return await this.kysely<{ reservations: ReservationAllColumnsRow }>()
+      .selectFrom('reservations')
+      .selectAll()
+      .where('trip_id', '=', trip_id)
+      .execute();
+  }
+
+  /**
+   * TP59 (`trips.service.ts::copy`'s reservation INSERT) — `INSERT INTO
+   * reservations (trip_id, day_id, end_day_id, place_id, assignment_id,
+   * accommodation_id, title, reservation_time, reservation_end_time,
+   * location, confirmation_number, notes, url, status, type, metadata,
+   * day_plan_position, needs_review, ingest_state) VALUES (?×19)`. The
+   * `external_*`/`sync_enabled`/`created_at` columns are deliberately
+   * omitted (the legacy statement's own column list never named them — a
+   * copy must not inherit the source's external sync identity).
+   *
+   * `this.insert(...)`, not `this.getEntityManager().insert(Reservations,
+   * …)`: this repository IS templated on `Reservations` (unlike
+   * `ReservationEndpointsRepository`, where this method used to live and
+   * needed the escape hatch to reach a table it wasn't templated on) — the
+   * ordinary `TrekRepository.insert` is the right call here.
+   *
+   * `accommodation_id` arrives ALREADY formatted as the legacy `'<id>.0'`
+   * TEXT shape (`row-id.ts`'s `legacyBoundIntegerText`, the program's
+   * Plan 3d Task 3 `"14.0"` finding): a plain JS number written here would
+   * be inlined as a SQL literal (rule 22) and stored as `'14'`, not the
+   * shape the legacy raw-bound statement produced.
+   */
+  async insertReservationCopy(input: {
+    trip_id: number;
+    day_id: number | null;
+    end_day_id: number | null;
+    place_id: number | null;
+    assignment_id: number | null;
+    accommodation_id: string | null;
+    title: string;
+    reservation_time: string | null;
+    reservation_end_time: string | null;
+    location: string | null;
+    confirmation_number: string | null;
+    notes: string | null;
+    url: string | null;
+    status: string | null;
+    type: string | null;
+    metadata: string | null;
+    day_plan_position: number | null;
+    needs_review: number;
+    ingest_state: string;
+  }): Promise<number> {
+    return await this.insert({
+      trip: input.trip_id,
+      day: input.day_id,
+      endDay: input.end_day_id,
+      place: input.place_id,
+      assignment: input.assignment_id,
+      accommodation_id: input.accommodation_id,
+      title: input.title,
+      reservation_time: input.reservation_time,
+      reservation_end_time: input.reservation_end_time,
+      location: input.location,
+      confirmation_number: input.confirmation_number,
+      notes: input.notes,
+      url: input.url,
+      status: input.status,
+      type: input.type,
+      metadata: input.metadata,
+      day_plan_position: input.day_plan_position,
+      needs_review: input.needs_review,
+      ingest_state: input.ingest_state,
+    });
   }
 
   // ---------------------------------------------------------------------------

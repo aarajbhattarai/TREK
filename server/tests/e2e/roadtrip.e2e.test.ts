@@ -121,6 +121,16 @@ describe('Roadtrip e2e (real guard chain + temp SQLite)', () => {
       expect(read).toHaveBeenCalledTimes(1);
     } finally { read.mockRestore(); }
   });
+  // L3 (Plan 3d Task 7 review): unlike every other case in this file,
+  // `ChargingService.read` is NOT mocked here — this is the one place CH1
+  // (`PlacesRepository.findChargingProbe`) runs for real, through the whole
+  // guard chain. Place 11 is a real row, just on trip 6, not trip 5 — the
+  // gate answers "Place not found", the same shape a place that never
+  // existed gets, never a leak of trip 6's row.
+  it('CH1 — a place id that belongs to a DIFFERENT trip is "Place not found", not trip 6\'s row (real findChargingProbe, no service mock)', async () => {
+    await request(server).get('/api/trips/5/roadtrip/charging/11').set('Cookie', cookie())
+      .expect(404, { error: 'Place not found' });
+  });
   it('gates the coordinate lookup like the saved stop and validates before fetching', async () => {
     const lookup = vi.spyOn(app.get(ChargingService), 'lookup').mockResolvedValue({} as never);
     const body = { lat: 48.137, lng: 11.575, name: 'Ladepark Nord' };
@@ -349,6 +359,34 @@ describe('Roadtrip e2e (real guard chain + temp SQLite)', () => {
       ).toBe(200);
       const after = await request(server).get('/api/trips/5/roadtrip/days/3/vias').set('Cookie', cookie());
       expect(after.body.vias).toEqual([]);
+    });
+
+    // L1 (Plan 3d Task 7 whole-plan review): `listForDay`/`listForTrip`/
+    // `tracksForTrip` used to bind `Number(tripId)`, which a hex-spelled id
+    // coerces to a real trip — `TripAccessGuard` had already authorised the
+    // SAME id through its own `Number()` (not a leak), but the legacy
+    // raw-bind statement's affinity never converts a hex string, so it
+    // always answered empty. Every one of these three now answers the
+    // legacy empty shape for the same hex id, not the real trip's rows.
+    it('L1 — vias/tracks by a hex-spelled trip id answer the legacy empty shape, not trip 5\'s real rows', async () => {
+      const created = await request(server)
+        .post('/api/trips/5/roadtrip/days/3/vias')
+        .set('Cookie', cookie())
+        .send({ after_order_index: 0, lat: 53, lng: 10 });
+      expect(created.status).toBe(201);
+
+      const hexTripId = '0x' + (5).toString(16);
+      const res = await request(server).get(`/api/trips/${hexTripId}/roadtrip/vias`).set('Cookie', cookie());
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({ vias: [], tracks: [] });
+
+      const hexDayId = '0x' + (3).toString(16);
+      const dayRes = await request(server).get(`/api/trips/5/roadtrip/days/${hexDayId}/vias`).set('Cookie', cookie());
+      // `requireDay` (`toRowId`, unrelated to this fix) already 404s a
+      // hex-spelled day id — asserted here only to document that this route
+      // never reaches `listForDay` with one, so `listForDay`'s own fix is
+      // pinned at the service level instead (see roadtrip.service.test.ts).
+      expect(dayRes.status).toBe(404);
     });
 
     it('ROADTRIP-E2E-010: the batch route answers 200 and records the track it was fitted to', async () => {

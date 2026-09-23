@@ -84,13 +84,24 @@ export class RoadtripService {
     return await this.daysRepo.existsInTrip(dayId, tripId);
   }
 
+  // L1 (Plan 3d Task 7 whole-plan review): `toRowId`, not `Number()` — a
+  // hex/exponent-spelled id used to coerce to a real row and return its
+  // vias/tracks, where the legacy raw-bind statement's affinity never
+  // converts a hex string and so matched nothing. `TripAccessGuard` already
+  // authorised the SAME hex-spelled id through its own `Number()` (not a
+  // leak, rule-21 seam widening) — a miss here answers the legacy empty
+  // shape, matching every other read path in this class.
   async listForDay(dayId: string | number): Promise<RoadtripVia[]> {
-    return await this.viasRepo.listForDay(Number(dayId));
+    const dayIdNum = toRowId(dayId);
+    if (dayIdNum === null) return [];
+    return await this.viasRepo.listForDay(dayIdNum);
   }
 
   /** Every via of a trip, so the client can route all days without one request per day. */
   async listForTrip(tripId: string | number): Promise<RoadtripVia[]> {
-    return await this.viasRepo.listForTrip(Number(tripId));
+    const tripIdNum = toRowId(tripId);
+    if (tripIdNum === null) return [];
+    return await this.viasRepo.listForTrip(tripIdNum);
   }
 
   async create(dayId: string | number, input: { after_order_index: number; lat: number; lng: number; sequence?: number }): Promise<RoadtripVia> {
@@ -162,12 +173,16 @@ export class RoadtripService {
    * second route for a handful of rows would be a second round trip for nothing.
    */
   async tracksForTrip(tripId: string | number): Promise<RoadtripDayTrack[]> {
-    return await this.tracksRepo.listForTrip(Number(tripId));
+    const tripIdNum = toRowId(tripId);
+    if (tripIdNum === null) return [];
+    return await this.tracksRepo.listForTrip(tripIdNum);
   }
 
   /** Whether a place is on this trip, and is a track rather than an ordinary place. RT13 → `PlacesRepository.isTrackInTrip`. */
   async trackExists(placeId: number, tripId: string | number): Promise<boolean> {
-    return await this.placesRepo.isTrackInTrip(placeId, Number(tripId));
+    const tripIdNum = toRowId(tripId);
+    if (tripIdNum === null) return false;
+    return await this.placesRepo.isTrackInTrip(placeId, tripIdNum);
   }
 
   /** Moving a via is the whole edit; where it sits in the chain does not change. */

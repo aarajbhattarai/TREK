@@ -1084,3 +1084,55 @@ describe('PlacesRepository.listAllForTrip (TP40)', () => {
     expect(await places.listAllForTrip(trip.id)).toEqual([]);
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// L3 (Plan 3d Task 7 whole-plan review): CH1 (`findChargingProbe`,
+// `ChargingService.read`'s trip-scoped gate) had zero coverage of the REAL
+// repository call anywhere in the suite — every existing `charging.test.ts`/
+// `roadtrip.e2e.test.ts` case mocks `findChargingProbe` or `ChargingService
+// .read` itself. Pinned here at the repository level (parity with the legacy
+// `SELECT name, lat, lng, stop_type FROM places WHERE id = ? AND trip_id =
+// ?`), and separately at the route level for the foreign-place 404
+// (`tests/e2e/roadtrip.e2e.test.ts`).
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('PlacesRepository.findChargingProbe (CH1)', () => {
+  it('CH1-001: an own-trip place resolves name/lat/lng/stop_type, matching the legacy statement', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const place = createPlace(testDb, trip.id, { name: 'Ladepark Nord', lat: 48.137, lng: 11.575 });
+    testDb.prepare("UPDATE places SET stop_type = 'charging' WHERE id = ?").run(place.id);
+
+    const typed = await places.findChargingProbe(place.id, trip.id);
+    const legacy = testDb
+      .prepare('SELECT name, lat, lng, stop_type FROM places WHERE id = ? AND trip_id = ?')
+      .get(place.id, trip.id);
+
+    expect(typed).toEqual(legacy);
+    expect(typed).toEqual({ name: 'Ladepark Nord', lat: 48.137, lng: 11.575, stop_type: 'charging' });
+  });
+
+  it('CH1-002: a place belonging to a DIFFERENT trip resolves to undefined, matching the legacy miss', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const otherTrip = createTrip(testDb, user.id);
+    const place = createPlace(testDb, otherTrip.id, { name: 'Theirs' });
+
+    const typed = await places.findChargingProbe(place.id, trip.id);
+    const legacy = testDb
+      .prepare('SELECT name, lat, lng, stop_type FROM places WHERE id = ? AND trip_id = ?')
+      .get(place.id, trip.id);
+
+    expect(typed).toBeUndefined();
+    expect(legacy).toBeUndefined();
+  });
+
+  it('CH1-003: a non-charging place still resolves (the caller, not this query, decides what to do with stop_type)', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const place = createPlace(testDb, trip.id, { name: 'Just a stop' });
+
+    const typed = await places.findChargingProbe(place.id, trip.id);
+    expect(typed).toEqual({ name: 'Just a stop', lat: 48.8566, lng: 2.3522, stop_type: null });
+  });
+});

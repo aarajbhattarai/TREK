@@ -163,4 +163,56 @@ describe('Anonymous ICS feed routes run inside a request context', () => {
     expect(res.status).toBe(404);
     expect(res.body).toEqual({ error: 'Feed not found' });
   });
+
+  /**
+   * M2 (Plan 3d Task 0 review, folded into Task 7's fix wave): SEAM-FEED-001..
+   * 004 only ever drove `/api/feed/trip/…`; the user feed had no valid-token
+   * case at all. `FeedsService.buildUserIcs` catches EVERY per-trip failure
+   * into `// skip failed trips` (`feeds.service.ts:151`) and still answers
+   * 200 with an EMPTY calendar — so a `cannotUseGlobalContext` regression on
+   * this route is invisible to a status/body check the same way SEAM-FEED-003
+   * showed for the trip feed, but WORSE: the trip feed at least degrades to a
+   * 404, while this route stays 200 either way. The assertion that actually
+   * catches it is SEAM-FEED-001's own shape — a genuine repository read
+   * happened, against the real request-scoped `MikroORM`, AND the sentinel
+   * event the stub returns is actually IN the body — never a status check
+   * alone, which cannot tell "the read happened" from "every trip's read was
+   * silently swallowed".
+   */
+  it('SEAM-FEED-005: GET /api/feed/user/:token.ics for a VALID token performs a real repository read and the resulting event reaches the body, inside the request, against the SAME MikroORM app.get(MikroORM) does', async () => {
+    const orm = app.get(MikroORM);
+    const { user } = createUser(testDb);
+    createTrip(testDb, user.id, { title: 'User-Feed Context-Proof Trip' });
+    const token = randomUUID();
+    testDb.prepare('UPDATE users SET feed_token = ? WHERE id = ?').run(token, user.id);
+
+    let repoRead: unknown;
+    let caught: unknown;
+    const calendar = app.get(CalendarService);
+    const spy = vi.spyOn(calendar, 'buildTripCalendar').mockImplementation(async (tripId: string | number) => {
+      try {
+        repoRead = await orm.em.getRepository(Trips).findOne({ id: Number(tripId) });
+      } catch (e) {
+        caught = e;
+      }
+      return { calName: 'Stub Calendar', filename: 'stub.ics', timezones: new Map(), events: ['BEGIN:VEVENT\r\nSUMMARY:Sentinel Event\r\nEND:VEVENT\r\n'] };
+    });
+    try {
+      const httpApp = app.getHttpAdapter().getInstance() as Application;
+      const res = await request(httpApp).get(`/api/feed/user/${token}.ics`);
+
+      expect(caught).toBeUndefined();
+      expect(repoRead).toBeTruthy();
+      expect(res.status).toBe(200);
+      expect(res.headers['content-type']).toMatch(/text\/calendar/);
+      // NOT a status-only check: this is what distinguishes a genuine read
+      // from the route's own per-trip swallow, which would return the SAME
+      // 200 with an EMPTY calendar (no VEVENT at all) if the read failed
+      // with a request-context error.
+      expect(res.text).toContain('BEGIN:VEVENT');
+      expect(res.text).toContain('Sentinel Event');
+    } finally {
+      spy.mockRestore();
+    }
+  });
 });
