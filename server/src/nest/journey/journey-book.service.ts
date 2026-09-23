@@ -3,6 +3,7 @@ import { InjectRepository } from '@mikro-orm/nestjs';
 import type { BookRecord, BookSummary } from '@trek/shared';
 import { normalizeBookDocument } from '@trek/shared';
 import { JourneyDomainService } from './journey-domain.service';
+import { UnitOfWork } from '../database/unit-of-work';
 import { JourneyBooks } from '../../db/entities/JourneyBooks.entity';
 import type { JourneyBookRow, JourneyBooksRepository } from '../../db/repositories/JourneyBooks.repository';
 
@@ -33,6 +34,9 @@ export class JourneyBookService {
   constructor(
     private readonly journey: JourneyDomainService,
     @InjectRepository(JourneyBooks) private readonly booksRepo: JourneyBooksRepository,
+    // M1 (task-5-review.md) — `saveBook`'s first-save read-then-insert
+    // needs the connection mutex to serialize two concurrent first saves.
+    private readonly uow: UnitOfWork,
   ) {}
 
   /** Null when the journey does not exist or the user cannot reach it. */
@@ -117,38 +121,50 @@ export class JourneyBookService {
     if (!(await this.canWrite(journeyId, userId))) return null;
 
     const document = JSON.stringify(normalizeBookDocument(input.document));
-    // JB3.
-    const existing = await this.booksRepo.findFirstForJourney(journeyId);
 
-    if (!existing) {
-      // JB4.
-      const id = await this.booksRepo.insertBook(journeyId, input.title, document, userId);
-      return { record: (await this.byId(id))! };
-    }
+    // M1 (rule 11/24) — JB3's existing-link read and JB4's insert are
+    // separate awaits, so two concurrent first saves of the same journey's
+    // book could both read "no book yet" and both insert, leaving one
+    // editor's save silently orphaned behind `getBook`'s `ORDER BY id LIMIT
+    // 1` (there is no unique index on `journey_id`). Wrapped whole: every
+    // statement below is DB-only, and the mutex serializes a second
+    // caller's read behind the first's commit, so it finds the row the
+    // first just created and takes the JB5 CAS-update path instead, the
+    // same outcome the synchronous legacy code always had.
+    return this.uow.transactional(async () => {
+      // JB3.
+      const existing = await this.booksRepo.findFirstForJourney(journeyId);
 
-    /*
-     * The version goes in the WHERE clause rather than being checked first.
-     * Read-then-write leaves a window between the two in which another save can
-     * land, and SQLite gives no guarantee across two statements — one UPDATE
-     * that matches on the version cannot lose that race with itself.
-     *
-     * A save with no base version is a first write from a client that has not
-     * loaded one; it is allowed to take the current version, since refusing it
-     * would break "open Studio and start editing" for the second person to
-     * arrive.
-     */
-    const base = input.baseVersion ?? existing.version;
-    // JB5 (R2) — one conditional UPDATE, returning the affected-row count.
-    const changes = await this.booksRepo.casUpdate(existing.id, base, {
-      title: input.title,
-      document,
-      updatedBy: userId,
+      if (!existing) {
+        // JB4.
+        const id = await this.booksRepo.insertBook(journeyId, input.title, document, userId);
+        return { record: (await this.byId(id))! };
+      }
+
+      /*
+       * The version goes in the WHERE clause rather than being checked first.
+       * Read-then-write leaves a window between the two in which another save can
+       * land, and SQLite gives no guarantee across two statements — one UPDATE
+       * that matches on the version cannot lose that race with itself.
+       *
+       * A save with no base version is a first write from a client that has not
+       * loaded one; it is allowed to take the current version, since refusing it
+       * would break "open Studio and start editing" for the second person to
+       * arrive.
+       */
+      const base = input.baseVersion ?? existing.version;
+      // JB5 (R2) — one conditional UPDATE, returning the affected-row count.
+      const changes = await this.booksRepo.casUpdate(existing.id, base, {
+        title: input.title,
+        document,
+        updatedBy: userId,
+      });
+
+      if (changes === 0) {
+        return { conflict: (await this.byId(existing.id))! };
+      }
+      return { record: (await this.byId(existing.id))! };
     });
-
-    if (changes === 0) {
-      return { conflict: (await this.byId(existing.id))! };
-    }
-    return { record: (await this.byId(existing.id))! };
   }
 
   async deleteBook(journeyId: number, userId: number): Promise<boolean | null> {

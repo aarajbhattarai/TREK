@@ -81,7 +81,9 @@ beforeAll(async () => {
     await createTestJourneyPhotosRepo(testDb), await createTestJourneyEntryPhotosRepo(testDb), await createTestPlacesRepo(testDb),
   );
   // Plan 3g Task 3: JourneyBooksRepository (JB1-JB7), not `dbs` any more.
-  books = new JourneyBookService(domain, await createTestJourneyBooksRepo(testDb));
+  // task-5-fix-brief constructor-ripple (M1): `UnitOfWork`, so `saveBook`'s
+  // read-then-insert can be wrapped in one transaction.
+  books = new JourneyBookService(domain, await createTestJourneyBooksRepo(testDb), uow);
 });
 
 beforeEach(() => {
@@ -350,6 +352,37 @@ describe('concurrency', () => {
       .run('Clobbered', JSON.stringify(doc('clobbered')), row.id);
     const afterMutation = testDb.prepare('SELECT title FROM journey_books WHERE id = ?').get(row.id) as { title: string };
     expect(afterMutation.title).toBe('Clobbered');
+  });
+
+  // M1 (task-5-review.md) — JB3's existing-link read and JB4's insert used
+  // to be two separate awaits, so two concurrent FIRST saves of a journey
+  // with no book yet could both read "no book" and both insert, leaving one
+  // editor's save orphaned behind `getBook`'s `ORDER BY id LIMIT 1` (there is
+  // no unique index on `journey_id`). Races two REAL `await Promise.all([...])`
+  // callers through the actual service on the shared connection, then
+  // asserts the base's outcome: exactly one row, and the loser lands on the
+  // JB5 CAS-update path (version 2), not a second insert.
+  it('journey-book-svc M1: two concurrent first saves of a journey with no book — exactly one row, ending at version 2', async () => {
+    const { user } = createUser(testDb);
+    const journey = createJourney(testDb, user.id);
+
+    const [a, b] = await Promise.all([
+      books.saveBook(journey.id, user.id, { title: 'A', document: doc('a') }),
+      books.saveBook(journey.id, user.id, { title: 'B', document: doc('b') }),
+    ]);
+
+    expect(a).not.toBeNull();
+    expect(b).not.toBeNull();
+    // One of the two lands as the first insert (version 1, before the
+    // second's own read observes it and takes the CAS-update branch); the
+    // other either also lands as {record} (version 2, having taken the
+    // update branch against baseVersion undefined -> existing.version) or
+    // sees a stale conflict — either way, never a second inserted row.
+    const rows = testDb.prepare('SELECT COUNT(*) AS n FROM journey_books WHERE journey_id = ?').get(journey.id) as { n: number };
+    expect(rows.n).toBe(1);
+
+    const finalVersion = (testDb.prepare('SELECT version FROM journey_books WHERE journey_id = ?').get(journey.id) as { version: number }).version;
+    expect(finalVersion).toBe(2);
   });
 });
 

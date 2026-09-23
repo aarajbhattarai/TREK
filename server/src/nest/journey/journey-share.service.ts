@@ -4,6 +4,7 @@ import crypto from 'crypto';
 import { JourneyDomainService } from './journey-domain.service';
 import { decodeEntryRow } from './journey-entry-row';
 import { SettingsService } from '../settings/settings.service';
+import { UnitOfWork } from '../database/unit-of-work';
 import { Journeys } from '../../db/entities/Journeys.entity';
 import type { JourneysRepository } from '../../db/repositories/Journeys.repository';
 import { JourneyShareTokens } from '../../db/entities/JourneyShareTokens.entity';
@@ -11,6 +12,8 @@ import type {
   JourneyPublicEntryPhotoRow,
   JourneyShareTokensRepository,
 } from '../../db/repositories/JourneyShareTokens.repository';
+import { JourneyPhotos } from '../../db/entities/JourneyPhotos.entity';
+import type { JourneyPhotosRepository } from '../../db/repositories/JourneyPhotos.repository';
 
 interface JourneySharePermissions {
   share_timeline?: boolean;
@@ -47,6 +50,17 @@ export class JourneyShareService {
     // already-stable `JourneysRepository.findById` (the JG5 dup group) rather
     // than a second, hand-kept copy of the same statement.
     @InjectRepository(Journeys) private readonly journeysRepo: JourneysRepository,
+    // Fix-wave additions (task-5-review.md):
+    // - `uow` (L1): `createOrUpdateJourneyShareLink`'s existing-link read and
+    //   its insert are separate awaits now, so two concurrent first-creates
+    //   for the same journey could both read "no link yet" and both insert —
+    //   the second hits `UNIQUE(journey_id)` and 500s instead of returning
+    //   `{created:false}` like the legacy synchronous path always did.
+    // - `photosRepo` (L2): `getPublicJourney`'s gallery read (JS15) reuses
+    //   `JourneyPhotosRepository.galleryRead` instead of carrying its own
+    //   byte-identical copy of the ORDER BY builder and the gallery query.
+    private readonly uow: UnitOfWork,
+    @InjectRepository(JourneyPhotos) private readonly photosRepo: JourneyPhotosRepository,
   ) {}
 
   async createOrUpdateJourneyShareLink(
@@ -58,45 +72,55 @@ export class JourneyShareService {
     // able to publish the journey or change which screens are shared.
     if (!(await this.journey.isOwner(journeyId, createdBy))) return null;
 
-    // JS1 — `JourneyShareTokensRepository.findFlagsByJourneyId`.
-    const existing = await this.shareTokensRepo.findFlagsByJourneyId(journeyId);
+    // L1 (rule 11/24) — the existing-link read and the insert below are
+    // separate awaits, so two concurrent first-creates for the same journey
+    // could both read "no link yet" and both try to insert: the loser hits
+    // `UNIQUE(journey_id)` and throws (a 500 over HTTP) instead of the
+    // legacy's `{created:false}` outcome. Wrapped whole, DB-only, same fix
+    // as M1: the mutex serializes the second caller's read behind the
+    // first's commit, so it finds the row the first just created and takes
+    // the UPDATE branch instead, exactly like the synchronous legacy path.
+    return this.uow.transactional(async () => {
+      // JS1 — `JourneyShareTokensRepository.findFlagsByJourneyId`.
+      const existing = await this.shareTokensRepo.findFlagsByJourneyId(journeyId);
 
-    if (existing) {
-      // An update only changes the flags it was actually given. Falling back to
-      // the create-time defaults here would silently re-publish a gallery or map
-      // the owner had switched off, at the unchanged token.
-      const share_timeline = permissions.share_timeline ?? !!existing.share_timeline;
-      const share_gallery = permissions.share_gallery ?? !!existing.share_gallery;
-      const share_map = permissions.share_map ?? !!existing.share_map;
-      const newest_first = permissions.newest_first ?? !!existing.newest_first;
-      // JS2 — the SERVICE resolves the final value of every flag (above); the
-      // repository writes exactly those four already-resolved booleans, a
-      // plain 4-column UPDATE, not a presence-sentinel one.
-      await this.shareTokensRepo.updateFlags(journeyId, {
+      if (existing) {
+        // An update only changes the flags it was actually given. Falling back to
+        // the create-time defaults here would silently re-publish a gallery or map
+        // the owner had switched off, at the unchanged token.
+        const share_timeline = permissions.share_timeline ?? !!existing.share_timeline;
+        const share_gallery = permissions.share_gallery ?? !!existing.share_gallery;
+        const share_map = permissions.share_map ?? !!existing.share_map;
+        const newest_first = permissions.newest_first ?? !!existing.newest_first;
+        // JS2 — the SERVICE resolves the final value of every flag (above); the
+        // repository writes exactly those four already-resolved booleans, a
+        // plain 4-column UPDATE, not a presence-sentinel one.
+        await this.shareTokensRepo.updateFlags(journeyId, {
+          share_timeline: share_timeline ? 1 : 0,
+          share_gallery: share_gallery ? 1 : 0,
+          share_map: share_map ? 1 : 0,
+          newest_first: newest_first ? 1 : 0,
+        });
+        return { token: existing.token, created: false };
+      }
+
+      const {
+        share_timeline = true,
+        share_gallery = true,
+        share_map = true,
+        newest_first = false,
+      } = permissions;
+
+      const token = crypto.randomBytes(24).toString('base64url');
+      // JS3.
+      await this.shareTokensRepo.insertLink(journeyId, token, createdBy, {
         share_timeline: share_timeline ? 1 : 0,
         share_gallery: share_gallery ? 1 : 0,
         share_map: share_map ? 1 : 0,
         newest_first: newest_first ? 1 : 0,
       });
-      return { token: existing.token, created: false };
-    }
-
-    const {
-      share_timeline = true,
-      share_gallery = true,
-      share_map = true,
-      newest_first = false,
-    } = permissions;
-
-    const token = crypto.randomBytes(24).toString('base64url');
-    // JS3.
-    await this.shareTokensRepo.insertLink(journeyId, token, createdBy, {
-      share_timeline: share_timeline ? 1 : 0,
-      share_gallery: share_gallery ? 1 : 0,
-      share_map: share_map ? 1 : 0,
-      newest_first: newest_first ? 1 : 0,
+      return { token, created: true };
     });
-    return { token, created: true };
   }
 
   /**
@@ -194,8 +218,10 @@ export class JourneyShareService {
       (photosByEntry[p.entry_id] ||= []).push(p);
     }
 
-    // JS15 (R1's second `GALLERY_CHRONOLOGICAL_ORDER` site).
-    const gallery = await this.shareTokensRepo.listGalleryForPublicJourney(row.journey_id);
+    // JS15 (R1's second `GALLERY_CHRONOLOGICAL_ORDER` site) — L2: reuses
+    // `JourneyPhotosRepository.galleryRead` (same `GALLERY_COLUMNS`, same
+    // ORDER BY) rather than a second, hand-kept copy of the same query.
+    const gallery = await this.photosRepo.galleryRead(row.journey_id);
 
     const enrichedEntries = entries
       .map(e => ({

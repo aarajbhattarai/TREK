@@ -60,6 +60,10 @@ import {
   createTestJourneysRepo, createTestJourneyContributorsRepo, createTestJourneyTripsRepo, createTestJourneyEntriesRepo,
   createTestJourneyPhotosRepo, createTestJourneyEntryPhotosRepo,
 } from '../../helpers/journey-repos';
+// M5d (task-5-review.md) — full-key parity tests for Task 2's read models,
+// ported from the reviewer's probe (scratchpad r3g/probe/zz-r3g-parity-probe.test.ts).
+import { todayUtc } from '@trek/shared';
+import { GALLERY_CHRONOLOGICAL_ORDER } from '../../../src/nest/journey/journey-gallery-order';
 
 let dbs: DatabaseService;
 let svc: JourneyDomainService;
@@ -701,6 +705,36 @@ describe('updateEntry', () => {
     expect((await svc.updateEntry(entry!.id, user.id, { title: 'Renamed' }))!.pros_cons).toEqual(prosCons);
   });
 
+  // L3 (task-5-review.md, user decision: KEEP HEAD's behaviour, deliberate
+  // deviation FOR THE USER) — base stored the raw non-array `tags`/non-object
+  // `pros_cons` value as-is and then 500ed on every later read that tried to
+  // JSON.parse it, leaving the entry permanently unreadable; base also 500s
+  // outright on a `false` bind. HEAD writes SQL NULL instead and answers 200,
+  // which is the narrowing that fixes that legacy defect. Pinned here so a
+  // future change to this branch is a deliberate decision, not an accident.
+  it('L3: a non-array tags / non-object pros_cons patch writes NULL and returns 200, rather than the raw value HEAD used to store (a legacy defect, not reproduced)', async () => {
+    const { user } = createUser(testDb);
+    const journey = createJourney(testDb, user.id);
+    const entry = createJourneyEntry(testDb, journey.id, user.id, { entry_date: '2026-03-01' });
+
+    const updated = await svc.updateEntry(entry.id, user.id, {
+      tags: 'not-an-array' as unknown as string[],
+      pros_cons: false as unknown as { pros: string[]; cons: string[] },
+    });
+
+    expect(updated).not.toBeNull();
+    expect(updated!.tags).toEqual([]);
+    expect(updated!.pros_cons).toBeNull();
+
+    const row = testDb.prepare('SELECT tags, pros_cons FROM journey_entries WHERE id = ?').get(entry.id) as { tags: string | null; pros_cons: string | null };
+    expect(row.tags).toBeNull();
+    expect(row.pros_cons).toBeNull();
+
+    // And the entry stays readable afterwards — no 500 on the next read,
+    // which is exactly the defect this deviation fixes.
+    expect(await svc.listEntries(journey.id, user.id)).not.toBeNull();
+  });
+
   /* An update that changes nothing takes its own early return out of the method. */
   it('decodes on the no-op update too', async () => {
     const { user } = createUser(testDb);
@@ -807,6 +841,37 @@ describe('updateEntry', () => {
     expect(updated!.title).toBe('Updated'); // legit field still applied
     expect(updated!.story).toBe('original'); // injection key dropped — no hash leaked into story
     expect(updated!.author_id).toBe(user.id); // mass-assignment blocked
+  });
+
+  // M3 (task-5-review.md) — a patch carrying ONLY non-allow-listed keys (no
+  // legit field at all, unlike JOURNEY-SVC-034b above which always mixes in
+  // a real `title`) used to be treated as "something was provided" because
+  // the old no-op check read `Object.values(data).some(v => v !== undefined)`
+  // off the RAW request body, not off the allow-listed `patch` presenceSet
+  // actually builds. Base: no write, no `updated_at` bump on either row, no
+  // broadcast. HEAD (before this fix): stamped both `updated_at`s and
+  // broadcast anyway.
+  it('JOURNEY-SVC-M3-01: a patch with only non-allow-listed keys is a no-op — no write, no updated_at bump, no broadcast', async () => {
+    const { user } = createUser(testDb);
+    const journey = createJourney(testDb, user.id);
+    const entry = createJourneyEntry(testDb, journey.id, user.id, { title: 'Original', entry_date: '2026-03-01' });
+
+    const updateFieldsSpy = vi.spyOn(entriesRepoDirect, 'updateFields');
+    const journeyUpdateSpy = vi.spyOn(journeysRepoDirect, 'updateFields');
+    const broadcastSpy = vi.spyOn(RealtimeService.prototype, 'broadcastToUser').mockImplementation(() => {});
+    try {
+      const updated = await svc.updateEntry(entry.id, user.id, { foo: 1 } as unknown as Parameters<typeof svc.updateEntry>[2]);
+
+      expect(updated).not.toBeNull();
+      expect(updated!.title).toBe('Original');
+      expect(updateFieldsSpy).not.toHaveBeenCalled();
+      expect(journeyUpdateSpy).not.toHaveBeenCalled();
+      expect(broadcastSpy).not.toHaveBeenCalled();
+    } finally {
+      updateFieldsSpy.mockRestore();
+      journeyUpdateSpy.mockRestore();
+      broadcastSpy.mockRestore();
+    }
   });
 });
 
@@ -1029,6 +1094,27 @@ describe('addContributor / updateContributorRole / removeContributor', () => {
     expect(result).toBe(false);
   });
 
+  // JG118 (task-5-review.md, user decision: pin, do NOT fix) — a PRE-EXISTING
+  // hole preserved on purpose (also present at legacy base): nothing here or
+  // in SQL stops the owner from writing `role = 'owner'` through this path —
+  // only the TypeScript parameter type discourages it, and that boundary is
+  // bypassable from a raw HTTP/MCP body. The hardening line (refuse unless
+  // `role === 'editor' || role === 'viewer'`) goes in the report FOR THE
+  // USER; this test pins today's behaviour so a future fix is a deliberate
+  // change, not a silent one.
+  it('JOURNEY-SVC-JG118-PIN: updateContributorRole still accepts role "owner" through the typed path (pre-existing, not fixed by this wave)', async () => {
+    const { user: owner } = createUser(testDb);
+    const { user: target } = createUser(testDb);
+    const journey = createJourney(testDb, owner.id);
+    addJourneyContributor(testDb, journey.id, target.id, 'editor');
+
+    const result = await svc.updateContributorRole(journey.id, owner.id, target.id, 'owner' as unknown as 'editor' | 'viewer');
+
+    expect(result).toBe(true);
+    const row = testDb.prepare('SELECT role FROM journey_contributors WHERE journey_id = ? AND user_id = ?').get(journey.id, target.id) as { role: string };
+    expect(row.role).toBe('owner');
+  });
+
   it('JOURNEY-SVC-050: owner can remove contributor', async () => {
     const { user: owner } = createUser(testDb);
     const { user: contrib } = createUser(testDb);
@@ -1056,6 +1142,109 @@ describe('addContributor / updateContributorRole / removeContributor', () => {
       'SELECT * FROM journey_contributors WHERE journey_id = ? AND user_id = ?'
     ).get(journey.id, owner.id);
     expect(row).toBeDefined();
+  });
+});
+
+// M5c (task-5-review.md) — R3's reset-column trap on `journey_contributors`'s
+// composite PK: the legacy `INSERT OR REPLACE` deletes and re-inserts on a
+// conflict, so `hide_skeletons` (not in the column list `upsertContributor`
+// writes on purpose) resets to its table default (0) — verified live by W2's
+// probe, but until now pinned only as report text (the ledger's "upsert SQL
+// pinned = the reference" claim did not hold). Mutation M10 (drop the
+// explicit `hide_skeletons: 0`) stayed green with no test to catch it.
+describe('R3 composite-PK writes — reset-on-conflict behaviour and rendered SQL (M5c)', () => {
+  it('JOURNEY-SVC-M5C-01: re-adding a contributor (upsertContributor merge branch) resets hide_skeletons to 0', async () => {
+    const { user: owner } = createUser(testDb);
+    const { user: contrib } = createUser(testDb);
+    const journey = createJourney(testDb, owner.id);
+
+    await svc.addContributor(journey.id, owner.id, contrib.id, 'editor');
+    await svc.updateJourneyPreferences(journey.id, contrib.id, { hide_skeletons: true });
+    expect(
+      (testDb.prepare('SELECT hide_skeletons FROM journey_contributors WHERE journey_id = ? AND user_id = ?').get(journey.id, contrib.id) as { hide_skeletons: number }).hide_skeletons,
+    ).toBe(1);
+
+    // Re-add (same target, a possibly different role) — the ON CONFLICT
+    // merge branch of upsertContributor, exercised through the real service.
+    await svc.addContributor(journey.id, owner.id, contrib.id, 'viewer');
+
+    const row = testDb
+      .prepare('SELECT role, hide_skeletons FROM journey_contributors WHERE journey_id = ? AND user_id = ?')
+      .get(journey.id, contrib.id) as { role: string; hide_skeletons: number };
+    expect(row.role).toBe('viewer');
+    expect(row.hide_skeletons).toBe(0);
+  });
+
+  it('JOURNEY-SVC-M5C-02: upsertContributor (merge-shaped) renders an ON CONFLICT over the (journey_id, user_id) composite PK', async () => {
+    const { user: owner } = createUser(testDb);
+    const { user: contrib } = createUser(testDb);
+    const journey = createJourney(testDb, owner.id);
+
+    const connection = contributorsRepoDirect.getEntityManager().getConnection();
+    const spy = vi.spyOn(connection, 'execute');
+    try {
+      await contributorsRepoDirect.upsertContributor(journey.id, contrib.id, 'editor', Date.now());
+      const insertSql = spy.mock.calls.map(([sql]) => sql).find((sql): sql is string => typeof sql === 'string' && /insert into/i.test(sql));
+      expect(insertSql).toBeDefined();
+      expect(insertSql).toMatch(/on conflict \(`journey_id`, ?`user_id`\)/i);
+      expect(insertSql).toMatch(/do update set/i);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it('JOURNEY-SVC-M5C-03: JourneyTripsRepository.insertIgnore (ignore-shaped) renders an ON CONFLICT ... DO NOTHING over (journey_id, trip_id)', async () => {
+    const { user } = createUser(testDb);
+    const journey = createJourney(testDb, user.id);
+    const trip = createTrip(testDb, user.id);
+
+    const connection = journeyTripsRepoDirect.getEntityManager().getConnection();
+    const spy = vi.spyOn(connection, 'execute');
+    try {
+      await journeyTripsRepoDirect.insertIgnore(journey.id, trip.id, Date.now());
+      const insertSql = spy.mock.calls.map(([sql]) => sql).find((sql): sql is string => typeof sql === 'string' && /insert into/i.test(sql));
+      expect(insertSql).toBeDefined();
+      expect(insertSql).toMatch(/on conflict \(`journey_id`, ?`trip_id`\)/i);
+      expect(insertSql).toMatch(/do nothing/i);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it('JOURNEY-SVC-M5C-04: JourneyEntryPhotosRepository.insertIgnore (ignore-shaped) renders an ON CONFLICT ... DO NOTHING over (entry_id, journey_photo_id)', async () => {
+    const { user } = createUser(testDb);
+    const journey = createJourney(testDb, user.id);
+    const entry = createJourneyEntry(testDb, journey.id, user.id);
+    const trekResult = testDb
+      .prepare('INSERT INTO trek_photos (provider, file_path, owner_id, created_at) VALUES (?, ?, ?, ?)')
+      .run('local', '/photos/m5c.jpg', user.id, Date.now());
+    const trekId = trekResult.lastInsertRowid as number;
+    const jpResult = testDb
+      .prepare('INSERT INTO journey_photos (journey_id, photo_id, sort_order, created_at) VALUES (?, ?, ?, ?)')
+      .run(journey.id, trekId, 0, Date.now());
+    const journeyPhotoId = jpResult.lastInsertRowid as number;
+
+    const connection = entryPhotosRepoDirect.getEntityManager().getConnection();
+    const spy = vi.spyOn(connection, 'execute');
+    try {
+      await entryPhotosRepoDirect.insertIgnore(entry.id, journeyPhotoId, 0, Date.now());
+      const insertSql = spy.mock.calls.map(([sql]) => sql).find((sql): sql is string => typeof sql === 'string' && /insert into/i.test(sql));
+      expect(insertSql).toBeDefined();
+      expect(insertSql).toMatch(/on conflict \(`entry_id`, ?`journey_photo_id`\)/i);
+      expect(insertSql).toMatch(/do nothing/i);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+});
+
+// M4 (task-5-review.md) — `JourneysRepository.listRecipientUserIds`'s
+// `if (ownerId !== undefined) ids.add(ownerId)` null arm had no test where
+// `findOwnerId` actually returns undefined (a missing journey), so the
+// branch went uncovered.
+describe('JourneysRepository.listRecipientUserIds — missing journey (M4)', () => {
+  it('returns an empty array for a journey id that does not exist (findOwnerId undefined arm)', async () => {
+    expect(await journeysRepoDirect.listRecipientUserIds(999_999)).toEqual([]);
   });
 });
 
@@ -1934,6 +2123,48 @@ describe('reconcileTripSkeletons', () => {
     await expect(svc.reconcileTripSkeletons(trip.id)).resolves.toBeUndefined();
     const anyEntry = testDb.prepare('SELECT COUNT(*) AS n FROM journey_entries').get() as { n: number };
     expect(anyEntry.n).toBe(0);
+  });
+
+  // -- M2 (task-5-review.md) — the sync engine's existence-check-then-insert
+  // used to be two separate awaits, so two concurrent callers could both see
+  // "not there yet" and both insert a skeleton for the same (place,
+  // assignment). Races two REAL `await Promise.all([...])` callers through
+  // the actual service on the shared connection, then asserts the base's
+  // outcome: exactly one skeleton per (place, assignment), never two.
+  describe('concurrency (M2) — exactly one skeleton per (place, assignment) under a race', () => {
+    it('two concurrent reconcileTripSkeletons(trip) calls after two new assignments produce exactly one skeleton per place, not two', async () => {
+      const { journey, trip } = await linkedJourneyTrip();
+      const days = daysOf(trip.id);
+      const placeA = createPlace(testDb, trip.id, { name: 'Race Place A' });
+      const placeB = createPlace(testDb, trip.id, { name: 'Race Place B' });
+      createDayAssignment(testDb, days[0].id, placeA.id);
+      createDayAssignment(testDb, days[1].id, placeB.id);
+
+      await Promise.all([
+        svc.reconcileTripSkeletons(trip.id),
+        svc.reconcileTripSkeletons(trip.id),
+      ]);
+
+      const countFor = (placeId: number) =>
+        (testDb.prepare('SELECT COUNT(*) AS n FROM journey_entries WHERE journey_id = ? AND source_place_id = ?').get(journey.id, placeId) as { n: number }).n;
+      expect(countFor(placeA.id)).toBe(1);
+      expect(countFor(placeB.id)).toBe(1);
+    });
+
+    it('onPlaceCreated racing reconcileTripSkeletons for the same new assignment produces exactly one skeleton, not two', async () => {
+      const { journey, trip } = await linkedJourneyTrip();
+      const days = daysOf(trip.id);
+      const place = createPlace(testDb, trip.id, { name: 'Race Place C' });
+      createDayAssignment(testDb, days[0].id, place.id);
+
+      await Promise.all([
+        svc.onPlaceCreated(trip.id, place.id),
+        svc.reconcileTripSkeletons(trip.id),
+      ]);
+
+      const count = (testDb.prepare('SELECT COUNT(*) AS n FROM journey_entries WHERE journey_id = ? AND source_place_id = ?').get(journey.id, place.id) as { n: number }).n;
+      expect(count).toBe(1);
+    });
   });
 });
 
@@ -2952,6 +3183,188 @@ describe('Plan 3g Task 1 — repository parity (full-key toEqual against the leg
     // The multi-day place appears twice — once per assignment — proving #2329's
     // one-skeleton-per-assignment shape survives the conversion at the read layer.
     expect(converted.filter((r) => r.id === multiDayPlace.id)).toHaveLength(2);
+  });
+});
+
+// M5d (task-5-review.md) — Task 2's read models had no full-key parity
+// tests: mutations dropping `lng` from JG15 (M19) and from JG19's gallery
+// read (M20) stayed green. Ported from the reviewer's own probe
+// (`scratchpad/r3g/probe/zz-r3g-parity-probe.test.ts`, which the review
+// names as the template), turned from console.log(OK/DIFF) reports into
+// real `toEqual` assertions against the legacy statement run raw on the
+// SAME seeded rows. One journey seeded with every tier this plan's read
+// models touch: dated + undated trips, a multi-day place, an unattached
+// gallery photo, ties on `sort_order`/`taken_at`, a video (excluded from
+// the "photograph per stop" read), a dismissed entry, and a second,
+// unrelated journey's photo (must never leak in).
+describe('Plan 3g Task 2 — repository parity (full-key toEqual against the legacy statement, M5d)', () => {
+  async function seedParityJourney() {
+    const { user: owner } = createUser(testDb);
+    const { user: member } = createUser(testDb);
+    const d = (n: number) => new Date(Date.now() - n * 86400000).toISOString().slice(0, 10);
+    const t1 = createTrip(testDb, owner.id, { title: 'T1', start_date: '2026-01-01', end_date: '2026-01-03' });
+    const t2 = createTrip(testDb, owner.id, { title: 'T2 undated' });
+    const t3 = createTrip(testDb, member.id, { title: 'T3 recent', start_date: d(10), end_date: d(5) });
+    const t4 = createTrip(testDb, owner.id, { title: 'T4 recent', start_date: d(12), end_date: d(2) });
+    testDb.prepare('INSERT INTO trip_members (trip_id, user_id) VALUES (?, ?)').run(t3.id, owner.id);
+    const days = testDb.prepare('SELECT id, date FROM days WHERE trip_id = ? ORDER BY date').all(t1.id) as { id: number }[];
+    const pA = createPlace(testDb, t1.id, { name: 'A' });
+    const pB = createPlace(testDb, t1.id, { name: 'B', lat: 1, lng: 2 });
+    createPlace(testDb, t1.id, { name: 'C unassigned' });
+    const pD = createPlace(testDb, t2.id, { name: 'D' });
+    testDb.prepare("UPDATE places SET route_geometry = '[[1,2],[3,4]]', route_color = '#f00' WHERE id IN (?, ?)").run(pA.id, pD.id);
+    createDayAssignment(testDb, days[1].id, pA.id);
+    createDayAssignment(testDb, days[0].id, pA.id);
+    createDayAssignment(testDb, days[0].id, pB.id);
+    createDayAssignment(testDb, days[2].id, pB.id, { order_index: 0 });
+    const place4 = createPlace(testDb, t4.id, { name: 'X' });
+    const d4 = createDay(testDb, t4.id, { date: d(3) });
+    createDayAssignment(testDb, d4.id, place4.id);
+    const journey = createJourney(testDb, owner.id);
+    for (const tid of [t1.id, t2.id]) {
+      testDb.prepare('INSERT INTO journey_trips (journey_id, trip_id, added_at) VALUES (?,?,1)').run(journey.id, tid);
+      await svc.syncTripPlaces(journey.id, tid, owner.id);
+    }
+    const now = Date.now();
+    const ins = testDb.prepare(
+      `INSERT INTO journey_entries (journey_id, author_id, type, title, story, entry_date, entry_time, location_name, location_lat, location_lng, sort_order, created_at, updated_at, stats_excluded, dismissed) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+    );
+    const e1 = Number(ins.run(journey.id, owner.id, 'entry', 'E1', 's', '2026-01-02', '10:00', 'Paris', 48.8, 2.3, 0, now, now, 0, 0).lastInsertRowid);
+    const e2 = Number(ins.run(journey.id, owner.id, 'entry', 'E2', null, '2026-01-02', '', null, null, null, 0, now, now, 1, 0).lastInsertRowid);
+    const e3 = Number(ins.run(journey.id, owner.id, 'entry', 'E3 dismissed', null, '2026-01-01', null, 'X', null, null, 1, now, now, 0, 1).lastInsertRowid);
+    const e4 = Number(ins.run(journey.id, owner.id, 'entry', 'E4', null, '2025-12-31', null, 'Paris', 1, 1, 5, now, now, 0, 0).lastInsertRowid);
+    const tp = testDb.prepare(
+      `INSERT INTO trek_photos (provider, asset_id, owner_id, file_path, thumbnail_path, width, height, media_type, taken_at, lat, lng) VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
+    );
+    const gp = testDb.prepare(`INSERT INTO journey_photos (journey_id, photo_id, caption, shared, sort_order, provider, asset_id, owner_id, created_at) VALUES (?,?,?,?,?,?,?,?,?)`);
+    const jep = testDb.prepare(`INSERT INTO journey_entry_photos (entry_id, journey_photo_id, sort_order, created_at) VALUES (?,?,?,?)`);
+    // taken_at/media_type combinations: null, empty string, two ties at the
+    // same taken_at (one video — excluded from listFirstPhotoPerEntry), and
+    // a null media_type (treated as 'image').
+    const specs: [string | null, string | null][] = [
+      [null, 'image'], ['', 'image'], ['2026-01-02T08:00:00', 'image'], ['2026-01-02T08:00:00', 'video'],
+      [null, 'image'], ['', null], [null, 'image'],
+    ];
+    const gids: number[] = [];
+    specs.forEach(([taken, mt], i) => {
+      const pid = Number(
+        tp.run('local', null, owner.id, `f${i}.jpg`, i % 2 ? null : `t${i}.jpg`, 100, i % 3 ? null : 50, mt ?? 'image', taken, i % 2 ? 1.5 : null, i % 2 ? 2.5 : null).lastInsertRowid,
+      );
+      gids.push(Number(gp.run(journey.id, pid, i % 2 ? `cap${i}` : null, i % 2, i % 3, null, null, null, 1700000000000 + (i % 4) * 1000).lastInsertRowid));
+    });
+    jep.run(e1, gids[0], 0, now); jep.run(e1, gids[1], 0, now); jep.run(e1, gids[2], 0, now);
+    jep.run(e2, gids[0], 1, now); jep.run(e2, gids[3], 0, now);
+    jep.run(e4, gids[5], 2, now); jep.run(e4, gids[4], 2, now);
+    jep.run(e3, gids[6], 0, now);
+    // An unrelated journey's photo — must never leak into this journey's reads.
+    const other = createJourney(testDb, member.id);
+    const opid = Number(tp.run('local', null, member.id, 'o.jpg', null, null, null, 'image', null, null, null).lastInsertRowid);
+    gp.run(other.id, opid, null, 0, 0, null, null, null, 1);
+
+    return { owner, member, journey };
+  }
+
+  const LEG = {
+    JG15: `SELECT gp.id, jep.entry_id, gp.photo_id, gp.caption, jep.sort_order, gp.shared, gp.created_at,
+      tp.provider, tp.asset_id, tp.owner_id, tp.file_path, tp.thumbnail_path, tp.width, tp.height,
+      tp.media_type, tp.duration_ms, tp.taken_at, tp.lat, tp.lng FROM journey_entry_photos jep
+      JOIN journey_photos gp ON gp.id  = jep.journey_photo_id
+      JOIN trek_photos    tp ON tp.id  = gp.photo_id WHERE jep.entry_id IN (SELECT id FROM journey_entries WHERE journey_id = ?) ORDER BY jep.sort_order ASC`,
+    JG19: `SELECT gp.id, gp.journey_id, gp.photo_id, gp.caption, gp.shared, gp.sort_order, gp.created_at,
+      tp.provider, tp.asset_id, tp.owner_id, tp.file_path, tp.thumbnail_path, tp.width, tp.height,
+      tp.media_type, tp.duration_ms, tp.taken_at, tp.lat, tp.lng FROM journey_photos gp JOIN trek_photos tp ON tp.id = gp.photo_id WHERE gp.journey_id = ? ${GALLERY_CHRONOLOGICAL_ORDER}`,
+    STATS_ENTRIES: `SELECT id, title, location_name, location_lat, location_lng, entry_date, source_trip_id, source_place_id, stats_excluded FROM journey_entries WHERE journey_id = ? AND dismissed = 0 ORDER BY entry_date ASC, sort_order ASC, id ASC`,
+    STATS_TRIPS: `SELECT t.id, t.title, t.start_date AS start, t.end_date AS end FROM journey_trips jt JOIN trips t ON t.id = jt.trip_id WHERE jt.journey_id = ? ORDER BY t.start_date IS NULL, t.start_date ASC, t.id ASC`,
+    STATS_PLACES: `SELECT p.id, p.name, p.lat, p.lng, p.trip_id AS tripId, MIN(d.date) AS day, MIN(da.order_index) AS ord FROM journey_trips jt JOIN places p ON p.trip_id = jt.trip_id LEFT JOIN day_assignments da ON da.place_id = p.id LEFT JOIN days d ON d.id = da.day_id WHERE jt.journey_id = ? GROUP BY p.id ORDER BY day IS NULL, day ASC, ord ASC, p.id ASC`,
+    STATS_PLACECOUNT: `SELECT COUNT(*) AS n FROM journey_trips jt JOIN places p ON p.trip_id = jt.trip_id WHERE jt.journey_id = ?`,
+    STATS_PHOTOCOUNT: `SELECT COUNT(*) AS n FROM journey_photos WHERE journey_id = ?`,
+    STATS_EPHOTOS: `SELECT jep.entry_id AS entryId, gp.photo_id AS photoId FROM journey_entry_photos jep JOIN journey_photos gp ON gp.id = jep.journey_photo_id JOIN trek_photos tp ON tp.id = gp.photo_id WHERE gp.journey_id = ? AND (tp.media_type IS NULL OR tp.media_type = 'image') ORDER BY jep.entry_id ASC, jep.sort_order ASC, gp.sort_order ASC, gp.id ASC`,
+    TRACKS: `SELECT DISTINCT p.id AS place_id, p.trip_id, p.name, p.route_color, p.route_geometry FROM journey_entries je JOIN places p ON p.trip_id = je.source_trip_id WHERE je.journey_id = ? AND je.source_trip_id IS NOT NULL AND p.route_geometry IS NOT NULL ORDER BY p.trip_id, p.id`,
+    SUGG: `SELECT t.id, t.title, t.start_date, t.end_date, t.cover_image, (SELECT COUNT(*) FROM places p INNER JOIN day_assignments da ON da.place_id = p.id WHERE p.trip_id = t.id) as place_count FROM trips t LEFT JOIN trip_members tm ON t.id = tm.trip_id AND tm.user_id = ? WHERE (t.user_id = ? OR tm.user_id = ?) AND t.end_date IS NOT NULL AND t.end_date >= ? AND t.end_date <= date('now') AND t.id NOT IN (SELECT trip_id FROM journey_trips) ORDER BY t.end_date DESC`,
+    PICKER: `SELECT t.id, t.title, t.start_date, t.end_date, t.cover_image, (SELECT COUNT(*) FROM places p INNER JOIN day_assignments da ON da.place_id = p.id WHERE p.trip_id = t.id) as place_count FROM trips t LEFT JOIN trip_members tm ON t.id = tm.trip_id AND tm.user_id = ? WHERE t.user_id = ? OR tm.user_id = ? ORDER BY t.start_date DESC`,
+  };
+
+  /** L8 — JG15's flat row order can differ from legacy on `sort_order` ties across entries (join order vs. the IN subquery); the only consumer groups by entry, so the parity contract is the GROUPED shape, not the flat row order. */
+  function groupedByEntry(rows: { entry_id: number; id: number }[]) {
+    const out: Record<number, number[]> = {};
+    for (const r of rows) (out[r.entry_id] ||= []).push(r.id);
+    return out;
+  }
+
+  it('JourneyEntryPhotosRepository.listForJourney (JG15) matches the legacy statement, grouped by entry (L8: flat order may tie-break differently)', async () => {
+    const { journey } = await seedParityJourney();
+    const legacy = testDb.prepare(LEG.JG15).all(journey.id) as { entry_id: number; id: number }[];
+    const converted = (await entryPhotosRepoDirect.listForJourney(journey.id)) as unknown as { entry_id: number; id: number }[];
+
+    expect(groupedByEntry(converted)).toEqual(groupedByEntry(legacy));
+    // Full-key equality still holds per row (only ORDER may tie-differ) — a
+    // sorted-by-id comparison catches a dropped/renamed column.
+    const sortById = (rows: { id: number }[]) => [...rows].sort((a, b) => a.id - b.id);
+    expect(sortById(converted)).toEqual(sortById(legacy));
+  });
+
+  it('JourneyPhotosRepository.galleryRead (JG19, GALLERY_CHRONOLOGICAL_ORDER) matches the legacy statement exactly, including row order', async () => {
+    const { journey } = await seedParityJourney();
+    const legacy = testDb.prepare(LEG.JG19).all(journey.id);
+    const converted = await photosRepoDirect.galleryRead(journey.id);
+    expect(converted).toEqual(legacy);
+  });
+
+  it('JourneyEntriesRepository.listStatsRows (JG64) matches the legacy statement', async () => {
+    const { journey } = await seedParityJourney();
+    const legacy = testDb.prepare(LEG.STATS_ENTRIES).all(journey.id);
+    expect(await entriesRepoDirect.listStatsRows(journey.id)).toEqual(legacy);
+  });
+
+  it('JourneyEntriesRepository.listStatsTrips (JG65) matches the legacy statement, undated trips sorted last', async () => {
+    const { journey } = await seedParityJourney();
+    const legacy = testDb.prepare(LEG.STATS_TRIPS).all(journey.id);
+    expect(await entriesRepoDirect.listStatsTrips(journey.id)).toEqual(legacy);
+  });
+
+  it('JourneyEntriesRepository.listStatsPlaces (JG66) matches the legacy statement, one row per place at its earliest day', async () => {
+    const { journey } = await seedParityJourney();
+    const legacy = testDb.prepare(LEG.STATS_PLACES).all(journey.id);
+    expect(await entriesRepoDirect.listStatsPlaces(journey.id)).toEqual(legacy);
+  });
+
+  it('JourneyEntriesRepository.countStatsPlaces (JG67) matches the legacy count', async () => {
+    const { journey } = await seedParityJourney();
+    const legacy = (testDb.prepare(LEG.STATS_PLACECOUNT).get(journey.id) as { n: number }).n;
+    expect(await entriesRepoDirect.countStatsPlaces(journey.id)).toBe(legacy);
+  });
+
+  it('JourneyPhotosRepository.countForJourney (JG68) matches the legacy count', async () => {
+    const { journey } = await seedParityJourney();
+    const legacy = (testDb.prepare(LEG.STATS_PHOTOCOUNT).get(journey.id) as { n: number }).n;
+    expect(await photosRepoDirect.countForJourney(journey.id)).toBe(legacy);
+  });
+
+  it('JourneyEntryPhotosRepository.listFirstPhotoPerEntry (JG69) matches the legacy statement, videos excluded', async () => {
+    const { journey } = await seedParityJourney();
+    const legacy = testDb.prepare(LEG.STATS_EPHOTOS).all(journey.id);
+    expect(await entryPhotosRepoDirect.listFirstPhotoPerEntry(journey.id)).toEqual(legacy);
+  });
+
+  it('JourneyEntriesRepository.listTracksSource (JG63) matches the legacy statement', async () => {
+    const { journey } = await seedParityJourney();
+    const legacy = testDb.prepare(LEG.TRACKS).all(journey.id);
+    expect(await entriesRepoDirect.listTracksSource(journey.id)).toEqual(legacy);
+  });
+
+  it('JourneyEntriesRepository.listSuggestedTrips (JG120) matches the legacy statement', async () => {
+    const { owner } = await seedParityJourney();
+    const since = new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0];
+    const legacy = testDb.prepare(LEG.SUGG).all(owner.id, owner.id, owner.id, since);
+    expect(await entriesRepoDirect.listSuggestedTrips(owner.id, since, todayUtc())).toEqual(legacy);
+  });
+
+  it('JourneyEntriesRepository.listUserTripsPicker (JG121) matches the legacy statement — owner and a member', async () => {
+    const { owner, member } = await seedParityJourney();
+    const legacyOwner = testDb.prepare(LEG.PICKER).all(owner.id, owner.id, owner.id);
+    const legacyMember = testDb.prepare(LEG.PICKER).all(member.id, member.id, member.id);
+    expect(await entriesRepoDirect.listUserTripsPicker(owner.id)).toEqual(legacyOwner);
+    expect(await entriesRepoDirect.listUserTripsPicker(member.id)).toEqual(legacyMember);
   });
 });
 

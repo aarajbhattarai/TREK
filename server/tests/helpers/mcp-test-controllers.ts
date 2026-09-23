@@ -125,6 +125,7 @@ import {
   createTestDaysRepo, createTestDayAssignmentsRepo, createTestDayNotesRepo, createTestTripsRepo,
   createTestTripMembersRepo, createTestPlaceRatingsRepo, createTestAssignmentParticipantsRepo,
   createTestGooglePlacePhotoMetaRepo, createTestPlacesRepo, createTestRoadtripViasRepo, createTestRoadtripDayTracksRepo,
+  createTestPlaceDetailsCacheRepo,
   createTestReservationsRepo,
   createTestReservationEndpointsRepo,
   createTestReservationTravelersRepo,
@@ -251,7 +252,7 @@ export async function createMcpTestRegistry(): Promise<McpRegistry> {
   // Exactly one instance, shared by maps, places and share: its stampede guard
   // and its on-disk set only work if all three readers see the same maps.
   const placePhotoCache = new PlacePhotoCacheService(dbService, makeStorageFixture('photos/google/').storage, await createTestGooglePlacePhotoMetaRepo(dbService.connection), await createTestPlacesRepo(dbService.connection));
-  const mapsService = new MapsService(dbService, placePhotoCache, appSettings, usersRepo);
+  const mapsService = new MapsService(placePhotoCache, appSettings, usersRepo, await createTestPlaceDetailsCacheRepo(dbService.connection), await createTestPlacesRepo(dbService.connection));
   const journeyDomain = new JourneyDomainService(
     dbService, realtimeService, new TrekPhotoRegistrationService(mcpOrm.repo(TrekPhotos), mcpOrm.repo(TripPhotos), await createTestJourneyPhotosRepo(dbService.connection), dbService), await createTestUnitOfWork(dbService.connection),
     // Plan 3g Task 1 — the constructor-ripple fix (R9): four journey-owned
@@ -472,11 +473,16 @@ export async function createMcpTestRegistry(): Promise<McpRegistry> {
         // Plan 3g Task 3 — the constructor-ripple fix: `JourneyShareTokensRepository`
         // (JS1-JS15) + the already-shared `JourneysRepository` (JS8/JS12).
         await createTestJourneyShareTokensRepo(dbService.connection), await createTestJourneysRepo(dbService.connection),
+        // task-5-fix-brief constructor-ripple: `UnitOfWork` (L1) + `JourneyPhotosRepository` (L2).
+        await createTestUnitOfWork(dbService.connection), await createTestJourneyPhotosRepo(dbService.connection),
       ), addonsService, authService, captureBackfill),
       new MemoriesMcp(immichService, synologyService, addonsService, mcpOrm.repo(PhotoProviders)),
       new NotificationsMcp(await makeNotificationsService(dbService, realtimeService), authService),
-      new AirtrailMcp(new AirtrailService(dbService, new AuditService(auditLogRepo, usersRepo), new AirtrailClient()), addonsService),
-      new ReservationImportMcp(new AirtrailImportService(dbService, realtimeService, reservationsService, new AirtrailClient(), new AirtrailService(dbService, new AuditService(auditLogRepo, usersRepo), new AirtrailClient())), dbService, authService, guards, addonsService),
+      new AirtrailMcp(new AirtrailService(usersRepo, new AuditService(auditLogRepo, usersRepo), new AirtrailClient()), addonsService),
+      new ReservationImportMcp(new AirtrailImportService(
+        await createTestReservationsRepo(dbService.connection), await createTestReservationEndpointsRepo(dbService.connection), await createTestDaysRepo(dbService.connection),
+        realtimeService, reservationsService, new AirtrailClient(), new AirtrailService(usersRepo, new AuditService(auditLogRepo, usersRepo), new AirtrailClient()),
+      ), dbService, authService, guards, addonsService),
       new SettingsMcp(new SettingsService(await createTestUnitOfWork(dbService.connection), appSettings, await createTestSettingsRepo(dbService.connection)), authService),
       new HelpMcp(), new AddonsMcp(addonsService),
       new TripWarningsMcp(new PluginHooks({ providersOf: () => [], invokeHook: async () => [] } as unknown as PluginRuntimeService), dbService),

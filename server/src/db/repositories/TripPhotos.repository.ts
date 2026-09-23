@@ -67,7 +67,8 @@ export class TripPhotosRepository extends TrekRepository<TripPhotos> {
   /**
    * PH10's non-journey half — `SELECT 1 FROM trip_photos WHERE photo_id = ?
    * LIMIT 1`, used by `TrekPhotoRegistrationService.deleteIfOrphan` alongside
-   * the still-raw `journey_photos` existence check (`// PH10 — Plan 3g`).
+   * the `journey_photos` half of the same orphan check, converted onto
+   * {@link JourneyPhotosRepository.existsForPhoto} (Plan 3g Task 4).
    */
   async existsForPhoto(photo_id: number): Promise<boolean> {
     const row = await this.findOne({ photo: photo_id }, { fields: ['id'] });

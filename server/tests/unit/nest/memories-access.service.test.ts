@@ -429,6 +429,31 @@ describe('canAccessUserPhoto', () => {
     expect(await access.canAccessUserPhoto(viewer.id, owner.id, '0', 'j-asset-viewer', 'immich')).toBe(true);
   });
 
+  // M5b (task-5-review.md) — mutation M24 dropped `tkp.owner_id = ?` from
+  // `JourneyPhotosRepository.findJourneyIdForAsset` (MA1) and every existing
+  // test stayed green, because none put the SAME asset_id/provider under a
+  // DIFFERENT trek_photos.owner_id than the `ownerUserId` the caller asks
+  // about. Here the asset really is in a journey the requester (the journey
+  // owner) could otherwise reach — but `ownerUserId` names someone who did
+  // NOT upload it, so MA1's owner scope must refuse to resolve it. A dropped
+  // scope would match on asset_id+provider alone, resolve the journey, and
+  // MA2's owner-or-contributor check would then grant access wrongly.
+  it('MEM-ACCESS-M5B: tripId "0" — same asset_id/provider exists in the journey but under a DIFFERENT owner_id (findJourneyIdForAsset owner scope)', async () => {
+    const { user: owner } = createUser(testDb);
+    const { user: realUploader } = createUser(testDb, { username: 'real-uploader-m5b' });
+    const { user: otherOwner } = createUser(testDb, { username: 'other-owner-m5b' });
+    const journeyId = makeJourney(owner.id);
+    const photoId = Number(testDb.prepare(
+      "INSERT INTO trek_photos (provider, asset_id, owner_id) VALUES ('immich', 'm5b-shared-asset', ?)"
+    ).run(realUploader.id).lastInsertRowid);
+    testDb.prepare('INSERT INTO journey_photos (journey_id, photo_id, created_at) VALUES (?, ?, 0)').run(journeyId, photoId);
+
+    // requestingUserId (owner) !== ownerUserId (otherOwner), so the trivial
+    // shortcut does not fire; MA1 must refuse because otherOwner never
+    // uploaded this asset.
+    expect(await access.canAccessUserPhoto(owner.id, otherOwner.id, '0', 'm5b-shared-asset', 'immich')).toBe(false);
+  });
+
   it('MEM-ACCESS-007: tripId "0" refuses someone with no journey link', async () => {
     const { user: owner } = createUser(testDb);
     const { user: stranger } = createUser(testDb, { username: 'stranger' });

@@ -81,6 +81,7 @@ import {
   createTestDaysRepo, createTestDayAssignmentsRepo, createTestDayNotesRepo, createTestTripsRepo,
   createTestTripMembersRepo, createTestPlaceRatingsRepo, createTestAssignmentParticipantsRepo,
   createTestGooglePlacePhotoMetaRepo, createTestPlacesRepo, createTestRoadtripViasRepo,
+  createTestPlaceDetailsCacheRepo,
   createTestReservationsRepo,
   createTestReservationEndpointsRepo,
   createTestReservationTravelersRepo,
@@ -253,7 +254,7 @@ export async function createPluginRpcHostFactory(dbs: DatabaseService): Promise<
   );
   // After it: deleting a place cancels the nights booked at it through this one.
   const places = new PlacesService(
-    dbs, permissions, realtime, new MapsService(dbs, photoCache, appSettings, usersRepo), queryHelpers, unsplash, photoCache, journey, generalStorage, accommodations, await createTestUnitOfWork(dbs.connection),
+    dbs, permissions, realtime, new MapsService(photoCache, appSettings, usersRepo, await createTestPlaceDetailsCacheRepo(dbs.connection), await createTestPlacesRepo(dbs.connection)), queryHelpers, unsplash, photoCache, journey, generalStorage, accommodations, await createTestUnitOfWork(dbs.connection),
     await createTestPlacesRepo(dbs.connection),
     await createTestTagsRepo(dbs.connection),
     await createTestPlaceRatingsRepo(dbs.connection),

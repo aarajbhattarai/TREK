@@ -1,7 +1,4 @@
-import type { Platform } from '@mikro-orm/core';
-import type { ExpressionBuilder } from 'kysely';
 import type { JourneyEntry } from '../../types';
-import { concatKysely, unixEpochToIsoKysely } from '../dialect/sql-functions';
 import type { JourneyShareTokens } from '../entities/JourneyShareTokens.entity';
 import { TrekRepository } from './_shared/trek-repository';
 
@@ -168,42 +165,18 @@ interface JourneyPublicKyselyDB {
   };
 }
 
-/**
- * R1's SECOND `GALLERY_CHRONOLOGICAL_ORDER` consumer (`getPublicJourney`'s
- * gallery read, JS15) — Task 0's worked example (`task-0-report.md`), pasted
- * verbatim against this file's own `JourneyPublicKyselyDB` shape rather than
- * re-derived. Fixed to the `gp`/`tp` alias contract `.selectFrom('journey_photos
- * as gp').innerJoin('trek_photos as tp', ...)` produces, same as the
- * `publicStayExists`/SQLF-070 precedent: a table's alias is a property of the
- * QUERY, not of the `DB` interface, so this is not generic over an arbitrary
- * caller `DB`/`TB`.
- */
-function galleryChronologicalOrderExpr(
-  platform: Platform,
-  eb: ExpressionBuilder<JourneyPublicKyselyDB & { gp: JourneyPublicKyselyDB['journey_photos']; tp: JourneyPublicKyselyDB['trek_photos'] }, 'gp' | 'tp'>,
-) {
-  return eb.fn.coalesce(
-    eb.fn<string | null>('nullif', [eb.ref('tp.taken_at'), eb.val('')]),
-    eb
-      .selectFrom('journey_entry_photos as jep')
-      .innerJoin('journey_entries as je', 'je.id', 'jep.entry_id')
-      .select((eb2) =>
-        eb2.fn
-          .min<string | null>(
-            concatKysely(
-              platform,
-              eb2,
-              { column: 'je.entry_date' },
-              { value: 'T' },
-              { expression: eb2.fn.coalesce(eb2.fn<string | null>('nullif', [eb2.ref('je.entry_time'), eb2.val('')]), eb2.val('00:00')) },
-            ),
-          )
-          .as('min_dt'),
-      )
-      .whereRef('jep.journey_photo_id', '=', 'gp.id'),
-    unixEpochToIsoKysely(platform, eb, 'gp.created_at'),
-  );
-}
+// L2 — `galleryChronologicalOrderExpr`/`listGalleryForPublicJourney` (JS15)
+// used to be a byte-identical duplicate of `JourneyPhotosRepository`'s own
+// `galleryChronologicalOrderExpr`/`galleryRead` (same `GALLERY_COLUMNS`
+// select list, same ORDER BY, differing only in which local `DB` interface
+// the builder is typed against). `JourneyShareService.getPublicJourney` now
+// calls `JourneyPhotosRepository.galleryRead` directly instead — one gallery
+// ORDER BY builder, one gallery query, per the whole-plan review (M5/L2).
+// `JourneyPublicGalleryRow` stays exported: it is still the accurate shape
+// of what that query returns (`GalleryPhoto`, the type `galleryRead` is
+// declared against, is a narrower public-API type missing `taken_at`/`lat`/
+// `lng`/`media_type`/`duration_ms`), and tests keep using it to type the
+// public gallery response.
 
 /**
  * `journey_share_tokens` — public share links (Plan 3g Task 3, R4). Six of
@@ -354,27 +327,6 @@ export class JourneyShareTokensRepository extends TrekRepository<JourneyShareTok
       .execute();
   }
 
-  /**
-   * JS15 — `getPublicJourney`'s gallery read (R1's second
-   * `GALLERY_CHRONOLOGICAL_ORDER` site). The select list is byte-for-byte
-   * `GALLERY_SELECT` (`journey-domain.service.ts`), hand-duplicated here the
-   * same way the legacy statement hand-duplicated it (that module const is
-   * not imported by `journey-share.service.ts` at HEAD either).
-   */
-  async listGalleryForPublicJourney(journeyId: number): Promise<JourneyPublicGalleryRow[]> {
-    const platform = this.getEntityManager().getPlatform();
-    return await this.kysely<JourneyPublicKyselyDB>()
-      .selectFrom('journey_photos as gp')
-      .innerJoin('trek_photos as tp', 'tp.id', 'gp.photo_id')
-      .select([
-        'gp.id', 'gp.journey_id', 'gp.photo_id', 'gp.caption', 'gp.shared', 'gp.sort_order', 'gp.created_at',
-        'tp.provider', 'tp.asset_id', 'tp.owner_id', 'tp.file_path', 'tp.thumbnail_path', 'tp.width', 'tp.height',
-        'tp.media_type', 'tp.duration_ms', 'tp.taken_at', 'tp.lat', 'tp.lng',
-      ])
-      .where('gp.journey_id', '=', journeyId)
-      .orderBy((eb) => galleryChronologicalOrderExpr(platform, eb), 'asc')
-      .orderBy('gp.sort_order', 'asc')
-      .orderBy('gp.id', 'asc')
-      .execute();
-  }
+  // JS15 — `getPublicJourney`'s gallery read moved to
+  // `JourneyPhotosRepository.galleryRead` (L2, above).
 }

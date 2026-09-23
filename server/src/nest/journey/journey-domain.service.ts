@@ -460,43 +460,51 @@ export class JourneyDomainService {
   // ── Sync engine ──────────────────────────────────────────────────────────
 
   async syncTripPlaces(journeyId: number, tripId: number, authorId: number) {
-    const places = await this.journeyTripsRepo.listAssignedPlacesForTrip(tripId);
+    // M2 (rule 11/24) — the existence read and the skeleton insert are
+    // separate awaits now that the sync engine is async, so two concurrent
+    // syncs for the same trip could both miss the same place and each insert
+    // a skeleton for it. Wrapped whole: every statement inside is DB-only
+    // (repository calls), and the connection mutex serializes a second
+    // caller's statements behind this one until it commits.
+    await this.uow.transactional(async () => {
+      const places = await this.journeyTripsRepo.listAssignedPlacesForTrip(tripId);
 
-    const now = this.ts();
-    const existing = await this.entriesRepo.listSourceKeysForTrip(journeyId, tripId);
-    const existingKeys = new Set(existing.map((e) => skeletonKey(e.source_place_id, e.source_assignment_id)));
+      const now = this.ts();
+      const existing = await this.entriesRepo.listSourceKeysForTrip(journeyId, tripId);
+      const existingKeys = new Set(existing.map((e) => skeletonKey(e.source_place_id, e.source_assignment_id)));
 
-    // Track next sort_order per date so synced skeletons get unique, sequential positions.
-    const dateMaxOrder = new Map<string, number>();
-    const maxRows = await this.entriesRepo.dateSortOrderMaxima(journeyId);
-    for (const row of maxRows) dateMaxOrder.set(row.entry_date, row.m);
+      // Track next sort_order per date so synced skeletons get unique, sequential positions.
+      const dateMaxOrder = new Map<string, number>();
+      const maxRows = await this.entriesRepo.dateSortOrderMaxima(journeyId);
+      for (const row of maxRows) dateMaxOrder.set(row.entry_date, row.m);
 
-    for (const place of places) {
-      const key = skeletonKey(place.id, place.assignment_id);
-      if (existingKeys.has(key)) continue;
-      existingKeys.add(key);
+      for (const place of places) {
+        const key = skeletonKey(place.id, place.assignment_id);
+        if (existingKeys.has(key)) continue;
+        existingKeys.add(key);
 
-      const entryDate = place.day_date || new Date().toISOString().split('T')[0];
-      const entryTime = place.assignment_time || place.place_time || null;
-      const nextOrder = (dateMaxOrder.get(entryDate) ?? -1) + 1;
-      dateMaxOrder.set(entryDate, nextOrder);
+        const entryDate = place.day_date || new Date().toISOString().split('T')[0];
+        const entryTime = place.assignment_time || place.place_time || null;
+        const nextOrder = (dateMaxOrder.get(entryDate) ?? -1) + 1;
+        dateMaxOrder.set(entryDate, nextOrder);
 
-      await this.insertSkeletonEntry({
-        journeyId,
-        tripId,
-        placeId: place.id,
-        assignmentId: place.assignment_id ?? null,
-        authorId,
-        title: place.name,
-        entryDate,
-        entryTime,
-        locationName: place.address || place.name,
-        lat: place.lat || null,
-        lng: place.lng || null,
-        sortOrder: nextOrder,
-        now,
-      });
-    }
+        await this.insertSkeletonEntry({
+          journeyId,
+          tripId,
+          placeId: place.id,
+          assignmentId: place.assignment_id ?? null,
+          authorId,
+          title: place.name,
+          entryDate,
+          entryTime,
+          locationName: place.address || place.name,
+          lat: place.lat || null,
+          lng: place.lng || null,
+          sortOrder: nextOrder,
+          now,
+        });
+      }
+    });
   }
 
   // called when a trip place is created
@@ -511,38 +519,44 @@ export class JourneyDomainService {
     if (!assignments.length) return; // not assigned to a day yet — skip
 
     const now = this.ts();
-    for (const journeyId of links) {
-      // JG40 — same text as JG2/JG54, resolved through `findOwnerId`. No
-      // undefined-guard here (matching the legacy statement's own unchecked
-      // `as { user_id: number }` cast): `journey_trips` cascades on the
-      // owning journey's delete, so a linked journey can never be missing.
-      const ownerId = (await this.journeysRepo.findOwnerId(journeyId)) as number;
+    // M2 (rule 11/24) — same fix as syncTripPlaces: the existence check
+    // (`existsForPlaceAssignment`) and the insert are separate awaits, so a
+    // concurrent reconcile racing this callback could both find nothing and
+    // both insert. Wrapped whole; DB-only, no broadcast inside.
+    await this.uow.transactional(async () => {
+      for (const journeyId of links) {
+        // JG40 — same text as JG2/JG54, resolved through `findOwnerId`. No
+        // undefined-guard here (matching the legacy statement's own unchecked
+        // `as { user_id: number }` cast): `journey_trips` cascades on the
+        // owning journey's delete, so a linked journey can never be missing.
+        const ownerId = (await this.journeysRepo.findOwnerId(journeyId)) as number;
 
-      for (const place of assignments) {
-        const already = await this.entriesRepo.existsForPlaceAssignment(journeyId, placeId, place.assignment_id ?? null);
-        if (already) continue;
+        for (const place of assignments) {
+          const already = await this.entriesRepo.existsForPlaceAssignment(journeyId, placeId, place.assignment_id ?? null);
+          if (already) continue;
 
-        const entryDate = place.day_date as string;
-        const maxOrder = await this.entriesRepo.maxSortOrderForDate(journeyId, entryDate);
-        const nextOrder = (maxOrder ?? -1) + 1;
+          const entryDate = place.day_date as string;
+          const maxOrder = await this.entriesRepo.maxSortOrderForDate(journeyId, entryDate);
+          const nextOrder = (maxOrder ?? -1) + 1;
 
-        await this.insertSkeletonEntry({
-          journeyId,
-          tripId,
-          placeId,
-          assignmentId: place.assignment_id ?? null,
-          authorId: ownerId,
-          title: place.name,
-          entryDate,
-          entryTime: place.assignment_time || place.place_time || null,
-          locationName: place.address || place.name,
-          lat: place.lat || null,
-          lng: place.lng || null,
-          sortOrder: nextOrder,
-          now,
-        });
+          await this.insertSkeletonEntry({
+            journeyId,
+            tripId,
+            placeId,
+            assignmentId: place.assignment_id ?? null,
+            authorId: ownerId,
+            title: place.name,
+            entryDate,
+            entryTime: place.assignment_time || place.place_time || null,
+            locationName: place.address || place.name,
+            lat: place.lat || null,
+            lng: place.lng || null,
+            sortOrder: nextOrder,
+            now,
+          });
+        }
       }
-    }
+    });
   }
 
   // called when a trip place is updated
@@ -695,137 +709,148 @@ export class JourneyDomainService {
 
     const now = this.ts();
     for (const journeyId of links) {
-      const ownerId = await this.journeysRepo.findOwnerId(journeyId);
-      if (ownerId === undefined) continue;
+      // M2 (rule 11/24) — the existence read (`listForTripReconcile`) and the
+      // upsert/delete writes below are separate awaits, so two concurrent
+      // reconciles for the same trip (or a reconcile racing `onPlaceCreated`)
+      // could both read "not there yet" and both insert. Wrapped whole per
+      // journey: every statement inside is DB-only, and the mutex serializes
+      // a second caller's statements behind this one until it commits — the
+      // broadcast (non-DB I/O) stays outside, after commit, per rule 24.
+      const changed = await this.uow.transactional(async () => {
+        const ownerId = await this.journeysRepo.findOwnerId(journeyId);
+        if (ownerId === undefined) return false;
 
-      let changed = false;
-      // JG55 — a wider column set than JG35 (`listSourceKeysForTrip`), not a dup.
-      const existing = await this.entriesRepo.listForTripReconcile(journeyId, tripId);
-      const existingByKey = new Map<string, (typeof existing)[number]>();
-      // Rows from before the assignment link existed, and any the backfill could not
-      // resolve. The place's earliest assignment claims one below, rather than the row
-      // being read as "no longer in the plan" and annotated out from under its author.
-      const unclaimed = new Map<number, (typeof existing)[number][]>();
-      for (const e of existing) {
-        if (e.source_place_id == null) continue;
-        if (e.source_assignment_id == null) {
-          const pool = unclaimed.get(e.source_place_id);
-          if (pool) pool.push(e);
-          else unclaimed.set(e.source_place_id, [e]);
-        } else {
-          existingByKey.set(skeletonKey(e.source_place_id, e.source_assignment_id), e);
-        }
-      }
-
-      // Next sort_order per date for freshly inserted skeletons.
-      const dateMaxOrder = new Map<string, number>();
-      const maxRows = await this.entriesRepo.dateSortOrderMaxima(journeyId);
-      for (const row of maxRows) dateMaxOrder.set(row.entry_date, row.m);
-
-      // 1) Upsert a skeleton for every current day assignment.
-      for (const place of places) {
-        const entryDate = place.day_date || new Date().toISOString().split('T')[0];
-        const entryTime = place.assignment_time || place.place_time || null;
-        const locationName = place.address || place.name;
-        const lat = place.lat || null;
-        const lng = place.lng || null;
-        let found = existingByKey.get(skeletonKey(place.id, place.assignment_id));
-
-        if (!found) {
-          // `places` is ordered by day, so the earliest assignment claims it.
-          const adopted = unclaimed.get(place.id)?.shift();
-          if (adopted) {
-            await this.entriesRepo.claimAssignment(adopted.id, place.assignment_id ?? null);
-            adopted.source_assignment_id = place.assignment_id ?? null;
-            existingByKey.set(skeletonKey(place.id, place.assignment_id), adopted);
-            found = adopted;
+        let didChange = false;
+        // JG55 — a wider column set than JG35 (`listSourceKeysForTrip`), not a dup.
+        const existing = await this.entriesRepo.listForTripReconcile(journeyId, tripId);
+        const existingByKey = new Map<string, (typeof existing)[number]>();
+        // Rows from before the assignment link existed, and any the backfill could not
+        // resolve. The place's earliest assignment claims one below, rather than the row
+        // being read as "no longer in the plan" and annotated out from under its author.
+        const unclaimed = new Map<number, (typeof existing)[number][]>();
+        for (const e of existing) {
+          if (e.source_place_id == null) continue;
+          if (e.source_assignment_id == null) {
+            const pool = unclaimed.get(e.source_place_id);
+            if (pool) pool.push(e);
+            else unclaimed.set(e.source_place_id, [e]);
+          } else {
+            existingByKey.set(skeletonKey(e.source_place_id, e.source_assignment_id), e);
           }
         }
 
-        if (!found) {
-          const nextOrder = (dateMaxOrder.get(entryDate) ?? -1) + 1;
-          dateMaxOrder.set(entryDate, nextOrder);
-          await this.insertSkeletonEntry({
-            journeyId,
-            tripId,
-            placeId: place.id,
-            assignmentId: place.assignment_id ?? null,
-            authorId: ownerId,
-            title: place.name,
-            entryDate,
-            entryTime,
-            locationName,
-            lat,
-            lng,
-            sortOrder: nextOrder,
-            now,
-          });
-          changed = true;
-        } else if (found.type === 'skeleton') {
-          // Skeletons follow the place's day/time/location snapshot.
-          const stale =
-            found.title !== place.name ||
-            found.entry_date !== entryDate ||
-            found.entry_time !== entryTime ||
-            found.location_name !== locationName ||
-            found.location_lat !== lat ||
-            found.location_lng !== lng;
-          if (stale) {
-            await this.entriesRepo.updateSkeletonSnapshot(found.id, {
+        // Next sort_order per date for freshly inserted skeletons.
+        const dateMaxOrder = new Map<string, number>();
+        const maxRows = await this.entriesRepo.dateSortOrderMaxima(journeyId);
+        for (const row of maxRows) dateMaxOrder.set(row.entry_date, row.m);
+
+        // 1) Upsert a skeleton for every current day assignment.
+        for (const place of places) {
+          const entryDate = place.day_date || new Date().toISOString().split('T')[0];
+          const entryTime = place.assignment_time || place.place_time || null;
+          const locationName = place.address || place.name;
+          const lat = place.lat || null;
+          const lng = place.lng || null;
+          let found = existingByKey.get(skeletonKey(place.id, place.assignment_id));
+
+          if (!found) {
+            // `places` is ordered by day, so the earliest assignment claims it.
+            const adopted = unclaimed.get(place.id)?.shift();
+            if (adopted) {
+              await this.entriesRepo.claimAssignment(adopted.id, place.assignment_id ?? null);
+              adopted.source_assignment_id = place.assignment_id ?? null;
+              existingByKey.set(skeletonKey(place.id, place.assignment_id), adopted);
+              found = adopted;
+            }
+          }
+
+          if (!found) {
+            const nextOrder = (dateMaxOrder.get(entryDate) ?? -1) + 1;
+            dateMaxOrder.set(entryDate, nextOrder);
+            await this.insertSkeletonEntry({
+              journeyId,
+              tripId,
+              placeId: place.id,
+              assignmentId: place.assignment_id ?? null,
+              authorId: ownerId,
               title: place.name,
-              entry_date: entryDate,
-              entry_time: entryTime,
-              location_name: locationName,
-              location_lat: lat,
-              location_lng: lng,
-              country_code: this.countryFor(lat, lng),
-              updated_at: now,
+              entryDate,
+              entryTime,
+              locationName,
+              lat,
+              lng,
+              sortOrder: nextOrder,
+              now,
             });
-            changed = true;
-          }
-        } else {
-          // Filled entries keep the user's date/story; only location follows the place.
-          const stale =
-            found.location_name !== locationName || found.location_lat !== lat || found.location_lng !== lng;
-          if (stale) {
-            await this.entriesRepo.updateLocationOnly(found.id, {
-              location_name: locationName,
-              location_lat: lat,
-              location_lng: lng,
-              country_code: this.countryFor(lat, lng),
-              updated_at: now,
-            });
-            changed = true;
+            didChange = true;
+          } else if (found.type === 'skeleton') {
+            // Skeletons follow the place's day/time/location snapshot.
+            const stale =
+              found.title !== place.name ||
+              found.entry_date !== entryDate ||
+              found.entry_time !== entryTime ||
+              found.location_name !== locationName ||
+              found.location_lat !== lat ||
+              found.location_lng !== lng;
+            if (stale) {
+              await this.entriesRepo.updateSkeletonSnapshot(found.id, {
+                title: place.name,
+                entry_date: entryDate,
+                entry_time: entryTime,
+                location_name: locationName,
+                location_lat: lat,
+                location_lng: lng,
+                country_code: this.countryFor(lat, lng),
+                updated_at: now,
+              });
+              didChange = true;
+            }
+          } else {
+            // Filled entries keep the user's date/story; only location follows the place.
+            const stale =
+              found.location_name !== locationName || found.location_lat !== lat || found.location_lng !== lng;
+            if (stale) {
+              await this.entriesRepo.updateLocationOnly(found.id, {
+                location_name: locationName,
+                location_lat: lat,
+                location_lng: lng,
+                country_code: this.countryFor(lat, lng),
+                updated_at: now,
+              });
+              didChange = true;
+            }
           }
         }
-      }
 
-      // 2) Drop skeletons whose assignment is gone. One still waiting to be claimed is
-      //    spared while its place is on the plan somewhere: having no link yet is not
-      //    the same as the stop having left.
-      for (const e of existing) {
-        if (e.source_place_id == null) continue;
-        if (e.source_assignment_id == null && assignedPlaceIds.has(e.source_place_id)) continue;
-        if (e.source_assignment_id != null && assignedKeys.has(skeletonKey(e.source_place_id, e.source_assignment_id))) {
-          continue;
-        }
-        if (e.type === 'skeleton') {
-          const hasPhotos = await this.entriesRepo.existsPhotoForEntry(e.id);
-          if (!hasPhotos && !e.story) {
-            await this.entriesRepo.deleteById(e.id);
-            changed = true;
+        // 2) Drop skeletons whose assignment is gone. One still waiting to be claimed is
+        //    spared while its place is on the plan somewhere: having no link yet is not
+        //    the same as the stop having left.
+        for (const e of existing) {
+          if (e.source_place_id == null) continue;
+          if (e.source_assignment_id == null && assignedPlaceIds.has(e.source_place_id)) continue;
+          if (e.source_assignment_id != null && assignedKeys.has(skeletonKey(e.source_place_id, e.source_assignment_id))) {
             continue;
           }
+          if (e.type === 'skeleton') {
+            const hasPhotos = await this.entriesRepo.existsPhotoForEntry(e.id);
+            if (!hasPhotos && !e.story) {
+              await this.entriesRepo.deleteById(e.id);
+              didChange = true;
+              continue;
+            }
+          }
+          const note = '\n\n> _Note: the original trip place was removed from the trip plan_';
+          const newStory = (e.story || '') + note;
+          await this.entriesRepo.detachAndAnnotate(e.id, {
+            type: e.type === 'skeleton' ? 'entry' : e.type,
+            story: newStory,
+            updated_at: now,
+          });
+          didChange = true;
         }
-        const note = '\n\n> _Note: the original trip place was removed from the trip plan_';
-        const newStory = (e.story || '') + note;
-        await this.entriesRepo.detachAndAnnotate(e.id, {
-          type: e.type === 'skeleton' ? 'entry' : e.type,
-          story: newStory,
-          updated_at: now,
-        });
-        changed = true;
-      }
+
+        return didChange;
+      });
 
       if (changed) await this.broadcastJourneyEvent(journeyId, 'journey:trip:synced', { tripId }, sid);
     }
@@ -1273,13 +1298,16 @@ export class JourneyDomainService {
       updated_at: [true, this.ts()],
     });
 
-    // The legacy no-op check (`fields.length === 0`) fires exactly when NO
-    // allow-listed key of `data` carries a defined value — the country
-    // recompute and the type-promotion push are both themselves gated on
-    // keys already in that same set (`location_lat`/`location_lng`/`story`),
-    // so "any key of `data` is defined" is the identical condition.
-    const anyFieldProvided = Object.values(data).some((v) => v !== undefined);
-    if (!anyFieldProvided) return decodeEntryRow(entry);
+    // M3 (parity) — the legacy no-op check (`fields.length === 0`) fires
+    // exactly when NO allow-listed key made it into the dynamic SET list.
+    // `Object.values(data).some(v => v !== undefined)` is the WRONG mirror
+    // of that: `data` is `journeyEntryUpdateRequestSchema`'s `z.looseObject`,
+    // so a PATCH body carrying only non-allow-listed keys (`{"foo":1}`) has
+    // a defined value there and this used to write and broadcast anyway.
+    // `patch` (built above by `presenceSet`) always carries `updated_at`
+    // unconditionally, so its length is 1 exactly when nothing allow-listed
+    // was provided — the same condition the legacy field-count check tested.
+    if (Object.keys(patch).length === 1) return decodeEntryRow(entry);
 
     await this.entriesRepo.updateFields(entryId, patch);
 

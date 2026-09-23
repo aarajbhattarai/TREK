@@ -428,8 +428,11 @@ export class JourneyEntriesRepository extends TrekRepository<JourneyEntries> {
   async listCachedCountriesForPlaceIds(placeIds: number[]): Promise<{ place_id: number; country_code: string | null }[]> {
     const out: { place_id: number; country_code: string | null }[] = [];
     for (let i = 0; i < placeIds.length; i += 400) {
+      // M4 (task-5-review.md) — `chunk` can never be empty here: the loop
+      // guard `i < placeIds.length` guarantees at least one element remains
+      // to slice, so a dead `if (!chunk.length) continue;` used to sit here
+      // (an uncovered branch the coverage gate flagged, worse than base).
       const chunk = placeIds.slice(i, i + 400);
-      if (!chunk.length) continue;
       const rows = await this.kysely<PlaceRegionsKyselyDB>()
         .selectFrom('place_regions')
         .select(['place_id', 'country_code'])

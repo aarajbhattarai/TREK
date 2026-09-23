@@ -81,6 +81,9 @@ beforeAll(async () => {
     // already-built JourneysRepository (JS8/JS12), same instance the domain
     // service above uses.
     await createTestJourneyShareTokensRepo(testDb), journeysRepo,
+    // task-5-fix-brief constructor-ripple: `UnitOfWork` (L1's transactional
+    // create/update) + `JourneyPhotosRepository` (L2's `galleryRead` reuse).
+    uow, await createTestJourneyPhotosRepo(testDb),
   );
 });
 
@@ -248,6 +251,32 @@ describe('createOrUpdateJourneyShareLink', () => {
     const r2 = await svc.createOrUpdateJourneyShareLink(j2.id, user.id, {});
 
     expect(r1.token).not.toBe(r2.token);
+  });
+
+  // L1 (task-5-review.md) — two concurrent FIRST creates for the same
+  // journey used to race the existing-link read against the insert: the
+  // loser hit `UNIQUE(journey_id)` and threw (a 500 over HTTP) instead of
+  // the base's `{created:false}`. Races two real `Promise.all` callers
+  // through the actual service on the shared connection.
+  it('JOURNEY-SHARE-L1: two concurrent first-creates for the same journey — one created, one {created:false}, no throw', async () => {
+    const { user } = createUser(testDb);
+    const journey = createJourney(testDb, user.id);
+
+    const [a, b] = await Promise.all([
+      svc.createOrUpdateJourneyShareLink(journey.id, user.id, { share_timeline: true }),
+      svc.createOrUpdateJourneyShareLink(journey.id, user.id, { share_timeline: false }),
+    ]);
+
+    const results = [a, b];
+    const created = results.filter((r) => r!.created);
+    const notCreated = results.filter((r) => !r!.created);
+    expect(created).toHaveLength(1);
+    expect(notCreated).toHaveLength(1);
+    // Both callers agree on the one token that exists.
+    expect(a!.token).toBe(b!.token);
+
+    const rows = testDb.prepare('SELECT COUNT(*) AS n FROM journey_share_tokens WHERE journey_id = ?').get(journey.id) as { n: number };
+    expect(rows.n).toBe(1);
   });
 });
 
@@ -438,6 +467,26 @@ describe('validateShareTokenForAsset', () => {
     // otherwise it could proxy any asset out of the owner's Immich/Synology
     // library (IDOR). Only assets actually in the journey may resolve.
     const result = await svc.validateShareTokenForAsset(token, 'nonexistent-asset');
+
+    expect(result).toBeNull();
+  });
+
+  // M5a (task-5-review.md) — JOURNEY-SHARE-015 above only tries an asset id
+  // that does not exist at all; it stays green even with `gp.journey_id = ?`
+  // dropped from `findAssetForValidation` (mutation M23), because the join
+  // still fails to find a row. This test uses an asset id that IS real and
+  // gallery-linked, just to a DIFFERENT journey, so a dropped scope check
+  // would resolve it (leaking a cross-journey asset through a valid token)
+  // where JOURNEY-SHARE-015 cannot catch that.
+  it('JOURNEY-SHARE-M5A: denies an asset that is real but belongs to a DIFFERENT journey (findAssetForValidation journey scope)', async () => {
+    const { user } = createUser(testDb);
+    const sharedJourney = createJourney(testDb, user.id);
+    const otherJourney = createJourney(testDb, user.id);
+    const otherEntry = createJourneyEntry(testDb, otherJourney.id, user.id);
+    insertJourneyPhoto(otherEntry.id, { assetId: 'other-journey-asset', ownerId: user.id });
+    const { token } = await svc.createOrUpdateJourneyShareLink(sharedJourney.id, user.id, {});
+
+    const result = await svc.validateShareTokenForAsset(token, 'other-journey-asset');
 
     expect(result).toBeNull();
   });
@@ -726,9 +775,14 @@ describe('getPublicJourney', () => {
 
 describe('parity — JourneyShareTokensRepository reads match the legacy statement run raw', () => {
   let shareTokensRepo: JourneyShareTokensRepository;
+  // L2 — JS15 moved to `JourneyPhotosRepository.galleryRead`; P06 below now
+  // pins that method's output against the legacy statement instead of the
+  // (now-deleted) `JourneyShareTokensRepository.listGalleryForPublicJourney`.
+  let journeyPhotosRepo: Awaited<ReturnType<typeof createTestJourneyPhotosRepo>>;
 
   beforeAll(async () => {
     shareTokensRepo = await createTestJourneyShareTokensRepo(testDb);
+    journeyPhotosRepo = await createTestJourneyPhotosRepo(testDb);
   });
 
   it('JOURNEY-SHARE-P01: findFlagsByJourneyId (JS1) matches the legacy 5-column read', async () => {
@@ -813,7 +867,7 @@ describe('parity — JourneyShareTokensRepository reads match the legacy stateme
     expect(await shareTokensRepo.listEntryPhotosForPublicJourney(journey.id)).toEqual(legacy);
   });
 
-  it('JOURNEY-SHARE-P06: listGalleryForPublicJourney (JS15, GALLERY_CHRONOLOGICAL_ORDER) matches the legacy statement — a photo linked to an entry AND an unattached gallery photo', async () => {
+  it('JOURNEY-SHARE-P06: JourneyPhotosRepository.galleryRead (JS15, GALLERY_CHRONOLOGICAL_ORDER) matches the legacy statement — a photo linked to an entry AND an unattached gallery photo', async () => {
     const { user } = createUser(testDb);
     const journey = createJourney(testDb, user.id);
     const entry = createJourneyEntry(testDb, journey.id, user.id, { type: 'entry', entry_date: '2026-01-01' });
@@ -838,7 +892,7 @@ describe('parity — JourneyShareTokensRepository reads match the legacy stateme
       `)
       .all(journey.id);
 
-    expect(await shareTokensRepo.listGalleryForPublicJourney(journey.id)).toEqual(legacy);
+    expect(await journeyPhotosRepo.galleryRead(journey.id)).toEqual(legacy);
     expect(legacy).toHaveLength(2);
   });
 

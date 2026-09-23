@@ -137,6 +137,20 @@ describe('journeyStats access', () => {
     expect(stats).not.toBeNull();
     expect(stats!.journeyId).toBe(journey.id);
   });
+
+  // M4 (task-5-review.md) — `JourneyEntriesRepository.countStatsPlaces`'s
+  // `row?.n ?? 0` null arm had no test exercising a journey with zero linked
+  // trips at all (worse coverage than base). `places` must still answer 0,
+  // not throw or leave the field undefined.
+  it('places is 0 for a journey with no trips at all (countStatsPlaces)', async () => {
+    const { user } = createUser(testDb);
+    const journey = createJourney(testDb, user.id);
+
+    const stats = await svc.journeyStats(journey.id, user.id);
+
+    expect(stats).not.toBeNull();
+    expect(stats!.places).toBe(0);
+  });
 });
 
 describe('journeyStats route', () => {
