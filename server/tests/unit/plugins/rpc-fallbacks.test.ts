@@ -93,19 +93,19 @@ describe('optional fields fall back rather than reaching the service as undefine
   });
 
   it('FALLBACK-003 a file link with no targets stores three nulls', async () => {
-    const { guards, db } = guardsFor();
+    const { guards } = guardsFor();
     const createFileLink = vi.fn(() => []);
     const files = { getFileById: vi.fn(() => ({})), findForeignLinkTarget: vi.fn(() => null), createFileLink } as never;
-    const host = new PluginRpcHost('p', ALL, makeDeps(), createTestPluginRegistry([new FilesRpc(files, realtime(), db, guards, {} as never)]));
+    const host = new PluginRpcHost('p', ALL, makeDeps(), createTestPluginRegistry([new FilesRpc(files, realtime(), {} as never, guards, {} as never)]));
     await host.dispatch(req('files.createLink', { tripId: 1, fileId: 2, opts: {} }), 42);
     expect(createFileLink).toHaveBeenCalledWith(2, { reservation_id: null, assignment_id: null, place_id: null });
   });
 
   it('FALLBACK-004 a file update tells an omitted link from one cleared with null', async () => {
-    const { guards, db } = guardsFor();
+    const { guards } = guardsFor();
     const updateFile = vi.fn((id: number) => ({ id }));
     const files = { getFileById: vi.fn(() => ({})), findForeignLinkTarget: vi.fn(() => null), updateFile } as never;
-    const host = new PluginRpcHost('p', ALL, makeDeps(), createTestPluginRegistry([new FilesRpc(files, realtime(), db, guards, {} as never)]));
+    const host = new PluginRpcHost('p', ALL, makeDeps(), createTestPluginRegistry([new FilesRpc(files, realtime(), {} as never, guards, {} as never)]));
     await host.dispatch(req('files.update', { tripId: 1, fileId: 2, input: { reservation_id: null, place_id: 7 } }), 42);
     expect(updateFile).toHaveBeenLastCalledWith(2, expect.anything(), expect.objectContaining({ reservation_id: null, place_id: '7' }));
   });

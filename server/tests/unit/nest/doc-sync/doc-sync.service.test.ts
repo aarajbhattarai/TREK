@@ -70,7 +70,7 @@ import type { AddonsService } from '../../../../src/nest/addons/addons.service';
 import type { FilesService } from '../../../../src/nest/files/files.service';
 import type { StorageService } from '../../../../src/nest/storage/storage.service';
 import type { RealtimeService } from '../../../../src/nest/realtime/realtime.service';
-import { createTestUnitOfWork } from '../../../helpers/test-uow';
+import { createTestUnitOfWork, createTestAppSettingsRepo } from '../../../helpers/test-uow';
 
 // ── Fixtures ─────────────────────────────────────────────────────────────────
 
@@ -328,7 +328,7 @@ describe('DocSyncService', () => {
       registry,
       storage,
       files,
-      new AllowedFileTypesService(dbs),
+      new AllowedFileTypesService(await createTestAppSettingsRepo(testDb)),
       realtime,
       addons as unknown as AddonsService,
       await createTestUnitOfWork(testDb),

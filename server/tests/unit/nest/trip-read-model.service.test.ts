@@ -92,6 +92,7 @@ import {
   createTestReservationDayPositionsRepo,
   createTestDayAccommodationsRepo,
 } from '../../helpers/test-uow';
+import { createTestTripFilesRepo, createTestFileLinksRepo, createTestBudgetItemsRepo } from '../../helpers/files-repos';
 
 // Real sibling services over the same in-memory DB — the aggregation runs the
 // actual SQL of every domain it fans out to, so a shape change downstream shows
@@ -160,7 +161,21 @@ const buildReadModel = async (tripsRepo: TripsRepository, roster: TripMembersSer
     new CollabService(dbs(), new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)), new RealtimeService(), notificationsStub(), makeStorageFixture('').storage, new RateLimitService(), await createTestUnitOfWork(dbs().connection)),
     placesSvc,
     new TodoService(dbs(), new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)), new RealtimeService(), await createTestUnitOfWork(dbs().connection)),
-    new FilesService(dbs(), new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)), new RealtimeService(), new EphemeralTokenService(), makeStorageFixture('').storage, (await sharedTestOrm(testDb)).em),
+    new FilesService(
+      dbs(),
+      new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)),
+      new RealtimeService(),
+      new EphemeralTokenService(),
+      makeStorageFixture('').storage,
+      (await sharedTestOrm(testDb)).em,
+      await createTestUnitOfWork(dbs().connection),
+      await createTestTripFilesRepo(dbs().connection),
+      await createTestFileLinksRepo(dbs().connection),
+      await createTestReservationsRepo(dbs().connection),
+      await createTestPlacesRepo(dbs().connection),
+      await createTestDayAssignmentsRepo(dbs().connection),
+      await createTestBudgetItemsRepo(dbs().connection),
+    ),
   );
 
 let svc: Awaited<ReturnType<typeof buildReadModel>>;

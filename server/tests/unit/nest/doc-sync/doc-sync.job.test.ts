@@ -42,7 +42,7 @@ import type { RealtimeService } from '../../../../src/nest/realtime/realtime.ser
 import { createTables } from '../../../../src/db/schema';
 import { runMigrations } from '../../../../src/db/migrations';
 import { createTrip, createUser } from '../../../helpers/factories';
-import { createTestUnitOfWork } from '../../../helpers/test-uow';
+import { createTestUnitOfWork, createTestAppSettingsRepo } from '../../../helpers/test-uow';
 
 const link = (id: number): LinkRow => ({ id, provider_id: 'paperless' } as LinkRow);
 
@@ -449,7 +449,7 @@ describe('DocSyncJob and a provider switched off in the admin panel', () => {
     config = new DocSyncConfigService(dbs, registry, await createTestUnitOfWork(testDb));
     service = new DocSyncService(
       dbs, config, registry,
-      {} as StorageService, {} as FilesService, new AllowedFileTypesService(dbs),
+      {} as StorageService, {} as FilesService, new AllowedFileTypesService(await createTestAppSettingsRepo(testDb)),
       { broadcast: vi.fn() } as unknown as RealtimeService,
       addons,
       await createTestUnitOfWork(testDb),

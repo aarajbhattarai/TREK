@@ -117,7 +117,7 @@ beforeAll(async () => {
   new UserCleanupService(new DatabaseService(testDb), new BudgetService(new DatabaseService(testDb), new PermissionsService(await createTestAppSettingsRepo(testDb), await createTestUnitOfWork(testDb)), new ExchangeRatesService(), new RealtimeService(), await createTestUnitOfWork(testDb)), await createTestUnitOfWork(testDb), await createTestUsersRepo(testDb)),
   mailerStub,
   new EphemeralTokenService(),
-  new AllowedFileTypesService(new DatabaseService(testDb)), await createTestUnitOfWork(testDb),
+  new AllowedFileTypesService(await createTestAppSettingsRepo(testDb)), await createTestUnitOfWork(testDb),
   await createTestAppSettingsRepo(testDb), await createTestUsersRepo(testDb),
   await createTestInviteTokensRepo(testDb), await createTestMcpTokensRepo(testDb), await createTestOauthTokensRepo(testDb),
   await createTestWebauthnCredentialsRepo(testDb), await createTestPasswordResetTokensRepo(testDb),

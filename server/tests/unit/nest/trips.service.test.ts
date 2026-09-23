@@ -101,6 +101,7 @@ import {
   createTestReservationDayPositionsRepo,
   createTestDayAccommodationsRepo,
 } from '../../helpers/test-uow';
+import { createTestTripFilesRepo, createTestFileLinksRepo, createTestBudgetItemsRepo } from '../../helpers/files-repos';
 
 // Real sibling services over the same in-memory DB — updateTrip's date-shift
 // resyncs and the summary/bundle aggregation run their actual SQL.
@@ -207,7 +208,21 @@ beforeAll(async () => {
   new CollabService(dbs(), new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)), new RealtimeService(), notificationsStub(), coversFx.storage, new RateLimitService(), await createTestUnitOfWork(dbs().connection)),
   placesSvc,
   new TodoService(dbs(), new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)), new RealtimeService(), await createTestUnitOfWork(dbs().connection)),
-  new FilesService(dbs(), new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)), new RealtimeService(), new EphemeralTokenService(), coversFx.storage, (await sharedTestOrm(testDb)).em),
+  new FilesService(
+    dbs(),
+    new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)),
+    new RealtimeService(),
+    new EphemeralTokenService(),
+    coversFx.storage,
+    (await sharedTestOrm(testDb)).em,
+    await createTestUnitOfWork(dbs().connection),
+    await createTestTripFilesRepo(dbs().connection),
+    await createTestFileLinksRepo(dbs().connection),
+    await createTestReservationsRepo(dbs().connection),
+    await createTestPlacesRepo(dbs().connection),
+    await createTestDayAssignmentsRepo(dbs().connection),
+    await createTestBudgetItemsRepo(dbs().connection),
+  ),
 );
 });
 
