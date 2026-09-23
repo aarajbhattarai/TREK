@@ -78,7 +78,7 @@ export class PlaceDetailsController {
 
     // The place must belong to a trip the caller can access — same gate as a read.
     const row = this.dbs.connection.prepare('SELECT trip_id FROM places WHERE id = ?').get(placeId) as { trip_id: number } | undefined;
-    if (!row || !this.dbs.canAccessTrip(row.trip_id, userId)) return { providers: [] };
+    if (!row || !(await this.dbs.canAccessTrip(row.trip_id, userId))) return { providers: [] };
 
     const ids = this.hooks.providersOf('placeDetailProvider');
     const results = await Promise.all(

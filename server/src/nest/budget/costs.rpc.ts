@@ -120,7 +120,7 @@ export class CostsRpc {
 
   /** Trip access plus budget_edit, with the cost-specific refusal message. */
   private async requireCostEdit(tripId: number, userId: number): Promise<void> {
-    if (!this.db.canAccessTrip(tripId, userId)) throw new ForbiddenResource(`no access to trip ${tripId}`);
+    if (!(await this.db.canAccessTrip(tripId, userId))) throw new ForbiddenResource(`no access to trip ${tripId}`);
     if (!(await this.guards.canEditAs(BUDGET_EDIT_ACTION, tripId, userId))) {
       throw new ForbiddenResource(`no permission to edit costs on trip ${tripId}`);
     }

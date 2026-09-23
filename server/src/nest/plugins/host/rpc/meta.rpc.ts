@@ -130,7 +130,7 @@ export class MetaRpc {
     const entityId = num(params.entityId, 'entityId');
     if (ctx.actingUserId === undefined) throw new ForbiddenResource('metadata requires an authenticated user context');
     const tripId = await this.entityTrip(entityType, entityId);
-    if (tripId === undefined || !this.db.canAccessTrip(tripId, ctx.actingUserId)) {
+    if (tripId === undefined || !(await this.db.canAccessTrip(tripId, ctx.actingUserId))) {
       throw new ForbiddenResource(`no access to ${entityType} ${entityId}`);
     }
     if (write && !(await this.guards.canEditAs(EDIT_ACTION[entityType], tripId, ctx.actingUserId))) {

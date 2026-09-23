@@ -851,7 +851,7 @@ export class CollectionsService {
       // (mirrors the canAccessTrip gate in saveFromTripPlace).
       if (
         body.source_place_id && body.source_trip_id &&
-        this.db.canAccessTrip(body.source_trip_id, userId) &&
+        (await this.db.canAccessTrip(body.source_trip_id, userId)) &&
         this.db.get('SELECT 1 FROM places WHERE id = ? AND trip_id = ?', body.source_place_id, body.source_trip_id)
       ) {
         await this.copyTripRatings(body.source_place_id, id, body.collection_id);
@@ -866,7 +866,7 @@ export class CollectionsService {
     userId: number, collectionId: number, tripId: number, placeId: number, force?: boolean, socketId?: string,
   ): Promise<CollectionSaveResult> {
     await this.assertCanEdit(userId, collectionId);
-    if (!this.db.canAccessTrip(tripId, userId)) httpError(404, 'Trip not found');
+    if (!(await this.db.canAccessTrip(tripId, userId))) httpError(404, 'Trip not found');
 
     const place = this.db.get<Record<string, unknown>>('SELECT * FROM places WHERE id = ? AND trip_id = ?', placeId, tripId);
     if (!place) httpError(404, 'Place not found');
@@ -904,7 +904,7 @@ export class CollectionsService {
    *  what this import exists for, so the dialog pre-selects them. */
   async importablePlaces(userId: number, collectionId: number, tripId: number): Promise<CollectionImportablesResponse> {
     await this.assertCanEdit(userId, collectionId);
-    if (!this.db.canAccessTrip(tripId, userId)) httpError(404, 'Trip not found');
+    if (!(await this.db.canAccessTrip(tripId, userId))) httpError(404, 'Trip not found');
 
     // One row per place: a place can sit on several days, so the day columns resolve to the
     // earliest one rather than multiplying the place out across its assignments.
@@ -947,7 +947,7 @@ export class CollectionsService {
     userId: number, collectionId: number, tripId: number, placeIds: number[], force?: boolean, socketId?: string,
   ): Promise<{ copied: number; skipped: { id: number; name: string }[] }> {
     await this.assertCanEdit(userId, collectionId);
-    if (!this.db.canAccessTrip(tripId, userId)) httpError(404, 'Trip not found');
+    if (!(await this.db.canAccessTrip(tripId, userId))) httpError(404, 'Trip not found');
 
     const ownerId = await this.ownerOf(collectionId);
     const insert = this.db.prepare(`
@@ -1164,7 +1164,7 @@ export class CollectionsService {
     status: CollectionStatus,
     socketId?: string,
   ): Promise<{ updated: number; places: number }> {
-    if (!this.db.canAccessTrip(tripId, userId)) httpError(404, 'Trip not found');
+    if (!(await this.db.canAccessTrip(tripId, userId))) httpError(404, 'Trip not found');
 
     const sources = placeIds.length
       ? this.db.all<{ id: number; name: string; lat: number | null; lng: number | null; google_place_id: string | null; google_ftid: string | null; osm_id: string | null }>(`
@@ -1238,7 +1238,7 @@ export class CollectionsService {
   // -------------------------------------------------------------------------
 
   async copyToTrip(userId: number, body: CollectionCopyToTripRequest): Promise<{ copied: number; skipped: { id: number; name: string }[] }> {
-    const trip = this.db.canAccessTrip(body.trip_id, userId);
+    const trip = await this.db.canAccessTrip(body.trip_id, userId);
     if (!trip) httpError(404, 'Trip not found');
     const role = this.db.get<{ role: string }>('SELECT role FROM users WHERE id = ?', userId)?.role ?? 'user';
     if (!(await this.permissions.checkPermission('place_edit', role, trip.user_id, userId, trip.user_id !== userId))) {

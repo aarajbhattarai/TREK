@@ -21,17 +21,17 @@ describe('canAccessTrip', () => {
     db.exec('DELETE FROM trip_members; DELETE FROM trips; DELETE FROM users;');
   });
 
-  it('returns the trip currency for the owner (#1543)', () => {
+  it('returns the trip currency for the owner (#1543)', async () => {
     const owner = seedUser('owner');
     const tripId = Number(
       db.prepare("INSERT INTO trips (user_id, title, currency) VALUES (?, 'Trip', 'RUB')")
         .run(owner).lastInsertRowid,
     );
 
-    expect(canAccessTrip(tripId, owner)).toMatchObject({ id: tripId, user_id: owner, currency: 'RUB' });
+    expect(await canAccessTrip(tripId, owner)).toMatchObject({ id: tripId, user_id: owner, currency: 'RUB' });
   });
 
-  it('returns the trip currency for a member too', () => {
+  it('returns the trip currency for a member too', async () => {
     const owner = seedUser('owner2');
     const member = seedUser('member2');
     const tripId = Number(
@@ -40,17 +40,17 @@ describe('canAccessTrip', () => {
     );
     db.prepare('INSERT INTO trip_members (trip_id, user_id) VALUES (?, ?)').run(tripId, member);
 
-    expect(canAccessTrip(tripId, member)).toMatchObject({ currency: 'JPY' });
+    expect(await canAccessTrip(tripId, member)).toMatchObject({ currency: 'JPY' });
   });
 
-  it('returns undefined for a user with no access', () => {
+  it('returns undefined for a user with no access', async () => {
     const owner = seedUser('owner3');
     const stranger = seedUser('stranger3');
     const tripId = Number(
       db.prepare("INSERT INTO trips (user_id, title) VALUES (?, 'Trip')").run(owner).lastInsertRowid,
     );
 
-    expect(canAccessTrip(tripId, stranger)).toBeUndefined();
+    expect(await canAccessTrip(tripId, stranger)).toBeUndefined();
   });
 });
 
@@ -59,7 +59,7 @@ describe('canAccessTrip', () => {
  * regression the block above pins was invisible to the suites that mock the db.
  */
 describe('the buildDbMock stand-in for canAccessTrip', () => {
-  it('hands back the trip currency, like the real one', () => {
+  it('hands back the trip currency, like the real one', async () => {
     const testDb = createTestDb();
     try {
       const owner = Number(
@@ -71,7 +71,7 @@ describe('the buildDbMock stand-in for canAccessTrip', () => {
           .run(owner).lastInsertRowid,
       );
 
-      expect(buildDbMock(testDb).canAccessTrip(tripId, owner)).toMatchObject({ id: tripId, currency: 'ISK' });
+      expect(await buildDbMock(testDb).canAccessTrip(tripId, owner)).toMatchObject({ id: tripId, currency: 'ISK' });
     } finally {
       testDb.close();
     }

@@ -58,7 +58,7 @@ export class FeedsMcp {
 
   /** Trip access first (404-equivalent), then share_manage, exactly as TripFeedTokenController is gated. */
   private async denyTripFeed(tripId: number, userId: number) {
-    if (!this.db.canAccessTrip(tripId, userId)) return noAccess();
+    if (!(await this.db.canAccessTrip(tripId, userId))) return noAccess();
     if (!(await this.guards.hasTripPermission('share_manage', tripId, userId))) return permissionDenied();
     return null;
   }

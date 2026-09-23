@@ -91,7 +91,7 @@ export class MapMarkersController {
     if (!pluginsEnabled()) return { markers: [] };
     const tripId = Number(tripIdRaw);
     const userId = req.user?.id;
-    if (!Number.isFinite(tripId) || userId == null || !this.dbs.canAccessTrip(tripId, userId)) return { markers: [] };
+    if (!Number.isFinite(tripId) || userId == null || !(await this.dbs.canAccessTrip(tripId, userId))) return { markers: [] };
 
     const ids = this.hooks.providersOf('mapMarkerProvider');
     const perProvider = await Promise.all(

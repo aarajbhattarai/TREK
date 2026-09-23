@@ -71,7 +71,7 @@ export class DaysService {
   ) {}
 
   async verifyTripAccess(tripId: string | number, userId: number) {
-    return this.db.canAccessTrip(Number(tripId), userId);
+    return await this.db.canAccessTrip(Number(tripId), userId);
   }
 
   async canEdit(trip: Trip, user: User): Promise<boolean> {

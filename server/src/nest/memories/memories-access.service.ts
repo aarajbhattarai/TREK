@@ -58,7 +58,7 @@ export class MemoriesAccessService {
     if (!sharedAsset) {
       return false;
     }
-    return !!this.db.canAccessTrip(tripId, requestingUserId);
+    return !!(await this.db.canAccessTrip(tripId, requestingUserId));
   }
 
   // ── Unified photo access check (trek_photos based) ──────────────────────
@@ -108,7 +108,7 @@ export class MemoriesAccessService {
   // ── Album link syncing ──────────────────────────────────────────────────
 
   async getAlbumIdFromLink(tripId: string, linkId: string, userId: number): Promise<ServiceResult<string>> {
-    const access = this.db.canAccessTrip(tripId, userId);
+    const access = await this.db.canAccessTrip(tripId, userId);
     if (!access) return fail('Trip not found or access denied', 404);
 
     try {
@@ -124,7 +124,7 @@ export class MemoriesAccessService {
   }
 
   async getAlbumLinkForSync(tripId: string, linkId: string, userId: number): Promise<ServiceResult<{ albumId: string; passphrase?: string }>> {
-    const access = this.db.canAccessTrip(tripId, userId);
+    const access = await this.db.canAccessTrip(tripId, userId);
     if (!access) return fail('Trip not found or access denied', 404);
 
     try {

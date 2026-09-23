@@ -43,12 +43,12 @@ export class DatabaseService {
   // must keep flowing through here.
 
   /** Trip visible to the user (owner or member); undefined when no access. */
-  canAccessTrip(tripId: number | string, userId: number): TripAccess | undefined {
-    return canAccessTrip(tripId, userId);
+  async canAccessTrip(tripId: number | string, userId: number): Promise<TripAccess | undefined> {
+    return await canAccessTrip(tripId, userId);
   }
 
-  isOwner(tripId: number | string, userId: number): boolean {
-    return isOwner(tripId, userId);
+  async isOwner(tripId: number | string, userId: number): Promise<boolean> {
+    return await isOwner(tripId, userId);
   }
 
   /**
@@ -62,7 +62,7 @@ export class DatabaseService {
    * id you name belongs to it. Runs on the connection rather than delegating to
    * db/database, because it has no legacy export to stay parity with.
    */
-  rosterUserIds(tripId: number | string): Set<number> {
+  async rosterUserIds(tripId: number | string): Promise<Set<number>> {
     const rows = this.all<{ user_id: number }>(
       'SELECT user_id FROM trip_members WHERE trip_id = ? UNION SELECT user_id FROM trips WHERE id = ?',
       tripId, tripId,
@@ -70,7 +70,7 @@ export class DatabaseService {
     return new Set(rows.map(r => r.user_id));
   }
 
-  getPlaceWithTags(placeId: number | string): PlaceWithTags | null {
-    return getPlaceWithTags(placeId);
+  async getPlaceWithTags(placeId: number | string): Promise<PlaceWithTags | null> {
+    return await getPlaceWithTags(placeId);
   }
 }

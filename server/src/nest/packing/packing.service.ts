@@ -65,7 +65,7 @@ export class PackingService {
   ) {}
 
   async verifyTripAccess(tripId: string | number, userId: number) {
-    return this.db.canAccessTrip(tripId, userId);
+    return await this.db.canAccessTrip(tripId, userId);
   }
 
   /** Mirrors the inline checkPermission('packing_edit', ...) the legacy route runs. */
@@ -586,7 +586,7 @@ export class PackingService {
    * grew up without it.
    */
   private async tripRosterIds(tripId: string | number): Promise<Set<number>> {
-    return this.db.rosterUserIds(tripId);
+    return await this.db.rosterUserIds(tripId);
   }
 
   async setBagMembers(tripId: string | number, bagId: string | number, userIds: number[]) {

@@ -70,7 +70,7 @@ export class TripOwnerGuard implements CanActivate {
     let trip = request[TRIP_REQUEST_KEY];
     if (!trip) {
       const tripId = Number((request.params as Record<string, string>)?.[meta?.param ?? 'tripId']);
-      trip = Number.isFinite(tripId) ? this.db.canAccessTrip(tripId, user.id) ?? undefined : undefined;
+      trip = Number.isFinite(tripId) ? (await this.db.canAccessTrip(tripId, user.id)) ?? undefined : undefined;
       if (trip) request[TRIP_REQUEST_KEY] = trip;
     }
     if (!trip) throw new HttpException({ error: 'Trip not found' }, 404);

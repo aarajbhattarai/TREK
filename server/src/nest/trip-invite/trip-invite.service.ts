@@ -37,7 +37,7 @@ export class TripInviteService {
   ) {}
 
   async verifyTripAccess(tripId: string, userId: number) {
-    return this.dbs.canAccessTrip(tripId, userId);
+    return await this.dbs.canAccessTrip(tripId, userId);
   }
 
   async canManage(trip: Trip, user: User): Promise<boolean> {

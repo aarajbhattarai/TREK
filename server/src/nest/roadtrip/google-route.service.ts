@@ -56,7 +56,7 @@ export class GoogleRouteService {
   }
 
   async import(tripId: number, userId: number, input: GoogleRouteImport, socketId?: string) {
-    const access = this.db.canAccessTrip(tripId, userId);
+    const access = await this.db.canAccessTrip(tripId, userId);
     if (!access) throw new HttpException({ error: 'Trip not found' }, 404);
     const role = this.db.get<{ role: string }>('SELECT role FROM users WHERE id = ?', userId)?.role ?? 'user';
     // `every` cannot await the permission check, so the same all-of test runs as

@@ -89,7 +89,7 @@ export class FilesService {
   ) {}
 
   async verifyTripAccess(tripId: string | number, userId: number) {
-    return this.db.canAccessTrip(tripId, userId);
+    return await this.db.canAccessTrip(tripId, userId);
   }
 
   async can(action: FilePermission, trip: Trip, user: User): Promise<boolean> {

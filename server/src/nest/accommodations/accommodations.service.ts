@@ -106,7 +106,7 @@ export class AccommodationsService {
   /** Owner or member, returning the trip. Takes a number too: the MCP tools pass
    *  the parsed id, the REST path the raw param. */
   async verifyTripAccess(tripId: string | number, userId: number) {
-    return this.dbs.canAccessTrip(Number(tripId), userId);
+    return await this.dbs.canAccessTrip(Number(tripId), userId);
   }
 
   async canEdit(trip: Trip, user: User): Promise<boolean> {
@@ -349,7 +349,7 @@ export class AccommodationsService {
     const place = this.db.get<{ stop_type: string | null }>('SELECT stop_type FROM places WHERE id = ?', placeId);
     if (!place || place.stop_type) return null;
     this.db.run("UPDATE places SET stop_type = 'hotel' WHERE id = ?", placeId);
-    return this.db.getPlaceWithTags(placeId);
+    return await this.db.getPlaceWithTags(placeId);
   }
 
   /**

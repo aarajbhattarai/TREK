@@ -168,7 +168,7 @@ export class DayTintsController {
     if (!pluginsEnabled()) return { tints: [] };
     const tripId = Number(tripIdRaw);
     const userId = req.user?.id;
-    if (!Number.isFinite(tripId) || userId == null || !this.dbs.canAccessTrip(tripId, userId)) return { tints: [] };
+    if (!Number.isFinite(tripId) || userId == null || !(await this.dbs.canAccessTrip(tripId, userId))) return { tints: [] };
 
     const ids = this.hooks.providersOf('dayTintProvider');
     if (ids.length === 0) return { tints: [] };

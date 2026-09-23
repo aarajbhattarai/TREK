@@ -31,7 +31,7 @@ export class DayBoundariesMcp {
     annotations: TOOL_ANNOTATIONS_READONLY, access: { group: 'trips', mode: 'read' }, when,
   })
   async list({ tripId }: { tripId: number }, ctx: McpContext) {
-    if (!this.db.canAccessTrip(tripId, ctx.userId)) return noAccess();
+    if (!(await this.db.canAccessTrip(tripId, ctx.userId))) return noAccess();
     return ok({ boundaries: await this.boundaries.list(tripId) });
   }
 
@@ -43,7 +43,7 @@ export class DayBoundariesMcp {
   })
   async save({ tripId, dayNumber, boundary }: { tripId: number; dayNumber: number; boundary: RoadtripDayBoundary | null }, ctx: McpContext) {
     if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
-    if (!this.db.canAccessTrip(tripId, ctx.userId)) return noAccess();
+    if (!(await this.db.canAccessTrip(tripId, ctx.userId))) return noAccess();
     if (!(await this.guards.hasTripPermission('day_edit', tripId, ctx.userId))) return permissionDenied();
     // A stop from another trip is refused by the service, with the reason.
     return answeringRefusals(async () => {

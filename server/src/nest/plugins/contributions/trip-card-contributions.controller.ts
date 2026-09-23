@@ -103,7 +103,9 @@ export class TripCardContributionsController {
       .map((s) => Number(s.trim()))
       .filter((n) => Number.isInteger(n) && n > 0)
       .slice(0, MAX_TRIP_IDS);
-    const accessible = [...new Set(requested)].filter((id) => this.dbs.canAccessTrip(id, userId));
+    const uniqueRequested = [...new Set(requested)];
+    const accessFlags = await Promise.all(uniqueRequested.map((id) => this.dbs.canAccessTrip(id, userId)));
+    const accessible = uniqueRequested.filter((_, i) => accessFlags[i]);
     if (accessible.length === 0) return { contributions: [] };
     const allowed = new Set(accessible);
 

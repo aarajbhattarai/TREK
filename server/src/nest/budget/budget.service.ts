@@ -117,7 +117,7 @@ export class BudgetService {
   ) {}
 
   async verifyTripAccess(tripId: string | number, userId: number) {
-    return this.db.canAccessTrip(tripId, userId);
+    return await this.db.canAccessTrip(tripId, userId);
   }
 
   async canEdit(trip: Trip, user: User): Promise<boolean> {
@@ -188,7 +188,7 @@ export class BudgetService {
   private async rosterMemberIds(tripId: string | number, userIds: number[]): Promise<Set<number>> {
     const unique = new Set(userIds);
     if (unique.size === 0) return new Set();
-    const roster = this.db.rosterUserIds(tripId);
+    const roster = await this.db.rosterUserIds(tripId);
     return new Set([...unique].filter(id => roster.has(id)));
   }
 
@@ -1276,7 +1276,7 @@ export class BudgetService {
    * an id it rejected exists at all.
    */
   private async settlementPartiesOnTrip(tripId: string | number, data: { from_user_id: number; to_user_id: number }): Promise<boolean> {
-    const roster = this.db.rosterUserIds(tripId);
+    const roster = await this.db.rosterUserIds(tripId);
     return roster.has(data.from_user_id) && roster.has(data.to_user_id);
   }
 

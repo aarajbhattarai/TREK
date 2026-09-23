@@ -69,7 +69,7 @@ export class AssignmentsService {
   ) {}
 
   async verifyTripAccess(tripId: string | number, userId: number) {
-    return this.dbs.canAccessTrip(Number(tripId), userId);
+    return await this.dbs.canAccessTrip(Number(tripId), userId);
   }
 
   async canEdit(trip: Trip, user: User): Promise<boolean> {
@@ -426,7 +426,7 @@ export class AssignmentsService {
    * the request would strand a trip whose membership changed underneath it.
    */
   async setParticipants(assignmentId: string | number, userIds: number[], tripId: string | number) {
-    const roster = this.dbs.rosterUserIds(tripId);
+    const roster = await this.dbs.rosterUserIds(tripId);
     const scoped = userIds.filter(id => roster.has(id));
     await this.uow.transactional(async () => {
       this.dbs.run('DELETE FROM assignment_participants WHERE assignment_id = ?', assignmentId);

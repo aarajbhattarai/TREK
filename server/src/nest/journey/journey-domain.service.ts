@@ -441,7 +441,7 @@ export class JourneyDomainService {
     // owner could pull an arbitrary trip's places + photos into their journey
     // (cross-tenant leak). Mirrors the trip-access gate every other trip-scoped
     // path enforces.
-    if (!this.db.canAccessTrip(tripId, userId)) return false;
+    if (!(await this.db.canAccessTrip(tripId, userId))) return false;
     // And a journey the caller can actually reach. Without this, any logged-in user
     // could link a trip of theirs into a stranger's journey and seed entries and
     // photos there — the MCP tool has always checked this, the REST route never did.

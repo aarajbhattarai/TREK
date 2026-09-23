@@ -36,7 +36,7 @@ export class PluginGuards {
     if (ctx.actingUserId === undefined) {
       throw new ForbiddenResource('trip reads require an authenticated user context');
     }
-    if (!this.db.canAccessTrip(tripId, ctx.actingUserId)) {
+    if (!(await this.db.canAccessTrip(tripId, ctx.actingUserId))) {
       throw new ForbiddenResource(`no access to trip ${tripId}`);
     }
     // The read runs only for a bound, membership-checked user, so hand the id through
@@ -57,7 +57,7 @@ export class PluginGuards {
 
   /** A write is allowed only if the acting user can access AND edit the trip. */
   async requireTripEdit(tripId: number, userId: number, action: string): Promise<void> {
-    if (!this.db.canAccessTrip(tripId, userId)) throw new ForbiddenResource(`no access to trip ${tripId}`);
+    if (!(await this.db.canAccessTrip(tripId, userId))) throw new ForbiddenResource(`no access to trip ${tripId}`);
     if (!(await this.canEditAs(action, tripId, userId))) throw new ForbiddenResource(`no permission to edit trip ${tripId}`);
   }
 
@@ -67,7 +67,7 @@ export class PluginGuards {
    * message the refusal carries.
    */
   async canEditAs(action: string, tripId: number, userId: number): Promise<boolean> {
-    const trip = this.db.canAccessTrip(tripId, userId);
+    const trip = await this.db.canAccessTrip(tripId, userId);
     if (!trip) return false;
     const user = this.db.prepare('SELECT role FROM users WHERE id = ?').get(userId) as { role?: string } | undefined;
     if (!user) return false;

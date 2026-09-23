@@ -143,7 +143,7 @@ interface PlaceWithTags extends Place {
   rating_count: number;
 }
 
-function getPlaceWithTags(placeId: number | string): PlaceWithTags | null {
+async function getPlaceWithTags(placeId: number | string): Promise<PlaceWithTags | null> {
   const place = db
     .prepare(
       `
@@ -202,7 +202,7 @@ interface TripAccess {
   currency: string | null;
 }
 
-function canAccessTrip(tripId: number | string, userId: number): TripAccess | undefined {
+async function canAccessTrip(tripId: number | string, userId: number): Promise<TripAccess | undefined> {
   return db
     .prepare(
       `
@@ -214,7 +214,7 @@ function canAccessTrip(tripId: number | string, userId: number): TripAccess | un
     .get(userId, tripId, userId) as TripAccess | undefined;
 }
 
-function isOwner(tripId: number | string, userId: number): boolean {
+async function isOwner(tripId: number | string, userId: number): Promise<boolean> {
   return !!db.prepare('SELECT id FROM trips WHERE id = ? AND user_id = ?').get(tripId, userId);
 }
 

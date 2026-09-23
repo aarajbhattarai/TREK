@@ -48,7 +48,7 @@ export class RoadtripMcp {
     when: roadtripAddonOn,
   })
   async listVias({ tripId, dayId }: { tripId: number; dayId?: number }, ctx: McpContext) {
-    if (!this.db.canAccessTrip(tripId, ctx.userId)) return noAccess();
+    if (!(await this.db.canAccessTrip(tripId, ctx.userId))) return noAccess();
     if (dayId != null) {
       if (!(await this.roadtrip.dayExists(dayId, tripId))) return noAccess();
       return ok({ vias: await this.roadtrip.listForDay(dayId) });
@@ -75,7 +75,7 @@ export class RoadtripMcp {
     ctx: McpContext,
   ) {
     if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
-    if (!this.db.canAccessTrip(tripId, ctx.userId)) return noAccess();
+    if (!(await this.db.canAccessTrip(tripId, ctx.userId))) return noAccess();
     if (!(await this.guards.hasTripPermission('day_edit', tripId, ctx.userId))) return permissionDenied();
     if (!(await this.roadtrip.dayExists(dayId, tripId))) return noAccess();
     const via = await this.roadtrip.create(dayId, { after_order_index, lat, lng });
@@ -117,7 +117,7 @@ export class RoadtripMcp {
     ctx: McpContext,
   ) {
     if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
-    if (!this.db.canAccessTrip(tripId, ctx.userId)) return noAccess();
+    if (!(await this.db.canAccessTrip(tripId, ctx.userId))) return noAccess();
     if (!(await this.guards.hasTripPermission('day_edit', tripId, ctx.userId))) return permissionDenied();
     if (!(await this.roadtrip.dayExists(dayId, tripId))) return noAccess();
     // The same check the REST route makes, in the same change: permission alone would let
@@ -156,7 +156,7 @@ export class RoadtripMcp {
     ctx: McpContext,
   ) {
     if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
-    if (!this.db.canAccessTrip(tripId, ctx.userId)) return noAccess();
+    if (!(await this.db.canAccessTrip(tripId, ctx.userId))) return noAccess();
     if (!(await this.guards.hasTripPermission('day_edit', tripId, ctx.userId))) return permissionDenied();
     if (!(await this.roadtrip.dayExists(dayId, tripId))) return noAccess();
     const next = await this.roadtrip.reanchor(dayId, { vias, remove });
@@ -178,7 +178,7 @@ export class RoadtripMcp {
   })
   async removeVia({ tripId, dayId, viaId }: { tripId: number; dayId: number; viaId: number }, ctx: McpContext) {
     if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
-    if (!this.db.canAccessTrip(tripId, ctx.userId)) return noAccess();
+    if (!(await this.db.canAccessTrip(tripId, ctx.userId))) return noAccess();
     if (!(await this.guards.hasTripPermission('day_edit', tripId, ctx.userId))) return permissionDenied();
     if (!(await this.roadtrip.dayExists(dayId, tripId))) return noAccess();
     if (!(await this.roadtrip.remove(viaId, dayId))) return noAccess();
@@ -194,7 +194,7 @@ export class RoadtripMcp {
   })
   async updateVia(input: RoadtripViaUpdateRequest & { tripId: number; dayId: number; viaId: number }, ctx: McpContext) {
     if (await this.auth.isDemoUser(ctx.userId)) return demoDenied();
-    if (!this.db.canAccessTrip(input.tripId, ctx.userId)) return noAccess();
+    if (!(await this.db.canAccessTrip(input.tripId, ctx.userId))) return noAccess();
     if (!(await this.guards.hasTripPermission('day_edit', input.tripId, ctx.userId))) return permissionDenied();
     if (!(await this.roadtrip.dayExists(input.dayId, input.tripId))) return noAccess();
     const via = await this.roadtrip.move(input.viaId, input.dayId, input.lat, input.lng, input.after_order_index);

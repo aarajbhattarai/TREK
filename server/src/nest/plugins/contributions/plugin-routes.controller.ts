@@ -45,7 +45,7 @@ export class PluginRoutesController {
     if (!pluginsEnabled()) return { route: null };
     const userId = req.user?.id;
     const tripId = Number(body?.tripId);
-    if (userId == null || !Number.isFinite(tripId) || !this.dbs.canAccessTrip(tripId, userId)) return { route: null };
+    if (userId == null || !Number.isFinite(tripId) || !(await this.dbs.canAccessTrip(tripId, userId))) return { route: null };
     if (!PROFILE_RE.test(profileId)) return { route: null };
     const waypoints = readWaypoints(body?.waypoints);
     if (!waypoints) return { route: null };

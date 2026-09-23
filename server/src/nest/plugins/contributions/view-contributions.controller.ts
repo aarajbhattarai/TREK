@@ -116,7 +116,7 @@ export class ViewContributionsController {
     if (!pluginsEnabled() || !VIEWS.has(view)) return { contributions: [] };
     const tripId = Number(tripIdRaw);
     const userId = req.user?.id;
-    if (!Number.isFinite(tripId) || userId == null || !this.dbs.canAccessTrip(tripId, userId)) return { contributions: [] };
+    if (!Number.isFinite(tripId) || userId == null || !(await this.dbs.canAccessTrip(tripId, userId))) return { contributions: [] };
 
     const ids = this.hooks.providersOf('tableContributor');
     const perProvider = await Promise.all(

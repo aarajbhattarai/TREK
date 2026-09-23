@@ -87,7 +87,7 @@ export class PdfSectionsController {
     if (!pluginsEnabled()) return { sections: [] };
     const tripId = Number(tripIdRaw);
     const userId = req.user?.id;
-    if (!Number.isFinite(tripId) || userId == null || !this.dbs.canAccessTrip(tripId, userId)) return { sections: [] };
+    if (!Number.isFinite(tripId) || userId == null || !(await this.dbs.canAccessTrip(tripId, userId))) return { sections: [] };
 
     const ids = this.hooks.providersOf('pdfSectionProvider');
     const perProvider = await Promise.all(

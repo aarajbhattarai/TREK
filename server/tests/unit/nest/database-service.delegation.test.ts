@@ -27,13 +27,13 @@ describe('DatabaseService (helper delegation)', () => {
     const { db } = await import('../../../src/db/database');
     const svc = new DatabaseService(db);
 
-    expect(svc.canAccessTrip(7, 8)).toEqual({ id: -1, user_id: -2, currency: 'XXX' });
+    expect(await svc.canAccessTrip(7, 8)).toEqual({ id: -1, user_id: -2, currency: 'XXX' });
     expect(canAccessTrip).toHaveBeenCalledWith(7, 8);
 
-    expect(svc.isOwner(7, 8)).toBe(true);
+    expect(await svc.isOwner(7, 8)).toBe(true);
     expect(isOwner).toHaveBeenCalledWith(7, 8);
 
-    expect(svc.getPlaceWithTags(9)).toBeNull();
+    expect(await svc.getPlaceWithTags(9)).toBeNull();
     expect(getPlaceWithTags).toHaveBeenCalledWith(9);
   });
 });

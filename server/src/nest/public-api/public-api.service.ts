@@ -62,7 +62,7 @@ export class PublicApiService {
    * trip ids exist.
    */
   async getTrip(tripId: number, userId: number, include: PublicApiInclude[], granted: readonly string[] = include): Promise<PublicApiTrip | null> {
-    if (!this.db.canAccessTrip(tripId, userId)) return null;
+    if (!(await this.db.canAccessTrip(tripId, userId))) return null;
     const row = this.db.get<TripRow>(
       `SELECT id, title, description, start_date, end_date, currency, is_archived, updated_at
          FROM trips WHERE id = ?`,

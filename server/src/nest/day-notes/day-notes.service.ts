@@ -34,7 +34,7 @@ export class DayNotesService {
   ) {}
 
   async verifyTripAccess(tripId: string | number, userId: number): Promise<TripAccess | undefined> {
-    return this.dbs.canAccessTrip(tripId, userId);
+    return await this.dbs.canAccessTrip(tripId, userId);
   }
 
   async canEdit(trip: TripAccess, user: User): Promise<boolean> {

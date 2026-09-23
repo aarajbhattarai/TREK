@@ -63,7 +63,7 @@ export class UnifiedMemoriesService {
 
 
   async listTripPhotos(tripId: string, userId: number): Promise<ServiceResult<any[]>> {
-    const access = this.db.canAccessTrip(tripId, userId);
+    const access = await this.db.canAccessTrip(tripId, userId);
     if (!access) {
       return fail('Trip not found or access denied', 404);
     }
@@ -95,7 +95,7 @@ export class UnifiedMemoriesService {
   }
 
   async listTripAlbumLinks(tripId: string, userId: number): Promise<ServiceResult<any[]>> {
-    const access = this.db.canAccessTrip(tripId, userId);
+    const access = await this.db.canAccessTrip(tripId, userId);
     if (!access) {
       return fail('Trip not found or access denied', 404);
     }
@@ -160,7 +160,7 @@ export class UnifiedMemoriesService {
     sid: string,
     albumLinkId?: string,
   ): Promise<ServiceResult<{ added: number; shared: boolean }>> {
-    const access = this.db.canAccessTrip(tripId, userId);
+    const access = await this.db.canAccessTrip(tripId, userId);
     if (!access) {
       return fail('Trip not found or access denied', 404);
     }
@@ -201,7 +201,7 @@ export class UnifiedMemoriesService {
     shared: boolean,
     sid?: string,
   ): Promise<ServiceResult<true>> {
-    const access = this.db.canAccessTrip(tripId, userId);
+    const access = await this.db.canAccessTrip(tripId, userId);
     if (!access) {
       return fail('Trip not found or access denied', 404);
     }
@@ -229,7 +229,7 @@ export class UnifiedMemoriesService {
     photoId: number,
     sid?: string,
   ): Promise<ServiceResult<true>> {
-    const access = this.db.canAccessTrip(tripId, userId);
+    const access = await this.db.canAccessTrip(tripId, userId);
     if (!access) {
       return fail('Trip not found or access denied', 404);
     }
@@ -255,7 +255,7 @@ export class UnifiedMemoriesService {
   // managing album links in trip
 
   async createTripAlbumLink(tripId: string, userId: number, providerRaw: unknown, albumIdRaw: unknown, albumNameRaw: unknown, passphrase?: string): Promise<ServiceResult<true>> {
-    const access = this.db.canAccessTrip(tripId, userId);
+    const access = await this.db.canAccessTrip(tripId, userId);
     if (!access) {
       return fail('Trip not found or access denied', 404);
     }
@@ -294,7 +294,7 @@ export class UnifiedMemoriesService {
   }
 
   async removeAlbumLink(tripId: string, linkId: string, userId: number): Promise<ServiceResult<true>> {
-    const access = this.db.canAccessTrip(tripId, userId);
+    const access = await this.db.canAccessTrip(tripId, userId);
     if (!access) {
       return fail('Trip not found or access denied', 404);
     }

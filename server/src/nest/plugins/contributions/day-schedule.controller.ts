@@ -91,7 +91,7 @@ export class DayScheduleController {
     if (!pluginsEnabled()) return { items: [] };
     const tripId = Number(tripIdRaw);
     const userId = req.user?.id;
-    if (!Number.isFinite(tripId) || userId == null || !this.dbs.canAccessTrip(tripId, userId)) return { items: [] };
+    if (!Number.isFinite(tripId) || userId == null || !(await this.dbs.canAccessTrip(tripId, userId))) return { items: [] };
 
     const ids = this.hooks.providersOf('dayScheduleProvider');
     if (ids.length === 0) return { items: [] };

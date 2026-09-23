@@ -124,7 +124,7 @@ export class BudgetMcp {
     // here instead would certify a split against a figure the row never receives.
     // Negative payers count with their sign (#2176) — the write path stores them.
     if (payers !== undefined) {
-      const roster = this.db.rosterUserIds(tripId);
+      const roster = await this.db.rosterUserIds(tripId);
       return sumCents(payers.filter(p => p.amount !== 0 && roster.has(p.user_id)).map(p => p.amount));
     }
     if (total_price !== undefined) return toCents(total_price);
@@ -146,7 +146,7 @@ export class BudgetMcp {
     totalCents: number,
     payers?: { user_id: number; amount: number }[],
   ): Promise<string | null> {
-    const roster = this.db.rosterUserIds(tripId);
+    const roster = await this.db.rosterUserIds(tripId);
     const strangers = members.filter(m => !roster.has(m.user_id)).map(m => m.user_id);
     if (strangers.length > 0) {
       return `members contains user IDs that are not on this trip: ${strangers.join(', ')}. Resolve them with list_trip_members.`;

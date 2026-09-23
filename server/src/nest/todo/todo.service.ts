@@ -27,7 +27,7 @@ export class TodoService {
   ) {}
 
   async verifyTripAccess(tripId: string | number, userId: number) {
-    return this.db.canAccessTrip(tripId, userId);
+    return await this.db.canAccessTrip(tripId, userId);
   }
 
   async canEdit(trip: Trip, user: User): Promise<boolean> {
@@ -142,7 +142,7 @@ export class TodoService {
         // members and reservations filter travellers. Dropped rather than
         // rejected: a copied trip carries assignee ids across before its members
         // exist, and a 400 would make the picker unusable there.
-        const roster = this.db.rosterUserIds(tripId);
+        const roster = await this.db.rosterUserIds(tripId);
         for (const uid of userIds) if (roster.has(uid)) insert.run(tripId, categoryName, uid);
       }
     });

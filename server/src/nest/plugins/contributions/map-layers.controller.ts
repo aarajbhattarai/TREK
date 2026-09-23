@@ -158,7 +158,7 @@ export class MapLayersController {
     if (!pluginsEnabled()) return { layers: [] };
     const tripId = Number(tripIdRaw);
     const userId = req.user?.id;
-    if (!Number.isFinite(tripId) || userId == null || !this.dbs.canAccessTrip(tripId, userId)) return { layers: [] };
+    if (!Number.isFinite(tripId) || userId == null || !(await this.dbs.canAccessTrip(tripId, userId))) return { layers: [] };
 
     const ids = this.hooks.providersOf('mapLayerProvider');
     const perProvider = await Promise.all(

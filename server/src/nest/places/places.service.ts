@@ -138,7 +138,7 @@ export class PlacesService {
   ) {}
 
   async verifyTripAccess(tripId: string, userId: number) {
-    return this.dbs.canAccessTrip(Number(tripId), userId);
+    return await this.dbs.canAccessTrip(Number(tripId), userId);
   }
 
   async canEdit(trip: Trip, user: User): Promise<boolean> {
@@ -160,7 +160,7 @@ export class PlacesService {
   private async tagsOnTrip(tripId: string | number, tagIds: number[]): Promise<number[]> {
     const unique = [...new Set(tagIds)];
     if (unique.length === 0) return [];
-    const roster = this.dbs.rosterUserIds(tripId);
+    const roster = await this.dbs.rosterUserIds(tripId);
     const owned = this.dbs.all<{ id: number; user_id: number }>(
       `SELECT id, user_id FROM tags WHERE id IN (${unique.map(() => '?').join(',')})`,
       ...unique,
@@ -283,7 +283,7 @@ export class PlacesService {
       }
     }
 
-    return this.dbs.getPlaceWithTags(Number(placeId))!;
+    return (await this.dbs.getPlaceWithTags(Number(placeId)))!;
   }
 
   // -------------------------------------------------------------------------
@@ -293,7 +293,7 @@ export class PlacesService {
   async get(tripId: string, placeId: string) {
     const placeCheck = this.dbs.get('SELECT id FROM places WHERE id = ? AND trip_id = ?', placeId, tripId);
     if (!placeCheck) return null;
-    return this.dbs.getPlaceWithTags(placeId);
+    return await this.dbs.getPlaceWithTags(placeId);
   }
 
   // -------------------------------------------------------------------------
@@ -329,7 +329,7 @@ export class PlacesService {
     // edit on and the row has moved on since, reject instead of clobbering. Absent
     // token => unconditional update (back-compat — old clients keep last-write-wins).
     if (ifMatch !== undefined && existingPlace.updated_at != null && String(existingPlace.updated_at) !== ifMatch) {
-      return { result: { conflict: true, server: this.dbs.getPlaceWithTags(placeId) } };
+      return { result: { conflict: true, server: await this.dbs.getPlaceWithTags(placeId) } };
     }
 
     const {
@@ -418,7 +418,7 @@ export class PlacesService {
       ? existingPlace.image_url
       : undefined;
 
-    return { result: this.dbs.getPlaceWithTags(placeId), reclaim };
+    return { result: await this.dbs.getPlaceWithTags(placeId), reclaim };
   }
 
   // -------------------------------------------------------------------------
@@ -803,7 +803,7 @@ export class PlacesService {
           continue;
         }
         const result = insertStmt.run(tripId, wp.name, wp.description, wp.lat, wp.lng, wp.routeGeometry || null);
-        const place = this.dbs.getPlaceWithTags(Number(result.lastInsertRowid))!;
+        const place = (await this.dbs.getPlaceWithTags(Number(result.lastInsertRowid)))!;
         created.push(place);
         trackInsertedInDedupSet({ name: wp.name, lat: wp.lat, lng: wp.lng }, dedup);
       }
@@ -916,7 +916,7 @@ export class PlacesService {
           parsedPlacemark.routeGeometry,
         );
 
-        const place = this.dbs.getPlaceWithTags(Number(result.lastInsertRowid))!;
+        const place = (await this.dbs.getPlaceWithTags(Number(result.lastInsertRowid)))!;
         created.push(place);
         trackInsertedInDedupSet({ name, lat: parsedPlacemark.lat, lng: parsedPlacemark.lng }, dedup);
         summary.createdCount += 1;
@@ -1147,7 +1147,7 @@ export class PlacesService {
           continue;
         }
         const result = insertStmt.run(tripId, p.name, p.lat, p.lng, p.notes, p.googleFtid);
-        const place = this.dbs.getPlaceWithTags(Number(result.lastInsertRowid))!;
+        const place = (await this.dbs.getPlaceWithTags(Number(result.lastInsertRowid)))!;
         created.push(place);
         trackInsertedInDedupSet(candidate, dedup);
       }
@@ -1387,7 +1387,7 @@ export class PlacesService {
           continue;
         }
         const result = insertStmt.run(tripId, p.name, p.lat, p.lng, p.address, p.notes);
-        const place = this.dbs.getPlaceWithTags(Number(result.lastInsertRowid))!;
+        const place = (await this.dbs.getPlaceWithTags(Number(result.lastInsertRowid)))!;
         created.push(place);
         trackInsertedInDedupSet({ name: p.name, lat: p.lat, lng: p.lng }, dedup);
       }
@@ -1475,7 +1475,7 @@ export class PlacesService {
 
     // Push the enriched row to every connected client (no socket exclusion: the
     // importer's own client should also receive the late update).
-    const updated = this.dbs.getPlaceWithTags(place.id);
+    const updated = await this.dbs.getPlaceWithTags(place.id);
     if (updated) this.realtime.broadcast(tripId, 'place:updated', { place: updated }, undefined);
   }
 
@@ -1546,7 +1546,7 @@ export class PlacesService {
             'UPDATE places SET address = COALESCE(address, ?), updated_at = CURRENT_TIMESTAMP WHERE id = ? AND trip_id = ?',
             address, place.id, tripId,
           );
-          const updated = this.dbs.getPlaceWithTags(place.id);
+          const updated = await this.dbs.getPlaceWithTags(place.id);
           if (updated) this.realtime.broadcast(tripId, 'place:updated', { place: updated }, undefined);
         } catch (err) {
           console.error(`[Places] address backfill failed for place ${place.id}:`, err instanceof Error ? err.message : err);
@@ -1589,7 +1589,7 @@ export class PlacesService {
       ON CONFLICT(place_id, user_id) DO UPDATE SET rating = excluded.rating
     `, placeId, userId, rating);
     }
-    return this.dbs.getPlaceWithTags(placeId);
+    return await this.dbs.getPlaceWithTags(placeId);
   }
 
   // Journey hooks — non-fatal, mirroring the route's try/catch wrappers.

@@ -168,11 +168,12 @@ export class TripsService {
   }
 
   async canAccessTrip(tripId: string | number, userId: number) {
-    return this.dbs.canAccessTrip(tripId, userId) as { user_id: number } | null | undefined;
+    const access = await this.dbs.canAccessTrip(tripId, userId);
+    return access as { user_id: number } | null | undefined;
   }
 
   async isOwner(tripId: string | number, userId: number): Promise<boolean> {
-    return this.dbs.isOwner(tripId, userId);
+    return await this.dbs.isOwner(tripId, userId);
   }
 
   async can(action: string, role: string, ownerId: number | null, userId: number, isMember: boolean): Promise<boolean> {

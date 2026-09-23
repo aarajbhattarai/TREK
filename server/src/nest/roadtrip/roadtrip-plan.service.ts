@@ -69,7 +69,7 @@ export class RoadtripPlanService {
   ) {}
 
   async context(tripId: number, userId: number) {
-    if (!this.db.canAccessTrip(tripId, userId)) throw new HttpException({ error: 'Trip not found' }, 404);
+    if (!(await this.db.canAccessTrip(tripId, userId))) throw new HttpException({ error: 'Trip not found' }, 404);
     const days = this.db.all<StoredDay>(
       'SELECT id, day_number, date, title, default_transport_mode FROM days WHERE trip_id = ? ORDER BY day_number',
       tripId,

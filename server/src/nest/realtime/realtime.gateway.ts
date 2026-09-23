@@ -170,7 +170,7 @@ export class RealtimeGateway
     if (!user || !message?.tripId) return undefined;
 
     const tripId = Number(message.tripId);
-    if (!this.db.canAccessTrip(tripId, user.id)) {
+    if (!(await this.db.canAccessTrip(tripId, user.id))) {
       return { type: 'error', message: 'Access denied' };
     }
     joinRoom(socket, tripId);

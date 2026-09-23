@@ -93,7 +93,7 @@ export function buildDbMock(testDb: Database.Database) {
     db: testDb,
     closeDb: () => {},
     reinitialize: () => {},
-    getPlaceWithTags: (placeId: number | string) => {
+    getPlaceWithTags: async (placeId: number | string) => {
       interface PlaceRow {
         id: number;
         category_id: number | null;
@@ -128,10 +128,10 @@ export function buildDbMock(testDb: Database.Database) {
         tags,
       };
     },
-    canAccessTrip: (tripId: number | string, userId: number) => {
+    canAccessTrip: async (tripId: number | string, userId: number) => {
       return testDb.prepare(CAN_ACCESS_TRIP_SQL).get(userId, tripId, userId);
     },
-    isOwner: (tripId: number | string, userId: number) => {
+    isOwner: async (tripId: number | string, userId: number) => {
       return !!testDb.prepare('SELECT id FROM trips WHERE id = ? AND user_id = ?').get(tripId, userId);
     },
     getRawConnection: () => testDb,

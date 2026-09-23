@@ -36,7 +36,7 @@ describe('DatabaseService (typed query helpers)', () => {
 describe('DatabaseService (trip-access helpers)', () => {
   const svc = new DatabaseService(db);
 
-  it('canAccessTrip / isOwner / getPlaceWithTags delegate to the shared helpers', () => {
+  it('canAccessTrip / isOwner / getPlaceWithTags delegate to the shared helpers', async () => {
     svc.run(
       "INSERT INTO users (id, username, email, password_hash) VALUES (900, 'dbsvc-owner', 'dbsvc-owner@x.test', 'x')"
     );
@@ -46,16 +46,16 @@ describe('DatabaseService (trip-access helpers)', () => {
     svc.run("INSERT INTO trips (id, user_id, title) VALUES (900, 900, 'DbSvc Trip')");
     svc.run("INSERT INTO trip_members (trip_id, user_id) VALUES (900, 901)");
 
-    expect(svc.canAccessTrip(900, 900)).toMatchObject({ id: 900, user_id: 900 });
-    expect(svc.canAccessTrip(900, 901)).toMatchObject({ id: 900 });
-    expect(svc.canAccessTrip(900, 999)).toBeUndefined();
+    expect(await svc.canAccessTrip(900, 900)).toMatchObject({ id: 900, user_id: 900 });
+    expect(await svc.canAccessTrip(900, 901)).toMatchObject({ id: 900 });
+    expect(await svc.canAccessTrip(900, 999)).toBeUndefined();
 
-    expect(svc.isOwner(900, 900)).toBe(true);
-    expect(svc.isOwner(900, 901)).toBe(false);
+    expect(await svc.isOwner(900, 900)).toBe(true);
+    expect(await svc.isOwner(900, 901)).toBe(false);
 
-    expect(svc.getPlaceWithTags(999999)).toBeNull();
+    expect(await svc.getPlaceWithTags(999999)).toBeNull();
     svc.run("INSERT INTO places (id, trip_id, name) VALUES (900, 900, 'DbSvc Place')");
-    expect(svc.getPlaceWithTags(900)).toMatchObject({
+    expect(await svc.getPlaceWithTags(900)).toMatchObject({
       id: 900,
       name: 'DbSvc Place',
       category: null,

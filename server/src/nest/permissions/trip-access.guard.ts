@@ -56,7 +56,7 @@ export class TripAccessGuard implements CanActivate {
     if (!user) throw new HttpException({ error: 'Unauthorized' }, 401);
 
     const tripId = Number((request.params as Record<string, string>)?.tripId);
-    const trip = Number.isFinite(tripId) ? this.db.canAccessTrip(tripId, user.id) : undefined;
+    const trip = Number.isFinite(tripId) ? await this.db.canAccessTrip(tripId, user.id) : undefined;
     // A trip the user may not see is reported as absent, never as forbidden: a 403
     // would confirm the id exists to someone who has no business knowing.
     if (!trip) throw new HttpException({ error: 'Trip not found' }, 404);

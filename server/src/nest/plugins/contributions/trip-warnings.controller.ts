@@ -40,7 +40,7 @@ export class TripWarningsController {
     if (!pluginsEnabled()) return { warnings: [] };
     const tripId = Number(tripIdRaw);
     const userId = req.user?.id;
-    if (!Number.isFinite(tripId) || userId == null || !this.dbs.canAccessTrip(tripId, userId)) return { warnings: [] };
+    if (!Number.isFinite(tripId) || userId == null || !(await this.dbs.canAccessTrip(tripId, userId))) return { warnings: [] };
 
     const ids = this.hooks.providersOf('warningProvider');
     const perProvider = await Promise.all(

@@ -61,7 +61,7 @@ export class DawarichTracksService {
     to?: string,
     offsetMinutes = 0,
   ): Promise<DawarichTrack | null> {
-    if (!this.db.canAccessTrip(tripId, userId)) return null;
+    if (!(await this.db.canAccessTrip(tripId, userId))) return null;
 
     const trip = this.db.get<{ start_date: string | null; end_date: string | null }>(
       'SELECT start_date, end_date FROM trips WHERE id = ?',

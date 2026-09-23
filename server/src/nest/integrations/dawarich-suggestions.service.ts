@@ -212,7 +212,7 @@ export class DawarichSuggestionsService {
     const tripId = body.tripId ?? row.trip_id;
     if (!tripId) throw new AcceptError('trip_required', 'A trip is required to create a place', 400);
 
-    const access = this.db.canAccessTrip(tripId, userId);
+    const access = await this.db.canAccessTrip(tripId, userId);
     if (!access) throw new AcceptError('not_found', 'Trip not found', 404);
 
     // Being on the roster is not permission to write to it. Every other way of
@@ -260,7 +260,7 @@ export class DawarichSuggestionsService {
       // Re-read, so what goes out on the wire carries the source: everyone else
       // on the trip should see the Dawarich mark on it too, not only the person
       // who accepted it.
-      return { created: this.db.getPlaceWithTags(id) ?? place, placeId: id, assignment: day };
+      return { created: (await this.db.getPlaceWithTags(id)) ?? place, placeId: id, assignment: day };
     });
 
     // Outside the transaction, because both reach past the database: a

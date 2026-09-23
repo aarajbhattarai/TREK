@@ -55,7 +55,7 @@ export class TripWarningsMcp {
   async getTripWarnings({ tripId }: { tripId: number }, ctx: McpContext): Promise<McpTextResult> {
     // Access first, so the answer to "may I look at this trip" does not depend on
     // whether an admin has the plugin system switched on.
-    if (!this.dbs.canAccessTrip(tripId, ctx.userId)) return noAccess();
+    if (!(await this.dbs.canAccessTrip(tripId, ctx.userId))) return noAccess();
     if (!pluginsEnabled()) return ok({ warnings: [] });
 
     const ids = this.hooks.providersOf('warningProvider');

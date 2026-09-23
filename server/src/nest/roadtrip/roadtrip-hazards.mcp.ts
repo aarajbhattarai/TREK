@@ -17,7 +17,7 @@ export class RoadtripHazardsMcp {
     annotations: TOOL_ANNOTATIONS_READONLY, access: { group: 'trips', mode: 'read' }, when: addonGate(ADDON_IDS.ROADTRIP),
   })
   async read({ tripId }: { tripId: number }, ctx: McpContext) {
-    if (!this.db.canAccessTrip(tripId, ctx.userId)) return noAccess();
+    if (!(await this.db.canAccessTrip(tripId, ctx.userId))) return noAccess();
     return ok(await this.hazards.read());
   }
 }
