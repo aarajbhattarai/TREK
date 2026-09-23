@@ -248,7 +248,7 @@ describe('Roadtrip MCP registration and search', () => {
     const mcp = new PlacesMcp(
       places as never,
       {} as never,
-      { canAccessTrip: () => true } as never,
+      { findAccessible: () => ({ id: 1, user_id: 1, currency: null }) } as never,
       auth as never,
       {} as never,
       {} as never,

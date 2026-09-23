@@ -1,4 +1,6 @@
+import path from 'node:path';
 import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@mikro-orm/nestjs';
 import { XMLValidator } from 'fast-xml-parser';
 import { TRACK_COLORS, placeMatchStrategies, type PlaceMatchCandidate } from '@trek/shared';
 import type { TrekWsPayload, TrekWsTripEventName } from '@trek/shared';
@@ -9,7 +11,8 @@ import type { PlaceWithTags } from '../database/database.service';
 import { PermissionsService } from '../permissions/permissions.service';
 import { MapsService, GOOGLE_SHORT_HOSTS, isGoogleMapsHost } from '../maps/maps.service';
 import { isDirectionsUrl, parseDirectionsUrl } from './maps-dir.helpers';
-import type { Place, User } from '../../types';
+import { toRowId } from '../common/row-id';
+import type { User } from '../../types';
 import { QueryHelpersService } from '../query-helpers/query-helpers.service';
 import { ratingAggregate } from '../common/rowShape';
 import { checkSsrf, safeFetchFollow, SsrfBlockedError } from '../../utils/ssrfGuard';
@@ -26,10 +29,20 @@ import type { GpxExportDay, GpxExportOptions, GpxExportPlace } from './gpx-expor
 import { UnsplashService } from '../unsplash/unsplash.service';
 import { PlacePhotoCacheService } from '../place-photos/place-photo-cache.service';
 import { type UpdateConflict, isUpdateConflict } from '../common/conflictResult';
-import { reclaimPlaceImage } from './place-image';
+import { isUploadedPlaceImage } from './place-image';
 import { JourneyDomainService } from '../journey/journey-domain.service';
 import { StorageService } from '../storage/storage.service';
 import { AccommodationsService } from '../accommodations/accommodations.service';
+import { Places } from '../../db/entities/Places.entity';
+import { Tags } from '../../db/entities/Tags.entity';
+import { PlaceRatings } from '../../db/entities/PlaceRatings.entity';
+import { TripMembers } from '../../db/entities/TripMembers.entity';
+import { DayAssignments } from '../../db/entities/DayAssignments.entity';
+import type { PlacesRepository, PlaceWithCategoryRow } from '../../db/repositories/Places.repository';
+import type { TagsRepository } from '../../db/repositories/Tags.repository';
+import type { PlaceRatingsRepository } from '../../db/repositories/PlaceRatings.repository';
+import type { TripMembersRepository } from '../../db/repositories/TripMembers.repository';
+import type { DayAssignmentsRepository } from '../../db/repositories/DayAssignments.repository';
 
 /** Rows a place delete took down with the nights booked there, for the caller to announce. */
 export interface CancelledStays {
@@ -64,7 +77,6 @@ import {
   type ListImportOptions,
   type ListImportResult,
   type PlaceImportResult,
-  type PlaceWithCategory,
 } from './places.helpers';
 
 type Trip = TripAccess;
@@ -135,6 +147,11 @@ export class PlacesService {
     private readonly storage: StorageService,
     private readonly accommodations: AccommodationsService,
     private readonly uow: UnitOfWork,
+    @InjectRepository(Places) private readonly placesRepo: PlacesRepository,
+    @InjectRepository(Tags) private readonly tagsRepo: TagsRepository,
+    @InjectRepository(PlaceRatings) private readonly placeRatingsRepo: PlaceRatingsRepository,
+    @InjectRepository(TripMembers) private readonly tripMembersRepo: TripMembersRepository,
+    @InjectRepository(DayAssignments) private readonly dayAssignmentsRepo: DayAssignmentsRepository,
   ) {}
 
   async verifyTripAccess(tripId: string, userId: number) {
@@ -160,16 +177,49 @@ export class PlacesService {
   private async tagsOnTrip(tripId: string | number, tagIds: number[]): Promise<number[]> {
     const unique = [...new Set(tagIds)];
     if (unique.length === 0) return [];
-    const roster = await this.dbs.rosterUserIds(tripId);
-    const owned = this.dbs.all<{ id: number; user_id: number }>(
-      `SELECT id, user_id FROM tags WHERE id IN (${unique.map(() => '?').join(',')})`,
-      ...unique,
-    );
+    // PL1 — `TripMembersRepository.rosterUserIds`, injected directly (not
+    // through `DatabaseService`), matching `AssignmentsService`'s AS28
+    // precedent: each domain converts its own `DatabaseService`-delegated
+    // callers as it lands.
+    const roster = await this.tripMembersRepo.rosterUserIds(tripId);
+    // PL2 — `SELECT id, user_id FROM tags WHERE id IN (${…})`.
+    const owned = await this.tagsRepo.findByIds(unique);
     return owned.filter(t => roster.has(t.user_id)).map(t => t.id);
   }
 
   broadcast<E extends TrekWsTripEventName>(tripId: string, event: E, payload: TrekWsPayload<E>, socketId: string | undefined): void {
     this.realtime.broadcast(tripId, event, payload, socketId);
+  }
+
+  /**
+   * Delete a custom place-image object once nothing references it any more
+   * (moved in from `place-image.ts`'s free function `reclaimPlaceImage`,
+   * option (a) — see `place-image.ts`'s own docstring for why that free
+   * function stays, unconverted, for `collections.service.ts`'s own call
+   * sites). A trip place and a collection saved-place can share the same
+   * uploaded file — save-to-collection and copy-to-trip copy `image_url` by
+   * reference — so this ref-counts across both tables before deleting.
+   *
+   * PI1 (`SELECT 1 FROM places WHERE image_url = ? LIMIT 1`) through
+   * `PlacesRepository.existsByImageUrl`; PI2 (`SELECT 1 FROM collection_places
+   * WHERE image_url = ? LIMIT 1`, Plan 3h's table) stays one raw statement,
+   * evaluated only when PI1 is false — reproducing the legacy `UNION ALL …
+   * LIMIT 1`'s short-circuit by evaluation order, the same pattern
+   * `PlacePhotoCacheService.isReferenced` uses for the same two tables
+   * (Plan 3c Task 1's PP6 ruling). `path.basename()` keeps the storage name
+   * confined to the 'places' category. Best-effort: never throws (central
+   * key validation rejects a hostile stored value; the catch swallows it
+   * exactly like the legacy unlink guard).
+   */
+  private async reclaimPlaceImage(url: string | null | undefined): Promise<void> {
+    if (!isUploadedPlaceImage(url)) return;
+    if (await this.placesRepo.existsByImageUrl(url)) return;
+    // Plan 3h: collection_places is not yet repository-backed.
+    const referenced = this.dbs.get('SELECT 1 FROM collection_places WHERE image_url = ? LIMIT 1', url);
+    if (referenced) return;
+    await this.storage.delete('places', path.basename(url)).catch(() => {
+      /* best-effort */
+    });
   }
 
   // -------------------------------------------------------------------------
@@ -180,43 +230,17 @@ export class PlacesService {
     tripId: string,
     filters: { search?: string; category?: string; tag?: string; assignment?: 'all' | 'unassigned' | 'assigned' },
   ) {
-    let query = `
-    SELECT DISTINCT p.*, c.name as category_name, c.color as category_color, c.icon as category_icon
-    FROM places p
-    LEFT JOIN categories c ON p.category_id = c.id
-    WHERE p.trip_id = ?
-  `;
-    const params: (string | number)[] = [tripId];
-
-    if (filters.search) {
-      // ESCAPE so a `%` or `_` the user typed matches literally instead of
-      // acting as a LIKE wildcard (a bare '%' used to return the whole trip).
-      query += " AND (p.name LIKE ? ESCAPE '\\' OR p.address LIKE ? ESCAPE '\\' OR p.description LIKE ? ESCAPE '\\')";
-      const searchParam = `%${escapeLikePattern(filters.search)}%`;
-      params.push(searchParam, searchParam, searchParam);
-    }
-
-    if (filters.category) {
-      query += ' AND p.category_id = ?';
-      params.push(filters.category);
-    }
-
-    if (filters.tag) {
-      query += ' AND p.id IN (SELECT place_id FROM place_tags WHERE tag_id = ?)';
-      params.push(filters.tag);
-    }
-
-    if (filters.assignment === 'unassigned') {
-      query += ` AND p.id NOT IN (SELECT da.place_id FROM day_assignments da JOIN days d ON da.day_id = d.id WHERE d.trip_id = ?)`;
-      params.push(tripId);
-    } else if (filters.assignment === 'assigned') {
-      query += ` AND p.id IN (SELECT da.place_id FROM day_assignments da JOIN days d ON da.day_id = d.id WHERE d.trip_id = ?)`;
-      params.push(tripId);
-    }
-
-    query += ' ORDER BY p.created_at DESC';
-
-    const places = this.dbs.prepare(query).all(...params) as PlaceWithCategory[];
+    // ESCAPE so a `%` or `_` the user typed matches literally instead of
+    // acting as a LIKE wildcard (a bare '%' used to return the whole trip) —
+    // the coercion stays here (the service), the repository binds the
+    // already-built pattern verbatim (PL3).
+    const searchPattern = filters.search ? `%${escapeLikePattern(filters.search)}%` : undefined;
+    const places: PlaceWithCategoryRow[] = await this.placesRepo.listForTrip(tripId, {
+      searchPattern,
+      category: filters.category,
+      tag: filters.tag,
+      assignment: filters.assignment,
+    });
 
     const placeIds = places.map(p => p.id);
     const tagsByPlaceId = await this.queryHelpers.loadTagsByPlaceIds(placeIds);
@@ -248,42 +272,51 @@ export class PlacesService {
       transport_mode, route_geometry, route_color, stop_type, fill_percent, tags = [],
     } = body;
 
-    const result = this.dbs.run(`
-    INSERT INTO places (trip_id, name, description, lat, lng, address, category_id, price, currency,
-      place_time, end_time,
-      duration_minutes, notes, image_url, google_place_id, google_ftid, osm_id, amap_poi_id, website, phone, transport_mode,
-      route_geometry, route_color, stop_type, fill_percent)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `,
-      // lat/lng/price/duration_minutes use an explicit undefined check, not `||`:
-      // 0 is a legitimate value for all four (Null Island, a free entry, a
-      // drive-by stop) and the falsy coercion silently threw it away.
-      //
-      // The hour stays the default for a place created without one, which is what it
-      // has always been and what the column itself declares. The road trip rail reads
-      // the value as a stay, and a stop added from the corridor search brings its own
-      // figure — ten minutes for fuel, twenty for a rest area — so the kinds that would
-      // be misread as an hour never take the default in the first place.
-      tripId, name, description || null, lat ?? null, lng ?? null, address || null,
-      category_id || null, price ?? null, currency || null,
-      place_time || null, end_time || null, duration_minutes ?? 60, notes || null, image_url || null,
-      google_place_id || null, google_ftid || null, osm_id || null, amap_poi_id || null, website || null, phone || null, transport_mode || 'walking',
-      route_geometry || null, route_color || null, stop_type || null,
-      // `?? null` rather than `|| null`, the same reason lat/lng have it: the column is a
-      // percentage and the falsy check would be a silent floor.
-      fill_percent ?? null,
-    );
+    // PL4 — the 25-column INSERT. lat/lng/price/duration_minutes/fill_percent
+    // use an explicit undefined check, not `||`: 0 is a legitimate value for
+    // all five (Null Island, a free entry, a drive-by stop, an empty tank)
+    // and the falsy coercion silently threw it away.
+    //
+    // The hour stays the default for a place created without one, which is what it
+    // has always been and what the column itself declares. The road trip rail reads
+    // the value as a stay, and a stop added from the corridor search brings its own
+    // figure — ten minutes for fuel, twenty for a rest area — so the kinds that would
+    // be misread as an hour never take the default in the first place.
+    const placeId = await this.placesRepo.insertPlace({
+      trip_id: Number(tripId),
+      name,
+      description: description || null,
+      lat: lat ?? null,
+      lng: lng ?? null,
+      address: address || null,
+      category_id: category_id || null,
+      price: price ?? null,
+      currency: currency || null,
+      place_time: place_time || null,
+      end_time: end_time || null,
+      duration_minutes: duration_minutes ?? 60,
+      notes: notes || null,
+      image_url: image_url || null,
+      google_place_id: google_place_id || null,
+      google_ftid: google_ftid || null,
+      osm_id: osm_id || null,
+      amap_poi_id: amap_poi_id || null,
+      website: website || null,
+      phone: phone || null,
+      transport_mode: transport_mode || 'walking',
+      route_geometry: route_geometry || null,
+      route_color: route_color || null,
+      stop_type: stop_type || null,
+      fill_percent: fill_percent ?? null,
+    });
 
-    const placeId = result.lastInsertRowid;
-
+    // PL5 — `INSERT OR IGNORE INTO place_tags (place_id, tag_id) VALUES (?, ?)`.
     if (tags && tags.length > 0) {
-      const insertTag = this.dbs.prepare('INSERT OR IGNORE INTO place_tags (place_id, tag_id) VALUES (?, ?)');
-      for (const tagId of await this.tagsOnTrip(tripId, tags)) {
-        insertTag.run(placeId, tagId);
-      }
+      await this.tagsRepo.insertIgnore(placeId, await this.tagsOnTrip(tripId, tags));
     }
 
-    return (await this.dbs.getPlaceWithTags(Number(placeId)))!;
+    // PL6 — `findWithTagsAndRatings` replaces the `getPlaceWithTags` delegation.
+    return (await this.placesRepo.findWithTagsAndRatings(placeId))!;
   }
 
   // -------------------------------------------------------------------------
@@ -291,9 +324,16 @@ export class PlacesService {
   // -------------------------------------------------------------------------
 
   async get(tripId: string, placeId: string) {
-    const placeCheck = this.dbs.get('SELECT id FROM places WHERE id = ? AND trip_id = ?', placeId, tripId);
-    if (!placeCheck) return null;
-    return await this.dbs.getPlaceWithTags(placeId);
+    // PL7 — the existence gate. `toRowId` first (Task 3 review H1, absorbed
+    // here): a non-canonical id must resolve to "not found" here, the same
+    // answer `findWithTagsAndRatings` below would give it anyway — this
+    // just skips the trip-scoped existence read for an id that can never
+    // exist.
+    const id = toRowId(placeId);
+    if (id === null) return null;
+    if (!(await this.placesRepo.existsInTrip(id, Number(tripId)))) return null;
+    // PL8 — `findWithTagsAndRatings` replaces the `getPlaceWithTags` delegation.
+    return await this.placesRepo.findWithTagsAndRatings(id);
   }
 
   // -------------------------------------------------------------------------
@@ -307,7 +347,7 @@ export class PlacesService {
     ifMatch?: string,
   ): Promise<PlaceWithTags | UpdateConflict | null> {
     const { result, reclaim } = await this.applyUpdate(tripId, placeId, body, ifMatch);
-    if (reclaim !== undefined) await reclaimPlaceImage(this.storage, reclaim);
+    if (reclaim !== undefined) await this.reclaimPlaceImage(reclaim);
     return result;
   }
 
@@ -322,14 +362,24 @@ export class PlacesService {
     body: PlaceUpdateInput,
     ifMatch?: string,
   ): Promise<{ result: PlaceWithTags | UpdateConflict | null; reclaim?: string | null }> {
-    const existingPlace = this.dbs.get<Place>('SELECT * FROM places WHERE id = ? AND trip_id = ?', placeId, tripId);
+    // PL9 — the pre-image read every `!== undefined` fallback below needs.
+    // `toRowId` first (Task 3 review H1, absorbed here): every write in
+    // this method (`updatePlace`, `tagsRepo.deleteForPlace`/`insertIgnore`)
+    // uses this SAME validated `id` — a non-canonical `placeId` (`"3 "`,
+    // `"3.0"`) must resolve to "not found" HERE, not pass a loose SQLite
+    // affinity match and then hit a downstream write keyed on a `toRowId(x)!`
+    // that returns `null`.
+    const id = toRowId(placeId);
+    if (id === null) return { result: null };
+    const existingPlace = await this.placesRepo.findInTrip(id, Number(tripId));
     if (!existingPlace) return { result: null };
 
     // Optimistic concurrency (#1135): when the caller sent the version it based its
     // edit on and the row has moved on since, reject instead of clobbering. Absent
     // token => unconditional update (back-compat — old clients keep last-write-wins).
     if (ifMatch !== undefined && existingPlace.updated_at != null && String(existingPlace.updated_at) !== ifMatch) {
-      return { result: { conflict: true, server: await this.dbs.getPlaceWithTags(placeId) } };
+      // PL10 — the `{conflict: true, server}` body when `If-Match` loses (#1135).
+      return { result: { conflict: true, server: await this.placesRepo.findWithTagsAndRatings(id) } };
     }
 
     const {
@@ -339,75 +389,58 @@ export class PlacesService {
       transport_mode, route_color, stop_type, fill_percent, tags,
     } = body;
 
-    this.dbs.run(`
-    UPDATE places SET
-      name = COALESCE(?, name),
-      description = ?,
-      lat = ?,
-      lng = ?,
-      address = ?,
-      category_id = ?,
-      price = ?,
-      currency = COALESCE(?, currency),
-      place_time = ?,
-      end_time = ?,
-      duration_minutes = ?,
-      notes = ?,
-      image_url = ?,
-      google_place_id = ?,
-      google_ftid = ?,
-      osm_id = ?,
-      amap_poi_id = ?,
-      website = ?,
-      phone = ?,
-      transport_mode = COALESCE(?, transport_mode),
-      route_color = ?,
-      stop_type = ?,
-      fill_percent = ?,
-      updated_at = CURRENT_TIMESTAMP
-    WHERE id = ?
-  `,
-      name || null,
-      description !== undefined ? description : existingPlace.description,
-      lat !== undefined ? lat : existingPlace.lat,
-      lng !== undefined ? lng : existingPlace.lng,
-      address !== undefined ? address : existingPlace.address,
-      category_id !== undefined ? category_id : existingPlace.category_id,
-      price !== undefined ? price : existingPlace.price,
-      currency || null,
-      place_time !== undefined ? place_time : existingPlace.place_time,
-      end_time !== undefined ? end_time : existingPlace.end_time,
+    // PL11 — ONE `nativeUpdate` with a typed full partial (the ruling): the
+    // SQL `COALESCE(?, col)` keep-if-null semantics (name/currency/
+    // transport_mode, all three bound `x || null`) and the twenty
+    // `!== undefined ? x : existing.x` pre-image fallbacks are resolved to
+    // their final value HERE, in the service — the repository writes
+    // exactly what it is handed.
+    await this.placesRepo.updatePlace(id, {
+      // COALESCE(?, name): the bound value is `name || null` (falsy clears
+      // to null), and `?? existingPlace.name` is the COALESCE half itself —
+      // a `nativeUpdate` writes a literal value, it does not evaluate SQL
+      // COALESCE, so the keep-if-null fold has to be resolved here.
+      name: (name || null) ?? existingPlace.name,
+      description: description !== undefined ? description : existingPlace.description,
+      lat: lat !== undefined ? lat : existingPlace.lat,
+      lng: lng !== undefined ? lng : existingPlace.lng,
+      address: address !== undefined ? address : existingPlace.address,
+      category_id: category_id !== undefined ? category_id : existingPlace.category_id,
+      price: price !== undefined ? price : existingPlace.price,
+      // COALESCE(?, currency) — same fold as `name` above.
+      currency: (currency || null) ?? existingPlace.currency,
+      place_time: place_time !== undefined ? place_time : existingPlace.place_time,
+      end_time: end_time !== undefined ? end_time : existingPlace.end_time,
       // Not COALESCE, like its neighbours: the contract says an explicit null
       // clears the planned stay length, and COALESCE made null and absent the
       // same thing, so the field advertised a reset it never performed. 0 keeps
       // working, which a `|| null` bind would have swallowed.
-      duration_minutes !== undefined ? duration_minutes : existingPlace.duration_minutes,
-      notes !== undefined ? notes : existingPlace.notes,
-      image_url !== undefined ? image_url : existingPlace.image_url,
-      google_place_id !== undefined ? google_place_id : existingPlace.google_place_id,
-      google_ftid !== undefined ? google_ftid : existingPlace.google_ftid,
-      osm_id !== undefined ? osm_id : existingPlace.osm_id,
-      amap_poi_id !== undefined ? amap_poi_id : existingPlace.amap_poi_id,
-      website !== undefined ? website : existingPlace.website,
-      phone !== undefined ? phone : existingPlace.phone,
-      transport_mode || null,
+      duration_minutes: duration_minutes !== undefined ? duration_minutes : existingPlace.duration_minutes,
+      notes: notes !== undefined ? notes : existingPlace.notes,
+      image_url: image_url !== undefined ? image_url : existingPlace.image_url,
+      google_place_id: google_place_id !== undefined ? google_place_id : existingPlace.google_place_id,
+      google_ftid: google_ftid !== undefined ? google_ftid : existingPlace.google_ftid,
+      osm_id: osm_id !== undefined ? osm_id : existingPlace.osm_id,
+      amap_poi_id: amap_poi_id !== undefined ? amap_poi_id : existingPlace.amap_poi_id,
+      website: website !== undefined ? website : existingPlace.website,
+      phone: phone !== undefined ? phone : existingPlace.phone,
+      // COALESCE(?, transport_mode) — same fold as `name`/`currency` above.
+      transport_mode: (transport_mode || null) ?? existingPlace.transport_mode,
       // Deliberately not COALESCE: an explicit null is how the picker resets a
       // track back to its category colour (#776).
-      route_color !== undefined ? route_color : existingPlace.route_color,
+      route_color: route_color !== undefined ? route_color : existingPlace.route_color,
       // Same shape: an explicit null is how a fuel stop becomes an ordinary place again.
-      stop_type !== undefined ? stop_type : existingPlace.stop_type,
+      stop_type: stop_type !== undefined ? stop_type : existingPlace.stop_type,
       // And how a stop that had its own fill amount goes back to following the setting.
-      fill_percent !== undefined ? fill_percent : existingPlace.fill_percent,
-      placeId,
-    );
+      fill_percent: fill_percent !== undefined ? fill_percent : existingPlace.fill_percent,
+    });
 
     if (tags !== undefined) {
-      this.dbs.run('DELETE FROM place_tags WHERE place_id = ?', placeId);
+      // PL12 — `DELETE FROM place_tags WHERE place_id = ?`.
+      await this.tagsRepo.deleteForPlace(id);
       if (tags.length > 0) {
-        const insertTag = this.dbs.prepare('INSERT OR IGNORE INTO place_tags (place_id, tag_id) VALUES (?, ?)');
-        for (const tagId of await this.tagsOnTrip(tripId, tags)) {
-          insertTag.run(placeId, tagId);
-        }
+        // PL13 — `INSERT OR IGNORE INTO place_tags (place_id, tag_id) VALUES (?, ?)`.
+        await this.tagsRepo.insertIgnore(id, await this.tagsOnTrip(tripId, tags));
       }
     }
 
@@ -418,7 +451,8 @@ export class PlacesService {
       ? existingPlace.image_url
       : undefined;
 
-    return { result: await this.dbs.getPlaceWithTags(placeId), reclaim };
+    // PL14 — `findWithTagsAndRatings` replaces the `getPlaceWithTags` delegation.
+    return { result: await this.placesRepo.findWithTagsAndRatings(id), reclaim };
   }
 
   // -------------------------------------------------------------------------
@@ -432,6 +466,7 @@ export class PlacesService {
    */
   async linkedExpenseIds(tripId: string | number, placeIds: Array<string | number>): Promise<number[]> {
     if (placeIds.length === 0) return [];
+    // PL15 — `budget_items` is Plan 3e's table; stays raw.
     const rows = this.dbs.all<{ id: number }>(
       `SELECT id FROM budget_items WHERE trip_id = ? AND place_id IN (${placeIds.map(() => '?').join(',')})`,
       tripId, ...placeIds,
@@ -452,6 +487,9 @@ export class PlacesService {
    * Runs inside the caller's transaction.
    */
   private async cancelStaysAt(tripId: string | number, placeId: string | number, into: CancelledStays): Promise<void> {
+    // PL16 — `day_accommodations` is Plan 3d's table; stays raw. Runs inside
+    // the caller's own transaction (R4 — Plan 3d must not re-open or
+    // re-scope this transaction when it converts `accommodations`).
     const stays = this.dbs.all<{ id: number }>(
       'SELECT id FROM day_accommodations WHERE trip_id = ? AND place_id = ?', tripId, placeId,
     );
@@ -467,39 +505,47 @@ export class PlacesService {
   }
 
   async remove(tripId: string, placeId: string): Promise<{ deleted: boolean; cancelled: CancelledStays }> {
-    const place = this.dbs.get<{ google_place_id: string | null; image_url: string | null }>(
-      'SELECT google_place_id, image_url FROM places WHERE id = ? AND trip_id = ?', placeId, tripId,
-    );
     const cancelled = noCancelledStays();
+    // `toRowId` first (Task 3 review H1, absorbed here): the write below
+    // (`deleteById`) must use the SAME id this gate's existence read used.
+    const id = toRowId(placeId);
+    if (id === null) return { deleted: false, cancelled };
+    // PL17 — the reclaim-candidate projection, read before the delete.
+    const place = await this.placesRepo.reclaimInputs(id, Number(tripId));
     if (!place) return { deleted: false, cancelled };
     // The linked expense goes with the place, the same way a booking takes its
     // expense with it (#1298). One transaction, so a place can never survive
     // half-detached from its money.
     await this.uow.transactional(async () => {
-      await this.cancelStaysAt(tripId, placeId, cancelled);
-      this.dbs.run('DELETE FROM budget_items WHERE trip_id = ? AND place_id = ?', tripId, placeId);
-      this.dbs.run('DELETE FROM places WHERE id = ?', placeId);
+      await this.cancelStaysAt(tripId, id, cancelled);
+      // PL18 — `budget_items` is Plan 3e's table; stays raw.
+      this.dbs.run('DELETE FROM budget_items WHERE trip_id = ? AND place_id = ?', tripId, id);
+      // PL19 — `DELETE FROM places WHERE id = ?`.
+      await this.placesRepo.deleteById(id);
     });
     await reclaimPhotoCache(this.photoCache, place.google_place_id, place.image_url);
-    await reclaimPlaceImage(this.storage, place.image_url);
+    await this.reclaimPlaceImage(place.image_url);
     return { deleted: true, cancelled };
   }
 
   async removeMany(tripId: string, ids: number[]): Promise<{ deleted: number[]; cancelled: CancelledStays }> {
     const cancelled = noCancelledStays();
     if (ids.length === 0) return { deleted: [], cancelled };
-    const selectStmt = this.dbs.prepare('SELECT google_place_id, image_url FROM places WHERE id = ? AND trip_id = ?');
-    const deleteStmt = this.dbs.prepare('DELETE FROM places WHERE id = ?');
-    const deleteExpenseStmt = this.dbs.prepare('DELETE FROM budget_items WHERE trip_id = ? AND place_id = ?');
     const deleted: number[] = [];
     const reclaimable: { google_place_id: string | null; image_url: string | null }[] = [];
     await this.uow.transactional(async () => {
       for (const id of ids) {
-        const row = selectStmt.get(id, tripId) as { google_place_id: string | null; image_url: string | null } | undefined;
+        // PL20 — the reclaim-candidate projection, read before the delete
+        // (same statement as PL17). `id` is already a genuine `number`
+        // here (a body-validated array, not a route string) — no `toRowId`
+        // gate needed, the H1 class of bug is a route-string problem.
+        const row = await this.placesRepo.reclaimInputs(id, Number(tripId));
         if (!row) continue;
         await this.cancelStaysAt(tripId, id, cancelled);
-        deleteExpenseStmt.run(tripId, id);
-        deleteStmt.run(id);
+        // PL22 — `budget_items` is Plan 3e's table; stays raw.
+        this.dbs.run('DELETE FROM budget_items WHERE trip_id = ? AND place_id = ?', tripId, id);
+        // PL21 — `DELETE FROM places WHERE id = ?`.
+        await this.placesRepo.deleteById(id);
         deleted.push(id);
         reclaimable.push(row);
       }
@@ -507,7 +553,7 @@ export class PlacesService {
     // Reclaim after the transaction commits so isReferenced() sees the final place set.
     for (const row of reclaimable) {
       await reclaimPhotoCache(this.photoCache, row.google_place_id, row.image_url);
-      await reclaimPlaceImage(this.storage, row.image_url);
+      await this.reclaimPlaceImage(row.image_url);
     }
     return { deleted, cancelled };
   }
@@ -519,13 +565,8 @@ export class PlacesService {
    * that trip's journey entries even though the delete itself refuses it.
    */
   async scopedIds(tripId: string, ids: number[]): Promise<number[]> {
-    if (ids.length === 0) return [];
-    const placeholders = ids.map(() => '?').join(',');
-    const rows = this.dbs.all<{ id: number }>(
-      `SELECT id FROM places WHERE trip_id = ? AND id IN (${placeholders})`, tripId, ...ids,
-    );
-    const owned = new Set(rows.map((r) => r.id));
-    return ids.filter((id) => owned.has(id));
+    // PL23 — input-order preservation lives in the repository method now.
+    return this.placesRepo.scopedIds(tripId, ids);
   }
 
   // -------------------------------------------------------------------------
@@ -553,7 +594,7 @@ export class PlacesService {
     });
     // Settle reclaims after the transaction commits, so the refcount sees the
     // final image_url state.
-    for (const reclaim of reclaims) await reclaimPlaceImage(this.storage, reclaim);
+    for (const reclaim of reclaims) await this.reclaimPlaceImage(reclaim);
     return updated;
   }
 
@@ -630,29 +671,18 @@ export class PlacesService {
     for (const strategy of placeMatchStrategies(place)) {
       let hit: { id: number; google_ftid: string | null } | undefined;
       if (strategy.by === 'externalId') {
-        hit = this.dbs.get<{ id: number; google_ftid: string | null }>(`
-      SELECT id, google_ftid FROM places
-      WHERE trip_id = ? AND (google_place_id = ? OR google_ftid = ? OR osm_id = ? OR amap_poi_id = ?)
-      ORDER BY id ASC
-      LIMIT 1
-    `, tripId, strategy.id, strategy.id, strategy.id, strategy.id);
+        // PL25 — the same candidate id bound in all four positions.
+        hit = await this.placesRepo.findDuplicateByExternalId(tripId, strategy.id);
       } else if (strategy.by === 'name') {
-        hit = this.dbs.get<{ id: number; google_ftid: string | null }>(`
-      SELECT id, google_ftid FROM places
-      WHERE trip_id = ? AND lower(trim(name)) = ?
-      ORDER BY id ASC
-      LIMIT 1
-    `, tripId, strategy.name);
+        // PL26 — `strategy.name` is already `.trim().toLowerCase()`'d in JS
+        // (`normalizePlaceName`, `@trek/shared/place/place-match.ts`,
+        // Unicode-aware) — the documented legacy disagreement with SQLite's
+        // ASCII-only `lower()` (rule 18's exception clause: the legacy
+        // statement itself received a JS-lowered value).
+        hit = await this.placesRepo.findDuplicateByName(tripId, strategy.name);
       } else {
-        hit = this.dbs.get<{ id: number; google_ftid: string | null }>(`
-      SELECT id, google_ftid FROM places
-      WHERE trip_id = ?
-        AND lat IS NOT NULL AND lng IS NOT NULL
-        AND abs(lat - ?) <= ?
-        AND abs(lng - ?) <= ?
-      ORDER BY id ASC
-      LIMIT 1
-    `, tripId, strategy.lat, strategy.tolerance, strategy.lng, strategy.tolerance);
+        // PL27 — `abs(lat - ?) <= ? AND abs(lng - ?) <= ?` through the Task 0b `absDifference` helper.
+        hit = await this.placesRepo.findDuplicateByCoords(tripId, strategy.lat, strategy.lng, strategy.tolerance);
       }
       if (hit) return hit;
     }
@@ -679,29 +709,21 @@ export class PlacesService {
    * than handing over a file that imports as nothing on the other end.
    */
   async exportGpx(tripId: string, opts: GpxExportOptions = {}): Promise<{ gpx: string; filename: string } | null> {
+    // PL28 — `SELECT title FROM trips WHERE id = ?`. `trips` is outside this
+    // task's owned repositories (Plan 3c Task 7's domain) and
+    // `Trips.repository.ts` has a live concurrent editor in this tree this
+    // session (Task 6, adding its own byte-identical `getTitle` for a
+    // different caller) — stays raw here rather than risk a duplicate-method
+    // collision; once Task 6 lands, this call can reuse its `getTitle`.
     const trip = this.dbs.get<{ title: string }>('SELECT title FROM trips WHERE id = ?', tripId);
     if (!trip) return null;
 
-    const places = this.dbs.all<GpxExportPlace>(`
-      SELECT p.name, p.description, p.address, p.lat, p.lng, p.route_geometry, c.name AS category
-        FROM places p
-        LEFT JOIN categories c ON c.id = p.category_id
-       WHERE p.trip_id = ?
-       ORDER BY p.id
-    `, tripId);
+    // PL29 — the waypoint projection.
+    const places = await this.placesRepo.listForGpx(tripId) as GpxExportPlace[];
 
-    // One row per stop, ordered the way the day plan draws it, then folded into days.
-    const stops = this.dbs.all<{
-      day_number: number; date: string | null; title: string | null;
-      name: string; lat: number; lng: number;
-    }>(`
-      SELECT d.day_number, d.date, d.title, p.name, p.lat, p.lng
-        FROM days d
-        JOIN day_assignments da ON da.day_id = d.id
-        JOIN places p ON p.id = da.place_id
-       WHERE d.trip_id = ? AND p.lat IS NOT NULL AND p.lng IS NOT NULL
-       ORDER BY d.day_number, da.order_index
-    `, tripId);
+    // One row per stop, ordered the way the day plan draws it, then folded
+    // into days. PL30 — `DayAssignmentsRepository.listItineraryForGpx`.
+    const stops = await this.dayAssignmentsRepo.listItineraryForGpx(tripId);
 
     const days = new Map<number, GpxExportDay>();
     for (const stop of stops) {
@@ -1562,7 +1584,12 @@ export class PlacesService {
   // -------------------------------------------------------------------------
 
   async searchImage(tripId: string, placeId: string, userId: number) {
-    const place = this.dbs.get<Place>('SELECT * FROM places WHERE id = ? AND trip_id = ?', placeId, tripId);
+    // `toRowId` first (Task 3 review H1, absorbed here) — same gate shape
+    // as every other place-id route in this service.
+    const id = toRowId(placeId);
+    if (id === null) return { error: 'Place not found', status: 404 };
+    // PL48 — same statement as PL9 (`applyUpdate`'s pre-image read).
+    const place = await this.placesRepo.findInTrip(id, Number(tripId));
     if (!place) return { error: 'Place not found', status: 404 };
 
     return this.unsplash.searchUnsplashPhotos(place.name + (place.address ? ' ' + place.address : ''), 5, await this.unsplash.getUnsplashKey(userId));
@@ -1579,17 +1606,23 @@ export class PlacesService {
    * place (with the new aggregate) or null when the place isn't in the trip.
    */
   async rate(tripId: string, placeId: string, userId: number, rating: number | null): Promise<PlaceWithTags | null> {
-    const place = this.dbs.get('SELECT id FROM places WHERE id = ? AND trip_id = ?', placeId, tripId);
-    if (!place) return null;
+    // `toRowId` first (Task 3 review H1, absorbed here): PL50/PL51 write
+    // with this SAME id — a non-canonical `placeId` must resolve to "not
+    // found" here rather than pass a loose affinity match and then write a
+    // rating against an id `place_ratings`'s own FK never actually named.
+    const id = toRowId(placeId);
+    if (id === null) return null;
+    // PL49 — the existence gate.
+    if (!(await this.placesRepo.existsInTrip(id, Number(tripId)))) return null;
     if (rating === null) {
-      this.dbs.run('DELETE FROM place_ratings WHERE place_id = ? AND user_id = ?', placeId, userId);
+      // PL50 — `DELETE FROM place_ratings WHERE place_id = ? AND user_id = ?`.
+      await this.placeRatingsRepo.deleteRating(id, userId);
     } else {
-      this.dbs.run(`
-      INSERT INTO place_ratings (place_id, user_id, rating) VALUES (?, ?, ?)
-      ON CONFLICT(place_id, user_id) DO UPDATE SET rating = excluded.rating
-    `, placeId, userId, rating);
+      // PL51 — the only explicit `ON CONFLICT … DO UPDATE` in the cluster; never touches `places.updated_at`.
+      await this.placeRatingsRepo.upsertRating(id, userId, rating);
     }
-    return await this.dbs.getPlaceWithTags(placeId);
+    // PL52 — `findWithTagsAndRatings` replaces the `getPlaceWithTags` delegation.
+    return await this.placesRepo.findWithTagsAndRatings(id);
   }
 
   // Journey hooks — non-fatal, mirroring the route's try/catch wrappers.

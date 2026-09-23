@@ -78,7 +78,7 @@ import { QueryHelpersService } from '../../../src/nest/query-helpers/query-helpe
 import { JourneyDomainService } from '../../../src/nest/journey/journey-domain.service';
 import { TrekPhotosRepository } from '../../../src/nest/photos/trek-photos.repository';
 import { makeStorageFixture } from '../../helpers/storage-fixture';
-import { createTestUnitOfWork, createTestAppSettingsRepo, createTestUsersRepo, createTestTagsRepo, createTestPlaceRatingsRepo, createTestAssignmentParticipantsRepo, sharedTestOrm } from '../../helpers/test-uow';
+import { createTestUnitOfWork, createTestAppSettingsRepo, createTestUsersRepo, createTestTagsRepo, createTestPlaceRatingsRepo, createTestAssignmentParticipantsRepo, createTestPlacesRepo, createTestTripMembersRepo, createTestDayAssignmentsRepo, sharedTestOrm } from '../../helpers/test-uow';
 import type { AppSettingsRepository } from '../../../src/db/repositories/AppSettings.repository';
 import type { UsersRepository } from '../../../src/db/repositories/Users.repository';
 
@@ -119,6 +119,11 @@ async function makePlacesService(
     new JourneyDomainService(dbs, new RealtimeService(), new TrekPhotosRepository(dbs), await createTestUnitOfWork(dbs.connection)),
     placesStorageFx.storage,
     await accommodationsOver(dbs), await createTestUnitOfWork(dbs.connection),
+    await createTestPlacesRepo(dbs.connection),
+    await createTestTagsRepo(dbs.connection),
+    await createTestPlaceRatingsRepo(dbs.connection),
+    await createTestTripMembersRepo(dbs.connection),
+    await createTestDayAssignmentsRepo(dbs.connection),
   );
 }
 
@@ -295,6 +300,22 @@ describe('get', () => {
     const trip = createTrip(testDb, user.id);
     expect(await svc.get(String(trip.id), '99999')).toBeNull();
   });
+
+  // Task 3 review H1's lesson, applied to every place-id gate this task
+  // converts: a non-canonical id shape (`"<id> "`, `"<id>.0"`, `"+<id>"`)
+  // must resolve to not-found HERE, in the gate — SQLite's own affinity
+  // would otherwise match it, and this service's writes downstream convert
+  // with `toRowId`, which rejects the same shapes.
+  it('PLACE-SVC-012b (H1) — non-canonical id shapes ("<id> ", "<id>.0", "+<id>") also return null, not just non-numeric ids', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const place = createPlace(testDb, trip.id);
+    expect(await svc.get(String(trip.id), `${place.id} `)).toBeNull();
+    expect(await svc.get(String(trip.id), `${place.id}.0`)).toBeNull();
+    expect(await svc.get(String(trip.id), `+${place.id}`)).toBeNull();
+    // The canonical shape still finds it, proving the fix didn't just null everything.
+    expect(await svc.get(String(trip.id), String(place.id))).not.toBeNull();
+  });
 });
 
 // ── update ────────────────────────────────────────────────────────────────────
@@ -314,6 +335,16 @@ describe('update', () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     expect(await svc.update(String(trip.id), '99999', { name: 'Ghost' })).toBeNull();
+  });
+
+  it('PLACE-SVC-014b (H1) — a non-canonical id ("<id> ") is null, not a write: the row is left untouched', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const place = createPlace(testDb, trip.id, { name: 'Untouched' });
+    const result = await svc.update(String(trip.id), `${place.id} `, { name: 'Clobbered' });
+    expect(result).toBeNull();
+    const row = testDb.prepare('SELECT name FROM places WHERE id = ?').get(place.id) as { name: string };
+    expect(row.name).toBe('Untouched');
   });
 
   it('PLACE-SVC-015 — updates tags (replaces old set)', async () => {
@@ -440,6 +471,15 @@ describe('remove', () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     expect((await svc.remove(String(trip.id), '99999')).deleted).toBe(false);
+  });
+
+  it('PLACE-SVC-018b (H1) — a non-canonical id ("<id> ") is not deleted: deleted:false, row intact', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const place = createPlace(testDb, trip.id, { name: 'Survives' });
+    const result = await svc.remove(String(trip.id), `${place.id} `);
+    expect(result.deleted).toBe(false);
+    expect(await svc.get(String(trip.id), String(place.id))).not.toBeNull();
   });
 
   it('PLACE-SVC-019 — deleting one place does not remove others', async () => {
@@ -952,6 +992,15 @@ describe('searchImage', () => {
     expect(result.status).toBe(404);
   });
 
+  it('PLACE-SVC-030b (H1) — a non-canonical id ("<id> ") also 404s', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const place = createPlace(testDb, trip.id);
+    const result = await svc.searchImage(String(trip.id), `${place.id} `, user.id) as any;
+    expect(result.error).toBeDefined();
+    expect(result.status).toBe(404);
+  });
+
   it('PLACE-SVC-031 — searches Unsplash without a stored API key', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
@@ -1159,6 +1208,34 @@ describe('custom place image reclaim', () => {
     expect(await svc.rate(String(trip.id), String(place.id), user.id, 4)).toBeNull();
     const count = testDb.prepare('SELECT COUNT(*) AS n FROM place_ratings WHERE place_id = ?').get(place.id) as { n: number };
     expect(count.n).toBe(0);
+  });
+
+  it('PLACE-SVC-051b (H1) — a non-canonical id ("<id> ") is null and writes nothing', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const place = createPlace(testDb, trip.id) as { id: number };
+    expect(await svc.rate(String(trip.id), `${place.id} `, user.id, 4)).toBeNull();
+    const count = testDb.prepare('SELECT COUNT(*) AS n FROM place_ratings WHERE place_id = ?').get(place.id) as { n: number };
+    expect(count.n).toBe(0);
+  });
+
+  // PL51's ruling: an ON CONFLICT DO UPDATE limited to `rating` must never
+  // touch `places.updated_at` — a vote must not 409 another member's
+  // offline edit (#1435). Proven directly against the column, not just
+  // against the response shape.
+  it('PLACE-SVC-051c (PL51) — rating a place never bumps places.updated_at', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const place = createPlace(testDb, trip.id, { name: 'Silent Vote' }) as { id: number };
+    const before = (testDb.prepare('SELECT updated_at FROM places WHERE id = ?').get(place.id) as { updated_at: string | null }).updated_at;
+
+    await svc.rate(String(trip.id), String(place.id), user.id, 5);
+    // Re-vote (the ON CONFLICT DO UPDATE path) — the one statement in the
+    // whole cluster that could plausibly touch `updated_at` via a careless
+    // merge-field list.
+    await svc.rate(String(trip.id), String(place.id), user.id, 2);
+    const after = (testDb.prepare('SELECT updated_at FROM places WHERE id = ?').get(place.id) as { updated_at: string | null }).updated_at;
+    expect(after).toBe(before);
   });
 });
 

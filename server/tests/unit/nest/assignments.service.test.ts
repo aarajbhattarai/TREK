@@ -173,6 +173,60 @@ describe('dayExists / placeExists / assignmentExistsInDay', () => {
     expect(await svc.assignmentExistsInDay(a.id, otherDay.id, trip.id)).toBe(false);
     expect(await svc.assignmentExistsInDay(a.id, day.id, trip.id + 1)).toBe(false);
   });
+
+  // Task 3 review H1 (live regression, fixed and absorbed in Task 4): these
+  // four gates used to bind a non-canonical id (`"<id> "`, `"<id>.0"`,
+  // `"+<id>"`) straight into their own read, which SQLite's text/integer
+  // affinity matches — so the gate answered "found" for an id `toRowId`
+  // (the SAME conversion the write behind each gate applies) rejects as
+  // `null`. Each case below proves the gate itself now says "not found" for
+  // exactly the id shapes `toRowId` rejects, so the mutation behind it can
+  // never be reached with a mismatched id.
+  describe('H1 — non-canonical ids resolve to not-found in the gate itself', () => {
+    it('ASG-SVC-042: dayExists rejects "<id> "/"<id>.0"/"+<id>", not just non-numeric ids', async () => {
+      const { trip, day } = fixture();
+      expect(await svc.dayExists(`${day.id} `, trip.id)).toBe(false);
+      expect(await svc.dayExists(`${day.id}.0`, trip.id)).toBe(false);
+      expect(await svc.dayExists(`+${day.id}`, trip.id)).toBe(false);
+      expect(await svc.dayExists('abc', trip.id)).toBe(false);
+      // The canonical shape still passes, proving the fix didn't just make everything false.
+      expect(await svc.dayExists(String(day.id), trip.id)).toBe(true);
+    });
+
+    it('ASG-SVC-043: placeExists rejects "<id> "/"<id>.0"/"+<id>"', async () => {
+      const { trip, place } = fixture();
+      expect(await svc.placeExists(`${place.id} `, trip.id)).toBe(false);
+      expect(await svc.placeExists(`${place.id}.0`, trip.id)).toBe(false);
+      expect(await svc.placeExists(`+${place.id}`, trip.id)).toBe(false);
+      expect(await svc.placeExists(String(place.id), trip.id)).toBe(true);
+    });
+
+    it('ASG-SVC-044: assignmentExistsInDay rejects a non-canonical assignment id', async () => {
+      const { trip, day, place } = fixture();
+      const a = createDayAssignment(testDb, day.id, place.id);
+      expect(await svc.assignmentExistsInDay(`${a.id} `, day.id, trip.id)).toBe(false);
+      expect(await svc.assignmentExistsInDay(`${a.id}.0`, day.id, trip.id)).toBe(false);
+      expect(await svc.assignmentExistsInDay(String(a.id), day.id, trip.id)).toBe(true);
+    });
+
+    it('ASG-SVC-045: getAssignmentForTrip rejects a non-canonical assignment id (undefined, not the row)', async () => {
+      const { trip, day, place } = fixture();
+      const a = createDayAssignment(testDb, day.id, place.id);
+      expect(await svc.getAssignmentForTrip(`${a.id} `, trip.id)).toBeUndefined();
+      expect(await svc.getAssignmentForTrip(`${a.id}.0`, trip.id)).toBeUndefined();
+      expect(await svc.getAssignmentForTrip(String(a.id), trip.id)).toMatchObject({ id: a.id });
+    });
+
+    it('ASG-SVC-046: deleteAssignment is never reached with a mismatched id — the controller-shape gate-then-write leaves the row intact for a non-canonical id', async () => {
+      const { trip, day, place } = fixture();
+      const a = createDayAssignment(testDb, day.id, place.id);
+      // The controller's own shape: gate, then act only if the gate passed.
+      const gate = await svc.assignmentExistsInDay(`${a.id} `, day.id, trip.id);
+      expect(gate).toBe(false);
+      if (gate) await svc.deleteAssignment(`${a.id} `);
+      expect(await svc.getAssignmentForTrip(String(a.id), trip.id)).toMatchObject({ id: a.id });
+    });
+  });
 });
 
 // ── createAssignment ──────────────────────────────────────────────────────────

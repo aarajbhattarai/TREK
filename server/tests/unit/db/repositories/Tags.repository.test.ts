@@ -318,12 +318,70 @@ describe('TagsRepository', () => {
       const trip = createTrip(testDb, user.id);
       const place = createPlace(testDb, trip.id);
       const tag = createTag(testDb, user.id, { name: 'Fresh' });
-      // Populate the identity map with a narrower read first.
-      await tags.findByIdAndUser(tag.id, user.id);
+      // rule 20: the FIRST, wider setup read passes `disableIdentityMap:
+      // false` explicitly and carries the column the later write targets
+      // (`name`) — `find({})` with the base default merged in populates
+      // nothing.
+      await t.repo(Tags).find({}, { disableIdentityMap: false });
       attach(tag.id, place.id);
       testDb.prepare('UPDATE tags SET name = ? WHERE id = ?').run('Renamed', tag.id);
       const rows = await tags.listForPlaces([place.id]);
       expect(rows[0]?.name).toBe('Renamed');
     });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Plan 3c Task 4 — findByIds (PL2) and the place_tags pivot writes (PL5/PL12/PL13).
+// ---------------------------------------------------------------------------
+
+describe('TagsRepository.findByIds (PL2)', () => {
+  it('FINDBYIDSREPO-001: returns id + user_id for the matching ids, empty input short-circuits', async () => {
+    const { user: ownerA } = createUser(testDb);
+    const { user: ownerB } = createUser(testDb, { username: 'owner_b' });
+    const tagA = createTag(testDb, ownerA.id, { name: 'A' });
+    const tagB = createTag(testDb, ownerB.id, { name: 'B' });
+    const rows = await tags.findByIds([tagA.id, tagB.id, 999999]);
+    expect(rows.map((r) => ({ id: r.id, user_id: r.user_id })).sort((a, b) => a.id - b.id)).toEqual(
+      [{ id: tagA.id, user_id: ownerA.id }, { id: tagB.id, user_id: ownerB.id }].sort((a, b) => a.id - b.id),
+    );
+    expect(await tags.findByIds([])).toEqual([]);
+  });
+});
+
+describe('TagsRepository.insertIgnore / deleteForPlace (PL5/PL12/PL13 — place_tags pivot)', () => {
+  it('PLACETAGSREPO-001: insertIgnore attaches every listed tag, ignoring a duplicate pair', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const place = createPlace(testDb, trip.id);
+    const tagA = createTag(testDb, user.id, { name: 'A' });
+    const tagB = createTag(testDb, user.id, { name: 'B' });
+    await tags.insertIgnore(place.id, [tagA.id, tagB.id]);
+    // Re-run with an overlapping id — the pre-existing pair must not error or duplicate.
+    await tags.insertIgnore(place.id, [tagA.id]);
+    const rows = testDb.prepare('SELECT tag_id FROM place_tags WHERE place_id = ? ORDER BY tag_id').all(place.id) as { tag_id: number }[];
+    expect(rows.map((r) => r.tag_id).sort((a, b) => a - b)).toEqual([tagA.id, tagB.id].sort((a, b) => a - b));
+  });
+
+  it('PLACETAGSREPO-002: insertIgnore with an empty array is a no-op', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const place = createPlace(testDb, trip.id);
+    await tags.insertIgnore(place.id, []);
+    const rows = testDb.prepare('SELECT tag_id FROM place_tags WHERE place_id = ?').all(place.id);
+    expect(rows).toEqual([]);
+  });
+
+  it('PLACETAGSREPO-003: deleteForPlace removes every row for that place, leaving other places\' tags alone', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const place = createPlace(testDb, trip.id);
+    const other = createPlace(testDb, trip.id);
+    const tag = createTag(testDb, user.id, { name: 'Shared' });
+    await tags.insertIgnore(place.id, [tag.id]);
+    await tags.insertIgnore(other.id, [tag.id]);
+    await tags.deleteForPlace(place.id);
+    expect(testDb.prepare('SELECT * FROM place_tags WHERE place_id = ?').all(place.id)).toEqual([]);
+    expect(testDb.prepare('SELECT * FROM place_tags WHERE place_id = ?').all(other.id)).toHaveLength(1);
   });
 });

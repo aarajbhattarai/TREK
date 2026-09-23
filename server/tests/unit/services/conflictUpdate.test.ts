@@ -63,6 +63,8 @@ import {
   createTestAssignmentParticipantsRepo,
   createTestGooglePlacePhotoMetaRepo,
   createTestPlacesRepo,
+  createTestTripMembersRepo,
+  createTestDayAssignmentsRepo,
   sharedTestOrm,
 } from '../../helpers/test-uow';
 
@@ -105,6 +107,11 @@ beforeAll(async () => {
   new JourneyDomainService(dbs, realtime, new TrekPhotosRepository(dbs), await createTestUnitOfWork(dbs.connection)),
   makeStorageFixture('').storage,
   await accommodationsOver(dbs), await createTestUnitOfWork(dbs.connection),
+  await createTestPlacesRepo(dbs.connection),
+  await createTestTagsRepo(dbs.connection),
+  await createTestPlaceRatingsRepo(dbs.connection),
+  await createTestTripMembersRepo(dbs.connection),
+  await createTestDayAssignmentsRepo(dbs.connection),
 );
 });
 

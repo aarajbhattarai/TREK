@@ -40,4 +40,37 @@ export class PlaceRatingsRepository extends TrekRepository<PlaceRatings> {
       .orderBy({ 'pr.created_at': 'asc' })
       .execute<PlaceRatingForPlaceRow[]>('all', false);
   }
+
+  /**
+   * PL51 (`places.service.ts::rate`) — `INSERT INTO place_ratings (place_id,
+   * user_id, rating) VALUES (?, ?, ?) ON CONFLICT(place_id, user_id) DO
+   * UPDATE SET rating = excluded.rating` — the only explicit `ON CONFLICT …
+   * DO UPDATE` in the Plan 3c cluster (#1435). `onConflictFields: ['place',
+   * 'user']` on the entity's own declared composite unique
+   * (`PlaceRatingsSchema`'s `uniques: [{ properties: ['place', 'user'] }]`,
+   * itself generated from the migration's `UNIQUE(place_id, user_id)`
+   * — verified against both, not assumed). `onConflictMergeFields: ['rating']`
+   * is load-bearing, not decorative: without it `em.upsert`'s default merge
+   * set is every non-key column, which on THIS entity is only `rating`
+   * anyway (`created_at` is the sole other column and is excluded because it
+   * is the primary key's sibling default, not a mergeable field) — named
+   * explicitly so a future column added to this entity does not silently
+   * join the merge set and start touching a column the legacy statement
+   * never wrote on conflict. The ruling this method exists to satisfy: a
+   * vote must never touch `places.updated_at` (a separate table this
+   * statement doesn't reference at all) so it can't 409 another member's
+   * `If-Match` — proven by a repository test that reads `places.updated_at`
+   * unchanged across a rating write.
+   */
+  async upsertRating(place_id: number, user_id: number, rating: number): Promise<void> {
+    await this.upsert(
+      { place: place_id, user: user_id, rating },
+      { onConflictFields: ['place', 'user'], onConflictAction: 'merge', onConflictMergeFields: ['rating'] },
+    );
+  }
+
+  /** PL50 — `DELETE FROM place_ratings WHERE place_id = ? AND user_id = ?` (a null rating clears the vote). */
+  async deleteRating(place_id: number, user_id: number): Promise<void> {
+    await this.nativeDelete({ place: place_id, user: user_id });
+  }
 }

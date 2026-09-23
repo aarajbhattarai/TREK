@@ -1,6 +1,6 @@
 import type { Places } from '../entities/Places.entity';
 import type { Tags } from '../entities/Tags.entity';
-import { columnRef } from '../dialect/sql-functions';
+import { absDifference, columnRef, currentTimestamp, lowerTrim } from '../dialect/sql-functions';
 import { type AssertRowKeys } from './_shared/rows';
 import { TrekRepository } from './_shared/trek-repository';
 
@@ -53,7 +53,8 @@ export interface TagRow {
 
 const _tagRowKeys: AssertRowKeys<TagRow, Tags> = true;
 
-interface PlaceWithCategoryRow extends PlaceRow {
+/** PL3 (`PlacesService.list`) — a `places` row joined with its category's flat columns. */
+export interface PlaceWithCategoryRow extends PlaceRow {
   category_name: string | null;
   category_color: string | null;
   category_icon: string | null;
@@ -180,5 +181,417 @@ export class PlacesRepository extends TrekRepository<Places> {
       .limit(1)
       .execute<{ id: number } | undefined>('get', false);
     return !!row;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Plan 3c Task 4 (`PlacesService` core) — every method below is additive;
+  // `findWithTagsAndRatings`/`existsByGoogleIdOrImageUrl` above are Task 0b's
+  // and Task 1's, unchanged.
+  // ---------------------------------------------------------------------------
+
+  /**
+   * PL0/PL7/PL49/AS5 — `SELECT id FROM places WHERE id = ? AND trip_id = ?`.
+   *
+   * **`id: number`, not `number | string` (Task 3 review H1, absorbed
+   * here — `task-3-review.md` §9.1):** the legacy raw-bind seam other
+   * guard-shaped methods in this cluster preserve (`TripsRepository
+   * .findAccessible`'s precedent) is the WRONG shape for a method whose
+   * caller then writes with `toRowId(placeId)!`. A non-canonical id
+   * (`"3 "`, `"3.0"`, `"+3"`) matches this statement via SQLite's own
+   * loose text/integer affinity — `existsInTrip` would answer `true` — while
+   * `toRowId` (`/^\d+$/` + `Number.isSafeInteger`, program rule 15) rejects
+   * the same string and returns `null`, so the write downstream runs
+   * `toRowId(placeId)!` on a value the gate just vouched for and gets
+   * `null` — exactly Task 3's H1 (`AssignmentsService.dayExists`/
+   * `placeExists`/`assignmentExistsInDay`/`getAssignmentForTrip`, all four
+   * kept on this seam, all four reproducing it). This method's only two
+   * callers (`PlacesService.get`/`applyUpdate`'s existence half — via
+   * `applyUpdate` calling `findInTrip` below — and `AssignmentsService
+   * .placeExists`, once Task 4 repoints it) now run `toRowId` FIRST and
+   * pass the validated `number` in, matching `DaysService.getDay`'s shape
+   * (the review's cited correct precedent) — so `id` here is narrowed to
+   * match what every caller actually has after its own gate, and a second
+   * `toRowId(...)!` downstream can never disagree with this one.
+   */
+  async existsInTrip(id: number, trip_id: number): Promise<boolean> {
+    const row = await this.qb('p')
+      .select(['p.id'])
+      .where('p.id = ? AND p.trip_id = ?', [id, trip_id])
+      .execute<{ id: number } | undefined>('get', false);
+    return !!row;
+  }
+
+  /**
+   * PL9/PL48 — `SELECT * FROM places WHERE id = ? AND trip_id = ?`, byte-
+   * identical statements at both legacy sites (`applyUpdate`'s pre-image
+   * read and `searchImage`'s existence-plus-name read) — one method for
+   * both rather than two identically-bodied ones.
+   *
+   * `id: number`, same H1 fix and reasoning as `existsInTrip` above: both
+   * callers write with the SAME already-`toRowId`'d id this read returns
+   * (`applyUpdate` feeds it straight into `updatePlace`/`tagsRepo`;
+   * `searchImage` only reads, but takes the same gate shape for
+   * consistency — one rule for every place-id gate in this service, not
+   * one per call site).
+   */
+  async findInTrip(id: number, trip_id: number): Promise<PlaceRow | undefined> {
+    return this.qb('p')
+      .select(['p.*'])
+      .where('p.id = ? AND p.trip_id = ?', [id, trip_id])
+      .execute<PlaceRow | undefined>('get', false);
+  }
+
+  /**
+   * PL17/PL20 — `SELECT google_place_id, image_url FROM places WHERE id = ?
+   * AND trip_id = ?`, the reclaim-candidate projection `remove`/`removeMany`
+   * read BEFORE their delete transaction. `id: number`, same H1 fix: both
+   * callers immediately follow a `true` result with `deleteById(id)` on the
+   * SAME numeric id.
+   */
+  async reclaimInputs(id: number, trip_id: number): Promise<{ google_place_id: string | null; image_url: string | null } | undefined> {
+    return this.qb('p')
+      .select(['p.google_place_id', 'p.image_url'])
+      .where('p.id = ? AND p.trip_id = ?', [id, trip_id])
+      .execute<{ google_place_id: string | null; image_url: string | null } | undefined>('get', false);
+  }
+
+  /** PL19/PL21 — `DELETE FROM places WHERE id = ?`, unscoped: every caller proved trip access first. */
+  async deleteById(id: number): Promise<void> {
+    await this.nativeDelete({ id });
+  }
+
+  /**
+   * PL23 — `` SELECT id FROM places WHERE trip_id = ? AND id IN (${…}) ``,
+   * narrowed to the caller's own INPUT ORDER (not SQL result order — SQLite
+   * makes no ordering promise for an `IN (...)` scan and the legacy code
+   * re-filters the original `ids` array through a `Set` built from the row
+   * set for exactly this reason). `$in` for the dynamic list (rule 17b, "the
+   * good kind").
+   */
+  async scopedIds(trip_id: string | number, ids: number[]): Promise<number[]> {
+    if (ids.length === 0) return [];
+    const rows = await this.qb('p')
+      .select(['p.id'])
+      .where('p.trip_id = ?', [trip_id])
+      .andWhere({ id: { $in: ids } })
+      .execute<{ id: number }[]>('all', false);
+    const owned = new Set(rows.map((r) => r.id));
+    return ids.filter((id) => owned.has(id));
+  }
+
+  /**
+   * PL4 — the 25-column `INSERT INTO places (...)` the service's `create`
+   * builds. Every value here is already fully coerced by the caller (the
+   * `?? null` vs `|| null` split PL4's own legacy comment documents — 0 is
+   * legitimate for `lat`/`lng`/`price`/`fill_percent`, and
+   * `duration_minutes` defaults to 60 — stays the service's decision, this
+   * writes exactly what it is handed, `DaysRepository.createDay`'s split).
+   * `em.insert()` returns the generated PK (R6's `lastInsertRowid`
+   * replacement).
+   */
+  async insertPlace(input: {
+    trip_id: number;
+    name: string;
+    description: string | null;
+    lat: number | null;
+    lng: number | null;
+    address: string | null;
+    category_id: number | null;
+    price: number | null;
+    currency: string | null;
+    place_time: string | null;
+    end_time: string | null;
+    duration_minutes: number;
+    notes: string | null;
+    image_url: string | null;
+    google_place_id: string | null;
+    google_ftid: string | null;
+    osm_id: string | null;
+    amap_poi_id: string | null;
+    website: string | null;
+    phone: string | null;
+    transport_mode: string;
+    route_geometry: string | null;
+    route_color: string | null;
+    stop_type: string | null;
+    fill_percent: number | null;
+  }): Promise<number> {
+    return await this.insert({
+      trip: input.trip_id,
+      name: input.name,
+      description: input.description,
+      lat: input.lat,
+      lng: input.lng,
+      address: input.address,
+      category: input.category_id,
+      price: input.price,
+      currency: input.currency,
+      place_time: input.place_time,
+      end_time: input.end_time,
+      duration_minutes: input.duration_minutes,
+      notes: input.notes,
+      image_url: input.image_url,
+      google_place_id: input.google_place_id,
+      google_ftid: input.google_ftid,
+      osm_id: input.osm_id,
+      amap_poi_id: input.amap_poi_id,
+      website: input.website,
+      phone: input.phone,
+      transport_mode: input.transport_mode,
+      route_geometry: input.route_geometry,
+      route_color: input.route_color,
+      stop_type: input.stop_type,
+      fill_percent: input.fill_percent,
+    });
+  }
+
+  /**
+   * PL11 — `UPDATE places SET name = COALESCE(?, name), description = ?,
+   * lat = ?, lng = ?, address = ?, category_id = ?, price = ?, currency =
+   * COALESCE(?, currency), place_time = ?, end_time = ?, duration_minutes =
+   * ?, notes = ?, image_url = ?, google_place_id = ?, google_ftid = ?,
+   * osm_id = ?, amap_poi_id = ?, website = ?, phone = ?, transport_mode =
+   * COALESCE(?, transport_mode), route_color = ?, stop_type = ?,
+   * fill_percent = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?` — ONE
+   * `nativeUpdate` with a typed full partial (the ruling): the SQL
+   * `COALESCE(?, col)` keep-if-null semantics (`name`/`currency`/
+   * `transport_mode`) and the twenty `!== undefined ? x : existing.x`
+   * pre-image fallbacks are both already resolved to their FINAL value by
+   * the caller (`PlacesService.applyUpdate`, which reads the pre-image via
+   * `findInTrip` first) — this method writes exactly what it is handed,
+   * plus the timestamp stamp every write gets.
+   */
+  async updatePlace(id: number, write: {
+    name: string | null;
+    description: string | null;
+    lat: number | null;
+    lng: number | null;
+    address: string | null;
+    category_id: number | null;
+    price: number | null;
+    currency: string | null;
+    place_time: string | null;
+    end_time: string | null;
+    duration_minutes: number | null;
+    notes: string | null;
+    image_url: string | null;
+    google_place_id: string | null;
+    google_ftid: string | null;
+    osm_id: string | null;
+    amap_poi_id: string | null;
+    website: string | null;
+    phone: string | null;
+    transport_mode: string | null;
+    route_color: string | null;
+    stop_type: string | null;
+    fill_percent: number | null;
+  }): Promise<void> {
+    const platform = this.getEntityManager().getPlatform();
+    await this.nativeUpdate({ id }, {
+      name: write.name,
+      description: write.description,
+      lat: write.lat,
+      lng: write.lng,
+      address: write.address,
+      category: write.category_id,
+      price: write.price,
+      currency: write.currency,
+      place_time: write.place_time,
+      end_time: write.end_time,
+      duration_minutes: write.duration_minutes,
+      notes: write.notes,
+      image_url: write.image_url,
+      google_place_id: write.google_place_id,
+      google_ftid: write.google_ftid,
+      osm_id: write.osm_id,
+      amap_poi_id: write.amap_poi_id,
+      website: write.website,
+      phone: write.phone,
+      transport_mode: write.transport_mode,
+      route_color: write.route_color,
+      stop_type: write.stop_type,
+      fill_percent: write.fill_percent,
+      updated_at: currentTimestamp(platform),
+    });
+  }
+
+  /**
+   * PL25 (`findDuplicatePlace`'s `externalId` strategy) — `SELECT id,
+   * google_ftid FROM places WHERE trip_id = ? AND (google_place_id = ? OR
+   * google_ftid = ? OR osm_id = ? OR amap_poi_id = ?) ORDER BY id ASC LIMIT
+   * 1` — the same candidate id bound in all four positions, exactly as the
+   * legacy statement does.
+   */
+  async findDuplicateByExternalId(trip_id: string, external_id: string): Promise<{ id: number; google_ftid: string | null } | undefined> {
+    return this.qb('p')
+      .select(['p.id', 'p.google_ftid'])
+      .where('p.trip_id = ?', [trip_id])
+      .andWhere({
+        $or: [
+          { google_place_id: external_id },
+          { google_ftid: external_id },
+          { osm_id: external_id },
+          { amap_poi_id: external_id },
+        ],
+      })
+      .orderBy({ 'p.id': 'asc' })
+      .limit(1)
+      .execute<{ id: number; google_ftid: string | null } | undefined>('get', false);
+  }
+
+  /**
+   * PL26 (`findDuplicatePlace`'s `name` strategy) — `SELECT id, google_ftid
+   * FROM places WHERE trip_id = ? AND lower(trim(name)) = ? ORDER BY id ASC
+   * LIMIT 1`. Rule 18's documented-disagreement exception clause: the legacy
+   * statement's OWN bound value is already JS-lowered+trimmed
+   * (`normalizePlaceName`, `@trek/shared/place/place-match.ts`, Unicode-
+   * aware), so `lowered_trimmed_name` here must be passed in ALREADY
+   * lowered — never re-lowered through `lowerParam` (that would apply
+   * SQLite's ASCII-only `LOWER()` a second time, on a value the caller
+   * already folded fully). `lowerTrim(platform, 'p.name')` renders
+   * `LOWER(TRIM(name))` (SQLite `LOWER()` is ASCII-only, program rule 18 —
+   * the documented divergence PL26's legacy comment (`places.service.ts
+   * :609-619`) already accepts and this repository reproduces literally,
+   * not fixes).
+   */
+  async findDuplicateByName(trip_id: string, lowered_trimmed_name: string): Promise<{ id: number; google_ftid: string | null } | undefined> {
+    const platform = this.getEntityManager().getPlatform();
+    return this.qb('p')
+      .select(['p.id', 'p.google_ftid'])
+      .where('p.trip_id = ?', [trip_id])
+      .andWhere({ [lowerTrim(platform, 'p.name')]: lowered_trimmed_name })
+      .orderBy({ 'p.id': 'asc' })
+      .limit(1)
+      .execute<{ id: number; google_ftid: string | null } | undefined>('get', false);
+  }
+
+  /**
+   * PL27 (`findDuplicatePlace`'s `coords` strategy) — `SELECT id,
+   * google_ftid FROM places WHERE trip_id = ? AND lat IS NOT NULL AND lng IS
+   * NOT NULL AND abs(lat - ?) <= ? AND abs(lng - ?) <= ? ORDER BY id ASC
+   * LIMIT 1`. `absDifference(platform, ref, value)` renders `ABS(<col> - ?)`
+   * with `value` already bound inside the fragment (`sql-functions.ts`'s own
+   * docstring) — used as a filter KEY paired with `{ $lte: tolerance }`, so
+   * the emitted SQL and bind order match the legacy statement exactly:
+   * `ABS(lat - ?) <= ?` then `ABS(lng - ?) <= ?`, the SAME `tolerance` value
+   * on both.
+   */
+  async findDuplicateByCoords(trip_id: string, lat: number, lng: number, tolerance: number): Promise<{ id: number; google_ftid: string | null } | undefined> {
+    const platform = this.getEntityManager().getPlatform();
+    return this.qb('p')
+      .select(['p.id', 'p.google_ftid'])
+      .where('p.trip_id = ?', [trip_id])
+      .andWhere({
+        lat: { $ne: null },
+        lng: { $ne: null },
+        [absDifference(platform, 'p.lat', lat)]: { $lte: tolerance },
+        [absDifference(platform, 'p.lng', lng)]: { $lte: tolerance },
+      })
+      .orderBy({ 'p.id': 'asc' })
+      .limit(1)
+      .execute<{ id: number; google_ftid: string | null } | undefined>('get', false);
+  }
+
+  /**
+   * PL29 (`exportGpx`'s waypoint read) — `SELECT p.name, p.description,
+   * p.address, p.lat, p.lng, p.route_geometry, c.name AS category FROM
+   * places p LEFT JOIN categories c ON c.id = p.category_id WHERE p.trip_id
+   * = ? ORDER BY p.id`. PL30 (the `days`/`day_assignments` itinerary half)
+   * is `DayAssignmentsRepository.listItineraryForGpx` — a different table
+   * root, kept there per the task-4 brief's own pointer.
+   */
+  async listForGpx(trip_id: string): Promise<{
+    name: string; description: string | null; address: string | null;
+    lat: number | null; lng: number | null; route_geometry: string | null;
+    category: string | null;
+  }[]> {
+    return this.qb('p')
+      .leftJoin('p.category', 'c')
+      .select(['p.name', 'p.description', 'p.address', 'p.lat', 'p.lng', 'p.route_geometry', 'c.name as category'])
+      .where('p.trip_id = ?', [trip_id])
+      .orderBy({ 'p.id': 'asc' })
+      .execute<{ name: string; description: string | null; address: string | null; lat: number | null; lng: number | null; route_geometry: string | null; category: string | null }[]>('all', false);
+  }
+
+  /**
+   * PI1 (`place-image.ts:27`) — `SELECT 1 FROM places WHERE image_url = ?
+   * LIMIT 1`. Trip-agnostic on purpose (an uploaded image is ref-counted
+   * across every trip, not just the one it was uploaded from — a place
+   * copied or shared across trips can share the file).
+   */
+  async existsByImageUrl(imageUrl: string): Promise<boolean> {
+    const row = await this.qb('p')
+      .select(['p.id'])
+      .where({ image_url: imageUrl })
+      .limit(1)
+      .execute<{ id: number } | undefined>('get', false);
+    return !!row;
+  }
+
+  /**
+   * PL3 (`PlacesService.list`) — the trip's places, joined with their
+   * category's flat columns, filtered by up to four optional fragments
+   * built as conditional `andWhere`s rather than a hand-assembled SQL
+   * string (§18.3's surprise: the legacy statement's own text is not
+   * knowable from the source without tracing four `if`s — this makes each
+   * fragment a single, separately readable `andWhere` call instead).
+   *
+   * `filters.searchPattern` arrives PRE-BUILT (`%${escapeLikePattern(term)}%`,
+   * the service's job, matching every other "coercions stay in the service"
+   * split in this program) — this binds it verbatim into all three `LIKE …
+   * ESCAPE '\'` fragments, matching the legacy's one-param-three-times bind.
+   * The `ESCAPE '\'` clause is written into the raw fragment text because
+   * MikroORM's `$like` operator does not add one (§18.3).
+   *
+   * `filters.category`/`filters.tag` bind their raw string values with no
+   * `Number()` conversion (matching the legacy statement's own untyped
+   * bind); the two `assignment` fragments reference `place_tags`/
+   * `day_assignments`/`days` by physical table name in a subquery (neither
+   * has, or needs, an entity-relation path for this shape) — the same
+   * raw-SQL-subquery shape `PlacesService.list`'s own legacy string used.
+   *
+   * `DISTINCT` kept via `.select([...], true)` even though a place has at
+   * most one category row (so it changes nothing about THIS join) — parity
+   * with the legacy statement's own `SELECT DISTINCT`, not a functional
+   * requirement.
+   */
+  async listForTrip(trip_id: string, filters: {
+    searchPattern?: string;
+    category?: string;
+    tag?: string;
+    assignment?: 'all' | 'unassigned' | 'assigned';
+  }): Promise<PlaceWithCategoryRow[]> {
+    const qb = this.qb('p')
+      .leftJoin('p.category', 'c')
+      .select(['p.*', 'c.name as category_name', 'c.color as category_color', 'c.icon as category_icon'], true)
+      .where('p.trip_id = ?', [trip_id]);
+
+    if (filters.searchPattern) {
+      qb.andWhere(
+        "(p.name LIKE ? ESCAPE '\\' OR p.address LIKE ? ESCAPE '\\' OR p.description LIKE ? ESCAPE '\\')",
+        [filters.searchPattern, filters.searchPattern, filters.searchPattern],
+      );
+    }
+    if (filters.category) {
+      qb.andWhere('p.category_id = ?', [filters.category]);
+    }
+    if (filters.tag) {
+      qb.andWhere('p.id IN (SELECT place_id FROM place_tags WHERE tag_id = ?)', [filters.tag]);
+    }
+    if (filters.assignment === 'unassigned') {
+      qb.andWhere(
+        'p.id NOT IN (SELECT da.place_id FROM day_assignments da JOIN days d ON da.day_id = d.id WHERE d.trip_id = ?)',
+        [trip_id],
+      );
+    } else if (filters.assignment === 'assigned') {
+      qb.andWhere(
+        'p.id IN (SELECT da.place_id FROM day_assignments da JOIN days d ON da.day_id = d.id WHERE d.trip_id = ?)',
+        [trip_id],
+      );
+    }
+
+    qb.orderBy({ 'p.created_at': 'desc' });
+
+    return qb.execute<PlaceWithCategoryRow[]>('all', false);
   }
 }

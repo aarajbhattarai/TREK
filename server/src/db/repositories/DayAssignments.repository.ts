@@ -300,13 +300,20 @@ export class DayAssignmentsRepository extends TrekRepository<DayAssignments> {
   /**
    * AS9 (`assignmentExistsInDay`) — `SELECT da.id FROM day_assignments da
    * JOIN days d ON da.day_id = d.id WHERE da.id = ? AND da.day_id = ? AND
-   * d.trip_id = ?`. Raw-bind (`number | string`, D4's T5 escape hatch,
-   * `TripsRepository.findAccessible`'s precedent): the legacy guard binds
-   * the route's raw params straight into the statement with no `Number()`/
-   * `toRowId` conversion of its own, so this must accept and bind exactly
-   * what it's handed, not coerce it first.
+   * d.trip_id = ?`.
+   *
+   * **`id: number`, not `number | string` (Task 3 review H1, absorbed in
+   * Task 4 — `task-3-review.md` §9.1):** this method's ONLY caller
+   * (`AssignmentsService.assignmentExistsInDay`) now runs `toRowId` on the
+   * route's raw `id` BEFORE calling this — a non-canonical id (`"3 "`,
+   * `"3.0"`) must resolve to "not found" in the SERVICE gate, not pass this
+   * statement's own SQLite text/integer affinity match and then disagree
+   * with `deleteAssignment`'s `toRowId(id)!` downstream (the H1 regression).
+   * `day_id`/`trip_id` keep their `number | string` raw-bind scoping —
+   * `deleteAssignment` never reads either back, so there is no gate-vs-write
+   * id to protect there.
    */
-  async existsInDay(id: number | string, day_id: number | string, trip_id: number | string): Promise<boolean> {
+  async existsInDay(id: number, day_id: number | string, trip_id: number | string): Promise<boolean> {
     const row = await this.qb('da')
       .join('da.day', 'd')
       .select(['da.id'])
@@ -318,13 +325,21 @@ export class DayAssignmentsRepository extends TrekRepository<DayAssignments> {
   /**
    * AS12 (`getAssignmentForTrip`) — `SELECT da.* FROM day_assignments da
    * JOIN days d ON da.day_id = d.id WHERE da.id = ? AND d.trip_id = ?`.
-   * Same raw-bind seam as `existsInDay` above — every real caller
-   * (`AssignmentOpsController`, `AssignmentsMcp`, `ItineraryRpc`) hands this
-   * the route/tool id verbatim, and `ItineraryRpc.unassign` reads
-   * `existing.day_id` off the result, so this is a genuine re-select, not
-   * only an existence guard.
+   *
+   * **`id: number`, not `number | string` (Task 3 review H1, absorbed in
+   * Task 4 — `task-3-review.md` §9.1):** this method's ONLY caller
+   * (`AssignmentsService.getAssignmentForTrip`) now runs `toRowId` on the
+   * route/tool's raw `id` BEFORE calling this, the same H1 fix
+   * `existsInDay` above applies — every mutation behind this gate
+   * (`updateTime`/`setEndDay`/`updateNotes`/`setLegTransportMode`/
+   * `setIncomingLegTransportMode`/`setParticipants`/`moveAssignment`)
+   * converts `id` with its own `toRowId(id)!`, and `ItineraryRpc.unassign`
+   * reads `existing.day_id` off THIS result (a genuine re-select, not only
+   * an existence guard) — so the id this read resolves must be the same one
+   * every one of those writes uses. `trip_id` keeps its `number | string`
+   * raw-bind scoping, unchanged.
    */
-  async findInTrip(id: number | string, trip_id: number | string): Promise<DayAssignmentRow | undefined> {
+  async findInTrip(id: number, trip_id: number | string): Promise<DayAssignmentRow | undefined> {
     const row = await this.qb('da')
       .join('da.day', 'd')
       .select(['da.*'])
@@ -508,5 +523,40 @@ export class DayAssignmentsRepository extends TrekRepository<DayAssignments> {
   /** AS27 — `UPDATE day_assignments SET incoming_leg_transport_mode = ? WHERE id = ?`. */
   async setIncomingLegMode(id: number, mode: string | null): Promise<void> {
     await this.nativeUpdate({ id }, { incoming_leg_transport_mode: mode });
+  }
+
+  // ---------------------------------------------------------------------------
+  // Plan 3c Task 4 (`PlacesService.exportGpx`) — appended per the task-4
+  // brief's "task-3-report.md" pointer ("DayAssignmentsRepository for the
+  // PL30 GPX itinerary read if it fits there"). Unlike AS16/AS18, this join
+  // (`day_assignments` -> `days`, `day_assignments` -> `places`) is fully
+  // expressible through the entity's own declared relations (`da.day`,
+  // `da.place`) — no `day_accommodations`-shaped gap — so the QueryBuilder is
+  // used directly rather than Kysely.
+  // ---------------------------------------------------------------------------
+
+  /**
+   * PL30 (`places.service.ts::exportGpx`) — `SELECT d.day_number, d.date,
+   * d.title, p.name, p.lat, p.lng FROM days d JOIN day_assignments da ON
+   * da.day_id = d.id JOIN places p ON p.id = da.place_id WHERE d.trip_id = ?
+   * AND p.lat IS NOT NULL AND p.lng IS NOT NULL ORDER BY d.day_number,
+   * da.order_index` — rooted here on `day_assignments` instead of `days`
+   * (the legacy statement's own `FROM` root) because both joins the legacy
+   * statement needs (`day_assignments -> days`, `day_assignments -> places`)
+   * are single hops FROM this entity, while `days` has no direct relation to
+   * `places`. Same result set, same ordering; the root alias choice is not
+   * observable from the row shape.
+   */
+  async listItineraryForGpx(trip_id: string | number): Promise<{
+    day_number: number; date: string | null; title: string | null;
+    name: string; lat: number; lng: number;
+  }[]> {
+    return this.qb('da')
+      .join('da.day', 'd')
+      .join('da.place', 'p')
+      .select(['d.day_number', 'd.date', 'd.title', 'p.name', 'p.lat', 'p.lng'])
+      .where('d.trip_id = ? AND p.lat IS NOT NULL AND p.lng IS NOT NULL', [trip_id])
+      .orderBy({ 'd.day_number': 'asc', 'da.order_index': 'asc' })
+      .execute<{ day_number: number; date: string | null; title: string | null; name: string; lat: number; lng: number }[]>('all', false);
   }
 }

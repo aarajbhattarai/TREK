@@ -1,9 +1,18 @@
 /**
  * Places module e2e — exercises the migrated /api/trips/:tripId/places endpoints
- * through the real JwtAuthGuard against a temp SQLite db. PlacesService runs its
- * real (DI-native) SQL — places/categories/tags/place_tags/place_ratings DDL
- * below; journeyService, the permission check, canAccessTrip and the WebSocket
- * broadcast are mocked.
+ * through the real JwtAuthGuard against a real migrated-and-seeded temp SQLite db
+ * (createSnapshotTestDb(), Plan 3c Task 4 — this used to hand-roll a dozen
+ * CREATE TABLEs, a second hand-maintained schema copy that omitted several
+ * `places` columns `PlacesRepository.insertPlace`'s own `em.insert()`
+ * RETURNING read-back names (`reservation_status`, `reservation_notes`,
+ * `reservation_datetime`) and stubbed `getPlaceWithTags`/`canAccessTrip`
+ * directly rather than routing through the real repositories this domain now
+ * uses — the same class of failure `days.e2e.test.ts` (Task 2) and
+ * `assignments.e2e.test.ts` (Task 3) already fixed for their own files.
+ * PlacesService runs its real SQL (DI-injected, no service mock);
+ * journeyService, the permission check and the WebSocket broadcast stay
+ * mocked. Every `it(...)` body below is unchanged from before this
+ * conversion — only the DB bootstrap changed.
  */
 import { describe, it, expect, beforeAll, afterAll, beforeEach, vi, type MockInstance } from 'vitest';
 import request from 'supertest';
@@ -12,74 +21,22 @@ import type { Server } from 'http';
 import { DatabaseModule } from '../../src/nest/database/database.module';
 import { RealtimeModule } from '../../src/nest/realtime/realtime.module';
 import { Test } from '@nestjs/testing';
-import { seedUser, sessionCookie } from './harness';
+import { sessionCookie } from './harness';
 
-const { db } = vi.hoisted(() => {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const Database = require('better-sqlite3');
-  const tmp = new Database(':memory:');
-  tmp.exec('PRAGMA journal_mode = WAL');
-  tmp.exec(`CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT NOT NULL,
-    email TEXT NOT NULL UNIQUE, role TEXT NOT NULL DEFAULT 'user', password_version INTEGER NOT NULL DEFAULT 0,
-    avatar TEXT);`);
-  // PlacesService runs its real SQL since the place fold — the full place column
-  // set the INSERT/UPDATE/SELECT paths touch, plus the joined projections.
-  tmp.exec(`CREATE TABLE places (id INTEGER PRIMARY KEY AUTOINCREMENT, trip_id INTEGER NOT NULL, name TEXT,
-    description TEXT, lat REAL, lng REAL, address TEXT, category_id INTEGER, price REAL, currency TEXT,
-    place_time TEXT, end_time TEXT, duration_minutes INTEGER, notes TEXT, image_url TEXT,
-    google_place_id TEXT, google_ftid TEXT, osm_id TEXT, amap_poi_id TEXT, website TEXT, phone TEXT, transport_mode TEXT,
-    route_geometry TEXT, route_color TEXT, stop_type TEXT, fill_percent INTEGER,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP);`);
-  tmp.exec(`CREATE TABLE categories (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, color TEXT, icon TEXT);`);
-  // Plan 3c Task 1: TagsRepository.listForPlaces (QH1) selects `user_id`
-  // explicitly (the legacy statement's `t.*` tolerated a narrower fixture
-  // schema; a named column list does not) — added here, matching the real
-  // `tags` table (`Migration20200101000000_baseline_schema.ts`).
-  tmp.exec(`CREATE TABLE tags (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, name TEXT, color TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP);`);
-  tmp.exec(`CREATE TABLE place_tags (place_id INTEGER NOT NULL, tag_id INTEGER NOT NULL,
-    PRIMARY KEY (place_id, tag_id));`);
-  tmp.exec(`CREATE TABLE place_ratings (place_id INTEGER NOT NULL, user_id INTEGER NOT NULL, rating INTEGER,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP, UNIQUE(place_id, user_id));`);
-  // The assignment=unassigned/assigned filters join these.
-  tmp.exec('CREATE TABLE days (id INTEGER PRIMARY KEY AUTOINCREMENT, trip_id INTEGER NOT NULL, day_number INTEGER, date TEXT, title TEXT);');
-  // The GPX export reads the trip title for <metadata> and the filename.
-  tmp.exec('CREATE TABLE trips (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT, user_id INTEGER, currency TEXT);');
-  // TripAccessGuard now reads TripsRepository.findAccessible directly
-  // (Plan 3c Task 0b), a real join against trip_members.
-  tmp.exec('CREATE TABLE trip_members (trip_id INTEGER NOT NULL, user_id INTEGER NOT NULL);');
-  tmp.exec(`CREATE TABLE day_assignments (id INTEGER PRIMARY KEY AUTOINCREMENT, day_id INTEGER NOT NULL,
-    place_id INTEGER NOT NULL, order_index INTEGER DEFAULT 0);`);
-  // reclaimPlaceImage ref-counts an uploaded thumbnail across both tables.
-  // Deleting a place cancels the nights booked at it (#2354), so the delete path
-  // reads this table even in a file that never books one.
-  tmp.exec(`CREATE TABLE day_accommodations (id INTEGER PRIMARY KEY AUTOINCREMENT, trip_id INTEGER,
-    place_id INTEGER, start_day_id INTEGER, end_day_id INTEGER, check_in TEXT, check_in_end TEXT,
-    check_out TEXT, confirmation TEXT, notes TEXT, created_at TEXT DEFAULT (datetime('now')));`);
-  tmp.exec(`CREATE TABLE collection_places (id INTEGER PRIMARY KEY AUTOINCREMENT, image_url TEXT);`);
-  // reclaimPhotoCache's removeIfUnreferenced sweeps the Google photo cache.
-  tmp.exec(`CREATE TABLE google_place_photo_meta (place_id TEXT PRIMARY KEY, attribution TEXT, error_at DATETIME);`);
-  // Deleting a place takes its linked expense with it (#1298).
-  tmp.exec(`CREATE TABLE budget_items (id INTEGER PRIMARY KEY AUTOINCREMENT, trip_id INTEGER NOT NULL,
-    name TEXT, total_price REAL DEFAULT 0, place_id INTEGER, reservation_id INTEGER);`);
-  // StorageRegistryService (behind StorageModule, now in this module chain) reads
-  // this at onModuleInit.
-  tmp.exec('CREATE TABLE app_settings (key TEXT PRIMARY KEY, value TEXT);');
-  return { db: tmp };
+vi.mock('../../src/db/database', async () => {
+  const { createSnapshotTestDb, buildDbMock } = await import('../helpers/db-mock');
+  return buildDbMock(createSnapshotTestDb());
 });
+const { broadcast } = vi.hoisted(() => ({ broadcast: vi.fn() }));
+vi.mock('../../src/websocket', () => ({ broadcast }));
 
-const { canAccessTrip } = vi.hoisted(() => ({ canAccessTrip: vi.fn() }));
-const { getPlaceWithTags } = vi.hoisted(() => ({
-  // The one db/database helper PlacesService still calls through (post-write
-  // re-selects). Real implementation over the temp db so the responses carry
-  // the joined category/tags/ratings the client expects.
-  getPlaceWithTags: vi.fn(),
+import { db } from '../../src/db/database';
+
+const { onPlaceCreated, onPlaceUpdated, onPlaceDeleted } = vi.hoisted(() => ({
+  onPlaceCreated: vi.fn().mockResolvedValue(undefined),
+  onPlaceUpdated: vi.fn().mockResolvedValue(undefined),
+  onPlaceDeleted: vi.fn().mockResolvedValue(undefined),
 }));
-vi.mock('../../src/db/database', () => ({
-  db, canAccessTrip, isOwner: vi.fn(() => true), getPlaceWithTags, closeDb: () => {}, reinitialize: () => {},
-}));
-vi.mock('../../src/websocket', () => ({ broadcast: vi.fn() }));
-import { broadcast } from '../../src/websocket';
 import { JourneyDomainService } from '../../src/nest/journey/journey-domain.service';
 
 import { PermissionsService } from '../../src/nest/permissions/permissions.service';
@@ -102,11 +59,7 @@ describe('Places e2e (real auth guard + temp SQLite)', () => {
   async function build() {
     const moduleRef = await Test.createTestingModule({ imports: [await TestUnitOfWorkModule.forRoot(db), await createTestMikroOrmModule(db), DatabaseModule, RealtimeModule, PlacesModule] })
       .overrideProvider(JourneyDomainService)
-      .useValue({
-        onPlaceCreated: vi.fn().mockResolvedValue(undefined),
-        onPlaceUpdated: vi.fn().mockResolvedValue(undefined),
-        onPlaceDeleted: vi.fn().mockResolvedValue(undefined),
-      })
+      .useValue({ onPlaceCreated, onPlaceUpdated, onPlaceDeleted })
       .compile();
     const nest = moduleRef.createNestApplication();
     nest.use(cookieParser());
@@ -119,28 +72,32 @@ describe('Places e2e (real auth guard + temp SQLite)', () => {
   }
 
   beforeAll(async () => {
-    seedUser(db as never, { id: 1 });
-    getPlaceWithTags.mockImplementation((placeId: number | string) => {
-      const place = db.prepare(`SELECT p.*, c.name AS category_name, c.color AS category_color, c.icon AS category_icon
-        FROM places p LEFT JOIN categories c ON p.category_id = c.id WHERE p.id = ?`).get(placeId) as Record<string, unknown> | undefined;
-      if (!place) return null;
-      const tags = db.prepare('SELECT t.* FROM tags t JOIN place_tags pt ON t.id = pt.tag_id WHERE pt.place_id = ?').all(placeId);
-      return { ...place, category: place.category_id ? { id: place.category_id, name: place.category_name } : null, tags, ratings: [], rating_avg: null, rating_count: 0 };
-    });
+    // harness.ts's seedUser() omits password_hash, which the real migrated
+    // schema requires NOT NULL (days.e2e.test.ts's/assignments.e2e.test.ts's
+    // own precedent) — raw inserts here instead. `username: 'e2e-user'`
+    // (user 1) matches the harness default so assertion bodies that spell
+    // out the owner's username stay unchanged. User 2 owns the "foreign"
+    // trip (id 6) several tests below reference — `trips.user_id` and
+    // `places.trip_id` both carry a real FK now (`ON DELETE CASCADE`), so a
+    // dangling trip_id the old hand-rolled DDL tolerated would fail here.
+    db.prepare("INSERT INTO users (id, username, email, password_hash, role, password_version) VALUES (1, 'e2e-user', 'e2e@example.test', 'x', 'user', 0)").run();
+    db.prepare("INSERT INTO users (id, username, email, password_hash, role, password_version) VALUES (2, 'peer', 'peer@example.test', 'x', 'user', 0)").run();
+    db.prepare("INSERT INTO trips (id, title, user_id) VALUES (6, 'Theirs', 2)").run();
     app = await build();
     checkPermission = vi.spyOn(app.get(PermissionsService), 'checkPermission');
     server = app.getHttpServer();
   });
 
   beforeEach(() => {
-    db.exec('DELETE FROM trips; DELETE FROM places; DELETE FROM place_tags; DELETE FROM place_ratings; DELETE FROM day_assignments; DELETE FROM days;');
-    // Plan 3c Task 0b: TripAccessGuard reads TripsRepository.findAccessible
-    // directly now, a real query — `canAccessTrip.mockReturnValue(...)` no
-    // longer intercepts it, so trip 5's real row is (re-)seeded every test
-    // instead, owned by user 1, matching what the mock used to fake. GPX
-    // tests below re-seed their own data-bearing row with `INSERT OR
-    // REPLACE` over this default.
+    // Trip 5 (owned by user 1) is the suite's main trip, re-seeded fresh
+    // every test — deleting it (`ON DELETE CASCADE`) also clears every place/
+    // day/assignment/rating/tag-link/budget-item this suite seeded under it,
+    // the real-FK equivalent of the old blanket `DELETE FROM places; …`.
+    // Trip 6 (the "foreign" trip, owned by user 2) is seeded once in
+    // beforeAll and left alone.
+    db.exec('DELETE FROM trips WHERE id = 5;');
     db.prepare("INSERT INTO trips (id, title, user_id) VALUES (5, 'Trip', 1)").run();
+    db.exec('DELETE FROM places WHERE trip_id = 6;');
     checkPermission.mockReturnValue(true);
   });
 
@@ -184,7 +141,8 @@ describe('Places e2e (real auth guard + temp SQLite)', () => {
   });
 
   it('200 (not 201) bulk-delete, 400 on bad ids', async () => {
-    db.prepare("INSERT INTO places (id, trip_id, name) VALUES (1, 5, 'A'), (2, 5, 'B'), (3, 6, 'Foreign')").run();
+    db.prepare("INSERT INTO places (id, trip_id, name) VALUES (1, 5, 'A'), (2, 5, 'B')").run();
+    db.prepare("INSERT INTO places (id, trip_id, name) VALUES (3, 6, 'Foreign')").run();
     const ok = await request(server).post('/api/trips/5/places/bulk-delete').set('Cookie', sessionCookie(1)).send({ ids: [1, 2, 3] });
     expect(ok.status).toBe(200);
     expect(ok.body).toEqual({ deleted: [1, 2], count: 2 });
@@ -279,7 +237,8 @@ describe('Places e2e (real auth guard + temp SQLite)', () => {
   });
 
   it('DELETE :id removes the row, 404 for a foreign place', async () => {
-    db.prepare("INSERT INTO places (id, trip_id, name) VALUES (9, 5, 'Gone'), (10, 6, 'Foreign')").run();
+    db.prepare("INSERT INTO places (id, trip_id, name) VALUES (9, 5, 'Gone')").run();
+    db.prepare("INSERT INTO places (id, trip_id, name) VALUES (10, 6, 'Foreign')").run();
 
     const ok = await request(server).delete('/api/trips/5/places/9').set('Cookie', sessionCookie(1));
     expect(ok.status).toBe(200);

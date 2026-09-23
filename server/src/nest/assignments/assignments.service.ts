@@ -65,21 +65,26 @@ function sortMinutes(time: string | null): number | null {
  * `AssignmentParticipantsRepository` (Plan 3c Task 3, consuming Task 2's
  * `findWithPlaceAndCategory`/`listForDay` projection unchanged for AS1/AS3);
  * AS20–AS23 (`roadtrip_vias`) stay raw on `DatabaseService`, `// ASn — Plan
- * 3d` marked — that table belongs to Plan 3d. AS5 (`placeExists`) is the one
- * exception to "SQL lives in a repository method": `Places.repository.ts`
- * was another task's exclusive, actively-edited file this session (never
- * touched here), so the equivalent one-line `qb()` raw-condition read is
- * inlined below rather than added as a `PlacesRepository` method — flagged
- * in the task report for a follow-up to move it once that file is free.
+ * 3d` marked — that table belongs to Plan 3d. AS5 (`placeExists`) called
+ * `PlacesRepository.existsInTrip` through Task 4's follow-up, once that file
+ * was free (it moved off an inlined `qb()` read this class carried for one
+ * session while `Places.repository.ts` was another task's exclusive file).
  *
- * Assignment ids arriving from a route/tool are an **affinity seam** for the
- * mutation methods (`toRowId(id)!`, program rule 15) — every real call site
- * only ever reaches a mutation downstream of its own gate check in the same
- * request (`assignmentExistsInDay`/`getAssignmentForTrip`, both of which
- * stay on the legacy raw-bind seam themselves, matching `TripsRepository
- * .findAccessible`'s documented `number | string` pass-through), so the
- * non-null assertion is dead-code-safe, the same shape `DaysService` already
- * uses for its own single `getDay` gate.
+ * **Assignment/day/place ids arriving from a route/tool are `toRowId`'d
+ * inside each existence gate, not passed through on the affinity seam**
+ * (Task 3 review H1, a live regression fixed by Task 4): `dayExists`/
+ * `placeExists`/`assignmentExistsInDay`/`getAssignmentForTrip` used to bind
+ * the caller's raw id straight into their own read, which SQLite's
+ * text/integer affinity matches for a shape (`"3 "`, `"3.0"`, `"+3"`)
+ * `toRowId` rejects — so a gate could answer "found" for an id the mutation
+ * behind it, converting with its own `toRowId(id)!`, then treated as `null`
+ * (a 500 on `move`, a silent no-write "success" on `notes`/`delete`). Fixed
+ * the way `DaysService.getDay` (`days.service.ts:238-242`, the correct
+ * precedent — NOT the raw pass-through this docstring previously,
+ * incorrectly, cited it for) does it: `toRowId` runs INSIDE the gate, which
+ * returns not-found on `null`, so every mutation's own `toRowId(id)!` below
+ * can never disagree with the gate that authorized it — the non-null
+ * assertion is dead-code-safe for real, not just by convention.
  */
 @Injectable()
 export class AssignmentsService {
@@ -173,25 +178,39 @@ export class AssignmentsService {
     });
   }
 
-  /** AS4 — `DaysRepository.existsInTrip`. Raw-bind pass-through, unchanged. */
+  /**
+   * AS4 — `DaysRepository.existsInTrip`, `dayId` `toRowId`'d INSIDE this
+   * gate (Task 3 review H1 fix, absorbed in Task 4): `createAssignment`
+   * (the only write behind this gate) converts `dayId` with its own
+   * `toRowId(dayId)!` — a non-canonical id (`"3 "`, `"3.0"`) must answer
+   * "not found" HERE, not pass `DaysRepository.existsInTrip`'s own raw-bind
+   * affinity match and then hit `toRowId(dayId)!` downstream returning
+   * `null` (the live regression: a `day_id: null` INSERT, 500). `tripId`
+   * keeps the trip-scoping seam every gate in this cluster uses (D4's T5,
+   * `TripsRepository.findAccessible`'s precedent) — trip access is already
+   * verified upstream of every route this class serves, so `Number(tripId)`
+   * is the correct, unchanged shape (`DaysService.getDay`'s own precedent
+   * keeps its `tripId` unconverted too).
+   */
   async dayExists(dayId: string | number, tripId: string | number) {
-    return await this.daysRepo.existsInTrip(dayId, tripId);
+    const id = toRowId(dayId);
+    if (id === null) return false;
+    return await this.daysRepo.existsInTrip(id, Number(tripId));
   }
 
   /**
-   * AS5 — `SELECT id FROM places WHERE id = ? AND trip_id = ?`. `Places
-   * .repository.ts` was another task's exclusive, actively-edited file this
-   * session (see the class docstring) — inlined here as the one exception to
-   * "SQL lives in a repository method" rather than adding a method there.
-   * Same raw-bind seam as `dayExists`/`DayAssignmentsRepository.existsInDay`.
+   * AS5 — `PlacesRepository.existsInTrip`, same H1 fix and reasoning as
+   * `dayExists` above: `createAssignment`'s own `toRowId(placeId)!` must
+   * never disagree with this gate. `PlacesRepository.existsInTrip` itself
+   * narrowed its `id` parameter to `number` for this exact reason
+   * (`Places.repository.ts`'s own docstring) — Plan 3c Task 1 originally
+   * landed the method, Task 4 repointed this call site and applied the H1
+   * fix in the same change.
    */
   async placeExists(placeId: unknown, tripId: string | number) {
-    const row = await this.placesRepo
-      .qb('p')
-      .select(['p.id'])
-      .where('p.id = ? AND p.trip_id = ?', [placeId, tripId])
-      .execute<{ id: number } | undefined>('get', false);
-    return !!row;
+    const id = toRowId(placeId);
+    if (id === null) return false;
+    return await this.placesRepo.existsInTrip(id, Number(tripId));
   }
 
   /**
@@ -233,9 +252,20 @@ export class AssignmentsService {
     return await this.getAssignmentWithPlace(insertedId);
   }
 
-  /** AS9 — `DayAssignmentsRepository.existsInDay`. Raw-bind pass-through, unchanged. */
+  /**
+   * AS9 — `DayAssignmentsRepository.existsInDay`, `id` `toRowId`'d INSIDE
+   * this gate (Task 3 review H1 fix, absorbed in Task 4): `deleteAssignment`
+   * (the only write behind this gate, `AssignmentsController.remove`) converts
+   * `id` with its own `toRowId(id)!` — this must reject exactly what that
+   * rejects. `dayId`/`tripId` keep the legacy's own raw-bind scoping
+   * (`DayAssignmentsRepository.existsInDay`'s own `number | string`
+   * parameters, unchanged): `deleteAssignment` never reads either back, so
+   * there is no gate-vs-write id to disagree on for them.
+   */
   async assignmentExistsInDay(id: string | number, dayId: string | number, tripId: string | number) {
-    return await this.dayAssignmentsRepo.existsInDay(id, dayId, tripId);
+    const rowId = toRowId(id);
+    if (rowId === null) return false;
+    return await this.dayAssignmentsRepo.existsInDay(rowId, dayId, tripId);
   }
 
   /** AS10 — `DayAssignmentsRepository.deleteById`. */
@@ -257,9 +287,20 @@ export class AssignmentsService {
     });
   }
 
-  /** AS12 — `DayAssignmentsRepository.findInTrip`. Raw-bind pass-through, unchanged. */
+  /**
+   * AS12 — `DayAssignmentsRepository.findInTrip`, `id` `toRowId`'d INSIDE
+   * this gate (Task 3 review H1 fix, absorbed in Task 4): every mutation
+   * behind this gate (`updateTime`, `setEndDay`, `updateNotes`,
+   * `setLegTransportMode`, `setIncomingLegTransportMode`, `setParticipants`,
+   * and `ItineraryRpc.unassign` via `moveAssignment`) converts `id` with its
+   * own `toRowId(id)!` — this must reject exactly what those reject, the
+   * same shape `assignmentExistsInDay` above uses for `deleteAssignment`.
+   * `tripId` keeps the legacy's own raw-bind scoping, unchanged.
+   */
   async getAssignmentForTrip(id: string | number, tripId: string | number) {
-    return await this.dayAssignmentsRepo.findInTrip(id, tripId);
+    const rowId = toRowId(id);
+    if (rowId === null) return undefined;
+    return await this.dayAssignmentsRepo.findInTrip(rowId, tripId);
   }
 
   async moveAssignment(id: string | number, newDayId: unknown, orderIndex: number | null | undefined) {

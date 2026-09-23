@@ -1,4 +1,11 @@
 import { Module } from '@nestjs/common';
+import { MikroOrmModule } from '@mikro-orm/nestjs';
+import { Places } from '../../db/entities/Places.entity';
+import { Tags } from '../../db/entities/Tags.entity';
+import { PlaceRatings } from '../../db/entities/PlaceRatings.entity';
+import { TripMembers } from '../../db/entities/TripMembers.entity';
+import { DayAssignments } from '../../db/entities/DayAssignments.entity';
+import { Trips } from '../../db/entities/Trips.entity';
 import { JourneyDomainModule } from '../journey/journey-domain.module';
 import { PlacesController } from './places.controller';
 import { PlacesService } from './places.service';
@@ -45,7 +52,17 @@ import { MAX_PLACE_IMAGE_SIZE } from '../common/place-image-upload';
     StorageModule,
     // AccommodationsDomainModule: deleting a place takes the nights booked at it with
     // it, and the cascade behind a stay belongs to the domain that owns it.
-    McpSharedModule, PermissionsModule, QueryHelpersModule, MapsModule, AuthModule, AppConfigModule, UnsplashModule, PlacePhotosModule, JourneyDomainModule, RealtimeModule, PluginGuardsModule, AssignmentsDomainModule, AccommodationsDomainModule],
+    McpSharedModule, PermissionsModule, QueryHelpersModule, MapsModule, AuthModule, AppConfigModule, UnsplashModule, PlacePhotosModule, JourneyDomainModule, RealtimeModule, PluginGuardsModule, AssignmentsDomainModule, AccommodationsDomainModule,
+    // Plan 3c Task 4: `PlacesService`'s and `PlacesMcp`'s own `@InjectRepository`
+    // constructor params (`PlacesRepository`, `TagsRepository`,
+    // `PlaceRatingsRepository`, `TripMembersRepository`,
+    // `DayAssignmentsRepository`, `TripsRepository`) — registered directly on
+    // THIS module (not a sibling domain module's `exports`), matching
+    // `AssignmentsDomainModule`'s own `MikroOrmModule.forFeature(...)`
+    // precedent: a `forFeature` registration only reaches providers declared
+    // in the SAME module.
+    MikroOrmModule.forFeature([Places, Tags, PlaceRatings, TripMembers, DayAssignments, Trips]),
+  ],
   controllers: [PlacesController],
   providers: [PlacesService, PlacesMcp, PlacesRpc],
   exports: [PlacesService],

@@ -30,6 +30,22 @@ export interface TagForPlaceRow {
   created_at: string | null;
 }
 
+/**
+ * `place_tags` (`place_id`, `tag_id`, `PRIMARY KEY (place_id, tag_id)`,
+ * `Migration20200101000000_baseline_schema.ts:195-199` — verified against
+ * the migration, not assumed) as `Places.entity.ts`'s own `place_tags`
+ * many-to-many relation declares it — a PLAIN pivot table
+ * (`p.manyToMany(Tags).pivotTable('place_tags')...`) with no owning entity of
+ * its own (unlike `PackingItems`' `packing_item_contributors`, which has a
+ * `pivotEntity`). Neither `em.upsert` nor `qb()` can target a table with no
+ * entity mapping — both are bound to exactly one mapped entity — so
+ * `TrekRepository.kysely()` (D3's sanctioned next escape hatch) is the only
+ * API that reaches it.
+ */
+interface PlaceTagsKyselyDB {
+  place_tags: { place_id: number; tag_id: number };
+}
+
 export class TagsRepository extends TrekRepository<Tags> {
   /**
    * `SELECT * FROM tags WHERE user_id = ? ORDER BY name ASC`, via the shared
@@ -162,5 +178,64 @@ export class TagsRepository extends TrekRepository<Tags> {
       .select(['t.id', 't.user', 't.name', 't.color', 't.created_at', 'p.id as place_id'])
       .where({ 'p.id': { $in: placeIds } })
       .execute<TagForPlaceRow[]>('all', false);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Plan 3c Task 4 (`PlacesService`) — additive methods.
+  // ---------------------------------------------------------------------------
+
+  /**
+   * PL2 (`PlacesService.tagsOnTrip`) — `` SELECT id, user_id FROM tags WHERE
+   * id IN (${…}) ``, the ownership half of tag scoping: the caller
+   * (`tagsOnTrip`) intersects these rows' `user_id` against the trip's
+   * roster, and an id belonging to nobody on the roster drops silently.
+   * `$in` for the dynamic list (rule 17b).
+   */
+  async findByIds(ids: number[]): Promise<{ id: number; user_id: number }[]> {
+    if (ids.length === 0) return [];
+    // `t.user` (unaliased, not separately joined) resolves to the physical
+    // `user_id` column and comes back keyed as `user_id` on the raw driver
+    // row — `TripsRepository.findAccessible`'s `.select(['t.id', 't.user',
+    // 't.currency'])` establishes the same shape.
+    return this.qb('t')
+      .select(['t.id', 't.user'])
+      .where({ id: { $in: ids } })
+      .execute<{ id: number; user_id: number }[]>('all', false);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Plan 3c Task 4 (`PlacesService.create`/`applyUpdate`, PL5/PL12/PL13) —
+  // `place_tags` writes. `PlaceTagsKyselyDB` above documents why Kysely.
+  // ---------------------------------------------------------------------------
+
+  /**
+   * PL5/PL13 — `INSERT OR IGNORE INTO place_tags (place_id, tag_id) VALUES
+   * (?, ?)`, the legacy statement run once per tag id. One batched Kysely
+   * insert with `onConflict((oc) => oc.columns(['place_id', 'tag_id'])
+   * .doNothing())` on the pivot's real composite `PRIMARY KEY (place_id,
+   * tag_id)` — SQLite's `ON CONFLICT (...) DO NOTHING` (supported since
+   * SQLite 3.24, well within better-sqlite3's bundled version) is the
+   * upsert-API-less equivalent of `INSERT OR IGNORE` for a table with no
+   * entity mapping. Same end state as the legacy per-row loop (every
+   * genuinely new pair inserted, every duplicate silently skipped); the
+   * caller (`PlacesService.tagsOnTrip`) always hands an already
+   * roster-scoped, deduplicated tag id list — the empty-array guard here is
+   * defensive, matching every other batch-write method in this program.
+   */
+  async insertIgnore(place_id: number, tag_ids: number[]): Promise<void> {
+    if (tag_ids.length === 0) return;
+    await this.kysely<PlaceTagsKyselyDB>()
+      .insertInto('place_tags')
+      .values(tag_ids.map((tag_id) => ({ place_id, tag_id })))
+      .onConflict((oc) => oc.columns(['place_id', 'tag_id']).doNothing())
+      .execute();
+  }
+
+  /** PL12 — `DELETE FROM place_tags WHERE place_id = ?` (the replace-all half of an update). */
+  async deleteForPlace(place_id: number): Promise<void> {
+    await this.kysely<PlaceTagsKyselyDB>()
+      .deleteFrom('place_tags')
+      .where('place_id', '=', place_id)
+      .execute();
   }
 }

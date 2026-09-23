@@ -291,13 +291,13 @@ describe('DayAssignmentsRepository — AS4/AS9/AS12 existence + trip-scoped read
     expect(await assignments.existsInDay(a.id, day.id, trip.id + 1)).toBe(false);
   });
 
-  it('ASSIGNREPO-002 (AS9): raw-bind — a string id binds unconverted, same as a real number', async () => {
+  it('ASSIGNREPO-002 (AS9): raw-bind on day_id/trip_id — a string binds unconverted, same as a real number; `id` itself is `number`-only now (Task 3 review H1, absorbed in Task 4: the method\'s only caller `toRowId`s `id` before calling, so the type narrowed to match)', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const day = createDay(testDb, trip.id);
     const place = createPlace(testDb, trip.id);
     const a = createDayAssignment(testDb, day.id, place.id);
-    expect(await assignments.existsInDay(String(a.id), String(day.id), String(trip.id))).toBe(true);
+    expect(await assignments.existsInDay(a.id, String(day.id), String(trip.id))).toBe(true);
   });
 
   it('ASSIGNREPO-003 (AS12, findInTrip): the raw `da.*` row, scoped to the trip via a two-hop join; undefined cross-trip', async () => {
@@ -594,4 +594,50 @@ it('ASSIGNREPO-023 (D-shape): a notes write after an unrelated identity-map read
   await t.repo(DayAssignments).find({}, { disableIdentityMap: false }); // populate the identity map with the managed assignment entity
   await withRequestContext(t.orm, () => assignments.setNotes(a.id, 'fresh note'));
   expect(await assignments.findInTrip(a.id, trip.id)).toMatchObject({ notes: 'fresh note' });
+});
+
+// ---------------------------------------------------------------------------
+// Plan 3c Task 4 (`PlacesService.exportGpx`) — the PL30 itinerary read.
+// ---------------------------------------------------------------------------
+
+describe('DayAssignmentsRepository.listItineraryForGpx (PL30)', () => {
+  it('ASSIGNREPO-024: joins day + place, only stops with coordinates, ordered by day_number then order_index', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const day1 = createDay(testDb, trip.id, { day_number: 1, date: '2026-01-01', title: 'Day One' });
+    const day2 = createDay(testDb, trip.id, { day_number: 2, date: '2026-01-02' });
+    const geo = createPlace(testDb, trip.id, { name: 'Has Coords', lat: 1, lng: 2 });
+    const noGeo = testDb.prepare('INSERT INTO places (trip_id, name, lat, lng) VALUES (?, ?, NULL, NULL)').run(trip.id, 'No Coords').lastInsertRowid as number;
+    const secondStop = createPlace(testDb, trip.id, { name: 'Second Stop', lat: 3, lng: 4 });
+    // day2's stop first (order_index 0), day1's stop second — proves the
+    // ORDER BY is day_number then order_index, not insertion/id order.
+    createDayAssignment(testDb, day2.id, secondStop.id, { order_index: 0 });
+    createDayAssignment(testDb, day1.id, geo.id, { order_index: 0 });
+    createDayAssignment(testDb, day1.id, noGeo, { order_index: 1 });
+
+    const rows = await assignments.listItineraryForGpx(trip.id);
+    expect(rows).toEqual([
+      { day_number: 1, date: '2026-01-01', title: 'Day One', name: 'Has Coords', lat: 1, lng: 2 },
+      { day_number: 2, date: '2026-01-02', title: null, name: 'Second Stop', lat: 3, lng: 4 },
+    ]);
+  });
+
+  it('ASSIGNREPO-025: a trip with no coordinate-bearing stops returns []', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const day = createDay(testDb, trip.id);
+    const noGeo = testDb.prepare('INSERT INTO places (trip_id, name, lat, lng) VALUES (?, ?, NULL, NULL)').run(trip.id, 'No Coords').lastInsertRowid as number;
+    createDayAssignment(testDb, day.id, noGeo);
+    expect(await assignments.listItineraryForGpx(trip.id)).toEqual([]);
+  });
+
+  it('ASSIGNREPO-026: another trip\'s stops never leak in', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const other = createTrip(testDb, user.id);
+    const day = createDay(testDb, other.id);
+    const place = createPlace(testDb, other.id, { lat: 5, lng: 6 });
+    createDayAssignment(testDb, day.id, place.id);
+    expect(await assignments.listItineraryForGpx(trip.id)).toEqual([]);
+  });
 });

@@ -99,6 +99,27 @@ export class AssignmentParticipantsRepository extends TrekRepository<AssignmentP
    * for a relation-backed `onConflictFields` list). The caller only ever
    * passes a non-empty, already-roster-scoped array; the empty-array guard
    * here is defensive, matching the service's own guard.
+   *
+   * **Two differences from the legacy per-row loop (Task 3 review M1,
+   * absorbed in Task 4), both benign today, documented so they stay that
+   * way on purpose:**
+   * 1. **Narrower failure mode.** `OR IGNORE` swallowed *any* constraint
+   *    violation on a row; `ON CONFLICT (assignment_id, user_id) DO
+   *    NOTHING` swallows only THAT unique index, and one row that violates
+   *    a DIFFERENT constraint aborts the whole multi-row statement rather
+   *    than being skipped. Unreachable today — AS28 roster-scopes the ids
+   *    before this call, and the caller has already gated the assignment
+   *    itself — but a concurrent delete of the assignment mid-request would
+   *    now 500 where the legacy loop silently no-opped that one row.
+   * 2. **One extra statement.** `upsertMany` issues a reload `SELECT` after
+   *    the insert (`generated SQL, captured: insert … on conflict (…) do
+   *    nothing returning id` then `select … from assignment_participants
+   *    as a0 where (…)`) that the legacy loop never ran. Harmless — the
+   *    reloaded rows are fully hydrated and unchanged, so the enclosing
+   *    `em.transactional`'s closing flush emits nothing for them — but it
+   *    is a genuine extra round-trip and briefly populates the identity map
+   *    inside the write transaction, worth knowing if a future change here
+   *    ever needs to reason about statement counts.
    */
   async insertIgnore(assignment_id: number, user_ids: number[]): Promise<void> {
     if (user_ids.length === 0) return;
