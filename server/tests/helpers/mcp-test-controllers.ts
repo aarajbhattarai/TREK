@@ -145,6 +145,10 @@ import {
   createTestPackingTemplateItemsRepo,
 } from './packing-repos';
 import { createTestTodoItemsRepo, createTestTodoCategoryAssigneesRepo } from './todo-repos';
+import {
+  createTestSchoolHolidayCountriesRepo, createTestSchoolHolidayRegionsRepo,
+  createTestSchoolHolidayPeriodsRepo, createTestVacayHolidayCalendarsRepo,
+} from './school-holidays-repos';
 import { AppSettings } from '../../src/db/entities/AppSettings.entity';
 import { AuditLog } from '../../src/db/entities/AuditLog.entity';
 import { Users } from '../../src/db/entities/Users.entity';
@@ -362,7 +366,16 @@ export async function createMcpTestRegistry(): Promise<McpRegistry> {
       new AssignmentsMcp(assignmentsService, daysService, authService, guards),
       new CollabMcp(collabService, authService, addonsService, guards),
       new VacayMcp(new VacayService(dbService, realtimeService, notificationsStub(), await createTestUnitOfWork(dbService.connection)), authService, addonsService),
-      new SchoolHolidaysMcp(new SchoolHolidaysService(dbService, await createTestUnitOfWork(dbService.connection)), guards),
+      new SchoolHolidaysMcp(
+        new SchoolHolidaysService(
+          await createTestSchoolHolidayCountriesRepo(dbService.connection),
+          await createTestSchoolHolidayRegionsRepo(dbService.connection),
+          await createTestSchoolHolidayPeriodsRepo(dbService.connection),
+          await createTestVacayHolidayCalendarsRepo(dbService.connection),
+          await createTestUnitOfWork(dbService.connection),
+        ),
+        guards,
+      ),
       new TripsMcp(tripsService, todoService, collabService, authService, calendarService, membersService, readModelService, addonsService, guards),
       new TripPromptsMcp(tripsService, readModelService, packingService, addonsService),
       new ShareMcp(new ShareService(dbService, new SettingsService(await createTestUnitOfWork(dbService.connection), appSettings, await createTestSettingsRepo(dbService.connection)), permissionsService, queryHelpersService, placePhotoCache, await createTestUnitOfWork(dbService.connection), await createTestReservationsRepo(dbService.connection)), authService, guards),

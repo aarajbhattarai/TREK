@@ -1,61 +1,87 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { InjectRepository } from '@mikro-orm/nestjs';
 import type { SchoolHolidayCatalog, SchoolHolidayCountryRequest, SchoolHolidayPeriod, SchoolHolidayRegion, SchoolHolidayRegionDetail, SchoolHolidayRegionRequest } from '@trek/shared';
-import { DatabaseService } from '../database/database.service';
+import { SchoolHolidayCountries } from '../../db/entities/SchoolHolidayCountries.entity';
+import type { SchoolHolidayCountriesRepository } from '../../db/repositories/SchoolHolidayCountries.repository';
+import { SchoolHolidayRegions } from '../../db/entities/SchoolHolidayRegions.entity';
+import type { SchoolHolidayRegionsRepository, SchoolHolidayRegionRow } from '../../db/repositories/SchoolHolidayRegions.repository';
+import { SchoolHolidayPeriods } from '../../db/entities/SchoolHolidayPeriods.entity';
+import type { SchoolHolidayPeriodsRepository } from '../../db/repositories/SchoolHolidayPeriods.repository';
+import { VacayHolidayCalendars } from '../../db/entities/VacayHolidayCalendars.entity';
+import type { VacayHolidayCalendarsRepository } from '../../db/repositories/VacayHolidayCalendars.repository';
 import { UnitOfWork } from '../database/unit-of-work';
 
+/**
+ * School-holidays domain service — moved off `DatabaseService`/raw SQL onto
+ * `SchoolHolidayCountriesRepository`/`SchoolHolidayRegionsRepository`/
+ * `SchoolHolidayPeriodsRepository` (Plan 3f Task 2). The synthesized
+ * `country || '-MANUAL-' || id AS code` column (SH2/SH7) is computed here in
+ * JS (`toRegion`) rather than in SQL — see `SchoolHolidayRegions.repository
+ * .ts`'s own docstring for why that is still exact parity. `checkName`'s
+ * duplicate-name guard and `updateRegion`'s optimistic-concurrency revision
+ * check keep their exact legacy shapes; see the repository methods they call
+ * for the parity notes.
+ */
 @Injectable()
 export class SchoolHolidaysService {
   constructor(
-    private readonly db: DatabaseService,
+    @InjectRepository(SchoolHolidayCountries) private readonly countries: SchoolHolidayCountriesRepository,
+    @InjectRepository(SchoolHolidayRegions) private readonly regions: SchoolHolidayRegionsRepository,
+    @InjectRepository(SchoolHolidayPeriods) private readonly periods: SchoolHolidayPeriodsRepository,
+    @InjectRepository(VacayHolidayCalendars) private readonly vacayCalendars: VacayHolidayCalendarsRepository,
     private readonly uow: UnitOfWork,
   ) {}
 
   async catalog(): Promise<SchoolHolidayCatalog> {
-    return {
-      countries: this.db.all<SchoolHolidayCountryRequest>('SELECT code, name FROM school_holiday_countries ORDER BY name, code'),
-      regions: this.db.all<SchoolHolidayRegion>("SELECT *, country || '-MANUAL-' || id AS code FROM school_holiday_regions ORDER BY name, id"),
-    };
+    const countries = await this.countries.list();
+    const regions = await this.regions.list();
+    return { countries, regions: regions.map((region) => this.toRegion(region)) };
   }
 
   async country(code: string): Promise<SchoolHolidayCountryRequest> {
-    const country = this.db.get<SchoolHolidayCountryRequest>('SELECT code, name FROM school_holiday_countries WHERE code = ?', code);
+    const country = await this.countries.findByCode(code);
     if (!country) throw new NotFoundException('Country not found');
     return country;
   }
 
   async createCountry(country: SchoolHolidayCountryRequest) {
-    const inserted = this.db.run('INSERT OR IGNORE INTO school_holiday_countries (code, name) VALUES (?, ?)', country.code, country.name);
-    if (!inserted.changes) throw new ConflictException('Country already exists');
+    const inserted = await this.countries.insertIgnore(country);
+    if (!inserted) throw new ConflictException('Country already exists');
     return country;
   }
 
   async deleteCountry(code: string) {
     return await this.uow.transactional(async () => {
       await this.country(code);
-      if (this.db.get('SELECT id FROM school_holiday_regions WHERE country = ? LIMIT 1', code)) {
+      if (await this.regions.existsForCountry(code)) {
         throw new ConflictException('Remove the regions before deleting this country');
       }
-      this.db.run('DELETE FROM school_holiday_countries WHERE code = ?', code);
+      await this.countries.remove(code);
       return { success: true };
     });
   }
 
   async region(id: number): Promise<SchoolHolidayRegionDetail> {
-    const region = this.db.get<SchoolHolidayRegion>("SELECT *, country || '-MANUAL-' || id AS code FROM school_holiday_regions WHERE id = ?", id);
+    const region = await this.regions.findById(id);
     if (!region) throw new NotFoundException('Region not found');
-    return { ...region, holidays: this.db.all<SchoolHolidayPeriod>('SELECT name, start_date AS startDate, end_date AS endDate FROM school_holiday_periods WHERE region_id = ? ORDER BY start_date, end_date, name', id) };
+    const holidays = await this.periods.listForRegion(id);
+    return { ...this.toRegion(region), holidays };
+  }
+
+  /** The SH2/SH7 synthesized `code` column — see `SchoolHolidayRegions.repository.ts`'s class docstring. */
+  private toRegion(region: SchoolHolidayRegionRow): SchoolHolidayRegion {
+    return { id: region.id, country: region.country, name: region.name, revision: region.revision, code: `${region.country}-MANUAL-${region.id}` };
   }
 
   private async checkName(country: string, name: string, id: number) {
-    if (this.db.get('SELECT id FROM school_holiday_regions WHERE country = ? AND name = ? COLLATE NOCASE AND id != ?', country, name, id)) {
+    if (await this.regions.findIdByNameCI(country, name, id)) {
       throw new ConflictException('A region with this name already exists');
     }
   }
 
   private async writePeriods(id: number, holidays: SchoolHolidayPeriod[]) {
-    this.db.run('DELETE FROM school_holiday_periods WHERE region_id = ?', id);
-    const insert = this.db.prepare('INSERT INTO school_holiday_periods (region_id, name, start_date, end_date) VALUES (?, ?, ?, ?)');
-    for (const holiday of holidays) insert.run(id, holiday.name, holiday.startDate, holiday.endDate);
+    await this.periods.deleteForRegion(id);
+    await this.periods.insertPeriods(id, holidays);
   }
 
   async createRegion(country: string, body: SchoolHolidayRegionRequest) {
@@ -63,8 +89,7 @@ export class SchoolHolidaysService {
       await this.country(country);
       await this.checkName(country, body.name, 0);
       if (body.revision !== 0) throw new ConflictException('New regions must have revision zero');
-      const inserted = this.db.run('INSERT INTO school_holiday_regions (country, name) VALUES (?, ?)', country, body.name);
-      const id = Number(inserted.lastInsertRowid);
+      const id = await this.regions.insertRegion(country, body.name);
       await this.writePeriods(id, body.holidays);
       return this.region(id);
     });
@@ -74,8 +99,8 @@ export class SchoolHolidaysService {
     return await this.uow.transactional(async () => {
       const region = await this.region(id);
       await this.checkName(region.country, body.name, id);
-      const updated = this.db.run('UPDATE school_holiday_regions SET name = ?, revision = revision + 1 WHERE id = ? AND revision = ?', body.name, id, body.revision);
-      if (!updated.changes) throw new ConflictException('This region changed. Reopen it before saving again.');
+      const affected = await this.regions.updateWithRevision(id, body.revision, body.name);
+      if (!affected) throw new ConflictException('This region changed. Reopen it before saving again.');
       await this.writePeriods(id, body.holidays);
       return this.region(id);
     });
@@ -85,11 +110,11 @@ export class SchoolHolidaysService {
     return await this.uow.transactional(async () => {
       const region = await this.region(id);
       if (region.revision !== revision) throw new ConflictException('This region changed. Reload before deleting it.');
-      if (this.db.get("SELECT id FROM vacay_holiday_calendars WHERE type = 'school_holiday' AND region = ? LIMIT 1", region.code)) {
+      if (await this.vacayCalendars.existsForSchoolRegion(region.code)) {
         throw new ConflictException('This region is used by vacation calendars and cannot be deleted');
       }
-      this.db.run('DELETE FROM school_holiday_periods WHERE region_id = ?', id);
-      this.db.run('DELETE FROM school_holiday_regions WHERE id = ?', id);
+      await this.periods.deleteForRegion(id);
+      await this.regions.remove(id);
       return { success: true };
     });
   }
