@@ -64,6 +64,16 @@ export interface AssignmentWithPlaceRow extends DayAssignmentRow {
 }
 
 /**
+ * {@link DayAssignmentsRepository.listPublicForShare}'s projection (SH9) —
+ * {@link AssignmentWithPlaceRow} minus the six columns a public share link
+ * must not leak.
+ */
+export type SharePublicAssignmentRow = Omit<
+  AssignmentWithPlaceRow,
+  'google_place_id' | 'google_ftid' | 'osm_id' | 'amap_poi_id' | 'stop_type' | 'fill_percent'
+>;
+
+/**
  * `day_assignments`'s shape as DY24's `em.getKysely()` call needs it (an
  * explicit `TDB` type argument, per `WebauthnChallengesRepository
  * .claimChallenge`'s docstring — entity-metadata inference is not what a
@@ -306,6 +316,53 @@ export class DayAssignmentsRepository extends TrekRepository<DayAssignments> {
       .where({ 'da.day': { $in: day_ids } })
       .orderBy({ 'da.order_index': 'asc', 'da.created_at': 'asc' })
       .execute<AssignmentWithPlaceRow[]>('all', false);
+  }
+
+  /**
+   * `share.service.ts:288` SH9 (`getSharedTripData`'s share_map assignment
+   * read) — the SAME projection {@link assignmentWithPlaceSelect} builds,
+   * minus six internal-id/routing columns a public share link must never
+   * leak (`google_place_id`, `google_ftid`, `osm_id`, `amap_poi_id`,
+   * `stop_type`, `fill_percent`) — never widen this list to match the
+   * private `listWithPlaceAndCategory` projection above.
+   */
+  private publicAssignmentSelect(platform: Platform) {
+    return [
+      'da.*',
+      'p.id as place_id',
+      'p.name as place_name',
+      'p.description as place_description',
+      'p.lat',
+      'p.lng',
+      'p.address',
+      columnRef(platform, 'p.category_id'),
+      'p.price',
+      'p.currency as place_currency',
+      coalesce(platform, 'da.assignment_time', 'p.place_time').as('place_time'),
+      coalesce(platform, 'da.assignment_end_time', 'p.end_time').as('end_time'),
+      'p.duration_minutes',
+      'p.notes as place_notes',
+      'p.image_url',
+      'p.transport_mode',
+      'p.website',
+      'p.phone',
+      'c.name as category_name',
+      'c.color as category_color',
+      'c.icon as category_icon',
+    ] as const;
+  }
+
+  /** SH9 — same WHERE/ORDER BY shape as {@link listWithPlaceAndCategory}, narrower projection. */
+  async listPublicForShare(day_ids: number[]): Promise<SharePublicAssignmentRow[]> {
+    if (day_ids.length === 0) return [];
+    const platform = this.getEntityManager().getPlatform();
+    return await this.qb('da')
+      .join('da.place', 'p')
+      .leftJoin('p.category', 'c')
+      .select(this.publicAssignmentSelect(platform))
+      .where({ 'da.day': { $in: day_ids } })
+      .orderBy({ 'da.order_index': 'asc', 'da.created_at': 'asc' })
+      .execute<SharePublicAssignmentRow[]>('all', false);
   }
 
   /**

@@ -53,6 +53,28 @@ export interface PlaceWithCategoryRow extends PlaceRow {
   category_icon: string | null;
 }
 
+/**
+ * {@link PlacesRepository.listPublicForShare}'s projection (SH12) — the
+ * `PUBLIC_PLACE_COLUMNS` allow-list plus the category join, picked out of
+ * {@link PlaceWithCategoryRow} rather than re-derived (never independently
+ * widen this list — see that method's docstring).
+ */
+export type SharePublicPlaceRow = Pick<
+  PlaceWithCategoryRow,
+  | 'id' | 'trip_id' | 'name' | 'description' | 'lat' | 'lng' | 'address' | 'category_id' | 'price' | 'currency'
+  | 'place_time' | 'end_time' | 'duration_minutes' | 'notes' | 'image_url' | 'website' | 'phone' | 'transport_mode'
+  | 'created_at' | 'updated_at' | 'category_name' | 'category_color' | 'category_icon'
+>;
+
+interface SharePublicPlaceKyselyDB {
+  places: Pick<PlaceRow,
+    | 'id' | 'trip_id' | 'name' | 'description' | 'lat' | 'lng' | 'address' | 'category_id' | 'price' | 'currency'
+    | 'place_time' | 'end_time' | 'duration_minutes' | 'notes' | 'image_url' | 'website' | 'phone' | 'transport_mode'
+    | 'created_at' | 'updated_at'
+  >;
+  categories: { id: number; name: string; color: string | null; icon: string | null };
+}
+
 interface PlaceRatingRow {
   user_id: number;
   username: string;
@@ -754,6 +776,58 @@ export class PlacesRepository extends TrekRepository<Places> {
       .where({ trip: trip_id })
       .orderBy({ 'p.created_at': 'desc' })
       .execute<PlaceRow[]>('all', false);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Plan 3h Task 6 (`share.service.ts`) — additive.
+  // ---------------------------------------------------------------------------
+
+  /**
+   * `share.service.ts:340` SH12 (`getSharedTripData`'s share_map place-pool
+   * read) — **SECURITY-CRITICAL (#2320)**: a named 20-column allow-list,
+   * never `p.*`. Withheld on purpose (matching `PUBLIC_PLACE_COLUMNS`'s own
+   * doc comment in `share.service.ts`): the owner's booking-status columns
+   * (`reservation_status`/`reservation_notes`/`reservation_datetime`), every
+   * routing/dedup id (`google_place_id`, `google_ftid`, `osm_id`,
+   * `amap_poi_id`), `route_geometry`/`route_color`/`stop_type`/
+   * `fill_percent`, and `source`. Kysely, not `qb()`+`columnRef`: this read
+   * joins `p.category` under alias `c`, and both `trip_id`/`category_id` are
+   * `persist(false)` mirror columns — the exact trap
+   * `DayAssignmentsRepository.assignmentWithPlaceSelect`'s docstring
+   * documents. `ORDER BY p.created_at DESC`, matching the legacy statement.
+   */
+  async listPublicForShare(trip_id: number | string): Promise<SharePublicPlaceRow[]> {
+    return await this.kysely<SharePublicPlaceKyselyDB>()
+      .selectFrom('places as p')
+      .leftJoin('categories as c', 'c.id', 'p.category_id')
+      .select([
+        'p.id', 'p.trip_id', 'p.name', 'p.description', 'p.lat', 'p.lng', 'p.address', 'p.category_id',
+        'p.price', 'p.currency', 'p.place_time', 'p.end_time', 'p.duration_minutes', 'p.notes',
+        'p.image_url', 'p.website', 'p.phone', 'p.transport_mode', 'p.created_at', 'p.updated_at',
+        'c.name as category_name', 'c.color as category_color', 'c.icon as category_icon',
+      ])
+      .where('p.trip_id', '=', trip_id as number)
+      .orderBy('p.created_at', 'desc')
+      .execute();
+  }
+
+  /**
+   * `share.service.ts:461` SH18 (`getSharedPlacePhotoKey`) —
+   * **SECURITY-CRITICAL**: the anonymous photo-serving ownership gate.
+   * `SELECT 1 FROM places WHERE trip_id = ? AND image_url = ?` — both must
+   * match, proving the requested proxy URL belongs to a place on the SAME
+   * trip the share token covers, never just any place anywhere with that
+   * `image_url`.
+   */
+  async existsByTripAndImageUrl(trip_id: number | string, imageUrl: string): Promise<boolean> {
+    const row = await this.kysely<{ places: { id: number; trip_id: number; image_url: string | null } }>()
+      .selectFrom('places')
+      .select('id')
+      .where('trip_id', '=', trip_id as number)
+      .where('image_url', '=', imageUrl)
+      .limit(1)
+      .executeTakeFirst();
+    return !!row;
   }
 
   // ---------------------------------------------------------------------------

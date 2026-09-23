@@ -11,15 +11,17 @@
  * pinned by the storage-registry tests; here the two prefixes prove the cache
  * itself is mode-agnostic.
  *
- * Rebuilt on GooglePlacePhotoMetaRepository/PlacesRepository (Plan 3c Task 1):
- * the legacy version cast a hand-rolled 3-table SQLite fixture to
- * `DatabaseService`; that cannot survive the service now calling two
- * repositories for its owned reads/writes. The same minimal 3-table fixture
- * stays (every column these repositories touch is already in it — the R8
- * `createSnapshotTestDb()` migration only applies once a converted read
- * needs a column the hand-rolled DDL omits, which is not the case here), but
- * it is now wired through `createTestOrm()` and `DatabaseService` is kept
- * ONLY for the one raw `collection_places` statement (PP6's Plan 3h half).
+ * Rebuilt on GooglePlacePhotoMetaRepository/PlacesRepository (Plan 3c Task 1)
+ * and, since Plan 3h Task 6, CollectionPlacesRepository too (PP6's
+ * `collection_places` half, closing out the Plan 3h carve-out): the legacy
+ * version cast a hand-rolled 3-table SQLite fixture to `DatabaseService`;
+ * that cannot survive the service now calling three repositories for its
+ * owned reads/writes. The same minimal 3-table fixture stays (every column
+ * these repositories touch is already in it — the R8 `createSnapshotTestDb()`
+ * migration only applies once a converted read needs a column the hand-rolled
+ * DDL omits, which is not the case here), wired through `createTestOrm()`.
+ * `DatabaseService` itself is left injected (constructor-ripple scope, see
+ * the class's own docstring) but is now unused in the body.
  */
 import { describe, it, expect, beforeAll, beforeEach, afterAll, vi } from 'vitest';
 import path from 'node:path';
@@ -63,6 +65,8 @@ import { GooglePlacePhotoMeta } from '../../../../src/db/entities/GooglePlacePho
 import type { GooglePlacePhotoMetaRepository } from '../../../../src/db/repositories/GooglePlacePhotoMeta.repository';
 import { Places } from '../../../../src/db/entities/Places.entity';
 import type { PlacesRepository } from '../../../../src/db/repositories/Places.repository';
+import { CollectionPlaces } from '../../../../src/db/entities/CollectionPlaces.entity';
+import type { CollectionPlacesRepository } from '../../../../src/db/repositories/CollectionPlaces.repository';
 import { makeStorageFixture, type StorageFixture } from '../../../helpers/storage-fixture';
 
 async function makeJpeg(width: number, height: number): Promise<Buffer> {
@@ -77,6 +81,7 @@ function nameFor(placeId: string): string {
 let t: TestOrm;
 let metaRepo: GooglePlacePhotoMetaRepository;
 let placesRepo: PlacesRepository;
+let collectionPlacesRepo: CollectionPlacesRepository;
 
 // Task 1 fix review L3: this is the one suite in this commit that opts out of
 // the request-context ratchet (`allowGlobalContext: true`, disabling
@@ -100,6 +105,7 @@ beforeAll(async () => {
   t = await createTestOrm(testDb, { allowGlobalContext: true });
   metaRepo = t.repo(GooglePlacePhotoMeta);
   placesRepo = t.repo(Places);
+  collectionPlacesRepo = t.repo(CollectionPlaces);
 });
 afterAll(async () => { await t.close(); });
 
@@ -119,7 +125,7 @@ describe.each([
 
   beforeAll(() => {
     fx = makeStorageFixture(keyPrefix);
-    cache = new PlacePhotoCacheService(new DatabaseService(testDb as never), fx.storage, metaRepo, placesRepo);
+    cache = new PlacePhotoCacheService(new DatabaseService(testDb as never), fx.storage, metaRepo, placesRepo, collectionPlacesRepo);
   });
 
   beforeEach(() => {
@@ -256,11 +262,11 @@ describe.each([
       expect(fs.existsSync(filePathFor(id))).toBe(true);
     });
 
-    // Plan 3c Task 1 PP6 ruling: the `collection_places` half stays raw
-    // (Plan 3h owns that table) and only runs when the `places` half comes
-    // back false — this is the direct proof that half is still wired,
-    // through the SAME `isReferenced` call as the two above.
-    it('PPC-016: keeps an entry referenced only through collection_places, proving the Plan 3h raw fallback still fires', async () => {
+    // Plan 3c Task 1 PP6 ruling, converted onto CollectionPlacesRepository by
+    // Plan 3h Task 6: the `collection_places` half only runs when the
+    // `places` half comes back false — this is the direct proof that half
+    // is still wired, through the SAME `isReferenced` call as the two above.
+    it('PPC-016: keeps an entry referenced only through collection_places, proving the repository-backed fallback still fires', async () => {
       const id = 'coll-only';
       await cache.put(id, await makeJpeg(50, 50), null);
       testDb.prepare('INSERT INTO collection_places (google_place_id) VALUES (?)').run(id);

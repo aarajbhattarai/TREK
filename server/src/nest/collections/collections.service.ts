@@ -3,7 +3,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@mikro-orm/nestjs';
 import { PermissionsService } from '../permissions/permissions.service';
 import { RealtimeService } from '../realtime/realtime.service';
-import { reclaimPlaceImage } from '../places/place-image';
+import { isUploadedPlaceImage } from '../places/place-image';
 import { StorageService } from '../storage/storage.service';
 import { Collections } from '../../db/entities/Collections.entity';
 import { CollectionsRepository, type CollectionPlaceRow } from '../../db/repositories/Collections.repository';
@@ -945,7 +945,7 @@ export class CollectionsService {
     });
 
     if (body.image_url !== undefined && prevImage !== (body.image_url ?? null)) {
-      await reclaimPlaceImage(this.storage, prevImage);
+      await this.reclaimPlaceImage(prevImage);
     }
 
     await this.notifyCollectionUsers(currentCollection, socketId, 'collections:updated');
@@ -978,12 +978,35 @@ export class CollectionsService {
     return this.getPlaceById(placeId);
   }
 
+  /**
+   * Delete a custom saved-place-image object once nothing references it any
+   * more (Plan 3h Task 6, replacing `place-image.ts`'s free function — see
+   * that file's own doc comment). A trip place and a collection saved-place
+   * can share the same uploaded file — save-to-collection and copy-to-trip
+   * copy `image_url` by reference — so this ref-counts across both tables
+   * before deleting, mirroring `PlacesService.reclaimPlaceImage`'s shape
+   * exactly: `places` first via `PlacesRepository.existsByImageUrl`
+   * (`tripPlaces`, already injected), `collection_places` second via
+   * `CollectionPlacesRepository.existsByImageUrl` (`collectionPlaces`,
+   * already injected), JS-level `||` short-circuit preserved by early
+   * return. `path.basename()` keeps the storage name confined to the
+   * 'places' category. Best-effort: never throws.
+   */
+  private async reclaimPlaceImage(url: string | null | undefined): Promise<void> {
+    if (!isUploadedPlaceImage(url)) return;
+    if (await this.tripPlaces.existsByImageUrl(url)) return;
+    if (await this.collectionPlaces.existsByImageUrl(url)) return;
+    await this.storage.delete('places', path.basename(url)).catch(() => {
+      /* best-effort */
+    });
+  }
+
   async deletePlace(userId: number, placeId: number, socketId?: string): Promise<void> {
     const collectionId = await this.collectionIdOfPlace(placeId);
     await this.assertCanDelete(userId, collectionId);
     const image = (await this.collectionPlaces.imageUrl(placeId)) ?? null;
     await this.collectionPlaces.deleteById(placeId); // CASCADE drops tags. NO photo-cache reclaim.
-    await reclaimPlaceImage(this.storage, image);
+    await this.reclaimPlaceImage(image);
     await this.notifyCollectionUsers(collectionId, socketId, 'collections:updated');
   }
 
@@ -1007,7 +1030,7 @@ export class CollectionsService {
         deleted.push(id);
       }
     });
-    for (const image of images) await reclaimPlaceImage(this.storage, image);
+    for (const image of images) await this.reclaimPlaceImage(image);
     for (const cid of touched) await this.notifyCollectionUsers(cid, socketId, 'collections:updated');
     return deleted;
   }
@@ -1101,7 +1124,7 @@ export class CollectionsService {
     await this.assertCanEdit(userId, collectionId);
     const prev = (await this.collectionPlaces.imageUrl(placeId)) ?? null;
     await this.collectionPlaces.setImageUrl(placeId, imageUrl);
-    if (prev !== imageUrl) await reclaimPlaceImage(this.storage, prev);
+    if (prev !== imageUrl) await this.reclaimPlaceImage(prev);
     await this.notifyCollectionUsers(collectionId, socketId, 'collections:updated');
     return this.getPlaceById(placeId);
   }

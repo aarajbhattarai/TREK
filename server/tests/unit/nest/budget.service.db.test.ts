@@ -74,6 +74,7 @@ import { QueryHelpersService } from '../../../src/nest/query-helpers/query-helpe
 import { notificationsStub } from '../../helpers/notifications';
 import { createTestUnitOfWork, createTestAppSettingsRepo, createTestUsersRepo, sharedTestOrm, createTestTripsRepo, createTestTripMembersRepo } from '../../helpers/test-uow';
 import { budgetRepoArgs, createTestBudgetItemMembersRepo, createTestBudgetItemPayersRepo, createTestBudgetSettlementsRepo } from '../../helpers/budget-repos';
+import { createTestShareTokensRepo } from '../../helpers/share-repos';
 import { createTestBudgetItemsRepo } from '../../helpers/files-repos';
 import { createTestJourneysRepo, createTestJourneyEntriesRepo, createTestJourneyContributorsRepo } from '../../helpers/journey-repos';
 import { createTestJourneyShareTokensRepo } from '../../helpers/journey-share-repos';
@@ -120,7 +121,7 @@ beforeAll(async () => {
   membersSvc = new TripMembersService(
   dbs(),
   budget,
-  new UserCleanupService(dbs(), budget, await createTestUnitOfWork(testDb), await createTestUsersRepo(testDb), await createTestBudgetItemsRepo(testDb), await createTestJourneyShareTokensRepo(testDb), await createTestJourneysRepo(testDb), await createTestJourneyEntriesRepo(testDb), await createTestJourneyContributorsRepo(testDb)),
+  new UserCleanupService(dbs(), budget, await createTestUnitOfWork(testDb), await createTestUsersRepo(testDb), await createTestBudgetItemsRepo(testDb), await createTestJourneyShareTokensRepo(testDb), await createTestJourneysRepo(testDb), await createTestJourneyEntriesRepo(testDb), await createTestJourneyContributorsRepo(testDb), await createTestShareTokensRepo(testDb)),
   new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)),
   new RealtimeService(),
   notificationsStub(),

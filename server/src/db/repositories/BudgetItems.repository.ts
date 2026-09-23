@@ -249,6 +249,15 @@ export class BudgetItemsRepository extends TrekRepository<BudgetItems> {
   }
 
   /**
+   * `share.service.ts:391` SH14 (`getSharedTripData`'s share_budget read) —
+   * `SELECT * FROM budget_items WHERE trip_id = ? ORDER BY category ASC`
+   * (unlike BG72's `listAllForTrip` above, which has no `ORDER BY`).
+   */
+  async listPublicForShare(trip_id: number | string): Promise<BudgetItemRow[]> {
+    return await this.kysely<BudgetKyselyDB>().selectFrom('budget_items').selectAll().where('trip_id', '=', trip_id as number).orderBy('category', 'asc').execute();
+  }
+
+  /**
    * BG71 (`getPerPersonSummary`) — the correlated-subquery-inside-`SUM`
    * aggregate (T6, per the plan's own ruling): `SELECT bm.user_id,
    * COALESCE(u.display_name,u.username) AS username, u.avatar, SUM(...) as

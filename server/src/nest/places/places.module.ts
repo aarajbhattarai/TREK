@@ -8,6 +8,7 @@ import { TripMembers } from '../../db/entities/TripMembers.entity';
 import { DayAssignments } from '../../db/entities/DayAssignments.entity';
 import { Trips } from '../../db/entities/Trips.entity';
 import { Categories } from '../../db/entities/Categories.entity';
+import { CollectionPlaces } from '../../db/entities/CollectionPlaces.entity';
 import { JourneyDomainModule } from '../journey/journey-domain.module';
 import { PlacesController } from './places.controller';
 import { PlacesService } from './places.service';
@@ -63,8 +64,13 @@ import { MAX_PLACE_IMAGE_SIZE } from '../common/place-image-upload';
     // `AssignmentsDomainModule`'s own `MikroOrmModule.forFeature(...)`
     // precedent: a `forFeature` registration only reaches providers declared
     // in the SAME module. Plan 3c Task 5 adds `CategoriesRepository` for
-    // PL33's `importKmlPlaces` folder → category lookup.
-    MikroOrmModule.forFeature([Places, Tags, PlaceRatings, TripMembers, DayAssignments, Trips, Categories, BudgetItems]),
+    // PL33's `importKmlPlaces` folder → category lookup. Plan 3h Task 6 adds
+    // `CollectionPlaces` for SV-PI2 (`reclaimPlaceImage`'s second existence
+    // check) — a read-only cross-domain repository reference, not a
+    // `CollectionsModule` import, so it creates no cycle (`CollectionsModule`
+    // does not import `PlacesModule` either — both sides reach the other's
+    // table only through `forFeature`).
+    MikroOrmModule.forFeature([Places, Tags, PlaceRatings, TripMembers, DayAssignments, Trips, Categories, BudgetItems, CollectionPlaces]),
   ],
   controllers: [PlacesController],
   providers: [PlacesService, PlacesMcp, PlacesRpc],

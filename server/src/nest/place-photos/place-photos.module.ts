@@ -7,6 +7,7 @@ import { SchedulingModule } from '../scheduling/scheduling.module';
 import { StorageModule } from '../storage/storage.module';
 import { GooglePlacePhotoMeta } from '../../db/entities/GooglePlacePhotoMeta.entity';
 import { Places } from '../../db/entities/Places.entity';
+import { CollectionPlaces } from '../../db/entities/CollectionPlaces.entity';
 
 /** The marker-photo cache. No controller of its own — maps serves the bytes,
  *  places and share read through it, and PlacePhotoCacheJob sweeps it nightly.
@@ -17,9 +18,10 @@ import { Places } from '../../db/entities/Places.entity';
  *
  *  MikroOrmModule.forFeature registers GooglePlacePhotoMetaRepository/
  *  PlacesRepository for PlacePhotoCacheService's @InjectRepository
- *  constructor (Plan 3c Task 1). */
+ *  constructor (Plan 3c Task 1); Plan 3h Task 6 adds CollectionPlaces for
+ *  SV-PP6's `isReferenced` second existence check. */
 @Module({
-  imports: [AppConfigModule, SchedulingModule, StorageModule, MikroOrmModule.forFeature([GooglePlacePhotoMeta, Places])],
+  imports: [AppConfigModule, SchedulingModule, StorageModule, MikroOrmModule.forFeature([GooglePlacePhotoMeta, Places, CollectionPlaces])],
   providers: [PlacePhotoCacheService, PlacePhotoCacheJob],
   exports: [PlacePhotoCacheService],
 })

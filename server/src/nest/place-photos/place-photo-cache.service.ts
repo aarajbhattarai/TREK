@@ -9,6 +9,8 @@ import { GooglePlacePhotoMeta } from '../../db/entities/GooglePlacePhotoMeta.ent
 import type { GooglePlacePhotoMetaRepository } from '../../db/repositories/GooglePlacePhotoMeta.repository';
 import { Places } from '../../db/entities/Places.entity';
 import type { PlacesRepository } from '../../db/repositories/Places.repository';
+import { CollectionPlaces } from '../../db/entities/CollectionPlaces.entity';
+import type { CollectionPlacesRepository } from '../../db/repositories/CollectionPlaces.repository';
 
 // How long a "no photo for this place" answer stays remembered. Nothing about it
 // changes until a photo appears upstream, so it is worth keeping: without it every
@@ -52,10 +54,14 @@ interface CachedPhoto {
  * layouts (unset: uploads/photos/google; set: that dir, bare keys), so the
  * cache itself is mode-agnostic.
  *
- * `DatabaseService` stays injected (Plan 3c Task 1, PP6 ruling option 2)
- * purely for the `collection_places` half of `isReferenced` — that table is
- * Plan 3h's, so it stays a raw statement with a `// Plan 3h` comment until
- * then. Every other statement in this file is repository-backed.
+ * `DatabaseService` was injected (Plan 3c Task 1, PP6 ruling option 2) purely
+ * for the `collection_places` half of `isReferenced`; Plan 3h Task 6 converts
+ * that half onto `CollectionPlacesRepository.existsByGoogleIdOrImageUrl`, so
+ * every statement in this file is now repository-backed — `DatabaseService`
+ * itself is left injected (out of this task's one-line-swap scope: several
+ * other domains' test files hand-construct this class positionally) but is
+ * now unused in the body; flagged for whoever next touches this file's
+ * constructor to drop.
  */
 @Injectable()
 export class PlacePhotoCacheService {
@@ -71,6 +77,8 @@ export class PlacePhotoCacheService {
     private readonly storage: StorageService,
     @InjectRepository(GooglePlacePhotoMeta) private readonly meta: GooglePlacePhotoMetaRepository,
     @InjectRepository(Places) private readonly places: PlacesRepository,
+    // Plan 3h Task 6 (survivors) — additive, SV-PP6's `isReferenced` only.
+    @InjectRepository(CollectionPlaces) private readonly collectionPlaces: CollectionPlacesRepository,
   ) {}
 
   private fileName(placeId: string): string {
@@ -215,17 +223,14 @@ export class PlacePhotoCacheService {
    * statement spans `places` (this plan's) and `collection_places` (Plan 3h's),
    * so it is split into two existence checks, evaluated in the SAME order the
    * legacy `UNION ALL … LIMIT 1` would short-circuit in — the `collection_places`
-   * half only runs when the `places` half comes back false.
+   * half only runs when the `places` half comes back false. Plan 3h Task 6
+   * converts the second half onto `CollectionPlacesRepository
+   * .existsByGoogleIdOrImageUrl`, closing out the carve-out.
    */
   private async isReferenced(placeId: string): Promise<boolean> {
     const proxyUrl = this.proxyUrl(placeId);
     if (await this.places.existsByGoogleIdOrImageUrl(placeId, proxyUrl)) return true;
-    // Plan 3h: collection_places is not yet repository-backed.
-    const row = this.db.get(
-      `SELECT 1 FROM collection_places WHERE google_place_id = ? OR image_url = ? LIMIT 1`,
-      placeId, proxyUrl,
-    );
-    return !!row;
+    return await this.collectionPlaces.existsByGoogleIdOrImageUrl(placeId, proxyUrl);
   }
 
   private async deleteEntry(placeId: string): Promise<void> {

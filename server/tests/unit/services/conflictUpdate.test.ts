@@ -73,6 +73,7 @@ import {
   sharedTestOrm,
 } from '../../helpers/test-uow';
 import { createTestBudgetItemsRepo } from '../../helpers/files-repos';
+import { createTestCollectionPlacesRepo } from '../../helpers/test-uow';
 import {
   createTestJourneysRepo, createTestJourneyContributorsRepo, createTestJourneyTripsRepo, createTestJourneyEntriesRepo,
   createTestJourneyPhotosRepo, createTestJourneyEntryPhotosRepo,
@@ -104,6 +105,7 @@ beforeAll(async () => {
     makeStorageFixture('photos/google/').storage,
     await createTestGooglePlacePhotoMetaRepo(dbs.connection),
     await createTestPlacesRepo(dbs.connection),
+    await createTestCollectionPlacesRepo(dbs.connection),
   );
   // Plan 3c Task 0b: `dbs` is constructed at module load, before any
   // `beforeAll` can resolve a real `EntityManager` — the four
@@ -155,6 +157,7 @@ beforeAll(async () => {
   await createTestCategoriesRepo(dbs.connection),
   await createTestTripsRepo(dbs.connection),
   await createTestBudgetItemsRepo(dbs.connection),
+  await createTestCollectionPlacesRepo(dbs.connection),
 );
 });
 

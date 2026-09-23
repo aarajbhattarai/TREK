@@ -49,6 +49,8 @@ import type { CategoriesRepository } from '../../db/repositories/Categories.repo
 import type { TripsRepository } from '../../db/repositories/Trips.repository';
 import { BudgetItems } from '../../db/entities/BudgetItems.entity';
 import type { BudgetItemsRepository } from '../../db/repositories/BudgetItems.repository';
+import { CollectionPlaces } from '../../db/entities/CollectionPlaces.entity';
+import type { CollectionPlacesRepository } from '../../db/repositories/CollectionPlaces.repository';
 
 /** Rows a place delete took down with the nights booked there, for the caller to announce. */
 export interface CancelledStays {
@@ -167,6 +169,8 @@ export class PlacesService {
     @InjectRepository(Trips) private readonly tripsRepo: TripsRepository,
     // Plan 3e Task 2 (budget) — additive, PL15/PL18/PL22 only.
     @InjectRepository(BudgetItems) private readonly budgetItemsRepo: BudgetItemsRepository,
+    // Plan 3h Task 6 (survivors) — additive, SV-PI2's `reclaimPlaceImage` only.
+    @InjectRepository(CollectionPlaces) private readonly collectionPlacesRepo: CollectionPlacesRepository,
   ) {}
 
   /**
@@ -234,9 +238,10 @@ export class PlacesService {
    *
    * PI1 (`SELECT 1 FROM places WHERE image_url = ? LIMIT 1`) through
    * `PlacesRepository.existsByImageUrl`; PI2 (`SELECT 1 FROM collection_places
-   * WHERE image_url = ? LIMIT 1`, Plan 3h's table) stays one raw statement,
-   * evaluated only when PI1 is false — reproducing the legacy `UNION ALL …
-   * LIMIT 1`'s short-circuit by evaluation order, the same pattern
+   * WHERE image_url = ? LIMIT 1`) through `CollectionPlacesRepository
+   * .existsByImageUrl` (Plan 3h Task 6, closing out the carve-out), evaluated
+   * only when PI1 is false — reproducing the legacy `UNION ALL … LIMIT 1`'s
+   * short-circuit by evaluation order, the same pattern
    * `PlacePhotoCacheService.isReferenced` uses for the same two tables
    * (Plan 3c Task 1's PP6 ruling). `path.basename()` keeps the storage name
    * confined to the 'places' category. Best-effort: never throws (central
@@ -246,9 +251,8 @@ export class PlacesService {
   private async reclaimPlaceImage(url: string | null | undefined): Promise<void> {
     if (!isUploadedPlaceImage(url)) return;
     if (await this.placesRepo.existsByImageUrl(url)) return;
-    // Plan 3h: collection_places is not yet repository-backed.
-    const referenced = this.dbs.get('SELECT 1 FROM collection_places WHERE image_url = ? LIMIT 1', url);
-    if (referenced) return;
+    // PI2 (Plan 3h Task 6) — `CollectionPlacesRepository.existsByImageUrl`.
+    if (await this.collectionPlacesRepo.existsByImageUrl(url)) return;
     await this.storage.delete('places', path.basename(url)).catch(() => {
       /* best-effort */
     });

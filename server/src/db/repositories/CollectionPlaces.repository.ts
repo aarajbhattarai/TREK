@@ -418,6 +418,39 @@ export class CollectionPlacesRepository extends TrekRepository<CollectionPlaces>
       .executeTakeFirst();
     return Number(result.numInsertedOrUpdatedRows ?? 0);
   }
+
+  // ---------------------------------------------------------------------
+  // Plan 3h Task 6 (survivors — `places.service.ts` SV-PI2, `place-photo-
+  // cache.service.ts` SV-PP6, `place-image.ts` SV-PLACEIMG-2) — additive.
+  // ---------------------------------------------------------------------
+
+  /**
+   * SV-PI2 (`places.service.ts::reclaimPlaceImage`) / SV-PLACEIMG-2
+   * (`CollectionsService`'s own private `reclaimPlaceImage`, replacing
+   * `place-image.ts`'s free function) — `SELECT 1 FROM collection_places
+   * WHERE image_url = ? LIMIT 1`. Trip-agnostic, same shape as
+   * `PlacesRepository.existsByImageUrl` for its own table.
+   */
+  async existsByImageUrl(imageUrl: string): Promise<boolean> {
+    const row = await this.db_().selectFrom('collection_places').select('id').where('image_url', '=', imageUrl).limit(1).executeTakeFirst();
+    return !!row;
+  }
+
+  /**
+   * SV-PP6 (`place-photo-cache.service.ts::isReferenced`) — `SELECT 1 FROM
+   * collection_places WHERE google_place_id = ? OR image_url = ? LIMIT 1`,
+   * the same shape `PlacesRepository.existsByGoogleIdOrImageUrl` uses for
+   * its own table.
+   */
+  async existsByGoogleIdOrImageUrl(googlePlaceId: string, imageUrl: string): Promise<boolean> {
+    const row = await this.db_()
+      .selectFrom('collection_places')
+      .select('id')
+      .where((eb) => eb.or([eb('google_place_id', '=', googlePlaceId), eb('image_url', '=', imageUrl)]))
+      .limit(1)
+      .executeTakeFirst();
+    return !!row;
+  }
 }
 
 /** {@link CollectionPlacesRepository.findForCopy}'s narrow projection (CL62). */

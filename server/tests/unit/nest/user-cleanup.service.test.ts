@@ -59,6 +59,7 @@ import { budgetRepoArgs } from '../../helpers/budget-repos';
 import { createTestBudgetItemsRepo } from '../../helpers/files-repos';
 import { createTestJourneysRepo, createTestJourneyEntriesRepo, createTestJourneyContributorsRepo } from '../../helpers/journey-repos';
 import { createTestJourneyShareTokensRepo } from '../../helpers/journey-share-repos';
+import { createTestShareTokensRepo } from '../../helpers/share-repos';
 
 const dbs = new DatabaseService(testDb);
 
@@ -80,6 +81,8 @@ beforeAll(async () => {
     // Plan 3g Task 4 constructor-ripple: UC7-10's repositories.
     await createTestJourneyShareTokensRepo(dbs.connection), await createTestJourneysRepo(dbs.connection),
     await createTestJourneyEntriesRepo(dbs.connection), await createTestJourneyContributorsRepo(dbs.connection),
+    // Plan 3h Task 6 constructor-ripple: UC6's repository.
+    await createTestShareTokensRepo(dbs.connection),
   );
 });
 
@@ -182,6 +185,10 @@ describe('erasePluginUserData', () => {
       new DatabaseService(slim), budget, await createTestUnitOfWork(slim), await createTestUsersRepo(slim), {} as unknown as BudgetItemsRepository,
       {} as unknown as JourneyShareTokensRepository, {} as unknown as JourneysRepository,
       {} as unknown as JourneyEntriesRepository, {} as unknown as JourneyContributorsRepository,
+      // Plan 3h Task 6: a real repository (never a stub cast — `erasePluginUserData`
+      // never touches it, but MikroORM's entity metadata does not require the
+      // physical table to exist to construct the repository object itself).
+      await createTestShareTokensRepo(slim),
     );
 
     await expect(slimSvc.erasePluginUserData(1)).resolves.toBeUndefined();
@@ -222,7 +229,7 @@ describe('deleteUserCompletely', () => {
     expect(testDb.prepare('SELECT COUNT(*) AS c FROM journey_entries').get()).toEqual({ c: 0 });
   });
 
-  it('USER-CLEANUP-010: GDPR erasure — UC7-10 remove every journey-table row the departing user reaches, and only those', async () => {
+  it('USER-CLEANUP-010: GDPR erasure — UC6-10 remove every journey/share-table row the departing user reaches, and only those', async () => {
     const { user: victim } = createUser(testDb, { username: 'gdpr-victim' });
     const { user: second } = createUser(testDb, { username: 'gdpr-second' });
     const { user: third } = createUser(testDb, { username: 'gdpr-third' });
@@ -246,6 +253,19 @@ describe('deleteUserCompletely', () => {
       .run(thirdJourney, victim.id);
     testDb.prepare("INSERT INTO journey_share_tokens (journey_id, token, created_by) VALUES (?, 'third-tok', ?)").run(thirdJourney, victim.id);
 
+    // R10/UC6, full-key: `share_tokens` (trip-level, `nest/share`) — a
+    // GENUINELY DIFFERENT table from `journey_share_tokens` above, on the
+    // SAME fixture per the ruling's own instruction. Victim creates a share
+    // link on a trip they OWN, and — `created_by` need not equal the trip's
+    // owner — a SECOND share link on a trip owned by `second` (not the
+    // victim). A THIRD share link, on that same foreign trip but created by
+    // `third` (not the victim), is the control row UC6 must NOT touch.
+    const ownTrip = createTrip(testDb, victim.id);
+    const foreignTrip = createTrip(testDb, second.id);
+    testDb.prepare("INSERT INTO share_tokens (trip_id, token, created_by) VALUES (?, 'own-trip-tok', ?)").run(ownTrip.id, victim.id);
+    testDb.prepare("INSERT INTO share_tokens (trip_id, token, created_by) VALUES (?, 'foreign-trip-tok', ?)").run(foreignTrip.id, victim.id);
+    testDb.prepare("INSERT INTO share_tokens (trip_id, token, created_by) VALUES (?, 'control-tok', ?)").run(foreignTrip.id, third.id);
+
     await svc.deleteUserCompletely(victim.id);
 
     // Everything the departing user owned is gone (UC8 + cascade).
@@ -260,6 +280,14 @@ describe('deleteUserCompletely', () => {
     // Nothing extra removed: the other two users' own journeys survive.
     expect(testDb.prepare('SELECT id FROM journeys WHERE id = ?').get(secondJourney)).toBeDefined();
     expect(testDb.prepare('SELECT id FROM journeys WHERE id = ?').get(thirdJourney)).toBeDefined();
+
+    // UC6/R10: every `share_tokens` row `created_by` the departing user is
+    // gone, on BOTH their own trip and a trip they don't own — and the
+    // control row (same foreign trip, created by someone else) survives
+    // untouched. `ownTrip` itself cascades away with the user's cleanup
+    // elsewhere (not this test's concern); the assertion is on `created_by`.
+    expect(testDb.prepare('SELECT id FROM share_tokens WHERE created_by = ?').get(victim.id)).toBeUndefined();
+    expect(testDb.prepare('SELECT token FROM share_tokens WHERE trip_id = ?').get(foreignTrip.id)).toEqual({ token: 'control-tok' });
   });
 
   it('USER-CLEANUP-008: re-derives the expense divisor before the member rows cascade away', async () => {
@@ -295,6 +323,7 @@ describe('deleteUserCompletely', () => {
         dbs, budget, await createTestUnitOfWork(testDb), usersRepo, await createTestBudgetItemsRepo(testDb),
         await createTestJourneyShareTokensRepo(testDb), await createTestJourneysRepo(testDb),
         await createTestJourneyEntriesRepo(testDb), await createTestJourneyContributorsRepo(testDb),
+        await createTestShareTokensRepo(testDb),
       ).deleteUserCompletely(victim.id)).rejects.toThrow('boom');
 
       expect(testDb.prepare('SELECT id FROM users WHERE id = ?').get(victim.id)).toBeDefined();

@@ -118,6 +118,25 @@ export class PackingItemsRepository extends TrekRepository<PackingItems> {
   }
 
   /**
+   * `share.service.ts:386` SH13 (`getSharedTripData`'s share_packing read)
+   * — **SECURITY-CRITICAL (#858)**: `SELECT * FROM packing_items WHERE
+   * trip_id = ? AND is_private = 0 ORDER BY sort_order ASC` — a public
+   * viewer is neither owner nor recipient, so only Common items may
+   * surface. `ORDER BY sort_order ASC` only (unlike PK4's `listForTrip`,
+   * which also orders by `created_at` — the legacy public statement never
+   * added that second key).
+   */
+  async listPublicForShare(trip_id: number | string): Promise<PackingItemRow[]> {
+    return await this.db()
+      .selectFrom('packing_items')
+      .selectAll()
+      .where('trip_id', '=', trip_id as number)
+      .where('is_private', '=', 0)
+      .orderBy('sort_order', 'asc')
+      .execute();
+  }
+
+  /**
    * PK5 (`listItems`'s viewer-filtered branch, T5) — `SELECT * FROM
    * packing_items WHERE trip_id = ? AND (${VISIBLE_TO_ACTOR}) ORDER BY
    * sort_order ASC, created_at ASC`. **Security-critical (#858

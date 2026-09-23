@@ -94,6 +94,7 @@ import { AuditLog } from '../../src/db/entities/AuditLog.entity';
 import { Users } from '../../src/db/entities/Users.entity';
 import { createTestTripFilesRepo, createTestFileLinksRepo, createTestBudgetItemsRepo } from './files-repos';
 import { budgetRepoArgs } from './budget-repos';
+import { createTestShareTokensRepo } from './share-repos';
 import {
   createTestCollabMessageReactionsRepo, createTestCollabNotesRepo, createTestCollabPollsRepo,
   createTestCollabPollVotesRepo, createTestCollabLinksRepo, createTestCollabMessagesRepo,
@@ -188,7 +189,7 @@ export async function createPluginRpcHostFactory(dbs: DatabaseService): Promise<
     await createTestReservationEndpointsRepo(dbs.connection),
     await createTestDayAccommodationsRepo(dbs.connection),
   );
-  const photoCache = new PlacePhotoCacheService(dbs, makeStorageFixture('photos/google/').storage, await createTestGooglePlacePhotoMetaRepo(dbs.connection), await createTestPlacesRepo(dbs.connection));
+  const photoCache = new PlacePhotoCacheService(dbs, makeStorageFixture('photos/google/').storage, await createTestGooglePlacePhotoMetaRepo(dbs.connection), await createTestPlacesRepo(dbs.connection), await createTestCollectionPlacesRepo(dbs.connection));
   const unsplash = new UnsplashService(appSettings, usersRepo, new RuntimeEnvService(), generalStorage);
   const journey = new JourneyDomainService(
     dbs, realtime, new TrekPhotoRegistrationService((await sharedTestOrm(dbs.connection)).repo(TrekPhotos), (await sharedTestOrm(dbs.connection)).repo(TripPhotos), await createTestJourneyPhotosRepo(dbs.connection), dbs), await createTestUnitOfWork(dbs.connection),
@@ -263,11 +264,12 @@ export async function createPluginRpcHostFactory(dbs: DatabaseService): Promise<
     await createTestCategoriesRepo(dbs.connection),
   await createTestTripsRepo(dbs.connection),
   await createTestBudgetItemsRepo(dbs.connection),
+  await createTestCollectionPlacesRepo(dbs.connection),
   );
   // After accommodations: a hotel booking writes the stay's day stop through it.
   const reservations = new ReservationsService(dbs, permissions, budget, realtime, notificationsStub(), new ReservationsReadService(await createTestReservationsRepo(dbs.connection), await createTestReservationEndpointsRepo(dbs.connection), await createTestReservationTravelersRepo(dbs.connection)), accommodations, await createTestUnitOfWork(dbs.connection), await createTestReservationsRepo(dbs.connection), await createTestReservationEndpointsRepo(dbs.connection), await createTestReservationTravelersRepo(dbs.connection), await createTestReservationDayPositionsRepo(dbs.connection), await createTestDayAccommodationsRepo(dbs.connection), await createTestDaysRepo(dbs.connection), await createTestPlacesRepo(dbs.connection), await createTestDayAssignmentsRepo(dbs.connection), await createTestTripMembersRepo(dbs.connection), await createTestUsersRepo(dbs.connection), await createTestTripsRepo(dbs.connection), await createTestBudgetItemsRepo(dbs.connection));
   const trips = new TripsService(dbs, reservations, days, permissions, budget, vacay, realtime, unsplash, generalStorage, await createTestUnitOfWork(dbs.connection), (await sharedTestOrm(dbs.connection)).em);
-  const members = new TripMembersService(dbs, budget, new UserCleanupService(dbs, budget, await createTestUnitOfWork(dbs.connection), usersRepo, await createTestBudgetItemsRepo(dbs.connection), await createTestJourneyShareTokensRepo(dbs.connection), await createTestJourneysRepo(dbs.connection), await createTestJourneyEntriesRepo(dbs.connection), await createTestJourneyContributorsRepo(dbs.connection)), permissions, realtime, notificationsStub(), await createTestUnitOfWork(dbs.connection), await createTestTripsRepo(dbs.connection), await createTestTripMembersRepo(dbs.connection), usersRepo);
+  const members = new TripMembersService(dbs, budget, new UserCleanupService(dbs, budget, await createTestUnitOfWork(dbs.connection), usersRepo, await createTestBudgetItemsRepo(dbs.connection), await createTestJourneyShareTokensRepo(dbs.connection), await createTestJourneysRepo(dbs.connection), await createTestJourneyEntriesRepo(dbs.connection), await createTestJourneyContributorsRepo(dbs.connection), await createTestShareTokensRepo(dbs.connection)), permissions, realtime, notificationsStub(), await createTestUnitOfWork(dbs.connection), await createTestTripsRepo(dbs.connection), await createTestTripMembersRepo(dbs.connection), usersRepo);
   const guards = new PluginGuards(dbs, permissions, addons);
 
   const registry = createTestPluginRegistry([

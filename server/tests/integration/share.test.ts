@@ -37,6 +37,7 @@ import { DEFAULT_UPLOADS_ROOT, GLOBAL_TEMP_DIR } from '../../src/nest/storage/st
 import { createTestOrm } from '../helpers/test-orm';
 import { GooglePlacePhotoMeta } from '../../src/db/entities/GooglePlacePhotoMeta.entity';
 import { Places } from '../../src/db/entities/Places.entity';
+import { CollectionPlaces } from '../../src/db/entities/CollectionPlaces.entity';
 
 // A real instance over the same connection the app uses — these cases write a
 // cache entry and then read it back through the HTTP route, so the stub
@@ -66,7 +67,7 @@ beforeAll(async () => {
   nestApp = await buildApp();
   app = nestApp.getHttpAdapter().getInstance();
   const t = await createTestOrm(sharedDb, { allowGlobalContext: true });
-  placePhotoCache = new PlacePhotoCacheService(new DatabaseService(sharedDb), testStorage, t.repo(GooglePlacePhotoMeta), t.repo(Places));
+  placePhotoCache = new PlacePhotoCacheService(new DatabaseService(sharedDb), testStorage, t.repo(GooglePlacePhotoMeta), t.repo(Places), t.repo(CollectionPlaces));
 });
 
 beforeEach(() => {

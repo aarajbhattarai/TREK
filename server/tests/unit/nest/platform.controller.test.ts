@@ -23,6 +23,7 @@ import { StorageNotFoundError, StorageInvalidKeyError } from '../../../src/nest/
 import type { StorageService } from '../../../src/nest/storage/storage.service';
 import { createSnapshotTestDb } from '../../helpers/db-mock';
 import { createTestOrm, type TestOrm } from '../../helpers/test-orm';
+import { createUser, createTrip } from '../../helpers/factories';
 
 // The serving swap addresses files as (category, name) on the injected facade;
 // these unit tests only assert routing/auth/error mapping, so a two-method stub
@@ -201,38 +202,103 @@ describe('applyPlatformUploads', () => {
       expect(res.statusCode).toBe(401);
     });
 
+    // R1/R5 (Plan 3h Task 6): the share-token half of this handler now reads
+    // through `ShareTokensRepository.findTripIdByToken` — `orm.em.getRepository
+    // (ShareTokens)` inside the SAME `withRequestContext` wrap `applyPlatformUploads`
+    // already uses for the JWT half — so these cases seed REAL rows in
+    // `uploadsTestDb` (bound to `uploadsOrm.orm`) rather than mocking
+    // `db.prepare`'s return value the way the (still-unconverted) sibling
+    // `photos` read below continues to. `photoStmt` stays a `db.prepare` mock
+    // (untouched domain) throughout.
+    function insertShareToken(tripId: number, userId: number, token: string, expiresAt: string | null = null) {
+      uploadsTestDb.prepare('INSERT INTO share_tokens (trip_id, token, created_by, expires_at) VALUES (?, ?, ?, ?)')
+        .run(tripId, token, userId, expiresAt);
+    }
+
     it('401 when a share token does not cover the photo trip', async () => {
+      const { user } = createUser(uploadsTestDb);
+      const photoTrip = createTrip(uploadsTestDb, user.id);
+      const otherTrip = createTrip(uploadsTestDb, user.id);
+      insertShareToken(otherTrip.id, user.id, 'share-mismatch');
       h.exists.mockResolvedValue(true);
       h.verifyJwtAndLoadUser.mockReturnValue(null);
-      const photoStmt = { get: vi.fn().mockReturnValue({ trip_id: 7 }) };
-      const shareStmt = { get: vi.fn().mockReturnValue({ trip_id: 8 }) };
-      h.dbPrepare.mockImplementationOnce(() => photoStmt).mockImplementationOnce(() => shareStmt);
+      h.dbPrepare.mockReturnValue({ get: vi.fn().mockReturnValue({ trip_id: photoTrip.id }) });
       const res = makeRes();
-      await photoHandler()({ params: { filename: 'a.jpg' }, headers: {}, query: { token: 'share1' } }, res, next);
+      await photoHandler()({ params: { filename: 'a.jpg' }, headers: {}, query: { token: 'share-mismatch' } }, res, next);
       expect(res.statusCode).toBe(401);
     });
 
-    it('401 when there is no matching share token at all', async () => {
+    it('R5: 401 when there is no matching share token at all (unknown)', async () => {
+      const { user } = createUser(uploadsTestDb);
+      const photoTrip = createTrip(uploadsTestDb, user.id);
       h.exists.mockResolvedValue(true);
       h.verifyJwtAndLoadUser.mockReturnValue(null);
-      const photoStmt = { get: vi.fn().mockReturnValue({ trip_id: 7 }) };
-      const shareStmt = { get: vi.fn().mockReturnValue(undefined) };
-      h.dbPrepare.mockImplementationOnce(() => photoStmt).mockImplementationOnce(() => shareStmt);
+      h.dbPrepare.mockReturnValue({ get: vi.fn().mockReturnValue({ trip_id: photoTrip.id }) });
       const res = makeRes();
-      await photoHandler()({ params: { filename: 'a.jpg' }, headers: {}, query: { token: 'share1' } }, res, next);
+      await photoHandler()({ params: { filename: 'a.jpg' }, headers: {}, query: { token: 'never-issued' } }, res, next);
       expect(res.statusCode).toBe(401);
     });
 
-    it('serves the file when the share token covers the photo trip', async () => {
+    it('R5: 401 when the token is revoked (deleted, not merely unknown)', async () => {
+      const { user } = createUser(uploadsTestDb);
+      const photoTrip = createTrip(uploadsTestDb, user.id);
+      insertShareToken(photoTrip.id, user.id, 'share-revoked');
+      uploadsTestDb.prepare('DELETE FROM share_tokens WHERE token = ?').run('share-revoked');
+      h.exists.mockResolvedValue(true);
+      h.verifyJwtAndLoadUser.mockReturnValue(null);
+      h.dbPrepare.mockReturnValue({ get: vi.fn().mockReturnValue({ trip_id: photoTrip.id }) });
+      const res = makeRes();
+      await photoHandler()({ params: { filename: 'a.jpg' }, headers: {}, query: { token: 'share-revoked' } }, res, next);
+      expect(res.statusCode).toBe(401);
+    });
+
+    it('R5: 401 when the token is expired', async () => {
+      const { user } = createUser(uploadsTestDb);
+      const photoTrip = createTrip(uploadsTestDb, user.id);
+      insertShareToken(photoTrip.id, user.id, 'share-expired', '2020-01-01 00:00:00');
+      h.exists.mockResolvedValue(true);
+      h.verifyJwtAndLoadUser.mockReturnValue(null);
+      h.dbPrepare.mockReturnValue({ get: vi.fn().mockReturnValue({ trip_id: photoTrip.id }) });
+      const res = makeRes();
+      await photoHandler()({ params: { filename: 'a.jpg' }, headers: {}, query: { token: 'share-expired' } }, res, next);
+      expect(res.statusCode).toBe(401);
+    });
+
+    it('R5: 401 for a wrong-case token — no case-folding is introduced', async () => {
+      const { user } = createUser(uploadsTestDb);
+      const photoTrip = createTrip(uploadsTestDb, user.id);
+      insertShareToken(photoTrip.id, user.id, 'share-CaseSensitive');
+      h.exists.mockResolvedValue(true);
+      h.verifyJwtAndLoadUser.mockReturnValue(null);
+      h.dbPrepare.mockReturnValue({ get: vi.fn().mockReturnValue({ trip_id: photoTrip.id }) });
+      const res = makeRes();
+      await photoHandler()({ params: { filename: 'a.jpg' }, headers: {}, query: { token: 'share-casesensitive' } }, res, next);
+      expect(res.statusCode).toBe(401);
+    });
+
+    it('R5: 401 for a token with an embedded NUL byte', async () => {
+      const { user } = createUser(uploadsTestDb);
+      const photoTrip = createTrip(uploadsTestDb, user.id);
+      insertShareToken(photoTrip.id, user.id, 'share-nul');
+      h.exists.mockResolvedValue(true);
+      h.verifyJwtAndLoadUser.mockReturnValue(null);
+      h.dbPrepare.mockReturnValue({ get: vi.fn().mockReturnValue({ trip_id: photoTrip.id }) });
+      const res = makeRes();
+      await photoHandler()({ params: { filename: 'a.jpg' }, headers: {}, query: { token: 'share-nul\0extra' } }, res, next);
+      expect(res.statusCode).toBe(401);
+    });
+
+    it('serves the file when the share token covers the photo trip (R1 valid-token case)', async () => {
+      const { user } = createUser(uploadsTestDb);
+      const photoTrip = createTrip(uploadsTestDb, user.id);
+      insertShareToken(photoTrip.id, user.id, 'share-valid');
       h.exists.mockResolvedValue(true);
       h.sendToResponse.mockResolvedValue(undefined);
       h.verifyJwtAndLoadUser.mockReturnValue(null);
-      const photoStmt = { get: vi.fn().mockReturnValue({ trip_id: 7 }) };
-      const shareStmt = { get: vi.fn().mockReturnValue({ trip_id: 7 }) };
-      h.dbPrepare.mockImplementationOnce(() => photoStmt).mockImplementationOnce(() => shareStmt);
+      h.dbPrepare.mockReturnValue({ get: vi.fn().mockReturnValue({ trip_id: photoTrip.id }) });
       const res = makeRes();
       await photoHandler()(
-        { params: { filename: 'a.jpg' }, headers: { authorization: 'Bearer share1' }, query: {} },
+        { params: { filename: 'a.jpg' }, headers: { authorization: 'Bearer share-valid' }, query: {} },
         res,
         next,
       );

@@ -81,6 +81,7 @@ import { TripPhotos } from '../../../src/db/entities/TripPhotos.entity';
 import { makeStorageFixture } from '../../helpers/storage-fixture';
 import { createTestUnitOfWork, createTestAppSettingsRepo, createTestUsersRepo, createTestTagsRepo, createTestPlaceRatingsRepo, createTestAssignmentParticipantsRepo, createTestPlacesRepo, createTestTripMembersRepo, createTestDayAssignmentsRepo, createTestCategoriesRepo, createTestTripsRepo, sharedTestOrm } from '../../helpers/test-uow';
 import { createTestBudgetItemsRepo } from '../../helpers/files-repos';
+import { createTestCollectionPlacesRepo } from '../../helpers/test-uow';
 import {
   createTestJourneysRepo, createTestJourneyContributorsRepo, createTestJourneyTripsRepo, createTestJourneyEntriesRepo,
   createTestJourneyPhotosRepo, createTestJourneyEntryPhotosRepo,
@@ -155,6 +156,7 @@ async function makePlacesService(
     await createTestCategoriesRepo(dbs.connection),
   await createTestTripsRepo(dbs.connection),
   await createTestBudgetItemsRepo(dbs.connection),
+  await createTestCollectionPlacesRepo(dbs.connection),
   );
 }
 

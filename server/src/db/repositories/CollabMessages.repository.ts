@@ -24,6 +24,12 @@ export interface CollabMessageJoinRow extends CollabMessageRow {
   reply_username: string | null;
 }
 
+/** {@link CollabMessagesRepository.listPublicForShare}'s projection (SH16) — `m.*, u.username, u.avatar` only. */
+export interface SharePublicCollabMessageRow extends CollabMessageRow {
+  username: string;
+  avatar: string | null;
+}
+
 interface CollabMessagesKyselyDB {
   collab_messages: CollabMessageRow;
   users: { id: number; username: string; avatar: string | null };
@@ -115,6 +121,27 @@ export class CollabMessagesRepository extends TrekRepository<CollabMessages> {
   /** CB50 (`createMessage`'s post-tx re-select) — the joined shape above, `WHERE m.id = ?`, no trip filter (the caller just wrote this exact id inside the transaction). */
   async findWithReply(id: number): Promise<CollabMessageJoinRow | undefined> {
     return await this.joinedQuery().where('m.id', '=', id).executeTakeFirst();
+  }
+
+  /**
+   * `share.service.ts:400` SH16 (`getSharedTripData`'s share_collab read) —
+   * `SELECT m.*, u.username, u.avatar FROM collab_messages m JOIN users u
+   * ON m.user_id = u.id WHERE m.trip_id = ? AND m.deleted = 0 ORDER BY
+   * m.created_at`. A narrower projection than {@link joinedQuery} above (no
+   * `reply_text`/`reply_username` — a public share viewer never resolves a
+   * reply thread through this read) and a different order/shape than
+   * `listForTrip` (ascending, no cursor, no `LIMIT`).
+   */
+  async listPublicForShare(trip_id: number): Promise<SharePublicCollabMessageRow[]> {
+    return await this.kysely<CollabMessagesKyselyDB>()
+      .selectFrom('collab_messages as m')
+      .innerJoin('users as u', 'u.id', 'm.user_id')
+      .selectAll('m')
+      .select(['u.username', 'u.avatar'])
+      .where('m.trip_id', '=', trip_id)
+      .where('m.deleted', '=', 0)
+      .orderBy('m.created_at', 'asc')
+      .execute();
   }
 
   /**

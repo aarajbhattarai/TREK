@@ -126,6 +126,8 @@ import {
   createTestJourneyPhotosRepo, createTestJourneyEntryPhotosRepo,
 } from '../../helpers/journey-repos';
 import { createTestJourneyShareTokensRepo } from '../../helpers/journey-share-repos';
+import { createTestShareTokensRepo } from '../../helpers/share-repos';
+import { createTestCollectionPlacesRepo } from '../../helpers/test-uow';
 
 // Real sibling services over the same in-memory DB — updateTrip's date-shift
 // resyncs and the summary/bundle aggregation run their actual SQL.
@@ -176,6 +178,7 @@ beforeAll(async () => {
     makeStorageFixture('photos/google/').storage,
     await createTestGooglePlacePhotoMetaRepo(dbs().connection),
     await createTestPlacesRepo(dbs().connection),
+    await createTestCollectionPlacesRepo(dbs().connection),
   );
   budgetSvc = new BudgetService(dbs(), new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)), new ExchangeRatesService(), new RealtimeService(), await createTestUnitOfWork(dbs().connection), ...(await budgetRepoArgs(dbs().connection)));
   daysSvc = new DaysService(
@@ -217,6 +220,7 @@ beforeAll(async () => {
   await createTestCategoriesRepo(dbs().connection),
   await createTestTripsRepo(dbs().connection),
   await createTestBudgetItemsRepo(dbs().connection),
+  await createTestCollectionPlacesRepo(dbs().connection),
 );
   svc = new TripsService(
   dbs(),
@@ -239,7 +243,7 @@ beforeAll(async () => {
   await createTestUnitOfWork(dbs().connection),
   (await sharedTestOrm(testDb)).em,
 );
-  membersSvc = new TripMembersService(dbs(), budgetSvc, new UserCleanupService(dbs(), budgetSvc, await createTestUnitOfWork(dbs().connection), await createTestUsersRepo(dbs().connection), await createTestBudgetItemsRepo(dbs().connection), await createTestJourneyShareTokensRepo(dbs().connection), await createTestJourneysRepo(dbs().connection), await createTestJourneyEntriesRepo(dbs().connection), await createTestJourneyContributorsRepo(dbs().connection)), new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)), new RealtimeService(), notificationsStub(), await createTestUnitOfWork(dbs().connection), await createTestTripsRepo(dbs().connection), await createTestTripMembersRepo(dbs().connection), await createTestUsersRepo(dbs().connection));
+  membersSvc = new TripMembersService(dbs(), budgetSvc, new UserCleanupService(dbs(), budgetSvc, await createTestUnitOfWork(dbs().connection), await createTestUsersRepo(dbs().connection), await createTestBudgetItemsRepo(dbs().connection), await createTestJourneyShareTokensRepo(dbs().connection), await createTestJourneysRepo(dbs().connection), await createTestJourneyEntriesRepo(dbs().connection), await createTestJourneyContributorsRepo(dbs().connection), await createTestShareTokensRepo(dbs().connection)), new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)), new RealtimeService(), notificationsStub(), await createTestUnitOfWork(dbs().connection), await createTestTripsRepo(dbs().connection), await createTestTripMembersRepo(dbs().connection), await createTestUsersRepo(dbs().connection));
   readModelSvc = new TripReadModelService(
   await createTestTripsRepo(dbs().connection), membersSvc, daysSvc, accommodationsSvc, budgetSvc,
   new PackingService(

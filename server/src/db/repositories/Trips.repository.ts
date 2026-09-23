@@ -696,6 +696,22 @@ export class TripsRepository extends TrekRepository<Trips> {
   }
 
   /**
+   * `share.service.ts:264` SH7 (`getSharedTripData`) — `SELECT id, title,
+   * description, start_date, end_date, cover_image, currency FROM trips
+   * WHERE id = ?`. A different 7-column public projection from
+   * `TripSummaryProjectionRow`'s 8 above (`cover_image` in, `is_archived`/
+   * `updated_at` out — a public share-link viewer never sees either). No
+   * access check here, matching the legacy statement — the caller's own
+   * `verifyTripAccess`/token validity gates this read.
+   */
+  async findPublicForShare(id: number | string): Promise<TripPublicShareRow | undefined> {
+    return await this.qb('t')
+      .select(['t.id', 't.title', 't.description', 't.start_date', 't.end_date', 't.cover_image', 't.currency'])
+      .where('t.id = ?', [id])
+      .execute<TripPublicShareRow | undefined>('get', false);
+  }
+
+  /**
    * `PublicApiService.buildTravellers`'s statement — the owner row (a
    * literal `1 AS is_owner`) `UNION ALL` every member row (`0 AS is_owner`),
    * `ORDER BY is_owner DESC`. A QueryBuilder `UNION ALL` of two different
@@ -919,6 +935,17 @@ export interface TripSummaryProjectionRow {
   currency: string | null;
   is_archived: number | null;
   updated_at: string | null;
+}
+
+/** {@link TripsRepository.findPublicForShare}'s projection (SH7). */
+export interface TripPublicShareRow {
+  id: number;
+  title: string;
+  description: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  cover_image: string | null;
+  currency: string | null;
 }
 
 /** `PublicApiService.buildTravellers`'s output row. */

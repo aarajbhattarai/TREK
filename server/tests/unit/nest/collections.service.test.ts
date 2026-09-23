@@ -104,6 +104,7 @@ beforeAll(async () => {
     makeStorageFixture('photos/google/').storage,
     await createTestGooglePlacePhotoMetaRepo(testDb),
     await createTestPlacesRepo(testDb),
+    await createTestCollectionPlacesRepo(testDb),
   );
 });
 

@@ -54,13 +54,13 @@ import { resetTestDb } from '../../helpers/test-db';
 import {
   createUser, createTrip, addTripMember, createDay, createPlace, createDayAssignment,
 } from '../../helpers/factories';
-import { DatabaseService } from '../../../src/nest/database/database.service';
 import type { PermissionsService } from '../../../src/nest/permissions/permissions.service';
 import { ShareService, publicReservationMetadata } from '../../../src/nest/share/share.service';
 import { SettingsService } from '../../../src/nest/settings/settings.service';
 import { QueryHelpersService } from '../../../src/nest/query-helpers/query-helpers.service';
 import type { User } from '../../../src/types';
-import { sharedTestOrm, createTestUnitOfWork, createTestAppSettingsRepo, createTestSettingsRepo, createTestTagsRepo, createTestPlaceRatingsRepo, createTestAssignmentParticipantsRepo, createTestReservationsRepo } from '../../helpers/test-uow';
+import { sharedTestOrm, createTestUnitOfWork, createTestAppSettingsRepo, createTestSettingsRepo, createTestTagsRepo, createTestPlaceRatingsRepo, createTestAssignmentParticipantsRepo } from '../../helpers/test-uow';
+import { shareServiceRepoArgs } from '../../helpers/share-repos';
 import type { TestOrm } from '../../helpers/test-orm';
 
 let svc: ShareService;
@@ -73,15 +73,13 @@ beforeAll(async () => {
   createTables(testDb);
   runMigrations(testDb);
   t = await sharedTestOrm(testDb);
-  const dbs = new DatabaseService(testDb, t.em);
   svc = new ShareService(
-    dbs,
     new SettingsService(await createTestUnitOfWork(testDb), await createTestAppSettingsRepo(testDb), await createTestSettingsRepo(testDb)),
     permissionsStub,
-    new QueryHelpersService(await createTestTagsRepo(dbs.connection), await createTestPlaceRatingsRepo(dbs.connection), await createTestAssignmentParticipantsRepo(dbs.connection)),
+    new QueryHelpersService(await createTestTagsRepo(testDb), await createTestPlaceRatingsRepo(testDb), await createTestAssignmentParticipantsRepo(testDb)),
     photoCacheStub,
     await createTestUnitOfWork(testDb),
-    await createTestReservationsRepo(testDb),
+    ...(await shareServiceRepoArgs(testDb)),
   );
 });
 
@@ -247,6 +245,34 @@ describe('getSharedTripData', () => {
     expect(await svc.getSharedTripData(token)).toBeNull();
     testDb.prepare('UPDATE share_tokens SET expires_at = NULL WHERE trip_id = ?').run(trip.id);
     expect(await svc.getSharedTripData(token)).not.toBeNull();
+  });
+
+  // R5's six-case matrix (valid, revoked, unknown, wrong-case, NUL-byte,
+  // expired) — SHARE-SVC-010/011 above already pin unknown/expired; the
+  // remaining four are named separately here, per the plan's "a failure in
+  // one branch must not be masked by another's passing case" discipline.
+  it('SHARE-SVC-039 (R5, valid): a freshly created token returns the shared payload', async () => {
+    const { token } = await seedSharedTrip();
+    expect(await svc.getSharedTripData(token)).not.toBeNull();
+  });
+
+  it('SHARE-SVC-040 (R5, revoked): a deleted token returns null — distinct from merely unknown', async () => {
+    const { trip, token } = await seedSharedTrip();
+    expect(await svc.getSharedTripData(token)).not.toBeNull();
+    testDb.prepare('DELETE FROM share_tokens WHERE trip_id = ?').run(trip.id);
+    expect(await svc.getSharedTripData(token)).toBeNull();
+  });
+
+  it('SHARE-SVC-041 (R5, wrong-case): a differently-cased token never matches — no case-folding introduced (mutation proof: a COLLATE NOCASE companion would flip this red)', async () => {
+    const { token } = await seedSharedTrip();
+    const flipped = token === token.toUpperCase() ? token.toLowerCase() : token.toUpperCase();
+    expect(flipped).not.toBe(token);
+    expect(await svc.getSharedTripData(flipped)).toBeNull();
+  });
+
+  it('SHARE-SVC-042 (R5, NUL-byte): a token with an embedded NUL byte never matches', async () => {
+    const { token } = await seedSharedTrip();
+    expect(await svc.getSharedTripData(`${token}\0x`)).toBeNull();
   });
 
   it('SHARE-SVC-012: returns null when the trip row is gone', async () => {
@@ -557,6 +583,45 @@ describe('getSharedTripData redaction (#2320)', () => {
     expect(JSON.stringify(data)).not.toContain('ChIJ123');
   });
 
+  it('SHARE-SVC-046 (SH12 full-key parity): every allow-listed column of a fully-populated place reaches the public payload, nothing else does', async () => {
+    const { trip, token } = await seedSharedTrip();
+    const place = createPlace(testDb, trip.id, { name: 'Fully Populated' });
+    testDb.prepare(`UPDATE places SET
+      description = 'A description', address = '1 Rue Test', price = 12.5, currency = 'EUR',
+      place_time = '09:00', end_time = '10:00', duration_minutes = 60, notes = 'A public note',
+      image_url = '/uploads/pic.jpg', website = 'https://example.com', phone = '+33 1 23',
+      transport_mode = 'walk',
+      reservation_status = 'confirmed', reservation_notes = 'Private booking note', reservation_datetime = '2026-01-01T09:00',
+      google_place_id = 'ChIJ-private', google_ftid = 'ftid-private', osm_id = 'osm-private', amap_poi_id = 'amap-private',
+      route_geometry = '{"type":"LineString"}', route_color = '#ff0000', stop_type = 'hotel', fill_percent = 42,
+      source = 'import'
+      WHERE id = ?`).run(place.id);
+
+    const data = (await svc.getSharedTripData(token))!;
+    const pool = (data.places as any[])[0];
+
+    // The full allow-list (20 `places` columns + the 3 flat category-join
+    // columns), and nothing more.
+    expect(Object.keys(pool).sort()).toEqual([
+      'address', 'category_color', 'category_icon', 'category_id', 'category_name', 'created_at', 'currency',
+      'description', 'duration_minutes', 'end_time', 'id', 'image_url', 'lat', 'lng', 'name', 'notes', 'phone',
+      'place_time', 'price', 'transport_mode', 'trip_id', 'updated_at', 'website',
+    ]);
+    expect(pool.notes).toBe('A public note');
+    expect(pool.address).toBe('1 Rue Test');
+    expect(pool.duration_minutes).toBe(60);
+
+    // Every non-allow-listed column, whole-payload-wide.
+    const whole = JSON.stringify(data);
+    for (const secret of [
+      'Private booking note', '2026-01-01T09:00',
+      'ChIJ-private', 'ftid-private', 'osm-private', 'amap-private',
+      'LineString', '#ff0000',
+    ]) {
+      expect(whole, secret).not.toContain(secret);
+    }
+  });
+
   it('SHARE-SVC-037: a stay carries its desk times and note, not its confirmation', async () => {
     const { trip, token } = await seedSharedTrip();
     const place = createPlace(testDb, trip.id, { name: 'Hotel' });
@@ -590,6 +655,32 @@ describe('getSharedPlacePhotoKey', () => {
     testDb.prepare('UPDATE share_tokens SET expires_at = ? WHERE trip_id = ?').run('2020-01-01T00:00:00.000Z', trip.id);
     expect(await svc.getSharedPlacePhotoKey(token, 'ChIJabc')).toBeNull();
     expect(serveKey).not.toHaveBeenCalled();
+  });
+
+  // R5's six-case matrix, this method's own named cases (SHARE-SVC-022 above
+  // already pins unknown/expired — same predicate, same {@link
+  // ShareTokensRepository.findTripAndShareMapByToken}, proven separately here
+  // since a regression in this method's own call site would not otherwise be
+  // caught).
+  it('SHARE-SVC-043 (R5, revoked): a deleted token returns null — distinct from merely unknown', async () => {
+    const { trip, token } = await seedSharedTrip();
+    const place = createPlace(testDb, trip.id);
+    testDb.prepare('UPDATE places SET image_url = ? WHERE id = ?').run('/api/maps/place-photo/ChIJabc/bytes', place.id);
+    expect(await svc.getSharedPlacePhotoKey(token, 'ChIJabc')).not.toBeNull();
+    testDb.prepare('DELETE FROM share_tokens WHERE trip_id = ?').run(trip.id);
+    expect(await svc.getSharedPlacePhotoKey(token, 'ChIJabc')).toBeNull();
+  });
+
+  it('SHARE-SVC-044 (R5, wrong-case): a differently-cased token never matches (mutation proof: a COLLATE NOCASE companion would flip this red)', async () => {
+    const { token } = await seedSharedTrip();
+    const flipped = token === token.toUpperCase() ? token.toLowerCase() : token.toUpperCase();
+    expect(flipped).not.toBe(token);
+    expect(await svc.getSharedPlacePhotoKey(flipped, 'ChIJabc')).toBeNull();
+  });
+
+  it('SHARE-SVC-045 (R5, NUL-byte): a token with an embedded NUL byte never matches', async () => {
+    const { token } = await seedSharedTrip();
+    expect(await svc.getSharedPlacePhotoKey(`${token}\0x`, 'ChIJabc')).toBeNull();
   });
 
   it('SHARE-SVC-023: returns null when the owner disabled the map section', async () => {

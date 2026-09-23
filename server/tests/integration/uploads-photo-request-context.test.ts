@@ -50,7 +50,7 @@ vi.mock('../../src/websocket', () => ({ broadcast: vi.fn(), broadcastToUser: vi.
 import { db as testDb } from '../../src/db/database';
 import { buildApp } from '../../src/bootstrap';
 import { resetTestDb } from '../helpers/test-db';
-import { createUser } from '../helpers/factories';
+import { createUser, createTrip } from '../helpers/factories';
 import { generateToken } from '../helpers/auth';
 import { applyPlatformUploads } from '../../src/nest/platform/platform.routes';
 import { StorageService } from '../../src/nest/storage/storage.service';
@@ -122,6 +122,44 @@ describe('GET /uploads/photos/:filename — request context (Plan 3b Task 0, D6)
     } finally {
       spy.mockRestore();
     }
+  });
+
+  // R1 (Plan 3h Task 6): the anonymous share-token FALLBACK branch of the
+  // SAME pre-init handler — the one PHOTOCTX-001/002 above never exercised
+  // (they only drove the JWT half) — now reads `share_tokens` through
+  // `ShareTokensRepository.findTripIdByToken` inside the SAME `withRequestContext`
+  // wrap, the plan's single highest-severity finding (an unconverted `db`
+  // proxy read had run outside Nest's per-request EntityManager fork,
+  // permanently, since Plan 3b's own D6 wrap covered only the JWT branch).
+  // These two cases drive the REAL pre-init route, anonymously, through the
+  // real compiled `buildApp()` boot above — not a wrapper mock.
+  it('PHOTOCTX-004 (R1): a valid share token serves the SAME photo bytes as the JWT path, byte-identical', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    testDb.prepare('INSERT INTO photos (trip_id, filename, original_name) VALUES (?, ?, ?)').run(trip.id, photoName, photoName);
+    testDb.prepare('INSERT INTO share_tokens (trip_id, token, created_by) VALUES (?, ?, ?)').run(trip.id, 'ratchet-valid-token', user.id);
+
+    const res = await request(app).get(`/uploads/photos/${photoName}?token=ratchet-valid-token`);
+
+    expect(res.status).toBe(200);
+    expect(Buffer.from(res.body as Buffer)).toEqual(photoBytes);
+  });
+
+  it('PHOTOCTX-005 (R1): an invalid/unknown share token answers the legacy 401 — never `cannotUseGlobalContext`', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    testDb.prepare('INSERT INTO photos (trip_id, filename, original_name) VALUES (?, ?, ?)').run(trip.id, photoName, photoName);
+    // No matching share_tokens row for this token at all.
+
+    const res = await request(app).get(`/uploads/photos/${photoName}?token=ratchet-unknown-token`);
+
+    expect(res.status).toBe(401);
+    expect(res.status).not.toBe(500);
+    // The explicit R1 assertion (rule 13(b)'s shape): the pre-init handler
+    // never throws `cannotUseGlobalContext` for this branch — the wrap
+    // covers the ShareTokensRepository read exactly as it covers the
+    // already-converted Users read.
+    expect(JSON.stringify(res.body ?? res.text ?? '')).not.toContain('cannotUseGlobalContext');
   });
 });
 
