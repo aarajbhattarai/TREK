@@ -312,6 +312,24 @@ describe('send() — recipient resolution', () => {
     expect(recipients).not.toContain(guestId);
   });
 
+  it('NSVC-007c — guest-exclusion (#1362), the direct call: resolveRecipients itself never returns a guest for trip or user scope (Plan 3f Task 3 — the NT2 chokepoint, R8)', async () => {
+    const { user: owner } = createUser(testDb);
+    const { user: member } = createUser(testDb);
+
+    const tripId = (testDb.prepare('INSERT INTO trips (title, user_id) VALUES (?, ?)').run('Trip', owner.id)).lastInsertRowid as number;
+    testDb.prepare('INSERT INTO trip_members (trip_id, user_id) VALUES (?, ?)').run(tripId, member.id);
+    const guestId = (testDb.prepare("INSERT INTO users (username, email, password_hash, role, is_guest) VALUES ('Guest', 'guest-y@guests.invalid', '', 'user', 1)").run()).lastInsertRowid as number;
+    testDb.prepare('INSERT INTO trip_members (trip_id, user_id) VALUES (?, ?)').run(tripId, guestId);
+
+    const tripRecipients = await notifications.resolveRecipients('trip', tripId);
+    expect(tripRecipients).toContain(owner.id);
+    expect(tripRecipients).toContain(member.id);
+    expect(tripRecipients).not.toContain(guestId);
+
+    const userRecipients = await notifications.resolveRecipients('user', guestId);
+    expect(userRecipients).toEqual([]);
+  });
+
   it('NSVC-008 — user scope sends to exactly one user', async () => {
     const { user: target } = createUser(testDb);
     const { user: other } = createUser(testDb);

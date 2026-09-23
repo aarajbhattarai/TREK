@@ -68,7 +68,8 @@ import { DatabaseService } from '../../../src/nest/database/database.service';
 import { createPluginRuntime } from '../../helpers/plugin-host';
 import { MailerService } from '../../../src/nest/notifications/mailer/mailer.service';
 import { NotificationPreferencesService } from '../../../src/nest/notifications/notification-preferences.service';
-import { createTestUnitOfWork } from '../../helpers/test-uow';
+import { createTestUnitOfWork, createTestAppSettingsRepo } from '../../helpers/test-uow';
+import { createTestNotificationChannelPreferencesRepo } from '../../helpers/notifications-repos';
 
 import {
   setPluginChannelSource,
@@ -91,7 +92,12 @@ void WebhookService; void NtfyService;
 beforeAll(async () => {
   createTables(testDb);
   runMigrations(testDb);
-  prefsSvc = new NotificationPreferencesService(prefsDbs, new MailerService(prefsDbs), await createTestUnitOfWork(testDb));
+  prefsSvc = new NotificationPreferencesService(
+    new MailerService(prefsDbs),
+    await createTestUnitOfWork(testDb),
+    await createTestAppSettingsRepo(testDb),
+    await createTestNotificationChannelPreferencesRepo(testDb),
+  );
   notifications = await makeNotificationsService(new DatabaseService(testDb));
 });
 beforeEach(() => { resetTestDb(testDb); setPluginChannelSource(null); });

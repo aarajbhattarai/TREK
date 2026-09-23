@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@mikro-orm/nestjs';
 import type { ChannelTestResult } from '@trek/shared';
 import { readEnv, getAppUrl } from '../../app-config';
 import { logDebug, logError } from '../audit/audit-log.logger';
@@ -18,7 +19,8 @@ import {
 import { getChannel, listChannels } from './channel-registry';
 import { getAction } from './in-app-actions';
 import { avatarUrl } from '../common/avatarUrl';
-import { DatabaseService } from '../database/database.service';
+import { Notifications } from '../../db/entities/Notifications.entity';
+import type { NotificationsRepository } from '../../db/repositories/Notifications.repository';
 import { UnitOfWork } from '../database/unit-of-work';
 import { RealtimeService } from '../realtime/realtime.service';
 
@@ -76,9 +78,9 @@ interface NotificationRow {
   sender_avatar?: string | null;
   recipient_id: number;
   title_key: string;
-  title_params: string;
+  title_params: string | null;
   text_key: string;
-  text_params: string;
+  text_params: string | null;
   positive_text_key: string | null;
   negative_text_key: string | null;
   positive_callback: string | null;
@@ -86,7 +88,7 @@ interface NotificationRow {
   response: NotificationResponse | null;
   navigate_text_key: string | null;
   navigate_target: string | null;
-  is_read: number;
+  is_read: number | null;
   created_at: string;
 }
 
@@ -311,13 +313,13 @@ async function shouldSendToUser(
 @Injectable()
 export class NotificationsService {
   constructor(
-    private readonly db: DatabaseService,
     private readonly realtime: RealtimeService,
     private readonly mailer: MailerService,
     private readonly webhook: WebhookService,
     private readonly ntfy: NtfyService,
     private readonly prefs: NotificationPreferencesService,
     private readonly uow: UnitOfWork,
+    @InjectRepository(Notifications) private readonly notificationsRepo: NotificationsRepository,
   ) {
     // The registry is a module singleton shared with the plugin runtime and any
     // separately-constructed instance (which never runs onModuleInit), so
@@ -384,19 +386,18 @@ export class NotificationsService {
     // so they must never be resolved as notification recipients on any scope. This is the
     // single chokepoint for in-app/email/webhook/ntfy, so filtering here covers all channels.
     if (scope === 'trip') {
-      const owner = this.db.get<{ user_id: number }>('SELECT user_id FROM trips WHERE id = ?', target);
-      const members = this.db.all<{ user_id: number }>('SELECT m.user_id FROM trip_members m JOIN users u ON u.id = m.user_id WHERE m.trip_id = ? AND COALESCE(u.is_guest, 0) = 0', target);
+      const ownerId = await this.notificationsRepo.getTripOwnerId(target);
+      const memberIds = await this.notificationsRepo.listNonGuestTripMemberIds(target);
       const ids = new Set<number>();
-      if (owner) ids.add(owner.user_id);
-      for (const m of members) ids.add(m.user_id);
+      if (ownerId != null) ids.add(ownerId);
+      for (const id of memberIds) ids.add(id);
       userIds = Array.from(ids);
     } else if (scope === 'user') {
       // A guest can be a todo assignee (scope='user'); never notify them.
-      const u = this.db.get<{ is_guest?: number }>('SELECT is_guest FROM users WHERE id = ?', target);
+      const u = await this.notificationsRepo.findGuestFlag(target);
       userIds = u && u.is_guest ? [] : [target];
     } else if (scope === 'admin') {
-      const admins = this.db.all<{ id: number }>("SELECT id FROM users WHERE role = ? AND COALESCE(is_guest, 0) = 0", 'admin');
-      userIds = admins.map(a => a.id);
+      userIds = await this.notificationsRepo.listNonGuestUserIdsByRole('admin');
     }
 
     // Only exclude sender for group scopes (trip/admin) — for user scope, the target is explicit
@@ -423,15 +424,6 @@ export class NotificationsService {
     const insertedPairs: Array<{ id: number; recipientId: number }> = [];
 
     await this.uow.transactional(async () => {
-      const stmt = this.db.prepare(`
-      INSERT INTO notifications (
-        type, scope, target, sender_id, recipient_id,
-        title_key, title_params, text_key, text_params,
-        positive_text_key, negative_text_key, positive_callback, negative_callback,
-        navigate_text_key, navigate_target
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `);
-
       for (const recipientId of recipients) {
         // Check per-user in-app preference if an event_type is provided
         if (input.event_type && !(await this.prefs.isEnabledForEvent(recipientId, input.event_type, 'inapp'))) {
@@ -455,34 +447,32 @@ export class NotificationsService {
           navigateTarget = input.navigate_target;
         }
 
-        const result = stmt.run(
-          input.type, input.scope, input.target, input.sender_id, recipientId,
-          input.title_key, titleParams, input.text_key, textParams,
-          positiveTextKey, negativeTextKey, positiveCallback, negativeCallback,
-          navigateTextKey, navigateTarget
-        );
+        const id = await this.notificationsRepo.insertNotification({
+          type: input.type, scope: input.scope, target: input.target, sender_id: input.sender_id, recipient_id: recipientId,
+          title_key: input.title_key, title_params: titleParams, text_key: input.text_key, text_params: textParams,
+          positive_text_key: positiveTextKey, negative_text_key: negativeTextKey, positive_callback: positiveCallback, negative_callback: negativeCallback,
+          navigate_text_key: navigateTextKey, navigate_target: navigateTarget,
+        });
 
-        insertedPairs.push({ id: result.lastInsertRowid as number, recipientId });
+        insertedPairs.push({ id, recipientId });
       }
     });
 
     // Fetch sender info once for WS payloads
-    const sender = input.sender_id
-      ? this.db.get<{ username: string; avatar: string | null }>('SELECT username, avatar FROM users WHERE id = ?', input.sender_id)
-      : null;
+    const sender = input.sender_id ? await this.notificationsRepo.findUserBasic(input.sender_id) : undefined;
 
     // Broadcast to each recipient
     for (const { id: notificationId, recipientId } of insertedPairs) {
-      const row = this.db.get<NotificationRow>('SELECT * FROM notifications WHERE id = ?', notificationId) as NotificationRow;
+      const row = await this.notificationsRepo.findById(notificationId);
       if (!row) continue;
 
       this.realtime.broadcastToUser(recipientId, {
         type: 'notification:new',
         notification: {
           ...row,
-          created_at: toUtcIso(row.created_at),
+          created_at: toUtcIso(row.created_at!),
           sender_username: sender?.username ?? null,
-          sender_avatar: avatarUrl({ avatar: sender?.avatar }),
+          sender_avatar: avatarUrl({ avatar: sender?.avatar ?? null }),
         },
       });
     }
@@ -519,31 +509,23 @@ export class NotificationsService {
       navigateTarget = input.navigate_target;
     }
 
-    const result = this.db.run(`
-    INSERT INTO notifications (
-      type, scope, target, sender_id, recipient_id,
-      title_key, title_params, text_key, text_params,
-      positive_text_key, negative_text_key, positive_callback, negative_callback,
-      navigate_text_key, navigate_target
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `,
-      input.type, input.scope, input.target, input.sender_id, recipientId,
-      input.title_key, titleParams, input.text_key, textParams,
-      positiveTextKey, negativeTextKey, positiveCallback, negativeCallback,
-      navigateTextKey, navigateTarget
-    );
+    const notificationId = await this.notificationsRepo.insertNotification({
+      type: input.type, scope: input.scope, target: input.target, sender_id: input.sender_id, recipient_id: recipientId,
+      title_key: input.title_key, title_params: titleParams, text_key: input.text_key, text_params: textParams,
+      positive_text_key: positiveTextKey, negative_text_key: negativeTextKey, positive_callback: positiveCallback, negative_callback: negativeCallback,
+      navigate_text_key: navigateTextKey, navigate_target: navigateTarget,
+    });
 
-    const notificationId = result.lastInsertRowid as number;
-    const row = this.db.get<NotificationRow>('SELECT * FROM notifications WHERE id = ?', notificationId);
+    const row = await this.notificationsRepo.findById(notificationId);
     if (!row) return null;
 
     this.realtime.broadcastToUser(recipientId, {
       type: 'notification:new',
       notification: {
         ...row,
-        created_at: toUtcIso(row.created_at),
+        created_at: toUtcIso(row.created_at!),
         sender_username: sender?.username ?? null,
-        sender_avatar: avatarUrl({ avatar: sender?.avatar }),
+        sender_avatar: avatarUrl({ avatar: sender?.avatar ?? null }),
       },
     });
 
@@ -560,58 +542,46 @@ export class NotificationsService {
     const offset = options.offset ?? 0;
     const unreadOnly = options.unreadOnly ?? false;
 
-    const whereAliased = unreadOnly ? 'WHERE n.recipient_id = ? AND n.is_read = 0' : 'WHERE n.recipient_id = ?';
-    const wherePlain = unreadOnly ? 'WHERE recipient_id = ? AND is_read = 0' : 'WHERE recipient_id = ?';
+    const rows = await this.notificationsRepo.listForRecipient(userId, limit, offset, unreadOnly);
+    const total = await this.notificationsRepo.countForRecipient(userId, unreadOnly);
+    const unread_count = await this.notificationsRepo.countUnreadForRecipient(userId);
 
-    const rows = this.db.all<NotificationRow>(`
-    SELECT n.*, u.username AS sender_username, u.avatar AS sender_avatar
-    FROM notifications n
-    LEFT JOIN users u ON n.sender_id = u.id
-    ${whereAliased}
-    ORDER BY n.created_at DESC
-    LIMIT ? OFFSET ?
-  `, userId, limit, offset);
-
-    const { total } = this.db.get<{ total: number }>(`SELECT COUNT(*) as total FROM notifications ${wherePlain}`, userId) as { total: number };
-    const { unread_count } = this.db.get<{ unread_count: number }>('SELECT COUNT(*) as unread_count FROM notifications WHERE recipient_id = ? AND is_read = 0', userId) as { unread_count: number };
-
+    // The repository row's `type`/`scope`/`response` are the physical TEXT
+    // columns (plain `string`); this service's own `NotificationRow` narrows
+    // them to the literal unions it writes — the same unchecked boundary the
+    // legacy `db.all<NotificationRow>(...)` generic drew (SQLite has no enum
+    // type to check against either way).
     const mapped = rows.map(r => ({
       ...r,
-      created_at: toUtcIso(r.created_at),
+      created_at: toUtcIso(r.created_at!),
       sender_avatar: avatarUrl({ avatar: r.sender_avatar }),
-    }));
+    })) as NotificationRow[];
 
     return { notifications: mapped, total, unread_count };
   }
 
   async unreadCount(userId: number): Promise<number> {
-    const row = this.db.get<{ count: number }>('SELECT COUNT(*) as count FROM notifications WHERE recipient_id = ? AND is_read = 0', userId) as { count: number };
-    return row.count;
+    return await this.notificationsRepo.countUnreadForRecipient(userId);
   }
 
   async markRead(notificationId: number, userId: number): Promise<boolean> {
-    const result = this.db.run('UPDATE notifications SET is_read = 1 WHERE id = ? AND recipient_id = ?', notificationId, userId);
-    return result.changes > 0;
+    return (await this.notificationsRepo.setRead(notificationId, userId, 1)) > 0;
   }
 
   async markUnread(notificationId: number, userId: number): Promise<boolean> {
-    const result = this.db.run('UPDATE notifications SET is_read = 0 WHERE id = ? AND recipient_id = ?', notificationId, userId);
-    return result.changes > 0;
+    return (await this.notificationsRepo.setRead(notificationId, userId, 0)) > 0;
   }
 
   async markAllRead(userId: number): Promise<number> {
-    const result = this.db.run('UPDATE notifications SET is_read = 1 WHERE recipient_id = ? AND is_read = 0', userId);
-    return result.changes;
+    return await this.notificationsRepo.markAllRead(userId);
   }
 
   async deleteOne(notificationId: number, userId: number): Promise<boolean> {
-    const result = this.db.run('DELETE FROM notifications WHERE id = ? AND recipient_id = ?', notificationId, userId);
-    return result.changes > 0;
+    return (await this.notificationsRepo.deleteForRecipient(notificationId, userId)) > 0;
   }
 
   async deleteAll(userId: number): Promise<number> {
-    const result = this.db.run('DELETE FROM notifications WHERE recipient_id = ?', userId);
-    return result.changes;
+    return await this.notificationsRepo.deleteAllForRecipient(userId);
   }
 
   async respond(
@@ -619,7 +589,7 @@ export class NotificationsService {
     userId: number,
     response: NotificationResponse
   ): Promise<RespondResult> {
-    const notification = this.db.get<NotificationRow>('SELECT * FROM notifications WHERE id = ? AND recipient_id = ?', notificationId, userId);
+    const notification = await this.notificationsRepo.findByIdForRecipient(notificationId, userId);
 
     if (!notification) return { success: false, error: 'Notification not found' };
     if (notification.type !== 'boolean') return { success: false, error: 'Not a boolean notification' };
@@ -641,37 +611,27 @@ export class NotificationsService {
     // Atomic claim BEFORE the handler runs — only updates if response is still
     // NULL, so a concurrent double-submit can never execute the action twice
     // (the legacy order ran the handler first, letting both submits through).
-    const result = this.db.run(
-      'UPDATE notifications SET response = ?, is_read = 1 WHERE id = ? AND recipient_id = ? AND response IS NULL',
-      response, notificationId, userId
-    );
+    const changes = await this.notificationsRepo.claimResponse(notificationId, userId, response);
 
-    if (result.changes === 0) return { success: false, error: 'Already responded' };
+    if (changes === 0) return { success: false, error: 'Already responded' };
 
     try {
       await handler(callback.payload, userId);
     } catch (err) {
       // Release the claim so the user can retry — legacy contract: a handler
       // failure returns its message and leaves the notification unresponded.
-      this.db.run(
-        'UPDATE notifications SET response = NULL, is_read = ? WHERE id = ? AND recipient_id = ?',
-        notification.is_read, notificationId, userId
-      );
+      await this.notificationsRepo.releaseResponse(notificationId, userId, notification.is_read);
       return { success: false, error: err instanceof Error ? err.message : 'Action failed' };
     }
 
-    const updated = this.db.get<NotificationRow>(`
-    SELECT n.*, u.username AS sender_username, u.avatar AS sender_avatar
-    FROM notifications n
-    LEFT JOIN users u ON n.sender_id = u.id
-    WHERE n.id = ?
-  `, notificationId) as NotificationRow;
+    const updated = (await this.notificationsRepo.findWithSenderById(notificationId))!;
 
+    // Same unchecked-narrowing boundary as `listInApp`'s `mapped` above.
     const mappedUpdated = {
       ...updated,
-      created_at: toUtcIso(updated.created_at),
+      created_at: toUtcIso(updated.created_at!),
       sender_avatar: avatarUrl({ avatar: updated.sender_avatar }),
-    };
+    } as NotificationRow;
 
     this.realtime.broadcastToUser(userId, { type: 'notification:updated', notification: mappedUpdated });
 
@@ -691,7 +651,7 @@ export class NotificationsService {
     if (!configEntry) {
       logDebug(`notificationService.send: unknown event type "${event}", using fallback`);
       if (readEnv().app.isDevelopment && actorId != null) {
-        const devSender = this.db.get<{ username: string; avatar: string | null }>('SELECT username, avatar FROM users WHERE id = ?', actorId) ?? null;
+        const devSender = (await this.notificationsRepo.findUserBasic(actorId)) ?? null;
         await this.createNotificationForRecipient({
           type: 'simple',
           scope: 'user',
@@ -718,7 +678,7 @@ export class NotificationsService {
 
     // Fetch sender info once for in-app WS payloads
     const sender = actorId
-      ? this.db.get<{ username: string; avatar: string | null }>('SELECT username, avatar FROM users WHERE id = ?', actorId) ?? null
+      ? (await this.notificationsRepo.findUserBasic(actorId)) ?? null
       : null;
 
     logDebug(`notificationService.send event=${event} scope=${scope} targetId=${targetId} recipients=${recipients.length} channels=inapp,${activeChannels.join(',')}`);

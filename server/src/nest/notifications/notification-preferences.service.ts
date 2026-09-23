@@ -1,5 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import { DatabaseService } from '../database/database.service';
+import { InjectRepository } from '@mikro-orm/nestjs';
+import { AppSettings } from '../../db/entities/AppSettings.entity';
+import type { AppSettingsRepository } from '../../db/repositories/AppSettings.repository';
+import { NotificationChannelPreferences } from '../../db/entities/NotificationChannelPreferences.entity';
+import type { NotificationChannelPreferencesRepository } from '../../db/repositories/NotificationChannelPreferences.repository';
 import { UnitOfWork } from '../database/unit-of-work';
 import { MailerService } from './mailer/mailer.service';
 import { listChannels } from './channel-registry';
@@ -30,18 +34,26 @@ export interface PreferencesMatrix {
  *
  * It reads the live channel set from the registry but never sends anything —
  * the dispatch loop in NotificationsService applies what is decided here.
+ *
+ * DI-native (Plan 3f Task 3): the `SELECT value FROM app_settings WHERE
+ * key = ?`/`INSERT OR REPLACE INTO app_settings ...` reads/writes (NP1/NP4)
+ * moved onto the shared `AppSettingsRepository.getValue`/`.setValue` pair
+ * (already built, Plan 3a) rather than a new method — this is the first of
+ * six identical `app_settings` single-key sites in this cluster to converge
+ * on it (plan3f-sql-inventory.md §15 surprise 8). `notification_channel_preferences`'s
+ * reads/writes (NP2/NP3/NP5/NP6) go through `NotificationChannelPreferencesRepository`,
+ * whose `upsertPreference`/`deletePreference` target the table's genuine
+ * 3-column composite primary key (`user`, `event_type`, `channel`) via
+ * `em.upsert({ onConflictFields: [...] })`, per Task 0's R5 pin.
  */
 @Injectable()
 export class NotificationPreferencesService {
   constructor(
-    private readonly db: DatabaseService,
     private readonly mailer: MailerService,
     private readonly uow: UnitOfWork,
+    @InjectRepository(AppSettings) private readonly appSettings: AppSettingsRepository,
+    @InjectRepository(NotificationChannelPreferences) private readonly channelPrefs: NotificationChannelPreferencesRepository,
   ) {}
-
-  private async getAppSetting(key: string): Promise<string | null> {
-    return this.db.get<{ value: string }>('SELECT value FROM app_settings WHERE key = ?', key)?.value || null;
-  }
 
   /**
    * Channels implemented for an event. In-app takes everything; external channels
@@ -71,7 +83,7 @@ export class NotificationPreferencesService {
    * would silently drop any that were).
    */
   async getActiveChannels(): Promise<NotifChannel[]> {
-    const raw = (await this.getAppSetting('notification_channels')) || (await this.getAppSetting('notification_channel')) || 'none';
+    const raw = (await this.appSettings.getValue('notification_channels')) || (await this.appSettings.getValue('notification_channel')) || 'none';
     if (raw === 'none') return [];
     const builtins = new Set((await listChannels()).filter(c => c.source === 'builtin').map(c => c.id));
     return raw.split(',').map(c => c.trim()).filter(c => builtins.has(c));
@@ -89,11 +101,8 @@ export class NotificationPreferencesService {
    * Default (no row) = enabled. Only returns false if there's an explicit disabled row.
    */
   async isEnabledForEvent(userId: number, eventType: NotifEventType, channel: NotifChannel): Promise<boolean> {
-    const row = this.db.get<{ enabled: number }>(
-      'SELECT enabled FROM notification_channel_preferences WHERE user_id = ? AND event_type = ? AND channel = ?',
-      userId, eventType, channel,
-    );
-    return row === undefined || row.enabled === 1;
+    const row = await this.channelPrefs.findEnabled(userId, eventType, channel);
+    return row === null || row.enabled === 1;
   }
 
   // ── Preferences matrix ─────────────────────────────────────────────────────
@@ -121,8 +130,8 @@ export class NotificationPreferencesService {
       // Admin-scoped events go out over the admin's own global credentials, which
       // are independent of the per-user `notification_channels` toggle.
       const hasSmtp = await this.mailer.isSmtpConfigured();
-      const hasAdminWebhook = !!(await this.getAppSetting('admin_webhook_url'));
-      const hasAdminNtfy = !!(await this.getAppSetting('admin_ntfy_topic'));
+      const hasAdminWebhook = !!(await this.appSettings.getValue('admin_webhook_url'));
+      const hasAdminNtfy = !!(await this.appSettings.getValue('admin_ntfy_topic'));
       const adminActive: Record<string, boolean> = { email: hasSmtp, webhook: hasAdminWebhook, ntfy: hasAdminNtfy };
       for (const channel of await listChannels()) {
         // Plugin channels are user-scoped only — they never carry admin-global events.
@@ -162,9 +171,7 @@ export class NotificationPreferencesService {
    * scope='admin' — returns only admin-scoped events (for admin notifications tab)
    */
   async getPreferencesMatrix(userId: number, userRole: string, scope: 'user' | 'admin' = 'user'): Promise<PreferencesMatrix> {
-    const rows = this.db.all<{ event_type: string; channel: string; enabled: number }>(
-      'SELECT event_type, channel, enabled FROM notification_channel_preferences WHERE user_id = ?', userId,
-    );
+    const rows = await this.channelPrefs.listForUser(userId);
 
     // Build a lookup from stored rows
     const stored: Partial<Record<string, Partial<Record<string, boolean>>>> = {};
@@ -200,7 +207,7 @@ export class NotificationPreferencesService {
       channels: await this.describeChannels(userId, scope),
       event_types,
       implemented_combos,
-      ...(scope === 'user' && { defaults: { ntfyServer: (await this.getAppSetting('admin_ntfy_server')) || null } }),
+      ...(scope === 'user' && { defaults: { ntfyServer: (await this.appSettings.getValue('admin_ntfy_server')) || null } }),
     };
   }
 
@@ -212,15 +219,12 @@ export class NotificationPreferencesService {
    * Defaults to true (enabled) when no row exists.
    */
   async getAdminGlobalPref(event: NotifEventType, channel: AdminGlobalChannel): Promise<boolean> {
-    const val = await this.getAppSetting(`admin_notif_pref_${event}_${channel}`);
+    const val = await this.appSettings.getValue(`admin_notif_pref_${event}_${channel}`);
     return val !== '0';
   }
 
   private async setAdminGlobalPref(event: NotifEventType, channel: AdminGlobalChannel, enabled: boolean): Promise<void> {
-    this.db.run('INSERT OR REPLACE INTO app_settings (key, value) VALUES (?, ?)',
-      `admin_notif_pref_${event}_${channel}`,
-      enabled ? '1' : '0',
-    );
+    await this.appSettings.setValue(`admin_notif_pref_${event}_${channel}`, enabled ? '1' : '0');
   }
 
   // ── Preferences update ─────────────────────────────────────────────────────
@@ -230,20 +234,14 @@ export class NotificationPreferencesService {
     userId: number,
     prefs: Partial<Record<string, Partial<Record<string, boolean>>>>,
   ): Promise<void> {
-    const upsert = this.db.prepare(
-      'INSERT OR REPLACE INTO notification_channel_preferences (user_id, event_type, channel, enabled) VALUES (?, ?, ?, ?)'
-    );
-    const del = this.db.prepare(
-      'DELETE FROM notification_channel_preferences WHERE user_id = ? AND event_type = ? AND channel = ?'
-    );
     for (const [eventType, channels] of Object.entries(prefs)) {
       if (!channels) continue;
       for (const [channel, enabled] of Object.entries(channels)) {
         if (enabled) {
           // Remove explicit row — default is enabled
-          del.run(userId, eventType, channel);
+          await this.channelPrefs.deletePreference(userId, eventType, channel);
         } else {
-          upsert.run(userId, eventType, channel, 0);
+          await this.channelPrefs.upsertPreference(userId, eventType, channel, 0);
         }
       }
     }
@@ -288,7 +286,11 @@ export class NotificationPreferencesService {
       }
     }
 
-    // Apply global prefs outside the transaction (they write to app_settings)
+    // Apply global prefs outside the transaction (they write to app_settings).
+    // Mixed atomicity, preserved as-is (plan3f-sql-inventory.md §4b's flag, R10):
+    // these are single-key upserts with no cross-row invariant, so a partial
+    // failure here is low-risk — widening this into the transaction below is a
+    // ruling this task does not make on its own.
     for (const [eventType, channels] of Object.entries(globalPrefs)) {
       if (!channels) continue;
       for (const [channel, enabled] of Object.entries(channels)) {

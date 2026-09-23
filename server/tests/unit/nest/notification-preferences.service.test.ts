@@ -43,7 +43,8 @@ import { registerBuiltinChannels } from '../../../src/nest/notifications/channel
 import { NtfyService } from '../../../src/nest/notifications/transports/ntfy.service';
 import { WebhookService } from '../../../src/nest/notifications/transports/webhook.service';
 import { __resetChannelsForTest } from '../../../src/nest/notifications/channel-registry';
-import { createTestUnitOfWork } from '../../helpers/test-uow';
+import { createTestUnitOfWork, createTestAppSettingsRepo } from '../../helpers/test-uow';
+import { createTestNotificationChannelPreferencesRepo } from '../../helpers/notifications-repos';
 
 const dbs = new DatabaseService(testDb);
 const mailer = new MailerService(dbs);
@@ -69,7 +70,12 @@ const isWebhookConfigured = (...a: Parameters<Svc['isWebhookConfigured']>) => sv
 beforeAll(async () => {
   createTables(testDb);
   runMigrations(testDb);
-  svc = new NotificationPreferencesService(dbs, mailer, await createTestUnitOfWork(testDb));
+  svc = new NotificationPreferencesService(
+    mailer,
+    await createTestUnitOfWork(testDb),
+    await createTestAppSettingsRepo(testDb),
+    await createTestNotificationChannelPreferencesRepo(testDb),
+  );
 });
 
 beforeEach(() => {
