@@ -39,12 +39,14 @@ import { PlaceRatings } from '../../db/entities/PlaceRatings.entity';
 import { TripMembers } from '../../db/entities/TripMembers.entity';
 import { DayAssignments } from '../../db/entities/DayAssignments.entity';
 import { Categories } from '../../db/entities/Categories.entity';
+import { Trips } from '../../db/entities/Trips.entity';
 import type { PlacesRepository, PlaceWithCategoryRow } from '../../db/repositories/Places.repository';
 import type { TagsRepository } from '../../db/repositories/Tags.repository';
 import type { PlaceRatingsRepository } from '../../db/repositories/PlaceRatings.repository';
 import type { TripMembersRepository } from '../../db/repositories/TripMembers.repository';
 import type { DayAssignmentsRepository } from '../../db/repositories/DayAssignments.repository';
 import type { CategoriesRepository } from '../../db/repositories/Categories.repository';
+import type { TripsRepository } from '../../db/repositories/Trips.repository';
 
 /** Rows a place delete took down with the nights booked there, for the caller to announce. */
 export interface CancelledStays {
@@ -155,10 +157,33 @@ export class PlacesService {
     @InjectRepository(TripMembers) private readonly tripMembersRepo: TripMembersRepository,
     @InjectRepository(DayAssignments) private readonly dayAssignmentsRepo: DayAssignmentsRepository,
     @InjectRepository(Categories) private readonly categoriesRepo: CategoriesRepository,
+    // Task 9 fix wave (B-M2 / A-L3 ruling): `DatabaseService.getTripTitle`
+    // does not stay — it was the one method on that class this domain's own
+    // PL28 comment said should convert like its siblings once concurrent
+    // implementers stopped colliding on this file. `Trips` is already on
+    // `PlacesModule`'s `forFeature` list, so this needs no module change.
+    @InjectRepository(Trips) private readonly tripsRepo: TripsRepository,
   ) {}
 
-  async verifyTripAccess(tripId: string, userId: number) {
-    return await this.dbs.canAccessTrip(Number(tripId), userId);
+  /**
+   * The `requireTrip` gate for 13 of the 16 routes on this controller (the
+   * other 3 use `TripAccessGuard` directly). `toRowId`, not `Number()` —
+   * Plan 3c Task 9's whole-plan review (A-H1/M1, B-H1): `Number('1.0')`/
+   * `Number('1 ')`/`Number('0x1abc's NaN half)` either authorised an id the
+   * writes behind this gate (`toRowId(tripId) ?? -1`) then refused, or sent
+   * a bare `NaN` into `TripsRepository.findAccessible`'s raw bind and 500'd
+   * (fixed program-wide at the platform too — see `NulSafeSqlitePlatform`).
+   * Parsing ONCE, here, and returning the parsed `tid` for every downstream
+   * call to reuse (never re-parsing) closes both: a non-canonical trip id
+   * now answers this gate's own 404 before any read or write runs, and every
+   * write behind it shares the exact id the gate authorised.
+   */
+  async verifyTripAccess(tripId: string, userId: number): Promise<(TripAccess & { tid: number }) | undefined> {
+    const tid = toRowId(tripId);
+    if (tid === null) return undefined;
+    const access = await this.dbs.canAccessTrip(tid, userId);
+    if (!access) return undefined;
+    return { ...access, tid };
   }
 
   async canEdit(trip: Trip, user: User): Promise<boolean> {
@@ -275,19 +300,18 @@ export class PlacesService {
       transport_mode, route_geometry, route_color, stop_type, fill_percent, tags = [],
     } = body;
 
-    // Rule 21 (H1): one trip-id notion, parsed once, used by every write
-    // below — including PL5's `tagsOnTrip` roster read. Every other gate in
-    // this class answers the legacy not-found when the trip id doesn't parse
-    // canonically; create() has no existence gate to answer instead — the
-    // legacy raw bind (base 94c6efbbc) stored the non-canonical spelling
-    // straight into the `trip_id` column and let the FK constraint fail
-    // closed (verified live: a hex trip id 500s on create, where every other
-    // route 404s). `toRowId` rejects the same non-canonical spellings that
-    // never reach a real row; `?? -1` substitutes a trip id that can never
-    // exist (ids are autoincrement from 1), so the FK constraint fails the
-    // same way — without widening `insertPlace`'s typed `trip_id: number`
-    // column to accept the raw string.
-    const tid = toRowId(tripId) ?? -1;
+    // Rule 21 / M1 (Task 9 fix wave): `verifyTripAccess` now parses `tripId`
+    // with this SAME `toRowId` and answers 404 `Trip not found` before
+    // `create()` is ever reached (the controller's `requireTrip`/MCP's own
+    // `tripsRepo.findAccessible` gate both run first) — so `toRowId` here
+    // can never miss for a caller that went through the gate. The previous
+    // `?? -1` sentinel was ruled a defect, not parity: with the gate itself
+    // loosely `Number()`-parsed, a non-canonical-but-numeric id like `1.0`
+    // could pass the gate and still manufacture a fresh 500 here (an FK
+    // failure the legacy raw bind never produced for that input). Non-null
+    // asserted, not defaulted — a null here now means a caller skipped the
+    // gate, a bug to surface, not a trip id to silently coerce to -1.
+    const tid = toRowId(tripId)!;
 
     // PL4 — the 25-column INSERT. lat/lng/price/duration_minutes/fill_percent
     // use an explicit undefined check, not `||`: 0 is a legitimate value for
@@ -584,11 +608,17 @@ export class PlacesService {
     const cancelled = noCancelledStays();
     if (ids.length === 0) return { deleted: [], cancelled };
     // Rule 21 (H1): the trip id gets the same `toRowId` treatment as
-    // `remove()`'s, parsed once and reused for every id in the loop below —
-    // a non-canonical trip id never matches a real place's row (the PL20
-    // gate would answer "not found" for every id anyway), so this returns
-    // early with nothing deleted, the same shape the legacy raw bind
-    // produced when the trip id didn't affinity-match any row.
+    // `remove()`'s, parsed once and reused for every id in the loop below.
+    // Task 9 fix wave (A-8): the claim this comment used to make — "the
+    // legacy raw bind produced the same shape, because the trip id didn't
+    // affinity-match any row" — was WRONG for `1.0`/`1 ` (and other
+    // SQLite-affinity-recognised spellings): the legacy statement DID match
+    // those against a real trip, deleting for real. `toRowId`'s narrower
+    // canonical-decimal check answers "nothing deleted" for those inputs
+    // too, which is the deliberate rule-15 narrowing (not parity) — and, as
+    // of this fix wave, moot in practice: `verifyTripAccess` already 404s
+    // any non-canonical trip id before `removeMany` is ever reached, so this
+    // `tid === null` branch only fires for a caller that skipped the gate.
     const tid = toRowId(tripId);
     if (tid === null) return { deleted: [], cancelled };
     const deleted: number[] = [];
@@ -769,17 +799,14 @@ export class PlacesService {
    */
   async exportGpx(tripId: string, opts: GpxExportOptions = {}): Promise<{ gpx: string; filename: string } | null> {
     // PL28 — `SELECT title FROM trips WHERE id = ?`, via
-    // `DatabaseService.getTripTitle` (Task 4 review L3: this comment
-    // previously said the repoint was blocked on `Trips.repository.ts`
-    // landing `getTitle`, which it did at `94c6efbbc` — Task 4's own parent
-    // commit — so the block was stale from the moment this task started).
-    // `getTripTitle` is a narrow `DatabaseService` helper, the same shape as
-    // `canAccessTrip`/`isOwner`/`rosterUserIds`: `trips` stays outside this
-    // domain's owned repositories, and a full `TripsRepository`
-    // `@InjectRepository` constructor param on `PlacesService` would ripple
-    // through every `new PlacesService(...)` test-helper call site for one
-    // read. The legacy `if (!trip) return null` maps onto `title === null`.
-    const title = await this.dbs.getTripTitle(tripId);
+    // `TripsRepository.getTitle` directly (Task 9 fix wave, B-M2 / A-L3
+    // ruling): `DatabaseService.getTripTitle` was a narrow, single-caller
+    // delegation kept only because concurrent Task 4/7/8 implementers were
+    // all editing this file's constructor at once — that risk is gone, so
+    // it and its `entityManager()` mention are deleted, and this domain
+    // injects `TripsRepository` directly like its other five repositories.
+    // The legacy `if (!trip) return null` maps onto `title === null`.
+    const title = await this.tripsRepo.getTitle(tripId);
     if (title === null) return null;
 
     // PL29 — the waypoint projection.
@@ -875,14 +902,13 @@ export class PlacesService {
 
     if (waypoints.length === 0) return null;
 
-    // Task 5 review L5 (rule 21): parsed once here, reused for the one write
-    // below. `buildDedupSet` keeps the raw-bind seam (L6 ruling, PL24) —
-    // this does not touch it. A non-canonical trip id (this route has no
-    // existence gate to answer "not found" instead, matching `create`'s own
-    // H1 fix) substitutes a trip id that can never exist, so `insertPlace`
-    // fails its FK constraint the same way the legacy raw bind did (base:
-    // 500 on a hex trip id, live-verified in the Task 5 review).
-    const tid = toRowId(tripId) ?? -1;
+    // Rule 21 / M1 (Task 9 fix wave): non-null asserted, not `?? -1` — the
+    // controller's `requireTrip` (`verifyTripAccess`) already parsed and
+    // gated this SAME `tripId` with `toRowId` before `importGpx` was ever
+    // called, so a miss here can only mean a caller skipped the gate (see
+    // `create()`'s comment for the full ruling). `buildDedupSet` keeps the
+    // raw-bind seam (L6 ruling, PL24) — this does not touch it.
+    const tid = toRowId(tripId)!;
     const dedup = await this.buildDedupSet(tripId);
     const created: PlaceWithTags[] = [];
     let skipped = 0;
@@ -985,8 +1011,9 @@ export class PlacesService {
     // PL33 — `CategoriesRepository.listIdName` (Plan 3a's repository).
     const categories = await this.categoriesRepo.listIdName();
     const categoryLookup = buildCategoryNameLookup(categories);
-    // Task 5 review L5 (rule 21) — same fix and reasoning as `importGpxRows`.
-    const tid = toRowId(tripId) ?? -1;
+    // Rule 21 / M1 (Task 9 fix wave) — same ruling as `importGpxRows`: the
+    // caller's `requireTrip` gate already `toRowId`-parsed this `tripId`.
+    const tid = toRowId(tripId)!;
     const dedup = await this.buildDedupSet(tripId);
     const created: PlaceWithTags[] = [];
     let dupCount = 0;
@@ -1265,8 +1292,9 @@ export class PlacesService {
     tripId: string,
     places: { name: string; lat: number; lng: number; notes: string | null; googleFtid: string | null }[],
   ): Promise<{ created: PlaceWithTags[]; skipped: number }> {
-    // Task 5 review L5 (rule 21) — same fix and reasoning as `importGpxRows`.
-    const tid = toRowId(tripId) ?? -1;
+    // Rule 21 / M1 (Task 9 fix wave) — same ruling as `importGpxRows`: the
+    // caller's `requireTrip` gate already `toRowId`-parsed this `tripId`.
+    const tid = toRowId(tripId)!;
     const dedup = await this.buildDedupSet(tripId);
     const created: PlaceWithTags[] = [];
     let skipped = 0;
@@ -1546,8 +1574,9 @@ export class PlacesService {
       return { error: 'No places with coordinates found in list', status: 400 };
     }
 
-    // Task 5 review L5 (rule 21) — same fix and reasoning as `importGpxRows`.
-    const tid = toRowId(tripId) ?? -1;
+    // Rule 21 / M1 (Task 9 fix wave) — same ruling as `importGpxRows`: the
+    // caller's `requireTrip` gate already `toRowId`-parsed this `tripId`.
+    const tid = toRowId(tripId)!;
     const dedup = await this.buildDedupSet(tripId);
     const created: PlaceWithTags[] = [];
     let skipped = 0;
@@ -1626,18 +1655,15 @@ export class PlacesService {
     if (place.google_place_id) return;
     if (typeof place.lat !== 'number' || typeof place.lng !== 'number') return;
 
-    // Task 5 review L5 (rule 21): parsed once, reused by both `fillIfEmpty`
-    // calls below. A non-canonical trip id (never a real client spelling —
-    // this whole path only ever runs right after this service's own import,
-    // which now also parses `tripId` once) substitutes a trip id that can
-    // never exist, so `fillIfEmpty`'s `WHERE id = ? AND trip_id = ?` matches
-    // no row — a silent no-op, matching this method's own "never throws"
-    // contract, not a 500 the caller (a detached background task) could not
-    // observe anyway. Deliberately NOT applied to `this.realtime.broadcast`
-    // below: every broadcast call in this domain, controller included, keys
-    // the room by the raw route string, and changing this one call's room
-    // shape alone would desync it from what the client actually joined.
-    const tid = toRowId(tripId) ?? -1;
+    // Rule 21 / M1 (Task 9 fix wave): non-null asserted — this whole path
+    // only ever runs right after this service's own import, downstream of
+    // the controller's `requireTrip` gate, which already `toRowId`-parsed
+    // this same `tripId` once. Deliberately NOT applied to
+    // `this.realtime.broadcast` below: every broadcast call in this domain,
+    // controller included, keys the room by the raw route string, and
+    // changing this one call's room shape alone would desync it from what
+    // the client actually joined.
+    const tid = toRowId(tripId)!;
 
     // Asked for a Google identity rather than for the best answer: the whole
     // point here is the `google_place_id` that `pickEnrichmentMatch` selects on,
@@ -1743,8 +1769,8 @@ export class PlacesService {
         console.warn(`[Places] address backfill skipped for trip ${tripId}: ${pending.length} places exceeds the ${ADDRESS_BACKFILL_MAX_PLACES} cap`);
         return;
       }
-      // Task 5 review L5 (rule 21) — same fix and reasoning as `enrichOne`.
-      const tid = toRowId(tripId) ?? -1;
+      // Rule 21 / M1 (Task 9 fix wave) — same ruling as `enrichOne`.
+      const tid = toRowId(tripId)!;
       // Serial on purpose: the background lane throttles to roughly one request a
       // second anyway, so concurrency would only build a queue.
       for (const place of pending) {

@@ -813,17 +813,30 @@ describe('UsersRepository — TripMembersService (Plan 3c Task 6)', () => {
   });
 
   describe('findInvitableByEmailOrUsername (TM4)', () => {
+    // Task 9 fix wave (B-L7): the legacy statement TM4's docstring quotes,
+    // run raw on the same fixture — `toEqual(legacy)` on the FULL key set,
+    // so a renamed or dropped column would fail this, not just the
+    // literal-object assertion below (rule 19; #1362 is security-relevant,
+    // so this is one of the L7 reads the fix wave covers).
+    const legacyInvitable = (identifier: string) =>
+      testDb.prepare(
+        'SELECT id, username, email, avatar FROM users WHERE (email = ? OR username = ?) AND COALESCE(is_guest, 0) = 0',
+      ).get(identifier, identifier) ?? null;
+
     it('USERSREPO-063: matches on email OR username, case-SENSITIVE (unlike findByEmailCI/findIdByEmailCI above)', async () => {
       const { user: byEmail } = createUser(testDb, { email: 'invitee@example.test', username: 'invitee-handle' });
       expect(await users.findInvitableByEmailOrUsername('invitee@example.test')).toEqual({
         id: byEmail.id, username: 'invitee-handle', email: 'invitee@example.test', avatar: null,
       });
+      expect(await users.findInvitableByEmailOrUsername('invitee@example.test')).toEqual(legacyInvitable('invitee@example.test'));
       expect(await users.findInvitableByEmailOrUsername('invitee-handle')).toEqual({
         id: byEmail.id, username: 'invitee-handle', email: 'invitee@example.test', avatar: null,
       });
+      expect(await users.findInvitableByEmailOrUsername('invitee-handle')).toEqual(legacyInvitable('invitee-handle'));
       // Case-sensitive: an uppercased email must NOT match (program rule 18
       // only applies where the legacy statement itself folds case — TM4's does not).
       expect(await users.findInvitableByEmailOrUsername('INVITEE@EXAMPLE.TEST')).toBeNull();
+      expect(legacyInvitable('INVITEE@EXAMPLE.TEST')).toBeNull();
     });
 
     it('USERSREPO-064: excludes guests — a trip-scoped guest can never be re-invited through the box', async () => {
@@ -837,11 +850,17 @@ describe('UsersRepository — TripMembersService (Plan 3c Task 6)', () => {
       expect(await users.findInvitableByEmailOrUsername('nobody@example.test')).toBeNull();
     });
 
-    // Task 6 review, L3: `findInvitableByEmailOrUsername` is `findOne`-based
-    // (unlike the qb-based projections above), so rule 21's D-shape test
-    // applies for real — this is the guest-exclusion guard (#1362), so
-    // staleness here would re-open the bug the guard exists to close.
-    it('USERSREPO-072 (D-shape): an is_guest flip written after an unrelated identity-map read is visible in the FIRST wider projection', async () => {
+    // Task 9 fix wave (B-M3): relabelled — this comment previously claimed
+    // rule 20's PK-only D-shape guarantee "applies for real", but
+    // `findInvitableByEmailOrUsername` filters `findOne` on `{$or:
+    // [{email},{username}], is_guest}`, not the primary key (rule 20 draws
+    // that PK-only line precisely because a non-PK filter always re-runs
+    // the WHERE clause against the live table, so it can never serve a
+    // stale identity-map snapshot the way a PK lookup can). What this DOES
+    // prove, honestly: a row that flips `is_guest` after an unrelated wider
+    // identity-map read is fresh here — the guest-exclusion guard (#1362)
+    // sees the current value, not a cached one.
+    it('USERSREPO-072 (fresh after a raw UPDATE, not D-shape): an is_guest flip written after an unrelated identity-map read is visible in the FIRST wider projection', async () => {
       const { user } = createUser(testDb, { email: 'flip@example.test', username: 'flip-handle' });
       await t.repo(Users).find({}, { disableIdentityMap: false }); // populate the identity map with an unrelated read
       testDb.prepare('UPDATE users SET is_guest = 1 WHERE id = ?').run(user.id);

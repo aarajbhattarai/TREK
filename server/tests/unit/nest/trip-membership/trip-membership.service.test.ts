@@ -93,17 +93,23 @@ describe('joinTripAsMember', () => {
       svc.joinTripAsMember(trip.id, joiner.id, null),
       svc.joinTripAsMember(trip.id, joiner.id, null),
     ]);
-    // Today's actual outcome (run under real concurrency, not assumed): the
-    // method performs no locking/serialization of its own, so both calls can
-    // pass the TB5 "already a member" check before either TB6 INSERT lands —
-    // the loser then hits the table's own UNIQUE(trip_id, user_id) constraint
-    // and REJECTS, it does not swallow the error into `{joined: false}`. At
-    // least one call always fulfills (the winner); pinning "both always
-    // fulfill" was wrong (verified: failed under the full-suite coverage
-    // run's real scheduling) — the row-count assertion below is the actual
-    // safety net, not a specific promise-settlement shape.
-    const fulfilled = results.filter((r) => r.status === 'fulfilled');
-    expect(fulfilled.length).toBeGreaterThanOrEqual(1);
+    // Task 9 fix wave (A-L2 / B-L8): the exact settlement set, not `>= 1` —
+    // measured 20/20 on the real scheduler (A2's `r5mut.py`): one call wins
+    // (`{joined: true, tripId}`, TB6's INSERT lands), the other loses to the
+    // table's own UNIQUE(trip_id, user_id) constraint and REJECTS — the
+    // method performs no locking/serialization of its own (TB5 "already a
+    // member" check → TB6 INSERT, unchanged by this conversion, §18.4), so
+    // both calls can pass TB5 before either TB6 lands. A `>= 1` assertion
+    // would also pass if the race somehow let both calls through, which is
+    // precisely the bug this test exists to catch (order-insensitive:
+    // `Promise.allSettled` does not guarantee which of the two promises is
+    // the winner).
+    const fulfilled = results.filter((r): r is PromiseFulfilledResult<{ joined: boolean; tripId: number }> => r.status === 'fulfilled');
+    const rejected = results.filter((r): r is PromiseRejectedResult => r.status === 'rejected');
+    expect(fulfilled.length).toBe(1);
+    expect(fulfilled[0].value).toEqual({ joined: true, tripId: trip.id });
+    expect(rejected.length).toBe(1);
+    expect((rejected[0].reason as Error).message).toMatch(/UNIQUE constraint failed: trip_members/);
     // Exactly one membership row exists afterwards either way — the UNIQUE
     // constraint on (trip_id, user_id) is the actual safety net today, not
     // application-level locking.

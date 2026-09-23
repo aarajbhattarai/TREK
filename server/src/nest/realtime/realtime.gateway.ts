@@ -169,8 +169,16 @@ export class RealtimeGateway
     const user = userOf(socket);
     if (!user || !message?.tripId) return undefined;
 
+    // Rule 22 / A-H1 (Task 9 fix wave): `Number.isFinite` first, the same
+    // guard `handleBookJoin` below already carries — without it, a
+    // non-numeric `tripId` (`'abc'`) becomes `NaN`, which used to reach
+    // `TripsRepository.findAccessible`'s raw bind as the unquoted bareword
+    // `NaN` and throw (`no such column: NaN`), leaving this handler's
+    // promise unanswered instead of the legacy `Access denied` frame. The
+    // platform now renders a bound `NaN` as `NULL` too (`NulSafeSqlitePlatform`),
+    // so this guard is defence in depth, not the only fix.
     const tripId = Number(message.tripId);
-    if (!(await this.db.canAccessTrip(tripId, user.id))) {
+    if (!Number.isFinite(tripId) || !(await this.db.canAccessTrip(tripId, user.id))) {
       return { type: 'error', message: 'Access denied' };
     }
     joinRoom(socket, tripId);

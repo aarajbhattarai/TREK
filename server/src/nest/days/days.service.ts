@@ -72,12 +72,28 @@ export class DayReorderError extends Error {}
  * is only ever reached downstream of a successful `getDay` call in the same
  * request (REST/MCP/RPC all check-then-act), so `toRowId(id)!` there is not
  * a live 404 path, just the same non-null-assert style this file already
- * used before conversion (`this.db.get<Day>(...)!`). `tripId` is the DY0
- * seam: `TripAccessGuard` already validated it with the SAME raw-bind
- * escape hatch `TripsRepository.findAccessible` uses, so every id-shape a
- * plain `Number(tripId)` would mis-parse relative to SQLite's affinity was
- * already refused before this service's handler ever runs — safe to convert
- * with a bare `Number()` downstream of that guard.
+ * used before conversion (`this.db.get<Day>(...)!`).
+ *
+ * `tripId` is the DY0 seam, and the claim this docstring used to make about
+ * it was WRONG (Task 9 whole-plan review, H2, live): `TripAccessGuard`
+ * validates `:tripId` with a bare `Number(tripId)` — a `Number()` seam, not
+ * an affinity seam — so `Number('0x12')` is `18`, a real trip's row id, and
+ * the guard authorises it. That is LOOSER than `toRowId`'s canonical-decimal
+ * check (program rule 15). Every ORM-converted entry point below used to
+ * re-parse with its OWN bare `Number(tripId)`, agreeing with the guard,
+ * while `restampReservationDates` and `assertNoInvertedAccommodation` kept
+ * binding the RAW ROUTE STRING on `reservations`/`day_accommodations`
+ * (Plan 3d survivors, an affinity seam a hex id never matches) — so one
+ * `PUT .../days/reorder` request could renumber a real trip's days (the
+ * `Number()` half agreeing with the guard) while its own
+ * inverted-accommodation guard silently matched zero rows (the raw-string
+ * half), writing a stay whose end precedes its start with no error. Every
+ * entry point now parses ONCE with `toRowId(tripId)` and threads that same
+ * value into every survivor and read; a `toRowId` miss answers the entry
+ * point's own legacy-shaped not-found (`list` → `{ days: [] }`, `getDay` →
+ * `undefined`, `reorder`/`insert`/`create` → `DayReorderError`, uncaught by
+ * `create`'s route into the legacy 500) rather than let the guard's wider
+ * `Number()` grant reach a downstream raw bind that disagrees with it.
  */
 @Injectable()
 export class DaysService {
@@ -174,7 +190,13 @@ export class DaysService {
   // -------------------------------------------------------------------------
 
   async list(tripId: string | number) {
-    const days = await this.daysRepo.listByTrip(Number(tripId));
+    // Rule 21 / H2: `toRowId`, not `Number()` — see the class docstring. A
+    // trip id `TripAccessGuard`'s looser `Number()` authorised but this
+    // stricter parse refuses answers the same `{ days: [] }` an affinity-seam
+    // raw bind would have (no row ever matches a hex/decimal-spelled id).
+    const tid = toRowId(tripId);
+    if (tid === null) return { days: [] };
+    const days = await this.daysRepo.listByTrip(tid);
 
     if (days.length === 0) {
       return { days: [] };
@@ -218,7 +240,13 @@ export class DaysService {
   }
 
   async create(tripId: string | number, date?: string, notes?: string) {
-    const tripIdNum = Number(tripId);
+    // Rule 21 / H2: `toRowId`, not `Number()`. Uncaught by the controller's
+    // `create` handler, so a miss becomes the legacy 500 (the raw INSERT's FK
+    // violation on a hex/decimal-spelled trip id) — status-level parity, not
+    // a manufactured miss, since `create` never had an existence gate to
+    // answer instead (same documented exception `PlacesService.create` uses).
+    const tripIdNum = toRowId(tripId);
+    if (tripIdNum === null) throw new Error('Trip id is not a real row.');
     // DY5: `DaysRepository.maxDayNumber` already folds the no-rows case to 0
     // (`?? 0`); the `|| 0` here is the legacy expression kept verbatim so a
     // stored 0 still becomes 1 — the same outcome either fold produces, but
@@ -238,7 +266,10 @@ export class DaysService {
   async getDay(id: string | number, tripId: string | number) {
     const dayId = toRowId(id);
     if (dayId === null) return undefined;
-    return await this.daysRepo.findInTrip(dayId, Number(tripId));
+    // Rule 21 / H2: `toRowId`, not `Number()` — see the class docstring.
+    const tid = toRowId(tripId);
+    if (tid === null) return undefined;
+    return await this.daysRepo.findInTrip(dayId, tid);
   }
 
   async update(id: string | number, current: { notes?: string | null; title?: string | null }, fields: { notes?: string; title?: string | null }) {
@@ -296,9 +327,16 @@ export class DaysService {
    * DY14–DY18 — Plan 3d (`reservations`/`reservation_endpoints`): stays raw on
    * `DatabaseService` inside the caller's `uow.transactional` block, per the
    * Plan 3b `UserCleanupService` precedent for cross-domain writes.
+   *
+   * `tripId: number` (Task 9 fix wave, H2): every caller now passes the ONE
+   * `toRowId`-parsed value its own entry point already computed, never the
+   * raw route string — binding the raw string here (an affinity seam) is
+   * exactly the mismatch that let a hex-spelled trip id's reorder skip this
+   * statement entirely while the `Number()`-parsed half of the same request
+   * acted on a real trip (see the class docstring).
    */
   async restampReservationDates(
-    tripId: string | number,
+    tripId: number,
     oldDateById: Map<number, string | null>,
     newDateById: Map<number, string | null>,
   ): Promise<void> {
@@ -352,8 +390,12 @@ export class DaysService {
    * (joined to `days` only to read `day_number`), so it stays raw on
    * `DatabaseService` per the inventory's ruling, even though `days` itself
    * is owned here.
+   *
+   * `tripId: number` (Task 9 fix wave, H2): the same parsed-once value every
+   * other survivor in this class now takes — see `restampReservationDates`'s
+   * docstring for why binding the raw route string here was the live bug.
    */
-  private async assertNoInvertedAccommodation(tripId: string | number): Promise<void> {
+  private async assertNoInvertedAccommodation(tripId: number): Promise<void> {
     const spans = this.db.all<{ id: number; start_no: number; end_no: number }>(`
     SELECT a.id, s.day_number AS start_no, e.day_number AS end_no
     FROM day_accommodations a
@@ -385,12 +427,16 @@ export class DaysService {
    * converts via `DayAssignmentsRepository.reanchorToDay`, a Kysely
    * statement proven to join this method's ambient transaction by rollback
    * (see the task report).
+   *
+   * `tripId: number` (Task 9 fix wave, H2): callers now pass their own
+   * `toRowId`-parsed value; DY20's raw bind uses it too (previously the raw
+   * route string — the same affinity-seam mismatch documented on
+   * `restampReservationDates`).
    */
   async resyncAccommodationDays(
-    tripId: string | number,
+    tripId: number,
     prevDateByDayId: Map<number, string | null>,
   ): Promise<void> {
-    const tripIdNum = Number(tripId);
     // DY20 — Plan 3d
     const stays = this.db.all<{ id: number; start_day_id: number; end_day_id: number }>(
       'SELECT id, start_day_id, end_day_id FROM day_accommodations WHERE trip_id = ?',
@@ -413,8 +459,8 @@ export class DaysService {
       const oldEndDate = prevDateByDayId.get(stay.end_day_id);
       if (oldStartDate && oldEndDate) {
         // DY21
-        const newStart = await this.daysRepo.findByTripAndDate(tripIdNum, oldStartDate);
-        const newEnd = await this.daysRepo.findByTripAndDate(tripIdNum, oldEndDate);
+        const newStart = await this.daysRepo.findByTripAndDate(tripId, oldStartDate);
+        const newEnd = await this.daysRepo.findByTripAndDate(tripId, oldEndDate);
         if (newStart && newEnd && newStart.day_number <= newEnd.day_number
           && (newStart.id !== stay.start_day_id || newEnd.id !== stay.end_day_id)) {
           updateStay.run(newStart.id, newEnd.id, stay.id);
@@ -441,7 +487,14 @@ export class DaysService {
    * day ids (a permutation of the current ids).
    */
   async reorder(tripId: string | number, orderedIds: number[]) {
-    const tripIdNum = Number(tripId);
+    // Rule 21 / H2: `toRowId`, not `Number()` — see the class docstring. A
+    // miss throws the SAME permutation error an empty `rows` set would
+    // (nothing ever matches a hex/decimal-spelled id), so the controller's
+    // existing `DayReorderError` → 400 catch answers it, before any write —
+    // never the "renumber a real trip, skip the invariant check" split this
+    // fixes.
+    const tripIdNum = toRowId(tripId);
+    if (tripIdNum === null) throw new DayReorderError('orderedIds must be a permutation of the trip day ids.');
     const rows: DayOrderRow[] = await this.daysRepo.listOrderedForReorder(tripIdNum);
 
     const existingIds = new Set(rows.map(r => r.id));
@@ -468,11 +521,11 @@ export class DaysService {
         newDateById.set(id, date);
       }
 
-      if (isDated) await this.restampReservationDates(tripId, oldDateById, newDateById);
-      await this.assertNoInvertedAccommodation(tripId);
+      if (isDated) await this.restampReservationDates(tripIdNum, oldDateById, newDateById);
+      await this.assertNoInvertedAccommodation(tripIdNum);
     });
 
-    return await this.list(tripId);
+    return await this.list(tripIdNum);
   }
 
   /**
@@ -482,7 +535,15 @@ export class DaysService {
    * shifted days have their dates re-stamped (same rules as reorder).
    */
   async insert(tripId: string | number, position?: number) {
-    const tripIdNum = Number(tripId);
+    // Rule 21 / H2: `toRowId`, not `Number()` — see `reorder`'s comment above
+    // and the class docstring. `insert` shares `create`'s controller route
+    // (no `DayReorderError` catch on that path — `reorder` is the only
+    // handler that has one), so a plain `Error` here becomes the SAME
+    // legacy-shaped 500 `create`'s own miss does (the FK violation on the
+    // raw route string this never executes), rather than the renumber-then-
+    // skip-the-invariant split H2 found.
+    const tripIdNum = toRowId(tripId);
+    if (tripIdNum === null) throw new Error('Trip id is not a real row.');
     const rows: DayOrderRow[] = await this.daysRepo.listOrderedForReorder(tripIdNum);
     const n = rows.length;
     const pos = Math.min(Math.max(position ?? n + 1, 1), n + 1);
@@ -518,8 +579,8 @@ export class DaysService {
         newDateById.set(id, dates[i]);
       }
 
-      await this.restampReservationDates(tripId, oldDateById, newDateById);
-      await this.assertNoInvertedAccommodation(tripId);
+      await this.restampReservationDates(tripIdNum, oldDateById, newDateById);
+      await this.assertNoInvertedAccommodation(tripIdNum);
       // DY35 — `TripsRepository.setEndDate`, added this task for Task 7 to reuse.
       await this.tripsRepo.setEndDate(tripIdNum, dates[dates.length - 1]);
 

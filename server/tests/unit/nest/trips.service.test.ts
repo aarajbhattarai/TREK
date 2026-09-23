@@ -174,6 +174,7 @@ beforeAll(async () => {
   await createTestTripMembersRepo(dbs().connection),
   await createTestDayAssignmentsRepo(dbs().connection),
   await createTestCategoriesRepo(dbs().connection),
+  await createTestTripsRepo(dbs().connection),
 );
   svc = new TripsService(
   dbs(),
@@ -1352,7 +1353,7 @@ describe('copy — whole-trip parity (Task 8)', () => {
     const newTripId = await svc.copy(trip.id, owner.id, 'Full Copy');
 
     // trips
-    const newTrip = testDb.prepare('SELECT * FROM trips WHERE id = ?').get(newTripId) as any;
+    const newTrip = testDb.prepare('SELECT * FROM trips WHERE id = ?').get(newTripId) as Record<string, unknown>;
     expect(newTrip).toMatchObject({
       user_id: owner.id, title: 'Full Copy', description: 'A full trip',
       start_date: '2025-09-01', end_date: '2025-09-03', currency: 'EUR',
@@ -1365,50 +1366,65 @@ describe('copy — whole-trip parity (Task 8)', () => {
     expect(newDays.map(d => ({ day_number: d.day_number, date: d.date }))).toEqual(
       days.map(d => ({ day_number: d.day_number, date: d.date })),
     );
-    expect((testDb.prepare('SELECT notes, title FROM days WHERE id = ?').get(newDays[0].id) as any)).toEqual({ notes: 'Pack light', title: 'Arrival' });
-    expect((testDb.prepare('SELECT notes FROM days WHERE id = ?').get(newDays[1].id) as any).notes).toBe('Checkout');
+    expect((testDb.prepare('SELECT notes, title FROM days WHERE id = ?').get(newDays[0].id) as { notes: string | null; title: string | null })).toEqual({ notes: 'Pack light', title: 'Arrival' });
+    expect((testDb.prepare('SELECT notes FROM days WHERE id = ?').get(newDays[1].id) as { notes: string | null }).notes).toBe('Checkout');
 
     // places
-    const newStop = testDb.prepare('SELECT * FROM places WHERE trip_id = ? AND name = ?').get(newTripId, 'Hotel Full') as any;
-    const newTrack = testDb.prepare('SELECT * FROM places WHERE trip_id = ? AND name = ?').get(newTripId, 'Scenic road') as any;
+    const newStop = testDb.prepare('SELECT * FROM places WHERE trip_id = ? AND name = ?').get(newTripId, 'Hotel Full') as {
+      id: number; description: string | null; reservation_status: string | null; reservation_notes: string | null;
+      reservation_datetime: string | null; route_color: string | null; stop_type: string | null; fill_percent: number | null;
+    };
+    const newTrack = testDb.prepare('SELECT * FROM places WHERE trip_id = ? AND name = ?').get(newTripId, 'Scenic road') as { id: number };
     expect(newStop).toMatchObject({
       description: 'Nice place', reservation_status: 'booked', reservation_notes: 'rn',
       reservation_datetime: '2025-09-01T14:00', route_color: '#ff0000', stop_type: 'hotel', fill_percent: 80,
     });
 
     // place_tags
-    expect((testDb.prepare('SELECT tag_id FROM place_tags WHERE place_id = ?').get(newStop.id) as any).tag_id).toBe(tag);
+    expect((testDb.prepare('SELECT tag_id FROM place_tags WHERE place_id = ?').get(newStop.id) as { tag_id: number }).tag_id).toBe(tag);
 
     // day_assignments (+ the TP57 accommodation stamp)
-    const newAssignment = getAssignments(newDays[0].id)[0] as any;
-    const newAssignmentFull = testDb.prepare('SELECT * FROM day_assignments WHERE id = ?').get(newAssignment.id) as any;
+    const newAssignment = getAssignments(newDays[0].id)[0];
+    const newAssignmentFull = testDb.prepare('SELECT * FROM day_assignments WHERE id = ?').get(newAssignment.id) as {
+      place_id: number; reservation_status: string | null; reservation_notes: string | null; reservation_datetime: string | null;
+      assignment_time: string | null; assignment_end_time: string | null; end_day: number; accommodation_id: number | null;
+    };
     expect(newAssignmentFull).toMatchObject({
       place_id: newStop.id, reservation_status: 'booked', reservation_notes: 'arn',
       reservation_datetime: '2025-09-01T15:00', assignment_time: '15:00', assignment_end_time: '16:00', end_day: 1,
     });
 
     // assignment_participants
-    const newParticipants = testDb.prepare('SELECT user_id FROM assignment_participants WHERE assignment_id = ?').all(newAssignment.id) as any[];
+    const newParticipants = testDb.prepare('SELECT user_id FROM assignment_participants WHERE assignment_id = ?').all(newAssignment.id) as { user_id: number }[];
     expect(newParticipants.map(p => p.user_id).sort((a, b) => a - b)).toEqual([owner.id, member.id].sort((a, b) => a - b));
 
     // roadtrip_vias / roadtrip_day_tracks
-    const newVia = testDb.prepare('SELECT after_order_index, sequence, lat, lng FROM roadtrip_vias WHERE day_id = ?').get(newDays[0].id) as any;
+    const newVia = testDb.prepare('SELECT after_order_index, sequence, lat, lng FROM roadtrip_vias WHERE day_id = ?').get(newDays[0].id) as {
+      after_order_index: number; sequence: number; lat: number; lng: number;
+    };
     expect(newVia).toEqual({ after_order_index: 0, sequence: 0, lat: 48.1, lng: 2.1 });
-    const newTrackRow = testDb.prepare('SELECT place_id, stray_km FROM roadtrip_day_tracks WHERE day_id = ?').get(newDays[0].id) as any;
+    const newTrackRow = testDb.prepare('SELECT place_id, stray_km FROM roadtrip_day_tracks WHERE day_id = ?').get(newDays[0].id) as { place_id: number; stray_km: number | null };
     expect(newTrackRow).toEqual({ place_id: newTrack.id, stray_km: 2.5 });
 
     // roadtrip_preferences / roadtrip_day_boundaries
-    expect((testDb.prepare("SELECT value FROM roadtrip_preferences WHERE trip_id = ? AND key = 'avoid_tolls'").get(newTripId) as any).value).toBe('true');
-    const newBoundary = testDb.prepare('SELECT day_number, from_assignment_id, to_assignment_id, fraction FROM roadtrip_day_boundaries WHERE trip_id = ?').get(newTripId) as any;
+    expect((testDb.prepare("SELECT value FROM roadtrip_preferences WHERE trip_id = ? AND key = 'avoid_tolls'").get(newTripId) as { value: string }).value).toBe('true');
+    const newBoundary = testDb.prepare('SELECT day_number, from_assignment_id, to_assignment_id, fraction FROM roadtrip_day_boundaries WHERE trip_id = ?').get(newTripId) as {
+      day_number: number; from_assignment_id: number; to_assignment_id: number | null; fraction: number;
+    };
     expect(newBoundary).toEqual({ day_number: 1, from_assignment_id: newAssignment.id, to_assignment_id: null, fraction: 0.5 });
 
     // day_accommodations, and the assignment's accommodation_id stamped at the NEW accommodation
-    const newAccom = testDb.prepare('SELECT id, place_id, start_day_id, end_day_id, check_in, check_out FROM day_accommodations WHERE trip_id = ?').get(newTripId) as any;
+    const newAccom = testDb.prepare('SELECT id, place_id, start_day_id, end_day_id, check_in, check_out FROM day_accommodations WHERE trip_id = ?').get(newTripId) as {
+      id: number; place_id: number | null; start_day_id: number; end_day_id: number; check_in: string | null; check_out: string | null;
+    };
     expect(newAccom).toMatchObject({ place_id: newStop.id, start_day_id: newDays[0].id, end_day_id: newDays[1].id, check_in: '15:00', check_out: '11:00' });
     expect(newAssignmentFull.accommodation_id).toBe(newAccom.id);
 
     // reservations
-    const newRes = testDb.prepare('SELECT * FROM reservations WHERE trip_id = ?').get(newTripId) as any;
+    const newRes = testDb.prepare('SELECT * FROM reservations WHERE trip_id = ?').get(newTripId) as {
+      id: number; day_id: number | null; end_day_id: number | null; place_id: number | null; assignment_id: number | null;
+      title: string; status: string | null; type: string | null; ingest_state: string; accommodation_id: string | null;
+    };
     expect(newRes).toMatchObject({
       day_id: newDays[0].id, end_day_id: newDays[1].id, place_id: newStop.id, assignment_id: newAssignment.id,
       title: 'Stay', status: 'confirmed', type: 'hotel', ingest_state: 'live',
@@ -1416,29 +1432,37 @@ describe('copy — whole-trip parity (Task 8)', () => {
     expect(Number(newRes.accommodation_id)).toBe(newAccom.id);
 
     // budget_items / members / payers / category order
-    const newItem = testDb.prepare('SELECT * FROM budget_items WHERE trip_id = ?').get(newTripId) as any;
+    const newItem = testDb.prepare('SELECT * FROM budget_items WHERE trip_id = ?').get(newTripId) as {
+      id: number; category: string; name: string; total_price: number; reservation_id: number | null; currency: string | null;
+    };
     expect(newItem).toMatchObject({ category: 'Accommodation', name: 'Hotel', total_price: 300, reservation_id: newRes.id, currency: 'EUR' });
-    const newMembers = testDb.prepare('SELECT user_id, paid, amount FROM budget_item_members WHERE budget_item_id = ? ORDER BY user_id').all(newItem.id) as any[];
+    const newMembers = testDb.prepare('SELECT user_id, paid, amount FROM budget_item_members WHERE budget_item_id = ? ORDER BY user_id').all(newItem.id) as { user_id: number; paid: number; amount: number | null }[];
     expect(newMembers).toEqual([owner.id, member.id].sort((a, b) => a - b).map((uid) =>
       uid === owner.id ? { user_id: owner.id, paid: 1, amount: 150 } : { user_id: member.id, paid: 0, amount: 150 },
     ));
-    const newPayers = testDb.prepare('SELECT user_id, amount FROM budget_item_payers WHERE budget_item_id = ?').all(newItem.id) as any[];
+    const newPayers = testDb.prepare('SELECT user_id, amount FROM budget_item_payers WHERE budget_item_id = ?').all(newItem.id) as { user_id: number; amount: number }[];
     expect(newPayers).toEqual([{ user_id: owner.id, amount: 300 }]);
-    expect((testDb.prepare("SELECT sort_order FROM budget_category_order WHERE trip_id = ? AND category = 'Accommodation'").get(newTripId) as any).sort_order).toBe(1);
+    expect((testDb.prepare("SELECT sort_order FROM budget_category_order WHERE trip_id = ? AND category = 'Accommodation'").get(newTripId) as { sort_order: number }).sort_order).toBe(1);
 
     // packing_bags / packing_items (incl. the TP68 privacy filter — the copIER is the owner)
-    const newBag = testDb.prepare("SELECT id FROM packing_bags WHERE trip_id = ? AND name = 'Carry-on'").get(newTripId) as any;
-    const newPacking = testDb.prepare('SELECT name, checked, is_private, owner_id, bag_id FROM packing_items WHERE trip_id = ? ORDER BY name').all(newTripId) as any[];
+    const newBag = testDb.prepare("SELECT id FROM packing_bags WHERE trip_id = ? AND name = 'Carry-on'").get(newTripId) as { id: number };
+    const newPacking = testDb.prepare('SELECT name, checked, is_private, owner_id, bag_id FROM packing_items WHERE trip_id = ? ORDER BY name').all(newTripId) as {
+      name: string; checked: number | null; is_private: number; owner_id: number | null; bag_id: number | null;
+    }[];
     expect(newPacking.map(p => p.name)).toEqual(['Owner\'s diary', 'Shared tent']); // member's private item is NOT copied
     expect(newPacking.find(p => p.name === 'Shared tent')).toMatchObject({ checked: 0, is_private: 0, owner_id: null, bag_id: newBag.id });
     expect(newPacking.find(p => p.name === "Owner's diary")).toMatchObject({ checked: 0, is_private: 1, owner_id: owner.id });
 
     // day_notes
-    const newNote = testDb.prepare('SELECT day_id, text, time, icon, sort_order FROM day_notes WHERE trip_id = ?').get(newTripId) as any;
+    const newNote = testDb.prepare('SELECT day_id, text, time, icon, sort_order FROM day_notes WHERE trip_id = ?').get(newTripId) as {
+      day_id: number; text: string; time: string | null; icon: string | null; sort_order: number | null;
+    };
     expect(newNote).toEqual({ day_id: newDays[0].id, text: 'Remember passport', time: '08:00', icon: '🛂', sort_order: 1 });
 
     // todo_items — reset to unchecked, no assignee
-    const newTodo = testDb.prepare('SELECT name, checked, category, sort_order, assigned_user_id FROM todo_items WHERE trip_id = ?').get(newTripId) as any;
+    const newTodo = testDb.prepare('SELECT name, checked, category, sort_order, assigned_user_id FROM todo_items WHERE trip_id = ?').get(newTripId) as {
+      name: string; checked: number | null; category: string | null; sort_order: number | null; assigned_user_id: number | null;
+    };
     expect(newTodo).toEqual({ name: 'Book taxi', checked: 0, category: 'travel', sort_order: 1, assigned_user_id: null });
 
     // The source trip is untouched.

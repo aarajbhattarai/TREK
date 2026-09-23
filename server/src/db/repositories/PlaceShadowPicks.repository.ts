@@ -73,10 +73,16 @@ export class PlaceShadowPicksRepository extends TrekRepository<PlaceShadowPicks>
    */
   async totals(): Promise<{ total: number; oldest: string | null; newest: string | null }> {
     const platform = this.getEntityManager().getPlatform();
+    // Task 9 fix wave (B-L5): a bare aggregate `SELECT` always returns one
+    // row (the docstring above), so `row` is never `undefined` — the
+    // previous `row?.x ?? fallback` optional-chain/nullish-coalescing pair
+    // was the one partial branch in `src/db/repositories/**` (83.33%
+    // coverage), unreachable, not a real "no rows" guard. Non-null
+    // asserted, matching the docstring's own claim.
     const row = await this.qb('p')
       .select([countAll(platform, 'total'), minOf(platform, 'p.created_at', 'oldest'), maxOf(platform, 'p.created_at', 'newest')])
       .execute<{ total: number; oldest: string | null; newest: string | null } | undefined>('get', false);
-    return { total: row?.total ?? 0, oldest: row?.oldest ?? null, newest: row?.newest ?? null };
+    return { total: row!.total, oldest: row!.oldest, newest: row!.newest };
   }
 
   /**

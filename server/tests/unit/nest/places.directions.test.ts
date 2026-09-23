@@ -54,7 +54,7 @@ import type { PlacePhotoCacheService } from '../../../src/nest/place-photos/plac
 import { JourneyDomainService } from '../../../src/nest/journey/journey-domain.service';
 import { TrekPhotosRepository } from '../../../src/nest/photos/trek-photos.repository';
 import { makeStorageFixture } from '../../helpers/storage-fixture';
-import { createTestUnitOfWork, createTestAppSettingsRepo, createTestUsersRepo, createTestTagsRepo, createTestPlaceRatingsRepo, createTestAssignmentParticipantsRepo, createTestPlacesRepo, createTestTripMembersRepo, createTestDayAssignmentsRepo, createTestCategoriesRepo, sharedTestOrm } from '../../helpers/test-uow';
+import { createTestUnitOfWork, createTestAppSettingsRepo, createTestUsersRepo, createTestTagsRepo, createTestPlaceRatingsRepo, createTestAssignmentParticipantsRepo, createTestPlacesRepo, createTestTripMembersRepo, createTestDayAssignmentsRepo, createTestCategoriesRepo, createTestTripsRepo, sharedTestOrm } from '../../helpers/test-uow';
 
 const dbs = new DatabaseService(testDb);
 const photoCacheStub = { removeIfUnreferenced: vi.fn() } as unknown as PlacePhotoCacheService;
@@ -98,6 +98,7 @@ async function svc(searchNominatim: MapsService['searchNominatim']): Promise<Pla
     await createTestTripMembersRepo(dbs.connection),
     await createTestDayAssignmentsRepo(dbs.connection),
     await createTestCategoriesRepo(dbs.connection),
+  await createTestTripsRepo(dbs.connection),
   );
 }
 

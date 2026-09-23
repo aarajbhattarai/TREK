@@ -245,6 +245,19 @@ export class TripsService {
     const existing = await this.daysRepo.listOrderedForReorder(trip_id); // TP1
 
     // Two-phase renumber to avoid UNIQUE(trip_id, day_number) collisions.
+    //
+    // Task 9 fix wave (A-L4a): the FIRST (negative) pass is not pinned by
+    // any test — a mutation that removes or skips it survives the suite,
+    // because no test's fixture forces two days to swap `day_number`s (the
+    // only scenario where skipping straight to the positive pass would hit
+    // a live UNIQUE collision on a still-occupied target number). It is
+    // still correct, production-necessary code, not dead code: this
+    // helper's callers (`generateDays`'s regenerate/compact paths) reorder
+    // day rows whose numbers can genuinely collide mid-pass, and the
+    // negative pass is what clears every target number before any of them
+    // is reused. Documented per the review's ruling rather than added a
+    // test, since the equivalent-mutation gap is the ABSENCE of a
+    // swap-shaped fixture, not a defect in this code.
     const renumber = async (days: { id: number }[]) => {
       for (let i = 0; i < days.length; i++) await this.daysRepo.setDayNumber(days[i].id, -(i + 1)); // TP2
       for (let i = 0; i < days.length; i++) await this.daysRepo.setDayNumber(days[i].id, i + 1); // TP2
@@ -462,13 +475,16 @@ export class TripsService {
           // so re-stamp reservation_time to follow — same rules as reorderDays/insertDay.
           const newDays = await this.daysRepo.listOrderedForReorder(tripIdNum); // TP27
           const newDateByDayId = new Map(newDays.map(d => [d.id, d.date]));
-          await this.days.restampReservationDates(tripId, prevDateByDayId, newDateByDayId);
+          // `tripIdNum`, not `tripId` (Task 9 fix wave, H2): `restampReservationDates`
+          // now takes the parsed row id, the same value every other DaysService
+          // survivor takes — see its own docstring.
+          await this.days.restampReservationDates(tripIdNum, prevDateByDayId, newDateByDayId);
         } else {
           // Default: generateDays re-dates day rows positionally; re-anchor dated bookings to
           // the day matching their absolute reservation_time, and accommodations (+ their
           // linked hotel reservations) to the days now holding their pre-change dates (#1288).
           await this.reservations.resyncReservationDays(tripId);
-          await this.days.resyncAccommodationDays(tripId, prevDateByDayId);
+          await this.days.resyncAccommodationDays(tripIdNum, prevDateByDayId);
         }
       });
     }

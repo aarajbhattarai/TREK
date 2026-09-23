@@ -78,7 +78,7 @@ import { QueryHelpersService } from '../../../src/nest/query-helpers/query-helpe
 import { JourneyDomainService } from '../../../src/nest/journey/journey-domain.service';
 import { TrekPhotosRepository } from '../../../src/nest/photos/trek-photos.repository';
 import { makeStorageFixture } from '../../helpers/storage-fixture';
-import { createTestUnitOfWork, createTestAppSettingsRepo, createTestUsersRepo, createTestTagsRepo, createTestPlaceRatingsRepo, createTestAssignmentParticipantsRepo, createTestPlacesRepo, createTestTripMembersRepo, createTestDayAssignmentsRepo, createTestCategoriesRepo, sharedTestOrm } from '../../helpers/test-uow';
+import { createTestUnitOfWork, createTestAppSettingsRepo, createTestUsersRepo, createTestTagsRepo, createTestPlaceRatingsRepo, createTestAssignmentParticipantsRepo, createTestPlacesRepo, createTestTripMembersRepo, createTestDayAssignmentsRepo, createTestCategoriesRepo, createTestTripsRepo, sharedTestOrm } from '../../helpers/test-uow';
 import type { AppSettingsRepository } from '../../../src/db/repositories/AppSettings.repository';
 import type { UsersRepository } from '../../../src/db/repositories/Users.repository';
 import { isUpdateConflict, type UpdateConflict } from '../../../src/nest/common/conflictResult';
@@ -141,6 +141,7 @@ async function makePlacesService(
     await createTestTripMembersRepo(dbs.connection),
     await createTestDayAssignmentsRepo(dbs.connection),
     await createTestCategoriesRepo(dbs.connection),
+  await createTestTripsRepo(dbs.connection),
   );
 }
 
@@ -155,7 +156,9 @@ beforeAll(async () => {
   const real = new DatabaseService(testDb, (await sharedTestOrm(testDb)).em);
   vi.spyOn(dbs, 'canAccessTrip').mockImplementation((...a) => real.canAccessTrip(...a));
   vi.spyOn(dbs, 'isOwner').mockImplementation((...a) => real.isOwner(...a));
-  vi.spyOn(dbs, 'rosterUserIds').mockImplementation((...a) => real.rosterUserIds(...a));
+  // Task 9 fix wave (A-L4c): `dbs.rosterUserIds` is dead here — `PlacesService`
+  // now calls `TripMembersRepository.rosterUserIds` directly (PL1, injected,
+  // not through `DatabaseService`), so this spy was inert.
   vi.spyOn(dbs, 'getPlaceWithTags').mockImplementation((...a) => real.getPlaceWithTags(...a));
   accommodations = await accommodationsOver(dbs);
   svc = await makePlacesService();

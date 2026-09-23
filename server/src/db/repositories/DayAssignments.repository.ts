@@ -35,22 +35,7 @@ import { TrekRepository } from './_shared/trek-repository';
  * `category_icon` through the LEFT JOIN even though `Categories.name` itself
  * is NOT NULL.
  */
-export interface AssignmentWithPlaceRow {
-  id: number;
-  day_id: number;
-  place_id: number;
-  order_index: number | null;
-  notes: string | null;
-  reservation_status: string | null;
-  reservation_notes: string | null;
-  reservation_datetime: string | null;
-  assignment_time: string | null;
-  assignment_end_time: string | null;
-  end_day: number;
-  leg_transport_mode: string | null;
-  incoming_leg_transport_mode: string | null;
-  accommodation_id: number | null;
-  created_at: string | null;
+export interface AssignmentWithPlaceRow extends DayAssignmentRow {
   place_name: string;
   place_description: string | null;
   lat: number | null;
@@ -501,8 +486,16 @@ export class DayAssignmentsRepository extends TrekRepository<DayAssignments> {
       .orderBy('da.order_index', 'asc')
       .orderBy('da.created_at', 'asc')
       .orderBy('da.id', 'asc')
+      // `$castTo` (Task 9 fix wave, B-L1): Kysely infers `located` as its own
+      // `SqlBool` type from `eb.and(...)`, not the `0`/`1` integer
+      // `DayStopRow.located` declares (the value SQLite actually returns for
+      // a boolean expression) — a straight `as DayStopRow[]` is rejected as
+      // an unrelated-type cast, which is what forced the `as unknown as`
+      // bridge. `$castTo` retypes the builder itself before `execute()`
+      // runs, so the result is `DayStopRow[]` with no intermediate `unknown`.
+      .$castTo<DayStopRow>()
       .execute();
-    return rows as unknown as DayStopRow[];
+    return rows;
   }
 
   /** AS24 — `UPDATE day_assignments SET end_day = ? WHERE id = ?`. */

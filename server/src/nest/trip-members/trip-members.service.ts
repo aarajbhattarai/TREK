@@ -152,9 +152,12 @@ export class TripMembersService {
 
     // `Number(tripId)`, not the raw string: `addMember`'s INSERT needs the
     // real `Primary<Trips>` type (its docstring). Safe here — `tripId` has
-    // already matched a real trip through the inline `canAccessTrip` check
-    // above this method's controller call, which only succeeds for a string
-    // SQLite's own affinity rules already recognise as numeric.
+    // already matched a real trip through the controller's `TripAccessGuard`,
+    // whose own `Number(tripId)` is the seam (Task 9 fix wave, A-L1: this
+    // comment previously and wrongly called it a raw-bind/SQLite-affinity
+    // check — a `Number()` seam is WIDER, since `Number('0x10')`/
+    // `Number('1e1')` coerce to a real integer where SQLite's own text
+    // affinity never converts a hex or exponent literal).
     await this.tripMembersRepo.addMember(Number(tripId), target.id, invitedByUserId);
 
     const tripTitle = await this.tripsRepo.getTitle(tripId);
@@ -196,16 +199,23 @@ export class TripMembersService {
 
     const fromEmail = (await this.usersRepo.getEmail(currentOwnerId)) || '';
 
-    // `Number(tripId)` at the two writes below that need the real
-    // `Primary<Trips>` type (`setOwner`'s docstring / `addIgnoringConflict`'s
-    // docstring) — safe: this route runs behind `TripOwnerGuard`, so `tripId`
-    // has already matched a real trip through its raw-bind `isOwner` check.
+    // Task 9 fix wave (B-L4 / A-L1): all THREE writes below now take
+    // `trip.id` — the real `number` `findIdTitleOwner` already resolved
+    // above, not the route's raw `tripId` string. The comment this replaces
+    // claimed "`Number(tripId)` at the two writes below", but only
+    // `addIgnoringConflict` (which requires a real `Primary<Trips>`) ever
+    // did that; `setOwner`/`remove` kept binding the unconverted string —
+    // not a live divergence (both repository methods document and test
+    // that raw-bind seam for their OTHER callers, so their signatures stay
+    // `number | string`), but the letter of rule 21 says one id, parsed
+    // once, threaded everywhere — and `trip.id` is already sitting right
+    // here, already proven to be the real row.
     await this.uow.transactional(async () => {
-      await this.tripsRepo.setOwner(tripId, newOwnerId);
+      await this.tripsRepo.setOwner(trip.id, newOwnerId);
       // The new owner is no longer a plain member…
-      await this.tripMembersRepo.remove(tripId, newOwnerId);
+      await this.tripMembersRepo.remove(trip.id, newOwnerId);
       // …and the former owner keeps access as a member.
-      await this.tripMembersRepo.addIgnoringConflict(Number(tripId), currentOwnerId, newOwnerId);
+      await this.tripMembersRepo.addIgnoringConflict(trip.id, currentOwnerId, newOwnerId);
     });
 
     return { tripTitle: trip.title, fromEmail, toEmail: newOwner.email };
@@ -227,8 +237,12 @@ export class TripMembersService {
     const username = `guest-${randomUUID()}`;
 
     // `Number(tripId)` for the same reason `addMember`'s docstring gives:
-    // `createGuest`'s route runs behind `TripOwnerGuard`, so `tripId` has
-    // already matched a real trip through its raw-bind `isOwner` check.
+    // `createGuest`'s route runs behind `TripOwnerGuard`, whose OWN
+    // `Number(tripId)` is the seam that already matched a real trip (Task 9
+    // fix wave, A-L1: corrected from "raw-bind `isOwner` check" — the guard
+    // converts with `Number()` first, a WIDER seam than a raw bind, so a
+    // hex-spelled trip id is authorised here too — L1's accepted widening:
+    // `POST .../guests` with a hex id now creates a real guest, base 500).
     const guestId = await this.uow.transactional(async () => {
       const newGuestId = await this.usersRepo.insertGuest({ username, email, display_name: display });
       await this.tripMembersRepo.addMember(Number(tripId), newGuestId, invitedByUserId);

@@ -28,7 +28,7 @@ vi.mock('../../src/websocket', () => ({ broadcast: vi.fn(), broadcastToUser: vi.
 import { db as testDb } from '../../src/db/database';
 import { buildApp } from '../../src/bootstrap';
 import { resetTestDb, resetRateLimits } from '../helpers/test-db';
-import { createUser, createTrip, createDay, createPlace, addTripMember } from '../helpers/factories';
+import { createUser, createTrip, createDay, createPlace, addTripMember, createDayAccommodation, createReservation } from '../helpers/factories';
 import { authCookie } from '../helpers/auth';
 
 let nestApp: INestApplication;
@@ -533,5 +533,134 @@ describe('Accommodations', () => {
       'SELECT id FROM budget_items WHERE trip_id = ?'
     ).get(trip.id);
     expect(budgetAfter).toBeUndefined();
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Plan 3c Task 9 fix wave — A-H2 (live regression): `DaysService` was
+// converted with a bare `Number(tripId)` at every entry point while
+// `restampReservationDates`/`assertNoInvertedAccommodation` (Plan 3d
+// survivors) kept binding the RAW route string — an affinity seam a
+// hex-spelled trip id never matches. `TripAccessGuard` authorises a
+// hex-spelled id whose `Number()` value is a real trip (`Number('0x12')`
+// is `18`), so one `PUT .../days/reorder` request could renumber that real
+// trip's days (the `Number()` half) while its own inverted-accommodation
+// guard silently matched zero rows (the raw-string half) — writing a stay
+// whose end precedes its start with no error. Every entry point now parses
+// ONCE with `toRowId` and threads that value into every survivor; a
+// `toRowId` miss answers a legacy-shaped not-found instead of letting the
+// guard's wider `Number()` grant reach a downstream raw bind that disagrees
+// with it.
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('A-H2 — DaysService trip id parsed once, threaded to every survivor (Task 9 fix wave)', () => {
+  it('GET /days by the hex-spelled trip id answers the legacy-shaped miss ({ days: [] }), not the real trip\'s days', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id, { title: 'Trip', start_date: '2026-09-01', end_date: '2026-09-03' });
+    const hexTripId = '0x' + trip.id.toString(16);
+
+    const res = await request(app)
+      .get(`/api/trips/${hexTripId}/days`)
+      .set('Cookie', authCookie(user.id));
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ days: [] });
+  });
+
+  it('PUT /days/:id by the hex-spelled trip id 404s "Day not found" (getDay\'s own toRowId gate), not the real trip\'s day', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id, { title: 'Trip' });
+    const day = createDay(testDb, trip.id, { title: 'Original' });
+    const hexTripId = '0x' + trip.id.toString(16);
+
+    const res = await request(app)
+      .put(`/api/trips/${hexTripId}/days/${day.id}`)
+      .set('Cookie', authCookie(user.id))
+      .send({ title: 'Renamed' });
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({ error: 'Day not found' });
+    const row = testDb.prepare('SELECT title FROM days WHERE id = ?').get(day.id) as { title: string };
+    expect(row.title).toBe('Original');
+  });
+
+  it('POST /days by the hex-spelled trip id (append, no position) 500s the legacy-shaped miss and writes no day', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id, { title: 'Trip' });
+    const hexTripId = '0x' + trip.id.toString(16);
+    const before = (testDb.prepare('SELECT COUNT(*) AS n FROM days WHERE trip_id = ?').get(trip.id) as { n: number }).n;
+
+    const res = await request(app)
+      .post(`/api/trips/${hexTripId}/days`)
+      .set('Cookie', authCookie(user.id))
+      .send({});
+    expect(res.status).toBe(500);
+    expect(res.body).toEqual({ error: 'Internal server error' });
+    const after = (testDb.prepare('SELECT COUNT(*) AS n FROM days WHERE trip_id = ?').get(trip.id) as { n: number }).n;
+    expect(after).toBe(before);
+  });
+
+  it('POST /days {position} (insert) by the hex-spelled trip id 500s the legacy-shaped miss and writes no day', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id, { title: 'Trip', start_date: '2026-09-01', end_date: '2026-09-02' });
+    const hexTripId = '0x' + trip.id.toString(16);
+    const before = (testDb.prepare('SELECT COUNT(*) AS n FROM days WHERE trip_id = ?').get(trip.id) as { n: number }).n;
+
+    const res = await request(app)
+      .post(`/api/trips/${hexTripId}/days`)
+      .set('Cookie', authCookie(user.id))
+      .send({ position: 1 });
+    expect(res.status).toBe(500);
+    expect(res.body).toEqual({ error: 'Internal server error' });
+    const after = (testDb.prepare('SELECT COUNT(*) AS n FROM days WHERE trip_id = ?').get(trip.id) as { n: number }).n;
+    expect(after).toBe(before);
+  });
+
+  it('PUT /days/reorder by the hex-spelled trip id 400s "orderedIds must be a permutation…" and writes NOTHING — the live H2 bug: it used to 200 and invert a real accommodation', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id, { title: 'Trip', start_date: '2026-06-01', end_date: '2026-06-03' });
+    const days = testDb.prepare('SELECT id, day_number, date FROM days WHERE trip_id = ? ORDER BY day_number').all(trip.id) as { id: number; day_number: number; date: string }[];
+    expect(days).toHaveLength(3);
+    const [d1, d2, d3] = days;
+    const place = createPlace(testDb, trip.id, { name: 'Hotel' });
+    // A valid (non-inverted) stay d1 -> d2, and a reservation on d1 — exactly
+    // the shape the compiled-boot evidence used to catch reorder inverting.
+    const stay = createDayAccommodation(testDb, trip.id, place.id, d1.id, d2.id);
+    const reservation = createReservation(testDb, trip.id, { day_id: d1.id, title: 'Dinner' });
+    testDb.prepare('UPDATE reservations SET reservation_time = ? WHERE id = ?').run('2026-06-01T19:00:00', reservation.id);
+    const hexTripId = '0x' + trip.id.toString(16);
+
+    const res = await request(app)
+      .put(`/api/trips/${hexTripId}/days/reorder`)
+      .set('Cookie', authCookie(user.id))
+      .send({ orderedIds: [d2.id, d1.id, d3.id] });
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({ error: 'orderedIds must be a permutation of the trip day ids.' });
+
+    // Nothing renumbered.
+    const after = testDb.prepare('SELECT id, day_number, date FROM days WHERE trip_id = ? ORDER BY day_number').all(trip.id) as { id: number; day_number: number; date: string }[];
+    expect(after).toEqual(days);
+    // The stay is still d1 -> d2, never inverted.
+    const stayAfter = testDb.prepare('SELECT start_day_id, end_day_id FROM day_accommodations WHERE id = ?').get(stay.id) as { start_day_id: number; end_day_id: number };
+    expect(stayAfter).toEqual({ start_day_id: d1.id, end_day_id: d2.id });
+    // The reservation's stamped time is untouched.
+    const resAfter = testDb.prepare('SELECT reservation_time FROM reservations WHERE id = ?').get(reservation.id) as { reservation_time: string };
+    expect(resAfter.reservation_time).toBe('2026-06-01T19:00:00');
+  });
+
+  it('PUT /days/reorder with the REAL numeric trip id still works and can still be legitimately rejected for inverting a stay (unchanged, base 400)', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id, { title: 'Trip', start_date: '2026-06-01', end_date: '2026-06-03' });
+    const days = testDb.prepare('SELECT id FROM days WHERE trip_id = ? ORDER BY day_number').all(trip.id) as { id: number }[];
+    const [d1, d2, d3] = days;
+    const place = createPlace(testDb, trip.id, { name: 'Hotel' });
+    const stay = createDayAccommodation(testDb, trip.id, place.id, d1.id, d3.id);
+
+    const res = await request(app)
+      .put(`/api/trips/${trip.id}/days/reorder`)
+      .set('Cookie', authCookie(user.id))
+      .send({ orderedIds: [d3.id, d2.id, d1.id] });
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({ error: 'This move would make an accommodation end before it starts.' });
+    const stayAfter = testDb.prepare('SELECT start_day_id, end_day_id FROM day_accommodations WHERE id = ?').get(stay.id) as { start_day_id: number; end_day_id: number };
+    expect(stayAfter).toEqual({ start_day_id: d1.id, end_day_id: d3.id });
   });
 });

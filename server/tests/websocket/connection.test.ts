@@ -239,6 +239,36 @@ describe('WS rooms', () => {
   });
 
   /**
+   * Plan 3c Task 9 fix wave (A-H1, live regression): before the
+   * `Number.isFinite` guard on `realtime.gateway.ts::handleJoin`, a
+   * non-numeric `tripId` became `NaN`, which used to reach
+   * `TripsRepository.findAccessible`'s raw bind as the unquoted bareword
+   * `NaN` and throw `SqliteError: no such column: NaN` — the promise this
+   * handler returns never resolved, so the client got NO reply at all
+   * (confirmed on the compiled dual boot: 4 `[ERROR]` lines, HEAD only).
+   * The platform's own `NaN` -> `NULL` rendering (`NulSafeSqlitePlatform`)
+   * fixes the crash even without this guard; this test pins the WS-level
+   * contract (the SAME `Access denied` frame WS-005 gets for a real trip
+   * with no access), not just "does not throw".
+   */
+  it('WS-005b — join with a non-numeric tripId receives the same error frame as no access (rule 22 / A-H1)', async () => {
+    const { user } = createUser(testDb);
+    const token = createEphemeralToken(user.id, 'ws')!;
+
+    const client = await connectWs(token);
+    try {
+      await client.next(); // welcome
+
+      client.send({ type: 'join', tripId: 'abc' });
+      const msg = await client.next();
+      expect(msg.type).toBe('error');
+      expect(msg.message).toMatch(/access denied/i);
+    } finally {
+      client.close();
+    }
+  });
+
+  /**
    * Plan 3c Task 0b (R9): `handleJoin`'s `this.db.canAccessTrip(...)` call
    * (`realtime.gateway.ts:173`) is now `TripsRepository.findAccessible`
    * underneath `DatabaseService`, reached through the request context

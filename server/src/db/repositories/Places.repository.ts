@@ -1,8 +1,12 @@
 import type { Places } from '../entities/Places.entity';
-import type { Tags } from '../entities/Tags.entity';
 import { absDifference, coalesceParam, columnRef, currentTimestamp, lowerTrim } from '../dialect/sql-functions';
 import { type AssertRowKeys } from './_shared/rows';
 import { TrekRepository } from './_shared/trek-repository';
+// Task 9 fix wave (B-L2): `TagRow` is Tags.repository.ts's own row type,
+// byte-identical to what used to be hand-mirrored here — a second
+// declaration of the same shape is exactly the duplication Sonar flags and
+// the program's "single source of truth" rule (root CLAUDE.md) forbids.
+import type { TagRow } from './Tags.repository';
 
 /** A `places` row as the API emits it — every scalar column of the entity. */
 export interface PlaceRow {
@@ -41,17 +45,6 @@ export interface PlaceRow {
 }
 
 const _placeRowKeys: AssertRowKeys<PlaceRow, Places> = true;
-
-/** A `tags` row, byte-identical to the legacy `SELECT t.* FROM tags t ...` shape. */
-export interface TagRow {
-  id: number;
-  user_id: number;
-  name: string;
-  color: string | null;
-  created_at: string | null;
-}
-
-const _tagRowKeys: AssertRowKeys<TagRow, Tags> = true;
 
 /** PL3 (`PlacesService.list`) — a `places` row joined with its category's flat columns. */
 export interface PlaceWithCategoryRow extends PlaceRow {
@@ -362,7 +355,12 @@ export class PlacesRepository extends TrekRepository<Places> {
    * plus the timestamp stamp every write gets.
    */
   async updatePlace(id: number, write: {
-    name: string | null;
+    // Task 9 fix wave (B-L10): `places.name` is `NOT NULL` (`PlaceRow.name:
+    // string`); the caller's `(name || null) ?? existingPlace.name` fold
+    // always resolves to a real string before this is called — `string |
+    // null` here was a widened lie the type checker could never catch a
+    // real NULL write through.
+    name: string;
     description: string | null;
     lat: number | null;
     lng: number | null;

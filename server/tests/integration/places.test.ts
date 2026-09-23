@@ -1074,7 +1074,7 @@ describe('H1 — trip id parsed once at the gate (rule 21)', () => {
     expect(res.body).toEqual({ error: 'Place not found' });
   });
 
-  it('PUT with tags by the hex-spelled trip id 404s and leaves the tags untouched (H1 live: they used to be wiped)', async () => {
+  it('PUT with tags by the hex-spelled trip id 404s "Trip not found" (Task 9 fix wave: `verifyTripAccess` now gates BEFORE the place-id read, so the string changed from "Place not found") and leaves the tags untouched (H1 live: they used to be wiped)', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const tagResult = testDb.prepare('INSERT INTO tags (name, user_id) VALUES (?, ?)').run('Original', user.id);
@@ -1092,7 +1092,7 @@ describe('H1 — trip id parsed once at the gate (rule 21)', () => {
       .set('Cookie', authCookie(user.id))
       .send({ name: 'Renamed', tags: [] });
     expect(res.status).toBe(404);
-    expect(res.body).toEqual({ error: 'Place not found' });
+    expect(res.body).toEqual({ error: 'Trip not found' });
 
     const after = await request(app)
       .get(`/api/trips/${trip.id}/places/${placeId}`)
@@ -1101,7 +1101,7 @@ describe('H1 — trip id parsed once at the gate (rule 21)', () => {
     expect((after.body.place.tags as { id: number }[]).some((t) => t.id === tagId)).toBe(true);
   });
 
-  it('PUT :id/rating by the hex-spelled trip id 404s', async () => {
+  it('PUT :id/rating by the hex-spelled trip id 404s "Trip not found" (Task 9 fix wave: was "Place not found" — see the PUT :id case above)', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const place = createPlace(testDb, trip.id, { name: 'Rated' });
@@ -1112,11 +1112,11 @@ describe('H1 — trip id parsed once at the gate (rule 21)', () => {
       .set('Cookie', authCookie(user.id))
       .send({ rating: 4 });
     expect(res.status).toBe(404);
-    expect(res.body).toEqual({ error: 'Place not found' });
+    expect(res.body).toEqual({ error: 'Trip not found' });
     expect(testDb.prepare('SELECT COUNT(*) AS n FROM place_ratings WHERE place_id = ?').get(place.id)).toEqual({ n: 0 });
   });
 
-  it('POST create by the hex-spelled trip id mirrors the legacy 500 (base 94c6efbbc: FK violation on the raw-bound trip id) — every OTHER route 404s, this is the one documented exception', async () => {
+  it('POST create by the hex-spelled trip id now 404s "Trip not found" (Task 9 fix wave, M1: `verifyTripAccess` gates with `toRowId` before `create()` is ever reached — the base 94c6efbbc 500 this test used to mirror was ruled a defect, not the contract to preserve, once the gate itself refuses the id)', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const hexTripId = '0x' + trip.id.toString(16);
@@ -1125,8 +1125,8 @@ describe('H1 — trip id parsed once at the gate (rule 21)', () => {
       .post(`/api/trips/${hexTripId}/places`)
       .set('Cookie', authCookie(user.id))
       .send({ name: 'Should not land' });
-    expect(res.status).toBe(500);
-    expect(res.body).toEqual({ error: 'Internal server error' });
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({ error: 'Trip not found' });
     expect(testDb.prepare('SELECT COUNT(*) AS n FROM places WHERE trip_id = ?').get(trip.id)).toEqual({ n: 0 });
   });
 
@@ -1148,7 +1148,7 @@ describe('H1 — trip id parsed once at the gate (rule 21)', () => {
     expect(broadcast).not.toHaveBeenCalled();
   });
 
-  it('POST bulk-delete by the hex-spelled trip id deletes nothing (scopedIds already binds the trip id raw, so this was never divergent — kept as a regression alongside the single-delete case)', async () => {
+  it('POST bulk-delete by the hex-spelled trip id now 404s "Trip not found" and deletes nothing (Task 9 fix wave: `verifyTripAccess` gates before `scopedIds`/`removeMany` ever run — was a 200 with `count: 0`)', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
     const place = createPlace(testDb, trip.id, { name: 'Louvre' });
@@ -1160,10 +1160,154 @@ describe('H1 — trip id parsed once at the gate (rule 21)', () => {
       .post(`/api/trips/${hexTripId}/places/bulk-delete`)
       .set('Cookie', authCookie(user.id))
       .send({ ids: [place.id] });
-    expect(res.status).toBe(200);
-    expect(res.body).toEqual({ deleted: [], count: 0 });
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({ error: 'Trip not found' });
     expect(testDb.prepare('SELECT id FROM places WHERE id = ?').get(place.id)).toBeTruthy();
     expect(broadcast).not.toHaveBeenCalled();
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Plan 3c Task 9 fix wave — A-H1 / A-M1 / B-H1: `verifyTripAccess` parses
+// ONCE with `toRowId` (never `Number()`) and answers 404 `Trip not found`
+// before ANY read or write on the 10 `requireTrip`-gated routes above,
+// closing two live regressions at once:
+//   - A-H1: a non-numeric id (`abc`, `1abc`) used to become `NaN` and 500
+//     (`no such column: NaN`) instead of the legacy 404 — every one of
+//     these routes now answers the SAME 404 a stranger's clean miss does.
+//   - A-M1 / B-H1: a numeric-but-non-canonical id (`1.0`, `' 1'`, `'+1'`,
+//     `'1e0'`) used to pass the old loose `Number()` gate and then
+//     manufacture a FRESH 500 at the write (`toRowId(tripId) ?? -1`, an FK
+//     violation on `-1`) — an id the gate itself authorised. It now 404s at
+//     the gate instead: an ACCEPTED rule-15 narrowing (legacy's raw-bind
+//     affinity matched these forms; `toRowId` deliberately does not), named
+//     here rather than claimed as parity.
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('A-H1 / A-M1 / B-H1 — verifyTripAccess parses once with toRowId (Task 9 fix wave)', () => {
+  const nonCanonicalShapes: [label: string, spell: (id: number) => string][] = [
+    ['a non-numeric id (abc)', () => 'abc'],
+    ['a numeric-suffixed id (1abc)', (id) => `${id}abc`],
+    ['a decimal-spelled id (1.0) — rule-15 narrowing, base 201', (id) => `${id}.0`],
+    ['a leading-space id (\' 1\') — rule-15 narrowing, base 201', (id) => ` ${id}`],
+    ['a leading-plus id (+1) — rule-15 narrowing, base 201', (id) => `+${id}`],
+    ['an exponent-spelled id (1e0) — rule-15 narrowing, base 201', (id) => `${id}e0`],
+  ];
+
+  describe.each(nonCanonicalShapes)('POST create — %s', (_label, spell) => {
+    it('404s "Trip not found" and creates nothing', async () => {
+      const { user } = createUser(testDb);
+      const trip = createTrip(testDb, user.id);
+      const spelled = spell(trip.id);
+
+      const res = await request(app)
+        .post(`/api/trips/${spelled}/places`)
+        .set('Cookie', authCookie(user.id))
+        .send({ name: 'Should not land' });
+      expect(res.status).toBe(404);
+      expect(res.body).toEqual({ error: 'Trip not found' });
+      expect(testDb.prepare('SELECT COUNT(*) AS n FROM places WHERE trip_id = ?').get(trip.id)).toEqual({ n: 0 });
+    });
+  });
+
+  describe.each(nonCanonicalShapes)('PUT :id — %s', (_label, spell) => {
+    it('404s "Trip not found" and leaves the place untouched', async () => {
+      const { user } = createUser(testDb);
+      const trip = createTrip(testDb, user.id);
+      const place = createPlace(testDb, trip.id, { name: 'Untouched' });
+      const spelled = spell(trip.id);
+
+      const res = await request(app)
+        .put(`/api/trips/${spelled}/places/${place.id}`)
+        .set('Cookie', authCookie(user.id))
+        .send({ name: 'Renamed' });
+      expect(res.status).toBe(404);
+      expect(res.body).toEqual({ error: 'Trip not found' });
+      const row = testDb.prepare('SELECT name FROM places WHERE id = ?').get(place.id) as { name: string };
+      expect(row.name).toBe('Untouched');
+    });
+  });
+
+  describe.each(nonCanonicalShapes)('POST bulk-delete — %s', (_label, spell) => {
+    it('404s "Trip not found" and deletes nothing', async () => {
+      const { user } = createUser(testDb);
+      const trip = createTrip(testDb, user.id);
+      const place = createPlace(testDb, trip.id, { name: 'Louvre' });
+      const spelled = spell(trip.id);
+      vi.mocked(broadcast).mockClear();
+
+      const res = await request(app)
+        .post(`/api/trips/${spelled}/places/bulk-delete`)
+        .set('Cookie', authCookie(user.id))
+        .send({ ids: [place.id] });
+      expect(res.status).toBe(404);
+      expect(res.body).toEqual({ error: 'Trip not found' });
+      expect(testDb.prepare('SELECT id FROM places WHERE id = ?').get(place.id)).toBeTruthy();
+      expect(broadcast).not.toHaveBeenCalled();
+    });
+  });
+
+  describe.each(nonCanonicalShapes)('POST bulk-update — %s', (_label, spell) => {
+    it('404s "Trip not found" and updates nothing', async () => {
+      const { user } = createUser(testDb);
+      const trip = createTrip(testDb, user.id);
+      const place = createPlace(testDb, trip.id, { name: 'Louvre', category_id: null });
+      const spelled = spell(trip.id);
+
+      const res = await request(app)
+        .post(`/api/trips/${spelled}/places/bulk-update`)
+        .set('Cookie', authCookie(user.id))
+        .send({ ids: [place.id], category_id: null });
+      expect(res.status).toBe(404);
+      expect(res.body).toEqual({ error: 'Trip not found' });
+    });
+  });
+
+  describe.each(nonCanonicalShapes)('PUT :id/rating — %s', (_label, spell) => {
+    it('404s "Trip not found" and writes no rating', async () => {
+      const { user } = createUser(testDb);
+      const trip = createTrip(testDb, user.id);
+      const place = createPlace(testDb, trip.id, { name: 'Rated' });
+      const spelled = spell(trip.id);
+
+      const res = await request(app)
+        .put(`/api/trips/${spelled}/places/${place.id}/rating`)
+        .set('Cookie', authCookie(user.id))
+        .send({ rating: 4 });
+      expect(res.status).toBe(404);
+      expect(res.body).toEqual({ error: 'Trip not found' });
+      expect(testDb.prepare('SELECT COUNT(*) AS n FROM place_ratings WHERE place_id = ?').get(place.id)).toEqual({ n: 0 });
+    });
+  });
+
+  describe.each(nonCanonicalShapes)('GET export.gpx — %s', (_label, spell) => {
+    it('404s "Trip not found"', async () => {
+      const { user } = createUser(testDb);
+      const trip = createTrip(testDb, user.id);
+      const spelled = spell(trip.id);
+
+      const res = await request(app)
+        .get(`/api/trips/${spelled}/places/export.gpx`)
+        .set('Cookie', authCookie(user.id));
+      expect(res.status).toBe(404);
+      expect(res.body).toEqual({ error: 'Trip not found' });
+    });
+  });
+
+  describe.each(nonCanonicalShapes)('POST import/gpx — %s', (_label, spell) => {
+    it('404s "Trip not found" and imports nothing', async () => {
+      const { user } = createUser(testDb);
+      const trip = createTrip(testDb, user.id);
+      const spelled = spell(trip.id);
+
+      const res = await request(app)
+        .post(`/api/trips/${spelled}/places/import/gpx`)
+        .set('Cookie', authCookie(user.id))
+        .attach('file', GPX_FIXTURE);
+      expect(res.status).toBe(404);
+      expect(res.body).toEqual({ error: 'Trip not found' });
+      expect(testDb.prepare('SELECT COUNT(*) AS n FROM places WHERE trip_id = ?').get(trip.id)).toEqual({ n: 0 });
+    });
   });
 });
 

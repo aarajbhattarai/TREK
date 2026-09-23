@@ -1,0 +1,175 @@
+/**
+ * Program rule 24 (`docs/superpowers/plans/2026-09-21-orm-migration-program.md`),
+ * added by Plan 3c Task 9's whole-plan review (reviewer A, ruling 5): "transactional
+ * bodies await DB work only." The server holds ONE better-sqlite3 connection, shared
+ * by MikroORM's Kysely-backed driver (`orm-driver.ts`'s `BoundSqliteDriver`) and by
+ * `DatabaseService`'s raw `db.prepare(...)` calls. This file pins the two concrete
+ * behaviours that measurement (fork A2, real `UnitOfWork` + `withRequestContext` +
+ * the bound driver, no mocks) found when a `uow.transactional` body is left open
+ * across a real `await` (which no converted service does today — a static scan of
+ * all 131 `.transactional(` call sites found none awaiting non-DB I/O; this file's
+ * own transactional bodies hold one open ONLY to observe the window, which is
+ * exactly the shape a future violation of rule 24 would take):
+ *
+ *   A. Another request's ORM/Kysely statement QUEUES behind the open transaction —
+ *      Kysely's own `ConnectionMutex` for SQLite serialises every statement onto
+ *      the one connection, so there is no interleaving: the queued statement's
+ *      result only becomes observable after the holder's transaction settles.
+ *   B. A raw `DatabaseService` statement issued while that same transaction is
+ *      open does NOT queue — it shares the connection directly, with no mutex of
+ *      its own, so it runs INSIDE the open transaction: a "dirty read" of the
+ *      transaction's uncommitted write, which then reverts to its pre-transaction
+ *      value the moment the holder rolls back (the hazard rule 24 exists to keep
+ *      out of production code, by keeping every transactional body DB-only).
+ *
+ * Both requests run through `withRequestContext` (MikroORM's `RequestContext`,
+ * AsyncLocalStorage-based), the same per-request fork every real HTTP/MCP/WS/cron
+ * entrypoint uses — not two calls sharing one ambient EntityManager, which would
+ * make MikroORM treat the second as a SAVEPOINT of the first (`UnitOfWork`'s own
+ * docstring: NESTED propagation) rather than the independent, connection-mutex-
+ * queued transaction two unrelated concurrent requests actually are.
+ */
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { createSnapshotTestDb } from '../../helpers/db-mock';
+import { resetTestDb } from '../../helpers/test-db';
+import { createTestOrm, type TestOrm } from '../../helpers/test-orm';
+import { createUser, createTrip } from '../../helpers/factories';
+import { Trips } from '../../../src/db/entities/Trips.entity';
+import type { TripsRepository } from '../../../src/db/repositories/Trips.repository';
+import { UnitOfWork } from '../../../src/nest/database/unit-of-work';
+import { withRequestContext } from '../../../src/nest/database/request-context';
+import { DatabaseService } from '../../../src/nest/database/database.service';
+
+const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+const testDb = createSnapshotTestDb();
+let t: TestOrm;
+let trips: TripsRepository;
+let uow: UnitOfWork;
+let dbs: DatabaseService;
+
+beforeAll(async () => {
+  t = await createTestOrm(testDb);
+  trips = t.repo(Trips);
+  uow = new UnitOfWork(t.em);
+  dbs = new DatabaseService(testDb, t.em);
+});
+beforeEach(() => { resetTestDb(testDb); t.clear(); });
+afterAll(async () => { await t.close(); testDb.close(); });
+
+describe('transaction yield (rule 24)', () => {
+  it('A — another request\'s ORM statement queues behind an open transaction: no interleaving, and its result only becomes observable after the holder commits', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id, { end_date: '2026-01-01' });
+
+    const order: string[] = [];
+    const HOLD_MS = 40;
+
+    // Request 1: opens a transaction, holds it open across a real `await` (the
+    // window this test needs to observe — never how production code shapes a
+    // transactional body; see the file docstring), then writes and commits.
+    const holder = withRequestContext(t.orm, async () => {
+      return uow.transactional(async () => {
+        order.push('holder:open');
+        await sleep(HOLD_MS);
+        await trips.setEndDate(trip.id, '2099-12-31');
+        order.push('holder:commit');
+      });
+    });
+
+    // Give the holder a tick to actually open its transaction before the
+    // second "request" starts, so the queued statement is provably issued
+    // while the first is open, not racing to start first itself.
+    await sleep(5);
+
+    // Request 2: an unrelated concurrent request's plain ORM read (no
+    // transaction of its own) for the SAME row, through its own forked
+    // context — the shape `TripAccessGuard`/`findAccessible` reads take.
+    const queued = withRequestContext(t.orm, async () => {
+      order.push('queued:issue');
+      const row = await trips.getTitle(trip.id);
+      order.push('queued:resolve');
+      return row;
+    });
+
+    await Promise.all([holder, queued]);
+
+    // The queued read was ISSUED while the holder was still open (between
+    // "holder:open" and "holder:commit")…
+    expect(order.indexOf('queued:issue')).toBeGreaterThan(order.indexOf('holder:open'));
+    expect(order.indexOf('queued:issue')).toBeLessThan(order.indexOf('holder:commit'));
+    // …but it only RESOLVED after the holder committed — the connection
+    // mutex queued it rather than interleaving it inside the open transaction.
+    expect(order.indexOf('queued:resolve')).toBeGreaterThan(order.indexOf('holder:commit'));
+  });
+
+  it('B — a raw DatabaseService statement issued while a transaction is open runs INSIDE it (a dirty read of the uncommitted write), then reverts when the holder rolls back', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id, { end_date: '2026-01-01' });
+
+    let dirtyRead: string | null | undefined;
+    const HOLD_MS = 40;
+
+    const holder = withRequestContext(t.orm, async () => {
+      await expect(
+        uow.transactional(async () => {
+          await trips.setEndDate(trip.id, '2099-12-31');
+          // The write is now inside the open, uncommitted transaction. A raw
+          // statement issued from a DIFFERENT concurrent "request" — no
+          // request-context fork, no `uow.transactional` of its own — shares
+          // the one better-sqlite3 connection directly and is NOT behind
+          // Kysely's mutex, so it runs synchronously, right now, still
+          // inside this open transaction.
+          const row = dbs.get<{ end_date: string | null }>('SELECT end_date FROM trips WHERE id = ?', trip.id);
+          dirtyRead = row?.end_date;
+          await sleep(HOLD_MS);
+          // Force a rollback: the write above must not survive.
+          throw new Error('forced rollback (rule 24 probe)');
+        }),
+      ).rejects.toThrow('forced rollback');
+    });
+
+    await holder;
+
+    // The raw read saw the uncommitted value — a dirty read, proving the raw
+    // path is NOT queued behind the transaction the way an ORM/Kysely
+    // statement is (probe A above).
+    expect(dirtyRead).toBe('2099-12-31');
+    // After the holder rolled back, the row reverts — the dirty read never
+    // should have been trusted, which is exactly why rule 24 keeps every
+    // transactional body DB-only: a raw statement issued mid-transaction by
+    // ANOTHER request would otherwise report success on a write that this
+    // rollback just erased.
+    const after = testDb.prepare('SELECT end_date FROM trips WHERE id = ?').get(trip.id) as { end_date: string | null };
+    expect(after.end_date).toBe('2026-01-01');
+  });
+
+  it('I — a second, unrelated transaction opened while the first is still open does not error (no nested-BEGIN exception); it queues and commits its own write once the first settles', async () => {
+    const { user } = createUser(testDb);
+    const tripA = createTrip(testDb, user.id, { end_date: '2026-01-01' });
+    const tripB = createTrip(testDb, user.id, { end_date: '2026-01-01' });
+    const HOLD_MS = 40;
+
+    const first = withRequestContext(t.orm, () =>
+      uow.transactional(async () => {
+        await sleep(HOLD_MS);
+        await trips.setEndDate(tripA.id, '2099-01-01');
+      }),
+    );
+    // Give the first a moment to actually open before the second starts, so
+    // the second's own BEGIN is provably attempted while one is already open.
+    await sleep(5);
+    const second = withRequestContext(t.orm, () =>
+      uow.transactional(async () => {
+        await trips.setEndDate(tripB.id, '2099-02-01');
+      }),
+    );
+
+    await expect(Promise.all([first, second])).resolves.toBeDefined();
+
+    const rowA = testDb.prepare('SELECT end_date FROM trips WHERE id = ?').get(tripA.id) as { end_date: string | null };
+    const rowB = testDb.prepare('SELECT end_date FROM trips WHERE id = ?').get(tripB.id) as { end_date: string | null };
+    expect(rowA.end_date).toBe('2099-01-01');
+    expect(rowB.end_date).toBe('2099-02-01');
+  });
+});

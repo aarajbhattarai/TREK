@@ -34,10 +34,13 @@ const { db } = vi.hoisted(() => {
   return { db: tmp };
 });
 
-const { canAccessTrip } = vi.hoisted(() => ({ canAccessTrip: vi.fn() }));
+// Task 9 fix wave (B-L11): `src/db/database.ts` no longer exports
+// `canAccessTrip` (Plan 3c Task 0b moved it onto `TripsRepository` behind
+// `TripAccessGuard`'s own `EntityManager`), so mocking it here was a dead
+// no-op — the "404 when trip not accessible" cases below already delete/
+// restore the real row instead (see their own comments).
 vi.mock('../../src/db/database', () => ({
   db,
-  canAccessTrip,
   getPlaceWithTags: vi.fn(),
   closeDb: () => {},
   reinitialize: () => {},
@@ -92,7 +95,6 @@ describe('Reservations + accommodations e2e (real auth guard + temp SQLite, real
   });
 
   beforeEach(() => {
-    canAccessTrip.mockImplementation((id: unknown) => db.prepare('SELECT * FROM trips WHERE id = ?').get(id));
     checkPermission.mockReturnValue(true);
     notificationSend.mockClear();
   });

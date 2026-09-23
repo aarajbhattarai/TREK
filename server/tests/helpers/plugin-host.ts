@@ -146,6 +146,7 @@ export async function createPluginRpcHostFactory(dbs: DatabaseService): Promise<
     await createTestTripMembersRepo(dbs.connection),
     await createTestDayAssignmentsRepo(dbs.connection),
     await createTestCategoriesRepo(dbs.connection),
+  await createTestTripsRepo(dbs.connection),
   );
   // After accommodations: a hotel booking writes the stay's day stop through it.
   const reservations = new ReservationsService(dbs, permissions, budget, realtime, notificationsStub(), new ReservationsReadRepository(dbs), accommodations, await createTestUnitOfWork(dbs.connection));

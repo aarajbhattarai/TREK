@@ -137,6 +137,7 @@ beforeAll(async () => {
   await createTestTripMembersRepo(dbs().connection),
   await createTestDayAssignmentsRepo(dbs().connection),
   await createTestCategoriesRepo(dbs().connection),
+  await createTestTripsRepo(dbs().connection),
 );
   membersSvc = new TripMembersService(dbs(), budgetSvc, new UserCleanupService(dbs(), budgetSvc, await createTestUnitOfWork(dbs().connection), await createTestUsersRepo(dbs().connection)), new PermissionsService(await createTestAppSettingsRepo(dbs().connection), await createTestUnitOfWork(dbs().connection)), new RealtimeService(), notificationsStub(), await createTestUnitOfWork(dbs().connection), await createTestTripsRepo(dbs().connection), await createTestTripMembersRepo(dbs().connection), await createTestUsersRepo(dbs().connection));
 });
