@@ -433,10 +433,12 @@ export class FilesService {
         console.error(`[files] unlink failed for ${file.filename}, keeping DB row:`, e);
       }
     }));
+    // A single statement is already atomic — no `uow.transactional` wrapper
+    // needed here (task-8-review.md L1/U1: the wrapper this method used to
+    // carry was vacuous, and FILE-SVC-062's "rollback" claim never actually
+    // exercised it — removing it keeps every test green).
     if (successfullyUnlinked.length > 0) {
-      await this.uow.transactional(async () => {
-        await this.tripFilesRepo.deleteMany(successfullyUnlinked);
-      });
+      await this.tripFilesRepo.deleteMany(successfullyUnlinked);
     }
     return successfullyUnlinked.length;
   }

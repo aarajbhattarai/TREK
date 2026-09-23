@@ -188,6 +188,17 @@ describe('CollabController (parity with the legacy /api/trips/:tripId/collab rou
       expect(await new CollabController(s, storageStub).deleteMessage(user, '5', '3', 'sock')).toEqual({ success: true });
       expect(broadcast).toHaveBeenCalledWith('5', 'collab:message:deleted', { messageId: 3, username: 'bob' }, 'sock');
     });
+
+    it('U5: deleteMessage broadcast falls back to the caller\'s own username when the service\'s username is undefined (the real, pre-existing shape)', async () => {
+      const broadcast = vi.fn();
+      // `CollabService.deleteMessage` really does return `{ username: undefined }`
+      // (findInTrip never joins users) — the controller's `result.username ||
+      // user.username` fallback is what keeps the broadcast correct, and only
+      // works because the route already requires caller === message owner.
+      const s = svc({ deleteMessage: vi.fn().mockResolvedValue({ username: undefined }), broadcast } as Partial<CollabService>);
+      expect(await new CollabController(s, storageStub).deleteMessage(user, '5', '3', 'sock')).toEqual({ success: true });
+      expect(broadcast).toHaveBeenCalledWith('5', 'collab:message:deleted', { messageId: 3, username: user.username }, 'sock');
+    });
   });
 
   // The decorators, not the handler body. Constructing the controller directly,

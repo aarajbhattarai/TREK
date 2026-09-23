@@ -52,11 +52,13 @@ import { createTestUnitOfWork, createTestAppSettingsRepo, createTestDatabaseServ
 import { createTestTodoItemsRepo, createTestTodoCategoryAssigneesRepo } from '../../helpers/todo-repos';
 
 let svc: TodoService;
+let todoItemsRepoDirect: Awaited<ReturnType<typeof createTestTodoItemsRepo>>;
 beforeAll(async () => {
   const uow = await createTestUnitOfWork(testDb);
+  todoItemsRepoDirect = await createTestTodoItemsRepo(testDb);
   svc = new TodoService(
     await createTestDatabaseService(testDb), new PermissionsService(await createTestAppSettingsRepo(testDb), uow), new RealtimeService(), uow,
-    await createTestTodoItemsRepo(testDb), await createTestTodoCategoryAssigneesRepo(testDb),
+    todoItemsRepoDirect, await createTestTodoCategoryAssigneesRepo(testDb),
   );
 });
 
@@ -190,6 +192,24 @@ describe('updateItem', () => {
     const item = (await svc.createItem(trip.id, { name: 'Task', due_date: '2026-06-01' })) as any;
     const updated = (await svc.updateItem(trip.id, item.id, { due_date: null }, ['due_date'])) as any;
     expect(updated.due_date).toBeNull();
+  });
+
+  it('M2-TODO-001: refuses to update an item from a different trip (TodoItems.findInTrip trip-scoping)', async () => {
+    const { user } = createUser(testDb);
+    const tripA = createTrip(testDb, user.id);
+    const tripB = createTrip(testDb, user.id);
+    const itemB = (await svc.createItem(tripB.id, { name: 'Foreign task' }))!;
+
+    expect(await svc.updateItem(tripA.id, itemB.id, { name: 'Hijacked' }, ['name'])).toBeNull();
+    expect((await svc.listItems(tripB.id))[0].name).toBe('Foreign task');
+  });
+
+  it('M1: TodoItemsRepository.update no-ops on an empty write (presenceSet returns {})', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const item = (await svc.createItem(trip.id, { name: 'Untouched' }))!;
+    await expect(todoItemsRepoDirect.update(item.id, {})).resolves.toBeUndefined();
+    expect((await svc.listItems(trip.id))[0].name).toBe('Untouched');
   });
 });
 

@@ -1,3 +1,4 @@
+import { BudgetItems } from '../../db/entities/BudgetItems.entity';
 import { RateLimitModule } from '../common/rate-limit.module';
 import { Module } from '@nestjs/common';
 import { MikroOrmModule } from '@mikro-orm/nestjs';
@@ -83,7 +84,7 @@ import { AllowedFileTypesModule } from '../files/allowed-file-types.module';
     // resolves from THIS module's own `forFeature` graph regardless of who
     // else also registers it (`tokens.module.ts`'s own docstring explains
     // why). PasswordResetTokens: AuthService's own table (Plan 3b Task 5).
-    MikroOrmModule.forFeature([AppSettings, Users, WebauthnCredentials, WebauthnChallenges, InviteTokens, McpTokens, OauthTokens, PasswordResetTokens])],
+    MikroOrmModule.forFeature([AppSettings, Users, WebauthnCredentials, WebauthnChallenges, InviteTokens, McpTokens, OauthTokens, PasswordResetTokens, BudgetItems])],
   controllers: [AuthPublicController, AuthController, PasskeyController],
   providers: [AuthService, UserProfileService, RegistrationInvitesService, PasskeyService, UserCleanupService, WebauthnConfigService, AuthMcp],
   exports: [AuthService, RegistrationInvitesService, PasskeyService, UserCleanupService],

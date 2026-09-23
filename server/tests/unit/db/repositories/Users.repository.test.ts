@@ -985,4 +985,18 @@ describe('UsersRepository — feed tokens (Plan 3d Task 5, FD5-FD8/FD10)', () =>
     // an `IS NULL` match against the many NULL-token rows in the DB.
     expect(await users.findIdAndUsernameByFeedToken('')).toBeUndefined();
   });
+
+  it('M1: getImmichAutoUpload / getSynologyUsername / findUsernameEmail return their column, and the missing-user branch, honestly', async () => {
+    const { user } = createUser(testDb, { username: 'imm-user', email: 'imm@example.com' });
+    testDb.prepare('UPDATE users SET immich_auto_upload = 1, synology_username = ? WHERE id = ?').run('syno-login', user.id);
+
+    expect(await users.getImmichAutoUpload(user.id)).toBe(1);
+    expect(await users.getImmichAutoUpload(999999)).toBeNull();
+
+    expect(await users.getSynologyUsername(user.id)).toBe('syno-login');
+    expect(await users.getSynologyUsername(999999)).toBeNull();
+
+    expect(await users.findUsernameEmail(user.id)).toEqual({ username: 'imm-user', email: 'imm@example.com' });
+    expect(await users.findUsernameEmail(999999)).toBeUndefined();
+  });
 });

@@ -143,7 +143,12 @@ export class PackingBagsRepository extends TrekRepository<PackingBags> {
    * `name`/`color` keep the legacy `COALESCE(?, col)` truthy-wins
    * semantics (`present = !!value`); `weight_limit_grams`/`user_id` are
    * true presence sentinels, already resolved by the SERVICE
-   * (`assignUser`'s roster check, the bodyKeys presence protocol).
+   * (`assignUser`'s roster check, the bodyKeys presence protocol). An
+   * empty write (`{}`, or every field falsy/absent) short-circuits before
+   * the `UPDATE` — `presenceSet` returns `{}` and Kysely's `set({})` emits
+   * `UPDATE packing_bags SET WHERE id = ?`, a SQLite syntax error (base
+   * returned 200; task-8-review.md H2) — the same guard `BudgetItems`
+   * (`:222`) and `TodoItems` (`:125`) already carry.
    */
   async update(id: number | string, write: {
     name?: readonly [present: boolean, value: string | null];
@@ -152,6 +157,7 @@ export class PackingBagsRepository extends TrekRepository<PackingBags> {
     user_id?: readonly [present: boolean, value: number | null];
   }): Promise<void> {
     const data = presenceSet<{ name: string; color: string; weight_limit_grams: number | null; user_id: number | null }>(write);
+    if (Object.keys(data).length === 0) return;
     await this.db().updateTable('packing_bags').set(data).where('id', '=', id as number).execute();
   }
 

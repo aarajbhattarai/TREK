@@ -1,3 +1,4 @@
+import { BudgetItems } from '../../db/entities/BudgetItems.entity';
 import { Module } from '@nestjs/common';
 import { MikroOrmModule } from '@mikro-orm/nestjs';
 import { ReservationsReadModule } from './reservations-read.module';
@@ -53,7 +54,7 @@ import { Trips } from '../../db/entities/Trips.entity';
   // back — accommodations reaches neither days nor reservations (ACC-002).
   imports: [
     McpSharedModule, NotificationsModule, DaysModule, AssignmentsModule, AccommodationsModule, PermissionsModule, BudgetModule, AuthModule, RealtimeModule, PluginGuardsModule, ReservationsReadModule, AirtrailCoreModule,
-    MikroOrmModule.forFeature([Reservations, ReservationEndpoints, ReservationTravelers, ReservationDayPositions, DayAccommodations, Days, Places, DayAssignments, TripMembers, Users, Trips]),
+    MikroOrmModule.forFeature([Reservations, ReservationEndpoints, ReservationTravelers, ReservationDayPositions, DayAccommodations, Days, Places, DayAssignments, TripMembers, Users, Trips, BudgetItems]),
   ],
   controllers: [ReservationsController, UpcomingReservationsController],
   providers: [ReservationsService, ReservationsMcp, ReservationsRpc],

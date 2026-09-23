@@ -421,6 +421,58 @@ describe('Bags', () => {
     expect(res.body.bag.name).toBe('New Name');
   });
 
+  it('PACK-009b — H2 regression: PUT /bags/:bagId with an empty body no-ops (200, not 500)', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const createRes = await request(app)
+      .post(`/api/trips/${trip.id}/packing/bags`)
+      .set('Cookie', authCookie(user.id))
+      .send({ name: 'Untouched Name', color: '#abcdef' });
+    const bagId = createRes.body.bag.id;
+
+    const res = await request(app)
+      .put(`/api/trips/${trip.id}/packing/bags/${bagId}`)
+      .set('Cookie', authCookie(user.id))
+      .send({});
+    expect(res.status).toBe(200);
+    expect(res.body.bag.name).toBe('Untouched Name');
+    expect(res.body.bag.color).toBe('#abcdef');
+  });
+
+  it('PACK-009c — H2 regression: PUT /bags/:bagId with an empty name no-ops (200, not 500)', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const createRes = await request(app)
+      .post(`/api/trips/${trip.id}/packing/bags`)
+      .set('Cookie', authCookie(user.id))
+      .send({ name: 'Untouched Name', color: '#abcdef' });
+    const bagId = createRes.body.bag.id;
+
+    const res = await request(app)
+      .put(`/api/trips/${trip.id}/packing/bags/${bagId}`)
+      .set('Cookie', authCookie(user.id))
+      .send({ name: '' });
+    expect(res.status).toBe(200);
+    expect(res.body.bag.name).toBe('Untouched Name');
+  });
+
+  it('PACK-009d — H2 regression: PUT /bags/:bagId with an empty color no-ops (200, not 500)', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const createRes = await request(app)
+      .post(`/api/trips/${trip.id}/packing/bags`)
+      .set('Cookie', authCookie(user.id))
+      .send({ name: 'Untouched Name', color: '#abcdef' });
+    const bagId = createRes.body.bag.id;
+
+    const res = await request(app)
+      .put(`/api/trips/${trip.id}/packing/bags/${bagId}`)
+      .set('Cookie', authCookie(user.id))
+      .send({ color: '' });
+    expect(res.status).toBe(200);
+    expect(res.body.bag.color).toBe('#abcdef');
+  });
+
   it('PACK-010 — DELETE /bags/:bagId removes bag', async () => {
     const { user } = createUser(testDb);
     const trip = createTrip(testDb, user.id);
@@ -455,6 +507,24 @@ describe('Category assignees', () => {
       .send({ user_ids: [user.id, member.id] });
     expect(res.status).toBe(200);
     expect(res.body.assignees).toBeDefined();
+  });
+
+  it('PACK-012b — H1 regression: a string trip id (the real REST shape) with a non-empty roster does not 500', async () => {
+    const { user } = createUser(testDb);
+    const { user: member } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    addTripMember(testDb, trip.id, member.id);
+
+    // `trip.id` is a number in the fixture, but the route param — like every
+    // real REST call — arrives as a string; `insertIgnore` used to hand that
+    // raw string to `upsertMany`, which threw on the post-write re-match
+    // (task-8-review.md H1) instead of the 200 base returned.
+    const res = await request(app)
+      .put(`/api/trips/${String(trip.id)}/packing/category-assignees/Clothing`)
+      .set('Cookie', authCookie(user.id))
+      .send({ user_ids: [user.id, member.id] });
+    expect(res.status).toBe(200);
+    expect(res.body.assignees).toHaveLength(2);
   });
 
   it('PACK-013 — GET /category-assignees returns all category assignments', async () => {

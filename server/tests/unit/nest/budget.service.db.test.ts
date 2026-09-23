@@ -73,7 +73,7 @@ import { VacayService } from '../../../src/nest/vacay/vacay.service';
 import { QueryHelpersService } from '../../../src/nest/query-helpers/query-helpers.service';
 import { notificationsStub } from '../../helpers/notifications';
 import { createTestUnitOfWork, createTestAppSettingsRepo, createTestUsersRepo, sharedTestOrm, createTestTripsRepo, createTestTripMembersRepo } from '../../helpers/test-uow';
-import { budgetRepoArgs } from '../../helpers/budget-repos';
+import { budgetRepoArgs, createTestBudgetItemMembersRepo, createTestBudgetItemPayersRepo, createTestBudgetSettlementsRepo } from '../../helpers/budget-repos';
 import { createTestBudgetItemsRepo } from '../../helpers/files-repos';
 import { BudgetItemMembers } from '../../../src/db/entities/BudgetItemMembers.entity';
 
@@ -97,8 +97,16 @@ let budget: BudgetService;
 let membersSvc: TripMembersService;
 let createGuest: typeof membersSvc.createGuest;
 let deleteGuest: typeof membersSvc.deleteGuest;
+let budgetItemsRepoDirect: Awaited<ReturnType<typeof createTestBudgetItemsRepo>>;
+let budgetItemMembersRepoDirect: Awaited<ReturnType<typeof createTestBudgetItemMembersRepo>>;
+let budgetItemPayersRepoDirect: Awaited<ReturnType<typeof createTestBudgetItemPayersRepo>>;
+let budgetSettlementsRepoDirect: Awaited<ReturnType<typeof createTestBudgetSettlementsRepo>>;
 beforeAll(async () => {
   dbsEm = (await sharedTestOrm(testDb)).em;
+  budgetItemsRepoDirect = await createTestBudgetItemsRepo(testDb);
+  budgetItemMembersRepoDirect = await createTestBudgetItemMembersRepo(testDb);
+  budgetItemPayersRepoDirect = await createTestBudgetItemPayersRepo(testDb);
+  budgetSettlementsRepoDirect = await createTestBudgetSettlementsRepo(testDb);
   budget = new BudgetService(
   dbs(),
   new PermissionsService(await createTestAppSettingsRepo(testDb), await createTestUnitOfWork(testDb)),
@@ -249,6 +257,23 @@ describe('toggleMemberPaid trip-scoping', () => {
 
     expect(member).toBeNull();
     expect(paidFlag(itemB.id, user.id)).toBe(0); // unchanged
+  });
+
+  it('M2-BUDGET-001: getBudgetItem/deleteBudgetItem refuse an item from a different trip (BudgetItems.findInTrip / findForDelete trip-scoping)', async () => {
+    const { user } = createUser(testDb);
+    const tripA = createTrip(testDb, user.id, { title: 'Trip A' });
+    const tripB = createTrip(testDb, user.id, { title: 'Trip B' });
+    const itemB = await budget.createBudgetItem(tripB.id, { name: 'Foreign expense', total_price: 50 }) as { id: number };
+
+    // Caller passes a trip they can access (A) but the item lives in trip B —
+    // both methods must answer the legacy "not found" (null/false), not act
+    // on a row outside the trip the route claims to scope to.
+    expect(await budget.getBudgetItem(itemB.id, tripA.id)).toBeNull();
+    expect(await budget.deleteBudgetItem(itemB.id, tripA.id)).toBe(false);
+
+    // The item is untouched — proof the delete branch really refused, not
+    // just returned a stale read.
+    expect(await budget.getBudgetItem(itemB.id, tripB.id)).not.toBeNull();
   });
 
   it('BUDGET-SVC-DB-044: a forced mid-transaction failure after the write leaves no partial update (R2-class fix, §17 surprise 4)', async () => {
@@ -495,6 +520,25 @@ describe('rebaseTripCurrency', () => {
     expect(placeRow(jpy)).toEqual({ price: 1500, currency: 'JPY' });
     // Nothing to denominate without a price: leave it inheriting the trip's currency.
     expect(placeRow(free)).toEqual({ price: null, currency: null });
+  });
+
+  it('BUDGET-SVC-DB-010: re-freezes a budget_settlements row against the new base (BudgetSettlements.listDistinctCurrencies / setExchangeRateForCurrency)', async () => {
+    const { user: alice } = createUser(testDb, { username: 'alice' });
+    const { user: bob } = createUser(testDb, { username: 'bob' });
+    const trip = createTrip(testDb, alice.id, { title: 'Trip' });
+    addTripMember(testDb, trip.id, bob.id);
+    testDb.prepare("UPDATE trips SET currency = 'EUR' WHERE id = ?").run(trip.id);
+
+    const settlement = await budget.createSettlement(trip.id, { from_user_id: bob.id, to_user_id: alice.id, amount: 50, currency: 'USD' }, alice.id) as { id: number };
+    const settlementRow = () =>
+      testDb.prepare('SELECT currency, exchange_rate FROM budget_settlements WHERE id = ?').get(settlement.id) as { currency: string | null; exchange_rate: number };
+    expect(settlementRow().currency).toBe('USD');
+
+    await budget.rebaseTripCurrency(trip.id, 'RUB');
+
+    // USD isn't the incoming base, so the settlement's frozen rate is re-anchored
+    // against RUB rather than left pointing at the trip's old EUR base.
+    expect(settlementRow()).toEqual({ currency: 'USD', exchange_rate: RATES.RUB.USD });
   });
 
   it('BUDGET-SVC-DB-008: is a no-op when the currency is unchanged', async () => {
@@ -1187,6 +1231,41 @@ describe('an expense whose split leaves a remainder', () => {
     expect((testDb.prepare('SELECT deleted_at FROM trip_files WHERE id = ?').get(file) as { deleted_at: string | null }).deleted_at).toBeNull();
   });
 
+  it('BUDGET-SVC-DB-046: unlinking a receipt that also carries a place link clears only the budget_item_id (BudgetItems.clearLinkBudgetRef)', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const place = Number(testDb.prepare('INSERT INTO places (trip_id, name) VALUES (?, ?)').run(trip.id, 'Cafe').lastInsertRowid);
+    const file = Number(testDb.prepare('INSERT INTO trip_files (trip_id, filename, original_name) VALUES (?, ?, ?)').run(trip.id, 'receipt.pdf', 'receipt.pdf').lastInsertRowid);
+    const item = await budget.createBudgetItem(trip.id, { name: 'Lunch' }) as { id: number };
+    // Seed a link row that carries BOTH the receipt tie and a place tie — the
+    // shape unlinkReceipts's clearLinkBudgetRef branch exists for (row also
+    // ties the file to a place, so it must survive with budget_item_id cleared
+    // rather than be deleted outright).
+    testDb.prepare('INSERT INTO file_links (file_id, budget_item_id, place_id) VALUES (?, ?, ?)').run(file, item.id, place);
+
+    await budget.deleteBudgetItem(item.id, trip.id);
+
+    const row = testDb.prepare('SELECT place_id, budget_item_id FROM file_links WHERE file_id = ?').get(file) as { place_id: number | null; budget_item_id: number | null };
+    expect(row.place_id).toBe(place);
+    expect(row.budget_item_id).toBeNull();
+  });
+
+  it('BUDGET-SVC-DB-047: updating receipts adopts a spare file_links row instead of inserting a duplicate (BudgetItems.adoptSpareLink)', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const file = Number(testDb.prepare('INSERT INTO trip_files (trip_id, filename, original_name) VALUES (?, ?, ?)').run(trip.id, 'r.pdf', 'r.pdf').lastInsertRowid);
+    const item = await budget.createBudgetItem(trip.id, { name: 'Lunch' }) as { id: number };
+    const linkId = Number(testDb.prepare('INSERT INTO file_links (file_id) VALUES (?)').run(file).lastInsertRowid);
+
+    await budget.updateBudgetItem(item.id, trip.id, { receipt_file_ids: [file] });
+
+    const row = testDb.prepare('SELECT id, budget_item_id FROM file_links WHERE file_id = ?').get(file) as { id: number; budget_item_id: number | null };
+    // The pre-existing spare row is re-parented rather than left orphaned
+    // beside a freshly inserted duplicate.
+    expect(row.id).toBe(linkId);
+    expect(row.budget_item_id).toBe(item.id);
+  });
+
   it('leaves a receipt already in the trash linked, so restoring it comes back attached', async () => {
     const { user: alice } = createUser(testDb);
     const trip = createTrip(testDb, alice.id);
@@ -1209,5 +1288,126 @@ describe('an expense whose split leaves a remainder', () => {
     await budget.updateBudgetItem(item.id, trip.id, { name: 'Hotel 2', receipt_file_ids: [file] });
     const after = testDb.prepare('SELECT id FROM file_links WHERE file_id = ? AND budget_item_id = ?').get(file, item.id) as { id: number };
     expect(after.id).toBe(before.id);
+  });
+});
+
+describe('repository parity (rule 19 — full-key toEqual against the legacy statement run raw)', () => {
+  it('BUDGET-REPO-001: BudgetItemsRepository.listWithCategoryOrder matches BG10 (LEFT JOIN budget_category_order, COALESCE sort) run raw', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    // Two categories; only one has an explicit sort_order row, so the other
+    // falls back to the 999999 COALESCE default and sorts after it.
+    testDb.prepare('INSERT INTO budget_category_order (trip_id, category, sort_order) VALUES (?, ?, ?)').run(trip.id, 'Food', 0);
+    // Creation order assigns bi.sort_order 0, 1, 2 in turn; 'Activities' has no
+    // budget_category_order row, so it falls back to the 999999 COALESCE
+    // default and sorts after every 'Food' item regardless of its own sort_order.
+    await budget.createBudgetItem(trip.id, { name: 'Ramen', category: 'Food', total_price: 12 });
+    await budget.createBudgetItem(trip.id, { name: 'Museum', category: 'Activities', total_price: 20 });
+    await budget.createBudgetItem(trip.id, { name: 'Coffee', category: 'Food', total_price: 4 });
+
+    const converted = await budgetItemsRepoDirect.listWithCategoryOrder(trip.id);
+    const legacy = testDb.prepare(`
+      SELECT bi.* FROM budget_items bi
+      LEFT JOIN budget_category_order bco ON bco.trip_id = bi.trip_id AND bco.category = bi.category
+      WHERE bi.trip_id = ?
+      ORDER BY COALESCE(bco.sort_order, 999999) ASC, bi.sort_order ASC
+    `).all(trip.id);
+
+    expect(converted).toEqual(legacy);
+    expect(converted).toHaveLength(3);
+    expect(converted.map(r => r.name)).toEqual(['Ramen', 'Coffee', 'Museum']);
+  });
+
+  it('BUDGET-REPO-002: BudgetItemMembersRepository/BudgetItemPayersRepository.listForItems and BudgetItemsRepository.listReceiptsForItems match BG11/BG12/BG13 run raw', async () => {
+    const { user: alice } = createUser(testDb, { username: 'alice' });
+    const { user: bob } = createUser(testDb, { username: 'bob' });
+    const trip = createTrip(testDb, alice.id);
+    addTripMember(testDb, trip.id, bob.id);
+    const file = Number(testDb.prepare('INSERT INTO trip_files (trip_id, filename, original_name) VALUES (?, ?, ?)').run(trip.id, 'r.pdf', 'r.pdf').lastInsertRowid);
+
+    const item1 = await budget.createBudgetItem(trip.id, {
+      name: 'Dinner', total_price: 40, members: [{ user_id: alice.id }, { user_id: bob.id }],
+      payers: [{ user_id: alice.id, amount: 40 }], receipt_file_ids: [file],
+    }) as { id: number };
+    const item2 = await budget.createBudgetItem(trip.id, { name: 'Snack', total_price: 5, members: [{ user_id: bob.id }] }) as { id: number };
+    const itemIds = [item1.id, item2.id];
+
+    const convertedMembers = await budgetItemMembersRepoDirect.listForItems(itemIds);
+    const legacyMembers = testDb.prepare(`
+      SELECT bm.budget_item_id, bm.user_id, bm.paid, bm.amount, COALESCE(u.display_name, u.username) AS username, u.avatar
+      FROM budget_item_members bm JOIN users u ON u.id = bm.user_id
+      WHERE bm.budget_item_id IN (${itemIds.join(',')})
+    `).all();
+    const sortByUser = <T extends { user_id: number; budget_item_id: number }>(rows: T[]) => [...rows].sort((a, b) => a.budget_item_id - b.budget_item_id || a.user_id - b.user_id);
+    expect(sortByUser(convertedMembers)).toEqual(sortByUser(legacyMembers as typeof convertedMembers));
+    expect(convertedMembers).toHaveLength(3);
+
+    const convertedPayers = await budgetItemPayersRepoDirect.listForItems(itemIds);
+    const legacyPayers = testDb.prepare(`
+      SELECT bp.budget_item_id, bp.user_id, bp.amount, COALESCE(u.display_name, u.username) AS username, u.avatar
+      FROM budget_item_payers bp JOIN users u ON u.id = bp.user_id
+      WHERE bp.budget_item_id IN (${itemIds.join(',')})
+    `).all();
+    expect(sortByUser(convertedPayers)).toEqual(sortByUser(legacyPayers as typeof convertedPayers));
+    expect(convertedPayers).toHaveLength(1);
+
+    const convertedReceipts = await budgetItemsRepoDirect.listReceiptsForItems(itemIds);
+    const legacyReceipts = testDb.prepare(`
+      SELECT f.id, f.filename, f.original_name, f.file_size, f.mime_type, f.trip_id, fl.budget_item_id
+      FROM trip_files f JOIN file_links fl ON fl.file_id = f.id
+      WHERE f.deleted_at IS NULL AND fl.budget_item_id IN (${itemIds.join(',')})
+      ORDER BY f.created_at ASC
+    `).all();
+    expect(convertedReceipts).toEqual(legacyReceipts);
+    expect(convertedReceipts).toHaveLength(1);
+  });
+
+  it('BUDGET-REPO-003: BudgetSettlementsRepository.listForTrip / findWithUsers match BG76/BG77 (SETTLEMENT_SELECT) run raw', async () => {
+    const { user: alice } = createUser(testDb, { username: 'alice' });
+    const { user: bob } = createUser(testDb, { username: 'bob' });
+    const trip = createTrip(testDb, alice.id);
+    addTripMember(testDb, trip.id, bob.id);
+
+    const s1 = await budget.createSettlement(trip.id, { from_user_id: bob.id, to_user_id: alice.id, amount: 50, currency: 'USD' }, alice.id) as { id: number };
+    const s2 = await budget.createSettlement(trip.id, { from_user_id: alice.id, to_user_id: bob.id, amount: 10 }, bob.id) as { id: number };
+
+    const SETTLEMENT_SELECT = `
+      SELECT s.id, s.trip_id, s.from_user_id, s.to_user_id, s.amount, s.currency, s.exchange_rate,
+             s.created_at, s.settled_at, s.created_by_user_id,
+             COALESCE(fu.display_name, fu.username) AS from_username, fu.avatar AS from_avatar,
+             COALESCE(tu.display_name, tu.username) AS to_username, tu.avatar AS to_avatar
+      FROM budget_settlements s
+      JOIN users fu ON fu.id = s.from_user_id
+      JOIN users tu ON tu.id = s.to_user_id
+    `;
+
+    const convertedList = await budgetSettlementsRepoDirect.listForTrip(trip.id);
+    const legacyList = testDb.prepare(`${SETTLEMENT_SELECT} WHERE s.trip_id = ? ORDER BY s.created_at DESC, s.id DESC`).all(trip.id);
+    expect(convertedList).toEqual(legacyList);
+    expect(convertedList.map(s => s.id).sort()).toEqual([s1.id, s2.id].sort());
+
+    const convertedOne = await budgetSettlementsRepoDirect.findWithUsers(s1.id, trip.id);
+    const legacyOne = testDb.prepare(`${SETTLEMENT_SELECT} WHERE s.trip_id = ? AND s.id = ?`).get(trip.id, s1.id);
+    expect(convertedOne).toEqual(legacyOne);
+  });
+
+  it('M1: BudgetItemsRepository.listReceiptsForItems / listIdsForPlaces short-circuit on an empty id array', async () => {
+    expect(await budgetItemsRepoDirect.listReceiptsForItems([])).toEqual([]);
+    expect(await budgetItemsRepoDirect.listIdsForPlaces(1, [])).toEqual([]);
+  });
+
+  it('M1: BudgetItemMembersRepository/BudgetItemPayersRepository.listForItems short-circuit on an empty id array; BudgetItemMembers.insertIgnore hits its onConflict doNothing branch on a repeat insert', async () => {
+    expect(await budgetItemMembersRepoDirect.listForItems([])).toEqual([]);
+    expect(await budgetItemPayersRepoDirect.listForItems([])).toEqual([]);
+
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const item = await budget.createBudgetItem(trip.id, { name: 'Lunch', total_price: 10 }) as { id: number };
+    await budgetItemMembersRepoDirect.insertIgnore({ budget_item_id: item.id, user_id: user.id });
+    // A second insert for the same (budget_item_id, user_id) hits the unique
+    // index — onConflict(doNothing) swallows it instead of throwing.
+    await expect(budgetItemMembersRepoDirect.insertIgnore({ budget_item_id: item.id, user_id: user.id })).resolves.toBeUndefined();
+    const rows = testDb.prepare('SELECT COUNT(*) c FROM budget_item_members WHERE budget_item_id = ? AND user_id = ?').get(item.id, user.id);
+    expect(rows).toEqual({ c: 1 });
   });
 });

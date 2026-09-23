@@ -79,23 +79,33 @@ import {
 } from '../../helpers/packing-repos';
 
 let svc: PackingService;
+let packingItemsRepoDirect: Awaited<ReturnType<typeof createTestPackingItemsRepo>>;
+let packingBagsRepoDirect: Awaited<ReturnType<typeof createTestPackingBagsRepo>>;
+let packingTemplatesRepoDirect: Awaited<ReturnType<typeof createTestPackingTemplatesRepo>>;
+let packingCategoryAssigneesRepoDirect: Awaited<ReturnType<typeof createTestPackingCategoryAssigneesRepo>>;
+let packingItemContributorsRepoDirect: Awaited<ReturnType<typeof createTestPackingItemContributorsRepo>>;
 
 // ── Lifecycle ─────────────────────────────────────────────────────────────────
 
 beforeAll(async () => {
   createTables(testDb);
   runMigrations(testDb);
+  packingItemsRepoDirect = await createTestPackingItemsRepo(testDb);
+  packingBagsRepoDirect = await createTestPackingBagsRepo(testDb);
+  packingTemplatesRepoDirect = await createTestPackingTemplatesRepo(testDb);
+  packingCategoryAssigneesRepoDirect = await createTestPackingCategoryAssigneesRepo(testDb);
+  packingItemContributorsRepoDirect = await createTestPackingItemContributorsRepo(testDb);
   svc = new PackingService(
     await createTestDatabaseService(testDb),
     permissionsStub,
     new RealtimeService(),
     notificationsStub(send),
     await createTestUnitOfWork(testDb),
-    await createTestPackingItemsRepo(testDb),
-    await createTestPackingItemContributorsRepo(testDb),
-    await createTestPackingBagsRepo(testDb),
-    await createTestPackingCategoryAssigneesRepo(testDb),
-    await createTestPackingTemplatesRepo(testDb),
+    packingItemsRepoDirect,
+    packingItemContributorsRepoDirect,
+    packingBagsRepoDirect,
+    packingCategoryAssigneesRepoDirect,
+    packingTemplatesRepoDirect,
     await createTestPackingTemplateCategoriesRepo(testDb),
     await createTestPackingTemplateItemsRepo(testDb),
     await createTestTripsRepo(testDb),
@@ -1185,6 +1195,47 @@ describe('packing item object-level authorization', () => {
     expect(await svc.cloneItem(trip.id, personal.id, intruder.id)).toBeNull();
   });
 
+  it('L3: a non-viewer cannot add themselves as a contributor on a restricted item they cannot see', async () => {
+    const { trip, personal, intruder } = await restrictedTrip();
+    expect(await svc.addContributor(trip.id, personal.id, intruder.id)).toBeNull();
+  });
+
+  it('L3: a non-viewer cannot remove a contributor from a restricted item they cannot see', async () => {
+    const { owner, trip, personal, intruder } = await restrictedTrip();
+    // Route the contributor delete through the CALLER's own id as the acting
+    // visibility check (unlike the controller's actual `:userId` wiring,
+    // which is U3's own hole below) — even so, an intruder with no view
+    // access to a Personal item must not be able to touch it.
+    expect(await svc.removeContributor(trip.id, personal.id, intruder.id)).toBeNull();
+    expect(testDb.prepare('SELECT owner_id FROM packing_items WHERE id = ?').get(personal.id)).toEqual({ owner_id: owner.id });
+  });
+
+  it('U3 HOLE — contributor removal checks the path user\'s visibility, not the caller\'s: an intruder who cannot see a Personal item still gets it back by naming the owner as :userId', async () => {
+    // PRE-EXISTING on base (packing.controller.ts ~250 → packing.service.ts
+    // removeContributor; base carries the identical shape). The controller
+    // passes the PATH `:userId` — not `user.id`, the caller — as the third
+    // argument to `PackingService.removeContributor`, which uses that same
+    // id both to run the visibility check AND as the contributor row to
+    // delete. An intruder who cannot see `owner`'s Personal item at all can
+    // still name `owner` as `:userId`: the visibility check passes because
+    // OWNERS can always see their own item, and the full enriched item comes
+    // back in the response — an IDOR read of content the intruder has no
+    // business seeing, RIGHTS-gated only by `packing_edit`, not by the
+    // three-tier privacy model. Deliberately NOT fixed here (controller
+    // ruling U3, pinned so it cannot be "fixed" silently); the one-line fix
+    // is in the fix-wave report for the user: check `findVisibleInTrip` for
+    // the CALLER, and additionally require `userId === callerId ||
+    // item.owner_id === callerId`.
+    // The intruder is the caller in the real route (RequirePermission checks
+    // only packing_edit, never visibility) — but the service signature never
+    // receives the caller's id at all, only the path :userId. That gap is
+    // the bug, so there is nothing of the intruder's identity to pass here.
+    const { owner, trip, personal } = await restrictedTrip();
+    const leaked = await svc.removeContributor(trip.id, personal.id, owner.id);
+    expect(leaked).not.toBeNull();
+    expect(leaked.name).toBe('Diary');
+  });
+
   it('PACK-SVC-105b: a visible item the caller does not own still reports forbidden, not missing', async () => {
     const { trip, common, intruder } = await restrictedTrip();
     expect((await svc.setItemSharing(trip.id, common.id, intruder.id, 'personal', []) as any).forbidden).toBe(true);
@@ -1194,6 +1245,21 @@ describe('packing item object-level authorization', () => {
     const { trip, personal, intruder } = await restrictedTrip();
     expect(await svc.setItemSharing(trip.id, personal.id, intruder.id, 'common', [])).toBeNull();
     expect(testDb.prepare('SELECT is_private FROM packing_items WHERE id = ?').get(personal.id)).toEqual({ is_private: 1 });
+  });
+
+  it('M2-PACKING-001: refuses to update a visible-shaped item from a different trip (PackingItems.findVisibleInTrip trip-scoping)', async () => {
+    const { user } = createUser(testDb);
+    const tripA = createTrip(testDb, user.id);
+    const tripB = createTrip(testDb, user.id);
+    const itemBId = Number(
+      testDb.prepare('INSERT INTO packing_items (trip_id, name, category, checked) VALUES (?, ?, ?, 0)').run(tripB.id, 'Foreign item', 'Clothing').lastInsertRowid,
+    );
+
+    // itemB is a Common item the caller can see — the guard that must refuse
+    // this is the trip filter, not the privacy predicate.
+    const result = await svc.updateItem(tripA.id, itemBId, { name: 'Hijacked' }, ['name'], undefined, user.id);
+    expect(result).toBeNull();
+    expect(testDb.prepare('SELECT name FROM packing_items WHERE id = ?').get(itemBId)).toEqual({ name: 'Foreign item' });
   });
 
   // Missing actor must deny rather than fall through unfiltered.
@@ -1221,5 +1287,126 @@ describe('packing item object-level authorization', () => {
       WHERE c.template_id = ?
     `).all(templateId) as { name: string }[];
     expect(rows.map(r => r.name).sort()).toEqual(['Tent']);
+  });
+});
+
+describe('repository parity (rule 19 — full-key toEqual against the legacy statement run raw)', () => {
+  // The legacy VISIBLE_TO_ACTOR fragment (`_shared/packing-visibility.ts`'s
+  // own docstring quotes it byte-for-byte):
+  //   ( is_private = 0 OR owner_id = ? OR EXISTS (SELECT 1 FROM
+  //     packing_item_recipients r WHERE r.item_id = packing_items.id AND
+  //     r.user_id = ?) )
+  const VISIBLE_TO_ACTOR = `(
+    is_private = 0
+    OR owner_id = ?
+    OR EXISTS (SELECT 1 FROM packing_item_recipients r WHERE r.item_id = packing_items.id AND r.user_id = ?)
+  )`;
+
+  it('PACKING-REPO-001: PackingItemsRepository.listVisibleToActor matches PK5 (VISIBLE_TO_ACTOR) run raw, for the owner, a recipient and a plain member', async () => {
+    const { user: owner } = createUser(testDb);
+    const { user: friend } = createUser(testDb);
+    const { user: stranger } = createUser(testDb);
+    const trip = createTrip(testDb, owner.id);
+    addTripMember(testDb, trip.id, friend.id);
+    addTripMember(testDb, trip.id, stranger.id);
+
+    const common = await svc.createItem(trip.id, { name: 'Common tent', visibility: 'common' }, owner.id);
+    const personal = await svc.createItem(trip.id, { name: 'Owner diary', visibility: 'personal' }, owner.id);
+    const shared = await svc.createItem(trip.id, { name: 'Shared map', visibility: 'shared', recipient_ids: [friend.id] }, owner.id);
+    expect([common, personal, shared]).toHaveLength(3);
+
+    for (const [actor, label] of [[owner, 'owner'], [friend, 'recipient'], [stranger, 'plain member']] as const) {
+      const converted = await packingItemsRepoDirect.listVisibleToActor(trip.id, actor.id);
+      const legacy = testDb.prepare(`
+        SELECT * FROM packing_items WHERE trip_id = ? AND ${VISIBLE_TO_ACTOR}
+        ORDER BY sort_order ASC, created_at ASC
+      `).all(trip.id, actor.id, actor.id);
+      expect(converted, `mismatch for ${label}`).toEqual(legacy);
+    }
+    // Sanity on the visibility split itself, so a predicate regression that
+    // still byte-matches (e.g. both sides equally wrong) cannot hide.
+    expect((await packingItemsRepoDirect.listVisibleToActor(trip.id, owner.id)).map(i => i.name).sort()).toEqual(['Common tent', 'Owner diary', 'Shared map']);
+    expect((await packingItemsRepoDirect.listVisibleToActor(trip.id, friend.id)).map(i => i.name).sort()).toEqual(['Common tent', 'Shared map']);
+    expect((await packingItemsRepoDirect.listVisibleToActor(trip.id, stranger.id)).map(i => i.name).sort()).toEqual(['Common tent']);
+  });
+
+  it('PACKING-REPO-002: PackingBagsRepository.findWithAssignee matches PK46 (LEFT JOIN users) run raw, assigned and unassigned', async () => {
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const bag = (await svc.createBag(trip.id, { name: 'Backpack', color: '#123456' }))!;
+
+    const legacyUnassigned = testDb.prepare('SELECT b.*, COALESCE(u.display_name, u.username) as assigned_username FROM packing_bags b LEFT JOIN users u ON b.user_id = u.id WHERE b.id = ?').get(bag.id);
+    expect(await packingBagsRepoDirect.findWithAssignee(bag.id)).toEqual(legacyUnassigned);
+
+    await packingBagsRepoDirect.update(bag.id, { user_id: [true, user.id] });
+    const legacyAssigned = testDb.prepare('SELECT b.*, COALESCE(u.display_name, u.username) as assigned_username FROM packing_bags b LEFT JOIN users u ON b.user_id = u.id WHERE b.id = ?').get(bag.id);
+    const convertedAssigned = await packingBagsRepoDirect.findWithAssignee(bag.id);
+    expect(convertedAssigned).toEqual(legacyAssigned);
+    expect(convertedAssigned!.assigned_username).toBe(user.username);
+  });
+
+  it('PACKING-REPO-003: PackingTemplatesRepository.listWithItemCount matches PK49 (correlated COUNT) run raw', async () => {
+    const { user: owner } = createUser(testDb);
+    const trip = createTrip(testDb, owner.id);
+    await svc.createItem(trip.id, { name: 'Tent', visibility: 'common' }, owner.id);
+    await svc.createItem(trip.id, { name: 'Stove', visibility: 'common' }, owner.id);
+    await svc.saveAsTemplate(trip.id, owner.id, 'Camping kit');
+    await svc.saveAsTemplate(trip.id, owner.id, 'Empty-ish'); // second template, 0 extra items beyond dedupe
+
+    const converted = await packingTemplatesRepoDirect.listWithItemCount();
+    const legacy = testDb.prepare(`
+      SELECT pt.id, pt.name,
+        (SELECT COUNT(*) FROM packing_template_items ti JOIN packing_template_categories tc ON ti.category_id = tc.id WHERE tc.template_id = pt.id) as item_count
+      FROM packing_templates pt ORDER BY pt.created_at DESC
+    `).all();
+    expect(converted).toEqual(legacy);
+    expect(converted.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('PACKING-REPO-004: PackingCategoryAssigneesRepository.listForCategory matches PK61 run raw', async () => {
+    const { user: alice } = createUser(testDb, { username: 'alice' });
+    const { user: bob } = createUser(testDb, { username: 'bob' });
+    const trip = createTrip(testDb, alice.id);
+    addTripMember(testDb, trip.id, bob.id);
+
+    await svc.updateCategoryAssignees(trip.id, 'Clothing', [alice.id, bob.id]);
+
+    const converted = await packingCategoryAssigneesRepoDirect.listForCategory(trip.id, 'Clothing');
+    const legacy = testDb.prepare(`
+      SELECT pca.user_id, COALESCE(u.display_name, u.username) AS username, u.avatar
+      FROM packing_category_assignees pca JOIN users u ON pca.user_id = u.id
+      WHERE pca.trip_id = ? AND pca.category_name = ?
+    `).all(trip.id, 'Clothing');
+    const sortByUser = (rows: { user_id: number }[]) => [...rows].sort((a, b) => a.user_id - b.user_id);
+    expect(sortByUser(converted)).toEqual(sortByUser(legacy as { user_id: number }[]));
+    expect(converted).toHaveLength(2);
+  });
+
+  it('PACKING-REPO-005: PackingItemsRepository.listExportable matches PK54 run raw, dropping another member\'s restricted item', async () => {
+    const { user: owner } = createUser(testDb);
+    const { user: other } = createUser(testDb);
+    const trip = createTrip(testDb, owner.id);
+    addTripMember(testDb, trip.id, other.id);
+
+    await svc.createItem(trip.id, { name: 'Common tent', visibility: 'common' }, owner.id);
+    await svc.createItem(trip.id, { name: 'Owner diary', visibility: 'personal' }, owner.id);
+    await svc.createItem(trip.id, { name: 'Other diary', visibility: 'personal' }, other.id);
+
+    const converted = await packingItemsRepoDirect.listExportable(trip.id, owner.id);
+    const legacy = testDb.prepare(`
+      SELECT name, category FROM packing_items WHERE trip_id = ? AND (is_private = 0 OR owner_id = ?) ORDER BY sort_order ASC
+    `).all(trip.id, owner.id);
+    expect(converted).toEqual(legacy);
+    expect(converted.map((r) => r.name).sort()).toEqual(['Common tent', 'Owner diary']);
+  });
+
+  it('M1: empty-id-array guards short-circuit on PackingItemContributors/PackingItems batch reads and writes', async () => {
+    expect(await packingItemContributorsRepoDirect.listForItems([])).toEqual([]);
+    expect(await packingItemsRepoDirect.listRecipientsForItems([])).toEqual([]);
+    await expect(packingItemsRepoDirect.insertRecipientsIgnore(1, [])).resolves.toBeUndefined();
+  });
+
+  it('M1: PackingCategoryAssigneesRepository.insertIgnore short-circuits on an empty user_ids array', async () => {
+    await expect(packingCategoryAssigneesRepoDirect.insertIgnore(1, 'Clothing', [])).resolves.toBeUndefined();
   });
 });

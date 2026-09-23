@@ -1,3 +1,4 @@
+import { BudgetItems } from '../../db/entities/BudgetItems.entity';
 import { Module } from '@nestjs/common';
 import { MikroOrmModule } from '@mikro-orm/nestjs';
 import { Places } from '../../db/entities/Places.entity';
@@ -63,7 +64,7 @@ import { MAX_PLACE_IMAGE_SIZE } from '../common/place-image-upload';
     // precedent: a `forFeature` registration only reaches providers declared
     // in the SAME module. Plan 3c Task 5 adds `CategoriesRepository` for
     // PL33's `importKmlPlaces` folder → category lookup.
-    MikroOrmModule.forFeature([Places, Tags, PlaceRatings, TripMembers, DayAssignments, Trips, Categories]),
+    MikroOrmModule.forFeature([Places, Tags, PlaceRatings, TripMembers, DayAssignments, Trips, Categories, BudgetItems]),
   ],
   controllers: [PlacesController],
   providers: [PlacesService, PlacesMcp, PlacesRpc],

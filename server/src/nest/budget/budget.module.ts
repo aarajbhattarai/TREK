@@ -1,3 +1,12 @@
+import { BudgetItems } from '../../db/entities/BudgetItems.entity';
+import { MikroOrmModule } from '@mikro-orm/nestjs';
+import { BudgetItemMembers } from '../../db/entities/BudgetItemMembers.entity';
+import { BudgetItemPayers } from '../../db/entities/BudgetItemPayers.entity';
+import { BudgetSettlements } from '../../db/entities/BudgetSettlements.entity';
+import { BudgetCategoryOrder } from '../../db/entities/BudgetCategoryOrder.entity';
+import { Reservations } from '../../db/entities/Reservations.entity';
+import { Places } from '../../db/entities/Places.entity';
+import { Trips } from '../../db/entities/Trips.entity';
 import { Module } from '@nestjs/common';
 import { BudgetController } from './budget.controller';
 import { BudgetService } from './budget.service';
@@ -21,7 +30,7 @@ import { McpSharedModule } from '../mcp-shared/mcp-shared.module';
  *  AppConfigModule is @Global in the app graph; the explicit import keeps the
  *  partial e2e TestingModules resolving RuntimeEnvService. */
 @Module({
-  imports: [McpSharedModule, PermissionsModule, AppConfigModule, RealtimeModule, PluginGuardsModule, AddonsModule, TripMembershipModule],
+  imports: [McpSharedModule, PermissionsModule, AppConfigModule, RealtimeModule, PluginGuardsModule, AddonsModule, TripMembershipModule, MikroOrmModule.forFeature([BudgetItems, BudgetItemMembers, BudgetItemPayers, BudgetSettlements, BudgetCategoryOrder, Reservations, Places, Trips])],
   controllers: [BudgetController],
   providers: [BudgetService, ExchangeRatesService, BudgetMcp, ExchangeRatesRpc, CostsRpc],
   // For in-container consumers (CostsRpc, TripsService,

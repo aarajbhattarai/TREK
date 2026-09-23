@@ -259,6 +259,20 @@ describe('listMessages', () => {
     expect(msgs).toHaveLength(2);
   });
 
+  it('COLLAB-SVC-010b: a message created with files inserts a trip_files attachment row per file (CollabMessages.insertAttachmentForMessage)', async () => {
+    const { user1, trip } = setup();
+    const files = [
+      { filename: 'stored-a.png', originalname: 'a.png', size: 123, mimetype: 'image/png' },
+      { filename: 'stored-b.png', originalname: 'b.png', size: 456, mimetype: 'image/png' },
+    ];
+
+    const result = await svc.createMessage(trip.id, user1.id, 'look at these', undefined, files);
+
+    expect(result.message!.attachments).toHaveLength(2);
+    const names = result.message!.attachments.map(a => a.original_name).sort();
+    expect(names).toEqual(['a.png', 'b.png']);
+  });
+
   it('COLLAB-SVC-011: paginates using before cursor (returns messages with id < before)', async () => {
     const { user1, trip } = setup();
     await svc.createMessage(trip.id, user1.id, 'First');
@@ -272,6 +286,21 @@ describe('listMessages', () => {
     expect(texts).toContain('First');
     expect(texts).toContain('Second');
     expect(texts).not.toContain('Third');
+  });
+
+  it('U4: a malformed `before` cursor (non-canonical string, hex, or empty string) narrows to an empty page, not "every message" (rule 15, accepted deviation)', async () => {
+    const { user1, trip } = setup();
+    await svc.createMessage(trip.id, user1.id, 'First');
+    await svc.createMessage(trip.id, user1.id, 'Second');
+
+    // The legacy raw bind let SQLite's TEXT/INTEGER ordering decide (a
+    // non-numeric cursor always sorted "greater" than every integer id, so
+    // `m.id < 'garbage'` matched everything). `toRowId` narrows each of
+    // these three spellings to -1 instead, which matches nothing — our own
+    // client never sends any of them (task-5 ruling, task-8-review.md L2/U4).
+    for (const before of ['abc', '0x1', '']) {
+      expect(await svc.listMessages(trip.id, before)).toEqual([]);
+    }
   });
 
   it('COLLAB-SVC-012: returns messages in ascending order (reversed after DESC query)', async () => {
@@ -378,6 +407,11 @@ describe('deleteMessage', () => {
 
     const result = await svc.deleteMessage(trip.id, r.message!.id, user1.id);
     expect(result.error).toBeUndefined();
+    // U5 (pre-existing, pinned not fixed): findInTrip never joins users, so
+    // this has always been undefined at runtime — the controller falls back
+    // to the caller's own username (CollabController.deleteMessage, correct
+    // because only the owner may delete their own message).
+    expect(result.username).toBeUndefined();
 
     const row = testDb.prepare('SELECT deleted FROM collab_messages WHERE id = ?').get(r.message!.id) as any;
     expect(row.deleted).toBe(1);
@@ -433,6 +467,18 @@ describe('updateNote', () => {
     const { trip } = setup();
     const result = await svc.updateNote(trip.id, 9999, { title: 'Ghost' });
     expect(result).toBeNull();
+  });
+
+  it('M2-COLLAB-001: refuses to update a note from a different trip (CollabNotes.findInTrip trip-scoping)', async () => {
+    const { user1, trip } = setup();
+    const tripB = createTrip(testDb, user1.id);
+    const noteB = await svc.createNote(tripB.id, user1.id, { title: 'Foreign note' });
+
+    const result = await svc.updateNote(trip.id, noteB.id, { title: 'Hijacked' });
+
+    expect(result).toBeNull();
+    const untouched = testDb.prepare('SELECT title FROM collab_notes WHERE id = ?').get(noteB.id) as { title: string };
+    expect(untouched.title).toBe('Foreign note');
   });
 
   it('COLLAB-SVC-024: updates pinned flag', async () => {

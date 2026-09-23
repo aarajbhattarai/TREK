@@ -258,6 +258,16 @@ describe('getFileById / getDeletedFile', () => {
     await svc.softDeleteFile(file.id);
     expect((await svc.getDeletedFile(file.id, trip.id))?.id).toBe(file.id);
   });
+
+  it('M2-FILES-001: getDeletedFile refuses a soft-deleted file from a different trip (TripFiles.findDeletedInTrip trip-scoping)', async () => {
+    const { user, trip } = seedTrip();
+    const other = createTrip(testDb, user.id);
+    const file = await makeFile(trip.id, user.id);
+    await svc.softDeleteFile(file.id);
+
+    expect((await svc.getDeletedFile(file.id, trip.id))?.id).toBe(file.id);
+    expect(await svc.getDeletedFile(file.id, other.id)).toBeUndefined();
+  });
 });
 
 describe('listFiles', () => {
@@ -531,7 +541,16 @@ describe('emptyTrash', () => {
     expect(storageDelete).not.toHaveBeenCalled();
   });
 
-  it('FILE-SVC-062 (R2): a failing bulk delete leaves every trashed row in place', async () => {
+  it('FILE-SVC-062: a failing bulk delete leaves every trashed row in place (single-statement atomicity, not a transaction)', async () => {
+    // `emptyTrash`'s bulk delete is one statement (`tripFilesRepo.deleteMany`),
+    // not wrapped in `uow.transactional` (task-8-review.md L1/U1: that wrapper
+    // was vacuous — there is nothing else in the body for a rollback to undo,
+    // and the FILE-SVC-062 name's old "(R2)" tag overclaimed transactional
+    // rollback semantics it never actually proved). This pins the honest
+    // claim instead: a single statement that never runs leaves nothing
+    // half-done, by construction — the row survives because `deleteMany`
+    // itself rejected before touching the DB, not because a transaction
+    // rolled anything back.
     const { user, trip } = seedTrip();
     const a = await makeFile(trip.id, user.id, { filename: 'a.pdf' });
     await svc.softDeleteFile(a.id);
@@ -582,6 +601,60 @@ describe('findForeignLinkTarget', () => {
     expect(await svc.findForeignLinkTarget(mine.id, { reservation_id: '' })).toBeNull();
     // Both foreign — the reservation check runs before the place check.
     expect(await svc.findForeignLinkTarget(mine.id, { reservation_id: foreignRes.id, place_id: foreignPlace.id })).toBe('reservation_id');
+  });
+
+  it('M1: a malformed (non-canonical) id for each target kind is refused as foreign (toRowId narrows to null, rule 15)', async () => {
+    const { mine } = twoTrips();
+    expect(await svc.findForeignLinkTarget(mine.id, { reservation_id: 'abc' })).toBe('reservation_id');
+    expect(await svc.findForeignLinkTarget(mine.id, { place_id: 'abc' })).toBe('place_id');
+    expect(await svc.findForeignLinkTarget(mine.id, { assignment_id: 'abc' })).toBe('assignment_id');
+    expect(await svc.findForeignLinkTarget(mine.id, { budget_item_id: 'abc' })).toBe('budget_item_id');
+  });
+});
+
+// ── rule 21 — every `toRowId(x) ?? -1` guard's malformed-id branch ─────────────
+
+describe('malformed (non-canonical) ids narrow to -1, not a live row', () => {
+  it('M1: getFileById / getDeletedFile return undefined for a malformed id', async () => {
+    const { trip } = seedTrip();
+    expect(await svc.getFileById('abc', trip.id)).toBeUndefined();
+    expect(await svc.getDeletedFile('abc', trip.id)).toBeUndefined();
+  });
+
+  it('M1: listFiles / emptyTrash treat a malformed trip id as an empty trip', async () => {
+    expect(await svc.listFiles('abc', false)).toEqual([]);
+    expect(await svc.emptyTrash('abc')).toBe(0);
+  });
+
+  it('M1: updateFile with a malformed id writes nothing and there is no row left to format', async () => {
+    const { user, trip } = seedTrip();
+    const file = await makeFile(trip.id, user.id);
+    await expect(svc.updateFile('abc', file, { description: 'x' })).rejects.toThrow();
+  });
+
+  it('M1: toggleStarred with a malformed id writes nothing and there is no row left to format', async () => {
+    await expect(svc.toggleStarred('abc', 0)).rejects.toThrow();
+  });
+
+  it('M1: restoreFile with a malformed id writes nothing and there is no row left to format', async () => {
+    await expect(svc.restoreFile('abc')).rejects.toThrow();
+  });
+
+  it('M1: softDeleteFile with a malformed id is a safe no-op', async () => {
+    await expect(svc.softDeleteFile('abc')).resolves.toBeUndefined();
+  });
+
+  it('M1: deleteFileLink / getFileLinks with malformed ids are safe no-ops', async () => {
+    await expect(svc.deleteFileLink('abc', 'abc')).resolves.toBeUndefined();
+    expect(await svc.getFileLinks('abc')).toEqual([]);
+  });
+
+  it('M1: createFileLink with a malformed fileId cannot satisfy the file_links FK and rejects', async () => {
+    await expect(svc.createFileLink('abc', {})).rejects.toThrow();
+  });
+
+  it('M1: TripFilesRepository.deleteMany short-circuits on an empty id array', async () => {
+    await expect(tripFilesRepo.deleteMany([])).resolves.toBeUndefined();
   });
 });
 

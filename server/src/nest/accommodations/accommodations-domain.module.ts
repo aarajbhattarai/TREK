@@ -1,3 +1,4 @@
+import { BudgetItems } from '../../db/entities/BudgetItems.entity';
 import { Module } from '@nestjs/common';
 import { MikroOrmModule } from '@mikro-orm/nestjs';
 import { AccommodationsService } from './accommodations.service';
@@ -38,7 +39,7 @@ import { Reservations } from '../../db/entities/Reservations.entity';
 @Module({
   imports: [
     PermissionsModule, RealtimeModule, AssignmentsDomainModule,
-    MikroOrmModule.forFeature([DayAccommodations, DayAssignments, Places, Days, RoadtripVias, Reservations]),
+    MikroOrmModule.forFeature([DayAccommodations, DayAssignments, Places, Days, RoadtripVias, Reservations, BudgetItems]),
   ],
   providers: [AccommodationsService],
   exports: [AccommodationsService],

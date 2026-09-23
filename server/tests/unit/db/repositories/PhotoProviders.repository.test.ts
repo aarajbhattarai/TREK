@@ -79,3 +79,20 @@ describe('PhotoProvidersRepository.listEnabled', () => {
     expect(rawRow('immich')).toMatchObject({ enabled: 1 });
   });
 });
+
+describe('PhotoProvidersRepository.listAll / findEnabled', () => {
+  it('M1: listAll (the admin listing) returns every row regardless of enabled, unordered by that flag', async () => {
+    insertProvider({ id: 'immich', name: 'Immich', enabled: 1 });
+    insertProvider({ id: 'off', name: 'Off', enabled: 0 });
+
+    const rows = await photoProviders.listAll();
+    expect(rows.map((r) => r.id).sort()).toEqual(['immich', 'off']);
+    expect(rows.find((r) => r.id === 'off')?.enabled).toBe(0);
+  });
+
+  it('M1: findEnabled reads the enabled flag for a known provider and null for an unknown one', async () => {
+    insertProvider({ id: 'synology', name: 'Synology', enabled: 1 });
+    expect(await photoProviders.findEnabled('synology')).toEqual({ enabled: 1 });
+    expect(await photoProviders.findEnabled('does-not-exist')).toBeNull();
+  });
+});

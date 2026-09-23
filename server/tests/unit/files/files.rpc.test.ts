@@ -200,6 +200,18 @@ describe('FilesRpc writes', () => {
     expect(res.error.message).toBe('file exceeds the 10MB plugin upload cap');
   });
 
+  it('M1: a payload whose DECODED bytes exceed the 10MB cap is refused even though its base64 length is under the 14MB encoded cap', async () => {
+    const f = build();
+    // 10,600,000 decoded bytes (> FILE_CONTENT_MAX's 10,485,760) encodes to
+    // ~14.13M base64 chars — under FILES-RPC-010's 14MB ENCODED-length gate,
+    // so only `writeFile`'s own decoded-length check can catch this one.
+    const oversized = b64('x'.repeat(10_600_000));
+    const res = (await f.host('db:write:files').dispatch(
+      req('files.create', { tripId: 1, input: { name: 'big.pdf', content_base64: oversized } }), 42,
+    )) as RpcError;
+    expect(res.error.message).toBe('file exceeds the 10MB plugin upload cap');
+  });
+
   it('FILES-RPC-011 empty decoded content is refused', async () => {
     const f = build();
     const res = (await f.host('db:write:files').dispatch(req('files.create', { tripId: 1, input: { name: 'a.pdf', content_base64: '====' } }), 42)) as RpcError;
@@ -213,6 +225,22 @@ describe('FilesRpc writes', () => {
     expect(created.error.message).toBe('reservation 9 does not belong to trip 1');
     const updated = (await host.dispatch(req('files.update', { tripId: 1, fileId: 2, input: { reservation_id: 9 } }), 42)) as RpcError;
     expect(updated.error.message).toBe('reservation 9 does not belong to trip 1');
+  });
+
+  it('M1: files.createLink also refuses a link target on another trip', async () => {
+    const f = build({ foreign: 'place 7' });
+    const res = (await f.host('db:write:files').dispatch(req('files.createLink', { tripId: 1, fileId: 2, opts: { place_id: 7 } }), 42)) as RpcError;
+    expect(res.error.message).toBe('place 7 does not belong to trip 1');
+    expect(f.files.createFileLink).not.toHaveBeenCalled();
+  });
+
+  it('M1: files.createLink stringifies a provided place_id and files.update leaves an entirely absent reservation_id as undefined', async () => {
+    const f = build();
+    await f.host('db:write:files').dispatch(req('files.createLink', { tripId: 1, fileId: 2, opts: { place_id: 11 } }), 42);
+    expect(f.files.createFileLink).toHaveBeenCalledWith(2, { reservation_id: null, assignment_id: null, place_id: '11' });
+
+    await f.host('db:write:files').dispatch(req('files.update', { tripId: 1, fileId: 2, input: { description: 'x' } }), 42);
+    expect(f.files.updateFile).toHaveBeenLastCalledWith(2, expect.anything(), expect.objectContaining({ reservation_id: undefined }));
   });
 
   it('FILES-RPC-013 update tells null from undefined, so a link can be cleared', async () => {

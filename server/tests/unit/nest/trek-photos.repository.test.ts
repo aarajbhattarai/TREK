@@ -18,6 +18,7 @@ import { DatabaseService } from '../../../src/nest/database/database.service';
 import { TrekPhotoRegistrationService } from '../../../src/nest/photos/trek-photos.repository';
 import { TrekPhotos } from '../../../src/db/entities/TrekPhotos.entity';
 import { TripPhotos } from '../../../src/db/entities/TripPhotos.entity';
+import { TripAlbumLinks } from '../../../src/db/entities/TripAlbumLinks.entity';
 import { decrypt_api_key } from '../../../src/nest/common/crypto/apiKeyCrypto';
 
 const testDb = createSnapshotTestDb();
@@ -228,5 +229,30 @@ describe('TrekPhotoRegistrationService.deleteIfOrphan (PH10-11)', () => {
     const id = await repo.getOrCreateLocal('journey/never-reclaimed.jpg');
     await repo.deleteIfOrphan(id);
     expect(rawRow(id)).toBeDefined();
+  });
+});
+
+describe('M1: TripAlbumLinksRepository/TripPhotosRepository onConflict + empty-array branches', () => {
+  it('TripAlbumLinksRepository.insertIgnore returns true on a fresh insert and false on a repeat (onConflict doNothing); listForTrip short-circuits on an empty provider list', async () => {
+    const albumLinks = t.repo(TripAlbumLinks);
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const row = { trip_id: trip.id, user_id: user.id, provider: 'immich', album_id: 'alb-1', album_name: 'Album', passphrase: null };
+
+    expect(await albumLinks.insertIgnore(row)).toBe(true);
+    expect(await albumLinks.insertIgnore(row)).toBe(false); // same (trip, user, provider, album_id) — conflict
+    expect(await albumLinks.listForTrip(trip.id, [])).toEqual([]);
+  });
+
+  it('TripPhotosRepository.insertIgnore returns true on a fresh insert and false on a repeat (onConflict doNothing); listForTrip short-circuits on an empty provider list', async () => {
+    const tripPhotos = t.repo(TripPhotos);
+    const { user } = createUser(testDb);
+    const trip = createTrip(testDb, user.id);
+    const photoId = await repo.getOrCreate('immich', 'photo-1', user.id);
+    const row = { trip_id: trip.id, user_id: user.id, photo_id: photoId, shared: 1, album_link_id: null };
+
+    expect(await tripPhotos.insertIgnore(row)).toBe(true);
+    expect(await tripPhotos.insertIgnore(row)).toBe(false); // same (trip, user, photo) — conflict
+    expect(await tripPhotos.listForTrip(trip.id, user.id, [])).toEqual([]);
   });
 });
